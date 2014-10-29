@@ -1,6 +1,6 @@
 include ../configure.user
 
-OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o netlibblas.o common_letkf.o \
+OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_letkf.o \
 	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o #common_precip.o
 
 all:	$(OBJS) enssize datetime
