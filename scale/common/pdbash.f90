@@ -9,7 +9,7 @@ program pdbash
 
   integer, parameter :: maxlen = 6400
   integer :: nprocs, myrank, ierr, pos
-  character(len=maxlen) :: cmd, scpname
+  character(len=maxlen) :: cmd
   character(len=10) :: myranks
 
   call MPI_INIT(ierr)
