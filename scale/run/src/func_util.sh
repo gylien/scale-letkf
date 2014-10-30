@@ -25,6 +25,12 @@ fi
 
 local DIRNAME="$1"
 
+
+
+echo "###### $DIRNAME ######"
+
+
+
 #-------------------------------------------------------------------------------
 
 if [ -z "$DIRNAME" ]; then
@@ -44,8 +50,10 @@ if [ ! -O "$DIRNAME" ]; then
   exit 1
 fi
 
-rm -fr $DIRNAME/*
-(($? != 0)) && exit $?
+if ((MACHINE_TYPE != 10 || PREP != 0)); then 
+  rm -fr $DIRNAME/*
+  (($? != 0)) && exit $?
+fi
 
 #-------------------------------------------------------------------------------
 }
@@ -121,22 +129,26 @@ local ARGS="$@"
 #-------------------------------------------------------------------------------
 
 if ((MACHINE_TYPE == 1)); then
-  local HOSTLIST=''
-  local ihost
-  for ihost in $(cat ${NODEFILE_DIR}/${NODEFILE}); do
-    if [ -z "$HOSTLIST" ]; then
-      HOSTLIST="$ihost"
-    else
-      HOSTLIST="${HOSTLIST},${ihost}"
-    fi
-  done
+
+  local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
+  HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
+
   if [ "$RUNDIR" == '-' ]; then
     $MPIRUN $HOSTLIST 1 $PROG $ARGS
   else
     $MPIRUN -d $RUNDIR $HOSTLIST 1 $PROG $ARGS
   fi
-#elif ((MACHINE_TYPE == 10)); then
-###
+
+elif ((MACHINE_TYPE == 10)); then
+
+  local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
+
+  if [ "$RUNDIR" == '-' ]; then
+    mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS
+  else
+    ( cd $RUNDIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS )
+  fi
+
 fi
 
 #-------------------------------------------------------------------------------
@@ -176,6 +188,7 @@ local ARGS="$@"
 #-------------------------------------------------------------------------------
 
 if ((MACHINE_TYPE == 1)); then
+
   if [ "$PROC_OPT" == 'all' ]; then
     local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
   elif [ "$PROC_OPT" == 'alln' ]; then
@@ -194,8 +207,34 @@ if ((MACHINE_TYPE == 1)); then
   fi
 #  $MPIRUN -d $SCRP_DIR $HOSTLIST 1 bash $SCRIPT - $ARGS
 
-#elif ((MACHINE_TYPE == 10)); then
-###
+elif ((MACHINE_TYPE == 10)); then
+
+
+  ls -l .
+
+  echo ${NODEFILE_DIR}
+  ls ${NODEFILE_DIR}
+
+
+
+  if [ "$PROC_OPT" == 'all' ]; then
+    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
+  elif [ "$PROC_OPT" == 'alln' ]; then
+    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}_tmp"
+    cat ${NODEFILE_DIR}/${NODEFILE} | sort | uniq > $vcoordfile
+  elif [ "$PROC_OPT" == 'one' ]; then
+    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}_tmp"
+    head -n 1 ${NODEFILE_DIR}/${NODEFILE} > $vcoordfile
+  else
+    exit 1
+  fi
+
+  if [ -f "$TMPDAT/exec/pdbash" ]; then
+    ( cd $SCRP_DIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $TMPDAT/exec/pdbash $SCRIPT $ARGS )
+  else
+    ( cd $SCRP_DIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $COMMON_DIR/pdbash $SCRIPT $ARGS )
+  fi
+
 fi
 
 #-------------------------------------------------------------------------------

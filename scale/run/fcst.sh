@@ -139,7 +139,9 @@ fi
 mkdir -p $LOGDIR
 
 if ((MACHINE_TYPE == 10 && PREP == 0)); then
-  exec 2>> $TMP/runlog/${myname1}.err
+  mkdir -p $TMP/runlog
+  sleep 0.01s
+#  exec 2>> $TMP/runlog/${myname1}.err
 else
   sleep 0.01s
 ####exec 2>> $LOGDIR/${myname1}.err
@@ -155,7 +157,13 @@ done
 #===============================================================================
 # More configuration
 
-safe_init_tmpdir $TMP
+if ((MACHINE_TYPE == 10)); then
+  if ((PREP == 1)); then
+    safe_init_tmpdir $TMPS
+  fi
+else
+  safe_init_tmpdir $TMP
+fi
 
 #-------------------------------------------------------------------------------
 
@@ -196,11 +204,6 @@ declare -a node
 declare -a name_m
 declare -a node_m
 
-#if ((MACHINE_TYPE == 10)); then # K-computer: create temporary nodefiles in local disk, then stage in
-#  safe_init_tmpdir $TMPS/node
-#  distribute_fcst "$MEMBERS" $CYCLE machinefile $TMPS/node
-#else
-
 
 if ((MACHINE_TYPE == 10)); then
 
@@ -219,9 +222,6 @@ else
 
 fi
 
-
-#fi
-
 #===============================================================================
 
 if ((MACHINE_TYPE == 10)); then
@@ -232,7 +232,67 @@ if ((MACHINE_TYPE == 10)); then
 
     init
 
-    ## create K job script
+
+    cp $SCRP_DIR/config.all $TMPS
+    echo "SCRP_DIR='./runscp'" >> $TMPS/config.all
+
+    cp $SCRP_DIR/config.$myname1 $TMPS
+    echo "PREP=0" >> $TMPS/config.$myname1
+
+#### walltime limit as a variable!!!
+#### rscgrp automatically determined!!!
+#### OMP_NUM_THREADS, PARALLEL as a variable!!!
+#### ./runscp ./runlog as a variable
+
+    cat > ${myname1}_pj.sh << EOF
+#!/bin/sh
+##PJM -g ra000015
+#PJM --rsc-list "node=$NNODES"
+#PJM --rsc-list "elapse=00:01:00"
+#PJM --rsc-list "rscgrp=small"
+##PJM --rsc-list "node-quota=29GB"
+#PJM --mpi "shape=$NNODES"
+#PJM --mpi "proc=$((NNODES*PPN))"
+#PJM --mpi assign-online-node
+#PJM --stg-transfiles all
+EOF
+
+if [ ! -z "$TMPL" ]; then
+  echo "#PJM --mpi \"use-rankdir\"" >> ${myname1}_pj.sh
+fi
+
+    bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR >> ${myname1}_pj.sh
+
+#########################
+    cat >> ${myname1}_pj.sh << EOF
+#PJM --stgout "./* /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/"
+#PJM --stgout-dir "./node /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/node"
+#PJM --stgout-dir "./dat /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/dat"
+#PJM --stgout-dir "./run /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/run"
+#PJM --stgout-dir "./out /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/out"
+#PJM --stgout-dir "./runscp /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/runscp"
+#PJM --stgout-dir "./runlog /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/runlog"
+EOF
+#########################
+
+    cat >> ${myname1}_pj.sh << EOF
+#PJM -s
+. /work/system/Env_base
+export OMP_NUM_THREADS=1
+export PARALLEL=1
+
+ls -l .
+
+cd runscp
+./${myname}
+
+ls -l .
+
+EOF
+
+
+    pjstgchk ${myname1}_pj.sh
+    (($? != 0)) && exit $?
 
     ## submit job
 
@@ -293,7 +353,8 @@ while ((time <= ETIME)); do
 # Write the header of the log file
 
 if ((MACHINE_TYPE == 10)); then
-  exec > $TMP/runlog/${myname1}_${stimes[1]}.log
+  sleep 0.01s
+#  exec > $TMP/runlog/${myname1}_${stimes[1]}.log
 else
   sleep 0.01s
 ####  exec > $LOGDIR/${myname1}_${stimes[1]}.log

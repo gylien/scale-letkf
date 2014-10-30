@@ -81,7 +81,7 @@ NUMBER_OF_FILES=$((FCSTLEN/ANLWRF_INT+2))
 i=0
 time=$STIME
 for c in $(seq $NUMBER_OF_FILES); do
-  wrfoutfile="${WRFOUT}_${time:0:4}-${time:4:2}-${time:6:2}_${time:8:2}:${time:10:2}:${time:12:2}"
+  wrfoutfile="${WRFOUT}_${time}"
   if [ -e "$wrfoutfile" ]; then
     ln -fs $wrfoutfile wrfout_$(printf %05d $i)
   else

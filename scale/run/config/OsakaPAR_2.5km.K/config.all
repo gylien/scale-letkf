@@ -94,10 +94,10 @@ MACHINE_TYPE=10
 
 TMP="."
 TMPS="$DIR/tmp/$TMPSUBDIR"
-TMPL=  # No use
+TMPL=  # No use (need to be set to empty)
 
 ###### K computer (rank directory)
-#TMPDAT_MODE=3
+#TMPDAT_MODE=2
 #TMPRUN_MODE=3
 #TMPOUT_MODE=3
 #MACHINE_TYPE=10
@@ -253,8 +253,8 @@ if ((MACHINE_TYPE == 1)); then
   SCP_HOSTPREFIX=''
 elif ((MACHINE_TYPE == 10)); then
 ######
-  MPIBIN=$(dirname $(which mpirun))
-  MPIRUN="$MPIBIN/mpirun"
+  MPIBIN=$(dirname $(which mpiexec))
+  MPIRUN="$MPIBIN/mpiexec"
 ######
 fi
 

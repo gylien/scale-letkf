@@ -31,7 +31,7 @@ function init {
 safe_init_tmpdir $STAGING_DIR
 cd $STAGING_DIR
 
-if ((INPUT_MODE == 1)); then
+if ((INPUT_MODE == 1 && MACHINE_TYPE != 10)); then
 #---------------------------------------
   safe_init_tmpdir $TMPDAT
   ln -fs $MODELDIR $TMPDAT/exec
@@ -56,8 +56,7 @@ EOF
   time=$STIME
   etime_anlwrf=$(datetime $ETIME $((FCSTLEN+ANLWRF_INT)) s)
   while ((time <= etime_anlwrf)); do
-    timef="${time:0:4}-${time:4:2}-${time:6:2}_${time:8:2}:${time:10:2}:${time:12:2}"
-    echo "${ANLWRF}/wrfout_d01_${timef}|wrf/wrfout_d01_${timef}" >> stagein.dat
+    echo "${ANLWRF}/wrfout_d01_${time}|wrf/wrfout_d01_${time}" >> stagein.dat
     if ((time == etime_anlwrf)); then
       break
     fi
@@ -90,15 +89,11 @@ EOF
     cat >> stagein.dat << EOF
 ${COMMON_DIR}/datetime|exec/datetime
 EOF
-
-####    cat >> stagein.node << EOF  # should be automatically added in the stage_in script for K
-####${TMPS}/node|node
-####EOF
   fi
 #---------------------------------------
 fi
 
-if ((OUTPUT_MODE == 1)); then
+if ((OUTPUT_MODE == 1 && MACHINE_TYPE != 10)); then
 #---------------------------------------
   safe_init_tmpdir $(cd $TMPOUT/.. && pwd)
   ln -fs $OUTDIR $TMPOUT
@@ -126,6 +121,8 @@ else
   done
 #---------------------------------------
 fi
+
+cd $SCRP_DIR
 
 #-------------------------------------------------------------------------------
 }
