@@ -35,7 +35,7 @@ fi
 . src/func_datetime.sh
 . src/func_util.sh
 
-. src/$myname1/func_$myname1.sh
+. src/func_$myname1.sh
 
 #-------------------------------------------------------------------------------
 
@@ -137,7 +137,13 @@ fi
 #-------------------------------------------------------------------------------
 
 mkdir -p $LOGDIR
+
+if ((MACHINE_TYPE == 10 && PREP == 0)); then
+  exec 2>> $TMP/runlog/${myname1}.err
+else
+  sleep 0.01s
 ####exec 2>> $LOGDIR/${myname1}.err
+fi
 echo "[$(datetime_now)] Start $myname" >&2
 
 for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN \
@@ -157,11 +163,6 @@ safe_init_tmpdir $TMP
 
 CYCLE_FMT='%04d'
 
-#if ((PREP == 0)); then
-#  STAGING_DIR="??"
-#  NODEFILE_DIR="??"
-#  SRCP_DIR="??"
-#fi
 
 #-------------------------------------------------------------------------------
 
@@ -195,30 +196,71 @@ declare -a node
 declare -a name_m
 declare -a node_m
 
-if ((MACHINE_TYPE == 10)); then # K-computer: create temporary nodefiles in local disk, then stage in
-  safe_init_tmpdir $TMPS/node
-  distribute_fcst "$MEMBERS" $CYCLE machinefile $TMPS/node
+#if ((MACHINE_TYPE == 10)); then # K-computer: create temporary nodefiles in local disk, then stage in
+#  safe_init_tmpdir $TMPS/node
+#  distribute_fcst "$MEMBERS" $CYCLE machinefile $TMPS/node
+#else
+
+
+if ((MACHINE_TYPE == 10)); then
+
+  if ((PREP == 1)); then
+    NODEFILE_DIR="$TMPS/node"
+    safe_init_tmpdir $NODEFILE_DIR
+    distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
+  else
+    distribute_fcst "$MEMBERS" $CYCLE - -
+  fi
+
 else
+
   safe_init_tmpdir $NODEFILE_DIR
   distribute_fcst "$MEMBERS" $CYCLE machinefile $NODEFILE_DIR
+
+fi
+
+
+#fi
+
+#===============================================================================
+
+if ((MACHINE_TYPE == 10)); then
+
+  if ((PREP == 1)); then
+
+    STAGING_DIR="$TMPS/staging"
+
+    init
+
+    ## create K job script
+
+    ## submit job
+
+    ## wait for job to finish
+    
+  fi  
+
+else
+  echo "[$(datetime_now)] Initialization (stage in)" >&2
+
+  init
+
+####
+#safe_init_tmpdir $TMPDAT
+#safe_init_tmpdir $TMPOUT
+#safe_init_tmpdir $TMPRUN
+####
+
+  pdbash node all $SCRP_DIR/src/stage_in.sh
 fi
 
 #===============================================================================
 
-echo "[$(datetime_now)] Initialization (stage in)" >&2
-
-init
-
-####
-safe_init_tmpdir $TMPDAT
-safe_init_tmpdir $TMPOUT
-safe_init_tmpdir $TMPRUN
-####
-
-pdbash node all $SCRP_DIR/src/stage_in.sh
+if ((PREP == 0)); then
 
 #===============================================================================
 # Run cycles of forecasts
+
 
 declare -a stimes
 declare -a stimesfmt
@@ -250,7 +292,12 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 # Write the header of the log file
 
+if ((MACHINE_TYPE == 10)); then
+  exec > $TMP/runlog/${myname1}_${stimes[1]}.log
+else
+  sleep 0.01s
 ####  exec > $LOGDIR/${myname1}_${stimes[1]}.log
+fi
 
   echo
   echo " +----------------------------------------------------------------+"
@@ -331,6 +378,10 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 done
 #-------------------------------------------------------------------------------
+
+#===============================================================================
+
+fi # ((PREP == 0))
 
 #===============================================================================
 # Finalization
