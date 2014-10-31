@@ -128,6 +128,30 @@ else
 fi
 
 #===============================================================================
+# Environmental settings
+
+if ((MACHINE_TYPE == 1)); then
+  MPIBIN=$(dirname $(which mpirun))
+  MPIRUN="$MPIBIN/mpirun"
+
+  PBS_O_HOST='admin-ib'            # Hostname of the head node (seen from nodes)
+
+#  SCP="scp -q"
+#  SCP_HOSTPREFIX="$PBS_O_HOST:"
+  SCP='cp'
+  SCP_HOSTPREFIX=''
+elif ((MACHINE_TYPE == 10)); then
+######
+  MPIBIN=$(dirname $(which mpiexec))
+  MPIRUN="$MPIBIN/mpiexec"
+######
+fi
+
+PYTHON="python"
+
+#BUFRBIN=/home/glien/pkg/BUFRLIB/bin
+
+#===============================================================================
 # Parallelization settings
 
 MTYPE=1            # Type of the MPI system
@@ -205,30 +229,6 @@ LOG_OPT=1     # 1:   o      o      o      o      o   o      o        o       o
               # 3:          o             o                          o
               # 4:   (none)
 ######
-
-#===============================================================================
-# Environmental settings
-
-if ((MACHINE_TYPE == 1)); then
-  MPIBIN=$(dirname $(which mpirun))
-  MPIRUN="$MPIBIN/mpirun"
-
-  PBS_O_HOST='admin-ib'            # Hostname of the head node (seen from nodes)
-
-#  SCP="scp -q"
-#  SCP_HOSTPREFIX="$PBS_O_HOST:"
-  SCP='cp'
-  SCP_HOSTPREFIX=''
-elif ((MACHINE_TYPE == 10)); then
-######
-  MPIBIN=$(dirname $(which mpiexec))
-  MPIRUN="$MPIBIN/mpiexec"
-######
-fi
-
-PYTHON="python"
-
-#BUFRBIN=/home/glien/pkg/BUFRLIB/bin
 
 #===============================================================================
 # Self test (for security)

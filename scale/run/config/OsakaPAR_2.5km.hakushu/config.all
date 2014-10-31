@@ -36,7 +36,7 @@ MEMBER_FMT='%04d'
 #===============================================================================
 # Basic system settings (usually do not need to modify this section)
 
-SCRP_DIR="$DIR/run"               # Job script directory
+SCRP_DIR="$DIR/run"              # Job script directory
 COMMON_DIR="$DIR/common"         # Common program directory
 LETKF_DIR="$DIR/letkf"           # LETKF program directory
 OBSUTIL_DIR="$DIR/obs"           # Observation program directory
@@ -68,7 +68,6 @@ TMPSUBDIR="scale-letkf_${USER}_${SYSNAME}"
 # STAGE_OPT
 
 ###### Use local disk
-#TMPDAT_MODE=1
 TMPDAT_MODE=3
 TMPRUN_MODE=3
 TMPOUT_MODE=3
@@ -89,13 +88,23 @@ TMPL="/dev/shm/$TMPSUBDIR"
 
 ###### K computer
 #TMPDAT_MODE=2
-##TMPOUT_MODE=2
-#TMPOUT_MODE=3
+#TMPRUN_MODE=2
+#TMPOUT_MODE=2
 #MACHINE_TYPE=10
 
 #TMP="."
 #TMPS="$DIR/tmp/$TMPSUBDIR"
-#TMPL=".."
+#TMPL=  # No use (need to be set to empty)
+
+###### K computer (rank directory)
+#TMPDAT_MODE=2
+#TMPRUN_MODE=3
+#TMPOUT_MODE=3
+#MACHINE_TYPE=10
+
+#TMP=".."
+#TMPS="$DIR/tmp/$TMPSUBDIR"
+#TMPL="."
 
 #-------------------
 
@@ -119,6 +128,30 @@ else
 fi
 
 #===============================================================================
+# Environmental settings
+
+if ((MACHINE_TYPE == 1)); then
+  MPIBIN=$(dirname $(which mpirun))
+  MPIRUN="$MPIBIN/mpirun"
+
+  PBS_O_HOST='admin-ib'            # Hostname of the head node (seen from nodes)
+
+#  SCP="scp -q"
+#  SCP_HOSTPREFIX="$PBS_O_HOST:"
+  SCP='cp'
+  SCP_HOSTPREFIX=''
+elif ((MACHINE_TYPE == 10)); then
+######
+  MPIBIN=$(dirname $(which mpiexec))
+  MPIRUN="$MPIBIN/mpiexec"
+######
+fi
+
+PYTHON="python"
+
+#BUFRBIN=/home/glien/pkg/BUFRLIB/bin
+
+#===============================================================================
 # Parallelization settings
 
 MTYPE=1            # Type of the MPI system
@@ -127,8 +160,8 @@ MTYPE=1            # Type of the MPI system
 
 MEMBER=4           # Ensemble size
 
-NNODES=2           # Number of nodes
-PPN=16             # Number of processes per node
+NNODES=4           # Number of nodes
+PPN=8              # Number of processes per node
 
                    # (This limit is usually due to available memory per node/core)
 MIN_NP_SCALE=4     # Minimum number of cores required to run SCALE
@@ -136,7 +169,7 @@ MIN_NP_SCALE=4     # Minimum number of cores required to run SCALE
                    # (This limit is usually due to parallelization efficiency)
 MAX_NP_SCALE=4     # Maximum number of cores suggested to run SCALE
 
-BGJOB_INT='0.2s'  # Interval of multiple background job submissions
+BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
 #===============================================================================
 # LETKF settings
@@ -168,35 +201,6 @@ ADAPTINFL=1        # Adaptive inflation
                    #  1: ON, using inflation parameter 1 cycle  ago as prior
                    #  2: ON, using inflation parameter 2 cycles ago as prior
 
-#------
-
-FIX_TOPO=0     # 0: No
-               # 1: Yes
-FIX_LANDUSE=0  # 0: No
-               # 1: Yes
-
-PERTURB_BDY=0  # 0: No
-               # 1: Yes
-
-#===============================================================================
-# EFSO settings
-
-#EFSOT=24           # EFSO validation time interval (from the analysis time) (hour)
-
-#OBSOUT_DIAG=0      # Store obsgues/obsanal (for EFSO) during the GFS-LETKF cycling run
-#                   #  0: No
-#                   #  1: Yes
-
-#===============================================================================
-# Forecast settings
-
-FCSTLEN=300         # SCALE forecast length in the forecast mode (second)
-#FCSTOUT=$LCYCLE    # SCALE forecast output interval in the forecast mode (second)
-FCSTOUT=60
-
-EFSOFLEN=$EFSOT    # SCALE forecast length in the EFSO (ensemble) forecast mode (second)
-EFSOFOUT=$LCYCLE   # SCALE forecast output interval in the EFSO (ensemble) forecast mode (second)
-
 #===============================================================================
 # Diagnostic output settings
 
@@ -209,11 +213,6 @@ OUT_OPT=1     # 1:   o    o   o         o   o    o   o    o   o         o   o   
               # 5:   o    .   o             o        o        o             o
               # 6:   o    .   o             o
 
-              #      fcst fcstg/fcstv fcstgp/fcstvp
-FOUT_OPT=1    # 1:   o    o           o
-              # 2:        o           o
-              # 3:        o
-
 OBSOUT_OPT=1  # OBSOPE_OPT=1  superob          obs2 obsdep(omb/oma) obsdiag(obsgues/obsanal)
               # OBSOPE_OPT=2  obsinput gsidiag obs2 obsdep(omb/oma) obsdiag(obsgues/obsanal)
               # 1:            o        o       o    o               ($OBSOUT_DIAG)
@@ -222,36 +221,14 @@ OBSOUT_OPT=1  # OBSOPE_OPT=1  superob          obs2 obsdep(omb/oma) obsdiag(obsg
               # 4:                                  o               ($OBSOUT_DIAG)
               # 5:            (none)
 
+######
               #      gfs    superob       gsimean    gsi    readdiag letkf | gfsfcst
               #      stdout stdout detail stdout fit stdout stdout   outp0 | stdout
 LOG_OPT=1     # 1:   o      o      o      o      o   o      o        o       o
               # 2:   o      o             o          o      o        o       o
               # 3:          o             o                          o
               # 4:   (none)
-
-#===============================================================================
-# Environmental settings
-
-if ((MACHINE_TYPE == 1)); then
-  MPIBIN=$(dirname $(which mpirun))
-  MPIRUN="$MPIBIN/mpirun"
-
-  PBS_O_HOST='admin-ib'            # Hostname of the head node (seen from nodes)
-
-#  SCP="scp -q"
-#  SCP_HOSTPREFIX="$PBS_O_HOST:"
-  SCP='cp'
-  SCP_HOSTPREFIX=''
-elif ((MACHINE_TYPE == 10)); then
 ######
-  MPIBIN=$(dirname $(which mpiexec))
-  MPIEXEC="$MPIBIN/mpiexec"
-######
-fi
-
-PYTHON="python"
-
-#BUFRBIN=/home/glien/pkg/BUFRLIB/bin
 
 #===============================================================================
 # Self test (for security)
