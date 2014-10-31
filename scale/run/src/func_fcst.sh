@@ -146,7 +146,6 @@ function staging_list {
 #-------------------------------------------------------------------------------
 
 safe_init_tmpdir $STAGING_DIR
-cd $STAGING_DIR
 
 if ((INPUT_MODE == 1 && MACHINE_TYPE != 10)); then
 #---------------------------------------
@@ -160,7 +159,7 @@ if ((INPUT_MODE == 1 && MACHINE_TYPE != 10)); then
 #---------------------------------------
 else
 #---------------------------------------
-  cat >> stagein.dat << EOF
+  cat >> $STAGING_DIR/stagein.dat << EOF
 ${MODELDIR}/scale-les|exec/scale-les
 ${MODELDIR}/scale-les_init|exec/scale-les_init
 ${MODELDIR}/scale-les_pp|exec/scale-les_pp
@@ -173,7 +172,7 @@ EOF
   time=$STIME
   etime_anlwrf=$(datetime $ETIME $((FCSTLEN+ANLWRF_INT)) s)
   while ((time <= etime_anlwrf)); do
-    echo "${ANLWRF}/wrfout_d01_${time}|wrf/wrfout_d01_${time}" >> stagein.dat
+    echo "${ANLWRF}/wrfout_d01_${time}|wrf/wrfout_d01_${time}" >> $STAGING_DIR/stagein.dat
     if ((time == etime_anlwrf)); then
       break
     fi
@@ -182,10 +181,10 @@ EOF
 
   if ((FIX_TOPO == 1)); then
     for q in $(seq $mem_np); do
-      echo "${DATADIR}/topo_fix/topo$(printf $SCALE_SFX $((q-1)))|topo_fix/topo$(printf $SCALE_SFX $((q-1)))" >> stagein.dat
+      echo "${DATADIR}/topo_fix/topo$(printf $SCALE_SFX $((q-1)))|topo_fix/topo$(printf $SCALE_SFX $((q-1)))" >> $STAGING_DIR/stagein.dat
     done
   else
-    cat >> stagein.dat << EOF
+    cat >> $STAGING_DIR/stagein.dat << EOF
 ${SCRP_DIR}/scale_pp_topo.conf|conf/scale_pp_topo.conf
 ${DATADIR}/topo/DEM50M/Products|topo/DEM50M/Products
 EOF
@@ -193,17 +192,17 @@ EOF
 
   if ((FIX_LANDUSE == 1)); then
     for q in $(seq $mem_np); do
-      echo "${DATADIR}/landuse_fix/landuse$(printf $SCALE_SFX $((q-1)))|landuse_fix/landuse$(printf $SCALE_SFX $((q-1)))" >> stagein.dat
+      echo "${DATADIR}/landuse_fix/landuse$(printf $SCALE_SFX $((q-1)))|landuse_fix/landuse$(printf $SCALE_SFX $((q-1)))" >> $STAGING_DIR/stagein.dat
     done
   else
-    cat >> stagein.dat << EOF
+    cat >> $STAGING_DIR/stagein.dat << EOF
 ${SCRP_DIR}/scale_pp_landuse.conf|conf/scale_pp_landuse.conf
 ${DATADIR}/landuse/LU100M/Products|landuse/LU100M/Products
 EOF
   fi
 
   if ((MACHINE_TYPE == 10)); then
-    cat >> stagein.dat << EOF
+    cat >> $STAGING_DIR/stagein.dat << EOF
 ${COMMON_DIR}/datetime|exec/datetime
 EOF
   fi
@@ -238,8 +237,6 @@ else
   done
 #---------------------------------------
 fi
-
-cd $SCRP_DIR
 
 #-------------------------------------------------------------------------------
 }

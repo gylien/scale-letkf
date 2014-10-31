@@ -92,9 +92,9 @@ TMPRUN_MODE=2
 TMPOUT_MODE=2
 MACHINE_TYPE=10
 
-TMP="."
+TMP='XXX' # No use, assign a value for security
 TMPS="$DIR/tmp/$TMPSUBDIR"
-TMPL=  # No use (need to be set to empty)
+TMPL='XXX'
 
 ###### K computer (rank directory)
 #TMPDAT_MODE=2
@@ -102,9 +102,9 @@ TMPL=  # No use (need to be set to empty)
 #TMPOUT_MODE=3
 #MACHINE_TYPE=10
 
-#TMP=".."
+#TMP='XXX'
 #TMPS="$DIR/tmp/$TMPSUBDIR"
-#TMPL="."
+#TMPL='XXX'
 
 #-------------------
 
@@ -130,22 +130,10 @@ fi
 #===============================================================================
 # Environmental settings
 
-if ((MACHINE_TYPE == 1)); then
-  MPIBIN=$(dirname $(which mpirun))
-  MPIRUN="$MPIBIN/mpirun"
-
-  PBS_O_HOST='admin-ib'            # Hostname of the head node (seen from nodes)
-
-#  SCP="scp -q"
-#  SCP_HOSTPREFIX="$PBS_O_HOST:"
-  SCP='cp'
-  SCP_HOSTPREFIX=''
-elif ((MACHINE_TYPE == 10)); then
 ######
-  MPIBIN=$(dirname $(which mpiexec))
-  MPIRUN="$MPIBIN/mpiexec"
+MPIBIN=$(dirname $(which mpiexec))
+MPIRUN="$MPIBIN/mpiexec"
 ######
-fi
 
 PYTHON="python"
 
