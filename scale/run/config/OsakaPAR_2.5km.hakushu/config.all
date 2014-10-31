@@ -130,22 +130,15 @@ fi
 #===============================================================================
 # Environmental settings
 
-if ((MACHINE_TYPE == 1)); then
-  MPIBIN=$(dirname $(which mpirun))
-  MPIRUN="$MPIBIN/mpirun"
+MPIBIN=$(dirname $(which mpirun))
+MPIRUN="$MPIBIN/mpirun"
 
-  PBS_O_HOST='admin-ib'            # Hostname of the head node (seen from nodes)
+PBS_O_HOST='admin-ib'            # Hostname of the head node (seen from nodes)
 
-#  SCP="scp -q"
-#  SCP_HOSTPREFIX="$PBS_O_HOST:"
-  SCP='cp'
-  SCP_HOSTPREFIX=''
-elif ((MACHINE_TYPE == 10)); then
-######
-  MPIBIN=$(dirname $(which mpiexec))
-  MPIRUN="$MPIBIN/mpiexec"
-######
-fi
+#SCP="scp -q"
+#SCP_HOSTPREFIX="$PBS_O_HOST:"
+SCP='cp -L'
+SCP_HOSTPREFIX=''
 
 PYTHON="python"
 
@@ -160,8 +153,8 @@ MTYPE=1            # Type of the MPI system
 
 MEMBER=4           # Ensemble size
 
-NNODES=4           # Number of nodes
-PPN=8              # Number of processes per node
+NNODES=2           # Number of nodes
+PPN=16             # Number of processes per node
 
                    # (This limit is usually due to available memory per node/core)
 MIN_NP_SCALE=4     # Minimum number of cores required to run SCALE
