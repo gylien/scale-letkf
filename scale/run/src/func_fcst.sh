@@ -25,7 +25,124 @@ fi
 
 #===============================================================================
 
-function init {
+function setting {
+#-------------------------------------------------------------------------------
+# define steps
+
+nsteps=6
+stepname[1]='Prepare topo files'
+stepfunc[1]='topo'
+stepname[2]='Prepare landuse files'
+stepfunc[2]='landuse'
+stepname[3]='Prepare boundary files'
+stepfunc[3]='boundary'
+stepname[4]='Perturb boundaries'
+stepfunc[4]='pertbdy'
+stepname[5]='Run ensemble forecasts'
+stepfunc[5]='ensfcst'
+stepname[6]='Run verification'
+stepfunc[6]='verf'
+
+#-------------------------------------------------------------------------------
+# usage help string
+
+USAGE="
+[$myname] Run ensemble forecasts and (optional) verifications.
+
+Configuration files:
+  config.all
+  config.$myname1 (optional)
+
+Steps:
+$(for i in $(seq $nsteps); do echo "  ${i}. ${stepname[$i]}"; done)
+
+Usage: $myname [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP]
+
+  STIME       Time of the first cycle (format: YYYY[MMDDHHMMSS])
+  ETIME       Time of the last  cycle (format: YYYY[MMDDHHMMSS])
+               (default: same as STIME)
+  MEMBERS     List of forecast members ('mean' for ensemble mean)
+               all:     Run all members including ensemble mean (default)
+               mems:    Run all members but not including ensemble mean
+               '2 4 6': Run members 2, 4, 6
+  CYCLE       Number of forecast cycles run in parallel
+               (default: 1)
+  CYCLE_SKIP  Run forecasts every ? cycles
+               (default: 1)
+  IF_VERF     Run verification? [Not finished!]
+               0: No (default)
+               1: Yes
+              * to run the verification, a shared disk storing observations
+                and reference model analyses needs to be used
+  IF_EFSO     Use EFSO forecast length and output interval? [Not finished!]
+               0: No (default)
+               1: Yes
+  ISTEP       The initial step in the first cycle from which this script starts
+               (default: the first step)
+  FSTEP       The final step in the last cycle by which this script ends
+               (default: the last step)
+"
+
+if [ "$1" == '-h' ] || [ "$1" == '--help' ]; then
+  echo "$USAGE"
+  exit 0
+fi
+
+#-------------------------------------------------------------------------------
+# set parameters from command line
+
+STIME=${1:-$STIME}; shift
+ETIME=${1:-$ETIME}; shift
+MEMBERS=${1:-$MEMBERS}; shift
+CYCLE=${1:-$CYCLE}; shift
+CYCLE_SKIP=${1:-$CYCLE_SKIP}; shift
+IF_VERF=${1:-$IF_VERF}; shift
+IF_EFSO=${1:-$IF_EFSO}; shift
+ISTEP=${1:-$ISTEP}; shift
+FSTEP=${1:-$FSTEP}
+
+#-------------------------------------------------------------------------------
+# if some necessary parameters are not given, print the usage help and exit
+
+if [ -z "$STIME" ]; then
+  echo "$USAGE" >&2
+  exit 1
+fi
+
+#-------------------------------------------------------------------------------
+# assign default values to and standardize the parameters
+
+STIME=$(datetime $STIME)
+ETIME=$(datetime ${ETIME:-$STIME})
+if [ -z "$MEMBERS" ] || [ "$MEMBERS" = 'all' ]; then
+  MEMBERS="mean $(printf "$MEMBER_FMT " $(seq $MEMBER))"
+elif [ "$MEMBERS" = 'mems' ]; then
+  MEMBERS=$(printf "$MEMBER_FMT " $(seq $MEMBER))
+else
+  tmpstr=''
+  for m in $MEMBERS; do
+    if [ "$m" = 'mean' ] || [ "$m" = 'sprd' ]; then
+      tmpstr="$tmpstr$m "
+    else
+      tmpstr="$tmpstr$(printf $MEMBER_FMT $((10#$m))) "
+      (($? != 0)) && exit 1
+    fi
+  done
+  MEMBERS="$tmpstr"
+fi
+CYCLE=${CYCLE:-1}
+CYCLE_SKIP=${CYCLE_SKIP:-1}
+IF_VERF=${IF_VERF:-0}
+IF_EFSO=${IF_EFSO:-0}
+ISTEP=${ISTEP:-1}
+FSTEP=${FSTEP:-$nsteps}
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+function staging_list {
 #-------------------------------------------------------------------------------
 
 safe_init_tmpdir $STAGING_DIR

@@ -8,15 +8,12 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    fcst.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP]
+#    fcst.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP PREP]
+#    (see variable explanation in 'config.fcst')
 #
 #  Use settings:
 #    config.all
-#    config.fcst
-#    scale_pp_topo.conf
-#    scale_pp_landuse.conf
-#    scale_init.conf
-#    scale.conf
+#    config.fcst (optional)
 #
 #===============================================================================
 
@@ -29,19 +26,37 @@ myname1=${myname%.*}
 
 . config.all
 (($? != 0)) && exit $?
-. config.$myname1
-(($? != 0)) && exit $?
+
+if [ -f config.$myname1 ]; then
+  . config.$myname1
+fi
 
 . src/func_distribute.sh
 . src/func_datetime.sh
 . src/func_util.sh
+
 . src/func_$myname1.sh
 
 #-------------------------------------------------------------------------------
 
-setting
+if ((MACHINE_TYPE == 10)); then
+  PREP=${PREP:-1}
+else
+  PREP=${PREP:-0}
+fi
 
 #-------------------------------------------------------------------------------
+
+mkdir -p $LOGDIR
+
+if ((MACHINE_TYPE == 10 && PREP == 0)); then
+  mkdir -p $TMP/runlog
+  sleep 0.01s
+#  exec 2>> $TMP/runlog/${myname1}.err
+else
+  sleep 0.01s
+####exec 2>> $LOGDIR/${myname1}.err
+fi
 
 echo "[$(datetime_now)] Start $myname" >&2
 
@@ -52,11 +67,24 @@ for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN \
 done
 
 #===============================================================================
-# Determine the distibution schemes
+# More configuration
 
-#if ((MACHINE_TYPE != 10)); then
-#  safe_init_tmpdir $TMP
-#fi
+if ((MACHINE_TYPE == 10)); then
+  if ((PREP == 1)); then
+    safe_init_tmpdir $TMPS
+  fi
+else
+  safe_init_tmpdir $TMP
+fi
+
+#-------------------------------------------------------------------------------
+
+# more variable difinition???
+
+
+
+#-------------------------------------------------------------------------------
+
 
 #-------------------------------------------------------------------------------
 
@@ -66,21 +94,106 @@ declare -a node
 declare -a name_m
 declare -a node_m
 
+
 if ((MACHINE_TYPE == 10)); then
-  distribute_fcst "$MEMBERS" $CYCLE - -
+
+  if ((PREP == 1)); then
+    NODEFILE_DIR="$TMPS/node"
+    safe_init_tmpdir $NODEFILE_DIR
+    distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
+  else
+    distribute_fcst "$MEMBERS" $CYCLE - -
+  fi
+
 else
+
   safe_init_tmpdir $NODEFILE_DIR
   distribute_fcst "$MEMBERS" $CYCLE machinefile $NODEFILE_DIR
+
 fi
 
 #===============================================================================
-# Determine the staging list and then stage in
 
-if ((MACHINE_TYPE != 10)); then
+if ((MACHINE_TYPE == 10)); then
 
+  if ((PREP == 1)); then
+
+    STAGING_DIR="$TMPS/staging"
+
+    init
+
+
+    cp $SCRP_DIR/config.all $TMPS
+    echo "SCRP_DIR='./runscp'" >> $TMPS/config.all
+
+    cp $SCRP_DIR/config.$myname1 $TMPS
+    echo "PREP=0" >> $TMPS/config.$myname1
+
+#### walltime limit as a variable!!!
+#### rscgrp automatically determined!!!
+#### OMP_NUM_THREADS, PARALLEL as a variable!!!
+#### ./runscp ./runlog as a variable
+
+    cat > ${myname1}_pj.sh << EOF
+#!/bin/sh
+##PJM -g ra000015
+#PJM --rsc-list "node=$NNODES"
+#PJM --rsc-list "elapse=00:01:00"
+#PJM --rsc-list "rscgrp=small"
+##PJM --rsc-list "node-quota=29GB"
+#PJM --mpi "shape=$NNODES"
+#PJM --mpi "proc=$((NNODES*PPN))"
+#PJM --mpi assign-online-node
+#PJM --stg-transfiles all
+EOF
+
+if [ ! -z "$TMPL" ]; then
+  echo "#PJM --mpi \"use-rankdir\"" >> ${myname1}_pj.sh
+fi
+
+    bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR >> ${myname1}_pj.sh
+
+#########################
+    cat >> ${myname1}_pj.sh << EOF
+#PJM --stgout "./* /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/"
+#PJM --stgout-dir "./node /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/node"
+#PJM --stgout-dir "./dat /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/dat"
+#PJM --stgout-dir "./run /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/run"
+#PJM --stgout-dir "./out /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/out"
+#PJM --stgout-dir "./runscp /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/runscp"
+#PJM --stgout-dir "./runlog /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/runlog"
+EOF
+#########################
+
+    cat >> ${myname1}_pj.sh << EOF
+#PJM -s
+. /work/system/Env_base
+export OMP_NUM_THREADS=1
+export PARALLEL=1
+
+ls -l .
+
+cd runscp
+./${myname}
+
+ls -l .
+
+EOF
+
+
+    pjstgchk ${myname1}_pj.sh
+    (($? != 0)) && exit $?
+
+    ## submit job
+
+    ## wait for job to finish
+    
+  fi  
+
+else
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
-  staging_list
+  init
 
 ####
 #safe_init_tmpdir $TMPDAT
@@ -92,7 +205,12 @@ if ((MACHINE_TYPE != 10)); then
 fi
 
 #===============================================================================
+
+if ((PREP == 0)); then
+
+#===============================================================================
 # Run cycles of forecasts
+
 
 declare -a stimes
 declare -a stimesfmt
@@ -123,6 +241,14 @@ while ((time <= ETIME)); do
 
 #-------------------------------------------------------------------------------
 # Write the header of the log file
+
+if ((MACHINE_TYPE == 10)); then
+  sleep 0.01s
+#  exec > $TMP/runlog/${myname1}_${stimes[1]}.log
+else
+  sleep 0.01s
+####  exec > $LOGDIR/${myname1}_${stimes[1]}.log
+fi
 
   echo
   echo " +----------------------------------------------------------------+"
@@ -205,15 +331,11 @@ done
 #-------------------------------------------------------------------------------
 
 #===============================================================================
-# Stage out
 
-if ((MACHINE_TYPE != 10)); then
+fi # ((PREP == 0))
 
-  echo "[$(datetime_now)] Finalization (stage out)" >&2
-
-#  pdbash node all $SCRP_DIR/src/stage_out.sh
-
-fi
+#===============================================================================
+# Finalization
 
 #safe_rm_tmpdir $TMP
 #safe_rm_tmpdir $TMPS
