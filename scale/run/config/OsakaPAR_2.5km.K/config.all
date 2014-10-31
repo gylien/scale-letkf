@@ -151,6 +151,8 @@ MEMBER=4           # Ensemble size
 NNODES=4           # Number of nodes
 PPN=8              # Number of processes per node
 
+THREAD=1           ######
+
                    # (This limit is usually due to available memory per node/core)
 MIN_NP_SCALE=4     # Minimum number of cores required to run SCALE
 

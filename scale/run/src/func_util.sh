@@ -102,7 +102,7 @@ function mpirunf {
 #
 #   NODEFILE  Name of nodefile (omit the directory $NODEFILE_DIR)
 #   RUNDIR    Working directory
-#             '-': the current directory
+#             -: the current directory
 #   PROG      Program
 #   ARGS      Arguments passed into the program
 #
@@ -135,7 +135,9 @@ if ((MACHINE_TYPE == 1)); then
 
 elif ((MACHINE_TYPE == 10)); then
 
-  local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
+  local vcoordfile="$(pwd)/${NODEFILE_DIR}/${NODEFILE}"
+
+echo $vcoordfile
 
   if [ "$RUNDIR" == '-' ]; then
     mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS
@@ -158,9 +160,9 @@ function pdbash {
 #
 #   NODEFILE  Name of nodefile (omit the directory $NODEFILE_DIR)
 #   PROC_OPT  Options of using processes
-#             'all':  run the script in all processes listed in $NODEFILE
-#             'alln': run the script in all nodes list in $NODEFILE, one process per node
-#             'one':  run the script only in the first process and node in $NODEFILE
+#             all:  run the script in all processes listed in $NODEFILE
+#             alln: run the script in all nodes list in $NODEFILE, one process per node
+#             one:  run the script only in the first process and node in $NODEFILE
 #   SCRIPT    Script (the working directory is set to $SCRP_DIR)
 #   ARGS      Arguments passed into the program
 #
@@ -203,25 +205,19 @@ if ((MACHINE_TYPE == 1)); then
 
 elif ((MACHINE_TYPE == 10)); then
 
-
-  ls -l .
-
-  echo ${NODEFILE_DIR}
-  ls ${NODEFILE_DIR}
-
-
-
   if [ "$PROC_OPT" == 'all' ]; then
-    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
+    local vcoordfile="$(pwd)/${NODEFILE_DIR}/${NODEFILE}"
   elif [ "$PROC_OPT" == 'alln' ]; then
-    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}_tmp"
+    local vcoordfile="$(pwd)/${NODEFILE_DIR}/${NODEFILE}_tmp"
     cat ${NODEFILE_DIR}/${NODEFILE} | sort | uniq > $vcoordfile
   elif [ "$PROC_OPT" == 'one' ]; then
-    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}_tmp"
+    local vcoordfile="$(pwd)/${NODEFILE_DIR}/${NODEFILE}_tmp"
     head -n 1 ${NODEFILE_DIR}/${NODEFILE} > $vcoordfile
   else
     exit 1
   fi
+
+cat $vcoordfile
 
   if [ -f "$TMPDAT/exec/pdbash" ]; then
     ( cd $SCRP_DIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $TMPDAT/exec/pdbash $SCRIPT $ARGS )
@@ -235,93 +231,3 @@ fi
 }
 
 #===============================================================================
-
-#function parse_steps {
-##-------------------------------------------------------------------------------
-## Parse the input steps to be executed
-##
-## Usage: parse_steps NSTEPS [STEP]
-##
-##   NSTEPS  Number of steps
-##   STEP    Steps of the script to be executed
-##           'all': Run all steps
-##           '2-3': Run steps 2 to 3
-##           '2-' : Run steps after 2
-##           (default: all)
-##
-## Return variables:
-##   run_step[1...$NSTEPS]  Array of run/no run flags
-##-------------------------------------------------------------------------------
-
-#if (($# < 1)); then
-#  echo "[Error] $FUNCNAME: Insufficient arguments." 1>&2
-#  exit 1
-#fi
-
-#local NSTEPS=$1
-#local STEP="${2:-all}"
-
-##-------------------------------------------------------------------------------
-
-#local p1
-#local p2
-#if [ "$STEP" = 'all' ]; then
-#  p1=1
-#  p2=$NSTEPS
-#elif [ $(echo $STEP | grep '-') ]; then
-#  p1=$(echo $STEP | cut -d '-' -s -f1)
-#  if [ -z "$p1" ]; then
-#    p1=1
-#  fi
-#  p2=$(echo $STEP | cut -d '-' -s -f2)
-#  if [ -z "$p2" ]; then
-#    p2=$NSTEPS
-#  fi
-#else
-#  p1=$STEP
-#  p2=$STEP
-#fi
-
-#local p
-#for p in $(seq $NSTEPS); do
-#  if ((p >= p1)) && ((p <= p2)); then
-#    run_step[$p]=1
-#  else
-#    run_step[$p]=0
-#  fi
-#done
-
-##-------------------------------------------------------------------------------
-#}
-
-##===============================================================================
-
-#function step_timing {
-##-------------------------------------------------------------------------------
-## Print the information and timing of a step
-##
-## Usage: step_timing ISTEP
-##
-##   ISTEP  Current step
-##
-## Other input variables:
-##   $stepname[...]  Names of steps
-##-------------------------------------------------------------------------------
-
-#if (($# < 1)); then
-#  echo "[Error] $FUNCNAME: Insufficient arguments." 1>&2
-#  exit 1
-#fi
-
-#local ISTEP="$1"
-
-##-------------------------------------------------------------------------------
-
-#echo "[$(datetime_now)] ${stepname[$ISTEP]}" 1>&2
-#echo
-#printf " %2d. %-55s\n" $ISTEP "${stepname[$ISTEP]}"
-
-##-------------------------------------------------------------------------------
-#}
-
-##===============================================================================

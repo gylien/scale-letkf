@@ -217,10 +217,20 @@ totalnp=$((PPN*NNODES))
 mmean=$((MEMBER+1))
 msprd=$((MEMBER+2))
 
-local n
-for n in $(seq $NNODES); do
-  node[$n]="($((n-1)))"
-done
+if ((MACHINE_TYPE == 1)); then
+  read_nodefile_pbs "$NODEFILE"
+elif ((MACHINE_TYPE == 10)); then
+  local n
+  local p
+  for n in $(seq $NNODES_real); do
+    for p in $(seq $PPN_real); do
+      node[$(((n-1)*PPN_real+p))]="($((n-1)))"
+    done
+  done
+else
+  echo "[Error] Unsupported \$MACHINE_TYPE." >&2
+  exit 1
+fi
 
 local m
 for m in $(seq $MEMBER); do
@@ -228,13 +238,6 @@ for m in $(seq $MEMBER); do
 done
 name_m[$mmean]='mean'
 name_m[$msprd]='sprd'
-
-#-------------------------------------------------------------------------------
-# If a nodefile is used, parse it and get the node names.
-
-if ((MACHINE_TYPE == 1)); then
-  read_nodefile_pbs "$NODEFILE"
-fi
 
 #-------------------------------------------------------------------------------
 # Set up the distribution of members on nodes
@@ -288,6 +291,8 @@ function distribute_fcst {
 # Other input variables:
 #   $NNODES        Number of total nodes
 #   $PPN           Number of processes per node
+#   $NNODES_real   XXXXXX
+#   $PPN_real      XXXXXX
 #   $MIN_NP_SCALE
 #   $MAX_NP_SCALE
 #   $MACHINE_TYPE
@@ -328,10 +333,20 @@ local NODEFILEDIR=${4:-'-'}
 
 totalnp=$((PPN*NNODES))
 
-local n
-for n in $(seq $NNODES); do
-  node[$n]="($((n-1)))"
-done
+if ((MACHINE_TYPE == 1)); then
+  read_nodefile_pbs "$NODEFILE"
+elif ((MACHINE_TYPE == 10)); then
+  local n
+  local p
+  for n in $(seq $NNODES_real); do
+    for p in $(seq $PPN_real); do
+      node[$(((n-1)*PPN_real+p))]="($((n-1)))"
+    done
+  done
+else
+  echo "[Error] Unsupported \$MACHINE_TYPE." >&2
+  exit 1
+fi
 
 fmember=0
 for iname in $MEMBERS; do
@@ -339,14 +354,13 @@ for iname in $MEMBERS; do
   name_m[$fmember]=$iname
 done
 
+for c in $(seq 2 $CYCLE); do
+  for m in $(seq $fmember); do
+    name_m[$(((c-1)*fmember+m))]=${name_m[$m]}
+  done
+done
+
 fmembertot=$((fmember * CYCLE))
-
-#-------------------------------------------------------------------------------
-# If a nodefile is used, parse it and get the node names.
-
-if ((MACHINE_TYPE == 1)); then
-  read_nodefile_pbs "$NODEFILE"
-fi
 
 #-------------------------------------------------------------------------------
 # Set up the distribution of members on nodes
@@ -370,9 +384,6 @@ if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
     cf=$(printf $CYCLE_FMT $c)
     for m in $(seq $fmember); do
       mm=$(((c-1) * fmember + m))
-      if ((mm != m)); then
-        name_m[$mm]=${name_m[$m]}
-      fi
       for p in $(seq $mem_np); do
         echo ${node[${mem2proc[$(((mm-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${cf}.${name_m[$mm]}
       done

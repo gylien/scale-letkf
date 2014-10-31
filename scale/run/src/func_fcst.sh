@@ -226,7 +226,11 @@ else
           mm=$(((c-1) * fmember + m))
           for q in $(seq $mem_np); do
             opath="anal/${name_m[$mm]}/${time2}$(printf $SCALE_SFX $((q-1)))"
-            echo "${OUTDIR}/${opath}|${opath}" >> $STAGING_DIR/stagein.out.${mem2proc[$(((mm-1)*mem_np+q))]}
+            if ((MACHINE_TYPE == 10)); then
+              echo "${OUTDIR}/${opath}|${opath}" >> $STAGING_DIR/stagein.out.${mem2proc[$(((mm-1)*mem_np+q))]}
+            else
+              echo "${OUTDIR}/${opath}|${opath}" >> $STAGING_DIR/stagein.out.${mem2proc[$(((mm-1)*mem_np+q))]}
+            fi
           done
         done
       fi
@@ -313,6 +317,12 @@ else
   #-------------------
   fi
   #-------------------
+
+
+ls -l $TMPRUN/scale_pp_topo
+ls -l $TMPRUN/scale_pp_topo/0001
+ls -l $TMPRUN/scale_pp_topo/0002
+
 
 fi
 

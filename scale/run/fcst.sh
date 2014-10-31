@@ -44,12 +44,15 @@ setting
 
 #-------------------------------------------------------------------------------
 
+mkdir -p $LOGDIR
+####exec 2>> $LOGDIR/${myname1}.err
+
 echo "[$(datetime_now)] Start $myname" >&2
 
 for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN \
              FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT FOUT_OPT \
              STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP; do
-  printf '                      %-10s = %s\n' $vname ${!vname} >&2
+  printf '                      %-10s = %s\n' $vname "${!vname}" >&2
 done
 
 #-------------------------------------------------------------------------------
@@ -122,6 +125,8 @@ while ((time <= ETIME)); do
 
 #-------------------------------------------------------------------------------
 # Write the header of the log file
+
+####  exec > $LOGDIR/${myname1}_${stimes[1]}.log
 
   echo
   echo " +----------------------------------------------------------------+"
