@@ -18,11 +18,6 @@ function safe_init_tmpdir {
 #
 #-------------------------------------------------------------------------------
 
-if (($# < 1)); then
-  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
-  exit 1
-fi
-
 local DIRNAME="$1"
 
 
@@ -34,7 +29,7 @@ echo "###### $DIRNAME ######"
 #-------------------------------------------------------------------------------
 
 if [ -z "$DIRNAME" ]; then
-  echo "[Error] $FUNCNAME: '\$DIRNAME' is not set." >&2
+  echo "[Warning] $FUNCNAME: '\$DIRNAME' is not set." >&2
   exit 1
 fi
 
@@ -50,10 +45,8 @@ if [ ! -O "$DIRNAME" ]; then
   exit 1
 fi
 
-if ((MACHINE_TYPE != 10 || PREP != 0)); then 
-  rm -fr $DIRNAME/*
-  (($? != 0)) && exit $?
-fi
+rm -fr $DIRNAME/*
+(($? != 0)) && exit $?
 
 #-------------------------------------------------------------------------------
 }
@@ -70,12 +63,13 @@ function safe_rm_tmpdir {
 #
 #-------------------------------------------------------------------------------
 
-if (($# < 1)); then
-  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
-  exit 1
-fi
-
 local DIRNAME="$1"
+
+
+
+echo "!!!!!! $DIRNAME !!!!!!"
+
+
 
 #-------------------------------------------------------------------------------
 

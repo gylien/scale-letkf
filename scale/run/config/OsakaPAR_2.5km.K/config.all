@@ -92,9 +92,9 @@ TMPRUN_MODE=2
 TMPOUT_MODE=2
 MACHINE_TYPE=10
 
-TMP='XXX' # No use, assign a value for security
+TMP='.'
 TMPS="$DIR/tmp/$TMPSUBDIR"
-TMPL='XXX'
+TMPL= # no use
 
 ###### K computer (rank directory)
 #TMPDAT_MODE=2
@@ -102,9 +102,9 @@ TMPL='XXX'
 #TMPOUT_MODE=3
 #MACHINE_TYPE=10
 
-#TMP='XXX'
+#TMP='..'
 #TMPS="$DIR/tmp/$TMPSUBDIR"
-#TMPL='XXX'
+#TMPL='.'
 
 #-------------------
 

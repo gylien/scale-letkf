@@ -31,6 +31,22 @@ cd "$(dirname "$0")"
 
 setting
 
+jobscrp='fcst_job.sh'
+
+#-------------------------------------------------------------------------------
+
+echo
+
+for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN \
+             FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT FOUT_OPT \
+             STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP; do
+  printf '  %-10s = %s\n' $vname ${!vname}
+done
+
+echo
+echo "Create a job script '$jobscrp'..."
+echo
+
 #===============================================================================
 
 #mkdir -p $LOGDIR
@@ -61,48 +77,32 @@ distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
 
 #===============================================================================
 
-STAGING_DIR="$TMPS/staging"
-
-staging_list
 
 
 
 cp $SCRP_DIR/config.all $TMPS
-echo "SCRP_DIR='./runscp'" >> $TMPS/config.all
 
-USE_RANKDIR=0
+
 if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
   USE_RANKDIR=1
   echo "USE_RANKDIR=1" >> $TMPS/config.all
-  echo "TMP='..'" >> $TMPS/config.all
-  echo "TMPL='.'" >> $TMPS/config.all
   echo "SCRP_DIR='.'" >> $TMPS/config.all
+  echo "LOGDIR='./log'" >> $TMPS/config.all
 else
   USE_RANKDIR=0
   echo "USE_RANKDIR=0" >> $TMPS/config.all
-  echo "TMP=/work/\$PJM_JOBDIR" >> $TMPS/config.all
   echo "SCRP_DIR='.'" >> $TMPS/config.all
-#  echo "SCRP_DIR=\$TMP" >> $TMPS/config.all
+  echo "LOGDIR='./log'" >> $TMPS/config.all
 fi
 
-echo "NODEFILE_DIR=\"\$TMP/node\"" >> $TMPS/config.all
+echo "NODEFILE_DIR='./node'" >> $TMPS/config.all
 
-if ((TMPDAT_MODE <= 2)); then
-  echo "TMPDAT=\"\$TMP/dat\"" >> $TMPS/config.all
-else
-  echo "TMPDAT=\"\$TMPL/dat\"" >> $TMPS/config.all
-fi
-if ((TMPRUN_MODE <= 2)); then
-  echo "TMPRUN=\"\$TMP/run\"" >> $TMPS/config.all
-else
-  echo "TMPRUN=\"\$TMPL/run\"" >> $TMPS/config.all
-fi
-if ((TMPOUT_MODE <= 2)); then
-  echo "TMPOUT=\"\$TMP/out\"" >> $TMPS/config.all
-else
-  echo "TMPOUT=\"\$TMPL/out\"" >> $TMPS/config.all
-fi
 
+
+STAGING_DIR="$TMPS/staging"
+
+safe_init_tmpdir $STAGING_DIR
+staging_list
 
 
 #### walltime limit as a variable!!!
@@ -110,7 +110,7 @@ fi
 #### OMP_NUM_THREADS, PARALLEL as a variable!!!
 #### ./runscp ./runlog as a variable
 
-cat > fcst_job.sh << EOF
+cat > $jobscrp << EOF
 #!/bin/sh
 ##PJM -g ra000015
 #PJM --rsc-list "node=$NNODES"
@@ -124,24 +124,23 @@ cat > fcst_job.sh << EOF
 EOF
 
 if ((USE_RANKDIR == 1)); then
-  echo "#PJM --mpi \"use-rankdir\"" >> fcst_job.sh
+  echo "#PJM --mpi \"use-rankdir\"" >> $jobscrp
 fi
 
-bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR >> fcst_job.sh
+bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR >> $jobscrp
 
 #########################
-cat >> fcst_job.sh << EOF
+cat >> $jobscrp << EOF
 #PJM --stgout "./* /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/"
 #PJM --stgout-dir "./node /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/node"
 #PJM --stgout-dir "./dat /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/dat"
 #PJM --stgout-dir "./run /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/run"
 #PJM --stgout-dir "./out /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/out"
-#PJM --stgout-dir "./runscp /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/runscp"
-#PJM --stgout-dir "./runlog /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/runlog"
+#PJM --stgout-dir "./log /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/runlog"
 EOF
 #########################
 
-cat >> fcst_job.sh << EOF
+cat >> $jobscrp << EOF
 #PJM -s
 . /work/system/Env_base
 export OMP_NUM_THREADS=1
@@ -149,16 +148,18 @@ export PARALLEL=1
 
 ls -l .
 
-cd runscp
 ./fcst.sh
 
 ls -l .
 
 EOF
 
-
-pjstgchk fcst_job.sh
+echo "Run pjstgchk..."
+echo
+pjstgchk $jobscrp
 (($? != 0)) && exit $?
+
+echo
 
 ## submit job
 

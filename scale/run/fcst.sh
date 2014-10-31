@@ -52,14 +52,19 @@ for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN \
   printf '                      %-10s = %s\n' $vname ${!vname} >&2
 done
 
+#-------------------------------------------------------------------------------
+
+if ((MACHINE_TYPE != 10)); then
+  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
+    safe_init_tmpdir $TMP
+  fi
+  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
+    safe_init_tmpdir $TMPL
+  fi
+fi
+
 #===============================================================================
 # Determine the distibution schemes
-
-#if ((MACHINE_TYPE != 10)); then
-#  safe_init_tmpdir $TMP
-#fi
-
-#-------------------------------------------------------------------------------
 
 declare -a procs
 declare -a mem2proc
@@ -78,17 +83,10 @@ fi
 # Determine the staging list and then stage in
 
 if ((MACHINE_TYPE != 10)); then
-
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
+  safe_init_tmpdir $STAGING_DIR
   staging_list
-
-####
-#safe_init_tmpdir $TMPDAT
-#safe_init_tmpdir $TMPOUT
-#safe_init_tmpdir $TMPRUN
-####
-
   pdbash node all $SCRP_DIR/src/stage_in.sh
 fi
 
