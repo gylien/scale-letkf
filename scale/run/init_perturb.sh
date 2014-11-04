@@ -16,7 +16,6 @@
 #
 #  Use settings:
 #    config.all
-#    config.fcst (optional)
 #
 #===============================================================================
 
@@ -31,7 +30,6 @@ myname1=${myname%.*}
 (($? != 0)) && exit $?
 
 . src/func_datetime.sh
-. src/func_init.sh
 . src/func_util.sh
 
 #-------------------------------------------------------------------------------
@@ -73,7 +71,7 @@ fi
 echo
 echo "Prepare output directory..."
 
-create_outdir
+#create_outdir
 
 #===============================================================================
 
@@ -94,7 +92,8 @@ for m in $(seq $MEMBER); do
 
   q=0
   while [ -s "$S_basename$(printf $SCALE_SFX $q)" ]; do
-    mv -f "$S_basename$(printf $SCALE_SFX $q)" $OUTDIR/anal/${mem}/$STIME$(printf $SCALE_SFX $q)
+    mkdir -p $OUTDIR/$STIME/anal/${mem}
+    mv -f "$S_basename$(printf $SCALE_SFX $q)" $OUTDIR/$STIME/anal/${mem}/init$(printf $SCALE_SFX $q)
   q=$((q+1))
   done
 done
