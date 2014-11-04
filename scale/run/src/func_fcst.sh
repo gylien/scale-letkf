@@ -210,7 +210,7 @@ fi
 
 if ((OUTPUT_MODE == 1 && MACHINE_TYPE != 10)); then
 #---------------------------------------
-  mkdir -p $(cd $TMPOUT/.. && pwd)
+  mkdir -p $(cd $TMPOUT/.. ; pwd)
   ln -fs $OUTDIR $TMPOUT
 #---------------------------------------
 else
@@ -270,7 +270,7 @@ else
       echo "  ${stimesfmt[$c]}: node ${node_m[$ipm]} [$(datetime_now)]"
       ( pdbash proc.${cfr}.${name_m[$ipm]} one $SCRP_DIR/src/pre_scale_pp_topo.sh \
           ${stimes[$c]} $TMPRUN/scale_pp_topo/${cf} \
-          $TMPDAT/exec $TMPDAT;
+          $TMPDAT/exec $TMPDAT ;
         mpirunf proc.${cfr}.${name_m[$ipm]} $TMPRUN/scale_pp_topo/${cf} \
           ./scale-les_pp pp.conf ) &
       sleep $BGJOB_INT
@@ -289,7 +289,7 @@ else
           echo "  ${stimesfmt[$c]}: node ${node_m[$m]} [$(datetime_now)]"
           ( pdbash proc.$(printf $CYCLE_FMT 1).${name_m[$m]} alln $SCRP_DIR/src/pre_scale_pp_topo.sh \
               ${stimes[$c]} $TMPRUN/scale_pp_topo/${cf} \
-              $TMPDAT/exec $TMPDAT &&
+              $TMPDAT/exec $TMPDAT ;
             mpirunf proc.$(printf $CYCLE_FMT 1).${name_m[$m]} $TMPRUN/scale_pp_topo/${cf} \
               ./scale-les_pp pp.conf ) &
           sleep $BGJOB_INT
@@ -307,7 +307,7 @@ else
           echo "  ${stimesfmt[$c]}: node ${node_m[$mm]} [$(datetime_now)]"
           ( pdbash proc.${cf}.${name_m[$mm]} alln $SCRP_DIR/src/pre_scale_pp_topo.sh \
               ${stimes[$c]} $TMPRUN/scale_pp_topo/${cf} \
-              $TMPDAT/exec $TMPDAT &&
+              $TMPDAT/exec $TMPDAT ;
             mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale_pp_topo/${cf} \
               ./scale-les_pp pp.conf ) &
           sleep $BGJOB_INT
@@ -360,7 +360,7 @@ else
       echo "  ${stimesfmt[$c]}: node ${node_m[$ipm]} [$(datetime_now)]"
       ( pdbash proc.${cfr}.${name_m[$ipm]} one $SCRP_DIR/src/pre_scale_pp_landuse.sh \
           ${stimes[$c]} $TMPRUN/scale_pp_landuse/${cf} \
-          $TMPDAT/exec $TMPDAT &&
+          $TMPDAT/exec $TMPDAT ;
         mpirunf proc.${cfr}.${name_m[$ipm]} $TMPRUN/scale_pp_landuse/${cf} \
           ./scale-les_pp pp.conf ) &
       sleep $BGJOB_INT
@@ -378,7 +378,7 @@ else
           echo "  ${stimesfmt[$c]}: node ${node_m[$m]} [$(datetime_now)]"
           ( pdbash proc.$(printf $CYCLE_FMT 1).${name_m[$m]} alln $SCRP_DIR/src/pre_scale_pp_landuse.sh \
               ${stimes[$c]} $TMPRUN/scale_pp_landuse/${cf} \
-              $TMPDAT/exec $TMPDAT &&
+              $TMPDAT/exec $TMPDAT ;
             mpirunf proc.$(printf $CYCLE_FMT 1).${name_m[$m]} $TMPRUN/scale_pp_landuse/${cf} \
               ./scale-les_pp pp.conf ) &
           sleep $BGJOB_INT
@@ -396,7 +396,7 @@ else
           echo "  ${stimesfmt[$c]}: node ${node_m[$mm]} [$(datetime_now)]"
           ( pdbash proc.${cf}.${name_m[$mm]} alln $SCRP_DIR/src/pre_scale_pp_landuse.sh \
               ${stimes[$c]} $TMPRUN/scale_pp_landuse/${cf} \
-              $TMPDAT/exec $TMPDAT &&
+              $TMPDAT/exec $TMPDAT ;
             mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale_pp_landuse/${cf} \
               ./scale-les_pp pp.conf ) &
           sleep $BGJOB_INT
@@ -440,7 +440,7 @@ else
       ( pdbash proc.${cf}.${name_m[$ipm]} one $SCRP_DIR/src/pre_scale_init.sh $mem_np \
           $topo_base $landuse_base $TMPDAT/wrf/wrfout_d01 \
           ${stimes[$c]} $FCSTLEN $TMPRUN/scale_init/${cf} \
-          $TMPDAT/exec $TMPDAT &&
+          $TMPDAT/exec $TMPDAT ;
         mpirunf proc.${cf}.${name_m[$ipm]} $TMPRUN/scale_init/${cf} \
           ./scale-les_init init.conf ) &
       sleep $BGJOB_INT
@@ -460,7 +460,7 @@ else
           ( pdbash proc.$(printf $CYCLE_FMT 1).${name_m[$m]} alln $SCRP_DIR/src/pre_scale_init.sh $mem_np \
               $topo_base $landuse_base $TMPDAT/wrf/wrfout_d01 \
               ${stimes[$c]} $FCSTLEN $TMPRUN/scale_init/${cf} \
-              $TMPDAT/exec $TMPDAT &&
+              $TMPDAT/exec $TMPDAT ;
             mpirunf proc.$(printf $CYCLE_FMT 1).${name_m[$m]} $TMPRUN/scale_init/${cf} \
               ./scale-les_init init.conf ) &
           sleep $BGJOB_INT
@@ -480,7 +480,7 @@ else
           ( pdbash proc.${cf}.${name_m[$mm]} alln $SCRP_DIR/src/pre_scale_init.sh $mem_np \
               $topo_base $landuse_base $TMPDAT/wrf/wrfout_d01 \
               ${stimes[$c]} $FCSTLEN $TMPRUN/scale_init/${cf} \
-              $TMPDAT/exec $TMPDAT &&
+              $TMPDAT/exec $TMPDAT ;
             mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale_init/${cf} \
               ./scale-les_init init.conf ) &
           sleep $BGJOB_INT
@@ -539,7 +539,7 @@ for c in $(seq $rcycle); do
           $TMPRUN/scale_init/${cf}/boundary \
           $topo_base $landuse_base \
           ${stimes[$c]} $FCSTLEN $FCSTOUT $TMPRUN/scale/${cf}_${name_m[$mm]} \
-          $TMPDAT/exec $TMPDAT &&
+          $TMPDAT/exec $TMPDAT ;
         mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale/${cf}_${name_m[$mm]} \
           ./scale-les run.conf ) &
     else
@@ -548,7 +548,7 @@ for c in $(seq $rcycle); do
           $TMPRUN/scale_init/${cf}/boundary \
           $topo_base $landuse_base \
           ${stimes[$c]} $FCSTLEN $FCSTOUT $TMPRUN/scale/${cf}_${name_m[$mm]} \
-          $TMPDAT/exec $TMPDAT &&
+          $TMPDAT/exec $TMPDAT ;
         mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale/${cf}_${name_m[$mm]} \
           ./scale-les run.conf ) &
     fi

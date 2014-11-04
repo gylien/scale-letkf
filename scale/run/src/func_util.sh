@@ -136,7 +136,7 @@ if ((MACHINE_TYPE == 1)); then
 elif ((MACHINE_TYPE == 10)); then
 
 #echo 21
-  local vcoordfile="$(pwd)/${NODEFILE_DIR}/${NODEFILE}"
+  local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
 
 #echo 22
 echo $vcoordfile
@@ -145,8 +145,7 @@ echo "mpirunf $NODEFILE $RUNDIR $PROG $ARGS"
   if [ "$RUNDIR" == '-' ]; then
     mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS
   else
-#    ( cd $RUNDIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS )
-    ( cd $RUNDIR && ls -l && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS )
+    ( cd $RUNDIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS )
   fi
 
 #echo 23
@@ -213,12 +212,12 @@ elif ((MACHINE_TYPE == 10)); then
 
 #echo 11
   if [ "$PROC_OPT" == 'all' ]; then
-    local vcoordfile="$(pwd)/${NODEFILE_DIR}/${NODEFILE}"
+    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
   elif [ "$PROC_OPT" == 'alln' ]; then
-    local vcoordfile="$(pwd)/${NODEFILE_DIR}/${NODEFILE}_tmp"
+    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}_tmp"
     cat ${NODEFILE_DIR}/${NODEFILE} | sort | uniq > $vcoordfile
   elif [ "$PROC_OPT" == 'one' ]; then
-    local vcoordfile="$(pwd)/${NODEFILE_DIR}/${NODEFILE}_tmp"
+    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}_tmp"
     head -n 1 ${NODEFILE_DIR}/${NODEFILE} > $vcoordfile
   else
     exit 1
@@ -231,11 +230,7 @@ echo $vcoordfile
 cat $vcoordfile
 echo "======"
 
-  if [ -f "$TMPDAT/exec/pdbash" ]; then
-    ( cd $SCRP_DIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $TMPDAT/exec/pdbash $SCRIPT $ARGS )
-  else
-    ( cd $SCRP_DIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $COMMON_DIR/pdbash $SCRIPT $ARGS )
-  fi
+  ( cd $SCRP_DIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $TMPDAT/exec/pdbash $SCRIPT $ARGS )
 
 #echo 13
 

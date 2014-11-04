@@ -21,22 +21,22 @@ if [ -s "$STAGING_DIR/stagein.dat" ]; then
       if [ -d "$source" ]; then
         if ((USE_RANKDIR == 1)); then
           if ((TMPDAT_MODE == 3)); then
-            echo "#PJM --stgin-dir \"rank=* ${source} %r:${TMPDAT}/${destin}\""
+            echo "#PJM --stgin-dir \"rank=* ${source} %r:${TMPDAT_STG}/${destin}\""
           else
-            echo "#PJM --stgin-dir \"rank=0 ${source} 0:${TMPDAT}/${destin}\""
+            echo "#PJM --stgin-dir \"rank=0 ${source} 0:${TMPDAT_STG}/${destin}\""
           fi
         else
-          echo "#PJM --stgin-dir \"${source} ${TMPDAT}/${destin}\""
+          echo "#PJM --stgin-dir \"${source} ${TMPDAT_STG}/${destin}\""
         fi
       else
         if ((USE_RANKDIR == 1)); then
           if ((TMPDAT_MODE == 3)); then
-            echo "#PJM --stgin \"rank=* ${source} %r:${TMPDAT}/${destin}\""
+            echo "#PJM --stgin \"rank=* ${source} %r:${TMPDAT_STG}/${destin}\""
           else
-            echo "#PJM --stgin \"rank=0 ${source} 0:.${TMPDAT}/${destin}\""
+            echo "#PJM --stgin \"rank=0 ${source} 0:.${TMPDAT_STG}/${destin}\""
           fi
         else
-          echo "#PJM --stgin \"${source} ${TMPDAT}/${destin}\""
+          echo "#PJM --stgin \"${source} ${TMPDAT_STG}/${destin}\""
         fi
       fi
     fi
@@ -53,9 +53,9 @@ while [ -s "$STAGING_DIR/stagein.out.$((i+1))" ]; do
     destin="$(echo $line | cut -d '|' -s -f2)"
     if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
       if ((USE_RANKDIR == 1)); then
-        echo "#PJM --stgin \"rank=${i} ${source} ${i}:${TMPOUT}/${destin}\""
+        echo "#PJM --stgin \"rank=${i} ${source} ${i}:${TMPOUT_STG}/${destin}\""
       else
-        echo "#PJM --stgin \"${source} ${TMPOUT}/${destin}\""
+        echo "#PJM --stgin \"${source} ${TMPOUT_STG}/${destin}\""
       fi
     fi
   done < "$STAGING_DIR/stagein.out.$((i+1))"
@@ -66,7 +66,8 @@ done
 # stage-in: nodefiles
 
 if ((USE_RANKDIR == 1)); then
-  echo "#PJM --stgin-dir \"rank=* $TMPS/node %r:./node\""
+#  echo "#PJM --stgin-dir \"rank=* $TMPS/node %r:./node\""
+  echo "#PJM --stgin-dir \"rank=0 $TMPS/node 0:./node\""
 else
   echo "#PJM --stgin-dir \"$TMPS/node ./node\""
 fi
@@ -77,19 +78,11 @@ fi
 if ((USE_RANKDIR == 1)); then
   echo "#PJM --stgin \"rank=* $TMPS/config.all %r:./config.all\""
   echo "#PJM --stgin \"rank=* $SCRP_DIR/config.fcst %r:./config.fcst\""
-#  echo "#PJM --stgin \"rank=* $SCRP_DIR/scale_pp_topo.conf %r:./scale_pp_topo.conf\""
-#  echo "#PJM --stgin \"rank=* $SCRP_DIR/scale_pp_landuse.conf %r:./scale_pp_landuse.conf\""
-#  echo "#PJM --stgin \"rank=* $SCRP_DIR/scale_init.conf %r:./scale_init.conf\""
-#  echo "#PJM --stgin \"rank=* $SCRP_DIR/scale.conf %r:./scale.conf\""
   echo "#PJM --stgin \"rank=* $SCRP_DIR/fcst.sh %r:./fcst.sh\""
   echo "#PJM --stgin \"rank=* $SCRP_DIR/src/* %r:./src/\""
 else
   echo "#PJM --stgin \"$TMPS/config.all ./config.all\""
   echo "#PJM --stgin \"$SCRP_DIR/config.fcst ./config.fcst\""
-#  echo "#PJM --stgin \"$SCRP_DIR/scale_pp_topo.conf ./scale_pp_topo.conf\""
-#  echo "#PJM --stgin \"$SCRP_DIR/scale_pp_landuse.conf ./scale_pp_landuse.conf\""
-#  echo "#PJM --stgin \"$SCRP_DIR/scale_init.conf ./scale_init.conf\""
-#  echo "#PJM --stgin \"$SCRP_DIR/scale.conf ./scale.conf\""
   echo "#PJM --stgin \"$SCRP_DIR/fcst.sh ./fcst.sh\""
   echo "#PJM --stgin \"$SCRP_DIR/src/* ./src/\""
 fi

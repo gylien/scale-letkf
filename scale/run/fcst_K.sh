@@ -14,6 +14,10 @@
 
 cd "$(dirname "$0")"
 
+#--------------
+
+TIME_LIMIT='00:01:00'
+
 #===============================================================================
 # Configuration
 
@@ -63,9 +67,8 @@ declare -a name_m
 declare -a node_m
 
 safe_init_tmpdir $TMPS
-NODEFILE_DIR="$TMPS/node"
-safe_init_tmpdir $NODEFILE_DIR
-distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
+safe_init_tmpdir $TMPS/node
+distribute_fcst "$MEMBERS" $CYCLE - $TMPS/node
 
 #===============================================================================
 
@@ -75,17 +78,9 @@ distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
 cp $SCRP_DIR/config.all $TMPS
 
 
-if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
-  USE_RANKDIR=1
-  echo "USE_RANKDIR=1" >> $TMPS/config.all
-else
-  USE_RANKDIR=0
-  echo "USE_RANKDIR=0" >> $TMPS/config.all
-fi
-
 echo "SCRP_DIR='.'" >> $TMPS/config.all
-echo "NODEFILE_DIR='./node'" >> $TMPS/config.all
-echo "LOGDIR='./log'" >> $TMPS/config.all
+echo "NODEFILE_DIR=\"\$(pwd)/node\"" >> $TMPS/config.all
+echo "LOGDIR=\"\$(pwd)/log\"" >> $TMPS/config.all
 
 echo "NNODES=$NNODES" >> $TMPS/config.all
 echo "PPN=$PPN" >> $TMPS/config.all
@@ -98,18 +93,27 @@ STAGING_DIR="$TMPS/staging"
 safe_init_tmpdir $STAGING_DIR
 staging_list
 
+#------
 
-#### walltime limit as a variable!!!
-#### rscgrp automatically determined!!!
-#### OMP_NUM_THREADS, PARALLEL as a variable!!!
-#### ./runscp ./runlog as a variable
+if ((NNODES_real > 36864)); then
+  rscgrp="huge"
+elif ((NNODES_real > 384)); then
+  rscgrp="large"
+else
+  rscgrp="small"
+fi
+
+#------
 
 cat > $jobscrp << EOF
 #!/bin/sh
 ##PJM -g ra000015
+#PJM -N fcst_${SYSNAME}
+#PJM -s
+##PJM -j
 #PJM --rsc-list "node=${NNODES_real}"
-#PJM --rsc-list "elapse=00:01:00"
-#PJM --rsc-list "rscgrp=small"
+#PJM --rsc-list "elapse=${TIME_LIMIT}"
+#PJM --rsc-list "rscgrp=${rscgrp}"
 ##PJM --rsc-list "node-quota=29GB"
 #PJM --mpi "shape=${NNODES_real}"
 #PJM --mpi "proc=$NNODES"
@@ -135,11 +139,9 @@ EOF
 #########################
 
 cat >> $jobscrp << EOF
-#PJM -j
-#PJM -s
 . /work/system/Env_base
-export OMP_NUM_THREADS=1
-export PARALLEL=1
+export OMP_NUM_THREADS=${THREADS}
+export PARALLEL=${THREADS}
 
 ls -l .
 ls -l dat

@@ -31,11 +31,11 @@ TMPDIR="$3"
 EXECDIR="$4"
 DATADIR="$5"
 
-if ((MACHINE_TYPE == 10)); then
-  TMPDIR="$(pwd)/$TMPDIR"
-  EXECDIR="$(pwd)/$EXECDIR"
-  DATADIR="$(pwd)/$DATADIR"
-fi
+#if ((MACHINE_TYPE == 10)); then
+#  TMPDIR="$(pwd)/$TMPDIR"
+#  EXECDIR="$(pwd)/$EXECDIR"
+#  DATADIR="$(pwd)/$DATADIR"
+#fi
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
