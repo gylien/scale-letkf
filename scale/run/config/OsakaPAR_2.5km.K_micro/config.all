@@ -30,24 +30,6 @@ ANLWRF_INT=600
 OBS=              # directory of observation data in LETKF obs format
 OBSNCEP=          # directory of observation data in NCEP BUFR format
 
-SCALE_SFX='.pe%06d.nc'
-MEMBER_FMT='%04d'
-
-#===============================================================================
-# Basic system settings (usually do not need to modify this section)
-
-SCRP_DIR="$DIR/run"              # Job script directory
-COMMON_DIR="$DIR/common"         # Common program directory
-LETKF_DIR="$DIR/letkf"           # LETKF program directory
-OBSUTIL_DIR="$DIR/obs"           # Observation program directory
-VERIFY_DIR="$DIR/verify"         # Verification program directory
-UTIL_DIR="$DIR/util"             # Other utility program directory
-
-USER=$(whoami)                   # User account name
-SYSNAME="$(basename $OUTDIR)"    # A unique name in the machine
-                                 # (used to identify multiple GFS-LETKFs running in the same time)
-TMPSUBDIR="scale-letkf_${USER}_${SYSNAME}"
-
 #===============================================================================
 # Temporary directories to store runtime files
 #
@@ -65,52 +47,18 @@ TMPSUBDIR="scale-letkf_${USER}_${SYSNAME}"
 # TMPS   Temporary directory only on the server node
 # TMPL   Local temporary directory on computing nodes
 
-# STAGE_OPT
-
-###### Use local disk
-#TMPDAT_MODE=3
-#TMPRUN_MODE=3
-#TMPOUT_MODE=3
-#MACHINE_TYPE=1
-
-#TMP="$DIR/tmp/$TMPSUBDIR"
-#TMPS="/dev/shm/$TMPSUBDIR"
-#TMPL="/dev/shm/$TMPSUBDIR"
-
-###### shared disk
-#TMPDAT_MODE=1
-#TMPOUT_MODE=1
-#MACHINE_TYPE=1
-
-#TMP="$DIR/tmp/$TMPSUBDIR"  
-#TMPS="/dev/shm/$TMPSUBDIR"
-#TMPL=  # No use
+# STAGE_OPT ???
 
 ###### K computer
-TMPDAT_MODE=2
-TMPRUN_MODE=2
-TMPOUT_MODE=2
-MACHINE_TYPE=10
-
-TMP='.'
-TMPS="$DIR/tmp/$TMPSUBDIR"
-TMPL= # no use
-
-###### K computer (rank directory)
-#TMPDAT_MODE=2
-#TMPRUN_MODE=3
-#TMPOUT_MODE=3
-#MACHINE_TYPE=10
-
-#TMP='..'
-#TMPS="$DIR/tmp/$TMPSUBDIR"
-#TMPL='.'
-
-###### K computer (micro)
-TMPDAT_MODE=2
-TMPRUN_MODE=2
-TMPOUT_MODE=2
 MACHINE_TYPE=11
+
+SYSNAME="$(basename $OUTDIR)"    # A unique name in the machine
+                                 # (used to identify multiple GFS-LETKFs running in the same time)
+TMPSUBDIR="scale-letkf_$(whoami)_${SYSNAME}"
+
+TMPDAT_MODE=1
+TMPRUN_MODE=2
+TMPOUT_MODE=1
 
 TMP="$DIR/tmp/$TMPSUBDIR"
 TMPS="$DIR/tmp/$TMPSUBDIR"
@@ -119,24 +67,6 @@ TMPL= # no use
 
 #-------------------
 
-STAGING_DIR="$TMP/staging"
-NODEFILE_DIR="$TMP/node"
-
-if ((TMPDAT_MODE <= 2)); then
-  TMPDAT="$TMP/dat"
-else
-  TMPDAT="$TMPL/dat"
-fi
-if ((TMPRUN_MODE <= 2)); then
-  TMPRUN="$TMP/run"
-else
-  TMPRUN="$TMPL/run"
-fi
-if ((TMPOUT_MODE <= 2)); then
-  TMPOUT="$TMP/out"
-else
-  TMPOUT="$TMPL/out"
-fi
 
 #===============================================================================
 # Environmental settings
@@ -153,16 +83,12 @@ PYTHON="python"
 #===============================================================================
 # Parallelization settings
 
-#MTYPE=1            # Type of the MPI system
-#                   #  1: PBS format
-#                   #  2: K computer vcoordfile format
-
-MEMBER=4           # Ensemble size
+MEMBER=2           # Ensemble size
 
 NNODES=4           # Number of nodes
-PPN=8              # Number of processes per node
+PPN=4              # Number of processes per node
 
-THREAD=1           ######
+THREADS=2           ######
 
                    # (This limit is usually due to available memory per node/core)
 MIN_NP_SCALE=4     # Minimum number of cores required to run SCALE
@@ -232,7 +158,47 @@ LOG_OPT=1     # 1:   o      o      o      o      o   o      o        o       o
 ######
 
 #===============================================================================
-# Self test (for security)
+# Do not need to edit below...
+
+#-------------------
+
+SCALE_SFX='.pe%06d.nc'
+MEMBER_FMT='%04d'
+
+#-------------------
+
+STAGING_DIR="$TMP/staging"
+NODEFILE_DIR="$TMP/node"
+
+if ((TMPDAT_MODE <= 2)); then
+  TMPDAT="$TMP/dat"
+else
+  TMPDAT="$TMPL/dat"
+fi
+if ((TMPRUN_MODE <= 2)); then
+  TMPRUN="$TMP/run"
+else
+  TMPRUN="$TMPL/run"
+fi
+if ((TMPOUT_MODE <= 2)); then
+  TMPOUT="$TMP/out"
+else
+  TMPOUT="$TMPL/out"
+fi
+
+#------------------------
+
+SCRP_DIR="$DIR/run"              # Job script directory
+COMMON_DIR="$DIR/common"         # Common program directory
+LETKF_DIR="$DIR/letkf"           # LETKF program directory
+OBSUTIL_DIR="$DIR/obs"           # Observation program directory
+VERIFY_DIR="$DIR/verify"         # Verification program directory
+UTIL_DIR="$DIR/util"             # Other utility program directory
 
 
-#===============================================================================
+#XXXXXXXXXXXXXXX
+
+NNODES_real=$NNODES
+PPN_real=$PPN
+NNODES=$((NNODES*PPN))
+PPN=1

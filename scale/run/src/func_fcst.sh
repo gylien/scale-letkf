@@ -6,42 +6,19 @@
 #
 #===============================================================================
 
-function set_topo_landuse_bases {
-#-------------------------------------------------------------------------------
-
-if ((FIX_TOPO == 1)); then
-  topo_base="$TMPDAT/topo_fix/topo"
-else
-  topo_base="$TMPRUN/scale_pp_topo/${cf}/topo"
-fi
-if ((FIX_LANDUSE == 1)); then
-  landuse_base="$TMPDAT/landuse_fix/landuse"
-else
-  landuse_base="$TMPRUN/scale_pp_landuse/${cf}/landuse"
-fi
-
-#-------------------------------------------------------------------------------
-}
-
-#===============================================================================
-
 function setting {
 #-------------------------------------------------------------------------------
 # define steps
 
-nsteps=6
-stepname[1]='Prepare topo files'
-stepfunc[1]='topo'
-stepname[2]='Prepare landuse files'
-stepfunc[2]='landuse'
-stepname[3]='Prepare boundary files'
-stepfunc[3]='boundary'
-stepname[4]='Perturb boundaries'
-stepfunc[4]='pertbdy'
-stepname[5]='Run ensemble forecasts'
-stepfunc[5]='ensfcst'
-stepname[6]='Run verification'
-stepfunc[6]='verf'
+nsteps=4
+stepname[1]='Prepare boundary files'
+stepfunc[1]='boundary'
+stepname[2]='Perturb boundaries'
+stepfunc[2]='pertbdy'
+stepname[3]='Run ensemble forecasts'
+stepfunc[3]='ensfcst'
+stepname[4]='Run verification'
+stepfunc[4]='verf'
 
 #-------------------------------------------------------------------------------
 # usage help string
@@ -145,18 +122,33 @@ FSTEP=${FSTEP:-$nsteps}
 function staging_list {
 #-------------------------------------------------------------------------------
 
-if ((INPUT_MODE == 1 && MACHINE_TYPE != 10)); then
-#---------------------------------------
-  mkdir -p $TMPDAT
-  ln -fs $MODELDIR $TMPDAT/exec
-  ln -fs $DATADIR $TMPDAT/data
+if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
+#-------------------
+  safe_init_tmpdir $TMPDAT
+  safe_init_tmpdir $TMPDAT/exec
+  ln -fs $MODELDIR/scale-les $TMPDAT/exec
+  ln -fs $MODELDIR/scale-les_init $TMPDAT/exec
+  ln -fs $MODELDIR/scale-les_pp $TMPDAT/exec
+  ln -fs $COMMON_DIR/pdbash $TMPDAT/exec
+  ln -fs $DATADIR/rad $TMPDAT
   ln -fs $ANLWRF $TMPDAT/wrf
-#
-######...... more
-#
-#---------------------------------------
+
+  safe_init_tmpdir $TMPDAT/conf
+  ln -fs $SCRP_DIR/*.conf $TMPDAT/conf
+
+  if ((PREP_TOPO == 1)); then
+    ln -fs $DATADIR/topo_prep $TMPDAT/topo_prep
+  else
+    ln -fs $DATADIR/topo $TMPDAT
+  fi
+  if ((PREP_LANDUSE == 1)); then
+    ln -fs $DATADIR/landuse_prep $TMPDAT/landuse_prep
+  else
+    ln -fs $DATADIR/landuse $TMPDAT
+  fi
+#-------------------
 else
-#---------------------------------------
+#-------------------
 
   cat >> $STAGING_DIR/stagein.dat << EOF
 ${MODELDIR}/scale-les|exec/scale-les
@@ -178,9 +170,9 @@ EOF
     time=$(datetime $time $ANLWRF_INT s)
   done
 
-  if ((FIX_TOPO == 1)); then
+  if ((PREP_TOPO == 1)); then
     for q in $(seq $mem_np); do
-      echo "${DATADIR}/topo_fix/topo$(printf $SCALE_SFX $((q-1)))|topo_fix/topo$(printf $SCALE_SFX $((q-1)))" >> $STAGING_DIR/stagein.dat
+      echo "${DATADIR}/topo_prep/topo$(printf $SCALE_SFX $((q-1)))|topo_prep/topo$(printf $SCALE_SFX $((q-1)))" >> $STAGING_DIR/stagein.dat
     done
   else
     cat >> $STAGING_DIR/stagein.dat << EOF
@@ -189,9 +181,9 @@ ${DATADIR}/topo/DEM50M/Products|topo/DEM50M/Products
 EOF
   fi
 
-  if ((FIX_LANDUSE == 1)); then
+  if ((PREP_LANDUSE == 1)); then
     for q in $(seq $mem_np); do
-      echo "${DATADIR}/landuse_fix/landuse$(printf $SCALE_SFX $((q-1)))|landuse_fix/landuse$(printf $SCALE_SFX $((q-1)))" >> $STAGING_DIR/stagein.dat
+      echo "${DATADIR}/landuse_prep/landuse$(printf $SCALE_SFX $((q-1)))|landuse_prep/landuse$(printf $SCALE_SFX $((q-1)))" >> $STAGING_DIR/stagein.dat
     done
   else
     cat >> $STAGING_DIR/stagein.dat << EOF
@@ -205,16 +197,16 @@ EOF
 ${COMMON_DIR}/datetime|exec/datetime
 EOF
   fi
-#---------------------------------------
+#-------------------
 fi
 
-if ((OUTPUT_MODE == 1 && MACHINE_TYPE != 10)); then
-#---------------------------------------
-  mkdir -p $(cd $TMPOUT/.. ; pwd)
+if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
+#-------------------
+  mkdir -p $(dirname $TMPOUT)
   ln -fs $OUTDIR $TMPOUT
-#---------------------------------------
+#-------------------
 else
-#---------------------------------------
+#-------------------
   lcycles=$((LCYCLE * CYCLE_SKIP))
   time=$STIME
   while ((time <= ETIME)); do
@@ -238,177 +230,83 @@ else
 
     time=$(datetime $time $((lcycles * CYCLE)) s)
   done
-#---------------------------------------
+#-------------------
 fi
 
 #-------------------------------------------------------------------------------
 }
 
 #===============================================================================
-###### combine topo, landuse, boundary!!!!!
 
-function topo {
+function boundary_sub {
+#-------------------------------------------------------------------------------
+# Run a series of scripts (topo/landuse/init) to make the boundary files.
+#
+# Usage: make_boundary PDBASH_NODEFILE PDBASH_PROC_OPT MPIRUNF_NODEFILE
+#
+#   PDBASH_NODEFILE   $NODEFILE in function 'pdbash'
+#   PDBASH_PROC_OPT   $PROC_OPT in function 'pdbash'
+#   MPIRUNF_NODEFILE  $NODEFILE in function 'mpirunf'
+#
+# Other input variables:
+#   $c       Cycle number
+#   $cf      Formatted cycle number
+#   $stimes  Start time of this cycle
+#   $SCRP_DIR
+#   $TMPRUN
+#   $TMPDAT
+#   $mem_np
+#   $PREP_TOPO
+#   $PREP_LANDUSE
 #-------------------------------------------------------------------------------
 
-echo
-
-if ((FIX_TOPO == 1)); then
-
-  echo "  ... skip this step (use fixed topo files)"
-
-else
-
-  #-------------------
-  if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
-  #-------------------
-    ipm=0
-    for c in $(seq $rcycle); do
-      cf=$(printf $CYCLE_FMT $c)
-      ipm=$((ipm+1))
-      if ((ipm > parallel_mems)); then wait; ipm=1; fi
-      cfr=$(printf $CYCLE_FMT $(((ipm-1)/fmember+1))) # try to use processes in parallel
-      echo "  ${stimesfmt[$c]}: node ${node_m[$ipm]} [$(datetime_now)]"
-      ( pdbash proc.${cfr}.${name_m[$ipm]} one $SCRP_DIR/src/pre_scale_pp_topo.sh \
-          ${stimes[$c]} $TMPRUN/scale_pp_topo/${cf} \
-          $TMPDAT/exec $TMPDAT ;
-        mpirunf proc.${cfr}.${name_m[$ipm]} $TMPRUN/scale_pp_topo/${cf} \
-          ./scale-les_pp pp.conf ) &
-      sleep $BGJOB_INT
-    done
-    wait
-  #-------------------
-  else # local run directory: run multiple members as needed
-  #-------------------
-    if ((repeat_mems <= fmember)); then
-      ipm=0
-      for c in $(seq $rcycle); do
-        cf=$(printf $CYCLE_FMT $c)
-        for m in $(seq $repeat_mems); do
-          ipm=$((ipm+1))
-          if ((ipm > parallel_mems)); then wait; ipm=1; fi
-          echo "  ${stimesfmt[$c]}: node ${node_m[$m]} [$(datetime_now)]"
-          ( pdbash proc.$(printf $CYCLE_FMT 1).${name_m[$m]} alln $SCRP_DIR/src/pre_scale_pp_topo.sh \
-              ${stimes[$c]} $TMPRUN/scale_pp_topo/${cf} \
-              $TMPDAT/exec $TMPDAT ;
-            mpirunf proc.$(printf $CYCLE_FMT 1).${name_m[$m]} $TMPRUN/scale_pp_topo/${cf} \
-              ./scale-les_pp pp.conf ) &
-          sleep $BGJOB_INT
-        done
-      done
-      wait
-    else
-      ipm=0
-      for c in $(seq $rcycle); do
-        cf=$(printf $CYCLE_FMT $c)
-        for m in $(seq $fmember); do
-          mm=$(((c-1) * fmember + m))
-          ipm=$((ipm+1))
-          if ((ipm > parallel_mems)); then wait; ipm=1; fi
-          echo "  ${stimesfmt[$c]}: node ${node_m[$mm]} [$(datetime_now)]"
-          ( pdbash proc.${cf}.${name_m[$mm]} alln $SCRP_DIR/src/pre_scale_pp_topo.sh \
-              ${stimes[$c]} $TMPRUN/scale_pp_topo/${cf} \
-              $TMPDAT/exec $TMPDAT ;
-            mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale_pp_topo/${cf} \
-              ./scale-les_pp pp.conf ) &
-          sleep $BGJOB_INT
-        done
-      done
-      wait
-    fi
-  #-------------------
-  fi
-  #-------------------
-
-pwd
-ls -l
-ls -l $TMPRUN/scale_pp_topo
-ls -l $TMPRUN/scale_pp_topo/0001
-ls -l $TMPRUN/scale_pp_topo/0002
-
-
+if (($# < 3)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
 fi
 
-
-exit
-
+local PDBASH_NODEFILE="$1"; shift
+local PDBASH_PROC_OPT="$1"; shift
+local MPIRUNF_NODEFILE="$1"
 
 #-------------------------------------------------------------------------------
-}
+# topo
 
-#===============================================================================
-
-function landuse {
-#-------------------------------------------------------------------------------
-
-echo
-
-if ((FIX_LANDUSE == 1)); then
-
-  echo "  ... skip this step (use fixed landuse files)"
-
-else
-
-  #-------------------
-  if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
-  #-------------------
-    ipm=0
-    for c in $(seq $rcycle); do
-      cf=$(printf $CYCLE_FMT $c)
-      ipm=$((ipm+1))
-      if ((ipm > parallel_mems)); then wait; ipm=1; fi
-      cfr=$(printf $CYCLE_FMT $(((ipm-1)/fmember+1))) # try to use processes in parallel
-      echo "  ${stimesfmt[$c]}: node ${node_m[$ipm]} [$(datetime_now)]"
-      ( pdbash proc.${cfr}.${name_m[$ipm]} one $SCRP_DIR/src/pre_scale_pp_landuse.sh \
-          ${stimes[$c]} $TMPRUN/scale_pp_landuse/${cf} \
-          $TMPDAT/exec $TMPDAT ;
-        mpirunf proc.${cfr}.${name_m[$ipm]} $TMPRUN/scale_pp_landuse/${cf} \
-          ./scale-les_pp pp.conf ) &
-      sleep $BGJOB_INT
-    done
-  #-------------------
-  else # local run directory: run multiple members as needed
-  #-------------------
-    if ((repeat_mems <= fmember)); then
-      ipm=0
-      for c in $(seq $rcycle); do
-        cf=$(printf $CYCLE_FMT $c)
-        for m in $(seq $repeat_mems); do
-          ipm=$((ipm+1))
-          if ((ipm > parallel_mems)); then wait; ipm=1; fi
-          echo "  ${stimesfmt[$c]}: node ${node_m[$m]} [$(datetime_now)]"
-          ( pdbash proc.$(printf $CYCLE_FMT 1).${name_m[$m]} alln $SCRP_DIR/src/pre_scale_pp_landuse.sh \
-              ${stimes[$c]} $TMPRUN/scale_pp_landuse/${cf} \
-              $TMPDAT/exec $TMPDAT ;
-            mpirunf proc.$(printf $CYCLE_FMT 1).${name_m[$m]} $TMPRUN/scale_pp_landuse/${cf} \
-              ./scale-les_pp pp.conf ) &
-          sleep $BGJOB_INT
-        done
-      done
-      wait
-    else
-      ipm=0
-      for c in $(seq $rcycle); do
-        cf=$(printf $CYCLE_FMT $c)
-        for m in $(seq $fmember); do
-          mm=$(((c-1) * fmember + m))
-          ipm=$((ipm+1))
-          if ((ipm > parallel_mems)); then wait; ipm=1; fi
-          echo "  ${stimesfmt[$c]}: node ${node_m[$mm]} [$(datetime_now)]"
-          ( pdbash proc.${cf}.${name_m[$mm]} alln $SCRP_DIR/src/pre_scale_pp_landuse.sh \
-              ${stimes[$c]} $TMPRUN/scale_pp_landuse/${cf} \
-              $TMPDAT/exec $TMPDAT ;
-            mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale_pp_landuse/${cf} \
-              ./scale-les_pp pp.conf ) &
-          sleep $BGJOB_INT
-        done
-      done
-      wait
-    fi
-  #-------------------
-  fi
-  #-------------------
-
+if ((PREP_TOPO != 1)); then
+  pdbash $PDBASH_NODEFILE $PDBASH_PROC_OPT \
+    $SCRP_DIR/src/pre_scale_pp_topo.sh ${stimes[$c]} $TMPRUN/scale_pp_topo/${cf} $TMPDAT/exec $TMPDAT
+  mpirunf $MPIRUNF_NODEFILE \
+    $TMPRUN/scale_pp_topo/${cf} ./scale-les_pp pp.conf
 fi
+
+#-------------------------------------------------------------------------------
+# landuse
+
+if ((PREP_LANDUSE != 1)); then
+  pdbash $PDBASH_NODEFILE $PDBASH_PROC_OPT \
+    $SCRP_DIR/src/pre_scale_pp_landuse.sh ${stimes[$c]} $TMPRUN/scale_pp_landuse/${cf} $TMPDAT/exec $TMPDAT
+  mpirunf $MPIRUNF_NODEFILE \
+    $TMPRUN/scale_pp_landuse/${cf} ./scale-les_pp pp.conf
+fi
+
+#-------------------------------------------------------------------------------
+# init
+
+if ((PREP_TOPO == 1)); then
+  local topo_base="$TMPDAT/topo_prep/topo"
+else
+  local topo_base="$TMPRUN/scale_pp_topo/${cf}/topo"
+fi
+if ((PREP_LANDUSE == 1)); then
+  local landuse_base="$TMPDAT/landuse_prep/landuse"
+else
+  local landuse_base="$TMPRUN/scale_pp_landuse/${cf}/landuse"
+fi
+pdbash $PDBASH_NODEFILE $PDBASH_PROC_OPT \
+  $SCRP_DIR/src/pre_scale_init.sh $mem_np $topo_base $landuse_base $TMPDAT/wrf/wrfout_d01 \
+  ${stimes[$c]} $FCSTLEN $TMPRUN/scale_init/${cf} $TMPDAT/exec $TMPDAT ;
+mpirunf $MPIRUNF_NODEFILE \
+  $TMPRUN/scale_init/${cf} ./scale-les_init init.conf
 
 #-------------------------------------------------------------------------------
 }
@@ -419,79 +317,59 @@ function boundary {
 #-------------------------------------------------------------------------------
 
 echo
+if ((PREP_BDY == 1)); then
+  echo "  ... skip this step (use prepared boundary files)"
+  return 0
+fi
 
-if ((FIX_LANDUSE == 1)); then
+if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+#-------------------
+  ipm=0
+  for c in $(seq $rcycle); do
+    cf=$(printf $CYCLE_FMT $c)
+    ipm=$((ipm+1))
+    if ((ipm > parallel_mems)); then wait; ipm=1; fi
+    cfr=$(printf $CYCLE_FMT $(((ipm-1)/fmember+1))) # try to use processes in parallel
+    echo "  ${stimesfmt[$c]}: node ${node_m[$ipm]} [$(datetime_now)]"
 
-  echo "  ... skip this step (use fixed landuse files)"
-
-else
-
-  #-------------------
-  if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
-  #-------------------
+    boundary_sub proc.${cfr}.${name_m[$ipm]} one proc.${cfr}.${name_m[$ipm]} &
+    sleep $BGJOB_INT
+  done
+  wait
+#-------------------
+else # local run directory: run multiple members as needed
+#-------------------
+  if ((repeat_mems <= fmember)); then
     ipm=0
     for c in $(seq $rcycle); do
       cf=$(printf $CYCLE_FMT $c)
-      set_topo_landuse_bases
-      ipm=$((ipm+1))
-      if ((ipm > parallel_mems)); then wait; ipm=1; fi
-      cfr=$(printf $CYCLE_FMT $(((ipm-1)/fmember+1))) # try to use processes in parallel
-      echo "  ${stimesfmt[$c]}: node ${node_m[$ipm]} [$(datetime_now)]"
-      ( pdbash proc.${cf}.${name_m[$ipm]} one $SCRP_DIR/src/pre_scale_init.sh $mem_np \
-          $topo_base $landuse_base $TMPDAT/wrf/wrfout_d01 \
-          ${stimes[$c]} $FCSTLEN $TMPRUN/scale_init/${cf} \
-          $TMPDAT/exec $TMPDAT ;
-        mpirunf proc.${cf}.${name_m[$ipm]} $TMPRUN/scale_init/${cf} \
-          ./scale-les_init init.conf ) &
-      sleep $BGJOB_INT
-    done
-  #-------------------
-  else # local run directory: run multiple members as needed
-  #-------------------
-    if ((repeat_mems <= fmember)); then
-      ipm=0
-      for c in $(seq $rcycle); do
-        cf=$(printf $CYCLE_FMT $c)
-        set_topo_landuse_bases
-        for m in $(seq $repeat_mems); do
-          ipm=$((ipm+1))
-          if ((ipm > parallel_mems)); then wait; ipm=1; fi
-          echo "  ${stimesfmt[$c]}: node ${node_m[$m]} [$(datetime_now)]"
-          ( pdbash proc.$(printf $CYCLE_FMT 1).${name_m[$m]} alln $SCRP_DIR/src/pre_scale_init.sh $mem_np \
-              $topo_base $landuse_base $TMPDAT/wrf/wrfout_d01 \
-              ${stimes[$c]} $FCSTLEN $TMPRUN/scale_init/${cf} \
-              $TMPDAT/exec $TMPDAT ;
-            mpirunf proc.$(printf $CYCLE_FMT 1).${name_m[$m]} $TMPRUN/scale_init/${cf} \
-              ./scale-les_init init.conf ) &
-          sleep $BGJOB_INT
-        done
-      done
-      wait
-    else
-      ipm=0
-      for c in $(seq $rcycle); do
-        cf=$(printf $CYCLE_FMT $c)
-        set_topo_landuse_bases
-        for m in $(seq $fmember); do
-          mm=$(((c-1) * fmember + m))
-          ipm=$((ipm+1))
-          if ((ipm > parallel_mems)); then wait; ipm=1; fi
-          echo "  ${stimesfmt[$c]}: node ${node_m[$mm]} [$(datetime_now)]"
-          ( pdbash proc.${cf}.${name_m[$mm]} alln $SCRP_DIR/src/pre_scale_init.sh $mem_np \
-              $topo_base $landuse_base $TMPDAT/wrf/wrfout_d01 \
-              ${stimes[$c]} $FCSTLEN $TMPRUN/scale_init/${cf} \
-              $TMPDAT/exec $TMPDAT ;
-            mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale_init/${cf} \
-              ./scale-les_init init.conf ) &
-          sleep $BGJOB_INT
-        done
-      done
-      wait
-    fi
-  #-------------------
-  fi
-  #-------------------
+      for m in $(seq $repeat_mems); do
+        ipm=$((ipm+1))
+        if ((ipm > parallel_mems)); then wait; ipm=1; fi
+        echo "  ${stimesfmt[$c]}: node ${node_m[$m]} [$(datetime_now)]"
 
+        boundary_sub proc.$(printf $CYCLE_FMT 1).${name_m[$m]} alln proc.$(printf $CYCLE_FMT 1).${name_m[$m]} &
+        sleep $BGJOB_INT
+      done
+    done
+    wait
+  else
+    ipm=0
+    for c in $(seq $rcycle); do
+      cf=$(printf $CYCLE_FMT $c)
+      for m in $(seq $fmember); do
+        mm=$(((c-1) * fmember + m))
+        ipm=$((ipm+1))
+        if ((ipm > parallel_mems)); then wait; ipm=1; fi
+        echo "  ${stimesfmt[$c]}: node ${node_m[$mm]} [$(datetime_now)]"
+
+        boundary_sub proc.${cf}.${name_m[$mm]} alln proc.${cf}.${name_m[$mm]} &
+        sleep $BGJOB_INT
+      done
+    done
+    wait
+  fi
+#-------------------
 fi
 
 #-------------------------------------------------------------------------------
@@ -503,16 +381,48 @@ function pertbdy {
 #-------------------------------------------------------------------------------
 
 echo
-
 if ((PERTURB_BDY == 0)); then
-
   echo "  ... skip this step (do not perturb boundaries)"
-
-else
-
-  echo "pertbdy..."
-
+  return 1
 fi
+
+###### not finished yet...
+echo "pertbdy..."
+######
+
+ipm=0
+for c in $(seq $rcycle); do
+  cf=$(printf $CYCLE_FMT $c)
+  if ((PREP_BDY == 1)); then
+    bdy_base="$TMPDAT/bdy_prep/bdy_${stimes[$c]}"
+  else
+    bdy_base="$TMPRUN/scale_init/${cf}/boundary"
+  fi
+
+  for m in $(seq $fmember); do
+    mm=$(((c-1) * fmember + m))
+    ipm=$((ipm+1))
+    if ((ipm > parallel_mems)); then wait; ipm=1; fi
+    echo "  ${stimesfmt[$c]}, member ${name_m[$mm]}: node ${node_m[$mm]} [$(datetime_now)]"
+
+    if ((TMPRUN_MODE <= 2)); then
+      proc_opt='one'
+    else
+      proc_opt='alln'
+    fi
+#   ......
+#    ( pdbash proc.${cf}.${name_m[$mm]} $proc_opt $SCRP_DIR/src/pre_scale.sh $mem_np \
+#        $TMPOUT/anal/${name_m[$mm]}/${stimes[$c]} $bdy_base $topo_base $landuse_base \
+#        ${stimes[$c]} $FCSTLEN $FCSTOUT $TMPRUN/scale/${cf}_${name_m[$mm]} $TMPDAT/exec $TMPDAT ;
+#      mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale/${cf}_${name_m[$mm]} \
+#        ./scale-les run.conf ) &
+#   ......
+#   $TMPRUN/pertbdy/${cf}_${name_m[$mm]}
+
+    sleep $BGJOB_INT
+  done
+done
+wait
 
 #-------------------------------------------------------------------------------
 }
@@ -527,31 +437,44 @@ echo
 ipm=0
 for c in $(seq $rcycle); do
   cf=$(printf $CYCLE_FMT $c)
-  set_topo_landuse_bases
+  if ((PREP_TOPO == 1)); then
+    topo_base="$TMPDAT/topo_prep/topo"
+  else
+    topo_base="$TMPRUN/scale_pp_topo/${cf}/topo"
+  fi
+  if ((PREP_LANDUSE == 1)); then
+    landuse_base="$TMPDAT/landuse_prep/landuse"
+  else
+    landuse_base="$TMPRUN/scale_pp_landuse/${cf}/landuse"
+  fi
+
   for m in $(seq $fmember); do
     mm=$(((c-1) * fmember + m))
     ipm=$((ipm+1))
     if ((ipm > parallel_mems)); then wait; ipm=1; fi
     echo "  ${stimesfmt[$c]}, member ${name_m[$mm]}: node ${node_m[$mm]} [$(datetime_now)]"
-    if ((TMPRUN_MODE <= 2)); then
-      ( pdbash proc.${cf}.${name_m[$mm]} one $SCRP_DIR/src/pre_scale.sh $mem_np \
-          $TMPOUT/anal/${name_m[$mm]}/${stimes[$c]} \
-          $TMPRUN/scale_init/${cf}/boundary \
-          $topo_base $landuse_base \
-          ${stimes[$c]} $FCSTLEN $FCSTOUT $TMPRUN/scale/${cf}_${name_m[$mm]} \
-          $TMPDAT/exec $TMPDAT ;
-        mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale/${cf}_${name_m[$mm]} \
-          ./scale-les run.conf ) &
+
+    if ((PERTURB_BDY == 1)); then
+######
+      echo "not finished yet..."
+#      bdy_base="$TMPRUN/pertbdy/${cf}_${name_m[$mm]}/boundary"
+######
+    elif ((PREP_BDY == 1)); then
+      bdy_base="$TMPDAT/bdy_prep/bdy_${stimes[$c]}"
     else
-      ( pdbash proc.${cf}.${name_m[$mm]} alln $SCRP_DIR/src/pre_scale.sh $mem_np \
-          $TMPOUT/anal/${name_m[$mm]}/${stimes[$c]} \
-          $TMPRUN/scale_init/${cf}/boundary \
-          $topo_base $landuse_base \
-          ${stimes[$c]} $FCSTLEN $FCSTOUT $TMPRUN/scale/${cf}_${name_m[$mm]} \
-          $TMPDAT/exec $TMPDAT ;
-        mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale/${cf}_${name_m[$mm]} \
-          ./scale-les run.conf ) &
+      bdy_base="$TMPRUN/scale_init/${cf}/boundary"
     fi
+    if ((TMPRUN_MODE <= 2)); then
+      proc_opt='one'
+    else
+      proc_opt='alln'
+    fi
+    ( pdbash proc.${cf}.${name_m[$mm]} $proc_opt $SCRP_DIR/src/pre_scale.sh $mem_np \
+        $TMPOUT/anal/${name_m[$mm]}/${stimes[$c]} $bdy_base $topo_base $landuse_base \
+        ${stimes[$c]} $FCSTLEN $FCSTOUT $TMPRUN/scale/${cf}_${name_m[$mm]} $TMPDAT/exec $TMPDAT ;
+      mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale/${cf}_${name_m[$mm]} \
+        ./scale-les run.conf ) &
+
     sleep $BGJOB_INT
   done
 done
@@ -559,62 +482,10 @@ wait
 
 
 
-#for c in $(seq $rcycle); do
-#  cf=$(printf $CYCLE_FMT $c)
-#  for m in $(seq $fmember); do
-#    mm=$(((c-1) * fmember + m))
+exit
 
-#    pdbash proc.${cf}.${name_m[$mm]} alln $SCRP_DIR/src/pre_scale.sh \
-#      $TMPOUT/anal/${name_m[$mm]}/${stimes[$c]} \
-#      /data1/gylien/scale/scale-les/test/case_real/ctl_4_small_domain/initial_WRF/boundary \
-#      /data1/gylien/scale/scale-les/test/case_real/ctl_4_small_domain/topo/topo \
-#      /data1/gylien/scale/scale-les/test/case_real/ctl_4_small_domain/landuse/landuse \
-#      ${stimes[$c]} $FCSTLEN $FCSTOUT $TMPRUN/scale/${cf}_${name_m[$mm]} \
-#      $TMPDAT/exec $TMPDAT &
 
-#    sleep $BGJOB_INT
-#  done
-#done
-#wait
 
-#-------------------------------------------------------------------------------
-
-#echo
-#ppnl=$((ppn*mem_nodes))
-#pcount=0
-#for c in `seq $rcycle`; do
-##  if [ "$LOG_OPT" -le 2 ]; then
-#    mkdir -p $OUTDIR/log/scalefcst/${stimes[$c]}
-##  fi
-#  cf=$(printf $CYCLE_FMT $c)
-#  for m in `seq $fmember`; do
-#    mm=$(((c-1) * fmember + m))
-##    np=`cat $tmpnode/machinefile.gfs.${cf}.${name_m[$mt]} | wc -l`
-####    if [ "${node[${mem2proc[$(((mm-1)*mem_np+1))]}]}" = "${node[1]}" ]; then
-####      pcount=$((pcount+mem_np))
-####      if [ "$pcount" -gt "$ppnl" ]; then
-####        echo "    wait..."
-####        wait
-####        pcount=$mem_np
-####      fi
-####    fi
-#    echo "  run SCALE forecast: ${stimes[$c]}, member ${name_m[$mm]} on node ${node_m[$mm]}"
-##    if [ "$LOG_OPT" -le 2 ]; then
-
-##echo "    mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale/${cf}_${name_m[$mm]} \\"
-##echo "            ./scale-les run.conf > $OUTDIR/log/scalefcst/${stimes[$c]}/scale_${name_m[$mm]}.log 2>&1 &"
-#    mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale/${cf}_${name_m[$mm]} \
-#            ./scale-les run.conf > $OUTDIR/log/scalefcst/${stimes[$c]}/scale_${name_m[$mm]}.log 2>&1 &
-##    else
-##      $MPIBIN/mpiexec -machinefile $tmpnode/machinefile.gfs.${cf}.${name_m[$mt]} -n $mem_np \
-##                      -wdir $ltmpgfs/${cf}_${name_m[$mt]} \
-##                      ./global_fcst > /dev/null 2>&1 &
-##    fi
-#    sleep $BGJOB_INT
-#  done
-#done
-#echo "    wait..."
-#wait
 
 #-------------------------------------------------------------------------------
 }
@@ -625,16 +496,12 @@ function verf {
 #-------------------------------------------------------------------------------
 
 echo
-
 if ((IF_VERF == 0)); then
-
   echo "  ... skip this step (do not run verification)"
-
-else
-
-  echo "verf..."
-
+  return 1
 fi
+
+echo "verf..."
 
 
 #cd $TMPMPI

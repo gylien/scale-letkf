@@ -133,14 +133,14 @@ if ((MACHINE_TYPE == 1)); then
     $MPIRUN -d $RUNDIR $HOSTLIST 1 $PROG $ARGS
   fi
 
-elif ((MACHINE_TYPE == 10)); then
+elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11)); then
 
 #echo 21
   local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
 
 #echo 22
-echo $vcoordfile
-echo "mpirunf $NODEFILE $RUNDIR $PROG $ARGS"
+#echo $vcoordfile
+#echo "mpirunf $NODEFILE $RUNDIR $PROG $ARGS"
 
   if [ "$RUNDIR" == '-' ]; then
     mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS
@@ -208,7 +208,7 @@ if ((MACHINE_TYPE == 1)); then
   fi
 #  $MPIRUN -d $SCRP_DIR $HOSTLIST 1 bash $SCRIPT - $ARGS
 
-elif ((MACHINE_TYPE == 10)); then
+elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11)); then
 
 #echo 11
   if [ "$PROC_OPT" == 'all' ]; then
@@ -224,11 +224,11 @@ elif ((MACHINE_TYPE == 10)); then
   fi
 
 #echo 12
-echo "======"
-echo "pdbash $NODEFILE $PROC_OPT $SCRIPT $ARGS"
-echo $vcoordfile
-cat $vcoordfile
-echo "======"
+#echo "======"
+#echo "pdbash $NODEFILE $PROC_OPT $SCRIPT $ARGS"
+#echo $vcoordfile
+#cat $vcoordfile
+#echo "======"
 
   ( cd $SCRP_DIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $TMPDAT/exec/pdbash $SCRIPT $ARGS )
 

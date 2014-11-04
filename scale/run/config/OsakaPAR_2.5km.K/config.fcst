@@ -36,11 +36,12 @@ FCSTOUT=60
 
 #===============================================================================
 
-FIX_TOPO=0     # 0: No
+PREP_TOPO=0    # 0: No
                # 1: Yes
-FIX_LANDUSE=0  # 0: No
+PREP_LANDUSE=0 # 0: No
                # 1: Yes
-
+PREP_BDY=0     # 0: No
+               # 1: Yes
 PERTURB_BDY=0  # 0: No
                # 1: Yes
 

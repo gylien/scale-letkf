@@ -31,12 +31,6 @@ TMPDIR="$3"
 EXECDIR="$4"
 DATADIR="$5"
 
-#if ((MACHINE_TYPE == 10)); then
-#  TMPDIR="$(pwd)/$TMPDIR"
-#  EXECDIR="$(pwd)/$EXECDIR"
-#  DATADIR="$(pwd)/$DATADIR"
-#fi
-
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
 S_DD=${STIME:6:2}
@@ -54,14 +48,6 @@ ln -fs $EXECDIR/scale-les_pp $TMPDIR
 ln -fs $DATADIR/topo/DEM50M/Products $TMPDIR/input
 
 #===============================================================================
-
-
-echo 777
-pwd
-ls -l
-ls -l $TMPDAT
-ls -l $TMPDAT/conf
-
 
 cat $TMPDAT/conf/scale_pp_topo.conf | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \

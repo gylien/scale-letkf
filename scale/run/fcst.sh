@@ -90,7 +90,9 @@ if ((MACHINE_TYPE != 10)); then
 
   safe_init_tmpdir $STAGING_DIR
   staging_list
-  pdbash node all $SCRP_DIR/src/stage_in.sh
+  if ((TMPDAT_MODE >= 2 || TMPOUT_MODE >= 2)); then
+    pdbash node all $SCRP_DIR/src/stage_in.sh
+  fi
 fi
 
 #===============================================================================
