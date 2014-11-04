@@ -48,10 +48,9 @@ PERTURB_BDY=0  # 0: No
 #===============================================================================
 # Diagnostic output settings
 
-              #      fcst fcstg/fcstv fcstgp/fcstvp
-FOUT_OPT=1    # 1:   o    o           o
-              # 2:        o           o
-              # 3:        o
+              #      fcst fcstr
+FOUT_OPT=1    # 1:   o    o
+              # 2:   o
 
 #===============================================================================
 

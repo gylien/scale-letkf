@@ -33,18 +33,18 @@ EOF
   exit 1
 fi
 
-MYRANK="$1"
-MEM_NP="$2"
-INIT="$3"
-BDY="$4"
-TOPO="$5"
-LANDUSE="$6"
-STIME="$7"
-FCSTLEN="$8"
-FCSTINT="$9"
-TMPDIR="${10}"
-EXECDIR="${11}"
-DATADIR="${12}"
+MYRANK="$1"; shift
+MEM_NP="$1"; shift
+INIT="$1"; shift
+BDY="$1"; shift
+TOPO="$1"; shift
+LANDUSE="$1"; shift
+STIME="$1"; shift
+FCSTLEN="$1"; shift
+FCSTINT="$1"; shift
+TMPDIR="$1"; shift
+EXECDIR="$1"; shift
+DATADIR="$1"
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
