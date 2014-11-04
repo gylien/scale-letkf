@@ -76,10 +76,6 @@ MPIBIN=$(dirname $(which mpiexec))
 MPIRUN="$MPIBIN/mpiexec"
 ######
 
-SERVER_HOST="$PJM_O_HOST"     # Hostname of the head node (seen from nodes)
-
-#SCP="scp -q"
-#SCP_HOSTPREFIX="$SERVER_HOST:"
 SCP='cp -L'
 SCP_HOSTPREFIX=''
 

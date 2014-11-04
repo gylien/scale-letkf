@@ -57,7 +57,7 @@ done
 
 #-------------------------------------------------------------------------------
 
-if ((MACHINE_TYPE != 10)); then
+if ((MACHINE_TYPE != 10 && MACHINE_TYPE != 11)); then
   if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
     safe_init_tmpdir $TMP
   fi

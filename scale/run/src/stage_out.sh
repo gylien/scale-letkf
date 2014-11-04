@@ -8,6 +8,7 @@
 . config.all
 
 MYRANK="$1"   # s: run on the server node (create directories)
+              # a: run on the server node, stage out all files
 
 if [ "$MYRANK" == '-' ]; then
   # If myrank is not passed using the first argument, determine myrank in another way.
@@ -18,7 +19,21 @@ fi
 #-------------------------------------------------------------------------------
 # Files in TMPOUT directory
 
-if ((TMPOUT_MODE >= 2)); then
+if [ "$MYRANK" == 'a' ]; then
+
+  for ifile in $(ls $STAGING_DIR/stageout.out.*); do
+    while read line; do
+      destin="$(echo $line | cut -d '|' -s -f1)"
+      source="$(echo $line | cut -d '|' -s -f2)"
+      if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
+        mkdir -p "$(dirname ${destin})"
+        $SCP -r "${TMPOUT}/${source}" "${SCP_HOSTPREFIX}${destin}"
+      fi
+    done < "$ifile"
+  done
+
+elif ((TMPOUT_MODE >= 2)); then
+
   if [ -s "$STAGING_DIR/stageout.out.$((MYRANK+1))" ]; then
     while read line; do
       destin="$(echo $line | cut -d '|' -s -f1)"
@@ -32,6 +47,7 @@ if ((TMPOUT_MODE >= 2)); then
       fi
     done < "$STAGING_DIR/stagein.out.$((MYRANK+1))"
   fi
+
 fi
 
 #===============================================================================

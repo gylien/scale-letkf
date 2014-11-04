@@ -16,7 +16,7 @@ cd "$(dirname "$0")"
 
 #--------------
 
-TIME_LIMIT='01:00:00'
+TIME_LIMIT='00:30:00'
 
 #===============================================================================
 # Configuration
@@ -43,7 +43,7 @@ fi
 
 setting
 
-jobscrp='fcst_job.sh'
+jobscrp="$TMP/fcst_job.sh"
 
 #-------------------------------------------------------------------------------
 
@@ -58,6 +58,10 @@ done
 echo
 echo "Create a job script '$jobscrp'..."
 echo
+
+#-------------------------------------------------------------------------------
+
+safe_init_tmpdir $TMP
 
 #===============================================================================
 # Determine the distibution schemes
@@ -74,9 +78,8 @@ declare -a node
 declare -a name_m
 declare -a node_m
 
-safe_init_tmpdir $TMPS
-safe_init_tmpdir $TMPS/node
-distribute_fcst "$MEMBERS" $CYCLE - $TMPS/node
+safe_init_tmpdir $NODEFILE_DIR
+distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
 
 #===============================================================================
 # Determine the staging list and then stage in
@@ -85,7 +88,16 @@ echo "[$(datetime_now)] Initialization (stage in)" >&2
 
 safe_init_tmpdir $STAGING_DIR
 staging_list
-bash $SCRP_DIR/src/stage_in.sh
+bash $SCRP_DIR/src/stage_in.sh a
+
+#-------------------------------------------------------------------------------
+# stage-in: scripts
+
+cp -L -r $SCRP_DIR/config.all $TMP/config.all
+cp -L -r $SCRP_DIR/config.fcst $TMP/config.fcst
+cp -L -r $SCRP_DIR/fcst.sh $TMP/fcst.sh
+mkdir -p $TMP/src
+cp -L -r $SCRP_DIR/src/* $TMP/src
 
 #===============================================================================
 
@@ -95,9 +107,9 @@ bash $SCRP_DIR/src/stage_in.sh
 cp $SCRP_DIR/config.all $TMPS
 
 
-#echo "SCRP_DIR='.'" >> $TMPS/config.all
+echo "SCRP_DIR=\"\$TMP\"" >> $TMP/config.all
 #echo "NODEFILE_DIR=\"\$(pwd)/node\"" >> $TMPS/config.all
-echo "LOGDIR=\"\$(pwd)/log\"" >> $TMPS/config.all
+echo "LOGDIR=\"\$TMP/log\"" >> $TMP/config.all
 
 #echo "NNODES=$NNODES" >> $TMPS/config.all
 #echo "PPN=$PPN" >> $TMPS/config.all
@@ -127,13 +139,7 @@ cat > $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-ls -l .
-ls -l dat
-ls -l dat/conf
-
 ./fcst.sh
-
-ls -l .
 
 EOF
 
@@ -148,8 +154,13 @@ echo
 
 echo "[$(datetime_now)] Finalization (stage out)" >&2
 
-#bash $SCRP_DIR/src/stage_out.sh s  # first run on the server node (create directories)
-#bash $SCRP_DIR/src/stage_out.sh
+#bash $SCRP_DIR/src/stage_out.sh a
+
+#mkdir -p $LOGDIR
+#cp -f $TMP/log/fcst_*.log $LOGDIR
+#if [ -f "$TMP/log/fcst.err" ]; then
+#  cat $TMP/log/fcst.err >> $LOGDIR/fcst.err
+#fi
 
 #safe_rm_tmpdir $TMP
 #safe_rm_tmpdir $TMPS

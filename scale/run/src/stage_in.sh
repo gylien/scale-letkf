@@ -7,7 +7,7 @@
 
 . config.all
 
-MYRANK="$1"
+MYRANK="$1"   # a: run on the server node, stage in all files
 
 if [ "$MYRANK" == '-' ]; then
   # If myrank is not passed using the first argument, determine myrank in another way.
@@ -18,7 +18,8 @@ fi
 #-------------------------------------------------------------------------------
 # Files in TMPDAT directory
 
-if (((TMPDAT_MODE == 2 && MYRANK == 0) || (TMPDAT_MODE == 3))); then
+if [ "$MYRANK" == 'a' ] ||
+   (((TMPDAT_MODE == 2 && MYRANK == 0) || TMPDAT_MODE == 3)); then
 
   if [ -s "$STAGING_DIR/stagein.dat" ]; then
     while read line; do
@@ -36,7 +37,21 @@ fi
 #-------------------------------------------------------------------------------
 # Files in TMPOUT directory
 
-if ((TMPOUT_MODE >= 2)); then
+if [ "$MYRANK" == 'a' ]; then
+
+  for ifile in $(ls $STAGING_DIR/stagein.out.*); do
+    while read line; do
+      source="$(echo $line | cut -d '|' -s -f1)"
+      destin="$(echo $line | cut -d '|' -s -f2)"
+      if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
+        mkdir -p "$(dirname ${TMPOUT}/${destin})"
+        $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPOUT}/${destin}"
+      fi
+    done < "$ifile"
+  done
+
+elif ((TMPOUT_MODE >= 2)); then
+
   if [ -s "$STAGING_DIR/stagein.out.$((MYRANK+1))" ]; then
     while read line; do
       source="$(echo $line | cut -d '|' -s -f1)"
@@ -47,6 +62,7 @@ if ((TMPOUT_MODE >= 2)); then
       fi
     done < "$STAGING_DIR/stagein.out.$((MYRANK+1))"
   fi
+
 fi
 
 #===============================================================================
