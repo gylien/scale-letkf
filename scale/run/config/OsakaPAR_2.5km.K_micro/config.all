@@ -106,6 +106,17 @@ TMPL= # no use
 #TMPS="$DIR/tmp/$TMPSUBDIR"
 #TMPL='.'
 
+###### K computer (micro)
+TMPDAT_MODE=2
+TMPRUN_MODE=2
+TMPOUT_MODE=2
+MACHINE_TYPE=11
+
+TMP="$DIR/tmp/$TMPSUBDIR"
+TMPS="$DIR/tmp/$TMPSUBDIR"
+TMPL= # no use
+
+
 #-------------------
 
 STAGING_DIR="$TMP/staging"
@@ -146,10 +157,10 @@ PYTHON="python"
 #                   #  1: PBS format
 #                   #  2: K computer vcoordfile format
 
-MEMBER=2           # Ensemble size
+MEMBER=4           # Ensemble size
 
 NNODES=4           # Number of nodes
-PPN=4              # Number of processes per node
+PPN=8              # Number of processes per node
 
 THREAD=1           ######
 

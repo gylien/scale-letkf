@@ -219,7 +219,7 @@ msprd=$((MEMBER+2))
 
 if ((MACHINE_TYPE == 1)); then
   read_nodefile_pbs "$NODEFILE"
-elif ((MACHINE_TYPE == 10)); then
+elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11)); then
   local n
   local p
   for n in $(seq $NNODES_real); do
@@ -335,7 +335,7 @@ totalnp=$((PPN*NNODES))
 
 if ((MACHINE_TYPE == 1)); then
   read_nodefile_pbs "$NODEFILE"
-elif ((MACHINE_TYPE == 10)); then
+elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11)); then
   local n
   local p
   for n in $(seq $NNODES_real); do

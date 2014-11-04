@@ -125,22 +125,25 @@ bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR >> $jobscrp
 
 #########################
 cat >> $jobscrp << EOF
-#PJM --stgout "./* /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/"
-#PJM --stgout-dir "./node /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/node"
-#PJM --stgout-dir "./dat /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/dat"
-#PJM --stgout-dir "./run /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/run"
-#PJM --stgout-dir "./out /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/out"
-#PJM --stgout-dir "./log /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/runlog"
+#PJM --stgout "./* /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/ stgout=all"
+#PJM --stgout-dir "./node /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/node stgout=all"
+#PJM --stgout-dir "./dat /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/dat stgout=all"
+#PJM --stgout-dir "./run /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/run stgout=all"
+#PJM --stgout-dir "./out /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/out stgout=all"
+#PJM --stgout-dir "./log /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/run stgout=all"
 EOF
 #########################
 
 cat >> $jobscrp << EOF
+#PJM -j
 #PJM -s
 . /work/system/Env_base
 export OMP_NUM_THREADS=1
 export PARALLEL=1
 
 ls -l .
+ls -l dat
+ls -l dat/conf
 
 ./fcst.sh
 

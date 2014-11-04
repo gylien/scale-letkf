@@ -270,11 +270,12 @@ else
       echo "  ${stimesfmt[$c]}: node ${node_m[$ipm]} [$(datetime_now)]"
       ( pdbash proc.${cfr}.${name_m[$ipm]} one $SCRP_DIR/src/pre_scale_pp_topo.sh \
           ${stimes[$c]} $TMPRUN/scale_pp_topo/${cf} \
-          $TMPDAT/exec $TMPDAT &&
+          $TMPDAT/exec $TMPDAT;
         mpirunf proc.${cfr}.${name_m[$ipm]} $TMPRUN/scale_pp_topo/${cf} \
           ./scale-les_pp pp.conf ) &
       sleep $BGJOB_INT
     done
+    wait
   #-------------------
   else # local run directory: run multiple members as needed
   #-------------------
@@ -318,13 +319,18 @@ else
   fi
   #-------------------
 
-
+pwd
+ls -l
 ls -l $TMPRUN/scale_pp_topo
 ls -l $TMPRUN/scale_pp_topo/0001
 ls -l $TMPRUN/scale_pp_topo/0002
 
 
 fi
+
+
+exit
+
 
 #-------------------------------------------------------------------------------
 }

@@ -42,17 +42,16 @@ S_SS=${STIME:12:2}
 
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
-cd $TMPDIR
 
-ln -fs $EXECDIR/scale-les_pp .
+ln -fs $EXECDIR/scale-les_pp $TMPDIR
 
-ln -fs $DATADIR/landuse/LU100M/Products input
+ln -fs $DATADIR/landuse/LU100M/Products $TMPDIR/input
 
 #===============================================================================
 
 cat $TMPDAT/conf/scale_pp_landuse.conf | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
-    > pp.conf
+    > $TMPDIR/pp.conf
 
 #===============================================================================
 

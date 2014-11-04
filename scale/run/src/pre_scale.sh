@@ -57,18 +57,17 @@ S_SS=${STIME:12:2}
 
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
-cd $TMPDIR
 
-ln -fs $EXECDIR/scale-les .
+ln -fs $EXECDIR/scale-les $TMPDIR
 
-ln -fs $DATADIR/rad/PARAG.29 .
-ln -fs $DATADIR/rad/PARAPC.29 .
-ln -fs $DATADIR/rad/VARDATA.RM29 .
-ln -fs $DATADIR/rad/cira.nc .
-ln -fs $DATADIR/rad/MIPAS/day.atm .
-ln -fs $DATADIR/rad/MIPAS/equ.atm .
-ln -fs $DATADIR/rad/MIPAS/sum.atm .
-ln -fs $DATADIR/rad/MIPAS/win.atm .
+ln -fs $DATADIR/rad/PARAG.29 $TMPDIR
+ln -fs $DATADIR/rad/PARAPC.29 $TMPDIR
+ln -fs $DATADIR/rad/VARDATA.RM29 $TMPDIR
+ln -fs $DATADIR/rad/cira.nc $TMPDIR
+ln -fs $DATADIR/rad/MIPAS/day.atm $TMPDIR
+ln -fs $DATADIR/rad/MIPAS/equ.atm $TMPDIR
+ln -fs $DATADIR/rad/MIPAS/sum.atm $TMPDIR
+ln -fs $DATADIR/rad/MIPAS/win.atm $TMPDIR
 
 ###
 ### Given $mem_np, do exact loop, use exact process
@@ -76,16 +75,16 @@ ln -fs $DATADIR/rad/MIPAS/win.atm .
 for q in $(seq $MEM_NP); do
   sfx=$(printf $SCALE_SFX $((q-1)))
 #  if [ -e "$INIT$sfx" ]; then
-    ln -fs $INIT$sfx init$sfx
+    ln -fs $INIT$sfx $TMPDIR/init$sfx
 #  fi
 #  if [ -e "$BDY$sfx" ]; then
-    ln -fs $BDY$sfx boundary$sfx
+    ln -fs $BDY$sfx $TMPDIR/boundary$sfx
 #  fi
 #  if [ -e "$TOPO$sfx" ]; then
-    ln -fs $TOPO$sfx topo$sfx
+    ln -fs $TOPO$sfx $TMPDIR/topo$sfx
 #  fi
 #  if [ -e "$LANDUSE$sfx" ]; then
-    ln -fs $LANDUSE$sfx landuse$sfx
+    ln -fs $LANDUSE$sfx $TMPDIR/landuse$sfx
 #  fi
 done
 
@@ -95,7 +94,7 @@ cat $TMPDAT/conf/scale.conf | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
         -e "s/\[TIME_DURATION\]/ TIME_DURATION = ${FCSTLEN}.D0,/" \
         -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = ${FCSTINT}.D0,/" \
-    > run.conf
+    > $TMPDIR/run.conf
 
 #===============================================================================
 

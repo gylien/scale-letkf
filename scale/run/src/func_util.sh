@@ -98,7 +98,7 @@ function mpirunf {
 #-------------------------------------------------------------------------------
 # Submit a MPI job according to nodefile
 #
-# Usage: mpiexec_nodefile NODEFILE RUNDIR PROG [ARGS]
+# Usage: mpirunf NODEFILE RUNDIR PROG [ARGS]
 #
 #   NODEFILE  Name of nodefile (omit the directory $NODEFILE_DIR)
 #   RUNDIR    Working directory
@@ -135,15 +135,21 @@ if ((MACHINE_TYPE == 1)); then
 
 elif ((MACHINE_TYPE == 10)); then
 
+#echo 21
   local vcoordfile="$(pwd)/${NODEFILE_DIR}/${NODEFILE}"
 
+#echo 22
 echo $vcoordfile
+echo "mpirunf $NODEFILE $RUNDIR $PROG $ARGS"
 
   if [ "$RUNDIR" == '-' ]; then
     mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS
   else
-    ( cd $RUNDIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS )
+#    ( cd $RUNDIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS )
+    ( cd $RUNDIR && ls -l && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS )
   fi
+
+#echo 23
 
 fi
 
@@ -205,6 +211,7 @@ if ((MACHINE_TYPE == 1)); then
 
 elif ((MACHINE_TYPE == 10)); then
 
+#echo 11
   if [ "$PROC_OPT" == 'all' ]; then
     local vcoordfile="$(pwd)/${NODEFILE_DIR}/${NODEFILE}"
   elif [ "$PROC_OPT" == 'alln' ]; then
@@ -217,13 +224,20 @@ elif ((MACHINE_TYPE == 10)); then
     exit 1
   fi
 
+#echo 12
+echo "======"
+echo "pdbash $NODEFILE $PROC_OPT $SCRIPT $ARGS"
+echo $vcoordfile
 cat $vcoordfile
+echo "======"
 
   if [ -f "$TMPDAT/exec/pdbash" ]; then
     ( cd $SCRP_DIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $TMPDAT/exec/pdbash $SCRIPT $ARGS )
   else
     ( cd $SCRP_DIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $COMMON_DIR/pdbash $SCRIPT $ARGS )
   fi
+
+#echo 13
 
 fi
 

@@ -53,26 +53,25 @@ S_SS=${STIME:12:2}
 
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
-cd $TMPDIR
 
-ln -fs $EXECDIR/scale-les_init .
+ln -fs $EXECDIR/scale-les_init $TMPDIR
 
-ln -fs $DATADIR/rad/PARAG.29 .
-ln -fs $DATADIR/rad/PARAPC.29 .
-ln -fs $DATADIR/rad/VARDATA.RM29 .
-ln -fs $DATADIR/rad/cira.nc .
-ln -fs $DATADIR/rad/MIPAS/day.atm .
-ln -fs $DATADIR/rad/MIPAS/equ.atm .
-ln -fs $DATADIR/rad/MIPAS/sum.atm .
-ln -fs $DATADIR/rad/MIPAS/win.atm .
+ln -fs $DATADIR/rad/PARAG.29 $TMPDIR
+ln -fs $DATADIR/rad/PARAPC.29 $TMPDIR
+ln -fs $DATADIR/rad/VARDATA.RM29 $TMPDIR
+ln -fs $DATADIR/rad/cira.nc $TMPDIR
+ln -fs $DATADIR/rad/MIPAS/day.atm $TMPDIR
+ln -fs $DATADIR/rad/MIPAS/equ.atm $TMPDIR
+ln -fs $DATADIR/rad/MIPAS/sum.atm $TMPDIR
+ln -fs $DATADIR/rad/MIPAS/win.atm $TMPDIR
 
 for q in $(seq $MEM_NP); do
   sfx=$(printf $SCALE_SFX $((q-1)))
 #  if [ -e "$TOPO$sfx" ]; then
-    ln -fs $TOPO$sfx topo$sfx
+    ln -fs $TOPO$sfx $TMPDIR/topo$sfx
 #  fi
 #  if [ -e "$LANDUSE$sfx" ]; then
-    ln -fs $LANDUSE$sfx landuse$sfx
+    ln -fs $LANDUSE$sfx $TMPDIR/landuse$sfx
 #  fi
 done
 
@@ -83,7 +82,7 @@ time=$STIME
 for c in $(seq $NUMBER_OF_FILES); do
   wrfoutfile="${WRFOUT}_${time}"
   if [ -e "$wrfoutfile" ]; then
-    ln -fs $wrfoutfile wrfout_$(printf %05d $i)
+    ln -fs $wrfoutfile $TMPDIR/wrfout_$(printf %05d $i)
   else
     echo "[Error] $0: Cannot find WRFOUT file '$wrfoutfile'."
     exit 1
@@ -98,7 +97,7 @@ cat $TMPDAT/conf/scale_init.conf | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
         -e "s/\[NUMBER_OF_FILES\]/ NUMBER_OF_FILES = $NUMBER_OF_FILES,/" \
         -e "s/\[BOUNDARY_UPDATE_DT\]/ BOUNDARY_UPDATE_DT = $ANLWRF_INT.D0,/" \
-    > init.conf
+    > $TMPDIR/init.conf
 
 #===============================================================================
 
