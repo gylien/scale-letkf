@@ -58,7 +58,7 @@ TMPSUBDIR="scale-letkf_$(whoami)_${SYSNAME}"
 
 TMPDAT_MODE=2
 TMPRUN_MODE=2
-TMPOUT_MODE=2
+TMPOUT_MODE=$TMPRUN_MODE
 
 TMP= # When $MACHINE_TYPE=10, this will be automatically set
 TMPS="$DIR/tmp/$TMPSUBDIR"

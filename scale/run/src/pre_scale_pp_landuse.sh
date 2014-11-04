@@ -11,7 +11,7 @@
 if (($# < 5)); then
   cat >&2 << EOF
 
-[scale_pre.sh] Prepare a temporary directory for SCALE model run,
+[pre_scale_pp_landuse.sh] Prepare a temporary directory for SCALE model run.
 
 Usage: $0 MYRANK STIME TMPDIR EXECDIR DATADIR
 

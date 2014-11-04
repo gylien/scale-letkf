@@ -133,7 +133,7 @@ if ((MACHINE_TYPE == 1)); then
     $MPIRUN -d $RUNDIR $HOSTLIST 1 $PROG $ARGS
   fi
 
-elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11)); then
+elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
 #echo 21
   local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
@@ -186,6 +186,15 @@ local PROC_OPT="$1"; shift
 local SCRIPT="$1"; shift
 local ARGS="$@"
 
+if [ -x "$TMPDAT/exec/pdbash" ]; then
+  pdbash_exec="$TMPDAT/exec/pdbash"
+elif [ -x "$COMMON_DIR/pdbash" ]; then
+  pdbash_exec="$COMMON_DIR/pdbash"
+else
+  echo "[Error] $FUNCNAME: Cannot find 'pdbash' program." >&2
+  exit 1
+fi
+
 #-------------------------------------------------------------------------------
 
 if ((MACHINE_TYPE == 1)); then
@@ -201,14 +210,10 @@ if ((MACHINE_TYPE == 1)); then
   fi
   HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
 
-  if [ -f "$TMPDAT/exec/pdbash" ]; then
-    $MPIRUN -d $SCRP_DIR $HOSTLIST 1 $TMPDAT/exec/pdbash $SCRIPT $ARGS
-  else
-    $MPIRUN -d $SCRP_DIR $HOSTLIST 1 $COMMON_DIR/pdbash $SCRIPT $ARGS
-  fi
+  $MPIRUN -d $SCRP_DIR $HOSTLIST 1 $pdbash_exec $SCRIPT $ARGS
 #  $MPIRUN -d $SCRP_DIR $HOSTLIST 1 bash $SCRIPT - $ARGS
 
-elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11)); then
+elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
 #echo 11
   if [ "$PROC_OPT" == 'all' ]; then
@@ -230,7 +235,7 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11)); then
 #cat $vcoordfile
 #echo "======"
 
-  ( cd $SCRP_DIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $TMPDAT/exec/pdbash $SCRIPT $ARGS )
+  ( cd $SCRP_DIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS )
 
 #echo 13
 

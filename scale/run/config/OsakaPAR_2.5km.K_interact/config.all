@@ -50,7 +50,7 @@ OBSNCEP=          # directory of observation data in NCEP BUFR format
 # STAGE_OPT ???
 
 ###### K computer
-MACHINE_TYPE=11
+MACHINE_TYPE=12
 
 SYSNAME="$(basename $OUTDIR)"    # A unique name in the machine
                                  # (used to identify multiple GFS-LETKFs running in the same time)
@@ -60,7 +60,7 @@ TMPDAT_MODE=2
 TMPRUN_MODE=2
 TMPOUT_MODE=$TMPRUN_MODE
 
-TMP="/scratch/ra000015/gylien/$TMPSUBDIR"
+TMP="$DIR/tmp/$TMPSUBDIR"
 TMPS="$DIR/tmp/$TMPSUBDIR"
 TMPL= # no use
 

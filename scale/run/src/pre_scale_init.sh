@@ -12,7 +12,7 @@
 if (($# < 10)); then
   cat >&2 << EOF
 
-[scale_pre.sh] Prepare a temporary directory for SCALE model run,
+[pre_scale_init.sh] Prepare a temporary directory for SCALE model run.
 
 Usage: $0 MYRANK MEM_NP TOPO LANDUSE WRFOUT STIME FCSTLEN TMPDIR EXECDIR DATADIR
 

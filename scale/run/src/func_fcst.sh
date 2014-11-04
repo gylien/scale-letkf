@@ -163,7 +163,8 @@ EOF
   time=$STIME
   etime_anlwrf=$(datetime $ETIME $((FCSTLEN+ANLWRF_INT)) s)
   while ((time <= etime_anlwrf)); do
-    echo "${ANLWRF}/wrfout_d01_${time}|wrf/wrfout_d01_${time}" >> $STAGING_DIR/stagein.dat
+    path="wrfout_d01_${time}"
+    echo "${ANLWRF}/${path}|wrf/${path}" >> $STAGING_DIR/stagein.dat
     if ((time == etime_anlwrf)); then
       break
     fi
@@ -172,7 +173,8 @@ EOF
 
   if ((PREP_TOPO == 1)); then
     for q in $(seq $mem_np); do
-      echo "${DATADIR}/topo_prep/topo$(printf $SCALE_SFX $((q-1)))|topo_prep/topo$(printf $SCALE_SFX $((q-1)))" >> $STAGING_DIR/stagein.dat
+      path="topo_prep/topo$(printf $SCALE_SFX $((q-1)))"
+      echo "${DATADIR}/${path}|${path}" >> $STAGING_DIR/stagein.dat
     done
   else
     cat >> $STAGING_DIR/stagein.dat << EOF
@@ -183,7 +185,8 @@ EOF
 
   if ((PREP_LANDUSE == 1)); then
     for q in $(seq $mem_np); do
-      echo "${DATADIR}/landuse_prep/landuse$(printf $SCALE_SFX $((q-1)))|landuse_prep/landuse$(printf $SCALE_SFX $((q-1)))" >> $STAGING_DIR/stagein.dat
+      path="landuse_prep/landuse$(printf $SCALE_SFX $((q-1)))"
+      echo "${DATADIR}/${path}|${path}" >> $STAGING_DIR/stagein.dat
     done
   else
     cat >> $STAGING_DIR/stagein.dat << EOF
@@ -199,6 +202,8 @@ EOF
   fi
 #-------------------
 fi
+
+#-------------------------------------------------------------------------------
 
 if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
 #-------------------
@@ -217,12 +222,25 @@ else
         for m in $(seq $fmember); do
           mm=$(((c-1) * fmember + m))
           for q in $(seq $mem_np); do
-            opath="anal/${name_m[$mm]}/${time2}$(printf $SCALE_SFX $((q-1)))"
-            if ((MACHINE_TYPE == 10)); then
-              echo "${OUTDIR}/${opath}|${opath}" >> $STAGING_DIR/stagein.out.${mem2proc[$(((mm-1)*mem_np+q))]}
-            else
-              echo "${OUTDIR}/${opath}|${opath}" >> $STAGING_DIR/stagein.out.${mem2proc[$(((mm-1)*mem_np+q))]}
+            #-------------------
+            # stage-in
+
+            path="${time2}/anal/${name_m[$mm]}/init$(printf $SCALE_SFX $((q-1)))"
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2proc[$(((mm-1)*mem_np+q))]}
+
+            #-------------------
+            # stage-out
+
+            if ((FOUT_OPT <= 2)); then
+              path="${time2}/fcst/${name_m[$mm]}/history$(printf $SCALE_SFX $((q-1)))"
+              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stageout.out.${mem2proc[$(((mm-1)*mem_np+q))]}
             fi
+            if ((FOUT_OPT <= 1)); then
+              path="${time2}/fcst/${name_m[$mm]}/init_$(datetime ${time2} $FCSTLEN s)$(printf $SCALE_SFX $((q-1)))"
+              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stageout.out.${mem2proc[$(((mm-1)*mem_np+q))]}
+            fi
+
+            #-------------------
           done
         done
       fi
@@ -232,6 +250,33 @@ else
   done
 #-------------------
 fi
+
+
+
+#for c in `seq $CYCLES`; do
+#  for m in `seq $fmember`; do
+#    mt=$(((c-1) * fmember + m))
+#    echo "rm|anal/${name_m[$mt]}/${Syyyymmddhh[$c]}.sig" >> $tmpstageout/out.${node_m[$mt]}
+#    echo "rm|anal/${name_m[$mt]}/${Syyyymmddhh[$c]}.sfc" >> $tmpstageout/out.${node_m[$mt]}
+#    fh=0
+#    while [ "$fh" -le "$FCSTLEN" ]; do
+#      fhhh=`printf '%03d' $fh`
+#      Fyyyymmddhh=$(datetime ${STIME[$c]} $fh h | cut -c 1-10)
+#      if [ "$FOUT_OPT" -le 1 ]; then
+#        echo "mv|fcst/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.sig" >> $tmpstageout/out.${node_m[$mt]}
+#        echo "mv|fcst/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.sfc" >> $tmpstageout/out.${node_m[$mt]}
+#      fi
+#      echo "mv|fcstg/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.grd" >> $tmpstageout/out.${node_m[$mt]}
+#      if [ "$FOUT_OPT" -le 2 ]; then
+#        echo "mv|fcstgp/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.grd" >> $tmpstageout/out.${node_m[$mt]}
+#      fi
+#      echo "mv|verfo1/${fhhh}/${name_m[$mt]}/${Fyyyymmddhh}.dat" >> $tmpstageout/out.${node_m[$mt]}
+#      echo "mv|verfa1/${fhhh}/${name_m[$mt]}/${Fyyyymmddhh}.dat" >> $tmpstageout/out.${node_m[$mt]}
+#      echo "mv|verfa2/${fhhh}/${name_m[$mt]}/${Fyyyymmddhh}.dat" >> $tmpstageout/out.${node_m[$mt]}
+#    fh=$((fh + FCSTOUT))
+#    done
+#  done
+#done
 
 #-------------------------------------------------------------------------------
 }
@@ -412,7 +457,7 @@ for c in $(seq $rcycle); do
     fi
 #   ......
 #    ( pdbash proc.${cf}.${name_m[$mm]} $proc_opt $SCRP_DIR/src/pre_scale.sh $mem_np \
-#        $TMPOUT/anal/${name_m[$mm]}/${stimes[$c]} $bdy_base $topo_base $landuse_base \
+#        $TMPOUT/${stimes[$c]}/anal/${name_m[$mm]}/init $bdy_base $topo_base $landuse_base \
 #        ${stimes[$c]} $FCSTLEN $FCSTOUT $TMPRUN/scale/${cf}_${name_m[$mm]} $TMPDAT/exec $TMPDAT ;
 #      mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale/${cf}_${name_m[$mm]} \
 #        ./scale-les run.conf ) &
@@ -470,10 +515,12 @@ for c in $(seq $rcycle); do
       proc_opt='alln'
     fi
     ( pdbash proc.${cf}.${name_m[$mm]} $proc_opt $SCRP_DIR/src/pre_scale.sh $mem_np \
-        $TMPOUT/anal/${name_m[$mm]}/${stimes[$c]} $bdy_base $topo_base $landuse_base \
+        $TMPOUT/${stimes[$c]}/anal/${name_m[$mm]}/init $bdy_base $topo_base $landuse_base \
         ${stimes[$c]} $FCSTLEN $FCSTOUT $TMPRUN/scale/${cf}_${name_m[$mm]} $TMPDAT/exec $TMPDAT ;
       mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale/${cf}_${name_m[$mm]} \
-        ./scale-les run.conf ) &
+        ./scale-les run.conf ;
+      pdbash proc.${cf}.${name_m[$mm]} $proc_opt $SCRP_DIR/src/post_scale.sh $mem_np \
+        ${stimes[$c]} ${name_m[$mm]} $FCSTLEN $TMPRUN/scale/${cf}_${name_m[$mm]} ) &
 
     sleep $BGJOB_INT
   done

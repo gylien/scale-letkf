@@ -75,7 +75,7 @@ declare -a node
 declare -a name_m
 declare -a node_m
 
-if ((MACHINE_TYPE == 10)); then
+if ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11)); then
   distribute_fcst "$MEMBERS" $CYCLE - -
 else
   safe_init_tmpdir $NODEFILE_DIR
@@ -85,7 +85,7 @@ fi
 #===============================================================================
 # Determine the staging list and then stage in
 
-if ((MACHINE_TYPE != 10)); then
+if ((MACHINE_TYPE != 10 && MACHINE_TYPE != 11)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR
@@ -217,7 +217,10 @@ if ((MACHINE_TYPE != 10)); then
 
   echo "[$(datetime_now)] Finalization (stage out)" >&2
 
-#  pdbash node all $SCRP_DIR/src/stage_out.sh
+  if ((TMPOUT_MODE >= 2)); then
+    bash $SCRP_DIR/src/stage_out.sh s  # first run on the server node (create directories)
+    pdbash node all $SCRP_DIR/src/stage_out.sh
+  fi
 
 fi
 

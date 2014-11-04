@@ -1,0 +1,59 @@
+#!/bin/bash
+#===============================================================================
+#
+#  Settings for fcst.sh
+#
+#===============================================================================
+
+STIME='20130713010000'
+ETIME='20130713011000'
+MEMBERS='mems'
+CYCLE=2
+CYCLE_SKIP=1
+IF_VERF=0
+IF_EFSO=0
+ISTEP=
+FSTEP=
+
+#===============================================================================
+# Forecast settings
+
+FCSTLEN=300         # SCALE forecast length in the forecast mode (second)
+#FCSTOUT=$LCYCLE    # SCALE forecast output interval in the forecast mode (second)
+FCSTOUT=60
+
+#===============================================================================
+# EFSO settings
+
+#EFSOT=24           # EFSO validation time interval (from the analysis time) (hour)
+
+#OBSOUT_DIAG=0      # Store obsgues/obsanal (for EFSO) during the GFS-LETKF cycling run
+#                   #  0: No
+#                   #  1: Yes
+
+#EFSOFLEN=$EFSOT    # SCALE forecast length in the EFSO (ensemble) forecast mode (second)
+#EFSOFOUT=$LCYCLE   # SCALE forecast output interval in the EFSO (ensemble) forecast mode (second)
+
+#===============================================================================
+
+FIX_TOPO=0     # 0: No
+               # 1: Yes
+FIX_LANDUSE=0  # 0: No
+               # 1: Yes
+
+PERTURB_BDY=0  # 0: No
+               # 1: Yes
+
+#===============================================================================
+# Diagnostic output settings
+
+              #      fcst fcstg/fcstv fcstgp/fcstvp
+FOUT_OPT=1    # 1:   o    o           o
+              # 2:        o           o
+              # 3:        o
+
+#===============================================================================
+
+CYCLE_FMT='%04d'
+
+#===============================================================================
