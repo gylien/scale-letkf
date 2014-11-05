@@ -39,6 +39,7 @@ jobscrp='fcst_job.sh'
 
 #-------------------------------------------------------------------------------
 
+echo "[$(datetime_now)] Start $(basename $0) $@"
 echo
 
 for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN \
@@ -47,8 +48,6 @@ for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN \
   printf '  %-10s = %s\n' $vname "${!vname}"
 done
 
-echo
-echo "Create a job script '$jobscrp'..."
 echo
 
 #===============================================================================
@@ -73,6 +72,7 @@ distribute_fcst "$MEMBERS" $CYCLE - $TMPS/node
 #===============================================================================
 
 
+echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
 
 cp $SCRP_DIR/config.all $TMPS
@@ -167,6 +167,8 @@ echo
 #===============================================================================
 
 #safe_rm_tmpdir $TMPS
+
+echo "[$(datetime_now)] Finish $(basename $0) $@"
 
 #===============================================================================
 

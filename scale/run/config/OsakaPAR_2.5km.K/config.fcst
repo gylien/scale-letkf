@@ -18,7 +18,7 @@ FSTEP=
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=300         # SCALE forecast length in the forecast mode (second)
+FCSTLEN=120         # SCALE forecast length in the forecast mode (second)
 #FCSTOUT=$LCYCLE    # SCALE forecast output interval in the forecast mode (second)
 FCSTOUT=60
 

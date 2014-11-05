@@ -47,6 +47,7 @@ jobscrp="$TMP/fcst_job.sh"
 
 #-------------------------------------------------------------------------------
 
+echo "[$(datetime_now)] Start $(basename $0) $@"
 echo
 
 for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN \
@@ -55,8 +56,6 @@ for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN \
   printf '  %-10s = %s\n' $vname "${!vname}"
 done
 
-echo
-echo "Create a job script '$jobscrp'..."
 echo
 
 #-------------------------------------------------------------------------------
@@ -84,7 +83,7 @@ distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
 #===============================================================================
 # Determine the staging list and then stage in
 
-echo "[$(datetime_now)] Initialization (stage in)" >&2
+echo "[$(datetime_now)] Initialization (stage in)"
 
 safe_init_tmpdir $STAGING_DIR
 staging_list
@@ -99,73 +98,59 @@ cp -L -r $SCRP_DIR/fcst.sh $TMP/fcst.sh
 mkdir -p $TMP/src
 cp -L -r $SCRP_DIR/src/* $TMP/src
 
-#===============================================================================
-
-
-
-
-cp $SCRP_DIR/config.all $TMPS
-
-
 echo "SCRP_DIR=\"\$TMP\"" >> $TMP/config.all
-#echo "NODEFILE_DIR=\"\$(pwd)/node\"" >> $TMPS/config.all
 echo "LOGDIR=\"\$TMP/log\"" >> $TMP/config.all
 
-#echo "NNODES=$NNODES" >> $TMPS/config.all
-#echo "PPN=$PPN" >> $TMPS/config.all
-#echo "NNODES_real=$NNODES_real" >> $TMPS/config.all
-#echo "PPN_real=$PPN_real" >> $TMPS/config.all
+#===============================================================================
+# Creat a job script
+
+echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
 rscgrp="micro"
-
-#------
 
 cat > $jobscrp << EOF
 #!/bin/sh
 ##PJM -g ra000015
 #PJM -N fcst_${SYSNAME}
 #PJM -s
-##PJM -j
 #PJM --rsc-list "node=${NNODES_real}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
 #PJM --rsc-list "rscgrp=${rscgrp}"
-##PJM --rsc-list "node-quota=29GB"
 #PJM --mpi "shape=${NNODES_real}"
 #PJM --mpi "proc=$NNODES"
 #PJM --mpi assign-online-node
-#PJM --stg-transfiles all
 
 . /work/system/Env_base
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./fcst.sh
+cd $TMP
 
+./fcst.sh
 EOF
 
-echo
+echo "[$(datetime_now)] Run fcst job on PJM"
 
-## submit job
+job_submit_PJM $jobscrp
 
-## wait for job to finish
+job_end_check_PJM $jobid
 
 #===============================================================================
 # Stage out
 
-echo "[$(datetime_now)] Finalization (stage out)" >&2
+echo "[$(datetime_now)] Finalization (stage out)"
 
-#bash $SCRP_DIR/src/stage_out.sh a
+bash $SCRP_DIR/src/stage_out.sh a
 
-#mkdir -p $LOGDIR
-#cp -f $TMP/log/fcst_*.log $LOGDIR
-#if [ -f "$TMP/log/fcst.err" ]; then
-#  cat $TMP/log/fcst.err >> $LOGDIR/fcst.err
-#fi
+mkdir -p $LOGDIR
+cp -f $TMP/log/fcst_*.log $LOGDIR
+if [ -f "$TMP/log/fcst.err" ]; then
+  cat $TMP/log/fcst.err >> $LOGDIR/fcst.err
+fi
 
 #safe_rm_tmpdir $TMP
-#safe_rm_tmpdir $TMPS
 
-echo "[$(datetime_now)] Finish fcst.sh $@" >&2
+echo "[$(datetime_now)] Finish $(basename $0) $@"
 
 #===============================================================================
 

@@ -45,7 +45,7 @@ setting
 #-------------------------------------------------------------------------------
 
 mkdir -p $LOGDIR
-####exec 2>> $LOGDIR/${myname1}.err
+exec 2>> $LOGDIR/${myname1}.err
 
 echo "[$(datetime_now)] Start $myname" >&2
 
@@ -128,7 +128,7 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 # Write the header of the log file
 
-####  exec > $LOGDIR/${myname1}_${stimes[1]}.log
+  exec > $LOGDIR/${myname1}_${stimes[1]}.log
 
   echo
   echo " +----------------------------------------------------------------+"

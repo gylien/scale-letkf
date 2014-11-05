@@ -9,7 +9,7 @@
 #
 #===============================================================================
 
-function set_mem_np {
+set_mem_np () {
 #-------------------------------------------------------------------------------
 # Set up numbers of nodes and processes for a member.
 #
@@ -93,7 +93,7 @@ parallel_cycles=$(((MEM-1)/parallel_mems+1))
 
 #===============================================================================
 
-function set_mem2proc {
+set_mem2proc () {
 #-------------------------------------------------------------------------------
 # Set up the relation from members to nodes and processes
 #
@@ -168,7 +168,7 @@ fi
 
 #===============================================================================
 
-function distribute_da_cycle {
+distribute_da_cycle () {
 #-------------------------------------------------------------------------------
 # Distribute members on nodes for DA cycling run.
 #
@@ -275,7 +275,7 @@ fi
 
 #===============================================================================
 
-function distribute_fcst {
+distribute_fcst () {
 #-------------------------------------------------------------------------------
 # Distribute members on nodes for ensemble forecasts.
 #
@@ -396,7 +396,7 @@ fi
 
 #===============================================================================
 
-function read_nodefile_pbs {
+read_nodefile_pbs () {
 #-------------------------------------------------------------------------------
 # Parse the PBS-type nodefile.
 # check if it is consistent to the $NNODES and $PPN settings and get the node names.

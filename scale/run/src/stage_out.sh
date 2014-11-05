@@ -7,10 +7,10 @@
 
 . config.all
 
-MYRANK="$1"   # s: run on the server node (create directories)
-              # a: run on the server node, stage out all files
+MYRANK="$1"   # a: run on the server node, stage out all files
+              # s: run on the server node, only create directories
 
-if [ "$MYRANK" == '-' ]; then
+if [ "$MYRANK" = '-' ]; then
   # If myrank is not passed using the first argument, determine myrank in another way.
   MYRANK=$MPI_DRANK
 #  MYRANK=$(cat $NODEFILE_DIR/node | sed -ne "/$(hostname)/=") 
@@ -19,36 +19,27 @@ fi
 #-------------------------------------------------------------------------------
 # Files in TMPOUT directory
 
-if [ "$MYRANK" == 'a' ]; then
+filelist=
+if [ "$MYRANK" = 'a' ]; then
+  filelist=$(ls $STAGING_DIR/stageout.out.* 2> /dev/null)
+elif ((TMPOUT_MODE >= 2)); then
+  filelist=$(ls $STAGING_DIR/stageout.out.$((MYRANK+1)) 2> /dev/null)
+fi
 
-  for ifile in $(ls $STAGING_DIR/stageout.out.*); do
-    while read line; do
-      destin="$(echo $line | cut -d '|' -s -f1)"
-      source="$(echo $line | cut -d '|' -s -f2)"
-      if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
+for ifile in $filelist; do
+  while read line; do
+    destin="$(echo $line | cut -d '|' -s -f1)"
+    source="$(echo $line | cut -d '|' -s -f2)"
+    if [ ! -z "$source" ] && [ ! -z "$destin" ] && [ -e "${TMPOUT}/${source}" ]; then
+      if [ "$MYRANK" = 'a' ] || [ "$MYRANK" = 's' ]; then
         mkdir -p "$(dirname ${destin})"
+      fi
+      if [ "$MYRANK" = 'a' ] || [ "$MYRANK" != 's' ]; then
         $SCP -r "${TMPOUT}/${source}" "${SCP_HOSTPREFIX}${destin}"
       fi
-    done < "$ifile"
-  done
-
-elif ((TMPOUT_MODE >= 2)); then
-
-  if [ -s "$STAGING_DIR/stageout.out.$((MYRANK+1))" ]; then
-    while read line; do
-      destin="$(echo $line | cut -d '|' -s -f1)"
-      source="$(echo $line | cut -d '|' -s -f2)"
-      if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
-        if [ "$MYRANK" == 's' ]; then
-          mkdir -p "$(dirname ${destin})"
-        else
-          $SCP -r "${TMPOUT}/${source}" "${SCP_HOSTPREFIX}${destin}"
-        fi
-      fi
-    done < "$STAGING_DIR/stagein.out.$((MYRANK+1))"
-  fi
-
-fi
+    fi
+  done < "$ifile"
+done
 
 #===============================================================================
 

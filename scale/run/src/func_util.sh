@@ -8,7 +8,7 @@
 #
 #===============================================================================
 
-function safe_init_tmpdir {
+safe_init_tmpdir () {
 #-------------------------------------------------------------------------------
 # Safely initialize a temporary directory
 #
@@ -22,7 +22,7 @@ local DIRNAME="$1"
 
 
 
-echo "###### $DIRNAME ######"
+#echo "###### $DIRNAME ######"
 
 
 
@@ -53,7 +53,7 @@ rm -fr $DIRNAME/*
 
 #===============================================================================
 
-function safe_rm_tmpdir {
+safe_rm_tmpdir () {
 #-------------------------------------------------------------------------------
 # Safely remove a temporary directory
 #
@@ -67,7 +67,7 @@ local DIRNAME="$1"
 
 
 
-echo "!!!!!! $DIRNAME !!!!!!"
+#echo "!!!!!! $DIRNAME !!!!!!"
 
 
 
@@ -94,7 +94,7 @@ rm -fr $DIRNAME
 
 #===============================================================================
 
-function mpirunf {
+mpirunf () {
 #-------------------------------------------------------------------------------
 # Submit a MPI job according to nodefile
 #
@@ -157,7 +157,7 @@ fi
 
 #===============================================================================
 
-function pdbash {
+pdbash () {
 #-------------------------------------------------------------------------------
 # Submit bash parallel scripts according to nodefile, only one process in each node
 #
@@ -173,7 +173,6 @@ function pdbash {
 #
 # Other input variables:
 #   $NODEFILE_DIR  Directory of nodefiles
-#
 #-------------------------------------------------------------------------------
 
 if (($# < 3)); then
@@ -240,6 +239,73 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 #echo 13
 
 fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+job_submit_PJM () {
+#-------------------------------------------------------------------------------
+# Submit a PJM job.
+#
+# Usage: job_submit_PJM
+#
+#   JOBSCRP  Job script
+#
+# Return variables:
+#   jobid  Job ID monitered
+#-------------------------------------------------------------------------------
+
+if (($# < 1)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local JOBSCRP="$1"
+
+#-------------------------------------------------------------------------------
+
+res=$(pjsub $JOBSCRP 2>&1)
+echo $res
+
+if [ -z "$(echo $res | grep '[ERR.]')" ]; then
+  jobid=$(echo $res | grep 'submitted' | cut -d ' ' -f 6)
+  if [ -z "$jobid" ]; then
+    echo "[Error] $FUNCNAME: Error found when submitting a job." 1>&2
+    exit 1
+  fi
+else
+  echo "[Error] $FUNCNAME: Error found when submitting a job." 1>&2
+  exit 1
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+job_end_check_PJM () {
+#-------------------------------------------------------------------------------
+# Check if a K-computer job has ended.
+#
+# Usage: job_end_check_PJM JOBID
+#
+#   JOBID  Job ID monitored
+#-------------------------------------------------------------------------------
+
+if (($# < 1)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local JOBID="$1"
+
+#-------------------------------------------------------------------------------
+
+while [ ! -z "$(pjstat $JOBID | tail -n 1)" ]; do
+  sleep 5s
+done
 
 #-------------------------------------------------------------------------------
 }
