@@ -107,7 +107,7 @@ while [ -s "$STAGING_DIR/stageout.out.$((i+1))" ]; do
         echo "#PJM --stgout \"${TMPOUT_STG}/${source} ${destin}\""
       fi
     fi
-  done < "$STAGING_DIR/stagein.out.$((i+1))"
+  done < "$STAGING_DIR/stageout.out.$((i+1))"
   i=$((i+1))
 done
 
