@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    fcst_K_micro.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP]
+#    fcst_K_micro.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP TIME_LIMIT]
 #
 #===============================================================================
 
@@ -129,7 +129,7 @@ cat > $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./fcst.sh
+./fcst.sh "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
 EOF
 
 echo "[$(datetime_now)] Run fcst job on PJM"
@@ -180,8 +180,8 @@ fi
 
 safe_rm_tmpdir $TMP
 
-echo "[$(datetime_now)] Finish $(basename $0) $@"
-
 #===============================================================================
+
+echo "[$(datetime_now)] Finish $(basename $0) $@"
 
 exit 0

@@ -8,15 +8,11 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    fcst_K.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP]
+#    fcst_K.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP TIME_LIMIT]
 #
 #===============================================================================
 
 cd "$(dirname "$0")"
-
-#--------------
-
-TIME_LIMIT='00:01:00'
 
 #===============================================================================
 # Configuration
@@ -147,7 +143,7 @@ ls -l .
 ls -l dat
 ls -l dat/conf
 
-./fcst.sh
+./fcst.sh "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
 
 ls -l .
 

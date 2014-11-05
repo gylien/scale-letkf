@@ -33,7 +33,7 @@ Configuration files:
 Steps:
 $(for i in $(seq $nsteps); do echo "  ${i}. ${stepname[$i]}"; done)
 
-Usage: $myname [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP]
+Usage: $myname [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP TIME_LIMIT]
 
   STIME       Time of the first cycle (format: YYYY[MMDDHHMMSS])
   ETIME       Time of the last  cycle (format: YYYY[MMDDHHMMSS])
@@ -58,6 +58,8 @@ Usage: $myname [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP
                (default: the first step)
   FSTEP       The final step in the last cycle by which this script ends
                (default: the last step)
+  TIME_LIMIT  Requested time limit (only used when using a job scheduler)
+               (default: 30 minutes)
 "
 
 if [ "$1" == '-h' ] || [ "$1" == '--help' ]; then
@@ -76,7 +78,8 @@ CYCLE_SKIP=${1:-$CYCLE_SKIP}; shift
 IF_VERF=${1:-$IF_VERF}; shift
 IF_EFSO=${1:-$IF_EFSO}; shift
 ISTEP=${1:-$ISTEP}; shift
-FSTEP=${1:-$FSTEP}
+FSTEP=${1:-$FSTEP}; shift
+TIME_LIMIT="${1:-$TIME_LIMIT}"
 
 #-------------------------------------------------------------------------------
 # if some necessary parameters are not given, print the usage help and exit
@@ -113,6 +116,7 @@ IF_VERF=${IF_VERF:-0}
 IF_EFSO=${IF_EFSO:-0}
 ISTEP=${ISTEP:-1}
 FSTEP=${FSTEP:-$nsteps}
+TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 
 #-------------------------------------------------------------------------------
 }

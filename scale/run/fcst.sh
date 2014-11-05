@@ -45,7 +45,7 @@ setting
 #-------------------------------------------------------------------------------
 
 mkdir -p $LOGDIR
-exec 2>> $LOGDIR/${myname1}.err
+#exec 2>> $LOGDIR/${myname1}.err
 
 echo "[$(datetime_now)] Start $myname" >&2
 
@@ -131,7 +131,7 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 # Write the header of the log file
 
-  exec > $LOGDIR/${myname1}_${stimes[1]}.log
+#  exec > $LOGDIR/${myname1}_${stimes[1]}.log
 
   echo
   echo " +----------------------------------------------------------------+"
@@ -183,7 +183,7 @@ while ((time <= ETIME)); do
   for s in $(seq $nsteps); do
     if (((s_flag == 0 || s >= ISTEP) && (e_flag == 0 || s <= FSTEP))); then
 
-      echo "[$(datetime_now)] Loop # ${loop}: ${stepname[$s]}" >&2
+      echo "[$(datetime_now)] ${stimes[1]}: ${stepname[$s]}" >&2
       echo
       printf " %2d. %-55s\n" $s "${stepname[$s]}"
 
@@ -204,8 +204,15 @@ while ((time <= ETIME)); do
     fi
     if ((MACHINE_TYPE != 10 && MACHINE_TYPE != 11)) &&
        (($(datetime $time $((lcycles * CYCLE)) s) <= ETIME)); then
-      ( bash $SCRP_DIR/src/stage_out.sh s $loop ;
-        pdbash node all $SCRP_DIR/src/stage_out.sh $loop ) &
+      if ((MACHINE_TYPE == 12)); then
+        echo "[$(datetime_now)] ${stimes[1]}: Online stage out"
+        bash $SCRP_DIR/src/stage_out.sh s $loop
+        pdbash node all $SCRP_DIR/src/stage_out.sh $loop
+      else
+        echo "[$(datetime_now)] ${stimes[1]}: Online stage out (background job)"
+        ( bash $SCRP_DIR/src/stage_out.sh s $loop ;
+          pdbash node all $SCRP_DIR/src/stage_out.sh $loop ) &
+      fi
     fi
   fi
 
