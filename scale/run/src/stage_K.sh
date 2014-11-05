@@ -6,11 +6,11 @@
 #===============================================================================
 
 . config.all
-#. src/func_util.sh
 
-STAGING_DIR="$1"
+STAGING_DIR="$1"; shift
+PROGNAME="$1"
 
-#-------------------------------------------------------------------------------
+#===============================================================================
 # stage-in: Files in TMPDAT directory
 
 if [ -s "$STAGING_DIR/stagein.dat" ]; then
@@ -75,16 +75,49 @@ fi
 #-------------------------------------------------------------------------------
 # stage-in: scripts
 
+mkdir -p $LOGDIR
+touch $LOGDIR/${PROGNAME}.err
+
 if ((USE_RANKDIR == 1)); then
   echo "#PJM --stgin \"rank=* $TMPS/config.all %r:./config.all\""
-  echo "#PJM --stgin \"rank=* $SCRP_DIR/config.fcst %r:./config.fcst\""
-  echo "#PJM --stgin \"rank=* $SCRP_DIR/fcst.sh %r:./fcst.sh\""
+  echo "#PJM --stgin \"rank=* $SCRP_DIR/config.${PROGNAME} %r:./config.${PROGNAME}\""
+  echo "#PJM --stgin \"rank=* $SCRP_DIR/${PROGNAME}.sh %r:./${PROGNAME}.sh\""
   echo "#PJM --stgin \"rank=* $SCRP_DIR/src/* %r:./src/\""
+  echo "#PJM --stgin \"rank=0 $LOGDIR/${PROGNAME}.err 0:./log/${PROGNAME}.err\""
 else
   echo "#PJM --stgin \"$TMPS/config.all ./config.all\""
-  echo "#PJM --stgin \"$SCRP_DIR/config.fcst ./config.fcst\""
-  echo "#PJM --stgin \"$SCRP_DIR/fcst.sh ./fcst.sh\""
+  echo "#PJM --stgin \"$SCRP_DIR/config.${PROGNAME} ./config.${PROGNAME}\""
+  echo "#PJM --stgin \"$SCRP_DIR/${PROGNAME}.sh ./${PROGNAME}.sh\""
   echo "#PJM --stgin \"$SCRP_DIR/src/* ./src/\""
+  echo "#PJM --stgin \"$LOGDIR/${PROGNAME}.err ./log/${PROGNAME}.err\""
+fi
+
+#===============================================================================
+# stage-out: Files in TMPOUT directory
+
+i=0
+while [ -s "$STAGING_DIR/stageout.out.$((i+1))" ]; do
+  while read line; do
+    destin="$(echo $line | cut -d '|' -s -f1)"
+    source="$(echo $line | cut -d '|' -s -f2)"
+    if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
+      if ((USE_RANKDIR == 1)); then
+        echo "#PJM --stgout \"rank=${i} ${i}:${TMPOUT_STG}/${source} ${destin}\""
+      else
+        echo "#PJM --stgout \"${TMPOUT_STG}/${source} ${destin}\""
+      fi
+    fi
+  done < "$STAGING_DIR/stagein.out.$((i+1))"
+  i=$((i+1))
+done
+
+#-------------------------------------------------------------------------------
+# stage-out: standard log files
+
+if ((USE_RANKDIR == 1)); then
+  echo "#PJM --stgout \"rank=0 0:./log/* $LOGDIR/\""
+else
+  echo "#PJM --stgout \"./log/* $LOGDIR/\""
 fi
 
 #===============================================================================

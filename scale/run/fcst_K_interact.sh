@@ -13,17 +13,18 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
+myname1='fcst'
 
 #===============================================================================
 # Configuration
 
 . config.all
 (($? != 0)) && exit $?
-. config.fcst
+. config.$myname1
 (($? != 0)) && exit $?
 
 . src/func_datetime.sh
-. src/func_fcst.sh
+. src/func_$myname1.sh
 
 #-------------------------------------------------------------------------------
 
@@ -37,7 +38,7 @@ fi
 
 setting
 
-jobscrp="fcst_job.sh"
+jobscrp="${myname1}_job.sh"
 
 #-------------------------------------------------------------------------------
 
@@ -60,7 +61,7 @@ echo "[$(datetime_now)] Create a job script '$jobscrp'"
 cat > $jobscrp << EOF
 #!/bin/sh
 ##PJM -g ra000015
-#PJM -N fcst_${SYSNAME}
+#PJM -N ${myname1}_${SYSNAME}
 #PJM -s
 #PJM --rsc-list "node=${NNODES_real}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
@@ -74,7 +75,7 @@ export PARALLEL=${THREADS}
 
 cd $(pwd)
 
-./fcst.sh $STIME "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
+./${myname1}.sh $STIME "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
 EOF
 
 echo "[$(datetime_now)] Entering the interactive mode..."

@@ -13,23 +13,20 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
-
-#--------------
-
-TIME_LIMIT='00:30:00'
+myname1='fcst'
 
 #===============================================================================
 # Configuration
 
 . config.all
 (($? != 0)) && exit $?
-. config.fcst
+. config.$myname1
 (($? != 0)) && exit $?
 
 . src/func_distribute.sh
 . src/func_datetime.sh
 . src/func_util.sh
-. src/func_fcst.sh
+. src/func_$myname1.sh
 
 #-------------------------------------------------------------------------------
 
@@ -43,7 +40,7 @@ fi
 
 setting
 
-jobscrp="$TMP/fcst_job.sh"
+jobscrp="$TMP/${myname1}_job.sh"
 
 #-------------------------------------------------------------------------------
 
@@ -93,8 +90,8 @@ bash $SCRP_DIR/src/stage_in.sh a
 # stage-in: scripts
 
 cp -L -r $SCRP_DIR/config.all $TMP/config.all
-cp -L -r $SCRP_DIR/config.fcst $TMP/config.fcst
-cp -L -r $SCRP_DIR/fcst.sh $TMP/fcst.sh
+cp -L -r $SCRP_DIR/config.${myname1} $TMP/config.${myname1}
+cp -L -r $SCRP_DIR/${myname1}.sh $TMP/${myname1}.sh
 mkdir -p $TMP/src
 cp -L -r $SCRP_DIR/src/* $TMP/src
 
@@ -116,7 +113,7 @@ rscgrp="micro"
 cat > $jobscrp << EOF
 #!/bin/sh
 ##PJM -g ra000015
-#PJM -N fcst_${SYSNAME}
+#PJM -N ${myname1}_${SYSNAME}
 #PJM -s
 #PJM --rsc-list "node=${NNODES_real}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
@@ -129,10 +126,13 @@ cat > $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./fcst.sh "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
+./${myname1}.sh "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
 EOF
 
-echo "[$(datetime_now)] Run fcst job on PJM"
+#===============================================================================
+# Run the job
+
+echo "[$(datetime_now)] Run ${myname1} job on PJM"
 echo
 
 job_submit_PJM $jobscrp
@@ -172,10 +172,11 @@ if ((ONLINE_STGOUT != 1)); then
   bash $SCRP_DIR/src/stage_out.sh a
 fi
 
+###### To do: also online staging...
 mkdir -p $LOGDIR
-cp -f $TMP/log/fcst_*.log $LOGDIR
-if [ -f "$TMP/log/fcst.err" ]; then
-  cat $TMP/log/fcst.err >> $LOGDIR/fcst.err
+cp -f $TMP/log/${myname1}_*.log $LOGDIR
+if [ -f "$TMP/log/${myname1}.err" ]; then
+  cat $TMP/log/${myname1}.err >> $LOGDIR/${myname1}.err
 fi
 
 safe_rm_tmpdir $TMP

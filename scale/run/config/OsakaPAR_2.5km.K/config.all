@@ -67,6 +67,8 @@ TMPL= # When $MACHINE_TYPE=10, this will be automatically set
 
 #-------------------
 
+ONLINE_STGOUT=1  # 0: No
+                 # 1: Yes
 
 #===============================================================================
 # Environmental settings
