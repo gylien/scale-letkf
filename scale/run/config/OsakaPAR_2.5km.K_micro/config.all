@@ -67,6 +67,8 @@ TMPL= # no use
 
 #-------------------
 
+ONLINE_STGOUT=1  # 0: No
+                 # 1: Yes
 
 #===============================================================================
 # Environmental settings
@@ -88,7 +90,7 @@ PYTHON="python"
 
 MEMBER=2           # Ensemble size
 
-NNODES=4           # Number of nodes
+NNODES=2           # Number of nodes
 PPN=4              # Number of processes per node
 
 THREADS=2           ######
@@ -198,10 +200,3 @@ OBSUTIL_DIR="$DIR/obs"           # Observation program directory
 VERIFY_DIR="$DIR/verify"         # Verification program directory
 UTIL_DIR="$DIR/util"             # Other utility program directory
 
-
-#XXXXXXXXXXXXXXX
-
-NNODES_real=$NNODES
-PPN_real=$PPN
-NNODES=$((NNODES*PPN))
-PPN=1

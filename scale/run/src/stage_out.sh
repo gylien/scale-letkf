@@ -7,8 +7,9 @@
 
 . config.all
 
-MYRANK="$1"   # a: run on the server node, stage out all files
-              # s: run on the server node, only create directories
+MYRANK="$1"  # a: run on the server node, stage out all files
+             # s: run on the server node, only create directories
+LOOP="$2"    # Number of loop
 
 if [ "$MYRANK" = '-' ]; then
   # If myrank is not passed using the first argument, determine myrank in another way.
@@ -21,9 +22,17 @@ fi
 
 filelist=
 if [ "$MYRANK" = 'a' ]; then
-  filelist=$(ls $STAGING_DIR/stageout.out.* 2> /dev/null)
+  if [ -z "$LOOP" ]; then
+    filelist=$(ls $STAGING_DIR/stageout.out.* 2> /dev/null)
+  else
+    filelist=$(ls $STAGING_DIR/stageout.loop.${LOOP}.* 2> /dev/null)
+  fi
 elif ((TMPOUT_MODE >= 2)); then
-  filelist=$(ls $STAGING_DIR/stageout.out.$((MYRANK+1)) 2> /dev/null)
+  if [ -z "$LOOP" ]; then
+    filelist=$(ls $STAGING_DIR/stageout.out.$((MYRANK+1)) 2> /dev/null)
+  else
+    filelist=$(ls $STAGING_DIR/stageout.loop.${LOOP}.$((MYRANK+1)) 2> /dev/null)
+  fi
 fi
 
 for ifile in $filelist; do
@@ -36,6 +45,12 @@ for ifile in $filelist; do
       fi
       if [ "$MYRANK" = 'a' ] || [ "$MYRANK" != 's' ]; then
         $SCP -r "${TMPOUT}/${source}" "${SCP_HOSTPREFIX}${destin}"
+        if [ ! -z "$LOOP" ]; then
+          flag="$(echo $line | cut -d '|' -s -f3)"
+          if [ "$flag" = 'rm' ]; then
+            rm -fr "${TMPOUT}/${source}"
+          fi
+        fi
       fi
     fi
   done < "$ifile"

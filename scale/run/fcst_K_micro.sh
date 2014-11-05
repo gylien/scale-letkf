@@ -98,8 +98,13 @@ cp -L -r $SCRP_DIR/fcst.sh $TMP/fcst.sh
 mkdir -p $TMP/src
 cp -L -r $SCRP_DIR/src/* $TMP/src
 
-echo "SCRP_DIR=\"\$TMP\"" >> $TMP/config.all
-echo "LOGDIR=\"\$TMP/log\"" >> $TMP/config.all
+echo "SCRP_DIR=\"$TMP\"" >> $TMP/config.all
+echo "LOGDIR=\"$TMP/log\"" >> $TMP/config.all
+
+echo "NNODES=$NNODES" >> $TMP/config.all
+echo "PPN=$PPN" >> $TMP/config.all
+echo "NNODES_real=$NNODES_real" >> $TMP/config.all
+echo "PPN_real=$PPN_real" >> $TMP/config.all
 
 #===============================================================================
 # Creat a job script
@@ -124,23 +129,48 @@ cat > $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-cd $TMP
-
 ./fcst.sh
 EOF
 
 echo "[$(datetime_now)] Run fcst job on PJM"
+echo
 
 job_submit_PJM $jobscrp
+echo
 
-job_end_check_PJM $jobid
+if ((ONLINE_STGOUT != 1)); then
+
+  job_end_check_PJM $jobid
+
+else # when using online stage-out, check the joub status in a special way.
+
+  loop=1
+  while (($(pjstat $jobid | sed -n '2p' | awk '{print $10}') >= 1)); do
+    if [ -e "$TMP/loop.${loop}.done" ]; then
+      echo "[$(datetime_now)] Online stage out: Loop # $loop"
+      bash $SCRP_DIR/src/stage_out.sh a $loop &
+      loop=$((loop+1))
+    fi
+    sleep 5s
+  done
+  wait
+
+  while [ -e "$TMP/loop.${loop}.done" ]; do
+    echo "[$(datetime_now)] Online stage out: Loop # $loop"
+    bash $SCRP_DIR/src/stage_out.sh a $loop
+    loop=$((loop+1))
+  done
+
+fi
 
 #===============================================================================
 # Stage out
 
 echo "[$(datetime_now)] Finalization (stage out)"
 
-bash $SCRP_DIR/src/stage_out.sh a
+if ((ONLINE_STGOUT != 1)); then
+  bash $SCRP_DIR/src/stage_out.sh a
+fi
 
 mkdir -p $LOGDIR
 cp -f $TMP/log/fcst_*.log $LOGDIR
@@ -148,7 +178,7 @@ if [ -f "$TMP/log/fcst.err" ]; then
   cat $TMP/log/fcst.err >> $LOGDIR/fcst.err
 fi
 
-#safe_rm_tmpdir $TMP
+safe_rm_tmpdir $TMP
 
 echo "[$(datetime_now)] Finish $(basename $0) $@"
 

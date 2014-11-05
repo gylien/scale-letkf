@@ -6,7 +6,7 @@
 #
 #===============================================================================
 
-function setting {
+setting () {
 #-------------------------------------------------------------------------------
 # define steps
 
@@ -119,7 +119,7 @@ FSTEP=${FSTEP:-$nsteps}
 
 #===============================================================================
 
-function staging_list {
+staging_list () {
 #-------------------------------------------------------------------------------
 
 if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
@@ -214,7 +214,9 @@ else
 #-------------------
   lcycles=$((LCYCLE * CYCLE_SKIP))
   time=$STIME
+  loop=0
   while ((time <= ETIME)); do
+    loop=$((loop+1))
 
     for c in $(seq $CYCLE); do
       time2=$(datetime $time $((lcycles * (c-1))) s)
@@ -234,10 +236,18 @@ else
             if ((FOUT_OPT <= 2)); then
               path="${time2}/fcst/${name_m[$mm]}/history$(printf $SCALE_SFX $((q-1)))"
               echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stageout.out.${mem2proc[$(((mm-1)*mem_np+q))]}
+
+              if ((ONLINE_STGOUT == 1)); then
+                echo "${OUTDIR}/${path}|${path}|rm" >> $STAGING_DIR/stageout.loop.${loop}.${mem2proc[$(((mm-1)*mem_np+q))]}
+              fi
             fi
             if ((FOUT_OPT <= 1)); then
               path="${time2}/fcst/${name_m[$mm]}/init_$(datetime ${time2} $FCSTLEN s)$(printf $SCALE_SFX $((q-1)))"
               echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stageout.out.${mem2proc[$(((mm-1)*mem_np+q))]}
+
+              if ((ONLINE_STGOUT == 1)); then
+                echo "${OUTDIR}/${path}|${path}|rm" >> $STAGING_DIR/stageout.loop.${loop}.${mem2proc[$(((mm-1)*mem_np+q))]}
+              fi
             fi
 
             #-------------------
@@ -283,7 +293,7 @@ fi
 
 #===============================================================================
 
-function boundary_sub {
+boundary_sub () {
 #-------------------------------------------------------------------------------
 # Run a series of scripts (topo/landuse/init) to make the boundary files.
 #
@@ -358,7 +368,7 @@ mpirunf $MPIRUNF_NODEFILE \
 
 #===============================================================================
 
-function boundary {
+boundary () {
 #-------------------------------------------------------------------------------
 
 echo
@@ -422,7 +432,7 @@ fi
 
 #===============================================================================
 
-function pertbdy {
+pertbdy () {
 #-------------------------------------------------------------------------------
 
 echo
@@ -474,7 +484,7 @@ wait
 
 #===============================================================================
 
-function ensfcst {
+ensfcst () {
 #-------------------------------------------------------------------------------
 
 echo
@@ -532,7 +542,7 @@ wait
 
 #===============================================================================
 
-function verf {
+verf () {
 #-------------------------------------------------------------------------------
 
 echo
@@ -704,7 +714,7 @@ echo "verf..."
 
 #===============================================================================
 
-function final {
+final () {
 #-------------------------------------------------------------------------------
 
 echo

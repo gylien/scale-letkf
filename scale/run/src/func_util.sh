@@ -77,6 +77,9 @@ if [ -z "$DIRNAME" ]; then
   echo "[Error] $FUNCNAME: '\$DIRNAME' is not set." >&2
   exit 1
 fi
+if [ ! -e "$DIRNAME" ]; then
+  return 0
+fi
 if [ ! -d "$DIRNAME" ]; then
   echo "[Error] $FUNCNAME: '$DIRNAME' is not a directory." >&2
   exit 1
@@ -264,12 +267,15 @@ fi
 
 local JOBSCRP="$1"
 
+local rundir=$(dirname $JOBSCRP)
+local scrpname=$(basename $JOBSCRP)
+
 #-------------------------------------------------------------------------------
 
-res=$(pjsub $JOBSCRP 2>&1)
+res=$(cd $rundir && pjsub $scrpname 2>&1)
 echo $res
 
-if [ -z "$(echo $res | grep '[ERR.]')" ]; then
+if [ -z "$(echo $res | grep '\[ERR.\]')" ]; then
   jobid=$(echo $res | grep 'submitted' | cut -d ' ' -f 6)
   if [ -z "$jobid" ]; then
     echo "[Error] $FUNCNAME: Error found when submitting a job." 1>&2
@@ -303,7 +309,7 @@ local JOBID="$1"
 
 #-------------------------------------------------------------------------------
 
-while [ ! -z "$(pjstat $JOBID | tail -n 1)" ]; do
+while (($(pjstat $JOBID | sed -n '2p' | awk '{print $10}') >= 1)); do
   sleep 5s
 done
 

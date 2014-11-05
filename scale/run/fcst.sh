@@ -75,11 +75,11 @@ declare -a node
 declare -a name_m
 declare -a node_m
 
-if ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11)); then
-  distribute_fcst "$MEMBERS" $CYCLE - -
-else
+if ((MACHINE_TYPE != 10 && MACHINE_TYPE != 11)); then
   safe_init_tmpdir $NODEFILE_DIR
   distribute_fcst "$MEMBERS" $CYCLE machinefile $NODEFILE_DIR
+else
+  distribute_fcst "$MEMBERS" $CYCLE - -
 fi
 
 #===============================================================================
@@ -104,10 +104,13 @@ lcycles=$((LCYCLE * CYCLE_SKIP))
 s_flag=1
 e_flag=0
 time=$STIME
+loop=0
 
 #-------------------------------------------------------------------------------
 while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
+
+  loop=$((loop+1))
 
   for c in $(seq $CYCLE); do
     time2=$(datetime $time $((lcycles * (c-1))) s)
@@ -180,7 +183,7 @@ while ((time <= ETIME)); do
   for s in $(seq $nsteps); do
     if (((s_flag == 0 || s >= ISTEP) && (e_flag == 0 || s <= FSTEP))); then
 
-      echo "[$(datetime_now)] ${stepname[$s]}" >&2
+      echo "[$(datetime_now)] Loop # ${loop}: ${stepname[$s]}" >&2
       echo
       printf " %2d. %-55s\n" $s "${stepname[$s]}"
 
@@ -191,6 +194,20 @@ while ((time <= ETIME)); do
 
     fi
   done
+
+#-------------------------------------------------------------------------------
+# Online stage out
+
+  if ((ONLINE_STGOUT == 1)); then
+    if ((MACHINE_TYPE == 11)); then
+      touch $TMP/loop.${loop}.done
+    fi
+    if ((MACHINE_TYPE != 10 && MACHINE_TYPE != 11)) &&
+       (($(datetime $time $((lcycles * CYCLE)) s) <= ETIME)); then
+      ( bash $SCRP_DIR/src/stage_out.sh s $loop ;
+        pdbash node all $SCRP_DIR/src/stage_out.sh $loop ) &
+    fi
+  fi
 
 #-------------------------------------------------------------------------------
 # Write the footer of the log file
@@ -213,22 +230,30 @@ done
 #===============================================================================
 # Stage out
 
-if ((MACHINE_TYPE != 10)); then
-
+if ((MACHINE_TYPE != 10 && MACHINE_TYPE != 11)); then
   echo "[$(datetime_now)] Finalization (stage out)" >&2
 
   if ((TMPOUT_MODE >= 2)); then
-    bash $SCRP_DIR/src/stage_out.sh s  # first run on the server node (create directories)
-    pdbash node all $SCRP_DIR/src/stage_out.sh
+    if ((ONLINE_STGOUT == 1)); then
+      wait
+      bash $SCRP_DIR/src/stage_out.sh s $loop
+      pdbash node all $SCRP_DIR/src/stage_out.sh $loop
+    else
+      bash $SCRP_DIR/src/stage_out.sh s
+      pdbash node all $SCRP_DIR/src/stage_out.sh
+    fi
   fi
 
+  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
+    safe_rm_tmpdir $TMP
+  fi
+  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
+    safe_rm_tmpdir $TMPL
+  fi
 fi
 
-#safe_rm_tmpdir $TMP
-#safe_rm_tmpdir $TMPS
+#===============================================================================
 
 echo "[$(datetime_now)] Finish fcst.sh $@" >&2
-
-#===============================================================================
 
 exit 0
