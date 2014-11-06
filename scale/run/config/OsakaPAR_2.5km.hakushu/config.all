@@ -30,24 +30,6 @@ ANLWRF_INT=600
 OBS=              # directory of observation data in LETKF obs format
 OBSNCEP=          # directory of observation data in NCEP BUFR format
 
-SCALE_SFX='.pe%06d.nc'
-MEMBER_FMT='%04d'
-
-#===============================================================================
-# Basic system settings (usually do not need to modify this section)
-
-SCRP_DIR="$DIR/run"              # Job script directory
-COMMON_DIR="$DIR/common"         # Common program directory
-LETKF_DIR="$DIR/letkf"           # LETKF program directory
-OBSUTIL_DIR="$DIR/obs"           # Observation program directory
-VERIFY_DIR="$DIR/verify"         # Verification program directory
-UTIL_DIR="$DIR/util"             # Other utility program directory
-
-USER=$(whoami)                   # User account name
-SYSNAME="$(basename $OUTDIR)"    # A unique name in the machine
-                                 # (used to identify multiple GFS-LETKFs running in the same time)
-TMPSUBDIR="scale-letkf_${USER}_${SYSNAME}"
-
 #===============================================================================
 # Temporary directories to store runtime files
 #
@@ -65,75 +47,36 @@ TMPSUBDIR="scale-letkf_${USER}_${SYSNAME}"
 # TMPS   Temporary directory only on the server node
 # TMPL   Local temporary directory on computing nodes
 
-# STAGE_OPT
+# STAGE_OPT ???
 
-###### Use local disk
+###### K computer
+MACHINE_TYPE=1
+
+SYSNAME="$(basename $OUTDIR)"    # A unique name in the machine
+                                 # (used to identify multiple GFS-LETKFs running in the same time)
+TMPSUBDIR="scale-letkf_$(whoami)_${SYSNAME}"
+
 TMPDAT_MODE=3
 TMPRUN_MODE=3
-TMPOUT_MODE=3
-MACHINE_TYPE=1
+TMPOUT_MODE=$TMPRUN_MODE
 
 TMP="$DIR/tmp/$TMPSUBDIR"
 TMPS="/dev/shm/$TMPSUBDIR"
 TMPL="/dev/shm/$TMPSUBDIR"
 
-###### shared disk
-#TMPDAT_MODE=1
-#TMPOUT_MODE=1
-#MACHINE_TYPE=1
-
-#TMP="$DIR/tmp/$TMPSUBDIR"  
-#TMPS="/dev/shm/$TMPSUBDIR"
-#TMPL=  # No use
-
-###### K computer
-#TMPDAT_MODE=2
-#TMPRUN_MODE=2
-#TMPOUT_MODE=2
-#MACHINE_TYPE=10
-
-#TMP="."
-#TMPS="$DIR/tmp/$TMPSUBDIR"
-#TMPL=  # No use (need to be set to empty)
-
-###### K computer (rank directory)
-#TMPDAT_MODE=2
-#TMPRUN_MODE=3
-#TMPOUT_MODE=3
-#MACHINE_TYPE=10
-
-#TMP=".."
-#TMPS="$DIR/tmp/$TMPSUBDIR"
-#TMPL="."
 
 #-------------------
 
-STAGING_DIR="$TMP/staging"
-NODEFILE_DIR="$TMP/node"
-
-if ((TMPDAT_MODE <= 2)); then
-  TMPDAT="$TMP/dat"
-else
-  TMPDAT="$TMPL/dat"
-fi
-if ((TMPRUN_MODE <= 2)); then
-  TMPRUN="$TMP/run"
-else
-  TMPRUN="$TMPL/run"
-fi
-if ((TMPOUT_MODE <= 2)); then
-  TMPOUT="$TMP/out"
-else
-  TMPOUT="$TMPL/out"
-fi
+ONLINE_STGOUT=1  # 0: No
+                 # 1: Yes
 
 #===============================================================================
 # Environmental settings
 
+######
 MPIBIN=$(dirname $(which mpirun))
 MPIRUN="$MPIBIN/mpirun"
-
-PBS_O_HOST='admin-ib'            # Hostname of the head node (seen from nodes)
+######
 
 #SCP="scp -q"
 #SCP_HOSTPREFIX="$PBS_O_HOST:"
@@ -147,14 +90,12 @@ PYTHON="python"
 #===============================================================================
 # Parallelization settings
 
-MTYPE=1            # Type of the MPI system
-                   #  1: PBS format
-                   #  2: K computer vcoordfile format
+MEMBER=2           # Ensemble size
 
-MEMBER=4           # Ensemble size
+NNODES=4           # Number of nodes
+PPN=4              # Number of processes per node
 
-NNODES=2           # Number of nodes
-PPN=16             # Number of processes per node
+THREADS=4           ######
 
                    # (This limit is usually due to available memory per node/core)
 MIN_NP_SCALE=4     # Minimum number of cores required to run SCALE
@@ -195,36 +136,41 @@ ADAPTINFL=1        # Adaptive inflation
                    #  2: ON, using inflation parameter 2 cycles ago as prior
 
 #===============================================================================
-# Diagnostic output settings
+# Do not need to edit below...
 
-              #      anal     analg         analgp   gues     guesg         guesgp
-              #      mean mem mean/sprd mem mean mem mean mem mean/sprd mem mean mem
-OUT_OPT=1     # 1:   o    o   o         o   o    o   o    o   o         o   o    o
-              # 2:   o    o   o         o   o        o    o   o         o   o
-              # 3:   o    o   o             o        o    o   o             o
-              # 4:   o    o   o             o        o        o             o
-              # 5:   o    .   o             o        o        o             o
-              # 6:   o    .   o             o
+#-------------------
 
-OBSOUT_OPT=1  # OBSOPE_OPT=1  superob          obs2 obsdep(omb/oma) obsdiag(obsgues/obsanal)
-              # OBSOPE_OPT=2  obsinput gsidiag obs2 obsdep(omb/oma) obsdiag(obsgues/obsanal)
-              # 1:            o        o       o    o               ($OBSOUT_DIAG)
-              # 2:            o                o    o               ($OBSOUT_DIAG)
-              # 3:            o                     o               ($OBSOUT_DIAG)
-              # 4:                                  o               ($OBSOUT_DIAG)
-              # 5:            (none)
+SCALE_SFX='.pe%06d.nc'
+SCALE_LOG_SFX='.pe000000'
+MEMBER_FMT='%04d'
 
-######
-              #      gfs    superob       gsimean    gsi    readdiag letkf | gfsfcst
-              #      stdout stdout detail stdout fit stdout stdout   outp0 | stdout
-LOG_OPT=1     # 1:   o      o      o      o      o   o      o        o       o
-              # 2:   o      o             o          o      o        o       o
-              # 3:          o             o                          o
-              # 4:   (none)
-######
+#-------------------
 
-#===============================================================================
-# Self test (for security)
+STAGING_DIR="$TMP/staging"
+NODEFILE_DIR="$TMP/node"
 
+if ((TMPDAT_MODE <= 2)); then
+  TMPDAT="$TMP/dat"
+else
+  TMPDAT="$TMPL/dat"
+fi
+if ((TMPRUN_MODE <= 2)); then
+  TMPRUN="$TMP/run"
+else
+  TMPRUN="$TMPL/run"
+fi
+if ((TMPOUT_MODE <= 2)); then
+  TMPOUT="$TMP/out"
+else
+  TMPOUT="$TMPL/out"
+fi
 
-#===============================================================================
+#------------------------
+
+SCRP_DIR="$DIR/run"              # Job script directory
+COMMON_DIR="$DIR/common"         # Common program directory
+LETKF_DIR="$DIR/letkf"           # LETKF program directory
+OBSUTIL_DIR="$DIR/obs"           # Observation program directory
+VERIFY_DIR="$DIR/verify"         # Verification program directory
+UTIL_DIR="$DIR/util"             # Other utility program directory
+

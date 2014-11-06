@@ -21,17 +21,17 @@ fi
 # Files in TMPOUT directory
 
 filelist=
-if [ "$MYRANK" = 'a' ]; then
-  if [ -z "$LOOP" ]; then
-    filelist=$(ls $STAGING_DIR/stageout.out.* 2> /dev/null)
-  else
+if [ "$MYRANK" = 'a' ] || [ "$MYRANK" = 's' ]; then
+  if ((ONLINE_STGOUT == 1)); then
     filelist=$(ls $STAGING_DIR/stageout.loop.${LOOP}.* 2> /dev/null)
+  else
+    filelist=$(ls $STAGING_DIR/stageout.out.* 2> /dev/null)
   fi
 elif ((TMPOUT_MODE >= 2)); then
-  if [ -z "$LOOP" ]; then
-    filelist=$(ls $STAGING_DIR/stageout.out.$((MYRANK+1)) 2> /dev/null)
-  else
+  if ((ONLINE_STGOUT == 1)); then
     filelist=$(ls $STAGING_DIR/stageout.loop.${LOOP}.$((MYRANK+1)) 2> /dev/null)
+  else
+    filelist=$(ls $STAGING_DIR/stageout.out.$((MYRANK+1)) 2> /dev/null)
   fi
 fi
 
@@ -39,13 +39,13 @@ for ifile in $filelist; do
   while read line; do
     destin="$(echo $line | cut -d '|' -s -f1)"
     source="$(echo $line | cut -d '|' -s -f2)"
-    if [ ! -z "$source" ] && [ ! -z "$destin" ] && [ -e "${TMPOUT}/${source}" ]; then
+    if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
       if [ "$MYRANK" = 'a' ] || [ "$MYRANK" = 's' ]; then
         mkdir -p "$(dirname ${destin})"
       fi
-      if [ "$MYRANK" = 'a' ] || [ "$MYRANK" != 's' ]; then
+      if [ "$MYRANK" = 'a' ] || [ "$MYRANK" != 's' ] && [ -e "${TMPOUT}/${source}" ]; then
         $SCP -r "${TMPOUT}/${source}" "${SCP_HOSTPREFIX}${destin}"
-        if [ ! -z "$LOOP" ]; then
+        if ((ONLINE_STGOUT == 1)); then
           flag="$(echo $line | cut -d '|' -s -f3)"
           if [ "$flag" = 'rm' ]; then
             rm -fr "${TMPOUT}/${source}"
