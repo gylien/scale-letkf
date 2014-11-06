@@ -8,7 +8,7 @@
 
 . config.all
 
-if (($# < 5)); then
+if (($# < 3)); then
   cat >&2 << EOF
 
 [post_scale_init.sh] Post-process the SCALE model outputs.

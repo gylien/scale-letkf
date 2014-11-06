@@ -149,14 +149,7 @@ cat >> $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-ls -l .
-ls -l dat
-ls -l dat/conf
-
 ./${myname1}.sh "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
-
-ls -l .
-
 EOF
 
 #===============================================================================

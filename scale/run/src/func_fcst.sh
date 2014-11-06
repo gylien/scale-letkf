@@ -411,7 +411,7 @@ mpirunf $NODEFILE \
   $TMPRUN/scale_init/${cf} ./scale-les_init init.conf
 if ((LOG_OPT <= 2)); then
   pdbash $NODEFILE $PDBASH_PROC_OPT \
-    $SCRP_DIR/src/post_scale_init.sh ${stimes[$c]} $FCSTLEN $TMPRUN/scale_init/${cf}
+    $SCRP_DIR/src/post_scale_init.sh ${stimes[$c]} $TMPRUN/scale_init/${cf}
 fi
 
 #-------------------------------------------------------------------------------
