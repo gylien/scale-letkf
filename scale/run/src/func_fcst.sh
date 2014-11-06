@@ -270,20 +270,30 @@ else
             path="${time2}/log/scale/${name_m[$mm]}_LOG${SCALE_LOG_SFX}"
             echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$(((mm-1)*mem_np+1))]}
           fi
-          if ((LOG_OPT <= 2)); then
-            path="${time2}/log/scale_topo/${name_m[$mm]}_pp_LOG${SCALE_LOG_SFX}"
-            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$(((mm-1)*mem_np+1))]}
-            path="${time2}/log/scale_landuse/${name_m[$mm]}_pp_LOG${SCALE_LOG_SFX}"
-            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$(((mm-1)*mem_np+1))]}
-            path="${time2}/log/scale_bdy/${name_m[$mm]}_init_LOG${SCALE_LOG_SFX}"
-            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$(((mm-1)*mem_np+1))]}
-          fi
 #          if ((LOG_OPT <= 1)); then
 #            # perturb bdy log
 #          fi
 
           #-------------------
         done
+
+        #-------------------
+
+        if ((LOG_OPT <= 2)); then
+          if ((repeat_mems <= fmember)); then
+            tmpidx=1                              # mm=1
+          else
+            tmpidx=$((((c-1)*fmember)*mem_np+1))  # mm=$(((c-1) * fmember + 1))
+          fi
+          path="${time2}/log/scale_topo/pp_LOG${SCALE_LOG_SFX}"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$tmpidx]}
+          path="${time2}/log/scale_landuse/pp_LOG${SCALE_LOG_SFX}"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$tmpidx]}
+          path="${time2}/log/scale_bdy/init_LOG${SCALE_LOG_SFX}"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$tmpidx]}
+        fi
+
+        #-------------------
       fi
     done
 
@@ -328,11 +338,10 @@ boundary_sub () {
 #-------------------------------------------------------------------------------
 # Run a series of scripts (topo/landuse/init) to make the boundary files.
 #
-# Usage: make_boundary PDBASH_NODEFILE PDBASH_PROC_OPT MPIRUNF_NODEFILE
+# Usage: make_boundary NODEFILE PDBASH_PROC_OPT
 #
-#   PDBASH_NODEFILE   $NODEFILE in function 'pdbash'
+#   NODEFILE          $NODEFILE in functions 'pdbash' and 'mpirunf'
 #   PDBASH_PROC_OPT   $PROC_OPT in function 'pdbash'
-#   MPIRUNF_NODEFILE  $NODEFILE in function 'mpirunf'
 #
 # Other input variables:
 #   $c       Cycle number
@@ -346,38 +355,41 @@ boundary_sub () {
 #   $PREP_LANDUSE
 #-------------------------------------------------------------------------------
 
-if (($# < 3)); then
+if (($# < 2)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." >&2
   exit 1
 fi
 
-local PDBASH_NODEFILE="$1"; shift
+local NODEFILE="$1"; shift
 local PDBASH_PROC_OPT="$1"; shift
-local MPIRUNF_NODEFILE="$1"
 
 #-------------------------------------------------------------------------------
 # topo
 
 if ((PREP_TOPO != 1)); then
-  pdbash $PDBASH_NODEFILE $PDBASH_PROC_OPT \
+  pdbash $NODEFILE $PDBASH_PROC_OPT \
     $SCRP_DIR/src/pre_scale_pp_topo.sh ${stimes[$c]} $TMPRUN/scale_pp_topo/${cf} $TMPDAT/exec $TMPDAT
-  mpirunf $MPIRUNF_NODEFILE \
+  mpirunf $NODEFILE \
     $TMPRUN/scale_pp_topo/${cf} ./scale-les_pp pp.conf
+  if ((LOG_OPT <= 2)); then
+    pdbash $NODEFILE $PDBASH_PROC_OPT \
+      $SCRP_DIR/src/post_scale_pp_topo.sh ${stimes[$c]} $TMPRUN/scale_pp_topo/${cf}
+  fi
 fi
-
-## post_scale_pp_topo
 
 #-------------------------------------------------------------------------------
 # landuse
 
 if ((PREP_LANDUSE != 1)); then
-  pdbash $PDBASH_NODEFILE $PDBASH_PROC_OPT \
+  pdbash $NODEFILE $PDBASH_PROC_OPT \
     $SCRP_DIR/src/pre_scale_pp_landuse.sh ${stimes[$c]} $TMPRUN/scale_pp_landuse/${cf} $TMPDAT/exec $TMPDAT
-  mpirunf $MPIRUNF_NODEFILE \
+  mpirunf $NODEFILE \
     $TMPRUN/scale_pp_landuse/${cf} ./scale-les_pp pp.conf
+  if ((LOG_OPT <= 2)); then
+    pdbash $NODEFILE $PDBASH_PROC_OPT \
+      $SCRP_DIR/src/post_scale_pp_landuse.sh ${stimes[$c]} $TMPRUN/scale_pp_landuse/${cf}
+  fi
 fi
-
-## post_scale_pp_landuse
 
 #-------------------------------------------------------------------------------
 # init
@@ -392,13 +404,15 @@ if ((PREP_LANDUSE == 1)); then
 else
   local landuse_base="$TMPRUN/scale_pp_landuse/${cf}/landuse"
 fi
-pdbash $PDBASH_NODEFILE $PDBASH_PROC_OPT \
+pdbash $NODEFILE $PDBASH_PROC_OPT \
   $SCRP_DIR/src/pre_scale_init.sh $mem_np $topo_base $landuse_base $TMPDAT/wrf/wrfout_d01 \
-  ${stimes[$c]} $FCSTLEN $TMPRUN/scale_init/${cf} $TMPDAT/exec $TMPDAT ;
-mpirunf $MPIRUNF_NODEFILE \
+  ${stimes[$c]} $FCSTLEN $TMPRUN/scale_init/${cf} $TMPDAT/exec $TMPDAT
+mpirunf $NODEFILE \
   $TMPRUN/scale_init/${cf} ./scale-les_init init.conf
-
-## post_scale_init
+if ((LOG_OPT <= 2)); then
+  pdbash $NODEFILE $PDBASH_PROC_OPT \
+    $SCRP_DIR/src/post_scale_init.sh ${stimes[$c]} $FCSTLEN $TMPRUN/scale_init/${cf}
+fi
 
 #-------------------------------------------------------------------------------
 }
@@ -424,7 +438,7 @@ if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cy
     cfr=$(printf $CYCLE_FMT $(((ipm-1)/fmember+1))) # try to use processes in parallel
     echo "  ${stimesfmt[$c]}: node ${node_m[$ipm]} [$(datetime_now)]"
 
-    boundary_sub proc.${cfr}.${name_m[$ipm]} one proc.${cfr}.${name_m[$ipm]} &
+    boundary_sub proc.${cfr}.${name_m[$ipm]} one &
     sleep $BGJOB_INT
   done
   wait
@@ -440,7 +454,7 @@ else # local run directory: run multiple members as needed
         if ((ipm > parallel_mems)); then wait; ipm=1; fi
         echo "  ${stimesfmt[$c]}: node ${node_m[$m]} [$(datetime_now)]"
 
-        boundary_sub proc.$(printf $CYCLE_FMT 1).${name_m[$m]} alln proc.$(printf $CYCLE_FMT 1).${name_m[$m]} &
+        boundary_sub proc.$(printf $CYCLE_FMT 1).${name_m[$m]} alln &
         sleep $BGJOB_INT
       done
     done
@@ -455,7 +469,7 @@ else # local run directory: run multiple members as needed
         if ((ipm > parallel_mems)); then wait; ipm=1; fi
         echo "  ${stimesfmt[$c]}: node ${node_m[$mm]} [$(datetime_now)]"
 
-        boundary_sub proc.${cf}.${name_m[$mm]} alln proc.${cf}.${name_m[$mm]} &
+        boundary_sub proc.${cf}.${name_m[$mm]} alln &
         sleep $BGJOB_INT
       done
     done

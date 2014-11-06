@@ -9,7 +9,7 @@
 . config.all
 . src/func_datetime.sh
 
-if (($# < 5)); then
+if (($# < 6)); then
   cat >&2 << EOF
 
 [post_scale.sh] Post-process the SCALE model outputs.
