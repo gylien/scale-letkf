@@ -67,7 +67,7 @@ TMPL= # When $MACHINE_TYPE=10, this will be automatically set
 
 #-------------------
 
-ONLINE_STGOUT=1  # 0: No
+ONLINE_STGOUT=0  # 0: No
                  # 1: Yes
 
 #===============================================================================
@@ -133,31 +133,31 @@ ADAPTINFL=1        # Adaptive inflation
 #===============================================================================
 # Diagnostic output settings
 
-              #      anal     analg         analgp   gues     guesg         guesgp
-              #      mean mem mean/sprd mem mean mem mean mem mean/sprd mem mean mem
-OUT_OPT=1     # 1:   o    o   o         o   o    o   o    o   o         o   o    o
-              # 2:   o    o   o         o   o        o    o   o         o   o
-              # 3:   o    o   o             o        o    o   o             o
-              # 4:   o    o   o             o        o        o             o
-              # 5:   o    .   o             o        o        o             o
-              # 6:   o    .   o             o
+#              #      anal     analg         analgp   gues     guesg         guesgp
+#              #      mean mem mean/sprd mem mean mem mean mem mean/sprd mem mean mem
+#OUT_OPT=1     # 1:   o    o   o         o   o    o   o    o   o         o   o    o
+#              # 2:   o    o   o         o   o        o    o   o         o   o
+#              # 3:   o    o   o             o        o    o   o             o
+#              # 4:   o    o   o             o        o        o             o
+#              # 5:   o    .   o             o        o        o             o
+#              # 6:   o    .   o             o
 
-OBSOUT_OPT=1  # OBSOPE_OPT=1  superob          obs2 obsdep(omb/oma) obsdiag(obsgues/obsanal)
-              # OBSOPE_OPT=2  obsinput gsidiag obs2 obsdep(omb/oma) obsdiag(obsgues/obsanal)
-              # 1:            o        o       o    o               ($OBSOUT_DIAG)
-              # 2:            o                o    o               ($OBSOUT_DIAG)
-              # 3:            o                     o               ($OBSOUT_DIAG)
-              # 4:                                  o               ($OBSOUT_DIAG)
-              # 5:            (none)
+#OBSOUT_OPT=1  # OBSOPE_OPT=1  superob          obs2 obsdep(omb/oma) obsdiag(obsgues/obsanal)
+#              # OBSOPE_OPT=2  obsinput gsidiag obs2 obsdep(omb/oma) obsdiag(obsgues/obsanal)
+#              # 1:            o        o       o    o               ($OBSOUT_DIAG)
+#              # 2:            o                o    o               ($OBSOUT_DIAG)
+#              # 3:            o                     o               ($OBSOUT_DIAG)
+#              # 4:                                  o               ($OBSOUT_DIAG)
+#              # 5:            (none)
 
-######
-              #      gfs    superob       gsimean    gsi    readdiag letkf | gfsfcst
-              #      stdout stdout detail stdout fit stdout stdout   outp0 | stdout
-LOG_OPT=1     # 1:   o      o      o      o      o   o      o        o       o
-              # 2:   o      o             o          o      o        o       o
-              # 3:          o             o                          o
-              # 4:   (none)
-######
+#######
+#              #      gfs    superob       gsimean    gsi    readdiag letkf | gfsfcst
+#              #      stdout stdout detail stdout fit stdout stdout   outp0 | stdout
+#LOG_OPT=1     # 1:   o      o      o      o      o   o      o        o       o
+#              # 2:   o      o             o          o      o        o       o
+#              # 3:          o             o                          o
+#              # 4:   (none)
+#######
 
 #===============================================================================
 # Do not need to edit below...
@@ -165,6 +165,7 @@ LOG_OPT=1     # 1:   o      o      o      o      o   o      o        o       o
 #-------------------
 
 SCALE_SFX='.pe%06d.nc'
+SCALE_LOG_SFX='.pe000000'
 MEMBER_FMT='%04d'
 
 #-------------------

@@ -50,8 +50,15 @@ PERTURB_BDY=0  # 0: No
 # Diagnostic output settings
 
               #      fcst fcstr
-FOUT_OPT=1    # 1:   o    o
+OUT_OPT=1     # 1:   o    o
               # 2:   o
+
+              #      topo landuse bdy perturb        scale
+              #      log  log     log (not finished) log
+LOG_OPT=3     # 1:   o    o       o   o              o
+              # 2:   o    o       o                  o
+              # 3:                                   o
+              # 4:   (none)
 
 #===============================================================================
 

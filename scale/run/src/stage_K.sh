@@ -21,12 +21,12 @@ if [ -s "$STAGING_DIR/stagein.dat" ]; then
       if [ -d "$source" ]; then
         if ((USE_RANKDIR == 1)); then
           if ((TMPDAT_MODE == 3)); then
-            echo "#PJM --stgin-dir \"rank=* ${source} %r:${TMPDAT_STG}/${destin}\""
+            echo "#PJM --stgin-dir \"rank=* ${source} %r:${TMPDAT_STG}/${destin} recursive=10\""
           else
-            echo "#PJM --stgin-dir \"rank=0 ${source} 0:${TMPDAT_STG}/${destin}\""
+            echo "#PJM --stgin-dir \"rank=0 ${source} 0:${TMPDAT_STG}/${destin} recursive=10\""
           fi
         else
-          echo "#PJM --stgin-dir \"${source} ${TMPDAT_STG}/${destin}\""
+          echo "#PJM --stgin-dir \"${source} ${TMPDAT_STG}/${destin} recursive=10\""
         fi
       else
         if ((USE_RANKDIR == 1)); then

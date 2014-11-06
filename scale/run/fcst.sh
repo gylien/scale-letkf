@@ -42,6 +42,8 @@ myname1=${myname%.*}
 
 setting
 
+builtin_staging=$((MACHINE_TYPE != 10 && MACHINE_TYPE != 11))
+
 #-------------------------------------------------------------------------------
 
 mkdir -p $LOGDIR
@@ -51,14 +53,14 @@ exec 2> >(tee -a $LOGDIR/${myname1}.err >&2)
 echo "[$(datetime_now)] Start $myname" >&2
 
 for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN \
-             FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT FOUT_OPT \
+             FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT OUT_OPT \
              STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP; do
   printf '                      %-10s = %s\n' $vname "${!vname}" >&2
 done
 
 #-------------------------------------------------------------------------------
 
-if ((MACHINE_TYPE != 10 && MACHINE_TYPE != 11)); then
+if ((builtin_staging)); then
   if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
     safe_init_tmpdir $TMP
   fi
@@ -76,7 +78,7 @@ declare -a node
 declare -a name_m
 declare -a node_m
 
-if ((MACHINE_TYPE != 10 && MACHINE_TYPE != 11)); then
+if ((builtin_staging)); then
   safe_init_tmpdir $NODEFILE_DIR
   distribute_fcst "$MEMBERS" $CYCLE machinefile $NODEFILE_DIR
 else
@@ -86,7 +88,7 @@ fi
 #===============================================================================
 # Determine the staging list and then stage in
 
-if ((MACHINE_TYPE != 10 && MACHINE_TYPE != 11)); then
+if ((builtin_staging)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR
@@ -204,8 +206,7 @@ while ((time <= ETIME)); do
     if ((MACHINE_TYPE == 11)); then
       touch $TMP/loop.${loop}.done
     fi
-    if ((MACHINE_TYPE != 10 && MACHINE_TYPE != 11)) &&
-       (($(datetime $time $((lcycles * CYCLE)) s) <= ETIME)); then
+    if ((builtin_staging && $(datetime $time $((lcycles * CYCLE)) s) <= ETIME)); then
       if ((MACHINE_TYPE == 12)); then
         echo "[$(datetime_now)] ${stimes[1]}: Online stage out"
         bash $SCRP_DIR/src/stage_out.sh s $loop
@@ -239,7 +240,7 @@ done
 #===============================================================================
 # Stage out
 
-if ((MACHINE_TYPE != 10 && MACHINE_TYPE != 11)); then
+if ((builtin_staging)); then
   echo "[$(datetime_now)] Finalization (stage out)" >&2
 
   if ((TMPOUT_MODE >= 2)); then

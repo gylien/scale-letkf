@@ -96,6 +96,15 @@ cat $TMPDAT/conf/scale.conf | \
         -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = ${FCSTINT}.D0,/" \
     > $TMPDIR/run.conf
 
+
+#echo
+#echo $TMPDIR
+#echo '##### pre #####'
+#ls -lL $TMPDIR
+#echo
+
+
+
 #===============================================================================
 
 exit 0

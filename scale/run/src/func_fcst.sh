@@ -90,6 +90,16 @@ if [ -z "$STIME" ]; then
 fi
 
 #-------------------------------------------------------------------------------
+# error detection
+
+if ((MACHINE_TYPE == 10 && ONLINE_STGOUT != 0)); then
+  echo "[Error] $myname: When \$MACHINE_TYPE = 10, \$ONLINE_STGOUT needs to be 0." >&2
+  exit 1
+fi
+
+#... more detections...
+
+#-------------------------------------------------------------------------------
 # assign default values to and standardize the parameters
 
 STIME=$(datetime $STIME)
@@ -221,6 +231,11 @@ else
   loop=0
   while ((time <= ETIME)); do
     loop=$((loop+1))
+    if ((ONLINE_STGOUT == 1)); then
+      stgoutstep="stageout.loop.${loop}"
+    else
+      stgoutstep='stageout.out'
+    fi
 
     for c in $(seq $CYCLE); do
       time2=$(datetime $time $((lcycles * (c-1))) s)
@@ -237,25 +252,37 @@ else
             #-------------------
             # stage-out
 
-            if ((FOUT_OPT <= 2)); then
+            if ((OUT_OPT <= 2)); then
               path="${time2}/fcst/${name_m[$mm]}/history$(printf $SCALE_SFX $((q-1)))"
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stageout.out.${mem2proc[$(((mm-1)*mem_np+q))]}
-
-              if ((ONLINE_STGOUT == 1)); then
-                echo "${OUTDIR}/${path}|${path}|rm" >> $STAGING_DIR/stageout.loop.${loop}.${mem2proc[$(((mm-1)*mem_np+q))]}
-              fi
+              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$(((mm-1)*mem_np+q))]}
             fi
-            if ((FOUT_OPT <= 1)); then
+            if ((OUT_OPT <= 1)); then
               path="${time2}/fcst/${name_m[$mm]}/init_$(datetime ${time2} $FCSTLEN s)$(printf $SCALE_SFX $((q-1)))"
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stageout.out.${mem2proc[$(((mm-1)*mem_np+q))]}
-
-              if ((ONLINE_STGOUT == 1)); then
-                echo "${OUTDIR}/${path}|${path}|rm" >> $STAGING_DIR/stageout.loop.${loop}.${mem2proc[$(((mm-1)*mem_np+q))]}
-              fi
+              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$(((mm-1)*mem_np+q))]}
             fi
 
             #-------------------
           done
+
+          #-------------------
+
+          if ((LOG_OPT <= 3)); then
+            path="${time2}/log/scale/${name_m[$mm]}_LOG${SCALE_LOG_SFX}"
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$(((mm-1)*mem_np+1))]}
+          fi
+          if ((LOG_OPT <= 2)); then
+            path="${time2}/log/scale_topo/${name_m[$mm]}_pp_LOG${SCALE_LOG_SFX}"
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$(((mm-1)*mem_np+1))]}
+            path="${time2}/log/scale_landuse/${name_m[$mm]}_pp_LOG${SCALE_LOG_SFX}"
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$(((mm-1)*mem_np+1))]}
+            path="${time2}/log/scale_bdy/${name_m[$mm]}_init_LOG${SCALE_LOG_SFX}"
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$(((mm-1)*mem_np+1))]}
+          fi
+#          if ((LOG_OPT <= 1)); then
+#            # perturb bdy log
+#          fi
+
+          #-------------------
         done
       fi
     done
@@ -276,12 +303,12 @@ fi
 #    while [ "$fh" -le "$FCSTLEN" ]; do
 #      fhhh=`printf '%03d' $fh`
 #      Fyyyymmddhh=$(datetime ${STIME[$c]} $fh h | cut -c 1-10)
-#      if [ "$FOUT_OPT" -le 1 ]; then
+#      if [ "$OUT_OPT" -le 1 ]; then
 #        echo "mv|fcst/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.sig" >> $tmpstageout/out.${node_m[$mt]}
 #        echo "mv|fcst/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.sfc" >> $tmpstageout/out.${node_m[$mt]}
 #      fi
 #      echo "mv|fcstg/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.grd" >> $tmpstageout/out.${node_m[$mt]}
-#      if [ "$FOUT_OPT" -le 2 ]; then
+#      if [ "$OUT_OPT" -le 2 ]; then
 #        echo "mv|fcstgp/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.grd" >> $tmpstageout/out.${node_m[$mt]}
 #      fi
 #      echo "mv|verfo1/${fhhh}/${name_m[$mt]}/${Fyyyymmddhh}.dat" >> $tmpstageout/out.${node_m[$mt]}
@@ -338,6 +365,8 @@ if ((PREP_TOPO != 1)); then
     $TMPRUN/scale_pp_topo/${cf} ./scale-les_pp pp.conf
 fi
 
+## post_scale_pp_topo
+
 #-------------------------------------------------------------------------------
 # landuse
 
@@ -347,6 +376,8 @@ if ((PREP_LANDUSE != 1)); then
   mpirunf $MPIRUNF_NODEFILE \
     $TMPRUN/scale_pp_landuse/${cf} ./scale-les_pp pp.conf
 fi
+
+## post_scale_pp_landuse
 
 #-------------------------------------------------------------------------------
 # init
@@ -366,6 +397,8 @@ pdbash $PDBASH_NODEFILE $PDBASH_PROC_OPT \
   ${stimes[$c]} $FCSTLEN $TMPRUN/scale_init/${cf} $TMPDAT/exec $TMPDAT ;
 mpirunf $MPIRUNF_NODEFILE \
   $TMPRUN/scale_init/${cf} ./scale-les_init init.conf
+
+## post_scale_init
 
 #-------------------------------------------------------------------------------
 }
@@ -592,13 +625,13 @@ echo "verf..."
 #  ./ss2grd
 #  mv -f fort.31 $ltmpout/fcstg/\${Syyyymmddhh}/\${mem}/\${Fyyyymmddhh}.grd
 #EOF
-#if [ "$FOUT_OPT" -le 2 ]; then
+#if [ "$OUT_OPT" -le 2 ]; then
 #  cat >> fcst_31.sh << EOF
 #  ./ss2grdp
 #  mv -f fort.31 $ltmpout/fcstgp/\${Syyyymmddhh}/\${mem}/\${Fyyyymmddhh}.grd
 #EOF
 #fi
-#if [ "$FOUT_OPT" -le 1 ]; then
+#if [ "$OUT_OPT" -le 1 ]; then
 #  cat >> fcst_31.sh << EOF
 #  if [ "\$fh" -eq 0 ]; then
 #    cp -fL $ltmpgfs/\${cyc}_\${mem}/sig_ini $ltmpout/fcst/\${Syyyymmddhh}/\${mem}/\${Fyyyymmddhh}.sig
@@ -712,110 +745,6 @@ echo "verf..."
 #done
 #echo "    wait..."
 #wait
-
-#-------------------------------------------------------------------------------
-}
-
-#===============================================================================
-
-final () {
-#-------------------------------------------------------------------------------
-
-echo
-
-echo "final..."
-
-
-#for c in `seq $CYCLES`; do
-#  STIMEgrads=$(datetimegrads ${STIME[$c]})
-#  for m in `seq $fmember`; do
-#    mt=$(((c-1) * fmember + m))
-#    if [ "$FOUT_OPT" -le 1 ]; then
-#      mkdir -p $OUTDIR/fcst/${Syyyymmddhh[$c]}/${name_m[$mt]}
-#    fi
-#    mkdir -p $OUTDIR/fcstg/${Syyyymmddhh[$c]}/${name_m[$mt]}
-#    $DIR/ssio/grdctl '%y4%m2%d2%h2.grd' 'template byteswapped' $STIMEgrads ${FCSTOUT}hr 10000 x > \
-#                     $OUTDIR/fcstg/${Syyyymmddhh[$c]}/${name_m[$mt]}/yyyymmddhhx.ctl
-#    if [ "$FOUT_OPT" -le 2 ]; then
-#      mkdir -p $OUTDIR/fcstgp/${Syyyymmddhh[$c]}/${name_m[$mt]}
-#      $DIR/ssio/grdctl '%y4%m2%d2%h2.grd' 'template byteswapped' $STIMEgrads ${FCSTOUT}hr 10000 p > \
-#                       $OUTDIR/fcstgp/${Syyyymmddhh[$c]}/${name_m[$mt]}/yyyymmddhhp.ctl
-#    fi
-
-#    fh=0
-#    while [ "$fh" -le "$FCSTLEN" ]; do
-#      fhhh=`printf '%03d' $fh`
-#      Fyyyymmddhh=$(datetime ${STIME[$c]} $fh h | cut -c 1-10)
-#      mkdir -p $OUTDIR/fcstv/${fhhh}/${name_m[$mt]}
-#      cd $OUTDIR/fcstv/${fhhh}/${name_m[$mt]}
-#      ln -fs ../../../fcstg/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.grd .
-#      if [ ! -s 'yyyymmddhhx.ctl' ]; then
-#        $DIR/ssio/grdctl '%y4%m2%d2%h2.grd' 'template byteswapped' $STIMEgrads ${LCYCLE}hr 10000 x > \
-#                         yyyymmddhhx.ctl
-#      fi
-#      if [ "$FOUT_OPT" -le 2 ]; then
-#        mkdir -p $OUTDIR/fcstvp/${fhhh}/${name_m[$mt]}
-#        cd $OUTDIR/fcstvp/${fhhh}/${name_m[$mt]}
-#        ln -fs ../../../fcstgp/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.grd .
-#        if [ ! -s 'yyyymmddhhp.ctl' ]; then
-#          $DIR/ssio/grdctl '%y4%m2%d2%h2.grd' 'template byteswapped' $STIMEgrads ${LCYCLE}hr 10000 p > \
-#                           yyyymmddhhp.ctl
-#        fi
-#      fi
-#    fh=$((fh + FCSTOUT))
-#    done
-#  done
-#done
-
-##-------------------------------------------------------------------------------
-#if [ "$SHAREDISK" = '0' ]; then
-##-------------------------------------------------------------------------------
-
-#cd $TMPMPI
-#mkdir -p $tmpstageout
-#rm -f $tmpstageout/*
-
-#for c in `seq $CYCLES`; do
-#  for m in `seq $fmember`; do
-#    mt=$(((c-1) * fmember + m))
-#    echo "rm|anal/${name_m[$mt]}/${Syyyymmddhh[$c]}.sig" >> $tmpstageout/out.${node_m[$mt]}
-#    echo "rm|anal/${name_m[$mt]}/${Syyyymmddhh[$c]}.sfc" >> $tmpstageout/out.${node_m[$mt]}
-#    fh=0
-#    while [ "$fh" -le "$FCSTLEN" ]; do
-#      fhhh=`printf '%03d' $fh`
-#      Fyyyymmddhh=$(datetime ${STIME[$c]} $fh h | cut -c 1-10)
-#      if [ "$FOUT_OPT" -le 1 ]; then
-#        echo "mv|fcst/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.sig" >> $tmpstageout/out.${node_m[$mt]}
-#        echo "mv|fcst/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.sfc" >> $tmpstageout/out.${node_m[$mt]}
-#      fi
-#      echo "mv|fcstg/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.grd" >> $tmpstageout/out.${node_m[$mt]}
-#      if [ "$FOUT_OPT" -le 2 ]; then
-#        echo "mv|fcstgp/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.grd" >> $tmpstageout/out.${node_m[$mt]}
-#      fi
-#      echo "mv|verfo1/${fhhh}/${name_m[$mt]}/${Fyyyymmddhh}.dat" >> $tmpstageout/out.${node_m[$mt]}
-#      echo "mv|verfa1/${fhhh}/${name_m[$mt]}/${Fyyyymmddhh}.dat" >> $tmpstageout/out.${node_m[$mt]}
-#      echo "mv|verfa2/${fhhh}/${name_m[$mt]}/${Fyyyymmddhh}.dat" >> $tmpstageout/out.${node_m[$mt]}
-#    fh=$((fh + FCSTOUT))
-#    done
-#  done
-#done
-
-##-------------------------------------------------------------------------------
-
-#stageout $ltmpout 0  # clean stageout
-#$MPIBIN/mpiexec -machinefile $tmpnode/machinefile.node -n $nnodes \
-#                rm -fr $LTMP1/${tmpsubdir} $LTMP2/${tmpsubdir} &
-#wait
-
-##-------------------------------------------------------------------------------
-#elif [ "$SHAREDISK" = '1' ]; then
-##-------------------------------------------------------------------------------
-
-#rm -fr $ltmprun1 $ltmprun2
-
-##-------------------------------------------------------------------------------
-#fi
-##-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 }

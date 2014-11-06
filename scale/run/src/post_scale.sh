@@ -38,7 +38,14 @@ restartbaselen=23  # 7 + 16
 
 #===============================================================================
 
-if ((FOUT_OPT <= 2)); then
+
+#echo
+#echo '##### post #####'
+#ls -lL $TMPDIR
+#echo
+
+
+if ((OUT_OPT <= 2)); then
   mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
 #  for ifile in $(ls $TMPDIR/history*.nc); do
 #    ifilebase=$(basename $ifile)
@@ -47,12 +54,19 @@ if ((FOUT_OPT <= 2)); then
   mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
 fi
 
-if ((FOUT_OPT <= 1)); then
+if ((OUT_OPT <= 1)); then
   mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
   for ifile in $(ls $TMPDIR/restart*.nc); do
     ifilebase=$(basename $ifile)
     mv -f $ifile $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifilebase:$restartbaselen}
   done
+fi
+
+if ((LOG_OPT <= 3)); then
+  mkdir -p $TMPOUT/${STIME}/log/scale
+  if [ -f "$TMPDIR/LOG${SCALE_LOG_SFX}" ]; then
+    mv -f $TMPDIR/LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale/${MEM}_LOG${SCALE_LOG_SFX}
+  fi
 fi
 
 #===============================================================================

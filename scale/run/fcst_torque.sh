@@ -61,7 +61,7 @@ fi
 echo "[$(datetime_now)] Start $myname" >&2
 
 for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN \
-             FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT FOUT_OPT \
+             FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT OUT_OPT \
              STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP; do
   printf '                      %-10s = %s\n' $vname ${!vname} >&2
 done

@@ -134,40 +134,12 @@ ADAPTINFL=1        # Adaptive inflation
                    #  2: ON, using inflation parameter 2 cycles ago as prior
 
 #===============================================================================
-# Diagnostic output settings
-
-              #      anal     analg         analgp   gues     guesg         guesgp
-              #      mean mem mean/sprd mem mean mem mean mem mean/sprd mem mean mem
-OUT_OPT=1     # 1:   o    o   o         o   o    o   o    o   o         o   o    o
-              # 2:   o    o   o         o   o        o    o   o         o   o
-              # 3:   o    o   o             o        o    o   o             o
-              # 4:   o    o   o             o        o        o             o
-              # 5:   o    .   o             o        o        o             o
-              # 6:   o    .   o             o
-
-OBSOUT_OPT=1  # OBSOPE_OPT=1  superob          obs2 obsdep(omb/oma) obsdiag(obsgues/obsanal)
-              # OBSOPE_OPT=2  obsinput gsidiag obs2 obsdep(omb/oma) obsdiag(obsgues/obsanal)
-              # 1:            o        o       o    o               ($OBSOUT_DIAG)
-              # 2:            o                o    o               ($OBSOUT_DIAG)
-              # 3:            o                     o               ($OBSOUT_DIAG)
-              # 4:                                  o               ($OBSOUT_DIAG)
-              # 5:            (none)
-
-######
-              #      gfs    superob       gsimean    gsi    readdiag letkf | gfsfcst
-              #      stdout stdout detail stdout fit stdout stdout   outp0 | stdout
-LOG_OPT=1     # 1:   o      o      o      o      o   o      o        o       o
-              # 2:   o      o             o          o      o        o       o
-              # 3:          o             o                          o
-              # 4:   (none)
-######
-
-#===============================================================================
 # Do not need to edit below...
 
 #-------------------
 
 SCALE_SFX='.pe%06d.nc'
+SCALE_LOG_SFX='.pe000000'
 MEMBER_FMT='%04d'
 
 #-------------------
