@@ -28,7 +28,7 @@ USAGE="
 
 Configuration files:
   config.all
-  config.$myname1 (optional)
+  config.$myname1
 
 Steps:
 $(for i in $(seq $nsteps); do echo "  ${i}. ${stepname[$i]}"; done)

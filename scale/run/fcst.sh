@@ -40,7 +40,7 @@ myname1=${myname%.*}
 
 #-------------------------------------------------------------------------------
 
-setting
+setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}"
 
 builtin_staging=$((MACHINE_TYPE != 10 && MACHINE_TYPE != 11))
 
@@ -50,10 +50,10 @@ mkdir -p $LOGDIR
 #exec 2>> $LOGDIR/${myname1}.err
 exec 2> >(tee -a $LOGDIR/${myname1}.err >&2)
 
-echo "[$(datetime_now)] Start $myname" >&2
+echo "[$(datetime_now)] Start $myname $@" >&2
 
-for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN \
-             FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT OUT_OPT \
+for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
+             FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT OUT_OPT LOG_OPT \
              STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP; do
   printf '                      %-10s = %s\n' $vname "${!vname}" >&2
 done
@@ -159,7 +159,7 @@ while ((time <= ETIME)); do
   echo
   echo "  Nodes used:               $NNODES"
 #  if ((MTYPE == 1)); then
-    for n in `seq $NNODES`; do
+    for n in $(seq $NNODES); do
       echo "    ${node[$n]}"
     done
 #  fi
@@ -264,6 +264,6 @@ fi
 
 #===============================================================================
 
-echo "[$(datetime_now)] Finish fcst.sh $@" >&2
+echo "[$(datetime_now)] Finish $myname $@" >&2
 
 exit 0

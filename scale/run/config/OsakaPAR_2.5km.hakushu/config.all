@@ -106,36 +106,6 @@ MAX_NP_SCALE=4     # Maximum number of cores suggested to run SCALE
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
 #===============================================================================
-# LETKF settings
-
-WINDOW_S=300       # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=900       # SCALE forecast time when assimilation window ends (second)
-LCYCLE=600         # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=60       # Timeslot interval for 4D-LETKF (second)
-#LTIMESLOTMEAN=60   # Timeslot interval to compute ensemble mean for GSI QC and thinning (second)
-
-FHMAX=$WINDOW_E    # GFS forecast length in a cycle (hour)
-FHOUT=$LTIMESLOT   # GFS forecast output interval (hour)
-
-#OBSOPE_OPT=1       # Observation operator options:
-#                   #  1: use LETKF built-in obsope
-#                   #  2: use GSI
-
-#THIN_OPT=2         # Superobing/thinning options:
-#                   # -- Options below (1-2) is for OBSOPE_OPT=1
-#                   #  1: No superobing/thinning
-#                   #  2: Use superobed/thinned observations
-#                   #     Superobed/thinned observations store in $OUTDIR/obs/superob
-#                   # -- Options below (3-4) are for OBSOPE_OPT=2
-#                   #  3: use thinned observations for satellite radiance observations only
-#                   #  4: use thinned observations for both conventional and satellite radiance observations
-
-ADAPTINFL=1        # Adaptive inflation
-                   #  0: OFF
-                   #  1: ON, using inflation parameter 1 cycle  ago as prior
-                   #  2: ON, using inflation parameter 2 cycles ago as prior
-
-#===============================================================================
 # Do not need to edit below...
 
 #-------------------
