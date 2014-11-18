@@ -18,10 +18,10 @@ MODULE common_scale
 !-----------------------------------------------------------------------
 ! General parameters
 !-----------------------------------------------------------------------
-  INTEGER,PARAMETER :: nlonsub=24
-  INTEGER,PARAMETER :: nlatsub=24
-  INTEGER,PARAMETER :: nlonns=2
-  INTEGER,PARAMETER :: nlatns=2
+  INTEGER,PARAMETER :: nlonsub=30
+  INTEGER,PARAMETER :: nlatsub=30
+  INTEGER,PARAMETER :: nlonns=1
+  INTEGER,PARAMETER :: nlatns=1
   INTEGER,PARAMETER :: nlon=nlonsub*nlonns
   INTEGER,PARAMETER :: nlat=nlatsub*nlatns
   INTEGER,PARAMETER :: nlev=30

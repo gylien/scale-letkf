@@ -1,4 +1,4 @@
-MODULE common_mpi_scale
+module common_mpi_scale
 !=======================================================================
 !
 ! [PURPOSE:] MPI procedures
@@ -15,31 +15,275 @@ MODULE common_mpi_scale
 !
 !=======================================================================
 !$USE OMP_LIB
-  USE common
-  USE common_mpi
-  USE common_scale
-  USE common_obs_scale
-  IMPLICIT NONE
-  PUBLIC
+  use common
+  use common_mpi
+  use common_scale
+  use common_obs_scale
 
-  INTEGER,PARAMETER :: mpibufsize=1000000
-  INTEGER,SAVE :: nij1
-  INTEGER,SAVE :: nij1max
-  INTEGER,ALLOCATABLE,SAVE :: nij1node(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: phi1(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: lon1(:),lat1(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: lonu1(:),latu1(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: lonv1(:),latv1(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: ri1(:),rj1(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: wg1(:)
+  use letkf_namelist, only: &
+    NNODES, &
+    PPN, &
+    MEM_NODES, &
+    MEM_NP, &
+    PRC_NUM_X_LETKF, &
+    PRC_NUM_Y_LETKF
 
-  INTEGER,SAVE :: nnodes,ppn,mem_nodes,mem_np
-  INTEGER,SAVE :: nitmax ! maximum number of model files processed by a process
-  INTEGER,ALLOCATABLE,SAVE :: procs(:)
-  INTEGER,ALLOCATABLE,SAVE :: mem2proc(:,:)
-  INTEGER,ALLOCATABLE,SAVE :: proc2mem(:,:,:)
+  use scale_precision
+  use scale_stdio
+  use scale_prof
 
-CONTAINS
+    use scale_grid_index
+
+    use dc_log, only: &
+       loginit
+    use gtool_file, only: &
+!       fileread, &
+       filecloseall
+
+    use scale_process, only: &
+       prc_setup,    &
+       prc_mpistart, &
+       prc_mpifinish, &
+       prc_master, &
+       prc_myrank, &
+       prc_myrank_world, &
+       prc_nu, &
+       prc_2drank
+
+  implicit none
+  public
+
+  integer,parameter :: mpibufsize=1000000
+  integer,save :: nij1
+  integer,save :: nij1max
+  integer,allocatable,save :: nij1node(:)
+!  real(r_size),allocatable,save :: phi1(:)
+  real(r_size),allocatable,save :: lon1(:),lat1(:)
+  real(r_size),allocatable,save :: lonu1(:),latu1(:)
+  real(r_size),allocatable,save :: lonv1(:),latv1(:)
+  real(r_size),allocatable,save :: ri1(:),rj1(:)
+!  real(r_size),allocatable,save :: wg1(:)
+
+  integer,save :: nitmax ! maximum number of model files processed by a process
+  integer,allocatable,save :: procs(:)
+  integer,allocatable,save :: mem2proc(:,:)
+  integer,allocatable,save :: proc2mem(:,:,:)
+
+contains
+
+subroutine set_scale_IO
+!    use dc_log, only: &
+!       loginit
+!    use gtool_file, only: &
+!!       fileread, &
+!       filecloseall
+    use gtool_history, only: &
+       historyinit
+
+
+    use scale_process, only: &
+       prc_setup,    &
+       prc_mpistart, &
+       prc_mpifinish, &
+       prc_master, &
+       prc_myrank, &
+       prc_myrank_world, &
+       prc_nu, &
+       PRC_2Drank
+    use scale_const, only: &
+       CONST_setup
+    use scale_calendar, only: &
+       CALENDAR_setup
+    use scale_random, only: &
+       RANDOM_setup
+    use scale_time, only: &
+       TIME_setup
+    use scale_grid, only: &
+       GRID_setup
+    use scale_grid_nest, only: &
+       NEST_setup
+!    use scale_land_grid_index, only: &
+!       LAND_GRID_INDEX_setup
+!    use scale_land_grid, only: &
+!       LAND_GRID_setup
+!    use scale_urban_grid_index, only: &
+!       URBAN_GRID_INDEX_setup
+!    use scale_urban_grid, only: &
+!       URBAN_GRID_setup
+    use scale_tracer, only: &
+       TRACER_setup
+    use scale_fileio, only: &
+       FILEIO_setup, &
+       FILEIO_write, &
+       FILEIO_read
+    use scale_history, only: &
+       HIST_setup, &
+       HIST_get
+    use scale_comm, only: &
+       COMM_setup, &
+       COMM_vars8, &
+       COMM_wait
+
+
+    implicit none
+
+!    character(len=H_MID) :: DATATYPE = 'DEFAULT' !< REAL4 or REAL8
+    integer :: rankidx(2)
+
+    !-----------------------------------------------------------------------------
+
+    ! start SCALE MPI
+    call PRC_MPIstart
+
+    ! setup process
+    call PRC_setup
+
+    ! setup Log
+    call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
+
+    ! setup constants
+    call CONST_setup
+
+    ! setup time
+    call TIME_setup( setup_TimeIntegration = .false. )
+
+    call PROF_rapstart('Initialize')
+
+    ! setup horizontal/vertical grid coordinates
+    call GRID_INDEX_setup
+    call GRID_setup
+
+!    call LAND_GRID_INDEX_setup
+!    call LAND_GRID_setup
+
+!    call URBAN_GRID_INDEX_setup
+!    call URBAN_GRID_setup
+
+    ! setup file I/O
+    call FILEIO_setup
+
+    ! setup mpi communication
+    call COMM_setup
+
+    rankidx(1) = PRC_2Drank(PRC_myrank, 1)
+    rankidx(2) = PRC_2Drank(PRC_myrank, 2)
+    call HistoryInit('','','',IMAX*JMAX*KMAX,PRC_master,PRC_myrank,rankidx)
+
+    call PROF_rapend('Initialize')
+
+    call PROF_rapstart('Main')
+
+  return
+end subroutine set_scale_IO
+
+
+subroutine unset_scale_IO
+    implicit none
+
+    call PROF_rapend('Main')
+
+    call PROF_rapreport
+
+    call FileCloseAll
+
+    ! stop SCALE MPI
+    call PRC_MPIfinish
+
+  return
+end subroutine unset_scale_IO
+
+
+
+!subroutine set_scale_mpi_comm
+!  implicit none
+
+
+!!    real(RP), allocatable :: U(:,:,:), MOMX(:,:,:)
+
+!  integer :: k, i, j
+
+!  integer               :: dim1_max, dim1_S, dim1_E
+!  integer               :: dim2_max, dim2_S, dim2_E
+!  integer               :: dim3_max, dim3_S, dim3_E
+!  integer               :: dim4_max, dim4_S, dim4_E
+!  real(RP), allocatable :: var3D(:,:,:)
+
+!  integer :: iolen
+
+!  character(len=100) :: basename
+!  character(len=100) :: varname
+!  integer :: step
+!  basename = 'history'
+!  varname = 'U'
+!  step = 1
+
+!  if (PRC_nu == 0) then
+!    basename = trim(basename) // '.u000000'
+!  else if (PRC_nu == 1) THEN
+!    basename = trim(basename) // '.u000001'
+!  end if
+
+!  allocate( U(KA,IA,JA) )
+!  allocate( MOMX(KA,IA,JA) )
+!  U = 0.0d0
+
+
+
+
+!    ! Read file
+
+!!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
+
+!       dim1_max = IMAX !KMAX
+!       dim2_max = JMAX !IMAX
+!       dim3_max = KMAX !JMAX
+!       dim1_S   = IS !KS
+!       dim1_E   = IE !KE
+!       dim2_S   = JS !IS
+!       dim2_E   = JE !IE
+!       dim3_S   = KS !JS
+!       dim3_E   = KE !JE
+
+!    allocate( var3D(dim1_max,dim2_max,dim3_max) )
+
+
+!    call HIST_get(var3D, trim(basename), trim(varname), step=step)
+
+
+!    forall (i=1:IMAX, j=1:JMAX, k=1:KMAX) U(k+KHALO,i+IHALO,j+JHALO) = var3D(i,j,k)
+
+!    deallocate( var3D )
+
+
+!    if (PRC_nu == 0) then
+!      call FILEIO_read( MOMX(:,:,:),                          & ! [OUT]
+!                        'init.u000000', 'MOMX', 'ZXY', step=1 ) ! [IN]
+!    else if (PRC_nu == 1) then
+!      call FILEIO_read( MOMX(:,:,:),                          & ! [OUT]
+!                        'init.u000001', 'MOMX', 'ZXY', step=1 ) ! [IN]
+!    end if
+
+
+!    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+!    do j  = JS, JE
+!    do i  = IS, IE
+!       U(   1:KS-1,i,j) = U(KS,i,j)
+!       U(KE+1:KA,  i,j) = U(KE,i,j)
+!       MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
+!       MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
+!    enddo
+!    enddo
+
+!    call COMM_vars8( U   (:,:,:), 1 )
+!    call COMM_vars8( MOMX(:,:,:), 2 )
+!    call COMM_wait ( U   (:,:,:), 1 )
+!    call COMM_wait ( MOMX(:,:,:), 2 )
+
+
+
+!-----------------------------------------------------------------------
+! set_common_mpi_scale
+!-----------------------------------------------------------------------
 SUBROUTINE set_common_mpi_scale(nbv)
   INTEGER,INTENT(IN) :: nbv
   REAL(r_sngl) :: v3dg(nlon,nlat,nlev,nv3d)
@@ -50,6 +294,30 @@ SUBROUTINE set_common_mpi_scale(nbv)
   INTEGER :: ierr,buf(4)
   CHARACTER(LEN=9),PARAMETER :: mpimapfile = 'mpimap.in'
   LOGICAL :: ex
+
+!  IF(myrank == 0) THEN
+!    buf(1) = nprocs ! nnodes
+!    buf(2) = 1      ! ppn
+!    buf(3) = 1      ! mem_nodes
+!    buf(4) = 1      ! mem_np
+!    INQUIRE(FILE=TRIM(mpimapfile), EXIST=ex)
+!    IF(ex) THEN
+!      OPEN(30, FILE=TRIM(mpimapfile), STATUS='old', FORM='formatted')
+!      READ(30, '(4I)') buf
+!      CLOSE(30)
+!    END IF
+!  END IF
+!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+!  CALL MPI_BCAST(buf,4,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+!  nnodes = buf(1)
+!  ppn = buf(2)
+!  mem_nodes = buf(3)
+!  mem_np = buf(4)
+
+  CALL set_mem2proc(nbv+1)
+  CALL set_proc2mem(nbv+1)
+
+
 
   WRITE(6,'(A)') 'Hello from set_common_mpi_scale'
   i = MOD(nlon*nlat,nprocs)
@@ -108,48 +376,26 @@ SUBROUTINE set_common_mpi_scale(nbv)
 !  phi1  = v2d(:,1)
 !!  wg1(:) = v3d(:,2,1)
 
-  IF(myrank == 0) THEN
-    buf(1) = nprocs ! nnodes
-    buf(2) = 1      ! ppn
-    buf(3) = 1      ! mem_nodes
-    buf(4) = 1      ! mem_np
-    INQUIRE(FILE=TRIM(mpimapfile), EXIST=ex)
-    IF(ex) THEN
-      OPEN(30, FILE=TRIM(mpimapfile), STATUS='old', FORM='formatted')
-      READ(30, '(4I)') buf
-      CLOSE(30)
-    END IF
-  END IF
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(buf,4,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  nnodes = buf(1)
-  ppn = buf(2)
-  mem_nodes = buf(3)
-  mem_np = buf(4)
-  IF(ppn*nnodes /= nprocs) THEN
-    WRITE(6,'(A)') 'Wrong nnodes, ppn!'
-    STOP 1
-  END IF
-  CALL set_mem2proc(nbv)
-  CALL set_proc2mem(nbv)
+
+
 
   RETURN
 END SUBROUTINE set_common_mpi_scale
 !-----------------------------------------------------------------------
 ! set_mem2proc
 !-----------------------------------------------------------------------
-SUBROUTINE set_mem2proc(nbv)
-  INTEGER,INTENT(IN) :: nbv
+SUBROUTINE set_mem2proc(mem)
+  INTEGER,INTENT(IN) :: mem
   INTEGER :: m,i,n,nn
 
   ALLOCATE(procs(nprocs))
-  ALLOCATE(mem2proc(mem_np,nbv))
+  ALLOCATE(mem2proc(MEM_NP,mem))
   m = 0
-  DO WHILE(m < nbv)
-    DO i = 1, ppn
-      DO n = 1, nnodes
+  DO WHILE(m < mem)
+    DO i = 1, PPN
+      DO n = 1, NNODES
         m = m+1
-        IF(mem_nodes == 1 .AND. m <= nbv) THEN
+        IF(MEM_NODES == 1 .AND. m <= mem) THEN
           mem2proc(:,m) = n
         END IF
         IF(m <= nprocs) THEN
@@ -158,14 +404,14 @@ SUBROUTINE set_mem2proc(nbv)
       END DO
     END DO
   END DO
-  IF(mem_nodes > 1) THEN
+  IF(MEM_NODES > 1) THEN
     n = 0
-    DO m = 1, nbv
-      DO nn = 1, mem_nodes
-        mem2proc(ppn*(nn-1)+1:ppn*nn,m) = n+nn
+    DO m = 1, mem
+      DO nn = 1, MEM_NODES
+        mem2proc(PPN*(nn-1)+1:PPN*nn,m) = n+nn
       END DO
-      n = n + mem_nodes
-      IF(n + mem_nodes > nnodes) THEN
+      n = n + MEM_NODES
+      IF(n + MEM_NODES > NNODES) THEN
         n = 0
       END IF
     END DO
@@ -176,29 +422,29 @@ END SUBROUTINE
 !-----------------------------------------------------------------------
 ! set_proc2mem
 !-----------------------------------------------------------------------
-SUBROUTINE set_proc2mem(nbv)
-  INTEGER,INTENT(IN) :: nbv
+SUBROUTINE set_proc2mem(mem)
+  INTEGER,INTENT(IN) :: mem
   LOGICAL,ALLOCATABLE :: used(:,:)
   INTEGER :: n_mem,n_mempn,nip,it,ip,m,p
 
-  IF(mem_nodes > 1) THEN
-    n_mem = nnodes / mem_nodes
-    nitmax = (nbv-1) / n_mem + 1
+  IF(MEM_NODES > 1) THEN
+    n_mem = NNODES / MEM_NODES
+    nitmax = (mem-1) / n_mem + 1
     nip = nprocs
   ELSE
-    n_mempn = ppn / mem_np
-    nitmax = (nbv-1) / (n_mempn*nnodes) + 1
-    nip = mem_np * n_mempn * nnodes
+    n_mempn = PPN / MEM_NP
+    nitmax = (mem-1) / (n_mempn*NNODES) + 1
+    nip = MEM_NP * n_mempn * NNODES
   END IF
   ALLOCATE(proc2mem(2,nitmax,nprocs))
-  ALLOCATE(used(mem_np,nbv))
+  ALLOCATE(used(MEM_NP,mem))
   proc2mem = -1
   used = .FALSE.
 
   DO it = 1, nitmax
     DO ip = 1, nip
-search_mem: DO m = 1, nbv
-        DO p = 1, mem_np
+search_mem: DO m = 1, mem
+        DO p = 1, MEM_NP
           IF((.NOT. used(p,m)) .AND. mem2proc(p,m) == procs(ip)) THEN
             proc2mem(1,it,ip) = m
             proc2mem(2,it,ip) = p

@@ -48,4 +48,5 @@ obsope.o: mod_ioapi.o common_modules
 	$(FC) $(FOPTS) $(FMCMODEL) -c obsope.f90 -I$(COMMON_DIR) $(INCS)
 
 obsope: obsope.o mod_ioapi.o common_modules
-	$(FC) $(FOPTS) $(FMCMODEL) -o obsope obsope.o mod_ioapi.o $(COMMON_OBJS) $(LIBS) #-mkl
+	$(FC) $(FOPTS) $(FMCMODEL) -o obsope obsope.o mod_ioapi.o $(COMMON_OBJS) $(LIBS)
+#-mkl

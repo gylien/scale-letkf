@@ -117,10 +117,6 @@ contains
     call MPI_Group_incl(MPI_G_WORLD,4,ranks,MPI_G,ierr)
     call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_u,ierr)
 
-!    MPI_COMM_u = MPI_COMM_WORLD
-
-
-
     call MPI_Comm_size(MPI_COMM_u,PRC_nmax,  ierr)
     call MPI_Comm_rank(MPI_COMM_u,PRC_myrank,ierr)
 
@@ -336,22 +332,25 @@ contains
     !---------------------------------------------------------------------------
 
     ! Stop MPI
-    if ( PRC_mpi_alive ) then
-       if ( IO_L ) then
-          write(IO_FID_LOG,*)
-          write(IO_FID_LOG,*) '++++++ Stop MPI'
-          write(IO_FID_LOG,*) '*** Broadcast STOP signal'
-       endif
-       call MPI_BCAST( request,        &
-                       H_SHORT,      &
-                       MPI_CHARACTER,  & !--- type
-                       PRC_master,     & !--- source rank
-                       MPI_COMM_WORLD, &
-                       ierr            )
-       call MPI_Barrier(MPI_COMM_WORLD,ierr)
-       call MPI_Finalize(ierr)
-       if( IO_L ) write(IO_FID_LOG,*) '*** MPI is peacefully finalized'
-    endif
+   if ( PRC_mpi_alive ) then
+
+     call MPI_Comm_free(MPI_COMM_u,ierr)
+
+!       if ( IO_L ) then
+!          write(IO_FID_LOG,*)
+!          write(IO_FID_LOG,*) '++++++ Stop MPI'
+!          write(IO_FID_LOG,*) '*** Broadcast STOP signal'
+!       endif
+!       call MPI_BCAST( request,        &
+!                       H_SHORT,      &
+!                       MPI_CHARACTER,  & !--- type
+!                       PRC_master,     & !--- source rank
+!                       MPI_COMM_WORLD, &
+!                       ierr            )
+!       call MPI_Barrier(MPI_COMM_WORLD,ierr)
+!       call MPI_Finalize(ierr)
+!       if( IO_L ) write(IO_FID_LOG,*) '*** MPI is peacefully finalized'
+   endif
 
     ! Close logfile, configfile
     if ( IO_L ) then
@@ -360,7 +359,7 @@ contains
     close(IO_FID_CONF)
 
     ! Stop program
-    stop
+!    stop
   end subroutine PRC_MPIfinish
 
   !-----------------------------------------------------------------------------

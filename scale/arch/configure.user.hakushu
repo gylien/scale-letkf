@@ -1,7 +1,7 @@
 SFC       = ifort
 FC        = mpif90
-FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel
-FOPTS2    = -O3 -ip -fp-model precise -shared-intel
+FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback
+FOPTS2    = -O3 -ip -fp-model precise -shared-intel -g
 FMCMODEL  = -mcmodel=medium
 FFREE     = -free
 FFIXED    = -fixed

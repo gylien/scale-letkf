@@ -49,7 +49,8 @@ contains
        FileRead, &
        FileCloseAll
 
-    use gtool_history, only: HistoryInit
+    use gtool_history, only: &
+       HistoryInit
 
     use scale_precision
     use scale_stdio
@@ -73,8 +74,6 @@ contains
        RANDOM_setup
     use scale_time, only: &
        TIME_setup
-    use scale_grid_index, only: &
-       GRID_INDEX_setup
     use scale_grid, only: &
        GRID_setup
     use scale_grid_nest, only: &
@@ -93,20 +92,13 @@ contains
        FILEIO_setup, &
        FILEIO_write, &
        FILEIO_read
-
-  use scale_history, only: &
-     HIST_setup, &
-     HIST_get
-
+    use scale_history, only: &
+       HIST_setup, &
+       HIST_get
     use scale_comm, only: &
        COMM_setup, &
        COMM_vars8, &
        COMM_wait
-
-!  use scale_topography, only: &
-!     TOPO_setup
-!  use scale_grid_real, only: &
-!     REAL_setup
 
 
     implicit none
@@ -171,30 +163,14 @@ contains
     ! setup file I/O
     call FILEIO_setup
 
-  ! setup mpi communication
-  call COMM_setup
+    ! setup mpi communication
+    call COMM_setup
 
-  ! setup topography
-!  call TOPO_setup
-
-  ! setup grid coordinates (real world)
-!  call REAL_setup
-
-
-  ! setup history I/O
-!  call HIST_setup
 
 
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
-
-    call HistoryInit( '',           &
-                      '',                  &
-                      '',               &
-                      IMAX*JMAX*KMAX,            &
-                      PRC_master,                &
-                      PRC_myrank,                &
-                      rankidx)
+    call HistoryInit('','','',IMAX*JMAX*KMAX,PRC_master,PRC_myrank,rankidx)
 
 
     call PROF_rapend('Initialize')
@@ -208,7 +184,7 @@ contains
 
 
 
-print *, '######', PRC_nu, PRC_myrank_world, PRC_myrank, KA, IA, JA
+!print *, '######', PRC_nu, PRC_myrank_world, PRC_myrank, KA, IA, JA
 
     if (PRC_nu == 0) then
       basename = trim(basename) // '.u000000'
@@ -230,30 +206,18 @@ print *, '######', PRC_nu, PRC_myrank_world, PRC_myrank, KA, IA, JA
        dim1_max = IMAX !KMAX
        dim2_max = JMAX !IMAX
        dim3_max = KMAX !JMAX
-!       dim4_max = step
        dim1_S   = IS !KS
        dim1_E   = IE !KE
        dim2_S   = JS !IS
        dim2_E   = JE !IE
        dim3_S   = KS !JS
        dim3_E   = KE !JE
-!       dim4_S   = 1
-!       dim4_E   = step
 
     allocate( var3D(dim1_max,dim2_max,dim3_max) )
 
 
-!    History_myrank = PRC_myrank
-!    History_master = 0
+    call HIST_get(var3D, trim(basename), trim(varname), step=step)
 
-!    History_rankidx(1) = PRC_2Drank(PRC_myrank,1)
-!    History_rankidx(2) = PRC_2Drank(PRC_myrank,2)
-
-
-!print *, basename
-    call HIST_get(var3D, trim(basename), trim(varname), step)
-
-!    call FileRead( var3D(:,:,:,:), trim(basename), trim(varname), step, PRC_myrank )
 
     forall (i=1:IMAX, j=1:JMAX, k=1:KMAX) U(k+KHALO,i+IHALO,j+JHALO) = var3D(i,j,k)
 
@@ -279,11 +243,6 @@ print *, '######', PRC_nu, PRC_myrank_world, PRC_myrank, KA, IA, JA
     enddo
     enddo
 
-INQUIRE(IOLENGTH=iolen) iolen
-OPEN(myrank+20,FORM='unformatted',ACCESS='direct',RECL=IA*JA*KA*iolen)
-WRITE(myrank+20,REC=1) (((real(U(k,i,j),4),i=1,IA),j=1,JA),k=1,KA)
-WRITE(myrank+20,REC=2) (((real(MOMX(k,i,j),4),i=1,IA),j=1,JA),k=1,KA)
-CLOSE(myrank+20)
 
     call COMM_vars8( U   (:,:,:), 1 )
     call COMM_vars8( MOMX(:,:,:), 2 )
@@ -294,23 +253,11 @@ CLOSE(myrank+20)
 
 
 
-
-!    do j = 1, JA
-!    do i = 1, IA
-!    do k = 1, KA
-!       write(*,*) 'Intput(k,i,j,value): ', k, i, j, U(k,i,j)
-!    enddo
-!    enddo
-!    enddo
-
-
-
 INQUIRE(IOLENGTH=iolen) iolen
-OPEN(myrank+10,FORM='unformatted',ACCESS='direct',RECL=IA*JA*KA*iolen)
-WRITE(myrank+10,REC=1) (((real(U(k,i,j),4),i=1,IA),j=1,JA),k=1,KA)
-WRITE(myrank+10,REC=2) (((real(MOMX(k,i,j),4),i=1,IA),j=1,JA),k=1,KA)
-CLOSE(myrank+10)
-
+OPEN(myrank+30,FORM='unformatted',ACCESS='direct',RECL=IA*JA*KA*iolen)
+WRITE(myrank+30,REC=1) (((real(U(k,i,j),4),i=1,IA),j=1,JA),k=1,KA)
+WRITE(myrank+30,REC=2) (((real(MOMX(k,i,j),4),i=1,IA),j=1,JA),k=1,KA)
+CLOSE(myrank+30)
 
 
 !    if( IO_L ) write(IO_FID_LOG,*) '*** IOAPI test end ***'
@@ -323,7 +270,7 @@ CLOSE(myrank+10)
     call FileCloseAll
 
     ! stop MPI
-!    call PRC_MPIfinish
+    call PRC_MPIfinish
 
     return
   end subroutine IOAPI

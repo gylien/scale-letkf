@@ -2,7 +2,7 @@ include ../configure.user
 
 PROGS   = letkf mean obsope efso
 
-OBJS    = letkf_obs.o #letkf_tools.o efso_tools.o efso_nml.o
+OBJS    = letkf_obs.o letkf_namelist.o #letkf_tools.o efso_tools.o efso_nml.o
 
 COMMON_DIR = ../common
 
@@ -18,9 +18,13 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common_mpi_scale.o
 #              $(COMMON_DIR)/common_precip.o
 
-INCS    = -I$(SIGIO_INC)
+INCS    = -I/data1/gylien/scale_ens/dc_utils \
+          -I/data1/gylien/scale_ens/gtool \
+          -I/data1/gylien/scale_ens/include
+#          -I/data1/gylien/scale/scalelib/include
 
-LIBS    = $(NETCDF_LIB) $(LIBBLAS)
+LIBS    = -L/data1/gylien/scale_ens/lib -lscale -lgtool -ldcutils \
+          $(NETCDF_LIB) $(LIBBLAS)
 
 all:	$(PROGS)
 
@@ -30,11 +34,9 @@ letkf:	letkf.o $(OBJS) common_modules
 mean:	mean.o letkf_obs.o common_modules
 	$(FC) $(FOPTS) $(FMCMODEL) -o mean$(shell ../common/enssize) mean.o \
 	$(COMMON_OBJS) $(OBJS) $(LIBS)
-obsope:	obsope.o common_modules
-	$(SFC) $(FOPTS) -o obsope obsope.o \
-	$(COMMON_DIR)/SFMT.o $(COMMON_DIR)/common.o \
-	$(COMMON_DIR)/common_gfs.o $(COMMON_DIR)/common_obs_gfs.o \
-	-L$(SP_LIB) -lsp_4
+obsope:	obsope.o $(OBJS) common_modules
+	$(FC) $(FOPTS) $(FMCMODEL) -o obsope$(shell ../common/enssize) obsope.o \
+	$(COMMON_OBJS) $(OBJS) $(LIBS)
 efso:	efso.o $(OBJS) common_modules
 	$(FC) $(FOPTS) $(FMCMODEL) -o efso$(shell ../common/enssize) efso.o \
 	$(COMMON_OBJS) $(OBJS) $(LIBS)
@@ -44,7 +46,7 @@ letkf.o:	letkf.f90 $(OBJS) common_modules
 mean.o:	mean.f90 letkf_obs.o common_modules
 	$(FC) $(FOPTS) -c mean.f90 -I$(COMMON_DIR) $(INCS)
 obsope.o:	obsope.f90 common_modules
-	$(SFC) $(FOPTS) -c obsope.f90 -I$(COMMON_DIR) $(INCS)
+	$(FC) $(FOPTS) -c obsope.f90 -I$(COMMON_DIR) $(INCS)
 efso.o:	efso.f90 $(OBJS) common_modules
 	$(FC) $(FOPTS) -c efso.f90 -I$(COMMON_DIR) $(INCS)
 
@@ -52,6 +54,8 @@ letkf_obs.o:	letkf_obs.f90 common_modules
 	$(FC) $(FOPTS) -c letkf_obs.f90 -I$(COMMON_DIR) $(INCS)
 letkf_tools.o:  letkf_tools.f90 letkf_obs.o common_modules
 	$(FC) $(FOPTS) -c letkf_tools.f90 -I$(COMMON_DIR) $(INCS)
+letkf_namelist.o:	letkf_namelist.f90
+	$(FC) $(FOPTS) -c letkf_namelist.f90 $(INCS)
 #letkf_tools.o:	letkf_tools.f90 letkf_obs.o efso_nml.o efso_tools.o common_modules
 #	$(FC) $(FOPTS) -c letkf_tools.f90 -I$(COMMON_DIR) $(INCS)
 efso_tools.o:	efso_tools.f90 letkf_obs.o efso_nml.o common_modules
@@ -63,4 +67,4 @@ common_modules:
 	( cd $(COMMON_DIR) ; make )
 
 clean:
-	rm -f *.o *.mod $(PROGS) letkf[0-9]* mean[0-9]* efso[0-9]*
+	rm -f *.o *.mod $(PROGS) letkf[0-9]* mean[0-9]* efso[0-9]* obsope[0-9]*
