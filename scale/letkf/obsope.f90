@@ -58,6 +58,9 @@ PROGRAM obsope
 
   print *, PRC_NUM_X_LETKF, PRC_NUM_Y_LETKF
 
+
+  call set_common_mpi_scale(nbv)
+
   call set_scale_IO
 
   print *, myrank, PRC_myrank_world, PRC_myrank

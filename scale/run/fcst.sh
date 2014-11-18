@@ -73,7 +73,7 @@ fi
 # Determine the distibution schemes
 
 declare -a procs
-declare -a mem2proc
+declare -a mem2node
 declare -a node
 declare -a name_m
 declare -a node_m

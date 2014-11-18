@@ -82,6 +82,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Start MPI
   subroutine PRC_MPIstart
+
+    use common_mpi_scale, only: procs, mem2proc, proc2mem
     implicit none
 
     character(len=H_LONG) :: fname ! name of logfile for each process

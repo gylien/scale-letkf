@@ -69,7 +69,7 @@ NNODES=$((NNODES*PPN))
 PPN=1
 
 declare -a procs
-declare -a mem2proc
+declare -a mem2node
 declare -a node
 declare -a name_m
 declare -a node_m

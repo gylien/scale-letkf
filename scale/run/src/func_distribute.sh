@@ -79,18 +79,22 @@ if ((mem_nodes > NNODES)); then
   exit 1
 fi
 repeat_mems=$((NNODES/mem_nodes))
-parallel_mems=$((repeat_mems * (PPN/mem_np)))
+if ((mem_nodes == 1)); then
+  parallel_mems=$((repeat_mems * (PPN/mem_np)))
+else
+  parallel_mems=$repeat_mems
+fi
 
 #-------------------------------------------------------------------------------
 }
 
 #===============================================================================
 
-set_mem2proc () {
+set_mem2node () {
 #-------------------------------------------------------------------------------
 # Set up the relation from members to nodes and processes
 #
-# Usage: set_mem2proc [MEM]
+# Usage: set_mem2node [MEM]
 #
 #   MEM  Number of members
 #        (default: $MEMBER)
@@ -106,7 +110,7 @@ set_mem2proc () {
 # Return variables:
 #   $totalnp                       Total number of processes
 #   $procs[1...$totalnp]           Sequence of (total) processes
-#   $mem2proc[1...($MEM*$mem_np)]  Relation from members to nodes and processes (pseudo 2-D array)
+#   $mem2node[1...($MEM*$mem_np)]  Relation from (members, processes) to nodes (pseudo 2-D array)
 #   $node_m[1...$MEM]              Name of node(s) for each member
 #-------------------------------------------------------------------------------
 
@@ -127,15 +131,15 @@ totalnp=0
 
 for m in $(seq $MEM); do
   node_m[$m]=''
+  qn=0
   for nn in $(seq $mem_nodes); do
     if ((nn <= tmod)); then
       tppnt=$((tppn+1))
     else
       tppnt=$tppn
     fi
-    qn=0
     for q in $(seq $((qn+1)) $((qn+tppnt))); do
-      mem2proc[$(((m-1)*mem_np+q))]=$((n+nn))
+      mem2node[$(((m-1)*mem_np+q))]=$((n+nn))
     done
     qn=$((qn+tppnt))
     node_m[$m]="${node_m[$m]}${node[$((n+nn))]}*$tppnt "
@@ -182,7 +186,7 @@ distribute_da_cycle () {
 #   $mem_nodes                            Number of nodes for a member
 #   $mem_np                               Number of processes for a member
 #   $procs[1...$totalnp]                  Sequence of (total) processes
-#   $mem2proc[1...(($MEMBER+2)*$mem_np)]  Relation from members to nodes and processes (pseudo 2-D array)
+#   $mem2node[1...(($MEMBER+2)*$mem_np)]  Relation from members to nodes and processes (pseudo 2-D array)
 #   $mmean                                Index of the ensemble mean ($MEMBER+1)
 #   $msprd                                Index of the ensemble spread ($MEMBER+2)
 #   $node[1...$nnodes]                    Name of each node
@@ -234,11 +238,11 @@ name_m[$msprd]='sprd'
 
 set_mem_np $((MEMBER+1)) $SCALE_NP $SCALE_NP
 
-set_mem2proc $((MEMBER+1))
+set_mem2node $((MEMBER+1))
 
 local p
 for p in $(seq $mem_np); do
-  mem2proc[$(((msprd-1)*mem_np+p))]=${mem2proc[$(((mmean-1)*mem_np+p))]}
+  mem2node[$(((msprd-1)*mem_np+p))]=${mem2node[$(((mmean-1)*mem_np+p))]}
 done
 node_m[$msprd]=${node_m[$mmean]}
 
@@ -255,7 +259,7 @@ if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
   done
   for m in $(seq $((MEMBER+1))); do
     for p in $(seq $mem_np); do
-      echo ${node[${mem2proc[$(((m-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${name_m[$m]}
+      echo ${node[${mem2node[$(((m-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${name_m[$m]}
     done
   done
 fi
@@ -293,7 +297,7 @@ distribute_fcst () {
 #   $mem_nodes                            Number of nodes for a member
 #   $mem_np                               Number of processes for a member
 #   $procs[1...$totalnp]                  Sequence of (total) processes
-#   $mem2proc[1...($fmembertot*$mem_np)]  Relation from members to nodes and processes (pseudo 2-D array)
+#   $mem2node[1...($fmembertot*$mem_np)]  Relation from (members, processes) to nodes (pseudo 2-D array)
 #   $node[1...$nnodes]                    Name of each node
 #   $name_m[1...$fmembertot]              Name of each member
 #   $node_m[1...$fmembertot]              Name of node(s) for each member
@@ -354,7 +358,7 @@ fmembertot=$((fmember * CYCLE))
 
 set_mem_np $fmembertot $SCALE_NP $SCALE_NP
 
-set_mem2proc $fmembertot
+set_mem2node $fmembertot
 
 #-------------------------------------------------------------------------------
 # Create nodefiles
@@ -372,7 +376,7 @@ if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
     for m in $(seq $fmember); do
       mm=$(((c-1) * fmember + m))
       for p in $(seq $mem_np); do
-        echo ${node[${mem2proc[$(((mm-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${cf}.${name_m[$mm]}
+        echo ${node[${mem2node[$(((mm-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${cf}.${name_m[$mm]}
       done
     done
   done

@@ -315,27 +315,29 @@ SUBROUTINE set_common_mpi_scale(nbv)
 !  mem_np = buf(4)
 
   CALL set_mem2proc(nbv+1)
-  CALL set_proc2mem(nbv+1)
+!  CALL set_proc2mem(nbv+1)
 
 
 
   WRITE(6,'(A)') 'Hello from set_common_mpi_scale'
-  i = MOD(nlon*nlat,nprocs)
-  nij1max = (nlon*nlat - i)/nprocs + 1
-  IF(myrank < i) THEN
-    nij1 = nij1max
-  ELSE
-    nij1 = nij1max - 1
-  END IF
-  WRITE(6,'(A,I3.3,A,I6)') 'MYRANK ',myrank,' number of grid points: nij1= ',nij1
-  ALLOCATE(nij1node(nprocs))
-  DO n=1,nprocs
-    IF(n-1 < i) THEN
-      nij1node(n) = nij1max
-    ELSE
-      nij1node(n) = nij1max - 1
-    END IF
-  END DO
+!  i = MOD(nlon*nlat,nprocs)
+!  nij1max = (nlon*nlat - i)/nprocs + 1
+!  IF(myrank < i) THEN
+!    nij1 = nij1max
+!  ELSE
+!    nij1 = nij1max - 1
+!  END IF
+!  WRITE(6,'(A,I3.3,A,I6)') 'MYRANK ',myrank,' number of grid points: nij1= ',nij1
+!  ALLOCATE(nij1node(nprocs))
+!  DO n=1,nprocs
+!    IF(n-1 < i) THEN
+!      nij1node(n) = nij1max
+!    ELSE
+!      nij1node(n) = nij1max - 1
+!    END IF
+!  END DO
+
+
 
 !!  ALLOCATE(phi1(nij1))
 !  ALLOCATE(lon1(nij1))
@@ -386,78 +388,88 @@ END SUBROUTINE set_common_mpi_scale
 !-----------------------------------------------------------------------
 SUBROUTINE set_mem2proc(mem)
   INTEGER,INTENT(IN) :: mem
-  INTEGER :: m,i,n,nn
+  INTEGER :: m,n,nn,pn,qn,tppn,tppnt,tmod
+  LOGICAL :: procs_add
 
   ALLOCATE(procs(nprocs))
   ALLOCATE(mem2proc(MEM_NP,mem))
-  m = 0
-  DO WHILE(m < mem)
-    DO i = 1, PPN
-      DO n = 1, NNODES
-        m = m+1
-        IF(MEM_NODES == 1 .AND. m <= mem) THEN
-          mem2proc(:,m) = n
-        END IF
-        IF(m <= nprocs) THEN
-          procs(m) = n
-        END IF
-      END DO
-    END DO
-  END DO
-  IF(MEM_NODES > 1) THEN
-    n = 0
-    DO m = 1, mem
-      DO nn = 1, MEM_NODES
-        mem2proc(PPN*(nn-1)+1:PPN*nn,m) = n+nn
-      END DO
-      n = n + MEM_NODES
-      IF(n + MEM_NODES > NNODES) THEN
-        n = 0
+
+  tppn = MEM_NP / MEM_NODES
+  tmod = mod(MEM_NP, MEM_NODES)
+
+  n = 0
+  pn = 0
+  procs_add = .true.
+  DO m = 1, mem
+    qn = 0
+    DO nn = 1, MEM_NODES
+      IF(nn <= tmod) THEN
+        tppnt = tppn+1
+      ELSE
+        tppnt = tppn
+      END IF
+      mem2proc(qn+1:qn+tppnt) = n+nn
+      qn = qn + tppnt
+
+      IF(procs_add) THEN
+        procs(pn+1:pn+PPN) = n+nn
+        pn = pn + PPN
       END IF
     END DO
-  END IF
+
+    n = n + MEM_NODES
+    IF(n + MEM_NODES > NNODES) THEN
+      n = 0
+      procs_add = .false.
+    END IF
+  END DO
+
+!  IF(pn /= nprocs) THEN
+!    write(6,*) 'Inconsistent number of MPI processes.'
+!    stop
+!  END IF
 
   RETURN
 END SUBROUTINE
 !-----------------------------------------------------------------------
 ! set_proc2mem
 !-----------------------------------------------------------------------
-SUBROUTINE set_proc2mem(mem)
-  INTEGER,INTENT(IN) :: mem
-  LOGICAL,ALLOCATABLE :: used(:,:)
-  INTEGER :: n_mem,n_mempn,nip,it,ip,m,p
+!SUBROUTINE set_proc2mem(mem)
+!  INTEGER,INTENT(IN) :: mem
+!  LOGICAL,ALLOCATABLE :: used(:,:)
+!  INTEGER :: n_mem,n_mempn,nip,it,ip,m,p
 
-  IF(MEM_NODES > 1) THEN
-    n_mem = NNODES / MEM_NODES
-    nitmax = (mem-1) / n_mem + 1
-    nip = nprocs
-  ELSE
-    n_mempn = PPN / MEM_NP
-    nitmax = (mem-1) / (n_mempn*NNODES) + 1
-    nip = MEM_NP * n_mempn * NNODES
-  END IF
-  ALLOCATE(proc2mem(2,nitmax,nprocs))
-  ALLOCATE(used(MEM_NP,mem))
-  proc2mem = -1
-  used = .FALSE.
+!  IF(MEM_NODES > 1) THEN
+!    n_mem = NNODES / MEM_NODES
+!    nitmax = (mem-1) / n_mem + 1
+!    nip = nprocs
+!  ELSE
+!    n_mempn = PPN / MEM_NP
+!    nitmax = (mem-1) / (n_mempn*NNODES) + 1
+!    nip = MEM_NP * n_mempn * NNODES
+!  END IF
+!  ALLOCATE(proc2mem(2,nitmax,nprocs))
+!  ALLOCATE(used(MEM_NP,mem))
+!  proc2mem = -1
+!  used = .FALSE.
 
-  DO it = 1, nitmax
-    DO ip = 1, nip
-search_mem: DO m = 1, mem
-        DO p = 1, MEM_NP
-          IF((.NOT. used(p,m)) .AND. mem2proc(p,m) == procs(ip)) THEN
-            proc2mem(1,it,ip) = m
-            proc2mem(2,it,ip) = p
-            used(p,m) = .TRUE.
-            EXIT search_mem
-          END IF
-        END DO
-      END DO search_mem
-    END DO
-  END DO
+!  DO it = 1, nitmax
+!    DO ip = 1, nip
+!search_mem: DO m = 1, mem
+!        DO p = 1, MEM_NP
+!          IF((.NOT. used(p,m)) .AND. mem2proc(p,m) == procs(ip)) THEN
+!            proc2mem(1,it,ip) = m
+!            proc2mem(2,it,ip) = p
+!            used(p,m) = .TRUE.
+!            EXIT search_mem
+!          END IF
+!        END DO
+!      END DO search_mem
+!    END DO
+!  END DO
 
-  RETURN
-END SUBROUTINE
+!  RETURN
+!END SUBROUTINE
 !-----------------------------------------------------------------------
 ! Scatter gridded data to processes (nrank -> all)
 !-----------------------------------------------------------------------

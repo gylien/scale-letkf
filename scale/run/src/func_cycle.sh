@@ -205,18 +205,18 @@ else
         # stage-in
 
         path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2proc[$(((m-1)*mem_np+q))]}
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
 
         #-------------------
         # stage-out
 
 #        if ((OUT_OPT <= 2)); then
 #          path="${time}/fcst/${name_m[$m]}/history$(printf $SCALE_SFX $((q-1)))"
-#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$(((m-1)*mem_np+q))]}
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
 #        fi
 #        if ((OUT_OPT <= 1)); then
 #          path="${time}/fcst/${name_m[$m]}/init_$(datetime ${time} $FCSTLEN s)$(printf $SCALE_SFX $((q-1)))"
-#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$(((m-1)*mem_np+q))]}
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
 #        fi
 
         #-------------------
@@ -226,7 +226,7 @@ else
 
       if ((LOG_OPT <= 3)); then
         path="${time}/log/scale/${name_m[$m]}_LOG${SCALE_LOG_SFX}"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[$(((m-1)*mem_np+1))]}
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
       fi
 #          if ((LOG_OPT <= 1)); then
 #            # perturb bdy log
@@ -239,11 +239,11 @@ else
 
     if ((LOG_OPT <= 2)); then
       path="${time}/log/scale_topo/pp_LOG${SCALE_LOG_SFX}"
-      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[1]}
+      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
       path="${time}/log/scale_landuse/pp_LOG${SCALE_LOG_SFX}"
-      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[1]}
+      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
       path="${time}/log/scale_bdy/init_LOG${SCALE_LOG_SFX}"
-      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2proc[1]}
+      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
     fi
 
     #-------------------
