@@ -22,7 +22,7 @@ stepfunc[4]='obsthin'
 stepname[5]='Run observation operator'
 stepfunc[5]='obsope'
 stepname[6]='Run LETKF'
-stepfunc[6]='obsope'
+stepfunc[6]='letkf'
 
 #-------------------------------------------------------------------------------
 # usage help string
@@ -199,7 +199,7 @@ else
       stgoutstep='stageout.out'
     fi
 
-    for m in $(seq $MEMBER); do
+    for m in $(seq $mmean); do
       for q in $(seq $mem_np); do
         #-------------------
         # stage-in
@@ -458,47 +458,46 @@ ensfcst () {
 echo
 
 ipm=0
-  if ((PREP_TOPO == 1)); then
-    topo_base="$TMPDAT/topo_prep/topo"
-  else
-    topo_base="$TMPRUN/scale_pp_topo/topo"
-  fi
-  if ((PREP_LANDUSE == 1)); then
-    landuse_base="$TMPDAT/landuse_prep/landuse"
-  else
-    landuse_base="$TMPRUN/scale_pp_landuse/landuse"
-  fi
+if ((PREP_TOPO == 1)); then
+  topo_base="$TMPDAT/topo_prep/topo"
+else
+  topo_base="$TMPRUN/scale_pp_topo/topo"
+fi
+if ((PREP_LANDUSE == 1)); then
+  landuse_base="$TMPDAT/landuse_prep/landuse"
+else
+  landuse_base="$TMPRUN/scale_pp_landuse/landuse"
+fi
 
-  for m in $(seq $fmember); do
-    ipm=$((ipm+1))
-    if ((ipm > parallel_mems)); then wait; ipm=1; fi
-    echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+for m in $(seq $mmean); do
+  ipm=$((ipm+1))
+  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-    if ((PERTURB_BDY == 1)); then
+  if ((PERTURB_BDY == 1)); then
 ######
-      echo "not finished yet..."
+    echo "not finished yet..."
 #      bdy_base="$TMPRUN/pertbdy/${name_m[$m]}/boundary"
 ######
-    elif ((PREP_BDY == 1)); then
-      bdy_base="$TMPDAT/bdy_prep/bdy_${time}"
-    else
-      bdy_base="$TMPRUN/scale_init/boundary"
-    fi
-    if ((TMPRUN_MODE <= 2)); then
-      proc_opt='one'
-    else
-      proc_opt='alln'
-    fi
-    ( pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/pre_scale.sh $mem_np \
-        $TMPOUT/${time}/anal/${name_m[$m]}/init $bdy_base $topo_base $landuse_base \
-        ${time} $FCSTLEN $FCSTOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
-      mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \
-        ./scale-les run.conf ;
-      pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/post_scale.sh $mem_np \
-        ${time} ${name_m[$m]} $FCSTLEN $TMPRUN/scale/${name_m[$m]} ) &
+  elif ((PREP_BDY == 1)); then
+    bdy_base="$TMPDAT/bdy_prep/bdy_${time}"
+  else
+    bdy_base="$TMPRUN/scale_init/boundary"
+  fi
+  if ((TMPRUN_MODE <= 2)); then
+    proc_opt='one'
+  else
+    proc_opt='alln'
+  fi
+  ( pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/pre_scale.sh $mem_np \
+      $TMPOUT/${time}/anal/${name_m[$m]}/init $bdy_base $topo_base $landuse_base \
+      ${time} $FCSTLEN $FCSTOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
+    mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \
+      ./scale-les run.conf ) &
+#    pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/post_scale.sh $mem_np \
+#      ${time} ${name_m[$m]} $FCSTLEN $TMPRUN/scale/${name_m[$m]} ) &
 
-    sleep $BGJOB_INT
-  done
+  sleep $BGJOB_INT
 done
 wait
 

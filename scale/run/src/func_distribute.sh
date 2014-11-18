@@ -49,7 +49,7 @@ if ((NNODES >= MEM)); then
   mem_np=$((PPN*mem_nodes))
 else
   mem_nodes=1
-  mempn=$(((MEM-1)/NNODES+1))
+  local mempn=$(((MEM-1)/NNODES+1))
   if ((mempn > PPN)); then
     mem_np=1
   else
@@ -60,7 +60,6 @@ fi
 #-------------------------------------------------------------------------------
 # Limited to the minimum processes for a member ($MIN_NP)
 #        and the maximum processes for a member ($MAX_NP),
-# and require it occupy full nodes if multiple nodes are used.
 
 if [ "$MIN_NP" != 'none' ] && ((mem_np < MIN_NP)); then
   mem_np=$MIN_NP
@@ -68,25 +67,19 @@ fi
 if [ "$MAX_NP" != 'none' ] && ((mem_np > MAX_NP)); then
   mem_np=$MAX_NP
 fi
-if ((mem_np > PPN)); then
-  mem_nodes=$(((mem_np-1)/PPN+1))
-  if ((mem_nodes > NNODES)); then
-    echo "[Error] Total number of nodes is insufficient." >&2
-    exit 1
-  fi
-  mem_np=$((PPN*mem_nodes))
-  repeat_mems=$((NNODES/mem_nodes))
-  parallel_mems=$repeat_mems
-else
-  mem_nodes=1
-  mempn=$((PPN/mem_np))
-  if ((mempn == 1)); then
-    mem_np=$PPN
-  fi
-  repeat_mems=$NNODES
-  parallel_mems=$((repeat_mems*mempn))
+
+#-------------------------------------------------------------------------------
+# Re-calculate $mem_nodes, and calculate
+# the period that members run on repeated nodes ($repeat_mems), and
+# the number of members that can be run parallelly ($parallel_mems).
+
+mem_nodes=$(((mem_np-1)/PPN+1))
+if ((mem_nodes > NNODES)); then
+  echo "[Error] Total number of nodes is insufficient." >&2
+  exit 1
 fi
-parallel_cycles=$(((MEM-1)/parallel_mems+1))
+repeat_mems=$((NNODES/mem_nodes))
+parallel_mems=$((repeat_mems * (PPN/mem_np)))
 
 #-------------------------------------------------------------------------------
 }
@@ -106,12 +99,12 @@ set_mem2proc () {
 #   $MEMBER             Ensemble size (if $MEM is not given)
 #   $NNODES             Number of total nodes
 #   $PPN                Number of processes per node
-#   $totalnp            Total number of processes
 #   $mem_nodes          Number of nodes for a member
 #   $mem_np             Number of processes for a member
 #   $node[1...$NNODES]  Name of nodes
 #
 # Return variables:
+#   $totalnp                       Total number of processes
 #   $procs[1...$totalnp]           Sequence of (total) processes
 #   $mem2proc[1...($MEM*$mem_np)]  Relation from members to nodes and processes (pseudo 2-D array)
 #   $node_m[1...$MEM]              Name of node(s) for each member
@@ -121,47 +114,46 @@ local MEM=${1:-$MEMBER}
 
 #-------------------------------------------------------------------------------
 
-local m=0
-local i
-local n
+local tppn=$((mem_np / mem_nodes))
+local tmod=$((mem_np % mem_nodes))
+
+local m
 local nn
-local p
+local q
+local qn
+local n=0
+local procs_add=1
+totalnp=0
 
-while ((m < MEM)); do
-  for i in $(seq $PPN); do
-    for n in $(seq $NNODES); do
-      m=$((m+1))
-      if ((mem_nodes == 1)) && ((m <= MEM)); then
-        for p in $(seq $mem_np); do
-          mem2proc[$(((m-1)*mem_np+p))]=$n
-          node_m[$m]="${node[$n]}*$mem_np"
-        done
-      fi
-      if ((m <= totalnp)); then
-        procs[$m]=$n
-      fi
-    done
-  done
-done
-
-#-------------------------------------------------------------------------------
-
-if ((mem_nodes > 1)); then
-  n=0
+for m in $(seq $MEM); do
   node_m[$m]=''
-  for m in $(seq $MEM); do
-    for nn in $(seq $mem_nodes); do
-      for p in $(seq $((PPN*(nn-1)+1)) $((PPN*nn))); do
-        mem2proc[$(((m-1)*mem_np+p))]=$((n+nn))
-      done
-      node_m[$m]="${node_m[$m]}${node[$((n+nn))]}*$PPN "
+  for nn in $(seq $mem_nodes); do
+    if ((nn <= tmod)); then
+      tppnt=$((tppn+1))
+    else
+      tppnt=$tppn
+    fi
+    qn=0
+    for q in $(seq $((qn+1)) $((qn+tppnt))); do
+      mem2proc[$(((m-1)*mem_np+q))]=$((n+nn))
     done
-    n=$((n+mem_nodes))
-    if ((n+mem_nodes > NNODES)); then
-      n=0
+    qn=$((qn+tppnt))
+    node_m[$m]="${node_m[$m]}${node[$((n+nn))]}*$tppnt "
+
+    if ((procs_add == 1)); then
+      for p in $(seq $((totalnp+1)) $((totalnp+PPN))); do
+        procs[$p]=$((n+nn))
+      done
+      totalnp=$((totalnp+PPN))
     fi
   done
-fi
+
+  n=$((n+mem_nodes))
+  if ((n+mem_nodes > NNODES)); then
+    n=0
+    procs_add=0
+  fi
+done
 
 #-------------------------------------------------------------------------------
 }
@@ -183,8 +175,7 @@ distribute_da_cycle () {
 #   $NNODES        Number of total nodes
 #   $PPN           Number of processes per node
 #   $MEMBER_FMT
-#   $MIN_NP_SCALE
-#   $MAX_NP_SCALE
+#   $SCALE_NP
 #   
 # Return variables:
 #   $totalnp                              Total number of processes
@@ -213,7 +204,6 @@ local NODEFILEDIR=${2:-'-'}
 #-------------------------------------------------------------------------------
 # Set up node names and member names
 
-totalnp=$((PPN*NNODES))
 mmean=$((MEMBER+1))
 msprd=$((MEMBER+2))
 
@@ -242,7 +232,7 @@ name_m[$msprd]='sprd'
 #-------------------------------------------------------------------------------
 # Set up the distribution of members on nodes
 
-set_mem_np $((MEMBER+1)) $MIN_NP_SCALE $MAX_NP_SCALE
+set_mem_np $((MEMBER+1)) $SCALE_NP $SCALE_NP
 
 set_mem2proc $((MEMBER+1))
 
@@ -257,7 +247,7 @@ node_m[$msprd]=${node_m[$mmean]}
 
 if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
   local p
-  for p in $(seq $totalnp); do
+  for p in $(seq $totalnp); do  
     echo ${node[${procs[$p]}]} >> $NODEFILEDIR/proc
   done
   for n in $(seq $NNODES); do
@@ -293,14 +283,13 @@ distribute_fcst () {
 #   $PPN           Number of processes per node
 #   $NNODES_real   XXXXXX
 #   $PPN_real      XXXXXX
-#   $MIN_NP_SCALE
-#   $MAX_NP_SCALE
+#   $SCALE_NP
 #   $MACHINE_TYPE
 #   
 # Return variables:
+#   $totalnp                              Total number of processes
 #   $fmember                              Number of forecast members
 #   $fmembertot                           Total number of forecast numbers for all cycles
-#   $totalnp                              Total number of processes
 #   $mem_nodes                            Number of nodes for a member
 #   $mem_np                               Number of processes for a member
 #   $procs[1...$totalnp]                  Sequence of (total) processes
@@ -330,8 +319,6 @@ local NODEFILEDIR=${4:-'-'}
 
 #-------------------------------------------------------------------------------
 # Set up node names and member names, and also get the number of members
-
-totalnp=$((PPN*NNODES))
 
 if ((MACHINE_TYPE == 1)); then
   read_nodefile_pbs "$NODEFILE"
@@ -365,7 +352,7 @@ fmembertot=$((fmember * CYCLE))
 #-------------------------------------------------------------------------------
 # Set up the distribution of members on nodes
 
-set_mem_np $fmembertot $MIN_NP_SCALE $MAX_NP_SCALE
+set_mem_np $fmembertot $SCALE_NP $SCALE_NP
 
 set_mem2proc $fmembertot
 

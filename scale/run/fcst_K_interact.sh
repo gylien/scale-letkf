@@ -36,7 +36,7 @@ fi
 
 #-------------------------------------------------------------------------------
 
-setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}"
+setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}"
 
 jobscrp="${myname1}_job.sh"
 
@@ -75,7 +75,7 @@ export PARALLEL=${THREADS}
 
 cd $(pwd)
 
-./${myname1}.sh $STIME "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
+./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
 EOF
 
 echo "[$(datetime_now)] Entering the interactive mode..."

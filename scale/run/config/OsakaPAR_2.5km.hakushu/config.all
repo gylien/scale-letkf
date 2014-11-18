@@ -31,6 +31,14 @@ OBS=              # directory of observation data in LETKF obs format
 OBSNCEP=          # directory of observation data in NCEP BUFR format
 
 #===============================================================================
+# Cycling settings
+
+WINDOW_S=300        # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=900        # SCALE forecast time when assimilation window ends (second)
+LCYCLE=600          # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=60        # Timeslot interval for 4D-LETKF (second)
+
+#===============================================================================
 # Temporary directories to store runtime files
 #
 # TMPDAT_MODE
@@ -90,18 +98,14 @@ PYTHON="python"
 #===============================================================================
 # Parallelization settings
 
-MEMBER=2           # Ensemble size
+MEMBER=4           # Ensemble size
 
-NNODES=4           # Number of nodes
-PPN=4              # Number of processes per node
+NNODES=2           # Number of nodes
+PPN=8              # Number of processes per node
 
-THREADS=4           ######
+THREADS=1          ######
 
-                   # (This limit is usually due to available memory per node/core)
-MIN_NP_SCALE=4     # Minimum number of cores required to run SCALE
-
-                   # (This limit is usually due to parallelization efficiency)
-MAX_NP_SCALE=4     # Maximum number of cores suggested to run SCALE
+SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 

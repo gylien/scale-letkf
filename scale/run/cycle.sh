@@ -152,7 +152,7 @@ while ((time <= ETIME)); do
   echo
   echo "  Observation timeslots:"
   for is in $(seq $nslots); do
-    printf "  %4d - %s" ${is} "${timefmt_sl[$is]}"
+    printf "  %4d - %s\n" ${is} "${timefmt_sl[$is]}"
   done
   echo
   echo "  Nodes used:               $NNODES"
@@ -248,12 +248,12 @@ if ((builtin_staging)); then
     fi
   fi
 
-  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
-    safe_rm_tmpdir $TMP
-  fi
-  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
-    safe_rm_tmpdir $TMPL
-  fi
+#  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
+#    safe_rm_tmpdir $TMP
+#  fi
+#  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
+#    safe_rm_tmpdir $TMPL
+#  fi
 fi
 
 #===============================================================================
