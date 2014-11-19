@@ -1,8 +1,8 @@
 include ../configure.user
 
-PROGS   = letkf mean obsope efso
+PROGS   = obsope #letkf mean efso
 
-OBJS    = letkf_obs.o letkf_namelist.o #letkf_tools.o efso_tools.o efso_nml.o
+OBJS    = obsope_tools.o letkf_obs.o letkf_nml.o #letkf_tools.o efso_tools.o efso_nml.o
 
 COMMON_DIR = ../common
 
@@ -45,17 +45,20 @@ letkf.o:	letkf.f90 $(OBJS) common_modules
 	$(FC) $(FOPTS) -c letkf.f90 -I$(COMMON_DIR) $(INCS)
 mean.o:	mean.f90 letkf_obs.o common_modules
 	$(FC) $(FOPTS) -c mean.f90 -I$(COMMON_DIR) $(INCS)
-obsope.o:	obsope.f90 common_modules
+obsope.o:	obsope.f90 $(OBJS) common_modules
 	$(FC) $(FOPTS) -c obsope.f90 -I$(COMMON_DIR) $(INCS)
 efso.o:	efso.f90 $(OBJS) common_modules
 	$(FC) $(FOPTS) -c efso.f90 -I$(COMMON_DIR) $(INCS)
+
+obsope_tools.o:    obsope_tools.f90 letkf_nml.o common_modules
+	$(FC) $(FOPTS) -c obsope_tools.f90 -I$(COMMON_DIR) $(INCS)
 
 letkf_obs.o:	letkf_obs.f90 common_modules
 	$(FC) $(FOPTS) -c letkf_obs.f90 -I$(COMMON_DIR) $(INCS)
 letkf_tools.o:  letkf_tools.f90 letkf_obs.o common_modules
 	$(FC) $(FOPTS) -c letkf_tools.f90 -I$(COMMON_DIR) $(INCS)
-letkf_namelist.o:	letkf_namelist.f90
-	$(FC) $(FOPTS) -c letkf_namelist.f90 $(INCS)
+letkf_nml.o:	letkf_nml.f90
+	$(FC) $(FOPTS) -c letkf_nml.f90 -I$(COMMON_DIR) $(INCS)
 #letkf_tools.o:	letkf_tools.f90 letkf_obs.o efso_nml.o efso_tools.o common_modules
 #	$(FC) $(FOPTS) -c letkf_tools.f90 -I$(COMMON_DIR) $(INCS)
 efso_tools.o:	efso_tools.f90 letkf_obs.o efso_nml.o common_modules

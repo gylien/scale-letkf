@@ -78,6 +78,26 @@ MODULE common_obs_scale
      (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC'/)
 !     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'TCX', 'TCY', 'TCP'/)
 
+  TYPE obs_info
+    INTEGER :: nobs
+    REAL(r_size),ALLOCATABLE :: elm(:)
+    REAL(r_size),ALLOCATABLE :: lon(:)
+    REAL(r_size),ALLOCATABLE :: lat(:)
+    REAL(r_size),ALLOCATABLE :: lev(:)
+    REAL(r_size),ALLOCATABLE :: dat(:)
+    REAL(r_size),ALLOCATABLE :: err(:)
+    REAL(r_size),ALLOCATABLE :: typ(:)
+    REAL(r_size),ALLOCATABLE :: dif(:)
+  END TYPE obs_info
+
+  TYPE obs_ensval
+    INTEGER :: nobs
+    INTEGER,ALLOCATABLE :: idx(:)
+    REAL(r_size),ALLOCATABLE :: val(:)
+    REAL(r_size),ALLOCATABLE :: ensval(:,:)
+    INTEGER,ALLOCATABLE :: qc(:)
+  END TYPE obs_ensval
+
 CONTAINS
 !-----------------------------------------------------------------------
 ! Transformation from model variables to an observation
@@ -611,6 +631,72 @@ SUBROUTINE monit_dep(nn,elm,dep,qc,ofmt)
   RETURN
 END SUBROUTINE monit_dep
 !-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+SUBROUTINE obs_info_allocate(obs)
+  IMPLICIT NONE
+  TYPE(obs_info),INTENT(INOUT) :: obs
+
+  call obs_info_deallocate(obs)
+
+  ALLOCATE( obs%elm (obs%nobs) )
+  ALLOCATE( obs%lon (obs%nobs) )
+  ALLOCATE( obs%lat (obs%nobs) )
+  ALLOCATE( obs%lev (obs%nobs) )
+  ALLOCATE( obs%dat (obs%nobs) )
+  ALLOCATE( obs%err (obs%nobs) )
+  ALLOCATE( obs%typ (obs%nobs) )
+  ALLOCATE( obs%dif (obs%nobs) )
+
+  RETURN
+END SUBROUTINE obs_info_allocate
+!-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+SUBROUTINE obs_info_deallocate(obs)
+  IMPLICIT NONE
+  TYPE(obs_info),INTENT(INOUT) :: obs
+
+  IF(ALLOCATED(obs%elm)) DEALLOCATE(obs%elm)
+  IF(ALLOCATED(obs%lon)) DEALLOCATE(obs%lon)
+  IF(ALLOCATED(obs%lat)) DEALLOCATE(obs%lat)
+  IF(ALLOCATED(obs%lev)) DEALLOCATE(obs%lev)
+  IF(ALLOCATED(obs%dat)) DEALLOCATE(obs%dat)
+  IF(ALLOCATED(obs%err)) DEALLOCATE(obs%err)
+  IF(ALLOCATED(obs%typ)) DEALLOCATE(obs%typ)
+  IF(ALLOCATED(obs%dif)) DEALLOCATE(obs%dif)
+
+  RETURN
+END SUBROUTINE obs_info_deallocate
+!-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+SUBROUTINE obs_ensval_allocate(obs)
+  IMPLICIT NONE
+  TYPE(obs_ensval),INTENT(INOUT) :: obs
+
+  call obs_ensval_deallocate(obs)
+
+  ALLOCATE( obs%idx (obs%nobs) )
+  ALLOCATE( obs%val (obs%nobs) )
+  ALLOCATE( obs%qc  (obs%nobs) )
+
+  RETURN
+END SUBROUTINE obs_ensval_allocate
+!-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+SUBROUTINE obs_ensval_deallocate(obs)
+  IMPLICIT NONE
+  TYPE(obs_ensval),INTENT(INOUT) :: obs
+
+  IF(ALLOCATED(obs%idx)) DEALLOCATE(obs%idx)
+  IF(ALLOCATED(obs%val)) DEALLOCATE(obs%val)
+  IF(ALLOCATED(obs%qc )) DEALLOCATE(obs%qc )
+
+  RETURN
+END SUBROUTINE obs_ensval_deallocate
+!-----------------------------------------------------------------------
 ! Basic modules for observation input
 !-----------------------------------------------------------------------
 SUBROUTINE get_nobs(cfile,nrec,nn)
@@ -675,23 +761,18 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
   RETURN
 END SUBROUTINE get_nobs
 
-SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,otyp)
+SUBROUTINE read_obs(cfile,obs)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
-  INTEGER,INTENT(IN) :: nn
-  REAL(r_size),INTENT(OUT) :: elem(nn) ! element number
-  REAL(r_size),INTENT(OUT) :: rlon(nn)
-  REAL(r_size),INTENT(OUT) :: rlat(nn)
-  REAL(r_size),INTENT(OUT) :: rlev(nn)
-  REAL(r_size),INTENT(OUT) :: odat(nn)
-  REAL(r_size),INTENT(OUT) :: oerr(nn)
-  REAL(r_size),INTENT(OUT) :: otyp(nn)
-  REAL(r_sngl) :: wk(7)
+  TYPE(obs_info),INTENT(INOUT) :: obs
+  REAL(r_sngl) :: wk(8)
   INTEGER :: n,iunit
+
+!  call obs_info_allocate(obs)
 
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-  DO n=1,nn
+  DO n=1,obs%nobs
     READ(iunit) wk
     SELECT CASE(NINT(wk(1)))
     CASE(id_u_obs)
@@ -715,141 +796,142 @@ SUBROUTINE read_obs(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,otyp)
       wk(5) = wk(5) * 100.0 ! hPa -> Pa
       wk(6) = wk(6) * 100.0 ! hPa -> Pa
     END SELECT
-    elem(n) = REAL(wk(1),r_size)
-    rlon(n) = REAL(wk(2),r_size)
-    rlat(n) = REAL(wk(3),r_size)
-    rlev(n) = REAL(wk(4),r_size)
-    odat(n) = REAL(wk(5),r_size)
-    oerr(n) = REAL(wk(6),r_size)
-    otyp(n) = REAL(wk(7),r_size)
+    obs%elm(n) = NINT(wk(1))
+    obs%lon(n) = REAL(wk(2),r_size)
+    obs%lat(n) = REAL(wk(3),r_size)
+    obs%lev(n) = REAL(wk(4),r_size)
+    obs%dat(n) = REAL(wk(5),r_size)
+    obs%err(n) = REAL(wk(6),r_size)
+    obs%typ(n) = NINT(wk(7))
+    obs%dif(n) = REAL(wk(8),r_size)
   END DO
   CLOSE(iunit)
 
   RETURN
 END SUBROUTINE read_obs
 
-SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,ohx,oqc)
-  IMPLICIT NONE
-  CHARACTER(*),INTENT(IN) :: cfile
-  INTEGER,INTENT(IN) :: nn
-  REAL(r_size),INTENT(OUT) :: elem(nn) ! element number
-  REAL(r_size),INTENT(OUT) :: rlon(nn)
-  REAL(r_size),INTENT(OUT) :: rlat(nn)
-  REAL(r_size),INTENT(OUT) :: rlev(nn)
-  REAL(r_size),INTENT(OUT) :: odat(nn)
-  REAL(r_size),INTENT(OUT) :: oerr(nn)
-  REAL(r_size),INTENT(OUT) :: otyp(nn)
-  REAL(r_size),INTENT(OUT) :: tdif(nn)
-  REAL(r_size),INTENT(OUT) :: ohx(nn)
-  INTEGER,INTENT(OUT) :: oqc(nn)
-  REAL(r_sngl) :: wk(10)
-  INTEGER :: n,iunit
+!SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,ohx,oqc)
+!  IMPLICIT NONE
+!  CHARACTER(*),INTENT(IN) :: cfile
+!  INTEGER,INTENT(IN) :: nn
+!  REAL(r_size),INTENT(OUT) :: elem(nn) ! element number
+!  REAL(r_size),INTENT(OUT) :: rlon(nn)
+!  REAL(r_size),INTENT(OUT) :: rlat(nn)
+!  REAL(r_size),INTENT(OUT) :: rlev(nn)
+!  REAL(r_size),INTENT(OUT) :: odat(nn)
+!  REAL(r_size),INTENT(OUT) :: oerr(nn)
+!  REAL(r_size),INTENT(OUT) :: otyp(nn)
+!  REAL(r_size),INTENT(OUT) :: tdif(nn)
+!  REAL(r_size),INTENT(OUT) :: ohx(nn)
+!  INTEGER,INTENT(OUT) :: oqc(nn)
+!  REAL(r_sngl) :: wk(10)
+!  INTEGER :: n,iunit
 
-  iunit=91
-  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-  DO n=1,nn
-    READ(iunit) wk
-    SELECT CASE(NINT(wk(1)))
-    CASE(id_u_obs)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-    CASE(id_v_obs)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-    CASE(id_t_obs)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-    CASE(id_tv_obs)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-    CASE(id_q_obs)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-    CASE(id_ps_obs)
-      wk(5) = wk(5) * 100.0 ! hPa -> Pa
-      wk(6) = wk(6) * 100.0 ! hPa -> Pa
-    CASE(id_rh_obs)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-      wk(5) = wk(5) * 0.01 ! percent input
-      wk(6) = wk(6) * 0.01 ! percent input
-    CASE(id_tcmip_obs)
-      wk(5) = wk(5) * 100.0 ! hPa -> Pa
-      wk(6) = wk(6) * 100.0 ! hPa -> Pa
-    END SELECT
-    elem(n) = REAL(wk(1),r_size)
-    rlon(n) = REAL(wk(2),r_size)
-    rlat(n) = REAL(wk(3),r_size)
-    rlev(n) = REAL(wk(4),r_size)
-    odat(n) = REAL(wk(5),r_size)
-    oerr(n) = REAL(wk(6),r_size)
-    otyp(n) = REAL(wk(7),r_size)
-    tdif(n) = REAL(wk(8),r_size)
-    ohx(n) = REAL(wk(9),r_size)
-    oqc(n) = NINT(wk(10))
-  END DO
-  CLOSE(iunit)
+!  iunit=91
+!  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+!  DO n=1,nn
+!    READ(iunit) wk
+!    SELECT CASE(NINT(wk(1)))
+!    CASE(id_u_obs)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!    CASE(id_v_obs)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!    CASE(id_t_obs)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!    CASE(id_tv_obs)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!    CASE(id_q_obs)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!    CASE(id_ps_obs)
+!      wk(5) = wk(5) * 100.0 ! hPa -> Pa
+!      wk(6) = wk(6) * 100.0 ! hPa -> Pa
+!    CASE(id_rh_obs)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!      wk(5) = wk(5) * 0.01 ! percent input
+!      wk(6) = wk(6) * 0.01 ! percent input
+!    CASE(id_tcmip_obs)
+!      wk(5) = wk(5) * 100.0 ! hPa -> Pa
+!      wk(6) = wk(6) * 100.0 ! hPa -> Pa
+!    END SELECT
+!    elem(n) = REAL(wk(1),r_size)
+!    rlon(n) = REAL(wk(2),r_size)
+!    rlat(n) = REAL(wk(3),r_size)
+!    rlev(n) = REAL(wk(4),r_size)
+!    odat(n) = REAL(wk(5),r_size)
+!    oerr(n) = REAL(wk(6),r_size)
+!    otyp(n) = REAL(wk(7),r_size)
+!    tdif(n) = REAL(wk(8),r_size)
+!    ohx(n) = REAL(wk(9),r_size)
+!    oqc(n) = NINT(wk(10))
+!  END DO
+!  CLOSE(iunit)
 
-  RETURN
-END SUBROUTINE read_obs2
+!  RETURN
+!END SUBROUTINE read_obs2
 
-SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,ohx,oqc,append)
-  IMPLICIT NONE
-  CHARACTER(*),INTENT(IN) :: cfile
-  INTEGER,INTENT(IN) :: nn
-  REAL(r_size),INTENT(IN) :: elem(nn) ! element number
-  REAL(r_size),INTENT(IN) :: rlon(nn)
-  REAL(r_size),INTENT(IN) :: rlat(nn)
-  REAL(r_size),INTENT(IN) :: rlev(nn)
-  REAL(r_size),INTENT(IN) :: odat(nn)
-  REAL(r_size),INTENT(IN) :: oerr(nn)
-  REAL(r_size),INTENT(IN) :: otyp(nn)
-  REAL(r_size),INTENT(IN) :: tdif(nn)
-  REAL(r_size),INTENT(IN) :: ohx(nn)
-  INTEGER,INTENT(IN) :: oqc(nn)
-  INTEGER,INTENT(IN) :: append
-  REAL(r_sngl) :: wk(10)
-  INTEGER :: n,iunit
+!SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,ohx,oqc,append)
+!  IMPLICIT NONE
+!  CHARACTER(*),INTENT(IN) :: cfile
+!  INTEGER,INTENT(IN) :: nn
+!  REAL(r_size),INTENT(IN) :: elem(nn) ! element number
+!  REAL(r_size),INTENT(IN) :: rlon(nn)
+!  REAL(r_size),INTENT(IN) :: rlat(nn)
+!  REAL(r_size),INTENT(IN) :: rlev(nn)
+!  REAL(r_size),INTENT(IN) :: odat(nn)
+!  REAL(r_size),INTENT(IN) :: oerr(nn)
+!  REAL(r_size),INTENT(IN) :: otyp(nn)
+!  REAL(r_size),INTENT(IN) :: tdif(nn)
+!  REAL(r_size),INTENT(IN) :: ohx(nn)
+!  INTEGER,INTENT(IN) :: oqc(nn)
+!  INTEGER,INTENT(IN) :: append
+!  REAL(r_sngl) :: wk(10)
+!  INTEGER :: n,iunit
 
-  iunit=92
-  IF(append == 0) THEN
-    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-  ELSE
-    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
-  END IF
-  DO n=1,nn
-    wk(1) = REAL(elem(n),r_sngl)
-    wk(2) = REAL(rlon(n),r_sngl)
-    wk(3) = REAL(rlat(n),r_sngl)
-    wk(4) = REAL(rlev(n),r_sngl)
-    wk(5) = REAL(odat(n),r_sngl)
-    wk(6) = REAL(oerr(n),r_sngl)
-    wk(7) = REAL(otyp(n),r_sngl)
-    wk(8) = REAL(tdif(n),r_sngl)
-    wk(9) = REAL(ohx(n),r_sngl)
-    wk(10) = REAL(oqc(n),r_sngl)
-    SELECT CASE(NINT(wk(1)))
-    CASE(id_u_obs)
-      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-    CASE(id_v_obs)
-      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-    CASE(id_t_obs)
-      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-    CASE(id_tv_obs)
-      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-    CASE(id_q_obs)
-      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-    CASE(id_ps_obs)
-      wk(5) = wk(5) * 0.01 ! Pa -> hPa
-      wk(6) = wk(6) * 0.01 ! Pa -> hPa
-    CASE(id_rh_obs)
-      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-      wk(5) = wk(5) * 100.0 ! percent output
-      wk(6) = wk(6) * 100.0 ! percent output
-    CASE(id_tcmip_obs)
-      wk(5) = wk(5) * 0.01 ! Pa -> hPa
-      wk(6) = wk(6) * 0.01 ! Pa -> hPa
-    END SELECT
-    WRITE(iunit) wk
-  END DO
-  CLOSE(iunit)
+!  iunit=92
+!  IF(append == 0) THEN
+!    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+!  ELSE
+!    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
+!  END IF
+!  DO n=1,nn
+!    wk(1) = REAL(elem(n),r_sngl)
+!    wk(2) = REAL(rlon(n),r_sngl)
+!    wk(3) = REAL(rlat(n),r_sngl)
+!    wk(4) = REAL(rlev(n),r_sngl)
+!    wk(5) = REAL(odat(n),r_sngl)
+!    wk(6) = REAL(oerr(n),r_sngl)
+!    wk(7) = REAL(otyp(n),r_sngl)
+!    wk(8) = REAL(tdif(n),r_sngl)
+!    wk(9) = REAL(ohx(n),r_sngl)
+!    wk(10) = REAL(oqc(n),r_sngl)
+!    SELECT CASE(NINT(wk(1)))
+!    CASE(id_u_obs)
+!      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+!    CASE(id_v_obs)
+!      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+!    CASE(id_t_obs)
+!      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+!    CASE(id_tv_obs)
+!      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+!    CASE(id_q_obs)
+!      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+!    CASE(id_ps_obs)
+!      wk(5) = wk(5) * 0.01 ! Pa -> hPa
+!      wk(6) = wk(6) * 0.01 ! Pa -> hPa
+!    CASE(id_rh_obs)
+!      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+!      wk(5) = wk(5) * 100.0 ! percent output
+!      wk(6) = wk(6) * 100.0 ! percent output
+!    CASE(id_tcmip_obs)
+!      wk(5) = wk(5) * 0.01 ! Pa -> hPa
+!      wk(6) = wk(6) * 0.01 ! Pa -> hPa
+!    END SELECT
+!    WRITE(iunit) wk
+!  END DO
+!  CLOSE(iunit)
 
-  RETURN
-END SUBROUTINE write_obs2
+!  RETURN
+!END SUBROUTINE write_obs2
 
 FUNCTION uid_obs(id_obs)
   IMPLICIT NONE

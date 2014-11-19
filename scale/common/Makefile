@@ -8,8 +8,8 @@ SCALE_INCS    = -I/data1/gylien/scale_ens/dc_utils \
           -I/data1/gylien/scale_ens/include
 #          -I/data1/gylien/scale/scalelib/include
 
-SCALE_LIBS    = -L/data1/gylien/scale_ens/lib -lscale -lgtool -ldcutils \
-          $(NETCDF_LIB) # $(LIBBLAS)
+#SCALE_LIBS    = -L/data1/gylien/scale_ens/lib -lscale -lgtool -ldcutils \
+#          $(NETCDF_LIB) # $(LIBBLAS)
 
 all:	$(OBJS) enssize datetime pdbash
 
@@ -38,7 +38,7 @@ common_letkf.o:	../../common/common_letkf.f90 common.o common_mtx.o
 common_ncio.o:	common_ncio.f90 common.o
 	$(SFC) $(FOPTS) -c common_ncio.f90 $(NETCDF_INC)
 common_scale.o:	common_scale.f90 common.o common_ncio.o
-	$(SFC) $(FOPTS) -c common_scale.f90 $(NETCDF_INC)
+	$(SFC) $(FOPTS) -c common_scale.f90 $(NETCDF_INC) $(SCALE_INCS)
 common_obs_scale.o:	common_obs_scale.f90 common.o common_scale.o
 	$(SFC) $(FOPTS) -c common_obs_scale.f90 $(NETCDF_INC)
 common_mpi_scale.o:	common_mpi_scale.f90 common.o common_mpi.o common_scale.o common_obs_scale.o

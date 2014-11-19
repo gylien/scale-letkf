@@ -12,7 +12,10 @@ MODULE common_scale
 !=======================================================================
 !$USE OMP_LIB
   USE common
-  USE common_ncio
+!  USE common_ncio
+
+  use scale_stdio, only: H_MID
+
   IMPLICIT NONE
   PUBLIC
 !-----------------------------------------------------------------------
@@ -26,11 +29,11 @@ MODULE common_scale
   INTEGER,PARAMETER :: nlat=nlatsub*nlatns
   INTEGER,PARAMETER :: nlev=30
   INTEGER,PARAMETER :: nv3d=11   ! 3D state variables (in SCALE init/restart files)
-  INTEGER,PARAMETER :: nv3dd=12  ! 3D diagnostic variables (in SCALE history files)
-  INTEGER,PARAMETER :: nv3dx=12  ! 3D diagnostic variables
+  INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
+  INTEGER,PARAMETER :: nv3dx=13  ! 3D diagnostic variables
   INTEGER,PARAMETER :: nv2d=0    ! 2D state variables (in SCALE init/restart files)
-  INTEGER,PARAMETER :: nv2dd=3   ! 2D diagnostic variables (in SCALE history files)
-  INTEGER,PARAMETER :: nv2dx=3   ! 2D diagnostic variables
+  INTEGER,PARAMETER :: nv2dd=2   ! 2D diagnostic variables (in SCALE history files)
+  INTEGER,PARAMETER :: nv2dx=2   ! 2D diagnostic variables
   INTEGER,PARAMETER :: iv3d_rho=1
   INTEGER,PARAMETER :: iv3d_rhou=2
   INTEGER,PARAMETER :: iv3d_rhov=3
@@ -54,9 +57,10 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv3dd_qs=10
   INTEGER,PARAMETER :: iv3dd_qg=11
   INTEGER,PARAMETER :: iv3dd_rh=12
-  INTEGER,PARAMETER :: iv2dd_hgt=1
-  INTEGER,PARAMETER :: iv2dd_tsfc=2
-  INTEGER,PARAMETER :: iv2dd_rain=3
+  INTEGER,PARAMETER :: iv3dd_hgt=13
+!  INTEGER,PARAMETER :: iv2dd_hgt=1
+  INTEGER,PARAMETER :: iv2dd_tsfc=1
+  INTEGER,PARAMETER :: iv2dd_rain=2
   INTEGER,PARAMETER :: nij0=nlon*nlat
   INTEGER,PARAMETER :: nlevall=nlev*nv3d+nv2d
   INTEGER,PARAMETER :: nlevalld=nlev*nv3dd+nv2dd
@@ -81,6 +85,8 @@ MODULE common_scale
   CHARACTER(vname_max),SAVE :: v2d_name(nv2d)
   CHARACTER(vname_max),SAVE :: v2dd_name(nv2dx)
 
+  character(len=H_MID), parameter :: MODELNAME = "SCALE-LES"
+
 CONTAINS
 !-----------------------------------------------------------------------
 ! Set the parameters
@@ -95,7 +101,7 @@ SUBROUTINE set_common_scale
   !
   ! Variable names (same as in the NetCDF file)
   !
-  ! state variables (for LETKF)
+  ! state variables (in 'restart' files, for LETKF)
   v3d_name(iv3d_rho)  = 'DENS'
   v3d_name(iv3d_rhou) = 'MOMX'
   v3d_name(iv3d_rhov) = 'MOMY'
@@ -108,7 +114,7 @@ SUBROUTINE set_common_scale
   v3d_name(iv3d_qs)   = 'QS'
   v3d_name(iv3d_qg)   = 'QG'
   !
-  ! diagnostic variables (for observation operators)
+  ! diagnostic variables (in 'history' files, for observation operators)
   v3dd_name(iv3dd_u)    = 'U'
   v3dd_name(iv3dd_v)    = 'V'
   v3dd_name(iv3dd_w)    = 'W'
@@ -121,7 +127,9 @@ SUBROUTINE set_common_scale
   v3dd_name(iv3dd_qs)   = 'QS'
   v3dd_name(iv3dd_qg)   = 'QG'
   v3dd_name(iv3dd_rh)   = 'RH'
+  v3dd_name(iv3dd_hgt)   = 'height'
   !
+!  v2dd_name(iv2dd_hgt) = 'height'
   v2dd_name(iv2dd_tsfc) = 'SFC_TEMP'
   v2dd_name(iv2dd_rain) = 'PREC'
   !
@@ -187,130 +195,130 @@ SUBROUTINE set_common_scale
 !  wg(:,:) = sqrt(wg(:,:) * totalwg)
   RETURN
 END SUBROUTINE set_common_scale
-!-----------------------------------------------------------------------
-! File I/O
-!-----------------------------------------------------------------------
-!-- Read a grid file ---------------------------------------------------
-SUBROUTINE read_grd(filename,inv3d,inv2d,iv3dname,iv2dname,v3d,v2d)
-  IMPLICIT NONE
-  CHARACTER(*),INTENT(IN) :: filename
-  INTEGER,INTENT(IN) :: inv3d,inv2d
-  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
-  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
-  REAL(r_size),INTENT(OUT) :: v3d(nlonsub,nlatsub,nlev,inv3d)
-  REAL(r_size),INTENT(OUT) :: v2d(nlonsub,nlatsub,inv2d)
-  REAL(r_dble) :: buf3d8(nlonsub,nlatsub,nlev)
-  REAL(r_dble) :: buf2d8(nlonsub,nlatsub)
-  INTEGER :: iunit,n
+!!-----------------------------------------------------------------------
+!! File I/O
+!!-----------------------------------------------------------------------
+!!-- Read a grid file ---------------------------------------------------
+!SUBROUTINE read_grd(filename,inv3d,inv2d,iv3dname,iv2dname,v3d,v2d)
+!  IMPLICIT NONE
+!  CHARACTER(*),INTENT(IN) :: filename
+!  INTEGER,INTENT(IN) :: inv3d,inv2d
+!  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
+!  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
+!  REAL(r_size),INTENT(OUT) :: v3d(nlonsub,nlatsub,nlev,inv3d)
+!  REAL(r_size),INTENT(OUT) :: v2d(nlonsub,nlatsub,inv2d)
+!  REAL(r_dble) :: buf3d8(nlonsub,nlatsub,nlev)
+!  REAL(r_dble) :: buf2d8(nlonsub,nlatsub)
+!  INTEGER :: iunit,n
 
-  CALL ncio_open(filename, nf90_nowrite, iunit)
-  DO n=1,inv3d
-    IF(r_size == r_dble) THEN
-      CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,v3d(:,:,:,n))
-    ELSE
-      CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,buf3d8)
-      v3d(:,:,:,n) = REAL(buf3d8,r_size)
-    END IF
-  END DO
-  DO n=1,inv2d
-    IF(r_size == r_dble) THEN
-      CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,v2d(:,:,n))
-    ELSE
-      CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,buf2d8)
-      v2d(:,:,n) = REAL(buf2d8,r_size)
-    END IF
-  END DO
-  CALL ncio_close(iunit)
+!  CALL ncio_open(filename, nf90_nowrite, iunit)
+!  DO n=1,inv3d
+!    IF(r_size == r_dble) THEN
+!      CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,v3d(:,:,:,n))
+!    ELSE
+!      CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,buf3d8)
+!      v3d(:,:,:,n) = REAL(buf3d8,r_size)
+!    END IF
+!  END DO
+!  DO n=1,inv2d
+!    IF(r_size == r_dble) THEN
+!      CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,v2d(:,:,n))
+!    ELSE
+!      CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,buf2d8)
+!      v2d(:,:,n) = REAL(buf2d8,r_size)
+!    END IF
+!  END DO
+!  CALL ncio_close(iunit)
 
-  RETURN
-END SUBROUTINE read_grd
+!  RETURN
+!END SUBROUTINE read_grd
 
-SUBROUTINE read_grd4(filename,inv3d,inv2d,iv3dname,iv2dname,v3d,v2d)
-  IMPLICIT NONE
-  CHARACTER(*),INTENT(IN) :: filename
-  INTEGER,INTENT(IN) :: inv3d,inv2d
-  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
-  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
-  REAL(r_sngl),INTENT(OUT) :: v3d(nlonsub,nlatsub,nlev,inv3d)
-  REAL(r_sngl),INTENT(OUT) :: v2d(nlonsub,nlatsub,inv2d)
-  REAL(r_dble) :: buf3d8(nlonsub,nlatsub,nlev)
-  REAL(r_dble) :: buf2d8(nlonsub,nlatsub)
-  INTEGER :: iunit,n
+!SUBROUTINE read_grd4(filename,inv3d,inv2d,iv3dname,iv2dname,v3d,v2d)
+!  IMPLICIT NONE
+!  CHARACTER(*),INTENT(IN) :: filename
+!  INTEGER,INTENT(IN) :: inv3d,inv2d
+!  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
+!  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
+!  REAL(r_sngl),INTENT(OUT) :: v3d(nlonsub,nlatsub,nlev,inv3d)
+!  REAL(r_sngl),INTENT(OUT) :: v2d(nlonsub,nlatsub,inv2d)
+!  REAL(r_dble) :: buf3d8(nlonsub,nlatsub,nlev)
+!  REAL(r_dble) :: buf2d8(nlonsub,nlatsub)
+!  INTEGER :: iunit,n
 
-  CALL ncio_open(filename, nf90_nowrite, iunit)
-  DO n=1,inv3d
-    CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,buf3d8)
-    v3d(:,:,:,n) = REAL(buf3d8,r_sngl)
-  END DO
-  DO n=1,inv2d
-    CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,buf2d8)
-    v2d(:,:,n) = REAL(buf2d8,r_sngl)
-  END DO
-  CALL ncio_close(iunit)
+!  CALL ncio_open(filename, nf90_nowrite, iunit)
+!  DO n=1,inv3d
+!    CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,buf3d8)
+!    v3d(:,:,:,n) = REAL(buf3d8,r_sngl)
+!  END DO
+!  DO n=1,inv2d
+!    CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,buf2d8)
+!    v2d(:,:,n) = REAL(buf2d8,r_sngl)
+!  END DO
+!  CALL ncio_close(iunit)
 
-  RETURN
-END SUBROUTINE read_grd4
+!  RETURN
+!END SUBROUTINE read_grd4
 
-!-- Write a grid file -------------------------------------------------
-SUBROUTINE write_grd(filename,inv3d,inv2d,iv3dname,iv2dname,v3d,v2d)
-  IMPLICIT NONE
-  CHARACTER(*),INTENT(IN) :: filename
-  INTEGER,INTENT(IN) :: inv3d,inv2d
-  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
-  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
-  REAL(r_size),INTENT(IN) :: v3d(nlonsub,nlatsub,nlev,inv3d)
-  REAL(r_size),INTENT(IN) :: v2d(nlonsub,nlatsub,inv2d)
-  REAL(r_dble) :: buf3d8(nlonsub,nlatsub,nlev)
-  REAL(r_dble) :: buf2d8(nlonsub,nlatsub)
-  INTEGER :: iunit,n
+!!-- Write a grid file -------------------------------------------------
+!SUBROUTINE write_grd(filename,inv3d,inv2d,iv3dname,iv2dname,v3d,v2d)
+!  IMPLICIT NONE
+!  CHARACTER(*),INTENT(IN) :: filename
+!  INTEGER,INTENT(IN) :: inv3d,inv2d
+!  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
+!  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
+!  REAL(r_size),INTENT(IN) :: v3d(nlonsub,nlatsub,nlev,inv3d)
+!  REAL(r_size),INTENT(IN) :: v2d(nlonsub,nlatsub,inv2d)
+!  REAL(r_dble) :: buf3d8(nlonsub,nlatsub,nlev)
+!  REAL(r_dble) :: buf2d8(nlonsub,nlatsub)
+!  INTEGER :: iunit,n
 
-  CALL ncio_open(filename, nf90_write, iunit)
-  DO n=1,inv3d
-    IF(r_size == r_dble) THEN
-      CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,v3d(:,:,:,n))
-    ELSE
-      buf3d8 = REAL(v3d(:,:,:,n),r_dble)
-      CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,buf3d8)
-    END IF
-  END DO
-  DO n=1,inv2d
-    IF(r_size == r_dble) THEN
-      CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,v2d(:,:,n))
-    ELSE
-      buf2d8 = REAL(v2d(:,:,n),r_dble)
-      CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,buf2d8)
-    END IF
-  END DO
-  CALL ncio_close(iunit)
+!  CALL ncio_open(filename, nf90_write, iunit)
+!  DO n=1,inv3d
+!    IF(r_size == r_dble) THEN
+!      CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,v3d(:,:,:,n))
+!    ELSE
+!      buf3d8 = REAL(v3d(:,:,:,n),r_dble)
+!      CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,buf3d8)
+!    END IF
+!  END DO
+!  DO n=1,inv2d
+!    IF(r_size == r_dble) THEN
+!      CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,v2d(:,:,n))
+!    ELSE
+!      buf2d8 = REAL(v2d(:,:,n),r_dble)
+!      CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,buf2d8)
+!    END IF
+!  END DO
+!  CALL ncio_close(iunit)
 
-  RETURN
-END SUBROUTINE write_grd
+!  RETURN
+!END SUBROUTINE write_grd
 
-SUBROUTINE write_grd4(filename,inv3d,inv2d,iv3dname,iv2dname,v3d,v2d)
-  IMPLICIT NONE
-  CHARACTER(*),INTENT(IN) :: filename
-  INTEGER,INTENT(IN) :: inv3d,inv2d
-  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
-  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
-  REAL(r_sngl),INTENT(IN) :: v3d(nlonsub,nlatsub,nlev,inv3d)
-  REAL(r_sngl),INTENT(IN) :: v2d(nlonsub,nlatsub,inv2d)
-  REAL(r_dble) :: buf3d8(nlonsub,nlatsub,nlev)
-  REAL(r_dble) :: buf2d8(nlonsub,nlatsub)
-  INTEGER :: iunit,n
+!SUBROUTINE write_grd4(filename,inv3d,inv2d,iv3dname,iv2dname,v3d,v2d)
+!  IMPLICIT NONE
+!  CHARACTER(*),INTENT(IN) :: filename
+!  INTEGER,INTENT(IN) :: inv3d,inv2d
+!  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
+!  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
+!  REAL(r_sngl),INTENT(IN) :: v3d(nlonsub,nlatsub,nlev,inv3d)
+!  REAL(r_sngl),INTENT(IN) :: v2d(nlonsub,nlatsub,inv2d)
+!  REAL(r_dble) :: buf3d8(nlonsub,nlatsub,nlev)
+!  REAL(r_dble) :: buf2d8(nlonsub,nlatsub)
+!  INTEGER :: iunit,n
 
-  CALL ncio_open(filename, nf90_write, iunit)
-  DO n=1,inv3d
-    buf3d8 = REAL(v3d(:,:,:,n),r_dble)
-    CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,buf3d8)
-  END DO
-  DO n=1,inv2d
-    buf2d8 = REAL(v2d(:,:,n),r_dble)
-    CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,buf2d8)
-  END DO
-  CALL ncio_close(iunit)
+!  CALL ncio_open(filename, nf90_write, iunit)
+!  DO n=1,inv3d
+!    buf3d8 = REAL(v3d(:,:,:,n),r_dble)
+!    CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,buf3d8)
+!  END DO
+!  DO n=1,inv2d
+!    buf2d8 = REAL(v2d(:,:,n),r_dble)
+!    CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,buf2d8)
+!  END DO
+!  CALL ncio_close(iunit)
 
-  RETURN
-END SUBROUTINE write_grd4
+!  RETURN
+!END SUBROUTINE write_grd4
 !-----------------------------------------------------------------------
 ! Monitor
 !-----------------------------------------------------------------------

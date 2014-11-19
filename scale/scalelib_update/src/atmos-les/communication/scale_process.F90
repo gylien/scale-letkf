@@ -41,7 +41,7 @@ module scale_process
   integer, public, parameter :: PRC_master = 0   !< master node
 
   integer, public            :: MPI_COMM_u = 0
-  integer, public            :: PRC_nu = -1
+!  integer, public            :: PRC_nu = -1
   integer, public            :: PRC_myrank_world = 0
 
   integer, public            :: PRC_myrank = 0   !< my node ID
@@ -81,16 +81,18 @@ module scale_process
 contains
   !-----------------------------------------------------------------------------
   !> Start MPI
-  subroutine PRC_MPIstart
+  subroutine PRC_MPIstart(mem_np, nitmax, nprocs, proc2mem)
 
-    use common_mpi_scale, only: procs, mem2proc, proc2mem
     implicit none
+
+    integer, intent(in) :: mem_np, nitmax, nprocs
+    integer, intent(in) :: proc2mem(2,nitmax,nprocs)
 
     character(len=H_LONG) :: fname ! name of logfile for each process
 
     integer :: MPI_G_WORLD, MPI_G
-    integer :: ranks(4)
-    integer :: ierr
+    integer :: ranks(mem_np)
+    integer :: i, ip, ierr
     !---------------------------------------------------------------------------
 
 !    call MPI_Init(ierr)
@@ -100,27 +102,27 @@ contains
 
     PRC_myrank_world = PRC_myrank
 
-    call MPI_Comm_group(MPI_COMM_WORLD,MPI_G_WORLD,ierr)
+!    if (proc2mem(1,1,PRC_myrank+1) >= 0) then
 
-    if (PRC_myrank < 4) then
-       ranks(1) = 0
-       ranks(2) = 1
-       ranks(3) = 2
-       ranks(4) = 3
-       PRC_nu = 0
-    else
-       ranks(1) = 4
-       ranks(2) = 5
-       ranks(3) = 6
-       ranks(4) = 7
-       PRC_nu = 1
-    end if
+      call MPI_Comm_group(MPI_COMM_WORLD,MPI_G_WORLD,ierr)
 
-    call MPI_Group_incl(MPI_G_WORLD,4,ranks,MPI_G,ierr)
-    call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_u,ierr)
+      do ip = 1, nprocs
+        if (proc2mem(1,1,ip) == proc2mem(1,1,PRC_myrank+1)) then
+          ranks(proc2mem(2,1,ip)+1) = ip-1
+!print *, PRC_myrank_world, proc2mem(2,1,ip)+1, ranks(proc2mem(2,1,ip)+1)
+        end if
+      end do
+  !    PRC_nu = proc2mem(1,1,PRC_myrank+1)
 
-    call MPI_Comm_size(MPI_COMM_u,PRC_nmax,  ierr)
-    call MPI_Comm_rank(MPI_COMM_u,PRC_myrank,ierr)
+      call MPI_Group_incl(MPI_G_WORLD,mem_np,ranks,MPI_G,ierr)
+      call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_u,ierr)
+
+      call MPI_Comm_size(MPI_COMM_u,PRC_nmax,  ierr)
+      call MPI_Comm_rank(MPI_COMM_u,PRC_myrank,ierr)
+
+!print *, PRC_myrank_world, PRC_myrank, PRC_nmax
+
+!    end if
 
     PRC_mpi_alive = .true.
 
@@ -145,7 +147,7 @@ contains
           IO_FID_LOG = IO_FID_STDOUT
        else
           IO_FID_LOG = IO_get_available_fid()
-          call IO_make_idstr(fname,trim(IO_LOG_BASENAME),'pe',PRC_myrank)
+          call IO_make_idstr(fname,trim(IO_LOG_BASENAME),'pe',PRC_myrank_world)
           open( unit   = IO_FID_LOG,  &
                 file   = trim(fname), &
                 form   = 'formatted', &
@@ -411,6 +413,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** No. of Node   :', PRC_NUM_X," x ",PRC_NUM_Y
 
     if ( PRC_NUM_X*PRC_NUM_Y /= PRC_nmax ) then
+
+write(*,*) PRC_NUM_X, PRC_NUM_Y, PRC_nmax
+
        write(*,*) 'xxx total number of node does not match that requested. Check!'
        call PRC_MPIstop
     endif

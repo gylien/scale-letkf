@@ -20,13 +20,13 @@ module common_mpi_scale
   use common_scale
   use common_obs_scale
 
-  use letkf_namelist, only: &
-    NNODES, &
-    PPN, &
-    MEM_NODES, &
-    MEM_NP, &
-    PRC_NUM_X_LETKF, &
-    PRC_NUM_Y_LETKF
+  use common_letkf, only: nbv
+
+!  use letkf_namelist, only: &
+!    NNODES, &
+!    PPN, &
+!    MEM_NODES, &
+!    MEM_NP
 
   use scale_precision
   use scale_stdio
@@ -40,15 +40,8 @@ module common_mpi_scale
 !       fileread, &
        filecloseall
 
-    use scale_process, only: &
-       prc_setup,    &
-       prc_mpistart, &
-       prc_mpifinish, &
-       prc_master, &
-       prc_myrank, &
-       prc_myrank_world, &
-       prc_nu, &
-       prc_2drank
+!  use scale_grid_index, only: &
+!    KHALO, IHALO, JHALO
 
   implicit none
   public
@@ -66,12 +59,17 @@ module common_mpi_scale
 
   integer,save :: nitmax ! maximum number of model files processed by a process
   integer,allocatable,save :: procs(:)
+  integer,allocatable,save :: mem2node(:,:)
   integer,allocatable,save :: mem2proc(:,:)
   integer,allocatable,save :: proc2mem(:,:,:)
+  integer,save :: n_mem
+  integer,save :: n_mempn
+
+  integer,save :: scale_IO_group_n = -1
 
 contains
 
-subroutine set_scale_IO
+subroutine set_scale_IO(mem_np)
 !    use dc_log, only: &
 !       loginit
 !    use gtool_file, only: &
@@ -84,12 +82,12 @@ subroutine set_scale_IO
     use scale_process, only: &
        prc_setup,    &
        prc_mpistart, &
-       prc_mpifinish, &
+!       prc_mpifinish, &
        prc_master, &
        prc_myrank, &
        prc_myrank_world, &
-       prc_nu, &
        PRC_2Drank
+!       prc_nu, &
     use scale_const, only: &
        CONST_setup
     use scale_calendar, only: &
@@ -100,8 +98,8 @@ subroutine set_scale_IO
        TIME_setup
     use scale_grid, only: &
        GRID_setup
-    use scale_grid_nest, only: &
-       NEST_setup
+!    use scale_grid_nest, only: &
+!       NEST_setup
 !    use scale_land_grid_index, only: &
 !       LAND_GRID_INDEX_setup
 !    use scale_land_grid, only: &
@@ -110,22 +108,17 @@ subroutine set_scale_IO
 !       URBAN_GRID_INDEX_setup
 !    use scale_urban_grid, only: &
 !       URBAN_GRID_setup
-    use scale_tracer, only: &
-       TRACER_setup
+!    use scale_tracer, only: &
+!       TRACER_setup
     use scale_fileio, only: &
-       FILEIO_setup, &
-       FILEIO_write, &
-       FILEIO_read
-    use scale_history, only: &
-       HIST_setup, &
-       HIST_get
+       FILEIO_setup
     use scale_comm, only: &
-       COMM_setup, &
-       COMM_vars8, &
-       COMM_wait
+       COMM_setup
 
 
     implicit none
+
+    integer,intent(in) :: mem_np
 
 !    character(len=H_MID) :: DATATYPE = 'DEFAULT' !< REAL4 or REAL8
     integer :: rankidx(2)
@@ -133,7 +126,7 @@ subroutine set_scale_IO
     !-----------------------------------------------------------------------------
 
     ! start SCALE MPI
-    call PRC_MPIstart
+    call PRC_MPIstart(mem_np, nitmax, nprocs, proc2mem)
 
     ! setup process
     call PRC_setup
@@ -178,6 +171,8 @@ end subroutine set_scale_IO
 
 
 subroutine unset_scale_IO
+    use scale_process, only: &
+       prc_mpifinish
     implicit none
 
     call PROF_rapend('Main')
@@ -192,100 +187,12 @@ subroutine unset_scale_IO
   return
 end subroutine unset_scale_IO
 
-
-
-!subroutine set_scale_mpi_comm
-!  implicit none
-
-
-!!    real(RP), allocatable :: U(:,:,:), MOMX(:,:,:)
-
-!  integer :: k, i, j
-
-!  integer               :: dim1_max, dim1_S, dim1_E
-!  integer               :: dim2_max, dim2_S, dim2_E
-!  integer               :: dim3_max, dim3_S, dim3_E
-!  integer               :: dim4_max, dim4_S, dim4_E
-!  real(RP), allocatable :: var3D(:,:,:)
-
-!  integer :: iolen
-
-!  character(len=100) :: basename
-!  character(len=100) :: varname
-!  integer :: step
-!  basename = 'history'
-!  varname = 'U'
-!  step = 1
-
-!  if (PRC_nu == 0) then
-!    basename = trim(basename) // '.u000000'
-!  else if (PRC_nu == 1) THEN
-!    basename = trim(basename) // '.u000001'
-!  end if
-
-!  allocate( U(KA,IA,JA) )
-!  allocate( MOMX(KA,IA,JA) )
-!  U = 0.0d0
-
-
-
-
-!    ! Read file
-
-!!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
-
-!       dim1_max = IMAX !KMAX
-!       dim2_max = JMAX !IMAX
-!       dim3_max = KMAX !JMAX
-!       dim1_S   = IS !KS
-!       dim1_E   = IE !KE
-!       dim2_S   = JS !IS
-!       dim2_E   = JE !IE
-!       dim3_S   = KS !JS
-!       dim3_E   = KE !JE
-
-!    allocate( var3D(dim1_max,dim2_max,dim3_max) )
-
-
-!    call HIST_get(var3D, trim(basename), trim(varname), step=step)
-
-
-!    forall (i=1:IMAX, j=1:JMAX, k=1:KMAX) U(k+KHALO,i+IHALO,j+JHALO) = var3D(i,j,k)
-
-!    deallocate( var3D )
-
-
-!    if (PRC_nu == 0) then
-!      call FILEIO_read( MOMX(:,:,:),                          & ! [OUT]
-!                        'init.u000000', 'MOMX', 'ZXY', step=1 ) ! [IN]
-!    else if (PRC_nu == 1) then
-!      call FILEIO_read( MOMX(:,:,:),                          & ! [OUT]
-!                        'init.u000001', 'MOMX', 'ZXY', step=1 ) ! [IN]
-!    end if
-
-
-!    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-!    do j  = JS, JE
-!    do i  = IS, IE
-!       U(   1:KS-1,i,j) = U(KS,i,j)
-!       U(KE+1:KA,  i,j) = U(KE,i,j)
-!       MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
-!       MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
-!    enddo
-!    enddo
-
-!    call COMM_vars8( U   (:,:,:), 1 )
-!    call COMM_vars8( MOMX(:,:,:), 2 )
-!    call COMM_wait ( U   (:,:,:), 1 )
-!    call COMM_wait ( MOMX(:,:,:), 2 )
-
-
-
 !-----------------------------------------------------------------------
 ! set_common_mpi_scale
 !-----------------------------------------------------------------------
-SUBROUTINE set_common_mpi_scale(nbv)
+SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
   INTEGER,INTENT(IN) :: nbv
+  INTEGER,INTENT(IN) :: nnodes,ppn,mem_nodes,mem_np
   REAL(r_sngl) :: v3dg(nlon,nlat,nlev,nv3d)
   REAL(r_sngl) :: v2dg(nlon,nlat,nv2d)
   REAL(r_size),ALLOCATABLE :: v3d(:,:,:)
@@ -314,9 +221,16 @@ SUBROUTINE set_common_mpi_scale(nbv)
 !  mem_nodes = buf(3)
 !  mem_np = buf(4)
 
-  CALL set_mem2proc(nbv+1)
-!  CALL set_proc2mem(nbv+1)
+  CALL set_mem_node_proc(nbv+1,nnodes,ppn,mem_nodes,mem_np)
 
+!  if (myrank == 0) then
+!  print *, procs
+!  print *, mem2node
+!  print *, mem2proc
+!  print *, proc2mem
+!  end if
+
+  scale_IO_group_n = proc2mem(1,1,myrank+1)
 
 
   WRITE(6,'(A)') 'Hello from set_common_mpi_scale'
@@ -386,90 +300,64 @@ END SUBROUTINE set_common_mpi_scale
 !-----------------------------------------------------------------------
 ! set_mem2proc
 !-----------------------------------------------------------------------
-SUBROUTINE set_mem2proc(mem)
-  INTEGER,INTENT(IN) :: mem
-  INTEGER :: m,n,nn,pn,qn,tppn,tppnt,tmod
-  LOGICAL :: procs_add
+SUBROUTINE set_mem_node_proc(mem,nnodes,ppn,mem_nodes,mem_np)
+  IMPLICIT NONE
+  INTEGER,INTENT(IN) :: mem,nnodes,ppn,mem_nodes,mem_np
+  INTEGER :: tppn,tppnt,tmod
+  INTEGER :: n,ns,nn,m,q,qs,i,j,it,ip
 
   ALLOCATE(procs(nprocs))
-  ALLOCATE(mem2proc(MEM_NP,mem))
-
-  tppn = MEM_NP / MEM_NODES
-  tmod = mod(MEM_NP, MEM_NODES)
-
-  n = 0
-  pn = 0
-  procs_add = .true.
-  DO m = 1, mem
-    qn = 0
-    DO nn = 1, MEM_NODES
-      IF(nn <= tmod) THEN
-        tppnt = tppn+1
-      ELSE
-        tppnt = tppn
-      END IF
-      mem2proc(qn+1:qn+tppnt) = n+nn
-      qn = qn + tppnt
-
-      IF(procs_add) THEN
-        procs(pn+1:pn+PPN) = n+nn
-        pn = pn + PPN
-      END IF
-    END DO
-
-    n = n + MEM_NODES
-    IF(n + MEM_NODES > NNODES) THEN
-      n = 0
-      procs_add = .false.
-    END IF
+  ns = 0
+  DO n = 1, nnodes
+    procs(ns+1:ns+ppn) = n
+    ns = ns + ppn
   END DO
 
-!  IF(pn /= nprocs) THEN
-!    write(6,*) 'Inconsistent number of MPI processes.'
-!    stop
-!  END IF
+  IF(mem_nodes > 1) THEN
+    n_mem = nnodes / mem_nodes
+    n_mempn = 1
+  ELSE
+    n_mem = nnodes
+    n_mempn = ppn / mem_np
+  END IF
+  nitmax = (mem - 1) / (n_mem * n_mempn) + 1
+  tppn = mem_np / mem_nodes
+  tmod = MOD(mem_np, mem_nodes)
+
+  ALLOCATE(mem2node(mem_np,mem))
+  ALLOCATE(mem2proc(mem_np,mem))
+  ALLOCATE(proc2mem(2,nitmax,nprocs))
+  proc2mem = -1
+  m = 1
+mem_loop: DO it = 1, nitmax
+    DO i = 0, n_mempn-1
+      n = 0
+      DO j = 0, n_mem-1
+        qs = 0
+        DO nn = 0, mem_nodes-1
+          IF(nn < tmod) THEN
+            tppnt = tppn + 1
+          ELSE
+            tppnt = tppn
+          END IF
+          DO q = 0, tppnt-1
+            ip = (n+nn)*ppn + i*mem_np + q
+            mem2node(qs+1,m) = n+nn
+            mem2proc(qs+1,m) = ip
+            proc2mem(1,it,ip+1) = m
+            proc2mem(2,it,ip+1) = qs
+            qs = qs + 1
+          END DO
+        END DO
+        IF(m >= mem) EXIT mem_loop
+        m = m + 1
+        n = n + mem_nodes
+      END DO
+    END DO
+  END DO mem_loop
 
   RETURN
 END SUBROUTINE
-!-----------------------------------------------------------------------
-! set_proc2mem
-!-----------------------------------------------------------------------
-!SUBROUTINE set_proc2mem(mem)
-!  INTEGER,INTENT(IN) :: mem
-!  LOGICAL,ALLOCATABLE :: used(:,:)
-!  INTEGER :: n_mem,n_mempn,nip,it,ip,m,p
-
-!  IF(MEM_NODES > 1) THEN
-!    n_mem = NNODES / MEM_NODES
-!    nitmax = (mem-1) / n_mem + 1
-!    nip = nprocs
-!  ELSE
-!    n_mempn = PPN / MEM_NP
-!    nitmax = (mem-1) / (n_mempn*NNODES) + 1
-!    nip = MEM_NP * n_mempn * NNODES
-!  END IF
-!  ALLOCATE(proc2mem(2,nitmax,nprocs))
-!  ALLOCATE(used(MEM_NP,mem))
-!  proc2mem = -1
-!  used = .FALSE.
-
-!  DO it = 1, nitmax
-!    DO ip = 1, nip
-!search_mem: DO m = 1, mem
-!        DO p = 1, MEM_NP
-!          IF((.NOT. used(p,m)) .AND. mem2proc(p,m) == procs(ip)) THEN
-!            proc2mem(1,it,ip) = m
-!            proc2mem(2,it,ip) = p
-!            used(p,m) = .TRUE.
-!            EXIT search_mem
-!          END IF
-!        END DO
-!      END DO search_mem
-!    END DO
-!  END DO
-
-!  RETURN
-!END SUBROUTINE
 !-----------------------------------------------------------------------
 ! Scatter gridded data to processes (nrank -> all)
 !-----------------------------------------------------------------------
@@ -742,38 +630,176 @@ SUBROUTINE gather_grd_mpi_fast(nrank,v3d,v2d,v3dg,v2dg)
 
   RETURN
 END SUBROUTINE gather_grd_mpi_fast
-!!-----------------------------------------------------------------------
-!! Read ensemble data and distribute to processes
-!!-----------------------------------------------------------------------
-!SUBROUTINE read_ens_mpi(file,member,v3d,v2d)
-!  CHARACTER(4),INTENT(IN) :: file
-!  INTEGER,INTENT(IN) :: member
-!  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,member,nv3d)
-!  REAL(r_size),INTENT(OUT) :: v2d(nij1,member,nv2d)
-!  REAL(r_sngl) :: v3dg(nlon,nlat,nlev,nv3d)
-!  REAL(r_sngl) :: v2dg(nlon,nlat,nv2d)
-!  INTEGER :: l,n,ll,im
-!  CHARACTER(11) :: filename='file000.grd'
+!-----------------------------------------------------------------------
+! Read ensemble data and distribute to processes
+!-----------------------------------------------------------------------
 
-!  ll = CEILING(REAL(member)/REAL(nprocs))
-!  DO l=1,ll
-!    im = myrank+1 + (l-1)*nprocs
-!    IF(im <= member) THEN
-!      WRITE(filename(1:7),'(A4,I3.3)') file,im
-!      WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading a file ',filename
-!      CALL read_grd4(filename,v3dg,v2dg,1)
-!    END IF
+!subroutine set_scale_mpi_comm
+!  implicit none
 
-!    DO n=0,nprocs-1
-!      im = n+1 + (l-1)*nprocs
-!      IF(im <= member) THEN
-!        CALL scatter_grd_mpi(n,v3dg,v2dg,v3d(:,:,im,:),v2d(:,im,:))
-!      END IF
-!    END DO
-!  END DO
+!!    real(RP), allocatable :: U(:,:,:), MOMX(:,:,:)
 
-!  RETURN
-!END SUBROUTINE read_ens_mpi
+!  integer :: k, i, j
+
+!  integer               :: dim1_max, dim1_S, dim1_E
+!  integer               :: dim2_max, dim2_S, dim2_E
+!  integer               :: dim3_max, dim3_S, dim3_E
+!  integer               :: dim4_max, dim4_S, dim4_E
+!  real(RP), allocatable :: var3D(:,:,:)
+
+!  integer :: iolen
+
+!  character(len=100) :: basename
+!  character(len=100) :: varname
+!  integer :: step
+!  basename = 'history'
+!  varname = 'U'
+!  step = 1
+
+!  if (PRC_nu == 0) then
+!    basename = trim(basename) // '.u000000'
+!  else if (PRC_nu == 1) THEN
+!    basename = trim(basename) // '.u000001'
+!  end if
+
+!  allocate( U(KA,IA,JA) )
+!  allocate( MOMX(KA,IA,JA) )
+!  U = 0.0d0
+
+
+
+
+!    ! Read file
+
+!!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
+
+!       dim1_max = IMAX !KMAX
+!       dim2_max = JMAX !IMAX
+!       dim3_max = KMAX !JMAX
+!       dim1_S   = IS !KS
+!       dim1_E   = IE !KE
+!       dim2_S   = JS !IS
+!       dim2_E   = JE !IE
+!       dim3_S   = KS !JS
+!       dim3_E   = KE !JE
+
+!    allocate( var3D(dim1_max,dim2_max,dim3_max) )
+
+
+!    call HIST_get(var3D, trim(basename), trim(varname), step=step)
+
+
+!    forall (i=1:IMAX, j=1:JMAX, k=1:KMAX) U(k+KHALO,i+IHALO,j+JHALO) = var3D(i,j,k)
+
+!    deallocate( var3D )
+
+
+!    if (PRC_nu == 0) then
+!      call FILEIO_read( MOMX(:,:,:),                          & ! [OUT]
+!                        'init.u000000', 'MOMX', 'ZXY', step=1 ) ! [IN]
+!    else if (PRC_nu == 1) then
+!      call FILEIO_read( MOMX(:,:,:),                          & ! [OUT]
+!                        'init.u000001', 'MOMX', 'ZXY', step=1 ) ! [IN]
+!    end if
+
+
+!    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+!    do j  = JS, JE
+!    do i  = IS, IE
+!       U(   1:KS-1,i,j) = U(KS,i,j)
+!       U(KE+1:KA,  i,j) = U(KE,i,j)
+!       MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
+!       MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
+!    enddo
+!    enddo
+
+!    call COMM_vars8( U   (:,:,:), 1 )
+!    call COMM_vars8( MOMX(:,:,:), 2 )
+!    call COMM_wait ( U   (:,:,:), 1 )
+!    call COMM_wait ( MOMX(:,:,:), 2 )
+
+
+SUBROUTINE read_ens_history_mpi(file,iter,step,v3dg,v2dg,ensmean)
+!    use scale_fileio, only: &
+!       FILEIO_write, &
+!       FILEIO_read
+    use scale_history, only: &
+       HIST_get
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+
+  IMPLICIT NONE
+
+  CHARACTER(4),INTENT(IN) :: file
+  INTEGER,INTENT(IN) :: iter
+  INTEGER,INTENT(IN) :: step
+  REAL(r_size),INTENT(OUT) :: v3dg(nlev+2*KHALO,nlon+2*IHALO,nlat+2*JHALO,nv3dd)
+  REAL(r_size),INTENT(OUT) :: v2dg(nlon+2*IHALO,nlat+2*JHALO,nv2dd)
+  LOGICAL,INTENT(INOUT),OPTIONAL :: ensmean
+  INTEGER :: i,j,k,iv3d,iv2d,nbvr
+
+  CHARACTER(9) :: filename='file.0000'
+
+  real(RP), allocatable :: var3D(:,:,:)
+  real(RP), allocatable :: var2D(:,:)
+
+  if (.not. present(ensmean) .or. (.not. ensmean)) then
+    nbvr = nbv
+  else
+    nbvr = nbv+1
+  end if
+
+  IF (scale_IO_group_n >= 0) then
+    allocate( var3D(IMAX,JMAX,KMAX) )
+    allocate( var2D(IMAX,JMAX) )
+
+    IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= nbvr) THEN
+      WRITE(filename(1:4),'(A4)') file
+      WRITE(filename(6:9),'(I4.4)') proc2mem(1,iter,myrank+1)
+      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,iter,myrank+1),'.nc'
+
+      DO iv3d = 1, nv3dd
+        if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
+        call HIST_get(var3D, filename, trim(v3dd_name(iv3d)), step)
+        FORALL (i=1:IMAX, j=1:JMAX, k=1:KMAX) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k)
+
+!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+        do j  = JS, JE
+          do i  = IS, IE
+            v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
+            v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
+          enddo
+        enddo
+      END DO
+
+      DO iv3d = 1, nv3dd
+        call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
+      END DO
+      DO iv3d = 1, nv3dd
+        call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
+      END DO
+
+      DO iv2d = 1, nv2dd
+        if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
+        call HIST_get(var2D, filename, trim(v2dd_name(iv2d)), step)
+        v2dg(1+IHALO:IMAX+IHALO,1+JHALO:JMAX+JHALO,iv2d) = var2D(:,:)
+      END DO
+
+      DO iv2d = 1, nv2dd
+        call COMM_vars8( v2dg(:,:,iv2d), iv2d )
+      END DO
+      DO iv2d = 1, nv2dd
+        call COMM_wait ( v2dg(:,:,iv2d), iv2d )
+      END DO
+    END IF
+
+    deallocate( var3D )
+    deallocate( var2D )
+  END IF
+
+  RETURN
+END SUBROUTINE read_ens_history_mpi
 !!-----------------------------------------------------------------------
 !! Write ensemble data after collecting data from processes
 !!-----------------------------------------------------------------------

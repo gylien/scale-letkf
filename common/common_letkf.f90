@@ -25,7 +25,7 @@ MODULE common_letkf
 !=======================================================================
 !  LEKF Model Independent Parameters
 !=======================================================================
-  INTEGER,PARAMETER :: nbv=20    ! ensemble size
+  INTEGER,PARAMETER :: nbv=4    ! ensemble size
   REAL(r_size),PARAMETER :: relax_alpha = 0.0d0  ! relaxation parameter     !GYL
   REAL(r_size),PARAMETER :: min_infl = 0.0d0     ! minimum inlfation factor !GYL
 
