@@ -1,10 +1,10 @@
-PROGRAM obsope
+PROGRAM obsmake
 !=======================================================================
 !
 ! [PURPOSE:] Main program of observation operator
 !
 ! [HISTORY:]
-!   11/12/2014 Guo-Yuan Lien     Created
+!   November 2014  Guo-Yuan Lien     Created
 !
 !=======================================================================
 !$USE OMP_LIB
@@ -14,7 +14,7 @@ PROGRAM obsope
   USE common_mpi_scale
   USE common_obs_scale
 
-  use common_letkf, only: nbv
+!  use common_letkf, only: nbv
 
   use common_nml
 
@@ -38,6 +38,7 @@ PROGRAM obsope
   REAL(r_size) :: rtimer00,rtimer
   INTEGER :: ierr
   CHARACTER(8) :: stdoutf='NOUT-000000'
+
 
 
   TYPE(obs_info) :: obs
@@ -71,12 +72,17 @@ PROGRAM obsope
   ! setup standard I/O
   call IO_setup( MODELNAME )
 
-  call read_nml_obsope
+  call read_nml_obsmake
+
 
   if (nprocs /= NNODES * PPN) then
     write(6,*) 'Number of MPI processes should be equal to NNODES * PPN.'
     stop
+  else if (nprocs /= MEM_NP) then
+    write(6,*) 'Number of MPI processes should be equal to MEM_NP.'
+    stop
   end if
+
 
 !-----------------------------------------------------------------------
 
@@ -94,10 +100,12 @@ PROGRAM obsope
 
 
 
-  call set_common_mpi_scale(nbv,NNODES,PPN,MEM_NODES,MEM_NP)
+  call set_common_mpi_scale(1,NNODES,PPN,MEM_NODES,MEM_NP)
 
 
-  call obsope_cal
+  call obsmake_cal(obs)
+
+
 
 
 !-----------------------------------------------------------------------
@@ -107,4 +115,4 @@ PROGRAM obsope
   CALL finalize_mpi
 
   STOP
-END PROGRAM obsope
+END PROGRAM obsmake

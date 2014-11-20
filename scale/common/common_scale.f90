@@ -23,17 +23,22 @@ MODULE common_scale
 !-----------------------------------------------------------------------
   INTEGER,PARAMETER :: nlonsub=30
   INTEGER,PARAMETER :: nlatsub=30
-  INTEGER,PARAMETER :: nlonns=1
-  INTEGER,PARAMETER :: nlatns=1
+  INTEGER,PARAMETER :: nlonns=2
+  INTEGER,PARAMETER :: nlatns=2
   INTEGER,PARAMETER :: nlon=nlonsub*nlonns
   INTEGER,PARAMETER :: nlat=nlatsub*nlatns
   INTEGER,PARAMETER :: nlev=30
+
+  integer,parameter :: nlonhalo=nlonsub+4
+  integer,parameter :: nlathalo=nlatsub+4
+  integer,parameter :: nlevhalo=nlev+4
+
   INTEGER,PARAMETER :: nv3d=11   ! 3D state variables (in SCALE init/restart files)
   INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: nv3dx=13  ! 3D diagnostic variables
   INTEGER,PARAMETER :: nv2d=0    ! 2D state variables (in SCALE init/restart files)
-  INTEGER,PARAMETER :: nv2dd=2   ! 2D diagnostic variables (in SCALE history files)
-  INTEGER,PARAMETER :: nv2dx=2   ! 2D diagnostic variables
+  INTEGER,PARAMETER :: nv2dd=7   ! 2D diagnostic variables (in SCALE history files)
+  INTEGER,PARAMETER :: nv2dx=7   ! 2D diagnostic variables
   INTEGER,PARAMETER :: iv3d_rho=1
   INTEGER,PARAMETER :: iv3d_rhou=2
   INTEGER,PARAMETER :: iv3d_rhov=3
@@ -59,26 +64,31 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv3dd_rh=12
   INTEGER,PARAMETER :: iv3dd_hgt=13
 !  INTEGER,PARAMETER :: iv2dd_hgt=1
-  INTEGER,PARAMETER :: iv2dd_tsfc=1
-  INTEGER,PARAMETER :: iv2dd_rain=2
-  INTEGER,PARAMETER :: nij0=nlon*nlat
+  INTEGER,PARAMETER :: iv2dd_ps=1
+  INTEGER,PARAMETER :: iv2dd_tsfc=2
+  INTEGER,PARAMETER :: iv2dd_rain=3
+  INTEGER,PARAMETER :: iv2dd_u10m=4
+  INTEGER,PARAMETER :: iv2dd_v10m=5
+  INTEGER,PARAMETER :: iv2dd_t2m=6
+  INTEGER,PARAMETER :: iv2dd_q2m=7
+  INTEGER,PARAMETER :: nij0=nlonsub*nlatsub
   INTEGER,PARAMETER :: nlevall=nlev*nv3d+nv2d
   INTEGER,PARAMETER :: nlevalld=nlev*nv3dd+nv2dd
   INTEGER,PARAMETER :: nlevallx=nlev*nv3dx+nv2dx
   INTEGER,PARAMETER :: ngpv=nij0*nlevall
   INTEGER,PARAMETER :: ngpvd=nij0*nlevalld
   INTEGER,PARAMETER :: ngpvx=nij0*nlevallx
-  REAL(r_size),SAVE :: lon(nlon,nlat)
-  REAL(r_size),SAVE :: lat(nlon,nlat)
-  REAL(r_size),SAVE :: lonu(nlon,nlat)
-  REAL(r_size),SAVE :: latu(nlon,nlat)
-  REAL(r_size),SAVE :: lonv(nlon,nlat)
-  REAL(r_size),SAVE :: latv(nlon,nlat)
-!  REAL(r_size),SAVE :: dx(nlat)
-!  REAL(r_size),SAVE :: dy(nlat)
-!  REAL(r_size),SAVE :: dy2(nlat)
-  REAL(r_size),SAVE :: fcori(nlat)
-!  REAL(r_size),SAVE :: wg(nlon,nlat)
+  REAL(r_size),SAVE :: lon(nlonsub,nlatsub)
+  REAL(r_size),SAVE :: lat(nlonsub,nlatsub)
+  REAL(r_size),SAVE :: lonu(nlonsub,nlatsub)
+  REAL(r_size),SAVE :: latu(nlonsub,nlatsub)
+  REAL(r_size),SAVE :: lonv(nlonsub,nlatsub)
+  REAL(r_size),SAVE :: latv(nlonsub,nlatsub)
+!  REAL(r_size),SAVE :: dx(nlatsub)
+!  REAL(r_size),SAVE :: dy(nlatsub)
+!  REAL(r_size),SAVE :: dy2(nlatsub)
+  REAL(r_size),SAVE :: fcori(nlatsub)
+!  REAL(r_size),SAVE :: wg(nlonsub,nlatsub)
   INTEGER,PARAMETER :: vname_max = 10
   CHARACTER(vname_max),SAVE :: v3d_name(nv3d)
   CHARACTER(vname_max),SAVE :: v3dd_name(nv3dx)
@@ -130,8 +140,13 @@ SUBROUTINE set_common_scale
   v3dd_name(iv3dd_hgt)   = 'height'
   !
 !  v2dd_name(iv2dd_hgt) = 'height'
+  v2dd_name(iv2dd_ps) = 'SFC_PRES'
   v2dd_name(iv2dd_tsfc) = 'SFC_TEMP'
   v2dd_name(iv2dd_rain) = 'PREC'
+  v2dd_name(iv2dd_u10m) = 'U10'
+  v2dd_name(iv2dd_v10m) = 'V10'
+  v2dd_name(iv2dd_t2m) = 'T2'
+  v2dd_name(iv2dd_q2m) = 'Q2'
   !
   ! Lon, Lat
   !

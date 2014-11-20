@@ -80,13 +80,13 @@ MODULE common_obs_scale
 
   TYPE obs_info
     INTEGER :: nobs
-    REAL(r_size),ALLOCATABLE :: elm(:)
+    INTEGER,ALLOCATABLE :: elm(:)
     REAL(r_size),ALLOCATABLE :: lon(:)
     REAL(r_size),ALLOCATABLE :: lat(:)
     REAL(r_size),ALLOCATABLE :: lev(:)
     REAL(r_size),ALLOCATABLE :: dat(:)
     REAL(r_size),ALLOCATABLE :: err(:)
-    REAL(r_size),ALLOCATABLE :: typ(:)
+    INTEGER,ALLOCATABLE :: typ(:)
     REAL(r_size),ALLOCATABLE :: dif(:)
   END TYPE obs_info
 
@@ -104,12 +104,11 @@ CONTAINS
 !-----------------------------------------------------------------------
 SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)
   IMPLICIT NONE
-  REAL(r_size),INTENT(IN) :: elm
+  INTEGER,INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk
-  REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3dx)
-  REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,nv2dx)
+  REAL(r_size),INTENT(IN) :: v3d(nlevhalo,nlonhalo,nlathalo,nv3dd)
+  REAL(r_size),INTENT(IN) :: v2d(nlonhalo,nlathalo,nv2dd)
   REAL(r_size),INTENT(OUT) :: yobs
-  REAL(r_size) :: rh(nlon,nlat,nlev)
   REAL(r_size) :: tg,qg
   REAL(r_size) :: qq
 !  REAL(r_size) :: dummy(3)
@@ -122,44 +121,32 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)
 !  ke = CEILING( rk )
 !  ks = ke-1
 
-  SELECT CASE (NINT(elm))
+  SELECT CASE (elm)
   CASE(id_u_obs)  ! U
-    CALL itpl_3d(v3d(:,:,:,iv3dd_u),ri,rj,rk,yobs)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,yobs)
   CASE(id_v_obs)  ! V
-    CALL itpl_3d(v3d(:,:,:,iv3dd_v),ri,rj,rk,yobs)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,yobs)
   CASE(id_t_obs)  ! T
-    CALL itpl_3d(v3d(:,:,:,iv3dd_t),ri,rj,rk,yobs)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,yobs)
   CASE(id_tv_obs)  ! Tv
-    CALL itpl_3d(v3d(:,:,:,iv3dd_t),ri,rj,rk,yobs)
-    CALL itpl_3d(v3d(:,:,:,iv3dd_q),ri,rj,rk,qq)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,yobs)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_q),rk,ri,rj,qq)
     yobs = yobs * (1.0d0 + fvirt * qq)
   CASE(id_q_obs)  ! Q
-    CALL itpl_3d(v3d(:,:,:,iv3dd_q),ri,rj,rk,yobs)
-!  CASE(id_ps_obs) ! PS   !##################################
-!    CALL itpl_2d(v2d(:,:,iv2d_t2m),ri,rj,tg)
-!    CALL itpl_2d(v2d(:,:,iv2d_q2m),ri,rj,qg)
-!    CALL itpl_2d(v2d(:,:,iv2d_ps),ri,rj,yobs)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_q),rk,ri,rj,yobs)
+  CASE(id_ps_obs) ! PS   !##################################
+
+!    CALL itpl_2d(v2d(:,:,iv2dd_t2m),ri,rj,tg)
+!    CALL itpl_2d(v2d(:,:,iv2dd_q2m),ri,rj,qg)
+!    CALL itpl_2d(v2d(:,:,iv2dd_ps),ri,rj,yobs)
 !    CALL prsadj(yobs,rk,tg,qg)
-  CASE(id_rain_obs) ! RAIN
-    CALL itpl_2d(v2d(:,:,iv2dd_rain),ri,rj,yobs) !#############
+
+    CALL itpl_2d(v2d(:,:,iv2dd_ps),ri,rj,yobs)
+
+!  CASE(id_rain_obs) ! RAIN                        ############# (not finished)
+!    CALL itpl_2d(v2d(:,:,iv2dd_rain),ri,rj,yobs) !#############
   CASE(id_rh_obs) ! RH
-    CALL itpl_3d(v3d(:,:,:,iv3dd_rh),ri,rj,rk,yobs)
-!    DO k=ks,ke
-!      DO j=js,je
-!        IF(ie <= nlon ) THEN
-!          CALL calc_rh(v3d(is,j,k,iv3d_t),v3d(is,j,k,iv3d_q),&
-!            & v3d(is,j,k,iv3d_p),rh(is,j,k))
-!          CALL calc_rh(v3d(ie,j,k,iv3d_t),v3d(ie,j,k,iv3d_q),&
-!            & v3d(ie,j,k,iv3d_p),rh(ie,j,k))
-!        ELSE
-!          CALL calc_rh(v3d(is,j,k,iv3d_t),v3d(is,j,k,iv3d_q),&
-!            & v3d(is,j,k,iv3d_p),rh(is,j,k))
-!          CALL calc_rh(v3d( 1,j,k,iv3d_t),v3d( 1,j,k,iv3d_q),&
-!            & v3d( 1,j,k,iv3d_p),rh( 1,j,k))
-!        END IF
-!      END DO
-!    END DO
-!    CALL itpl_3d(rh,ri,rj,rk,yobs)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_rh),rk,ri,rj,yobs)
 !  CASE(id_tclon_obs)
 !    CALL tctrk(v2d(:,:,iv2d_ps),v2d(:,:,iv2d_t2),ri,rj,dummy)
 !    yobs = dummy(1)
@@ -299,127 +286,183 @@ END SUBROUTINE prsadj
 !-----------------------------------------------------------------------
 ! Coordinate conversion
 !-----------------------------------------------------------------------
-!SUBROUTINE phys2ijk(p_full,elem,rlon,rlat,rlev,ri,rj,rk)
-!  IMPLICIT NONE
-!  REAL(r_size),INTENT(IN) :: p_full(nlon,nlat,nlev)
-!  REAL(r_size),INTENT(IN) :: elem
-!  REAL(r_size),INTENT(IN) :: rlon
-!  REAL(r_size),INTENT(IN) :: rlat
-!  REAL(r_size),INTENT(IN) :: rlev ! pressure levels
-!  REAL(r_size),INTENT(OUT) :: ri
-!  REAL(r_size),INTENT(OUT) :: rj
-!  REAL(r_size),INTENT(OUT) :: rk
-!  REAL(r_size) :: aj,ak
-!  REAL(r_size) :: lnps(nlon,nlat)
-!  REAL(r_size) :: plev(nlev)
-!  INTEGER :: i,j,k
-!!
-!! rlon -> ri
-!!
-!  IF(rlon == 0.0 .OR. rlon == 360.0) THEN
-!    ri = REAL(nlon+1,r_size)
-!  ELSE
-!    ri = rlon / 360.0d0 * REAL(nlon,r_size) + 1.0d0
-!  END IF
-!  IF(CEILING(ri) < 2 .OR. nlon+1 < CEILING(ri)) RETURN
-!!
-!! rlat -> rj
-!!
-!  DO j=1,nlat
-!    IF(rlat < lat(j)) EXIT
-!  END DO
-!  IF(j == 1) THEN
-!    rj = (rlat + 90.0d0) / (lat(1) + 90.0d0)
-!  ELSE IF(j == nlat+1) THEN
-!    aj = (rlat - lat(nlat)) / (90.0d0 - lat(nlat))
-!    rj = REAL(nlat,r_size) + aj
-!  ELSE
-!    aj = (rlat - lat(j-1)) / (lat(j) - lat(j-1))
-!    rj = REAL(j-1,r_size) + aj
-!  END IF
-!  IF(CEILING(rj) < 2 .OR. nlat < CEILING(rj)) RETURN
-!!
-!! rlev -> rk
-!!
-!  IF(NINT(elem) > 9999) THEN ! surface observation
-!    rk = 0.0d0
-!  ELSE
-!    !
-!    ! horizontal interpolation
-!    !
-!    i = CEILING(ri)
-!    j = CEILING(rj)
-!    DO k=1,nlev
-!      IF(i <= nlon) THEN
-!        lnps(i-1:i,j-1:j) = LOG(p_full(i-1:i,j-1:j,k))
-!      ELSE
-!        lnps(i-1,j-1:j) = LOG(p_full(i-1,j-1:j,k))
-!        lnps(1,j-1:j) = LOG(p_full(1,j-1:j,k))
-!      END IF
-!      CALL itpl_2d(lnps,ri,rj,plev(k))
-!    END DO
-!    !
-!    ! Log pressure
-!    !
-!    rk = LOG(rlev)
-!    !
-!    ! find rk
-!    !
-!    DO k=2,nlev
-!!    DO k=2,nlev-1 !########
-!      IF(plev(k) < rk) EXIT ! assuming descending order of plev
-!    END DO
-!    ak = (rk - plev(k-1)) / (plev(k) - plev(k-1))
-!    rk = REAL(k-1,r_size) + ak
-!  END IF
+!SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk)
+SUBROUTINE phys2ijk(p_full,elem,rig,rjg,ri,rj,rlev,rk) ! [for validation]
+  use scale_grid, only: & ! [for validation]
+      GRID_CX, &          ! [for validation]
+      GRID_CY, &          ! [for validation]
+      GRID_CXG, &         ! [for validation]
+      GRID_CYG, &         ! [for validation]
+      DX, &               ! [for validation]
+      DY                  ! [for validation]
+  use scale_grid_index, only: &
+      KHALO, &
+      IA,JA               ! [for validation]
+  IMPLICIT NONE
 
-!  RETURN
-!END SUBROUTINE phys2ijk
+  REAL(r_size),INTENT(IN) :: p_full(nlevhalo,nlonhalo,nlathalo)
+  INTEGER,INTENT(IN) :: elem
+  REAL(r_size),INTENT(IN) :: rig ! [for validation]
+  REAL(r_size),INTENT(IN) :: rjg ! [for validation]
+  REAL(r_size),INTENT(IN) :: ri
+  REAL(r_size),INTENT(IN) :: rj
+  REAL(r_size),INTENT(IN) :: rlev ! pressure levels
+  REAL(r_size),INTENT(OUT) :: rk
+  REAL(r_size) :: ak
+  REAL(r_size) :: lnps(nlonhalo,nlathalo)
+  REAL(r_size) :: plev(nlevhalo)
+  INTEGER :: i,j,k, ii, jj, ks
+!
+! rlev -> rk
+!
+  IF(ri == -1.0d0 .or. rj == -1.0d0) THEN ! GYL
+    rk = -1.0d0                                          ! GYL
+    RETURN                                               ! GYL
+  END IF                                                 ! GYL
+  !
+
+  if (rig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &
+      rig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &
+      rjg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &
+      rjg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then
+    write (6,'(A,6F10.2)') '####', rig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0, &
+                                   rjg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0
+!    write (6,'(A)') 'Error: This should not happen!!'
+  end if
+
+
+  IF(elem > 9999) THEN ! surface observation
+    rk = 0.0d0
+  ELSE
+    !
+    ! horizontal interpolation
+    !
+    i = CEILING(ri)
+    j = CEILING(rj)
+
+!    if (i < 2 .or. i > nlonhalo .or. j < 2 .or. j > nlathalo) then
+!      write (6,'(A)') 'Error: This should not happen!!'
+!      stop
+!    end if
+
+!  write(6,'(A,2I4,8F10.1)'), '#####', i,j, p_full(1:8,i-1,j-1)
+!stop
+
+
+    !
+    ! Find the lowest valid level
+    !
+    ks = 1+KHALO
+    do jj = j-1, j
+      do ii = i-1, i
+        DO k=1+KHALO,nlev+KHALO
+          if (p_full(k,ii,jj) >= 0.0d0) exit
+        END DO
+        if (k > ks) ks = k
+      end do
+    end do
+!print *, '######', ks
+
+
+
+!    DO k=1,nlevhalo
+    DO k=1+KHALO,nlev+KHALO
+!      IF(i <= nlon+IHALO) THEN
+        lnps(i-1:i,j-1:j) = LOG(p_full(k,i-1:i,j-1:j))
+!      ELSE
+!        lnps(i-1,j-1:j) = LOG(p_full(k,i-1,j-1:j))
+!        lnps(1,j-1:j) = LOG(p_full(k,1,j-1:j))
+!      END IF
+      CALL itpl_2d(lnps,ri,rj,plev(k))
+    END DO
+    !
+    ! Log pressure
+    !
+    rk = LOG(rlev)
+    !
+    ! determine if rk is within bound.
+    !
+    IF(rk > plev(ks) .or. rk < plev(nlev+KHALO)) THEN ! GYL
+!      write(6,'(A)') 'warning: too high or too low'  ! GYL
+      rk = -1.0d0                                     ! GYL
+      RETURN                                          ! GYL
+    END IF                                            ! GYL
+    !
+    ! find rk
+    !
+    DO k=ks+1,nlev+KHALO
+      IF(plev(k) < rk) EXIT ! assuming descending order of plev
+    END DO
+    ak = (rk - plev(k-1)) / (plev(k) - plev(k-1))
+    rk = REAL(k-1,r_size) + ak
+  END IF
+
+  RETURN
+END SUBROUTINE phys2ijk
 !-----------------------------------------------------------------------
 ! Coordinate conversion
 !-----------------------------------------------------------------------
-!SUBROUTINE phys2ij(rlon,rlat,ri,rj)
-!  IMPLICIT NONE
-!  REAL(r_size),INTENT(IN) :: rlon
-!  REAL(r_size),INTENT(IN) :: rlat
-!  REAL(r_size),INTENT(OUT) :: ri
-!  REAL(r_size),INTENT(OUT) :: rj
-!  REAL(r_size) :: aj
-!  INTEGER :: j
-!!
-!! rlon -> ri
-!!
-!  IF(rlon == 0.0 .OR. rlon == 360.0) THEN
-!    ri = REAL(nlon+1,r_size)
-!  ELSE
-!    ri = rlon / 360.0d0 * REAL(nlon,r_size) + 1.0d0
-!  END IF
-!  IF(CEILING(ri) < 2 .OR. nlon+1 < CEILING(ri)) RETURN
-!!
-!! rlat -> rj
-!!
-!  DO j=1,nlat
-!    IF(rlat < lat(j)) EXIT
-!  END DO
-!  IF(j == 1) THEN
-!    rj = (rlat + 90.0d0) / (lat(1) + 90.0d0)
-!  ELSE IF(j == nlat+1) THEN
-!    aj = (rlat - lat(nlat)) / (90.0d0 - lat(nlat))
-!    rj = REAL(nlat,r_size) + aj
-!  ELSE
-!    aj = (rlat - lat(j-1)) / (lat(j) - lat(j-1))
-!    rj = REAL(j-1,r_size) + aj
-!  END IF
-!  IF(CEILING(rj) < 2 .OR. nlat < CEILING(rj)) RETURN
+SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
+  use scale_grid, only: &
+      GRID_CXG, &
+      GRID_CYG, &
+      DX, &
+      DY
+  use scale_mapproj, only: &
+      MPRJ_lonlat2xy
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: rlon
+  REAL(r_size),INTENT(IN) :: rlat
+  REAL(r_size),INTENT(OUT) :: rig
+  REAL(r_size),INTENT(OUT) :: rjg
+!
+! rlon,rlat -> ri,rj
+!
+  call MPRJ_lonlat2xy(rlon*pi/180.0d0,rlat*pi/180.0d0,rig,rjg)
+  rig = (rig - GRID_CXG(1)) / DX + 1.0d0
+  rjg = (rjg - GRID_CYG(1)) / DY + 1.0d0
 
-!  RETURN
-!END SUBROUTINE phys2ij
+  RETURN
+END SUBROUTINE phys2ij
+!-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+SUBROUTINE ijproc(rig,rjg,ri,rj,proc)
+  use scale_grid_index, only: &
+      IMAX,JMAX, &
+      IHALO,JHALO
+  use scale_process, only: &
+      PRC_NUM_X,PRC_NUM_Y
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: rig
+  REAL(r_size),INTENT(IN) :: rjg
+  REAL(r_size),INTENT(OUT) :: ri
+  REAL(r_size),INTENT(OUT) :: rj
+  integer,INTENT(OUT) :: proc
+  integer :: iproc, jproc
+
+  if (rig < real(1+IHALO,r_size) .or. rig > real(IMAX*PRC_NUM_X+IHALO,r_size) .or. &
+      rjg < real(1+JHALO,r_size) .or. rjg > real(JMAX*PRC_NUM_Y+JHALO,r_size)) then
+    ri = -1.0d0
+    rj = -1.0d0
+    proc = -1
+    return
+  end if
+
+  iproc = ceiling((rig-real(IHALO,r_size)-0.5d0) / real(IMAX,r_size))
+  jproc = ceiling((rjg-real(JHALO,r_size)-0.5d0) / real(JMAX,r_size))
+  ri = rig - (iproc-1) * IMAX
+  rj = rjg - (jproc-1) * JMAX
+  proc = (jproc-1) * PRC_NUM_X + iproc-1
+
+  RETURN
+END SUBROUTINE ijproc
 !-----------------------------------------------------------------------
 ! Interpolation
 !-----------------------------------------------------------------------
 SUBROUTINE itpl_2d(var,ri,rj,var5)
   IMPLICIT NONE
-  REAL(r_size),INTENT(IN) :: var(nlon,nlat)
+  REAL(r_size),INTENT(IN) :: var(nlonhalo,nlathalo)
   REAL(r_size),INTENT(IN) :: ri
   REAL(r_size),INTENT(IN) :: rj
   REAL(r_size),INTENT(OUT) :: var5
@@ -431,24 +474,24 @@ SUBROUTINE itpl_2d(var,ri,rj,var5)
   j = CEILING(rj)
   aj = rj - REAL(j-1,r_size)
 
-  IF(i <= nlon) THEN
+!  IF(i <= nlon+IHALO) THEN
     var5 = var(i-1,j-1) * (1-ai) * (1-aj) &
        & + var(i  ,j-1) *    ai  * (1-aj) &
        & + var(i-1,j  ) * (1-ai) *    aj  &
        & + var(i  ,j  ) *    ai  *    aj
-  ELSE
-    var5 = var(i-1,j-1) * (1-ai) * (1-aj) &
-       & + var(1  ,j-1) *    ai  * (1-aj) &
-       & + var(i-1,j  ) * (1-ai) *    aj  &
-       & + var(1  ,j  ) *    ai  *    aj
-  END IF
+!  ELSE
+!    var5 = var(i-1,j-1) * (1-ai) * (1-aj) &
+!       & + var(1  ,j-1) *    ai  * (1-aj) &
+!       & + var(i-1,j  ) * (1-ai) *    aj  &
+!       & + var(1  ,j  ) *    ai  *    aj
+!  END IF
 
   RETURN
 END SUBROUTINE itpl_2d
 
 SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
   IMPLICIT NONE
-  REAL(r_size),INTENT(IN) :: var(nlon,nlat,nlev)
+  REAL(r_size),INTENT(IN) :: var(nlevhalo,nlonhalo,nlathalo)
   REAL(r_size),INTENT(IN) :: ri
   REAL(r_size),INTENT(IN) :: rj
   REAL(r_size),INTENT(IN) :: rk
@@ -463,7 +506,7 @@ SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
   k = CEILING(rk)
   ak = rk - REAL(k-1,r_size)
 
-  IF(i <= nlon) THEN
+!  IF(i <= nlon+IHALO) THEN
     var5 = var(i-1,j-1,k-1) * (1-ai) * (1-aj) * (1-ak) &
        & + var(i  ,j-1,k-1) *    ai  * (1-aj) * (1-ak) &
        & + var(i-1,j  ,k-1) * (1-ai) *    aj  * (1-ak) &
@@ -472,16 +515,16 @@ SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
        & + var(i  ,j-1,k  ) *    ai  * (1-aj) *    ak  &
        & + var(i-1,j  ,k  ) * (1-ai) *    aj  *    ak  &
        & + var(i  ,j  ,k  ) *    ai  *    aj  *    ak
-  ELSE
-    var5 = var(i-1,j-1,k-1) * (1-ai) * (1-aj) * (1-ak) &
-       & + var(1  ,j-1,k-1) *    ai  * (1-aj) * (1-ak) &
-       & + var(i-1,j  ,k-1) * (1-ai) *    aj  * (1-ak) &
-       & + var(1  ,j  ,k-1) *    ai  *    aj  * (1-ak) &
-       & + var(i-1,j-1,k  ) * (1-ai) * (1-aj) *    ak  &
-       & + var(1  ,j-1,k  ) *    ai  * (1-aj) *    ak  &
-       & + var(i-1,j  ,k  ) * (1-ai) *    aj  *    ak  &
-       & + var(1  ,j  ,k  ) *    ai  *    aj  *    ak
-  END IF
+!  ELSE
+!    var5 = var(i-1,j-1,k-1) * (1-ai) * (1-aj) * (1-ak) &
+!       & + var(1  ,j-1,k-1) *    ai  * (1-aj) * (1-ak) &
+!       & + var(i-1,j  ,k-1) * (1-ai) *    aj  * (1-ak) &
+!       & + var(1  ,j  ,k-1) *    ai  *    aj  * (1-ak) &
+!       & + var(i-1,j-1,k  ) * (1-ai) * (1-aj) *    ak  &
+!       & + var(1  ,j-1,k  ) *    ai  * (1-aj) *    ak  &
+!       & + var(i-1,j  ,k  ) * (1-ai) *    aj  *    ak  &
+!       & + var(1  ,j  ,k  ) *    ai  *    aj  *    ak
+!  END IF
 
   RETURN
 END SUBROUTINE itpl_3d
@@ -809,6 +852,58 @@ SUBROUTINE read_obs(cfile,obs)
 
   RETURN
 END SUBROUTINE read_obs
+
+SUBROUTINE write_obs(cfile,obs,append)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: cfile
+  TYPE(obs_info),INTENT(IN) :: obs
+  INTEGER,INTENT(IN),OPTIONAL :: append
+  REAL(r_sngl) :: wk(8)
+  INTEGER :: n,iunit
+
+  iunit=92
+  IF(present(append) .and. append == 1) THEN
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
+  ELSE
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+  END IF
+  DO n=1,obs%nobs
+    wk(1) = REAL(obs%elm(n),r_sngl)
+    wk(2) = REAL(obs%lon(n),r_sngl)
+    wk(3) = REAL(obs%lat(n),r_sngl)
+    wk(4) = REAL(obs%lev(n),r_sngl)
+    wk(5) = REAL(obs%dat(n),r_sngl)
+    wk(6) = REAL(obs%err(n),r_sngl)
+    wk(7) = REAL(obs%typ(n),r_sngl)
+    wk(8) = REAL(obs%dif(n),r_sngl)
+    SELECT CASE(NINT(wk(1)))
+    CASE(id_u_obs)
+      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+    CASE(id_v_obs)
+      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+    CASE(id_t_obs)
+      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+    CASE(id_tv_obs)
+      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+    CASE(id_q_obs)
+      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+    CASE(id_ps_obs)
+      wk(5) = wk(5) * 0.01 ! Pa -> hPa
+      wk(6) = wk(6) * 0.01 ! Pa -> hPa
+    CASE(id_rh_obs)
+      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+      wk(5) = wk(5) * 100.0 ! percent output
+      wk(6) = wk(6) * 100.0 ! percent output
+    CASE(id_tcmip_obs)
+      wk(5) = wk(5) * 0.01 ! Pa -> hPa
+      wk(6) = wk(6) * 0.01 ! Pa -> hPa
+    END SELECT
+    WRITE(iunit) wk
+  END DO
+  CLOSE(iunit)
+
+  RETURN
+END SUBROUTINE write_obs
 
 !SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,ohx,oqc)
 !  IMPLICIT NONE

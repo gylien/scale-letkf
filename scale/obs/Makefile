@@ -1,6 +1,6 @@
 include ../configure.user
 
-PROGS   = obsope #superob dec_prepbufr dec_prcp readdiag_conv
+PROGS   = obsope obsmake #superob dec_prepbufr dec_prcp readdiag_conv
 
 OBJS    = obsope_tools.o #obs_tools.o superob_tools.o obs_gfs_ext.o
 
@@ -32,6 +32,8 @@ all:	$(PROGS)
 obsope:	obsope.o $(OBJS) common_modules
 	$(FC) $(FOPTS) $(FMCMODEL) -o obsope$(shell ../common/enssize) obsope.o \
 	$(COMMON_OBJS) $(OBJS) $(LIBS)
+obsmake:	obsmake.o $(OBS) common_modules
+	$(FC) $(FOPTS) $(FMCMODEL) -o obsmake obsmake.o $(COMMON_OBJS) $(OBJS) $(LIBS)
 superob:	superob.o $(OBJS) common_modules
 	$(SFC) $(FOPTS) $(FMCMODEL) -o superob superob.o $(COMMON_OBJS) $(OBJS) \
 	$(LIBS) -L$(SIGIO_LIB) -lsigio_4
@@ -46,6 +48,8 @@ readdiag_conv:	readdiag_conv.o common_modules
 
 obsope.o:	obsope.f90 $(OBJS) common_modules
 	$(FC) $(FOPTS) -c obsope.f90 -I$(COMMON_DIR) $(INCS)
+obsmake.o:	obsmake.f90 $(OBJS) common_modules
+	$(FC) $(FOPTS) -c obsmake.f90 -I$(COMMON_DIR) $(INCS)
 superob.o:      superob.f90 $(OBJS) common_modules
 	$(SFC) $(FOPTS) $(FMCMODEL) -c superob.f90 -I$(COMMON_DIR) -I$(SIGIO_INC)
 dec_prepbufr.o:	dec_prepbufr.f90 common_modules

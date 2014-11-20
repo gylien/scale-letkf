@@ -53,9 +53,9 @@ subroutine read_nml_letkf_prc
     stop
   endif
 
-  if (nprocs /= NNODES * PPN) then
-    write(6,*) 'Number of MPI processes should be equal to NNODES * PPN.'
-    stop
+!  if (nprocs /= NNODES * PPN) then
+!    write(6,*) 'Number of MPI processes should be equal to NNODES * PPN.'
+!    stop
 !  else if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
 !    write(6,*) 'MEM_NP should be equal to PRC_NUM_X * PRC_NUM_Y.'
 !    stop
@@ -68,7 +68,7 @@ subroutine read_nml_letkf_prc
 !  else if (KMAX /= nlev) then
 !    write(6,*) 'KMAX should be equal to nlev.'
 !    stop
-  end if
+!  end if
 
   return
 end subroutine read_nml_letkf_prc

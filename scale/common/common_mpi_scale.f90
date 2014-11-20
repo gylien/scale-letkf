@@ -66,10 +66,11 @@ module common_mpi_scale
   integer,save :: n_mempn
 
   integer,save :: scale_IO_group_n = -1
+!  integer,save :: scale_IO_proc_n = -1
 
 contains
 
-subroutine set_scale_IO(mem_np)
+subroutine set_scale_lib(mem_np)
 !    use dc_log, only: &
 !       loginit
 !    use gtool_file, only: &
@@ -80,13 +81,15 @@ subroutine set_scale_IO(mem_np)
 
 
     use scale_process, only: &
-       prc_setup,    &
-       prc_mpistart, &
-!       prc_mpifinish, &
-       prc_master, &
-       prc_myrank, &
-       prc_myrank_world, &
-       PRC_2Drank
+       PRC_setup,    &
+       PRC_MPIstart, &
+!       PRC_mpifinish, &
+       PRC_master, &
+       PRC_myrank, &
+       PRC_myrank_world, &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y
 !       prc_nu, &
     use scale_const, only: &
        CONST_setup
@@ -97,7 +100,9 @@ subroutine set_scale_IO(mem_np)
     use scale_time, only: &
        TIME_setup
     use scale_grid, only: &
-       GRID_setup
+       GRID_setup, &
+       GRID_DOMAIN_CENTER_X, &
+       GRID_DOMAIN_CENTER_Y
 !    use scale_grid_nest, only: &
 !       NEST_setup
 !    use scale_land_grid_index, only: &
@@ -114,6 +119,17 @@ subroutine set_scale_IO(mem_np)
        FILEIO_setup
     use scale_comm, only: &
        COMM_setup
+
+!    use scale_topography, only: &
+!       TOPO_setup
+!    use scale_landuse, only: &
+!       LANDUSE_setup
+
+!    use scale_grid_real, only: &
+!       REAL_setup
+    use scale_mapproj, only: &
+       MPRJ_setup
+
 
 
     implicit none
@@ -146,6 +162,24 @@ subroutine set_scale_IO(mem_np)
     call GRID_INDEX_setup
     call GRID_setup
 
+
+
+    if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
+      write(6,*) 'MEM_NP should be equal to PRC_NUM_X * PRC_NUM_Y.'
+      stop
+    else if (IMAX /= nlonsub) then
+      write(6,*) 'IMAX should be equal to nlonsub.'
+      stop
+    else if (JMAX /= nlatsub) then
+      write(6,*) 'JMAX should be equal to nlatsub.'
+      stop
+    else if (KMAX /= nlev) then
+      write(6,*) 'KMAX should be equal to nlev.'
+      stop
+    end if
+
+
+
 !    call LAND_GRID_INDEX_setup
 !    call LAND_GRID_setup
 
@@ -158,6 +192,18 @@ subroutine set_scale_IO(mem_np)
     ! setup mpi communication
     call COMM_setup
 
+!    ! setup topography
+!    call TOPO_setup
+!    ! setup land use category index/fraction
+!    call LANDUSE_setup
+
+!    ! setup grid coordinates (real world)
+!    call REAL_setup
+    ! setup map projection
+    call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
+
+
+
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
     call HistoryInit('','','',IMAX*JMAX*KMAX,PRC_master,PRC_myrank,rankidx)
@@ -167,10 +213,10 @@ subroutine set_scale_IO(mem_np)
     call PROF_rapstart('Main')
 
   return
-end subroutine set_scale_IO
+end subroutine set_scale_lib
 
 
-subroutine unset_scale_IO
+subroutine unset_scale_lib
     use scale_process, only: &
        prc_mpifinish
     implicit none
@@ -185,7 +231,7 @@ subroutine unset_scale_IO
     call PRC_MPIfinish
 
   return
-end subroutine unset_scale_IO
+end subroutine unset_scale_lib
 
 !-----------------------------------------------------------------------
 ! set_common_mpi_scale
@@ -199,27 +245,7 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
   REAL(r_size),ALLOCATABLE :: v2d(:,:)
   INTEGER :: i,n
   INTEGER :: ierr,buf(4)
-  CHARACTER(LEN=9),PARAMETER :: mpimapfile = 'mpimap.in'
   LOGICAL :: ex
-
-!  IF(myrank == 0) THEN
-!    buf(1) = nprocs ! nnodes
-!    buf(2) = 1      ! ppn
-!    buf(3) = 1      ! mem_nodes
-!    buf(4) = 1      ! mem_np
-!    INQUIRE(FILE=TRIM(mpimapfile), EXIST=ex)
-!    IF(ex) THEN
-!      OPEN(30, FILE=TRIM(mpimapfile), STATUS='old', FORM='formatted')
-!      READ(30, '(4I)') buf
-!      CLOSE(30)
-!    END IF
-!  END IF
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!  CALL MPI_BCAST(buf,4,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-!  nnodes = buf(1)
-!  ppn = buf(2)
-!  mem_nodes = buf(3)
-!  mem_np = buf(4)
 
   CALL set_mem_node_proc(nbv+1,nnodes,ppn,mem_nodes,mem_np)
 
@@ -231,6 +257,7 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
 !  end if
 
   scale_IO_group_n = proc2mem(1,1,myrank+1)
+!  scale_IO_proc_n = proc2mem(2,1,myrank+1)
 
 
   WRITE(6,'(A)') 'Hello from set_common_mpi_scale'
@@ -734,8 +761,8 @@ SUBROUTINE read_ens_history_mpi(file,iter,step,v3dg,v2dg,ensmean)
   CHARACTER(4),INTENT(IN) :: file
   INTEGER,INTENT(IN) :: iter
   INTEGER,INTENT(IN) :: step
-  REAL(r_size),INTENT(OUT) :: v3dg(nlev+2*KHALO,nlon+2*IHALO,nlat+2*JHALO,nv3dd)
-  REAL(r_size),INTENT(OUT) :: v2dg(nlon+2*IHALO,nlat+2*JHALO,nv2dd)
+  REAL(r_size),INTENT(OUT) :: v3dg(nlevhalo,nlonhalo,nlathalo,nv3dd)
+  REAL(r_size),INTENT(OUT) :: v2dg(nlonhalo,nlathalo,nv2dd)
   LOGICAL,INTENT(INOUT),OPTIONAL :: ensmean
   INTEGER :: i,j,k,iv3d,iv2d,nbvr
 
@@ -756,7 +783,13 @@ SUBROUTINE read_ens_history_mpi(file,iter,step,v3dg,v2dg,ensmean)
 
     IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= nbvr) THEN
       WRITE(filename(1:4),'(A4)') file
-      WRITE(filename(6:9),'(I4.4)') proc2mem(1,iter,myrank+1)
+
+      if (proc2mem(1,iter,myrank+1) == nbv+1) then
+        WRITE(filename(6:9),'(A4)') 'mean'
+      else
+        WRITE(filename(6:9),'(I4.4)') proc2mem(1,iter,myrank+1)
+      end if
+
       WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,iter,myrank+1),'.nc'
 
       DO iv3d = 1, nv3dd
@@ -1035,6 +1068,21 @@ END SUBROUTINE buf_to_grd
 
 !  RETURN
 !END SUBROUTINE read_obs2_mpi
+!!!!!!!!!-----------------------------------------------------------------------
+!!!!!!!!!
+!!!!!!!!!-----------------------------------------------------------------------
+!!!!!!!!SUBROUTINE obs_info_allreduce(obs)
+!!!!!!!!  IMPLICIT NONE
+!!!!!!!!  TYPE(obs_info),INTENT(INOUT) :: obs
+
+!!!!!!!!  ALLOCATE( obs%dat (obs%nobs) )
+
+!!!!!!!!  CALL MPI_ALLREDUCE(ibufs,ibufr,obs%nobs,MPI_INTEGER,MPI_MAX,&
+!!!!!!!!          & MPI_COMM_WORLD,ierr)
+
+
+!!!!!!!!  RETURN
+!!!!!!!!END SUBROUTINE obs_info_allreduce
 !!-----------------------------------------------------------------------
 !! MPI_ALLREDUCE of hdxf and qc
 !!-----------------------------------------------------------------------

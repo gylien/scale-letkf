@@ -41,7 +41,7 @@ common_ncio.o:	common_ncio.f90 common.o
 common_scale.o:	common_scale.f90 common.o common_ncio.o
 	$(SFC) $(FOPTS) -c common_scale.f90 $(NETCDF_INC) $(SCALE_INCS)
 common_obs_scale.o:	common_obs_scale.f90 common.o common_scale.o
-	$(SFC) $(FOPTS) -c common_obs_scale.f90 $(NETCDF_INC)
+	$(SFC) $(FOPTS) -c common_obs_scale.f90 $(NETCDF_INC) $(SCALE_INCS)
 common_mpi_scale.o:	common_mpi_scale.f90 common.o common_mpi.o common_scale.o common_obs_scale.o
 	$(FC) $(FOPTS) -c common_mpi_scale.f90 $(NETCDF_INC) $(SCALE_INCS)
 #common_precip.o:	common_precip.f90 common.o common_scale.o common_letkf.o
