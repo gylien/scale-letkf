@@ -16,7 +16,7 @@ PROGRAM obsope
 
   use common_letkf, only: nbv
 
-  use letkf_nml
+  use common_nml
 
   use obsope_tools
 

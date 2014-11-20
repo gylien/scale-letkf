@@ -1,23 +1,37 @@
 include ../configure.user
 
-PROGS   = superob dec_prepbufr dec_prcp readdiag_conv
+PROGS   = obsope #superob dec_prepbufr dec_prcp readdiag_conv
 
-OBJS    = obs_tools.o superob_tools.o obs_gfs_ext.o
+OBJS    = obsope_tools.o #obs_tools.o superob_tools.o obs_gfs_ext.o
 
 COMMON_DIR = ../common
 
 COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common.o         \
+              $(COMMON_DIR)/common_mpi.o     \
               $(COMMON_DIR)/common_mtx.o     \
               $(COMMON_DIR)/netlib.o         \
               $(COMMON_DIR)/common_letkf.o   \
-              $(COMMON_DIR)/common_gfs.o     \
-              $(COMMON_DIR)/common_obs_gfs.o
+              $(COMMON_DIR)/common_scale.o     \
+              $(COMMON_DIR)/common_obs_scale.o \
+              $(COMMON_DIR)/common_mpi_scale.o \
+              $(COMMON_DIR)/common_nml.o
+#              $(COMMON_DIR)/common_ncio.o
+#              $(COMMON_DIR)/common_precip.o
 
-LIBS    = -L$(SP_LIB) -lsp_4 $(LIBBLAS)
+INCS    = -I/data1/gylien/scale_ens/dc_utils \
+          -I/data1/gylien/scale_ens/gtool \
+          -I/data1/gylien/scale_ens/include
+#          -I/data1/gylien/scale/scalelib/include
+
+LIBS    = -L/data1/gylien/scale_ens/lib -lscale -lgtool -ldcutils \
+          $(NETCDF_LIB) $(LIBBLAS)
 
 all:	$(PROGS)
 
+obsope:	obsope.o $(OBJS) common_modules
+	$(FC) $(FOPTS) $(FMCMODEL) -o obsope$(shell ../common/enssize) obsope.o \
+	$(COMMON_OBJS) $(OBJS) $(LIBS)
 superob:	superob.o $(OBJS) common_modules
 	$(SFC) $(FOPTS) $(FMCMODEL) -o superob superob.o $(COMMON_OBJS) $(OBJS) \
 	$(LIBS) -L$(SIGIO_LIB) -lsigio_4
@@ -30,6 +44,8 @@ readdiag_conv:	readdiag_conv.o common_modules
 	$(SFC) $(FOPTS2) -o readdiag_conv readdiag_conv.o $(COMMON_OBJS) $(OBJS) \
 	$(LIBS)
 
+obsope.o:	obsope.f90 $(OBJS) common_modules
+	$(FC) $(FOPTS) -c obsope.f90 -I$(COMMON_DIR) $(INCS)
 superob.o:      superob.f90 $(OBJS) common_modules
 	$(SFC) $(FOPTS) $(FMCMODEL) -c superob.f90 -I$(COMMON_DIR) -I$(SIGIO_INC)
 dec_prepbufr.o:	dec_prepbufr.f90 common_modules
@@ -39,6 +55,8 @@ dec_prcp.o:	dec_prcp.f90 common_modules
 readdiag_conv.o:	readdiag_conv.f90 $(OBJS) common_modules
 	$(SFC) $(FOPTS2) -c readdiag_conv.f90 -I$(COMMON_DIR)
 
+obsope_tools.o:	obsope_tools.f90 common_modules
+	$(FC) $(FOPTS) -c obsope_tools.f90 -I$(COMMON_DIR) $(INCS)
 obs_tools.o:	obs_tools.f90 common_modules
 	$(SFC) $(FOPTS) -c obs_tools.f90 -I$(COMMON_DIR)
 superob_tools.o:	superob_tools.f90 obs_tools.o obs_gfs_ext.o common_modules
@@ -50,4 +68,4 @@ common_modules:
 	( cd $(COMMON_DIR) ; make )
 
 clean:
-	rm -f *.o *.mod $(PROGS)
+	rm -f *.o *.mod $(PROGS) obsope[0-9]*

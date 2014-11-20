@@ -1,4 +1,4 @@
-MODULE letkf_nml
+MODULE common_nml
 !=======================================================================
 !
 ! [PURPOSE:] Read namelist
@@ -27,18 +27,6 @@ MODULE letkf_nml
   real(r_size) :: SLOT_TINTERVAL = 3600.0d0
 
 contains
-!-----------------------------------------------------------------------
-! Read namelist for obsope
-!-----------------------------------------------------------------------
-subroutine read_nml_obsope
-  implicit none
-
-  call read_nml_letkf_prc
-  call read_nml_letkf_obs
-
-  return
-end subroutine read_nml_obsope
-
 !-----------------------------------------------------------------------
 ! PARAM_LETKF_PRC
 !-----------------------------------------------------------------------
@@ -111,4 +99,4 @@ subroutine read_nml_letkf_obs
 end subroutine read_nml_letkf_obs
 
 
-end module letkf_nml
+end module common_nml

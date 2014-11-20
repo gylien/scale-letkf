@@ -16,7 +16,7 @@ MODULE obsope_tools
 
   use common_letkf, only: nbv
 
-  use letkf_nml
+  use common_nml
 
   use scale_process, only: &
        prc_myrank, &
@@ -41,6 +41,18 @@ MODULE obsope_tools
 
 
 CONTAINS
+!-----------------------------------------------------------------------
+! Read namelist for obsope
+!-----------------------------------------------------------------------
+subroutine read_nml_obsope
+  implicit none
+
+  call read_nml_letkf_prc
+  call read_nml_letkf_obs
+
+  return
+end subroutine read_nml_obsope
+
 !-----------------------------------------------------------------------
 ! Set the parameters
 !-----------------------------------------------------------------------
