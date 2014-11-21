@@ -79,7 +79,7 @@ MODULE common_obs_scale
 !     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'TCX', 'TCY', 'TCP'/)
 
   TYPE obs_info
-    INTEGER :: nobs
+    INTEGER :: nobs = 0
     INTEGER,ALLOCATABLE :: elm(:)
     REAL(r_size),ALLOCATABLE :: lon(:)
     REAL(r_size),ALLOCATABLE :: lat(:)
@@ -91,24 +91,35 @@ MODULE common_obs_scale
   END TYPE obs_info
 
   TYPE obs_ensval
-    INTEGER :: nobs
+    INTEGER :: nobs = 0
+    LOGICAL :: sorted = .false.
     INTEGER,ALLOCATABLE :: idx(:)
+    INTEGER,ALLOCATABLE :: nobsgrd(:,:)
     REAL(r_size),ALLOCATABLE :: val(:)
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
   END TYPE obs_ensval
 
+  INTEGER,PARAMETER :: iqc_good=0
+  INTEGER,PARAMETER :: iqc_ps_ter=10
+  INTEGER,PARAMETER :: iqc_out_vhi=20
+  INTEGER,PARAMETER :: iqc_out_vlo=21
+  INTEGER,PARAMETER :: iqc_out_h=22
+  INTEGER,PARAMETER :: iqc_otype=90
+  INTEGER,PARAMETER :: iqc_time=91
+
 CONTAINS
 !-----------------------------------------------------------------------
 ! Transformation from model variables to an observation
 !-----------------------------------------------------------------------
-SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)
+SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs,qc)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk
   REAL(r_size),INTENT(IN) :: v3d(nlevhalo,nlonhalo,nlathalo,nv3dd)
   REAL(r_size),INTENT(IN) :: v2d(nlonhalo,nlathalo,nv2dd)
   REAL(r_size),INTENT(OUT) :: yobs
+  INTEGER,INTENT(OUT) :: qc
   REAL(r_size) :: tg,qg
   REAL(r_size) :: qq
 !  REAL(r_size) :: dummy(3)
@@ -121,6 +132,7 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)
 !  ke = CEILING( rk )
 !  ks = ke-1
 
+  qc = 0
   SELECT CASE (elm)
   CASE(id_u_obs)  ! U
     CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,yobs)
@@ -156,6 +168,9 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs)
 !  CASE(id_tcmip_obs)
 !    CALL tctrk(v2d(:,:,iv2d_ps),v2d(:,:,iv2d_t2),ri,rj,dummy)
 !    yobs = dummy(3)
+  CASE DEFAULT
+    yobs = undef
+    qc = iqc_otype
   END SELECT
 
   RETURN
@@ -285,25 +300,19 @@ SUBROUTINE prsadj(p,dz,t,q)
 END SUBROUTINE prsadj
 !-----------------------------------------------------------------------
 ! Coordinate conversion
+!
+! rk = 0.0d0  : surface observation
+! rk = -1.0d0 : too high
+! rk = -2.0d0 : too low
+! rk = -3.0d0 : horizontally outside (should not happen)
 !-----------------------------------------------------------------------
-!SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk)
-SUBROUTINE phys2ijk(p_full,elem,rig,rjg,ri,rj,rlev,rk) ! [for validation]
-  use scale_grid, only: & ! [for validation]
-      GRID_CX, &          ! [for validation]
-      GRID_CY, &          ! [for validation]
-      GRID_CXG, &         ! [for validation]
-      GRID_CYG, &         ! [for validation]
-      DX, &               ! [for validation]
-      DY                  ! [for validation]
+SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk)
   use scale_grid_index, only: &
-      KHALO, &
-      IA,JA               ! [for validation]
+      KHALO
   IMPLICIT NONE
 
   REAL(r_size),INTENT(IN) :: p_full(nlevhalo,nlonhalo,nlathalo)
   INTEGER,INTENT(IN) :: elem
-  REAL(r_size),INTENT(IN) :: rig ! [for validation]
-  REAL(r_size),INTENT(IN) :: rjg ! [for validation]
   REAL(r_size),INTENT(IN) :: ri
   REAL(r_size),INTENT(IN) :: rj
   REAL(r_size),INTENT(IN) :: rlev ! pressure levels
@@ -311,26 +320,17 @@ SUBROUTINE phys2ijk(p_full,elem,rig,rjg,ri,rj,rlev,rk) ! [for validation]
   REAL(r_size) :: ak
   REAL(r_size) :: lnps(nlonhalo,nlathalo)
   REAL(r_size) :: plev(nlevhalo)
+  REAL(r_size) :: ptop
   INTEGER :: i,j,k, ii, jj, ks
 !
 ! rlev -> rk
 !
-  IF(ri == -1.0d0 .or. rj == -1.0d0) THEN ! GYL
-    rk = -1.0d0                                          ! GYL
-    RETURN                                               ! GYL
-  END IF                                                 ! GYL
-  !
-
-  if (rig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &
-      rig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &
-      rjg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &
-      rjg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then
-    write (6,'(A,6F10.2)') '####', rig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0, &
-                                   rjg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0
-!    write (6,'(A)') 'Error: This should not happen!!'
+  if (ri < 1.0d0 .or. ri > nlonhalo .or. rj < 1.0d0 .or. rj > nlathalo) then
+    write (6,'(A)') 'warning: observation is outside of the horizontal domain'
+    rk = -3.0d0
+    return
   end if
-
-
+  !
   IF(elem > 9999) THEN ! surface observation
     rk = 0.0d0
   ELSE
@@ -339,16 +339,6 @@ SUBROUTINE phys2ijk(p_full,elem,rig,rjg,ri,rj,rlev,rk) ! [for validation]
     !
     i = CEILING(ri)
     j = CEILING(rj)
-
-!    if (i < 2 .or. i > nlonhalo .or. j < 2 .or. j > nlathalo) then
-!      write (6,'(A)') 'Error: This should not happen!!'
-!      stop
-!    end if
-
-!  write(6,'(A,2I4,8F10.1)'), '#####', i,j, p_full(1:8,i-1,j-1)
-!stop
-
-
     !
     ! Find the lowest valid level
     !
@@ -361,10 +351,6 @@ SUBROUTINE phys2ijk(p_full,elem,rig,rjg,ri,rj,rlev,rk) ! [for validation]
         if (k > ks) ks = k
       end do
     end do
-!print *, '######', ks
-
-
-
 !    DO k=1,nlevhalo
     DO k=1+KHALO,nlev+KHALO
 !      IF(i <= nlon+IHALO) THEN
@@ -382,11 +368,18 @@ SUBROUTINE phys2ijk(p_full,elem,rig,rjg,ri,rj,rlev,rk) ! [for validation]
     !
     ! determine if rk is within bound.
     !
-    IF(rk > plev(ks) .or. rk < plev(nlev+KHALO)) THEN ! GYL
-!      write(6,'(A)') 'warning: too high or too low'  ! GYL
-      rk = -1.0d0                                     ! GYL
-      RETURN                                          ! GYL
-    END IF                                            ! GYL
+    IF(rk < plev(nlev+KHALO)) THEN
+      call itpl_2d(p_full(nlev+KHALO,:,:),ri,rj,ptop)
+      write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too high: ptop=', ptop, ', lev=', rlev
+      rk = -1.0d0
+      RETURN
+    END IF
+    IF(rk > plev(ks)) THEN
+      call itpl_2d(p_full(ks,:,:),ri,rj,ptop)
+      write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too low: ptop=', ptop, ', lev=', rlev
+      rk = -2.0d0
+      RETURN
+    END IF
     !
     ! find rk
     !
@@ -426,13 +419,23 @@ SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
 END SUBROUTINE phys2ij
 !-----------------------------------------------------------------------
 !
+! proc = -1: outside the global domain
 !-----------------------------------------------------------------------
 SUBROUTINE ijproc(rig,rjg,ri,rj,proc)
   use scale_grid_index, only: &
       IMAX,JMAX, &
-      IHALO,JHALO
+      IHALO,JHALO, &
+      IA,JA                  ! [for validation]
   use scale_process, only: &
-      PRC_NUM_X,PRC_NUM_Y
+      PRC_NUM_X,PRC_NUM_Y, &
+      PRC_myrank             ! [for validation]
+  use scale_grid, only: &    ! [for validation]
+      GRID_CX, &             ! [for validation]
+      GRID_CY, &             ! [for validation]
+      GRID_CXG, &            ! [for validation]
+      GRID_CYG, &            ! [for validation]
+      DX, &                  ! [for validation]
+      DY                     ! [for validation]
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: rig
   REAL(r_size),INTENT(IN) :: rjg
@@ -454,6 +457,18 @@ SUBROUTINE ijproc(rig,rjg,ri,rj,proc)
   ri = rig - (iproc-1) * IMAX
   rj = rjg - (jproc-1) * JMAX
   proc = (jproc-1) * PRC_NUM_X + iproc-1
+
+  if (PRC_myrank == proc) then                                                                                    ! [for validation]
+    if (rig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                      ! [for validation]
+        rig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                     ! [for validation]
+        rjg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &                                                      ! [for validation]
+        rjg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then                                                      ! [for validation]
+      write (6,'(A)') 'Error: Process assignment fails!'                                                          ! [for validation]
+      write (6,'(3F10.2)') rig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 ! [for validation]
+      write (6,'(3F10.2)') rjg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0 ! [for validation]
+      stop                                                                                                        ! [for validation]
+    end if                                                                                                        ! [for validation]
+  end if                                                                                                          ! [for validation]
 
   RETURN
 END SUBROUTINE ijproc
@@ -734,8 +749,10 @@ SUBROUTINE obs_ensval_deallocate(obs)
   TYPE(obs_ensval),INTENT(INOUT) :: obs
 
   IF(ALLOCATED(obs%idx)) DEALLOCATE(obs%idx)
+  IF(ALLOCATED(obs%idx)) DEALLOCATE(obs%nobsgrd)
   IF(ALLOCATED(obs%val)) DEALLOCATE(obs%val)
-  IF(ALLOCATED(obs%qc )) DEALLOCATE(obs%qc )
+  IF(ALLOCATED(obs%qc )) DEALLOCATE(obs%ensval)
+  IF(ALLOCATED(obs%qc )) DEALLOCATE(obs%qc)
 
   RETURN
 END SUBROUTINE obs_ensval_deallocate
@@ -904,6 +921,53 @@ SUBROUTINE write_obs(cfile,obs,append)
 
   RETURN
 END SUBROUTINE write_obs
+
+SUBROUTINE read_obsval(cfile,obs)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: cfile
+  TYPE(obs_ensval),INTENT(INOUT) :: obs
+  REAL(r_sngl) :: wk(3)
+  INTEGER :: n,iunit
+
+!  call obs_ensval_allocate(obs)
+
+  iunit=91
+  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+  DO n=1,obs%nobs
+    READ(iunit) wk
+    obs%idx(n) = NINT(wk(1))  !!!!!! will overflow......
+    obs%val(n) = REAL(wk(2),r_size)
+    obs%qc(n) = NINT(wk(3))
+  END DO
+  CLOSE(iunit)
+
+  RETURN
+END SUBROUTINE read_obsval
+
+SUBROUTINE write_obsval(cfile,obs,append)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: cfile
+  TYPE(obs_ensval),INTENT(IN) :: obs
+  INTEGER,INTENT(IN),OPTIONAL :: append
+  REAL(r_sngl) :: wk(3)
+  INTEGER :: n,iunit
+
+  iunit=92
+  IF(present(append) .and. append == 1) THEN
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
+  ELSE
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+  END IF
+  DO n=1,obs%nobs
+    wk(1) = REAL(obs%idx(n),r_sngl)  !!!!!! will overflow......
+    wk(2) = REAL(obs%val(n),r_sngl)
+    wk(3) = REAL(obs%qc(n),r_sngl)
+    WRITE(iunit) wk
+  END DO
+  CLOSE(iunit)
+
+  RETURN
+END SUBROUTINE write_obsval
 
 !SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,ohx,oqc)
 !  IMPLICIT NONE

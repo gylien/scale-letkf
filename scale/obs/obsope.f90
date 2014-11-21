@@ -37,7 +37,7 @@ PROGRAM obsope
 
   REAL(r_size) :: rtimer00,rtimer
   INTEGER :: ierr
-  CHARACTER(8) :: stdoutf='NOUT-000000'
+  CHARACTER(11) :: stdoutf='NOUT-000000'
 
 
   TYPE(obs_info) :: obs
@@ -51,20 +51,11 @@ PROGRAM obsope
   CALL initialize_mpi
 !
   WRITE(stdoutf(6:11), '(I6.6)') myrank
-!  WRITE(6,'(3A,I3.3)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
-!  OPEN(6,FILE=stdoutf)
-!  WRITE(6,'(A,I3.3,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
+  WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
+  OPEN(6,FILE=stdoutf)
+  WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
 !
   CALL set_common_scale
-
-!  ALLOCATE(gues3d(nij1,nlev,nbv,nv3d))
-!  ALLOCATE(gues2d(nij1,nbv,nv2d))
-!  ALLOCATE(anal3d(nij1,nlev,nbv,nv3d))
-!  ALLOCATE(anal2d(nij1,nbv,nv2d))
-!
-  CALL CPU_TIME(rtimer)
-  WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
-  rtimer00=rtimer
 
 !-----------------------------------------------------------------------
 
@@ -78,28 +69,30 @@ PROGRAM obsope
     stop
   end if
 
-!-----------------------------------------------------------------------
+  CALL CPU_TIME(rtimer)
+  WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
+  rtimer00=rtimer
 
+!-----------------------------------------------------------------------
 
   CALL get_nobs(obsfile,8,obs%nobs)
   WRITE(6,'(A,I9,A)') 'TOTAL: ', obs%nobs, ' OBSERVATIONS'
 
-  !IF(obs%nobs == 0) ...
-
   CALL obs_info_allocate(obs)
+
   CALL read_obs(obsfile,obs)
 
-!  print *, obs%nobs
-!  print *, obs%lat, obs%lon, obs%lev, obs%elm
+  CALL CPU_TIME(rtimer)
+  WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
+  rtimer00=rtimer
 
+!-----------------------------------------------------------------------
 
+  call obsope_cal(obs)
 
-  call set_common_mpi_scale(nbv,NNODES,PPN,MEM_NODES,MEM_NP)
-
-
-  call obsope_cal
-
-
+  CALL CPU_TIME(rtimer)
+  WRITE(6,'(A,2F10.2)') '### TIMER(OBS_OPERATOR):',rtimer,rtimer-rtimer00
+  rtimer00=rtimer
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------

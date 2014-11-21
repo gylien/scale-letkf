@@ -16,6 +16,8 @@ MODULE obsope_tools
 
   use common_letkf, only: nbv
 
+  use common_scalelib
+
   use common_nml
 
   use scale_process, only: &
@@ -46,7 +48,7 @@ MODULE obsope_tools
   REAL(r_size),PARAMETER :: slotint=60.0d0 ! time interval between slots in second
 
   CHARACTER(7) :: obsfile='obs.dat' !IN
-  CHARACTER(15) :: obsvalfile='obsval.0000.dat' !OUT
+  CHARACTER(22) :: obsvalfile='obsval.0000.000000.dat' !OUT
 
 
 CONTAINS
@@ -104,105 +106,87 @@ end subroutine read_nml_letkf_obsmake
 !-----------------------------------------------------------------------
 ! Observation operator calculation
 !-----------------------------------------------------------------------
-SUBROUTINE obsope_cal
+SUBROUTINE obsope_cal(obs)
   IMPLICIT NONE
 
-
-
+  TYPE(obs_info),INTENT(INOUT) :: obs
+  type(obs_ensval) :: obsval
   REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
-  integer :: it, islot
-
-  integer :: ierr
-!integer :: i, j, k
-
+  integer :: it,islot,proc
+  integer :: n,nslot,nproc,nprocslot,ierr
+  real(r_size) :: rig,rjg,ri,rj,rk
+  real(r_size) :: slot_lb,slot_ub
+!  real(r_size),allocatable :: bufr(:)
 
 !-----------------------------------------------------------------------
 
+  call set_common_mpi_scale(nbv,NNODES,PPN,MEM_NODES,MEM_NP)
+!  call set_common_mpi_scale(nbv+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
-  if (scale_IO_group_n >= 0) then
-    call set_scale_lib(MEM_NP)
+  obsval%nobs = obs%nobs
+  call obs_ensval_allocate(obsval)
 
-!  print *, myrank, PRC_myrank
+  if (scale_IO_group_n > 0) then
+    call set_scalelib
 
-
-    ALLOCATE ( v3dg (nlevhalo,nlonhalo,nlathalo,nv3dd) )
-    ALLOCATE ( v2dg (nlonhalo,nlathalo,nv2dd) )
+    allocate ( v3dg (nlevhalo,nlonhalo,nlathalo,nv3dd) )
+    allocate ( v2dg (nlonhalo,nlathalo,nv2dd) )
 
     do it = 1, nitmax
+      write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
+            proc2mem(1,it,myrank+1), ', subdomain id #', proc2mem(2,it,myrank+1)
 
-      write (6,'(A,I)') '# Loop ', it
-
+      nproc = 0
       do islot = 1, SLOT_NUM
-
-        write (6,'(A,I)') '## Slot loop ', islot
-
-!    WRITE(obsinfile(6:7),'(I2.2)') islot
-!    CALL read_obs(obsinfile,nobslots(islot),&
-!      & elem(1:nobslots(islot)),rlon(1:nobslots(islot)),&
-!      & rlat(1:nobslots(islot)),rlev(1:nobslots(islot)),&
-!      & odat(1:nobslots(islot)),oerr(1:nobslots(islot)),&
-!      & otyp(1:nobslots(islot)))
-!    tdif(1:nobslots(islot)) = REAL(islot-nbslot,r_size)*hourslot
-
+        slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
+        slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
+        write (6,'(A,I3,A,F7.1,A,F7.1,A)') 'Slot #', islot, ': time interval (', slot_lb, ',', slot_ub, '] sec'
 
         call read_ens_history_mpi('hist',it,islot,v3dg,v2dg)
-
-
 !  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
-!if (myrank ==0) then
-!print *, v3dg(5,:,6,iv3dd_t)
-!end if
+        nslot = 0
+        nprocslot = 0
+        do n = 1, obs%nobs
 
-!if (myrank<4) then
-! OPEN(myrank+30,FORM='unformatted',ACCESS='direct',RECL=IA*JA*KA)
-! WRITE(myrank+30,REC=1) (((real(v3dg(k,i,j,iv3dd_p),4),i=1,IA),j=1,JA),k=1,KA)
-! WRITE(myrank+30,REC=2) (((real(v3dg(k,i,j,iv3dd_hgt),4),i=1,IA),j=1,JA),k=1,KA)
-! CLOSE(myrank+30)
-!end if
+          if (obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub) then
+            nslot = nslot + 1
 
+            call phys2ij(obs%lon(n),obs%lat(n),rig,rjg)
+            call ijproc(rig,rjg,ri,rj,proc)
 
+  !          if (PRC_myrank == 0) then
+  !            print *, proc, rig, rjg, ri, rj
+  !          end if
 
+            if (PRC_myrank == proc) then
+              nproc = nproc + 1
+              nprocslot = nprocslot + 1
+              obsval%idx(nproc) = n
 
-!    ohx=0.0d0
-!    oqc=0
+              call phys2ijk(v3dg(:,:,:,iv3dd_p),obs%elm(n),ri,rj,obs%lev(n),rk)
 
-!    DO n=1,nobslots(islot)
-!      CALL phys2ijk(v3d(:,:,:,iv3d_p),elem(n),rlon(n),rlat(n),rlev(n),ri,rj,rk)
-!      IF(CEILING(ri) < 2 .OR. nlon+1 < CEILING(ri)) THEN
-!!        WRITE(6,'(A)') '* X-coordinate out of range'
-!!        WRITE(6,'(A,F6.2,A,F6.2)') '*   ri=',ri,', rlon=',rlon(n)
-!        CYCLE
-!      END IF
-!      IF(CEILING(rj) < 2 .OR. nlat < CEILING(rj)) THEN
-!!        WRITE(6,'(A)') '* Y-coordinate out of range'
-!!        WRITE(6,'(A,F6.2,A,F6.2)') '*   rj=',rj,', rlat=',rlat(n)
-!        CYCLE
-!      END IF
-!      IF(CEILING(rk) > nlev) THEN
-!!        CALL itpl_2d(v2d(:,:,iv2d_orog),ri,rj,dz)
-!!        WRITE(6,'(A)') '* Z-coordinate out of range'
-!!        WRITE(6,'(A,F6.2,A,F10.2,A,F6.2,A,F6.2,A,F10.2)') &
-!!         & '*   rk=',rk,', rlev=',rlev(n),&
-!!         & ', (lon,lat)=(',rlon(n),',',rlat(n),'), phi0=',dz
-!        CYCLE
-!      END IF
-!      IF(CEILING(rk) < 2 .AND. NINT(elem(n)) /= id_ps_obs) THEN
-!        IF(NINT(elem(n)) > 9999) THEN
-!          rk = 0.0d0
-!        ELSE IF(NINT(elem(n)) == id_u_obs .OR. NINT(elem(n)) == id_v_obs) THEN
-!          rk = 1.00001d0
-!        ELSE
-!!          CALL itpl_2d(v2d(:,:,iv2d_orog),ri,rj,dz)
-!!          WRITE(6,'(A)') '* Z-coordinate out of range'
-!!          WRITE(6,'(A,F6.2,A,F10.2,A,F6.2,A,F6.2,A,F10.2)') &
-!!           & '*   rk=',rk,', rlev=',rlev(n),&
-!!           & ', (lon,lat)=(',rlon(n),',',rlat(n),'), phi0=',dz
-!          CYCLE
-!        END IF
-!      END IF
+              if (rk == -1.0d0) then
+                obsval%qc(nproc) = iqc_out_vhi
+              else if (rk == -2.0d0) then
+                obsval%qc(nproc) = iqc_out_vlo
+              else if (rk == -3.0d0) then
+                obsval%qc(nproc) = iqc_out_h
+              else
+                call Trans_XtoY(obs%elm(n),ri,rj,rk,v3dg,v2dg,obsval%val(nproc),obsval%qc(nproc))
+              end if
+
+            end if ! [ PRC_myrank == proc ]
+
+          end if ! [ obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub ]
+
+        end do ! [ n = 1, obs%nobs ]
+
+        write (6,'(A,I10)') ' -- nobs in the slot = ', nslot
+        write (6,'(A,I6,A,I10)') ' -- nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
+
 !      IF(NINT(elem(n)) == id_ps_obs .AND. odat(n) < -100.0d0) THEN
 !        CYCLE
 !      END IF
@@ -216,203 +200,89 @@ SUBROUTINE obsope_cal
 !          CYCLE
 !        END IF
 !      END IF
-!      !
-!      ! observational operator
-!      !
-!      CALL Trans_XtoY(elem(n),ri,rj,rk,v3d,v2d,ohx(n))
-!      oqc(n) = 1
-!    END DO
-!    IF(firstwrite) THEN
-!      CALL write_obs2(obsoutfile,nobslots(islot),&
-!        & elem(1:nobslots(islot)),rlon(1:nobslots(islot)),&
-!        & rlat(1:nobslots(islot)),rlev(1:nobslots(islot)),&
-!        & odat(1:nobslots(islot)),oerr(1:nobslots(islot)),&
-!        & otyp(1:nobslots(islot)),tdif(1:nobslots(islot)),&
-!        & ohx(1:nobslots(islot)),oqc(1:nobslots(islot)),0)
-!      firstwrite = .FALSE.
-!    ELSE
-!      CALL write_obs2(obsoutfile,nobslots(islot),&
-!        & elem(1:nobslots(islot)),rlon(1:nobslots(islot)),&
-!        & rlat(1:nobslots(islot)),rlev(1:nobslots(islot)),&
-!        & odat(1:nobslots(islot)),oerr(1:nobslots(islot)),&
-!        & otyp(1:nobslots(islot)),tdif(1:nobslots(islot)),&
-!        & ohx(1:nobslots(islot)),oqc(1:nobslots(islot)),1)
-!    END IF
-!  END DO
 
-!  IF(nobslots(nslots+1) > 0) THEN
-!    v2d(:,:,iv2d_tprcp) = pp
-!    CALL read_obs(obsinfile_mean,nobslots(nslots+1),&
-!      & elem(1:nobslots(nslots+1)),rlon(1:nobslots(nslots+1)),&
-!      & rlat(1:nobslots(nslots+1)),rlev(1:nobslots(nslots+1)),&
-!      & odat(1:nobslots(nslots+1)),oerr(1:nobslots(nslots+1)),&
-!      & otyp(1:nobslots(nslots+1)))
-!    tdif(1:nobslots(nslots+1)) = 0.0d0
-!    ohx=0.0d0
-!    oqc=0
-!    DO n=1,nobslots(nslots+1)
-!      IF(elem(n) /= id_rain_obs) CYCLE
-!      CALL phys2ij(rlon(n),rlat(n),ri,rj)
-!      IF(CEILING(ri) < 2 .OR. nlon+1 < CEILING(ri)) THEN
-!!        WRITE(6,'(A)') '* X-coordinate out of range'
-!!        WRITE(6,'(A,F6.2,A,F6.2)') '*   ri=',ri,', rlon=',rlon(n)
-!        CYCLE
-!      END IF
-!      IF(CEILING(rj) < 2 .OR. nlat < CEILING(rj)) THEN
-!!        WRITE(6,'(A)') '* Y-coordinate out of range'
-!!       WRITE(6,'(A,F6.2,A,F6.2)') '*   rj=',rj,', rlat=',rlat(n)
-!        CYCLE
-!      END IF
-!      !
-!      ! observational operator
-!      !
-!      rk = 0.0d0
-!      CALL Trans_XtoY(elem(n),ri,rj,rk,v3d,v2d,ohx(n))
-!      oqc(n) = 1
-!    END DO
-!    IF(firstwrite) THEN
-!      CALL write_obs2(obsoutfile,nobslots(nslots+1),&
-!        & elem(1:nobslots(nslots+1)),rlon(1:nobslots(nslots+1)),&
-!        & rlat(1:nobslots(nslots+1)),rlev(1:nobslots(nslots+1)),&
-!        & odat(1:nobslots(nslots+1)),oerr(1:nobslots(nslots+1)),&
-!        & otyp(1:nobslots(nslots+1)),tdif(1:nobslots(nslots+1)),&
-!        & ohx(1:nobslots(nslots+1)),oqc(1:nobslots(nslots+1)),0)
-!      firstwrite = .FALSE.
-!    ELSE
-!      CALL write_obs2(obsoutfile,nobslots(nslots+1),&
-!        & elem(1:nobslots(nslots+1)),rlon(1:nobslots(nslots+1)),&
-!        & rlat(1:nobslots(nslots+1)),rlev(1:nobslots(nslots+1)),&
-!        & odat(1:nobslots(nslots+1)),oerr(1:nobslots(nslots+1)),&
-!        & otyp(1:nobslots(nslots+1)),tdif(1:nobslots(nslots+1)),&
-!        & ohx(1:nobslots(nslots+1)),oqc(1:nobslots(nslots+1)),1)
-!    END IF
-!  END IF
+      end do ! [ islot = 1, SLOT_NUM ]
 
-!  DEALLOCATE( elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,ohx,oqc )
+      obsval%nobs = nproc
 
-      end do
-    end do
+      write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' finishes processing member ', &
+            proc2mem(1,it,myrank+1), ', subdomain id #', proc2mem(2,it,myrank+1)
+      write (6,'(A,I8,A)') ' -- ', nproc, ' observations found'
 
+      write (obsvalfile(8:11),'(I4.4)') proc2mem(1,it,myrank+1)
+      write (obsvalfile(13:18),'(I6.6)') proc2mem(2,it,myrank+1)
+      call write_obsval(obsvalfile,obsval)
 
-    DEALLOCATE ( v3dg )
-    DEALLOCATE ( v2dg )
+    end do ! [ it = 1, nitmax ]
 
-    call unset_scale_lib
-  end if ! [scale_IO_group_n >= 0]
+    deallocate ( v3dg, v2dg )
 
+    call unset_scalelib
 
-
-!  REAL(r_size) :: v3d(nlon,nlat,nlev,nv3dx)
-!  REAL(r_size) :: v2d(nlon,nlat,nv2dx)
-!  REAL(r_size) :: pp(nlon,nlat)
-!  REAL(r_size),PARAMETER :: threshold_dz=500.0d0
-!  REAL(r_size) :: dz,tg,qg
-!  INTEGER :: nobslots(nslots+1)
-!  INTEGER :: nobs,maxnobs
-!  REAL(r_size) :: ri,rj,rk
-!  INTEGER :: n,islot
-!  LOGICAL :: firstwrite
-
-!  CALL set_common_gfs
-
-!  DO islot=1,nslots
-!    WRITE(obsinfile(6:7),'(I2.2)') islot
-!    CALL get_nobs(obsinfile,7,nobslots(islot))
-!    WRITE(6,'(2A,I9,A)') obsinfile, ':', nobslots(islot), ' OBSERVATIONS'
-!  END DO
-!  CALL get_nobs(obsinfile_mean,7,nobslots(nslots+1))
-!  WRITE(6,'(2A,I9,A)') obsinfile_mean, ':', nobslots(nslots+1), ' OBSERVATIONS'
-!  nobs = SUM(nobslots)
-!  maxnobs = MAXVAL(nobslots)
-!  WRITE(6,'(A,I9,A)') 'TOTAL:      ', nobs, ' OBSERVATIONS'
-!  ALLOCATE( elem(maxnobs) )
-!  ALLOCATE( rlon(maxnobs) )
-!  ALLOCATE( rlat(maxnobs) )
-!  ALLOCATE( rlev(maxnobs) )
-!  ALLOCATE( odat(maxnobs) )
-!  ALLOCATE( oerr(maxnobs) )
-!  ALLOCATE( otyp(maxnobs) )
-!  ALLOCATE( tdif(maxnobs) )
-!  ALLOCATE( ohx(maxnobs) )
-!  ALLOCATE( oqc(maxnobs) )
-!  firstwrite = .TRUE.
-!  pp = 0.0d0
-
+  end if ! [scale_IO_group_n > 0]
 
 end subroutine obsope_cal
-
 !-----------------------------------------------------------------------
 ! Observation generator calculation
 !-----------------------------------------------------------------------
+
+!!! need to refine qc...
+
 SUBROUTINE obsmake_cal(obs)
   IMPLICIT NONE
 
   TYPE(obs_info),INTENT(INOUT) :: obs
-
   REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
-
   REAL(r_size),ALLOCATABLE :: error(:)
 
-  integer :: islot, proc
-
-  integer :: n,nn,nnproc,ierr
+  integer :: islot,proc
+  integer :: n,nslot,nproc,nprocslot,ierr,iqc
   real(r_size) :: rig,rjg,ri,rj,rk
-  real(r_size) :: slot_lb, slot_ub
-!integer :: i, j, k
-
+  real(r_size) :: slot_lb,slot_ub
   real(r_size),allocatable :: bufr(:)
 
-  CHARACTER(10) :: obsoutfile='obsout.dat'
+  CHARACTER(10) :: obsoutfile = 'obsout.dat'
 
 !-----------------------------------------------------------------------
 
-  if (scale_IO_group_n == 1) then
-    call set_scale_lib(MEM_NP)
+  call set_common_mpi_scale(1,NNODES,PPN,MEM_NODES,MEM_NP)
 
-!  print *, myrank, PRC_myrank
+!-----------------------------------------------------------------------
 
-    ALLOCATE ( v3dg (nlevhalo,nlonhalo,nlathalo,nv3dd) )
-    ALLOCATE ( v2dg (nlonhalo,nlathalo,nv2dd) )
+  if (scale_IO_group_n == 1) then ! only run at the first group
+    call set_scalelib
 
+    allocate ( v3dg (nlevhalo,nlonhalo,nlathalo,nv3dd) )
+    allocate ( v2dg (nlonhalo,nlathalo,nv2dd) )
 
+    write (6,'(A,I6.6,A,I6.6)') 'MYRANK ',myrank,' is processing subdomain id #', proc2mem(2,1,myrank+1)
+
+    nproc = 0
     do islot = 1, SLOT_NUM
-
       slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
       slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
-
       write (6,'(A,I3,A,F7.1,A,F7.1,A)') 'Slot #', islot, ': time interval (', slot_lb, ',', slot_ub, '] sec'
-
 
       call read_ens_history_mpi('hist',1,islot,v3dg,v2dg)
 
-
-      nn = 0
-      nnproc = 0
-
+      nslot = 0
+      nprocslot = 0
       do n = 1, obs%nobs
 
         if (obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub) then
-
-          nn = nn + 1
-
+          nslot = nslot + 1
 
           call phys2ij(obs%lon(n),obs%lat(n),rig,rjg)
-
           call ijproc(rig,rjg,ri,rj,proc)
 
 !          if (PRC_myrank == 0) then
 !            print *, proc, rig, rjg, ri, rj
 !          end if
 
-!print *, '#########', proc
-!if (PRC_myrank == 0) then
-
           if (PRC_myrank == proc) then
-
-            nnproc = nnproc + 1
-
-
+            nproc = nproc + 1
+            nprocslot = nprocslot + 1
 
 !IF(NINT(elem(n)) == id_ps_obs) THEN
 !  CALL itpl_2d(v2d(:,:,iv2d_orog),ri,rj,dz)
@@ -425,34 +295,21 @@ SUBROUTINE obsmake_cal(obs)
 !  END IF
 !END IF
 
+            call phys2ijk(v3dg(:,:,:,iv3dd_p),obs%elm(n),ri,rj,obs%lev(n),rk)
 
+            call Trans_XtoY(obs%elm(n),ri,rj,rk,v3dg,v2dg,obs%dat(n),iqc)
+          end if ! [ PRC_myrank == proc ]
 
-
-!            call phys2ijk(v3dg(:,:,:,iv3dd_p),obs%elm(n),ri,rj,obs%lev(n),rk)
-            call phys2ijk(v3dg(:,:,:,iv3dd_p),obs%elm(n),rig,rjg,ri,rj,obs%lev(n),rk) ! [ for validation]
-
-!            write (6,'(I6,1x,5F10.2)') proc, rig, rjg, ri, rj, rk
-
-            call Trans_XtoY(obs%elm(n),ri,rj,rk,v3dg,v2dg,obs%dat(n))
-
-!    print *, obs%elm(n), obs%dat(n)
-
-
-          end if
-
-!end if
-
-        end if
+        end if ! [ obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub ]
 
       end do ! [ n = 1, obs%nobs ]
 
-      write (6,'(A,I10)') ' -- nobs in the slot = ', nn
-      write (6,'(A,I6,A,I10)') ' -- nobs in the slot and processed by rank ', myrank, ' = ', nnproc
+      write (6,'(A,I10)') ' -- nobs in the slot = ', nslot
+      write (6,'(A,I6,A,I10)') ' -- nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
 
-    end do
+    end do ! [ islot = 1, SLOT_NUM ]
 
-    DEALLOCATE ( v3dg )
-    DEALLOCATE ( v2dg )
+    deallocate ( v3dg, v2dg )
 
     if (PRC_myrank == 0) then
       allocate ( bufr (obs%nobs) )
@@ -463,15 +320,11 @@ SUBROUTINE obsmake_cal(obs)
     if (PRC_myrank == 0) then
 
       obs%dat = bufr
-
       deallocate ( bufr )
 
       ALLOCATE(error(obs%nobs))
       CALL com_randn(obs%nobs,error)
-
-
       do n = 1, obs%nobs
-
         select case(obs%elm(n))
         case(id_u_obs)
           obs%err(n) = OBSERR_U
@@ -488,30 +341,21 @@ SUBROUTINE obsmake_cal(obs)
         case default
           write(6,'(A)') 'warning: skip assigning observation error (unsupported observation type)' 
         end select
-
-!    print *, obs%elm(n), obs%dat(n)
-
         obs%dat(n) = obs%dat(n) + obs%err(n) * error(n)
 
-    print *, '######', obs%elm(n), obs%dat(n)
+print *, '######', obs%elm(n), obs%dat(n)
 
+      end do ! [ n = 1, obs%nobs ]
 
-      end do
+      call write_obs(obsoutfile,obs)
 
+    end if ! [ PRC_myrank == 0 ]
 
-      CALL write_obs(obsoutfile,obs)
-
-    end if
-
-
-
-    call unset_scale_lib
-
+    call unset_scalelib
 
   end if ! [scale_IO_group_n == 0]
 
-
-
 end subroutine obsmake_cal
+!=======================================================================
 
 END MODULE obsope_tools

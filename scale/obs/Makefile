@@ -15,7 +15,8 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common_scale.o     \
               $(COMMON_DIR)/common_obs_scale.o \
               $(COMMON_DIR)/common_mpi_scale.o \
-              $(COMMON_DIR)/common_nml.o
+              $(COMMON_DIR)/common_nml.o     \
+              $(COMMON_DIR)/common_scalelib.o
 #              $(COMMON_DIR)/common_ncio.o
 #              $(COMMON_DIR)/common_precip.o
 

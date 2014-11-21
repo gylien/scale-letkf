@@ -17,36 +17,19 @@ module common_mpi_scale
 !$USE OMP_LIB
   use common
   use common_mpi
+  use common_letkf, only: nbv
   use common_scale
   use common_obs_scale
 
-  use common_letkf, only: nbv
-
-!  use letkf_namelist, only: &
-!    NNODES, &
-!    PPN, &
-!    MEM_NODES, &
-!    MEM_NP
-
   use scale_precision
   use scale_stdio
-  use scale_prof
-
-    use scale_grid_index
-
-    use dc_log, only: &
-       loginit
-    use gtool_file, only: &
-!       fileread, &
-       filecloseall
-
-!  use scale_grid_index, only: &
-!    KHALO, IHALO, JHALO
+!  use scale_prof
+  use scale_grid_index
 
   implicit none
   public
 
-  integer,parameter :: mpibufsize=1000000
+!  integer,parameter :: mpibufsize=1000000
   integer,save :: nij1
   integer,save :: nij1max
   integer,allocatable,save :: nij1node(:)
@@ -69,170 +52,6 @@ module common_mpi_scale
 !  integer,save :: scale_IO_proc_n = -1
 
 contains
-
-subroutine set_scale_lib(mem_np)
-!    use dc_log, only: &
-!       loginit
-!    use gtool_file, only: &
-!!       fileread, &
-!       filecloseall
-    use gtool_history, only: &
-       historyinit
-
-
-    use scale_process, only: &
-       PRC_setup,    &
-       PRC_MPIstart, &
-!       PRC_mpifinish, &
-       PRC_master, &
-       PRC_myrank, &
-       PRC_myrank_world, &
-       PRC_2Drank, &
-       PRC_NUM_X, &
-       PRC_NUM_Y
-!       prc_nu, &
-    use scale_const, only: &
-       CONST_setup
-    use scale_calendar, only: &
-       CALENDAR_setup
-    use scale_random, only: &
-       RANDOM_setup
-    use scale_time, only: &
-       TIME_setup
-    use scale_grid, only: &
-       GRID_setup, &
-       GRID_DOMAIN_CENTER_X, &
-       GRID_DOMAIN_CENTER_Y
-!    use scale_grid_nest, only: &
-!       NEST_setup
-!    use scale_land_grid_index, only: &
-!       LAND_GRID_INDEX_setup
-!    use scale_land_grid, only: &
-!       LAND_GRID_setup
-!    use scale_urban_grid_index, only: &
-!       URBAN_GRID_INDEX_setup
-!    use scale_urban_grid, only: &
-!       URBAN_GRID_setup
-!    use scale_tracer, only: &
-!       TRACER_setup
-    use scale_fileio, only: &
-       FILEIO_setup
-    use scale_comm, only: &
-       COMM_setup
-
-!    use scale_topography, only: &
-!       TOPO_setup
-!    use scale_landuse, only: &
-!       LANDUSE_setup
-
-!    use scale_grid_real, only: &
-!       REAL_setup
-    use scale_mapproj, only: &
-       MPRJ_setup
-
-
-
-    implicit none
-
-    integer,intent(in) :: mem_np
-
-!    character(len=H_MID) :: DATATYPE = 'DEFAULT' !< REAL4 or REAL8
-    integer :: rankidx(2)
-
-    !-----------------------------------------------------------------------------
-
-    ! start SCALE MPI
-    call PRC_MPIstart(mem_np, nitmax, nprocs, proc2mem)
-
-    ! setup process
-    call PRC_setup
-
-    ! setup Log
-    call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
-
-    ! setup constants
-    call CONST_setup
-
-    ! setup time
-    call TIME_setup( setup_TimeIntegration = .false. )
-
-    call PROF_rapstart('Initialize')
-
-    ! setup horizontal/vertical grid coordinates
-    call GRID_INDEX_setup
-    call GRID_setup
-
-
-
-    if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
-      write(6,*) 'MEM_NP should be equal to PRC_NUM_X * PRC_NUM_Y.'
-      stop
-    else if (IMAX /= nlonsub) then
-      write(6,*) 'IMAX should be equal to nlonsub.'
-      stop
-    else if (JMAX /= nlatsub) then
-      write(6,*) 'JMAX should be equal to nlatsub.'
-      stop
-    else if (KMAX /= nlev) then
-      write(6,*) 'KMAX should be equal to nlev.'
-      stop
-    end if
-
-
-
-!    call LAND_GRID_INDEX_setup
-!    call LAND_GRID_setup
-
-!    call URBAN_GRID_INDEX_setup
-!    call URBAN_GRID_setup
-
-    ! setup file I/O
-    call FILEIO_setup
-
-    ! setup mpi communication
-    call COMM_setup
-
-!    ! setup topography
-!    call TOPO_setup
-!    ! setup land use category index/fraction
-!    call LANDUSE_setup
-
-!    ! setup grid coordinates (real world)
-!    call REAL_setup
-    ! setup map projection
-    call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
-
-
-
-    rankidx(1) = PRC_2Drank(PRC_myrank, 1)
-    rankidx(2) = PRC_2Drank(PRC_myrank, 2)
-    call HistoryInit('','','',IMAX*JMAX*KMAX,PRC_master,PRC_myrank,rankidx)
-
-    call PROF_rapend('Initialize')
-
-    call PROF_rapstart('Main')
-
-  return
-end subroutine set_scale_lib
-
-
-subroutine unset_scale_lib
-    use scale_process, only: &
-       prc_mpifinish
-    implicit none
-
-    call PROF_rapend('Main')
-
-    call PROF_rapreport
-
-    call FileCloseAll
-
-    ! stop SCALE MPI
-    call PRC_MPIfinish
-
-  return
-end subroutine unset_scale_lib
-
 !-----------------------------------------------------------------------
 ! set_common_mpi_scale
 !-----------------------------------------------------------------------
@@ -247,7 +66,7 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
   INTEGER :: ierr,buf(4)
   LOGICAL :: ex
 
-  CALL set_mem_node_proc(nbv+1,nnodes,ppn,mem_nodes,mem_np)
+  CALL set_mem_node_proc(nbv,nnodes,ppn,mem_nodes,mem_np)
 
 !  if (myrank == 0) then
 !  print *, procs
@@ -404,74 +223,74 @@ SUBROUTINE scatter_grd_mpi(nrank,v3dg,v2dg,v3d,v2d)
   RETURN
 END SUBROUTINE scatter_grd_mpi
 
-SUBROUTINE scatter_grd_mpi_safe(nrank,v3dg,v2dg,v3d,v2d)
-  INTEGER,INTENT(IN) :: nrank
-  REAL(r_sngl),INTENT(IN) :: v3dg(nlon,nlat,nlev,nv3d)
-  REAL(r_sngl),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
-  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,nv3d)
-  REAL(r_size),INTENT(OUT) :: v2d(nij1,nv2d)
-  REAL(r_sngl) :: tmp(nij1max,nprocs)
-  REAL(r_sngl) :: bufs(mpibufsize,nprocs)
-  REAL(r_sngl) :: bufr(mpibufsize)
-  INTEGER :: i,j,k,n,ierr,ns,nr
-  INTEGER :: iter,niter
+!SUBROUTINE scatter_grd_mpi_safe(nrank,v3dg,v2dg,v3d,v2d)
+!  INTEGER,INTENT(IN) :: nrank
+!  REAL(r_sngl),INTENT(IN) :: v3dg(nlon,nlat,nlev,nv3d)
+!  REAL(r_sngl),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
+!  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,nv3d)
+!  REAL(r_size),INTENT(OUT) :: v2d(nij1,nv2d)
+!  REAL(r_sngl) :: tmp(nij1max,nprocs)
+!  REAL(r_sngl) :: bufs(mpibufsize,nprocs)
+!  REAL(r_sngl) :: bufr(mpibufsize)
+!  INTEGER :: i,j,k,n,ierr,ns,nr
+!  INTEGER :: iter,niter
 
-  ns = mpibufsize
-  nr = ns
-  niter = CEILING(REAL(nij1max)/REAL(mpibufsize))
+!  ns = mpibufsize
+!  nr = ns
+!  niter = CEILING(REAL(nij1max)/REAL(mpibufsize))
 
-  DO n=1,nv3d
-    DO k=1,nlev
-      IF(myrank == nrank) CALL grd_to_buf(v3dg(:,:,k,n),tmp)
-      DO iter=1,niter
-        IF(myrank == nrank) THEN
-          i = mpibufsize * (iter-1)
-          DO j=1,mpibufsize
-            i=i+1
-            IF(i > nij1max) EXIT
-            bufs(j,:) = tmp(i,:)
-          END DO
-        END IF
-        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-        CALL MPI_SCATTER(bufs,ns,MPI_REAL,&
-                       & bufr,nr,MPI_REAL,nrank,MPI_COMM_WORLD,ierr)
-        i = mpibufsize * (iter-1)
-        DO j=1,mpibufsize
-          i=i+1
-          IF(i > nij1) EXIT
-          v3d(i,k,n) = REAL(bufr(j),r_size)
-        END DO
-      END DO
-    END DO
-  END DO
+!  DO n=1,nv3d
+!    DO k=1,nlev
+!      IF(myrank == nrank) CALL grd_to_buf(v3dg(:,:,k,n),tmp)
+!      DO iter=1,niter
+!        IF(myrank == nrank) THEN
+!          i = mpibufsize * (iter-1)
+!          DO j=1,mpibufsize
+!            i=i+1
+!            IF(i > nij1max) EXIT
+!            bufs(j,:) = tmp(i,:)
+!          END DO
+!        END IF
+!        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+!        CALL MPI_SCATTER(bufs,ns,MPI_REAL,&
+!                       & bufr,nr,MPI_REAL,nrank,MPI_COMM_WORLD,ierr)
+!        i = mpibufsize * (iter-1)
+!        DO j=1,mpibufsize
+!          i=i+1
+!          IF(i > nij1) EXIT
+!          v3d(i,k,n) = REAL(bufr(j),r_size)
+!        END DO
+!      END DO
+!    END DO
+!  END DO
 
-  DO n=1,nv2d
-    IF(myrank == nrank) CALL grd_to_buf(v2dg(:,:,n),tmp)
-    DO iter=1,niter
-      IF(myrank == nrank) THEN
-        i = mpibufsize * (iter-1)
-        DO j=1,mpibufsize
-          i=i+1
-          IF(i > nij1max) EXIT
-          bufs(j,:) = tmp(i,:)
-        END DO
-      END IF
-      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-      CALL MPI_SCATTER(bufs,ns,MPI_REAL,&
-                     & bufr,nr,MPI_REAL,nrank,MPI_COMM_WORLD,ierr)
-      i = mpibufsize * (iter-1)
-      DO j=1,mpibufsize
-        i=i+1
-        IF(i > nij1) EXIT
-        v2d(i,n) = REAL(bufr(j),r_size)
-      END DO
-    END DO
-  END DO
+!  DO n=1,nv2d
+!    IF(myrank == nrank) CALL grd_to_buf(v2dg(:,:,n),tmp)
+!    DO iter=1,niter
+!      IF(myrank == nrank) THEN
+!        i = mpibufsize * (iter-1)
+!        DO j=1,mpibufsize
+!          i=i+1
+!          IF(i > nij1max) EXIT
+!          bufs(j,:) = tmp(i,:)
+!        END DO
+!      END IF
+!      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+!      CALL MPI_SCATTER(bufs,ns,MPI_REAL,&
+!                     & bufr,nr,MPI_REAL,nrank,MPI_COMM_WORLD,ierr)
+!      i = mpibufsize * (iter-1)
+!      DO j=1,mpibufsize
+!        i=i+1
+!        IF(i > nij1) EXIT
+!        v2d(i,n) = REAL(bufr(j),r_size)
+!      END DO
+!    END DO
+!  END DO
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
-  RETURN
-END SUBROUTINE scatter_grd_mpi_safe
+!  RETURN
+!END SUBROUTINE scatter_grd_mpi_safe
 
 SUBROUTINE scatter_grd_mpi_fast(nrank,v3dg,v2dg,v3d,v2d)
   INTEGER,INTENT(IN) :: nrank
@@ -540,74 +359,74 @@ SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
   RETURN
 END SUBROUTINE gather_grd_mpi
 
-SUBROUTINE gather_grd_mpi_safe(nrank,v3d,v2d,v3dg,v2dg)
-  INTEGER,INTENT(IN) :: nrank
-  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
-  REAL(r_size),INTENT(IN) :: v2d(nij1,nv2d)
-  REAL(r_sngl),INTENT(OUT) :: v3dg(nlon,nlat,nlev,nv3d)
-  REAL(r_sngl),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
-  REAL(r_sngl) :: tmp(nij1max,nprocs)
-  REAL(r_sngl) :: bufs(mpibufsize)
-  REAL(r_sngl) :: bufr(mpibufsize,nprocs)
-  INTEGER :: i,j,k,n,ierr,ns,nr
-  INTEGER :: iter,niter
+!SUBROUTINE gather_grd_mpi_safe(nrank,v3d,v2d,v3dg,v2dg)
+!  INTEGER,INTENT(IN) :: nrank
+!  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
+!  REAL(r_size),INTENT(IN) :: v2d(nij1,nv2d)
+!  REAL(r_sngl),INTENT(OUT) :: v3dg(nlon,nlat,nlev,nv3d)
+!  REAL(r_sngl),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
+!  REAL(r_sngl) :: tmp(nij1max,nprocs)
+!  REAL(r_sngl) :: bufs(mpibufsize)
+!  REAL(r_sngl) :: bufr(mpibufsize,nprocs)
+!  INTEGER :: i,j,k,n,ierr,ns,nr
+!  INTEGER :: iter,niter
 
-  ns = mpibufsize
-  nr = ns
-  niter = CEILING(REAL(nij1max)/REAL(mpibufsize))
+!  ns = mpibufsize
+!  nr = ns
+!  niter = CEILING(REAL(nij1max)/REAL(mpibufsize))
 
-  DO n=1,nv3d
-    DO k=1,nlev
-      DO iter=1,niter
-        i = mpibufsize * (iter-1)
-        DO j=1,mpibufsize
-          i=i+1
-          IF(i > nij1) EXIT
-          bufs(j) = REAL(v3d(i,k,n),r_sngl)
-        END DO
-        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-        CALL MPI_GATHER(bufs,ns,MPI_REAL,&
-                      & bufr,nr,MPI_REAL,nrank,MPI_COMM_WORLD,ierr)
-        IF(myrank == nrank) THEN
-          i = mpibufsize * (iter-1)
-          DO j=1,mpibufsize
-            i=i+1
-            IF(i > nij1max) EXIT
-            tmp(i,:) = bufr(j,:)
-          END DO
-        END IF
-      END DO
-      IF(myrank == nrank) CALL buf_to_grd(tmp,v3dg(:,:,k,n))
-    END DO
-  END DO
+!  DO n=1,nv3d
+!    DO k=1,nlev
+!      DO iter=1,niter
+!        i = mpibufsize * (iter-1)
+!        DO j=1,mpibufsize
+!          i=i+1
+!          IF(i > nij1) EXIT
+!          bufs(j) = REAL(v3d(i,k,n),r_sngl)
+!        END DO
+!        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+!        CALL MPI_GATHER(bufs,ns,MPI_REAL,&
+!                      & bufr,nr,MPI_REAL,nrank,MPI_COMM_WORLD,ierr)
+!        IF(myrank == nrank) THEN
+!          i = mpibufsize * (iter-1)
+!          DO j=1,mpibufsize
+!            i=i+1
+!            IF(i > nij1max) EXIT
+!            tmp(i,:) = bufr(j,:)
+!          END DO
+!        END IF
+!      END DO
+!      IF(myrank == nrank) CALL buf_to_grd(tmp,v3dg(:,:,k,n))
+!    END DO
+!  END DO
 
-  DO n=1,nv2d
-    DO iter=1,niter
-      i = mpibufsize * (iter-1)
-      DO j=1,mpibufsize
-        i=i+1
-        IF(i > nij1) EXIT
-        bufs(j) = REAL(v2d(i,n),r_sngl)
-      END DO
-      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-      CALL MPI_GATHER(bufs,ns,MPI_REAL,&
-                    & bufr,nr,MPI_REAL,nrank,MPI_COMM_WORLD,ierr)
-      IF(myrank == nrank) THEN
-        i = mpibufsize * (iter-1)
-        DO j=1,mpibufsize
-          i=i+1
-          IF(i > nij1max) EXIT
-          tmp(i,:) = bufr(j,:)
-        END DO
-      END IF
-    END DO
-    IF(myrank == nrank) CALL buf_to_grd(tmp,v2dg(:,:,n))
-  END DO
+!  DO n=1,nv2d
+!    DO iter=1,niter
+!      i = mpibufsize * (iter-1)
+!      DO j=1,mpibufsize
+!        i=i+1
+!        IF(i > nij1) EXIT
+!        bufs(j) = REAL(v2d(i,n),r_sngl)
+!      END DO
+!      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+!      CALL MPI_GATHER(bufs,ns,MPI_REAL,&
+!                    & bufr,nr,MPI_REAL,nrank,MPI_COMM_WORLD,ierr)
+!      IF(myrank == nrank) THEN
+!        i = mpibufsize * (iter-1)
+!        DO j=1,mpibufsize
+!          i=i+1
+!          IF(i > nij1max) EXIT
+!          tmp(i,:) = bufr(j,:)
+!        END DO
+!      END IF
+!    END DO
+!    IF(myrank == nrank) CALL buf_to_grd(tmp,v2dg(:,:,n))
+!  END DO
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
-  RETURN
-END SUBROUTINE gather_grd_mpi_safe
+!  RETURN
+!END SUBROUTINE gather_grd_mpi_safe
 
 SUBROUTINE gather_grd_mpi_fast(nrank,v3d,v2d,v3dg,v2dg)
   INTEGER,INTENT(IN) :: nrank
