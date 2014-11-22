@@ -22,6 +22,7 @@ Usage: $0 MYRANK MEM_NP STIME MEM FCSTLEN TMPDIR
   MEM      Name of the ensemble member
   FCSTLEN  Forecast length (second)
   TMPDIR   Temporary directory to run the model
+  SCPCALL  Called from which script? (fcst/cycle)
 
 EOF
   exit 1
@@ -32,7 +33,10 @@ MEM_NP="$1"; shift
 STIME="$1"; shift
 MEM="$1"; shift
 FCSTLEN="$1"; shift
-TMPDIR="$1"
+TMPDIR="$1"; shift
+SCPCALL="$1"
+
+ATIME=$(datetime $STIME $LCYCLE s)
 
 restartbaselen=23  # 7 + 16
 
@@ -45,20 +49,23 @@ restartbaselen=23  # 7 + 16
 #echo
 
 
-if ((OUT_OPT <= 2)); then
+if [ "$SCPCALL" == 'fcst' ] && ((OUT_OPT <= 2)); then
   mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
-#  for ifile in $(ls $TMPDIR/history*.nc); do
-#    ifilebase=$(basename $ifile)
-#    mv -f $ifile $TMPOUT/${STIME}/fcst/${MEM}/out${ifilebase/history/out}
-#  done
   mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
+elif [ "$SCPCALL" == 'cycle' ]; then
+  mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
+  mv -f $TMPDIR/history*.nc $TMPOUT/${ATIME}/gues/${MEM}
 fi
 
-if ((OUT_OPT <= 1)); then
+if [ "$SCPCALL" == 'fcst' ] && ((OUT_OPT <= 1)); then
   mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
-  for ifile in $(ls $TMPDIR/restart*.nc); do
-    ifilebase=$(basename $ifile)
-    mv -f $ifile $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifilebase:$restartbaselen}
+  for ifile in $(cd $TMPDIR ; ls restart*.nc); do
+    mv -f $ifile $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifile:$restartbaselen}
+  done
+elif [ "$SCPCALL" == 'cycle' ]; then
+  mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
+  for ifile in $(cd $TMPDIR ; ls restart*.nc); do
+    mv -f $ifile $TMPOUT/${ATIME}/gues/${MEM}/init${ifile:$restartbaselen}
   done
 fi
 

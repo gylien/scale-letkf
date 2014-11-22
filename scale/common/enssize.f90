@@ -7,6 +7,6 @@ program enssize
   use common_letkf, only: nbv
   implicit none
 
-  write (*, '(I3.3)') nbv
+  write (*, '(I4.4)') nbv
 
 end program enssize

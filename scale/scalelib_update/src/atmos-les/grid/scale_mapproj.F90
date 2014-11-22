@@ -145,7 +145,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[MAPPROJ]/Categ[GRID]'
 
     MPRJ_basepoint_x = UNDEF
@@ -153,6 +153,9 @@ contains
     MPRJ_PS_lat      = UNDEF
     MPRJ_M_lat       = UNDEF
     MPRJ_EC_lat      = UNDEF
+
+    MPRJ_basepoint_x = DOMAIN_CENTER_X
+    MPRJ_basepoint_y = DOMAIN_CENTER_Y
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -167,19 +170,17 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MAPPROJ)
 
 
-    if( MPRJ_basepoint_x == UNDEF ) MPRJ_basepoint_x = DOMAIN_CENTER_X
-    if( MPRJ_basepoint_y == UNDEF ) MPRJ_basepoint_y = DOMAIN_CENTER_Y
     if( MPRJ_PS_lat      == UNDEF ) MPRJ_PS_lat      = MPRJ_basepoint_lat
     if( MPRJ_M_lat       == UNDEF ) MPRJ_M_lat       = MPRJ_basepoint_lat
     if( MPRJ_EC_lat      == UNDEF ) MPRJ_EC_lat      = MPRJ_basepoint_lat
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_basepoint_lon:', MPRJ_basepoint_lon
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_basepoint_lat:', MPRJ_basepoint_lat
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_basepoint_x  :', MPRJ_basepoint_x
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_basepoint_y  :', MPRJ_basepoint_y
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '*** Projection type:', trim(MPRJ_type)
     select case(trim(MPRJ_type))
     case('NONE')
@@ -509,7 +510,7 @@ contains
     MPRJ_pole_x = MPRJ_basepoint_x -                   dist * sin(MPRJ_LC_c*dlon)
     MPRJ_pole_y = MPRJ_basepoint_y + MPRJ_hemisphere * dist * cos(MPRJ_LC_c*dlon)
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_LC_lat1   :', MPRJ_LC_lat1
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_LC_lat2   :', MPRJ_LC_lat2
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_hemisphere:', MPRJ_hemisphere
@@ -570,6 +571,8 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
+    if ( dlon >  PI ) dlon = dlon - PI*2.0_RP
+    if ( dlon < -PI ) dlon = dlon + PI*2.0_RP
 
     latrot = 0.5_RP*PI - lat
 
@@ -620,14 +623,18 @@ contains
     real(RP), intent(in)  :: lat (IA,JA) ! [rad]
 
     real(RP) :: dlon
+    real(RP) :: alpha
     integer :: i, j
     !---------------------------------------------------------------------------
 
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       rotc(i,j,1) = cos( MPRJ_LC_c * dlon ) * MPRJ_hemisphere
-       rotc(i,j,2) = sin( MPRJ_LC_c * dlon )
+       if ( dlon >  PI ) dlon = dlon - PI*2.0_RP
+       if ( dlon < -PI ) dlon = dlon + PI*2.0_RP
+       alpha = - MPRJ_LC_c * dlon * MPRJ_hemisphere
+       rotc(i,j,1) = cos( alpha ) ! cosin
+       rotc(i,j,2) = sin( alpha ) ! sine
     enddo
     enddo
 
@@ -661,7 +668,7 @@ contains
     MPRJ_pole_x = MPRJ_basepoint_x -                   dist * sin(dlon)
     MPRJ_pole_y = MPRJ_basepoint_y + MPRJ_hemisphere * dist * cos(dlon)
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_PS_lat1   :', MPRJ_PS_lat
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_hemisphere:', MPRJ_hemisphere
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_PS_fact   :', MPRJ_PS_fact
@@ -765,14 +772,18 @@ contains
     real(RP), intent(in)  :: lat (IA,JA) ! [rad]
 
     real(RP) :: dlon
+    real(RP) :: alpha
     integer :: i, j
     !---------------------------------------------------------------------------
 
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       rotc(i,j,1) = cos( dlon ) * MPRJ_hemisphere
-       rotc(i,j,2) = sin( dlon )
+       if ( dlon >  PI ) dlon = dlon - PI*2.0_RP
+       if ( dlon < -PI ) dlon = dlon + PI*2.0_RP
+       alpha = - dlon * MPRJ_hemisphere
+       rotc(i,j,1) = cos( alpha ) ! cosin
+       rotc(i,j,2) = sin( alpha ) ! sine
     enddo
     enddo
 
@@ -803,7 +814,7 @@ contains
     MPRJ_eq_x = MPRJ_basepoint_x - RADIUS * MPRJ_M_fact * dlon
     MPRJ_eq_y = MPRJ_basepoint_y - RADIUS * MPRJ_M_fact * log(dist)
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_M_lat :', MPRJ_M_lat
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_M_fact:', MPRJ_M_fact
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_eq_x  :', MPRJ_eq_x
@@ -928,7 +939,7 @@ contains
     MPRJ_eq_x = MPRJ_basepoint_x - RADIUS * MPRJ_EC_fact * dlon
     MPRJ_eq_y = MPRJ_basepoint_y - RADIUS * MPRJ_basepoint_lat
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_EC_lat :', MPRJ_EC_lat
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_EC_fact:', MPRJ_EC_fact
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_eq_x   :', MPRJ_eq_x

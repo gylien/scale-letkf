@@ -107,6 +107,8 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $MODELDIR/scale-les_init $TMPDAT/exec
   ln -fs $MODELDIR/scale-les_pp $TMPDAT/exec
   ln -fs $COMMON_DIR/pdbash $TMPDAT/exec
+  ln -fs $OBSUTIL_DIR/obsope$(printf $MEMBER_FMT $MEMBER) $TMPDAT/exec/obsope
+  ln -fs $OBSUTIL_DIR/letkf$(printf $MEMBER_FMT $MEMBER) $TMPDAT/exec/letkf
   ln -fs $DATADIR/rad $TMPDAT
   ln -fs $ANLWRF $TMPDAT/wrf
 
@@ -132,6 +134,8 @@ ${MODELDIR}/scale-les|exec/scale-les
 ${MODELDIR}/scale-les_init|exec/scale-les_init
 ${MODELDIR}/scale-les_pp|exec/scale-les_pp
 ${COMMON_DIR}/pdbash|exec/pdbash
+${OBSUTIL_DIR}/obsope$(printf $MEMBER_FMT $MEMBER)|exec/obsope
+${OBSUTIL_DIR}/letkf$(printf $MEMBER_FMT $MEMBER)|exec/letkf
 ${SCRP_DIR}/scale.conf|conf/scale.conf
 ${SCRP_DIR}/scale_init.conf|conf/scale_init.conf
 ${DATADIR}/rad|rad
@@ -177,6 +181,14 @@ EOF
 ${COMMON_DIR}/datetime|exec/datetime
 EOF
   fi
+
+  time=$(datetime $STIME $LCYCLE s)
+  while ((time <= $(datetime $ETIME $LCYCLE s))); do
+    cat >> $STAGING_DIR/stagein.dat << EOF
+${OBS}/obs_${time}.dat|obs/obs_${time}.dat
+EOF
+    time=$(datetime $time $LCYCLE s)
+  done
 #-------------------
 fi
 
@@ -493,13 +505,77 @@ for m in $(seq $mmean); do
       $TMPOUT/${time}/anal/${name_m[$m]}/init $bdy_base $topo_base $landuse_base \
       ${time} $FCSTLEN $FCSTOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
     mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \
-      ./scale-les run.conf ) &
-#    pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/post_scale.sh $mem_np \
-#      ${time} ${name_m[$m]} $FCSTLEN $TMPRUN/scale/${name_m[$m]} ) &
+      ./scale-les run.conf ;
+    pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/post_scale.sh $mem_np \
+      ${time} ${name_m[$m]} $FCSTLEN $TMPRUN/scale/${name_m[$m]} $myname1 ) &
 
   sleep $BGJOB_INT
 done
 wait
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+obsthin () {
+#-------------------------------------------------------------------------------
+
+echo
+if ((THINNING == 0)); then
+  echo "  ... skip this step (do not thin observations)"
+  return 1
+fi
+
+###### not finished yet...
+echo "obsthin..."
+######
+
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+obsope () {
+#-------------------------------------------------------------------------------
+
+ipm=0
+if ((PREP_BDY == 1)); then
+  bdy_base="$TMPDAT/bdy_prep/bdy_${time}"
+else
+  bdy_base="$TMPRUN/scale_init/boundary"
+fi
+
+for m in $(seq $mmean); do
+  ipm=$((ipm+1))
+  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+
+  if ((TMPRUN_MODE <= 2)); then
+    proc_opt='one'
+  else
+    proc_opt='alln'
+  fi
+  pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/pre_obsope.sh $mem_np \
+    ${time} $FCSTLEN $FCSTOUT $baseslot $nslots $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs &
+
+  sleep $BGJOB_INT
+done
+wait
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+letkf () {
+#-------------------------------------------------------------------------------
+
+###### not finished yet...
+echo "letkf..."
+######
+
 
 #-------------------------------------------------------------------------------
 }

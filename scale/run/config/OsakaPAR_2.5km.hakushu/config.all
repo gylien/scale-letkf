@@ -27,8 +27,8 @@ ANLWRF_INT=600
 
 #INITGFS="/discover/nobackup/glien/model/GDAS_IC_t62"     # directory of arbitrary initial condition files [sigma/surface formats]
 
-OBS=              # directory of observation data in LETKF obs format
-OBSNCEP=          # directory of observation data in NCEP BUFR format
+OBS="/data1/gylien/obs/obs"           # directory of observation data in LETKF obs format
+OBSNCEP="/data1/gylien/obs/prepbufr"  # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # Cycling settings

@@ -50,6 +50,10 @@ PREP_BDY=0     # 0: No
                # 1: Yes
 PERTURB_BDY=0  # 0: No
                # 1: Yes
+THINNING=0     # 0: No
+               # 1: Yes
+OBSOPE=0       # 0: No    ! obsope options: not finished yet!!
+               # 1: Yes   !
 
 #===============================================================================
 # Diagnostic output settings
