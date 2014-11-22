@@ -108,7 +108,7 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $MODELDIR/scale-les_pp $TMPDAT/exec
   ln -fs $COMMON_DIR/pdbash $TMPDAT/exec
   ln -fs $OBSUTIL_DIR/obsope$(printf $MEMBER_FMT $MEMBER) $TMPDAT/exec/obsope
-  ln -fs $OBSUTIL_DIR/letkf$(printf $MEMBER_FMT $MEMBER) $TMPDAT/exec/letkf
+###  ln -fs $OBSUTIL_DIR/letkf$(printf $MEMBER_FMT $MEMBER) $TMPDAT/exec/letkf
   ln -fs $DATADIR/rad $TMPDAT
   ln -fs $ANLWRF $TMPDAT/wrf
 
@@ -135,11 +135,15 @@ ${MODELDIR}/scale-les_init|exec/scale-les_init
 ${MODELDIR}/scale-les_pp|exec/scale-les_pp
 ${COMMON_DIR}/pdbash|exec/pdbash
 ${OBSUTIL_DIR}/obsope$(printf $MEMBER_FMT $MEMBER)|exec/obsope
-${OBSUTIL_DIR}/letkf$(printf $MEMBER_FMT $MEMBER)|exec/letkf
 ${SCRP_DIR}/scale.conf|conf/scale.conf
 ${SCRP_DIR}/scale_init.conf|conf/scale_init.conf
+${SCRP_DIR}/obsope.conf|conf/obsope.conf
+${SCRP_DIR}/letkf.conf|conf/letkf.conf
 ${DATADIR}/rad|rad
 EOF
+
+###${OBSUTIL_DIR}/letkf$(printf $MEMBER_FMT $MEMBER)|exec/letkf
+
 
   time=$STIME
   etime_anlwrf=$(datetime $ETIME $((FCSTLEN+ANLWRF_INT)) s)
@@ -429,13 +433,13 @@ fi
 echo "pertbdy..."
 ######
 
-ipm=0
 if ((PREP_BDY == 1)); then
   bdy_base="$TMPDAT/bdy_prep/bdy_${time}"
 else
   bdy_base="$TMPRUN/scale_init/boundary"
 fi
 
+ipm=0
 for m in $(seq $MEMBER); do
   ipm=$((ipm+1))
   if ((ipm > parallel_mems)); then wait; ipm=1; fi
@@ -469,7 +473,6 @@ ensfcst () {
 
 echo
 
-ipm=0
 if ((PREP_TOPO == 1)); then
   topo_base="$TMPDAT/topo_prep/topo"
 else
@@ -481,6 +484,7 @@ else
   landuse_base="$TMPRUN/scale_pp_landuse/landuse"
 fi
 
+ipm=0
 for m in $(seq $mmean); do
   ipm=$((ipm+1))
   if ((ipm > parallel_mems)); then wait; ipm=1; fi
@@ -541,13 +545,7 @@ obsope () {
 #-------------------------------------------------------------------------------
 
 ipm=0
-if ((PREP_BDY == 1)); then
-  bdy_base="$TMPDAT/bdy_prep/bdy_${time}"
-else
-  bdy_base="$TMPRUN/scale_init/boundary"
-fi
-
-for m in $(seq $mmean); do
+for m in $(seq $MEMBER); do
   ipm=$((ipm+1))
   if ((ipm > parallel_mems)); then wait; ipm=1; fi
   echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
@@ -557,8 +555,28 @@ for m in $(seq $mmean); do
   else
     proc_opt='alln'
   fi
-  pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/pre_obsope.sh $mem_np \
+  pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/pre_obsope.sh \
     ${time} $FCSTLEN $FCSTOUT $baseslot $nslots $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs &
+
+  sleep $BGJOB_INT
+done
+wait
+
+mpirunf proc $TMPRUN/obsope ./obsope obsope.conf
+
+ipm=0
+for m in $(seq $MEMBER); do
+  ipm=$((ipm+1))
+  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+
+  if ((TMPRUN_MODE <= 2)); then
+    proc_opt='one'
+  else
+    proc_opt='alln'
+  fi
+  pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/post_obsope.sh \
+    ${time} $TMPRUN/obsope &
 
   sleep $BGJOB_INT
 done
@@ -572,10 +590,43 @@ wait
 letkf () {
 #-------------------------------------------------------------------------------
 
-###### not finished yet...
-echo "letkf..."
-######
+ipm=0
+for m in $(seq $MEMBER); do
+  ipm=$((ipm+1))
+  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
+  if ((TMPRUN_MODE <= 2)); then
+    proc_opt='one'
+  else
+    proc_opt='alln'
+  fi
+  pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/pre_letkf.sh \
+    ${time} $FCSTLEN $FCSTOUT $baseslot $nslots $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs &
+
+  sleep $BGJOB_INT
+done
+wait
+
+#mpirunf proc $TMPRUN/letkf ./letkf letkf.conf
+
+#ipm=0
+#for m in $(seq $MEMBER); do
+#  ipm=$((ipm+1))
+#  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+#  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+
+#  if ((TMPRUN_MODE <= 2)); then
+#    proc_opt='one'
+#  else
+#    proc_opt='alln'
+#  fi
+#  pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/post_letkf.sh \
+#    ${time} $TMPRUN/letkf &
+
+#  sleep $BGJOB_INT
+#done
+#wait
 
 #-------------------------------------------------------------------------------
 }

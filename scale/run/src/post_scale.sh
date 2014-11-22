@@ -60,12 +60,12 @@ fi
 if [ "$SCPCALL" == 'fcst' ] && ((OUT_OPT <= 1)); then
   mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
   for ifile in $(cd $TMPDIR ; ls restart*.nc); do
-    mv -f $ifile $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifile:$restartbaselen}
+    mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifile:$restartbaselen}
   done
 elif [ "$SCPCALL" == 'cycle' ]; then
   mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
   for ifile in $(cd $TMPDIR ; ls restart*.nc); do
-    mv -f $ifile $TMPOUT/${ATIME}/gues/${MEM}/init${ifile:$restartbaselen}
+    mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/gues/${MEM}/init${ifile:$restartbaselen}
   done
 fi
 

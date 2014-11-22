@@ -1,7 +1,7 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Script to prepare the directory of obsope run.
+#  Script to prepare the directory of LETKF run.
 #  November 2014  created  Guo-Yuan Lien
 #
 #===============================================================================
@@ -14,7 +14,7 @@
 if (($# < 9)); then
   cat >&2 << EOF
 
-[pre_obsope.sh] Prepare a temporary directory for obsope
+[pre_letkf.sh] Prepare a temporary directory for LETKF
 
 Usage: $0 MYRANK STIME FCSTLEN FCSTINT SLOT_BASE SLOT_NUM TMPDIR EXECDIR OBSDIR
 
@@ -53,7 +53,7 @@ ATIME=$(datetime $STIME $LCYCLE s)
 
 historybaselen=7
 
-#initbaselen=4 ######
+initbaselen=4
 
 #-------------------------------------------------------------------------------
 
@@ -64,24 +64,25 @@ distribute_da_cycle machinefile -
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
 
-ln -fs $EXECDIR/obsope $TMPDIR
+#ln -fs $EXECDIR/letkf $TMPDIR
 
 ln -fs $OBSDIR/obs_${ATIME}.dat $TMPDIR/obs.dat
 
+ln -fs $TMPOUT/${ATIME}/obsgues/obsval*.dat $TMPDIR
 for m in $(seq $MEMBER); do
   if [ -d "$TMPOUT/${ATIME}/gues/${name_m[$m]}" ]; then
     for ifile in $(cd $TMPOUT/${ATIME}/gues/${name_m[$m]} ; ls history*.nc); do
       ln -fs $TMPOUT/${ATIME}/gues/${name_m[$m]}/${ifile} $TMPDIR/hist.${name_m[$m]}${ifile:$historybaselen}
     done
-#    for ifile in $(cd $TMPOUT/${ATIME}/gues/${name_m[$m]} ; ls init*.nc); do
-#      ln -fs $TMPOUT/${ATIME}/gues/${name_m[$m]}/${ifile} $TMPDIR/init.${name_m[$m]}${ifile:$initbaselen}
-#    done
+    for ifile in $(cd $TMPOUT/${ATIME}/gues/${name_m[$m]} ; ls init*.nc); do
+      ln -fs $TMPOUT/${ATIME}/gues/${name_m[$m]}/${ifile} $TMPDIR/gues.${name_m[$m]}${ifile:$initbaselen}
+    done
   fi
 done
 
 #===============================================================================
 
-cat $TMPDAT/conf/obsope.conf | \
+cat $TMPDAT/conf/letkf.conf | \
     sed -e "s/\[NNODES\]/ NNODES = $NNODES,/" \
         -e "s/\[PPN\]/ PPN = $PPN,/" \
         -e "s/\[MEM_NODES\]/ MEM_NODES = $mem_nodes,/" \
@@ -89,13 +90,13 @@ cat $TMPDAT/conf/obsope.conf | \
         -e "s/\[SLOT_NUM\]/ SLOT_NUM = $SLOT_NUM,/" \
         -e "s/\[SLOT_BASE\]/ SLOT_BASE = $SLOT_BASE,/" \
         -e "s/\[SLOT_TINTERVAL\]/ SLOT_TINTERVAL = $LTIMESLOT.D0,/" \
-    > $TMPDIR/obsope.conf
+    > $TMPDIR/letkf.conf
 
 cat $TMPDAT/conf/scale.conf | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
         -e "s/\[TIME_DURATION\]/ TIME_DURATION = ${FCSTLEN}.D0,/" \
         -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = ${FCSTINT}.D0,/" \
-    >> $TMPDIR/obsope.conf
+    >> $TMPDIR/letkf.conf
 
 #===============================================================================
 

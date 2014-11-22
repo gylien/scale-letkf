@@ -14,11 +14,6 @@ TIME_LIMIT='0:20:00'
 #===============================================================================
 # LETKF settings
 
-WINDOW_S=300        # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=900        # SCALE forecast time when assimilation window ends (second)
-LCYCLE=600          # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=60        # Timeslot interval for 4D-LETKF (second)
-
 FCSTLEN=$WINDOW_E   # GFS forecast length in a cycle (hour)
 FCSTOUT=$LTIMESLOT  # GFS forecast output interval (hour)
 
@@ -62,11 +57,12 @@ OBSOPE=0       # 0: No    ! obsope options: not finished yet!!
 OUT_OPT=1     # 1:   o    o
               # 2:   o
 
-              #      topo landuse bdy perturb        scale
-              #      log  log     log (not finished) log
-LOG_OPT=2     # 1:   o    o       o   o              o
-              # 2:   o    o       o                  o
-              # 3:                                   o
+              #      topo landuse bdy perturb        scale obsope letkf
+              #      log  log     log (not finished) log   log    log
+LOG_OPT=2     # 1:   o    o       o   o              o     o      o
+              # 2:   o    o       o                  o     o      o
+              # 3:                                   o     o      o
+              # 3:                                         o      o
               # 4:   (none)
 
 #===============================================================================
