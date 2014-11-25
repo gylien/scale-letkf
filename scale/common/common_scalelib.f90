@@ -15,6 +15,8 @@ module common_scalelib
     nitmax, &
     proc2mem
 
+!  use common_letkf, only: nbv
+
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -124,6 +126,7 @@ subroutine set_scalelib
 
   ! start SCALE MPI
   call PRC_MPIstart(MEM_NP, nitmax, nprocs, proc2mem)
+!  call PRC_MPIstart(nbv, MEM_NP, nitmax, nprocs, proc2mem)
 
   ! setup process
   call PRC_setup

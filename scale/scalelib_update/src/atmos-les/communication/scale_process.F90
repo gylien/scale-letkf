@@ -102,7 +102,7 @@ contains
 
     PRC_myrank_world = PRC_myrank
 
-!    if (proc2mem(1,1,PRC_myrank+1) >= 0) then
+!    if (proc2mem(1,1,PRC_myrank+1) >= 1 .and. proc2mem(1,1,PRC_myrank+1) <= member) then
 
       call MPI_Comm_group(MPI_COMM_WORLD,MPI_G_WORLD,ierr)
 
@@ -114,13 +114,15 @@ contains
       end do
   !    PRC_nu = proc2mem(1,1,PRC_myrank+1)
 
+!write(6,'(7I5)') PRC_myrank_world, ranks(:)
+
       call MPI_Group_incl(MPI_G_WORLD,mem_np,ranks,MPI_G,ierr)
       call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_u,ierr)
 
       call MPI_Comm_size(MPI_COMM_u,PRC_nmax,  ierr)
       call MPI_Comm_rank(MPI_COMM_u,PRC_myrank,ierr)
 
-!print *, PRC_myrank_world, PRC_myrank, PRC_nmax
+!write(6,'(9I5)') PRC_myrank_world, PRC_myrank, PRC_nmax, ranks(:)
 
 !    end if
 
@@ -414,7 +416,7 @@ contains
 
     if ( PRC_NUM_X*PRC_NUM_Y /= PRC_nmax ) then
 
-write(*,*) PRC_NUM_X, PRC_NUM_Y, PRC_nmax
+write(*,*) PRC_myrank_world, PRC_NUM_X, PRC_NUM_Y, PRC_nmax
 
        write(*,*) 'xxx total number of node does not match that requested. Check!'
        call PRC_MPIstop

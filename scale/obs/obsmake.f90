@@ -50,6 +50,8 @@ PROGRAM obsmake
     stop
   end if
 
+  call set_common_mpi_scale(1,NNODES,PPN,MEM_NODES,MEM_NP)
+
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
   rtimer00=rtimer
@@ -69,7 +71,9 @@ PROGRAM obsmake
 
 !-----------------------------------------------------------------------
 
-  CALL obsmake_cal(obs)
+  if (scale_IO_group_n == 1) then ! only run at the first group
+    CALL obsmake_cal(obs)
+  end if
 
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(OBSMAKE):',rtimer,rtimer-rtimer00

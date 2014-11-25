@@ -50,8 +50,54 @@ module common_mpi_scale
 
   integer,save :: scale_IO_group_n = -1
 !  integer,save :: scale_IO_proc_n = -1
+  logical,save :: valid_member = .false.
 
 contains
+
+
+
+!subroutine set_mpi_along_domains
+!  use common_nml, only: &
+!    MEM_NP
+
+!  use gtool_history, only: &
+!    historyinit
+!  use scale_process, only: &
+!    PRC_setup,    &
+!    PRC_MPIstart, &
+!!      PRC_mpifinish, &
+!    PRC_master, &
+!    PRC_myrank, &
+!    PRC_2Drank, &
+!    PRC_NUM_X, &
+!    PRC_NUM_Y
+!!    prc_nu, &
+!  use scale_comm, only: &
+!    COMM_setup
+!  implicit none
+
+!  integer :: rankidx(2)
+
+!  !-----------------------------------------------------------------------------
+
+!  ! setup mpi communication
+!  call COMM_setup
+
+!  ! setup history file I/O
+!  rankidx(1) = PRC_2Drank(PRC_myrank, 1)
+!  rankidx(2) = PRC_2Drank(PRC_myrank, 2)
+!  call HistoryInit('','','',IMAX*JMAX*KMAX,PRC_master,PRC_myrank,rankidx)
+
+!  ! check if the namelist seetings are consistent
+!  if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
+!    write(6,*) 'MEM_NP should be equal to PRC_NUM_X * PRC_NUM_Y.'
+!    stop
+!  end if
+
+!  return
+!end subroutine set_mpi_along_domains
+
+
 !-----------------------------------------------------------------------
 ! set_common_mpi_scale
 !-----------------------------------------------------------------------
@@ -66,7 +112,7 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
   INTEGER :: ierr,buf(4)
   LOGICAL :: ex
 
-  CALL set_mem_node_proc(nbv,nnodes,ppn,mem_nodes,mem_np)
+!  CALL set_mem_node_proc(nbv+1,nnodes,ppn,mem_nodes,mem_np)
 
 !  if (myrank == 0) then
 !  print *, procs
@@ -74,10 +120,6 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
 !  print *, mem2proc
 !  print *, proc2mem
 !  end if
-
-  scale_IO_group_n = proc2mem(1,1,myrank+1)
-!  scale_IO_proc_n = proc2mem(2,1,myrank+1)
-
 
   WRITE(6,'(A)') 'Hello from set_common_mpi_scale'
 !  i = MOD(nlon*nlat,nprocs)
@@ -179,6 +221,7 @@ mem_loop: DO it = 1, nitmax
     DO i = 0, n_mempn-1
       n = 0
       DO j = 0, n_mem-1
+        IF(m > mem .and. it > 1) EXIT mem_loop
         qs = 0
         DO nn = 0, mem_nodes-1
           IF(nn < tmod) THEN
@@ -188,19 +231,26 @@ mem_loop: DO it = 1, nitmax
           END IF
           DO q = 0, tppnt-1
             ip = (n+nn)*ppn + i*mem_np + q
-            mem2node(qs+1,m) = n+nn
-            mem2proc(qs+1,m) = ip
+            if (m <= mem) then
+              mem2node(qs+1,m) = n+nn
+              mem2proc(qs+1,m) = ip
+            end if
             proc2mem(1,it,ip+1) = m
             proc2mem(2,it,ip+1) = qs
             qs = qs + 1
           END DO
         END DO
-        IF(m >= mem) EXIT mem_loop
         m = m + 1
         n = n + mem_nodes
       END DO
     END DO
   END DO mem_loop
+
+  scale_IO_group_n = proc2mem(1,1,myrank+1)
+!  scale_IO_proc_n = proc2mem(2,1,myrank+1)
+  if (scale_IO_group_n >= 1 .and. scale_IO_group_n <= mem) then
+    valid_member = .true.
+  end if
 
   RETURN
 END SUBROUTINE
@@ -596,7 +646,7 @@ SUBROUTINE read_ens_history_mpi(file,iter,step,v3dg,v2dg,ensmean)
     nbvr = nbv+1
   end if
 
-  IF (scale_IO_group_n >= 0) then
+  IF (valid_member) then
     allocate( var3D(IMAX,JMAX,KMAX) )
     allocate( var2D(IMAX,JMAX) )
 

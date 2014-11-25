@@ -41,7 +41,6 @@ PROGRAM obsope
 
 
   TYPE(obs_info) :: obs
-!  TYPE(obs_ensval) :: obsval
 
 
 !-----------------------------------------------------------------------
@@ -69,6 +68,8 @@ PROGRAM obsope
     stop
   end if
 
+  CALL set_mem_node_proc(nbv+1,NNODES,PPN,MEM_NODES,MEM_NP)
+
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
   rtimer00=rtimer
@@ -88,7 +89,9 @@ PROGRAM obsope
 
 !-----------------------------------------------------------------------
 
-  call obsope_cal(obs)
+  if (valid_member) then
+    call obsope_cal(obs)
+  end if
 
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(OBS_OPERATOR):',rtimer,rtimer-rtimer00

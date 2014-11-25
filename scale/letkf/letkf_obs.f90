@@ -17,7 +17,14 @@ MODULE letkf_obs
   USE common_obs_scale
   USE common_mpi_scale
   USE common_letkf
+
+  use common_nml
+
 !  USE common_precip
+
+
+  use common_scalelib
+
 
   IMPLICIT NONE
   PUBLIC
@@ -37,21 +44,36 @@ MODULE letkf_obs
   REAL(r_size),SAVE :: dist_zero_rain
   REAL(r_size),SAVE :: dist_zerov
   REAL(r_size),SAVE :: dist_zerov_rain
-  REAL(r_size),ALLOCATABLE,SAVE :: obselm(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obslon(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obslat(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obslev(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obsdat(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obserr(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obstyp(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obsdif(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: obsi(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: obsj(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: obsk(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obsdep(:)
-  REAL(r_size),ALLOCATABLE,SAVE :: obshdxf(:,:)
-  INTEGER,ALLOCATABLE,SAVE :: obsqc(:) ! GYL: QC values in output diag files (could be any value >= 1)
-  INTEGER,SAVE :: nobsgrd(nlon,nlat)
+!  REAL(r_size),ALLOCATABLE,SAVE :: obselm(:)
+!  REAL(r_size),ALLOCATABLE,SAVE :: obslon(:)
+!  REAL(r_size),ALLOCATABLE,SAVE :: obslat(:)
+!  REAL(r_size),ALLOCATABLE,SAVE :: obslev(:)
+!  REAL(r_size),ALLOCATABLE,SAVE :: obsdat(:)
+!  REAL(r_size),ALLOCATABLE,SAVE :: obserr(:)
+!  REAL(r_size),ALLOCATABLE,SAVE :: obstyp(:)
+!  REAL(r_size),ALLOCATABLE,SAVE :: obsdif(:)
+!!  REAL(r_size),ALLOCATABLE,SAVE :: obsi(:)
+!!  REAL(r_size),ALLOCATABLE,SAVE :: obsj(:)
+!!  REAL(r_size),ALLOCATABLE,SAVE :: obsk(:)
+!  REAL(r_size),ALLOCATABLE,SAVE :: obsdep(:)
+!  REAL(r_size),ALLOCATABLE,SAVE :: obshdxf(:,:)
+!  INTEGER,ALLOCATABLE,SAVE :: obsqc(:) ! GYL: QC values in output diag files (could be any value >= 1)
+!  INTEGER,SAVE :: nobsgrd(nlon,nlat)
+
+  type(obs_info),save :: obs
+  type(obs_ensval),save :: obsval
+
+
+!-----------------------------------------------------------------------
+! General parameters
+!-----------------------------------------------------------------------
+
+  INTEGER,PARAMETER :: nslots=11 ! number of time slots for 4D-LETKF
+  INTEGER,PARAMETER :: nbslot=6 ! basetime slot
+  REAL(r_size),PARAMETER :: slotint=60.0d0 ! time interval between slots in second
+
+  CHARACTER(7) :: obsfile='obs.dat' !IN
+  CHARACTER(22) :: obsvalfile='obsval.0000.000000.dat' !IN
 
 CONTAINS
 !-----------------------------------------------------------------------
@@ -112,351 +134,487 @@ SUBROUTINE set_letkf_obs
 !  REAL(r_size) :: tmpdat_o, obserr_p, obserr_n ! GYL
 !  INTEGER :: ii, jj                            ! GYL
 
+  integer :: it,ip
+  logical :: check
+!  REAL(r_size),allocatable :: bufr(:)
+  REAL(r_size),allocatable :: bufr(:,:)
+  INTEGER,allocatable :: bufri(:)
+
+
+  integer :: MPI_G_WORLD, MPI_G, MPI_COMM_e, nprocs_e, myrank_e
+  integer :: n_mem,n_mempn
+  integer,allocatable :: ranks(:)
+
+
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
-!  dist_zero = sigma_obs * SQRT(10.0d0/3.0d0) * 2.0d0
-!  dist_zero_rain = sigma_obs_rain * SQRT(10.0d0/3.0d0) * 2.0d0
-!  dist_zerov = sigma_obsv * SQRT(10.0d0/3.0d0) * 2.0d0
-!  dist_zerov_rain = sigma_obsv_rain * SQRT(10.0d0/3.0d0) * 2.0d0
 
-!  CALL get_nobs_mpi(obsfile,10,nobs)
-!  WRITE(6,'(I10,A)') nobs,' TOTAL OBSERVATIONS INPUT'
-!  IF(nobs == 0) RETURN
-!!
-!! INITIALIZE GLOBAL VARIABLES
-!!
-!  ALLOCATE( tmpelm(nobs) )
-!  ALLOCATE( tmplon(nobs) )
-!  ALLOCATE( tmplat(nobs) )
-!  ALLOCATE( tmplev(nobs) )
-!  ALLOCATE( tmpdat(nobs) )
-!  ALLOCATE( tmperr(nobs) )
-!  ALLOCATE( tmptyp(nobs) )
-!  ALLOCATE( tmpdif(nobs) )
-!!  ALLOCATE( tmpi(nobs) )
-!!  ALLOCATE( tmpj(nobs) )
-!!  ALLOCATE( tmpk(nobs) )
-!  ALLOCATE( tmpdep(nobs) )
-!  ALLOCATE( tmphdxf(nobs,nbv) )
-!  ALLOCATE( tmpqc0(nobs,nbv) )
-!  ALLOCATE( tmpqc(nobs) )
-!!
-!! reading observation data
-!!
-!  CALL read_obs2_mpi(obsfile,nobs,nbv,tmpelm,tmplon,tmplat,tmplev, &
-!                     tmpdat,tmperr,tmptyp,tmpdif,tmphdxf,tmpqc0)
-!!!                                                                               ! GYL, PRECIP assimilation
-!!! reading precipitation transformation definition and mask                      ! GYL
-!!!                                                                               ! GYL
-!!  if (opt_pptrans >= 2) then                                                    ! GYL
-!!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading.. ',cdffile_m          ! GYL
-!!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading.. ',cdffile_o          ! GYL
-!!    call read_ppcdf(cdffile_m, cdffile_o, ppcdf_m, ppcdf_o, ppzero_m, ppzero_o) ! GYL
-!!  end if                                                                        ! GYL
-!!  WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading.. ',maskfile             ! GYL
-!!  call read_ppmask(maskfile, ppmask)                                            ! GYL
-!!  pp_ntotal = 0                                                                 ! GYL
+
+  dist_zero = sigma_obs * SQRT(10.0d0/3.0d0) * 2.0d0
+  dist_zero_rain = sigma_obs_rain * SQRT(10.0d0/3.0d0) * 2.0d0
+  dist_zerov = sigma_obsv * SQRT(10.0d0/3.0d0) * 2.0d0
+  dist_zerov_rain = sigma_obsv_rain * SQRT(10.0d0/3.0d0) * 2.0d0
+
+
+
+
+
+
+!  if (valid_member) then
+!    call unset_scalelib
+!  end if
+
+!!!!!!
+!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+!!!!!!
+
+
+
+
+! define MPI_COMM_e...
+
+  
+  if (scale_IO_group_n >= 1) then
+
+
+
+    IF(MEM_NODES > 1) THEN
+      n_mem = NNODES / MEM_NODES
+      n_mempn = 1
+    ELSE
+      n_mem = NNODES
+      n_mempn = PPN / MEM_NP
+    END IF
+    nprocs_e = n_mem*n_mempn
+
+    allocate (ranks(nprocs_e))
+
+    call MPI_Comm_group(MPI_COMM_WORLD,MPI_G_WORLD,ierr)
+
+    do ip = 1, nprocs
+      if (proc2mem(2,1,ip) == proc2mem(2,1,myrank+1)) then
+        if (proc2mem(1,1,ip) >= 1) then
+          ranks(proc2mem(1,1,ip)) = ip-1
+        end if
+      end if
+    end do
+
+!write(6,'(A,7I6)') '######===', myrank, ranks(:)
+
+    call MPI_Group_incl(MPI_G_WORLD,nprocs_e,ranks,MPI_G,ierr)
+    call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_e,ierr)
+
+    call MPI_Comm_size(MPI_COMM_e,nprocs_e,ierr)
+    call MPI_Comm_rank(MPI_COMM_e,myrank_e,ierr)
+
+!write(6,'(A,9I6)') '######===', myrank, myrank_e, nprocs_e, ranks(:)
+!stop
+
+    deallocate(ranks)
+
+
+
+!--------------------
+
+
+    check = .false.
+    do it = 1, nitmax
+      im = proc2mem(1,it,myrank+1)
+      if (im >= 1 .and. im <= nbv) then
+        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
+              im, ', subdomain id #', proc2mem(2,it,myrank+1)
+
+  !      nproc = 0
+
+  !      obsval%nobs = nproc
+
+  !      write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' finishes processing member ', &
+  !            im, ', subdomain id #', proc2mem(2,it,myrank+1)
+  !      write (6,'(A,I8,A)') ' -- ', nproc, ' observations found'
+
+        write (obsvalfile(8:11),'(I4.4)') im
+        write (obsvalfile(13:18),'(I6.6)') proc2mem(2,it,myrank+1)
+
+
+        CALL get_nobs(obsvalfile,5,obsval%nobs)
+        WRITE(6,'(A,I9,A)') 'TOTAL: ', obsval%nobs, ' OBSERVATIONS'
+
+        CALL obs_ensval_allocate(obsval,nbv)
+
+
+        call read_obsval(obsvalfile,obsval,im,check)
+        check = .true.
+
+!if(myrank==2) obsval%qc(4) = 17
+!if(myrank==6) obsval%qc(4) = 9
+
+
+      end if
+    end do ! [ it = 1, nitmax ]
+
+
+    if (nprocs_e > nbv) then
+      CALL MPI_BARRIER(MPI_COMM_e,ierr)
+      call MPI_BCAST(obsval%nobs, 1, MPI_INTEGER, 0, MPI_COMM_e, ierr)
+    end if
+
+!    print *, myrank, obsval%nobs
+    if (myrank_e >= nbv) then
+      CALL obs_ensval_allocate(obsval,nbv)
+    end if
+
+
+!    allocate (bufr(obsval%nobs))
+!    bufr = 0.0d0
+!    DO im = 1, nbv
+!      CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!      CALL MPI_ALLREDUCE(obsval%val(:,im),bufr,obsval%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
+!      obsval%val(:,im) = bufr
+!    ENDDO
+
+    allocate (bufr(obsval%nobs,nbv))
+    bufr = 0.0d0
+    CALL MPI_BARRIER(MPI_COMM_e,ierr)
+    CALL MPI_ALLREDUCE(obsval%val,bufr,obsval%nobs*nbv,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
+    obsval%val = bufr
+
+    allocate (bufri(obsval%nobs))
+    bufri = 0
+    CALL MPI_BARRIER(MPI_COMM_e,ierr)
+    CALL MPI_ALLREDUCE(obsval%qc,bufri,obsval%nobs,MPI_INTEGER,MPI_MAX,MPI_COMM_e,ierr)
+    obsval%qc = bufri
+
+
+
+    deallocate(bufr,bufri)
+
+!if(myrank==10) then
+!    print *, '######======'
+!    print *, obsval%val(50,:)
+!    print *, obsval%qc(:)
+!end if
+
+  end if ! [ scale_IO_group_n >= 1 ]
+
+
+
+
+
+
+
+
+!!                                                                               ! GYL, PRECIP assimilation
+!! reading precipitation transformation definition and mask                      ! GYL
+!!                                                                               ! GYL
+!  if (opt_pptrans >= 2) then                                                    ! GYL
+!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading.. ',cdffile_m          ! GYL
+!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading.. ',cdffile_o          ! GYL
+!    call read_ppcdf(cdffile_m, cdffile_o, ppcdf_m, ppcdf_o, ppzero_m, ppzero_o) ! GYL
+!  end if                                                                        ! GYL
+!  WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading.. ',maskfile             ! GYL
+!  call read_ppmask(maskfile, ppmask)                                            ! GYL
+!  pp_ntotal = 0                                                                 ! GYL
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i)
-  DO n=1,nobs
-    tmpqc(n) = MINVAL(tmpqc0(n,:))
-    IF(tmpqc(n) /= 1) CYCLE
-
-
-!!###### PRECIP assimilation ######
-!    if (tmpelm(n) == id_rain_obs) then
-
-!      CALL phys2ij(tmplon(n),tmplat(n),ri,rj)
-!      ii = CEILING(ri-0.5) ! nearest point
-!      jj = CEILING(rj-0.5) ! nearest point
-!      if (ii < 1)    ii = ii + nlon
-!      if (ii > nlon) ii = ii - nlon
-!      if (jj < 1)    jj = 1
-!      if (jj > nlat) jj = nlat
-
-!      if (ppmask(ii,jj) < mask_thres) then
-!        tmpqc(n) = 0
-!!        write (6,'(A)') '* Precipitation not used because of the mask file'
-!!        write (6,'(A,F6.2,A,F6.2,A)') &
-!!              '*  (lon,lat)=(',tmplon(n),',',tmplat(n),')'
-!!        cycle
-!      end if
-
-!      pp_mem = 0
-!      do i = 1, nbv
-!        if (tmphdxf(n,i) >= ppzero_thres) then
-!          pp_mem = pp_mem + 1
-!        end if
-!      end do
-
-!      bg_lev = pp_bg_nlev
-!      do il = 1, pp_bg_nlev-1
-!        if (pp_mem < pp_bg_levs(il)) then
-!          bg_lev = il
-!          exit
-!        end if
-!      end do
-!      ob_lev = pp_ob_nlev
-!      do il = 1, pp_ob_nlev-1
-!        if (tmpdat(n) < pp_ob_levs(il)) then
-!          ob_lev = il
-!          exit
-!        end if
-!      end do
-!      pp_ntotal(bg_lev,ob_lev) = pp_ntotal(bg_lev,ob_lev) + 1
-!      tmpqc(n) = 100 + pp_mem  !! For precip, qc = 100 + number of members with precip
-
-!      if (.not. pp_criterion(bg_lev,ob_lev)) then
-!        tmpqc(n) = 0
-!!        write (6,'(A)') '* Precipitation does not fit assimilation criterion'
-!!        write (6,'(A,F6.2,A,F6.2,A,I3,A,I2,A,F7.3,A,I2,A)') &
-!!              '*  (lon,lat)=(',tmplon(n),',',tmplat(n),'), pp_mem=', &
-!!              pp_mem, '(', bg_lev, '), pp_obs=', tmpdat(n), '(', ob_lev, ')'
-!        cycle
-!      end if
-
-!      if (opt_pptrans >= 1) then
-!        tmpdat_o = tmpdat(n)
-!        tmplev(n) = tmpdat_o  !! For precip, lev = original observed value if transformation is used
-!        if (opt_pptrans == 1) then ! log transformation
-!          do i = 1, nbv
-!            tmphdxf(n,i) = pptrans_log(tmphdxf(n,i))
-!          end do
-!          tmpdat(n) = pptrans_log(tmpdat_o)
-!        else if (opt_pptrans == 2) then ! Gaussian transformation with median zero rain
-!          do i = 1, nbv
-!            tmphdxf(n,i) = pptrans_normal(tmphdxf(n,i), ppcdf_m(ii,jj,:), ppzero_m(ii,jj))
-!          end do
-!          tmpdat(n) = pptrans_normal(tmpdat_o, ppcdf_o(ii,jj,:), ppzero_o(ii,jj))
-!        else if (opt_pptrans == 3) then ! Gaussian transformation with modified median zero rain
-!          call pptrans_normal_mdzero_def(tmphdxf(n,:), ppcdf_m(ii,jj,:), ppzero_m(ii,jj), zero_mem, ym, sigma)
-!          tmpdat(n) = pptrans_normal_mdzero(tmpdat_o, ppcdf_o(ii,jj,:), ppzero_o(ii,jj), ppzero_m(ii,jj), zero_mem, ym, sigma)
-!        end if
-
-!        if (opt_ppobserr == 1) then ! transformed obserr from obs data file
-!          if (opt_pptrans == 1) then ! log transformation
-!            tmperr(n) = tmperr(n) / (tmpdat_o + log_trans_tiny)
-!            if (tmperr(n) < min_ppobserr) tmperr(n) = min_ppobserr
-!          else if (opt_pptrans == 2) then ! Gaussian transformation with median zero rain
-!            obserr_p = pptrans_normal(tmpdat_o+tmperr(n), ppcdf_o(ii,jj,:), ppzero_o(ii,jj)) - tmpdat(n)
-!            if (obserr_p < min_ppobserr) obserr_p = min_ppobserr
-!            obserr_n = tmpdat(n) - pptrans_normal(tmpdat_o-tmperr(n), ppcdf_o(ii,jj,:), ppzero_o(ii,jj))
-!            if (obserr_n < min_ppobserr) obserr_n = min_ppobserr
-!            tmperr(n) = 0.5d0 * (obserr_p + obserr_n)
-!          else if (opt_pptrans == 3) then ! Gaussian transformation with modified median zero rain
-!            obserr_p = pptrans_normal_mdzero(tmpdat_o+tmperr(n), ppcdf_o(ii,jj,:), ppzero_o(ii,jj), ppzero_m(ii,jj), zero_mem, ym, sigma) - tmpdat(n)
-!            if (obserr_p < min_ppobserr) obserr_p = min_ppobserr
-!            obserr_n = tmpdat(n) - pptrans_normal_mdzero(tmpdat_o-tmperr(n), ppcdf_o(ii,jj,:), ppzero_o(ii,jj), ppzero_m(ii,jj), zero_mem, ym, sigma)
-!            if (obserr_n < min_ppobserr) obserr_n = min_ppobserr
-!            tmperr(n) = 0.5d0 * (obserr_p + obserr_n)
-!          end if
-!        else if (opt_ppobserr == 2) then ! constant obserr
-!          tmperr(n) = const_ppobserr
-!        end if
-!      end if ! [ opt_pptrans == 1 ]
-
-!    end if ! [ tmpelm(n) == id_rain_obs ]
-!!###### end PRECIP assimilation ######
-
-
-    tmpdep(n) = tmphdxf(n,1)
-    DO i=2,nbv
-      tmpdep(n) = tmpdep(n) + tmphdxf(n,i)
-    END DO
-    tmpdep(n) = tmpdep(n) / REAL(nbv,r_size)
-    DO i=1,nbv
-      tmphdxf(n,i) = tmphdxf(n,i) - tmpdep(n) ! Hdx
-    END DO
-    tmpdep(n) = tmpdat(n) - tmpdep(n) ! y-Hx
-    IF(ABS(tmpdep(n)) > gross_error*tmperr(n)) THEN !gross error
-      tmpqc(n) = 0
-    END IF
-  END DO
-!$OMP END PARALLEL DO
-  DEALLOCATE(tmpqc0)
-
-  nn = 0
-  DO n=1,nobs
-    IF(tmpqc(n) >= 1) nn = nn+1
-  END DO
-  WRITE(6,'(I10,A)') nn,' OBSERVATIONS TO BE ASSIMILATED'
-
-!  do il = 1, pp_ob_nlev                            ! GYL, PRECIP assimilation
-!    write (*, '(A,10I6)') 'STAT:', pp_ntotal(:,il) ! GYL
-!  end do                                           ! GYL
-
-  WRITE(6,'(A)') 'OBSERVATIONAL DEPARTURE STATISTICS:'
-  CALL monit_dep(nobs,tmpelm,tmpdep,tmpqc,1)
-!
-! temporal observation localization
-!
 !  DO n=1,nobs
-!    tmperr(n) = tmperr(n) * exp(0.25d0 * (tmpdif(n) / sigma_obst)**2)
-!  END DO
-!
-! SELECT OBS IN THE NODE
-!
-  nn = 0
-  DO n=1,nobs
-    IF(tmpqc(n) <= 0) CYCLE
-    nn = nn+1
-    tmpelm(nn) = tmpelm(n)
-    tmplon(nn) = tmplon(n)
-    tmplat(nn) = tmplat(n)
-    tmplev(nn) = tmplev(n)
-    tmpdat(nn) = tmpdat(n)
-    tmperr(nn) = tmperr(n)
-    tmptyp(nn) = tmptyp(n)
-    tmpdif(nn) = tmpdif(n)
-!    tmpi(nn) = tmpi(n)
-!    tmpj(nn) = tmpj(n)
-!    tmpk(nn) = tmpk(n)
-    tmpdep(nn) = tmpdep(n)
-    tmphdxf(nn,:) = tmphdxf(n,:)
-    tmpqc(nn) = tmpqc(n)
-  END DO
-  nobs = nn
-  WRITE(6,'(I10,A,I3.3)') nobs,' OBSERVATIONS TO BE ASSIMILATED IN MYRANK ',myrank
-!!
-!! SORT
-!!
-!  ALLOCATE( tmp2elm(nobs) )
-!  ALLOCATE( tmp2lon(nobs) )
-!  ALLOCATE( tmp2lat(nobs) )
-!  ALLOCATE( tmp2lev(nobs) )
-!  ALLOCATE( tmp2dat(nobs) )
-!  ALLOCATE( tmp2err(nobs) )
-!  ALLOCATE( tmp2typ(nobs) )
-!  ALLOCATE( tmp2dif(nobs) )
-!!  ALLOCATE( tmp2i(nobs) )
-!!  ALLOCATE( tmp2j(nobs) )
-!!  ALLOCATE( tmp2k(nobs) )
-!  ALLOCATE( tmp2dep(nobs) )
-!  ALLOCATE( tmp2hdxf(nobs,nbv) )
-!  ALLOCATE( tmp2qc(nobs) )
-!  ALLOCATE( obselm(nobs) )
-!  ALLOCATE( obslon(nobs) )
-!  ALLOCATE( obslat(nobs) )
-!  ALLOCATE( obslev(nobs) )
-!  ALLOCATE( obsdat(nobs) )
-!  ALLOCATE( obserr(nobs) )
-!  ALLOCATE( obstyp(nobs) )
-!  ALLOCATE( obsdif(nobs) )
-!!  ALLOCATE( obsi(nobs) )
-!!  ALLOCATE( obsj(nobs) )
-!!  ALLOCATE( obsk(nobs) )
-!  ALLOCATE( obsdep(nobs) )
-!  ALLOCATE( obshdxf(nobs,nbv) )
-!  ALLOCATE( obsqc(nobs) )
-!  nobsgrd = 0
-!  nj = 0
-!!$OMP PARALLEL PRIVATE(i,j,n,nn)
-!!$OMP DO SCHEDULE(DYNAMIC)
-!  DO j=1,nlat-1
-!    DO n=1,nobs
-!      IF(tmplat(n) < lat(j) .OR. lat(j+1) <= tmplat(n)) CYCLE
-!      nj(j) = nj(j) + 1
+!    tmpqc(n) = MINVAL(tmpqc0(n,:))
+!    IF(tmpqc(n) /= 1) CYCLE
+
+
+!!!###### PRECIP assimilation ######
+!!    if (tmpelm(n) == id_rain_obs) then
+
+!!      CALL phys2ij(tmplon(n),tmplat(n),ri,rj)
+!!      ii = CEILING(ri-0.5) ! nearest point
+!!      jj = CEILING(rj-0.5) ! nearest point
+!!      if (ii < 1)    ii = ii + nlon
+!!      if (ii > nlon) ii = ii - nlon
+!!      if (jj < 1)    jj = 1
+!!      if (jj > nlat) jj = nlat
+
+!!      if (ppmask(ii,jj) < mask_thres) then
+!!        tmpqc(n) = 0
+!!!        write (6,'(A)') '* Precipitation not used because of the mask file'
+!!!        write (6,'(A,F6.2,A,F6.2,A)') &
+!!!              '*  (lon,lat)=(',tmplon(n),',',tmplat(n),')'
+!!!        cycle
+!!      end if
+
+!!      pp_mem = 0
+!!      do i = 1, nbv
+!!        if (tmphdxf(n,i) >= ppzero_thres) then
+!!          pp_mem = pp_mem + 1
+!!        end if
+!!      end do
+
+!!      bg_lev = pp_bg_nlev
+!!      do il = 1, pp_bg_nlev-1
+!!        if (pp_mem < pp_bg_levs(il)) then
+!!          bg_lev = il
+!!          exit
+!!        end if
+!!      end do
+!!      ob_lev = pp_ob_nlev
+!!      do il = 1, pp_ob_nlev-1
+!!        if (tmpdat(n) < pp_ob_levs(il)) then
+!!          ob_lev = il
+!!          exit
+!!        end if
+!!      end do
+!!      pp_ntotal(bg_lev,ob_lev) = pp_ntotal(bg_lev,ob_lev) + 1
+!!      tmpqc(n) = 100 + pp_mem  !! For precip, qc = 100 + number of members with precip
+
+!!      if (.not. pp_criterion(bg_lev,ob_lev)) then
+!!        tmpqc(n) = 0
+!!!        write (6,'(A)') '* Precipitation does not fit assimilation criterion'
+!!!        write (6,'(A,F6.2,A,F6.2,A,I3,A,I2,A,F7.3,A,I2,A)') &
+!!!              '*  (lon,lat)=(',tmplon(n),',',tmplat(n),'), pp_mem=', &
+!!!              pp_mem, '(', bg_lev, '), pp_obs=', tmpdat(n), '(', ob_lev, ')'
+!!        cycle
+!!      end if
+
+!!      if (opt_pptrans >= 1) then
+!!        tmpdat_o = tmpdat(n)
+!!        tmplev(n) = tmpdat_o  !! For precip, lev = original observed value if transformation is used
+!!        if (opt_pptrans == 1) then ! log transformation
+!!          do i = 1, nbv
+!!            tmphdxf(n,i) = pptrans_log(tmphdxf(n,i))
+!!          end do
+!!          tmpdat(n) = pptrans_log(tmpdat_o)
+!!        else if (opt_pptrans == 2) then ! Gaussian transformation with median zero rain
+!!          do i = 1, nbv
+!!            tmphdxf(n,i) = pptrans_normal(tmphdxf(n,i), ppcdf_m(ii,jj,:), ppzero_m(ii,jj))
+!!          end do
+!!          tmpdat(n) = pptrans_normal(tmpdat_o, ppcdf_o(ii,jj,:), ppzero_o(ii,jj))
+!!        else if (opt_pptrans == 3) then ! Gaussian transformation with modified median zero rain
+!!          call pptrans_normal_mdzero_def(tmphdxf(n,:), ppcdf_m(ii,jj,:), ppzero_m(ii,jj), zero_mem, ym, sigma)
+!!          tmpdat(n) = pptrans_normal_mdzero(tmpdat_o, ppcdf_o(ii,jj,:), ppzero_o(ii,jj), ppzero_m(ii,jj), zero_mem, ym, sigma)
+!!        end if
+
+!!        if (opt_ppobserr == 1) then ! transformed obserr from obs data file
+!!          if (opt_pptrans == 1) then ! log transformation
+!!            tmperr(n) = tmperr(n) / (tmpdat_o + log_trans_tiny)
+!!            if (tmperr(n) < min_ppobserr) tmperr(n) = min_ppobserr
+!!          else if (opt_pptrans == 2) then ! Gaussian transformation with median zero rain
+!!            obserr_p = pptrans_normal(tmpdat_o+tmperr(n), ppcdf_o(ii,jj,:), ppzero_o(ii,jj)) - tmpdat(n)
+!!            if (obserr_p < min_ppobserr) obserr_p = min_ppobserr
+!!            obserr_n = tmpdat(n) - pptrans_normal(tmpdat_o-tmperr(n), ppcdf_o(ii,jj,:), ppzero_o(ii,jj))
+!!            if (obserr_n < min_ppobserr) obserr_n = min_ppobserr
+!!            tmperr(n) = 0.5d0 * (obserr_p + obserr_n)
+!!          else if (opt_pptrans == 3) then ! Gaussian transformation with modified median zero rain
+!!            obserr_p = pptrans_normal_mdzero(tmpdat_o+tmperr(n), ppcdf_o(ii,jj,:), ppzero_o(ii,jj), ppzero_m(ii,jj), zero_mem, ym, sigma) - tmpdat(n)
+!!            if (obserr_p < min_ppobserr) obserr_p = min_ppobserr
+!!            obserr_n = tmpdat(n) - pptrans_normal_mdzero(tmpdat_o-tmperr(n), ppcdf_o(ii,jj,:), ppzero_o(ii,jj), ppzero_m(ii,jj), zero_mem, ym, sigma)
+!!            if (obserr_n < min_ppobserr) obserr_n = min_ppobserr
+!!            tmperr(n) = 0.5d0 * (obserr_p + obserr_n)
+!!          end if
+!!        else if (opt_ppobserr == 2) then ! constant obserr
+!!          tmperr(n) = const_ppobserr
+!!        end if
+!!      end if ! [ opt_pptrans == 1 ]
+
+!!    end if ! [ tmpelm(n) == id_rain_obs ]
+!!!###### end PRECIP assimilation ######
+
+
+!    tmpdep(n) = tmphdxf(n,1)
+!    DO i=2,nbv
+!      tmpdep(n) = tmpdep(n) + tmphdxf(n,i)
 !    END DO
-!  END DO
-!!$OMP END DO
-!!$OMP DO SCHEDULE(DYNAMIC)
-!  DO j=1,nlat-1
-!    njs(j) = SUM(nj(0:j-1))
-!  END DO
-!!$OMP END DO
-!!$OMP DO SCHEDULE(DYNAMIC)
-!  DO j=1,nlat-1
-!    nn = 0
-!    DO n=1,nobs
-!      IF(tmplat(n) < lat(j) .OR. lat(j+1) <= tmplat(n)) CYCLE
-!      nn = nn + 1
-!      tmp2elm(njs(j)+nn) = tmpelm(n)
-!      tmp2lon(njs(j)+nn) = tmplon(n)
-!      tmp2lat(njs(j)+nn) = tmplat(n)
-!      tmp2lev(njs(j)+nn) = tmplev(n)
-!      tmp2dat(njs(j)+nn) = tmpdat(n)
-!      tmp2err(njs(j)+nn) = tmperr(n)
-!      tmp2typ(njs(j)+nn) = tmptyp(n)
-!      tmp2dif(njs(j)+nn) = tmpdif(n)
-!!      tmp2i(njs(j)+nn) = tmpi(n)
-!!      tmp2j(njs(j)+nn) = tmpj(n)
-!!      tmp2k(njs(j)+nn) = tmpk(n)
-!      tmp2dep(njs(j)+nn) = tmpdep(n)
-!      tmp2hdxf(njs(j)+nn,:) = tmphdxf(n,:)
-!      tmp2qc(njs(j)+nn) = tmpqc(n)
+!    tmpdep(n) = tmpdep(n) / REAL(nbv,r_size)
+!    DO i=1,nbv
+!      tmphdxf(n,i) = tmphdxf(n,i) - tmpdep(n) ! Hdx
 !    END DO
-!  END DO
-!!$OMP END DO
-!!$OMP DO SCHEDULE(DYNAMIC)
-!  DO j=1,nlat-1
-!    IF(nj(j) == 0) THEN
-!      nobsgrd(:,j) = njs(j)
-!      CYCLE
-!    END IF
-!    nn = 0
-!    DO i=1,nlon
-!      DO n=njs(j)+1,njs(j)+nj(j)
-!        IF(i < nlon) THEN
-!          IF(tmp2lon(n) < lon(i) .OR. lon(i+1) <= tmp2lon(n)) CYCLE
-!        ELSE
-!          IF(tmp2lon(n) < lon(nlon) .OR. 360.0d0 <= tmp2lon(n)) CYCLE
-!        END IF
-!        nn = nn + 1
-!        obselm(njs(j)+nn) = tmp2elm(n)
-!        obslon(njs(j)+nn) = tmp2lon(n)
-!        obslat(njs(j)+nn) = tmp2lat(n)
-!        obslev(njs(j)+nn) = tmp2lev(n)
-!        obsdat(njs(j)+nn) = tmp2dat(n)
-!        obserr(njs(j)+nn) = tmp2err(n)
-!        obstyp(njs(j)+nn) = tmp2typ(n)
-!        obsdif(njs(j)+nn) = tmp2dif(n)
-!!        obsi(njs(j)+nn) = tmp2i(n)
-!!        obsj(njs(j)+nn) = tmp2j(n)
-!!        obsk(njs(j)+nn) = tmp2k(n)
-!        obsdep(njs(j)+nn) = tmp2dep(n)
-!        obshdxf(njs(j)+nn,:) = tmp2hdxf(n,:)
-!        obsqc(njs(j)+nn) = tmp2qc(n)
-!      END DO
-!      nobsgrd(i,j) = njs(j) + nn
-!    END DO
-!    IF(nn /= nj(j)) THEN
-!!$OMP CRITICAL
-!      WRITE(6,'(A,2I)') 'OBS DATA SORT ERROR: ',nn,nj(j)
-!      WRITE(6,'(F6.2,A,F6.2)') lat(j),'< LAT <',lat(j+1)
-!      WRITE(6,'(F6.2,A,F6.2)') MINVAL(tmp2lat(njs(j)+1:njs(j)+nj(j))),'< OBSLAT <',MAXVAL(tmp2lat(njs(j)+1:njs(j)+nj(j)))
-!!$OMP END CRITICAL
+!    tmpdep(n) = tmpdat(n) - tmpdep(n) ! y-Hx
+!    IF(ABS(tmpdep(n)) > gross_error*tmperr(n)) THEN !gross error
+!      tmpqc(n) = 0
 !    END IF
 !  END DO
-!!$OMP END DO
-!!$OMP END PARALLEL
-!  DEALLOCATE( tmp2elm )
-!  DEALLOCATE( tmp2lon )
-!  DEALLOCATE( tmp2lat )
-!  DEALLOCATE( tmp2lev )
-!  DEALLOCATE( tmp2dat )
-!  DEALLOCATE( tmp2err )
-!  DEALLOCATE( tmp2typ )
-!  DEALLOCATE( tmp2dif )
-!!  DEALLOCATE( tmp2i )
-!!  DEALLOCATE( tmp2j )
-!!  DEALLOCATE( tmp2k )
-!  DEALLOCATE( tmp2dep )
-!  DEALLOCATE( tmp2hdxf )
-!  DEALLOCATE( tmp2qc )
-!  DEALLOCATE( tmpelm )
-!  DEALLOCATE( tmplon )
-!  DEALLOCATE( tmplat )
-!  DEALLOCATE( tmplev )
-!  DEALLOCATE( tmpdat )
-!  DEALLOCATE( tmperr )
-!  DEALLOCATE( tmptyp )
-!  DEALLOCATE( tmpdif )
-!!  DEALLOCATE( tmpi )
-!!  DEALLOCATE( tmpj )
-!!  DEALLOCATE( tmpk )
-!  DEALLOCATE( tmpdep )
-!  DEALLOCATE( tmphdxf )
-!  DEALLOCATE( tmpqc )
+!!$OMP END PARALLEL DO
+!  DEALLOCATE(tmpqc0)
+
+!  nn = 0
+!  DO n=1,nobs
+!    IF(tmpqc(n) >= 1) nn = nn+1
+!  END DO
+!  WRITE(6,'(I10,A)') nn,' OBSERVATIONS TO BE ASSIMILATED'
+
+!!  do il = 1, pp_ob_nlev                            ! GYL, PRECIP assimilation
+!!    write (*, '(A,10I6)') 'STAT:', pp_ntotal(:,il) ! GYL
+!!  end do                                           ! GYL
+
+!  WRITE(6,'(A)') 'OBSERVATIONAL DEPARTURE STATISTICS:'
+!  CALL monit_dep(nobs,tmpelm,tmpdep,tmpqc,1)
+!!
+!! temporal observation localization
+!!
+!!  DO n=1,nobs
+!!    tmperr(n) = tmperr(n) * exp(0.25d0 * (tmpdif(n) / sigma_obst)**2)
+!!  END DO
+!!
+!! SELECT OBS IN THE NODE
+!!
+!  nn = 0
+!  DO n=1,nobs
+!    IF(tmpqc(n) <= 0) CYCLE
+!    nn = nn+1
+!    tmpelm(nn) = tmpelm(n)
+!    tmplon(nn) = tmplon(n)
+!    tmplat(nn) = tmplat(n)
+!    tmplev(nn) = tmplev(n)
+!    tmpdat(nn) = tmpdat(n)
+!    tmperr(nn) = tmperr(n)
+!    tmptyp(nn) = tmptyp(n)
+!    tmpdif(nn) = tmpdif(n)
+!!    tmpi(nn) = tmpi(n)
+!!    tmpj(nn) = tmpj(n)
+!!    tmpk(nn) = tmpk(n)
+!    tmpdep(nn) = tmpdep(n)
+!    tmphdxf(nn,:) = tmphdxf(n,:)
+!    tmpqc(nn) = tmpqc(n)
+!  END DO
+!  nobs = nn
+!  WRITE(6,'(I10,A,I3.3)') nobs,' OBSERVATIONS TO BE ASSIMILATED IN MYRANK ',myrank
+!!!
+!!! SORT
+!!!
+!!  ALLOCATE( tmp2elm(nobs) )
+!!  ALLOCATE( tmp2lon(nobs) )
+!!  ALLOCATE( tmp2lat(nobs) )
+!!  ALLOCATE( tmp2lev(nobs) )
+!!  ALLOCATE( tmp2dat(nobs) )
+!!  ALLOCATE( tmp2err(nobs) )
+!!  ALLOCATE( tmp2typ(nobs) )
+!!  ALLOCATE( tmp2dif(nobs) )
+!!!  ALLOCATE( tmp2i(nobs) )
+!!!  ALLOCATE( tmp2j(nobs) )
+!!!  ALLOCATE( tmp2k(nobs) )
+!!  ALLOCATE( tmp2dep(nobs) )
+!!  ALLOCATE( tmp2hdxf(nobs,nbv) )
+!!  ALLOCATE( tmp2qc(nobs) )
+!!  ALLOCATE( obselm(nobs) )
+!!  ALLOCATE( obslon(nobs) )
+!!  ALLOCATE( obslat(nobs) )
+!!  ALLOCATE( obslev(nobs) )
+!!  ALLOCATE( obsdat(nobs) )
+!!  ALLOCATE( obserr(nobs) )
+!!  ALLOCATE( obstyp(nobs) )
+!!  ALLOCATE( obsdif(nobs) )
+!!!  ALLOCATE( obsi(nobs) )
+!!!  ALLOCATE( obsj(nobs) )
+!!!  ALLOCATE( obsk(nobs) )
+!!  ALLOCATE( obsdep(nobs) )
+!!  ALLOCATE( obshdxf(nobs,nbv) )
+!!  ALLOCATE( obsqc(nobs) )
+!!  nobsgrd = 0
+!!  nj = 0
+!!!$OMP PARALLEL PRIVATE(i,j,n,nn)
+!!!$OMP DO SCHEDULE(DYNAMIC)
+!!  DO j=1,nlat-1
+!!    DO n=1,nobs
+!!      IF(tmplat(n) < lat(j) .OR. lat(j+1) <= tmplat(n)) CYCLE
+!!      nj(j) = nj(j) + 1
+!!    END DO
+!!  END DO
+!!!$OMP END DO
+!!!$OMP DO SCHEDULE(DYNAMIC)
+!!  DO j=1,nlat-1
+!!    njs(j) = SUM(nj(0:j-1))
+!!  END DO
+!!!$OMP END DO
+!!!$OMP DO SCHEDULE(DYNAMIC)
+!!  DO j=1,nlat-1
+!!    nn = 0
+!!    DO n=1,nobs
+!!      IF(tmplat(n) < lat(j) .OR. lat(j+1) <= tmplat(n)) CYCLE
+!!      nn = nn + 1
+!!      tmp2elm(njs(j)+nn) = tmpelm(n)
+!!      tmp2lon(njs(j)+nn) = tmplon(n)
+!!      tmp2lat(njs(j)+nn) = tmplat(n)
+!!      tmp2lev(njs(j)+nn) = tmplev(n)
+!!      tmp2dat(njs(j)+nn) = tmpdat(n)
+!!      tmp2err(njs(j)+nn) = tmperr(n)
+!!      tmp2typ(njs(j)+nn) = tmptyp(n)
+!!      tmp2dif(njs(j)+nn) = tmpdif(n)
+!!!      tmp2i(njs(j)+nn) = tmpi(n)
+!!!      tmp2j(njs(j)+nn) = tmpj(n)
+!!!      tmp2k(njs(j)+nn) = tmpk(n)
+!!      tmp2dep(njs(j)+nn) = tmpdep(n)
+!!      tmp2hdxf(njs(j)+nn,:) = tmphdxf(n,:)
+!!      tmp2qc(njs(j)+nn) = tmpqc(n)
+!!    END DO
+!!  END DO
+!!!$OMP END DO
+!!!$OMP DO SCHEDULE(DYNAMIC)
+!!  DO j=1,nlat-1
+!!    IF(nj(j) == 0) THEN
+!!      nobsgrd(:,j) = njs(j)
+!!      CYCLE
+!!    END IF
+!!    nn = 0
+!!    DO i=1,nlon
+!!      DO n=njs(j)+1,njs(j)+nj(j)
+!!        IF(i < nlon) THEN
+!!          IF(tmp2lon(n) < lon(i) .OR. lon(i+1) <= tmp2lon(n)) CYCLE
+!!        ELSE
+!!          IF(tmp2lon(n) < lon(nlon) .OR. 360.0d0 <= tmp2lon(n)) CYCLE
+!!        END IF
+!!        nn = nn + 1
+!!        obselm(njs(j)+nn) = tmp2elm(n)
+!!        obslon(njs(j)+nn) = tmp2lon(n)
+!!        obslat(njs(j)+nn) = tmp2lat(n)
+!!        obslev(njs(j)+nn) = tmp2lev(n)
+!!        obsdat(njs(j)+nn) = tmp2dat(n)
+!!        obserr(njs(j)+nn) = tmp2err(n)
+!!        obstyp(njs(j)+nn) = tmp2typ(n)
+!!        obsdif(njs(j)+nn) = tmp2dif(n)
+!!!        obsi(njs(j)+nn) = tmp2i(n)
+!!!        obsj(njs(j)+nn) = tmp2j(n)
+!!!        obsk(njs(j)+nn) = tmp2k(n)
+!!        obsdep(njs(j)+nn) = tmp2dep(n)
+!!        obshdxf(njs(j)+nn,:) = tmp2hdxf(n,:)
+!!        obsqc(njs(j)+nn) = tmp2qc(n)
+!!      END DO
+!!      nobsgrd(i,j) = njs(j) + nn
+!!    END DO
+!!    IF(nn /= nj(j)) THEN
+!!!$OMP CRITICAL
+!!      WRITE(6,'(A,2I)') 'OBS DATA SORT ERROR: ',nn,nj(j)
+!!      WRITE(6,'(F6.2,A,F6.2)') lat(j),'< LAT <',lat(j+1)
+!!      WRITE(6,'(F6.2,A,F6.2)') MINVAL(tmp2lat(njs(j)+1:njs(j)+nj(j))),'< OBSLAT <',MAXVAL(tmp2lat(njs(j)+1:njs(j)+nj(j)))
+!!!$OMP END CRITICAL
+!!    END IF
+!!  END DO
+!!!$OMP END DO
+!!!$OMP END PARALLEL
+!!  DEALLOCATE( tmp2elm )
+!!  DEALLOCATE( tmp2lon )
+!!  DEALLOCATE( tmp2lat )
+!!  DEALLOCATE( tmp2lev )
+!!  DEALLOCATE( tmp2dat )
+!!  DEALLOCATE( tmp2err )
+!!  DEALLOCATE( tmp2typ )
+!!  DEALLOCATE( tmp2dif )
+!!!  DEALLOCATE( tmp2i )
+!!!  DEALLOCATE( tmp2j )
+!!!  DEALLOCATE( tmp2k )
+!!  DEALLOCATE( tmp2dep )
+!!  DEALLOCATE( tmp2hdxf )
+!!  DEALLOCATE( tmp2qc )
+!!  DEALLOCATE( tmpelm )
+!!  DEALLOCATE( tmplon )
+!!  DEALLOCATE( tmplat )
+!!  DEALLOCATE( tmplev )
+!!  DEALLOCATE( tmpdat )
+!!  DEALLOCATE( tmperr )
+!!  DEALLOCATE( tmptyp )
+!!  DEALLOCATE( tmpdif )
+!!!  DEALLOCATE( tmpi )
+!!!  DEALLOCATE( tmpj )
+!!!  DEALLOCATE( tmpk )
+!!  DEALLOCATE( tmpdep )
+!!  DEALLOCATE( tmphdxf )
+!!  DEALLOCATE( tmpqc )
 
   RETURN
 END SUBROUTINE set_letkf_obs
