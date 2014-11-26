@@ -48,7 +48,7 @@ MODULE obsope_tools
   REAL(r_size),PARAMETER :: slotint=60.0d0 ! time interval between slots in second
 
   CHARACTER(7) :: obsfile='obs.dat' !IN
-  CHARACTER(22) :: obsvalfile='obsval.0000.000000.dat' !OUT
+  CHARACTER(21) :: obsdafile='obsda.0000.000000.dat' !OUT
 
 
 CONTAINS
@@ -110,7 +110,7 @@ SUBROUTINE obsope_cal(obs)
   IMPLICIT NONE
 
   TYPE(obs_info),INTENT(IN) :: obs
-  type(obs_ensval) :: obsval
+  type(obs_da_value) :: obsda
   REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
@@ -125,8 +125,8 @@ SUBROUTINE obsope_cal(obs)
 
 !  call set_mpi_along_domains
 
-  obsval%nobs = obs%nobs
-  call obs_ensval_allocate(obsval,1) ! only use 'one member'
+  obsda%nobs = obs%nobs
+  call obs_da_value_allocate(obsda,0)
 
   allocate ( v3dg (nlevhalo,nlonhalo,nlathalo,nv3dd) )
   allocate ( v2dg (nlonhalo,nlathalo,nv2dd) )
@@ -163,20 +163,20 @@ SUBROUTINE obsope_cal(obs)
             if (PRC_myrank == proc) then
               nproc = nproc + 1
               nprocslot = nprocslot + 1
-              obsval%idx(nproc) = n
-              obsval%ri(nproc) = rig
-              obsval%rj(nproc) = rjg
+              obsda%idx(nproc) = n
+              obsda%ri(nproc) = rig
+              obsda%rj(nproc) = rjg
 
               call phys2ijk(v3dg(:,:,:,iv3dd_p),obs%elm(n),ri,rj,obs%lev(n),rk)
 
               if (rk == -1.0d0) then
-                obsval%qc(nproc) = iqc_out_vhi
+                obsda%qc(nproc) = iqc_out_vhi
               else if (rk == -2.0d0) then
-                obsval%qc(nproc) = iqc_out_vlo
+                obsda%qc(nproc) = iqc_out_vlo
               else if (rk == -3.0d0) then
-                obsval%qc(nproc) = iqc_out_h
+                obsda%qc(nproc) = iqc_out_h
               else
-                call Trans_XtoY(obs%elm(n),ri,rj,rk,v3dg,v2dg,obsval%val(nproc,1),obsval%qc(nproc))
+                call Trans_XtoY(obs%elm(n),ri,rj,rk,v3dg,v2dg,obsda%val(nproc),obsda%qc(nproc))
               end if
 
             end if ! [ PRC_myrank == proc ]
@@ -204,15 +204,15 @@ SUBROUTINE obsope_cal(obs)
 
       end do ! [ islot = 1, SLOT_NUM ]
 
-      obsval%nobs = nproc
+      obsda%nobs = nproc
 
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' finishes processing member ', &
             im, ', subdomain id #', proc2mem(2,it,myrank+1)
       write (6,'(A,I8,A)') ' -- ', nproc, ' observations found'
 
-      write (obsvalfile(8:11),'(I4.4)') im
-      write (obsvalfile(13:18),'(I6.6)') proc2mem(2,it,myrank+1)
-      call write_obsval(obsvalfile,obsval,1)
+      write (obsdafile(7:10),'(I4.4)') im
+      write (obsdafile(12:17),'(I6.6)') proc2mem(2,it,myrank+1)
+      call write_obs_da(obsdafile,obsda,0)
 
     end if
 

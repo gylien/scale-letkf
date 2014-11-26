@@ -90,16 +90,17 @@ MODULE common_obs_scale
     REAL(r_size),ALLOCATABLE :: dif(:)
   END TYPE obs_info
 
-  TYPE obs_ensval
+  TYPE obs_da_value
     INTEGER :: nobs = 0
 !    LOGICAL :: sorted = .false.
     INTEGER,ALLOCATABLE :: idx(:)
 !    INTEGER,ALLOCATABLE :: nobsgrd(:,:)
-    REAL(r_size),ALLOCATABLE :: val(:,:)
+    REAL(r_size),ALLOCATABLE :: val(:)
+    REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
     REAL(r_size),ALLOCATABLE :: ri(:)
     REAL(r_size),ALLOCATABLE :: rj(:)
-  END TYPE obs_ensval
+  END TYPE obs_da_value
 
 
 
@@ -115,6 +116,7 @@ MODULE common_obs_scale
 
 
   INTEGER,PARAMETER :: iqc_good=0
+  INTEGER,PARAMETER :: iqc_gross_err=5
   INTEGER,PARAMETER :: iqc_ps_ter=10
   INTEGER,PARAMETER :: iqc_out_vhi=20
   INTEGER,PARAMETER :: iqc_out_vlo=21
@@ -720,14 +722,14 @@ SUBROUTINE obs_info_allocate(obs)
   ALLOCATE( obs%typ (obs%nobs) )
   ALLOCATE( obs%dif (obs%nobs) )
 
-!  obs%elm = 0
-!  obs%lon = 0.0d0
-!  obs%lat = 0.0d0
-!  obs%lev = 0.0d0
-!  obs%dat = 0.0d0
-!  obs%err = 0.0d0
-!  obs%typ = 0
-!  obs%dif = 0.0d0
+  obs%elm = 0
+  obs%lon = 0.0d0
+  obs%lat = 0.0d0
+  obs%lev = 0.0d0
+  obs%dat = 0.0d0
+  obs%err = 0.0d0
+  obs%typ = 0
+  obs%dif = 0.0d0
 
   RETURN
 END SUBROUTINE obs_info_allocate
@@ -752,18 +754,18 @@ END SUBROUTINE obs_info_deallocate
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
-SUBROUTINE obs_ensval_allocate(obs,member)
+SUBROUTINE obs_da_value_allocate(obs,member)
   IMPLICIT NONE
-  TYPE(obs_ensval),INTENT(INOUT) :: obs
+  TYPE(obs_da_value),INTENT(INOUT) :: obs
   INTEGER,INTENT(IN) :: member
 
-  call obs_ensval_deallocate(obs)
+  call obs_da_value_deallocate(obs)
 
-  ALLOCATE( obs%idx (obs%nobs) )
-  ALLOCATE( obs%val (obs%nobs,member) )
-  ALLOCATE( obs%qc  (obs%nobs) )
-  ALLOCATE( obs%ri  (obs%nobs) )
-  ALLOCATE( obs%rj  (obs%nobs) )
+  ALLOCATE( obs%idx    (obs%nobs) )
+  ALLOCATE( obs%val    (obs%nobs) )
+  ALLOCATE( obs%qc     (obs%nobs) )
+  ALLOCATE( obs%ri     (obs%nobs) )
+  ALLOCATE( obs%rj     (obs%nobs) )
 
   obs%idx = 0
   obs%val = 0.0d0
@@ -771,24 +773,30 @@ SUBROUTINE obs_ensval_allocate(obs,member)
   obs%ri = 0.0d0
   obs%rj = 0.0d0
 
+  if (member > 0) then
+    ALLOCATE( obs%ensval (obs%nobs,member) )
+    obs%ensval = 0.0d0
+  end if
+
   RETURN
-END SUBROUTINE obs_ensval_allocate
+END SUBROUTINE obs_da_value_allocate
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
-SUBROUTINE obs_ensval_deallocate(obs)
+SUBROUTINE obs_da_value_deallocate(obs)
   IMPLICIT NONE
-  TYPE(obs_ensval),INTENT(INOUT) :: obs
+  TYPE(obs_da_value),INTENT(INOUT) :: obs
 
   IF(ALLOCATED(obs%idx    )) DEALLOCATE(obs%idx    )
 !  IF(ALLOCATED(obs%nobsgrd)) DEALLOCATE(obs%nobsgrd)
   IF(ALLOCATED(obs%val    )) DEALLOCATE(obs%val    )
+  IF(ALLOCATED(obs%ensval )) DEALLOCATE(obs%ensval )
   IF(ALLOCATED(obs%qc     )) DEALLOCATE(obs%qc     )
   IF(ALLOCATED(obs%ri     )) DEALLOCATE(obs%ri     )
   IF(ALLOCATED(obs%rj     )) DEALLOCATE(obs%rj     )
 
   RETURN
-END SUBROUTINE obs_ensval_deallocate
+END SUBROUTINE obs_da_value_deallocate
 !-----------------------------------------------------------------------
 ! Basic modules for observation input
 !-----------------------------------------------------------------------
@@ -959,37 +967,49 @@ END SUBROUTINE write_obs
 ! check = .false.: no check, overwrite anyway
 !         .true.:  check, stop if inconsistency occurs, use maximum qc
 !
-SUBROUTINE read_obsval(cfile,obs,im,check)
+SUBROUTINE read_obs_da(cfile,obs,im,check)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
-  TYPE(obs_ensval),INTENT(INOUT) :: obs
+  TYPE(obs_da_value),INTENT(INOUT) :: obs
   INTEGER,INTENT(IN) :: im
   LOGICAL,INTENT(IN) :: check
   REAL(r_sngl) :: wk(5)
   INTEGER :: n,iunit
 
-!  call obs_ensval_allocate(obs)
+!  call obs_da_value_allocate(obs)
 
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   DO n=1,obs%nobs
     READ(iunit) wk
     if (check .and. obs%idx(n) /= NINT(wk(1))) then
-      write (6,'(A)') 'error: obsval%idx are inconsistent among the ensemble'
+      write (6,'(A)') 'error: obs_da_value%idx are inconsistent among the ensemble'
       stop
     end if
     obs%idx(n) = NINT(wk(1))  !!!!!! will overflow......
-    obs%val(n,im) = REAL(wk(2),r_size)
+    if (im == 0) then
+      obs%val(n) = REAL(wk(2),r_size)
+    else
+      obs%ensval(n,im) = REAL(wk(2),r_size)
+    end if
+
+
+if (abs(wk(2)) > 1.0d6)then
+ print *,'$$$$$$', wk(2), NINT(wk(3))
+stop
+end if
+
+
     if ((.not. check) .or. (check .and. obs%qc(n) < NINT(wk(3)))) then ! choose the maximum qc value if check = .true.
       obs%qc(n) = NINT(wk(3))
     end if
     if (check .and. obs%ri(n) /= REAL(wk(4),r_size)) then
-      write (6,'(A)') 'error: obsval%ri are inconsistent among the ensemble'
+      write (6,'(A)') 'error: obs_da_value%ri are inconsistent among the ensemble'
       stop
     end if
     obs%ri(n) = REAL(wk(4),r_size)
     if (check .and. obs%rj(n) /= REAL(wk(5),r_size)) then
-      write (6,'(A)') 'error: obsval%rj are inconsistent among the ensemble'
+      write (6,'(A)') 'error: obs_da_value%rj are inconsistent among the ensemble'
       stop
     end if
     obs%rj(n) = REAL(wk(5),r_size)
@@ -997,12 +1017,12 @@ SUBROUTINE read_obsval(cfile,obs,im,check)
   CLOSE(iunit)
 
   RETURN
-END SUBROUTINE read_obsval
+END SUBROUTINE read_obs_da
 
-SUBROUTINE write_obsval(cfile,obs,im,append)
+SUBROUTINE write_obs_da(cfile,obs,im,append)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
-  TYPE(obs_ensval),INTENT(IN) :: obs
+  TYPE(obs_da_value),INTENT(IN) :: obs
   INTEGER,INTENT(IN) :: im
   INTEGER,INTENT(IN),OPTIONAL :: append
   REAL(r_sngl) :: wk(5)
@@ -1016,8 +1036,18 @@ SUBROUTINE write_obsval(cfile,obs,im,append)
   END IF
   DO n=1,obs%nobs
     wk(1) = REAL(obs%idx(n),r_sngl)  !!!!!! will overflow......
-    wk(2) = REAL(obs%val(n,im),r_sngl)
+    if (im == 0) then
+      wk(2) = REAL(obs%val(n),r_sngl)
+    else
+      wk(2) = REAL(obs%ensval(n,im),r_sngl)
+    end if
     wk(3) = REAL(obs%qc(n),r_sngl)
+
+if (abs(wk(2)) > 1.0d6)then
+ print *,'$$$$$$', wk(2)
+stop
+end if
+
     wk(4) = REAL(obs%ri(n),r_sngl)
     wk(5) = REAL(obs%rj(n),r_sngl)
     WRITE(iunit) wk
@@ -1025,7 +1055,7 @@ SUBROUTINE write_obsval(cfile,obs,im,append)
   CLOSE(iunit)
 
   RETURN
-END SUBROUTINE write_obsval
+END SUBROUTINE write_obs_da
 
 !SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,ohx,oqc)
 !  IMPLICIT NONE

@@ -61,7 +61,7 @@ MODULE letkf_obs
 !  INTEGER,SAVE :: nobsgrd(nlon,nlat)
 
   type(obs_info),save :: obs
-  type(obs_ensval),save :: obsval
+  type(obs_da_value),save :: obsda
 
 
 !-----------------------------------------------------------------------
@@ -73,7 +73,7 @@ MODULE letkf_obs
   REAL(r_size),PARAMETER :: slotint=60.0d0 ! time interval between slots in second
 
   CHARACTER(7) :: obsfile='obs.dat' !IN
-  CHARACTER(22) :: obsvalfile='obsval.0000.000000.dat' !IN
+  CHARACTER(21) :: obsdafile='obsda.0000.000000.dat' !IN
 
 CONTAINS
 !-----------------------------------------------------------------------
@@ -226,27 +226,27 @@ SUBROUTINE set_letkf_obs
 
   !      nproc = 0
 
-  !      obsval%nobs = nproc
+  !      obsda%nobs = nproc
 
   !      write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' finishes processing member ', &
   !            im, ', subdomain id #', proc2mem(2,it,myrank+1)
   !      write (6,'(A,I8,A)') ' -- ', nproc, ' observations found'
 
-        write (obsvalfile(8:11),'(I4.4)') im
-        write (obsvalfile(13:18),'(I6.6)') proc2mem(2,it,myrank+1)
+        write (obsdafile(7:10),'(I4.4)') im
+        write (obsdafile(12:17),'(I6.6)') proc2mem(2,it,myrank+1)
 
 
-        CALL get_nobs(obsvalfile,5,obsval%nobs)
-        WRITE(6,'(A,I9,A)') 'TOTAL: ', obsval%nobs, ' OBSERVATIONS'
+        CALL get_nobs(obsdafile,5,obsda%nobs)
+        WRITE(6,'(A,I9,A)') 'TOTAL: ', obsda%nobs, ' OBSERVATIONS'
 
-        CALL obs_ensval_allocate(obsval,nbv)
+        CALL obs_da_value_allocate(obsda,nbv)
 
 
-        call read_obsval(obsvalfile,obsval,im,check)
+        call read_obs_da(obsdafile,obsda,im,check)
         check = .true.
 
-!if(myrank==2) obsval%qc(4) = 17
-!if(myrank==6) obsval%qc(4) = 9
+!if(myrank==2) obsda%qc(4) = 17
+!if(myrank==6) obsda%qc(4) = 9
 
 
       end if
@@ -255,34 +255,33 @@ SUBROUTINE set_letkf_obs
 
     if (nprocs_e > nbv) then
       CALL MPI_BARRIER(MPI_COMM_e,ierr)
-      call MPI_BCAST(obsval%nobs, 1, MPI_INTEGER, 0, MPI_COMM_e, ierr)
+      call MPI_BCAST(obsda%nobs, 1, MPI_INTEGER, 0, MPI_COMM_e, ierr)
+!    print *, myrank, obsda%nobs
+
+      if (myrank_e >= nbv) then
+        CALL obs_da_value_allocate(obsda,nbv)
+      end if
     end if
 
-!    print *, myrank, obsval%nobs
-    if (myrank_e >= nbv) then
-      CALL obs_ensval_allocate(obsval,nbv)
-    end if
 
-
-!    allocate (bufr(obsval%nobs))
+!    allocate (bufr(obsda%nobs))
 !    bufr = 0.0d0
 !    DO im = 1, nbv
 !      CALL MPI_BARRIER(MPI_COMM_e,ierr)
-!      CALL MPI_ALLREDUCE(obsval%val(:,im),bufr,obsval%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
-!      obsval%val(:,im) = bufr
+!      CALL MPI_ALLREDUCE(obsda%ensval(:,im),bufr,obsda%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
+!      obsda%ensval(:,im) = bufr
 !    ENDDO
-
-    allocate (bufr(obsval%nobs,nbv))
+    allocate (bufr(obsda%nobs,nbv))
     bufr = 0.0d0
     CALL MPI_BARRIER(MPI_COMM_e,ierr)
-    CALL MPI_ALLREDUCE(obsval%val,bufr,obsval%nobs*nbv,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
-    obsval%val = bufr
+    CALL MPI_ALLREDUCE(obsda%ensval,bufr,obsda%nobs*nbv,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
+    obsda%ensval = bufr
 
-    allocate (bufri(obsval%nobs))
+    allocate (bufri(obsda%nobs))
     bufri = 0
     CALL MPI_BARRIER(MPI_COMM_e,ierr)
-    CALL MPI_ALLREDUCE(obsval%qc,bufri,obsval%nobs,MPI_INTEGER,MPI_MAX,MPI_COMM_e,ierr)
-    obsval%qc = bufri
+    CALL MPI_ALLREDUCE(obsda%qc,bufri,obsda%nobs,MPI_INTEGER,MPI_MAX,MPI_COMM_e,ierr)
+    obsda%qc = bufri
 
 
 
@@ -290,18 +289,15 @@ SUBROUTINE set_letkf_obs
 
 !if(myrank==10) then
 !    print *, '######======'
-!    print *, obsval%val(50,:)
-!    print *, obsval%qc(:)
+!do n = 1, obsda%nobs
+!if (maxval(abs(obsda%ensval(n,:))) > 1.0d6) then
+!    print *, n, obsda%qc(n)
+!    print *, obsda%ensval(n,:)
+!    print *, ' '
 !end if
-
-  end if ! [ scale_IO_group_n >= 1 ]
-
-
-
-
-
-
-
+!end do
+!end if
+!stop
 
 !!                                                                               ! GYL, PRECIP assimilation
 !! reading precipitation transformation definition and mask                      ! GYL
@@ -315,10 +311,7 @@ SUBROUTINE set_letkf_obs
 !  call read_ppmask(maskfile, ppmask)                                            ! GYL
 !  pp_ntotal = 0                                                                 ! GYL
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i)
-!  DO n=1,nobs
-!    tmpqc(n) = MINVAL(tmpqc0(n,:))
-!    IF(tmpqc(n) /= 1) CYCLE
+
 
 
 !!!###### PRECIP assimilation ######
@@ -416,22 +409,27 @@ SUBROUTINE set_letkf_obs
 !!    end if ! [ tmpelm(n) == id_rain_obs ]
 !!!###### end PRECIP assimilation ######
 
-
-!    tmpdep(n) = tmphdxf(n,1)
-!    DO i=2,nbv
-!      tmpdep(n) = tmpdep(n) + tmphdxf(n,i)
-!    END DO
-!    tmpdep(n) = tmpdep(n) / REAL(nbv,r_size)
-!    DO i=1,nbv
-!      tmphdxf(n,i) = tmphdxf(n,i) - tmpdep(n) ! Hdx
-!    END DO
-!    tmpdep(n) = tmpdat(n) - tmpdep(n) ! y-Hx
-!    IF(ABS(tmpdep(n)) > gross_error*tmperr(n)) THEN !gross error
-!      tmpqc(n) = 0
-!    END IF
-!  END DO
+!!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i)
+    do n = 1, obsda%nobs
+      IF(obsda%qc(n) > 0) CYCLE
+      obsda%val(n) = obsda%ensval(n,1)
+      DO i=2,nbv
+        obsda%val(n) = obsda%val(n) + obsda%ensval(n,i)
+      END DO
+      obsda%val(n) = obsda%val(n) / REAL(nbv,r_size)
+      DO i=1,nbv
+        obsda%ensval(n,i) = obsda%ensval(n,i) - obsda%val(n) ! Hdx
+      END DO
+      obsda%val(n) = obs%dat(obsda%idx(n)) - obsda%val(n) ! y-Hx
+!if (myrank == 0) print *, obsda%idx(n), obs%elm(obsda%idx(n)), obs%dat(obsda%idx(n)), obsda%val(n), obsda%ensval(n,:)
+      IF(ABS(obsda%val(n)) > gross_error * obs%err(obsda%idx(n))) THEN !gross error
+        obsda%qc(n) = iqc_gross_err
+      END IF
+    END DO
 !!$OMP END PARALLEL DO
-!  DEALLOCATE(tmpqc0)
+
+  end if ! [ scale_IO_group_n >= 1 ]
+
 
 !  nn = 0
 !  DO n=1,nobs

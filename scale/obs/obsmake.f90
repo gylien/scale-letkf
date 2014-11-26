@@ -50,7 +50,7 @@ PROGRAM obsmake
     stop
   end if
 
-  call set_common_mpi_scale(1,NNODES,PPN,MEM_NODES,MEM_NP)
+  CALL set_mem_node_proc(1,NNODES,PPN,MEM_NODES,MEM_NP)
 
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00

@@ -32,7 +32,7 @@ PROGRAM letkf
 
 
 !  TYPE(obs_info) :: obs
-!  TYPE(obs_ensval) :: obsval
+!  TYPE(obs_da_value) :: obsval
 
 
 !-----------------------------------------------------------------------
@@ -42,9 +42,9 @@ PROGRAM letkf
   CALL initialize_mpi
 !
   WRITE(stdoutf(6:11), '(I6.6)') myrank
-!  WRITE(6,'(3A,I3.3)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
-!  OPEN(6,FILE=stdoutf)
-!  WRITE(6,'(A,I3.3,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
+  WRITE(6,'(3A,I3.3)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
+  OPEN(6,FILE=stdoutf)
+  WRITE(6,'(A,I3.3,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
 !
   WRITE(6,'(A)') '============================================='
   WRITE(6,'(A)') '  LOCAL ENSEMBLE TRANSFORM KALMAN FILTERING  '
@@ -105,10 +105,6 @@ PROGRAM letkf
   CALL obs_info_allocate(obs)
 
   CALL read_obs(obsfile,obs)
-
-
-!  CALL read_obsval(obsfile,obs)
-
 
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
