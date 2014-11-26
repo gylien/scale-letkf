@@ -58,10 +58,13 @@ MODULE letkf_obs
 !  REAL(r_size),ALLOCATABLE,SAVE :: obsdep(:)
 !  REAL(r_size),ALLOCATABLE,SAVE :: obshdxf(:,:)
 !  INTEGER,ALLOCATABLE,SAVE :: obsqc(:) ! GYL: QC values in output diag files (could be any value >= 1)
-!  INTEGER,SAVE :: nobsgrd(nlon,nlat)
+
+!  INTEGER,SAVE :: nobsgrd(0:nlon,1:nlat) ! global count
+  INTEGER,allocatable,SAVE :: nobsgrd(:,:,:)
 
   type(obs_info),save :: obs
   type(obs_da_value),save :: obsda
+  type(obs_da_value),save :: obsda2  ! sorted
 
 
 !-----------------------------------------------------------------------
@@ -80,6 +83,11 @@ CONTAINS
 ! Initialize
 !-----------------------------------------------------------------------
 SUBROUTINE set_letkf_obs
+  use scale_grid_index, only: &
+    IHALO,JHALO
+  use scale_process, only: &
+    MPI_COMM_u, &
+    PRC_myrank
   IMPLICIT NONE
   REAL(r_size),PARAMETER :: gross_error=5.0d0
   REAL(r_size) :: dlon1,dlon2,dlon,dlat
@@ -139,12 +147,15 @@ SUBROUTINE set_letkf_obs
 !  REAL(r_size),allocatable :: bufr(:)
   REAL(r_size),allocatable :: bufr(:,:)
   INTEGER,allocatable :: bufri(:)
+  INTEGER,allocatable :: bufri2(:,:,:)
 
 
   integer :: MPI_G_WORLD, MPI_G, MPI_COMM_e, nprocs_e, myrank_e
   integer :: n_mem,n_mempn
+  integer :: iproc,jproc
   integer,allocatable :: ranks(:)
 
+  integer,allocatable :: nnext(:,:)
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
@@ -264,35 +275,26 @@ SUBROUTINE set_letkf_obs
     end if
 
 
-!    allocate (bufr(obsda%nobs))
-!    bufr = 0.0d0
-!    DO im = 1, nbv
-!      CALL MPI_BARRIER(MPI_COMM_e,ierr)
-!      CALL MPI_ALLREDUCE(obsda%ensval(:,im),bufr,obsda%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
-!      obsda%ensval(:,im) = bufr
-!    ENDDO
-    allocate (bufr(obsda%nobs,nbv))
+    allocate (bufr(nbv,obsda%nobs))
     bufr = 0.0d0
     CALL MPI_BARRIER(MPI_COMM_e,ierr)
     CALL MPI_ALLREDUCE(obsda%ensval,bufr,obsda%nobs*nbv,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
     obsda%ensval = bufr
+    deallocate(bufr)
 
     allocate (bufri(obsda%nobs))
     bufri = 0
     CALL MPI_BARRIER(MPI_COMM_e,ierr)
     CALL MPI_ALLREDUCE(obsda%qc,bufri,obsda%nobs,MPI_INTEGER,MPI_MAX,MPI_COMM_e,ierr)
     obsda%qc = bufri
-
-
-
-    deallocate(bufr,bufri)
+    deallocate(bufri)
 
 !if(myrank==10) then
 !    print *, '######======'
 !do n = 1, obsda%nobs
-!if (maxval(abs(obsda%ensval(n,:))) > 1.0d6) then
+!if (maxval(abs(obsda%ensval(:,n))) > 1.0d6) then
 !    print *, n, obsda%qc(n)
-!    print *, obsda%ensval(n,:)
+!    print *, obsda%ensval(:,n)
 !    print *, ' '
 !end if
 !end do
@@ -412,37 +414,29 @@ SUBROUTINE set_letkf_obs
 !!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i)
     do n = 1, obsda%nobs
       IF(obsda%qc(n) > 0) CYCLE
-      obsda%val(n) = obsda%ensval(n,1)
+      obsda%val(n) = obsda%ensval(1,n)
       DO i=2,nbv
-        obsda%val(n) = obsda%val(n) + obsda%ensval(n,i)
+        obsda%val(n) = obsda%val(n) + obsda%ensval(i,n)
       END DO
       obsda%val(n) = obsda%val(n) / REAL(nbv,r_size)
       DO i=1,nbv
-        obsda%ensval(n,i) = obsda%ensval(n,i) - obsda%val(n) ! Hdx
+        obsda%ensval(i,n) = obsda%ensval(i,n) - obsda%val(n) ! Hdx
       END DO
       obsda%val(n) = obs%dat(obsda%idx(n)) - obsda%val(n) ! y-Hx
-!if (myrank == 0) print *, obsda%idx(n), obs%elm(obsda%idx(n)), obs%dat(obsda%idx(n)), obsda%val(n), obsda%ensval(n,:)
+!if (myrank == 0) print *, obsda%idx(n), obs%elm(obsda%idx(n)), obs%dat(obsda%idx(n)), obsda%val(n), obsda%ensval(:,n)
       IF(ABS(obsda%val(n)) > gross_error * obs%err(obsda%idx(n))) THEN !gross error
         obsda%qc(n) = iqc_gross_err
       END IF
     END DO
 !!$OMP END PARALLEL DO
 
-  end if ! [ scale_IO_group_n >= 1 ]
 
 
-!  nn = 0
-!  DO n=1,nobs
-!    IF(tmpqc(n) >= 1) nn = nn+1
-!  END DO
-!  WRITE(6,'(I10,A)') nn,' OBSERVATIONS TO BE ASSIMILATED'
 
-!!  do il = 1, pp_ob_nlev                            ! GYL, PRECIP assimilation
-!!    write (*, '(A,10I6)') 'STAT:', pp_ntotal(:,il) ! GYL
-!!  end do                                           ! GYL
 
 !  WRITE(6,'(A)') 'OBSERVATIONAL DEPARTURE STATISTICS:'
 !  CALL monit_dep(nobs,tmpelm,tmpdep,tmpqc,1)
+
 !!
 !! temporal observation localization
 !!
@@ -452,6 +446,7 @@ SUBROUTINE set_letkf_obs
 !!
 !! SELECT OBS IN THE NODE
 !!
+
 !  nn = 0
 !  DO n=1,nobs
 !    IF(tmpqc(n) <= 0) CYCLE
@@ -473,6 +468,104 @@ SUBROUTINE set_letkf_obs
 !  END DO
 !  nobs = nn
 !  WRITE(6,'(I10,A,I3.3)') nobs,' OBSERVATIONS TO BE ASSIMILATED IN MYRANK ',myrank
+
+
+
+
+    call set_scalelib
+
+
+! Sorting
+
+    obsda2%nobs = 0
+    allocate ( nobsgrd(0:nlonsub,1:nlatsub,0:MEM_NP-1) )
+    nobsgrd = 0
+    do n = 1, obsda%nobs
+      if (obsda%qc(n) == 0) then
+        obsda2%nobs = obsda2%nobs + 1
+        call rank_1d_2d(PRC_myrank, iproc, jproc)
+        i = ceiling(obsda%ri(n)-0.5) - IHALO - iproc * IMAX
+        j = ceiling(obsda%rj(n)-0.5) - JHALO - jproc * JMAX
+        nobsgrd(i,j,PRC_myrank) = nobsgrd(i,j,PRC_myrank) + 1
+      end if
+    end do
+
+    write (6,'(I10,A)') obsda2%nobs,' OBSERVATIONS TO BE ASSIMILATED'
+
+! regional count
+    do j = 1, nlatsub
+      if (j > 1) then
+        nobsgrd(0,j,PRC_myrank) = nobsgrd(nlonsub,j-1,PRC_myrank)
+      end if
+      do i = 1, nlonsub
+        nobsgrd(i,j,PRC_myrank) = nobsgrd(i-1,j,PRC_myrank) + nobsgrd(i,j,PRC_myrank)
+      end do
+    end do
+
+!do i = 0, MEM_NP-1
+!do j = 1, nlatsub
+!write (6,'(31I4)') nobsgrd(:,j,i)
+!end do
+!write (6,*)
+!end do
+
+!write (6, *) 'XXXXXX'
+
+! communication
+    allocate ( bufri2 (0:nlonsub,1:nlatsub,0:MEM_NP-1) )
+    call MPI_ALLREDUCE(nobsgrd,bufri2,(nlonsub+1)*nlatsub*MEM_NP,MPI_INTEGER,MPI_SUM,MPI_COMM_u,ierr)
+    nobsgrd(0:nlonsub,1:nlatsub,0:MEM_NP-1) = bufri2(0:nlonsub,1:nlatsub,0:MEM_NP-1)
+    deallocate ( bufri2 )
+
+!do i = 0, MEM_NP-1
+!do j = 1, nlatsub
+!write (6,'(31I4)') nobsgrd(:,j,i)
+!end do
+!write (6,*)
+!end do
+
+!! global count
+!    do j = 1, nlat
+!      if (j > 1) then
+!        nobsgrd(0,j) = nobsgrd(nlon,j-1)
+!      end if
+!      do i = 1, nlon
+!        nobsgrd(i,j) = nobsgrd(i-1,j) + nobsgrd(i,j)
+!      end do
+!    end do
+
+    allocate ( nnext (nlonsub,nlatsub) )
+    nnext(1:nlonsub,:) = nobsgrd(0:nlonsub-1,:,PRC_myrank) + 1
+    call obs_da_value_allocate(obsda2,nbv)
+    do n = 1, obsda%nobs
+      if (obsda%qc(n) == 0) then
+        call rank_1d_2d(PRC_myrank, iproc, jproc)
+        i = ceiling(obsda%ri(n)-0.5) - IHALO - iproc * IMAX
+        j = ceiling(obsda%rj(n)-0.5) - JHALO - jproc * JMAX
+
+        obsda2%idx(nnext(i,j)) = obsda%idx(n)
+        obsda2%val(nnext(i,j)) = obsda%val(n)
+        obsda2%ensval(:,nnext(i,j)) = obsda%ensval(:,n)
+        obsda2%qc(nnext(i,j)) = obsda%qc(n)
+        obsda2%ri(nnext(i,j)) = obsda%ri(n)
+        obsda2%rj(nnext(i,j)) = obsda%rj(n)
+
+        nnext(i,j) = nnext(i,j) + 1
+      end if
+    end do
+    deallocate (nnext)
+
+    call obs_da_value_deallocate(obsda)
+
+
+    call unset_scalelib
+
+
+  end if ! [ scale_IO_group_n >= 1 ]
+
+
+
+
 !!!
 !!! SORT
 !!!

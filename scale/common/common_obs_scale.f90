@@ -92,9 +92,7 @@ MODULE common_obs_scale
 
   TYPE obs_da_value
     INTEGER :: nobs = 0
-!    LOGICAL :: sorted = .false.
     INTEGER,ALLOCATABLE :: idx(:)
-!    INTEGER,ALLOCATABLE :: nobsgrd(:,:)
     REAL(r_size),ALLOCATABLE :: val(:)
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
@@ -105,12 +103,12 @@ MODULE common_obs_scale
 
 
 
-  TYPE obs_csort
-    INTEGER :: nobs = 0
-    LOGICAL :: sorted = .false.
-    INTEGER,ALLOCATABLE :: idx(:)
-    INTEGER,ALLOCATABLE :: nobsgrd(:,:)
-  END TYPE obs_csort
+!  TYPE obs_csort
+!    INTEGER :: nobs = 0
+!    LOGICAL :: sorted = .false.
+!    INTEGER,ALLOCATABLE :: idx(:)
+!    INTEGER,ALLOCATABLE :: nobsgrd(:,:)
+!  END TYPE obs_csort
 
 
 
@@ -434,61 +432,6 @@ SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
   RETURN
 END SUBROUTINE phys2ij
 !-----------------------------------------------------------------------
-!
-! proc = -1: outside the global domain
-!-----------------------------------------------------------------------
-SUBROUTINE ijproc(rig,rjg,ri,rj,proc)
-  use scale_grid_index, only: &
-      IMAX,JMAX, &
-      IHALO,JHALO, &
-      IA,JA                  ! [for validation]
-  use scale_process, only: &
-      PRC_NUM_X,PRC_NUM_Y, &
-      PRC_myrank             ! [for validation]
-  use scale_grid, only: &    ! [for validation]
-      GRID_CX, &             ! [for validation]
-      GRID_CY, &             ! [for validation]
-      GRID_CXG, &            ! [for validation]
-      GRID_CYG, &            ! [for validation]
-      DX, &                  ! [for validation]
-      DY                     ! [for validation]
-  IMPLICIT NONE
-  REAL(r_size),INTENT(IN) :: rig
-  REAL(r_size),INTENT(IN) :: rjg
-  REAL(r_size),INTENT(OUT) :: ri
-  REAL(r_size),INTENT(OUT) :: rj
-  integer,INTENT(OUT) :: proc
-  integer :: iproc, jproc
-
-  if (rig < real(1+IHALO,r_size) .or. rig > real(IMAX*PRC_NUM_X+IHALO,r_size) .or. &
-      rjg < real(1+JHALO,r_size) .or. rjg > real(JMAX*PRC_NUM_Y+JHALO,r_size)) then
-    ri = -1.0d0
-    rj = -1.0d0
-    proc = -1
-    return
-  end if
-
-  iproc = ceiling((rig-real(IHALO,r_size)-0.5d0) / real(IMAX,r_size))
-  jproc = ceiling((rjg-real(JHALO,r_size)-0.5d0) / real(JMAX,r_size))
-  ri = rig - (iproc-1) * IMAX
-  rj = rjg - (jproc-1) * JMAX
-  proc = (jproc-1) * PRC_NUM_X + iproc-1
-
-  if (PRC_myrank == proc) then                                                                                    ! [for validation]
-    if (rig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                      ! [for validation]
-        rig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                     ! [for validation]
-        rjg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &                                                      ! [for validation]
-        rjg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then                                                      ! [for validation]
-      write (6,'(A)') 'Error: Process assignment fails!'                                                          ! [for validation]
-      write (6,'(3F10.2)') rig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 ! [for validation]
-      write (6,'(3F10.2)') rjg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0 ! [for validation]
-      stop                                                                                                        ! [for validation]
-    end if                                                                                                        ! [for validation]
-  end if                                                                                                          ! [for validation]
-
-  RETURN
-END SUBROUTINE ijproc
-!-----------------------------------------------------------------------
 ! Interpolation
 !-----------------------------------------------------------------------
 SUBROUTINE itpl_2d(var,ri,rj,var5)
@@ -774,7 +717,7 @@ SUBROUTINE obs_da_value_allocate(obs,member)
   obs%rj = 0.0d0
 
   if (member > 0) then
-    ALLOCATE( obs%ensval (obs%nobs,member) )
+    ALLOCATE( obs%ensval (member,obs%nobs) )
     obs%ensval = 0.0d0
   end if
 
@@ -788,7 +731,6 @@ SUBROUTINE obs_da_value_deallocate(obs)
   TYPE(obs_da_value),INTENT(INOUT) :: obs
 
   IF(ALLOCATED(obs%idx    )) DEALLOCATE(obs%idx    )
-!  IF(ALLOCATED(obs%nobsgrd)) DEALLOCATE(obs%nobsgrd)
   IF(ALLOCATED(obs%val    )) DEALLOCATE(obs%val    )
   IF(ALLOCATED(obs%ensval )) DEALLOCATE(obs%ensval )
   IF(ALLOCATED(obs%qc     )) DEALLOCATE(obs%qc     )
@@ -990,16 +932,8 @@ SUBROUTINE read_obs_da(cfile,obs,im,check)
     if (im == 0) then
       obs%val(n) = REAL(wk(2),r_size)
     else
-      obs%ensval(n,im) = REAL(wk(2),r_size)
+      obs%ensval(im,n) = REAL(wk(2),r_size)
     end if
-
-
-if (abs(wk(2)) > 1.0d6)then
- print *,'$$$$$$', wk(2), NINT(wk(3))
-stop
-end if
-
-
     if ((.not. check) .or. (check .and. obs%qc(n) < NINT(wk(3)))) then ! choose the maximum qc value if check = .true.
       obs%qc(n) = NINT(wk(3))
     end if
@@ -1039,15 +973,9 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
     if (im == 0) then
       wk(2) = REAL(obs%val(n),r_sngl)
     else
-      wk(2) = REAL(obs%ensval(n,im),r_sngl)
+      wk(2) = REAL(obs%ensval(im,n),r_sngl)
     end if
     wk(3) = REAL(obs%qc(n),r_sngl)
-
-if (abs(wk(2)) > 1.0d6)then
- print *,'$$$$$$', wk(2)
-stop
-end if
-
     wk(4) = REAL(obs%ri(n),r_sngl)
     wk(5) = REAL(obs%rj(n),r_sngl)
     WRITE(iunit) wk

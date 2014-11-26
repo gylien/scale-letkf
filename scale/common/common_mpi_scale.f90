@@ -98,6 +98,82 @@ contains
 !end subroutine set_mpi_along_domains
 
 
+subroutine rank_1d_2d(proc, pi, pj)
+  use scale_process, only: PRC_2Drank
+  implicit none
+  integer, intent(in) :: proc
+  integer, intent(out) :: pi, pj
+
+  pi = PRC_2Drank(proc,1)
+  pj = PRC_2Drank(proc,2)
+end subroutine rank_1d_2d
+
+
+subroutine rank_2d_1d(pi, pj, proc)
+  use scale_process, only: PRC_NUM_X
+  implicit none
+  integer, intent(in) :: pi, pj
+  integer, intent(out) :: proc
+
+  proc = pj * PRC_NUM_X + pi
+end subroutine rank_2d_1d
+
+!-----------------------------------------------------------------------
+!
+! proc = -1: outside the global domain
+!-----------------------------------------------------------------------
+SUBROUTINE ijproc(rig,rjg,ri,rj,proc)
+  use scale_grid_index, only: &
+      IMAX,JMAX, &
+      IHALO,JHALO, &
+      IA,JA                  ! [for validation]
+  use scale_process, only: &
+      PRC_NUM_X,PRC_NUM_Y, &
+      PRC_myrank             ! [for validation]
+  use scale_grid, only: &    ! [for validation]
+      GRID_CX, &             ! [for validation]
+      GRID_CY, &             ! [for validation]
+      GRID_CXG, &            ! [for validation]
+      GRID_CYG, &            ! [for validation]
+      DX, &                  ! [for validation]
+      DY                     ! [for validation]
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: rig
+  REAL(r_size),INTENT(IN) :: rjg
+  REAL(r_size),INTENT(OUT) :: ri
+  REAL(r_size),INTENT(OUT) :: rj
+  integer,INTENT(OUT) :: proc
+  integer :: iproc, jproc
+
+  if (rig < real(1+IHALO,r_size) .or. rig > real(IMAX*PRC_NUM_X+IHALO,r_size) .or. &
+      rjg < real(1+JHALO,r_size) .or. rjg > real(JMAX*PRC_NUM_Y+JHALO,r_size)) then
+    ri = -1.0d0
+    rj = -1.0d0
+    proc = -1
+    return
+  end if
+
+  iproc = ceiling((rig-real(IHALO,r_size)-0.5d0) / real(IMAX,r_size)) - 1
+  jproc = ceiling((rjg-real(JHALO,r_size)-0.5d0) / real(JMAX,r_size)) - 1
+  ri = rig - iproc * IMAX
+  rj = rjg - jproc * JMAX
+  call rank_2d_1d(iproc,jproc,proc)
+
+  if (PRC_myrank == proc) then                                                                                    ! [for validation]
+    if (rig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                      ! [for validation]
+        rig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                     ! [for validation]
+        rjg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &                                                      ! [for validation]
+        rjg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then                                                      ! [for validation]
+      write (6,'(A)') 'Error: Process assignment fails!'                                                          ! [for validation]
+      write (6,'(3F10.2)') rig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 ! [for validation]
+      write (6,'(3F10.2)') rjg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0 ! [for validation]
+      stop                                                                                                        ! [for validation]
+    end if                                                                                                        ! [for validation]
+  end if                                                                                                          ! [for validation]
+
+  RETURN
+END SUBROUTINE ijproc
+
 !-----------------------------------------------------------------------
 ! set_common_mpi_scale
 !-----------------------------------------------------------------------
