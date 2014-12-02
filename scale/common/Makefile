@@ -2,7 +2,7 @@ include ../configure.user
 
 OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_letkf.o \
 	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
-          common_nml.o common_scalelib.o #common_precip.o
+          common_nml.o #common_scalelib.o #common_precip.o
 
 SCALE_INCS    = -I/data1/gylien/scale_ens/dc_utils \
           -I/data1/gylien/scale_ens/gtool \
@@ -48,8 +48,8 @@ common_mpi_scale.o:	common_mpi_scale.f90 common.o common_mpi.o common_scale.o co
 #	$(SFC) $(FOPTS) -c common_precip.f90
 common_nml.o:	common_nml.f90
 	$(FC) $(FOPTS) -c common_nml.f90 $(INCS) $(SCALE_INCS)
-common_scalelib.o:	common_scalelib.f90
-	$(FC) $(FOPTS) -c common_scalelib.f90 $(INCS) $(SCALE_INCS)
+#common_scalelib.o:	common_scalelib.f90
+#	$(FC) $(FOPTS) -c common_scalelib.f90 $(INCS) $(SCALE_INCS)
 
 enssize.o:	enssize.f90 common.o common_letkf.o
 	$(SFC) $(FOPTS) -c enssize.f90

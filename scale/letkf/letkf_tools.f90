@@ -16,7 +16,7 @@ MODULE letkf_tools
   USE common_mpi_scale
   USE common_letkf
 
-  use common_scalelib
+!  use common_scalelib
 
   use common_nml
 

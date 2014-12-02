@@ -16,7 +16,7 @@ MODULE obsope_tools
 
   use common_letkf, only: nbv
 
-  use common_scalelib
+!  use common_scalelib
 
   use common_nml
 
@@ -121,7 +121,7 @@ SUBROUTINE obsope_cal(obs)
 
 !-----------------------------------------------------------------------
 
-  call set_scalelib
+  call set_scalelib(MEM_NP, nitmax, nprocs, proc2mem)
 
 !  call set_mpi_along_domains
 
@@ -247,7 +247,7 @@ SUBROUTINE obsmake_cal(obs)
 
 !-----------------------------------------------------------------------
 
-  call set_scalelib
+  call set_scalelib(MEM_NP, nitmax, nprocs, proc2mem)
 
   allocate ( v3dg (nlevhalo,nlonhalo,nlathalo,nv3dd) )
   allocate ( v2dg (nlonhalo,nlathalo,nv2dd) )

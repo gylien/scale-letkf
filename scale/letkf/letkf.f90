@@ -87,11 +87,11 @@ PROGRAM letkf
     stop
   end if
 
-  CALL set_mem_node_proc(nbv+1,NNODES,PPN,MEM_NODES,MEM_NP)
+!
+!  CALL set_mem_node_proc(nbv+1,NNODES,PPN,MEM_NODES,MEM_NP)
+!
 
-!!!!!!
   CALL set_common_mpi_scale(nbv+1,NNODES,PPN,MEM_NODES,MEM_NP)
-!!!!!!
 
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
@@ -99,12 +99,20 @@ PROGRAM letkf
 
 !-----------------------------------------------------------------------
 
+!!!
+  if (scale_IO_group_n >= 1) then
+!!!
+
   CALL get_nobs(obsfile,8,obs%nobs)
   WRITE(6,'(A,I9,A)') 'TOTAL: ', obs%nobs, ' OBSERVATIONS'
 
   CALL obs_info_allocate(obs)
 
   CALL read_obs(obsfile,obs)
+
+!!!
+  end if
+!!!
 
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
@@ -121,6 +129,26 @@ PROGRAM letkf
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
   rtimer00=rtimer
+
+
+
+!  if (scale_IO_group_n >= 1) then
+!!  write (6,*) obsda%idx
+!!  write (6,*) obsda%val(3)
+!!  write (6,*) obsda%ensval(:,3)
+!!  write (6,*) obsda%qc(3)
+!!  write (6,*) obsda%ri(3)
+!!  write (6,*) obsda%rj(3)
+!!  write (6,*) obsda2%idx
+!!  write (6,*) obsda2%val(3)
+!!  write (6,*) obsda2%ensval(:,3)
+!!  write (6,*) obsda2%qc(3)
+!!  write (6,*) obsda2%ri(3)
+!!  write (6,*) obsda2%rj(3)
+!  write (6,*) obsda2%ri
+!  write (6,*) obsda2%rj
+!  end if
+
 
 !-----------------------------------------------------------------------
 ! First guess ensemble
@@ -178,6 +206,8 @@ PROGRAM letkf
 !  CALL CPU_TIME(rtimer)
 !  WRITE(6,'(A,2F10.2)') '### TIMER(MONIT_MEAN):',rtimer,rtimer-rtimer00
 !  rtimer00=rtimer
+
+  CALL unset_common_mpi_scale
 
 
 !-----------------------------------------------------------------------

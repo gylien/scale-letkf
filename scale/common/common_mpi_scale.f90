@@ -26,6 +26,8 @@ module common_mpi_scale
 !  use scale_prof
   use scale_grid_index
 
+!  use common_scalelib
+
   implicit none
   public
 
@@ -51,6 +53,10 @@ module common_mpi_scale
   integer,save :: scale_IO_group_n = -1
 !  integer,save :: scale_IO_proc_n = -1
   logical,save :: valid_member = .false.
+
+  integer,save :: MPI_COMM_e, nprocs_e, myrank_e
+
+
 
 contains
 
@@ -188,7 +194,6 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
   INTEGER :: ierr,buf(4)
   LOGICAL :: ex
 
-!  CALL set_mem_node_proc(nbv+1,nnodes,ppn,mem_nodes,mem_np)
 
 !  if (myrank == 0) then
 !  print *, procs
@@ -196,8 +201,66 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
 !  print *, mem2proc
 !  print *, proc2mem
 !  end if
+  integer :: MPI_G_WORLD, MPI_G
+  integer :: n_mem,n_mempn
+!  integer :: iproc,jproc
+  integer,allocatable :: ranks(:)
+
+  integer :: ip
+
+
 
   WRITE(6,'(A)') 'Hello from set_common_mpi_scale'
+
+
+  CALL set_mem_node_proc(nbv+1,NNODES,PPN,MEM_NODES,MEM_NP)
+
+
+!!!!!!------
+  if (scale_IO_group_n >= 1) then
+
+    call set_scalelib(MEM_NP, nitmax, nprocs, proc2mem)
+
+
+    IF(MEM_NODES > 1) THEN
+      n_mem = NNODES / MEM_NODES
+      n_mempn = 1
+    ELSE
+      n_mem = NNODES
+      n_mempn = PPN / MEM_NP
+    END IF
+    nprocs_e = n_mem*n_mempn
+
+    allocate (ranks(nprocs_e))
+
+    call MPI_Comm_group(MPI_COMM_WORLD,MPI_G_WORLD,ierr)
+
+    do ip = 1, nprocs
+      if (proc2mem(2,1,ip) == proc2mem(2,1,myrank+1)) then
+        if (proc2mem(1,1,ip) >= 1) then
+          ranks(proc2mem(1,1,ip)) = ip-1
+        end if
+      end if
+    end do
+
+!write(6,'(A,7I6)') '######===', myrank, ranks(:)
+
+    call MPI_Group_incl(MPI_G_WORLD,nprocs_e,ranks,MPI_G,ierr)
+    call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_e,ierr)
+
+    call MPI_Comm_size(MPI_COMM_e,nprocs_e,ierr)
+    call MPI_Comm_rank(MPI_COMM_e,myrank_e,ierr)
+
+!write(6,'(A,9I6)') '######===', myrank, myrank_e, nprocs_e, ranks(:)
+!stop
+
+    deallocate(ranks)
+  end if
+!!!!!!------
+
+
+
+
 !  i = MOD(nlon*nlat,nprocs)
 !  nij1max = (nlon*nlat - i)/nprocs + 1
 !  IF(myrank < i) THEN
@@ -261,6 +324,20 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
 
   RETURN
 END SUBROUTINE set_common_mpi_scale
+!-----------------------------------------------------------------------
+! set_common_mpi_scale
+!-----------------------------------------------------------------------
+SUBROUTINE unset_common_mpi_scale
+  implicit none
+  integer:: ierr
+
+  if (scale_IO_group_n >= 1) then
+    call MPI_Comm_free(MPI_COMM_e,ierr)
+    call unset_scalelib
+  end if
+
+  RETURN
+END SUBROUTINE unset_common_mpi_scale
 !-----------------------------------------------------------------------
 ! set_mem2proc
 !-----------------------------------------------------------------------

@@ -23,7 +23,7 @@ MODULE letkf_obs
 !  USE common_precip
 
 
-  use common_scalelib
+!  use common_scalelib
 
 
   IMPLICIT NONE
@@ -150,12 +150,13 @@ SUBROUTINE set_letkf_obs
   INTEGER,allocatable :: bufri2(:,:,:)
 
 
-  integer :: MPI_G_WORLD, MPI_G, MPI_COMM_e, nprocs_e, myrank_e
-  integer :: n_mem,n_mempn
   integer :: iproc,jproc
   integer,allocatable :: ranks(:)
 
   integer,allocatable :: nnext(:,:)
+
+  integer :: MPI_G_e, MPI_G_obstmp, MPI_COMM_obstmp
+
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
@@ -182,46 +183,11 @@ SUBROUTINE set_letkf_obs
 
 
 
-! define MPI_COMM_e...
 
   
   if (scale_IO_group_n >= 1) then
 
 
-
-    IF(MEM_NODES > 1) THEN
-      n_mem = NNODES / MEM_NODES
-      n_mempn = 1
-    ELSE
-      n_mem = NNODES
-      n_mempn = PPN / MEM_NP
-    END IF
-    nprocs_e = n_mem*n_mempn
-
-    allocate (ranks(nprocs_e))
-
-    call MPI_Comm_group(MPI_COMM_WORLD,MPI_G_WORLD,ierr)
-
-    do ip = 1, nprocs
-      if (proc2mem(2,1,ip) == proc2mem(2,1,myrank+1)) then
-        if (proc2mem(1,1,ip) >= 1) then
-          ranks(proc2mem(1,1,ip)) = ip-1
-        end if
-      end if
-    end do
-
-!write(6,'(A,7I6)') '######===', myrank, ranks(:)
-
-    call MPI_Group_incl(MPI_G_WORLD,nprocs_e,ranks,MPI_G,ierr)
-    call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_e,ierr)
-
-    call MPI_Comm_size(MPI_COMM_e,nprocs_e,ierr)
-    call MPI_Comm_rank(MPI_COMM_e,myrank_e,ierr)
-
-!write(6,'(A,9I6)') '######===', myrank, myrank_e, nprocs_e, ranks(:)
-!stop
-
-    deallocate(ranks)
 
 
 
@@ -263,15 +229,59 @@ SUBROUTINE set_letkf_obs
       end if
     end do ! [ it = 1, nitmax ]
 
-
+!
+! if the number of processors is greater then the ensemble size,
+! broadcast the observation indices and real grid numbers
+! from myrank_e=nbv-1 to the rest of processors that didn't read anything.
+!
+!####################### now broadcast to all, need to be corrected.
     if (nprocs_e > nbv) then
-      CALL MPI_BARRIER(MPI_COMM_e,ierr)
-      call MPI_BCAST(obsda%nobs, 1, MPI_INTEGER, 0, MPI_COMM_e, ierr)
+
+!      ALLOCATE(ranks(nprocs_e-nbv+1))
+!      do n = nbv, nprocs_e
+!        ranks(n-nbv+1) = n-1
+!      end do
+!      call MPI_Comm_group(MPI_COMM_e,MPI_G_e,ierr)
+!      call MPI_GROUP_INCL(MPI_G_e,nprocs_e-nbv+1,ranks,MPI_G_obstmp,ierr)
+!      call MPI_COMM_CREATE(MPI_COMM_e,MPI_G_obstmp,MPI_COMM_obstmp,ierr)
+
+!      IF(myrank_e+1 >= nbv) THEN
+!        CALL MPI_BARRIER(MPI_COMM_obstmp,ierr)
+!        call MPI_BCAST(obsda%nobs, 1, MPI_INTEGER, 0, MPI_COMM_obstmp, ierr)
+!!    print *, myrank, obsda%nobs
+
+!        if (myrank_e+1 > nbv) then
+!          CALL obs_da_value_allocate(obsda,nbv)
+!        end if
+
+!        CALL MPI_BARRIER(MPI_COMM_obstmp,ierr)
+!        call MPI_BCAST(obsda%idx, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_obstmp, ierr)
+!        call MPI_BCAST(obsda%ri, obsda%nobs, MPI_r_size, 0, MPI_COMM_obstmp, ierr)
+!        call MPI_BCAST(obsda%rj, obsda%nobs, MPI_r_size, 0, MPI_COMM_obstmp, ierr)
+!!        CALL MPI_BARRIER(MPI_COMM_obstmp,ierr)
+!      end if
+
+!      deallocate(ranks)
+!      call MPI_Comm_free(MPI_COMM_obstmp,ierr)
+
+
+
+        CALL MPI_BARRIER(MPI_COMM_e,ierr)
+        call MPI_BCAST(obsda%nobs, 1, MPI_INTEGER, 0, MPI_COMM_e, ierr)
 !    print *, myrank, obsda%nobs
 
-      if (myrank_e >= nbv) then
-        CALL obs_da_value_allocate(obsda,nbv)
-      end if
+        if (myrank_e+1 > nbv) then
+          CALL obs_da_value_allocate(obsda,nbv)
+        end if
+
+        CALL MPI_BARRIER(MPI_COMM_e,ierr)
+        call MPI_BCAST(obsda%idx, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
+        call MPI_BCAST(obsda%ri, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
+        call MPI_BCAST(obsda%rj, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
+!        CALL MPI_BARRIER(MPI_COMM_e,ierr)
+
+
+
     end if
 
 
@@ -288,6 +298,15 @@ SUBROUTINE set_letkf_obs
     CALL MPI_ALLREDUCE(obsda%qc,bufri,obsda%nobs,MPI_INTEGER,MPI_MAX,MPI_COMM_e,ierr)
     obsda%qc = bufri
     deallocate(bufri)
+
+!  write (6,*) obsda%nobs
+!  write (6,*) obsda%idx
+
+
+
+!    call MPI_Comm_free(MPI_COMM_e,ierr)
+
+
 
 !if(myrank==10) then
 !    print *, '######======'
@@ -472,7 +491,7 @@ SUBROUTINE set_letkf_obs
 
 
 
-    call set_scalelib
+!    call set_scalelib
 
 
 ! Sorting
@@ -558,7 +577,7 @@ SUBROUTINE set_letkf_obs
     call obs_da_value_deallocate(obsda)
 
 
-    call unset_scalelib
+!    call unset_scalelib
 
 
   end if ! [ scale_IO_group_n >= 1 ]
