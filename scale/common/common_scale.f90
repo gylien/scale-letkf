@@ -17,6 +17,8 @@ MODULE common_scale
   use scale_stdio
 !  use scale_stdio, only: H_MID
 
+  use scale_precision, only: RP
+
   use scale_prof
 
 !  use common_mpi
@@ -66,9 +68,12 @@ MODULE common_scale
   INTEGER,PARAMETER :: nv2dd=7   ! 2D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: nv2dx=7   ! 2D diagnostic variables
   INTEGER,PARAMETER :: iv3d_rho=1
-  INTEGER,PARAMETER :: iv3d_rhou=2
-  INTEGER,PARAMETER :: iv3d_rhov=3
-  INTEGER,PARAMETER :: iv3d_rhow=4
+!  INTEGER,PARAMETER :: iv3d_rhou=2
+  INTEGER,PARAMETER :: iv3d_u=2
+!  INTEGER,PARAMETER :: iv3d_rhov=3
+  INTEGER,PARAMETER :: iv3d_v=3
+!  INTEGER,PARAMETER :: iv3d_rhow=4
+  INTEGER,PARAMETER :: iv3d_w=4
   INTEGER,PARAMETER :: iv3d_rhot=5
   INTEGER,PARAMETER :: iv3d_q=6
   INTEGER,PARAMETER :: iv3d_qc=7
@@ -139,9 +144,9 @@ SUBROUTINE set_common_scale
   !
   ! state variables (in 'restart' files, for LETKF)
   v3d_name(iv3d_rho)  = 'DENS'
-  v3d_name(iv3d_rhou) = 'MOMX'
-  v3d_name(iv3d_rhov) = 'MOMY'
-  v3d_name(iv3d_rhow) = 'MOMZ'
+!  v3d_name(iv3d_rhou) = 'MOMX'
+!  v3d_name(iv3d_rhov) = 'MOMY'
+!  v3d_name(iv3d_rhow) = 'MOMZ'
   v3d_name(iv3d_rhot) = 'RHOT'
   v3d_name(iv3d_q)    = 'QV'
   v3d_name(iv3d_qc)   = 'QC'
@@ -417,6 +422,160 @@ end subroutine unset_scalelib
 !!-----------------------------------------------------------------------
 !! File I/O
 !!-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+SUBROUTINE read_restart(filename,v3dg,v2dg)
+  use gtool_file, only: &
+    FileRead
+  use scale_process, only: &
+    PRC_myrank
+  IMPLICIT NONE
+
+  CHARACTER(*),INTENT(IN) :: filename
+  REAL(RP),INTENT(OUT) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+  REAL(RP),INTENT(OUT) :: v2dg(nlonsub,nlatsub,nv2d)
+  INTEGER :: iv3d,iv2d
+
+!  WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,iter,myrank+1),'.nc'
+  DO iv3d = 1, nv3d
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+    select case (iv3d)
+    case (iv3d_u)
+      call FileRead(v3dg(:,:,:,iv3d), filename, 'MOMX', 1, PRC_myrank)
+      v3dg(:,:,:,iv3d) = v3dg(:,:,:,iv3d) / v3dg(:,:,:,iv3d_rho)
+    case (iv3d_v)
+      call FileRead(v3dg(:,:,:,iv3d), filename, 'MOMY', 1, PRC_myrank)
+      v3dg(:,:,:,iv3d) = v3dg(:,:,:,iv3d) / v3dg(:,:,:,iv3d_rho)
+    case (iv3d_w)
+      call FileRead(v3dg(:,:,:,iv3d), filename, 'MOMZ', 1, PRC_myrank)
+      v3dg(:,:,:,iv3d) = v3dg(:,:,:,iv3d) / v3dg(:,:,:,iv3d_rho)
+    case default
+      call FileRead(v3dg(:,:,:,iv3d), filename, trim(v3d_name(iv3d)), 1, PRC_myrank)
+    end select
+  END DO
+
+  DO iv2d = 1, nv2d
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
+    call FileRead(v2dg(:,:,iv2d), filename, trim(v2d_name(iv2d)), 1, PRC_myrank)
+  END DO
+
+  RETURN
+END SUBROUTINE read_restart
+!-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+!SUBROUTINE write_restart(filename,v3dg,v2dg)
+!  use gtool_file, only: &
+!    FileWrite
+!  use scale_process, only: &
+!    PRC_myrank
+!  IMPLICIT NONE
+
+!  CHARACTER(*),INTENT(IN) :: filename
+!  REAL(RP),INTENT(IN) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+!  REAL(RP),INTENT(IN) :: v2dg(nlonsub,nlatsub,nv2d)
+!  INTEGER :: iv3d,iv2d
+
+!!  WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,iter,myrank+1),'.nc'
+!  DO iv3d = 1, nv3d
+!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+!    select case (iv3d)
+!    case (iv3d_u)
+!      call FileWrite(v3dg(:,:,:,iv3d) * v3dg(:,:,:,iv3d_rho), filename, 'MOMX', 1, PRC_myrank)
+!    case (iv3d_v)
+!      call FileWrite(v3dg(:,:,:,iv3d) * v3dg(:,:,:,iv3d_rho), filename, 'MOMY', 1, PRC_myrank)
+!    case (iv3d_w)
+!      call FileWrite(v3dg(:,:,:,iv3d) * v3dg(:,:,:,iv3d_rho), filename, 'MOMZ', 1, PRC_myrank)
+!    case default
+!      call FileWrite(v3dg(:,:,:,iv3d), filename, trim(v3d_name(iv3d)), 1, PRC_myrank)
+!    end select
+!  END DO
+
+!  DO iv2d = 1, nv2d
+!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+!    call FileWrite(v2dg(:,:,iv2d), filename, trim(v2d_name(iv2d)), 1, PRC_myrank)
+!  END DO
+
+!  RETURN
+!END SUBROUTINE write_restart
+
+
+!subroutine FileWrite_combine_3D(var,basename,varname,step,myrank)
+
+!  use gtool_file, only: &
+!    FileWrite, &
+!    File
+!  use scale_process, only: &
+!    PRC_master, &
+!    PRC_myrank, &
+!    PRC_2Drank
+!  implicit none
+
+!  real(DP),         intent(in)           :: var(:,:,:)
+!  character(LEN=*), intent(in)           :: basename
+!  character(LEN=*), intent(in)           :: varname
+!  integer,          intent(in)           :: step
+!  integer,          intent(in)           :: myrank
+
+!  real(RP),          intent(in)  :: var(:,:,:) !< value of the variable
+!  character(len=*),  intent(in)  :: basename   !< basename of the file
+!  character(len=*),  intent(in)  :: title      !< title    of the file
+!  character(len=*),  intent(in)  :: varname    !< name        of the variable
+!  character(len=*),  intent(in)  :: desc       !< description of the variable
+!  character(len=*),  intent(in)  :: unit       !< unit        of the variable
+!  character(len=*),  intent(in)  :: axistype   !< axis type (Z/X/Y)
+!  character(len=*),  intent(in)  :: datatype   !< data type (REAL8/REAL4/default)
+!  logical, optional, intent(in)  :: append     !< append existing (closed) file?
+
+!!  integer          :: dtype
+!!  character(len=2) :: dims(3)
+!!  integer          :: dim1_max, dim1_S, dim1_E
+!!  integer          :: dim2_max, dim2_S, dim2_E
+!!  integer          :: dim3_max, dim3_S, dim3_E
+
+!  real(RP), allocatable :: var3D(:,:,:)
+
+!  integer :: rankidx(2)
+!  logical :: append_sw
+!  logical :: fileexisted
+!  integer :: fid, vid
+!  !---------------------------------------------------------------------------
+
+!  rankidx(1) = PRC_2Drank(PRC_myrank,1)
+!  rankidx(2) = PRC_2Drank(PRC_myrank,2)
+!  if ( RP == 8 ) then
+!    dtype = File_REAL8
+!  elseif( RP == 4 ) then
+!    dtype = File_REAL4
+!  endif
+!  call FileCreate( fid,               & ! [OUT]
+!                   fileexisted,       & ! [OUT]
+!                   basename,          & ! [IN]
+!                   '', & !title,             & ! [IN]
+!                   '', & !H_SOURCE,          & ! [IN]
+!                   '', & !H_INSTITUTE,       & ! [IN]
+!                   PRC_master,        & ! [IN]
+!                   PRC_myrank,        & ! [IN]
+!                   rankidx,           & ! [IN]
+!                   .true. ) ! [IN]
+
+!    if ( .NOT. fileexisted ) then ! only once
+!       call FILEIO_set_axes( fid, dtype ) ! [IN]
+!    endif
+
+!    call FileAddVariable( vid, fid, varname, desc, '', dims, dtype ) ! [IN]
+
+!    allocate( var3D(dim1_max,dim2_max,dim3_max) )
+
+!    var3D(1:dim1_max,1:dim2_max,1:dim3_max) = var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
+!    call FileWrite( vid, var3D(:,:,:), NOWSEC, NOWSEC ) ! [IN]
+
+!    deallocate( var3D )
+!  end subroutine FILEIO_write_3D
+
+
+
 !!-- Read a grid file ---------------------------------------------------
 !SUBROUTINE read_grd(filename,inv3d,inv2d,iv3dname,iv2dname,v3d,v2d)
 !  IMPLICIT NONE

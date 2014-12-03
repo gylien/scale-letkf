@@ -70,11 +70,6 @@ PROGRAM letkf
   WRITE(6,'(A)') '============================================='
   CALL set_common_scale
 
-  ALLOCATE(gues3d(nij1,nlev,nbv,nv3d))
-  ALLOCATE(gues2d(nij1,nbv,nv2d))
-  ALLOCATE(anal3d(nij1,nlev,nbv,nv3d))
-  ALLOCATE(anal2d(nij1,nbv,nv2d))
-
 !-----------------------------------------------------------------------
 
   ! setup standard I/O
@@ -92,6 +87,13 @@ PROGRAM letkf
 !
 
   CALL set_common_mpi_scale(nbv+1,NNODES,PPN,MEM_NODES,MEM_NP)
+
+
+  ALLOCATE(gues3d(nij1,nlev,nbv,nv3d))
+  ALLOCATE(gues2d(nij1,nbv,nv2d))
+  ALLOCATE(anal3d(nij1,nlev,nbv,nv3d))
+  ALLOCATE(anal2d(nij1,nbv,nv2d))
+
 
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
@@ -157,8 +159,24 @@ PROGRAM letkf
   ! READ GUES
   !
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!  call read_ens_mpi('gues',it,islot,v3dg,v2dg)
-!  CALL read_ens_mpi('gues',nbv,gues3d,gues2d)
+
+!!!
+  if (scale_IO_group_n >= 1) then
+!!!
+  call read_ens_mpi('gues',gues3d,gues2d)
+!!!
+  end if
+!!!
+
+
+
+  if (scale_IO_group_n >= 1) then
+  write (6,*) gues3d(:,20,3,iv3d_u)
+!  write (6,*) gues2d
+  end if
+
+
+
   !
   ! WRITE ENS MEAN and SPRD
   !
