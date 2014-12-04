@@ -35,6 +35,7 @@ PROGRAM letkf
 !  TYPE(obs_da_value) :: obsval
 
 
+
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
@@ -170,10 +171,11 @@ PROGRAM letkf
 
 
 
-  if (scale_IO_group_n >= 1) then
-  write (6,*) gues3d(:,20,3,iv3d_u)
-!  write (6,*) gues2d
-  end if
+!  if (scale_IO_group_n >= 1) then
+!  write (6,*) gues3d(:,20,3,iv3d_u)
+!!  write (6,*) gues2d
+!  end if
+
 
 
 

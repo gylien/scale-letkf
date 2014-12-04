@@ -67,14 +67,15 @@ MODULE common_scale
   INTEGER,PARAMETER :: nv2d=0    ! 2D state variables (in SCALE init/restart files)
   INTEGER,PARAMETER :: nv2dd=7   ! 2D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: nv2dx=7   ! 2D diagnostic variables
-  INTEGER,PARAMETER :: iv3d_rho=1
+!  INTEGER,PARAMETER :: iv3d_rho=1
 !  INTEGER,PARAMETER :: iv3d_rhou=2
-  INTEGER,PARAMETER :: iv3d_u=2
 !  INTEGER,PARAMETER :: iv3d_rhov=3
-  INTEGER,PARAMETER :: iv3d_v=3
 !  INTEGER,PARAMETER :: iv3d_rhow=4
-  INTEGER,PARAMETER :: iv3d_w=4
-  INTEGER,PARAMETER :: iv3d_rhot=5
+  INTEGER,PARAMETER :: iv3d_u=1
+  INTEGER,PARAMETER :: iv3d_v=2
+  INTEGER,PARAMETER :: iv3d_w=3
+  INTEGER,PARAMETER :: iv3d_t=4
+  INTEGER,PARAMETER :: iv3d_rhot=5 ! (~pressure)
   INTEGER,PARAMETER :: iv3d_q=6
   INTEGER,PARAMETER :: iv3d_qc=7
   INTEGER,PARAMETER :: iv3d_qr=8
@@ -143,7 +144,7 @@ SUBROUTINE set_common_scale
   ! Variable names (same as in the NetCDF file)
   !
   ! state variables (in 'restart' files, for LETKF)
-  v3d_name(iv3d_rho)  = 'DENS'
+!  v3d_name(iv3d_rho)  = 'DENS'
 !  v3d_name(iv3d_rhou) = 'MOMX'
 !  v3d_name(iv3d_rhov) = 'MOMY'
 !  v3d_name(iv3d_rhow) = 'MOMZ'
@@ -426,10 +427,9 @@ end subroutine unset_scalelib
 !
 !-----------------------------------------------------------------------
 SUBROUTINE read_restart(filename,v3dg,v2dg)
-  use gtool_file, only: &
-    FileRead
-  use scale_process, only: &
-    PRC_myrank
+  use gtool_file, only: FileRead
+  use scale_process, only: PRC_myrank
+  use common_mpi, only: myrank
   IMPLICIT NONE
 
   CHARACTER(*),INTENT(IN) :: filename
@@ -437,68 +437,91 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   REAL(RP),INTENT(OUT) :: v2dg(nlonsub,nlatsub,nv2d)
   INTEGER :: iv3d,iv2d
 
-!  WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,iter,myrank+1),'.nc'
-  DO iv3d = 1, nv3d
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
-    select case (iv3d)
-    case (iv3d_u)
-      call FileRead(v3dg(:,:,:,iv3d), filename, 'MOMX', 1, PRC_myrank)
-      v3dg(:,:,:,iv3d) = v3dg(:,:,:,iv3d) / v3dg(:,:,:,iv3d_rho)
-    case (iv3d_v)
-      call FileRead(v3dg(:,:,:,iv3d), filename, 'MOMY', 1, PRC_myrank)
-      v3dg(:,:,:,iv3d) = v3dg(:,:,:,iv3d) / v3dg(:,:,:,iv3d_rho)
-    case (iv3d_w)
-      call FileRead(v3dg(:,:,:,iv3d), filename, 'MOMZ', 1, PRC_myrank)
-      v3dg(:,:,:,iv3d) = v3dg(:,:,:,iv3d) / v3dg(:,:,:,iv3d_rho)
-    case default
-      call FileRead(v3dg(:,:,:,iv3d), filename, trim(v3d_name(iv3d)), 1, PRC_myrank)
-    end select
-  END DO
+  WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
 
-  DO iv2d = 1, nv2d
+  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', 'DENS'
+  call FileRead(v3dg(:,:,:,6), filename, 'DENS', 1, PRC_myrank)         ! temporarily save rho
+
+  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', 'MOMX'
+  call FileRead(v3dg(:,:,:,iv3d_u), filename, 'MOMX', 1, PRC_myrank)
+  v3dg(:,:,:,iv3d_u) = v3dg(:,:,:,iv3d_u) / v3dg(:,:,:,6)               ! -- get U
+
+  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', 'MOMY'
+  call FileRead(v3dg(:,:,:,iv3d_v), filename, 'MOMY', 1, PRC_myrank)
+  v3dg(:,:,:,iv3d_v) = v3dg(:,:,:,iv3d_v) / v3dg(:,:,:,6)               ! -- get V
+
+  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', 'MOMZ'
+  call FileRead(v3dg(:,:,:,iv3d_w), filename, 'MOMZ', 1, PRC_myrank)
+  v3dg(:,:,:,iv3d_w) = v3dg(:,:,:,iv3d_w) / v3dg(:,:,:,6)               ! -- get W
+
+  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', 'RHOT'
+  call FileRead(v3dg(:,:,:,iv3d_rhot), filename, 'RHOT', 1, PRC_myrank) ! -- get rho * T
+  v3dg(:,:,:,iv3d_t) = v3dg(:,:,:,iv3d_rhot) / v3dg(:,:,:,6)            ! -- get T
+
+  do iv3d = 6, nv3d
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+    call FileRead(v3dg(:,:,:,iv3d), filename, trim(v3d_name(iv3d)), 1, PRC_myrank)
+  end do
+
+  do iv2d = 1, nv2d
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
     call FileRead(v2dg(:,:,iv2d), filename, trim(v2d_name(iv2d)), 1, PRC_myrank)
-  END DO
+  end do
 
   RETURN
 END SUBROUTINE read_restart
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
-!SUBROUTINE write_restart(filename,v3dg,v2dg)
-!  use gtool_file, only: &
-!    FileWrite
-!  use scale_process, only: &
-!    PRC_myrank
-!  IMPLICIT NONE
+SUBROUTINE write_restart(filename,v3dg,v2dg)
+  use netcdf, only: NF90_WRITE
+  use scale_process, only: PRC_myrank
+  use common_mpi, only: myrank
+  use common_ncio
+  implicit none
 
-!  CHARACTER(*),INTENT(IN) :: filename
-!  REAL(RP),INTENT(IN) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
-!  REAL(RP),INTENT(IN) :: v2dg(nlonsub,nlatsub,nv2d)
-!  INTEGER :: iv3d,iv2d
+  CHARACTER(*),INTENT(IN) :: filename
+  REAL(RP),INTENT(IN) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+  REAL(RP),INTENT(IN) :: v2dg(nlonsub,nlatsub,nv2d)
+  REAL(RP) :: rhotmp(nlev,nlonsub,nlatsub)
+  character(len=12) :: filesuffix = '.pe000000.nc'
+  integer :: iv3d,iv2d,ncid
 
-!!  WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,iter,myrank+1),'.nc'
-!  DO iv3d = 1, nv3d
-!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
-!    select case (iv3d)
-!    case (iv3d_u)
-!      call FileWrite(v3dg(:,:,:,iv3d) * v3dg(:,:,:,iv3d_rho), filename, 'MOMX', 1, PRC_myrank)
-!    case (iv3d_v)
-!      call FileWrite(v3dg(:,:,:,iv3d) * v3dg(:,:,:,iv3d_rho), filename, 'MOMY', 1, PRC_myrank)
-!    case (iv3d_w)
-!      call FileWrite(v3dg(:,:,:,iv3d) * v3dg(:,:,:,iv3d_rho), filename, 'MOMZ', 1, PRC_myrank)
-!    case default
-!      call FileWrite(v3dg(:,:,:,iv3d), filename, trim(v3d_name(iv3d)), 1, PRC_myrank)
-!    end select
-!  END DO
+  WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',PRC_myrank,'.nc'
+  write (filesuffix(4:9),'(I6.6)') PRC_myrank
+  call ncio_open(filename // filesuffix, NF90_WRITE, ncid)
 
-!  DO iv2d = 1, nv2d
-!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
-!    call FileWrite(v2dg(:,:,iv2d), filename, trim(v2d_name(iv2d)), 1, PRC_myrank)
-!  END DO
+  rhotmp = v3dg(:,:,:,iv3d_rhot) / v3dg(:,:,:,iv3d_t)
 
-!  RETURN
-!END SUBROUTINE write_restart
+  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', 'DENS'
+  call ncio_write_3d_r8(ncid, 'DENS', nlev, nlonsub, nlatsub, 1, rhotmp) ! -- write rho
+
+  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', 'MOMX'
+  call ncio_write_3d_r8(ncid, 'MOMX', nlev, nlonsub, nlatsub, 1, rhotmp * v3dg(:,:,:,iv3d_u)) ! -- write rho*u
+
+  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', 'MOMY'
+  call ncio_write_3d_r8(ncid, 'MOMY', nlev, nlonsub, nlatsub, 1, rhotmp * v3dg(:,:,:,iv3d_v)) ! -- write rho*v
+
+  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', 'MOMZ'
+  call ncio_write_3d_r8(ncid, 'MOMZ', nlev, nlonsub, nlatsub, 1, rhotmp * v3dg(:,:,:,iv3d_w)) ! -- write rho*w
+
+  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', 'RHOT'
+  call ncio_write_3d_r8(ncid, 'RHOT', nlev, nlonsub, nlatsub, 1, v3dg(:,:,:,iv3d_rhot)) ! -- write rho*T
+
+  DO iv3d = 6, nv3d
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlonsub, nlatsub, 1, v3dg(:,:,:,iv3d))
+  END DO
+
+  DO iv2d = 1, nv2d
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), nlonsub, nlatsub, 1, v2dg(:,:,iv2d))
+  END DO
+
+  call ncio_close(ncid)
+
+  RETURN
+END SUBROUTINE write_restart
 
 
 !subroutine FileWrite_combine_3D(var,basename,varname,step,myrank)
@@ -722,41 +745,41 @@ END SUBROUTINE read_restart
 !-----------------------------------------------------------------------
 ! Ensemble manipulations
 !-----------------------------------------------------------------------
-!SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
-!  IMPLICIT NONE
-!  INTEGER,INTENT(IN) :: member
-!  INTEGER,INTENT(IN) :: nij
-!  REAL(r_size),INTENT(IN) :: v3d(nij,nlev,member,nv3d)
-!  REAL(r_size),INTENT(IN) :: v2d(nij,member,nv2d)
-!  REAL(r_size),INTENT(OUT) :: v3dm(nij,nlev,nv3d)
-!  REAL(r_size),INTENT(OUT) :: v2dm(nij,nv2d)
-!  INTEGER :: i,k,m,n
+SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
+  IMPLICIT NONE
+  INTEGER,INTENT(IN) :: member
+  INTEGER,INTENT(IN) :: nij
+  REAL(r_size),INTENT(IN) :: v3d(nij,nlev,member,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nij,member,nv2d)
+  REAL(r_size),INTENT(OUT) :: v3dm(nij,nlev,nv3d)
+  REAL(r_size),INTENT(OUT) :: v2dm(nij,nv2d)
+  INTEGER :: i,k,m,n
 
-!  DO n=1,nv3d
-!!$OMP PARALLEL DO PRIVATE(i,k,m)
-!    DO k=1,nlev
-!      DO i=1,nij
-!        v3dm(i,k,n) = v3d(i,k,1,n)
-!        DO m=2,member
-!          v3dm(i,k,n) = v3dm(i,k,n) + v3d(i,k,m,n)
-!        END DO
-!        v3dm(i,k,n) = v3dm(i,k,n) / REAL(member,r_size)
-!      END DO
-!    END DO
-!!$OMP END PARALLEL DO
-!  END DO
+  DO n=1,nv3d
+!$OMP PARALLEL DO PRIVATE(i,k,m)
+    DO k=1,nlev
+      DO i=1,nij
+        v3dm(i,k,n) = v3d(i,k,1,n)
+        DO m=2,member
+          v3dm(i,k,n) = v3dm(i,k,n) + v3d(i,k,m,n)
+        END DO
+        v3dm(i,k,n) = v3dm(i,k,n) / REAL(member,r_size)
+      END DO
+    END DO
+!$OMP END PARALLEL DO
+  END DO
 
-!  DO n=1,nv2d
-!    DO i=1,nij
-!      v2dm(i,n) = v2d(i,1,n)
-!      DO m=2,member
-!        v2dm(i,n) = v2dm(i,n) + v2d(i,m,n)
-!      END DO
-!      v2dm(i,n) = v2dm(i,n) / REAL(member,r_size)
-!    END DO
-!  END DO
+  DO n=1,nv2d
+    DO i=1,nij
+      v2dm(i,n) = v2d(i,1,n)
+      DO m=2,member
+        v2dm(i,n) = v2dm(i,n) + v2d(i,m,n)
+      END DO
+      v2dm(i,n) = v2dm(i,n) / REAL(member,r_size)
+    END DO
+  END DO
 
-!  RETURN
-!END SUBROUTINE ensmean_grd
+  RETURN
+END SUBROUTINE ensmean_grd
 
 END MODULE common_scale

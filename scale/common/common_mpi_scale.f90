@@ -632,54 +632,66 @@ END SUBROUTINE
 !  RETURN
 !END SUBROUTINE gather_grd_mpi_safe
 
-!SUBROUTINE gather_grd_mpi_fast(nrank,v3d,v2d,v3dg,v2dg)
-!  INTEGER,INTENT(IN) :: nrank
-!  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
-!  REAL(r_size),INTENT(IN) :: v2d(nij1,nv2d)
-!  REAL(r_sngl),INTENT(OUT) :: v3dg(nlon,nlat,nlev,nv3d)
-!  REAL(r_sngl),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
-!  REAL(r_sngl) :: bufs(nij1max,nlevall)
-!  REAL(r_sngl) :: bufr(nij1max,nlevall,nprocs)
-!  INTEGER :: j,k,n,ierr,ns,nr
 
-!  ns = nij1max * nlevall
-!  nr = ns
-!  j=0
-!  DO n=1,nv3d
-!    DO k=1,nlev
-!      j = j+1
-!      bufs(1:nij1,j) = REAL(v3d(:,k,n),r_sngl)
-!    END DO
-!  END DO
 
-!  DO n=1,nv2d
-!    j = j+1
-!    bufs(1:nij1,j) = REAL(v2d(:,n),r_sngl)
-!  END DO
+SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
+  INTEGER,INTENT(IN) :: nrank
+  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nij1,nv2d)
+  REAL(RP),INTENT(OUT) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+  REAL(RP),INTENT(OUT) :: v2dg(nlonsub,nlatsub,nv2d)
+  REAL(RP) :: bufs(nij1max,nlevall)
+  REAL(RP) :: bufr(nij1max,nlevall,nprocs_e)
+  INTEGER :: j,k,n,ierr,ns,nr
 
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!  CALL MPI_GATHER(bufs,ns,MPI_REAL,&
-!                & bufr,nr,MPI_REAL,nrank,MPI_COMM_WORLD,ierr)
+  integer :: MPI_RP
 
-!  IF(myrank == nrank) THEN
-!    j=0
-!    DO n=1,nv3d
-!      DO k=1,nlev
-!        j = j+1
-!        CALL buf_to_grd(bufr(:,j,:),v3dg(:,:,k,n))
-!      END DO
-!    END DO
+!!!!!!
+  IF(RP == r_dble) THEN
+    MPI_RP = MPI_DOUBLE_PRECISION
+  ELSE IF(RP == r_sngl) THEN
+    MPI_RP = MPI_REAL
+  END IF
+!!!!!!
 
-!    DO n=1,nv2d
-!      j = j+1
-!      CALL buf_to_grd(bufr(:,j,:),v2dg(:,:,n))
-!    END DO
-!  END IF
+  ns = nij1max * nlevall
+  nr = ns
+  j=0
+  DO n=1,nv3d
+    DO k=1,nlev
+      j = j+1
+      bufs(1:nij1,j) = REAL(v3d(:,k,n),RP)
+    END DO
+  END DO
 
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  DO n=1,nv2d
+    j = j+1
+    bufs(1:nij1,j) = REAL(v2d(:,n),RP)
+  END DO
 
-!  RETURN
-!END SUBROUTINE gather_grd_mpi_fast
+  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+  CALL MPI_GATHER(bufs,ns,MPI_RP,&
+                & bufr,nr,MPI_RP,nrank,MPI_COMM_e,ierr)
+
+  IF(myrank_e == nrank) THEN
+    j=0
+    DO n=1,nv3d
+      DO k=1,nlev
+        j = j+1
+        CALL buf_to_grd(nprocs_e,bufr(:,j,:),v3dg(:,:,k,n))
+      END DO
+    END DO
+
+    DO n=1,nv2d
+      j = j+1
+      CALL buf_to_grd(nprocs_e,bufr(:,j,:),v2dg(:,:,n))
+    END DO
+  END IF
+
+  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+
+  RETURN
+END SUBROUTINE gather_grd_mpi
 
 !!!!!!!!!!subroutine set_scale_mpi_comm
 !!!!!!!!!!  implicit none
@@ -919,6 +931,7 @@ END SUBROUTINE read_ens_history_mpi
 ! Read ensemble data and distribute to processes
 !-----------------------------------------------------------------------
 subroutine read_ens_mpi(file,v3d,v2d)
+  implicit none
   CHARACTER(4),INTENT(IN) :: file
   REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,nbv,nv3d)
   REAL(r_size),INTENT(OUT) :: v2d(nij1,nbv,nv2d)
@@ -932,12 +945,9 @@ subroutine read_ens_mpi(file,v3d,v2d)
     if (im >= 1 .and. im <= nbv) then
       WRITE(filename(1:4),'(A4)') file
       WRITE(filename(6:9),'(I4.4)') im
-      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
-!      write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
-!            im, ', subdomain id #', proc2mem(2,it,myrank+1)
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
       call read_restart(filename,v3dg,v2dg)
     end if
-
     mstart = 1 + (it-1)*nprocs_e
     mend = MIN(it*nprocs_e, nbv)
     CALL scatter_grd_mpi_alltoall(mstart,mend,nbv,v3dg,v2dg,v3d,v2d)
@@ -947,38 +957,34 @@ subroutine read_ens_mpi(file,v3d,v2d)
 end subroutine read_ens_mpi
 
 
-!!-----------------------------------------------------------------------
-!! Write ensemble data after collecting data from processes
-!!-----------------------------------------------------------------------
-!SUBROUTINE write_ens_mpi(file,member,v3d,v2d)
-!  CHARACTER(4),INTENT(IN) :: file
-!  INTEGER,INTENT(IN) :: member
-!  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,member,nv3d)
-!  REAL(r_size),INTENT(IN) :: v2d(nij1,member,nv2d)
-!  REAL(r_sngl) :: v3dg(nlon,nlat,nlev,nv3d)
-!  REAL(r_sngl) :: v2dg(nlon,nlat,nv2d)
-!  INTEGER :: l,n,ll,im
-!  CHARACTER(11) :: filename='file000.grd'
+!-----------------------------------------------------------------------
+! Write ensemble data after collecting data from processes
+!-----------------------------------------------------------------------
+SUBROUTINE write_ens_mpi(file,v3d,v2d)
+  implicit none
+  CHARACTER(4),INTENT(IN) :: file
+  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nbv,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nij1,nbv,nv2d)
+  REAL(RP) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+  REAL(RP) :: v2dg(nlonsub,nlatsub,nv2d)
+  CHARACTER(9) :: filename='file.0000'
+  integer :: it,im,mstart,mend
 
-!  ll = CEILING(REAL(member)/REAL(nprocs))
-!  DO l=1,ll
-!    DO n=0,nprocs-1
-!      im = n+1 + (l-1)*nprocs
-!      IF(im <= member) THEN
-!        CALL gather_grd_mpi(n,v3d(:,:,im,:),v2d(:,im,:),v3dg,v2dg)
-!      END IF
-!    END DO
+  do it = 1, nitmax
+    im = proc2mem(1,it,myrank+1)
+    mstart = 1 + (it-1)*nprocs_e
+    mend = MIN(it*nprocs_e, nbv)
+    CALL gather_grd_mpi_alltoall(mstart,mend,nbv,v3d,v2d,v3dg,v2dg)
+    if (im >= 1 .and. im <= nbv) then
+      WRITE(filename(1:4),'(A4)') file
+      WRITE(filename(6:9),'(I4.4)') im
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+      call write_restart(filename,v3dg,v2dg)
+    end if
+  end do ! [ it = 1, nitmax ]
 
-!    im = myrank+1 + (l-1)*nprocs
-!    IF(im <= member) THEN
-!      WRITE(filename(1:7),'(A4,I3.3)') file,im
-!      WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',filename
-!      CALL write_grd4(filename,v3dg,v2dg,0)
-!    END IF
-!  END DO
-
-!  RETURN
-!END SUBROUTINE write_ens_mpi
+  return
+END SUBROUTINE write_ens_mpi
 
 !-----------------------------------------------------------------------
 !
@@ -1263,28 +1269,29 @@ SUBROUTINE buf_to_grd(np,buf,grd)
 
   RETURN
 END SUBROUTINE buf_to_grd
-!!-----------------------------------------------------------------------
-!! STORING DATA (ensemble mean and spread)
-!!-----------------------------------------------------------------------
-!SUBROUTINE write_ensmspr_mpi(file,member,v3d,v2d)
-!  CHARACTER(4),INTENT(IN) :: file
-!  INTEGER,INTENT(IN) :: member
-!  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,member,nv3d)
-!  REAL(r_size),INTENT(IN) :: v2d(nij1,member,nv2d)
-!  REAL(r_size) :: v3dm(nij1,nlev,nv3d)
-!  REAL(r_size) :: v2dm(nij1,nv2d)
-!  REAL(r_size) :: v3ds(nij1,nlev,nv3d)
-!  REAL(r_size) :: v2ds(nij1,nv2d)
-!  REAL(r_sngl) :: v3dg(nlon,nlat,nlev,nv3d)
-!  REAL(r_sngl) :: v2dg(nlon,nlat,nv2d)
-!  INTEGER :: i,k,m,n
-!  CHARACTER(11) :: filename='file000.grd'
+!-----------------------------------------------------------------------
+! STORING DATA (ensemble mean and spread)
+!-----------------------------------------------------------------------
+SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
+  CHARACTER(4),INTENT(IN) :: file
+  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nbv,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nij1,nbv,nv2d)
+  REAL(r_size) :: v3dm(nij1,nlev,nv3d)
+  REAL(r_size) :: v2dm(nij1,nv2d)
+  REAL(r_size) :: v3ds(nij1,nlev,nv3d)
+  REAL(r_size) :: v2ds(nij1,nv2d)
+  REAL(r_sngl) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+  REAL(r_sngl) :: v2dg(nlonsub,nlatsub,nv2d)
+  INTEGER :: i,k,m,n
+  CHARACTER(9) :: filename='file.0000'
 
-!  CALL ensmean_grd(member,nij1,v3d,v2d,v3dm,v2dm)
+  CALL ensmean_grd(nbv,nij1,v3d,v2d,v3dm,v2dm)
+
+!  mem2proc(0,nbv+1)
 
 !  CALL gather_grd_mpi(0,v3dm,v2dm,v3dg,v2dg)
-!  IF(myrank == 0) THEN
-!!  IF(myrank == nprocs-1) THEN  ! The last processor
+!  IF(myrank_e == 0) THEN
+!!  IF(myrank_e == nprocs_e-1) THEN  ! The last processor
 !    WRITE(filename(1:7),'(A4,A3)') file,'_me'
 !    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',filename
 !    CALL write_grd4(filename,v3dg,v2dg,0)
@@ -1295,10 +1302,10 @@ END SUBROUTINE buf_to_grd
 !    DO k=1,nlev
 !      DO i=1,nij1
 !        v3ds(i,k,n) = (v3d(i,k,1,n)-v3dm(i,k,n))**2
-!        DO m=2,member
+!        DO m=2,nbv
 !          v3ds(i,k,n) = v3ds(i,k,n) + (v3d(i,k,m,n)-v3dm(i,k,n))**2
 !        END DO
-!        v3ds(i,k,n) = SQRT(v3ds(i,k,n) / REAL(member-1,r_size))
+!        v3ds(i,k,n) = SQRT(v3ds(i,k,n) / REAL(nbv-1,r_size))
 !      END DO
 !    END DO
 !!$OMP END PARALLEL DO
@@ -1308,24 +1315,24 @@ END SUBROUTINE buf_to_grd
 !!$OMP PARALLEL DO PRIVATE(i,k,m)
 !    DO i=1,nij1
 !      v2ds(i,n) = (v2d(i,1,n)-v2dm(i,n))**2
-!      DO m=2,member
+!      DO m=2,nbv
 !        v2ds(i,n) = v2ds(i,n) + (v2d(i,m,n)-v2dm(i,n))**2
 !      END DO
-!      v2ds(i,n) = SQRT(v2ds(i,n) / REAL(member-1,r_size))
+!      v2ds(i,n) = SQRT(v2ds(i,n) / REAL(nbv-1,r_size))
 !    END DO
 !!$OMP END PARALLEL DO
 !  END DO
 
 !  CALL gather_grd_mpi(0,v3ds,v2ds,v3dg,v2dg)
-!  IF(myrank == 0) THEN
-!!  IF(myrank == MOD(nprocs*2-2,nprocs)) THEN  ! The second last processor
+!  IF(myrank_e == 0) THEN
+!!  IF(myrank_e == MOD(nprocs_e*2-2,nprocs_e)) THEN  ! The second last processor
 !    WRITE(filename(1:7),'(A4,A3)') file,'_sp'
 !    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',filename
 !    CALL write_grd4(filename,v3dg,v2dg,0)
 !  END IF
 
-!  RETURN
-!END SUBROUTINE write_ensmspr_mpi
+  RETURN
+END SUBROUTINE write_ensmspr_mpi
 !!-----------------------------------------------------------------------
 !! Get number of observations from ensemble obs2 data,
 !! assuming all members have the identical obs records
