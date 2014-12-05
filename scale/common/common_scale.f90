@@ -61,21 +61,22 @@ MODULE common_scale
   integer,parameter :: nlathalo=nlatsub+4
   integer,parameter :: nlevhalo=nlev+4
 
-  INTEGER,PARAMETER :: nv3d=11   ! 3D state variables (in SCALE init/restart files)
+  INTEGER,PARAMETER :: nv3d=11   ! 3D state variables (in SCALE restart files)
   INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: nv3dx=13  ! 3D diagnostic variables
-  INTEGER,PARAMETER :: nv2d=0    ! 2D state variables (in SCALE init/restart files)
+  INTEGER,PARAMETER :: nv2d=0    ! 2D state variables (in SCALE restart files)
   INTEGER,PARAMETER :: nv2dd=7   ! 2D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: nv2dx=7   ! 2D diagnostic variables
-!  INTEGER,PARAMETER :: iv3d_rho=1
-!  INTEGER,PARAMETER :: iv3d_rhou=2
-!  INTEGER,PARAMETER :: iv3d_rhov=3
-!  INTEGER,PARAMETER :: iv3d_rhow=4
-  INTEGER,PARAMETER :: iv3d_u=1
-  INTEGER,PARAMETER :: iv3d_v=2
-  INTEGER,PARAMETER :: iv3d_w=3
-  INTEGER,PARAMETER :: iv3d_t=4
-  INTEGER,PARAMETER :: iv3d_rhot=5 ! (~pressure)
+  INTEGER,PARAMETER :: iv3d_rho=1  !-- State in restart files
+  INTEGER,PARAMETER :: iv3d_rhou=2 !
+  INTEGER,PARAMETER :: iv3d_rhov=3 !
+  INTEGER,PARAMETER :: iv3d_rhow=4 !
+  INTEGER,PARAMETER :: iv3d_rhot=5 !
+  INTEGER,PARAMETER :: iv3d_u=1    !-- State for LETKF
+  INTEGER,PARAMETER :: iv3d_v=2    !
+  INTEGER,PARAMETER :: iv3d_w=3    !
+  INTEGER,PARAMETER :: iv3d_t=4    !
+  INTEGER,PARAMETER :: iv3d_p=5    !
   INTEGER,PARAMETER :: iv3d_q=6
   INTEGER,PARAMETER :: iv3d_qc=7
   INTEGER,PARAMETER :: iv3d_qr=8
@@ -144,10 +145,10 @@ SUBROUTINE set_common_scale
   ! Variable names (same as in the NetCDF file)
   !
   ! state variables (in 'restart' files, for LETKF)
-!  v3d_name(iv3d_rho)  = 'DENS'
-!  v3d_name(iv3d_rhou) = 'MOMX'
-!  v3d_name(iv3d_rhov) = 'MOMY'
-!  v3d_name(iv3d_rhow) = 'MOMZ'
+  v3d_name(iv3d_rho)  = 'DENS'
+  v3d_name(iv3d_rhou) = 'MOMX'
+  v3d_name(iv3d_rhov) = 'MOMY'
+  v3d_name(iv3d_rhow) = 'MOMZ'
   v3d_name(iv3d_rhot) = 'RHOT'
   v3d_name(iv3d_q)    = 'QV'
   v3d_name(iv3d_qc)   = 'QC'
@@ -297,8 +298,8 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
 !    URBAN_GRID_INDEX_setup
 !  use scale_urban_grid, only: &
 !    URBAN_GRID_setup
-!  use scale_tracer, only: &
-!    TRACER_setup
+  use scale_tracer, only: &
+    TRACER_setup
   use scale_fileio, only: &
      FILEIO_setup
   use scale_comm, only: &
@@ -309,6 +310,14 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
 !    LANDUSE_setup
 !  use scale_grid_real, only: &
 !    REAL_setup
+
+
+  use scale_atmos_hydrostatic, only: &
+     ATMOS_HYDROSTATIC_setup
+  use scale_atmos_thermodyn, only: &
+     ATMOS_THERMODYN_setup
+
+
   use scale_mapproj, only: &
     MPRJ_setup
   implicit none
@@ -369,6 +378,9 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
 !  call URBAN_GRID_INDEX_setup
 !  call URBAN_GRID_setup
 
+  ! setup tracer index
+  call TRACER_setup
+
   ! setup file I/O
   call FILEIO_setup
 
@@ -382,6 +394,11 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
 
   ! setup grid coordinates (real world)
 !  call REAL_setup
+
+  ! setup common tools
+!  call ATMOS_HYDROSTATIC_setup
+  call ATMOS_THERMODYN_setup
+!  call ATMOS_SATURATION_setup
 
   ! setup map projection
   call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
@@ -439,26 +456,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
 
   WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
 
-  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', 'DENS'
-  call FileRead(v3dg(:,:,:,6), filename, 'DENS', 1, PRC_myrank)         ! temporarily save rho
-
-  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', 'MOMX'
-  call FileRead(v3dg(:,:,:,iv3d_u), filename, 'MOMX', 1, PRC_myrank)
-  v3dg(:,:,:,iv3d_u) = v3dg(:,:,:,iv3d_u) / v3dg(:,:,:,6)               ! -- get U
-
-  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', 'MOMY'
-  call FileRead(v3dg(:,:,:,iv3d_v), filename, 'MOMY', 1, PRC_myrank)
-  v3dg(:,:,:,iv3d_v) = v3dg(:,:,:,iv3d_v) / v3dg(:,:,:,6)               ! -- get V
-
-  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', 'MOMZ'
-  call FileRead(v3dg(:,:,:,iv3d_w), filename, 'MOMZ', 1, PRC_myrank)
-  v3dg(:,:,:,iv3d_w) = v3dg(:,:,:,iv3d_w) / v3dg(:,:,:,6)               ! -- get W
-
-  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', 'RHOT'
-  call FileRead(v3dg(:,:,:,iv3d_rhot), filename, 'RHOT', 1, PRC_myrank) ! -- get rho * T
-  v3dg(:,:,:,iv3d_t) = v3dg(:,:,:,iv3d_rhot) / v3dg(:,:,:,6)            ! -- get T
-
-  do iv3d = 6, nv3d
+  do iv3d = 1, nv3d
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
     call FileRead(v3dg(:,:,:,iv3d), filename, trim(v3d_name(iv3d)), 1, PRC_myrank)
   end do
@@ -467,6 +465,8 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
     call FileRead(v2dg(:,:,iv2d), filename, trim(v2d_name(iv2d)), 1, PRC_myrank)
   end do
+
+!  call state_trans(v3dg)
 
   RETURN
 END SUBROUTINE read_restart
@@ -487,28 +487,13 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d,iv2d,ncid
 
+!  call state_trans_inv(v3dg)
+
   WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',PRC_myrank,'.nc'
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
   call ncio_open(filename // filesuffix, NF90_WRITE, ncid)
 
-  rhotmp = v3dg(:,:,:,iv3d_rhot) / v3dg(:,:,:,iv3d_t)
-
-  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', 'DENS'
-  call ncio_write_3d_r8(ncid, 'DENS', nlev, nlonsub, nlatsub, 1, rhotmp) ! -- write rho
-
-  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', 'MOMX'
-  call ncio_write_3d_r8(ncid, 'MOMX', nlev, nlonsub, nlatsub, 1, rhotmp * v3dg(:,:,:,iv3d_u)) ! -- write rho*u
-
-  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', 'MOMY'
-  call ncio_write_3d_r8(ncid, 'MOMY', nlev, nlonsub, nlatsub, 1, rhotmp * v3dg(:,:,:,iv3d_v)) ! -- write rho*v
-
-  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', 'MOMZ'
-  call ncio_write_3d_r8(ncid, 'MOMZ', nlev, nlonsub, nlatsub, 1, rhotmp * v3dg(:,:,:,iv3d_w)) ! -- write rho*w
-
-  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', 'RHOT'
-  call ncio_write_3d_r8(ncid, 'RHOT', nlev, nlonsub, nlatsub, 1, v3dg(:,:,:,iv3d_rhot)) ! -- write rho*T
-
-  DO iv3d = 6, nv3d
+  DO iv3d = 1, nv3d
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
     call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlonsub, nlatsub, 1, v3dg(:,:,:,iv3d))
   END DO
@@ -522,80 +507,6 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
 
   RETURN
 END SUBROUTINE write_restart
-
-
-!subroutine FileWrite_combine_3D(var,basename,varname,step,myrank)
-
-!  use gtool_file, only: &
-!    FileWrite, &
-!    File
-!  use scale_process, only: &
-!    PRC_master, &
-!    PRC_myrank, &
-!    PRC_2Drank
-!  implicit none
-
-!  real(DP),         intent(in)           :: var(:,:,:)
-!  character(LEN=*), intent(in)           :: basename
-!  character(LEN=*), intent(in)           :: varname
-!  integer,          intent(in)           :: step
-!  integer,          intent(in)           :: myrank
-
-!  real(RP),          intent(in)  :: var(:,:,:) !< value of the variable
-!  character(len=*),  intent(in)  :: basename   !< basename of the file
-!  character(len=*),  intent(in)  :: title      !< title    of the file
-!  character(len=*),  intent(in)  :: varname    !< name        of the variable
-!  character(len=*),  intent(in)  :: desc       !< description of the variable
-!  character(len=*),  intent(in)  :: unit       !< unit        of the variable
-!  character(len=*),  intent(in)  :: axistype   !< axis type (Z/X/Y)
-!  character(len=*),  intent(in)  :: datatype   !< data type (REAL8/REAL4/default)
-!  logical, optional, intent(in)  :: append     !< append existing (closed) file?
-
-!!  integer          :: dtype
-!!  character(len=2) :: dims(3)
-!!  integer          :: dim1_max, dim1_S, dim1_E
-!!  integer          :: dim2_max, dim2_S, dim2_E
-!!  integer          :: dim3_max, dim3_S, dim3_E
-
-!  real(RP), allocatable :: var3D(:,:,:)
-
-!  integer :: rankidx(2)
-!  logical :: append_sw
-!  logical :: fileexisted
-!  integer :: fid, vid
-!  !---------------------------------------------------------------------------
-
-!  rankidx(1) = PRC_2Drank(PRC_myrank,1)
-!  rankidx(2) = PRC_2Drank(PRC_myrank,2)
-!  if ( RP == 8 ) then
-!    dtype = File_REAL8
-!  elseif( RP == 4 ) then
-!    dtype = File_REAL4
-!  endif
-!  call FileCreate( fid,               & ! [OUT]
-!                   fileexisted,       & ! [OUT]
-!                   basename,          & ! [IN]
-!                   '', & !title,             & ! [IN]
-!                   '', & !H_SOURCE,          & ! [IN]
-!                   '', & !H_INSTITUTE,       & ! [IN]
-!                   PRC_master,        & ! [IN]
-!                   PRC_myrank,        & ! [IN]
-!                   rankidx,           & ! [IN]
-!                   .true. ) ! [IN]
-
-!    if ( .NOT. fileexisted ) then ! only once
-!       call FILEIO_set_axes( fid, dtype ) ! [IN]
-!    endif
-
-!    call FileAddVariable( vid, fid, varname, desc, '', dims, dtype ) ! [IN]
-
-!    allocate( var3D(dim1_max,dim2_max,dim3_max) )
-
-!    var3D(1:dim1_max,1:dim2_max,1:dim3_max) = var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
-!    call FileWrite( vid, var3D(:,:,:), NOWSEC, NOWSEC ) ! [IN]
-
-!    deallocate( var3D )
-!  end subroutine FILEIO_write_3D
 
 
 
@@ -781,5 +692,242 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
 
   RETURN
 END SUBROUTINE ensmean_grd
+
+
+
+
+SUBROUTINE state_trans(v3dg)
+!  use gtool_file, only: FileRead
+!  use scale_process, only: PRC_myrank
+!  use common_mpi, only: myrank
+!  use scale_history, only: &
+!     HIST_get
+
+  use scale_atmos_thermodyn, only: AQ_CP, AQ_CV
+    use scale_const, only: &
+       Rdry   => CONST_Rdry, &
+       Rvap   => CONST_Rvap, &
+       CVdry  => CONST_CVdry, &
+       PRE00 => CONST_PRE00
+
+  IMPLICIT NONE
+
+  REAL(RP),INTENT(INOUT) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+!  REAL(RP) :: pres(nlev,nlonsub,nlatsub)
+!  REAL(RP) :: temp(nlev,nlonsub,nlatsub)
+  REAL(RP) :: rho,pres,temp
+  real(RP) :: qdry,CVtot,Rtot,CPovCV
+  integer :: i,j,k,iv3d
+
+
+!  REAL(RP) :: pres2(nlev,nlonsub,nlatsub)
+
+!write(6,*) AQ_CP
+!write(6,*)
+!write(6,*) AQ_CV
+!write(6,*)
+!write(6,*) CVdry, Rdry, Rvap, PRE00
+
+!!!!!!    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
+  do j = 1, nlatsub
+    do i = 1, nlonsub
+      do k = 1, nlev
+       qdry  = 1.0d0
+       CVtot = 0.0d0
+       do iv3d = iv3d_q, nv3d ! loop over all moisture variables
+         qdry  = qdry - v3dg(k,i,j,iv3d)
+         CVtot = CVtot + v3dg(k,i,j,iv3d) * AQ_CV(iv3d-iv3d_q+1)
+       enddo
+       CVtot = CVdry * qdry + CVtot
+       Rtot  = Rdry  * qdry + Rvap * v3dg(k,i,j,iv3d_q)
+       CPovCV = ( CVtot + Rtot ) / CVtot
+
+       rho = v3dg(k,i,j,iv3d_rho)
+       pres = PRE00 * ( v3dg(k,i,j,iv3d_rhot) * Rtot / PRE00 )**CPovCV
+       temp = pres / ( rho * Rtot )
+
+       v3dg(k,i,j,iv3d_u) = v3dg(k,i,j,iv3d_rhou) / rho
+       v3dg(k,i,j,iv3d_v) = v3dg(k,i,j,iv3d_rhov) / rho
+       v3dg(k,i,j,iv3d_w) = v3dg(k,i,j,iv3d_rhow) / rho
+       v3dg(k,i,j,iv3d_t) = temp
+       v3dg(k,i,j,iv3d_p) = pres
+      enddo
+    enddo
+  enddo
+
+!  v3dg(:,:,:,5) = v3dg(:,:,:,iv3d_rho) ! temporarily store density here
+!  v3dg(:,:,:,iv3d_u) = v3dg(:,:,:,iv3d_rhou) / v3dg(:,:,:,5)
+!  v3dg(:,:,:,iv3d_v) = v3dg(:,:,:,iv3d_rhov) / v3dg(:,:,:,5)
+!  v3dg(:,:,:,iv3d_w) = v3dg(:,:,:,iv3d_rhow) / v3dg(:,:,:,5)
+!  v3dg(:,:,:,iv3d_t) = temp
+!  v3dg(:,:,:,iv3d_p) = pres
+
+!!write(6,*) pres(:,10,10)
+!write(6,*) v3dg(:,10,10,iv3d_t)
+!!write(6,*) v3dg(6,:,:,iv3d_rhou)
+
+!!write(6,*)
+
+!if(myrank == 0) then
+
+!  call HIST_get(pres2, 'hist.0001', 'T', 15)
+!  write(6,*) pres2(10,10,:)
+
+!!  call HIST_get(pres2, 'hist.0001', 'MOMX', 15)
+!!  write(6,*) pres2(:,:,6)
+
+!!  do i = 1, 15
+!!  call HIST_get(pres2, 'hist.0001', 'MOMX', i)
+!!  write(6,*) pres2(10,10,6)
+!!  end do
+
+!end if
+
+!write(6,*)
+
+
+  RETURN
+END SUBROUTINE state_trans
+
+
+SUBROUTINE state_trans_inv(v3dg)
+  use scale_atmos_thermodyn, only: AQ_CP, AQ_CV
+    use scale_const, only: &
+       Rdry   => CONST_Rdry, &
+       Rvap   => CONST_Rvap, &
+       CVdry  => CONST_CVdry, &
+       PRE00 => CONST_PRE00
+  IMPLICIT NONE
+
+  REAL(RP),INTENT(INOUT) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+  REAL(RP) :: rho,rhot
+  real(RP) :: qdry,CVtot,Rtot,CVovCP
+  integer :: i,j,k,iv3d
+
+!!!!!!    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
+  do j = 1, nlatsub
+    do i = 1, nlonsub
+      do k = 1, nlev
+       qdry  = 1.0d0
+       CVtot = 0.0d0
+       do iv3d = iv3d_q, nv3d ! loop over all moisture variables
+         qdry  = qdry - v3dg(k,i,j,iv3d)
+         CVtot = CVtot + v3dg(k,i,j,iv3d) * AQ_CV(iv3d-iv3d_q+1)
+       enddo
+       CVtot = CVdry * qdry + CVtot
+       Rtot  = Rdry  * qdry + Rvap * v3dg(k,i,j,iv3d_q)
+       CVovCP = CVtot / ( CVtot + Rtot )
+
+       rho = v3dg(k,i,j,iv3d_p) / (Rtot * v3dg(k,i,j,iv3d_t))
+       rhot = PRE00 / Rtot * (v3dg(k,i,j,iv3d_p) / PRE00)**CVovCP
+
+       v3dg(k,i,j,iv3d_rhot) = rhot
+       v3dg(k,i,j,iv3d_rhow) = v3dg(k,i,j,iv3d_w) * rho
+       v3dg(k,i,j,iv3d_rhov) = v3dg(k,i,j,iv3d_v) * rho
+       v3dg(k,i,j,iv3d_rhou) = v3dg(k,i,j,iv3d_u) * rho
+       v3dg(k,i,j,iv3d_rho) = rho
+      enddo
+    enddo
+  enddo
+
+  RETURN
+END SUBROUTINE state_trans_inv
+
+!  subroutine ATMOS_THERMODYN_temp_pres_3D( &
+!       temp, &
+!       pres, &
+!       dens, &
+!       rhot, &
+!       q     )
+!    implicit none
+
+!    real(RP), intent(out) :: temp(KA,IA,JA)    !< temperature                     [K]
+!    real(RP), intent(out) :: pres(KA,IA,JA)    !< pressure                        [Pa]
+!    real(RP), intent(in)  :: dens(KA,IA,JA)    !< density                         [kg/m3]
+!    real(RP), intent(in)  :: rhot(KA,IA,JA)    !< density * potential temperature [kg/m3*K]
+!    real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration              [kg/kg]
+
+!    real(RP) :: qdry
+!    real(RP) :: Rtot, CVtot, CPovCV
+
+!    integer :: k, i, j, iqw
+!    !---------------------------------------------------------------------------
+
+!    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
+!    do j = 1, JA
+!    do i = 1, IA
+!    do k = KS, KE
+!#ifdef DRY
+!       CVtot = CVdry
+!       Rtot  = Rdry
+!#else
+!       qdry  = 1.0_RP
+!       CVtot = 0.0_RP
+!       do iqw = QQS, QQE
+!          qdry  = qdry  - q(k,i,j,iqw)
+!          CVtot = CVtot + q(k,i,j,iqw) * AQ_CV(iqw)
+!       enddo
+!       CVtot = CVdry * qdry + CVtot
+!       Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+!#endif
+
+!       CPovCV = ( CVtot + Rtot ) / CVtot
+
+!       pres(k,i,j) = PRE00 * ( rhot(k,i,j) * Rtot / PRE00 )**CPovCV
+!       temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rtot )
+!    enddo
+!    enddo
+!    enddo
+
+!    return
+!  end subroutine ATMOS_THERMODYN_temp_pres_3D
+
+
+!  !-----------------------------------------------------------------------------
+!  subroutine ATMOS_THERMODYN_pott_3D( &
+!      pott,         &
+!      temp, pres, q )
+!    implicit none
+
+!    real(RP), intent(out) :: pott(KA,IA,JA)    ! potential temperature [K]
+!    real(RP), intent(in)  :: temp(KA,IA,JA)    ! temperature           [K]
+!    real(RP), intent(in)  :: pres(KA,IA,JA)    ! pressure              [Pa]
+!    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! mass concentration    [kg/kg]
+
+!    ! work
+!    real(RP) :: qdry
+!    real(RP) :: Rtot, CVtot, RovCP
+
+!    integer :: k, i, j, iqw
+!    !---------------------------------------------------------------------------
+
+!    do j = 1, JA
+!    do i = 1, IA
+!    do k = 1, KA
+!#ifdef DRY
+!       CVtot = CVdry
+!       Rtot  = Rdry
+!#else
+!       qdry  = 1.0_RP
+!       CVtot = 0.0_RP
+!       do iqw = QQS, QQE
+!          qdry  = qdry  - q(k,i,j,iqw)
+!          CVtot = CVtot + q(k,i,j,iqw) * AQ_CV(iqw)
+!       enddo
+!       CVtot = CVdry * qdry + CVtot
+!       Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
+!#endif
+
+!       RovCP = Rtot / ( CVtot + Rtot )
+
+!       pott(k,i,j) = temp(k,i,j) * ( PRE00 / pres(k,i,j) )**RovCP
+!    enddo
+!    enddo
+!    enddo
+
+!    return
+!  end subroutine ATMOS_THERMODYN_pott_3D
+
+
 
 END MODULE common_scale

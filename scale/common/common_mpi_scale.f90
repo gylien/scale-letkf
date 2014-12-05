@@ -947,6 +947,7 @@ subroutine read_ens_mpi(file,v3d,v2d)
       WRITE(filename(6:9),'(I4.4)') im
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
       call read_restart(filename,v3dg,v2dg)
+      call state_trans(v3dg)
     end if
     mstart = 1 + (it-1)*nprocs_e
     mend = MIN(it*nprocs_e, nbv)
@@ -979,6 +980,7 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
       WRITE(filename(1:4),'(A4)') file
       WRITE(filename(6:9),'(I4.4)') im
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+      call state_trans_inv(v3dg)
       call write_restart(filename,v3dg,v2dg)
     end if
   end do ! [ it = 1, nitmax ]
@@ -1183,12 +1185,12 @@ SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,mem,v3d,v2d,v3dg,v2dg) !,ngp,ngpm
     DO n=1,nv3d
       DO k=1,nlev
         j = j+1
-        CALL buf_to_grd(nprocs_e,bufs(:,j,:),v3dg(k,:,:,n))
+        CALL buf_to_grd(nprocs_e,bufr(:,j,:),v3dg(k,:,:,n))
       END DO
     END DO
     DO n=1,nv2d
       j = j+1
-      CALL buf_to_grd(nprocs_e,bufs(:,j,:),v2dg(:,:,n))
+      CALL buf_to_grd(nprocs_e,bufr(:,j,:),v2dg(:,:,n))
     END DO
   END IF
 
@@ -1298,6 +1300,7 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
     WRITE(filename(1:4),'(A4)') file
     WRITE(filename(6:9),'(A4)') 'mean'
 !    WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+    call state_trans_inv(v3dg)
     call write_restart(filename,v3dg,v2dg)
   END IF
 
@@ -1332,7 +1335,8 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
     WRITE(filename(1:4),'(A4)') file
     WRITE(filename(6:9),'(A4)') 'sprd'
 !    WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
-    call write_restart(filename,v3dg,v2dg)
+!    call state_trans_inv(v3dg)             !!
+    call write_restart(filename,v3dg,v2dg)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
   END IF
 
   RETURN

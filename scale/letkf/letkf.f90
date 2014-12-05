@@ -90,11 +90,16 @@ PROGRAM letkf
   CALL set_common_mpi_scale(nbv+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
 
+!!!
+  if (scale_IO_group_n >= 1) then
+!!!
   ALLOCATE(gues3d(nij1,nlev,nbv,nv3d))
   ALLOCATE(gues2d(nij1,nbv,nv2d))
   ALLOCATE(anal3d(nij1,nlev,nbv,nv3d))
   ALLOCATE(anal2d(nij1,nbv,nv2d))
-
+!!!
+  end if
+!!!
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL CPU_TIME(rtimer)
@@ -176,7 +181,7 @@ PROGRAM letkf
 
 
 !  if (scale_IO_group_n >= 1) then
-!  write (6,*) gues3d(:,20,3,iv3d_u)
+!  write (6,*) gues3d(20,:,3,iv3d_t)
 !!  write (6,*) gues2d
 !  end if
 
@@ -208,6 +213,10 @@ PROGRAM letkf
 !  !
 !  ! LETKF
 !  !
+
+  anal3d = gues3d
+  anal2d = gues2d
+
 !  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 !  CALL das_letkf(gues3d,gues2d,anal3d,anal2d)
 !!
@@ -215,23 +224,40 @@ PROGRAM letkf
 !  CALL CPU_TIME(rtimer)
 !  WRITE(6,'(A,2F10.2)') '### TIMER(DAS_LETKF):',rtimer,rtimer-rtimer00
 !  rtimer00=rtimer
-!!-----------------------------------------------------------------------
-!! Analysis ensemble
-!!-----------------------------------------------------------------------
-!  !
-!  ! WRITE ANAL
-!  !
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!  CALL write_ens_mpi('anal',nbv,anal3d,anal2d)
-!  !
-!  ! WRITE ENS MEAN and SPRD
-!  !
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!  CALL write_ensmspr_mpi('anal',nbv,anal3d,anal2d)
-!!
-!  CALL CPU_TIME(rtimer)
-!  WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_ANAL):',rtimer,rtimer-rtimer00
-!  rtimer00=rtimer
+!-----------------------------------------------------------------------
+! Analysis ensemble
+!-----------------------------------------------------------------------
+  !
+  ! WRITE ANAL
+  !
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+!!!
+  if (scale_IO_group_n >= 1) then
+!!!
+  CALL write_ens_mpi('anal',anal3d,anal2d)
+!!!
+  end if
+!!!
+
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  CALL CPU_TIME(rtimer)
+  WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_ANAL):',rtimer,rtimer-rtimer00
+  rtimer00=rtimer
+  !
+  ! WRITE ENS MEAN and SPRD
+  !
+!!!
+  if (scale_IO_group_n >= 1) then
+!!!
+  CALL write_ensmspr_mpi('anal',anal3d,anal2d)
+!!!
+  end if
+!!!
+!
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  CALL CPU_TIME(rtimer)
+  WRITE(6,'(A,2F10.2)') '### TIMER(ANAL_MEAN):',rtimer,rtimer-rtimer00
+  rtimer00=rtimer
 !!-----------------------------------------------------------------------
 !! Monitor
 !!-----------------------------------------------------------------------

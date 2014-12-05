@@ -1,6 +1,17 @@
 *.swp
 *.o
 *.mod
+scale/configure.user
 scale/common/datetime
 scale/common/enssize
 scale/common/pdbash
+scale/run/*.conf
+scale/run/config.*
+scale/run/cycle_job.sh
+scale/run/fcst_job.sh
+scale/run/machinefile
+scale/run/mpd.hosts
+scale/letkf/letkf[0-9]*
+scale/letkf/testexp/
+scale/obs/obsmake
+scale/obs/obsope[0-9]*

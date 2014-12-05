@@ -138,10 +138,10 @@ SUBROUTINE obsope_cal(obs)
             im, ', subdomain id #', proc2mem(2,it,myrank+1)
 
       nproc = 0
-      do islot = 1, SLOT_NUM
+      do islot = SLOT_START, SLOT_END
         slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
         slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
-        write (6,'(A,I3,A,F7.1,A,F7.1,A)') 'Slot #', islot, ': time interval (', slot_lb, ',', slot_ub, '] sec'
+        write (6,'(A,I3,A,F7.1,A,F7.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
 
         call read_ens_history_mpi('hist',it,islot,v3dg,v2dg)
 !  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -202,7 +202,7 @@ SUBROUTINE obsope_cal(obs)
 !        END IF
 !      END IF
 
-      end do ! [ islot = 1, SLOT_NUM ]
+      end do ! [ islot = SLOT_START, SLOT_END ]
 
       obsda%nobs = nproc
 
@@ -255,10 +255,10 @@ SUBROUTINE obsmake_cal(obs)
   write (6,'(A,I6.6,A,I6.6)') 'MYRANK ',myrank,' is processing subdomain id #', proc2mem(2,1,myrank+1)
 
   nproc = 0
-  do islot = 1, SLOT_NUM
+  do islot = SLOT_START, SLOT_END
     slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
     slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
-    write (6,'(A,I3,A,F7.1,A,F7.1,A)') 'Slot #', islot, ': time interval (', slot_lb, ',', slot_ub, '] sec'
+    write (6,'(A,I3,A,F7.1,A,F7.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
 
     call read_ens_history_mpi('hist',1,islot,v3dg,v2dg)
 
@@ -303,7 +303,7 @@ SUBROUTINE obsmake_cal(obs)
     write (6,'(A,I10)') ' -- nobs in the slot = ', nslot
     write (6,'(A,I6,A,I10)') ' -- nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
 
-  end do ! [ islot = 1, SLOT_NUM ]
+  end do ! [ islot = SLOT_START, SLOT_END ]
 
   deallocate ( v3dg, v2dg )
 

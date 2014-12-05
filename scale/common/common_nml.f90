@@ -22,7 +22,8 @@ MODULE common_nml
 !  integer :: PRC_NUM_Y_LETKF = 1
 
   !--- PARAM_LETKF_OBS
-  integer :: SLOT_NUM = 1
+  integer :: SLOT_START = 1
+  integer :: SLOT_END = 1
   integer :: SLOT_BASE = 1
   real(r_size) :: SLOT_TINTERVAL = 3600.0d0
 
@@ -81,7 +82,8 @@ subroutine read_nml_letkf_obs
   integer :: ierr
 
   namelist /PARAM_LETKF_OBS/ &
-    SLOT_NUM, &
+    SLOT_START, &
+    SLOT_END, &
     SLOT_BASE, &
     SLOT_TINTERVAL
 
