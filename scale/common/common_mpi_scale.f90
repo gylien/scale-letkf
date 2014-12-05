@@ -56,7 +56,7 @@ module common_mpi_scale
 
   integer,save :: MPI_COMM_e, nprocs_e, myrank_e
 
-
+!  character(9) scale_filename = 'file.0000'
 
 contains
 
@@ -678,7 +678,7 @@ SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
     DO n=1,nv3d
       DO k=1,nlev
         j = j+1
-        CALL buf_to_grd(nprocs_e,bufr(:,j,:),v3dg(:,:,k,n))
+        CALL buf_to_grd(nprocs_e,bufr(:,j,:),v3dg(k,:,:,n))
       END DO
     END DO
 
@@ -1273,6 +1273,9 @@ END SUBROUTINE buf_to_grd
 ! STORING DATA (ensemble mean and spread)
 !-----------------------------------------------------------------------
 SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
+  use scale_process, only: PRC_myrank
+  implicit none
+
   CHARACTER(4),INTENT(IN) :: file
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nbv,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nij1,nbv,nv2d)
@@ -1280,56 +1283,57 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
   REAL(r_size) :: v2dm(nij1,nv2d)
   REAL(r_size) :: v3ds(nij1,nlev,nv3d)
   REAL(r_size) :: v2ds(nij1,nv2d)
-  REAL(r_sngl) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
-  REAL(r_sngl) :: v2dg(nlonsub,nlatsub,nv2d)
-  INTEGER :: i,k,m,n
+  REAL(RP) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+  REAL(RP) :: v2dg(nlonsub,nlatsub,nv2d)
+  INTEGER :: i,k,m,n,ensm_rank_e
   CHARACTER(9) :: filename='file.0000'
+
+  ensm_rank_e = proc2mem(1,1,mem2proc(PRC_myrank+1,nbv+1)+1)-1
+!print *, PRC_myrank, ensm_rank_e
 
   CALL ensmean_grd(nbv,nij1,v3d,v2d,v3dm,v2dm)
 
-!  mem2proc(0,nbv+1)
+  CALL gather_grd_mpi(ensm_rank_e,v3dm,v2dm,v3dg,v2dg)
+  IF(myrank_e == ensm_rank_e) THEN
+    WRITE(filename(1:4),'(A4)') file
+    WRITE(filename(6:9),'(A4)') 'mean'
+!    WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+    call write_restart(filename,v3dg,v2dg)
+  END IF
 
-!  CALL gather_grd_mpi(0,v3dm,v2dm,v3dg,v2dg)
-!  IF(myrank_e == 0) THEN
-!!  IF(myrank_e == nprocs_e-1) THEN  ! The last processor
-!    WRITE(filename(1:7),'(A4,A3)') file,'_me'
-!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',filename
-!    CALL write_grd4(filename,v3dg,v2dg,0)
-!  END IF
+  DO n=1,nv3d
+!$OMP PARALLEL DO PRIVATE(i,k,m)
+    DO k=1,nlev
+      DO i=1,nij1
+        v3ds(i,k,n) = (v3d(i,k,1,n)-v3dm(i,k,n))**2
+        DO m=2,nbv
+          v3ds(i,k,n) = v3ds(i,k,n) + (v3d(i,k,m,n)-v3dm(i,k,n))**2
+        END DO
+        v3ds(i,k,n) = SQRT(v3ds(i,k,n) / REAL(nbv-1,r_size))
+      END DO
+    END DO
+!$OMP END PARALLEL DO
+  END DO
 
-!  DO n=1,nv3d
-!!$OMP PARALLEL DO PRIVATE(i,k,m)
-!    DO k=1,nlev
-!      DO i=1,nij1
-!        v3ds(i,k,n) = (v3d(i,k,1,n)-v3dm(i,k,n))**2
-!        DO m=2,nbv
-!          v3ds(i,k,n) = v3ds(i,k,n) + (v3d(i,k,m,n)-v3dm(i,k,n))**2
-!        END DO
-!        v3ds(i,k,n) = SQRT(v3ds(i,k,n) / REAL(nbv-1,r_size))
-!      END DO
-!    END DO
-!!$OMP END PARALLEL DO
-!  END DO
+  DO n=1,nv2d
+!$OMP PARALLEL DO PRIVATE(i,k,m)
+    DO i=1,nij1
+      v2ds(i,n) = (v2d(i,1,n)-v2dm(i,n))**2
+      DO m=2,nbv
+        v2ds(i,n) = v2ds(i,n) + (v2d(i,m,n)-v2dm(i,n))**2
+      END DO
+      v2ds(i,n) = SQRT(v2ds(i,n) / REAL(nbv-1,r_size))
+    END DO
+!$OMP END PARALLEL DO
+  END DO
 
-!  DO n=1,nv2d
-!!$OMP PARALLEL DO PRIVATE(i,k,m)
-!    DO i=1,nij1
-!      v2ds(i,n) = (v2d(i,1,n)-v2dm(i,n))**2
-!      DO m=2,nbv
-!        v2ds(i,n) = v2ds(i,n) + (v2d(i,m,n)-v2dm(i,n))**2
-!      END DO
-!      v2ds(i,n) = SQRT(v2ds(i,n) / REAL(nbv-1,r_size))
-!    END DO
-!!$OMP END PARALLEL DO
-!  END DO
-
-!  CALL gather_grd_mpi(0,v3ds,v2ds,v3dg,v2dg)
-!  IF(myrank_e == 0) THEN
-!!  IF(myrank_e == MOD(nprocs_e*2-2,nprocs_e)) THEN  ! The second last processor
-!    WRITE(filename(1:7),'(A4,A3)') file,'_sp'
-!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',filename
-!    CALL write_grd4(filename,v3dg,v2dg,0)
-!  END IF
+  CALL gather_grd_mpi(ensm_rank_e,v3ds,v2ds,v3dg,v2dg)
+  IF(myrank_e == ensm_rank_e) THEN
+    WRITE(filename(1:4),'(A4)') file
+    WRITE(filename(6:9),'(A4)') 'sprd'
+!    WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+    call write_restart(filename,v3dg,v2dg)
+  END IF
 
   RETURN
 END SUBROUTINE write_ensmspr_mpi

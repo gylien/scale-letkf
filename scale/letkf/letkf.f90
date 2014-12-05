@@ -96,6 +96,7 @@ PROGRAM letkf
   ALLOCATE(anal2d(nij1,nbv,nv2d))
 
 
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
   rtimer00=rtimer
@@ -117,6 +118,7 @@ PROGRAM letkf
   end if
 !!!
 
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
   rtimer00=rtimer
@@ -129,6 +131,8 @@ PROGRAM letkf
 !  !
   CALL set_letkf_obs
 !
+
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
   rtimer00=rtimer
@@ -159,7 +163,7 @@ PROGRAM letkf
   !
   ! READ GUES
   !
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
 !!!
   if (scale_IO_group_n >= 1) then
@@ -177,16 +181,26 @@ PROGRAM letkf
 !  end if
 
 
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  CALL CPU_TIME(rtimer)
+  WRITE(6,'(A,2F10.2)') '### TIMER(READ_GUES):',rtimer,rtimer-rtimer00
+  rtimer00=rtimer
 
 
   !
   ! WRITE ENS MEAN and SPRD
   !
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!  CALL write_ensmspr_mpi('gues',nbv,gues3d,gues2d)
+!!!
+  if (scale_IO_group_n >= 1) then
+!!!
+  CALL write_ensmspr_mpi('gues',gues3d,gues2d)
+!!!
+  end if
+!!!
 !
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   CALL CPU_TIME(rtimer)
-  WRITE(6,'(A,2F10.2)') '### TIMER(READ_GUES):',rtimer,rtimer-rtimer00
+  WRITE(6,'(A,2F10.2)') '### TIMER(GUES_MEAN):',rtimer,rtimer-rtimer00
   rtimer00=rtimer
 !!-----------------------------------------------------------------------
 !! Data Assimilation
@@ -197,6 +211,7 @@ PROGRAM letkf
 !  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 !  CALL das_letkf(gues3d,gues2d,anal3d,anal2d)
 !!
+!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 !  CALL CPU_TIME(rtimer)
 !  WRITE(6,'(A,2F10.2)') '### TIMER(DAS_LETKF):',rtimer,rtimer-rtimer00
 !  rtimer00=rtimer
