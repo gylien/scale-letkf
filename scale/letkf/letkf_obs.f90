@@ -34,16 +34,16 @@ MODULE letkf_obs
   LOGICAL,PARAMETER :: oma_output=.TRUE.
   LOGICAL,PARAMETER :: obsgues_output=.FALSE.
   LOGICAL,PARAMETER :: obsanal_output=.FALSE.
-  REAL(r_size),PARAMETER :: sigma_obs=500.0d3
-  REAL(r_size),PARAMETER :: sigma_obs_rain=350.0d3   ! GYL
+  REAL(r_size),PARAMETER :: sigma_obs=10.0d3
+!  REAL(r_size),PARAMETER :: sigma_obs_rain=350.0d3   ! GYL
   REAL(r_size),PARAMETER :: sigma_obsv=0.4d0
-  REAL(r_size),PARAMETER :: sigma_obsv_rain=0.4d0    ! GYL
-  REAL(r_size),PARAMETER :: base_obsv_rain=85000.0d0 ! GYL
+!  REAL(r_size),PARAMETER :: sigma_obsv_rain=0.4d0    ! GYL
+!  REAL(r_size),PARAMETER :: base_obsv_rain=85000.0d0 ! GYL
   REAL(r_size),PARAMETER :: sigma_obst=3.0d0
   REAL(r_size),SAVE :: dist_zero
-  REAL(r_size),SAVE :: dist_zero_rain
+!  REAL(r_size),SAVE :: dist_zero_rain
   REAL(r_size),SAVE :: dist_zerov
-  REAL(r_size),SAVE :: dist_zerov_rain
+!  REAL(r_size),SAVE :: dist_zerov_rain
 !  REAL(r_size),ALLOCATABLE,SAVE :: obselm(:)
 !  REAL(r_size),ALLOCATABLE,SAVE :: obslon(:)
 !  REAL(r_size),ALLOCATABLE,SAVE :: obslat(:)
@@ -64,7 +64,7 @@ MODULE letkf_obs
 
   type(obs_info),save :: obs
   type(obs_da_value),save :: obsda
-  type(obs_da_value),save :: obsda2  ! sorted
+  type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
 
 
 !-----------------------------------------------------------------------
@@ -83,11 +83,17 @@ CONTAINS
 ! Initialize
 !-----------------------------------------------------------------------
 SUBROUTINE set_letkf_obs
+  use scale_grid, only: &
+    DX, &
+    DY
   use scale_grid_index, only: &
     IHALO,JHALO
   use scale_process, only: &
     MPI_COMM_u, &
-    PRC_myrank
+    PRC_myrank, &
+    PRC_NUM_X, &
+    PRC_NUM_Y
+
   IMPLICIT NONE
   REAL(r_size),PARAMETER :: gross_error=5.0d0
   REAL(r_size) :: dlon1,dlon2,dlon,dlat
@@ -158,14 +164,28 @@ SUBROUTINE set_letkf_obs
   integer :: MPI_G_e, MPI_G_obstmp, MPI_COMM_obstmp
 
 
+
+
+
+!---
+  integer :: ns
+  integer, allocatable :: nr(:), nrt(:), obsidx(:)
+  integer, allocatable :: obsbufs(:), obsbufr(:)
+  integer :: ip2, imin1,imax1,jmin1,jmax1,imin2,imax2,jmin2,jmax2
+!---
+
+
+
+
+
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
 
 
   dist_zero = sigma_obs * SQRT(10.0d0/3.0d0) * 2.0d0
-  dist_zero_rain = sigma_obs_rain * SQRT(10.0d0/3.0d0) * 2.0d0
+!  dist_zero_rain = sigma_obs_rain * SQRT(10.0d0/3.0d0) * 2.0d0
   dist_zerov = sigma_obsv * SQRT(10.0d0/3.0d0) * 2.0d0
-  dist_zerov_rain = sigma_obsv_rain * SQRT(10.0d0/3.0d0) * 2.0d0
+!  dist_zerov_rain = sigma_obsv_rain * SQRT(10.0d0/3.0d0) * 2.0d0
 
 
 
@@ -496,12 +516,14 @@ SUBROUTINE set_letkf_obs
 
 ! Sorting
 
-    obsda2%nobs = 0
+    allocate ( obsda2(0:MEM_NP-1) )
+
+    obsda2(PRC_myrank)%nobs = 0
     allocate ( nobsgrd(0:nlonsub,1:nlatsub,0:MEM_NP-1) )
     nobsgrd = 0
     do n = 1, obsda%nobs
       if (obsda%qc(n) == 0) then
-        obsda2%nobs = obsda2%nobs + 1
+        obsda2(PRC_myrank)%nobs = obsda2(PRC_myrank)%nobs + 1
         call rank_1d_2d(PRC_myrank, iproc, jproc)
         i = ceiling(obsda%ri(n)-0.5) - IHALO - iproc * IMAX
         j = ceiling(obsda%rj(n)-0.5) - JHALO - jproc * JMAX
@@ -509,7 +531,7 @@ SUBROUTINE set_letkf_obs
       end if
     end do
 
-    write (6,'(I10,A)') obsda2%nobs,' OBSERVATIONS TO BE ASSIMILATED'
+    write (6,'(I10,A)') obsda2(PRC_myrank)%nobs,' OBSERVATIONS TO BE ASSIMILATED'
 
 ! regional count
     do j = 1, nlatsub
@@ -530,11 +552,8 @@ SUBROUTINE set_letkf_obs
 
 !write (6, *) 'XXXXXX'
 
-! communication
-    allocate ( bufri2 (0:nlonsub,1:nlatsub,0:MEM_NP-1) )
-    call MPI_ALLREDUCE(nobsgrd,bufri2,(nlonsub+1)*nlatsub*MEM_NP,MPI_INTEGER,MPI_SUM,MPI_COMM_u,ierr)
-    nobsgrd(0:nlonsub,1:nlatsub,0:MEM_NP-1) = bufri2(0:nlonsub,1:nlatsub,0:MEM_NP-1)
-    deallocate ( bufri2 )
+
+
 
 !do i = 0, MEM_NP-1
 !do j = 1, nlatsub
@@ -555,19 +574,19 @@ SUBROUTINE set_letkf_obs
 
     allocate ( nnext (nlonsub,nlatsub) )
     nnext(1:nlonsub,:) = nobsgrd(0:nlonsub-1,:,PRC_myrank) + 1
-    call obs_da_value_allocate(obsda2,nbv)
+    call obs_da_value_allocate(obsda2(PRC_myrank),nbv)
     do n = 1, obsda%nobs
       if (obsda%qc(n) == 0) then
         call rank_1d_2d(PRC_myrank, iproc, jproc)
         i = ceiling(obsda%ri(n)-0.5) - IHALO - iproc * IMAX
         j = ceiling(obsda%rj(n)-0.5) - JHALO - jproc * JMAX
 
-        obsda2%idx(nnext(i,j)) = obsda%idx(n)
-        obsda2%val(nnext(i,j)) = obsda%val(n)
-        obsda2%ensval(:,nnext(i,j)) = obsda%ensval(:,n)
-        obsda2%qc(nnext(i,j)) = obsda%qc(n)
-        obsda2%ri(nnext(i,j)) = obsda%ri(n)
-        obsda2%rj(nnext(i,j)) = obsda%rj(n)
+        obsda2(PRC_myrank)%idx(nnext(i,j)) = obsda%idx(n)
+        obsda2(PRC_myrank)%val(nnext(i,j)) = obsda%val(n)
+        obsda2(PRC_myrank)%ensval(:,nnext(i,j)) = obsda%ensval(:,n)
+        obsda2(PRC_myrank)%qc(nnext(i,j)) = obsda%qc(n)
+        obsda2(PRC_myrank)%ri(nnext(i,j)) = obsda%ri(n)
+        obsda2(PRC_myrank)%rj(nnext(i,j)) = obsda%rj(n)
 
         nnext(i,j) = nnext(i,j) + 1
       end if
@@ -575,6 +594,121 @@ SUBROUTINE set_letkf_obs
     deallocate (nnext)
 
     call obs_da_value_deallocate(obsda)
+
+
+
+
+
+
+! communication
+    allocate ( bufri2 (0:nlonsub,1:nlatsub,0:MEM_NP-1) )
+    call MPI_ALLREDUCE(nobsgrd,bufri2,(nlonsub+1)*nlatsub*MEM_NP,MPI_INTEGER,MPI_SUM,MPI_COMM_u,ierr)
+    nobsgrd(0:nlonsub,1:nlatsub,0:MEM_NP-1) = bufri2(0:nlonsub,1:nlatsub,0:MEM_NP-1)
+    deallocate ( bufri2 )
+
+
+
+
+    allocate(nr(MEM_NP),nrt(MEM_NP))
+
+!if (PRC_myrank == 0 .and. myrank_e == 0) then
+!print *, nobsgrd(nlonsub,nlatsub,:)
+!print *, maxval(nobsgrd(nlonsub,nlatsub,:))
+!end if
+
+    allocate ( obsbufs(maxval(nobsgrd(nlonsub,nlatsub,:))) )
+    allocate ( obsidx(maxval(nobsgrd(nlonsub,nlatsub,:))) )
+
+    do ip = 0, MEM_NP-1
+!    do ip = 0, 0
+
+      call rank_1d_2d(ip, iproc, jproc)
+
+!if (PRC_myrank == 0 .and. myrank_e == 0) then
+!print *, PRC_NUM_X,IMAX,iproc,jproc,sigma_obs,DX,DY,dist_zero
+!end if
+
+      imin1 = max(1, iproc*IMAX+1 - ceiling(dist_zero/DX))
+      imax1 = min(PRC_NUM_X*IMAX, (iproc+1)*IMAX + ceiling(dist_zero/DX))
+      jmin1 = max(1, jproc*JMAX+1 - ceiling(dist_zero/DY))
+      jmax1 = min(PRC_NUM_Y*JMAX, (jproc+1)*JMAX + ceiling(dist_zero/DY))
+!      i = ceiling(obsda%ri(n)-0.5) - IHALO - iproc * IMAX
+!      j = ceiling(obsda%rj(n)-0.5) - JHALO - jproc * JMAX
+
+!if (myrank_e == 0) then
+!print *, PRC_myrank,imin1,imax1,jmin1,jmax1
+!end if
+
+      nr = 0
+      nrt = 0
+
+      do ip2 = 0, MEM_NP-1
+
+        if (ip2 /= ip) then
+          call rank_1d_2d(ip2, iproc, jproc)
+!          i = ceiling(obsda%ri(n)-0.5) - IHALO - iproc * IMAX
+!          j = ceiling(obsda%rj(n)-0.5) - JHALO - jproc * JMAX
+
+          imin2 = max(1, imin1 - iproc*IMAX)
+          imax2 = min(IMAX, imax1 - iproc*IMAX)
+          jmin2 = max(1, jmin1 - jproc*JMAX)
+          jmax2 = min(JMAX, jmax1 - jproc*JMAX)
+
+!if (myrank_e == 0) then
+!print *, PRC_myrank,ip2,imin2,imax2,jmin2,jmax2
+!end if
+
+
+          nr(ip2+1) = 0
+          call obs_choose(imin2,imax2,jmin2,jmax2,ip2,nr(ip2+1),obsidx)
+
+          if (ip2 == PRC_myrank) then
+
+!              allocate ( obsidx(obsda2(PRC_myrank)%nobs) )
+!              call obs_choose(imin2,imax2,jmin2,jmax2,PRC_myrank,ns,obsidx)
+
+            ns = nr(ip2+1)
+            do n = 1, ns
+              obsbufs(n) = obsda2(PRC_myrank)%idx(obsidx(n))
+            end do
+
+          end if
+
+
+        end if
+
+        if (ip2 > 0) then
+          nrt(ip2+1) = nrt(ip2) + nr(ip2)
+        end if
+
+      end do
+
+      allocate ( obsbufr(nrt(MEM_NP)+nr(MEM_NP)) )
+
+      call MPI_GATHERV(obsbufs, ns, MPI_INTEGER, obsbufr, nr, nrt, MPI_INTEGER, ip, MPI_COMM_u, ierr)
+
+
+      if (PRC_myrank == ip) then
+
+!        write(6,*) ns
+        write(6,*) nr(:)
+        write(6,*) nrt(:)
+        write(6,*)
+        write(6,*) nrt(MEM_NP)+nr(MEM_NP)
+        write(6,*)
+        write(6,*) obsbufr(:)
+
+      end if
+
+      deallocate (obsbufr)
+
+    end do ! [ ip = 0, MEM_MP ]
+
+
+
+
+
+
 
 
 !    call unset_scalelib
@@ -728,6 +862,45 @@ SUBROUTINE set_letkf_obs
 
   RETURN
 END SUBROUTINE set_letkf_obs
+
+
+
+
+SUBROUTINE obs_choose(imin,imax,jmin,jmax,proc,nn,nobs_use)
+
+!  use scale_process, only: &
+!    PRC_myrank
+
+
+  implicit none
+
+  INTEGER,INTENT(IN) :: imin,imax,jmin,jmax,proc
+  INTEGER,INTENT(INOUT) :: nn
+  INTEGER,INTENT(INOUT),OPTIONAL :: nobs_use(:)
+  INTEGER :: j,ip
+
+  DO j = jmin, jmax
+
+!if (myrank_e == 0 .and. PRC_myrank == 0) then
+!print *, nobsgrd(imin-1,j,proc)+1, nobsgrd(imax,j,proc)
+!end if
+
+
+    DO ip = nobsgrd(imin-1,j,proc)+1, nobsgrd(imax,j,proc)
+!      IF(nn > nobs) THEN
+!        WRITE(6,*) 'FATALERROR, NN > NOBS', NN, NOBS
+!      END IF
+      nn = nn + 1
+      if (present(nobs_use)) then
+        nobs_use(nn) = ip
+      end if
+    END DO
+  END DO
+
+  RETURN
+END SUBROUTINE obs_choose
+
+
 !!-----------------------------------------------------------------------
 !! Monitor observation diagnostics after the letkf update
 !!  Moved from main program code to this subroutine, 2013/12/26 Guo-Yuan Lien

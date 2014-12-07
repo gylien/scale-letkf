@@ -62,37 +62,37 @@ subroutine read_nml_letkf
 
   return
 end subroutine read_nml_letkf
-!!-----------------------------------------------------------------------
-!! Data Assimilation
-!!-----------------------------------------------------------------------
-!SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
-!  IMPLICIT NONE
-!  CHARACTER(12) :: inflfile='infl_mul.grd'
-!  REAL(r_size),INTENT(INOUT) :: gues3d(nij1,nlev,nbv,nv3d) ! background ensemble
-!  REAL(r_size),INTENT(INOUT) :: gues2d(nij1,nbv,nv2d)      !  output: destroyed
-!  REAL(r_size),INTENT(OUT) :: anal3d(nij1,nlev,nbv,nv3d) ! analysis ensemble
-!  REAL(r_size),INTENT(OUT) :: anal2d(nij1,nbv,nv2d)
-!  REAL(r_size),ALLOCATABLE :: mean3d(:,:,:)
-!  REAL(r_size),ALLOCATABLE :: mean2d(:,:)
-!  REAL(r_size),ALLOCATABLE :: hdxf(:,:)
-!  REAL(r_size),ALLOCATABLE :: rdiag(:)
-!  REAL(r_size),ALLOCATABLE :: rloc(:)
-!  REAL(r_size),ALLOCATABLE :: dep(:)
-!  REAL(r_size),ALLOCATABLE :: work3d(:,:,:)
-!  REAL(r_size),ALLOCATABLE :: work2d(:,:)
-!  REAL(r_sngl),ALLOCATABLE :: work3dg(:,:,:,:)
-!  REAL(r_sngl),ALLOCATABLE :: work2dg(:,:,:)
-!  REAL(r_size),ALLOCATABLE :: tmptv(:,:)
-!  REAL(r_size),ALLOCATABLE :: pfull(:,:)
-!  REAL(r_size) :: parm
-!  REAL(r_size) :: trans(nbv,nbv,nv3d+nv2d)
-!  REAL(r_size) :: q_mean,q_sprd  ! GYL
-!  REAL(r_size) :: q_anal(nbv)    ! GYL
-!  LOGICAL :: ex
-!  INTEGER :: ij,ilev,n,m,i,j,k,nobsl,ierr,iret
+!-----------------------------------------------------------------------
+! Data Assimilation
+!-----------------------------------------------------------------------
+SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
+  IMPLICIT NONE
+  CHARACTER(12) :: inflfile='infl_mul.grd'
+  REAL(r_size),INTENT(INOUT) :: gues3d(nij1,nlev,nbv,nv3d) ! background ensemble
+  REAL(r_size),INTENT(INOUT) :: gues2d(nij1,nbv,nv2d)      !  output: destroyed
+  REAL(r_size),INTENT(OUT) :: anal3d(nij1,nlev,nbv,nv3d) ! analysis ensemble
+  REAL(r_size),INTENT(OUT) :: anal2d(nij1,nbv,nv2d)
+  REAL(r_size),ALLOCATABLE :: mean3d(:,:,:)
+  REAL(r_size),ALLOCATABLE :: mean2d(:,:)
+  REAL(r_size),ALLOCATABLE :: hdxf(:,:)
+  REAL(r_size),ALLOCATABLE :: rdiag(:)
+  REAL(r_size),ALLOCATABLE :: rloc(:)
+  REAL(r_size),ALLOCATABLE :: dep(:)
+  REAL(r_size),ALLOCATABLE :: work3d(:,:,:)
+  REAL(r_size),ALLOCATABLE :: work2d(:,:)
+  REAL(r_sngl),ALLOCATABLE :: work3dg(:,:,:,:)
+  REAL(r_sngl),ALLOCATABLE :: work2dg(:,:,:)
+  REAL(r_size),ALLOCATABLE :: tmptv(:,:)
+  REAL(r_size),ALLOCATABLE :: pfull(:,:)
+  REAL(r_size) :: parm
+  REAL(r_size) :: trans(nbv,nbv,nv3d+nv2d)
+  REAL(r_size) :: q_mean,q_sprd  ! GYL
+  REAL(r_size) :: q_anal(nbv)    ! GYL
+  LOGICAL :: ex
+  INTEGER :: ij,ilev,n,m,i,j,k,nobsl,ierr,iret
 
-!  WRITE(6,'(A)') 'Hello from das_letkf'
-!  WRITE(6,'(A,F15.2)') '  cov_infl_mul = ',cov_infl_mul
+  WRITE(6,'(A)') 'Hello from das_letkf'
+  WRITE(6,'(A,F15.2)') '  cov_infl_mul = ',cov_infl_mul
 !  nobstotal = nobs
 !  WRITE(6,'(A,I8)') 'Target observation numbers : NOBS=',nobs
 !  !
@@ -315,8 +315,8 @@ end subroutine read_nml_letkf
 
 !  DEALLOCATE(mean3d,mean2d)
 !  DEALLOCATE(pfull)
-!  RETURN
-!END SUBROUTINE das_letkf
+  RETURN
+END SUBROUTINE das_letkf
 !!-----------------------------------------------------------------------
 !! Data assimilation for observations: Compute analyses of observations (Y^a)
 !! * currently only support multiplicative and adaptive inflation

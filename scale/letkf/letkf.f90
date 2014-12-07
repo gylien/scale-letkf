@@ -217,13 +217,12 @@ PROGRAM letkf
   anal3d = gues3d
   anal2d = gues2d
 
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 !  CALL das_letkf(gues3d,gues2d,anal3d,anal2d)
-!!
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!  CALL CPU_TIME(rtimer)
-!  WRITE(6,'(A,2F10.2)') '### TIMER(DAS_LETKF):',rtimer,rtimer-rtimer00
-!  rtimer00=rtimer
+!
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  CALL CPU_TIME(rtimer)
+  WRITE(6,'(A,2F10.2)') '### TIMER(DAS_LETKF):',rtimer,rtimer-rtimer00
+  rtimer00=rtimer
 !-----------------------------------------------------------------------
 ! Analysis ensemble
 !-----------------------------------------------------------------------
