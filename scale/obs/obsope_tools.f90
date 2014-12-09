@@ -154,7 +154,7 @@ SUBROUTINE obsope_cal(obs)
             nslot = nslot + 1
 
             call phys2ij(obs%lon(n),obs%lat(n),rig,rjg)
-            call ijproc(rig,rjg,ri,rj,proc)
+            call rij_g2l_auto(proc,rig,rjg,ri,rj)
 
   !          if (PRC_myrank == 0) then
   !            print *, proc, rig, rjg, ri, rj
@@ -270,7 +270,7 @@ SUBROUTINE obsmake_cal(obs)
         nslot = nslot + 1
 
         call phys2ij(obs%lon(n),obs%lat(n),rig,rjg)
-        call ijproc(rig,rjg,ri,rj,proc)
+        call rij_g2l_auto(proc,rig,rjg,ri,rj)
 
 !          if (PRC_myrank == 0) then
 !            print *, proc, rig, rjg, ri, rj

@@ -24,50 +24,43 @@ MODULE letkf_tools
 !  USE efso_nml
 !  USE efso_tools
 
+  use scale_precision, only: RP
+
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC ::  read_nml_letkf !, das_letkf !, das_efso
+  PUBLIC :: das_letkf !, das_efso
 
-  INTEGER,SAVE :: nobstotal
+!  INTEGER,SAVE :: nobstotal
 
-  REAL(r_size),PARAMETER :: cov_infl_mul = -1.03d0
+!  REAL(r_size),PARAMETER :: cov_infl_mul = -1.03d0
+  REAL(r_size),PARAMETER :: cov_infl_mul = 1.03d0
 ! > 0: globally constant covariance inflation
 ! < 0: 3D inflation values input from a GPV file "infl_mul.grd"
   REAL(r_size),PARAMETER :: sp_infl_add = 0.0d0 !additive inflation
 
-  INTEGER, PARAMETER :: lev_update_q = 30 !q and qc are only updated below and equal to this model level
+  INTEGER, PARAMETER :: lev_update_q = 25 !q and qc are only updated below and equal to this model level
   REAL(r_size), PARAMETER :: q_sprd_max = 0.5 !GYL, maximum q (ensemble spread)/(ensemble mean)
 
-!  REAL(r_size),PARAMETER :: var_local(nv3d+nv2d,6) = RESHAPE( (/ &
-!!       U    V    T    Q   QC   PS   
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! U,V
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! T,Tv
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! Q,RH
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! PS
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! RAIN
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0 & ! TC
-!   & /),(/nv3d+nv2d,6/))
+  REAL(r_size),PARAMETER :: var_local(nv3d+nv2d,6) = RESHAPE( (/ &
+!       U    V    W    T    P    Q   QC   QR   QI   QS   QG
+   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! U,V
+   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! T,Tv
+   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! Q,RH
+   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! PS
+   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! RAIN
+   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0 & ! TC
+   & /),(/nv3d+nv2d,6/))
   INTEGER,SAVE :: var_local_n2n(nv3d+nv2d)
 
 CONTAINS
-!-----------------------------------------------------------------------
-! Read namelist for letkf
-!-----------------------------------------------------------------------
-subroutine read_nml_letkf
-  implicit none
-
-  call read_nml_letkf_prc
-  call read_nml_letkf_obs
-
-  return
-end subroutine read_nml_letkf
 !-----------------------------------------------------------------------
 ! Data Assimilation
 !-----------------------------------------------------------------------
 SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   IMPLICIT NONE
-  CHARACTER(12) :: inflfile='infl_mul.grd'
+  CHARACTER(8) :: inflfile='infl_mul'
+  CHARACTER(20) :: inflfile_0='infl_mul.pe000000.nc'
   REAL(r_size),INTENT(INOUT) :: gues3d(nij1,nlev,nbv,nv3d) ! background ensemble
   REAL(r_size),INTENT(INOUT) :: gues2d(nij1,nbv,nv2d)      !  output: destroyed
   REAL(r_size),INTENT(OUT) :: anal3d(nij1,nlev,nbv,nv3d) ! analysis ensemble
@@ -80,8 +73,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size),ALLOCATABLE :: dep(:)
   REAL(r_size),ALLOCATABLE :: work3d(:,:,:)
   REAL(r_size),ALLOCATABLE :: work2d(:,:)
-  REAL(r_sngl),ALLOCATABLE :: work3dg(:,:,:,:)
-  REAL(r_sngl),ALLOCATABLE :: work2dg(:,:,:)
+  REAL(RP),ALLOCATABLE :: work3dg(:,:,:,:)
+  REAL(RP),ALLOCATABLE :: work2dg(:,:,:)
   REAL(r_size),ALLOCATABLE :: tmptv(:,:)
   REAL(r_size),ALLOCATABLE :: pfull(:,:)
   REAL(r_size) :: parm
@@ -93,76 +86,88 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   WRITE(6,'(A)') 'Hello from das_letkf'
   WRITE(6,'(A,F15.2)') '  cov_infl_mul = ',cov_infl_mul
-!  nobstotal = nobs
-!  WRITE(6,'(A,I8)') 'Target observation numbers : NOBS=',nobs
-!  !
-!  ! In case of no obs
-!  !
-!  IF(nobstotal == 0) THEN
-!    WRITE(6,'(A)') 'No observation assimilated'
-!    anal3d = gues3d
-!    anal2d = gues2d
-!    RETURN
-!  END IF
-!  !
-!  ! Variable localization
-!  !
-!  var_local_n2n(1) = 1
-!  DO n=2,nv3d+nv2d
-!    DO i=1,n
-!      var_local_n2n(n) = i
-!      IF(MAXVAL(ABS(var_local(i,:)-var_local(n,:))) < TINY(var_local)) EXIT
-!    END DO
-!  END DO
-!  !
-!  ! FCST PERTURBATIONS
-!  !
-!  ALLOCATE(mean3d(nij1,nlev,nv3d))
-!  ALLOCATE(mean2d(nij1,nv2d))
-!  CALL ensmean_grd(nbv,nij1,gues3d,gues2d,mean3d,mean2d)
-!  DO n=1,nv3d
-!    DO m=1,nbv
-!      DO k=1,nlev
-!        DO i=1,nij1
-!          gues3d(i,k,m,n) = gues3d(i,k,m,n) - mean3d(i,k,n)
-!        END DO
-!      END DO
-!    END DO
-!  END DO
-!  DO n=1,nv2d
-!    DO m=1,nbv
-!      DO i=1,nij1
-!        gues2d(i,m,n) = gues2d(i,m,n) - mean2d(i,n)
-!      END DO
-!    END DO
-!  END DO
-!  !
-!  ! multiplicative inflation
-!  !
-!  IF(cov_infl_mul > 0.0d0) THEN ! fixed multiplicative inflation parameter
-!    ALLOCATE( work3d(nij1,nlev,nv3d) )
-!    ALLOCATE( work2d(nij1,nv2d) )
-!    work3d = cov_infl_mul
-!    work2d = cov_infl_mul
-!  END IF
-!  IF(cov_infl_mul <= 0.0d0) THEN ! 3D parameter values are read-in
-!    ALLOCATE( work3dg(nlon,nlat,nlev,nv3d) )
-!    ALLOCATE( work2dg(nlon,nlat,nv2d) )
-!    ALLOCATE( work3d(nij1,nlev,nv3d) )
-!    ALLOCATE( work2d(nij1,nv2d) )
-!    IF(myrank == 0) THEN
-!      INQUIRE(FILE=inflfile,EXIST=ex)
+
+  WRITE(6,'(A,I8)') 'Target observation numbers (global) : NOBS=',nobstotalg
+  WRITE(6,'(A,I8)') 'Target observation numbers processed in this subdomian : NOBS=',nobstotal
+  !
+  ! In case of no obs
+  !
+!!  IF(nobstotal == 0) THEN
+!!    WRITE(6,'(A)') 'No observation assimilated'
+!!    anal3d = gues3d
+!!    anal2d = gues2d
+!!    RETURN
+!!  END IF
+  !
+  ! Variable localization
+  !
+  var_local_n2n(1) = 1
+  DO n=2,nv3d+nv2d
+    DO i=1,n
+      var_local_n2n(n) = i
+      IF(MAXVAL(ABS(var_local(i,:)-var_local(n,:))) < TINY(var_local)) EXIT
+    END DO
+  END DO
+  !
+  ! FCST PERTURBATIONS
+  !
+  ALLOCATE(mean3d(nij1,nlev,nv3d))
+  ALLOCATE(mean2d(nij1,nv2d))
+  CALL ensmean_grd(nbv,nij1,gues3d,gues2d,mean3d,mean2d)
+  DO n=1,nv3d
+    DO m=1,nbv
+      DO k=1,nlev
+        DO i=1,nij1
+          gues3d(i,k,m,n) = gues3d(i,k,m,n) - mean3d(i,k,n)
+        END DO
+      END DO
+    END DO
+  END DO
+  DO n=1,nv2d
+    DO m=1,nbv
+      DO i=1,nij1
+        gues2d(i,m,n) = gues2d(i,m,n) - mean2d(i,n)
+      END DO
+    END DO
+  END DO
+  !
+  ! multiplicative inflation
+  !
+  IF(cov_infl_mul > 0.0d0) THEN ! fixed multiplicative inflation parameter
+    ALLOCATE( work3d(nij1,nlev,nv3d) )
+    ALLOCATE( work2d(nij1,nv2d) )
+    work3d = cov_infl_mul
+    work2d = cov_infl_mul
+  END IF
+  IF(cov_infl_mul <= 0.0d0) THEN ! 3D parameter values are read-in
+    ALLOCATE( work3dg(nlon,nlat,nlev,nv3d) )
+    ALLOCATE( work2dg(nlon,nlat,nv2d) )
+    ALLOCATE( work3d(nij1,nlev,nv3d) )
+    ALLOCATE( work2d(nij1,nv2d) )
+    IF(myrank_e == lastmem_rank_e) THEN
+
+      IF(ADAPTIVE_INFL_INIT) THEN
+        work3dg = -1.0d0 * cov_infl_mul
+        work2dg = -1.0d0 * cov_infl_mul
+      ELSE
+!        WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
+        call read_restart(inflfile,work3dg,work2dg)
+!        call state_trans(work3dg)
+      END IF
+
+!      INQUIRE(FILE=inflfile_0,EXIST=ex)
 !      IF(ex) THEN
-!        WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading.. ',inflfile
-!        CALL read_grd4(inflfile,work3dg,work2dg,0)
+!!        WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
+!        call read_restart(inflfile,work3dg,work2dg)
+!!        call state_trans(work3dg)
 !      ELSE
 !        WRITE(6,'(2A)') '!!WARNING: no such file exist: ',inflfile
 !        work3dg = -1.0d0 * cov_infl_mul
 !        work2dg = -1.0d0 * cov_infl_mul
 !      END IF
-!    END IF
-!    CALL scatter_grd_mpi(0,work3dg,work2dg,work3d,work2d)
-!  END IF
+    END IF
+    CALL scatter_grd_mpi(lastmem_rank_e,work3dg,work2dg,work3d,work2d)
+  END IF
 !  !
 !  ! p_full for background ensemble mean
 !  !
@@ -172,148 +177,148 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !  call sigio_modprd(nij1,nij1,nlev,gfs_nvcoord,gfs_idvc,gfs_idsl, &
 !                    gfs_vcoord,iret,mean2d(:,iv2d_ps),tmptv,pm=pfull)
 !  DEALLOCATE(tmptv)
-!  !
-!  ! MAIN ASSIMILATION LOOP
-!  !
-!  ALLOCATE( hdxf(1:nobstotal,1:nbv),rdiag(1:nobstotal),rloc(1:nobstotal),dep(1:nobstotal) )
-!  DO ilev=1,nlev
-!    WRITE(6,'(A,I3)') 'ilev = ',ilev
-!    DO ij=1,nij1
-!      DO n=1,nv3d
-!        IF(var_local_n2n(n) < n) THEN
-!          trans(:,:,n) = trans(:,:,var_local_n2n(n))
-!          work3d(ij,ilev,n) = work3d(ij,ilev,var_local_n2n(n))
-!        ELSE
-!          CALL obs_local(lon1(ij),lat1(ij),pfull(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl)
-!          parm = work3d(ij,ilev,n)
-!          CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,n))
-!          work3d(ij,ilev,n) = parm
-!        END IF
-!        IF((n == iv3d_q .OR. n == iv3d_qc) .AND. ilev > lev_update_q) THEN   ! GYL, do not update upper-level q,qc
-!          anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)      ! GYL
-!        ELSE                                                                 ! GYL
-!          DO m=1,nbv                                                         ! GYL
-!            anal3d(ij,ilev,m,n) = mean3d(ij,ilev,n)
-!            DO k=1,nbv
-!              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-!                & + gues3d(ij,ilev,k,n) * trans(k,m,n)
-!            END DO
-!          END DO                                                             ! GYL
-!        END IF                                                               ! GYL
-!        IF(n == iv3d_q .AND. ilev <= lev_update_q) THEN                      ! GYL, limit the lower-level q spread
-!          q_mean = SUM(anal3d(ij,ilev,:,n)) / REAL(nbv,r_size)               ! GYL
-!          q_sprd = 0.0d0                                                     ! GYL
-!          DO m=1,nbv                                                         ! GYL
-!            q_anal(m) = anal3d(ij,ilev,m,n) - q_mean                         ! GYL
-!            q_sprd = q_sprd + q_anal(m)**2                                   ! GYL
-!          END DO                                                             ! GYL
-!          q_sprd = SQRT(q_sprd / REAL(nbv-1,r_size)) / q_mean                ! GYL
-!          IF(q_sprd > q_sprd_max) THEN                                       ! GYL
-!            DO m=1,nbv                                                       ! GYL
-!              anal3d(ij,ilev,m,n) = q_mean + q_anal(m) * q_sprd_max / q_sprd ! GYL
-!            END DO                                                           ! GYL
-!          END IF                                                             ! GYL
-!        END IF
-!      END DO
-!      IF(ilev == 1) THEN !update 2d variable at ilev=1
-!        DO n=1,nv2d
-!          IF(var_local_n2n(nv3d+n) < nv3d+n) THEN                  ! GYL
-!            trans(:,:,nv3d+n) = trans(:,:,var_local_n2n(nv3d+n))
-!            IF(var_local_n2n(nv3d+n) <= nv3d) THEN                 ! GYL
-!              work2d(ij,n) = work3d(ij,ilev,var_local_n2n(nv3d+n)) ! GYL
-!            ELSE                                                   ! GYL
-!              work2d(ij,n) = work2d(ij,var_local_n2n(nv3d+n)-nv3d) ! GYL
-!            END IF                                                 ! GYL
-!          ELSE
-!            CALL obs_local(lon1(ij),lat1(ij),pfull(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl)
-!            parm = work2d(ij,n)
-!            CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,nv3d+n))
-!            work2d(ij,n) = parm
-!          END IF
-!          DO m=1,nbv
-!            anal2d(ij,m,n)  = mean2d(ij,n)
-!            DO k=1,nbv
-!              anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,k,n) * trans(k,m,nv3d+n)
-!            END DO
-!          END DO
-!        END DO
-!      END IF
-!    END DO
-!  END DO
-!  DEALLOCATE(hdxf,rdiag,rloc,dep)
+  !
+  ! MAIN ASSIMILATION LOOP
+  !
+  ALLOCATE( hdxf(1:nobstotal,1:nbv),rdiag(1:nobstotal),rloc(1:nobstotal),dep(1:nobstotal) )
+  DO ilev=1,nlev
+    WRITE(6,'(A,I3)') 'ilev = ',ilev
+    DO ij=1,nij1
+      DO n=1,nv3d
+        IF(var_local_n2n(n) < n) THEN
+          trans(:,:,n) = trans(:,:,var_local_n2n(n))
+          work3d(ij,ilev,n) = work3d(ij,ilev,var_local_n2n(n))
+        ELSE
+          CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),n,hdxf,rdiag,rloc,dep,nobsl)
+          parm = work3d(ij,ilev,n)
+          CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,n))
+          work3d(ij,ilev,n) = parm
+        END IF
+        IF((n == iv3d_q .OR. n == iv3d_qc) .AND. ilev > lev_update_q) THEN   ! GYL, do not update upper-level q,qc
+          anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)      ! GYL
+        ELSE                                                                 ! GYL
+          DO m=1,nbv                                                         ! GYL
+            anal3d(ij,ilev,m,n) = mean3d(ij,ilev,n)
+            DO k=1,nbv
+              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
+                & + gues3d(ij,ilev,k,n) * trans(k,m,n)
+            END DO
+          END DO                                                             ! GYL
+        END IF                                                               ! GYL
+        IF(n == iv3d_q .AND. ilev <= lev_update_q) THEN                      ! GYL, limit the lower-level q spread
+          q_mean = SUM(anal3d(ij,ilev,:,n)) / REAL(nbv,r_size)               ! GYL
+          q_sprd = 0.0d0                                                     ! GYL
+          DO m=1,nbv                                                         ! GYL
+            q_anal(m) = anal3d(ij,ilev,m,n) - q_mean                         ! GYL
+            q_sprd = q_sprd + q_anal(m)**2                                   ! GYL
+          END DO                                                             ! GYL
+          q_sprd = SQRT(q_sprd / REAL(nbv-1,r_size)) / q_mean                ! GYL
+          IF(q_sprd > q_sprd_max) THEN                                       ! GYL
+            DO m=1,nbv                                                       ! GYL
+              anal3d(ij,ilev,m,n) = q_mean + q_anal(m) * q_sprd_max / q_sprd ! GYL
+            END DO                                                           ! GYL
+          END IF                                                             ! GYL
+        END IF
+      END DO
+      IF(ilev == 1) THEN !update 2d variable at ilev=1
+        DO n=1,nv2d
+          IF(var_local_n2n(nv3d+n) < nv3d+n) THEN                  ! GYL
+            trans(:,:,nv3d+n) = trans(:,:,var_local_n2n(nv3d+n))
+            IF(var_local_n2n(nv3d+n) <= nv3d) THEN                 ! GYL
+              work2d(ij,n) = work3d(ij,ilev,var_local_n2n(nv3d+n)) ! GYL
+            ELSE                                                   ! GYL
+              work2d(ij,n) = work2d(ij,var_local_n2n(nv3d+n)-nv3d) ! GYL
+            END IF                                                 ! GYL
+          ELSE
+            CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),nv3d+n,hdxf,rdiag,rloc,dep,nobsl)
+            parm = work2d(ij,n)
+            CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,nv3d+n))
+            work2d(ij,n) = parm
+          END IF
+          DO m=1,nbv
+            anal2d(ij,m,n)  = mean2d(ij,n)
+            DO k=1,nbv
+              anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,k,n) * trans(k,m,nv3d+n)
+            END DO
+          END DO
+        END DO
+      END IF
+    END DO
+  END DO
+  DEALLOCATE(hdxf,rdiag,rloc,dep)
 !  !
 !  ! Compute analyses of observations (Y^a)
 !  !
 !  IF(obsanal_output) THEN
 !    call das_letkf_obs(work3dg,work2dg)
 !  END IF
-!  !
-!  ! Write updated inflation parameters
-!  !
-!  IF(cov_infl_mul < 0.0d0) THEN
-!    CALL gather_grd_mpi(0,work3d,work2d,work3dg,work2dg)
-!    IF(myrank == 0) THEN
-!      WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing.. ',inflfile
-!      
-!      CALL write_grd4(inflfile,work3dg,work2dg,0)
-!    END IF
-!    DEALLOCATE(work3dg,work2dg,work3d,work2d)
-!  END IF
-!  !
-!  ! Additive inflation
-!  !
-!  IF(sp_infl_add > 0.0d0) THEN
-!    CALL read_ens_mpi('addi',nbv,gues3d,gues2d)
-!    ALLOCATE( work3d(nij1,nlev,nv3d) )
-!    ALLOCATE( work2d(nij1,nv2d) )
-!    CALL ensmean_grd(nbv,nij1,gues3d,gues2d,work3d,work2d)
-!    DO n=1,nv3d
-!      DO m=1,nbv
-!        DO k=1,nlev
-!          DO i=1,nij1
-!            gues3d(i,k,m,n) = gues3d(i,k,m,n) - work3d(i,k,n)
-!          END DO
-!        END DO
-!      END DO
-!    END DO
-!    DO n=1,nv2d
-!      DO m=1,nbv
-!        DO i=1,nij1
-!          gues2d(i,m,n) = gues2d(i,m,n) - work2d(i,n)
-!        END DO
-!      END DO
-!    END DO
+  !
+  ! Write updated inflation parameters
+  !
+  IF(cov_infl_mul < 0.0d0) THEN
+    CALL gather_grd_mpi(lastmem_rank_e,work3d,work2d,work3dg,work2dg)
+    IF(myrank_e == lastmem_rank_e) THEN
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
+!      call state_trans_inv(work3dg)
+      call write_restart(inflfile,work3dg,work2dg)
+    END IF
+    DEALLOCATE(work3dg,work2dg,work3d,work2d)
+  END IF
+  !
+  ! Additive inflation
+  !
+  IF(sp_infl_add > 0.0d0) THEN
+    CALL read_ens_mpi('addi',gues3d,gues2d)
+    ALLOCATE( work3d(nij1,nlev,nv3d) )
+    ALLOCATE( work2d(nij1,nv2d) )
+    CALL ensmean_grd(nbv,nij1,gues3d,gues2d,work3d,work2d)
+    DO n=1,nv3d
+      DO m=1,nbv
+        DO k=1,nlev
+          DO i=1,nij1
+            gues3d(i,k,m,n) = gues3d(i,k,m,n) - work3d(i,k,n)
+          END DO
+        END DO
+      END DO
+    END DO
+    DO n=1,nv2d
+      DO m=1,nbv
+        DO i=1,nij1
+          gues2d(i,m,n) = gues2d(i,m,n) - work2d(i,n)
+        END DO
+      END DO
+    END DO
 
-!    DEALLOCATE(work3d,work2d)
-!    WRITE(6,'(A)') '===== Additive covariance inflation ====='
-!    WRITE(6,'(A,F10.4)') '  parameter:',sp_infl_add
-!    WRITE(6,'(A)') '========================================='
-!!    parm = 0.7d0
-!!    DO ilev=1,nlev
-!!      parm_infl_damp(ilev) = 1.0d0 + parm &
-!!        & + parm * REAL(1-ilev,r_size)/REAL(nlev_dampinfl,r_size)
-!!      parm_infl_damp(ilev) = MAX(parm_infl_damp(ilev),1.0d0)
-!!    END DO
-!    DO n=1,nv3d
-!      DO m=1,nbv
-!        DO ilev=1,nlev
-!          DO ij=1,nij1
-!            anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-!              & + gues3d(ij,ilev,m,n) * sp_infl_add
-!          END DO
-!        END DO
-!      END DO
+    DEALLOCATE(work3d,work2d)
+    WRITE(6,'(A)') '===== Additive covariance inflation ====='
+    WRITE(6,'(A,F10.4)') '  parameter:',sp_infl_add
+    WRITE(6,'(A)') '========================================='
+!    parm = 0.7d0
+!    DO ilev=1,nlev
+!      parm_infl_damp(ilev) = 1.0d0 + parm &
+!        & + parm * REAL(1-ilev,r_size)/REAL(nlev_dampinfl,r_size)
+!      parm_infl_damp(ilev) = MAX(parm_infl_damp(ilev),1.0d0)
 !    END DO
-!    DO n=1,nv2d
-!      DO m=1,nbv
-!        DO ij=1,nij1
-!          anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,m,n) * sp_infl_add
-!        END DO
-!      END DO
-!    END DO
-!  END IF
+    DO n=1,nv3d
+      DO m=1,nbv
+        DO ilev=1,nlev
+          DO ij=1,nij1
+            anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
+              & + gues3d(ij,ilev,m,n) * sp_infl_add
+          END DO
+        END DO
+      END DO
+    END DO
+    DO n=1,nv2d
+      DO m=1,nbv
+        DO ij=1,nij1
+          anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,m,n) * sp_infl_add
+        END DO
+      END DO
+    END DO
+  END IF
 
-!  DEALLOCATE(mean3d,mean2d)
+  DEALLOCATE(mean3d,mean2d)
 !  DEALLOCATE(pfull)
   RETURN
 END SUBROUTINE das_letkf
@@ -687,252 +692,178 @@ END SUBROUTINE das_letkf
 !  DEALLOCATE(pfull)
 !  RETURN
 !END SUBROUTINE das_efso
-!!-----------------------------------------------------------------------
-!! Project global observations to local
-!!     (hdxf_g,dep_g,rdiag_g) -> (hdxf,dep,rdiag)
-!! -- modified, using (rlon,rlat,rlev) instead of (ij,ilev), Guo-Yuan Lien
-!! -- optional oindex output, followed by D.Hotta
-!!-----------------------------------------------------------------------
-!SUBROUTINE obs_local(rlon,rlat,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl,oindex)
-!  IMPLICIT NONE
-!  REAL(r_size),INTENT(IN) :: rlon,rlat,rlev
-!  INTEGER,INTENT(IN) :: nvar
-!  REAL(r_size),INTENT(OUT) :: hdxf(nobstotal,nbv)
-!  REAL(r_size),INTENT(OUT) :: rdiag(nobstotal)
-!  REAL(r_size),INTENT(OUT) :: rloc(nobstotal)
-!  REAL(r_size),INTENT(OUT) :: dep(nobstotal)
-!  INTEGER,INTENT(OUT) :: nobsl
+!-----------------------------------------------------------------------
+! Project global observations to local
+!     (hdxf_g,dep_g,rdiag_g) -> (hdxf,dep,rdiag)
+! -- modified, using (rlon,rlat,rlev) instead of (ij,ilev), Guo-Yuan Lien
+! -- optional oindex output, followed by D.Hotta
+!-----------------------------------------------------------------------
+SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
+!SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl,oindex)
+  use scale_grid, only: &
+    DX, DY
+  use scale_grid_index, only: &
+    IMAX,JMAX
+  use scale_process, only: &
+    PRC_NUM_X, &
+    PRC_NUM_Y
+
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: ri,rj,rlev
+  INTEGER,INTENT(IN) :: nvar
+  REAL(r_size),INTENT(OUT) :: hdxf(nobstotal,nbv)
+  REAL(r_size),INTENT(OUT) :: rdiag(nobstotal)
+  REAL(r_size),INTENT(OUT) :: rloc(nobstotal)
+  REAL(r_size),INTENT(OUT) :: dep(nobstotal)
+  INTEGER,INTENT(OUT) :: nobsl
 !  INTEGER,INTENT(OUT),OPTIONAL :: oindex(nobstotal)      ! DH
 !  REAL(r_size) :: dlon_zero,dlat_zero                    ! GYL
 !  REAL(r_size) :: minlon,maxlon,minlat,maxlat,dist,dlev
 !  REAL(r_size) :: tmplon,tmplat,tmperr,tmpwgt(nlev)
-!  REAL(r_size) :: logrlev
-!  INTEGER,ALLOCATABLE:: nobs_use(:)
+  REAL(r_size) :: logrlev,dist,dlev,tmperr
+  INTEGER,ALLOCATABLE:: nobs_use(:)
 !  INTEGER :: imin,imax,jmin,jmax,im,ichan
-!  INTEGER :: n,nn,iobs
-!!
-!! INITIALIZE
-!!
-!  IF( nobs > 0 ) THEN
-!    ALLOCATE(nobs_use(nobs))
-!  END IF
-!!
-!! data search
-!!
-!  dlat_zero = MAX(dist_zero,dist_zero_rain) / pi / re * 180.0d0 ! GYL
-!  dlon_zero = dlat_zero / COS(rlat*pi/180.0d0)                  ! GYL
-!  minlon = rlon - dlon_zero
-!  maxlon = rlon + dlon_zero
-!  minlat = rlat - dlat_zero
-!  maxlat = rlat + dlat_zero
-!  IF(maxlon - minlon >= 360.0d0) THEN
-!    minlon = 0.0d0
-!    maxlon = 360.0d0
-!  END IF
+  integer :: ip, imin1,imax1,jmin1,jmax1,imin2,imax2,jmin2,jmax2
+  integer :: iproc,jproc
 
-!  DO jmin=1,nlat-2
-!    IF(minlat < lat(jmin+1)) EXIT
-!  END DO
-!  DO jmax=1,nlat-2
-!    IF(maxlat < lat(jmax+1)) EXIT
-!  END DO
-!  nn = 1
-!  IF(minlon >= 0 .AND. maxlon <= 360.0) THEN
-!    DO imin=1,nlon-1
-!      IF(minlon < lon(imin+1)) EXIT
-!    END DO
-!    DO imax=1,nlon-1
-!      IF(maxlon < lon(imax+1)) EXIT
-!    END DO
-!    IF( nobs > 0 ) &
-!    & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!  ELSE IF(minlon >= 0 .AND. maxlon > 360.0) THEN
-!    DO imin=1,nlon-1
-!      IF(minlon < lon(imin+1)) EXIT
-!    END DO
-!    maxlon = maxlon - 360.0d0
-!    IF(maxlon > 360.0d0) THEN
-!      imin = 1
-!      imax = nlon
-!      IF( nobs > 0 ) &
-!      & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!    ELSE
-!      DO imax=1,nlon-1
-!        IF(maxlon < lon(imax+1)) EXIT
-!      END DO
-!      IF(imax > imin) THEN
-!        imin = 1
-!        imax = nlon
-!        IF( nobs > 0 ) &
-!        & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!      ELSE
-!        imin = 1
-!        IF( nobs > 0 ) &
-!        & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!        DO imin=1,nlon-1
-!          IF(minlon < lon(imin+1)) EXIT
-!        END DO
-!        imax = nlon
-!        IF( nobs > 0 ) &
-!        & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!      END IF
-!    END IF
-!  ELSE IF(minlon < 0 .AND. maxlon <= 360.0d0) THEN
-!    DO imax=1,nlon-1
-!      IF(maxlon < lon(imax+1)) EXIT
-!    END DO
-!    minlon = minlon + 360.0d0
-!    IF(minlon < 0) THEN
-!      imin = 1
-!      imax = nlon
-!      IF( nobs > 0 ) &
-!      & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!    ELSE
-!      DO imin=1,nlon-1
-!        IF(minlon < lon(imin+1)) EXIT
-!      END DO
-!      IF(imin < imax) THEN
-!        imin = 1
-!        imax = nlon
-!        IF( nobs > 0 ) &
-!        & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!      ELSE
-!        imin = 1
-!        IF( nobs > 0 ) &
-!        & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!        DO imin=1,nlon-1
-!          IF(minlon < lon(imin+1)) EXIT
-!        END DO
-!        imax = nlon
-!        IF( nobs > 0 ) &
-!        & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!      END IF
-!    END IF
-!  ELSE
-!    maxlon = maxlon - 360.0d0
-!    minlon = minlon + 360.0d0
-!    IF(maxlon > 360.0 .OR. minlon < 0) THEN
-!      imin = 1
-!      imax = nlon
-!      IF( nobs > 0 ) &
-!      & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!    ELSE
-!      DO imin=1,nlon-1
-!        IF(minlon < lon(imin+1)) EXIT
-!      END DO
-!      DO imax=1,nlon-1
-!        IF(maxlon < lon(imax+1)) EXIT
-!      END DO
-!      IF(imin > imax) THEN
-!        imin = 1
-!        imax = nlon
-!        IF( nobs > 0 ) &
-!        & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!      ELSE
-!        IF( nobs > 0 ) &
-!        & CALL obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!      END IF
-!    END IF
-!  END IF
-!  nn = nn-1
-!  IF(nn < 1) THEN
-!    nobsl = 0
-!    RETURN
-!  END IF
-!!
-!! CONVENTIONAL
-!!
-!  logrlev = LOG(rlev)
-!  nobsl = 0
-!  IF(nn > 0) THEN
-!    DO n=1,nn
-!      !
-!      ! vertical localization
-!      !
-!      IF(NINT(obselm(nobs_use(n))) == id_ps_obs) THEN
-!        dlev = ABS(LOG(obsdat(nobs_use(n))) - logrlev)
-!        IF(dlev > dist_zerov) CYCLE
-!      ELSE IF(NINT(obselm(nobs_use(n))) == id_rain_obs) THEN
-!        dlev = ABS(LOG(base_obsv_rain) - logrlev)
-!        IF(dlev > dist_zerov_rain) CYCLE
-!      ELSE IF(NINT(obselm(nobs_use(n))) >= id_tclon_obs) THEN !TC track obs
-!        dlev = 0.0d0
-!      ELSE !! other (3D) variables
-!        dlev = ABS(LOG(obslev(nobs_use(n))) - logrlev)
-!        IF(dlev > dist_zerov) CYCLE
-!      END IF
-!      !
-!      ! horizontal localization
-!      !
-!      CALL com_distll_1(obslon(nobs_use(n)),obslat(nobs_use(n)),rlon,rlat,dist)
-!      IF(NINT(obselm(nobs_use(n))) == id_rain_obs) THEN
-!        IF(dist > dist_zero_rain) CYCLE
-!      ELSE
-!        IF(dist > dist_zero) CYCLE
-!      END IF
-!      !
-!      ! variable localization
-!      !
-!      IF(nvar > 0) THEN ! use variable localization only when nvar > 0
-!        SELECT CASE(NINT(obselm(nobs_use(n))))
-!        CASE(id_u_obs)
-!          iobs=1
-!        CASE(id_v_obs)
-!          iobs=1
-!        CASE(id_t_obs)
-!          iobs=2
-!        CASE(id_tv_obs)
-!          iobs=2
-!        CASE(id_q_obs)
-!          iobs=3
-!        CASE(id_rh_obs)
-!          iobs=3
-!        CASE(id_ps_obs)
-!          iobs=4
-!        CASE(id_rain_obs)
-!          iobs=5
-!        CASE(id_tclon_obs)
-!          iobs=6
-!        CASE(id_tclat_obs)
-!          iobs=6
-!        CASE(id_tcmip_obs)
-!          iobs=6
-!        END SELECT
-!        IF(var_local(nvar,iobs) < TINY(var_local)) CYCLE
-!      END IF
+  INTEGER :: n,nn,iobs
 
-!      nobsl = nobsl + 1
-!      hdxf(nobsl,:) = obshdxf(nobs_use(n),:)
-!      dep(nobsl)    = obsdep(nobs_use(n))
-!      !
-!      ! Observational localization
-!      !
-!      tmperr=obserr(nobs_use(n))
-!      rdiag(nobsl) = tmperr * tmperr
-!      IF(NINT(obselm(nobs_use(n))) == id_rain_obs) THEN                              ! GYL
-!        rloc(nobsl) =EXP(-0.5d0 * ((dist/sigma_obs_rain)**2 + (dlev/sigma_obsv)**2)) ! GYL
-!      ELSE                                                                           ! GYL
-!        rloc(nobsl) =EXP(-0.5d0 * ((dist/sigma_obs)**2 + (dlev/sigma_obsv)**2))      ! GYL
-!      END IF                                                                         ! GYL
-!      IF(nvar > 0) THEN ! use variable localization only when nvar > 0
-!        rloc(nobsl) = rloc(nobsl) * var_local(nvar,iobs)
-!      END IF
-!      IF(PRESENT(oindex)) oindex(nobsl) = nobs_use(n)      ! DH
-!    END DO
-!  END IF
-!!
-!  IF( nobsl > nobstotal ) THEN
-!    WRITE(6,'(A,I5,A,I5)') 'FATAL ERROR, NOBSL=',nobsl,' > NOBSTOTAL=',nobstotal
-!    WRITE(6,*) 'LON,LAT,LEV,NN=', rlon,rlat,rlev,nn
-!    STOP 99
-!  END IF
-!!
-!  IF( nobs > 0 ) THEN
-!    DEALLOCATE(nobs_use)
-!  END IF
-!!
-!  RETURN
-!END SUBROUTINE obs_local
+  integer :: ielm
+
+  real(r_size) :: rdx, rdy
+!
+! INITIALIZE
+!
+  IF( maxval(nobsgrd(nlonsub,nlatsub,:)) > 0 ) THEN
+    ALLOCATE(nobs_use(maxval(nobsgrd(nlonsub,nlatsub,:))))
+  END IF
+!
+! data search
+!
+  imin1 = max(1, floor(ri - dlon_zero))
+  imax1 = min(PRC_NUM_X*IMAX, ceiling(ri + dlon_zero))
+  jmin1 = max(1, floor(rj - dlat_zero))
+  jmax1 = min(PRC_NUM_Y*JMAX, ceiling(rj + dlat_zero))
+
+  nobsl = 0
+  logrlev = LOG(rlev)
+
+  do ip = 0, MEM_NP-1
+
+    if (obsda2(ip)%nobs > 0) then
+
+      call rank_1d_2d(ip, iproc, jproc)
+
+      imin2 = max(1, imin1 - iproc*IMAX)
+      imax2 = min(IMAX, imax1 - iproc*IMAX)
+      jmin2 = max(1, jmin1 - jproc*JMAX)
+      jmax2 = min(JMAX, jmax1 - jproc*JMAX)
+
+      nn = 0
+      call obs_choose(imin2,imax2,jmin2,jmax2,ip,nn,nobs_use)
+
+
+
+      DO n = 1, nn
+
+        ielm = obs%elm(obsda2(ip)%idx(nobs_use(n)))
+
+        !
+        ! vertical localization
+        !
+        IF(ielm == id_ps_obs) THEN
+          dlev = ABS(LOG(obs%dat(obsda2(ip)%idx(nobs_use(n)))) - logrlev)
+          IF(dlev > dist_zerov) CYCLE
+  !      ELSE IF(ielm == id_rain_obs) THEN
+  !        dlev = ABS(LOG(base_obsv_rain) - logrlev)
+  !        IF(dlev > dist_zerov_rain) CYCLE
+  !      ELSE IF(ielm >= id_tclon_obs) THEN !TC track obs
+  !        dlev = 0.0d0
+        ELSE !! other (3D) variables
+          dlev = ABS(LOG(obs%lev(obsda2(ip)%idx(nobs_use(n)))) - logrlev)
+          IF(dlev > dist_zerov) CYCLE
+        END IF
+        !
+        ! horizontal localization
+        !
+  !!!      CALL com_distll_1(obslon(nobs_use(n)),obslat(nobs_use(n)),rlon,rlat,dist)
+
+        rdx = (ri - obsda2(ip)%ri(nobs_use(n))) * DX
+        rdy = (rj - obsda2(ip)%rj(nobs_use(n))) * DY
+        dist = sqrt(rdx*rdx + rdy*rdy)
+
+  !      IF(ielm == id_rain_obs) THEN
+  !        IF(dist > dist_zero_rain) CYCLE
+  !      ELSE
+          IF(dist > dist_zero) CYCLE
+  !      END IF
+        !
+        ! variable localization
+        !
+        IF(nvar > 0) THEN ! use variable localization only when nvar > 0
+          SELECT CASE(ielm)
+          CASE(id_u_obs)
+            iobs=1
+          CASE(id_v_obs)
+            iobs=1
+          CASE(id_t_obs)
+            iobs=2
+          CASE(id_tv_obs)
+            iobs=2
+          CASE(id_q_obs)
+            iobs=3
+          CASE(id_rh_obs)
+            iobs=3
+          CASE(id_ps_obs)
+            iobs=4
+          CASE(id_rain_obs)
+            iobs=5
+          CASE(id_tclon_obs)
+            iobs=6
+          CASE(id_tclat_obs)
+            iobs=6
+          CASE(id_tcmip_obs)
+            iobs=6
+          END SELECT
+          IF(var_local(nvar,iobs) < TINY(var_local)) CYCLE
+        END IF
+
+        nobsl = nobsl + 1
+        hdxf(nobsl,:) = obsda2(ip)%ensval(:,nobs_use(n))
+        dep(nobsl)    = obsda2(ip)%val(nobs_use(n))
+        !
+        ! Observational localization
+        !
+        tmperr=obs%err(obsda2(ip)%idx(nobs_use(n)))
+        rdiag(nobsl) = tmperr * tmperr
+  !      IF(ielm == id_rain_obs) THEN                                                   ! GYL
+  !        rloc(nobsl) =EXP(-0.5d0 * ((dist/sigma_obs_rain)**2 + (dlev/sigma_obsv)**2)) ! GYL
+  !      ELSE                                                                           ! GYL
+          rloc(nobsl) =EXP(-0.5d0 * ((dist/sigma_obs)**2 + (dlev/sigma_obsv)**2))      ! GYL
+  !      END IF                                                                         ! GYL
+        IF(nvar > 0) THEN ! use variable localization only when nvar > 0
+          rloc(nobsl) = rloc(nobsl) * var_local(nvar,iobs)
+        END IF
+  !      IF(PRESENT(oindex)) oindex(nobsl) = obsda2(ip)%idx(nobs_use(n))      ! DH
+
+      END DO ! [ n = 1, nn ]
+
+    end if ! [ obsda2(ip)%nobs > 0 ]
+
+  end do ! [ ip = 0, MEM_NP-1 ]
+
+!
+  IF( nobsl > nobstotal ) THEN
+    WRITE(6,'(A,I5,A,I5)') 'FATAL ERROR, NOBSL=',nobsl,' > NOBSTOTAL=',nobstotal
+    WRITE(6,*) 'RI,RJ,LEV,NOBSL,NOBSTOTAL=', ri,rj,rlev,nobsl,nobstotal
+    STOP 99
+  END IF
+
+!
+  IF( allocated(nobs_use) ) DEALLOCATE(nobs_use)
+!
+  RETURN
+END SUBROUTINE obs_local
 
 !SUBROUTINE obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
 !  INTEGER,INTENT(IN) :: imin,imax,jmin,jmax

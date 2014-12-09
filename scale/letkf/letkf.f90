@@ -43,9 +43,9 @@ PROGRAM letkf
   CALL initialize_mpi
 !
   WRITE(stdoutf(6:11), '(I6.6)') myrank
-  WRITE(6,'(3A,I3.3)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
+  WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
   OPEN(6,FILE=stdoutf)
-  WRITE(6,'(A,I3.3,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
+  WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
 !
   WRITE(6,'(A)') '============================================='
   WRITE(6,'(A)') '  LOCAL ENSEMBLE TRANSFORM KALMAN FILTERING  '
@@ -77,6 +77,8 @@ PROGRAM letkf
   call IO_setup( MODELNAME )
 
   call read_nml_letkf
+  call read_nml_letkf_prc
+  call read_nml_letkf_obs
 
   if (nprocs /= NNODES * PPN) then
     write(6,*) 'Number of MPI processes should be equal to NNODES * PPN.'
@@ -89,62 +91,55 @@ PROGRAM letkf
 
   CALL set_common_mpi_scale(nbv+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
+!! print process distribution!!!
 
-!!!
-  if (scale_IO_group_n >= 1) then
-!!!
-  ALLOCATE(gues3d(nij1,nlev,nbv,nv3d))
-  ALLOCATE(gues2d(nij1,nbv,nv2d))
-  ALLOCATE(anal3d(nij1,nlev,nbv,nv3d))
-  ALLOCATE(anal2d(nij1,nbv,nv2d))
-!!!
-  end if
-!!!
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL CPU_TIME(rtimer)
-  WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
-  rtimer00=rtimer
+  if (scale_IO_group_n <= 0) then
+
+    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
+
+  else
+
+    ALLOCATE(gues3d(nij1,nlev,nbv,nv3d))
+    ALLOCATE(gues2d(nij1,nbv,nv2d))
+    ALLOCATE(anal3d(nij1,nlev,nbv,nv3d))
+    ALLOCATE(anal2d(nij1,nbv,nv2d))
+
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    CALL CPU_TIME(rtimer)
+    WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
+    rtimer00=rtimer
 
 !-----------------------------------------------------------------------
 
-!!!
-  if (scale_IO_group_n >= 1) then
-!!!
+    CALL get_nobs(obsfile,8,obs%nobs)
+    WRITE(6,'(A,I9,A)') 'TOTAL: ', obs%nobs, ' OBSERVATIONS'
 
-  CALL get_nobs(obsfile,8,obs%nobs)
-  WRITE(6,'(A,I9,A)') 'TOTAL: ', obs%nobs, ' OBSERVATIONS'
+    CALL obs_info_allocate(obs)
 
-  CALL obs_info_allocate(obs)
+    CALL read_obs(obsfile,obs)
 
-  CALL read_obs(obsfile,obs)
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    CALL CPU_TIME(rtimer)
+    WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
+    rtimer00=rtimer
 
-!!!
-  end if
-!!!
-
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL CPU_TIME(rtimer)
-  WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
-  rtimer00=rtimer
-
-!!-----------------------------------------------------------------------
-!! Observations
-!!-----------------------------------------------------------------------
-!  !
-!  ! CONVENTIONAL OBS
-!  !
-  CALL set_letkf_obs
+!-----------------------------------------------------------------------
+! Observations
+!-----------------------------------------------------------------------
+    !
+    ! CONVENTIONAL OBS
+    !
+    CALL set_letkf_obs
 !
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL CPU_TIME(rtimer)
-  WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
-  rtimer00=rtimer
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    CALL CPU_TIME(rtimer)
+    WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
+    rtimer00=rtimer
 
 
 
-!  if (scale_IO_group_n >= 1) then
 !!  write (6,*) obsda%idx
 !!  write (6,*) obsda%val(3)
 !!  write (6,*) obsda%ensval(:,3)
@@ -159,104 +154,77 @@ PROGRAM letkf
 !!  write (6,*) obsda2%rj(3)
 !  write (6,*) obsda2%ri
 !  write (6,*) obsda2%rj
-!  end if
 
 
 !-----------------------------------------------------------------------
 ! First guess ensemble
 !-----------------------------------------------------------------------
-  !
-  ! READ GUES
-  !
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+    !
+    ! READ GUES
+    !
 
-!!!
-  if (scale_IO_group_n >= 1) then
-!!!
-  call read_ens_mpi('gues',gues3d,gues2d)
-!!!
-  end if
-!!!
+    call read_ens_mpi('gues',gues3d,gues2d)
 
 
 
-!  if (scale_IO_group_n >= 1) then
 !  write (6,*) gues3d(20,:,3,iv3d_t)
 !!  write (6,*) gues2d
-!  end if
 
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL CPU_TIME(rtimer)
-  WRITE(6,'(A,2F10.2)') '### TIMER(READ_GUES):',rtimer,rtimer-rtimer00
-  rtimer00=rtimer
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    CALL CPU_TIME(rtimer)
+    WRITE(6,'(A,2F10.2)') '### TIMER(READ_GUES):',rtimer,rtimer-rtimer00
+    rtimer00=rtimer
 
 
-  !
-  ! WRITE ENS MEAN and SPRD
-  !
-!!!
-  if (scale_IO_group_n >= 1) then
-!!!
-  CALL write_ensmspr_mpi('gues',gues3d,gues2d)
-!!!
-  end if
-!!!
+    !
+    ! WRITE ENS MEAN and SPRD
+    !
+    CALL write_ensmspr_mpi('gues',gues3d,gues2d)
 !
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL CPU_TIME(rtimer)
-  WRITE(6,'(A,2F10.2)') '### TIMER(GUES_MEAN):',rtimer,rtimer-rtimer00
-  rtimer00=rtimer
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    CALL CPU_TIME(rtimer)
+    WRITE(6,'(A,2F10.2)') '### TIMER(GUES_MEAN):',rtimer,rtimer-rtimer00
+    rtimer00=rtimer
 !!-----------------------------------------------------------------------
 !! Data Assimilation
 !!-----------------------------------------------------------------------
-!  !
-!  ! LETKF
-!  !
+    !
+    ! LETKF
+    !
 
-  anal3d = gues3d
-  anal2d = gues2d
+!    anal3d = gues3d
+!    anal2d = gues2d
 
-!  CALL das_letkf(gues3d,gues2d,anal3d,anal2d)
+    CALL das_letkf(gues3d,gues2d,anal3d,anal2d)
 !
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL CPU_TIME(rtimer)
-  WRITE(6,'(A,2F10.2)') '### TIMER(DAS_LETKF):',rtimer,rtimer-rtimer00
-  rtimer00=rtimer
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    CALL CPU_TIME(rtimer)
+    WRITE(6,'(A,2F10.2)') '### TIMER(DAS_LETKF):',rtimer,rtimer-rtimer00
+    rtimer00=rtimer
 !-----------------------------------------------------------------------
 ! Analysis ensemble
 !-----------------------------------------------------------------------
-  !
-  ! WRITE ANAL
-  !
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!!!
-  if (scale_IO_group_n >= 1) then
-!!!
-  CALL write_ens_mpi('anal',anal3d,anal2d)
-!!!
-  end if
-!!!
+    !
+    ! WRITE ANAL
+    !
+!    CALL MPI_BARRIER(MPI_COMM_a,ierr)
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL CPU_TIME(rtimer)
-  WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_ANAL):',rtimer,rtimer-rtimer00
-  rtimer00=rtimer
-  !
-  ! WRITE ENS MEAN and SPRD
-  !
-!!!
-  if (scale_IO_group_n >= 1) then
-!!!
-  CALL write_ensmspr_mpi('anal',anal3d,anal2d)
-!!!
-  end if
-!!!
-!
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  CALL CPU_TIME(rtimer)
-  WRITE(6,'(A,2F10.2)') '### TIMER(ANAL_MEAN):',rtimer,rtimer-rtimer00
-  rtimer00=rtimer
+    CALL write_ens_mpi('anal',anal3d,anal2d)
+
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    CALL CPU_TIME(rtimer)
+    WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_ANAL):',rtimer,rtimer-rtimer00
+    rtimer00=rtimer
+    !
+    ! WRITE ENS MEAN and SPRD
+    !
+    CALL write_ensmspr_mpi('anal',anal3d,anal2d)
+    !
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    CALL CPU_TIME(rtimer)
+    WRITE(6,'(A,2F10.2)') '### TIMER(ANAL_MEAN):',rtimer,rtimer-rtimer00
+    rtimer00=rtimer
 !!-----------------------------------------------------------------------
 !! Monitor
 !!-----------------------------------------------------------------------
@@ -266,6 +234,8 @@ PROGRAM letkf
 !  CALL CPU_TIME(rtimer)
 !  WRITE(6,'(A,2F10.2)') '### TIMER(MONIT_MEAN):',rtimer,rtimer-rtimer00
 !  rtimer00=rtimer
+
+  end if
 
   CALL unset_common_mpi_scale
 

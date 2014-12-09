@@ -63,10 +63,10 @@ MODULE common_scale
 
   INTEGER,PARAMETER :: nv3d=11   ! 3D state variables (in SCALE restart files)
   INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
-  INTEGER,PARAMETER :: nv3dx=13  ! 3D diagnostic variables
+!  INTEGER,PARAMETER :: nv3dx=13  ! 3D diagnostic variables
   INTEGER,PARAMETER :: nv2d=0    ! 2D state variables (in SCALE restart files)
   INTEGER,PARAMETER :: nv2dd=7   ! 2D diagnostic variables (in SCALE history files)
-  INTEGER,PARAMETER :: nv2dx=7   ! 2D diagnostic variables
+!  INTEGER,PARAMETER :: nv2dx=7   ! 2D diagnostic variables
   INTEGER,PARAMETER :: iv3d_rho=1  !-- State in restart files
   INTEGER,PARAMETER :: iv3d_rhou=2 !
   INTEGER,PARAMETER :: iv3d_rhov=3 !
@@ -107,10 +107,10 @@ MODULE common_scale
   INTEGER,PARAMETER :: nij0=nlonsub*nlatsub
   INTEGER,PARAMETER :: nlevall=nlev*nv3d+nv2d
   INTEGER,PARAMETER :: nlevalld=nlev*nv3dd+nv2dd
-  INTEGER,PARAMETER :: nlevallx=nlev*nv3dx+nv2dx
+!  INTEGER,PARAMETER :: nlevallx=nlev*nv3dx+nv2dx
   INTEGER,PARAMETER :: ngpv=nij0*nlevall
   INTEGER,PARAMETER :: ngpvd=nij0*nlevalld
-  INTEGER,PARAMETER :: ngpvx=nij0*nlevallx
+!  INTEGER,PARAMETER :: ngpvx=nij0*nlevallx
   REAL(r_size),SAVE :: lon(nlonsub,nlatsub)
   REAL(r_size),SAVE :: lat(nlonsub,nlatsub)
   REAL(r_size),SAVE :: lonu(nlonsub,nlatsub)
@@ -124,9 +124,11 @@ MODULE common_scale
 !  REAL(r_size),SAVE :: wg(nlonsub,nlatsub)
   INTEGER,PARAMETER :: vname_max = 10
   CHARACTER(vname_max),SAVE :: v3d_name(nv3d)
-  CHARACTER(vname_max),SAVE :: v3dd_name(nv3dx)
+  CHARACTER(vname_max),SAVE :: v3dd_name(nv3dd)
+!  CHARACTER(vname_max),SAVE :: v3dd_name(nv3dx)
   CHARACTER(vname_max),SAVE :: v2d_name(nv2d)
-  CHARACTER(vname_max),SAVE :: v2dd_name(nv2dx)
+  CHARACTER(vname_max),SAVE :: v2dd_name(nv2dd)
+!  CHARACTER(vname_max),SAVE :: v2dd_name(nv2dx)
 
   character(len=H_MID), parameter :: MODELNAME = "SCALE-LES"
 

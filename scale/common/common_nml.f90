@@ -13,6 +13,9 @@ MODULE common_nml
   implicit none
   public
 
+  !--- PARAM_LETKF
+  integer :: ADAPTIVE_INFL_INIT = .false.
+
   !--- PARAM_LETKF_PRC
   integer :: NNODES = 1
   integer :: PPN = 1
@@ -28,6 +31,30 @@ MODULE common_nml
   real(r_size) :: SLOT_TINTERVAL = 3600.0d0
 
 contains
+!-----------------------------------------------------------------------
+! PARAM_LETKF_PRC
+!-----------------------------------------------------------------------
+subroutine read_nml_letkf
+  use common_mpi, only: nprocs
+  implicit none
+  integer :: ierr
+  
+  namelist /PARAM_LETKF/ &
+    ADAPTIVE_INFL_INIT
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'xxx Not found namelist. Check!'
+    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_PRC. Check!'
+    stop
+  endif
+
+  return
+end subroutine read_nml_letkf
+
 !-----------------------------------------------------------------------
 ! PARAM_LETKF_PRC
 !-----------------------------------------------------------------------

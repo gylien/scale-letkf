@@ -964,9 +964,9 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
 
   iunit=92
   IF(present(append) .and. append == 1) THEN
-    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append',STATUS='replace')
   ELSE
-    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',STATUS='replace')
   END IF
   DO n=1,obs%nobs
     wk(1) = REAL(obs%idx(n),r_sngl)  !!!!!! will overflow......

@@ -24,7 +24,7 @@ module common_mpi_scale
   use scale_precision, only: RP
   use scale_stdio
 !  use scale_prof
-  use scale_grid_index
+!  use scale_grid_index
 
 !  use common_scalelib
 
@@ -41,6 +41,7 @@ module common_mpi_scale
 !!!  real(r_size),allocatable,save :: lonv1(:),latv1(:)
 !!!  real(r_size),allocatable,save :: ri1(:),rj1(:)
 !!!!  real(r_size),allocatable,save :: wg1(:)
+  real(r_size),allocatable,save :: rig1(:),rjg1(:)
 
   integer,save :: nitmax ! maximum number of model files processed by a process
   integer,allocatable,save :: procs(:)
@@ -53,8 +54,10 @@ module common_mpi_scale
   integer,save :: scale_IO_group_n = -1
 !  integer,save :: scale_IO_proc_n = -1
   logical,save :: valid_member = .false.
+  integer,save :: lastmem_rank_e
 
   integer,save :: MPI_COMM_e, nprocs_e, myrank_e
+  integer,save :: MPI_COMM_a, nprocs_a, myrank_a
 
 !  character(9) scale_filename = 'file.0000'
 
@@ -104,93 +107,144 @@ contains
 !end subroutine set_mpi_along_domains
 
 
-subroutine rank_1d_2d(proc, pi, pj)
+subroutine rank_1d_2d(proc, iproc, jproc)
   use scale_process, only: PRC_2Drank
   implicit none
   integer, intent(in) :: proc
-  integer, intent(out) :: pi, pj
+  integer, intent(out) :: iproc, jproc
 
-  pi = PRC_2Drank(proc,1)
-  pj = PRC_2Drank(proc,2)
+  iproc = PRC_2Drank(proc,1)
+  jproc = PRC_2Drank(proc,2)
+
+  return  
 end subroutine rank_1d_2d
 
 
-subroutine rank_2d_1d(pi, pj, proc)
+subroutine rank_2d_1d(iproc, jproc, proc)
   use scale_process, only: PRC_NUM_X
   implicit none
-  integer, intent(in) :: pi, pj
+  integer, intent(in) :: iproc, jproc
   integer, intent(out) :: proc
 
-  proc = pj * PRC_NUM_X + pi
+  proc = jproc * PRC_NUM_X + iproc
+
+  return  
 end subroutine rank_2d_1d
 
-!-----------------------------------------------------------------------
-!
-! proc = -1: outside the global domain
-!-----------------------------------------------------------------------
-SUBROUTINE ijproc(rig,rjg,ri,rj,proc)
+
+subroutine ij_g2l(proc, ig, jg, il, jl)
   use scale_grid_index, only: &
-      IMAX,JMAX, &
-      IHALO,JHALO, &
-      IA,JA                  ! [for validation]
-  use scale_process, only: &
-      PRC_NUM_X,PRC_NUM_Y, &
-      PRC_myrank             ! [for validation]
-  use scale_grid, only: &    ! [for validation]
-      GRID_CX, &             ! [for validation]
-      GRID_CY, &             ! [for validation]
-      GRID_CXG, &            ! [for validation]
-      GRID_CYG, &            ! [for validation]
-      DX, &                  ! [for validation]
-      DY                     ! [for validation]
-  IMPLICIT NONE
-  REAL(r_size),INTENT(IN) :: rig
-  REAL(r_size),INTENT(IN) :: rjg
-  REAL(r_size),INTENT(OUT) :: ri
-  REAL(r_size),INTENT(OUT) :: rj
-  integer,INTENT(OUT) :: proc
+      IMAX, JMAX
+  implicit none
+  integer, intent(in) :: proc
+  integer, intent(in) :: ig
+  integer, intent(in) :: jg
+  integer, intent(out) :: il
+  integer, intent(out) :: jl
   integer :: iproc, jproc
 
-  if (rig < real(1+IHALO,r_size) .or. rig > real(IMAX*PRC_NUM_X+IHALO,r_size) .or. &
-      rjg < real(1+JHALO,r_size) .or. rjg > real(JMAX*PRC_NUM_Y+JHALO,r_size)) then
-    ri = -1.0d0
-    rj = -1.0d0
+  call rank_1d_2d(proc, iproc, jproc)
+  il = ig - iproc * IMAX
+  jl = jg - jproc * JMAX
+
+  return  
+end subroutine ij_g2l
+
+
+subroutine ij_l2g(proc, il, jl, ig, jg)
+  use scale_grid_index, only: &
+      IMAX, JMAX
+  implicit none
+  integer, intent(in) :: proc
+  integer, intent(in) :: il
+  integer, intent(in) :: jl
+  integer, intent(out) :: ig
+  integer, intent(out) :: jg
+  integer :: iproc, jproc
+
+  call rank_1d_2d(proc, iproc, jproc)
+  ig = il + iproc * IMAX
+  jg = jl + jproc * JMAX
+
+  return  
+end subroutine ij_l2g
+
+
+
+!-----------------------------------------------------------------------
+! using halo!
+! proc = -1: outside the global domain
+!-----------------------------------------------------------------------
+SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
+  use scale_grid_index, only: &
+      IMAX,JMAX, &
+      IHALO,JHALO
+!      IA,JA                  ! [for validation]
+  use scale_process, only: &
+      PRC_NUM_X,PRC_NUM_Y
+!      PRC_myrank             ! [for validation]
+!  use scale_grid, only: &    ! [for validation]
+!      GRID_CX, &             ! [for validation]
+!      GRID_CY, &             ! [for validation]
+!      GRID_CXG, &            ! [for validation]
+!      GRID_CYG, &            ! [for validation]
+!      DX, &                  ! [for validation]
+!      DY                     ! [for validation]
+  IMPLICIT NONE
+  integer,INTENT(OUT) :: proc
+  REAL(r_size),INTENT(IN) :: ig
+  REAL(r_size),INTENT(IN) :: jg
+  REAL(r_size),INTENT(OUT) :: il
+  REAL(r_size),INTENT(OUT) :: jl
+  integer :: iproc, jproc
+
+  if (ig < real(1+IHALO,r_size) .or. ig > real(IMAX*PRC_NUM_X+IHALO,r_size) .or. &
+      jg < real(1+JHALO,r_size) .or. jg > real(JMAX*PRC_NUM_Y+JHALO,r_size)) then
+    il = -1.0d0
+    jl = -1.0d0
     proc = -1
     return
   end if
 
-  iproc = ceiling((rig-real(IHALO,r_size)-0.5d0) / real(IMAX,r_size)) - 1
-  jproc = ceiling((rjg-real(JHALO,r_size)-0.5d0) / real(JMAX,r_size)) - 1
-  ri = rig - iproc * IMAX
-  rj = rjg - jproc * JMAX
+  iproc = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(IMAX,r_size)) - 1
+  jproc = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(JMAX,r_size)) - 1
+  il = ig - iproc * IMAX
+  jl = jg - jproc * JMAX
   call rank_2d_1d(iproc,jproc,proc)
 
-  if (PRC_myrank == proc) then                                                                                    ! [for validation]
-    if (rig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                      ! [for validation]
-        rig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                     ! [for validation]
-        rjg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &                                                      ! [for validation]
-        rjg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then                                                      ! [for validation]
-      write (6,'(A)') 'Error: Process assignment fails!'                                                          ! [for validation]
-      write (6,'(3F10.2)') rig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 ! [for validation]
-      write (6,'(3F10.2)') rjg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0 ! [for validation]
-      stop                                                                                                        ! [for validation]
-    end if                                                                                                        ! [for validation]
-  end if                                                                                                          ! [for validation]
+!  if (PRC_myrank == proc) then                                                                                    ! [for validation]
+!    if (rig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                      ! [for validation]
+!        rig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                     ! [for validation]
+!        rjg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &                                                      ! [for validation]
+!        rjg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then                                                      ! [for validation]
+!      write (6,'(A)') 'Error: Process assignment fails!'                                                          ! [for validation]
+!      write (6,'(3F10.2)') rig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 ! [for validation]
+!      write (6,'(3F10.2)') rjg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0 ! [for validation]
+!      stop                                                                                                        ! [for validation]
+!    end if                                                                                                        ! [for validation]
+!  end if                                                                                                          ! [for validation]
 
   RETURN
-END SUBROUTINE ijproc
+END SUBROUTINE rij_g2l_auto
 
 !-----------------------------------------------------------------------
 ! set_common_mpi_scale
 !-----------------------------------------------------------------------
 SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
+  use scale_grid_index, only: &
+      IHALO,JHALO, &
+      IMAX, JMAX
+  use scale_process, only: &
+    PRC_myrank
+
+  implicit none
   INTEGER,INTENT(IN) :: nbv
   INTEGER,INTENT(IN) :: nnodes,ppn,mem_nodes,mem_np
-  REAL(r_sngl) :: v3dg(nlon,nlat,nlev,nv3d)
-  REAL(r_sngl) :: v2dg(nlon,nlat,nv2d)
+  REAL(RP) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+  REAL(RP) :: v2dg(nlonsub,nlatsub,nv2d)
   REAL(r_size),ALLOCATABLE :: v3d(:,:,:)
   REAL(r_size),ALLOCATABLE :: v2d(:,:)
-  INTEGER :: i,n
+  INTEGER :: i,j,n
   INTEGER :: ierr,buf(4)
   LOGICAL :: ex
 
@@ -205,8 +259,11 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
   integer :: n_mem,n_mempn
 !  integer :: iproc,jproc
   integer,allocatable :: ranks(:)
+  integer,allocatable :: ranks_a(:)
 
   integer :: ip
+
+  integer :: iproc, jproc
 
 
 
@@ -230,16 +287,19 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
       n_mempn = PPN / MEM_NP
     END IF
     nprocs_e = n_mem*n_mempn
+    nprocs_a = nprocs_e*MEM_NP
 
     allocate (ranks(nprocs_e))
+    allocate (ranks_a(nprocs_a))
 
     call MPI_Comm_group(MPI_COMM_WORLD,MPI_G_WORLD,ierr)
 
     do ip = 1, nprocs
-      if (proc2mem(2,1,ip) == proc2mem(2,1,myrank+1)) then
-        if (proc2mem(1,1,ip) >= 1) then
+      if (proc2mem(1,1,ip) >= 1) then
+        if (proc2mem(2,1,ip) == proc2mem(2,1,myrank+1)) then
           ranks(proc2mem(1,1,ip)) = ip-1
         end if
+        ranks_a((proc2mem(1,1,ip)-1)*MEM_NP+proc2mem(2,1,ip)+1) = ip-1
       end if
     end do
 
@@ -250,6 +310,15 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
 
     call MPI_Comm_size(MPI_COMM_e,nprocs_e,ierr)
     call MPI_Comm_rank(MPI_COMM_e,myrank_e,ierr)
+
+!--
+
+    call MPI_Group_incl(MPI_G_WORLD,nprocs_e*MEM_NP,ranks_a,MPI_G,ierr)
+    call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_a,ierr)
+
+    call MPI_Comm_size(MPI_COMM_a,nprocs_a,ierr)
+    call MPI_Comm_rank(MPI_COMM_a,myrank_a,ierr)
+
 
 !write(6,'(A,9I6)') '######===', myrank, myrank_e, nprocs_e, ranks(:)
 !stop
@@ -267,7 +336,7 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
     ELSE
       nij1 = nij1max - 1
     END IF
-    WRITE(6,'(A,I3.3,A,I6)') 'MYRANK ',myrank,' number of grid points: nij1= ',nij1
+    WRITE(6,'(A,I6.6,A,I6)') 'MYRANK ',myrank,' number of grid points: nij1= ',nij1
     ALLOCATE(nij1node(nprocs_e))
     DO n=1,nprocs_e
       IF(n-1 < i) THEN
@@ -290,9 +359,21 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
 !  ALLOCATE(ri1(nij1))
 !  ALLOCATE(rj1(nij1))
 !!  ALLOCATE(wg1(nij1))
+    ALLOCATE(rig1(nij1))
+    ALLOCATE(rjg1(nij1))
 
-!  ALLOCATE(v3d(nij1,nlev,nv3d))
-!  ALLOCATE(v2d(nij1,nv2d))
+    ALLOCATE(v3d(nij1,nlev,nv3d))
+    ALLOCATE(v2d(nij1,nv2d))
+
+
+    call rank_1d_2d(PRC_myrank, iproc, jproc)
+    do j = 1, nlatsub
+      do i = 1, nlonsub
+        v3dg(1,i,j,1) = i + iproc * IMAX + IHALO
+        v3dg(1,i,j,2) = j + jproc * JMAX + JHALO
+      end do
+    end do
+
 !  v3dg(:,:,1,1) = SNGL(lon)
 !  v3dg(:,:,1,2) = SNGL(lat)
 !  v3dg(:,:,1,3) = SNGL(lonu)
@@ -307,7 +388,9 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
 !    END DO
 !  END DO
 !!  v2dg(:,:,1) = SNGL(phi0)
-!  CALL scatter_grd_mpi(0,v3dg,v2dg,v3d,v2d)
+
+    CALL scatter_grd_mpi(0,v3dg,v2dg,v3d,v2d)
+
 !  lon1  = v3d(:,1,1)
 !  lat1  = v3d(:,1,2)
 !  lonu1 = v3d(:,1,3)
@@ -318,6 +401,9 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
 !  rj1   = v3d(:,1,8)
 !  phi1  = v2d(:,1)
 !!  wg1(:) = v3d(:,2,1)
+
+    rig1   = v3d(:,1,1)
+    rjg1   = v3d(:,1,2)
 
 
   end if ! [ scale_IO_group_n >= 1 ]
@@ -334,6 +420,7 @@ SUBROUTINE unset_common_mpi_scale
 
   if (scale_IO_group_n >= 1) then
     call MPI_Comm_free(MPI_COMM_e,ierr)
+    call MPI_Comm_free(MPI_COMM_a,ierr)
     call unset_scalelib
   end if
 
@@ -405,6 +492,15 @@ mem_loop: DO it = 1, nitmax
   if (scale_IO_group_n >= 1 .and. scale_IO_group_n <= mem) then
     valid_member = .true.
   end if
+
+  lastmem_rank_e = mod(mem-1, n_mem*n_mempn)
+!print *, lastmem_rank_e
+
+  if (lastmem_rank_e /= proc2mem(1,1,mem2proc(1,mem)+1)-1) then
+    print *, 'XXXXXX wrong!!'
+    stop
+  end if
+
 
   RETURN
 END SUBROUTINE
@@ -544,96 +640,68 @@ END SUBROUTINE
 
 !  RETURN
 !END SUBROUTINE scatter_grd_mpi_fast
+
+SUBROUTINE scatter_grd_mpi(nrank,v3dg,v2dg,v3d,v2d)
+  INTEGER,INTENT(IN) :: nrank
+  REAL(RP),INTENT(IN) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+  REAL(RP),INTENT(IN) :: v2dg(nlonsub,nlatsub,nv2d)
+  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,nv3d)
+  REAL(r_size),INTENT(OUT) :: v2d(nij1,nv2d)
+  REAL(RP) :: bufs(nij1max,nlevall,nprocs_e)
+  REAL(RP) :: bufr(nij1max,nlevall)
+  INTEGER :: j,k,n,ierr,ns,nr
+
+  integer :: MPI_RP
+
+!!!!!!
+  IF(RP == r_dble) THEN
+    MPI_RP = MPI_DOUBLE_PRECISION
+  ELSE IF(RP == r_sngl) THEN
+    MPI_RP = MPI_REAL
+  END IF
+!!!!!!
+
+  ns = nij1max * nlevall
+  nr = ns
+  IF(myrank_e == nrank) THEN
+    j=0
+    DO n=1,nv3d
+      DO k=1,nlev
+        j = j+1
+        CALL grd_to_buf(nprocs_e,v3dg(k,:,:,n),bufs(:,j,:))
+      END DO
+    END DO
+
+    DO n=1,nv2d
+      j = j+1
+      CALL grd_to_buf(nprocs_e,v2dg(:,:,n),bufs(:,j,:))
+    END DO
+  END IF
+
+  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+  CALL MPI_SCATTER(bufs,ns,MPI_RP,&
+                 & bufr,nr,MPI_RP,nrank,MPI_COMM_e,ierr)
+
+  j=0
+  DO n=1,nv3d
+    DO k=1,nlev
+      j = j+1
+      v3d(:,k,n) = REAL(bufr(1:nij1,j),r_size)
+    END DO
+  END DO
+
+  DO n=1,nv2d
+    j = j+1
+    v2d(:,n) = REAL(bufr(1:nij1,j),r_size)
+  END DO
+
+  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+
+  RETURN
+END SUBROUTINE scatter_grd_mpi
 !-----------------------------------------------------------------------
 ! Gather gridded data (all -> nrank)
 !-----------------------------------------------------------------------
-!SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
-!  INTEGER,INTENT(IN) :: nrank
-!  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
-!  REAL(r_size),INTENT(IN) :: v2d(nij1,nv2d)
-!  REAL(r_sngl),INTENT(OUT) :: v3dg(nlon,nlat,nlev,nv3d)
-!  REAL(r_sngl),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
-
-!!  IF(mpibufsize > nij1max) THEN
-!    CALL gather_grd_mpi_fast(nrank,v3d,v2d,v3dg,v2dg)
-!!  ELSE
-!!    CALL gather_grd_mpi_safe(nrank,v3d,v2d,v3dg,v2dg)
-!!  END IF
-
-!  RETURN
-!END SUBROUTINE gather_grd_mpi
-
-!SUBROUTINE gather_grd_mpi_safe(nrank,v3d,v2d,v3dg,v2dg)
-!  INTEGER,INTENT(IN) :: nrank
-!  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
-!  REAL(r_size),INTENT(IN) :: v2d(nij1,nv2d)
-!  REAL(r_sngl),INTENT(OUT) :: v3dg(nlon,nlat,nlev,nv3d)
-!  REAL(r_sngl),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
-!  REAL(r_sngl) :: tmp(nij1max,nprocs)
-!  REAL(r_sngl) :: bufs(mpibufsize)
-!  REAL(r_sngl) :: bufr(mpibufsize,nprocs)
-!  INTEGER :: i,j,k,n,ierr,ns,nr
-!  INTEGER :: iter,niter
-
-!  ns = mpibufsize
-!  nr = ns
-!  niter = CEILING(REAL(nij1max)/REAL(mpibufsize))
-
-!  DO n=1,nv3d
-!    DO k=1,nlev
-!      DO iter=1,niter
-!        i = mpibufsize * (iter-1)
-!        DO j=1,mpibufsize
-!          i=i+1
-!          IF(i > nij1) EXIT
-!          bufs(j) = REAL(v3d(i,k,n),r_sngl)
-!        END DO
-!        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!        CALL MPI_GATHER(bufs,ns,MPI_REAL,&
-!                      & bufr,nr,MPI_REAL,nrank,MPI_COMM_WORLD,ierr)
-!        IF(myrank == nrank) THEN
-!          i = mpibufsize * (iter-1)
-!          DO j=1,mpibufsize
-!            i=i+1
-!            IF(i > nij1max) EXIT
-!            tmp(i,:) = bufr(j,:)
-!          END DO
-!        END IF
-!      END DO
-!      IF(myrank == nrank) CALL buf_to_grd(tmp,v3dg(:,:,k,n))
-!    END DO
-!  END DO
-
-!  DO n=1,nv2d
-!    DO iter=1,niter
-!      i = mpibufsize * (iter-1)
-!      DO j=1,mpibufsize
-!        i=i+1
-!        IF(i > nij1) EXIT
-!        bufs(j) = REAL(v2d(i,n),r_sngl)
-!      END DO
-!      CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!      CALL MPI_GATHER(bufs,ns,MPI_REAL,&
-!                    & bufr,nr,MPI_REAL,nrank,MPI_COMM_WORLD,ierr)
-!      IF(myrank == nrank) THEN
-!        i = mpibufsize * (iter-1)
-!        DO j=1,mpibufsize
-!          i=i+1
-!          IF(i > nij1max) EXIT
-!          tmp(i,:) = bufr(j,:)
-!        END DO
-!      END IF
-!    END DO
-!    IF(myrank == nrank) CALL buf_to_grd(tmp,v2dg(:,:,n))
-!  END DO
-
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-
-!  RETURN
-!END SUBROUTINE gather_grd_mpi_safe
-
-
-
 SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
   INTEGER,INTENT(IN) :: nrank
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
@@ -779,6 +847,10 @@ END SUBROUTINE gather_grd_mpi
 
 
 SUBROUTINE read_ens_history_mpi(file,iter,step,v3dg,v2dg,ensmean)
+  use scale_grid_index, only: &
+      IMAX, JMAX, KMAX, &
+      IHALO, JHALO, KHALO, &
+      IS, IE, JS, JE, KS, KE, KA
   use scale_history, only: &
      HIST_get
   use scale_comm, only: &
@@ -1287,16 +1359,13 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
   REAL(r_size) :: v2ds(nij1,nv2d)
   REAL(RP) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
   REAL(RP) :: v2dg(nlonsub,nlatsub,nv2d)
-  INTEGER :: i,k,m,n,ensm_rank_e
+  INTEGER :: i,k,m,n
   CHARACTER(9) :: filename='file.0000'
-
-  ensm_rank_e = proc2mem(1,1,mem2proc(PRC_myrank+1,nbv+1)+1)-1
-!print *, PRC_myrank, ensm_rank_e
 
   CALL ensmean_grd(nbv,nij1,v3d,v2d,v3dm,v2dm)
 
-  CALL gather_grd_mpi(ensm_rank_e,v3dm,v2dm,v3dg,v2dg)
-  IF(myrank_e == ensm_rank_e) THEN
+  CALL gather_grd_mpi(lastmem_rank_e,v3dm,v2dm,v3dg,v2dg)
+  IF(myrank_e == lastmem_rank_e) THEN
     WRITE(filename(1:4),'(A4)') file
     WRITE(filename(6:9),'(A4)') 'mean'
 !    WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
@@ -1330,8 +1399,8 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
 !$OMP END PARALLEL DO
   END DO
 
-  CALL gather_grd_mpi(ensm_rank_e,v3ds,v2ds,v3dg,v2dg)
-  IF(myrank_e == ensm_rank_e) THEN
+  CALL gather_grd_mpi(lastmem_rank_e,v3ds,v2ds,v3dg,v2dg)
+  IF(myrank_e == lastmem_rank_e) THEN
     WRITE(filename(1:4),'(A4)') file
     WRITE(filename(6:9),'(A4)') 'sprd'
 !    WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
