@@ -21,7 +21,7 @@ module scale_statistics
   use scale_stdio
   use scale_prof
   use scale_grid_index
-  use scale_process, only: MPI_COMM_u
+  use scale_process, only: MPI_COMM_d
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -142,7 +142,7 @@ contains
                            1,                    &
                            COMM_datatype,        &
                            MPI_SUM,              &
-                           MPI_COMM_u,       &
+                           MPI_COMM_d,       &
                            ierr                  )
 
        call PROF_rapend  ('COMM Allreduce MPI')
@@ -213,7 +213,7 @@ contains
                            1,                    &
                            COMM_datatype,        &
                            MPI_SUM,              &
-                           MPI_COMM_u,       &
+                           MPI_COMM_d,       &
                            ierr                  )
 
        call PROF_rapend  ('COMM Allreduce MPI')
@@ -296,13 +296,13 @@ contains
                           vsize*2,          &
                           COMM_datatype,    &
                           p,                &
-                          MPI_COMM_u,   &
+                          MPI_COMM_d,   &
                           ierr              )
           call MPI_Bcast( statidx(1,1,1,p), &
                           3*vsize*2,        &
                           MPI_INTEGER,      &
                           p,                &
-                          MPI_COMM_u,   &
+                          MPI_COMM_d,   &
                           ierr              )
        enddo
        call PROF_rapend  ('COMM Bcast MPI')

@@ -1,6 +1,7 @@
 *.swp
 *.o
 *.mod
+*.pyc
 scale/configure.user
 scale/common/datetime
 scale/common/enssize

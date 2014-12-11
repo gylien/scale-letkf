@@ -59,4 +59,4 @@ pdbash.o:	pdbash.f90
 	$(FC) $(FOPTS) -c pdbash.f90
 
 clean:
-	rm -f *.o *.mod enssize datetime
+	rm -f *.o *.mod enssize datetime pdbash

@@ -34,9 +34,9 @@ MODULE letkf_obs
   LOGICAL,PARAMETER :: oma_output=.TRUE.
   LOGICAL,PARAMETER :: obsgues_output=.FALSE.
   LOGICAL,PARAMETER :: obsanal_output=.FALSE.
-  REAL(r_size),PARAMETER :: sigma_obs=10.0d3
+  REAL(r_size),PARAMETER :: sigma_obs=1.0d3
 !  REAL(r_size),PARAMETER :: sigma_obs_rain=350.0d3   ! GYL
-  REAL(r_size),PARAMETER :: sigma_obsv=0.4d0
+  REAL(r_size),PARAMETER :: sigma_obsv=0.05d0
 !  REAL(r_size),PARAMETER :: sigma_obsv_rain=0.4d0    ! GYL
 !  REAL(r_size),PARAMETER :: base_obsv_rain=85000.0d0 ! GYL
   REAL(r_size),PARAMETER :: sigma_obst=3.0d0
@@ -99,7 +99,7 @@ SUBROUTINE set_letkf_obs
     IMAX,JMAX, &
     IHALO,JHALO
   use scale_process, only: &
-    MPI_COMM_u, &
+    MPI_COMM_d, &
     PRC_myrank, &
     PRC_NUM_X, &
     PRC_NUM_Y
@@ -620,7 +620,7 @@ SUBROUTINE set_letkf_obs
 
 ! communication
   allocate ( bufri2 (0:nlonsub,1:nlatsub,0:MEM_NP-1) )
-  call MPI_ALLREDUCE(nobsgrd,bufri2,(nlonsub+1)*nlatsub*MEM_NP,MPI_INTEGER,MPI_SUM,MPI_COMM_u,ierr)
+  call MPI_ALLREDUCE(nobsgrd,bufri2,(nlonsub+1)*nlatsub*MEM_NP,MPI_INTEGER,MPI_SUM,MPI_COMM_d,ierr)
   nobsgrd(0:nlonsub,1:nlatsub,0:MEM_NP-1) = bufri2(0:nlonsub,1:nlatsub,0:MEM_NP-1)
   deallocate ( bufri2 )
 
@@ -718,12 +718,12 @@ SUBROUTINE set_letkf_obs
     obsbufr%nobs = nrt(MEM_NP)+nr(MEM_NP)
     call obs_da_value_allocate(obsbufr,nbv)
 
-    call MPI_GATHERV(obsbufs%idx, ns, MPI_INTEGER, obsbufr%idx, nr, nrt, MPI_INTEGER, ip, MPI_COMM_u, ierr)
-    call MPI_GATHERV(obsbufs%val, ns, MPI_r_size, obsbufr%val, nr, nrt, MPI_r_size, ip, MPI_COMM_u, ierr)
-    call MPI_GATHERV(obsbufs%ensval, ns*nbv, MPI_r_size, obsbufr%ensval, nr*nbv, nrt*nbv, MPI_r_size, ip, MPI_COMM_u, ierr)
-    call MPI_GATHERV(obsbufs%qc, ns, MPI_INTEGER, obsbufr%qc, nr, nrt, MPI_INTEGER, ip, MPI_COMM_u, ierr)
-    call MPI_GATHERV(obsbufs%ri, ns, MPI_r_size, obsbufr%ri, nr, nrt, MPI_r_size, ip, MPI_COMM_u, ierr)
-    call MPI_GATHERV(obsbufs%rj, ns, MPI_r_size, obsbufr%rj, nr, nrt, MPI_r_size, ip, MPI_COMM_u, ierr)
+    call MPI_GATHERV(obsbufs%idx, ns, MPI_INTEGER, obsbufr%idx, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%val, ns, MPI_r_size, obsbufr%val, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%ensval, ns*nbv, MPI_r_size, obsbufr%ensval, nr*nbv, nrt*nbv, MPI_r_size, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%qc, ns, MPI_INTEGER, obsbufr%qc, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%ri, ns, MPI_r_size, obsbufr%ri, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%rj, ns, MPI_r_size, obsbufr%rj, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
 
 
     if (PRC_myrank == ip) then

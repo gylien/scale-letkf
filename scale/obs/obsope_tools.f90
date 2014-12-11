@@ -23,7 +23,7 @@ MODULE obsope_tools
   use scale_process, only: &
        PRC_myrank, &
        PRC_myrank_world, &
-       MPI_COMM_u
+       MPI_COMM_d
 
   use scale_grid_index, only: &
     KHALO, IHALO, JHALO
@@ -311,7 +311,7 @@ SUBROUTINE obsmake_cal(obs)
     allocate ( bufr (obs%nobs) )
   end if
 
-  CALL MPI_REDUCE(obs%dat,bufr,obs%nobs,MPI_r_size,MPI_MAX,0,MPI_COMM_u,ierr)
+  CALL MPI_REDUCE(obs%dat,bufr,obs%nobs,MPI_r_size,MPI_MAX,0,MPI_COMM_d,ierr)
 
   if (PRC_myrank == 0) then
 

@@ -125,7 +125,7 @@ void rdma_setup_(
 	local_sf = FJMPI_Rdma_reg_mem(memid_cnt, status_flag, sizeof(sf_t)*BEARING_CNT*FLAG_CNT) ;
 	memid_cnt++ ;
 
-	MPI_Barrier(MPI_COMM_u) ;
+	MPI_Barrier(MPI_COMM_d) ;
 
 	if( RANK_W != MPI_PROC_NULL )
 		remote_sf[WEST]  = FJMPI_Rdma_get_remote_addr(RANK_W, memid_sf) ;
@@ -160,7 +160,7 @@ void set_rdma_variable_(
 	memid_cnt++ ;
 
 
-	MPI_Barrier(MPI_COMM_u) ;
+	MPI_Barrier(MPI_COMM_d) ;
 
 	if( RANK_W != MPI_PROC_NULL ) rvar[*vid][WEST]  = FJMPI_Rdma_get_remote_addr(RANK_W, memid[*vid]) ;
 	if( RANK_N != MPI_PROC_NULL ) rvar[*vid][NORTH] = FJMPI_Rdma_get_remote_addr(RANK_N, memid[*vid]) ;

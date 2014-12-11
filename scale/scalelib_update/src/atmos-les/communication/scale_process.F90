@@ -17,6 +17,8 @@ module scale_process
   !++ used modules
   !
   use mpi
+  use gtool_file, only: &
+     FileCloseAll
   use scale_precision
   use scale_stdio
   !-----------------------------------------------------------------------------
@@ -40,14 +42,13 @@ module scale_process
   !
   integer, public, parameter :: PRC_master = 0   !< master node
 
-  integer, public            :: MPI_COMM_u = 0
-!  integer, public            :: PRC_nu = -1
-  integer, public            :: PRC_myrank_world = 0
-
   integer, public            :: PRC_myrank = 0   !< my node ID
   integer, public            :: PRC_nmax   = 1   !< total number of processors
   integer, public            :: PRC_NUM_X  = 1   !< x length of 2D processor topology
   integer, public            :: PRC_NUM_Y  = 1   !< y length of 2D processor topology
+
+  integer, public            :: MPI_COMM_d = 0
+  integer, public            :: PRC_myrank_world = 0
 
   integer, public, allocatable :: PRC_2Drank(:,:)  !< node index in 2D topology
 
@@ -67,6 +68,10 @@ module scale_process
   logical, public            :: PRC_HAS_E
   logical, public            :: PRC_HAS_S
 
+  logical, public :: PRC_online_nest   = .false. !< whether online nesting is running or not?
+  integer, public :: PRC_interdomain_p = 0       ! interdomain communicator (to parent)
+  integer, public :: PRC_interdomain_d = 0       ! interdomain communicator (to daughter)
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -75,56 +80,62 @@ module scale_process
   !
   !++ Private parameters & variables
   !
-  logical, private :: PRC_mpi_alive = .false. !< whether MPI is alive or not?
+  integer, private, parameter :: abort_code   = -1 !< mpi abort code in error handler
+!  integer, private, parameter :: abort_code_p = 2 !< mpi abort code in error handler from parent
+!  integer, private, parameter :: abort_code_d = 3 !< mpi abort code in error handler from daughter
+  logical, private :: PRC_mpi_alive   = .false. !< whether MPI is alive or not?
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Start MPI
   subroutine PRC_MPIstart(mem_np, nitmax, nprocs, proc2mem)
-
     implicit none
 
     integer, intent(in) :: mem_np, nitmax, nprocs
     integer, intent(in) :: proc2mem(2,nitmax,nprocs)
 
-    character(len=H_LONG) :: fname ! name of logfile for each process
+    character(len=H_LONG)  :: fname ! name of logfile for each process
+    character(len=H_SHORT) :: info
+
+    integer :: new_abort
+    integer :: handler_status
+    integer :: ierr
 
     integer :: MPI_G_WORLD, MPI_G
     integer :: ranks(mem_np)
-    integer :: i, ip, ierr
+    integer :: ip
     !---------------------------------------------------------------------------
 
 !    call MPI_Init(ierr)
+
+!    call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, new_abort, ierr )
+!    call MPI_COMM_SET_ERRHANDLER   ( MPI_COMM_WORLD,       new_abort, ierr )
+!    call MPI_COMM_GET_ERRHANDLER   ( MPI_COMM_WORLD,  handler_status, ierr )
 
 !    call MPI_Comm_size(MPI_COMM_WORLD,PRC_nmax,  ierr)
     call MPI_Comm_rank(MPI_COMM_WORLD,PRC_myrank,ierr)
 
     PRC_myrank_world = PRC_myrank
 
-!    if (proc2mem(1,1,PRC_myrank+1) >= 1 .and. proc2mem(1,1,PRC_myrank+1) <= member) then
-
-      call MPI_Comm_group(MPI_COMM_WORLD,MPI_G_WORLD,ierr)
-
+    if ( proc2mem(1,1,PRC_myrank+1) >= 1 ) then
       do ip = 1, nprocs
         if (proc2mem(1,1,ip) == proc2mem(1,1,PRC_myrank+1)) then
           ranks(proc2mem(2,1,ip)+1) = ip-1
-!print *, PRC_myrank_world, proc2mem(2,1,ip)+1, ranks(proc2mem(2,1,ip)+1)
         end if
       end do
-  !    PRC_nu = proc2mem(1,1,PRC_myrank+1)
 
-!write(6,'(7I5)') PRC_myrank_world, ranks(:)
-
+      call MPI_Comm_group(MPI_COMM_WORLD,MPI_G_WORLD,ierr)
       call MPI_Group_incl(MPI_G_WORLD,mem_np,ranks,MPI_G,ierr)
-      call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_u,ierr)
+      call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_d,ierr)
 
-      call MPI_Comm_size(MPI_COMM_u,PRC_nmax,  ierr)
-      call MPI_Comm_rank(MPI_COMM_u,PRC_myrank,ierr)
+      call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, new_abort, ierr )
+      call MPI_COMM_SET_ERRHANDLER   ( MPI_COMM_d,       new_abort, ierr )
+      call MPI_COMM_GET_ERRHANDLER   ( MPI_COMM_d,  handler_status, ierr )
 
-!write(6,'(9I5)') PRC_myrank_world, PRC_myrank, PRC_nmax, ranks(:)
-
-!    end if
+      call MPI_Comm_size(MPI_COMM_d,PRC_nmax,  ierr)
+      call MPI_Comm_rank(MPI_COMM_d,PRC_myrank,ierr)
+    end if
 
     PRC_mpi_alive = .true.
 
@@ -160,7 +171,7 @@ contains
           endif
        endif
 
-!       write(IO_FID_LOG,*)
+!       write(IO_FID_LOG,*) ''
 !       write(IO_FID_LOG,*) '                                               -+++++++++;              '
 !       write(IO_FID_LOG,*) '                                             ++++++++++++++=            '
 !       write(IO_FID_LOG,*) '                                           ++++++++++++++++++-          '
@@ -230,6 +241,7 @@ contains
 !       write(IO_FID_LOG,*) '*** Open log    file, FID = ', IO_FID_LOG
 !       write(IO_FID_LOG,*) '*** basename of log file  = ', trim(IO_LOG_BASENAME)
 !       write(IO_FID_LOG,*) '*** detailed log output   = ', IO_LNML
+!       write(IO_FID_LOG,*) '*** Created Error Handler: rt=', new_abort,' st=', handler_status
 
     else
 
@@ -312,16 +324,18 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    ! flush 1kbyte
-    if( IO_L ) write(IO_FID_LOG,'(32A32)') '                                '
+    if ( IO_L ) then
+       write(IO_FID_LOG,*) ''
+       write(IO_FID_LOG,*) '++++++ PRC_MPIstop'
+       write(IO_FID_LOG,*) ''
+    end if
+
+    write(*,*) ''
+    write(*,*) '++++++ PRC_MPIstop'
+    write(*,*) ''
 
     if ( PRC_mpi_alive ) then
-       if ( IO_L ) then
-          write(IO_FID_LOG,*)
-          write(IO_FID_LOG,*) '++++++ Abort MPI'
-          if ( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
-       endif
-       call MPI_Abort(MPI_COMM_u, 1, ierr)
+        call MPI_COMM_CALL_ERRHANDLER(MPI_COMM_d, abort_code, ierr)
     endif
 
     stop
@@ -338,9 +352,9 @@ contains
     !---------------------------------------------------------------------------
 
     ! Stop MPI
-   if ( PRC_mpi_alive ) then
+    if ( PRC_mpi_alive ) then
 
-     call MPI_Comm_free(MPI_COMM_u,ierr)
+     call MPI_Comm_free(MPI_COMM_d,ierr)
 
 !       if ( IO_L ) then
 !          write(IO_FID_LOG,*)
@@ -356,7 +370,7 @@ contains
 !       call MPI_Barrier(MPI_COMM_WORLD,ierr)
 !       call MPI_Finalize(ierr)
 !       if( IO_L ) write(IO_FID_LOG,*) '*** MPI is peacefully finalized'
-   endif
+    endif
 
     ! Close logfile, configfile
     if ( IO_L ) then
@@ -415,9 +429,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** No. of Node   :', PRC_NUM_X," x ",PRC_NUM_Y
 
     if ( PRC_NUM_X*PRC_NUM_Y /= PRC_nmax ) then
-
-write(*,*) PRC_myrank_world, PRC_NUM_X, PRC_NUM_Y, PRC_nmax
-
        write(*,*) 'xxx total number of node does not match that requested. Check!'
        call PRC_MPIstop
     endif
@@ -441,7 +452,7 @@ write(*,*) PRC_myrank_world, PRC_NUM_X, PRC_NUM_Y, PRC_nmax
     period(1) = PRC_PERIODIC_Y
     period(2) = PRC_PERIODIC_X
     if ( PRC_mpi_alive ) then
-       call MPI_CART_CREATE(MPI_COMM_u,2,divide,period,.false.,iptbl,ierr)
+       call MPI_CART_CREATE(MPI_COMM_d,2,divide,period,.false.,iptbl,ierr)
        call MPI_CART_SHIFT(iptbl,0,1,PRC_next(PRC_S),PRC_next(PRC_N),ierr) ! next rank search Down/Up
        call MPI_CART_SHIFT(iptbl,1,1,PRC_next(PRC_W),PRC_next(PRC_E),ierr) ! next rank search Left/Right
 
@@ -571,7 +582,7 @@ write(*,*) PRC_myrank_world, PRC_NUM_X, PRC_NUM_Y, PRC_nmax
                        vsize,                &
                        MPI_DOUBLE_PRECISION, &
                        p,                    &
-                       MPI_COMM_u,       &
+                       MPI_COMM_d,       &
                        ierr                  )
     enddo
 
@@ -592,6 +603,78 @@ write(*,*) PRC_myrank_world, PRC_NUM_X, PRC_NUM_Y, PRC_nmax
 
     return
   end subroutine PRC_MPItimestat
+
+  !-----------------------------------------------------------------------------
+  !> MPI Error Handler
+  subroutine PRC_MPI_errorhandler( &
+      comm,     &
+      errcode   )
+    implicit none
+
+    ! attributes are needed to be the same with COMM_ERRHANDLER function
+    integer :: comm    !< MPI communicator
+    integer :: errcode !< error code
+
+    character(len=MPI_MAX_ERROR_STRING) :: msg
+    integer :: len
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    ! Print Error Messages
+    if ( PRC_mpi_alive ) then
+          ! flush 1kbyte
+       if ( IO_L ) then
+          write(IO_FID_LOG,'(32A32)') '                                '
+          write(IO_FID_LOG,*) '++++++ Abort MPI'
+          write(IO_FID_LOG,*) ''
+       end if
+
+       if ( errcode .eq. abort_code ) then ! called from PRC_MPIstop
+       elseif ( errcode <= MPI_ERR_LASTCODE ) then
+          call MPI_ERROR_STRING(errcode, msg, len, ierr)
+          if ( IO_L ) write(IO_FID_LOG,*) '++++++ ', trim(msg)
+          write(*,*) '++++++ ', trim(msg)
+       else
+          if ( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected error code', errcode
+          write(*,*) '++++++ Unexpected error code', errcode
+       endif
+
+       if ( comm .ne. MPI_COMM_d ) then
+          if ( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected communicator'
+          write(*,*) '++++++ Unexpected communicator'
+       endif
+       if ( IO_L ) write(IO_FID_LOG,*) ''
+       write(*,*) ''
+    endif
+
+    call FileCloseAll
+
+    ! Close logfile, configfile
+    if ( IO_L ) then
+       if ( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+    endif
+    close(IO_FID_CONF)
+
+    ! Abort MPI
+    if ( PRC_mpi_alive ) then
+       if ( PRC_online_nest ) then
+          if ( PRC_interdomain_d /= 0 .and. & ! # of comm may not be 0
+               PRC_interdomain_d /= comm ) then
+             write(*,*) "Send abort code to daughter domain"
+             call MPI_ABORT(PRC_interdomain_d, abort_code, ierr)
+          endif
+          if ( PRC_interdomain_p /= 0 .and. & ! # of comm may not be 0
+               PRC_interdomain_p /= comm ) then
+             write(*,*) "Send abort code to parent domain"
+             call MPI_ABORT(PRC_interdomain_p, abort_code, ierr)
+          endif
+       endif
+
+       call MPI_ABORT(MPI_COMM_d, abort_code, ierr)
+    endif
+
+    stop
+  end subroutine PRC_MPI_errorhandler
 
 end module scale_process
 !-------------------------------------------------------------------------------
