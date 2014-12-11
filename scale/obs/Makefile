@@ -20,13 +20,9 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
 #              $(COMMON_DIR)/common_scalelib.o
 #              $(COMMON_DIR)/common_precip.o
 
-INCS    = -I/data1/gylien/scale_ens/dc_utils \
-          -I/data1/gylien/scale_ens/gtool \
-          -I/data1/gylien/scale_ens/include
-#          -I/data1/gylien/scale/scalelib/include
+INCS    = $(SCALE_INC)
 
-LIBS    = -L/data1/gylien/scale_ens/lib -lscale -lgtool -ldcutils \
-          $(NETCDF_LIB) $(LIBBLAS)
+LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LIBBLAS)
 
 all:	$(PROGS)
 

@@ -16,4 +16,9 @@ LIBBLAS   = -SSL2BLAMP
 NETCDF_INC = -I/opt/aics/netcdf/k-serial-noszip/include
 NETCDF_LIB = -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
 
+SCALE_INCS = -I/volume63/data/ra000015/gylien/scale_ens/dc_utils \
+             -I/volume63/data/ra000015/gylien/scale_ens/gtool    \
+             -I/volume63/data/ra000015/gylien/scale_ens/include
+SCALE_LIBS = -L/volume63/data/ra000015/gylien/scale_ens/lib -lscale -lgtool -ldcutils
+
 BUFR_LIB  = 

@@ -4,14 +4,6 @@ OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_letkf.o \
 	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
           common_nml.o #common_scalelib.o #common_precip.o
 
-SCALE_INCS    = -I/data1/gylien/scale_ens/dc_utils \
-          -I/data1/gylien/scale_ens/gtool \
-          -I/data1/gylien/scale_ens/include
-#          -I/data1/gylien/scale/scalelib/include
-
-#SCALE_LIBS    = -L/data1/gylien/scale_ens/lib -lscale -lgtool -ldcutils \
-#          $(NETCDF_LIB) # $(LIBBLAS)
-
 all:	$(OBJS) enssize datetime pdbash
 
 enssize:        enssize.o SFMT.o common.o common_mtx.o netlib.o common_letkf.o
