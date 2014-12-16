@@ -76,10 +76,9 @@ if [ "$SCPCALL" == 'fcst' ]; then
     mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifile:$restartbaselen}
   done
 elif [ "$SCPCALL" == 'cycle' ]; then
+  MEMtmp=$MEM
   if [ "$MEM" == 'mean' ]; then
     MEMtmp='meanf'
-  else
-    MEMtmp='mean'
   fi
   mkdir -p $TMPOUT/${ATIME}/gues/${MEMtmp}
   mv -f $TMPDIR/history*.nc $TMPOUT/${ATIME}/gues/${MEMtmp}
