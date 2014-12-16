@@ -1,102 +1,65 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Script to prepare the directory of LETKF run.
-#  November 2014  created  Guo-Yuan Lien
+#  Script to prepare the directory of LETKF run; for each member.
+#  December 2014  created  Guo-Yuan Lien
 #
 #===============================================================================
 
 . config.all
-#. config.cycle
-. src/func_distribute.sh
-. src/func_datetime.sh
 
-if (($# < 9)); then
+if (($# < 4)); then
   cat >&2 << EOF
 
-[pre_letkf.sh] Prepare a temporary directory for LETKF
+[pre_letkf.sh]
 
-Usage: $0 MYRANK STIME FCSTLEN FCSTINT SLOT_BASE SLOT_NUM TMPDIR EXECDIR OBSDIR
+Usage: $0 MYRANK ATIME MEM TMPDIR
 
-  MYRANK     My rank number (not used)
-  STIME      Start time (format: YYYYMMDDHHMMSS)
-  FCSTLEN    Forecast length (second)
-  FCSTINT    Output interval (second)
-  SLOT_BASE  The base slot
-  SLOT_NUM   Number of observation timeslots
-  TMPDIR     Temporary directory to run the model
-  EXECDIR    Directory of SCALE executable files
-  OBSDIR     Directory of SCALE data files
+  MYRANK  My rank number (not used)
+  ATIME   Analysis time (format: YYYYMMDDHHMMSS)
+  MEM     Name of the ensemble member
+  TMPDIR  Temporary directory to run the program
 
 EOF
   exit 1
 fi
 
 MYRANK="$1"; shift
-STIME="$1"; shift
-FCSTLEN="$1"; shift
-FCSTINT="$1"; shift
-SLOT_BASE="$1"; shift
-SLOT_NUM="$1"; shift
-TMPDIR="$1"; shift
-EXECDIR="$1"; shift 
-OBSDIR="$1"
-
-S_YYYY=${STIME:0:4}
-S_MM=${STIME:4:2}
-S_DD=${STIME:6:2}
-S_HH=${STIME:8:2}
-S_II=${STIME:10:2}
-S_SS=${STIME:12:2}
-
-ATIME=$(datetime $STIME $LCYCLE s)
+ATIME="$1"; shift
+MEM="$1"; shift
+TMPDIR="$1"
 
 historybaselen=7
-
 initbaselen=4
 
-#-------------------------------------------------------------------------------
-
-distribute_da_cycle machinefile -
-
 #===============================================================================
 
-mkdir -p $TMPDIR
-rm -fr $TMPDIR/*
+if [ -d "$TMPOUT/${ATIME}/obsgues/${MEM}" ]; then
+  for ifile in $(cd $TMPOUT/${ATIME}/obsgues/${MEM} ; ls obsda.${MEM}.*.dat 2> /dev/null); do
+    ln -fs $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile} $TMPDIR/${ifile}
+  done
+fi
 
-#ln -fs $EXECDIR/letkf $TMPDIR
+if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
+  for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls history*.nc 2> /dev/null); do
+    ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEM}${ifile:$historybaselen}
+  done
 
-ln -fs $OBSDIR/obs_${ATIME}.dat $TMPDIR/obs.dat
+  for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls init*.nc 2> /dev/null); do
+    ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/gues.${MEM}${ifile:$initbaselen}
+    cp -f $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/anal.${MEM}${ifile:$initbaselen}
+  done
+fi
 
-ln -fs $TMPOUT/${ATIME}/obsgues/obsval*.dat $TMPDIR
-for m in $(seq $MEMBER); do
-  if [ -d "$TMPOUT/${ATIME}/gues/${name_m[$m]}" ]; then
-    for ifile in $(cd $TMPOUT/${ATIME}/gues/${name_m[$m]} ; ls history*.nc); do
-      ln -fs $TMPOUT/${ATIME}/gues/${name_m[$m]}/${ifile} $TMPDIR/hist.${name_m[$m]}${ifile:$historybaselen}
-    done
-    for ifile in $(cd $TMPOUT/${ATIME}/gues/${name_m[$m]} ; ls init*.nc); do
-      ln -fs $TMPOUT/${ATIME}/gues/${name_m[$m]}/${ifile} $TMPDIR/gues.${name_m[$m]}${ifile:$initbaselen}
-    done
-  fi
-done
-
-#===============================================================================
-
-cat $TMPDAT/conf/letkf.conf | \
-    sed -e "s/\[NNODES\]/ NNODES = $NNODES,/" \
-        -e "s/\[PPN\]/ PPN = $PPN,/" \
-        -e "s/\[MEM_NODES\]/ MEM_NODES = $mem_nodes,/" \
-        -e "s/\[MEM_NP\]/ MEM_NP = $mem_np,/" \
-        -e "s/\[SLOT_NUM\]/ SLOT_NUM = $SLOT_NUM,/" \
-        -e "s/\[SLOT_BASE\]/ SLOT_BASE = $SLOT_BASE,/" \
-        -e "s/\[SLOT_TINTERVAL\]/ SLOT_TINTERVAL = $LTIMESLOT.D0,/" \
-    > $TMPDIR/letkf.conf
-
-cat $TMPDAT/conf/scale.conf | \
-    sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
-        -e "s/\[TIME_DURATION\]/ TIME_DURATION = ${FCSTLEN}.D0,/" \
-        -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = ${FCSTINT}.D0,/" \
-    >> $TMPDIR/letkf.conf
+if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd'
+#if [ "$MEM" == 'mean' ] && [ -d "$TMPOUT/${ATIME}/gues/meanf" ]; then  # required....
+  for ifile in $(cd $TMPOUT/${ATIME}/gues/meanf ; ls init*.nc 2> /dev/null); do
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/gues.mean${ifile:$initbaselen}
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/anal.mean${ifile:$initbaselen}
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/gues.sprd${ifile:$initbaselen}
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/anal.sprd${ifile:$initbaselen}
+  done
+fi
 
 #===============================================================================
 

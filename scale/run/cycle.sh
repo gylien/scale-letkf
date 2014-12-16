@@ -41,8 +41,6 @@ myname1=${myname%.*}
 
 setting "$1" "$2" "$3" "$4" "$5"
 
-builtin_staging=$((MACHINE_TYPE != 10 && MACHINE_TYPE != 11))
-
 #-------------------------------------------------------------------------------
 
 mkdir -p $LOGDIR
@@ -59,7 +57,7 @@ done
 
 #-------------------------------------------------------------------------------
 
-if ((builtin_staging)); then
+if ((builtin_staging && ISTEP == 1)); then
   if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
     safe_init_tmpdir $TMP
   fi
@@ -87,7 +85,7 @@ fi
 #===============================================================================
 # Determine the staging list and then stage in
 
-if ((builtin_staging)); then
+if ((builtin_staging && ISTEP == 1)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR
@@ -103,6 +101,7 @@ fi
 s_flag=1
 e_flag=0
 time=$STIME
+atime=$(datetime $time $LCYCLE s)
 loop=0
 
 #-------------------------------------------------------------------------------
@@ -115,18 +114,37 @@ while ((time <= ETIME)); do
     e_flag=1
   fi
 
-  obstime=$(datetime $time $WINDOW_S s)
+  obstime=$(datetime $time $LTIMESLOT s)
   is=0
+  slot_s=0
   while ((obstime <= $(datetime $time $WINDOW_E s))); do
     is=$((is+1))
     time_sl[$is]=$obstime
     timefmt_sl[$is]="$(datetime_fmt ${obstime})"
-    if ((WINDOW_S + LTIMESLOT * (is-1) == LCYCLE)); then
-      baseslot=$is
+    if ((slot_s == 0 && obstime >= $(datetime $time $WINDOW_S s))); then
+      slot_s=$is
+    fi
+    if ((obstime == $(datetime $time $LCYCLE s))); then # $(datetime $time $LCYCLE,$WINDOW_S,$WINDOW_E,... s) as a variable
+      slot_b=$is
     fi
   obstime=$(datetime $obstime $LTIMESLOT s)
   done
-  nslots=$is
+  slot_e=$is
+
+#echo "###### $slot_s $slot_b $slot_e"
+
+#  obstime=$(datetime $time $WINDOW_S s)
+#  is=0
+#  while ((obstime <= $(datetime $time $WINDOW_E s))); do
+#    is=$((is+1))
+#    time_sl[$is]=$obstime
+#    timefmt_sl[$is]="$(datetime_fmt ${obstime})"
+#    if ((WINDOW_S + LTIMESLOT * (is-1) == LCYCLE)); then
+#      baseslot=$is
+#    fi
+#  obstime=$(datetime $obstime $LTIMESLOT s)
+#  done
+#  nslots=$is
 
 #-------------------------------------------------------------------------------
 # Write the header of the log file
@@ -151,7 +169,7 @@ while ((time <= ETIME)); do
   echo "  Assimilation window:      $WINDOW_S - $WINDOW_E s ($((WINDOW_E-WINDOW_S)) s)"
   echo
   echo "  Observation timeslots:"
-  for is in $(seq $nslots); do
+  for is in $(seq $slot_s $slot_e); do
     printf "  %4d - %s\n" ${is} "${timefmt_sl[$is]}"
   done
   echo
@@ -225,6 +243,7 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 
   time=$(datetime $time $LCYCLE s)
+  atime=$(datetime $time $LCYCLE s)
   s_flag=0
 
 #-------------------------------------------------------------------------------

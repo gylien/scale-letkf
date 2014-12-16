@@ -53,17 +53,26 @@ OBSOPE=0       # 0: No    ! obsope options: not finished yet!!
 #===============================================================================
 # Diagnostic output settings
 
-              #      fcst fcstr
-OUT_OPT=1     # 1:   o    o
-              # 2:   o
+              #      anal          gues
+              #      mean/sprd mem mean/sprd mem history
+OUT_OPT=1     # 1:   o         o   o         o   o
+              # 2:   o         o   o         o
+              # 3:   o         o   o
+              # 4:   o             o
+
+OBSOUT_OPT=1  #      obsgues obsanal obsdep
+              # 1:   o       o       o
+              # 2:   o               o
+              # 3:                   o
+              # 4:   (none)
 
               #      topo landuse bdy perturb        scale obsope letkf
               #      log  log     log (not finished) log   log    log
 LOG_OPT=2     # 1:   o    o       o   o              o     o      o
               # 2:   o    o       o                  o     o      o
               # 3:                                   o     o      o
-              # 3:                                         o      o
-              # 4:   (none)
+              # 4:                                         o      o
+              # 5:   (none)
 
 #===============================================================================
 

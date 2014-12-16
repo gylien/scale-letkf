@@ -49,23 +49,42 @@ restartbaselen=23  # 7 + 16
 #echo
 
 
-if [ "$SCPCALL" == 'fcst' ] && ((OUT_OPT <= 2)); then
+#if [ "$SCPCALL" == 'fcst' ] && ((OUT_OPT <= 2)); then
+#  mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
+#  mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
+#elif [ "$SCPCALL" == 'cycle' ]; then
+#  mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
+#  mv -f $TMPDIR/history*.nc $TMPOUT/${ATIME}/gues/${MEM}
+#fi
+
+#if [ "$SCPCALL" == 'fcst' ] && ((OUT_OPT <= 1)); then
+#  mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
+#  for ifile in $(cd $TMPDIR ; ls restart*.nc); do
+#    mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifile:$restartbaselen}
+#  done
+#elif [ "$SCPCALL" == 'cycle' ]; then
+#  mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
+#  for ifile in $(cd $TMPDIR ; ls restart*.nc); do
+#    mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/gues/${MEM}/init${ifile:$restartbaselen}
+#  done
+#fi
+
+if [ "$SCPCALL" == 'fcst' ]; then
   mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
   mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
-elif [ "$SCPCALL" == 'cycle' ]; then
-  mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
-  mv -f $TMPDIR/history*.nc $TMPOUT/${ATIME}/gues/${MEM}
-fi
-
-if [ "$SCPCALL" == 'fcst' ] && ((OUT_OPT <= 1)); then
-  mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
   for ifile in $(cd $TMPDIR ; ls restart*.nc); do
     mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifile:$restartbaselen}
   done
 elif [ "$SCPCALL" == 'cycle' ]; then
-  mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
+  if [ "$MEM" == 'mean' ]; then
+    MEMtmp='meanf'
+  else
+    MEMtmp='mean'
+  fi
+  mkdir -p $TMPOUT/${ATIME}/gues/${MEMtmp}
+  mv -f $TMPDIR/history*.nc $TMPOUT/${ATIME}/gues/${MEMtmp}
   for ifile in $(cd $TMPDIR ; ls restart*.nc); do
-    mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/gues/${MEM}/init${ifile:$restartbaselen}
+    mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/gues/${MEMtmp}/init${ifile:$restartbaselen}
   done
 fi
 

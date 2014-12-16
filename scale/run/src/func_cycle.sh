@@ -92,6 +92,17 @@ FSTEP=${FSTEP:-$nsteps}
 TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 
 #-------------------------------------------------------------------------------
+# common variables
+
+builtin_staging=$((MACHINE_TYPE != 10 && MACHINE_TYPE != 11))
+
+if ((TMPRUN_MODE <= 2)); then
+  proc_opt='one'
+else
+  proc_opt='alln'
+fi
+
+#-------------------------------------------------------------------------------
 }
 
 #===============================================================================
@@ -108,7 +119,7 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $MODELDIR/scale-les_pp $TMPDAT/exec
   ln -fs $COMMON_DIR/pdbash $TMPDAT/exec
   ln -fs $OBSUTIL_DIR/obsope$(printf $MEMBER_FMT $MEMBER) $TMPDAT/exec/obsope
-###  ln -fs $OBSUTIL_DIR/letkf$(printf $MEMBER_FMT $MEMBER) $TMPDAT/exec/letkf
+  ln -fs $LETKF_DIR/letkf$(printf $MEMBER_FMT $MEMBER) $TMPDAT/exec/letkf
   ln -fs $DATADIR/rad $TMPDAT
   ln -fs $ANLWRF $TMPDAT/wrf
 
@@ -135,15 +146,13 @@ ${MODELDIR}/scale-les_init|exec/scale-les_init
 ${MODELDIR}/scale-les_pp|exec/scale-les_pp
 ${COMMON_DIR}/pdbash|exec/pdbash
 ${OBSUTIL_DIR}/obsope$(printf $MEMBER_FMT $MEMBER)|exec/obsope
+${LETKF_DIR}/letkf$(printf $MEMBER_FMT $MEMBER)|exec/letkf
 ${SCRP_DIR}/scale.conf|conf/scale.conf
 ${SCRP_DIR}/scale_init.conf|conf/scale_init.conf
 ${SCRP_DIR}/obsope.conf|conf/obsope.conf
 ${SCRP_DIR}/letkf.conf|conf/letkf.conf
 ${DATADIR}/rad|rad
 EOF
-
-###${OBSUTIL_DIR}/letkf$(printf $MEMBER_FMT $MEMBER)|exec/letkf
-
 
   time=$STIME
   etime_anlwrf=$(datetime $ETIME $((FCSTLEN+ANLWRF_INT)) s)
@@ -206,6 +215,7 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
 else
 #-------------------
   time=$STIME
+  atime=$(datetime $time $LCYCLE s)
   loop=0
   while ((time <= ETIME)); do
     loop=$((loop+1))
@@ -215,27 +225,43 @@ else
       stgoutstep='stageout.out'
     fi
 
+    #-------------------
+    # stage-in
+
     for m in $(seq $mmean); do
       for q in $(seq $mem_np); do
-        #-------------------
-        # stage-in
 
         path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
         echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
 
-        #-------------------
-        # stage-out
+      done
+    done
 
-#        if ((OUT_OPT <= 2)); then
-#          path="${time}/fcst/${name_m[$m]}/history$(printf $SCALE_SFX $((q-1)))"
-#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
-#        fi
-#        if ((OUT_OPT <= 1)); then
-#          path="${time}/fcst/${name_m[$m]}/init_$(datetime ${time} $FCSTLEN s)$(printf $SCALE_SFX $((q-1)))"
-#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
-#        fi
+    #-------------------
+    # stage-out
 
-        #-------------------
+    for m in $(seq $MEMBER); do
+      for q in $(seq $mem_np); do
+
+        if ((OUT_OPT <= 1)); then
+          path="${atime}/gues/${name_m[$m]}/history$(printf $SCALE_SFX $((q-1)))"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
+        fi
+        if ((OUT_OPT <= 2)); then
+          path="${atime}/gues/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
+        fi
+
+        if ((OUT_OPT <= 3)); then
+          path="${atime}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
+        fi
+
+        if ((OBSOUT_OPT <= 2)); then
+          path="${atime}/obsgues/${name_m[$m]}/obsda.${name_m[$m]}.$(printf $PROCESS_FMT $((q-1))).dat"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
+        fi
+
       done
 
       #-------------------
@@ -253,6 +279,46 @@ else
 
     #-------------------
 
+    for q in $(seq $mem_np); do
+      #-------------------
+      # mean/sprd
+
+      if ((OUT_OPT <= 4)); then
+        path="${atime}/gues/mean/init$(printf $SCALE_SFX $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
+        path="${atime}/gues/sprd/init$(printf $SCALE_SFX $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
+
+        path="${atime}/anal/mean/init$(printf $SCALE_SFX $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
+        path="${atime}/anal/sprd/init$(printf $SCALE_SFX $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
+      fi
+
+      #-------------------
+      # meanf
+
+      if ((OUT_OPT <= 1)); then
+        path="${atime}/gues/meanf/history$(printf $SCALE_SFX $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
+      fi
+      if ((OUT_OPT <= 4)); then
+        path="${atime}/gues/meanf/init$(printf $SCALE_SFX $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
+      fi
+
+      #-------------------
+    done
+
+    #-------------------
+
+    if ((LOG_OPT <= 4)); then
+      path="${atime}/log/obsope/NOUT-000000" ###### 'NOUT-000000' as a variable
+      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+      path="${atime}/log/letkf/NOUT-000000" ###### 'NOUT-000000' as a variable
+      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+    fi
+
     if ((LOG_OPT <= 2)); then
       path="${time}/log/scale_topo/pp_LOG${SCALE_LOG_SFX}"
       echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
@@ -265,6 +331,7 @@ else
     #-------------------
 
     time=$(datetime $time $LCYCLE s)
+    atime=$(datetime $time $LCYCLE s)
   done
 #-------------------
 fi
@@ -544,39 +611,35 @@ echo "obsthin..."
 obsope () {
 #-------------------------------------------------------------------------------
 
+echo
+
+pdbash node $proc_opt $SCRP_DIR/src/pre_obsope_node.sh \
+  $time $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
+  $mem_nodes $mem_np $slot_s $slot_e $slot_b $FCSTLEN $FCSTOUT
+
 ipm=0
 for m in $(seq $MEMBER); do
   ipm=$((ipm+1))
   if ((ipm > parallel_mems)); then wait; ipm=1; fi
   echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-  if ((TMPRUN_MODE <= 2)); then
-    proc_opt='one'
-  else
-    proc_opt='alln'
-  fi
   pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/pre_obsope.sh \
-    ${time} $FCSTLEN $FCSTOUT $baseslot $nslots $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs &
+    $atime ${name_m[$m]} $TMPRUN/obsope &
 
   sleep $BGJOB_INT
 done
 wait
 
-mpirunf proc $TMPRUN/obsope ./obsope obsope.conf
+mpirunf proc $TMPRUN/obsope ./obsope obsope.conf > /dev/null
 
 ipm=0
 for m in $(seq $MEMBER); do
   ipm=$((ipm+1))
   if ((ipm > parallel_mems)); then wait; ipm=1; fi
-  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+#  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-  if ((TMPRUN_MODE <= 2)); then
-    proc_opt='one'
-  else
-    proc_opt='alln'
-  fi
   pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/post_obsope.sh \
-    ${time} $TMPRUN/obsope &
+    ${atime} ${name_m[$m]} $TMPRUN/obsope &
 
   sleep $BGJOB_INT
 done
@@ -590,43 +653,39 @@ wait
 letkf () {
 #-------------------------------------------------------------------------------
 
+echo
+
+pdbash node $proc_opt $SCRP_DIR/src/pre_letkf_node.sh \
+  $time $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
+  $mem_nodes $mem_np $slot_s $slot_e $slot_b $FCSTLEN $FCSTOUT
+
 ipm=0
-for m in $(seq $MEMBER); do
+for m in $(seq $mmean); do
   ipm=$((ipm+1))
   if ((ipm > parallel_mems)); then wait; ipm=1; fi
   echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-  if ((TMPRUN_MODE <= 2)); then
-    proc_opt='one'
-  else
-    proc_opt='alln'
-  fi
   pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/pre_letkf.sh \
-    ${time} $FCSTLEN $FCSTOUT $baseslot $nslots $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs &
+    $atime ${name_m[$m]} $TMPRUN/letkf &
 
   sleep $BGJOB_INT
 done
 wait
 
-#mpirunf proc $TMPRUN/letkf ./letkf letkf.conf
+mpirunf proc $TMPRUN/letkf ./letkf letkf.conf > /dev/null
 
-#ipm=0
-#for m in $(seq $MEMBER); do
-#  ipm=$((ipm+1))
-#  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+ipm=0
+for m in $(seq $mmean); do
+  ipm=$((ipm+1))
+  if ((ipm > parallel_mems)); then wait; ipm=1; fi
 #  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-#  if ((TMPRUN_MODE <= 2)); then
-#    proc_opt='one'
-#  else
-#    proc_opt='alln'
-#  fi
-#  pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/post_letkf.sh \
-#    ${time} $TMPRUN/letkf &
+  pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/post_letkf.sh \
+    ${atime} ${name_m[$m]} $TMPRUN/letkf &
 
-#  sleep $BGJOB_INT
-#done
-#wait
+  sleep $BGJOB_INT
+done
+wait
 
 #-------------------------------------------------------------------------------
 }

@@ -33,8 +33,8 @@ OBSNCEP="/data1/gylien/obs/prepbufr"  # directory of observation data in NCEP BU
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=300        # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=900        # SCALE forecast time when assimilation window ends (second)
+WINDOW_S=60         # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=600        # SCALE forecast time when assimilation window ends (second)
 LCYCLE=600          # Length of a GFS-LETKF cycle (second)
 LTIMESLOT=60        # Timeslot interval for 4D-LETKF (second)
 
@@ -116,6 +116,7 @@ BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
 SCALE_SFX='.pe%06d.nc'
 SCALE_LOG_SFX='.pe000000'
+PROCESS_FMT='%06d'
 MEMBER_FMT='%04d'
 
 #-------------------
