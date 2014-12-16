@@ -75,14 +75,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size),ALLOCATABLE :: work2d(:,:)
   REAL(RP),ALLOCATABLE :: work3dg(:,:,:,:)
   REAL(RP),ALLOCATABLE :: work2dg(:,:,:)
-  REAL(r_size),ALLOCATABLE :: tmptv(:,:)
-  REAL(r_size),ALLOCATABLE :: pfull(:,:)
+!  REAL(r_size),ALLOCATABLE :: tmptv(:,:)
+!  REAL(r_size),ALLOCATABLE :: pfull(:,:)
   REAL(r_size) :: parm
   REAL(r_size) :: trans(nbv,nbv,nv3d+nv2d)
   REAL(r_size) :: q_mean,q_sprd  ! GYL
   REAL(r_size) :: q_anal(nbv)    ! GYL
-  LOGICAL :: ex
-  INTEGER :: ij,ilev,n,m,i,j,k,nobsl,ierr,iret
+!  LOGICAL :: ex
+!  INTEGER :: ij,ilev,n,m,i,j,k,nobsl,ierr,iret
+  INTEGER :: ij,ilev,n,m,i,k,nobsl
 
   WRITE(6,'(A)') 'Hello from das_letkf'
   WRITE(6,'(A,F15.2)') '  cov_infl_mul = ',cov_infl_mul

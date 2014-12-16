@@ -89,7 +89,7 @@ PROGRAM letkf
 !  CALL set_mem_node_proc(nbv+1,NNODES,PPN,MEM_NODES,MEM_NP)
 !
 
-  CALL set_common_mpi_scale(nbv+1,NNODES,PPN,MEM_NODES,MEM_NP)
+  CALL set_common_mpi_scale(nbv,NNODES,PPN,MEM_NODES,MEM_NP)
 
 !! print process distribution!!!
 
@@ -99,11 +99,6 @@ PROGRAM letkf
     write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
 
   else
-
-    ALLOCATE(gues3d(nij1,nlev,nbv,nv3d))
-    ALLOCATE(gues2d(nij1,nbv,nv2d))
-    ALLOCATE(anal3d(nij1,nlev,nbv,nv3d))
-    ALLOCATE(anal2d(nij1,nbv,nv2d))
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     CALL CPU_TIME(rtimer)
@@ -135,7 +130,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     CALL CPU_TIME(rtimer)
-    WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
+    WRITE(6,'(A,2F10.2)') '### TIMER(PROCESS_OBS):',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 
 
@@ -159,13 +154,17 @@ PROGRAM letkf
 !-----------------------------------------------------------------------
 ! First guess ensemble
 !-----------------------------------------------------------------------
+
+    ALLOCATE(gues3d(nij1,nlev,nbv,nv3d))
+    ALLOCATE(gues2d(nij1,nbv,nv2d))
+    ALLOCATE(anal3d(nij1,nlev,nbv,nv3d))
+    ALLOCATE(anal2d(nij1,nbv,nv2d))
+
     !
     ! READ GUES
     !
 
     call read_ens_mpi('gues',gues3d,gues2d)
-
-
 
 !  write (6,*) gues3d(20,:,3,iv3d_t)
 !!  write (6,*) gues2d

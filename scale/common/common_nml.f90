@@ -14,7 +14,7 @@ MODULE common_nml
   public
 
   !--- PARAM_LETKF
-  integer :: ADAPTIVE_INFL_INIT = .false.
+  logical :: ADAPTIVE_INFL_INIT = .false.
 
   !--- PARAM_LETKF_PRC
   integer :: NNODES = 1

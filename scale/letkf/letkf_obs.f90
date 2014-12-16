@@ -106,42 +106,43 @@ SUBROUTINE set_letkf_obs
 
   IMPLICIT NONE
   REAL(r_size),PARAMETER :: gross_error=5.0d0
-  REAL(r_size) :: dlon1,dlon2,dlon,dlat
-  REAL(r_size),ALLOCATABLE :: wk2d(:,:)
-  INTEGER,ALLOCATABLE :: iwk2d(:,:)
-  REAL(r_size),ALLOCATABLE :: tmpelm(:)
-  REAL(r_size),ALLOCATABLE :: tmplon(:)
-  REAL(r_size),ALLOCATABLE :: tmplat(:)
-  REAL(r_size),ALLOCATABLE :: tmplev(:)
-  REAL(r_size),ALLOCATABLE :: tmpdat(:)
-  REAL(r_size),ALLOCATABLE :: tmperr(:)
-  REAL(r_size),ALLOCATABLE :: tmptyp(:)
-  REAL(r_size),ALLOCATABLE :: tmpdif(:)
-!  REAL(r_size),ALLOCATABLE :: tmpi(:)
-!  REAL(r_size),ALLOCATABLE :: tmpj(:)
-!  REAL(r_size),ALLOCATABLE :: tmpk(:)
-  REAL(r_size),ALLOCATABLE :: tmpdep(:)
-  REAL(r_size),ALLOCATABLE :: tmphdxf(:,:)
-  INTEGER,ALLOCATABLE :: tmpqc0(:,:)
-  INTEGER,ALLOCATABLE :: tmpqc(:)
-  REAL(r_size),ALLOCATABLE :: tmp2elm(:)
-  REAL(r_size),ALLOCATABLE :: tmp2lon(:)
-  REAL(r_size),ALLOCATABLE :: tmp2lat(:)
-  REAL(r_size),ALLOCATABLE :: tmp2lev(:)
-  REAL(r_size),ALLOCATABLE :: tmp2dat(:)
-  REAL(r_size),ALLOCATABLE :: tmp2err(:)
-  REAL(r_size),ALLOCATABLE :: tmp2typ(:)
-  REAL(r_size),ALLOCATABLE :: tmp2dif(:)
-!  REAL(r_size),ALLOCATABLE :: tmp2i(:)
-!  REAL(r_size),ALLOCATABLE :: tmp2j(:)
-!  REAL(r_size),ALLOCATABLE :: tmp2k(:)
-  REAL(r_size),ALLOCATABLE :: tmp2dep(:)
-  REAL(r_size),ALLOCATABLE :: tmp2hdxf(:,:)
-  INTEGER,ALLOCATABLE :: tmp2qc(:)
-  INTEGER :: n,i,j,ierr,nn,l,im
-  INTEGER :: nj(0:nlat-1)
-  INTEGER :: njs(1:nlat-1)
-  CHARACTER(10) :: obsfile='obsNNN.dat'
+!  REAL(r_size) :: dlon1,dlon2,dlon,dlat
+!  REAL(r_size),ALLOCATABLE :: wk2d(:,:)
+!  INTEGER,ALLOCATABLE :: iwk2d(:,:)
+!  REAL(r_size),ALLOCATABLE :: tmpelm(:)
+!  REAL(r_size),ALLOCATABLE :: tmplon(:)
+!  REAL(r_size),ALLOCATABLE :: tmplat(:)
+!  REAL(r_size),ALLOCATABLE :: tmplev(:)
+!  REAL(r_size),ALLOCATABLE :: tmpdat(:)
+!  REAL(r_size),ALLOCATABLE :: tmperr(:)
+!  REAL(r_size),ALLOCATABLE :: tmptyp(:)
+!  REAL(r_size),ALLOCATABLE :: tmpdif(:)
+!!  REAL(r_size),ALLOCATABLE :: tmpi(:)
+!!  REAL(r_size),ALLOCATABLE :: tmpj(:)
+!!  REAL(r_size),ALLOCATABLE :: tmpk(:)
+!  REAL(r_size),ALLOCATABLE :: tmpdep(:)
+!  REAL(r_size),ALLOCATABLE :: tmphdxf(:,:)
+!  INTEGER,ALLOCATABLE :: tmpqc0(:,:)
+!  INTEGER,ALLOCATABLE :: tmpqc(:)
+!  REAL(r_size),ALLOCATABLE :: tmp2elm(:)
+!  REAL(r_size),ALLOCATABLE :: tmp2lon(:)
+!  REAL(r_size),ALLOCATABLE :: tmp2lat(:)
+!  REAL(r_size),ALLOCATABLE :: tmp2lev(:)
+!  REAL(r_size),ALLOCATABLE :: tmp2dat(:)
+!  REAL(r_size),ALLOCATABLE :: tmp2err(:)
+!  REAL(r_size),ALLOCATABLE :: tmp2typ(:)
+!  REAL(r_size),ALLOCATABLE :: tmp2dif(:)
+!!  REAL(r_size),ALLOCATABLE :: tmp2i(:)
+!!  REAL(r_size),ALLOCATABLE :: tmp2j(:)
+!!  REAL(r_size),ALLOCATABLE :: tmp2k(:)
+!  REAL(r_size),ALLOCATABLE :: tmp2dep(:)
+!  REAL(r_size),ALLOCATABLE :: tmp2hdxf(:,:)
+!  INTEGER,ALLOCATABLE :: tmp2qc(:)
+!  INTEGER :: n,i,j,ierr,nn,l,im
+  INTEGER :: n,i,j,ierr,im
+!  INTEGER :: nj(0:nlat-1)
+!  INTEGER :: njs(1:nlat-1)
+!  CHARACTER(10) :: obsfile='obsNNN.dat'
 !  CHARACTER(8) :: cdffile_m='cdfm.grd'         ! GYL, PRECIP assimilation
 !  CHARACTER(8) :: cdffile_o='cdfo.grd'         ! GYL
 !  CHARACTER(10) :: maskfile='ppmask.grd'       ! GYL
@@ -167,11 +168,11 @@ SUBROUTINE set_letkf_obs
 
 
   integer :: iproc,jproc
-  integer,allocatable :: ranks(:)
+!  integer,allocatable :: ranks(:)
 
   integer,allocatable :: nnext(:,:)
 
-  integer :: MPI_G_e, MPI_G_obstmp, MPI_COMM_obstmp
+!  integer :: MPI_G_e, MPI_G_obstmp, MPI_COMM_obstmp
 
 
 

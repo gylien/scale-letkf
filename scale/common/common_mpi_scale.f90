@@ -230,7 +230,7 @@ END SUBROUTINE rij_g2l_auto
 !-----------------------------------------------------------------------
 ! set_common_mpi_scale
 !-----------------------------------------------------------------------
-SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
+SUBROUTINE set_common_mpi_scale(mem,nnodes,ppn,mem_nodes,mem_np)
   use scale_grid_index, only: &
       IHALO,JHALO, &
       IMAX, JMAX
@@ -238,7 +238,7 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
     PRC_myrank
 
   implicit none
-  INTEGER,INTENT(IN) :: nbv
+  INTEGER,INTENT(IN) :: mem
   INTEGER,INTENT(IN) :: nnodes,ppn,mem_nodes,mem_np
   REAL(RP) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
   REAL(RP) :: v2dg(nlonsub,nlatsub,nv2d)
@@ -270,7 +270,7 @@ SUBROUTINE set_common_mpi_scale(nbv,nnodes,ppn,mem_nodes,mem_np)
   WRITE(6,'(A)') 'Hello from set_common_mpi_scale'
 
 
-  CALL set_mem_node_proc(nbv+1,NNODES,PPN,MEM_NODES,MEM_NP)
+  CALL set_mem_node_proc(mem+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
 
   if (scale_IO_group_n >= 1) then
