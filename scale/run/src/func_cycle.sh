@@ -339,33 +339,6 @@ else
 #-------------------
 fi
 
-
-
-#for c in `seq $CYCLES`; do
-#  for m in `seq $fmember`; do
-#    mt=$(((c-1) * fmember + m))
-#    echo "rm|anal/${name_m[$mt]}/${Syyyymmddhh[$c]}.sig" >> $tmpstageout/out.${node_m[$mt]}
-#    echo "rm|anal/${name_m[$mt]}/${Syyyymmddhh[$c]}.sfc" >> $tmpstageout/out.${node_m[$mt]}
-#    fh=0
-#    while [ "$fh" -le "$CYCLEFLEN" ]; do
-#      fhhh=`printf '%03d' $fh`
-#      Fyyyymmddhh=$(datetime ${STIME[$c]} $fh h | cut -c 1-10)
-#      if [ "$OUT_OPT" -le 1 ]; then
-#        echo "mv|fcst/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.sig" >> $tmpstageout/out.${node_m[$mt]}
-#        echo "mv|fcst/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.sfc" >> $tmpstageout/out.${node_m[$mt]}
-#      fi
-#      echo "mv|fcstg/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.grd" >> $tmpstageout/out.${node_m[$mt]}
-#      if [ "$OUT_OPT" -le 2 ]; then
-#        echo "mv|fcstgp/${Syyyymmddhh[$c]}/${name_m[$mt]}/${Fyyyymmddhh}.grd" >> $tmpstageout/out.${node_m[$mt]}
-#      fi
-#      echo "mv|verfo1/${fhhh}/${name_m[$mt]}/${Fyyyymmddhh}.dat" >> $tmpstageout/out.${node_m[$mt]}
-#      echo "mv|verfa1/${fhhh}/${name_m[$mt]}/${Fyyyymmddhh}.dat" >> $tmpstageout/out.${node_m[$mt]}
-#      echo "mv|verfa2/${fhhh}/${name_m[$mt]}/${Fyyyymmddhh}.dat" >> $tmpstageout/out.${node_m[$mt]}
-#    fh=$((fh + CYCLEFOUT))
-#    done
-#  done
-#done
-
 #-------------------------------------------------------------------------------
 }
 
@@ -606,8 +579,8 @@ obsope () {
 echo
 
 pdbash node $PROC_OPT $SCRP_DIR/src/pre_obsope_node.sh \
-  $time $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
-  $mem_nodes $mem_np $slot_s $slot_e $slot_b $CYCLEFLEN $CYCLEFOUT
+  $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
+  $mem_nodes $mem_np $slot_s $slot_e $slot_b
 
 ipm=0
 for m in $(seq $MEMBER); do
@@ -648,8 +621,8 @@ letkf () {
 echo
 
 pdbash node $PROC_OPT $SCRP_DIR/src/pre_letkf_node.sh \
-  $time $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
-  $mem_nodes $mem_np $slot_s $slot_e $slot_b $CYCLEFLEN $CYCLEFOUT
+  $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
+  $mem_nodes $mem_np $slot_s $slot_e $slot_b
 
 ipm=0
 for m in $(seq $mmean); do
