@@ -41,6 +41,9 @@ fi
 
 #-------------------------------------------------------------------------------
 
+STAGING_DIR="$TMP/staging"
+NODEFILE_DIR="$TMP/node"
+
 if ((TMPDAT_MODE <= 2)); then    # The 'dat' temporary directory (input data)
   TMPDAT="$TMP/dat"              #
   TMPDAT_STG="$TMP_STG/dat"      #
