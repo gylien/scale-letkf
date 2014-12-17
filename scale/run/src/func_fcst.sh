@@ -27,7 +27,7 @@ USAGE="
 [$myname] Run ensemble forecasts and (optional) verifications.
 
 Configuration files:
-  config.all
+  config.main
   config.$myname1
 
 Steps:
@@ -169,8 +169,8 @@ ${MODELDIR}/scale-les|exec/scale-les
 ${MODELDIR}/scale-les_init|exec/scale-les_init
 ${MODELDIR}/scale-les_pp|exec/scale-les_pp
 ${COMMON_DIR}/pdbash|exec/pdbash
-${SCRP_DIR}/scale.conf|conf/scale.conf
-${SCRP_DIR}/scale_init.conf|conf/scale_init.conf
+${SCRP_DIR}/config.nml.scale|conf/config.nml.scale
+${SCRP_DIR}/config.nml.scale_init|conf/config.nml.scale_init
 ${DATADIR}/rad|rad
 EOF
 
@@ -192,7 +192,7 @@ EOF
     done
   else
     cat >> $STAGING_DIR/stagein.dat << EOF
-${SCRP_DIR}/scale_pp_topo.conf|conf/scale_pp_topo.conf
+${SCRP_DIR}/config.nml.scale_pp_topo|conf/config.nml.scale_pp_topo
 ${DATADIR}/topo/DEM50M/Products|topo/DEM50M/Products
 EOF
   fi
@@ -204,7 +204,7 @@ EOF
     done
   else
     cat >> $STAGING_DIR/stagein.dat << EOF
-${SCRP_DIR}/scale_pp_landuse.conf|conf/scale_pp_landuse.conf
+${SCRP_DIR}/config.nml.scale_pp_landuse|conf/config.nml.scale_pp_landuse
 ${DATADIR}/landuse/LU100M/Products|landuse/LU100M/Products
 EOF
   fi

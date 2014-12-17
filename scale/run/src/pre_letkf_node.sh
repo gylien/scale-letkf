@@ -6,7 +6,7 @@
 #
 #===============================================================================
 
-. config.all
+. config.main
 
 if (($# < 13)); then
   cat >&2 << EOF
@@ -65,7 +65,7 @@ ln -fs $OBSDIR/obs_${ATIME}.dat $TMPDIR/obs.dat
 
 #===============================================================================
 
-cat $TMPDAT/conf/letkf.conf | \
+cat $TMPDAT/conf/config.nml.letkf | \
     sed -e "s/\[NNODES\]/ NNODES = $NNODES,/" \
         -e "s/\[PPN\]/ PPN = $PPN,/" \
         -e "s/\[MEM_NODES\]/ MEM_NODES = $MEM_NODES,/" \
@@ -76,7 +76,7 @@ cat $TMPDAT/conf/letkf.conf | \
         -e "s/\[SLOT_TINTERVAL\]/ SLOT_TINTERVAL = $LTIMESLOT.D0,/" \
     > $TMPDIR/letkf.conf
 
-cat $TMPDAT/conf/scale.conf | \
+cat $TMPDAT/conf/config.nml.scale | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
         -e "s/\[TIME_DURATION\]/ TIME_DURATION = ${FCSTLEN}.D0,/" \
         -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = ${FCSTINT}.D0,/" \

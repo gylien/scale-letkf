@@ -5,7 +5,7 @@
 #  April   2013,          Guo-Yuan Lien
 #  August  2014, modified Guo-Yuan Lien
 #
-#  *Require source 'config.all' first.
+#  *Require source 'config.main' first.
 #
 #===============================================================================
 

@@ -18,7 +18,7 @@ myname1='fcst'
 #===============================================================================
 # Configuration
 
-. config.all
+. config.main
 (($? != 0)) && exit $?
 . config.$myname1
 (($? != 0)) && exit $?
@@ -87,16 +87,16 @@ staging_list
 
 #-------------------------------------------------------------------------------
 
-cp $SCRP_DIR/config.all $TMPS
+cp $SCRP_DIR/config.main $TMPS
 
-echo "SCRP_DIR=\"\$(pwd)\"" >> $TMPS/config.all
-echo "NODEFILE_DIR=\"\$(pwd)/node\"" >> $TMPS/config.all
-echo "LOGDIR=\"\$(pwd)/log\"" >> $TMPS/config.all
+echo "SCRP_DIR=\"\$(pwd)\"" >> $TMPS/config.main
+echo "NODEFILE_DIR=\"\$(pwd)/node\"" >> $TMPS/config.main
+echo "LOGDIR=\"\$(pwd)/log\"" >> $TMPS/config.main
 
-echo "NNODES=$NNODES" >> $TMPS/config.all
-echo "PPN=$PPN" >> $TMPS/config.all
-echo "NNODES_real=$NNODES_real" >> $TMPS/config.all
-echo "PPN_real=$PPN_real" >> $TMPS/config.all
+echo "NNODES=$NNODES" >> $TMPS/config.main
+echo "PPN=$PPN" >> $TMPS/config.main
+echo "NNODES_real=$NNODES_real" >> $TMPS/config.main
+echo "PPN_real=$PPN_real" >> $TMPS/config.main
 
 #===============================================================================
 # Creat a job script

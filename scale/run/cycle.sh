@@ -11,12 +11,14 @@
 #    cycle.sh [STIME ETIME ISTEP FSTEP]
 #
 #  Use settings:
-#    config.all
+#    config.main
 #    config.cycle
-#    scale_pp_topo.conf
-#    scale_pp_landuse.conf
-#    scale_init.conf
-#    scale.conf
+#    config.nml.scale_pp_topo
+#    config.nml.scale_pp_landuse
+#    config.nml.scale_init
+#    config.nml.scale
+#    config.nml.obsope
+#    config.nml.letkf
 #
 #===============================================================================
 
@@ -27,7 +29,7 @@ myname1=${myname%.*}
 #===============================================================================
 # Configuration
 
-. config.all
+. config.main
 (($? != 0)) && exit $?
 . config.$myname1
 (($? != 0)) && exit $?
@@ -57,7 +59,7 @@ done
 
 #-------------------------------------------------------------------------------
 
-if ((builtin_staging && ISTEP == 1)); then
+if ((BUILTIN_STAGING && ISTEP == 1)); then
   if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
     safe_init_tmpdir $TMP
   fi
@@ -75,7 +77,7 @@ declare -a node
 declare -a name_m
 declare -a node_m
 
-if ((builtin_staging)); then
+if ((BUILTIN_STAGING)); then
   safe_init_tmpdir $NODEFILE_DIR
   distribute_da_cycle machinefile $NODEFILE_DIR
 else
@@ -85,7 +87,7 @@ fi
 #===============================================================================
 # Determine the staging list and then stage in
 
-if ((builtin_staging && ISTEP == 1)); then
+if ((BUILTIN_STAGING && ISTEP == 1)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR
@@ -165,7 +167,7 @@ while ((time <= ETIME)); do
   echo
   echo "  Number of cycles:         $rcycle"
   echo "  Start time:               ${timefmt}"
-  echo "  Forecast length:          $FCSTLEN s"
+  echo "  Forecast length:          $CYCLEFLEN s"
   echo "  Assimilation window:      $WINDOW_S - $WINDOW_E s ($((WINDOW_E-WINDOW_S)) s)"
   echo
   echo "  Observation timeslots:"
@@ -218,7 +220,7 @@ while ((time <= ETIME)); do
     if ((MACHINE_TYPE == 11)); then
       touch $TMP/loop.${loop}.done
     fi
-    if ((builtin_staging && $(datetime $time $((lcycles * CYCLE)) s) <= ETIME)); then
+    if ((BUILTIN_STAGING && $(datetime $time $((lcycles * CYCLE)) s) <= ETIME)); then
       if ((MACHINE_TYPE == 12)); then
         echo "[$(datetime_now)] ${time}: Online stage out"
         bash $SCRP_DIR/src/stage_out.sh s $loop
@@ -253,7 +255,7 @@ done
 #===============================================================================
 # Stage out
 
-if ((builtin_staging)); then
+if ((BUILTIN_STAGING)); then
   echo "[$(datetime_now)] Finalization (stage out)" >&2
 
   if ((TMPOUT_MODE >= 2)); then

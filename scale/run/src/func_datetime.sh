@@ -4,7 +4,7 @@
 #  Date and time utilities
 #  May 2014, Guo-Yuan Lien
 #
-#  *Require source 'config.all' first.
+#  *Require source 'config.main' first.
 #
 #===============================================================================
 

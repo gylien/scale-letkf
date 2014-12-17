@@ -31,7 +31,7 @@ USAGE="
 [$myname] Run data assimilation cycles.
 
 Configuration files:
-  config.all
+  config.main
   config.$myname1
 
 Steps:
@@ -94,12 +94,15 @@ TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 #-------------------------------------------------------------------------------
 # common variables
 
-builtin_staging=$((MACHINE_TYPE != 10 && MACHINE_TYPE != 11))
+CYCLEFLEN=$WINDOW_E   # Model forecast length in a cycle (hour)
+CYCLEFOUT=$LTIMESLOT  # Model forecast output interval (hour)
+
+BUILTIN_STAGING=$((MACHINE_TYPE != 10 && MACHINE_TYPE != 11))
 
 if ((TMPRUN_MODE <= 2)); then
-  proc_opt='one'
+  PROC_OPT='one'
 else
-  proc_opt='alln'
+  PROC_OPT='alln'
 fi
 
 #-------------------------------------------------------------------------------
@@ -147,15 +150,15 @@ ${MODELDIR}/scale-les_pp|exec/scale-les_pp
 ${COMMON_DIR}/pdbash|exec/pdbash
 ${OBSUTIL_DIR}/obsope$(printf $MEMBER_FMT $MEMBER)|exec/obsope
 ${LETKF_DIR}/letkf$(printf $MEMBER_FMT $MEMBER)|exec/letkf
-${SCRP_DIR}/scale.conf|conf/scale.conf
-${SCRP_DIR}/scale_init.conf|conf/scale_init.conf
-${SCRP_DIR}/obsope.conf|conf/obsope.conf
-${SCRP_DIR}/letkf.conf|conf/letkf.conf
+${SCRP_DIR}/config.nml.scale|conf/config.nml.scale
+${SCRP_DIR}/config.nml.scale_init|conf/config.nml.scale_init
+${SCRP_DIR}/config.nml.obsope|conf/config.nml.obsope
+${SCRP_DIR}/config.nml.letkf|conf/config.nml.letkf
 ${DATADIR}/rad|rad
 EOF
 
   time=$STIME
-  etime_anlwrf=$(datetime $ETIME $((FCSTLEN+ANLWRF_INT)) s)
+  etime_anlwrf=$(datetime $ETIME $((CYCLEFLEN+ANLWRF_INT)) s)
   while ((time <= etime_anlwrf)); do
     path="wrfout_d01_${time}"
     echo "${ANLWRF}/${path}|wrf/${path}" >> $STAGING_DIR/stagein.dat
@@ -172,7 +175,7 @@ EOF
     done
   else
     cat >> $STAGING_DIR/stagein.dat << EOF
-${SCRP_DIR}/scale_pp_topo.conf|conf/scale_pp_topo.conf
+${SCRP_DIR}/config.nml.scale_pp_topo|conf/config.nml.scale_pp_topo
 ${DATADIR}/topo/DEM50M/Products|topo/DEM50M/Products
 EOF
   fi
@@ -184,7 +187,7 @@ EOF
     done
   else
     cat >> $STAGING_DIR/stagein.dat << EOF
-${SCRP_DIR}/scale_pp_landuse.conf|conf/scale_pp_landuse.conf
+${SCRP_DIR}/config.nml.scale_pp_landuse|conf/config.nml.scale_pp_landuse
 ${DATADIR}/landuse/LU100M/Products|landuse/LU100M/Products
 EOF
   fi
@@ -344,7 +347,7 @@ fi
 #    echo "rm|anal/${name_m[$mt]}/${Syyyymmddhh[$c]}.sig" >> $tmpstageout/out.${node_m[$mt]}
 #    echo "rm|anal/${name_m[$mt]}/${Syyyymmddhh[$c]}.sfc" >> $tmpstageout/out.${node_m[$mt]}
 #    fh=0
-#    while [ "$fh" -le "$FCSTLEN" ]; do
+#    while [ "$fh" -le "$CYCLEFLEN" ]; do
 #      fhhh=`printf '%03d' $fh`
 #      Fyyyymmddhh=$(datetime ${STIME[$c]} $fh h | cut -c 1-10)
 #      if [ "$OUT_OPT" -le 1 ]; then
@@ -358,7 +361,7 @@ fi
 #      echo "mv|verfo1/${fhhh}/${name_m[$mt]}/${Fyyyymmddhh}.dat" >> $tmpstageout/out.${node_m[$mt]}
 #      echo "mv|verfa1/${fhhh}/${name_m[$mt]}/${Fyyyymmddhh}.dat" >> $tmpstageout/out.${node_m[$mt]}
 #      echo "mv|verfa2/${fhhh}/${name_m[$mt]}/${Fyyyymmddhh}.dat" >> $tmpstageout/out.${node_m[$mt]}
-#    fh=$((fh + FCSTOUT))
+#    fh=$((fh + CYCLEFOUT))
 #    done
 #  done
 #done
@@ -372,10 +375,9 @@ boundary_sub () {
 #-------------------------------------------------------------------------------
 # Run a series of scripts (topo/landuse/init) to make the boundary files.
 #
-# Usage: make_boundary NODEFILE PDBASH_PROC_OPT
+# Usage: boundary_sub NODEFILE
 #
-#   NODEFILE          $NODEFILE in functions 'pdbash' and 'mpirunf'
-#   PDBASH_PROC_OPT   $PROC_OPT in function 'pdbash'
+#   NODEFILE  $NODEFILE in functions 'pdbash' and 'mpirunf'
 #
 # Other input variables:
 #   $time
@@ -385,26 +387,26 @@ boundary_sub () {
 #   $mem_np
 #   $PREP_TOPO
 #   $PREP_LANDUSE
+#   $PROC_OPT
 #-------------------------------------------------------------------------------
 
-if (($# < 2)); then
+if (($# < 1)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." >&2
   exit 1
 fi
 
-local NODEFILE="$1"; shift
-local PDBASH_PROC_OPT="$1"; shift
+local NODEFILE="$1"
 
 #-------------------------------------------------------------------------------
 # topo
 
 if ((PREP_TOPO != 1)); then
-  pdbash $NODEFILE $PDBASH_PROC_OPT \
+  pdbash $NODEFILE $PROC_OPT \
     $SCRP_DIR/src/pre_scale_pp_topo.sh $time $TMPRUN/scale_pp_topo $TMPDAT/exec $TMPDAT
   mpirunf $NODEFILE \
     $TMPRUN/scale_pp_topo ./scale-les_pp pp.conf
   if ((LOG_OPT <= 2)); then
-    pdbash $NODEFILE $PDBASH_PROC_OPT \
+    pdbash $NODEFILE $PROC_OPT \
       $SCRP_DIR/src/post_scale_pp_topo.sh $time $TMPRUN/scale_pp_topo
   fi
 fi
@@ -413,12 +415,12 @@ fi
 # landuse
 
 if ((PREP_LANDUSE != 1)); then
-  pdbash $NODEFILE $PDBASH_PROC_OPT \
+  pdbash $NODEFILE $PROC_OPT \
     $SCRP_DIR/src/pre_scale_pp_landuse.sh $time $TMPRUN/scale_pp_landuse $TMPDAT/exec $TMPDAT
   mpirunf $NODEFILE \
     $TMPRUN/scale_pp_landuse ./scale-les_pp pp.conf
   if ((LOG_OPT <= 2)); then
-    pdbash $NODEFILE $PDBASH_PROC_OPT \
+    pdbash $NODEFILE $PROC_OPT \
       $SCRP_DIR/src/post_scale_pp_landuse.sh $time $TMPRUN/scale_pp_landuse
   fi
 fi
@@ -436,13 +438,13 @@ if ((PREP_LANDUSE == 1)); then
 else
   local landuse_base="$TMPRUN/scale_pp_landuse/landuse"
 fi
-pdbash $NODEFILE $PDBASH_PROC_OPT \
+pdbash $NODEFILE $PROC_OPT \
   $SCRP_DIR/src/pre_scale_init.sh $mem_np $topo_base $landuse_base $TMPDAT/wrf/wrfout_d01 \
-  $time $FCSTLEN $TMPRUN/scale_init $TMPDAT/exec $TMPDAT
+  $time $CYCLEFLEN $TMPRUN/scale_init $TMPDAT/exec $TMPDAT
 mpirunf $NODEFILE \
   $TMPRUN/scale_init ./scale-les_init init.conf
 if ((LOG_OPT <= 2)); then
-  pdbash $NODEFILE $PDBASH_PROC_OPT \
+  pdbash $NODEFILE $PROC_OPT \
     $SCRP_DIR/src/post_scale_init.sh $time $TMPRUN/scale_init
 fi
 
@@ -464,7 +466,7 @@ if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cy
 #-------------------
   echo "  ${timefmt}: node ${node_m[1]} [$(datetime_now)]"
 
-  boundary_sub proc.${name_m[1]} one &
+  boundary_sub proc.${name_m[1]} &
   sleep $BGJOB_INT
 #-------------------
 else # local run directory: run multiple members as needed
@@ -475,7 +477,7 @@ else # local run directory: run multiple members as needed
 #    if ((ipm > parallel_mems)); then wait; ipm=1; fi
     echo "  ${timefmt}: node ${node_m[$m]} [$(datetime_now)]"
 
-    boundary_sub proc.${name_m[$m]} alln &
+    boundary_sub proc.${name_m[$m]} &
     sleep $BGJOB_INT
   done
   wait
@@ -512,15 +514,10 @@ for m in $(seq $MEMBER); do
   if ((ipm > parallel_mems)); then wait; ipm=1; fi
   echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-  if ((TMPRUN_MODE <= 2)); then
-    proc_opt='one'
-  else
-    proc_opt='alln'
-  fi
 #   ......
-#    ( pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/pre_scale.sh $mem_np \
+#    ( pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
 #        $TMPOUT/${time}/anal/${name_m[$m]}/init $bdy_base $topo_base $landuse_base \
-#        ${time} $FCSTLEN $FCSTOUT $TMPRUN/scale_${name_m[$m]} $TMPDAT/exec $TMPDAT ;
+#        ${time} $CYCLEFLEN $CYCLEFOUT $TMPRUN/scale_${name_m[$m]} $TMPDAT/exec $TMPDAT ;
 #      mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \
 #        ./scale-les run.conf ) &
 #   ......
@@ -567,18 +564,13 @@ for m in $(seq $mmean); do
   else
     bdy_base="$TMPRUN/scale_init/boundary"
   fi
-  if ((TMPRUN_MODE <= 2)); then
-    proc_opt='one'
-  else
-    proc_opt='alln'
-  fi
-  ( pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/pre_scale.sh $mem_np \
+  ( pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
       $TMPOUT/${time}/anal/${name_m[$m]}/init $bdy_base $topo_base $landuse_base \
-      ${time} $FCSTLEN $FCSTOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
+      ${time} $CYCLEFLEN $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
     mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \
       ./scale-les run.conf ;
-    pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/post_scale.sh $mem_np \
-      ${time} ${name_m[$m]} $FCSTLEN $TMPRUN/scale/${name_m[$m]} $myname1 ) &
+    pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_scale.sh $mem_np \
+      ${time} ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/${name_m[$m]} $myname1 ) &
 
   sleep $BGJOB_INT
 done
@@ -613,9 +605,9 @@ obsope () {
 
 echo
 
-pdbash node $proc_opt $SCRP_DIR/src/pre_obsope_node.sh \
+pdbash node $PROC_OPT $SCRP_DIR/src/pre_obsope_node.sh \
   $time $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
-  $mem_nodes $mem_np $slot_s $slot_e $slot_b $FCSTLEN $FCSTOUT
+  $mem_nodes $mem_np $slot_s $slot_e $slot_b $CYCLEFLEN $CYCLEFOUT
 
 ipm=0
 for m in $(seq $MEMBER); do
@@ -623,7 +615,7 @@ for m in $(seq $MEMBER); do
   if ((ipm > parallel_mems)); then wait; ipm=1; fi
   echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-  pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/pre_obsope.sh \
+  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_obsope.sh \
     $atime ${name_m[$m]} $TMPRUN/obsope &
 
   sleep $BGJOB_INT
@@ -638,7 +630,7 @@ for m in $(seq $MEMBER); do
   if ((ipm > parallel_mems)); then wait; ipm=1; fi
 #  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-  pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/post_obsope.sh \
+  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_obsope.sh \
     ${atime} ${name_m[$m]} $TMPRUN/obsope &
 
   sleep $BGJOB_INT
@@ -655,9 +647,9 @@ letkf () {
 
 echo
 
-pdbash node $proc_opt $SCRP_DIR/src/pre_letkf_node.sh \
+pdbash node $PROC_OPT $SCRP_DIR/src/pre_letkf_node.sh \
   $time $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
-  $mem_nodes $mem_np $slot_s $slot_e $slot_b $FCSTLEN $FCSTOUT
+  $mem_nodes $mem_np $slot_s $slot_e $slot_b $CYCLEFLEN $CYCLEFOUT
 
 ipm=0
 for m in $(seq $mmean); do
@@ -665,7 +657,7 @@ for m in $(seq $mmean); do
   if ((ipm > parallel_mems)); then wait; ipm=1; fi
   echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-  pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/pre_letkf.sh \
+  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_letkf.sh \
     $atime ${name_m[$m]} $TMPRUN/letkf &
 
   sleep $BGJOB_INT
@@ -680,7 +672,7 @@ for m in $(seq $mmean); do
   if ((ipm > parallel_mems)); then wait; ipm=1; fi
 #  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-  pdbash proc.${name_m[$m]} $proc_opt $SCRP_DIR/src/post_letkf.sh \
+  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_letkf.sh \
     ${atime} ${name_m[$m]} $TMPRUN/letkf &
 
   sleep $BGJOB_INT

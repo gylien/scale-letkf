@@ -18,7 +18,7 @@ myname1='fcst'
 #===============================================================================
 # Configuration
 
-. config.all
+. config.main
 (($? != 0)) && exit $?
 . config.$myname1
 (($? != 0)) && exit $?

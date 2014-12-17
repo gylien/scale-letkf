@@ -18,7 +18,7 @@ myname1='fcst'
 #===============================================================================
 # Configuration
 
-. config.all
+. config.main
 (($? != 0)) && exit $?
 . config.$myname1
 (($? != 0)) && exit $?
@@ -89,19 +89,19 @@ bash $SCRP_DIR/src/stage_in.sh a
 #-------------------------------------------------------------------------------
 # stage-in: scripts
 
-cp -L -r $SCRP_DIR/config.all $TMP/config.all
+cp -L -r $SCRP_DIR/config.main $TMP/config.main
 cp -L -r $SCRP_DIR/config.${myname1} $TMP/config.${myname1}
 cp -L -r $SCRP_DIR/${myname1}.sh $TMP/${myname1}.sh
 mkdir -p $TMP/src
 cp -L -r $SCRP_DIR/src/* $TMP/src
 
-echo "SCRP_DIR=\"$TMP\"" >> $TMP/config.all
-echo "LOGDIR=\"$TMP/log\"" >> $TMP/config.all
+echo "SCRP_DIR=\"$TMP\"" >> $TMP/config.main
+echo "LOGDIR=\"$TMP/log\"" >> $TMP/config.main
 
-echo "NNODES=$NNODES" >> $TMP/config.all
-echo "PPN=$PPN" >> $TMP/config.all
-echo "NNODES_real=$NNODES_real" >> $TMP/config.all
-echo "PPN_real=$PPN_real" >> $TMP/config.all
+echo "NNODES=$NNODES" >> $TMP/config.main
+echo "PPN=$PPN" >> $TMP/config.main
+echo "NNODES_real=$NNODES_real" >> $TMP/config.main
+echo "PPN_real=$PPN_real" >> $TMP/config.main
 
 #===============================================================================
 # Creat a job script

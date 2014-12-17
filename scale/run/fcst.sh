@@ -12,12 +12,12 @@
 #    fcst.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP]
 #
 #  Use settings:
-#    config.all
+#    config.main
 #    config.fcst
-#    scale_pp_topo.conf
-#    scale_pp_landuse.conf
-#    scale_init.conf
-#    scale.conf
+#    config.nml.scale_pp_topo
+#    config.nml.scale_pp_landuse
+#    config.nml.scale_init
+#    config.nml.scale
 #
 #===============================================================================
 
@@ -28,7 +28,7 @@ myname1=${myname%.*}
 #===============================================================================
 # Configuration
 
-. config.all
+. config.main
 (($? != 0)) && exit $?
 . config.$myname1
 (($? != 0)) && exit $?

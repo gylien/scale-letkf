@@ -15,7 +15,7 @@
 #  S_PATH  Source of the initial condition including the basename.
 #
 #  Use settings:
-#    config.all
+#    config.main
 #
 #===============================================================================
 
@@ -26,7 +26,7 @@ myname1=${myname%.*}
 #===============================================================================
 # Configuration
 
-. config.all
+. config.main
 (($? != 0)) && exit $?
 
 . src/func_datetime.sh

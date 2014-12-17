@@ -7,10 +7,10 @@
 #
 #===============================================================================
 
-if [ -f config.all ]; then
-  . config.all
+if [ -f config.main ]; then
+  . config.main
 else
-  echo "[Error] $0: 'config.all' does not exist." 1>&2
+  echo "[Error] $0: 'config.main' does not exist." 1>&2
   exit 1
 fi
 . datetime.sh
@@ -19,7 +19,7 @@ if [ "$#" -lt 3 ]; then
   cat 1>&2 << EOF
 
 [get_ncepobs.sh] Download NCEP conventional observation data.
-                 *use settings in 'config.all'
+                 *use settings in 'config.main'
 
 Usage: $0 EMAIL PASSWD STIME [ETIME] [IF_DECODE]
 

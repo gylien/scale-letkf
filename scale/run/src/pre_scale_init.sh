@@ -6,7 +6,7 @@
 #
 #===============================================================================
 
-. config.all
+. config.main
 . src/func_datetime.sh
 
 if (($# < 10)); then
@@ -93,7 +93,7 @@ done
 
 #===============================================================================
 
-cat $TMPDAT/conf/scale_init.conf | \
+cat $TMPDAT/conf/config.nml.scale_init | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
         -e "s/\[NUMBER_OF_FILES\]/ NUMBER_OF_FILES = $NUMBER_OF_FILES,/" \
         -e "s/\[BOUNDARY_UPDATE_DT\]/ BOUNDARY_UPDATE_DT = $ANLWRF_INT.D0,/" \

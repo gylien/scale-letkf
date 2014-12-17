@@ -6,7 +6,7 @@
 #
 #===============================================================================
 
-. config.all
+. config.main
 
 if (($# < 5)); then
   cat >&2 << EOF
@@ -49,7 +49,7 @@ ln -fs $DATADIR/topo/DEM50M/Products $TMPDIR/input
 
 #===============================================================================
 
-cat $TMPDAT/conf/scale_pp_topo.conf | \
+cat $TMPDAT/conf/config.nml.scale_pp_topo | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
     > $TMPDIR/pp.conf
 

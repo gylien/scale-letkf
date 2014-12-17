@@ -5,7 +5,7 @@
 #
 #===============================================================================
 
-. config.all
+. config.main
 
 MYRANK="$1"   # a: run on the server node, stage in all files
 

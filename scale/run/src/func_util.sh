@@ -4,7 +4,7 @@
 #  Common utilities (using built-in 'datetime' program)
 #  August 2014, Guo-Yuan Lien
 #
-#  *Require source 'config.all' first.
+#  *Require source 'config.main' first.
 #
 #===============================================================================
 
