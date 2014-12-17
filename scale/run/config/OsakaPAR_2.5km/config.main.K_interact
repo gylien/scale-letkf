@@ -14,7 +14,8 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/volume63/data/ra000015/gylien/scale/scale-les/test/case_real/ctl_4_small_domain/run"
+MODELDIR="/volume63/data/ra000015/gylien/scale_bak/scale-les/test/case_real/ctl_4_small_domain/run"
+#MODELDIR="/volume63/data/ra000015/gylien/scale/scale-les/test/case_real/ctl_36_PAR/run"
 DATADIR="/volume63/data/ra000015/gylien/scale-data/database"
 
 ANLWRF="/volume63/data/ra000015/gylien/scale-data/wrfout_10min"
@@ -42,10 +43,10 @@ LTIMESLOT=60       # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=4           # Ensemble size
 
-NNODES=3           # Number of nodes
-PPN=8              # Number of processes per node
+NNODES=5           # Number of nodes
+PPN=4              # Number of processes per node
 
-THREADS=1          # Number of threads per process
+THREADS=2          # Number of threads per process
 
 SCALE_NP=4         # Number of processes to run SCALE
 

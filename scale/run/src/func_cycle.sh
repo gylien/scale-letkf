@@ -439,8 +439,7 @@ if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cy
 #-------------------
   echo "  ${timefmt}: node ${node_m[1]} [$(datetime_now)]"
 
-  boundary_sub proc.${name_m[1]} &
-  sleep $BGJOB_INT
+  boundary_sub proc.${name_m[1]}
 #-------------------
 else # local run directory: run multiple members as needed
 #-------------------
