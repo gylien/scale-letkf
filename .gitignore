@@ -7,8 +7,7 @@ scale/configure.user
 scale/common/datetime
 scale/common/enssize
 scale/common/pdbash
-scale/run/*.conf
-scale/run/config.*
+scale/run/config.???*
 scale/run/cycle_job.sh
 scale/run/fcst_job.sh
 scale/run/machinefile
