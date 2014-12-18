@@ -59,7 +59,7 @@ PROGRAM obsope
 !-----------------------------------------------------------------------
 
   ! setup standard I/O
-  call IO_setup( MODELNAME )
+  call IO_setup( MODELNAME, .false. )
 
   call read_nml_obsope
 

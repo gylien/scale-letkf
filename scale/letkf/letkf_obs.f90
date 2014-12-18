@@ -99,7 +99,7 @@ SUBROUTINE set_letkf_obs
     IMAX,JMAX, &
     IHALO,JHALO
   use scale_process, only: &
-    MPI_COMM_d, &
+    MPI_COMM_d => LOCAL_COMM_WORLD, &
     PRC_myrank, &
     PRC_NUM_X, &
     PRC_NUM_Y

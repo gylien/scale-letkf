@@ -22,8 +22,7 @@ MODULE obsope_tools
 
   use scale_process, only: &
        PRC_myrank, &
-       PRC_myrank_world, &
-       MPI_COMM_d
+       MPI_COMM_d => LOCAL_COMM_WORLD
 
   use scale_grid_index, only: &
     KHALO, IHALO, JHALO

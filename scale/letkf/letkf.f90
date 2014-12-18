@@ -30,7 +30,6 @@ PROGRAM letkf
   INTEGER :: ierr
   CHARACTER(11) :: stdoutf='NOUT-000000'
 
-
 !  TYPE(obs_info) :: obs
 !  TYPE(obs_da_value) :: obsval
 
@@ -74,7 +73,7 @@ PROGRAM letkf
 !-----------------------------------------------------------------------
 
   ! setup standard I/O
-  call IO_setup( MODELNAME )
+  call IO_setup( MODELNAME, .false.)
 
   call read_nml_letkf
   call read_nml_letkf_prc

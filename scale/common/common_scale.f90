@@ -253,6 +253,7 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
 !subroutine set_scalelib(mem_np)
 !subroutine set_scalelib(nitmax, proc2mem)
 !subroutine set_scalelib
+  use common_mpi, only: myrank
 !  use common_nml, only: &
 !    MEM_NP
 
@@ -267,10 +268,10 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
   use scale_process, only: &
     PRC_setup,    &
     PRC_MPIstart, &
-!      PRC_mpifinish, &
+    PRC_MPIsplit_letkf, &
+    PRC_MPIsetup, &
     PRC_master, &
     PRC_myrank, &
-    PRC_myrank_world, &
     PRC_2Drank, &
     PRC_NUM_X, &
     PRC_NUM_Y
@@ -335,11 +336,20 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
 !    character(len=H_MID) :: DATATYPE = 'DEFAULT' !< REAL4 or REAL8
   integer :: rankidx(2)
 
+  integer :: LOCAL_myrank, LOCAL_nmax
+
   !-----------------------------------------------------------------------------
 
-  ! start SCALE MPI
-  call PRC_MPIstart(mem_np, nitmax, nprocs, proc2mem)
-!  call PRC_MPIstart(nbv, mem_np, nitmax, nprocs, proc2mem)
+!  ! start SCALE MPI
+!  call PRC_MPIstart(mem_np, nitmax, nprocs, proc2mem)
+!!  call PRC_MPIstart(nbv, mem_np, nitmax, nprocs, proc2mem)
+
+  ! split MPI communicator for LETKF
+  call PRC_MPIsplit_letkf(mem_np, nitmax, nprocs, proc2mem, myrank, &
+                          LOCAL_myrank, LOCAL_nmax)
+
+  ! setup MPI
+  call PRC_MPIsetup( .true., LOCAL_nmax, LOCAL_myrank )
 
   ! setup process
   call PRC_setup
@@ -433,8 +443,8 @@ subroutine unset_scalelib
 
   call FileCloseAll
 
-  ! stop SCALE MPI
-  call PRC_MPIfinish
+!  ! stop SCALE MPI
+!  call PRC_MPIfinish
 
   return
 end subroutine unset_scalelib
