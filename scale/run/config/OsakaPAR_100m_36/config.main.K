@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/ra000015/gylien/scale-exp/test"  # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/ra000015/gylien/scale-exp/ctl_36_PAR"  # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -26,28 +26,28 @@ ANLWRF_INT=600
 
 #INITGFS="/discover/nobackup/glien/model/GDAS_IC_t62"       # directory of arbitrary initial condition files [sigma/surface formats]
 
-OBS="/volume63/data/ra000015/gylien/scale-obs/test_220x180" # directory of observation data in LETKF obs format
+OBS="/volume63/data/ra000015/gylien/scale-obs/test_11x9"    # directory of observation data in LETKF obs format
 OBSNCEP="/volume63/data/ra000015/gylien/scale-obs/prepbufr" # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=60        # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=600       # SCALE forecast time when assimilation window ends (second)
-LCYCLE=600         # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=60       # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=5         # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=30        # SCALE forecast time when assimilation window ends (second)
+LCYCLE=30          # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=5        # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
 
 MEMBER=4           # Ensemble size
 
-NNODES=5           # Number of nodes
-PPN=4              # Number of processes per node
+NNODES=180         # Number of nodes
+PPN=1              # Number of processes per node
 
-THREADS=2          # Number of threads per process
+THREADS=8          # Number of threads per process
 
-SCALE_NP=4         # Number of processes to run SCALE
+SCALE_NP=36        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 

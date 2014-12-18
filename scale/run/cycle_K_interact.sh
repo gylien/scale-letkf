@@ -1,14 +1,14 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Wrap fcst.sh in a K-computer job script (interact) and run it.
+#  Wrap cycle.sh in a K-computer job script (interact) and run it.
 #
 #  November 2014, created,                 Guo-Yuan Lien
 #
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    fcst_K_interact.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP TIME_LIMIT]
+#    cycle_K_interact.sh [STIME ETIME ISTEP FSTEP TIME_LIMIT]
 #
 #===============================================================================
 

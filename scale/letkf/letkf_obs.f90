@@ -34,9 +34,9 @@ MODULE letkf_obs
   LOGICAL,PARAMETER :: oma_output=.TRUE.
   LOGICAL,PARAMETER :: obsgues_output=.FALSE.
   LOGICAL,PARAMETER :: obsanal_output=.FALSE.
-  REAL(r_size),PARAMETER :: sigma_obs=1.0d3
+  REAL(r_size),PARAMETER :: sigma_obs=15.0d3
 !  REAL(r_size),PARAMETER :: sigma_obs_rain=350.0d3   ! GYL
-  REAL(r_size),PARAMETER :: sigma_obsv=0.05d0
+  REAL(r_size),PARAMETER :: sigma_obsv=0.4d0
 !  REAL(r_size),PARAMETER :: sigma_obsv_rain=0.4d0    ! GYL
 !  REAL(r_size),PARAMETER :: base_obsv_rain=85000.0d0 ! GYL
   REAL(r_size),PARAMETER :: sigma_obst=3.0d0

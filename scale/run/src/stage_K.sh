@@ -80,12 +80,14 @@ touch $LOGDIR/${PROGNAME}.err
 
 if ((USE_RANKDIR == 1)); then
   echo "#PJM --stgin \"rank=* $TMPS/config.main %r:./config.main\""
+  echo "#PJM --stgin \"rank=* $SCRP_DIR/config.rc %r:./config.rc\""
   echo "#PJM --stgin \"rank=* $SCRP_DIR/config.${PROGNAME} %r:./config.${PROGNAME}\""
   echo "#PJM --stgin \"rank=* $SCRP_DIR/${PROGNAME}.sh %r:./${PROGNAME}.sh\""
   echo "#PJM --stgin \"rank=* $SCRP_DIR/src/* %r:./src/\""
   echo "#PJM --stgin \"rank=0 $LOGDIR/${PROGNAME}.err 0:./log/${PROGNAME}.err\""
 else
   echo "#PJM --stgin \"$TMPS/config.main ./config.main\""
+  echo "#PJM --stgin \"$SCRP_DIR/config.rc ./config.rc\""
   echo "#PJM --stgin \"$SCRP_DIR/config.${PROGNAME} ./config.${PROGNAME}\""
   echo "#PJM --stgin \"$SCRP_DIR/${PROGNAME}.sh ./${PROGNAME}.sh\""
   echo "#PJM --stgin \"$SCRP_DIR/src/* ./src/\""

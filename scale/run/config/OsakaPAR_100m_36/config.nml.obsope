@@ -1,0 +1,16 @@
+&PARAM_LETKF_PRC
+[NNODES]
+[PPN]
+[MEM_NODES]
+[MEM_NP]
+/
+
+&PARAM_LETKF_OBS
+[SLOT_START]
+[SLOT_END]
+[SLOT_BASE]
+[SLOT_TINTERVAL]
+/
+
+!*** Attach SCALE configuration below ***
+
