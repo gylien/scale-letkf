@@ -124,6 +124,7 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $OBSUTIL_DIR/obsope$(printf $MEMBER_FMT $MEMBER) $TMPDAT/exec/obsope
   ln -fs $LETKF_DIR/letkf$(printf $MEMBER_FMT $MEMBER) $TMPDAT/exec/letkf
   ln -fs $DATADIR/rad $TMPDAT
+  ln -fs $DATADIR/land $TMPDAT
   ln -fs $ANLWRF $TMPDAT/wrf
 
   safe_init_tmpdir $TMPDAT/conf
@@ -155,6 +156,7 @@ ${SCRP_DIR}/config.nml.scale_init|conf/config.nml.scale_init
 ${SCRP_DIR}/config.nml.obsope|conf/config.nml.obsope
 ${SCRP_DIR}/config.nml.letkf|conf/config.nml.letkf
 ${DATADIR}/rad|rad
+${DATADIR}/land|land
 EOF
 
   time=$STIME

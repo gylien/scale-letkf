@@ -68,6 +68,7 @@ ln -fs $DATADIR/rad/MIPAS/day.atm $TMPDIR
 ln -fs $DATADIR/rad/MIPAS/equ.atm $TMPDIR
 ln -fs $DATADIR/rad/MIPAS/sum.atm $TMPDIR
 ln -fs $DATADIR/rad/MIPAS/win.atm $TMPDIR
+ln -fs $DATADIR/land/param.bucket.conf $TMPDIR
 
 ###
 ### Given $mem_np, do exact loop, use exact process

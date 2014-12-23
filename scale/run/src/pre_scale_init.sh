@@ -64,6 +64,7 @@ ln -fs $DATADIR/rad/MIPAS/day.atm $TMPDIR
 ln -fs $DATADIR/rad/MIPAS/equ.atm $TMPDIR
 ln -fs $DATADIR/rad/MIPAS/sum.atm $TMPDIR
 ln -fs $DATADIR/rad/MIPAS/win.atm $TMPDIR
+ln -fs $DATADIR/land/param.bucket.conf $TMPDIR
 
 for q in $(seq $MEM_NP); do
   sfx=$(printf $SCALE_SFX $((q-1)))
