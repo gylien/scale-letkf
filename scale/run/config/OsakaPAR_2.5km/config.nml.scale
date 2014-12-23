@@ -241,7 +241,7 @@
 /
 
 &PARAM_HIST
- HIST_BND = .true.,
+ HIST_BND = .false.,
 /
 
 &HISTITEM item='DENS' /

@@ -34,9 +34,6 @@ letkfbaselen=9
 #===============================================================================
 
 mkdir -p $TMPOUT/${ATIME}/anal/${MEM}
-for ifile in $(cd $TMPDIR ; ls anal.${MEM}.*.nc 2> /dev/null); do
-  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/${MEM}/init${ifile:$letkfbaselen}
-done
 
 if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd'
   mkdir -p $TMPOUT/${ATIME}/gues/mean
@@ -54,6 +51,10 @@ if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd
   mkdir -p $TMPOUT/${ATIME}/anal/sprd
   for ifile in $(cd $TMPDIR ; ls anal.sprd.*.nc 2> /dev/null); do
     mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/sprd/init${ifile:$letkfbaselen}
+  done
+else
+  for ifile in $(cd $TMPDIR ; ls anal.${MEM}.*.nc 2> /dev/null); do
+    mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/${MEM}/init${ifile:$letkfbaselen}
   done
 fi
 

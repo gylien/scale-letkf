@@ -34,31 +34,32 @@ initbaselen=4
 
 #===============================================================================
 
-if [ -d "$TMPOUT/${ATIME}/obsgues/${MEM}" ]; then
-  for ifile in $(cd $TMPOUT/${ATIME}/obsgues/${MEM} ; ls obsda.${MEM}.*.dat 2> /dev/null); do
-    ln -fs $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile} $TMPDIR/${ifile}
-  done
-fi
-
-if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
-  for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls history*.nc 2> /dev/null); do
-    ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEM}${ifile:$historybaselen}
-  done
-
-  for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls init*.nc 2> /dev/null); do
-    ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/gues.${MEM}${ifile:$initbaselen}
-    cp -f $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/anal.${MEM}${ifile:$initbaselen}
-  done
-fi
-
 if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd'
-#if [ "$MEM" == 'mean' ] && [ -d "$TMPOUT/${ATIME}/gues/meanf" ]; then  # required....
+#if [ -d "$TMPOUT/${ATIME}/gues/meanf" ]; then  # required....
   for ifile in $(cd $TMPOUT/${ATIME}/gues/meanf ; ls init*.nc 2> /dev/null); do
     cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/gues.mean${ifile:$initbaselen}
     cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/anal.mean${ifile:$initbaselen}
     cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/gues.sprd${ifile:$initbaselen}
     cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/anal.sprd${ifile:$initbaselen}
   done
+#fi
+else
+  if [ -d "$TMPOUT/${ATIME}/obsgues/${MEM}" ]; then
+    for ifile in $(cd $TMPOUT/${ATIME}/obsgues/${MEM} ; ls obsda.${MEM}.*.dat 2> /dev/null); do
+      ln -fs $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile} $TMPDIR/${ifile}
+    done
+  fi
+
+  if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
+    for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls history*.nc 2> /dev/null); do
+      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEM}${ifile:$historybaselen}
+    done
+
+    for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls init*.nc 2> /dev/null); do
+      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/gues.${MEM}${ifile:$initbaselen}
+      cp -f $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/anal.${MEM}${ifile:$initbaselen}
+    done
+  fi
 fi
 
 #===============================================================================

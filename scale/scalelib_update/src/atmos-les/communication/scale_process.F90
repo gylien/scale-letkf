@@ -108,7 +108,7 @@ contains
     integer :: MPI_COMM_WORLD_tmp
     !---------------------------------------------------------------------------
 
-    call MPI_Init(ierr)
+!    call MPI_Init(ierr)
     MPI_COMM_WORLD_tmp = MPI_COMM_WORLD
     call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, new_abort, ierr )
     call MPI_COMM_SET_ERRHANDLER   ( MPI_COMM_WORLD_tmp,   new_abort, ierr )
@@ -579,7 +579,7 @@ contains
 
     if ( proc2mem(1,1,myrank+1) >= 1 ) then
       do ip = 1, nprocs
-        if (proc2mem(1,1,ip) == proc2mem(1,1,PRC_myrank+1)) then
+        if (proc2mem(1,1,ip) == proc2mem(1,1,myrank+1)) then
           ranks(proc2mem(2,1,ip)+1) = ip-1
         end if
       end do

@@ -55,7 +55,7 @@ MODULE common_scale
   INTEGER,PARAMETER :: nlatns=2
   INTEGER,PARAMETER :: nlon=nlonsub*nlonns
   INTEGER,PARAMETER :: nlat=nlatsub*nlatns
-  INTEGER,PARAMETER :: nlev=30
+  INTEGER,PARAMETER :: nlev=60
 
   integer,parameter :: nlonhalo=nlonsub+4
   integer,parameter :: nlathalo=nlatsub+4
@@ -340,9 +340,11 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
 
   !-----------------------------------------------------------------------------
 
-!  ! start SCALE MPI
-!  call PRC_MPIstart(mem_np, nitmax, nprocs, proc2mem)
-!!  call PRC_MPIstart(nbv, mem_np, nitmax, nprocs, proc2mem)
+  ! start SCALE MPI
+  call PRC_MPIstart
+!  if ( NUM_DOMAIN == 1 ) then
+!     PRC_DOMAINS(1) = GLOBAL_nmax
+!  endif
 
   ! split MPI communicator for LETKF
   call PRC_MPIsplit_letkf(mem_np, nitmax, nprocs, proc2mem, myrank, &
@@ -452,47 +454,195 @@ end subroutine unset_scalelib
 !!-----------------------------------------------------------------------
 !! File I/O
 !!-----------------------------------------------------------------------
+!!-----------------------------------------------------------------------
+!!
+!!-----------------------------------------------------------------------
+!SUBROUTINE read_restart(filename,v3dg,v2dg)
+!  use gtool_file, only: FileRead, FileCloseAll
+!  use scale_process, only: PRC_myrank
+!  use common_mpi, only: myrank
+!  IMPLICIT NONE
+
+!  CHARACTER(*),INTENT(IN) :: filename
+!  REAL(RP),INTENT(OUT) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+!  REAL(RP),INTENT(OUT) :: v2dg(nlonsub,nlatsub,nv2d)
+!  INTEGER :: iv3d,iv2d
+
+!  WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
+
+!  do iv3d = 1, nv3d
+!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+!    call FileRead(v3dg(:,:,:,iv3d), filename, trim(v3d_name(iv3d)), 1, PRC_myrank)
+!  end do
+
+!  do iv2d = 1, nv2d
+!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
+!    call FileRead(v2dg(:,:,iv2d), filename, trim(v2d_name(iv2d)), 1, PRC_myrank)
+!  end do
+
+!  call FileCloseAll
+
+!  RETURN
+!END SUBROUTINE read_restart
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
 SUBROUTINE read_restart(filename,v3dg,v2dg)
-  use gtool_file, only: FileRead, FileCloseAll
-  use scale_process, only: PRC_myrank
+  use netcdf, only: NF90_NOWRITE
+  use scale_process, only: &
+    PRC_myrank, &
+    PRC_HAS_W,  &
+    PRC_HAS_E,  &
+    PRC_HAS_S,  &
+    PRC_HAS_N
+  use scale_grid_index, only: &
+    IHALO, JHALO, &
+    IMAX, JMAX, KMAX, &
+    IMAXB, JMAXB
   use common_mpi, only: myrank
+  use common_ncio
   IMPLICIT NONE
 
   CHARACTER(*),INTENT(IN) :: filename
   REAL(RP),INTENT(OUT) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
   REAL(RP),INTENT(OUT) :: v2dg(nlonsub,nlatsub,nv2d)
-  INTEGER :: iv3d,iv2d
+  character(len=12) :: filesuffix = '.pe000000.nc'
+  integer :: iv3d,iv2d,ncid
+  integer :: is, ie, js, je
+  real(r_dble) :: v3dgtmp(KMAX,IMAXB,JMAXB)
+  real(r_dble) :: v2dgtmp(IMAXB,JMAXB)
+!  real(r_dble), allocatable :: v3dgtmp(:,:,:)
+!  real(r_dble), allocatable :: v2dgtmp(:,:)
 
-  WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
+  is = 1
+  ie = IMAX
+  js = 1
+  je = JMAX
+  if ( .not. PRC_HAS_W ) then
+    is = is + IHALO
+    ie = ie + IHALO
+  end if
+  if ( .not. PRC_HAS_S ) then
+    js = js + JHALO
+    je = je + JHALO
+  end if
+
+!  allocate (v3dgtmp(KMAX,IMAXB,JMAXB))
+!  allocate (v2dgtmp(IMAXB,JMAXB))
+
+  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
+
+  write (filesuffix(4:9),'(I6.6)') PRC_myrank
+  call ncio_open(filename // filesuffix, NF90_NOWRITE, ncid)
 
   do iv3d = 1, nv3d
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
-    call FileRead(v3dg(:,:,:,iv3d), filename, trim(v3d_name(iv3d)), 1, PRC_myrank)
+    call ncio_read_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
+    v3dg(:,:,:,iv3d) = real(v3dgtmp(:,is:ie,js:je), RP)
   end do
 
   do iv2d = 1, nv2d
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
-    call FileRead(v2dg(:,:,iv2d), filename, trim(v2d_name(iv2d)), 1, PRC_myrank)
+    call ncio_read_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+    v2dg(:,:,iv2d) = real(v2dgtmp(is:ie,js:je), RP)
   end do
 
-  call FileCloseAll
+  call ncio_close(ncid)
 
   RETURN
 END SUBROUTINE read_restart
+!!-----------------------------------------------------------------------
+!!
+!!-----------------------------------------------------------------------
+!SUBROUTINE write_restart(filename,v3dg,v2dg)
+!  use netcdf, only: NF90_WRITE
+
+!!  use gtool_file, only: FileOpen, FileClose, FileWrite
+!!  use gtool_file_h
+
+
+!  use scale_process, only: PRC_myrank
+!  use common_mpi, only: myrank
+!  use common_ncio
+!  implicit none
+
+!  CHARACTER(*),INTENT(IN) :: filename
+!  REAL(RP),INTENT(IN) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+!  REAL(RP),INTENT(IN) :: v2dg(nlonsub,nlatsub,nv2d)
+!  REAL(RP) :: rhotmp(nlev,nlonsub,nlatsub)
+!  character(len=12) :: filesuffix = '.pe000000.nc'
+!  integer :: iv3d,iv2d,ncid
+
+!  REAL(r_dble) :: v3dgtmp(nlev,nlonsub,nlatsub)
+!  REAL(r_dble) :: v2dgtmp(nlonsub,nlatsub)
+
+!!  integer :: vid,error
+
+!  WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',PRC_myrank,'.nc'
+
+!  write (filesuffix(4:9),'(I6.6)') PRC_myrank
+!  call ncio_open(filename // filesuffix, NF90_WRITE, ncid)
+
+!!  call file_open(ncid, filename // filesuffix, File_FWRITE)
+!!!  call FileOpen(ncid, filename, 2)
+
+!!print *, '######### ncid:', ncid
+
+!  DO iv3d = 1, nv3d
+!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+!    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlonsub, nlatsub, 1, real(v3dg(:,:,:,iv3d),r_dble))
+!    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), nlev, nlonsub, nlatsub, 1, v3dgtmp)
+!    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlonsub, nlatsub, 1, v3dgtmp)
+!  END DO
+
+!  DO iv2d = 1, nv2d
+!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+!    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), nlonsub, nlatsub, 1, real(v2dg(:,:,iv2d),r_dble))
+!    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), nlonsub, nlatsub, 1, v2dgtmp)
+!    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), nlonsub, nlatsub, 1, v2dgtmp)
+!  END DO
+
+!!  DO iv3d = 1, nv3d
+!!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+!!    call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), vid))
+
+!!!print *, '######### vid:', myrank, vid
+
+!!!    call FileWrite(vid, v3dg(:,:,:,iv3d), -1.0d0, -1.0d0)
+!!    call file_write_data( vid, v3dg(:,:,:,iv3d), -1.0d0, -1.0d0, RP, & ! (in)
+!!         error                                     ) ! (out)
+!!  END DO
+
+!!  DO iv2d = 1, nv2d
+!!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+!!    call ncio_check(nf90_inq_varid(ncid, trim(v2d_name(iv2d)), vid))
+!!!    call FileWrite(vid, v2dg(:,:,iv2d), 1.0d0, 1.0d0)
+!!    call file_write_data( vid, v2dg(:,:,iv2d), -1.0d0, -1.0d0, RP, & ! (in)
+!!         error                                     ) ! (out)
+!!  END DO
+
+!  call ncio_close(ncid)
+
+!!  call file_close(ncid)
+!!!  call FileClose(ncid)
+
+!  RETURN
+!END SUBROUTINE write_restart
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
 SUBROUTINE write_restart(filename,v3dg,v2dg)
   use netcdf, only: NF90_WRITE
-
-!  use gtool_file, only: FileOpen, FileClose, FileWrite
-!  use gtool_file_h
-
-
-  use scale_process, only: PRC_myrank
+  use scale_process, only: &
+    PRC_myrank, &
+    PRC_HAS_W,  &
+    PRC_HAS_E,  &
+    PRC_HAS_S,  &
+    PRC_HAS_N
+  use scale_grid_index, only: &
+    IHALO, JHALO, &
+    IMAX, JMAX, KMAX, &
+    IMAXB, JMAXB
   use common_mpi, only: myrank
   use common_ncio
   implicit none
@@ -500,62 +650,54 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   CHARACTER(*),INTENT(IN) :: filename
   REAL(RP),INTENT(IN) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
   REAL(RP),INTENT(IN) :: v2dg(nlonsub,nlatsub,nv2d)
-  REAL(RP) :: rhotmp(nlev,nlonsub,nlatsub)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d,iv2d,ncid
+  integer :: is, ie, js, je
+  real(r_dble) :: v3dgtmp(KMAX,IMAXB,JMAXB)
+  real(r_dble) :: v2dgtmp(IMAXB,JMAXB)
+!  real(r_dble), allocatable :: v3dgtmp(:,:,:)
+!  real(r_dble), allocatable :: v2dgtmp(:,:)
 
-  REAL(r_dble) :: v3dgtmp(nlev,nlonsub,nlatsub)
-  REAL(r_dble) :: v2dgtmp(nlonsub,nlatsub)
+  is = 1
+  ie = IMAX
+  js = 1
+  je = JMAX
+  if ( .not. PRC_HAS_W ) then
+    is = is + IHALO
+    ie = ie + IHALO
+  end if
+  if ( .not. PRC_HAS_S ) then
+    js = js + JHALO
+    je = je + JHALO
+  end if
 
-!  integer :: vid,error
+!  allocate (v3dgtmp(KMAX,IMAXB,JMAXB))
+!  allocate (v2dgtmp(IMAXB,JMAXB))
 
   WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',PRC_myrank,'.nc'
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
   call ncio_open(filename // filesuffix, NF90_WRITE, ncid)
 
-!  call file_open(ncid, filename // filesuffix, File_FWRITE)
-!!  call FileOpen(ncid, filename, 2)
-
-!print *, '######### ncid:', ncid
-
-  DO iv3d = 1, nv3d
+  do iv3d = 1, nv3d
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
-    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlonsub, nlatsub, 1, real(v3dg(:,:,:,iv3d),r_dble))
-    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), nlev, nlonsub, nlatsub, 1, v3dgtmp)
-    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlonsub, nlatsub, 1, v3dgtmp)
-  END DO
+    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
+    v3dgtmp(:,is:ie,js:je) = real(v3dg(:,:,:,iv3d), r_dble)
+    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
+    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
+    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
+  end do
 
-  DO iv2d = 1, nv2d
+  do iv2d = 1, nv2d
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
-    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), nlonsub, nlatsub, 1, real(v2dg(:,:,iv2d),r_dble))
-    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), nlonsub, nlatsub, 1, v2dgtmp)
-    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), nlonsub, nlatsub, 1, v2dgtmp)
-  END DO
-
-!  DO iv3d = 1, nv3d
-!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
-!    call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), vid))
-
-!!print *, '######### vid:', myrank, vid
-
-!!    call FileWrite(vid, v3dg(:,:,:,iv3d), -1.0d0, -1.0d0)
-!    call file_write_data( vid, v3dg(:,:,:,iv3d), -1.0d0, -1.0d0, RP, & ! (in)
-!         error                                     ) ! (out)
-!  END DO
-
-!  DO iv2d = 1, nv2d
-!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
-!    call ncio_check(nf90_inq_varid(ncid, trim(v2d_name(iv2d)), vid))
-!!    call FileWrite(vid, v2dg(:,:,iv2d), 1.0d0, 1.0d0)
-!    call file_write_data( vid, v2dg(:,:,iv2d), -1.0d0, -1.0d0, RP, & ! (in)
-!         error                                     ) ! (out)
-!  END DO
+    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+    v2dgtmp(is:ie,js:je) = real(v2dg(:,:,iv2d), r_dble)
+    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+  end do
 
   call ncio_close(ncid)
-
-!  call file_close(ncid)
-!!  call FileClose(ncid)
 
   RETURN
 END SUBROUTINE write_restart
