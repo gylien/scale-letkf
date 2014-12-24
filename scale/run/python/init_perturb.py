@@ -8,18 +8,21 @@ if len(sys.argv) <= 1:
     sys.exit("\nUsage: {:s} BASE_FILE\n".format(sys.argv[0]))
 initialfile = sys.argv[1]
 
-wavel1 = 10000.
+wavel1 =   8000.
 wavel2 = 100000.
-dx = 400.
+dx = 200.
 zheight = 20000.
 taper_width = 5
 
-pert_std = 0.01
+pert_std = 0.5
+halo = 2
 
 nproc, rootgrps, dimdef = scale_open(initialfile, 'r+')
 
-vardim, rho = scale_read(nproc, rootgrps, dimdef, 'DENS', it=0)
-vardim2, rhoT = scale_read(nproc, rootgrps, dimdef, 'RHOT', it=0)
+vardim, vardata = scale_read(nproc, rootgrps, dimdef, 'DENS', it=0)
+rho = vardata[:,halo:-halo,halo:-halo]
+vardim2, vardata = scale_read(nproc, rootgrps, dimdef, 'RHOT', it=0)
+rhoT = vardata[:,halo:-halo,halo:-halo]
 if vardim != vardim2:
     raise ValueError, 'Dimensions mismatch.'
 
@@ -81,6 +84,10 @@ var += gp3d
 rhoT = rho * var
 #rhoT = var
 
-scale_write(nproc, rootgrps, dimdef, 'RHOT', vardim, rhoT, it=0)
+vardata[:,halo:-halo,halo:-halo] = rhoT
+scale_write(nproc, rootgrps, dimdef, 'RHOT', vardim, vardata, it=0)
+
+vardim, vardata = scale_read(nproc, rootgrps, dimdef, 'RHOT', it=0)
+scale_write(nproc, rootgrps, dimdef, 'RHOT', vardim, vardata, it=0)
 
 scale_close(rootgrps)
