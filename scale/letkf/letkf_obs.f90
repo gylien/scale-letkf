@@ -80,9 +80,9 @@ MODULE letkf_obs
 ! General parameters
 !-----------------------------------------------------------------------
 
-  INTEGER,PARAMETER :: nslots=11 ! number of time slots for 4D-LETKF
-  INTEGER,PARAMETER :: nbslot=6 ! basetime slot
-  REAL(r_size),PARAMETER :: slotint=60.0d0 ! time interval between slots in second
+  INTEGER,PARAMETER :: nslots=1 ! number of time slots for 4D-LETKF
+  INTEGER,PARAMETER :: nbslot=1 ! basetime slot
+  REAL(r_size),PARAMETER :: slotint=5.0d0 ! time interval between slots in second
 
   CHARACTER(7) :: obsfile='obs.dat' !IN
   CHARACTER(21) :: obsdafile='obsda.0000.000000.dat' !IN
@@ -669,6 +669,7 @@ SUBROUTINE set_letkf_obs
 !print *, PRC_myrank,imin1,imax1,jmin1,jmax1
 !end if
 
+    ns = 0
     nr = 0
     nrt = 0
 
@@ -966,9 +967,12 @@ SUBROUTINE obs_choose(imin,imax,jmin,jmax,proc,nn,nobs_use,nobsgrdout)
   INTEGER,INTENT(INOUT) :: nn
   INTEGER,INTENT(INOUT),OPTIONAL :: nobs_use(:)
   logical,intent(in),optional :: nobsgrdout
+  logical :: nobsgrdoutr
   INTEGER :: i,j,ip
 
-  if (present(nobsgrdout) .and. nobsgrdout) then
+  nobsgrdoutr = .false.
+  if (present(nobsgrdout)) nobsgrdoutr = nobsgrdout
+  if (nobsgrdoutr) then
     nobsgrd2(:,:,proc) = 0
   end if
 
@@ -997,7 +1001,7 @@ SUBROUTINE obs_choose(imin,imax,jmin,jmax,proc,nn,nobs_use,nobsgrdout)
       end if
     END DO
 
-    if (present(nobsgrdout) .and. nobsgrdout) then
+    if (nobsgrdoutr) then
       if (j > 1) then
         nobsgrd2(0:imax-1,j,proc) = nobsgrd2(nlonsub,j-1,proc)
       end if
@@ -1009,7 +1013,7 @@ SUBROUTINE obs_choose(imin,imax,jmin,jmax,proc,nn,nobs_use,nobsgrdout)
 
   END DO
 
-  if (present(nobsgrdout) .and. nobsgrdout) then
+  if (nobsgrdoutr) then
     if (jmax < nlatsub) then
       nobsgrd2(:,jmax+1:nlatsub,proc) = nobsgrd2(nlonsub,jmax,proc)
     end if

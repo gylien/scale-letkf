@@ -49,10 +49,10 @@ MODULE common_scale
 !-----------------------------------------------------------------------
 ! General parameters
 !-----------------------------------------------------------------------
-  INTEGER,PARAMETER :: nlonsub=30
-  INTEGER,PARAMETER :: nlatsub=30
-  INTEGER,PARAMETER :: nlonns=2
-  INTEGER,PARAMETER :: nlatns=2
+  INTEGER,PARAMETER :: nlonsub=200
+  INTEGER,PARAMETER :: nlatsub=200
+  INTEGER,PARAMETER :: nlonns=6
+  INTEGER,PARAMETER :: nlatns=6
   INTEGER,PARAMETER :: nlon=nlonsub*nlonns
   INTEGER,PARAMETER :: nlat=nlatsub*nlatns
   INTEGER,PARAMETER :: nlev=60
@@ -258,7 +258,7 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
 !    MEM_NP
 
   use scale_precision
-!  use scale_stdio
+  use scale_stdio, only: IO_FID_CONF
 !  use scale_prof
 
   use gtool_history, only: &
@@ -420,7 +420,8 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
   ! setup history file I/O
   rankidx(1) = PRC_2Drank(PRC_myrank, 1)
   rankidx(2) = PRC_2Drank(PRC_myrank, 2)
-  call HistoryInit('','','',IMAX*JMAX*KMAX,PRC_master,PRC_myrank,rankidx)
+  call HistoryInit('','','',IMAX*JMAX*KMAX,PRC_master,LOCAL_myrank,rankidx,&
+                   namelist_fid=IO_FID_CONF)
 
   call PROF_rapend('Initialize')
 
@@ -534,6 +535,11 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
   call ncio_open(filename // filesuffix, NF90_NOWRITE, ncid)
+
+!!!!!!
+!  v3dg = 0.0d0
+!  v2dg = 0.0d0
+!!!!!!
 
   do iv3d = 1, nv3d
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))

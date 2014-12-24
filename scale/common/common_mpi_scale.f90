@@ -389,6 +389,10 @@ SUBROUTINE set_common_mpi_scale(mem,nnodes,ppn,mem_nodes,mem_np)
 !  END DO
 !!  v2dg(:,:,1) = SNGL(phi0)
 
+!!!!!! ----- need to be replaced by more native communication!!!!
+    v3dg = 0.0
+    v2dg = 0.0
+!!!!!!
     CALL scatter_grd_mpi(0,v3dg,v2dg,v3d,v2d)
 
 !  lon1  = v3d(:,1,1)
@@ -872,10 +876,11 @@ SUBROUTINE read_ens_history_mpi(file,iter,step,v3dg,v2dg,ensmean)
   real(RP), allocatable :: var3D(:,:,:)
   real(RP), allocatable :: var2D(:,:)
 
-  if (.not. present(ensmean) .or. (.not. ensmean)) then
-    nbvr = nbv
-  else
-    nbvr = nbv+1
+  nbvr = nbv
+  if (present(ensmean)) then
+    if (ensmean) then
+      nbvr = nbv+1
+    end if
   end if
 
   IF (valid_member) then
@@ -1313,6 +1318,11 @@ SUBROUTINE grd_to_buf(np,grd,buf)
       j = m-1 + np * (i-1)
       ilon = MOD(j,nlonsub) + 1
       ilat = (j-ilon+1) / nlonsub + 1
+!if (i < 1 .or. i > nij1max .or. m < 1 .or. m > np .or. ilon < 1 .or. ilon > nlonsub .or. ilat < 1 .or. ilat > nlatsub) then
+!print *, '######', np, nij1max
+!print *, '########', i, m, ilon, ilat
+!stop
+!end if
       buf(i,m) = grd(ilon,ilat)
     END DO
   END DO

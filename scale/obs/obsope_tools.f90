@@ -125,6 +125,7 @@ SUBROUTINE obsope_cal(obs)
 !  call set_mpi_along_domains
 
   obsda%nobs = obs%nobs
+
   call obs_da_value_allocate(obsda,0)
 
   allocate ( v3dg (nlevhalo,nlonhalo,nlathalo,nv3dd) )

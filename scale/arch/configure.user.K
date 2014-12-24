@@ -6,6 +6,11 @@ FOPTS     = -Kfast,ocl,preex,array_private \
             -x-                                                       \
             -Ksimd                                                    \
             -Kauto,threadsafe
+#FOPTS     = -O0                                                       \
+#            -Qi -Qt -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
+#            -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global        \
+#            -DDEBUG
+
 FOPTS2    = $(FOPTS)
 FMCMODEL  =
 FFREE     = -Free

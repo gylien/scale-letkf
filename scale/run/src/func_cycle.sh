@@ -638,6 +638,8 @@ for m in $(seq $mmean); do
 done
 wait
 
+exit
+
 mpirunf proc $TMPRUN/letkf ./letkf letkf.conf > /dev/null
 
 ipm=0

@@ -858,11 +858,15 @@ SUBROUTINE write_obs(cfile,obs,append)
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(IN) :: obs
   INTEGER,INTENT(IN),OPTIONAL :: append
+  INTEGER :: appendr
   REAL(r_sngl) :: wk(8)
   INTEGER :: n,iunit
 
   iunit=92
-  IF(present(append) .and. append == 1) THEN
+  appendr = 0
+  IF(present(append)) appendr = append
+
+  IF(appendr == 1) THEN
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
   ELSE
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
@@ -959,11 +963,14 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
   TYPE(obs_da_value),INTENT(IN) :: obs
   INTEGER,INTENT(IN) :: im
   INTEGER,INTENT(IN),OPTIONAL :: append
+  INTEGER :: appendr
   REAL(r_sngl) :: wk(5)
   INTEGER :: n,iunit
 
   iunit=92
-  IF(present(append) .and. append == 1) THEN
+  appendr = 0
+  IF(present(append)) appendr = append
+  IF(appendr == 1) THEN
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append',STATUS='replace')
   ELSE
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',STATUS='replace')
