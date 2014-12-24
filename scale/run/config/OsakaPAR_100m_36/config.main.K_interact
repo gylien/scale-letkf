@@ -14,8 +14,7 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/volume63/data/ra000015/gylien/scale_bak/scale-les/test/case_real/ctl_4_small_domain/run"
-#MODELDIR="/volume63/data/ra000015/gylien/scale/scale-les/test/case_real/ctl_36_PAR/run"
+MODELDIR="/volume63/data/ra000015/gylien/scale/scale-les/test/case_real/ctl_4_PAR_2km/topo"
 DATADIR="/volume63/data/ra000015/gylien/scale-data/database"
 
 ANLWRF="/volume63/data/ra000015/gylien/scale-data/wrfout_10min"
