@@ -80,6 +80,9 @@ PROGRAM letkf
   call read_nml_letkf_obs
 
   if (nprocs /= NNODES * PPN) then
+    write(6,'(A,I10)') 'nprocs = ', nprocs
+    write(6,'(A,I10)') 'NNODES = ', NNODES
+    write(6,'(A,I10)') 'PPN    = ', PPN
     write(6,*) 'Number of MPI processes should be equal to NNODES * PPN.'
     stop
   end if

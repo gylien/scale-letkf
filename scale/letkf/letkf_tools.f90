@@ -769,6 +769,8 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
 
         ielm = obs%elm(obsda2(ip)%idx(nobs_use(n)))
 
+!print *, '@@@', nobs_use(n), obsda2(ip)%idx(nobs_use(n)), ielm
+
         !
         ! vertical localization
         !

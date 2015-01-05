@@ -1398,7 +1398,7 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
   END DO
 
   DO n=1,nv2d
-!$OMP PARALLEL DO PRIVATE(i,k,m)
+!$OMP PARALLEL DO PRIVATE(i,m)
     DO i=1,nij1
       v2ds(i,n) = (v2d(i,1,n)-v2dm(i,n))**2
       DO m=2,nbv

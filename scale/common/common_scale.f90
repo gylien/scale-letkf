@@ -881,6 +881,7 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
   END DO
 
   DO n=1,nv2d
+!$OMP PARALLEL DO PRIVATE(i,m)
     DO i=1,nij
       v2dm(i,n) = v2d(i,1,n)
       DO m=2,member
@@ -888,6 +889,7 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
       END DO
       v2dm(i,n) = v2dm(i,n) / REAL(member,r_size)
     END DO
+!$OMP END PARALLEL DO
   END DO
 
   RETURN

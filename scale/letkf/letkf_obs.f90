@@ -34,9 +34,9 @@ MODULE letkf_obs
   LOGICAL,PARAMETER :: oma_output=.TRUE.
   LOGICAL,PARAMETER :: obsgues_output=.FALSE.
   LOGICAL,PARAMETER :: obsanal_output=.FALSE.
-  REAL(r_size),PARAMETER :: sigma_obs=15.0d3
+  REAL(r_size),PARAMETER :: sigma_obs=1.0d3
 !  REAL(r_size),PARAMETER :: sigma_obs_rain=350.0d3   ! GYL
-  REAL(r_size),PARAMETER :: sigma_obsv=0.4d0
+  REAL(r_size),PARAMETER :: sigma_obsv=0.1d0
 !  REAL(r_size),PARAMETER :: sigma_obsv_rain=0.4d0    ! GYL
 !  REAL(r_size),PARAMETER :: base_obsv_rain=85000.0d0 ! GYL
   REAL(r_size),PARAMETER :: sigma_obst=3.0d0
@@ -461,7 +461,7 @@ SUBROUTINE set_letkf_obs
 !!    end if ! [ tmpelm(n) == id_rain_obs ]
 !!!###### end PRECIP assimilation ######
 
-!!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i)
   do n = 1, obsda%nobs
     IF(obsda%qc(n) > 0) CYCLE
     obsda%val(n) = obsda%ensval(1,n)
@@ -478,7 +478,7 @@ SUBROUTINE set_letkf_obs
       obsda%qc(n) = iqc_gross_err
     END IF
   END DO
-!!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO
 
 
 
@@ -542,6 +542,17 @@ SUBROUTINE set_letkf_obs
                   ceiling(obsda%ri(n)-0.5) - IHALO, &
                   ceiling(obsda%rj(n)-0.5) - JHALO, &
                   i, j)
+
+!if (i < 1 .or. i > IMAX .or. j < 1 .or. j > JMAX) then
+!  call rank_1d_2d(PRC_myrank, iproc, jproc)
+!  print *, '%%%', myrank, PRC_myrank, obsda%ri(n) - real(IHALO + iproc * IMAX, r_size), obsda%rj(n) - real(JHALO + jproc * JMAX, r_size)
+!end if
+
+      if (i < 1) i = 1       ! Assume the process assignment was correct,
+      if (i > IMAX) i = IMAX ! so this correction is only to remedy the round-off problem.
+      if (j < 1) j = 1       !
+      if (j > JMAX) j = JMAX !
+
       nobsgrd(i,j,PRC_myrank) = nobsgrd(i,j,PRC_myrank) + 1
     end if
   end do
@@ -599,6 +610,13 @@ SUBROUTINE set_letkf_obs
                   ceiling(obsda%ri(n)-0.5) - IHALO, &
                   ceiling(obsda%rj(n)-0.5) - JHALO, &
                   i, j)
+
+
+      if (i < 1) i = 1       ! Assume the process assignment was correct,
+      if (i > IMAX) i = IMAX ! so this correction is only to remedy the round-off problem.
+      if (j < 1) j = 1       !
+      if (j > JMAX) j = JMAX !
+
 
       obsda2(PRC_myrank)%idx(nnext(i,j)) = obsda%idx(n)
       obsda2(PRC_myrank)%val(nnext(i,j)) = obsda%val(n)
@@ -776,9 +794,21 @@ SUBROUTINE set_letkf_obs
     nobstotal = nobstotal + obsda2(ip)%nobs
   end do
   if (nobstotal /= sum(nobsgrd(nlonsub,nlatsub,:))) then
+
+print *, myrank, nobstotalg, nobstotal, nobsgrd(nlonsub,nlatsub,:)
+
     print *, 'FFFFFF wrong!!'
     stop
   end if
+
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!  stop
+
+
+
+
 
   nobstotal = sum(nobsgrd(nlonsub,nlatsub,:))
 
