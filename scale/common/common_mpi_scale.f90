@@ -366,11 +366,15 @@ SUBROUTINE set_common_mpi_scale(mem,nnodes,ppn,mem_nodes,mem_np)
     ALLOCATE(v2d(nij1,nv2d))
 
 
+!!!!!! ----- need to be replaced by more native communication!!!!
+    v3dg = 0.0d0
+    v2dg = 0.0d0
+
     call rank_1d_2d(PRC_myrank, iproc, jproc)
     do j = 1, nlatsub
       do i = 1, nlonsub
-        v3dg(1,i,j,1) = i + iproc * IMAX + IHALO
-        v3dg(1,i,j,2) = j + jproc * JMAX + JHALO
+        v3dg(1,i,j,1) = real(i + iproc * IMAX + IHALO, RP)
+        v3dg(1,i,j,2) = real(j + jproc * JMAX + JHALO, RP)
       end do
     end do
 
@@ -389,11 +393,8 @@ SUBROUTINE set_common_mpi_scale(mem,nnodes,ppn,mem_nodes,mem_np)
 !  END DO
 !!  v2dg(:,:,1) = SNGL(phi0)
 
-!!!!!! ----- need to be replaced by more native communication!!!!
-    v3dg = 0.0
-    v2dg = 0.0
-!!!!!!
     CALL scatter_grd_mpi(0,v3dg,v2dg,v3d,v2d)
+!!!!!! -----
 
 !  lon1  = v3d(:,1,1)
 !  lat1  = v3d(:,1,2)

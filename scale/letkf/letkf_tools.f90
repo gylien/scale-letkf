@@ -192,7 +192,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         ELSE
           CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),n,hdxf,rdiag,rloc,dep,nobsl)
 
-write(6,'(A,4I10)') '$$$', ilev, ij, n, nobsl
+!write(6,'(A,4I10)') '$$$', ilev, ij, n, nobsl
 
           parm = work3d(ij,ilev,n)
           CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,n))
@@ -236,7 +236,7 @@ write(6,'(A,4I10)') '$$$', ilev, ij, n, nobsl
           ELSE
             CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),nv3d+n,hdxf,rdiag,rloc,dep,nobsl)
 
-write(6,'(A,3I10)') '$$$===', ij, n, nobsl
+!write(6,'(A,3I10)') '$$$===', ij, n, nobsl
 
             parm = work2d(ij,n)
             CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,nv3d+n))
@@ -769,7 +769,7 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
       nn = 0
       call obs_choose(imin2,imax2,jmin2,jmax2,ip,nn,nobs_use)
 
-
+write(6,'(A,6I8)') '$$$==', imin2,imax2,jmin2,jmax2,ip,nn
 
       DO n = 1, nn
 
@@ -789,6 +789,9 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
   !      ELSE IF(ielm >= id_tclon_obs) THEN !TC track obs
   !        dlev = 0.0d0
         ELSE !! other (3D) variables
+
+write (6, *) '$$$===', obs%lev(obsda2(ip)%idx(nobs_use(n))), rlev
+
           dlev = ABS(LOG(obs%lev(obsda2(ip)%idx(nobs_use(n)))) - logrlev)
           IF(dlev > dist_zerov) CYCLE
         END IF
