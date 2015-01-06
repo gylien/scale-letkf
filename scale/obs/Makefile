@@ -69,4 +69,4 @@ common_modules:
 	( cd $(COMMON_DIR) ; make )
 
 clean:
-	rm -f *.o *.mod $(PROGS) obsope[0-9]*
+	rm -f *.o *.mod *.lst $(PROGS) obsope[0-9]*

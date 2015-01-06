@@ -104,7 +104,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     CALL CPU_TIME(rtimer)
-    WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
+    WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE): ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 
 !-----------------------------------------------------------------------
@@ -118,7 +118,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     CALL CPU_TIME(rtimer)
-    WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
+    WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):   ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 
 !-----------------------------------------------------------------------
@@ -174,7 +174,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     CALL CPU_TIME(rtimer)
-    WRITE(6,'(A,2F10.2)') '### TIMER(READ_GUES):',rtimer,rtimer-rtimer00
+    WRITE(6,'(A,2F10.2)') '### TIMER(READ_GUES):  ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 
 
@@ -185,7 +185,7 @@ PROGRAM letkf
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     CALL CPU_TIME(rtimer)
-    WRITE(6,'(A,2F10.2)') '### TIMER(GUES_MEAN):',rtimer,rtimer-rtimer00
+    WRITE(6,'(A,2F10.2)') '### TIMER(GUES_MEAN):  ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 !!-----------------------------------------------------------------------
 !! Data Assimilation
@@ -201,7 +201,7 @@ PROGRAM letkf
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     CALL CPU_TIME(rtimer)
-    WRITE(6,'(A,2F10.2)') '### TIMER(DAS_LETKF):',rtimer,rtimer-rtimer00
+    WRITE(6,'(A,2F10.2)') '### TIMER(DAS_LETKF):  ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 !-----------------------------------------------------------------------
 ! Analysis ensemble
@@ -215,7 +215,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     CALL CPU_TIME(rtimer)
-    WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_ANAL):',rtimer,rtimer-rtimer00
+    WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_ANAL): ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
     !
     ! WRITE ENS MEAN and SPRD
@@ -224,7 +224,7 @@ PROGRAM letkf
     !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     CALL CPU_TIME(rtimer)
-    WRITE(6,'(A,2F10.2)') '### TIMER(ANAL_MEAN):',rtimer,rtimer-rtimer00
+    WRITE(6,'(A,2F10.2)') '### TIMER(ANAL_MEAN):  ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 !!-----------------------------------------------------------------------
 !! Monitor

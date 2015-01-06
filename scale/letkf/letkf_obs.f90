@@ -477,6 +477,13 @@ SUBROUTINE set_letkf_obs
     IF(ABS(obsda%val(n)) > gross_error * obs%err(obsda%idx(n))) THEN !gross error
       obsda%qc(n) = iqc_gross_err
     END IF
+
+
+
+write (6, '(2I6,2F8.2,4F12.4,I3)') obs%elm(obsda%idx(n)), obs%typ(obsda%idx(n)), obs%lon(obsda%idx(n)), obs%lat(obsda%idx(n)), obs%lev(obsda%idx(n)), obs%dat(obsda%idx(n)), obs%err(obsda%idx(n)), obsda%val(n), obsda%qc(n)
+
+
+
   END DO
 !$OMP END PARALLEL DO
 

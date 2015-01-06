@@ -58,4 +58,4 @@ common_modules:
 	( cd $(COMMON_DIR) ; make )
 
 clean:
-	rm -f *.o *.mod $(PROGS) letkf[0-9]* mean[0-9]* efso[0-9]*
+	rm -f *.o *.mod *.lst $(PROGS) letkf[0-9]* mean[0-9]* efso[0-9]*

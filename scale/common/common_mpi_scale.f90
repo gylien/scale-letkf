@@ -1372,9 +1372,31 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
   INTEGER :: i,k,m,n
   CHARACTER(9) :: filename='file.0000'
 
+
+  REAL(r_size) :: timer
+  INTEGER :: ierr
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  CALL CPU_TIME(timer)
+  if (myrank == 0) print *, '######', timer
+
+
   CALL ensmean_grd(nbv,nij1,v3d,v2d,v3dm,v2dm)
 
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  CALL CPU_TIME(timer)
+  if (myrank == 0) print *, '######', timer
+
+
   CALL gather_grd_mpi(lastmem_rank_e,v3dm,v2dm,v3dg,v2dg)
+
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  CALL CPU_TIME(timer)
+  if (myrank == 0) print *, '######', timer
+
+
   IF(myrank_e == lastmem_rank_e) THEN
     WRITE(filename(1:4),'(A4)') file
     WRITE(filename(6:9),'(A4)') 'mean'
@@ -1382,6 +1404,12 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
     call state_trans_inv(v3dg)
     call write_restart(filename,v3dg,v2dg)
   END IF
+
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  CALL CPU_TIME(timer)
+  if (myrank == 0) print *, '######', timer
+
 
   DO n=1,nv3d
 !$OMP PARALLEL DO PRIVATE(i,k,m)
@@ -1397,8 +1425,14 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
 !$OMP END PARALLEL DO
   END DO
 
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  CALL CPU_TIME(timer)
+  if (myrank == 0) print *, '######', timer
+
+
   DO n=1,nv2d
-!$OMP PARALLEL DO PRIVATE(i,m)
+!$OMP PARALLEL DO PRIVATE(i,k,m)
     DO i=1,nij1
       v2ds(i,n) = (v2d(i,1,n)-v2dm(i,n))**2
       DO m=2,nbv
@@ -1409,7 +1443,20 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
 !$OMP END PARALLEL DO
   END DO
 
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  CALL CPU_TIME(timer)
+  if (myrank == 0) print *, '######', timer
+
+
   CALL gather_grd_mpi(lastmem_rank_e,v3ds,v2ds,v3dg,v2dg)
+
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  CALL CPU_TIME(timer)
+  if (myrank == 0) print *, '######', timer
+
+
   IF(myrank_e == lastmem_rank_e) THEN
     WRITE(filename(1:4),'(A4)') file
     WRITE(filename(6:9),'(A4)') 'sprd'
@@ -1417,6 +1464,12 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
 !    call state_trans_inv(v3dg)             !!
     call write_restart(filename,v3dg,v2dg)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
   END IF
+
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  CALL CPU_TIME(timer)
+  if (myrank == 0) print *, '######', timer
+
 
   RETURN
 END SUBROUTINE write_ensmspr_mpi

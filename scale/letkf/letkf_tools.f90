@@ -191,11 +191,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           work3d(ij,ilev,n) = work3d(ij,ilev,var_local_n2n(n))
         ELSE
           CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),n,hdxf,rdiag,rloc,dep,nobsl)
+
+write(6,'(A,4I10)') '$$$', ilev, ij, n, nobsl
+
           parm = work3d(ij,ilev,n)
           CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,n))
           work3d(ij,ilev,n) = parm
         END IF
-        IF((n == iv3d_q .OR. n == iv3d_qc) .AND. ilev > lev_update_q) THEN   ! GYL, do not update upper-level q,qc
+        IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) .AND. ilev > lev_update_q) THEN   ! GYL, do not update upper-level q,qc
           anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)      ! GYL
         ELSE                                                                 ! GYL
           DO m=1,nbv                                                         ! GYL
@@ -232,6 +235,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             END IF                                                 ! GYL
           ELSE
             CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),nv3d+n,hdxf,rdiag,rloc,dep,nobsl)
+
+write(6,'(A,3I10)') '$$$===', ij, n, nobsl
+
             parm = work2d(ij,n)
             CALL letkf_core(nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,nv3d+n))
             work2d(ij,n) = parm
