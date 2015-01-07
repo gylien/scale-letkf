@@ -13,6 +13,9 @@ MODULE common_scale
 !$USE OMP_LIB
   USE common
 !  USE common_ncio
+  use common_nml
+  use common_mpi, only: nprocs, myrank
+
 
   use scale_stdio
 !  use scale_stdio, only: H_MID
@@ -43,30 +46,41 @@ MODULE common_scale
 !  use scale_grid_index, only: &
 !    KHALO, IHALO, JHALO
 
-
   IMPLICIT NONE
   PUBLIC
 !-----------------------------------------------------------------------
 ! General parameters
 !-----------------------------------------------------------------------
-  INTEGER,PARAMETER :: nlonsub=200
-  INTEGER,PARAMETER :: nlatsub=200
-  INTEGER,PARAMETER :: nlonns=6
-  INTEGER,PARAMETER :: nlatns=6
-  INTEGER,PARAMETER :: nlon=nlonsub*nlonns
-  INTEGER,PARAMETER :: nlat=nlatsub*nlatns
-  INTEGER,PARAMETER :: nlev=60
+!  INTEGER,PARAMETER :: nlonsub=200
+!  INTEGER,PARAMETER :: nlatsub=200
+!  INTEGER,PARAMETER :: nlonns=6
+!  INTEGER,PARAMETER :: nlatns=6
+!  INTEGER,PARAMETER :: nlon=nlonsub*nlonns
+!  INTEGER,PARAMETER :: nlat=nlatsub*nlatns
+!  INTEGER,PARAMETER :: nlev=60
+!  integer,parameter :: nlonhalo=nlonsub+4
+!  integer,parameter :: nlathalo=nlatsub+4
+!  integer,parameter :: nlevhalo=nlev+4
 
-  integer,parameter :: nlonhalo=nlonsub+4
-  integer,parameter :: nlathalo=nlatsub+4
-  integer,parameter :: nlevhalo=nlev+4
+
+  integer,save :: nitmax ! maximum number of model files processed by a process
+  integer,allocatable,save :: procs(:)
+  integer,allocatable,save :: mem2node(:,:)
+  integer,allocatable,save :: mem2proc(:,:)
+  integer,allocatable,save :: proc2mem(:,:,:)
+  integer,save :: n_mem
+  integer,save :: n_mempn
+
+  integer,save :: scale_IO_group_n = -1
+!  integer,save :: scale_IO_proc_n = -1
+  logical,save :: valid_member = .false.
+  integer,save :: lastmem_rank_e
+
 
   INTEGER,PARAMETER :: nv3d=11   ! 3D state variables (in SCALE restart files)
   INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
-!  INTEGER,PARAMETER :: nv3dx=13  ! 3D diagnostic variables
   INTEGER,PARAMETER :: nv2d=0    ! 2D state variables (in SCALE restart files)
   INTEGER,PARAMETER :: nv2dd=7   ! 2D diagnostic variables (in SCALE history files)
-!  INTEGER,PARAMETER :: nv2dx=7   ! 2D diagnostic variables
   INTEGER,PARAMETER :: iv3d_rho=1  !-- State in restart files
   INTEGER,PARAMETER :: iv3d_rhou=2 !
   INTEGER,PARAMETER :: iv3d_rhov=3 !
@@ -96,7 +110,6 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv3dd_qg=11
   INTEGER,PARAMETER :: iv3dd_rh=12
   INTEGER,PARAMETER :: iv3dd_hgt=13
-!  INTEGER,PARAMETER :: iv2dd_hgt=1
   INTEGER,PARAMETER :: iv2dd_ps=1
   INTEGER,PARAMETER :: iv2dd_tsfc=2
   INTEGER,PARAMETER :: iv2dd_rain=3
@@ -104,31 +117,42 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv2dd_v10m=5
   INTEGER,PARAMETER :: iv2dd_t2m=6
   INTEGER,PARAMETER :: iv2dd_q2m=7
-  INTEGER,PARAMETER :: nij0=nlonsub*nlatsub
-  INTEGER,PARAMETER :: nlevall=nlev*nv3d+nv2d
-  INTEGER,PARAMETER :: nlevalld=nlev*nv3dd+nv2dd
-!  INTEGER,PARAMETER :: nlevallx=nlev*nv3dx+nv2dx
-  INTEGER,PARAMETER :: ngpv=nij0*nlevall
-  INTEGER,PARAMETER :: ngpvd=nij0*nlevalld
-!  INTEGER,PARAMETER :: ngpvx=nij0*nlevallx
-  REAL(r_size),SAVE :: lon(nlonsub,nlatsub)
-  REAL(r_size),SAVE :: lat(nlonsub,nlatsub)
-  REAL(r_size),SAVE :: lonu(nlonsub,nlatsub)
-  REAL(r_size),SAVE :: latu(nlonsub,nlatsub)
-  REAL(r_size),SAVE :: lonv(nlonsub,nlatsub)
-  REAL(r_size),SAVE :: latv(nlonsub,nlatsub)
-!  REAL(r_size),SAVE :: dx(nlatsub)
-!  REAL(r_size),SAVE :: dy(nlatsub)
-!  REAL(r_size),SAVE :: dy2(nlatsub)
-  REAL(r_size),SAVE :: fcori(nlatsub)
-!  REAL(r_size),SAVE :: wg(nlonsub,nlatsub)
+
+
+
+  INTEGER,SAVE :: nlon  ! # grids in I-direction [subdomain]
+  INTEGER,SAVE :: nlat  ! # grids in J-direction [subdomain]
+  INTEGER,SAVE :: nlev  ! # grids in K-direction
+  INTEGER,SAVE :: nlong ! # grids in I-direction [global domain]
+  INTEGER,SAVE :: nlatg ! # grids in J-direction [global domain]
+  INTEGER,SAVE :: nlonh ! # grids in I-direction [subdomain with halo]
+  INTEGER,SAVE :: nlath ! # grids in J-direction [subdomain with halo]
+  INTEGER,SAVE :: nlevh ! # grids in K-direction [with halo]
+  INTEGER,SAVE :: nij0
+  INTEGER,SAVE :: nlevall
+  INTEGER,SAVE :: nlevalld
+  INTEGER,SAVE :: ngpv
+  INTEGER,SAVE :: ngpvd
+
+
+
+
+!  REAL(r_size),SAVE :: lon(nlonsub,nlatsub)
+!  REAL(r_size),SAVE :: lat(nlonsub,nlatsub)
+!  REAL(r_size),SAVE :: lonu(nlonsub,nlatsub)
+!  REAL(r_size),SAVE :: latu(nlonsub,nlatsub)
+!  REAL(r_size),SAVE :: lonv(nlonsub,nlatsub)
+!  REAL(r_size),SAVE :: latv(nlonsub,nlatsub)
+!!  REAL(r_size),SAVE :: dx(nlatsub)
+!!  REAL(r_size),SAVE :: dy(nlatsub)
+!!  REAL(r_size),SAVE :: dy2(nlatsub)
+!  REAL(r_size),SAVE :: fcori(nlatsub)
+!!  REAL(r_size),SAVE :: wg(nlonsub,nlatsub)
   INTEGER,PARAMETER :: vname_max = 10
   CHARACTER(vname_max),SAVE :: v3d_name(nv3d)
   CHARACTER(vname_max),SAVE :: v3dd_name(nv3dd)
-!  CHARACTER(vname_max),SAVE :: v3dd_name(nv3dx)
   CHARACTER(vname_max),SAVE :: v2d_name(nv2d)
   CHARACTER(vname_max),SAVE :: v2dd_name(nv2dd)
-!  CHARACTER(vname_max),SAVE :: v2dd_name(nv2dx)
 
   character(len=H_MID), parameter :: MODELNAME = "SCALE-LES"
 
@@ -137,125 +161,266 @@ CONTAINS
 ! Set the parameters
 !-----------------------------------------------------------------------
 SUBROUTINE set_common_scale
+  use scale_process, only: &
+    PRC_NUM_X, &
+    PRC_NUM_Y
+  use scale_grid_index, only: &
+    IMAX, &
+    JMAX, &
+    KMAX, &
+    IHALO, &
+    JHALO, &
+    KHALO
+
   IMPLICIT NONE
 !  REAL(r_sngl) :: slat(nlat), wlat(nlat)
 !  REAL(r_size) :: totalwg, wgtmp, latm1, latm2
-  INTEGER :: i,j
+!  INTEGER :: i,j
 
   WRITE(6,'(A)') 'Hello from set_common_scale'
-  !
-  ! Variable names (same as in the NetCDF file)
-  !
-  ! state variables (in 'restart' files, for LETKF)
-  v3d_name(iv3d_rho)  = 'DENS'
-  v3d_name(iv3d_rhou) = 'MOMX'
-  v3d_name(iv3d_rhov) = 'MOMY'
-  v3d_name(iv3d_rhow) = 'MOMZ'
-  v3d_name(iv3d_rhot) = 'RHOT'
-  v3d_name(iv3d_q)    = 'QV'
-  v3d_name(iv3d_qc)   = 'QC'
-  v3d_name(iv3d_qr)   = 'QR'
-  v3d_name(iv3d_qi)   = 'QI'
-  v3d_name(iv3d_qs)   = 'QS'
-  v3d_name(iv3d_qg)   = 'QG'
-  !
-  ! diagnostic variables (in 'history' files, for observation operators)
-  v3dd_name(iv3dd_u)    = 'U'
-  v3dd_name(iv3dd_v)    = 'V'
-  v3dd_name(iv3dd_w)    = 'W'
-  v3dd_name(iv3dd_t)    = 'T'
-  v3dd_name(iv3dd_p)    = 'PRES'
-  v3dd_name(iv3dd_q)    = 'QV'
-  v3dd_name(iv3dd_qc)   = 'QC'
-  v3dd_name(iv3dd_qr)   = 'QR'
-  v3dd_name(iv3dd_qi)   = 'QI'
-  v3dd_name(iv3dd_qs)   = 'QS'
-  v3dd_name(iv3dd_qg)   = 'QG'
-  v3dd_name(iv3dd_rh)   = 'RH'
-  v3dd_name(iv3dd_hgt)   = 'height'
-  !
-!  v2dd_name(iv2dd_hgt) = 'height'
-  v2dd_name(iv2dd_ps) = 'SFC_PRES'
-  v2dd_name(iv2dd_tsfc) = 'SFC_TEMP'
-  v2dd_name(iv2dd_rain) = 'PREC'
-  v2dd_name(iv2dd_u10m) = 'U10'
-  v2dd_name(iv2dd_v10m) = 'V10'
-  v2dd_name(iv2dd_t2m) = 'T2'
-  v2dd_name(iv2dd_q2m) = 'Q2'
-  !
-  ! Lon, Lat
-  !
-!!$OMP PARALLEL DO PRIVATE(i)
-!  DO i=1,nlon
-!    lon(i) = 360.d0/nlon*(i-1)
-!  END DO
-!!$OMP END PARALLEL DO
-!  CALL SPLAT(idrt,nlat,slat,wlat)
-!  do j=1,nlat
-!    lat(j) = 180.d0/pi*asin(slat(nlat-j+1))
-!  end do
-!  !
-!  ! dx and dy
-!  !
-!!$OMP PARALLEL
-!!$OMP WORKSHARE
-!  dx(:) = 2.0d0 * pi * re * cos(lat(:) * pi / 180.0d0) / REAL(nlon,r_size)
-!!$OMP END WORKSHARE
 
-!!$OMP DO
-!  DO i=1,nlat-1
-!    dy(i) = 2.0d0 * pi * re * (lat(i+1) - lat(i)) / 360.0d0
-!  END DO
-!!$OMP END DO
-!!$OMP END PARALLEL
-!  dy(nlat) = 2.0d0 * pi * re * (90.0d0 - lat(nlat)) / 180.0d0
+  ! setup standard I/O
+  call IO_setup( MODELNAME, .false.)
 
-!!$OMP PARALLEL DO
-!  DO i=2,nlat
-!    dy2(i) = (dy(i-1) + dy(i)) * 0.5d0
-!  END DO
-!!$OMP END PARALLEL DO
-!  dy2(1) = (dy(nlat) + dy(1)) * 0.5d0
-!  !
-!  ! Corioris parameter
-!  !
-!!$OMP PARALLEL WORKSHARE
-!  fcori(:) = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
-!!$OMP END PARALLEL WORKSHARE
-!  !
-!  ! Weight for global average
-!  !
-!  totalwg = 0.0_r_size
-!  DO j=1,nlat
-!    if (j == 1) then
-!      latm1 = -0.5d0*pi !-90 degree
-!    else
-!      latm1 = 0.5d0*(lat(j-1) + lat(j))*pi/180.0d0
-!    end if
-!    if (j == nlat) then
-!      latm2 = 0.5d0*pi !90 degree
-!    else
-!      latm2 = 0.5d0*(lat(j) + lat(j+1))*pi/180.0d0
-!    end if
-!    wgtmp = abs(sin(latm2) - sin(latm1))
-!    wg(:,j) = wgtmp
-!    totalwg = totalwg + wgtmp * nlon
-!  END DO
-!  totalwg = 1.0_r_size / totalwg
-!  wg(:,:) = sqrt(wg(:,:) * totalwg)
+  call read_nml_letkf
+  call read_nml_letkf_prc
+  call read_nml_letkf_obs
+
+  if (nprocs /= NNODES * PPN) then
+    write(6,'(A,I10)') 'Number of MPI processes = ', nprocs
+    write(6,'(A,I10)') 'NNODES = ', NNODES
+    write(6,'(A,I10)') 'PPN    = ', PPN
+    write(6,'(A)') 'Number of MPI processes should be equal to NNODES * PPN.'
+    stop
+  end if
+
+  !
+  ! Set up node and process distribution
+  !
+  CALL set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
+
+!! print process distribution!!!
+
+  if (scale_IO_group_n <= 0) then
+
+    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
+
+  else
+
+    call set_scalelib
+
+    if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
+      write(6,'(A,I10)') 'MEM_NP    = ', MEM_NP
+      write(6,'(A,I10)') 'PRC_NUM_X = ', PRC_NUM_X
+      write(6,'(A,I10)') 'PRC_NUM_Y = ', PRC_NUM_Y
+      write(6,'(A)') 'MEM_NP should be equal to PRC_NUM_X * PRC_NUM_Y.'
+      stop
+    end if
+
+    nlon = IMAX
+    nlat = JMAX
+    nlev = KMAX
+    nlong = nlon * PRC_NUM_X
+    nlatg = nlat * PRC_NUM_Y
+    nlonh = nlon + IHALO * 2
+    nlath = nlat + JHALO * 2
+    nlevh = nlev + KHALO * 2
+
+    nij0 = nlon * nlat
+    nlevall  = nlev * nv3d  + nv2d
+    nlevalld = nlev * nv3dd + nv2dd
+    ngpv  = nij0 * nlevall
+    ngpvd = nij0 * nlevalld
+
+    !
+    ! Variable names (same as in the NetCDF file)
+    !
+    ! state variables (in 'restart' files, for LETKF)
+    v3d_name(iv3d_rho)  = 'DENS'
+    v3d_name(iv3d_rhou) = 'MOMX'
+    v3d_name(iv3d_rhov) = 'MOMY'
+    v3d_name(iv3d_rhow) = 'MOMZ'
+    v3d_name(iv3d_rhot) = 'RHOT'
+    v3d_name(iv3d_q)    = 'QV'
+    v3d_name(iv3d_qc)   = 'QC'
+    v3d_name(iv3d_qr)   = 'QR'
+    v3d_name(iv3d_qi)   = 'QI'
+    v3d_name(iv3d_qs)   = 'QS'
+    v3d_name(iv3d_qg)   = 'QG'
+    !
+    ! diagnostic variables (in 'history' files, for observation operators)
+    v3dd_name(iv3dd_u)    = 'U'
+    v3dd_name(iv3dd_v)    = 'V'
+    v3dd_name(iv3dd_w)    = 'W'
+    v3dd_name(iv3dd_t)    = 'T'
+    v3dd_name(iv3dd_p)    = 'PRES'
+    v3dd_name(iv3dd_q)    = 'QV'
+    v3dd_name(iv3dd_qc)   = 'QC'
+    v3dd_name(iv3dd_qr)   = 'QR'
+    v3dd_name(iv3dd_qi)   = 'QI'
+    v3dd_name(iv3dd_qs)   = 'QS'
+    v3dd_name(iv3dd_qg)   = 'QG'
+    v3dd_name(iv3dd_rh)   = 'RH'
+    v3dd_name(iv3dd_hgt)   = 'height'
+    !
+    v2dd_name(iv2dd_ps) = 'SFC_PRES'
+    v2dd_name(iv2dd_tsfc) = 'SFC_TEMP'
+    v2dd_name(iv2dd_rain) = 'PREC'
+    v2dd_name(iv2dd_u10m) = 'U10'
+    v2dd_name(iv2dd_v10m) = 'V10'
+    v2dd_name(iv2dd_t2m) = 'T2'
+    v2dd_name(iv2dd_q2m) = 'Q2'
+    !
+    ! Lon, Lat
+    !
+  !!$OMP PARALLEL DO PRIVATE(i)
+  !  DO i=1,nlon
+  !    lon(i) = 360.d0/nlon*(i-1)
+  !  END DO
+  !!$OMP END PARALLEL DO
+  !  CALL SPLAT(idrt,nlat,slat,wlat)
+  !  do j=1,nlat
+  !    lat(j) = 180.d0/pi*asin(slat(nlat-j+1))
+  !  end do
+  !  !
+  !  ! dx and dy
+  !  !
+  !!$OMP PARALLEL
+  !!$OMP WORKSHARE
+  !  dx(:) = 2.0d0 * pi * re * cos(lat(:) * pi / 180.0d0) / REAL(nlon,r_size)
+  !!$OMP END WORKSHARE
+
+  !!$OMP DO
+  !  DO i=1,nlat-1
+  !    dy(i) = 2.0d0 * pi * re * (lat(i+1) - lat(i)) / 360.0d0
+  !  END DO
+  !!$OMP END DO
+  !!$OMP END PARALLEL
+  !  dy(nlat) = 2.0d0 * pi * re * (90.0d0 - lat(nlat)) / 180.0d0
+
+  !!$OMP PARALLEL DO
+  !  DO i=2,nlat
+  !    dy2(i) = (dy(i-1) + dy(i)) * 0.5d0
+  !  END DO
+  !!$OMP END PARALLEL DO
+  !  dy2(1) = (dy(nlat) + dy(1)) * 0.5d0
+  !  !
+  !  ! Corioris parameter
+  !  !
+  !!$OMP PARALLEL WORKSHARE
+  !  fcori(:) = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
+  !!$OMP END PARALLEL WORKSHARE
+  !  !
+  !  ! Weight for global average
+  !  !
+  !  totalwg = 0.0_r_size
+  !  DO j=1,nlat
+  !    if (j == 1) then
+  !      latm1 = -0.5d0*pi !-90 degree
+  !    else
+  !      latm1 = 0.5d0*(lat(j-1) + lat(j))*pi/180.0d0
+  !    end if
+  !    if (j == nlat) then
+  !      latm2 = 0.5d0*pi !90 degree
+  !    else
+  !      latm2 = 0.5d0*(lat(j) + lat(j+1))*pi/180.0d0
+  !    end if
+  !    wgtmp = abs(sin(latm2) - sin(latm1))
+  !    wg(:,j) = wgtmp
+  !    totalwg = totalwg + wgtmp * nlon
+  !  END DO
+  !  totalwg = 1.0_r_size / totalwg
+  !  wg(:,:) = sqrt(wg(:,:) * totalwg)
+
+
+  end if ! [ scale_IO_group_n <= 0 ]
+
+
   RETURN
 END SUBROUTINE set_common_scale
+
+
+!-----------------------------------------------------------------------
+! set_mem2proc
+!-----------------------------------------------------------------------
+SUBROUTINE set_mem_node_proc(mem,nnodes,ppn,mem_nodes,mem_np)
+  IMPLICIT NONE
+  INTEGER,INTENT(IN) :: mem,nnodes,ppn,mem_nodes,mem_np
+  INTEGER :: tppn,tppnt,tmod
+  INTEGER :: n,ns,nn,m,q,qs,i,j,it,ip
+
+  ALLOCATE(procs(nprocs))
+  ns = 0
+  DO n = 1, nnodes
+    procs(ns+1:ns+ppn) = n
+    ns = ns + ppn
+  END DO
+
+  IF(mem_nodes > 1) THEN
+    n_mem = nnodes / mem_nodes
+    n_mempn = 1
+  ELSE
+    n_mem = nnodes
+    n_mempn = ppn / mem_np
+  END IF
+  nitmax = (mem - 1) / (n_mem * n_mempn) + 1
+  tppn = mem_np / mem_nodes
+  tmod = MOD(mem_np, mem_nodes)
+
+  ALLOCATE(mem2node(mem_np,mem))
+  ALLOCATE(mem2proc(mem_np,mem))
+  ALLOCATE(proc2mem(2,nitmax,nprocs))
+  proc2mem = -1
+  m = 1
+mem_loop: DO it = 1, nitmax
+    DO i = 0, n_mempn-1
+      n = 0
+      DO j = 0, n_mem-1
+        IF(m > mem .and. it > 1) EXIT mem_loop
+        qs = 0
+        DO nn = 0, mem_nodes-1
+          IF(nn < tmod) THEN
+            tppnt = tppn + 1
+          ELSE
+            tppnt = tppn
+          END IF
+          DO q = 0, tppnt-1
+            ip = (n+nn)*ppn + i*mem_np + q
+            if (m <= mem) then
+              mem2node(qs+1,m) = n+nn
+              mem2proc(qs+1,m) = ip
+            end if
+            proc2mem(1,it,ip+1) = m
+            proc2mem(2,it,ip+1) = qs
+            qs = qs + 1
+          END DO
+        END DO
+        m = m + 1
+        n = n + mem_nodes
+      END DO
+    END DO
+  END DO mem_loop
+
+  scale_IO_group_n = proc2mem(1,1,myrank+1)
+!  scale_IO_proc_n = proc2mem(2,1,myrank+1)
+  if (scale_IO_group_n >= 1 .and. scale_IO_group_n <= mem) then
+    valid_member = .true.
+  end if
+
+  lastmem_rank_e = mod(mem-1, n_mem*n_mempn)
+!  if (lastmem_rank_e /= proc2mem(1,1,mem2proc(1,mem)+1)-1) then
+!    print *, 'XXXXXX wrong!!'
+!    stop
+!  end if
+
+  RETURN
+END SUBROUTINE
+
 
 !-----------------------------------------------------------------------
 ! Start using SCALE library
 !-----------------------------------------------------------------------
-subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
-!subroutine set_scalelib(mem_np)
-!subroutine set_scalelib(nitmax, proc2mem)
-!subroutine set_scalelib
-  use common_mpi, only: myrank
-!  use common_nml, only: &
-!    MEM_NP
+subroutine set_scalelib
 
   use scale_precision
   use scale_stdio, only: IO_FID_CONF
@@ -325,13 +490,7 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
     MPRJ_setup
   implicit none
 
-!  integer,intent(in) :: nitmax ! maximum number of model files processed by a process
-!  integer,intent(in) :: proc2mem(2,nitmax,nprocs)
-!  integer,intent(in) :: proc2mem(:,:,:)
 
-!  integer,intent(in) :: mem_np
-  integer, intent(in) :: mem_np, nitmax, nprocs
-  integer, intent(in) :: proc2mem(2,nitmax,nprocs)
 
 !    character(len=H_MID) :: DATATYPE = 'DEFAULT' !< REAL4 or REAL8
   integer :: rankidx(2)
@@ -347,7 +506,7 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
 !  endif
 
   ! split MPI communicator for LETKF
-  call PRC_MPIsplit_letkf(mem_np, nitmax, nprocs, proc2mem, myrank, &
+  call PRC_MPIsplit_letkf(MEM_NP, nitmax, nprocs, proc2mem, myrank, &
                           LOCAL_myrank, LOCAL_nmax)
 
   ! setup MPI
@@ -370,21 +529,6 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
   ! setup horizontal/vertical grid coordinates
   call GRID_INDEX_setup
   call GRID_setup
-
-  ! check if the namelist seetings are consistent
-  if (mem_np /= PRC_NUM_X * PRC_NUM_Y) then
-    write(6,*) 'mem_np should be equal to PRC_NUM_X * PRC_NUM_Y.'
-    stop
-  else if (IMAX /= nlonsub) then
-    write(6,*) 'IMAX should be equal to nlonsub.'
-    stop
-  else if (JMAX /= nlatsub) then
-    write(6,*) 'JMAX should be equal to nlatsub.'
-    stop
-  else if (KMAX /= nlev) then
-    write(6,*) 'KMAX should be equal to nlev.'
-    stop
-  end if
 
 !  call LAND_GRID_INDEX_setup
 !  call LAND_GRID_setup
@@ -420,7 +564,7 @@ subroutine set_scalelib(mem_np, nitmax, nprocs, proc2mem)
   ! setup history file I/O
   rankidx(1) = PRC_2Drank(PRC_myrank, 1)
   rankidx(2) = PRC_2Drank(PRC_myrank, 2)
-  call HistoryInit('','','',IMAX*JMAX*KMAX,PRC_master,LOCAL_myrank,rankidx,&
+  call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_master, LOCAL_myrank, rankidx, &
                    namelist_fid=IO_FID_CONF)
 
   call PROF_rapend('Initialize')
@@ -465,8 +609,8 @@ end subroutine unset_scalelib
 !  IMPLICIT NONE
 
 !  CHARACTER(*),INTENT(IN) :: filename
-!  REAL(RP),INTENT(OUT) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
-!  REAL(RP),INTENT(OUT) :: v2dg(nlonsub,nlatsub,nv2d)
+!  REAL(RP),INTENT(OUT) :: v3dg(nlev,nlon,nlat,nv3d)
+!  REAL(RP),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
 !  INTEGER :: iv3d,iv2d
 
 !  WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
@@ -500,13 +644,13 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     IHALO, JHALO, &
     IMAX, JMAX, KMAX, &
     IMAXB, JMAXB
-  use common_mpi, only: myrank
+!  use common_mpi, only: myrank
   use common_ncio
   IMPLICIT NONE
 
   CHARACTER(*),INTENT(IN) :: filename
-  REAL(RP),INTENT(OUT) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
-  REAL(RP),INTENT(OUT) :: v2dg(nlonsub,nlatsub,nv2d)
+  REAL(RP),INTENT(OUT) :: v3dg(nlev,nlon,nlat,nv3d)
+  REAL(RP),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d,iv2d,ncid
   integer :: is, ie, js, je
@@ -573,14 +717,14 @@ END SUBROUTINE read_restart
 !  implicit none
 
 !  CHARACTER(*),INTENT(IN) :: filename
-!  REAL(RP),INTENT(IN) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
-!  REAL(RP),INTENT(IN) :: v2dg(nlonsub,nlatsub,nv2d)
-!  REAL(RP) :: rhotmp(nlev,nlonsub,nlatsub)
+!  REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
+!  REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
+!  REAL(RP) :: rhotmp(nlev,nlon,nlat)
 !  character(len=12) :: filesuffix = '.pe000000.nc'
 !  integer :: iv3d,iv2d,ncid
 
-!  REAL(r_dble) :: v3dgtmp(nlev,nlonsub,nlatsub)
-!  REAL(r_dble) :: v2dgtmp(nlonsub,nlatsub)
+!  REAL(r_dble) :: v3dgtmp(nlev,nlon,nlat)
+!  REAL(r_dble) :: v2dgtmp(nlon,nlat)
 
 !!  integer :: vid,error
 
@@ -596,16 +740,16 @@ END SUBROUTINE read_restart
 
 !  DO iv3d = 1, nv3d
 !    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
-!    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlonsub, nlatsub, 1, real(v3dg(:,:,:,iv3d),r_dble))
-!    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), nlev, nlonsub, nlatsub, 1, v3dgtmp)
-!    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlonsub, nlatsub, 1, v3dgtmp)
+!    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, real(v3dg(:,:,:,iv3d),r_dble))
+!    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, v3dgtmp)
+!    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, v3dgtmp)
 !  END DO
 
 !  DO iv2d = 1, nv2d
 !    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
-!    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), nlonsub, nlatsub, 1, real(v2dg(:,:,iv2d),r_dble))
-!    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), nlonsub, nlatsub, 1, v2dgtmp)
-!    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), nlonsub, nlatsub, 1, v2dgtmp)
+!    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, real(v2dg(:,:,iv2d),r_dble))
+!    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, v2dgtmp)
+!    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, v2dgtmp)
 !  END DO
 
 !!  DO iv3d = 1, nv3d
@@ -649,13 +793,13 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     IHALO, JHALO, &
     IMAX, JMAX, KMAX, &
     IMAXB, JMAXB
-  use common_mpi, only: myrank
+!  use common_mpi, only: myrank
   use common_ncio
   implicit none
 
   CHARACTER(*),INTENT(IN) :: filename
-  REAL(RP),INTENT(IN) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
-  REAL(RP),INTENT(IN) :: v2dg(nlonsub,nlatsub,nv2d)
+  REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
+  REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d,iv2d,ncid
   integer :: is, ie, js, je
@@ -717,26 +861,26 @@ END SUBROUTINE write_restart
 !  INTEGER,INTENT(IN) :: inv3d,inv2d
 !  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
 !  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
-!  REAL(r_size),INTENT(OUT) :: v3d(nlonsub,nlatsub,nlev,inv3d)
-!  REAL(r_size),INTENT(OUT) :: v2d(nlonsub,nlatsub,inv2d)
-!  REAL(r_dble) :: buf3d8(nlonsub,nlatsub,nlev)
-!  REAL(r_dble) :: buf2d8(nlonsub,nlatsub)
+!  REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,inv3d)
+!  REAL(r_size),INTENT(OUT) :: v2d(nlon,nlat,inv2d)
+!  REAL(r_dble) :: buf3d8(nlon,nlat,nlev)
+!  REAL(r_dble) :: buf2d8(nlon,nlat)
 !  INTEGER :: iunit,n
 
 !  CALL ncio_open(filename, nf90_nowrite, iunit)
 !  DO n=1,inv3d
 !    IF(r_size == r_dble) THEN
-!      CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,v3d(:,:,:,n))
+!      CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlon,nlat,nlev,1,v3d(:,:,:,n))
 !    ELSE
-!      CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,buf3d8)
+!      CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlon,nlat,nlev,1,buf3d8)
 !      v3d(:,:,:,n) = REAL(buf3d8,r_size)
 !    END IF
 !  END DO
 !  DO n=1,inv2d
 !    IF(r_size == r_dble) THEN
-!      CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,v2d(:,:,n))
+!      CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlon,nlat,1,v2d(:,:,n))
 !    ELSE
-!      CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,buf2d8)
+!      CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlon,nlat,1,buf2d8)
 !      v2d(:,:,n) = REAL(buf2d8,r_size)
 !    END IF
 !  END DO
@@ -751,19 +895,19 @@ END SUBROUTINE write_restart
 !  INTEGER,INTENT(IN) :: inv3d,inv2d
 !  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
 !  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
-!  REAL(r_sngl),INTENT(OUT) :: v3d(nlonsub,nlatsub,nlev,inv3d)
-!  REAL(r_sngl),INTENT(OUT) :: v2d(nlonsub,nlatsub,inv2d)
-!  REAL(r_dble) :: buf3d8(nlonsub,nlatsub,nlev)
-!  REAL(r_dble) :: buf2d8(nlonsub,nlatsub)
+!  REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,inv3d)
+!  REAL(r_sngl),INTENT(OUT) :: v2d(nlon,nlat,inv2d)
+!  REAL(r_dble) :: buf3d8(nlon,nlat,nlev)
+!  REAL(r_dble) :: buf2d8(nlon,nlat)
 !  INTEGER :: iunit,n
 
 !  CALL ncio_open(filename, nf90_nowrite, iunit)
 !  DO n=1,inv3d
-!    CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,buf3d8)
+!    CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlon,nlat,nlev,1,buf3d8)
 !    v3d(:,:,:,n) = REAL(buf3d8,r_sngl)
 !  END DO
 !  DO n=1,inv2d
-!    CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,buf2d8)
+!    CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlon,nlat,1,buf2d8)
 !    v2d(:,:,n) = REAL(buf2d8,r_sngl)
 !  END DO
 !  CALL ncio_close(iunit)
@@ -778,27 +922,27 @@ END SUBROUTINE write_restart
 !  INTEGER,INTENT(IN) :: inv3d,inv2d
 !  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
 !  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
-!  REAL(r_size),INTENT(IN) :: v3d(nlonsub,nlatsub,nlev,inv3d)
-!  REAL(r_size),INTENT(IN) :: v2d(nlonsub,nlatsub,inv2d)
-!  REAL(r_dble) :: buf3d8(nlonsub,nlatsub,nlev)
-!  REAL(r_dble) :: buf2d8(nlonsub,nlatsub)
+!  REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,inv3d)
+!  REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,inv2d)
+!  REAL(r_dble) :: buf3d8(nlon,nlat,nlev)
+!  REAL(r_dble) :: buf2d8(nlon,nlat)
 !  INTEGER :: iunit,n
 
 !  CALL ncio_open(filename, nf90_write, iunit)
 !  DO n=1,inv3d
 !    IF(r_size == r_dble) THEN
-!      CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,v3d(:,:,:,n))
+!      CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlon,nlat,nlev,1,v3d(:,:,:,n))
 !    ELSE
 !      buf3d8 = REAL(v3d(:,:,:,n),r_dble)
-!      CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,buf3d8)
+!      CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlon,nlat,nlev,1,buf3d8)
 !    END IF
 !  END DO
 !  DO n=1,inv2d
 !    IF(r_size == r_dble) THEN
-!      CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,v2d(:,:,n))
+!      CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlon,nlat,1,v2d(:,:,n))
 !    ELSE
 !      buf2d8 = REAL(v2d(:,:,n),r_dble)
-!      CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,buf2d8)
+!      CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlon,nlat,1,buf2d8)
 !    END IF
 !  END DO
 !  CALL ncio_close(iunit)
@@ -812,20 +956,20 @@ END SUBROUTINE write_restart
 !  INTEGER,INTENT(IN) :: inv3d,inv2d
 !  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
 !  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
-!  REAL(r_sngl),INTENT(IN) :: v3d(nlonsub,nlatsub,nlev,inv3d)
-!  REAL(r_sngl),INTENT(IN) :: v2d(nlonsub,nlatsub,inv2d)
-!  REAL(r_dble) :: buf3d8(nlonsub,nlatsub,nlev)
-!  REAL(r_dble) :: buf2d8(nlonsub,nlatsub)
+!  REAL(r_sngl),INTENT(IN) :: v3d(nlon,nlat,nlev,inv3d)
+!  REAL(r_sngl),INTENT(IN) :: v2d(nlon,nlat,inv2d)
+!  REAL(r_dble) :: buf3d8(nlon,nlat,nlev)
+!  REAL(r_dble) :: buf2d8(nlon,nlat)
 !  INTEGER :: iunit,n
 
 !  CALL ncio_open(filename, nf90_write, iunit)
 !  DO n=1,inv3d
 !    buf3d8 = REAL(v3d(:,:,:,n),r_dble)
-!    CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlonsub,nlatsub,nlev,1,buf3d8)
+!    CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlon,nlat,nlev,1,buf3d8)
 !  END DO
 !  DO n=1,inv2d
 !    buf2d8 = REAL(v2d(:,:,n),r_dble)
-!    CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlonsub,nlatsub,1,buf2d8)
+!    CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlon,nlat,1,buf2d8)
 !  END DO
 !  CALL ncio_close(iunit)
 
@@ -914,15 +1058,15 @@ SUBROUTINE state_trans(v3dg)
 
   IMPLICIT NONE
 
-  REAL(RP),INTENT(INOUT) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
-!  REAL(RP) :: pres(nlev,nlonsub,nlatsub)
-!  REAL(RP) :: temp(nlev,nlonsub,nlatsub)
+  REAL(RP),INTENT(INOUT) :: v3dg(nlev,nlon,nlat,nv3d)
+!  REAL(RP) :: pres(nlev,nlon,nlat)
+!  REAL(RP) :: temp(nlev,nlon,nlat)
   REAL(RP) :: rho,pres,temp
   real(RP) :: qdry,CVtot,Rtot,CPovCV
   integer :: i,j,k,iv3d
 
 
-!  REAL(RP) :: pres2(nlev,nlonsub,nlatsub)
+!  REAL(RP) :: pres2(nlev,nlon,nlat)
 
 !write(6,*) AQ_CP
 !write(6,*)
@@ -931,8 +1075,8 @@ SUBROUTINE state_trans(v3dg)
 !write(6,*) CVdry, Rdry, Rvap, PRE00
 
 !!!!!!    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
-  do j = 1, nlatsub
-    do i = 1, nlonsub
+  do j = 1, nlat
+    do i = 1, nlon
       do k = 1, nlev
        qdry  = 1.0d0
        CVtot = 0.0d0
@@ -1001,14 +1145,14 @@ SUBROUTINE state_trans_inv(v3dg)
        PRE00 => CONST_PRE00
   IMPLICIT NONE
 
-  REAL(RP),INTENT(INOUT) :: v3dg(nlev,nlonsub,nlatsub,nv3d)
+  REAL(RP),INTENT(INOUT) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP) :: rho,rhot
   real(RP) :: qdry,CVtot,Rtot,CVovCP
   integer :: i,j,k,iv3d
 
 !!!!!!    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
-  do j = 1, nlatsub
-    do i = 1, nlonsub
+  do j = 1, nlat
+    do i = 1, nlon
       do k = 1, nlev
        qdry  = 1.0d0
        CVtot = 0.0d0

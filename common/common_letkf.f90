@@ -22,17 +22,12 @@ MODULE common_letkf
   IMPLICIT NONE
 
   PUBLIC
-!=======================================================================
-!  LEKF Model Independent Parameters
-!=======================================================================
-  INTEGER,PARAMETER :: nbv=4  ! ensemble size
-  REAL(r_size),PARAMETER :: relax_alpha = 0.0d0  ! relaxation parameter     !GYL
-  REAL(r_size),PARAMETER :: min_infl = 0.0d0     ! minimum inlfation factor !GYL
 
 CONTAINS
 !=======================================================================
 !  Main Subroutine of LETKF Core
 !   INPUT
+!     nbv              : ensemble size                                        !GYL
 !     nobs             : array size, but only first nobsl elements are used
 !     nobsl            : total number of observation assimilated at the point
 !     hdxb(nobs,nbv)   : obs operator times fcst ens perturbations
@@ -40,11 +35,14 @@ CONTAINS
 !     rloc(nobs)       : localization weighting function
 !     dep(nobs)        : observation departure (yo-Hxb)
 !     parm_infl        : covariance inflation parameter
+!     min_infl         : minimum covariance inflation parameter               !GYL
+!     relax_alpha      : covariance relaxation parameter                      !GYL
 !   OUTPUT
 !     trans(nbv,nbv) : transformation matrix
 !=======================================================================
-SUBROUTINE letkf_core(nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans)
+SUBROUTINE letkf_core(nbv,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,min_infl,relax_alpha,trans)
   IMPLICIT NONE
+  INTEGER,INTENT(IN) :: nbv                  !GYL
   INTEGER,INTENT(IN) :: nobs
   INTEGER,INTENT(IN) :: nobsl
   REAL(r_size),INTENT(IN) :: hdxb(1:nobs,1:nbv)
@@ -52,7 +50,10 @@ SUBROUTINE letkf_core(nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans)
   REAL(r_size),INTENT(IN) :: rloc(1:nobs)
   REAL(r_size),INTENT(IN) :: dep(1:nobs)
   REAL(r_size),INTENT(INOUT) :: parm_infl
+  REAL(r_size),INTENT(IN) :: min_infl        !GYL
+  REAL(r_size),INTENT(IN) :: relax_alpha     !GYL
   REAL(r_size),INTENT(OUT) :: trans(nbv,nbv)
+
   REAL(r_size) :: hdxb_rinv(nobsl,nbv)
   REAL(r_size) :: eivec(nbv,nbv)
   REAL(r_size) :: eival(nbv)

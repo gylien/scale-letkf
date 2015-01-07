@@ -61,6 +61,11 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: id_tclat_obs=99992  ! not used
   INTEGER,PARAMETER :: id_tcmip_obs=99993  ! not used
 
+
+!!!!!!  define the var_local category ???
+!!!!!!
+
+
   INTEGER,PARAMETER :: elem_uid(nid_obs)= &
      (/id_u_obs, id_v_obs, id_t_obs, id_tv_obs, id_q_obs, id_rh_obs, &
        id_ps_obs, id_rain_obs/)
@@ -130,11 +135,11 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs,qc)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk
-  REAL(r_size),INTENT(IN) :: v3d(nlevhalo,nlonhalo,nlathalo,nv3dd)
-  REAL(r_size),INTENT(IN) :: v2d(nlonhalo,nlathalo,nv2dd)
+  REAL(r_size),INTENT(IN) :: v3d(nlevh,nlonh,nlath,nv3dd)
+  REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
   REAL(r_size),INTENT(OUT) :: yobs
   INTEGER,INTENT(OUT) :: qc
-  REAL(r_size) :: tg,qg
+!  REAL(r_size) :: tg,qg
   REAL(r_size) :: qq
 !  REAL(r_size) :: dummy(3)
 !  INTEGER :: i,j,k
@@ -325,21 +330,21 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk)
       KHALO
   IMPLICIT NONE
 
-  REAL(r_size),INTENT(IN) :: p_full(nlevhalo,nlonhalo,nlathalo)
+  REAL(r_size),INTENT(IN) :: p_full(nlevh,nlonh,nlath)
   INTEGER,INTENT(IN) :: elem
   REAL(r_size),INTENT(IN) :: ri
   REAL(r_size),INTENT(IN) :: rj
   REAL(r_size),INTENT(IN) :: rlev ! pressure levels
   REAL(r_size),INTENT(OUT) :: rk
   REAL(r_size) :: ak
-  REAL(r_size) :: lnps(nlonhalo,nlathalo)
-  REAL(r_size) :: plev(nlevhalo)
+  REAL(r_size) :: lnps(nlonh,nlath)
+  REAL(r_size) :: plev(nlevh)
   REAL(r_size) :: ptop
   INTEGER :: i,j,k, ii, jj, ks
 !
 ! rlev -> rk
 !
-  if (ri < 1.0d0 .or. ri > nlonhalo .or. rj < 1.0d0 .or. rj > nlathalo) then
+  if (ri < 1.0d0 .or. ri > nlonh .or. rj < 1.0d0 .or. rj > nlath) then
     write (6,'(A)') 'warning: observation is outside of the horizontal domain'
     rk = -3.0d0
     return
@@ -365,7 +370,7 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk)
         if (k > ks) ks = k
       end do
     end do
-!    DO k=1,nlevhalo
+!    DO k=1,nlevh
     DO k=1+KHALO,nlev+KHALO
 !      IF(i <= nlon+IHALO) THEN
         lnps(i-1:i,j-1:j) = LOG(p_full(k,i-1:i,j-1:j))
@@ -436,7 +441,7 @@ END SUBROUTINE phys2ij
 !-----------------------------------------------------------------------
 SUBROUTINE itpl_2d(var,ri,rj,var5)
   IMPLICIT NONE
-  REAL(r_size),INTENT(IN) :: var(nlonhalo,nlathalo)
+  REAL(r_size),INTENT(IN) :: var(nlonh,nlath)
   REAL(r_size),INTENT(IN) :: ri
   REAL(r_size),INTENT(IN) :: rj
   REAL(r_size),INTENT(OUT) :: var5
@@ -448,24 +453,17 @@ SUBROUTINE itpl_2d(var,ri,rj,var5)
   j = CEILING(rj)
   aj = rj - REAL(j-1,r_size)
 
-!  IF(i <= nlon+IHALO) THEN
-    var5 = var(i-1,j-1) * (1-ai) * (1-aj) &
-       & + var(i  ,j-1) *    ai  * (1-aj) &
-       & + var(i-1,j  ) * (1-ai) *    aj  &
-       & + var(i  ,j  ) *    ai  *    aj
-!  ELSE
-!    var5 = var(i-1,j-1) * (1-ai) * (1-aj) &
-!       & + var(1  ,j-1) *    ai  * (1-aj) &
-!       & + var(i-1,j  ) * (1-ai) *    aj  &
-!       & + var(1  ,j  ) *    ai  *    aj
-!  END IF
+  var5 = var(i-1,j-1) * (1-ai) * (1-aj) &
+     & + var(i  ,j-1) *    ai  * (1-aj) &
+     & + var(i-1,j  ) * (1-ai) *    aj  &
+     & + var(i  ,j  ) *    ai  *    aj
 
   RETURN
 END SUBROUTINE itpl_2d
 
 SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
   IMPLICIT NONE
-  REAL(r_size),INTENT(IN) :: var(nlevhalo,nlonhalo,nlathalo)
+  REAL(r_size),INTENT(IN) :: var(nlevh,nlonh,nlath)
   REAL(r_size),INTENT(IN) :: ri
   REAL(r_size),INTENT(IN) :: rj
   REAL(r_size),INTENT(IN) :: rk
@@ -480,25 +478,14 @@ SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
   k = CEILING(rk)
   ak = rk - REAL(k-1,r_size)
 
-!  IF(i <= nlon+IHALO) THEN
-    var5 = var(i-1,j-1,k-1) * (1-ai) * (1-aj) * (1-ak) &
-       & + var(i  ,j-1,k-1) *    ai  * (1-aj) * (1-ak) &
-       & + var(i-1,j  ,k-1) * (1-ai) *    aj  * (1-ak) &
-       & + var(i  ,j  ,k-1) *    ai  *    aj  * (1-ak) &
-       & + var(i-1,j-1,k  ) * (1-ai) * (1-aj) *    ak  &
-       & + var(i  ,j-1,k  ) *    ai  * (1-aj) *    ak  &
-       & + var(i-1,j  ,k  ) * (1-ai) *    aj  *    ak  &
-       & + var(i  ,j  ,k  ) *    ai  *    aj  *    ak
-!  ELSE
-!    var5 = var(i-1,j-1,k-1) * (1-ai) * (1-aj) * (1-ak) &
-!       & + var(1  ,j-1,k-1) *    ai  * (1-aj) * (1-ak) &
-!       & + var(i-1,j  ,k-1) * (1-ai) *    aj  * (1-ak) &
-!       & + var(1  ,j  ,k-1) *    ai  *    aj  * (1-ak) &
-!       & + var(i-1,j-1,k  ) * (1-ai) * (1-aj) *    ak  &
-!       & + var(1  ,j-1,k  ) *    ai  * (1-aj) *    ak  &
-!       & + var(i-1,j  ,k  ) * (1-ai) *    aj  *    ak  &
-!       & + var(1  ,j  ,k  ) *    ai  *    aj  *    ak
-!  END IF
+  var5 = var(i-1,j-1,k-1) * (1-ai) * (1-aj) * (1-ak) &
+     & + var(i  ,j-1,k-1) *    ai  * (1-aj) * (1-ak) &
+     & + var(i-1,j  ,k-1) * (1-ai) *    aj  * (1-ak) &
+     & + var(i  ,j  ,k-1) *    ai  *    aj  * (1-ak) &
+     & + var(i-1,j-1,k  ) * (1-ai) * (1-aj) *    ak  &
+     & + var(i  ,j-1,k  ) *    ai  * (1-aj) *    ak  &
+     & + var(i-1,j  ,k  ) * (1-ai) *    aj  *    ak  &
+     & + var(i  ,j  ,k  ) *    ai  *    aj  *    ak
 
   RETURN
 END SUBROUTINE itpl_3d

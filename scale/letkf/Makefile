@@ -27,13 +27,13 @@ LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LIBBLAS)
 all:	$(PROGS)
 
 letkf:	letkf.o $(OBJS) common_modules
-	$(FC) $(FOPTS) $(FMCMODEL) -o letkf$(shell ../common/enssize) letkf.o \
+	$(FC) $(FOPTS) $(FMCMODEL) -o letkf letkf.o \
 	$(COMMON_OBJS) $(OBJS) $(LIBS)
 mean:	mean.o letkf_obs.o common_modules
-	$(FC) $(FOPTS) $(FMCMODEL) -o mean$(shell ../common/enssize) mean.o \
+	$(FC) $(FOPTS) $(FMCMODEL) -o mean mean.o \
 	$(COMMON_OBJS) $(OBJS) $(LIBS)
 efso:	efso.o $(OBJS) common_modules
-	$(FC) $(FOPTS) $(FMCMODEL) -o efso$(shell ../common/enssize) efso.o \
+	$(FC) $(FOPTS) $(FMCMODEL) -o efso efso.o \
 	$(COMMON_OBJS) $(OBJS) $(LIBS)
 
 letkf.o:	letkf.f90 $(OBJS) common_modules
