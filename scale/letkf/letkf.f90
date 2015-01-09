@@ -67,7 +67,7 @@ PROGRAM letkf
 !  WRITE(6,'(A,F15.2)') '  sigma_obst   :',sigma_obst
 !  WRITE(6,'(A)') '============================================='
 
-  CALL set_common_scale
+  CALL set_common_scale(-1)
 
 !-----------------------------------------------------------------------
 

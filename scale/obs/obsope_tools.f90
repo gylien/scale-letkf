@@ -14,8 +14,6 @@ MODULE obsope_tools
   USE common_mpi_scale
   USE common_obs_scale
 
-  use common_letkf, only: nbv
-
 !  use common_scalelib
 
   use common_nml
@@ -51,29 +49,29 @@ MODULE obsope_tools
 
 
 CONTAINS
-!-----------------------------------------------------------------------
-! Read namelist for obsope
-!-----------------------------------------------------------------------
-subroutine read_nml_obsope
-  implicit none
+!!-----------------------------------------------------------------------
+!! Read namelist for obsope
+!!-----------------------------------------------------------------------
+!subroutine read_nml_obsope
+!  implicit none
 
-  call read_nml_letkf_prc
-  call read_nml_letkf_obs
+!  call read_nml_letkf
+!  call read_nml_letkf_prc
 
-  return
-end subroutine read_nml_obsope
-!-----------------------------------------------------------------------
-! Read namelist for obsmake
-!-----------------------------------------------------------------------
-subroutine read_nml_obsmake
-  implicit none
+!  return
+!end subroutine read_nml_obsope
+!!-----------------------------------------------------------------------
+!! Read namelist for obsmake
+!!-----------------------------------------------------------------------
+!subroutine read_nml_obsmake
+!  implicit none
 
-  call read_nml_letkf_prc
-  call read_nml_letkf_obs
-  call read_nml_letkf_obsmake
+!  call read_nml_letkf
+!  call read_nml_letkf_prc
+!  call read_nml_letkf_obsmake
 
-  return
-end subroutine read_nml_obsmake
+!  return
+!end subroutine read_nml_obsmake
 !-----------------------------------------------------------------------
 ! PARAM_LETKF_OBSMAKE
 !-----------------------------------------------------------------------
@@ -120,7 +118,7 @@ SUBROUTINE obsope_cal(obs)
 
 !-----------------------------------------------------------------------
 
-  call set_scalelib(MEM_NP, nitmax, nprocs, proc2mem)
+!  call set_scalelib(MEM_NP, nitmax, nprocs, proc2mem)
 
 !  call set_mpi_along_domains
 
@@ -128,12 +126,12 @@ SUBROUTINE obsope_cal(obs)
 
   call obs_da_value_allocate(obsda,0)
 
-  allocate ( v3dg (nlevhalo,nlonhalo,nlathalo,nv3dd) )
-  allocate ( v2dg (nlonhalo,nlathalo,nv2dd) )
+  allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
+  allocate ( v2dg (nlonh,nlath,nv2dd) )
 
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
-    if (im >= 1 .and. im <= nbv) then
+    if (im >= 1 .and. im <= MEMBER) then
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
             im, ', subdomain id #', proc2mem(2,it,myrank+1)
 
@@ -220,7 +218,7 @@ SUBROUTINE obsope_cal(obs)
 
   deallocate ( v3dg, v2dg )
 
-  call unset_scalelib
+  call unset_scalelib !!!!!!
 
 end subroutine obsope_cal
 !-----------------------------------------------------------------------
@@ -247,10 +245,10 @@ SUBROUTINE obsmake_cal(obs)
 
 !-----------------------------------------------------------------------
 
-  call set_scalelib(MEM_NP, nitmax, nprocs, proc2mem)
+!  call set_scalelib(MEM_NP, nitmax, nprocs, proc2mem)
 
-  allocate ( v3dg (nlevhalo,nlonhalo,nlathalo,nv3dd) )
-  allocate ( v2dg (nlonhalo,nlathalo,nv2dd) )
+  allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
+  allocate ( v2dg (nlonh,nlath,nv2dd) )
 
   write (6,'(A,I6.6,A,I6.6)') 'MYRANK ',myrank,' is processing subdomain id #', proc2mem(2,1,myrank+1)
 
@@ -339,7 +337,7 @@ SUBROUTINE obsmake_cal(obs)
       end select
       obs%dat(n) = obs%dat(n) + obs%err(n) * error(n)
 
-print *, '######', obs%elm(n), obs%dat(n)
+!print *, '######', obs%elm(n), obs%dat(n)
 
     end do ! [ n = 1, obs%nobs ]
 
@@ -347,7 +345,7 @@ print *, '######', obs%elm(n), obs%dat(n)
 
   end if ! [ PRC_myrank == 0 ]
 
-  call unset_scalelib
+  call unset_scalelib !!!!!!
 
 end subroutine obsmake_cal
 !=======================================================================

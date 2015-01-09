@@ -482,7 +482,7 @@ SUBROUTINE set_letkf_obs
 
 
 
-write (6, '(2I6,2F8.2,4F12.4,I3)') obs%elm(obsda%idx(n)), obs%typ(obsda%idx(n)), obs%lon(obsda%idx(n)), obs%lat(obsda%idx(n)), obs%lev(obsda%idx(n)), obs%dat(obsda%idx(n)), obs%err(obsda%idx(n)), obsda%val(n), obsda%qc(n)
+!write (6, '(2I6,2F8.2,4F12.4,I3)') obs%elm(obsda%idx(n)), obs%typ(obsda%idx(n)), obs%lon(obsda%idx(n)), obs%lat(obsda%idx(n)), obs%lev(obsda%idx(n)), obs%dat(obsda%idx(n)), obs%err(obsda%idx(n)), obsda%val(n), obsda%qc(n)
 
 
 
@@ -824,12 +824,12 @@ print *, myrank, nobstotalg, nobstotal, nobsgrd(nlon,nlat,:)
 
 
 
-do i = 0, MEM_NP-1
-do j = 1, nlat
-write (6,'(31I4)') nobsgrd(:,j,i)
-end do
-write (6,*)
-end do
+!do i = 0, MEM_NP-1
+!do j = 1, nlat
+!write (6,'(31I4)') nobsgrd(:,j,i)
+!end do
+!write (6,*)
+!end do
 
 
 !do i = 0, MEM_NP-1

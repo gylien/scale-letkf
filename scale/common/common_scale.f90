@@ -159,8 +159,12 @@ MODULE common_scale
 CONTAINS
 !-----------------------------------------------------------------------
 ! Set the parameters
+! mem:
+!  >0: mem
+!  0:  MEMBER
+!  -1: MEMBER+1
 !-----------------------------------------------------------------------
-SUBROUTINE set_common_scale
+SUBROUTINE set_common_scale(mem)
   use scale_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
@@ -173,6 +177,7 @@ SUBROUTINE set_common_scale
     KHALO
 
   IMPLICIT NONE
+  integer, intent(in) :: mem
 !  REAL(r_sngl) :: slat(nlat), wlat(nlat)
 !  REAL(r_size) :: totalwg, wgtmp, latm1, latm2
 !  INTEGER :: i,j
@@ -184,7 +189,7 @@ SUBROUTINE set_common_scale
 
   call read_nml_letkf
   call read_nml_letkf_prc
-  call read_nml_letkf_obs
+  call read_nml_letkf_obs !!!!!!!!!!!!!!!!!!!!!! move outside of subroutine????
 
   if (nprocs /= NNODES * PPN) then
     write(6,'(A,I10)') 'Number of MPI processes = ', nprocs
@@ -197,7 +202,13 @@ SUBROUTINE set_common_scale
   !
   ! Set up node and process distribution
   !
-  CALL set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
+  if (mem == 0) then
+    call set_mem_node_proc(MEMBER,NNODES,PPN,MEM_NODES,MEM_NP)
+  else if (mem == -1) then
+    call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
+  else
+    call set_mem_node_proc(mem,NNODES,PPN,MEM_NODES,MEM_NP)
+  end if
 
 !! print process distribution!!!
 
@@ -853,128 +864,6 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
 END SUBROUTINE write_restart
 
 
-
-!!-- Read a grid file ---------------------------------------------------
-!SUBROUTINE read_grd(filename,inv3d,inv2d,iv3dname,iv2dname,v3d,v2d)
-!  IMPLICIT NONE
-!  CHARACTER(*),INTENT(IN) :: filename
-!  INTEGER,INTENT(IN) :: inv3d,inv2d
-!  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
-!  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
-!  REAL(r_size),INTENT(OUT) :: v3d(nlon,nlat,nlev,inv3d)
-!  REAL(r_size),INTENT(OUT) :: v2d(nlon,nlat,inv2d)
-!  REAL(r_dble) :: buf3d8(nlon,nlat,nlev)
-!  REAL(r_dble) :: buf2d8(nlon,nlat)
-!  INTEGER :: iunit,n
-
-!  CALL ncio_open(filename, nf90_nowrite, iunit)
-!  DO n=1,inv3d
-!    IF(r_size == r_dble) THEN
-!      CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlon,nlat,nlev,1,v3d(:,:,:,n))
-!    ELSE
-!      CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlon,nlat,nlev,1,buf3d8)
-!      v3d(:,:,:,n) = REAL(buf3d8,r_size)
-!    END IF
-!  END DO
-!  DO n=1,inv2d
-!    IF(r_size == r_dble) THEN
-!      CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlon,nlat,1,v2d(:,:,n))
-!    ELSE
-!      CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlon,nlat,1,buf2d8)
-!      v2d(:,:,n) = REAL(buf2d8,r_size)
-!    END IF
-!  END DO
-!  CALL ncio_close(iunit)
-
-!  RETURN
-!END SUBROUTINE read_grd
-
-!SUBROUTINE read_grd4(filename,inv3d,inv2d,iv3dname,iv2dname,v3d,v2d)
-!  IMPLICIT NONE
-!  CHARACTER(*),INTENT(IN) :: filename
-!  INTEGER,INTENT(IN) :: inv3d,inv2d
-!  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
-!  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
-!  REAL(r_sngl),INTENT(OUT) :: v3d(nlon,nlat,nlev,inv3d)
-!  REAL(r_sngl),INTENT(OUT) :: v2d(nlon,nlat,inv2d)
-!  REAL(r_dble) :: buf3d8(nlon,nlat,nlev)
-!  REAL(r_dble) :: buf2d8(nlon,nlat)
-!  INTEGER :: iunit,n
-
-!  CALL ncio_open(filename, nf90_nowrite, iunit)
-!  DO n=1,inv3d
-!    CALL ncio_read_3d_r8(iunit,trim(iv3dname(n)),nlon,nlat,nlev,1,buf3d8)
-!    v3d(:,:,:,n) = REAL(buf3d8,r_sngl)
-!  END DO
-!  DO n=1,inv2d
-!    CALL ncio_read_2d_r8(iunit,trim(iv2dname(n)),nlon,nlat,1,buf2d8)
-!    v2d(:,:,n) = REAL(buf2d8,r_sngl)
-!  END DO
-!  CALL ncio_close(iunit)
-
-!  RETURN
-!END SUBROUTINE read_grd4
-
-!!-- Write a grid file -------------------------------------------------
-!SUBROUTINE write_grd(filename,inv3d,inv2d,iv3dname,iv2dname,v3d,v2d)
-!  IMPLICIT NONE
-!  CHARACTER(*),INTENT(IN) :: filename
-!  INTEGER,INTENT(IN) :: inv3d,inv2d
-!  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
-!  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
-!  REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,inv3d)
-!  REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,inv2d)
-!  REAL(r_dble) :: buf3d8(nlon,nlat,nlev)
-!  REAL(r_dble) :: buf2d8(nlon,nlat)
-!  INTEGER :: iunit,n
-
-!  CALL ncio_open(filename, nf90_write, iunit)
-!  DO n=1,inv3d
-!    IF(r_size == r_dble) THEN
-!      CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlon,nlat,nlev,1,v3d(:,:,:,n))
-!    ELSE
-!      buf3d8 = REAL(v3d(:,:,:,n),r_dble)
-!      CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlon,nlat,nlev,1,buf3d8)
-!    END IF
-!  END DO
-!  DO n=1,inv2d
-!    IF(r_size == r_dble) THEN
-!      CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlon,nlat,1,v2d(:,:,n))
-!    ELSE
-!      buf2d8 = REAL(v2d(:,:,n),r_dble)
-!      CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlon,nlat,1,buf2d8)
-!    END IF
-!  END DO
-!  CALL ncio_close(iunit)
-
-!  RETURN
-!END SUBROUTINE write_grd
-
-!SUBROUTINE write_grd4(filename,inv3d,inv2d,iv3dname,iv2dname,v3d,v2d)
-!  IMPLICIT NONE
-!  CHARACTER(*),INTENT(IN) :: filename
-!  INTEGER,INTENT(IN) :: inv3d,inv2d
-!  CHARACTER(vname_max),INTENT(IN) :: iv3dname(inv3d)
-!  CHARACTER(vname_max),INTENT(IN) :: iv2dname(inv2d)
-!  REAL(r_sngl),INTENT(IN) :: v3d(nlon,nlat,nlev,inv3d)
-!  REAL(r_sngl),INTENT(IN) :: v2d(nlon,nlat,inv2d)
-!  REAL(r_dble) :: buf3d8(nlon,nlat,nlev)
-!  REAL(r_dble) :: buf2d8(nlon,nlat)
-!  INTEGER :: iunit,n
-
-!  CALL ncio_open(filename, nf90_write, iunit)
-!  DO n=1,inv3d
-!    buf3d8 = REAL(v3d(:,:,:,n),r_dble)
-!    CALL ncio_write_3d_r8(iunit,trim(iv3dname(n)),nlon,nlat,nlev,1,buf3d8)
-!  END DO
-!  DO n=1,inv2d
-!    buf2d8 = REAL(v2d(:,:,n),r_dble)
-!    CALL ncio_write_2d_r8(iunit,trim(iv2dname(n)),nlon,nlat,1,buf2d8)
-!  END DO
-!  CALL ncio_close(iunit)
-
-!  RETURN
-!END SUBROUTINE write_grd4
 !-----------------------------------------------------------------------
 ! Monitor
 !-----------------------------------------------------------------------
@@ -1000,12 +889,12 @@ END SUBROUTINE write_restart
 !-----------------------------------------------------------------------
 ! Ensemble manipulations
 !-----------------------------------------------------------------------
-SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
+SUBROUTINE ensmean_grd(mem,nij,v3d,v2d,v3dm,v2dm)
   IMPLICIT NONE
-  INTEGER,INTENT(IN) :: member
+  INTEGER,INTENT(IN) :: mem
   INTEGER,INTENT(IN) :: nij
-  REAL(r_size),INTENT(IN) :: v3d(nij,nlev,member,nv3d)
-  REAL(r_size),INTENT(IN) :: v2d(nij,member,nv2d)
+  REAL(r_size),INTENT(IN) :: v3d(nij,nlev,mem,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nij,mem,nv2d)
   REAL(r_size),INTENT(OUT) :: v3dm(nij,nlev,nv3d)
   REAL(r_size),INTENT(OUT) :: v2dm(nij,nv2d)
   INTEGER :: i,k,m,n
@@ -1015,10 +904,10 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
     DO k=1,nlev
       DO i=1,nij
         v3dm(i,k,n) = v3d(i,k,1,n)
-        DO m=2,member
+        DO m=2,mem
           v3dm(i,k,n) = v3dm(i,k,n) + v3d(i,k,m,n)
         END DO
-        v3dm(i,k,n) = v3dm(i,k,n) / REAL(member,r_size)
+        v3dm(i,k,n) = v3dm(i,k,n) / REAL(mem,r_size)
       END DO
     END DO
 !$OMP END PARALLEL DO
@@ -1028,10 +917,10 @@ SUBROUTINE ensmean_grd(member,nij,v3d,v2d,v3dm,v2dm)
 !$OMP PARALLEL DO PRIVATE(i,m)
     DO i=1,nij
       v2dm(i,n) = v2d(i,1,n)
-      DO m=2,member
+      DO m=2,mem
         v2dm(i,n) = v2dm(i,n) + v2d(i,m,n)
       END DO
-      v2dm(i,n) = v2dm(i,n) / REAL(member,r_size)
+      v2dm(i,n) = v2dm(i,n) / REAL(mem,r_size)
     END DO
 !$OMP END PARALLEL DO
   END DO
@@ -1049,7 +938,7 @@ SUBROUTINE state_trans(v3dg)
 !  use scale_history, only: &
 !     HIST_get
 
-  use scale_atmos_thermodyn, only: AQ_CP, AQ_CV
+  use scale_atmos_thermodyn, only: AQ_CV
     use scale_const, only: &
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
@@ -1068,13 +957,7 @@ SUBROUTINE state_trans(v3dg)
 
 !  REAL(RP) :: pres2(nlev,nlon,nlat)
 
-!write(6,*) AQ_CP
-!write(6,*)
-!write(6,*) AQ_CV
-!write(6,*)
-!write(6,*) CVdry, Rdry, Rvap, PRE00
-
-!!!!!!    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
+!$OMP PARALLEL DO PRIVATE(i,j,k,iv3d,qdry,CVtot,Rtot,CPovCV,rho,pres,temp) COLLAPSE(2)
   do j = 1, nlat
     do i = 1, nlon
       do k = 1, nlev
@@ -1100,6 +983,7 @@ SUBROUTINE state_trans(v3dg)
       enddo
     enddo
   enddo
+!$OMP END PARALLEL DO
 
 !  v3dg(:,:,:,5) = v3dg(:,:,:,iv3d_rho) ! temporarily store density here
 !  v3dg(:,:,:,iv3d_u) = v3dg(:,:,:,iv3d_rhou) / v3dg(:,:,:,5)
@@ -1150,7 +1034,7 @@ SUBROUTINE state_trans_inv(v3dg)
   real(RP) :: qdry,CVtot,Rtot,CVovCP
   integer :: i,j,k,iv3d
 
-!!!!!!    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
+!$OMP PARALLEL DO PRIVATE(i,j,k,iv3d,qdry,CVtot,Rtot,CPovCV,rho,rhot) COLLAPSE(2)
   do j = 1, nlat
     do i = 1, nlon
       do k = 1, nlev
@@ -1175,105 +1059,9 @@ SUBROUTINE state_trans_inv(v3dg)
       enddo
     enddo
   enddo
+!$OMP END PARALLEL DO
 
   RETURN
 END SUBROUTINE state_trans_inv
-
-!  subroutine ATMOS_THERMODYN_temp_pres_3D( &
-!       temp, &
-!       pres, &
-!       dens, &
-!       rhot, &
-!       q     )
-!    implicit none
-
-!    real(RP), intent(out) :: temp(KA,IA,JA)    !< temperature                     [K]
-!    real(RP), intent(out) :: pres(KA,IA,JA)    !< pressure                        [Pa]
-!    real(RP), intent(in)  :: dens(KA,IA,JA)    !< density                         [kg/m3]
-!    real(RP), intent(in)  :: rhot(KA,IA,JA)    !< density * potential temperature [kg/m3*K]
-!    real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration              [kg/kg]
-
-!    real(RP) :: qdry
-!    real(RP) :: Rtot, CVtot, CPovCV
-
-!    integer :: k, i, j, iqw
-!    !---------------------------------------------------------------------------
-
-!    !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
-!    do j = 1, JA
-!    do i = 1, IA
-!    do k = KS, KE
-!#ifdef DRY
-!       CVtot = CVdry
-!       Rtot  = Rdry
-!#else
-!       qdry  = 1.0_RP
-!       CVtot = 0.0_RP
-!       do iqw = QQS, QQE
-!          qdry  = qdry  - q(k,i,j,iqw)
-!          CVtot = CVtot + q(k,i,j,iqw) * AQ_CV(iqw)
-!       enddo
-!       CVtot = CVdry * qdry + CVtot
-!       Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
-!#endif
-
-!       CPovCV = ( CVtot + Rtot ) / CVtot
-
-!       pres(k,i,j) = PRE00 * ( rhot(k,i,j) * Rtot / PRE00 )**CPovCV
-!       temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rtot )
-!    enddo
-!    enddo
-!    enddo
-
-!    return
-!  end subroutine ATMOS_THERMODYN_temp_pres_3D
-
-
-!  !-----------------------------------------------------------------------------
-!  subroutine ATMOS_THERMODYN_pott_3D( &
-!      pott,         &
-!      temp, pres, q )
-!    implicit none
-
-!    real(RP), intent(out) :: pott(KA,IA,JA)    ! potential temperature [K]
-!    real(RP), intent(in)  :: temp(KA,IA,JA)    ! temperature           [K]
-!    real(RP), intent(in)  :: pres(KA,IA,JA)    ! pressure              [Pa]
-!    real(RP), intent(in)  :: q   (KA,IA,JA,QA) ! mass concentration    [kg/kg]
-
-!    ! work
-!    real(RP) :: qdry
-!    real(RP) :: Rtot, CVtot, RovCP
-
-!    integer :: k, i, j, iqw
-!    !---------------------------------------------------------------------------
-
-!    do j = 1, JA
-!    do i = 1, IA
-!    do k = 1, KA
-!#ifdef DRY
-!       CVtot = CVdry
-!       Rtot  = Rdry
-!#else
-!       qdry  = 1.0_RP
-!       CVtot = 0.0_RP
-!       do iqw = QQS, QQE
-!          qdry  = qdry  - q(k,i,j,iqw)
-!          CVtot = CVtot + q(k,i,j,iqw) * AQ_CV(iqw)
-!       enddo
-!       CVtot = CVdry * qdry + CVtot
-!       Rtot  = Rdry  * qdry + Rvap * q(k,i,j,I_QV)
-!#endif
-
-!       RovCP = Rtot / ( CVtot + Rtot )
-
-!       pott(k,i,j) = temp(k,i,j) * ( PRE00 / pres(k,i,j) )**RovCP
-!    enddo
-!    enddo
-!    enddo
-
-!    return
-!  end subroutine ATMOS_THERMODYN_pott_3D
-
-
 
 END MODULE common_scale

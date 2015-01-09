@@ -33,24 +33,26 @@ PROGRAM obsmake
   OPEN(6,FILE=stdoutf)
   WRITE(6,'(A,I3.3,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
 !
-  CALL set_common_scale
+  CALL set_common_scale(1)
 
 !-----------------------------------------------------------------------
 
-  ! setup standard I/O
-  call IO_setup( MODELNAME, .false. )
+!  ! setup standard I/O
+!  call IO_setup( MODELNAME, .false. )
 
-  call read_nml_obsmake
+!  call read_nml_obsmake
 
-  if (nprocs /= NNODES * PPN) then
-    write(6,*) 'Number of MPI processes should be equal to NNODES * PPN.'
-    stop
-  else if (nprocs /= MEM_NP) then
-    write(6,*) 'Number of MPI processes should be equal to MEM_NP.'
-    stop
-  end if
+  call read_nml_letkf_obsmake
 
-  CALL set_mem_node_proc(1,NNODES,PPN,MEM_NODES,MEM_NP)
+!  if (nprocs /= NNODES * PPN) then
+!    write(6,*) 'Number of MPI processes should be equal to NNODES * PPN.'
+!    stop
+!  else if (nprocs /= MEM_NP) then
+!    write(6,*) 'Number of MPI processes should be equal to MEM_NP.'
+!    stop
+!  end if
+
+!  CALL set_mem_node_proc(1,NNODES,PPN,MEM_NODES,MEM_NP)
 
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00

@@ -14,8 +14,6 @@ PROGRAM obsope
   USE common_mpi_scale
   USE common_obs_scale
 
-  use common_letkf, only: nbv
-
   use common_nml
 
   use obsope_tools
@@ -54,21 +52,21 @@ PROGRAM obsope
   OPEN(6,FILE=stdoutf)
   WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
 !
-  CALL set_common_scale
+  CALL set_common_scale(-1)
 
 !-----------------------------------------------------------------------
 
-  ! setup standard I/O
-  call IO_setup( MODELNAME, .false. )
+!  ! setup standard I/O
+!  call IO_setup( MODELNAME, .false. )
 
-  call read_nml_obsope
+!  call read_nml_obsope
 
-  if (nprocs /= NNODES * PPN) then
-    write(6,*) 'Number of MPI processes should be equal to NNODES * PPN.'
-    stop
-  end if
+!  if (nprocs /= NNODES * PPN) then
+!    write(6,*) 'Number of MPI processes should be equal to NNODES * PPN.'
+!    stop
+!  end if
 
-  CALL set_mem_node_proc(nbv+1,NNODES,PPN,MEM_NODES,MEM_NP)
+!  CALL set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
