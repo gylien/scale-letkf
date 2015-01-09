@@ -27,7 +27,7 @@ LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LIBBLAS)
 all:	$(PROGS)
 
 obsope:	obsope.o $(OBJS) common_modules
-	$(FC) $(FOPTS) $(FMCMODEL) -o obsope$(shell ../common/enssize) obsope.o \
+	$(FC) $(FOPTS) $(FMCMODEL) -o obsope obsope.o \
 	$(COMMON_OBJS) $(OBJS) $(LIBS)
 obsmake:	obsmake.o $(OBS) common_modules
 	$(FC) $(FOPTS) $(FMCMODEL) -o obsmake obsmake.o $(COMMON_OBJS) $(OBJS) $(LIBS)
@@ -69,4 +69,4 @@ common_modules:
 	( cd $(COMMON_DIR) ; make )
 
 clean:
-	rm -f *.o *.mod *.lst $(PROGS) obsope[0-9]*
+	rm -f *.o *.mod *.lst $(PROGS) obsope

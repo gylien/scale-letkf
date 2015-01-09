@@ -12,9 +12,9 @@ wavel1 =   8000.
 wavel2 = 100000.
 dx = 200.
 zheight = 20000.
-taper_width = 5
+taper_width = 100
 
-pert_std = 0.5
+pert_std = 0.1
 halo = 2
 
 nproc, rootgrps, dimdef = scale_open(initialfile, 'r+')

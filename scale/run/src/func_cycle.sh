@@ -121,8 +121,8 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $MODELDIR/scale-les_init $TMPDAT/exec
   ln -fs $MODELDIR/scale-les_pp $TMPDAT/exec
   ln -fs $COMMON_DIR/pdbash $TMPDAT/exec
-  ln -fs $OBSUTIL_DIR/obsope$(printf $MEMBER_FMT $MEMBER) $TMPDAT/exec/obsope
-  ln -fs $LETKF_DIR/letkf$(printf $MEMBER_FMT $MEMBER) $TMPDAT/exec/letkf
+  ln -fs $OBSUTIL_DIR/obsope $TMPDAT/exec
+  ln -fs $LETKF_DIR/letkf $TMPDAT/exec
   ln -fs $DATADIR/rad $TMPDAT
   ln -fs $DATADIR/land $TMPDAT
   ln -fs $ANLWRF $TMPDAT/wrf
@@ -149,8 +149,8 @@ ${MODELDIR}/scale-les|exec/scale-les
 ${MODELDIR}/scale-les_init|exec/scale-les_init
 ${MODELDIR}/scale-les_pp|exec/scale-les_pp
 ${COMMON_DIR}/pdbash|exec/pdbash
-${OBSUTIL_DIR}/obsope$(printf $MEMBER_FMT $MEMBER)|exec/obsope
-${LETKF_DIR}/letkf$(printf $MEMBER_FMT $MEMBER)|exec/letkf
+${OBSUTIL_DIR}/obsope|exec/obsope
+${LETKF_DIR}/letkf|exec/letkf
 ${SCRP_DIR}/config.nml.scale|conf/config.nml.scale
 ${SCRP_DIR}/config.nml.scale_init|conf/config.nml.scale_init
 ${SCRP_DIR}/config.nml.obsope|conf/config.nml.obsope

@@ -1,3 +1,11 @@
+&PARAM_LETKF
+[MEMBER]
+[SLOT_START]
+[SLOT_END]
+[SLOT_BASE]
+[SLOT_TINTERVAL]
+/
+
 &PARAM_LETKF_PRC
 [NNODES]
 [PPN]
@@ -6,10 +14,6 @@
 /
 
 &PARAM_LETKF_OBS
-[SLOT_START]
-[SLOT_END]
-[SLOT_BASE]
-[SLOT_TINTERVAL]
 /
 
 !*** Attach SCALE configuration below ***

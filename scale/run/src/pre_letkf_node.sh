@@ -53,14 +53,15 @@ ln -fs $OBSDIR/obs_${ATIME}.dat $TMPDIR/obs.dat
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.letkf | \
-    sed -e "s/\[NNODES\]/ NNODES = $NNODES,/" \
-        -e "s/\[PPN\]/ PPN = $PPN,/" \
-        -e "s/\[MEM_NODES\]/ MEM_NODES = $MEM_NODES,/" \
-        -e "s/\[MEM_NP\]/ MEM_NP = $MEM_NP,/" \
+    sed -e "s/\[MEMBER\]/ MEMBER = $MEMBER,/" \
         -e "s/\[SLOT_START\]/ SLOT_START = $SLOT_START,/" \
         -e "s/\[SLOT_END\]/ SLOT_END = $SLOT_END,/" \
         -e "s/\[SLOT_BASE\]/ SLOT_BASE = $SLOT_BASE,/" \
         -e "s/\[SLOT_TINTERVAL\]/ SLOT_TINTERVAL = $LTIMESLOT.D0,/" \
+        -e "s/\[NNODES\]/ NNODES = $NNODES,/" \
+        -e "s/\[PPN\]/ PPN = $PPN,/" \
+        -e "s/\[MEM_NODES\]/ MEM_NODES = $MEM_NODES,/" \
+        -e "s/\[MEM_NP\]/ MEM_NP = $MEM_NP,/" \
     > $TMPDIR/letkf.conf
 
 # These parameters are not important for obsope

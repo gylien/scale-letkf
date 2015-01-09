@@ -505,7 +505,7 @@ subroutine read_ens_mpi(file,v3d,v2d)
       call read_restart(filename,v3dg,v2dg)
 
 
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   CALL CPU_TIME(timer)
   if (myrank == 0) print *, '######', timer
 
@@ -513,7 +513,7 @@ subroutine read_ens_mpi(file,v3d,v2d)
       call state_trans(v3dg)
 
 
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   CALL CPU_TIME(timer)
   if (myrank == 0) print *, '######', timer
 
@@ -563,7 +563,7 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
     CALL gather_grd_mpi_alltoall(mstart,mend,v3d,v2d,v3dg,v2dg)
 
 
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   CALL CPU_TIME(timer)
   if (myrank == 0) print *, '######', timer
 
@@ -575,7 +575,7 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
       call state_trans_inv(v3dg)
 
 
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   CALL CPU_TIME(timer)
   if (myrank == 0) print *, '######', timer
 

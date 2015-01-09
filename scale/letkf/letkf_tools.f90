@@ -762,7 +762,7 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
   nobsl = 0
   logrlev = LOG(rlev)
 
-write(6,'(A)') '$$$======'
+!write(6,'(A)') '$$$======'
 
   do ip = 0, MEM_NP-1
 
