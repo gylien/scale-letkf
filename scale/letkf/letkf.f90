@@ -24,7 +24,8 @@ PROGRAM letkf
   REAL(r_size),ALLOCATABLE :: gues2d(:,:,:)
   REAL(r_size),ALLOCATABLE :: anal3d(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: anal2d(:,:,:)
-  REAL(r_size) :: rtimer00,rtimer
+!  REAL(r_size) :: rtimer00,rtimer
+  REAL(r_dble) :: rtimer00,rtimer
   INTEGER :: ierr
   CHARACTER(11) :: stdoutf='NOUT-000000'
 
@@ -36,8 +37,9 @@ PROGRAM letkf
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
-  CALL CPU_TIME(rtimer00)
+!  CALL CPU_TIME(rtimer00)
   CALL initialize_mpi
+  rtimer00 = MPI_WTIME()
 !
   WRITE(stdoutf(6:11), '(I6.6)') myrank
   WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
@@ -76,7 +78,8 @@ PROGRAM letkf
     CALL set_common_mpi_scale
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    CALL CPU_TIME(rtimer)
+!    CALL CPU_TIME(rtimer)
+    rtimer = MPI_WTIME()
     WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE): ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 
@@ -95,7 +98,8 @@ PROGRAM letkf
     CALL read_obs(obsfile,obs)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    CALL CPU_TIME(rtimer)
+!    CALL CPU_TIME(rtimer)
+    rtimer = MPI_WTIME()
     WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):   ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 
@@ -105,7 +109,8 @@ PROGRAM letkf
     CALL set_letkf_obs
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    CALL CPU_TIME(rtimer)
+!    CALL CPU_TIME(rtimer)
+    rtimer = MPI_WTIME()
     WRITE(6,'(A,2F10.2)') '### TIMER(PROCESS_OBS):',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 
@@ -147,7 +152,8 @@ PROGRAM letkf
 
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    CALL CPU_TIME(rtimer)
+!    CALL CPU_TIME(rtimer)
+    rtimer = MPI_WTIME()
     WRITE(6,'(A,2F10.2)') '### TIMER(READ_GUES):  ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 
@@ -158,7 +164,8 @@ PROGRAM letkf
     CALL write_ensmspr_mpi('gues',gues3d,gues2d)
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    CALL CPU_TIME(rtimer)
+!    CALL CPU_TIME(rtimer)
+    rtimer = MPI_WTIME()
     WRITE(6,'(A,2F10.2)') '### TIMER(GUES_MEAN):  ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 !!-----------------------------------------------------------------------
@@ -174,7 +181,8 @@ PROGRAM letkf
     CALL das_letkf(gues3d,gues2d,anal3d,anal2d)
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    CALL CPU_TIME(rtimer)
+!    CALL CPU_TIME(rtimer)
+    rtimer = MPI_WTIME()
     WRITE(6,'(A,2F10.2)') '### TIMER(DAS_LETKF):  ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 !-----------------------------------------------------------------------
@@ -188,7 +196,8 @@ PROGRAM letkf
     CALL write_ens_mpi('anal',anal3d,anal2d)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    CALL CPU_TIME(rtimer)
+!    CALL CPU_TIME(rtimer)
+    rtimer = MPI_WTIME()
     WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_ANAL): ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
     !
@@ -197,7 +206,8 @@ PROGRAM letkf
     CALL write_ensmspr_mpi('anal',anal3d,anal2d)
     !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    CALL CPU_TIME(rtimer)
+!    CALL CPU_TIME(rtimer)
+    rtimer = MPI_WTIME()
     WRITE(6,'(A,2F10.2)') '### TIMER(ANAL_MEAN):  ',rtimer,rtimer-rtimer00
     rtimer00=rtimer
 !!-----------------------------------------------------------------------
@@ -218,7 +228,13 @@ PROGRAM letkf
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
+
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+!  CALL CPU_TIME(rtimer)
+  rtimer = MPI_WTIME()
+  WRITE(6,'(A,2F10.2)') '### TIMER(FINALIZE):  ',rtimer,rtimer-rtimer00
+  rtimer00=rtimer
+
   CALL finalize_mpi
 
   STOP
