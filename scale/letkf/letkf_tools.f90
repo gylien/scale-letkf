@@ -126,18 +126,22 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   CALL ensmean_grd(MEMBER,nij1,gues3d,gues2d,mean3d,mean2d)
   DO n=1,nv3d
     DO m=1,MEMBER
+!$OMP PARALLEL DO PRIVATE(i,k)
       DO k=1,nlev
         DO i=1,nij1
           gues3d(i,k,m,n) = gues3d(i,k,m,n) - mean3d(i,k,n)
         END DO
       END DO
+!$OMP END PARALLEL DO
     END DO
   END DO
   DO n=1,nv2d
     DO m=1,MEMBER
+!$OMP PARALLEL DO PRIVATE(i)
       DO i=1,nij1
         gues2d(i,m,n) = gues2d(i,m,n) - mean2d(i,n)
       END DO
+!$OMP END PARALLEL DO
     END DO
   END DO
   !
@@ -193,6 +197,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ALLOCATE( hdxf(1:nobstotal,1:MEMBER),rdiag(1:nobstotal),rloc(1:nobstotal),dep(1:nobstotal) )
   DO ilev=1,nlev
     WRITE(6,'(A,I3)') 'ilev = ',ilev
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,m,k,q_mean,q_sprd,q_anal)
     DO ij=1,nij1
       DO n=1,nv3d
         IF(var_local_n2n(n) < n) THEN
@@ -207,10 +212,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,MIN_INFL_MUL,RELAX_ALPHA,trans(:,:,n))
           work3d(ij,ilev,n) = parm
         END IF
-        IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) .AND. ilev > LEV_UPDATE_Q) THEN   ! GYL, do not update upper-level q,qc
+        IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) .AND. ilev > LEV_UPDATE_Q) THEN ! GYL, do not update upper-level q,qc
           anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)      ! GYL
         ELSE                                                                 ! GYL
-          DO m=1,MEMBER                                                         ! GYL
+          DO m=1,MEMBER                                                      ! GYL
             anal3d(ij,ilev,m,n) = mean3d(ij,ilev,n)
             DO k=1,MEMBER
               anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
@@ -219,20 +224,20 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           END DO                                                             ! GYL
         END IF                                                               ! GYL
         IF(n == iv3d_q .AND. ilev <= LEV_UPDATE_Q) THEN                      ! GYL, limit the lower-level q spread
-          q_mean = SUM(anal3d(ij,ilev,:,n)) / REAL(MEMBER,r_size)               ! GYL
+          q_mean = SUM(anal3d(ij,ilev,:,n)) / REAL(MEMBER,r_size)            ! GYL
           q_sprd = 0.0d0                                                     ! GYL
-          DO m=1,MEMBER                                                         ! GYL
+          DO m=1,MEMBER                                                      ! GYL
             q_anal(m) = anal3d(ij,ilev,m,n) - q_mean                         ! GYL
             q_sprd = q_sprd + q_anal(m)**2                                   ! GYL
           END DO                                                             ! GYL
-          q_sprd = SQRT(q_sprd / REAL(MEMBER-1,r_size)) / q_mean                ! GYL
+          q_sprd = SQRT(q_sprd / REAL(MEMBER-1,r_size)) / q_mean             ! GYL
           IF(q_sprd > Q_SPRD_MAX) THEN                                       ! GYL
-            DO m=1,MEMBER                                                       ! GYL
+            DO m=1,MEMBER                                                    ! GYL
               anal3d(ij,ilev,m,n) = q_mean + q_anal(m) * Q_SPRD_MAX / q_sprd ! GYL
             END DO                                                           ! GYL
           END IF                                                             ! GYL
         END IF
-      END DO
+      END DO ! [ n=1,nv3d ]
       IF(ilev == 1) THEN !update 2d variable at ilev=1
         DO n=1,nv2d
           IF(var_local_n2n(nv3d+n) < nv3d+n) THEN                  ! GYL
@@ -258,9 +263,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             END DO
           END DO
         END DO
-      END IF
-    END DO
-  END DO
+      END IF ! [ ilev == 1 ]
+    END DO ! [ ij=1,nij1 ]
+!$OMP END PARALLEL DO
+  END DO ! [ ilev=1,nlev ]
   DEALLOCATE(hdxf,rdiag,rloc,dep)
 !  !
 !  ! Compute analyses of observations (Y^a)
@@ -290,18 +296,22 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     CALL ensmean_grd(MEMBER,nij1,gues3d,gues2d,work3d,work2d)
     DO n=1,nv3d
       DO m=1,MEMBER
+!$OMP PARALLEL DO PRIVATE(i,k)
         DO k=1,nlev
           DO i=1,nij1
             gues3d(i,k,m,n) = gues3d(i,k,m,n) - work3d(i,k,n)
           END DO
         END DO
+!$OMP END PARALLEL DO
       END DO
     END DO
     DO n=1,nv2d
       DO m=1,MEMBER
+!$OMP PARALLEL DO PRIVATE(i)
         DO i=1,nij1
           gues2d(i,m,n) = gues2d(i,m,n) - work2d(i,n)
         END DO
+!$OMP END PARALLEL DO
       END DO
     END DO
 
@@ -317,19 +327,23 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !    END DO
     DO n=1,nv3d
       DO m=1,MEMBER
+!$OMP PARALLEL DO PRIVATE(ij,ilev)
         DO ilev=1,nlev
           DO ij=1,nij1
             anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
               & + gues3d(ij,ilev,m,n) * SP_INFL_ADD
           END DO
         END DO
+!$OMP END PARALLEL DO
       END DO
     END DO
     DO n=1,nv2d
       DO m=1,MEMBER
+!$OMP PARALLEL DO PRIVATE(ij)
         DO ij=1,nij1
           anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,m,n) * SP_INFL_ADD
         END DO
+!$OMP END PARALLEL DO
       END DO
     END DO
   END IF

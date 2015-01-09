@@ -232,7 +232,7 @@ PROGRAM letkf
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 !  CALL CPU_TIME(rtimer)
   rtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '### TIMER(FINALIZE):  ',rtimer,rtimer-rtimer00
+  WRITE(6,'(A,2F10.2)') '### TIMER(FINALIZE):   ',rtimer,rtimer-rtimer00
   rtimer00=rtimer
 
   CALL finalize_mpi

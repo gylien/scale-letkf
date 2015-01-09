@@ -475,7 +475,6 @@ SUBROUTINE set_letkf_obs
       obsda%ensval(i,n) = obsda%ensval(i,n) - obsda%val(n) ! Hdx
     END DO
     obsda%val(n) = obs%dat(obsda%idx(n)) - obsda%val(n) ! y-Hx
-!if (myrank == 0) print *, obsda%idx(n), obs%elm(obsda%idx(n)), obs%dat(obsda%idx(n)), obsda%val(n), obsda%ensval(:,n)
     IF(ABS(obsda%val(n)) > gross_error * obs%err(obsda%idx(n))) THEN !gross error
       obsda%qc(n) = iqc_gross_err
     END IF
@@ -773,13 +772,13 @@ SUBROUTINE set_letkf_obs
         end if
       end do
 
-      write(6,*) ns
-      write(6,*) nr(:)
-      write(6,*) nrt(:)
-!        write(6,*)
-!        write(6,*) nrt(MEM_NP)+nr(MEM_NP)
-!        write(6,*)
-!        write(6,*) obsbufr(:)
+!      write(6,*) ns
+!      write(6,*) nr(:)
+!      write(6,*) nrt(:)
+!!        write(6,*)
+!!        write(6,*) nrt(MEM_NP)+nr(MEM_NP)
+!!        write(6,*)
+!!        write(6,*) obsbufr(:)
 
     end if
 

@@ -488,12 +488,11 @@ subroutine read_ens_mpi(file,v3d,v2d)
   integer :: it,im,mstart,mend
 
 
-  REAL(r_size) :: timer
-  INTEGER :: ierr
+  integer :: ierr
+  REAL(r_dble) :: rrtimer00,rrtimer
 
   CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  CALL CPU_TIME(timer)
-  if (myrank == 0) print *, '###### read_ens_mpi ######', timer
+  rrtimer00 = MPI_WTIME()
 
 
   do it = 1, nitmax
@@ -506,16 +505,18 @@ subroutine read_ens_mpi(file,v3d,v2d)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  CALL CPU_TIME(timer)
-  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,2F10.2)') '###### read_ens_mpi:read_restart:  ',rrtimer,rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
 
       call state_trans(v3dg)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  CALL CPU_TIME(timer)
-  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,2F10.2)') '###### read_ens_mpi:state_trans:  ',rrtimer,rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
 
     end if
@@ -526,8 +527,9 @@ subroutine read_ens_mpi(file,v3d,v2d)
 
 
   CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  CALL CPU_TIME(timer)
-  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,2F10.2)') '###### read_ens_mpi:scatter_grd_mpi_alltoall:  ',rrtimer,rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
 
   return
@@ -548,12 +550,11 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
   integer :: it,im,mstart,mend
 
 
-  REAL(r_size) :: timer
-  INTEGER :: ierr
+  integer :: ierr
+  REAL(r_dble) :: rrtimer00,rrtimer
 
   CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  CALL CPU_TIME(timer)
-  if (myrank == 0) print *, '###### write_ens_mpi ######', timer
+  rrtimer00 = MPI_WTIME()
 
 
   do it = 1, nitmax
@@ -564,8 +565,9 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  CALL CPU_TIME(timer)
-  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,2F10.2)') '###### write_ens_mpi:gather_grd_mpi_alltoall:  ',rrtimer,rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
 
     if (im >= 1 .and. im <= MEMBER) then
@@ -576,8 +578,9 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  CALL CPU_TIME(timer)
-  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,2F10.2)') '###### write_ens_mpi:state_trans_inv:  ',rrtimer,rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
 
       call write_restart(filename,v3dg,v2dg)
@@ -586,8 +589,9 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
 
 
   CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  CALL CPU_TIME(timer)
-  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,2F10.2)') '###### write_ens_mpi:write_restart:  ',rrtimer,rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
 
   return

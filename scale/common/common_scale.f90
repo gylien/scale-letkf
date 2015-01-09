@@ -1034,7 +1034,7 @@ SUBROUTINE state_trans_inv(v3dg)
   real(RP) :: qdry,CVtot,Rtot,CVovCP
   integer :: i,j,k,iv3d
 
-!$OMP PARALLEL DO PRIVATE(i,j,k,iv3d,qdry,CVtot,Rtot,CPovCV,rho,rhot) COLLAPSE(2)
+!$OMP PARALLEL DO PRIVATE(i,j,k,iv3d,qdry,CVtot,Rtot,CVovCP,rho,rhot) COLLAPSE(2)
   do j = 1, nlat
     do i = 1, nlon
       do k = 1, nlev
