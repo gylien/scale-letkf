@@ -3,8 +3,8 @@ PROGRAM dec_prepbufr
 ! NOTE: output goes to fort.90
 !
   USE common
-  USE common_gfs
-  USE common_obs_gfs
+  USE common_scale
+  USE common_obs_scale
 
   IMPLICIT NONE
 
@@ -33,13 +33,13 @@ PROGRAM dec_prepbufr
   CHARACTER(8) :: cs
   REAL(r_dble) :: prs(4,maxlev,maxevn)
   REAL(r_dble) :: obs(4,maxlev,maxevn)
-  REAL(r_sngl) :: wk(7)
+  REAL(r_sngl) :: wk(8)
 
 
-  real(r_sngl) :: vtcd
-  integer :: vtcdi
+!!!  real(r_sngl) :: vtcd
+!!!  integer :: vtcdi
 
-  INTEGER :: iunit
+  INTEGER :: iunit = 90
   !
   ! Open the input file
   !
@@ -47,8 +47,8 @@ PROGRAM dec_prepbufr
   CALL OPENBF(11,'IN',11)
   CALL DATELEN(10)
 
-  call UFBQCD(11,'VIRTMP',vtcd)
-  vtcdi = nint(vtcd)
+!!!  call UFBQCD(11,'VIRTMP',vtcd)
+!!!  vtcdi = nint(vtcd)
 
   !
   ! Main loop
@@ -87,7 +87,8 @@ PROGRAM dec_prepbufr
      & wk(3) <= minlat .OR. maxlat <= wk(3)) CYCLE ! domain check
     wk(4) = station(4)
     IF(NINT(station(5)) < -3 .OR. 3 < NINT(station(5))) CYCLE
-    iunit = 90+NINT(station(5))
+!    iunit = 90+NINT(station(5))
+    wk(8) = station(5)
     !
     ! obs
     !
@@ -151,14 +152,14 @@ SUBROUTINE output(id)
     END IF
     IF(id == id_t_obs) then
       wk(5) = wk(5) + t0c
-      do iseq = 1,maxevn-1
-        if (obs(4,ilev,iseq) > 9.e10) exit
-        if (nint(obs(4,ilev,iseq)) == vtcdi) then
-          iqm = NINT(obs(3,ilev,iseq+1))
-          wk(5) = obs(1,ilev,iseq+1) + t0c
-          exit
-        end if
-      end do
+!!!      do iseq = 1,maxevn-1
+!!!        if (obs(4,ilev,iseq) > 9.e10) exit
+!!!        if (nint(obs(4,ilev,iseq)) == vtcdi) then
+!!!          iqm = NINT(obs(3,ilev,iseq+1))
+!!!          wk(5) = obs(1,ilev,iseq+1) + t0c
+!!!          exit
+!!!        end if
+!!!      end do
     END IF
 
     IF(iqm < 0 .OR. 2 < iqm) CYCLE

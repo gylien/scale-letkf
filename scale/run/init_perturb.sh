@@ -59,8 +59,6 @@ S_PATH="$2"
 
 #-------------------------------------------------------------------------------
 
-tmppert="$TMPS/perturb"
-
 if [ ! -s "$S_PATH$(printf $SCALE_SFX 0)" ]; then
   echo "[Error] $0: Cannot find scale file '$S_PATH$(printf $SCALE_SFX 0)'" >&2
   exit 1

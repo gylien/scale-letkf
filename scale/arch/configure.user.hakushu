@@ -16,4 +16,4 @@ SCALE_INC = -I/data1/gylien/scale_ens/dc_utils \
             -I/data1/gylien/scale_ens/include
 SCALE_LIB = -L/data1/gylien/scale_ens/lib -lscale -lgtool -ldcutils
 
-BUFR_LIB  = -L/home/glien/pkg/BUFRLIB/lib -lbufrlib
+BUFR_LIB  = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib

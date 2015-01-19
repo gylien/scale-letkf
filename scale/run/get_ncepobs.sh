@@ -3,25 +3,30 @@
 #
 #  Download NCEP conventional observation data from UCAR/DSS
 #   -- adapted from Takemasa Miyoshi's LETKF google code,
-#      March 2013, Guo-Yuan Lien
+#      March 2013,             Guo-Yuan Lien
+#      January 2015, modified, Guo-Yuan Lien
 #
 #===============================================================================
 
-if [ -f config.main ]; then
-  . config.main
-else
-  echo "[Error] $0: 'config.main' does not exist." 1>&2
-  exit 1
-fi
-. datetime.sh
+cd "$(dirname "$0")"
+myname=$(basename "$0")
+myname1=${myname%.*}
 
-if [ "$#" -lt 3 ]; then
-  cat 1>&2 << EOF
+#===============================================================================
+# Configuration
 
-[get_ncepobs.sh] Download NCEP conventional observation data.
-                 *use settings in 'config.main'
+. config.main
+(($? != 0)) && exit $?
 
-Usage: $0 EMAIL PASSWD STIME [ETIME] [IF_DECODE]
+. src/func_datetime.sh
+. src/func_util.sh
+
+#-------------------------------------------------------------------------------
+
+USAGE="
+[$myname] Download NCEP conventional observation data.
+
+Usage: $myname EMAIL PASSWD STIME [ETIME] [IF_DECODE]
 
   EMAIL      UCAR/DSS account (register at http://rda.ucar.edu )
   PASSWD     UCAR/DSS account password
@@ -32,8 +37,16 @@ Usage: $0 EMAIL PASSWD STIME [ETIME] [IF_DECODE]
              0: No,  store only PREPBUFR format
              1: Yes, decode to LETKF obs format
              (default: Yes)
+"
 
-EOF
+#-------------------------------------------------------------------------------
+
+if [ "$1" == '-h' ] || [ "$1" == '--help' ]; then
+  echo "$USAGE"
+  exit 0
+fi
+if (($# < 3)); then
+  echo "$USAGE" >&2
   exit 1
 fi
 
@@ -43,6 +56,8 @@ STIME=$(datetime $3)
 ETIME=$(datetime ${4:-$STIME})
 IF_DECODE=${5:-1}
 
+#-------------------------------------------------------------------------------
+
 DATAURL="http://rda.ucar.edu/data/ds337.0/tarfiles"
 LOGINURL="https://rda.ucar.edu/cgi-bin/login"
 WGET="wget --no-check-certificate"
@@ -50,84 +65,70 @@ AUTH="auth.rda_ucar_edu"
 OPTLOGIN="-O /dev/null --save-cookies $AUTH --post-data=\"email=${EMAIL}&passwd=${PASSWD}&action=login\""
 OPT="-N --load-cookies $AUTH"
 
-tmpsubdir="gfs-letkf_${USER}_${SYSNAME}_get_ncepobs"
-tmprun="$TMP1/${tmpsubdir}"
-
 #===============================================================================
 
-mkdir -p $tmprun
-rm -fr $tmprun/*
-mkdir -p $tmprun/download
-cd $tmprun
-if [ "$IF_DECODE" = '1' ]; then
-  cp $DIR/obs/dec_prepbufr .
+safe_init_tmpdir $TMPS
+cd $TMPS
+
+if ((IF_DECODE == 1)); then
+  cp $OBSUTIL_DIR/dec_prepbufr .
 fi
 
-cd $tmprun/download
+mkdir -p download
+cd download
 $WGET $OPTLOGIN $LOGINURL
 
 time=$STIME
-while [ "$time" -le "$ETIME" ]; do
+while ((time <= ETIME)); do
 
   yyyy=${time:0:4}
   mm=${time:4:2}
   dd=${time:6:2}
-  if [ "$yyyy$mm" -ge 200807 ]; then
+  if (("$yyyy$mm" >= 200807)); then
     DATAF="prepbufr.$yyyy$mm$dd.nr.tar.gz"
   else
     DATAF="prepbufr.$yyyy$mm$dd.wo40.tar.gz"
   fi
 
-  cd $tmprun/download
+  cd $TMPS/download
   $WGET $OPT "${DATAURL}/${DATAF}"
   tar xzf $DATAF
   rm -f $DATAF
 
-  cd $tmprun
+  cd $TMPS
   for hh in '00' '06' '12' '18'; do
-    timef="$yyyy$mm$dd$hh"
     echo
-    echo "[${timef}]"
+    echo "[${time}]"
     echo
 
-    if [ "$yyyy$mm" -ge 200807 ]; then
+    if (("$yyyy$mm" >= 200807)); then
       mv -f download/$yyyy$mm$dd.nr/prepbufr.gdas.$yyyy$mm$dd.t${hh}z.nr \
-            prepbufr.gdas.${timef}.nr
+            prepbufr.gdas.${time}.nr
     else
-      mv -f download/$yyyy$mm$dd.wo40/prepbufr.gdas.${timef}.wo40 \
-            prepbufr.gdas.${timef}.nr
+      mv -f download/$yyyy$mm$dd.wo40/prepbufr.gdas.${time}.wo40 \
+            prepbufr.gdas.${time}.nr
     fi
-    wc -c prepbufr.gdas.${timef}.nr | $BUFRBIN/grabbufr prepbufr.gdas.${timef}.nr prepbufr.in
+    wc -c prepbufr.gdas.${time}.nr | $BUFRBIN/grabbufr prepbufr.gdas.${time}.nr prepbufr.in
 
-    if [ "$IF_DECODE" = '1' ]; then
+exit
+    if ((IF_DECODE == 1)); then
       time ./dec_prepbufr
-      touch fort.87
-      touch fort.88
-      touch fort.89
       touch fort.90
-      touch fort.91
-      touch fort.92
-      touch fort.93
-      mkdir -p $OBS/obs${timef}
-      mv fort.87 $OBS/obs${timef}/t-3.dat
-      mv fort.88 $OBS/obs${timef}/t-2.dat
-      mv fort.89 $OBS/obs${timef}/t-1.dat
-      mv fort.90 $OBS/obs${timef}/t.dat
-      mv fort.91 $OBS/obs${timef}/t+1.dat
-      mv fort.92 $OBS/obs${timef}/t+2.dat
-      mv fort.93 $OBS/obs${timef}/t+3.dat
+      mkdir -p $OBS
+      mv fort.90 $OBS/obs_${time}.dat
     fi
 
-    mkdir -p $OBSNCEP/obs${timef}
-    mv -f prepbufr.gdas.${timef}.nr $OBSNCEP/obs${timef}
-#    mv -f prepbufr.gdas.${timef}.nr $OBSNCEP/obs${timef}/gdas1.t${hh}z.prepbufr.nr
+    mkdir -p $OBSNCEP/obs${time}
+    mv -f prepbufr.gdas.${time}.nr $OBSNCEP/obs_${time}
   done
 
 time=$(datetime $time 1 d)
 done
 
-rm -rf $tmprun
+safe_rm_tmpdir $TMPS
 
 #===============================================================================
+
+echo
 
 exit 0

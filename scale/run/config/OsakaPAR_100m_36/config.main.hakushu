@@ -26,7 +26,7 @@ ANLWRF_INT=600
 
 #INITGFS="/discover/nobackup/glien/model/GDAS_IC_t62"     # directory of arbitrary initial condition files [sigma/surface formats]
 
-OBS="/data1/gylien/obs/test_11x9"     # directory of observation data in LETKF obs format
+OBS="/data1/gylien/obs/prepbufr_obs"     # directory of observation data in LETKF obs format
 OBSNCEP="/data1/gylien/obs/prepbufr"  # directory of observation data in NCEP BUFR format
 
 #===============================================================================
@@ -91,7 +91,7 @@ SCP_HOSTPREFIX=''
 
 PYTHON="python"
 
-#BUFRBIN=
+BUFRBIN="/data/opt/bufrlib/10.1.0_intel/bin"
 
 #===============================================================================
 # Machine-independent source file
