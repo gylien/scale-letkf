@@ -45,6 +45,7 @@ MODULE obsope_tools
   REAL(r_size),PARAMETER :: slotint=60.0d0 ! time interval between slots in second
 
   CHARACTER(7) :: obsfile='obs.dat' !IN
+  CHARACTER(9) :: radarfile='radar.dat' !IN
   CHARACTER(21) :: obsdafile='obsda.0000.000000.dat' !OUT
 
 

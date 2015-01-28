@@ -36,9 +36,11 @@ PROGRAM obsope
   REAL(r_size) :: rtimer00,rtimer
   INTEGER :: ierr
   CHARACTER(11) :: stdoutf='NOUT-000000'
+  LOGICAL :: ex
 
 
   TYPE(obs_info) :: obs
+  TYPE(obs_info) :: obsradar
 
 
 !-----------------------------------------------------------------------
@@ -75,11 +77,25 @@ PROGRAM obsope
 !-----------------------------------------------------------------------
 
   CALL get_nobs(obsfile,8,obs%nobs)
-  WRITE(6,'(A,I9,A)') 'TOTAL: ', obs%nobs, ' OBSERVATIONS'
+  WRITE(6,'(A,I9,A)') 'TOTAL: ', obs%nobs, ' CONVENTIONAL OBSERVATIONS'
 
   CALL obs_info_allocate(obs)
 
   CALL read_obs(obsfile,obs)
+
+!-----------------------------------------------------------------------
+
+  INQUIRE (FILE=radarfile, EXIST=ex)
+  IF (ex) THEN
+    CALL get_nobs_radar(radarfile,obsradar%nobs,radarlon,radarlat,radarz)
+    WRITE(6,'(A,I9,A)') 'TOTAL: ', obsradar%nobs, ' RADAR OBSERVATIONS'
+
+    CALL obs_info_allocate(obsradar)
+
+    CALL read_obs_radar(radarfile,obsradar)
+  ELSE
+    WRITE(6,*)'WARNING: FILE ',radarfile,' NOT FOUND'
+  ENDIF
 
   CALL CPU_TIME(rtimer)
   WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00

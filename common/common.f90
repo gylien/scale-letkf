@@ -32,6 +32,8 @@ MODULE common
   REAL(r_size),PARAMETER :: r_omega=7.292d-5
   REAL(r_size),PARAMETER :: t0c=273.15d0
   REAL(r_size),PARAMETER :: undef=-9.99d33
+  REAL(r_size),PARAMETER :: deg2rad=pi/180.0d0 ! GYL
+  REAL(r_size),PARAMETER :: rad2deg=180.0d0/pi ! GYL
 
 CONTAINS
 !-----------------------------------------------------------------------
