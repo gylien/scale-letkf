@@ -46,19 +46,6 @@ module common_mpi_scale
 !!!!  real(r_size),allocatable,save :: wg1(:)
   real(r_size),allocatable,save :: rig1(:),rjg1(:)
 
-!  integer,save :: nitmax ! maximum number of model files processed by a process
-!  integer,allocatable,save :: procs(:)
-!  integer,allocatable,save :: mem2node(:,:)
-!  integer,allocatable,save :: mem2proc(:,:)
-!  integer,allocatable,save :: proc2mem(:,:,:)
-!  integer,save :: n_mem
-!  integer,save :: n_mempn
-
-!  integer,save :: scale_IO_group_n = -1
-!!  integer,save :: scale_IO_proc_n = -1
-!  logical,save :: valid_member = .false.
-!  integer,save :: lastmem_rank_e
-
   integer,save :: MPI_COMM_e, nprocs_e, myrank_e
   integer,save :: MPI_COMM_a, nprocs_a, myrank_a
 
@@ -256,7 +243,7 @@ SUBROUTINE unset_common_mpi_scale
 
   call MPI_Comm_free(MPI_COMM_e,ierr)
   call MPI_Comm_free(MPI_COMM_a,ierr)
-  call unset_scalelib
+!  call unset_scalelib
 
   RETURN
 END SUBROUTINE unset_common_mpi_scale
@@ -418,7 +405,7 @@ SUBROUTINE read_ens_history_mpi(file,iter,step,v3dg,v2dg,ensmean)
     end if
   end if
 
-  IF (valid_member) then
+  IF (scale_IO_use) then
     allocate( var3D(nlon,nlat,nlev) )
     allocate( var2D(nlon,nlat) )
 

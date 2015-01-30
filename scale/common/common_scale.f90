@@ -71,9 +71,9 @@ MODULE common_scale
   integer,save :: n_mem
   integer,save :: n_mempn
 
-  integer,save :: scale_IO_group_n = -1
-!  integer,save :: scale_IO_proc_n = -1
-  logical,save :: valid_member = .false.
+  integer,save :: scale_IO_mygroup = -1
+!  integer,save :: scale_IO_myproc = -1
+  logical,save :: scale_IO_use = .false.
   integer,save :: lastmem_rank_e
 
 
@@ -212,7 +212,7 @@ SUBROUTINE set_common_scale(mem)
 
 !! print process distribution!!!
 
-  if (scale_IO_group_n <= 0) then
+  if (scale_IO_mygroup <= 0) then
 
     write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
 
@@ -344,12 +344,21 @@ SUBROUTINE set_common_scale(mem)
   !  wg(:,:) = sqrt(wg(:,:) * totalwg)
 
 
-  end if ! [ scale_IO_group_n <= 0 ]
+  end if ! [ scale_IO_mygroup <= 0 ]
 
 
   RETURN
 END SUBROUTINE set_common_scale
 
+SUBROUTINE unset_common_scale
+  IMPLICIT NONE
+
+  if (scale_IO_mygroup > 0) then
+    call unset_scalelib
+  end if
+
+  RETURN
+END SUBROUTINE unset_common_scale
 
 !-----------------------------------------------------------------------
 ! set_mem2proc
@@ -412,10 +421,10 @@ mem_loop: DO it = 1, nitmax
     END DO
   END DO mem_loop
 
-  scale_IO_group_n = proc2mem(1,1,myrank+1)
-!  scale_IO_proc_n = proc2mem(2,1,myrank+1)
-  if (scale_IO_group_n >= 1 .and. scale_IO_group_n <= mem) then
-    valid_member = .true.
+  scale_IO_mygroup = proc2mem(1,1,myrank+1)
+!  scale_IO_myproc = proc2mem(2,1,myrank+1)
+  if (scale_IO_mygroup >= 1 .and. scale_IO_mygroup <= mem) then
+    scale_IO_use = .true.
   end if
 
   lastmem_rank_e = mod(mem-1, n_mem*n_mempn)

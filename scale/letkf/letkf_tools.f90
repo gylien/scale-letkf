@@ -796,7 +796,7 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
 
       DO n = 1, nn
 
-        ielm = obs%elm(obsda2(ip)%idx(nobs_use(n)))
+        ielm = obs(obsda2(ip)%set(nobs_use(n)))%elm(obsda2(ip)%idx(nobs_use(n)))
 
 !print *, '@@@', nobs_use(n), obsda2(ip)%idx(nobs_use(n)), ielm
 
@@ -804,9 +804,9 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
         ! vertical localization
         !
         IF(ielm == id_ps_obs) THEN
-          dlev = ABS(LOG(obs%dat(obsda2(ip)%idx(nobs_use(n)))) - logrlev)
+          dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%dat(obsda2(ip)%idx(nobs_use(n)))) - logrlev)
 
-!if (n <= 6) write (6, *) '$$$ PS======', dlev, obs%dat(obsda2(ip)%idx(nobs_use(n))), rlev
+!if (n <= 6) write (6, *) '$$$ PS======', dlev, obs(obsda2(ip)%set(nobs_use(n)))%dat(obsda2(ip)%idx(nobs_use(n))), rlev
 
           IF(dlev > dist_zerov) CYCLE
   !      ELSE IF(ielm == id_rain_obs) THEN
@@ -816,11 +816,11 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
   !        dlev = 0.0d0
         ELSE !! other (3D) variables
 
-!write (6, *) '$$$===', obs%lev(obsda2(ip)%idx(nobs_use(n))), rlev
+!write (6, *) '$$$===', obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n))), rlev
 
-          dlev = ABS(LOG(obs%lev(obsda2(ip)%idx(nobs_use(n)))) - logrlev)
+          dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n)))) - logrlev)
 
-!if (n <= 6) write (6, *) '$$$ other===', dlev, obs%lev(obsda2(ip)%idx(nobs_use(n))), rlev
+!if (n <= 6) write (6, *) '$$$ other===', dlev, obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n))), rlev
 
           IF(dlev > dist_zerov) CYCLE
         END IF
@@ -875,7 +875,7 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
         !
         ! Observational localization
         !
-        tmperr=obs%err(obsda2(ip)%idx(nobs_use(n)))
+        tmperr=obs(obsda2(ip)%set(nobs_use(n)))%err(obsda2(ip)%idx(nobs_use(n)))
         rdiag(nobsl) = tmperr * tmperr
   !      IF(ielm == id_rain_obs) THEN                                                   ! GYL
   !        rloc(nobsl) =EXP(-0.5d0 * ((dist/sigma_obs_rain)**2 + (dlev/SIGMA_OBSV)**2)) ! GYL

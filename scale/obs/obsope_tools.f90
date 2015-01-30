@@ -40,13 +40,6 @@ MODULE obsope_tools
 ! General parameters
 !-----------------------------------------------------------------------
 
-  INTEGER,PARAMETER :: nslots=11 ! number of time slots for 4D-LETKF
-  INTEGER,PARAMETER :: nbslot=6 ! basetime slot
-  REAL(r_size),PARAMETER :: slotint=60.0d0 ! time interval between slots in second
-
-  CHARACTER(7) :: obsfile='obs.dat' !IN
-  CHARACTER(9) :: radarfile='radar.dat' !IN
-  CHARACTER(21) :: obsdafile='obsda.0000.000000.dat' !OUT
 
 
 CONTAINS
@@ -104,26 +97,26 @@ end subroutine read_nml_letkf_obsmake
 !-----------------------------------------------------------------------
 ! Observation operator calculation
 !-----------------------------------------------------------------------
-SUBROUTINE obsope_cal(obs)
+SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
   IMPLICIT NONE
 
-  TYPE(obs_info),INTENT(IN) :: obs
+  TYPE(obs_info),INTENT(IN) :: obs(nobsfiles)
+  real(r_size),intent(in) :: radarlon, radarlat, radarz
   type(obs_da_value) :: obsda
   REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
-  integer :: it,islot,proc,im
+  integer :: it,islot,proc,im,iof
   integer :: n,nslot,nproc,nprocslot,ierr
   real(r_size) :: rig,rjg,ri,rj,rk
   real(r_size) :: slot_lb,slot_ub
 
 !-----------------------------------------------------------------------
 
-!  call set_scalelib(MEM_NP, nitmax, nprocs, proc2mem)
-
-!  call set_mpi_along_domains
-
-  obsda%nobs = obs%nobs
+  obsda%nobs = 0
+  do iof = 1, nobsfiles
+    obsda%nobs = obsda%nobs + obs(iof)%nobs
+  end do
 
   call obs_da_value_allocate(obsda,0)
 
@@ -145,47 +138,55 @@ SUBROUTINE obsope_cal(obs)
         call read_ens_history_mpi('hist',it,islot,v3dg,v2dg)
 !  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
-        nslot = 0
-        nprocslot = 0
-        do n = 1, obs%nobs
+        do iof = 1, nobsfiles
 
-          if (obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub) then
-            nslot = nslot + 1
+          nslot = 0
+          nprocslot = 0
 
-            call phys2ij(obs%lon(n),obs%lat(n),rig,rjg)
-            call rij_g2l_auto(proc,rig,rjg,ri,rj)
+          do n = 1, obs(iof)%nobs
 
-  !          if (PRC_myrank == 0) then
-  !            print *, proc, rig, rjg, ri, rj
-  !          end if
+            if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
+              nslot = nslot + 1
 
-            if (PRC_myrank == proc) then
-              nproc = nproc + 1
-              nprocslot = nprocslot + 1
-              obsda%idx(nproc) = n
-              obsda%ri(nproc) = rig
-              obsda%rj(nproc) = rjg
+              call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
+              call rij_g2l_auto(proc,rig,rjg,ri,rj)
 
-              call phys2ijk(v3dg(:,:,:,iv3dd_p),obs%elm(n),ri,rj,obs%lev(n),rk)
+    !          if (PRC_myrank == 0) then
+    !            print *, proc, rig, rjg, ri, rj
+    !          end if
 
-              if (rk == -1.0d0) then
-                obsda%qc(nproc) = iqc_out_vhi
-              else if (rk == -2.0d0) then
-                obsda%qc(nproc) = iqc_out_vlo
-              else if (rk == -3.0d0) then
-                obsda%qc(nproc) = iqc_out_h
-              else
-                call Trans_XtoY(obs%elm(n),ri,rj,rk,v3dg,v2dg,obsda%val(nproc),obsda%qc(nproc))
-              end if
+              if (PRC_myrank == proc) then
+                nproc = nproc + 1
+                nprocslot = nprocslot + 1
+                obsda%set(nproc) = iof
+                obsda%idx(nproc) = n
+                obsda%ri(nproc) = rig
+                obsda%rj(nproc) = rjg
 
-            end if ! [ PRC_myrank == proc ]
+                call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri,rj,obs(iof)%lev(n),rk,obsda%qc(nproc))
 
-          end if ! [ obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub ]
+                if (obsda%qc(nproc) == iqc_good) then
+                  select case (obsfileformat(iof))
+                  case (1)
+                    call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk,v3dg,v2dg,obsda%val(nproc),obsda%qc(nproc))
+                  case (2)
+                    call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri,rj,rk, &
+                                          obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obsda%val(nproc),obsda%qc(nproc))
+                  end select
+                end if
 
-        end do ! [ n = 1, obs%nobs ]
+              end if ! [ PRC_myrank == proc ]
 
-        write (6,'(A,I10)') ' -- nobs in the slot = ', nslot
-        write (6,'(A,I6,A,I10)') ' -- nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
+            end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
+
+          end do ! [ n = 1, obs%nobs ]
+
+          write (6,'(3A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot = ', nslot
+          write (6,'(3A,I6,A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
+
+        end do ! [ do iof = 1, nobsfiles ]
+
+
 
 !      IF(NINT(elem(n)) == id_ps_obs .AND. odat(n) < -100.0d0) THEN
 !        CYCLE
@@ -213,45 +214,45 @@ SUBROUTINE obsope_cal(obs)
       write (obsdafile(12:17),'(I6.6)') proc2mem(2,it,myrank+1)
       call write_obs_da(obsdafile,obsda,0)
 
-    end if
+    end if ! [ im >= 1 .and. im <= MEMBER ]
 
   end do ! [ it = 1, nitmax ]
 
   deallocate ( v3dg, v2dg )
 
-  call unset_scalelib !!!!!!
-
 end subroutine obsope_cal
+
 !-----------------------------------------------------------------------
 ! Observation generator calculation
 !-----------------------------------------------------------------------
-
-!!! need to refine qc...
-
-SUBROUTINE obsmake_cal(obs)
+SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
   IMPLICIT NONE
 
-  TYPE(obs_info),INTENT(INOUT) :: obs
+  TYPE(obs_info),INTENT(INOUT) :: obs(nobsfiles)
+  real(r_size),intent(in) :: radarlon, radarlat, radarz
   REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
-  REAL(r_size),ALLOCATABLE :: error(:)
 
   integer :: islot,proc
-  integer :: n,nslot,nproc,nprocslot,ierr,iqc
+  integer :: n,nslot,nproc,nprocslot,ierr,iqc,iof,ns
+  integer :: nobsmax,nobsall
   real(r_size) :: rig,rjg,ri,rj,rk
   real(r_size) :: slot_lb,slot_ub
   real(r_size),allocatable :: bufr(:)
+  real(r_size),allocatable :: error(:)
 
   CHARACTER(10) :: obsoutfile = 'obsout.dat'
 
 !-----------------------------------------------------------------------
 
-!  call set_scalelib(MEM_NP, nitmax, nprocs, proc2mem)
+  write (6,'(A,I6.6,A,I6.6)') 'MYRANK ',myrank,' is processing subdomain id #', proc2mem(2,1,myrank+1)
 
   allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
   allocate ( v2dg (nlonh,nlath,nv2dd) )
 
-  write (6,'(A,I6.6,A,I6.6)') 'MYRANK ',myrank,' is processing subdomain id #', proc2mem(2,1,myrank+1)
+  do iof = 1, nobsfiles
+    obs(iof)%dat = 0.0d0
+  end do
 
   nproc = 0
   do islot = SLOT_START, SLOT_END
@@ -261,92 +262,128 @@ SUBROUTINE obsmake_cal(obs)
 
     call read_ens_history_mpi('hist',1,islot,v3dg,v2dg)
 
-    nslot = 0
-    nprocslot = 0
-    do n = 1, obs%nobs
+    do iof = 1, nobsfiles
 
-      if (obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub) then
-        nslot = nslot + 1
+      nslot = 0
+      nprocslot = 0
+      do n = 1, obs(iof)%nobs
 
-        call phys2ij(obs%lon(n),obs%lat(n),rig,rjg)
-        call rij_g2l_auto(proc,rig,rjg,ri,rj)
+        if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
+          nslot = nslot + 1
 
-!          if (PRC_myrank == 0) then
-!            print *, proc, rig, rjg, ri, rj
-!          end if
+          call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
+          call rij_g2l_auto(proc,rig,rjg,ri,rj)
 
-        if (PRC_myrank == proc) then
-          nproc = nproc + 1
-          nprocslot = nprocslot + 1
+  !          if (PRC_myrank == 0) then
+  !            print *, proc, rig, rjg, ri, rj
+  !          end if
 
-!IF(NINT(elem(n)) == id_ps_obs) THEN
-!  CALL itpl_2d(v2d(:,:,iv2d_orog),ri,rj,dz)
-!  rk = rlev(n) - dz
-!  IF(ABS(rk) > threshold_dz) THEN ! pressure adjustment threshold
-!    ! WRITE(6,'(A)') '* PS obs vertical adjustment beyond threshold'
-!    ! WRITE(6,'(A,F10.2,A,F6.2,A,F6.2,A)') '* dz=',rk,&
-!    ! & ', (lon,lat)=(',elon(n),',',elat(n),')'
-!    CYCLE
-!  END IF
-!END IF
+          if (proc < 0 .and. PRC_myrank == 0) then ! if outside of the global domain, processed by PRC_myrank == 0
+            obs(iof)%dat(n) = undef
+          end if
 
-          call phys2ijk(v3dg(:,:,:,iv3dd_p),obs%elm(n),ri,rj,obs%lev(n),rk)
+          if (PRC_myrank == proc) then
+            nproc = nproc + 1
+            nprocslot = nprocslot + 1
 
-          call Trans_XtoY(obs%elm(n),ri,rj,rk,v3dg,v2dg,obs%dat(n),iqc)
-        end if ! [ PRC_myrank == proc ]
+  !IF(NINT(elem(n)) == id_ps_obs) THEN
+  !  CALL itpl_2d(v2d(:,:,iv2d_orog),ri,rj,dz)
+  !  rk = rlev(n) - dz
+  !  IF(ABS(rk) > threshold_dz) THEN ! pressure adjustment threshold
+  !    ! WRITE(6,'(A)') '* PS obs vertical adjustment beyond threshold'
+  !    ! WRITE(6,'(A,F10.2,A,F6.2,A,F6.2,A)') '* dz=',rk,&
+  !    ! & ', (lon,lat)=(',elon(n),',',elat(n),')'
+  !    CYCLE
+  !  END IF
+  !END IF
 
-      end if ! [ obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub ]
+            call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri,rj,obs(iof)%lev(n),rk,iqc)
 
-    end do ! [ n = 1, obs%nobs ]
+            if (iqc /= iqc_good) then
+              obs(iof)%dat(n) = undef
+            else
+              select case (obsfileformat(iof))
+              case (1)
+                call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk,v3dg,v2dg,obs(iof)%dat(n),iqc)
+              case (2)
+                call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri,rj,rk, &
+                                      obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
+              end select
+              if (iqc /= iqc_good) then
+                obs(iof)%dat(n) = undef
+              end if
+            end if
 
-    write (6,'(A,I10)') ' -- nobs in the slot = ', nslot
-    write (6,'(A,I6,A,I10)') ' -- nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
+          end if ! [ PRC_myrank == proc ]
+
+        end if ! [ obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub ]
+
+      end do ! [ n = 1, obs%nobs ]
+
+    end do ! [ iof = 1, nobsfiles ]
+
+    write (6,'(3A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot = ', nslot
+    write (6,'(3A,I6,A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
 
   end do ! [ islot = SLOT_START, SLOT_END ]
 
   deallocate ( v3dg, v2dg )
 
   if (PRC_myrank == 0) then
-    allocate ( bufr (obs%nobs) )
+    nobsmax = 0
+    nobsall = 0
+    do iof = 1, nobsfiles
+      if (obs(iof)%nobs > nobsmax) nobsmax = obs(iof)%nobs
+      nobsall = nobsall + obs(iof)%nobs
+    end do
+
+    allocate ( bufr(nobsmax) )
+    allocate ( error(nobsall) )
+
+    call com_randn(nobsall, error) ! generate all random numbers at the same time
+    ns = 0
   end if
 
-  CALL MPI_REDUCE(obs%dat,bufr,obs%nobs,MPI_r_size,MPI_MAX,0,MPI_COMM_d,ierr)
+  do iof = 1, nobsfiles
 
-  if (PRC_myrank == 0) then
+    call MPI_REDUCE(obs(iof)%dat,bufr(1:obs(iof)%nobs),obs(iof)%nobs,MPI_r_size,MPI_SUM,0,MPI_COMM_d,ierr)
 
-    obs%dat = bufr
-    deallocate ( bufr )
+    if (PRC_myrank == 0) then
+      obs(iof)%dat = bufr(1:obs(iof)%nobs)
 
-    ALLOCATE(error(obs%nobs))
-    CALL com_randn(obs%nobs,error)
-    do n = 1, obs%nobs
-      select case(obs%elm(n))
-      case(id_u_obs)
-        obs%err(n) = OBSERR_U
-      case(id_v_obs)
-        obs%err(n) = OBSERR_V
-      case(id_t_obs,id_tv_obs)
-        obs%err(n) = OBSERR_T
-      case(id_q_obs)
-        obs%err(n) = OBSERR_Q
-      case(id_rh_obs)
-        obs%err(n) = OBSERR_RH
-      case(id_ps_obs)
-        obs%err(n) = OBSERR_PS
-      case default
-        write(6,'(A)') 'warning: skip assigning observation error (unsupported observation type)' 
-      end select
-      obs%dat(n) = obs%dat(n) + obs%err(n) * error(n)
+      do n = 1, obs(iof)%nobs
+        select case(obs(iof)%elm(n))
+        case(id_u_obs)
+          obs(iof)%err(n) = OBSERR_U
+        case(id_v_obs)
+          obs(iof)%err(n) = OBSERR_V
+        case(id_t_obs,id_tv_obs)
+          obs(iof)%err(n) = OBSERR_T
+        case(id_q_obs)
+          obs(iof)%err(n) = OBSERR_Q
+        case(id_rh_obs)
+          obs(iof)%err(n) = OBSERR_RH
+        case(id_ps_obs)
+          obs(iof)%err(n) = OBSERR_PS
+        case default
+          write(6,'(A)') 'warning: skip assigning observation error (unsupported observation type)' 
+        end select
+        obs(iof)%dat(n) = obs(iof)%dat(n) + obs(iof)%err(n) * error(ns+n)
 
 !print *, '######', obs%elm(n), obs%dat(n)
+      end do ! [ n = 1, obs(iof)%nobs ]
 
-    end do ! [ n = 1, obs%nobs ]
+      ns = ns + obs(iof)%nobs
+    end if ! [ PRC_myrank == 0 ]
 
-    call write_obs(obsoutfile,obs)
+  end do ! [ iof = 1, nobsfiles ]
 
-  end if ! [ PRC_myrank == 0 ]
+  if (PRC_myrank == 0) then
+    deallocate ( bufr )
+    deallocate ( error )
 
-  call unset_scalelib !!!!!!
+    call write_obs_all(obs, radarlon, radarlat, radarz) ! Overwrite the original obs files, only at the head node
+  end if
 
 end subroutine obsmake_cal
 !=======================================================================

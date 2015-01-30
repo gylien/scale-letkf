@@ -69,24 +69,19 @@ MODULE letkf_obs
 
   INTEGER,allocatable,SAVE :: nobsgrd2(:,:,:)
 
-  type(obs_info),save :: obs
+  type(obs_info),save :: obs(nobsfiles)
   type(obs_da_value),save :: obsda
   type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
 
+  real(r_size) :: radarlon, radarlat, radarz
+
   integer,save :: nobstotalg
   integer,save :: nobstotal
-
 
 !-----------------------------------------------------------------------
 ! General parameters
 !-----------------------------------------------------------------------
 
-  INTEGER,PARAMETER :: nslots=1 ! number of time slots for 4D-LETKF
-  INTEGER,PARAMETER :: nbslot=1 ! basetime slot
-  REAL(r_size),PARAMETER :: slotint=5.0d0 ! time interval between slots in second
-
-  CHARACTER(7) :: obsfile='obs.dat' !IN
-  CHARACTER(21) :: obsdafile='obsda.0000.000000.dat' !IN
 
 CONTAINS
 !-----------------------------------------------------------------------
@@ -204,22 +199,6 @@ SUBROUTINE set_letkf_obs
 
 
 
-!  if (valid_member) then
-!    call unset_scalelib
-!  end if
-
-!!!!!!
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!!!!!!
-
-
-
-
-
-
-
-
-
 
 
 
@@ -246,7 +225,7 @@ SUBROUTINE set_letkf_obs
       write (obsdafile(12:17),'(I6.6)') proc2mem(2,it,myrank+1)
 
 
-      CALL get_nobs(obsdafile,5,obsda%nobs)
+      CALL get_nobs(obsdafile,6,obsda%nobs)
       WRITE(6,'(A,I9,A)') 'TOTAL: ', obsda%nobs, ' OBSERVATIONS'
 
       CALL obs_da_value_allocate(obsda,MEMBER)
@@ -474,14 +453,14 @@ SUBROUTINE set_letkf_obs
     DO i=1,MEMBER
       obsda%ensval(i,n) = obsda%ensval(i,n) - obsda%val(n) ! Hdx
     END DO
-    obsda%val(n) = obs%dat(obsda%idx(n)) - obsda%val(n) ! y-Hx
-    IF(ABS(obsda%val(n)) > gross_error * obs%err(obsda%idx(n))) THEN !gross error
+    obsda%val(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - obsda%val(n) ! y-Hx
+    IF(ABS(obsda%val(n)) > gross_error * obs(obsda%set(n))%err(obsda%idx(n))) THEN !gross error
       obsda%qc(n) = iqc_gross_err
     END IF
 
 
 
-!write (6, '(2I6,2F8.2,4F12.4,I3)') obs%elm(obsda%idx(n)), obs%typ(obsda%idx(n)), obs%lon(obsda%idx(n)), obs%lat(obsda%idx(n)), obs%lev(obsda%idx(n)), obs%dat(obsda%idx(n)), obs%err(obsda%idx(n)), obsda%val(n), obsda%qc(n)
+!write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsda%set(n))%typ(obsda%idx(n)), obs(obsda%set(n))%lon(obsda%idx(n)), obs(obsda%set(n))%lat(obsda%idx(n)), obs(obsda%set(n))%lev(obsda%idx(n)), obs(obsda%set(n))%dat(obsda%idx(n)), obs(obsda%set(n))%err(obsda%idx(n)), obsda%val(n), obsda%qc(n)
 
 
 

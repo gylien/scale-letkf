@@ -45,7 +45,8 @@ MODULE common_obs_scale
   IMPLICIT NONE
   PUBLIC
 
-  INTEGER,PARAMETER :: nid_obs=8
+  INTEGER,PARAMETER :: nid_obs=11
+
   INTEGER,PARAMETER :: id_u_obs=2819
   INTEGER,PARAMETER :: id_v_obs=2820
   INTEGER,PARAMETER :: id_t_obs=3073
@@ -98,20 +99,20 @@ MODULE common_obs_scale
 
   INTEGER,PARAMETER :: elem_uid(nid_obs)= &
      (/id_u_obs, id_v_obs, id_t_obs, id_tv_obs, id_q_obs, id_rh_obs, &
-       id_ps_obs, id_rain_obs/)
+       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs/)
 !       id_tclon_obs, id_tclat_obs, id_tcmip_obs/)
 
-  INTEGER,PARAMETER :: nobtype = 21
+  CHARACTER(3),PARAMETER :: obelmlist(nid_obs)= &
+     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH'/)
+!     'TCX', 'TCY', 'TCP'/)
+
+  INTEGER,PARAMETER :: nobtype = 22
   CHARACTER(6),PARAMETER :: obtypelist(nobtype)= &
      (/'ADPUPA', 'AIRCAR', 'AIRCFT', 'SATWND', 'PROFLR', &
        'VADWND', 'SATEMP', 'ADPSFC', 'SFCSHP', 'SFCBOG', &
        'SPSSMI', 'SYNDAT', 'ERS1DA', 'GOESND', 'QKSWND', &
        'MSONET', 'GPSIPW', 'RASSDA', 'WDSATR', 'ASCATW', &
-       'TMPAPR'/)
-       
-  CHARACTER(3),PARAMETER :: obelmlist(nid_obs)= &
-     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC'/)
-!     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'TCX', 'TCY', 'TCP'/)
+       'TMPAPR', 'PHARAD'/)
 
   TYPE obs_info
     INTEGER :: nobs = 0
@@ -127,6 +128,7 @@ MODULE common_obs_scale
 
   TYPE obs_da_value
     INTEGER :: nobs = 0
+    INTEGER,ALLOCATABLE :: set(:)
     INTEGER,ALLOCATABLE :: idx(:)
     REAL(r_size),ALLOCATABLE :: val(:)
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
@@ -135,6 +137,23 @@ MODULE common_obs_scale
     REAL(r_size),ALLOCATABLE :: rj(:)
   END TYPE obs_da_value
 
+
+
+  INTEGER,PARAMETER :: nslots=1 ! number of time slots for 4D-LETKF
+  INTEGER,PARAMETER :: nbslot=1 ! basetime slot
+  REAL(r_size),PARAMETER :: slotint=5.0d0 ! time interval between slots in second
+
+  INTEGER,PARAMETER :: nobsformats=2
+  CHARACTER(30) :: obsformat_name(nobsformats) = &
+    (/'CONVENTIONAL', 'RADAR'/)
+
+  INTEGER,PARAMETER :: nobsfiles=2          !!!!!! goes to namelist ?????
+  CHARACTER(30) :: obsfile(nobsfiles) = &   !!!!
+    (/'obs.dat', 'radar.dat'/)              !!!!
+  INTEGER :: obsfileformat(nobsfiles) = &   !!!!
+    (/1, 2/)                                !!!!
+
+  CHARACTER(21) :: obsdafile='obsda.0000.000000.dat'
 
 
 
@@ -158,6 +177,21 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: iqc_time=91
 
 CONTAINS
+
+
+!!!!!!!! subroutine read_nml_letkf_obs ?????
+
+!-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+subroutine set_common_obs_scale
+  implicit none
+
+  MIN_RADAR_REF = 10.0d0 ** (MIN_RADAR_REF_DBZ/10.0d0)
+
+  return
+end subroutine set_common_obs_scale
+
 !-----------------------------------------------------------------------
 ! Transformation from model variables to an observation
 !-----------------------------------------------------------------------
@@ -181,8 +215,8 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs,qc)
 !  ke = CEILING( rk )
 !  ks = ke-1
 
-  qc = 0
   yobs = undef
+  qc = iqc_good
 
   SELECT CASE (elm)
   CASE(id_u_obs)  ! U
@@ -225,8 +259,6 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs,qc)
 
   RETURN
 END SUBROUTINE Trans_XtoY
-
-
 !-----------------------------------------------------------------------
 ! 
 !-----------------------------------------------------------------------
@@ -245,8 +277,8 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   REAL(r_size) :: dist , dlon , dlat , az , elev , radar_ref,radar_rv
 
 
-  qc = 0
   yobs = undef
+  qc = iqc_good
 
   CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,ur)
   CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,vr)
@@ -313,7 +345,7 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
 !!!!!      qc = 
 !!!!      yobs = -rhr
 
-!!!!    else                      --------- TO BE DONE...
+!!!!    else                      !!!!!! --------- Pesudo RH: TO BE DONE...
       yobs = radar_ref
 !!!!    end if
   CASE(id_radar_vr_obs)
@@ -818,11 +850,8 @@ END SUBROUTINE calc_ref_vr
 ! Coordinate conversion
 !
 ! rk = 0.0d0  : surface observation
-! rk = -1.0d0 : too high
-! rk = -2.0d0 : too low
-! rk = -3.0d0 : horizontally outside (should not happen)
 !-----------------------------------------------------------------------
-SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk)
+SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
   use scale_grid_index, only: &
       KHALO
   IMPLICIT NONE
@@ -833,17 +862,21 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk)
   REAL(r_size),INTENT(IN) :: rj
   REAL(r_size),INTENT(IN) :: rlev ! pressure levels
   REAL(r_size),INTENT(OUT) :: rk
+  INTEGER,INTENT(OUT) :: qc
   REAL(r_size) :: ak
   REAL(r_size) :: lnps(nlonh,nlath)
   REAL(r_size) :: plev(nlevh)
   REAL(r_size) :: ptop
   INTEGER :: i,j,k, ii, jj, ks
+
+  qc = iqc_good
 !
 ! rlev -> rk
 !
   if (ri < 1.0d0 .or. ri > nlonh .or. rj < 1.0d0 .or. rj > nlath) then
     write (6,'(A)') 'warning: observation is outside of the horizontal domain'
-    rk = -3.0d0
+    rk = undef
+    qc = iqc_out_h
     return
   end if
   !
@@ -887,13 +920,15 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk)
     IF(rk < plev(nlev+KHALO)) THEN
       call itpl_2d(p_full(nlev+KHALO,:,:),ri,rj,ptop)
       write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too high: ptop=', ptop, ', lev=', rlev
-      rk = -1.0d0
+      rk = undef
+      qc = iqc_out_vhi
       RETURN
     END IF
     IF(rk > plev(ks)) THEN
       call itpl_2d(p_full(ks,:,:),ri,rj,ptop)
       write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too low: ptop=', ptop, ', lev=', rlev
-      rk = -2.0d0
+      rk = undef
+      qc = iqc_out_vlo
       RETURN
     END IF
     !
@@ -1188,6 +1223,7 @@ SUBROUTINE obs_da_value_allocate(obs,member)
 
   call obs_da_value_deallocate(obs)
 
+  ALLOCATE( obs%set    (obs%nobs) )
   ALLOCATE( obs%idx    (obs%nobs) )
   ALLOCATE( obs%val    (obs%nobs) )
   ALLOCATE( obs%qc     (obs%nobs) )
@@ -1214,6 +1250,7 @@ SUBROUTINE obs_da_value_deallocate(obs)
   IMPLICIT NONE
   TYPE(obs_da_value),INTENT(INOUT) :: obs
 
+  IF(ALLOCATED(obs%set    )) DEALLOCATE(obs%set    )
   IF(ALLOCATED(obs%idx    )) DEALLOCATE(obs%idx    )
   IF(ALLOCATED(obs%val    )) DEALLOCATE(obs%val    )
   IF(ALLOCATED(obs%ensval )) DEALLOCATE(obs%ensval )
@@ -1403,7 +1440,7 @@ SUBROUTINE read_obs_da(cfile,obs,im,check)
   TYPE(obs_da_value),INTENT(INOUT) :: obs
   INTEGER,INTENT(IN) :: im
   LOGICAL,INTENT(IN) :: check
-  REAL(r_sngl) :: wk(5)
+  REAL(r_sngl) :: wk(6)
   INTEGER :: n,iunit
 
 !  call obs_da_value_allocate(obs)
@@ -1412,29 +1449,34 @@ SUBROUTINE read_obs_da(cfile,obs,im,check)
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   DO n=1,obs%nobs
     READ(iunit) wk
-    if (check .and. obs%idx(n) /= NINT(wk(1))) then
+    if (check .and. obs%set(n) /= NINT(wk(1))) then
+      write (6,'(A)') 'error: obs_da_value%set are inconsistent among the ensemble'
+      stop
+    end if
+    obs%set(n) = NINT(wk(1))
+    if (check .and. obs%idx(n) /= NINT(wk(2))) then
       write (6,'(A)') 'error: obs_da_value%idx are inconsistent among the ensemble'
       stop
     end if
-    obs%idx(n) = NINT(wk(1))  !!!!!! will overflow......
+    obs%idx(n) = NINT(wk(2))  !!!!!! will overflow......
     if (im == 0) then
-      obs%val(n) = REAL(wk(2),r_size)
+      obs%val(n) = REAL(wk(3),r_size)
     else
-      obs%ensval(im,n) = REAL(wk(2),r_size)
+      obs%ensval(im,n) = REAL(wk(3),r_size)
     end if
-    if ((.not. check) .or. (check .and. obs%qc(n) < NINT(wk(3)))) then ! choose the maximum qc value if check = .true.
-      obs%qc(n) = NINT(wk(3))
+    if ((.not. check) .or. (check .and. obs%qc(n) < NINT(wk(4)))) then ! choose the maximum qc value if check = .true.
+      obs%qc(n) = NINT(wk(4))
     end if
-    if (check .and. obs%ri(n) /= REAL(wk(4),r_size)) then
+    if (check .and. obs%ri(n) /= REAL(wk(5),r_size)) then
       write (6,'(A)') 'error: obs_da_value%ri are inconsistent among the ensemble'
       stop
     end if
-    obs%ri(n) = REAL(wk(4),r_size)
-    if (check .and. obs%rj(n) /= REAL(wk(5),r_size)) then
+    obs%ri(n) = REAL(wk(5),r_size)
+    if (check .and. obs%rj(n) /= REAL(wk(6),r_size)) then
       write (6,'(A)') 'error: obs_da_value%rj are inconsistent among the ensemble'
       stop
     end if
-    obs%rj(n) = REAL(wk(5),r_size)
+    obs%rj(n) = REAL(wk(6),r_size)
   END DO
   CLOSE(iunit)
 
@@ -1448,7 +1490,7 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
   INTEGER,INTENT(IN) :: im
   INTEGER,INTENT(IN),OPTIONAL :: append
   INTEGER :: appendr
-  REAL(r_sngl) :: wk(5)
+  REAL(r_sngl) :: wk(6)
   INTEGER :: n,iunit
 
   iunit=92
@@ -1460,15 +1502,16 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',STATUS='replace')
   END IF
   DO n=1,obs%nobs
-    wk(1) = REAL(obs%idx(n),r_sngl)  !!!!!! will overflow......
+    wk(1) = REAL(obs%set(n),r_sngl)
+    wk(2) = REAL(obs%idx(n),r_sngl)  !!!!!! will overflow......
     if (im == 0) then
-      wk(2) = REAL(obs%val(n),r_sngl)
+      wk(3) = REAL(obs%val(n),r_sngl)
     else
-      wk(2) = REAL(obs%ensval(im,n),r_sngl)
+      wk(3) = REAL(obs%ensval(im,n),r_sngl)
     end if
-    wk(3) = REAL(obs%qc(n),r_sngl)
-    wk(4) = REAL(obs%ri(n),r_sngl)
-    wk(5) = REAL(obs%rj(n),r_sngl)
+    wk(4) = REAL(obs%qc(n),r_sngl)
+    wk(5) = REAL(obs%ri(n),r_sngl)
+    wk(6) = REAL(obs%rj(n),r_sngl)
     WRITE(iunit) wk
   END DO
   CLOSE(iunit)
@@ -1476,176 +1519,6 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
   RETURN
 END SUBROUTINE write_obs_da
 
-!SUBROUTINE read_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,ohx,oqc)
-!  IMPLICIT NONE
-!  CHARACTER(*),INTENT(IN) :: cfile
-!  INTEGER,INTENT(IN) :: nn
-!  REAL(r_size),INTENT(OUT) :: elem(nn) ! element number
-!  REAL(r_size),INTENT(OUT) :: rlon(nn)
-!  REAL(r_size),INTENT(OUT) :: rlat(nn)
-!  REAL(r_size),INTENT(OUT) :: rlev(nn)
-!  REAL(r_size),INTENT(OUT) :: odat(nn)
-!  REAL(r_size),INTENT(OUT) :: oerr(nn)
-!  REAL(r_size),INTENT(OUT) :: otyp(nn)
-!  REAL(r_size),INTENT(OUT) :: tdif(nn)
-!  REAL(r_size),INTENT(OUT) :: ohx(nn)
-!  INTEGER,INTENT(OUT) :: oqc(nn)
-!  REAL(r_sngl) :: wk(10)
-!  INTEGER :: n,iunit
-
-!  iunit=91
-!  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-!  DO n=1,nn
-!    READ(iunit) wk
-!    SELECT CASE(NINT(wk(1)))
-!    CASE(id_u_obs)
-!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-!    CASE(id_v_obs)
-!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-!    CASE(id_t_obs)
-!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-!    CASE(id_tv_obs)
-!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-!    CASE(id_q_obs)
-!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-!    CASE(id_ps_obs)
-!      wk(5) = wk(5) * 100.0 ! hPa -> Pa
-!      wk(6) = wk(6) * 100.0 ! hPa -> Pa
-!    CASE(id_rh_obs)
-!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-!      wk(5) = wk(5) * 0.01 ! percent input
-!      wk(6) = wk(6) * 0.01 ! percent input
-!    CASE(id_tcmip_obs)
-!      wk(5) = wk(5) * 100.0 ! hPa -> Pa
-!      wk(6) = wk(6) * 100.0 ! hPa -> Pa
-!    END SELECT
-!    elem(n) = REAL(wk(1),r_size)
-!    rlon(n) = REAL(wk(2),r_size)
-!    rlat(n) = REAL(wk(3),r_size)
-!    rlev(n) = REAL(wk(4),r_size)
-!    odat(n) = REAL(wk(5),r_size)
-!    oerr(n) = REAL(wk(6),r_size)
-!    otyp(n) = REAL(wk(7),r_size)
-!    tdif(n) = REAL(wk(8),r_size)
-!    ohx(n) = REAL(wk(9),r_size)
-!    oqc(n) = NINT(wk(10))
-!  END DO
-!  CLOSE(iunit)
-
-!  RETURN
-!END SUBROUTINE read_obs2
-
-!SUBROUTINE write_obs2(cfile,nn,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,ohx,oqc,append)
-!  IMPLICIT NONE
-!  CHARACTER(*),INTENT(IN) :: cfile
-!  INTEGER,INTENT(IN) :: nn
-!  REAL(r_size),INTENT(IN) :: elem(nn) ! element number
-!  REAL(r_size),INTENT(IN) :: rlon(nn)
-!  REAL(r_size),INTENT(IN) :: rlat(nn)
-!  REAL(r_size),INTENT(IN) :: rlev(nn)
-!  REAL(r_size),INTENT(IN) :: odat(nn)
-!  REAL(r_size),INTENT(IN) :: oerr(nn)
-!  REAL(r_size),INTENT(IN) :: otyp(nn)
-!  REAL(r_size),INTENT(IN) :: tdif(nn)
-!  REAL(r_size),INTENT(IN) :: ohx(nn)
-!  INTEGER,INTENT(IN) :: oqc(nn)
-!  INTEGER,INTENT(IN) :: append
-!  REAL(r_sngl) :: wk(10)
-!  INTEGER :: n,iunit
-
-!  iunit=92
-!  IF(append == 0) THEN
-!    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-!  ELSE
-!    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
-!  END IF
-!  DO n=1,nn
-!    wk(1) = REAL(elem(n),r_sngl)
-!    wk(2) = REAL(rlon(n),r_sngl)
-!    wk(3) = REAL(rlat(n),r_sngl)
-!    wk(4) = REAL(rlev(n),r_sngl)
-!    wk(5) = REAL(odat(n),r_sngl)
-!    wk(6) = REAL(oerr(n),r_sngl)
-!    wk(7) = REAL(otyp(n),r_sngl)
-!    wk(8) = REAL(tdif(n),r_sngl)
-!    wk(9) = REAL(ohx(n),r_sngl)
-!    wk(10) = REAL(oqc(n),r_sngl)
-!    SELECT CASE(NINT(wk(1)))
-!    CASE(id_u_obs)
-!      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-!    CASE(id_v_obs)
-!      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-!    CASE(id_t_obs)
-!      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-!    CASE(id_tv_obs)
-!      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-!    CASE(id_q_obs)
-!      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-!    CASE(id_ps_obs)
-!      wk(5) = wk(5) * 0.01 ! Pa -> hPa
-!      wk(6) = wk(6) * 0.01 ! Pa -> hPa
-!    CASE(id_rh_obs)
-!      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-!      wk(5) = wk(5) * 100.0 ! percent output
-!      wk(6) = wk(6) * 100.0 ! percent output
-!    CASE(id_tcmip_obs)
-!      wk(5) = wk(5) * 0.01 ! Pa -> hPa
-!      wk(6) = wk(6) * 0.01 ! Pa -> hPa
-!    END SELECT
-!    WRITE(iunit) wk
-!  END DO
-!  CLOSE(iunit)
-
-!  RETURN
-!END SUBROUTINE write_obs2
-
-FUNCTION uid_obs(id_obs)
-  IMPLICIT NONE
-  INTEGER :: id_obs
-  INTEGER :: uid_obs
-
-  SELECT CASE(id_obs)
-  CASE(id_u_obs)
-    uid_obs = 1
-  CASE(id_v_obs)
-    uid_obs = 2
-  CASE(id_t_obs)
-    uid_obs = 3
-  CASE(id_tv_obs)
-    uid_obs = 4
-  CASE(id_q_obs)
-    uid_obs = 5
-  CASE(id_rh_obs)
-    uid_obs = 6
-  CASE(id_ps_obs)
-    uid_obs = 7
-  CASE(id_rain_obs)
-    uid_obs = 8
-!  CASE(id_tclon_obs)
-!    uid_obs = 9
-!  CASE(id_tclat_obs)
-!    uid_obs = 10
-!  CASE(id_tcmip_obs)
-!    uid_obs = 11
-  CASE DEFAULT
-    uid_obs = -1 ! error
-  END SELECT
-END FUNCTION uid_obs
-
-
-
-subroutine set_radar_letkf
-  implicit none
-
-  MIN_RADAR_REF = 10.0d0 ** (MIN_RADAR_REF_DBZ/10.0d0)
-
-  return
-end subroutine set_radar_letkf
-
-
-!-----------------------------------------------------------------------
-! Basic modules for observation input
-!-----------------------------------------------------------------------
 SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
@@ -1702,7 +1575,6 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
   RETURN
 END SUBROUTINE get_nobs_radar
 
-
 SUBROUTINE read_obs_radar(cfile,obs)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
@@ -1734,5 +1606,138 @@ SUBROUTINE read_obs_radar(cfile,obs)
   RETURN
 END SUBROUTINE read_obs_radar
 
+SUBROUTINE write_obs_radar(cfile,obs,radarlon,radarlat,radarz,append)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: cfile
+  TYPE(obs_info),INTENT(IN) :: obs
+  REAL(r_size),INTENT(IN) :: radarlon,radarlat,radarz
+  INTEGER,INTENT(IN),OPTIONAL :: append
+  INTEGER :: appendr
+  REAL(r_sngl) :: wk(7)
+  INTEGER :: n,iunit
+
+  iunit=92
+  appendr = 0
+  IF(present(append)) appendr = append
+
+  IF(appendr == 1) THEN
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
+  ELSE
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+  END IF
+  WRITE(iunit) REAL(radarlon,r_sngl)
+  WRITE(iunit) REAL(radarlat,r_sngl)
+  WRITE(iunit) REAL(radarz,r_sngl)
+  DO n=1,obs%nobs
+    wk(1) = REAL(obs%elm(n),r_sngl)
+    wk(2) = REAL(obs%lon(n),r_sngl)
+    wk(3) = REAL(obs%lat(n),r_sngl)
+    wk(4) = REAL(obs%lev(n),r_sngl)
+    wk(5) = REAL(obs%dat(n),r_sngl)
+    wk(6) = REAL(obs%err(n),r_sngl)
+    wk(7) = REAL(obs%typ(n),r_sngl)
+    WRITE(iunit) wk
+  END DO
+  CLOSE(iunit)
+
+  RETURN
+END SUBROUTINE write_obs_radar
+
+subroutine read_obs_all(obs, radarlon, radarlat, radarz)
+  implicit none
+
+  type(obs_info), intent(out) :: obs(nobsfiles)
+  real(r_size), intent(out) :: radarlon, radarlat, radarz
+  integer :: iof
+  logical :: ex
+
+  do iof = 1, nobsfiles
+    inquire (file=obsfile(iof), exist=ex)
+    if (ex) then
+      write(6,*) 'WARNING: FILE ',obsfile(iof),' NOT FOUND'
+      cycle
+    end if
+
+    select case (obsfileformat(iof))
+    case (1)
+      call get_nobs(obsfile(iof),8,obs(iof)%nobs)
+    case (2)
+      call get_nobs_radar(obsfile(iof), obs(iof)%nobs, radarlon, radarlat, radarz)  !!!!!! using 'radar_info' data type to handle more than 1 radar???
+    case default
+      write(6,*) 'Error: Unsupported observation file format!'
+      stop
+    end select
+
+    write(6,'(5A,I9,A)') 'OBS FILE [', trim(obsfile(iof)), '] (FORMAT ', &
+                         trim(obsformat_name(obsfileformat(iof))), '): TOTAL ', &
+                         obs(iof)%nobs, ' OBSERVATIONS'
+
+    call obs_info_allocate(obs(iof))
+
+    select case (obsfileformat(iof))
+    case (1)
+      call read_obs(obsfile(iof),obs(iof))
+    case (2)
+      call read_obs_radar(obsfile(iof),obs(iof))
+    end select
+  end do ! [ iof = 1, nobsfiles ]
+
+  return
+end subroutine read_obs_all
+
+subroutine write_obs_all(obs, radarlon, radarlat, radarz)
+  implicit none
+
+  type(obs_info), intent(in) :: obs(nobsfiles)
+  real(r_size), intent(in) :: radarlon, radarlat, radarz
+  integer :: iof
+
+  do iof = 1, nobsfiles
+    select case (obsfileformat(iof))
+    case (1)
+      call write_obs(obsfile(iof),obs(iof))
+    case (2)
+      call write_obs_radar(obsfile(iof),obs(iof),radarlon,radarlat,radarz)
+    end select
+  end do ! [ iof = 1, nobsfiles ]
+
+  return
+end subroutine write_obs_all
+
+!-----------------------------------------------------------------------
+! 
+!-----------------------------------------------------------------------
+FUNCTION uid_obs(id_obs)
+  IMPLICIT NONE
+  INTEGER :: id_obs
+  INTEGER :: uid_obs
+
+  SELECT CASE(id_obs)
+  CASE(id_u_obs)
+    uid_obs = 1
+  CASE(id_v_obs)
+    uid_obs = 2
+  CASE(id_t_obs)
+    uid_obs = 3
+  CASE(id_tv_obs)
+    uid_obs = 4
+  CASE(id_q_obs)
+    uid_obs = 5
+  CASE(id_rh_obs)
+    uid_obs = 6
+  CASE(id_ps_obs)
+    uid_obs = 7
+  CASE(id_rain_obs)
+    uid_obs = 8
+!  CASE(id_tclon_obs)
+!    uid_obs = 9
+!  CASE(id_tclat_obs)
+!    uid_obs = 10
+!  CASE(id_tcmip_obs)
+!    uid_obs = 11
+  CASE DEFAULT
+    uid_obs = -1 ! error
+  END SELECT
+END FUNCTION uid_obs
 
 END MODULE common_obs_scale

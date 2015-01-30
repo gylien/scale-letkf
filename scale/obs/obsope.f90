@@ -13,107 +13,72 @@ PROGRAM obsope
   USE common_scale
   USE common_mpi_scale
   USE common_obs_scale
-
-  use common_nml
-
-  use obsope_tools
-
-!  use scale_process, only: &
-!       prc_myrank, &
-!       prc_myrank_world
-
-!  use scale_grid_index, only: &
-!    KHALO, IHALO, JHALO
-
-
+  USE common_nml
+  USE obsope_tools
   IMPLICIT NONE
-!  REAL(r_size),ALLOCATABLE :: gues3d(:,:,:,:)
-!  REAL(r_size),ALLOCATABLE :: gues2d(:,:,:)
-!  REAL(r_size),ALLOCATABLE :: anal3d(:,:,:,:)
-!  REAL(r_size),ALLOCATABLE :: anal2d(:,:,:)
-
 
   REAL(r_size) :: rtimer00,rtimer
   INTEGER :: ierr
   CHARACTER(11) :: stdoutf='NOUT-000000'
-  LOGICAL :: ex
 
-
-  TYPE(obs_info) :: obs
-  TYPE(obs_info) :: obsradar
-
+  type(obs_info) :: obs(nobsfiles)
+  real(r_size) :: radarlon, radarlat, radarz
 
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
-  CALL CPU_TIME(rtimer00)
+
   CALL initialize_mpi
-!
+  rtimer00 = MPI_WTIME()
+
   WRITE(stdoutf(6:11), '(I6.6)') myrank
   WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
   OPEN(6,FILE=stdoutf)
   WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
-!
-  CALL set_common_scale(-1)
 
 !-----------------------------------------------------------------------
 
-!  ! setup standard I/O
-!  call IO_setup( MODELNAME, .false. )
+  CALL set_common_scale(-1)
+  CALL set_common_obs_scale
 
 !  call read_nml_obsope
 
-!  if (nprocs /= NNODES * PPN) then
-!    write(6,*) 'Number of MPI processes should be equal to NNODES * PPN.'
-!    stop
-!  end if
-
-!  CALL set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
-
-  CALL CPU_TIME(rtimer)
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  rtimer = MPI_WTIME()
   WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------
-
-  CALL get_nobs(obsfile,8,obs%nobs)
-  WRITE(6,'(A,I9,A)') 'TOTAL: ', obs%nobs, ' CONVENTIONAL OBSERVATIONS'
-
-  CALL obs_info_allocate(obs)
-
-  CALL read_obs(obsfile,obs)
-
+! Read observations
 !-----------------------------------------------------------------------
 
-  INQUIRE (FILE=radarfile, EXIST=ex)
-  IF (ex) THEN
-    CALL get_nobs_radar(radarfile,obsradar%nobs,radarlon,radarlat,radarz)
-    WRITE(6,'(A,I9,A)') 'TOTAL: ', obsradar%nobs, ' RADAR OBSERVATIONS'
+  if (scale_IO_use) then
+    call read_obs_all(obs, radarlon, radarlat, radarz)
+  end if
 
-    CALL obs_info_allocate(obsradar)
-
-    CALL read_obs_radar(radarfile,obsradar)
-  ELSE
-    WRITE(6,*)'WARNING: FILE ',radarfile,' NOT FOUND'
-  ENDIF
-
-  CALL CPU_TIME(rtimer)
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  rtimer = MPI_WTIME()
   WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------
+! Observation operator
+!-----------------------------------------------------------------------
 
-  if (valid_member) then
-    call obsope_cal(obs)
+  if (scale_IO_use) then
+    call obsope_cal(obs, radarlon, radarlat, radarz)
   end if
 
-  CALL CPU_TIME(rtimer)
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  rtimer = MPI_WTIME()
   WRITE(6,'(A,2F10.2)') '### TIMER(OBS_OPERATOR):',rtimer,rtimer-rtimer00
   rtimer00=rtimer
+
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
+  CALL unset_common_scale
   CALL finalize_mpi
 
   STOP
