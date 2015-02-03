@@ -74,7 +74,7 @@ MODULE common_obs_scale
 
   REAL(r_size),PARAMETER :: UNDEF_OBS = 9.99d9           !Code that will be assigned to obs outside the domain.(so we don't need qc0 array)
   REAL(r_size),PARAMETER :: MIN_RADAR_REF_MEMBER = 0.5d0 !Percentaje of ensemble members with reflectivity greather than 0.
-  REAL(r_size),PARAMETER :: MIN_RADAR_REF_DBZ = 0.0d0    !Reflectivity values below this threshold won't be assimilated.
+  REAL(r_size),PARAMETER :: MIN_RADAR_REF_DBZ = 15.0d0   !Reflectivity values below this threshold won't be assimilated.
 
   REAL(r_size),PARAMETER :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
 
@@ -170,6 +170,7 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: iqc_good=0
   INTEGER,PARAMETER :: iqc_gross_err=5
   INTEGER,PARAMETER :: iqc_ps_ter=10
+  INTEGER,PARAMETER :: iqc_ref_low=11
   INTEGER,PARAMETER :: iqc_out_vhi=20
   INTEGER,PARAMETER :: iqc_out_vlo=21
   INTEGER,PARAMETER :: iqc_out_h=22
@@ -330,7 +331,9 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   !DEGUB---------------------------------------------------------------
 
   !WRITE(6,*)'BCRV',dlon,dlat,az,elev
+
   CALL calc_ref_vr(qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr,az,elev,radar_ref,radar_rv)
+
   !WRITE(6,*)'ACRV',ref,radialv
   !WRITE(6,*)'ACRV',ref,radialv
 
@@ -346,10 +349,12 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
 !!!!      yobs = -rhr
 
 !!!!    else                      !!!!!! --------- Pesudo RH: TO BE DONE...
-      yobs = radar_ref
+      yobs = 10.0d0 * log10(radar_ref)
+      if (yobs < MIN_RADAR_REF_DBZ) qc = iqc_ref_low
 !!!!    end if
   CASE(id_radar_vr_obs)
     yobs = radar_rv
+    if (10.0d0 * log10(radar_ref) < MIN_RADAR_REF_DBZ) qc = iqc_ref_low
   CASE DEFAULT
     qc = iqc_otype
   END SELECT
@@ -847,7 +852,7 @@ END SUBROUTINE calc_ref_vr
 
 
 !-----------------------------------------------------------------------
-! Coordinate conversion
+! Coordinate conversion (find rk in pressure levels)
 !
 ! rk = 0.0d0  : surface observation
 !-----------------------------------------------------------------------
@@ -866,7 +871,7 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
   REAL(r_size) :: ak
   REAL(r_size) :: lnps(nlonh,nlath)
   REAL(r_size) :: plev(nlevh)
-  REAL(r_size) :: ptop
+  REAL(r_size) :: ptmp
   INTEGER :: i,j,k, ii, jj, ks
 
   qc = iqc_good
@@ -900,7 +905,6 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
         if (k > ks) ks = k
       end do
     end do
-!    DO k=1,nlevh
     DO k=1+KHALO,nlev+KHALO
 !      IF(i <= nlon+IHALO) THEN
         lnps(i-1:i,j-1:j) = LOG(p_full(k,i-1:i,j-1:j))
@@ -918,15 +922,15 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
     ! determine if rk is within bound.
     !
     IF(rk < plev(nlev+KHALO)) THEN
-      call itpl_2d(p_full(nlev+KHALO,:,:),ri,rj,ptop)
-      write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too high: ptop=', ptop, ', lev=', rlev
+      call itpl_2d(p_full(nlev+KHALO,:,:),ri,rj,ptmp)
+      write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too high: ptop=', ptmp, ', lev=', rlev
       rk = undef
       qc = iqc_out_vhi
       RETURN
     END IF
     IF(rk > plev(ks)) THEN
-      call itpl_2d(p_full(ks,:,:),ri,rj,ptop)
-      write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too low: ptop=', ptop, ', lev=', rlev
+      call itpl_2d(p_full(ks,:,:),ri,rj,ptmp)
+      write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too low: pbottom=', ptmp, ', lev=', rlev
       rk = undef
       qc = iqc_out_vlo
       RETURN
@@ -943,6 +947,94 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
 
   RETURN
 END SUBROUTINE phys2ijk
+!-----------------------------------------------------------------------
+! Coordinate conversion (find rk in height levels)
+!
+! rk = 0.0d0  : surface observation
+!-----------------------------------------------------------------------
+SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
+  use scale_grid_index, only: &
+      KHALO
+  IMPLICIT NONE
+
+  REAL(r_size),INTENT(IN) :: z_full(nlevh,nlonh,nlath)
+  REAL(r_size),INTENT(IN) :: ri
+  REAL(r_size),INTENT(IN) :: rj
+  REAL(r_size),INTENT(IN) :: rlev ! height levels
+  REAL(r_size),INTENT(OUT) :: rk
+  INTEGER,INTENT(OUT) :: qc
+  REAL(r_size) :: ak
+!  REAL(r_size) :: lnps(nlonh,nlath)
+  REAL(r_size) :: zlev(nlevh)
+  REAL(r_size) :: ztmp
+  INTEGER :: i,j,k, ii, jj, ks
+
+  qc = iqc_good
+!
+! rlev -> rk
+!
+  if (ri < 1.0d0 .or. ri > nlonh .or. rj < 1.0d0 .or. rj > nlath) then
+    write (6,'(A)') 'warning: observation is outside of the horizontal domain'
+    rk = undef
+    qc = iqc_out_h
+    return
+  end if
+  !
+  ! horizontal interpolation
+  !
+  i = CEILING(ri)
+  j = CEILING(rj)
+  !
+  ! Find the lowest valid level
+  !
+  ks = 1+KHALO
+  do jj = j-1, j
+    do ii = i-1, i
+      DO k=1+KHALO,nlev+KHALO
+        if (z_full(k,ii,jj) > -300.0d0 .and. z_full(k,ii,jj) < 10000.0d0) exit
+      END DO
+      if (k > ks) ks = k
+    end do
+  end do
+  DO k=1+KHALO,nlev+KHALO
+!!      IF(i <= nlon+IHALO) THEN
+!      lnps(i-1:i,j-1:j) = LOG(p_full(k,i-1:i,j-1:j))
+!!      ELSE
+!!        lnps(i-1,j-1:j) = LOG(p_full(k,i-1,j-1:j))
+!!        lnps(1,j-1:j) = LOG(p_full(k,1,j-1:j))
+!!      END IF
+    CALL itpl_2d(z_full(k,:,:),ri,rj,zlev(k))
+  END DO
+  !
+  ! determine if rlev is within bound.
+  !
+  IF(rlev > zlev(nlev+KHALO)) THEN
+    call itpl_2d(z_full(nlev+KHALO,:,:),ri,rj,ztmp)
+    write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too high: ztop=', ztmp, ', lev=', rlev
+    rk = undef
+    qc = iqc_out_vhi
+    RETURN
+  END IF
+  IF(rlev < zlev(ks)) THEN
+    call itpl_2d(z_full(ks,:,:),ri,rj,ztmp)
+    write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too low: zbottom=', ztmp, ', lev=', rlev
+    rk = undef
+    qc = iqc_out_vlo
+    RETURN
+  END IF
+  !
+  ! find rk
+  !
+  DO k=ks+1,nlev+KHALO
+    IF(zlev(k) > rlev) EXIT ! assuming ascending order of zlev
+  END DO
+  ak = (rlev - zlev(k-1)) / (zlev(k) - zlev(k-1))
+  rk = REAL(k-1,r_size) + ak
+
+!print *, '######', rlev, rk
+
+  RETURN
+END SUBROUTINE phys2ijkz
 !-----------------------------------------------------------------------
 ! Coordinate conversion
 !-----------------------------------------------------------------------
@@ -1374,56 +1466,62 @@ SUBROUTINE read_obs(cfile,obs)
   RETURN
 END SUBROUTINE read_obs
 
-SUBROUTINE write_obs(cfile,obs,append)
+SUBROUTINE write_obs(cfile,obs,append,missing)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(IN) :: obs
-  INTEGER,INTENT(IN),OPTIONAL :: append
-  INTEGER :: appendr
+  LOGICAL,INTENT(IN),OPTIONAL :: append
+  LOGICAL,INTENT(IN),OPTIONAL :: missing
+  LOGICAL :: appendr
+  LOGICAL :: missingr
   REAL(r_sngl) :: wk(8)
   INTEGER :: n,iunit
 
   iunit=92
-  appendr = 0
+  appendr = .false.
   IF(present(append)) appendr = append
+  missingr = .true.
+  IF(present(missing)) missingr = missing
 
-  IF(appendr == 1) THEN
+  IF(appendr) THEN
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
   ELSE
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   END IF
   DO n=1,obs%nobs
-    wk(1) = REAL(obs%elm(n),r_sngl)
-    wk(2) = REAL(obs%lon(n),r_sngl)
-    wk(3) = REAL(obs%lat(n),r_sngl)
-    wk(4) = REAL(obs%lev(n),r_sngl)
-    wk(5) = REAL(obs%dat(n),r_sngl)
-    wk(6) = REAL(obs%err(n),r_sngl)
-    wk(7) = REAL(obs%typ(n),r_sngl)
-    wk(8) = REAL(obs%dif(n),r_sngl)
-    SELECT CASE(NINT(wk(1)))
-    CASE(id_u_obs)
-      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-    CASE(id_v_obs)
-      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-    CASE(id_t_obs)
-      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-    CASE(id_tv_obs)
-      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-    CASE(id_q_obs)
-      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-    CASE(id_ps_obs)
-      wk(5) = wk(5) * 0.01 ! Pa -> hPa
-      wk(6) = wk(6) * 0.01 ! Pa -> hPa
-    CASE(id_rh_obs)
-      wk(4) = wk(4) * 0.01 ! Pa -> hPa
-      wk(5) = wk(5) * 100.0 ! percent output
-      wk(6) = wk(6) * 100.0 ! percent output
-    CASE(id_tcmip_obs)
-      wk(5) = wk(5) * 0.01 ! Pa -> hPa
-      wk(6) = wk(6) * 0.01 ! Pa -> hPa
-    END SELECT
-    WRITE(iunit) wk
+    if (missingr .or. abs(obs%dat(n) - undef) > tiny(wk(5))) then
+      wk(1) = REAL(obs%elm(n),r_sngl)
+      wk(2) = REAL(obs%lon(n),r_sngl)
+      wk(3) = REAL(obs%lat(n),r_sngl)
+      wk(4) = REAL(obs%lev(n),r_sngl)
+      wk(5) = REAL(obs%dat(n),r_sngl)
+      wk(6) = REAL(obs%err(n),r_sngl)
+      wk(7) = REAL(obs%typ(n),r_sngl)
+      wk(8) = REAL(obs%dif(n),r_sngl)
+      SELECT CASE(NINT(wk(1)))
+      CASE(id_u_obs)
+        wk(4) = wk(4) * 0.01 ! Pa -> hPa
+      CASE(id_v_obs)
+        wk(4) = wk(4) * 0.01 ! Pa -> hPa
+      CASE(id_t_obs)
+        wk(4) = wk(4) * 0.01 ! Pa -> hPa
+      CASE(id_tv_obs)
+        wk(4) = wk(4) * 0.01 ! Pa -> hPa
+      CASE(id_q_obs)
+        wk(4) = wk(4) * 0.01 ! Pa -> hPa
+      CASE(id_ps_obs)
+        wk(5) = wk(5) * 0.01 ! Pa -> hPa
+        wk(6) = wk(6) * 0.01 ! Pa -> hPa
+      CASE(id_rh_obs)
+        wk(4) = wk(4) * 0.01 ! Pa -> hPa
+        wk(5) = wk(5) * 100.0 ! percent output
+        wk(6) = wk(6) * 100.0 ! percent output
+      CASE(id_tcmip_obs)
+        wk(5) = wk(5) * 0.01 ! Pa -> hPa
+        wk(6) = wk(6) * 0.01 ! Pa -> hPa
+      END SELECT
+      WRITE(iunit) wk
+    end if
   END DO
   CLOSE(iunit)
 
@@ -1488,15 +1586,15 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_da_value),INTENT(IN) :: obs
   INTEGER,INTENT(IN) :: im
-  INTEGER,INTENT(IN),OPTIONAL :: append
-  INTEGER :: appendr
+  LOGICAL,INTENT(IN),OPTIONAL :: append
+  LOGICAL :: appendr
   REAL(r_sngl) :: wk(6)
   INTEGER :: n,iunit
 
   iunit=92
-  appendr = 0
+  appendr = .false.
   IF(present(append)) appendr = append
-  IF(appendr == 1) THEN
+  IF(appendr) THEN
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append',STATUS='replace')
   ELSE
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',STATUS='replace')
@@ -1606,21 +1704,25 @@ SUBROUTINE read_obs_radar(cfile,obs)
   RETURN
 END SUBROUTINE read_obs_radar
 
-SUBROUTINE write_obs_radar(cfile,obs,radarlon,radarlat,radarz,append)
+SUBROUTINE write_obs_radar(cfile,obs,radarlon,radarlat,radarz,append,missing)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(IN) :: obs
   REAL(r_size),INTENT(IN) :: radarlon,radarlat,radarz
-  INTEGER,INTENT(IN),OPTIONAL :: append
-  INTEGER :: appendr
+  LOGICAL,INTENT(IN),OPTIONAL :: append
+  LOGICAL,INTENT(IN),OPTIONAL :: missing
+  LOGICAL :: appendr
+  LOGICAL :: missingr
   REAL(r_sngl) :: wk(7)
   INTEGER :: n,iunit
 
   iunit=92
-  appendr = 0
+  appendr = .false.
   IF(present(append)) appendr = append
+  missingr = .true.
+  IF(present(missing)) missingr = missing
 
-  IF(appendr == 1) THEN
+  IF(appendr) THEN
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
   ELSE
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
@@ -1629,14 +1731,16 @@ SUBROUTINE write_obs_radar(cfile,obs,radarlon,radarlat,radarz,append)
   WRITE(iunit) REAL(radarlat,r_sngl)
   WRITE(iunit) REAL(radarz,r_sngl)
   DO n=1,obs%nobs
-    wk(1) = REAL(obs%elm(n),r_sngl)
-    wk(2) = REAL(obs%lon(n),r_sngl)
-    wk(3) = REAL(obs%lat(n),r_sngl)
-    wk(4) = REAL(obs%lev(n),r_sngl)
-    wk(5) = REAL(obs%dat(n),r_sngl)
-    wk(6) = REAL(obs%err(n),r_sngl)
-    wk(7) = REAL(obs%typ(n),r_sngl)
-    WRITE(iunit) wk
+    if (missingr .or. abs(obs%dat(n) - undef) > tiny(wk(5))) then
+      wk(1) = REAL(obs%elm(n),r_sngl)
+      wk(2) = REAL(obs%lon(n),r_sngl)
+      wk(3) = REAL(obs%lat(n),r_sngl)
+      wk(4) = REAL(obs%lev(n),r_sngl)
+      wk(5) = REAL(obs%dat(n),r_sngl)
+      wk(6) = REAL(obs%err(n),r_sngl)
+      wk(7) = REAL(obs%typ(n),r_sngl)
+      WRITE(iunit) wk
+    end if
   END DO
   CLOSE(iunit)
 
@@ -1653,7 +1757,7 @@ subroutine read_obs_all(obs, radarlon, radarlat, radarz)
 
   do iof = 1, nobsfiles
     inquire (file=obsfile(iof), exist=ex)
-    if (ex) then
+    if (.not. ex) then
       write(6,*) 'WARNING: FILE ',obsfile(iof),' NOT FOUND'
       cycle
     end if
@@ -1676,28 +1780,43 @@ subroutine read_obs_all(obs, radarlon, radarlat, radarz)
 
     select case (obsfileformat(iof))
     case (1)
-      call read_obs(obsfile(iof),obs(iof))
+      call read_obs(trim(obsfile(iof)),obs(iof))
     case (2)
-      call read_obs_radar(obsfile(iof),obs(iof))
+      call read_obs_radar(trim(obsfile(iof)),obs(iof))
     end select
   end do ! [ iof = 1, nobsfiles ]
 
   return
 end subroutine read_obs_all
 
-subroutine write_obs_all(obs, radarlon, radarlat, radarz)
+subroutine write_obs_all(obs, radarlon, radarlat, radarz, missing, file_suffix)
   implicit none
 
   type(obs_info), intent(in) :: obs(nobsfiles)
   real(r_size), intent(in) :: radarlon, radarlat, radarz
-  integer :: iof
+  logical, intent(in), optional :: missing
+  character(len=*), intent(in), optional :: file_suffix
+  logical :: missingr
+  integer :: iof, strlen1, strlen2
+  character(200) :: filestr
+
+  missingr = .true.
+  IF(present(missing)) missingr = missing
 
   do iof = 1, nobsfiles
+    if (present(file_suffix)) then
+      strlen1 = len(trim(obsfile(iof)))
+      strlen2 = len(trim(file_suffix))
+      write (filestr(1:strlen1),'(A)') trim(obsfile(iof))
+      write (filestr(strlen1+1:strlen1+strlen2),'(A)') trim(file_suffix)
+    else
+      filestr = obsfile(iof)
+    end if
     select case (obsfileformat(iof))
     case (1)
-      call write_obs(obsfile(iof),obs(iof))
+      call write_obs(trim(filestr),obs(iof),missing=missingr)
     case (2)
-      call write_obs_radar(obsfile(iof),obs(iof),radarlon,radarlat,radarz)
+      call write_obs_radar(trim(filestr),obs(iof),radarlon,radarlat,radarz,missing=missingr)
     end select
   end do ! [ iof = 1, nobsfiles ]
 

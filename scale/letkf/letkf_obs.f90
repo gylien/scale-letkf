@@ -267,6 +267,7 @@ SUBROUTINE set_letkf_obs
 !        end if
 
 !        CALL MPI_BARRIER(MPI_COMM_obstmp,ierr)
+!        call MPI_BCAST(obsda%set, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_obstmp, ierr)
 !        call MPI_BCAST(obsda%idx, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_obstmp, ierr)
 !        call MPI_BCAST(obsda%ri, obsda%nobs, MPI_r_size, 0, MPI_COMM_obstmp, ierr)
 !        call MPI_BCAST(obsda%rj, obsda%nobs, MPI_r_size, 0, MPI_COMM_obstmp, ierr)
@@ -287,6 +288,7 @@ SUBROUTINE set_letkf_obs
       end if
 
       CALL MPI_BARRIER(MPI_COMM_e,ierr)
+      call MPI_BCAST(obsda%set, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%idx, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%ri, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%rj, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
@@ -605,6 +607,7 @@ SUBROUTINE set_letkf_obs
       if (j > nlat) j = nlat !
 
 
+      obsda2(PRC_myrank)%set(nnext(i,j)) = obsda%set(n)
       obsda2(PRC_myrank)%idx(nnext(i,j)) = obsda%idx(n)
       obsda2(PRC_myrank)%val(nnext(i,j)) = obsda%val(n)
       obsda2(PRC_myrank)%ensval(:,nnext(i,j)) = obsda%ensval(:,n)
@@ -702,6 +705,7 @@ SUBROUTINE set_letkf_obs
           call obs_choose(imin2,imax2,jmin2,jmax2,ip2,nr(ip2+1),obsidx)
           ns = nr(ip2+1)
           do n = 1, ns
+            obsbufs%set(n) = obsda2(PRC_myrank)%set(obsidx(n))
             obsbufs%idx(n) = obsda2(PRC_myrank)%idx(obsidx(n))
             obsbufs%val(n) = obsda2(PRC_myrank)%val(obsidx(n))
             obsbufs%ensval(:,n) = obsda2(PRC_myrank)%ensval(:,obsidx(n))
@@ -725,6 +729,7 @@ SUBROUTINE set_letkf_obs
     obsbufr%nobs = nrt(MEM_NP)+nr(MEM_NP)
     call obs_da_value_allocate(obsbufr,MEMBER)
 
+    call MPI_GATHERV(obsbufs%set, ns, MPI_INTEGER, obsbufr%set, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
     call MPI_GATHERV(obsbufs%idx, ns, MPI_INTEGER, obsbufr%idx, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
     call MPI_GATHERV(obsbufs%val, ns, MPI_r_size, obsbufr%val, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
     call MPI_GATHERV(obsbufs%ensval, ns*MEMBER, MPI_r_size, obsbufr%ensval, nr*MEMBER, nrt*MEMBER, MPI_r_size, ip, MPI_COMM_d, ierr)
@@ -737,6 +742,7 @@ SUBROUTINE set_letkf_obs
 
       do ip2 = 0, MEM_NP-1
         if (ip2 /= ip) then
+          obsda2(ip2)%set = obsbufr%set(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
           obsda2(ip2)%idx = obsbufr%idx(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
           obsda2(ip2)%val = obsbufr%val(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
           obsda2(ip2)%ensval = obsbufr%ensval(:,nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))

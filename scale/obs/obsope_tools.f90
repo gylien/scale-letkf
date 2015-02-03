@@ -35,6 +35,8 @@ MODULE obsope_tools
   real(r_size) :: OBSERR_Q = 0.001d0
   real(r_size) :: OBSERR_RH = 10.0d0
   real(r_size) :: OBSERR_PS = 100.0d0
+  real(r_size) :: OBSERR_RADAR_REF = 5.0d0
+  real(r_size) :: OBSERR_RADAR_VR = 3.0d0
 
 !-----------------------------------------------------------------------
 ! General parameters
@@ -79,7 +81,9 @@ subroutine read_nml_letkf_obsmake
     OBSERR_T, &
     OBSERR_Q, &
     OBSERR_RH, &
-    OBSERR_PS
+    OBSERR_PS, &
+    OBSERR_RADAR_REF, &
+    OBSERR_RADAR_VR
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_OBSMAKE,iostat=ierr)
@@ -163,7 +167,11 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
                 obsda%ri(nproc) = rig
                 obsda%rj(nproc) = rjg
 
-                call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri,rj,obs(iof)%lev(n),rk,obsda%qc(nproc))
+                if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
+                  call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri,rj,obs(iof)%lev(n),rk,obsda%qc(nproc))
+                else
+                  call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri,rj,obs(iof)%lev(n),rk,obsda%qc(nproc))
+                end if
 
                 if (obsda%qc(nproc) == iqc_good) then
                   select case (obsfileformat(iof))
@@ -172,6 +180,7 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
                   case (2)
                     call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri,rj,rk, &
                                           obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obsda%val(nproc),obsda%qc(nproc))
+                    if (obsda%qc(nproc) == iqc_ref_low) obsda%qc(nproc) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
                   end select
                 end if
 
@@ -297,7 +306,11 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
   !  END IF
   !END IF
 
-            call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri,rj,obs(iof)%lev(n),rk,iqc)
+            if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
+              call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri,rj,obs(iof)%lev(n),rk,iqc)
+            else
+              call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri,rj,obs(iof)%lev(n),rk,iqc)
+            end if
 
             if (iqc /= iqc_good) then
               obs(iof)%dat(n) = undef
@@ -309,6 +322,10 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
                 call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri,rj,rk, &
                                       obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
               end select
+
+ !!! For radar observation, when reflectivity value is too low, do not generate ref/vr observations
+ !!! No consideration of the terrain blocking effects.....
+
               if (iqc /= iqc_good) then
                 obs(iof)%dat(n) = undef
               end if
@@ -365,10 +382,17 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
           obs(iof)%err(n) = OBSERR_RH
         case(id_ps_obs)
           obs(iof)%err(n) = OBSERR_PS
+        case(id_radar_ref_obs)
+          obs(iof)%err(n) = OBSERR_RADAR_REF
+        case(id_radar_vr_obs)
+          obs(iof)%err(n) = OBSERR_RADAR_VR
         case default
           write(6,'(A)') 'warning: skip assigning observation error (unsupported observation type)' 
         end select
-        obs(iof)%dat(n) = obs(iof)%dat(n) + obs(iof)%err(n) * error(ns+n)
+
+        if (obs(iof)%dat(n) /= undef .and. obs(iof)%err(n) /= undef) then
+          obs(iof)%dat(n) = obs(iof)%dat(n) + obs(iof)%err(n) * error(ns+n)
+        end if
 
 !print *, '######', obs%elm(n), obs%dat(n)
       end do ! [ n = 1, obs(iof)%nobs ]
@@ -382,7 +406,7 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
     deallocate ( bufr )
     deallocate ( error )
 
-    call write_obs_all(obs, radarlon, radarlat, radarz) ! Overwrite the original obs files, only at the head node
+    call write_obs_all(obs, radarlon, radarlat, radarz, missing=.false., file_suffix='.out') ! only at the head node
   end if
 
 end subroutine obsmake_cal
