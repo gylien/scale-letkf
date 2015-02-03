@@ -9,12 +9,12 @@
 
 . config.main
 
-if (($# < 12)); then
+if (($# < 13)); then
   cat >&2 << EOF
 
 [pre_scale.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM_NP INIT BDY TOPO LANDUSE STIME FCSTLEN FCSTINT TMPDIR EXECDIR DATADIR
+Usage: $0 MYRANK MEM_NP INIT BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR EXECDIR DATADIR
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member
@@ -24,7 +24,8 @@ Usage: $0 MYRANK MEM_NP INIT BDY TOPO LANDUSE STIME FCSTLEN FCSTINT TMPDIR EXECD
   LANDUSE  Basename of SCALE land use files
   STIME    Start time (format: YYYYMMDDHHMMSS)
   FCSTLEN  Forecast length (second)
-  FCSTINT  Output interval (second)
+  FCSTINT  Output interval of restart files (second)
+  HISTINT  Output interval of history files (second)
   TMPDIR   Temporary directory to run the model
   EXECDIR  Directory of SCALE executable files
   DATADIR  Directory of SCALE data files
@@ -42,6 +43,7 @@ LANDUSE="$1"; shift
 STIME="$1"; shift
 FCSTLEN="$1"; shift
 FCSTINT="$1"; shift
+HISTINT="$1"; shift
 TMPDIR="$1"; shift
 EXECDIR="$1"; shift
 DATADIR="$1"
@@ -94,7 +96,8 @@ done
 cat $TMPDAT/conf/config.nml.scale | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
         -e "s/\[TIME_DURATION\]/ TIME_DURATION = ${FCSTLEN}.D0,/" \
-        -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = ${FCSTINT}.D0,/" \
+        -e "s/\[TIME_DT_ATMOS_RESTART\]/ TIME_DT_ATMOS_RESTART = ${FCSTLEN}.D0,/" \
+        -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = ${HISTINT}.D0,/" \
     > $TMPDIR/run.conf
 
 

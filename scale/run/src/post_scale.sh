@@ -72,7 +72,8 @@ restartbaselen=23  # 7 + 16
 if [ "$SCPCALL" == 'fcst' ]; then
   mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
   mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
-  for ifile in $(cd $TMPDIR ; ls restart*.nc); do
+  file_prefix=$(cd $TMPDIR ; ls restart*.nc | head -n 1) # pick up the first restart output. ###### TO DO: explicitly calculate the time string???
+  for ifile in $(cd $TMPDIR ; ls ${file_prefix:0:$restartbaselen}*.nc); do
     mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifile:$restartbaselen}
   done
 elif [ "$SCPCALL" == 'cycle' ]; then
@@ -82,7 +83,8 @@ elif [ "$SCPCALL" == 'cycle' ]; then
   fi
   mkdir -p $TMPOUT/${ATIME}/gues/${MEMtmp}
   mv -f $TMPDIR/history*.nc $TMPOUT/${ATIME}/gues/${MEMtmp}
-  for ifile in $(cd $TMPDIR ; ls restart*.nc); do
+  file_prefix=$(cd $TMPDIR ; ls restart*.nc | head -n 1) # pick up the first restart output. ###### TO DO: explicitly calculate the time string???
+  for ifile in $(cd $TMPDIR ; ls ${file_prefix:0:$restartbaselen}*.nc); do
     mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/gues/${MEMtmp}/init${ifile:$restartbaselen}
   done
 fi

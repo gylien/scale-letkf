@@ -204,6 +204,7 @@ EOF
   while ((time <= $(datetime $ETIME $LCYCLE s))); do
     cat >> $STAGING_DIR/stagein.dat << EOF
 ${OBS}/obs_${time}.dat|obs/obs_${time}.dat
+${OBS}/radar_${time}.dat|obs/radar_${time}.dat
 EOF
     time=$(datetime $time $LCYCLE s)
   done
@@ -540,7 +541,7 @@ for m in $(seq $mmean); do
   fi
   ( pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
       $TMPOUT/${time}/anal/${name_m[$m]}/init $bdy_base $topo_base $landuse_base \
-      ${time} $CYCLEFLEN $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
+      ${time} $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
     mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \
       ./scale-les run.conf ;
     pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_scale.sh $mem_np \

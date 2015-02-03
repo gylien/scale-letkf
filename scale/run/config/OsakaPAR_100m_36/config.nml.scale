@@ -64,14 +64,22 @@
  TIME_DT_UNIT               = "SEC",
  TIME_DT_ATMOS_DYN          = 0.1D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
+ TIME_DT_ATMOS_PHY_MP       = 30.D0,
+ TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_RD       = 30.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
+ TIME_DT_ATMOS_PHY_SF       = 30.0D0,
+ TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
+ TIME_DT_ATMOS_PHY_TB       = 30.0D0,
+ TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",
  TIME_DT_OCEAN              = 30.D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
  TIME_DT_LAND               = 30.D0,
  TIME_DT_LAND_UNIT          = "SEC",
  TIME_DT_URBAN              = 30.D0,
  TIME_DT_URBAN_UNIT         = "SEC",
+[TIME_DT_ATMOS_RESTART]
+ TIME_DT_ATMOS_RESTART_UNIT = "SEC",
 /
 
 &PARAM_RESTART
@@ -126,8 +134,11 @@
  ATMOS_BOUNDARY_IN_BASENAME = 'boundary',
  ATMOS_BOUNDARY_USE_VELZ    = .true.,
  ATMOS_BOUNDARY_USE_QHYD    = .true.,
+! ATMOS_BOUNDARY_USE_DENS    = .true.,
  ATMOS_BOUNDARY_VALUE_VELZ  = 0.0D0,
  ATMOS_BOUNDARY_UPDATE_DT   = 600.0D0,
+! ATMOS_BOUNDARY_LINEAR_H    = .false.,
+! ATMOS_BOUNDARY_EXP_H       = 2.d0,
 /
 
 &PARAM_ATMOS_DYN
@@ -169,7 +180,7 @@
 /
 
 &PARAM_LAND
- LAND_TYPE = "BUCKET",
+ LAND_TYPE = "SLAB",
 /
 
 &PARAM_LAND_VARS
@@ -186,7 +197,7 @@
 /
 
 &PARAM_URBAN
- URBAN_TYPE = "UCM",
+ URBAN_TYPE = "SLC",
 /
 
 &PARAM_URBAN_VARS
@@ -199,36 +210,36 @@
  CPL_TYPE_AtmUrb = "BULK",
 /
 
-&PARAM_CPL_ATMURB_BULK
- URBAN_UCM_STRGR = 0.24D0,
- URBAN_UCM_STRGB = 0.009D0,
- URBAN_UCM_STRGG = 0.24D0,
-/
+!&PARAM_CPL_ATMURB_BULK
+! URBAN_UCM_STRGR = 0.24D0,
+! URBAN_UCM_STRGB = 0.009D0,
+! URBAN_UCM_STRGG = 0.24D0,
+!/
 
-&PARAM_CPL_ATMURB_BULK
- URBAN_UCM_ZR          = 15.0D0,
- URBAN_UCM_roof_width  =  7.5D0,
- URBAN_UCM_road_width  = 22.5D0,
- URBAN_UCM_AH          = 0.0D0,
- URBAN_UCM_ALH         = 0.0D0,
- URBAN_UCM_STRGR       = 0.24D0,
- URBAN_UCM_STRGB       = 0.009D0,
- URBAN_UCM_STRGG       = 0.24D0,
- URBAN_UCM_AKSR        = 2.28D0,
- URBAN_UCM_AKSB        = 2.28D0,
- URBAN_UCM_AKSG        = 2.28D0,
- URBAN_UCM_ALBR        = 0.20D0,
- URBAN_UCM_ALBB        = 0.20D0,
- URBAN_UCM_ALBG        = 0.20D0,
- URBAN_UCM_EPSR        = 0.97D0,
- URBAN_UCM_EPSB        = 0.97D0,
- URBAN_UCM_EPSG        = 0.97D0,
- URBAN_UCM_Z0R         = 0.005D0,
- URBAN_UCM_Z0B         = 0.005D0,
- URBAN_UCM_Z0G         = 0.005D0,
- URBAN_UCM_CAPR        = 2.01D6,
- URBAN_UCM_CAPB        = 2.01D6,
- URBAN_UCM_CAPG        = 2.01D6,
+&PARAM_URBAN_PHY_SLC
+ ZR         = 15.0D0,
+ roof_width = 7.5D0,
+ road_width = 22.5D0,
+ AH         = 0.0D0,
+ ALH        = 0.0D0,
+ STRGR      = 0.24D0,
+ STRGB      = 0.009D0,
+ STRGG      = 0.24D0,
+ AKSR       = 2.28D0,
+ AKSB       = 2.28D0,
+ AKSG       = 2.28D0,
+ ALBR       = 0.20D0,
+ ALBB       = 0.20D0,
+ ALBG       = 0.20D0,
+ EPSR       = 0.97D0,
+ EPSB       = 0.97D0,
+ EPSG       = 0.97D0,
+ Z0R        = 0.005D0,
+ Z0B        = 0.005D0,
+ Z0G        = 0.005D0,
+ CAPR       = 2.01D6,
+ CAPB       = 2.01D6,
+ CAPG       = 2.01D6,
 /
 
 &PARAM_HISTORY

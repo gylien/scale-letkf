@@ -49,6 +49,7 @@ rm -fr $TMPDIR/*
 ln -fs $EXECDIR/obsope $TMPDIR
 
 ln -fs $OBSDIR/obs_${ATIME}.dat $TMPDIR/obs.dat
+ln -fs $OBSDIR/radar_${ATIME}.dat $TMPDIR/radar.dat
 
 #===============================================================================
 
