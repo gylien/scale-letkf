@@ -14,7 +14,7 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/data1/gylien/scale/scale-les/test/case_real/ctl_4_PAR_2km/run_WRF"
+MODELDIR="/data1/gylien/scale/scale-les/test/case_real/test_ncepfnl5/run_WRF"
 DATADIR="/data1/SCALE/database"
 
 ANLWRF="/data1/SCALE/wrfout_10min"
@@ -26,14 +26,14 @@ ANLWRF_INT=600
 
 #INITGFS="/discover/nobackup/glien/model/GDAS_IC_t62"     # directory of arbitrary initial condition files [sigma/surface formats]
 
-OBS="/data1/gylien/obs/test_11x9"     # directory of observation data in LETKF obs format
+OBS="/data1/gylien/obs/test_220x180_radar"     # directory of observation data in LETKF obs format
 OBSNCEP="/data1/gylien/obs/prepbufr"  # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=60        # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=600       # SCALE forecast time when assimilation window ends (second)
+WINDOW_S=300       # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=900       # SCALE forecast time when assimilation window ends (second)
 LCYCLE=600         # Length of a GFS-LETKF cycle (second)
 LTIMESLOT=60       # Timeslot interval for 4D-LETKF (second)
 

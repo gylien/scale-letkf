@@ -8,11 +8,11 @@ if len(sys.argv) <= 1:
     sys.exit("\nUsage: {:s} BASE_FILE\n".format(sys.argv[0]))
 initialfile = sys.argv[1]
 
-wavel1 =   8000.
+wavel1 =  10000.
 wavel2 = 100000.
-dx = 100.
+dx = 2500.
 zheight = 20000.
-taper_width = 10
+taper_width = 6
 
 pert_std = 0.5
 halo = 2

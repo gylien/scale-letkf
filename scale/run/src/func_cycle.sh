@@ -639,7 +639,7 @@ for m in $(seq $mmean); do
 done
 wait
 
-exit
+#exit
 
 mpirunf proc $TMPRUN/letkf ./letkf letkf.conf > /dev/null
 

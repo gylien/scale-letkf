@@ -25,7 +25,7 @@ myname1='cycle'
 
 #. src/func_distribute.sh
 . src/func_datetime.sh
-#. src/func_util.sh
+. src/func_util.sh
 . src/func_$myname1.sh
 
 #-------------------------------------------------------------------------------
@@ -87,10 +87,10 @@ exit
 
 
 
-job_submit_PJM $jobscrp
+job_submit_PBS $jobscrp
 echo
 
-job_end_check_PJM $jobid
+job_end_check_PBS $jobid
 
 #===============================================================================
 
