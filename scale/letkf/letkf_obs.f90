@@ -72,6 +72,7 @@ MODULE letkf_obs
   type(obs_info),save :: obs(nobsfiles)
   type(obs_da_value),save :: obsda
   type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
+                                                    !!!!!! need to add %err and %dat if they can be determined in letkf_obs.f90
 
   real(r_size) :: radarlon, radarlat, radarz
 
@@ -134,7 +135,7 @@ SUBROUTINE set_letkf_obs
 !  REAL(r_size),ALLOCATABLE :: tmp2hdxf(:,:)
 !  INTEGER,ALLOCATABLE :: tmp2qc(:)
 !  INTEGER :: n,i,j,ierr,nn,l,im
-  INTEGER :: n,i,j,ierr,im
+  INTEGER :: n,i,j,ierr,im,iof
 !  INTEGER :: nj(0:nlat-1)
 !  INTEGER :: njs(1:nlat-1)
 !  CHARACTER(10) :: obsfile='obsNNN.dat'
@@ -146,6 +147,7 @@ SUBROUTINE set_letkf_obs
 !  REAL(r_size) :: ppzero_m(nlon,nlat)          ! GYL
 !  REAL(r_size) :: ppzero_o(nlon,nlat)          ! GYL
 !  REAL(r_size) :: ppmask(nlon,nlat)            ! GYL
+  integer :: mem_ref
 !  INTEGER :: pp_mem, il, bg_lev, ob_lev        ! GYL
 !  INTEGER :: pp_ntotal(pp_bg_nlev,pp_ob_nlev)  ! GYL
 !  INTEGER :: zero_mem                          ! GYL
@@ -296,7 +298,7 @@ SUBROUTINE set_letkf_obs
 
 
 
-  end if
+  end if ! [ nprocs_e > MEMBER ]
 
 
   allocate (bufr(MEMBER,obsda%nobs))
@@ -346,6 +348,33 @@ SUBROUTINE set_letkf_obs
 !  call read_ppmask(maskfile, ppmask)                                            ! GYL
 !  pp_ntotal = 0                                                                 ! GYL
 
+
+
+  !!!!!! may be moved to latter
+  do iof = 1, nobsfiles
+    do n = 1, obs(iof)%nobs
+
+      if (obs(iof)%elm(n) == id_radar_ref_obs) then
+        obs(iof)%dat(n) = 10.0d0 * log10(obs(iof)%dat(n))
+        if (USE_OBSERR_RADAR_REF) then
+          obs(iof)%err(n) = OBSERR_RADAR_REF
+        end if
+      end if
+
+      if (USE_OBSERR_RADAR_VR .AND. obs(iof)%elm(n) == id_radar_vr_obs) then
+        obs(iof)%err(n) = OBSERR_RADAR_VR
+      end if
+
+    end do ! [ n = 1, obs(iof)%nobs ]
+  end do ! [ iof = 1, nobsfiles ]
+  !!!!!!
+
+
+
+
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,mem_ref)
+  do n = 1, obsda%nobs
+    IF(obsda%qc(n) > 0) CYCLE
 
 
 
@@ -444,9 +473,40 @@ SUBROUTINE set_letkf_obs
 !!    end if ! [ tmpelm(n) == id_rain_obs ]
 !!!###### end PRECIP assimilation ######
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i)
-  do n = 1, obsda%nobs
-    IF(obsda%qc(n) > 0) CYCLE
+
+
+!!!###### RADAR assimilation ######
+
+!    if (USE_OBSERR_RADAR_REF .AND. obs(obsda%set(n))%elm(obsda%idx(n)) == id_radar_ref_obs) then
+!      obs(obsda%set(n))%err(obsda%idx(n)) = OBSERR_RADAR_REF
+!    end if
+!    if (USE_OBSERR_RADAR_VR .AND. obs(obsda%set(n))%elm(obsda%idx(n)) == id_radar_vr_obs) then
+!      obs(obsda%set(n))%err(obsda%idx(n)) = OBSERR_RADAR_VR
+!    end if
+
+    if (obs(obsda%set(n))%elm(obsda%idx(n)) == id_radar_ref_obs) then
+      mem_ref = 0
+      do i = 1, MEMBER
+        obsda%ensval(i,n) = 10.0d0 * log10(obsda%ensval(i,n))
+        if (obsda%ensval(i,n) >= MIN_RADAR_REF_DBZ) then
+          mem_ref = mem_ref + 1
+        end if
+      end do
+      if (mem_ref < MIN_RADAR_REF_MEMBER) then
+        obsda%qc(n) = iqc_ref_mem
+        write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
+        write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
+              '*  (lon,lat)=(',obs(obsda%set(n))%lon(obsda%idx(n)),',',obs(obsda%set(n))%lat(obsda%idx(n)),'), mem_ref=', &
+              mem_ref,', ref_obs=', obs(obsda%set(n))%dat(obsda%idx(n))
+        cycle
+      end if
+    end if
+
+!!!###### end RADAR assimilation ######
+
+
+
+
     obsda%val(n) = obsda%ensval(1,n)
     DO i=2,MEMBER
       obsda%val(n) = obsda%val(n) + obsda%ensval(i,n)

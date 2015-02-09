@@ -28,16 +28,6 @@ MODULE obsope_tools
   IMPLICIT NONE
   PUBLIC
 
-  !--- PARAM_LETKF_OBSMAKE
-  real(r_size) :: OBSERR_U = 1.0d0
-  real(r_size) :: OBSERR_V = 1.0d0
-  real(r_size) :: OBSERR_T = 1.0d0
-  real(r_size) :: OBSERR_Q = 0.001d0
-  real(r_size) :: OBSERR_RH = 10.0d0
-  real(r_size) :: OBSERR_PS = 100.0d0
-  real(r_size) :: OBSERR_RADAR_REF = 5.0d0
-  real(r_size) :: OBSERR_RADAR_VR = 3.0d0
-
 !-----------------------------------------------------------------------
 ! General parameters
 !-----------------------------------------------------------------------
@@ -71,32 +61,32 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! PARAM_LETKF_OBSMAKE
 !-----------------------------------------------------------------------
-subroutine read_nml_letkf_obsmake
-  implicit none
-  integer :: ierr
+!subroutine read_nml_letkf_obsmake
+!  implicit none
+!  integer :: ierr
 
-  namelist /PARAM_LETKF_OBSMAKE/ &
-    OBSERR_U, &
-    OBSERR_V, &
-    OBSERR_T, &
-    OBSERR_Q, &
-    OBSERR_RH, &
-    OBSERR_PS, &
-    OBSERR_RADAR_REF, &
-    OBSERR_RADAR_VR
+!  namelist /PARAM_LETKF_OBSMAKE/ &
+!    OBSERR_U, &
+!    OBSERR_V, &
+!    OBSERR_T, &
+!    OBSERR_Q, &
+!    OBSERR_RH, &
+!    OBSERR_PS, &
+!    OBSERR_RADAR_REF, &
+!    OBSERR_RADAR_VR
 
-  rewind(IO_FID_CONF)
-  read(IO_FID_CONF,nml=PARAM_LETKF_OBSMAKE,iostat=ierr)
-  if (ierr < 0) then !--- missing
-    write(6,*) 'xxx Not found namelist. Check!'
-    stop
-  elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_OBSMAKE. Check!'
-    stop
-  endif
+!  rewind(IO_FID_CONF)
+!  read(IO_FID_CONF,nml=PARAM_LETKF_OBSMAKE,iostat=ierr)
+!  if (ierr < 0) then !--- missing
+!    write(6,*) 'xxx Not found namelist. Check!'
+!    stop
+!  elseif (ierr > 0) then !--- fatal error
+!    write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_OBSMAKE. Check!'
+!    stop
+!  endif
 
-  return
-end subroutine read_nml_letkf_obsmake
+!  return
+!end subroutine read_nml_letkf_obsmake
 
 !-----------------------------------------------------------------------
 ! Observation operator calculation
@@ -181,6 +171,13 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
                     call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri,rj,rk, &
                                           obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obsda%val(nproc),obsda%qc(nproc))
                     if (obsda%qc(nproc) == iqc_ref_low) obsda%qc(nproc) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
+
+                    !!!!!! may not need to do this at this stage...
+                    !if (obs(iof)%elm(n) == id_radar_ref_obs) then
+                    !  obsda%val(nproc) = 10.0d0 * log10(obsda%val(nproc))
+                    !end if
+                    !!!!!!
+
                   end select
                 end if
 

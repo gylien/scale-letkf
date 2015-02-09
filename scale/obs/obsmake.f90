@@ -41,8 +41,6 @@ PROGRAM obsmake
   CALL set_common_scale(1)
   CALL set_common_obs_scale
 
-  call read_nml_letkf_obsmake
-
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   rtimer = MPI_WTIME()
   WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00

@@ -30,12 +30,6 @@ MODULE common_nml
 !  real(r_size) :: SIGMA_OBSV_RAIN = 0.4d0
 !  real(r_size) :: BASE_OBSV_RAIN = 85000.0d0
   real(r_size) :: SIGMA_OBST = 3.0d0
-  real(r_size) :: VAR_LOCAL_UV(nvarmax)   = 1.0d0
-  real(r_size) :: VAR_LOCAL_T(nvarmax)    = 1.0d0
-  real(r_size) :: VAR_LOCAL_Q(nvarmax)    = 1.0d0
-  real(r_size) :: VAR_LOCAL_PS(nvarmax)   = 1.0d0
-  real(r_size) :: VAR_LOCAL_RAIN(nvarmax) = 1.0d0
-  real(r_size) :: VAR_LOCAL_TC(nvarmax)   = 1.0d0
 
 !RESHAPE( (/ &
 !!       U    V    W    T    P    Q   QC   QR   QI   QS   QG
@@ -71,6 +65,27 @@ MODULE common_nml
   LOGICAL :: OBSGUES_OUTPUT = .false.
   LOGICAL :: OBSANAL_OUTPUT = .false.
 
+  real(r_size) :: VAR_LOCAL_UV(nvarmax)   = 1.0d0
+  real(r_size) :: VAR_LOCAL_T(nvarmax)    = 1.0d0
+  real(r_size) :: VAR_LOCAL_Q(nvarmax)    = 1.0d0
+  real(r_size) :: VAR_LOCAL_PS(nvarmax)   = 1.0d0
+  real(r_size) :: VAR_LOCAL_RAIN(nvarmax) = 1.0d0
+  real(r_size) :: VAR_LOCAL_TC(nvarmax)   = 1.0d0
+
+  logical :: USE_RADAR_PSEUDO_RH = .false.
+
+  !--- PARAM_LETKF_OBSERR
+  real(r_size) :: OBSERR_U = 1.0d0
+  real(r_size) :: OBSERR_V = 1.0d0
+  real(r_size) :: OBSERR_T = 1.0d0
+  real(r_size) :: OBSERR_Q = 0.001d0
+  real(r_size) :: OBSERR_RH = 10.0d0
+  real(r_size) :: OBSERR_PS = 100.0d0
+  real(r_size) :: OBSERR_RADAR_REF = 5.0d0
+  real(r_size) :: OBSERR_RADAR_VR = 3.0d0
+  logical :: USE_OBSERR_RADAR_REF = .false.
+  logical :: USE_OBSERR_RADAR_VR = .false.
+
 contains
 !-----------------------------------------------------------------------
 ! PARAM_LETKF
@@ -92,12 +107,6 @@ subroutine read_nml_letkf
 !    SIGMA_OBSV_RAIN, &
 !    BASE_OBSV_RAIN, &
     SIGMA_OBST, &
-    VAR_LOCAL_UV, &
-    VAR_LOCAL_T, &
-    VAR_LOCAL_Q, &
-    VAR_LOCAL_PS, &
-    VAR_LOCAL_RAIN, &
-    VAR_LOCAL_TC, &
     COV_INFL_MUL, &
     MIN_INFL_MUL, &
     ADAPTIVE_INFL_INIT, &
@@ -109,7 +118,7 @@ subroutine read_nml_letkf
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'xxx Not found namelist. Check!'
+    write(6,*) 'Error: /PARAM_LETKF/ is not found in namelist. Check!'
     stop
   elseif (ierr > 0) then !--- fatal error
     write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_PRC. Check!'
@@ -138,8 +147,8 @@ subroutine read_nml_letkf_prc
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_PRC,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'xxx Not found namelist. Check!'
-    stop
+    write(6,*) 'Warning: /PARAM_LETKF_PRC/ is not found in namelist.'
+!    stop
   elseif (ierr > 0) then !--- fatal error
     write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_PRC. Check!'
     stop
@@ -159,13 +168,20 @@ subroutine read_nml_letkf_obs
     OMB_OUTPUT, &
     OMA_OUTPUT, &
     OBSGUES_OUTPUT, &
-    OBSANAL_OUTPUT
+    OBSANAL_OUTPUT, &
+    VAR_LOCAL_UV, &
+    VAR_LOCAL_T, &
+    VAR_LOCAL_Q, &
+    VAR_LOCAL_PS, &
+    VAR_LOCAL_RAIN, &
+    VAR_LOCAL_TC, &
+    USE_RADAR_PSEUDO_RH
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_OBS,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'xxx Not found namelist. Check!'
-    stop
+    write(6,*) 'Warning: /PARAM_LETKF_OBS/ is not found in namelist.'
+!    stop
   elseif (ierr > 0) then !--- fatal error
     write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_OBS. Check!'
     stop
@@ -174,5 +190,36 @@ subroutine read_nml_letkf_obs
   return
 end subroutine read_nml_letkf_obs
 
+!-----------------------------------------------------------------------
+! PARAM_LETKF_OBSERR
+!-----------------------------------------------------------------------
+subroutine read_nml_letkf_obserr
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_LETKF_OBSERR/ &
+    OBSERR_U, &
+    OBSERR_V, &
+    OBSERR_T, &
+    OBSERR_Q, &
+    OBSERR_RH, &
+    OBSERR_PS, &
+    OBSERR_RADAR_REF, &
+    OBSERR_RADAR_VR, &
+    USE_OBSERR_RADAR_REF, &
+    USE_OBSERR_RADAR_VR
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_LETKF_OBSERR,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_LETKF_OBSERR/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_OBSERR. Check!'
+    stop
+  endif
+
+  return
+end subroutine read_nml_letkf_obserr
 
 end module common_nml

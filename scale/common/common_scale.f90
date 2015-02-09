@@ -190,6 +190,7 @@ SUBROUTINE set_common_scale(mem)
   call read_nml_letkf
   call read_nml_letkf_prc
   call read_nml_letkf_obs !!!!!!!!!!!!!!!!!!!!!! move outside of subroutine????
+  call read_nml_letkf_obserr !!!!!!!!!!!!!!!!!!! move outside of subroutine????
 
   if (nprocs /= NNODES * PPN) then
     write(6,'(A,I10)') 'Number of MPI processes = ', nprocs

@@ -68,12 +68,13 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: id_radar_vr_obs=4002
   INTEGER,PARAMETER :: id_radar_prh_obs=4003
 
-  LOGICAL,PARAMETER :: USE_RADAR_REF =.TRUE.
-  LOGICAL,PARAMETER :: USE_RADAR_VR  =.TRUE.
-  LOGICAL,PARAMETER :: USE_RADAR_PRH =.TRUE.
+!!!!!! goes to namelist !!!!!!
+  LOGICAL,PARAMETER :: USE_RADAR_REF =.TRUE.  ! not coded...
+  LOGICAL,PARAMETER :: USE_RADAR_VR  =.TRUE.  !
+  LOGICAL,PARAMETER :: USE_RADAR_PRH =.TRUE.  !
 
   REAL(r_size),PARAMETER :: UNDEF_OBS = 9.99d9           !Code that will be assigned to obs outside the domain.(so we don't need qc0 array)
-  REAL(r_size),PARAMETER :: MIN_RADAR_REF_MEMBER = 0.5d0 !Percentaje of ensemble members with reflectivity greather than 0.
+  INTEGER,PARAMETER :: MIN_RADAR_REF_MEMBER = 30         !Ensemble members with reflectivity greather than 0.
   REAL(r_size),PARAMETER :: MIN_RADAR_REF_DBZ = 15.0d0   !Reflectivity values below this threshold won't be assimilated.
 
   REAL(r_size),PARAMETER :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
@@ -89,6 +90,7 @@ MODULE common_obs_scale
 
   ! PARAMETERS FOR RADAR DATA ASSIMILATION
   INTEGER, PARAMETER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2)
+!!!!!!
 
 
 
@@ -126,6 +128,7 @@ MODULE common_obs_scale
     REAL(r_size),ALLOCATABLE :: dif(:)
   END TYPE obs_info
 
+  !!!!!!
   TYPE obs_da_value
     INTEGER :: nobs = 0
     INTEGER,ALLOCATABLE :: set(:)
@@ -136,6 +139,7 @@ MODULE common_obs_scale
     REAL(r_size),ALLOCATABLE :: ri(:)
     REAL(r_size),ALLOCATABLE :: rj(:)
   END TYPE obs_da_value
+  !!!!!! need to add %err and %dat for obsda2 if they can be determined in letkf_obs.f90 !!!!!!
 
 
 
@@ -171,6 +175,7 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: iqc_gross_err=5
   INTEGER,PARAMETER :: iqc_ps_ter=10
   INTEGER,PARAMETER :: iqc_ref_low=11
+  INTEGER,PARAMETER :: iqc_ref_mem=12
   INTEGER,PARAMETER :: iqc_out_vhi=20
   INTEGER,PARAMETER :: iqc_out_vlo=21
   INTEGER,PARAMETER :: iqc_out_h=22
