@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/ra000015/gylien/scale-exp/PAR_250m_36p"  # Directory for SCALE-LETKF output
+OUTDIR="/data/ra000015/gylien/scale-exp/PAR_250m_36p"  # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -26,7 +26,7 @@ ANLWRF_INT=600
 
 #INITGFS="/discover/nobackup/glien/model/GDAS_IC_t62"       # directory of arbitrary initial condition files [sigma/surface formats]
 
-OBS="/volume63/data/ra000015/gylien/scale-obs/test_11x9"    # directory of observation data in LETKF obs format
+OBS="/volume63/data/ra000015/gylien/scale-obs/QCED_250M"    # directory of observation data in LETKF obs format
 OBSNCEP="/volume63/data/ra000015/gylien/scale-obs/prepbufr" # directory of observation data in NCEP BUFR format
 
 #===============================================================================
@@ -35,7 +35,7 @@ OBSNCEP="/volume63/data/ra000015/gylien/scale-obs/prepbufr" # directory of obser
 WINDOW_S=30        # SCALE forecast time when assimilation window starts (second)
 WINDOW_E=30        # SCALE forecast time when assimilation window ends (second)
 LCYCLE=30          # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=5        # Timeslot interval for 4D-LETKF (second)
+LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
@@ -75,7 +75,7 @@ SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_$(whoami)_${SYSNAME}" # (used to identify multiple runs in the same time)
 
 TMP=                        # (When $MACHINE_TYPE=10, this will be automatically set)
-TMPS="/tmp/$TMPSUBDIR"      # Temporary directory only on the server node
+TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 TMPL=                       # (When $MACHINE_TYPE=10, this will be automatically set)
 
 #===============================================================================

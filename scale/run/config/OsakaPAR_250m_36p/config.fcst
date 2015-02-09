@@ -14,7 +14,7 @@ IF_VERF=0
 IF_EFSO=0
 ISTEP=
 FSTEP=
-TIME_LIMIT='4:00:00'
+TIME_LIMIT='3:00:00'
 
 #===============================================================================
 # Forecast settings
