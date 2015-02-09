@@ -8,13 +8,13 @@ if len(sys.argv) <= 1:
     sys.exit("\nUsage: {:s} BASE_FILE\n".format(sys.argv[0]))
 initialfile = sys.argv[1]
 
-wavel1 =  10000.
+wavel1 =  20000.
 wavel2 = 100000.
-dx = 2500.
+dx = 250.
 zheight = 20000.
-taper_width = 6
+taper_width = 10
 
-pert_std = 0.5
+pert_std = 0.2
 halo = 2
 
 nproc, rootgrps, dimdef = scale_open(initialfile, 'r+')
