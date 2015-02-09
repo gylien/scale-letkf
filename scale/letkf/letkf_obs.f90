@@ -494,10 +494,10 @@ SUBROUTINE set_letkf_obs
       end do
       if (mem_ref < MIN_RADAR_REF_MEMBER) then
         obsda%qc(n) = iqc_ref_mem
-        write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
-        write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
-              '*  (lon,lat)=(',obs(obsda%set(n))%lon(obsda%idx(n)),',',obs(obsda%set(n))%lat(obsda%idx(n)),'), mem_ref=', &
-              mem_ref,', ref_obs=', obs(obsda%set(n))%dat(obsda%idx(n))
+!        write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
+!        write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
+!              '*  (lon,lat)=(',obs(obsda%set(n))%lon(obsda%idx(n)),',',obs(obsda%set(n))%lat(obsda%idx(n)),'), mem_ref=', &
+!              mem_ref,', ref_obs=', obs(obsda%set(n))%dat(obsda%idx(n))
         cycle
       end if
     end if

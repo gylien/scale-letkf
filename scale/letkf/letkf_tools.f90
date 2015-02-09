@@ -53,7 +53,7 @@ MODULE letkf_tools
 !   & /),(/nv3d+nv2d,6/))
 
 
-  real(r_size),save :: var_local(nv3d+nv2d,6)
+  real(r_size),save :: var_local(nv3d+nv2d,8)  !!!!!! 8 as a variable
   integer,save :: var_local_n2n(nv3d+nv2d)
 
 CONTAINS
@@ -111,6 +111,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   var_local(:,4) = VAR_LOCAL_PS(1:nv3d+nv2d)
   var_local(:,5) = VAR_LOCAL_RAIN(1:nv3d+nv2d)
   var_local(:,6) = VAR_LOCAL_TC(1:nv3d+nv2d)
+  var_local(:,7) = VAR_LOCAL_RADAR_REF(1:nv3d+nv2d)
+  var_local(:,8) = VAR_LOCAL_RADAR_VR(1:nv3d+nv2d)
   var_local_n2n(1) = 1
   DO n=2,nv3d+nv2d
     DO i=1,n
@@ -865,6 +867,13 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
             iobs=6
           CASE(id_tcmip_obs)
             iobs=6
+          CASE(id_radar_ref_obs)
+            iobs=7
+          CASE(id_radar_vr_obs)
+            iobs=8
+          CASE DEFAULT
+            write (6,'(A)') 'xxx Warning!!! unsupport observation type in variable localization!'
+            iobs=1
           END SELECT
           IF(var_local(nvar,iobs) < TINY(var_local)) CYCLE
         END IF
