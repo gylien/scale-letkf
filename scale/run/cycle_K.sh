@@ -120,7 +120,7 @@ cat > $jobscrp << EOF
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
 #PJM --rsc-list "rscgrp=${rscgrp}"
 ##PJM --rsc-list "node-quota=29GB"
-#PJM --mpi "shape=${NNODES_real}"
+##PJM --mpi "shape=${NNODES_real}"
 #PJM --mpi "proc=$NNODES"
 #PJM --mpi assign-online-node
 #PJM --stg-transfiles all

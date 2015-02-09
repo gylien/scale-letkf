@@ -172,6 +172,7 @@ ${COMMON_DIR}/pdbash|exec/pdbash
 ${SCRP_DIR}/config.nml.scale|conf/config.nml.scale
 ${SCRP_DIR}/config.nml.scale_init|conf/config.nml.scale_init
 ${DATADIR}/rad|rad
+${DATADIR}/land|land
 EOF
 
   time=$STIME
