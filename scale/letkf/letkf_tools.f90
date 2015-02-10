@@ -206,7 +206,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           trans(:,:,n) = trans(:,:,var_local_n2n(n))
           work3d(ij,ilev,n) = work3d(ij,ilev,var_local_n2n(n))
         ELSE
-          CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),n,hdxf,rdiag,rloc,dep,nobsl)
+          CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl)
 
 !write(6,'(A,4I10)') '$$$', ilev, ij, n, nobsl
 
@@ -250,7 +250,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
               work2d(ij,n) = work2d(ij,var_local_n2n(nv3d+n)-nv3d) ! GYL
             END IF                                                 ! GYL
           ELSE
-            CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),nv3d+n,hdxf,rdiag,rloc,dep,nobsl)
+            CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl)
 
 !write(6,'(A,3I10)') '$$$===', ij, n, nobsl
 
@@ -730,8 +730,8 @@ END SUBROUTINE das_letkf
 ! -- modified, using (rlon,rlat,rlev) instead of (ij,ilev), Guo-Yuan Lien
 ! -- optional oindex output, followed by D.Hotta
 !-----------------------------------------------------------------------
-SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
-!SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl,oindex)
+SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
+!SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl,oindex)
   use scale_grid, only: &
     DX, DY
   use scale_process, only: &
@@ -739,7 +739,7 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
     PRC_NUM_Y
 
   IMPLICIT NONE
-  REAL(r_size),INTENT(IN) :: ri,rj,rlev
+  REAL(r_size),INTENT(IN) :: ri,rj,rlev,rz
   INTEGER,INTENT(IN) :: nvar
   REAL(r_size),INTENT(OUT) :: hdxf(nobstotal,MEMBER)
   REAL(r_size),INTENT(OUT) :: rdiag(nobstotal)
@@ -817,7 +817,7 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
           dlev = ABS(LOG(BASE_OBSV_RAIN) - LOG(rlev)) / SIGMA_OBSV_RAIN                                               !GYL
         case (id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs)                                                    !GYL
           dist = dist / SIGMA_OBS_RADAR                                                                               !GYL
-          dlev = ABS(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n))) - rlev) / SIGMA_OBSZ_RADAR     !GYL, vertical localization in Z; no LOG
+          dlev = ABS(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n))) - rz) / SIGMA_OBSZ_RADAR       !GYL, vertical localization in Z; no LOG
         case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)                                                               !GYL
           dist = dist / SIGMA_OBS                                                                                     !GYL
           dlev = 0.0d0                                                                                                !GYL

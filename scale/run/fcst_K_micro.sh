@@ -90,6 +90,7 @@ bash $SCRP_DIR/src/stage_in.sh a
 # stage-in: scripts
 
 cp -L -r $SCRP_DIR/config.main $TMP/config.main
+cp -L -r $SCRP_DIR/config.rc $TMP/config.rc
 cp -L -r $SCRP_DIR/config.${myname1} $TMP/config.${myname1}
 cp -L -r $SCRP_DIR/${myname1}.sh $TMP/${myname1}.sh
 mkdir -p $TMP/src

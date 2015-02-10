@@ -873,6 +873,97 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   RETURN
 END SUBROUTINE write_restart
 
+!-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+SUBROUTINE read_topo(filename,topo)
+  use netcdf, only: NF90_NOWRITE
+  use scale_process, only: &
+    PRC_myrank, &
+    PRC_HAS_W,  &
+    PRC_HAS_E,  &
+    PRC_HAS_S,  &
+    PRC_HAS_N
+  use scale_grid_index, only: &
+    IHALO, JHALO, &
+    IMAX, JMAX, &
+    IMAXB, JMAXB
+!  use common_mpi, only: myrank
+  use common_ncio
+  IMPLICIT NONE
+
+  CHARACTER(*),INTENT(IN) :: filename
+  REAL(RP),INTENT(OUT) :: topo(nlon,nlat)
+  character(len=12) :: filesuffix = '.pe000000.nc'
+  integer :: ncid
+  integer :: is, ie, js, je
+  real(r_dble) :: v2dgtmp(IMAXB,JMAXB)
+!  real(r_dble), allocatable :: v2dgtmp(:,:)
+
+  is = 1
+  ie = IMAX
+  js = 1
+  je = JMAX
+  if ( .not. PRC_HAS_W ) then
+    is = is + IHALO
+    ie = ie + IHALO
+  end if
+  if ( .not. PRC_HAS_S ) then
+    js = js + JHALO
+    je = je + JHALO
+  end if
+
+!  allocate (v2dgtmp(IMAXB,JMAXB))
+
+  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
+
+  write (filesuffix(4:9),'(I6.6)') PRC_myrank
+  call ncio_open(filename // filesuffix, NF90_NOWRITE, ncid)
+
+!!!!!!
+!  topo = 0.0d0
+!!!!!!
+
+  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', 'TOPO'
+  call ncio_read_2d_r8(ncid, 'TOPO', IMAXB, JMAXB, 1, v2dgtmp)
+  topo = real(v2dgtmp(is:ie,js:je), RP)
+
+  call ncio_close(ncid)
+
+  RETURN
+END SUBROUTINE read_topo
+
+!-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+subroutine scale_calc_z(nij,topo,z)
+  use scale_grid, only: &
+     GRID_CZ, &
+     GRID_FZ
+  use scale_grid_index, only: &
+     KHALO, KS, KE
+  implicit none
+
+  INTEGER,INTENT(IN) :: nij
+  REAL(r_size),INTENT(IN) :: topo(nij)
+  REAL(RP),INTENT(OUT) :: z(nij,nlev)
+  real(r_size) :: ztop
+  integer  :: k, i
+  !---------------------------------------------------------------------------
+
+write(6,*) '%%%%%%', ztop, GRID_FZ(KE), GRID_FZ(KS-1)
+
+  ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
+
+  do k = 1, nlev
+    do i = 1, nij
+      z(i,k) = (ztop - topo(i)) / ztop * GRID_CZ(k+KHALO) + topo(i)
+    enddo
+  enddo
+
+  return
+end subroutine scale_calc_z
+
 
 !-----------------------------------------------------------------------
 ! Monitor

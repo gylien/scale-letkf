@@ -45,6 +45,8 @@ module common_mpi_scale
 !!!  real(r_size),allocatable,save :: ri1(:),rj1(:)
 !!!!  real(r_size),allocatable,save :: wg1(:)
   real(r_size),allocatable,save :: rig1(:),rjg1(:)
+  real(r_size),allocatable,save :: topo1(:)
+  real(r_size),allocatable,save :: hgt1(:,:)
 
   integer,save :: MPI_COMM_e, nprocs_e, myrank_e
   integer,save :: MPI_COMM_a, nprocs_a, myrank_a
@@ -183,6 +185,9 @@ SUBROUTINE set_common_mpi_scale
 !!  ALLOCATE(wg1(nij1))
   ALLOCATE(rig1(nij1))
   ALLOCATE(rjg1(nij1))
+  ALLOCATE(topo1(nij1))
+
+  ALLOCATE(hgt1(nij1,nlev))
 
   ALLOCATE(v3d(nij1,nlev,nv3d))
   ALLOCATE(v2d(nij1,nv2d))
@@ -213,9 +218,12 @@ SUBROUTINE set_common_mpi_scale
 !      v3dg(i,j,1,8) = REAL(j,r_sngl)
 !    END DO
 !  END DO
-!!  v2dg(:,:,1) = SNGL(phi0)
 
-  CALL scatter_grd_mpi(0,v3dg,v2dg,v3d,v2d)
+  if (PRC_myrank == lastmem_rank_e) then
+    call read_topo('topo', v2dg(:,:,1))
+  end if
+
+  CALL scatter_grd_mpi(lastmem_rank_e,v3dg,v2dg,v3d,v2d)
 !!!!!! -----
 
 !  lon1  = v3d(:,1,1)
@@ -231,6 +239,9 @@ SUBROUTINE set_common_mpi_scale
 
   rig1   = v3d(:,1,1)
   rjg1   = v3d(:,1,2)
+  topo1  = v2d(:,1)
+
+  call scale_calc_z(nij1, topo1, hgt1)
 
   RETURN
 END SUBROUTINE set_common_mpi_scale

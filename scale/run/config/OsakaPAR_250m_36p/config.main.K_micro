@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/ra000015/gylien/scale-exp/PAR_250m_36p_3mem"  # Directory for SCALE-LETKF output
+OUTDIR="/data/ra000015/gylien/scale-exp/PAR_250m_36p_3mem"  # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 

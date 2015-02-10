@@ -199,8 +199,11 @@ SUBROUTINE set_letkf_obs
 !!  dist_zerov_rain = SIGMA_OBSV_RAIN * SQRT(10.0d0/3.0d0) * 2.0d0
 
 
-  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RAIN, SIGMA_OBS_RADAR) * dist_zero_fac / DX
-  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RAIN, SIGMA_OBS_RADAR) * dist_zero_fac / DY
+  !!!!!! changes for different observation types.... (do not communicate all observaitons in the same way...)
+  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR) * dist_zero_fac / DX
+  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR) * dist_zero_fac / DY
+!  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RAIN, SIGMA_OBS_RADAR) * dist_zero_fac / DX
+!  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RAIN, SIGMA_OBS_RADAR) * dist_zero_fac / DY
 
 
 

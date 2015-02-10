@@ -622,6 +622,12 @@ letkf () {
 
 echo
 
+if ((PREP_TOPO == 1)); then
+  topo_base="$TMPDAT/topo_prep/topo"
+else
+  topo_base="$TMPRUN/scale_pp_topo/topo"
+fi
+
 pdbash node $PROC_OPT $SCRP_DIR/src/pre_letkf_node.sh \
   $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
   $mem_nodes $mem_np $slot_s $slot_e $slot_b
@@ -633,7 +639,7 @@ for m in $(seq $mmean); do
   echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
   pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_letkf.sh \
-    $atime ${name_m[$m]} $TMPRUN/letkf &
+    $topo_base $atime ${name_m[$m]} $TMPRUN/letkf &
 
   sleep $BGJOB_INT
 done

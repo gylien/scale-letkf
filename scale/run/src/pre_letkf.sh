@@ -8,14 +8,15 @@
 
 . config.main
 
-if (($# < 4)); then
+if (($# < 5)); then
   cat >&2 << EOF
 
 [pre_letkf.sh]
 
-Usage: $0 MYRANK ATIME MEM TMPDIR
+Usage: $0 MYRANK TOPO ATIME MEM TMPDIR
 
   MYRANK  My rank number (not used)
+  TOPO    Basename of SCALE topography files
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
   MEM     Name of the ensemble member
   TMPDIR  Temporary directory to run the program
@@ -25,12 +26,17 @@ EOF
 fi
 
 MYRANK="$1"; shift
+TOPO="$1"; shift
 ATIME="$1"; shift
 MEM="$1"; shift
 TMPDIR="$1"
 
 historybaselen=7
 initbaselen=4
+
+topodir=$(dirname $TOPO)
+topobase=$(basename $TOPO)
+topobaselen=${#topobase}
 
 #===============================================================================
 
@@ -43,6 +49,10 @@ if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd
     cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/anal.sprd${ifile:$initbaselen}
   done
 #fi
+
+  for ifile in $(cd $topodir ; ls ${topobase}*.nc 2> /dev/null); do
+    ln -fs $topodir/${ifile} $TMPDIR/topo${ifile:$topobaselen}
+  done
 else
   if [ -d "$TMPOUT/${ATIME}/obsgues/${MEM}" ]; then
     for ifile in $(cd $TMPOUT/${ATIME}/obsgues/${MEM} ; ls obsda.${MEM}.*.dat 2> /dev/null); do
