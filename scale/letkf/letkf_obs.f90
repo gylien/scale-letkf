@@ -46,6 +46,8 @@ MODULE letkf_obs
 !  REAL(r_size),SAVE :: dist_zerov
 !!  REAL(r_size),SAVE :: dist_zerov_rain
 
+  REAL(r_size),SAVE :: dist_zero_fac
+
   real(r_size),save :: dlon_zero
   real(r_size),save :: dlat_zero
 
