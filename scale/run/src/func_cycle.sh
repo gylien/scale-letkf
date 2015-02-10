@@ -543,7 +543,7 @@ for m in $(seq $mmean); do
       $TMPOUT/${time}/anal/${name_m[$m]}/init $bdy_base $topo_base $landuse_base \
       ${time} $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
     mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \
-      ./scale-les run.conf ;
+      ./scale-les run.conf > /dev/null ;
     pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_scale.sh $mem_np \
       ${time} ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/${name_m[$m]} $myname1 ) &
 

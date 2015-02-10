@@ -1,19 +1,19 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Wrap fcst.sh in a K-computer job script (micro) and run it.
+#  Wrap cycle.sh in a K-computer job script (micro) and run it.
 #
-#  November 2014, created,                 Guo-Yuan Lien
+#  February 2015, created,                Guo-Yuan Lien
 #
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    fcst_K_micro.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP TIME_LIMIT]
+#    cycle_K_micro.sh [STIME ETIME ISTEP FSTEP TIME_LIMIT]
 #
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname1='fcst'
+myname1='cycle'
 
 #===============================================================================
 # Configuration
@@ -38,7 +38,7 @@ fi
 
 #-------------------------------------------------------------------------------
 
-setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}"
+setting "$1" "$2" "$3" "$4" "$5"
 
 jobscrp="$TMP/${myname1}_job.sh"
 
@@ -47,9 +47,9 @@ jobscrp="$TMP/${myname1}_job.sh"
 echo "[$(datetime_now)] Start $(basename $0) $@"
 echo
 
-for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN \
-             FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT OUT_OPT \
-             STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP; do
+for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
+             WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
+             STIME ETIME ISTEP FSTEP; do
   printf '  %-10s = %s\n' $vname "${!vname}"
 done
 
@@ -75,7 +75,7 @@ declare -a name_m
 declare -a node_m
 
 safe_init_tmpdir $NODEFILE_DIR
-distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
+distribute_da_cycle - $NODEFILE_DIR
 
 #===============================================================================
 # Determine the staging list and then stage in
@@ -126,7 +126,7 @@ cat > $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
+./${myname1}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP"
 EOF
 
 #===============================================================================

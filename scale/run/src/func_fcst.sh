@@ -580,7 +580,7 @@ for c in $(seq $rcycle); do
         $TMPOUT/${stimes[$c]}/anal/${name_m[$mm]}/init $bdy_base $topo_base $landuse_base \
         ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/${cf}_${name_m[$mm]} $TMPDAT/exec $TMPDAT ;
       mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale/${cf}_${name_m[$mm]} \
-        ./scale-les run.conf ;
+        ./scale-les run.conf > /dev/null ;
       pdbash proc.${cf}.${name_m[$mm]} $proc_opt $SCRP_DIR/src/post_scale.sh $mem_np \
         ${stimes[$c]} ${name_m[$mm]} $FCSTLEN $TMPRUN/scale/${cf}_${name_m[$mm]} $myname1 ) &
 

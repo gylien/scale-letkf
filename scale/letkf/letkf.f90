@@ -40,10 +40,12 @@ PROGRAM letkf
   CALL initialize_mpi
   rtimer00 = MPI_WTIME()
 !
+if (myrank == 0 .or. myrank > 1) then
   WRITE(stdoutf(6:11), '(I6.6)') myrank
   WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
   OPEN(6,FILE=stdoutf)
   WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
+end if
 !
   WRITE(6,'(A)') '============================================='
   WRITE(6,'(A)') '  LOCAL ENSEMBLE TRANSFORM KALMAN FILTERING  '

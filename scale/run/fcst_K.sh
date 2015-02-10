@@ -31,7 +31,7 @@ myname1='fcst'
 #-------------------------------------------------------------------------------
 
 if ((TMPDAT_MODE == 1 || TMPRUN_MODE == 1 || TMPOUT_MODE == 1)); then
-  echo "[Error] $0: When using 'micro' resource group," >&2
+  echo "[Error] $0: When using a regular resource group," >&2
   echo "        \$TMPDAT_MODE, \$TMPRUN_MODE, \$TMPOUT_MODE all need to be 2 or 3." >&2
   exit 1
 fi
