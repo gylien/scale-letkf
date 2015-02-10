@@ -949,12 +949,8 @@ subroutine scale_calc_z(nij,topo,z)
   REAL(RP),INTENT(OUT) :: z(nij,nlev)
   real(r_size) :: ztop
   integer  :: k, i
-  !---------------------------------------------------------------------------
-
-write(6,*) '%%%%%%', ztop, GRID_FZ(KE), GRID_FZ(KS-1)
 
   ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
-
   do k = 1, nlev
     do i = 1, nij
       z(i,k) = (ztop - topo(i)) / ztop * GRID_CZ(k+KHALO) + topo(i)

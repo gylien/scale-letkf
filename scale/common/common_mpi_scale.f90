@@ -219,8 +219,12 @@ SUBROUTINE set_common_mpi_scale
 !    END DO
 !  END DO
 
-  if (PRC_myrank == lastmem_rank_e) then
-    call read_topo('topo', v2dg(:,:,1))
+  if (myrank_e == lastmem_rank_e) then
+!    call read_topo('topo', v2dg(:,:,1))  !!! nv2d = 0 in scale...
+    call read_topo('topo', v3dg(1,:,:,3))
+
+!print *, v3dg(1,:,:,3)
+
   end if
 
   CALL scatter_grd_mpi(lastmem_rank_e,v3dg,v2dg,v3d,v2d)
@@ -239,9 +243,19 @@ SUBROUTINE set_common_mpi_scale
 
   rig1   = v3d(:,1,1)
   rjg1   = v3d(:,1,2)
-  topo1  = v2d(:,1)
+
+!  topo1  = v2d(:,1)
+  topo1  = v3d(:,1,3)
 
   call scale_calc_z(nij1, topo1, hgt1)
+
+!!print *, hgt1(1,:)
+
+!do n = 1, nij1
+!if (hgt1(n,1) > 120.0d0) then
+!print *, hgt1(n,:)
+!end if
+!end do
 
   RETURN
 END SUBROUTINE set_common_mpi_scale
