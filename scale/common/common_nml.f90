@@ -25,11 +25,13 @@ MODULE common_nml
   real(r_size) :: SLOT_TINTERVAL = 3600.0d0
 
   real(r_size) :: SIGMA_OBS = 500.0d3
-!  real(r_size) :: SIGMA_OBS_RAIN = 350.0d3
+  real(r_size) :: SIGMA_OBS_RAIN = 350.0d3
+  real(r_size) :: SIGMA_OBS_RADAR = 5.0d3
   real(r_size) :: SIGMA_OBSV = 0.4d0
-!  real(r_size) :: SIGMA_OBSV_RAIN = 0.4d0
-!  real(r_size) :: BASE_OBSV_RAIN = 85000.0d0
+  real(r_size) :: SIGMA_OBSV_RAIN = 0.4d0
+  real(r_size) :: SIGMA_OBSZ_RADAR = 1000.0d0
   real(r_size) :: SIGMA_OBST = 3.0d0
+  real(r_size) :: BASE_OBSV_RAIN = 85000.0d0
 
 !RESHAPE( (/ &
 !!       U    V    W    T    P    Q   QC   QR   QI   QS   QG
@@ -65,12 +67,14 @@ MODULE common_nml
   LOGICAL :: OBSGUES_OUTPUT = .false.
   LOGICAL :: OBSANAL_OUTPUT = .false.
 
-  real(r_size) :: VAR_LOCAL_UV(nvarmax)   = 1.0d0
-  real(r_size) :: VAR_LOCAL_T(nvarmax)    = 1.0d0
-  real(r_size) :: VAR_LOCAL_Q(nvarmax)    = 1.0d0
-  real(r_size) :: VAR_LOCAL_PS(nvarmax)   = 1.0d0
-  real(r_size) :: VAR_LOCAL_RAIN(nvarmax) = 1.0d0
-  real(r_size) :: VAR_LOCAL_TC(nvarmax)   = 1.0d0
+  real(r_size) :: VAR_LOCAL_UV(nvarmax)        = 1.0d0
+  real(r_size) :: VAR_LOCAL_T(nvarmax)         = 1.0d0
+  real(r_size) :: VAR_LOCAL_Q(nvarmax)         = 1.0d0
+  real(r_size) :: VAR_LOCAL_PS(nvarmax)        = 1.0d0
+  real(r_size) :: VAR_LOCAL_RAIN(nvarmax)      = 1.0d0
+  real(r_size) :: VAR_LOCAL_TC(nvarmax)        = 1.0d0
+  real(r_size) :: VAR_LOCAL_RADAR_REF(nvarmax) = 1.0d0
+  real(r_size) :: VAR_LOCAL_RADAR_VR(nvarmax)  = 1.0d0
 
   logical :: USE_RADAR_PSEUDO_RH = .false.
 
@@ -102,11 +106,13 @@ subroutine read_nml_letkf
     SLOT_BASE, &
     SLOT_TINTERVAL, &
     SIGMA_OBS, &
-!    SIGMA_OBS_RAIN, &
+    SIGMA_OBS_RAIN, &
+    SIGMA_OBS_RADAR, &
     SIGMA_OBSV, &
-!    SIGMA_OBSV_RAIN, &
-!    BASE_OBSV_RAIN, &
+    SIGMA_OBSV_RAIN, &
+    SIGMA_OBSZ_RADAR, &
     SIGMA_OBST, &
+    BASE_OBSV_RAIN, &
     COV_INFL_MUL, &
     MIN_INFL_MUL, &
     ADAPTIVE_INFL_INIT, &
@@ -175,6 +181,8 @@ subroutine read_nml_letkf_obs
     VAR_LOCAL_PS, &
     VAR_LOCAL_RAIN, &
     VAR_LOCAL_TC, &
+    VAR_LOCAL_RADAR_REF, &
+    VAR_LOCAL_RADAR_VR, &
     USE_RADAR_PSEUDO_RH
 
   rewind(IO_FID_CONF)

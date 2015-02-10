@@ -41,10 +41,10 @@ MODULE letkf_obs
 !!  REAL(r_size),PARAMETER :: sigma_obsv_rain=0.4d0    ! GYL
 !!  REAL(r_size),PARAMETER :: base_obsv_rain=85000.0d0 ! GYL
 !  REAL(r_size),PARAMETER :: sigma_obst=3.0d0
-  REAL(r_size),SAVE :: dist_zero
-!  REAL(r_size),SAVE :: dist_zero_rain
-  REAL(r_size),SAVE :: dist_zerov
-!  REAL(r_size),SAVE :: dist_zerov_rain
+!  REAL(r_size),SAVE :: dist_zero
+!!  REAL(r_size),SAVE :: dist_zero_rain
+!  REAL(r_size),SAVE :: dist_zerov
+!!  REAL(r_size),SAVE :: dist_zerov_rain
 
   real(r_size),save :: dlon_zero
   real(r_size),save :: dlat_zero
@@ -189,15 +189,16 @@ SUBROUTINE set_letkf_obs
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
 
+  dist_zero_fac = SQRT(10.0d0/3.0d0) * 2.0d0
 
-  dist_zero = SIGMA_OBS * SQRT(10.0d0/3.0d0) * 2.0d0
-!  dist_zero_rain = SIGMA_OBS_RAIN * SQRT(10.0d0/3.0d0) * 2.0d0
-  dist_zerov = SIGMA_OBSV * SQRT(10.0d0/3.0d0) * 2.0d0
-!  dist_zerov_rain = SIGMA_OBSV_RAIN * SQRT(10.0d0/3.0d0) * 2.0d0
+!  dist_zero = SIGMA_OBS * SQRT(10.0d0/3.0d0) * 2.0d0
+!!  dist_zero_rain = SIGMA_OBS_RAIN * SQRT(10.0d0/3.0d0) * 2.0d0
+!  dist_zerov = SIGMA_OBSV * SQRT(10.0d0/3.0d0) * 2.0d0
+!!  dist_zerov_rain = SIGMA_OBSV_RAIN * SQRT(10.0d0/3.0d0) * 2.0d0
 
 
-  dlon_zero = dist_zero/DX
-  dlat_zero = dist_zero/DY
+  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RAIN, SIGMA_OBS_RADAR) * dist_zero_fac / DX
+  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RAIN, SIGMA_OBS_RADAR) * dist_zero_fac / DY
 
 
 
@@ -725,7 +726,7 @@ SUBROUTINE set_letkf_obs
     call rank_1d_2d(ip, iproc, jproc)
 
 !if (PRC_myrank == 0 .and. myrank_e == 0) then
-!print *, PRC_NUM_X,nlon,iproc,jproc,SIGMA_OBS,DX,DY,dist_zero
+!print *, PRC_NUM_X,nlon,iproc,jproc,SIGMA_OBS,DX,DY,dlon_zero,dlat_zero
 !end if
 
     imin1 = max(1, iproc*nlon+1 - ceiling(dlon_zero))

@@ -750,7 +750,7 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
 !  REAL(r_size) :: dlon_zero,dlat_zero                    ! GYL
 !  REAL(r_size) :: minlon,maxlon,minlat,maxlat,dist,dlev
 !  REAL(r_size) :: tmplon,tmplat,tmperr,tmpwgt(nlev)
-  REAL(r_size) :: logrlev,dist,dlev,tmperr
+  REAL(r_size) :: dist,dlev,tmperr
   INTEGER,ALLOCATABLE:: nobs_use(:)
 !  INTEGER :: imin,imax,jmin,jmax,im,ichan
   integer :: ip, imin1,imax1,jmin1,jmax1,imin2,imax2,jmin2,jmax2
@@ -776,7 +776,6 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
   jmax1 = min(PRC_NUM_Y*nlat, ceiling(rj + dlat_zero))
 
   nobsl = 0
-  logrlev = LOG(rlev)
 
 !write(6,'(A)') '$$$======'
 
@@ -799,47 +798,36 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
       DO n = 1, nn
 
         ielm = obs(obsda2(ip)%set(nobs_use(n)))%elm(obsda2(ip)%idx(nobs_use(n)))
-
+        !
+        ! localization
+        !
 !print *, '@@@', nobs_use(n), obsda2(ip)%idx(nobs_use(n)), ielm
 
-        !
-        ! vertical localization
-        !
-        IF(ielm == id_ps_obs) THEN
-          dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%dat(obsda2(ip)%idx(nobs_use(n)))) - logrlev)
-
-!if (n <= 6) write (6, *) '$$$ PS======', dlev, obs(obsda2(ip)%set(nobs_use(n)))%dat(obsda2(ip)%idx(nobs_use(n))), rlev
-
-          IF(dlev > dist_zerov) CYCLE
-  !      ELSE IF(ielm == id_rain_obs) THEN
-  !        dlev = ABS(LOG(base_obsv_rain) - logrlev)
-  !        IF(dlev > dist_zerov_rain) CYCLE
-  !      ELSE IF(ielm >= id_tclon_obs) THEN !TC track obs
-  !        dlev = 0.0d0
-        ELSE !! other (3D) variables
-
-!write (6, *) '$$$===', obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n))), rlev
-
-          dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n)))) - logrlev)
-
-!if (n <= 6) write (6, *) '$$$ other===', dlev, obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n))), rlev
-
-          IF(dlev > dist_zerov) CYCLE
-        END IF
-        !
-        ! horizontal localization
-        !
   !!!      CALL com_distll_1(obslon(nobs_use(n)),obslat(nobs_use(n)),rlon,rlat,dist)
-
         rdx = (ri - obsda2(ip)%ri(nobs_use(n))) * DX
         rdy = (rj - obsda2(ip)%rj(nobs_use(n))) * DY
         dist = sqrt(rdx*rdx + rdy*rdy)
 
-  !      IF(ielm == id_rain_obs) THEN
-  !        IF(dist > dist_zero_rain) CYCLE
-  !      ELSE
-          IF(dist > dist_zero) CYCLE
-  !      END IF
+        select case (ielm)                                                                                            !GYL, normalize dist/dlev here
+        case (id_ps_obs)                                                                                              !GYL
+          dist = dist / SIGMA_OBS                                                                                     !GYL
+          dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%dat(obsda2(ip)%idx(nobs_use(n)))) - LOG(rlev)) / SIGMA_OBSV !GYL
+        case (id_rain_obs)                                                                                            !GYL
+          dist = dist / SIGMA_OBS_RAIN                                                                                !GYL
+          dlev = ABS(LOG(BASE_OBSV_RAIN) - LOG(rlev)) / SIGMA_OBSV_RAIN                                               !GYL
+        case (id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs)                                                    !GYL
+          dist = dist / SIGMA_OBS_RADAR                                                                               !GYL
+          dlev = ABS(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n))) - rlev) / SIGMA_OBSZ_RADAR     !GYL, vertical localization in Z; no LOG
+        case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)                                                               !GYL
+          dist = dist / SIGMA_OBS                                                                                     !GYL
+          dlev = 0.0d0                                                                                                !GYL
+        case default                                                                                                  !GYL
+          dist = dist / SIGMA_OBS                                                                                     !GYL
+          dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n)))) - LOG(rlev)) / SIGMA_OBSV !GYL
+        end select                                                                                                    !GYL
+
+        if (dist > dist_zero_fac) cycle
+        if (dlev > dist_zero_fac) cycle
         !
         ! variable localization
         !
@@ -886,11 +874,7 @@ SUBROUTINE obs_local(ri,rj,rlev,nvar,hdxf,rdiag,rloc,dep,nobsl)
         !
         tmperr=obs(obsda2(ip)%set(nobs_use(n)))%err(obsda2(ip)%idx(nobs_use(n)))
         rdiag(nobsl) = tmperr * tmperr
-  !      IF(ielm == id_rain_obs) THEN                                                   ! GYL
-  !        rloc(nobsl) =EXP(-0.5d0 * ((dist/sigma_obs_rain)**2 + (dlev/SIGMA_OBSV)**2)) ! GYL
-  !      ELSE                                                                           ! GYL
-          rloc(nobsl) =EXP(-0.5d0 * ((dist/sigma_obs)**2 + (dlev/SIGMA_OBSV)**2))      ! GYL
-  !      END IF                                                                         ! GYL
+        rloc(nobsl) = EXP(-0.5d0 * (dist*dist + dlev*dlev))                   ! GYL
         IF(nvar > 0) THEN ! use variable localization only when nvar > 0
           rloc(nobsl) = rloc(nobsl) * var_local(nvar,iobs)
         END IF
