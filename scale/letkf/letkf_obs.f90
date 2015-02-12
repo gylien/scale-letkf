@@ -103,7 +103,7 @@ SUBROUTINE set_letkf_obs
     PRC_NUM_Y
 
   IMPLICIT NONE
-  REAL(r_size),PARAMETER :: gross_error=5.0d0
+  REAL(r_size),PARAMETER :: gross_error=10.0d0
 !  REAL(r_size) :: dlon1,dlon2,dlon,dlat
 !  REAL(r_size),ALLOCATABLE :: wk2d(:,:)
 !  INTEGER,ALLOCATABLE :: iwk2d(:,:)

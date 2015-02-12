@@ -123,6 +123,8 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
             im, ', subdomain id #', proc2mem(2,it,myrank+1)
 
+write(6,*) '%%%%%%', MPI_WTIME(), 0
+
       nproc = 0
       do islot = SLOT_START, SLOT_END
         slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
@@ -137,9 +139,11 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
           nslot = 0
           nprocslot = 0
 
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) SHARED(nslot,nproc,nprocslot) PRIVATE(n,proc,rig,rjg,ri,rj,rk)
           do n = 1, obs(iof)%nobs
 
             if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
+!$OMP ATOMIC
               nslot = nslot + 1
 
               call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
@@ -149,13 +153,23 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
     !            print *, proc, rig, rjg, ri, rj
     !          end if
 
+!if (mod(n,50) == 0) then
+!  write(6,*) MPI_WTIME(), n
+!end if
+
               if (PRC_myrank == proc) then
+!$OMP ATOMIC
                 nproc = nproc + 1
+!$OMP ATOMIC
                 nprocslot = nprocslot + 1
                 obsda%set(nproc) = iof
                 obsda%idx(nproc) = n
                 obsda%ri(nproc) = rig
                 obsda%rj(nproc) = rjg
+
+if (mod(nproc,50) == 0) then
+  write(6,*) '%%%%%%', MPI_WTIME(), nproc
+end if
 
                 if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
                   call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri,rj,obs(iof)%lev(n),rk,obsda%qc(nproc))
@@ -186,6 +200,7 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
             end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
 
           end do ! [ n = 1, obs%nobs ]
+!$OMP END PARALLEL DO
 
           write (6,'(3A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot = ', nslot
           write (6,'(3A,I6,A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
@@ -209,6 +224,8 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
 !      END IF
 
       end do ! [ islot = SLOT_START, SLOT_END ]
+
+write(6,*) '%%%%%%', MPI_WTIME(), nproc
 
       obsda%nobs = nproc
 
