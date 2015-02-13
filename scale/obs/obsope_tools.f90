@@ -101,8 +101,10 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
   integer :: it,islot,proc,im,iof
-  integer :: n,nslot,nproc,nprocslot,ierr
-  real(r_size) :: rig,rjg,ri,rj,rk
+  integer :: n,nn,nslot,nproc,nproc_0,nprocslot,ierr
+!  real(r_size) :: rig,rjg,ri,rj,rk
+  real(r_size) :: rig,rjg,rk
+  real(r_size),allocatable :: ri(:),rj(:)
   real(r_size) :: slot_lb,slot_ub
 
 !-----------------------------------------------------------------------
@@ -111,8 +113,9 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
   do iof = 1, nobsfiles
     obsda%nobs = obsda%nobs + obs(iof)%nobs
   end do
-
   call obs_da_value_allocate(obsda,0)
+  allocate ( ri(obsda%nobs) )
+  allocate ( rj(obsda%nobs) )
 
   allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
   allocate ( v2dg (nlonh,nlath,nv2dd) )
@@ -126,6 +129,8 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
 write(6,*) '%%%%%%', MPI_WTIME(), 0
 
       nproc = 0
+      obsda%qc = iqc_time
+
       do islot = SLOT_START, SLOT_END
         slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
         slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
@@ -139,67 +144,64 @@ write(6,*) '%%%%%%', MPI_WTIME(), 0
           nslot = 0
           nprocslot = 0
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) SHARED(nslot,nproc,nprocslot) PRIVATE(n,proc,rig,rjg,ri,rj,rk)
+write(6,*) '%%%===', MPI_WTIME(), 'im:', im, 'islot:', islot, 'iof:', iof
+
+          ! do this small computtion first, without OpenMP
+          nproc_0 = nproc
           do n = 1, obs(iof)%nobs
-
             if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
-!$OMP ATOMIC
               nslot = nslot + 1
-
               call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
-              call rij_g2l_auto(proc,rig,rjg,ri,rj)
-
-    !          if (PRC_myrank == 0) then
-    !            print *, proc, rig, rjg, ri, rj
-    !          end if
-
-!if (mod(n,50) == 0) then
-!  write(6,*) MPI_WTIME(), n
-!end if
+              call rij_g2l_auto(proc,rig,rjg,ri(nproc),rj(nproc))
 
               if (PRC_myrank == proc) then
-!$OMP ATOMIC
                 nproc = nproc + 1
-!$OMP ATOMIC
                 nprocslot = nprocslot + 1
                 obsda%set(nproc) = iof
                 obsda%idx(nproc) = n
                 obsda%ri(nproc) = rig
                 obsda%rj(nproc) = rjg
+              end if ! [ PRC_myrank == proc ]
+            end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
+          end do ! [ n = 1, obs%nobs ]
 
-if (mod(nproc,50) == 0) then
-  write(6,*) '%%%%%%', MPI_WTIME(), nproc
+          ! then do this heavy computation with OpenMP
+
+write(6,*) '%%%===', MPI_WTIME(), nproc_0 + 1, nproc
+
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,rk)
+          do nn = nproc_0 + 1, nproc
+            n = obsda%idx(nn)
+
+if (mod(nn,50) == 0) then
+  write(6,*) '%%%%%%', MPI_WTIME(), nn
 end if
 
-                if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
-                  call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri,rj,obs(iof)%lev(n),rk,obsda%qc(nproc))
-                else
-                  call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri,rj,obs(iof)%lev(n),rk,obsda%qc(nproc))
-                end if
+            if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
+              call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
+            else
+              call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
+            end if
 
-                if (obsda%qc(nproc) == iqc_good) then
-                  select case (obsfileformat(iof))
-                  case (1)
-                    call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk,v3dg,v2dg,obsda%val(nproc),obsda%qc(nproc))
-                  case (2)
-                    call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri,rj,rk, &
-                                          obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obsda%val(nproc),obsda%qc(nproc))
-                    if (obsda%qc(nproc) == iqc_ref_low) obsda%qc(nproc) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
+            if (obsda%qc(nn) == iqc_good) then
+              select case (obsfileformat(iof))
+              case (1)
+                call Trans_XtoY(obs(iof)%elm(n),ri(nn),rj(nn),rk,v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
+              case (2)
+                call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri(nn),rj(nn),rk, &
+                                      obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
+                if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
 
-                    !!!!!! may not need to do this at this stage...
-                    !if (obs(iof)%elm(n) == id_radar_ref_obs) then
-                    !  obsda%val(nproc) = 10.0d0 * log10(obsda%val(nproc))
-                    !end if
-                    !!!!!!
+                !!!!!! may not need to do this at this stage...
+                !if (obs(iof)%elm(n) == id_radar_ref_obs) then
+                !  obsda%val(nn) = 10.0d0 * log10(obsda%val(nn))
+                !end if
+                !!!!!!
 
-                  end select
-                end if
+              end select
+            end if
 
-              end if ! [ PRC_myrank == proc ]
-
-            end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
-
-          end do ! [ n = 1, obs%nobs ]
+          end do ! [ nn = nproc_0 + 1, nproc ]
 !$OMP END PARALLEL DO
 
           write (6,'(3A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot = ', nslot
@@ -241,7 +243,7 @@ write(6,*) '%%%%%%', MPI_WTIME(), nproc
 
   end do ! [ it = 1, nitmax ]
 
-  deallocate ( v3dg, v2dg )
+  deallocate ( ri, rj, v3dg, v2dg )
 
 end subroutine obsope_cal
 
