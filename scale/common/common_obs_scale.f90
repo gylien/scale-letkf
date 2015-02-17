@@ -74,7 +74,7 @@ MODULE common_obs_scale
   LOGICAL,PARAMETER :: USE_RADAR_PRH =.TRUE.  !
 
   REAL(r_size),PARAMETER :: UNDEF_OBS = 9.99d9           !Code that will be assigned to obs outside the domain.(so we don't need qc0 array)
-  INTEGER,PARAMETER :: MIN_RADAR_REF_MEMBER = 30         !Ensemble members with reflectivity greather than 0.
+  INTEGER,PARAMETER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than 0.
   REAL(r_size),PARAMETER :: MIN_RADAR_REF_DBZ = 15.0d0   !Reflectivity values below this threshold won't be assimilated.
 
   REAL(r_size),PARAMETER :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.

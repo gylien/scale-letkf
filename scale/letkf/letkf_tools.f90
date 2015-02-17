@@ -198,9 +198,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !
   ALLOCATE( hdxf(1:nobstotal,1:MEMBER),rdiag(1:nobstotal),rloc(1:nobstotal),dep(1:nobstotal) )
   DO ilev=1,nlev
-    WRITE(6,'(A,I3)') 'ilev = ',ilev
+    WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,m,k,q_mean,q_sprd,q_anal)
     DO ij=1,nij1
+WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
       DO n=1,nv3d
         IF(var_local_n2n(n) < n) THEN
           trans(:,:,n) = trans(:,:,var_local_n2n(n))
@@ -208,11 +209,18 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         ELSE
           CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl)
 
-!write(6,'(A,4I10)') '$$$', ilev, ij, n, nobsl
+write(6,'(A,4I10)') '$$$', ilev, ij, n, nobsl
 
           parm = work3d(ij,ilev,n)
+
+write(6,*) hdxf(1,:)
+write(6,*) rdiag(1),rloc(1),dep(1),parm,MIN_INFL_MUL,RELAX_ALPHA
+
           CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,MIN_INFL_MUL,RELAX_ALPHA,trans(:,:,n))
           work3d(ij,ilev,n) = parm
+
+write(6,'(A,4I10,A)') '$$$', ilev, ij, n, nobsl,'--- finish'
+
         END IF
         IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) .AND. ilev > LEV_UPDATE_Q) THEN ! GYL, do not update upper-level q,qc
           anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)      ! GYL
