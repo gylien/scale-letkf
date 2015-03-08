@@ -74,24 +74,24 @@ MODULE common_obs_scale
   LOGICAL,PARAMETER :: USE_RADAR_PRH =.TRUE.  !
 
   REAL(r_size),PARAMETER :: UNDEF_OBS = 9.99d9           !Code that will be assigned to obs outside the domain.(so we don't need qc0 array)
-  INTEGER,PARAMETER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than 0.
-  REAL(r_size),PARAMETER :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
-  REAL(r_size),PARAMETER :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
+!  INTEGER,PARAMETER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than 0.
+!  REAL(r_size),PARAMETER :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
+!  REAL(r_size),PARAMETER :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
 
-  REAL(r_size),PARAMETER :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
+!  REAL(r_size),PARAMETER :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
 
   REAL(r_size),SAVE :: MIN_RADAR_REF
   REAL(r_size),SAVE :: RADAR_REF_THRES
 
   !These 2 flags affects the computation of model reflectivity and 
   !radial velocity. 
-  INTEGER,PARAMETER :: INTERPOLATION_TECHNIQUE=1
-  INTEGER,PARAMETER :: METHOD_REF_CALC=3
+!  INTEGER,PARAMETER :: INTERPOLATION_TECHNIQUE=1
+!  INTEGER,PARAMETER :: METHOD_REF_CALC=3
 
-  LOGICAL,PARAMETER :: USE_TERMINAL_VELOCITY=.FALSE.
+!  LOGICAL,PARAMETER :: USE_TERMINAL_VELOCITY=.FALSE.
 
   ! PARAMETERS FOR RADAR DATA ASSIMILATION
-  INTEGER, PARAMETER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2)
+!  INTEGER, PARAMETER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2)
 !!!!!!
 
 

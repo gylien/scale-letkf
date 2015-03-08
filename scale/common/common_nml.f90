@@ -90,6 +90,22 @@ MODULE common_nml
   logical :: USE_OBSERR_RADAR_REF = .false.
   logical :: USE_OBSERR_RADAR_VR = .false.
 
+  !--- PARAM_LETKF_RADAR
+  INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than 0.
+  REAL(r_size) :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
+  REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
+
+  REAL(r_size) :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
+
+  !These 2 flags affects the computation of model reflectivity and radial velocity. 
+  INTEGER :: INTERPOLATION_TECHNIQUE = 1
+  INTEGER :: METHOD_REF_CALC = 3
+
+  LOGICAL :: USE_TERMINAL_VELOCITY = .false.
+
+  ! PARAMETERS FOR RADAR DATA ASSIMILATION
+  INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
+
 contains
 !-----------------------------------------------------------------------
 ! PARAM_LETKF
@@ -229,5 +245,32 @@ subroutine read_nml_letkf_obserr
 
   return
 end subroutine read_nml_letkf_obserr
+
+subroutine read_nml_letkf_obs_radar
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_LETKF_OBS_RADAR/ &
+    MIN_RADAR_REF_MEMBER, &
+    MIN_RADAR_REF_DBZ, &
+    RADAR_REF_THRES_DBZ, &
+    RADAR_PRH_ERROR, &
+    INTERPOLATION_TECHNIQUE, &
+    METHOD_REF_CALC, &
+    USE_TERMINAL_VELOCITY, &
+    NRADARTYPE
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_LETKF_OBS_RADAR,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_LETKF_OBS_RADAR/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_OBS_RADAR. Check!'
+    stop
+  endif
+
+  return
+end subroutine read_nml_letkf_obs_radar
 
 end module common_nml
