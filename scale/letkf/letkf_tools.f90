@@ -209,17 +209,17 @@ WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
         ELSE
           CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl)
 
-write(6,'(A,4I10)') '$$$', ilev, ij, n, nobsl
+if (nobsl > 0) write(6,'(A,4I10)') '$$$', ilev, ij, n, nobsl
 
           parm = work3d(ij,ilev,n)
 
-write(6,*) hdxf(1,:)
-write(6,*) rdiag(1),rloc(1),dep(1),parm,MIN_INFL_MUL,RELAX_ALPHA
+if (nobsl > 0) write(6,*) hdxf(1,:)
+if (nobsl > 0) write(6,*) rdiag(1),rloc(1),dep(1),parm,MIN_INFL_MUL,RELAX_ALPHA
 
           CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,MIN_INFL_MUL,RELAX_ALPHA,trans(:,:,n))
           work3d(ij,ilev,n) = parm
 
-write(6,'(A,4I10,A)') '$$$', ilev, ij, n, nobsl,'--- finish'
+if (nobsl > 0) write(6,'(A,4I10,A)') '$$$', ilev, ij, n, nobsl,'--- finish'
 
         END IF
         IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) .AND. ilev > LEV_UPDATE_Q) THEN ! GYL, do not update upper-level q,qc

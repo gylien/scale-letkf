@@ -361,7 +361,15 @@ SUBROUTINE set_letkf_obs
     do n = 1, obs(iof)%nobs
 
       if (obs(iof)%elm(n) == id_radar_ref_obs) then
-        obs(iof)%dat(n) = 10.0d0 * log10(obs(iof)%dat(n))
+        if (obs(iof)%dat(n) >= 0.0d0 .and. obs(iof)%dat(n) < 1.0d10) then
+          if (obs(iof)%dat(n) < MIN_RADAR_REF) then
+            obs(iof)%dat(n) = MIN_RADAR_REF_DBZ
+          else
+            obs(iof)%dat(n) = 10.0d0 * log10(obs(iof)%dat(n))
+          end if
+        else
+          obs(iof)%dat(n) = undef
+        end if
         if (USE_OBSERR_RADAR_REF) then
           obs(iof)%err(n) = OBSERR_RADAR_REF
         end if
@@ -491,10 +499,15 @@ SUBROUTINE set_letkf_obs
 !    end if
 
     if (obs(obsda%set(n))%elm(obsda%idx(n)) == id_radar_ref_obs) then
+      if (obs(obsda%set(n))%dat(obsda%idx(n)) == undef) then
+        obsda%qc(n) = iqc_obs_bad
+        cycle
+      end if
+
+      !!! obsda%ensval: alredy converted to dBZ
       mem_ref = 0
       do i = 1, MEMBER
-        obsda%ensval(i,n) = 10.0d0 * log10(obsda%ensval(i,n))
-        if (obsda%ensval(i,n) >= MIN_RADAR_REF_DBZ) then
+        if (obsda%ensval(i,n) >= RADAR_REF_THRES_DBZ) then
           mem_ref = mem_ref + 1
         end if
       end do

@@ -1,8 +1,8 @@
 from distribute import *
 
-nnodes = 396
-ppn = 1
-member = 10
+nnodes = 3636
+ppn = 1 
+member = 100
 min_np = 36
 max_np = min_np
 

@@ -75,11 +75,13 @@ MODULE common_obs_scale
 
   REAL(r_size),PARAMETER :: UNDEF_OBS = 9.99d9           !Code that will be assigned to obs outside the domain.(so we don't need qc0 array)
   INTEGER,PARAMETER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than 0.
-  REAL(r_size),PARAMETER :: MIN_RADAR_REF_DBZ = 15.0d0   !Reflectivity values below this threshold won't be assimilated.
+  REAL(r_size),PARAMETER :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
+  REAL(r_size),PARAMETER :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
 
   REAL(r_size),PARAMETER :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
 
   REAL(r_size),SAVE :: MIN_RADAR_REF
+  REAL(r_size),SAVE :: RADAR_REF_THRES
 
   !These 2 flags affects the computation of model reflectivity and 
   !radial velocity. 
@@ -179,6 +181,7 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: iqc_out_vhi=20
   INTEGER,PARAMETER :: iqc_out_vlo=21
   INTEGER,PARAMETER :: iqc_out_h=22
+  INTEGER,PARAMETER :: iqc_obs_bad=50
   INTEGER,PARAMETER :: iqc_otype=90
   INTEGER,PARAMETER :: iqc_time=91
 
@@ -194,6 +197,7 @@ subroutine set_common_obs_scale
   implicit none
 
   MIN_RADAR_REF = 10.0d0 ** (MIN_RADAR_REF_DBZ/10.0d0)
+  RADAR_REF_THRES = 10.0d0 ** (RADAR_REF_THRES_DBZ/10.0d0)
 
   return
 end subroutine set_common_obs_scale
@@ -354,12 +358,18 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
 !!!!      yobs = -rhr
 
 !!!!    else                      !!!!!! --------- Pesudo RH: TO BE DONE...
+    if (radar_ref < MIN_RADAR_REF) then
+      qc = iqc_ref_low
+      yobs = MIN_RADAR_REF_DBZ  !!! even if the above qc is bad, still return the value
+    else
       yobs = 10.0d0 * log10(radar_ref)
-      if (yobs < MIN_RADAR_REF_DBZ) qc = iqc_ref_low
+    end if
 !!!!    end if
   CASE(id_radar_vr_obs)
-    yobs = radar_rv
-    if (10.0d0 * log10(radar_ref) < MIN_RADAR_REF_DBZ) qc = iqc_ref_low
+    if (radar_ref < MIN_RADAR_REF) then
+      qc = iqc_ref_low
+    end if
+    yobs = radar_rv  !!! even if the above qc is bad, still return the value
   CASE DEFAULT
     qc = iqc_otype
   END SELECT

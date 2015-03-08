@@ -41,11 +41,9 @@ PROGRAM letkf
   rtimer00 = MPI_WTIME()
 !
   WRITE(stdoutf(6:11), '(I6.6)') myrank
-if (myrank .ne. 21) then
   WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
   OPEN(6,FILE=stdoutf)
   WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
-end if
 !
   WRITE(6,'(A)') '============================================='
   WRITE(6,'(A)') '  LOCAL ENSEMBLE TRANSFORM KALMAN FILTERING  '
