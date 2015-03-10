@@ -27,5 +27,11 @@
 &PARAM_LETKF_OBS
 /
 
+&PARAM_LETKF_OBS_RADAR
+ MIN_RADAR_REF_MEMBER = 30,
+ MIN_RADAR_REF_DBZ = 0.0D0,
+ RADAR_REF_THRES_DBZ = 15.0D0,
+/
+
 !*** Attach SCALE configuration below ***
 
