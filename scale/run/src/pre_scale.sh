@@ -97,6 +97,9 @@ cat $TMPDAT/conf/config.nml.scale | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
         -e "s/\[TIME_DURATION\]/ TIME_DURATION = ${FCSTLEN}.D0,/" \
         -e "s/\[TIME_DT_ATMOS_RESTART\]/ TIME_DT_ATMOS_RESTART = ${FCSTINT}.D0,/" \
+        -e "s/\[TIME_DT_OCEAN_RESTART\]/ TIME_DT_OCEAN_RESTART = ${FCSTINT}.D0,/" \
+        -e "s/\[TIME_DT_LAND_RESTART\]/ TIME_DT_LAND_RESTART = ${FCSTINT}.D0,/" \
+        -e "s/\[TIME_DT_URBAN_RESTART\]/ TIME_DT_URBAN_RESTART = ${FCSTINT}.D0,/" \
         -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = ${HISTINT}.D0,/" \
     > $TMPDIR/run.conf
 

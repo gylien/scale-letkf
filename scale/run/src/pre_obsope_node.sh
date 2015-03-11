@@ -70,6 +70,9 @@ cat $TMPDAT/conf/config.nml.scale | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = 2014, 1, 1, 0, 0, 0,/" \
         -e "s/\[TIME_DURATION\]/ TIME_DURATION = 60.D0,/" \
         -e "s/\[TIME_DT_ATMOS_RESTART\]/ TIME_DT_ATMOS_RESTART = 60.D0,/" \
+        -e "s/\[TIME_DT_OCEAN_RESTART\]/ TIME_DT_OCEAN_RESTART = 60.D0,/" \
+        -e "s/\[TIME_DT_LAND_RESTART\]/ TIME_DT_LAND_RESTART = 60.D0,/" \
+        -e "s/\[TIME_DT_URBAN_RESTART\]/ TIME_DT_URBAN_RESTART = 60.D0,/" \
         -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = 60.D0,/" \
     >> $TMPDIR/obsope.conf
 
