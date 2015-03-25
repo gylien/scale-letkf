@@ -97,29 +97,28 @@ while ((time <= ETIME)); do
 
   cd $TMPS
   for hh in '00' '06' '12' '18'; do
+    timef="$yyyy$mm$dd${hh}0000"
     echo
-    echo "[${time}]"
+    echo "[${timef}]"
     echo
 
     if (("$yyyy$mm" >= 200807)); then
       mv -f download/$yyyy$mm$dd.nr/prepbufr.gdas.$yyyy$mm$dd.t${hh}z.nr \
-            prepbufr.gdas.${time}.nr
+            prepbufr.gdas.${timef}.nr
     else
-      mv -f download/$yyyy$mm$dd.wo40/prepbufr.gdas.${time}.wo40 \
-            prepbufr.gdas.${time}.nr
+      mv -f download/$yyyy$mm$dd.wo40/prepbufr.gdas.$yyyy$mm$dd$hh.wo40 \
+            prepbufr.gdas.${timef}.nr
     fi
-    wc -c prepbufr.gdas.${time}.nr | $BUFRBIN/grabbufr prepbufr.gdas.${time}.nr prepbufr.in
+    wc -c prepbufr.gdas.${timef}.nr | $BUFRBIN/grabbufr prepbufr.gdas.${timef}.nr prepbufr.in
 
-exit
     if ((IF_DECODE == 1)); then
       time ./dec_prepbufr
       touch fort.90
       mkdir -p $OBS
-      mv fort.90 $OBS/obs_${time}.dat
+      mv fort.90 $OBS/obs_${timef}.dat
     fi
 
-    mkdir -p $OBSNCEP/obs${time}
-    mv -f prepbufr.gdas.${time}.nr $OBSNCEP/obs_${time}
+    mv -f prepbufr.gdas.${timef}.nr $OBSNCEP/obs_${timef}
   done
 
 time=$(datetime $time 1 d)

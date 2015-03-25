@@ -26,7 +26,11 @@ ANLWRF_INT=21600
 
 #INITGFS="/discover/nobackup/glien/model/GDAS_IC_t62"     # directory of arbitrary initial condition files [sigma/surface formats]
 
-OBS="/data6/gylien/obs/prepbufr_obs_japan_west"     # directory of observation data in LETKF obs format
+OBSNUM=1
+OBSNAME[1]=obs                                    
+OBSNAME[2]=radar
+OBS="/data6/gylien/obs/prepbufr_obs_japan"    # directory of observation data in LETKF obs format
+
 OBSNCEP="/data6/gylien/obs/prepbufr"  # directory of observation data in NCEP BUFR format
 
 #===============================================================================
@@ -40,10 +44,10 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=20          # Ensemble size
+MEMBER=19          # Ensemble size
 
-NNODES=2           # Number of nodes
-PPN=40             # Number of processes per node
+NNODES=3           # Number of nodes
+PPN=16             # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
@@ -89,9 +93,9 @@ SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 
-PYTHON="python"
+PYTHON="python3"
 
-#BUFRBIN=
+BUFRBIN="/data/opt/bufrlib/10.1.0_intel/bin"
 
 #===============================================================================
 # Machine-independent source file
