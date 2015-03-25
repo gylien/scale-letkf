@@ -14,11 +14,11 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/volume63/data/ra000015/gylien/scale/scale-les/test/case_real/check_japan/run"
-DATADIR="/volume63/data/ra000015/gylien/scale-data/database"
+MODELDIR="/volume63/data/ra000015/gylien/scale-letkf/scale_history/v150203/scale/scale-les/test/case_real/check_japan/run"
+DATADIR="/volume63/data/ra000015/gylien/scale-letkf/database"
 
-ANLWRF="/volume63/data/ra000015/gylien/scale-data/wrfout_10min"
-ANLWRF_INT=600
+ANLWRF="/volume63/data/ra000015/gylien/model/wrfout_30sec"
+ANLWRF_INT=30
 #ANLGFS="/discover/nobackup/glien/model/CFSR_t62"           # directory of reference model files [sigma/surface formats]
 #ANLGRD="/discover/nobackup/glien/model/CFSR_t62_grd"       # directory of reference model files [sigma-level grid format]
 #ANLGRDP="/discover/nobackup/glien/model/CFSR_t62_grdp"     # directory of reference model files [pressure-level grid format]
@@ -26,8 +26,8 @@ ANLWRF_INT=600
 
 #INITGFS="/discover/nobackup/glien/model/GDAS_IC_t62"       # directory of arbitrary initial condition files [sigma/surface formats]
 
-OBS="/volume63/data/ra000015/gylien/scale-obs/QCED_250M"    # directory of observation data in LETKF obs format
-OBSNCEP="/volume63/data/ra000015/gylien/scale-obs/prepbufr" # directory of observation data in NCEP BUFR format
+OBS="/volume63/data/ra000015/gylien/obs/QCED_250M"          # directory of observation data in LETKF obs format
+OBSNCEP="/volume63/data/ra000015/gylien/obs/prepbufr"       # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # Cycling settings

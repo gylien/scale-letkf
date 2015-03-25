@@ -234,14 +234,16 @@ else
     #-------------------
     # stage-in
 
-    for m in $(seq $mmean); do
-      for q in $(seq $mem_np); do
+    if ((loop == 1)); then
+      for m in $(seq $mmean); do
+        for q in $(seq $mem_np); do
 
-        path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+          path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
 
+        done
       done
-    done
+    fi
 
     #-------------------
     # stage-out
