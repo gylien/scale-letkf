@@ -8,13 +8,13 @@ if len(sys.argv) <= 1:
     sys.exit("\nUsage: {:s} BASE_FILE\n".format(sys.argv[0]))
 initialfile = sys.argv[1]
 
-wavel1 =  20000.
-wavel2 = 100000.
-dx = 250.
-zheight = 20000.
+wavel1 =  100000.
+wavel2 = 2000000.
+dx = 7500.
+zheight = 25000.
 taper_width = 10
 
-pert_std = 0.2
+pert_std = 0.8
 halo = 2
 
 nproc, rootgrps, dimdef = scale_open(initialfile, 'r+')
@@ -24,7 +24,7 @@ rho = vardata[:,halo:-halo,halo:-halo]
 vardim2, vardata = scale_read(nproc, rootgrps, dimdef, 'RHOT', it=0)
 rhoT = vardata[:,halo:-halo,halo:-halo]
 if vardim != vardim2:
-    raise ValueError, 'Dimensions mismatch.'
+    raise ValueError('Dimensions mismatch.')
 
 var = rhoT / rho
 #var = rhoT
@@ -41,10 +41,10 @@ l2 = l / 2 + 1
 fc3d = np.zeros((l, m, n), dtype='complex128')
 amp3d = np.zeros((l2, m, n), dtype='float64')
 
-for ll in xrange(l2):
-    for mm in xrange(m):
+for ll in range(l2):
+    for mm in range(m):
         mms = min(mm, m - mm)
-        for nn in xrange(n):
+        for nn in range(n):
             nns = min(nn, n - nn)
             wn = np.sqrt(nns ** 2 + (mms*n/m) ** 2 + (ll*n*dx/zheight) **2)
             if wn <= dx * n / wavel1 and wn >= dx * n / wavel2:
@@ -53,14 +53,14 @@ for ll in xrange(l2):
 pha3d = np.random.rand(l2, m, n) * 2. * np.pi
 fc3d[0:l2, :, :] = amp3d * np.exp(1j * pha3d)
 
-for ll in xrange(1, l2):
+for ll in range(1, l2):
     lli = l - ll
-    for mm in xrange(m):
+    for mm in range(m):
         if mm == 0:
             mmi = 0
         else:
             mmi = m - mm
-        for nn in xrange(n):
+        for nn in range(n):
             if nn == 0:
                 nni = 0
             else:
@@ -70,8 +70,8 @@ for ll in xrange(1, l2):
 gp3d = np.real(np.fft.ifftn(fc3d))
 gp3d_std = np.std(gp3d)
 
-for mm in xrange(m):
-    for nn in xrange(n):
+for mm in range(m):
+    for nn in range(n):
         dist_bd = min(mm, m - 1 - mm, nn, n - 1 - nn)
         if dist_bd < taper_width:
             taper_ratio = float(dist_bd) / taper_width

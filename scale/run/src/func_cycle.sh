@@ -202,10 +202,13 @@ EOF
 
   time=$(datetime $STIME $LCYCLE s)
   while ((time <= $(datetime $ETIME $LCYCLE s))); do
-    cat >> $STAGING_DIR/stagein.dat << EOF
-${OBS}/obs_${time}.dat|obs/obs_${time}.dat
-${OBS}/radar_${time}.dat|obs/radar_${time}.dat
+    for iobs in $(seq $OBSNUM); do
+      if [ "${OBSNAME[$iobs]}" != '' ]; then
+        cat >> $STAGING_DIR/stagein.dat << EOF
+${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs/${OBSNAME[$iobs]}_${time}.dat
 EOF
+      fi
+    done
     time=$(datetime $time $LCYCLE s)
   done
 #-------------------
