@@ -269,12 +269,12 @@ if ((BUILTIN_STAGING)); then
     fi
   fi
 
-#  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
-#    safe_rm_tmpdir $TMP
-#  fi
-#  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
-#    safe_rm_tmpdir $TMPL
-#  fi
+  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
+    safe_rm_tmpdir $TMP
+  fi
+  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
+    safe_rm_tmpdir $TMPL
+  fi
 fi
 
 #===============================================================================

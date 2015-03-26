@@ -48,8 +48,11 @@ rm -fr $TMPDIR/*
 
 ln -fs $EXECDIR/letkf $TMPDIR
 
-ln -fs $OBSDIR/obs_${ATIME}.dat $TMPDIR/obs.dat
-ln -fs $OBSDIR/radar_${ATIME}.dat $TMPDIR/radar.dat
+for iobs in $(seq $OBSNUM); do
+  if [ "${OBSNAME[$iobs]}" != '' ]; then
+    ln -fs $OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat $TMPDIR/${OBSNAME[$iobs]}.dat
+  fi
+done
 
 #===============================================================================
 

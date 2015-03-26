@@ -20,6 +20,7 @@ PROGRAM obsope
   REAL(r_size) :: rtimer00,rtimer
   INTEGER :: ierr
   CHARACTER(11) :: stdoutf='NOUT-000000'
+  CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
   type(obs_info) :: obs(nobsfiles)
   real(r_size) :: radarlon, radarlat, radarz
@@ -45,7 +46,7 @@ PROGRAM obsope
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   rtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
+  WRITE(6,timer_fmt) '### TIMER(INITIALIZE):        ',rtimer-rtimer00
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------
@@ -58,7 +59,7 @@ PROGRAM obsope
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   rtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
+  WRITE(6,timer_fmt) '### TIMER(READ_OBS):          ',rtimer-rtimer00
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------
@@ -71,7 +72,7 @@ PROGRAM obsope
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   rtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '### TIMER(OBS_OPERATOR):',rtimer,rtimer-rtimer00
+  WRITE(6,timer_fmt) '### TIMER(OBS_OPERATOR):      ',rtimer-rtimer00
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------

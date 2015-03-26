@@ -28,6 +28,7 @@ PROGRAM letkf
   REAL(r_dble) :: rtimer00,rtimer
   INTEGER :: ierr
   CHARACTER(11) :: stdoutf='NOUT-000000'
+  CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
 !  TYPE(obs_info) :: obs
 !  TYPE(obs_da_value) :: obsval
@@ -79,7 +80,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE): ',rtimer,rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(INITIALIZE):        ',rtimer-rtimer00
     rtimer00=rtimer
 
 !-----------------------------------------------------------------------
@@ -93,7 +94,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):   ',rtimer,rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(READ_OBS):          ',rtimer-rtimer00
     rtimer00=rtimer
 
     !
@@ -103,7 +104,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,'(A,2F10.2)') '### TIMER(PROCESS_OBS):',rtimer,rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(PROCESS_OBS):       ',rtimer-rtimer00
     rtimer00=rtimer
 
 
@@ -145,7 +146,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,'(A,2F10.2)') '### TIMER(READ_GUES):  ',rtimer,rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(READ_GUES):         ',rtimer-rtimer00
     rtimer00=rtimer
 
 
@@ -156,7 +157,7 @@ PROGRAM letkf
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,'(A,2F10.2)') '### TIMER(GUES_MEAN):  ',rtimer,rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(GUES_MEAN):         ',rtimer-rtimer00
     rtimer00=rtimer
 !!-----------------------------------------------------------------------
 !! Data Assimilation
@@ -172,7 +173,7 @@ PROGRAM letkf
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,'(A,2F10.2)') '### TIMER(DAS_LETKF):  ',rtimer,rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(DAS_LETKF):         ',rtimer-rtimer00
     rtimer00=rtimer
 !-----------------------------------------------------------------------
 ! Analysis ensemble
@@ -186,7 +187,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,'(A,2F10.2)') '### TIMER(WRITE_ANAL): ',rtimer,rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(WRITE_ANAL):        ',rtimer-rtimer00
     rtimer00=rtimer
     !
     ! WRITE ENS MEAN and SPRD
@@ -195,7 +196,7 @@ PROGRAM letkf
     !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,'(A,2F10.2)') '### TIMER(ANAL_MEAN):  ',rtimer,rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(ANAL_MEAN):         ',rtimer-rtimer00
     rtimer00=rtimer
 !!-----------------------------------------------------------------------
 !! Monitor
@@ -204,7 +205,7 @@ PROGRAM letkf
 !  CALL monit_obs
 !!
 !  rtimer = MPI_WTIME()
-!  WRITE(6,'(A,2F10.2)') '### TIMER(MONIT_MEAN):',rtimer,rtimer-rtimer00
+!  WRITE(6,timer_fmt) '### TIMER(MONIT_MEAN):        ',rtimer-rtimer00
 !  rtimer00=rtimer
 
 
@@ -220,7 +221,7 @@ PROGRAM letkf
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   rtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '### TIMER(FINALIZE):   ',rtimer,rtimer-rtimer00
+  WRITE(6,timer_fmt) '### TIMER(FINALIZE):          ',rtimer-rtimer00
   rtimer00=rtimer
 
   CALL finalize_mpi

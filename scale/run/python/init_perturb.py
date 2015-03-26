@@ -36,7 +36,7 @@ var = rhoT / rho
 n = var.shape[2]
 m = var.shape[1]
 l = var.shape[0]
-l2 = l / 2 + 1
+l2 = int(l / 2) + 1
 
 fc3d = np.zeros((l, m, n), dtype='complex128')
 amp3d = np.zeros((l2, m, n), dtype='float64')

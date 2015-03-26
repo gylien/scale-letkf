@@ -72,7 +72,8 @@ MODULE letkf_obs
   INTEGER,allocatable,SAVE :: nobsgrd2(:,:,:)
 
   type(obs_info),save :: obs(nobsfiles)
-  type(obs_da_value),save :: obsda
+!  type(obs_da_value),save :: obsda
+  type(obs_da_value) :: obsda
   type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
                                                     !!!!!! need to add %err and %dat if they can be determined in letkf_obs.f90
 
@@ -213,7 +214,6 @@ SUBROUTINE set_letkf_obs
 
 !--------------------
 
-
   check = .false.
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
@@ -232,12 +232,12 @@ SUBROUTINE set_letkf_obs
       write (obsdafile(7:10),'(I4.4)') im
       write (obsdafile(12:17),'(I6.6)') proc2mem(2,it,myrank+1)
 
+      if (.not. check) then
+        CALL get_nobs(obsdafile,6,obsda%nobs)
+        WRITE(6,'(A,I9,A)') 'TOTAL: ', obsda%nobs, ' OBSERVATIONS'
 
-      CALL get_nobs(obsdafile,6,obsda%nobs)
-      WRITE(6,'(A,I9,A)') 'TOTAL: ', obsda%nobs, ' OBSERVATIONS'
-
-      CALL obs_da_value_allocate(obsda,MEMBER)
-
+        CALL obs_da_value_allocate(obsda,MEMBER)
+      end if
 
       call read_obs_da(obsdafile,obsda,im,check)
       check = .true.

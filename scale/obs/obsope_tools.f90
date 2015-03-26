@@ -105,6 +105,7 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
 !  real(r_size) :: rig,rjg,ri,rj,rk
   real(r_size) :: rig,rjg,rk
   real(r_size),allocatable :: ri(:),rj(:)
+  real(r_size) :: ritmp,rjtmp
   real(r_size) :: slot_lb,slot_ub
 
 !-----------------------------------------------------------------------
@@ -126,7 +127,7 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
             im, ', subdomain id #', proc2mem(2,it,myrank+1)
 
-write(6,*) '%%%%%%', MPI_WTIME(), 0
+!write(6,*) '%%%%%%', MPI_WTIME(), 0
 
       nproc = 0
       obsda%qc = iqc_time
@@ -134,7 +135,7 @@ write(6,*) '%%%%%%', MPI_WTIME(), 0
       do islot = SLOT_START, SLOT_END
         slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
         slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
-        write (6,'(A,I3,A,F7.1,A,F7.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
+        write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
 
         call read_ens_history_mpi('hist',it,islot,v3dg,v2dg)
 !  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -144,7 +145,7 @@ write(6,*) '%%%%%%', MPI_WTIME(), 0
           nslot = 0
           nprocslot = 0
 
-write(6,*) '%%%===', MPI_WTIME(), 'im:', im, 'islot:', islot, 'iof:', iof
+!write(6,*) '%%%===', MPI_WTIME(), 'im:', im, 'islot:', islot, 'iof:', iof
 
           ! do this small computtion first, without OpenMP
           nproc_0 = nproc
@@ -152,7 +153,7 @@ write(6,*) '%%%===', MPI_WTIME(), 'im:', im, 'islot:', islot, 'iof:', iof
             if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
               nslot = nslot + 1
               call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
-              call rij_g2l_auto(proc,rig,rjg,ri(nproc),rj(nproc))
+              call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
 
               if (PRC_myrank == proc) then
                 nproc = nproc + 1
@@ -161,21 +162,23 @@ write(6,*) '%%%===', MPI_WTIME(), 'im:', im, 'islot:', islot, 'iof:', iof
                 obsda%idx(nproc) = n
                 obsda%ri(nproc) = rig
                 obsda%rj(nproc) = rjg
+                ri(nproc) = ritmp
+                rj(nproc) = rjtmp
               end if ! [ PRC_myrank == proc ]
             end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
           end do ! [ n = 1, obs%nobs ]
 
           ! then do this heavy computation with OpenMP
 
-write(6,*) '%%%===', MPI_WTIME(), nproc_0 + 1, nproc
+!write(6,*) '%%%===', MPI_WTIME(), nproc_0 + 1, nproc
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,rk)
           do nn = nproc_0 + 1, nproc
             n = obsda%idx(nn)
 
-if (mod(nn,50) == 0) then
-  write(6,*) '%%%%%%', MPI_WTIME(), nn
-end if
+!if (mod(nn,50) == 0) then
+!  write(6,*) '%%%%%%', MPI_WTIME(), nn
+!end if
 
             if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
               call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
@@ -227,7 +230,7 @@ end if
 
       end do ! [ islot = SLOT_START, SLOT_END ]
 
-write(6,*) '%%%%%%', MPI_WTIME(), nproc
+!write(6,*) '%%%%%%', MPI_WTIME(), nproc
 
       obsda%nobs = nproc
 
@@ -244,6 +247,17 @@ write(6,*) '%%%%%%', MPI_WTIME(), nproc
   end do ! [ it = 1, nitmax ]
 
   deallocate ( ri, rj, v3dg, v2dg )
+
+!write(6,*) ri(1),rj(1)
+!write(6,*) '$$$$ 0'
+!!  deallocate ( ri )
+!write(6,*) '$$$$ 1'
+!!  deallocate ( rj )
+!write(6,*) '$$$$ 2'
+!!  deallocate ( v3dg )
+!write(6,*) '$$$$ 3'
+!!  deallocate ( v2dg )
+!write(6,*) '$$$$ 4'
 
 end subroutine obsope_cal
 
@@ -283,7 +297,7 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
   do islot = SLOT_START, SLOT_END
     slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
     slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
-    write (6,'(A,I3,A,F7.1,A,F7.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
+    write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
 
     call read_ens_history_mpi('hist',1,islot,v3dg,v2dg)
 

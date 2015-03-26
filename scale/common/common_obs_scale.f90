@@ -1656,11 +1656,22 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
   IF(ex) THEN
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
     READ(iunit,IOSTAT=ios)tmp
-    IF( ios /=0)RETURN
+    IF(ios /= 0) THEN
+      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      RETURN
+    END IF
     radarlon=REAL(tmp,r_size)
-    READ(iunit)tmp
+    READ(iunit,IOSTAT=ios)tmp
+    IF(ios /= 0) THEN 
+      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      RETURN
+    END IF
     radarlat=REAL(tmp,r_size)
-    READ(iunit)tmp
+    READ(iunit,IOSTAT=ios)tmp
+    IF(ios /= 0) THEN 
+      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      RETURN
+    END IF
     radarz=REAL(tmp,r_size)
     DO
       READ(iunit,IOSTAT=ios) wk
@@ -1694,15 +1705,18 @@ SUBROUTINE read_obs_radar(cfile,obs)
   TYPE(obs_info),INTENT(INOUT) :: obs
   REAL(r_sngl) :: wk(7)
   REAL(r_sngl) :: tmp
-  INTEGER :: n,iunit
+  INTEGER :: n,iunit,ios
 
 !  call obs_info_allocate(obs)
 
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-  READ(iunit)tmp
-  READ(iunit)tmp
-  READ(iunit)tmp
+  READ(iunit, iostat=ios)tmp
+  IF(ios /= 0) RETURN
+  READ(iunit, iostat=ios)tmp
+  IF(ios /= 0) RETURN
+  READ(iunit, iostat=ios)tmp
+  IF(ios /= 0) RETURN
   DO n=1,obs%nobs
     READ(iunit) wk
     obs%elm(n) = NINT(wk(1))
@@ -1770,10 +1784,22 @@ subroutine read_obs_all(obs, radarlon, radarlat, radarz)
   integer :: iof
   logical :: ex
 
+
+  radarlon = undef
+  radarlat = undef
+  radarz = undef
+
+
   do iof = 1, nobsfiles
     inquire (file=obsfile(iof), exist=ex)
     if (.not. ex) then
       write(6,*) 'WARNING: FILE ',obsfile(iof),' NOT FOUND'
+
+
+      obs(iof)%nobs = 0
+      call obs_info_allocate(obs(iof))
+
+
       cycle
     end if
 
