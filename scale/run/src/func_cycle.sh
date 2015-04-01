@@ -128,7 +128,7 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $ANLWRF $TMPDAT/wrf
 
   safe_init_tmpdir $TMPDAT/conf
-  ln -fs $SCRP_DIR/*.conf $TMPDAT/conf
+  ln -fs $SCRP_DIR/config.nml.* $TMPDAT/conf
 
   if ((PREP_TOPO == 1)); then
     ln -fs $DATADIR/topo_prep $TMPDAT/topo_prep

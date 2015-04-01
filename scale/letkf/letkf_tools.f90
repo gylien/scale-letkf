@@ -230,6 +230,11 @@ WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
             DO k=1,MEMBER
               anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
                 & + gues3d(ij,ilev,k,n) * trans(k,m,n)
+
+if (ij == 32 .and. ilev == 3) then
+  write(6,'(I4,2F16.6)') m, gues3d(ij,ilev,k,n), trans(k,m,n)
+end if
+
             END DO
           END DO                                                             ! GYL
         END IF                                                               ! GYL

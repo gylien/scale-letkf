@@ -33,9 +33,9 @@ ADAPTINFL=1         # Adaptive inflation
 
 #===============================================================================
 
-PREP_TOPO=0    # 0: No
+PREP_TOPO=1    # 0: No
                # 1: Yes
-PREP_LANDUSE=0 # 0: No
+PREP_LANDUSE=1 # 0: No
                # 1: Yes
 PREP_BDY=0     # 0: No
                # 1: Yes

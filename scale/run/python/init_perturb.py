@@ -1,7 +1,8 @@
 import numpy as np
 import numpy.ma as ma
 import datetime as dt
-from scaleio import *
+import scale
+from scale.io import *
 import sys
 
 if len(sys.argv) <= 1:
@@ -10,8 +11,8 @@ initialfile = sys.argv[1]
 
 wavel1 =  100000.
 wavel2 = 2000000.
-dx = 7500.
-zheight = 25000.
+dx = 15000.
+zheight = 29000.
 taper_width = 10
 
 pert_std = 0.8
@@ -19,9 +20,9 @@ halo = 2
 
 nproc, rootgrps, dimdef = scale_open(initialfile, 'r+')
 
-vardim, vardata = scale_read(nproc, rootgrps, dimdef, 'DENS', it=0)
+vardim, vardata = scale_read(nproc, rootgrps, dimdef, 'DENS', t=0)
 rho = vardata[:,halo:-halo,halo:-halo]
-vardim2, vardata = scale_read(nproc, rootgrps, dimdef, 'RHOT', it=0)
+vardim2, vardata = scale_read(nproc, rootgrps, dimdef, 'RHOT', t=0)
 rhoT = vardata[:,halo:-halo,halo:-halo]
 if vardim != vardim2:
     raise ValueError('Dimensions mismatch.')
@@ -85,9 +86,9 @@ rhoT = rho * var
 #rhoT = var
 
 vardata[:,halo:-halo,halo:-halo] = rhoT
-scale_write(nproc, rootgrps, dimdef, 'RHOT', vardim, vardata, it=0)
+scale_write(nproc, rootgrps, dimdef, 'RHOT', vardata, t=0)
 
-vardim, vardata = scale_read(nproc, rootgrps, dimdef, 'RHOT', it=0)
-scale_write(nproc, rootgrps, dimdef, 'RHOT', vardim, vardata, it=0)
+vardim, vardata = scale_read(nproc, rootgrps, dimdef, 'RHOT', t=0)
+scale_write(nproc, rootgrps, dimdef, 'RHOT', vardata, t=0)
 
 scale_close(rootgrps)
