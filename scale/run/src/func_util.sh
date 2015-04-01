@@ -131,11 +131,11 @@ if ((MACHINE_TYPE == 1)); then
   HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
 
   if [ "$RUNDIR" == '-' ]; then
-#    $MPIRUN $HOSTLIST 1 $PROG $ARGS
-    $MPIRUN $HOSTLIST 1 omplace -nt ${THREADS} $PROG $ARGS
+    $MPIRUN $HOSTLIST 1 $PROG $ARGS
+#    $MPIRUN $HOSTLIST 1 omplace -nt ${THREADS} $PROG $ARGS
   else
-#    $MPIRUN -d $RUNDIR $HOSTLIST 1 $PROG $ARGS
-    $MPIRUN -d $RUNDIR $HOSTLIST 1 omplace -nt ${THREADS} $PROG $ARGS
+    $MPIRUN -d $RUNDIR $HOSTLIST 1 $PROG $ARGS
+#    $MPIRUN -d $RUNDIR $HOSTLIST 1 omplace -nt ${THREADS} $PROG $ARGS
   fi
 
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then

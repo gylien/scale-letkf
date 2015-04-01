@@ -1073,9 +1073,9 @@ SUBROUTINE state_trans(v3dg)
        pres = PRE00 * ( v3dg(k,i,j,iv3d_rhot) * Rtot / PRE00 )**CPovCV
        temp = pres / ( rho * Rtot )
 
-       v3dg(k,i,j,iv3d_u) = v3dg(k,i,j,iv3d_rhou) / rho
-       v3dg(k,i,j,iv3d_v) = v3dg(k,i,j,iv3d_rhov) / rho
-       v3dg(k,i,j,iv3d_w) = v3dg(k,i,j,iv3d_rhow) / rho
+       v3dg(k,i,j,iv3d_u) = v3dg(k,i,j,iv3d_rhou) / rho !!!!!! inaccurate! do not consider staggered grid !!!!!!
+       v3dg(k,i,j,iv3d_v) = v3dg(k,i,j,iv3d_rhov) / rho !!!!!!
+       v3dg(k,i,j,iv3d_w) = v3dg(k,i,j,iv3d_rhow) / rho !!!!!!
        v3dg(k,i,j,iv3d_t) = temp
        v3dg(k,i,j,iv3d_p) = pres
       enddo
@@ -1150,9 +1150,9 @@ SUBROUTINE state_trans_inv(v3dg)
        rhot = PRE00 / Rtot * (v3dg(k,i,j,iv3d_p) / PRE00)**CVovCP
 
        v3dg(k,i,j,iv3d_rhot) = rhot
-       v3dg(k,i,j,iv3d_rhow) = v3dg(k,i,j,iv3d_w) * rho
-       v3dg(k,i,j,iv3d_rhov) = v3dg(k,i,j,iv3d_v) * rho
-       v3dg(k,i,j,iv3d_rhou) = v3dg(k,i,j,iv3d_u) * rho
+       v3dg(k,i,j,iv3d_rhow) = v3dg(k,i,j,iv3d_w) * rho !!!!!! inaccurate! do not consider staggered grid !!!!!!
+       v3dg(k,i,j,iv3d_rhov) = v3dg(k,i,j,iv3d_v) * rho !!!!!!
+       v3dg(k,i,j,iv3d_rhou) = v3dg(k,i,j,iv3d_u) * rho !!!!!!
        v3dg(k,i,j,iv3d_rho) = rho
       enddo
     enddo

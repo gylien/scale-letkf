@@ -7,31 +7,31 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/data6/gylien/exp/scale-letkf_test/Japan_west_7.5km_4p" # Directory for SCALE-LETKF output
+OUTDIR="/volume41/data/ra000015/gylien/scale-exp/Japan_west_7.5km_4p"  # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/data6/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
-DATADIR="/data6/gylien/scale-letkf/database"
+MODELDIR="/volume63/data/ra000015/gylien/scale/scale-les/test/case_real/check_japan/run"
+DATADIR="/volume63/data/ra000015/gylien/scale-letkf/database"
 
-ANLWRF="/data6/gylien/model/ncepfnl/wrfout"
+ANLWRF="/volume63/data/ra000015/gylien/model/ncepfnl/wrfout"
 ANLWRF_INT=21600
-#ANLGFS="/discover/nobackup/glien/model/CFSR_t62"         # directory of reference model files [sigma/surface formats]
-#ANLGRD="/discover/nobackup/glien/model/CFSR_t62_grd"     # directory of reference model files [sigma-level grid format]
-#ANLGRDP="/discover/nobackup/glien/model/CFSR_t62_grdp"   # directory of reference model files [pressure-level grid format]
+#ANLGFS="/discover/nobackup/glien/model/CFSR_t62"           # directory of reference model files [sigma/surface formats]
+#ANLGRD="/discover/nobackup/glien/model/CFSR_t62_grd"       # directory of reference model files [sigma-level grid format]
+#ANLGRDP="/discover/nobackup/glien/model/CFSR_t62_grdp"     # directory of reference model files [pressure-level grid format]
 #ANLGRDP2="/discover/nobackup/glien/model/EC_interim_t62_grdp" # directory of reference model files [pressure-level grid format]
 
-#INITGFS="/discover/nobackup/glien/model/GDAS_IC_t62"     # directory of arbitrary initial condition files [sigma/surface formats]
+#INITGFS="/discover/nobackup/glien/model/GDAS_IC_t62"       # directory of arbitrary initial condition files [sigma/surface formats]
 
 OBSNUM=1
-OBSNAME[1]=obs                                    
+OBSNAME[1]=obs
 OBSNAME[2]=radar
-OBS="/data6/gylien/obs/prepbufr_obs_japan"    # directory of observation data in LETKF obs format
+OBS="/volume63/data/ra000015/gylien/obs/prepbufr_obs_japan"    # directory of observation data in LETKF obs format
 
-OBSNCEP="/data6/gylien/obs/prepbufr"  # directory of observation data in NCEP BUFR format
+OBSNCEP="/volume63/data/ra000015/gylien/obs/prepbufr" # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # Cycling settings
@@ -46,10 +46,10 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=19          # Ensemble size
 
-NNODES=2           # Number of nodes
-PPN=40             # Number of processes per node
+NNODES=80          # Number of nodes
+PPN=1              # Number of processes per node
 
-THREADS=1          # Number of threads per process
+THREADS=8          # Number of threads per process
 
 SCALE_NP=4         # Number of processes to run SCALE
 
@@ -58,20 +58,20 @@ BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 #===============================================================================
 # Temporary directories to store runtime files
 
-MACHINE_TYPE=1              # Machine type
+MACHINE_TYPE=12             # Machine type
                             #  1: Linux cluster with PBS
                             # 10: K-computer
                             # 11: K-computer (micro jobs)
                             # 12: K-computer (interact jobs)
 
-TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
+TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
+TMPRUN_MODE=2               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)
                             #  2: share (staging to TMP)
                             #  3: local (staging to TMPL)
 
-ONLINE_STGOUT=1             # Stage out right after each cycle (do not wait until the end of the job)?
+ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
 
@@ -79,23 +79,23 @@ SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_$(whoami)_${SYSNAME}" # (used to identify multiple runs in the same time)
 
 TMP="$DIR/tmp/$TMPSUBDIR"   # Temporary directory shared among all nodes
-TMPS="/dev/shm/$TMPSUBDIR"  # Temporary directory only on the server node
-TMPL="/dev/shm/$TMPSUBDIR"  # Local temporary directory on computing nodes
+TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
+TMPL=                       # (When $MACHINE_TYPE=12, this will be automatically set)
 
 #===============================================================================
 # Environmental settings
 
-MPIBIN=$(dirname $(which mpirun))
-MPIRUN="$MPIBIN/mpirun"
+MPIBIN=$(dirname $(which mpiexec))
+MPIRUN="$MPIBIN/mpiexec"
 
 SCP='cp -L'
 SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 
-PYTHON="python3"
+PYTHON="python"
 
-BUFRBIN="/data/opt/bufrlib/10.1.0_intel/bin"
+#BUFRBIN=
 
 #===============================================================================
 # Machine-independent source file

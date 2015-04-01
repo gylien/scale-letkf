@@ -46,6 +46,7 @@ setting "$1" "$2" "$3" "$4" "$5"
 #-------------------------------------------------------------------------------
 
 mkdir -p $LOGDIR
+exec 3>&1 4>&2
 #exec 2>> $LOGDIR/${myname1}.err
 exec 2> >(tee -a $LOGDIR/${myname1}.err >&2)
 
@@ -242,6 +243,8 @@ while ((time <= ETIME)); do
   echo " +----------------------------------------------------------------+"
   echo
 
+  exec 1>&3
+
 #-------------------------------------------------------------------------------
 
   time=$(datetime $time $LCYCLE s)
@@ -269,12 +272,12 @@ if ((BUILTIN_STAGING)); then
     fi
   fi
 
-  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
-    safe_rm_tmpdir $TMP
-  fi
-  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
-    safe_rm_tmpdir $TMPL
-  fi
+#  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
+#    safe_rm_tmpdir $TMP
+#  fi
+#  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
+#    safe_rm_tmpdir $TMPL
+#  fi
 fi
 
 #===============================================================================
