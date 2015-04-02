@@ -110,13 +110,14 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv3dd_qg=11
   INTEGER,PARAMETER :: iv3dd_rh=12
   INTEGER,PARAMETER :: iv3dd_hgt=13
-  INTEGER,PARAMETER :: iv2dd_ps=1
-  INTEGER,PARAMETER :: iv2dd_tsfc=2
+  INTEGER,PARAMETER :: iv2dd_topo=1
+  INTEGER,PARAMETER :: iv2dd_ps=2
   INTEGER,PARAMETER :: iv2dd_rain=3
   INTEGER,PARAMETER :: iv2dd_u10m=4
   INTEGER,PARAMETER :: iv2dd_v10m=5
   INTEGER,PARAMETER :: iv2dd_t2m=6
   INTEGER,PARAMETER :: iv2dd_q2m=7
+!  INTEGER,PARAMETER :: iv2dd_tsfc=8
 
 
 
@@ -276,13 +277,14 @@ SUBROUTINE set_common_scale(mem)
     v3dd_name(iv3dd_rh)   = 'RH'
     v3dd_name(iv3dd_hgt)   = 'height'
     !
+    v2dd_name(iv2dd_topo) = 'topo'
     v2dd_name(iv2dd_ps) = 'SFC_PRES'
-    v2dd_name(iv2dd_tsfc) = 'SFC_TEMP'
     v2dd_name(iv2dd_rain) = 'PREC'
     v2dd_name(iv2dd_u10m) = 'U10'
     v2dd_name(iv2dd_v10m) = 'V10'
     v2dd_name(iv2dd_t2m) = 'T2'
     v2dd_name(iv2dd_q2m) = 'Q2'
+!    v2dd_name(iv2dd_tsfc) = 'SFC_TEMP'
     !
     ! Lon, Lat
     !

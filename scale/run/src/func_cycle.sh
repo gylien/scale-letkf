@@ -126,6 +126,7 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $DATADIR/rad $TMPDAT
   ln -fs $DATADIR/land $TMPDAT
   ln -fs $ANLWRF $TMPDAT/wrf
+  ln -sf $OBS $TMPDAT/obs
 
   safe_init_tmpdir $TMPDAT/conf
   ln -fs $SCRP_DIR/config.nml.* $TMPDAT/conf

@@ -104,7 +104,7 @@ SUBROUTINE set_letkf_obs
     PRC_NUM_Y
 
   IMPLICIT NONE
-  REAL(r_size),PARAMETER :: gross_error=10.0d0
+  REAL(r_size),PARAMETER :: gross_error=5.0d0 !!!!! move to namelist
 !  REAL(r_size) :: dlon1,dlon2,dlon,dlat
 !  REAL(r_size),ALLOCATABLE :: wk2d(:,:)
 !  INTEGER,ALLOCATABLE :: iwk2d(:,:)
@@ -541,7 +541,8 @@ SUBROUTINE set_letkf_obs
 
 
 
-!write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsda%set(n))%typ(obsda%idx(n)), obs(obsda%set(n))%lon(obsda%idx(n)), obs(obsda%set(n))%lat(obsda%idx(n)), obs(obsda%set(n))%lev(obsda%idx(n)), obs(obsda%set(n))%dat(obsda%idx(n)), obs(obsda%set(n))%err(obsda%idx(n)), obsda%val(n), obsda%qc(n)
+write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsda%set(n))%typ(obsda%idx(n)), obs(obsda%set(n))%lon(obsda%idx(n)), obs(obsda%set(n))%lat(obsda%idx(n)), obs(obsda%set(n))%lev(obsda%idx(n)), obs(obsda%set(n))%dat(obsda%idx(n)), obs(obsda%set(n))%err(obsda%idx(n)), obsda%val(n), obsda%qc(n)
+!write (6, '(A,15F8.2)') '-- ', obsda%ensval(:,n)
 
 
 

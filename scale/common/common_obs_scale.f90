@@ -83,6 +83,8 @@ MODULE common_obs_scale
   REAL(r_size),SAVE :: MIN_RADAR_REF
   REAL(r_size),SAVE :: RADAR_REF_THRES
 
+  REAL(r_size) :: PS_ADJUST_THRES = 100.d0
+
   !These 2 flags affects the computation of model reflectivity and 
   !radial velocity. 
 !  INTEGER,PARAMETER :: INTERPOLATION_TECHNIQUE=1
@@ -213,17 +215,7 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs,qc)
   REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
   REAL(r_size),INTENT(OUT) :: yobs
   INTEGER,INTENT(OUT) :: qc
-!  REAL(r_size) :: tg,qg
-  REAL(r_size) :: qq
-!  REAL(r_size) :: dummy(3)
-!  INTEGER :: i,j,k
-!  INTEGER :: is,ie,js,je,ks,ke
-!  ie = CEILING( ri )
-!  is = ie-1
-!  je = CEILING( rj )
-!  js = je-1
-!  ke = CEILING( rk )
-!  ks = ke-1
+  REAL(r_size) :: t,q,topo
 
   yobs = undef
   qc = iqc_good
@@ -237,19 +229,20 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs,qc)
     CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,yobs)
   CASE(id_tv_obs)  ! Tv
     CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,yobs)
-    CALL itpl_3d(v3d(:,:,:,iv3dd_q),rk,ri,rj,qq)
-    yobs = yobs * (1.0d0 + fvirt * qq)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_q),rk,ri,rj,q)
+    yobs = yobs * (1.0d0 + fvirt * q)
   CASE(id_q_obs)  ! Q
     CALL itpl_3d(v3d(:,:,:,iv3dd_q),rk,ri,rj,yobs)
-  CASE(id_ps_obs) ! PS   !##################################
-
-!    CALL itpl_2d(v2d(:,:,iv2dd_t2m),ri,rj,tg)
-!    CALL itpl_2d(v2d(:,:,iv2dd_q2m),ri,rj,qg)
-!    CALL itpl_2d(v2d(:,:,iv2dd_ps),ri,rj,yobs)
-!    CALL prsadj(yobs,rk,tg,qg)
-
+  CASE(id_ps_obs) ! PS
+    CALL itpl_2d(v2d(:,:,iv2dd_t2m),ri,rj,t)
+    CALL itpl_2d(v2d(:,:,iv2dd_q2m),ri,rj,q)
+    CALL itpl_2d(v2d(:,:,iv2dd_topo),ri,rj,topo)
     CALL itpl_2d(v2d(:,:,iv2dd_ps),ri,rj,yobs)
-
+    call prsadj(yobs,rk-topo,t,q)
+    if (abs(rk-topo) > PS_ADJUST_THRES) then
+      write (6,'(A,F6.1)') 'warning: PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
+      qc = iqc_ps_ter
+    end if
 !  CASE(id_rain_obs) ! RAIN                        ############# (not finished)
 !    CALL itpl_2d(v2d(:,:,iv2dd_rain),ri,rj,yobs) !#############
   CASE(id_rh_obs) ! RH
@@ -880,7 +873,7 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
   INTEGER,INTENT(IN) :: elem
   REAL(r_size),INTENT(IN) :: ri
   REAL(r_size),INTENT(IN) :: rj
-  REAL(r_size),INTENT(IN) :: rlev ! pressure levels
+  REAL(r_size),INTENT(IN) :: rlev ! pressure levels (for 3D variable only)
   REAL(r_size),INTENT(OUT) :: rk
   INTEGER,INTENT(OUT) :: qc
   REAL(r_size) :: ak
@@ -901,7 +894,7 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
   end if
   !
   IF(elem > 9999) THEN ! surface observation
-    rk = 0.0d0
+    rk = rlev
   ELSE
     !
     ! horizontal interpolation

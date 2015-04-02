@@ -201,7 +201,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,m,k,q_mean,q_sprd,q_anal)
     DO ij=1,nij1
-WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
+!WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
       DO n=1,nv3d
         IF(var_local_n2n(n) < n) THEN
           trans(:,:,n) = trans(:,:,var_local_n2n(n))
@@ -231,9 +231,9 @@ WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
               anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
                 & + gues3d(ij,ilev,k,n) * trans(k,m,n)
 
-if (ij == 32 .and. ilev == 3) then
-  write(6,'(I4,2F16.6)') m, gues3d(ij,ilev,k,n), trans(k,m,n)
-end if
+!if (n == 1 .and. ij == 32 .and. ilev == 3) then
+!  write(6,'(I4,2F16.6)') m, gues3d(ij,ilev,k,n), trans(k,m,n)
+!end if
 
             END DO
           END DO                                                             ! GYL

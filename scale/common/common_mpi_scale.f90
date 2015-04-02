@@ -518,7 +518,7 @@ subroutine read_ens_mpi(file,v3d,v2d)
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '###### read_ens_mpi:read_restart:  ',rrtimer,rrtimer-rrtimer00
+  WRITE(6,'(A,F10.2)') '###### read_ens_mpi:read_restart:              ',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
 
@@ -527,7 +527,7 @@ subroutine read_ens_mpi(file,v3d,v2d)
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '###### read_ens_mpi:state_trans:  ',rrtimer,rrtimer-rrtimer00
+  WRITE(6,'(A,F10.2)') '###### read_ens_mpi:state_trans:               ',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
 
@@ -540,7 +540,7 @@ subroutine read_ens_mpi(file,v3d,v2d)
 
   CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '###### read_ens_mpi:scatter_grd_mpi_alltoall:  ',rrtimer,rrtimer-rrtimer00
+  WRITE(6,'(A,F10.2)') '###### read_ens_mpi:scatter_grd_mpi_alltoall:  ',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
 
@@ -578,7 +578,7 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '###### write_ens_mpi:gather_grd_mpi_alltoall:  ',rrtimer,rrtimer-rrtimer00
+  WRITE(6,'(A,F10.2)') '###### write_ens_mpi:gather_grd_mpi_alltoall:  ',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
 
@@ -591,7 +591,7 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '###### write_ens_mpi:state_trans_inv:  ',rrtimer,rrtimer-rrtimer00
+  WRITE(6,'(A,F10.2)') '###### write_ens_mpi:state_trans_inv:          ',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
 
@@ -602,7 +602,7 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
 
   CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '###### write_ens_mpi:write_restart:  ',rrtimer,rrtimer-rrtimer00
+  WRITE(6,'(A,F10.2)') '###### write_ens_mpi:write_restart:            ',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
 

@@ -15,7 +15,7 @@ if (($# < 4)); then
 
 Usage: $0 MYRANK ATIME MEM TMPDIR
 
-  MYRANK  My rank number (not used)
+  MYRANK  My rank number
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
   MEM     Name of the ensemble member
   TMPDIR  Temporary directory to run the program
@@ -38,7 +38,8 @@ done
 
 if [ "$MEM" == '0001' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
   mkdir -p $TMPOUT/${ATIME}/log/obsope
-  mv -f $TMPDIR/NOUT-000000 $TMPOUT/${ATIME}/log/obsope/NOUT-000000 ###### using a variable for 'NOUT-000000'
+#  mv -f $TMPDIR/NOUT-000000 $TMPOUT/${ATIME}/log/obsope/NOUT-000000 ###### using a variable for 'NOUT-000000'
+  mv -f $TMPDIR/NOUT-?????? $TMPOUT/${ATIME}/log/obsope/NOUT-?????? ###### temporary!!!!! ######
 fi
 
 #===============================================================================
