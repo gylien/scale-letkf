@@ -61,7 +61,7 @@ fi
 if [ "$MEM" == '0001' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
   mkdir -p $TMPOUT/${ATIME}/log/letkf
 #  mv -f $TMPDIR/NOUT-000000 $TMPOUT/${ATIME}/log/letkf/NOUT-000000 ###### using a variable for 'NOUT-000000'
-  mv -f $TMPDIR/NOUT-?????? $TMPOUT/${ATIME}/log/letkf/NOUT-?????? ###### temporary!!!!! ######
+  mv -f $TMPDIR/NOUT-?????? $TMPOUT/${ATIME}/log/letkf ###### temporary!!!!! ######
 fi
 
 #===============================================================================
