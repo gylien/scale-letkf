@@ -5,21 +5,21 @@
 #
 #===============================================================================
 
-STIME='20130712000000'
-ETIME='20130712000000'
-MEMBERS='mems'
+STIME='20130710000000'
+ETIME='20130710000000'
+MEMBERS='all'
 CYCLE=1
 CYCLE_SKIP=1
 IF_VERF=0
 IF_EFSO=0
 ISTEP=
 FSTEP=
-TIME_LIMIT='24:00:00'
+TIME_LIMIT='04:00:00'
 
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=21600       # SCALE forecast length in the forecast mode (second)
+FCSTLEN=86400       # SCALE forecast length in the forecast mode (second)
 #FCSTOUT=$LCYCLE    # SCALE forecast output interval in the forecast mode (second)
 FCSTOUT=3600
 
