@@ -111,7 +111,6 @@ contains
 ! PARAM_LETKF
 !-----------------------------------------------------------------------
 subroutine read_nml_letkf
-  use common_mpi, only: nprocs
   implicit none
   integer :: ierr
   
@@ -154,7 +153,6 @@ end subroutine read_nml_letkf
 ! PARAM_LETKF_PRC
 !-----------------------------------------------------------------------
 subroutine read_nml_letkf_prc
-  use common_mpi, only: nprocs
   implicit none
   integer :: ierr
   
