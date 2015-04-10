@@ -47,6 +47,7 @@ builtin_staging=$((MACHINE_TYPE != 10 && MACHINE_TYPE != 11))
 #-------------------------------------------------------------------------------
 
 mkdir -p $LOGDIR
+exec 3>&1 4>&2
 #exec 2>> $LOGDIR/${myname1}.err
 exec 2> >(tee -a $LOGDIR/${myname1}.err >&2)
 
@@ -227,6 +228,8 @@ while ((time <= ETIME)); do
   echo " |             SCALE-Forecasts successfully completed             |"
   echo " +----------------------------------------------------------------+"
   echo
+
+  exec 1>&3
 
 #-------------------------------------------------------------------------------
 
