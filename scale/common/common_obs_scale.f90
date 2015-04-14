@@ -1164,7 +1164,7 @@ SUBROUTINE monit_dep(nn,elm,dep,qc,ofmt)
   irh = 0
   irain = 0
   DO n=1,nn
-    IF(qc(n) <= 0) CYCLE
+    IF(qc(n) /= iqc_good) CYCLE
     SELECT CASE(NINT(elm(n)))
     CASE(id_u_obs)
       rmse_u = rmse_u + dep(n)**2
