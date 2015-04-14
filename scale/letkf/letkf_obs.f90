@@ -18,74 +18,28 @@ MODULE letkf_obs
   USE common_obs_scale
   USE common_mpi_scale
   USE common_letkf
-
-
+!  USE common_scalelib
 !  USE common_precip
-
-
-!  use common_scalelib
-
 
   IMPLICIT NONE
   PUBLIC
 
-!  INTEGER,SAVE :: nobs
-
-!  LOGICAL,PARAMETER :: omb_output=.TRUE.
-!  LOGICAL,PARAMETER :: oma_output=.TRUE.
-!  LOGICAL,PARAMETER :: obsgues_output=.FALSE.
-!  LOGICAL,PARAMETER :: obsanal_output=.FALSE.
-!  REAL(r_size),PARAMETER :: sigma_obs=1.0d3
-!!  REAL(r_size),PARAMETER :: sigma_obs_rain=350.0d3   ! GYL
-!  REAL(r_size),PARAMETER :: sigma_obsv=0.1d0
-!!  REAL(r_size),PARAMETER :: sigma_obsv_rain=0.4d0    ! GYL
-!!  REAL(r_size),PARAMETER :: base_obsv_rain=85000.0d0 ! GYL
-!  REAL(r_size),PARAMETER :: sigma_obst=3.0d0
-!  REAL(r_size),SAVE :: dist_zero
-!!  REAL(r_size),SAVE :: dist_zero_rain
-!  REAL(r_size),SAVE :: dist_zerov
-!!  REAL(r_size),SAVE :: dist_zerov_rain
-
-  REAL(r_size),SAVE :: dist_zero_fac
-
+  real(r_size),save :: dist_zero_fac
   real(r_size),save :: dlon_zero
   real(r_size),save :: dlat_zero
 
-!  REAL(r_size),ALLOCATABLE,SAVE :: obselm(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: obslon(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: obslat(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: obslev(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: obsdat(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: obserr(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: obstyp(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: obsdif(:)
-!!  REAL(r_size),ALLOCATABLE,SAVE :: obsi(:)
-!!  REAL(r_size),ALLOCATABLE,SAVE :: obsj(:)
-!!  REAL(r_size),ALLOCATABLE,SAVE :: obsk(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: obsdep(:)
-!  REAL(r_size),ALLOCATABLE,SAVE :: obshdxf(:,:)
-!  INTEGER,ALLOCATABLE,SAVE :: obsqc(:) ! GYL: QC values in output diag files (could be any value >= 1)
-
-!  INTEGER,SAVE :: nobsgrd(0:nlon,1:nlat) ! global count
-  INTEGER,allocatable,SAVE :: nobsgrd(:,:,:)
-
-  INTEGER,allocatable,SAVE :: nobsgrd2(:,:,:)
-
   type(obs_info),save :: obs(nobsfiles)
-!  type(obs_da_value),save :: obsda
   type(obs_da_value) :: obsda
+!  type(obs_da_value),save :: obsda
   type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
                                                     !!!!!! need to add %err and %dat if they can be determined in letkf_obs.f90
 
-  real(r_size) :: radarlon, radarlat, radarz
-
+  integer,allocatable,save :: nobsgrd(:,:,:)
+  integer,allocatable,save :: nobsgrd2(:,:,:)
   integer,save :: nobstotalg
   integer,save :: nobstotal
 
-!-----------------------------------------------------------------------
-! General parameters
-!-----------------------------------------------------------------------
-
+  real(r_size) :: radarlon, radarlat, radarz
 
 CONTAINS
 !-----------------------------------------------------------------------
@@ -105,43 +59,9 @@ SUBROUTINE set_letkf_obs
 
   IMPLICIT NONE
   REAL(r_size),PARAMETER :: gross_error=5.0d0 !!!!! move to namelist
-!  REAL(r_size) :: dlon1,dlon2,dlon,dlat
-!  REAL(r_size),ALLOCATABLE :: wk2d(:,:)
-!  INTEGER,ALLOCATABLE :: iwk2d(:,:)
-!  REAL(r_size),ALLOCATABLE :: tmpelm(:)
-!  REAL(r_size),ALLOCATABLE :: tmplon(:)
-!  REAL(r_size),ALLOCATABLE :: tmplat(:)
-!  REAL(r_size),ALLOCATABLE :: tmplev(:)
-!  REAL(r_size),ALLOCATABLE :: tmpdat(:)
-!  REAL(r_size),ALLOCATABLE :: tmperr(:)
-!  REAL(r_size),ALLOCATABLE :: tmptyp(:)
-!  REAL(r_size),ALLOCATABLE :: tmpdif(:)
-!!  REAL(r_size),ALLOCATABLE :: tmpi(:)
-!!  REAL(r_size),ALLOCATABLE :: tmpj(:)
-!!  REAL(r_size),ALLOCATABLE :: tmpk(:)
-!  REAL(r_size),ALLOCATABLE :: tmpdep(:)
-!  REAL(r_size),ALLOCATABLE :: tmphdxf(:,:)
-!  INTEGER,ALLOCATABLE :: tmpqc0(:,:)
-!  INTEGER,ALLOCATABLE :: tmpqc(:)
-!  REAL(r_size),ALLOCATABLE :: tmp2elm(:)
-!  REAL(r_size),ALLOCATABLE :: tmp2lon(:)
-!  REAL(r_size),ALLOCATABLE :: tmp2lat(:)
-!  REAL(r_size),ALLOCATABLE :: tmp2lev(:)
-!  REAL(r_size),ALLOCATABLE :: tmp2dat(:)
-!  REAL(r_size),ALLOCATABLE :: tmp2err(:)
-!  REAL(r_size),ALLOCATABLE :: tmp2typ(:)
-!  REAL(r_size),ALLOCATABLE :: tmp2dif(:)
-!!  REAL(r_size),ALLOCATABLE :: tmp2i(:)
-!!  REAL(r_size),ALLOCATABLE :: tmp2j(:)
-!!  REAL(r_size),ALLOCATABLE :: tmp2k(:)
-!  REAL(r_size),ALLOCATABLE :: tmp2dep(:)
-!  REAL(r_size),ALLOCATABLE :: tmp2hdxf(:,:)
-!  INTEGER,ALLOCATABLE :: tmp2qc(:)
-!  INTEGER :: n,i,j,ierr,nn,l,im
   INTEGER :: n,i,j,ierr,im,iof
-!  INTEGER :: nj(0:nlat-1)
-!  INTEGER :: njs(1:nlat-1)
-!  CHARACTER(10) :: obsfile='obsNNN.dat'
+
+  integer :: mem_ref
 !  CHARACTER(8) :: cdffile_m='cdfm.grd'         ! GYL, PRECIP assimilation
 !  CHARACTER(8) :: cdffile_o='cdfo.grd'         ! GYL
 !  CHARACTER(10) :: maskfile='ppmask.grd'       ! GYL
@@ -150,7 +70,6 @@ SUBROUTINE set_letkf_obs
 !  REAL(r_size) :: ppzero_m(nlon,nlat)          ! GYL
 !  REAL(r_size) :: ppzero_o(nlon,nlat)          ! GYL
 !  REAL(r_size) :: ppmask(nlon,nlat)            ! GYL
-  integer :: mem_ref
 !  INTEGER :: pp_mem, il, bg_lev, ob_lev        ! GYL
 !  INTEGER :: pp_ntotal(pp_bg_nlev,pp_ob_nlev)  ! GYL
 !  INTEGER :: zero_mem                          ! GYL
@@ -161,22 +80,11 @@ SUBROUTINE set_letkf_obs
 
   integer :: it,ip
   logical :: check
-!  REAL(r_size),allocatable :: bufr(:)
   REAL(r_size),allocatable :: bufr(:,:)
   INTEGER,allocatable :: bufri(:)
   INTEGER,allocatable :: bufri2(:,:,:)
-
-
   integer :: iproc,jproc
-!  integer,allocatable :: ranks(:)
-
   integer,allocatable :: nnext(:,:)
-
-!  integer :: MPI_G_e, MPI_G_obstmp, MPI_COMM_obstmp
-
-
-
-
 
 !---
   integer :: ns
@@ -187,18 +95,14 @@ SUBROUTINE set_letkf_obs
 
 
 
+  real(r_size),allocatable :: tmpelm(:)
+
+
 
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
-
   dist_zero_fac = SQRT(10.0d0/3.0d0) * 2.0d0
-
-!  dist_zero = SIGMA_OBS * SQRT(10.0d0/3.0d0) * 2.0d0
-!!  dist_zero_rain = SIGMA_OBS_RAIN * SQRT(10.0d0/3.0d0) * 2.0d0
-!  dist_zerov = SIGMA_OBSV * SQRT(10.0d0/3.0d0) * 2.0d0
-!!  dist_zerov_rain = SIGMA_OBSV_RAIN * SQRT(10.0d0/3.0d0) * 2.0d0
-
 
   !!!!!! changes for different observation types.... (do not communicate all observaitons in the same way...)
   dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR) * dist_zero_fac / DX
@@ -207,12 +111,8 @@ SUBROUTINE set_letkf_obs
 !  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RAIN, SIGMA_OBS_RADAR) * dist_zero_fac / DY
 
 
-
-
-
-
-
-!--------------------
+! Read observations
+!-----------------------------------
 
   check = .false.
   do it = 1, nitmax
@@ -220,35 +120,23 @@ SUBROUTINE set_letkf_obs
     if (im >= 1 .and. im <= MEMBER) then
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
             im, ', subdomain id #', proc2mem(2,it,myrank+1)
-
-!      nproc = 0
-
-!      obsda%nobs = nproc
-
-!      write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' finishes processing member ', &
-!            im, ', subdomain id #', proc2mem(2,it,myrank+1)
-!      write (6,'(A,I8,A)') ' -- ', nproc, ' observations found'
-
       write (obsdafile(7:10),'(I4.4)') im
       write (obsdafile(12:17),'(I6.6)') proc2mem(2,it,myrank+1)
 
       if (.not. check) then
         CALL get_nobs(obsdafile,6,obsda%nobs)
         WRITE(6,'(A,I9,A)') 'TOTAL: ', obsda%nobs, ' OBSERVATIONS'
-
         CALL obs_da_value_allocate(obsda,MEMBER)
       end if
 
       call read_obs_da(obsdafile,obsda,im,check)
       check = .true.
-
-!if(myrank==2) obsda%qc(4) = 17
-!if(myrank==6) obsda%qc(4) = 9
-
-
     end if
   end do ! [ it = 1, nitmax ]
 
+
+! All_reduce the observations
+!-----------------------------------
 !
 ! if the number of processors is greater then the ensemble size,
 ! broadcast the observation indices and real grid numbers
@@ -286,7 +174,6 @@ SUBROUTINE set_letkf_obs
 !      call MPI_Comm_free(MPI_COMM_obstmp,ierr)
 
 
-
       CALL MPI_BARRIER(MPI_COMM_e,ierr)
       call MPI_BCAST(obsda%nobs, 1, MPI_INTEGER, 0, MPI_COMM_e, ierr)
 !    print *, myrank, obsda%nobs
@@ -301,7 +188,6 @@ SUBROUTINE set_letkf_obs
       call MPI_BCAST(obsda%ri, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%rj, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
 !        CALL MPI_BARRIER(MPI_COMM_e,ierr)
-
 
 
   end if ! [ nprocs_e > MEMBER ]
@@ -321,26 +207,8 @@ SUBROUTINE set_letkf_obs
   obsda%qc = bufri
   deallocate(bufri)
 
-!  write (6,*) obsda%nobs
-!  write (6,*) obsda%idx
-
-
-
 !    call MPI_Comm_free(MPI_COMM_e,ierr)
 
-
-
-!if(myrank==10) then
-!    print *, '######======'
-!do n = 1, obsda%nobs
-!if (maxval(abs(obsda%ensval(:,n))) > 1.0d6) then
-!    print *, n, obsda%qc(n)
-!    print *, obsda%ensval(:,n)
-!    print *, ' '
-!end if
-!end do
-!end if
-!stop
 
 !!                                                                               ! GYL, PRECIP assimilation
 !! reading precipitation transformation definition and mask                      ! GYL
@@ -354,8 +222,9 @@ SUBROUTINE set_letkf_obs
 !  call read_ppmask(maskfile, ppmask)                                            ! GYL
 !  pp_ntotal = 0                                                                 ! GYL
 
-
-
+!!
+!! Pre-process radar observations
+!!
   !!!!!! may be moved to latter
   do iof = 1, nobsfiles
     do n = 1, obs(iof)%nobs
@@ -384,7 +253,9 @@ SUBROUTINE set_letkf_obs
   !!!!!!
 
 
-
+! Compute perturbation and departure
+! gross error check
+!-----------------------------------
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,mem_ref)
   do n = 1, obsda%nobs
@@ -490,7 +361,6 @@ SUBROUTINE set_letkf_obs
 
 
 !!!###### RADAR assimilation ######
-
 !    if (USE_OBSERR_RADAR_REF .AND. obs(obsda%set(n))%elm(obsda%idx(n)) == id_radar_ref_obs) then
 !      obs(obsda%set(n))%err(obsda%idx(n)) = OBSERR_RADAR_REF
 !    end if
@@ -520,9 +390,7 @@ SUBROUTINE set_letkf_obs
         cycle
       end if
     end if
-
 !!!###### end RADAR assimilation ######
-
 
 
 
@@ -550,11 +418,19 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
 !$OMP END PARALLEL DO
 
 
+!!
+!! output departure statistics
+!!
+!-------------------------------------------------------------------------------
 
+  WRITE(6,'(A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN):'
 
-
-!  WRITE(6,'(A)') 'OBSERVATIONAL DEPARTURE STATISTICS:'
-!  CALL monit_dep(nobs,tmpelm,tmpdep,tmpqc,1)
+  allocate(tmpelm(obsda%nobs))
+  do n = 1, obsda%nobs
+    tmpelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
+  end do
+  CALL monit_dep(obsda%nobs,tmpelm,obsda%val,obsda%qc,0)
+  deallocate(tmpelm)
 
 !!
 !! temporal observation localization
@@ -566,35 +442,13 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
 !! SELECT OBS IN THE NODE
 !!
 
-!  nn = 0
-!  DO n=1,nobs
-!    IF(tmpqc(n) <= 0) CYCLE
-!    nn = nn+1
-!    tmpelm(nn) = tmpelm(n)
-!    tmplon(nn) = tmplon(n)
-!    tmplat(nn) = tmplat(n)
-!    tmplev(nn) = tmplev(n)
-!    tmpdat(nn) = tmpdat(n)
-!    tmperr(nn) = tmperr(n)
-!    tmptyp(nn) = tmptyp(n)
-!    tmpdif(nn) = tmpdif(n)
-!!    tmpi(nn) = tmpi(n)
-!!    tmpj(nn) = tmpj(n)
-!!    tmpk(nn) = tmpk(n)
-!    tmpdep(nn) = tmpdep(n)
-!    tmphdxf(nn,:) = tmphdxf(n,:)
-!    tmpqc(nn) = tmpqc(n)
-!  END DO
 !  nobs = nn
 !  WRITE(6,'(I10,A,I3.3)') nobs,' OBSERVATIONS TO BE ASSIMILATED IN MYRANK ',myrank
 
 
 
-
-!    call set_scalelib
-
-
 ! Sorting
+!-----------------------------------
 
   allocate ( obsda2(0:MEM_NP-1) )
 
@@ -646,7 +500,6 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
 !end do
 
 !write (6, *) 'XXXXXX'
-
 
 
 
@@ -704,10 +557,9 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
 
 
 
+! Communication
+!-----------------------------------
 
-
-
-! communication
   allocate ( bufri2 (0:nlon,1:nlat,0:MEM_NP-1) )
   call MPI_ALLREDUCE(nobsgrd,bufri2,(nlon+1)*nlat*MEM_NP,MPI_INTEGER,MPI_SUM,MPI_COMM_d,ierr)
   nobsgrd(0:nlon,1:nlat,0:MEM_NP-1) = bufri2(0:nlon,1:nlat,0:MEM_NP-1)
@@ -715,15 +567,9 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
 
   nobstotalg = sum(nobsgrd(nlon,nlat,:))
 !  WRITE(6,'(A,I8)') 'Target observation numbers (global) : NOBS=',nobstotalg
-  
-
-
 
   allocate ( nobsgrd2(0:nlon,1:nlat,0:MEM_NP-1) )
-
-
   nobsgrd2(:,:,PRC_myrank) = nobsgrd(:,:,PRC_myrank)
-
 
   allocate(nr(MEM_NP),nrt(MEM_NP))
 
@@ -737,7 +583,6 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
   call obs_da_value_allocate(obsbufs,MEMBER)
 
   allocate ( obsidx(maxval(nobsgrd(nlon,nlat,:))) )
-
 
   do ip = 0, MEM_NP-1
 !    do ip = 0, 0
@@ -830,9 +675,7 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
           obsda2(ip2)%ri = obsbufr%ri(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
           obsda2(ip2)%rj = obsbufr%rj(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
 
-
 !            write(6,*) obsda2(ip2)%idx
-
 
         end if
       end do
@@ -852,11 +695,8 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
   end do ! [ ip = 0, MEM_MP ]
 
 
-
-
   call obs_da_value_deallocate(obsbufs)
   deallocate(obsidx)
-
 
   nobsgrd = nobsgrd2
 
@@ -874,18 +714,10 @@ print *, myrank, nobstotalg, nobstotal, nobsgrd(nlon,nlat,:)
     stop
   end if
 
-
-
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
 !  stop
 
-
-
-
-
   nobstotal = sum(nobsgrd(nlon,nlat,:))
-
-
 
 
 !do i = 0, MEM_NP-1
@@ -901,156 +733,8 @@ print *, myrank, nobstotalg, nobstotal, nobsgrd(nlon,nlat,:)
 !  write(6,*) obsda2(i)%ensval(:,20:23)
 !end do
 
-
-
-
 !    call unset_scalelib
 
-
-
-
-
-
-!!!
-!!! SORT
-!!!
-!!  ALLOCATE( tmp2elm(nobs) )
-!!  ALLOCATE( tmp2lon(nobs) )
-!!  ALLOCATE( tmp2lat(nobs) )
-!!  ALLOCATE( tmp2lev(nobs) )
-!!  ALLOCATE( tmp2dat(nobs) )
-!!  ALLOCATE( tmp2err(nobs) )
-!!  ALLOCATE( tmp2typ(nobs) )
-!!  ALLOCATE( tmp2dif(nobs) )
-!!!  ALLOCATE( tmp2i(nobs) )
-!!!  ALLOCATE( tmp2j(nobs) )
-!!!  ALLOCATE( tmp2k(nobs) )
-!!  ALLOCATE( tmp2dep(nobs) )
-!!  ALLOCATE( tmp2hdxf(nobs,MEMBER) )
-!!  ALLOCATE( tmp2qc(nobs) )
-!!  ALLOCATE( obselm(nobs) )
-!!  ALLOCATE( obslon(nobs) )
-!!  ALLOCATE( obslat(nobs) )
-!!  ALLOCATE( obslev(nobs) )
-!!  ALLOCATE( obsdat(nobs) )
-!!  ALLOCATE( obserr(nobs) )
-!!  ALLOCATE( obstyp(nobs) )
-!!  ALLOCATE( obsdif(nobs) )
-!!!  ALLOCATE( obsi(nobs) )
-!!!  ALLOCATE( obsj(nobs) )
-!!!  ALLOCATE( obsk(nobs) )
-!!  ALLOCATE( obsdep(nobs) )
-!!  ALLOCATE( obshdxf(nobs,MEMBER) )
-!!  ALLOCATE( obsqc(nobs) )
-!!  nobsgrd = 0
-!!  nj = 0
-!!!$OMP PARALLEL PRIVATE(i,j,n,nn)
-!!!$OMP DO SCHEDULE(DYNAMIC)
-!!  DO j=1,nlat-1
-!!    DO n=1,nobs
-!!      IF(tmplat(n) < lat(j) .OR. lat(j+1) <= tmplat(n)) CYCLE
-!!      nj(j) = nj(j) + 1
-!!    END DO
-!!  END DO
-!!!$OMP END DO
-!!!$OMP DO SCHEDULE(DYNAMIC)
-!!  DO j=1,nlat-1
-!!    njs(j) = SUM(nj(0:j-1))
-!!  END DO
-!!!$OMP END DO
-!!!$OMP DO SCHEDULE(DYNAMIC)
-!!  DO j=1,nlat-1
-!!    nn = 0
-!!    DO n=1,nobs
-!!      IF(tmplat(n) < lat(j) .OR. lat(j+1) <= tmplat(n)) CYCLE
-!!      nn = nn + 1
-!!      tmp2elm(njs(j)+nn) = tmpelm(n)
-!!      tmp2lon(njs(j)+nn) = tmplon(n)
-!!      tmp2lat(njs(j)+nn) = tmplat(n)
-!!      tmp2lev(njs(j)+nn) = tmplev(n)
-!!      tmp2dat(njs(j)+nn) = tmpdat(n)
-!!      tmp2err(njs(j)+nn) = tmperr(n)
-!!      tmp2typ(njs(j)+nn) = tmptyp(n)
-!!      tmp2dif(njs(j)+nn) = tmpdif(n)
-!!!      tmp2i(njs(j)+nn) = tmpi(n)
-!!!      tmp2j(njs(j)+nn) = tmpj(n)
-!!!      tmp2k(njs(j)+nn) = tmpk(n)
-!!      tmp2dep(njs(j)+nn) = tmpdep(n)
-!!      tmp2hdxf(njs(j)+nn,:) = tmphdxf(n,:)
-!!      tmp2qc(njs(j)+nn) = tmpqc(n)
-!!    END DO
-!!  END DO
-!!!$OMP END DO
-!!!$OMP DO SCHEDULE(DYNAMIC)
-!!  DO j=1,nlat-1
-!!    IF(nj(j) == 0) THEN
-!!      nobsgrd(:,j) = njs(j)
-!!      CYCLE
-!!    END IF
-!!    nn = 0
-!!    DO i=1,nlon
-!!      DO n=njs(j)+1,njs(j)+nj(j)
-!!        IF(i < nlon) THEN
-!!          IF(tmp2lon(n) < lon(i) .OR. lon(i+1) <= tmp2lon(n)) CYCLE
-!!        ELSE
-!!          IF(tmp2lon(n) < lon(nlon) .OR. 360.0d0 <= tmp2lon(n)) CYCLE
-!!        END IF
-!!        nn = nn + 1
-!!        obselm(njs(j)+nn) = tmp2elm(n)
-!!        obslon(njs(j)+nn) = tmp2lon(n)
-!!        obslat(njs(j)+nn) = tmp2lat(n)
-!!        obslev(njs(j)+nn) = tmp2lev(n)
-!!        obsdat(njs(j)+nn) = tmp2dat(n)
-!!        obserr(njs(j)+nn) = tmp2err(n)
-!!        obstyp(njs(j)+nn) = tmp2typ(n)
-!!        obsdif(njs(j)+nn) = tmp2dif(n)
-!!!        obsi(njs(j)+nn) = tmp2i(n)
-!!!        obsj(njs(j)+nn) = tmp2j(n)
-!!!        obsk(njs(j)+nn) = tmp2k(n)
-!!        obsdep(njs(j)+nn) = tmp2dep(n)
-!!        obshdxf(njs(j)+nn,:) = tmp2hdxf(n,:)
-!!        obsqc(njs(j)+nn) = tmp2qc(n)
-!!      END DO
-!!      nobsgrd(i,j) = njs(j) + nn
-!!    END DO
-!!    IF(nn /= nj(j)) THEN
-!!!$OMP CRITICAL
-!!      WRITE(6,'(A,2I)') 'OBS DATA SORT ERROR: ',nn,nj(j)
-!!      WRITE(6,'(F6.2,A,F6.2)') lat(j),'< LAT <',lat(j+1)
-!!      WRITE(6,'(F6.2,A,F6.2)') MINVAL(tmp2lat(njs(j)+1:njs(j)+nj(j))),'< OBSLAT <',MAXVAL(tmp2lat(njs(j)+1:njs(j)+nj(j)))
-!!!$OMP END CRITICAL
-!!    END IF
-!!  END DO
-!!!$OMP END DO
-!!!$OMP END PARALLEL
-!!  DEALLOCATE( tmp2elm )
-!!  DEALLOCATE( tmp2lon )
-!!  DEALLOCATE( tmp2lat )
-!!  DEALLOCATE( tmp2lev )
-!!  DEALLOCATE( tmp2dat )
-!!  DEALLOCATE( tmp2err )
-!!  DEALLOCATE( tmp2typ )
-!!  DEALLOCATE( tmp2dif )
-!!!  DEALLOCATE( tmp2i )
-!!!  DEALLOCATE( tmp2j )
-!!!  DEALLOCATE( tmp2k )
-!!  DEALLOCATE( tmp2dep )
-!!  DEALLOCATE( tmp2hdxf )
-!!  DEALLOCATE( tmp2qc )
-!!  DEALLOCATE( tmpelm )
-!!  DEALLOCATE( tmplon )
-!!  DEALLOCATE( tmplat )
-!!  DEALLOCATE( tmplev )
-!!  DEALLOCATE( tmpdat )
-!!  DEALLOCATE( tmperr )
-!!  DEALLOCATE( tmptyp )
-!!  DEALLOCATE( tmpdif )
-!!!  DEALLOCATE( tmpi )
-!!!  DEALLOCATE( tmpj )
-!!!  DEALLOCATE( tmpk )
-!!  DEALLOCATE( tmpdep )
-!!  DEALLOCATE( tmphdxf )
-!!  DEALLOCATE( tmpqc )
 
   RETURN
 END SUBROUTINE set_letkf_obs
