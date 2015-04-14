@@ -57,6 +57,12 @@ echo
 
 #-------------------------------------------------------------------------------
 
+if [ ${TMP:0:8} != '/scratch' ]; then
+  echo "[Error] $0: When using 'micro' resource group, \$TMP will be completely removed." >&2
+  echo "        Wrong setting detected:" >&2
+  echo "        \$TMP = '$TMP'" >&2
+  exit 1
+fi
 safe_init_tmpdir $TMP
 
 #===============================================================================
