@@ -7,18 +7,18 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/ra000015/gylien/scale-exp/test"  # Directory for SCALE-LETKF output
+OUTDIR="/volume41/data/ra000015/gylien/scale-exp/Japan_15km_4p_init0710"  # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/volume63/data/ra000015/gylien/scale/scale-les/test/case_real/ctl_4_small_domain/run"
-DATADIR="/volume63/data/ra000015/gylien/scale-data/database"
+MODELDIR="/volume63/data/ra000015/gylien/scale/scale-les/test/case_real/check_japan/run"
+DATADIR="/volume63/data/ra000015/gylien/scale-letkf/database"
 
-ANLWRF="/volume63/data/ra000015/gylien/scale-data/wrfout_10min"
-ANLWRF_INT=600
+ANLWRF="/volume63/data/ra000015/gylien/model/ncepfnl/wrfout"
+ANLWRF_INT=21600
 #ANLGFS="/discover/nobackup/glien/model/CFSR_t62"           # directory of reference model files [sigma/surface formats]
 #ANLGRD="/discover/nobackup/glien/model/CFSR_t62_grd"       # directory of reference model files [sigma-level grid format]
 #ANLGRDP="/discover/nobackup/glien/model/CFSR_t62_grdp"     # directory of reference model files [pressure-level grid format]
@@ -26,26 +26,30 @@ ANLWRF_INT=600
 
 #INITGFS="/discover/nobackup/glien/model/GDAS_IC_t62"       # directory of arbitrary initial condition files [sigma/surface formats]
 
-OBS="/volume63/data/ra000015/gylien/scale-obs/test_11x9"    # directory of observation data in LETKF obs format
-OBSNCEP="/volume63/data/ra000015/gylien/scale-obs/prepbufr" # directory of observation data in NCEP BUFR format
+OBSNUM=1
+OBSNAME[1]=obs
+OBSNAME[2]=radar
+OBS="/volume63/data/ra000015/gylien/obs/prepbufr_obs_japan" # directory of observation data in LETKF obs format
+
+OBSNCEP="/volume63/data/ra000015/gylien/obs/prepbufr"       # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=60        # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=600       # SCALE forecast time when assimilation window ends (second)
-LCYCLE=600         # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=60       # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=10800     # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=32400     # SCALE forecast time when assimilation window ends (second)
+LCYCLE=21600       # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
 
-MEMBER=4           # Ensemble size
+MEMBER=19          # Ensemble size
 
-NNODES=3           # Number of nodes
-PPN=8              # Number of processes per node
+NNODES=80          # Number of nodes
+PPN=1              # Number of processes per node
 
-THREADS=1          # Number of threads per process
+THREADS=8          # Number of threads per process
 
 SCALE_NP=4         # Number of processes to run SCALE
 
