@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/data6/gylien/exp/scale-letkf_test/Japan_15km_4p_init0710" # Directory for SCALE-LETKF output
+OUTDIR="/data6/gylien/exp/scale-letkf_test/Japan_15km_4p_init0710_24h_bf0" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -17,7 +17,7 @@ LOGDIR="$DIR/log"
 MODELDIR="/data6/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
 DATADIR="/data6/gylien/scale-letkf/database"
 
-ANLWRF="/data6/gylien/model/ncepfnl/wrfout"
+ANLWRF="/data6/gylien/model/ncepfnl/wrfout_no_terrain"
 ANLWRF_INT=21600
 #ANLGFS="/discover/nobackup/glien/model/CFSR_t62"         # directory of reference model files [sigma/surface formats]
 #ANLGRD="/discover/nobackup/glien/model/CFSR_t62_grd"     # directory of reference model files [sigma-level grid format]
@@ -46,8 +46,8 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=19          # Ensemble size
 
-NNODES=3           # Number of nodes
-PPN=16             # Number of processes per node
+NNODES=2           # Number of nodes
+PPN=40             # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
@@ -64,8 +64,8 @@ MACHINE_TYPE=1              # Machine type
                             # 11: K-computer (micro jobs)
                             # 12: K-computer (interact jobs)
 
-TMPDAT_MODE=1               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=1               # Disk type used for the 'run' temporary directory (runtime files)
+TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
+TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)
                             #  2: share (staging to TMP)

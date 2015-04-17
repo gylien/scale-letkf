@@ -397,16 +397,7 @@ END SUBROUTINE gather_grd_mpi
 
 
 
-SUBROUTINE read_ens_history_mpi(file,iter,step,v3dg,v2dg,ensmean)
-  use scale_grid_index, only: &
-      IHALO, JHALO, KHALO, &
-      IS, IE, JS, JE, KS, KE, KA
-  use scale_history, only: &
-     HIST_get
-  use scale_comm, only: &
-     COMM_vars8, &
-     COMM_wait
-
+SUBROUTINE read_ens_history_iter(file,iter,step,v3dg,v2dg,ensmean)
   IMPLICIT NONE
 
   CHARACTER(4),INTENT(IN) :: file
@@ -415,11 +406,7 @@ SUBROUTINE read_ens_history_mpi(file,iter,step,v3dg,v2dg,ensmean)
   REAL(r_size),INTENT(OUT) :: v3dg(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size),INTENT(OUT) :: v2dg(nlonh,nlath,nv2dd)
   LOGICAL,INTENT(INOUT),OPTIONAL :: ensmean
-  INTEGER :: i,j,k,iv3d,iv2d
   CHARACTER(9) :: filename='file.0000'
-
-  real(RP), allocatable :: var3D(:,:,:)
-  real(RP), allocatable :: var2D(:,:)
 
   integer :: mem
 
@@ -431,8 +418,6 @@ SUBROUTINE read_ens_history_mpi(file,iter,step,v3dg,v2dg,ensmean)
   end if
 
   IF (scale_IO_use) then
-    allocate( var3D(nlon,nlat,nlev) )
-    allocate( var2D(nlon,nlat) )
 
     IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= mem) THEN
       WRITE(filename(1:4),'(A4)') file
@@ -443,49 +428,106 @@ SUBROUTINE read_ens_history_mpi(file,iter,step,v3dg,v2dg,ensmean)
         WRITE(filename(6:9),'(I4.4)') proc2mem(1,iter,myrank+1)
       end if
 
-      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,iter,myrank+1),'.nc'
-
-      DO iv3d = 1, nv3dd
-        if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
-        call HIST_get(var3D, filename, trim(v3dd_name(iv3d)), step)
-        FORALL (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k)
-
-!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-        do j  = JS, JE
-          do i  = IS, IE
-            v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
-            v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
-          enddo
-        enddo
-      END DO
-
-      DO iv3d = 1, nv3dd
-        call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
-      END DO
-      DO iv3d = 1, nv3dd
-        call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
-      END DO
-
-      DO iv2d = 1, nv2dd
-        if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
-        call HIST_get(var2D, filename, trim(v2dd_name(iv2d)), step)
-        v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
-      END DO
-
-      DO iv2d = 1, nv2dd
-        call COMM_vars8( v2dg(:,:,iv2d), iv2d )
-      END DO
-      DO iv2d = 1, nv2dd
-        call COMM_wait ( v2dg(:,:,iv2d), iv2d )
-      END DO
+      call read_history(filename,step,v3dg,v2dg)
     END IF
 
-    deallocate( var3D )
-    deallocate( var2D )
   END IF
 
   RETURN
-END SUBROUTINE read_ens_history_mpi
+END SUBROUTINE read_ens_history_iter
+
+
+
+
+!SUBROUTINE read_ens_history_mpi(file,iter,step,v3dg,v2dg,ensmean)
+!  use scale_grid_index, only: &
+!      IHALO, JHALO, KHALO, &
+!      IS, IE, JS, JE, KS, KE, KA
+!  use scale_history, only: &
+!     HIST_get
+!  use scale_comm, only: &
+!     COMM_vars8, &
+!     COMM_wait
+
+!  IMPLICIT NONE
+
+!  CHARACTER(4),INTENT(IN) :: file
+!  INTEGER,INTENT(IN) :: iter
+!  INTEGER,INTENT(IN) :: step
+!  REAL(r_size),INTENT(OUT) :: v3dg(nlevh,nlonh,nlath,nv3dd)
+!  REAL(r_size),INTENT(OUT) :: v2dg(nlonh,nlath,nv2dd)
+!  LOGICAL,INTENT(INOUT),OPTIONAL :: ensmean
+!  INTEGER :: i,j,k,iv3d,iv2d
+!  CHARACTER(9) :: filename='file.0000'
+
+!  real(RP), allocatable :: var3D(:,:,:)
+!  real(RP), allocatable :: var2D(:,:)
+
+!  integer :: mem
+
+!  mem = MEMBER
+!  if (present(ensmean)) then
+!    if (ensmean) then
+!      mem = MEMBER + 1
+!    end if
+!  end if
+
+!  IF (scale_IO_use) then
+!    allocate( var3D(nlon,nlat,nlev) )
+!    allocate( var2D(nlon,nlat) )
+
+!    IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= mem) THEN
+!      WRITE(filename(1:4),'(A4)') file
+
+!      if (proc2mem(1,iter,myrank+1) == MEMBER+1) then
+!        WRITE(filename(6:9),'(A4)') 'mean'
+!      else
+!        WRITE(filename(6:9),'(I4.4)') proc2mem(1,iter,myrank+1)
+!      end if
+
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,iter,myrank+1),'.nc'
+
+!      DO iv3d = 1, nv3dd
+!        if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
+!        call HIST_get(var3D, filename, trim(v3dd_name(iv3d)), step)
+!        FORALL (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k)
+
+!!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+!        do j  = JS, JE
+!          do i  = IS, IE
+!            v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
+!            v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
+!          enddo
+!        enddo
+!      END DO
+
+!      DO iv3d = 1, nv3dd
+!        call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
+!      END DO
+!      DO iv3d = 1, nv3dd
+!        call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
+!      END DO
+
+!      DO iv2d = 1, nv2dd
+!        if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
+!        call HIST_get(var2D, filename, trim(v2dd_name(iv2d)), step)
+!        v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
+!      END DO
+
+!      DO iv2d = 1, nv2dd
+!        call COMM_vars8( v2dg(:,:,iv2d), iv2d )
+!      END DO
+!      DO iv2d = 1, nv2dd
+!        call COMM_wait ( v2dg(:,:,iv2d), iv2d )
+!      END DO
+!    END IF
+
+!    deallocate( var3D )
+!    deallocate( var2D )
+!  END IF
+
+!  RETURN
+!END SUBROUTINE read_ens_history_mpi
 !-----------------------------------------------------------------------
 ! Read ensemble data and distribute to processes
 !-----------------------------------------------------------------------
@@ -837,8 +879,22 @@ END SUBROUTINE buf_to_grd
 !-----------------------------------------------------------------------
 ! STORING DATA (ensemble mean and spread)
 !-----------------------------------------------------------------------
-SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
+SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda)
   use scale_process, only: PRC_myrank
+
+
+
+!  use scale_process, only: &
+!      PRC_myrank
+  use scale_grid_index, only: &
+      IHALO, JHALO, KHALO, &
+      IS, IE, JS, JE, KS, KE, KA
+  use scale_comm, only: &
+      COMM_vars8, &
+      COMM_wait
+
+
+
   implicit none
 
   CHARACTER(4),INTENT(IN) :: file
@@ -854,8 +910,20 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
   CHARACTER(9) :: filename='file.0000'
 
 
-!  REAL(r_size) :: timer
-!  INTEGER :: ierr
+  type(obs_info),intent(in) :: obs(nobsfiles)
+  type(obs_da_value),intent(in) :: obsda
+
+  REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
+  REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
+  integer :: proc,iv3d,iv2d,j
+  real(r_size) :: ri,rj,rk
+
+  real(r_size),allocatable :: tmpelm(:)
+  real(r_size),allocatable :: ohx(:)
+  integer,allocatable :: oqc(:)
+
+  REAL(r_size) :: timer
+  INTEGER :: ierr
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
 !  CALL CPU_TIME(timer)
@@ -884,6 +952,123 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d)
 !    WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
     call state_trans_inv(v3dg)
     call write_restart(filename,v3dg,v2dg)
+
+CALL MPI_BARRIER(MPI_COMM_a,ierr)
+CALL CPU_TIME(timer)
+if (myrank == 0) print *, '######', timer
+
+    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_u) = v3dg(:,:,:,iv3d_u)
+    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_v) = v3dg(:,:,:,iv3d_v)
+    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_w) = v3dg(:,:,:,iv3d_w)
+    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_t) = v3dg(:,:,:,iv3d_t)
+    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_p) = v3dg(:,:,:,iv3d_p)
+    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q) = v3dg(:,:,:,iv3d_q)
+!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
+!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
+!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
+!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
+!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
+!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_rh) =
+!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) =
+
+!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo) =
+!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_ps) =
+!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) =
+!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_u10m) =
+!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_v10m) =
+!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_t2m) =
+!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_q2m) =
+
+
+    DO iv3d = 1, nv3dd
+!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+      do j  = JS, JE
+        do i  = IS, IE
+          v3dgh(   1:KS-1,i,j,iv3d) = v3dgh(KS,i,j,iv3d)
+          v3dgh(KE+1:KA,  i,j,iv3d) = v3dgh(KE,i,j,iv3d)
+        enddo
+      enddo
+    END DO
+
+    DO iv3d = 1, nv3dd
+      call COMM_vars8( v3dgh(:,:,:,iv3d), iv3d )
+    END DO
+    DO iv3d = 1, nv3dd
+      call COMM_wait ( v3dgh(:,:,:,iv3d), iv3d )
+    END DO
+
+    DO iv2d = 1, nv2dd
+      call COMM_vars8( v2dgh(:,:,iv2d), iv2d )
+    END DO
+    DO iv2d = 1, nv2dd
+      call COMM_wait ( v2dgh(:,:,iv2d), iv2d )
+    END DO
+
+
+
+    allocate (tmpelm(obsda%nobs))
+    allocate (ohx(obsda%nobs))
+    allocate (oqc(obsda%nobs))
+
+    oqc = -1
+
+    do n = 1, obsda%nobs
+
+
+      tmpelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
+
+      if (obsda%qc(n) /= iqc_good) write(6, *) '############', obsda%qc(n)
+
+      call rij_g2l_auto(proc,obsda%ri(n),obsda%rj(n),ri,rj)
+
+      if (PRC_myrank /= proc) then
+        write(6, *) '############ Error!'
+        stop
+      end if
+
+!      .. create the v2dg....... (for ps)
+
+      if (obs(obsda%set(n))%dif(obsda%idx(n)) >= -3600.0 .and. &   ! ###### 3600.0 as a variable
+          obs(obsda%set(n))%dif(obsda%idx(n)) <= 3600.0 .and. &    ! ######
+          (obs(obsda%set(n))%elm(obsda%idx(n)) == id_u_obs .or. &
+           obs(obsda%set(n))%elm(obsda%idx(n)) == id_v_obs .or. &
+           obs(obsda%set(n))%elm(obsda%idx(n)) == id_t_obs .or. &
+           obs(obsda%set(n))%elm(obsda%idx(n)) == id_tv_obs .or. &
+           obs(obsda%set(n))%elm(obsda%idx(n)) == id_q_obs)) then
+!           obs(obsda%set(n))%elm(obsda%idx(n)) == id_rh_obs .or. &
+!           obs(obsda%set(n))%elm(obsda%idx(n)) == id_ps_obs .or. &
+
+        call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(obsda%set(n))%elm(obsda%idx(n)), &
+                      ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
+
+        if (oqc(n) == iqc_good) then
+          if (obs(obsda%set(n))%elm(obsda%idx(n)) == id_u_obs) then
+            ri = ri - 0.5
+!            if (ri < 1.0000001) ri = 1.0000001  ! ###### should modity itpl_3d to prevent '1.0' problem....
+          else if (obs(obsda%set(n))%elm(obsda%idx(n)) == id_v_obs) then
+            rj = rj - 0.5
+!            if (rj < 1.0000001) rj = 1.0000001  ! ######
+          end if
+          call Trans_XtoY(obs(obsda%set(n))%elm(obsda%idx(n)),ri,rj,rk,v3dg,v2dg,ohx(n),oqc(n))
+        end if
+
+      end if
+
+    end do
+
+
+    CALL monit_dep(obsda%nobs,tmpelm,ohx,oqc,0)
+
+    deallocate (tmpelm)
+    deallocate (ohx)
+    deallocate (oqc)
+
+
+CALL MPI_BARRIER(MPI_COMM_a,ierr)
+CALL CPU_TIME(timer)
+if (myrank == 0) print *, '######', timer
+
+
   END IF
 
 
