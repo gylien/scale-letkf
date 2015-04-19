@@ -714,8 +714,6 @@ print *, myrank, nobstotalg, nobstotal, nobsgrd(nlon,nlat,:)
     stop
   end if
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  stop
 
 
 !do i = 0, MEM_NP-1

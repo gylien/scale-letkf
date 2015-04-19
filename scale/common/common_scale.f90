@@ -1215,4 +1215,126 @@ SUBROUTINE state_trans_inv(v3dg)
   RETURN
 END SUBROUTINE state_trans_inv
 
+
+
+
+
+
+
+subroutine rank_1d_2d(proc, iproc, jproc)
+  use scale_process, only: PRC_2Drank
+  implicit none
+  integer, intent(in) :: proc
+  integer, intent(out) :: iproc, jproc
+
+  iproc = PRC_2Drank(proc,1)
+  jproc = PRC_2Drank(proc,2)
+
+  return  
+end subroutine rank_1d_2d
+
+
+subroutine rank_2d_1d(iproc, jproc, proc)
+  use scale_process, only: PRC_NUM_X
+  implicit none
+  integer, intent(in) :: iproc, jproc
+  integer, intent(out) :: proc
+
+  proc = jproc * PRC_NUM_X + iproc
+
+  return  
+end subroutine rank_2d_1d
+
+
+subroutine ij_g2l(proc, ig, jg, il, jl)
+  implicit none
+  integer, intent(in) :: proc
+  integer, intent(in) :: ig
+  integer, intent(in) :: jg
+  integer, intent(out) :: il
+  integer, intent(out) :: jl
+  integer :: iproc, jproc
+
+  call rank_1d_2d(proc, iproc, jproc)
+  il = ig - iproc * nlon
+  jl = jg - jproc * nlat
+
+  return  
+end subroutine ij_g2l
+
+
+subroutine ij_l2g(proc, il, jl, ig, jg)
+  implicit none
+  integer, intent(in) :: proc
+  integer, intent(in) :: il
+  integer, intent(in) :: jl
+  integer, intent(out) :: ig
+  integer, intent(out) :: jg
+  integer :: iproc, jproc
+
+  call rank_1d_2d(proc, iproc, jproc)
+  ig = il + iproc * nlon
+  jg = jl + jproc * nlat
+
+  return  
+end subroutine ij_l2g
+
+
+!-----------------------------------------------------------------------
+! using halo!
+! proc = -1: outside the global domain
+!-----------------------------------------------------------------------
+SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
+  use scale_grid_index, only: &
+      IHALO,JHALO
+!      IA,JA                  ! [for validation]
+  use scale_process, only: &
+      PRC_NUM_X,PRC_NUM_Y
+!      PRC_myrank             ! [for validation]
+!  use scale_grid, only: &    ! [for validation]
+!      GRID_CX, &             ! [for validation]
+!      GRID_CY, &             ! [for validation]
+!      GRID_CXG, &            ! [for validation]
+!      GRID_CYG, &            ! [for validation]
+!      DX, &                  ! [for validation]
+!      DY                     ! [for validation]
+  IMPLICIT NONE
+  integer,INTENT(OUT) :: proc
+  REAL(r_size),INTENT(IN) :: ig
+  REAL(r_size),INTENT(IN) :: jg
+  REAL(r_size),INTENT(OUT) :: il
+  REAL(r_size),INTENT(OUT) :: jl
+  integer :: iproc, jproc
+
+  if (ig < real(1+IHALO,r_size) .or. ig > real(nlon*PRC_NUM_X+IHALO,r_size) .or. &
+      jg < real(1+JHALO,r_size) .or. jg > real(nlat*PRC_NUM_Y+JHALO,r_size)) then
+    il = -1.0d0
+    jl = -1.0d0
+    proc = -1
+    return
+  end if
+
+  iproc = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(nlon,r_size)) - 1
+  jproc = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
+  il = ig - iproc * nlon
+  jl = jg - jproc * nlat
+  call rank_2d_1d(iproc,jproc,proc)
+
+!  if (PRC_myrank == proc) then                                                                                    ! [for validation]
+!    if (rig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                      ! [for validation]
+!        rig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                     ! [for validation]
+!        rjg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &                                                      ! [for validation]
+!        rjg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then                                                      ! [for validation]
+!      write (6,'(A)') 'Error: Process assignment fails!'                                                          ! [for validation]
+!      write (6,'(3F10.2)') rig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 ! [for validation]
+!      write (6,'(3F10.2)') rjg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0 ! [for validation]
+!      stop                                                                                                        ! [for validation]
+!    end if                                                                                                        ! [for validation]
+!  end if                                                                                                          ! [for validation]
+
+  RETURN
+END SUBROUTINE rij_g2l_auto
+
+
+
 END MODULE common_scale

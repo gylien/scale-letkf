@@ -879,22 +879,8 @@ END SUBROUTINE buf_to_grd
 !-----------------------------------------------------------------------
 ! STORING DATA (ensemble mean and spread)
 !-----------------------------------------------------------------------
-SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda)
+SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
   use scale_process, only: PRC_myrank
-
-
-
-!  use scale_process, only: &
-!      PRC_myrank
-  use scale_grid_index, only: &
-      IHALO, JHALO, KHALO, &
-      IS, IE, JS, JE, KS, KE, KA
-  use scale_comm, only: &
-      COMM_vars8, &
-      COMM_wait
-
-
-
   implicit none
 
   CHARACTER(4),INTENT(IN) :: file
@@ -911,19 +897,10 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda)
 
 
   type(obs_info),intent(in) :: obs(nobsfiles)
-  type(obs_da_value),intent(in) :: obsda
+  type(obs_da_value),intent(in),allocatable :: obsda2(:)
 
-  REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
-  REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
-  integer :: proc,iv3d,iv2d,j
-  real(r_size) :: ri,rj,rk
-
-  real(r_size),allocatable :: tmpelm(:)
-  real(r_size),allocatable :: ohx(:)
-  integer,allocatable :: oqc(:)
-
-  REAL(r_size) :: timer
-  INTEGER :: ierr
+!  REAL(r_size) :: timer
+!  INTEGER :: ierr
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
 !  CALL CPU_TIME(timer)
@@ -950,125 +927,18 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda)
     WRITE(filename(1:4),'(A4)') file
     WRITE(filename(6:9),'(A4)') 'mean'
 !    WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+
+!print *, 'u',v3dg(:,5,5,iv3d_u)
+!print *, 'v',v3dg(:,5,5,iv3d_v)
+!print *, 'w',v3dg(:,5,5,iv3d_w)
+!print *, 't',v3dg(:,5,5,iv3d_t)
+!print *, 'p',v3dg(:,5,5,iv3d_p)
+
+    call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank))
+
+
     call state_trans_inv(v3dg)
     call write_restart(filename,v3dg,v2dg)
-
-CALL MPI_BARRIER(MPI_COMM_a,ierr)
-CALL CPU_TIME(timer)
-if (myrank == 0) print *, '######', timer
-
-    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_u) = v3dg(:,:,:,iv3d_u)
-    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_v) = v3dg(:,:,:,iv3d_v)
-    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_w) = v3dg(:,:,:,iv3d_w)
-    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_t) = v3dg(:,:,:,iv3d_t)
-    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_p) = v3dg(:,:,:,iv3d_p)
-    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q) = v3dg(:,:,:,iv3d_q)
-!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
-!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
-!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
-!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
-!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
-!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_rh) =
-!    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) =
-
-!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo) =
-!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_ps) =
-!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) =
-!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_u10m) =
-!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_v10m) =
-!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_t2m) =
-!    v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_q2m) =
-
-
-    DO iv3d = 1, nv3dd
-!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-      do j  = JS, JE
-        do i  = IS, IE
-          v3dgh(   1:KS-1,i,j,iv3d) = v3dgh(KS,i,j,iv3d)
-          v3dgh(KE+1:KA,  i,j,iv3d) = v3dgh(KE,i,j,iv3d)
-        enddo
-      enddo
-    END DO
-
-    DO iv3d = 1, nv3dd
-      call COMM_vars8( v3dgh(:,:,:,iv3d), iv3d )
-    END DO
-    DO iv3d = 1, nv3dd
-      call COMM_wait ( v3dgh(:,:,:,iv3d), iv3d )
-    END DO
-
-    DO iv2d = 1, nv2dd
-      call COMM_vars8( v2dgh(:,:,iv2d), iv2d )
-    END DO
-    DO iv2d = 1, nv2dd
-      call COMM_wait ( v2dgh(:,:,iv2d), iv2d )
-    END DO
-
-
-
-    allocate (tmpelm(obsda%nobs))
-    allocate (ohx(obsda%nobs))
-    allocate (oqc(obsda%nobs))
-
-    oqc = -1
-
-    do n = 1, obsda%nobs
-
-
-      tmpelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
-
-      if (obsda%qc(n) /= iqc_good) write(6, *) '############', obsda%qc(n)
-
-      call rij_g2l_auto(proc,obsda%ri(n),obsda%rj(n),ri,rj)
-
-      if (PRC_myrank /= proc) then
-        write(6, *) '############ Error!'
-        stop
-      end if
-
-!      .. create the v2dg....... (for ps)
-
-      if (obs(obsda%set(n))%dif(obsda%idx(n)) >= -3600.0 .and. &   ! ###### 3600.0 as a variable
-          obs(obsda%set(n))%dif(obsda%idx(n)) <= 3600.0 .and. &    ! ######
-          (obs(obsda%set(n))%elm(obsda%idx(n)) == id_u_obs .or. &
-           obs(obsda%set(n))%elm(obsda%idx(n)) == id_v_obs .or. &
-           obs(obsda%set(n))%elm(obsda%idx(n)) == id_t_obs .or. &
-           obs(obsda%set(n))%elm(obsda%idx(n)) == id_tv_obs .or. &
-           obs(obsda%set(n))%elm(obsda%idx(n)) == id_q_obs)) then
-!           obs(obsda%set(n))%elm(obsda%idx(n)) == id_rh_obs .or. &
-!           obs(obsda%set(n))%elm(obsda%idx(n)) == id_ps_obs .or. &
-
-        call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(obsda%set(n))%elm(obsda%idx(n)), &
-                      ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
-
-        if (oqc(n) == iqc_good) then
-          if (obs(obsda%set(n))%elm(obsda%idx(n)) == id_u_obs) then
-            ri = ri - 0.5
-!            if (ri < 1.0000001) ri = 1.0000001  ! ###### should modity itpl_3d to prevent '1.0' problem....
-          else if (obs(obsda%set(n))%elm(obsda%idx(n)) == id_v_obs) then
-            rj = rj - 0.5
-!            if (rj < 1.0000001) rj = 1.0000001  ! ######
-          end if
-          call Trans_XtoY(obs(obsda%set(n))%elm(obsda%idx(n)),ri,rj,rk,v3dg,v2dg,ohx(n),oqc(n))
-        end if
-
-      end if
-
-    end do
-
-
-    CALL monit_dep(obsda%nobs,tmpelm,ohx,oqc,0)
-
-    deallocate (tmpelm)
-    deallocate (ohx)
-    deallocate (oqc)
-
-
-CALL MPI_BARRIER(MPI_COMM_a,ierr)
-CALL CPU_TIME(timer)
-if (myrank == 0) print *, '######', timer
-
-
   END IF
 
 
@@ -1139,123 +1009,6 @@ if (myrank == 0) print *, '######', timer
 
   RETURN
 END SUBROUTINE write_ensmspr_mpi
-
-
-
-subroutine rank_1d_2d(proc, iproc, jproc)
-  use scale_process, only: PRC_2Drank
-  implicit none
-  integer, intent(in) :: proc
-  integer, intent(out) :: iproc, jproc
-
-  iproc = PRC_2Drank(proc,1)
-  jproc = PRC_2Drank(proc,2)
-
-  return  
-end subroutine rank_1d_2d
-
-
-subroutine rank_2d_1d(iproc, jproc, proc)
-  use scale_process, only: PRC_NUM_X
-  implicit none
-  integer, intent(in) :: iproc, jproc
-  integer, intent(out) :: proc
-
-  proc = jproc * PRC_NUM_X + iproc
-
-  return  
-end subroutine rank_2d_1d
-
-
-subroutine ij_g2l(proc, ig, jg, il, jl)
-  implicit none
-  integer, intent(in) :: proc
-  integer, intent(in) :: ig
-  integer, intent(in) :: jg
-  integer, intent(out) :: il
-  integer, intent(out) :: jl
-  integer :: iproc, jproc
-
-  call rank_1d_2d(proc, iproc, jproc)
-  il = ig - iproc * nlon
-  jl = jg - jproc * nlat
-
-  return  
-end subroutine ij_g2l
-
-
-subroutine ij_l2g(proc, il, jl, ig, jg)
-  implicit none
-  integer, intent(in) :: proc
-  integer, intent(in) :: il
-  integer, intent(in) :: jl
-  integer, intent(out) :: ig
-  integer, intent(out) :: jg
-  integer :: iproc, jproc
-
-  call rank_1d_2d(proc, iproc, jproc)
-  ig = il + iproc * nlon
-  jg = jl + jproc * nlat
-
-  return  
-end subroutine ij_l2g
-
-
-!-----------------------------------------------------------------------
-! using halo!
-! proc = -1: outside the global domain
-!-----------------------------------------------------------------------
-SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
-  use scale_grid_index, only: &
-      IHALO,JHALO
-!      IA,JA                  ! [for validation]
-  use scale_process, only: &
-      PRC_NUM_X,PRC_NUM_Y
-!      PRC_myrank             ! [for validation]
-!  use scale_grid, only: &    ! [for validation]
-!      GRID_CX, &             ! [for validation]
-!      GRID_CY, &             ! [for validation]
-!      GRID_CXG, &            ! [for validation]
-!      GRID_CYG, &            ! [for validation]
-!      DX, &                  ! [for validation]
-!      DY                     ! [for validation]
-  IMPLICIT NONE
-  integer,INTENT(OUT) :: proc
-  REAL(r_size),INTENT(IN) :: ig
-  REAL(r_size),INTENT(IN) :: jg
-  REAL(r_size),INTENT(OUT) :: il
-  REAL(r_size),INTENT(OUT) :: jl
-  integer :: iproc, jproc
-
-  if (ig < real(1+IHALO,r_size) .or. ig > real(nlon*PRC_NUM_X+IHALO,r_size) .or. &
-      jg < real(1+JHALO,r_size) .or. jg > real(nlat*PRC_NUM_Y+JHALO,r_size)) then
-    il = -1.0d0
-    jl = -1.0d0
-    proc = -1
-    return
-  end if
-
-  iproc = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(nlon,r_size)) - 1
-  jproc = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
-  il = ig - iproc * nlon
-  jl = jg - jproc * nlat
-  call rank_2d_1d(iproc,jproc,proc)
-
-!  if (PRC_myrank == proc) then                                                                                    ! [for validation]
-!    if (rig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                      ! [for validation]
-!        rig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                     ! [for validation]
-!        rjg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &                                                      ! [for validation]
-!        rjg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then                                                      ! [for validation]
-!      write (6,'(A)') 'Error: Process assignment fails!'                                                          ! [for validation]
-!      write (6,'(3F10.2)') rig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 ! [for validation]
-!      write (6,'(3F10.2)') rjg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0 ! [for validation]
-!      stop                                                                                                        ! [for validation]
-!    end if                                                                                                        ! [for validation]
-!  end if                                                                                                          ! [for validation]
-
-  RETURN
-END SUBROUTINE rij_g2l_auto
-
 
 !!-----------------------------------------------------------------------
 !! Get number of observations from ensemble obs2 data,

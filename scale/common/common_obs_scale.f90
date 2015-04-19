@@ -369,9 +369,6 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
 
   RETURN
 END SUBROUTINE Trans_XtoY_radar
-
-
-
 !-----------------------------------------------------------------------
 ! TC center search
 !  [AUTHORS:] T. Miyoshi and M. Kunii
@@ -907,6 +904,10 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
     ks = 1+KHALO
     do jj = j-1, j
       do ii = i-1, i
+
+
+!print *, p_full(:,ii,jj)
+
         DO k=1+KHALO,nlev+KHALO
           if (p_full(k,ii,jj) >= 0.0d0) exit
         END DO
@@ -938,9 +939,16 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
     END IF
     IF(rk > plev(ks)) THEN
       call itpl_2d(p_full(ks,:,:),ri,rj,ptmp)
+!print *, ks, rk, plev(ks)
       write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too low: pbottom=', ptmp, ', lev=', rlev
       rk = undef
       qc = iqc_out_vlo
+
+!print *, plev
+!stop
+!print *, elem, ri, rj, rlev, rk, qc
+
+
       RETURN
     END IF
     !
@@ -1121,6 +1129,175 @@ SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
 
   RETURN
 END SUBROUTINE itpl_3d
+!-----------------------------------------------------------------------
+! Monitor observation departure by giving the v3dg,v2dg data
+!-----------------------------------------------------------------------
+subroutine monit_obs(v3dg,v2dg,obs,obsda)
+  use scale_process, only: &
+      PRC_myrank
+  use scale_grid_index, only: &
+      IHALO, JHALO, KHALO, &
+      IS, IE, JS, JE, KS, KE, KA
+  use scale_comm, only: &
+      COMM_vars8, &
+      COMM_wait
+
+
+
+  implicit none
+
+  REAL(RP),intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
+  REAL(RP),intent(in) :: v2dg(nlon,nlat,nv2d)
+  type(obs_info),intent(in) :: obs(nobsfiles)
+  type(obs_da_value),intent(in) :: obsda
+
+  REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
+  REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
+  integer :: n,i,j,proc,iv3d,iv2d
+  real(r_size) :: ri,rj,rk
+
+  real(r_size) :: oelm(obsda%nobs)
+  real(r_size) :: ohx(obsda%nobs)
+  integer :: oqc(obsda%nobs)
+
+!  real(r_size),allocatable :: oelm(:)
+!  real(r_size),allocatable :: ohx(:)
+!  integer,allocatable :: oqc(:)
+
+  REAL(r_size) :: timer
+  INTEGER :: ierr
+
+
+!CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!CALL CPU_TIME(timer)
+!if (myrank == 0) print *, '######', timer
+
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_u) = v3dg(:,:,:,iv3d_u)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_v) = v3dg(:,:,:,iv3d_v)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_w) = v3dg(:,:,:,iv3d_w)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_t) = v3dg(:,:,:,iv3d_t)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_p) = v3dg(:,:,:,iv3d_p)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q) = v3dg(:,:,:,iv3d_q)
+!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
+!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
+!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
+!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
+!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
+!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_rh) =
+!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) =
+
+!  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo) =
+!  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_ps) =
+!  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) =
+  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_u10m) = v3dg(1+KHALO,:,:,iv3d_u)
+  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_v10m) = v3dg(1+KHALO,:,:,iv3d_v)
+  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_t2m) = v3dg(1+KHALO,:,:,iv3d_t)
+  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_q2m) = v3dg(1+KHALO,:,:,iv3d_q)
+
+
+  do iv3d = 1, nv3dd
+!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    do j  = JS, JE
+      do i  = IS, IE
+        v3dgh(   1:KS-1,i,j,iv3d) = v3dgh(KS,i,j,iv3d)
+        v3dgh(KE+1:KA,  i,j,iv3d) = v3dgh(KE,i,j,iv3d)
+      end do
+    end do
+  end do
+
+  do iv3d = 1, nv3dd
+    call COMM_vars8( v3dgh(:,:,:,iv3d), iv3d )
+  end do
+  do iv3d = 1, nv3dd
+    call COMM_wait ( v3dgh(:,:,:,iv3d), iv3d )
+  end do
+
+  do iv2d = 1, nv2dd
+    call COMM_vars8( v2dgh(:,:,iv2d), iv2d )
+  end do
+  do iv2d = 1, nv2dd
+    call COMM_wait ( v2dgh(:,:,iv2d), iv2d )
+  end do
+
+
+
+!    allocate (oelm(obsda%nobs))
+!    allocate (ohx(obsda%nobs))
+!    allocate (oqc(obsda%nobs))
+
+  oqc = -1
+
+  do n = 1, obsda%nobs
+
+
+    oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
+
+    if (obsda%qc(n) /= iqc_good) write(6, *) '############', obsda%qc(n)
+
+    call rij_g2l_auto(proc,obsda%ri(n),obsda%rj(n),ri,rj)
+
+    if (PRC_myrank /= proc) then
+      write(6, *) '############ Error!'
+      stop
+    end if
+
+!      .. create the v2dgh....... (for ps)
+
+
+!print *, obs(obsda%set(n))%dif(obsda%idx(n))
+
+
+    if (obs(obsda%set(n))%dif(obsda%idx(n)) >= -3600.0 .and. &   ! ###### 3600.0 as a variable
+        obs(obsda%set(n))%dif(obsda%idx(n)) <= 3600.0 .and. &    ! ######
+        (obs(obsda%set(n))%elm(obsda%idx(n)) == id_u_obs .or. &
+         obs(obsda%set(n))%elm(obsda%idx(n)) == id_v_obs .or. &
+         obs(obsda%set(n))%elm(obsda%idx(n)) == id_t_obs .or. &
+         obs(obsda%set(n))%elm(obsda%idx(n)) == id_tv_obs .or. &
+         obs(obsda%set(n))%elm(obsda%idx(n)) == id_q_obs)) then
+!           obs(obsda%set(n))%elm(obsda%idx(n)) == id_rh_obs .or. &
+!           obs(obsda%set(n))%elm(obsda%idx(n)) == id_ps_obs .or. &
+
+      call phys2ijk(v3dgh(:,:,:,iv3dd_p),obs(obsda%set(n))%elm(obsda%idx(n)), &
+                    ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
+
+      if (oqc(n) == iqc_good) then
+        if (obs(obsda%set(n))%elm(obsda%idx(n)) == id_u_obs) then
+          ri = ri - 0.5
+!            if (ri < 1.0000001) ri = 1.0000001  ! ###### should modity itpl_3d to prevent '1.0' problem....
+        else if (obs(obsda%set(n))%elm(obsda%idx(n)) == id_v_obs) then
+          rj = rj - 0.5
+!            if (rj < 1.0000001) rj = 1.0000001  ! ######
+        end if
+        call Trans_XtoY(obs(obsda%set(n))%elm(obsda%idx(n)),ri,rj,rk,v3dgh,v2dgh,ohx(n),oqc(n))
+
+
+        if (oqc(n) == iqc_good) then
+          ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n)
+        end if
+
+!write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsda%set(n))%typ(obsda%idx(n)), obs(obsda%set(n))%lon(obsda%idx(n)), obs(obsda%set(n))%lat(obsda%idx(n)), obs(obsda%set(n))%lev(obsda%idx(n)), obs(obsda%set(n))%dat(obsda%idx(n)), obs(obsda%set(n))%err(obsda%idx(n)), ohx(n), oqc(n)
+
+
+      end if
+
+    end if
+
+  end do
+
+  call monit_dep(obsda%nobs,oelm,ohx,oqc,0)
+
+!    deallocate (oelm)
+!    deallocate (ohx)
+!    deallocate (oqc)
+
+
+!CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!CALL CPU_TIME(timer)
+!if (myrank == 0) print *, '######', timer
+
+
+
+end subroutine monit_obs
 !-----------------------------------------------------------------------
 ! Monitor departure
 !  ofmt: output format

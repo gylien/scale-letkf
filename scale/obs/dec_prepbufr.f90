@@ -86,9 +86,8 @@ PROGRAM dec_prepbufr
     IF(wk(2) <= minlon .OR. maxlon <= wk(2) .OR. &
      & wk(3) <= minlat .OR. maxlat <= wk(3)) CYCLE ! domain check
     wk(4) = station(4)
-    IF(NINT(station(5)) < -3 .OR. 3 < NINT(station(5))) CYCLE
-!    iunit = 90+NINT(station(5))
-    wk(8) = station(5)
+    IF(station(5) <= -3.0d0 .OR. 3.0d0 < station(5)) CYCLE
+    wk(8) = station(5) * 3600.0d0 ! ###### second ###### ???
     !
     ! obs
     !
