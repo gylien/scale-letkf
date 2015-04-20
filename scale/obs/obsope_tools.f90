@@ -137,7 +137,7 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
         slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
         write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
 
-        call read_ens_history_mpi('hist',it,islot,v3dg,v2dg)
+        call read_ens_history_iter('hist',it,islot,v3dg,v2dg)
 !  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
         do iof = 1, nobsfiles
@@ -299,7 +299,7 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
     slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
     write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
 
-    call read_ens_history_mpi('hist',1,islot,v3dg,v2dg)
+    call read_ens_history_iter('hist',1,islot,v3dg,v2dg)
 
     do iof = 1, nobsfiles
 

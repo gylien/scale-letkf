@@ -456,7 +456,7 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
   allocate ( nobsgrd(0:nlon,1:nlat,0:MEM_NP-1) )
   nobsgrd = 0
   do n = 1, obsda%nobs
-    if (obsda%qc(n) == 0) then
+    if (obsda%qc(n) == iqc_good) then
       obsda2(PRC_myrank)%nobs = obsda2(PRC_myrank)%nobs + 1
 !      call rank_1d_2d(PRC_myrank, iproc, jproc)
 !      i = ceiling(obsda%ri(n)-0.5) - IHALO - iproc * nlon
@@ -524,7 +524,7 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
   nnext(1:nlon,:) = nobsgrd(0:nlon-1,:,PRC_myrank) + 1
   call obs_da_value_allocate(obsda2(PRC_myrank),MEMBER)
   do n = 1, obsda%nobs
-    if (obsda%qc(n) == 0) then
+    if (obsda%qc(n) == iqc_good) then
 !      call rank_1d_2d(PRC_myrank, iproc, jproc)
 !      i = ceiling(obsda%ri(n)-0.5) - IHALO - iproc * nlon
 !      j = ceiling(obsda%rj(n)-0.5) - JHALO - jproc * nlat
@@ -714,10 +714,6 @@ print *, myrank, nobstotalg, nobstotal, nobsgrd(nlon,nlat,:)
     stop
   end if
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  stop
-
-  nobstotal = sum(nobsgrd(nlon,nlat,:))
 
 
 !do i = 0, MEM_NP-1
@@ -897,15 +893,15 @@ END SUBROUTINE obs_choose
 
 !  RETURN
 !END SUBROUTINE monit_obs
-!!-----------------------------------------------------------------------
-!! Monitor h(xb) or h(xa) from a LETKF output file
-!! Adopted from 'monit_mean' subroutine, 2013/12/24 Guo-Yuan Lien
-!!-----------------------------------------------------------------------
-!!  file: 'gues' or 'anal'
-!!  im:   member # (integer); 0 for ensmean (always called from myrank == 0)
-!!  ohx:  h(xb) or h(xa)
-!!  oqc:  quality of h(xb) or h(xa)
-!!-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+! Monitor h(xb) or h(xa) from a LETKF output file
+! Adopted from 'monit_mean' subroutine, 2013/12/24 Guo-Yuan Lien
+!-----------------------------------------------------------------------
+!  file: 'gues' or 'anal'
+!  im:   member # (integer); 0 for ensmean (always called from myrank == 0)
+!  ohx:  h(xb) or h(xa)
+!  oqc:  quality of h(xb) or h(xa)
+!-----------------------------------------------------------------------
 !SUBROUTINE monit_output(file,im,ohx,oqc)
 !  IMPLICIT NONE
 !  CHARACTER(4),INTENT(IN) :: file
@@ -927,6 +923,19 @@ END SUBROUTINE obs_choose
 !  REAL(r_size) :: tmptv(nlon*nlat,nlev)
 !  REAL(r_size) :: tmpp(nlon*nlat,nlev)
 
+
+
+!  CHARACTER(4),INTENT(IN) :: file
+!  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,MEMBER,nv3d)
+!  REAL(r_size),INTENT(OUT) :: v2d(nij1,MEMBER,nv2d)
+!  REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
+!  REAL(RP) :: v2dg(nlon,nlat,nv2d)
+!  CHARACTER(9) :: filename='file.0000'
+!  integer :: it,im,mstart,mend
+
+
+
+
 !  IF(im == 0) THEN
 !    WRITE(filename(1:7),'(A4,A3)') file,'_me'
 !  ELSE
@@ -940,50 +949,70 @@ END SUBROUTINE obs_choose
 !  END IF
 !  CALL read_grdx(filename,v3d,v2d) ! only the orography is used, P will be recalulated
 
-!  v3d(:,:,:,iv3d_u) = v3dtmp(:,:,:,iv3d_u)
-!  v3d(:,:,:,iv3d_v) = v3dtmp(:,:,:,iv3d_v)
-!  v3d(:,:,:,iv3d_t) = v3dtmp(:,:,:,iv3d_t)
-!  v3d(:,:,:,iv3d_q) = v3dtmp(:,:,:,iv3d_q)
-!  v3d(:,:,:,iv3d_qc) = v3dtmp(:,:,:,iv3d_qc)
-!  v2d(:,:,iv2d_ps) = v2dtmp(:,:,iv2d_ps)
-!  tmpps = reshape(v2d(:,:,iv2d_ps),(/nlon*nlat/))
-!  tmptv = reshape(v3d(:,:,:,iv3d_t) * (1.0d0 + fvirt * v3d(:,:,:,iv3d_q)),(/nlon*nlat,nlev/))
-!  call sigio_modprd(nlon*nlat,nlon*nlat,nlev,gfs_nvcoord,gfs_idvc,gfs_idsl, &
-!                    gfs_vcoord,iret,tmpps,tmptv,pm=tmpp)
-!  v3d(:,:,:,iv3d_p) = reshape(tmpp,(/nlon,nlat,nlev/))
 
-!  oqc = 1
-!  DO n=1,nobs
-!    CALL phys2ijk(v3d(:,:,:,iv3d_p),obselm(n),obslon(n),obslat(n),obslev(n),ri,rj,rk)
-!    !
-!    ! For monitoring, don't skip any observation below or above model vertical extent.
-!    ! Just put bad QC but still get estimate.
-!    !
-!    IF(CEILING(rk) > nlev) THEN
-!      rk = REAL(nlev,r_size)
-!      oqc(n) = 0
-!    END IF
-!    IF(CEILING(rk) < 2 .AND. NINT(obselm(n)) /= id_ps_obs) THEN
-!      IF(NINT(obselm(n)) > 9999) THEN
-!        rk = 0.0d0
-!      ELSE IF(NINT(obselm(n)) == id_u_obs .OR. NINT(obselm(n)) == id_v_obs) THEN
-!        rk = 1.00001d0
-!      ELSE
-!        rk = 1.00001d0
-!        oqc(n) = 0
-!      END IF
-!    END IF
-!    IF(NINT(obselm(n)) == id_ps_obs) THEN
-!      CALL itpl_2d(v2d(:,:,iv2d_orog),ri,rj,rk)
-!      rk = obslev(n) - rk
-!    END IF
-!    IF(NINT(obselm(n)) == id_rain_obs) THEN ! No way to get the accumulated precipitation value
-!      ohx(n) = obsdat(n)
-!      oqc(n) = 0
-!    ELSE
-!      CALL Trans_XtoY(obselm(n),ri,rj,rk,v3d,v2d,ohx(n))
-!    END IF
-!  END DO
+
+
+
+
+!!-----------------------------------------------------------------------
+
+
+
+
+!      WRITE(filename(1:4),'(A4)') file
+!      WRITE(filename(6:9),'(I4.4)') im
+!!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+!      call read_restart(filename,v3dg,v2dg)
+
+
+
+
+
+
+!!  v3d(:,:,:,iv3d_u) = v3dtmp(:,:,:,iv3d_u)
+!!  v3d(:,:,:,iv3d_v) = v3dtmp(:,:,:,iv3d_v)
+!!  v3d(:,:,:,iv3d_t) = v3dtmp(:,:,:,iv3d_t)
+!!  v3d(:,:,:,iv3d_q) = v3dtmp(:,:,:,iv3d_q)
+!!  v3d(:,:,:,iv3d_qc) = v3dtmp(:,:,:,iv3d_qc)
+!!  v2d(:,:,iv2d_ps) = v2dtmp(:,:,iv2d_ps)
+!!  tmpps = reshape(v2d(:,:,iv2d_ps),(/nlon*nlat/))
+!!  tmptv = reshape(v3d(:,:,:,iv3d_t) * (1.0d0 + fvirt * v3d(:,:,:,iv3d_q)),(/nlon*nlat,nlev/))
+!!  call sigio_modprd(nlon*nlat,nlon*nlat,nlev,gfs_nvcoord,gfs_idvc,gfs_idsl, &
+!!                    gfs_vcoord,iret,tmpps,tmptv,pm=tmpp)
+!!  v3d(:,:,:,iv3d_p) = reshape(tmpp,(/nlon,nlat,nlev/))
+
+!!  oqc = 1
+!!  DO n=1,nobs
+!!    CALL phys2ijk(v3d(:,:,:,iv3d_p),obselm(n),obslon(n),obslat(n),obslev(n),ri,rj,rk)
+!!    !
+!!    ! For monitoring, don't skip any observation below or above model vertical extent.
+!!    ! Just put bad QC but still get estimate.
+!!    !
+!!    IF(CEILING(rk) > nlev) THEN
+!!      rk = REAL(nlev,r_size)
+!!      oqc(n) = 0
+!!    END IF
+!!    IF(CEILING(rk) < 2 .AND. NINT(obselm(n)) /= id_ps_obs) THEN
+!!      IF(NINT(obselm(n)) > 9999) THEN
+!!        rk = 0.0d0
+!!      ELSE IF(NINT(obselm(n)) == id_u_obs .OR. NINT(obselm(n)) == id_v_obs) THEN
+!!        rk = 1.00001d0
+!!      ELSE
+!!        rk = 1.00001d0
+!!        oqc(n) = 0
+!!      END IF
+!!    END IF
+!!    IF(NINT(obselm(n)) == id_ps_obs) THEN
+!!      CALL itpl_2d(v2d(:,:,iv2d_orog),ri,rj,rk)
+!!      rk = obslev(n) - rk
+!!    END IF
+!!    IF(NINT(obselm(n)) == id_rain_obs) THEN ! No way to get the accumulated precipitation value
+!!      ohx(n) = obsdat(n)
+!!      oqc(n) = 0
+!!    ELSE
+!!      CALL Trans_XtoY(obselm(n),ri,rj,rk,v3d,v2d,ohx(n))
+!!    END IF
+!!  END DO
 
 !  RETURN
 !END SUBROUTINE monit_output

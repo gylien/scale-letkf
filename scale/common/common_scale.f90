@@ -668,7 +668,6 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     IHALO, JHALO, &
     IMAX, JMAX, KMAX, &
     IMAXB, JMAXB
-!  use common_mpi, only: myrank
   use common_ncio
   IMPLICIT NONE
 
@@ -680,8 +679,6 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   integer :: is, ie, js, je
   real(r_dble) :: v3dgtmp(KMAX,IMAXB,JMAXB)
   real(r_dble) :: v2dgtmp(IMAXB,JMAXB)
-!  real(r_dble), allocatable :: v3dgtmp(:,:,:)
-!  real(r_dble), allocatable :: v2dgtmp(:,:)
 
   is = 1
   ie = IMAX
@@ -696,18 +693,11 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     je = je + JHALO
   end if
 
-!  allocate (v3dgtmp(KMAX,IMAXB,JMAXB))
-!  allocate (v2dgtmp(IMAXB,JMAXB))
-
-  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
+!  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  call ncio_open(filename // filesuffix, NF90_NOWRITE, ncid)
-
-!!!!!!
-!  v3dg = 0.0d0
-!  v2dg = 0.0d0
-!!!!!!
+  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+  call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
   do iv3d = 1, nv3d
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
@@ -817,7 +807,6 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     IHALO, JHALO, &
     IMAX, JMAX, KMAX, &
     IMAXB, JMAXB
-!  use common_mpi, only: myrank
   use common_ncio
   implicit none
 
@@ -829,8 +818,6 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   integer :: is, ie, js, je
   real(r_dble) :: v3dgtmp(KMAX,IMAXB,JMAXB)
   real(r_dble) :: v2dgtmp(IMAXB,JMAXB)
-!  real(r_dble), allocatable :: v3dgtmp(:,:,:)
-!  real(r_dble), allocatable :: v2dgtmp(:,:)
 
   is = 1
   ie = IMAX
@@ -845,13 +832,11 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     je = je + JHALO
   end if
 
-!  allocate (v3dgtmp(KMAX,IMAXB,JMAXB))
-!  allocate (v2dgtmp(IMAXB,JMAXB))
-
-  WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',PRC_myrank,'.nc'
+!  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',PRC_myrank,'.nc'
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  call ncio_open(filename // filesuffix, NF90_WRITE, ncid)
+  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is writing a file ',trim(filename) // filesuffix
+  call ncio_open(trim(filename) // filesuffix, NF90_WRITE, ncid)
 
   do iv3d = 1, nv3d
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
@@ -891,7 +876,6 @@ SUBROUTINE read_topo(filename,topo)
     IHALO, JHALO, &
     IMAX, JMAX, &
     IMAXB, JMAXB
-!  use common_mpi, only: myrank
   use common_ncio
   IMPLICIT NONE
 
@@ -901,7 +885,6 @@ SUBROUTINE read_topo(filename,topo)
   integer :: ncid
   integer :: is, ie, js, je
   real(r_dble) :: v2dgtmp(IMAXB,JMAXB)
-!  real(r_dble), allocatable :: v2dgtmp(:,:)
 
   is = 1
   ie = IMAX
@@ -916,16 +899,11 @@ SUBROUTINE read_topo(filename,topo)
     je = je + JHALO
   end if
 
-!  allocate (v2dgtmp(IMAXB,JMAXB))
-
-  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
+!  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  call ncio_open(filename // filesuffix, NF90_NOWRITE, ncid)
-
-!!!!!!
-!  topo = 0.0d0
-!!!!!!
+  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+  call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
   if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', 'TOPO'
   call ncio_read_2d_r8(ncid, 'TOPO', IMAXB, JMAXB, 1, v2dgtmp)
@@ -935,6 +913,79 @@ SUBROUTINE read_topo(filename,topo)
 
   RETURN
 END SUBROUTINE read_topo
+
+
+
+
+!-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+SUBROUTINE read_history(filename,step,v3dg,v2dg)
+  use scale_process, only: &
+      PRC_myrank
+  use scale_grid_index, only: &
+      IHALO, JHALO, KHALO, &
+      IS, IE, JS, JE, KS, KE, KA
+  use scale_history, only: &
+      HIST_get
+  use scale_comm, only: &
+      COMM_vars8, &
+      COMM_wait
+  IMPLICIT NONE
+
+  CHARACTER(*),INTENT(IN) :: filename
+  INTEGER,INTENT(IN) :: step
+  REAL(r_size),INTENT(OUT) :: v3dg(nlevh,nlonh,nlath,nv3dd)
+  REAL(r_size),INTENT(OUT) :: v2dg(nlonh,nlath,nv2dd)
+  INTEGER :: i,j,k,iv3d,iv2d
+  character(len=12) :: filesuffix = '.pe000000.nc'
+  real(RP) :: var3D(nlon,nlat,nlev)
+  real(RP) :: var2D(nlon,nlat)
+
+!  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
+
+  write (filesuffix(4:9),'(I6.6)') PRC_myrank
+  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+
+  DO iv3d = 1, nv3dd
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
+    call HIST_get(var3D, filename, trim(v3dd_name(iv3d)), step)
+    FORALL (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
+
+!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    do j  = JS, JE
+      do i  = IS, IE
+        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
+        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
+      enddo
+    enddo
+  END DO
+
+  DO iv3d = 1, nv3dd
+    call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
+  END DO
+  DO iv3d = 1, nv3dd
+    call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
+  END DO
+
+  DO iv2d = 1, nv2dd
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
+    call HIST_get(var2D, filename, trim(v2dd_name(iv2d)), step)
+    v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
+  END DO
+
+  DO iv2d = 1, nv2dd
+    call COMM_vars8( v2dg(:,:,iv2d), iv2d )
+  END DO
+  DO iv2d = 1, nv2dd
+    call COMM_wait ( v2dg(:,:,iv2d), iv2d )
+  END DO
+
+  RETURN
+END SUBROUTINE read_history
+
+
+
 
 !-----------------------------------------------------------------------
 !
@@ -1163,5 +1214,127 @@ SUBROUTINE state_trans_inv(v3dg)
 
   RETURN
 END SUBROUTINE state_trans_inv
+
+
+
+
+
+
+
+subroutine rank_1d_2d(proc, iproc, jproc)
+  use scale_process, only: PRC_2Drank
+  implicit none
+  integer, intent(in) :: proc
+  integer, intent(out) :: iproc, jproc
+
+  iproc = PRC_2Drank(proc,1)
+  jproc = PRC_2Drank(proc,2)
+
+  return  
+end subroutine rank_1d_2d
+
+
+subroutine rank_2d_1d(iproc, jproc, proc)
+  use scale_process, only: PRC_NUM_X
+  implicit none
+  integer, intent(in) :: iproc, jproc
+  integer, intent(out) :: proc
+
+  proc = jproc * PRC_NUM_X + iproc
+
+  return  
+end subroutine rank_2d_1d
+
+
+subroutine ij_g2l(proc, ig, jg, il, jl)
+  implicit none
+  integer, intent(in) :: proc
+  integer, intent(in) :: ig
+  integer, intent(in) :: jg
+  integer, intent(out) :: il
+  integer, intent(out) :: jl
+  integer :: iproc, jproc
+
+  call rank_1d_2d(proc, iproc, jproc)
+  il = ig - iproc * nlon
+  jl = jg - jproc * nlat
+
+  return  
+end subroutine ij_g2l
+
+
+subroutine ij_l2g(proc, il, jl, ig, jg)
+  implicit none
+  integer, intent(in) :: proc
+  integer, intent(in) :: il
+  integer, intent(in) :: jl
+  integer, intent(out) :: ig
+  integer, intent(out) :: jg
+  integer :: iproc, jproc
+
+  call rank_1d_2d(proc, iproc, jproc)
+  ig = il + iproc * nlon
+  jg = jl + jproc * nlat
+
+  return  
+end subroutine ij_l2g
+
+
+!-----------------------------------------------------------------------
+! using halo!
+! proc = -1: outside the global domain
+!-----------------------------------------------------------------------
+SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
+  use scale_grid_index, only: &
+      IHALO,JHALO
+!      IA,JA                  ! [for validation]
+  use scale_process, only: &
+      PRC_NUM_X,PRC_NUM_Y
+!      PRC_myrank             ! [for validation]
+!  use scale_grid, only: &    ! [for validation]
+!      GRID_CX, &             ! [for validation]
+!      GRID_CY, &             ! [for validation]
+!      GRID_CXG, &            ! [for validation]
+!      GRID_CYG, &            ! [for validation]
+!      DX, &                  ! [for validation]
+!      DY                     ! [for validation]
+  IMPLICIT NONE
+  integer,INTENT(OUT) :: proc
+  REAL(r_size),INTENT(IN) :: ig
+  REAL(r_size),INTENT(IN) :: jg
+  REAL(r_size),INTENT(OUT) :: il
+  REAL(r_size),INTENT(OUT) :: jl
+  integer :: iproc, jproc
+
+  if (ig < real(1+IHALO,r_size) .or. ig > real(nlon*PRC_NUM_X+IHALO,r_size) .or. &
+      jg < real(1+JHALO,r_size) .or. jg > real(nlat*PRC_NUM_Y+JHALO,r_size)) then
+    il = -1.0d0
+    jl = -1.0d0
+    proc = -1
+    return
+  end if
+
+  iproc = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(nlon,r_size)) - 1
+  jproc = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
+  il = ig - iproc * nlon
+  jl = jg - jproc * nlat
+  call rank_2d_1d(iproc,jproc,proc)
+
+!  if (PRC_myrank == proc) then                                                                                    ! [for validation]
+!    if (rig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                      ! [for validation]
+!        rig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                     ! [for validation]
+!        rjg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &                                                      ! [for validation]
+!        rjg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then                                                      ! [for validation]
+!      write (6,'(A)') 'Error: Process assignment fails!'                                                          ! [for validation]
+!      write (6,'(3F10.2)') rig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 ! [for validation]
+!      write (6,'(3F10.2)') rjg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0 ! [for validation]
+!      stop                                                                                                        ! [for validation]
+!    end if                                                                                                        ! [for validation]
+!  end if                                                                                                          ! [for validation]
+
+  RETURN
+END SUBROUTINE rij_g2l_auto
+
+
 
 END MODULE common_scale
