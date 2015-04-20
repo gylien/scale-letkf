@@ -503,6 +503,8 @@ subroutine set_scalelib
 !  use scale_grid_real, only: &
 !    REAL_setup
 
+!  use scale_gridtrans, only: &
+!     GTRANS_setup
 
   use scale_atmos_hydrostatic, only: &
      ATMOS_HYDROSTATIC_setup
@@ -576,14 +578,16 @@ subroutine set_scalelib
 
   ! setup grid coordinates (real world)
 !  call REAL_setup
+  ! setup map projection                      [in the SCALE model, this subroutine is called inside of REAL_setup!]
+  call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
+
+  ! setup grid transfer metrics (uses in ATMOS_dynamics)
+!  call GTRANS_setup
 
   ! setup common tools
 !  call ATMOS_HYDROSTATIC_setup
   call ATMOS_THERMODYN_setup
 !  call ATMOS_SATURATION_setup
-
-  ! setup map projection
-  call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
 
   ! setup history file I/O
   rankidx(1) = PRC_2Drank(PRC_myrank, 1)

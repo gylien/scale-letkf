@@ -189,7 +189,8 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
             if (obsda%qc(nn) == iqc_good) then
               select case (obsfileformat(iof))
               case (1)
-                call Trans_XtoY(obs(iof)%elm(n),ri(nn),rj(nn),rk,v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
+                call Trans_XtoY(obs(iof)%elm(n),ri(nn),rj(nn),rk, &
+                                obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
               case (2)
                 call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri(nn),rj(nn),rk, &
                                       obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
@@ -347,7 +348,8 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
             else
               select case (obsfileformat(iof))
               case (1)
-                call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk,v3dg,v2dg,obs(iof)%dat(n),iqc)
+                call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk, &
+                                obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
               case (2)
                 call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri,rj,rk, &
                                       obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
