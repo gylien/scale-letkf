@@ -206,25 +206,48 @@ end subroutine set_common_obs_scale
 
 !-----------------------------------------------------------------------
 ! Transformation from model variables to an observation
+!
+! stggrd: grid type of u and v
+!  0: non-staggered grid
+!  1: staggered grid
 !-----------------------------------------------------------------------
-SUBROUTINE Trans_XtoY(elm,ri,rj,rk,v3d,v2d,yobs,qc)
+SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
+  use scale_mapproj, only: &
+      MPRJ_rotcoef_point
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk
+  REAL(r_size),INTENT(IN) :: lon,lat
   REAL(r_size),INTENT(IN) :: v3d(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
   REAL(r_size),INTENT(OUT) :: yobs
   INTEGER,INTENT(OUT) :: qc
-  REAL(r_size) :: t,q,topo
+  INTEGER,INTENT(IN),OPTIONAL :: stggrd
+  REAL(r_size) :: u,v,t,q,topo
+  REAL(RP) :: rotc(2)
+
+  INTEGER :: stggrdr = 0
+  if (present(stggrd)) stggrdr = stggrd
 
   yobs = undef
   qc = iqc_good
 
   SELECT CASE (elm)
-  CASE(id_u_obs)  ! U
-    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,yobs)
-  CASE(id_v_obs)  ! V
-    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,yobs)
+  CASE(id_u_obs,id_v_obs)  ! U,V
+    if (stggrdr == 1) then
+      CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5,rj,u)  !###### should modity itpl_3d to prevent '1.0' problem....??
+      CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5,v)  !######
+    else
+      CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
+      CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
+    end if
+    call MPRJ_rotcoef_point(rotc,lon*deg2rad,lat*deg2rad)
+print *, rotc(1),rotc(2),lon,lat
+    if (elm == id_u_obs) then
+      yobs = u * rotc(1) - v * rotc(2)
+    else
+      yobs = u * rotc(2) + v * rotc(1)
+    end if
   CASE(id_t_obs)  ! T
     CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,yobs)
   CASE(id_tv_obs)  ! Tv
@@ -1261,22 +1284,13 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda)
                     ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
 
       if (oqc(n) == iqc_good) then
-        if (obs(obsda%set(n))%elm(obsda%idx(n)) == id_u_obs) then
-          ri = ri - 0.5
-!            if (ri < 1.0000001) ri = 1.0000001  ! ###### should modity itpl_3d to prevent '1.0' problem....
-        else if (obs(obsda%set(n))%elm(obsda%idx(n)) == id_v_obs) then
-          rj = rj - 0.5
-!            if (rj < 1.0000001) rj = 1.0000001  ! ######
-        end if
-        call Trans_XtoY(obs(obsda%set(n))%elm(obsda%idx(n)),ri,rj,rk,v3dgh,v2dgh,ohx(n),oqc(n))
-
-
+        call Trans_XtoY(obs(obsda%set(n))%elm(obsda%idx(n)),ri,rj,rk, &
+                        obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
         if (oqc(n) == iqc_good) then
           ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n)
         end if
 
 !write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsda%set(n))%typ(obsda%idx(n)), obs(obsda%set(n))%lon(obsda%idx(n)), obs(obsda%set(n))%lat(obsda%idx(n)), obs(obsda%set(n))%lev(obsda%idx(n)), obs(obsda%set(n))%dat(obsda%idx(n)), obs(obsda%set(n))%err(obsda%idx(n)), ohx(n), oqc(n)
-
 
       end if
 

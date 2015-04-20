@@ -926,16 +926,8 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
   IF(myrank_e == lastmem_rank_e) THEN
     WRITE(filename(1:4),'(A4)') file
     WRITE(filename(6:9),'(A4)') 'mean'
-!    WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
-
-!print *, 'u',v3dg(:,5,5,iv3d_u)
-!print *, 'v',v3dg(:,5,5,iv3d_v)
-!print *, 'w',v3dg(:,5,5,iv3d_w)
-!print *, 't',v3dg(:,5,5,iv3d_t)
-!print *, 'p',v3dg(:,5,5,iv3d_p)
-
+    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', filename, ']:'
     call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank))
-
 
     call state_trans_inv(v3dg)
     call write_restart(filename,v3dg,v2dg)
