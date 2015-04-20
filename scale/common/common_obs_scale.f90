@@ -242,7 +242,6 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
     end if
     call MPRJ_rotcoef_point(rotc,lon*deg2rad,lat*deg2rad)
-print *, rotc(1),rotc(2),lon,lat
     if (elm == id_u_obs) then
       yobs = u * rotc(1) - v * rotc(2)
     else
