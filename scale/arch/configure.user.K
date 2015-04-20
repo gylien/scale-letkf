@@ -27,9 +27,9 @@ NETCDF_LIB = -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -l
 #NETCDF_INC = -I/opt/aics/netcdf/k-noszip/include
 #NETCDF_LIB = -L/opt/aics/netcdf/k-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
 
-SCALE_INC = -I/volume63/data/ra000015/gylien/scale-letkf/scale_ens/dc_utils \
-            -I/volume63/data/ra000015/gylien/scale-letkf/scale_ens/gtool    \
-            -I/volume63/data/ra000015/gylien/scale-letkf/scale_ens/include
-SCALE_LIB = -L/volume63/data/ra000015/gylien/scale-letkf/scale_ens/lib -lscale -lgtool -ldcutils
+SCALE_INC = -I/volume63/data/hp150019/gylien/scale-letkf/scale_ens/dc_utils \
+            -I/volume63/data/hp150019/gylien/scale-letkf/scale_ens/gtool    \
+            -I/volume63/data/hp150019/gylien/scale-letkf/scale_ens/include
+SCALE_LIB = -L/volume63/data/hp150019/gylien/scale-letkf/scale_ens/lib -lscale -lgtool -ldcutils
 
 BUFR_LIB  = 
