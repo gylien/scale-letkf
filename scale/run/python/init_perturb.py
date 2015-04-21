@@ -9,11 +9,12 @@ if len(sys.argv) <= 1:
     sys.exit("\nUsage: {:s} BASE_FILE\n".format(sys.argv[0]))
 initialfile = sys.argv[1]
 
-wavel1 =  400000.
-wavel2 = 2000000.
+wavel1 =  500000.
+wavel2 = 3000000.
 dx = 15000.
 zheight = 28800.
 taper_width = 10
+taper_mtop = 10
 
 pert_std = 1.0
 halo = 2
@@ -73,10 +74,18 @@ gp3d_std = np.std(gp3d)
 
 for mm in range(m):
     for nn in range(n):
-        dist_bd = min(mm, m - 1 - mm, nn, n - 1 - nn)
-        if dist_bd < taper_width:
-            taper_ratio = float(dist_bd) / taper_width
-            gp3d[:, mm, nn] *= taper_ratio
+        if taper_width > 0:
+            taper_ratio = float(min(mm, m - 1 - mm, nn, n - 1 - nn)) / taper_width
+        else:
+            taper_ratio = 2.
+        for ll in range(l):
+            if taper_mtop > 0:
+                taper_ratio_h = float(l - 1 - ll) / taper_mtop
+            else:
+                taper_ratio_h = 2.
+            taper_ratio = min(taper_ratio, taper_ratio_h)
+            if taper_ratio < 1.:
+                gp3d[ll, mm, nn] *= taper_ratio
 
 gp3d /= gp3d_std
 gp3d *= pert_std
