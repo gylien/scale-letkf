@@ -8,10 +8,10 @@ PROGRAM dec_prepbufr
 
   IMPLICIT NONE
 
-  REAL,PARAMETER :: minlon=120.0
-  REAL,PARAMETER :: maxlon=150.0
-  REAL,PARAMETER :: minlat=25.0
-  REAL,PARAMETER :: maxlat=50.0
+  REAL,PARAMETER :: minlon=90.0
+  REAL,PARAMETER :: maxlon=180.0
+  REAL,PARAMETER :: minlat=5.0
+  REAL,PARAMETER :: maxlat=60.0
   INTEGER,PARAMETER :: maxlev = 255     !Maximum number of BUFR levels
   INTEGER,PARAMETER :: maxevn = 10      !Maximum number of BUFR event sequences
 !  CHARACTER(MXSTRL) :: head = 'SID XOB YOB DHR ELV TYP T29 ITP'

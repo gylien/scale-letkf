@@ -29,7 +29,7 @@ ANLWRF_INT=21600
 OBSNUM=1
 OBSNAME[1]=obs                                    
 OBSNAME[2]=radar
-OBS="/data6/gylien/obs/prepbufr_obs_japan"    # directory of observation data in LETKF obs format
+OBS="/data6/gylien/obs/prepbufr_obs_eastasia" # directory of observation data in LETKF obs format
 
 OBSNCEP="/data6/gylien/obs/prepbufr"  # directory of observation data in NCEP BUFR format
 
