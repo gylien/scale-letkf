@@ -22,13 +22,13 @@
 /
 
 &PARAM_CNVTOPO
- CNVTOPO_name = "DEM50M",
- CNVTOPO_SMOOTH_MAXSLOPE = 4.00D0,
+ CNVTOPO_name                = "GTOPO30",
+ CNVTOPO_SMOOTH_MAXSLOPE     = 4.00D0,
 /
 
-&PARAM_CNVTOPO_DEM50M
- DEM50M_IN_CATALOGUE = "DEM50m_catalogue.txt",
- DEM50M_IN_DIR       = "./input",
+&PARAM_CNVTOPO_GTOPO30
+ GTOPO30_IN_CATALOGUE = "GTOPO30_catalogue.txt",
+ GTOPO30_IN_DIR       = "./input",
 /
 
 #################################################
@@ -38,8 +38,8 @@
 #################################################
 
 &PARAM_PRC
- PRC_NUM_X      = 2,
- PRC_NUM_Y      = 2,
+ PRC_NUM_X      = 8,
+ PRC_NUM_Y      = 6,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -89,11 +89,11 @@
 /
 
 &PARAM_MAPPROJ
- MPRJ_basepoint_lon = 136.0D0,
- MPRJ_basepoint_lat =  36.0D0,
+ MPRJ_basepoint_lon = 135.0D0,
+ MPRJ_basepoint_lat =  35.0D0,
  MPRJ_type          = 'LC',
  MPRJ_LC_lat1       =  30.00D0,
- MPRJ_LC_lat2       =  42.00D0,
+ MPRJ_LC_lat2       =  40.00D0,
 /
 
 #################################################

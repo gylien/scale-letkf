@@ -7,17 +7,17 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume41/data/ra000015/gylien/scale-exp/Japan_15km_4p_init0710_24h"  # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf_test/EastAsia_15km_48p" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/volume63/data/ra000015/gylien/scale/scale-les/test/case_real/check_japan/run"
-DATADIR="/volume63/data/ra000015/gylien/scale-letkf/database"
+MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
+DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
-ANLWRF="/volume63/data/ra000015/gylien/model/ncepfnl/wrfout"
+ANLWRF="/volume63/data/hp150019/gylien/model/ncepfnl_large/wrfout"
 ANLWRF_INT=21600
 #ANLGFS="/discover/nobackup/glien/model/CFSR_t62"           # directory of reference model files [sigma/surface formats]
 #ANLGRD="/discover/nobackup/glien/model/CFSR_t62_grd"       # directory of reference model files [sigma-level grid format]
@@ -29,9 +29,9 @@ ANLWRF_INT=21600
 OBSNUM=1
 OBSNAME[1]=obs
 OBSNAME[2]=radar
-OBS="/volume63/data/ra000015/gylien/obs/prepbufr_obs_japan"    # directory of observation data in LETKF obs format
+OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
 
-OBSNCEP="/volume63/data/ra000015/gylien/obs/prepbufr" # directory of observation data in NCEP BUFR format
+OBSNCEP="/volume63/data/hp150019/gylien/obs/prepbufr" # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # Cycling settings
@@ -44,14 +44,14 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=19          # Ensemble size
+MEMBER=20          # Ensemble size
 
-NNODES=80          # Number of nodes
+NNODES=1008        # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
-SCALE_NP=4         # Number of processes to run SCALE
+SCALE_NP=48        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
