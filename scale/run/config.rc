@@ -11,7 +11,7 @@ MEMBER_FMT='%04d'
 CYCLE_FMT='%04d'
 
 SCALE_SFX=".pe${PROCESS_FMT}.nc"
-#SCALE_LOG_SFX='.pe000000'
+SCALE_LOG_SFX='.pe000000'
 
 #===============================================================================
 # Definition of sub-directories

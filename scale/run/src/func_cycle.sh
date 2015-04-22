@@ -125,7 +125,11 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $LETKF_DIR/letkf $TMPDAT/exec
   ln -fs $DATADIR/rad $TMPDAT/rad
   ln -fs $DATADIR/land $TMPDAT/land
-  ln -fs $DATA_BDY_WRF $TMPDAT/wrf
+
+  if ((BDY_FORMAT == 2)); then ###### other formats not finished yet......
+    ln -fs $DATA_BDY_WRF $TMPDAT/wrf
+  fi
+
   ln -fs $OBS $TMPDAT/obs
 
   safe_init_tmpdir $TMPDAT/conf
@@ -148,34 +152,42 @@ ${DATADIR}/rad|rad
 ${DATADIR}/land|land
 EOF
 
-  etime_bdy=$(datetime $ETIME $((CYCLEFLEN+BDYINT)) s)
-  for m in $(seq $mmean); do
-    if [ -d "${DATA_BDY_WRF}/${name_m[$m]}" ]; then
-      time=$STIME
-      while ((time <= etime_bdy)); do
-        path="${name_m[$m]}/wrfout_${time}"
-        echo "${DATA_BDY_WRF}/${path}|wrf/${path}" >> $STAGING_DIR/stagein.dat
-        if ((time == etime_bdy)); then
-          break
-        fi
-        time=$(datetime $time $BDYINT s)
-      done
-    fi
-  done
+  if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ]; then
+    echo "${SCRP_DIR}/config.nml.scale_pp|conf/config.nml.scale_pp" >> $STAGING_DIR/stagein.dat
+  fi
+  if [ "$TOPO_FORMAT" != 'prep' ]; then
+    echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
+  fi
+  if [ "$LANDUSE_FORMAT" != 'prep' ]; then
+    echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
+  fi
+
+  if ((BDY_FORMAT == 2)); then ###### other formats not finished yet......
+    etime_bdy=$(datetime $ETIME $((CYCLEFLEN+BDYINT)) s)
+    for m in $(seq $mmean); do
+      if [ -d "${DATA_BDY_WRF}/${name_m[$m]}" ]; then
+        time=$STIME
+        while ((time <= etime_bdy)); do
+          path="${name_m[$m]}/wrfout_${time}"
+          echo "${DATA_BDY_WRF}/${path}|wrf/${path}" >> $STAGING_DIR/stagein.dat
+          if ((time == etime_bdy)); then
+            break
+          fi
+          time=$(datetime $time $BDYINT s)
+        done
+      fi
+    done
+  fi
 
   if ((MACHINE_TYPE == 10)); then
-    cat >> $STAGING_DIR/stagein.dat << EOF
-${COMMON_DIR}/datetime|exec/datetime
-EOF
+    echo "${COMMON_DIR}/datetime|exec/datetime" >> $STAGING_DIR/stagein.dat
   fi
 
   time=$(datetime $STIME $LCYCLE s)
   while ((time <= $(datetime $ETIME $LCYCLE s))); do
     for iobs in $(seq $OBSNUM); do
       if [ "${OBSNAME[$iobs]}" != '' ]; then
-        cat >> $STAGING_DIR/stagein.dat << EOF
-${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs/${OBSNAME[$iobs]}_${time}.dat
-EOF
+        echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs/${OBSNAME[$iobs]}_${time}.dat" >> $STAGING_DIR/stagein.dat
       fi
     done
     time=$(datetime $time $LCYCLE s)
@@ -193,14 +205,14 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
   time=$STIME
   while ((time <= ETIME)); do
     #-------------------
-    if [ "$TOPO_FORMAT" = 'prep']; then
+    if [ "$TOPO_FORMAT" = 'prep' ]; then
       if [ -d "${DATA_TOPO}/${time}" ]; then
         ln -fs ${DATA_TOPO}/${time} $TMPOUT/${time}/topo
       else
         ln -fs ${DATA_TOPO}/fix $TMPOUT/${time}/topo
       fi
     fi
-    if [ "$LANDUSE_FORMAT" = 'prep']; then
+    if [ "$LANDUSE_FORMAT" = 'prep' ]; then
       if [ -d "${DATA_LANDUSE}/${time}" ]; then
         ln -fs ${DATA_LANDUSE}/${time} $TMPOUT/${time}/landuse
       else
@@ -238,7 +250,7 @@ else
 
     #-------------------
 
-    if [ "$TOPO_FORMAT" = 'prep']; then
+    if [ "$TOPO_FORMAT" = 'prep' ]; then
       if [ -d "${DATA_TOPO}/${time}" ]; then
         pathin="${DATA_TOPO}/${time}"
       else
@@ -253,7 +265,7 @@ else
       done
     fi
 
-    if [ "$LANDUSE_FORMAT" = 'prep']; then
+    if [ "$LANDUSE_FORMAT" = 'prep' ]; then
       if [ -d "${DATA_LANDUSE}/${time}" ]; then
         pathin="${DATA_LANDUSE}/${time}"
       else
@@ -426,7 +438,7 @@ else
   local landuse_base="$TMPRUN/scale_pp_landuse/landuse"
 fi
 pdbash $NODEFILE $PROC_OPT \
-  $SCRP_DIR/src/pre_scale_init.sh $mem_np $topo_base $landuse_base $TMPDAT/wrf/wrfout_d01 \
+  $SCRP_DIR/src/pre_scale_init.sh $mem_np $topo_base $landuse_base $TMPDAT/wrf/wrfout \
   $time $CYCLEFLEN $TMPRUN/scale_init $TMPDAT/exec $TMPDAT
 mpirunf $NODEFILE \
   $TMPRUN/scale_init ./scale-les_init init.conf

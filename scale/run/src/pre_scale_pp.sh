@@ -11,7 +11,7 @@
 if (($# < 5)); then
   cat >&2 << EOF
 
-[pre_scale_pp_topo.sh] Prepare a temporary directory for scale-les_pp run.
+[pre_scale_pp.sh] Prepare a temporary directory for scale-les_pp run.
 
 Usage: $0 MYRANK STIME TMPDIR EXECDIR DATADIR
 
@@ -61,10 +61,10 @@ fi
 
 cat $TMPDAT/conf/config.nml.scale_pp | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
-    sed -e "s/\[CONVERT_TOPO\]/ CONVERT_TOPO = $CONVERT_TOPO,/" \
-    sed -e "s/\[CONVERT_LANDUSE\]/ CONVERT_LANDUSE = $CONVERT_LANDUSE,/" \
-    sed -e "s/\[CNVTOPO_name\]/ CONVERT_LANDUSE = $TOPO_FORMAT,/" \
-    sed -e "s/\[CNVLANDUSE_name\]/ CONVERT_LANDUSE = $LANDUSE_FORMAT,/" \
+        -e "s/\[CONVERT_TOPO\]/ CONVERT_TOPO = $CONVERT_TOPO,/" \
+        -e "s/\[CONVERT_LANDUSE\]/ CONVERT_LANDUSE = $CONVERT_LANDUSE,/" \
+        -e "s/\[CNVTOPO_name\]/ CNVTOPO_name = '$TOPO_FORMAT',/" \
+        -e "s/\[CNVLANDUSE_name\]/ CNVLANDUSE_name = '$LANDUSE_FORMAT',/" \
     > $TMPDIR/pp.conf
 
 #===============================================================================

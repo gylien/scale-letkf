@@ -145,7 +145,11 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $MODELDIR/scale-les_pp $TMPDAT/exec
   ln -fs $COMMON_DIR/pdbash $TMPDAT/exec
   ln -fs $DATADIR/rad $TMPDAT/rad
-  ln -fs $DATA_BDY_WRF $TMPDAT/wrf
+  ln -fs $DATADIR/land $TMPDAT/land
+
+  if ((BDY_FORMAT == 2)); then ###### other formats not finished yet......
+    ln -fs $DATA_BDY_WRF $TMPDAT/wrf
+  fi
 
   safe_init_tmpdir $TMPDAT/conf
   ln -fs $SCRP_DIR/*.conf $TMPDAT/conf
@@ -164,45 +168,35 @@ ${DATADIR}/rad|rad
 ${DATADIR}/land|land
 EOF
 
-  time=$STIME
-  etime_bdy=$(datetime $ETIME $((FCSTLEN+BDYINT)) s)
-  while ((time <= etime_bdy)); do
-    path="wrfout_d01_${time}"
-    echo "${DATA_BDY_WRF}/${path}|wrf/${path}" >> $STAGING_DIR/stagein.dat
-    if ((time == etime_bdy)); then
-      break
-    fi
-    time=$(datetime $time $BDYINT s)
-  done
-
-  if ((PREP_TOPO == 1)); then
-    for q in $(seq $mem_np); do
-      path="topo_prep/topo$(printf $SCALE_SFX $((q-1)))"
-      echo "${DATADIR}/${path}|${path}" >> $STAGING_DIR/stagein.dat
-    done
-  else
-    cat >> $STAGING_DIR/stagein.dat << EOF
-${SCRP_DIR}/config.nml.scale_pp_topo|conf/config.nml.scale_pp_topo
-${DATADIR}/topo/DEM50M/Products|topo/DEM50M/Products
-EOF
+  if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ]; then
+    echo "${SCRP_DIR}/config.nml.scale_pp|conf/config.nml.scale_pp" >> $STAGING_DIR/stagein.dat
+  fi
+  if [ "$TOPO_FORMAT" != 'prep' ]; then
+    echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
+  fi
+  if [ "$LANDUSE_FORMAT" != 'prep' ]; then
+    echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
   fi
 
-  if ((PREP_LANDUSE == 1)); then
-    for q in $(seq $mem_np); do
-      path="landuse_prep/landuse$(printf $SCALE_SFX $((q-1)))"
-      echo "${DATADIR}/${path}|${path}" >> $STAGING_DIR/stagein.dat
+  if ((BDY_FORMAT == 2)); then ###### other formats not finished yet......
+    etime_bdy=$(datetime $ETIME $((FCSTLEN+BDYINT)) s)
+    for m in $(seq $fmembertot); do
+      if [ -d "${DATA_BDY_WRF}/${name_m[$m]}" ]; then
+        time=$STIME
+        while ((time <= etime_bdy)); do
+          path="${name_m[$m]}/wrfout_${time}"
+          echo "${DATA_BDY_WRF}/${path}|wrf/${path}" >> $STAGING_DIR/stagein.dat
+          if ((time == etime_bdy)); then
+            break
+          fi
+          time=$(datetime $time $BDYINT s)
+        done
+      fi
     done
-  else
-    cat >> $STAGING_DIR/stagein.dat << EOF
-${SCRP_DIR}/config.nml.scale_pp_landuse|conf/config.nml.scale_pp_landuse
-${DATADIR}/landuse/LU100M/Products|landuse/LU100M/Products
-EOF
   fi
 
   if ((MACHINE_TYPE == 10)); then
-    cat >> $STAGING_DIR/stagein.dat << EOF
-${COMMON_DIR}/datetime|exec/datetime
-EOF
+    echo "${COMMON_DIR}/datetime|exec/datetime" >> $STAGING_DIR/stagein.dat
   fi
 #-------------------
 fi
@@ -221,14 +215,14 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
       time2=$(datetime $time $((lcycles * (c-1))) s)
       if ((time2 <= ETIME)); then
         #-------------------
-        if [ "$TOPO_FORMAT" = 'prep']; then
+        if [ "$TOPO_FORMAT" = 'prep' ]; then
           if [ -d "${DATA_TOPO}/${time2}" ]; then
             ln -fs ${DATA_TOPO}/${time2} $TMPOUT/${time2}/topo
           else
             ln -fs ${DATA_TOPO}/fix $TMPOUT/${time2}/topo
           fi
         fi
-        if [ "$LANDUSE_FORMAT" = 'prep']; then
+        if [ "$LANDUSE_FORMAT" = 'prep' ]; then
           if [ -d "${DATA_LANDUSE}/${time2}" ]; then
             ln -fs ${DATA_LANDUSE}/${time2} $TMPOUT/${time2}/landuse
           else
@@ -272,7 +266,7 @@ else
 
         #-------------------
 
-        if [ "$TOPO_FORMAT" = 'prep']; then
+        if [ "$TOPO_FORMAT" = 'prep' ]; then
           if [ -d "${DATA_TOPO}/${time2}" ]; then
             pathin="${DATA_TOPO}/${time2}"
           else
@@ -288,7 +282,7 @@ else
           done
         fi
 
-        if [ "$LANDUSE_FORMAT" = 'prep']; then
+        if [ "$LANDUSE_FORMAT" = 'prep' ]; then
           if [ -d "${DATA_LANDUSE}/${time2}" ]; then
             pathin="${DATA_LANDUSE}/${time2}"
           else
@@ -418,32 +412,20 @@ local NODEFILE="$1"; shift
 local PDBASH_PROC_OPT="$1"; shift
 
 #-------------------------------------------------------------------------------
-# topo
+# pp (topo/landuse)
 
-if ((PREP_TOPO != 1)); then
+if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ]; then
   pdbash $NODEFILE $PDBASH_PROC_OPT \
-    $SCRP_DIR/src/pre_scale_pp_topo.sh ${stimes[$c]} $TMPRUN/scale_pp_topo/${cf} $TMPDAT/exec $TMPDAT
+    $SCRP_DIR/src/pre_scale_pp.sh ${stimes[$c]} $TMPRUN/scale_pp/${cf} $TMPDAT/exec $TMPDAT
   mpirunf $NODEFILE \
-    $TMPRUN/scale_pp_topo/${cf} ./scale-les_pp pp.conf
+    $TMPRUN/scale_pp/${cf} ./scale-les_pp pp.conf
   if ((LOG_OPT <= 2)); then
     pdbash $NODEFILE $PDBASH_PROC_OPT \
-      $SCRP_DIR/src/post_scale_pp_topo.sh ${stimes[$c]} $TMPRUN/scale_pp_topo/${cf}
+      $SCRP_DIR/src/post_scale_pp.sh ${stimes[$c]} $TMPRUN/scale_pp/${cf}
   fi
 fi
 
-#-------------------------------------------------------------------------------
-# landuse
-
-if ((PREP_LANDUSE != 1)); then
-  pdbash $NODEFILE $PDBASH_PROC_OPT \
-    $SCRP_DIR/src/pre_scale_pp_landuse.sh ${stimes[$c]} $TMPRUN/scale_pp_landuse/${cf} $TMPDAT/exec $TMPDAT
-  mpirunf $NODEFILE \
-    $TMPRUN/scale_pp_landuse/${cf} ./scale-les_pp pp.conf
-  if ((LOG_OPT <= 2)); then
-    pdbash $NODEFILE $PDBASH_PROC_OPT \
-      $SCRP_DIR/src/post_scale_pp_landuse.sh ${stimes[$c]} $TMPRUN/scale_pp_landuse/${cf}
-  fi
-fi
+exit
 
 #-------------------------------------------------------------------------------
 # init
@@ -459,7 +441,7 @@ else
   local landuse_base="$TMPRUN/scale_pp_landuse/${cf}/landuse"
 fi
 pdbash $NODEFILE $PDBASH_PROC_OPT \
-  $SCRP_DIR/src/pre_scale_init.sh $mem_np $topo_base $landuse_base $TMPDAT/wrf/wrfout_d01 \
+  $SCRP_DIR/src/pre_scale_init.sh $mem_np $topo_base $landuse_base $TMPDAT/wrf/wrfout \
   ${stimes[$c]} $FCSTLEN $TMPRUN/scale_init/${cf} $TMPDAT/exec $TMPDAT
 mpirunf $NODEFILE \
   $TMPRUN/scale_init/${cf} ./scale-les_init init.conf
