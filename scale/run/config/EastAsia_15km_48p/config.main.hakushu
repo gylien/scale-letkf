@@ -19,24 +19,34 @@ DATADIR="/data6/gylien/scale-letkf/database"
 
 DATA_TOPO="/data6/gylien/scale-letkf/database/topo/EastAsia_15km_48p"
 DATA_LANDUSE="/data6/gylien/scale-letkf/database/landuse/EastAsia_15km_48p"
-DATA_BDY="/data6/gylien/scale-letkf/database/bdy/random_date_init"
+DATA_BDY_SCALE=
 DATA_BDY_WRF="/data6/gylien/model/ncepfnl_large/wrfout"
+DATA_BDY_NICAM=
+
+OBS="/data6/gylien/obs/prepbufr_obs_eastasia" # directory of observation data in LETKF obs format
+OBSNCEP="/data6/gylien/obs/prepbufr"  # directory of observation data in NCEP BUFR format
+
+#===============================================================================
+# model/data file options
+
+TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
+                        # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
+                        # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
+
+LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+                        # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
+                        # 'LU100M' (requires compatible 'config.nml.scale_pp')
+
+BDY_FORMAT=2            # 0: SCALE with exactly same domain settings (do not need additional preprocessing)
+                        # 1: SCALE (requires compatible 'config.nml.scale_init')
+                        # 2: WRF   (requires compatible 'config.nml.scale_init')
+                        # 3: NICAM (requires compatible 'config.nml.scale_init')
 
 BDYINT=21600
-
-#ANLGFS="/discover/nobackup/glien/model/CFSR_t62"         # directory of reference model files [sigma/surface formats]
-#ANLGRD="/discover/nobackup/glien/model/CFSR_t62_grd"     # directory of reference model files [sigma-level grid format]
-#ANLGRDP="/discover/nobackup/glien/model/CFSR_t62_grdp"   # directory of reference model files [pressure-level grid format]
-#ANLGRDP2="/discover/nobackup/glien/model/EC_interim_t62_grdp" # directory of reference model files [pressure-level grid format]
-
-#INITGFS="/discover/nobackup/glien/model/GDAS_IC_t62"     # directory of arbitrary initial condition files [sigma/surface formats]
 
 OBSNUM=1
 OBSNAME[1]=obs                                    
 OBSNAME[2]=radar
-OBS="/data6/gylien/obs/prepbufr_obs_eastasia" # directory of observation data in LETKF obs format
-
-OBSNCEP="/data6/gylien/obs/prepbufr"  # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # Cycling settings

@@ -123,28 +123,16 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $COMMON_DIR/pdbash $TMPDAT/exec
   ln -fs $OBSUTIL_DIR/obsope $TMPDAT/exec
   ln -fs $LETKF_DIR/letkf $TMPDAT/exec
-  ln -fs $DATADIR/rad $TMPDAT
-  ln -fs $DATADIR/land $TMPDAT
-  ln -fs $ANLWRF $TMPDAT/wrf
-  ln -sf $OBS $TMPDAT/obs
+  ln -fs $DATADIR/rad $TMPDAT/rad
+  ln -fs $DATADIR/land $TMPDAT/land
+  ln -fs $DATA_BDY_WRF $TMPDAT/wrf
+  ln -fs $OBS $TMPDAT/obs
 
   safe_init_tmpdir $TMPDAT/conf
   ln -fs $SCRP_DIR/config.nml.* $TMPDAT/conf
-
-  if ((PREP_TOPO == 1)); then
-    ln -fs $DATADIR/topo_prep $TMPDAT/topo_prep
-  else
-    ln -fs $DATADIR/topo $TMPDAT
-  fi
-  if ((PREP_LANDUSE == 1)); then
-    ln -fs $DATADIR/landuse_prep $TMPDAT/landuse_prep
-  else
-    ln -fs $DATADIR/landuse $TMPDAT
-  fi
 #-------------------
 else
 #-------------------
-
   cat >> $STAGING_DIR/stagein.dat << EOF
 ${MODELDIR}/scale-les|exec/scale-les
 ${MODELDIR}/scale-les_init|exec/scale-les_init
@@ -160,40 +148,20 @@ ${DATADIR}/rad|rad
 ${DATADIR}/land|land
 EOF
 
-  time=$STIME
-  etime_anlwrf=$(datetime $ETIME $((CYCLEFLEN+ANLWRF_INT)) s)
-  while ((time <= etime_anlwrf)); do
-    path="wrfout_d01_${time}"
-    echo "${ANLWRF}/${path}|wrf/${path}" >> $STAGING_DIR/stagein.dat
-    if ((time == etime_anlwrf)); then
-      break
+  etime_bdy=$(datetime $ETIME $((CYCLEFLEN+BDYINT)) s)
+  for m in $(seq $mmean); do
+    if [ -d "${DATA_BDY_WRF}/${name_m[$m]}" ]; then
+      time=$STIME
+      while ((time <= etime_bdy)); do
+        path="${name_m[$m]}/wrfout_${time}"
+        echo "${DATA_BDY_WRF}/${path}|wrf/${path}" >> $STAGING_DIR/stagein.dat
+        if ((time == etime_bdy)); then
+          break
+        fi
+        time=$(datetime $time $BDYINT s)
+      done
     fi
-    time=$(datetime $time $ANLWRF_INT s)
   done
-
-  if ((PREP_TOPO == 1)); then
-    for q in $(seq $mem_np); do
-      path="topo_prep/topo$(printf $SCALE_SFX $((q-1)))"
-      echo "${DATADIR}/${path}|${path}" >> $STAGING_DIR/stagein.dat
-    done
-  else
-    cat >> $STAGING_DIR/stagein.dat << EOF
-${SCRP_DIR}/config.nml.scale_pp_topo|conf/config.nml.scale_pp_topo
-${DATADIR}/topo/DEM50M/Products|topo/DEM50M/Products
-EOF
-  fi
-
-  if ((PREP_LANDUSE == 1)); then
-    for q in $(seq $mem_np); do
-      path="landuse_prep/landuse$(printf $SCALE_SFX $((q-1)))"
-      echo "${DATADIR}/${path}|${path}" >> $STAGING_DIR/stagein.dat
-    done
-  else
-    cat >> $STAGING_DIR/stagein.dat << EOF
-${SCRP_DIR}/config.nml.scale_pp_landuse|conf/config.nml.scale_pp_landuse
-${DATADIR}/landuse/LU100M/Products|landuse/LU100M/Products
-EOF
-  fi
 
   if ((MACHINE_TYPE == 10)); then
     cat >> $STAGING_DIR/stagein.dat << EOF
@@ -221,6 +189,27 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
 #-------------------
   mkdir -p $(dirname $TMPOUT)
   ln -fs $OUTDIR $TMPOUT
+
+  time=$STIME
+  while ((time <= ETIME)); do
+    #-------------------
+    if [ "$TOPO_FORMAT" = 'prep']; then
+      if [ -d "${DATA_TOPO}/${time}" ]; then
+        ln -fs ${DATA_TOPO}/${time} $TMPOUT/${time}/topo
+      else
+        ln -fs ${DATA_TOPO}/fix $TMPOUT/${time}/topo
+      fi
+    fi
+    if [ "$LANDUSE_FORMAT" = 'prep']; then
+      if [ -d "${DATA_LANDUSE}/${time}" ]; then
+        ln -fs ${DATA_LANDUSE}/${time} $TMPOUT/${time}/landuse
+      else
+        ln -fs ${DATA_LANDUSE}/fix $TMPOUT/${time}/landuse
+      fi
+    fi
+    time=$(datetime $time $LCYCLE s)
+    #-------------------
+  done
 #-------------------
 else
 #-------------------
@@ -241,10 +230,40 @@ else
     if ((loop == 1)); then
       for m in $(seq $mmean); do
         for q in $(seq $mem_np); do
-
           path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      done
+    fi
 
+    #-------------------
+
+    if [ "$TOPO_FORMAT" = 'prep']; then
+      if [ -d "${DATA_TOPO}/${time}" ]; then
+        pathin="${DATA_TOPO}/${time}"
+      else
+        pathin="${DATA_TOPO}/fix"
+      fi
+      for m in $(seq $mmean); do
+        for q in $(seq $mem_np); do
+          pathin="${pathin}/topo$(printf $SCALE_SFX $((q-1)))"
+          path="${time}/topo/topo$(printf $SCALE_SFX $((q-1)))"
+          echo "${OUTDIR}/${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      done
+    fi
+
+    if [ "$LANDUSE_FORMAT" = 'prep']; then
+      if [ -d "${DATA_LANDUSE}/${time}" ]; then
+        pathin="${DATA_LANDUSE}/${time}"
+      else
+        pathin="${DATA_LANDUSE}/fix"
+      fi
+      for m in $(seq $mmean); do
+        for q in $(seq $mem_np); do
+          pathin="${pathin}/landuse$(printf $SCALE_SFX $((q-1)))"
+          path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+          echo "${OUTDIR}/${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
         done
       done
     fi
@@ -254,7 +273,6 @@ else
 
     for m in $(seq $MEMBER); do
       for q in $(seq $mem_np); do
-
         if ((OUT_OPT <= 1)); then
           path="${atime}/gues/${name_m[$m]}/history$(printf $SCALE_SFX $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
@@ -273,19 +291,16 @@ else
           path="${atime}/obsgues/${name_m[$m]}/obsda.${name_m[$m]}.$(printf $PROCESS_FMT $((q-1))).dat"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
         fi
-
       done
 
       #-------------------
-
       if ((LOG_OPT <= 3)); then
         path="${time}/log/scale/${name_m[$m]}_LOG${SCALE_LOG_SFX}"
         echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
       fi
-#          if ((LOG_OPT <= 1)); then
-#            # perturb bdy log
-#          fi
-
+#      if ((LOG_OPT <= 1)); then
+#        # perturb bdy log
+#      fi
       #-------------------
     done
 
@@ -384,30 +399,16 @@ fi
 local NODEFILE="$1"
 
 #-------------------------------------------------------------------------------
-# topo
+# pp (topo/landuse)
 
-if ((PREP_TOPO != 1)); then
+if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ]; then
   pdbash $NODEFILE $PROC_OPT \
-    $SCRP_DIR/src/pre_scale_pp_topo.sh $time $TMPRUN/scale_pp_topo $TMPDAT/exec $TMPDAT
+    $SCRP_DIR/src/pre_scale_pp.sh $time $TMPRUN/scale_pp $TMPDAT/exec $TMPDAT
   mpirunf $NODEFILE \
-    $TMPRUN/scale_pp_topo ./scale-les_pp pp.conf
+    $TMPRUN/scale_pp ./scale-les_pp pp.conf
   if ((LOG_OPT <= 2)); then
     pdbash $NODEFILE $PROC_OPT \
-      $SCRP_DIR/src/post_scale_pp_topo.sh $time $TMPRUN/scale_pp_topo
-  fi
-fi
-
-#-------------------------------------------------------------------------------
-# landuse
-
-if ((PREP_LANDUSE != 1)); then
-  pdbash $NODEFILE $PROC_OPT \
-    $SCRP_DIR/src/pre_scale_pp_landuse.sh $time $TMPRUN/scale_pp_landuse $TMPDAT/exec $TMPDAT
-  mpirunf $NODEFILE \
-    $TMPRUN/scale_pp_landuse ./scale-les_pp pp.conf
-  if ((LOG_OPT <= 2)); then
-    pdbash $NODEFILE $PROC_OPT \
-      $SCRP_DIR/src/post_scale_pp_landuse.sh $time $TMPRUN/scale_pp_landuse
+      $SCRP_DIR/src/post_scale_pp.sh $time $TMPRUN/scale_pp
   fi
 fi
 

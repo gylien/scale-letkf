@@ -1,7 +1,7 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Script to prepare the directory of SCALE landuse creation.
+#  Script to prepare the directory of SCALE topo creation.
 #  October 2014  created,  Guo-Yuan Lien
 #
 #===============================================================================
@@ -11,7 +11,7 @@
 if (($# < 5)); then
   cat >&2 << EOF
 
-[pre_scale_pp_landuse.sh] Prepare a temporary directory for SCALE model run.
+[pre_scale_pp_topo.sh] Prepare a temporary directory for scale-les_pp run.
 
 Usage: $0 MYRANK STIME TMPDIR EXECDIR DATADIR
 
@@ -45,12 +45,26 @@ rm -fr $TMPDIR/*
 
 ln -fs $EXECDIR/scale-les_pp $TMPDIR
 
-ln -fs $DATADIR/landuse/LU100M/Products $TMPDIR/input
+CONVERT_TOPO='.false.'
+if [ "$TOPO_FORMAT" != 'prep' ]; then
+  ln -fs $DATADIR/topo/${TOPO_FORMAT}/Products $TMPDIR/input_topo
+  CONVERT_TOPO='.true.'
+fi
+
+CONVERT_LANDUSE='.false.'
+if [ "$LANDUSE_FORMAT" != 'prep' ]; then
+  ln -fs $DATADIR/landuse/${LANDUSE_FORMAT}/Products $TMPDIR/input_landuse
+  CONVERT_LANDUSE='.true.'
+fi
 
 #===============================================================================
 
-cat $TMPDAT/conf/config.nml.scale_pp_landuse | \
+cat $TMPDAT/conf/config.nml.scale_pp | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
+    sed -e "s/\[CONVERT_TOPO\]/ CONVERT_TOPO = $CONVERT_TOPO,/" \
+    sed -e "s/\[CONVERT_LANDUSE\]/ CONVERT_LANDUSE = $CONVERT_LANDUSE,/" \
+    sed -e "s/\[CNVTOPO_name\]/ CONVERT_LANDUSE = $TOPO_FORMAT,/" \
+    sed -e "s/\[CNVLANDUSE_name\]/ CONVERT_LANDUSE = $LANDUSE_FORMAT,/" \
     > $TMPDIR/pp.conf
 
 #===============================================================================

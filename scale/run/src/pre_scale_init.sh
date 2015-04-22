@@ -76,7 +76,7 @@ for q in $(seq $MEM_NP); do
 #  fi
 done
 
-NUMBER_OF_FILES=$((FCSTLEN/ANLWRF_INT+2))
+NUMBER_OF_FILES=$((FCSTLEN/BDYINT+2))
 
 i=0
 time=$STIME
@@ -89,7 +89,7 @@ for c in $(seq $NUMBER_OF_FILES); do
     exit 1
   fi
   i=$((i+1))
-  time=$(datetime $time $ANLWRF_INT s)
+  time=$(datetime $time $BDYINT s)
 done
 
 #===============================================================================
@@ -97,7 +97,7 @@ done
 cat $TMPDAT/conf/config.nml.scale_init | \
     sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
         -e "s/\[NUMBER_OF_FILES\]/ NUMBER_OF_FILES = $NUMBER_OF_FILES,/" \
-        -e "s/\[BOUNDARY_UPDATE_DT\]/ BOUNDARY_UPDATE_DT = $ANLWRF_INT.D0,/" \
+        -e "s/\[BOUNDARY_UPDATE_DT\]/ BOUNDARY_UPDATE_DT = $BDYINT.D0,/" \
     > $TMPDIR/init.conf
 
 #===============================================================================

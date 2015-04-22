@@ -144,22 +144,11 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $MODELDIR/scale-les_init $TMPDAT/exec
   ln -fs $MODELDIR/scale-les_pp $TMPDAT/exec
   ln -fs $COMMON_DIR/pdbash $TMPDAT/exec
-  ln -fs $DATADIR/rad $TMPDAT
+  ln -fs $DATADIR/rad $TMPDAT/rad
   ln -fs $DATA_BDY_WRF $TMPDAT/wrf
 
   safe_init_tmpdir $TMPDAT/conf
   ln -fs $SCRP_DIR/*.conf $TMPDAT/conf
-
-  if ((PREP_TOPO == 1)); then
-    ln -fs $DATADIR/topo_prep $TMPDAT/topo_prep
-  else
-    ln -fs $DATADIR/topo $TMPDAT
-  fi
-  if ((PREP_LANDUSE == 1)); then
-    ln -fs $DATADIR/landuse_prep $TMPDAT/landuse_prep
-  else
-    ln -fs $DATADIR/landuse $TMPDAT
-  fi
 #-------------------
 else
 #-------------------
@@ -176,11 +165,11 @@ ${DATADIR}/land|land
 EOF
 
   time=$STIME
-  etime_anlwrf=$(datetime $ETIME $((FCSTLEN+BDYINT)) s)
-  while ((time <= etime_anlwrf)); do
+  etime_bdy=$(datetime $ETIME $((FCSTLEN+BDYINT)) s)
+  while ((time <= etime_bdy)); do
     path="wrfout_d01_${time}"
     echo "${DATA_BDY_WRF}/${path}|wrf/${path}" >> $STAGING_DIR/stagein.dat
-    if ((time == etime_anlwrf)); then
+    if ((time == etime_bdy)); then
       break
     fi
     time=$(datetime $time $BDYINT s)
@@ -224,6 +213,34 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
 #-------------------
   mkdir -p $(dirname $TMPOUT)
   ln -fs $OUTDIR $TMPOUT
+
+  lcycles=$((LCYCLE * CYCLE_SKIP))
+  time=$STIME
+  while ((time <= ETIME)); do
+    for c in $(seq $CYCLE); do
+      time2=$(datetime $time $((lcycles * (c-1))) s)
+      if ((time2 <= ETIME)); then
+        #-------------------
+        if [ "$TOPO_FORMAT" = 'prep']; then
+          if [ -d "${DATA_TOPO}/${time2}" ]; then
+            ln -fs ${DATA_TOPO}/${time2} $TMPOUT/${time2}/topo
+          else
+            ln -fs ${DATA_TOPO}/fix $TMPOUT/${time2}/topo
+          fi
+        fi
+        if [ "$LANDUSE_FORMAT" = 'prep']; then
+          if [ -d "${DATA_LANDUSE}/${time2}" ]; then
+            ln -fs ${DATA_LANDUSE}/${time2} $TMPOUT/${time2}/landuse
+          else
+            ln -fs ${DATA_LANDUSE}/fix $TMPOUT/${time2}/landuse
+          fi
+        fi
+        time=$(datetime $time $LCYCLE s)
+        #-------------------
+      fi
+    done
+    time=$(datetime $time $((lcycles * CYCLE)) s)
+  done
 #-------------------
 else
 #-------------------
@@ -241,18 +258,58 @@ else
     for c in $(seq $CYCLE); do
       time2=$(datetime $time $((lcycles * (c-1))) s)
       if ((time2 <= ETIME)); then
+
+        #-------------------
+        # stage-in
+
         for m in $(seq $fmember); do
           mm=$(((c-1) * fmember + m))
           for q in $(seq $mem_np); do
-            #-------------------
-            # stage-in
-
             path="${time2}/anal/${name_m[$mm]}/init$(printf $SCALE_SFX $((q-1)))"
             echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+          done
+        done
 
-            #-------------------
-            # stage-out
+        #-------------------
 
+        if [ "$TOPO_FORMAT" = 'prep']; then
+          if [ -d "${DATA_TOPO}/${time2}" ]; then
+            pathin="${DATA_TOPO}/${time2}"
+          else
+            pathin="${DATA_TOPO}/fix"
+          fi
+          for m in $(seq $fmember); do
+            mm=$(((c-1) * fmember + m))
+            for q in $(seq $mem_np); do
+              pathin="${pathin}/topo$(printf $SCALE_SFX $((q-1)))"
+              path="${time2}/topo/topo$(printf $SCALE_SFX $((q-1)))"
+              echo "${OUTDIR}/${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+            done
+          done
+        fi
+
+        if [ "$LANDUSE_FORMAT" = 'prep']; then
+          if [ -d "${DATA_LANDUSE}/${time2}" ]; then
+            pathin="${DATA_LANDUSE}/${time2}"
+          else
+            pathin="${DATA_LANDUSE}/fix"
+          fi
+          for m in $(seq $fmember); do
+            mm=$(((c-1) * fmember + m))
+            for q in $(seq $mem_np); do
+              pathin="${pathin}/landuse$(printf $SCALE_SFX $((q-1)))"
+              path="${time2}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+              echo "${OUTDIR}/${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+            done
+          done
+        fi
+
+        #-------------------
+        # stage-out
+
+        for m in $(seq $fmember); do
+          mm=$(((c-1) * fmember + m))
+          for q in $(seq $mem_np); do
             if ((OUT_OPT <= 2)); then
               path="${time2}/fcst/${name_m[$mm]}/history$(printf $SCALE_SFX $((q-1)))"
               echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+q))]}
@@ -261,12 +318,9 @@ else
               path="${time2}/fcst/${name_m[$mm]}/init_$(datetime ${time2} $FCSTLEN s)$(printf $SCALE_SFX $((q-1)))"
               echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+q))]}
             fi
-
-            #-------------------
           done
 
           #-------------------
-
           if ((LOG_OPT <= 3)); then
             path="${time2}/log/scale/${name_m[$mm]}_LOG${SCALE_LOG_SFX}"
             echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+1))]}
@@ -274,7 +328,6 @@ else
 #          if ((LOG_OPT <= 1)); then
 #            # perturb bdy log
 #          fi
-
           #-------------------
         done
 

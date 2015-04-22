@@ -52,7 +52,7 @@ exec 2> >(tee -a $LOGDIR/${myname1}.err >&2)
 
 echo "[$(datetime_now)] Start $myname $@" >&2
 
-for vname in DIR OUTDIR ANLWRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
+for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
              WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
              STIME ETIME ISTEP FSTEP; do
   printf '                      %-10s = %s\n' $vname "${!vname}" >&2
