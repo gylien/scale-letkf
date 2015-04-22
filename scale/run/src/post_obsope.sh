@@ -38,7 +38,11 @@ done
 
 if [ "$MEM" == '0001' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
   mkdir -p $TMPOUT/${ATIME}/log/obsope
-#  mv -f $TMPDIR/NOUT-000000 $TMPOUT/${ATIME}/log/obsope/NOUT-000000 ###### using a variable for 'NOUT-000000'
+  mv -f $TMPDIR/NOUT-?????? $TMPOUT/${ATIME}/log/obsope ###### temporary!!!!! ######
+fi
+
+if [ "$MEM" == 'mean' ] && ((LOG_OPT <= 4)); then ###### using a variable for 'mean'
+  mkdir -p $TMPOUT/${ATIME}/log/obsope
   mv -f $TMPDIR/NOUT-?????? $TMPOUT/${ATIME}/log/obsope ###### temporary!!!!! ######
 fi
 
