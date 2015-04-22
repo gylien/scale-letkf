@@ -325,10 +325,14 @@ else
     #-------------------
 
     if ((LOG_OPT <= 4)); then
-      path="${atime}/log/obsope/NOUT-000000" ###### 'NOUT-000000' as a variable
-      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
-      path="${atime}/log/letkf/NOUT-000000" ###### 'NOUT-000000' as a variable
-      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+      for m in 1 $mmean; do
+        for q in $(seq $mem_np); do
+          path="${atime}/log/obsope/NOUT-$(printf $PROCESS_FMT $(((m-1)*mem_np+q)))"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
+          path="${atime}/log/letkf/NOUT-$(printf $PROCESS_FMT $(((m-1)*mem_np+q)))"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      done
     fi
 
     if ((LOG_OPT <= 2)); then
