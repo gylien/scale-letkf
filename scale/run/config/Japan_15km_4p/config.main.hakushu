@@ -17,8 +17,8 @@ LOGDIR="$DIR/log"
 MODELDIR="/data6/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
 DATADIR="/data6/gylien/scale-letkf/database"
 
-ANLWRF="/data6/gylien/model/ncepfnl/wrfout_no_terrain"
-ANLWRF_INT=21600
+DATA_BDY_WRF="/data6/gylien/model/ncepfnl/wrfout_no_terrain"
+BDYINT=21600
 #ANLGFS="/discover/nobackup/glien/model/CFSR_t62"         # directory of reference model files [sigma/surface formats]
 #ANLGRD="/discover/nobackup/glien/model/CFSR_t62_grd"     # directory of reference model files [sigma-level grid format]
 #ANLGRDP="/discover/nobackup/glien/model/CFSR_t62_grdp"   # directory of reference model files [pressure-level grid format]

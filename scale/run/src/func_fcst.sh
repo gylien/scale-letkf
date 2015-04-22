@@ -145,7 +145,7 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $MODELDIR/scale-les_pp $TMPDAT/exec
   ln -fs $COMMON_DIR/pdbash $TMPDAT/exec
   ln -fs $DATADIR/rad $TMPDAT
-  ln -fs $ANLWRF $TMPDAT/wrf
+  ln -fs $DATA_BDY_WRF $TMPDAT/wrf
 
   safe_init_tmpdir $TMPDAT/conf
   ln -fs $SCRP_DIR/*.conf $TMPDAT/conf
@@ -176,14 +176,14 @@ ${DATADIR}/land|land
 EOF
 
   time=$STIME
-  etime_anlwrf=$(datetime $ETIME $((FCSTLEN+ANLWRF_INT)) s)
+  etime_anlwrf=$(datetime $ETIME $((FCSTLEN+BDYINT)) s)
   while ((time <= etime_anlwrf)); do
     path="wrfout_d01_${time}"
-    echo "${ANLWRF}/${path}|wrf/${path}" >> $STAGING_DIR/stagein.dat
+    echo "${DATA_BDY_WRF}/${path}|wrf/${path}" >> $STAGING_DIR/stagein.dat
     if ((time == etime_anlwrf)); then
       break
     fi
-    time=$(datetime $time $ANLWRF_INT s)
+    time=$(datetime $time $BDYINT s)
   done
 
   if ((PREP_TOPO == 1)); then
