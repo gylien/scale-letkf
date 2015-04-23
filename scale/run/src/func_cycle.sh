@@ -258,7 +258,7 @@ else
       for m in $(seq $mmean); do
         for q in $(seq $mem_np); do
           time_dby=${time}
-          etime_bdy=$(datetime ${time} $((FCSTLEN+BDYINT)) s)
+          etime_bdy=$(datetime ${time} $((CYCLEFLEN+BDYINT)) s)
           while ((time_dby < etime_bdy)); do
             if ((BDY_ENS == 1)); then
               pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_dby}"
@@ -433,8 +433,8 @@ fi
 boundary () {
 #-------------------------------------------------------------------------------
 
+echo
 if ((BDY_ENS == 1)); then
-  echo
   echo "     -- topo/landuse"
   echo
 fi

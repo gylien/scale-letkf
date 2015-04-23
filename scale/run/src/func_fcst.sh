@@ -450,8 +450,8 @@ fi
 boundary () {
 #-------------------------------------------------------------------------------
 
+echo
 if ((BDY_ENS == 1)); then
-  echo
   echo "     -- topo/landuse"
   echo
 fi
