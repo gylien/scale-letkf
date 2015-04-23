@@ -126,10 +126,6 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $DATADIR/rad $TMPDAT/rad
   ln -fs $DATADIR/land $TMPDAT/land
 
-  if ((BDY_FORMAT == 2)); then ###### other formats not finished yet......
-    ln -fs $DATA_BDY_WRF $TMPDAT/wrf
-  fi
-
   ln -fs $OBS $TMPDAT/obs
 
   safe_init_tmpdir $TMPDAT/conf
@@ -162,27 +158,6 @@ EOF
     echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
   fi
 
-  if ((BDY_FORMAT == 2)); then ###### other formats not finished yet......
-    etime_bdy=$(datetime $ETIME $((CYCLEFLEN+BDYINT)) s)
-    for m in $(seq $mmean); do
-      if [ -d "${DATA_BDY_WRF}/${name_m[$m]}" ]; then
-        time=$STIME
-        while ((time <= etime_bdy)); do
-          path="${name_m[$m]}/wrfout_${time}"
-          echo "${DATA_BDY_WRF}/${path}|wrf/${path}" >> $STAGING_DIR/stagein.dat
-          if ((time == etime_bdy)); then
-            break
-          fi
-          time=$(datetime $time $BDYINT s)
-        done
-      fi
-    done
-  fi
-
-  if ((MACHINE_TYPE == 10)); then
-    echo "${COMMON_DIR}/datetime|exec/datetime" >> $STAGING_DIR/stagein.dat
-  fi
-
   time=$(datetime $STIME $LCYCLE s)
   while ((time <= $(datetime $ETIME $LCYCLE s))); do
     for iobs in $(seq $OBSNUM); do
@@ -192,6 +167,10 @@ EOF
     done
     time=$(datetime $time $LCYCLE s)
   done
+
+  if ((MACHINE_TYPE == 10)); then
+    echo "${COMMON_DIR}/datetime|exec/datetime" >> $STAGING_DIR/stagein.dat
+  fi
 #-------------------
 fi
 
@@ -206,17 +185,13 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
   while ((time <= ETIME)); do
     #-------------------
     if [ "$TOPO_FORMAT" = 'prep' ]; then
-      if [ -d "${DATA_TOPO}/${time}" ]; then
-        ln -fs ${DATA_TOPO}/${time} $TMPOUT/${time}/topo
-      else
-        ln -fs ${DATA_TOPO}/fix $TMPOUT/${time}/topo
-      fi
+      ln -fs ${DATA_TOPO} $TMPOUT/${time}/topo
     fi
     if [ "$LANDUSE_FORMAT" = 'prep' ]; then
-      if [ -d "${DATA_LANDUSE}/${time}" ]; then
+      if ((LANDUSE_UPDATE == 1)); then
         ln -fs ${DATA_LANDUSE}/${time} $TMPOUT/${time}/landuse
       else
-        ln -fs ${DATA_LANDUSE}/fix $TMPOUT/${time}/landuse
+        ln -fs ${DATA_LANDUSE} $TMPOUT/${time}/landuse
       fi
     fi
     time=$(datetime $time $LCYCLE s)
@@ -251,14 +226,9 @@ else
     #-------------------
 
     if [ "$TOPO_FORMAT" = 'prep' ]; then
-      if [ -d "${DATA_TOPO}/${time}" ]; then
-        pathin="${DATA_TOPO}/${time}"
-      else
-        pathin="${DATA_TOPO}/fix"
-      fi
       for m in $(seq $mmean); do
         for q in $(seq $mem_np); do
-          pathin="${pathin}/topo$(printf $SCALE_SFX $((q-1)))"
+          pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
           path="${time}/topo/topo$(printf $SCALE_SFX $((q-1)))"
           echo "${OUTDIR}/${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
         done
@@ -269,7 +239,7 @@ else
       if [ -d "${DATA_LANDUSE}/${time}" ]; then
         pathin="${DATA_LANDUSE}/${time}"
       else
-        pathin="${DATA_LANDUSE}/fix"
+        pathin="${DATA_LANDUSE}"
       fi
       for m in $(seq $mmean); do
         for q in $(seq $mem_np); do

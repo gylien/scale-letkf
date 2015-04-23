@@ -53,7 +53,7 @@ for ifile in $filelist; do
         fi
       fi
     fi
-  done < "$ifile"
+  done < "$ifile" | sort | uniq
 done
 
 #===============================================================================

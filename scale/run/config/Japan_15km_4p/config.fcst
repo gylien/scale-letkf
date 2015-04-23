@@ -19,7 +19,7 @@ TIME_LIMIT='00:30:00'
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=86400       # SCALE forecast length in the forecast mode (second)
+FCSTLEN=3600        # SCALE forecast length in the forecast mode (second)
 #FCSTOUT=$LCYCLE    # SCALE forecast output interval in the forecast mode (second)
 FCSTOUT=3600
 

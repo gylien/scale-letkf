@@ -8,15 +8,16 @@
 
 . config.main
 
-if (($# < 3)); then
+if (($# < 4)); then
   cat >&2 << EOF
 
 [post_scale_init.sh] Post-process the SCALE model outputs.
 
-Usage: $0 MYRANK STIME TMPDIR
+Usage: $0 MYRANK STIME MEM TMPDIR
 
   MYRANK   My rank number (not used)
   STIME    Start time (format: YYYYMMDDHHMMSS)
+  MEM      Name of the ensemble member
   TMPDIR   Temporary directory to run the model
 
 EOF
@@ -25,9 +26,13 @@ fi
 
 MYRANK="$1"; shift
 STIME="$1"; shift
+MEM="$1"; shift
 TMPDIR="$1"
 
 #===============================================================================
+
+mkdir -p $TMPOUT/${STIME}/bdy/${MEM}
+mv -f $TMPDIR/boundary*.nc $TMPOUT/${STIME}/bdy/${MEM}
 
 if ((LOG_OPT <= 2)); then
   mkdir -p $TMPOUT/${STIME}/log/scale_bdy

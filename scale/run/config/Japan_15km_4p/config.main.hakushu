@@ -36,11 +36,15 @@ TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
 LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
+LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
+                        # 1: Time-variant landuse files
 
 BDY_FORMAT=2            # 0: SCALE with exactly same domain settings (do not need additional preprocessing)
                         # 1: SCALE (requires compatible 'config.nml.scale_init')
                         # 2: WRF   (requires compatible 'config.nml.scale_init')
                         # 3: NICAM (requires compatible 'config.nml.scale_init')
+BDY_ENS=1               # 0: Fixed boundary files for all memebers
+                        # 1: Ensemble boundary files
 
 BDYINT=21600
 
@@ -59,10 +63,10 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=19          # Ensemble size
+MEMBER=9           # Ensemble size
 
-NNODES=2           # Number of nodes
-PPN=40             # Number of processes per node
+NNODES=3           # Number of nodes
+PPN=16             # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
@@ -79,8 +83,8 @@ MACHINE_TYPE=1              # Machine type
                             # 11: K-computer (micro jobs)
                             # 12: K-computer (interact jobs)
 
-TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
+TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
+TMPRUN_MODE=2               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)
                             #  2: share (staging to TMP)
