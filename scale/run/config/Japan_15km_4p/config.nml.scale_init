@@ -14,7 +14,7 @@
 /
 
 &PARAM_RESTART
- RESTART_OUTPUT         = .false.,
+[RESTART_OUTPUT]
 /
 
 &PARAM_TOPO

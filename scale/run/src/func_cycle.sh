@@ -222,7 +222,7 @@ else
 
     # anal
     #-------------------
-    if ((loop == 1)); then
+    if ((loop == 1)) && ((MAKEINIT != 1)); then
       for m in $(seq $mmean); do
         for q in $(seq $mem_np); do
           path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
@@ -315,6 +315,10 @@ else
 
         # anal
         #-------------------
+        if ((loop == 1)) && ((MAKEINIT == 1)); then
+          path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
+        fi
         if ((OUT_OPT <= 3)); then
           path="${atime}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}

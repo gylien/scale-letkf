@@ -254,13 +254,18 @@ else
 
         # anal
         #-------------------
-        for m in $(seq $fmember); do
-          mm=$(((c-1) * fmember + m))
-          for q in $(seq $mem_np); do
-            path="${time2}/anal/${name_m[$mm]}/init$(printf $SCALE_SFX $((q-1)))"
-            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+
+        # anal
+        #-------------------
+        if ((MAKEINIT != 1)); then
+          for m in $(seq $fmember); do
+            mm=$(((c-1) * fmember + m))
+            for q in $(seq $mem_np); do
+              path="${time2}/anal/${name_m[$mm]}/init$(printf $SCALE_SFX $((q-1)))"
+              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+            done
           done
-        done
+        fi
 
         # topo
         #-------------------
@@ -331,6 +336,13 @@ else
             #-------------------
             if ((BDYOUT_OPT <= 1)) && ((BDY_ENS == 1)); then
               path="${time2}/bdy/${name_m[$mm]}/boundary$(printf $SCALE_SFX $((q-1)))"
+              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+q))]}
+            fi
+
+            # anal
+            #-------------------
+            if ((MAKEINIT == 1)); then
+              path="${time2}/anal/${name_m[$mm]}/init$(printf $SCALE_SFX $((q-1)))"
               echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+q))]}
             fi
 
