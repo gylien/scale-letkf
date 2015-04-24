@@ -56,23 +56,18 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=300       # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=900       # SCALE forecast time when assimilation window ends (second)
-LCYCLE=600         # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=300      # Timeslot interval for 4D-LETKF (second)
-
-#WINDOW_S=10800     # SCALE forecast time when assimilation window starts (second)
-#WINDOW_E=32400     # SCALE forecast time when assimilation window ends (second)
-#LCYCLE=21600       # Length of a GFS-LETKF cycle (second)
-#LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=10800     # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=32400     # SCALE forecast time when assimilation window ends (second)
+LCYCLE=21600       # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
 
-MEMBER=7           # Ensemble size
+MEMBER=19          # Ensemble size
 
 NNODES=2           # Number of nodes
-PPN=16             # Number of processes per node
+PPN=40             # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
