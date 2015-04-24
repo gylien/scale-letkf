@@ -14,7 +14,8 @@
 /
 
 &PARAM_RESTART
- RESTART_OUTPUT         = .false.,
+[RESTART_OUTPUT]
+ RESTART_OUT_BASENAME   = "init",
 /
 
 &PARAM_TOPO

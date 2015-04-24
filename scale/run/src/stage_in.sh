@@ -29,7 +29,7 @@ if [ "$MYRANK" = 'a' ] ||
         mkdir -p "$(dirname ${TMPDAT}/${destin})"
         $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDAT}/${destin}"
       fi
-    done < "$STAGING_DIR/stagein.dat"
+    done < "$STAGING_DIR/stagein.dat" | sort | uniq
   fi
 
 fi
@@ -52,7 +52,7 @@ for ifile in $filelist; do
       mkdir -p "$(dirname ${TMPOUT}/${destin})"
       $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPOUT}/${destin}"
     fi
-  done < "$ifile"
+  done < "$ifile" | sort | uniq
 done
 
 #===============================================================================

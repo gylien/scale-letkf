@@ -72,24 +72,29 @@ ln -fs $DATADIR/rad/MIPAS/sum.atm $TMPDIR
 ln -fs $DATADIR/rad/MIPAS/win.atm $TMPDIR
 ln -fs $DATADIR/land/param.bucket.conf $TMPDIR
 
+ln -fs ${INIT}*.nc $TMPDIR
+ln -fs ${BDY}*.nc $TMPDIR
+ln -fs ${TOPO}*.nc $TMPDIR
+ln -fs ${LANDUSE}*.nc $TMPDIR
+
 ###
 ### Given $mem_np, do exact loop, use exact process
 ###
-for q in $(seq $MEM_NP); do
-  sfx=$(printf $SCALE_SFX $((q-1)))
-#  if [ -e "$INIT$sfx" ]; then
-    ln -fs $INIT$sfx $TMPDIR/init$sfx
-#  fi
-#  if [ -e "$BDY$sfx" ]; then
-    ln -fs $BDY$sfx $TMPDIR/boundary$sfx
-#  fi
-#  if [ -e "$TOPO$sfx" ]; then
-    ln -fs $TOPO$sfx $TMPDIR/topo$sfx
-#  fi
-#  if [ -e "$LANDUSE$sfx" ]; then
-    ln -fs $LANDUSE$sfx $TMPDIR/landuse$sfx
-#  fi
-done
+#for q in $(seq $MEM_NP); do
+#  sfx=$(printf $SCALE_SFX $((q-1)))
+##  if [ -e "$INIT$sfx" ]; then
+#    ln -fs $INIT$sfx $TMPDIR/init$sfx
+##  fi
+##  if [ -e "$BDY$sfx" ]; then
+#    ln -fs $BDY$sfx $TMPDIR/boundary$sfx
+##  fi
+##  if [ -e "$TOPO$sfx" ]; then
+#    ln -fs $TOPO$sfx $TMPDIR/topo$sfx
+##  fi
+##  if [ -e "$LANDUSE$sfx" ]; then
+#    ln -fs $LANDUSE$sfx $TMPDIR/landuse$sfx
+##  fi
+#done
 
 #===============================================================================
 
@@ -102,15 +107,6 @@ cat $TMPDAT/conf/config.nml.scale | \
         -e "s/\[TIME_DT_URBAN_RESTART\]/ TIME_DT_URBAN_RESTART = ${FCSTINT}.D0,/" \
         -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = ${HISTINT}.D0,/" \
     > $TMPDIR/run.conf
-
-
-#echo
-#echo $TMPDIR
-#echo '##### pre #####'
-#ls -lL $TMPDIR
-#echo
-
-
 
 #===============================================================================
 

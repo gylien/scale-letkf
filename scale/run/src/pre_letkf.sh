@@ -34,9 +34,9 @@ TMPDIR="$1"
 historybaselen=7
 initbaselen=4
 
-topodir=$(dirname $TOPO)
-topobase=$(basename $TOPO)
-topobaselen=${#topobase}
+#topodir=$(dirname $TOPO)
+#topobase=$(basename $TOPO)
+#topobaselen=${#topobase}
 
 #===============================================================================
 
@@ -50,9 +50,10 @@ if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd
   done
 #fi
 
-  for ifile in $(cd $topodir ; ls ${topobase}*.nc 2> /dev/null); do
-    ln -fs $topodir/${ifile} $TMPDIR/topo${ifile:$topobaselen}
-  done
+  ln -fs ${TOPO}*.nc $TMPDIR
+#  for ifile in $(cd $topodir ; ls ${topobase}*.nc 2> /dev/null); do
+#    ln -fs $topodir/${ifile} $TMPDIR/topo${ifile:$topobaselen}
+#  done
 else
   if [ -d "$TMPOUT/${ATIME}/obsgues/${MEM}" ]; then
     for ifile in $(cd $TMPOUT/${ATIME}/obsgues/${MEM} ; ls obsda.${MEM}.*.dat 2> /dev/null); do

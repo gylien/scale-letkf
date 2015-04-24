@@ -123,28 +123,18 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $COMMON_DIR/pdbash $TMPDAT/exec
   ln -fs $OBSUTIL_DIR/obsope $TMPDAT/exec
   ln -fs $LETKF_DIR/letkf $TMPDAT/exec
-  ln -fs $DATADIR/rad $TMPDAT
-  ln -fs $DATADIR/land $TMPDAT
-  ln -fs $ANLWRF $TMPDAT/wrf
-  ln -sf $OBS $TMPDAT/obs
+  ln -fs $DATADIR/rad $TMPDAT/rad
+  ln -fs $DATADIR/land $TMPDAT/land
+  ln -fs $DATADIR/topo $TMPDAT
+  ln -fs $DATADIR/landuse $TMPDAT
+
+  ln -fs $OBS $TMPDAT/obs
 
   safe_init_tmpdir $TMPDAT/conf
-  ln -fs $SCRP_DIR/config.nml.* $TMPDAT/conf
-
-  if ((PREP_TOPO == 1)); then
-    ln -fs $DATADIR/topo_prep $TMPDAT/topo_prep
-  else
-    ln -fs $DATADIR/topo $TMPDAT
-  fi
-  if ((PREP_LANDUSE == 1)); then
-    ln -fs $DATADIR/landuse_prep $TMPDAT/landuse_prep
-  else
-    ln -fs $DATADIR/landuse $TMPDAT
-  fi
+  ln -fs $SCRP_DIR/config.* $TMPDAT/conf
 #-------------------
 else
 #-------------------
-
   cat >> $STAGING_DIR/stagein.dat << EOF
 ${MODELDIR}/scale-les|exec/scale-les
 ${MODELDIR}/scale-les_init|exec/scale-les_init
@@ -160,58 +150,29 @@ ${DATADIR}/rad|rad
 ${DATADIR}/land|land
 EOF
 
-  time=$STIME
-  etime_anlwrf=$(datetime $ETIME $((CYCLEFLEN+ANLWRF_INT)) s)
-  while ((time <= etime_anlwrf)); do
-    path="wrfout_d01_${time}"
-    echo "${ANLWRF}/${path}|wrf/${path}" >> $STAGING_DIR/stagein.dat
-    if ((time == etime_anlwrf)); then
-      break
-    fi
-    time=$(datetime $time $ANLWRF_INT s)
-  done
-
-  if ((PREP_TOPO == 1)); then
-    for q in $(seq $mem_np); do
-      path="topo_prep/topo$(printf $SCALE_SFX $((q-1)))"
-      echo "${DATADIR}/${path}|${path}" >> $STAGING_DIR/stagein.dat
-    done
-  else
-    cat >> $STAGING_DIR/stagein.dat << EOF
-${SCRP_DIR}/config.nml.scale_pp_topo|conf/config.nml.scale_pp_topo
-${DATADIR}/topo/DEM50M/Products|topo/DEM50M/Products
-EOF
+  if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ]; then
+    echo "${SCRP_DIR}/config.nml.scale_pp|conf/config.nml.scale_pp" >> $STAGING_DIR/stagein.dat
   fi
-
-  if ((PREP_LANDUSE == 1)); then
-    for q in $(seq $mem_np); do
-      path="landuse_prep/landuse$(printf $SCALE_SFX $((q-1)))"
-      echo "${DATADIR}/${path}|${path}" >> $STAGING_DIR/stagein.dat
-    done
-  else
-    cat >> $STAGING_DIR/stagein.dat << EOF
-${SCRP_DIR}/config.nml.scale_pp_landuse|conf/config.nml.scale_pp_landuse
-${DATADIR}/landuse/LU100M/Products|landuse/LU100M/Products
-EOF
+  if [ "$TOPO_FORMAT" != 'prep' ]; then
+    echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
   fi
-
-  if ((MACHINE_TYPE == 10)); then
-    cat >> $STAGING_DIR/stagein.dat << EOF
-${COMMON_DIR}/datetime|exec/datetime
-EOF
+  if [ "$LANDUSE_FORMAT" != 'prep' ]; then
+    echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
   fi
 
   time=$(datetime $STIME $LCYCLE s)
   while ((time <= $(datetime $ETIME $LCYCLE s))); do
     for iobs in $(seq $OBSNUM); do
       if [ "${OBSNAME[$iobs]}" != '' ]; then
-        cat >> $STAGING_DIR/stagein.dat << EOF
-${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs/${OBSNAME[$iobs]}_${time}.dat
-EOF
+        echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs/${OBSNAME[$iobs]}_${time}.dat" >> $STAGING_DIR/stagein.dat
       fi
     done
     time=$(datetime $time $LCYCLE s)
   done
+
+  if ((MACHINE_TYPE == 10)); then
+    echo "${COMMON_DIR}/datetime|exec/datetime" >> $STAGING_DIR/stagein.dat
+  fi
 #-------------------
 fi
 
@@ -221,6 +182,27 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
 #-------------------
   mkdir -p $(dirname $TMPOUT)
   ln -fs $OUTDIR $TMPOUT
+
+  time=$STIME
+  while ((time <= ETIME)); do
+    #-------------------
+    if [ "$TOPO_FORMAT" = 'prep' ]; then
+      ln -fs ${DATA_TOPO} $TMPOUT/${time}/topo
+    fi
+    if [ "$LANDUSE_FORMAT" = 'prep' ]; then
+      if ((LANDUSE_UPDATE == 1)); then
+        ln -fs ${DATA_LANDUSE}/${time} $TMPOUT/${time}/landuse
+      else
+        ln -fs ${DATA_LANDUSE} $TMPOUT/${time}/landuse
+      fi
+    fi
+    time=$(datetime $time $LCYCLE s)
+    #-------------------
+  done
+
+  if ((BDY_FORMAT == 2)); then
+    ln -fs $DATA_BDY_WRF $TMPOUT/bdywrf
+  fi
 #-------------------
 else
 #-------------------
@@ -234,57 +216,127 @@ else
     else
       stgoutstep='stageout.out'
     fi
-
     #-------------------
     # stage-in
+    #-------------------
 
-    if ((loop == 1)); then
+    # anal
+    #-------------------
+    if ((loop == 1)) && ((MAKEINIT != 1)); then
       for m in $(seq $mmean); do
         for q in $(seq $mem_np); do
-
           path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      done
+    fi
 
+    # topo
+    #-------------------
+    if [ "$TOPO_FORMAT" = 'prep' ]; then
+      for m in $(seq $mmean); do
+        for q in $(seq $mem_np); do
+          pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
+          path="${time}/topo/topo$(printf $SCALE_SFX $((q-1)))"
+          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      done
+    fi
+
+    # landuse
+    #-------------------
+    if [ "$LANDUSE_FORMAT" = 'prep' ]; then
+      if [ -d "${DATA_LANDUSE}/${time}" ]; then
+        pathin="${DATA_LANDUSE}/${time}"
+      else
+        pathin="${DATA_LANDUSE}"
+      fi
+      for m in $(seq $mmean); do
+        for q in $(seq $mem_np); do
+          pathin="${pathin}/landuse$(printf $SCALE_SFX $((q-1)))"
+          path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      done
+    fi
+
+    # bdy
+    #-------------------
+    if ((BDY_FORMAT == 2)); then
+      for m in $(seq $mmean); do
+        for q in $(seq $mem_np); do
+          time_dby=${time}
+          etime_bdy=$(datetime ${time} $((CYCLEFLEN+BDYINT)) s)
+          while ((time_dby < etime_bdy)); do
+            if ((BDY_ENS == 1)); then
+              pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_dby}"
+              path="bdywrf/${name_m[$m]}/wrfout_${time_dby}"
+            else
+              pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
+              path="bdywrf/mean/wrfout_${time_dby}"
+            fi
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+            time_dby=$(datetime $time_dby $BDYINT s)
+          done
         done
       done
     fi
 
     #-------------------
     # stage-out
+    #-------------------
 
     for m in $(seq $MEMBER); do
-      for q in $(seq $mem_np); do
+      #-------------------
 
+      for q in $(seq $mem_np); do
+        #-------------------
+
+        # bdy [members]
+        #-------------------
+        if ((BDYOUT_OPT <= 1)) && ((BDY_ENS == 1)); then
+          path="${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
+        fi
+
+        # gues [history]
+        #-------------------
         if ((OUT_OPT <= 1)); then
           path="${atime}/gues/${name_m[$m]}/history$(printf $SCALE_SFX $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
         fi
+
+        # gues [restart]
+        #-------------------
         if ((OUT_OPT <= 2)); then
           path="${atime}/gues/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
         fi
 
+        # anal
+        #-------------------
+        if ((loop == 1)) && ((MAKEINIT == 1)); then
+          path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
+        fi
         if ((OUT_OPT <= 3)); then
           path="${atime}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
         fi
 
+        # obsgues
+        #-------------------
         if ((OBSOUT_OPT <= 2)); then
           path="${atime}/obsgues/${name_m[$m]}/obsda.${name_m[$m]}.$(printf $PROCESS_FMT $((q-1))).dat"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
         fi
 
+        #-------------------
       done
 
-      #-------------------
-
-      if ((LOG_OPT <= 3)); then
-        path="${time}/log/scale/${name_m[$m]}_LOG${SCALE_LOG_SFX}"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
-      fi
-#          if ((LOG_OPT <= 1)); then
-#            # perturb bdy log
-#          fi
+#      if ((LOG_OPT <= 1)); then
+#        # perturb bdy log
+#      fi
 
       #-------------------
     done
@@ -293,8 +345,30 @@ else
 
     for q in $(seq $mem_np); do
       #-------------------
-      # mean/sprd
 
+      # topo
+      #-------------------
+      if ((TOPOOUT_OPT <= 1)); then
+        path="${time}/topo/topo$(printf $SCALE_SFX $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]} # ues m=1 instead of m=mmean to enhance parallelization
+      fi
+
+      # landuse
+      #-------------------
+      if ((LANDUSEOUT_OPT <= 1)); then
+        path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]} # ues m=1 instead of m=mmean to enhance parallelization
+      fi
+
+      # bdy [mean]
+      #-------------------
+      if ((BDYOUT_OPT <= 2)) && ((BDY_ENS != 1)); then
+        path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]} # ues m=1 instead of m=mmean to enhance parallelization
+      fi
+
+      # mean/sprd
+      #-------------------
       if ((OUT_OPT <= 4)); then
         path="${atime}/gues/mean/init$(printf $SCALE_SFX $((q-1)))"
         echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
@@ -307,9 +381,8 @@ else
         echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
       fi
 
-      #-------------------
       # meanf
-
+      #-------------------
       if ((OUT_OPT <= 1)); then
         path="${atime}/gues/meanf/history$(printf $SCALE_SFX $((q-1)))"
         echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
@@ -319,33 +392,55 @@ else
         echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
       fi
 
+      # log [obsope/letkf]
+      #-------------------
+      if ((LOG_OPT <= 4)); then
+        path="${atime}/log/obsope/NOUT-$(printf $PROCESS_FMT $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+        path="${atime}/log/letkf/NOUT-$(printf $PROCESS_FMT $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+      fi
+
+      #-------------------
+    done
+
+    # log [scale_pp]
+    #-------------------
+    if ((LOG_OPT <= 2)); then
+      path="${time}/log/scale_pp/pp_LOG${SCALE_LOG_SFX}"
+      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+    fi
+
+    # log [scale_init: mean]
+    #-------------------
+    if ((LOG_OPT <= 2)) && ((BDY_ENS != 1)); then
+      path="${time}/log/scale_init/mean_init_LOG${SCALE_LOG_SFX}"
+      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+    fi
+
+    #-------------------
+
+    for m in $(seq $mmean); do
+      #-------------------
+
+      # log [scale_init: members]
+      #-------------------
+      if ((LOG_OPT <= 2)) && ((BDY_ENS == 1)); then
+        path="${time}/log/scale_init/${name_m[$m]}_init_LOG${SCALE_LOG_SFX}"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
+      fi
+
+      # log [scale]
+      #-------------------
+      if ((LOG_OPT <= 3)); then
+        path="${time}/log/scale/${name_m[$m]}_LOG${SCALE_LOG_SFX}"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
+      fi
+
       #-------------------
     done
 
     #-------------------
-
-    if ((LOG_OPT <= 4)); then
-      for m in 1 $mmean; do
-        for q in $(seq $mem_np); do
-          path="${atime}/log/obsope/NOUT-$(printf $PROCESS_FMT $(((m-1)*mem_np+q)))"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
-          path="${atime}/log/letkf/NOUT-$(printf $PROCESS_FMT $(((m-1)*mem_np+q)))"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
-        done
-      done
-    fi
-
-    if ((LOG_OPT <= 2)); then
-      path="${time}/log/scale_topo/pp_LOG${SCALE_LOG_SFX}"
-      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
-      path="${time}/log/scale_landuse/pp_LOG${SCALE_LOG_SFX}"
-      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
-      path="${time}/log/scale_bdy/init_LOG${SCALE_LOG_SFX}"
-      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
-    fi
-
-    #-------------------
-
     time=$(datetime $time $LCYCLE s)
     atime=$(datetime $time $LCYCLE s)
   done
@@ -374,6 +469,7 @@ boundary_sub () {
 #   $PREP_TOPO
 #   $PREP_LANDUSE
 #   $PROC_OPT
+#   $mkinit
 #-------------------------------------------------------------------------------
 
 if (($# < 1)); then
@@ -384,54 +480,32 @@ fi
 local NODEFILE="$1"
 
 #-------------------------------------------------------------------------------
-# topo
+# pp (topo/landuse)
 
-if ((PREP_TOPO != 1)); then
+if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ]; then
   pdbash $NODEFILE $PROC_OPT \
-    $SCRP_DIR/src/pre_scale_pp_topo.sh $time $TMPRUN/scale_pp_topo $TMPDAT/exec $TMPDAT
+    $SCRP_DIR/src/pre_scale_pp.sh $time $TMPRUN/scale_pp $TMPDAT/exec $TMPDAT
   mpirunf $NODEFILE \
-    $TMPRUN/scale_pp_topo ./scale-les_pp pp.conf
-  if ((LOG_OPT <= 2)); then
-    pdbash $NODEFILE $PROC_OPT \
-      $SCRP_DIR/src/post_scale_pp_topo.sh $time $TMPRUN/scale_pp_topo
-  fi
-fi
-
-#-------------------------------------------------------------------------------
-# landuse
-
-if ((PREP_LANDUSE != 1)); then
+    $TMPRUN/scale_pp ./scale-les_pp pp.conf
   pdbash $NODEFILE $PROC_OPT \
-    $SCRP_DIR/src/pre_scale_pp_landuse.sh $time $TMPRUN/scale_pp_landuse $TMPDAT/exec $TMPDAT
-  mpirunf $NODEFILE \
-    $TMPRUN/scale_pp_landuse ./scale-les_pp pp.conf
-  if ((LOG_OPT <= 2)); then
-    pdbash $NODEFILE $PROC_OPT \
-      $SCRP_DIR/src/post_scale_pp_landuse.sh $time $TMPRUN/scale_pp_landuse
-  fi
+    $SCRP_DIR/src/post_scale_pp.sh $time $TMPRUN/scale_pp
 fi
 
 #-------------------------------------------------------------------------------
 # init
 
-if ((PREP_TOPO == 1)); then
-  local topo_base="$TMPDAT/topo_prep/topo"
-else
-  local topo_base="$TMPRUN/scale_pp_topo/topo"
-fi
-if ((PREP_LANDUSE == 1)); then
-  local landuse_base="$TMPDAT/landuse_prep/landuse"
-else
-  local landuse_base="$TMPRUN/scale_pp_landuse/landuse"
-fi
-pdbash $NODEFILE $PROC_OPT \
-  $SCRP_DIR/src/pre_scale_init.sh $mem_np $topo_base $landuse_base $TMPDAT/wrf/wrfout_d01 \
-  $time $CYCLEFLEN $TMPRUN/scale_init $TMPDAT/exec $TMPDAT
-mpirunf $NODEFILE \
-  $TMPRUN/scale_init ./scale-les_init init.conf
-if ((LOG_OPT <= 2)); then
-  pdbash $NODEFILE $PROC_OPT \
-    $SCRP_DIR/src/post_scale_init.sh $time $TMPRUN/scale_init
+if ((BDY_ENS != 1)); then
+  if ((BDY_FORMAT == 2)); then
+    pdbash $NODEFILE $PROC_OPT \
+      $SCRP_DIR/src/pre_scale_init.sh $mem_np \
+      $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+      $TMPOUT/bdywrf/mean/wrfout \
+      $time $CYCLEFLEN $mkinit mean $TMPRUN/scale_init/mean $TMPDAT/exec $TMPDAT
+    mpirunf $NODEFILE \
+      $TMPRUN/scale_init/mean ./scale-les_init init.conf
+    pdbash $NODEFILE $PROC_OPT \
+      $SCRP_DIR/src/post_scale_init.sh $time $mkinit mean $TMPRUN/scale_init/mean
+  fi
 fi
 
 #-------------------------------------------------------------------------------
@@ -443,9 +517,14 @@ boundary () {
 #-------------------------------------------------------------------------------
 
 echo
-if ((PREP_BDY == 1)); then
-  echo "  ... skip this step (use prepared boundary files)"
-  return 0
+if ((BDY_ENS == 1)); then
+  echo "     -- topo/landuse"
+  echo
+fi
+
+mkinit=0
+if ((time == STIME)); then
+  mkinit=$MAKEINIT
 fi
 
 if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
@@ -456,10 +535,7 @@ if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cy
 #-------------------
 else # local run directory: run multiple members as needed
 #-------------------
-#  ipm=0
-  for m in $(seq $((repeat_mems <= MEMBER ? repeat_mems : MEMBER))); do
-#    ipm=$((ipm+1))
-#    if ((ipm > parallel_mems)); then wait; ipm=1; fi
+  for m in $(seq $((repeat_mems <= mmean ? repeat_mems : mmean))); do
     echo "  ${timefmt}: node ${node_m[$m]} [$(datetime_now)]"
 
     boundary_sub proc.${name_m[$m]} &
@@ -467,6 +543,40 @@ else # local run directory: run multiple members as needed
   done
   wait
 #-------------------
+fi
+
+#-------------------------------------------------------------------------------
+
+if ((BDY_ENS == 1)); then
+  echo
+  echo "     -- boundary"
+  echo
+
+  ipm=0
+  for m in $(seq $mmean); do
+    ipm=$((ipm+1))
+    if ((ipm > parallel_mems)); then wait; ipm=1; fi
+    echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+
+#    if ((PERTURB_BDY == 1)); then
+#      ...
+#    fi
+
+    if ((BDY_FORMAT == 2)); then
+      ( pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale_init.sh $mem_np \
+          $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+          $TMPOUT/bdywrf/mean/wrfout $time $CYCLEFLEN $mkinit ${name_m[$m]} \
+          $TMPRUN/scale_init/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
+        mpirunf proc.${name_m[$m]} \
+          $TMPRUN/scale_init/${name_m[$m]} ./scale-les_init init.conf ;
+        pdbash proc.${name_m[$m]} $PROC_OPT \
+          $SCRP_DIR/src/post_scale_init.sh $time $mkinit ${name_m[$m]} \
+          $TMPRUN/scale_init/${name_m[$m]} ) &
+    fi
+
+    sleep $BGJOB_INT
+  done
+  wait
 fi
 
 #-------------------------------------------------------------------------------
@@ -522,40 +632,29 @@ ensfcst () {
 
 echo
 
-if ((PREP_TOPO == 1)); then
-  topo_base="$TMPDAT/topo_prep/topo"
-else
-  topo_base="$TMPRUN/scale_pp_topo/topo"
-fi
-if ((PREP_LANDUSE == 1)); then
-  landuse_base="$TMPDAT/landuse_prep/landuse"
-else
-  landuse_base="$TMPRUN/scale_pp_landuse/landuse"
-fi
-
 ipm=0
 for m in $(seq $mmean); do
   ipm=$((ipm+1))
   if ((ipm > parallel_mems)); then wait; ipm=1; fi
   echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-  if ((PERTURB_BDY == 1)); then
-######
-    echo "not finished yet..."
-#      bdy_base="$TMPRUN/pertbdy/${name_m[$m]}/boundary"
-######
-  elif ((PREP_BDY == 1)); then
-    bdy_base="$TMPDAT/bdy_prep/bdy_${time}"
+#  if ((PERTURB_BDY == 1)); then
+#    ...
+#  fi
+
+  if ((BDY_ENS == 1)); then
+    bdy_base="$TMPOUT/${time}/bdy/${name_m[$m]}/boundary"
   else
-    bdy_base="$TMPRUN/scale_init/boundary"
+    bdy_base="$TMPOUT/${time}/bdy/mean/boundary"
   fi
   ( pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
-      $TMPOUT/${time}/anal/${name_m[$m]}/init $bdy_base $topo_base $landuse_base \
-      ${time} $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
+      $TMPOUT/${time}/anal/${name_m[$m]}/init $bdy_base \
+      $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+      $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
     mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \
       ./scale-les run.conf > /dev/null ;
     pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_scale.sh $mem_np \
-      ${time} ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/${name_m[$m]} $myname1 ) &
+      $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/${name_m[$m]} $myname1 ) &
 
   sleep $BGJOB_INT
 done
@@ -616,7 +715,7 @@ for m in $(seq $MEMBER); do
 #  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
   pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_obsope.sh \
-    ${atime} ${name_m[$m]} $TMPRUN/obsope &
+    $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope &
 
   sleep $BGJOB_INT
 done
@@ -632,12 +731,6 @@ letkf () {
 
 echo
 
-if ((PREP_TOPO == 1)); then
-  topo_base="$TMPDAT/topo_prep/topo"
-else
-  topo_base="$TMPRUN/scale_pp_topo/topo"
-fi
-
 pdbash node $PROC_OPT $SCRP_DIR/src/pre_letkf_node.sh \
   $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
   $mem_nodes $mem_np $slot_s $slot_e $slot_b
@@ -649,7 +742,7 @@ for m in $(seq $mmean); do
   echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
   pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_letkf.sh \
-    $topo_base $atime ${name_m[$m]} $TMPRUN/letkf &
+    $TMPOUT/${time}/topo/topo $atime ${name_m[$m]} $TMPRUN/letkf &
 
   sleep $BGJOB_INT
 done
@@ -666,7 +759,7 @@ for m in $(seq $mmean); do
 #  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
   pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_letkf.sh \
-    ${atime} ${name_m[$m]} $TMPRUN/letkf &
+    $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf &
 
   sleep $BGJOB_INT
 done
