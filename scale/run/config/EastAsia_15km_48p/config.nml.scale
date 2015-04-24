@@ -7,9 +7,9 @@
  TIME_STARTMS               = 0.D0,
 [TIME_DURATION]
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 60.0D0,
+ TIME_DT                    = 30.0D0,
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = 15.0D0,
+ TIME_DT_ATMOS_DYN          = 7.5D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
  TIME_DT_ATMOS_PHY_MP       = 60.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
