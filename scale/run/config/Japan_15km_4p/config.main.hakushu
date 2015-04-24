@@ -23,7 +23,8 @@ DATA_BDY_SCALE=
 DATA_BDY_WRF="/data6/gylien/model/ncepfnl_large/wrfout2"
 DATA_BDY_NICAM=
 
-OBS="/data6/gylien/obs/prepbufr_obs_eastasia" # directory of observation data in LETKF obs format
+OBS="/data6/gylien/obs/prepbufr_obs_eastasia_test" # directory of observation data in LETKF obs format
+#OBS="/data6/gylien/obs/prepbufr_obs_eastasia" # directory of observation data in LETKF obs format
 OBSNCEP="/data6/gylien/obs/prepbufr"  # directory of observation data in NCEP BUFR format
 
 #===============================================================================
@@ -55,10 +56,15 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=10800     # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=32400     # SCALE forecast time when assimilation window ends (second)
-LCYCLE=21600       # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=300       # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=900       # SCALE forecast time when assimilation window ends (second)
+LCYCLE=600         # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=300      # Timeslot interval for 4D-LETKF (second)
+
+#WINDOW_S=10800     # SCALE forecast time when assimilation window starts (second)
+#WINDOW_E=32400     # SCALE forecast time when assimilation window ends (second)
+#LCYCLE=21600       # Length of a GFS-LETKF cycle (second)
+#LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings

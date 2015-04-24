@@ -354,7 +354,7 @@ else
           # log [scale_init: members]
           #-------------------
           if ((LOG_OPT <= 2)) && ((BDY_ENS == 1)); then
-            path="${time2}/log/scale_bdy/${name_m[$mm]}_init_LOG${SCALE_LOG_SFX}"
+            path="${time2}/log/scale_init/${name_m[$mm]}_init_LOG${SCALE_LOG_SFX}"
             echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+1))]}
           fi
 
@@ -411,7 +411,7 @@ else
         # log [scale_init: mean]
         #-------------------
         if ((LOG_OPT <= 2)) && ((BDY_ENS != 1)); then
-          path="${time2}/log/scale_bdy/mean_init_LOG${SCALE_LOG_SFX}"
+          path="${time2}/log/scale_init/mean_init_LOG${SCALE_LOG_SFX}"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$((tmpidx+1))]}
         fi
 

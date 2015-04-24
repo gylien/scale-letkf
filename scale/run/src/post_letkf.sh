@@ -67,12 +67,12 @@ if [ "$MEM" == '0001' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0
   done
 fi
 
-if [ "$MEM" == 'mean' ] && ((LOG_OPT <= 4)); then ###### using a variable for 'mean'
-  mkdir -p $TMPOUT/${ATIME}/log/letkf
-  for q in $(seq $MEM_NP); do
-    mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((MEMBER*MEM_NP+q-1))) $TMPOUT/${ATIME}/log/letkf # m=MEMBER+1 (mmean is not declared in this script)
-  done
-fi
+#if [ "$MEM" == 'mean' ] && ((LOG_OPT <= 4)); then ###### using a variable for 'mean'
+#  mkdir -p $TMPOUT/${ATIME}/log/letkf
+#  for q in $(seq $MEM_NP); do
+#    mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((MEMBER*MEM_NP+q-1))) $TMPOUT/${ATIME}/log/letkf # m=MEMBER+1 (mmean is not declared in this script)
+#  done
+#fi
 
 #===============================================================================
 

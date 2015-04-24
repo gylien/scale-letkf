@@ -388,6 +388,15 @@ else
         echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
       fi
 
+      # log [obsope/letkf]
+      #-------------------
+      if ((LOG_OPT <= 4)); then
+        path="${atime}/log/obsope/NOUT-$(printf $PROCESS_FMT $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+        path="${atime}/log/letkf/NOUT-$(printf $PROCESS_FMT $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+      fi
+
       #-------------------
     done
 
@@ -401,7 +410,7 @@ else
     # log [scale_init: mean]
     #-------------------
     if ((LOG_OPT <= 2)) && ((BDY_ENS != 1)); then
-      path="${time}/log/scale_bdy/mean_init_LOG${SCALE_LOG_SFX}"
+      path="${time}/log/scale_init/mean_init_LOG${SCALE_LOG_SFX}"
       echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
     fi
 
@@ -413,7 +422,7 @@ else
       # log [scale_init: members]
       #-------------------
       if ((LOG_OPT <= 2)) && ((BDY_ENS == 1)); then
-        path="${time}/log/scale_bdy/${name_m[$m]}_init_LOG${SCALE_LOG_SFX}"
+        path="${time}/log/scale_init/${name_m[$m]}_init_LOG${SCALE_LOG_SFX}"
         echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
       fi
 
@@ -426,19 +435,6 @@ else
 
       #-------------------
     done
-
-    # log [obsope/letkf]
-    #-------------------
-    if ((LOG_OPT <= 4)); then
-      for m in 1 $mmean; do
-        for q in $(seq $mem_np); do
-          path="${atime}/log/obsope/NOUT-$(printf $PROCESS_FMT $(((m-1)*mem_np+q-1)))"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
-          path="${atime}/log/letkf/NOUT-$(printf $PROCESS_FMT $(((m-1)*mem_np+q-1)))"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
-        done
-      done
-    fi
 
     #-------------------
     time=$(datetime $time $LCYCLE s)
