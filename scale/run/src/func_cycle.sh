@@ -330,20 +330,6 @@ else
         #-------------------
       done
 
-      # log [scale_init: members]
-      #-------------------
-      if ((LOG_OPT <= 2)) && ((BDY_ENS == 1)); then
-        path="${time}/log/scale_bdy/${name_m[$m]}_init_LOG${SCALE_LOG_SFX}"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
-      fi
-
-      # log [scale]
-      #-------------------
-      if ((LOG_OPT <= 3)); then
-        path="${time}/log/scale/${name_m[$m]}_LOG${SCALE_LOG_SFX}"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
-      fi
-
 #      if ((LOG_OPT <= 1)); then
 #        # perturb bdy log
 #      fi
@@ -419,14 +405,36 @@ else
       echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
     fi
 
+    #-------------------
+
+    for m in $(seq $mmean); do
+      #-------------------
+
+      # log [scale_init: members]
+      #-------------------
+      if ((LOG_OPT <= 2)) && ((BDY_ENS == 1)); then
+        path="${time}/log/scale_bdy/${name_m[$m]}_init_LOG${SCALE_LOG_SFX}"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
+      fi
+
+      # log [scale]
+      #-------------------
+      if ((LOG_OPT <= 3)); then
+        path="${time}/log/scale/${name_m[$m]}_LOG${SCALE_LOG_SFX}"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
+      fi
+
+      #-------------------
+    done
+
     # log [obsope/letkf]
     #-------------------
     if ((LOG_OPT <= 4)); then
       for m in 1 $mmean; do
         for q in $(seq $mem_np); do
-          path="${atime}/log/obsope/NOUT-$(printf $PROCESS_FMT $(((m-1)*mem_np+q)))"
+          path="${atime}/log/obsope/NOUT-$(printf $PROCESS_FMT $(((m-1)*mem_np+q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
-          path="${atime}/log/letkf/NOUT-$(printf $PROCESS_FMT $(((m-1)*mem_np+q)))"
+          path="${atime}/log/letkf/NOUT-$(printf $PROCESS_FMT $(((m-1)*mem_np+q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
         done
       done
@@ -701,7 +709,7 @@ for m in $(seq $MEMBER); do
 #  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
   pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_obsope.sh \
-    ${atime} ${name_m[$m]} $TMPRUN/obsope &
+    $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope &
 
   sleep $BGJOB_INT
 done
@@ -745,7 +753,7 @@ for m in $(seq $mmean); do
 #  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
   pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_letkf.sh \
-    ${atime} ${name_m[$m]} $TMPRUN/letkf &
+    $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf &
 
   sleep $BGJOB_INT
 done
