@@ -251,6 +251,9 @@ else
         #-------------------
         # stage-in
         #-------------------
+
+        # anal
+        #-------------------
         for m in $(seq $fmember); do
           mm=$(((c-1) * fmember + m))
           for q in $(seq $mem_np); do
@@ -258,6 +261,8 @@ else
             echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
           done
         done
+
+        # topo
         #-------------------
         if [ "$TOPO_FORMAT" = 'prep' ]; then
           for m in $(seq $fmember); do
@@ -269,6 +274,8 @@ else
             done
           done
         fi
+
+        # landuse
         #-------------------
         if [ "$LANDUSE_FORMAT" = 'prep' ]; then
           if ((LANDUSE_UPDATE == 1)); then
@@ -285,6 +292,8 @@ else
             done
           done
         fi
+
+        # bdy
         #-------------------
         if ((BDY_FORMAT == 2)); then
           for m in $(seq $fmember); do
@@ -306,44 +315,106 @@ else
             done
           done
         fi
+
         #-------------------
         # stage-out
         #-------------------
+
         for m in $(seq $fmember); do
           mm=$(((c-1) * fmember + m))
+          #-------------------
+
           for q in $(seq $mem_np); do
+            #-------------------
+
+            # bdy [members]
+            #-------------------
+            if ((BDYOUT_OPT <= 1)) && ((BDY_ENS == 1)); then
+              path="${time2}/bdy/${name_m[$mm]}/boundary$(printf $SCALE_SFX $((q-1)))"
+              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+q))]}
+            fi
+
+            # fcst [history]
+            #-------------------
             if ((OUT_OPT <= 2)); then
               path="${time2}/fcst/${name_m[$mm]}/history$(printf $SCALE_SFX $((q-1)))"
               echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+q))]}
             fi
+
+            # fcst [restart]
+            #-------------------
             if ((OUT_OPT <= 1)); then
               path="${time2}/fcst/${name_m[$mm]}/init_$(datetime ${time2} $FCSTLEN s)$(printf $SCALE_SFX $((q-1)))"
               echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+q))]}
             fi
+
+            #-------------------
           done
 
+          # log [scale_init: members]
+          #-------------------
+          if ((LOG_OPT <= 2)) && ((BDY_ENS == 1)); then
+            path="${time2}/log/scale_bdy/${name_m[$mm]}_init_LOG${SCALE_LOG_SFX}"
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+1))]}
+          fi
+
+          # log [scale]
           #-------------------
           if ((LOG_OPT <= 3)); then
             path="${time2}/log/scale/${name_m[$mm]}_LOG${SCALE_LOG_SFX}"
             echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+1))]}
           fi
+
 #          if ((LOG_OPT <= 1)); then
 #            # perturb bdy log
 #          fi
+
           #-------------------
         done
         #-------------------
-        if ((LOG_OPT <= 2)); then
-          if ((repeat_mems <= fmember)); then
-            tmpidx=1                              # mm=1
-          else
-            tmpidx=$((((c-1)*fmember)*mem_np+1))  # mm=$(((c-1) * fmember + 1))
-          fi
-          path="${time2}/log/scale_pp/pp_LOG${SCALE_LOG_SFX}"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$tmpidx]}
-          path="${time2}/log/scale_bdy/init_LOG${SCALE_LOG_SFX}"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$tmpidx]}
+
+        if ((repeat_mems <= fmember)); then
+          tmpidx=0                            # mm=1
+        else
+          tmpidx=$((((c-1)*fmember)*mem_np))  # mm=$(((c-1) * fmember + 1))
         fi
+
+        # topo/landuse
+        #-------------------
+        for q in $(seq $mem_np); do
+          if ((TOPOOUT_OPT <= 1)); then
+            path="${time2}/topo/topo$(printf $SCALE_SFX $((q-1)))"
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$((tmpidx+q))]}
+          fi
+          if ((LANDUSEOUT_OPT <= 1)); then
+            path="${time2}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$((tmpidx+q))]}
+          fi
+        done
+
+        # bdy [mean]
+        #-------------------
+        for q in $(seq $mem_np); do
+          if ((BDYOUT_OPT <= 2)) && ((BDY_ENS != 1)); then
+            path="${time2}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$((tmpidx+q))]}
+          fi
+        done
+
+        # log [scale_pp]
+        #-------------------
+        if ((LOG_OPT <= 2)); then
+          path="${time2}/log/scale_pp/pp_LOG${SCALE_LOG_SFX}"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$((tmpidx+1))]}
+        fi
+
+        # log [scale_init: mean]
+        #-------------------
+        if ((LOG_OPT <= 2)) && ((BDY_ENS != 1)); then
+          path="${time2}/log/scale_bdy/mean_init_LOG${SCALE_LOG_SFX}"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$((tmpidx+1))]}
+        fi
+
         #-------------------
       fi
     done

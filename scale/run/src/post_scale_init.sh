@@ -37,7 +37,7 @@ mv -f $TMPDIR/boundary*.nc $TMPOUT/${STIME}/bdy/${MEM}
 if ((LOG_OPT <= 2)); then
   mkdir -p $TMPOUT/${STIME}/log/scale_bdy
   if [ -f "$TMPDIR/init_LOG${SCALE_LOG_SFX}" ]; then
-    mv -f $TMPDIR/init_LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale_bdy/init_LOG${SCALE_LOG_SFX}
+    mv -f $TMPDIR/init_LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale_bdy/${MEM}_init_LOG${SCALE_LOG_SFX}
   fi
 fi
 
