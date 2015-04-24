@@ -469,6 +469,7 @@ boundary_sub () {
 #   $PREP_TOPO
 #   $PREP_LANDUSE
 #   $PROC_OPT
+#   $mkinit
 #-------------------------------------------------------------------------------
 
 if (($# < 1)); then
@@ -499,11 +500,11 @@ if ((BDY_ENS != 1)); then
       $SCRP_DIR/src/pre_scale_init.sh $mem_np \
       $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
       $TMPOUT/bdywrf/mean/wrfout \
-      $time $CYCLEFLEN mean $TMPRUN/scale_init/mean $TMPDAT/exec $TMPDAT
+      $time $CYCLEFLEN $mkinit mean $TMPRUN/scale_init/mean $TMPDAT/exec $TMPDAT
     mpirunf $NODEFILE \
       $TMPRUN/scale_init/mean ./scale-les_init init.conf
     pdbash $NODEFILE $PROC_OPT \
-      $SCRP_DIR/src/post_scale_init.sh $time mean $TMPRUN/scale_init/mean
+      $SCRP_DIR/src/post_scale_init.sh $time $mkinit mean $TMPRUN/scale_init/mean
   fi
 fi
 
@@ -519,6 +520,11 @@ echo
 if ((BDY_ENS == 1)); then
   echo "     -- topo/landuse"
   echo
+fi
+
+mkinit=0
+if ((time == STIME)); then
+  mkinit=$MAKEINIT
 fi
 
 if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
@@ -559,12 +565,12 @@ if ((BDY_ENS == 1)); then
     if ((BDY_FORMAT == 2)); then
       ( pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale_init.sh $mem_np \
           $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
-          $TMPOUT/bdywrf/mean/wrfout $time $CYCLEFLEN ${name_m[$m]} \
+          $TMPOUT/bdywrf/mean/wrfout $time $CYCLEFLEN $mkinit ${name_m[$m]} \
           $TMPRUN/scale_init/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
         mpirunf proc.${name_m[$m]} \
           $TMPRUN/scale_init/${name_m[$m]} ./scale-les_init init.conf ;
         pdbash proc.${name_m[$m]} $PROC_OPT \
-          $SCRP_DIR/src/post_scale_init.sh $time ${name_m[$m]} \
+          $SCRP_DIR/src/post_scale_init.sh $time $mkinit ${name_m[$m]} \
           $TMPRUN/scale_init/${name_m[$m]} ) &
     fi
 

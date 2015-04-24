@@ -517,11 +517,11 @@ if ((BDY_ENS != 1)); then
       $SCRP_DIR/src/pre_scale_init.sh $mem_np \
       $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \
       $TMPOUT/bdywrf/mean/wrfout \
-      ${stimes[$c]} $FCSTLEN mean $TMPRUN/scale_init/${cf}_mean $TMPDAT/exec $TMPDAT
+      ${stimes[$c]} $FCSTLEN $MAKEINIT mean $TMPRUN/scale_init/${cf}_mean $TMPDAT/exec $TMPDAT
     mpirunf $NODEFILE \
       $TMPRUN/scale_init/${cf}_mean ./scale-les_init init.conf
     pdbash $NODEFILE $PROC_OPT \
-      $SCRP_DIR/src/post_scale_init.sh ${stimes[$c]} mean $TMPRUN/scale_init/${cf}_mean
+      $SCRP_DIR/src/post_scale_init.sh ${stimes[$c]} $MAKEINIT mean $TMPRUN/scale_init/${cf}_mean
   fi
 fi
 
@@ -613,12 +613,12 @@ if ((BDY_ENS == 1)); then
       if ((BDY_FORMAT == 2)); then
         ( pdbash proc.${cf}.${name_m[$mm]} $PROC_OPT $SCRP_DIR/src/pre_scale_init.sh $mem_np \
             $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \
-            $TMPOUT/bdywrf/${name_m[$mm]}/wrfout ${stimes[$c]} $FCSTLEN ${name_m[$mm]} \
+            $TMPOUT/bdywrf/${name_m[$mm]}/wrfout ${stimes[$c]} $FCSTLEN $MAKEINIT ${name_m[$mm]} \
             $TMPRUN/scale_init/${cf}_${name_m[$mm]} $TMPDAT/exec $TMPDAT ;
           mpirunf proc.${cf}.${name_m[$mm]} \
             $TMPRUN/scale_init/${cf}_${name_m[$mm]} ./scale-les_init init.conf ;
           pdbash proc.${cf}.${name_m[$mm]} $PROC_OPT \
-            $SCRP_DIR/src/post_scale_init.sh ${stimes[$c]} ${name_m[$mm]} \
+            $SCRP_DIR/src/post_scale_init.sh ${stimes[$c]} $MAKEINIT ${name_m[$mm]} \
             $TMPRUN/scale_init/${cf}_${name_m[$mm]} ) &
       fi
 

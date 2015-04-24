@@ -42,7 +42,13 @@ mv -f $TMPDIR/boundary*.nc $TMPOUT/${STIME}/bdy/${MEM}
 
 if ((MKINIT == 1)); then
   mkdir -p $TMPOUT/${STIME}/anal/${MEM}
+
+ls $TMPDIR
+
   for ifile in $(cd $TMPDIR ; ls init_*.nc 2> /dev/null); do
+
+echo "    mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}/init${ifile:$initbaselen}"
+
     mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}/init${ifile:$initbaselen}
   done
 fi

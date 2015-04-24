@@ -33,7 +33,7 @@ ADAPTINFL=1         # Adaptive inflation
 
 #===============================================================================
 
-MAKEINIT=0       # 0: No
+MAKEINIT=1       # 0: No
                  # 1: Yes
 PERTURB_BDY=0    # 0: No
                  # 1: Yes
@@ -62,7 +62,7 @@ LANDUSEOUT_OPT=1 # 1:   o
 
                  #      bdy
                  #      mean members
-BDYOUT_OPT=1     # 1:   o    o
+BDYOUT_OPT=3     # 1:   o    o
                  # 2:   o
                  # 3:   (none)
 
