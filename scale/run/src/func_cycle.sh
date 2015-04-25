@@ -247,13 +247,13 @@ else
     #-------------------
     if [ "$LANDUSE_FORMAT" = 'prep' ]; then
       if [ -d "${DATA_LANDUSE}/${time}" ]; then
-        pathin="${DATA_LANDUSE}/${time}"
+        pathin_pfx="${DATA_LANDUSE}/${time}"
       else
-        pathin="${DATA_LANDUSE}"
+        pathin_pfx="${DATA_LANDUSE}"
       fi
       for m in $(seq $mmean); do
         for q in $(seq $mem_np); do
-          pathin="${pathin}/landuse$(printf $SCALE_SFX $((q-1)))"
+          pathin="${pathin_pfx}/landuse$(printf $SCALE_SFX $((q-1)))"
           path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
           echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
         done
@@ -263,8 +263,14 @@ else
     # bdy
     #-------------------
     if ((BDY_FORMAT == 2)); then
-      for m in $(seq $mmean); do
-        for q in $(seq $mem_np); do
+
+######
+      for m in $(seq 1); do
+        for q in $(seq 1); do
+######
+
+#      for m in $(seq $mmean); do
+#        for q in $(seq $mem_np); do
           time_dby=${time}
           etime_bdy=$(datetime ${time} $((CYCLEFLEN+BDYINT)) s)
           while ((time_dby < etime_bdy)); do

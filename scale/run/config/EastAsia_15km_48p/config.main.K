@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf_test/EastAsia_15km_48p_24h" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf_test/EastAsia_15km_48p_rdninit_24h" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -17,8 +17,8 @@ LOGDIR="$DIR/log"
 MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
-DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo/EastAsia_15km_48p.bf10"
-DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse/EastAsia_15km_48p.bf10"
+DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p.bf10"
+DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_15km_48p.bf10"
 DATA_BDY_SCALE=
 DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl_large/wrfout_rdninit"
 DATA_BDY_NICAM=
@@ -29,11 +29,11 @@ OBSNCEP="/volume63/data/hp150019/gylien/obs/prepbufr" # directory of observation
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -43,7 +43,7 @@ BDY_FORMAT=2            # 0: SCALE with exactly same domain settings (do not nee
                         # 1: SCALE (requires compatible 'config.nml.scale_init')
                         # 2: WRF   (requires compatible 'config.nml.scale_init')
                         # 3: NICAM (requires compatible 'config.nml.scale_init')
-BDY_ENS=1               # 0: Fixed boundary files for all memebers
+BDY_ENS=0               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 
 BDYINT=21600

@@ -17,8 +17,8 @@ LOGDIR="$DIR/log"
 MODELDIR="/volume63/data/ra000015/gylien/scale/scale-les/test/case_real/check_japan/run"
 DATADIR="/volume63/data/ra000015/gylien/scale-letkf/database"
 
-DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo/EastAsia_15km_48p.bf10"
-DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse/EastAsia_15km_48p.bf10"
+DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p.bf10"
+DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_15km_48p.bf10"
 DATA_BDY_SCALE=
 DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl_large/wrfout_rdninit"
 DATA_BDY_NICAM=
