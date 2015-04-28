@@ -40,11 +40,43 @@ if [ -s "$STAGING_DIR/stagein.dat" ]; then
         fi
       fi
     fi
-  done < "$STAGING_DIR/stagein.dat" | sort | uniq
+  done < "$STAGING_DIR/stagein.dat" # | sort | uniq
 fi
 
 #-------------------------------------------------------------------------------
 # stage-in: Files in TMPOUT directory
+
+if [ -s "$STAGING_DIR/stagein.out" ]; then
+  while read line; do
+    source="$(echo $line | cut -d '|' -s -f1)"
+    destin="$(echo $line | cut -d '|' -s -f2)"
+    if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
+      if [ -d "$source" ]; then
+        if ((USE_RANKDIR == 1)); then
+          if ((TMPOUT_MODE == 3)); then
+            echo "#PJM --stgin-dir \"rank=* ${source} %r:${TMPOUT_STG}/${destin} recursive=10\""
+          else
+            echo "#PJM --stgin-dir \"rank=0 ${source} 0:${TMPOUT_STG}/${destin} recursive=10\""
+          fi
+        else
+          echo "#PJM --stgin-dir \"${source} ${TMPOUT_STG}/${destin} recursive=10\""
+        fi
+      else
+        if ((USE_RANKDIR == 1)); then
+          if ((TMPOUT_MODE == 3)); then
+            echo "#PJM --stgin \"rank=* ${source} %r:${TMPOUT_STG}/${destin}\""
+          else
+            echo "#PJM --stgin \"rank=0 ${source} 0:.${TMPOUT_STG}/${destin}\""
+          fi
+        else
+          echo "#PJM --stgin \"${source} ${TMPOUT_STG}/${destin}\""
+        fi
+      fi
+    fi
+  done < "$STAGING_DIR/stagein.out" # | sort | uniq
+fi
+
+#-------------------
 
 i=0
 while [ -s "$STAGING_DIR/stagein.out.$((i+1))" ]; do
@@ -58,7 +90,7 @@ while [ -s "$STAGING_DIR/stagein.out.$((i+1))" ]; do
         echo "#PJM --stgin \"${source} ${TMPOUT_STG}/${destin}\""
       fi
     fi
-  done < "$STAGING_DIR/stagein.out.$((i+1))" | sort | uniq
+  done < "$STAGING_DIR/stagein.out.$((i+1))" # | sort | uniq
   i=$((i+1))
 done
 
@@ -109,7 +141,7 @@ while [ -s "$STAGING_DIR/stageout.out.$((i+1))" ]; do
         echo "#PJM --stgout \"${TMPOUT_STG}/${source} ${destin}\""
       fi
     fi
-  done < "$STAGING_DIR/stageout.out.$((i+1))" | sort | uniq
+  done < "$STAGING_DIR/stageout.out.$((i+1))" # | sort | uniq
   i=$((i+1))
 done
 

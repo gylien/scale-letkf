@@ -219,10 +219,6 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
         fi
         time=$(datetime $time $LCYCLE s)
         #-------------------
-#        if ((BDY_FORMAT == 2)); then
-#          ...
-#        fi
-        #-------------------
       fi
     done
     time=$(datetime $time $((lcycles * CYCLE)) s)
@@ -270,13 +266,10 @@ else
         # topo
         #-------------------
         if [ "$TOPO_FORMAT" = 'prep' ]; then
-          for m in $(seq $fmember); do
-            mm=$(((c-1) * fmember + m))
-            for q in $(seq $mem_np); do
-              pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
-              path="${time2}/topo/topo$(printf $SCALE_SFX $((q-1)))"
-              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
-            done
+          for q in $(seq $mem_np); do
+            pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
+            path="${time2}/topo/topo$(printf $SCALE_SFX $((q-1)))"
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
           done
         fi
 
@@ -284,40 +277,14 @@ else
         #-------------------
         if [ "$LANDUSE_FORMAT" = 'prep' ]; then
           if ((LANDUSE_UPDATE == 1)); then
-            pathin="${DATA_LANDUSE}/${time2}"
+            pathin_pfx="${DATA_LANDUSE}/${time2}"
           else
-            pathin="${DATA_LANDUSE}"
+            pathin_pfx="${DATA_LANDUSE}"
           fi
-          for m in $(seq $fmember); do
-            mm=$(((c-1) * fmember + m))
-            for q in $(seq $mem_np); do
-              pathin="${pathin}/landuse$(printf $SCALE_SFX $((q-1)))"
-              path="${time2}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
-              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
-            done
-          done
-        fi
-
-        # bdy
-        #-------------------
-        if ((BDY_FORMAT == 2)); then
-          for m in $(seq $fmember); do
-            mm=$(((c-1) * fmember + m))
-            for q in $(seq $mem_np); do
-              time_dby=${time2}
-              etime_bdy=$(datetime ${time2} $((FCSTLEN+BDYINT)) s)
-              while ((time_dby < etime_bdy)); do
-                if ((BDY_ENS == 1)); then
-                  pathin="$DATA_BDY_WRF/${name_m[$mm]}/wrfout_${time_dby}"
-                  path="bdywrf/${name_m[$mm]}/wrfout_${time_dby}"
-                else
-                  pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
-                  path="bdywrf/mean/wrfout_${time_dby}"
-                fi
-                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
-                time_dby=$(datetime $time_dby $BDYINT s)
-              done
-            done
+          for q in $(seq $mem_np); do
+            pathin="${pathin_pfx}/landuse$(printf $SCALE_SFX $((q-1)))"
+            path="${time2}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
           done
         fi
 
@@ -433,9 +400,42 @@ else
 
     time=$(datetime $time $((lcycles * CYCLE)) s)
   done
+
+  #-------------------
+
+  time_dby=${STIME}
+  etime_bdy=$(datetime ${ETIME} $((FCSTLEN+BDYINT)) s)
+  while ((time_dby < etime_bdy)); do
+    #-------------------
+    # stage-in
+    #-------------------
+
+    # bdy
+    #-------------------
+    if ((BDY_FORMAT == 2)); then
+      if ((BDY_ENS == 1)); then
+        for m in $(seq $fmember); do
+          mm=$(((c-1) * fmember + m))
+          for q in $(seq $mem_np); do
+            pathin="$DATA_BDY_WRF/${name_m[$mm]}/wrfout_${time_dby}"
+            path="bdywrf/${name_m[$mm]}/wrfout_${time_dby}"
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+          done
+        done
+      else
+        for q in $(seq $mem_np); do
+          pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
+          path="bdywrf/mean/wrfout_${time_dby}"
+          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+        done
+      fi
+    fi
+    #-------------------
+
+    time_dby=$(datetime $time_dby $BDYINT s)
+  done
 #-------------------
 fi
-
 
 
 #for c in `seq $CYCLES`; do

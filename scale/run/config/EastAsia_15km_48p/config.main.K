@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf_test/EastAsia_15km_48p_rdninit_24h" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf_test/EastAsia_15km_48p_24h_noda" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -23,7 +23,8 @@ DATA_BDY_SCALE=
 DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl_large/wrfout_rdninit"
 DATA_BDY_NICAM=
 
-OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
+#OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
+OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia_noobs"    # directory of observation data in LETKF obs format
 OBSNCEP="/volume63/data/hp150019/gylien/obs/prepbufr" # directory of observation data in NCEP BUFR format
 
 #===============================================================================

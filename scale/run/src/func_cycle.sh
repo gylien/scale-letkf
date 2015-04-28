@@ -234,12 +234,10 @@ else
     # topo
     #-------------------
     if [ "$TOPO_FORMAT" = 'prep' ]; then
-      for m in $(seq $mmean); do
-        for q in $(seq $mem_np); do
-          pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
-          path="${time}/topo/topo$(printf $SCALE_SFX $((q-1)))"
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
-        done
+      for q in $(seq $mem_np); do
+        pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
+        path="${time}/topo/topo$(printf $SCALE_SFX $((q-1)))"
+        echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
       done
     fi
 
@@ -251,40 +249,10 @@ else
       else
         pathin_pfx="${DATA_LANDUSE}"
       fi
-      for m in $(seq $mmean); do
-        for q in $(seq $mem_np); do
-          pathin="${pathin_pfx}/landuse$(printf $SCALE_SFX $((q-1)))"
-          path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
-        done
-      done
-    fi
-
-    # bdy
-    #-------------------
-    if ((BDY_FORMAT == 2)); then
-
-######
-      for m in $(seq 1); do
-        for q in $(seq 1); do
-######
-
-#      for m in $(seq $mmean); do
-#        for q in $(seq $mem_np); do
-          time_dby=${time}
-          etime_bdy=$(datetime ${time} $((CYCLEFLEN+BDYINT)) s)
-          while ((time_dby < etime_bdy)); do
-            if ((BDY_ENS == 1)); then
-              pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_dby}"
-              path="bdywrf/${name_m[$m]}/wrfout_${time_dby}"
-            else
-              pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
-              path="bdywrf/mean/wrfout_${time_dby}"
-            fi
-            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
-            time_dby=$(datetime $time_dby $BDYINT s)
-          done
-        done
+      for q in $(seq $mem_np); do
+        pathin="${pathin_pfx}/landuse$(printf $SCALE_SFX $((q-1)))"
+        path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+        echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
       done
     fi
 
@@ -449,6 +417,39 @@ else
     #-------------------
     time=$(datetime $time $LCYCLE s)
     atime=$(datetime $time $LCYCLE s)
+  done
+
+  #-------------------
+
+  time_dby=${STIME}
+  etime_bdy=$(datetime ${ETIME} $((CYCLEFLEN+BDYINT)) s)
+  while ((time_dby < etime_bdy)); do
+    #-------------------
+    # stage-in
+    #-------------------
+
+    # bdy
+    #-------------------
+    if ((BDY_FORMAT == 2)); then
+      if ((BDY_ENS == 1)); then
+        for m in $(seq $mmean); do
+          for q in $(seq $mem_np); do
+            pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_dby}"
+            path="bdywrf/${name_m[$m]}/wrfout_${time_dby}"
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+          done
+        done
+      else
+        for q in $(seq $mem_np); do
+          pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
+          path="bdywrf/mean/wrfout_${time_dby}"
+          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+        done
+      fi
+    fi
+    #-------------------
+
+    time_dby=$(datetime $time_dby $BDYINT s)
   done
 #-------------------
 fi
