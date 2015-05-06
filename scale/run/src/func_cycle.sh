@@ -436,15 +436,13 @@ else
           for q in $(seq $mem_np); do
             pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_dby}"
             path="bdywrf/${name_m[$m]}/wrfout_${time_dby}"
-            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]} ###### q: may be redundant ????
           done
         done
       else
-        for q in $(seq $mem_np); do
-          pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
-          path="bdywrf/mean/wrfout_${time_dby}"
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
-        done
+        pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
+        path="bdywrf/mean/wrfout_${time_dby}"
+        echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
       fi
     fi
     #-------------------

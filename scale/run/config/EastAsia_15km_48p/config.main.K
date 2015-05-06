@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf_test/EastAsia_15km_48p_24h_noda" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p/ctl" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -20,11 +20,11 @@ DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p.bf10"
 DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_15km_48p.bf10"
 DATA_BDY_SCALE=
-DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl_large/wrfout_rdninit"
+DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl_large/wrfout_rdninit_2013063000"
 DATA_BDY_NICAM=
 
-#OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
-OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia_noobs"    # directory of observation data in LETKF obs format
+OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
+#OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia_noobs"    # directory of observation data in LETKF obs format
 OBSNCEP="/volume63/data/hp150019/gylien/obs/prepbufr" # directory of observation data in NCEP BUFR format
 
 #===============================================================================
@@ -64,9 +64,9 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=20          # Ensemble size
+MEMBER=30          # Ensemble size
 
-NNODES=1008        # Number of nodes
+NNODES=1488        # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
