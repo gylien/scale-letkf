@@ -1154,7 +1154,7 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
-subroutine monit_obs(v3dg,v2dg,obs,obsda)
+subroutine monit_obs(v3dg,v2dg,obs,obsda,nobs,bias,rmse)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
@@ -1172,6 +1172,9 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda)
   REAL(RP),intent(in) :: v2dg(nlon,nlat,nv2d)
   type(obs_info),intent(in) :: obs(nobsfiles)
   type(obs_da_value),intent(in) :: obsda
+  INTEGER,INTENT(OUT) :: nobs(nid_obs)
+  REAL(r_size),INTENT(OUT) :: bias(nid_obs)
+  REAL(r_size),INTENT(OUT) :: rmse(nid_obs)
 
   REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
@@ -1297,7 +1300,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda)
 
   end do
 
-  call monit_dep(obsda%nobs,oelm,ohx,oqc,0)
+  call monit_dep(obsda%nobs,oelm,ohx,oqc,nobs,bias,rmse)
 
 !    deallocate (oelm)
 !    deallocate (ohx)
@@ -1317,145 +1320,83 @@ end subroutine monit_obs
 !    0: U,V,T(Tv),Q,RH,PS (default)
 !    1: U,V,T(Tv),Q,RH,PS,RAIN
 !-----------------------------------------------------------------------
-SUBROUTINE monit_dep(nn,elm,dep,qc,ofmt)
+SUBROUTINE monit_dep(nn,elm,dep,qc,nobs,bias,rmse)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: nn
   REAL(r_size),INTENT(IN) :: elm(nn)
   REAL(r_size),INTENT(IN) :: dep(nn)
   INTEGER,INTENT(IN) :: qc(nn)
-  INTEGER,INTENT(IN),OPTIONAL :: ofmt
-  INTEGER :: ofmt1
-  REAL(r_size) :: rmse_u,rmse_v,rmse_t,rmse_q,rmse_rh,rmse_ps,rmse_rain
-  REAL(r_size) :: bias_u,bias_v,bias_t,bias_q,bias_rh,bias_ps,bias_rain
-  INTEGER :: n,iu,iv,it,iq,irh,ips,irain
+  INTEGER,INTENT(OUT) :: nobs(nid_obs)
+  REAL(r_size),INTENT(OUT) :: bias(nid_obs)
+  REAL(r_size),INTENT(OUT) :: rmse(nid_obs)
+  INTEGER :: n,i,ielm
 
-  ofmt1 = 0
-  IF(PRESENT(ofmt)) ofmt1 = ofmt
+  rmse = 0.0d0
+  bias = 0.0d0
+  nobs = 0
 
-  rmse_u = 0.0d0
-  rmse_v = 0.0d0
-  rmse_t = 0.0d0
-  rmse_q = 0.0d0
-  rmse_ps = 0.0d0
-  rmse_rh = 0.0d0
-  rmse_rain = 0.0d0
-  bias_u = 0.0d0
-  bias_v = 0.0d0
-  bias_t = 0.0d0
-  bias_q = 0.0d0
-  bias_ps = 0.0d0
-  bias_rh = 0.0d0
-  bias_rain = 0.0d0
-  iu = 0
-  iv = 0
-  it = 0
-  iq = 0
-  ips = 0
-  irh = 0
-  irain = 0
   DO n=1,nn
     IF(qc(n) /= iqc_good) CYCLE
-    SELECT CASE(NINT(elm(n)))
-    CASE(id_u_obs)
-      rmse_u = rmse_u + dep(n)**2
-      bias_u = bias_u + dep(n)
-      iu = iu + 1
-    CASE(id_v_obs)
-      rmse_v = rmse_v + dep(n)**2
-      bias_v = bias_v + dep(n)
-      iv = iv + 1
-    CASE(id_t_obs,id_tv_obs) ! compute T, Tv together
-      rmse_t = rmse_t + dep(n)**2
-      bias_t = bias_t + dep(n)
-      it = it + 1
-    CASE(id_q_obs)
-      rmse_q = rmse_q + dep(n)**2
-      bias_q = bias_q + dep(n)
-      iq = iq + 1
-    CASE(id_rh_obs)
-      rmse_rh = rmse_rh + dep(n)**2
-      bias_rh = bias_rh + dep(n)
-      irh = irh + 1
-    CASE(id_ps_obs)
-      rmse_ps = rmse_ps + dep(n)**2
-      bias_ps = bias_ps + dep(n)
-      ips = ips + 1
-    CASE(id_rain_obs)
-      rmse_rain = rmse_rain + dep(n)**2
-      bias_rain = bias_rain + dep(n)
-      irain = irain + 1
-    END SELECT
-  END DO
-  IF(iu == 0) THEN
-    rmse_u = undef
-    bias_u = undef
-  ELSE
-    rmse_u = SQRT(rmse_u / REAL(iu,r_size))
-    bias_u = bias_u / REAL(iu,r_size)
-  END IF
-  IF(iv == 0) THEN
-    rmse_v = undef
-    bias_v = undef
-  ELSE
-    rmse_v = SQRT(rmse_v / REAL(iv,r_size))
-    bias_v = bias_v / REAL(iv,r_size)
-  END IF
-  IF(it == 0) THEN
-    rmse_t = undef
-    bias_t = undef
-  ELSE
-    rmse_t = SQRT(rmse_t / REAL(it,r_size))
-    bias_t = bias_t / REAL(it,r_size)
-  END IF
-  IF(iq == 0) THEN
-    rmse_q = undef
-    bias_q = undef
-  ELSE
-    rmse_q = SQRT(rmse_q / REAL(iq,r_size))
-    bias_q = bias_q / REAL(iq,r_size)
-  END IF
-  IF(irh == 0) THEN
-    rmse_rh = undef
-    bias_rh = undef
-  ELSE
-    rmse_rh = SQRT(rmse_rh / REAL(irh,r_size))
-    bias_rh = bias_rh / REAL(irh,r_size)
-  END IF
-  IF(ips == 0) THEN
-    rmse_ps = undef
-    bias_ps = undef
-  ELSE
-    rmse_ps = SQRT(rmse_ps / REAL(ips,r_size))
-    bias_ps = bias_ps / REAL(ips,r_size)
-  END IF
-  IF(irain == 0) THEN
-    rmse_rain = undef
-    bias_rain = undef
-  ELSE
-    rmse_rain = SQRT(rmse_rain / REAL(irain,r_size))
-    bias_rain = bias_rain / REAL(irain,r_size)
-  END IF
 
-  IF(ofmt1 == 0) THEN
+    ielm = NINT(elm(n))
+    if (ielm == id_tv_obs) then ! compute Tv as T
+      ielm = id_t_obs
+    end if
+    i = uid_obs(ielm)
+
+    rmse(i) = rmse(i) + dep(n)**2
+    bias(i) = bias(i) + dep(n)
+    nobs(i) = nobs(i) + 1
+  END DO
+
+  DO i = 1, nid_obs
+    IF(nobs(i) == 0) THEN
+      rmse(i) = undef
+      bias(i) = undef
+    ELSE
+      rmse(i) = SQRT(rmse(i) / REAL(nobs(i),r_size))
+      bias(i) = bias(i) / REAL(nobs(i),r_size)
+    END IF
+  END DO
+
+  RETURN
+END SUBROUTINE monit_dep
+!-----------------------------------------------------------------------
+! Monitor departure
+!  ofmt: output format
+!    0: U,V,T(Tv),Q,RH,PS (default)
+!    1: U,V,T(Tv),Q,RH,PS,RAIN
+!-----------------------------------------------------------------------
+SUBROUTINE monit_print(nobs,bias,rmse,ofmt)
+  IMPLICIT NONE
+  INTEGER,INTENT(IN) :: nobs(nid_obs)
+  REAL(r_size),INTENT(IN) :: bias(nid_obs)
+  REAL(r_size),INTENT(IN) :: rmse(nid_obs)
+  INTEGER,INTENT(IN),OPTIONAL :: ofmt
+  INTEGER :: ofmt0
+  ofmt0 = 0
+  IF(PRESENT(ofmt)) ofmt0 = ofmt
+
+  IF(ofmt0 == 0) THEN
     WRITE(6,'(A)') '=============================================================================='
     WRITE(6,'(6x,6A12)') 'U','V','T(Tv)','Q','RH','PS'
     WRITE(6,'(A)') '------------------------------------------------------------------------------'
-    WRITE(6,'(A6,6ES12.3)') 'BIAS  ',bias_u,bias_v,bias_t,bias_q,bias_rh,bias_ps
-    WRITE(6,'(A6,6ES12.3)') 'RMSE  ',rmse_u,rmse_v,rmse_t,rmse_q,rmse_rh,rmse_ps
-    WRITE(6,'(A6,6I12)') 'NUMBER',iu,iv,it,iq,irh,ips
+    WRITE(6,'(A6,6ES12.3)') 'BIAS  ',bias(1),bias(2),bias(3),bias(5),bias(6),bias(7)
+    WRITE(6,'(A6,6ES12.3)') 'RMSE  ',rmse(1),rmse(2),rmse(3),rmse(5),rmse(6),rmse(7)
+    WRITE(6,'(A6,6I12)') 'NUMBER',nobs(1),nobs(2),nobs(3),nobs(5),nobs(6),nobs(7)
     WRITE(6,'(A)') '=============================================================================='
-  ELSE IF(ofmt1 == 1) THEN
+  ELSE IF(ofmt0 == 1) THEN
     WRITE(6,'(A)') '=========================================================================================='
     WRITE(6,'(6x,7A12)') 'U','V','T(Tv)','Q','RH','PS','RAIN'
     WRITE(6,'(A)') '------------------------------------------------------------------------------------------'
-    WRITE(6,'(A6,6ES12.3)') 'BIAS  ',bias_u,bias_v,bias_t,bias_q,bias_rh,bias_ps
-    WRITE(6,'(A6,6ES12.3)') 'RMSE  ',rmse_u,rmse_v,rmse_t,rmse_q,rmse_rh,rmse_ps
-    WRITE(6,'(A6,7I12)') 'NUMBER',iu,iv,it,iq,irh,ips,irain
+    WRITE(6,'(A6,7ES12.3)') 'BIAS  ',bias(1),bias(2),bias(3),bias(5),bias(6),bias(7),bias(8)
+    WRITE(6,'(A6,7ES12.3)') 'RMSE  ',rmse(1),rmse(2),rmse(3),rmse(5),rmse(6),rmse(7),rmse(8)
+    WRITE(6,'(A6,7I12)') 'NUMBER',nobs(1),nobs(2),nobs(3),nobs(5),nobs(6),nobs(7),nobs(8)
     WRITE(6,'(A)') '=========================================================================================='
   END IF
 
   RETURN
-END SUBROUTINE monit_dep
+END SUBROUTINE monit_print
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
@@ -2072,6 +2013,12 @@ FUNCTION uid_obs(id_obs)
     uid_obs = 7
   CASE(id_rain_obs)
     uid_obs = 8
+  CASE(id_radar_ref_obs)
+    uid_obs = 9
+  CASE(id_radar_vr_obs)
+    uid_obs = 10
+  CASE(id_radar_prh_obs)
+    uid_obs = 11
 !  CASE(id_tclon_obs)
 !    uid_obs = 9
 !  CASE(id_tclat_obs)

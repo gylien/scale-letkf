@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p/ctl" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p/ncepfcst" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -67,7 +67,7 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=30          # Ensemble size
 
-NNODES=48          # Number of nodes
+NNODES=384         # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
