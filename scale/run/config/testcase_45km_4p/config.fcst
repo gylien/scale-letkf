@@ -5,21 +5,21 @@
 #
 #===============================================================================
 
-STIME='20130712000000'
-ETIME='20130712000000'
+STIME='20130630000000'
+ETIME='20130630000000'
 MEMBERS='mean'
 CYCLE=1
-CYCLE_SKIP=2
+CYCLE_SKIP=1
 IF_VERF=0
 IF_EFSO=0
 ISTEP=
 FSTEP=
-TIME_LIMIT='05:30:00'
+TIME_LIMIT='00:30:00'
 
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=432000     # SCALE forecast length in the forecast mode (second)
+FCSTLEN=86400      # SCALE forecast length in the forecast mode (second)
 #FCSTOUT=$LCYCLE    # SCALE forecast output interval in the forecast mode (second)
 FCSTOUT=3600
 
@@ -37,7 +37,7 @@ FCSTOUT=3600
 
 #===============================================================================
 
-MAKEINIT=0       # 0: No
+MAKEINIT=1       # 0: No
                  # 1: Yes
 PERTURB_BDY=0    # 0: No
                  # 1: Yes
@@ -51,16 +51,16 @@ OUT_OPT=1        # 1:   o       o
                  # 2:   o
 
                  #      topo
-TOPOOUT_OPT=2    # 1:   o
+TOPOOUT_OPT=1    # 1:   o
                  # 2:   (none)
 
                  #      landuse
-LANDUSEOUT_OPT=2 # 1:   o
+LANDUSEOUT_OPT=1 # 1:   o
                  # 2:   (none)
 
                  #      bdy
                  #      mean members
-BDYOUT_OPT=3     # 1:   o    o
+BDYOUT_OPT=1     # 1:   o    o
                  # 2:   o
                  # 3:   (none)
 

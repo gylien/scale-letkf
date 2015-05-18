@@ -196,6 +196,9 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
         ln -fs ${DATA_LANDUSE} $TMPOUT/${time}/landuse
       fi
     fi
+    if ((BDY_FORMAT == 0)); then
+      ln -fs ${DATA_BDY_SCALE_PREP}/${time} $TMPOUT/${time}/bdy
+    fi
     time=$(datetime $time $LCYCLE s)
     #-------------------
   done
@@ -254,6 +257,25 @@ else
         path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
         echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
       done
+    fi
+
+    # bdy (prepared)
+    #-------------------
+    if ((BDY_FORMAT == 0)); then
+      for q in $(seq $mem_np); do
+        pathin="${DATA_BDY_SCALE_PREP}/${time}/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+        path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+        echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+      done
+      if ((BDY_ENS == 1)); then
+        for m in $(seq $MEMBER); do
+          for q in $(seq $mem_np); do
+            pathin="${DATA_BDY_SCALE_PREP}/${time}/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
+            path="${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+          done
+        done
+      fi
     fi
 
     #-------------------
@@ -380,14 +402,16 @@ else
 
     # log [scale_pp]
     #-------------------
-    if ((LOG_OPT <= 2)); then
-      path="${time}/log/scale_pp/pp_LOG${SCALE_LOG_SFX}"
-      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+    if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ]; then
+      if ((LOG_OPT <= 2)); then
+        path="${time}/log/scale_pp/pp_LOG${SCALE_LOG_SFX}"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+      fi
     fi
 
     # log [scale_init: mean]
     #-------------------
-    if ((LOG_OPT <= 2)) && ((BDY_ENS != 1)); then
+    if ((BDY_FORMAT > 0)) && ((LOG_OPT <= 2)) && ((BDY_ENS != 1)); then
       path="${time}/log/scale_init/mean_init_LOG${SCALE_LOG_SFX}"
       echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
     fi
@@ -399,7 +423,7 @@ else
 
       # log [scale_init: members]
       #-------------------
-      if ((LOG_OPT <= 2)) && ((BDY_ENS == 1)); then
+      if ((BDY_FORMAT > 0)) && ((LOG_OPT <= 2)) && ((BDY_ENS == 1)); then
         path="${time}/log/scale_init/${name_m[$m]}_init_LOG${SCALE_LOG_SFX}"
         echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
       fi
@@ -522,6 +546,11 @@ boundary () {
 #-------------------------------------------------------------------------------
 
 echo
+if ((BDY_FORMAT == 0)); then
+  echo "  ... skip this step (use prepared boundaries)"
+  return 1
+fi
+
 if ((BDY_ENS == 1)); then
   echo "     -- topo/landuse"
   echo

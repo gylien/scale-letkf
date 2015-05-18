@@ -7,26 +7,25 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p/ctl" # Directory for SCALE-LETKF output
+OUTDIR="$DIR/../../exp/testcase_45km_4p" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
-DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
+MODELDIR="$DIR/../../scale/scale-les/test/case_real/check_japan/run"
+DATADIR="$DIR/../../database"
 
-DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p.bf10"
-DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_15km_48p.bf10"
+DATA_TOPO="$DIR/../../database/topo_prep/testcase_45km_4p_bf10"
+DATA_LANDUSE="$DIR/../../database/landuse_prep/testcase_45km_4p_bf10"
 DATA_BDY_SCALE=
-DATA_BDY_SCALE_PREP=
-DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl_large/wrfout_rdninit_2013063000"
+DATA_BDY_SCALE_PREP="$DIR/../../database/bdy_prep/testcase_45km_4p"
+DATA_BDY_WRF="$DIR/../../ncepfnl/wrfout"
 DATA_BDY_NICAM=
 
-OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
-#OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia_noobs"    # directory of observation data in LETKF obs format
-OBSNCEP="/volume63/data/hp150019/gylien/obs/prepbufr" # directory of observation data in NCEP BUFR format
+OBS="$DIR/../../obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
+OBSNCEP="$DIR/../../obs/prepbufr" # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # model/data file options
@@ -41,7 +40,7 @@ LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=2            # 0: SCALE with exactly same domain settings (do not need additional preprocessing)
+BDY_FORMAT=0            # 0: SCALE with exactly same domain settings (do not need additional preprocessing)
                         # 1: SCALE (requires compatible 'config.nml.scale_init')
                         # 2: WRF   (requires compatible 'config.nml.scale_init')
                         # 3: NICAM (requires compatible 'config.nml.scale_init')
@@ -65,14 +64,14 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=30          # Ensemble size
+MEMBER=10          # Ensemble size
 
-NNODES=48          # Number of nodes
+NNODES=44          # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
-SCALE_NP=48        # Number of processes to run SCALE
+SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 

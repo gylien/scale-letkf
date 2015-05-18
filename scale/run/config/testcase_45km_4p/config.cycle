@@ -5,11 +5,11 @@
 #
 #===============================================================================
 
-STIME='20130714000000'
-ETIME='20130716180000'
+STIME='20130701000000'
+ETIME='20130701000000'
 ISTEP=
 FSTEP=
-TIME_LIMIT='04:00:00'
+TIME_LIMIT='01:00:00'
 
 #===============================================================================
 
@@ -47,7 +47,7 @@ OBSOPE=0         # 0: No    ! obsope options: not finished yet!!
 
                  #      anal              gues
                  #      mean/sprd members mean/sprd members history
-OUT_OPT=3        # 1:   o         o       o         o       o
+OUT_OPT=1        # 1:   o         o       o         o       o
                  # 2:   o         o       o         o
                  # 3:   o         o       o
                  # 4:   o                 o
@@ -74,7 +74,7 @@ OBSOUT_OPT=3     # 1:   o       o       o
 
                  #      topo landuse bdy perturb        scale obsope letkf
                  #      log  log     log (not finished) log   log    log
-LOG_OPT=4        # 1:   o    o       o   o              o     o      o
+LOG_OPT=2        # 1:   o    o       o   o              o     o      o
                  # 2:   o    o       o                  o     o      o
                  # 3:                                   o     o      o
                  # 4:                                         o      o
