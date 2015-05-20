@@ -954,7 +954,7 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
     !
     IF(rk < plev(nlev+KHALO)) THEN
       call itpl_2d(p_full(nlev+KHALO,:,:),ri,rj,ptmp)
-      write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too high: ptop=', ptmp, ', lev=', rlev
+      write(6,'(A,F8.1,A,F8.1,A,I5)') 'warning: observation is too high: ptop=', ptmp, ', lev=', rlev, ', elem=', elem
       rk = undef
       qc = iqc_out_vhi
       RETURN
@@ -962,7 +962,7 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
     IF(rk > plev(ks)) THEN
       call itpl_2d(p_full(ks,:,:),ri,rj,ptmp)
 !print *, ks, rk, plev(ks)
-      write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too low: pbottom=', ptmp, ', lev=', rlev
+      write(6,'(A,F8.1,A,F8.1,A,I5)') 'warning: observation is too low: pbottom=', ptmp, ', lev=', rlev, ', elem=', elem
       rk = undef
       qc = iqc_out_vlo
 
@@ -1154,12 +1154,15 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
-subroutine monit_obs(v3dg,v2dg,obs,obsda,nobs,bias,rmse)
+subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
       IHALO, JHALO, KHALO, &
       IS, IE, JS, JE, KS, KE, KA
+  use scale_grid, only: &
+      GRID_CZ, &
+      GRID_FZ
   use scale_comm, only: &
       COMM_vars8, &
       COMM_wait
@@ -1172,6 +1175,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,nobs,bias,rmse)
   REAL(RP),intent(in) :: v2dg(nlon,nlat,nv2d)
   type(obs_info),intent(in) :: obs(nobsfiles)
   type(obs_da_value),intent(in) :: obsda
+  real(r_size) :: topo(nlon,nlat)
   INTEGER,INTENT(OUT) :: nobs(nid_obs)
   REAL(r_size),INTENT(OUT) :: bias(nid_obs)
   REAL(r_size),INTENT(OUT) :: rmse(nid_obs)
@@ -1189,8 +1193,10 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,nobs,bias,rmse)
 !  real(r_size),allocatable :: ohx(:)
 !  integer,allocatable :: oqc(:)
 
-  REAL(r_size) :: timer
-  INTEGER :: ierr
+!  REAL(r_size) :: timer
+!  INTEGER :: ierr
+
+  real(r_size) :: ztop
 
 
 !CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1211,13 +1217,19 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,nobs,bias,rmse)
 !  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_rh) =
 !  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) =
 
-!  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo) =
-!  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_ps) =
+  !!! use the 1st level as the surface (although it is not)
+  ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
+  do j = 1, nlat
+    do i = 1, nlon
+      v2dgh(i+IHALO,j+JHALO,iv2dd_topo) = (ztop - topo(i,j)) / ztop * GRID_CZ(1+KHALO) + topo(i,j)
+    enddo
+  enddo
+  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_ps) = v3dg(1,:,:,iv3d_p)
 !  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) =
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_u10m) = v3dg(1+KHALO,:,:,iv3d_u)
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_v10m) = v3dg(1+KHALO,:,:,iv3d_v)
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_t2m) = v3dg(1+KHALO,:,:,iv3d_t)
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_q2m) = v3dg(1+KHALO,:,:,iv3d_q)
+  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_u10m) = v3dg(1,:,:,iv3d_u)
+  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_v10m) = v3dg(1,:,:,iv3d_v)
+  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_t2m) = v3dg(1,:,:,iv3d_t)
+  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_q2m) = v3dg(1,:,:,iv3d_q)
 
 
   do iv3d = 1, nv3dd
@@ -1266,8 +1278,6 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,nobs,bias,rmse)
       stop
     end if
 
-!      .. create the v2dgh....... (for ps)
-
 
 !print *, obs(obsda%set(n))%dif(obsda%idx(n))
 
@@ -1278,9 +1288,9 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,nobs,bias,rmse)
          obs(obsda%set(n))%elm(obsda%idx(n)) == id_v_obs .or. &
          obs(obsda%set(n))%elm(obsda%idx(n)) == id_t_obs .or. &
          obs(obsda%set(n))%elm(obsda%idx(n)) == id_tv_obs .or. &
-         obs(obsda%set(n))%elm(obsda%idx(n)) == id_q_obs)) then
+         obs(obsda%set(n))%elm(obsda%idx(n)) == id_q_obs .or. &
+         obs(obsda%set(n))%elm(obsda%idx(n)) == id_ps_obs)) then
 !           obs(obsda%set(n))%elm(obsda%idx(n)) == id_rh_obs .or. &
-!           obs(obsda%set(n))%elm(obsda%idx(n)) == id_ps_obs .or. &
 
       call phys2ijk(v3dgh(:,:,:,iv3dd_p),obs(obsda%set(n))%elm(obsda%idx(n)), &
                     ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))

@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p/ctl" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf_test/EastAsia_15km_48p_24h" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -20,22 +20,20 @@ DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p.bf10"
 DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_15km_48p.bf10"
 DATA_BDY_SCALE=
-DATA_BDY_SCALE_PREP=
-DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl_large/wrfout_rdninit_2013063000"
+DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl_large/wrfout_rdninit"
 DATA_BDY_NICAM=
 
 OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
-#OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia_noobs"    # directory of observation data in LETKF obs format
 OBSNCEP="/volume63/data/hp150019/gylien/obs/prepbufr" # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -45,7 +43,7 @@ BDY_FORMAT=2            # 0: SCALE with exactly same domain settings (do not nee
                         # 1: SCALE (requires compatible 'config.nml.scale_init')
                         # 2: WRF   (requires compatible 'config.nml.scale_init')
                         # 3: NICAM (requires compatible 'config.nml.scale_init')
-BDY_ENS=0               # 0: Fixed boundary files for all memebers
+BDY_ENS=1               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 
 BDYINT=21600
@@ -65,21 +63,21 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=30          # Ensemble size
+MEMBER=19          # Ensemble size
 
-NNODES=1488        # Number of nodes
+NNODES=80          # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
-SCALE_NP=48        # Number of processes to run SCALE
+SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
 #===============================================================================
 # Temporary directories to store runtime files
 
-MACHINE_TYPE=10             # Machine type
+MACHINE_TYPE=12             # Machine type
                             #  1: Linux cluster with PBS
                             # 10: K-computer
                             # 11: K-computer (micro jobs)
@@ -99,9 +97,9 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_$(whoami)_${SYSNAME}" # (used to identify multiple runs in the same time)
 
-TMP=                        # (When $MACHINE_TYPE=10, this will be automatically set)
+TMP="$DIR/tmp/$TMPSUBDIR"   # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
-TMPL=                       # (When $MACHINE_TYPE=10, this will be automatically set)
+TMPL=                       # (When $MACHINE_TYPE=12, this will be automatically set)
 
 #===============================================================================
 # Environmental settings

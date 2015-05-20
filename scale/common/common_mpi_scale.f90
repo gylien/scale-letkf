@@ -44,6 +44,7 @@ module common_mpi_scale
 !!!  real(r_size),allocatable,save :: lonv1(:),latv1(:)
 !!!  real(r_size),allocatable,save :: ri1(:),rj1(:)
 !!!!  real(r_size),allocatable,save :: wg1(:)
+  real(r_size),allocatable,save :: topo(:,:)
   real(r_size),allocatable,save :: rig1(:),rjg1(:)
   real(r_size),allocatable,save :: topo1(:)
   real(r_size),allocatable,save :: hgt1(:,:)
@@ -171,7 +172,7 @@ SUBROUTINE set_common_mpi_scale
   END DO
 
 
-
+  ALLOCATE(topo(nlon,nlat))
 
 !!  ALLOCATE(phi1(nij1))
 !  ALLOCATE(lon1(nij1))
@@ -220,8 +221,8 @@ SUBROUTINE set_common_mpi_scale
 !  END DO
 
   if (myrank_e == lastmem_rank_e) then
-!    call read_topo('topo', v2dg(:,:,1))  !!! nv2d = 0 in scale...
-    call read_topo('topo', v3dg(1,:,:,3))
+    call read_topo('topo', topo)
+    v3dg(1,:,:,3) = topo
 
 !print *, v3dg(1,:,:,3)
 
@@ -927,7 +928,7 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
 !  if (myrank == 0) print *, '######', timer
 
   IF(myrank_e == lastmem_rank_e) THEN
-    call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),monit_nobs,bias,rmse)
+    call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,monit_nobs,bias,rmse)
   END IF
   call MPI_BCAST(monit_nobs,nid_obs,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
   call MPI_BCAST(bias,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
