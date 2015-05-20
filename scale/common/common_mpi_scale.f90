@@ -44,6 +44,7 @@ module common_mpi_scale
 !!!  real(r_size),allocatable,save :: lonv1(:),latv1(:)
 !!!  real(r_size),allocatable,save :: ri1(:),rj1(:)
 !!!!  real(r_size),allocatable,save :: wg1(:)
+  real(r_size),allocatable,save :: topo(:,:)
   real(r_size),allocatable,save :: rig1(:),rjg1(:)
   real(r_size),allocatable,save :: topo1(:)
   real(r_size),allocatable,save :: hgt1(:,:)
@@ -171,7 +172,7 @@ SUBROUTINE set_common_mpi_scale
   END DO
 
 
-
+  ALLOCATE(topo(nlon,nlat))
 
 !!  ALLOCATE(phi1(nij1))
 !  ALLOCATE(lon1(nij1))
@@ -220,8 +221,8 @@ SUBROUTINE set_common_mpi_scale
 !  END DO
 
   if (myrank_e == lastmem_rank_e) then
-!    call read_topo('topo', v2dg(:,:,1))  !!! nv2d = 0 in scale...
-    call read_topo('topo', v3dg(1,:,:,3))
+    call read_topo('topo', topo)
+    v3dg(1,:,:,3) = topo
 
 !print *, v3dg(1,:,:,3)
 
@@ -894,6 +895,10 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   INTEGER :: i,k,m,n
   CHARACTER(9) :: filename='file.0000'
+  INTEGER :: monit_nobs(nid_obs)
+  REAL(r_size) :: bias(nid_obs)
+  REAL(r_size) :: rmse(nid_obs)
+  INTEGER :: ierr
 
 
   type(obs_info),intent(in) :: obs(nobsfiles)
@@ -922,16 +927,22 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
 !  CALL CPU_TIME(timer)
 !  if (myrank == 0) print *, '######', timer
 
+  IF(myrank_e == lastmem_rank_e) THEN
+    call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,monit_nobs,bias,rmse)
+  END IF
+  call MPI_BCAST(monit_nobs,nid_obs,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
+  call MPI_BCAST(bias,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+  call MPI_BCAST(rmse,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+  WRITE(filename(1:4),'(A4)') file
+  WRITE(filename(6:9),'(A4)') 'mean'
+  write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', filename, ']:'
+  call monit_print(monit_nobs,bias,rmse)
 
   IF(myrank_e == lastmem_rank_e) THEN
-    WRITE(filename(1:4),'(A4)') file
-    WRITE(filename(6:9),'(A4)') 'mean'
-    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', filename, ']:'
-    call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank))
-
     call state_trans_inv(v3dg)
     call write_restart(filename,v3dg,v2dg)
   END IF
+
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -988,7 +999,6 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
   IF(myrank_e == lastmem_rank_e) THEN
     WRITE(filename(1:4),'(A4)') file
     WRITE(filename(6:9),'(A4)') 'sprd'
-!    WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
 !    call state_trans_inv(v3dg)             !!
     call write_restart(filename,v3dg,v2dg)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
   END IF

@@ -7,23 +7,23 @@
  TIME_STARTMS               = 0.D0,
 [TIME_DURATION]
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 20.0D0,
+ TIME_DT                    = 75.0D0,
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = 4.0D0,
+ TIME_DT_ATMOS_DYN          = 15.0D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = 20.0D0,
+ TIME_DT_ATMOS_PHY_MP       = 75.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_RD       = 600.D0,
+ TIME_DT_ATMOS_PHY_RD       = 1800.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_SF       = 20.0D0,
+ TIME_DT_ATMOS_PHY_SF       = 75.0D0,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_TB       = 20.0D0,
+ TIME_DT_ATMOS_PHY_TB       = 75.0D0,
  TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",
- TIME_DT_OCEAN              = 600.D0,
+ TIME_DT_OCEAN              = 1800.D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
- TIME_DT_LAND               = 600.D0,
+ TIME_DT_LAND               = 1800.D0,
  TIME_DT_LAND_UNIT          = "SEC",
- TIME_DT_URBAN              = 600.D0,
+ TIME_DT_URBAN              = 1800.D0,
  TIME_DT_URBAN_UNIT         = "SEC",
 [TIME_DT_ATMOS_RESTART]
  TIME_DT_ATMOS_RESTART_UNIT = "SEC",
@@ -65,8 +65,8 @@
 #################################################
 
 &PARAM_PRC
- PRC_NUM_X      = 8,
- PRC_NUM_Y      = 6,
+ PRC_NUM_X      = 2,
+ PRC_NUM_Y      = 2,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -88,7 +88,7 @@
 /
 
 &PARAM_URBAN_INDEX
- UKMAX = 5/
+ UKMAX = 5,
 /
 
 &PARAM_LAND_GRID
@@ -100,8 +100,8 @@
 /
 
 &PARAM_GRID
- DX = 15000.D0,
- DY = 15000.D0,
+ DX = 45000.D0,
+ DY = 45000.D0,
  FZ(:) =    161.6830D0,   335.9580D0,   523.8060D0,   726.2850D0,   944.5340D0,
            1179.7810D0,  1433.3490D0,  1706.6670D0,  2001.2720D0,  2318.8220D0,
            2661.1040D0,  3030.0450D0,  3427.7200D0,  3856.3680D0,  4318.4000D0,
@@ -111,8 +111,8 @@
           19154.0100D0, 20807.4900D0, 22589.7400D0, 24510.8100D0, 26581.5000D0,
           28800.0000D0,
  BUFFER_DZ = 5000.D0,
- BUFFER_DX = 150000.D0,
- BUFFER_DY = 150000.D0,
+ BUFFER_DX = 450000.D0,
+ BUFFER_DY = 450000.D0,
 /
 
 &PARAM_MAPPROJ
@@ -295,7 +295,7 @@
  HISTORY_DEFAULT_TUNIT     = "SEC",
  HISTORY_DEFAULT_TAVERAGE  = .false.,
  HISTORY_DEFAULT_DATATYPE  = "REAL4",
- HISTORY_DEFAULT_ZINTERP   = .false.,
+ HISTORY_DEFAULT_ZINTERP   = .true.,
 /
 
 &PARAM_HIST
@@ -328,9 +328,7 @@
 !&HISTITEM item='RHL'  /
 !&HISTITEM item='RHI'  /
 
-&HISTITEM item='PREC', taverage=.true. /
-&HISTITEM item='RAIN', taverage=.true. /
-&HISTITEM item='SNOW', taverage=.true. /
+&HISTITEM item='PREC' /
 
 &HISTITEM item='SFC_PRES'   /
 &HISTITEM item='SFC_TEMP'   /

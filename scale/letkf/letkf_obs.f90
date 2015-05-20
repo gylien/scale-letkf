@@ -95,8 +95,11 @@ SUBROUTINE set_letkf_obs
 
 
 
-  real(r_size),allocatable :: tmpelm(:)
 
+  real(r_size),allocatable :: tmpelm(:)
+  INTEGER :: monit_nobs(nid_obs)
+  REAL(r_size) :: bias(nid_obs)
+  REAL(r_size) :: rmse(nid_obs)
 
 
 
@@ -409,7 +412,9 @@ SUBROUTINE set_letkf_obs
 
 
 
-write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsda%set(n))%typ(obsda%idx(n)), obs(obsda%set(n))%lon(obsda%idx(n)), obs(obsda%set(n))%lat(obsda%idx(n)), obs(obsda%set(n))%lev(obsda%idx(n)), obs(obsda%set(n))%dat(obsda%idx(n)), obs(obsda%set(n))%err(obsda%idx(n)), obsda%val(n), obsda%qc(n)
+write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsda%set(n))%typ(obsda%idx(n)), obs(obsda%set(n))%lon(obsda%idx(n)), &
+                                   obs(obsda%set(n))%lat(obsda%idx(n)), obs(obsda%set(n))%lev(obsda%idx(n)), obs(obsda%set(n))%dat(obsda%idx(n)), &
+                                   obs(obsda%set(n))%err(obsda%idx(n)), obsda%val(n), obsda%qc(n)
 !write (6, '(A,15F8.2)') '-- ', obsda%ensval(:,n)
 
 
@@ -429,7 +434,8 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
   do n = 1, obsda%nobs
     tmpelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
   end do
-  CALL monit_dep(obsda%nobs,tmpelm,obsda%val,obsda%qc,0)
+  CALL monit_dep(obsda%nobs,tmpelm,obsda%val,obsda%qc,monit_nobs,bias,rmse)
+  CALL monit_print(monit_nobs,bias,rmse)
   deallocate(tmpelm)
 
 !!
