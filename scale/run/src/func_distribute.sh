@@ -130,7 +130,27 @@ local procs_add=1
 totalnp=0
 
 for m in $(seq $MEM); do
-  node_m[$m]=''
+
+  ###### SHORT node list description
+  if ((mem_nodes == 1)); then
+    node_m[$m]="${node[$((n+1))]}*$tppn"
+  elif ((tmod == 0)); then
+    node_m[$m]="[${node[$((n+1))]}-${node[$((n+mem_nodes))]}]*$tppn"
+  else
+    if ((tmod == 1)); then
+      node_m[$m]="${node[$((n+1))]}*$((tppn+1))"
+    else
+      node_m[$m]="[${node[$((n+1))]}-${node[$((n+tmod))]}]*$((tppn+1))"
+    fi
+    if (($((mem_nodes - tmod)) == 1)); then
+      node_m[$m]="${node_m[$m]} ${node[$((n+mem_nodes))]}*$tppn"
+    else
+      node_m[$m]="${node_m[$m]} [${node[$((n+tmod+1))]}-${node[$((n+mem_nodes))]}]*$tppn"
+    fi
+  fi
+  ######
+
+#  node_m[$m]=''
   qn=0
   for nn in $(seq $mem_nodes); do
     if ((nn <= tmod)); then
@@ -142,7 +162,7 @@ for m in $(seq $MEM); do
       mem2node[$(((m-1)*mem_np+q))]=$((n+nn))
     done
     qn=$((qn+tppnt))
-    node_m[$m]="${node_m[$m]}${node[$((n+nn))]}*$tppnt "
+#    node_m[$m]="${node_m[$m]}${node[$((n+nn))]}*$tppnt "
 
     if ((procs_add == 1)); then
       for p in $(seq $((totalnp+1)) $((totalnp+PPN))); do

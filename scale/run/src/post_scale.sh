@@ -96,6 +96,11 @@ if ((LOG_OPT <= 3)); then
   fi
 fi
 
+mkdir -p $TMPOUT/${STIME}/log/scale
+if [ -f "$TMPDIR/latlon_domain_catalogue.txt" ]; then
+  mv -f $TMPDIR/latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/scale/${MEM}_latlon_domain_catalogue.txt
+fi
+
 #===============================================================================
 
 exit 0
