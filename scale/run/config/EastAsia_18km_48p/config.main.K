@@ -21,12 +21,11 @@ DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsi
 DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_18km_48p.bf10"
 DATA_BDY_SCALE=
 DATA_BDY_SCALE_PREP=
-DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl_large/wrfout_rdninit_2013063000"
+DATA_BDY_WRF="/volume63/data/hp150019/gylien/realtime/ncepgfs_wrf/2015050900_da"
 DATA_BDY_NICAM=
 
-OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
-#OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia_noobs"    # directory of observation data in LETKF obs format
-OBSNCEP="/volume63/data/hp150019/gylien/obs/prepbufr" # directory of observation data in NCEP BUFR format
+OBS="/volume63/data/hp150019/gylien/realtime/ncepobs/2015051306_da"    # directory of observation data in LETKF obs format
+OBSNCEP="/volume63/data/hp150019/gylien/realtime/ncepobs/2015051306"   # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # model/data file options
