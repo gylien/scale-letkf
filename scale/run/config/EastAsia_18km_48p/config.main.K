@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/realtime/EastAsia_18km_48p" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/realtime/exp/EastAsia_18km_48p" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -21,11 +21,11 @@ DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsi
 DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_18km_48p.bf10"
 DATA_BDY_SCALE=
 DATA_BDY_SCALE_PREP=
-DATA_BDY_WRF="/volume63/data/hp150019/gylien/realtime/ncepgfs_wrf/2015050900_da"
+DATA_BDY_WRF="/volume63/data/hp150019/gylien/realtime/ncepgfs_wrf/<STIME>_da"
 DATA_BDY_NICAM=
 
-OBS="/volume63/data/hp150019/gylien/realtime/ncepobs/2015051306_da"    # directory of observation data in LETKF obs format
-OBSNCEP="/volume63/data/hp150019/gylien/realtime/ncepobs/2015051306"   # directory of observation data in NCEP BUFR format
+OBS="/volume63/data/hp150019/gylien/realtime/ncepobs"    # directory of observation data in LETKF obs format
+OBSNCEP=                                                 # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # model/data file options
@@ -44,7 +44,7 @@ BDY_FORMAT=2            # 0: SCALE with exactly same domain settings (do not nee
                         # 1: SCALE (requires compatible 'config.nml.scale_init')
                         # 2: WRF   (requires compatible 'config.nml.scale_init')
                         # 3: NICAM (requires compatible 'config.nml.scale_init')
-BDY_ENS=1               # 0: Fixed boundary files for all memebers
+BDY_ENS=0               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 
 BDYINT=21600
