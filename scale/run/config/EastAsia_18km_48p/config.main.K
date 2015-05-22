@@ -21,7 +21,7 @@ DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsi
 DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_18km_48p.bf10"
 DATA_BDY_SCALE=
 DATA_BDY_SCALE_PREP=
-DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl_large/wrfout_rdninit_2013063000"
+DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl_large/wrfout_rdninit_2015050600"
 DATA_BDY_NICAM=
 
 OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
@@ -45,7 +45,7 @@ BDY_FORMAT=2            # 0: SCALE with exactly same domain settings (do not nee
                         # 1: SCALE (requires compatible 'config.nml.scale_init')
                         # 2: WRF   (requires compatible 'config.nml.scale_init')
                         # 3: NICAM (requires compatible 'config.nml.scale_init')
-BDY_ENS=0               # 0: Fixed boundary files for all memebers
+BDY_ENS=1               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 
 BDYINT=21600
@@ -65,9 +65,9 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=30          # Ensemble size
+MEMBER=50          # Ensemble size
 
-NNODES=1488        # Number of nodes
+NNODES=2488        # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process

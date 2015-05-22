@@ -365,6 +365,8 @@ else
             path="${time2}/log/scale/${name_m[$mm]}_LOG${SCALE_LOG_SFX}"
             echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+1))]}
           fi
+          path="${time2}/log/scale/${name_m[$mm]}_latlon_domain_catalogue.txt"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+1))]}
 
 #          if ((LOG_OPT <= 1)); then
 #            # perturb bdy log
