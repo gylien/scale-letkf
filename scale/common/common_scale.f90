@@ -473,6 +473,10 @@ subroutine set_scalelib
     RANDOM_setup
 !  use scale_time, only: &
 !    TIME_setup
+!  use scale_time, only: &
+!    TIME_DTSEC,       &
+!    TIME_STARTDAYSEC
+
   use scale_grid, only: &
     GRID_setup, &
     GRID_DOMAIN_CENTER_X, &
@@ -596,7 +600,7 @@ subroutine set_scalelib
   rankidx(1) = PRC_2Drank(PRC_myrank, 1)
   rankidx(2) = PRC_2Drank(PRC_myrank, 2)
   call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_master, LOCAL_myrank, rankidx, &
-                   0.0d0, 0.0d0, namelist_fid=IO_FID_CONF)
+                   namelist_fid=IO_FID_CONF)
 
   call PROF_rapend('Initialize')
 
