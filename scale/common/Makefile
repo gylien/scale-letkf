@@ -2,7 +2,9 @@ include ../configure.user
 
 OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_letkf.o \
 	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
-          common_nml.o #common_scalelib.o #common_precip.o
+          common_nml.o \
+          mod_admin_time.o
+          #common_scalelib.o #common_precip.o
 
 all:	$(OBJS) datetime pdbash 
         #enssize
@@ -33,7 +35,7 @@ common_letkf.o:	../../common/common_letkf.f90 common.o common_mtx.o
 	$(SFC) $(FOPTS) -c ../../common/common_letkf.f90
 common_ncio.o:	common_ncio.f90 common.o
 	$(SFC) $(FOPTS) -c common_ncio.f90 $(NETCDF_INC)
-common_scale.o:	common_scale.f90 common.o common_nml.o common_mpi.o common_ncio.o
+common_scale.o:	common_scale.f90 common.o common_nml.o common_mpi.o common_ncio.o mod_admin_time.o
 	$(FC) $(FOPTS) -c common_scale.f90 $(NETCDF_INC) $(SCALE_INC)
 common_obs_scale.o:	common_obs_scale.f90 common.o common_scale.o
 	$(FC) $(FOPTS) -c common_obs_scale.f90 $(NETCDF_INC) $(SCALE_INC)
@@ -54,6 +56,11 @@ pdbash.o:	pdbash.f90
 	$(FC) $(FOPTS) -c pdbash.f90
 pdbash2.o:	pdbash2.f90 common.o common_scale.o common_mpi.o common_nml.o
 	$(FC) $(FOPTS) -c pdbash2.f90 $(SCALE_INC)
+
+
+mod_admin_time.o:
+	$(SFC) $(FOPTS) -c mod_admin_time.f90 $(SCALE_INC)
+
 
 clean:
 	rm -f *.o *.mod *.lst datetime pdbash
