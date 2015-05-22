@@ -13,9 +13,10 @@ LIBBLAS   = -mkl
 NETCDF_INC = -I/data/opt/netcdf/4.3.2_intel/include -I/data/opt/netcdf-fortran/4.4.1_intel/include
 NETCDF_LIB = -L/data/opt/netcdf/4.3.2_intel/lib -L/data/opt/netcdf-fortran/4.4.1_intel/lib -L/data/opt/hdf5/1.8.14_intel/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
 
-SCALE_INC = -I../../../scale_ens/dc_utils \
-            -I../../../scale_ens/gtool    \
-            -I../../../scale_ens/include
-SCALE_LIB = -L../../../scale_ens/lib -lscale -lgtool -ldcutils
+SCALE     = ../../../scale_ens
+SCALE_INC = -I$(SCALE)/dc_utils \
+            -I$(SCALE)/gtool    \
+            -I$(SCALE)/include
+SCALE_LIB = -L$(SCALE)/lib -lscale -lgtool -ldcutils
 
 BUFR_LIB  = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
