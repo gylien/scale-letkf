@@ -555,7 +555,7 @@ subroutine set_scalelib
   call CONST_setup
 
   ! setup time
-  call ADMIN_TIME_setup( setup_TimeIntegration = .false. )
+  call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
 
   call PROF_rapstart('Initialize')
 
@@ -599,6 +599,9 @@ subroutine set_scalelib
   ! setup history file I/O
   rankidx(1) = PRC_2Drank(PRC_myrank, 1)
   rankidx(2) = PRC_2Drank(PRC_myrank, 2)
+
+write (6, *) TIME_STARTDAYSEC, TIME_DTSEC
+
   call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_master, LOCAL_myrank, rankidx, &
                    TIME_STARTDAYSEC, TIME_DTSEC, &
                    namelist_fid=IO_FID_CONF)
