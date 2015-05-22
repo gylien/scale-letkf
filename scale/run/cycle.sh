@@ -117,7 +117,8 @@ while ((time <= ETIME)); do
     e_flag=1
   fi
 
-  obstime=$(datetime $time $LTIMESLOT s)
+  obstime=$(datetime $time)               # HISTORY_OUTPUT_STEP0 = .true.,
+#  obstime=$(datetime $time $LTIMESLOT s)  # HISTORY_OUTPUT_STEP0 = .false.,
   is=0
   slot_s=0
   while ((obstime <= $(datetime $time $WINDOW_E s))); do
@@ -173,7 +174,11 @@ while ((time <= ETIME)); do
   echo
   echo "  Observation timeslots:"
   for is in $(seq $slot_s $slot_e); do
-    printf "  %4d - %s\n" ${is} "${timefmt_sl[$is]}"
+    if ((is == slot_b)); then
+      printf "  %4d - %s [base]\n" ${is} "${timefmt_sl[$is]}"
+    else
+      printf "  %4d - %s\n" ${is} "${timefmt_sl[$is]}"
+    fi
   done
   echo
   echo "  Nodes used:               $NNODES"

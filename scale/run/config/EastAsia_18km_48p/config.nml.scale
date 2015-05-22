@@ -7,17 +7,17 @@
  TIME_STARTMS               = 0.D0,
 [TIME_DURATION]
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 20.0D0,
+ TIME_DT                    = <TIME_DT>,
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = 4.0D0,
+ TIME_DT_ATMOS_DYN          = <TIME_DT_DYN>,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = 20.0D0,
+ TIME_DT_ATMOS_PHY_MP       = <TIME_DT>,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_RD       = 600.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_SF       = 20.0D0,
+ TIME_DT_ATMOS_PHY_SF       = <TIME_DT>,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_TB       = 20.0D0,
+ TIME_DT_ATMOS_PHY_TB       = <TIME_DT>,
  TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",
  TIME_DT_OCEAN              = 600.D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
@@ -56,6 +56,10 @@
 
 &PARAM_LAND_PROPERTY
  LAND_PROPERTY_IN_FILENAME = "param.bucket.conf",
+/
+
+&PARAM_DOMAIN_CATALOGUE
+ DOMAIN_CATALOGUE_OUTPUT = .true.,
 /
 
 #################################################
@@ -296,17 +300,18 @@
  HISTORY_DEFAULT_TAVERAGE  = .false.,
  HISTORY_DEFAULT_DATATYPE  = "REAL4",
  HISTORY_DEFAULT_ZINTERP   = .false.,
+ HISTORY_OUTPUT_STEP0      = .true.,
 /
 
 &PARAM_HIST
  HIST_BND = .false.,
 /
 
-!&HISTITEM item='DENS' /
-!&HISTITEM item='MOMZ' /
-!&HISTITEM item='MOMX' /
-!&HISTITEM item='MOMY' /
-!&HISTITEM item='RHOT' /
+&HISTITEM item='DENS' /
+&HISTITEM item='MOMZ' /
+&HISTITEM item='MOMX' /
+&HISTITEM item='MOMY' /
+&HISTITEM item='RHOT' /
 
 &HISTITEM item='QV'   /
 &HISTITEM item='QC'   /
@@ -314,19 +319,20 @@
 &HISTITEM item='QI'   /
 &HISTITEM item='QS'   /
 &HISTITEM item='QG'   /
-!&HISTITEM item='QHYD' /
-!&HISTITEM item='QLIQ' /
-!&HISTITEM item='QICE' /
+&HISTITEM item='QHYD' /
+&HISTITEM item='QLIQ' /
+&HISTITEM item='QICE' /
 
 &HISTITEM item='T'    /
 &HISTITEM item='PRES' /
 &HISTITEM item='U'    /
 &HISTITEM item='V'    /
 &HISTITEM item='W'    /
-!&HISTITEM item='PT'   /
+&HISTITEM item="Uabs" /
+&HISTITEM item='PT'   /
 &HISTITEM item='RH'   /
-!&HISTITEM item='RHL'  /
-!&HISTITEM item='RHI'  /
+&HISTITEM item='RHL'  /
+&HISTITEM item='RHI'  /
 
 &HISTITEM item='PREC', taverage=.true. /
 &HISTITEM item='RAIN', taverage=.true. /
@@ -334,46 +340,50 @@
 
 &HISTITEM item='SFC_PRES'   /
 &HISTITEM item='SFC_TEMP'   /
-!&HISTITEM item='SFC_ALB_SW' /
-!&HISTITEM item='SFC_ALB_LW' /
-!&HISTITEM item='SFC_Z0M'     /
+&HISTITEM item='SFC_ALB_SW' /
+&HISTITEM item='SFC_ALB_LW' /
+&HISTITEM item='SFC_Z0M'     /
 
 &HISTITEM item='U10' /
 &HISTITEM item='V10' /
+&HISTITEM item="Uabs10" /
 &HISTITEM item='T2'  /
 &HISTITEM item='Q2'  /
+&HISTITEM item="MSLP" /
 
-!&HISTITEM item="LHFLX" /
-!&HISTITEM item="SHFLX" /
-!&HISTITEM item="GHFLX" /
+&HISTITEM item="LHFLX" /
+&HISTITEM item="SHFLX" /
+&HISTITEM item="GHFLX" /
 
-!&HISTITEM item="RADFLUX_SWDN" /
-!&HISTITEM item="SFLX_LW_up"   /
-!&HISTITEM item="SFLX_LW_dn"   /
-!&HISTITEM item="SFLX_SW_up"   /
-!&HISTITEM item="SFLX_SW_dn"   /
+&HISTITEM item="SFLX_LW_up"   /
+&HISTITEM item="SFLX_LW_dn"   /
+&HISTITEM item="SFLX_SW_up"   /
+&HISTITEM item="SFLX_SW_dn"   /
 
-!&HISTITEM item='OSR' /
-!&HISTITEM item='OLR' /
-!&HISTITEM item='SLR' /
-!&HISTITEM item='SSR' /
+&HISTITEM item='OSR' /
+&HISTITEM item='OLR' /
+&HISTITEM item='SLR' /
+&HISTITEM item='SSR' /
 
-!&HISTITEM item="OCEAN_TEMP"     /
-!&HISTITEM item="OCEAN_SFC_TEMP" /
-!&HISTITEM item="OCEAN_ALB_SW"   /
-!&HISTITEM item="OCEAN_ALB_LW"   /
-!&HISTITEM item="OCEAN_SFC_Z0M"  /
-!&HISTITEM item="OCEAN_SFC_Z0H"  /
-!&HISTITEM item="OCEAN_SFC_Z0E"  /
+&HISTITEM item="RADFLUX_SWUP" /
+&HISTITEM item="RADFLUX_SWDN" /
 
-!&HISTITEM item="LAND_TEMP"     /
-!&HISTITEM item="LAND_WATER"    /
-!&HISTITEM item="LAND_SFC_TEMP" /
-!&HISTITEM item="LAND_ALB_SW"   /
-!&HISTITEM item="LAND_ALB_LW"   /
+&HISTITEM item="OCEAN_TEMP"     /
+&HISTITEM item="OCEAN_SFC_TEMP" /
+&HISTITEM item="OCEAN_ALB_SW"   /
+&HISTITEM item="OCEAN_ALB_LW"   /
+&HISTITEM item="OCEAN_SFC_Z0M"  /
+&HISTITEM item="OCEAN_SFC_Z0H"  /
+&HISTITEM item="OCEAN_SFC_Z0E"  /
 
-!&HISTITEM item="TS_URB" /
-!&HISTITEM item="TC_URB" /
+&HISTITEM item="LAND_TEMP"     /
+&HISTITEM item="LAND_WATER"    /
+&HISTITEM item="LAND_SFC_TEMP" /
+&HISTITEM item="LAND_ALB_SW"   /
+&HISTITEM item="LAND_ALB_LW"   /
+
+&HISTITEM item="URBAN_TC"       /
+&HISTITEM item="URBAN_SFC_TEMP" /
 
 #################################################
 #

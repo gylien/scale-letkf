@@ -451,7 +451,7 @@ subroutine set_scalelib
 !  use scale_prof
 
   use gtool_history, only: &
-    historyinit
+    HistoryInit
   use dc_log, only: &
     LogInit
   use scale_process, only: &
@@ -471,8 +471,8 @@ subroutine set_scalelib
     CALENDAR_setup
   use scale_random, only: &
     RANDOM_setup
-  use scale_time, only: &
-    TIME_setup
+!  use scale_time, only: &
+!    TIME_setup
   use scale_grid, only: &
     GRID_setup, &
     GRID_DOMAIN_CENTER_X, &
@@ -511,6 +511,9 @@ subroutine set_scalelib
   use scale_atmos_thermodyn, only: &
      ATMOS_THERMODYN_setup
 
+!  use mod_admin_time, only: &
+!     ADMIN_TIME_setup
+
 
   use scale_mapproj, only: &
     MPRJ_setup
@@ -547,8 +550,8 @@ subroutine set_scalelib
   ! setup constants
   call CONST_setup
 
-  ! setup time
-  call TIME_setup( setup_TimeIntegration = .false. )
+!  ! setup time
+!  call ADMIN_TIME_setup( setup_TimeIntegration = .false. )
 
   call PROF_rapstart('Initialize')
 
@@ -593,7 +596,7 @@ subroutine set_scalelib
   rankidx(1) = PRC_2Drank(PRC_myrank, 1)
   rankidx(2) = PRC_2Drank(PRC_myrank, 2)
   call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_master, LOCAL_myrank, rankidx, &
-                   namelist_fid=IO_FID_CONF)
+                   0.0d0, 0.0d0, namelist_fid=IO_FID_CONF)
 
   call PROF_rapend('Initialize')
 

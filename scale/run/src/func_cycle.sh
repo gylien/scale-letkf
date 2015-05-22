@@ -434,6 +434,8 @@ else
         path="${time}/log/scale/${name_m[$m]}_LOG${SCALE_LOG_SFX}"
         echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
       fi
+      path="${time}/log/scale/${name_m[$m]}_latlon_domain_catalogue.txt"
+      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
 
       #-------------------
     done
