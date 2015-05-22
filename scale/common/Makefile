@@ -59,7 +59,7 @@ pdbash2.o:	pdbash2.f90 common.o common_scale.o common_mpi.o common_nml.o
 
 
 mod_admin_time.o:
-	$(SFC) $(FOPTS) -c mod_admin_time.f90 $(SCALE_INC)
+	$(FC) $(FOPTS) -c $(SCALE)/scale-les/src/admin/mod_admin_time.f90 $(SCALE_INC)
 
 
 clean:
