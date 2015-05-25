@@ -19,9 +19,9 @@ myname1='fcst'
 # Configuration
 
 . config.main
-(($? != 0)) && exit $?
+res=$? && ((res != 0)) && exit $res
 . config.$myname1
-(($? != 0)) && exit $?
+res=$? && ((res != 0)) && exit $res
 
 . src/func_distribute.sh
 . src/func_datetime.sh
@@ -159,7 +159,7 @@ echo "[$(datetime_now)] Run pjstgchk"
 echo
 
 pjstgchk $jobscrp
-(($? != 0)) && exit $?
+res=$? && ((res != 0)) && exit $res
 echo
 
 #-------------------------------------------------------------------------------

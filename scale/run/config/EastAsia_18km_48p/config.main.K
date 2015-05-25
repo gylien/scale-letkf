@@ -21,7 +21,7 @@ DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsi
 DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_18km_48p.bf10"
 DATA_BDY_SCALE=
 DATA_BDY_SCALE_PREP=
-DATA_BDY_WRF="/volume63/data/hp150019/gylien/realtime/ncepgfs_wrf/<STIME>_da"
+DATA_BDY_WRF="/volume63/data/hp150019/gylien/realtime/ncepgfs_wrf/<STIME>"
 DATA_BDY_NICAM=
 
 OBS="/volume63/data/hp150019/gylien/realtime/ncepobs"    # directory of observation data in LETKF obs format

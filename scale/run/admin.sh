@@ -28,8 +28,13 @@ CONFDIR="$OUTDIR/${STIME}/${SCPNAME}_conf"
 
 #-------------------------------------------------------------------------------
 
+if [ "$SCPNAME" = 'cycle' ]; then
+  STIME_DIR="${STIME}_da"
+else
+  STIME_DIR="${STIME}"
+fi
 cat config/EastAsia_18km_48p/config.main.K | \
-    sed -e "s/<STIME>/${STIME}/g" | \
+    sed -e "s/<STIME>/${STIME_DIR}/g" | \
     sed -e "s/<NNODES>/${NNODES}/g" \
     > config.main
 
@@ -49,6 +54,7 @@ cp config.* $CONFDIR
 #-------------------------------------------------------------------------------
 
 ./${SCPNAME}_K.sh > ${SCPNAME}_K.log 2>&1
+res=$? && ((res != 0)) && exit $res
 
 jobname="${SCPNAME}_${SYSNAME}"
 jobid=$(grep 'pjsub Job' ${SCPNAME}_K.log | cut -d ' ' -f6)
