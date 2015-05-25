@@ -16,7 +16,7 @@ myname1=${myname%.*}
 # Configuration
 
 . config.main
-(($? != 0)) && exit $?
+res=$? && ((res != 0)) && exit $res
 
 . src/func_datetime.sh
 . src/func_util.sh

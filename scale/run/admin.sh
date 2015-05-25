@@ -4,7 +4,7 @@
 cd "$(dirname "$0")"
 
 . config.main
-(($? != 0)) && exit $?
+res=$? && ((res != 0)) && exit $res
 
 #. src/func_datetime.sh
 

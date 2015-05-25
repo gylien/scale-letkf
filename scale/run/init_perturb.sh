@@ -27,7 +27,7 @@ myname1=${myname%.*}
 # Configuration
 
 . config.main
-(($? != 0)) && exit $?
+res=$? && ((res != 0)) && exit $res
 
 . src/func_datetime.sh
 . src/func_util.sh
@@ -86,7 +86,7 @@ for m in $(seq $MEMBER); do
 
   cp -f $S_PATH*.nc .
   $PYTHON $SCRP_DIR/python/init_perturb.py $S_basename
-  (($? != 0)) && exit $?
+  res=$? && ((res != 0)) && exit $res
 
   q=0
   while [ -s "$S_basename$(printf $SCALE_SFX $q)" ]; do

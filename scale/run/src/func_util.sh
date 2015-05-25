@@ -34,7 +34,7 @@ if [ -z "$DIRNAME" ]; then
 fi
 
 mkdir -p $DIRNAME
-(($? != 0)) && exit $?
+res=$? && ((res != 0)) && exit $res
 
 if [ ! -d "$DIRNAME" ]; then
   echo "[Error] $FUNCNAME: '$DIRNAME' is not a directory." >&2
@@ -46,7 +46,7 @@ if [ ! -O "$DIRNAME" ]; then
 fi
 
 rm -fr $DIRNAME/*
-(($? != 0)) && exit $?
+res=$? && ((res != 0)) && exit $res
 
 #-------------------------------------------------------------------------------
 }
@@ -90,7 +90,7 @@ if [ ! -O "$DIRNAME" ]; then
 fi
 
 rm -fr $DIRNAME
-(($? != 0)) && exit $?
+res=$? && ((res != 0)) && exit $res
 
 #-------------------------------------------------------------------------------
 }
