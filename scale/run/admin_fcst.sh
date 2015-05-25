@@ -23,7 +23,7 @@ WTIME_L="$5"
 
 #ETIME=$(datetime "$STIME" ${LCYCLE} s)
 
-CONFDIR="$OUTDIR/${STIME}/anal_conf"
+CONFDIR="$OUTDIR/${STIME}/fcst_conf"
 
 #-------------------------------------------------------------------------------
 
@@ -32,7 +32,7 @@ cat config/EastAsia_18km_48p/config.main.K | \
     sed -e "s/<NNODES>/${NNODES}/g" \
     > config.main
 
-cat config/EastAsia_18km_48p/config.cycle | \
+cat config/EastAsia_18km_48p/config.fcst | \
     sed -e "s/<STIME>/${STIME}/g" | \
     sed -e "s/<WTIME_L>/${WTIME_L}/g" \
     > config.cycle
