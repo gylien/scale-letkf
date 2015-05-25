@@ -15,15 +15,16 @@ if (($# < 5)); then
   exit 1
 fi
 
-STIME="$1"
-TIME_DT="$2"
-TIME_DT_DYN="$3"
-NNODES="$4"
-WTIME_L="$5"
+SCPNAME="$1"
+STIME="$2"
+TIME_DT="$3"
+TIME_DT_DYN="$4"
+NNODES="$5"
+WTIME_L="$6"
 
 #ETIME=$(datetime "$STIME" ${LCYCLE} s)
 
-CONFDIR="$OUTDIR/${STIME}/anal_conf"
+CONFDIR="$OUTDIR/${STIME}/${SCPNAME}_conf"
 
 #-------------------------------------------------------------------------------
 
@@ -32,10 +33,10 @@ cat config/EastAsia_18km_48p/config.main.K | \
     sed -e "s/<NNODES>/${NNODES}/g" \
     > config.main
 
-cat config/EastAsia_18km_48p/config.cycle | \
+cat config/EastAsia_18km_48p/config.${SCPNAME} | \
     sed -e "s/<STIME>/${STIME}/g" | \
     sed -e "s/<WTIME_L>/${WTIME_L}/g" \
-    > config.cycle
+    > config.${SCPNAME}
 
 cat config/EastAsia_18km_48p/config.nml.scale | \
     sed -e "s/<TIME_DT>/${TIME_DT}/g" | \
@@ -47,43 +48,43 @@ cp config.* $CONFDIR
 
 #-------------------------------------------------------------------------------
 
-./cycle_K.sh > cycle_K.log 2>&1
+./${SCPNAME}_K.sh > ${SCPNAME}_K.log 2>&1
 
-sleep 10s
+jobname="${SCPNAME}_${SYSNAME}"
+jobid=$(grep 'pjsub Job' ${SCPNAME}_K.log | cut -d ' ' -f6)
 
-jobname="cycle_${SYSNAME}"
-jobid=$(grep 'pjsub Job' cycle_K.log | cut -d ' ' -f6)
+n=0
+nmax=360
+while [ ! -s "${jobname}.o${jobid}" ] || [ ! -s "${jobname}.e${jobid}" ] ||
+      [ ! -s "${jobname}.s${jobid}" ] || [ ! -s "${jobname}.i${jobid}" ] && ((n < nmax)); do
+  n=$((n+1))
+  sleep 5s
+done
 
-if [ ! -s "${jobname}.o${jobid}" ]; then
+if ((n >= nmax)); then
   exit 1
-elif [ ! -s "${jobname}.e${jobid}" ]; then
-  exit 2
-elif [ ! -s "${jobname}.s${jobid}" ]; then
-  exit 3
-elif [ ! -s "${jobname}.i${jobid}" ]; then
-  exit 4
 elif [ -n "$(grep 'ERR.' ${jobname}.e${jobid})" ]; then
-  exit 5
+  exit 2
 elif [ -n "$(grep 'terminated' ${jobname}.e${jobid})" ]; then
-  exit 6
+  exit 3
 elif [ ! -s "${jobname}.s${jobid}" ]; then
-  exit 7
+  exit 4
 elif [ "$(tail -n 1 ${jobname}.s${jobid})" != "---(Stage-Out Error Information)---" ]; then
-  exit 8
+  exit 5
 fi
 
 #-------------------------------------------------------------------------------
 
-mv -f cycle_job.sh $CONFDIR
-mv -f cycle_K.log $CONFDIR
+mv -f ${SCPNAME}_job.sh $CONFDIR
+mv -f ${SCPNAME}_K.log $CONFDIR
 
 mv -f ${jobname}.o${jobid} $CONFDIR
 mv -f ${jobname}.e${jobid} $CONFDIR
 mv -f ${jobname}.s${jobid} $CONFDIR
 mv -f ${jobname}.i${jobid} $CONFDIR
 
-mv -f $LOGDIR/cycle_${STIME}.log $CONFDIR
-mv -f $LOGDIR/cycle.err $CONFDIR
+mv -f $LOGDIR/${SCPNAME}_${STIME}.log $CONFDIR
+mv -f $LOGDIR/${SCPNAME}.err $CONFDIR
 
 #-------------------------------------------------------------------------------
 
