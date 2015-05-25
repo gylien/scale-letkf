@@ -68,15 +68,15 @@ while [ ! -s "${jobname}.o${jobid}" ] || [ ! -s "${jobname}.e${jobid}" ] ||
 done
 
 if ((n >= nmax)); then
-  exit 1
+  exit 11
 elif [ -n "$(grep 'ERR.' ${jobname}.e${jobid})" ]; then
-  exit 2
+  exit 12
 elif [ -n "$(grep 'terminated' ${jobname}.e${jobid})" ]; then
-  exit 3
+  exit 13
 elif [ ! -s "${jobname}.s${jobid}" ]; then
-  exit 4
+  exit 14
 elif [ "$(tail -n 1 ${jobname}.s${jobid})" != "---(Stage-Out Error Information)---" ]; then
-  exit 5
+  exit 15
 fi
 
 #-------------------------------------------------------------------------------
