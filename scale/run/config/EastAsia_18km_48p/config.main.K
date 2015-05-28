@@ -21,7 +21,7 @@ DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsi
 DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_18km_48p.bf10"
 DATA_BDY_SCALE=
 DATA_BDY_SCALE_PREP=
-DATA_BDY_WRF="/volume63/data/hp150019/gylien/realtime/ncepgfs_wrf/<STIME>_da"
+DATA_BDY_WRF="/volume63/data/hp150019/gylien/realtime/ncepgfs_wrf/<STIME>"
 DATA_BDY_NICAM=
 
 OBS="/volume63/data/hp150019/gylien/realtime/ncepobs"    # directory of observation data in LETKF obs format
@@ -66,7 +66,7 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=50          # Ensemble size
 
-NNODES=2488        # Number of nodes
+NNODES=<NNODES>    # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
