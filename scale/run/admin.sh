@@ -60,38 +60,39 @@ jobname="${SCPNAME}_${SYSNAME}"
 jobid=$(grep 'pjsub Job' ${SCPNAME}_K.log | cut -d ' ' -f6)
 
 n=0
-nmax=360
+nmax=120
 while [ ! -s "${jobname}.o${jobid}" ] || [ ! -s "${jobname}.e${jobid}" ] ||
       [ ! -s "${jobname}.s${jobid}" ] || [ ! -s "${jobname}.i${jobid}" ] && ((n < nmax)); do
   n=$((n+1))
   sleep 5s
 done
 
+#-------------------------------------------------------------------------------
+
+res=0
 if ((n >= nmax)); then
-  exit 11
+  res=101
 elif [ -n "$(grep 'ERR.' ${jobname}.e${jobid})" ]; then
-  exit 12
+  res=102
 elif [ -n "$(grep 'terminated' ${jobname}.e${jobid})" ]; then
-  exit 13
+  res=103
 elif [ ! -s "${jobname}.s${jobid}" ]; then
-  exit 14
+  res=104
 elif [ "$(tail -n 1 ${jobname}.s${jobid})" != "---(Stage-Out Error Information)---" ]; then
-  exit 15
+  res=105
 fi
 
-#-------------------------------------------------------------------------------
+mv -f ${SCPNAME}_job.sh $CONFDIR/${jobid}.b
+mv -f ${SCPNAME}_K.log $CONFDIR/${jobid}.l
 
-mv -f ${SCPNAME}_job.sh $CONFDIR
-mv -f ${SCPNAME}_K.log $CONFDIR
+mv -f ${jobname}.o${jobid} $CONFDIR/${jobid}.o
+mv -f ${jobname}.e${jobid} $CONFDIR/${jobid}.e
+mv -f ${jobname}.s${jobid} $CONFDIR/${jobid}.s
+mv -f ${jobname}.i${jobid} $CONFDIR/${jobid}.i
 
-mv -f ${jobname}.o${jobid} $CONFDIR
-mv -f ${jobname}.e${jobid} $CONFDIR
-mv -f ${jobname}.s${jobid} $CONFDIR
-mv -f ${jobname}.i${jobid} $CONFDIR
-
-mv -f $LOGDIR/${SCPNAME}_${STIME}.log $CONFDIR
-mv -f $LOGDIR/${SCPNAME}.err $CONFDIR
+mv -f $LOGDIR/${SCPNAME}_${STIME}.log $CONFDIR/${jobid}.lo
+mv -f $LOGDIR/${SCPNAME}.err $CONFDIR/${jobid}.le
 
 #-------------------------------------------------------------------------------
 
-exit 0
+exit $res
