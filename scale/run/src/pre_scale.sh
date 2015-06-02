@@ -9,16 +9,17 @@
 
 . config.main
 
-if (($# < 13)); then
+if (($# < 14)); then
   cat >&2 << EOF
 
 [pre_scale.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM_NP INIT BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR EXECDIR DATADIR
+Usage: $0 MYRANK MEM_NP INIT OCEAN BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR EXECDIR DATADIR
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member
   INIT     Basename of SCALE initial files
+  OCEAN    Basename of SCALE initial ocean files
   BDY      Basename of SCALE boundary files
   TOPO     Basename of SCALE topography files
   LANDUSE  Basename of SCALE land use files
@@ -37,6 +38,7 @@ fi
 MYRANK="$1"; shift
 MEM_NP="$1"; shift
 INIT="$1"; shift
+OCEAN="$1"; shift
 BDY="$1"; shift
 TOPO="$1"; shift
 LANDUSE="$1"; shift
@@ -73,6 +75,11 @@ ln -fs $DATADIR/rad/MIPAS/win.atm $TMPDIR
 ln -fs $DATADIR/land/param.bucket.conf $TMPDIR
 
 ln -fs ${INIT}*.nc $TMPDIR
+if [ "$OCEAN" = '-' ]; then
+  OCEAN=$INIT
+else
+  ln -fs ${OCEAN}*.nc $TMPDIR
+fi
 ln -fs ${BDY}*.nc $TMPDIR
 ln -fs ${TOPO}*.nc $TMPDIR
 ln -fs ${LANDUSE}*.nc $TMPDIR
@@ -105,6 +112,11 @@ cat $TMPDAT/conf/config.nml.scale | \
         -e "s/\[TIME_DT_OCEAN_RESTART\]/ TIME_DT_OCEAN_RESTART = ${FCSTINT}.D0,/" \
         -e "s/\[TIME_DT_LAND_RESTART\]/ TIME_DT_LAND_RESTART = ${FCSTINT}.D0,/" \
         -e "s/\[TIME_DT_URBAN_RESTART\]/ TIME_DT_URBAN_RESTART = ${FCSTINT}.D0,/" \
+        -e "s/\[RESTART_IN_BASENAME\]/ RESTART_IN_BASENAME = \"$(basename ${INIT})\",/" \
+        -e "s/\[TOPO_IN_BASENAME\]/ TOPO_IN_BASENAME = \"$(basename ${TOPO})\",/" \
+        -e "s/\[LANDUSE_IN_BASENAME\]/ LANDUSE_IN_BASENAME = \"$(basename ${LANDUSE})\",/" \
+        -e "s/\[ATMOS_BOUNDARY_IN_BASENAME\]/ ATMOS_BOUNDARY_IN_BASENAME = \"$(basename ${BDY})\",/" \
+        -e "s/\[OCEAN_RESTART_IN_BASENAME\]/ OCEAN_RESTART_IN_BASENAME = \"$(basename ${OCEAN})\",/" \
         -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = ${HISTINT}.D0,/" \
     > $TMPDIR/run.conf
 

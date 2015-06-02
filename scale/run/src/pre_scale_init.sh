@@ -86,7 +86,7 @@ ln -fs ${LANDUSE}*.nc $TMPDIR
 #done
 
 RESTART_OUTPUT='.false.'
-if ((MKINIT == 1)); then
+if ((MKINIT == 1 || (OCEAN_INPUT == 1 && OCEAN_FORMAT == 99))); then
   RESTART_OUTPUT='.true.'
 fi
 

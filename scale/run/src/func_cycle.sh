@@ -234,6 +234,17 @@ else
       done
     fi
 
+    # anal_ocean
+    #-------------------
+#    if ((OCEAN_INPUT == 1)) && ((OCEAN_FORMAT == 0)); then
+#      for m in $(seq $mmean); do
+#        for q in $(seq $mem_np); do
+#          path="${time}/anal/${name_m[$m]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+#        done
+#      done
+#    fi
+
     # topo
     #-------------------
     if [ "$TOPO_FORMAT" = 'prep' ]; then
@@ -320,6 +331,13 @@ else
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
         fi
 
+        # anal_ocean
+        #-------------------
+#        if ((OCEAN_INPUT == 1)) && ((MAKEINIT != 1)); then
+#          path="${time}/anal/${name_m[$m]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
+#        fi
+
         # obsgues
         #-------------------
         if ((OBSOUT_OPT <= 2)); then
@@ -361,6 +379,13 @@ else
       if ((BDYOUT_OPT <= 2)) && ((BDY_ENS != 1)); then
         path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
         echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]} # ues m=1 instead of m=mmean to enhance parallelization
+      fi
+
+      # anal_ocean [mean]
+      #-------------------
+      if ((OCEAN_INPUT == 1)) && ((MAKEINIT != 1)); then
+        path="${time}/anal/mean/init_ocean$(printf $SCALE_SFX $((q-1)))"
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
       fi
 
       # mean/sprd
@@ -683,8 +708,17 @@ for m in $(seq $mmean); do
   else
     bdy_base="$TMPOUT/${time}/bdy/mean/boundary"
   fi
+  if ((OCEAN_INPUT == 1)); then
+    if ((MKINIT == 1 && OCEAN_FORMAT == 99)); then
+      ocean_base='-'
+    else
+      ocean_base="$TMPOUT/${time}/anal/mean/init_ocean"  ### always use mean???
+    fi
+  else
+    ocean_base='-'
+  fi
   ( pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
-      $TMPOUT/${time}/anal/${name_m[$m]}/init $bdy_base \
+      $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
       $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
       $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
     mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \

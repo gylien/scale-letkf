@@ -253,9 +253,6 @@ else
 
         # anal
         #-------------------
-
-        # anal
-        #-------------------
         if ((MAKEINIT != 1)); then
           for m in $(seq $fmember); do
             mm=$(((c-1) * fmember + m))
@@ -265,6 +262,18 @@ else
             done
           done
         fi
+
+        # anal_ocean
+        #-------------------
+#        if ((OCEAN_INPUT == 1)) && ((OCEAN_FORMAT == 0)); then
+#          for m in $(seq $fmember); do
+#            mm=$(((c-1) * fmember + m))
+#            for q in $(seq $mem_np); do
+#              path="${time2}/anal/${name_m[$mm]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
+#              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+#            done
+#          done
+#        fi
 
         # topo
         #-------------------
@@ -335,6 +344,13 @@ else
               echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+q))]}
             fi
 
+            # anal_ocean
+            #-------------------
+#            if ((OCEAN_INPUT == 1)) && ((MAKEINIT != 1)); then
+#              path="${time2}/anal/${name_m[$mm]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
+#              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+q))]}
+#            fi
+
             # fcst [history]
             #-------------------
             if ((OUT_OPT <= 2)); then
@@ -400,6 +416,15 @@ else
         for q in $(seq $mem_np); do
           if ((BDYOUT_OPT <= 2)) && ((BDY_ENS != 1)); then
             path="${time2}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$((tmpidx+q))]}
+          fi
+        done
+
+        # anal_ocean [mean]
+        #-------------------
+        for q in $(seq $mem_np); do
+          if ((OCEAN_INPUT == 1)) && ((MAKEINIT != 1)); then
+            path="${time2}/anal/mean/init_ocean$(printf $SCALE_SFX $((q-1)))"
             echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$((tmpidx+q))]}
           fi
         done
@@ -735,8 +760,17 @@ for c in $(seq $rcycle); do
     else
       bdy_base="$TMPOUT/${stimes[$c]}/bdy/mean/boundary"
     fi
+    if ((OCEAN_INPUT == 1)); then
+      if ((MKINIT == 1 && OCEAN_FORMAT == 99)); then
+        ocean_base='-'
+      else
+        ocean_base="$TMPOUT/${stimes[$c]}/anal/mean/init_ocean"  ### always use mean???
+      fi
+    else
+      ocean_base='-'
+    fi
     ( pdbash proc.${cf}.${name_m[$mm]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
-        $TMPOUT/${stimes[$c]}/anal/${name_m[$mm]}/init $bdy_base \
+        $TMPOUT/${stimes[$c]}/anal/${name_m[$mm]}/init $ocean_base $bdy_base \
         $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \
         ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/${cf}_${name_m[$mm]} $TMPDAT/exec $TMPDAT ;
       mpirunf proc.${cf}.${name_m[$mm]} $TMPRUN/scale/${cf}_${name_m[$mm]} \
