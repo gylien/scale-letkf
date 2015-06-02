@@ -40,14 +40,20 @@ LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=2            # 0: SCALE with exactly same domain settings (do not need additional preprocessing)
-                        # 1: SCALE (requires compatible 'config.nml.scale_init')
-                        # 2: WRF   (requires compatible 'config.nml.scale_init')
-                        # 3: NICAM (requires compatible 'config.nml.scale_init')
+BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+                        # 1: SCALE history (requires compatible 'config.nml.scale_init')
+                        # 2: WRF           (requires compatible 'config.nml.scale_init')
+                        # 3: NICAM         (requires compatible 'config.nml.scale_init')
 BDY_ENS=0               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 
 BDYINT=21600
+
+OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
+                        # 1: Update the ocean variables every cycle
+
+OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+                        # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
 OBSNAME[1]=obs                                    
