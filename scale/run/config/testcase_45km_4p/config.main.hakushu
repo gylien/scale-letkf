@@ -7,24 +7,25 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="$DIR/../../exp/testcase_45km_4p" # Directory for SCALE-LETKF output
+OUTDIR="/data6/gylien/exp/scale-letkf_test/testcase_45km_4p" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../scale/scale-les/test/case_real/check_japan/run"
-DATADIR="$DIR/../../database"
+MODELDIR="/data6/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
+DATADIR="/data6/gylien/scale-letkf/database"
 
-DATA_TOPO="$DIR/../../database/topo_prep/testcase_45km_4p_bf10"
-DATA_LANDUSE="$DIR/../../database/landuse_prep/testcase_45km_4p_bf10"
+DATA_TOPO="/data6/gylien/scale-letkf/database/topo_prep/testcase_45km_4p_bf10"
+DATA_LANDUSE="/data6/gylien/scale-letkf/database/landuse_prep/testcase_45km_4p_bf10"
 DATA_BDY_SCALE=
-DATA_BDY_WRF="$DIR/../../ncepfnl/wrfout"
+DATA_BDY_SCALE_PREP="/data6/gylien/scale-letkf/database/bdy_prep/testcase_45km_4p"
+DATA_BDY_WRF="/data6/gylien/model/ncepfnl_large/wrfout"
 DATA_BDY_NICAM=
 
-OBS="$DIR/../../obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
-OBSNCEP="$DIR/../../obs/prepbufr" # directory of observation data in NCEP BUFR format
+OBS="/data6/gylien/obs/prepbufr_obs_eastasia_test"    # directory of observation data in LETKF obs format
+OBSNCEP=                # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # model/data file options
@@ -39,7 +40,7 @@ LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=2            # 0: SCALE with exactly same domain settings (do not need additional preprocessing)
+BDY_FORMAT=0            # 0: SCALE with exactly same domain settings (do not need additional preprocessing)
                         # 1: SCALE (requires compatible 'config.nml.scale_init')
                         # 2: WRF   (requires compatible 'config.nml.scale_init')
                         # 3: NICAM (requires compatible 'config.nml.scale_init')
@@ -55,18 +56,18 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=10800     # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=32400     # SCALE forecast time when assimilation window ends (second)
-LCYCLE=21600       # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=1800      # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=3600      # SCALE forecast time when assimilation window ends (second)
+LCYCLE=3600        # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=600      # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
 
-MEMBER=10          # Ensemble size
+MEMBER=3           # Ensemble size
 
 NNODES=1           # Number of nodes
-PPN=40             # Number of processes per node
+PPN=16             # Number of processes per node
 
 THREADS=1          # Number of threads per process
 

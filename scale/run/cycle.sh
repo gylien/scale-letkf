@@ -78,7 +78,7 @@ declare -a node
 declare -a name_m
 declare -a node_m
 
-if ((BUILTIN_STAGING)); then
+if ((BUILTIN_STAGING && ISTEP == 1)); then
   safe_init_tmpdir $NODEFILE_DIR
   distribute_da_cycle machinefile $NODEFILE_DIR
 else
