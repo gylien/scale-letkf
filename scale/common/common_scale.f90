@@ -464,7 +464,7 @@ subroutine set_scalelib
     PRC_2Drank, &
     PRC_NUM_X, &
     PRC_NUM_Y, &
-    LOCAL_COMM_WORLD
+    GLOBAL_COMM_WORLD
 !    prc_nu, &
   use scale_const, only: &
     CONST_setup
@@ -544,7 +544,7 @@ subroutine set_scalelib
                           LOCAL_myrank, LOCAL_nmax)
 
   ! setup MPI
-  call PRC_MPIsetup( LOCAL_COMM_WORLD )
+  call PRC_MPIsetup( GLOBAL_COMM_WORLD )
 
   ! setup process
   call PRC_setup
