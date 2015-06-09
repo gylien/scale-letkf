@@ -6,7 +6,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_step.sh [TIME LOOP STEPFUNC]
+#    cycle_step.sh [LOOP STEPFUNC TIME]
 #
 #  Use settings:
 #    config.main
@@ -48,11 +48,9 @@ res=$? && ((res != 0)) && exit $res
 
 setting
 
-shift
-shift
-TIME="${1}"; shift
 LOOP="${1}"; shift
-STEPFUNC="${1}"
+STEPFUNC="${1}"; shift
+TIME="${1}"
 
 #-------------------------------------------------------------------------------
 
@@ -89,11 +87,13 @@ declare -a node
 declare -a name_m
 declare -a node_m
 
+distribute_da_cycle machinefile -
+
 #if ((BUILTIN_STAGING && ISTEP == 1)); then
 #  safe_init_tmpdir $NODEFILE_DIR
 #  distribute_da_cycle machinefile $NODEFILE_DIR
 #else
-  distribute_da_cycle - -
+#  distribute_da_cycle - -
 #fi
 
 #===============================================================================

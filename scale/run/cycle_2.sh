@@ -79,7 +79,8 @@ declare -a node
 declare -a name_m
 declare -a node_m
 
-if ((BUILTIN_STAGING && ISTEP == 1)); then
+#if ((BUILTIN_STAGING && ISTEP == 1)); then
+if ((BUILTIN_STAGING)); then
   safe_init_tmpdir $NODEFILE_DIR
   distribute_da_cycle machinefile $NODEFILE_DIR
 else
@@ -213,8 +214,7 @@ while ((time <= ETIME)); do
       echo
       printf " %2d. %-55s\n" $s "${stepname[$s]}"
 
-#      ./cycle_step.sh "$time" "$loop" "${stepfunc[$s]}"
-echo "      ./cycle_step.sh \"$time\" \"$loop\" \"${stepfunc[$s]}\""
+      ./cycle_step.sh "$loop" "${stepfunc[$s]}" "$time"
 
       echo
       echo "===================================================================="

@@ -32,7 +32,7 @@ USAGE="
 
 Configuration files:
   config.main
-  config.$myname1
+  config.cycle
 
 Steps:
 $(for i in $(seq $nsteps); do echo "  ${i}. ${stepname[$i]}"; done)
@@ -724,7 +724,7 @@ for m in $(seq $mmean); do
     mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \
       ./scale-les run.conf > /dev/null ;
     pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_scale.sh $mem_np \
-      $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/${name_m[$m]} $myname1 ) &
+      $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/${name_m[$m]} cycle ) &
 
   sleep $BGJOB_INT
 done
