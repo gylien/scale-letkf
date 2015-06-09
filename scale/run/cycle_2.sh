@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle.sh [STIME ETIME ISTEP FSTEP TIME_LIMIT]
+#    cycle.sh [STIME ETIME ISTEP FSTEP]
 #
 #  Use settings:
 #    config.main
@@ -42,7 +42,7 @@ res=$? && ((res != 0)) && exit $res
 
 #-------------------------------------------------------------------------------
 
-setting "$1" "$2" "$3" "$4" "$5"
+setting "$1" "$2" "$3" "$4"
 
 #-------------------------------------------------------------------------------
 
@@ -213,8 +213,8 @@ while ((time <= ETIME)); do
       echo
       printf " %2d. %-55s\n" $s "${stepname[$s]}"
 
-#      ./cycle_step.sh "$1" "$2" "$3" "$4" "$5" "$time" "${stepfunc[$s]}"
-echo "      ./cycle_step.sh \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$time\" \"${stepfunc[$s]}\""
+#      ./cycle_step.sh "$time" "$loop" "${stepfunc[$s]}"
+echo "      ./cycle_step.sh \"$time\" \"$loop\" \"${stepfunc[$s]}\""
 
       echo
       echo "===================================================================="

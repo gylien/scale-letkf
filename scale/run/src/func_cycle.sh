@@ -50,10 +50,10 @@ Usage: $myname [STIME ETIME ISTEP FSTEP TIME_LIMIT]
                (default: 30 minutes)
 "
 
-if [ "$1" == '-h' ] || [ "$1" == '--help' ]; then
-  echo "$USAGE"
-  exit 0
-fi
+#if [ "$1" == '-h' ] || [ "$1" == '--help' ]; then
+#  echo "$USAGE"
+#  exit 0
+#fi
 
 #-------------------------------------------------------------------------------
 # set parameters from command line
@@ -67,10 +67,10 @@ TIME_LIMIT="${1:-$TIME_LIMIT}"
 #-------------------------------------------------------------------------------
 # if some necessary parameters are not given, print the usage help and exit
 
-if [ -z "$STIME" ]; then
-  echo "$USAGE" >&2
-  exit 1
-fi
+#if [ -z "$STIME" ]; then
+#  echo "$USAGE" >&2
+#  exit 1
+#fi
 
 #-------------------------------------------------------------------------------
 # error detection
@@ -584,7 +584,7 @@ if ((BDY_ENS == 1)); then
 fi
 
 mkinit=0
-if ((time == STIME)); then
+if ((LOOP = 1)); then
   mkinit=$MAKEINIT
 fi
 

@@ -6,7 +6,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_step.sh [STIME ETIME ISTEP FSTEP TIME_LIMIT TIME STEPFUNC]
+#    cycle_step.sh [TIME LOOP STEPFUNC]
 #
 #  Use settings:
 #    config.main
@@ -27,7 +27,7 @@ myname1=${myname%.*}
 #===============================================================================
 # Configuration
 
-if (($# < 7)); then
+if (($# < 3)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." >&2
   exit 1
 fi
@@ -46,15 +46,13 @@ res=$? && ((res != 0)) && exit $res
 
 #-------------------------------------------------------------------------------
 
-setting "$1" "$2" "$3" "$4" "$5"
+setting
 
 shift
 shift
-shift
-shift
-shift
-TIME="${6}"; shift
-STEP="${7}"
+TIME="${1}"; shift
+LOOP="${1}"; shift
+STEPFUNC="${1}"
 
 #-------------------------------------------------------------------------------
 
