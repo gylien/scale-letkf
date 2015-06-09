@@ -838,4 +838,59 @@ wait
 #-------------------------------------------------------------------------------
 }
 
+#===============================================================================#===============================================================================
+
+obstime () {
+#-------------------------------------------------------------------------------
+# Determine the observation time slots
+#  *Require source 'func_datetime.sh'
+#
+# Usage: obstime TIME
+#
+#   TIME  Forecast start time
+#
+# Other input variables:
+#   $LTIMESLOT
+#   $WINDOW_S
+#   $WINDOW_E
+#   $LCYCLE
+#
+# Return variables:
+#   $slot_s
+#   $slot_e
+#   $slot_b
+#   $time_sl[1...$slot_e]
+#   $timefmt_sl[1...$slot_e]
+#-------------------------------------------------------------------------------
+
+if (($# < 1)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local TIME="$1"
+
+#-------------------------------------------------------------------------------
+
+  local otime=$(datetime $TIME)               # HISTORY_OUTPUT_STEP0 = .true.,
+#  local otime=$(datetime $TIME $LTIMESLOT s)  # HISTORY_OUTPUT_STEP0 = .false.,
+  local is=0
+  slot_s=0
+  while ((otime <= $(datetime $TIME $WINDOW_E s))); do
+    is=$((is+1))
+    time_sl[$is]=$otime
+    timefmt_sl[$is]="$(datetime_fmt ${otime})"
+    if ((slot_s == 0 && otime >= $(datetime $TIME $WINDOW_S s))); then
+      slot_s=$is
+    fi
+    if ((otime == $(datetime $TIME $LCYCLE s))); then # $(datetime $TIME $LCYCLE,$WINDOW_S,$WINDOW_E,... s) as a variable
+      slot_b=$is
+    fi
+  otime=$(datetime $otime $LTIMESLOT s)
+  done
+  slot_e=$is
+
+#-------------------------------------------------------------------------------
+}
+
 #===============================================================================
