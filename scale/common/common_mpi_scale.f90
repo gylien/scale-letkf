@@ -38,6 +38,9 @@ module common_mpi_scale
   integer,save :: nij1
   integer,save :: nij1max
   integer,allocatable,save :: nij1node(:)
+
+
+
 !!!!  real(r_size),allocatable,save :: phi1(:)
 !!!  real(r_size),allocatable,save :: lon1(:),lat1(:)
 !!!  real(r_size),allocatable,save :: lonu1(:),latu1(:)
@@ -49,7 +52,29 @@ module common_mpi_scale
   real(r_size),allocatable,save :: topo1(:)
   real(r_size),allocatable,save :: hgt1(:,:)
 
+
+
+
+  integer,save :: nitmax ! maximum number of model files processed by a process
+  integer,allocatable,save :: procs(:)
+  integer,allocatable,save :: mem2node(:,:)
+  integer,allocatable,save :: mem2proc(:,:)
+  integer,allocatable,save :: proc2mem(:,:,:)
+  integer,save :: n_mem
+  integer,save :: n_mempn
+
+  integer,save :: ens_mygroup = -1
+  integer,save :: ens_myrank = -1
+  logical,save :: myrank_use = .false.
+  logical,save :: myrank_mem_use = .false.
+  integer,save :: lastmem_rank_e
+
+
+
+
+
   integer,save :: MPI_COMM_e, nprocs_e, myrank_e
+  integer,save :: MPI_COMM_d, nprocs_d, myrank_d
   integer,save :: MPI_COMM_a, nprocs_a, myrank_a
 
 !  character(9) scale_filename = 'file.0000'
@@ -63,14 +88,12 @@ SUBROUTINE set_common_mpi_scale
     IHALO, &
     JHALO
   use scale_process, only: &
-    PRC_myrank
+!    PRC_myrank, &
+    LOCAL_COMM_WORLD
+
 
   implicit none
-  REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
-  REAL(RP) :: v2dg(nlon,nlat,nv2d)
-  REAL(r_size),ALLOCATABLE :: v3d(:,:,:)
-  REAL(r_size),ALLOCATABLE :: v2d(:,:)
-  INTEGER :: i,j,n
+  INTEGER :: i,n
   INTEGER :: ierr !,buf(4)
 !  LOGICAL :: ex
 
@@ -89,7 +112,6 @@ SUBROUTINE set_common_mpi_scale
 
   integer :: ip
 
-  integer :: iproc, jproc
 
 
 
@@ -144,6 +166,12 @@ SUBROUTINE set_common_mpi_scale
   call MPI_Comm_size(MPI_COMM_a,nprocs_a,ierr)
   call MPI_Comm_rank(MPI_COMM_a,myrank_a,ierr)
 
+!--
+
+  MPI_COMM_d = LOCAL_COMM_WORLD
+  call MPI_Comm_size(MPI_COMM_d,nprocs_d,ierr)
+  call MPI_Comm_rank(MPI_COMM_d,myrank_d,ierr)
+
 
 !write(6,'(A,9I6)') '######===', myrank, myrank_e, nprocs_e, ranks(:)
 !stop
@@ -171,6 +199,42 @@ SUBROUTINE set_common_mpi_scale
     END IF
   END DO
 
+
+
+  RETURN
+END SUBROUTINE set_common_mpi_scale
+!-----------------------------------------------------------------------
+! set_common_mpi_scale
+!-----------------------------------------------------------------------
+SUBROUTINE unset_common_mpi_scale
+  implicit none
+  integer:: ierr
+
+  call MPI_Comm_free(MPI_COMM_e,ierr)
+  call MPI_Comm_free(MPI_COMM_a,ierr)
+!  call unset_scalelib
+
+  RETURN
+END SUBROUTINE unset_common_mpi_scale
+
+
+
+
+subroutine set_common_mpi_grid(file)
+  use scale_grid_index, only: &
+    IHALO, &
+    JHALO
+  use scale_process, only: &
+    PRC_myrank
+
+  implicit none
+  CHARACTER(*),INTENT(IN) :: file
+  REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
+  REAL(RP) :: v2dg(nlon,nlat,nv2d)
+  REAL(r_size),ALLOCATABLE :: v3d(:,:,:)
+  REAL(r_size),ALLOCATABLE :: v2d(:,:)
+  INTEGER :: i,j
+  integer :: iproc, jproc
 
   ALLOCATE(topo(nlon,nlat))
 
@@ -221,7 +285,7 @@ SUBROUTINE set_common_mpi_scale
 !  END DO
 
   if (myrank_e == lastmem_rank_e) then
-    call read_topo('topo', topo)
+    call read_topo(file, topo)
     v3dg(1,:,:,3) = topo
 
 !print *, v3dg(1,:,:,3)
@@ -258,21 +322,294 @@ SUBROUTINE set_common_mpi_scale
 !end if
 !end do
 
+end subroutine set_common_mpi_grid
+
+
+
+!-----------------------------------------------------------------------
+! set_mem2proc
+!-----------------------------------------------------------------------
+SUBROUTINE set_mem_node_proc(mem,nnodes,ppn,mem_nodes,mem_np)
+  IMPLICIT NONE
+  INTEGER,INTENT(IN) :: mem,nnodes,ppn,mem_nodes,mem_np
+  INTEGER :: tppn,tppnt,tmod
+  INTEGER :: n,ns,nn,m,q,qs,i,j,it,ip
+
+  ALLOCATE(procs(nprocs))
+  ns = 0
+  DO n = 1, nnodes
+    procs(ns+1:ns+ppn) = n
+    ns = ns + ppn
+  END DO
+
+  IF(mem_nodes > 1) THEN
+    n_mem = nnodes / mem_nodes
+    n_mempn = 1
+  ELSE
+    n_mem = nnodes
+    n_mempn = ppn / mem_np
+  END IF
+  nitmax = (mem - 1) / (n_mem * n_mempn) + 1
+  tppn = mem_np / mem_nodes
+  tmod = MOD(mem_np, mem_nodes)
+
+  ALLOCATE(mem2node(mem_np,mem))
+  ALLOCATE(mem2proc(mem_np,mem))
+  ALLOCATE(proc2mem(2,nitmax,nprocs))
+  proc2mem = -1
+  m = 1
+mem_loop: DO it = 1, nitmax
+    DO i = 0, n_mempn-1
+      n = 0
+      DO j = 0, n_mem-1
+        IF(m > mem .and. it > 1) EXIT mem_loop
+        qs = 0
+        DO nn = 0, mem_nodes-1
+          IF(nn < tmod) THEN
+            tppnt = tppn + 1
+          ELSE
+            tppnt = tppn
+          END IF
+          DO q = 0, tppnt-1
+            ip = (n+nn)*ppn + i*mem_np + q
+            if (m <= mem) then
+              mem2node(qs+1,m) = n+nn
+              mem2proc(qs+1,m) = ip
+            end if
+            proc2mem(1,it,ip+1) = m
+            proc2mem(2,it,ip+1) = qs
+            qs = qs + 1
+          END DO
+        END DO
+        m = m + 1
+        n = n + mem_nodes
+      END DO
+    END DO
+  END DO mem_loop
+
+  ens_mygroup = proc2mem(1,1,myrank+1)
+  ens_myrank = proc2mem(2,1,myrank+1)
+  if (ens_mygroup >= 1) then
+    myrank_use = .true.
+  end if
+  if (ens_mygroup >= 1 .and. ens_mygroup <= mem) then
+    myrank_mem_use = .true.
+  end if
+
+  lastmem_rank_e = mod(mem-1, n_mem*n_mempn)
+!  if (lastmem_rank_e /= proc2mem(1,1,mem2proc(1,mem)+1)-1) then
+!    print *, 'XXXXXX wrong!!'
+!    stop
+!  end if
+
   RETURN
-END SUBROUTINE set_common_mpi_scale
+END SUBROUTINE
+
+
+
+
+
+
+
+
 !-----------------------------------------------------------------------
-! set_common_mpi_scale
+! Start using SCALE library
 !-----------------------------------------------------------------------
-SUBROUTINE unset_common_mpi_scale
+subroutine set_scalelib
+
+  use scale_precision
+  use scale_stdio, only: IO_FID_CONF
+!  use scale_prof
+
+  use gtool_history, only: &
+    HistoryInit
+  use dc_log, only: &
+    LogInit
+  use scale_process, only: &
+    PRC_setup,    &
+    PRC_MPIstart, &
+    PRC_MPIsplit_letkf, &
+    PRC_MPIsetup, &
+    PRC_master, &
+    PRC_myrank, &
+    PRC_2Drank, &
+    PRC_NUM_X, &
+    PRC_NUM_Y, &
+    GLOBAL_COMM_WORLD
+!    prc_nu, &
+  use scale_const, only: &
+    CONST_setup
+  use scale_calendar, only: &
+    CALENDAR_setup
+  use scale_random, only: &
+    RANDOM_setup
+!  use scale_time, only: &
+!    TIME_setup
+  use scale_time, only: &
+    TIME_DTSEC,       &
+    TIME_STARTDAYSEC
+
+  use scale_grid, only: &
+    GRID_setup, &
+    GRID_DOMAIN_CENTER_X, &
+    GRID_DOMAIN_CENTER_Y
+
+  use scale_grid_index
+
+!  use scale_grid_nest, only: &
+!    NEST_setup
+!  use scale_land_grid_index, only: &
+!    LAND_GRID_INDEX_setup
+!  use scale_land_grid, only: &
+!    LAND_GRID_setup
+!  use scale_urban_grid_index, only: &
+!    URBAN_GRID_INDEX_setup
+!  use scale_urban_grid, only: &
+!    URBAN_GRID_setup
+  use scale_tracer, only: &
+    TRACER_setup
+  use scale_fileio, only: &
+     FILEIO_setup
+  use scale_comm, only: &
+    COMM_setup
+!  use scale_topography, only: &
+!    TOPO_setup
+!  use scale_landuse, only: &
+!    LANDUSE_setup
+!  use scale_grid_real, only: &
+!    REAL_setup
+
+!  use scale_gridtrans, only: &
+!     GTRANS_setup
+
+  use scale_atmos_hydrostatic, only: &
+     ATMOS_HYDROSTATIC_setup
+  use scale_atmos_thermodyn, only: &
+     ATMOS_THERMODYN_setup
+
+  use mod_admin_time, only: &
+     ADMIN_TIME_setup
+
+
+  use scale_mapproj, only: &
+    MPRJ_setup
   implicit none
-  integer:: ierr
 
-  call MPI_Comm_free(MPI_COMM_e,ierr)
-  call MPI_Comm_free(MPI_COMM_a,ierr)
-!  call unset_scalelib
 
-  RETURN
-END SUBROUTINE unset_common_mpi_scale
+
+!    character(len=H_MID) :: DATATYPE = 'DEFAULT' !< REAL4 or REAL8
+  integer :: rankidx(2)
+
+  integer :: LOCAL_myrank, LOCAL_nmax
+
+  !-----------------------------------------------------------------------------
+
+  ! start SCALE MPI
+  call PRC_MPIstart
+!  if ( NUM_DOMAIN == 1 ) then
+!     PRC_DOMAINS(1) = GLOBAL_nmax
+!  endif
+
+  ! split MPI communicator for LETKF
+  call PRC_MPIsplit_letkf(MEM_NP, nitmax, nprocs, proc2mem, myrank, &
+                          LOCAL_myrank, LOCAL_nmax)
+
+  ! setup MPI
+  call PRC_MPIsetup( GLOBAL_COMM_WORLD )
+
+  ! setup process
+  call PRC_setup
+
+  ! setup Log
+  call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
+
+  ! setup constants
+  call CONST_setup
+
+  ! setup time
+  call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
+
+  call PROF_rapstart('Initialize')
+
+  ! setup horizontal/vertical grid coordinates
+  call GRID_INDEX_setup
+  call GRID_setup
+
+!  call LAND_GRID_INDEX_setup
+!  call LAND_GRID_setup
+
+!  call URBAN_GRID_INDEX_setup
+!  call URBAN_GRID_setup
+
+  ! setup tracer index
+  call TRACER_setup
+
+  ! setup file I/O
+  call FILEIO_setup
+
+  ! setup mpi communication
+  call COMM_setup
+
+  ! setup topography
+!  call TOPO_setup
+  ! setup land use category index/fraction
+!  call LANDUSE_setup
+
+  ! setup grid coordinates (real world)
+!  call REAL_setup
+  ! setup map projection                      [in the SCALE model, this subroutine is called inside of REAL_setup!]
+  call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
+
+  ! setup grid transfer metrics (uses in ATMOS_dynamics)
+!  call GTRANS_setup
+
+  ! setup common tools
+!  call ATMOS_HYDROSTATIC_setup
+  call ATMOS_THERMODYN_setup
+!  call ATMOS_SATURATION_setup
+
+  ! setup history file I/O
+  rankidx(1) = PRC_2Drank(PRC_myrank, 1)
+  rankidx(2) = PRC_2Drank(PRC_myrank, 2)
+
+  call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_master, LOCAL_myrank, rankidx, &
+                   TIME_STARTDAYSEC, TIME_DTSEC, &
+                   namelist_fid=IO_FID_CONF)
+
+  call PROF_rapend('Initialize')
+
+  call PROF_rapstart('Main')
+
+  return
+end subroutine set_scalelib
+
+!-----------------------------------------------------------------------
+! Finish using SCALE library
+!-----------------------------------------------------------------------
+subroutine unset_scalelib
+  use scale_process, only: &
+    PRC_MPIfinish
+  use gtool_file, only: &
+    FileCloseAll
+  implicit none
+
+  call PROF_rapend('Main')
+
+  call PROF_rapreport
+
+  call FileCloseAll
+
+!  ! stop SCALE MPI
+!  call PRC_MPIfinish
+
+  return
+end subroutine unset_scalelib
+
+
+
+
+
+
 !-----------------------------------------------------------------------
 ! Scatter gridded data to processes (nrank -> all)
 !-----------------------------------------------------------------------
@@ -418,7 +755,7 @@ SUBROUTINE read_ens_history_iter(file,iter,step,v3dg,v2dg,ensmean)
     end if
   end if
 
-  IF (scale_IO_use) then
+  IF (myrank_mem_use) then
 
     IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= mem) THEN
       WRITE(filename(1:4),'(A4)') file
@@ -473,7 +810,7 @@ END SUBROUTINE read_ens_history_iter
 !    end if
 !  end if
 
-!  IF (scale_IO_use) then
+!  IF (myrank_mem_use) then
 !    allocate( var3D(nlon,nlat,nlev) )
 !    allocate( var2D(nlon,nlat) )
 

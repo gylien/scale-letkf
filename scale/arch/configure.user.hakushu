@@ -18,5 +18,6 @@ SCALE_INC = -I$(SCALE)/dc_utils \
             -I$(SCALE)/gtool    \
             -I$(SCALE)/include
 SCALE_LIB = -L$(SCALE)/lib -lscale -lgtool -ldcutils
+SCALE_LES_OBJDIR = ../../../scale/scale-les/test/case_real/check_japan/run/.libs
 
 BUFR_LIB  = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib

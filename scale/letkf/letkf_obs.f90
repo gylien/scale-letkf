@@ -52,7 +52,7 @@ SUBROUTINE set_letkf_obs
   use scale_grid_index, only: &
     IHALO,JHALO
   use scale_process, only: &
-    MPI_COMM_d => LOCAL_COMM_WORLD, &
+!    MPI_COMM_d => LOCAL_COMM_WORLD, &
     PRC_myrank, &
     PRC_NUM_X, &
     PRC_NUM_Y

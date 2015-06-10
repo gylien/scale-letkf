@@ -19,8 +19,8 @@ MODULE obsope_tools
   use common_nml
 
   use scale_process, only: &
-       PRC_myrank, &
-       MPI_COMM_d => LOCAL_COMM_WORLD
+       PRC_myrank
+!       MPI_COMM_d => LOCAL_COMM_WORLD
 
   use scale_grid_index, only: &
     KHALO, IHALO, JHALO

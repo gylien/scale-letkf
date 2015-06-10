@@ -12,7 +12,7 @@ PROGRAM letkf
   USE common_mpi
   USE common_scale
   USE common_mpi_scale
-!  USE common_obs_scale
+  USE common_obs_scale
 
   use common_nml
 
@@ -69,18 +69,26 @@ PROGRAM letkf
 !  WRITE(6,'(A,F15.2)') '  sigma_obst   :',sigma_obst
 !  WRITE(6,'(A)') '============================================='
 
-  CALL set_common_scale(-1)
-  CALL set_common_obs_scale
 
-!-----------------------------------------------------------------------
+  call set_common_conf
 
-  if (scale_IO_mygroup > 0) then
+  call read_nml_letkf_obs
+  call read_nml_letkf_obserr
+  call read_nml_letkf_obs_radar
 
-    CALL set_common_mpi_scale
+  call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
+
+  if (myrank_use) then
+
+    call set_scalelib
+
+    call set_common_scale
+    call set_common_mpi_scale
+    call set_common_obs_scale
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(INITIALIZE):        ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(INITIALIZE):',rtimer-rtimer00
     rtimer00=rtimer
 
 !-----------------------------------------------------------------------
@@ -94,7 +102,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(READ_OBS):          ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(READ_OBS):',rtimer-rtimer00
     rtimer00=rtimer
 
     !
@@ -104,7 +112,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(PROCESS_OBS):       ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(PROCESS_OBS):',rtimer-rtimer00
     rtimer00=rtimer
 
 
@@ -134,6 +142,19 @@ PROGRAM letkf
     ALLOCATE(anal3d(nij1,nlev,MEMBER,nv3d))
     ALLOCATE(anal2d(nij1,MEMBER,nv2d))
 
+
+    !
+    ! LETKF GRID setup
+    !
+    call set_common_mpi_grid('topo')
+
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    rtimer = MPI_WTIME()
+    WRITE(6,timer_fmt) '### TIMER(SET_GRID):',rtimer-rtimer00
+    rtimer00=rtimer
+
+
+
     !
     ! READ GUES
     !
@@ -146,7 +167,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(READ_GUES):         ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(READ_GUES):',rtimer-rtimer00
     rtimer00=rtimer
 
 
@@ -157,7 +178,7 @@ PROGRAM letkf
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(GUES_MEAN):         ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(GUES_MEAN):',rtimer-rtimer00
     rtimer00=rtimer
 !!-----------------------------------------------------------------------
 !! Data Assimilation
@@ -173,7 +194,7 @@ PROGRAM letkf
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(DAS_LETKF):         ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(DAS_LETKF):',rtimer-rtimer00
     rtimer00=rtimer
 !-----------------------------------------------------------------------
 ! Analysis ensemble
@@ -187,7 +208,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(WRITE_ANAL):        ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(WRITE_ANAL):',rtimer-rtimer00
     rtimer00=rtimer
     !
     ! WRITE ENS MEAN and SPRD
@@ -196,7 +217,7 @@ PROGRAM letkf
     !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(ANAL_MEAN):         ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(ANAL_MEAN):',rtimer-rtimer00
     rtimer00=rtimer
 !!-----------------------------------------------------------------------
 !! Monitor
@@ -205,23 +226,27 @@ PROGRAM letkf
 !  CALL monit_obs
 !!
 !  rtimer = MPI_WTIME()
-!  WRITE(6,timer_fmt) '### TIMER(MONIT_MEAN):        ',rtimer-rtimer00
+!  WRITE(6,timer_fmt) '### TIMER(MONIT_MEAN):',rtimer-rtimer00
 !  rtimer00=rtimer
 
 
     CALL unset_common_mpi_scale
 
-  end if ! [ scale_IO_mygroup > 0 ]
+    call unset_scalelib
+
+  else ! [ myrank_use ]
+
+    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
+
+  end if ! [ myrank_use ]
 
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
 
-  CALL unset_common_scale
-
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(FINALIZE):          ',rtimer-rtimer00
+  WRITE(6,timer_fmt) '### TIMER(FINALIZE):',rtimer-rtimer00
   rtimer00=rtimer
 
   CALL finalize_mpi

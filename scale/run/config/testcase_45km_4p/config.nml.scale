@@ -1,4 +1,5 @@
 &PARAM_IO
+[IO_LOG_BASENAME]
  IO_LOG_ALLNODE = .false.,
 /
 
@@ -43,7 +44,7 @@
 &PARAM_RESTART
  RESTART_OUTPUT      = .true.,
 [RESTART_IN_BASENAME]
- RESTART_OUT_BASENAME = "restart",
+[RESTART_OUT_BASENAME]
 /
 
 &PARAM_TOPO
@@ -295,7 +296,7 @@
 #################################################
 
 &PARAM_HISTORY
- HISTORY_DEFAULT_BASENAME  = "history",
+[HISTORY_DEFAULT_BASENAME]
 [HISTORY_DEFAULT_TINTERVAL]
  HISTORY_DEFAULT_TUNIT     = "SEC",
  HISTORY_DEFAULT_TAVERAGE  = .false.,
@@ -393,7 +394,7 @@
 #################################################
 
 &PARAM_MONITOR
- MONITOR_OUT_BASENAME  = "monitor",
+[MONITOR_OUT_BASENAME]
  MONITOR_STEP_INTERVAL = 120,
 /
 

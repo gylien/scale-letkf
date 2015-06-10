@@ -22,6 +22,7 @@ LETKF_DIR="$DIR/letkf"           # LETKF program directory
 OBSUTIL_DIR="$DIR/obs"           # Observation program directory
 VERIFY_DIR="$DIR/verify"         # Verification program directory
 UTIL_DIR="$DIR/util"             # Other utility program directory
+ENSMODEL_DIR="$DIR/ensmodel"
 
 #-------------------------------------------------------------------------------
 

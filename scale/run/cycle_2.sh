@@ -214,7 +214,25 @@ while ((time <= ETIME)); do
       echo
       printf " %2d. %-55s\n" $s "${stepname[$s]}"
 
-      ./cycle_step.sh "$loop" "${stepfunc[$s]}" "$time"
+      if [ "${stepfunc[$s]}" = 'ensfcst' ]; then
+
+#        ./cycle_step.sh "$loop" "${stepfunc[$s]}"_pre "$time"
+
+#        mpirunf proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf > /dev/null
+
+        mkdir -p $TMPRUN/scale
+        rm -fr $TMPRUN/scale/*
+        ln -fs $TMPDAT/exec/scale-les_ens $TMPRUN/scale
+
+        mpirunf proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf $SCRP_DIR/cycle_step.sh "$loop" "${stepfunc[$s]}" "$time" # > /dev/null
+
+#        ./cycle_step.sh "$loop" "${stepfunc[$s]}"_post "$time"
+
+      else
+
+        ./cycle_step.sh "$loop" "${stepfunc[$s]}" "$time"
+
+      fi
 
       echo
       echo "===================================================================="

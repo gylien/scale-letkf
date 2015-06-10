@@ -70,18 +70,22 @@ cat $TMPDAT/conf/config.nml.letkf | \
 
 # These parameters are not important for obsope
 cat $TMPDAT/conf/config.nml.scale | \
-    sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = 2014, 1, 1, 0, 0, 0,/" \
+    sed -e "s/\[IO_LOG_BASENAME\]/ IO_LOG_BASENAME = \"LOG\",/" \
+        -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = 2014, 1, 1, 0, 0, 0,/" \
         -e "s/\[TIME_DURATION\]/ TIME_DURATION = $LTIMESLOT.D0,/" \
         -e "s/\[TIME_DT_ATMOS_RESTART\]/ TIME_DT_ATMOS_RESTART = $LTIMESLOT.D0,/" \
         -e "s/\[TIME_DT_OCEAN_RESTART\]/ TIME_DT_OCEAN_RESTART = $LTIMESLOT.D0,/" \
         -e "s/\[TIME_DT_LAND_RESTART\]/ TIME_DT_LAND_RESTART = $LTIMESLOT.D0,/" \
         -e "s/\[TIME_DT_URBAN_RESTART\]/ TIME_DT_URBAN_RESTART = .D0,/" \
         -e "s/\[RESTART_IN_BASENAME\]/ RESTART_IN_BASENAME = \"init\",/" \
+        -e "s/\[RESTART_OUT_BASENAME\]/ RESTART_OUT_BASENAME = \"restart\",/" \
         -e "s/\[TOPO_IN_BASENAME\]/ TOPO_IN_BASENAME = \"topo\",/" \
         -e "s/\[LANDUSE_IN_BASENAME\]/ LANDUSE_IN_BASENAME = \"landuse\",/" \
         -e "s/\[ATMOS_BOUNDARY_IN_BASENAME\]/ ATMOS_BOUNDARY_IN_BASENAME = \"boundary\",/" \
         -e "s/\[OCEAN_RESTART_IN_BASENAME\]/ OCEAN_RESTART_IN_BASENAME = \"init_ocean\",/" \
+        -e "s/\[HISTORY_DEFAULT_BASENAME\]/ HISTORY_DEFAULT_BASENAME = \"history\",/" \
         -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = $LTIMESLOT.D0,/" \
+        -e "s/\[MONITOR_OUT_BASENAME\]/ MONITOR_OUT_BASENAME = \"monitor\",/" \
     >> $TMPDIR/letkf.conf
 
 #===============================================================================
