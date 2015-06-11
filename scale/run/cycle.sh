@@ -23,7 +23,8 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname=$(basename "$0")
+#myname=$(basename "$0")
+myname='cycle.sh'
 myname1=${myname%.*}
 
 #===============================================================================
@@ -78,7 +79,8 @@ declare -a node
 declare -a name_m
 declare -a node_m
 
-if ((BUILTIN_STAGING && ISTEP == 1)); then
+#if ((BUILTIN_STAGING && ISTEP == 1)); then
+if ((BUILTIN_STAGING)); then
   safe_init_tmpdir $NODEFILE_DIR
   distribute_da_cycle machinefile $NODEFILE_DIR
 else
@@ -116,39 +118,7 @@ while ((time <= ETIME)); do
   if (($(datetime $time $LCYCLE s) > ETIME)); then
     e_flag=1
   fi
-
-  obstime=$(datetime $time)               # HISTORY_OUTPUT_STEP0 = .true.,
-#  obstime=$(datetime $time $LTIMESLOT s)  # HISTORY_OUTPUT_STEP0 = .false.,
-  is=0
-  slot_s=0
-  while ((obstime <= $(datetime $time $WINDOW_E s))); do
-    is=$((is+1))
-    time_sl[$is]=$obstime
-    timefmt_sl[$is]="$(datetime_fmt ${obstime})"
-    if ((slot_s == 0 && obstime >= $(datetime $time $WINDOW_S s))); then
-      slot_s=$is
-    fi
-    if ((obstime == $(datetime $time $LCYCLE s))); then # $(datetime $time $LCYCLE,$WINDOW_S,$WINDOW_E,... s) as a variable
-      slot_b=$is
-    fi
-  obstime=$(datetime $obstime $LTIMESLOT s)
-  done
-  slot_e=$is
-
-#echo "###### $slot_s $slot_b $slot_e"
-
-#  obstime=$(datetime $time $WINDOW_S s)
-#  is=0
-#  while ((obstime <= $(datetime $time $WINDOW_E s))); do
-#    is=$((is+1))
-#    time_sl[$is]=$obstime
-#    timefmt_sl[$is]="$(datetime_fmt ${obstime})"
-#    if ((WINDOW_S + LTIMESLOT * (is-1) == LCYCLE)); then
-#      baseslot=$is
-#    fi
-#  obstime=$(datetime $obstime $LTIMESLOT s)
-#  done
-#  nslots=$is
+  obstime $time
 
 #-------------------------------------------------------------------------------
 # Write the header of the log file
@@ -211,7 +181,35 @@ while ((time <= ETIME)); do
       echo
       printf " %2d. %-55s\n" $s "${stepname[$s]}"
 
-      ${stepfunc[$s]}
+      if [ "${stepfunc[$s]}" = 'ensfcst' ]; then
+      #------
+        mkdir -p $TMPRUN/scale
+        rm -fr $TMPRUN/scale/*
+        ln -fs $TMPDAT/exec/scale-les_ens $TMPRUN/scale
+
+        mpirunf proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+      #------
+      elif [ "${stepfunc[$s]}" = 'obsope' ]; then
+      #------
+        mkdir -p $TMPRUN/obsope
+        rm -fr $TMPRUN/obsope/*
+        ln -fs $TMPDAT/exec/obsope $TMPRUN/obsope
+
+        mpirunf proc $TMPRUN/obsope ./obsope obsope.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+      #------
+      elif [ "${stepfunc[$s]}" = 'letkf' ]; then
+      #------
+        mkdir -p $TMPRUN/letkf
+        rm -fr $TMPRUN/letkf/*
+        ln -fs $TMPDAT/exec/letkf $TMPRUN/letkf
+
+        mpirunf proc $TMPRUN/letkf ./letkf letkf.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+      #------
+      else
+      #------
+        ./cycle_step.sh "${stepfunc[$s]}" "$time" "$loop"
+      #------
+      fi
 
       echo
       echo "===================================================================="

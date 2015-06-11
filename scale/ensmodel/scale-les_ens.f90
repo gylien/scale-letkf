@@ -23,9 +23,7 @@ program scaleles_ens
 
   integer :: LOCAL_myrank, LOCAL_nmax
 
-  integer, parameter :: maxlen = 6400
-  character(len=maxlen) :: cmd, cmd1, cmd2
-!  integer :: nprocs, myrank, ierr, pos
+  character(len=6400) :: cmd, icmd
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -39,43 +37,37 @@ program scaleles_ens
   OPEN(6,FILE=stdoutf)
   WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
 
+!-----------------------------------------------------------------------
 ! Pre-processing scripts
 !-----------------------------------------------------------------------
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  if (myrank == 0) then
-    if (COMMAND_ARGUMENT_COUNT() < 5) then
-      write(6,*) 'Error: Insufficient arguments.'
-      stop
-    else
-      cmd1 = 'bash'
-      cmd2 = 'bash'
-      call get_command_argument(2, cmd)
-      cmd1 = trim(cmd1) // ' ' // trim(cmd)
-      cmd2 = trim(cmd2) // ' ' // trim(cmd)
-      call get_command_argument(3, cmd)
-      cmd1 = trim(cmd1) // ' ' // trim(cmd)
-      cmd2 = trim(cmd2) // ' ' // trim(cmd)
-      call get_command_argument(4, cmd)
-      cmd1 = trim(cmd1) // ' ' // trim(cmd) // '_pre'
-      cmd2 = trim(cmd2) // ' ' // trim(cmd) // '_post'
-      call get_command_argument(5, cmd)
-      cmd1 = trim(cmd1) // ' ' // trim(cmd)
-      cmd2 = trim(cmd2) // ' ' // trim(cmd)
-    endif
+  if (COMMAND_ARGUMENT_COUNT() >= 5) then
+    write(6,'(A)') 'Run pre-processing scripts'
+    if (myrank == 0) then
+      cmd = 'bash'
+      call get_command_argument(2, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd)
+      call get_command_argument(3, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd) // '_pre'
+      call get_command_argument(4, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd)
+      call get_command_argument(5, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd)
 
-    write(6,*) trim(cmd1)
-    call system(trim(cmd1))
+      WRITE(6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd), ']'
+      call system(trim(cmd))
+    end if
   end if
+
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  rtimer = MPI_WTIME()
+  WRITE(6,timer_fmt) '### TIMER(PRE_SCRIPT):',rtimer-rtimer00
+  rtimer00=rtimer
 
 !-----------------------------------------------------------------------
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   call set_common_conf
 
-  !
-  ! Set up node and process distribution
-  !
   call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -129,30 +121,43 @@ program scaleles_ens
 
   end if ! [ myrank_mem_use ]
 
-
-!-----------------------------------------------------------------------
-! Finalize
-!-----------------------------------------------------------------------
-
-! Post-processing scripts
-!-----------------------------------------------------------------------
-
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  if (myrank == 0) then
-    write(6,*) trim(cmd2)
-    call system(trim(cmd2))
-  end if
-
-!-----------------------------------------------------------------------
-
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   rtimer = MPI_WTIME()
   WRITE(6,timer_fmt) '### TIMER(SCALE_LES):',rtimer-rtimer00
   rtimer00=rtimer
 
-  CALL finalize_mpi
+!-----------------------------------------------------------------------
+! Post-processing scripts
+!-----------------------------------------------------------------------
+
+  if (COMMAND_ARGUMENT_COUNT() >= 5) then
+    write(6,'(A)') 'Run post-processing scripts'
+    if (myrank == 0) then
+      cmd = 'bash'
+      call get_command_argument(2, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd)
+      call get_command_argument(3, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd) // '_post'
+      call get_command_argument(4, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd)
+      call get_command_argument(5, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd)
+
+      WRITE(6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd), ']'
+      call system(trim(cmd))
+    end if
+  end if
+
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  rtimer = MPI_WTIME()
+  WRITE(6,timer_fmt) '### TIMER(POST_SCRIPT):',rtimer-rtimer00
+  rtimer00=rtimer
 
 !-----------------------------------------------------------------------
+! Finalize
+!-----------------------------------------------------------------------
+
+  CALL finalize_mpi
 
   stop
 end program scaleles_ens

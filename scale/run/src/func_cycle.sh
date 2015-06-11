@@ -695,6 +695,9 @@ ensfcst () {
 
 echo
 
+pdbash node $PROC_OPT $SCRP_DIR/src/pre_scale_node.sh \
+  $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT
+
 ipm=0
 for m in $(seq $mmean); do
   ipm=$((ipm+1))
@@ -741,34 +744,11 @@ ensfcst_pre () {
 #-------------------------------------------------------------------------------
 
 echo
+echo "* Pre-processing scripts"
+echo
 
-#mkdir -p $TMPRUN/scale
-#rm -fr $TMPRUN/scale/*
-
-#ln -fs $TMPDAT/exec/scale-les_ens $TMPRUN/scale
-
-ln -fs $DATADIR/rad/PARAG.29 $TMPRUN/scale
-ln -fs $DATADIR/rad/PARAPC.29 $TMPRUN/scale
-ln -fs $DATADIR/rad/VARDATA.RM29 $TMPRUN/scale
-ln -fs $DATADIR/rad/cira.nc $TMPRUN/scale
-ln -fs $DATADIR/rad/MIPAS/day.atm $TMPRUN/scale
-ln -fs $DATADIR/rad/MIPAS/equ.atm $TMPRUN/scale
-ln -fs $DATADIR/rad/MIPAS/sum.atm $TMPRUN/scale
-ln -fs $DATADIR/rad/MIPAS/win.atm $TMPRUN/scale
-ln -fs $DATADIR/land/param.bucket.conf $TMPRUN/scale
-
-cat $TMPDAT/conf/config.nml.letkf | \
-    sed -e "s/\[MEMBER\]/ MEMBER = $MEMBER,/" \
-        -e "s/\[SLOT_START\]/ SLOT_START = 1,/" \
-        -e "s/\[SLOT_END\]/ SLOT_END = 1,/" \
-        -e "s/\[SLOT_BASE\]/ SLOT_BASE = 1,/" \
-        -e "s/\[SLOT_TINTERVAL\]/ SLOT_TINTERVAL = $LTIMESLOT.D0,/" \
-        -e "s/\[NNODES\]/ NNODES = $NNODES,/" \
-        -e "s/\[PPN\]/ PPN = $PPN,/" \
-        -e "s/\[MEM_NODES\]/ MEM_NODES = $mem_nodes,/" \
-        -e "s/\[MEM_NP\]/ MEM_NP = $mem_np,/" \
-    > $TMPRUN/scale/scale-les_ens.conf
-
+pdbash node $PROC_OPT $SCRP_DIR/src/pre_scale_node.sh \
+  $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT
 
 ipm=0
 for m in $(seq $mmean); do
@@ -797,7 +777,7 @@ for m in $(seq $mmean); do
   pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
     $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
     $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
-    $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale ${name_m[$m]} $TMPDAT/exec $TMPDAT &
+    $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT &
 
   sleep $BGJOB_INT
 done
@@ -811,6 +791,8 @@ wait
 ensfcst_post () {
 #-------------------------------------------------------------------------------
 
+echo
+echo "* Post-processing scripts"
 echo
 
 ipm=0
@@ -896,6 +878,60 @@ wait
 
 #===============================================================================
 
+obsope_pre () {
+#-------------------------------------------------------------------------------
+
+echo
+echo "* Pre-processing scripts"
+echo
+
+pdbash node $PROC_OPT $SCRP_DIR/src/pre_obsope_node.sh \
+  $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
+  $mem_nodes $mem_np $slot_s $slot_e $slot_b
+
+ipm=0
+for m in $(seq $MEMBER); do
+  ipm=$((ipm+1))
+  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+
+  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_obsope.sh \
+    $atime ${name_m[$m]} $TMPRUN/obsope &
+
+  sleep $BGJOB_INT
+done
+wait
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+obsope_post () {
+#-------------------------------------------------------------------------------
+
+echo
+echo "* Post-processing scripts"
+echo
+
+ipm=0
+for m in $(seq $MEMBER); do
+  ipm=$((ipm+1))
+  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+
+  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_obsope.sh \
+    $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope &
+
+  sleep $BGJOB_INT
+done
+wait
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
 letkf () {
 #-------------------------------------------------------------------------------
 
@@ -918,8 +954,6 @@ for m in $(seq $mmean); do
 done
 wait
 
-#exit
-
 mpirunf proc $TMPRUN/letkf ./letkf letkf.conf > /dev/null
 
 ipm=0
@@ -927,6 +961,60 @@ for m in $(seq $mmean); do
   ipm=$((ipm+1))
   if ((ipm > parallel_mems)); then wait; ipm=1; fi
 #  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+
+  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_letkf.sh \
+    $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf &
+
+  sleep $BGJOB_INT
+done
+wait
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+letkf_pre () {
+#-------------------------------------------------------------------------------
+
+echo
+echo "* Pre-processing scripts"
+echo
+
+pdbash node $PROC_OPT $SCRP_DIR/src/pre_letkf_node.sh \
+  $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
+  $mem_nodes $mem_np $slot_s $slot_e $slot_b
+
+ipm=0
+for m in $(seq $mmean); do
+  ipm=$((ipm+1))
+  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+
+  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_letkf.sh \
+    $TMPOUT/${time}/topo/topo $atime ${name_m[$m]} $TMPRUN/letkf &
+
+  sleep $BGJOB_INT
+done
+wait
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+letkf_post () {
+#-------------------------------------------------------------------------------
+
+echo
+echo "* Post-processing scripts"
+echo
+
+ipm=0
+for m in $(seq $mmean); do
+  ipm=$((ipm+1))
+  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
   pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_letkf.sh \
     $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf &

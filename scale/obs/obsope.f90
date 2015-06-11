@@ -15,15 +15,17 @@ PROGRAM obsope
   USE common_obs_scale
   USE common_nml
   USE obsope_tools
-  IMPLICIT NONE
 
-  REAL(r_size) :: rtimer00,rtimer
+  IMPLICIT NONE
+  REAL(r_dble) :: rtimer00,rtimer
   INTEGER :: ierr
   CHARACTER(11) :: stdoutf='NOUT-000000'
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
   type(obs_info) :: obs(nobsfiles)
   real(r_size) :: radarlon, radarlat, radarz
+
+  character(len=6400) :: cmd, icmd
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -36,6 +38,33 @@ PROGRAM obsope
   WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
   OPEN(6,FILE=stdoutf)
   WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
+
+!-----------------------------------------------------------------------
+! Pre-processing scripts
+!-----------------------------------------------------------------------
+
+  if (COMMAND_ARGUMENT_COUNT() >= 5) then
+    write(6,'(A)') 'Run pre-processing scripts'
+    if (myrank == 0) then
+      cmd = 'bash'
+      call get_command_argument(2, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd)
+      call get_command_argument(3, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd) // '_pre'
+      call get_command_argument(4, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd)
+      call get_command_argument(5, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd)
+
+      WRITE(6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd), ']'
+      call system(trim(cmd))
+    end if
+  end if
+
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  rtimer = MPI_WTIME()
+  WRITE(6,timer_fmt) '### TIMER(PRE_SCRIPT):',rtimer-rtimer00
+  rtimer00=rtimer
 
 !-----------------------------------------------------------------------
 
@@ -86,8 +115,6 @@ PROGRAM obsope
     WRITE(6,timer_fmt) '### TIMER(OBS_OPERATOR):',rtimer-rtimer00
     rtimer00=rtimer
 
-
-
     CALL unset_common_mpi_scale
 
     call unset_scalelib
@@ -99,13 +126,42 @@ PROGRAM obsope
   end if ! [ myrank_use ]
 
 !-----------------------------------------------------------------------
-! Finalize
-!-----------------------------------------------------------------------
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
   rtimer = MPI_WTIME()
   WRITE(6,timer_fmt) '### TIMER(FINALIZE):',rtimer-rtimer00
   rtimer00=rtimer
+
+!-----------------------------------------------------------------------
+! Post-processing scripts
+!-----------------------------------------------------------------------
+
+  if (COMMAND_ARGUMENT_COUNT() >= 5) then
+    write(6,'(A)') 'Run post-processing scripts'
+    if (myrank == 0) then
+      cmd = 'bash'
+      call get_command_argument(2, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd)
+      call get_command_argument(3, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd) // '_post'
+      call get_command_argument(4, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd)
+      call get_command_argument(5, icmd)
+      cmd = trim(cmd) // ' ' // trim(icmd)
+
+      WRITE(6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd), ']'
+      call system(trim(cmd))
+    end if
+  end if
+
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  rtimer = MPI_WTIME()
+  WRITE(6,timer_fmt) '### TIMER(POST_SCRIPT):',rtimer-rtimer00
+  rtimer00=rtimer
+
+!-----------------------------------------------------------------------
+! Finalize
+!-----------------------------------------------------------------------
 
   CALL finalize_mpi
 

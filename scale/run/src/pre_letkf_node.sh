@@ -43,10 +43,10 @@ SLOT_BASE="$1"
 
 #===============================================================================
 
-mkdir -p $TMPDIR
-rm -fr $TMPDIR/*
+#mkdir -p $TMPDIR
+#rm -fr $TMPDIR/*
 
-ln -fs $EXECDIR/letkf $TMPDIR
+#ln -fs $EXECDIR/letkf $TMPDIR
 
 for iobs in $(seq $OBSNUM); do
   if [ "${OBSNAME[$iobs]}" != '' ]; then
