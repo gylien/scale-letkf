@@ -766,7 +766,7 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m <= mmean)); then
-    if ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 
@@ -805,7 +805,7 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m <= mmean)); then
-    if ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 
@@ -903,7 +903,7 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m <= mmean)); then
-    if ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 
@@ -930,7 +930,7 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m <= mmean)); then
-    if ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 
@@ -1005,7 +1005,7 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m <= mmean)); then
-    if ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 
@@ -1032,7 +1032,7 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m <= mmean)); then
-    if ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 

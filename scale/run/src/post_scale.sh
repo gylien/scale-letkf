@@ -9,7 +9,7 @@
 . config.main
 . src/func_datetime.sh
 
-if (($# < 6)); then
+if (($# < 7)); then
   cat >&2 << EOF
 
 [post_scale.sh] Post-process the SCALE model outputs.
@@ -96,10 +96,14 @@ if ((LOG_OPT <= 3)); then
   fi
 fi
 
-mkdir -p $TMPOUT/${STIME}/log/scale
-if [ -f "$TMPDIR/../latlon_domain_catalogue.txt" ]; then
-  mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/scale/${MEM}_latlon_domain_catalogue.txt
+######
+if ((MYRANK == 0)); then
+  mkdir -p $TMPOUT/${STIME}/log/scale
+  if [ -f "$TMPDIR/../latlon_domain_catalogue.txt" ]; then
+    mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/scale/${MEM}_latlon_domain_catalogue.txt
+  fi
 fi
+######
 
 #===============================================================================
 
