@@ -430,17 +430,23 @@ for s in $(seq 3); do
 ######
 if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
   local p
-  for p in $(seq $totalnp); do  
-#    echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc
+  for p in $(seq $totalnp); do
+    if ((s == 1)); then ###
+      echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc
+    fi
     echo ${node[$(((s-1)*NNODES_real+${proc2node[$p]}))]} >> $NODEFILEDIR/set${s}.proc
   done
   for n in $(seq $NNODES); do
-#    echo ${node[$n]} >> $NODEFILEDIR/node
+    if ((s == 1)); then ###
+      echo ${node[$n]} >> $NODEFILEDIR/node
+    fi
     echo ${node[$(((s-1)*NNODES_real+$n))]} >> $NODEFILEDIR/set${s}.node
   done
   for m in $(seq $((MEMBER+1))); do
     for p in $(seq $mem_np); do
-#      echo ${node[${mem2node[$(((m-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${name_m[$m]}
+      if ((s == 1)); then ###
+        echo ${node[${mem2node[$(((m-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${name_m[$m]}
+      fi
       echo ${node[$(((s-1)*NNODES_real+${mem2node[$(((m-1)*mem_np+p))]}))]} >> $NODEFILEDIR/set${s}.proc.${name_m[$m]}
     done
   done

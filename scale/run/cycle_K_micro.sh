@@ -108,6 +108,7 @@ cp -L -r $SCRP_DIR/config.main $TMP/config.main
 cp -L -r $SCRP_DIR/config.rc $TMP/config.rc
 cp -L -r $SCRP_DIR/config.${myname1} $TMP/config.${myname1}
 cp -L -r $SCRP_DIR/${myname1}.sh $TMP/${myname1}.sh
+cp -L -r $SCRP_DIR/${myname1}_step.sh $TMP/${myname1}_step.sh
 mkdir -p $TMP/src
 cp -L -r $SCRP_DIR/src/* $TMP/src
 
