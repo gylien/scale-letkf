@@ -74,6 +74,11 @@ PPN_real=$PPN
 NNODES=$((NNODES*PPN))
 PPN=1
 
+if ((ENABLE_SET == 1)); then          ##
+  NNODES_real_all=$((NNODES_real*3))  ##
+  NNODES_all=$((NNODES*3))            ##
+fi                                    ##
+
 declare -a procs
 declare -a mem2node
 declare -a node
@@ -81,7 +86,11 @@ declare -a name_m
 declare -a node_m
 
 safe_init_tmpdir $NODEFILE_DIR
-distribute_da_cycle - $NODEFILE_DIR
+if ((ENABLE_SET == 1)); then               ##
+  distribute_da_cycle_set - $NODEFILE_DIR  ##
+else                                       ##
+  distribute_da_cycle - $NODEFILE_DIR
+fi                                         ##
 
 #===============================================================================
 # Determine the staging list and then stage in
@@ -109,6 +118,14 @@ echo "NNODES=$NNODES" >> $TMP/config.main
 echo "PPN=$PPN" >> $TMP/config.main
 echo "NNODES_real=$NNODES_real" >> $TMP/config.main
 echo "PPN_real=$PPN_real" >> $TMP/config.main
+
+if ((ENABLE_SET == 1)); then                                    ##
+  echo "NNODES_all=$NNODES_all" >> $TMPS/config.main            ##
+  echo "NNODES_real_all=$NNODES_real_all" >> $TMPS/config.main  ##
+                                                                ##
+  NNODES=$NNODES_all                                            ##
+  NNODES_real=$NNODES_real_all                                  ##
+fi                                                              ##
 
 #===============================================================================
 # Creat a job script

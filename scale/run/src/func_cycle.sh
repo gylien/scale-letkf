@@ -443,6 +443,12 @@ else
       echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
     fi
 
+    # log [scale: catalogue]
+    #-------------------
+    path="${time}/log/scale/latlon_domain_catalogue.txt"
+    echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+
+
     #-------------------
 
     for m in $(seq $mmean); do
@@ -461,8 +467,6 @@ else
         path="${time}/log/scale/${name_m[$m]}_LOG${SCALE_LOG_SFX}"
         echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
       fi
-      path="${time}/log/scale/${name_m[$m]}_latlon_domain_catalogue.txt"
-      echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
 
       #-------------------
     done
@@ -747,7 +751,7 @@ ensfcst_pre () {
 #echo "* Pre-processing scripts"
 #echo
 
-if (pdrun $MYRANK all alln); then
+if (pdrun $MYRANK all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
        $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT
 fi
@@ -893,7 +897,7 @@ obsope_pre () {
 #echo "* Pre-processing scripts"
 #echo
 
-if (pdrun $MYRANK all alln); then
+if (pdrun $MYRANK all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_obsope_node.sh $MYRANK \
        $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b
@@ -995,7 +999,7 @@ letkf_pre () {
 #echo "* Pre-processing scripts"
 #echo
 
-if (pdrun $MYRANK all alln); then
+if (pdrun $MYRANK all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
        $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b

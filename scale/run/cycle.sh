@@ -188,11 +188,23 @@ while ((time <= ETIME)); do
       echo
 
       if [ "${stepfunc[$s]}" = 'ensfcst' ]; then
-        mpirunf proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+        if ((ENABLE_SET == 1)); then                                    ##
+          mpirunf set1.proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+        else
+          mpirunf proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+        fi
       elif [ "${stepfunc[$s]}" = 'obsope' ]; then
-        mpirunf proc $TMPRUN/obsope ./obsope obsope.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+        if ((ENABLE_SET == 1)); then                                    ##
+          mpirunf set2.proc $TMPRUN/obsope ./obsope obsope.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+        else
+          mpirunf proc $TMPRUN/obsope ./obsope obsope.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+        fi
       elif [ "${stepfunc[$s]}" = 'letkf' ]; then
-        mpirunf proc $TMPRUN/letkf ./letkf letkf.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+        if ((ENABLE_SET == 1)); then                                    ##
+          mpirunf set3.proc $TMPRUN/letkf ./letkf letkf.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+        else
+          mpirunf proc $TMPRUN/letkf ./letkf letkf.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+        fi
       else
 
         ./cycle_step.sh "${stepfunc[$s]}" "$time" "$loop"

@@ -100,7 +100,7 @@ fi
 if ((MYRANK == 0)); then
   mkdir -p $TMPOUT/${STIME}/log/scale
   if [ -f "$TMPDIR/../latlon_domain_catalogue.txt" ]; then
-    mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/scale/${MEM}_latlon_domain_catalogue.txt
+    mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/scale/latlon_domain_catalogue.txt
   fi
 fi
 ######
