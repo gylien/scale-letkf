@@ -24,6 +24,7 @@ program scaleles_ens
   integer :: LOCAL_myrank, LOCAL_nmax
 
   character(len=6400) :: cmd, icmd
+  character(len=10) :: myranks
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -43,20 +44,20 @@ program scaleles_ens
 
   if (COMMAND_ARGUMENT_COUNT() >= 5) then
     write(6,'(A)') 'Run pre-processing scripts'
-    if (myrank == 0) then
-      cmd = 'bash'
-      call get_command_argument(2, icmd)
-      cmd = trim(cmd) // ' ' // trim(icmd)
-      call get_command_argument(3, icmd)
-      cmd = trim(cmd) // ' ' // trim(icmd) // '_pre'
-      call get_command_argument(4, icmd)
-      cmd = trim(cmd) // ' ' // trim(icmd)
-      call get_command_argument(5, icmd)
-      cmd = trim(cmd) // ' ' // trim(icmd)
+    cmd = 'bash'
+    call get_command_argument(2, icmd)
+    cmd = trim(cmd) // ' ' // trim(icmd)
+    call get_command_argument(3, icmd)
+    cmd = trim(cmd) // ' ' // trim(icmd) // '_pre'
+    call get_command_argument(4, icmd)
+    cmd = trim(cmd) // ' ' // trim(icmd)
+    call get_command_argument(5, icmd)
+    cmd = trim(cmd) // ' ' // trim(icmd)
+    write (myranks, '(I10)') myrank
+    cmd = trim(cmd) // ' ' // trim(myranks)
 
-      WRITE(6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd), ']'
-      call system(trim(cmd))
-    end if
+    WRITE(6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd), ']'
+    call system(trim(cmd))
   end if
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -132,20 +133,20 @@ program scaleles_ens
 
   if (COMMAND_ARGUMENT_COUNT() >= 5) then
     write(6,'(A)') 'Run post-processing scripts'
-    if (myrank == 0) then
-      cmd = 'bash'
-      call get_command_argument(2, icmd)
-      cmd = trim(cmd) // ' ' // trim(icmd)
-      call get_command_argument(3, icmd)
-      cmd = trim(cmd) // ' ' // trim(icmd) // '_post'
-      call get_command_argument(4, icmd)
-      cmd = trim(cmd) // ' ' // trim(icmd)
-      call get_command_argument(5, icmd)
-      cmd = trim(cmd) // ' ' // trim(icmd)
+    cmd = 'bash'
+    call get_command_argument(2, icmd)
+    cmd = trim(cmd) // ' ' // trim(icmd)
+    call get_command_argument(3, icmd)
+    cmd = trim(cmd) // ' ' // trim(icmd) // '_post'
+    call get_command_argument(4, icmd)
+    cmd = trim(cmd) // ' ' // trim(icmd)
+    call get_command_argument(5, icmd)
+    cmd = trim(cmd) // ' ' // trim(icmd)
+!    write (myranks, '(I10)') myrank
+    cmd = trim(cmd) // ' ' // trim(myranks)
 
-      WRITE(6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd), ']'
-      call system(trim(cmd))
-    end if
+    WRITE(6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd), ']'
+    call system(trim(cmd))
   end if
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)

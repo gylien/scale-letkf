@@ -101,6 +101,11 @@ if ((BUILTIN_STAGING && ISTEP == 1)); then
 fi
 
 #===============================================================================
+# Run initialization scripts on all nodes
+
+pdbash node $PROC_OPT $SCRP_DIR/src/init_all_node.sh $TMPDAT $TMPRUN
+
+#===============================================================================
 # Run data assimilation cycles
 
 s_flag=1
@@ -180,47 +185,18 @@ while ((time <= ETIME)); do
       echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2
       echo
       printf " %2d. %-55s\n" $s "${stepname[$s]}"
+      echo
 
       if [ "${stepfunc[$s]}" = 'ensfcst' ]; then
-      #------
-        mkdir -p $TMPRUN/scale
-        rm -fr $TMPRUN/scale/*
-        ln -fs $TMPDAT/exec/scale-les_ens $TMPRUN/scale
-
-        ./cycle_step.sh "${stepfunc[$s]}"_pre "$time" "$loop"
-        mpirunf proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf
-        ./cycle_step.sh "${stepfunc[$s]}"_post "$time" "$loop"
-
-#        mpirunf proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
-      #------
+        mpirunf proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
       elif [ "${stepfunc[$s]}" = 'obsope' ]; then
-      #------
-        mkdir -p $TMPRUN/obsope
-        rm -fr $TMPRUN/obsope/*
-        ln -fs $TMPDAT/exec/obsope $TMPRUN/obsope
-
-        ./cycle_step.sh "${stepfunc[$s]}"_pre "$time" "$loop"
-        mpirunf proc $TMPRUN/obsope ./obsope obsope.conf
-        ./cycle_step.sh "${stepfunc[$s]}"_post "$time" "$loop"
-
-#        mpirunf proc $TMPRUN/obsope ./obsope obsope.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
-      #------
+        mpirunf proc $TMPRUN/obsope ./obsope obsope.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
       elif [ "${stepfunc[$s]}" = 'letkf' ]; then
-      #------
-        mkdir -p $TMPRUN/letkf
-        rm -fr $TMPRUN/letkf/*
-        ln -fs $TMPDAT/exec/letkf $TMPRUN/letkf
-
-        ./cycle_step.sh "${stepfunc[$s]}"_pre "$time" "$loop"
-        mpirunf proc $TMPRUN/letkf ./letkf letkf.conf
-        ./cycle_step.sh "${stepfunc[$s]}"_post "$time" "$loop"
-
-#        mpirunf proc $TMPRUN/letkf ./letkf letkf.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
-      #------
+        mpirunf proc $TMPRUN/letkf ./letkf letkf.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
       else
-      #------
+
         ./cycle_step.sh "${stepfunc[$s]}" "$time" "$loop"
-      #------
+
       fi
 
       echo

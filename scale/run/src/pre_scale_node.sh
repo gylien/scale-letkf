@@ -40,15 +40,15 @@ DATADIR="$1"
 
 #ln -fs $EXECDIR/scale-les $TMPDIR
 
-ln -fs $DATADIR/rad/PARAG.29 $TMPDIR
-ln -fs $DATADIR/rad/PARAPC.29 $TMPDIR
-ln -fs $DATADIR/rad/VARDATA.RM29 $TMPDIR
-ln -fs $DATADIR/rad/cira.nc $TMPDIR
-ln -fs $DATADIR/rad/MIPAS/day.atm $TMPDIR
-ln -fs $DATADIR/rad/MIPAS/equ.atm $TMPDIR
-ln -fs $DATADIR/rad/MIPAS/sum.atm $TMPDIR
-ln -fs $DATADIR/rad/MIPAS/win.atm $TMPDIR
-ln -fs $DATADIR/land/param.bucket.conf $TMPDIR
+#ln -fs $DATADIR/rad/PARAG.29 $TMPDIR
+#ln -fs $DATADIR/rad/PARAPC.29 $TMPDIR
+#ln -fs $DATADIR/rad/VARDATA.RM29 $TMPDIR
+#ln -fs $DATADIR/rad/cira.nc $TMPDIR
+#ln -fs $DATADIR/rad/MIPAS/day.atm $TMPDIR
+#ln -fs $DATADIR/rad/MIPAS/equ.atm $TMPDIR
+#ln -fs $DATADIR/rad/MIPAS/sum.atm $TMPDIR
+#ln -fs $DATADIR/rad/MIPAS/win.atm $TMPDIR
+#ln -fs $DATADIR/land/param.bucket.conf $TMPDIR
 
 #===============================================================================
 

@@ -740,96 +740,54 @@ wait
 
 #===============================================================================
 
-ensfcst_pre_ori () {
-#-------------------------------------------------------------------------------
-
-echo
-echo "* Pre-processing scripts"
-echo
-
-pdbash node $PROC_OPT $SCRP_DIR/src/pre_scale_node.sh \
-  $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT
-
-ipm=0
-for m in $(seq $mmean); do
-  ipm=$((ipm+1))
-  if ((ipm > parallel_mems)); then wait; ipm=1; fi
-  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-
-#  if ((PERTURB_BDY == 1)); then
-#    ...
-#  fi
-
-  if ((BDY_ENS == 1)); then
-    bdy_base="$TMPOUT/${time}/bdy/${name_m[$m]}/boundary"
-  else
-    bdy_base="$TMPOUT/${time}/bdy/mean/boundary"
-  fi
-  if ((OCEAN_INPUT == 1)); then
-    if ((MKINIT == 1 && OCEAN_FORMAT == 99)); then
-      ocean_base='-'
-    else
-      ocean_base="$TMPOUT/${time}/anal/mean/init_ocean"  ### always use mean???
-    fi
-  else
-    ocean_base='-'
-  fi
-  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
-    $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
-    $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
-    $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT &
-
-  sleep $BGJOB_INT
-done
-wait
-
-#-------------------------------------------------------------------------------
-}
-
-#===============================================================================
-
 ensfcst_pre () {
 #-------------------------------------------------------------------------------
 
-echo
-echo "* Pre-processing scripts"
-echo
+#echo
+#echo "* Pre-processing scripts"
+#echo
 
-pdbash node $PROC_OPT $SCRP_DIR/src/pre_scale_node.sh \
-  $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT
+if (pdrun $MYRANK all alln); then
+  bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
+       $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT
+fi
 
-ipm=0
-for m in $(seq $mmean); do
-  ipm=$((ipm+1))
-  if ((ipm > parallel_mems)); then wait; ipm=1; fi
-  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-
-#  if ((PERTURB_BDY == 1)); then
-#    ...
-#  fi
-
-  if ((BDY_ENS == 1)); then
-    bdy_base="$TMPOUT/${time}/bdy/${name_m[$m]}/boundary"
-  else
-    bdy_base="$TMPOUT/${time}/bdy/mean/boundary"
-  fi
-  if ((OCEAN_INPUT == 1)); then
-    if ((MKINIT == 1 && OCEAN_FORMAT == 99)); then
-      ocean_base='-'
-    else
-      ocean_base="$TMPOUT/${time}/anal/mean/init_ocean"  ### always use mean???
-    fi
-  else
+if ((OCEAN_INPUT == 1)); then
+  if ((MKINIT == 1 && OCEAN_FORMAT == 99)); then
     ocean_base='-'
+  else
+    ocean_base="$TMPOUT/${time}/anal/mean/init_ocean"  ### always use mean???
   fi
-  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
-    $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
-    $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
-    $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT &
+else
+  ocean_base='-'
+fi
 
-  sleep $BGJOB_INT
+for it in $(seq $nitmax); do
+  g=${proc2group[$((MYRANK+1))]}
+  m=$(((it-1)*parallel_mems+g))
+  if ((m <= mmean)); then
+    if ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+      echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+    fi
+
+#    if ((PERTURB_BDY == 1)); then
+#      ...
+#    fi
+
+    if ((BDY_ENS == 1)); then
+      bdy_base="$TMPOUT/${time}/bdy/${name_m[$m]}/boundary"
+    else
+      bdy_base="$TMPOUT/${time}/bdy/mean/boundary"
+    fi
+
+    if (pdrun $MYRANK $m $PROC_OPT); then
+      bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
+           $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
+           $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+           $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT
+    fi
+  fi
 done
-wait
 
 #-------------------------------------------------------------------------------
 }
@@ -839,26 +797,28 @@ wait
 ensfcst_post () {
 #-------------------------------------------------------------------------------
 
-echo
-echo "* Post-processing scripts"
-echo
+#echo
+#echo "* Post-processing scripts"
+#echo
 
-ipm=0
-for m in $(seq $mmean); do
-  ipm=$((ipm+1))
-  if ((ipm > parallel_mems)); then wait; ipm=1; fi
-  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+for it in $(seq $nitmax); do
+  g=${proc2group[$((MYRANK+1))]}
+  m=$(((it-1)*parallel_mems+g))
+  if ((m <= mmean)); then
+    if ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+      echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+    fi
 
-#  if ((PERTURB_BDY == 1)); then
-#    ...
-#  fi
+#    if ((PERTURB_BDY == 1)); then
+#      ...
+#    fi
 
-  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_scale.sh $mem_np \
-    $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/${name_m[$m]} cycle &
-
-  sleep $BGJOB_INT
+    if (pdrun $MYRANK $m $PROC_OPT); then
+      bash $SCRP_DIR/src/post_scale.sh $MYRANK $mem_np \
+           $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/${name_m[$m]} cycle
+    fi
+  fi
 done
-wait
 
 #-------------------------------------------------------------------------------
 }
@@ -929,26 +889,30 @@ wait
 obsope_pre () {
 #-------------------------------------------------------------------------------
 
-echo
-echo "* Pre-processing scripts"
-echo
+#echo
+#echo "* Pre-processing scripts"
+#echo
 
-pdbash node $PROC_OPT $SCRP_DIR/src/pre_obsope_node.sh \
-  $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
-  $mem_nodes $mem_np $slot_s $slot_e $slot_b
+if (pdrun $MYRANK all alln); then
+  bash $SCRP_DIR/src/pre_obsope_node.sh $MYRANK \
+       $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
+       $mem_nodes $mem_np $slot_s $slot_e $slot_b
+fi
 
-ipm=0
-for m in $(seq $MEMBER); do
-  ipm=$((ipm+1))
-  if ((ipm > parallel_mems)); then wait; ipm=1; fi
-  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+for it in $(seq $nitmax); do
+  g=${proc2group[$((MYRANK+1))]}
+  m=$(((it-1)*parallel_mems+g))
+  if ((m <= mmean)); then
+    if ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+      echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+    fi
 
-  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_obsope.sh \
-    $atime ${name_m[$m]} $TMPRUN/obsope &
-
-  sleep $BGJOB_INT
+    if (pdrun $MYRANK $m $PROC_OPT); then
+      bash $SCRP_DIR/src/pre_obsope.sh $MYRANK \
+           $atime ${name_m[$m]} $TMPRUN/obsope
+    fi
+  fi
 done
-wait
 
 #-------------------------------------------------------------------------------
 }
@@ -958,22 +922,24 @@ wait
 obsope_post () {
 #-------------------------------------------------------------------------------
 
-echo
-echo "* Post-processing scripts"
-echo
+#echo
+#echo "* Post-processing scripts"
+#echo
 
-ipm=0
-for m in $(seq $MEMBER); do
-  ipm=$((ipm+1))
-  if ((ipm > parallel_mems)); then wait; ipm=1; fi
-  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+for it in $(seq $nitmax); do
+  g=${proc2group[$((MYRANK+1))]}
+  m=$(((it-1)*parallel_mems+g))
+  if ((m <= mmean)); then
+    if ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+      echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+    fi
 
-  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_obsope.sh \
-    $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope &
-
-  sleep $BGJOB_INT
+    if (pdrun $MYRANK $m $PROC_OPT); then
+      bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
+           $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope
+    fi
+  fi
 done
-wait
 
 #-------------------------------------------------------------------------------
 }
@@ -1025,26 +991,30 @@ wait
 letkf_pre () {
 #-------------------------------------------------------------------------------
 
-echo
-echo "* Pre-processing scripts"
-echo
+#echo
+#echo "* Pre-processing scripts"
+#echo
 
-pdbash node $PROC_OPT $SCRP_DIR/src/pre_letkf_node.sh \
-  $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
-  $mem_nodes $mem_np $slot_s $slot_e $slot_b
+if (pdrun $MYRANK all alln); then
+  bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
+       $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
+       $mem_nodes $mem_np $slot_s $slot_e $slot_b
+fi
 
-ipm=0
-for m in $(seq $mmean); do
-  ipm=$((ipm+1))
-  if ((ipm > parallel_mems)); then wait; ipm=1; fi
-  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+for it in $(seq $nitmax); do
+  g=${proc2group[$((MYRANK+1))]}
+  m=$(((it-1)*parallel_mems+g))
+  if ((m <= mmean)); then
+    if ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+      echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+    fi
 
-  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_letkf.sh \
-    $TMPOUT/${time}/topo/topo $atime ${name_m[$m]} $TMPRUN/letkf &
-
-  sleep $BGJOB_INT
+    if (pdrun $MYRANK $m $PROC_OPT); then
+      bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
+           $TMPOUT/${time}/topo/topo $atime ${name_m[$m]} $TMPRUN/letkf
+    fi
+  fi
 done
-wait
 
 #-------------------------------------------------------------------------------
 }
@@ -1054,27 +1024,29 @@ wait
 letkf_post () {
 #-------------------------------------------------------------------------------
 
-echo
-echo "* Post-processing scripts"
-echo
+#echo
+#echo "* Post-processing scripts"
+#echo
 
-ipm=0
-for m in $(seq $mmean); do
-  ipm=$((ipm+1))
-  if ((ipm > parallel_mems)); then wait; ipm=1; fi
-  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+for it in $(seq $nitmax); do
+  g=${proc2group[$((MYRANK+1))]}
+  m=$(((it-1)*parallel_mems+g))
+  if ((m <= mmean)); then
+    if ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+      echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+    fi
 
-  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_letkf.sh \
-    $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf &
-
-  sleep $BGJOB_INT
+    if (pdrun $MYRANK $m $PROC_OPT); then
+      bash $SCRP_DIR/src/post_letkf.sh $MYRANK \
+           $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf
+    fi
+  fi
 done
-wait
 
 #-------------------------------------------------------------------------------
 }
 
-#===============================================================================#===============================================================================
+#===============================================================================
 
 obstime () {
 #-------------------------------------------------------------------------------

@@ -310,8 +310,7 @@ elif ((GROUP <= parallel_mems)); then
 
   if ((mygroup = GROUP)); then
     if [ "$OPT" = 'all' ]; then
-        exit 0
-      fi
+      exit 0
     elif [ "$OPT" = 'alln' ]; then
       res=0
       for n in $(seq $((mygrprank-1))); do
