@@ -30,11 +30,11 @@ SCALE_LES_OBJS = $(shell ls $(SCALE_LES_OBJDIR)/*.o | grep -v "scale-les.o\|scal
 all:	$(PROGS)
 
 scale-les_ens:	scale-les_ens.o $(OBJS) common_modules
-	$(FC) $(FOPTS) $(FMCMODEL) -o scale-les_ens scale-les_ens.o \
+	$(FC) $(FOPTS3) $(FMCMODEL) -o scale-les_ens scale-les_ens.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_LES_OBJS) $(LIBS)
 
 scale-les_ens.o:	scale-les_ens.f90 $(OBJS) common_modules
-	$(FC) $(FOPTS) -c scale-les_ens.f90 -I$(COMMON_DIR) $(INCS)
+	$(FC) $(FOPTS3) -c scale-les_ens.f90 -I$(COMMON_DIR) $(INCS)
 
 common_modules:
 	( cd $(COMMON_DIR) ; make )

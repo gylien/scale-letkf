@@ -28,11 +28,9 @@ set_mem_np () {
 #   $PPN     Number of processes per node
 #
 # Return variables:
-#   $mem_nodes        Number of nodes for a member
-#   $mem_np           Number of processes for a member
-#   $repeat_mems      Number of members that uses one round of nodes
-#   $parallel_mems    Number of members that can run in parallel
-#   $parallel_cycles  Number of parallel cycles needed to finish all members
+#   $mem_nodes  Number of nodes for a member
+#   $mem_np     Number of processes for a member
+#   $totalnp    Total number of processes
 #-------------------------------------------------------------------------------
 
 local MEM=${1:-$MEMBER}
@@ -78,12 +76,10 @@ if ((mem_nodes > NNODES)); then
   echo "[Error] Total number of nodes is insufficient." >&2
   exit 1
 fi
-repeat_mems=$((NNODES/mem_nodes))
-if ((mem_nodes == 1)); then
-  parallel_mems=$((repeat_mems * (PPN/mem_np)))
-else
-  parallel_mems=$repeat_mems
-fi
+
+#-------------------------------------------------------------------------------
+
+totalnp=$((NNODES*PPN))
 
 #-------------------------------------------------------------------------------
 }
@@ -108,75 +104,104 @@ set_mem2node () {
 #   $node[1...$NNODES]  Name of nodes
 #
 # Return variables:
-#   $totalnp                       Total number of processes
-#   $procs[1...$totalnp]           Sequence of (total) processes
-#   $mem2node[1...($MEM*$mem_np)]  Relation from (members, processes) to nodes (pseudo 2-D array)
-#   $node_m[1...$MEM]              Name of node(s) for each member
+#   $n_mem                         Number of members that use one round of nodes
+#   $n_mempn                       Number of members that run in parallel in a node
+#   $repeat_mems                   (= $n_mem)
+#   $parallel_mems                 Number of members that run in parallel
+#   $nitmax                        Number of parallel cycles needed to finish all members
+#   $mem2node[1...($MEM*$mem_np)]  Relation from (members, m_processes) to nodes (pseudo 2-D array)
+#   $mem2proc[1...($MEM*$mem_np)]  Relation from (members, m_processes) to processes (pseudo 2-D array)
+#   $proc2node[1...$totalnp]       Relation from processes to nodes
+#   $proc2group[1...$totalnp]      Relation from processes to groups
+#   $proc2grpproc[1...$totalnp]    Relation from processes to m_processes
+#   $node_m[1...$MEM]              Short node list description of each member
 #-------------------------------------------------------------------------------
 
 local MEM=${1:-$MEMBER}
 
 #-------------------------------------------------------------------------------
 
+local ns=0
+local n
+local p
+for n in $(seq $NNODES); do
+  for p in $(seq $((ns+1)) $((ns+PPN))); do
+    proc2node[$p]=$n
+  done
+  ns=$((ns+PPN))
+done
+
+if ((mem_nodes > 1)); then
+  n_mem=$((NNODES / mem_nodes))
+  n_mempn=1
+else
+  n_mem=$NNODES
+  n_mempn=$((PPN / mem_np))
+fi
+repeat_mems=$n_mem
+parallel_mems=$((n_mem * n_mempn))
+nitmax=$(((MEM - 1) / (n_mem * n_mempn) + 1))
 local tppn=$((mem_np / mem_nodes))
 local tmod=$((mem_np % mem_nodes))
 
 local m
 local nn
 local q
-local qn
-local n=0
-local procs_add=1
-totalnp=0
+local qs
 
-for m in $(seq $MEM); do
-
-  ###### SHORT node list description
-  if ((mem_nodes == 1)); then
-    node_m[$m]="${node[$((n+1))]}*$tppn"
-  elif ((tmod == 0)); then
-    node_m[$m]="[${node[$((n+1))]}-${node[$((n+mem_nodes))]}]*$tppn"
-  else
-    if ((tmod == 1)); then
-      node_m[$m]="${node[$((n+1))]}*$((tppn+1))"
-    else
-      node_m[$m]="[${node[$((n+1))]}-${node[$((n+tmod))]}]*$((tppn+1))"
-    fi
-    if (($((mem_nodes - tmod)) == 1)); then
-      node_m[$m]="${node_m[$m]} ${node[$((n+mem_nodes))]}*$tppn"
-    else
-      node_m[$m]="${node_m[$m]} [${node[$((n+tmod+1))]}-${node[$((n+mem_nodes))]}]*$tppn"
-    fi
-  fi
-  ######
-
-#  node_m[$m]=''
-  qn=0
-  for nn in $(seq $mem_nodes); do
-    if ((nn <= tmod)); then
-      tppnt=$((tppn+1))
-    else
-      tppnt=$tppn
-    fi
-    for q in $(seq $((qn+1)) $((qn+tppnt))); do
-      mem2node[$(((m-1)*mem_np+q))]=$((n+nn))
-    done
-    qn=$((qn+tppnt))
-#    node_m[$m]="${node_m[$m]}${node[$((n+nn))]}*$tppnt "
-
-    if ((procs_add == 1)); then
-      for p in $(seq $((totalnp+1)) $((totalnp+PPN))); do
-        procs[$p]=$((n+nn))
-      done
-      totalnp=$((totalnp+PPN))
-    fi
-  done
-
-  n=$((n+mem_nodes))
-  if ((n+mem_nodes > NNODES)); then
+m=1
+for it in $(seq $nitmax); do
+  for i in $(seq 0 $((n_mempn-1))); do
     n=0
-    procs_add=0
-  fi
+    for j in $(seq 0 $((n_mem-1))); do
+      if ((m > MEM && it > 1)); then break; fi
+
+      qs=0
+      for nn in $(seq 0 $((mem_nodes-1))); do
+        if ((nn < tmod)); then
+          tppnt=$((tppn+1))
+        else
+          tppnt=$tppn
+        fi
+        for q in $(seq 0 $((tppnt-1))); do
+          ip=$(((n+nn)*PPN + i*mem_np + q))
+          if ((m <= MEM)); then
+            mem2node[$(((m-1)*mem_np+qs+1))]=$((n+nn+1))
+            mem2proc[$(((m-1)*mem_np+qs+1))]=$((ip+1))
+            if ((it == 1)); then
+              proc2group[$((ip+1))]=$m
+              proc2grpproc[$((ip+1))]=$((qs+1))
+            fi
+          fi
+          qs=$((qs+1))
+        done
+      done
+
+      ###### SHORT node list description
+      if ((mem_nodes == 1)); then
+        node_m[$m]="${node[$((n+1))]}*$tppn"
+      elif ((tmod == 0)); then
+        node_m[$m]="[${node[$((n+1))]}-${node[$((n+mem_nodes))]}]*$tppn"
+      else
+        if ((tmod == 1)); then
+          node_m[$m]="${node[$((n+1))]}*$((tppn+1))"
+        else
+          node_m[$m]="[${node[$((n+1))]}-${node[$((n+tmod))]}]*$((tppn+1))"
+        fi
+        if (($((mem_nodes - tmod)) == 1)); then
+          node_m[$m]="${node_m[$m]} ${node[$((n+mem_nodes))]}*$tppn"
+        else
+          node_m[$m]="${node_m[$m]} [${node[$((n+tmod+1))]}-${node[$((n+mem_nodes))]}]*$tppn"
+        fi
+      fi
+      ######
+
+      m=$((m+1))
+      n=$((n+mem_nodes))
+    done
+    if ((m > MEM && it > 1)); then break; fi
+  done
+  if ((m > MEM && it > 1)); then break; fi
 done
 
 #-------------------------------------------------------------------------------
@@ -195,26 +220,34 @@ distribute_da_cycle () {
 #                '-': No output (default)
 #
 # Other input variables:
-#   $MEMBER        Ensemble size
-#   $NNODES        Number of total nodes
-#   $PPN           Number of processes per node
+#   $MEMBER      Ensemble size
+#   $NNODES      Number of total nodes
+#   $PPN         Number of processes per node
 #   $MEMBER_FMT
 #   $SCALE_NP
 #   
 # Return variables:
-#   $totalnp                              Total number of processes
+#   $node[1...$nnodes]                    Name of nodes
+#
 #   $mem_nodes                            Number of nodes for a member
 #   $mem_np                               Number of processes for a member
-#   $procs[1...$totalnp]                  Sequence of (total) processes
-#   $mem2node[1...(($MEMBER+2)*$mem_np)]  Relation from members to nodes and processes (pseudo 2-D array)
+#   $totalnp                              Total number of processes
+#
 #   $mmean                                Index of the ensemble mean ($MEMBER+1)
 #   $msprd                                Index of the ensemble spread ($MEMBER+2)
-#   $node[1...$nnodes]                    Name of each node
-#   $name_m[1...$MEMBER+2]                Name of each member
-#   $node_m[1...$MEMBER+2]                Name of node(s) for each member
-#   $repeat_mems                          Number of members that uses one round of nodes
-#   $parallel_mems                        Number of members that can run in parallel
-#   $parallel_cycles                      Number of parallel cycles needed to finish all members
+#   $node_m[1...$MEMBER+2]                Short node list description of each member
+#   $name_m[1...$MEMBER+2]                Name of members
+#
+#   $n_mem                                Number of members that use one round of nodes
+#   $n_mempn                              Number of members that run in parallel in a node
+#   $repeat_mems                          (= $n_mem)
+#   $parallel_mems                        Number of members that run in parallel
+#   $nitmax                               Number of parallel cycles needed to finish all members
+#   $mem2node[1...(($MEMBER+2)*$mem_np)]  Relation from (members, m_processes) to nodes (pseudo 2-D array)
+#   $mem2proc[1...(($MEMBER+2)*$mem_np)]  Relation from (members, m_processes) to processes (pseudo 2-D array)
+#   $proc2node[1...$totalnp]              Relation from processes to nodes
+#   $proc2group[1...$totalnp]             Relation from processes to groups
+#   $proc2grpproc[1...$totalnp]           Relation from processes to m_processes
 #
 # Output files:
 #   [$TMP/node/proc]       All processes
@@ -263,6 +296,7 @@ set_mem2node $((MEMBER+1))
 local p
 for p in $(seq $mem_np); do
   mem2node[$(((msprd-1)*mem_np+p))]=${mem2node[$(((mmean-1)*mem_np+p))]}
+  mem2proc[$(((msprd-1)*mem_np+p))]=${mem2proc[$(((mmean-1)*mem_np+p))]}
 done
 node_m[$msprd]=${node_m[$mmean]}
 
@@ -272,7 +306,7 @@ node_m[$msprd]=${node_m[$mmean]}
 if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
   local p
   for p in $(seq $totalnp); do  
-    echo ${node[${procs[$p]}]} >> $NODEFILEDIR/proc
+    echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc
   done
   for n in $(seq $NNODES); do
     echo ${node[$n]} >> $NODEFILEDIR/node
@@ -311,24 +345,32 @@ distribute_fcst () {
 #   $MACHINE_TYPE
 #   
 # Return variables:
-#   $totalnp                              Total number of processes
+#   $node[1...$nnodes]                    Name of nodes
 #   $fmember                              Number of forecast members
 #   $fmembertot                           Total number of forecast numbers for all cycles
+#
 #   $mem_nodes                            Number of nodes for a member
 #   $mem_np                               Number of processes for a member
-#   $procs[1...$totalnp]                  Sequence of (total) processes
-#   $mem2node[1...($fmembertot*$mem_np)]  Relation from (members, processes) to nodes (pseudo 2-D array)
-#   $node[1...$nnodes]                    Name of each node
-#   $name_m[1...$fmembertot]              Name of each member
-#   $node_m[1...$fmembertot]              Name of node(s) for each member
-#   $repeat_mems                          Number of members that uses one round of nodes
-#   $parallel_mems                        Number of members that can run in parallel
-#   $parallel_cycles                      Number of parallel cycles needed to finish all members
+#   $totalnp                              Total number of processes
+#
+#   $node_m[1...$fmembertot]              Short node list description of each member
+#   $name_m[1...$fmembertot]              Name of members
+#
+#   $n_mem                                Number of members that use one round of nodes
+#   $n_mempn                              Number of members that run in parallel in a node
+#   $repeat_mems                          (= $n_mem)
+#   $parallel_mems                        Number of members that run in parallel
+#   $nitmax                               Number of parallel cycles needed to finish all members
+#   $mem2node[1...($fmembertot*$mem_np)]  Relation from (members, m_processes) to nodes (pseudo 2-D array)
+#   $mem2proc[1...($fmembertot*$mem_np)]  Relation from (members, m_processes) to processes (pseudo 2-D array)
+#   $proc2node[1...$totalnp]              Relation from processes to nodes
+#   $proc2group[1...$totalnp]             Relation from processes to groups
+#   $proc2grpproc[1...$totalnp]           Relation from processes to m_processes
 #
 # Output files:
 #   [$TMP/node/proc]            All processes
 #   [$TMP/node/node]            One process per node
-#   [$TMP/node/proc.CCCC.MMMM]  Processes for each cycle and each member
+#   [$TMP/node/proc.CCCC.MMMM]  Processes for each member
 #-------------------------------------------------------------------------------
 
 if (($# < 1)); then
@@ -386,7 +428,7 @@ set_mem2node $fmembertot
 if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
   local p
   for p in $(seq $totalnp); do
-    echo ${node[${procs[$p]}]} >> $NODEFILEDIR/proc
+    echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc
   done
   for n in $(seq $NNODES); do
     echo ${node[$n]} >> $NODEFILEDIR/node

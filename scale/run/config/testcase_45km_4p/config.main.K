@@ -7,25 +7,27 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="$DIR/../../exp/testcase_45km_4p" # Directory for SCALE-LETKF output
+DDIR="/volume63/data/hp150019/gylien/test/scale-letkf/letkf/scale"
+
+OUTDIR="$DDIR/../../exp/testcase_45km_4p" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../scale/scale-les/test/case_real/check_japan/run"
-DATADIR="$DIR/../../database"
+MODELDIR="$DDIR/../../scale/scale-les/test/case_real/check_japan/run"
+DATADIR="$DDIR/../../database"
 
-DATA_TOPO="$DIR/../../database/topo_prep/testcase_45km_4p_bf10"
-DATA_LANDUSE="$DIR/../../database/landuse_prep/testcase_45km_4p_bf10"
+DATA_TOPO="$DDIR/../../database/topo_prep/testcase_45km_4p_bf10"
+DATA_LANDUSE="$DDIR/../../database/landuse_prep/testcase_45km_4p_bf10"
 DATA_BDY_SCALE=
-DATA_BDY_SCALE_PREP="$DIR/../../database/bdy_prep/testcase_45km_4p"
-DATA_BDY_WRF="$DIR/../../ncepfnl/wrfout"
+DATA_BDY_SCALE_PREP="$DDIR/../../database/bdy_prep/testcase_45km_4p"
+DATA_BDY_WRF="$DDIR/../../ncepfnl/wrfout"
 DATA_BDY_NICAM=
 
-OBS="$DIR/../../obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
-OBSNCEP="$DIR/../../obs/prepbufr" # directory of observation data in NCEP BUFR format
+OBS="$DDIR/../../obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
+OBSNCEP="$DDIR/../../obs/prepbufr" # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # model/data file options

@@ -68,11 +68,14 @@ PPN_real=$PPN
 NNODES=$((NNODES*PPN))
 PPN=1
 
-declare -a procs
-declare -a mem2node
 declare -a node
-declare -a name_m
 declare -a node_m
+declare -a name_m
+declare -a mem2node
+declare -a mem2proc
+declare -a proc2node
+declare -a proc2group
+declare -a proc2grpproc
 
 safe_init_tmpdir $TMPS/node
 distribute_da_cycle - $TMPS/node

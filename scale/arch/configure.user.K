@@ -16,6 +16,7 @@ FOPTS     = -Kfast,ocl,openmp,noeval -V -Qa,d,i,p,t,x -Koptmsg=2
 #            -DDEBUG
 
 FOPTS2    = $(FOPTS)
+FOPTS3    = $(FOPTS) -Kparallel
 FMCMODEL  =
 FFREE     = -Free
 FFIXED    = -Fixed
@@ -27,11 +28,12 @@ NETCDF_LIB = -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -l
 #NETCDF_INC = -I/opt/aics/netcdf/k-noszip/include
 #NETCDF_LIB = -L/opt/aics/netcdf/k-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
 
-SCALE     = /volume63/data/hp150019/gylien/scale-letkf/scale_ens
+SCALE     = /volume63/data/hp150019/gylien/scale-letkf/update/scale_ens
 
 SCALE_INC = -I$(SCALE)/dc_utils \
             -I$(SCALE)/gtool    \
             -I$(SCALE)/include
 SCALE_LIB = -L$(SCALE)/lib -lscale -lgtool -ldcutils
+SCALE_LES_OBJDIR = /volume63/data/hp150019/gylien/scale-letkf/update/scale/scale-les/test/case_real/check_japan/run/.libs
 
 BUFR_LIB  = 

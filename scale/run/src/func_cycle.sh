@@ -740,6 +740,54 @@ wait
 
 #===============================================================================
 
+ensfcst_pre_ori () {
+#-------------------------------------------------------------------------------
+
+echo
+echo "* Pre-processing scripts"
+echo
+
+pdbash node $PROC_OPT $SCRP_DIR/src/pre_scale_node.sh \
+  $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT
+
+ipm=0
+for m in $(seq $mmean); do
+  ipm=$((ipm+1))
+  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+
+#  if ((PERTURB_BDY == 1)); then
+#    ...
+#  fi
+
+  if ((BDY_ENS == 1)); then
+    bdy_base="$TMPOUT/${time}/bdy/${name_m[$m]}/boundary"
+  else
+    bdy_base="$TMPOUT/${time}/bdy/mean/boundary"
+  fi
+  if ((OCEAN_INPUT == 1)); then
+    if ((MKINIT == 1 && OCEAN_FORMAT == 99)); then
+      ocean_base='-'
+    else
+      ocean_base="$TMPOUT/${time}/anal/mean/init_ocean"  ### always use mean???
+    fi
+  else
+    ocean_base='-'
+  fi
+  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
+    $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
+    $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+    $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT &
+
+  sleep $BGJOB_INT
+done
+wait
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
 ensfcst_pre () {
 #-------------------------------------------------------------------------------
 

@@ -4,6 +4,7 @@ FC        = mpif90
 FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback
 #FOPTS2    = -O3 -ip -fp-model precise -shared-intel -g -traceback -fpe0
 FOPTS2    = -O3 -ip -fp-model precise -shared-intel -g -traceback
+FOPTS3    = $(FOPTS)
 FMCMODEL  = -mcmodel=medium
 FFREE     = -free
 FFIXED    = -fixed

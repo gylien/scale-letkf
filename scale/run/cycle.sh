@@ -187,7 +187,11 @@ while ((time <= ETIME)); do
         rm -fr $TMPRUN/scale/*
         ln -fs $TMPDAT/exec/scale-les_ens $TMPRUN/scale
 
-        mpirunf proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+        ./cycle_step.sh "${stepfunc[$s]}"_pre "$time" "$loop"
+        mpirunf proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf
+        ./cycle_step.sh "${stepfunc[$s]}"_post "$time" "$loop"
+
+#        mpirunf proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
       #------
       elif [ "${stepfunc[$s]}" = 'obsope' ]; then
       #------
@@ -195,7 +199,11 @@ while ((time <= ETIME)); do
         rm -fr $TMPRUN/obsope/*
         ln -fs $TMPDAT/exec/obsope $TMPRUN/obsope
 
-        mpirunf proc $TMPRUN/obsope ./obsope obsope.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+        ./cycle_step.sh "${stepfunc[$s]}"_pre "$time" "$loop"
+        mpirunf proc $TMPRUN/obsope ./obsope obsope.conf
+        ./cycle_step.sh "${stepfunc[$s]}"_post "$time" "$loop"
+
+#        mpirunf proc $TMPRUN/obsope ./obsope obsope.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
       #------
       elif [ "${stepfunc[$s]}" = 'letkf' ]; then
       #------
@@ -203,7 +211,11 @@ while ((time <= ETIME)); do
         rm -fr $TMPRUN/letkf/*
         ln -fs $TMPDAT/exec/letkf $TMPRUN/letkf
 
-        mpirunf proc $TMPRUN/letkf ./letkf letkf.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
+        ./cycle_step.sh "${stepfunc[$s]}"_pre "$time" "$loop"
+        mpirunf proc $TMPRUN/letkf ./letkf letkf.conf
+        ./cycle_step.sh "${stepfunc[$s]}"_post "$time" "$loop"
+
+#        mpirunf proc $TMPRUN/letkf ./letkf letkf.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
       #------
       else
       #------

@@ -64,10 +64,10 @@ LTIMESLOT=600      # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=3           # Ensemble size
+MEMBER=6           # Ensemble size
 
-NNODES=1           # Number of nodes
-PPN=16             # Number of processes per node
+NNODES=7           # Number of nodes
+PPN=3              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 

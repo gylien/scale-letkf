@@ -164,7 +164,7 @@ fi
 
 pdbash () {
 #-------------------------------------------------------------------------------
-# Submit bash parallel scripts according to nodefile, only one process in each node
+# Submit bash parallel scripts according to nodefile
 #
 # Usage: pdbash NODEFILE PROC_OPT SCRIPT [ARGS]
 #
@@ -244,6 +244,98 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 #echo 13
 
 fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+pdrun () {
+#-------------------------------------------------------------------------------
+# Return if it is the case to run parallel scripts, according to nodefile
+#
+# Usage: pdrun MYRANK GROUP OPT
+#
+#   MYRANK
+#   GROUP     Group of processes
+#             all:
+#             (group):
+#   OPT       Options of using processes
+#             all:  run the script in all processes in the group
+#             alln: run the script in all nodes in the group, one process per node
+#             one:  run the script only in the first process in the group
+#-------------------------------------------------------------------------------
+
+if (($# < 2)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local MYRANK="$1"; shift
+local GROUP="$1"; shift
+local OPT="$1"
+
+#-------------------------------------------------------------------------------
+
+local mynode=${proc2node[$((MYRANK+1))]}
+if [ -z "$mynode" ]; then
+  exit 1
+fi
+
+local res=1
+local n
+
+if [ "$GROUP" = 'all' ]; then
+
+  if [ "$OPT" = 'all' ]; then
+    exit 0
+  elif [ "$OPT" = 'alln' ]; then
+    res=0
+    for n in $(seq $MYRANK); do
+      if ((${proc2node[$n]} == mynode)); then
+        res=1
+        break
+      fi
+    done
+  elif [ "$OPT" = 'one' ]; then
+    if ((MYRANK == 0)); then
+      exit 0
+    fi
+  fi
+
+elif ((GROUP <= parallel_mems)); then
+
+  local mygroup=${proc2group[$((MYRANK+1))]}
+  local mygrprank=${proc2grpproc[$((MYRANK+1))]}
+
+  if ((mygroup = GROUP)); then
+    if [ "$OPT" = 'all' ]; then
+        exit 0
+      fi
+    elif [ "$OPT" = 'alln' ]; then
+      res=0
+      for n in $(seq $((mygrprank-1))); do
+        if ((${mem2node[$(((GROUP-1)*mem_np+n))]} == mynode)); then
+          res=1
+          break
+        fi
+      done
+    elif [ "$OPT" = 'one' ]; then
+      if ((${mem2node[$(((GROUP-1)*mem_np+1))]} == mynode)); then
+        res=0
+        for n in $(seq $((mygrprank-1))); do
+          if ((${mem2node[$(((GROUP-1)*mem_np+n))]} == mynode)); then
+            res=1
+            break
+          fi
+        done
+      fi
+    fi
+  fi
+
+fi
+
+exit $res
 
 #-------------------------------------------------------------------------------
 }
