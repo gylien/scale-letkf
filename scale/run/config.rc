@@ -33,6 +33,10 @@ if ((MACHINE_TYPE == 10)); then
     TMP_STG='..'    #
     TMPL="$(pwd)"   #
     TMPL_STG='.'    #
+#    TMP="$(pwd)/.." #
+#    TMP_STG='..'    #
+#    TMPL="."        #
+#    TMPL_STG='.'    #
   else
     USE_RANKDIR=0
     TMP="$(pwd)"

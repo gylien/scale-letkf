@@ -30,6 +30,10 @@ program scaleles_ens
 ! Initial settings
 !-----------------------------------------------------------------------
 
+  if (COMMAND_ARGUMENT_COUNT() >= 5) then
+    call chdir('run/scale')
+  end if
+
   CALL initialize_mpi
   rtimer00 = MPI_WTIME()
 

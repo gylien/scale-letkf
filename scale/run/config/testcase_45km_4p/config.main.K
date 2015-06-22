@@ -77,7 +77,7 @@ SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
-ENABLE_SET=1       ######
+ENABLE_SET=0       ######
 
 #===============================================================================
 # Temporary directories to store runtime files
@@ -88,8 +88,8 @@ MACHINE_TYPE=10             # Machine type
                             # 11: K-computer (micro jobs)
                             # 12: K-computer (interact jobs)
 
-TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=2               # Disk type used for the 'run' temporary directory (runtime files)
+TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
+TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)
                             #  2: share (staging to TMP)

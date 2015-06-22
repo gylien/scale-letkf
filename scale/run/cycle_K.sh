@@ -101,7 +101,12 @@ staging_list
 
 cp $SCRP_DIR/config.main $TMPS
 
-echo "SCRP_DIR=\"\$(pwd)\"" >> $TMPS/config.main
+#if ((USE_RANKDIR == 1)); then
+#  echo "SCRP_DIR=\".\"" >> $TMPS/config.main
+#else
+  echo "SCRP_DIR=\"\$(pwd)\"" >> $TMPS/config.main
+#fi
+
 echo "NODEFILE_DIR=\"\$(pwd)/node\"" >> $TMPS/config.main
 echo "LOGDIR=\"\$(pwd)/log\"" >> $TMPS/config.main
 

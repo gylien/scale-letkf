@@ -147,10 +147,43 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 #echo $vcoordfile
 #echo "mpirunf $NODEFILE $RUNDIR $PROG $ARGS"
 
+
+  if ((USE_RANKDIR == 1)); then
+
+    if [ "$RUNDIR" == '-' ]; then
+
+pwd 1>&2
+#ls -l 1>&2
+mpiexec /work/system/bin/msh "/bin/ls -lL" 1>&2
+echo "mpiexec $PROG $ARGS" 1>&2
+
+      mpiexec $PROG $ARGS
+    else
+
+pwd 1>&2
+#ls -l $RUNDIR 1>&2
+mpiexec /work/system/bin/msh "/bin/ls -lL $RUNDIR" 1>&2
+#echo "( cd $RUNDIR && mpiexec $PROG $ARGS )" 1>&2
+echo "mpiexec $RUNDIR/$PROG $ARGS" 1>&2
+
+#      ( cd $RUNDIR && mpiexec $PROG $ARGS )
+      mpiexec $RUNDIR/$PROG $ARGS
+#      ttdir="$(pwd)"
+#      cd $RUNDIR
+#      mpiexec $(basename $PROG) $ARGS
+#      cd $ttdir
+    fi
+
+  else
+
+
   if [ "$RUNDIR" == '-' ]; then
     mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS
   else
     ( cd $RUNDIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS )
+  fi
+
+
   fi
 
 #echo 23
@@ -239,7 +272,31 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 #cat $vcoordfile
 #echo "======"
 
+
+
+  if ((USE_RANKDIR == 1)); then
+
+
+    pdbash_exec="./dat/exec/pdbash"
+
+
+pwd 1>&2
+ls -l 1>&2
+echo "mpiexec $pdbash_exec $SCRIPT $ARGS" 1>&2
+#mpiexec /work/system/bin/msh "/bin/ls -l dat/exec"
+
+
+#    mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS
+    mpiexec $pdbash_exec $SCRIPT $ARGS
+  else
+
+
+
   ( cd $SCRP_DIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS )
+
+
+
+  fi
 
 #echo 13
 

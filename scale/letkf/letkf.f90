@@ -36,6 +36,11 @@ PROGRAM letkf
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
+
+  if (COMMAND_ARGUMENT_COUNT() >= 5) then
+    call chdir('run/letkf')
+  end if
+
   CALL initialize_mpi
   rtimer00 = MPI_WTIME()
 !

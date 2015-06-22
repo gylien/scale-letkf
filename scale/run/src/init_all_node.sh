@@ -24,8 +24,11 @@ EOF
 fi
 
 MYRANK="$1"; shift
-DATADIR="$1"; shift
-RUNDIR="$1"
+#DATADIR="$1"; shift
+#RUNDIR="$1"
+
+DATADIR="$TMPDAT"
+RUNDIR="$TMPRUN"
 
 #===============================================================================
 
