@@ -10,19 +10,19 @@ setting () {
 #-------------------------------------------------------------------------------
 # define steps
 
-nsteps=6
-stepname[1]='Prepare boundary files'
-stepfunc[1]='boundary'
-stepname[2]='Perturb boundaries'
-stepfunc[2]='pertbdy'
-stepname[3]='Run ensemble forecasts'
-stepfunc[3]='ensfcst'
-stepname[4]='Thin observations'
-stepfunc[4]='obsthin'
-stepname[5]='Run observation operator'
-stepfunc[5]='obsope'
-stepname[6]='Run LETKF'
-stepfunc[6]='letkf'
+nsteps=3
+#stepname[1]='Prepare boundary files'
+#stepname[2]='Perturb boundaries'
+stepname[1]='Run ensemble forecasts'
+stepexecdir[1]="$TMPRUN/scale"
+stepexecname[1]="scale-les_ens"
+#stepname[4]='Thin observations'
+stepname[2]='Run observation operator'
+stepexecdir[2]="$TMPRUN/obsope"
+stepexecname[2]="obsope"
+stepname[3]='Run LETKF'
+stepexecdir[3]="$TMPRUN/letkf"
+stepexecname[3]="letkf"
 
 #-------------------------------------------------------------------------------
 # usage help string
@@ -651,100 +651,100 @@ fi
 
 #===============================================================================
 
-pertbdy () {
-#-------------------------------------------------------------------------------
+#pertbdy () {
+##-------------------------------------------------------------------------------
 
-echo
-if ((PERTURB_BDY == 0)); then
-  echo "  ... skip this step (do not perturb boundaries)"
-  return 1
-fi
+#echo
+#if ((PERTURB_BDY == 0)); then
+#  echo "  ... skip this step (do not perturb boundaries)"
+#  return 1
+#fi
 
-###### not finished yet...
-echo "pertbdy..."
-######
+####### not finished yet...
+#echo "pertbdy..."
+#######
 
-if ((PREP_BDY == 1)); then
-  bdy_base="$TMPDAT/bdy_prep/bdy_${time}"
-else
-  bdy_base="$TMPRUN/scale_init/boundary"
-fi
+#if ((PREP_BDY == 1)); then
+#  bdy_base="$TMPDAT/bdy_prep/bdy_${time}"
+#else
+#  bdy_base="$TMPRUN/scale_init/boundary"
+#fi
 
-ipm=0
-for m in $(seq $MEMBER); do
-  ipm=$((ipm+1))
-  if ((ipm > parallel_mems)); then wait; ipm=1; fi
-  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+#ipm=0
+#for m in $(seq $MEMBER); do
+#  ipm=$((ipm+1))
+#  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+#  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-#   ......
-#    ( pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
-#        $TMPOUT/${time}/anal/${name_m[$m]}/init $bdy_base $topo_base $landuse_base \
-#        ${time} $CYCLEFLEN $CYCLEFOUT $TMPRUN/scale_${name_m[$m]} $TMPDAT/exec $TMPDAT ;
-#      mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \
-#        ./scale-les run.conf ) &
-#   ......
-#   $TMPRUN/pertbdy/${name_m[$m]}
+##   ......
+##    ( pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
+##        $TMPOUT/${time}/anal/${name_m[$m]}/init $bdy_base $topo_base $landuse_base \
+##        ${time} $CYCLEFLEN $CYCLEFOUT $TMPRUN/scale_${name_m[$m]} $TMPDAT/exec $TMPDAT ;
+##      mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \
+##        ./scale-les run.conf ) &
+##   ......
+##   $TMPRUN/pertbdy/${name_m[$m]}
 
-  sleep $BGJOB_INT
-done
-wait
+#  sleep $BGJOB_INT
+#done
+#wait
 
-#-------------------------------------------------------------------------------
-}
+##-------------------------------------------------------------------------------
+#}
 
 #===============================================================================
 
-ensfcst () {
-#-------------------------------------------------------------------------------
+#ensfcst () {
+##-------------------------------------------------------------------------------
 
-echo
+#echo
 
-pdbash node $PROC_OPT $SCRP_DIR/src/pre_scale_node.sh \
-  $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT
+#pdbash node $PROC_OPT $SCRP_DIR/src/pre_scale_node.sh \
+#  $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT
 
-ipm=0
-for m in $(seq $mmean); do
-  ipm=$((ipm+1))
-  if ((ipm > parallel_mems)); then wait; ipm=1; fi
-  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+#ipm=0
+#for m in $(seq $mmean); do
+#  ipm=$((ipm+1))
+#  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+#  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-#  if ((PERTURB_BDY == 1)); then
-#    ...
+##  if ((PERTURB_BDY == 1)); then
+##    ...
+##  fi
+
+#  if ((BDY_ENS == 1)); then
+#    bdy_base="$TMPOUT/${time}/bdy/${name_m[$m]}/boundary"
+#  else
+#    bdy_base="$TMPOUT/${time}/bdy/mean/boundary"
 #  fi
+#  if ((OCEAN_INPUT == 1)); then
+#    if ((MKINIT == 1 && OCEAN_FORMAT == 99)); then
+#      ocean_base='-'
+#    else
+#      ocean_base="$TMPOUT/${time}/anal/mean/init_ocean"  ### always use mean???
+#    fi
+#  else
+#    ocean_base='-'
+#  fi
+#  ( pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
+#      $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
+#      $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+#      $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
+#    mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \
+#      ./scale-les run.conf > /dev/null ;
+#    pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_scale.sh $mem_np \
+#      $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/${name_m[$m]} cycle ) &
 
-  if ((BDY_ENS == 1)); then
-    bdy_base="$TMPOUT/${time}/bdy/${name_m[$m]}/boundary"
-  else
-    bdy_base="$TMPOUT/${time}/bdy/mean/boundary"
-  fi
-  if ((OCEAN_INPUT == 1)); then
-    if ((MKINIT == 1 && OCEAN_FORMAT == 99)); then
-      ocean_base='-'
-    else
-      ocean_base="$TMPOUT/${time}/anal/mean/init_ocean"  ### always use mean???
-    fi
-  else
-    ocean_base='-'
-  fi
-  ( pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale.sh $mem_np \
-      $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
-      $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
-      $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
-    mpirunf proc.${name_m[$m]} $TMPRUN/scale/${name_m[$m]} \
-      ./scale-les run.conf > /dev/null ;
-    pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_scale.sh $mem_np \
-      $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/${name_m[$m]} cycle ) &
+#  sleep $BGJOB_INT
+#done
+#wait
 
-  sleep $BGJOB_INT
-done
-wait
-
-#-------------------------------------------------------------------------------
-}
+##-------------------------------------------------------------------------------
+#}
 
 #===============================================================================
 
-ensfcst_pre () {
+ensfcst_1 () {
 #-------------------------------------------------------------------------------
 
 #echo
@@ -798,7 +798,7 @@ done
 
 #===============================================================================
 
-ensfcst_post () {
+ensfcst_2 () {
 #-------------------------------------------------------------------------------
 
 #echo
@@ -829,68 +829,68 @@ done
 
 #===============================================================================
 
-obsthin () {
-#-------------------------------------------------------------------------------
+#obsthin () {
+##-------------------------------------------------------------------------------
 
-echo
-if ((THINNING == 0)); then
-  echo "  ... skip this step (do not thin observations)"
-  return 1
-fi
+#echo
+#if ((THINNING == 0)); then
+#  echo "  ... skip this step (do not thin observations)"
+#  return 1
+#fi
 
-###### not finished yet...
-echo "obsthin..."
-######
+####### not finished yet...
+#echo "obsthin..."
+#######
 
 
-#-------------------------------------------------------------------------------
-}
+##-------------------------------------------------------------------------------
+#}
 
 #===============================================================================
 
-obsope () {
-#-------------------------------------------------------------------------------
+#obsope () {
+##-------------------------------------------------------------------------------
 
-echo
+#echo
 
-pdbash node $PROC_OPT $SCRP_DIR/src/pre_obsope_node.sh \
-  $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
-  $mem_nodes $mem_np $slot_s $slot_e $slot_b
+#pdbash node $PROC_OPT $SCRP_DIR/src/pre_obsope_node.sh \
+#  $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
+#  $mem_nodes $mem_np $slot_s $slot_e $slot_b
 
-ipm=0
-for m in $(seq $MEMBER); do
-  ipm=$((ipm+1))
-  if ((ipm > parallel_mems)); then wait; ipm=1; fi
-  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-
-  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_obsope.sh \
-    $atime ${name_m[$m]} $TMPRUN/obsope &
-
-  sleep $BGJOB_INT
-done
-wait
-
-mpirunf proc $TMPRUN/obsope ./obsope obsope.conf > /dev/null
-
-ipm=0
-for m in $(seq $MEMBER); do
-  ipm=$((ipm+1))
-  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+#ipm=0
+#for m in $(seq $MEMBER); do
+#  ipm=$((ipm+1))
+#  if ((ipm > parallel_mems)); then wait; ipm=1; fi
 #  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_obsope.sh \
-    $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope &
+#  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_obsope.sh \
+#    $atime ${name_m[$m]} $TMPRUN/obsope &
 
-  sleep $BGJOB_INT
-done
-wait
+#  sleep $BGJOB_INT
+#done
+#wait
 
-#-------------------------------------------------------------------------------
-}
+#mpirunf proc $TMPRUN/obsope ./obsope obsope.conf > /dev/null
+
+#ipm=0
+#for m in $(seq $MEMBER); do
+#  ipm=$((ipm+1))
+#  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+##  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+
+#  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_obsope.sh \
+#    $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope &
+
+#  sleep $BGJOB_INT
+#done
+#wait
+
+##-------------------------------------------------------------------------------
+#}
 
 #===============================================================================
 
-obsope_pre () {
+obsope_1 () {
 #-------------------------------------------------------------------------------
 
 #echo
@@ -923,7 +923,7 @@ done
 
 #===============================================================================
 
-obsope_post () {
+obsope_2 () {
 #-------------------------------------------------------------------------------
 
 #echo
@@ -950,49 +950,49 @@ done
 
 #===============================================================================
 
-letkf () {
-#-------------------------------------------------------------------------------
+#letkf () {
+##-------------------------------------------------------------------------------
 
-echo
+#echo
 
-pdbash node $PROC_OPT $SCRP_DIR/src/pre_letkf_node.sh \
-  $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
-  $mem_nodes $mem_np $slot_s $slot_e $slot_b
+#pdbash node $PROC_OPT $SCRP_DIR/src/pre_letkf_node.sh \
+#  $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
+#  $mem_nodes $mem_np $slot_s $slot_e $slot_b
 
-ipm=0
-for m in $(seq $mmean); do
-  ipm=$((ipm+1))
-  if ((ipm > parallel_mems)); then wait; ipm=1; fi
-  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-
-  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_letkf.sh \
-    $TMPOUT/${time}/topo/topo $atime ${name_m[$m]} $TMPRUN/letkf &
-
-  sleep $BGJOB_INT
-done
-wait
-
-mpirunf proc $TMPRUN/letkf ./letkf letkf.conf > /dev/null
-
-ipm=0
-for m in $(seq $mmean); do
-  ipm=$((ipm+1))
-  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+#ipm=0
+#for m in $(seq $mmean); do
+#  ipm=$((ipm+1))
+#  if ((ipm > parallel_mems)); then wait; ipm=1; fi
 #  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
 
-  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_letkf.sh \
-    $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf &
+#  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_letkf.sh \
+#    $TMPOUT/${time}/topo/topo $atime ${name_m[$m]} $TMPRUN/letkf &
 
-  sleep $BGJOB_INT
-done
-wait
+#  sleep $BGJOB_INT
+#done
+#wait
 
-#-------------------------------------------------------------------------------
-}
+#mpirunf proc $TMPRUN/letkf ./letkf letkf.conf > /dev/null
+
+#ipm=0
+#for m in $(seq $mmean); do
+#  ipm=$((ipm+1))
+#  if ((ipm > parallel_mems)); then wait; ipm=1; fi
+##  echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+
+#  pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/post_letkf.sh \
+#    $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf &
+
+#  sleep $BGJOB_INT
+#done
+#wait
+
+##-------------------------------------------------------------------------------
+#}
 
 #===============================================================================
 
-letkf_pre () {
+letkf_1 () {
 #-------------------------------------------------------------------------------
 
 #echo
@@ -1025,7 +1025,7 @@ done
 
 #===============================================================================
 
-letkf_post () {
+letkf_2 () {
 #-------------------------------------------------------------------------------
 
 #echo

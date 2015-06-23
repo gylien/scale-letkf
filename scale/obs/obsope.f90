@@ -25,19 +25,30 @@ PROGRAM obsope
   type(obs_info) :: obs(nobsfiles)
   real(r_size) :: radarlon, radarlat, radarz
 
-  character(len=6400) :: cmd, icmd
+  character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
+  integer :: iarg
 
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
 
-  if (COMMAND_ARGUMENT_COUNT() >= 5) then
-    call chdir('run/obsope')
-  end if
-
   CALL initialize_mpi
   rtimer00 = MPI_WTIME()
+
+  if (command_argument_count() >= 3) then
+    call get_command_argument(2, icmd)
+    call chdir(trim(icmd))
+    write (myranks, '(I10)') myrank
+    call get_command_argument(3, icmd)
+    cmd1 = 'bash ' // trim(icmd) // ' obsope_1' // ' ' // trim(myranks)
+    cmd2 = 'bash ' // trim(icmd) // ' obsope_2' // ' ' // trim(myranks)
+    do iarg = 4, command_argument_count()
+      call get_command_argument(iarg, icmd)
+      cmd1 = trim(cmd1) // ' ' // trim(icmd)
+      cmd2 = trim(cmd2) // ' ' // trim(icmd)
+    end do
+  end if
 
   WRITE(stdoutf(6:11), '(I6.6)') myrank
   WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
@@ -48,22 +59,10 @@ PROGRAM obsope
 ! Pre-processing scripts
 !-----------------------------------------------------------------------
 
-  if (COMMAND_ARGUMENT_COUNT() >= 5) then
-    write(6,'(A)') 'Run pre-processing scripts'
-    cmd = 'bash'
-    call get_command_argument(2, icmd)
-    cmd = trim(cmd) // ' ' // trim(icmd)
-    call get_command_argument(3, icmd)
-    cmd = trim(cmd) // ' ' // trim(icmd) // '_pre'
-    call get_command_argument(4, icmd)
-    cmd = trim(cmd) // ' ' // trim(icmd)
-    call get_command_argument(5, icmd)
-    cmd = trim(cmd) // ' ' // trim(icmd)
-    write (myranks, '(I10)') myrank
-    cmd = trim(cmd) // ' ' // trim(myranks)
-
-    WRITE(6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd), ']'
-    call system(trim(cmd))
+  if (command_argument_count() >= 3) then
+    write (6,'(A)') 'Run pre-processing scripts'
+    write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd1), ']'
+    call system(trim(cmd1))
   end if
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -141,22 +140,10 @@ PROGRAM obsope
 ! Post-processing scripts
 !-----------------------------------------------------------------------
 
-  if (COMMAND_ARGUMENT_COUNT() >= 5) then
-    write(6,'(A)') 'Run post-processing scripts'
-    cmd = 'bash'
-    call get_command_argument(2, icmd)
-    cmd = trim(cmd) // ' ' // trim(icmd)
-    call get_command_argument(3, icmd)
-    cmd = trim(cmd) // ' ' // trim(icmd) // '_post'
-    call get_command_argument(4, icmd)
-    cmd = trim(cmd) // ' ' // trim(icmd)
-    call get_command_argument(5, icmd)
-    cmd = trim(cmd) // ' ' // trim(icmd)
-!    write (myranks, '(I10)') myrank
-    cmd = trim(cmd) // ' ' // trim(myranks)
-
-    WRITE(6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd), ']'
-    call system(trim(cmd))
+  if (command_argument_count() >= 3) then
+    write (6,'(A)') 'Run post-processing scripts'
+    write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd2), ']'
+    call system(trim(cmd2))
   end if
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)

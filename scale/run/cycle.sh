@@ -42,19 +42,15 @@ res=$? && ((res != 0)) && exit $res
 
 #-------------------------------------------------------------------------------
 
-setting "$1" "$2" "$3" "$4"
-
-
-
 if ((USE_RANKDIR == 1)); then
   SCRP_DIR="."
   TMPDAT="./dat"
   TMPRUN="./run"
 fi
 
-ls -lR
+#ls -lR
 
-
+setting "$1" "$2" "$3" "$4"
 
 #-------------------------------------------------------------------------------
 
@@ -199,31 +195,12 @@ while ((time <= ETIME)); do
       printf " %2d. %-55s\n" $s "${stepname[$s]}"
       echo
 
-      if [ "${stepfunc[$s]}" = 'ensfcst' ]; then
-        if ((ENABLE_SET == 1)); then                                    ##
-          mpirunf set1.proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
-        else
-#          mpirunf proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
-          mpirunf proc $TMPRUN/scale ./scale-les_ens scale-les_ens.conf ../../cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
-        fi
-      elif [ "${stepfunc[$s]}" = 'obsope' ]; then
-        if ((ENABLE_SET == 1)); then                                    ##
-          mpirunf set2.proc $TMPRUN/obsope ./obsope obsope.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
-        else
-#          mpirunf proc $TMPRUN/obsope ./obsope obsope.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
-          mpirunf proc $TMPRUN/obsope ./obsope obsope.conf ../../cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
-        fi
-      elif [ "${stepfunc[$s]}" = 'letkf' ]; then
-        if ((ENABLE_SET == 1)); then                                    ##
-          mpirunf set3.proc $TMPRUN/letkf ./letkf letkf.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
-        else
-#          mpirunf proc $TMPRUN/letkf ./letkf letkf.conf $SCRP_DIR/cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
-          mpirunf proc $TMPRUN/letkf ./letkf letkf.conf ../../cycle_step.sh "${stepfunc[$s]}" "$time" "$loop" # > /dev/null
-        fi
+      if ((USE_RANKDIR == 1)); then
+        mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+                "$(rev_path ${stepexecdir[$s]})/cycle_step.sh" "$time" "$loop" # > /dev/null
       else
-
-        ./cycle_step.sh "${stepfunc[$s]}" "$time" "$loop"
-
+        mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+                "$SCRP_DIR/cycle_step.sh" "$time" "$loop" # > /dev/null
       fi
 
       echo

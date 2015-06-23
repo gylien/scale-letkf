@@ -49,9 +49,9 @@ res=$? && ((res != 0)) && exit $res
 setting
 
 STEPFUNC="${1}"; shift
+MYRANK="${1}"; shift
 TIME="${1}"; shift
-LOOP="${1}"; shift
-MYRANK="${1}"
+LOOP="${1}"
 
 #===============================================================================
 # Determine the distibution schemes

@@ -15,7 +15,6 @@ safe_init_tmpdir () {
 # Usage: safe_init_tmpdir DIRNAME
 #
 #   DIRNAME  The temporary directory
-#
 #-------------------------------------------------------------------------------
 
 local DIRNAME="$1"
@@ -60,7 +59,6 @@ safe_rm_tmpdir () {
 # Usage: safe_rm_tmpdir DIRNAME
 #
 #   DIRNAME  The temporary directory
-#
 #-------------------------------------------------------------------------------
 
 local DIRNAME="$1"
@@ -97,15 +95,59 @@ res=$? && ((res != 0)) && exit $res
 
 #===============================================================================
 
+rev_path () {
+#-------------------------------------------------------------------------------
+# Compose the reverse path of a path
+#
+# Usage: rev_path PATH
+#
+#   PATH  The forward path
+#-------------------------------------------------------------------------------
+
+if (($# < 1)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local path="$1"
+
+#-------------------------------------------------------------------------------
+
+local rpath='.'
+local base
+while [ "$path" != '.' ]; do
+  base=$(basename $path)
+  res=$? && ((res != 0)) && exit $res
+  path=$(dirname $path)
+  if [ "$base" = '..' ]; then
+    if [ -d "$path" ]; then
+      rpath="$rpath/$(basename $(cd $path && pwd))"
+    else
+      echo "[Error] $FUNCNAME: Error in reverse path search." 1>&2
+      exit 1
+    fi
+  elif [ "$base" != '.' ]; then
+    rpath="$rpath/.."
+  fi
+done
+if [ ${rpath:0:2} = './' ]; then
+  echo ${rpath:2}
+else
+  echo $rpath
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
 mpirunf () {
 #-------------------------------------------------------------------------------
 # Submit a MPI job according to nodefile
 #
-# Usage: mpirunf NODEFILE RUNDIR PROG [ARGS]
+# Usage: mpirunf NODEFILE PROG [ARGS]
 #
 #   NODEFILE  Name of nodefile (omit the directory $NODEFILE_DIR)
-#   RUNDIR    Working directory
-#             -: the current directory
 #   PROG      Program
 #   ARGS      Arguments passed into the program
 #
@@ -113,15 +155,17 @@ mpirunf () {
 #   $NODEFILE_DIR  Directory of nodefiles
 #-------------------------------------------------------------------------------
 
-if (($# < 3)); then
+if (($# < 2)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." >&2
   exit 1
 fi
 
 local NODEFILE="$1"; shift
-local RUNDIR="$1"; shift
 local PROG="$1"; shift
 local ARGS="$@"
+
+progbase=$(basename $PROG)
+progdir=$(dirname $PROG)
 
 #-------------------------------------------------------------------------------
 
@@ -130,63 +174,26 @@ if ((MACHINE_TYPE == 1)); then
   local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
   HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
 
-  if [ "$RUNDIR" == '-' ]; then
-    $MPIRUN $HOSTLIST 1 $PROG $ARGS
-#    $MPIRUN $HOSTLIST 1 omplace -nt ${THREADS} $PROG $ARGS
-  else
-    $MPIRUN -d $RUNDIR $HOSTLIST 1 $PROG $ARGS
-#    $MPIRUN -d $RUNDIR $HOSTLIST 1 omplace -nt ${THREADS} $PROG $ARGS
-  fi
+  $MPIRUN -d $progdir $HOSTLIST 1 ./$progbase $ARGS
+#  $MPIRUN -d $progdir $HOSTLIST 1 omplace -nt ${THREADS} ./$progbase $ARGS
 
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
-#echo 21
   local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
-
-#echo 22
-#echo $vcoordfile
-#echo "mpirunf $NODEFILE $RUNDIR $PROG $ARGS"
-
 
   if ((USE_RANKDIR == 1)); then
 
-    if [ "$RUNDIR" == '-' ]; then
-
 pwd 1>&2
-#ls -l 1>&2
-mpiexec /work/system/bin/msh "/bin/ls -lL" 1>&2
-echo "mpiexec $PROG $ARGS" 1>&2
+mpiexec /work/system/bin/msh "/bin/ls -lL $progdir" 1>&2
+echo "mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS" 1>&2
 
-      mpiexec $PROG $ARGS
-    else
-
-pwd 1>&2
-#ls -l $RUNDIR 1>&2
-mpiexec /work/system/bin/msh "/bin/ls -lL $RUNDIR" 1>&2
-#echo "( cd $RUNDIR && mpiexec $PROG $ARGS )" 1>&2
-echo "mpiexec $RUNDIR/$PROG $ARGS" 1>&2
-
-#      ( cd $RUNDIR && mpiexec $PROG $ARGS )
-      mpiexec $RUNDIR/$PROG $ARGS
-#      ttdir="$(pwd)"
-#      cd $RUNDIR
-#      mpiexec $(basename $PROG) $ARGS
-#      cd $ttdir
-    fi
+    mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
 
   else
 
-
-  if [ "$RUNDIR" == '-' ]; then
-    mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS
-  else
-    ( cd $RUNDIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $PROG $ARGS )
-  fi
-
+    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS )
 
   fi
-
-#echo 23
 
 fi
 
