@@ -16,4 +16,6 @@ scale/letkf/testexp/
 scale/obs/obsmake
 scale/obs/obsope
 scale/obs/dec_prepbufr
+scale/ensmodel/scale-les_pp_ens
+scale/ensmodel/scale-les_init_ens
 scale/ensmodel/scale-les_ens

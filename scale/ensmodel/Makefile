@@ -1,6 +1,6 @@
 include ../configure.user
 
-PROGS   = scale-les_ens
+PROGS   = scale-les_pp_ens scale-les_init_ens scale-les_ens
 
 OBJS    =
 
@@ -29,6 +29,20 @@ SCALE_LES_OBJS = $(shell ls $(SCALE_LES_OBJDIR)/*.o | grep -v "scale-les.o\|scal
 
 all:	$(PROGS)
 
+scale-les_pp_ens:	scale-les_pp_ens.o $(OBJS) common_modules
+	$(FC) $(FOPTS3) $(FMCMODEL) -o scale-les_pp_ens scale-les_pp_ens.o \
+	$(COMMON_OBJS) $(OBJS) $(SCALE_LES_OBJS) $(LIBS)
+
+scale-les_pp_ens.o:	scale-les_pp_ens.f90 $(OBJS) common_modules
+	$(FC) $(FOPTS3) -c scale-les_pp_ens.f90 -I$(COMMON_DIR) $(INCS)
+
+scale-les_init_ens:	scale-les_init_ens.o $(OBJS) common_modules
+	$(FC) $(FOPTS3) $(FMCMODEL) -o scale-les_init_ens scale-les_init_ens.o \
+	$(COMMON_OBJS) $(OBJS) $(SCALE_LES_OBJS) $(LIBS)
+
+scale-les_init_ens.o:	scale-les_init_ens.f90 $(OBJS) common_modules
+	$(FC) $(FOPTS3) -c scale-les_init_ens.f90 -I$(COMMON_DIR) $(INCS)
+
 scale-les_ens:	scale-les_ens.o $(OBJS) common_modules
 	$(FC) $(FOPTS3) $(FMCMODEL) -o scale-les_ens scale-les_ens.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_LES_OBJS) $(LIBS)
@@ -40,4 +54,4 @@ common_modules:
 	( cd $(COMMON_DIR) ; make )
 
 clean:
-	rm -f *.o *.mod *.lst $(PROGS) letkf mean efso
+	rm -f *.o *.mod *.lst $(PROGS)

@@ -1,4 +1,4 @@
-program scaleles_ens
+program scaleles_init_ens
   !-----------------------------------------------------------------------------
 
   USE common
@@ -10,7 +10,7 @@ program scaleles_ens
      PRC_MPIstart,      &
      PRC_MPIsplit_letkf,&
      LOCAL_COMM_WORLD
-  use mod_les_driver
+  use mod_init_driver
 
   implicit none
 
@@ -19,7 +19,7 @@ program scaleles_ens
   CHARACTER(11) :: stdoutf='NOUT-000000'
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
-  CHARACTER(len=H_LONG) :: confname='0000/run.conf'
+  CHARACTER(len=H_LONG) :: confname='0000/init.conf'
 
   integer :: LOCAL_myrank, LOCAL_nmax
 
@@ -39,8 +39,8 @@ program scaleles_ens
     call chdir(trim(icmd))
     write (myranks, '(I10)') myrank
     call get_command_argument(3, icmd)
-    cmd1 = 'bash ' // trim(icmd) // ' ensfcst_1' // ' ' // trim(myranks)
-    cmd2 = 'bash ' // trim(icmd) // ' ensfcst_2' // ' ' // trim(myranks)
+    cmd1 = 'bash ' // trim(icmd) // ' ensinit_1' // ' ' // trim(myranks)
+    cmd2 = 'bash ' // trim(icmd) // ' ensinit_2' // ' ' // trim(myranks)
     do iarg = 4, command_argument_count()
       call get_command_argument(iarg, icmd)
       cmd1 = trim(cmd1) // ' ' // trim(icmd)
@@ -83,7 +83,7 @@ program scaleles_ens
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------
-! Run SCALE-LES
+! Run SCALE-LES_init
 !-----------------------------------------------------------------------
 
   if (myrank_mem_use) then
@@ -109,10 +109,10 @@ program scaleles_ens
         WRITE(confname(1:4),'(I4.4)') proc2mem(1,it,myrank+1)
         WRITE(6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is running a model with configuration file: ', confname
 
-        call scaleles ( LOCAL_COMM_WORLD, &
-                        MPI_COMM_NULL,    &
-                        MPI_COMM_NULL,    &
-                        confname )
+        call scaleles_init ( LOCAL_COMM_WORLD, &
+                             MPI_COMM_NULL,    &
+                             MPI_COMM_NULL,    &
+                             confname )
       end if
     end do ! [ it = 1, nitmax ]
 
@@ -149,4 +149,4 @@ program scaleles_ens
   CALL finalize_mpi
 
   stop
-end program scaleles_ens
+end program scaleles_init_ens

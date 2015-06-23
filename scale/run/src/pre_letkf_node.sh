@@ -58,6 +58,7 @@ done
 
 cat $TMPDAT/conf/config.nml.letkf | \
     sed -e "s/\[MEMBER\]/ MEMBER = $MEMBER,/" \
+        -e "s/\[MEMBER_RUN\]/ MEMBER_RUN = 0,/" \
         -e "s/\[SLOT_START\]/ SLOT_START = $SLOT_START,/" \
         -e "s/\[SLOT_END\]/ SLOT_END = $SLOT_END,/" \
         -e "s/\[SLOT_BASE\]/ SLOT_BASE = $SLOT_BASE,/" \

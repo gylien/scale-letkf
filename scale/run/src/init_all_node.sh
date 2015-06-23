@@ -32,6 +32,36 @@ RUNDIR="$TMPRUN"
 
 #===============================================================================
 
+mkdir -p $RUNDIR/scale_pp
+ln -fs $DATADIR/exec/scale-les_pp_ens $RUNDIR/scale_pp
+ln -fs $DATADIR/rad/PARAG.29 $RUNDIR/scale_pp
+ln -fs $DATADIR/rad/PARAPC.29 $RUNDIR/scale_pp
+ln -fs $DATADIR/rad/VARDATA.RM29 $RUNDIR/scale_pp
+ln -fs $DATADIR/rad/cira.nc $RUNDIR/scale_pp
+ln -fs $DATADIR/rad/MIPAS/day.atm $RUNDIR/scale_pp
+ln -fs $DATADIR/rad/MIPAS/equ.atm $RUNDIR/scale_pp
+ln -fs $DATADIR/rad/MIPAS/sum.atm $RUNDIR/scale_pp
+ln -fs $DATADIR/rad/MIPAS/win.atm $RUNDIR/scale_pp
+ln -fs $DATADIR/land/param.bucket.conf $RUNDIR/scale_pp
+if [ "$TOPO_FORMAT" != 'prep' ]; then
+  ln -fs $DATADIR/topo/${TOPO_FORMAT}/Products $RUNDIR/scale_pp/input_topo
+fi
+if [ "$LANDUSE_FORMAT" != 'prep' ]; then
+  ln -fs $DATADIR/landuse/${LANDUSE_FORMAT}/Products $RUNDIR/scale_pp/input_landuse
+fi
+
+mkdir -p $RUNDIR/scale_init
+ln -fs $DATADIR/exec/scale-les_init_ens $RUNDIR/scale_init
+ln -fs $DATADIR/rad/PARAG.29 $RUNDIR/scale_init
+ln -fs $DATADIR/rad/PARAPC.29 $RUNDIR/scale_init
+ln -fs $DATADIR/rad/VARDATA.RM29 $RUNDIR/scale_init
+ln -fs $DATADIR/rad/cira.nc $RUNDIR/scale_init
+ln -fs $DATADIR/rad/MIPAS/day.atm $RUNDIR/scale_init
+ln -fs $DATADIR/rad/MIPAS/equ.atm $RUNDIR/scale_init
+ln -fs $DATADIR/rad/MIPAS/sum.atm $RUNDIR/scale_init
+ln -fs $DATADIR/rad/MIPAS/win.atm $RUNDIR/scale_init
+ln -fs $DATADIR/land/param.bucket.conf $RUNDIR/scale_init
+
 mkdir -p $RUNDIR/scale
 ln -fs $DATADIR/exec/scale-les_ens $RUNDIR/scale
 ln -fs $DATADIR/rad/PARAG.29 $RUNDIR/scale

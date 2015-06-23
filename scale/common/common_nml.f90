@@ -16,9 +16,11 @@ MODULE common_nml
   !----
   integer, parameter :: nvarmax = 100
 
-  !--- PARAM_LETKF
+  !--- PARAM_ENSEMBLE
   integer :: MEMBER = 3      ! ensemble size
+  integer :: MEMBER_RUN = 1  !
 
+  !--- PARAM_LETKF
   integer :: SLOT_START = 1
   integer :: SLOT_END = 1
   integer :: SLOT_BASE = 1
@@ -43,7 +45,7 @@ MODULE common_nml
 !   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0 & ! TC
 !   & /),(/nv3d+nv2d,nvarlocal/))
 
-  real(r_size) :: COV_INFL_MUL = 1.0d0   ! > 0: globally constant covariance inflation
+  real(r_size) :: COV_INFL_MUL = 1.0d0    ! > 0: globally constant covariance inflation
                                           ! < 0: 3D inflation values input from a GPV file "infl_mul.grd"
   real(r_size) :: MIN_INFL_MUL = 0.0d0    ! minimum inlfation factor
   logical :: ADAPTIVE_INFL_INIT = .false.
@@ -108,6 +110,30 @@ MODULE common_nml
 
 contains
 !-----------------------------------------------------------------------
+! PARAM_ENSEMBLE
+!-----------------------------------------------------------------------
+subroutine read_nml_ensemble
+  implicit none
+  integer :: ierr
+  
+  namelist /PARAM_ENSEMBLE/ &
+    MEMBER, &
+    MEMBER_RUN
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Error: /PARAM_ENSEMBLE/ is not found in namelist. Check!'
+    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_ENSEMBLE. Check!'
+    stop
+  endif
+
+  return
+end subroutine read_nml_ensemble
+
+!-----------------------------------------------------------------------
 ! PARAM_LETKF
 !-----------------------------------------------------------------------
 subroutine read_nml_letkf
@@ -115,7 +141,6 @@ subroutine read_nml_letkf
   integer :: ierr
   
   namelist /PARAM_LETKF/ &
-    MEMBER, &
     SLOT_START, &
     SLOT_END, &
     SLOT_BASE, &
@@ -142,7 +167,7 @@ subroutine read_nml_letkf
     write(6,*) 'Error: /PARAM_LETKF/ is not found in namelist. Check!'
     stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_PRC. Check!'
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF. Check!'
     stop
   endif
 
@@ -170,7 +195,7 @@ subroutine read_nml_letkf_prc
     write(6,*) 'Warning: /PARAM_LETKF_PRC/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_PRC. Check!'
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_PRC. Check!'
     stop
   endif
 
@@ -205,7 +230,7 @@ subroutine read_nml_letkf_obs
     write(6,*) 'Warning: /PARAM_LETKF_OBS/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_OBS. Check!'
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_OBS. Check!'
     stop
   endif
 
@@ -237,7 +262,7 @@ subroutine read_nml_letkf_obserr
     write(6,*) 'Warning: /PARAM_LETKF_OBSERR/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_OBSERR. Check!'
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_OBSERR. Check!'
     stop
   endif
 
@@ -264,7 +289,7 @@ subroutine read_nml_letkf_obs_radar
     write(6,*) 'Warning: /PARAM_LETKF_OBS_RADAR/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_OBS_RADAR. Check!'
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_OBS_RADAR. Check!'
     stop
   endif
 

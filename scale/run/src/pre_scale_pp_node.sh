@@ -11,7 +11,7 @@
 if (($# < 7)); then
   cat >&2 << EOF
 
-[pre_scale_node.sh] 
+[pre_scale_pp_node.sh] 
 
 Usage: $0 MYRANK MEM_NODES MEM_NP TMPDIR EXECDIR DATADIR
 
@@ -64,7 +64,7 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "s/\[PPN\]/ PPN = $PPN,/" \
         -e "s/\[MEM_NODES\]/ MEM_NODES = $MEM_NODES,/" \
         -e "s/\[MEM_NP\]/ MEM_NP = $MEM_NP,/" \
-    > $TMPDIR/scale-les_ens.conf
+    > $TMPDIR/scale-les_pp_ens.conf
 
 #===============================================================================
 

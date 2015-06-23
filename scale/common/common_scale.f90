@@ -374,7 +374,7 @@ subroutine set_common_conf
   ! setup standard I/O
   call IO_setup( MODELNAME, .false.)
 
-  call read_nml_letkf
+  call read_nml_ensemble
   call read_nml_letkf_prc
 
   if (nprocs /= NNODES * PPN) then

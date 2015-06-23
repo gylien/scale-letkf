@@ -10,19 +10,25 @@ setting () {
 #-------------------------------------------------------------------------------
 # define steps
 
-nsteps=3
+nsteps=5
+stepname[1]='Run SCALE pp'
+stepexecdir[1]="$TMPRUN/scale_pp"
+stepexecname[1]="scale-les_pp_ens"
+stepname[2]='Run SCALE init'
+stepexecdir[2]="$TMPRUN/scale_init"
+stepexecname[2]="scale-les_init_ens"
 #stepname[1]='Prepare boundary files'
 #stepname[2]='Perturb boundaries'
-stepname[1]='Run ensemble forecasts'
-stepexecdir[1]="$TMPRUN/scale"
-stepexecname[1]="scale-les_ens"
+stepname[3]='Run ensemble forecasts'
+stepexecdir[3]="$TMPRUN/scale"
+stepexecname[3]="scale-les_ens"
 #stepname[4]='Thin observations'
-stepname[2]='Run observation operator'
-stepexecdir[2]="$TMPRUN/obsope"
-stepexecname[2]="obsope"
-stepname[3]='Run LETKF'
-stepexecdir[3]="$TMPRUN/letkf"
-stepexecname[3]="letkf"
+stepname[4]='Run observation operator'
+stepexecdir[4]="$TMPRUN/obsope"
+stepexecname[4]="obsope"
+stepname[5]='Run LETKF'
+stepexecdir[5]="$TMPRUN/letkf"
+stepexecname[5]="letkf"
 
 #-------------------------------------------------------------------------------
 # usage help string
@@ -117,9 +123,11 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
 #-------------------
   safe_init_tmpdir $TMPDAT
   safe_init_tmpdir $TMPDAT/exec
-  ln -fs $MODELDIR/scale-les $TMPDAT/exec
-  ln -fs $MODELDIR/scale-les_init $TMPDAT/exec
   ln -fs $MODELDIR/scale-les_pp $TMPDAT/exec
+  ln -fs $MODELDIR/scale-les_init $TMPDAT/exec
+  ln -fs $MODELDIR/scale-les $TMPDAT/exec
+  ln -fs $ENSMODEL_DIR/scale-les_pp_ens $TMPDAT/exec
+  ln -fs $ENSMODEL_DIR/scale-les_init_ens $TMPDAT/exec
   ln -fs $ENSMODEL_DIR/scale-les_ens $TMPDAT/exec
   ln -fs $COMMON_DIR/pdbash $TMPDAT/exec
   ln -fs $OBSUTIL_DIR/obsope $TMPDAT/exec
@@ -137,9 +145,11 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
 else
 #-------------------
   cat >> $STAGING_DIR/stagein.dat << EOF
-${MODELDIR}/scale-les|exec/scale-les
-${MODELDIR}/scale-les_init|exec/scale-les_init
 ${MODELDIR}/scale-les_pp|exec/scale-les_pp
+${MODELDIR}/scale-les_init|exec/scale-les_init
+${MODELDIR}/scale-les|exec/scale-les
+${ENSMODEL_DIR}/scale-les_pp_ens|exec/scale-les_pp_ens
+${ENSMODEL_DIR}/scale-les_init_ens|exec/scale-les_init_ens
 ${ENSMODEL_DIR}/scale-les_ens|exec/scale-les_ens
 ${COMMON_DIR}/pdbash|exec/pdbash
 ${OBSUTIL_DIR}/obsope|exec/obsope
@@ -573,6 +583,119 @@ fi
 #-------------------------------------------------------------------------------
 }
 
+
+
+
+
+
+
+
+
+
+
+#===============================================================================
+
+enspp_1 () {
+#-------------------------------------------------------------------------------
+
+if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
+  echo "  ... skip this step (use prepared topo and landuse files)"
+  return 1
+fi
+
+if ((BDY_FORMAT == 0)); then
+  echo "  ... skip this step (use prepared boundaries)"
+  return 1
+fi
+
+#echo
+#echo "* Pre-processing scripts"
+#echo
+
+mkinit=0
+if ((LOOP = 1)); then
+  mkinit=$MAKEINIT
+fi
+
+if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+  MEMBER_RUN=1
+else # local run directory: run multiple members as needed
+  if ((repeat_mems <= mmean)); then
+    MEMBER_RUN=$repeat_mems
+  else
+    MEMBER_RUN=$mmean
+  fi
+fi
+
+if (pdrun $MYRANK all $PROC_OPT); then
+  bash $SCRP_DIR/src/pre_scale_pp_node.sh $MYRANK \
+       $mem_nodes $mem_np $TMPRUN/scale_pp $TMPDAT/exec $TMPDAT $MEMBER_RUN
+fi
+
+for it in $(seq $nitmax); do
+  g=${proc2group[$((MYRANK+1))]}
+  m=$(((it-1)*parallel_mems+g))
+  if ((m <= MEMBER_RUN)); then
+    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+      echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+    fi
+
+    if (pdrun $MYRANK $m $PROC_OPT); then
+      bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK $time \
+           $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
+    fi
+  fi
+done
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+enspp_2 () {
+#-------------------------------------------------------------------------------
+
+#echo
+#echo "* Post-processing scripts"
+#echo
+
+if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+  MEMBER_RUN=1
+else # local run directory: run multiple members as needed
+  if ((repeat_mems <= mmean)); then
+    MEMBER_RUN=$repeat_mems
+  else
+    MEMBER_RUN=$mmean
+  fi
+fi
+
+for it in $(seq $nitmax); do
+  g=${proc2group[$((MYRANK+1))]}
+  m=$(((it-1)*parallel_mems+g))
+  if ((m <= MEMBER_RUN)); then
+    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+      echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+    fi
+
+    if (pdrun $MYRANK $m $PROC_OPT); then
+      bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $time \
+           $TMPRUN/scale_pp/$(printf '%04d' $m)
+    fi
+  fi
+done
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+
+
+
+
+
+
+
 #===============================================================================
 
 boundary () {
@@ -753,7 +876,7 @@ ensfcst_1 () {
 
 if (pdrun $MYRANK all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT
+       $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT $((MEMBER+1))
 fi
 
 if ((OCEAN_INPUT == 1)); then
@@ -788,7 +911,7 @@ for it in $(seq $nitmax); do
       bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
            $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
            $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
-           $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $TMPDAT/exec $TMPDAT
+           $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
     fi
   fi
 done
@@ -819,7 +942,7 @@ for it in $(seq $nitmax); do
 
     if (pdrun $MYRANK $m $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $mem_np \
-           $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/${name_m[$m]} cycle
+           $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) cycle
     fi
   fi
 done

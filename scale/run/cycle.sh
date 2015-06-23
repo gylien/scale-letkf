@@ -195,6 +195,8 @@ while ((time <= ETIME)); do
       printf " %2d. %-55s\n" $s "${stepname[$s]}"
       echo
 
+if ((s <= 1)) || ((s >= 3)); then
+
       if ((USE_RANKDIR == 1)); then
         mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
                 "$(rev_path ${stepexecdir[$s]})/cycle_step.sh" "$time" "$loop" # > /dev/null
@@ -202,6 +204,10 @@ while ((time <= ETIME)); do
         mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
                 "$SCRP_DIR/cycle_step.sh" "$time" "$loop" # > /dev/null
       fi
+
+exit
+
+fi
 
       echo
       echo "===================================================================="
