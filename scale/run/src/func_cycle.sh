@@ -428,9 +428,9 @@ else
       #-------------------
       if ((LOG_OPT <= 4)); then
         path="${atime}/log/obsope/NOUT-$(printf $PROCESS_FMT $((q-1)))"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
         path="${atime}/log/letkf/NOUT-$(printf $PROCESS_FMT $((q-1)))"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
+        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
       fi
 
       #-------------------

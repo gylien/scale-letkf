@@ -44,8 +44,16 @@ res=$? && ((res != 0)) && exit $res
 
 if ((USE_RANKDIR == 1)); then
   SCRP_DIR="."
-  TMPDAT="./dat"
-  TMPRUN="./run"
+  if ((TMPDAT_MODE <= 2)); then
+    TMPDAT="../dat"
+  else
+    TMPDAT="./dat"
+  fi
+  if ((TMPRUN_MODE <= 2)); then
+    TMPRUN="../run"
+  else
+    TMPRUN="./run"
+  fi
 fi
 
 #ls -lR

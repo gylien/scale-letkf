@@ -284,7 +284,7 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
   if ((USE_RANKDIR == 1)); then
 
 
-    pdbash_exec="./dat/exec/pdbash"
+#    pdbash_exec="./dat/exec/pdbash"
 
 
 pwd 1>&2

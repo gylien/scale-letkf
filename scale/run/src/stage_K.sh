@@ -33,7 +33,7 @@ if [ -s "$STAGING_DIR/stagein.dat" ]; then
           if ((TMPDAT_MODE == 3)); then
             echo "#PJM --stgin \"rank=* ${source} %r:${TMPDAT_STG}/${destin}\""
           else
-            echo "#PJM --stgin \"rank=0 ${source} 0:.${TMPDAT_STG}/${destin}\""
+            echo "#PJM --stgin \"rank=0 ${source} 0:${TMPDAT_STG}/${destin}\""
           fi
         else
           echo "#PJM --stgin \"${source} ${TMPDAT_STG}/${destin}\""
@@ -66,7 +66,7 @@ if [ -s "$STAGING_DIR/stagein.out" ]; then
           if ((TMPOUT_MODE == 3)); then
             echo "#PJM --stgin \"rank=* ${source} %r:${TMPOUT_STG}/${destin}\""
           else
-            echo "#PJM --stgin \"rank=0 ${source} 0:.${TMPOUT_STG}/${destin}\""
+            echo "#PJM --stgin \"rank=0 ${source} 0:${TMPOUT_STG}/${destin}\""
           fi
         else
           echo "#PJM --stgin \"${source} ${TMPOUT_STG}/${destin}\""

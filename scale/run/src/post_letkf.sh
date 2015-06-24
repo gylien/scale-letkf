@@ -63,7 +63,9 @@ fi
 if [ "$MEM" == '0001' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
   mkdir -p $TMPOUT/${ATIME}/log/letkf
   for q in $(seq $MEM_NP); do
-    mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${ATIME}/log/letkf
+    if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
+      mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${ATIME}/log/letkf
+    fi
   done
 fi
 
