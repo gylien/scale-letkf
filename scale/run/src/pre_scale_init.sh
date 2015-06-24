@@ -60,18 +60,6 @@ S_SS=${STIME:12:2}
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
 
-ln -fs $EXECDIR/scale-les_init $TMPDIR
-
-ln -fs $DATADIR/rad/PARAG.29 $TMPDIR
-ln -fs $DATADIR/rad/PARAPC.29 $TMPDIR
-ln -fs $DATADIR/rad/VARDATA.RM29 $TMPDIR
-ln -fs $DATADIR/rad/cira.nc $TMPDIR
-ln -fs $DATADIR/rad/MIPAS/day.atm $TMPDIR
-ln -fs $DATADIR/rad/MIPAS/equ.atm $TMPDIR
-ln -fs $DATADIR/rad/MIPAS/sum.atm $TMPDIR
-ln -fs $DATADIR/rad/MIPAS/win.atm $TMPDIR
-ln -fs $DATADIR/land/param.bucket.conf $TMPDIR
-
 ln -fs ${TOPO}*.nc $TMPDIR
 ln -fs ${LANDUSE}*.nc $TMPDIR
 
@@ -94,18 +82,12 @@ i=0
 time=$STIME
 etime_bdy=$(datetime $STIME $((FCSTLEN+BDYINT)) s)
 while ((time < etime_bdy)); do
-  if ((BDY_ENS == 1)); then
-    wrfoutfile="$TMPOUT/bdywrf/${MEM}/wrfout_${time}"
+  if [ -s "${WRFOUT}_${time}" ]; then
+    ln -fs "${WRFOUT}_${time}" $TMPDIR/wrfout_$(printf %05d $i)
   else
-    wrfoutfile="$TMPOUT/bdywrf/mean/wrfout_${time}"
-  fi
-  if [ ! -s "$wrfoutfile" ]; then
-    echo "[Error] $0: Cannot find WRFOUT file '$wrfoutfile'."
+    echo "[Error] $0: Cannot find WRFOUT file '${WRFOUT}_${time}'."
     exit 1
   fi
-
-  ln -fs $TMPOUT/bdywrf/${MEM}/wrfout_${time} $TMPDIR/wrfout_$(printf %05d $i)
-
   i=$((i+1))
   time=$(datetime $time $BDYINT s)
 done
@@ -113,8 +95,16 @@ NUMBER_OF_FILES=$i
 
 #===============================================================================
 
+TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
+
 cat $TMPDAT/conf/config.nml.scale_init | \
-    sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
+    sed -e "s/\[IO_LOG_BASENAME\]/ IO_LOG_BASENAME = \"${TMPSUBDIR}\/init_LOG\",/" \
+        -e "s/\[RESTART_OUT_BASENAME\]/ RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/init\",/" \
+        -e "s/\[TOPO_IN_BASENAME\]/ TOPO_IN_BASENAME = \"${TMPSUBDIR}\/topo\",/" \
+        -e "s/\[LANDUSE_IN_BASENAME\]/ LANDUSE_IN_BASENAME = \"${TMPSUBDIR}\/landuse\",/" \
+        -e "s/\[BASENAME_BOUNDARY\]/ BASENAME_BOUNDARY = \"${TMPSUBDIR}\/boundary\",/" \
+        -e "s/\[BASENAME_ORG\]/ BASENAME_ORG = \"${TMPSUBDIR}\/wrfout\",/" \
+        -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
         -e "s/\[RESTART_OUTPUT\]/ RESTART_OUTPUT = $RESTART_OUTPUT,/" \
         -e "s/\[NUMBER_OF_FILES\]/ NUMBER_OF_FILES = $NUMBER_OF_FILES,/" \
         -e "s/\[BOUNDARY_UPDATE_DT\]/ BOUNDARY_UPDATE_DT = $BDYINT.D0,/" \

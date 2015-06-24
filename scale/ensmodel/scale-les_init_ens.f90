@@ -15,7 +15,7 @@ program scaleles_init_ens
   implicit none
 
   REAL(r_dble) :: rtimer00,rtimer
-  INTEGER :: ierr, it, im
+  INTEGER :: ierr, it, its, ite, im
   CHARACTER(11) :: stdoutf='NOUT-000000'
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
@@ -49,7 +49,7 @@ program scaleles_init_ens
   end if
 
   WRITE(stdoutf(6:11), '(I6.6)') myrank
-  WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
+!  WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
   OPEN(6,FILE=stdoutf)
   WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
 
@@ -60,10 +60,10 @@ program scaleles_init_ens
   if (command_argument_count() >= 3) then
     write (6,'(A)') 'Run pre-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd1), ']'
-    call system(trim(cmd1),ierr)
-    if (ierr /= 0) then
-      stop
-    end if
+    call system(trim(cmd1))
+!    if (ierr /= 0) then
+!      stop
+!    end if
   end if
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -103,7 +103,15 @@ program scaleles_init_ens
     call PRC_MPIsplit_letkf(MEM_NP, nitmax, nprocs, proc2mem, myrank, &
                             LOCAL_myrank, LOCAL_nmax)
 
-    do it = 1, nitmax
+    if (MEMBER_ITER == 0) then
+      its = 1
+      ite = nitmax
+    else
+      its = MEMBER_ITER
+      ite = MEMBER_ITER
+    end if
+
+    do it = its, ite
       im = proc2mem(1,it,myrank+1)
       if (im >= 1 .and. im <= MEMBER_RUN) then
         WRITE(confname(1:4),'(I4.4)') proc2mem(1,it,myrank+1)
@@ -114,7 +122,7 @@ program scaleles_init_ens
                              MPI_COMM_NULL,    &
                              confname )
       end if
-    end do ! [ it = 1, nitmax ]
+    end do ! [ it = its, ite ]
 
   else ! [ myrank_mem_use ]
 
@@ -134,7 +142,7 @@ program scaleles_init_ens
   if (command_argument_count() >= 3) then
     write (6,'(A)') 'Run post-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd2), ']'
-    call system(trim(cmd2),ierr)
+    call system(trim(cmd2))
   end if
 
   CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)

@@ -11,7 +11,7 @@
 if (($# < 8)); then
   cat >&2 << EOF
 
-[pre_scale_pp_node.sh] 
+[pre_scale_init_node.sh] 
 
 Usage: $0 MYRANK MEM_NODES MEM_NP TMPDIR EXECDIR DATADIR MEMBER_RUN MEMBER_ITER
 
@@ -47,7 +47,7 @@ cat $TMPDAT/conf/config.nml.ensmodel | \
         -e "s/\[PPN\]/ PPN = $PPN,/" \
         -e "s/\[MEM_NODES\]/ MEM_NODES = $MEM_NODES,/" \
         -e "s/\[MEM_NP\]/ MEM_NP = $MEM_NP,/" \
-    > $TMPDIR/scale-les_pp_ens.conf
+    > $TMPDIR/scale-les_init_ens.conf
 
 #===============================================================================
 

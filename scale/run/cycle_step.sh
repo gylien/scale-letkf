@@ -6,7 +6,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_step.sh [STEPFUNC TIME LOOP]
+#    cycle_step.sh [STEPFUNC MYRANK TIME LOOP ITER]
 #
 #  Use settings:
 #    config.main
@@ -51,7 +51,8 @@ setting
 STEPFUNC="${1}"; shift
 MYRANK="${1}"; shift
 TIME="${1}"; shift
-LOOP="${1}"
+LOOP="${1}"; shift
+ITER="${1:-0}"
 
 #===============================================================================
 # Determine the distibution schemes
@@ -69,6 +70,14 @@ distribute_da_cycle machinefile -
 
 time=$TIME
 loop=$LOOP
+iter=$ITER
+if ((ITER == 0)); then
+  its=1
+  ite=$nitmax
+else
+  its=$iter
+  ite=$iter
+fi
 
 atime=$(datetime $time $LCYCLE s)
 timefmt="$(datetime_fmt ${time})"
@@ -76,8 +85,12 @@ obstime $time
 
 #-------------------------------------------------------------------------------
 
+#echo $STEPFUNC $MYRANK $TIME $LOOP 1>&2
+
 $STEPFUNC
 res=$? && ((res != 0)) && exit $res
+
+#echo $STEPFUNC $MYRANK $TIME $LOOP ... done 1>&2
 
 #===============================================================================
 

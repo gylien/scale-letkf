@@ -914,7 +914,9 @@ subroutine read_ens_mpi(file,v3d,v2d)
     end if
     mstart = 1 + (it-1)*nprocs_e
     mend = MIN(it*nprocs_e, MEMBER)
-    CALL scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
+    if (mstart <= mend) then
+      CALL scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
+    end if
   end do ! [ it = 1, nitmax ]
 
 
@@ -953,7 +955,9 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
     im = proc2mem(1,it,myrank+1)
     mstart = 1 + (it-1)*nprocs_e
     mend = MIN(it*nprocs_e, MEMBER)
-    CALL gather_grd_mpi_alltoall(mstart,mend,v3d,v2d,v3dg,v2dg)
+    if (mstart <= mend) then
+      CALL gather_grd_mpi_alltoall(mstart,mend,v3d,v2d,v3dg,v2dg)
+    end if
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)

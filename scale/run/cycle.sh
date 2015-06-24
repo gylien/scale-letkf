@@ -195,19 +195,51 @@ while ((time <= ETIME)); do
       printf " %2d. %-55s\n" $s "${stepname[$s]}"
       echo
 
-if ((s <= 1)) || ((s >= 3)); then
+      ######
+      if ((s == 1)); then
+        if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
+          echo "  ... skip this step (use prepared topo and landuse files)"
+          continue
+        elif ((BDY_FORMAT == 0)); then
+          echo "  ... skip this step (use prepared boundaries)"
+          continue
+        fi
+      fi
+      ######
+      if ((s == 2)); then
+        if ((BDY_FORMAT == 0)); then
+          echo "  ... skip this step (use prepared boundaries)"
+          continue
+        fi
+      fi
+      ######
 
-      if ((USE_RANKDIR == 1)); then
-        mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
-                "$(rev_path ${stepexecdir[$s]})/cycle_step.sh" "$time" "$loop" # > /dev/null
-      else
-        mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
-                "$SCRP_DIR/cycle_step.sh" "$time" "$loop" # > /dev/null
+      enable_iter=0
+      if ((s == 2 && BDY_ENS == 1)); then
+        enable_iter=1
+      elif ((s == 3)); then
+        enable_iter=1
       fi
 
-exit
-
-fi
+      if ((enable_iter == 1)); then
+        for it in $(seq $nitmax); do
+          if ((USE_RANKDIR == 1)); then
+            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+                    "$(rev_path ${stepexecdir[$s]})/cycle_step.sh" "$time" $loop $it # > /dev/null
+          else
+            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+                    "$SCRP_DIR/cycle_step.sh" "$time" $loop $it # > /dev/null
+          fi
+        done
+      else
+        if ((USE_RANKDIR == 1)); then
+          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+                  "$(rev_path ${stepexecdir[$s]})/cycle_step.sh" "$time" "$loop" # > /dev/null
+        else
+          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+                  "$SCRP_DIR/cycle_step.sh" "$time" "$loop" # > /dev/null
+        fi
+      fi
 
       echo
       echo "===================================================================="

@@ -44,9 +44,11 @@ ln -fs $DATADIR/rad/MIPAS/sum.atm $RUNDIR/scale_pp
 ln -fs $DATADIR/rad/MIPAS/win.atm $RUNDIR/scale_pp
 ln -fs $DATADIR/land/param.bucket.conf $RUNDIR/scale_pp
 if [ "$TOPO_FORMAT" != 'prep' ]; then
+  rm -f $RUNDIR/scale_pp/input_topo
   ln -fs $DATADIR/topo/${TOPO_FORMAT}/Products $RUNDIR/scale_pp/input_topo
 fi
 if [ "$LANDUSE_FORMAT" != 'prep' ]; then
+  rm -f $RUNDIR/scale_pp/input_landuse
   ln -fs $DATADIR/landuse/${LANDUSE_FORMAT}/Products $RUNDIR/scale_pp/input_landuse
 fi
 

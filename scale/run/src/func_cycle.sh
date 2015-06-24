@@ -154,17 +154,16 @@ ${ENSMODEL_DIR}/scale-les_ens|exec/scale-les_ens
 ${COMMON_DIR}/pdbash|exec/pdbash
 ${OBSUTIL_DIR}/obsope|exec/obsope
 ${LETKF_DIR}/letkf|exec/letkf
-${SCRP_DIR}/config.nml.scale|conf/config.nml.scale
+${SCRP_DIR}/config.nml.scale_pp|conf/config.nml.scale_pp
 ${SCRP_DIR}/config.nml.scale_init|conf/config.nml.scale_init
+${SCRP_DIR}/config.nml.scale|conf/config.nml.scale
+${SCRP_DIR}/config.nml.ensmodel|conf/config.nml.ensmodel
 ${SCRP_DIR}/config.nml.obsope|conf/config.nml.obsope
 ${SCRP_DIR}/config.nml.letkf|conf/config.nml.letkf
 ${DATADIR}/rad|rad
 ${DATADIR}/land|land
 EOF
 
-  if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ]; then
-    echo "${SCRP_DIR}/config.nml.scale_pp|conf/config.nml.scale_pp" >> $STAGING_DIR/stagein.dat
-  fi
   if [ "$TOPO_FORMAT" != 'prep' ]; then
     echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
   fi
@@ -524,123 +523,41 @@ fi
 
 #===============================================================================
 
-boundary_sub () {
-#-------------------------------------------------------------------------------
-# Run a series of scripts (topo/landuse/init) to make the boundary files.
-#
-# Usage: boundary_sub NODEFILE
-#
-#   NODEFILE  $NODEFILE in functions 'pdbash' and 'mpirunf'
-#
-# Other input variables:
-#   $time
-#   $SCRP_DIR
-#   $TMPRUN
-#   $TMPDAT
-#   $mem_np
-#   $PREP_TOPO
-#   $PREP_LANDUSE
-#   $PROC_OPT
-#   $mkinit
-#-------------------------------------------------------------------------------
-
-if (($# < 1)); then
-  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
-  exit 1
-fi
-
-local NODEFILE="$1"
-
-#-------------------------------------------------------------------------------
-# pp (topo/landuse)
-
-if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ]; then
-  pdbash $NODEFILE $PROC_OPT \
-    $SCRP_DIR/src/pre_scale_pp.sh $time $TMPRUN/scale_pp $TMPDAT/exec $TMPDAT
-  mpirunf $NODEFILE \
-    $TMPRUN/scale_pp ./scale-les_pp pp.conf
-  pdbash $NODEFILE $PROC_OPT \
-    $SCRP_DIR/src/post_scale_pp.sh $time $TMPRUN/scale_pp
-fi
-
-#-------------------------------------------------------------------------------
-# init
-
-if ((BDY_ENS != 1)); then
-  if ((BDY_FORMAT == 2)); then
-    pdbash $NODEFILE $PROC_OPT \
-      $SCRP_DIR/src/pre_scale_init.sh $mem_np \
-      $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
-      $TMPOUT/bdywrf/mean/wrfout \
-      $time $CYCLEFLEN $mkinit mean $TMPRUN/scale_init/mean $TMPDAT/exec $TMPDAT
-    mpirunf $NODEFILE \
-      $TMPRUN/scale_init/mean ./scale-les_init init.conf
-    pdbash $NODEFILE $PROC_OPT \
-      $SCRP_DIR/src/post_scale_init.sh $time $mkinit mean $TMPRUN/scale_init/mean
-  fi
-fi
-
-#-------------------------------------------------------------------------------
-}
-
-
-
-
-
-
-
-
-
-
-
-#===============================================================================
-
 enspp_1 () {
 #-------------------------------------------------------------------------------
-
-if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
-  echo "  ... skip this step (use prepared topo and landuse files)"
-  return 1
-fi
-
-if ((BDY_FORMAT == 0)); then
-  echo "  ... skip this step (use prepared boundaries)"
-  return 1
-fi
 
 #echo
 #echo "* Pre-processing scripts"
 #echo
 
-mkinit=0
-if ((LOOP = 1)); then
-  mkinit=$MAKEINIT
-fi
+MEMBER_RUN=0
 
-if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
+  echo "  ... skip this step (use prepared topo and landuse files)"
+elif ((BDY_FORMAT == 0)); then
+  echo "  ... skip this step (use prepared boundaries)"
+elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
-  if ((repeat_mems <= mmean)); then
-    MEMBER_RUN=$repeat_mems
-  else
-    MEMBER_RUN=$mmean
-  fi
+  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
 fi
 
 if (pdrun $MYRANK all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_pp_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale_pp $TMPDAT/exec $TMPDAT $MEMBER_RUN
+       $mem_nodes $mem_np $TMPRUN/scale_pp $TMPDAT/exec $TMPDAT $MEMBER_RUN $iter
 fi
 
-for it in $(seq $nitmax); do
+((MEMBER_RUN == 0)) && exit 1
+
+for it in $(seq $its $ite); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
-  if ((m <= MEMBER_RUN)); then
+  if ((m >= 1 && m <= MEMBER_RUN)); then
     if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+      echo "  [Pre-processing  script] node ${node_m[$m]} [$(datetime_now)]"
     fi
 
-    if (pdrun $MYRANK $m $PROC_OPT); then
+    if (pdrun $MYRANK $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK $time \
            $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
     fi
@@ -659,25 +576,27 @@ enspp_2 () {
 #echo "* Post-processing scripts"
 #echo
 
-if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+MEMBER_RUN=0
+
+if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
+  return 1
+elif ((BDY_FORMAT == 0)); then
+  return 1
+elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
-  if ((repeat_mems <= mmean)); then
-    MEMBER_RUN=$repeat_mems
-  else
-    MEMBER_RUN=$mmean
-  fi
+  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
 fi
 
-for it in $(seq $nitmax); do
+for it in $(seq $its $ite); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
-  if ((m <= MEMBER_RUN)); then
+  if ((m >= 1 && m <= MEMBER_RUN)); then
     if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+      echo "  [Post-processing script] node ${node_m[$m]} [$(datetime_now)]"
     fi
 
-    if (pdrun $MYRANK $m $PROC_OPT); then
+    if (pdrun $MYRANK $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $time \
            $TMPRUN/scale_pp/$(printf '%04d' $m)
     fi
@@ -689,88 +608,271 @@ done
 
 #===============================================================================
 
-
-
-
-
-
-
-
-#===============================================================================
-
-boundary () {
+ensinit_1 () {
 #-------------------------------------------------------------------------------
 
-echo
-if ((BDY_FORMAT == 0)); then
-  echo "  ... skip this step (use prepared boundaries)"
-  return 1
-fi
-
-if ((BDY_ENS == 1)); then
-  echo "     -- topo/landuse"
-  echo
-fi
+#echo
+#echo "* Pre-processing scripts"
+#echo
 
 mkinit=0
 if ((LOOP = 1)); then
   mkinit=$MAKEINIT
 fi
 
-if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
-#-------------------
-  echo "  ${timefmt}: node ${node_m[1]} [$(datetime_now)]"
+MEMBER_RUN=0
 
-  boundary_sub proc.${name_m[1]}
-#-------------------
+if ((BDY_FORMAT == 0)); then
+  echo "  ... skip this step (use prepared boundaries)"
+elif ((BDY_ENS == 1)); then
+  MEMBER_RUN=$mmean
+elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+  MEMBER_RUN=1
 else # local run directory: run multiple members as needed
-#-------------------
-  for m in $(seq $((repeat_mems <= mmean ? repeat_mems : mmean))); do
-    echo "  ${timefmt}: node ${node_m[$m]} [$(datetime_now)]"
-
-    boundary_sub proc.${name_m[$m]} &
-    sleep $BGJOB_INT
-  done
-  wait
-#-------------------
+  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
 fi
 
-#-------------------------------------------------------------------------------
+if (pdrun $MYRANK all $PROC_OPT); then
+  bash $SCRP_DIR/src/pre_scale_init_node.sh $MYRANK \
+       $mem_nodes $mem_np $TMPRUN/scale_init $TMPDAT/exec $TMPDAT $MEMBER_RUN $iter
+fi
 
-if ((BDY_ENS == 1)); then
-  echo
-  echo "     -- boundary"
-  echo
+((MEMBER_RUN == 0)) && exit 1
 
-  ipm=0
-  for m in $(seq $mmean); do
-    ipm=$((ipm+1))
-    if ((ipm > parallel_mems)); then wait; ipm=1; fi
-    echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-
-#    if ((PERTURB_BDY == 1)); then
-#      ...
-#    fi
-
-    if ((BDY_FORMAT == 2)); then
-      ( pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale_init.sh $mem_np \
-          $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
-          $TMPOUT/bdywrf/mean/wrfout $time $CYCLEFLEN $mkinit ${name_m[$m]} \
-          $TMPRUN/scale_init/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
-        mpirunf proc.${name_m[$m]} \
-          $TMPRUN/scale_init/${name_m[$m]} ./scale-les_init init.conf ;
-        pdbash proc.${name_m[$m]} $PROC_OPT \
-          $SCRP_DIR/src/post_scale_init.sh $time $mkinit ${name_m[$m]} \
-          $TMPRUN/scale_init/${name_m[$m]} ) &
+for it in $(seq $its $ite); do
+  g=${proc2group[$((MYRANK+1))]}
+  m=$(((it-1)*parallel_mems+g))
+  if ((m >= 1 && m <= MEMBER_RUN)); then
+    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+      if ((BDY_ENS == 1)); then
+        echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+      else
+        echo "  [Pre-processing  script] node ${node_m[$m]} [$(datetime_now)]"
+      fi
     fi
 
-    sleep $BGJOB_INT
-  done
-  wait
-fi
+    if (pdrun $MYRANK $g $PROC_OPT); then
+      if ((BDY_FORMAT == 2)); then
+        if ((BDY_ENS == 1)); then
+          bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK $mem_np \
+               $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+               $TMPOUT/bdywrf/${name_m[$m]}/wrfout \
+               $time $CYCLEFLEN $mkinit ${name_m[$m]} \
+               $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
+        else
+          bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK $mem_np \
+               $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+               $TMPOUT/bdywrf/mean/wrfout \
+               $time $CYCLEFLEN $mkinit mean \
+               $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
+        fi
+#      elif ((BDY_FORMAT == 1)); then
+#        ...
+#      elif ((BDY_FORMAT == 3)); then
+#        ...
+      fi
+    fi
+  fi
+done
 
 #-------------------------------------------------------------------------------
 }
+
+#===============================================================================
+
+ensinit_2 () {
+#-------------------------------------------------------------------------------
+
+#echo
+#echo "* Post-processing scripts"
+#echo
+
+mkinit=0
+if ((LOOP = 1)); then
+  mkinit=$MAKEINIT
+fi
+
+MEMBER_RUN=0
+
+if ((BDY_FORMAT == 0)); then
+  return 1
+elif ((BDY_ENS == 1)); then
+  MEMBER_RUN=$mmean
+elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+  MEMBER_RUN=1
+else # local run directory: run multiple members as needed
+  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
+fi
+
+for it in $(seq $its $ite); do
+  g=${proc2group[$((MYRANK+1))]}
+  m=$(((it-1)*parallel_mems+g))
+  if ((m >= 1 && m <= MEMBER_RUN)); then
+    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
+      if ((BDY_ENS == 1)); then
+        echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+      else
+        echo "  [Pre-processing  script] node ${node_m[$m]} [$(datetime_now)]"
+      fi
+    fi
+
+    if (pdrun $MYRANK $g $PROC_OPT); then
+      if ((BDY_FORMAT == 2)); then
+        if ((BDY_ENS == 1)); then
+          bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $time \
+               $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m)
+        else
+          bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $time \
+               $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m)
+        fi
+#      elif ((BDY_FORMAT == 1)); then
+#        ...
+#      elif ((BDY_FORMAT == 3)); then
+#        ...
+      fi
+    fi
+  fi
+done
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+#boundary_sub () {
+##-------------------------------------------------------------------------------
+## Run a series of scripts (topo/landuse/init) to make the boundary files.
+##
+## Usage: boundary_sub NODEFILE
+##
+##   NODEFILE  $NODEFILE in functions 'pdbash' and 'mpirunf'
+##
+## Other input variables:
+##   $time
+##   $SCRP_DIR
+##   $TMPRUN
+##   $TMPDAT
+##   $mem_np
+##   $PREP_TOPO
+##   $PREP_LANDUSE
+##   $PROC_OPT
+##   $mkinit
+##-------------------------------------------------------------------------------
+
+#if (($# < 1)); then
+#  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+#  exit 1
+#fi
+
+#local NODEFILE="$1"
+
+##-------------------------------------------------------------------------------
+## pp (topo/landuse)
+
+#if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ]; then
+#  pdbash $NODEFILE $PROC_OPT \
+#    $SCRP_DIR/src/pre_scale_pp.sh $time $TMPRUN/scale_pp $TMPDAT/exec $TMPDAT
+#  mpirunf $NODEFILE \
+#    $TMPRUN/scale_pp ./scale-les_pp pp.conf
+#  pdbash $NODEFILE $PROC_OPT \
+#    $SCRP_DIR/src/post_scale_pp.sh $time $TMPRUN/scale_pp
+#fi
+
+##-------------------------------------------------------------------------------
+## init
+
+#if ((BDY_ENS != 1)); then
+#  if ((BDY_FORMAT == 2)); then
+#    pdbash $NODEFILE $PROC_OPT \
+#      $SCRP_DIR/src/pre_scale_init.sh $mem_np \
+#      $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+#      $TMPOUT/bdywrf/mean/wrfout \
+#      $time $CYCLEFLEN $mkinit mean $TMPRUN/scale_init/mean $TMPDAT/exec $TMPDAT
+#    mpirunf $NODEFILE \
+#      $TMPRUN/scale_init/mean ./scale-les_init init.conf
+#    pdbash $NODEFILE $PROC_OPT \
+#      $SCRP_DIR/src/post_scale_init.sh $time $mkinit mean $TMPRUN/scale_init/mean
+#  fi
+#fi
+
+##-------------------------------------------------------------------------------
+#}
+
+#===============================================================================
+
+#boundary () {
+##-------------------------------------------------------------------------------
+
+#echo
+#if ((BDY_FORMAT == 0)); then
+#  echo "  ... skip this step (use prepared boundaries)"
+#  return 1
+#fi
+
+#if ((BDY_ENS == 1)); then
+#  echo "     -- topo/landuse"
+#  echo
+#fi
+
+#mkinit=0
+#if ((LOOP = 1)); then
+#  mkinit=$MAKEINIT
+#fi
+
+#if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+##-------------------
+#  echo "  ${timefmt}: node ${node_m[1]} [$(datetime_now)]"
+
+#  boundary_sub proc.${name_m[1]}
+##-------------------
+#else # local run directory: run multiple members as needed
+##-------------------
+#  for m in $(seq $((repeat_mems <= mmean ? repeat_mems : mmean))); do
+#    echo "  ${timefmt}: node ${node_m[$m]} [$(datetime_now)]"
+
+#    boundary_sub proc.${name_m[$m]} &
+#    sleep $BGJOB_INT
+#  done
+#  wait
+##-------------------
+#fi
+
+##-------------------------------------------------------------------------------
+
+#if ((BDY_ENS == 1)); then
+#  echo
+#  echo "     -- boundary"
+#  echo
+
+#  ipm=0
+#  for m in $(seq $mmean); do
+#    ipm=$((ipm+1))
+#    if ((ipm > parallel_mems)); then wait; ipm=1; fi
+#    echo "  ${timefmt}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+
+##    if ((PERTURB_BDY == 1)); then
+##      ...
+##    fi
+
+#    if ((BDY_FORMAT == 2)); then
+#      ( pdbash proc.${name_m[$m]} $PROC_OPT $SCRP_DIR/src/pre_scale_init.sh $mem_np \
+#          $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+#          $TMPOUT/bdywrf/mean/wrfout $time $CYCLEFLEN $mkinit ${name_m[$m]} \
+#          $TMPRUN/scale_init/${name_m[$m]} $TMPDAT/exec $TMPDAT ;
+#        mpirunf proc.${name_m[$m]} \
+#          $TMPRUN/scale_init/${name_m[$m]} ./scale-les_init init.conf ;
+#        pdbash proc.${name_m[$m]} $PROC_OPT \
+#          $SCRP_DIR/src/post_scale_init.sh $time $mkinit ${name_m[$m]} \
+#          $TMPRUN/scale_init/${name_m[$m]} ) &
+#    fi
+
+#    sleep $BGJOB_INT
+#  done
+#  wait
+#fi
+
+##-------------------------------------------------------------------------------
+#}
 
 #===============================================================================
 
@@ -876,7 +978,7 @@ ensfcst_1 () {
 
 if (pdrun $MYRANK all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT $((MEMBER+1))
+       $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT $((MEMBER+1)) $iter
 fi
 
 if ((OCEAN_INPUT == 1)); then
@@ -889,10 +991,10 @@ else
   ocean_base='-'
 fi
 
-for it in $(seq $nitmax); do
+for it in $(seq $its $ite); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
-  if ((m <= mmean)); then
+  if ((m >= 1 && m <= mmean)); then
     if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
@@ -907,7 +1009,7 @@ for it in $(seq $nitmax); do
       bdy_base="$TMPOUT/${time}/bdy/mean/boundary"
     fi
 
-    if (pdrun $MYRANK $m $PROC_OPT); then
+    if (pdrun $MYRANK $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
            $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
            $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
@@ -928,10 +1030,10 @@ ensfcst_2 () {
 #echo "* Post-processing scripts"
 #echo
 
-for it in $(seq $nitmax); do
+for it in $(seq $its $ite); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
-  if ((m <= mmean)); then
+  if ((m >= 1 && m <= mmean)); then
     if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
@@ -940,7 +1042,7 @@ for it in $(seq $nitmax); do
 #      ...
 #    fi
 
-    if (pdrun $MYRANK $m $PROC_OPT); then
+    if (pdrun $MYRANK $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $mem_np \
            $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) cycle
     fi
@@ -1029,12 +1131,12 @@ fi
 for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
-  if ((m <= mmean)); then
+  if ((m >= 1 && m <= mmean)); then
     if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 
-    if (pdrun $MYRANK $m $PROC_OPT); then
+    if (pdrun $MYRANK $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_obsope.sh $MYRANK \
            $atime ${name_m[$m]} $TMPRUN/obsope
     fi
@@ -1056,12 +1158,12 @@ obsope_2 () {
 for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
-  if ((m <= mmean)); then
+  if ((m >= 1 && m <= mmean)); then
     if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 
-    if (pdrun $MYRANK $m $PROC_OPT); then
+    if (pdrun $MYRANK $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
            $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope
     fi
@@ -1131,12 +1233,12 @@ fi
 for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
-  if ((m <= mmean)); then
+  if ((m >= 1 && m <= mmean)); then
     if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 
-    if (pdrun $MYRANK $m $PROC_OPT); then
+    if (pdrun $MYRANK $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
            $TMPOUT/${time}/topo/topo $atime ${name_m[$m]} $TMPRUN/letkf
     fi
@@ -1158,12 +1260,12 @@ letkf_2 () {
 for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
-  if ((m <= mmean)); then
+  if ((m >= 1 && m <= mmean)); then
     if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 
-    if (pdrun $MYRANK $m $PROC_OPT); then
+    if (pdrun $MYRANK $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_letkf.sh $MYRANK \
            $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf
     fi

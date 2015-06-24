@@ -19,6 +19,7 @@ MODULE common_nml
   !--- PARAM_ENSEMBLE
   integer :: MEMBER = 3      ! ensemble size
   integer :: MEMBER_RUN = 1  !
+  integer :: MEMBER_ITER = 0 !
 
   !--- PARAM_LETKF
   integer :: SLOT_START = 1
@@ -118,7 +119,8 @@ subroutine read_nml_ensemble
   
   namelist /PARAM_ENSEMBLE/ &
     MEMBER, &
-    MEMBER_RUN
+    MEMBER_RUN, &
+    MEMBER_ITER
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)

@@ -5,6 +5,7 @@ all:
 	( cd obs ; make )
 	( cd verify ; make )
 	( cd util ; make )
+	( cd ensmodel ; make )
 
 clean:
 	( cd common ; make clean )
@@ -13,3 +14,4 @@ clean:
 	( cd obs ; make clean )
 	( cd verify ; make clean )
 	( cd util ; make clean )
+	( cd ensmodel ; make clean )

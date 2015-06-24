@@ -25,11 +25,11 @@ EOF
   exit 1
 fi
 
-MYRANK="$1"
-STIME="$2"
-TMPDIR="$3"
-EXECDIR="$4"
-DATADIR="$5"
+MYRANK="$1"; shift
+STIME="$1"; shift
+TMPDIR="$1"; shift
+EXECDIR="$1"; shift
+DATADIR="$1"
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
@@ -42,8 +42,6 @@ S_SS=${STIME:12:2}
 
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
-
-#ln -fs $EXECDIR/scale-les_pp $TMPDIR
 
 CONVERT_TOPO='.false.'
 if [ "$TOPO_FORMAT" != 'prep' ]; then
