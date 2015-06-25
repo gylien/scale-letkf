@@ -183,9 +183,9 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
   if ((USE_RANKDIR == 1)); then
 
-pwd 1>&2
-mpiexec /work/system/bin/msh "/bin/ls -lL $progdir" 1>&2
-echo "mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS" 1>&2
+#pwd 1>&2
+#mpiexec /work/system/bin/msh "/bin/ls -lL $progdir" 1>&2
+#echo "mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS" 1>&2
 
     mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
 
@@ -211,7 +211,7 @@ pdbash () {
 #   NODEFILE  Name of nodefile (omit the directory $NODEFILE_DIR)
 #   PROC_OPT  Options of using processes
 #             all:  run the script in all processes listed in $NODEFILE
-#             alln: run the script in all nodes list in $NODEFILE, one process per node
+###             alln: run the script in all nodes list in $NODEFILE, one process per node
 #             one:  run the script only in the first process and node in $NODEFILE
 #   SCRIPT    Script (the working directory is set to $SCRP_DIR)
 #   ARGS      Arguments passed into the program
@@ -220,7 +220,7 @@ pdbash () {
 #   $NODEFILE_DIR  Directory of nodefiles
 #-------------------------------------------------------------------------------
 
-if (($# < 3)); then
+if (($# < 2)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." >&2
   exit 1
 fi
@@ -243,15 +243,15 @@ fi
 
 if ((MACHINE_TYPE == 1)); then
 
-  if [ "$PROC_OPT" == 'all' ]; then
+ if [ "$PROC_OPT" == 'all' ]; then
     local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
-  elif [ "$PROC_OPT" == 'alln' ]; then
-    local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE} | sort | uniq)
-  elif [ "$PROC_OPT" == 'one' ]; then
-    local HOSTLIST=$(head -n 1 ${NODEFILE_DIR}/${NODEFILE})
-  else
-    exit 1
-  fi
+###  elif [ "$PROC_OPT" == 'alln' ]; then
+###    local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE} | sort | uniq)
+ elif [ "$PROC_OPT" == 'one' ]; then
+   local HOSTLIST=$(head -n 1 ${NODEFILE_DIR}/${NODEFILE})
+ else
+   exit 1
+ fi
   HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
 
   $MPIRUN -d $SCRP_DIR $HOSTLIST 1 $pdbash_exec $SCRIPT $ARGS
@@ -262,12 +262,13 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 #echo 11
   if [ "$PROC_OPT" == 'all' ]; then
     local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
-  elif [ "$PROC_OPT" == 'alln' ]; then
-    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}_tmp"
-    cat ${NODEFILE_DIR}/${NODEFILE} | sort | uniq > $vcoordfile
+###  elif [ "$PROC_OPT" == 'alln' ]; then
+###    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}_tmp"
+###    cat ${NODEFILE_DIR}/${NODEFILE} | sort | uniq > $vcoordfile
   elif [ "$PROC_OPT" == 'one' ]; then
-    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}_tmp"
-    head -n 1 ${NODEFILE_DIR}/${NODEFILE} > $vcoordfile
+    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
+###    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}_tmp"
+###    head -n 1 ${NODEFILE_DIR}/${NODEFILE} > $vcoordfile
   else
     exit 1
   fi
@@ -287,20 +288,34 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 #    pdbash_exec="./dat/exec/pdbash"
 
 
-pwd 1>&2
-ls -l 1>&2
-echo "mpiexec $pdbash_exec $SCRIPT $ARGS" 1>&2
+#pwd 1>&2
+#ls -l .. 1>&2
+#ls -l 1>&2
+#ls -l src 1>&2
 #mpiexec /work/system/bin/msh "/bin/ls -l dat/exec"
+#echo "mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS" 1>&2
+#cat $vcoordfile 1>&2
 
 
 #    mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS
-    mpiexec $pdbash_exec $SCRIPT $ARGS
+#    mpiexec -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS
+#    mpiexec $pdbash_exec $SCRIPT $ARGS
+
+    if [ "$PROC_OPT" == 'one' ]; then
+      mpiexec -n 1 -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS
+    else
+      mpiexec -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS
+    fi
+
   else
 
 
 
-  ( cd $SCRP_DIR && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS )
-
+    if [ "$PROC_OPT" == 'one' ]; then
+      ( cd $SCRP_DIR && mpiexec -n 1 -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS )
+    else
+      ( cd $SCRP_DIR && mpiexec -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS )
+    fi
 
 
   fi

@@ -119,7 +119,11 @@ fi
 #===============================================================================
 # Run initialization scripts on all nodes
 
-pdbash node $PROC_OPT $SCRP_DIR/src/init_all_node.sh $TMPDAT $TMPRUN
+if ((TMPRUN_MODE <= 2)); then
+  pdbash node one $SCRP_DIR/src/init_all_node.sh $TMPDAT $TMPRUN
+else
+  pdbash node all $SCRP_DIR/src/init_all_node.sh $TMPDAT $TMPRUN
+fi
 
 #===============================================================================
 # Run data assimilation cycles
@@ -207,9 +211,13 @@ while ((time <= ETIME)); do
       if ((s == 1)); then
         if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
           echo "  ... skip this step (use prepared topo and landuse files)"
+          echo
+          echo "===================================================================="
           continue
         elif ((BDY_FORMAT == 0)); then
           echo "  ... skip this step (use prepared boundaries)"
+          echo
+          echo "===================================================================="
           continue
         fi
       fi

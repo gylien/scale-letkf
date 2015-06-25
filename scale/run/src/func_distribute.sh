@@ -311,11 +311,11 @@ if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
   for n in $(seq $NNODES); do
     echo ${node[$n]} >> $NODEFILEDIR/node
   done
-  for m in $(seq $((MEMBER+1))); do
-    for p in $(seq $mem_np); do
-      echo ${node[${mem2node[$(((m-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${name_m[$m]}
-    done
-  done
+######  for m in $(seq $((MEMBER+1))); do
+######    for p in $(seq $mem_np); do
+######      echo ${node[${mem2node[$(((m-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${name_m[$m]}
+######    done
+######  done
 fi
 
 #-------------------------------------------------------------------------------
@@ -442,14 +442,14 @@ if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
     fi
     echo ${node[$(((s-1)*NNODES_real+$n))]} >> $NODEFILEDIR/set${s}.node
   done
-  for m in $(seq $((MEMBER+1))); do
-    for p in $(seq $mem_np); do
-      if ((s == 1)); then ###
-        echo ${node[${mem2node[$(((m-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${name_m[$m]}
-      fi
-      echo ${node[$(((s-1)*NNODES_real+${mem2node[$(((m-1)*mem_np+p))]}))]} >> $NODEFILEDIR/set${s}.proc.${name_m[$m]}
-    done
-  done
+######  for m in $(seq $((MEMBER+1))); do
+######    for p in $(seq $mem_np); do
+######      if ((s == 1)); then ###
+######        echo ${node[${mem2node[$(((m-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${name_m[$m]}
+######      fi
+######      echo ${node[$(((s-1)*NNODES_real+${mem2node[$(((m-1)*mem_np+p))]}))]} >> $NODEFILEDIR/set${s}.proc.${name_m[$m]}
+######    done
+######  done
 fi
 ######
 done
@@ -570,15 +570,15 @@ if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
   for n in $(seq $NNODES); do
     echo ${node[$n]} >> $NODEFILEDIR/node
   done
-  for c in $(seq $CYCLE); do
-    cf=$(printf $CYCLE_FMT $c)
-    for m in $(seq $fmember); do
-      mm=$(((c-1) * fmember + m))
-      for p in $(seq $mem_np); do
-        echo ${node[${mem2node[$(((mm-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${cf}.${name_m[$mm]}
-      done
-    done
-  done
+######  for c in $(seq $CYCLE); do
+######    cf=$(printf $CYCLE_FMT $c)
+######    for m in $(seq $fmember); do
+######      mm=$(((c-1) * fmember + m))
+######      for p in $(seq $mem_np); do
+######        echo ${node[${mem2node[$(((mm-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${cf}.${name_m[$mm]}
+######      done
+######    done
+######  done
 fi
 
 #-------------------------------------------------------------------------------

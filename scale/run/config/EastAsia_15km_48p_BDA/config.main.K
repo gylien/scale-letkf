@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl_test" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -70,9 +70,9 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=100         # Ensemble size
+MEMBER=3           # Ensemble size
 
-NNODES=1632        # Number of nodes
+NNODES=192         # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -99,7 +99,15 @@ TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (
                             #  2: share (staging to TMP)
                             #  3: local (staging to TMPL)
 
+DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
+                            #  1: in $TMPDAT
+                            #  2: in $TMPOUT
+
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
+                            #  0: No
+                            #  1: Yes
+
+SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
                             #  0: No
                             #  1: Yes
 
