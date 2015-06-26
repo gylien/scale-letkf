@@ -21,8 +21,8 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname=$(basename "$0")
-myname1=${myname%.*}
+#myname=$(basename "$0")
+#myname1=${myname%.*}
 
 #===============================================================================
 # Configuration
@@ -63,7 +63,7 @@ declare -a node
 declare -a name_m
 declare -a node_m
 
-distribute_da_cycle machinefile -
+distribute_da_cycle machinefile - $NODEFILE_DIR/distr
 
 #===============================================================================
 # Run one step

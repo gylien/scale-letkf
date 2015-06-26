@@ -46,6 +46,15 @@ if ((LOG_OPT <= 2)); then
   fi
 fi
 
+if [ "$MEM" == '0001' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
+  mkdir -p $TMPOUT/${ATIME}/log/scale_pp_ens
+  for q in $(seq $MEM_NP); do
+    if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
+      mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${ATIME}/log/scale_pp_ens
+    fi
+  done
+fi
+
 #===============================================================================
 
 exit 0

@@ -479,9 +479,15 @@ else
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
         fi
 
-        # log [obsope/letkf]
+        # log [scale_pp/scale_init/scale/obsope/letkf]
         #-------------------
         if ((LOG_OPT <= 4)); then
+          path="${atime}/log/scale_pp/NOUT-$(printf $PROCESS_FMT $((q-1)))"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
+          path="${atime}/log/scale_init/NOUT-$(printf $PROCESS_FMT $((q-1)))"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
+          path="${atime}/log/scale/NOUT-$(printf $PROCESS_FMT $((q-1)))"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
           path="${atime}/log/obsope/NOUT-$(printf $PROCESS_FMT $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
           path="${atime}/log/letkf/NOUT-$(printf $PROCESS_FMT $((q-1)))"

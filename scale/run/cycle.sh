@@ -100,7 +100,7 @@ if ((BUILTIN_STAGING)); then
   safe_init_tmpdir $NODEFILE_DIR
   distribute_da_cycle machinefile $NODEFILE_DIR
 else
-  distribute_da_cycle - -
+  distribute_da_cycle - - $NODEFILE_DIR/distr
 fi
 
 #===============================================================================
