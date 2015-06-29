@@ -8,14 +8,15 @@
 
 . config.main
 
-if (($# < 5)); then
+if (($# < 6)); then
   cat >&2 << EOF
 
 [post_scale_init.sh] Post-process the SCALE model outputs.
 
-Usage: $0 MYRANK STIME MKINIT MEM TMPDIR
+Usage: $0 MYRANK MEM_NP STIME MKINIT MEM TMPDIR
 
   MYRANK   My rank number (not used)
+  MEM_NP  Number of processes per member
   STIME    Start time (format: YYYYMMDDHHMMSS)
   MKINIT   Make initial condition as well?
             0: No
@@ -28,6 +29,7 @@ EOF
 fi
 
 MYRANK="$1"; shift
+MEM_NP=$1; shift
 STIME="$1"; shift
 MKINIT="$1"; shift
 MEM="$1"; shift
@@ -59,11 +61,11 @@ if ((LOG_OPT <= 2)); then
   fi
 fi
 
-if [ "$MEM" == '0001' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
-  mkdir -p $TMPOUT/${ATIME}/log/scale_init_ens
+if [ "$MEM" == '0001' ] || [ "$MEM" == 'mean' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
+  mkdir -p $TMPOUT/${STIME}/log/scale_init_ens
   for q in $(seq $MEM_NP); do
     if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
-      mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${ATIME}/log/scale_init_ens
+      mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${STIME}/log/scale_init_ens
     fi
   done
 fi

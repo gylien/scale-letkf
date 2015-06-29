@@ -346,6 +346,12 @@ else
       echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       path="${time}/log/scale"
       echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      path="${time}/log/scale_pp_ens"
+      echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      path="${time}/log/scale_init_ens"
+      echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      path="${time}/log/scale_ens"    
+      echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 
       path="${atime}/gues"
       echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
@@ -353,7 +359,9 @@ else
       echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       path="${atime}/obsgues"
       echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      path="${atime}/log"
+      path="${atime}/log/obsope"
+      echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      path="${atime}/log/letkf"
       echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 
     #++++++
@@ -482,11 +490,11 @@ else
         # log [scale_pp/scale_init/scale/obsope/letkf]
         #-------------------
         if ((LOG_OPT <= 4)); then
-          path="${atime}/log/scale_pp/NOUT-$(printf $PROCESS_FMT $((q-1)))"
+          path="${time}/log/scale_pp_ens/NOUT-$(printf $PROCESS_FMT $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
-          path="${atime}/log/scale_init/NOUT-$(printf $PROCESS_FMT $((q-1)))"
+          path="${time}/log/scale_init_ens/NOUT-$(printf $PROCESS_FMT $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
-          path="${atime}/log/scale/NOUT-$(printf $PROCESS_FMT $((q-1)))"
+          path="${time}/log/scale_ens/NOUT-$(printf $PROCESS_FMT $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
           path="${atime}/log/obsope/NOUT-$(printf $PROCESS_FMT $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
@@ -682,7 +690,7 @@ for it in $(seq $its $ite); do
     fi
 
     if (pdrun $MYRANK $g $PROC_OPT); then
-      bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $time \
+      bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $mem_np $time \
            $TMPRUN/scale_pp/$(printf '%04d' $m)
     fi
   fi
@@ -810,10 +818,10 @@ for it in $(seq $its $ite); do
     if (pdrun $MYRANK $g $PROC_OPT); then
       if ((BDY_FORMAT == 2)); then
         if ((BDY_ENS == 1)); then
-          bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $time \
+          bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
                $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m)
         else
-          bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $time \
+          bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
                $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m)
         fi
 #      elif ((BDY_FORMAT == 1)); then
