@@ -375,9 +375,9 @@ mem_loop: DO it = 1, nitmax
             if (m <= mem) then
               mem2node(qs+1,m) = n+nn
               mem2proc(qs+1,m) = ip
-              proc2mem(1,it,ip+1) = m
-              proc2mem(2,it,ip+1) = qs
             end if
+            proc2mem(1,it,ip+1) = m    ! These lines are outside of (m <= mem) condition
+            proc2mem(2,it,ip+1) = qs   ! in order to cover over the entire first iteration
             qs = qs + 1
           END DO
         END DO

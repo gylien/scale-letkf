@@ -51,6 +51,12 @@ BDY_ENS=0               # 0: Fixed boundary files for all memebers
 
 BDYINT=21600
 
+OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
+                        # 1: Update the ocean variables every cycle
+
+OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+                        # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
+
 OBSNUM=1
 OBSNAME[1]=obs                                    
 OBSNAME[2]=radar
@@ -95,7 +101,15 @@ TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (
                             #  2: share (staging to TMP)
                             #  3: local (staging to TMPL)
 
+DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
+                            #  1: in $TMPDAT
+                            #  2: in $TMPOUT
+
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
+                            #  0: No
+                            #  1: Yes
+
+SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
                             #  0: No
                             #  1: Yes
 
