@@ -237,22 +237,33 @@ while ((time <= ETIME)); do
         enable_iter=1
       fi
 
+      nodestr=proc
+      if ((ENABLE_SET == 1)); then                                    ##
+        if ((s == 3)); then
+          nodestr='set1.proc'
+        elif ((s == 4)); then
+          nodestr='set2.proc'
+        elif ((s == 5)); then
+          nodestr='set3.proc'
+        fi
+      fi
+
       if ((enable_iter == 1)); then
         for it in $(seq $nitmax); do
           if ((USE_RANKDIR == 1)); then
-            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
                     "$(rev_path ${stepexecdir[$s]})/cycle_step.sh" "$time" $loop $it # > /dev/null
           else
-            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
                     "$SCRP_DIR/cycle_step.sh" "$time" $loop $it # > /dev/null
           fi
         done
       else
         if ((USE_RANKDIR == 1)); then
-          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
                   "$(rev_path ${stepexecdir[$s]})/cycle_step.sh" "$time" "$loop" # > /dev/null
         else
-          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
                   "$SCRP_DIR/cycle_step.sh" "$time" "$loop" # > /dev/null
         fi
       fi

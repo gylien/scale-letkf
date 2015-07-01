@@ -32,17 +32,17 @@ OBSNCEP="$DDIR/../../obs/prepbufr" # directory of observation data in NCEP BUFR 
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=2            # 0: SCALE with exactly same domain settings (do not need additional preprocessing)
+BDY_FORMAT=0            # 0: SCALE with exactly same domain settings (do not need additional preprocessing)
                         # 1: SCALE (requires compatible 'config.nml.scale_init')
                         # 2: WRF   (requires compatible 'config.nml.scale_init')
                         # 3: NICAM (requires compatible 'config.nml.scale_init')
@@ -51,7 +51,7 @@ BDY_ENS=0               # 0: Fixed boundary files for all memebers
 
 BDYINT=21600
 
-OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
+OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
 
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
@@ -83,7 +83,7 @@ SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
-ENABLE_SET=0       ######
+ENABLE_SET=1       ######
 
 #===============================================================================
 # Temporary directories to store runtime files
@@ -95,7 +95,7 @@ MACHINE_TYPE=10             # Machine type
                             # 12: K-computer (interact jobs)
 
 TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
+TMPRUN_MODE=2               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)
                             #  2: share (staging to TMP)
@@ -109,12 +109,12 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
+SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
                             #  0: No
                             #  1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
-TMPSUBDIR="scale-letkf_$(whoami)_${SYSNAME}" # (used to identify multiple runs in the same time)
+TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
 TMP=                        # (When $MACHINE_TYPE=10, this will be automatically set)
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node

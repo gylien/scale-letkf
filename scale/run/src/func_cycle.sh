@@ -346,12 +346,6 @@ else
       echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       path="${time}/log/scale"
       echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      path="${time}/log/scale_pp_ens"
-      echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      path="${time}/log/scale_init_ens"
-      echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      path="${time}/log/scale_ens"    
-      echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 
       path="${atime}/gues"
       echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
@@ -490,11 +484,15 @@ else
         # log [scale_pp/scale_init/scale/obsope/letkf]
         #-------------------
         if ((LOG_OPT <= 4)); then
-          path="${time}/log/scale_pp_ens/NOUT-$(printf $PROCESS_FMT $((q-1)))"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
-          path="${time}/log/scale_init_ens/NOUT-$(printf $PROCESS_FMT $((q-1)))"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
-          path="${time}/log/scale_ens/NOUT-$(printf $PROCESS_FMT $((q-1)))"
+          if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ] && ((BDY_FORMAT != 0)); then
+            path="${time}/log/scale_pp/NOUT-$(printf $PROCESS_FMT $((q-1)))"
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
+          fi
+          if ((BDY_FORMAT != 0)); then
+            path="${time}/log/scale_init/NOUT-$(printf $PROCESS_FMT $((q-1)))"
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
+          fi
+          path="${time}/log/scale/NOUT-$(printf $PROCESS_FMT $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
           path="${atime}/log/obsope/NOUT-$(printf $PROCESS_FMT $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
@@ -691,7 +689,7 @@ for it in $(seq $its $ite); do
 
     if (pdrun $MYRANK $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $mem_np $time \
-           $TMPRUN/scale_pp/$(printf '%04d' $m)
+           $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT
     fi
   fi
 done
@@ -819,10 +817,10 @@ for it in $(seq $its $ite); do
       if ((BDY_FORMAT == 2)); then
         if ((BDY_ENS == 1)); then
           bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
-               $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m)
+               $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
         else
           bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
-               $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m)
+               $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
         fi
 #      elif ((BDY_FORMAT == 1)); then
 #        ...
@@ -913,7 +911,7 @@ for it in $(seq $its $ite); do
 
     if (pdrun $MYRANK $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $mem_np \
-           $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) cycle
+           $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT cycle
     fi
   fi
 done
@@ -973,7 +971,7 @@ for it in $(seq $nitmax); do
 
     if (pdrun $MYRANK $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
-           $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope
+           $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope $LOG_OPT
     fi
   fi
 done
@@ -1033,7 +1031,7 @@ for it in $(seq $nitmax); do
 
     if (pdrun $MYRANK $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_letkf.sh $MYRANK \
-           $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf
+           $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf $LOG_OPT
     fi
   fi
 done

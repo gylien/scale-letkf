@@ -8,18 +8,19 @@
 
 . config.main
 
-if (($# < 5)); then
+if (($# < 6)); then
   cat >&2 << EOF
 
 [post_obsope.sh]
 
-Usage: $0 MYRANK MEM_NP ATIME MEM TMPDIR
+Usage: $0 MYRANK MEM_NP ATIME MEM TMPDIR LOG_OPT
 
   MYRANK  My rank number
   MEM_NP  Number of processes per member
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
   MEM     Name of the ensemble member
   TMPDIR  Temporary directory to run the program
+  LOG_OPT
 
 EOF
   exit 1
@@ -29,7 +30,8 @@ MYRANK="$1"; shift
 MEM_NP="$1"; shift
 ATIME="$1"; shift
 MEM="$1"; shift
-TMPDIR="$1"
+TMPDIR="$1"; shift
+LOG_OPT="$1"
 
 #===============================================================================
 

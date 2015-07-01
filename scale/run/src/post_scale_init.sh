@@ -8,12 +8,12 @@
 
 . config.main
 
-if (($# < 6)); then
+if (($# < 7)); then
   cat >&2 << EOF
 
 [post_scale_init.sh] Post-process the SCALE model outputs.
 
-Usage: $0 MYRANK MEM_NP STIME MKINIT MEM TMPDIR
+Usage: $0 MYRANK MEM_NP STIME MKINIT MEM TMPDIR LOG_OPT
 
   MYRANK   My rank number (not used)
   MEM_NP  Number of processes per member
@@ -23,6 +23,7 @@ Usage: $0 MYRANK MEM_NP STIME MKINIT MEM TMPDIR
             1: Yes
   MEM      Name of the ensemble member
   TMPDIR   Temporary directory to run the model
+  LOG_OPT
 
 EOF
   exit 1
@@ -33,7 +34,8 @@ MEM_NP=$1; shift
 STIME="$1"; shift
 MKINIT="$1"; shift
 MEM="$1"; shift
-TMPDIR="$1"
+TMPDIR="$1"; shift
+LOG_OPT="$1"
 
 initbaselen=20
 
@@ -62,10 +64,10 @@ if ((LOG_OPT <= 2)); then
 fi
 
 if [ "$MEM" == '0001' ] || [ "$MEM" == 'mean' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
-  mkdir -p $TMPOUT/${STIME}/log/scale_init_ens
+  mkdir -p $TMPOUT/${STIME}/log/scale_init
   for q in $(seq $MEM_NP); do
-    if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
-      mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${STIME}/log/scale_init_ens
+    if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
+      mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${STIME}/log/scale_init
     fi
   done
 fi

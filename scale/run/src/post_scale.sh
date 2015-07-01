@@ -9,12 +9,12 @@
 . config.main
 . src/func_datetime.sh
 
-if (($# < 7)); then
+if (($# < 8)); then
   cat >&2 << EOF
 
 [post_scale.sh] Post-process the SCALE model outputs.
 
-Usage: $0 MYRANK MEM_NP STIME MEM FCSTLEN TMPDIR
+Usage: $0 MYRANK MEM_NP STIME MEM FCSTLEN LOG_OPT TMPDIR
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member (not used !!!)
@@ -22,6 +22,7 @@ Usage: $0 MYRANK MEM_NP STIME MEM FCSTLEN TMPDIR
   MEM      Name of the ensemble member
   FCSTLEN  Forecast length (second)
   TMPDIR   Temporary directory to run the model
+  LOG_OPT
   SCPCALL  Called from which script? (fcst/cycle)
 
 EOF
@@ -34,6 +35,7 @@ STIME="$1"; shift
 MEM="$1"; shift
 FCSTLEN="$1"; shift
 TMPDIR="$1"; shift
+LOG_OPT="$1"; shift
 SCPCALL="$1"
 
 ATIME=$(datetime $STIME $LCYCLE s)
@@ -106,10 +108,10 @@ fi
 ######
 
 if [ "$MEM" == '0001' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
-  mkdir -p $TMPOUT/${STIME}/log/scale_ens
+  mkdir -p $TMPOUT/${STIME}/log/scale
   for q in $(seq $MEM_NP); do
-    if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
-      mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${STIME}/log/scale_ens
+    if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
+      mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${STIME}/log/scale
     fi
   done
 fi
