@@ -63,6 +63,13 @@ ln -fs $DATADIR/rad/MIPAS/equ.atm $RUNDIR/scale_init
 ln -fs $DATADIR/rad/MIPAS/sum.atm $RUNDIR/scale_init
 ln -fs $DATADIR/rad/MIPAS/win.atm $RUNDIR/scale_init
 ln -fs $DATADIR/land/param.bucket.conf $RUNDIR/scale_init
+if ((BDY_FORMAT == 1)); then
+  if ((DATA_BDY_TMPLOC == 1)); then
+    ln -fs $TMPDAT/bdyscale/latlon_domain_catalogue.txt $RUNDIR/scale_init/latlon_domain_catalogue.txt
+  elif ((DATA_BDY_TMPLOC == 2)); then
+    ln -fs $TMPOUT/bdyscale/latlon_domain_catalogue.txt $RUNDIR/scale_init/latlon_domain_catalogue.txt
+  fi
+fi
 
 mkdir -p $RUNDIR/scale
 ln -fs $DATADIR/exec/scale-les_ens $RUNDIR/scale

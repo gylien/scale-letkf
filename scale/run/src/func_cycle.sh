@@ -100,6 +100,14 @@ TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 CYCLEFLEN=$WINDOW_E   # Model forecast length in a cycle (hour)
 CYCLEFOUT=$LTIMESLOT  # Model forecast output interval (hour)
 
+if ((BDY_FORMAT == 1)); then
+  if ((BDYCYCLE_INT % BDYINT != 0)); then
+    echo "[Error] \$BDYCYCLE_INT needs to be an exact multiple of \$BDYINT" >&2
+    exit 1
+  fi
+  BDY_STARTFRAME_MAX=$((BDYCYCLE_INT/BDYINT))
+fi
+
 BUILTIN_STAGING=$((MACHINE_TYPE != 10 && MACHINE_TYPE != 11))
 
 if ((TMPRUN_MODE <= 2)); then
@@ -553,56 +561,98 @@ else
   done
 
   #-------------------
+  # stage-in
+  #-------------------
 
-  time_dby=${STIME}
-  etime_bdy=$(datetime ${ETIME} $((CYCLEFLEN+BDYINT)) s)
-  while ((time_dby < etime_bdy)); do
-    #-------------------
-    # stage-in
-    #-------------------
+  # bdy
+  #-------------------
+  if ((BDY_FORMAT == 1)); then
 
-    # bdy
-    #-------------------
-    if ((DATA_BDY_TMPLOC == 1)); then
-
-      if ((BDY_FORMAT == 2)); then
-        if ((BDY_ENS == 1)); then
-          for m in $(seq $mmean); do
-            pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_dby}"
-            path="bdywrf/${name_m[$m]}/wrfout_${time_dby}"
-            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-          done
-        else
-          pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
-          path="bdywrf/mean/wrfout_${time_dby}"
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+    time=$STIME
+    time_bdy_prev=0
+    while ((time <= ETIME)); do
+      time_bdy=$time
+      for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
+        if [ -s "$DATA_BDY_SCALE/${time_bdy}/gues/meanf/history.pe000000.nc" ]; then
+          break
+        elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
+          echo "[Error] Cannot find boundary files from the SCALE history files." >&2
+          exit 1
         fi
-      fi
+        time_bdy=$(datetme $time_bdy -${BDYINT} s)
+      done
 
-    elif ((DATA_BDY_TMPLOC == 2)); then
-
-      if ((BDY_FORMAT == 2)); then
+      if ((time_bdy != time_bdy_prev)); then
         if ((BDY_ENS == 1)); then
           for m in $(seq $mmean); do
-            for q in $(seq $mem_np); do
-              pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_dby}"
-              path="bdywrf/${name_m[$m]}/wrfout_${time_dby}"
-              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]} ###### q: may be redundant ????
+            mem=${name_m[$m]}
+            [ "$mem" = 'mean' ] && mem='meanf'
+            for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/gues/${mem}/history.*.nc 2> /dev/null); do
+              pathin="$ifile"
+              path="bdyscale/${time_bdy}/${name_m[$m]}/$(basename $ifile)"
+
+              if ((DATA_BDY_TMPLOC == 1)); then
+                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+              elif ((DATA_BDY_TMPLOC == 2)); then
+                for q in $(seq $mem_np); do
+                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]} ###### q: may be redundant ????
+                done
+              fi
             done
           done
         else
-          pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
-          path="bdywrf/mean/wrfout_${time_dby}"
+          for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/gues/meanf/history.*.nc 2> /dev/null); do
+            pathin="$ifile"
+            path="bdyscale/${time_bdy}/mean/$(basename $ifile)"
+
+            if ((DATA_BDY_TMPLOC == 1)); then
+              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+            elif ((DATA_BDY_TMPLOC == 2)); then
+              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+            fi
+          done
+        fi
+        time_bdy_prev=$time_bdy
+      fi
+      time=$(datetime $time $LCYCLE s)
+    done
+
+  #-------------------
+  elif ((BDY_FORMAT == 2)); then
+
+    time_dby=${STIME}
+    etime_bdy=$(datetime ${ETIME} $((CYCLEFLEN+BDYINT)) s)
+    while ((time_dby < etime_bdy)); do
+      if ((BDY_ENS == 1)); then
+        for m in $(seq $mmean); do
+          pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_dby}"
+          path="bdywrf/${name_m[$m]}/wrfout_${time_dby}"
+
+          if ((DATA_BDY_TMPLOC == 1)); then
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+          elif ((DATA_BDY_TMPLOC == 2)); then
+            for q in $(seq $mem_np); do
+              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]} ###### q: may be redundant ????
+            done
+          fi
+        done
+      else
+        pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
+        path="bdywrf/mean/wrfout_${time_dby}"
+
+        if ((DATA_BDY_TMPLOC == 1)); then
+          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+        elif ((DATA_BDY_TMPLOC == 2)); then
           echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
         fi
       fi
+      time_dby=$(datetime $time_dby $BDYINT s)
+    done
 
-    fi
+  fi
 
-    #-------------------
+  #-------------------
 
-    time_dby=$(datetime $time_dby $BDYINT s)
-  done
 #-------------------
 fi
 
@@ -708,10 +758,18 @@ if ((LOOP = 1)); then
   mkinit=$MAKEINIT
 fi
 
-if ((DATA_BDY_TMPLOC == 1)); then
-  bdywrf_loc=$TMPDAT/bdywrf
-elif ((DATA_BDY_TMPLOC == 2)); then
-  bdywrf_loc=$TMPOUT/bdywrf
+if ((BDY_FORMAT == 1)); then
+  if ((DATA_BDY_TMPLOC == 1)); then
+    bdyscale_loc=$TMPDAT/bdyscale
+  elif ((DATA_BDY_TMPLOC == 2)); then
+    bdyscale_loc=$TMPOUT/bdyscale
+  fi
+elif ((BDY_FORMAT == 2)); then
+  if ((DATA_BDY_TMPLOC == 1)); then
+    bdywrf_loc=$TMPDAT/bdywrf
+  elif ((DATA_BDY_TMPLOC == 2)); then
+    bdywrf_loc=$TMPOUT/bdywrf
+  fi
 fi
 
 MEMBER_RUN=0
@@ -746,7 +804,39 @@ for it in $(seq $its $ite); do
     fi
 
     if (pdrun $g $PROC_OPT); then
-      if ((BDY_FORMAT == 2)); then
+      #------
+      if ((BDY_FORMAT == 1)); then
+      #------
+        time_bdy=$time
+        for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
+          if [ -s "$bdyscale_loc/${time_bdy}/mean/history.pe000000.nc" ]; then
+            break
+          elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
+            echo "[Error] Cannot find boundary files from the SCALE history files." >&2
+            exit 1
+          fi
+          time_bdy=$(datetme $time_bdy -${BDYINT} s)
+        done
+
+        if ((BDY_ENS == 1)); then
+          bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK $mem_np \
+               $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+               ${bdyscale_loc}/${time_bdy}/${name_m[$m]}/history \
+               $time $CYCLEFLEN $mkinit ${name_m[$m]} \
+               $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT \
+               ${bdyscale_loc}/latlon_domain_catalogue.txt $bdy_startframe
+        else
+          bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK $mem_np \
+               $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+               ${bdyscale_loc}/${time_bdy}/mean/history \
+               $time $CYCLEFLEN $mkinit mean \
+               $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT \
+               ${bdyscale_loc}/latlon_domain_catalogue.txt $bdy_startframe
+        fi
+
+      #------
+      elif ((BDY_FORMAT == 2)); then
+      #------
         if ((BDY_ENS == 1)); then
           bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK $mem_np \
                $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
@@ -760,11 +850,12 @@ for it in $(seq $its $ite); do
                $time $CYCLEFLEN $mkinit mean \
                $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
         fi
-#      elif ((BDY_FORMAT == 1)); then
-#        ...
+      #------
 #      elif ((BDY_FORMAT == 3)); then
-#        ...
+      #------
+      #------
       fi
+      #------
     fi
   fi
 done

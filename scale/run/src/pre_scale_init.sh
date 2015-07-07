@@ -14,7 +14,7 @@ if (($# < 12)); then
 
 [pre_scale_init.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM_NP TOPO LANDUSE BDYORG STIME FCSTLEN MKINIT MEM TMPDIR EXECDIR DATADIR
+Usage: $0 MYRANK MEM_NP TOPO LANDUSE BDYORG STIME FCSTLEN MKINIT MEM TMPDIR EXECDIR DATADIR [STARTFRAME]
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member
@@ -32,6 +32,7 @@ Usage: $0 MYRANK MEM_NP TOPO LANDUSE BDYORG STIME FCSTLEN MKINIT MEM TMPDIR EXEC
   TMPDIR   Temporary directory to run scale-les_init
   EXECDIR  Directory of SCALE executable files
   DATADIR  Directory of SCALE data files
+  STARTFRAME
 
 EOF
   exit 1
@@ -48,7 +49,8 @@ MKINIT="$1"; shift
 MEM="$1"; shift
 TMPDIR="$1"; shift
 EXECDIR="$1"; shift
-DATADIR="$1"
+DATADIR="$1"; shift
+STARTFRAME="$1"
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
@@ -81,23 +83,12 @@ if ((MKINIT == 1 || (OCEAN_INPUT == 1 && OCEAN_FORMAT == 99))); then
 fi
 
 if ((BDY_FORMAT == 1)); then
-#  ln -fs XXX $TMPDIR/latlon_domain_catalogue.txt
-  i=0
-  time=$STIME
-  etime_bdy=$(datetime $STIME $((FCSTLEN+BDYINT)) s)
-  while ((time < etime_bdy)); do
-    if [ -s "${BDYORG}/${time}/..." ]; then
-######
-      ln -fs "${BDYORG}/${time}/..." $TMPDIR
-######
-    else
-      echo "[Error] $0: Cannot find source boundary file '${BDYORG}/${time}/...'."
-      exit 1
-    fi
-    i=$((i+1))
-    time=$(datetime $time $BDYINT s)
-  done
-  NUMBER_OF_FILES=$i
+  if [ ! -s "${BDYORG}.pe000000.nc" ]; then
+    echo "[Error] $0: Cannot find source boundary file '${BDYORG}.pe000000.nc'."
+    exit 1
+  fi
+  ln -fs ${BDYORG}*.nc $TMPDIR
+  NUMBER_OF_FILES=$(((FCSTLEN-1)/BDYINT+2))
 
   FILETYPE_ORG='SCALE-LES'
   USE_NESTING='.true.'
@@ -126,8 +117,6 @@ else
   echo "[Error] $0: Unsupport boundary file types" >&2
   exit 1
 fi
-
-latlon_domain_catalogue.txt
 
 #===============================================================================
 
