@@ -64,6 +64,8 @@ S_SS=${STIME:12:2}
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
 
+TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
+
 ln -fs ${TOPO}*.nc $TMPDIR
 ln -fs ${LANDUSE}*.nc $TMPDIR
 
@@ -90,6 +92,7 @@ if ((BDY_FORMAT == 1)); then
   ln -fs ${BDYORG}*.nc $TMPDIR
   NUMBER_OF_FILES=$(((FCSTLEN-1)/BDYINT+2))
 
+  BASENAME_ORG="${TMPSUBDIR}\/history"
   FILETYPE_ORG='SCALE-LES'
   USE_NESTING='.true.'
   OFFLINE='.true.'
@@ -119,8 +122,6 @@ else
 fi
 
 #===============================================================================
-
-TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
 
 cat $TMPDAT/conf/config.nml.scale_init | \
     sed -e "s/\[IO_LOG_BASENAME\]/ IO_LOG_BASENAME = \"${TMPSUBDIR}\/init_LOG\",/" \

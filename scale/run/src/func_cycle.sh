@@ -568,10 +568,11 @@ else
   #-------------------
   if ((BDY_FORMAT == 1)); then
 
+    find_catalogue=0
     time=$STIME
     time_bdy_prev=0
     while ((time <= ETIME)); do
-      time_bdy=$time
+      time_bdy=$(datetime $time $BDYCYCLE_INT s)
       for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
         if [ -s "$DATA_BDY_SCALE/${time_bdy}/gues/meanf/history.pe000000.nc" ]; then
           break
@@ -579,8 +580,22 @@ else
           echo "[Error] Cannot find boundary files from the SCALE history files." >&2
           exit 1
         fi
-        time_bdy=$(datetme $time_bdy -${BDYINT} s)
+        time_bdy=$(datetime $time_bdy -${BDYINT} s)
       done
+
+      if ((find_catalogue == 0)); then
+        time_catalogue=$(datetime $time_bdy -$BDYCYCLE_INT s)
+        if [ -s "$DATA_BDY_SCALE/${time_catalogue}/log/scale/latlon_domain_catalogue.txt" ]; then
+          pathin="$DATA_BDY_SCALE/${time_catalogue}/log/scale/latlon_domain_catalogue.txt"
+          path="bdyscale/latlon_domain_catalogue.txt"
+          if ((DATA_BDY_TMPLOC == 1)); then
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+          elif ((DATA_BDY_TMPLOC == 2)); then
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+          fi
+          find_catalogue=1
+        fi
+      fi
 
       if ((time_bdy != time_bdy_prev)); then
         if ((BDY_ENS == 1)); then
@@ -807,7 +822,7 @@ for it in $(seq $its $ite); do
       #------
       if ((BDY_FORMAT == 1)); then
       #------
-        time_bdy=$time
+        time_bdy=$(datetime $time $BDYCYCLE_INT s)
         for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
           if [ -s "$bdyscale_loc/${time_bdy}/mean/history.pe000000.nc" ]; then
             break
@@ -815,7 +830,7 @@ for it in $(seq $its $ite); do
             echo "[Error] Cannot find boundary files from the SCALE history files." >&2
             exit 1
           fi
-          time_bdy=$(datetme $time_bdy -${BDYINT} s)
+          time_bdy=$(datetime $time_bdy -${BDYINT} s)
         done
 
         if ((BDY_ENS == 1)); then
@@ -833,7 +848,6 @@ for it in $(seq $its $ite); do
                $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT \
                ${bdyscale_loc}/latlon_domain_catalogue.txt $bdy_startframe
         fi
-
       #------
       elif ((BDY_FORMAT == 2)); then
       #------
@@ -902,7 +916,9 @@ for it in $(seq $its $ite); do
     fi
 
     if (pdrun $g $PROC_OPT); then
-      if ((BDY_FORMAT == 2)); then
+#      if ((BDY_FORMAT == 1)); then
+#        ...
+#      elif ((BDY_FORMAT == 2)); then
         if ((BDY_ENS == 1)); then
           bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
                $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
@@ -910,11 +926,9 @@ for it in $(seq $its $ite); do
           bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
                $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
         fi
-#      elif ((BDY_FORMAT == 1)); then
-#        ...
 #      elif ((BDY_FORMAT == 3)); then
 #        ...
-      fi
+#      fi
     fi
   fi
 done
@@ -936,14 +950,11 @@ if (pdrun all $PROC_OPT); then
        $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT $((MEMBER+1)) $iter
 fi
 
+ocean_base='-'
 if ((OCEAN_INPUT == 1)); then
-  if ((MKINIT == 1 && OCEAN_FORMAT == 99)); then
-    ocean_base='-'
-  else
+  if ((MAKEINIT != 1 || OCEAN_FORMAT != 99)); then
     ocean_base="$TMPOUT/${time}/anal/mean/init_ocean"  ### always use mean???
   fi
-else
-  ocean_base='-'
 fi
 
 for it in $(seq $its $ite); do

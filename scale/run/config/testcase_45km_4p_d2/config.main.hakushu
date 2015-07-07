@@ -93,7 +93,7 @@ MACHINE_TYPE=1              # Machine type
                             # 11: K-computer (micro jobs)
                             # 12: K-computer (interact jobs)
 
-TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
+TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
 TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)

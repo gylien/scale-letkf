@@ -243,16 +243,18 @@ fi
 
 if ((MACHINE_TYPE == 1)); then
 
- if [ "$PROC_OPT" == 'all' ]; then
+  if [ "$PROC_OPT" == 'all' ]; then
     local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
 ###  elif [ "$PROC_OPT" == 'alln' ]; then
 ###    local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE} | sort | uniq)
- elif [ "$PROC_OPT" == 'one' ]; then
-   local HOSTLIST=$(head -n 1 ${NODEFILE_DIR}/${NODEFILE})
- else
-   exit 1
- fi
+  elif [ "$PROC_OPT" == 'one' ]; then
+    local HOSTLIST=$(head -n 1 ${NODEFILE_DIR}/${NODEFILE})
+  else
+    exit 1
+  fi
   HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
+
+#echo "  $MPIRUN -d $SCRP_DIR $HOSTLIST 1 $pdbash_exec $SCRIPT $ARGS"
 
   $MPIRUN -d $SCRP_DIR $HOSTLIST 1 $pdbash_exec $SCRIPT $ARGS
 #  $MPIRUN -d $SCRP_DIR $HOSTLIST 1 bash $SCRIPT - $ARGS

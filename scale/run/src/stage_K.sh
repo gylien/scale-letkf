@@ -145,7 +145,7 @@ if [ -s "$STAGING_DIR/stageout.out" ]; then
     source="$(echo $line | cut -d '|' -s -f2)"
     ftype="$(echo $line | cut -d '|' -s -f3)"
     if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
-      if [ "$ftype" == 'd' ]; then
+      if [ "$ftype" = 'd' ] || [ "$ftype" = 'drm' ]; then
         if ((USE_RANKDIR == 1)); then
           if ((TMPOUT_MODE == 3)); then
             echo "#PJM --stgout-dir \"rank=* %r:${TMPOUT_STG}/${source} ${destin} recursive=10\""
@@ -179,7 +179,7 @@ while [ -s "$STAGING_DIR/stageout.out.$((i+1))" ]; do
     source="$(echo $line | cut -d '|' -s -f2)"
     ftype="$(echo $line | cut -d '|' -s -f3)"
     if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
-      if [ "$ftype" == 'd' ]; then
+      if [ "$ftype" = 'd' ] || [ "$ftype" = 'drm' ]; then
         if ((USE_RANKDIR == 1)); then
           echo "#PJM --stgout-dir \"rank=${i} ${i}:${TMPOUT_STG}/${source} ${destin} recursive=10\""
         else
