@@ -333,26 +333,31 @@ pdrun () {
 #-------------------------------------------------------------------------------
 # Return if it is the case to run parallel scripts, according to nodefile
 #
-# Usage: pdrun MYRANK GROUP OPT
+# Usage: pdrun GROUP OPT
 #
-#   MYRANK
-#   GROUP     Group of processes
-#             all:
-#             (group):
-#   OPT       Options of using processes
-#             all:  run the script in all processes in the group
-#             alln: run the script in all nodes in the group, one process per node
-#             one:  run the script only in the first process in the group
+#   GROUP   Group of processes
+#           all:     all processes
+#           (group): process group #(group)
+#   OPT     Options of the ways to pick up processes
+#           all:  run the script in all processes in the group
+#           alln: run the script in all nodes in the group, one process per node (default)
+#           one:  run the script only in the first process in the group
+#
+# Other input variables:
+#   MYRANK  The rank of the current process
+#
+# Exit code:
+#   0: This process is used
+#   1: This process is not used
 #-------------------------------------------------------------------------------
 
-if (($# < 2)); then
+if (($# < 1)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." >&2
   exit 1
 fi
 
-local MYRANK="$1"; shift
 local GROUP="$1"; shift
-local OPT="$1"
+local OPT="${1:-alln}"
 
 #-------------------------------------------------------------------------------
 

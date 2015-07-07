@@ -17,12 +17,9 @@ stepexecname[1]="scale-les_pp_ens"
 stepname[2]='Run SCALE init'
 stepexecdir[2]="$TMPRUN/scale_init"
 stepexecname[2]="scale-les_init_ens"
-#stepname[1]='Prepare boundary files'
-#stepname[2]='Perturb boundaries'
 stepname[3]='Run ensemble forecasts'
 stepexecdir[3]="$TMPRUN/scale"
 stepexecname[3]="scale-les_ens"
-#stepname[4]='Thin observations'
 stepname[4]='Run observation operator'
 stepexecdir[4]="$TMPRUN/obsope"
 stepexecname[4]="obsope"
@@ -633,7 +630,7 @@ else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
 fi
 
-if (pdrun $MYRANK all $PROC_OPT); then
+if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_pp_node.sh $MYRANK \
        $mem_nodes $mem_np $TMPRUN/scale_pp $TMPDAT/exec $TMPDAT $MEMBER_RUN $iter
 fi
@@ -648,7 +645,7 @@ for it in $(seq $its $ite); do
       echo "  [Pre-processing  script] node ${node_m[$m]} [$(datetime_now)]"
     fi
 
-    if (pdrun $MYRANK $g $PROC_OPT); then
+    if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK $time \
            $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
     fi
@@ -687,7 +684,7 @@ for it in $(seq $its $ite); do
       echo "  [Post-processing script] node ${node_m[$m]} [$(datetime_now)]"
     fi
 
-    if (pdrun $MYRANK $g $PROC_OPT); then
+    if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $mem_np $time \
            $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT
     fi
@@ -729,7 +726,7 @@ else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
 fi
 
-if (pdrun $MYRANK all $PROC_OPT); then
+if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_init_node.sh $MYRANK \
        $mem_nodes $mem_np $TMPRUN/scale_init $TMPDAT/exec $TMPDAT $MEMBER_RUN $iter
 fi
@@ -748,7 +745,7 @@ for it in $(seq $its $ite); do
       fi
     fi
 
-    if (pdrun $MYRANK $g $PROC_OPT); then
+    if (pdrun $g $PROC_OPT); then
       if ((BDY_FORMAT == 2)); then
         if ((BDY_ENS == 1)); then
           bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK $mem_np \
@@ -813,7 +810,7 @@ for it in $(seq $its $ite); do
       fi
     fi
 
-    if (pdrun $MYRANK $g $PROC_OPT); then
+    if (pdrun $g $PROC_OPT); then
       if ((BDY_FORMAT == 2)); then
         if ((BDY_ENS == 1)); then
           bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
@@ -843,7 +840,7 @@ ensfcst_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if (pdrun $MYRANK all $PROC_OPT); then
+if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
        $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT $((MEMBER+1)) $iter
 fi
@@ -876,7 +873,7 @@ for it in $(seq $its $ite); do
       bdy_base="$TMPOUT/${time}/bdy/mean/boundary"
     fi
 
-    if (pdrun $MYRANK $g $PROC_OPT); then
+    if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
            $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
            $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
@@ -909,7 +906,7 @@ for it in $(seq $its $ite); do
 #      ...
 #    fi
 
-    if (pdrun $MYRANK $g $PROC_OPT); then
+    if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $mem_np \
            $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT cycle
     fi
@@ -928,7 +925,7 @@ obsope_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if (pdrun $MYRANK all $PROC_OPT); then
+if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_obsope_node.sh $MYRANK \
        $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b
@@ -942,7 +939,7 @@ for it in $(seq $nitmax); do
       echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 
-    if (pdrun $MYRANK $g $PROC_OPT); then
+    if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_obsope.sh $MYRANK \
            $atime ${name_m[$m]} $TMPRUN/obsope
     fi
@@ -969,7 +966,7 @@ for it in $(seq $nitmax); do
       echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 
-    if (pdrun $MYRANK $g $PROC_OPT); then
+    if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
            $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope $LOG_OPT
     fi
@@ -988,7 +985,7 @@ letkf_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if (pdrun $MYRANK all $PROC_OPT); then
+if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
        $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b
@@ -1002,7 +999,7 @@ for it in $(seq $nitmax); do
       echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 
-    if (pdrun $MYRANK $g $PROC_OPT); then
+    if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
            $TMPOUT/${time}/topo/topo $atime ${name_m[$m]} $TMPRUN/letkf
     fi
@@ -1029,7 +1026,7 @@ for it in $(seq $nitmax); do
       echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
     fi
 
-    if (pdrun $MYRANK $g $PROC_OPT); then
+    if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_letkf.sh $MYRANK \
            $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf $LOG_OPT
     fi

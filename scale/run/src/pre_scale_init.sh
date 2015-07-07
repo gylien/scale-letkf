@@ -14,13 +14,15 @@ if (($# < 12)); then
 
 [pre_scale_init.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM_NP TOPO LANDUSE WRFOUT STIME FCSTLEN MKINIT MEM TMPDIR EXECDIR DATADIR
+Usage: $0 MYRANK MEM_NP TOPO LANDUSE BDYORG STIME FCSTLEN MKINIT MEM TMPDIR EXECDIR DATADIR
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member
   TOPO     Basename of SCALE topography files
   LANDUSE  Basename of SCALE land use files
-  WRFOUT   Basename of WRF files
+  BDYORG   Path of the source boundary files
+           SCALE history: XXX
+           WRF: Basename of WRF files
   STIME    Start time (format: YYYYMMDDHHMMSS)
   FCSTLEN  Forecast length (second)
   MKINIT   Make initial condition as well?
@@ -39,7 +41,7 @@ MYRANK="$1"; shift
 MEM_NP="$1"; shift
 TOPO="$1"; shift
 LANDUSE="$1"; shift
-WRFOUT="$1"; shift
+BDYORG="$1"; shift
 STIME="$1"; shift
 FCSTLEN="$1"; shift
 MKINIT="$1"; shift
@@ -78,20 +80,54 @@ if ((MKINIT == 1 || (OCEAN_INPUT == 1 && OCEAN_FORMAT == 99))); then
   RESTART_OUTPUT='.true.'
 fi
 
-i=0
-time=$STIME
-etime_bdy=$(datetime $STIME $((FCSTLEN+BDYINT)) s)
-while ((time < etime_bdy)); do
-  if [ -s "${WRFOUT}_${time}" ]; then
-    ln -fs "${WRFOUT}_${time}" $TMPDIR/wrfout_$(printf %05d $i)
-  else
-    echo "[Error] $0: Cannot find WRFOUT file '${WRFOUT}_${time}'."
-    exit 1
-  fi
-  i=$((i+1))
-  time=$(datetime $time $BDYINT s)
-done
-NUMBER_OF_FILES=$i
+if ((BDY_FORMAT == 1)); then
+#  ln -fs XXX $TMPDIR/latlon_domain_catalogue.txt
+  i=0
+  time=$STIME
+  etime_bdy=$(datetime $STIME $((FCSTLEN+BDYINT)) s)
+  while ((time < etime_bdy)); do
+    if [ -s "${BDYORG}/${time}/..." ]; then
+######
+      ln -fs "${BDYORG}/${time}/..." $TMPDIR
+######
+    else
+      echo "[Error] $0: Cannot find source boundary file '${BDYORG}/${time}/...'."
+      exit 1
+    fi
+    i=$((i+1))
+    time=$(datetime $time $BDYINT s)
+  done
+  NUMBER_OF_FILES=$i
+
+  FILETYPE_ORG='SCALE-LES'
+  USE_NESTING='.true.'
+  OFFLINE='.true.'
+elif ((BDY_FORMAT == 2)); then
+  i=0
+  time=$STIME
+  etime_bdy=$(datetime $STIME $((FCSTLEN+BDYINT)) s)
+  while ((time < etime_bdy)); do
+    if [ -s "${BDYORG}_${time}" ]; then
+      ln -fs "${BDYORG}_${time}" $TMPDIR/wrfout_$(printf %05d $i)
+    else
+      echo "[Error] $0: Cannot find source boundary file '${BDYORG}_${time}'."
+      exit 1
+    fi
+    i=$((i+1))
+    time=$(datetime $time $BDYINT s)
+  done
+  NUMBER_OF_FILES=$i
+
+  BASENAME_ORG="${TMPSUBDIR}\/wrfout"
+  FILETYPE_ORG='WRF-ARW'
+  USE_NESTING='.false.'
+  OFFLINE='.true.'
+else
+  echo "[Error] $0: Unsupport boundary file types" >&2
+  exit 1
+fi
+
+latlon_domain_catalogue.txt
 
 #===============================================================================
 
@@ -99,15 +135,18 @@ TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
 
 cat $TMPDAT/conf/config.nml.scale_init | \
     sed -e "s/\[IO_LOG_BASENAME\]/ IO_LOG_BASENAME = \"${TMPSUBDIR}\/init_LOG\",/" \
+        -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
+        -e "s/\[RESTART_OUTPUT\]/ RESTART_OUTPUT = $RESTART_OUTPUT,/" \
         -e "s/\[RESTART_OUT_BASENAME\]/ RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/init\",/" \
         -e "s/\[TOPO_IN_BASENAME\]/ TOPO_IN_BASENAME = \"${TMPSUBDIR}\/topo\",/" \
         -e "s/\[LANDUSE_IN_BASENAME\]/ LANDUSE_IN_BASENAME = \"${TMPSUBDIR}\/landuse\",/" \
         -e "s/\[BASENAME_BOUNDARY\]/ BASENAME_BOUNDARY = \"${TMPSUBDIR}\/boundary\",/" \
-        -e "s/\[BASENAME_ORG\]/ BASENAME_ORG = \"${TMPSUBDIR}\/wrfout\",/" \
-        -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
-        -e "s/\[RESTART_OUTPUT\]/ RESTART_OUTPUT = $RESTART_OUTPUT,/" \
+        -e "s/\[BASENAME_ORG\]/ BASENAME_ORG = \"${BASENAME_ORG}\",/" \
+        -e "s/\[FILETYPE_ORG\]/ FILETYPE_ORG = \"${FILETYPE_ORG}\",/" \
         -e "s/\[NUMBER_OF_FILES\]/ NUMBER_OF_FILES = $NUMBER_OF_FILES,/" \
         -e "s/\[BOUNDARY_UPDATE_DT\]/ BOUNDARY_UPDATE_DT = $BDYINT.D0,/" \
+        -e "s/\[USE_NESTING\]/ USE_NESTING = $USE_NESTING,/" \
+        -e "s/\[OFFLINE\]/ OFFLINE = $OFFLINE,/" \
     > $TMPDIR/init.conf
 
 #===============================================================================
