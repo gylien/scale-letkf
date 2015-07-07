@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl_test" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl_d2" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -18,11 +18,11 @@ LOGDIR="$DIR/log"
 MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/update/scale/scale-les/test/case_real/check_japan/run"
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
-DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p_BDA.bf10"
-DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_15km_48p_DBA.bf10"
+DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p_BDA_d2.bf10"
+DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_15km_48p_DBA_d2.bf10"
 DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl"
 DATA_BDY_SCALE_PREP=
-DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl/wrfout_init_2013063000"
+DATA_BDY_WRF=
 DATA_BDY_NICAM=
 
 OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia" # directory of observation data in LETKF obs format
@@ -49,6 +49,7 @@ BDY_ENS=1               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 
 BDYINT=3600
+BDYCYCLE_INT=21600
 
 OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
@@ -63,10 +64,10 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=1800      # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=5400      # SCALE forecast time when assimilation window ends (second)
-LCYCLE=3600        # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=600      # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=120       # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=600       # SCALE forecast time when assimilation window ends (second)
+LCYCLE=600         # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=120      # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings

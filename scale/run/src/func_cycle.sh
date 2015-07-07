@@ -751,7 +751,7 @@ for it in $(seq $its $ite); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $mem_np $time \
-           $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT
+           ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT
     fi
   fi
 done

@@ -8,16 +8,17 @@
 
 . config.main
 
-if (($# < 5)); then
+if (($# < 6)); then
   cat >&2 << EOF
 
 [post_scale_pp.sh] Post-process the scale-les_init outputs.
 
-Usage: $0 MYRANK MEM_NP STIME TMPDIR LOG_OPT
+Usage: $0 MYRANK MEM_NP STIME MEM TMPDIR LOG_OPT
 
   MYRANK   My rank number (not used)
-  MEM_NP  Number of processes per member
+  MEM_NP   Number of processes per member
   STIME    Start time (format: YYYYMMDDHHMMSS)
+  MEM
   TMPDIR   Temporary directory to run the model
   LOG_OPT
 
@@ -28,6 +29,7 @@ fi
 MYRANK="$1"; shift
 MEM_NP="$1"; shift
 STIME="$1"; shift
+MEM="$1"; shift
 TMPDIR="$1"; shift
 LOG_OPT="$1"
 
