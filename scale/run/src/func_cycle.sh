@@ -768,6 +768,9 @@ ensinit_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
+echo "====== $STEPFUNC $MYRANK $TIME $LOOP $ITER ======"
+
+
 mkinit=0
 if ((LOOP = 1)); then
   mkinit=$MAKEINIT
@@ -944,6 +947,11 @@ ensfcst_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
+mkinit=0
+if ((LOOP = 1)); then
+  mkinit=$MAKEINIT
+fi
+
 ############
 if ((BDY_FORMAT == 1)); then
   if ((DATA_BDY_TMPLOC == 1)); then
@@ -972,7 +980,7 @@ fi
 
 ocean_base='-'
 if ((OCEAN_INPUT == 1)); then
-  if ((MAKEINIT != 1 || OCEAN_FORMAT != 99)); then
+  if ((mkinit != 1 || OCEAN_FORMAT != 99)); then
     ocean_base="$TMPOUT/${time}/anal/mean/init_ocean"  ### always use mean???
   fi
 fi

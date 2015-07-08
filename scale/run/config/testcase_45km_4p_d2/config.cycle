@@ -53,7 +53,7 @@ OUT_OPT=1        # 1:   o         o       o         o       o
                  # 4:   o                 o
 
                  #      topo
-TOPOOUT_OPT=2    # 1:   o
+TOPOOUT_OPT=1    # 1:   o
                  # 2:   (none)
 
                  #      landuse
