@@ -779,6 +779,16 @@ if ((BDY_FORMAT == 1)); then
   elif ((DATA_BDY_TMPLOC == 2)); then
     bdyscale_loc=$TMPOUT/bdyscale
   fi
+  time_bdy=$(datetime $time $BDYCYCLE_INT s)
+  for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
+    if [ -s "$bdyscale_loc/${time_bdy}/mean/history.pe000000.nc" ]; then
+      break
+    elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
+      echo "[Error] Cannot find boundary files from the SCALE history files." >&2
+      exit 1
+    fi
+    time_bdy=$(datetime $time_bdy -${BDYINT} s)
+  done
 elif ((BDY_FORMAT == 2)); then
   if ((DATA_BDY_TMPLOC == 1)); then
     bdywrf_loc=$TMPDAT/bdywrf
@@ -822,31 +832,20 @@ for it in $(seq $its $ite); do
       #------
       if ((BDY_FORMAT == 1)); then
       #------
-        time_bdy=$(datetime $time $BDYCYCLE_INT s)
-        for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
-          if [ -s "$bdyscale_loc/${time_bdy}/mean/history.pe000000.nc" ]; then
-            break
-          elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
-            echo "[Error] Cannot find boundary files from the SCALE history files." >&2
-            exit 1
-          fi
-          time_bdy=$(datetime $time_bdy -${BDYINT} s)
-        done
-
         if ((BDY_ENS == 1)); then
           bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK $mem_np \
                $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
                ${bdyscale_loc}/${time_bdy}/${name_m[$m]}/history \
                $time $CYCLEFLEN $mkinit ${name_m[$m]} \
                $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT \
-               ${bdyscale_loc}/latlon_domain_catalogue.txt $bdy_startframe
+               $bdy_startframe
         else
           bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK $mem_np \
                $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
                ${bdyscale_loc}/${time_bdy}/mean/history \
                $time $CYCLEFLEN $mkinit mean \
                $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT \
-               ${bdyscale_loc}/latlon_domain_catalogue.txt $bdy_startframe
+               $bdy_startframe
         fi
       #------
       elif ((BDY_FORMAT == 2)); then
@@ -945,6 +944,27 @@ ensfcst_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
+############
+if ((BDY_FORMAT == 1)); then
+  if ((DATA_BDY_TMPLOC == 1)); then
+    bdyscale_loc=$TMPDAT/bdyscale
+  elif ((DATA_BDY_TMPLOC == 2)); then
+    bdyscale_loc=$TMPOUT/bdyscale
+  fi
+  time_bdy=$(datetime $time $BDYCYCLE_INT s)
+  for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
+    if [ -s "$bdyscale_loc/${time_bdy}/mean/history.pe000000.nc" ]; then
+      break
+    elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
+      echo "[Error] Cannot find boundary files from the SCALE history files." >&2
+      exit 1
+    fi
+    time_bdy=$(datetime $time_bdy -${BDYINT} s)
+  done
+  time_bdy=$(datetime $time_bdy -$BDYCYCLE_INT s)
+fi
+############
+
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
        $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT $((MEMBER+1)) $iter
@@ -976,10 +996,19 @@ for it in $(seq $its $ite); do
     fi
 
     if (pdrun $g $PROC_OPT); then
-      bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
-           $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
-           $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
-           $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
+      if ((BDY_FORMAT == 1)); then
+        bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
+             $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
+             $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT $time_bdy
+      elif ((BDY_FORMAT == 2)); then
+        bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
+             $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
+             $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
+#      elif ((BDY_FORMAT == 3)); then
+      fi
+      
     fi
   fi
 done
