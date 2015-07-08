@@ -768,11 +768,8 @@ ensinit_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-echo "====== $STEPFUNC $MYRANK $TIME $LOOP $ITER ======"
-
-
 mkinit=0
-if ((LOOP = 1)); then
+if ((loop == 1)); then
   mkinit=$MAKEINIT
 fi
 
@@ -889,7 +886,7 @@ ensinit_2 () {
 #echo
 
 mkinit=0
-if ((LOOP = 1)); then
+if ((loop == 1)); then
   mkinit=$MAKEINIT
 fi
 
@@ -948,7 +945,7 @@ ensfcst_1 () {
 #echo
 
 mkinit=0
-if ((LOOP = 1)); then
+if ((loop == 1)); then
   mkinit=$MAKEINIT
 fi
 
