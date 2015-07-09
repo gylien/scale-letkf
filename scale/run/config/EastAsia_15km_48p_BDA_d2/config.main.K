@@ -25,7 +25,7 @@ DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
 
-OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia" # directory of observation data in LETKF obs format
+OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia_test" # directory of observation data in LETKF obs format
 OBSNCEP=                                                 # directory of observation data in NCEP BUFR format
 
 #===============================================================================
@@ -64,17 +64,17 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=120       # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=600       # SCALE forecast time when assimilation window ends (second)
-LCYCLE=600         # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=120      # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=3600      # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=3600      # SCALE forecast time when assimilation window ends (second)
+LCYCLE=3600        # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
 
-MEMBER=100         # Ensemble size
+MEMBER=10          # Ensemble size
 
-NNODES=4242        # Number of nodes
+NNODES=462         # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -109,7 +109,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
+SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
                             #  0: No
                             #  1: Yes
 

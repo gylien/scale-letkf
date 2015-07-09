@@ -54,11 +54,6 @@ TIME="${1}"; shift
 LOOP="${1}"; shift
 ITER="${1:-0}"
 
-
-echo "###### $STEPFUNC $MYRANK $TIME $LOOP $ITER ######"
-
-
-
 #===============================================================================
 # Determine the distibution schemes
 
