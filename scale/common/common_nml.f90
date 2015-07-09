@@ -50,8 +50,9 @@ MODULE common_nml
                                           ! < 0: 3D inflation values input from a GPV file "infl_mul.grd"
   real(r_size) :: MIN_INFL_MUL = 0.0d0    ! minimum inlfation factor
   logical :: ADAPTIVE_INFL_INIT = .false.
-  real(r_size) :: RELAX_ALPHA = 0.0d0     ! relaxation parameter
-  real(r_size) :: SP_INFL_ADD = 0.0d0     ! additive inflation
+  real(r_size) :: RELAX_ALPHA = 0.0d0        ! RTPP relaxation parameter
+  real(r_size) :: RELAX_ALPHA_SPREAD = 0.0d0 ! RTPS relaxation parameter
+  real(r_size) :: SP_INFL_ADD = 0.0d0        ! additive inflation
 
   integer :: LEV_UPDATE_Q = 100000        ! q and qc are only updated below and equal to this model level
   real(r_size) :: Q_SPRD_MAX = 0.5        ! maximum q (ensemble spread)/(ensemble mean)
@@ -159,6 +160,7 @@ subroutine read_nml_letkf
     MIN_INFL_MUL, &
     ADAPTIVE_INFL_INIT, &
     RELAX_ALPHA, &
+    RELAX_ALPHA_SPREAD, &
     SP_INFL_ADD, &
     LEV_UPDATE_Q, &
     Q_SPRD_MAX

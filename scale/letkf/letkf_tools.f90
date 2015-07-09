@@ -82,8 +82,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !  REAL(r_size),ALLOCATABLE :: pfull(:,:)
   REAL(r_size) :: parm
   REAL(r_size) :: trans(MEMBER,MEMBER,nv3d+nv2d)
-  REAL(r_size) :: q_mean,q_sprd  ! GYL
-  REAL(r_size) :: q_anal(MEMBER)    ! GYL
+  REAL(r_size) :: anal_mean,anal_sprd,gues_sprd,rtps_parm  ! GYL
+  REAL(r_size) :: anal_pert(MEMBER)                        ! GYL
 !  LOGICAL :: ex
 !  INTEGER :: ij,ilev,n,m,i,j,k,nobsl,ierr,iret
   INTEGER :: ij,ilev,n,m,i,k,nobsl
@@ -199,7 +199,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ALLOCATE( hdxf(1:nobstotal,1:MEMBER),rdiag(1:nobstotal),rloc(1:nobstotal),dep(1:nobstotal) )
   DO ilev=1,nlev
     WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,m,k,q_mean,q_sprd,q_anal)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,m,k,anal_mean,anal_sprd,anal_pert,gues_sprd,rtps_parm)
     DO ij=1,nij1
 !WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
       DO n=1,nv3d
@@ -208,19 +208,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           work3d(ij,ilev,n) = work3d(ij,ilev,var_local_n2n(n))
         ELSE
           CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl)
-
-!if (nobsl > 0) write(6,'(A,4I10)') '$$$', ilev, ij, n, nobsl
-
           parm = work3d(ij,ilev,n)
-
-!if (nobsl > 0) write(6,*) hdxf(1,:)
-!if (nobsl > 0) write(6,*) rdiag(1),rloc(1),dep(1),parm,MIN_INFL_MUL,RELAX_ALPHA
-
-          CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,MIN_INFL_MUL,RELAX_ALPHA,trans(:,:,n))
+          CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,n),MIN_INFL_MUL,RELAX_ALPHA)
           work3d(ij,ilev,n) = parm
-
-!if (nobsl > 0) write(6,'(A,4I10,A)') '$$$', ilev, ij, n, nobsl,'--- finish'
-
         END IF
         IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) .AND. ilev > LEV_UPDATE_Q) THEN ! GYL, do not update upper-level q,qc
           anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)      ! GYL
@@ -230,32 +220,44 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             DO k=1,MEMBER
               anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
                 & + gues3d(ij,ilev,k,n) * trans(k,m,n)
-
-!if (n == 1 .and. ij == 32 .and. ilev == 3) then
-!  write(6,'(I4,2F16.6)') m, gues3d(ij,ilev,k,n), trans(k,m,n)
-!end if
-
             END DO
           END DO                                                             ! GYL
         END IF                                                               ! GYL
-        IF(n == iv3d_q .AND. ilev <= LEV_UPDATE_Q) THEN                      ! GYL, limit the lower-level q spread
-          q_mean = SUM(anal3d(ij,ilev,:,n)) / REAL(MEMBER,r_size)            ! GYL
-          q_sprd = 0.0d0                                                     ! GYL
+
+        IF(RELAX_ALPHA_SPREAD /= 0.0d0 .OR. (n == iv3d_q .AND. ilev <= LEV_UPDATE_Q)) THEN ! GYL, compute analysis mean and spread
+          anal_mean = SUM(anal3d(ij,ilev,:,n)) / REAL(MEMBER,r_size)         ! GYL
+          anal_sprd = 0.0d0                                                  ! GYL
           DO m=1,MEMBER                                                      ! GYL
-            q_anal(m) = anal3d(ij,ilev,m,n) - q_mean                         ! GYL
-            q_sprd = q_sprd + q_anal(m)**2                                   ! GYL
+            anal_pert(m) = anal3d(ij,ilev,m,n) - anal_mean                   ! GYL
+            anal_sprd = anal_sprd + anal_pert(m)**2                          ! GYL
           END DO                                                             ! GYL
-          q_sprd = SQRT(q_sprd / REAL(MEMBER-1,r_size)) / q_mean             ! GYL
-          IF(q_sprd > Q_SPRD_MAX) THEN                                       ! GYL
+          anal_sprd = SQRT(anal_sprd / REAL(MEMBER-1,r_size))                ! GYL
+        END IF                                                               ! GYL
+
+        rtps_parm = 1.0d0                                                    ! GYL, compute guess spread and the RTPS
+        IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                 ! GYL
+          gues_sprd = 0.0d0                                                  ! GYL
+          DO m=1,MEMBER                                                      ! GYL
+            gues_sprd = gues_sprd + gues3d(ij,ilev,m,n)**2                   ! GYL
+          END DO                                                             ! GYL
+          gues_sprd = SQRT(gues_sprd / REAL(MEMBER-1,r_size))                ! GYL
+          rtps_parm = RELAX_ALPHA_SPREAD * (gues_sprd - anal_sprd) / anal_sprd + 1.0d0 ! GYL
+          DO m=1,MEMBER                                                      ! GYL
+            anal3d(ij,ilev,m,n) = anal_mean + anal_pert(m) * rtps_parm       ! GYL
+          END DO                                                             ! GYL
+        END IF                                                               ! GYL
+
+        IF(n == iv3d_q .AND. ilev <= LEV_UPDATE_Q) THEN                      ! GYL, limit the lower-level q spread
+          IF(anal_sprd * rtps_parm / anal_mean > Q_SPRD_MAX) THEN            ! GYL
             DO m=1,MEMBER                                                    ! GYL
-              anal3d(ij,ilev,m,n) = q_mean + q_anal(m) * Q_SPRD_MAX / q_sprd ! GYL
+              anal3d(ij,ilev,m,n) = anal_mean + anal_pert(m) * anal_mean * Q_SPRD_MAX / anal_sprd ! GYL
             END DO                                                           ! GYL
           END IF                                                             ! GYL
-        END IF
+        END IF                                                               ! GYL
       END DO ! [ n=1,nv3d ]
       IF(ilev == 1) THEN !update 2d variable at ilev=1
         DO n=1,nv2d
-          IF(var_local_n2n(nv3d+n) < nv3d+n) THEN                  ! GYL
+          IF(var_local_n2n(nv3d+n) < nv3d+n) THEN                  ! GYL, correct the bug of the 2d variable update
             trans(:,:,nv3d+n) = trans(:,:,var_local_n2n(nv3d+n))
             IF(var_local_n2n(nv3d+n) <= nv3d) THEN                 ! GYL
               work2d(ij,n) = work3d(ij,ilev,var_local_n2n(nv3d+n)) ! GYL
@@ -264,11 +266,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             END IF                                                 ! GYL
           ELSE
             CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl)
-
-!write(6,'(A,3I10)') '$$$===', ij, n, nobsl
-
             parm = work2d(ij,n)
-            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,MIN_INFL_MUL,RELAX_ALPHA,trans(:,:,nv3d+n))
+            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,nv3d+n),MIN_INFL_MUL,RELAX_ALPHA)
             work2d(ij,n) = parm
           END IF
           DO m=1,MEMBER
@@ -277,6 +276,25 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
               anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,k,n) * trans(k,m,nv3d+n)
             END DO
           END DO
+
+          IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                            ! GYL, compute analysis mean and spread
+            anal_mean = SUM(anal2d(ij,:,n)) / REAL(MEMBER,r_size)         ! GYL
+            anal_sprd = 0.0d0                                             ! GYL
+            DO m=1,MEMBER                                                 ! GYL
+              anal_pert(m) = anal2d(ij,m,n) - anal_mean                   ! GYL
+              anal_sprd = anal_sprd + anal_pert(m)**2                     ! GYL
+            END DO                                                        ! GYL
+            anal_sprd = SQRT(anal_sprd / REAL(MEMBER-1,r_size))           ! GYL
+            gues_sprd = 0.0d0                                             ! GYL, compute guess spread and the RTPS
+            DO m=1,MEMBER                                                 ! GYL
+              gues_sprd = gues_sprd + gues2d(ij,m,n)**2                   ! GYL
+            END DO                                                        ! GYL
+            gues_sprd = SQRT(gues_sprd / REAL(MEMBER-1,r_size))           ! GYL
+            rtps_parm = RELAX_ALPHA_SPREAD * (gues_sprd - anal_sprd) / anal_sprd + 1.0d0 ! GYL
+            DO m=1,MEMBER                                                 ! GYL
+              anal2d(ij,m,n) = anal_mean + anal_pert(m) * rtps_parm       ! GYL
+            END DO                                                        ! GYL
+          END IF                                                          ! GYL
         END DO
       END IF ! [ ilev == 1 ]
     END DO ! [ ij=1,nij1 ]
@@ -524,7 +542,7 @@ END SUBROUTINE das_letkf
 !    ! LETKF computation
 !    !
 !    CALL obs_local(obslon(nn),obslat(nn),rlev,n,hdxf,rdiag,rloc,dep,nobsl)
-!    CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,MIN_INFL_MUL,RELAX_ALPHA,trans)
+!    CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans,MIN_INFL_MUL,RELAX_ALPHA)
 
 !    IF(n == iv3d_q .OR. n == iv3d_qc) THEN
 !      CALL itpl_2d(v3dinflx(:,:,LEV_UPDATE_Q,iv3d_p),ri,rj,p_update_q)

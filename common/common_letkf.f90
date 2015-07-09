@@ -35,12 +35,13 @@ CONTAINS
 !     rloc(nobs)       : localization weighting function
 !     dep(nobs)        : observation departure (yo-Hxb)
 !     parm_infl        : covariance inflation parameter
-!     min_infl         : minimum covariance inflation parameter               !GYL
-!     relax_alpha      : covariance relaxation parameter                      !GYL
+!     min_infl         : (optional) minimum covariance inflation parameter    !GYL
+!     relax_alpha      : (optional) covariance relaxation parameter           !GYL
 !   OUTPUT
-!     trans(nbv,nbv) : transformation matrix
+!     parm_infl        : updated covariance inflation parameter
+!     trans(nbv,nbv)   : transformation matrix
 !=======================================================================
-SUBROUTINE letkf_core(nbv,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,min_infl,relax_alpha,trans)
+SUBROUTINE letkf_core(nbv,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans,min_infl,relax_alpha)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: nbv                  !GYL
   INTEGER,INTENT(IN) :: nobs
@@ -50,9 +51,9 @@ SUBROUTINE letkf_core(nbv,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,min_infl,rela
   REAL(r_size),INTENT(IN) :: rloc(1:nobs)
   REAL(r_size),INTENT(IN) :: dep(1:nobs)
   REAL(r_size),INTENT(INOUT) :: parm_infl
-  REAL(r_size),INTENT(IN) :: min_infl        !GYL
-  REAL(r_size),INTENT(IN) :: relax_alpha     !GYL
   REAL(r_size),INTENT(OUT) :: trans(nbv,nbv)
+  REAL(r_size),INTENT(IN),OPTIONAL :: min_infl        !GYL
+  REAL(r_size),INTENT(IN),OPTIONAL :: relax_alpha     !GYL
 
   REAL(r_size) :: hdxb_rinv(nobsl,nbv)
   REAL(r_size) :: eivec(nbv,nbv)
@@ -96,9 +97,11 @@ SUBROUTINE letkf_core(nbv,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,min_infl,rela
 !-----------------------------------------------------------------------
 !  hdxb^T Rinv hdxb + (m-1) I / rho (covariance inflation)
 !-----------------------------------------------------------------------
-  IF (min_infl /= 0.0d0 .AND. parm_infl < min_infl) THEN !GYL
-    parm_infl = min_infl                                 !GYL
-  END IF                                                 !GYL
+  IF (PRESENT(min_infl)) THEN                              !GYL
+    IF (min_infl /= 0.0d0 .AND. parm_infl < min_infl) THEN !GYL
+      parm_infl = min_infl                                 !GYL
+    END IF                                                 !GYL
+  END IF                                                   !GYL
   rho = 1.0d0 / parm_infl
   DO i=1,nbv
     work1(i,i) = work1(i,i) + REAL(nbv-1,r_size) * rho
@@ -169,12 +172,14 @@ SUBROUTINE letkf_core(nbv,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,min_infl,rela
 !-----------------------------------------------------------------------
 !  T + Pa hdxb_rinv^T dep
 !-----------------------------------------------------------------------
-  IF (relax_alpha /= 0.0d0) THEN            !GYL
-    trans = (1.0d0 - relax_alpha) * trans   !GYL
-    DO i=1,nbv                              !GYL
-      trans(i,i) = relax_alpha + trans(i,i) !GYL
-    END DO                                  !GYL
-  END IF                                    !GYL
+  IF (PRESENT(relax_alpha)) THEN              !GYL
+    IF (relax_alpha /= 0.0d0) THEN            !GYL
+      trans = (1.0d0 - relax_alpha) * trans   !GYL
+      DO i=1,nbv                              !GYL
+        trans(i,i) = relax_alpha + trans(i,i) !GYL
+      END DO                                  !GYL
+    END IF                                    !GYL
+  END IF                                      !GYL
   DO j=1,nbv
     DO i=1,nbv
       trans(i,j) = trans(i,j) + work3(i)
