@@ -31,11 +31,11 @@ OBSNCEP=                                                 # directory of observat
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='DEM50M'    # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='LU100M' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -67,14 +67,14 @@ OBSNAME[2]=radar
 WINDOW_S=3600      # SCALE forecast time when assimilation window starts (second)
 WINDOW_E=3600      # SCALE forecast time when assimilation window ends (second)
 LCYCLE=3600        # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
+LTIMESLOT=600      # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
 
-MEMBER=10          # Ensemble size
+MEMBER=100         # Ensemble size
 
-NNODES=462         # Number of nodes
+NNODES=4242        # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process

@@ -125,11 +125,13 @@
 /
 
 &PARAM_MAPPROJ
- MPRJ_basepoint_lon = 134.27D0,
- MPRJ_basepoint_lat =  35.03D0,
+ MPRJ_basepoint_lon = 140.00D0,
+ MPRJ_basepoint_lat =  30.00D0,
+ MPRJ_basepoint_x   =  850000.0D0,
+ MPRJ_basepoint_y   = -300000.0D0,
  MPRJ_type          = 'LC',
- MPRJ_LC_lat1       =  33.5D0,
- MPRJ_LC_lat2       =  36.5D0,
+ MPRJ_LC_lat1       =  30.0D0,
+ MPRJ_LC_lat2       =  60.0D0,
 /
 
 #################################################
