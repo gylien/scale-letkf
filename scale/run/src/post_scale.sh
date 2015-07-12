@@ -14,7 +14,7 @@ if (($# < 8)); then
 
 [post_scale.sh] Post-process the SCALE model outputs.
 
-Usage: $0 MYRANK MEM_NP STIME MEM FCSTLEN LOG_OPT TMPDIR
+Usage: $0 MYRANK MEM_NP STIME MEM FCSTLEN TMPDIR LOG_OPT SCPCALL
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member (not used !!!)

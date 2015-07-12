@@ -272,7 +272,6 @@ distribute_da_cycle () {
 # Output files:
 #   [$TMP/node/proc]       All processes
 #   [$TMP/node/node]       One process per node
-#   [$TMP/node/proc.MMMM]  Processes for each member
 #-------------------------------------------------------------------------------
 
 local NODEFILE=${1:-machinefile}; shift
@@ -400,7 +399,6 @@ distribute_da_cycle_set () {
 # Output files:
 #   [$TMP/node/proc]       All processes
 #   [$TMP/node/node]       One process per node
-#   [$TMP/node/proc.MMMM]  Processes for each member
 #-------------------------------------------------------------------------------
 
 local NODEFILE=${1:-machinefile}; shift
@@ -686,7 +684,6 @@ distribute_fcst () {
 # Output files:
 #   [$TMP/node/proc]            All processes
 #   [$TMP/node/node]            One process per node
-#   [$TMP/node/proc.CCCC.MMMM]  Processes for each member
 #-------------------------------------------------------------------------------
 
 if (($# < 1)); then
