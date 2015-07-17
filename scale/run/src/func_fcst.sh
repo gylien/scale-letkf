@@ -877,9 +877,9 @@ for it in $(seq $its $ite); do
     fi
     if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       if ((BDY_ENS == 1)); then
-        echo "  [Pre-processing  script] ${stimesfmt[$c]}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+        echo "  [Post-processing script] ${stimesfmt[$c]}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
       else
-        echo "  [Pre-processing  script] ${stimesfmt[$c]}, node ${node_m[$m]} [$(datetime_now)]"
+        echo "  [Post-processing script] ${stimesfmt[$c]}, node ${node_m[$m]} [$(datetime_now)]"
       fi
     fi
 

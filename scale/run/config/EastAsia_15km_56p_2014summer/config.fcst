@@ -7,14 +7,14 @@
 
 STIME='20140531000000'
 ETIME='20140531000000'
-MEMBERS='all'
+MEMBERS='3 5 12 30'
 CYCLE=1
 CYCLE_SKIP=1
 IF_VERF=0
 IF_EFSO=0
 ISTEP=
 FSTEP=
-TIME_LIMIT='01:10:00'
+TIME_LIMIT='01:45:00'
 
 #===============================================================================
 # Forecast settings
