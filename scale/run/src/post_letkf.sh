@@ -63,8 +63,8 @@ else
 fi
 
 if ((MYRANK < MEM_NP)); then
-  mkdir -p $TMPOUT/${ATIME}/log/letkf
   if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
+    mkdir -p $TMPOUT/${ATIME}/log/letkf
     mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${ATIME}/log/letkf
   fi
 fi

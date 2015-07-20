@@ -108,8 +108,8 @@ fi
 ######
 
 if ((MYRANK < MEM_NP)); then
-  mkdir -p $TMPOUT/${STIME}/log/scale
   if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
+    mkdir -p $TMPOUT/${STIME}/log/scale
     mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${STIME}/log/scale
   fi
 fi
