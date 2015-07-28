@@ -74,11 +74,6 @@ PPN_real=$PPN
 NNODES=$((NNODES*PPN))
 PPN=1
 
-if ((ENABLE_SET == 1)); then          ##
-  NNODES_real_all=$((NNODES_real*3))  ##
-  NNODES_all=$((NNODES*3))            ##
-fi                                    ##
-
 declare -a procs
 declare -a mem2node
 declare -a node
@@ -86,11 +81,7 @@ declare -a name_m
 declare -a node_m
 
 safe_init_tmpdir $NODEFILE_DIR
-if ((ENABLE_SET == 1)); then               ##
-  distribute_da_cycle_set - $NODEFILE_DIR  ##
-else                                       ##
-  distribute_da_cycle - $NODEFILE_DIR
-fi                                         ##
+distribute_da_cycle - $NODEFILE_DIR
 
 #===============================================================================
 # Determine the staging list and then stage in
@@ -108,7 +99,6 @@ cp -L -r $SCRP_DIR/config.main $TMP/config.main
 cp -L -r $SCRP_DIR/config.rc $TMP/config.rc
 cp -L -r $SCRP_DIR/config.${myname1} $TMP/config.${myname1}
 cp -L -r $SCRP_DIR/${myname1}.sh $TMP/${myname1}.sh
-cp -L -r $SCRP_DIR/${myname1}_step.sh $TMP/${myname1}_step.sh
 mkdir -p $TMP/src
 cp -L -r $SCRP_DIR/src/* $TMP/src
 
@@ -119,14 +109,6 @@ echo "NNODES=$NNODES" >> $TMP/config.main
 echo "PPN=$PPN" >> $TMP/config.main
 echo "NNODES_real=$NNODES_real" >> $TMP/config.main
 echo "PPN_real=$PPN_real" >> $TMP/config.main
-
-if ((ENABLE_SET == 1)); then                                    ##
-  echo "NNODES_all=$NNODES_all" >> $TMPS/config.main            ##
-  echo "NNODES_real_all=$NNODES_real_all" >> $TMPS/config.main  ##
-                                                                ##
-  NNODES=$NNODES_all                                            ##
-  NNODES_real=$NNODES_real_all                                  ##
-fi                                                              ##
 
 #===============================================================================
 # Creat a job script

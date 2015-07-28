@@ -14,15 +14,13 @@ if (($# < 12)); then
 
 [pre_scale_init.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM_NP TOPO LANDUSE BDYORG STIME FCSTLEN MKINIT MEM TMPDIR EXECDIR DATADIR [STARTFRAME]
+Usage: $0 MYRANK MEM_NP TOPO LANDUSE WRFOUT STIME FCSTLEN MKINIT MEM TMPDIR EXECDIR DATADIR
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member
   TOPO     Basename of SCALE topography files
   LANDUSE  Basename of SCALE land use files
-  BDYORG   Path of the source boundary files
-           SCALE history: XXX
-           WRF: Basename of WRF files
+  WRFOUT   Basename of WRF files
   STIME    Start time (format: YYYYMMDDHHMMSS)
   FCSTLEN  Forecast length (second)
   MKINIT   Make initial condition as well?
@@ -32,7 +30,6 @@ Usage: $0 MYRANK MEM_NP TOPO LANDUSE BDYORG STIME FCSTLEN MKINIT MEM TMPDIR EXEC
   TMPDIR   Temporary directory to run scale-les_init
   EXECDIR  Directory of SCALE executable files
   DATADIR  Directory of SCALE data files
-  STARTFRAME
 
 EOF
   exit 1
@@ -42,15 +39,14 @@ MYRANK="$1"; shift
 MEM_NP="$1"; shift
 TOPO="$1"; shift
 LANDUSE="$1"; shift
-BDYORG="$1"; shift
+WRFOUT="$1"; shift
 STIME="$1"; shift
 FCSTLEN="$1"; shift
 MKINIT="$1"; shift
 MEM="$1"; shift
 TMPDIR="$1"; shift
 EXECDIR="$1"; shift
-DATADIR="$1"; shift
-STARTFRAME="$1"
+DATADIR="$1"
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
@@ -64,7 +60,17 @@ S_SS=${STIME:12:2}
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
 
-TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
+ln -fs $EXECDIR/scale-les_init $TMPDIR
+
+ln -fs $DATADIR/rad/PARAG.29 $TMPDIR
+ln -fs $DATADIR/rad/PARAPC.29 $TMPDIR
+ln -fs $DATADIR/rad/VARDATA.RM29 $TMPDIR
+ln -fs $DATADIR/rad/cira.nc $TMPDIR
+ln -fs $DATADIR/rad/MIPAS/day.atm $TMPDIR
+ln -fs $DATADIR/rad/MIPAS/equ.atm $TMPDIR
+ln -fs $DATADIR/rad/MIPAS/sum.atm $TMPDIR
+ln -fs $DATADIR/rad/MIPAS/win.atm $TMPDIR
+ln -fs $DATADIR/land/param.bucket.conf $TMPDIR
 
 ln -fs ${TOPO}*.nc $TMPDIR
 ln -fs ${LANDUSE}*.nc $TMPDIR
@@ -84,60 +90,34 @@ if ((MKINIT == 1 || (OCEAN_INPUT == 1 && OCEAN_FORMAT == 99))); then
   RESTART_OUTPUT='.true.'
 fi
 
-if ((BDY_FORMAT == 1)); then
-  if [ ! -s "${BDYORG}.pe000000.nc" ]; then
-    echo "[Error] $0: Cannot find source boundary file '${BDYORG}.pe000000.nc'."
+i=0
+time=$STIME
+etime_bdy=$(datetime $STIME $((FCSTLEN+BDYINT)) s)
+while ((time < etime_bdy)); do
+  if ((BDY_ENS == 1)); then
+    wrfoutfile="$TMPOUT/bdywrf/${MEM}/wrfout_${time}"
+  else
+    wrfoutfile="$TMPOUT/bdywrf/mean/wrfout_${time}"
+  fi
+  if [ ! -s "$wrfoutfile" ]; then
+    echo "[Error] $0: Cannot find WRFOUT file '$wrfoutfile'."
     exit 1
   fi
-  ln -fs ${BDYORG}*.nc $TMPDIR
-#  NUMBER_OF_FILES=$(((FCSTLEN-1)/BDYINT+2))
-  NUMBER_OF_FILES=$(((FCSTLEN-1)/BDYINT+1+STARTFRAME))
 
-  BASENAME_ORG="${TMPSUBDIR}\/history"
-  FILETYPE_ORG='SCALE-LES'
-  USE_NESTING='.true.'
-  OFFLINE='.true.'
-elif ((BDY_FORMAT == 2)); then
-  i=0
-  time=$STIME
-  etime_bdy=$(datetime $STIME $((FCSTLEN+BDYINT)) s)
-  while ((time < etime_bdy)); do
-    if [ -s "${BDYORG}_${time}" ]; then
-      ln -fs "${BDYORG}_${time}" $TMPDIR/wrfout_$(printf %05d $i)
-    else
-      echo "[Error] $0: Cannot find source boundary file '${BDYORG}_${time}'."
-      exit 1
-    fi
-    i=$((i+1))
-    time=$(datetime $time $BDYINT s)
-  done
-  NUMBER_OF_FILES=$i
+  ln -fs $TMPOUT/bdywrf/${MEM}/wrfout_${time} $TMPDIR/wrfout_$(printf %05d $i)
 
-  BASENAME_ORG="${TMPSUBDIR}\/wrfout"
-  FILETYPE_ORG='WRF-ARW'
-  USE_NESTING='.false.'
-  OFFLINE='.true.'
-else
-  echo "[Error] $0: Unsupport boundary file types" >&2
-  exit 1
-fi
+  i=$((i+1))
+  time=$(datetime $time $BDYINT s)
+done
+NUMBER_OF_FILES=$i
 
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_init | \
-    sed -e "s/\[IO_LOG_BASENAME\]/ IO_LOG_BASENAME = \"${TMPSUBDIR}\/init_LOG\",/" \
-        -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
+    sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
         -e "s/\[RESTART_OUTPUT\]/ RESTART_OUTPUT = $RESTART_OUTPUT,/" \
-        -e "s/\[RESTART_OUT_BASENAME\]/ RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/init\",/" \
-        -e "s/\[TOPO_IN_BASENAME\]/ TOPO_IN_BASENAME = \"${TMPSUBDIR}\/topo\",/" \
-        -e "s/\[LANDUSE_IN_BASENAME\]/ LANDUSE_IN_BASENAME = \"${TMPSUBDIR}\/landuse\",/" \
-        -e "s/\[BASENAME_BOUNDARY\]/ BASENAME_BOUNDARY = \"${TMPSUBDIR}\/boundary\",/" \
-        -e "s/\[BASENAME_ORG\]/ BASENAME_ORG = \"${BASENAME_ORG}\",/" \
-        -e "s/\[FILETYPE_ORG\]/ FILETYPE_ORG = \"${FILETYPE_ORG}\",/" \
         -e "s/\[NUMBER_OF_FILES\]/ NUMBER_OF_FILES = $NUMBER_OF_FILES,/" \
         -e "s/\[BOUNDARY_UPDATE_DT\]/ BOUNDARY_UPDATE_DT = $BDYINT.D0,/" \
-        -e "s/\[USE_NESTING\]/ USE_NESTING = $USE_NESTING,/" \
-        -e "s/\[OFFLINE\]/ OFFLINE = $OFFLINE,/" \
     > $TMPDIR/init.conf
 
 #===============================================================================

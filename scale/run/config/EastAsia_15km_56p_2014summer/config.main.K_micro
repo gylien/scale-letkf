@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_2014summer/ctl" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_2014summer/ctl_RTPP_no_mulinfl_small_old" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -72,9 +72,9 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=100         # Ensemble size
+MEMBER=3           # Ensemble size
 
-NNODES=2856        # Number of nodes
+NNODES=224         # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -113,8 +113,8 @@ SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory ins
                             #  0: No
                             #  1: Yes
 
-SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
-TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
+SYSNAME="$(basename $OUTDIR)"              # A unique name in the machine
+TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
 TMP="/scratch/hp150019/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
