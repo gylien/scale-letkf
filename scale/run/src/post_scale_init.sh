@@ -63,14 +63,20 @@ if ((LOG_OPT <= 2)); then
   fi
 fi
 
-if [ "$MEM" == '0001' ] || [ "$MEM" == 'mean' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
-  mkdir -p $TMPOUT/${STIME}/log/scale_init
-  for q in $(seq $MEM_NP); do
-    if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
-      mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${STIME}/log/scale_init
-    fi
-  done
+if ((MYRANK < MEM_NP)); then
+  if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
+    mkdir -p $TMPOUT/${STIME}/log/scale_init
+    mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${STIME}/log/scale_init
+  fi
 fi
+#if [ "$MEM" == '0001' ] || [ "$MEM" == 'mean' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
+#  mkdir -p $TMPOUT/${STIME}/log/scale_init
+#  for q in $(seq $MEM_NP); do
+#    if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
+#      mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${STIME}/log/scale_init
+#    fi
+#  done
+#fi
 
 #===============================================================================
 

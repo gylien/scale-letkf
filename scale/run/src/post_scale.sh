@@ -14,7 +14,7 @@ if (($# < 8)); then
 
 [post_scale.sh] Post-process the SCALE model outputs.
 
-Usage: $0 MYRANK MEM_NP STIME MEM FCSTLEN LOG_OPT TMPDIR
+Usage: $0 MYRANK MEM_NP STIME MEM FCSTLEN TMPDIR LOG_OPT SCPCALL
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member (not used !!!)
@@ -107,14 +107,20 @@ if ((MYRANK == 0)); then
 fi
 ######
 
-if [ "$MEM" == '0001' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
-  mkdir -p $TMPOUT/${STIME}/log/scale
-  for q in $(seq $MEM_NP); do
-    if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
-      mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${STIME}/log/scale
-    fi
-  done
+if ((MYRANK < MEM_NP)); then
+  if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
+    mkdir -p $TMPOUT/${STIME}/log/scale
+    mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${STIME}/log/scale
+  fi
 fi
+#if [ "$MEM" == '0001' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
+#  mkdir -p $TMPOUT/${STIME}/log/scale
+#  for q in $(seq $MEM_NP); do
+#    if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
+#      mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${STIME}/log/scale
+#    fi
+#  done
+#fi
 
 #===============================================================================
 

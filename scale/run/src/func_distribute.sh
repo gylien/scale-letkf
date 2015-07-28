@@ -272,7 +272,6 @@ distribute_da_cycle () {
 # Output files:
 #   [$TMP/node/proc]       All processes
 #   [$TMP/node/node]       One process per node
-#   [$TMP/node/proc.MMMM]  Processes for each member
 #-------------------------------------------------------------------------------
 
 local NODEFILE=${1:-machinefile}; shift
@@ -400,7 +399,6 @@ distribute_da_cycle_set () {
 # Output files:
 #   [$TMP/node/proc]       All processes
 #   [$TMP/node/node]       One process per node
-#   [$TMP/node/proc.MMMM]  Processes for each member
 #-------------------------------------------------------------------------------
 
 local NODEFILE=${1:-machinefile}; shift
@@ -686,7 +684,6 @@ distribute_fcst () {
 # Output files:
 #   [$TMP/node/proc]            All processes
 #   [$TMP/node/node]            One process per node
-#   [$TMP/node/proc.CCCC.MMMM]  Processes for each member
 #-------------------------------------------------------------------------------
 
 if (($# < 1)); then
@@ -697,8 +694,16 @@ fi
 local MEMBERS="$1"; shift
 local CYCLE=${1:-1}; shift
 local NODEFILE=${1:-machinefile}; shift
-local NODEFILEDIR=${1:-'-'}
+local NODEFILEDIR=${1:-'-'}; shift
+local DISTR_FILE=${1:-'-'}
 
+if [ "$DISTR_FILE" != '-' ]; then
+  if [ -z "$DISTR_FILE" ]; then
+    echo "[Error] Cannot find \$DISTR_FILE: '$DISTR_FILE'." >&2
+    exit 1
+  fi
+  . $DISTR_FILE
+fi
 #-------------------------------------------------------------------------------
 # Set up node names and member names, and also get the number of members
 
@@ -707,11 +712,14 @@ if ((MACHINE_TYPE == 1)); then
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
   local n
   local p
-  for n in $(seq $NNODES_real); do
-    for p in $(seq $PPN_real); do
-      node[$(((n-1)*PPN_real+p))]="($((n-1)))"
+  if [ "$DISTR_FILE" = '-' ]; then
+    for n in $(seq $NNODES_real); do
+      for p in $(seq $PPN_real); do
+        node[$(((n-1)*PPN_real+p))]="($((n-1)))"
+        echo "node[$(((n-1)*PPN_real+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
+      done
     done
-  done
+  fi # [ "$DISTR_FILE" = '-' ]
 else
   echo "[Error] Unsupported \$MACHINE_TYPE." >&2
   exit 1

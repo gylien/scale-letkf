@@ -23,7 +23,6 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
-#myname=$(basename "$0")
 myname='cycle.sh'
 myname1=${myname%.*}
 
@@ -56,8 +55,6 @@ if ((USE_RANKDIR == 1)); then
   fi
 fi
 
-#ls -lR
-
 setting "$1" "$2" "$3" "$4"
 
 #-------------------------------------------------------------------------------
@@ -89,11 +86,14 @@ fi
 #===============================================================================
 # Determine the distibution schemes
 
-declare -a procs
-declare -a mem2node
 declare -a node
-declare -a name_m
 declare -a node_m
+declare -a name_m
+declare -a mem2node
+declare -a mem2proc
+declare -a proc2node
+declare -a proc2group
+declare -a proc2grpproc
 
 #if ((BUILTIN_STAGING && ISTEP == 1)); then
 if ((BUILTIN_STAGING)); then
@@ -120,9 +120,9 @@ fi
 # Run initialization scripts on all nodes
 
 if ((TMPRUN_MODE <= 2)); then
-  pdbash node one $SCRP_DIR/src/init_all_node.sh $TMPDAT $TMPRUN
+  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1
 else
-  pdbash node all $SCRP_DIR/src/init_all_node.sh $TMPDAT $TMPRUN
+  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1
 fi
 
 #===============================================================================
@@ -162,7 +162,6 @@ while ((time <= ETIME)); do
   done
   echo " +----------------------------------------------------------------+"
   echo
-  echo "  Number of cycles:         $rcycle"
   echo "  Start time:               ${timefmt}"
   echo "  Forecast length:          $CYCLEFLEN s"
   echo "  Assimilation window:      $WINDOW_S - $WINDOW_E s ($((WINDOW_E-WINDOW_S)) s)"
@@ -252,19 +251,19 @@ while ((time <= ETIME)); do
         for it in $(seq $nitmax); do
           if ((USE_RANKDIR == 1)); then
             mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
-                    "$(rev_path ${stepexecdir[$s]})/cycle_step.sh" "$time" $loop $it # > /dev/null
+                    "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" $loop $it # > /dev/null
           else
             mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
-                    "$SCRP_DIR/cycle_step.sh" "$time" $loop $it # > /dev/null
+                    "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it # > /dev/null
           fi
         done
       else
         if ((USE_RANKDIR == 1)); then
           mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
-                  "$(rev_path ${stepexecdir[$s]})/cycle_step.sh" "$time" "$loop" # > /dev/null
+                  "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" "$loop" # > /dev/null
         else
           mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
-                  "$SCRP_DIR/cycle_step.sh" "$time" "$loop" # > /dev/null
+                  "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" # > /dev/null
         fi
       fi
 

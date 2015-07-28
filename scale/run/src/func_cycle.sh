@@ -321,13 +321,6 @@ else
     if ((SIMPLE_STGOUT == 1)); then
     #++++++
 
-#      # bdy
-#      #-------------------
-#      if ((BDYOUT_OPT <= 1)); then
-#        path="${time}/bdy"
-#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-#      fi
-
       if ((loop == 1)) && ((MAKEINIT == 1)); then
         path="${time}/anal"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
@@ -683,13 +676,15 @@ enspp_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-MEMBER_RUN=0
-
 if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
   echo "  ... skip this step (use prepared topo and landuse files)"
+  exit 1
 elif ((BDY_FORMAT == 0)); then
   echo "  ... skip this step (use prepared boundaries)"
-elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+  exit 1
+fi
+
+if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
@@ -699,8 +694,6 @@ if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_pp_node.sh $MYRANK \
        $mem_nodes $mem_np $TMPRUN/scale_pp $TMPDAT/exec $TMPDAT $MEMBER_RUN $iter
 fi
-
-((MEMBER_RUN == 0)) && exit 1
 
 for it in $(seq $its $ite); do
   g=${proc2group[$((MYRANK+1))]}
@@ -729,13 +722,13 @@ enspp_2 () {
 #echo "* Post-processing scripts"
 #echo
 
-MEMBER_RUN=0
-
 if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
   return 1
 elif ((BDY_FORMAT == 0)); then
   return 1
-elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+fi
+
+if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
@@ -768,12 +761,10 @@ ensinit_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-mkinit=0
-if ((loop == 1)); then
-  mkinit=$MAKEINIT
-fi
-
-if ((BDY_FORMAT == 1)); then
+if ((BDY_FORMAT == 0)); then
+  echo "  ... skip this step (use prepared boundaries)"
+  exit 1
+elif ((BDY_FORMAT == 1)); then
   if ((DATA_BDY_TMPLOC == 1)); then
     bdyscale_loc=$TMPDAT/bdyscale
   elif ((DATA_BDY_TMPLOC == 2)); then
@@ -797,11 +788,7 @@ elif ((BDY_FORMAT == 2)); then
   fi
 fi
 
-MEMBER_RUN=0
-
-if ((BDY_FORMAT == 0)); then
-  echo "  ... skip this step (use prepared boundaries)"
-elif ((BDY_ENS == 1)); then
+if ((BDY_ENS == 1)); then
   MEMBER_RUN=$mmean
 elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
@@ -809,12 +796,15 @@ else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
 fi
 
+mkinit=0
+if ((loop == 1)); then
+  mkinit=$MAKEINIT
+fi
+
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_init_node.sh $MYRANK \
        $mem_nodes $mem_np $TMPRUN/scale_init $TMPDAT/exec $TMPDAT $MEMBER_RUN $iter
 fi
-
-((MEMBER_RUN == 0)) && exit 1
 
 for it in $(seq $its $ite); do
   g=${proc2group[$((MYRANK+1))]}
@@ -885,21 +875,21 @@ ensinit_2 () {
 #echo "* Post-processing scripts"
 #echo
 
-mkinit=0
-if ((loop == 1)); then
-  mkinit=$MAKEINIT
-fi
-
-MEMBER_RUN=0
-
 if ((BDY_FORMAT == 0)); then
   return 1
-elif ((BDY_ENS == 1)); then
+fi
+
+if ((BDY_ENS == 1)); then
   MEMBER_RUN=$mmean
 elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
+fi
+
+mkinit=0
+if ((loop == 1)); then
+  mkinit=$MAKEINIT
 fi
 
 for it in $(seq $its $ite); do
@@ -908,16 +898,14 @@ for it in $(seq $its $ite); do
   if ((m >= 1 && m <= MEMBER_RUN)); then
     if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
       if ((BDY_ENS == 1)); then
-        echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
+        echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
       else
-        echo "  [Pre-processing  script] node ${node_m[$m]} [$(datetime_now)]"
+        echo "  [Post-processing script] node ${node_m[$m]} [$(datetime_now)]"
       fi
     fi
 
     if (pdrun $g $PROC_OPT); then
-#      if ((BDY_FORMAT == 1)); then
-#        ...
-#      elif ((BDY_FORMAT == 2)); then
+#      if ((BDY_FORMAT == 1 || BDY_FORMAT == 2)); then
         if ((BDY_ENS == 1)); then
           bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
                $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
@@ -944,11 +932,6 @@ ensfcst_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-mkinit=0
-if ((loop == 1)); then
-  mkinit=$MAKEINIT
-fi
-
 ############
 if ((BDY_FORMAT == 1)); then
   if ((DATA_BDY_TMPLOC == 1)); then
@@ -973,6 +956,11 @@ fi
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
        $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT $((MEMBER+1)) $iter
+fi
+
+mkinit=0
+if ((loop == 1)); then
+  mkinit=$MAKEINIT
 fi
 
 ocean_base='-'

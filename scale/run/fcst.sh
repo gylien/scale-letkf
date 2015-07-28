@@ -22,7 +22,7 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname=$(basename "$0")
+myname='fcst.sh'
 myname1=${myname%.*}
 
 #===============================================================================
@@ -40,9 +40,21 @@ res=$? && ((res != 0)) && exit $res
 
 #-------------------------------------------------------------------------------
 
-setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}"
+if ((USE_RANKDIR == 1)); then
+  SCRP_DIR="."
+  if ((TMPDAT_MODE <= 2)); then
+    TMPDAT="../dat"
+  else
+    TMPDAT="./dat"
+  fi
+  if ((TMPRUN_MODE <= 2)); then
+    TMPRUN="../run"
+  else
+    TMPRUN="./run"
+  fi
+fi
 
-builtin_staging=$((MACHINE_TYPE != 10 && MACHINE_TYPE != 11))
+setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9"
 
 #-------------------------------------------------------------------------------
 
@@ -61,7 +73,7 @@ done
 
 #-------------------------------------------------------------------------------
 
-if ((builtin_staging)); then
+if ((BUILTIN_STAGING && ISTEP == 1)); then
   if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
     safe_init_tmpdir $TMP
   fi
@@ -73,17 +85,21 @@ fi
 #===============================================================================
 # Determine the distibution schemes
 
-declare -a procs
-declare -a mem2node
 declare -a node
-declare -a name_m
 declare -a node_m
+declare -a name_m
+declare -a mem2node
+declare -a mem2proc
+declare -a proc2node
+declare -a proc2group
+declare -a proc2grpproc
 
-if ((builtin_staging)); then
+#if ((BUILTIN_STAGING && ISTEP == 1)); then
+if ((BUILTIN_STAGING)); then
   safe_init_tmpdir $NODEFILE_DIR
   distribute_fcst "$MEMBERS" $CYCLE machinefile $NODEFILE_DIR
 else
-  distribute_fcst "$MEMBERS" $CYCLE - -
+  distribute_fcst "$MEMBERS" $CYCLE - - $NODEFILE_DIR/distr
 fi
 
 #===============================================================================
@@ -97,6 +113,15 @@ if ((builtin_staging)); then
   if ((TMPDAT_MODE >= 2 || TMPOUT_MODE >= 2)); then
     pdbash node all $SCRP_DIR/src/stage_in.sh
   fi
+fi
+
+#===============================================================================
+# Run initialization scripts on all nodes
+
+if ((TMPRUN_MODE <= 2)); then
+  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1
+else
+  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1
 fi
 
 #===============================================================================
@@ -191,8 +216,58 @@ while ((time <= ETIME)); do
       echo "[$(datetime_now)] ${stimes[1]}: ${stepname[$s]}" >&2
       echo
       printf " %2d. %-55s\n" $s "${stepname[$s]}"
+      echo
 
-      ${stepfunc[$s]}
+      ######
+      if ((s == 1)); then
+        if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
+          echo "  ... skip this step (use prepared topo and landuse files)"
+          echo
+          echo "===================================================================="
+          continue
+        elif ((BDY_FORMAT == 0)); then
+          echo "  ... skip this step (use prepared boundaries)"
+          echo
+          echo "===================================================================="
+          continue
+        fi
+      fi
+      ######
+      if ((s == 2)); then
+        if ((BDY_FORMAT == 0)); then
+          echo "  ... skip this step (use prepared boundaries)"
+          continue
+        fi
+      fi
+      ######
+
+      enable_iter=0
+      if ((s == 2 && BDY_ENS == 1)); then
+        enable_iter=1
+      elif ((s == 3)); then
+        enable_iter=1
+      fi
+
+      if ((enable_iter == 1)); then
+        for it in $(seq $nitmax); do
+          if ((USE_RANKDIR == 1)); then
+            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+                    "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop $it # > /dev/null
+          else
+            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+                    "$SCRP_DIR/fcst_step.sh" $loop $it # > /dev/null
+          fi
+        done
+      else
+        if ((USE_RANKDIR == 1)); then
+          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+                  "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop # > /dev/null
+        else
+          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+                  "$SCRP_DIR/fcst_step.sh" $loop # > /dev/null
+        fi
+      fi
+
 
       echo
       echo "===================================================================="
