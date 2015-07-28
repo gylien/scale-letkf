@@ -8,30 +8,24 @@
 
 . config.main
 
-if (($# < 6)); then
+if (($# < 3)); then
   cat >&2 << EOF
 
 [post_scale_pp.sh] Post-process the scale-les_init outputs.
 
-Usage: $0 MYRANK MEM_NP STIME MEM TMPDIR LOG_OPT
+Usage: $0 MYRANK STIME TMPDIR
 
   MYRANK   My rank number (not used)
-  MEM_NP   Number of processes per member
   STIME    Start time (format: YYYYMMDDHHMMSS)
-  MEM
   TMPDIR   Temporary directory to run the model
-  LOG_OPT
 
 EOF
   exit 1
 fi
 
 MYRANK="$1"; shift
-MEM_NP="$1"; shift
 STIME="$1"; shift
-MEM="$1"; shift
-TMPDIR="$1"; shift
-LOG_OPT="$1"
+TMPDIR="$1"
 
 #===============================================================================
 
@@ -51,21 +45,6 @@ if ((LOG_OPT <= 2)); then
     mv -f $TMPDIR/pp_LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale_pp/pp_LOG${SCALE_LOG_SFX}
   fi
 fi
-
-if ((MYRANK < MEM_NP)); then
-  if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
-    mkdir -p $TMPOUT/${STIME}/log/scale_pp
-    mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${STIME}/log/scale_pp
-  fi
-fi
-#if [ "$MEM" == '0001' ] || [ "$MEM" == 'mean' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
-#  mkdir -p $TMPOUT/${STIME}/log/scale_pp
-#  for q in $(seq $MEM_NP); do
-#    if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
-#      mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${STIME}/log/scale_pp
-#    fi
-#  done
-#fi
 
 #===============================================================================
 

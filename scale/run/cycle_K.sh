@@ -68,26 +68,14 @@ PPN_real=$PPN
 NNODES=$((NNODES*PPN))
 PPN=1
 
-if ((ENABLE_SET == 1)); then          ##
-  NNODES_real_all=$((NNODES_real*3))  ##
-  NNODES_all=$((NNODES*3))            ##
-fi                                    ##
-
-declare -a node
-declare -a node_m
-declare -a name_m
+declare -a procs
 declare -a mem2node
-declare -a mem2proc
-declare -a proc2node
-declare -a proc2group
-declare -a proc2grpproc
+declare -a node
+declare -a name_m
+declare -a node_m
 
 safe_init_tmpdir $TMPS/node
-if ((ENABLE_SET == 1)); then            ##
-  distribute_da_cycle_set - $TMPS/node  ##
-else                                    ##
-  distribute_da_cycle - $TMPS/node
-fi                                      ##
+distribute_da_cycle - $TMPS/node
 
 #===============================================================================
 # Determine the staging list
@@ -110,14 +98,6 @@ echo "PPN=$PPN" >> $TMPS/config.main
 echo "NNODES_real=$NNODES_real" >> $TMPS/config.main
 echo "PPN_real=$PPN_real" >> $TMPS/config.main
 
-if ((ENABLE_SET == 1)); then                                    ##
-  echo "NNODES_all=$NNODES_all" >> $TMPS/config.main            ##
-  echo "NNODES_real_all=$NNODES_real_all" >> $TMPS/config.main  ##
-                                                                ##
-  NNODES=$NNODES_all                                            ##
-  NNODES_real=$NNODES_real_all                                  ##
-fi                                                              ##
-
 #===============================================================================
 # Creat a job script
 
@@ -139,7 +119,7 @@ cat > $jobscrp << EOF
 #PJM --rsc-list "node=${NNODES_real}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
 #PJM --rsc-list "rscgrp=${rscgrp}"
-##PJM --rsc-list "node-quota=29G"
+##PJM --rsc-list "node-quota=29GB"
 ##PJM --mpi "shape=${NNODES_real}"
 #PJM --mpi "proc=$NNODES"
 #PJM --mpi assign-online-node
@@ -165,7 +145,7 @@ bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR $myname1 >> $jobscrp
 
 cat >> $jobscrp << EOF
 
-. /work/system/Env_base
+. /work/system/Env_base_1.2.0-17-2
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 

@@ -74,7 +74,7 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=100         # Ensemble size
 
-NNODES=1904        # Number of nodes
+NNODES=56          # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -95,7 +95,7 @@ MACHINE_TYPE=10             # Machine type
                             # 12: K-computer (interact jobs)
 
 TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
+TMPRUN_MODE=2               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)
                             #  2: share (staging to TMP)
@@ -109,7 +109,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
+SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
                             #  0: No
                             #  1: Yes
 

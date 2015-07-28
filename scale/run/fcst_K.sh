@@ -68,14 +68,11 @@ PPN_real=$PPN
 NNODES=$((NNODES*PPN))
 PPN=1
 
-declare -a node
-declare -a node_m
-declare -a name_m
+declare -a procs
 declare -a mem2node
-declare -a mem2proc
-declare -a proc2node
-declare -a proc2group
-declare -a proc2grpproc
+declare -a node
+declare -a name_m
+declare -a node_m
 
 safe_init_tmpdir $TMPS/node
 distribute_fcst "$MEMBERS" $CYCLE - $TMPS/node
@@ -122,7 +119,7 @@ cat > $jobscrp << EOF
 #PJM --rsc-list "node=${NNODES_real}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
 #PJM --rsc-list "rscgrp=${rscgrp}"
-##PJM --rsc-list "node-quota=29G"
+##PJM --rsc-list "node-quota=29GB"
 ##PJM --mpi "shape=${NNODES_real}"
 #PJM --mpi "proc=$NNODES"
 #PJM --mpi assign-online-node
@@ -148,7 +145,7 @@ bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR $myname1 >> $jobscrp
 
 cat >> $jobscrp << EOF
 
-. /work/system/Env_base
+. /work/system/Env_base_1.2.0-17-2
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
