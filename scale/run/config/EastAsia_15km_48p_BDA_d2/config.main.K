@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl_d2" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl_d2_20m" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -67,14 +67,16 @@ OBSNAME[2]=radar
 WINDOW_S=3600      # SCALE forecast time when assimilation window starts (second)
 WINDOW_E=3600      # SCALE forecast time when assimilation window ends (second)
 LCYCLE=3600        # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=600      # Timeslot interval for 4D-LETKF (second)
+LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
 
-MEMBER=100         # Ensemble size
+#MEMBER=100         # Ensemble size
+MEMBER=20          # Ensemble size
 
-NNODES=4242        # Number of nodes
+#NNODES=2142        # Number of nodes
+NNODES=882         # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
