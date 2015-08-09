@@ -6,7 +6,11 @@ FC        = mpifrtpx
 #            -x-                                                       \
 #            -Ksimd                                                    \
 #            -Kauto,threadsafe
-FOPTS     = -Kfast,ocl,openmp,noeval -V -Qa,d,i,p,t,x -Koptmsg=2
+#FOPTS     = -Kfast,ocl,openmp,noeval -V -Qa,d,i,p,t,x -Koptmsg=2
+FOPTS     = -Kfast,ocl,openmp,noeval -V -Qa,d,i,p,t,x -Koptmsg=2 \
+            -x-    \
+            -Ksimd \
+            -Kauto,threadsafe
 #FOPTS     = -Kfast,ocl,noeval -V -Qa,d,i,p,t,x -Koptmsg=2
 #FOPTS     = -Kfast,parallel,ocl,noeval -V -Qa,d,i,p,t,x -Koptmsg=2
 #FOPTS     = -Kfast,parallel,ocl,openmp,noeval -V -Qa,d,i,p,t,x -Koptmsg=2
@@ -16,7 +20,7 @@ FOPTS     = -Kfast,ocl,openmp,noeval -V -Qa,d,i,p,t,x -Koptmsg=2
 #            -DDEBUG
 
 FOPTS2    = $(FOPTS)
-FOPTS3    = $(FOPTS) -Kparallel
+FOPTS3    = $(FOPTS) -Kparallel,eval,preex,array_private,noalias=s,mfunc=2
 FMCMODEL  =
 FFREE     = -Free
 FFIXED    = -Fixed

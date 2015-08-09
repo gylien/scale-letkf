@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl_d2_20m" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl_d3_250m" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -18,9 +18,9 @@ LOGDIR="$DIR/log"
 MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/update/scale/scale-les/test/case_real/check_japan/run"
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
-DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p_BDA_d2.bf10"
-DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_15km_48p_DBA_d2.bf10"
-DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl"
+DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p_BDA_d3_250m.bf10"
+DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_15km_48p_DBA_d3_250m.bf10"
+DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl_d2"
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
@@ -31,11 +31,11 @@ OBSNCEP=                                                 # directory of observat
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='DEM50M'    # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='LU100M' # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -48,8 +48,8 @@ BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain sett
 BDY_ENS=1               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 
-BDYINT=3600
-BDYCYCLE_INT=21600
+BDYINT=30  
+BDYCYCLE_INT=3600
 
 OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
@@ -64,24 +64,22 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=3600      # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=3600      # SCALE forecast time when assimilation window ends (second)
-LCYCLE=3600        # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=30        # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=30        # SCALE forecast time when assimilation window ends (second)
+LCYCLE=30          # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=5        # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
 
-#MEMBER=100         # Ensemble size
-MEMBER=20          # Ensemble size
+MEMBER=1           # Ensemble size
 
-#NNODES=2142        # Number of nodes
-NNODES=882         # Number of nodes
+NNODES=72          # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
-SCALE_NP=42        # Number of processes to run SCALE
+SCALE_NP=36        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
