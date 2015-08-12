@@ -53,9 +53,11 @@ SUBROUTINE set_letkf_obs
     IHALO,JHALO
   use scale_process, only: &
 !    MPI_COMM_d => LOCAL_COMM_WORLD, &
-    PRC_myrank, &
+    PRC_myrank
+  use scale_les_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
+
 
   IMPLICIT NONE
   REAL(r_size),PARAMETER :: gross_error=5.0d0 !!!!! move to namelist

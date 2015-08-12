@@ -765,7 +765,7 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
 !SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl,oindex)
   use scale_grid, only: &
     DX, DY
-  use scale_process, only: &
+  use scale_les_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
 

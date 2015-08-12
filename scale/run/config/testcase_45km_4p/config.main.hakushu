@@ -14,7 +14,8 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/data6/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
+#MODELDIR="/data6/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
+MODELDIR="/home/gylien/scale-letkf/scale_history/v150809/scale/scale-les/test/case_real/check_japan/run"
 DATADIR="/data6/gylien/scale-letkf/database"
 
 DATA_TOPO="/data6/gylien/scale-letkf/database/topo_prep/testcase_45km_4p_bf10"
@@ -72,8 +73,8 @@ LTIMESLOT=600      # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=10          # Ensemble size
 
-NNODES=3           # Number of nodes
-PPN=16             # Number of processes per node
+NNODES=2           # Number of nodes
+PPN=40             # Number of processes per node
 
 THREADS=1          # Number of threads per process
 

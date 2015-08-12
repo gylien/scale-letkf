@@ -26,6 +26,7 @@ module common_mpi_scale
 
   use scale_precision, only: RP
   use scale_stdio
+  use scale_process, only: PRC_DOMAIN_nlim
 !  use scale_prof
 !  use scale_grid_index
 
@@ -38,6 +39,25 @@ module common_mpi_scale
   integer,save :: nij1
   integer,save :: nij1max
   integer,allocatable,save :: nij1node(:)
+
+
+
+
+  integer,save          :: universal_comm                         ! universal communicator
+  integer,save          :: universal_nprocs                       ! number of procs in universal communicator
+  logical,save          :: universal_master                       ! master process  in universal communicator?
+
+  integer,save          :: global_comm                            ! communicator for each member
+
+  integer,save          :: local_comm                             ! assigned local communicator
+  integer,save          :: intercomm_parent                       ! inter communicator with parent
+  integer,save          :: intercomm_child                        ! inter communicator with child
+
+  integer,save          :: NUM_DOMAIN                   = 1       ! number of domains
+  integer,save          :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0       ! number of total process in each domain
+  character(len=H_LONG),save :: CONF_FILES (PRC_DOMAIN_nlim) = "" ! name of configulation files
+  logical,save          :: ABORT_ALL_JOBS               = .false. ! abort all jobs or not?
+  logical,save          :: LOG_SPLIT                    = .false. ! log-output for mpi splitting?
 
 
 
@@ -77,6 +97,8 @@ module common_mpi_scale
   integer,save :: MPI_COMM_d, nprocs_d, myrank_d
   integer,save :: MPI_COMM_a, nprocs_a, myrank_a
 
+
+
 !  character(9) scale_filename = 'file.0000'
 
 contains
@@ -87,9 +109,8 @@ SUBROUTINE set_common_mpi_scale
   use scale_grid_index, only: &
     IHALO, &
     JHALO
-  use scale_process, only: &
+!  use scale_process, only: &
 !    PRC_myrank, &
-    LOCAL_COMM_WORLD
 
 
   implicit none
@@ -168,7 +189,6 @@ SUBROUTINE set_common_mpi_scale
 
 !--
 
-  MPI_COMM_d = LOCAL_COMM_WORLD
   call MPI_Comm_size(MPI_COMM_d,nprocs_d,ierr)
   call MPI_Comm_rank(MPI_COMM_d,myrank_d,ierr)
 
@@ -426,17 +446,20 @@ subroutine set_scalelib
   use dc_log, only: &
     LogInit
   use scale_process, only: &
-    PRC_setup,    &
+    PRC_UNIVERSAL_setup, &
     PRC_MPIstart, &
     PRC_MPIsplit_letkf, &
-    PRC_MPIsetup, &
-    PRC_master, &
-    PRC_myrank, &
+    PRC_MPIsplit, &
+    PRC_GLOBAL_setup, &
+    PRC_LOCAL_setup, &
+    PRC_masterrank, &
+    PRC_myrank
+  use scale_les_process, only: &
+    PRC_setup, &
     PRC_2Drank, &
     PRC_NUM_X, &
-    PRC_NUM_Y, &
-    GLOBAL_COMM_WORLD
-!    prc_nu, &
+    PRC_NUM_Y 
+
   use scale_const, only: &
     CONST_setup
   use scale_calendar, only: &
@@ -469,7 +492,7 @@ subroutine set_scalelib
   use scale_tracer, only: &
     TRACER_setup
   use scale_fileio, only: &
-     FILEIO_setup
+    FILEIO_setup
   use scale_comm, only: &
     COMM_setup
 !  use scale_topography, only: &
@@ -480,10 +503,10 @@ subroutine set_scalelib
 !    REAL_setup
 
 !  use scale_gridtrans, only: &
-!     GTRANS_setup
+!    GTRANS_setup
 
-  use scale_atmos_hydrostatic, only: &
-     ATMOS_HYDROSTATIC_setup
+!  use scale_atmos_hydrostatic, only: &
+!     ATMOS_HYDROSTATIC_setup
   use scale_atmos_thermodyn, only: &
      ATMOS_THERMODYN_setup
 
@@ -500,36 +523,73 @@ subroutine set_scalelib
 !    character(len=H_MID) :: DATATYPE = 'DEFAULT' !< REAL4 or REAL8
   integer :: rankidx(2)
 
-  integer :: LOCAL_myrank, LOCAL_nmax
+  integer :: local_myrank
+  logical :: local_ismaster
+
+  CHARACTER(len=H_LONG) :: confname_dummy
 
   !-----------------------------------------------------------------------------
 
   ! start SCALE MPI
-  call PRC_MPIstart
-!  if ( NUM_DOMAIN == 1 ) then
-!     PRC_DOMAINS(1) = GLOBAL_nmax
-!  endif
+  call PRC_MPIstart( universal_comm ) ! [OUT]
+
+  call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
+                            universal_nprocs, & ! [OUT]
+                            universal_master  ) ! [OUT]
 
   ! split MPI communicator for LETKF
-  call PRC_MPIsplit_letkf(MEM_NP, nitmax, nprocs, proc2mem, myrank, &
-                          LOCAL_myrank, LOCAL_nmax)
+  call PRC_MPIsplit_letkf( universal_comm,                   & ! [IN]
+                           MEM_NP, nitmax, nprocs, proc2mem, & ! [IN]
+                           global_comm                       ) ! [OUT]
+
+  call PRC_GLOBAL_setup( ABORT_ALL_JOBS, & ! [IN]
+                         global_comm     ) ! [IN]
+
+  !--- split for nesting
+  ! communicator split for nesting domains
+  call PRC_MPIsplit( global_comm,      & ! [IN]
+                     NUM_DOMAIN,       & ! [IN]
+                     PRC_DOMAINS(:),   & ! [IN]
+                     CONF_FILES (:),   & ! [IN]
+                     LOG_SPLIT,        & ! [IN]
+                     .false.,          & ! [IN] flag bulk_split
+                     local_comm,       & ! [OUT]
+                     intercomm_parent, & ! [OUT]
+                     intercomm_child,  & ! [OUT]
+                     confname_dummy    ) ! [OUT]
+
+  MPI_COMM_d = local_comm
+
+  ! setup standard I/O
+!  call IO_setup( MODELNAME, .true., cnf_fname )
 
   ! setup MPI
-  call PRC_MPIsetup( GLOBAL_COMM_WORLD )
+  call PRC_LOCAL_setup( local_comm, local_myrank, local_ismaster )
+
+  ! setup Log
+  call IO_LOG_setup( local_myrank, local_ismaster )
+  call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
   ! setup process
   call PRC_setup
 
-  ! setup Log
-  call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
+  ! setup PROF
+!  call PROF_setup
 
   ! setup constants
   call CONST_setup
 
+  ! setup calendar
+!  call CALENDAR_setup
+
+  ! setup random number
+!  call RANDOM_setup
+
   ! setup time
   call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
 
-  call PROF_rapstart('Initialize')
+!  call PROF_setprefx('INIT')
+!  call PROF_rapstart('Initialize')
 
   ! setup horizontal/vertical grid coordinates
   call GRID_INDEX_setup
@@ -554,31 +614,56 @@ subroutine set_scalelib
 !  call TOPO_setup
   ! setup land use category index/fraction
 !  call LANDUSE_setup
-
   ! setup grid coordinates (real world)
 !  call REAL_setup
-  ! setup map projection                      [in the SCALE model, this subroutine is called inside of REAL_setup!]
-  call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
+    ! setup map projection [[ in REAL_setup ]]
+    call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
 
   ! setup grid transfer metrics (uses in ATMOS_dynamics)
 !  call GTRANS_setup
+  ! setup Z-ZS interpolation factor (uses in History)
+!  call INTERP_setup
+
+  ! setup restart
+!  call ADMIN_restart_setup
+  ! setup statistics
+!  call STAT_setup
+  ! setup history I/O
+!  call HIST_setup
+    ! setup history file I/O [[ in HIST_setup ]]
+    rankidx(1) = PRC_2Drank(PRC_myrank, 1)
+    rankidx(2) = PRC_2Drank(PRC_myrank, 2)
+
+    call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_masterrank, PRC_myrank, rankidx, &
+                     TIME_STARTDAYSEC, TIME_DTSEC, &
+                     namelist_fid=IO_FID_CONF)
+  ! setup monitor I/O
+!  call MONIT_setup
+
+  ! setup nesting grid
+!  call NEST_setup ( intercomm_parent, intercomm_child )
 
   ! setup common tools
 !  call ATMOS_HYDROSTATIC_setup
   call ATMOS_THERMODYN_setup
 !  call ATMOS_SATURATION_setup
 
-  ! setup history file I/O
-  rankidx(1) = PRC_2Drank(PRC_myrank, 1)
-  rankidx(2) = PRC_2Drank(PRC_myrank, 2)
+!  call BULKFLUX_setup
+!  call ROUGHNESS_setup
 
-  call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_master, LOCAL_myrank, rankidx, &
-                   TIME_STARTDAYSEC, TIME_DTSEC, &
-                   namelist_fid=IO_FID_CONF)
+  ! setup submodel administrator
+!  call ATMOS_admin_setup
+!  call OCEAN_admin_setup
+!  call LAND_admin_setup
+!  call URBAN_admin_setup
+!  call CPL_admin_setup
 
-  call PROF_rapend('Initialize')
-
-  call PROF_rapstart('Main')
+  ! setup variable container
+!  call ATMOS_vars_setup
+!  call OCEAN_vars_setup
+!  call LAND_vars_setup
+!  call URBAN_vars_setup
+!  call CPL_vars_setup
 
   return
 end subroutine set_scalelib
@@ -587,20 +672,13 @@ end subroutine set_scalelib
 ! Finish using SCALE library
 !-----------------------------------------------------------------------
 subroutine unset_scalelib
-  use scale_process, only: &
-    PRC_MPIfinish
   use gtool_file, only: &
     FileCloseAll
   implicit none
 
-  call PROF_rapend('Main')
-
-  call PROF_rapreport
+!  call MONIT_finalize
 
   call FileCloseAll
-
-!  ! stop SCALE MPI
-!  call PRC_MPIfinish
 
   return
 end subroutine unset_scalelib
