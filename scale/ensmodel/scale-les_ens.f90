@@ -7,9 +7,13 @@ program scaleles_ens
   USE common_mpi_scale
 
   use scale_process, only: &
-     PRC_MPIstart,      &
-     PRC_MPIsplit_letkf,&
-     LOCAL_COMM_WORLD
+     PRC_UNIVERSAL_setup, &
+     PRC_MPIstart, &
+     PRC_MPIfinish, &
+     PRC_MPIsplit_letkf, &
+     PRC_MPIsplit, &
+     PRC_GLOBAL_setup, &
+     PRC_mpi_alive
   use mod_les_driver
 
   implicit none
@@ -20,8 +24,13 @@ program scaleles_ens
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
   CHARACTER(len=H_LONG) :: confname='0000/run.conf'
+  CHARACTER(len=H_LONG) :: confname_dummy
 
-  integer :: LOCAL_myrank, LOCAL_nmax
+!  integer               :: NUM_DOMAIN                   = 1       ! number of domains
+!  integer               :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0       ! number of total process in each domain
+!  character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim) = ""      ! name of configulation files
+!  logical               :: ABORT_ALL_JOBS               = .false. ! abort all jobs or not?
+!  logical               :: LOG_SPLIT                    = .false. ! log-output for mpi splitting?
 
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
@@ -97,11 +106,35 @@ program scaleles_ens
 !    end if
 
     ! start SCALE MPI
-    call PRC_MPIstart
+!    call PRC_MPIstart( universal_comm ) ! [OUT]
+
+    PRC_mpi_alive = .true.
+    universal_comm = MPI_COMM_WORLD
+
+    call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
+                              universal_nprocs, & ! [OUT]
+                              universal_master  ) ! [OUT]
 
     ! split MPI communicator for LETKF
-    call PRC_MPIsplit_letkf(MEM_NP, nitmax, nprocs, proc2mem, myrank, &
-                            LOCAL_myrank, LOCAL_nmax)
+    call PRC_MPIsplit_letkf( universal_comm,                   & ! [IN]
+                             MEM_NP, nitmax, nprocs, proc2mem, & ! [IN]
+                             global_comm                       ) ! [OUT]
+
+    call PRC_GLOBAL_setup( ABORT_ALL_JOBS, & ! [IN]
+                           global_comm     ) ! [IN]
+
+    !--- split for nesting
+    ! communicator split for nesting domains
+    call PRC_MPIsplit( global_comm,      & ! [IN]
+                       NUM_DOMAIN,       & ! [IN]
+                       PRC_DOMAINS(:),   & ! [IN]
+                       CONF_FILES (:),   & ! [IN]
+                       LOG_SPLIT,        & ! [IN]
+                       .false.,          & ! [IN] flag bulk_split
+                       local_comm,       & ! [OUT]
+                       intercomm_parent, & ! [OUT]
+                       intercomm_child,  & ! [OUT]
+                       confname_dummy    ) ! [OUT]
 
     if (MEMBER_ITER == 0) then
       its = 1
@@ -117,12 +150,20 @@ program scaleles_ens
         WRITE(confname(1:4),'(I4.4)') proc2mem(1,it,myrank+1)
         WRITE(6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is running a model with configuration file: ', confname
 
-        call scaleles ( LOCAL_COMM_WORLD, &
-                        MPI_COMM_NULL,    &
-                        MPI_COMM_NULL,    &
+        call scaleles ( local_comm, &
+                        intercomm_parent, &
+                        intercomm_child, &
                         confname )
       end if
     end do ! [ it = its, ite ]
+
+!    call PRC_MPIfinish
+
+    ! Close logfile, configfile
+    if ( IO_L ) then
+       if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+    endif
+    close(IO_FID_CONF)
 
   else ! [ myrank_mem_use ]
 

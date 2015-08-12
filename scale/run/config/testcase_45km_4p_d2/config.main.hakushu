@@ -24,8 +24,8 @@ DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
 
-OBS="/data6/gylien/obs/prepbufr_obs_eastasia_test"    # directory of observation data in LETKF obs format
-OBSNCEP=                # directory of observation data in NCEP BUFR format
+OBS="/data6/gylien/obs/prepbufr_obs_eastasia_wide"    # directory of observation data in LETKF obs format
+OBSNCEP="/data6/gylien/obs/prepbufr_xx"               # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # model/data file options
