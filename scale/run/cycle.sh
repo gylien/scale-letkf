@@ -213,7 +213,7 @@ while ((time <= ETIME)); do
           echo
           echo "===================================================================="
           continue
-        elif ((BDY_FORMAT == 0)); then
+        elif ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
           echo "  ... skip this step (use prepared boundaries)"
           echo
           echo "===================================================================="
@@ -222,7 +222,7 @@ while ((time <= ETIME)); do
       fi
       ######
       if ((s == 2)); then
-        if ((BDY_FORMAT == 0)); then
+        if ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
           echo "  ... skip this step (use prepared boundaries)"
           continue
         fi

@@ -100,7 +100,7 @@ TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 CYCLEFLEN=$WINDOW_E   # Model forecast length in a cycle (hour)
 CYCLEFOUT=$LTIMESLOT  # Model forecast output interval (hour)
 
-if ((BDY_FORMAT == 1)); then
+if ((BDY_FORMAT == 1 || BDY_FORMAT == -1)); then
   if ((BDYCYCLE_INT % BDYINT != 0)); then
     echo "[Error] \$BDYCYCLE_INT needs to be an exact multiple of \$BDYINT" >&2
     exit 1
@@ -296,18 +296,19 @@ else
 
     # bdy (prepared)
     #-------------------
-    if ((BDY_FORMAT == 0)); then
-      for q in $(seq $mem_np); do
-        pathin="${DATA_BDY_SCALE_PREP}/${time}/mean/boundary$(printf $SCALE_SFX $((q-1)))"
-        path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
-        echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
-      done
-      if ((BDY_ENS == 1)); then
-        for m in $(seq $MEMBER); do
+    if ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
+      if ((BDY_ENS == 0)); then
+        for q in $(seq $mem_np); do
+          pathin="${DATA_BDY_SCALE_PREP}/${time}/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+          path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+        done
+      elif ((BDY_ENS == 1)); then
+        for m in $(seq $mmean); do
           for q in $(seq $mem_np); do
             pathin="${DATA_BDY_SCALE_PREP}/${time}/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
             path="${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
-            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
           done
         done
       fi
@@ -482,11 +483,11 @@ else
         # log [scale_pp/scale_init/scale/obsope/letkf]
         #-------------------
         if ((LOG_OPT <= 4)); then
-          if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ] && ((BDY_FORMAT != 0)); then
+          if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ] && ((BDY_FORMAT != 0)) && ((BDY_FORMAT != -1)); then
             path="${time}/log/scale_pp/NOUT-$(printf $PROCESS_FMT $((q-1)))"
             echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
           fi
-          if ((BDY_FORMAT != 0)); then
+          if ((BDY_FORMAT != 0)) && ((BDY_FORMAT != -1)); then
             path="${time}/log/scale_init/NOUT-$(printf $PROCESS_FMT $((q-1)))"
             echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]}
           fi
@@ -559,7 +560,7 @@ else
 
   # bdy
   #-------------------
-  if ((BDY_FORMAT == 1)); then
+  if ((BDY_FORMAT == 1)) || ((BDY_FORMAT == -1)); then
 
     find_catalogue=0
     time=$STIME
@@ -679,7 +680,7 @@ enspp_1 () {
 if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
   echo "  ... skip this step (use prepared topo and landuse files)"
   exit 1
-elif ((BDY_FORMAT == 0)); then
+elif ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
   echo "  ... skip this step (use prepared boundaries)"
   exit 1
 fi
@@ -724,7 +725,7 @@ enspp_2 () {
 
 if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
   return 1
-elif ((BDY_FORMAT == 0)); then
+elif ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
   return 1
 fi
 
@@ -761,7 +762,7 @@ ensinit_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((BDY_FORMAT == 0)); then
+if ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
   echo "  ... skip this step (use prepared boundaries)"
   exit 1
 elif ((BDY_FORMAT == 1)); then
@@ -905,7 +906,7 @@ for it in $(seq $its $ite); do
     fi
 
     if (pdrun $g $PROC_OPT); then
-#      if ((BDY_FORMAT == 1 || BDY_FORMAT == 2)); then
+      if ((BDY_FORMAT == 1 || BDY_FORMAT == 2)); then
         if ((BDY_ENS == 1)); then
           bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
                $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
@@ -913,9 +914,10 @@ for it in $(seq $its $ite); do
           bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
                $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
         fi
-#      elif ((BDY_FORMAT == 3)); then
-#        ...
-#      fi
+      elif ((BDY_FORMAT == 3)); then
+        echo
+        #........
+      fi
     fi
   fi
 done
@@ -933,7 +935,7 @@ ensfcst_1 () {
 #echo
 
 ############
-if ((BDY_FORMAT == 1)); then
+if ((BDY_FORMAT == 1 || BDY_FORMAT == -1)); then
   if ((DATA_BDY_TMPLOC == 1)); then
     bdyscale_loc=$TMPDAT/bdyscale
   elif ((DATA_BDY_TMPLOC == 2)); then
@@ -989,7 +991,7 @@ for it in $(seq $its $ite); do
     fi
 
     if (pdrun $g $PROC_OPT); then
-      if ((BDY_FORMAT == 1)); then
+      if ((BDY_FORMAT == 1 || BDY_FORMAT == -1)); then
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
              $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
              $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \

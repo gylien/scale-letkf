@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl_d3_250m" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl_d3_20m_250m" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -20,8 +20,8 @@ DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p_BDA_d3_250m.bf10"
 DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_15km_48p_DBA_d3_250m.bf10"
-DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl_d2_LBC_q_nouse"
-DATA_BDY_SCALE_PREP=
+DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl_d2_20m"
+DATA_BDY_SCALE_PREP="/volume63/data/hp150019/gylien/scale-letkf/database/bdy_prep/BDA_ctl_d3_250m"
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
 
@@ -41,7 +41,8 @@ LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+######
+BDY_FORMAT=-1           # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
