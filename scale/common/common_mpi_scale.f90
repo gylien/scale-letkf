@@ -453,7 +453,8 @@ subroutine set_scalelib
     PRC_GLOBAL_setup, &
     PRC_LOCAL_setup, &
     PRC_masterrank, &
-    PRC_myrank
+    PRC_myrank, &
+    PRC_mpi_alive
   use scale_les_process, only: &
     PRC_setup, &
     PRC_2Drank, &
@@ -531,7 +532,10 @@ subroutine set_scalelib
   !-----------------------------------------------------------------------------
 
   ! start SCALE MPI
-  call PRC_MPIstart( universal_comm ) ! [OUT]
+!  call PRC_MPIstart( universal_comm ) ! [OUT]
+
+  PRC_mpi_alive = .true.
+  universal_comm = MPI_COMM_WORLD
 
   call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
                             universal_nprocs, & ! [OUT]
@@ -679,6 +683,12 @@ subroutine unset_scalelib
 !  call MONIT_finalize
 
   call FileCloseAll
+
+  ! Close logfile, configfile
+  if ( IO_L ) then
+    if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+  endif
+  close(IO_FID_CONF)
 
   return
 end subroutine unset_scalelib
