@@ -15,7 +15,7 @@ LOGDIR="$DIR/log"
 # Location of model/data files
 
 #MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
-MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/update/scale/scale-les/test/case_real/check_japan/run"
+MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale_history/v150809/scale/scale-les/test/case_real/check_japan/run"
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p_2014summer.bf10"
@@ -74,7 +74,7 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=100         # Ensemble size
 
-NNODES=1904        # Number of nodes
+NNODES=2856        # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
