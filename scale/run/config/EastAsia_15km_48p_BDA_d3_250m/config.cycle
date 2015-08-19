@@ -5,11 +5,11 @@
 #
 #===============================================================================
 
-STIME='20130713055030'
-ETIME='20130713055030'
+STIME='20130713053030'
+ETIME='20130713053030'
 ISTEP=
 FSTEP=
-TIME_LIMIT='00:30:00'
+TIME_LIMIT='00:15:00'
 
 #===============================================================================
 
@@ -53,16 +53,16 @@ OUT_OPT=1        # 1:   o         o       o         o       o
                  # 4:   o                 o
 
                  #      topo
-TOPOOUT_OPT=1    # 1:   o
+TOPOOUT_OPT=2    # 1:   o
                  # 2:   (none)
 
                  #      landuse
-LANDUSEOUT_OPT=1 # 1:   o
+LANDUSEOUT_OPT=2 # 1:   o
                  # 2:   (none)
 
                  #      bdy
                  #      mean members
-BDYOUT_OPT=1     # 1:   o    o
+BDYOUT_OPT=3     # 1:   o    o
                  # 2:   o
                  # 3:   (none)
 
