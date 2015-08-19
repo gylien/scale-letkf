@@ -50,7 +50,7 @@ MEM="$1"; shift
 TMPDIR="$1"; shift
 EXECDIR="$1"; shift
 DATADIR="$1"; shift
-STARTFRAME="$1"
+STARTFRAME="${1:-1}"
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
@@ -91,7 +91,10 @@ if ((BDY_FORMAT == 1)); then
   fi
   ln -fs ${BDYORG}*.nc $TMPDIR
 #  NUMBER_OF_FILES=$(((FCSTLEN-1)/BDYINT+2))
-  NUMBER_OF_FILES=$(((FCSTLEN-1)/BDYINT+1+STARTFRAME))
+#  NUMBER_OF_FILES=$(((FCSTLEN-1)/BDYINT+1+STARTFRAME))
+  NUMBER_OF_FILES=1
+  NUMBER_OF_TSTEPS=$(((FCSTLEN-1)/BDYINT+1+STARTFRAME))
+  NUMBER_OF_SKIP_TSTEPS=$((STARTFRAME-1))
 
   BASENAME_ORG="${TMPSUBDIR}\/history"
   FILETYPE_ORG='SCALE-LES'
@@ -112,6 +115,8 @@ elif ((BDY_FORMAT == 2)); then
     time=$(datetime $time $BDYINT s)
   done
   NUMBER_OF_FILES=$i
+  NUMBER_OF_TSTEPS=1
+  NUMBER_OF_SKIP_TSTEPS=0
 
   BASENAME_ORG="${TMPSUBDIR}\/wrfout"
   FILETYPE_ORG='WRF-ARW'
@@ -135,6 +140,8 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "s/\[BASENAME_ORG\]/ BASENAME_ORG = \"${BASENAME_ORG}\",/" \
         -e "s/\[FILETYPE_ORG\]/ FILETYPE_ORG = \"${FILETYPE_ORG}\",/" \
         -e "s/\[NUMBER_OF_FILES\]/ NUMBER_OF_FILES = $NUMBER_OF_FILES,/" \
+        -e "s/\[NUMBER_OF_TSTEPS\]/ NUMBER_OF_TSTEPS = $NUMBER_OF_TSTEPS,/" \
+        -e "s/\[NUMBER_OF_SKIP_TSTEPS\]/ NUMBER_OF_SKIP_TSTEPS = $NUMBER_OF_SKIP_TSTEPS,/" \
         -e "s/\[BOUNDARY_UPDATE_DT\]/ BOUNDARY_UPDATE_DT = $BDYINT.D0,/" \
         -e "s/\[USE_NESTING\]/ USE_NESTING = $USE_NESTING,/" \
         -e "s/\[OFFLINE\]/ OFFLINE = $OFFLINE,/" \

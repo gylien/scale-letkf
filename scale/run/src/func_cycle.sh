@@ -995,7 +995,7 @@ for it in $(seq $its $ite); do
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
              $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
              $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
-             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT $time_bdy
+             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT ## $time_bdy
       elif ((BDY_FORMAT == 2)); then
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
              $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
