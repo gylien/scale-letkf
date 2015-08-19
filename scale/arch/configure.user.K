@@ -32,8 +32,7 @@ NETCDF_LIB = -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -l
 #NETCDF_INC = -I/opt/aics/netcdf/k-noszip/include
 #NETCDF_LIB = -L/opt/aics/netcdf/k-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
 
-SCALE     = /volume63/data/hp150019/gylien/scale-letkf/scale_history/v150809/scale
-
+SCALE     = /volume63/data/hp150019/gylien/scale-letkf/update/scale
 SCALE_INC = -I$(SCALE)/dc_utils \
             -I$(SCALE)/gtool    \
             -I$(SCALE)/include
