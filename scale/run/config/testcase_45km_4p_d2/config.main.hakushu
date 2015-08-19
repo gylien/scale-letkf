@@ -14,32 +14,36 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/data6/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
+#MODELDIR="/data6/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
+MODELDIR="/home/gylien/scale-letkf/scale_history/v150809/scale_bugfix/scale-les/test/case_real/check_japan/run"
 DATADIR="/data6/gylien/scale-letkf/database"
 
-DATA_TOPO=
-DATA_LANDUSE=
+DATA_TOPO="/data6/gylien/exp/scale-letkf_test/testcase_45km_4p_d2/preptopo"
+DATA_LANDUSE="/data6/gylien/exp/scale-letkf_test/testcase_45km_4p_d2/preplanduse"
 DATA_BDY_SCALE="/data6/gylien/exp/scale-letkf_test/testcase_45km_4p"
-DATA_BDY_SCALE_PREP=
+DATA_BDY_SCALE_PREP="/data6/gylien/exp/scale-letkf_test/testcase_45km_4p_d2/prepbdy"
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
 
-OBS="/data6/gylien/obs/prepbufr_obs_eastasia_wide"    # directory of observation data in LETKF obs format
+OBS="/data6/gylien/obs/prepbufr_obs_eastasia_test"    # directory of observation data in LETKF obs format
 OBSNCEP="/data6/gylien/obs/prepbufr_xx"               # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'                                                        
+#TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'
+#LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
+#BDY_FORMAT=-1
 BDY_FORMAT=1            # 0: SCALE with exactly same domain settings (do not need additional preprocessing)
                         # 1: SCALE (requires compatible 'config.nml.scale_init')
                         # 2: WRF   (requires compatible 'config.nml.scale_init')
@@ -50,7 +54,8 @@ BDY_ENS=1               # 0: Fixed boundary files for all memebers
 BDYINT=600
 BDYCYCLE_INT=3600
 
-OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
+OCEAN_INPUT=0
+#OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
 
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)

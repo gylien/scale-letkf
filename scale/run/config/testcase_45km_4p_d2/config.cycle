@@ -5,7 +5,7 @@
 #
 #===============================================================================
 
-STIME='20130701000000'
+STIME='20130701004000'
 ETIME='20130701004000'
 ISTEP=
 FSTEP=
@@ -33,7 +33,8 @@ ADAPTINFL=1         # Adaptive inflation
 
 #===============================================================================
 
-MAKEINIT=1       # 0: No
+#MAKEINIT=1
+MAKEINIT=0       # 0: No
                  # 1: Yes
 PERTURB_BDY=0    # 0: No
                  # 1: Yes
@@ -57,7 +58,7 @@ TOPOOUT_OPT=1    # 1:   o
                  # 2:   (none)
 
                  #      landuse
-LANDUSEOUT_OPT=2 # 1:   o
+LANDUSEOUT_OPT=1 # 1:   o
                  # 2:   (none)
 
                  #      bdy

@@ -14,7 +14,7 @@ if (($# < 14)); then
 
 [pre_scale.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM_NP INIT OCEAN BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR EXECDIR DATADIR BDY_STIME
+Usage: $0 MYRANK MEM_NP INIT OCEAN BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR EXECDIR DATADIR [BDY_STIME]
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member
