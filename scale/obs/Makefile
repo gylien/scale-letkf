@@ -1,6 +1,6 @@
 include ../configure.user
 
-PROGS   = obsope obsmake dec_prepbufr #superob dec_prcp readdiag_conv
+PROGS   = obsope obsmake #dec_prepbufr #superob dec_prcp readdiag_conv
 
 OBJS    = obsope_tools.o #obs_tools.o superob_tools.o obs_gfs_ext.o
 
@@ -23,7 +23,7 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
 
 INCS    = $(SCALE_INC)
 
-LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LIBBLAS)
+LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
 
 all:	$(PROGS)
 
@@ -41,7 +41,7 @@ dec_prepbufr:	dec_prepbufr.o common_modules
 dec_prcp:	dec_prcp.o common_modules
 	$(SFC) $(FOPTS) -o dec_prcp dec_prcp.o $(COMMON_OBJS) $(LIBS)
 readdiag_conv:	readdiag_conv.o common_modules
-	$(SFC) $(FOPTS2) -o readdiag_conv readdiag_conv.o $(COMMON_OBJS) $(OBJS) \
+	$(SFC) $(FOPTS) -o readdiag_conv readdiag_conv.o $(COMMON_OBJS) $(OBJS) \
 	$(LIBS)
 
 obsope.o:	obsope.f90 $(OBJS) common_modules
@@ -55,7 +55,7 @@ dec_prepbufr.o:	dec_prepbufr.f90 common_modules
 dec_prcp.o:	dec_prcp.f90 common_modules
 	$(SFC) $(FOPTS) -c dec_prcp.f90 -I$(COMMON_DIR)
 readdiag_conv.o:	readdiag_conv.f90 $(OBJS) common_modules
-	$(SFC) $(FOPTS2) -c readdiag_conv.f90 -I$(COMMON_DIR)
+	$(SFC) $(FOPTS) -c readdiag_conv.f90 -I$(COMMON_DIR)
 
 obsope_tools.o:	obsope_tools.f90 common_modules
 	$(FC) $(FOPTS) -c obsope_tools.f90 -I$(COMMON_DIR) $(INCS)
