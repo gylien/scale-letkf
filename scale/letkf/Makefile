@@ -23,7 +23,7 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
 
 INCS    = $(SCALE_INC)
 
-LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LIBBLAS)
+LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
 
 all:	$(PROGS)
 

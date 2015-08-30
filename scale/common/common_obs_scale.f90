@@ -213,7 +213,7 @@ end subroutine set_common_obs_scale
 !-----------------------------------------------------------------------
 SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
   use scale_mapproj, only: &
-      MPRJ_rotcoef_point
+      MPRJ_rotcoef
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk
@@ -241,7 +241,7 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
     end if
-    call MPRJ_rotcoef_point(rotc,lon*deg2rad,lat*deg2rad)
+    call MPRJ_rotcoef(rotc,lon*deg2rad,lat*deg2rad)
     if (elm == id_u_obs) then
       yobs = u * rotc(1) - v * rotc(2)
     else

@@ -43,21 +43,22 @@ module common_mpi_scale
 
 
 
-  integer,save          :: universal_comm                         ! universal communicator
-  integer,save          :: universal_nprocs                       ! number of procs in universal communicator
-  logical,save          :: universal_master                       ! master process  in universal communicator?
+!  integer,save          :: universal_comm                         ! universal communicator
+!  integer,save          :: universal_nprocs                       ! number of procs in universal communicator
+!  logical,save          :: universal_master                       ! master process  in universal communicator?
+!  logical,save          :: universal_myrank                       ! 
 
-  integer,save          :: global_comm                            ! communicator for each member
+!  integer,save          :: global_comm                            ! communicator for each member
 
-  integer,save          :: local_comm                             ! assigned local communicator
-  integer,save          :: intercomm_parent                       ! inter communicator with parent
-  integer,save          :: intercomm_child                        ! inter communicator with child
+!  integer,save          :: local_comm                             ! assigned local communicator
+!  integer,save          :: intercomm_parent                       ! inter communicator with parent
+!  integer,save          :: intercomm_child                        ! inter communicator with child
 
-  integer,save          :: NUM_DOMAIN                   = 1       ! number of domains
-  integer,save          :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0       ! number of total process in each domain
-  character(len=H_LONG),save :: CONF_FILES (PRC_DOMAIN_nlim) = "" ! name of configulation files
-  logical,save          :: ABORT_ALL_JOBS               = .false. ! abort all jobs or not?
-  logical,save          :: LOG_SPLIT                    = .false. ! log-output for mpi splitting?
+!  integer,save          :: NUM_DOMAIN                   = 1       ! number of domains
+!  integer,save          :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0       ! number of total process in each domain
+!  character(len=H_LONG),save :: CONF_FILES (PRC_DOMAIN_nlim) = "" ! name of configulation files
+!  logical,save          :: ABORT_ALL_JOBS               = .false. ! abort all jobs or not?
+!  logical,save          :: LOG_SPLIT                    = .false. ! log-output for mpi splitting?
 
 
 
@@ -529,7 +530,23 @@ subroutine set_scalelib
 
   CHARACTER(len=H_LONG) :: confname_dummy
 
+  integer :: universal_comm
+  integer :: universal_nprocs
+  logical :: universal_master
+  integer :: global_comm
+  integer :: local_comm
+  integer :: intercomm_parent
+  integer :: intercomm_child
+
+  integer :: NUM_DOMAIN
+  integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
+  character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim)
+
   !-----------------------------------------------------------------------------
+
+  NUM_DOMAIN = 1
+  PRC_DOMAINS = 0
+  CONF_FILES = ""
 
   ! start SCALE MPI
 !  call PRC_MPIstart( universal_comm ) ! [OUT]
@@ -546,17 +563,18 @@ subroutine set_scalelib
                            MEM_NP, nitmax, nprocs, proc2mem, & ! [IN]
                            global_comm                       ) ! [OUT]
 
-  call PRC_GLOBAL_setup( ABORT_ALL_JOBS, & ! [IN]
-                         global_comm     ) ! [IN]
+  call PRC_GLOBAL_setup( .false.,    & ! [IN]
+                         global_comm ) ! [IN]
 
   !--- split for nesting
   ! communicator split for nesting domains
   call PRC_MPIsplit( global_comm,      & ! [IN]
                      NUM_DOMAIN,       & ! [IN]
                      PRC_DOMAINS(:),   & ! [IN]
-                     CONF_FILES (:),   & ! [IN]
-                     LOG_SPLIT,        & ! [IN]
+                     CONF_FILES(:),    & ! [IN]
+                     .false.,          & ! [IN]
                      .false.,          & ! [IN] flag bulk_split
+                     .false.,          & ! [IN] no reordering
                      local_comm,       & ! [OUT]
                      intercomm_parent, & ! [OUT]
                      intercomm_child,  & ! [OUT]
