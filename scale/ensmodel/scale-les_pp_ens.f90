@@ -2,6 +2,9 @@ program scaleles_pp_ens
   !-----------------------------------------------------------------------------
 
   use mpi
+  use common_mpi, only: &
+     nprocs, &
+     myrank
   use common_nml
   use common_scale, only: &
      set_common_conf
@@ -66,6 +69,8 @@ program scaleles_pp_ens
                             universal_nprocs, & ! [OUT]
                             universal_master  ) ! [OUT]
   universal_myrank = PRC_UNIVERSAL_myrank
+  nprocs = universal_nprocs
+  myrank = universal_myrank
 
   WRITE(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ',universal_myrank,'/',universal_nprocs-1
 
