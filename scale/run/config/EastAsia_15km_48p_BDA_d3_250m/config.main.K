@@ -15,7 +15,7 @@ LOGDIR="$DIR/log"
 # Location of model/data files
 
 #MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
-MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale_history/v150809/scale_local/scale-les/test/case_real/check_japan/run"
+MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/update/scale/scale-les/test/case_real/check_japan/run"
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p_BDA_d3_250m.bf10"
@@ -42,7 +42,7 @@ LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
 ######
-BDY_FORMAT=-1           # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
@@ -96,7 +96,7 @@ MACHINE_TYPE=10             # Machine type
                             # 12: K-computer (interact jobs)
 
 TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=2               # Disk type used for the 'run' temporary directory (runtime files)
+TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)
                             #  2: share (staging to TMP)
@@ -110,7 +110,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
+SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
                             #  0: No
                             #  1: Yes
 
