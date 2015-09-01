@@ -15,7 +15,7 @@ LOGDIR="$DIR/log"
 # Location of model/data files
 
 #MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
-MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale_history/v150809/scale_mod/scale-les/test/case_real/check_japan/run"
+MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale_history/v150806/scale_local/scale-les/test/case_real/check_japan/run"
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p_BDA_d3_250m.bf10"
@@ -73,9 +73,9 @@ LTIMESLOT=5        # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=1           # Ensemble size
+MEMBER=20          # Ensemble size
 
-NNODES=72          # Number of nodes
+NNODES=756         # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -120,7 +120,7 @@ TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs i
 
 TMP="/scratch/hp150019/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
-TMPL=                       # (When $MACHINE_TYPE=12, this will be automatically set)
+TMPL=                       # (When $MACHINE_TYPE=10, this will be automatically set)
 
 #===============================================================================
 # Environmental settings

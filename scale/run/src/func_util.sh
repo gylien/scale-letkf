@@ -187,15 +187,25 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 #mpiexec /work/system/bin/msh "/bin/ls -lL $progdir" 1>&2
 #echo "mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS" 1>&2
 
-    mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS || exit 999
-#    mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS || exit 999
-#    mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile -mca mpi_deadlock_timeout 60 -mca mpi_deadlock_timeout_delay 20 ./${progdir}/${progbase} $ARGS || exit 999
+#    mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
+    mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
+#    mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile -mca mpi_deadlock_timeout 60 -mca mpi_deadlock_timeout_delay 20 ./${progdir}/${progbase} $ARGS
+    res=$?
+    if ((res != 0)); then
+      echo "[Error] mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS" >&2
+      echo "        Exit code: $res" >&2
+    fi
 
   else
 
-    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS || exit 999 )
-#    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile ./$progbase $ARGS || exit 999 )
-#    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile -mca mpi_deadlock_timeout 60 -mca mpi_deadlock_timeout_delay 20 ./$progbase $ARGS || exit 999 )
+#    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS )
+    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile ./$progbase $ARGS )
+#    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile -mca mpi_deadlock_timeout 60 -mca mpi_deadlock_timeout_delay 20 ./$progbase $ARGS )
+    res=$?
+    if ((res != 0)); then 
+      echo "[Error] mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS" >&2
+      echo "        Exit code: $res" >&2
+    fi
 
   fi
 

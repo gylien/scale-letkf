@@ -15,7 +15,11 @@ program scaleles_init_ens
      set_mem_node_proc
 
   use scale_stdio, only: &
-     H_LONG
+     H_LONG, &
+     IO_L, &
+     IO_FID_CONF, &
+     IO_FID_LOG, &
+     IO_FID_STDOUT
   use scale_process, only: &
      PRC_MPIstart, &
      PRC_UNIVERSAL_setup, &
@@ -24,7 +28,9 @@ program scaleles_init_ens
      PRC_MPIsplit, &
      PRC_MPIsplit_letkf, &
      PRC_UNIVERSAL_myrank, &
-     PRC_DOMAIN_nlim
+     PRC_DOMAIN_nlim, &
+     PRC_GLOBAL_COMM_WORLD, &
+     PRC_LOCAL_COMM_WORLD
   use mod_init_driver
 
   implicit none
@@ -110,6 +116,9 @@ program scaleles_init_ens
     write (6,'(A)') 'Run pre-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd1), ']'
     call system(trim(cmd1))
+!    call system(trim(cmd1), status=ierr)
+!    CALL EXECUTE_COMMAND_LINE(trim(cmd1), exitstat=ierr)
+    write(6, '(A,I,A)') '######', universal_myrank, ' 222222, ierr = ', ierr
 !    if (ierr /= 0) then
 !      stop
 !    end if
@@ -130,6 +139,12 @@ program scaleles_init_ens
 
   write(6, '(A,I,A)') '######', universal_myrank, ' 444444'
 
+  write(6, '(A,I,A)') '######', universal_myrank, ' MEMBER    = ', MEMBER+1
+  write(6, '(A,I,A)') '######', universal_myrank, ' NNODES    = ', NNODES
+  write(6, '(A,I,A)') '######', universal_myrank, ' PPN       = ', PPN
+  write(6, '(A,I,A)') '######', universal_myrank, ' MEM_NODES = ', MEM_NODES
+  write(6, '(A,I,A)') '######', universal_myrank, ' MEM_NP    = ', MEM_NP
+
   call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
   CALL MPI_BARRIER(universal_comm,ierr)
@@ -144,7 +159,7 @@ program scaleles_init_ens
 ! Run SCALE-LES_init
 !-----------------------------------------------------------------------
 
-  if (myrank_mem_use) then
+!  if (myrank_mem_use) then
 
 !    if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
 !      write(6,'(A,I10)') 'MEM_NP    = ', MEM_NP
@@ -162,6 +177,9 @@ program scaleles_init_ens
                              global_comm                       ) ! [OUT]
 
   write(6, '(A,I,A)') '######', universal_myrank, ' 777777'
+
+
+  if (global_comm /= MPI_COMM_NULL) then
 
 
     call PRC_GLOBAL_setup( .false.,    & ! [IN]
@@ -234,6 +252,29 @@ program scaleles_init_ens
 
   write(6, '(A,I,A)') '######', universal_myrank, ' CCCCCC'
 
+
+
+
+
+  ! free splitted communicator
+!  if (PRC_LOCAL_COMM_WORLD /= -1 .and. PRC_LOCAL_COMM_WORLD /= MPI_COMM_NULL) then
+!    call MPI_Comm_free(PRC_LOCAL_COMM_WORLD,ierr)
+!  endif
+!  if (PRC_GLOBAL_COMM_WORLD /= -1 .and. PRC_GLOBAL_COMM_WORLD /= MPI_COMM_NULL) then
+!    call MPI_Comm_free(PRC_GLOBAL_COMM_WORLD,ierr)
+!  endif
+
+!  write(6, '(A,I,A)') '######', universal_myrank, ' CCCCDD'
+
+  ! Close logfile, configfile
+  if ( IO_L ) then
+    if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+  endif
+  close(IO_FID_CONF)
+
+  write(6, '(A,I,A)') '######', universal_myrank, ' CCDDDD'
+
+
 !-----------------------------------------------------------------------
 ! Post-processing scripts
 !-----------------------------------------------------------------------
@@ -242,6 +283,9 @@ program scaleles_init_ens
     write (6,'(A)') 'Run post-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd2), ']'
     call system(trim(cmd2))
+!    call system(trim(cmd2), status=ierr)
+!    CALL EXECUTE_COMMAND_LINE(trim(cmd2), exitstat=ierr)
+    write(6, '(A,I,A)') '######', universal_myrank, ' CCCCCC, ierr = ', ierr
   end if
 
   write(6, '(A,I,A)') '######', universal_myrank, ' DDDDDD'
@@ -260,7 +304,9 @@ program scaleles_init_ens
 
 !  CALL finalize_mpi
 
-  call PRC_MPIfinish
+!  call PRC_MPIfinish
+
+  call MPI_Finalize(ierr)
 
   write(6, '(A,I,A)') '######', universal_myrank, ' FFFFFF'
 

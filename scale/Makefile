@@ -1,5 +1,6 @@
 all:
 	( cd common ; make )
+	( cd common/fopts_scale ; make )
 	( cd letkf ; make )
 #	( cd ssio ; make )
 	( cd obs ; make )
@@ -9,6 +10,7 @@ all:
 
 clean:
 	( cd common ; make clean )
+	( cd common/fopts_scale ; make clean )
 	( cd letkf ; make clean )
 #	( cd ssio ; make clean )
 	( cd obs ; make clean )

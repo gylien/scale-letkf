@@ -15,7 +15,7 @@ LOGDIR="$DIR/log"
 # Location of model/data files
 
 #MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
-MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/update/scale/scale-les/test/case_real/check_japan/run"
+MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale_history/v150806/scale_local/scale-les/test/case_real/check_japan/run"
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p_BDA_d3_250m.bf10"
