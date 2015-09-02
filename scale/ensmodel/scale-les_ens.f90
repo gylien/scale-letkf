@@ -300,6 +300,8 @@ program scaleles_ens
 
 !  call PRC_MPIfinish
 
+  call MPI_Finalize(ierr)
+
   write(6, '(A,I,A)') '######', universal_myrank, ' FFFFFF'
 
 
