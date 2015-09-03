@@ -22,8 +22,7 @@ BUFR_LIB  =
 #SFC       = frtpx
 #FC        = mpifrtpx
 
-FOPTS_SCALE = $(FFLAGS) \
-              -Kopenmp 
+FOPTS_SCALE = $(FFLAGS)
 
 #FOPTS     = -Kfast,ocl,openmp,noeval -V -Qa,d,i,p,t,x -Koptmsg=2 \
 #            -x-    \
