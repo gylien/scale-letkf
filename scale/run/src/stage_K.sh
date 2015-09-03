@@ -137,105 +137,102 @@ else
 fi
 
 #===============================================================================
+
+if ((SIMPLE_STGOUT <= 1)); then
+#------
+
+#-------------------------------------------------------------------------------
 # stage-out: Files in TMPOUT directory
 
-#if [ -s "$STAGING_DIR/stageout.out" ]; then
-#  while read line; do
-#    destin="$(echo $line | cut -d '|' -s -f1)"
-#    source="$(echo $line | cut -d '|' -s -f2)"
-#    ftype="$(echo $line | cut -d '|' -s -f3)"
-#    if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
-#      if [ "$ftype" = 'd' ] || [ "$ftype" = 'drm' ]; then
-#        if ((USE_RANKDIR == 1)); then
-#          if ((TMPOUT_MODE == 3)); then
-#            echo "#PJM --stgout-dir \"rank=* %r:${TMPOUT_STG}/${source} ${destin} recursive=10\""
-#          else
-#            echo "#PJM --stgout-dir \"rank=0 0:${TMPOUT_STG}/${source} ${destin} recursive=10\""
-#          fi
-#        else
-#          echo "#PJM --stgout-dir \"${TMPOUT_STG}/${source} ${destin} recursive=10\""
-#        fi
-#      else
-#        if ((USE_RANKDIR == 1)); then
-#          if ((TMPOUT_MODE == 3)); then
-#            echo "#PJM --stgout \"rank=* %r:${TMPOUT_STG}/${source} ${destin}\""
-#          else
-#            echo "#PJM --stgout \"rank=0 0:${TMPOUT_STG}/${source} ${destin}\""
-#          fi
-#        else
-#          echo "#PJM --stgout \"${TMPOUT_STG}/${source} ${destin}\""
-#        fi
-#      fi
-#    fi
-#  done < "$STAGING_DIR/stageout.out" # | sort | uniq
-#fi
+  if [ -s "$STAGING_DIR/stageout.out" ]; then
+    while read line; do
+      destin="$(echo $line | cut -d '|' -s -f1)"
+      source="$(echo $line | cut -d '|' -s -f2)"
+      ftype="$(echo $line | cut -d '|' -s -f3)"
+      if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
+        if [ "$ftype" = 'd' ] || [ "$ftype" = 'drm' ]; then
+          if ((USE_RANKDIR == 1)); then
+            if ((TMPOUT_MODE == 3)); then
+              echo "#PJM --stgout-dir \"rank=* %r:${TMPOUT_STG}/${source} ${destin} recursive=10\""
+            else
+              echo "#PJM --stgout-dir \"rank=0 0:${TMPOUT_STG}/${source} ${destin} recursive=10\""
+            fi
+          else
+            echo "#PJM --stgout-dir \"${TMPOUT_STG}/${source} ${destin} recursive=10\""
+          fi
+        else
+          if ((USE_RANKDIR == 1)); then
+            if ((TMPOUT_MODE == 3)); then
+              echo "#PJM --stgout \"rank=* %r:${TMPOUT_STG}/${source} ${destin}\""
+            else
+              echo "#PJM --stgout \"rank=0 0:${TMPOUT_STG}/${source} ${destin}\""
+            fi
+          else
+            echo "#PJM --stgout \"${TMPOUT_STG}/${source} ${destin}\""
+          fi
+        fi
+      fi
+    done < "$STAGING_DIR/stageout.out" # | sort | uniq
+  fi
 
-##-------------------
+  #-------------------
 
-#i=0
-#while [ -s "$STAGING_DIR/stageout.out.$((i+1))" ]; do
-#  while read line; do
-#    destin="$(echo $line | cut -d '|' -s -f1)"
-#    source="$(echo $line | cut -d '|' -s -f2)"
-#    ftype="$(echo $line | cut -d '|' -s -f3)"
-#    if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
-#      if [ "$ftype" = 'd' ] || [ "$ftype" = 'drm' ]; then
-#        if ((USE_RANKDIR == 1)); then
-#          echo "#PJM --stgout-dir \"rank=${i} ${i}:${TMPOUT_STG}/${source} ${destin} recursive=10\""
-#        else
-#          echo "#PJM --stgout-dir \"${TMPOUT_STG}/${source} ${destin} recursive=10\""
-#        fi
-#      else
-#        if ((USE_RANKDIR == 1)); then
-#          echo "#PJM --stgout \"rank=${i} ${i}:${TMPOUT_STG}/${source} ${destin}\""
-#        else
-#          echo "#PJM --stgout \"${TMPOUT_STG}/${source} ${destin}\""
-#        fi
-#      fi
-#    fi
-#  done < "$STAGING_DIR/stageout.out.$((i+1))" # | sort | uniq
-#  i=$((i+1))
-#done
+  i=0
+  while [ -s "$STAGING_DIR/stageout.out.$((i+1))" ]; do
+    while read line; do
+      destin="$(echo $line | cut -d '|' -s -f1)"
+      source="$(echo $line | cut -d '|' -s -f2)"
+      ftype="$(echo $line | cut -d '|' -s -f3)"
+      if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
+        if [ "$ftype" = 'd' ] || [ "$ftype" = 'drm' ]; then
+          if ((USE_RANKDIR == 1)); then
+            echo "#PJM --stgout-dir \"rank=${i} ${i}:${TMPOUT_STG}/${source} ${destin} recursive=10\""
+          else
+            echo "#PJM --stgout-dir \"${TMPOUT_STG}/${source} ${destin} recursive=10\""
+          fi
+        else
+          if ((USE_RANKDIR == 1)); then
+            echo "#PJM --stgout \"rank=${i} ${i}:${TMPOUT_STG}/${source} ${destin}\""
+          else
+            echo "#PJM --stgout \"${TMPOUT_STG}/${source} ${destin}\""
+          fi
+        fi
+      fi
+    done < "$STAGING_DIR/stageout.out.$((i+1))" # | sort | uniq
+    i=$((i+1))
+  done
 
-##. config.cycle
-##. src/func_datetime.sh
+#-------------------------------------------------------------------------------
+# stage-out: standard log files
 
-##time=$STIME
-##if ((USE_RANKDIR == 1)); then
-##  echo "#PJM --stgout-dir \"rank=* %r:${TMPOUT_STG}/${time}/log ${OUTDIR}/${time}/log recursive=6\""
-##else
-##  echo "#PJM --stgout-dir \"${TMPOUT_STG}/${time}/log ${OUTDIR}/${time}/log recursive=6\""
-##fi
-##while ((time <= ETIME)); do
-##  time=$(datetime $time $LCYCLE s)
-##  if ((USE_RANKDIR == 1)); then
-##    echo "#PJM --stgout-dir \"rank=* %r:${TMPOUT_STG}/${time} ${OUTDIR}/${time} recursive=6\""
-##  else
-##    echo "#PJM --stgout-dir \"${TMPOUT_STG}/${time} ${OUTDIR}/${time} recursive=6\""
-##  fi
-##done
+  if ((USE_RANKDIR == 1)); then
+    echo "#PJM --stgout \"rank=0 0:./log/* $LOGDIR/\""
+  else
+    echo "#PJM --stgout \"./log/* $LOGDIR/\""
+  fi
 
-##-------------------------------------------------------------------------------
-## stage-out: standard log files
+#------
+else # [ SIMPLE_STGOUT <= 1 ]
+#------
 
-#if ((USE_RANKDIR == 1)); then
-#  echo "#PJM --stgout \"rank=0 0:./log/* $LOGDIR/\""
-#else
-#  echo "#PJM --stgout \"./log/* $LOGDIR/\""
-#fi
+#-------------------------------------------------------------------------------
+# stage-out: everything
 
-OOODIR="$OUTDIR/everything"
+  ALLOUTDIR="$OUTDIR/everything"
 
-if ((USE_RANKDIR == 1)); then
-  echo "#PJM --stgout-dir \"rank=* %r:./log $OOODIR/log recursive=10\""
-  echo "#PJM --stgout-dir \"rank=* %r:./run $OOODIR/run recursive=10\""
-  echo "#PJM --stgout-dir \"rank=* %r:./out $OOODIR/out recursive=10\""
-  echo "#PJM --stgout \"rank=* %r:./* $OOODIR/\""
-else
-  echo "#PJM --stgout-dir \"./log $OOODIR/log\" recursive=10"
-  echo "#PJM --stgout-dir \"./run $OOODIR/run\" recursive=10"
-  echo "#PJM --stgout-dir \"./out $OOODIR/out\" recursive=10"
-  echo "#PJM --stgout \"./* $OOODIR/\""
+  if ((USE_RANKDIR == 1)); then
+    echo "#PJM --stgout-dir \"rank=* %r:./log $ALLOUTDIR/log recursive=10\""
+    echo "#PJM --stgout-dir \"rank=* %r:./run $ALLOUTDIR/run recursive=10\""
+    echo "#PJM --stgout-dir \"rank=* %r:./out $ALLOUTDIR/out recursive=10\""
+    echo "#PJM --stgout \"rank=* %r:./* $ALLOUTDIR/\""
+  else
+    echo "#PJM --stgout-dir \"./log $ALLOUTDIR/log\" recursive=10"
+    echo "#PJM --stgout-dir \"./run $ALLOUTDIR/run\" recursive=10"
+    echo "#PJM --stgout-dir \"./out $ALLOUTDIR/out\" recursive=10"
+    echo "#PJM --stgout \"./* $ALLOUTDIR/\""
+  fi
+
+#------
 fi
 
 #===============================================================================

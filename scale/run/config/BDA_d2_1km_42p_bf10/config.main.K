@@ -7,20 +7,19 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl_d2_20m" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2_1km" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
 #===============================================================================
 # Location of model/data files
 
-#MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
-MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/update/scale/scale-les/test/case_real/check_japan/run"
+MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale_history/v150902/scale_local_aggressive_K-1.2.0-17-2/scale-les/test/case_real/check_japan/run"
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
-DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_15km_48p_BDA_d2.bf10"
-DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_15km_48p_DBA_d2.bf10"
-DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/EastAsia_15km_48p_BDA/ctl"
+DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/BDA_d2_1km_42p_bf10"
+DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/BDA_d2_1km_42p_bf10"
+DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d1_15km"
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
@@ -51,7 +50,7 @@ BDY_ENS=1               # 0: Fixed boundary files for all memebers
 BDYINT=3600
 BDYCYCLE_INT=21600
 
-OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
+OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
 
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
@@ -73,10 +72,10 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 # Parallelization settings
 
 #MEMBER=100         # Ensemble size
-MEMBER=20          # Ensemble size
+MEMBER=3           # Ensemble size
 
 #NNODES=2142        # Number of nodes
-NNODES=882         # Number of nodes
+NNODES=168         # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -111,12 +110,12 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
+SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
                             #  0: No
                             #  1: Yes
+                            #  2: Stage-out everything
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
-#TMPSUBDIR="scale-letkf_$(whoami)_${SYSNAME}" # (used to identify multiple runs in the same time)
 TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
 TMP=                        # (When $MACHINE_TYPE=10, this will be automatically set)

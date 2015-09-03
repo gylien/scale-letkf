@@ -5,11 +5,11 @@
 #
 #===============================================================================
 
-STIME='20130713010000'
-ETIME='20130713010000'
+STIME='20130713060000'
+ETIME='20130713060000'
 ISTEP=
 FSTEP=
-TIME_LIMIT='00:30:00'
+TIME_LIMIT='00:20:00'
 
 #===============================================================================
 
@@ -26,7 +26,7 @@ TIME_LIMIT='00:30:00'
 #                   #  3: use thinned observations for satellite radiance observations only
 #                   #  4: use thinned observations for both conventional and satellite radiance observations
 
-ADAPTINFL=1         # Adaptive inflation
+ADAPTINFL=0         # Adaptive inflation
                     #  0: OFF
                     #  1: ON, using inflation parameter 1 cycle  ago as prior
                     #  2: ON, using inflation parameter 2 cycles ago as prior
