@@ -71,6 +71,8 @@ program scaleles_init_ens
   ! start MPI
   call PRC_MPIstart( universal_comm ) ! [OUT]
 
+  rtimer00 = MPI_WTIME()
+
   call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
                             universal_nprocs, & ! [OUT]
                             universal_master  ) ! [OUT]
@@ -79,12 +81,6 @@ program scaleles_init_ens
   myrank = universal_myrank
 
   WRITE(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ',universal_myrank,'/',universal_nprocs-1
-
-  rtimer00 = MPI_WTIME()
-
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' 111111'
-
 
   if (command_argument_count() >= 3) then
     call get_command_argument(2, icmd)
@@ -102,11 +98,8 @@ program scaleles_init_ens
 
   WRITE(stdoutf(6:11), '(I6.6)') universal_myrank
 !  WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', universal_myrank
-!  OPEN(6,FILE=stdoutf)
-!  WRITE(6,'(A,I6.6,2A)') 'MYRANK=',universal_myrank,', STDOUTF=',stdoutf
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' 222222'
-
+  OPEN(6,FILE=stdoutf)
+  WRITE(6,'(A,I6.6,2A)') 'MYRANK=',universal_myrank,', STDOUTF=',stdoutf
 
 !-----------------------------------------------------------------------
 ! Pre-processing scripts
@@ -116,17 +109,7 @@ program scaleles_init_ens
     write (6,'(A)') 'Run pre-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd1), ']'
     call system(trim(cmd1))
-!    call system(trim(cmd1), status=ierr)
-!    CALL EXECUTE_COMMAND_LINE(trim(cmd1), exitstat=ierr)
-    write(6, '(A,I,A)') '######', universal_myrank, ' 222222, ierr = ', ierr
-!    if (ierr /= 0) then
-!      stop
-!    end if
   end if
-
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' 333333'
-
 
   CALL MPI_BARRIER(universal_comm,ierr)
   rtimer = MPI_WTIME()
@@ -136,15 +119,6 @@ program scaleles_init_ens
 !-----------------------------------------------------------------------
 
   call set_common_conf
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' 444444'
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' MEMBER    = ', MEMBER+1
-  write(6, '(A,I,A)') '######', universal_myrank, ' NNODES    = ', NNODES
-  write(6, '(A,I,A)') '######', universal_myrank, ' PPN       = ', PPN
-  write(6, '(A,I,A)') '######', universal_myrank, ' MEM_NODES = ', MEM_NODES
-  write(6, '(A,I,A)') '######', universal_myrank, ' MEM_NP    = ', MEM_NP
-
   call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
   CALL MPI_BARRIER(universal_comm,ierr)
@@ -152,41 +126,27 @@ program scaleles_init_ens
   WRITE(6,timer_fmt) '### TIMER(INITIALIZE):',rtimer-rtimer00
   rtimer00=rtimer
 
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' 555555'
-
 !-----------------------------------------------------------------------
 ! Run SCALE-LES_init
 !-----------------------------------------------------------------------
 
-!  if (myrank_mem_use) then
+!  if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
+!    write(6,'(A,I10)') 'MEM_NP    = ', MEM_NP
+!    write(6,'(A,I10)') 'PRC_NUM_X = ', PRC_NUM_X
+!    write(6,'(A,I10)') 'PRC_NUM_Y = ', PRC_NUM_Y
+!    write(6,'(A)') 'MEM_NP should be equal to PRC_NUM_X * PRC_NUM_Y.'
+!    stop
+!  end if
 
-!    if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
-!      write(6,'(A,I10)') 'MEM_NP    = ', MEM_NP
-!      write(6,'(A,I10)') 'PRC_NUM_X = ', PRC_NUM_X
-!      write(6,'(A,I10)') 'PRC_NUM_Y = ', PRC_NUM_Y
-!      write(6,'(A)') 'MEM_NP should be equal to PRC_NUM_X * PRC_NUM_Y.'
-!      stop
-!    end if
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' 666666'
-
-    ! split MPI communicator for LETKF
-    call PRC_MPIsplit_letkf( universal_comm,                   & ! [IN]
-                             MEM_NP, nitmax, universal_nprocs, proc2mem, & ! [IN]
-                             global_comm                       ) ! [OUT]
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' 777777'
-
+  ! split MPI communicator for LETKF
+  call PRC_MPIsplit_letkf( universal_comm,                   & ! [IN]
+                           MEM_NP, nitmax, universal_nprocs, proc2mem, & ! [IN]
+                           global_comm                       ) ! [OUT]
 
   if (global_comm /= MPI_COMM_NULL) then
 
-
     call PRC_GLOBAL_setup( .false.,    & ! [IN]
                            global_comm ) ! [IN]
-
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' 888888'
 
     !--- split for nesting
     ! communicator split for nesting domains
@@ -201,9 +161,6 @@ program scaleles_init_ens
                        intercomm_parent, & ! [OUT]
                        intercomm_child,  & ! [OUT]
                        confname_dummy    ) ! [OUT]
-
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' 999999'
 
     if (MEMBER_ITER == 0) then
       its = 1
@@ -226,45 +183,11 @@ program scaleles_init_ens
       end if
     end do ! [ it = its, ite ]
 
-  write(6, '(A,I,A)') '######', universal_myrank, ' AAAAAA'
-
-
-!    call PRC_MPIfinish
-
-!    ! Close logfile, configfile
-!    if ( IO_L ) then
-!       if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
-!    endif
-!    close(IO_FID_CONF)
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' BBBBBB'
-
-  else ! [ myrank_mem_use ]
+  else ! [ global_comm /= MPI_COMM_NULL ]
 
     write (6, '(A,I6.6,A)') 'MYRANK=',universal_myrank,': This process is not used!'
 
-  end if ! [ myrank_mem_use ]
-
-  CALL MPI_BARRIER(universal_comm,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(SCALE_LES):',rtimer-rtimer00
-  rtimer00=rtimer
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' CCCCCC'
-
-
-
-
-
-  ! free splitted communicator
-!  if (PRC_LOCAL_COMM_WORLD /= -1 .and. PRC_LOCAL_COMM_WORLD /= MPI_COMM_NULL) then
-!    call MPI_Comm_free(PRC_LOCAL_COMM_WORLD,ierr)
-!  endif
-!  if (PRC_GLOBAL_COMM_WORLD /= -1 .and. PRC_GLOBAL_COMM_WORLD /= MPI_COMM_NULL) then
-!    call MPI_Comm_free(PRC_GLOBAL_COMM_WORLD,ierr)
-!  endif
-
-!  write(6, '(A,I,A)') '######', universal_myrank, ' CCCCDD'
+  end if ! [ global_comm /= MPI_COMM_NULL ]
 
   ! Close logfile, configfile
   if ( IO_L ) then
@@ -272,8 +195,10 @@ program scaleles_init_ens
   endif
   close(IO_FID_CONF)
 
-  write(6, '(A,I,A)') '######', universal_myrank, ' CCDDDD'
-
+  CALL MPI_BARRIER(universal_comm,ierr)
+  rtimer = MPI_WTIME()
+  WRITE(6,timer_fmt) '### TIMER(SCALE_LES):',rtimer-rtimer00
+  rtimer00=rtimer
 
 !-----------------------------------------------------------------------
 ! Post-processing scripts
@@ -283,33 +208,20 @@ program scaleles_init_ens
     write (6,'(A)') 'Run post-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd2), ']'
     call system(trim(cmd2))
-!    call system(trim(cmd2), status=ierr)
-!    CALL EXECUTE_COMMAND_LINE(trim(cmd2), exitstat=ierr)
-    write(6, '(A,I,A)') '######', universal_myrank, ' CCCCCC, ierr = ', ierr
   end if
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' DDDDDD'
-
 
   CALL MPI_BARRIER(universal_comm,ierr)
   rtimer = MPI_WTIME()
   WRITE(6,timer_fmt) '### TIMER(POST_SCRIPT):',rtimer-rtimer00
   rtimer00=rtimer
 
-  write(6, '(A,I,A)') '######', universal_myrank, ' EEEEEE'
-
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
 
-!  CALL finalize_mpi
-
 !  call PRC_MPIfinish
 
   call MPI_Finalize(ierr)
-
-  write(6, '(A,I,A)') '######', universal_myrank, ' FFFFFF'
-
 
   stop
 end program scaleles_init_ens
