@@ -1,25 +1,31 @@
-SFC       = ifort
-FC        = mpif90
-#FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback -fpe0
-FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback
-#FOPTS2    = -O3 -ip -fp-model precise -shared-intel -g -traceback -fpe0
-FOPTS2    = -O3 -ip -fp-model precise -shared-intel -g -traceback
-FOPTS3    = $(FOPTS)
-FMCMODEL  = -mcmodel=medium
-FFREE     = -free
-FFIXED    = -fixed
-
-LIBBLAS   = -mkl
-
-NETCDF_INC = -I/data/opt/netcdf/4.3.2_intel/include -I/data/opt/netcdf-fortran/4.4.1_intel/include
-NETCDF_LIB = -L/data/opt/netcdf/4.3.2_intel/lib -L/data/opt/netcdf-fortran/4.4.1_intel/lib -L/data/opt/hdf5/1.8.14_intel/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
-
-#SCALE     = ../../../scale
-SCALE     = /home/gylien/scale-letkf/scale_history/v150809/scale_local
+SCALE     = /data6/gylien/scale-letkf/scale
 SCALE_INC = -I$(SCALE)/dc_utils \
             -I$(SCALE)/gtool    \
             -I$(SCALE)/include
 SCALE_LIB = -L$(SCALE)/lib -lscale -lgtool -ldcutils
 SCALE_LES_OBJDIR = $(SCALE)/scale-les/test/case_real/check_japan/run/.libs
 
+include $(SCALE)/sysdep/Makedef.$(SCALE_SYS)
+include $(SCALE)/Mkinclude
+
+NETCDF_INC = -I/data/opt/netcdf/4.3.2_intel/include -I/data/opt/netcdf-fortran/4.4.1_intel/include
+NETCDF_LIB = -L/data/opt/netcdf/4.3.2_intel/lib -L/data/opt/netcdf-fortran/4.4.1_intel/lib -L/data/opt/hdf5/1.8.14_intel/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+
+LAPACK_LIB = -mkl
+
 BUFR_LIB  = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
+
+######
+
+SFC       = ifort
+FC        = mpif90
+
+FOPTS_SCALE = $(FFLAGS)
+
+#FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback -fpe0
+FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback
+
+FMCMODEL  = -mcmodel=medium
+FBYTESWAP = -convert little_endian
+FFREE     = -free
+FFIXED    = -fixed
