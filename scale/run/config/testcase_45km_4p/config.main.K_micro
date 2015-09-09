@@ -7,27 +7,27 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-DDIR="/volume63/data/hp150019/gylien/test/scale-letkf/letkf/scale"
+DDIR="/volume63/data/hp150019/gylien/test/scale-letkf"
 
-OUTDIR="$DDIR/../../exp/testcase_45km_4p" # Directory for SCALE-LETKF output
+OUTDIR="$DDIR/exp/testcase_45km_4p" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DDIR/../../scale/scale-les/test/case_real/check_japan/run"
-DATADIR="$DDIR/../../database"
+MODELDIR="$DIR/../../bin/K"
+DATADIR="$DDIR/database"
 
-DATA_TOPO="$DDIR/../../database/topo_prep/testcase_45km_4p_bf10"
-DATA_LANDUSE="$DDIR/../../database/landuse_prep/testcase_45km_4p_bf10"
+DATA_TOPO="$DDIR/database/topo_prep/testcase_45km_4p_bf10"
+DATA_LANDUSE="$DDIR/database/landuse_prep/testcase_45km_4p_bf10"
 DATA_BDY_SCALE=
-DATA_BDY_SCALE_PREP="$DDIR/../../database/bdy_prep/testcase_45km_4p"
-DATA_BDY_WRF="$DDIR/../../ncepfnl/wrfout"
+DATA_BDY_SCALE_PREP="$DDIR/database/bdy_prep/testcase_45km_4p"
+DATA_BDY_WRF="$DDIR/ncepfnl/wrfout"
 DATA_BDY_NICAM=
 
-OBS="$DDIR/../../obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
-OBSNCEP="$DDIR/../../obs/prepbufr" # directory of observation data in NCEP BUFR format
+OBS="$DDIR/obs/prepbufr_obs_eastasia"
+OBSNCEP=
 
 #===============================================================================
 # model/data file options
@@ -42,10 +42,10 @@ LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=0            # 0: SCALE with exactly same domain settings (do not need additional preprocessing)
-                        # 1: SCALE (requires compatible 'config.nml.scale_init')
-                        # 2: WRF   (requires compatible 'config.nml.scale_init')
-                        # 3: NICAM (requires compatible 'config.nml.scale_init')
+BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+                        # 1: SCALE history (requires compatible 'config.nml.scale_init')
+                        # 2: WRF           (requires compatible 'config.nml.scale_init')
+                        # 3: NICAM         (requires compatible 'config.nml.scale_init')
 BDY_ENS=0               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 
@@ -83,7 +83,7 @@ SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
-ENABLE_SET=1       ######
+ENABLE_SET=0       ######
 if ((ENABLE_SET == 1)); then
   NNODES_all=$((NNODES*3))
 fi
@@ -121,7 +121,7 @@ TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same
 
 TMP="/scratch/hp150019/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
-TMPL=                       # (When $MACHINE_TYPE=12, this will be automatically set)
+TMPL=                       # (When $MACHINE_TYPE=10, this will be automatically set)
 
 #===============================================================================
 # Environmental settings

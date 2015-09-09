@@ -3,7 +3,7 @@ SCALE_INC = -I$(SCALE)/dc_utils \
             -I$(SCALE)/gtool    \
             -I$(SCALE)/include
 SCALE_LIB = -L$(SCALE)/lib -lscale -lgtool -ldcutils
-SCALE_LES_OBJDIR = $(SCALE)/scale-les/test/case_real/check_japan/run/.libs
+SCALE_LES_OBJDIR = $(SCALE)/scale-les/src/.libs
 
 include $(SCALE)/sysdep/Makedef.$(SCALE_SYS)
 include $(SCALE)/Mkinclude

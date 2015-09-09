@@ -14,8 +14,7 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-#MODELDIR="/data6/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
-MODELDIR="/home/gylien/scale-letkf/scale_history/v150809/scale/scale-les/test/case_real/check_japan/run"
+MODELDIR="/data6/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
 DATADIR="/data6/gylien/scale-letkf/database"
 
 DATA_TOPO="/data6/gylien/scale-letkf/database/topo_prep/testcase_45km_4p_bf10"
@@ -93,7 +92,7 @@ MACHINE_TYPE=1              # Machine type
                             # 11: K-computer (micro jobs)
                             # 12: K-computer (interact jobs)
 
-TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
+TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
 TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)
@@ -108,7 +107,7 @@ ONLINE_STGOUT=1             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
+SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
                             #  0: No
                             #  1: Yes
 
