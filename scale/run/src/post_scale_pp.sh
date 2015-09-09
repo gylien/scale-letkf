@@ -48,7 +48,14 @@ fi
 if ((LOG_OPT <= 2)); then
   mkdir -p $TMPOUT/${STIME}/log/scale_pp
   if [ -f "$TMPDIR/pp_LOG${SCALE_LOG_SFX}" ]; then
-    mv -f $TMPDIR/pp_LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale_pp/pp_LOG${SCALE_LOG_SFX}
+    mv -f $TMPDIR/pp_LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale_pp/${MEM}_pp_LOG${SCALE_LOG_SFX}
+  fi
+fi
+
+if ((LOG_OPT <= 1)); then
+  mkdir -p $TMPOUT/${STIME}/log/scale_pp
+  if [ -f "$TMPDIR/pp.conf" ]; then
+    mv -f $TMPDIR/pp.conf $TMPOUT/${STIME}/log/scale_pp/${MEM}_pp.conf
   fi
 fi
 

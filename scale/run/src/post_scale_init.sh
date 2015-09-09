@@ -63,6 +63,13 @@ if ((LOG_OPT <= 2)); then
   fi
 fi
 
+if ((LOG_OPT <= 1)); then
+  mkdir -p $TMPOUT/${STIME}/log/scale_init
+  if [ -f "$TMPDIR/init.conf" ]; then
+    mv -f $TMPDIR/init.conf $TMPOUT/${STIME}/log/scale_init/${MEM}_init.conf
+  fi
+fi
+
 if ((MYRANK < MEM_NP)); then
   if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
     mkdir -p $TMPOUT/${STIME}/log/scale_init

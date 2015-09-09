@@ -188,6 +188,8 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 #echo "mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS" 1>&2
 
     mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
+#echo "fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS"
+#    fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
 #    mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
 #    mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile -mca mpi_deadlock_timeout 60 -mca mpi_deadlock_timeout_delay 20 ./${progdir}/${progbase} $ARGS
     res=$?
@@ -199,6 +201,8 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
   else
 
     ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS )
+#echo "( cd $progdir && fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS )"
+#    ( cd $progdir && fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS )
 #    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile ./$progbase $ARGS )
 #    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile -mca mpi_deadlock_timeout 60 -mca mpi_deadlock_timeout_delay 20 ./$progbase $ARGS )
     res=$?

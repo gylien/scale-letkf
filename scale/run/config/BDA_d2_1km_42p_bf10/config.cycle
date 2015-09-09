@@ -5,11 +5,11 @@
 #
 #===============================================================================
 
-STIME='20130713000000'
-ETIME='20130713000000'
+STIME='20130713040000'
+ETIME='20130713050000'
 ISTEP=
 FSTEP=
-TIME_LIMIT='01:40:00'
+TIME_LIMIT='03:15:00'
 
 #===============================================================================
 
@@ -33,7 +33,7 @@ ADAPTINFL=0         # Adaptive inflation
 
 #===============================================================================
 
-MAKEINIT=1       # 0: No
+MAKEINIT=0       # 0: No
                  # 1: Yes
 PERTURB_BDY=0    # 0: No
                  # 1: Yes
@@ -72,12 +72,12 @@ OBSOUT_OPT=1     # 1:   o       o       o
                  # 3:                   o
                  # 4:   (none)
 
-                 #      topo landuse bdy perturb        scale obsope letkf
-                 #      log  log     log (not finished) log   log    log
-LOG_OPT=2        # 1:   o    o       o   o              o     o      o
-                 # 2:   o    o       o                  o     o      o
-                 # 3:                                   o     o      o
-                 # 4:                                         o      o
+                 #      scale_pp scale_init scale    obsope letkf
+                 #      log conf log conf   log conf log    log
+LOG_OPT=1        # 1:   o   o    o   o      o   o    o      o
+                 # 2:   o        o          o        o      o
+                 # 3:                       o        o      o
+                 # 4:                                o      o
                  # 5:   (none)
 
 #===============================================================================

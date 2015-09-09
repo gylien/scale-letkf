@@ -41,9 +41,9 @@ for ifile in $(cd $TMPDIR ; ls obsda.${MEM}.*.dat 2> /dev/null); do
 done
 
 if ((MYRANK < MEM_NP)); then
-  if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
+  if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
     mkdir -p $TMPOUT/${ATIME}/log/obsope
-    mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${ATIME}/log/obsope
+    mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${ATIME}/log/obsope
   fi
 fi
 #if [ "$MEM" == '0001' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'

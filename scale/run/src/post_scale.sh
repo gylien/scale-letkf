@@ -98,6 +98,13 @@ if ((LOG_OPT <= 3)); then
   fi
 fi
 
+if ((LOG_OPT <= 1)); then
+  mkdir -p $TMPOUT/${STIME}/log/scale
+  if [ -f "$TMPDIR/run.conf" ]; then
+    mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/scale/${MEM}_run.conf
+  fi
+fi
+
 ######
 if ((MYRANK == 0)); then
   mkdir -p $TMPOUT/${STIME}/log/scale
