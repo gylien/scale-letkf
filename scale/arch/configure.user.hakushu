@@ -1,4 +1,4 @@
-SCALE     = /data6/gylien/scale-letkf/scale
+SCALE     = ../../../scale
 SCALE_INC = -I$(SCALE)/dc_utils \
             -I$(SCALE)/gtool    \
             -I$(SCALE)/include
@@ -8,8 +8,10 @@ SCALE_LES_OBJDIR = $(SCALE)/scale-les/test/case_real/check_japan/run/.libs
 include $(SCALE)/sysdep/Makedef.$(SCALE_SYS)
 include $(SCALE)/Mkinclude
 
-NETCDF_INC = -I/data/opt/netcdf/4.3.2_intel/include -I/data/opt/netcdf-fortran/4.4.1_intel/include
-NETCDF_LIB = -L/data/opt/netcdf/4.3.2_intel/lib -L/data/opt/netcdf-fortran/4.4.1_intel/lib -L/data/opt/hdf5/1.8.14_intel/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+#NETCDF_INC = -I/data/opt/netcdf/4.3.2_intel/include -I/data/opt/netcdf-fortran/4.4.1_intel/include
+#NETCDF_LIB = -L/data/opt/netcdf/4.3.2_intel/lib -L/data/opt/netcdf-fortran/4.4.1_intel/lib -L/data/opt/hdf5/1.8.14_intel/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
+NETCDF_INC = $(NETCDF_INCLUDE)
+NETCDF_LIB = $(NETCDF_LIBS)
 
 LAPACK_LIB = -mkl
 
