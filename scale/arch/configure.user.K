@@ -1,4 +1,4 @@
-SCALE     = /volume63/data/hp150019/gylien/scale-letkf/scale_history/v150902/scale_local_aggressive_K-1.2.0-17-2
+SCALE     = ../../..
 SCALE_INC = -I$(SCALE)/dc_utils \
             -I$(SCALE)/gtool    \
             -I$(SCALE)/include
