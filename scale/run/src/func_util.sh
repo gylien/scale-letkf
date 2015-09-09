@@ -174,6 +174,8 @@ if ((MACHINE_TYPE == 1)); then
   local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
   HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
 
+  echo "$MPIRUN -d $progdir $HOSTLIST 1 ./$progbase $ARGS"
+
   $MPIRUN -d $progdir $HOSTLIST 1 ./$progbase $ARGS
 #  $MPIRUN -d $progdir $HOSTLIST 1 omplace -nt ${THREADS} ./$progbase $ARGS
 

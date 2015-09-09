@@ -209,16 +209,22 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
   while ((time <= ETIME)); do
     #-------------------
     if [ "$TOPO_FORMAT" = 'prep' ]; then
-      ln -fs ${DATA_TOPO} $TMPOUT/${time}/topo
+      mkdir -p $TMPOUT/${time}
+      rm -fr $TMPOUT/${time}/topo
+      ln -s ${DATA_TOPO} $TMPOUT/${time}/topo
     fi
     if [ "$LANDUSE_FORMAT" = 'prep' ]; then
+      mkdir -p $TMPOUT/${time}
+      rm -fr $TMPOUT/${time}/landuse
       if ((LANDUSE_UPDATE == 1)); then
-        ln -fs ${DATA_LANDUSE}/${time} $TMPOUT/${time}/landuse
+        ln -s ${DATA_LANDUSE}/${time} $TMPOUT/${time}/landuse
       else
-        ln -fs ${DATA_LANDUSE} $TMPOUT/${time}/landuse
+        ln -s ${DATA_LANDUSE} $TMPOUT/${time}/landuse
       fi
     fi
     if ((BDY_FORMAT == 0)); then
+      mkdir -p $TMPOUT/${time}
+      rm -fr $TMPOUT/${time}/bdy
       ln -fs ${DATA_BDY_SCALE_PREP}/${time} $TMPOUT/${time}/bdy
     fi
     time=$(datetime $time $LCYCLE s)
@@ -230,6 +236,63 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
       ln -fs $DATA_BDY_WRF $TMPOUT/bdywrf
     fi
   fi
+
+  if ((BDY_FORMAT == 1)) || ((BDY_FORMAT == -1)); then
+    find_catalogue=0
+    time=$STIME
+    time_bdy_prev=0
+    while ((time <= ETIME)); do
+      time_bdy=$(datetime $time $BDYCYCLE_INT s)
+      for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
+        if [ -s "$DATA_BDY_SCALE/${time_bdy}/gues/meanf/history.pe000000.nc" ]; then
+          break
+        elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
+          echo "[Error] Cannot find boundary files from the SCALE history files." >&2
+          exit 1
+        fi
+        time_bdy=$(datetime $time_bdy -${BDYINT} s)
+      done
+
+      if ((DATA_BDY_TMPLOC == 1)); then
+        bdyscale_dir="$TMPDAT/bdyscale"
+      elif ((DATA_BDY_TMPLOC == 2)); then
+        bdyscale_dir="$TMPOUT/bdyscale"
+      fi
+      mkdir -p $bdyscale_dir
+
+      if ((find_catalogue == 0)); then
+        time_catalogue=$(datetime $time_bdy -$BDYCYCLE_INT s)
+        if [ -s "$DATA_BDY_SCALE/${time_catalogue}/log/scale/latlon_domain_catalogue.txt" ]; then
+          pathin="$DATA_BDY_SCALE/${time_catalogue}/log/scale/latlon_domain_catalogue.txt"
+          ln -fs ${pathin} ${bdyscale_dir}/latlon_domain_catalogue.txt
+          find_catalogue=1
+        fi
+      fi
+
+      if ((time_bdy != time_bdy_prev)); then
+        if ((BDY_ENS == 1)); then
+          for m in $(seq $mmean); do
+            mem=${name_m[$m]}
+            [ "$mem" = 'mean' ] && mem='meanf'
+            mkdir -p ${bdyscale_dir}/${time_bdy}/${name_m[$m]}
+            for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/gues/${mem}/history.*.nc 2> /dev/null); do
+              pathin="$ifile"
+              ln -fs ${pathin} ${bdyscale_dir}/${time_bdy}/${name_m[$m]}/$(basename $ifile)
+            done
+          done
+        else
+          mkdir -p ${bdyscale_dir}/${time_bdy}/mean
+          for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/gues/meanf/history.*.nc 2> /dev/null); do
+            pathin="$ifile"
+            ln -fs ${pathin} ${bdyscale_dir}/${time_bdy}/mean/$(basename $ifile)
+          done
+        fi
+        time_bdy_prev=$time_bdy
+      fi
+      time=$(datetime $time $LCYCLE s)
+    done
+  fi
+
 #-------------------
 else
 #-------------------
@@ -935,24 +998,24 @@ ensfcst_1 () {
 #echo
 
 ############
-if ((BDY_FORMAT == 1 || BDY_FORMAT == -1)); then
-  if ((DATA_BDY_TMPLOC == 1)); then
-    bdyscale_loc=$TMPDAT/bdyscale
-  elif ((DATA_BDY_TMPLOC == 2)); then
-    bdyscale_loc=$TMPOUT/bdyscale
-  fi
-  time_bdy=$(datetime $time $BDYCYCLE_INT s)
-  for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
-    if [ -s "$bdyscale_loc/${time_bdy}/mean/history.pe000000.nc" ]; then
-      break
-    elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
-      echo "[Error] Cannot find boundary files from the SCALE history files." >&2
-      exit 1
-    fi
-    time_bdy=$(datetime $time_bdy -${BDYINT} s)
-  done
-  time_bdy=$(datetime $time_bdy -$BDYCYCLE_INT s)
-fi
+#if ((BDY_FORMAT == 1 || BDY_FORMAT == -1)); then
+#  if ((DATA_BDY_TMPLOC == 1)); then
+#    bdyscale_loc=$TMPDAT/bdyscale
+#  elif ((DATA_BDY_TMPLOC == 2)); then
+#    bdyscale_loc=$TMPOUT/bdyscale
+#  fi
+#  time_bdy=$(datetime $time $BDYCYCLE_INT s)
+#  for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
+#    if [ -s "$bdyscale_loc/${time_bdy}/mean/history.pe000000.nc" ]; then
+#      break
+#    elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
+#      echo "[Error] Cannot find boundary files from the SCALE history files." >&2
+#      exit 1
+#    fi
+#    time_bdy=$(datetime $time_bdy -${BDYINT} s)
+#  done
+#  time_bdy=$(datetime $time_bdy -$BDYCYCLE_INT s)
+#fi
 ############
 
 if (pdrun all $PROC_OPT); then
@@ -990,19 +1053,21 @@ for it in $(seq $its $ite); do
       bdy_base="$TMPOUT/${time}/bdy/mean/boundary"
     fi
 
+echo "$$$$$$"
+
     if (pdrun $g $PROC_OPT); then
-      if ((BDY_FORMAT == 1 || BDY_FORMAT == -1)); then
-        bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
-             $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
-             $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
-             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT ## $time_bdy
-      elif ((BDY_FORMAT == 2)); then
+#      if ((BDY_FORMAT == 1 || BDY_FORMAT == -1)); then
+#        bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
+#             $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
+#             $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
+#             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT ## $time_bdy
+#      elif ((BDY_FORMAT == 2)); then
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
              $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
              $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
              $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
 #      elif ((BDY_FORMAT == 3)); then
-      fi
+#      fi
       
     fi
   fi
