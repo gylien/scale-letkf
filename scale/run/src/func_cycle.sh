@@ -1053,8 +1053,6 @@ for it in $(seq $its $ite); do
       bdy_base="$TMPOUT/${time}/bdy/mean/boundary"
     fi
 
-echo "$$$$$$"
-
     if (pdrun $g $PROC_OPT); then
 #      if ((BDY_FORMAT == 1 || BDY_FORMAT == -1)); then
 #        bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
