@@ -14,7 +14,7 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/data6/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
+MODELDIR="$DIR/../../bin/Linux64-intel-mpt-yamazaki"
 DATADIR="/data6/gylien/scale-letkf/database"
 
 DATA_TOPO="/data6/gylien/scale-letkf/database/topo_prep/BDA_d3_1km_4p_bf10"
@@ -93,8 +93,8 @@ MACHINE_TYPE=1              # Machine type
                             # 11: K-computer (micro jobs)
                             # 12: K-computer (interact jobs)
 
-TMPDAT_MODE=1               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=1               # Disk type used for the 'run' temporary directory (runtime files)
+TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
+TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)
                             #  2: share (staging to TMP)
