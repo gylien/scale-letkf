@@ -1274,8 +1274,9 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse)
     call rij_g2l_auto(proc,obsda%ri(n),obsda%rj(n),ri,rj)
 
     if (PRC_myrank /= proc) then
-      write(6, *) '############ Error!'
-      stop
+      write(6, *) '############ Error!', PRC_myrank,proc,obsda%ri(n),obsda%rj(n),ri,rj
+      cycle
+!      stop
     end if
 
 
