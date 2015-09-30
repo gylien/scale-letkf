@@ -60,7 +60,7 @@ SUBROUTINE set_letkf_obs
 
 
   IMPLICIT NONE
-  REAL(r_size),PARAMETER :: gross_error=5.0d0 !!!!! move to namelist
+!  REAL(r_size),PARAMETER :: gross_error=10.0d0 !!!!! move to namelist
   INTEGER :: n,i,j,ierr,im,iof
 
   integer :: mem_ref
@@ -379,7 +379,7 @@ SUBROUTINE set_letkf_obs
         cycle
       end if
 
-      !!! obsda%ensval: alredy converted to dBZ
+      !!! obsda%ensval: already converted to dBZ
       mem_ref = 0
       do i = 1, MEMBER
         if (obsda%ensval(i,n) >= RADAR_REF_THRES_DBZ) then
@@ -408,9 +408,29 @@ SUBROUTINE set_letkf_obs
       obsda%ensval(i,n) = obsda%ensval(i,n) - obsda%val(n) ! Hdx
     END DO
     obsda%val(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - obsda%val(n) ! y-Hx
-    IF(ABS(obsda%val(n)) > gross_error * obs(obsda%set(n))%err(obsda%idx(n))) THEN !gross error
-      obsda%qc(n) = iqc_gross_err
-    END IF
+
+    select case (obs(obsda%set(n))%elm(obsda%idx(n))) !gross error
+    case (id_rain_obs)
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_RAIN * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
+    case (id_radar_ref_obs)
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_REF * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
+    case (id_radar_vr_obs)
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_VR * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
+    case (id_radar_prh_obs)
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_PRH * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
+    case default
+      IF(ABS(obsda%val(n)) > GROSS_ERROR * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
+    end select
 
 
 
