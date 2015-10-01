@@ -26,7 +26,7 @@ TIME_LIMIT='<WTIME_L>'
 #                   #  3: use thinned observations for satellite radiance observations only
 #                   #  4: use thinned observations for both conventional and satellite radiance observations
 
-ADAPTINFL=1         # Adaptive inflation
+ADAPTINFL=0         # Adaptive inflation
                     #  0: OFF
                     #  1: ON, using inflation parameter 1 cycle  ago as prior
                     #  2: ON, using inflation parameter 2 cycles ago as prior
@@ -47,17 +47,17 @@ OBSOPE=0         # 0: No    ! obsope options: not finished yet!!
 
                  #      anal              gues
                  #      mean/sprd members mean/sprd members history
-OUT_OPT=3        # 1:   o         o       o         o       o
+OUT_OPT=1        # 1:   o         o       o         o       o
                  # 2:   o         o       o         o
                  # 3:   o         o       o
                  # 4:   o                 o
 
                  #      topo
-TOPOOUT_OPT=2    # 1:   o
+TOPOOUT_OPT=1    # 1:   o
                  # 2:   (none)
 
                  #      landuse
-LANDUSEOUT_OPT=2 # 1:   o
+LANDUSEOUT_OPT=1 # 1:   o
                  # 2:   (none)
 
                  #      bdy
@@ -72,12 +72,12 @@ OBSOUT_OPT=1     # 1:   o       o       o
                  # 3:                   o
                  # 4:   (none)
 
-                 #      topo landuse bdy perturb        scale obsope letkf
-                 #      log  log     log (not finished) log   log    log
-LOG_OPT=2        # 1:   o    o       o   o              o     o      o
-                 # 2:   o    o       o                  o     o      o
-                 # 3:                                   o     o      o
-                 # 4:                                         o      o
+                 #      scale_pp scale_init scale    obsope letkf
+                 #      log conf log conf   log conf log    log
+LOG_OPT=1        # 1:   o   o    o   o      o   o    o      o
+                 # 2:   o        o          o        o      o
+                 # 3:                       o        o      o
+                 # 4:                                o      o
                  # 5:   (none)
 
 #===============================================================================

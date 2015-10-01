@@ -567,7 +567,7 @@ else
 
       # log [scale_pp]
       #-------------------
-      if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ]; then
+      if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ] || ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
         if ((LOG_OPT <= 2)); then
           path="${time}/log/scale_pp/pp_LOG${SCALE_LOG_SFX}"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
