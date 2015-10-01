@@ -28,10 +28,10 @@ MODULE common_nml
   real(r_size) :: SLOT_TINTERVAL = 3600.0d0
 
   real(r_size) :: SIGMA_OBS = 500.0d3
-  real(r_size) :: SIGMA_OBS_RAIN = 350.0d3
-  real(r_size) :: SIGMA_OBS_RADAR = 5.0d3
+  real(r_size) :: SIGMA_OBS_RAIN = -1.0d0  ! < 0: same as SIGMA_OBS
+  real(r_size) :: SIGMA_OBS_RADAR = -1.0d0 ! < 0: same as SIGMA_OBS
   real(r_size) :: SIGMA_OBSV = 0.4d0
-  real(r_size) :: SIGMA_OBSV_RAIN = 0.4d0
+  real(r_size) :: SIGMA_OBSV_RAIN = -1.0d0 ! < 0: same as SIGMA_OBSV
   real(r_size) :: SIGMA_OBSZ_RADAR = 1000.0d0
   real(r_size) :: SIGMA_OBST = 3.0d0
   real(r_size) :: BASE_OBSV_RAIN = 85000.0d0
@@ -53,6 +53,12 @@ MODULE common_nml
   real(r_size) :: RELAX_ALPHA = 0.0d0        ! RTPP relaxation parameter
   real(r_size) :: RELAX_ALPHA_SPREAD = 0.0d0 ! RTPS relaxation parameter
   real(r_size) :: SP_INFL_ADD = 0.0d0        ! additive inflation
+
+  real(r_size) :: GROSS_ERROR = 5.0d0
+  real(r_size) :: GROSS_ERROR_RAIN = -1.0d0      ! < 0: same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_RADAR_REF = -1.0d0 ! < 0: same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_RADAR_VR = -1.0d0  ! < 0: same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_RADAR_PRH = -1.0d0 ! < 0: same as GROSS_ERROR
 
   integer :: LEV_UPDATE_Q = 100000        ! q and qc are only updated below and equal to this model level
   real(r_size) :: Q_SPRD_MAX = 0.5        ! maximum q (ensemble spread)/(ensemble mean)
@@ -133,6 +139,8 @@ subroutine read_nml_ensemble
     stop
   endif
 
+  write(6, nml=PARAM_ENSEMBLE)
+
   return
 end subroutine read_nml_ensemble
 
@@ -162,6 +170,11 @@ subroutine read_nml_letkf
     RELAX_ALPHA, &
     RELAX_ALPHA_SPREAD, &
     SP_INFL_ADD, &
+    GROSS_ERROR, &
+    GROSS_ERROR_RAIN, &
+    GROSS_ERROR_RADAR_REF, &
+    GROSS_ERROR_RADAR_VR, &
+    GROSS_ERROR_RADAR_PRH, &
     LEV_UPDATE_Q, &
     Q_SPRD_MAX
 
@@ -174,6 +187,30 @@ subroutine read_nml_letkf
     write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF. Check!'
     stop
   endif
+
+  if (GROSS_ERROR_RAIN < 0.0d0) then
+    GROSS_ERROR_RAIN = GROSS_ERROR
+  end if
+  if (GROSS_ERROR_RADAR_REF < 0.0d0) then
+    GROSS_ERROR_RADAR_REF = GROSS_ERROR
+  end if
+  if (GROSS_ERROR_RADAR_VR < 0.0d0) then
+    GROSS_ERROR_RADAR_VR = GROSS_ERROR
+  end if
+  if (GROSS_ERROR_RADAR_PRH < 0.0d0) then
+    GROSS_ERROR_RADAR_PRH = GROSS_ERROR
+  end if
+  if (SIGMA_OBS_RAIN < 0.0d0) then
+    SIGMA_OBS_RAIN = SIGMA_OBS
+  end if
+  if (SIGMA_OBS_RADAR < 0.0d0) then
+    SIGMA_OBS_RADAR = SIGMA_OBS
+  end if
+  if (SIGMA_OBSV_RAIN < 0.0d0) then
+    SIGMA_OBSV_RAIN = SIGMA_OBSV
+  end if
+
+  write(6, nml=PARAM_LETKF)
 
   return
 end subroutine read_nml_letkf
@@ -202,6 +239,8 @@ subroutine read_nml_letkf_prc
     write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_PRC. Check!'
     stop
   endif
+
+  write(6, nml=PARAM_LETKF_PRC)
 
   return
 end subroutine read_nml_letkf_prc
@@ -238,6 +277,8 @@ subroutine read_nml_letkf_obs
     stop
   endif
 
+  write(6, nml=PARAM_LETKF_OBS)
+
   return
 end subroutine read_nml_letkf_obs
 
@@ -270,6 +311,8 @@ subroutine read_nml_letkf_obserr
     stop
   endif
 
+  write(6, nml=PARAM_LETKF_OBSERR)
+
   return
 end subroutine read_nml_letkf_obserr
 
@@ -296,6 +339,8 @@ subroutine read_nml_letkf_obs_radar
     write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_OBS_RADAR. Check!'
     stop
   endif
+
+  write(6, nml=PARAM_LETKF_OBS_RADAR)
 
   return
 end subroutine read_nml_letkf_obs_radar

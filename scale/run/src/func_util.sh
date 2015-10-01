@@ -188,6 +188,7 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 #echo "mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS" 1>&2
 
     mpiexec -n $(cat $vcoordfile | wc -l) ./${progdir}/${progbase} $ARGS
+#    mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
 #echo "fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS"
 #    fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
 #    mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS

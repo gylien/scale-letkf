@@ -506,9 +506,13 @@ else
 
         # bdy [mean]
         #-------------------
-        if ((BDYOUT_OPT <= 2)) && ((BDY_ENS != 1)); then
+        if ((BDYOUT_OPT <= 2)); then
           path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]} # ues m=1 instead of m=mmean to enhance parallelization
+          if ((BDY_ENS == 1)); then
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
+          else
+            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$q]} # ues m=1 instead of m=mmean to enhance parallelization
+          fi
         fi
 
         # anal_ocean [mean]
