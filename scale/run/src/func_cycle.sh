@@ -663,30 +663,47 @@ else
           for m in $(seq $mmean); do
             mem=${name_m[$m]}
             [ "$mem" = 'mean' ] && mem='meanf'
-            for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/gues/${mem}/history.*.nc 2> /dev/null); do
-              pathin="$ifile"
-              path="bdyscale/${time_bdy}/${name_m[$m]}/$(basename $ifile)"
-
-              if ((DATA_BDY_TMPLOC == 1)); then
-                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-              elif ((DATA_BDY_TMPLOC == 2)); then
-                for q in $(seq $mem_np); do
-                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]} ###### q: may be redundant ????
-                done
-              fi
-            done
-          done
-        else
-          for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/gues/meanf/history.*.nc 2> /dev/null); do
-            pathin="$ifile"
-            path="bdyscale/${time_bdy}/mean/$(basename $ifile)"
+#            for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/gues/${mem}/history.*.nc 2> /dev/null); do
+#              pathin="$ifile"
+#              path="bdyscale/${time_bdy}/${name_m[$m]}/$(basename $ifile)"
+#
+#              if ((DATA_BDY_TMPLOC == 1)); then
+#                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#              elif ((DATA_BDY_TMPLOC == 2)); then
+#                for q in $(seq $mem_np); do
+#                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]} ###### q: may be redundant ????
+#                done
+#              fi
+#            done
+            pathin="$DATA_BDY_SCALE/${time_bdy}/gues/${mem}"
+            path="bdyscale/${time_bdy}/${name_m[$m]}"
 
             if ((DATA_BDY_TMPLOC == 1)); then
-              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+              echo "${pathin}|${path}|d" >> $STAGING_DIR/stagein.dat
             elif ((DATA_BDY_TMPLOC == 2)); then
-              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+              for q in $(seq $mem_np); do
+                echo "${pathin}|${path}|d" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]} ###### q: may be redundant ????
+              done
             fi
           done
+        else
+#          for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/gues/meanf/history.*.nc 2> /dev/null); do
+#            pathin="$ifile"
+#            path="bdyscale/${time_bdy}/mean/$(basename $ifile)"
+#
+#            if ((DATA_BDY_TMPLOC == 1)); then
+#              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#            elif ((DATA_BDY_TMPLOC == 2)); then
+#              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+#            fi
+#          done
+          pathin="$DATA_BDY_SCALE/${time_bdy}/gues/meanf"
+          path="bdyscale/${time_bdy}/mean"
+            if ((DATA_BDY_TMPLOC == 1)); then
+            echo "${pathin}|${path}|d" >> $STAGING_DIR/stagein.dat
+          elif ((DATA_BDY_TMPLOC == 2)); then
+            echo "${pathin}|${path}|d" >> $STAGING_DIR/stagein.out
+          fi
         fi
         time_bdy_prev=$time_bdy
       fi
