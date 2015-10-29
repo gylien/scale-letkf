@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_30mem_test2" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_100mem_2" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -19,8 +19,8 @@ DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/BDA_d3_1km_4p_bf10"
 DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/BDA_d3_1km_4p_bf10"
-DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2_1km_30mem"
-DATA_BDY_SCALE_PREP=
+DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2_1km_100mem"
+DATA_BDY_SCALE_PREP="/volume63/data/hp150019/gylien/scale-letkf/database/bdy_prep/BDA_case130713/d3_1km_4p"
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
 
@@ -63,17 +63,17 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=30        # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=30        # SCALE forecast time when assimilation window ends (second)
-LCYCLE=30          # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=120       # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=120       # SCALE forecast time when assimilation window ends (second)
+LCYCLE=120         # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=120      # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
 
-MEMBER=30          # Ensemble size
+MEMBER=100         # Ensemble size
 
-NNODES=408         # Number of nodes
+NNODES=960         # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -108,7 +108,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
+SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
                             #  0: No
                             #  1: Yes
 
