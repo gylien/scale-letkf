@@ -7,9 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-DDIR="/volume63/data/hp150019/gylien/test/scale-letkf"
-
-OUTDIR="$DDIR/exp/testcase_45km_4p" # Directory for SCALE-LETKF output
+OUTDIR="$DIR/../../../exp/testcase_45km_4p_l36" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -17,16 +15,16 @@ LOGDIR="$DIR/log"
 # Location of model/data files
 
 MODELDIR="$DIR/../../bin/K"
-DATADIR="$DDIR/database"
+DATADIR="$DIR/../../../database"
 
-DATA_TOPO="$DDIR/database/topo_prep/testcase_45km_4p_bf10"
-DATA_LANDUSE="$DDIR/database/landuse_prep/testcase_45km_4p_bf10"
+DATA_TOPO="$DIR/../../../database/topo_prep/testcase_45km_4p_l36_bf10"
+DATA_LANDUSE="$DIR/../../../database/landuse_prep/testcase_45km_4p_l36_bf10"
 DATA_BDY_SCALE=
-DATA_BDY_SCALE_PREP="$DDIR/database/bdy_prep/testcase_45km_4p"
-DATA_BDY_WRF="$DDIR/ncepfnl/wrfout"
+DATA_BDY_SCALE_PREP="$DIR/../../../database/bdy_prep/testcase_45km_4p_l36"
+DATA_BDY_WRF="$DIR/../../../ncepfnl/wrfout"
 DATA_BDY_NICAM=
 
-OBS="$DDIR/obs/prepbufr_obs_eastasia"
+OBS="$DIR/../../../obs/prepbufr_obs_eastasia"
 OBSNCEP=
 
 #===============================================================================
@@ -42,7 +40,7 @@ LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=0            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
@@ -83,7 +81,7 @@ SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
-ENABLE_SET=0       ######
+ENABLE_SET=1       ######
 
 #===============================================================================
 # Temporary directories to store runtime files
@@ -95,7 +93,7 @@ MACHINE_TYPE=10             # Machine type
                             # 12: K-computer (interact jobs)
 
 TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
+TMPRUN_MODE=2               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)
                             #  2: share (staging to TMP)
@@ -109,9 +107,10 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
+SIMPLE_STGOUT=2             # Stage out the entire 'out' temporary directory instead of specifying each file?
                             #  0: No
                             #  1: Yes
+                            #  2: Stage-out everything
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)

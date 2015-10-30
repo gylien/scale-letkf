@@ -121,8 +121,8 @@ echo "NNODES_real=$NNODES_real" >> $TMP/config.main
 echo "PPN_real=$PPN_real" >> $TMP/config.main
 
 if ((ENABLE_SET == 1)); then                                    ##
-  echo "NNODES_all=$NNODES_all" >> $TMPS/config.main            ##
-  echo "NNODES_real_all=$NNODES_real_all" >> $TMPS/config.main  ##
+  echo "NNODES_all=$NNODES_all" >> $TMP/config.main             ##
+  echo "NNODES_real_all=$NNODES_real_all" >> $TMP/config.main   ##
                                                                 ##
   NNODES=$NNODES_all                                            ##
   NNODES_real=$NNODES_real_all                                  ##
