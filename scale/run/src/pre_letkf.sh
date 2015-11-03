@@ -31,7 +31,7 @@ ATIME="$1"; shift
 MEM="$1"; shift
 TMPDIR="$1"
 
-historybaselen=7
+#historybaselen=7
 initbaselen=4
 
 #topodir=$(dirname $TOPO)
@@ -62,9 +62,9 @@ else
   fi
 
   if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
-    for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls history*.nc 2> /dev/null); do
-      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEM}${ifile:$historybaselen}
-    done
+#    for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls history*.nc 2> /dev/null); do
+#      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEM}${ifile:$historybaselen}
+#    done
 
     for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls init*.nc 2> /dev/null); do
       ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/gues.${MEM}${ifile:$initbaselen}

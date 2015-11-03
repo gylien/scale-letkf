@@ -1023,14 +1023,13 @@ subroutine read_ens_mpi(file,v3d,v2d)
     if (mstart <= mend) then
       CALL scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
     end if
-  end do ! [ it = 1, nitmax ]
 
-
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
   WRITE(6,'(A,F10.2)') '###### read_ens_mpi:scatter_grd_mpi_alltoall:  ',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
+  end do ! [ it = 1, nitmax ]
 
   return
 end subroutine read_ens_mpi
@@ -1086,15 +1085,14 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
 
 
       call write_restart(filename,v3dg,v2dg)
-    end if
-  end do ! [ it = 1, nitmax ]
 
-
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
   WRITE(6,'(A,F10.2)') '###### write_ens_mpi:write_restart:            ',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
+    end if
+  end do ! [ it = 1, nitmax ]
 
   return
 END SUBROUTINE write_ens_mpi
