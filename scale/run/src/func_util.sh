@@ -164,6 +164,13 @@ local NODEFILE="$1"; shift
 local PROG="$1"; shift
 local ARGS="$@"
 
+local ARGS1="$1"; shift
+local ARGS2="$1"; shift
+local ARGS3="$1"; shift
+local ARGS4="$1"; shift
+local ARGS5="$1"; shift
+local ARGS6="$1"; shift
+
 progbase=$(basename $PROG)
 progdir=$(dirname $PROG)
 
@@ -187,7 +194,9 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 #mpiexec /work/system/bin/msh "/bin/ls -lL $progdir" 1>&2
 #echo "mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS" 1>&2
 
-    mpiexec -n $(cat $vcoordfile | wc -l) ./${progdir}/${progbase} $ARGS
+    fipp -C -Srange -d ./${progdir}/Fprofd_${ARGS4}_${ARGS5}_${ARGS6} -m 50000 -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) ./${progdir}/${progbase} $ARGS
+#    fipp -C -Srange -d ./${progdir}/Fprofd -m 20000 -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -mca mpi_print_stats 1 ./${progdir}/${progbase} $ARGS
+
 #    mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
 #echo "fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS"
 #    fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
@@ -201,7 +210,9 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
   else
 
-    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS )
+    ( cd $progdir && fipp -C -Srange -d ./Fprofd_${ARGS4}_${ARGS5}_${ARGS6} -m 50000 -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS )
+#    ( cd $progdir && fipp -C -Srange -d ./Fprofd -m 20000 -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile -mca mpi_print_stats 1 ./$progbase $ARGS )
+
 #echo "( cd $progdir && fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS )"
 #    ( cd $progdir && fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS )
 #    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile ./$progbase $ARGS )
