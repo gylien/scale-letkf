@@ -97,8 +97,15 @@ TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 #-------------------------------------------------------------------------------
 # common variables
 
-CYCLEFLEN=$WINDOW_E   # Model forecast length in a cycle (hour)
-CYCLEFOUT=$LTIMESLOT  # Model forecast output interval (hour)
+CYCLEFLEN=$WINDOW_E     # Model forecast length in a cycle (hour)
+if [ -z "$FCSTOUT" ] || ((FCSTOUT >= LTIMESLOT)); then
+  CYCLEFOUT=$LTIMESLOT  # Model forecast output interval (hour)
+elif ((LTIMESLOT % FCSTOUT == 0)); then
+  CYCLEFOUT=$FCSTOUT
+else
+  echo "[Error] If \$FCSTOUT < \$LTIMESLOT, \$LTIMESLOT needs to be an exact multiple of \$FCSTOUT" >&2
+  exit 1
+fi
 
 if ((BDY_FORMAT == 1 || BDY_FORMAT == -1)); then
   if ((BDYCYCLE_INT % BDYINT != 0)); then
