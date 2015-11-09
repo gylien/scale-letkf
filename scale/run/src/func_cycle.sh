@@ -133,6 +133,10 @@ staging_list () {
 
 if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
 #-------------------
+# H08
+  ln -fs ${RTTOV_COEF} $TMPDAT/exec/rtcoef_himawari_8_ahi.dat
+  ln -fs ${RTTOV_SCCOEF} $TMPDAT/exec/sccldcoef_himawari_8_ahi.dat
+
   safe_init_tmpdir $TMPDAT
   safe_init_tmpdir $TMPDAT/exec
   ln -fs $MODELDIR/scale-les_pp $TMPDAT/exec
@@ -162,7 +166,10 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
 #-------------------
 else
 #-------------------
+# H08
   cat >> $STAGING_DIR/stagein.dat << EOF
+${RTTOV_COEF}|exec/rtcoef_himawari_8_ahi.dat
+${RTTOV_SCCOEF}|exec/sccldcoef_himawari_8_ahi.dat
 ${MODELDIR}/scale-les_pp|exec/scale-les_pp
 ${MODELDIR}/scale-les_init|exec/scale-les_init
 ${MODELDIR}/scale-les|exec/scale-les

@@ -81,7 +81,6 @@ MODULE common_scale
   INTEGER,PARAMETER :: nv3d=11   ! 3D state variables (in SCALE restart files)
   INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: nv2d=0    ! 2D state variables (in SCALE restart files)
-!  INTEGER,PARAMETER :: nv2dd=7   ! 2D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: nv2dd=9  ! H08  ! 2D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: iv3d_rho=1  !-- State in restart files
   INTEGER,PARAMETER :: iv3d_rhou=2 !
