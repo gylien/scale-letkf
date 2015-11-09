@@ -30,9 +30,11 @@ MODULE common_nml
   real(r_size) :: SIGMA_OBS = 500.0d3
   real(r_size) :: SIGMA_OBS_RAIN = -1.0d0  ! < 0: same as SIGMA_OBS
   real(r_size) :: SIGMA_OBS_RADAR = -1.0d0 ! < 0: same as SIGMA_OBS
+  real(r_size) :: SIGMA_OBS_H08 = -1.0d0 ! < 0: same as SIGMA_OBS ! H08
   real(r_size) :: SIGMA_OBSV = 0.4d0
   real(r_size) :: SIGMA_OBSV_RAIN = -1.0d0 ! < 0: same as SIGMA_OBSV
   real(r_size) :: SIGMA_OBSZ_RADAR = 1000.0d0
+  real(r_size) :: SIGMA_OBSV_H08 = -1.0d0 ! < 0: same as SIGMA_OBSV ! H08
   real(r_size) :: SIGMA_OBST = 3.0d0
   real(r_size) :: BASE_OBSV_RAIN = 85000.0d0
 
@@ -85,6 +87,7 @@ MODULE common_nml
   real(r_size) :: VAR_LOCAL_TC(nvarmax)        = 1.0d0
   real(r_size) :: VAR_LOCAL_RADAR_REF(nvarmax) = 1.0d0
   real(r_size) :: VAR_LOCAL_RADAR_VR(nvarmax)  = 1.0d0
+  real(r_size) :: VAR_LOCAL_H08(nvarmax)       = 1.0d0 ! H08
 
   logical :: USE_RADAR_PSEUDO_RH = .false.
 
@@ -97,6 +100,7 @@ MODULE common_nml
   real(r_size) :: OBSERR_PS = 100.0d0
   real(r_size) :: OBSERR_RADAR_REF = 5.0d0
   real(r_size) :: OBSERR_RADAR_VR = 3.0d0
+  real(r_size) :: OBSERR_H08 = 0.3d0 ! H08  
   logical :: USE_OBSERR_RADAR_REF = .false.
   logical :: USE_OBSERR_RADAR_VR = .false.
 
@@ -159,8 +163,10 @@ subroutine read_nml_letkf
     SIGMA_OBS, &
     SIGMA_OBS_RAIN, &
     SIGMA_OBS_RADAR, &
+    SIGMA_OBS_H08, & ! H08
     SIGMA_OBSV, &
     SIGMA_OBSV_RAIN, &
+    SIGMA_OBSV_H08, & ! H08
     SIGMA_OBSZ_RADAR, &
     SIGMA_OBST, &
     BASE_OBSV_RAIN, &
@@ -208,6 +214,13 @@ subroutine read_nml_letkf
   end if
   if (SIGMA_OBSV_RAIN < 0.0d0) then
     SIGMA_OBSV_RAIN = SIGMA_OBSV
+  end if
+
+  if (SIGMA_OBS_H08 < 0.0d0) then ! H08
+    SIGMA_OBS_H08 = SIGMA_OBS
+  end if
+  if (SIGMA_OBSV_H08 < 0.0d0) then ! H08
+    SIGMA_OBSV_H08 = SIGMA_OBSV
   end if
 
   write(6, nml=PARAM_LETKF)
@@ -265,6 +278,7 @@ subroutine read_nml_letkf_obs
     VAR_LOCAL_TC, &
     VAR_LOCAL_RADAR_REF, &
     VAR_LOCAL_RADAR_VR, &
+    VAR_LOCAL_H08, & ! H08
     USE_RADAR_PSEUDO_RH
 
   rewind(IO_FID_CONF)
@@ -298,6 +312,7 @@ subroutine read_nml_letkf_obserr
     OBSERR_PS, &
     OBSERR_RADAR_REF, &
     OBSERR_RADAR_VR, &
+    OBSERR_H08, & ! H08
     USE_OBSERR_RADAR_REF, &
     USE_OBSERR_RADAR_VR
 

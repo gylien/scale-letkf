@@ -108,6 +108,19 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
   real(r_size) :: ritmp,rjtmp
   real(r_size) :: slot_lb,slot_ub
 
+! -- for Himawari-8 obs --
+  INTEGER :: nallprof ! H08: Num of all profiles (entire domain) required by RTTOV
+  INTEGER :: ns ! H08 obs count
+  INTEGER :: nprof_H08 ! num of H08 obs
+  REAL(r_size),ALLOCATABLE :: ri_H08(:),rj_H08(:)
+  REAL(r_size),ALLOCATABLE :: lon_H08(:),lat_H08(:)
+  REAL(r_size),ALLOCATABLE :: tmp_ri_H08(:),tmp_rj_H08(:)
+  REAL(r_size),ALLOCATABLE :: tmp_lon_H08(:),tmp_lat_H08(:)
+
+  REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
+  INTEGER :: ch
+  INTEGER,ALLOCATABLE :: qc_H08(:)
+
 !-----------------------------------------------------------------------
 
   obsda%nobs = 0
@@ -147,54 +160,118 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
 
 !write(6,*) '%%%===', MPI_WTIME(), 'im:', im, 'islot:', islot, 'iof:', iof
 
-          ! do this small computtion first, without OpenMP
-          nproc_0 = nproc
-          do n = 1, obs(iof)%nobs
-            if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
-              nslot = nslot + 1
-              call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
-              call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
+          IF(iof /= 3)THEN ! except H08 obs ! H08
 
-              if (PRC_myrank == proc) then
-                nproc = nproc + 1
-                nprocslot = nprocslot + 1
-                obsda%set(nproc) = iof
-                obsda%idx(nproc) = n
-                obsda%ri(nproc) = rig
-                obsda%rj(nproc) = rjg
-                ri(nproc) = ritmp
-                rj(nproc) = rjtmp
-              end if ! [ PRC_myrank == proc ]
-            end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
-          end do ! [ n = 1, obs%nobs ]
+            ! do this small computtion first, without OpenMP
+            nproc_0 = nproc
+            do n = 1, obs(iof)%nobs
+              if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
+                nslot = nslot + 1
+                call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
+                call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
+
+                if (PRC_myrank == proc) then
+                  nproc = nproc + 1
+                  nprocslot = nprocslot + 1
+                  obsda%set(nproc) = iof
+                  obsda%idx(nproc) = n
+                  obsda%ri(nproc) = rig
+                  obsda%rj(nproc) = rjg
+                  ri(nproc) = ritmp
+                  rj(nproc) = rjtmp
+                end if ! [ PRC_myrank == proc ]
+              end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
+            end do ! [ n = 1, obs%nobs ]
+
+          ELSEIF( iof == 3) THEN ! for H08 obs (iof = 3) ! H08
+
+            nprof_H08 = 0
+            nproc_0 = nproc
+            nallprof = obs(iof)%nobs/nch
+
+            ALLOCATE(tmp_ri_H08(nallprof))
+            ALLOCATE(tmp_rj_H08(nallprof))
+            ALLOCATE(tmp_lon_H08(nallprof))
+            ALLOCATE(tmp_lat_H08(nallprof))
+
+            do n = 1, nallprof
+              ns = (n - 1) * nch + 1
+              if (obs(iof)%dif(ns) > slot_lb .and. obs(iof)%dif(ns) <= slot_ub) then
+                nslot = nslot + 1
+                call phys2ij(obs(iof)%lon(ns),obs(iof)%lat(ns),rig,rjg)
+                call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
+
+                if (PRC_myrank == proc) then
+                  nprof_H08 = nprof_H08 + 1 ! num of prof in myrank node
+                  tmp_ri_H08(nprof_H08) = ritmp
+                  tmp_rj_H08(nprof_H08) = rjtmp
+                  tmp_lon_H08(nprof_H08) = obs(iof)%lon(ns)
+                  tmp_lat_H08(nprof_H08) = obs(iof)%lat(ns)
+
+                  nproc = nproc + nch
+                  nprocslot = nprocslot + 1
+                  obsda%set(nproc-nch+1:nproc) = iof
+                  obsda%ri(nproc-nch+1:nproc) = rig
+                  obsda%rj(nproc-nch+1:nproc) = rjg
+                  ri(nproc-nch+1:nproc) = ritmp
+                  rj(nproc-nch+1:nproc) = rjtmp
+                  do ch = 1, nch
+                    obsda%idx(nproc-nch+ch) = ns + ch - 1
+                  enddo
+
+                end if ! [ PRC_myrank == proc ]
+              end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
+            end do ! [ n = 1, nallprof ]
+
+            IF(nprof_H08 >=1)THEN
+              ALLOCATE(ri_H08(nprof_H08))
+              ALLOCATE(rj_H08(nprof_H08))
+              ALLOCATE(lon_H08(nprof_H08))
+              ALLOCATE(lat_H08(nprof_H08))
+
+              ri_H08 = tmp_ri_H08(1:nprof_H08)
+              rj_H08 = tmp_rj_H08(1:nprof_H08)
+              lon_H08 = tmp_lon_H08(1:nprof_H08)
+              lat_H08 = tmp_lat_H08(1:nprof_H08)
+
+            ENDIF
+
+            DEALLOCATE(tmp_ri_H08,tmp_rj_H08)
+            DEALLOCATE(tmp_lon_H08,tmp_lat_H08)
+
+          ENDIF ! end of nproc count [if (iof = 3)]
+
 
           ! then do this heavy computation with OpenMP
+
+          IF(iof /= 3)THEN ! H08
+
 
 !write(6,*) '%%%===', MPI_WTIME(), nproc_0 + 1, nproc
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,rk)
-          do nn = nproc_0 + 1, nproc
-            n = obsda%idx(nn)
+            do nn = nproc_0 + 1, nproc
+              n = obsda%idx(nn)
 
 !if (mod(nn,50) == 0) then
 !  write(6,*) '%%%%%%', MPI_WTIME(), nn
 !end if
 
-            if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
-              call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
-            else
-              call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
-            end if
+              if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
+                call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
+              else
+                call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
+              end if
 
-            if (obsda%qc(nn) == iqc_good) then
-              select case (obsfileformat(iof))
-              case (1)
-                call Trans_XtoY(obs(iof)%elm(n),ri(nn),rj(nn),rk, &
-                                obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
-              case (2)
-                call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri(nn),rj(nn),rk, &
-                                      obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
-                if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
+              if (obsda%qc(nn) == iqc_good) then
+                select case (obsfileformat(iof))
+                case (1)
+                  call Trans_XtoY(obs(iof)%elm(n),ri(nn),rj(nn),rk, &
+                                  obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
+                case (2)
+                  call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri(nn),rj(nn),rk, &
+                                        obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
+                  if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
 
                 !!!!!! may not need to do this at this stage...
                 !if (obs(iof)%elm(n) == id_radar_ref_obs) then
@@ -202,11 +279,54 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
                 !end if
                 !!!!!!
 
-              end select
-            end if
+                end select
+              end if
 
-          end do ! [ nn = nproc_0 + 1, nproc ]
+            end do ! [ nn = nproc_0 + 1, nproc ]
 !$OMP END PARALLEL DO
+
+          ELSEIF((iof == 3).and.(nprof_H08 >=1 ))THEN ! H08
+! -- Note: Trans_XtoY_H08 is called without OpenMP but it can use a parallel (with OpenMP) RTTOV routine
+!
+
+            ALLOCATE(yobs_H08(nprof_H08*nch))
+            ALLOCATE(plev_obs_H08(nprof_H08*nch))
+            ALLOCATE(qc_H08(nprof_H08*nch))
+
+            CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
+                                lon_H08,lat_H08,v3dg,v2dg,&
+                                yobs_H08,plev_obs_H08,&
+                                qc_H08)
+
+            obsda%qc(nproc_0+1:nproc) = iqc_obs_bad
+
+            ns = 0
+            DO nn = nproc_0 + 1, nproc
+              ns = ns + 1
+
+              obsda%val(nn) = yobs_H08(ns)
+              obsda%qc(nn) = qc_H08(ns)
+
+!
+!  NOTE: T.Honda (10/16/2015)
+!  The original H08 obs does not inlcude the level information.
+!  However, we have the level information derived by RTTOV (plev_obs_H08) here, 
+!  so that we substitute the level information into obsda.  
+!  The substituted level information is used in letkf_tools_H08.f90
+!
+              obsda%lev(nn) = plev_obs_H08(ns)
+
+!              write(6,'(a,f12.1,i9)')'H08 debug_plev',obsda%lev(nn),nn
+
+            END DO ! [ nn = nproc_0 + 1, nproc ]
+
+            DEALLOCATE(ri_H08, rj_H08)
+            DEALLOCATE(lon_H08, lat_H08)
+            DEALLOCATE(yobs_H08, plev_obs_H08)
+            DEALLOCATE(qc_H08)
+
+          ENDIF ! H08
+
 
           write (6,'(3A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot = ', nslot
           write (6,'(3A,I6,A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
@@ -274,7 +394,7 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
   integer :: islot,proc
-  integer :: n,nslot,nproc,nprocslot,ierr,iqc,iof,ns
+  integer :: n,nslot,nproc,nprocslot,ierr,iqc,iof
   integer :: nobsmax,nobsall
   real(r_size) :: rig,rjg,ri,rj,rk
   real(r_size) :: slot_lb,slot_ub
@@ -282,6 +402,20 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
   real(r_size),allocatable :: error(:)
 
   CHARACTER(10) :: obsoutfile = 'obsout.dat'
+
+! -- for Himawari-8 obs --
+  INTEGER :: nallprof ! H08: Num of all profiles (entire domain) required by RTTOV
+  INTEGER :: ns ! H08 obs count
+  INTEGER :: nprof_H08 ! num of H08 obs
+  REAL(r_size),ALLOCATABLE :: ri_H08(:),rj_H08(:)
+  REAL(r_size),ALLOCATABLE :: lon_H08(:),lat_H08(:)
+  REAL(r_size),ALLOCATABLE :: tmp_ri_H08(:),tmp_rj_H08(:)
+  REAL(r_size),ALLOCATABLE :: tmp_lon_H08(:),tmp_lat_H08(:)
+
+  REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
+  INTEGER,ALLOCATABLE :: qc_H08(:)
+  INTEGER,ALLOCATABLE :: idx_H08(:) ! index array
+  INTEGER :: ich
 
 !-----------------------------------------------------------------------
 
@@ -303,28 +437,28 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
     call read_ens_history_iter('hist',1,islot,v3dg,v2dg)
 
     do iof = 1, nobsfiles
+      IF(iof/=3)THEN ! except H08 obs
+        nslot = 0
+        nprocslot = 0
+        do n = 1, obs(iof)%nobs
 
-      nslot = 0
-      nprocslot = 0
-      do n = 1, obs(iof)%nobs
+          if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
+            nslot = nslot + 1
 
-        if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
-          nslot = nslot + 1
-
-          call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
-          call rij_g2l_auto(proc,rig,rjg,ri,rj)
+            call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
+            call rij_g2l_auto(proc,rig,rjg,ri,rj)
 
   !          if (PRC_myrank == 0) then
   !            print *, proc, rig, rjg, ri, rj
   !          end if
 
-          if (proc < 0 .and. PRC_myrank == 0) then ! if outside of the global domain, processed by PRC_myrank == 0
-            obs(iof)%dat(n) = undef
-          end if
+            if (proc < 0 .and. PRC_myrank == 0) then ! if outside of the global domain, processed by PRC_myrank == 0
+              obs(iof)%dat(n) = undef
+            end if
 
-          if (PRC_myrank == proc) then
-            nproc = nproc + 1
-            nprocslot = nprocslot + 1
+            if (PRC_myrank == proc) then
+              nproc = nproc + 1
+              nprocslot = nprocslot + 1
 
   !IF(NINT(elem(n)) == id_ps_obs) THEN
   !  CALL itpl_2d(v2d(:,:,iv2d_orog),ri,rj,dz)
@@ -337,37 +471,125 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
   !  END IF
   !END IF
 
-            if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
-              call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri,rj,obs(iof)%lev(n),rk,iqc)
-            else
-              call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri,rj,obs(iof)%lev(n),rk,iqc)
-            end if
+              if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
+                call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri,rj,obs(iof)%lev(n),rk,iqc)
+              else
+                call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri,rj,obs(iof)%lev(n),rk,iqc)
+              end if
 
-            if (iqc /= iqc_good) then
-              obs(iof)%dat(n) = undef
-            else
-              select case (obsfileformat(iof))
-              case (1)
-                call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk, &
-                                obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
-              case (2)
-                call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri,rj,rk, &
-                                      obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
-              end select
+              if (iqc /= iqc_good) then
+                obs(iof)%dat(n) = undef
+              else
+                select case (obsfileformat(iof))
+                case (1)
+                  call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk, &
+                                  obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
+                case (2)
+                  call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri,rj,rk, &
+                                        obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
+                end select
 
  !!! For radar observation, when reflectivity value is too low, do not generate ref/vr observations
  !!! No consideration of the terrain blocking effects.....
 
-              if (iqc /= iqc_good) then
-                obs(iof)%dat(n) = undef
+                if (iqc /= iqc_good) then
+                  obs(iof)%dat(n) = undef
+                end if
               end if
+
+            end if ! [ PRC_myrank == proc ]
+
+          end if ! [ obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub ]
+
+        end do ! [ n = 1, obs%nobs ]
+
+! -- H08 part --
+      ELSEIF(iof==3)THEN ! H08
+        nslot = 0
+        nprocslot = 0
+        nprof_H08 = 0
+
+        nallprof = obs(iof)%nobs/nch
+
+        ALLOCATE(tmp_ri_H08(nallprof))
+        ALLOCATE(tmp_rj_H08(nallprof))
+        ALLOCATE(tmp_lon_H08(nallprof))
+        ALLOCATE(tmp_lat_H08(nallprof))
+        ALLOCATE(idx_H08(nallprof))
+
+        do n = 1, nallprof
+          ns = (n - 1) * nch + 1
+          if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
+            nslot = nslot + 1
+
+            call phys2ij(obs(iof)%lon(ns),obs(iof)%lat(ns),rig,rjg)
+            call rij_g2l_auto(proc,rig,rjg,ri,rj)
+
+
+            if (proc < 0 .and. PRC_myrank == 0) then ! if outside of the global domain, processed by PRC_myrank == 0
+              obs(iof)%dat(ns:ns+nch-1) = undef
             end if
 
-          end if ! [ PRC_myrank == proc ]
+            if (PRC_myrank == proc) then
+              nprof_H08 = nprof_H08 + 1 ! num of prof in myrank node
+              idx_H08(nprof_H08) = ns ! idx of prof in myrank node
+              tmp_ri_H08(nprof_H08) = ri
+              tmp_rj_H08(nprof_H08) = rj
+              tmp_lon_H08(nprof_H08) = obs(iof)%lon(ns)
+              tmp_lat_H08(nprof_H08) = obs(iof)%lat(ns)
 
-        end if ! [ obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub ]
+              nproc = nproc + nch
+              nprocslot = nprocslot + nch
 
-      end do ! [ n = 1, obs%nobs ]
+            end if ! [ PRC_myrank == proc ]
+
+          end if ! [ obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub ]
+
+        end do ! [ n = 1, nallprof ]
+
+        IF(nprof_H08 >=1)THEN
+          ALLOCATE(ri_H08(nprof_H08))
+          ALLOCATE(rj_H08(nprof_H08))
+          ALLOCATE(lon_H08(nprof_H08))
+          ALLOCATE(lat_H08(nprof_H08))
+
+          ri_H08 = tmp_ri_H08(1:nprof_H08)
+          rj_H08 = tmp_rj_H08(1:nprof_H08)
+          lon_H08 = tmp_lon_H08(1:nprof_H08)
+          lat_H08 = tmp_lat_H08(1:nprof_H08)
+
+          ALLOCATE(yobs_H08(nprof_H08*nch))
+          ALLOCATE(plev_obs_H08(nprof_H08*nch))
+          ALLOCATE(qc_H08(nprof_H08*nch))
+
+          CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
+                              lon_H08,lat_H08,v3dg,v2dg,&
+                              yobs_H08,plev_obs_H08,&
+                              qc_H08)
+
+          DO n = 1, nprof_H08
+            ns = idx_H08(n)
+
+            obs(iof)%lon(ns:ns+nch-1)=lon_H08(n:n+nch-1)
+            obs(iof)%lat(ns:ns+nch-1)=lat_H08(n:n+nch-1)
+
+            DO ich = 1, nch-1
+              IF(qc_H08(n+ich-1) == iqc_good)THEN
+                obs(iof)%dat(ns+ich-1)=undef
+              ELSE
+                obs(iof)%dat(ns+ich-1)=yobs_H08(n+ich-1)
+              ENDIF
+            ENDDO
+          ENDDO
+
+        ENDIF
+
+        DEALLOCATE(tmp_ri_H08,tmp_rj_H08)
+        DEALLOCATE(tmp_lon_H08,tmp_lat_H08)
+
+
+! -- end of H08 part --
+      ENDIF
 
     end do ! [ iof = 1, nobsfiles ]
 
@@ -418,6 +640,8 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
           obs(iof)%err(n) = OBSERR_RADAR_REF
         case(id_radar_vr_obs)
           obs(iof)%err(n) = OBSERR_RADAR_VR
+        case(id_H08IR_obs) ! H08
+          obs(iof)%err(n) = OBSERR_H08 !H08
         case default
           write(6,'(A)') 'warning: skip assigning observation error (unsupported observation type)' 
         end select

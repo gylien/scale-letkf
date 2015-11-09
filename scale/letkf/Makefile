@@ -13,6 +13,7 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/netlib.o         \
               $(COMMON_DIR)/common_letkf.o   \
               $(COMMON_DIR)/common_ncio.o    \
+              $(COMMON_DIR)/scale_H08_fwd.o    \
               $(COMMON_DIR)/common_scale.o     \
               $(COMMON_DIR)/common_obs_scale.o \
               $(COMMON_DIR)/common_mpi_scale.o \
@@ -23,7 +24,9 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
 
 INCS    = $(SCALE_INC)
 
-LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
+#LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
+# --  for Himawari-8 assimilation --
+LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB) ${RT_INCLUDE} ${RT_LDFLAGS}
 
 all:	$(PROGS)
 

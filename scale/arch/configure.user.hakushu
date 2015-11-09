@@ -31,3 +31,10 @@ FMCMODEL  = -mcmodel=medium
 FBYTESWAP = -convert little_endian
 FFREE     = -free
 FFIXED    = -fixed
+
+# -- for Himawari-8 assimilatin on hakushu (T.Honda)
+DIR_RTTOV = /home/honda/local/RTTOV
+RT_LDFLAGS = -L${DIR_RTTOV}/lib  -lrttov11.2.0_test -lrttov11.2.0_other \
+               -lrttov11.2.0_coef_io -lrttov11.2.0_parallel -lrttov11.2.0_main
+RT_INCLUDE = -I${DIR_RTTOV}/mod  -I${DIR_RTTOV}/include
+
