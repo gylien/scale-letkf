@@ -5,7 +5,7 @@ all:
 #	( cd ssio ; make )
 	( cd obs ; make )
 #	( cd verify ; make )
-#	( cd util ; make )
+#	( cd util ; make )#
 	( cd ensmodel ; make )
 
 clean:
