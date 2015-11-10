@@ -1,9 +1,8 @@
 include ../configure.user
 
 OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_letkf.o \
-	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
+	  common_ncio.o common_scale.o scale_H08_fwd.o common_obs_scale.o common_mpi_scale.o \
           common_nml.o \
-          scale_H08_fwd.o \
           mod_admin_time.o
           #common_precip.o
 
@@ -39,7 +38,6 @@ scale_H08_fwd.o:        scale_H08_fwd.F90 common.o
 	$(FC) $(FOPTS) $(RT_INCLUDE) $(RT_LDFLAGS)  -c scale_H08_fwd.F90  
 common_scale.o:	common_scale.f90 common.o common_nml.o common_mpi.o common_ncio.o
 	$(FC) $(FOPTS) -c common_scale.f90 $(NETCDF_INC) $(SCALE_INC)
-#common_obs_scale.o:	common_obs_scale.f90 common.o common_scale.o
 common_obs_scale.o:	common_obs_scale.f90 common.o common_scale.o scale_H08_fwd.o
 	$(FC) $(FOPTS) -c common_obs_scale.f90 $(NETCDF_INC) $(SCALE_INC)
 common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o \
