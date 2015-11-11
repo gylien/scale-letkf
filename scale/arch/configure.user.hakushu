@@ -25,7 +25,7 @@ FC        = mpif90
 FOPTS_SCALE = $(FFLAGS)
 
 #FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback -fpe0
-FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback
+FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback -fpp
 
 FMCMODEL  = -mcmodel=medium
 FBYTESWAP = -convert little_endian
@@ -33,6 +33,7 @@ FFREE     = -free
 FFIXED    = -fixed
 
 # -- for Himawari-8 assimilatin on hakushu (T.Honda)
+H08 = T
 DIR_RTTOV = /home/honda/local/RTTOV
 RT_LDFLAGS = -L${DIR_RTTOV}/lib  -lrttov11.2.0_test -lrttov11.2.0_other \
                -lrttov11.2.0_coef_io -lrttov11.2.0_parallel -lrttov11.2.0_main

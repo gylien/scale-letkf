@@ -1,10 +1,18 @@
 include ../configure.user
 
+FOPTS += -fpp
+ifeq ($(H08),T)
 OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_letkf.o \
 	  common_ncio.o common_scale.o scale_H08_fwd.o common_obs_scale.o common_mpi_scale.o \
           common_nml.o \
           mod_admin_time.o
-
+FOPTS += -DH08
+else
+OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_letkf.o \
+	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
+          common_nml.o \
+          mod_admin_time.o
+endif
 all:	$(OBJS) 
 
 common.o:	../../common/common.f90
@@ -23,13 +31,19 @@ common_letkf.o:	../../common/common_letkf.f90 common.o common_mtx.o
 	$(FC) $(FOPTS_SCALE) -c ../../common/common_letkf.f90
 common_ncio.o:	../common/common_ncio.f90 common.o
 	$(FC) $(FOPTS_SCALE) -c ../common/common_ncio.f90 $(NETCDF_INC)
-# -- H08 -- 
+ifeq ($(H08),T)
 scale_H08_fwd.o: ../common/scale_H08_fwd.F90 common.o
 	$(FC) $(FOPTS) $(RT_INCLUDE) $(RT_LDFLAGS)  -c ../common/scale_H08_fwd.F90  
+endif
 common_scale.o:	../common/common_scale.f90 common.o common_nml.o common_mpi.o common_ncio.o
 	$(FC) $(FOPTS_SCALE) -c ../common/common_scale.f90 $(NETCDF_INC) $(SCALE_INC)
+ifeq ($(H08),T)
 common_obs_scale.o:	../common/common_obs_scale.f90 common.o common_scale.o scale_H08_fwd.o
 	$(FC) $(FOPTS_SCALE) -c ../common/common_obs_scale.f90 $(NETCDF_INC) $(SCALE_INC)
+else
+common_obs_scale.o:	../common/common_obs_scale.f90 common.o common_scale.o
+	$(FC) $(FOPTS_SCALE) -c ../common/common_obs_scale.f90 $(NETCDF_INC) $(SCALE_INC)
+endif
 common_mpi_scale.o:	../common/common_mpi_scale.f90 common.o common_nml.o common_mpi.o \
 	common_scale.o common_obs_scale.o mod_admin_time.o
 	$(FC) $(FOPTS_SCALE) -c ../common/common_mpi_scale.f90 $(NETCDF_INC) $(SCALE_INC)

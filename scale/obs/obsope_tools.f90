@@ -183,6 +183,7 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
               end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
             end do ! [ n = 1, obs%nobs ]
 
+#ifdef H08
           ELSEIF( iof == 3) THEN ! for H08 obs (iof = 3) ! H08
 
             nprof_H08 = 0
@@ -239,8 +240,8 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
             DEALLOCATE(tmp_ri_H08,tmp_rj_H08)
             DEALLOCATE(tmp_lon_H08,tmp_lat_H08)
 
+#endif
           ENDIF ! end of nproc count [if (iof = 3)]
-
 
           ! then do this heavy computation with OpenMP
 
@@ -285,6 +286,7 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
             end do ! [ nn = nproc_0 + 1, nproc ]
 !$OMP END PARALLEL DO
 
+#ifdef H08
           ELSEIF((iof == 3).and.(nprof_H08 >=1 ))THEN ! H08
 ! -- Note: Trans_XtoY_H08 is called without OpenMP but it can use a parallel (with OpenMP) RTTOV routine
 !
@@ -325,8 +327,8 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
             DEALLOCATE(yobs_H08, plev_obs_H08)
             DEALLOCATE(qc_H08)
 
+#endif
           ENDIF ! H08
-
 
           write (6,'(3A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot = ', nslot
           write (6,'(3A,I6,A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
@@ -503,6 +505,7 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
 
         end do ! [ n = 1, obs%nobs ]
 
+#ifdef H08
 ! -- H08 part --
       ELSEIF(iof==3)THEN ! H08
         nslot = 0
@@ -589,6 +592,7 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
 
 
 ! -- end of H08 part --
+#endif
       ENDIF
 
     end do ! [ iof = 1, nobsfiles ]

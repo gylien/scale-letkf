@@ -2073,6 +2073,8 @@ END FUNCTION uid_obs
 !-----------------------------------------------------------------------
 !   Himawari-8 obs subroutines by T. Honda (10/29/2015)
 !-----------------------------------------------------------------------
+#ifdef H08
+!
 SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
   use scale_mapproj, only: &
       MPRJ_rotcoef
@@ -2244,6 +2246,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
 
   RETURN
 END SUBROUTINE Trans_XtoY_H08
+#endif
 
 SUBROUTINE itpl_prof(var,ri,rj,var5)
   IMPLICIT NONE
@@ -2391,6 +2394,5 @@ SUBROUTINE write_obs_H08(cfile,obs,append,missing)
 
   RETURN
 END SUBROUTINE write_obs_H08
-
 
 END MODULE common_obs_scale

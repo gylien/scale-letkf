@@ -6,6 +6,8 @@ OBJS    = letkf_obs.o letkf_tools.o #efso_tools.o efso_nml.o
 
 COMMON_DIR = ../common
 
+FOPTS += -fpp
+ifeq ($(H08),T)
 COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common.o         \
               $(COMMON_DIR)/common_mpi.o     \
@@ -19,6 +21,21 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common_mpi_scale.o \
               $(COMMON_DIR)/common_nml.o     \
               $(COMMON_DIR)/mod_admin_time.o
+FOPTS += -DH08
+else
+COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
+              $(COMMON_DIR)/common.o         \
+              $(COMMON_DIR)/common_mpi.o     \
+              $(COMMON_DIR)/common_mtx.o     \
+              $(COMMON_DIR)/netlib.o         \
+              $(COMMON_DIR)/common_letkf.o   \
+              $(COMMON_DIR)/common_ncio.o    \
+              $(COMMON_DIR)/common_scale.o     \
+              $(COMMON_DIR)/common_obs_scale.o \
+              $(COMMON_DIR)/common_mpi_scale.o \
+              $(COMMON_DIR)/common_nml.o     \
+              $(COMMON_DIR)/mod_admin_time.o
+endif
 #              $(COMMON_DIR)/common_scalelib.o
 #              $(COMMON_DIR)/common_precip.o
 
