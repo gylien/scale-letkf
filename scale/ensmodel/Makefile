@@ -6,7 +6,6 @@ OBJS    =
 
 COMMON_DIR = ../.common_for_scale
 
-FOPTS += -fpp
 ifeq ($(H08),T)
 COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common.o         \

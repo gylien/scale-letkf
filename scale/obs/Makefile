@@ -6,7 +6,6 @@ OBJS    = obsope_tools.o #obs_tools.o superob_tools.o obs_gfs_ext.o
 
 COMMON_DIR = ../common
 
-FOPTS += -fpp
 ifeq ($(H08),T)
 COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common.o         \
