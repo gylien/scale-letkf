@@ -109,18 +109,18 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
   USE rttov_unix_env, ONLY : rttov_exit
   USE common, ONLY : r_size
-!  USE thermo, ONLY : Rdb, epsb, repsb
+  USE scale_const, ONLY: &
+        Rdry   => CONST_Rdry, &
+        Rvap   => CONST_Rvav
 
   IMPLICIT NONE
 
 
-  real,parameter :: Rd = 287.04
-  real,parameter :: Rv =461.51
+  real(kind=jprb),parameter :: Rd = real(Rdry,kind=jprb)
+  real(kind=jprb),parameter :: Rv = real(Rvav,kind=jprb)
 
-  double precision,parameter :: Rdb = dble(Rd)
-  double precision,parameter :: Rvb = dble(Rv)
-  double precision,parameter :: epsb = Rdb / Rvb
-  double precision,parameter :: repsb = 1.0d0/epsb
+  real(kind=jprb),parameter :: epsb = Rd / Rv
+  real(kind=jprb),parameter :: repsb = 1.0_jprb / epsb
 
 
 #include "rttov_parallel_direct.interface"
@@ -479,18 +479,18 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   !========== READ profiles == start =============
   if(debug) WRITE(6,*) 'START SUBSTITUTE PROFILE'
   DO iprof = 1, nprof
-    profiles(iprof)%p(:)=tmp_p(:,iprof) * 0.01_jprb  ! (hpa)
-    profiles(iprof)%t(:)=tmp_t(:,iprof)
-    profiles(iprof)%q(:)=max(tmp_qv(:,iprof) * q_mixratio_to_ppmv, qmin) ! (ppmv)
-    profiles(iprof)%s2m%t=tmp_t2m(iprof)
-    profiles(iprof)%s2m%q=max(tmp_q2m(iprof) * q_mixratio_to_ppmv, qmin) ! (ppmv)
+    profiles(iprof)%p(:)=real(tmp_p(:,iprof),kind=jprb) * 0.01_jprb  ! (hpa)
+    profiles(iprof)%t(:)=real(tmp_t(:,iprof),kind=jprb)
+    profiles(iprof)%q(:)=max(real(tmp_qv(:,iprof),kind=jprb) * q_mixratio_to_ppmv, qmin) ! (ppmv)
+    profiles(iprof)%s2m%t=real(tmp_t2m(iprof),kind=jprb)
+    profiles(iprof)%s2m%q=max(real(tmp_q2m(iprof),kind=jprb) * q_mixratio_to_ppmv, qmin) ! (ppmv)
 
-    profiles(iprof)%s2m%p=tmp_p2m(iprof) * 0.01_jprb ! (hPa)
-    profiles(iprof)%s2m%u=tmp_u2m(iprof)
-    profiles(iprof)%s2m%v=tmp_v2m(iprof)
-    profiles(iprof)%s2m%wfetc= 100000.0d0
+    profiles(iprof)%s2m%p=real(tmp_p2m(iprof),kind=jprb) * 0.01_jprb ! (hPa)
+    profiles(iprof)%s2m%u=real(tmp_u2m(iprof),kind=jprb)
+    profiles(iprof)%s2m%v=real(tmp_v2m(iprof),kind=jprb)
+    profiles(iprof)%s2m%wfetc= 100000.0_jprb
 
-    profiles(iprof) % skin % t = tmp_t2m(iprof)
+    profiles(iprof) % skin % t = real(tmp_t2m(iprof),kind=jprb)
     profiles(iprof) % skin % fastem(1) = 3.0
     profiles(iprof) % skin % fastem(2) = 5.0
     profiles(iprof) % skin % fastem(3) =15.0
@@ -500,9 +500,9 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
     profiles(iprof) % skin % surftype = int(tmp_land(iprof))
     profiles(iprof) % skin % watertype = 1
 
-    profiles(iprof) % elevation = tmp_elev(iprof) * 0.001_jprb ! (km)
-    profiles(iprof) % latitude  = tmp_lat(iprof)
-    profiles(iprof) % longitude = tmp_lon(iprof)
+    profiles(iprof) % elevation = real(tmp_elev(iprof),kind=jprb) * 0.001_jprb ! (km)
+    profiles(iprof) % latitude  = real(tmp_lat(iprof),kind=jprb)
+    profiles(iprof) % longitude = real(tmp_lon(iprof),kind=jprb)
 
 ! sattelite angle 
     profiles(iprof)%zenangle=30.0_jprb
@@ -530,10 +530,11 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 !    if(icldprf==1) then
     ! --convert kg/kg into g/m3, make liq.cloud and ice.cloud amount, and upside-down
     do ilev=1,nlevels
-      tv = tmp_t(ilev,iprof) * (1.0_jprb+tmp_qv(ilev,iprof) * repsb) / (1.0_jprb + tmp_qv(ilev,iprof))
-      kgkg2gm3(ilev) = tmp_p(ilev,iprof) / (Rdb * tv) * 1000.0_jprb 
-      liqc(ilev) = tmp_qc(ilev,iprof) * kgkg2gm3(ilev)
-      icec(ilev) = (tmp_qice(ilev,iprof) ) * kgkg2gm3(ilev)
+      tv = real(tmp_t(ilev,iprof),kind=jprb) * (1.0_jprb+real(tmp_qv(ilev,iprof),kind=jprb) * repsb) &
+         / (1.0_jprb + real(tmp_qv(ilev,iprof),kind=jprb))
+      kgkg2gm3(ilev) = real(tmp_p(ilev,iprof),kind=jprb) / (Rd * tv) * 1000.0_jprb 
+      liqc(ilev) = real(tmp_qc(ilev,iprof),kind=jprb) * kgkg2gm3(ilev)
+      icec(ilev) = (real(tmp_qice(ilev,iprof),kind=jprb) ) * kgkg2gm3(ilev)
     end do !ilev
 
     do ilev=1,nlevels-1
