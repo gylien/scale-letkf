@@ -313,8 +313,8 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
 !  NOTE: T.Honda (10/16/2015)
 !  The original H08 obs does not inlcude the level information.
 !  However, we have the level information derived by RTTOV (plev_obs_H08) here, 
-!  so that we substitute the level information into obsda.  
-!  The substituted level information is used in letkf_tools_H08.f90
+!  so that we substitute the level information into obsda%lev.  
+!  The substituted level information is used in letkf_tools.f90
 !
               obsda%lev(nn) = plev_obs_H08(ns)
 

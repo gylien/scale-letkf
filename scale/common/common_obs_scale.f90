@@ -148,6 +148,11 @@ MODULE common_obs_scale
     INTEGER,ALLOCATABLE :: set(:)
     INTEGER,ALLOCATABLE :: idx(:)
     REAL(r_size),ALLOCATABLE :: val(:)
+    !
+    ! obsda%lev array is used only for Himawari-8 assimilation.
+    ! This array preserves the most sensitive height derived from transmittance outputs from RTTOV.
+    ! For Himawari-8 assimilation, LETKF uses obsda%lev instead of obs%lev.
+    ! 
     REAL(r_size),ALLOCATABLE :: lev(:) ! H08
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
@@ -2085,7 +2090,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
   IMPLICIT NONE
   INTEGER :: n, np, k, ch
   INTEGER,INTENT(IN) :: nprof ! Num of Brightness Temp "Loc" observed by Himawari-8
-                              ! NOTE: multiple channels (obs) on one grid point !!
+                              ! NOTE: multiple channels (obs) on each grid point !!
   REAL(r_size),INTENT(IN) :: ri(nprof),rj(nprof)
   REAL(r_size),INTENT(IN) :: lon(nprof),lat(nprof)
   REAL(r_size),INTENT(IN) :: v3d(nlevh,nlonh,nlath,nv3dd)
@@ -2114,7 +2119,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
 
 ! -- brightness temp from RTTOV
   REAL(r_size) :: bt_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
-! -- transmitter from RTTOV
+! -- transmittance from RTTOV
   REAL(r_size) :: trans_out(nlev,nch,nprof)
  
   REAL(r_size) :: max_weight(nch,nprof)
@@ -2237,8 +2242,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
       qc(n) = iqc_obs_bad
     ENDIF
 !
-! reject Band #11(ch=5) & #12(ch=6) obs because these bands are sensitive to 
-! chemical tracers.
+! reject Band #11(ch=5) & #12(ch=6) obs because these bands are sensitive to chemicals.
 !
     IF(ch==5 .or. ch==6)THEN
       qc(n) = iqc_obs_bad
