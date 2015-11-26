@@ -32,7 +32,7 @@ common_ncio.o:	../common/common_ncio.f90 common.o
 	$(FC) $(FOPTS_SCALE) -c ../common/common_ncio.f90 $(NETCDF_INC)
 ifeq ($(H08),T)
 scale_H08_fwd.o: ../common/scale_H08_fwd.F90 common.o
-	$(FC) $(FOPTS) $(RT_INCLUDE) $(RT_LDFLAGS)  -c ../common/scale_H08_fwd.F90  
+	$(FC) $(FOPTS) -c ../common/scale_H08_fwd.F90 $(RT_INCLUDE) $(RT_LDFLAGS) $(SCALE_INC)
 endif
 common_scale.o:	../common/common_scale.f90 common.o common_nml.o common_mpi.o common_ncio.o
 	$(FC) $(FOPTS_SCALE) -c ../common/common_scale.f90 $(NETCDF_INC) $(SCALE_INC)

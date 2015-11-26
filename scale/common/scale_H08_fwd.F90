@@ -110,18 +110,11 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   USE rttov_unix_env, ONLY : rttov_exit
   USE common, ONLY : r_size
   USE scale_const, ONLY: &
-        Rdry   => CONST_Rdry, &
-        Rvap   => CONST_Rvav
+        Rdry    => CONST_Rdry, &
+        Rvap    => CONST_Rvap, &
+        Deg2Rad => CONST_D2R
 
   IMPLICIT NONE
-
-
-  real(kind=jprb),parameter :: Rd = real(Rdry,kind=jprb)
-  real(kind=jprb),parameter :: Rv = real(Rvav,kind=jprb)
-
-  real(kind=jprb),parameter :: epsb = Rd / Rv
-  real(kind=jprb),parameter :: repsb = 1.0_jprb / epsb
-
 
 #include "rttov_parallel_direct.interface"
 #include "rttov_direct.interface"
@@ -135,7 +128,29 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 #include "rttov_print_profile.interface"
 #include "rttov_skipcommentline.interface"
 
-! added by T.Honda
+!
+! -  Added by T.Honda (11/18/2015)
+! -- Note: Computation of the zenith angle in each obs point (P) is based on the formula in
+!          LRIT/HRIT Global Specification.
+!          http://www.cgms-info.org/index_.php/cgms/page?cat=publications&page=technical+publications
+! 
+  REAL(r_size),PARAMETER :: Rpol = 6356.7523d3 ! a polar radius of Earth (m) 
+  REAL(r_size) :: Rl ! a local radius of Earth
+  REAL(r_size),PARAMETER :: sub_lon_H08 = 140.7d0 ! longitude of Himawari-8 satellite
+  REAL(r_size) :: rlon,rlat ! (lon,lat) (Radian)
+!
+!
+! Vector components for a satellite coordinate frame
+!
+!
+  REAL(r_size) :: rnps, rnep, c_lat ! auxiliary variables
+  REAL(r_size) :: r1, r2, r3       ! components of location vector for point P 
+  REAL(r_size) :: r1ps, r2ps, r3ps ! components of the vector from P to the satellite 
+  REAL(r_size) :: r1ep, r2ep, r3ep  ! components of the vector from the center of Earth to P
+  REAL(r_size) :: z_angle_H08 ! zenith angle of Himawari-8
+ 
+
+
   INTEGER, INTENT(IN) :: nprof
   INTEGER, INTENT(IN) :: nlevels
   integer(kind=jpim):: icecld_ish=4, icecld_idg=0  !improved Baran, new in rttov11.2 recommended in  Rttov11
@@ -226,6 +241,17 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
   logical :: debug = .false.
 !  logical :: debug = .true.
+
+  real(kind=jprb) :: Rd 
+  real(kind=jprb) :: Rv 
+
+  real(kind=jprb) :: epsb 
+  real(kind=jprb) :: repsb 
+
+  Rd = real(Rdry,kind=jprb)
+  Rv = real(Rvap,kind=jprb)
+  epsb = Rd / Rv 
+  repsb = 1.0_jprb / epsb
 
   ALLOCATE(tmp_bt_out(nchannels,nprof))
   ALLOCATE(tmp_trans_out(nlevels,nchannels,nprof))
@@ -481,9 +507,14 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   DO iprof = 1, nprof
     profiles(iprof)%p(:)=real(tmp_p(:,iprof),kind=jprb) * 0.01_jprb  ! (hpa)
     profiles(iprof)%t(:)=real(tmp_t(:,iprof),kind=jprb)
-    profiles(iprof)%q(:)=max(real(tmp_qv(:,iprof),kind=jprb) * q_mixratio_to_ppmv, qmin) ! (ppmv)
+    profiles(iprof)%q(:)=real(tmp_qv(:,iprof),kind=jprb) * q_mixratio_to_ppmv ! (ppmv)
     profiles(iprof)%s2m%t=real(tmp_t2m(iprof),kind=jprb)
-    profiles(iprof)%s2m%q=max(real(tmp_q2m(iprof),kind=jprb) * q_mixratio_to_ppmv, qmin) ! (ppmv)
+    profiles(iprof)%s2m%q=real(tmp_q2m(iprof),kind=jprb) * q_mixratio_to_ppmv ! (ppmv)
+
+    if(profiles(iprof)%s2m%q < qmin) profiles(iprof)%s2m%q = qmin + qmin * 0.01_jprb
+    do ilev=1,nlevels
+      if(profiles(iprof)%q(ilev) < qmin) profiles(iprof)%q(ilev) = qmin + qmin * 0.01_jprb
+    enddo
 
     profiles(iprof)%s2m%p=real(tmp_p2m(iprof),kind=jprb) * 0.01_jprb ! (hPa)
     profiles(iprof)%s2m%u=real(tmp_u2m(iprof),kind=jprb)
@@ -491,24 +522,53 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
     profiles(iprof)%s2m%wfetc= 100000.0_jprb
 
     profiles(iprof) % skin % t = real(tmp_t2m(iprof),kind=jprb)
-    profiles(iprof) % skin % fastem(1) = 3.0
-    profiles(iprof) % skin % fastem(2) = 5.0
-    profiles(iprof) % skin % fastem(3) =15.0
-    profiles(iprof) % skin % fastem(4) = 0.1
-    profiles(iprof) % skin % fastem(5) = 0.3
+!    profiles(iprof) % skin % fastem(1) = 3.0 ! comment out (11/18/2015)
+!    profiles(iprof) % skin % fastem(2) = 5.0 ! comment out (11/18/2015)
+!    profiles(iprof) % skin % fastem(3) =15.0 ! comment out (11/18/2015)
+!    profiles(iprof) % skin % fastem(4) = 0.1 ! comment out (11/18/2015)
+!    profiles(iprof) % skin % fastem(5) = 0.3 ! comment out (11/18/2015)
 
     profiles(iprof) % skin % surftype = int(tmp_land(iprof))
-    profiles(iprof) % skin % watertype = 1
+    profiles(iprof) % skin % watertype = 1 ! tentative (11/18/2015)
 
     profiles(iprof) % elevation = real(tmp_elev(iprof),kind=jprb) * 0.001_jprb ! (km)
     profiles(iprof) % latitude  = real(tmp_lat(iprof),kind=jprb)
     profiles(iprof) % longitude = real(tmp_lon(iprof),kind=jprb)
 
 ! sattelite angle 
-    profiles(iprof)%zenangle=30.0_jprb
-    profiles(iprof)%azangle=0.0_jprb
-    profiles(iprof)%sunzenangle=0.0_jprb
-    profiles(iprof)%sunazangle=0.0_jprb
+
+    rlat = tmp_lat(iprof)*Deg2Rad
+    rlon = tmp_lon(iprof)*Deg2Rad
+
+    c_lat = datan(0.993305616d0 * dtan(rlat))
+    Rl = Rpol / dsqrt(1.0d0 - 0.00669438444d0 * dcos(c_lat)*dcos(c_lat))
+    r1 = 42164.0d3 - Rl * dcos(c_lat) * dcos(rlon - sub_lon_H08*Deg2Rad)
+    r2 = -Rl * dcos(c_lat) * dsin(rlon - sub_lon_H08*Deg2Rad)
+    r3 = Rl * dsin(c_lat)
+    rnps = dsqrt(r1*r1+r2*r2+r3*r3)
+
+    r1ps = r1 * (-1.0d0)
+    r2ps = r2 * (-1.0d0)
+    r3ps = r3 * (-1.0d0)
+
+    r1ep = r1 - 42164.0d3
+    r2ep = r2 
+    r3ep = r3
+ 
+    rnep = dsqrt(r1ep*r1ep+r2ep*r2ep+r3ep*r3ep)
+
+    z_angle_H08 = r1ps * r1ep + r2ps * r2ep + r3ps * r3ep ! internal product 
+    z_angle_H08 = dacos(z_angle_H08/(rnps*rnep))/Deg2Rad  
+
+
+    profiles(iprof)% zenangle = real(z_angle_H08,kind=jprb) ! (11/18/2015)
+    if(mod(iprof,1000)==0.and.debug)write(6,'(a,f15.10)'),'zenangle ',profiles(iprof)% zenangle
+    if(mod(iprof,1000)==0.and.debug)write(6,'(a,4f10.5)'),' ',rlon,rlat,tmp_lon(iprof),tmp_lat(iprof)
+
+!    profiles(iprof)% zenangle = 30.0_jprb ! tentative
+!    profiles(iprof)%azangle=0.0_jprb     ! Not required for [opts % rt_ir % addsolar = .FALSE.] 
+!    profiles(iprof)%sunzenangle=0.0_jprb ! Not required for [opts % rt_ir % addsolar = .FALSE.] 
+!    profiles(iprof)%sunazangle=0.0_jprb  ! Not required for [opts % rt_ir % addsolar = .FALSE.]
 
     profiles(iprof) % ctp       = 500.0_jprb
     profiles(iprof) % cfraction = 0.0_jprb
@@ -524,46 +584,42 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
       profiles(iprof) % cloud(:,:) = 0._jprb
       profiles(iprof) % cfrac(:)   = 0._jprb
-!      profiles(iprof) % cfrac(:)   = 1._jprb
 
 !  --- 6.1 microphysical clouds 
 !    if(icldprf==1) then
     ! --convert kg/kg into g/m3, make liq.cloud and ice.cloud amount, and upside-down
-    do ilev=1,nlevels
-      tv = real(tmp_t(ilev,iprof),kind=jprb) * (1.0_jprb+real(tmp_qv(ilev,iprof),kind=jprb) * repsb) &
-         / (1.0_jprb + real(tmp_qv(ilev,iprof),kind=jprb))
-      kgkg2gm3(ilev) = real(tmp_p(ilev,iprof),kind=jprb) / (Rd * tv) * 1000.0_jprb 
-      liqc(ilev) = real(tmp_qc(ilev,iprof),kind=jprb) * kgkg2gm3(ilev)
-      icec(ilev) = (real(tmp_qice(ilev,iprof),kind=jprb) ) * kgkg2gm3(ilev)
-    end do !ilev
+      do ilev=1,nlevels
+        tv = real(tmp_t(ilev,iprof),kind=jprb) * (1.0_jprb+real(tmp_qv(ilev,iprof),kind=jprb) * repsb) &
+           / (1.0_jprb + real(tmp_qv(ilev,iprof),kind=jprb))
+        kgkg2gm3(ilev) = real(tmp_p(ilev,iprof),kind=jprb) / (Rd * tv) * 1000.0_jprb 
+        liqc(ilev) = real(max(tmp_qc(ilev,iprof),0.0_r_size),kind=jprb) * kgkg2gm3(ilev)
+        icec(ilev) = real(max(tmp_qice(ilev,iprof),0.0_r_size),kind=jprb) * kgkg2gm3(ilev)
+      end do !ilev
 
-    do ilev=1,nlevels-1
-!!!      profiles(iprof) % cfrac(ilev)   = (cvr(ilev)+cvr(ilev+1)) * 0.5_jprb  !cloud fraction ?? T.Honda
-!!      profiles(iprof) % cloud(1,ilev) = & !continental maritime
-!!      profiles(iprof) % cloud(3,ilev) = & !cumulus continental cean
-!      profiles(iprof) % cloud(2,ilev) = & !stratus maritime (default)
-!        (max(tmp_qc(ilev,iprof),0.0) * kgkg2gm3(ilev) + max(tmp_qc(ilev+1,iprof),0.0) * kgkg2gm3(ilev+1))* 0.5_jprb
-!      profiles(iprof) % cloud(6,ilev) = (tmp_qi(ilev,iprof) * kgkg2gm3(ilev) & 
-!                 & + tmp_qi(ilev+1,iprof)*kgkg2gm3(ilev+1)) * 0.5_jprb  !cirrus 
-      profiles(iprof) % cloud(2,ilev) = & !stratus maritime (default)
-                 (max(liqc(ilev+1),0.0) + max(liqc(ilev),0.0)) * 0.5_jprb
-      profiles(iprof) % cloud(6,ilev) = & 
-                 (max(icec(ilev+1),0.0) + max(icec(ilev),0.0)) * 0.5_jprb
+      do ilev=1,nlevels-1
+        profiles(iprof) % cloud(2,ilev) = & !stratus maritime (default)
+                   (liqc(ilev+1) + liqc(ilev)) * 0.5_jprb
+        profiles(iprof) % cloud(6,ilev) = & 
+                   (icec(ilev+1) + icec(ilev)) * 0.5_jprb
+!
+!  -- NOTE: Currently(11/18/2015), the SCALE-LES model regards cfrac = 1.0 (/0.0)
+!            in the grid point where QHYDRO > 0.0 (=0.0).
+!           If this treatment (probably not suitable for low resolution simulations) in SCALE is updated,
+!            it will be better to consider updating the following statements.
+!
+        if((profiles(iprof) % cloud(2,ilev) > 0.0_jprb) .or. &
+           (profiles(iprof) % cloud(6,ilev) > 0.0_jprb)) then
+          profiles(iprof) % cfrac(ilev)   = 1.0_jprb  !cloud fraction 
+        else
+          profiles(iprof) % cfrac(ilev)   = 0.0_jprb  !cloud fraction 
 
-      profiles(iprof) % cfrac(ilev)   = 1.0_jprb  !cloud fraction tentative??
+        endif
 
-    end do
+      end do
 
     endif
 
   ENDDO
-
-
-!  deallocate(tmp_p, tmp_t, tmp_qv)
-!  deallocate(tmp_qc, tmp_qi, tmp_q2m)
-!  deallocate(tmp_t2m, tmp_p2m, tmp_u2m, tmp_v2m)
-!  deallocate(tmp_soze, tmp_soaz, tmp_saze, tmp_saaz)
-!  deallocate(tmp_elev, tmp_lon, tmp_lat, tmp_land)
 
   deallocate(kgkg2gm3)
 

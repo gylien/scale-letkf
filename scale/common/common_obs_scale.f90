@@ -2178,6 +2178,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
 ! -- NOTE: The channel number for RTTOV is always 10, because it should be the same
 !          with that in Himawari-8 RTTOV coef files.
 !
+!        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using (lon,lat).
+!
 
   slev = 1 + KHALO
   elev = nlevh - KHALO
