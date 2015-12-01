@@ -355,6 +355,10 @@ subroutine read_nml_letkf_obs_radar
     stop
   endif
 
+  if (RADAR_REF_THRES_DBZ < MIN_RADAR_REF_DBZ) then
+    RADAR_REF_THRES_DBZ = MIN_RADAR_REF_DBZ
+  end if
+
   write(6, nml=PARAM_LETKF_OBS_RADAR)
 
   return

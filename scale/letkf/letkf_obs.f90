@@ -383,7 +383,7 @@ SUBROUTINE set_letkf_obs
       !!! obsda%ensval: already converted to dBZ
       mem_ref = 0
       do i = 1, MEMBER
-        if (obsda%ensval(i,n) >= RADAR_REF_THRES_DBZ) then
+        if (obsda%ensval(i,n) > RADAR_REF_THRES_DBZ+1.0D-6) then
           mem_ref = mem_ref + 1
         end if
       end do
