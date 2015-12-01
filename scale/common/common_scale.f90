@@ -699,8 +699,8 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
     v3dgtmp(:,is:ie,js:je) = real(v3dg(:,:,:,iv3d), r_dble)
     call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
+!    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)  !!! read and write again to work around the endian problem on the K computer
+!    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)  !
   end do
 
   do iv2d = 1, nv2d
@@ -708,8 +708,8 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
     v2dgtmp(is:ie,js:je) = real(v2dg(:,:,iv2d), r_dble)
     call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+!    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !!! read and write again to work around the endian problem on the K computer
+!    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !
   end do
 
   call ncio_close(ncid)
