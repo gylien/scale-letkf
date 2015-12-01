@@ -507,7 +507,13 @@ local JOBID="$1"
 
 #-------------------------------------------------------------------------------
 
-while (($(pjstat $JOBID | sed -n '2p' | awk '{print $10}') >= 1)); do
+while true; do
+  jobnum=$(pjstat $JOBID | sed -n '2p' | awk '{print $10}')
+  if [[ "$jobnum" =~ ^[0-9]+$ ]]; then
+    if ((jobnum == 0)); then
+      break
+    fi
+  fi
   sleep 5s
 done
 
