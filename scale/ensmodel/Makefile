@@ -6,17 +6,6 @@ OBJS    =
 
 COMMON_DIR = ../.common_for_scale
 
-ifeq ($(H08),T)
-COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
-              $(COMMON_DIR)/common.o         \
-              $(COMMON_DIR)/common_mpi.o     \
-              $(COMMON_DIR)/common_ncio.o    \
-              $(COMMON_DIR)/common_scale.o     \
-              $(COMMON_DIR)/scale_H08_fwd.o \
-              $(COMMON_DIR)/common_obs_scale.o \
-              $(COMMON_DIR)/common_mpi_scale.o \
-              $(COMMON_DIR)/common_nml.o     
-else
 COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common.o         \
               $(COMMON_DIR)/common_mpi.o     \
@@ -25,17 +14,17 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common_obs_scale.o \
               $(COMMON_DIR)/common_mpi_scale.o \
               $(COMMON_DIR)/common_nml.o     
-endif
 
 INCS    = $(SCALE_INC) -I$(SCALE_LES_OBJDIR)
 
-ifeq ($(H08),T)
-LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB) ${RT_INCLUDE} ${RT_LDFLAGS}
-else
 LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
-endif
 
 SCALE_LES_OBJS = $(shell ls $(SCALE_LES_OBJDIR)/*.o | grep -v "scale-les.o\|scale-les_pp.o\|scale-les_init.o")
+
+ifeq ($(H08),T)
+COMMON_OBJS += $(COMMON_DIR)/scale_H08_fwd.o
+LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)
+endif
 
 all:	$(PROGS)
 

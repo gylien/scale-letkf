@@ -1,20 +1,14 @@
 include ../configure.user
 
-ifeq ($(H08),T)
-OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_letkf.o \
-	  common_ncio.o common_scale.o scale_H08_fwd.o common_obs_scale.o \
-          common_mpi_scale.o \
-          common_nml.o \
-          mod_admin_time.o
-FOPTS += -DH08
-else
 OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_letkf.o \
 	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
           common_nml.o \
           mod_admin_time.o
-endif
           #common_precip.o
 
+ifeq ($(H08),T)
+OBJS    += scale_H08_fwd.o
+endif
 
 all:	$(OBJS) datetime pdbash 
         #enssize
