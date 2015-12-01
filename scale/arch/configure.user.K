@@ -36,3 +36,14 @@ FMCMODEL  =
 FBYTESWAP = 
 FFREE     = -Free
 FFIXED    = -Fixed
+
+# -- for Himawari-8 assimilatin on the K computer (T.Honda)
+# -- If you want to compile without RTTOV (Himawari assimilation),
+# -- you should set "H08 = F".
+H08 = T
+DIR_RTTOV = /data/share005/honda/RTTOV
+RT_LDFLAGS = -L${DIR_RTTOV}/lib  -lrttov11.2.0_test -lrttov11.2.0_other \
+               -lrttov11.2.0_coef_io -lrttov11.2.0_parallel -lrttov11.2.0_main
+RT_INCLUDE = -I${DIR_RTTOV}/mod  -I${DIR_RTTOV}/include
+
+

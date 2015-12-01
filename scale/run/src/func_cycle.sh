@@ -149,6 +149,13 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $DATADIR/topo $TMPDAT
   ln -fs $DATADIR/landuse $TMPDAT
 
+# H08
+  if [ -e "${RTTOV_COEF}" ] && [ -e "${RTTOV_SCCOEF}" ]; then
+    safe_init_tmpdir $TMPDAT/rttov
+    ln -fs ${RTTOV_COEF} $TMPDAT/rttov/rtcoef_himawari_8_ahi.dat
+    ln -fs ${RTTOV_SCCOEF} $TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat
+  fi
+
   if ((DATA_BDY_TMPLOC == 1)); then
     if ((BDY_FORMAT == 2)); then
       ln -fs $DATA_BDY_WRF $TMPDAT/bdywrf
@@ -181,6 +188,14 @@ ${SCRP_DIR}/config.nml.letkf|conf/config.nml.letkf
 ${DATADIR}/rad|rad
 ${DATADIR}/land|land
 EOF
+
+# H08
+  if [ -e "${RTTOV_COEF}" ] && [ -e "${RTTOV_SCCOEF}" ]; then
+    cat >> $STAGING_DIR/stagein.dat << EOF
+${RTTOV_COEF}|rttov/rtcoef_himawari_8_ahi.dat
+${RTTOV_SCCOEF}|rttov/sccldcoef_himawari_8_ahi.dat
+EOF
+  fi
 
   if [ "$TOPO_FORMAT" != 'prep' ]; then
     echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat

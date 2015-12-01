@@ -556,6 +556,10 @@ else
 
     time_dby=${STIME}
     etime_bdy=$(datetime ${ETIME} $((FCSTLEN+BDYINT)) s)
+#    tmp_etime_bdy=$(datetime ${ETIME} $((BDYINT+BDYINT)) s)  # T. Honda (may be not necessary?)
+#    if (( etime_bdy < tmp_etime_bdy )); then                 #
+#      etime_bdy=${tmp_etime_bdy}                             #
+#    fi                                                       #
     while ((time_dby < etime_bdy)); do
       if ((BDY_ENS == 1)); then
         for m in $(seq $fmember); do

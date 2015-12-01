@@ -104,6 +104,10 @@ elif ((BDY_FORMAT == 2)); then
   i=0
   time=$STIME
   etime_bdy=$(datetime $STIME $((FCSTLEN+BDYINT)) s)
+#  tmp_etime_bdy=$(datetime $STIME $((BDYINT+BDYINT)) s)  # T. Honda (may be not necessary?)
+#  if (( etime_bdy < tmp_etime_bdy )); then               #
+#    etime_bdy=${tmp_etime_bdy}                           #
+#  fi                                                     #
   while ((time < etime_bdy)); do
     if [ -s "${BDYORG}_${time}" ]; then
       ln -fs "${BDYORG}_${time}" $TMPDIR/wrfout_$(printf %05d $i)

@@ -48,6 +48,14 @@ SLOT_BASE="$1"
 
 #ln -fs $EXECDIR/obsope $TMPDIR
 
+#-- H08 --
+if [ -e "$TMPDAT/rttov/rtcoef_himawari_8_ahi.dat" ]; then
+  ln -fs $TMPDAT/rttov/rtcoef_himawari_8_ahi.dat $TMPDIR
+fi
+if [ -e "$TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat" ]; then
+  ln -fs $TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat $TMPDIR
+fi
+
 for iobs in $(seq $OBSNUM); do
   if [ "${OBSNAME[$iobs]}" != '' ]; then
     ln -fs $OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat $TMPDIR/${OBSNAME[$iobs]}.dat
