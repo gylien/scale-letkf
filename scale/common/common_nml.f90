@@ -331,11 +331,11 @@ subroutine read_nml_letkf_obserr
   return
 end subroutine read_nml_letkf_obserr
 
-subroutine read_nml_letkf_obs_radar
+subroutine read_nml_letkf_radar
   implicit none
   integer :: ierr
 
-  namelist /PARAM_LETKF_OBS_RADAR/ &
+  namelist /PARAM_LETKF_RADAR/ &
     MIN_RADAR_REF_MEMBER, &
     MIN_RADAR_REF_DBZ, &
     RADAR_REF_THRES_DBZ, &
@@ -346,12 +346,12 @@ subroutine read_nml_letkf_obs_radar
     NRADARTYPE
 
   rewind(IO_FID_CONF)
-  read(IO_FID_CONF,nml=PARAM_LETKF_OBS_RADAR,iostat=ierr)
+  read(IO_FID_CONF,nml=PARAM_LETKF_RADAR,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_LETKF_OBS_RADAR/ is not found in namelist.'
+    write(6,*) 'Warning: /PARAM_LETKF_RADAR/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_OBS_RADAR. Check!'
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_RADAR. Check!'
     stop
   endif
 
@@ -359,9 +359,9 @@ subroutine read_nml_letkf_obs_radar
     RADAR_REF_THRES_DBZ = MIN_RADAR_REF_DBZ
   end if
 
-  write(6, nml=PARAM_LETKF_OBS_RADAR)
+  write(6, nml=PARAM_LETKF_RADAR)
 
   return
-end subroutine read_nml_letkf_obs_radar
+end subroutine read_nml_letkf_radar
 
 end module common_nml
