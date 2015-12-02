@@ -75,7 +75,6 @@ PROGRAM obsope
   call set_common_conf
 
   call read_nml_letkf
-  call read_nml_letkf_obs
   call read_nml_letkf_obserr
   call read_nml_letkf_radar
 

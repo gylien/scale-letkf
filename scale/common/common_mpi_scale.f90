@@ -1340,9 +1340,17 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   INTEGER :: i,k,m,n
   CHARACTER(9) :: filename='file.0000'
-  INTEGER :: monit_nobs(nid_obs)
+
+  INTEGER :: nobs(nid_obs)
+  INTEGER :: nobs_tmp(nid_obs)
+  INTEGER :: nobs_g(nid_obs)
   REAL(r_size) :: bias(nid_obs)
+  REAL(r_size) :: bias_tmp(nid_obs)
+  REAL(r_size) :: bias_g(nid_obs)
   REAL(r_size) :: rmse(nid_obs)
+  REAL(r_size) :: rmse_tmp(nid_obs)
+  REAL(r_size) :: rmse_g(nid_obs)
+  LOGICAL :: monit_type(nid_obs)
   INTEGER :: ierr
 
 
@@ -1372,22 +1380,64 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
 !  CALL CPU_TIME(timer)
 !  if (myrank == 0) print *, '######', timer
 
-  IF(myrank_e == lastmem_rank_e) THEN
-    call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,monit_nobs,bias,rmse)
-  END IF
-  call MPI_BCAST(monit_nobs,nid_obs,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
-  call MPI_BCAST(bias,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
-  call MPI_BCAST(rmse,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
-  WRITE(filename(1:4),'(A4)') file
-  WRITE(filename(6:9),'(A4)') 'mean'
-  write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', filename, ']:'
-  call monit_print(monit_nobs,bias,rmse)
+  if (DEPARTURE_STAT) then
+    if (myrank_e == lastmem_rank_e) then
+      call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,nobs,bias,rmse,monit_type)
+
+      do i = 1, nid_obs
+        if (monit_type(i)) then
+          nobs_tmp(i) = nobs(i)
+          if (nobs(i) == 0) then
+            bias_tmp(i) = 0.0d0
+            rmse_tmp(i) = 0.0d0
+          else
+            bias_tmp(i) = bias(i) * REAL(nobs(i),r_size)
+            rmse_tmp(i) = rmse(i) * rmse(i) * REAL(nobs(i),r_size)
+          end if
+        end if
+      end do
+
+      call MPI_ALLREDUCE(nobs_tmp, nobs_g, nid_obs, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(bias_tmp, bias_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(rmse_tmp, rmse_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+
+      do i = 1, nid_obs
+        if (monit_type(i)) then
+          if (nobs_g(i) == 0) then
+            bias_g(i) = undef
+            rmse_g(i) = undef
+          else
+            bias_g(i) = bias_g(i) / REAL(nobs_g(i),r_size)
+            rmse_g(i) = sqrt(rmse_g(i) / REAL(nobs_g(i),r_size))
+          end if
+        else
+          nobs_g(i) = -1
+          bias_g(i) = undef
+          rmse_g(i) = undef
+        end if
+      end do
+    end if
+
+    call MPI_BCAST(nobs,nid_obs,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(bias,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(rmse,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(nobs_g,nid_obs,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(bias_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(rmse_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(monit_type,nid_obs,MPI_LOGICAL,lastmem_rank_e,MPI_COMM_e,ierr)
+    WRITE(filename(1:4),'(A4)') file
+    WRITE(filename(6:9),'(A4)') 'mean'
+    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', filename, ']:'
+    call monit_print(nobs,bias,rmse,monit_type)
+    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', filename, ']:'
+    call monit_print(nobs_g,bias_g,rmse_g,monit_type)
+  end if ! [ DEPARTURE_STAT ]
+
 
   IF(myrank_e == lastmem_rank_e) THEN
     call state_trans_inv(v3dg)
     call write_restart(filename,v3dg,v2dg)
   END IF
-
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)

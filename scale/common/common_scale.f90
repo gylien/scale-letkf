@@ -12,7 +12,6 @@ MODULE common_scale
 !=======================================================================
 !$USE OMP_LIB
   USE common
-!  USE common_ncio
   use common_nml
   use common_mpi, only: nprocs, myrank
 
@@ -188,20 +187,6 @@ SUBROUTINE set_common_scale
 
 !  ! setup standard I/O
 !  call IO_setup( MODELNAME, .false.)
-
-!  call read_nml_letkf
-!  call read_nml_letkf_prc
-!  call read_nml_letkf_obs !!!!!!!!!!!!!!!!!!!!!! move outside of subroutine????
-!  call read_nml_letkf_obserr !!!!!!!!!!!!!!!!!!! move outside of subroutine????
-!  call read_nml_letkf_radar !!!!!!!!!!!!!!!! move outside of subroutine????
-
-!  if (nprocs /= NNODES * PPN) then
-!    write(6,'(A,I10)') 'Number of MPI processes = ', nprocs
-!    write(6,'(A,I10)') 'NNODES = ', NNODES
-!    write(6,'(A,I10)') 'PPN    = ', PPN
-!    write(6,'(A)') 'Number of MPI processes should be equal to NNODES * PPN.'
-!    stop
-!  end if
 
   !
   ! Set up node and process distribution

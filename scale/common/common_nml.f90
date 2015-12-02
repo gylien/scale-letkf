@@ -38,16 +38,6 @@ MODULE common_nml
   real(r_size) :: SIGMA_OBST = 3.0d0
   real(r_size) :: BASE_OBSV_RAIN = 85000.0d0
 
-!RESHAPE( (/ &
-!!       U    V    W    T    P    Q   QC   QR   QI   QS   QG
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! U,V
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! T,Tv
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! Q,RH
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! PS
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! RAIN
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0 & ! TC
-!   & /),(/nv3d+nv2d,nvarlocal/))
-
   real(r_size) :: COV_INFL_MUL = 1.0d0    ! > 0: globally constant covariance inflation
                                           ! < 0: 3D inflation values input from a GPV file "infl_mul.grd"
   real(r_size) :: MIN_INFL_MUL = 0.0d0    ! minimum inlfation factor
@@ -73,12 +63,7 @@ MODULE common_nml
 !  integer :: PRC_NUM_X_LETKF = 1
 !  integer :: PRC_NUM_Y_LETKF = 1
 
-  !--- PARAM_LETKF_OBS
-  LOGICAL :: OMB_OUTPUT = .true.
-  LOGICAL :: OMA_OUTPUT = .true.
-  LOGICAL :: OBSGUES_OUTPUT = .false.
-  LOGICAL :: OBSANAL_OUTPUT = .false.
-
+  !--- PARAM_LETKF_VAR_LOCAL
   real(r_size) :: VAR_LOCAL_UV(nvarmax)        = 1.0d0
   real(r_size) :: VAR_LOCAL_T(nvarmax)         = 1.0d0
   real(r_size) :: VAR_LOCAL_Q(nvarmax)         = 1.0d0
@@ -88,8 +73,6 @@ MODULE common_nml
   real(r_size) :: VAR_LOCAL_RADAR_REF(nvarmax) = 1.0d0
   real(r_size) :: VAR_LOCAL_RADAR_VR(nvarmax)  = 1.0d0
   real(r_size) :: VAR_LOCAL_H08(nvarmax)       = 1.0d0 ! H08
-
-  logical :: USE_RADAR_PSEUDO_RH = .false.
 
   !--- PARAM_LETKF_OBSERR
   real(r_size) :: OBSERR_U = 1.0d0
@@ -104,12 +87,26 @@ MODULE common_nml
   logical :: USE_OBSERR_RADAR_REF = .false.
   logical :: USE_OBSERR_RADAR_VR = .false.
 
+  !--- PARAM_LETKF_MONITOR
+  logical :: DEPARTURE_STAT = .true.
+  logical :: DEPARTURE_STAT_RADAR = .false.
+  logical :: DEPARTURE_STAT_H08 = .false.
+  real(r_size) :: DEPARTURE_STAT_T_RANGE = 0.0d0 ! time range within which observations are considered in the departure statistics.
+                                                 ! 0.0d0: no limit
+
+  LOGICAL :: OMB_OUTPUT = .true.
+  LOGICAL :: OMA_OUTPUT = .true.
+  LOGICAL :: OBSGUES_OUTPUT = .false.
+  LOGICAL :: OBSANAL_OUTPUT = .false.
+
   !--- PARAM_LETKF_RADAR
   INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than 0.
   REAL(r_size) :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
   REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
 
   REAL(r_size) :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
+
+  logical :: USE_RADAR_PSEUDO_RH = .false.
 
   !These 2 flags affects the computation of model reflectivity and radial velocity. 
   INTEGER :: INTERPOLATION_TECHNIQUE = 1
@@ -259,17 +256,13 @@ subroutine read_nml_letkf_prc
 end subroutine read_nml_letkf_prc
 
 !-----------------------------------------------------------------------
-! PARAM_LETKF_OBS
+! PARAM_LETKF_VAR_LOCAL
 !-----------------------------------------------------------------------
-subroutine read_nml_letkf_obs
+subroutine read_nml_letkf_var_local
   implicit none
   integer :: ierr
 
-  namelist /PARAM_LETKF_OBS/ &
-    OMB_OUTPUT, &
-    OMA_OUTPUT, &
-    OBSGUES_OUTPUT, &
-    OBSANAL_OUTPUT, &
+  namelist /PARAM_LETKF_VAR_LOCAL/ &
     VAR_LOCAL_UV, &
     VAR_LOCAL_T, &
     VAR_LOCAL_Q, &
@@ -278,23 +271,22 @@ subroutine read_nml_letkf_obs
     VAR_LOCAL_TC, &
     VAR_LOCAL_RADAR_REF, &
     VAR_LOCAL_RADAR_VR, &
-    VAR_LOCAL_H08, & ! H08
-    USE_RADAR_PSEUDO_RH
+    VAR_LOCAL_H08 ! H08
 
   rewind(IO_FID_CONF)
-  read(IO_FID_CONF,nml=PARAM_LETKF_OBS,iostat=ierr)
+  read(IO_FID_CONF,nml=PARAM_LETKF_VAR_LOCAL,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_LETKF_OBS/ is not found in namelist.'
+    write(6,*) 'Warning: /PARAM_LETKF_VAR_LOCAL/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_OBS. Check!'
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_VAR_LOCAL. Check!'
     stop
   endif
 
-  write(6, nml=PARAM_LETKF_OBS)
+  write(6, nml=PARAM_LETKF_VAR_LOCAL)
 
   return
-end subroutine read_nml_letkf_obs
+end subroutine read_nml_letkf_var_local
 
 !-----------------------------------------------------------------------
 ! PARAM_LETKF_OBSERR
@@ -331,6 +323,41 @@ subroutine read_nml_letkf_obserr
   return
 end subroutine read_nml_letkf_obserr
 
+!-----------------------------------------------------------------------
+! PARAM_LETKF_MONITOR
+!-----------------------------------------------------------------------
+subroutine read_nml_letkf_monitor
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_LETKF_MONITOR/ &
+    DEPARTURE_STAT, &
+    DEPARTURE_STAT_RADAR, &
+    DEPARTURE_STAT_H08, &
+    DEPARTURE_STAT_T_RANGE, &
+    OMB_OUTPUT, &
+    OMA_OUTPUT, &
+    OBSGUES_OUTPUT, &
+    OBSANAL_OUTPUT
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_LETKF_MONITOR,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_LETKF_MONITOR/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_MONITOR. Check!'
+    stop
+  endif
+
+  write(6, nml=PARAM_LETKF_MONITOR)
+
+  return
+end subroutine read_nml_letkf_monitor
+
+!-----------------------------------------------------------------------
+! PARAM_LETKF_RADAR
+!-----------------------------------------------------------------------
 subroutine read_nml_letkf_radar
   implicit none
   integer :: ierr
@@ -340,6 +367,7 @@ subroutine read_nml_letkf_radar
     MIN_RADAR_REF_DBZ, &
     RADAR_REF_THRES_DBZ, &
     RADAR_PRH_ERROR, &
+    USE_RADAR_PSEUDO_RH, &
     INTERPOLATION_TECHNIQUE, &
     METHOD_REF_CALC, &
     USE_TERMINAL_VELOCITY, &

@@ -389,10 +389,10 @@ SUBROUTINE set_letkf_obs
       end do
       if (mem_ref < MIN_RADAR_REF_MEMBER) then
         obsda%qc(n) = iqc_ref_mem
-!        write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
-!        write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
-!              '*  (lon,lat)=(',obs(obsda%set(n))%lon(obsda%idx(n)),',',obs(obsda%set(n))%lat(obsda%idx(n)),'), mem_ref=', &
-!              mem_ref,', ref_obs=', obs(obsda%set(n))%dat(obsda%idx(n))
+        write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
+        write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
+              '*  (lon,lat)=(',obs(obsda%set(n))%lon(obsda%idx(n)),',',obs(obsda%set(n))%lat(obsda%idx(n)),'), mem_ref=', &
+              mem_ref,', ref_obs=', obs(obsda%set(n))%dat(obsda%idx(n))
         cycle
       end if
     end if
@@ -827,12 +827,12 @@ SUBROUTINE obs_choose(imin,imax,jmin,jmax,proc,nn,nobs_use,nobsgrdout)
   INTEGER,INTENT(INOUT) :: nn
   INTEGER,INTENT(INOUT),OPTIONAL :: nobs_use(:)
   logical,intent(in),optional :: nobsgrdout
-  logical :: nobsgrdoutr
+  logical :: nobsgrdout_
   INTEGER :: j,ip
 
-  nobsgrdoutr = .false.
-  if (present(nobsgrdout)) nobsgrdoutr = nobsgrdout
-  if (nobsgrdoutr) then
+  nobsgrdout_ = .false.
+  if (present(nobsgrdout)) nobsgrdout_ = nobsgrdout
+  if (nobsgrdout_) then
     nobsgrd2(:,:,proc) = 0
   end if
 
@@ -861,7 +861,7 @@ SUBROUTINE obs_choose(imin,imax,jmin,jmax,proc,nn,nobs_use,nobsgrdout)
       end if
     END DO
 
-    if (nobsgrdoutr) then
+    if (nobsgrdout_) then
       if (j > 1) then
         nobsgrd2(0:imax-1,j,proc) = nobsgrd2(nlon,j-1,proc)
       end if
@@ -873,7 +873,7 @@ SUBROUTINE obs_choose(imin,imax,jmin,jmax,proc,nn,nobs_use,nobsgrdout)
 
   END DO
 
-  if (nobsgrdoutr) then
+  if (nobsgrdout_) then
     if (jmax < nlat) then
       nobsgrd2(:,jmax+1:nlat,proc) = nobsgrd2(nlon,jmax,proc)
     end if

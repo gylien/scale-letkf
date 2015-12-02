@@ -103,8 +103,9 @@ PROGRAM letkf
   call set_common_conf
 
   call read_nml_letkf
-  call read_nml_letkf_obs
+  call read_nml_letkf_var_local
   call read_nml_letkf_obserr
+  call read_nml_letkf_monitor
   call read_nml_letkf_radar
 
   call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
