@@ -231,10 +231,12 @@ SUBROUTINE set_letkf_obs
 !!
 !! Pre-process radar observations
 !!
+
+  write (6, '(A)') '******'
+
   !!!!!! may be moved to latter
   do iof = 1, nobsfiles
     do n = 1, obs(iof)%nobs
-
       if (obs(iof)%elm(n) == id_radar_ref_obs) then
         if (obs(iof)%dat(n) >= 0.0d0 .and. obs(iof)%dat(n) < 1.0d10) then
           if (obs(iof)%dat(n) < MIN_RADAR_REF) then
@@ -253,7 +255,6 @@ SUBROUTINE set_letkf_obs
       if (USE_OBSERR_RADAR_VR .AND. obs(iof)%elm(n) == id_radar_vr_obs) then
         obs(iof)%err(n) = OBSERR_RADAR_VR
       end if
-
     end do ! [ n = 1, obs(iof)%nobs ]
   end do ! [ iof = 1, nobsfiles ]
   !!!!!!
@@ -389,10 +390,10 @@ SUBROUTINE set_letkf_obs
       end do
       if (mem_ref < MIN_RADAR_REF_MEMBER) then
         obsda%qc(n) = iqc_ref_mem
-        write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
-        write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
-              '*  (lon,lat)=(',obs(obsda%set(n))%lon(obsda%idx(n)),',',obs(obsda%set(n))%lat(obsda%idx(n)),'), mem_ref=', &
-              mem_ref,', ref_obs=', obs(obsda%set(n))%dat(obsda%idx(n))
+!        write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
+!        write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
+!              '*  (lon,lat)=(',obs(obsda%set(n))%lon(obsda%idx(n)),',',obs(obsda%set(n))%lat(obsda%idx(n)),'), mem_ref=', &
+!              mem_ref,', ref_obs=', obs(obsda%set(n))%dat(obsda%idx(n))
         cycle
       end if
     end if

@@ -1183,7 +1183,7 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
-subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
+subroutine monit_obs(v3dg,v2dg,obs,obsda,radarlon,radarlat,radarz,topo,nobs,bias,rmse,monit_type)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
@@ -1204,6 +1204,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   REAL(RP),intent(in) :: v2dg(nlon,nlat,nv2d)
   type(obs_info),intent(in) :: obs(nobsfiles)
   type(obs_da_value),intent(in) :: obsda
+  real(r_size),intent(in) :: radarlon,radarlat,radarz
   real(r_size),intent(in) :: topo(nlon,nlat)
   INTEGER,INTENT(OUT) :: nobs(nid_obs)
   REAL(r_size),INTENT(OUT) :: bias(nid_obs)
@@ -1212,7 +1213,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 
   REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
-  integer :: n,i,j,proc,iv3d,iv2d
+  integer :: n,i,j,k,proc,iv3d,iv2d
   real(r_size) :: ri,rj,rk
 
   real(r_size) :: oelm(obsda%nobs)
@@ -1239,21 +1240,25 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_t) = v3dg(:,:,:,iv3d_t)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_p) = v3dg(:,:,:,iv3d_p)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q) = v3dg(:,:,:,iv3d_q)
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
 !  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_rh) =
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) =
 
-  !!! use the 1st level as the surface (although it is not)
   ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
   do j = 1, nlat
     do i = 1, nlon
-      v2dgh(i+IHALO,j+JHALO,iv2dd_topo) = (ztop - topo(i,j)) / ztop * GRID_CZ(1+KHALO) + topo(i,j)
+      do k = 1, nlev
+        v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dd_hgt) = (ztop - topo(i,j)) / ztop * GRID_CZ(k+KHALO) + topo(i,j)
+      end do
     enddo
   enddo
+
+  !!! use the 1st level as the surface (although it is not)
+  v2dgh(:,:,iv2dd_topo) = v3dgh(1+KHALO,:,:,iv3dd_hgt)
+
   v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_ps) = v3dg(1,:,:,iv3d_p)
 !  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) =
   v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_u10m) = v3dg(1,:,:,iv3d_u)
@@ -1324,24 +1329,21 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
                           obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
         end if
 
-!!!!!!!! v3dgh is not available now..., need to be recalculated.
-!!!!!!!! radarlon, radarlat, radarz not available
-!      case(id_radar_ref_obs,id_radar_vr_obs,id_radar_prh_obs)
-!        if (DEPARTURE_STAT_RADAR) then
-!          call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
-!          if (oqc(n) == iqc_good) then
-!            call Trans_XtoY_radar(obs(obsda%set(n))%elm(obsda%idx(n)),radarlon,radarlat,radarz,ri,rj,rk, &
-!                                  obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)),obs(obsda%set(n))%lev(obsda%idx(n)),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
-!            if (oqc(n) == iqc_ref_low) oqc(n) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
-!          end if
-!        end if
+      case(id_radar_ref_obs,id_radar_vr_obs,id_radar_prh_obs)
+        if (DEPARTURE_STAT_RADAR) then
+          call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
+          if (oqc(n) == iqc_good) then
+            call Trans_XtoY_radar(obs(obsda%set(n))%elm(obsda%idx(n)),radarlon,radarlat,radarz,ri,rj,rk, &
+                                  obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)),obs(obsda%set(n))%lev(obsda%idx(n)),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
+            if (oqc(n) == iqc_ref_low) oqc(n) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
+          end if
+        end if
 
 !!!!!!!! not available...
 !      case(id_H08IR_obs)
 !        if (DEPARTURE_STAT_H08) then
 !          ......
 !        end if
-
       end select
 
       if (oqc(n) == iqc_good) then
