@@ -130,7 +130,7 @@ PROGRAM letkf
     !
     ! Read observations
     !
-    call read_obs_all(obs, radarlon, radarlat, radarz)
+    call read_obs_all(obs)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -206,7 +206,7 @@ PROGRAM letkf
     !
     ! WRITE ENS MEAN and SPRD
     !
-    CALL write_ensmspr_mpi('gues',gues3d,gues2d,obs,obsda2,radarlon,radarlat,radarz)
+    CALL write_ensmspr_mpi('gues',gues3d,gues2d,obs,obsda2)
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -245,7 +245,7 @@ PROGRAM letkf
     !
     ! WRITE ENS MEAN and SPRD
     !
-    CALL write_ensmspr_mpi('anal',anal3d,anal2d,obs,obsda2,radarlon,radarlat,radarz)
+    CALL write_ensmspr_mpi('anal',anal3d,anal2d,obs,obsda2)
     !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()

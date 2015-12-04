@@ -1325,7 +1325,7 @@ END SUBROUTINE buf_to_grd
 !-----------------------------------------------------------------------
 ! STORING DATA (ensemble mean and spread)
 !-----------------------------------------------------------------------
-SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2,radarlon,radarlat,radarz)
+SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
   use scale_process, only: PRC_myrank
   implicit none
 
@@ -1356,7 +1356,6 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2,radarlon,radarlat,radarz)
 
   type(obs_info),intent(in) :: obs(nobsfiles)
   type(obs_da_value),intent(in),allocatable :: obsda2(:)
-  real(r_size),intent(in) :: radarlon,radarlat,radarz
 
 
   REAL(r_dble) :: rrtimer00,rrtimer
@@ -1385,7 +1384,7 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2,radarlon,radarlat,radarz)
 
   if (DEPARTURE_STAT) then
     if (myrank_e == lastmem_rank_e) then
-      call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),radarlon,radarlat,radarz,topo,nobs,bias,rmse,monit_type)
+      call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,nobs,bias,rmse,monit_type)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)

@@ -131,6 +131,8 @@ MODULE common_obs_scale
        'TMPAPR', 'PHARAD', 'H08IRB'/) ! H08
 !       'TMPAPR', 'PHARAD'/)
 
+  INTEGER,PARAMETER :: max_obs_info_meta = 3 ! maximum array size for type(obs_info)%meta
+
   TYPE obs_info
     INTEGER :: nobs = 0
     INTEGER,ALLOCATABLE :: elm(:)
@@ -141,6 +143,7 @@ MODULE common_obs_scale
     REAL(r_size),ALLOCATABLE :: err(:)
     INTEGER,ALLOCATABLE :: typ(:)
     REAL(r_size),ALLOCATABLE :: dif(:)
+    REAL(r_size) :: meta(max_obs_info_meta) = undef
   END TYPE obs_info
 
   !!!!!!
@@ -1183,7 +1186,7 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
-subroutine monit_obs(v3dg,v2dg,obs,obsda,radarlon,radarlat,radarz,topo,nobs,bias,rmse,monit_type)
+subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
@@ -1204,7 +1207,6 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,radarlon,radarlat,radarz,topo,nobs,bias
   REAL(RP),intent(in) :: v2dg(nlon,nlat,nv2d)
   type(obs_info),intent(in) :: obs(nobsfiles)
   type(obs_da_value),intent(in) :: obsda
-  real(r_size),intent(in) :: radarlon,radarlat,radarz
   real(r_size),intent(in) :: topo(nlon,nlat)
   INTEGER,INTENT(OUT) :: nobs(nid_obs)
   REAL(r_size),INTENT(OUT) :: bias(nid_obs)
@@ -1333,7 +1335,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,radarlon,radarlat,radarz,topo,nobs,bias
         if (DEPARTURE_STAT_RADAR) then
           call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
           if (oqc(n) == iqc_good) then
-            call Trans_XtoY_radar(obs(obsda%set(n))%elm(obsda%idx(n)),radarlon,radarlat,radarz,ri,rj,rk, &
+            call Trans_XtoY_radar(obs(obsda%set(n))%elm(obsda%idx(n)),obs(obsda%set(n))%meta(1),obs(obsda%set(n))%meta(2),obs(obsda%set(n))%meta(3),ri,rj,rk, &
                                   obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)),obs(obsda%set(n))%lev(obsda%idx(n)),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
             if (oqc(n) == iqc_ref_low) oqc(n) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
           end if
@@ -1955,11 +1957,10 @@ SUBROUTINE read_obs_radar(cfile,obs)
   RETURN
 END SUBROUTINE read_obs_radar
 
-SUBROUTINE write_obs_radar(cfile,obs,radarlon,radarlat,radarz,append,missing)
+SUBROUTINE write_obs_radar(cfile,obs,append,missing)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(IN) :: obs
-  REAL(r_size),INTENT(IN) :: radarlon,radarlat,radarz
   LOGICAL,INTENT(IN),OPTIONAL :: append
   LOGICAL,INTENT(IN),OPTIONAL :: missing
   LOGICAL :: append_
@@ -1978,9 +1979,9 @@ SUBROUTINE write_obs_radar(cfile,obs,radarlon,radarlat,radarz,append,missing)
   ELSE
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   END IF
-  WRITE(iunit) REAL(radarlon,r_sngl)
-  WRITE(iunit) REAL(radarlat,r_sngl)
-  WRITE(iunit) REAL(radarz,r_sngl)
+  WRITE(iunit) REAL(obs%meta(1),r_sngl)
+  WRITE(iunit) REAL(obs%meta(2),r_sngl)
+  WRITE(iunit) REAL(obs%meta(3),r_sngl)
   DO n=1,obs%nobs
     if (missing_ .or. abs(obs%dat(n) - undef) > tiny(wk(5))) then
       wk(1) = REAL(obs%elm(n),r_sngl)
@@ -1998,19 +1999,12 @@ SUBROUTINE write_obs_radar(cfile,obs,radarlon,radarlat,radarz,append,missing)
   RETURN
 END SUBROUTINE write_obs_radar
 
-subroutine read_obs_all(obs, radarlon, radarlat, radarz)
+subroutine read_obs_all(obs)
   implicit none
 
   type(obs_info), intent(out) :: obs(nobsfiles)
-  real(r_size), intent(out) :: radarlon, radarlat, radarz
   integer :: iof
   logical :: ex
-
-
-  radarlon = undef
-  radarlat = undef
-  radarz = undef
-
 
   do iof = 1, nobsfiles
     inquire (file=obsfile(iof), exist=ex)
@@ -2029,7 +2023,7 @@ subroutine read_obs_all(obs, radarlon, radarlat, radarz)
     case (1)
       call get_nobs(obsfile(iof),8,obs(iof)%nobs)
     case (2)
-      call get_nobs_radar(obsfile(iof), obs(iof)%nobs, radarlon, radarlat, radarz)  !!!!!! using 'radar_info' data type to handle more than 1 radar???
+      call get_nobs_radar(obsfile(iof), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
     case (3) !H08 
       call get_nobs_H08(obsfile(iof),obs(iof)%nobs) ! H08
     case default
@@ -2056,11 +2050,10 @@ subroutine read_obs_all(obs, radarlon, radarlat, radarz)
   return
 end subroutine read_obs_all
 
-subroutine write_obs_all(obs, radarlon, radarlat, radarz, missing, file_suffix)
+subroutine write_obs_all(obs, missing, file_suffix)
   implicit none
 
   type(obs_info), intent(in) :: obs(nobsfiles)
-  real(r_size), intent(in) :: radarlon, radarlat, radarz
   logical, intent(in), optional :: missing
   character(len=*), intent(in), optional :: file_suffix
   logical :: missing_
@@ -2083,7 +2076,7 @@ subroutine write_obs_all(obs, radarlon, radarlat, radarz, missing, file_suffix)
     case (1)
       call write_obs(trim(filestr),obs(iof),missing=missing_)
     case (2)
-      call write_obs_radar(trim(filestr),obs(iof),radarlon,radarlat,radarz,missing=missing_)
+      call write_obs_radar(trim(filestr),obs(iof),missing=missing_)
     case (3) ! H08 
       call write_obs_H08(trim(filestr),obs(iof),missing=missing_) ! H08
     end select

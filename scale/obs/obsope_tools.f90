@@ -91,11 +91,10 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Observation operator calculation
 !-----------------------------------------------------------------------
-SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
+SUBROUTINE obsope_cal(obs)
   IMPLICIT NONE
 
   TYPE(obs_info),INTENT(IN) :: obs(nobsfiles)
-  real(r_size),intent(in) :: radarlon, radarlat, radarz
   type(obs_da_value) :: obsda
   REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
@@ -270,7 +269,7 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
                   call Trans_XtoY(obs(iof)%elm(n),ri(nn),rj(nn),rk, &
                                   obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
                 case (2)
-                  call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri(nn),rj(nn),rk, &
+                  call Trans_XtoY_radar(obs(iof)%elm(n),obs(iof)%meta(1),obs(iof)%meta(2),obs(iof)%meta(3),ri(nn),rj(nn),rk, &
                                         obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
                   if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
 
@@ -387,11 +386,10 @@ end subroutine obsope_cal
 !-----------------------------------------------------------------------
 ! Observation generator calculation
 !-----------------------------------------------------------------------
-SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
+SUBROUTINE obsmake_cal(obs)
   IMPLICIT NONE
 
   TYPE(obs_info),INTENT(INOUT) :: obs(nobsfiles)
-  real(r_size),intent(in) :: radarlon, radarlat, radarz
   REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
@@ -487,7 +485,7 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
                   call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk, &
                                   obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
                 case (2)
-                  call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri,rj,rk, &
+                  call Trans_XtoY_radar(obs(iof)%elm(n),obs(iof)%meta(1),obs(iof)%meta(2),obs(iof)%meta(3),ri,rj,rk, &
                                         obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
                 end select
 
@@ -666,7 +664,7 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
     deallocate ( bufr )
     deallocate ( error )
 
-    call write_obs_all(obs, radarlon, radarlat, radarz, missing=.false., file_suffix='.out') ! only at the head node
+    call write_obs_all(obs, missing=.false., file_suffix='.out') ! only at the head node
   end if
 
 end subroutine obsmake_cal

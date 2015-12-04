@@ -766,6 +766,8 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
 !SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl,oindex)
   use scale_grid, only: &
     DX, DY
+  use scale_grid_index, only: &
+    IHALO, JHALO
   use scale_les_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
@@ -793,6 +795,24 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
   integer :: ielm
 
   real(r_size) :: rdx, rdy
+
+  real(r_size) :: radar_ri(nobsfiles)       !!!!!!
+  real(r_size) :: radar_rj(nobsfiles)       !!!!!!
+  real(r_size) :: dist_radar_edge, dist_bdy !!!!!!
+  integer :: iof                            !!!!!!
+
+
+
+  if (RADAR_EDGE_TAPER_WIDTH > 0.0d0 .and. RADAR_RANGE > 0.0d0) then                !!!!!!
+    do iof = 1, nobsfiles                                                           !!!!!!
+      if (obsfileformat(iof) == 2) then                                             !!!!!!
+        call phys2ij(obs(iof)%meta(1),obs(iof)%meta(2),radar_ri(iof),radar_rj(iof)) !!!!!!
+      end if                                                                        !!!!!!
+    end do                                                                          !!!!!!
+  end if                                                                            !!!!!!
+
+
+
 !
 ! INITIALIZE
 !
@@ -917,6 +937,23 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
         END IF
   !      IF(PRESENT(oindex)) oindex(nobsl) = obsda2(ip)%idx(nobs_use(n))      ! DH
 
+
+
+        if (RADAR_EDGE_TAPER_WIDTH > 0.0d0 .and. RADAR_RANGE > 0.0d0 .and. &                 !!!!!!
+            obsfileformat(obsda2(ip)%set(nobs_use(n))) == 2) then                            !!!!!!
+          rdx = (ri - radar_ri(obsda2(ip)%set(nobs_use(n)))) * DX                            !!!!!!
+          rdy = (rj - radar_rj(obsda2(ip)%set(nobs_use(n)))) * DY                            !!!!!!
+          dist_radar_edge = (RADAR_RANGE - sqrt(rdx*rdx + rdy*rdy)) / RADAR_EDGE_TAPER_WIDTH !!!!!!
+          if (dist_radar_edge < 0.0d0) then                                                  !!!!!!
+            dist_radar_edge = 0.0d0                                                          !!!!!!
+!            write (6,'(A,F12.2)') '[Warning] dist_radar_edge < 0. dist_radar_edge =', RADAR_RANGE - sqrt(rdx*rdx + rdy*rdy)
+          end if                                                                             !!!!!!
+          if (dist_radar_edge < 1.0d0) then                                                  !!!!!!
+            rloc(nobsl) = rloc(nobsl) * dist_radar_edge                                      !!!!!!
+          end if                                                                             !!!!!!
+        end if                                                                               !!!!!!
+
+
       END DO ! [ n = 1, nn ]
 
     end if ! [ obsda2(ip)%nobs > 0 ]
@@ -929,10 +966,23 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
     WRITE(6,*) 'RI,RJ,LEV,NOBSL,NOBSTOTAL=', ri,rj,rlev,nobsl,nobstotal
     STOP 99
   END IF
-
 !
   IF( allocated(nobs_use) ) DEALLOCATE(nobs_use)
 !
+
+
+  if (BOUNDARY_TAPER_WIDTH > 0.0d0) then                                              !!!!!!
+    dist_bdy = min(min(ri - IHALO, nlong+1 - ri - IHALO) * DX, &                      !!!!!!
+                   min(rj - JHALO, nlatg+1 - rj - JHALO) * DY) / BOUNDARY_TAPER_WIDTH !!!!!!
+    if (dist_bdy < 0.0d0) then                                                        !!!!!!
+      write (6, '(A)') '[Error] ###### Wrong dist_bdy ######'                         !!!!!!
+      stop                                                                            !!!!!!
+    else if (dist_bdy < 1.0d0) then                                                   !!!!!!
+      rloc = rloc * dist_bdy                                                          !!!!!!
+    end if                                                                            !!!!!!
+  end if                                                                              !!!!!!
+
+
   RETURN
 END SUBROUTINE obs_local
 

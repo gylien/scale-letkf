@@ -23,7 +23,6 @@ PROGRAM obsmake
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
   type(obs_info) :: obs(nobsfiles)
-  real(r_size) :: radarlon, radarlat, radarz
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -65,7 +64,7 @@ PROGRAM obsmake
 !-----------------------------------------------------------------------
 
     if (myrank_mem_use) then
-      call read_obs_all(obs, radarlon, radarlat, radarz)
+      call read_obs_all(obs)
     end if
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -78,7 +77,7 @@ PROGRAM obsmake
 !-----------------------------------------------------------------------
 
     if (myrank_mem_use) then
-      CALL obsmake_cal(obs, radarlon, radarlat, radarz)
+      CALL obsmake_cal(obs)
     end if
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)

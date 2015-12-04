@@ -39,8 +39,6 @@ MODULE letkf_obs
   integer,save :: nobstotalg
   integer,save :: nobstotal
 
-  real(r_size) :: radarlon, radarlat, radarz
-
 CONTAINS
 !-----------------------------------------------------------------------
 ! Initialize
