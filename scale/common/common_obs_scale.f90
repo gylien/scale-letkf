@@ -1248,6 +1248,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,radarlon,radarlat,radarz,topo,nobs,bias
 !  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_rh) =
 
   ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
+!$OMP PARALLEL DO PRIVATE(j,i,k)
   do j = 1, nlat
     do i = 1, nlon
       do k = 1, nlev
@@ -1255,6 +1256,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,radarlon,radarlat,radarz,topo,nobs,bias
       end do
     enddo
   enddo
+!$OMP END PARALLEL DO
 
   !!! use the 1st level as the surface (although it is not)
   v2dgh(:,:,iv2dd_topo) = v3dgh(1+KHALO,:,:,iv3dd_hgt)
@@ -1299,21 +1301,19 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,radarlon,radarlat,radarz,topo,nobs,bias
 
   oqc = -1
 
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ri,rj,rk)
   do n = 1, obsda%nobs
-
-
-    oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
 
     if (obsda%qc(n) /= iqc_good) write(6, *) '############', obsda%qc(n)
 
-    call rij_g2l_auto(proc,obsda%ri(n),obsda%rj(n),ri,rj)
+    oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
 
+    call rij_g2l_auto(proc,obsda%ri(n),obsda%rj(n),ri,rj)
     if (PRC_myrank /= proc) then
       write(6, *) '############ Error!', PRC_myrank,proc,obsda%ri(n),obsda%rj(n),ri,rj
       cycle
 !      stop
     end if
-
 
     if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
         abs(obs(obsda%set(n))%dif(obsda%idx(n))) <= DEPARTURE_STAT_T_RANGE) then
@@ -1354,6 +1354,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,radarlon,radarlat,radarz,topo,nobs,bias
     end if
 
   end do ! [ n = 1, obsda%nobs ]
+!$OMP END PARALLEL DO
 
   call monit_dep(obsda%nobs,oelm,ohx,oqc,nobs,bias,rmse)
 

@@ -1358,32 +1358,41 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2,radarlon,radarlat,radarz)
   type(obs_da_value),intent(in),allocatable :: obsda2(:)
   real(r_size),intent(in) :: radarlon,radarlat,radarz
 
-!  REAL(r_size) :: timer
-!  INTEGER :: ierr
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  REAL(r_dble) :: rrtimer00,rrtimer
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer00 = MPI_WTIME()
 
 
   CALL ensmean_grd(MEMBER,nij1,v3d,v2d,v3dm,v2dm)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:calc_mean:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
 
   CALL gather_grd_mpi(lastmem_rank_e,v3dm,v2dm,v3dg,v2dg)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:gather_grd_mpi:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
 
   if (DEPARTURE_STAT) then
     if (myrank_e == lastmem_rank_e) then
       call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),radarlon,radarlat,radarz,topo,nobs,bias,rmse,monit_type)
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:monit_obs:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
 
       do i = 1, nid_obs
         if (monit_type(i)) then
@@ -1432,19 +1441,29 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2,radarlon,radarlat,radarz)
     call monit_print(nobs,bias,rmse,monit_type)
     write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', filename, ']:'
     call monit_print(nobs_g,bias_g,rmse_g,monit_type)
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:monit_obs_reduce_print:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+
   end if ! [ DEPARTURE_STAT ]
 
 
   IF(myrank_e == lastmem_rank_e) THEN
     call state_trans_inv(v3dg)
     call write_restart(filename,v3dg,v2dg)
-  END IF
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:write_mean:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
+
+  END IF
 
   DO n=1,nv3d
 !$OMP PARALLEL DO PRIVATE(i,k,m)
@@ -1460,12 +1479,6 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2,radarlon,radarlat,radarz)
 !$OMP END PARALLEL DO
   END DO
 
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
-
-
   DO n=1,nv2d
 !$OMP PARALLEL DO PRIVATE(i,m)
     DO i=1,nij1
@@ -1480,16 +1493,18 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2,radarlon,radarlat,radarz)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:calc_spread:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
 
   CALL gather_grd_mpi(lastmem_rank_e,v3ds,v2ds,v3dg,v2dg)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:gather_grd_mpi:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
 
   IF(myrank_e == lastmem_rank_e) THEN
@@ -1497,13 +1512,15 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2,radarlon,radarlat,radarz)
     WRITE(filename(6:9),'(A4)') 'sprd'
 !    call state_trans_inv(v3dg)             !!
     call write_restart(filename,v3dg,v2dg)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
-  END IF
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:write_spread:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
+
+  END IF
 
   RETURN
 END SUBROUTINE write_ensmspr_mpi
