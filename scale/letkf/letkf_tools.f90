@@ -972,10 +972,11 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
 
 
   if (BOUNDARY_TAPER_WIDTH > 0.0d0) then                                              !!!!!!
-    dist_bdy = min(min(ri - IHALO, nlong+1 - ri - IHALO) * DX, &                      !!!!!!
-                   min(rj - JHALO, nlatg+1 - rj - JHALO) * DY) / BOUNDARY_TAPER_WIDTH !!!!!!
+    dist_bdy = min(min(ri - IHALO, nlong+IHALO+1 - ri) * DX, &                        !!!!!!
+                   min(rj - JHALO, nlatg+JHALO+1 - rj) * DY) / BOUNDARY_TAPER_WIDTH   !!!!!!
     if (dist_bdy < 0.0d0) then                                                        !!!!!!
       write (6, '(A)') '[Error] ###### Wrong dist_bdy ######'                         !!!!!!
+!write (6,*) '$$$$$$####', ri - IHALO, nlong+IHALO+1 - ri, rj - JHALO, nlatg+JHALO+1 - rj
       stop                                                                            !!!!!!
     else if (dist_bdy < 1.0d0) then                                                   !!!!!!
       rloc = rloc * dist_bdy                                                          !!!!!!
