@@ -122,6 +122,13 @@ SUBROUTINE obsope_cal(obs)
 
 !-----------------------------------------------------------------------
 
+  integer :: ierr
+  REAL(r_dble) :: rrtimer00,rrtimer
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer00 = MPI_WTIME()
+
+
   obsda%nobs = 0
   do iof = 1, nobsfiles
     obsda%nobs = obsda%nobs + obs(iof)%nobs
@@ -151,6 +158,13 @@ SUBROUTINE obsope_cal(obs)
 
         call read_ens_history_iter('hist',it,islot,v3dg,v2dg)
 !  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,I3,A,I3,A,4x,F15.7)') '###### obsope_cal:read_ens_history_iter:',it,':',islot,':',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
 
         do iof = 1, nobsfiles
 
@@ -242,6 +256,14 @@ SUBROUTINE obsope_cal(obs)
 #endif
           ENDIF ! end of nproc count [if (iof = 3)]
 
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,I3,A,I3,A,I3,A,F15.7)') '###### obsope_cal:obsope_step_1:        ',it,':',islot,':',iof,':',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+
           ! then do this heavy computation with OpenMP
 
           IF(iof /= 3)THEN ! H08
@@ -263,6 +285,13 @@ SUBROUTINE obsope_cal(obs)
                 call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
               end if
 
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!  rrtimer = MPI_WTIME()
+!  WRITE(6,'(A,I3,A,I3,A,I3,A,I8,A,F15.7)') '###### obsope_cal:obsope_step_2_phys2ijkz:',it,':',islot,':',iof,':',nn,':',rrtimer-rrtimer00
+!  rrtimer00=rrtimer
+
+
               if (obsda%qc(nn) == iqc_good) then
                 select case (obsfileformat(iof))
                 case (1)
@@ -281,6 +310,13 @@ SUBROUTINE obsope_cal(obs)
 
                 end select
               end if
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!  rrtimer = MPI_WTIME()
+!  WRITE(6,'(A,I3,A,I3,A,I3,A,I8,A,F15.7)') '###### obsope_cal:obsope_step_2_Trans_XtoY_radar:',it,':',islot,':',iof,':',nn,':',rrtimer-rrtimer00
+!  rrtimer00=rrtimer
+
 
             end do ! [ nn = nproc_0 + 1, nproc ]
 !$OMP END PARALLEL DO
@@ -332,6 +368,13 @@ SUBROUTINE obsope_cal(obs)
           write (6,'(3A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot = ', nslot
           write (6,'(3A,I6,A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
 
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,I3,A,I3,A,I3,A,F15.7)') '###### obsope_cal:obsope_step_2:        ',it,':',islot,':',iof,':',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+
         end do ! [ do iof = 1, nobsfiles ]
 
 
@@ -363,6 +406,13 @@ SUBROUTINE obsope_cal(obs)
       write (obsdafile(7:10),'(I4.4)') im
       write (obsdafile(12:17),'(I6.6)') proc2mem(2,it,myrank+1)
       call write_obs_da(obsdafile,obsda,0)
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,I3,A,8x,F15.7)') '###### obsope_cal:write_obs_da:         ',it,':',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
 
     end if ! [ im >= 1 .and. im <= MEMBER ]
 
