@@ -100,7 +100,7 @@ SUBROUTINE obsope_cal(obs)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
   integer :: it,islot,proc,im,iof
-  integer :: n,nn,nslot,nproc,nproc_0,nprocslot,ierr
+  integer :: n,nn,nslot,nproc,nproc_0,nprocslot
 !  real(r_size) :: rig,rjg,ri,rj,rk
   real(r_size) :: rig,rjg,rk
   real(r_size),allocatable :: ri(:),rj(:)
