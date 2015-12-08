@@ -82,8 +82,11 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !  REAL(r_size),ALLOCATABLE :: pfull(:,:)
   REAL(r_size) :: parm
   REAL(r_size) :: trans(MEMBER,MEMBER,nv3d+nv2d)
-  REAL(r_size) :: anal_mean,anal_sprd,gues_sprd,rtps_parm  ! GYL
-  REAL(r_size) :: anal_pert(MEMBER)                        ! GYL
+  REAL(r_size) :: transm(MEMBER,nv3d+nv2d)       !GYL
+  REAL(r_size) :: pa(MEMBER,MEMBER,nv3d+nv2d)    !GYL
+  REAL(r_size) :: tmp,tmp2                       !GYL
+  REAL(r_size) :: q_mean,q_sprd                  !GYL
+  REAL(r_size) :: q_anal(MEMBER)                 !GYL
 !  LOGICAL :: ex
 !  INTEGER :: ij,ilev,n,m,i,j,k,nobsl,ierr,iret
   INTEGER :: ij,ilev,n,m,i,k,nobsl
@@ -200,103 +203,124 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ALLOCATE( hdxf(1:nobstotal,1:MEMBER),rdiag(1:nobstotal),rloc(1:nobstotal),dep(1:nobstotal) )
   DO ilev=1,nlev
     WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,m,k,anal_mean,anal_sprd,anal_pert,gues_sprd,rtps_parm)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,transm,pa,m,k,tmp,tmp2,q_mean,q_sprd,q_anal)
     DO ij=1,nij1
 !WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
       DO n=1,nv3d
         IF(var_local_n2n(n) < n) THEN
           trans(:,:,n) = trans(:,:,var_local_n2n(n))
+          transm(:,n) = transm(:,var_local_n2n(n))                                     !GYL
+          IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
+            pa(:,:,n) = pa(:,:,var_local_n2n(n))                                       !GYL
+          END IF                                                                       !GYL
           work3d(ij,ilev,n) = work3d(ij,ilev,var_local_n2n(n))
         ELSE
           CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl)
           parm = work3d(ij,ilev,n)
-          CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,n),MIN_INFL_MUL,RELAX_ALPHA)
+          IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
+            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &         !GYL
+                            trans(:,:,n),transm=transm(:,n),pao=pa(:,:,n),minfl=MIN_INFL_MUL) !GYL
+          ELSE                                                                         !GYL
+            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &         !GYL
+                            trans(:,:,n),transm=transm(:,n),minfl=MIN_INFL_MUL)        !GYL
+          END IF                                                                       !GYL
           work3d(ij,ilev,n) = parm
         END IF
-        IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) .AND. ilev > LEV_UPDATE_Q) THEN ! GYL, do not update upper-level q,qc
-          anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)      ! GYL
-        ELSE                                                                 ! GYL
-          DO m=1,MEMBER                                                      ! GYL
+        IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) .AND. ilev > LEV_UPDATE_Q) THEN !GYL, do not update upper-level q,qc
+          anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)                !GYL
+        ELSE                                                                           !GYL
+          IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2005)
+            trans(:,:,n) = (1.0d0 - RELAX_ALPHA) * trans(:,:,n)                        !GYL
+            DO i=1,MEMBER                                                              !GYL
+              trans(i,i,n) = RELAX_ALPHA + trans(i,i,n)                                !GYL
+            END DO                                                                     !GYL
+          ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL - RTPS method (Whitaker and Hamill 2012)
+            tmp = 0.0d0                                                                !GYL
+            tmp2 = 0.0d0                                                               !GYL
+            DO m=1,MEMBER                                                              !GYL
+              tmp = tmp + gues3d(ij,ilev,m,n) * gues3d(ij,ilev,m,n)                    !GYL
+              DO k=1,MEMBER                                                            !GYL
+                tmp2 = tmp2 + gues3d(ij,ilev,k,n) * pa(k,m,n) * gues3d(ij,ilev,m,n)    !GYL
+              END DO                                                                   !GYL
+            END DO                                                                     !GYL
+            tmp = RELAX_ALPHA_SPREAD * SQRT(tmp / tmp2) - RELAX_ALPHA_SPREAD + 1.0d0   !GYL - Whitaker and Hamill 2012
+!            tmp = SQRT(RELAX_ALPHA_SPREAD * (tmp / tmp2) - RELAX_ALPHA_SPREAD + 1.0d0) !GYL - Hamrud et al. 2015 (slightly modified)
+            trans(:,:,n) = trans(:,:,n) * tmp                                          !GYL
+          END IF                                                                       !GYL
+          DO m=1,MEMBER
             anal3d(ij,ilev,m,n) = mean3d(ij,ilev,n)
             DO k=1,MEMBER
-              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-                & + gues3d(ij,ilev,k,n) * trans(k,m,n)
+              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &                              !GYL - sum trans and transm here
+                & + gues3d(ij,ilev,k,n) * (trans(k,m,n) + transm(k,n))                 !GYL
             END DO
-          END DO                                                             ! GYL
-        END IF                                                               ! GYL
-
-        IF(RELAX_ALPHA_SPREAD /= 0.0d0 .OR. (n == iv3d_q .AND. ilev <= LEV_UPDATE_Q)) THEN ! GYL, compute analysis mean and spread
-          anal_mean = SUM(anal3d(ij,ilev,:,n)) / REAL(MEMBER,r_size)         ! GYL
-          anal_sprd = 0.0d0                                                  ! GYL
-          DO m=1,MEMBER                                                      ! GYL
-            anal_pert(m) = anal3d(ij,ilev,m,n) - anal_mean                   ! GYL
-            anal_sprd = anal_sprd + anal_pert(m)**2                          ! GYL
-          END DO                                                             ! GYL
-          anal_sprd = SQRT(anal_sprd / REAL(MEMBER-1,r_size))                ! GYL
-        END IF                                                               ! GYL
-
-        rtps_parm = 1.0d0                                                    ! GYL, compute guess spread and the RTPS
-        IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                 ! GYL
-          gues_sprd = 0.0d0                                                  ! GYL
-          DO m=1,MEMBER                                                      ! GYL
-            gues_sprd = gues_sprd + gues3d(ij,ilev,m,n)**2                   ! GYL
-          END DO                                                             ! GYL
-          gues_sprd = SQRT(gues_sprd / REAL(MEMBER-1,r_size))                ! GYL
-          rtps_parm = RELAX_ALPHA_SPREAD * (gues_sprd - anal_sprd) / anal_sprd + 1.0d0 ! GYL
-          DO m=1,MEMBER                                                      ! GYL
-            anal3d(ij,ilev,m,n) = anal_mean + anal_pert(m) * rtps_parm       ! GYL
-          END DO                                                             ! GYL
-        END IF                                                               ! GYL
-
-        IF(n == iv3d_q .AND. ilev <= LEV_UPDATE_Q) THEN                      ! GYL, limit the lower-level q spread
-          IF(anal_sprd * rtps_parm / anal_mean > Q_SPRD_MAX) THEN            ! GYL
-            DO m=1,MEMBER                                                    ! GYL
-              anal3d(ij,ilev,m,n) = anal_mean + anal_pert(m) * anal_mean * Q_SPRD_MAX / anal_sprd ! GYL
-            END DO                                                           ! GYL
-          END IF                                                             ! GYL
-        END IF                                                               ! GYL
+          END DO
+        END IF                                                                         !GYL
+        IF(n == iv3d_q .AND. ilev <= LEV_UPDATE_Q) THEN                                !GYL - limit the lower-level q spread
+          q_mean = SUM(anal3d(ij,ilev,:,n)) / REAL(MEMBER,r_size)                      !GYL
+          q_sprd = 0.0d0                                                               !GYL
+          DO m=1,MEMBER                                                                !GYL
+            q_anal(m) = anal3d(ij,ilev,m,n) - q_mean                                   !GYL
+            q_sprd = q_sprd + q_anal(m)**2                                             !GYL
+          END DO                                                                       !GYL
+          q_sprd = SQRT(q_sprd / REAL(MEMBER-1,r_size)) / q_mean                       !GYL
+          IF(q_sprd > Q_SPRD_MAX) THEN                                                 !GYL
+            DO m=1,MEMBER                                                              !GYL
+              anal3d(ij,ilev,m,n) = q_mean + q_anal(m) * Q_SPRD_MAX / q_sprd           !GYL
+            END DO                                                                     !GYL
+          END IF                                                                       !GYL
+        END IF                                                                         !GYL
       END DO ! [ n=1,nv3d ]
       IF(ilev == 1) THEN !update 2d variable at ilev=1
         DO n=1,nv2d
-          IF(var_local_n2n(nv3d+n) < nv3d+n) THEN                  ! GYL, correct the bug of the 2d variable update
+          IF(var_local_n2n(nv3d+n) < nv3d+n) THEN
             trans(:,:,nv3d+n) = trans(:,:,var_local_n2n(nv3d+n))
-            IF(var_local_n2n(nv3d+n) <= nv3d) THEN                 ! GYL
-              work2d(ij,n) = work3d(ij,ilev,var_local_n2n(nv3d+n)) ! GYL
-            ELSE                                                   ! GYL
-              work2d(ij,n) = work2d(ij,var_local_n2n(nv3d+n)-nv3d) ! GYL
-            END IF                                                 ! GYL
+            transm(:,nv3d+n) = transm(:,var_local_n2n(nv3d+n))                         !GYL
+            IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
+              pa(:,:,nv3d+n) = pa(:,:,var_local_n2n(nv3d+n))                           !GYL
+            END IF                                                                     !GYL
+            IF(var_local_n2n(nv3d+n) <= nv3d) THEN                                     !GYL - correct the bug of the 2d variable update
+              work2d(ij,n) = work3d(ij,ilev,var_local_n2n(nv3d+n))                     !GYL
+            ELSE                                                                       !GYL
+              work2d(ij,n) = work2d(ij,var_local_n2n(nv3d+n)-nv3d)                     !GYL
+            END IF                                                                     !GYL
           ELSE
             CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl)
             parm = work2d(ij,n)
-            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,nv3d+n),MIN_INFL_MUL,RELAX_ALPHA)
+            IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
+              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &       !GYL
+                              trans(:,:,nv3d+n),transm=transm(:,nv3d+n),pao=pa(:,:,nv3d+n),minfl=MIN_INFL_MUL) !GYL
+            ELSE                                                                       !GYL
+              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &       !GYL
+                              trans(:,:,nv3d+n),transm=transm(:,nv3d+n),minfl=MIN_INFL_MUL) !GYL
+            END IF                                                                     !GYL
             work2d(ij,n) = parm
           END IF
+          IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2005)
+            trans(:,:,nv3d+n) = (1.0d0 - RELAX_ALPHA) * trans(:,:,nv3d+n)              !GYL
+            DO i=1,MEMBER                                                              !GYL
+              trans(i,i,nv3d+n) = RELAX_ALPHA + trans(i,i,nv3d+n)                      !GYL
+            END DO                                                                     !GYL
+          ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL - RTPS method (Whitaker and Hamill 2012)
+            tmp = 0.0d0                                                                !GYL
+            tmp2 = 0.0d0                                                               !GYL
+            DO m=1,MEMBER                                                              !GYL
+              tmp = tmp + gues2d(ij,m,n) * gues2d(ij,m,n)                              !GYL
+              DO k=1,MEMBER                                                            !GYL
+                tmp2 = tmp2 + gues2d(ij,k,n) * pa(k,m,nv3d+n) * gues2d(ij,m,n)         !GYL
+              END DO                                                                   !GYL
+            END DO                                                                     !GYL
+            tmp = RELAX_ALPHA_SPREAD * SQRT(tmp / tmp2) - RELAX_ALPHA_SPREAD + 1.0d0   !GYL - Whitaker and Hamill 2012
+!            tmp = SQRT(RELAX_ALPHA_SPREAD * (tmp / tmp2) - RELAX_ALPHA_SPREAD + 1.0d0) !GYL - Hamrud et al. 2015 (slightly modified)
+            trans(:,:,nv3d+n) = trans(:,:,nv3d+n) * tmp                                !GYL
+          END IF                                                                       !GYL
           DO m=1,MEMBER
-            anal2d(ij,m,n)  = mean2d(ij,n)
+            anal2d(ij,m,n) = mean2d(ij,n)
             DO k=1,MEMBER
-              anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,k,n) * trans(k,m,nv3d+n)
+              anal2d(ij,m,n) = anal2d(ij,m,n) &                                        !GYL - sum trans and transm here
+                & + gues2d(ij,k,n) * (trans(k,m,nv3d+n) + transm(k,nv3d+n))            !GYL
             END DO
           END DO
-
-          IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                            ! GYL, compute analysis mean and spread
-            anal_mean = SUM(anal2d(ij,:,n)) / REAL(MEMBER,r_size)         ! GYL
-            anal_sprd = 0.0d0                                             ! GYL
-            DO m=1,MEMBER                                                 ! GYL
-              anal_pert(m) = anal2d(ij,m,n) - anal_mean                   ! GYL
-              anal_sprd = anal_sprd + anal_pert(m)**2                     ! GYL
-            END DO                                                        ! GYL
-            anal_sprd = SQRT(anal_sprd / REAL(MEMBER-1,r_size))           ! GYL
-            gues_sprd = 0.0d0                                             ! GYL, compute guess spread and the RTPS
-            DO m=1,MEMBER                                                 ! GYL
-              gues_sprd = gues_sprd + gues2d(ij,m,n)**2                   ! GYL
-            END DO                                                        ! GYL
-            gues_sprd = SQRT(gues_sprd / REAL(MEMBER-1,r_size))           ! GYL
-            rtps_parm = RELAX_ALPHA_SPREAD * (gues_sprd - anal_sprd) / anal_sprd + 1.0d0 ! GYL
-            DO m=1,MEMBER                                                 ! GYL
-              anal2d(ij,m,n) = anal_mean + anal_pert(m) * rtps_parm       ! GYL
-            END DO                                                        ! GYL
-          END IF                                                          ! GYL
-        END DO
+        END DO ! [ n=1,nv2d ]
       END IF ! [ ilev == 1 ]
     END DO ! [ ij=1,nij1 ]
 !$OMP END PARALLEL DO
