@@ -83,6 +83,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size) :: parm
   REAL(r_size) :: trans(MEMBER,MEMBER,nv3d+nv2d)
   REAL(r_size) :: transm(MEMBER,nv3d+nv2d)       !GYL
+  REAL(r_size) :: trans2(MEMBER,MEMBER)          !GYL
   REAL(r_size) :: pa(MEMBER,MEMBER,nv3d+nv2d)    !GYL
   REAL(r_size) :: tmp,tmp2                       !GYL
   REAL(r_size) :: q_mean,q_sprd                  !GYL
@@ -203,7 +204,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ALLOCATE( hdxf(1:nobstotal,1:MEMBER),rdiag(1:nobstotal),rloc(1:nobstotal),dep(1:nobstotal) )
   DO ilev=1,nlev
     WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,transm,pa,m,k,tmp,tmp2,q_mean,q_sprd,q_anal)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,transm,trans2,pa,m,k,tmp,tmp2,q_mean,q_sprd,q_anal)
     DO ij=1,nij1
 !WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
       DO n=1,nv3d
@@ -230,9 +231,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)                !GYL
         ELSE                                                                           !GYL
           IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2005)
-            trans(:,:,n) = (1.0d0 - RELAX_ALPHA) * trans(:,:,n)                        !GYL
+            trans2(:,:) = (1.0d0 - RELAX_ALPHA) * trans(:,:,n)                         !GYL
             DO i=1,MEMBER                                                              !GYL
-              trans(i,i,n) = RELAX_ALPHA + trans(i,i,n)                                !GYL
+              trans2(i,i) = trans2(i,i) + RELAX_ALPHA                                  !GYL
             END DO                                                                     !GYL
           ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL - RTPS method (Whitaker and Hamill 2012)
             tmp = 0.0d0                                                                !GYL
@@ -243,15 +244,22 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                 tmp2 = tmp2 + gues3d(ij,ilev,k,n) * pa(k,m,n) * gues3d(ij,ilev,m,n)    !GYL
               END DO                                                                   !GYL
             END DO                                                                     !GYL
-            tmp = RELAX_ALPHA_SPREAD * SQRT(tmp / tmp2) - RELAX_ALPHA_SPREAD + 1.0d0   !GYL - Whitaker and Hamill 2012
-!            tmp = SQRT(RELAX_ALPHA_SPREAD * (tmp / tmp2) - RELAX_ALPHA_SPREAD + 1.0d0) !GYL - Hamrud et al. 2015 (slightly modified)
-            trans(:,:,n) = trans(:,:,n) * tmp                                          !GYL
+            IF(tmp > 0.0d0 .AND. tmp2 > 0.0d0) THEN                                    !GYL
+              tmp = RELAX_ALPHA_SPREAD * SQRT(tmp / (tmp2 * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0 !GYL - Whitaker and Hamill 2012
+!              tmp = SQRT(RELAX_ALPHA_SPREAD * (tmp / (tmp2 * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0) !GYL - Hamrud et al. 2015 (slightly modified)
+
+write(6,*) '$$$$$$', n, trans(5,5,n), tmp
+
+              trans2(:,:) = trans(:,:,n) * tmp                                         !GYL
+            END IF                                                                     !GYL
+          ELSE                                                                         !GYL
+            trans2 = trans(:,:,n)                                                      !GYL
           END IF                                                                       !GYL
           DO m=1,MEMBER
             anal3d(ij,ilev,m,n) = mean3d(ij,ilev,n)
             DO k=1,MEMBER
               anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &                              !GYL - sum trans and transm here
-                & + gues3d(ij,ilev,k,n) * (trans(k,m,n) + transm(k,n))                 !GYL
+                & + gues3d(ij,ilev,k,n) * (trans2(k,m) + transm(k,n))                  !GYL
             END DO
           END DO
         END IF                                                                         !GYL
@@ -296,9 +304,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             work2d(ij,n) = parm
           END IF
           IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2005)
-            trans(:,:,nv3d+n) = (1.0d0 - RELAX_ALPHA) * trans(:,:,nv3d+n)              !GYL
+            trans2(:,:) = (1.0d0 - RELAX_ALPHA) * trans(:,:,nv3d+n)                    !GYL
             DO i=1,MEMBER                                                              !GYL
-              trans(i,i,nv3d+n) = RELAX_ALPHA + trans(i,i,nv3d+n)                      !GYL
+              trans2(i,i) = trans2(i,i) + RELAX_ALPHA                                  !GYL
             END DO                                                                     !GYL
           ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL - RTPS method (Whitaker and Hamill 2012)
             tmp = 0.0d0                                                                !GYL
@@ -309,15 +317,22 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                 tmp2 = tmp2 + gues2d(ij,k,n) * pa(k,m,nv3d+n) * gues2d(ij,m,n)         !GYL
               END DO                                                                   !GYL
             END DO                                                                     !GYL
-            tmp = RELAX_ALPHA_SPREAD * SQRT(tmp / tmp2) - RELAX_ALPHA_SPREAD + 1.0d0   !GYL - Whitaker and Hamill 2012
-!            tmp = SQRT(RELAX_ALPHA_SPREAD * (tmp / tmp2) - RELAX_ALPHA_SPREAD + 1.0d0) !GYL - Hamrud et al. 2015 (slightly modified)
-            trans(:,:,nv3d+n) = trans(:,:,nv3d+n) * tmp                                !GYL
+            IF(tmp > 0.0d0 .AND. tmp2 > 0.0d0) THEN                                    !GYL
+              tmp = RELAX_ALPHA_SPREAD * SQRT(tmp / (tmp2 * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0 !GYL - Whitaker and Hamill 2012
+!              tmp = SQRT(RELAX_ALPHA_SPREAD * (tmp / (tmp2 * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0) !GYL - Hamrud et al. 2015 (slightly modified)
+
+write(6,*) '$$$$$$', n, trans(5,5,nv3d+n), tmp
+
+              trans2(:,:) = trans(:,:,nv3d+n) * tmp                                    !GYL
+            END IF                                                                     !GYL
+          ELSE                                                                         !GYL
+            trans2 = trans(:,:,nv3d+n)                                                 !GYL
           END IF                                                                       !GYL
           DO m=1,MEMBER
             anal2d(ij,m,n) = mean2d(ij,n)
             DO k=1,MEMBER
               anal2d(ij,m,n) = anal2d(ij,m,n) &                                        !GYL - sum trans and transm here
-                & + gues2d(ij,k,n) * (trans(k,m,nv3d+n) + transm(k,nv3d+n))            !GYL
+                & + gues2d(ij,k,n) * (trans2(k,m) + transm(k,nv3d+n))                  !GYL
             END DO
           END DO
         END DO ! [ n=1,nv2d ]
