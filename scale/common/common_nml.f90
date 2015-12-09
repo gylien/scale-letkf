@@ -55,6 +55,18 @@ MODULE common_nml
   integer :: LEV_UPDATE_Q = 100000        ! q and qc are only updated below and equal to this model level
   real(r_size) :: Q_SPRD_MAX = 0.5        ! maximum q (ensemble spread)/(ensemble mean)
 
+  integer, parameter :: nch = 10 ! Num of Himawari-8 (IR) channels 
+!
+!
+  real(r_size) :: H08_LIMIT_LEV = 20000.0d0 ! (Pa) Upper limit level of the sensitive height for Himawari-8 IR
+  integer :: H08_CH_USE(nch) = (/0,1,1,1,0,0,0,0,0,0/) 
+                        !! ch = (1,2,3,4,5,6,7,8,9,10)
+                        !! (B07,B08,B09,B10,B11,B12,B13,B14,B15,B16)
+                        !! ==1: Assimilate
+                        !! ==0: NOT assimilate (rejected by QC in trans_XtoY_H08)
+                        !! It is better to reject B11(ch=5) & B12(ch=6) obs because these bands are 
+                        !! sensitive to chemicals.
+
   !--- PARAM_LETKF_PRC
   integer :: NNODES = 1
   integer :: PPN = 1
@@ -179,7 +191,9 @@ subroutine read_nml_letkf
     GROSS_ERROR_RADAR_VR, &
     GROSS_ERROR_RADAR_PRH, &
     LEV_UPDATE_Q, &
-    Q_SPRD_MAX
+    Q_SPRD_MAX, &
+    H08_LIMIT_LEV, & ! H08
+    H08_CH_USE       ! H08
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
