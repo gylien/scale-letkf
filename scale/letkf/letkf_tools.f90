@@ -76,16 +76,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size),ALLOCATABLE :: dep(:)
   REAL(r_size),ALLOCATABLE :: work3d(:,:,:)
   REAL(r_size),ALLOCATABLE :: work2d(:,:)
+  REAL(r_size),ALLOCATABLE :: work3da(:,:,:)     !GYL
+  REAL(r_size),ALLOCATABLE :: work2da(:,:)       !GYL
   REAL(RP),ALLOCATABLE :: work3dg(:,:,:,:)
   REAL(RP),ALLOCATABLE :: work2dg(:,:,:)
-!  REAL(r_size),ALLOCATABLE :: tmptv(:,:)
-!  REAL(r_size),ALLOCATABLE :: pfull(:,:)
   REAL(r_size) :: parm
   REAL(r_size) :: trans(MEMBER,MEMBER,nv3d+nv2d)
   REAL(r_size) :: transm(MEMBER,nv3d+nv2d)       !GYL
-  REAL(r_size) :: trans2(MEMBER,MEMBER)          !GYL
+  REAL(r_size) :: transrlx(MEMBER,MEMBER)        !GYL
   REAL(r_size) :: pa(MEMBER,MEMBER,nv3d+nv2d)    !GYL
-  REAL(r_size) :: tmp,tmp2                       !GYL
   REAL(r_size) :: q_mean,q_sprd                  !GYL
   REAL(r_size) :: q_anal(MEMBER)                 !GYL
 !  LOGICAL :: ex
@@ -189,22 +188,24 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     END IF
     CALL scatter_grd_mpi(lastmem_rank_e,work3dg,work2dg,work3d,work2d)
   END IF
-!  !
-!  ! p_full for background ensemble mean
-!  !
-!  ALLOCATE( tmptv(nij1,nlev) )
-!  ALLOCATE( pfull(nij1,nlev) )
-!  tmptv = mean3d(:,:,iv3d_t) * (1.0d0 + fvirt * mean3d(:,:,iv3d_q))
-!  call sigio_modprd(nij1,nij1,nlev,gfs_nvcoord,gfs_idvc,gfs_idsl, &
-!                    gfs_vcoord,iret,mean2d(:,iv2d_ps),tmptv,pm=pfull)
-!  DEALLOCATE(tmptv)
+  !
+  ! RTPS relaxation
+  !
+  IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN
+!    ALLOCATE( work3dg(nlon,nlat,nlev,nv3d) )
+!    ALLOCATE( work2dg(nlon,nlat,nv2d) )
+    ALLOCATE( work3da(nij1,nlev,nv3d) )
+    ALLOCATE( work2da(nij1,nv2d) )
+    work3da = 1.0d0
+    work2da = 1.0d0
+  END IF
   !
   ! MAIN ASSIMILATION LOOP
   !
   ALLOCATE( hdxf(1:nobstotal,1:MEMBER),rdiag(1:nobstotal),rloc(1:nobstotal),dep(1:nobstotal) )
   DO ilev=1,nlev
     WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,transm,trans2,pa,m,k,tmp,tmp2,q_mean,q_sprd,q_anal)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,transm,transrlx,pa,m,k,q_mean,q_sprd,q_anal)
     DO ij=1,nij1
 !WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
       DO n=1,nv3d
@@ -231,35 +232,17 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)                !GYL
         ELSE                                                                           !GYL
           IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2005)
-            trans2(:,:) = (1.0d0 - RELAX_ALPHA) * trans(:,:,n)                         !GYL
-            DO i=1,MEMBER                                                              !GYL
-              trans2(i,i) = trans2(i,i) + RELAX_ALPHA                                  !GYL
-            END DO                                                                     !GYL
+            CALL weight_RTPP(trans(:,:,n),transrlx)                                    !GYL
           ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL - RTPS method (Whitaker and Hamill 2012)
-            tmp = 0.0d0                                                                !GYL
-            tmp2 = 0.0d0                                                               !GYL
-            DO m=1,MEMBER                                                              !GYL
-              tmp = tmp + gues3d(ij,ilev,m,n) * gues3d(ij,ilev,m,n)                    !GYL
-              DO k=1,MEMBER                                                            !GYL
-                tmp2 = tmp2 + gues3d(ij,ilev,k,n) * pa(k,m,n) * gues3d(ij,ilev,m,n)    !GYL
-              END DO                                                                   !GYL
-            END DO                                                                     !GYL
-            IF(tmp > 0.0d0 .AND. tmp2 > 0.0d0) THEN                                    !GYL
-              tmp = RELAX_ALPHA_SPREAD * SQRT(tmp / (tmp2 * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0 !GYL - Whitaker and Hamill 2012
-!              tmp = SQRT(RELAX_ALPHA_SPREAD * (tmp / (tmp2 * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0) !GYL - Hamrud et al. 2015 (slightly modified)
-
-write(6,*) '$$$$$$', n, trans(5,5,n), tmp
-
-              trans2(:,:) = trans(:,:,n) * tmp                                         !GYL
-            END IF                                                                     !GYL
+            CALL weight_RTPS(trans(:,:,n),pa(:,:,n),gues3d(ij,ilev,:,n),transrlx,work3da(ij,ilev,n)) !GYL
           ELSE                                                                         !GYL
-            trans2 = trans(:,:,n)                                                      !GYL
+            transrlx = trans(:,:,n)                                                    !GYL
           END IF                                                                       !GYL
           DO m=1,MEMBER
             anal3d(ij,ilev,m,n) = mean3d(ij,ilev,n)
             DO k=1,MEMBER
               anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &                              !GYL - sum trans and transm here
-                & + gues3d(ij,ilev,k,n) * (trans2(k,m) + transm(k,n))                  !GYL
+                & + gues3d(ij,ilev,k,n) * (transrlx(k,m) + transm(k,n))                !GYL
             END DO
           END DO
         END IF                                                                         !GYL
@@ -304,35 +287,17 @@ write(6,*) '$$$$$$', n, trans(5,5,n), tmp
             work2d(ij,n) = parm
           END IF
           IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2005)
-            trans2(:,:) = (1.0d0 - RELAX_ALPHA) * trans(:,:,nv3d+n)                    !GYL
-            DO i=1,MEMBER                                                              !GYL
-              trans2(i,i) = trans2(i,i) + RELAX_ALPHA                                  !GYL
-            END DO                                                                     !GYL
+            CALL weight_RTPP(trans(:,:,nv3d+n),transrlx)                               !GYL
           ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL - RTPS method (Whitaker and Hamill 2012)
-            tmp = 0.0d0                                                                !GYL
-            tmp2 = 0.0d0                                                               !GYL
-            DO m=1,MEMBER                                                              !GYL
-              tmp = tmp + gues2d(ij,m,n) * gues2d(ij,m,n)                              !GYL
-              DO k=1,MEMBER                                                            !GYL
-                tmp2 = tmp2 + gues2d(ij,k,n) * pa(k,m,nv3d+n) * gues2d(ij,m,n)         !GYL
-              END DO                                                                   !GYL
-            END DO                                                                     !GYL
-            IF(tmp > 0.0d0 .AND. tmp2 > 0.0d0) THEN                                    !GYL
-              tmp = RELAX_ALPHA_SPREAD * SQRT(tmp / (tmp2 * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0 !GYL - Whitaker and Hamill 2012
-!              tmp = SQRT(RELAX_ALPHA_SPREAD * (tmp / (tmp2 * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0) !GYL - Hamrud et al. 2015 (slightly modified)
-
-write(6,*) '$$$$$$', n, trans(5,5,nv3d+n), tmp
-
-              trans2(:,:) = trans(:,:,nv3d+n) * tmp                                    !GYL
-            END IF                                                                     !GYL
+            CALL weight_RTPS(trans(:,:,nv3d+n),pa(:,:,nv3d+n),gues2d(ij,:,n),transrlx,work2da(ij,n)) !GYL
           ELSE                                                                         !GYL
-            trans2 = trans(:,:,nv3d+n)                                                 !GYL
+            transrlx = trans(:,:,nv3d+n)                                               !GYL
           END IF                                                                       !GYL
           DO m=1,MEMBER
             anal2d(ij,m,n) = mean2d(ij,n)
             DO k=1,MEMBER
               anal2d(ij,m,n) = anal2d(ij,m,n) &                                        !GYL - sum trans and transm here
-                & + gues2d(ij,k,n) * (trans2(k,m) + transm(k,nv3d+n))                  !GYL
+                & + gues2d(ij,k,n) * (transrlx(k,m) + transm(k,nv3d+n))                !GYL
             END DO
           END DO
         END DO ! [ n=1,nv2d ]
@@ -351,14 +316,28 @@ write(6,*) '$$$$$$', n, trans(5,5,nv3d+n), tmp
   ! Write updated inflation parameters
   !
   IF(COV_INFL_MUL < 0.0d0) THEN
-    CALL gather_grd_mpi(lastmem_rank_e,work3d,work2d,work3dg,work2dg)
-    IF(myrank_e == lastmem_rank_e) THEN
-!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
-!      call state_trans_inv(work3dg)
-      call write_restart(inflfile,work3dg,work2dg)
-    END IF
-    DEALLOCATE(work3dg,work2dg,work3d,work2d)
+!    CALL gather_grd_mpi(lastmem_rank_e,work3d,work2d,work3dg,work2dg)
+!    IF(myrank_e == lastmem_rank_e) THEN
+!!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
+!!      call state_trans_inv(work3dg)
+!      call write_restart(inflfile,work3dg,work2dg)
+!    END IF
+    DEALLOCATE(work3d,work2d)
   END IF
+  !
+  ! Write inflation parameter (in analysis) corresponding to the RTPS method
+  !
+  IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN
+!    CALL gather_grd_mpi(lastmem_rank_e,work3da,work2da,work3dg,work2dg)
+!    IF(myrank_e == lastmem_rank_e) THEN
+!!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
+!!      call state_trans_inv(work3dg)
+!      call write_restart(inflfile,work3dg,work2dg)
+!    END IF
+    DEALLOCATE(work3da,work2da)
+  END IF
+  IF(ALLOCATED(work3dg)) DEALLOCATE(work3dg)
+  IF(ALLOCATED(work2dg)) DEALLOCATE(work2dg)
   !
   ! Additive inflation
   !
@@ -422,7 +401,6 @@ write(6,*) '$$$$$$', n, trans(5,5,nv3d+n), tmp
   END IF
 
   DEALLOCATE(mean3d,mean2d)
-!  DEALLOCATE(pfull)
   RETURN
 END SUBROUTINE das_letkf
 !!-----------------------------------------------------------------------
@@ -1025,6 +1003,55 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
 
   RETURN
 END SUBROUTINE obs_local
+
+!-----------------------------------------------------------------------
+! Relaxation via LETKF weight - RTPP method
+!-----------------------------------------------------------------------
+subroutine weight_RTPP(w, wrlx)
+  implicit none
+  real(r_size), intent(in) :: w(MEMBER,MEMBER)
+  real(r_size), intent(out) :: wrlx(MEMBER,MEMBER)
+  integer :: m
+
+  wrlx = (1.0d0 - RELAX_ALPHA) * w
+  do m = 1, MEMBER
+    wrlx(m,m) = wrlx(m,m) + RELAX_ALPHA
+  end do
+
+  return
+end subroutine weight_RTPP
+!-----------------------------------------------------------------------
+! Relaxation via LETKF weight - RTPS method
+!-----------------------------------------------------------------------
+subroutine weight_RTPS(w, pa, xb, wrlx, infl)
+  implicit none
+  real(r_size), intent(in) :: w(MEMBER,MEMBER)
+  real(r_size), intent(in) :: pa(MEMBER,MEMBER)
+  real(r_size), intent(in) :: xb(MEMBER)
+  real(r_size), intent(out) :: wrlx(MEMBER,MEMBER)
+  real(r_size), intent(out) :: infl
+  real(r_size) :: var_g, var_a
+  integer :: m, k
+
+  var_g = 0.0d0
+  var_a = 0.0d0
+  do m = 1, MEMBER
+    var_g = var_g + xb(m) * xb(m)
+    do k = 1, MEMBER
+      var_a = var_a + xb(k) * pa(k,m) * xb(m)
+    end do
+  end do
+  if (var_g > 0.0d0 .and. var_a > 0.0d0) then
+    infl = RELAX_ALPHA_SPREAD * sqrt(var_g / (var_a * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0   ! Whitaker and Hamill 2012
+!    infl = sqrt(RELAX_ALPHA_SPREAD * (var_g / (var_a * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0) ! Hamrud et al. 2015 (slightly modified)
+    wrlx = w * infl
+  else
+    wrlx = w
+    infl = 1.0d0
+  end if
+
+  return
+end subroutine weight_RTPS
 
 !SUBROUTINE obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
 !  INTEGER,INTENT(IN) :: imin,imax,jmin,jmax
