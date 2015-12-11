@@ -76,6 +76,12 @@ SUBROUTINE letkf_core(nbv,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans,transm,
     IF (PRESENT(transm)) THEN   !GYL
       transm = 0.0d0            !GYL
     END IF                      !GYL
+    IF (PRESENT(pao)) THEN                        !GYL
+      pao = 0.0d0                                 !GYL
+      DO i=1,nbv                                  !GYL
+        pao(i,i) = parm_infl / REAL(nbv-1,r_size) !GYL
+      END DO                                      !GYL
+    END IF                                        !GYL
     RETURN
   ELSE
 !-----------------------------------------------------------------------
