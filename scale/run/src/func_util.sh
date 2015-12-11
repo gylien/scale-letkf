@@ -177,6 +177,16 @@ if ((MACHINE_TYPE == 1)); then
   $MPIRUN -d $progdir $HOSTLIST 1 ./$progbase $ARGS
 #  $MPIRUN -d $progdir $HOSTLIST 1 omplace -nt ${THREADS} ./$progbase $ARGS
 
+elif ((MACHINE_TYPE == 2)); then
+
+#  local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
+#  HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
+
+  NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
+
+echo "$MPIRUN -np $NNP -wdir $progdir ./$progbase $ARGS"
+  $MPIRUN -np $NNP -wdir $progdir ./$progbase $ARGS
+
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
   local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
@@ -277,6 +287,22 @@ if ((MACHINE_TYPE == 1)); then
 
   $MPIRUN -d $SCRP_DIR $HOSTLIST 1 $pdbash_exec $SCRIPT $ARGS
 #  $MPIRUN -d $SCRP_DIR $HOSTLIST 1 bash $SCRIPT - $ARGS
+
+elif ((MACHINE_TYPE == 2)); then
+
+  if [ "$PROC_OPT" == 'all' ]; then
+#    local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
+    NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
+  elif [ "$PROC_OPT" == 'one' ]; then
+#    local HOSTLIST=$(head -n 1 ${NODEFILE_DIR}/${NODEFILE})
+    NNP=1
+  else
+    exit 1
+  fi
+#  HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
+
+echo "$MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS"
+  $MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS
 
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 

@@ -294,6 +294,10 @@ msprd=$((MEMBER+2))
 
 if ((MACHINE_TYPE == 1)); then
   read_nodefile_pbs "$NODEFILE"
+elif ((MACHINE_TYPE == 2)); then
+  ####
+  echo
+  ####
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
   local n
   local p
@@ -421,6 +425,10 @@ msprd=$((MEMBER+2))
 
 if ((MACHINE_TYPE == 1)); then
   read_nodefile_pbs "$NODEFILE"
+elif ((MACHINE_TYPE == 2)); then
+  ####
+  echo
+  ####
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
   local n
   local p
@@ -709,6 +717,17 @@ fi
 
 if ((MACHINE_TYPE == 1)); then
   read_nodefile_pbs "$NODEFILE"
+elif ((MACHINE_TYPE == 2)); then
+  local n
+  local p
+  if [ "$DISTR_FILE" = '-' ]; then
+    for n in $(seq $NNODES); do
+      for p in $(seq $PPN); do
+        node[$(((n-1)*PPN+p))]="($((n-1)))"
+        echo "node[$(((n-1)*PPN+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
+      done
+    done
+  fi # [ "$DISTR_FILE" = '-' ]
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
   local n
   local p

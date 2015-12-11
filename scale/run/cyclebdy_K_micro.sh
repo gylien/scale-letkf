@@ -1,19 +1,19 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Wrap fcst.sh in a K-computer job script (micro) and run it.
+#  Wrap cyclebdy.sh in a K-computer job script (micro) and run it.
 #
 #  November 2014, created,                 Guo-Yuan Lien
 #
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    fcst_K_micro.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP TIME_LIMIT]
+#    cyclebdy_K_micro.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP TIME_LIMIT]
 #
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname1='fcst'
+myname1='cyclebdy'
 
 #===============================================================================
 # Configuration
@@ -187,7 +187,7 @@ if [ -f "$TMP/log/${myname1}.err" ]; then
   cat $TMP/log/${myname1}.err >> $LOGDIR/${myname1}.err
 fi
 
-safe_rm_tmpdir $TMP
+#safe_rm_tmpdir $TMP
 
 #===============================================================================
 

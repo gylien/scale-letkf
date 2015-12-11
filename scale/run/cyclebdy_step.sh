@@ -6,11 +6,11 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    fcst_step.sh [STEPFUNC MYRANK LOOP ITER]
+#    cyclebdy_step.sh [STEPFUNC MYRANK LOOP ITER]
 #
 #  Use settings:
 #    config.main
-#    config.fcst
+#    config.cyclebdy
 #    config.nml.scale_pp_topo
 #    config.nml.scale_pp_landuse
 #    config.nml.scale_init
@@ -34,13 +34,13 @@ fi
 
 . config.main
 res=$? && ((res != 0)) && exit $res
-. config.fcst
+. config.cyclebdy
 res=$? && ((res != 0)) && exit $res
 
 . src/func_distribute.sh
 . src/func_datetime.sh
 . src/func_util.sh
-. src/func_fcst.sh
+. src/func_cyclebdy.sh
 
 #-------------------------------------------------------------------------------
 
