@@ -8,12 +8,12 @@
 
 . config.main
 
-if (($# < 6)); then
+if (($# < 7)); then
   cat >&2 << EOF
 
 [post_obsope.sh]
 
-Usage: $0 MYRANK MEM_NP ATIME MEM TMPDIR LOG_OPT
+Usage: $0 MYRANK MEM_NP ATIME MEM TMPDIR LOG_OPT OUT_OPT
 
   MYRANK  My rank number
   MEM_NP  Number of processes per member
@@ -21,6 +21,7 @@ Usage: $0 MYRANK MEM_NP ATIME MEM TMPDIR LOG_OPT
   MEM     Name of the ensemble member
   TMPDIR  Temporary directory to run the program
   LOG_OPT
+  OUT_OPT
 
 EOF
   exit 1
@@ -31,7 +32,8 @@ MEM_NP="$1"; shift
 ATIME="$1"; shift
 MEM="$1"; shift
 TMPDIR="$1"; shift
-LOG_OPT="$1"
+LOG_OPT="$1"; shift
+OUT_OPT="$1"
 
 #===============================================================================
 
@@ -61,6 +63,12 @@ fi
 #    mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((MEMBER*MEM_NP+q-1))) $TMPOUT/${ATIME}/log/obsope # m=MEMBER+1 (mmean is not declared in this script)
 #  done
 #fi
+
+if ((OUT_OPT >= 2)); then
+  if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
+    rm -f $TMPOUT/${ATIME}/gues/${MEM}/history*.nc
+  fi
+fi
 
 #===============================================================================
 

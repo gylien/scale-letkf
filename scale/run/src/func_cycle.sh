@@ -1199,7 +1199,7 @@ for it in $(seq $nitmax); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
-           $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope $LOG_OPT
+           $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope $LOG_OPT $OUT_OPT
     fi
   fi
 done
