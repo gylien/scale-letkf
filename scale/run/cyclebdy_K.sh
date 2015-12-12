@@ -122,7 +122,7 @@ cat > $jobscrp << EOF
 #PJM --rsc-list "node=${NNODES_real}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
 #PJM --rsc-list "rscgrp=${rscgrp}"
-#PJM --rsc-list "node-quota=29G"
+##PJM --rsc-list "node-quota=29G"
 ##PJM --mpi "shape=${NNODES_real}"
 #PJM --mpi "proc=$NNODES"
 #PJM --mpi assign-online-node
@@ -148,7 +148,7 @@ bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR $myname1 >> $jobscrp
 
 cat >> $jobscrp << EOF
 
-. /work/system/Env_base
+. /work/system/Env_base_1.2.0-17-2
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
