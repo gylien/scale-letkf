@@ -70,8 +70,9 @@ distribute_fcst "$MEMBERS" $CYCLE machinefile - $NODEFILE_DIR/distr
 # Run one step
 
 loop=$LOOP
-
+lcycles=$((LCYCLE * CYCLE_SKIP))
 time=$(datetime $STIME $((lcycles * CYCLE * (LOOP-1))) s)
+
 rcycle=0
 for c in $(seq $CYCLE); do
   time2=$(datetime $time $((lcycles * (c-1))) s)

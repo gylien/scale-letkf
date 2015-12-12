@@ -928,9 +928,6 @@ for it in $(seq $its $ite); do
 
         time_bdy=$(datetime ${stimes[$c]} $BDYCYCLE_INT s)
         for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
-
-echo "$bdyscale_loc/${time_bdy}/${name_m[$m]}/history.pe000000.nc"
-
           if [ -s "$bdyscale_loc/${time_bdy}/${name_m[$m]}/history.pe000000.nc" ]; then
             break
           elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
@@ -941,14 +938,6 @@ echo "$bdyscale_loc/${time_bdy}/${name_m[$m]}/history.pe000000.nc"
         done
 
         if ((BDY_ENS == 1)); then
-
-echo "          bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK $mem_np \\"
-echo "               $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \\"
-echo "               ${bdyscale_loc}/${time_bdy}/${name_m[$m]}/history \\"
-echo "               ${stimes[$c]} $CYCLEFLEN $mkinit ${name_m[$m]} \\"
-echo "               $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT \\"
-echo "               $bdy_startframe"
-
           bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK $mem_np \
                $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \
                ${bdyscale_loc}/${time_bdy}/${name_m[$m]}/history \

@@ -184,7 +184,7 @@ elif ((MACHINE_TYPE == 2)); then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-echo "$MPIRUN -np $NNP -wdir $progdir ./$progbase $ARGS"
+#echo "$MPIRUN -np $NNP -wdir $progdir ./$progbase $ARGS"
   $MPIRUN -np $NNP -wdir $progdir ./$progbase $ARGS
 
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
@@ -301,7 +301,7 @@ elif ((MACHINE_TYPE == 2)); then
   fi
 #  HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
 
-echo "$MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS"
+#echo "$MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS"
   $MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS
 
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
