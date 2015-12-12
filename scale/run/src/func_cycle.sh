@@ -357,11 +357,20 @@ else
     # topo
     #-------------------
     if [ "$TOPO_FORMAT" = 'prep' ]; then
-      for q in $(seq $mem_np); do
-        pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
-        path="${time}/topo/topo$(printf $SCALE_SFX $((q-1)))"
+      if [ "$TOPO_TARGZ" = 'T' ]; then
+        if [ ! -e ${DATA_TOPO}/topo.tar.gz ] ; then
+          tar czvfh topo.tar.gz topo*.nc -C ${DATA_TOPO}/ >/dev/null
+        fi
+        pathin=${DATA_TOPO}/topo.tar.gz
+        path=${time}/topo/topo.tar.gz
         echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
-      done
+      else
+        for q in $(seq $mem_np); do
+          pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
+          path="${time}/topo/topo$(printf $SCALE_SFX $((q-1)))"
+          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+        done
+      fi
     fi
 
     # landuse
@@ -372,11 +381,20 @@ else
       else
         pathin_pfx="${DATA_LANDUSE}"
       fi
-      for q in $(seq $mem_np); do
-        pathin="${pathin_pfx}/landuse$(printf $SCALE_SFX $((q-1)))"
-        path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+      if [ "$LANDUSE_TARGZ" = 'T' ]; then
+        if [ ! -e ${pathin_pfx}/landuse.tar.gz ] ; then
+          tar czvfh landuse.tar.gz landuse*.nc -C ${pathin_pfx}/ >/dev/null
+        fi
+        pathin=${pathin_pfx}/landuse.tar.gz
+        path=${time}/landuse/landuse.tar.gz
         echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
-      done
+      else
+        for q in $(seq $mem_np); do
+          pathin="${pathin_pfx}/landuse$(printf $SCALE_SFX $((q-1)))"
+          path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+        done
+      fi
     fi
 
     # bdy (prepared)

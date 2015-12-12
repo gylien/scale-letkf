@@ -66,6 +66,22 @@ rm -fr $TMPDIR/*
 
 TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
 
+if [ "${TOPO_TARGZ}" = 'T' ] ; then
+  tmp_length=${#TOPO}
+  tmp_length=`expr $tmp_length - 4` # cut "topo"
+  UNCOMP_DIR="$(echo $TOPO | cut -c 1-${tmp_length} )"
+
+  tar zxvf  ${TOPO}.tar.gz -C $UNCOMP_DIR > /dev/null
+fi
+
+if [ "${LANDUSE_TARGZ}" = 'T' ] ; then
+  tmp_length=${#LANDUSE}
+  tmp_length=`expr $tmp_length - 7` # cut "landuse"
+  UNCOMP_DIR="$(echo $LANDUSE | cut -c 1-${tmp_length} )"
+
+  tar zxvf  ${LANDUSE}.tar.gz -C $UNCOMP_DIR > /dev/null
+fi
+
 ln -fs ${TOPO}*.nc $TMPDIR
 ln -fs ${LANDUSE}*.nc $TMPDIR
 
