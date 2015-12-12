@@ -29,7 +29,7 @@ MODULE letkf_obs
   real(r_size),save :: dlat_zero
 
   type(obs_info),save :: obs(nobsfiles)
-  type(obs_da_value) :: obsda
+  type(obs_da_value),save :: obsda
 !  type(obs_da_value),save :: obsda
   type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
                                                     !!!!!! need to add %err and %dat if they can be determined in letkf_obs.f90

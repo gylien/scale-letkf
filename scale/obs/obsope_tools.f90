@@ -366,7 +366,8 @@ SUBROUTINE obsope_cal(obs)
           ENDIF ! H08
 
           write (6,'(3A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot = ', nslot
-          write (6,'(3A,I6,A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
+          write (6,'(3A,I6,A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot and processed by rank ' &
+                                    , myrank, ' = ', nprocslot
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)

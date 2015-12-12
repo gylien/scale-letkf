@@ -175,13 +175,13 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: nobsformats=3 ! H08
   CHARACTER(30) :: obsformat_name(nobsformats) = &
 !    (/'CONVENTIONAL', 'RADAR'/)
-    (/'CONVENTIONAL', 'RADAR', 'Himawari-8-IR'/)
+    (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR'/)
 
 !  INTEGER,PARAMETER :: nobsfiles=2          !!!!!! goes to namelist ?????
   INTEGER,PARAMETER :: nobsfiles=3 ! H08     !!!!!! goes to namelist ?????
   CHARACTER(30) :: obsfile(nobsfiles) = &   !!!!
 !    (/'obs.dat', 'radar.dat'/)              !!!!
-    (/'obs.dat', 'radar.dat', 'H08.dat'/)  ! H08   !!!!
+    (/'obs.dat  ', 'radar.dat', 'H08.dat  '/)  ! H08   !!!!
   INTEGER :: obsfileformat(nobsfiles) = &   !!!!
 !    (/1, 2/)                                !!!!
     (/1, 2, 3/)  ! H08                     !!!!
@@ -1414,15 +1414,18 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
                       ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
         if (oqc(n) == iqc_good) then
           call Trans_XtoY(obs(obsda%set(n))%elm(obsda%idx(n)),ri,rj,rk, &
-                          obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
+                          obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)), &
+                          v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
         end if
 
       case(id_radar_ref_obs,id_radar_vr_obs,id_radar_prh_obs)
         if (DEPARTURE_STAT_RADAR) then
           call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
           if (oqc(n) == iqc_good) then
-            call Trans_XtoY_radar(obs(obsda%set(n))%elm(obsda%idx(n)),obs(obsda%set(n))%meta(1),obs(obsda%set(n))%meta(2),obs(obsda%set(n))%meta(3),ri,rj,rk, &
-                                  obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)),obs(obsda%set(n))%lev(obsda%idx(n)),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
+            call Trans_XtoY_radar(obs(obsda%set(n))%elm(obsda%idx(n)),obs(obsda%set(n))%meta(1), &
+                                  obs(obsda%set(n))%meta(2),obs(obsda%set(n))%meta(3),ri,rj,rk, &
+                                  obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)), &
+                                  obs(obsda%set(n))%lev(obsda%idx(n)),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
             if (oqc(n) == iqc_ref_low) oqc(n) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
           end if
         end if

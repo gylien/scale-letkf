@@ -228,7 +228,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           END IF                                                                       !GYL
           work3d(ij,ilev,n) = parm
         END IF
-        IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) .AND. ilev > LEV_UPDATE_Q) THEN !GYL, do not update upper-level q,qc
+        IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) &
+           .AND. ilev > LEV_UPDATE_Q) THEN !GYL, do not update upper-level q,qc
           anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)                !GYL
         ELSE                                                                           !GYL
           IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2005)
