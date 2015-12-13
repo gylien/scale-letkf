@@ -9,7 +9,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cyclebdy.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP]
+#    cyclebdy.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP ISTEP FSTEP]
 #
 #  Use settings:
 #    config.main
@@ -54,7 +54,7 @@ if ((USE_RANKDIR == 1)); then
   fi
 fi
 
-setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9"
+setting "$1" "$2" "$3" "$4" "$5" "$6" "$7"
 
 #-------------------------------------------------------------------------------
 
@@ -65,9 +65,9 @@ exec 2> >(tee -a $LOGDIR/${myname1}.err >&2)
 
 echo "[$(datetime_now)] Start $myname $@" >&2
 
-for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
-             FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT OUT_OPT LOG_OPT \
-             STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP; do
+for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF MEMBER NNODES PPN THREADS \
+             WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
+             STIME ETIME MEMBERS CYCLE CYCLE_SKIP ISTEP FSTEP; do
   printf '                      %-10s = %s\n' $vname "${!vname}" >&2
 done
 

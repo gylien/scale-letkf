@@ -45,6 +45,9 @@ Usage: $myname [STIME ETIME ISTEP FSTEP TIME_LIMIT]
   STIME       Time of the first cycle (format: YYYY[MMDDHHMMSS])
   ETIME       Time of the last  cycle (format: YYYY[MMDDHHMMSS])
                (default: same as STIME)
+  MEMBERS     List of forecast members
+               all:     Run all members (default)
+               '2 4 6': Run members 2, 4, 6
   ISTEP       The initial step in the first cycle from which this script starts
                (default: the first step)
   FSTEP       The final step in the last cycle by which this script ends
@@ -63,6 +66,7 @@ Usage: $myname [STIME ETIME ISTEP FSTEP TIME_LIMIT]
 
 STIME=${1:-$STIME}; shift
 ETIME=${1:-$ETIME}; shift
+MEMBERS=${1:-$MEMBERS}; shift
 ISTEP=${1:-$ISTEP}; shift
 FSTEP=${1:-$FSTEP}; shift
 TIME_LIMIT="${1:-$TIME_LIMIT}"
@@ -90,6 +94,19 @@ fi
 
 STIME=$(datetime $STIME)
 ETIME=$(datetime ${ETIME:-$STIME})
+if [ -z "$MEMBERS" ] || [ "$MEMBERS" = 'all' ]; then
+  MEMBERS='all'
+#  MEMBERS="$(printf "$MEMBER_FMT " $(seq $MEMBER))"
+else
+  MEMBER=0
+  tmpstr=''
+  for m in $MEMBERS; do
+    MEMBER=$((MEMBER+1))
+    tmpstr="$tmpstr$(printf $MEMBER_FMT $((10#$m))) "
+    (($? != 0)) && exit 1
+  done
+  MEMBERS="$tmpstr"
+fi
 ISTEP=${ISTEP:-1}
 FSTEP=${FSTEP:-$nsteps}
 TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
@@ -1159,7 +1176,7 @@ obsope_1 () {
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_obsope_node.sh $MYRANK \
        $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
-       $mem_nodes $mem_np $slot_s $slot_e $slot_b
+       $mem_nodes $mem_np $slot_s $slot_e $slot_b $MEMBER
 fi
 
 for it in $(seq $nitmax); do
@@ -1172,7 +1189,7 @@ for it in $(seq $nitmax); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_obsope.sh $MYRANK \
-           $atime ${name_m[$m]} $TMPRUN/obsope
+           $atime ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/obsope
     fi
   fi
 done
@@ -1199,7 +1216,7 @@ for it in $(seq $nitmax); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
-           $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope $LOG_OPT $OUT_OPT
+           $mem_np ${atime} ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/obsope $LOG_OPT $OUT_OPT
     fi
   fi
 done
@@ -1219,7 +1236,7 @@ letkf_1 () {
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
        $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
-       $mem_nodes $mem_np $slot_s $slot_e $slot_b
+       $mem_nodes $mem_np $slot_s $slot_e $slot_b $MEMBER
 fi
 
 for it in $(seq $nitmax); do
@@ -1232,7 +1249,7 @@ for it in $(seq $nitmax); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
-           $TMPOUT/${time}/topo/topo $atime ${name_m[$m]} $TMPRUN/letkf
+           $TMPOUT/${time}/topo/topo $atime ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/letkf
     fi
   fi
 done
@@ -1259,7 +1276,7 @@ for it in $(seq $nitmax); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_letkf.sh $MYRANK \
-           $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf $LOG_OPT
+           $mem_np ${atime} ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/letkf $LOG_OPT
     fi
   fi
 done

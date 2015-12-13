@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle.sh [STIME ETIME ISTEP FSTEP]
+#    cycle.sh [STIME ETIME MEMBERS ISTEP FSTEP]
 #
 #  Use settings:
 #    config.main
@@ -55,7 +55,7 @@ if ((USE_RANKDIR == 1)); then
   fi
 fi
 
-setting "$1" "$2" "$3" "$4"
+setting "$1" "$2" "$3" "$4" "$5"
 
 #-------------------------------------------------------------------------------
 
@@ -68,7 +68,7 @@ echo "[$(datetime_now)] Start $myname $@" >&2
 
 for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
              WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
-             STIME ETIME ISTEP FSTEP; do
+             STIME ETIME MEMBERS ISTEP FSTEP; do
   printf '                      %-10s = %s\n' $vname "${!vname}" >&2
 done
 
@@ -98,9 +98,9 @@ declare -a proc2grpproc
 #if ((BUILTIN_STAGING && ISTEP == 1)); then
 if ((BUILTIN_STAGING)); then
   safe_init_tmpdir $NODEFILE_DIR
-  distribute_da_cycle machinefile $NODEFILE_DIR
+  distribute_da_cycle machinefile $NODEFILE_DIR - "$MEMBERS"
 else
-  distribute_da_cycle - - $NODEFILE_DIR/distr
+  distribute_da_cycle - - $NODEFILE_DIR/distr "$MEMBERS"
 fi
 
 #===============================================================================

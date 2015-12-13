@@ -8,7 +8,7 @@
 
 . config.main
 
-if (($# < 7)); then
+if (($# < 8)); then
   cat >&2 << EOF
 
 [post_obsope.sh]
@@ -19,6 +19,7 @@ Usage: $0 MYRANK MEM_NP ATIME MEM TMPDIR LOG_OPT OUT_OPT
   MEM_NP  Number of processes per member
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
   MEM     Name of the ensemble member
+  MEMSEQ
   TMPDIR  Temporary directory to run the program
   LOG_OPT
   OUT_OPT
@@ -31,15 +32,19 @@ MYRANK="$1"; shift
 MEM_NP="$1"; shift
 ATIME="$1"; shift
 MEM="$1"; shift
+MEMSEQ="$1"; shift
 TMPDIR="$1"; shift
 LOG_OPT="$1"; shift
 OUT_OPT="$1"
 
+obsdabaselen=10
+
 #===============================================================================
 
 mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
-for ifile in $(cd $TMPDIR ; ls obsda.${MEM}.*.dat 2> /dev/null); do
-  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile}
+for ifile in $(cd $TMPDIR ; ls obsda.${MEMSEQ}.*.dat 2> /dev/null); do
+#  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile}
+  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/obsda.${MEM}${ifile:$obsdabaselen}
 done
 
 #if ((MYRANK < MEM_NP)); then
