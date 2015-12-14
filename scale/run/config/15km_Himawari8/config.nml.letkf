@@ -26,5 +26,10 @@
 [MEM_NP]
 /
 
+&PARAM_LETKF_H08
+ H08_LIMIT_LEV = 20000.0d0,
+ H08_CH_USE = 0,1,1,1,0,0,0,0,0,0,
+/
+
 !*** Attach SCALE configuration below ***
 

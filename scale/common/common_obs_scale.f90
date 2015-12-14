@@ -58,7 +58,6 @@ MODULE common_obs_scale
 !
 ! Himawari-8 (H08) observations
 !
-  INTEGER,PARAMETER :: nch=10 ! num of channnels
   INTEGER,PARAMETER :: id_H08IR_obs=8800
 !
 ! surface observations codes > 9999
@@ -2354,7 +2353,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
 !
 ! -- Compute max weight level using trans_out 
 ! -- (Transmittance from each user pressure level to Top Of the Atmosphere)
-! -- bt_out is substitute into yobs
+! -- bt_out is substituted into yobs
 
   n = 0
   DO np = 1, nprof
@@ -2362,7 +2361,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
     n = n + 1
 
     rdp = 1.0d0 / (prs2d(slev+1,np) - prs2d(slev,np))
-    max_weight(ch,np) = (trans_out(2,ch,np) - trans_out(1,ch,np)) * rdp * (-1.0d0) ! keep positive sign 
+    max_weight(ch,np) = abs((trans_out(2,ch,np) - trans_out(1,ch,np)) * rdp )
 
 
     plev_obs(n) = (prs2d(slev+1,np) + prs2d(slev,np)) * 0.5d0 ! (Pa)
@@ -2379,17 +2378,18 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
 
     yobs(n) = bt_out(ch,np)
 ! -- tentative QC here --
-    IF(plev_obs(n) >= 20000.0)THEN
+    IF(plev_obs(n) >= H08_LIMIT_LEV)THEN
       qc(n) = iqc_good
     ELSE
       qc(n) = iqc_obs_bad
     ENDIF
-!
-! reject Band #11(ch=5) & #12(ch=6) obs because these bands are sensitive to chemicals.
-!
-    IF(ch==5 .or. ch==6)THEN
+
+    SELECT CASE(H08_CH_USE(ch))
+    CASE(1)
+      qc(n) = iqc_good
+    CASE DEFAULT
       qc(n) = iqc_obs_bad
-    ENDIF
+    END SELECT
   ENDDO ! ch
   ENDDO ! np
 
