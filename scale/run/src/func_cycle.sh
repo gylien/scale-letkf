@@ -402,14 +402,16 @@ else
     if ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
       if ((BDY_ENS == 0)); then
         for q in $(seq $mem_np); do
-          pathin="${DATA_BDY_SCALE_PREP}/${time}/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+          pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+#          pathin="${DATA_BDY_SCALE_PREP}/${time}/mean/boundary$(printf $SCALE_SFX $((q-1)))"
           path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
           echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
         done
       elif ((BDY_ENS == 1)); then
         for m in $(seq $mmean); do
           for q in $(seq $mem_np); do
-            pathin="${DATA_BDY_SCALE_PREP}/${time}/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
+            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
+#            pathin="${DATA_BDY_SCALE_PREP}/${time}/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
             path="${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
             echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
           done

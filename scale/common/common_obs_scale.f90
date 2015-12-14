@@ -2270,7 +2270,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
 !
 ! -- Compute max weight level using trans_out 
 ! -- (Transmittance from each user pressure level to Top Of the Atmosphere)
-! -- bt_out is substitute into yobs
+! -- bt_out is substituted into yobs
 
   n = 0
   DO np = 1, nprof
