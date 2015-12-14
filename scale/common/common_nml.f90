@@ -15,6 +15,7 @@ MODULE common_nml
 
   !----
   integer, parameter :: nvarmax = 100
+  integer, parameter :: nch = 10 ! Num of Himawari-8 (IR) channels 
 
   !--- PARAM_ENSEMBLE
   integer :: MEMBER = 3      ! ensemble size
@@ -54,18 +55,6 @@ MODULE common_nml
 
   integer :: LEV_UPDATE_Q = 100000        ! q and qc are only updated below and equal to this model level
   real(r_size) :: Q_SPRD_MAX = 0.5        ! maximum q (ensemble spread)/(ensemble mean)
-
-  integer, parameter :: nch = 10 ! Num of Himawari-8 (IR) channels 
-!
-!
-  real(r_size) :: H08_LIMIT_LEV = 20000.0d0 ! (Pa) Upper limit level of the sensitive height for Himawari-8 IR
-  integer :: H08_CH_USE(nch) = (/0,1,1,1,0,0,0,0,0,0/) 
-                        !! ch = (1,2,3,4,5,6,7,8,9,10)
-                        !! (B07,B08,B09,B10,B11,B12,B13,B14,B15,B16)
-                        !! ==1: Assimilate
-                        !! ==0: NOT assimilate (rejected by QC in trans_XtoY_H08)
-                        !! It is better to reject B11(ch=5) & B12(ch=6) obs because these bands are 
-                        !! sensitive to chemicals.
 
   !--- PARAM_LETKF_PRC
   integer :: NNODES = 1
@@ -129,6 +118,16 @@ MODULE common_nml
   ! PARAMETERS FOR RADAR DATA ASSIMILATION
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
+  !---PARAM_LETKF_H08
+  real(r_size) :: H08_LIMIT_LEV = 20000.0d0 ! (Pa) Upper limit level of the sensitive height for Himawari-8 IR
+  integer :: H08_CH_USE(nch) = (/0,1,1,1,0,0,0,0,0,0/)
+                        !! ch = (1,2,3,4,5,6,7,8,9,10)
+                        !! (B07,B08,B09,B10,B11,B12,B13,B14,B15,B16)
+                        !! ==1: Assimilate
+                        !! ==0: NOT assimilate (rejected by QC in trans_XtoY_H08)
+                        !! It is better to reject B11(ch=5) & B12(ch=6) obs because these bands are 
+                        !! sensitive to chemicals.
+
 contains
 !-----------------------------------------------------------------------
 ! PARAM_ENSEMBLE
@@ -191,9 +190,7 @@ subroutine read_nml_letkf
     GROSS_ERROR_RADAR_VR, &
     GROSS_ERROR_RADAR_PRH, &
     LEV_UPDATE_Q, &
-    Q_SPRD_MAX, &
-    H08_LIMIT_LEV, & ! H08
-    H08_CH_USE       ! H08
+    Q_SPRD_MAX
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
@@ -405,5 +402,31 @@ subroutine read_nml_letkf_radar
 
   return
 end subroutine read_nml_letkf_radar
+
+!-----------------------------------------------------------------------
+! PARAM_LETKF_RADAR
+!-----------------------------------------------------------------------
+subroutine read_nml_letkf_h08
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_LETKF_H08/ &
+    H08_LIMIT_LEV, &
+    H08_CH_USE
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_LETKF_H08,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_LETKF_H08/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_H08. Check!'
+    stop
+  endif
+
+  write(6, nml=PARAM_LETKF_H08)
+
+  return
+end subroutine read_nml_letkf_h08
 
 end module common_nml
