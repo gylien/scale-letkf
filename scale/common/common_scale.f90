@@ -1122,6 +1122,41 @@ subroutine ij_l2g(proc, il, jl, ig, jg)
 end subroutine ij_l2g
 
 
+
+subroutine rij_g2l(proc, ig, jg, il, jl)
+  implicit none
+  integer, intent(in) :: proc
+  real(r_size), intent(in) :: ig
+  real(r_size), intent(in) :: jg
+  real(r_size), intent(out) :: il
+  real(r_size), intent(out) :: jl
+  integer :: iproc, jproc
+
+  call rank_1d_2d(proc, iproc, jproc)
+  il = ig - real(iproc * nlon,r_size)
+  jl = jg - real(jproc * nlat,r_size)
+
+  return  
+end subroutine rij_g2l
+
+
+subroutine rij_l2g(proc, il, jl, ig, jg)
+  implicit none
+  integer, intent(in) :: proc
+  real(r_size), intent(in) :: il
+  real(r_size), intent(in) :: jl
+  real(r_size), intent(out) :: ig
+  real(r_size), intent(out) :: jg
+  integer :: iproc, jproc
+
+  call rank_1d_2d(proc, iproc, jproc)
+  ig = il + real(iproc * nlon,r_size)
+  jg = jl + real(jproc * nlat,r_size)
+
+  return  
+end subroutine rij_l2g
+
+
 !-----------------------------------------------------------------------
 ! using halo!
 ! proc = -1: outside the global domain
@@ -1158,8 +1193,8 @@ SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
 
   iproc = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(nlon,r_size)) - 1
   jproc = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
-  il = ig - iproc * nlon
-  jl = jg - jproc * nlat
+  il = ig - real(iproc * nlon,r_size)
+  jl = jg - real(jproc * nlat,r_size)
   call rank_2d_1d(iproc,jproc,proc)
 
 !  if (PRC_myrank == proc) then                                                                                    ! [for validation]

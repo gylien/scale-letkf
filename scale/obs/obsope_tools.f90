@@ -91,17 +91,16 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Observation operator calculation
 !-----------------------------------------------------------------------
-SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
+SUBROUTINE obsope_cal(obs)
   IMPLICIT NONE
 
   TYPE(obs_info),INTENT(IN) :: obs(nobsfiles)
-  real(r_size),intent(in) :: radarlon, radarlat, radarz
   type(obs_da_value) :: obsda
   REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
   integer :: it,islot,proc,im,iof
-  integer :: n,nn,nslot,nproc,nproc_0,nprocslot,ierr
+  integer :: n,nn,nslot,nproc,nproc_0,nprocslot
 !  real(r_size) :: rig,rjg,ri,rj,rk
   real(r_size) :: rig,rjg,rk
   real(r_size),allocatable :: ri(:),rj(:)
@@ -122,6 +121,13 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
   INTEGER,ALLOCATABLE :: qc_H08(:)
 
 !-----------------------------------------------------------------------
+
+  integer :: ierr
+  REAL(r_dble) :: rrtimer00,rrtimer
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer00 = MPI_WTIME()
+
 
   obsda%nobs = 0
   do iof = 1, nobsfiles
@@ -152,6 +158,13 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
 
         call read_ens_history_iter('hist',it,islot,v3dg,v2dg)
 !  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,I3,A,I3,A,4x,F15.7)') '###### obsope_cal:read_ens_history_iter:',it,':',islot,':',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
 
         do iof = 1, nobsfiles
 
@@ -243,6 +256,14 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
 #endif
           ENDIF ! end of nproc count [if (iof = 3)]
 
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,I3,A,I3,A,I3,A,F15.7)') '###### obsope_cal:obsope_step_1:        ',it,':',islot,':',iof,':',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+
           ! then do this heavy computation with OpenMP
 
           IF(iof /= 3)THEN ! H08
@@ -264,13 +285,20 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
                 call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
               end if
 
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!  rrtimer = MPI_WTIME()
+!  WRITE(6,'(A,I3,A,I3,A,I3,A,I8,A,F15.7)') '###### obsope_cal:obsope_step_2_phys2ijkz:',it,':',islot,':',iof,':',nn,':',rrtimer-rrtimer00
+!  rrtimer00=rrtimer
+
+
               if (obsda%qc(nn) == iqc_good) then
                 select case (obsfileformat(iof))
                 case (1)
                   call Trans_XtoY(obs(iof)%elm(n),ri(nn),rj(nn),rk, &
                                   obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
                 case (2)
-                  call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri(nn),rj(nn),rk, &
+                  call Trans_XtoY_radar(obs(iof)%elm(n),obs(iof)%meta(1),obs(iof)%meta(2),obs(iof)%meta(3),ri(nn),rj(nn),rk, &
                                         obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
                   if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
 
@@ -282,6 +310,13 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
 
                 end select
               end if
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!  rrtimer = MPI_WTIME()
+!  WRITE(6,'(A,I3,A,I3,A,I3,A,I8,A,F15.7)') '###### obsope_cal:obsope_step_2_Trans_XtoY_radar:',it,':',islot,':',iof,':',nn,':',rrtimer-rrtimer00
+!  rrtimer00=rrtimer
+
 
             end do ! [ nn = nproc_0 + 1, nproc ]
 !$OMP END PARALLEL DO
@@ -331,7 +366,15 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
           ENDIF ! H08
 
           write (6,'(3A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot = ', nslot
-          write (6,'(3A,I6,A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
+          write (6,'(3A,I6,A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot and processed by rank ' &
+                                    , myrank, ' = ', nprocslot
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,I3,A,I3,A,I3,A,F15.7)') '###### obsope_cal:obsope_step_2:        ',it,':',islot,':',iof,':',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
 
         end do ! [ do iof = 1, nobsfiles ]
 
@@ -365,6 +408,13 @@ SUBROUTINE obsope_cal(obs, radarlon, radarlat, radarz)
       write (obsdafile(12:17),'(I6.6)') proc2mem(2,it,myrank+1)
       call write_obs_da(obsdafile,obsda,0)
 
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,I3,A,8x,F15.7)') '###### obsope_cal:write_obs_da:         ',it,':',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+
     end if ! [ im >= 1 .and. im <= MEMBER ]
 
   end do ! [ it = 1, nitmax ]
@@ -387,11 +437,10 @@ end subroutine obsope_cal
 !-----------------------------------------------------------------------
 ! Observation generator calculation
 !-----------------------------------------------------------------------
-SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
+SUBROUTINE obsmake_cal(obs)
   IMPLICIT NONE
 
   TYPE(obs_info),INTENT(INOUT) :: obs(nobsfiles)
-  real(r_size),intent(in) :: radarlon, radarlat, radarz
   REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
@@ -487,7 +536,7 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
                   call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk, &
                                   obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
                 case (2)
-                  call Trans_XtoY_radar(obs(iof)%elm(n),radarlon,radarlat,radarz,ri,rj,rk, &
+                  call Trans_XtoY_radar(obs(iof)%elm(n),obs(iof)%meta(1),obs(iof)%meta(2),obs(iof)%meta(3),ri,rj,rk, &
                                         obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
                 end select
 
@@ -666,7 +715,7 @@ SUBROUTINE obsmake_cal(obs, radarlon, radarlat, radarz)
     deallocate ( bufr )
     deallocate ( error )
 
-    call write_obs_all(obs, radarlon, radarlat, radarz, missing=.false., file_suffix='.out') ! only at the head node
+    call write_obs_all(obs, missing=.false., file_suffix='.out') ! only at the head node
   end if
 
 end subroutine obsmake_cal

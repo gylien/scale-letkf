@@ -1,22 +1,20 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Run one step of data assimilation cycles.
+#  Run one step of ensemble forecasts
 #
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_step.sh [STEPFUNC MYRANK TIME LOOP ITER]
+#    cyclebdy_step.sh [STEPFUNC MYRANK LOOP ITER]
 #
 #  Use settings:
 #    config.main
-#    config.cycle
+#    config.cyclebdy
 #    config.nml.scale_pp_topo
 #    config.nml.scale_pp_landuse
 #    config.nml.scale_init
 #    config.nml.scale
-#    config.nml.obsope
-#    config.nml.letkf
 #
 #===============================================================================
 
@@ -36,13 +34,13 @@ fi
 
 . config.main
 res=$? && ((res != 0)) && exit $res
-. config.cycle
+. config.cyclebdy
 res=$? && ((res != 0)) && exit $res
 
 . src/func_distribute.sh
 . src/func_datetime.sh
 . src/func_util.sh
-. src/func_cycle.sh
+. src/func_cyclebdy.sh
 
 #-------------------------------------------------------------------------------
 
@@ -50,7 +48,7 @@ setting
 
 STEPFUNC="${1}"; shift
 MYRANK="${1}"; shift
-TIME="${1}"; shift
+#TIME="${1}"; shift
 LOOP="${1}"; shift
 ITER="${1:-0}"
 
@@ -66,13 +64,32 @@ declare -a proc2node
 declare -a proc2group
 declare -a proc2grpproc
 
-distribute_da_cycle machinefile - $NODEFILE_DIR/distr "$MEMBERS"
+distribute_fcst "$MEMBERS" $CYCLE machinefile - $NODEFILE_DIR/distr
 
 #===============================================================================
 # Run one step
 
-time=$TIME
 loop=$LOOP
+lcycles=$((LCYCLE * CYCLE_SKIP))
+time=$(datetime $STIME $((lcycles * CYCLE * (LOOP-1))) s)
+
+rcycle=0
+for c in $(seq $CYCLE); do
+  time2=$(datetime $time $((lcycles * (c-1))) s)
+  if ((time2 <= ETIME)); then
+    stimes[$c]=$time2
+    stimesfmt[$c]="$(datetime_fmt ${stimes[$c]})"
+    rcycle=$c  # The "real" number of cycles
+  else
+    stimes[$c]=
+    stimesfmt[$c]=
+  fi
+done
+if ((rcycle == 0)); then
+  echo "[Error] Wrong loop number, LOOP = $LOOP" >&2
+  exit 1
+fi
+
 iter=$ITER
 if ((ITER == 0)); then
   its=1
@@ -81,10 +98,6 @@ else
   its=$iter
   ite=$iter
 fi
-
-atime=$(datetime $time $LCYCLE s)
-timefmt="$(datetime_fmt ${time})"
-obstime $time
 
 #-------------------------------------------------------------------------------
 

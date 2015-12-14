@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_K_interact.sh [STIME ETIME ISTEP FSTEP TIME_LIMIT]
+#    cycle_K_interact.sh [STIME ETIME MEMBERS ISTEP FSTEP TIME_LIMIT]
 #
 #===============================================================================
 
@@ -47,7 +47,7 @@ echo
 
 for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
              WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
-             STIME ETIME ISTEP FSTEP; do
+             STIME ETIME MEMBERS ISTEP FSTEP; do
   printf '  %-10s = %s\n' $vname "${!vname}"
 done
 
@@ -75,7 +75,7 @@ export PARALLEL=${THREADS}
 
 cd $(pwd)
 
-./${myname1}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP"
+./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$ISTEP" "$FSTEP"
 EOF
 
 echo "[$(datetime_now)] Entering the interactive mode..."

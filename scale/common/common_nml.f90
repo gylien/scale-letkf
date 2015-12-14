@@ -56,6 +56,8 @@ MODULE common_nml
   integer :: LEV_UPDATE_Q = 100000        ! q and qc are only updated below and equal to this model level
   real(r_size) :: Q_SPRD_MAX = 0.5        ! maximum q (ensemble spread)/(ensemble mean)
 
+  real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0
+
   !--- PARAM_LETKF_PRC
   integer :: NNODES = 1
   integer :: PPN = 1
@@ -108,6 +110,9 @@ MODULE common_nml
   REAL(r_size) :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
 
   logical :: USE_RADAR_PSEUDO_RH = .false.
+
+  real(r_size) :: RADAR_EDGE_TAPER_WIDTH = 0.0d0
+  real(r_size) :: RADAR_RANGE = 0.0d0              !!!!!! should not use this and should save this information in obs files !!!!!!
 
   !These 2 flags affects the computation of model reflectivity and radial velocity. 
   INTEGER :: INTERPOLATION_TECHNIQUE = 1
@@ -190,7 +195,8 @@ subroutine read_nml_letkf
     GROSS_ERROR_RADAR_VR, &
     GROSS_ERROR_RADAR_PRH, &
     LEV_UPDATE_Q, &
-    Q_SPRD_MAX
+    Q_SPRD_MAX, &
+    BOUNDARY_TAPER_WIDTH
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
@@ -379,6 +385,8 @@ subroutine read_nml_letkf_radar
     RADAR_REF_THRES_DBZ, &
     RADAR_PRH_ERROR, &
     USE_RADAR_PSEUDO_RH, &
+    RADAR_EDGE_TAPER_WIDTH, &
+    RADAR_RANGE, &               !!!!!! should not use this and should save this information in obs files !!!!!!
     INTERPOLATION_TECHNIQUE, &
     METHOD_REF_CALC, &
     USE_TERMINAL_VELOCITY, &

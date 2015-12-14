@@ -10,13 +10,13 @@ program datetime
   integer :: yyyy, mm, dd, hh, ii, ss, inc
   character (len=1) :: sunit
 
-  read (*, '(I)') yyyy
-  read (*, '(I)') mm
-  read (*, '(I)') dd
-  read (*, '(I)') hh
-  read (*, '(I)') ii
-  read (*, '(I)') ss
-  read (*, '(I)') inc
+  read (*, '(I4)') yyyy
+  read (*, '(I2)') mm
+  read (*, '(I2)') dd
+  read (*, '(I2)') hh
+  read (*, '(I2)') ii
+  read (*, '(I2)') ss
+  read (*, '(I10)') inc
   read (*, '(A1)') sunit
 
   select case (sunit)

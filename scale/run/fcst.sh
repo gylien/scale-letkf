@@ -105,7 +105,7 @@ fi
 #===============================================================================
 # Determine the staging list and then stage in
 
-if ((builtin_staging)); then
+if ((BUILTIN_STAGING)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR
@@ -282,7 +282,7 @@ while ((time <= ETIME)); do
     if ((MACHINE_TYPE == 11)); then
       touch $TMP/loop.${loop}.done
     fi
-    if ((builtin_staging && $(datetime $time $((lcycles * CYCLE)) s) <= ETIME)); then
+    if ((BUILTIN_STAGING && $(datetime $time $((lcycles * CYCLE)) s) <= ETIME)); then
       if ((MACHINE_TYPE == 12)); then
         echo "[$(datetime_now)] ${stimes[1]}: Online stage out"
         bash $SCRP_DIR/src/stage_out.sh s $loop
@@ -318,7 +318,7 @@ done
 #===============================================================================
 # Stage out
 
-if ((builtin_staging)); then
+if ((BUILTIN_STAGING)); then
   echo "[$(datetime_now)] Finalization (stage out)" >&2
 
   if ((TMPOUT_MODE >= 2)); then

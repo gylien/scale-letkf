@@ -1,19 +1,19 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Wrap cycle.sh in a K-computer job script (micro) and run it.
+#  Wrap cyclebdy.sh in a K-computer job script (micro) and run it.
 #
-#  February 2015, created,                Guo-Yuan Lien
+#  November 2014, created,                 Guo-Yuan Lien
 #
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_K_micro.sh [STIME ETIME MEMBERS ISTEP FSTEP TIME_LIMIT]
+#    cyclebdy_K_micro.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP TIME_LIMIT]
 #
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname1='cycle'
+myname1='cyclebdy'
 
 #===============================================================================
 # Configuration
@@ -38,7 +38,7 @@ fi
 
 #-------------------------------------------------------------------------------
 
-setting "$1" "$2" "$3" "$4" "$5"
+setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}"
 
 jobscrp="$TMP/${myname1}_job.sh"
 
@@ -47,9 +47,9 @@ jobscrp="$TMP/${myname1}_job.sh"
 echo "[$(datetime_now)] Start $(basename $0) $@"
 echo
 
-for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
-             WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
-             STIME ETIME MEMBERS ISTEP FSTEP; do
+for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN \
+             FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT OUT_OPT \
+             STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP; do
   printf '  %-10s = %s\n' $vname "${!vname}"
 done
 
@@ -74,11 +74,6 @@ PPN_real=$PPN
 NNODES=$((NNODES*PPN))
 PPN=1
 
-if ((ENABLE_SET == 1)); then          ##
-  NNODES_real_all=$((NNODES_real*3))  ##
-  NNODES_all=$((NNODES*3))            ##
-fi                                    ##
-
 declare -a procs
 declare -a mem2node
 declare -a node
@@ -86,11 +81,7 @@ declare -a name_m
 declare -a node_m
 
 safe_init_tmpdir $NODEFILE_DIR
-if ((ENABLE_SET == 1)); then               ##
-  distribute_da_cycle_set - $NODEFILE_DIR  ##
-else                                       ##
-  distribute_da_cycle - $NODEFILE_DIR - "$MEMBERS"
-fi                                         ##
+distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
 
 #===============================================================================
 # Determine the staging list and then stage in
@@ -120,14 +111,6 @@ echo "PPN=$PPN" >> $TMP/config.main
 echo "NNODES_real=$NNODES_real" >> $TMP/config.main
 echo "PPN_real=$PPN_real" >> $TMP/config.main
 
-if ((ENABLE_SET == 1)); then                                    ##
-  echo "NNODES_all=$NNODES_all" >> $TMP/config.main             ##
-  echo "NNODES_real_all=$NNODES_real_all" >> $TMP/config.main   ##
-                                                                ##
-  NNODES=$NNODES_all                                            ##
-  NNODES_real=$NNODES_real_all                                  ##
-fi                                                              ##
-
 #===============================================================================
 # Creat a job script
 
@@ -151,7 +134,7 @@ cat > $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$ISTEP" "$FSTEP"
+./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
 EOF
 
 #===============================================================================

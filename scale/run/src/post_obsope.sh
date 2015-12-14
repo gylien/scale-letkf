@@ -8,19 +8,21 @@
 
 . config.main
 
-if (($# < 6)); then
+if (($# < 8)); then
   cat >&2 << EOF
 
 [post_obsope.sh]
 
-Usage: $0 MYRANK MEM_NP ATIME MEM TMPDIR LOG_OPT
+Usage: $0 MYRANK MEM_NP ATIME MEM TMPDIR LOG_OPT OUT_OPT
 
   MYRANK  My rank number
   MEM_NP  Number of processes per member
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
   MEM     Name of the ensemble member
+  MEMSEQ
   TMPDIR  Temporary directory to run the program
   LOG_OPT
+  OUT_OPT
 
 EOF
   exit 1
@@ -30,14 +32,19 @@ MYRANK="$1"; shift
 MEM_NP="$1"; shift
 ATIME="$1"; shift
 MEM="$1"; shift
+MEMSEQ="$1"; shift
 TMPDIR="$1"; shift
-LOG_OPT="$1"
+LOG_OPT="$1"; shift
+OUT_OPT="$1"
+
+obsdabaselen=10
 
 #===============================================================================
 
 mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
-for ifile in $(cd $TMPDIR ; ls obsda.${MEM}.*.dat 2> /dev/null); do
-  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile}
+for ifile in $(cd $TMPDIR ; ls obsda.${MEMSEQ}.*.dat 2> /dev/null); do
+#  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile}
+  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/obsda.${MEM}${ifile:$obsdabaselen}
 done
 
 #if ((MYRANK < MEM_NP)); then
@@ -61,6 +68,12 @@ fi
 #    mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((MEMBER*MEM_NP+q-1))) $TMPOUT/${ATIME}/log/obsope # m=MEMBER+1 (mmean is not declared in this script)
 #  done
 #fi
+
+if ((OUT_OPT >= 2)); then
+  if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
+    rm -f $TMPOUT/${ATIME}/gues/${MEM}/history*.nc
+  fi
+fi
 
 #===============================================================================
 

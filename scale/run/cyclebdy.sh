@@ -1,29 +1,28 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Run data assimilation cycles.
+#  Run ensemble forecasts and (optional) verifications.
 #
-#  November 2014, modified from GFS-LETKF, Guo-Yuan Lien
+#  August  2014, modified from GFS-LETKF, Guo-Yuan Lien
+#  October 2014, modified,                Guo-Yuan Lien
 #
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle.sh [STIME ETIME MEMBERS ISTEP FSTEP]
+#    cyclebdy.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP ISTEP FSTEP]
 #
 #  Use settings:
 #    config.main
-#    config.cycle
+#    config.cyclebdy
 #    config.nml.scale_pp_topo
 #    config.nml.scale_pp_landuse
 #    config.nml.scale_init
 #    config.nml.scale
-#    config.nml.obsope
-#    config.nml.letkf
 #
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname='cycle.sh'
+myname='cyclebdy.sh'
 myname1=${myname%.*}
 
 #===============================================================================
@@ -31,13 +30,13 @@ myname1=${myname%.*}
 
 . config.main
 res=$? && ((res != 0)) && exit $res
-. config.$myname1
+. config.cyclebdy
 res=$? && ((res != 0)) && exit $res
 
 . src/func_distribute.sh
 . src/func_datetime.sh
 . src/func_util.sh
-. src/func_$myname1.sh
+. src/func_cyclebdy.sh
 
 #-------------------------------------------------------------------------------
 
@@ -55,7 +54,7 @@ if ((USE_RANKDIR == 1)); then
   fi
 fi
 
-setting "$1" "$2" "$3" "$4" "$5"
+setting "$1" "$2" "$3" "$4" "$5" "$6" "$7"
 
 #-------------------------------------------------------------------------------
 
@@ -66,9 +65,9 @@ exec 2> >(tee -a $LOGDIR/${myname1}.err >&2)
 
 echo "[$(datetime_now)] Start $myname $@" >&2
 
-for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
+for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF MEMBER NNODES PPN THREADS \
              WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
-             STIME ETIME MEMBERS ISTEP FSTEP; do
+             STIME ETIME MEMBERS CYCLE CYCLE_SKIP ISTEP FSTEP; do
   printf '                      %-10s = %s\n' $vname "${!vname}" >&2
 done
 
@@ -98,15 +97,15 @@ declare -a proc2grpproc
 #if ((BUILTIN_STAGING && ISTEP == 1)); then
 if ((BUILTIN_STAGING)); then
   safe_init_tmpdir $NODEFILE_DIR
-  distribute_da_cycle machinefile $NODEFILE_DIR - "$MEMBERS"
+  distribute_fcst "$MEMBERS" $CYCLE machinefile $NODEFILE_DIR
 else
-  distribute_da_cycle - - $NODEFILE_DIR/distr "$MEMBERS"
+  distribute_fcst "$MEMBERS" $CYCLE - - $NODEFILE_DIR/distr
 fi
 
 #===============================================================================
 # Determine the staging list and then stage in
 
-if ((BUILTIN_STAGING && ISTEP == 1)); then
+if ((BUILTIN_STAGING)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR
@@ -126,34 +125,47 @@ else
 fi
 
 #===============================================================================
-# Run data assimilation cycles
+# Run cycles of forecasts
 
+declare -a stimes
+declare -a stimesfmt
+lcycles=$((LCYCLE * CYCLE_SKIP))
 s_flag=1
 e_flag=0
 time=$STIME
-atime=$(datetime $time $LCYCLE s)
 loop=0
 
 #-------------------------------------------------------------------------------
 while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 
-  timefmt="$(datetime_fmt ${time})"
   loop=$((loop+1))
-  if (($(datetime $time $LCYCLE s) > ETIME)); then
-    e_flag=1
-  fi
-  obstime $time
+
+  for c in $(seq $CYCLE); do
+    time2=$(datetime $time $((lcycles * (c-1))) s)
+    if (($(datetime $time2 $lcycles s) > ETIME)); then
+      e_flag=1
+    fi
+
+    if ((time2 <= ETIME)); then
+      stimes[$c]=$time2
+      stimesfmt[$c]="$(datetime_fmt ${stimes[$c]})"
+      rcycle=$c  # The "real" number of cycles
+    else
+      stimes[$c]=
+      stimesfmt[$c]=
+    fi
+  done
 
 #-------------------------------------------------------------------------------
 # Write the header of the log file
 
-#  exec > $LOGDIR/${myname1}_${time}.log
-  exec > >(tee $LOGDIR/${myname1}_${time}.log)
+#  exec > $LOGDIR/${myname1}_${stimes[1]}.log
+  exec > >(tee $LOGDIR/${myname1}_${stimes[1]}.log)
 
   echo
   echo " +----------------------------------------------------------------+"
-  echo " |                          SCALE-LETKF                           |"
+  echo " |                        SCALE-Forecasts                         |"
   echo " +----------------------------------------------------------------+"
   for s in $(seq $nsteps); do
     if (((s_flag == 0 || s >= ISTEP) && (e_flag == 0 || s <= FSTEP))); then
@@ -162,18 +174,14 @@ while ((time <= ETIME)); do
   done
   echo " +----------------------------------------------------------------+"
   echo
-  echo "  Start time:               ${timefmt}"
-  echo "  Forecast length:          $CYCLEFLEN s"
-  echo "  Assimilation window:      $WINDOW_S - $WINDOW_E s ($((WINDOW_E-WINDOW_S)) s)"
-  echo
-  echo "  Observation timeslots:"
-  for is in $(seq $slot_s $slot_e); do
-    if ((is == slot_b)); then
-      printf "  %4d - %s [base]\n" ${is} "${timefmt_sl[$is]}"
-    else
-      printf "  %4d - %s\n" ${is} "${timefmt_sl[$is]}"
-    fi
+  echo "  Number of cycles:         $rcycle"
+  echo "  Forecast start time:"
+  for c in $(seq $rcycle); do
+    printf "    Cycle %-5s %s\n" "$c:" "${stimesfmt[$c]}"
   done
+  echo
+  echo "  Forecast length:          $CYCLEFLEN s"
+  echo "  Output interval:          $CYCLEFOUT s"
   echo
   echo "  Nodes used:               $NNODES"
 #  if ((MTYPE == 1)); then
@@ -188,9 +196,13 @@ while ((time <= ETIME)); do
   echo "  Nodes per SCALE run:      $mem_nodes"
   echo "  Processes per SCALE run:  $mem_np"
   echo
-  echo "  Ensemble size:            $MEMBER"
-  for m in $(seq $msprd); do
-    echo "      ${name_m[$m]}: ${node_m[$m]}"
+  echo "  Number of members:        $fmember"
+  for c in $(seq $rcycle); do
+    echo "    Cycle $c:"
+    for m in $(seq $fmember); do
+      mm=$(((c-1) * fmember + m))
+      echo "      ${name_m[$m]}: ${node_m[$mm]}"
+    done
   done
   echo
   echo "===================================================================="
@@ -201,7 +213,7 @@ while ((time <= ETIME)); do
   for s in $(seq $nsteps); do
     if (((s_flag == 0 || s >= ISTEP) && (e_flag == 0 || s <= FSTEP))); then
 
-      echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2
+      echo "[$(datetime_now)] ${stimes[1]}: ${stepname[$s]}" >&2
       echo
       printf " %2d. %-55s\n" $s "${stepname[$s]}"
       echo
@@ -213,7 +225,7 @@ while ((time <= ETIME)); do
           echo
           echo "===================================================================="
           continue
-        elif ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
+        elif ((BDY_FORMAT == 0)); then
           echo "  ... skip this step (use prepared boundaries)"
           echo
           echo "===================================================================="
@@ -222,7 +234,7 @@ while ((time <= ETIME)); do
       fi
       ######
       if ((s == 2)); then
-        if ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
+        if ((BDY_FORMAT == 0)); then
           echo "  ... skip this step (use prepared boundaries)"
           continue
         fi
@@ -236,36 +248,26 @@ while ((time <= ETIME)); do
         enable_iter=1
       fi
 
-      nodestr=proc
-      if ((ENABLE_SET == 1)); then                                    ##
-        if ((s == 3)); then
-          nodestr='set1.proc'
-        elif ((s == 4)); then
-          nodestr='set2.proc'
-        elif ((s == 5)); then
-          nodestr='set3.proc'
-        fi
-      fi
-
       if ((enable_iter == 1)); then
         for it in $(seq $nitmax); do
           if ((USE_RANKDIR == 1)); then
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
-                    "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" $loop $it # > /dev/null
+            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+                    "$(rev_path ${stepexecdir[$s]})/cyclebdy_step.sh" $loop $it # > /dev/null
           else
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
-                    "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it # > /dev/null
+            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+                    "$SCRP_DIR/cyclebdy_step.sh" $loop $it # > /dev/null
           fi
         done
       else
         if ((USE_RANKDIR == 1)); then
-          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
-                  "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" "$loop" # > /dev/null
+          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+                  "$(rev_path ${stepexecdir[$s]})/cyclebdy_step.sh" $loop # > /dev/null
         else
-          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
-                  "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" # > /dev/null
+          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+                  "$SCRP_DIR/cyclebdy_step.sh" $loop # > /dev/null
         fi
       fi
+
 
       echo
       echo "===================================================================="
@@ -280,13 +282,13 @@ while ((time <= ETIME)); do
     if ((MACHINE_TYPE == 11)); then
       touch $TMP/loop.${loop}.done
     fi
-    if ((BUILTIN_STAGING && $(datetime $time $LCYCLE s) <= ETIME)); then
+    if ((BUILTIN_STAGING && $(datetime $time $((lcycles * CYCLE)) s) <= ETIME)); then
       if ((MACHINE_TYPE == 12)); then
-        echo "[$(datetime_now)] ${time}: Online stage out"
+        echo "[$(datetime_now)] ${stimes[1]}: Online stage out"
         bash $SCRP_DIR/src/stage_out.sh s $loop
         pdbash node all $SCRP_DIR/src/stage_out.sh $loop
       else
-        echo "[$(datetime_now)] ${time}: Online stage out (background job)"
+        echo "[$(datetime_now)] ${stimes[1]}: Online stage out (background job)"
         ( bash $SCRP_DIR/src/stage_out.sh s $loop ;
           pdbash node all $SCRP_DIR/src/stage_out.sh $loop ) &
       fi
@@ -298,7 +300,7 @@ while ((time <= ETIME)); do
 
   echo
   echo " +----------------------------------------------------------------+"
-  echo " |               SCALE-LETKF successfully completed               |"
+  echo " |             SCALE-Forecasts successfully completed             |"
   echo " +----------------------------------------------------------------+"
   echo
 
@@ -306,8 +308,7 @@ while ((time <= ETIME)); do
 
 #-------------------------------------------------------------------------------
 
-  time=$(datetime $time $LCYCLE s)
-  atime=$(datetime $time $LCYCLE s)
+  time=$(datetime $time $((lcycles * CYCLE)) s)
   s_flag=0
 
 #-------------------------------------------------------------------------------

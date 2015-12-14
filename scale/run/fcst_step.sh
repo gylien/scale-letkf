@@ -15,8 +15,6 @@
 #    config.nml.scale_pp_landuse
 #    config.nml.scale_init
 #    config.nml.scale
-#    config.nml.obsope
-#    config.nml.letkf
 #
 #===============================================================================
 
@@ -71,9 +69,10 @@ distribute_fcst "$MEMBERS" $CYCLE machinefile - $NODEFILE_DIR/distr
 #===============================================================================
 # Run one step
 
+lcycles=$((LCYCLE * CYCLE_SKIP))
 loop=$LOOP
-
 time=$(datetime $STIME $((lcycles * CYCLE * (LOOP-1))) s)
+
 rcycle=0
 for c in $(seq $CYCLE); do
   time2=$(datetime $time $((lcycles * (c-1))) s)
