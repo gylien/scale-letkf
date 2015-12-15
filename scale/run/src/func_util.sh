@@ -472,6 +472,87 @@ exit $res
 
 #===============================================================================
 
+history_files_for_bdy () {
+#-------------------------------------------------------------------------------
+# Find the corresponding history files for preparing boundary files
+#
+# Usage: history_files_for_bdy
+#
+#   TIME
+#   FCSTLEN
+#   PARENT_LCYCLE
+#   PARENT_FOUT
+#   PARENT_REF_TIME
+#   ONEFILE
+#
+# Return variables:
+#   $nfiles
+#   $ntsteps
+#   $ntsteps_skip
+#   $history_times[1...$nfiles]
+#
+#  *Require source 'func_datetime' first.
+#-------------------------------------------------------------------------------
+
+if (($# < 5)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local TIME=$1; shift
+local FCSTLEN=$1; shift
+local PARENT_LCYCLE=$1; shift
+local PARENT_FOUT=$1; shift
+local PARENT_REF_TIME=$1; shift
+local ONEFILE=${1:-0}
+
+#-------------------------------------------------------------------------------
+
+local parent_time_start=$PARENT_REF_TIME
+local parent_time_start_prev=$parent_time_start
+while ((parent_time_start <= TIME)); do
+  parent_time_start_prev=$parent_time_start
+  parent_time_start=$(datetime $parent_time_start $PARENT_LCYCLE s)
+done
+parent_time_start=$parent_time_start_prev
+
+while ((parent_time_start > TIME)); do
+  parent_time_start=$(datetime $parent_time_start -${PARENT_LCYCLE} s)
+done
+
+ntsteps_skip=0
+local itime=$parent_time_start
+while ((itime < TIME)); do
+  ntsteps_skip=$((ntsteps_skip+1))
+  itime=$(datetime $itime ${PARENT_FOUT} s)
+done
+if ((itime > TIME)); then
+  echo "[Error] $FUNCNAME: Cannot not find the requested timeframe ($TIME) in history files." >&2
+  exit 1
+fi
+
+local ntsteps_total=$(((FCSTLEN-1)/PARENT_FOUT+2 + ntsteps_skip))
+
+if ((ONEFILE == 1)); then
+  ntsteps=$ntsteps_total
+  nfiles=1
+  history_times[1]=$(datetime $parent_time_start $PARENT_LCYCLE s)
+else
+  ntsteps=$((PARENT_LCYCLE / PARENT_FOUT))
+  nfiles=1
+  history_times[1]=$(datetime $parent_time_start $PARENT_LCYCLE s)
+  while ((ntsteps_total > ntsteps)); do
+    nfiles=$((nfiles+1))
+    history_times[$nfiles]=$(datetime ${history_times[$((nfiles-1))]} $PARENT_LCYCLE s)
+    ntsteps_total=$((ntsteps_total-ntsteps))
+  done
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
 job_submit_PJM () {
 #-------------------------------------------------------------------------------
 # Submit a PJM job.
@@ -481,7 +562,7 @@ job_submit_PJM () {
 #   JOBSCRP  Job script
 #
 # Return variables:
-#   jobid  Job ID monitered
+#   $jobid  Job ID monitered
 #-------------------------------------------------------------------------------
 
 if (($# < 1)); then
@@ -502,11 +583,11 @@ echo $res
 if [ -z "$(echo $res | grep '\[ERR.\]')" ]; then
   jobid=$(echo $res | grep 'submitted' | cut -d ' ' -f 6)
   if [ -z "$jobid" ]; then
-    echo "[Error] $FUNCNAME: Error found when submitting a job." 1>&2
+    echo "[Error] $FUNCNAME: Error found when submitting a job." >&2
     exit 1
   fi
 else
-  echo "[Error] $FUNCNAME: Error found when submitting a job." 1>&2
+  echo "[Error] $FUNCNAME: Error found when submitting a job." >&2
   exit 1
 fi
 
