@@ -388,6 +388,9 @@ else
           echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
         done
       fi
+    elif [ "$TOPO_TARGZ" = 'T' ] ; then
+      echo "[Error] TOPO_TARGZ = T option requires TOPO_FORMAT = prep" >&2
+      exit 1
     fi
 
     # landuse
@@ -412,6 +415,9 @@ else
           echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
         done
       fi
+    elif [ "$LANDUSE_TARGZ" = 'T' ] ; then
+      echo "[Error] LANDUSE_TARGZ = T option requires LANDUSE_FORMAT = prep" >&2
+      exit 1
     fi
 
     # bdy (prepared)
