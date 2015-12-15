@@ -103,9 +103,11 @@ PROGRAM letkf
   call set_common_conf
 
   call read_nml_letkf
-  call read_nml_letkf_obs
+  call read_nml_letkf_var_local
   call read_nml_letkf_obserr
-  call read_nml_letkf_obs_radar
+  call read_nml_letkf_monitor
+  call read_nml_letkf_radar
+  call read_nml_letkf_h08
 
   call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
@@ -129,7 +131,7 @@ PROGRAM letkf
     !
     ! Read observations
     !
-    call read_obs_all(obs, radarlon, radarlat, radarz)
+    call read_obs_all(obs)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()

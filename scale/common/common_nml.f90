@@ -15,6 +15,7 @@ MODULE common_nml
 
   !----
   integer, parameter :: nvarmax = 100
+  integer, parameter :: nch = 10 ! Num of Himawari-8 (IR) channels 
 
   !--- PARAM_ENSEMBLE
   integer :: MEMBER = 3      ! ensemble size
@@ -30,21 +31,13 @@ MODULE common_nml
   real(r_size) :: SIGMA_OBS = 500.0d3
   real(r_size) :: SIGMA_OBS_RAIN = -1.0d0  ! < 0: same as SIGMA_OBS
   real(r_size) :: SIGMA_OBS_RADAR = -1.0d0 ! < 0: same as SIGMA_OBS
+  real(r_size) :: SIGMA_OBS_H08 = -1.0d0 ! < 0: same as SIGMA_OBS ! H08
   real(r_size) :: SIGMA_OBSV = 0.4d0
   real(r_size) :: SIGMA_OBSV_RAIN = -1.0d0 ! < 0: same as SIGMA_OBSV
   real(r_size) :: SIGMA_OBSZ_RADAR = 1000.0d0
+  real(r_size) :: SIGMA_OBSV_H08 = -1.0d0 ! < 0: same as SIGMA_OBSV ! H08
   real(r_size) :: SIGMA_OBST = 3.0d0
   real(r_size) :: BASE_OBSV_RAIN = 85000.0d0
-
-!RESHAPE( (/ &
-!!       U    V    W    T    P    Q   QC   QR   QI   QS   QG
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! U,V
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! T,Tv
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! Q,RH
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! PS
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,& ! RAIN
-!   & 1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0,1.d0 & ! TC
-!   & /),(/nv3d+nv2d,nvarlocal/))
 
   real(r_size) :: COV_INFL_MUL = 1.0d0    ! > 0: globally constant covariance inflation
                                           ! < 0: 3D inflation values input from a GPV file "infl_mul.grd"
@@ -63,6 +56,8 @@ MODULE common_nml
   integer :: LEV_UPDATE_Q = 100000        ! q and qc are only updated below and equal to this model level
   real(r_size) :: Q_SPRD_MAX = 0.5        ! maximum q (ensemble spread)/(ensemble mean)
 
+  real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0
+
   !--- PARAM_LETKF_PRC
   integer :: NNODES = 1
   integer :: PPN = 1
@@ -71,12 +66,7 @@ MODULE common_nml
 !  integer :: PRC_NUM_X_LETKF = 1
 !  integer :: PRC_NUM_Y_LETKF = 1
 
-  !--- PARAM_LETKF_OBS
-  LOGICAL :: OMB_OUTPUT = .true.
-  LOGICAL :: OMA_OUTPUT = .true.
-  LOGICAL :: OBSGUES_OUTPUT = .false.
-  LOGICAL :: OBSANAL_OUTPUT = .false.
-
+  !--- PARAM_LETKF_VAR_LOCAL
   real(r_size) :: VAR_LOCAL_UV(nvarmax)        = 1.0d0
   real(r_size) :: VAR_LOCAL_T(nvarmax)         = 1.0d0
   real(r_size) :: VAR_LOCAL_Q(nvarmax)         = 1.0d0
@@ -85,8 +75,7 @@ MODULE common_nml
   real(r_size) :: VAR_LOCAL_TC(nvarmax)        = 1.0d0
   real(r_size) :: VAR_LOCAL_RADAR_REF(nvarmax) = 1.0d0
   real(r_size) :: VAR_LOCAL_RADAR_VR(nvarmax)  = 1.0d0
-
-  logical :: USE_RADAR_PSEUDO_RH = .false.
+  real(r_size) :: VAR_LOCAL_H08(nvarmax)       = 1.0d0 ! H08
 
   !--- PARAM_LETKF_OBSERR
   real(r_size) :: OBSERR_U = 1.0d0
@@ -97,8 +86,21 @@ MODULE common_nml
   real(r_size) :: OBSERR_PS = 100.0d0
   real(r_size) :: OBSERR_RADAR_REF = 5.0d0
   real(r_size) :: OBSERR_RADAR_VR = 3.0d0
+  real(r_size) :: OBSERR_H08 = 0.3d0 ! H08  
   logical :: USE_OBSERR_RADAR_REF = .false.
   logical :: USE_OBSERR_RADAR_VR = .false.
+
+  !--- PARAM_LETKF_MONITOR
+  logical :: DEPARTURE_STAT = .true.
+  logical :: DEPARTURE_STAT_RADAR = .false.
+  logical :: DEPARTURE_STAT_H08 = .false.
+  real(r_size) :: DEPARTURE_STAT_T_RANGE = 0.0d0 ! time range within which observations are considered in the departure statistics.
+                                                 ! 0.0d0: no limit
+
+  LOGICAL :: OMB_OUTPUT = .true.
+  LOGICAL :: OMA_OUTPUT = .true.
+  LOGICAL :: OBSGUES_OUTPUT = .false.
+  LOGICAL :: OBSANAL_OUTPUT = .false.
 
   !--- PARAM_LETKF_RADAR
   INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than 0.
@@ -106,6 +108,11 @@ MODULE common_nml
   REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
 
   REAL(r_size) :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
+
+  logical :: USE_RADAR_PSEUDO_RH = .false.
+
+  real(r_size) :: RADAR_EDGE_TAPER_WIDTH = 0.0d0
+  real(r_size) :: RADAR_RANGE = 0.0d0              !!!!!! should not use this and should save this information in obs files !!!!!!
 
   !These 2 flags affects the computation of model reflectivity and radial velocity. 
   INTEGER :: INTERPOLATION_TECHNIQUE = 1
@@ -115,6 +122,16 @@ MODULE common_nml
 
   ! PARAMETERS FOR RADAR DATA ASSIMILATION
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
+
+  !---PARAM_LETKF_H08
+  real(r_size) :: H08_LIMIT_LEV = 20000.0d0 ! (Pa) Upper limit level of the sensitive height for Himawari-8 IR
+  integer :: H08_CH_USE(nch) = (/0,1,1,1,0,0,0,0,0,0/)
+                        !! ch = (1,2,3,4,5,6,7,8,9,10)
+                        !! (B07,B08,B09,B10,B11,B12,B13,B14,B15,B16)
+                        !! ==1: Assimilate
+                        !! ==0: NOT assimilate (rejected by QC in trans_XtoY_H08)
+                        !! It is better to reject B11(ch=5) & B12(ch=6) obs because these bands are 
+                        !! sensitive to chemicals.
 
 contains
 !-----------------------------------------------------------------------
@@ -159,8 +176,10 @@ subroutine read_nml_letkf
     SIGMA_OBS, &
     SIGMA_OBS_RAIN, &
     SIGMA_OBS_RADAR, &
+    SIGMA_OBS_H08, & ! H08
     SIGMA_OBSV, &
     SIGMA_OBSV_RAIN, &
+    SIGMA_OBSV_H08, & ! H08
     SIGMA_OBSZ_RADAR, &
     SIGMA_OBST, &
     BASE_OBSV_RAIN, &
@@ -176,7 +195,8 @@ subroutine read_nml_letkf
     GROSS_ERROR_RADAR_VR, &
     GROSS_ERROR_RADAR_PRH, &
     LEV_UPDATE_Q, &
-    Q_SPRD_MAX
+    Q_SPRD_MAX, &
+    BOUNDARY_TAPER_WIDTH
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
@@ -208,6 +228,13 @@ subroutine read_nml_letkf
   end if
   if (SIGMA_OBSV_RAIN < 0.0d0) then
     SIGMA_OBSV_RAIN = SIGMA_OBSV
+  end if
+
+  if (SIGMA_OBS_H08 < 0.0d0) then ! H08
+    SIGMA_OBS_H08 = SIGMA_OBS
+  end if
+  if (SIGMA_OBSV_H08 < 0.0d0) then ! H08
+    SIGMA_OBSV_H08 = SIGMA_OBSV
   end if
 
   write(6, nml=PARAM_LETKF)
@@ -246,17 +273,13 @@ subroutine read_nml_letkf_prc
 end subroutine read_nml_letkf_prc
 
 !-----------------------------------------------------------------------
-! PARAM_LETKF_OBS
+! PARAM_LETKF_VAR_LOCAL
 !-----------------------------------------------------------------------
-subroutine read_nml_letkf_obs
+subroutine read_nml_letkf_var_local
   implicit none
   integer :: ierr
 
-  namelist /PARAM_LETKF_OBS/ &
-    OMB_OUTPUT, &
-    OMA_OUTPUT, &
-    OBSGUES_OUTPUT, &
-    OBSANAL_OUTPUT, &
+  namelist /PARAM_LETKF_VAR_LOCAL/ &
     VAR_LOCAL_UV, &
     VAR_LOCAL_T, &
     VAR_LOCAL_Q, &
@@ -265,22 +288,22 @@ subroutine read_nml_letkf_obs
     VAR_LOCAL_TC, &
     VAR_LOCAL_RADAR_REF, &
     VAR_LOCAL_RADAR_VR, &
-    USE_RADAR_PSEUDO_RH
+    VAR_LOCAL_H08 ! H08
 
   rewind(IO_FID_CONF)
-  read(IO_FID_CONF,nml=PARAM_LETKF_OBS,iostat=ierr)
+  read(IO_FID_CONF,nml=PARAM_LETKF_VAR_LOCAL,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_LETKF_OBS/ is not found in namelist.'
+    write(6,*) 'Warning: /PARAM_LETKF_VAR_LOCAL/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_OBS. Check!'
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_VAR_LOCAL. Check!'
     stop
   endif
 
-  write(6, nml=PARAM_LETKF_OBS)
+  write(6, nml=PARAM_LETKF_VAR_LOCAL)
 
   return
-end subroutine read_nml_letkf_obs
+end subroutine read_nml_letkf_var_local
 
 !-----------------------------------------------------------------------
 ! PARAM_LETKF_OBSERR
@@ -298,6 +321,7 @@ subroutine read_nml_letkf_obserr
     OBSERR_PS, &
     OBSERR_RADAR_REF, &
     OBSERR_RADAR_VR, &
+    OBSERR_H08, & ! H08
     USE_OBSERR_RADAR_REF, &
     USE_OBSERR_RADAR_VR
 
@@ -316,33 +340,101 @@ subroutine read_nml_letkf_obserr
   return
 end subroutine read_nml_letkf_obserr
 
-subroutine read_nml_letkf_obs_radar
+!-----------------------------------------------------------------------
+! PARAM_LETKF_MONITOR
+!-----------------------------------------------------------------------
+subroutine read_nml_letkf_monitor
   implicit none
   integer :: ierr
 
-  namelist /PARAM_LETKF_OBS_RADAR/ &
+  namelist /PARAM_LETKF_MONITOR/ &
+    DEPARTURE_STAT, &
+    DEPARTURE_STAT_RADAR, &
+    DEPARTURE_STAT_H08, &
+    DEPARTURE_STAT_T_RANGE, &
+    OMB_OUTPUT, &
+    OMA_OUTPUT, &
+    OBSGUES_OUTPUT, &
+    OBSANAL_OUTPUT
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_LETKF_MONITOR,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_LETKF_MONITOR/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_MONITOR. Check!'
+    stop
+  endif
+
+  write(6, nml=PARAM_LETKF_MONITOR)
+
+  return
+end subroutine read_nml_letkf_monitor
+
+!-----------------------------------------------------------------------
+! PARAM_LETKF_RADAR
+!-----------------------------------------------------------------------
+subroutine read_nml_letkf_radar
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_LETKF_RADAR/ &
     MIN_RADAR_REF_MEMBER, &
     MIN_RADAR_REF_DBZ, &
     RADAR_REF_THRES_DBZ, &
     RADAR_PRH_ERROR, &
+    USE_RADAR_PSEUDO_RH, &
+    RADAR_EDGE_TAPER_WIDTH, &
+    RADAR_RANGE, &               !!!!!! should not use this and should save this information in obs files !!!!!!
     INTERPOLATION_TECHNIQUE, &
     METHOD_REF_CALC, &
     USE_TERMINAL_VELOCITY, &
     NRADARTYPE
 
   rewind(IO_FID_CONF)
-  read(IO_FID_CONF,nml=PARAM_LETKF_OBS_RADAR,iostat=ierr)
+  read(IO_FID_CONF,nml=PARAM_LETKF_RADAR,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_LETKF_OBS_RADAR/ is not found in namelist.'
+    write(6,*) 'Warning: /PARAM_LETKF_RADAR/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_OBS_RADAR. Check!'
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_RADAR. Check!'
     stop
   endif
 
-  write(6, nml=PARAM_LETKF_OBS_RADAR)
+  if (RADAR_REF_THRES_DBZ < MIN_RADAR_REF_DBZ) then
+    RADAR_REF_THRES_DBZ = MIN_RADAR_REF_DBZ
+  end if
+
+  write(6, nml=PARAM_LETKF_RADAR)
 
   return
-end subroutine read_nml_letkf_obs_radar
+end subroutine read_nml_letkf_radar
+
+!-----------------------------------------------------------------------
+! PARAM_LETKF_RADAR
+!-----------------------------------------------------------------------
+subroutine read_nml_letkf_h08
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_LETKF_H08/ &
+    H08_LIMIT_LEV, &
+    H08_CH_USE
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_LETKF_H08,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_LETKF_H08/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_H08. Check!'
+    stop
+  endif
+
+  write(6, nml=PARAM_LETKF_H08)
+
+  return
+end subroutine read_nml_letkf_h08
 
 end module common_nml

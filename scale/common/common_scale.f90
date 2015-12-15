@@ -12,7 +12,6 @@ MODULE common_scale
 !=======================================================================
 !$USE OMP_LIB
   USE common
-!  USE common_ncio
   use common_nml
   use common_mpi, only: nprocs, myrank
 
@@ -81,7 +80,7 @@ MODULE common_scale
   INTEGER,PARAMETER :: nv3d=11   ! 3D state variables (in SCALE restart files)
   INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: nv2d=0    ! 2D state variables (in SCALE restart files)
-  INTEGER,PARAMETER :: nv2dd=7   ! 2D diagnostic variables (in SCALE history files)
+  INTEGER,PARAMETER :: nv2dd=9  ! H08  ! 2D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: iv3d_rho=1  !-- State in restart files
   INTEGER,PARAMETER :: iv3d_rhou=2 !
   INTEGER,PARAMETER :: iv3d_rhov=3 !
@@ -118,6 +117,8 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv2dd_v10m=5
   INTEGER,PARAMETER :: iv2dd_t2m=6
   INTEGER,PARAMETER :: iv2dd_q2m=7
+  INTEGER,PARAMETER :: iv2dd_lsmask=8 ! H08
+  INTEGER,PARAMETER :: iv2dd_skint=9 ! H08
 !  INTEGER,PARAMETER :: iv2dd_tsfc=8
 
 
@@ -186,20 +187,6 @@ SUBROUTINE set_common_scale
 
 !  ! setup standard I/O
 !  call IO_setup( MODELNAME, .false.)
-
-!  call read_nml_letkf
-!  call read_nml_letkf_prc
-!  call read_nml_letkf_obs !!!!!!!!!!!!!!!!!!!!!! move outside of subroutine????
-!  call read_nml_letkf_obserr !!!!!!!!!!!!!!!!!!! move outside of subroutine????
-!  call read_nml_letkf_obs_radar !!!!!!!!!!!!!!!! move outside of subroutine????
-
-!  if (nprocs /= NNODES * PPN) then
-!    write(6,'(A,I10)') 'Number of MPI processes = ', nprocs
-!    write(6,'(A,I10)') 'NNODES = ', NNODES
-!    write(6,'(A,I10)') 'PPN    = ', PPN
-!    write(6,'(A)') 'Number of MPI processes should be equal to NNODES * PPN.'
-!    stop
-!  end if
 
   !
   ! Set up node and process distribution
@@ -283,6 +270,8 @@ SUBROUTINE set_common_scale
     v2dd_name(iv2dd_v10m) = 'V10'
     v2dd_name(iv2dd_t2m) = 'T2'
     v2dd_name(iv2dd_q2m) = 'Q2'
+    v2dd_name(iv2dd_lsmask) = 'lsmask' ! H08
+    v2dd_name(iv2dd_skint) = 'SFC_TEMP' ! H08
 !    v2dd_name(iv2dd_tsfc) = 'SFC_TEMP'
     !
     ! Lon, Lat
@@ -695,8 +684,8 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
     v3dgtmp(:,is:ie,js:je) = real(v3dg(:,:,:,iv3d), r_dble)
     call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
+!    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)  !!! read and write again to work around the endian problem on the K computer
+!    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)  !
   end do
 
   do iv2d = 1, nv2d
@@ -704,8 +693,8 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
     v2dgtmp(is:ie,js:je) = real(v2dg(:,:,iv2d), r_dble)
     call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+!    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !!! read and write again to work around the endian problem on the K computer
+!    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !
   end do
 
   call ncio_close(ncid)
@@ -1133,6 +1122,41 @@ subroutine ij_l2g(proc, il, jl, ig, jg)
 end subroutine ij_l2g
 
 
+
+subroutine rij_g2l(proc, ig, jg, il, jl)
+  implicit none
+  integer, intent(in) :: proc
+  real(r_size), intent(in) :: ig
+  real(r_size), intent(in) :: jg
+  real(r_size), intent(out) :: il
+  real(r_size), intent(out) :: jl
+  integer :: iproc, jproc
+
+  call rank_1d_2d(proc, iproc, jproc)
+  il = ig - real(iproc * nlon,r_size)
+  jl = jg - real(jproc * nlat,r_size)
+
+  return  
+end subroutine rij_g2l
+
+
+subroutine rij_l2g(proc, il, jl, ig, jg)
+  implicit none
+  integer, intent(in) :: proc
+  real(r_size), intent(in) :: il
+  real(r_size), intent(in) :: jl
+  real(r_size), intent(out) :: ig
+  real(r_size), intent(out) :: jg
+  integer :: iproc, jproc
+
+  call rank_1d_2d(proc, iproc, jproc)
+  ig = il + real(iproc * nlon,r_size)
+  jg = jl + real(jproc * nlat,r_size)
+
+  return  
+end subroutine rij_l2g
+
+
 !-----------------------------------------------------------------------
 ! using halo!
 ! proc = -1: outside the global domain
@@ -1169,8 +1193,8 @@ SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
 
   iproc = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(nlon,r_size)) - 1
   jproc = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
-  il = ig - iproc * nlon
-  jl = jg - jproc * nlat
+  il = ig - real(iproc * nlon,r_size)
+  jl = jg - real(jproc * nlat,r_size)
   call rank_2d_1d(iproc,jproc,proc)
 
 !  if (PRC_myrank == proc) then                                                                                    ! [for validation]

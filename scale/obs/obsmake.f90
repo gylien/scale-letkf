@@ -23,7 +23,6 @@ PROGRAM obsmake
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
   type(obs_info) :: obs(nobsfiles)
-  real(r_size) :: radarlon, radarlat, radarz
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -42,9 +41,9 @@ PROGRAM obsmake
   call set_common_conf
 
   call read_nml_letkf
-  call read_nml_letkf_obs
   call read_nml_letkf_obserr
-  call read_nml_letkf_obs_radar
+  call read_nml_letkf_radar
+  call read_nml_letkf_h08
 
   call set_mem_node_proc(1,NNODES,PPN,MEM_NODES,MEM_NP)
 
@@ -66,7 +65,7 @@ PROGRAM obsmake
 !-----------------------------------------------------------------------
 
     if (myrank_mem_use) then
-      call read_obs_all(obs, radarlon, radarlat, radarz)
+      call read_obs_all(obs)
     end if
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -79,7 +78,7 @@ PROGRAM obsmake
 !-----------------------------------------------------------------------
 
     if (myrank_mem_use) then
-      CALL obsmake_cal(obs, radarlon, radarlat, radarz)
+      CALL obsmake_cal(obs)
     end if
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)

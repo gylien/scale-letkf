@@ -25,6 +25,7 @@ Usage: $0 MYRANK ATIME TMPDIR EXECDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_EN
   SLOT_START  Start observation timeslots
   SLOT_END    End observation timeslots
   SLOT_BASE   The base slot
+  MEMBERSEQ
 
 EOF
   exit 1
@@ -39,7 +40,8 @@ MEM_NODES="$1"; shift
 MEM_NP="$1"; shift
 SLOT_START="$1"; shift
 SLOT_END="$1"; shift
-SLOT_BASE="$1"
+SLOT_BASE="$1"; shift
+MEMBERSEQ=${1:-$MEMBER}
 
 #===============================================================================
 
@@ -57,7 +59,7 @@ done
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.letkf | \
-    sed -e "s/\[MEMBER\]/ MEMBER = $MEMBER,/" \
+    sed -e "s/\[MEMBER\]/ MEMBER = $MEMBERSEQ,/" \
         -e "s/\[SLOT_START\]/ SLOT_START = $SLOT_START,/" \
         -e "s/\[SLOT_END\]/ SLOT_END = $SLOT_END,/" \
         -e "s/\[SLOT_BASE\]/ SLOT_BASE = $SLOT_BASE,/" \

@@ -29,7 +29,7 @@ MODULE letkf_obs
   real(r_size),save :: dlat_zero
 
   type(obs_info),save :: obs(nobsfiles)
-  type(obs_da_value) :: obsda
+  type(obs_da_value),save :: obsda
 !  type(obs_da_value),save :: obsda
   type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
                                                     !!!!!! need to add %err and %dat if they can be determined in letkf_obs.f90
@@ -38,8 +38,6 @@ MODULE letkf_obs
   integer,allocatable,save :: nobsgrd2(:,:,:)
   integer,save :: nobstotalg
   integer,save :: nobstotal
-
-  real(r_size) :: radarlon, radarlat, radarz
 
 CONTAINS
 !-----------------------------------------------------------------------
@@ -129,7 +127,7 @@ SUBROUTINE set_letkf_obs
       write (obsdafile(12:17),'(I6.6)') proc2mem(2,it,myrank+1)
 
       if (.not. check) then
-        CALL get_nobs(obsdafile,6,obsda%nobs)
+        CALL get_nobs(obsdafile,7,obsda%nobs) ! H08
         WRITE(6,'(A,I9,A)') 'TOTAL: ', obsda%nobs, ' OBSERVATIONS'
         CALL obs_da_value_allocate(obsda,MEMBER)
       end if
@@ -190,6 +188,7 @@ SUBROUTINE set_letkf_obs
       CALL MPI_BARRIER(MPI_COMM_e,ierr)
       call MPI_BCAST(obsda%set, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%idx, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
+      call MPI_BCAST(obsda%lev, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr) ! H08
       call MPI_BCAST(obsda%ri, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%rj, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
 !        CALL MPI_BARRIER(MPI_COMM_e,ierr)
@@ -230,10 +229,12 @@ SUBROUTINE set_letkf_obs
 !!
 !! Pre-process radar observations
 !!
+
+  write (6, '(A)') '******'
+
   !!!!!! may be moved to latter
   do iof = 1, nobsfiles
     do n = 1, obs(iof)%nobs
-
       if (obs(iof)%elm(n) == id_radar_ref_obs) then
         if (obs(iof)%dat(n) >= 0.0d0 .and. obs(iof)%dat(n) < 1.0d10) then
           if (obs(iof)%dat(n) < MIN_RADAR_REF) then
@@ -252,7 +253,6 @@ SUBROUTINE set_letkf_obs
       if (USE_OBSERR_RADAR_VR .AND. obs(iof)%elm(n) == id_radar_vr_obs) then
         obs(iof)%err(n) = OBSERR_RADAR_VR
       end if
-
     end do ! [ n = 1, obs(iof)%nobs ]
   end do ! [ iof = 1, nobsfiles ]
   !!!!!!
@@ -382,7 +382,7 @@ SUBROUTINE set_letkf_obs
       !!! obsda%ensval: already converted to dBZ
       mem_ref = 0
       do i = 1, MEMBER
-        if (obsda%ensval(i,n) >= RADAR_REF_THRES_DBZ) then
+        if (obsda%ensval(i,n) > RADAR_REF_THRES_DBZ+1.0d-6) then
           mem_ref = mem_ref + 1
         end if
       end do
@@ -397,7 +397,30 @@ SUBROUTINE set_letkf_obs
     end if
 !!!###### end RADAR assimilation ######
 
+!!!###### Himawari-8 assimilation ###### ! H08
+    if (obs(obsda%set(n))%elm(obsda%idx(n)) == id_H08IR_obs) then
+      if (obs(obsda%set(n))%dat(obsda%idx(n)) == undef) then
+        obsda%qc(n) = iqc_obs_bad
+        cycle
+      end if
 
+! -- reject Himawari-8 obs sensitivie above the 200 hPa ! H08 --
+      if (obsda%lev(n) < 20000.0) then
+        obsda%qc(n) = iqc_obs_bad
+        cycle
+      endif
+!
+! -- reject Band #11(ch=5) & #12(ch=6) of Himawari-8 obs ! H08
+! -- because these channels are sensitive to chemical tracers
+! NOTE!!
+!    channel num of Himawari-8 obs is stored in obs%lev (T.Honda 11/04/2015)
+      if ((int(obs(obsda%set(n))%elm(obsda%idx(n))) == 11) .or. &
+          (int(obs(obsda%set(n))%lev(obsda%idx(n))) == 12)) then
+        obsda%qc(n) = iqc_obs_bad
+        cycle
+      endif
+    endif
+!!!###### end Himawari-8 assimilation ###### ! H08
 
     obsda%val(n) = obsda%ensval(1,n)
     DO i=2,MEMBER
@@ -432,11 +455,32 @@ SUBROUTINE set_letkf_obs
       END IF
     end select
 
+    IF(obs(obsda%set(n))%elm(obsda%idx(n)) == id_H08IR_obs)then
+      write (6, '(2I6,2F8.2,4F12.4,2I3)')obs(obsda%set(n))%elm(obsda%idx(n)), &
+                                         obs(obsda%set(n))%typ(obsda%idx(n)), &
+                                         obs(obsda%set(n))%lon(obsda%idx(n)), &
+                                         obs(obsda%set(n))%lat(obsda%idx(n)), &
+                                         obsda%lev(n), &
+                                         obs(obsda%set(n))%dat(obsda%idx(n)), &
+                                         obs(obsda%set(n))%err(obsda%idx(n)), &
+                                         obsda%val(n), &
+                                         obsda%qc(n), &
+                                         int(obs(obsda%set(n))%lev(obsda%idx(n)))
 
 
-write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsda%set(n))%typ(obsda%idx(n)), obs(obsda%set(n))%lon(obsda%idx(n)), &
-                                   obs(obsda%set(n))%lat(obsda%idx(n)), obs(obsda%set(n))%lev(obsda%idx(n)), obs(obsda%set(n))%dat(obsda%idx(n)), &
-                                   obs(obsda%set(n))%err(obsda%idx(n)), obsda%val(n), obsda%qc(n)
+    ELSE
+      write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), &
+                                         obs(obsda%set(n))%typ(obsda%idx(n)), &
+                                         obs(obsda%set(n))%lon(obsda%idx(n)), &
+                                         obs(obsda%set(n))%lat(obsda%idx(n)), &
+                                         obs(obsda%set(n))%lev(obsda%idx(n)), &
+                                         obs(obsda%set(n))%dat(obsda%idx(n)), &
+                                         obs(obsda%set(n))%err(obsda%idx(n)), &
+                                         obsda%val(n), &
+                                         obsda%qc(n)
+    ENDIF
+
+
 !write (6, '(A,15F8.2)') '-- ', obsda%ensval(:,n)
 
 
@@ -575,6 +619,7 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
       obsda2(PRC_myrank)%qc(nnext(i,j)) = obsda%qc(n)
       obsda2(PRC_myrank)%ri(nnext(i,j)) = obsda%ri(n)
       obsda2(PRC_myrank)%rj(nnext(i,j)) = obsda%rj(n)
+      obsda2(PRC_myrank)%lev(nnext(i,j)) = obsda%lev(n) ! H08
 
       nnext(i,j) = nnext(i,j) + 1
     end if
@@ -665,6 +710,7 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
             obsbufs%qc(n) = obsda2(PRC_myrank)%qc(obsidx(n))
             obsbufs%ri(n) = obsda2(PRC_myrank)%ri(obsidx(n))
             obsbufs%rj(n) = obsda2(PRC_myrank)%rj(obsidx(n))
+            obsbufs%lev(n) = obsda2(PRC_myrank)%lev(obsidx(n)) ! H08
           end do
         else
           call obs_choose(imin2,imax2,jmin2,jmax2,ip2,nr(ip2+1))
@@ -689,6 +735,7 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
     call MPI_GATHERV(obsbufs%qc, ns, MPI_INTEGER, obsbufr%qc, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
     call MPI_GATHERV(obsbufs%ri, ns, MPI_r_size, obsbufr%ri, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
     call MPI_GATHERV(obsbufs%rj, ns, MPI_r_size, obsbufr%rj, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%lev, ns, MPI_r_size, obsbufr%lev, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
 
 
     if (PRC_myrank == ip) then
@@ -702,6 +749,7 @@ write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsd
           obsda2(ip2)%qc = obsbufr%qc(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
           obsda2(ip2)%ri = obsbufr%ri(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
           obsda2(ip2)%rj = obsbufr%rj(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
+          obsda2(ip2)%lev = obsbufr%lev(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1)) ! H08
 
 !            write(6,*) obsda2(ip2)%idx
 
@@ -778,12 +826,12 @@ SUBROUTINE obs_choose(imin,imax,jmin,jmax,proc,nn,nobs_use,nobsgrdout)
   INTEGER,INTENT(INOUT) :: nn
   INTEGER,INTENT(INOUT),OPTIONAL :: nobs_use(:)
   logical,intent(in),optional :: nobsgrdout
-  logical :: nobsgrdoutr
+  logical :: nobsgrdout_
   INTEGER :: j,ip
 
-  nobsgrdoutr = .false.
-  if (present(nobsgrdout)) nobsgrdoutr = nobsgrdout
-  if (nobsgrdoutr) then
+  nobsgrdout_ = .false.
+  if (present(nobsgrdout)) nobsgrdout_ = nobsgrdout
+  if (nobsgrdout_) then
     nobsgrd2(:,:,proc) = 0
   end if
 
@@ -812,7 +860,7 @@ SUBROUTINE obs_choose(imin,imax,jmin,jmax,proc,nn,nobs_use,nobsgrdout)
       end if
     END DO
 
-    if (nobsgrdoutr) then
+    if (nobsgrdout_) then
       if (j > 1) then
         nobsgrd2(0:imax-1,j,proc) = nobsgrd2(nlon,j-1,proc)
       end if
@@ -824,7 +872,7 @@ SUBROUTINE obs_choose(imin,imax,jmin,jmax,proc,nn,nobs_use,nobsgrdout)
 
   END DO
 
-  if (nobsgrdoutr) then
+  if (nobsgrdout_) then
     if (jmax < nlat) then
       nobsgrd2(:,jmax+1:nlat,proc) = nobsgrd2(nlon,jmax,proc)
     end if

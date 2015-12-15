@@ -238,6 +238,8 @@ distribute_da_cycle () {
 #                '-': No output (default)
 #   DISTR_FILE   Location of the 'distr' file
 #                '-': The first-time run; output 'distr' file in $NODEFILEDIR
+#   MEMBERS      List of forecast members
+#                '-': Sequential numbers (default)
 #
 # Other input variables:
 #   $MEMBER      Ensemble size
@@ -276,7 +278,8 @@ distribute_da_cycle () {
 
 local NODEFILE=${1:-machinefile}; shift
 local NODEFILEDIR=${1:-'-'}; shift
-local DISTR_FILE=${1:-'-'}
+local DISTR_FILE=${1:-'-'}; shift
+local MEMBERS="${1:-'all'}"
 
 if [ "$DISTR_FILE" != '-' ]; then
   if [ -z "$DISTR_FILE" ]; then
@@ -289,11 +292,12 @@ fi
 #-------------------------------------------------------------------------------
 # Set up node names and member names
 
-mmean=$((MEMBER+1))
-msprd=$((MEMBER+2))
-
 if ((MACHINE_TYPE == 1)); then
   read_nodefile_pbs "$NODEFILE"
+elif ((MACHINE_TYPE == 2)); then
+  ####
+  echo
+  ####
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
   local n
   local p
@@ -310,10 +314,25 @@ else
   exit 1
 fi
 
-local m
-for m in $(seq $MEMBER); do
-  name_m[$m]=$(printf $MEMBER_FMT $m)
-done
+if [ "$MEMBERS" = 'all' ]; then
+  local m
+  for m in $(seq $MEMBER); do
+    name_m[$m]=$(printf $MEMBER_FMT $m)
+  done
+else
+  local m=0
+  for iname in $MEMBERS; do
+    m=$((m+1))
+    name_m[$m]=$iname
+  done
+  if ((m != MEMBER)); then
+    echo "[Error] Number of members (\$MEMBERS) is not equal to \$MEMBER." >&2
+    exit 1
+  fi
+fi
+
+mmean=$((MEMBER+1))
+msprd=$((MEMBER+2))
 name_m[$mmean]='mean'
 name_m[$msprd]='sprd'
 
@@ -322,7 +341,8 @@ name_m[$msprd]='sprd'
 
 set_mem_np $((MEMBER+1)) $SCALE_NP $SCALE_NP
 
-set_mem2node $((MEMBER+1)) "$DISTR_FILE"
+set_mem2node $((MEMBER+1))
+#set_mem2node $((MEMBER+1)) "$DISTR_FILE"
 
 local p
 for p in $(seq $mem_np); do
@@ -421,6 +441,10 @@ msprd=$((MEMBER+2))
 
 if ((MACHINE_TYPE == 1)); then
   read_nodefile_pbs "$NODEFILE"
+elif ((MACHINE_TYPE == 2)); then
+  ####
+  echo
+  ####
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
   local n
   local p
@@ -709,6 +733,17 @@ fi
 
 if ((MACHINE_TYPE == 1)); then
   read_nodefile_pbs "$NODEFILE"
+elif ((MACHINE_TYPE == 2)); then
+  local n
+  local p
+  if [ "$DISTR_FILE" = '-' ]; then
+    for n in $(seq $NNODES); do
+      for p in $(seq $PPN); do
+        node[$(((n-1)*PPN+p))]="($((n-1)))"
+        echo "node[$(((n-1)*PPN+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
+      done
+    done
+  fi # [ "$DISTR_FILE" = '-' ]
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
   local n
   local p

@@ -66,7 +66,7 @@ declare -a proc2node
 declare -a proc2group
 declare -a proc2grpproc
 
-distribute_da_cycle machinefile - $NODEFILE_DIR/distr
+distribute_da_cycle machinefile - $NODEFILE_DIR/distr "$MEMBERS"
 
 #===============================================================================
 # Run one step

@@ -184,6 +184,16 @@ if ((MACHINE_TYPE == 1)); then
   $MPIRUN -d $progdir $HOSTLIST 1 ./$progbase $ARGS
 #  $MPIRUN -d $progdir $HOSTLIST 1 omplace -nt ${THREADS} ./$progbase $ARGS
 
+elif ((MACHINE_TYPE == 2)); then
+
+#  local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
+#  HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
+
+  NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
+
+#echo "$MPIRUN -np $NNP -wdir $progdir ./$progbase $ARGS"
+  $MPIRUN -np $NNP -wdir $progdir ./$progbase $ARGS
+
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
   local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
@@ -288,6 +298,22 @@ if ((MACHINE_TYPE == 1)); then
 
   $MPIRUN -d $SCRP_DIR $HOSTLIST 1 $pdbash_exec $SCRIPT $ARGS
 #  $MPIRUN -d $SCRP_DIR $HOSTLIST 1 bash $SCRIPT - $ARGS
+
+elif ((MACHINE_TYPE == 2)); then
+
+  if [ "$PROC_OPT" == 'all' ]; then
+#    local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
+    NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
+  elif [ "$PROC_OPT" == 'one' ]; then
+#    local HOSTLIST=$(head -n 1 ${NODEFILE_DIR}/${NODEFILE})
+    NNP=1
+  else
+    exit 1
+  fi
+#  HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
+
+#echo "$MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS"
+  $MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS
 
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
@@ -457,6 +483,87 @@ exit $res
 
 #===============================================================================
 
+history_files_for_bdy () {
+#-------------------------------------------------------------------------------
+# Find the corresponding history files for preparing boundary files
+#
+# Usage: history_files_for_bdy
+#
+#   TIME
+#   FCSTLEN
+#   PARENT_LCYCLE
+#   PARENT_FOUT
+#   PARENT_REF_TIME
+#   ONEFILE
+#
+# Return variables:
+#   $nfiles
+#   $ntsteps
+#   $ntsteps_skip
+#   $history_times[1...$nfiles]
+#
+#  *Require source 'func_datetime' first.
+#-------------------------------------------------------------------------------
+
+if (($# < 5)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local TIME=$1; shift
+local FCSTLEN=$1; shift
+local PARENT_LCYCLE=$1; shift
+local PARENT_FOUT=$1; shift
+local PARENT_REF_TIME=$1; shift
+local ONEFILE=${1:-0}
+
+#-------------------------------------------------------------------------------
+
+local parent_time_start=$PARENT_REF_TIME
+local parent_time_start_prev=$parent_time_start
+while ((parent_time_start <= TIME)); do
+  parent_time_start_prev=$parent_time_start
+  parent_time_start=$(datetime $parent_time_start $PARENT_LCYCLE s)
+done
+parent_time_start=$parent_time_start_prev
+
+while ((parent_time_start > TIME)); do
+  parent_time_start=$(datetime $parent_time_start -${PARENT_LCYCLE} s)
+done
+
+ntsteps_skip=0
+local itime=$parent_time_start
+while ((itime < TIME)); do
+  ntsteps_skip=$((ntsteps_skip+1))
+  itime=$(datetime $itime ${PARENT_FOUT} s)
+done
+if ((itime > TIME)); then
+  echo "[Error] $FUNCNAME: Cannot not find the requested timeframe ($TIME) in history files." >&2
+  exit 1
+fi
+
+local ntsteps_total=$(((FCSTLEN-1)/PARENT_FOUT+2 + ntsteps_skip))
+
+if ((ONEFILE == 1)); then
+  ntsteps=$ntsteps_total
+  nfiles=1
+  history_times[1]=$(datetime $parent_time_start $PARENT_LCYCLE s)
+else
+  ntsteps=$((PARENT_LCYCLE / PARENT_FOUT))
+  nfiles=1
+  history_times[1]=$(datetime $parent_time_start $PARENT_LCYCLE s)
+  while ((ntsteps_total > ntsteps)); do
+    nfiles=$((nfiles+1))
+    history_times[$nfiles]=$(datetime ${history_times[$((nfiles-1))]} $PARENT_LCYCLE s)
+    ntsteps_total=$((ntsteps_total-ntsteps))
+  done
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
 job_submit_PJM () {
 #-------------------------------------------------------------------------------
 # Submit a PJM job.
@@ -466,7 +573,7 @@ job_submit_PJM () {
 #   JOBSCRP  Job script
 #
 # Return variables:
-#   jobid  Job ID monitered
+#   $jobid  Job ID monitered
 #-------------------------------------------------------------------------------
 
 if (($# < 1)); then
@@ -487,11 +594,11 @@ echo $res
 if [ -z "$(echo $res | grep '\[ERR.\]')" ]; then
   jobid=$(echo $res | grep 'submitted' | cut -d ' ' -f 6)
   if [ -z "$jobid" ]; then
-    echo "[Error] $FUNCNAME: Error found when submitting a job." 1>&2
+    echo "[Error] $FUNCNAME: Error found when submitting a job." >&2
     exit 1
   fi
 else
-  echo "[Error] $FUNCNAME: Error found when submitting a job." 1>&2
+  echo "[Error] $FUNCNAME: Error found when submitting a job." >&2
   exit 1
 fi
 
@@ -518,7 +625,13 @@ local JOBID="$1"
 
 #-------------------------------------------------------------------------------
 
-while (($(pjstat $JOBID | sed -n '2p' | awk '{print $10}') >= 1)); do
+while true; do
+  jobnum=$(pjstat $JOBID | sed -n '2p' | awk '{print $10}')
+  if [[ "$jobnum" =~ ^[0-9]+$ ]]; then
+    if ((jobnum == 0)); then
+      break
+    fi
+  fi
   sleep 5s
 done
 
