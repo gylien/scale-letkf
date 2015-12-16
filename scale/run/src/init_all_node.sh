@@ -49,6 +49,7 @@ if [ "$LANDUSE_FORMAT" != 'prep' ]; then
   rm -f $RUNDIR/scale_pp/input_landuse
   ln -fs $DATADIR/landuse/${LANDUSE_FORMAT}/Products $RUNDIR/scale_pp/input_landuse
 fi
+mkdir -p $RUNDIR/scale_pp/Fprofd
 
 mkdir -p $RUNDIR/scale_init
 ln -fs $DATADIR/exec/scale-les_init_ens $RUNDIR/scale_init
@@ -68,6 +69,7 @@ if ((BDY_FORMAT == 1)); then
     ln -fs $TMPOUT/bdyscale/latlon_domain_catalogue.txt $RUNDIR/scale_init/latlon_domain_catalogue.txt
   fi
 fi
+mkdir -p $RUNDIR/scale_init/Fprofd
 
 mkdir -p $RUNDIR/scale
 ln -fs $DATADIR/exec/scale-les_ens $RUNDIR/scale
@@ -80,13 +82,16 @@ ln -fs $DATADIR/rad/MIPAS/equ.atm $RUNDIR/scale
 ln -fs $DATADIR/rad/MIPAS/sum.atm $RUNDIR/scale
 ln -fs $DATADIR/rad/MIPAS/win.atm $RUNDIR/scale
 ln -fs $DATADIR/land/param.bucket.conf $RUNDIR/scale
+mkdir -p $RUNDIR/scale/Fprofd
 
 if [ "$SCPCALL" == 'cycle' ]; then
   mkdir -p $RUNDIR/obsope
   ln -fs $DATADIR/exec/obsope $RUNDIR/obsope
+  mkdir -p $RUNDIR/obsope/Fprofd
 
   mkdir -p $RUNDIR/letkf
   ln -fs $DATADIR/exec/letkf $RUNDIR/letkf
+  mkdir -p $RUNDIR/letkf/Fprofd
 fi
 
 #===============================================================================

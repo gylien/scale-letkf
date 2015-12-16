@@ -70,6 +70,10 @@ PROGRAM obsope
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------
+#ifdef _FIPP_LETKF_
+  call fipp_start
+#endif
+!-----------------------------------------------------------------------
 
   call set_common_conf
 
@@ -136,6 +140,10 @@ PROGRAM obsope
   WRITE(6,timer_fmt) '### TIMER(FINALIZE):',rtimer-rtimer00
   rtimer00=rtimer
 
+!-----------------------------------------------------------------------
+#ifdef _FIPP_LETKF_
+  call fipp_stop
+#endif
 !-----------------------------------------------------------------------
 ! Post-processing scripts
 !-----------------------------------------------------------------------

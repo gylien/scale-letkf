@@ -5,16 +5,16 @@
 #
 #===============================================================================
 
-STIME='20130713053000'
-ETIME='20130713053000'
-MEMBERS='1 2 3 4 5 6 7'
+STIME='20130713060000'
+ETIME='20130713060000'
+MEMBERS='1 2 3 4 5 6'
 ISTEP=
 FSTEP=
-TIME_LIMIT='06:40:00'
+TIME_LIMIT='00:45:00'
 
 #===============================================================================
 
-FCSTOUT=600
+FCSTOUT=30
 
 #OBSOPE_OPT=1       # Observation operator options:
 #                   #  1: use LETKF built-in obsope
@@ -36,7 +36,7 @@ ADAPTINFL=0         # Adaptive inflation
 
 #===============================================================================
 
-MAKEINIT=1       # 0: No
+MAKEINIT=0       # 0: No
                  # 1: Yes
 PERTURB_BDY=0    # 0: No
                  # 1: Yes
@@ -50,7 +50,7 @@ OBSOPE=0         # 0: No    ! obsope options: not finished yet!!
 
                  #      anal              gues
                  #      mean/sprd members mean/sprd members history
-OUT_OPT=1        # 1:   o         o       o         o       o
+OUT_OPT=2        # 1:   o         o       o         o       o
                  # 2:   o         o       o         o
                  # 3:   o         o       o
                  # 4:   o                 o

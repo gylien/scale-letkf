@@ -75,6 +75,11 @@ if ((OUT_OPT >= 2)); then
   fi
 fi
 
+######
+#mkdir -p $TMPOUT/${ATIME}/log/obsope/Fprofd
+#mv -f $TMPDIR/../Fprofd/* $TMPOUT/${ATIME}/log/obsope/Fprofd
+######
+
 #===============================================================================
 
 exit 0

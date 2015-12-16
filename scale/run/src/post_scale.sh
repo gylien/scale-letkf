@@ -129,6 +129,11 @@ fi
 #  done
 #fi
 
+######
+#mkdir -p $TMPOUT/${STIME}/log/scale/Fprofd
+#mv -f $TMPDIR/../Fprofd/* $TMPOUT/${STIME}/log/scale/Fprofd
+######
+
 #===============================================================================
 
 exit 0

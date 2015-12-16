@@ -37,6 +37,11 @@ FBYTESWAP =
 FFREE     = -Free
 FFIXED    = -Fixed
 
+
+FOPTS_SCALE += -D_FIPP_LETKF_
+FOPTS       += -D_FIPP_LETKF_
+
+
 # -- for Himawari-8 assimilatin on the K computer (T.Honda)
 # -- If you want to compile without RTTOV (Himawari assimilation),
 # -- you should set "H08 = F".

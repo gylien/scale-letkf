@@ -117,6 +117,10 @@ program scaleles_pp_ens
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------
+#ifdef _FIPP_LETKF_
+  call fipp_start
+#endif
+!-----------------------------------------------------------------------
 
   call set_common_conf
   call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
@@ -200,6 +204,10 @@ program scaleles_pp_ens
   WRITE(6,timer_fmt) '### TIMER(SCALE_LES):',rtimer-rtimer00
   rtimer00=rtimer
 
+!-----------------------------------------------------------------------
+#ifdef _FIPP_LETKF_
+  call fipp_stop
+#endif
 !-----------------------------------------------------------------------
 ! Post-processing scripts
 !-----------------------------------------------------------------------
