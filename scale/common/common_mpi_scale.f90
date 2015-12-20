@@ -1452,6 +1452,8 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
 
 
   IF(myrank_e == lastmem_rank_e) THEN
+    WRITE(filename(1:4),'(A4)') file
+    WRITE(filename(6:9),'(A4)') 'mean'
     call state_trans_inv(v3dg)
     call write_restart(filename,v3dg,v2dg)
 
