@@ -899,8 +899,9 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
           dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n)))) - LOG(rlev)) / SIGMA_OBSV !GYL
         end select                                                                                                    !GYL
 
-        if (dist > dist_zero_fac) cycle
-        if (dlev > dist_zero_fac) cycle
+!        if (dist > dist_zero_fac) cycle
+!        if (dlev > dist_zero_fac) cycle
+        if (dist*dist + dlev*dlev > dist_zero_fac*dist_zero_fac) cycle
         !
         ! variable localization
         !

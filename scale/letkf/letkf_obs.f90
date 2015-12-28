@@ -24,7 +24,14 @@ MODULE letkf_obs
   IMPLICIT NONE
   PUBLIC
 
+!  real(r_size),save :: sigma_obs_i(nid_obs,nobtype)
+!  real(r_size),save :: sigma_obs_j(nid_obs,nobtype)
+!  real(r_size),save :: sigma_obs_lnp(nid_obs,nobtype)
+!  real(r_size),save :: sigma_obs_z(nid_obs,nobtype)
+
   real(r_size),save :: dist_zero_fac
+!  real(r_size),save :: zero_obs_i(nid_obs,nobtype)
+!  real(r_size),save :: zero_obs_j(nid_obs,nobtype)
   real(r_size),save :: dlon_zero
   real(r_size),save :: dlat_zero
 
@@ -105,13 +112,35 @@ SUBROUTINE set_letkf_obs
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
+
+!  sigma_obs_i(:               ,:) = SIGMA_OBS
+!  sigma_obs_i(id_rain_obs     ,:) = SIGMA_OBS_RAIN
+!  sigma_obs_i(id_radar_ref_obs,:) = SIGMA_OBS_RADAR
+!  sigma_obs_i(id_radar_vr_obs ,:) = SIGMA_OBS_RADAR
+!  sigma_obs_i(id_radar_prh_obs,:) = SIGMA_OBS_RADAR
+!  sigma_obs_i(id_H08IR_obs    ,:) = SIGMA_OBS_H08
+
+!  sigma_obs_j = sigma_obs_i / DY
+!  sigma_obs_i = sigma_obs_i / DX
+
   dist_zero_fac = SQRT(10.0d0/3.0d0) * 2.0d0
+!  zero_obs_i = sigma_obs_i * dist_zero_fac
+!  zero_obs_j = sigma_obs_j * dist_zero_fac
 
   !!!!!! changes for different observation types.... (do not communicate all observaitons in the same way...)
   dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR) * dist_zero_fac / DX
   dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR) * dist_zero_fac / DY
 !  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RAIN, SIGMA_OBS_RADAR) * dist_zero_fac / DX
 !  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RAIN, SIGMA_OBS_RADAR) * dist_zero_fac / DY
+
+!  sigma_obs_lnp(:           ,:) = SIGMA_OBSV
+!  sigma_obs_lnp(id_rain_obs ,:) = SIGMA_OBSV_RAIN
+!  sigma_obs_lnp(id_H08IR_obs,:) = SIGMA_OBSV_H08
+
+!  sigma_obs_z(:               ,:) = 1.0D-7
+!  sigma_obs_z(id_radar_ref_obs,:) = SIGMA_OBSZ_RADAR
+!  sigma_obs_z(id_radar_vr_obs ,:) = SIGMA_OBSZ_RADAR
+!  sigma_obs_z(id_radar_prh_obs,:) = SIGMA_OBSZ_RADAR
 
 
 ! Read observations
@@ -781,7 +810,16 @@ SUBROUTINE set_letkf_obs
   nobstotal = 0
   do ip = 0, MEM_NP-1
     nobstotal = nobstotal + obsda2(ip)%nobs
+
+
+!write(6,'(A,I4,A,I10)') 'nobs(', ip+1, ') =', obsda2(ip)%nobs
+
   end do
+
+
+!write(6,'(A,I10)') 'nobstotal =', nobstotal
+
+
   if (nobstotal /= sum(nobsgrd(nlon,nlat,:))) then
 
 print *, myrank, nobstotalg, nobstotal, nobsgrd(nlon,nlat,:)
