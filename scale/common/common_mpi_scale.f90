@@ -1526,6 +1526,54 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
   RETURN
 END SUBROUTINE write_ensmspr_mpi
 
+
+
+subroutine read_obs_all_mpi(obs)
+  implicit none
+
+  type(obs_info), intent(out) :: obs(nobsfiles)
+  integer :: iof, ierr
+
+  REAL(r_dble) :: rrtimer00,rrtimer
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer00 = MPI_WTIME()
+
+  if (myrank_a == 0) then
+    call read_obs_all(obs)
+  end if
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()  
+  WRITE(6,'(A,F10.2)') '###### read_obs_all_mpi:read_obs_all:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+  do iof = 1, nobsfiles
+    call MPI_BCAST(obs(iof)%nobs, 1, MPI_INTEGER, 0, MPI_COMM_a, ierr)
+    if (myrank_a /= 0) then
+      call obs_info_allocate(obs(iof))
+    end if
+
+    call MPI_BCAST(obs(iof)%elm, obs(iof)%nobs, MPI_INTEGER, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%lon, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%lat, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%lev, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%dat, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%err, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%typ, obs(iof)%nobs, MPI_INTEGER, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%dif, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%meta, max_obs_info_meta, MPI_r_size, 0, MPI_COMM_a, ierr)
+  end do ! [ iof = 1, nobsfiles ]
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### read_obs_all_mpi:bcast:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+  return
+end subroutine read_obs_all_mpi
+
+
+
 !!-----------------------------------------------------------------------
 !! Get number of observations from ensemble obs2 data,
 !! assuming all members have the identical obs records
