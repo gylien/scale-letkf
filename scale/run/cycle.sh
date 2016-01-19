@@ -250,11 +250,23 @@ while ((time <= ETIME)); do
       if ((enable_iter == 1)); then
         for it in $(seq $nitmax); do
           if ((USE_RANKDIR == 1)); then
+
+      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: start" >&2
+
             mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
                     "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" $loop $it # > /dev/null
+
+      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: end" >&2
+
           else
+
+      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: start" >&2
+
             mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
                     "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it # > /dev/null
+
+      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: end" >&2
+
           fi
         done
       else

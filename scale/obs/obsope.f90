@@ -101,9 +101,9 @@ PROGRAM obsope
 ! Read observations
 !-----------------------------------------------------------------------
 
-    if (myrank_mem_use) then
-      call read_obs_all(obs)
-    end if
+!    if (myrank_mem_use) then
+      call read_obs_all_mpi(obs)
+!    end if
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()

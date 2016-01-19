@@ -135,7 +135,7 @@ PROGRAM letkf
     !
     ! Read observations
     !
-    call read_obs_all(obs)
+    call read_obs_all_mpi(obs)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
