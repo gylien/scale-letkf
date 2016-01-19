@@ -49,7 +49,7 @@ echo
 
 for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN \
              FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT OUT_OPT \
-             STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP; do
+             STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP PARENT_REF_TIME; do
   printf '  %-10s = %s\n' $vname "${!vname}"
 done
 
@@ -99,6 +99,7 @@ cp -L -r $SCRP_DIR/config.main $TMP/config.main
 cp -L -r $SCRP_DIR/config.rc $TMP/config.rc
 cp -L -r $SCRP_DIR/config.${myname1} $TMP/config.${myname1}
 cp -L -r $SCRP_DIR/${myname1}.sh $TMP/${myname1}.sh
+cp -L -r $SCRP_DIR/${myname1}_step.sh $TMP/${myname1}_step.sh
 mkdir -p $TMP/src
 cp -L -r $SCRP_DIR/src/* $TMP/src
 
@@ -109,6 +110,8 @@ echo "NNODES=$NNODES" >> $TMP/config.main
 echo "PPN=$PPN" >> $TMP/config.main
 echo "NNODES_real=$NNODES_real" >> $TMP/config.main
 echo "PPN_real=$PPN_real" >> $TMP/config.main
+
+echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMPS/config.main
 
 #===============================================================================
 # Creat a job script
@@ -186,7 +189,7 @@ if [ -f "$TMP/log/${myname1}.err" ]; then
   cat $TMP/log/${myname1}.err >> $LOGDIR/${myname1}.err
 fi
 
-safe_rm_tmpdir $TMP
+#safe_rm_tmpdir $TMP
 
 #===============================================================================
 

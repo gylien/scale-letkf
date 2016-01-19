@@ -7,11 +7,14 @@
 
 STIME='20130701000000'
 ETIME='20130701000000'
+#MEMBERS="$(seq 21 30)"
 ISTEP=
 FSTEP=
 TIME_LIMIT='00:25:00'
 
 #===============================================================================
+
+#FCSTOUT=3600
 
 #OBSOPE_OPT=1       # Observation operator options:
 #                   #  1: use LETKF built-in obsope

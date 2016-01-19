@@ -43,3 +43,17 @@ COPTS     = $(COPTS_SCALE) \
             -Knoparallel,noeval,nopreex \
             -Kopenmp
 
+# -- for Himawari-8 assimilatin on the K computer (T.Honda)
+# -- If you want to compile without RTTOV (Himawari assimilation),
+# -- you should set "H08 = F".
+H08       = F
+
+DIR_RTTOV = /data/share005/honda/RTTOV
+RT_LDFLAGS = -L$(DIR_RTTOV)/lib -lrttov11.2.0_test -lrttov11.2.0_other \
+             -lrttov11.2.0_coef_io -lrttov11.2.0_parallel -lrttov11.2.0_main
+RT_INCLUDE = -I$(DIR_RTTOV)/mod -I$(DIR_RTTOV)/include
+
+ifeq ($(H08),T)
+FOPTS     += -DH08
+FOPTS_SCALE += -DH08
+endif

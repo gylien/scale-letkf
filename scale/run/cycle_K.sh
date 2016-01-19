@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_K.sh [STIME ETIME ISTEP FSTEP TIME_LIMIT]
+#    cycle_K.sh [STIME ETIME MEMBERS ISTEP FSTEP TIME_LIMIT]
 #
 #===============================================================================
 
@@ -49,7 +49,7 @@ echo
 
 for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
              WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
-             STIME ETIME ISTEP FSTEP; do
+             STIME ETIME MEMBERS ISTEP FSTEP; do
   printf '  %-10s = %s\n' $vname "${!vname}"
 done
 
@@ -86,7 +86,7 @@ safe_init_tmpdir $TMPS/node
 if ((ENABLE_SET == 1)); then            ##
   distribute_da_cycle_set - $TMPS/node  ##
 else                                    ##
-  distribute_da_cycle - $TMPS/node
+  distribute_da_cycle - $TMPS/node - "$MEMBERS"
 fi                                      ##
 
 #===============================================================================
@@ -165,11 +165,11 @@ bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR $myname1 >> $jobscrp
 
 cat >> $jobscrp << EOF
 
-. /work/system/Env_base
+. /work/system/Env_base_1.2.0-17-2
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${myname1}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP"
+./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$ISTEP" "$FSTEP"
 EOF
 
 #===============================================================================

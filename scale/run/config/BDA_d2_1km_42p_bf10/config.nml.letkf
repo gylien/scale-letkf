@@ -26,8 +26,5 @@
 [MEM_NP]
 /
 
-&PARAM_LETKF_OBS
-/
-
 !*** Attach SCALE configuration below ***
 

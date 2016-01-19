@@ -1023,14 +1023,13 @@ subroutine read_ens_mpi(file,v3d,v2d)
     if (mstart <= mend) then
       CALL scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
     end if
-  end do ! [ it = 1, nitmax ]
 
-
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
   WRITE(6,'(A,F10.2)') '###### read_ens_mpi:scatter_grd_mpi_alltoall:  ',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
+  end do ! [ it = 1, nitmax ]
 
   return
 end subroutine read_ens_mpi
@@ -1086,15 +1085,14 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
 
 
       call write_restart(filename,v3dg,v2dg)
-    end if
-  end do ! [ it = 1, nitmax ]
 
-
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
   WRITE(6,'(A,F10.2)') '###### write_ens_mpi:write_restart:            ',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
+    end if
+  end do ! [ it = 1, nitmax ]
 
   return
 END SUBROUTINE write_ens_mpi
@@ -1342,60 +1340,131 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   INTEGER :: i,k,m,n
   CHARACTER(9) :: filename='file.0000'
-  INTEGER :: monit_nobs(nid_obs)
+
+  INTEGER :: nobs(nid_obs)
+  INTEGER :: nobs_tmp(nid_obs)
+  INTEGER :: nobs_g(nid_obs)
   REAL(r_size) :: bias(nid_obs)
+  REAL(r_size) :: bias_tmp(nid_obs)
+  REAL(r_size) :: bias_g(nid_obs)
   REAL(r_size) :: rmse(nid_obs)
+  REAL(r_size) :: rmse_tmp(nid_obs)
+  REAL(r_size) :: rmse_g(nid_obs)
+  LOGICAL :: monit_type(nid_obs)
   INTEGER :: ierr
 
 
   type(obs_info),intent(in) :: obs(nobsfiles)
   type(obs_da_value),intent(in),allocatable :: obsda2(:)
 
-!  REAL(r_size) :: timer
-!  INTEGER :: ierr
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  REAL(r_dble) :: rrtimer00,rrtimer
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer00 = MPI_WTIME()
 
 
   CALL ensmean_grd(MEMBER,nij1,v3d,v2d,v3dm,v2dm)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:calc_mean:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
 
   CALL gather_grd_mpi(lastmem_rank_e,v3dm,v2dm,v3dg,v2dg)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:gather_grd_mpi:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
-  IF(myrank_e == lastmem_rank_e) THEN
-    call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,monit_nobs,bias,rmse)
-  END IF
-  call MPI_BCAST(monit_nobs,nid_obs,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
-  call MPI_BCAST(bias,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
-  call MPI_BCAST(rmse,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
-  WRITE(filename(1:4),'(A4)') file
-  WRITE(filename(6:9),'(A4)') 'mean'
-  write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', filename, ']:'
-  call monit_print(monit_nobs,bias,rmse)
 
-  IF(myrank_e == lastmem_rank_e) THEN
-    call state_trans_inv(v3dg)
-    call write_restart(filename,v3dg,v2dg)
-  END IF
-
+  if (DEPARTURE_STAT) then
+    if (myrank_e == lastmem_rank_e) then
+      call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,nobs,bias,rmse,monit_type)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:monit_obs:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
+
+      do i = 1, nid_obs
+        if (monit_type(i)) then
+          nobs_tmp(i) = nobs(i)
+          if (nobs(i) == 0) then
+            bias_tmp(i) = 0.0d0
+            rmse_tmp(i) = 0.0d0
+          else
+            bias_tmp(i) = bias(i) * REAL(nobs(i),r_size)
+            rmse_tmp(i) = rmse(i) * rmse(i) * REAL(nobs(i),r_size)
+          end if
+        end if
+      end do
+
+      call MPI_ALLREDUCE(nobs_tmp, nobs_g, nid_obs, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(bias_tmp, bias_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(rmse_tmp, rmse_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+
+      do i = 1, nid_obs
+        if (monit_type(i)) then
+          if (nobs_g(i) == 0) then
+            bias_g(i) = undef
+            rmse_g(i) = undef
+          else
+            bias_g(i) = bias_g(i) / REAL(nobs_g(i),r_size)
+            rmse_g(i) = sqrt(rmse_g(i) / REAL(nobs_g(i),r_size))
+          end if
+        else
+          nobs_g(i) = -1
+          bias_g(i) = undef
+          rmse_g(i) = undef
+        end if
+      end do
+    end if
+
+    call MPI_BCAST(nobs,nid_obs,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(bias,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(rmse,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(nobs_g,nid_obs,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(bias_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(rmse_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(monit_type,nid_obs,MPI_LOGICAL,lastmem_rank_e,MPI_COMM_e,ierr)
+    WRITE(filename(1:4),'(A4)') file
+    WRITE(filename(6:9),'(A4)') 'mean'
+    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', filename, ']:'
+    call monit_print(nobs,bias,rmse,monit_type)
+    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', filename, ']:'
+    call monit_print(nobs_g,bias_g,rmse_g,monit_type)
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:monit_obs_reduce_print:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+
+  end if ! [ DEPARTURE_STAT ]
+
+
+  IF(myrank_e == lastmem_rank_e) THEN
+    WRITE(filename(1:4),'(A4)') file
+    WRITE(filename(6:9),'(A4)') 'mean'
+    call state_trans_inv(v3dg)
+    call write_restart(filename,v3dg,v2dg)
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:write_mean:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+
+  END IF
 
   DO n=1,nv3d
 !$OMP PARALLEL DO PRIVATE(i,k,m)
@@ -1411,12 +1480,6 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
 !$OMP END PARALLEL DO
   END DO
 
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
-
-
   DO n=1,nv2d
 !$OMP PARALLEL DO PRIVATE(i,m)
     DO i=1,nij1
@@ -1431,16 +1494,18 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:calc_spread:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
 
   CALL gather_grd_mpi(lastmem_rank_e,v3ds,v2ds,v3dg,v2dg)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:gather_grd_mpi:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
 
   IF(myrank_e == lastmem_rank_e) THEN
@@ -1448,16 +1513,66 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
     WRITE(filename(6:9),'(A4)') 'sprd'
 !    call state_trans_inv(v3dg)             !!
     call write_restart(filename,v3dg,v2dg)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
-  END IF
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  CALL CPU_TIME(timer)
-!  if (myrank == 0) print *, '######', timer
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:write_spread:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
 
+
+  END IF
 
   RETURN
 END SUBROUTINE write_ensmspr_mpi
+
+
+
+subroutine read_obs_all_mpi(obs)
+  implicit none
+
+  type(obs_info), intent(out) :: obs(nobsfiles)
+  integer :: iof, ierr
+
+  REAL(r_dble) :: rrtimer00,rrtimer
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer00 = MPI_WTIME()
+
+  if (myrank_a == 0) then
+    call read_obs_all(obs)
+  end if
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()  
+  WRITE(6,'(A,F10.2)') '###### read_obs_all_mpi:read_obs_all:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+  do iof = 1, nobsfiles
+    call MPI_BCAST(obs(iof)%nobs, 1, MPI_INTEGER, 0, MPI_COMM_a, ierr)
+    if (myrank_a /= 0) then
+      call obs_info_allocate(obs(iof))
+    end if
+
+    call MPI_BCAST(obs(iof)%elm, obs(iof)%nobs, MPI_INTEGER, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%lon, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%lat, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%lev, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%dat, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%err, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%typ, obs(iof)%nobs, MPI_INTEGER, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%dif, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%meta, max_obs_info_meta, MPI_r_size, 0, MPI_COMM_a, ierr)
+  end do ! [ iof = 1, nobsfiles ]
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### read_obs_all_mpi:bcast:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+  return
+end subroutine read_obs_all_mpi
+
+
 
 !!-----------------------------------------------------------------------
 !! Get number of observations from ensemble obs2 data,

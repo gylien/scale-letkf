@@ -25,6 +25,11 @@ LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
 
 SCALE_LES_OBJS = $(shell ls $(SCALE_LES_OBJDIR)/*.o | grep -v "scale-les.o\|scale-les_pp.o\|scale-les_init.o")
 
+ifeq ($(H08),T)
+COMMON_OBJS += $(COMMON_DIR)/scale_H08_fwd.o
+LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)
+endif
+
 all:	$(PROGS)
 
 scale-les_pp_ens:	scale-les_pp_ens.o $(OBJS) common_modules

@@ -5,22 +5,22 @@
 #
 #===============================================================================
 
-STIME='20130630000000'
-ETIME='20130630000000'
-MEMBERS='all'
+STIME='20130713061000'
+ETIME='20130713061000'
+MEMBERS='mean 1 2 3'
 CYCLE=1
 CYCLE_SKIP=1
 IF_VERF=0
 IF_EFSO=0
 ISTEP=
 FSTEP=
-TIME_LIMIT='01:30:00'
+TIME_LIMIT='03:00:00'
 
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=86400       # SCALE forecast length in the forecast mode (second)
-FCSTOUT=86400
+FCSTLEN=1800        # SCALE forecast length in the forecast mode (second)
+FCSTOUT=30
 
 #===============================================================================
 # EFSO settings
@@ -36,7 +36,7 @@ FCSTOUT=86400
 
 #===============================================================================
 
-MAKEINIT=1       # 0: No
+MAKEINIT=0       # 0: No
                  # 1: Yes
 PERTURB_BDY=0    # 0: No
                  # 1: Yes
@@ -50,11 +50,11 @@ OUT_OPT=1        # 1:   o       o
                  # 2:   o
 
                  #      topo
-TOPOOUT_OPT=1    # 1:   o
+TOPOOUT_OPT=2    # 1:   o
                  # 2:   (none)
 
                  #      landuse
-LANDUSEOUT_OPT=1 # 1:   o
+LANDUSEOUT_OPT=2 # 1:   o
                  # 2:   (none)
 
                  #      bdy

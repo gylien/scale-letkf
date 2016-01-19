@@ -45,6 +45,9 @@ Usage: $myname [STIME ETIME ISTEP FSTEP TIME_LIMIT]
   STIME       Time of the first cycle (format: YYYY[MMDDHHMMSS])
   ETIME       Time of the last  cycle (format: YYYY[MMDDHHMMSS])
                (default: same as STIME)
+  MEMBERS     List of forecast members
+               all:     Run all members (default)
+               '2 4 6': Run members 2, 4, 6
   ISTEP       The initial step in the first cycle from which this script starts
                (default: the first step)
   FSTEP       The final step in the last cycle by which this script ends
@@ -63,6 +66,7 @@ Usage: $myname [STIME ETIME ISTEP FSTEP TIME_LIMIT]
 
 STIME=${1:-$STIME}; shift
 ETIME=${1:-$ETIME}; shift
+MEMBERS=${1:-$MEMBERS}; shift
 ISTEP=${1:-$ISTEP}; shift
 FSTEP=${1:-$FSTEP}; shift
 TIME_LIMIT="${1:-$TIME_LIMIT}"
@@ -90,6 +94,19 @@ fi
 
 STIME=$(datetime $STIME)
 ETIME=$(datetime ${ETIME:-$STIME})
+if [ -z "$MEMBERS" ] || [ "$MEMBERS" = 'all' ]; then
+  MEMBERS='all'
+#  MEMBERS="$(printf "$MEMBER_FMT " $(seq $MEMBER))"
+else
+  MEMBER=0
+  tmpstr=''
+  for m in $MEMBERS; do
+    MEMBER=$((MEMBER+1))
+    tmpstr="$tmpstr$(printf $MEMBER_FMT $((10#$m))) "
+    (($? != 0)) && exit 1
+  done
+  MEMBERS="$tmpstr"
+fi
 ISTEP=${ISTEP:-1}
 FSTEP=${FSTEP:-$nsteps}
 TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
@@ -97,8 +114,15 @@ TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 #-------------------------------------------------------------------------------
 # common variables
 
-CYCLEFLEN=$WINDOW_E   # Model forecast length in a cycle (hour)
-CYCLEFOUT=$LTIMESLOT  # Model forecast output interval (hour)
+CYCLEFLEN=$WINDOW_E     # Model forecast length in a cycle (hour)
+if [ -z "$FCSTOUT" ] || ((FCSTOUT >= LTIMESLOT)); then
+  CYCLEFOUT=$LTIMESLOT  # Model forecast output interval (hour)
+elif ((LTIMESLOT % FCSTOUT == 0)); then
+  CYCLEFOUT=$FCSTOUT
+else
+  echo "[Error] If \$FCSTOUT < \$LTIMESLOT, \$LTIMESLOT needs to be an exact multiple of \$FCSTOUT" >&2
+  exit 1
+fi
 
 if ((BDY_FORMAT == 1 || BDY_FORMAT == -1)); then
   if ((BDYCYCLE_INT % BDYINT != 0)); then
@@ -123,6 +147,7 @@ fi
 
 staging_list () {
 #-------------------------------------------------------------------------------
+# TMPDAT
 
 if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
 #-------------------
@@ -141,6 +166,13 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   ln -fs $DATADIR/land $TMPDAT/land
   ln -fs $DATADIR/topo $TMPDAT
   ln -fs $DATADIR/landuse $TMPDAT
+
+# H08
+  if [ -e "${RTTOV_COEF}" ] && [ -e "${RTTOV_SCCOEF}" ]; then
+    safe_init_tmpdir $TMPDAT/rttov
+    ln -fs ${RTTOV_COEF} $TMPDAT/rttov/rtcoef_himawari_8_ahi.dat
+    ln -fs ${RTTOV_SCCOEF} $TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat
+  fi
 
   if ((DATA_BDY_TMPLOC == 1)); then
     if ((BDY_FORMAT == 2)); then
@@ -175,6 +207,14 @@ ${DATADIR}/rad|rad
 ${DATADIR}/land|land
 EOF
 
+# H08
+  if [ -e "${RTTOV_COEF}" ] && [ -e "${RTTOV_SCCOEF}" ]; then
+    cat >> $STAGING_DIR/stagein.dat << EOF
+${RTTOV_COEF}|rttov/rtcoef_himawari_8_ahi.dat
+${RTTOV_SCCOEF}|rttov/sccldcoef_himawari_8_ahi.dat
+EOF
+  fi
+
   if [ "$TOPO_FORMAT" != 'prep' ]; then
     echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
   fi
@@ -185,7 +225,7 @@ EOF
   time=$(datetime $STIME $LCYCLE s)
   while ((time <= $(datetime $ETIME $LCYCLE s))); do
     for iobs in $(seq $OBSNUM); do
-      if [ "${OBSNAME[$iobs]}" != '' ]; then
+      if [ "${OBSNAME[$iobs]}" != '' ] && [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
         echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs/${OBSNAME[$iobs]}_${time}.dat" >> $STAGING_DIR/stagein.dat
       fi
     done
@@ -199,6 +239,7 @@ EOF
 fi
 
 #-------------------------------------------------------------------------------
+# TMPOUT
 
 if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
 #-------------------
@@ -292,7 +333,6 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
       time=$(datetime $time $LCYCLE s)
     done
   fi
-
 #-------------------
 else
 #-------------------
@@ -335,11 +375,23 @@ else
     # topo
     #-------------------
     if [ "$TOPO_FORMAT" = 'prep' ]; then
-      for q in $(seq $mem_np); do
-        pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
-        path="${time}/topo/topo$(printf $SCALE_SFX $((q-1)))"
+      if [ "$TOPO_TARGZ" = 'T' ]; then
+        if [ ! -e ${DATA_TOPO}/topo.tar.gz ] ; then
+          tar czvfh topo.tar.gz topo*.nc -C ${DATA_TOPO}/ >/dev/null
+        fi
+        pathin=${DATA_TOPO}/topo.tar.gz
+        path=${time}/topo/topo.tar.gz
         echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
-      done
+      else
+        for q in $(seq $mem_np); do
+          pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
+          path="${time}/topo/topo$(printf $SCALE_SFX $((q-1)))"
+          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+        done
+      fi
+    elif [ "$TOPO_TARGZ" = 'T' ] ; then
+      echo "[Error] TOPO_TARGZ = T option requires TOPO_FORMAT = prep" >&2
+      exit 1
     fi
 
     # landuse
@@ -350,11 +402,23 @@ else
       else
         pathin_pfx="${DATA_LANDUSE}"
       fi
-      for q in $(seq $mem_np); do
-        pathin="${pathin_pfx}/landuse$(printf $SCALE_SFX $((q-1)))"
-        path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+      if [ "$LANDUSE_TARGZ" = 'T' ]; then
+        if [ ! -e ${pathin_pfx}/landuse.tar.gz ] ; then
+          tar czvfh landuse.tar.gz landuse*.nc -C ${pathin_pfx}/ >/dev/null
+        fi
+        pathin=${pathin_pfx}/landuse.tar.gz
+        path=${time}/landuse/landuse.tar.gz
         echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
-      done
+      else
+        for q in $(seq $mem_np); do
+          pathin="${pathin_pfx}/landuse$(printf $SCALE_SFX $((q-1)))"
+          path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+        done
+      fi
+    elif [ "$LANDUSE_TARGZ" = 'T' ] ; then
+      echo "[Error] LANDUSE_TARGZ = T option requires LANDUSE_FORMAT = prep" >&2
+      exit 1
     fi
 
     # bdy (prepared)
@@ -362,14 +426,16 @@ else
     if ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
       if ((BDY_ENS == 0)); then
         for q in $(seq $mem_np); do
-          pathin="${DATA_BDY_SCALE_PREP}/${time}/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+          pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+#          pathin="${DATA_BDY_SCALE_PREP}/${time}/mean/boundary$(printf $SCALE_SFX $((q-1)))"
           path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
           echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
         done
       elif ((BDY_ENS == 1)); then
         for m in $(seq $mmean); do
           for q in $(seq $mem_np); do
-            pathin="${DATA_BDY_SCALE_PREP}/${time}/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
+            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
+#            pathin="${DATA_BDY_SCALE_PREP}/${time}/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
             path="${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
             echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
           done
@@ -1137,7 +1203,7 @@ obsope_1 () {
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_obsope_node.sh $MYRANK \
        $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
-       $mem_nodes $mem_np $slot_s $slot_e $slot_b
+       $mem_nodes $mem_np $slot_s $slot_e $slot_b $MEMBER
 fi
 
 for it in $(seq $nitmax); do
@@ -1150,7 +1216,7 @@ for it in $(seq $nitmax); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_obsope.sh $MYRANK \
-           $atime ${name_m[$m]} $TMPRUN/obsope
+           $atime ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/obsope
     fi
   fi
 done
@@ -1177,7 +1243,7 @@ for it in $(seq $nitmax); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
-           $mem_np ${atime} ${name_m[$m]} $TMPRUN/obsope $LOG_OPT
+           $mem_np ${atime} ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/obsope $LOG_OPT $OUT_OPT
     fi
   fi
 done
@@ -1197,7 +1263,7 @@ letkf_1 () {
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
        $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
-       $mem_nodes $mem_np $slot_s $slot_e $slot_b
+       $mem_nodes $mem_np $slot_s $slot_e $slot_b $MEMBER
 fi
 
 for it in $(seq $nitmax); do
@@ -1210,7 +1276,7 @@ for it in $(seq $nitmax); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
-           $TMPOUT/${time}/topo/topo $atime ${name_m[$m]} $TMPRUN/letkf
+           $TMPOUT/${time}/topo/topo $atime ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/letkf
     fi
   fi
 done
@@ -1237,7 +1303,7 @@ for it in $(seq $nitmax); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_letkf.sh $MYRANK \
-           $mem_np ${atime} ${name_m[$m]} $TMPRUN/letkf $LOG_OPT
+           $mem_np ${atime} ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/letkf $LOG_OPT
     fi
   fi
 done

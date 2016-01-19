@@ -53,7 +53,7 @@ MODULE letkf_tools
 !   & /),(/nv3d+nv2d,6/))
 
 
-  real(r_size),save :: var_local(nv3d+nv2d,8)  !!!!!! 8 as a variable
+  real(r_size),save :: var_local(nv3d+nv2d,9)  !!!!!! 8 as a variable ! H08
   integer,save :: var_local_n2n(nv3d+nv2d)
 
 CONTAINS
@@ -76,14 +76,17 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size),ALLOCATABLE :: dep(:)
   REAL(r_size),ALLOCATABLE :: work3d(:,:,:)
   REAL(r_size),ALLOCATABLE :: work2d(:,:)
+  REAL(r_size),ALLOCATABLE :: work3da(:,:,:)     !GYL
+  REAL(r_size),ALLOCATABLE :: work2da(:,:)       !GYL
   REAL(RP),ALLOCATABLE :: work3dg(:,:,:,:)
   REAL(RP),ALLOCATABLE :: work2dg(:,:,:)
-!  REAL(r_size),ALLOCATABLE :: tmptv(:,:)
-!  REAL(r_size),ALLOCATABLE :: pfull(:,:)
   REAL(r_size) :: parm
   REAL(r_size) :: trans(MEMBER,MEMBER,nv3d+nv2d)
-  REAL(r_size) :: anal_mean,anal_sprd,gues_sprd,rtps_parm  ! GYL
-  REAL(r_size) :: anal_pert(MEMBER)                        ! GYL
+  REAL(r_size) :: transm(MEMBER,nv3d+nv2d)       !GYL
+  REAL(r_size) :: transrlx(MEMBER,MEMBER)        !GYL
+  REAL(r_size) :: pa(MEMBER,MEMBER,nv3d+nv2d)    !GYL
+  REAL(r_size) :: q_mean,q_sprd                  !GYL
+  REAL(r_size) :: q_anal(MEMBER)                 !GYL
 !  LOGICAL :: ex
 !  INTEGER :: ij,ilev,n,m,i,j,k,nobsl,ierr,iret
   INTEGER :: ij,ilev,n,m,i,k,nobsl
@@ -113,6 +116,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   var_local(:,6) = VAR_LOCAL_TC(1:nv3d+nv2d)
   var_local(:,7) = VAR_LOCAL_RADAR_REF(1:nv3d+nv2d)
   var_local(:,8) = VAR_LOCAL_RADAR_VR(1:nv3d+nv2d)
+  var_local(:,9) = VAR_LOCAL_H08(1:nv3d+nv2d) ! H08
   var_local_n2n(1) = 1
   DO n=2,nv3d+nv2d
     DO i=1,n
@@ -184,118 +188,120 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     END IF
     CALL scatter_grd_mpi(lastmem_rank_e,work3dg,work2dg,work3d,work2d)
   END IF
-!  !
-!  ! p_full for background ensemble mean
-!  !
-!  ALLOCATE( tmptv(nij1,nlev) )
-!  ALLOCATE( pfull(nij1,nlev) )
-!  tmptv = mean3d(:,:,iv3d_t) * (1.0d0 + fvirt * mean3d(:,:,iv3d_q))
-!  call sigio_modprd(nij1,nij1,nlev,gfs_nvcoord,gfs_idvc,gfs_idsl, &
-!                    gfs_vcoord,iret,mean2d(:,iv2d_ps),tmptv,pm=pfull)
-!  DEALLOCATE(tmptv)
+  !
+  ! RTPS relaxation
+  !
+  IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN
+!    ALLOCATE( work3dg(nlon,nlat,nlev,nv3d) )
+!    ALLOCATE( work2dg(nlon,nlat,nv2d) )
+    ALLOCATE( work3da(nij1,nlev,nv3d) )
+    ALLOCATE( work2da(nij1,nv2d) )
+    work3da = 1.0d0
+    work2da = 1.0d0
+  END IF
   !
   ! MAIN ASSIMILATION LOOP
   !
   ALLOCATE( hdxf(1:nobstotal,1:MEMBER),rdiag(1:nobstotal),rloc(1:nobstotal),dep(1:nobstotal) )
   DO ilev=1,nlev
     WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,m,k,anal_mean,anal_sprd,anal_pert,gues_sprd,rtps_parm)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,transm,transrlx,pa,m,k,q_mean,q_sprd,q_anal)
     DO ij=1,nij1
 !WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
       DO n=1,nv3d
         IF(var_local_n2n(n) < n) THEN
           trans(:,:,n) = trans(:,:,var_local_n2n(n))
+          transm(:,n) = transm(:,var_local_n2n(n))                                     !GYL
+          IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
+            pa(:,:,n) = pa(:,:,var_local_n2n(n))                                       !GYL
+          END IF                                                                       !GYL
           work3d(ij,ilev,n) = work3d(ij,ilev,var_local_n2n(n))
         ELSE
           CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl)
           parm = work3d(ij,ilev,n)
-          CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,n),MIN_INFL_MUL,RELAX_ALPHA)
+          IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
+            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &         !GYL
+                            trans(:,:,n),transm=transm(:,n),pao=pa(:,:,n),minfl=MIN_INFL_MUL) !GYL
+          ELSE                                                                         !GYL
+            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &         !GYL
+                            trans(:,:,n),transm=transm(:,n),minfl=MIN_INFL_MUL)        !GYL
+          END IF                                                                       !GYL
           work3d(ij,ilev,n) = parm
         END IF
-        IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) .AND. ilev > LEV_UPDATE_Q) THEN ! GYL, do not update upper-level q,qc
-          anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)      ! GYL
-        ELSE                                                                 ! GYL
-          DO m=1,MEMBER                                                      ! GYL
+        IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) &
+           .AND. ilev > LEV_UPDATE_Q) THEN !GYL, do not update upper-level q,qc
+          anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)                !GYL
+        ELSE                                                                           !GYL
+          IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2005)
+            CALL weight_RTPP(trans(:,:,n),transrlx)                                    !GYL
+          ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL - RTPS method (Whitaker and Hamill 2012)
+            CALL weight_RTPS(trans(:,:,n),pa(:,:,n),gues3d(ij,ilev,:,n),transrlx,work3da(ij,ilev,n)) !GYL
+          ELSE                                                                         !GYL
+            transrlx = trans(:,:,n)                                                    !GYL
+          END IF                                                                       !GYL
+          DO m=1,MEMBER
             anal3d(ij,ilev,m,n) = mean3d(ij,ilev,n)
             DO k=1,MEMBER
-              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-                & + gues3d(ij,ilev,k,n) * trans(k,m,n)
+              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &                              !GYL - sum trans and transm here
+                & + gues3d(ij,ilev,k,n) * (transrlx(k,m) + transm(k,n))                !GYL
             END DO
-          END DO                                                             ! GYL
-        END IF                                                               ! GYL
-
-        IF(RELAX_ALPHA_SPREAD /= 0.0d0 .OR. (n == iv3d_q .AND. ilev <= LEV_UPDATE_Q)) THEN ! GYL, compute analysis mean and spread
-          anal_mean = SUM(anal3d(ij,ilev,:,n)) / REAL(MEMBER,r_size)         ! GYL
-          anal_sprd = 0.0d0                                                  ! GYL
-          DO m=1,MEMBER                                                      ! GYL
-            anal_pert(m) = anal3d(ij,ilev,m,n) - anal_mean                   ! GYL
-            anal_sprd = anal_sprd + anal_pert(m)**2                          ! GYL
-          END DO                                                             ! GYL
-          anal_sprd = SQRT(anal_sprd / REAL(MEMBER-1,r_size))                ! GYL
-        END IF                                                               ! GYL
-
-        rtps_parm = 1.0d0                                                    ! GYL, compute guess spread and the RTPS
-        IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                 ! GYL
-          gues_sprd = 0.0d0                                                  ! GYL
-          DO m=1,MEMBER                                                      ! GYL
-            gues_sprd = gues_sprd + gues3d(ij,ilev,m,n)**2                   ! GYL
-          END DO                                                             ! GYL
-          gues_sprd = SQRT(gues_sprd / REAL(MEMBER-1,r_size))                ! GYL
-          rtps_parm = RELAX_ALPHA_SPREAD * (gues_sprd - anal_sprd) / anal_sprd + 1.0d0 ! GYL
-          DO m=1,MEMBER                                                      ! GYL
-            anal3d(ij,ilev,m,n) = anal_mean + anal_pert(m) * rtps_parm       ! GYL
-          END DO                                                             ! GYL
-        END IF                                                               ! GYL
-
-        IF(n == iv3d_q .AND. ilev <= LEV_UPDATE_Q) THEN                      ! GYL, limit the lower-level q spread
-          IF(anal_sprd * rtps_parm / anal_mean > Q_SPRD_MAX) THEN            ! GYL
-            DO m=1,MEMBER                                                    ! GYL
-              anal3d(ij,ilev,m,n) = anal_mean + anal_pert(m) * anal_mean * Q_SPRD_MAX / anal_sprd ! GYL
-            END DO                                                           ! GYL
-          END IF                                                             ! GYL
-        END IF                                                               ! GYL
+          END DO
+        END IF                                                                         !GYL
+        IF(n == iv3d_q .AND. ilev <= LEV_UPDATE_Q) THEN                                !GYL - limit the lower-level q spread
+          q_mean = SUM(anal3d(ij,ilev,:,n)) / REAL(MEMBER,r_size)                      !GYL
+          q_sprd = 0.0d0                                                               !GYL
+          DO m=1,MEMBER                                                                !GYL
+            q_anal(m) = anal3d(ij,ilev,m,n) - q_mean                                   !GYL
+            q_sprd = q_sprd + q_anal(m)**2                                             !GYL
+          END DO                                                                       !GYL
+          q_sprd = SQRT(q_sprd / REAL(MEMBER-1,r_size)) / q_mean                       !GYL
+          IF(q_sprd > Q_SPRD_MAX) THEN                                                 !GYL
+            DO m=1,MEMBER                                                              !GYL
+              anal3d(ij,ilev,m,n) = q_mean + q_anal(m) * Q_SPRD_MAX / q_sprd           !GYL
+            END DO                                                                     !GYL
+          END IF                                                                       !GYL
+        END IF                                                                         !GYL
       END DO ! [ n=1,nv3d ]
       IF(ilev == 1) THEN !update 2d variable at ilev=1
         DO n=1,nv2d
-          IF(var_local_n2n(nv3d+n) < nv3d+n) THEN                  ! GYL, correct the bug of the 2d variable update
+          IF(var_local_n2n(nv3d+n) < nv3d+n) THEN
             trans(:,:,nv3d+n) = trans(:,:,var_local_n2n(nv3d+n))
-            IF(var_local_n2n(nv3d+n) <= nv3d) THEN                 ! GYL
-              work2d(ij,n) = work3d(ij,ilev,var_local_n2n(nv3d+n)) ! GYL
-            ELSE                                                   ! GYL
-              work2d(ij,n) = work2d(ij,var_local_n2n(nv3d+n)-nv3d) ! GYL
-            END IF                                                 ! GYL
+            transm(:,nv3d+n) = transm(:,var_local_n2n(nv3d+n))                         !GYL
+            IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
+              pa(:,:,nv3d+n) = pa(:,:,var_local_n2n(nv3d+n))                           !GYL
+            END IF                                                                     !GYL
+            IF(var_local_n2n(nv3d+n) <= nv3d) THEN                                     !GYL - correct the bug of the 2d variable update
+              work2d(ij,n) = work3d(ij,ilev,var_local_n2n(nv3d+n))                     !GYL
+            ELSE                                                                       !GYL
+              work2d(ij,n) = work2d(ij,var_local_n2n(nv3d+n)-nv3d)                     !GYL
+            END IF                                                                     !GYL
           ELSE
             CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl)
             parm = work2d(ij,n)
-            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans(:,:,nv3d+n),MIN_INFL_MUL,RELAX_ALPHA)
+            IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
+              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &       !GYL
+                              trans(:,:,nv3d+n),transm=transm(:,nv3d+n),pao=pa(:,:,nv3d+n),minfl=MIN_INFL_MUL) !GYL
+            ELSE                                                                       !GYL
+              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &       !GYL
+                              trans(:,:,nv3d+n),transm=transm(:,nv3d+n),minfl=MIN_INFL_MUL) !GYL
+            END IF                                                                     !GYL
             work2d(ij,n) = parm
           END IF
+          IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2005)
+            CALL weight_RTPP(trans(:,:,nv3d+n),transrlx)                               !GYL
+          ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL - RTPS method (Whitaker and Hamill 2012)
+            CALL weight_RTPS(trans(:,:,nv3d+n),pa(:,:,nv3d+n),gues2d(ij,:,n),transrlx,work2da(ij,n)) !GYL
+          ELSE                                                                         !GYL
+            transrlx = trans(:,:,nv3d+n)                                               !GYL
+          END IF                                                                       !GYL
           DO m=1,MEMBER
-            anal2d(ij,m,n)  = mean2d(ij,n)
+            anal2d(ij,m,n) = mean2d(ij,n)
             DO k=1,MEMBER
-              anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,k,n) * trans(k,m,nv3d+n)
+              anal2d(ij,m,n) = anal2d(ij,m,n) &                                        !GYL - sum trans and transm here
+                & + gues2d(ij,k,n) * (transrlx(k,m) + transm(k,nv3d+n))                !GYL
             END DO
           END DO
-
-          IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                            ! GYL, compute analysis mean and spread
-            anal_mean = SUM(anal2d(ij,:,n)) / REAL(MEMBER,r_size)         ! GYL
-            anal_sprd = 0.0d0                                             ! GYL
-            DO m=1,MEMBER                                                 ! GYL
-              anal_pert(m) = anal2d(ij,m,n) - anal_mean                   ! GYL
-              anal_sprd = anal_sprd + anal_pert(m)**2                     ! GYL
-            END DO                                                        ! GYL
-            anal_sprd = SQRT(anal_sprd / REAL(MEMBER-1,r_size))           ! GYL
-            gues_sprd = 0.0d0                                             ! GYL, compute guess spread and the RTPS
-            DO m=1,MEMBER                                                 ! GYL
-              gues_sprd = gues_sprd + gues2d(ij,m,n)**2                   ! GYL
-            END DO                                                        ! GYL
-            gues_sprd = SQRT(gues_sprd / REAL(MEMBER-1,r_size))           ! GYL
-            rtps_parm = RELAX_ALPHA_SPREAD * (gues_sprd - anal_sprd) / anal_sprd + 1.0d0 ! GYL
-            DO m=1,MEMBER                                                 ! GYL
-              anal2d(ij,m,n) = anal_mean + anal_pert(m) * rtps_parm       ! GYL
-            END DO                                                        ! GYL
-          END IF                                                          ! GYL
-        END DO
+        END DO ! [ n=1,nv2d ]
       END IF ! [ ilev == 1 ]
     END DO ! [ ij=1,nij1 ]
 !$OMP END PARALLEL DO
@@ -311,14 +317,28 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Write updated inflation parameters
   !
   IF(COV_INFL_MUL < 0.0d0) THEN
-    CALL gather_grd_mpi(lastmem_rank_e,work3d,work2d,work3dg,work2dg)
-    IF(myrank_e == lastmem_rank_e) THEN
-!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
-!      call state_trans_inv(work3dg)
-      call write_restart(inflfile,work3dg,work2dg)
-    END IF
-    DEALLOCATE(work3dg,work2dg,work3d,work2d)
+!    CALL gather_grd_mpi(lastmem_rank_e,work3d,work2d,work3dg,work2dg)
+!    IF(myrank_e == lastmem_rank_e) THEN
+!!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
+!!      call state_trans_inv(work3dg)
+!      call write_restart(inflfile,work3dg,work2dg)
+!    END IF
+    DEALLOCATE(work3d,work2d)
   END IF
+  !
+  ! Write inflation parameter (in analysis) corresponding to the RTPS method
+  !
+  IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN
+!    CALL gather_grd_mpi(lastmem_rank_e,work3da,work2da,work3dg,work2dg)
+!    IF(myrank_e == lastmem_rank_e) THEN
+!!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
+!!      call state_trans_inv(work3dg)
+!      call write_restart(inflfile,work3dg,work2dg)
+!    END IF
+    DEALLOCATE(work3da,work2da)
+  END IF
+  IF(ALLOCATED(work3dg)) DEALLOCATE(work3dg)
+  IF(ALLOCATED(work2dg)) DEALLOCATE(work2dg)
   !
   ! Additive inflation
   !
@@ -382,7 +402,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   END IF
 
   DEALLOCATE(mean3d,mean2d)
-!  DEALLOCATE(pfull)
   RETURN
 END SUBROUTINE das_letkf
 !!-----------------------------------------------------------------------
@@ -765,6 +784,8 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
 !SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl,oindex)
   use scale_grid, only: &
     DX, DY
+  use scale_grid_index, only: &
+    IHALO, JHALO
   use scale_les_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
@@ -792,6 +813,24 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
   integer :: ielm
 
   real(r_size) :: rdx, rdy
+
+  real(r_size) :: radar_ri(nobsfiles)       !!!!!!
+  real(r_size) :: radar_rj(nobsfiles)       !!!!!!
+  real(r_size) :: dist_radar_edge, dist_bdy !!!!!!
+  integer :: iof                            !!!!!!
+
+
+
+  if (RADAR_EDGE_TAPER_WIDTH > 0.0d0 .and. RADAR_RANGE > 0.0d0) then                !!!!!!
+    do iof = 1, nobsfiles                                                           !!!!!!
+      if (obsfileformat(iof) == 2) then                                             !!!!!!
+        call phys2ij(obs(iof)%meta(1),obs(iof)%meta(2),radar_ri(iof),radar_rj(iof)) !!!!!!
+      end if                                                                        !!!!!!
+    end do                                                                          !!!!!!
+  end if                                                                            !!!!!!
+
+
+
 !
 ! INITIALIZE
 !
@@ -852,13 +891,17 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
         case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)                                                               !GYL
           dist = dist / SIGMA_OBS                                                                                     !GYL
           dlev = 0.0d0                                                                                                !GYL
+        case (id_H08IR_obs)                                                         ! H08       
+          dist = dist / SIGMA_OBS_H08                                               ! H08                       
+          dlev = ABS(LOG(obsda2(ip)%lev(nobs_use(n))) - LOG(rlev)) / SIGMA_OBSV_H08 ! H08 
         case default                                                                                                  !GYL
           dist = dist / SIGMA_OBS                                                                                     !GYL
           dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n)))) - LOG(rlev)) / SIGMA_OBSV !GYL
         end select                                                                                                    !GYL
 
-        if (dist > dist_zero_fac) cycle
-        if (dlev > dist_zero_fac) cycle
+!        if (dist > dist_zero_fac) cycle
+!        if (dlev > dist_zero_fac) cycle
+        if (dist*dist + dlev*dlev > dist_zero_fac*dist_zero_fac) cycle
         !
         ! variable localization
         !
@@ -890,6 +933,8 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
             iobs=7
           CASE(id_radar_vr_obs)
             iobs=8
+          CASE(id_H08IR_obs) ! H08
+            iobs=9           ! H08
           CASE DEFAULT
             write (6,'(A)') 'xxx Warning!!! unsupport observation type in variable localization!'
             iobs=1
@@ -911,6 +956,23 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
         END IF
   !      IF(PRESENT(oindex)) oindex(nobsl) = obsda2(ip)%idx(nobs_use(n))      ! DH
 
+
+
+        if (RADAR_EDGE_TAPER_WIDTH > 0.0d0 .and. RADAR_RANGE > 0.0d0 .and. &                 !!!!!!
+            obsfileformat(obsda2(ip)%set(nobs_use(n))) == 2) then                            !!!!!!
+          rdx = (ri - radar_ri(obsda2(ip)%set(nobs_use(n)))) * DX                            !!!!!!
+          rdy = (rj - radar_rj(obsda2(ip)%set(nobs_use(n)))) * DY                            !!!!!!
+          dist_radar_edge = (RADAR_RANGE - sqrt(rdx*rdx + rdy*rdy)) / RADAR_EDGE_TAPER_WIDTH !!!!!!
+          if (dist_radar_edge < 0.0d0) then                                                  !!!!!!
+            dist_radar_edge = 0.0d0                                                          !!!!!!
+!            write (6,'(A,F12.2)') '[Warning] dist_radar_edge < 0. dist_radar_edge =', RADAR_RANGE - sqrt(rdx*rdx + rdy*rdy)
+          end if                                                                             !!!!!!
+          if (dist_radar_edge < 1.0d0) then                                                  !!!!!!
+            rloc(nobsl) = rloc(nobsl) * dist_radar_edge                                      !!!!!!
+          end if                                                                             !!!!!!
+        end if                                                                               !!!!!!
+
+
       END DO ! [ n = 1, nn ]
 
     end if ! [ obsda2(ip)%nobs > 0 ]
@@ -923,12 +985,75 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
     WRITE(6,*) 'RI,RJ,LEV,NOBSL,NOBSTOTAL=', ri,rj,rlev,nobsl,nobstotal
     STOP 99
   END IF
-
 !
   IF( allocated(nobs_use) ) DEALLOCATE(nobs_use)
 !
+
+
+  if (BOUNDARY_TAPER_WIDTH > 0.0d0) then                                              !!!!!!
+    dist_bdy = min(min(ri - IHALO, nlong+IHALO+1 - ri) * DX, &                        !!!!!!
+                   min(rj - JHALO, nlatg+JHALO+1 - rj) * DY) / BOUNDARY_TAPER_WIDTH   !!!!!!
+    if (dist_bdy < 0.0d0) then                                                        !!!!!!
+      write (6, '(A)') '[Error] ###### Wrong dist_bdy ######'                         !!!!!!
+!write (6,*) '$$$$$$####', ri - IHALO, nlong+IHALO+1 - ri, rj - JHALO, nlatg+JHALO+1 - rj
+      stop                                                                            !!!!!!
+    else if (dist_bdy < 1.0d0) then                                                   !!!!!!
+      rloc = rloc * dist_bdy                                                          !!!!!!
+    end if                                                                            !!!!!!
+  end if                                                                              !!!!!!
+
+
   RETURN
 END SUBROUTINE obs_local
+
+!-----------------------------------------------------------------------
+! Relaxation via LETKF weight - RTPP method
+!-----------------------------------------------------------------------
+subroutine weight_RTPP(w, wrlx)
+  implicit none
+  real(r_size), intent(in) :: w(MEMBER,MEMBER)
+  real(r_size), intent(out) :: wrlx(MEMBER,MEMBER)
+  integer :: m
+
+  wrlx = (1.0d0 - RELAX_ALPHA) * w
+  do m = 1, MEMBER
+    wrlx(m,m) = wrlx(m,m) + RELAX_ALPHA
+  end do
+
+  return
+end subroutine weight_RTPP
+!-----------------------------------------------------------------------
+! Relaxation via LETKF weight - RTPS method
+!-----------------------------------------------------------------------
+subroutine weight_RTPS(w, pa, xb, wrlx, infl)
+  implicit none
+  real(r_size), intent(in) :: w(MEMBER,MEMBER)
+  real(r_size), intent(in) :: pa(MEMBER,MEMBER)
+  real(r_size), intent(in) :: xb(MEMBER)
+  real(r_size), intent(out) :: wrlx(MEMBER,MEMBER)
+  real(r_size), intent(out) :: infl
+  real(r_size) :: var_g, var_a
+  integer :: m, k
+
+  var_g = 0.0d0
+  var_a = 0.0d0
+  do m = 1, MEMBER
+    var_g = var_g + xb(m) * xb(m)
+    do k = 1, MEMBER
+      var_a = var_a + xb(k) * pa(k,m) * xb(m)
+    end do
+  end do
+  if (var_g > 0.0d0 .and. var_a > 0.0d0) then
+    infl = RELAX_ALPHA_SPREAD * sqrt(var_g / (var_a * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0   ! Whitaker and Hamill 2012
+!    infl = sqrt(RELAX_ALPHA_SPREAD * (var_g / (var_a * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0) ! Hamrud et al. 2015 (slightly modified)
+    wrlx = w * infl
+  else
+    wrlx = w
+    infl = 1.0d0
+  end if
+
+  return
+end subroutine weight_RTPS
 
 !SUBROUTINE obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
 !  INTEGER,INTENT(IN) :: imin,imax,jmin,jmax

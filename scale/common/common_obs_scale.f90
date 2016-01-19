@@ -40,12 +40,14 @@ MODULE common_obs_scale
 !=======================================================================
 !$USE OMP_LIB
   USE common
+  USE common_nml
   USE common_scale
 
   IMPLICIT NONE
   PUBLIC
 
-  INTEGER,PARAMETER :: nid_obs=11
+!  INTEGER,PARAMETER :: nid_obs=11
+  INTEGER,PARAMETER :: nid_obs=12 !H08
 
   INTEGER,PARAMETER :: id_u_obs=2819
   INTEGER,PARAMETER :: id_v_obs=2820
@@ -53,6 +55,10 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: id_tv_obs=3074
   INTEGER,PARAMETER :: id_q_obs=3330
   INTEGER,PARAMETER :: id_rh_obs=3331
+!
+! Himawari-8 (H08) observations
+!
+  INTEGER,PARAMETER :: id_H08IR_obs=8800
 !
 ! surface observations codes > 9999
 !
@@ -105,20 +111,26 @@ MODULE common_obs_scale
 
   INTEGER,PARAMETER :: elem_uid(nid_obs)= &
      (/id_u_obs, id_v_obs, id_t_obs, id_tv_obs, id_q_obs, id_rh_obs, &
-       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs/)
+       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs, id_H08IR_obs/) ! H08
+!       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs/)
 !       id_tclon_obs, id_tclat_obs, id_tcmip_obs/)
 
   CHARACTER(3),PARAMETER :: obelmlist(nid_obs)= &
-     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH'/)
+!     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH'/)
+     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH', 'H08'/) ! H08
 !     'TCX', 'TCY', 'TCP'/)
 
-  INTEGER,PARAMETER :: nobtype = 22
+!  INTEGER,PARAMETER :: nobtype = 22
+  INTEGER,PARAMETER :: nobtype = 23 ! H08
   CHARACTER(6),PARAMETER :: obtypelist(nobtype)= &
      (/'ADPUPA', 'AIRCAR', 'AIRCFT', 'SATWND', 'PROFLR', &
        'VADWND', 'SATEMP', 'ADPSFC', 'SFCSHP', 'SFCBOG', &
        'SPSSMI', 'SYNDAT', 'ERS1DA', 'GOESND', 'QKSWND', &
        'MSONET', 'GPSIPW', 'RASSDA', 'WDSATR', 'ASCATW', &
-       'TMPAPR', 'PHARAD'/)
+       'TMPAPR', 'PHARAD', 'H08IRB'/) ! H08
+!       'TMPAPR', 'PHARAD'/)
+
+  INTEGER,PARAMETER :: max_obs_info_meta = 3 ! maximum array size for type(obs_info)%meta
 
   TYPE obs_info
     INTEGER :: nobs = 0
@@ -130,6 +142,7 @@ MODULE common_obs_scale
     REAL(r_size),ALLOCATABLE :: err(:)
     INTEGER,ALLOCATABLE :: typ(:)
     REAL(r_size),ALLOCATABLE :: dif(:)
+    REAL(r_size) :: meta(max_obs_info_meta) = undef
   END TYPE obs_info
 
   !!!!!!
@@ -138,6 +151,12 @@ MODULE common_obs_scale
     INTEGER,ALLOCATABLE :: set(:)
     INTEGER,ALLOCATABLE :: idx(:)
     REAL(r_size),ALLOCATABLE :: val(:)
+    !
+    ! obsda%lev array is used only for Himawari-8 assimilation.
+    ! This array preserves the most sensitive height derived from transmittance outputs from RTTOV.
+    ! For Himawari-8 assimilation, LETKF uses obsda%lev instead of obs%lev.
+    ! 
+    REAL(r_size),ALLOCATABLE :: lev(:) ! H08
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
     REAL(r_size),ALLOCATABLE :: ri(:)
@@ -151,15 +170,20 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: nbslot=1 ! basetime slot
   REAL(r_size),PARAMETER :: slotint=5.0d0 ! time interval between slots in second
 
-  INTEGER,PARAMETER :: nobsformats=2
+!  INTEGER,PARAMETER :: nobsformats=2
+  INTEGER,PARAMETER :: nobsformats=3 ! H08
   CHARACTER(30) :: obsformat_name(nobsformats) = &
-    (/'CONVENTIONAL', 'RADAR'/)
+!    (/'CONVENTIONAL', 'RADAR'/)
+    (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR'/)
 
-  INTEGER,PARAMETER :: nobsfiles=2          !!!!!! goes to namelist ?????
+!  INTEGER,PARAMETER :: nobsfiles=2          !!!!!! goes to namelist ?????
+  INTEGER,PARAMETER :: nobsfiles=3 ! H08     !!!!!! goes to namelist ?????
   CHARACTER(30) :: obsfile(nobsfiles) = &   !!!!
-    (/'obs.dat', 'radar.dat'/)              !!!!
+!    (/'obs.dat', 'radar.dat'/)              !!!!
+    (/'obs.dat  ', 'radar.dat', 'H08.dat  '/)  ! H08   !!!!
   INTEGER :: obsfileformat(nobsfiles) = &   !!!!
-    (/1, 2/)                                !!!!
+!    (/1, 2/)                                !!!!
+    (/1, 2, 3/)  ! H08                     !!!!
 
   CHARACTER(21) :: obsdafile='obsda.0000.000000.dat'
 
@@ -189,8 +213,6 @@ MODULE common_obs_scale
 
 CONTAINS
 
-
-!!!!!!!! subroutine read_nml_letkf_obs ?????
 
 !-----------------------------------------------------------------------
 !
@@ -226,15 +248,15 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
   REAL(r_size) :: u,v,t,q,topo
   REAL(RP) :: rotc(2)
 
-  INTEGER :: stggrdr = 0
-  if (present(stggrd)) stggrdr = stggrd
+  INTEGER :: stggrd_ = 0
+  if (present(stggrd)) stggrd_ = stggrd
 
   yobs = undef
   qc = iqc_good
 
   SELECT CASE (elm)
   CASE(id_u_obs,id_v_obs)  ! U,V
-    if (stggrdr == 1) then
+    if (stggrd_ == 1) then
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5,rj,u)  !###### should modity itpl_3d to prevent '1.0' problem....??
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5,v)  !######
     else
@@ -287,7 +309,8 @@ END SUBROUTINE Trans_XtoY
 !-----------------------------------------------------------------------
 ! 
 !-----------------------------------------------------------------------
-SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev,v3d,v2d,yobs,qc)
+SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev,v3d,v2d,yobs,qc,stggrd)
+!  USE common_mpi
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk,radar_lon,radar_lat,radar_z !!!!! Use only, ri, rj, rk eventually... (radar_lon,lat,z in ri,rj,rk)
@@ -296,17 +319,30 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
   REAL(r_size),INTENT(OUT) :: yobs
   INTEGER,INTENT(OUT) :: qc
-
+  INTEGER,INTENT(IN),OPTIONAL :: stggrd
+  INTEGER :: stggrd_ = 0
 
   REAL(r_size) :: qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr,rhr
   REAL(r_size) :: dist , dlon , dlat , az , elev , radar_ref,radar_rv
+
+!  integer :: ierr
+!  REAL(r_dble) :: rrtimer00,rrtimer
+!  rrtimer00 = MPI_WTIME()
+
+
+  if (present(stggrd)) stggrd_ = stggrd
 
 
   yobs = undef
   qc = iqc_good
 
-  CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,ur)
-  CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,vr)
+  if (stggrd_ == 1) then
+    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
+    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5,vr)  !######
+  else
+    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,ur)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,vr)
+  end if
   CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk,ri,rj,wr)
   CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,tr)
   CALL itpl_3d(v3d(:,:,:,iv3dd_p),rk,ri,rj,pr)
@@ -316,6 +352,12 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   CALL itpl_3d(v3d(:,:,:,iv3dd_qi),rk,ri,rj,qir)
   CALL itpl_3d(v3d(:,:,:,iv3dd_qs),rk,ri,rj,qsr)
   CALL itpl_3d(v3d(:,:,:,iv3dd_qg),rk,ri,rj,qgr)
+
+
+!  rrtimer = MPI_WTIME()
+!  WRITE(6,'(A,F18.10)') '###### Trans_XtoY_radar:itpl_3d:',rrtimer-rrtimer00
+!  rrtimer00=rrtimer
+
 
   !Compute az and elevation for the current observation.
   !Simple approach (TODO: implement a more robust computation)
@@ -339,6 +381,12 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   CALL com_distll_1(lon,lat,radar_lon,radar_lat,dist)
   elev=rad2deg*atan2(lev-radar_z,dist)
 
+
+!  rrtimer = MPI_WTIME()
+!  WRITE(6,'(A,F18.10)') '###### Trans_XtoY_radar:radar_coord:',rrtimer-rrtimer00
+!  rrtimer00=rrtimer
+
+
   !Check that the azimuth and elevation angles are within the expected range.
   !Some grid points may be at the radar location.
   !IF( .NOT. ( az .GT. 0.0d0 .AND. az .LT. 360.0d0 ) )RETURN
@@ -358,8 +406,11 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
 
   CALL calc_ref_vr(qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr,az,elev,radar_ref,radar_rv)
 
-  !WRITE(6,*)'ACRV',ref,radialv
-  !WRITE(6,*)'ACRV',ref,radialv
+
+!  rrtimer = MPI_WTIME()
+!  WRITE(6,'(A,F18.10)') '###### Trans_XtoY_radar:calc_ref_vr:',rrtimer-rrtimer00
+!  rrtimer00=rrtimer
+
 
   SELECT CASE (elm)
   CASE(id_radar_ref_obs)
@@ -388,6 +439,12 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   CASE DEFAULT
     qc = iqc_otype
   END SELECT
+
+
+!  rrtimer = MPI_WTIME()
+!  WRITE(6,'(A,F18.10)') '###### Trans_XtoY_radar:conversion:',rrtimer-rrtimer00
+!  rrtimer00=rrtimer
+
 
   RETURN
 END SUBROUTINE Trans_XtoY_radar
@@ -896,7 +953,8 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
   REAL(r_size),INTENT(OUT) :: rk
   INTEGER,INTENT(OUT) :: qc
   REAL(r_size) :: ak
-  REAL(r_size) :: lnps(nlonh,nlath)
+!  REAL(r_size) :: lnps(nlonh,nlath)
+  REAL(r_size) :: lnps(nlevh,nlonh,nlath)
   REAL(r_size) :: plev(nlevh)
   REAL(r_size) :: ptmp
   INTEGER :: i,j,k, ii, jj, ks
@@ -936,15 +994,19 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
         if (k > ks) ks = k
       end do
     end do
-    DO k=1+KHALO,nlev+KHALO
-!      IF(i <= nlon+IHALO) THEN
-        lnps(i-1:i,j-1:j) = LOG(p_full(k,i-1:i,j-1:j))
-!      ELSE
-!        lnps(i-1,j-1:j) = LOG(p_full(k,i-1,j-1:j))
-!        lnps(1,j-1:j) = LOG(p_full(k,1,j-1:j))
-!      END IF
-      CALL itpl_2d(lnps,ri,rj,plev(k))
-    END DO
+!    DO k=1+KHALO,nlev+KHALO
+!!      IF(i <= nlon+IHALO) THEN
+!        lnps(i-1:i,j-1:j) = LOG(p_full(k,i-1:i,j-1:j))
+!!      ELSE
+!!        lnps(i-1,j-1:j) = LOG(p_full(k,i-1,j-1:j))
+!!        lnps(1,j-1:j) = LOG(p_full(k,1,j-1:j))
+!!      END IF
+!      CALL itpl_2d(lnps,ri,rj,plev(k))
+!    END DO
+
+    lnps(:,i-1:i,j-1:j) = LOG(p_full(:,i-1:i,j-1:j))
+    call itpl_2d_column(lnps,ri,rj,plev)
+
     !
     ! Log pressure
     !
@@ -993,6 +1055,7 @@ END SUBROUTINE phys2ijk
 SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
   use scale_grid_index, only: &
       KHALO
+!  use common_mpi
   IMPLICIT NONE
 
   REAL(r_size),INTENT(IN) :: z_full(nlevh,nlonh,nlath)
@@ -1002,10 +1065,14 @@ SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
   REAL(r_size),INTENT(OUT) :: rk
   INTEGER,INTENT(OUT) :: qc
   REAL(r_size) :: ak
-!  REAL(r_size) :: lnps(nlonh,nlath)
   REAL(r_size) :: zlev(nlevh)
   REAL(r_size) :: ztmp
   INTEGER :: i,j,k, ii, jj, ks
+
+!  integer :: ierr
+!  REAL(r_dble) :: rrtimer00,rrtimer
+!  rrtimer00 = MPI_WTIME()
+
 
   qc = iqc_good
 !
@@ -1017,6 +1084,13 @@ SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
     qc = iqc_out_h
     return
   end if
+
+
+!  rrtimer = MPI_WTIME()
+!  WRITE(6,'(A,F18.10)') '###### phys2ijkz:check_domain:',rrtimer-rrtimer00
+!  rrtimer00=rrtimer
+
+
   !
   ! horizontal interpolation
   !
@@ -1034,15 +1108,25 @@ SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
       if (k > ks) ks = k
     end do
   end do
-  DO k=1+KHALO,nlev+KHALO
-!!      IF(i <= nlon+IHALO) THEN
-!      lnps(i-1:i,j-1:j) = LOG(p_full(k,i-1:i,j-1:j))
-!!      ELSE
-!!        lnps(i-1,j-1:j) = LOG(p_full(k,i-1,j-1:j))
-!!        lnps(1,j-1:j) = LOG(p_full(k,1,j-1:j))
-!!      END IF
-    CALL itpl_2d(z_full(k,:,:),ri,rj,zlev(k))
-  END DO
+
+
+!  rrtimer = MPI_WTIME()
+!  WRITE(6,'(A,F18.10)') '###### phys2ijkz:find_lowesr_level:',rrtimer-rrtimer00
+!  rrtimer00=rrtimer
+
+
+!  DO k=1+KHALO,nlev+KHALO
+!    CALL itpl_2d(z_full(k,:,:),ri,rj,zlev(k))
+!  END DO
+
+  call itpl_2d_column(z_full,ri,rj,zlev)
+
+
+!  rrtimer = MPI_WTIME()
+!  WRITE(6,'(A,F18.10)') '###### phys2ijkz:itpl_2d:',rrtimer-rrtimer00
+!  rrtimer00=rrtimer
+
+
   !
   ! determine if rlev is within bound.
   !
@@ -1060,6 +1144,13 @@ SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
     qc = iqc_out_vlo
     RETURN
   END IF
+
+
+!  rrtimer = MPI_WTIME()
+!  WRITE(6,'(A,F18.10)') '###### phys2ijkz:check_height:',rrtimer-rrtimer00
+!  rrtimer00=rrtimer
+
+
   !
   ! find rk
   !
@@ -1069,7 +1160,11 @@ SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
   ak = (rlev - zlev(k-1)) / (zlev(k) - zlev(k-1))
   rk = REAL(k-1,r_size) + ak
 
-!print *, '######', rlev, rk
+
+!  rrtimer = MPI_WTIME()
+!  WRITE(6,'(A,F18.10)') '###### phys2ijkz:calc_rk:',rrtimer-rrtimer00
+!  rrtimer00=rrtimer
+
 
   RETURN
 END SUBROUTINE phys2ijkz
@@ -1123,6 +1218,28 @@ SUBROUTINE itpl_2d(var,ri,rj,var5)
   RETURN
 END SUBROUTINE itpl_2d
 
+SUBROUTINE itpl_2d_column(var,ri,rj,var5)
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: var(nlevh,nlonh,nlath)
+  REAL(r_size),INTENT(IN) :: ri
+  REAL(r_size),INTENT(IN) :: rj
+  REAL(r_size),INTENT(OUT) :: var5(nlevh)
+  REAL(r_size) :: ai,aj
+  INTEGER :: i,j
+
+  i = CEILING(ri)
+  ai = ri - REAL(i-1,r_size)
+  j = CEILING(rj)
+  aj = rj - REAL(j-1,r_size)
+
+  var5(:) = var(:,i-1,j-1) * (1-ai) * (1-aj) &
+        & + var(:,i  ,j-1) *    ai  * (1-aj) &
+        & + var(:,i-1,j  ) * (1-ai) *    aj  &
+        & + var(:,i  ,j  ) *    ai  *    aj
+
+  RETURN
+END SUBROUTINE itpl_2d_column
+
 SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: var(nlevh,nlonh,nlath)
@@ -1154,7 +1271,7 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
-subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse)
+subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
@@ -1175,14 +1292,15 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse)
   REAL(RP),intent(in) :: v2dg(nlon,nlat,nv2d)
   type(obs_info),intent(in) :: obs(nobsfiles)
   type(obs_da_value),intent(in) :: obsda
-  real(r_size) :: topo(nlon,nlat)
+  real(r_size),intent(in) :: topo(nlon,nlat)
   INTEGER,INTENT(OUT) :: nobs(nid_obs)
   REAL(r_size),INTENT(OUT) :: bias(nid_obs)
   REAL(r_size),INTENT(OUT) :: rmse(nid_obs)
+  LOGICAL,INTENT(OUT) :: monit_type(nid_obs)
 
   REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
-  integer :: n,i,j,proc,iv3d,iv2d
+  integer :: n,i,j,k,proc,iv3d,iv2d
   real(r_size) :: ri,rj,rk
 
   real(r_size) :: oelm(obsda%nobs)
@@ -1209,21 +1327,27 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_t) = v3dg(:,:,:,iv3d_t)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_p) = v3dg(:,:,:,iv3d_p)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q) = v3dg(:,:,:,iv3d_q)
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
 !  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_rh) =
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) =
 
-  !!! use the 1st level as the surface (although it is not)
   ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
+!$OMP PARALLEL DO PRIVATE(j,i,k)
   do j = 1, nlat
     do i = 1, nlon
-      v2dgh(i+IHALO,j+JHALO,iv2dd_topo) = (ztop - topo(i,j)) / ztop * GRID_CZ(1+KHALO) + topo(i,j)
+      do k = 1, nlev
+        v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dd_hgt) = (ztop - topo(i,j)) / ztop * GRID_CZ(k+KHALO) + topo(i,j)
+      end do
     enddo
   enddo
+!$OMP END PARALLEL DO
+
+  !!! use the 1st level as the surface (although it is not)
+  v2dgh(:,:,iv2dd_topo) = v3dgh(1+KHALO,:,:,iv3dd_hgt)
+
   v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_ps) = v3dg(1,:,:,iv3d_p)
 !  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) =
   v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_u10m) = v3dg(1,:,:,iv3d_u)
@@ -1264,54 +1388,83 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse)
 
   oqc = -1
 
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ri,rj,rk)
   do n = 1, obsda%nobs
-
-
-    oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
 
     if (obsda%qc(n) /= iqc_good) write(6, *) '############', obsda%qc(n)
 
-    call rij_g2l_auto(proc,obsda%ri(n),obsda%rj(n),ri,rj)
+    oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
 
+    call rij_g2l_auto(proc,obsda%ri(n),obsda%rj(n),ri,rj)
     if (PRC_myrank /= proc) then
       write(6, *) '############ Error!', PRC_myrank,proc,obsda%ri(n),obsda%rj(n),ri,rj
       cycle
 !      stop
     end if
 
+    if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
+        abs(obs(obsda%set(n))%dif(obsda%idx(n))) <= DEPARTURE_STAT_T_RANGE) then
 
-!print *, obs(obsda%set(n))%dif(obsda%idx(n))
+      oqc(n) = iqc_otype
 
-
-    if (obs(obsda%set(n))%dif(obsda%idx(n)) >= -3600.0 .and. &   ! ###### 3600.0 as a variable
-        obs(obsda%set(n))%dif(obsda%idx(n)) <= 3600.0 .and. &    ! ######
-        (obs(obsda%set(n))%elm(obsda%idx(n)) == id_u_obs .or. &
-         obs(obsda%set(n))%elm(obsda%idx(n)) == id_v_obs .or. &
-         obs(obsda%set(n))%elm(obsda%idx(n)) == id_t_obs .or. &
-         obs(obsda%set(n))%elm(obsda%idx(n)) == id_tv_obs .or. &
-         obs(obsda%set(n))%elm(obsda%idx(n)) == id_q_obs .or. &
-         obs(obsda%set(n))%elm(obsda%idx(n)) == id_ps_obs)) then
-!           obs(obsda%set(n))%elm(obsda%idx(n)) == id_rh_obs .or. &
-
-      call phys2ijk(v3dgh(:,:,:,iv3dd_p),obs(obsda%set(n))%elm(obsda%idx(n)), &
-                    ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
-
-      if (oqc(n) == iqc_good) then
-        call Trans_XtoY(obs(obsda%set(n))%elm(obsda%idx(n)),ri,rj,rk, &
-                        obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
+      select case (obs(obsda%set(n))%elm(obsda%idx(n)))
+      case(id_u_obs,id_v_obs,id_t_obs,id_tv_obs,id_q_obs,id_ps_obs) !,id_rh_obs)
+        call phys2ijk(v3dgh(:,:,:,iv3dd_p),obs(obsda%set(n))%elm(obsda%idx(n)), &
+                      ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
         if (oqc(n) == iqc_good) then
-          ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n)
+          call Trans_XtoY(obs(obsda%set(n))%elm(obsda%idx(n)),ri,rj,rk, &
+                          obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)), &
+                          v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
         end if
 
-!write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsda%set(n))%typ(obsda%idx(n)), obs(obsda%set(n))%lon(obsda%idx(n)), obs(obsda%set(n))%lat(obsda%idx(n)), obs(obsda%set(n))%lev(obsda%idx(n)), obs(obsda%set(n))%dat(obsda%idx(n)), obs(obsda%set(n))%err(obsda%idx(n)), ohx(n), oqc(n)
+      case(id_radar_ref_obs,id_radar_vr_obs,id_radar_prh_obs)
+        if (DEPARTURE_STAT_RADAR) then
+          call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
+          if (oqc(n) == iqc_good) then
+            call Trans_XtoY_radar(obs(obsda%set(n))%elm(obsda%idx(n)),obs(obsda%set(n))%meta(1), &
+                                  obs(obsda%set(n))%meta(2),obs(obsda%set(n))%meta(3),ri,rj,rk, &
+                                  obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)), &
+                                  obs(obsda%set(n))%lev(obsda%idx(n)),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
+            if (oqc(n) == iqc_ref_low) oqc(n) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
+          end if
+        end if
 
+!!!!!!!! not available...
+!      case(id_H08IR_obs)
+!        if (DEPARTURE_STAT_H08) then
+!          ......
+!        end if
+      end select
+
+      if (oqc(n) == iqc_good) then
+        ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n)
       end if
+!write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsda%set(n))%typ(obsda%idx(n)), obs(obsda%set(n))%lon(obsda%idx(n)), obs(obsda%set(n))%lat(obsda%idx(n)), obs(obsda%set(n))%lev(obsda%idx(n)), obs(obsda%set(n))%dat(obsda%idx(n)), obs(obsda%set(n))%err(obsda%idx(n)), ohx(n), oqc(n)
 
     end if
 
-  end do
+  end do ! [ n = 1, obsda%nobs ]
+!$OMP END PARALLEL DO
 
   call monit_dep(obsda%nobs,oelm,ohx,oqc,nobs,bias,rmse)
+
+  monit_type = .false.
+  monit_type(uid_obs(id_u_obs)) = .true.
+  monit_type(uid_obs(id_v_obs)) = .true.
+  monit_type(uid_obs(id_t_obs)) = .true.
+  monit_type(uid_obs(id_tv_obs)) = .true.
+  monit_type(uid_obs(id_q_obs)) = .true.
+!  monit_type(uid_obs(id_rh_obs)) = .true.
+  monit_type(uid_obs(id_ps_obs)) = .true.
+  if (DEPARTURE_STAT_RADAR) then
+    monit_type(uid_obs(id_radar_ref_obs)) = .true.
+    monit_type(uid_obs(id_radar_vr_obs)) = .true.
+!    monit_type(uid_obs(id_radar_prh_obs)) = .true.
+  end if
+  if (DEPARTURE_STAT_H08) then
+    monit_type(uid_obs(id_H08IR_obs)) = .true.
+  end if
+
 
 !    deallocate (oelm)
 !    deallocate (ohx)
@@ -1342,9 +1495,9 @@ SUBROUTINE monit_dep(nn,elm,dep,qc,nobs,bias,rmse)
   REAL(r_size),INTENT(OUT) :: rmse(nid_obs)
   INTEGER :: n,i,ielm
 
+  nobs = 0
   rmse = 0.0d0
   bias = 0.0d0
-  nobs = 0
 
   DO n=1,nn
     IF(qc(n) /= iqc_good) CYCLE
@@ -1355,18 +1508,18 @@ SUBROUTINE monit_dep(nn,elm,dep,qc,nobs,bias,rmse)
     end if
     i = uid_obs(ielm)
 
-    rmse(i) = rmse(i) + dep(n)**2
-    bias(i) = bias(i) + dep(n)
     nobs(i) = nobs(i) + 1
+    bias(i) = bias(i) + dep(n)
+    rmse(i) = rmse(i) + dep(n)**2
   END DO
 
   DO i = 1, nid_obs
     IF(nobs(i) == 0) THEN
-      rmse(i) = undef
       bias(i) = undef
+      rmse(i) = undef
     ELSE
-      rmse(i) = SQRT(rmse(i) / REAL(nobs(i),r_size))
       bias(i) = bias(i) / REAL(nobs(i),r_size)
+      rmse(i) = SQRT(rmse(i) / REAL(nobs(i),r_size))
     END IF
   END DO
 
@@ -1374,37 +1527,56 @@ SUBROUTINE monit_dep(nn,elm,dep,qc,nobs,bias,rmse)
 END SUBROUTINE monit_dep
 !-----------------------------------------------------------------------
 ! Monitor departure
-!  ofmt: output format
-!    0: U,V,T(Tv),Q,RH,PS (default)
-!    1: U,V,T(Tv),Q,RH,PS,RAIN
 !-----------------------------------------------------------------------
-SUBROUTINE monit_print(nobs,bias,rmse,ofmt)
+SUBROUTINE monit_print(nobs,bias,rmse,monit_type)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: nobs(nid_obs)
   REAL(r_size),INTENT(IN) :: bias(nid_obs)
   REAL(r_size),INTENT(IN) :: rmse(nid_obs)
-  INTEGER,INTENT(IN),OPTIONAL :: ofmt
-  INTEGER :: ofmt0
-  ofmt0 = 0
-  IF(PRESENT(ofmt)) ofmt0 = ofmt
+  LOGICAL,INTENT(IN),OPTIONAL :: monit_type(nid_obs)
 
-  IF(ofmt0 == 0) THEN
-    WRITE(6,'(A)') '=============================================================================='
-    WRITE(6,'(6x,6A12)') 'U','V','T(Tv)','Q','RH','PS'
-    WRITE(6,'(A)') '------------------------------------------------------------------------------'
-    WRITE(6,'(A6,6ES12.3)') 'BIAS  ',bias(1),bias(2),bias(3),bias(5),bias(6),bias(7)
-    WRITE(6,'(A6,6ES12.3)') 'RMSE  ',rmse(1),rmse(2),rmse(3),rmse(5),rmse(6),rmse(7)
-    WRITE(6,'(A6,6I12)') 'NUMBER',nobs(1),nobs(2),nobs(3),nobs(5),nobs(6),nobs(7)
-    WRITE(6,'(A)') '=============================================================================='
-  ELSE IF(ofmt0 == 1) THEN
-    WRITE(6,'(A)') '=========================================================================================='
-    WRITE(6,'(6x,7A12)') 'U','V','T(Tv)','Q','RH','PS','RAIN'
-    WRITE(6,'(A)') '------------------------------------------------------------------------------------------'
-    WRITE(6,'(A6,7ES12.3)') 'BIAS  ',bias(1),bias(2),bias(3),bias(5),bias(6),bias(7),bias(8)
-    WRITE(6,'(A6,7ES12.3)') 'RMSE  ',rmse(1),rmse(2),rmse(3),rmse(5),rmse(6),rmse(7),rmse(8)
-    WRITE(6,'(A6,7I12)') 'NUMBER',nobs(1),nobs(2),nobs(3),nobs(5),nobs(6),nobs(7),nobs(8)
-    WRITE(6,'(A)') '=========================================================================================='
-  END IF
+  character(12) :: var_show(nid_obs)
+  character(12) :: nobs_show(nid_obs)
+  character(12) :: bias_show(nid_obs)
+  character(12) :: rmse_show(nid_obs)
+
+  integer :: i, itv, n
+  character(4) :: nstr
+  character(12) :: tmpstr(nid_obs)
+  character(12) :: tmpstr2(nid_obs)
+
+  logical :: monit_type_(nid_obs)
+
+  monit_type_ = .true.
+  if (present(monit_type)) monit_type_ = monit_type
+
+  n = 0
+  itv = uid_obs(id_tv_obs)
+  do i = 1, nid_obs
+    if (monit_type_(i) .and. i /= itv) then
+      n = n + 1
+      write(var_show(n),'(A12)') obelmlist(i)
+      write(nobs_show(n),'(I12)') nobs(i)
+      if (nobs(i) > 0) then
+        write(bias_show(n),'(ES12.3)') bias(i)
+        write(rmse_show(n),'(ES12.3)') rmse(i)
+      else
+        write(bias_show(n),'(A12)') 'N/A'
+        write(rmse_show(n),'(A12)') 'N/A'
+      end if
+    end if
+  end do
+  write(nstr, '(I4)') n
+  tmpstr(1:n) = '============'
+  tmpstr2(1:n) = '------------'
+
+  WRITE(6,'(A,' // trim(nstr) // 'A)') '======', tmpstr(1:n)
+  WRITE(6,'(6x,' // trim(nstr) // 'A)')          var_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') '------', tmpstr2(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') 'BIAS  ', bias_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') 'RMSE  ', rmse_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') 'NUMBER', nobs_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') '======', tmpstr(1:n)
 
   RETURN
 END SUBROUTINE monit_print
@@ -1468,12 +1640,14 @@ SUBROUTINE obs_da_value_allocate(obs,member)
   ALLOCATE( obs%set    (obs%nobs) )
   ALLOCATE( obs%idx    (obs%nobs) )
   ALLOCATE( obs%val    (obs%nobs) )
+  ALLOCATE( obs%lev    (obs%nobs) ) ! H08
   ALLOCATE( obs%qc     (obs%nobs) )
   ALLOCATE( obs%ri     (obs%nobs) )
   ALLOCATE( obs%rj     (obs%nobs) )
 
   obs%idx = 0
   obs%val = 0.0d0
+  obs%lev = undef ! H08
   obs%qc = 0
   obs%ri = 0.0d0
   obs%rj = 0.0d0
@@ -1495,6 +1669,7 @@ SUBROUTINE obs_da_value_deallocate(obs)
   IF(ALLOCATED(obs%set    )) DEALLOCATE(obs%set    )
   IF(ALLOCATED(obs%idx    )) DEALLOCATE(obs%idx    )
   IF(ALLOCATED(obs%val    )) DEALLOCATE(obs%val    )
+  IF(ALLOCATED(obs%lev    )) DEALLOCATE(obs%lev    ) ! H08
   IF(ALLOCATED(obs%ensval )) DEALLOCATE(obs%ensval )
   IF(ALLOCATED(obs%qc     )) DEALLOCATE(obs%qc     )
   IF(ALLOCATED(obs%ri     )) DEALLOCATE(obs%ri     )
@@ -1622,24 +1797,24 @@ SUBROUTINE write_obs(cfile,obs,append,missing)
   TYPE(obs_info),INTENT(IN) :: obs
   LOGICAL,INTENT(IN),OPTIONAL :: append
   LOGICAL,INTENT(IN),OPTIONAL :: missing
-  LOGICAL :: appendr
-  LOGICAL :: missingr
+  LOGICAL :: append_
+  LOGICAL :: missing_
   REAL(r_sngl) :: wk(8)
   INTEGER :: n,iunit
 
   iunit=92
-  appendr = .false.
-  IF(present(append)) appendr = append
-  missingr = .true.
-  IF(present(missing)) missingr = missing
+  append_ = .false.
+  IF(present(append)) append_ = append
+  missing_ = .true.
+  IF(present(missing)) missing_ = missing
 
-  IF(appendr) THEN
+  IF(append_) THEN
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
   ELSE
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   END IF
   DO n=1,obs%nobs
-    if (missingr .or. abs(obs%dat(n) - undef) > tiny(wk(5))) then
+    if (missing_ .or. abs(obs%dat(n) - undef) > tiny(wk(5))) then
       wk(1) = REAL(obs%elm(n),r_sngl)
       wk(2) = REAL(obs%lon(n),r_sngl)
       wk(3) = REAL(obs%lat(n),r_sngl)
@@ -1688,7 +1863,7 @@ SUBROUTINE read_obs_da(cfile,obs,im,check)
   TYPE(obs_da_value),INTENT(INOUT) :: obs
   INTEGER,INTENT(IN) :: im
   LOGICAL,INTENT(IN) :: check
-  REAL(r_sngl) :: wk(6)
+  REAL(r_sngl) :: wk(7) ! H08
   INTEGER :: n,iunit
 
 !  call obs_da_value_allocate(obs)
@@ -1725,6 +1900,7 @@ SUBROUTINE read_obs_da(cfile,obs,im,check)
       stop
     end if
     obs%rj(n) = REAL(wk(6),r_size)
+    obs%lev(n) = REAL(wk(7),r_size) ! H08
   END DO
   CLOSE(iunit)
 
@@ -1737,14 +1913,14 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
   TYPE(obs_da_value),INTENT(IN) :: obs
   INTEGER,INTENT(IN) :: im
   LOGICAL,INTENT(IN),OPTIONAL :: append
-  LOGICAL :: appendr
-  REAL(r_sngl) :: wk(6)
+  LOGICAL :: append_
+  REAL(r_sngl) :: wk(7) ! H08
   INTEGER :: n,iunit
 
   iunit=92
-  appendr = .false.
-  IF(present(append)) appendr = append
-  IF(appendr) THEN
+  append_ = .false.
+  IF(present(append)) append_ = append
+  IF(append_) THEN
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append',STATUS='replace')
   ELSE
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',STATUS='replace')
@@ -1760,6 +1936,7 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
     wk(4) = REAL(obs%qc(n),r_sngl)
     wk(5) = REAL(obs%ri(n),r_sngl)
     wk(6) = REAL(obs%rj(n),r_sngl)
+    wk(7) = REAL(obs%lev(n),r_sngl) ! H08
     WRITE(iunit) wk
   END DO
   CLOSE(iunit)
@@ -1868,34 +2045,33 @@ SUBROUTINE read_obs_radar(cfile,obs)
   RETURN
 END SUBROUTINE read_obs_radar
 
-SUBROUTINE write_obs_radar(cfile,obs,radarlon,radarlat,radarz,append,missing)
+SUBROUTINE write_obs_radar(cfile,obs,append,missing)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(IN) :: obs
-  REAL(r_size),INTENT(IN) :: radarlon,radarlat,radarz
   LOGICAL,INTENT(IN),OPTIONAL :: append
   LOGICAL,INTENT(IN),OPTIONAL :: missing
-  LOGICAL :: appendr
-  LOGICAL :: missingr
+  LOGICAL :: append_
+  LOGICAL :: missing_
   REAL(r_sngl) :: wk(7)
   INTEGER :: n,iunit
 
   iunit=92
-  appendr = .false.
-  IF(present(append)) appendr = append
-  missingr = .true.
-  IF(present(missing)) missingr = missing
+  append_ = .false.
+  IF(present(append)) append_ = append
+  missing_ = .true.
+  IF(present(missing)) missing_ = missing
 
-  IF(appendr) THEN
+  IF(append_) THEN
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
   ELSE
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   END IF
-  WRITE(iunit) REAL(radarlon,r_sngl)
-  WRITE(iunit) REAL(radarlat,r_sngl)
-  WRITE(iunit) REAL(radarz,r_sngl)
+  WRITE(iunit) REAL(obs%meta(1),r_sngl)
+  WRITE(iunit) REAL(obs%meta(2),r_sngl)
+  WRITE(iunit) REAL(obs%meta(3),r_sngl)
   DO n=1,obs%nobs
-    if (missingr .or. abs(obs%dat(n) - undef) > tiny(wk(5))) then
+    if (missing_ .or. abs(obs%dat(n) - undef) > tiny(wk(5))) then
       wk(1) = REAL(obs%elm(n),r_sngl)
       wk(2) = REAL(obs%lon(n),r_sngl)
       wk(3) = REAL(obs%lat(n),r_sngl)
@@ -1911,19 +2087,12 @@ SUBROUTINE write_obs_radar(cfile,obs,radarlon,radarlat,radarz,append,missing)
   RETURN
 END SUBROUTINE write_obs_radar
 
-subroutine read_obs_all(obs, radarlon, radarlat, radarz)
+subroutine read_obs_all(obs)
   implicit none
 
   type(obs_info), intent(out) :: obs(nobsfiles)
-  real(r_size), intent(out) :: radarlon, radarlat, radarz
   integer :: iof
   logical :: ex
-
-
-  radarlon = undef
-  radarlat = undef
-  radarz = undef
-
 
   do iof = 1, nobsfiles
     inquire (file=obsfile(iof), exist=ex)
@@ -1942,7 +2111,9 @@ subroutine read_obs_all(obs, radarlon, radarlat, radarz)
     case (1)
       call get_nobs(obsfile(iof),8,obs(iof)%nobs)
     case (2)
-      call get_nobs_radar(obsfile(iof), obs(iof)%nobs, radarlon, radarlat, radarz)  !!!!!! using 'radar_info' data type to handle more than 1 radar???
+      call get_nobs_radar(obsfile(iof), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
+    case (3) !H08 
+      call get_nobs_H08(obsfile(iof),obs(iof)%nobs) ! H08
     case default
       write(6,*) 'Error: Unsupported observation file format!'
       stop
@@ -1959,25 +2130,26 @@ subroutine read_obs_all(obs, radarlon, radarlat, radarz)
       call read_obs(trim(obsfile(iof)),obs(iof))
     case (2)
       call read_obs_radar(trim(obsfile(iof)),obs(iof))
+    case (3) ! H08 
+      call read_obs_H08(trim(obsfile(iof)),obs(iof)) ! H08
     end select
   end do ! [ iof = 1, nobsfiles ]
 
   return
 end subroutine read_obs_all
 
-subroutine write_obs_all(obs, radarlon, radarlat, radarz, missing, file_suffix)
+subroutine write_obs_all(obs, missing, file_suffix)
   implicit none
 
   type(obs_info), intent(in) :: obs(nobsfiles)
-  real(r_size), intent(in) :: radarlon, radarlat, radarz
   logical, intent(in), optional :: missing
   character(len=*), intent(in), optional :: file_suffix
-  logical :: missingr
+  logical :: missing_
   integer :: iof, strlen1, strlen2
   character(200) :: filestr
 
-  missingr = .true.
-  IF(present(missing)) missingr = missing
+  missing_ = .true.
+  IF(present(missing)) missing_ = missing
 
   do iof = 1, nobsfiles
     if (present(file_suffix)) then
@@ -1990,9 +2162,11 @@ subroutine write_obs_all(obs, radarlon, radarlat, radarz, missing, file_suffix)
     end if
     select case (obsfileformat(iof))
     case (1)
-      call write_obs(trim(filestr),obs(iof),missing=missingr)
+      call write_obs(trim(filestr),obs(iof),missing=missing_)
     case (2)
-      call write_obs_radar(trim(filestr),obs(iof),radarlon,radarlat,radarz,missing=missingr)
+      call write_obs_radar(trim(filestr),obs(iof),missing=missing_)
+    case (3) ! H08 
+      call write_obs_H08(trim(filestr),obs(iof),missing=missing_) ! H08
     end select
   end do ! [ iof = 1, nobsfiles ]
 
@@ -2030,6 +2204,8 @@ FUNCTION uid_obs(id_obs)
     uid_obs = 10
   CASE(id_radar_prh_obs)
     uid_obs = 11
+  CASE(id_H08IR_obs) ! H08
+    uid_obs = 12     ! H08
 !  CASE(id_tclon_obs)
 !    uid_obs = 9
 !  CASE(id_tclat_obs)
@@ -2040,5 +2216,310 @@ FUNCTION uid_obs(id_obs)
     uid_obs = -1 ! error
   END SELECT
 END FUNCTION uid_obs
+!
+!-----------------------------------------------------------------------
+!   Himawari-8 obs subroutines by T. Honda (10/29/2015)
+!-----------------------------------------------------------------------
+#ifdef H08
+!
+SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
+  use scale_mapproj, only: &
+      MPRJ_rotcoef
+  use scale_H08_fwd
+  use scale_grid_index, only: &
+    KHALO
+
+  IMPLICIT NONE
+  INTEGER :: n, np, k, ch
+  INTEGER,INTENT(IN) :: nprof ! Num of Brightness Temp "Loc" observed by Himawari-8
+                              ! NOTE: multiple channels (obs) on each grid point !!
+  REAL(r_size),INTENT(IN) :: ri(nprof),rj(nprof)
+  REAL(r_size),INTENT(IN) :: lon(nprof),lat(nprof)
+  REAL(r_size),INTENT(IN) :: v3d(nlevh,nlonh,nlath,nv3dd)
+  REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
+  INTEGER,INTENT(IN),OPTIONAL :: stggrd
+  REAL(RP) :: rotc(2)
+
+  INTEGER :: stggrd_ = 0
+
+! -- 2D (nlevh,nbtobs) or 1D (nbtobs) profiles for RTTOV --  
+  REAL(r_size) :: prs2d(nlevh,nprof)
+  REAL(r_size) :: tk2d(nlevh,nprof)
+  REAL(r_size) :: qv2d(nlevh,nprof)
+  REAL(r_size) :: qliq2d(nlevh,nprof)
+  REAL(r_size) :: qice2d(nlevh,nprof)
+
+  REAL(r_size) :: tsfc1d(nprof)
+  REAL(r_size) :: qsfc1d(nprof)
+  REAL(r_size) :: psfc1d(nprof)
+  REAL(r_size) :: usfc1d(nprof)
+  REAL(r_size) :: vsfc1d(nprof)
+  REAL(r_size) :: lon1d(nprof)
+  REAL(r_size) :: lat1d(nprof)
+  REAL(r_size) :: topo1d(nprof)
+  REAL(r_size) :: lsmask1d(nprof)
+
+! -- brightness temp from RTTOV
+  REAL(r_size) :: bt_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
+! -- transmittance from RTTOV
+  REAL(r_size) :: trans_out(nlev,nch,nprof)
+ 
+  REAL(r_size) :: max_weight(nch,nprof)
+  REAL(r_size) :: tmp_weight
+
+  REAL(r_size),INTENT(OUT) :: yobs(nprof*nch)
+  INTEGER,INTENT(OUT) :: qc(nprof*nch)
+  REAL(r_size),INTENT(OUT) :: plev_obs(nch*nprof)
+
+  REAL(r_size) :: rdp ! delta p
+  INTEGER :: slev, elev
+
+  REAL(r_size) :: utmp, vtmp ! U10m & V10m tmp for rotation
+
+  if (present(stggrd)) stggrd_ = stggrd
+
+  yobs = undef
+  qc = iqc_good
+
+  lon1d(:) = lon(:)
+  lat1d(:) = lat(:)
+
+! -- make profile arrays for RTTOV --
+  DO np = 1, nprof ! -- make profiles
+
+    CALL itpl_2d(v2d(:,:,iv2dd_skint),ri(np),rj(np),tsfc1d(np)) ! T2 is better??
+!    CALL itpl_2d(v2d(:,:,iv2dd_t2m),ri(np),rj(np),tsfc1d(np))
+    CALL itpl_2d(v2d(:,:,iv2dd_q2m),ri(np),rj(np),qsfc1d(np))
+    CALL itpl_2d(v2d(:,:,iv2dd_topo),ri(np),rj(np),topo1d(np))
+    CALL itpl_2d(v2d(:,:,iv2dd_lsmask),ri(np),rj(np),lsmask1d(np))
+    CALL itpl_2d(v2d(:,:,iv2dd_ps),ri(np),rj(np),psfc1d(np))
+!    call prsadj(yobs,rk-topo,t,q)
+!    if (abs(rk-topo) > PS_ADJUST_THRES) then
+!      write (6,'(A,F6.1)') 'warning: PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
+!      qc = iqc_ps_ter
+!    end if
+
+    if (stggrd_ == 1) then
+      CALL itpl_2d(v2d(:,:,iv2dd_u10m),ri(np)-0.5,rj(np),utmp)  !###### should modity itpl_3d to prevent '1.0' problem....??
+      CALL itpl_2d(v2d(:,:,iv2dd_v10m),ri(np),rj(np)-0.5,vtmp)  !######
+    else
+      CALL itpl_2d(v2d(:,:,iv2dd_u10m),ri(np),rj(np),utmp)
+      CALL itpl_2d(v2d(:,:,iv2dd_v10m),ri(np),rj(np),vtmp)
+    end if
+    call MPRJ_rotcoef(rotc,lon(np)*deg2rad,lat(np)*deg2rad)
+    usfc1d(np) = utmp * rotc(1) - vtmp * rotc(2)
+    vsfc1d(np) = utmp * rotc(2) + vtmp * rotc(1)
+
+    CALL itpl_2d_column(v3d(:,:,:,iv3dd_p),ri(np),rj(np),prs2d(:,np))
+    CALL itpl_2d_column(v3d(:,:,:,iv3dd_t),ri(np),rj(np),tk2d(:,np))
+    CALL itpl_2d_column(v3d(:,:,:,iv3dd_q),ri(np),rj(np),qv2d(:,np))
+    CALL itpl_2d_column(v3d(:,:,:,iv3dd_qc),ri(np),rj(np),qliq2d(:,np))
+    CALL itpl_2d_column((v3d(:,:,:,iv3dd_qi) &
+                       + v3d(:,:,:,iv3dd_qs) &
+                       + v3d(:,:,:,iv3dd_qg)),ri(np),rj(np),qice2d(:,np))
+
+  ENDDO ! -- make profiles
+
+
+!
+! -- NOTE: The channel number for RTTOV is always 10, because it should be the same
+!          with that in Himawari-8 RTTOV coef files.
+!
+!        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using (lon,lat).
+!
+
+  slev = 1 + KHALO
+  elev = nlevh - KHALO
+
+  CALL SCALE_RTTOV_fwd(nch, & ! num of channels
+                       nlev,& ! num of levels
+                       nprof,& ! num of profs
+                       prs2d(elev:slev:-1,1:nprof),& ! (Pa)
+                       tk2d(elev:slev:-1,1:nprof),& ! (K)
+                       qv2d(elev:slev:-1,1:nprof),& ! (kg/kg)
+                       qliq2d(elev:slev:-1,1:nprof),& ! (kg/kg)
+                       qice2d(elev:slev:-1,1:nprof),& ! (kg/kg)
+                       tsfc1d(1:nprof),& ! (K)
+                       qsfc1d(1:nprof),& ! (kg/kg)
+                       psfc1d(1:nprof),& ! (Pa)
+                       usfc1d(1:nprof),& ! (m/s)
+                       vsfc1d(1:nprof),& ! (m/s)
+                       topo1d(1:nprof),& ! (m)
+                       lon1d(1:nprof),& ! (deg)
+                       lat1d(1:nprof),& ! (deg)
+                       lsmask1d(1:nprof),& ! (0-1)
+                       bt_out(1:nch,1:nprof),& ! (K)
+                       trans_out(nlev:1:-1,1:nch,1:nprof)) ! ()
+!
+! -- Compute max weight level using trans_out 
+! -- (Transmittance from each user pressure level to Top Of the Atmosphere)
+! -- bt_out is substituted into yobs
+
+  n = 0
+  DO np = 1, nprof
+  DO ch = 1, nch
+    n = n + 1
+
+    rdp = 1.0d0 / (prs2d(slev+1,np) - prs2d(slev,np))
+    max_weight(ch,np) = abs((trans_out(2,ch,np) - trans_out(1,ch,np)) * rdp )
+
+
+    plev_obs(n) = (prs2d(slev+1,np) + prs2d(slev,np)) * 0.5d0 ! (Pa)
+
+    DO k = 2, nlev-1
+
+      rdp = 1.0d0 / abs(prs2d(slev+k,np) - prs2d(slev+k-1,np))
+      tmp_weight = (trans_out(k+1,ch,np) - trans_out(k,ch,np)) * rdp 
+      if(tmp_weight > max_weight(ch,np))then
+        max_weight(ch,np) = tmp_weight
+        plev_obs(n) = (prs2d(slev+k,np) + prs2d(slev+k-1,np)) * 0.5d0 ! (Pa)
+      endif
+    ENDDO
+
+    yobs(n) = bt_out(ch,np)
+! -- tentative QC here --
+    IF(plev_obs(n) >= H08_LIMIT_LEV)THEN
+      qc(n) = iqc_good
+    ELSE
+      qc(n) = iqc_obs_bad
+    ENDIF
+
+    SELECT CASE(H08_CH_USE(ch))
+    CASE(1)
+      qc(n) = iqc_good
+    CASE DEFAULT
+      qc(n) = iqc_obs_bad
+    END SELECT
+  ENDDO ! ch
+  ENDDO ! np
+
+  RETURN
+END SUBROUTINE Trans_XtoY_H08
+#endif
+
+SUBROUTINE get_nobs_H08(cfile,nn)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: cfile
+  INTEGER,INTENT(OUT) :: nn ! num of all H08 obs
+  REAL(r_sngl) :: wk(4+nch)
+  INTEGER :: ios 
+  INTEGER :: iprof
+  INTEGER :: iunit
+  LOGICAL :: ex
+
+  nn = 0 
+  iprof = 0
+  iunit=91
+      
+      
+  INQUIRE(FILE=cfile,EXIST=ex)
+  IF(ex) THEN
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+    
+!    READ(iunit,IOSTAT=ios)wk
+!    IF(ios /= 0) THEN 
+!      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+!      RETURN
+!    END IF
+    
+    DO
+      READ(iunit,IOSTAT=ios) wk
+      IF(ios /= 0) EXIT
+      iprof = iprof + 1
+      nn = nn + nch
+    END DO
+    WRITE(6,*)' H08 FILE ', cfile
+    WRITE(6,'(I10,A)') nn,' OBSERVATIONS INPUT'
+    WRITE(6,'(A12,I10)') '   num of prof:',iprof
+    CLOSE(iunit)
+  ELSE
+    WRITE(6,'(2A)') cfile,' does not exist -- skipped'
+  END IF
+
+  RETURN
+END SUBROUTINE get_nobs_H08
+
+SUBROUTINE read_obs_H08(cfile,obs)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: cfile
+  TYPE(obs_info),INTENT(INOUT) :: obs
+  REAL(r_sngl) :: wk(4+nch)
+!  REAL(r_sngl) :: tmp
+  INTEGER :: n,iunit
+
+  INTEGER :: nprof, np, ch
+
+  nprof = obs%nobs / nch
+!  call obs_info_allocate(obs)
+
+  iunit=91
+  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+
+  n = 0
+  DO np=1,nprof
+    READ(iunit) wk
+
+    DO ch = 1, nch
+      n = n + 1
+
+      obs%elm(n) = NINT(wk(1))
+      obs%typ(n) = NINT(wk(2))
+      obs%lon(n) = REAL(wk(3),r_size)
+      obs%lat(n) = REAL(wk(4),r_size)
+      obs%dat(n) = REAL(wk(4+ch),r_size)
+      obs%dif(n) = 0.0d0
+      obs%lev(n) = ch + 6 ! substitute channnel number instead of the obs level
+      obs%err(n) = REAL(OBSERR_H08,r_size)
+    END DO
+  END DO
+  CLOSE(iunit)
+
+  RETURN
+END SUBROUTINE read_obs_H08
+
+SUBROUTINE write_obs_H08(cfile,obs,append,missing)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN) :: cfile
+  TYPE(obs_info),INTENT(IN) :: obs
+  LOGICAL,INTENT(IN),OPTIONAL :: append
+  LOGICAL,INTENT(IN),OPTIONAL :: missing
+  LOGICAL :: append_
+  LOGICAL :: missing_
+  REAL(r_sngl) :: wk(4+nch)
+  INTEGER :: n,iunit
+  INTEGER :: iprof, ns, ne
+
+  iunit=92
+  append_ = .false.
+  IF(present(append)) append_ = append
+  missing_ = .true.
+  IF(present(missing)) missing_ = missing
+
+  iprof = obs%nobs / nch
+
+
+  IF(append_) THEN
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
+  ELSE
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+  END IF
+
+  DO n=1,iprof
+    ns = (n-1)*nch + 1
+    ne = n*nch
+
+    wk(1) = REAL(obs%elm(ns),r_sngl)
+    wk(2) = REAL(obs%typ(ns),r_sngl)
+    wk(3) = REAL(obs%lon(ns),r_sngl)
+    wk(4) = REAL(obs%lat(ns),r_sngl)
+    wk(5:5+nch-1) = REAL(obs%dat(ns:ne),r_size)
+    WRITE(iunit) wk
+
+  ENDDO
+
+  CLOSE(iunit)
+
+  RETURN
+END SUBROUTINE write_obs_H08
 
 END MODULE common_obs_scale

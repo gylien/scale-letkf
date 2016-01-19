@@ -5,16 +5,19 @@
 #
 #===============================================================================
 
+RTTOV_COEF="/data6/gylien/scale-letkf/scale_run_himawari_test/letkf/scale/run/rtcoef_himawari_8_ahi.dat"
+RTTOV_SCCOEF="/data6/gylien/scale-letkf/scale_run_himawari_test/letkf/scale/run/sccldcoef_himawari_8_ahi.dat"
+
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/data6/gylien/exp/scale-letkf_test/testcase_45km_4p" # Directory for SCALE-LETKF output
+OUTDIR="/data6/gylien/exp/scale-letkf_testcase/testcase_45km_4p_l36" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/data6/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
+MODELDIR="$DIR/../../bin/Linux64-intel-mpt-yamazaki"
 DATADIR="/data6/gylien/scale-letkf/database"
 
 DATA_TOPO="/data6/gylien/scale-letkf/database/topo_prep/testcase_45km_4p_bf10"
@@ -70,10 +73,10 @@ LTIMESLOT=600      # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=10          # Ensemble size
+MEMBER=3           # Ensemble size
 
-NNODES=2           # Number of nodes
-PPN=40             # Number of processes per node
+NNODES=1           # Number of nodes
+PPN=16             # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
@@ -92,7 +95,7 @@ MACHINE_TYPE=1              # Machine type
                             # 11: K-computer (micro jobs)
                             # 12: K-computer (interact jobs)
 
-TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
+TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
 TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)
@@ -107,7 +110,7 @@ ONLINE_STGOUT=1             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
+SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
                             #  0: No
                             #  1: Yes
 
