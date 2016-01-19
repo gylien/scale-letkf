@@ -14,11 +14,11 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/volume63/data/hp150019/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
+MODELDIR="$DIR/../../bin/K"
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
-DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/EastAsia_18km_48p.bf10"
-DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/EastAsia_18km_48p.bf10"
+DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/JapanWideA_d1_18km_48p_bf10"
+DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/JapanWideA_d1_18km_48p_bf10"
 DATA_BDY_SCALE=
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF="/volume63/data/hp150019/gylien/realtime/ncepgfs_wrf/<STIME>"
@@ -48,6 +48,7 @@ BDY_ENS=0               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 
 BDYINT=21600
+BDYCYCLE_INT=21600
 
 OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
@@ -81,6 +82,8 @@ SCALE_NP=48        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
+ENABLE_SET=0       ######
+
 #===============================================================================
 # Temporary directories to store runtime files
 
@@ -91,18 +94,27 @@ MACHINE_TYPE=10             # Machine type
                             # 12: K-computer (interact jobs)
 
 TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=2               # Disk type used for the 'run' temporary directory (runtime files)
+TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)
                             #  2: share (staging to TMP)
                             #  3: local (staging to TMPL)
 
+DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
+                            #  1: in $TMPDAT
+                            #  2: in $TMPOUT
+
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
 
-SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
-TMPSUBDIR="scale-letkf_$(whoami)_${SYSNAME}" # (used to identify multiple runs in the same time)
+SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
+                            #  0: No
+                            #  1: Yes
+                            #  2: Stage-out everything
+
+SYSNAME="$(basename $OUTDIR)"      # A unique name in the machine
+TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
 TMP=                        # (When $MACHINE_TYPE=10, this will be automatically set)
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node

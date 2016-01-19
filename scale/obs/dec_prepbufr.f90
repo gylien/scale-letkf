@@ -10,7 +10,7 @@ PROGRAM dec_prepbufr
 
   REAL,PARAMETER :: minlon=90.0
   REAL,PARAMETER :: maxlon=180.0
-  REAL,PARAMETER :: minlat=5.0
+  REAL,PARAMETER :: minlat=-10.0
   REAL,PARAMETER :: maxlat=60.0
   INTEGER,PARAMETER :: maxlev = 255     !Maximum number of BUFR levels
   INTEGER,PARAMETER :: maxevn = 10      !Maximum number of BUFR event sequences

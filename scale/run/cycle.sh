@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle.sh [STIME ETIME ISTEP FSTEP]
+#    cycle.sh [STIME ETIME MEMBERS ISTEP FSTEP]
 #
 #  Use settings:
 #    config.main
@@ -23,7 +23,7 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname=$(basename "$0")
+myname='cycle.sh'
 myname1=${myname%.*}
 
 #===============================================================================
@@ -41,6 +41,20 @@ res=$? && ((res != 0)) && exit $res
 
 #-------------------------------------------------------------------------------
 
+if ((USE_RANKDIR == 1)); then
+  SCRP_DIR="."
+  if ((TMPDAT_MODE <= 2)); then
+    TMPDAT="../dat"
+  else
+    TMPDAT="./dat"
+  fi
+  if ((TMPRUN_MODE <= 2)); then
+    TMPRUN="../run"
+  else
+    TMPRUN="./run"
+  fi
+fi
+
 setting "$1" "$2" "$3" "$4" "$5"
 
 #-------------------------------------------------------------------------------
@@ -54,7 +68,7 @@ echo "[$(datetime_now)] Start $myname $@" >&2
 
 for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
              WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
-             STIME ETIME ISTEP FSTEP; do
+             STIME ETIME MEMBERS ISTEP FSTEP; do
   printf '                      %-10s = %s\n' $vname "${!vname}" >&2
 done
 
@@ -72,17 +86,21 @@ fi
 #===============================================================================
 # Determine the distibution schemes
 
-declare -a procs
-declare -a mem2node
 declare -a node
-declare -a name_m
 declare -a node_m
+declare -a name_m
+declare -a mem2node
+declare -a mem2proc
+declare -a proc2node
+declare -a proc2group
+declare -a proc2grpproc
 
+#if ((BUILTIN_STAGING && ISTEP == 1)); then
 if ((BUILTIN_STAGING)); then
   safe_init_tmpdir $NODEFILE_DIR
-  distribute_da_cycle machinefile $NODEFILE_DIR
+  distribute_da_cycle machinefile $NODEFILE_DIR - "$MEMBERS"
 else
-  distribute_da_cycle - -
+  distribute_da_cycle - - $NODEFILE_DIR/distr "$MEMBERS"
 fi
 
 #===============================================================================
@@ -96,6 +114,15 @@ if ((BUILTIN_STAGING && ISTEP == 1)); then
   if ((TMPDAT_MODE >= 2 || TMPOUT_MODE >= 2)); then
     pdbash node all $SCRP_DIR/src/stage_in.sh
   fi
+fi
+
+#===============================================================================
+# Run initialization scripts on all nodes
+
+if ((TMPRUN_MODE <= 2)); then
+  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1
+else
+  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1
 fi
 
 #===============================================================================
@@ -116,39 +143,7 @@ while ((time <= ETIME)); do
   if (($(datetime $time $LCYCLE s) > ETIME)); then
     e_flag=1
   fi
-
-  obstime=$(datetime $time)               # HISTORY_OUTPUT_STEP0 = .true.,
-#  obstime=$(datetime $time $LTIMESLOT s)  # HISTORY_OUTPUT_STEP0 = .false.,
-  is=0
-  slot_s=0
-  while ((obstime <= $(datetime $time $WINDOW_E s))); do
-    is=$((is+1))
-    time_sl[$is]=$obstime
-    timefmt_sl[$is]="$(datetime_fmt ${obstime})"
-    if ((slot_s == 0 && obstime >= $(datetime $time $WINDOW_S s))); then
-      slot_s=$is
-    fi
-    if ((obstime == $(datetime $time $LCYCLE s))); then # $(datetime $time $LCYCLE,$WINDOW_S,$WINDOW_E,... s) as a variable
-      slot_b=$is
-    fi
-  obstime=$(datetime $obstime $LTIMESLOT s)
-  done
-  slot_e=$is
-
-#echo "###### $slot_s $slot_b $slot_e"
-
-#  obstime=$(datetime $time $WINDOW_S s)
-#  is=0
-#  while ((obstime <= $(datetime $time $WINDOW_E s))); do
-#    is=$((is+1))
-#    time_sl[$is]=$obstime
-#    timefmt_sl[$is]="$(datetime_fmt ${obstime})"
-#    if ((WINDOW_S + LTIMESLOT * (is-1) == LCYCLE)); then
-#      baseslot=$is
-#    fi
-#  obstime=$(datetime $obstime $LTIMESLOT s)
-#  done
-#  nslots=$is
+  obstime $time
 
 #-------------------------------------------------------------------------------
 # Write the header of the log file
@@ -167,7 +162,6 @@ while ((time <= ETIME)); do
   done
   echo " +----------------------------------------------------------------+"
   echo
-  echo "  Number of cycles:         $rcycle"
   echo "  Start time:               ${timefmt}"
   echo "  Forecast length:          $CYCLEFLEN s"
   echo "  Assimilation window:      $WINDOW_S - $WINDOW_E s ($((WINDOW_E-WINDOW_S)) s)"
@@ -210,8 +204,80 @@ while ((time <= ETIME)); do
       echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2
       echo
       printf " %2d. %-55s\n" $s "${stepname[$s]}"
+      echo
 
-      ${stepfunc[$s]}
+      ######
+      if ((s == 1)); then
+        if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
+          echo "  ... skip this step (use prepared topo and landuse files)"
+          echo
+          echo "===================================================================="
+          continue
+        elif ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
+          echo "  ... skip this step (use prepared boundaries)"
+          echo
+          echo "===================================================================="
+          continue
+        fi
+      fi
+      ######
+      if ((s == 2)); then
+        if ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
+          echo "  ... skip this step (use prepared boundaries)"
+          continue
+        fi
+      fi
+      ######
+
+      enable_iter=0
+      if ((s == 2 && BDY_ENS == 1)); then
+        enable_iter=1
+      elif ((s == 3)); then
+        enable_iter=1
+      fi
+
+      nodestr=proc
+      if ((ENABLE_SET == 1)); then                                    ##
+        if ((s == 3)); then
+          nodestr='set1.proc'
+        elif ((s == 4)); then
+          nodestr='set2.proc'
+        elif ((s == 5)); then
+          nodestr='set3.proc'
+        fi
+      fi
+
+      if ((enable_iter == 1)); then
+        for it in $(seq $nitmax); do
+          if ((USE_RANKDIR == 1)); then
+
+      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: start" >&2
+
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+                    "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" $loop $it # > /dev/null
+
+      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: end" >&2
+
+          else
+
+      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: start" >&2
+
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+                    "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it # > /dev/null
+
+      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: end" >&2
+
+          fi
+        done
+      else
+        if ((USE_RANKDIR == 1)); then
+          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+                  "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" "$loop" # > /dev/null
+        else
+          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+                  "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" # > /dev/null
+        fi
+      fi
 
       echo
       echo "===================================================================="
@@ -226,7 +292,7 @@ while ((time <= ETIME)); do
     if ((MACHINE_TYPE == 11)); then
       touch $TMP/loop.${loop}.done
     fi
-    if ((BUILTIN_STAGING && $(datetime $time $((lcycles * CYCLE)) s) <= ETIME)); then
+    if ((BUILTIN_STAGING && $(datetime $time $LCYCLE s) <= ETIME)); then
       if ((MACHINE_TYPE == 12)); then
         echo "[$(datetime_now)] ${time}: Online stage out"
         bash $SCRP_DIR/src/stage_out.sh s $loop

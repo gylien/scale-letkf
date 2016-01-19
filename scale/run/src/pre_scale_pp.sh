@@ -25,11 +25,11 @@ EOF
   exit 1
 fi
 
-MYRANK="$1"
-STIME="$2"
-TMPDIR="$3"
-EXECDIR="$4"
-DATADIR="$5"
+MYRANK="$1"; shift
+STIME="$1"; shift
+TMPDIR="$1"; shift
+EXECDIR="$1"; shift
+DATADIR="$1"
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
@@ -43,24 +43,27 @@ S_SS=${STIME:12:2}
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
 
-ln -fs $EXECDIR/scale-les_pp $TMPDIR
-
 CONVERT_TOPO='.false.'
 if [ "$TOPO_FORMAT" != 'prep' ]; then
-  ln -fs $DATADIR/topo/${TOPO_FORMAT}/Products $TMPDIR/input_topo
+#  ln -fs $DATADIR/topo/${TOPO_FORMAT}/Products $TMPDIR/input_topo
   CONVERT_TOPO='.true.'
 fi
 
 CONVERT_LANDUSE='.false.'
 if [ "$LANDUSE_FORMAT" != 'prep' ]; then
-  ln -fs $DATADIR/landuse/${LANDUSE_FORMAT}/Products $TMPDIR/input_landuse
+#  ln -fs $DATADIR/landuse/${LANDUSE_FORMAT}/Products $TMPDIR/input_landuse
   CONVERT_LANDUSE='.true.'
 fi
 
 #===============================================================================
 
+TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
+
 cat $TMPDAT/conf/config.nml.scale_pp | \
-    sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
+    sed -e "s/\[IO_LOG_BASENAME\]/ IO_LOG_BASENAME = \"${TMPSUBDIR}\/pp_LOG\",/" \
+        -e "s/\[TOPO_OUT_BASENAME\]/ TOPO_OUT_BASENAME = \"${TMPSUBDIR}\/topo\",/" \
+        -e "s/\[LANDUSE_OUT_BASENAME\]/ LANDUSE_OUT_BASENAME = \"${TMPSUBDIR}\/landuse\",/" \
+        -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
         -e "s/\[CONVERT_TOPO\]/ CONVERT_TOPO = $CONVERT_TOPO,/" \
         -e "s/\[CONVERT_LANDUSE\]/ CONVERT_LANDUSE = $CONVERT_LANDUSE,/" \
         -e "s/\[CNVTOPO_name\]/ CNVTOPO_name = '$TOPO_FORMAT',/" \

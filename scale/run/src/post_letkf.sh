@@ -8,18 +8,20 @@
 
 . config.main
 
-if (($# < 5)); then
+if (($# < 7)); then
   cat >&2 << EOF
 
 [post_letkf.sh]
 
-Usage: $0 MYRANK MEM_NP ATIME MEM TMPDIR
+Usage: $0 MYRANK MEM_NP ATIME MEM TMPDIR LOG_OPT
 
   MYRANK  My rank number (not used)
   MEM_NP  Number of processes per member
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
   MEM     Name of the ensemble member
+  MEMSEQ
   TMPDIR  Temporary directory to run the program
+  LOG_OPT
 
 EOF
   exit 1
@@ -29,7 +31,9 @@ MYRANK="$1"; shift
 MEM_NP="$1"; shift
 ATIME="$1"; shift
 MEM="$1"; shift
-TMPDIR="$1"
+MEMSEQ="$1"; shift
+TMPDIR="$1"; shift
+LOG_OPT="$1"
 
 letkfbaselen=9
 
@@ -55,15 +59,23 @@ if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd
     mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/sprd/init${ifile:$letkfbaselen}
   done
 else
-  for ifile in $(cd $TMPDIR ; ls anal.${MEM}.*.nc 2> /dev/null); do
+  for ifile in $(cd $TMPDIR ; ls anal.${MEMSEQ}.*.nc 2> /dev/null); do
     mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/${MEM}/init${ifile:$letkfbaselen}
   done
 fi
 
-if [ "$MEM" == '0001' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
+#if ((MYRANK < MEM_NP)); then
+#  if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
+#    mkdir -p $TMPOUT/${ATIME}/log/letkf
+#    mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${ATIME}/log/letkf
+#  fi
+#fi
+if ((MYRANK < MEM_NP)) && ((LOG_OPT <= 4)); then
   mkdir -p $TMPOUT/${ATIME}/log/letkf
   for q in $(seq $MEM_NP); do
-    mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${ATIME}/log/letkf
+    if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
+      mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${ATIME}/log/letkf
+    fi
   done
 fi
 

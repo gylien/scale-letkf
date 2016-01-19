@@ -25,6 +25,7 @@ Usage: $0 MYRANK ATIME TMPDIR EXECDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_EN
   SLOT_START  Start observation timeslots
   SLOT_END    End observation timeslots
   SLOT_BASE   The base slot
+  MEMBERSEQ
 
 EOF
   exit 1
@@ -39,14 +40,23 @@ MEM_NODES="$1"; shift
 MEM_NP="$1"; shift
 SLOT_START="$1"; shift
 SLOT_END="$1"; shift
-SLOT_BASE="$1"
+SLOT_BASE="$1"; shift
+MEMBERSEQ=${1:-$MEMBER}
 
 #===============================================================================
 
-mkdir -p $TMPDIR
-rm -fr $TMPDIR/*
+#mkdir -p $TMPDIR
+#rm -fr $TMPDIR/*
 
-ln -fs $EXECDIR/obsope $TMPDIR
+#ln -fs $EXECDIR/obsope $TMPDIR
+
+#-- H08 --
+if [ -e "$TMPDAT/rttov/rtcoef_himawari_8_ahi.dat" ]; then
+  ln -fs $TMPDAT/rttov/rtcoef_himawari_8_ahi.dat $TMPDIR
+fi
+if [ -e "$TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat" ]; then
+  ln -fs $TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat $TMPDIR
+fi
 
 for iobs in $(seq $OBSNUM); do
   if [ "${OBSNAME[$iobs]}" != '' ]; then
@@ -57,7 +67,7 @@ done
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.obsope | \
-    sed -e "s/\[MEMBER\]/ MEMBER = $MEMBER,/" \
+    sed -e "s/\[MEMBER\]/ MEMBER = $MEMBERSEQ,/" \
         -e "s/\[SLOT_START\]/ SLOT_START = $SLOT_START,/" \
         -e "s/\[SLOT_END\]/ SLOT_END = $SLOT_END,/" \
         -e "s/\[SLOT_BASE\]/ SLOT_BASE = $SLOT_BASE,/" \
@@ -70,13 +80,22 @@ cat $TMPDAT/conf/config.nml.obsope | \
 
 # These parameters are not important for obsope
 cat $TMPDAT/conf/config.nml.scale | \
-    sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = 2014, 1, 1, 0, 0, 0,/" \
-        -e "s/\[TIME_DURATION\]/ TIME_DURATION = 60.D0,/" \
-        -e "s/\[TIME_DT_ATMOS_RESTART\]/ TIME_DT_ATMOS_RESTART = 60.D0,/" \
-        -e "s/\[TIME_DT_OCEAN_RESTART\]/ TIME_DT_OCEAN_RESTART = 60.D0,/" \
-        -e "s/\[TIME_DT_LAND_RESTART\]/ TIME_DT_LAND_RESTART = 60.D0,/" \
-        -e "s/\[TIME_DT_URBAN_RESTART\]/ TIME_DT_URBAN_RESTART = 60.D0,/" \
-        -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = 60.D0,/" \
+    sed -e "s/\[IO_LOG_BASENAME\]/ IO_LOG_BASENAME = \"LOG\",/" \
+        -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = 2014, 1, 1, 0, 0, 0,/" \
+        -e "s/\[TIME_DURATION\]/ TIME_DURATION = $LTIMESLOT.D0,/" \
+        -e "s/\[TIME_DT_ATMOS_RESTART\]/ TIME_DT_ATMOS_RESTART = $LTIMESLOT.D0,/" \
+        -e "s/\[TIME_DT_OCEAN_RESTART\]/ TIME_DT_OCEAN_RESTART = $LTIMESLOT.D0,/" \
+        -e "s/\[TIME_DT_LAND_RESTART\]/ TIME_DT_LAND_RESTART = $LTIMESLOT.D0,/" \
+        -e "s/\[TIME_DT_URBAN_RESTART\]/ TIME_DT_URBAN_RESTART = .D0,/" \
+        -e "s/\[RESTART_IN_BASENAME\]/ RESTART_IN_BASENAME = \"init\",/" \
+        -e "s/\[RESTART_OUT_BASENAME\]/ RESTART_OUT_BASENAME = \"restart\",/" \
+        -e "s/\[TOPO_IN_BASENAME\]/ TOPO_IN_BASENAME = \"topo\",/" \
+        -e "s/\[LANDUSE_IN_BASENAME\]/ LANDUSE_IN_BASENAME = \"landuse\",/" \
+        -e "s/\[ATMOS_BOUNDARY_IN_BASENAME\]/ ATMOS_BOUNDARY_IN_BASENAME = \"boundary\",/" \
+        -e "s/\[OCEAN_RESTART_IN_BASENAME\]/ OCEAN_RESTART_IN_BASENAME = \"init_ocean\",/" \
+        -e "s/\[HISTORY_DEFAULT_BASENAME\]/ HISTORY_DEFAULT_BASENAME = \"history\",/" \
+        -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = $LTIMESLOT.D0,/" \
+        -e "s/\[MONITOR_OUT_BASENAME\]/ MONITOR_OUT_BASENAME = \"monitor\",/" \
     >> $TMPDIR/obsope.conf
 
 #===============================================================================

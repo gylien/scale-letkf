@@ -23,15 +23,22 @@ fi
 filelist=
 if [ "$MYRANK" = 'a' ] || [ "$MYRANK" = 's' ]; then
   if ((ONLINE_STGOUT == 1)); then
-    filelist=$(ls $STAGING_DIR/stageout.loop.${LOOP}.* 2> /dev/null)
+    filelist=$(ls $STAGING_DIR/stageout.loop.${LOOP}* 2> /dev/null)
   else
-    filelist=$(ls $STAGING_DIR/stageout.out.* 2> /dev/null)
+    filelist=$(ls $STAGING_DIR/stageout.out* 2> /dev/null)
   fi
 elif ((TMPOUT_MODE >= 2)); then
+  if (((TMPOUT_MODE == 2 && MYRANK == 0) || TMPOUT_MODE == 3)); then
+    if ((ONLINE_STGOUT == 1)); then
+      filelist="$(ls $STAGING_DIR/stageout.loop.${LOOP} 2> /dev/null)"
+    else
+      filelist="$(ls $STAGING_DIR/stageout.out 2> /dev/null)"
+    fi
+  fi
   if ((ONLINE_STGOUT == 1)); then
-    filelist=$(ls $STAGING_DIR/stageout.loop.${LOOP}.$((MYRANK+1)) 2> /dev/null)
+    filelist="$filelist $(ls $STAGING_DIR/stageout.loop.${LOOP}.$((MYRANK+1)) 2> /dev/null)"
   else
-    filelist=$(ls $STAGING_DIR/stageout.out.$((MYRANK+1)) 2> /dev/null)
+    filelist="$filelist $(ls $STAGING_DIR/stageout.out.$((MYRANK+1)) 2> /dev/null)"
   fi
 fi
 
@@ -39,15 +46,25 @@ for ifile in $filelist; do
   while read line; do
     destin="$(echo $line | cut -d '|' -s -f1)"
     source="$(echo $line | cut -d '|' -s -f2)"
+    ftype="$(echo $line | cut -d '|' -s -f3)"
     if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
       if [ "$MYRANK" = 'a' ] || [ "$MYRANK" = 's' ]; then
-        mkdir -p "$(dirname ${destin})"
+        if [ "$ftype" = 'd' ] || [ "$ftype" = 'drm' ]; then
+          mkdir -p "${destin}"
+        else
+          mkdir -p "$(dirname ${destin})"
+        fi
       fi
       if [ "$MYRANK" = 'a' ] || [ "$MYRANK" != 's' ] && [ -e "${TMPOUT}/${source}" ]; then
-        $SCP -r "${TMPOUT}/${source}" "${SCP_HOSTPREFIX}${destin}"
+        if [ "$ftype" = 'd' ] || [ "$ftype" = 'drm' ]; then
+          $SCP -r ${TMPOUT}/${source}/* "${SCP_HOSTPREFIX}${destin}" > /dev/null 2>&1
+        else
+          $SCP "${TMPOUT}/${source}" "${SCP_HOSTPREFIX}${destin}"
+        fi
         if ((ONLINE_STGOUT == 1)); then
-          flag="$(echo $line | cut -d '|' -s -f3)"
-          if [ "$flag" = 'rm' ]; then
+          if [ "$ftype" = 'rm' ]; then
+            rm -f "${TMPOUT}/${source}"
+          elif [ "$ftype" = 'drm' ]; then
             rm -fr "${TMPOUT}/${source}"
           fi
         fi

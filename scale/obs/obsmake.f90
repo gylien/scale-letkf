@@ -20,9 +20,9 @@ PROGRAM obsmake
   REAL(r_size) :: rtimer00,rtimer
   INTEGER :: ierr
   CHARACTER(11) :: stdoutf='NOUT-000000'
+  CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
   type(obs_info) :: obs(nobsfiles)
-  real(r_size) :: radarlon, radarlat, radarz
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -32,51 +32,81 @@ PROGRAM obsmake
   rtimer00 = MPI_WTIME()
 
   WRITE(stdoutf(6:11), '(I6.6)') myrank
-  WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
+!  WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
   OPEN(6,FILE=stdoutf)
   WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
 
 !-----------------------------------------------------------------------
 
-  CALL set_common_scale(1)
-  CALL set_common_obs_scale
+  call set_common_conf
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '### TIMER(INITIALIZE):',rtimer,rtimer-rtimer00
-  rtimer00=rtimer
+  call read_nml_letkf
+  call read_nml_letkf_obserr
+  call read_nml_letkf_radar
+  call read_nml_letkf_h08
+
+  call set_mem_node_proc(1,NNODES,PPN,MEM_NODES,MEM_NP)
+
+  if (myrank_use) then
+
+    call set_scalelib
+
+    call set_common_scale
+    CALL set_common_mpi_scale
+    call set_common_obs_scale
+
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    rtimer = MPI_WTIME()
+    WRITE(6,timer_fmt) '### TIMER(INITIALIZE):',rtimer-rtimer00
+    rtimer00=rtimer
 
 !-----------------------------------------------------------------------
 ! Read observations
 !-----------------------------------------------------------------------
 
-  if (scale_IO_mygroup == 1) then ! only run at the first group
-    call read_obs_all(obs, radarlon, radarlat, radarz)
-  end if
+    if (myrank_mem_use) then
+      call read_obs_all(obs)
+    end if
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '### TIMER(READ_OBS):',rtimer,rtimer-rtimer00
-  rtimer00=rtimer
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    rtimer = MPI_WTIME()
+    WRITE(6,timer_fmt) '### TIMER(READ_OBS):',rtimer-rtimer00
+    rtimer00=rtimer
 
 !-----------------------------------------------------------------------
 ! Generate observations
 !-----------------------------------------------------------------------
 
-  if (scale_IO_mygroup == 1) then ! only run at the first group
-    CALL obsmake_cal(obs, radarlon, radarlat, radarz)
-  end if
+    if (myrank_mem_use) then
+      CALL obsmake_cal(obs)
+    end if
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,'(A,2F10.2)') '### TIMER(OBSMAKE):',rtimer,rtimer-rtimer00
-  rtimer00=rtimer
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    rtimer = MPI_WTIME()
+    WRITE(6,timer_fmt) '### TIMER(OBSMAKE):',rtimer-rtimer00
+    rtimer00=rtimer
+
+
+
+    CALL unset_common_mpi_scale
+
+    call unset_scalelib
+
+  else ! [ myrank_use ]
+
+    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
+
+  end if ! [ myrank_use ]
 
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
 
-  CALL unset_common_scale
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  rtimer = MPI_WTIME()
+  WRITE(6,timer_fmt) '### TIMER(FINALIZE):',rtimer-rtimer00
+  rtimer00=rtimer
+
   CALL finalize_mpi
 
   STOP

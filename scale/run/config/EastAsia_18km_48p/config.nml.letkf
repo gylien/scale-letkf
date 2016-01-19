@@ -1,5 +1,8 @@
-&PARAM_LETKF
+&PARAM_ENSEMBLE
 [MEMBER]
+/
+
+&PARAM_LETKF
 [SLOT_START]
 [SLOT_END]
 [SLOT_BASE]
@@ -11,6 +14,7 @@
 ! MIN_INFL_MUL = 0.0D0,
 ! ADAPTIVE_INFL_INIT = .false.,
  RELAX_ALPHA = 0.8D0,
+ RELAX_ALPHA_SPREAD = 0.0D0,
  LEV_UPDATE_Q = 24,
  Q_SPRD_MAX = 0.5D0,
 /
@@ -20,9 +24,6 @@
 [PPN]
 [MEM_NODES]
 [MEM_NP]
-/
-
-&PARAM_LETKF_OBS
 /
 
 !*** Attach SCALE configuration below ***

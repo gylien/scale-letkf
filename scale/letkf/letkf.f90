@@ -12,10 +12,8 @@ PROGRAM letkf
   USE common_mpi
   USE common_scale
   USE common_mpi_scale
-!  USE common_obs_scale
-
-  use common_nml
-
+  USE common_obs_scale
+  USE common_nml
   USE letkf_obs
   USE letkf_tools
 
@@ -24,7 +22,6 @@ PROGRAM letkf
   REAL(r_size),ALLOCATABLE :: gues2d(:,:,:)
   REAL(r_size),ALLOCATABLE :: anal3d(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: anal2d(:,:,:)
-!  REAL(r_size) :: rtimer00,rtimer
   REAL(r_dble) :: rtimer00,rtimer
   INTEGER :: ierr
   CHARACTER(11) :: stdoutf='NOUT-000000'
@@ -33,16 +30,33 @@ PROGRAM letkf
 !  TYPE(obs_info) :: obs
 !  TYPE(obs_da_value) :: obsval
 
-
+  character(len=6400) :: cmd1, cmd2, icmd
+  character(len=10) :: myranks
+  integer :: iarg
 
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
+
   CALL initialize_mpi
   rtimer00 = MPI_WTIME()
 !
+  if (command_argument_count() >= 3) then
+    call get_command_argument(2, icmd)
+    call chdir(trim(icmd))
+    write (myranks, '(I10)') myrank
+    call get_command_argument(3, icmd)
+    cmd1 = 'bash ' // trim(icmd) // ' letkf_1' // ' ' // trim(myranks)
+    cmd2 = 'bash ' // trim(icmd) // ' letkf_2' // ' ' // trim(myranks)
+    do iarg = 4, command_argument_count()
+      call get_command_argument(iarg, icmd)
+      cmd1 = trim(cmd1) // ' ' // trim(icmd)
+      cmd2 = trim(cmd2) // ' ' // trim(icmd)
+    end do
+  end if
+!
   WRITE(stdoutf(6:11), '(I6.6)') myrank
-  WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
+!  WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
   OPEN(6,FILE=stdoutf)
   WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
 !
@@ -69,18 +83,45 @@ PROGRAM letkf
 !  WRITE(6,'(A,F15.2)') '  sigma_obst   :',sigma_obst
 !  WRITE(6,'(A)') '============================================='
 
-  CALL set_common_scale(-1)
-  CALL set_common_obs_scale
+!-----------------------------------------------------------------------
+! Pre-processing scripts
+!-----------------------------------------------------------------------
+
+  if (command_argument_count() >= 3) then
+    write (6,'(A)') 'Run pre-processing scripts'
+    write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd1), ']'
+    call system(trim(cmd1))
+  end if
+
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  rtimer = MPI_WTIME()
+  WRITE(6,timer_fmt) '### TIMER(PRE_SCRIPT):',rtimer-rtimer00
+  rtimer00=rtimer
 
 !-----------------------------------------------------------------------
 
-  if (scale_IO_mygroup > 0) then
+  call set_common_conf
 
-    CALL set_common_mpi_scale
+  call read_nml_letkf
+  call read_nml_letkf_var_local
+  call read_nml_letkf_obserr
+  call read_nml_letkf_monitor
+  call read_nml_letkf_radar
+  call read_nml_letkf_h08
+
+  call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
+
+  if (myrank_use) then
+
+    call set_scalelib
+
+    call set_common_scale
+    call set_common_mpi_scale
+    call set_common_obs_scale
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(INITIALIZE):        ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(INITIALIZE):',rtimer-rtimer00
     rtimer00=rtimer
 
 !-----------------------------------------------------------------------
@@ -90,11 +131,11 @@ PROGRAM letkf
     !
     ! Read observations
     !
-    call read_obs_all(obs, radarlon, radarlat, radarz)
+    call read_obs_all_mpi(obs)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(READ_OBS):          ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(READ_OBS):',rtimer-rtimer00
     rtimer00=rtimer
 
     !
@@ -104,7 +145,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(PROCESS_OBS):       ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(PROCESS_OBS):',rtimer-rtimer00
     rtimer00=rtimer
 
 
@@ -134,6 +175,19 @@ PROGRAM letkf
     ALLOCATE(anal3d(nij1,nlev,MEMBER,nv3d))
     ALLOCATE(anal2d(nij1,MEMBER,nv2d))
 
+
+    !
+    ! LETKF GRID setup
+    !
+    call set_common_mpi_grid('topo')
+
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    rtimer = MPI_WTIME()
+    WRITE(6,timer_fmt) '### TIMER(SET_GRID):',rtimer-rtimer00
+    rtimer00=rtimer
+
+
+
     !
     ! READ GUES
     !
@@ -146,7 +200,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(READ_GUES):         ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(READ_GUES):',rtimer-rtimer00
     rtimer00=rtimer
 
 
@@ -157,7 +211,7 @@ PROGRAM letkf
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(GUES_MEAN):         ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(GUES_MEAN):',rtimer-rtimer00
     rtimer00=rtimer
 !!-----------------------------------------------------------------------
 !! Data Assimilation
@@ -173,7 +227,7 @@ PROGRAM letkf
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(DAS_LETKF):         ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(DAS_LETKF):',rtimer-rtimer00
     rtimer00=rtimer
 !-----------------------------------------------------------------------
 ! Analysis ensemble
@@ -187,7 +241,7 @@ PROGRAM letkf
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(WRITE_ANAL):        ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(WRITE_ANAL):',rtimer-rtimer00
     rtimer00=rtimer
     !
     ! WRITE ENS MEAN and SPRD
@@ -196,7 +250,7 @@ PROGRAM letkf
     !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(ANAL_MEAN):         ',rtimer-rtimer00
+    WRITE(6,timer_fmt) '### TIMER(ANAL_MEAN):',rtimer-rtimer00
     rtimer00=rtimer
 !!-----------------------------------------------------------------------
 !! Monitor
@@ -205,24 +259,45 @@ PROGRAM letkf
 !  CALL monit_obs
 !!
 !  rtimer = MPI_WTIME()
-!  WRITE(6,timer_fmt) '### TIMER(MONIT_MEAN):        ',rtimer-rtimer00
+!  WRITE(6,timer_fmt) '### TIMER(MONIT_MEAN):',rtimer-rtimer00
 !  rtimer00=rtimer
 
 
     CALL unset_common_mpi_scale
 
-  end if ! [ scale_IO_mygroup > 0 ]
+    call unset_scalelib
+
+  else ! [ myrank_use ]
+
+    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
+
+  end if ! [ myrank_use ]
+
+!-----------------------------------------------------------------------
+
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  rtimer = MPI_WTIME()
+  WRITE(6,timer_fmt) '### TIMER(FINALIZE):',rtimer-rtimer00
+  rtimer00=rtimer
+
+!-----------------------------------------------------------------------
+! Post-processing scripts
+!-----------------------------------------------------------------------
+
+  if (command_argument_count() >= 3) then
+    write (6,'(A)') 'Run post-processing scripts'
+    write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd2), ']'
+    call system(trim(cmd2))
+  end if
+
+  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  rtimer = MPI_WTIME()
+  WRITE(6,timer_fmt) '### TIMER(POST_SCRIPT):',rtimer-rtimer00
+  rtimer00=rtimer
 
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
-
-  CALL unset_common_scale
-
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(FINALIZE):          ',rtimer-rtimer00
-  rtimer00=rtimer
 
   CALL finalize_mpi
 

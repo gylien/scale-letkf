@@ -49,7 +49,7 @@ echo
 
 for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN \
              FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT OUT_OPT \
-             STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP; do
+             STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP PARENT_REF_TIME; do
   printf '  %-10s = %s\n' $vname "${!vname}"
 done
 
@@ -68,11 +68,14 @@ PPN_real=$PPN
 NNODES=$((NNODES*PPN))
 PPN=1
 
-declare -a procs
-declare -a mem2node
 declare -a node
-declare -a name_m
 declare -a node_m
+declare -a name_m
+declare -a mem2node
+declare -a mem2proc
+declare -a proc2node
+declare -a proc2group
+declare -a proc2grpproc
 
 safe_init_tmpdir $TMPS/node
 distribute_fcst "$MEMBERS" $CYCLE - $TMPS/node
@@ -98,6 +101,8 @@ echo "PPN=$PPN" >> $TMPS/config.main
 echo "NNODES_real=$NNODES_real" >> $TMPS/config.main
 echo "PPN_real=$PPN_real" >> $TMPS/config.main
 
+echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMPS/config.main
+
 #===============================================================================
 # Creat a job script
 
@@ -119,7 +124,7 @@ cat > $jobscrp << EOF
 #PJM --rsc-list "node=${NNODES_real}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
 #PJM --rsc-list "rscgrp=${rscgrp}"
-##PJM --rsc-list "node-quota=29GB"
+#PJM --rsc-list "node-quota=29G"
 ##PJM --mpi "shape=${NNODES_real}"
 #PJM --mpi "proc=$NNODES"
 #PJM --mpi assign-online-node
@@ -145,7 +150,7 @@ bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR $myname1 >> $jobscrp
 
 cat >> $jobscrp << EOF
 
-. /work/system/Env_base
+. /work/system/Env_base_1.2.0-17-2
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 

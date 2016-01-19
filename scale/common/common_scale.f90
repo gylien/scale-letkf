@@ -12,12 +12,11 @@ MODULE common_scale
 !=======================================================================
 !$USE OMP_LIB
   USE common
-!  USE common_ncio
   use common_nml
   use common_mpi, only: nprocs, myrank
 
 
-  use scale_stdio
+!  use scale_stdio
 !  use scale_stdio, only: H_MID
 
   use scale_precision, only: RP
@@ -63,24 +62,25 @@ MODULE common_scale
 !  integer,parameter :: nlevhalo=nlev+4
 
 
-  integer,save :: nitmax ! maximum number of model files processed by a process
-  integer,allocatable,save :: procs(:)
-  integer,allocatable,save :: mem2node(:,:)
-  integer,allocatable,save :: mem2proc(:,:)
-  integer,allocatable,save :: proc2mem(:,:,:)
-  integer,save :: n_mem
-  integer,save :: n_mempn
+!  integer,save :: nitmax ! maximum number of model files processed by a process
+!  integer,allocatable,save :: procs(:)
+!  integer,allocatable,save :: mem2node(:,:)
+!  integer,allocatable,save :: mem2proc(:,:)
+!  integer,allocatable,save :: proc2mem(:,:,:)
+!  integer,save :: n_mem
+!  integer,save :: n_mempn
 
-  integer,save :: scale_IO_mygroup = -1
-!  integer,save :: scale_IO_myproc = -1
-  logical,save :: scale_IO_use = .false.
-  integer,save :: lastmem_rank_e
+!  integer,save :: ens_mygroup = -1
+!  integer,save :: ens_myrank = -1
+!  logical,save :: myrank_use = .false.
+!  logical,save :: myrank_mem_use = .false.
+!  integer,save :: lastmem_rank_e
 
 
   INTEGER,PARAMETER :: nv3d=11   ! 3D state variables (in SCALE restart files)
   INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: nv2d=0    ! 2D state variables (in SCALE restart files)
-  INTEGER,PARAMETER :: nv2dd=7   ! 2D diagnostic variables (in SCALE history files)
+  INTEGER,PARAMETER :: nv2dd=9  ! H08  ! 2D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: iv3d_rho=1  !-- State in restart files
   INTEGER,PARAMETER :: iv3d_rhou=2 !
   INTEGER,PARAMETER :: iv3d_rhov=3 !
@@ -117,6 +117,8 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv2dd_v10m=5
   INTEGER,PARAMETER :: iv2dd_t2m=6
   INTEGER,PARAMETER :: iv2dd_q2m=7
+  INTEGER,PARAMETER :: iv2dd_lsmask=8 ! H08
+  INTEGER,PARAMETER :: iv2dd_skint=9 ! H08
 !  INTEGER,PARAMETER :: iv2dd_tsfc=8
 
 
@@ -155,8 +157,6 @@ MODULE common_scale
   CHARACTER(vname_max),SAVE :: v2d_name(nv2d)
   CHARACTER(vname_max),SAVE :: v2dd_name(nv2dd)
 
-  character(len=H_MID), parameter :: MODELNAME = "SCALE-LES"
-
 CONTAINS
 !-----------------------------------------------------------------------
 ! Set the parameters
@@ -165,8 +165,8 @@ CONTAINS
 !  0:  MEMBER
 !  -1: MEMBER+1
 !-----------------------------------------------------------------------
-SUBROUTINE set_common_scale(mem)
-  use scale_process, only: &
+SUBROUTINE set_common_scale
+  use scale_les_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
   use scale_grid_index, only: &
@@ -178,50 +178,36 @@ SUBROUTINE set_common_scale(mem)
     KHALO
 
   IMPLICIT NONE
-  integer, intent(in) :: mem
+!  integer, intent(in) :: mem
 !  REAL(r_sngl) :: slat(nlat), wlat(nlat)
 !  REAL(r_size) :: totalwg, wgtmp, latm1, latm2
 !  INTEGER :: i,j
 
   WRITE(6,'(A)') 'Hello from set_common_scale'
 
-  ! setup standard I/O
-  call IO_setup( MODELNAME, .false.)
-
-  call read_nml_letkf
-  call read_nml_letkf_prc
-  call read_nml_letkf_obs !!!!!!!!!!!!!!!!!!!!!! move outside of subroutine????
-  call read_nml_letkf_obserr !!!!!!!!!!!!!!!!!!! move outside of subroutine????
-  call read_nml_letkf_obs_radar !!!!!!!!!!!!!!!! move outside of subroutine????
-
-  if (nprocs /= NNODES * PPN) then
-    write(6,'(A,I10)') 'Number of MPI processes = ', nprocs
-    write(6,'(A,I10)') 'NNODES = ', NNODES
-    write(6,'(A,I10)') 'PPN    = ', PPN
-    write(6,'(A)') 'Number of MPI processes should be equal to NNODES * PPN.'
-    stop
-  end if
+!  ! setup standard I/O
+!  call IO_setup( MODELNAME, .false.)
 
   !
   ! Set up node and process distribution
   !
-  if (mem == 0) then
-    call set_mem_node_proc(MEMBER,NNODES,PPN,MEM_NODES,MEM_NP)
-  else if (mem == -1) then
-    call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
-  else
-    call set_mem_node_proc(mem,NNODES,PPN,MEM_NODES,MEM_NP)
-  end if
+!  if (mem == 0) then
+!    call set_mem_node_proc(MEMBER,NNODES,PPN,MEM_NODES,MEM_NP)
+!  else if (mem == -1) then
+!    call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
+!  else
+!    call set_mem_node_proc(mem,NNODES,PPN,MEM_NODES,MEM_NP)
+!  end if
 
 !! print process distribution!!!
 
-  if (scale_IO_mygroup <= 0) then
+!  if (scale_IO_mygroup <= 0) then
 
-    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
+!    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
 
-  else
+!  else
 
-    call set_scalelib
+!    call set_scalelib
 
     if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
       write(6,'(A,I10)') 'MEM_NP    = ', MEM_NP
@@ -284,6 +270,8 @@ SUBROUTINE set_common_scale(mem)
     v2dd_name(iv2dd_v10m) = 'V10'
     v2dd_name(iv2dd_t2m) = 'T2'
     v2dd_name(iv2dd_q2m) = 'Q2'
+    v2dd_name(iv2dd_lsmask) = 'lsmask' ! H08
+    v2dd_name(iv2dd_skint) = 'SFC_TEMP' ! H08
 !    v2dd_name(iv2dd_tsfc) = 'SFC_TEMP'
     !
     ! Lon, Lat
@@ -348,292 +336,128 @@ SUBROUTINE set_common_scale(mem)
   !  wg(:,:) = sqrt(wg(:,:) * totalwg)
 
 
-  end if ! [ scale_IO_mygroup <= 0 ]
+!  end if ! [ scale_IO_mygroup <= 0 ]
 
 
   RETURN
 END SUBROUTINE set_common_scale
 
-SUBROUTINE unset_common_scale
-  IMPLICIT NONE
+!SUBROUTINE unset_common_scale
+!  IMPLICIT NONE
 
-  if (scale_IO_mygroup > 0) then
-    call unset_scalelib
-  end if
-
-  RETURN
-END SUBROUTINE unset_common_scale
-
-!-----------------------------------------------------------------------
-! set_mem2proc
-!-----------------------------------------------------------------------
-SUBROUTINE set_mem_node_proc(mem,nnodes,ppn,mem_nodes,mem_np)
-  IMPLICIT NONE
-  INTEGER,INTENT(IN) :: mem,nnodes,ppn,mem_nodes,mem_np
-  INTEGER :: tppn,tppnt,tmod
-  INTEGER :: n,ns,nn,m,q,qs,i,j,it,ip
-
-  ALLOCATE(procs(nprocs))
-  ns = 0
-  DO n = 1, nnodes
-    procs(ns+1:ns+ppn) = n
-    ns = ns + ppn
-  END DO
-
-  IF(mem_nodes > 1) THEN
-    n_mem = nnodes / mem_nodes
-    n_mempn = 1
-  ELSE
-    n_mem = nnodes
-    n_mempn = ppn / mem_np
-  END IF
-  nitmax = (mem - 1) / (n_mem * n_mempn) + 1
-  tppn = mem_np / mem_nodes
-  tmod = MOD(mem_np, mem_nodes)
-
-  ALLOCATE(mem2node(mem_np,mem))
-  ALLOCATE(mem2proc(mem_np,mem))
-  ALLOCATE(proc2mem(2,nitmax,nprocs))
-  proc2mem = -1
-  m = 1
-mem_loop: DO it = 1, nitmax
-    DO i = 0, n_mempn-1
-      n = 0
-      DO j = 0, n_mem-1
-        IF(m > mem .and. it > 1) EXIT mem_loop
-        qs = 0
-        DO nn = 0, mem_nodes-1
-          IF(nn < tmod) THEN
-            tppnt = tppn + 1
-          ELSE
-            tppnt = tppn
-          END IF
-          DO q = 0, tppnt-1
-            ip = (n+nn)*ppn + i*mem_np + q
-            if (m <= mem) then
-              mem2node(qs+1,m) = n+nn
-              mem2proc(qs+1,m) = ip
-            end if
-            proc2mem(1,it,ip+1) = m
-            proc2mem(2,it,ip+1) = qs
-            qs = qs + 1
-          END DO
-        END DO
-        m = m + 1
-        n = n + mem_nodes
-      END DO
-    END DO
-  END DO mem_loop
-
-  scale_IO_mygroup = proc2mem(1,1,myrank+1)
-!  scale_IO_myproc = proc2mem(2,1,myrank+1)
-  if (scale_IO_mygroup >= 1 .and. scale_IO_mygroup <= mem) then
-    scale_IO_use = .true.
-  end if
-
-  lastmem_rank_e = mod(mem-1, n_mem*n_mempn)
-!  if (lastmem_rank_e /= proc2mem(1,1,mem2proc(1,mem)+1)-1) then
-!    print *, 'XXXXXX wrong!!'
-!    stop
+!  if (scale_IO_mygroup > 0) then
+!    call unset_scalelib
 !  end if
 
-  RETURN
-END SUBROUTINE
+!  RETURN
+!END SUBROUTINE unset_common_scale
 
 
-!-----------------------------------------------------------------------
-! Start using SCALE library
-!-----------------------------------------------------------------------
-subroutine set_scalelib
 
-  use scale_precision
-  use scale_stdio, only: IO_FID_CONF
-!  use scale_prof
+subroutine set_common_conf
+  use scale_stdio
 
-  use gtool_history, only: &
-    HistoryInit
-  use dc_log, only: &
-    LogInit
-  use scale_process, only: &
-    PRC_setup,    &
-    PRC_MPIstart, &
-    PRC_MPIsplit_letkf, &
-    PRC_MPIsetup, &
-    PRC_master, &
-    PRC_myrank, &
-    PRC_2Drank, &
-    PRC_NUM_X, &
-    PRC_NUM_Y
-!    prc_nu, &
-  use scale_const, only: &
-    CONST_setup
-  use scale_calendar, only: &
-    CALENDAR_setup
-  use scale_random, only: &
-    RANDOM_setup
-!  use scale_time, only: &
-!    TIME_setup
-  use scale_time, only: &
-    TIME_DTSEC,       &
-    TIME_STARTDAYSEC
-
-  use scale_grid, only: &
-    GRID_setup, &
-    GRID_DOMAIN_CENTER_X, &
-    GRID_DOMAIN_CENTER_Y
-
-  use scale_grid_index
-
-!  use scale_grid_nest, only: &
-!    NEST_setup
-!  use scale_land_grid_index, only: &
-!    LAND_GRID_INDEX_setup
-!  use scale_land_grid, only: &
-!    LAND_GRID_setup
-!  use scale_urban_grid_index, only: &
-!    URBAN_GRID_INDEX_setup
-!  use scale_urban_grid, only: &
-!    URBAN_GRID_setup
-  use scale_tracer, only: &
-    TRACER_setup
-  use scale_fileio, only: &
-     FILEIO_setup
-  use scale_comm, only: &
-    COMM_setup
-!  use scale_topography, only: &
-!    TOPO_setup
-!  use scale_landuse, only: &
-!    LANDUSE_setup
-!  use scale_grid_real, only: &
-!    REAL_setup
-
-!  use scale_gridtrans, only: &
-!     GTRANS_setup
-
-  use scale_atmos_hydrostatic, only: &
-     ATMOS_HYDROSTATIC_setup
-  use scale_atmos_thermodyn, only: &
-     ATMOS_THERMODYN_setup
-
-  use mod_admin_time, only: &
-     ADMIN_TIME_setup
-
-
-  use scale_mapproj, only: &
-    MPRJ_setup
   implicit none
+  character(len=H_MID), parameter :: MODELNAME = "SCALE-LETKF"
 
+  ! setup standard I/O
+  call IO_setup( MODELNAME, .false.)
 
+  call read_nml_ensemble
+  call read_nml_letkf_prc
 
-!    character(len=H_MID) :: DATATYPE = 'DEFAULT' !< REAL4 or REAL8
-  integer :: rankidx(2)
-
-  integer :: LOCAL_myrank, LOCAL_nmax
-
-  !-----------------------------------------------------------------------------
-
-  ! start SCALE MPI
-  call PRC_MPIstart
-!  if ( NUM_DOMAIN == 1 ) then
-!     PRC_DOMAINS(1) = GLOBAL_nmax
-!  endif
-
-  ! split MPI communicator for LETKF
-  call PRC_MPIsplit_letkf(MEM_NP, nitmax, nprocs, proc2mem, myrank, &
-                          LOCAL_myrank, LOCAL_nmax)
-
-  ! setup MPI
-  call PRC_MPIsetup( .true., LOCAL_nmax, LOCAL_myrank )
-
-  ! setup process
-  call PRC_setup
-
-  ! setup Log
-  call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
-
-  ! setup constants
-  call CONST_setup
-
-  ! setup time
-  call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
-
-  call PROF_rapstart('Initialize')
-
-  ! setup horizontal/vertical grid coordinates
-  call GRID_INDEX_setup
-  call GRID_setup
-
-!  call LAND_GRID_INDEX_setup
-!  call LAND_GRID_setup
-
-!  call URBAN_GRID_INDEX_setup
-!  call URBAN_GRID_setup
-
-  ! setup tracer index
-  call TRACER_setup
-
-  ! setup file I/O
-  call FILEIO_setup
-
-  ! setup mpi communication
-  call COMM_setup
-
-  ! setup topography
-!  call TOPO_setup
-  ! setup land use category index/fraction
-!  call LANDUSE_setup
-
-  ! setup grid coordinates (real world)
-!  call REAL_setup
-  ! setup map projection                      [in the SCALE model, this subroutine is called inside of REAL_setup!]
-  call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
-
-  ! setup grid transfer metrics (uses in ATMOS_dynamics)
-!  call GTRANS_setup
-
-  ! setup common tools
-!  call ATMOS_HYDROSTATIC_setup
-  call ATMOS_THERMODYN_setup
-!  call ATMOS_SATURATION_setup
-
-  ! setup history file I/O
-  rankidx(1) = PRC_2Drank(PRC_myrank, 1)
-  rankidx(2) = PRC_2Drank(PRC_myrank, 2)
-
-write (6, *) TIME_STARTDAYSEC, TIME_DTSEC
-
-  call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_master, LOCAL_myrank, rankidx, &
-                   TIME_STARTDAYSEC, TIME_DTSEC, &
-                   namelist_fid=IO_FID_CONF)
-
-  call PROF_rapend('Initialize')
-
-  call PROF_rapstart('Main')
+  if (nprocs /= NNODES * PPN) then
+    write(6,'(A,I10)') 'Number of MPI processes = ', nprocs
+    write(6,'(A,I10)') 'NNODES = ', NNODES
+    write(6,'(A,I10)') 'PPN    = ', PPN
+    write(6,'(A)') 'Number of MPI processes should be equal to NNODES * PPN.'
+    stop
+  end if
 
   return
-end subroutine set_scalelib
+end subroutine set_common_conf
 
-!-----------------------------------------------------------------------
-! Finish using SCALE library
-!-----------------------------------------------------------------------
-subroutine unset_scalelib
-  use scale_process, only: &
-    PRC_MPIfinish
-  use gtool_file, only: &
-    FileCloseAll
-  implicit none
 
-  call PROF_rapend('Main')
+!!-----------------------------------------------------------------------
+!! set_mem2proc
+!!-----------------------------------------------------------------------
+!SUBROUTINE set_mem_node_proc(mem,nnodes,ppn,mem_nodes,mem_np)
+!  IMPLICIT NONE
+!  INTEGER,INTENT(IN) :: mem,nnodes,ppn,mem_nodes,mem_np
+!  INTEGER :: tppn,tppnt,tmod
+!  INTEGER :: n,ns,nn,m,q,qs,i,j,it,ip
 
-  call PROF_rapreport
+!  ALLOCATE(procs(nprocs))
+!  ns = 0
+!  DO n = 1, nnodes
+!    procs(ns+1:ns+ppn) = n
+!    ns = ns + ppn
+!  END DO
 
-  call FileCloseAll
+!  IF(mem_nodes > 1) THEN
+!    n_mem = nnodes / mem_nodes
+!    n_mempn = 1
+!  ELSE
+!    n_mem = nnodes
+!    n_mempn = ppn / mem_np
+!  END IF
+!  nitmax = (mem - 1) / (n_mem * n_mempn) + 1
+!  tppn = mem_np / mem_nodes
+!  tmod = MOD(mem_np, mem_nodes)
 
-!  ! stop SCALE MPI
-!  call PRC_MPIfinish
+!  ALLOCATE(mem2node(mem_np,mem))
+!  ALLOCATE(mem2proc(mem_np,mem))
+!  ALLOCATE(proc2mem(2,nitmax,nprocs))
+!  proc2mem = -1
+!  m = 1
+!mem_loop: DO it = 1, nitmax
+!    DO i = 0, n_mempn-1
+!      n = 0
+!      DO j = 0, n_mem-1
+!        IF(m > mem .and. it > 1) EXIT mem_loop
+!        qs = 0
+!        DO nn = 0, mem_nodes-1
+!          IF(nn < tmod) THEN
+!            tppnt = tppn + 1
+!          ELSE
+!            tppnt = tppn
+!          END IF
+!          DO q = 0, tppnt-1
+!            ip = (n+nn)*ppn + i*mem_np + q
+!            if (m <= mem) then
+!              mem2node(qs+1,m) = n+nn
+!              mem2proc(qs+1,m) = ip
+!            end if
+!            proc2mem(1,it,ip+1) = m
+!            proc2mem(2,it,ip+1) = qs
+!            qs = qs + 1
+!          END DO
+!        END DO
+!        m = m + 1
+!        n = n + mem_nodes
+!      END DO
+!    END DO
+!  END DO mem_loop
 
-  return
-end subroutine unset_scalelib
+!  ens_mygroup = proc2mem(1,1,myrank+1)
+!  ens_myrank = proc2mem(2,1,myrank+1)
+!  if (ens_mygroup >= 1) then
+!    myrank_use = .true.
+!  end if
+!  if (ens_mygroup >= 1 .and. ens_mygroup <= mem) then
+!    myrank_mem_use = .true.
+!  end if
+
+!  lastmem_rank_e = mod(mem-1, n_mem*n_mempn)
+!!  if (lastmem_rank_e /= proc2mem(1,1,mem2proc(1,mem)+1)-1) then
+!!    print *, 'XXXXXX wrong!!'
+!!    stop
+!!  end if
+
+!  RETURN
+!END SUBROUTINE
+
+
 
 !!-----------------------------------------------------------------------
 !! File I/O
@@ -655,12 +479,12 @@ end subroutine unset_scalelib
 !  WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
 
 !  do iv3d = 1, nv3d
-!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+!    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
 !    call FileRead(v3dg(:,:,:,iv3d), filename, trim(v3d_name(iv3d)), 1, PRC_myrank)
 !  end do
 
 !  do iv2d = 1, nv2d
-!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
+!    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
 !    call FileRead(v2dg(:,:,iv2d), filename, trim(v2d_name(iv2d)), 1, PRC_myrank)
 !  end do
 
@@ -674,7 +498,8 @@ end subroutine unset_scalelib
 SUBROUTINE read_restart(filename,v3dg,v2dg)
   use netcdf, only: NF90_NOWRITE
   use scale_process, only: &
-    PRC_myrank, &
+    PRC_myrank
+  use scale_les_process, only: &
     PRC_HAS_W,  &
     PRC_HAS_E,  &
     PRC_HAS_S,  &
@@ -715,13 +540,13 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
   do iv3d = 1, nv3d
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
     call ncio_read_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
     v3dg(:,:,:,iv3d) = real(v3dgtmp(:,is:ie,js:je), RP)
   end do
 
   do iv2d = 1, nv2d
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
+    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
     call ncio_read_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
     v2dg(:,:,iv2d) = real(v2dgtmp(is:ie,js:je), RP)
   end do
@@ -768,21 +593,21 @@ END SUBROUTINE read_restart
 !!print *, '######### ncid:', ncid
 
 !  DO iv3d = 1, nv3d
-!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+!    write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
 !    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, real(v3dg(:,:,:,iv3d),r_dble))
 !    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, v3dgtmp)
 !    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, v3dgtmp)
 !  END DO
 
 !  DO iv2d = 1, nv2d
-!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+!    write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
 !    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, real(v2dg(:,:,iv2d),r_dble))
 !    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, v2dgtmp)
 !    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, v2dgtmp)
 !  END DO
 
 !!  DO iv3d = 1, nv3d
-!!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+!!    write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
 !!    call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), vid))
 
 !!!print *, '######### vid:', myrank, vid
@@ -793,7 +618,7 @@ END SUBROUTINE read_restart
 !!  END DO
 
 !!  DO iv2d = 1, nv2d
-!!    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+!!    write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
 !!    call ncio_check(nf90_inq_varid(ncid, trim(v2d_name(iv2d)), vid))
 !!!    call FileWrite(vid, v2dg(:,:,iv2d), 1.0d0, 1.0d0)
 !!    call file_write_data( vid, v2dg(:,:,iv2d), -1.0d0, -1.0d0, RP, & ! (in)
@@ -813,7 +638,8 @@ END SUBROUTINE read_restart
 SUBROUTINE write_restart(filename,v3dg,v2dg)
   use netcdf, only: NF90_WRITE
   use scale_process, only: &
-    PRC_myrank, &
+    PRC_myrank
+  use scale_les_process, only: &
     PRC_HAS_W,  &
     PRC_HAS_E,  &
     PRC_HAS_S,  &
@@ -854,21 +680,21 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   call ncio_open(trim(filename) // filesuffix, NF90_WRITE, ncid)
 
   do iv3d = 1, nv3d
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+    write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
     call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
     v3dgtmp(:,is:ie,js:je) = real(v3dg(:,:,:,iv3d), r_dble)
     call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
+!    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)  !!! read and write again to work around the endian problem on the K computer
+!    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)  !
   end do
 
   do iv2d = 1, nv2d
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+    write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
     call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
     v2dgtmp(is:ie,js:je) = real(v2dg(:,:,iv2d), r_dble)
     call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+!    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !!! read and write again to work around the endian problem on the K computer
+!    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !
   end do
 
   call ncio_close(ncid)
@@ -882,7 +708,8 @@ END SUBROUTINE write_restart
 SUBROUTINE read_topo(filename,topo)
   use netcdf, only: NF90_NOWRITE
   use scale_process, only: &
-    PRC_myrank, &
+    PRC_myrank
+  use scale_les_process, only: &
     PRC_HAS_W,  &
     PRC_HAS_E,  &
     PRC_HAS_S,  &
@@ -920,7 +747,7 @@ SUBROUTINE read_topo(filename,topo)
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
-  if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', 'TOPO'
+  write(6,'(1x,A,A15)') '*** Read 2D var: ', 'TOPO'
   call ncio_read_2d_r8(ncid, 'TOPO', IMAXB, JMAXB, 1, v2dgtmp)
   topo = real(v2dgtmp(is:ie,js:je), RP)
 
@@ -963,7 +790,7 @@ SUBROUTINE read_history(filename,step,v3dg,v2dg)
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
 
   DO iv3d = 1, nv3dd
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
+    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
     call HIST_get(var3D, filename, trim(v3dd_name(iv3d)), step)
     FORALL (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
 
@@ -984,7 +811,7 @@ SUBROUTINE read_history(filename,step,v3dg,v2dg)
   END DO
 
   DO iv2d = 1, nv2dd
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
+    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
     call HIST_get(var2D, filename, trim(v2dd_name(iv2d)), step)
     v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
   END DO
@@ -1237,7 +1064,7 @@ END SUBROUTINE state_trans_inv
 
 
 subroutine rank_1d_2d(proc, iproc, jproc)
-  use scale_process, only: PRC_2Drank
+  use scale_les_process, only: PRC_2Drank
   implicit none
   integer, intent(in) :: proc
   integer, intent(out) :: iproc, jproc
@@ -1250,7 +1077,7 @@ end subroutine rank_1d_2d
 
 
 subroutine rank_2d_1d(iproc, jproc, proc)
-  use scale_process, only: PRC_NUM_X
+  use scale_les_process, only: PRC_NUM_X
   implicit none
   integer, intent(in) :: iproc, jproc
   integer, intent(out) :: proc
@@ -1295,6 +1122,41 @@ subroutine ij_l2g(proc, il, jl, ig, jg)
 end subroutine ij_l2g
 
 
+
+subroutine rij_g2l(proc, ig, jg, il, jl)
+  implicit none
+  integer, intent(in) :: proc
+  real(r_size), intent(in) :: ig
+  real(r_size), intent(in) :: jg
+  real(r_size), intent(out) :: il
+  real(r_size), intent(out) :: jl
+  integer :: iproc, jproc
+
+  call rank_1d_2d(proc, iproc, jproc)
+  il = ig - real(iproc * nlon,r_size)
+  jl = jg - real(jproc * nlat,r_size)
+
+  return  
+end subroutine rij_g2l
+
+
+subroutine rij_l2g(proc, il, jl, ig, jg)
+  implicit none
+  integer, intent(in) :: proc
+  real(r_size), intent(in) :: il
+  real(r_size), intent(in) :: jl
+  real(r_size), intent(out) :: ig
+  real(r_size), intent(out) :: jg
+  integer :: iproc, jproc
+
+  call rank_1d_2d(proc, iproc, jproc)
+  ig = il + real(iproc * nlon,r_size)
+  jg = jl + real(jproc * nlat,r_size)
+
+  return  
+end subroutine rij_l2g
+
+
 !-----------------------------------------------------------------------
 ! using halo!
 ! proc = -1: outside the global domain
@@ -1303,7 +1165,7 @@ SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
   use scale_grid_index, only: &
       IHALO,JHALO
 !      IA,JA                  ! [for validation]
-  use scale_process, only: &
+  use scale_les_process, only: &
       PRC_NUM_X,PRC_NUM_Y
 !      PRC_myrank             ! [for validation]
 !  use scale_grid, only: &    ! [for validation]
@@ -1331,8 +1193,8 @@ SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
 
   iproc = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(nlon,r_size)) - 1
   jproc = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
-  il = ig - iproc * nlon
-  jl = jg - jproc * nlat
+  il = ig - real(iproc * nlon,r_size)
+  jl = jg - real(jproc * nlat,r_size)
   call rank_2d_1d(iproc,jproc,proc)
 
 !  if (PRC_myrank == proc) then                                                                                    ! [for validation]

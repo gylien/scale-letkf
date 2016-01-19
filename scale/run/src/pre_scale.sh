@@ -14,7 +14,7 @@ if (($# < 14)); then
 
 [pre_scale.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM_NP INIT OCEAN BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR EXECDIR DATADIR
+Usage: $0 MYRANK MEM_NP INIT OCEAN BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR EXECDIR DATADIR [BDY_STIME]
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member
@@ -30,6 +30,7 @@ Usage: $0 MYRANK MEM_NP INIT OCEAN BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTIN
   TMPDIR   Temporary directory to run the model
   EXECDIR  Directory of SCALE executable files
   DATADIR  Directory of SCALE data files
+  BDY_STIME  (format: YYYYMMDDHHMMSS)
 
 EOF
   exit 1
@@ -48,7 +49,8 @@ FCSTINT="$1"; shift
 HISTINT="$1"; shift
 TMPDIR="$1"; shift
 EXECDIR="$1"; shift
-DATADIR="$1"
+DATADIR="$1"; shift
+BDY_STIME="${1:-$STIME}"
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
@@ -57,22 +59,45 @@ S_HH=${STIME:8:2}
 S_II=${STIME:10:2}
 S_SS=${STIME:12:2}
 
+BS_YYYY=${BDY_STIME:0:4}
+BS_MM=${BDY_STIME:4:2}
+BS_DD=${BDY_STIME:6:2}
+BS_HH=${BDY_STIME:8:2}
+BS_II=${BDY_STIME:10:2}
+BS_SS=${BDY_STIME:12:2}
+
 #===============================================================================
 
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
 
-ln -fs $EXECDIR/scale-les $TMPDIR
+if [ "${TOPO_TARGZ}" = 'T' ] ; then
+  tmp_length=${#TOPO}
+  tmp_length=$((tmp_length-4)) # cut "topo"
+  UNCOMP_DIR="$(echo $TOPO | cut -c 1-${tmp_length} )"
 
-ln -fs $DATADIR/rad/PARAG.29 $TMPDIR
-ln -fs $DATADIR/rad/PARAPC.29 $TMPDIR
-ln -fs $DATADIR/rad/VARDATA.RM29 $TMPDIR
-ln -fs $DATADIR/rad/cira.nc $TMPDIR
-ln -fs $DATADIR/rad/MIPAS/day.atm $TMPDIR
-ln -fs $DATADIR/rad/MIPAS/equ.atm $TMPDIR
-ln -fs $DATADIR/rad/MIPAS/sum.atm $TMPDIR
-ln -fs $DATADIR/rad/MIPAS/win.atm $TMPDIR
-ln -fs $DATADIR/land/param.bucket.conf $TMPDIR
+  tar zxvf  ${TOPO}.tar.gz -C $UNCOMP_DIR > /dev/null
+fi
+
+if [ "${LANDUSE_TARGZ}" = 'T' ] ; then
+  tmp_length=${#LANDUSE}
+  tmp_length=$((tmp_length-7)) # cut "landuse"
+  UNCOMP_DIR="$(echo $LANDUSE | cut -c 1-${tmp_length} )"
+
+  tar zxvf  ${LANDUSE}.tar.gz -C $UNCOMP_DIR > /dev/null
+fi
+
+#ln -fs $EXECDIR/scale-les $TMPDIR
+
+#ln -fs $DATADIR/rad/PARAG.29 $TMPDIR
+#ln -fs $DATADIR/rad/PARAPC.29 $TMPDIR
+#ln -fs $DATADIR/rad/VARDATA.RM29 $TMPDIR
+#ln -fs $DATADIR/rad/cira.nc $TMPDIR
+#ln -fs $DATADIR/rad/MIPAS/day.atm $TMPDIR
+#ln -fs $DATADIR/rad/MIPAS/equ.atm $TMPDIR
+#ln -fs $DATADIR/rad/MIPAS/sum.atm $TMPDIR
+#ln -fs $DATADIR/rad/MIPAS/win.atm $TMPDIR
+#ln -fs $DATADIR/land/param.bucket.conf $TMPDIR
 
 ln -fs ${INIT}*.nc $TMPDIR
 if [ "$OCEAN" = '-' ]; then
@@ -105,19 +130,27 @@ ln -fs ${LANDUSE}*.nc $TMPDIR
 
 #===============================================================================
 
+TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
+
 cat $TMPDAT/conf/config.nml.scale | \
-    sed -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
+    sed -e "s/\[IO_LOG_BASENAME\]/ IO_LOG_BASENAME = \"${TMPSUBDIR}\/LOG\",/" \
+        -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
         -e "s/\[TIME_DURATION\]/ TIME_DURATION = ${FCSTLEN}.D0,/" \
         -e "s/\[TIME_DT_ATMOS_RESTART\]/ TIME_DT_ATMOS_RESTART = ${FCSTINT}.D0,/" \
         -e "s/\[TIME_DT_OCEAN_RESTART\]/ TIME_DT_OCEAN_RESTART = ${FCSTINT}.D0,/" \
         -e "s/\[TIME_DT_LAND_RESTART\]/ TIME_DT_LAND_RESTART = ${FCSTINT}.D0,/" \
         -e "s/\[TIME_DT_URBAN_RESTART\]/ TIME_DT_URBAN_RESTART = ${FCSTINT}.D0,/" \
-        -e "s/\[RESTART_IN_BASENAME\]/ RESTART_IN_BASENAME = \"$(basename ${INIT})\",/" \
-        -e "s/\[TOPO_IN_BASENAME\]/ TOPO_IN_BASENAME = \"$(basename ${TOPO})\",/" \
-        -e "s/\[LANDUSE_IN_BASENAME\]/ LANDUSE_IN_BASENAME = \"$(basename ${LANDUSE})\",/" \
-        -e "s/\[ATMOS_BOUNDARY_IN_BASENAME\]/ ATMOS_BOUNDARY_IN_BASENAME = \"$(basename ${BDY})\",/" \
-        -e "s/\[OCEAN_RESTART_IN_BASENAME\]/ OCEAN_RESTART_IN_BASENAME = \"$(basename ${OCEAN})\",/" \
+        -e "s/\[RESTART_IN_BASENAME\]/ RESTART_IN_BASENAME = \"${TMPSUBDIR}\/$(basename ${INIT})\",/" \
+        -e "s/\[RESTART_OUT_BASENAME\]/ RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/restart\",/" \
+        -e "s/\[TOPO_IN_BASENAME\]/ TOPO_IN_BASENAME = \"${TMPSUBDIR}\/$(basename ${TOPO})\",/" \
+        -e "s/\[LANDUSE_IN_BASENAME\]/ LANDUSE_IN_BASENAME = \"${TMPSUBDIR}\/$(basename ${LANDUSE})\",/" \
+        -e "s/\[ATMOS_BOUNDARY_IN_BASENAME\]/ ATMOS_BOUNDARY_IN_BASENAME = \"${TMPSUBDIR}\/$(basename ${BDY})\",/" \
+        -e "s/\[ATMOS_BOUNDARY_START_DATE\]/ ATMOS_BOUNDARY_START_DATE = $BS_YYYY, $BS_MM, $BS_DD, $BS_HH, $BS_II, $BS_SS,/" \
+        -e "s/\[ATMOS_BOUNDARY_UPDATE_DT\]/ ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0,/" \
+        -e "s/\[OCEAN_RESTART_IN_BASENAME\]/ OCEAN_RESTART_IN_BASENAME = \"${TMPSUBDIR}\/$(basename ${OCEAN})\",/" \
+        -e "s/\[HISTORY_DEFAULT_BASENAME\]/ HISTORY_DEFAULT_BASENAME = \"${TMPSUBDIR}\/history\",/" \
         -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = ${HISTINT}.D0,/" \
+        -e "s/\[MONITOR_OUT_BASENAME\]/ MONITOR_OUT_BASENAME = \"${TMPSUBDIR}\/monitor\",/" \
     > $TMPDIR/run.conf
 
 #===============================================================================

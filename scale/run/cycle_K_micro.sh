@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_K_micro.sh [STIME ETIME ISTEP FSTEP TIME_LIMIT]
+#    cycle_K_micro.sh [STIME ETIME MEMBERS ISTEP FSTEP TIME_LIMIT]
 #
 #===============================================================================
 
@@ -49,7 +49,7 @@ echo
 
 for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
              WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
-             STIME ETIME ISTEP FSTEP; do
+             STIME ETIME MEMBERS ISTEP FSTEP; do
   printf '  %-10s = %s\n' $vname "${!vname}"
 done
 
@@ -74,6 +74,11 @@ PPN_real=$PPN
 NNODES=$((NNODES*PPN))
 PPN=1
 
+if ((ENABLE_SET == 1)); then          ##
+  NNODES_real_all=$((NNODES_real*3))  ##
+  NNODES_all=$((NNODES*3))            ##
+fi                                    ##
+
 declare -a procs
 declare -a mem2node
 declare -a node
@@ -81,7 +86,11 @@ declare -a name_m
 declare -a node_m
 
 safe_init_tmpdir $NODEFILE_DIR
-distribute_da_cycle - $NODEFILE_DIR
+if ((ENABLE_SET == 1)); then               ##
+  distribute_da_cycle_set - $NODEFILE_DIR  ##
+else                                       ##
+  distribute_da_cycle - $NODEFILE_DIR - "$MEMBERS"
+fi                                         ##
 
 #===============================================================================
 # Determine the staging list and then stage in
@@ -99,6 +108,7 @@ cp -L -r $SCRP_DIR/config.main $TMP/config.main
 cp -L -r $SCRP_DIR/config.rc $TMP/config.rc
 cp -L -r $SCRP_DIR/config.${myname1} $TMP/config.${myname1}
 cp -L -r $SCRP_DIR/${myname1}.sh $TMP/${myname1}.sh
+cp -L -r $SCRP_DIR/${myname1}_step.sh $TMP/${myname1}_step.sh
 mkdir -p $TMP/src
 cp -L -r $SCRP_DIR/src/* $TMP/src
 
@@ -109,6 +119,14 @@ echo "NNODES=$NNODES" >> $TMP/config.main
 echo "PPN=$PPN" >> $TMP/config.main
 echo "NNODES_real=$NNODES_real" >> $TMP/config.main
 echo "PPN_real=$PPN_real" >> $TMP/config.main
+
+if ((ENABLE_SET == 1)); then                                    ##
+  echo "NNODES_all=$NNODES_all" >> $TMP/config.main             ##
+  echo "NNODES_real_all=$NNODES_real_all" >> $TMP/config.main   ##
+                                                                ##
+  NNODES=$NNODES_all                                            ##
+  NNODES_real=$NNODES_real_all                                  ##
+fi                                                              ##
 
 #===============================================================================
 # Creat a job script
@@ -129,11 +147,11 @@ cat > $jobscrp << EOF
 #PJM --mpi "proc=$NNODES"
 #PJM --mpi assign-online-node
 
-. /work/system/Env_base
+. /work/system/Env_base_1.2.0-17-2
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${myname1}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP"
+./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$ISTEP" "$FSTEP"
 EOF
 
 #===============================================================================

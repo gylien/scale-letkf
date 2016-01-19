@@ -8,7 +8,7 @@
 
 . config.main
 
-if (($# < 4)); then
+if (($# < 5)); then
   cat >&2 << EOF
 
 [pre_obsope.sh]
@@ -18,6 +18,7 @@ Usage: $0 MYRANK ATIME MEM TMPDIR
   MYRANK  My rank number (not used)
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
   MEM     Name of the ensemble member
+  MEMSEQ
   TMPDIR  Temporary directory to run the program
 
 EOF
@@ -27,6 +28,7 @@ fi
 MYRANK="$1"; shift
 ATIME="$1"; shift
 MEM="$1"; shift
+MEMSEQ="$1"; shift
 TMPDIR="$1"
 
 historybaselen=7
@@ -36,10 +38,10 @@ historybaselen=7
 
 if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
   for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls history*.nc 2> /dev/null); do
-    ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEM}${ifile:$historybaselen}
+    ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEMSEQ}${ifile:$historybaselen}
   done
 #  for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls init*.nc 2> /dev/null); do
-#    ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/init.${MEM}${ifile:$initbaselen}
+#    ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/init.${MEMSEQ}${ifile:$initbaselen}
 #  done
 fi
 

@@ -8,7 +8,7 @@
 
 . config.main
 
-if (($# < 5)); then
+if (($# < 6)); then
   cat >&2 << EOF
 
 [pre_letkf.sh]
@@ -19,6 +19,7 @@ Usage: $0 MYRANK TOPO ATIME MEM TMPDIR
   TOPO    Basename of SCALE topography files
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
   MEM     Name of the ensemble member
+  MEMSEQ
   TMPDIR  Temporary directory to run the program
 
 EOF
@@ -29,9 +30,11 @@ MYRANK="$1"; shift
 TOPO="$1"; shift
 ATIME="$1"; shift
 MEM="$1"; shift
+MEMSEQ="$1"; shift
 TMPDIR="$1"
 
-historybaselen=7
+#historybaselen=7
+obsdabaselen=10
 initbaselen=4
 
 #topodir=$(dirname $TOPO)
@@ -57,18 +60,19 @@ if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd
 else
   if [ -d "$TMPOUT/${ATIME}/obsgues/${MEM}" ]; then
     for ifile in $(cd $TMPOUT/${ATIME}/obsgues/${MEM} ; ls obsda.${MEM}.*.dat 2> /dev/null); do
-      ln -fs $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile} $TMPDIR/${ifile}
+#      ln -fs $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile} $TMPDIR/${ifile}
+      ln -fs $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile} $TMPDIR/obsda.${MEMSEQ}${ifile:$obsdabaselen}
     done
   fi
 
   if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
-    for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls history*.nc 2> /dev/null); do
-      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEM}${ifile:$historybaselen}
-    done
+#    for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls history*.nc 2> /dev/null); do
+#      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEMSEQ}${ifile:$historybaselen}
+#    done
 
     for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls init*.nc 2> /dev/null); do
-      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/gues.${MEM}${ifile:$initbaselen}
-      cp -f $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/anal.${MEM}${ifile:$initbaselen}
+      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/gues.${MEMSEQ}${ifile:$initbaselen}
+      cp -f $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/anal.${MEMSEQ}${ifile:$initbaselen}
     done
   fi
 fi
