@@ -3,7 +3,8 @@ include ../configure.user
 OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_letkf.o \
 	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
           common_nml.o \
-          mod_admin_time.o
+          mod_admin_time.o \
+          farb_connect.o
           #common_precip.o
 
 all:	$(OBJS) datetime pdbash 
@@ -16,6 +17,9 @@ datetime:	datetime.o SFMT.o common.o
 	$(SFC) $(FOPTS) -o datetime datetime.o SFMT.o common.o
 pdbash:	pdbash.o SFMT.o
 	$(FC) $(FOPTS) -o pdbash pdbash.o
+
+farb_connect.o:	farb_connect.c farb_connect.h farb_conf_dict.o farb_conf_parse.o farb_util.o
+	$(CC) $(COPTS) -fPIC -c farb_connect.c
 
 common.o:	../../common/common.f90
 	$(SFC) $(FOPTS) -c ../../common/common.f90

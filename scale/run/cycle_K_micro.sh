@@ -112,6 +112,9 @@ cp -L -r $SCRP_DIR/${myname1}_step.sh $TMP/${myname1}_step.sh
 mkdir -p $TMP/src
 cp -L -r $SCRP_DIR/src/* $TMP/src
 
+cp -L -r $SCRP_DIR/sample.ini $TMP/sample.ini
+cp -L -r /volume63/data/hp150019/gylien/scale-letkf/lib_liao_160119/hack.so $TMP/hack.so
+
 echo "SCRP_DIR=\"$TMP\"" >> $TMP/config.main
 echo "LOGDIR=\"$TMP/log\"" >> $TMP/config.main
 

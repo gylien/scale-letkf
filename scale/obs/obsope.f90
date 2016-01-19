@@ -32,8 +32,24 @@ PROGRAM obsope
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
+! New added for SYNC
+  external conn_init
+  external conn_finalize
+  external pub_server_connect
+  external pub_client_connect
+  external pub_send_data1
+  external pub_recv_data
+  character a*5, b*3
+  a = "scale"
+  b = "obs"
+!  call conn_init("sample.ini", b);
+  call initialize_mpi
+  call conn_init("sample.ini", b);
+  call sleep(1)
+  call pub_server_connect(b)
+  call pub_client_connect(a)
+  call pub_recv_data(a)
 
-  CALL initialize_mpi
   rtimer00 = MPI_WTIME()
 
   if (command_argument_count() >= 3) then
@@ -155,6 +171,10 @@ PROGRAM obsope
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
+
+! New added for SYNC
+  call pub_send_data1(b)
+  call conn_finalize
 
   CALL finalize_mpi
 

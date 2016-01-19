@@ -250,20 +250,20 @@ while ((time <= ETIME)); do
       if ((enable_iter == 1)); then
         for it in $(seq $nitmax); do
           if ((USE_RANKDIR == 1)); then
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
-                    "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" $loop $it # > /dev/null
+            mpirunf $nodestr LD_PRELOAD=$TMPRUN/../hack.so ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+                    "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" $loop $it & # > /dev/null
           else
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
-                    "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it # > /dev/null
+            mpirunf $nodestr LD_PRELOAD=$TMPRUN/../hack.so ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+                    "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it &# > /dev/null
           fi
         done
       else
         if ((USE_RANKDIR == 1)); then
-          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
-                  "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" "$loop" # > /dev/null
+          mpirunf $nodestr LD_PRELOAD=$TMPRUN/../hack.so ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+                  "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" "$loop" &# > /dev/null
         else
-          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
-                  "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" # > /dev/null
+          mpirunf $nodestr LD_PRELOAD=$TMPRUN/../hack.so ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+                  "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" &# > /dev/null
         fi
       fi
 
@@ -272,6 +272,8 @@ while ((time <= ETIME)); do
 
     fi
   done
+
+  wait
 
 #-------------------------------------------------------------------------------
 # Online stage out

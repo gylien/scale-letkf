@@ -36,3 +36,10 @@ FMCMODEL  =
 FBYTESWAP = 
 FFREE     = -Free
 FFIXED    = -Fixed
+
+COPTS_SCALE = $(CFLAGS)
+
+COPTS     = $(COPTS_SCALE) \
+            -Knoparallel,noeval,nopreex \
+            -Kopenmp
+

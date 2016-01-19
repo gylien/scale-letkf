@@ -38,7 +38,25 @@ PROGRAM letkf
 ! Initial settings
 !-----------------------------------------------------------------------
 
+! New added for SYNC
+  external conn_init
+  external conn_finalize
+  external pub_client_connect
+  external pub_recv_data
+  external pub_recv_data1
+  external pub_server_connect
+  character a*5, b*3
+  a = "letkf"
+  b = "obs"
+  !  call conn_init("sample.ini", a)
   CALL initialize_mpi
+  call conn_init("sample.ini", a)
+  rtimer00 = MPI_WTIME()
+  call sleep(2)
+  call pub_client_connect(b)
+  call pub_server_connect(a)
+  call pub_recv_data(a)
+  call pub_recv_data1(b)
   rtimer00 = MPI_WTIME()
 !
   if (command_argument_count() >= 3) then
@@ -297,6 +315,7 @@ PROGRAM letkf
 ! Finalize
 !-----------------------------------------------------------------------
 
+  call conn_finalize
   CALL finalize_mpi
 
   STOP

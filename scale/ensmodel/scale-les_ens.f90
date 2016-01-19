@@ -71,6 +71,20 @@ program scaleles_ens
   ! start MPI
   call PRC_MPIstart( universal_comm ) ! [OUT]
 
+! New added for SYNC
+  external conn_init
+  external conn_finalize
+  external pub_server_connect
+  external pub_client_connect
+  external pub_send_data
+  character a*5, b*5
+  a = "scale"
+  b = "letkf"
+  call conn_init("sample.ini", a)
+  call pub_server_connect(a)
+  call sleep(3)
+  call pub_client_connect(b)
+
   rtimer00 = MPI_WTIME()
 
   call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
@@ -218,6 +232,10 @@ program scaleles_ens
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
+
+! New added for SYNC
+  call pub_send_data()
+  call conn_finalize
 
 !  call PRC_MPIfinish
 

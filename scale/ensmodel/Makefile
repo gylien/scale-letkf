@@ -13,7 +13,11 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common_scale.o     \
               $(COMMON_DIR)/common_obs_scale.o \
               $(COMMON_DIR)/common_mpi_scale.o \
-              $(COMMON_DIR)/common_nml.o     
+              $(COMMON_DIR)/common_nml.o     \
+              $(COMMON_DIR)/farb_connect.o   \
+              $(COMMON_DIR)/farb_util.o      \
+              $(COMMON_DIR)/farb_conf_dict.o \
+              $(COMMON_DIR)/farb_conf_parse.o
 
 INCS    = $(SCALE_INC) -I$(SCALE_LES_OBJDIR)
 
