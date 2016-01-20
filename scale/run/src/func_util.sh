@@ -212,7 +212,7 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
   else
 
-    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -x $PRELOAD -of-proc stdoe ./$progbase $ARGS )
+    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile -x $PRELOAD -of-proc stdoe ./$progbase $ARGS )
 #echo "( cd $progdir && fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS )"
 #    ( cd $progdir && fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS )
 #    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile ./$progbase $ARGS )

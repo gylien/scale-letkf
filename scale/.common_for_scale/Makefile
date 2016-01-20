@@ -4,7 +4,7 @@ OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_letkf.o \
 	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
           common_nml.o \
           mod_admin_time.o \
-          farb_connect.o
+          farb_connect.o farb_util.o farb_conf_dict.o farb_conf_parse.o
 
 ifeq ($(H08),T)
 OBJS    += scale_H08_fwd.o
@@ -12,8 +12,14 @@ endif
 
 all:	$(OBJS) 
 
-farb_connect.o: farb_connect.c farb_connect.h farb_conf_dict.o farb_conf_parse.o farb_util.o
-	$(CC) $(COPTS_SCALE) -fPIC -c farb_connect.c
+farb_connect.o:	../common/farb_connect.c ../common/farb_connect.h
+	$(CC) $(COPTS) -fPIC -c ../common/farb_connect.c
+farb_util.o:	../common/farb_util.c ../common/farb_util.h
+	$(CC) $(COPTS) -fPIC -c ../common/farb_util.c
+farb_conf_dict.o:	../common/farb_conf_dict.c ../common/farb_conf_dict.h
+	$(CC) $(COPTS) -fPIC -c ../common/farb_conf_dict.c
+farb_conf_parse.o:	../common/farb_conf_parse.c ../common/farb_conf_parse.h
+	$(CC) $(COPTS) -fPIC -c ../common/farb_conf_parse.c
 
 common.o:	../../common/common.f90
 	$(FC) $(FOPTS_SCALE) -c ../../common/common.f90
