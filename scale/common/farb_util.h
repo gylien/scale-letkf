@@ -26,10 +26,11 @@ struct file_buffer{
   char *buffer_pointer;         /* pointer of the buffer */
   char **buffer_list;			/* buffer node list */
   int buffer_size;              /* size of the buffer */
-  char service_name[1024];	/* service name */
-  char direction[8];	/* direction of send & recv */
-  char alias_name[1024];	/* alias name for the file */
+  char service_name[1024];		/* service name */
+  char direction[8];			/* direction of send & recv */
+  char alias_name[1024];		/* alias name for the file */
   int client_server_flag;
+  int files_cnt;
   struct file_buffer *next;     /* pointer to the next record */
 };
 

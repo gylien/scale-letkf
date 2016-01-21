@@ -272,6 +272,7 @@ struct file_buffer* create_list(char *file_path)
     ptr->buffer_pointer = NULL;
 	ptr->buffer_list = NULL;
     ptr->buffer_size = 0;
+	ptr->files_cnt = 0;
     ptr->next = NULL;
 
     head = curr = ptr;
@@ -295,6 +296,7 @@ struct file_buffer* add_to_list(char *file_path, int add_to_end)
     ptr->buffer_pointer = NULL;
 	ptr->buffer_list = NULL;
     ptr->buffer_size = 0;
+	ptr->files_cnt = 0;
     ptr->next = NULL;
 
     if(add_to_end)
@@ -389,8 +391,8 @@ int list_get_size(){
    	int i = 0;
         curr = head;
         while (curr != NULL){
-                i ++;
-                curr = curr -> next;
+        	i++;
+           	curr = curr -> next;
         }
         return i;
 }
