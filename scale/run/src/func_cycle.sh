@@ -1106,7 +1106,7 @@ ensfcst_1 () {
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT $((MEMBER+1)) $iter
+       $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT $((MEMBER+1)) $iter $time
 fi
 
 mkinit=0
@@ -1146,7 +1146,7 @@ for it in $(seq $its $ite); do
 #             $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
 #             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT ## $time_bdy
 #      elif ((BDY_FORMAT == 2)); then
-        bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
+        bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np ${name_m[$m]} \
              $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
              $TMPOUT/${time}/topo/topo $TMPOUT/${time}/landuse/landuse \
              $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
