@@ -383,10 +383,12 @@ else
         path=${time}/topo/topo.tar.gz
         echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
       else
-        for q in $(seq $mem_np); do
-          pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
-          path="${time}/topo/topo$(printf $SCALE_SFX $((q-1)))"
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+        for m in $(seq $mmean); do
+          for q in $(seq $mem_np); do
+            pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
+            path="${time}/topo/topo$(printf $SCALE_SFX $((q-1)))"
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+          done
         done
       fi
     elif [ "$TOPO_TARGZ" = 'T' ] ; then
@@ -410,10 +412,12 @@ else
         path=${time}/landuse/landuse.tar.gz
         echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
       else
-        for q in $(seq $mem_np); do
-          pathin="${pathin_pfx}/landuse$(printf $SCALE_SFX $((q-1)))"
-          path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+        for m in $(seq $mmean); do
+          for q in $(seq $mem_np); do
+            pathin="${pathin_pfx}/landuse$(printf $SCALE_SFX $((q-1)))"
+            path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+          done
         done
       fi
     elif [ "$LANDUSE_TARGZ" = 'T' ] ; then
@@ -425,11 +429,13 @@ else
     #-------------------
     if ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
       if ((BDY_ENS == 0)); then
-        for q in $(seq $mem_np); do
-          pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
-#          pathin="${DATA_BDY_SCALE_PREP}/${time}/mean/boundary$(printf $SCALE_SFX $((q-1)))"
-          path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+        for m in $(seq $mmean); do
+          for q in $(seq $mem_np); do
+            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+#            pathin="${DATA_BDY_SCALE_PREP}/${time}/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+            path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+          done
         done
       elif ((BDY_ENS == 1)); then
         for m in $(seq $mmean); do
