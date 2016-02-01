@@ -70,16 +70,17 @@ if ((BDY_FORMAT == 1)); then
 fi
 
 mkdir -p $RUNDIR/scale
-ln -fs $DATADIR/exec/scale-les_ens $RUNDIR/scale
-ln -fs $DATADIR/rad/PARAG.29 $RUNDIR/scale
-ln -fs $DATADIR/rad/PARAPC.29 $RUNDIR/scale
-ln -fs $DATADIR/rad/VARDATA.RM29 $RUNDIR/scale
-ln -fs $DATADIR/rad/cira.nc $RUNDIR/scale
-ln -fs $DATADIR/rad/MIPAS/day.atm $RUNDIR/scale
-ln -fs $DATADIR/rad/MIPAS/equ.atm $RUNDIR/scale
-ln -fs $DATADIR/rad/MIPAS/sum.atm $RUNDIR/scale
-ln -fs $DATADIR/rad/MIPAS/win.atm $RUNDIR/scale
-ln -fs $DATADIR/land/param.bucket.conf $RUNDIR/scale
+cp -f $DATADIR/exec/scale-les_ens $RUNDIR/scale
+#ln -fs $DATADIR/exec/scale-les_ens $RUNDIR/scale
+#ln -fs $DATADIR/rad/PARAG.29 $RUNDIR/scale
+#ln -fs $DATADIR/rad/PARAPC.29 $RUNDIR/scale
+#ln -fs $DATADIR/rad/VARDATA.RM29 $RUNDIR/scale
+#ln -fs $DATADIR/rad/cira.nc $RUNDIR/scale
+#ln -fs $DATADIR/rad/MIPAS/day.atm $RUNDIR/scale
+#ln -fs $DATADIR/rad/MIPAS/equ.atm $RUNDIR/scale
+#ln -fs $DATADIR/rad/MIPAS/sum.atm $RUNDIR/scale
+#ln -fs $DATADIR/rad/MIPAS/win.atm $RUNDIR/scale
+#ln -fs $DATADIR/land/param.bucket.conf $RUNDIR/scale
 
 if [ "$SCPCALL" == 'cycle' ]; then
   mkdir -p $RUNDIR/obsope

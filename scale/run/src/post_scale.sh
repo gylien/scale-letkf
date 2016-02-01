@@ -91,12 +91,12 @@ elif [ "$SCPCALL" == 'cycle' ]; then
   done
 fi
 
-if ((LOG_OPT <= 3)); then
-  mkdir -p $TMPOUT/${STIME}/log/scale
-  if [ -f "$TMPDIR/LOG${SCALE_LOG_SFX}" ]; then
-    mv -f $TMPDIR/LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale/${MEM}_LOG${SCALE_LOG_SFX}
-  fi
-fi
+#if ((LOG_OPT <= 3)); then
+#  mkdir -p $TMPOUT/${STIME}/log/scale
+#  if [ -f "$TMPDIR/LOG${SCALE_LOG_SFX}" ]; then
+#    mv -f $TMPDIR/LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale/${MEM}_LOG${SCALE_LOG_SFX}
+#  fi
+#fi
 
 if ((LOG_OPT <= 1)); then
   mkdir -p $TMPOUT/${STIME}/log/scale

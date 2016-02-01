@@ -7,12 +7,12 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_100m_100mem_205" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_100m_100mem_201" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
-LANDUSE_TARGZ="T"
-TOPO_TARGZ="T"
+#LANDUSE_TARGZ="T"
+#TOPO_TARGZ="T"
 
 #===============================================================================
 # Location of model/data files
@@ -74,9 +74,9 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=100         # Ensemble size
+MEMBER=15          # Ensemble size
 
-NNODES=12240       # Number of nodes
+NNODES=5760        # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process

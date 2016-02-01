@@ -350,9 +350,11 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 #    mpiexec $pdbash_exec $SCRIPT $ARGS
 
     if [ "$PROC_OPT" == 'one' ]; then
-      mpiexec -n 1 -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS
+#      mpiexec -n 1 -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS
+      mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS
     else
-      mpiexec -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS
+#      mpiexec -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS
+      mpiexec $pdbash_exec $SCRIPT $ARGS
     fi
 
   else
@@ -360,9 +362,11 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
 
     if [ "$PROC_OPT" == 'one' ]; then
-      ( cd $SCRP_DIR && mpiexec -n 1 -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS )
+#      ( cd $SCRP_DIR && mpiexec -n 1 -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS )
+      ( cd $SCRP_DIR && mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS )
     else
-      ( cd $SCRP_DIR && mpiexec -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS )
+#      ( cd $SCRP_DIR && mpiexec -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS )
+      ( cd $SCRP_DIR && mpiexec $pdbash_exec $SCRIPT $ARGS )
     fi
 
 

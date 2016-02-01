@@ -20,6 +20,10 @@
 #
 #===============================================================================
 
+
+echo "[$(date)] cycle_step: $@: start"
+
+
 cd "$(dirname "$0")"
 #myname=$(basename "$0")
 #myname1=${myname%.*}
@@ -96,5 +100,9 @@ res=$? && ((res != 0)) && exit $res
 #echo $STEPFUNC $MYRANK $TIME $LOOP ... done 1>&2
 
 #===============================================================================
+
+
+echo "[$(date)] cycle_step: $@: end"
+
 
 exit 0
