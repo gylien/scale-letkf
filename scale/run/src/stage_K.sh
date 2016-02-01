@@ -151,7 +151,7 @@ if ((USE_RANKDIR == 1)); then
   echo "#PJM --stgin \"rank=* $SCRP_DIR/src/* %r:./src/\""
   echo "#PJM --stgin \"rank=0 $LOGDIR/${PROGNAME}.err 0:./log/${PROGNAME}.err\""
   echo "#PJM --stgin \"rank=* $SCRP_DIR/sample.ini %r:./sample.ini\""
-  echo "#PJM --stgin \"rank=* /volume63/data/hp150019/gylien/scale-letkf/lib_liao_160119/hack.so %r:./hack.so\""
+  echo "#PJM --stgin \"rank=* /volume63/data/hp150019/gylien/scale-letkf/lib_liao_160119/hack_nonbuf.so %r:./hack.so\""
 else
   echo "#PJM --stgin \"$TMPS/config.main ./config.main\""
   echo "#PJM --stgin \"$SCRP_DIR/config.rc ./config.rc\""
@@ -161,7 +161,7 @@ else
   echo "#PJM --stgin \"$SCRP_DIR/src/* ./src/\""
   echo "#PJM --stgin \"$LOGDIR/${PROGNAME}.err ./log/${PROGNAME}.err\""
   echo "#PJM --stgin \"$SCRP_DIR/sample.ini ./sample.ini\""
-  echo "#PJM --stgin \"/volume63/data/hp150019/gylien/scale-letkf/lib_liao_160119/hack.so ./hack.so\""
+  echo "#PJM --stgin \"/volume63/data/hp150019/gylien/scale-letkf/lib_liao_160119/hack_nonbuf.so ./hack.so\""
 fi
 
 #===============================================================================
