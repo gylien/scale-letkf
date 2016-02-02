@@ -7,9 +7,12 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_100m_100mem_noda_2" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_100m_100mem_18" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
+
+LANDUSE_TARGZ="T"
+TOPO_TARGZ="T"
 
 #===============================================================================
 # Location of model/data files
@@ -24,7 +27,7 @@ DATA_BDY_SCALE_PREP="/volume63/data/hp150019/gylien/scale-letkf/database/bdy_pre
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
 
-OBS="/volume63/data/hp150019/gylien/obs/QCED_100M_v2"    # directory of observation data in LETKF obs format
+OBS="/volume63/data/hp150019/gylien/obs/QCED_100M_v3"    # directory of observation data in LETKF obs format
 OBSNCEP=                                                 # directory of observation data in NCEP BUFR format
 
 #===============================================================================
@@ -40,7 +43,7 @@ LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=0            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
@@ -63,17 +66,17 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=600       # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=600       # SCALE forecast time when assimilation window ends (second)
-LCYCLE=600         # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=600      # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=30        # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=30        # SCALE forecast time when assimilation window ends (second)
+LCYCLE=30          # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
 
 MEMBER=100         # Ensemble size
 
-NNODES=512         # Number of nodes
+NNODES=3264        # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process

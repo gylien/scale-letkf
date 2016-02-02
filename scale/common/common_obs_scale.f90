@@ -204,6 +204,7 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: iqc_ps_ter=10
   INTEGER,PARAMETER :: iqc_ref_low=11
   INTEGER,PARAMETER :: iqc_ref_mem=12
+  INTEGER,PARAMETER :: iqc_radar_vhi=19
   INTEGER,PARAMETER :: iqc_out_vhi=20
   INTEGER,PARAMETER :: iqc_out_vlo=21
   INTEGER,PARAMETER :: iqc_out_h=22
