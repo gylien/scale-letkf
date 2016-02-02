@@ -107,6 +107,8 @@ MODULE common_nml
   REAL(r_size) :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
   REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
 
+  real(r_size) :: RADAR_ZMAX = 99.0d3          !Height limit of radar data to be used
+
   REAL(r_size) :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
 
   logical :: USE_RADAR_PSEUDO_RH = .false.
@@ -383,6 +385,7 @@ subroutine read_nml_letkf_radar
     MIN_RADAR_REF_MEMBER, &
     MIN_RADAR_REF_DBZ, &
     RADAR_REF_THRES_DBZ, &
+    RADAR_ZMAX, &
     RADAR_PRH_ERROR, &
     USE_RADAR_PSEUDO_RH, &
     RADAR_EDGE_TAPER_WIDTH, &
