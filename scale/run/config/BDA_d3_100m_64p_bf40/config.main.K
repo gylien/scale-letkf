@@ -11,8 +11,8 @@ OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_100m_10
 
 LOGDIR="$DIR/log"
 
-LANDUSE_TARGZ="T"
-TOPO_TARGZ="T"
+#LANDUSE_TARGZ="T"
+#TOPO_TARGZ="T"
 
 #===============================================================================
 # Location of model/data files
@@ -96,7 +96,7 @@ MACHINE_TYPE=10             # Machine type
                             # 11: K-computer (micro jobs)
                             # 12: K-computer (interact jobs)
 
-TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
+TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
 TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
                             #  1: share (link to TMP)
