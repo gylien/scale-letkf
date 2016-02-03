@@ -41,11 +41,11 @@ obsdabaselen=10
 
 #===============================================================================
 
-mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
-for ifile in $(cd $TMPDIR ; ls obsda.${MEMSEQ}.*.dat 2> /dev/null); do
-#  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile}
-  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/obsda.${MEM}${ifile:$obsdabaselen}
-done
+#mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
+#for ifile in $(cd $TMPDIR ; ls obsda.${MEMSEQ}.*.dat 2> /dev/null); do
+##  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile}
+#  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/obsda.${MEM}${ifile:$obsdabaselen}
+#done
 
 #if ((MYRANK < MEM_NP)); then
 #  if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then

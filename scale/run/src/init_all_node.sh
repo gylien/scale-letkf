@@ -84,10 +84,20 @@ cp -f $DATADIR/exec/scale-les_ens $RUNDIR/scale
 
 if [ "$SCPCALL" == 'cycle' ]; then
   mkdir -p $RUNDIR/obsope
-  ln -fs $DATADIR/exec/obsope $RUNDIR/obsope
+  cp -f $DATADIR/exec/obsope $RUNDIR/obsope
+#  ln -fs $DATADIR/exec/obsope $RUNDIR/obsope
+
+  #-- H08 --
+  if [ -e "$DATADIR/rttov/rtcoef_himawari_8_ahi.dat" ]; then
+    cp -f $DATADIR/rttov/rtcoef_himawari_8_ahi.dat $RUNDIR/obsope
+  fi
+  if [ -e "$DATADIR/rttov/sccldcoef_himawari_8_ahi.dat" ]; then
+    cp -f $DATADIR/rttov/sccldcoef_himawari_8_ahi.dat $RUNDIR/obsope
+  fi
 
   mkdir -p $RUNDIR/letkf
-  ln -fs $DATADIR/exec/letkf $RUNDIR/letkf
+  cp -f $DATADIR/exec/letkf $RUNDIR/letkf
+#  ln -fs $DATADIR/exec/letkf $RUNDIR/letkf
 fi
 
 #===============================================================================

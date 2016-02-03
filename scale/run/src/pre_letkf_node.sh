@@ -90,6 +90,8 @@ cat $TMPDAT/conf/config.nml.scale | \
         -e "s/\[MONITOR_OUT_BASENAME\]/ MONITOR_OUT_BASENAME = \"monitor\",/" \
     >> $TMPDIR/letkf.conf
 
+mkdir -p $TMPOUT/${ATIME}/log/letkf
+
 #===============================================================================
 
 exit 0
