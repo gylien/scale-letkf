@@ -257,14 +257,14 @@ else # [ SIMPLE_STGOUT <= 1 ]
   ALLOUTDIR="$OUTDIR/everything"
 
   if ((USE_RANKDIR == 1)); then
-    echo "#PJM --stgout-dir \"rank=* %r:./log $ALLOUTDIR/log recursive=10\""
-    echo "#PJM --stgout-dir \"rank=* %r:./run $ALLOUTDIR/run recursive=10\""
-    echo "#PJM --stgout-dir \"rank=* %r:./out $ALLOUTDIR/out recursive=10\""
+    echo "#PJM --stgout-dir \"rank=* %r:./log $ALLOUTDIR/log recursive=10,stgout=all\""
+    echo "#PJM --stgout-dir \"rank=* %r:./run $ALLOUTDIR/run recursive=10,stgout=all\""
+    echo "#PJM --stgout-dir \"rank=* %r:./out $ALLOUTDIR/out recursive=10,stgout=all\""
     echo "#PJM --stgout \"rank=* %r:./* $ALLOUTDIR/\""
   else
-    echo "#PJM --stgout-dir \"./log $ALLOUTDIR/log recursive=10\""
-    echo "#PJM --stgout-dir \"./run $ALLOUTDIR/run recursive=10\""
-    echo "#PJM --stgout-dir \"./out $ALLOUTDIR/out recursive=10\""
+    echo "#PJM --stgout-dir \"./log $ALLOUTDIR/log recursive=10,stgout=all\""
+    echo "#PJM --stgout-dir \"./run $ALLOUTDIR/run recursive=10,stgout=all\""
+    echo "#PJM --stgout-dir \"./out $ALLOUTDIR/out recursive=10,stgout=all\""
     echo "#PJM --stgout \"./* $ALLOUTDIR/\""
   fi
 

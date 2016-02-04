@@ -845,11 +845,13 @@ subroutine scale_calc_z(nij,topo,z)
   integer  :: k, i
 
   ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
+!$OMP PARALLEL DO PRIVATE(i,k)
   do k = 1, nlev
     do i = 1, nij
       z(i,k) = (ztop - topo(i)) / ztop * GRID_CZ(k+KHALO) + topo(i)
-    enddo
-  enddo
+    end do
+  end do
+!$OMP END PARALLEL DO
 
   return
 end subroutine scale_calc_z

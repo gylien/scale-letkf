@@ -253,34 +253,44 @@ while ((time <= ETIME)); do
         fi
       fi
 
+      if ((s <= 3)); then
+        stdout_dir="$TMPOUT/${time}/log/$(basename ${stepexecdir[$s]})"
+      else
+        stdout_dir="$TMPOUT/${atime}/log/$(basename ${stepexecdir[$s]})"
+      fi
+
+echo "$stdout_dir" >&2
+echo ${stepexecdir[$s]} >&2
+echo $(rev_path ${stepexecdir[$s]}) >&2
+
       if ((enable_iter == 1)); then
         for it in $(seq $nitmax); do
           if ((USE_RANKDIR == 1)); then
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: start" >&2
-
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "'$STDOUT'" ${stepexecdir[$s]} \
+#            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "$(rev_path ${stdout_dir})/NOUT-${it}" ${stepexecdir[$s]} \
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "./out/${time}/log/$(basename ${stepexecdir[$s]})/NOUT-${it}" ${stepexecdir[$s]} \
                     "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" $loop $it # > /dev/null
 
-      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: end" >&2
-
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           else
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: start" >&2
-
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "'$STDOUT'" . \
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
                     "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it # > /dev/null
 
-      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: end" >&2
-
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           fi
         done
       else
         if ((USE_RANKDIR == 1)); then
-          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "'$STDOUT'" ${stepexecdir[$s]} \
+
+#          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "$(rev_path ${stdout_dir})/NOUT" ${stepexecdir[$s]} \
+          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "./out/${atime}/log/$(basename ${stepexecdir[$s]})/NOUT" ${stepexecdir[$s]} \
                   "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" "$loop" # > /dev/null
         else
-          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "'$STDOUT'" . \
+
+          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
                   "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" # > /dev/null
         fi
       fi

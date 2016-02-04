@@ -131,7 +131,6 @@ fi
 #done
 
 if ((LOG_OPT <= 1)); then
-  mkdir -p $TMPOUT/${STIME}/log/scale
   if [ -f "$TMPDIR/run.conf" ]; then
     mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/scale/${MEM}_run.conf
   fi
@@ -139,7 +138,6 @@ fi
 
 ######
 if ((MYRANK == 0)); then
-  mkdir -p $TMPOUT/${STIME}/log/scale
   if [ -f "$TMPDIR/../latlon_domain_catalogue.txt" ]; then
     mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/scale/latlon_domain_catalogue.txt
   fi

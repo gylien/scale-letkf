@@ -20,10 +20,6 @@
 #
 #===============================================================================
 
-
-echo "[$(date)] cycle_step: $@: start"
-
-
 cd "$(dirname "$0")"
 #myname=$(basename "$0")
 #myname1=${myname%.*}
@@ -47,6 +43,10 @@ res=$? && ((res != 0)) && exit $res
 . src/func_datetime.sh
 . src/func_util.sh
 . src/func_cycle.sh
+
+######
+echo "[$(datetime_now)] cycle_step: $@: start"
+######
 
 #-------------------------------------------------------------------------------
 
@@ -101,8 +101,8 @@ res=$? && ((res != 0)) && exit $res
 
 #===============================================================================
 
-
-echo "[$(date)] cycle_step: $@: end"
-
+######
+echo "[$(datetime_now)] cycle_step: $@: end"
+######
 
 exit 0

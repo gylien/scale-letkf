@@ -51,7 +51,7 @@ cat $TMPDAT/conf/config.nml.ensmodel | \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
     > $TMPDIR/scale-les_ens.conf
 
-mkdir -p $TMPOUT/${STIME}/log/scale
+#mkdir -p $TMPOUT/${STIME}/log/scale
 
 #===============================================================================
 

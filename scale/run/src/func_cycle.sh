@@ -832,6 +832,10 @@ enspp_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script start" >&2
+fi
+
 if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
   echo "  ... skip this step (use prepared topo and landuse files)"
   exit 1
@@ -851,18 +855,26 @@ if (pdrun all $PROC_OPT); then
        $mem_nodes $mem_np $TMPRUN/scale_pp $TMPDAT/exec $TMPDAT $MEMBER_RUN $iter
 fi
 
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script end" >&2
+fi
+
 for it in $(seq $its $ite); do
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) start" >&2
+  fi
+
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= MEMBER_RUN)); then
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Pre-processing  script] node ${node_m[$m]} [$(datetime_now)]"
-    fi
-
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK $time \
            $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
     fi
+  fi
+
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) end" >&2
   fi
 done
 
@@ -891,17 +903,21 @@ else # local run directory: run multiple members as needed
 fi
 
 for it in $(seq $its $ite); do
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) start" >&2
+  fi
+
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= MEMBER_RUN)); then
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Post-processing script] node ${node_m[$m]} [$(datetime_now)]"
-    fi
-
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $mem_np $time \
            ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT
     fi
+  fi
+
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) end" >&2
   fi
 done
 
@@ -916,6 +932,10 @@ ensinit_1 () {
 #echo
 #echo "* Pre-processing scripts"
 #echo
+
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script start" >&2
+fi
 
 if ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
   echo "  ... skip this step (use prepared boundaries)"
@@ -962,18 +982,18 @@ if (pdrun all $PROC_OPT); then
        $mem_nodes $mem_np $TMPRUN/scale_init $TMPDAT/exec $TMPDAT $MEMBER_RUN $iter
 fi
 
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script end" >&2
+fi
+
 for it in $(seq $its $ite); do
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) start" >&2
+  fi
+
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= MEMBER_RUN)); then
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      if ((BDY_ENS == 1)); then
-        echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-      else
-        echo "  [Pre-processing  script] node ${node_m[$m]} [$(datetime_now)]"
-      fi
-    fi
-
     if (pdrun $g $PROC_OPT); then
       #------
       if ((BDY_FORMAT == 1)); then
@@ -1017,6 +1037,10 @@ for it in $(seq $its $ite); do
       #------
     fi
   fi
+
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) end" >&2
+  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1049,17 +1073,13 @@ if ((loop == 1)); then
 fi
 
 for it in $(seq $its $ite); do
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
+  fi
+
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= MEMBER_RUN)); then
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      if ((BDY_ENS == 1)); then
-        echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-      else
-        echo "  [Post-processing script] node ${node_m[$m]} [$(datetime_now)]"
-      fi
-    fi
-
     if (pdrun $g $PROC_OPT); then
       if ((BDY_FORMAT == 1 || BDY_FORMAT == 2)); then
         if ((BDY_ENS == 1)); then
@@ -1075,6 +1095,10 @@ for it in $(seq $its $ite); do
       fi
     fi
   fi
+
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
+  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1088,6 +1112,10 @@ ensfcst_1 () {
 #echo
 #echo "* Pre-processing scripts"
 #echo
+
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script start" >&2
+fi
 
 ############
 #if ((BDY_FORMAT == 1 || BDY_FORMAT == -1)); then
@@ -1127,13 +1155,18 @@ if ((OCEAN_INPUT == 1)); then
   fi
 fi
 
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script end" >&2
+fi
+
 for it in $(seq $its $ite); do
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) start" >&2
+  fi
+
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= mmean)); then
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-    fi
 
 #    if ((PERTURB_BDY == 1)); then
 #      ...
@@ -1161,6 +1194,10 @@ for it in $(seq $its $ite); do
       
     fi
   fi
+
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) end" >&2
+  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1176,12 +1213,13 @@ ensfcst_2 () {
 #echo
 
 for it in $(seq $its $ite); do
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) start" >&2
+  fi
+
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= mmean)); then
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-    fi
 
 #    if ((PERTURB_BDY == 1)); then
 #      ...
@@ -1189,8 +1227,12 @@ for it in $(seq $its $ite); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $mem_np \
-           $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT cycle
+           $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT cycle $iter
     fi
+  fi
+
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) end" >&2
   fi
 done
 
@@ -1206,24 +1248,36 @@ obsope_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ${time}: ${stepname[4]}: Pre-processing script start" >&2
+fi
+
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_obsope_node.sh $MYRANK \
        $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b $MEMBER
 fi
 
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ${time}: ${stepname[4]}: Pre-processing script end" >&2
+fi
+
 for it in $(seq $nitmax); do
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) start" >&2
+  fi
+
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= mmean)); then
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-    fi
-
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_obsope.sh $MYRANK \
            $atime ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/obsope
     fi
+  fi
+
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) end" >&2
   fi
 done
 
@@ -1240,17 +1294,21 @@ obsope_2 () {
 #echo
 
 for it in $(seq $nitmax); do
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Post-processing script (member) start" >&2
+  fi
+
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= mmean)); then
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-    fi
-
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
            $mem_np ${atime} ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/obsope $LOG_OPT $OUT_OPT
     fi
+  fi
+
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Post-processing script (member) end" >&2
   fi
 done
 
@@ -1266,24 +1324,36 @@ letkf_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script start" >&2
+fi
+
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
        $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/${time}/topo/topo $MEMBER
 fi
 
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script end" >&2
+fi
+
 for it in $(seq $nitmax); do
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Pre-processing script (member) start" >&2
+  fi
+
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= mmean)); then
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Pre-processing  script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-    fi
-
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
            $TMPOUT/${time}/topo/topo $atime ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/letkf
     fi
+  fi
+
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Pre-processing script (member) end" >&2
   fi
 done
 
@@ -1300,17 +1370,21 @@ letkf_2 () {
 #echo
 
 for it in $(seq $nitmax); do
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Post-processing script (member) start" >&2
+  fi
+
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= mmean)); then
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Post-processing script] member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-    fi
-
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_letkf.sh $MYRANK \
            $mem_np ${atime} ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/letkf $LOG_OPT
     fi
+  fi
+
+  if ((MYRANK == 0)); then
+    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Post-processing script (member) end" >&2
   fi
 done
 
