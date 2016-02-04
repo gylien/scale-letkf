@@ -63,45 +63,45 @@ done
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.letkf | \
-    sed -e "s#\[MEMBER\]# MEMBER = $MEMBERSEQ,#" \
-        -e "s#\[OBS_IN_NUM\]# OBS_IN_NUM = $OBSNUM,#" \
-        -e "s#\[OBS_IN_NAME\]# OBS_IN_NAME = $OBS_IN_NAME_LIST#" \
-        -e "s#\[OBSDA_IN_BASENAME\]# OBSDA_IN_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda\",#" \
-        -e "s#\[GUES_IN_BASENAME\]# GUES_IN_BASENAME = \"${TMPOUT}/${ATIME}/gues/@@@@/init\",#" \
-        -e "s#\[GUES_OUT_MEAN_BASENAME\]# GUES_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/gues/mean/init\",#" \
-        -e "s#\[GUES_OUT_SPRD_BASENAME\]# GUES_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/gues/sprd/init\",#" \
-        -e "s#\[ANAL_OUT_BASENAME\]# ANAL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/anal/@@@@/init\",#" \
-        -e "s#\[ANAL_OUT_MEAN_BASENAME\]# ANAL_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/anal/mean/init\",#" \
-        -e "s#\[ANAL_OUT_SPRD_BASENAME\]# ANAL_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/anal/sprd/init\",#" \
-        -e "s#\[LETKF_TOPO_IN_BASENAME\]# LETKF_TOPO_IN_BASENAME = \"${TOPO}\",#" \
-        -e "s#\[SLOT_START\]# SLOT_START = $SLOT_START,#" \
-        -e "s#\[SLOT_END\]# SLOT_END = $SLOT_END,#" \
-        -e "s#\[SLOT_BASE\]# SLOT_BASE = $SLOT_BASE,#" \
-        -e "s#\[SLOT_TINTERVAL\]# SLOT_TINTERVAL = $LTIMESLOT.D0,#" \
-        -e "s#\[NNODES\]# NNODES = $NNODES,#" \
-        -e "s#\[PPN\]# PPN = $PPN,#" \
-        -e "s#\[MEM_NODES\]# MEM_NODES = $MEM_NODES,#" \
-        -e "s#\[MEM_NP\]# MEM_NP = $MEM_NP,#" \
+    sed -e "/!--MEMBER--/a MEMBER = $MEMBERSEQ," \
+        -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
+        -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
+        -e "/!--OBSDA_IN_BASENAME--/a OBSDA_IN_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda\"," \
+        -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${TMPOUT}/${ATIME}/gues/@@@@/init\"," \
+        -e "/!--GUES_OUT_MEAN_BASENAME--/a GUES_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/gues/mean/init\"," \
+        -e "/!--GUES_OUT_SPRD_BASENAME--/a GUES_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/gues/sprd/init\"," \
+        -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/anal/@@@@/init\"," \
+        -e "/!--ANAL_OUT_MEAN_BASENAME--/a ANAL_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/anal/mean/init\"," \
+        -e "/!--ANAL_OUT_SPRD_BASENAME--/a ANAL_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/anal/sprd/init\"," \
+        -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${TOPO}\"," \
+        -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \
+        -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
+        -e "/!--SLOT_BASE--/a SLOT_BASE = $SLOT_BASE," \
+        -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = $LTIMESLOT.D0," \
+        -e "/!--NNODES--/a NNODES = $NNODES," \
+        -e "/!--PPN--/a PPN = $PPN," \
+        -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
+        -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
     > $TMPDIR/letkf.conf
 
 # These parameters are not important for obsope
 cat $TMPDAT/conf/config.nml.scale | \
-    sed -e "s/\[IO_LOG_BASENAME\]/ IO_LOG_BASENAME = \"LOG\",/" \
-        -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = 2014, 1, 1, 0, 0, 0,/" \
-        -e "s/\[TIME_DURATION\]/ TIME_DURATION = $LTIMESLOT.D0,/" \
-        -e "s/\[TIME_DT_ATMOS_RESTART\]/ TIME_DT_ATMOS_RESTART = $LTIMESLOT.D0,/" \
-        -e "s/\[TIME_DT_OCEAN_RESTART\]/ TIME_DT_OCEAN_RESTART = $LTIMESLOT.D0,/" \
-        -e "s/\[TIME_DT_LAND_RESTART\]/ TIME_DT_LAND_RESTART = $LTIMESLOT.D0,/" \
-        -e "s/\[TIME_DT_URBAN_RESTART\]/ TIME_DT_URBAN_RESTART = .D0,/" \
-        -e "s/\[RESTART_IN_BASENAME\]/ RESTART_IN_BASENAME = \"init\",/" \
-        -e "s/\[RESTART_OUT_BASENAME\]/ RESTART_OUT_BASENAME = \"restart\",/" \
-        -e "s/\[TOPO_IN_BASENAME\]/ TOPO_IN_BASENAME = \"topo\",/" \
-        -e "s/\[LANDUSE_IN_BASENAME\]/ LANDUSE_IN_BASENAME = \"landuse\",/" \
-        -e "s/\[ATMOS_BOUNDARY_IN_BASENAME\]/ ATMOS_BOUNDARY_IN_BASENAME = \"boundary\",/" \
-        -e "s/\[OCEAN_RESTART_IN_BASENAME\]/ OCEAN_RESTART_IN_BASENAME = \"init_ocean\",/" \
-        -e "s/\[HISTORY_DEFAULT_BASENAME\]/ HISTORY_DEFAULT_BASENAME = \"history\",/" \
-        -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = $LTIMESLOT.D0,/" \
-        -e "s/\[MONITOR_OUT_BASENAME\]/ MONITOR_OUT_BASENAME = \"monitor\",/" \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"LOG\"," \
+        -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = 2014, 1, 1, 0, 0, 0," \
+        -e "/!--TIME_DURATION--/a TIME_DURATION = $LTIMESLOT.D0," \
+        -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = $LTIMESLOT.D0," \
+        -e "/!--TIME_DT_OCEAN_RESTART--/a TIME_DT_OCEAN_RESTART = $LTIMESLOT.D0," \
+        -e "/!--TIME_DT_LAND_RESTART--/a TIME_DT_LAND_RESTART = $LTIMESLOT.D0," \
+        -e "/!--TIME_DT_URBAN_RESTART--/a TIME_DT_URBAN_RESTART = .D0," \
+        -e "/!--RESTART_IN_BASENAME--/a RESTART_IN_BASENAME = \"init\"," \
+        -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"restart\"," \
+        -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo\"," \
+        -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse\"," \
+        -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"boundary\"," \
+        -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"init_ocean\"," \
+        -e "/!--HISTORY_DEFAULT_BASENAME--/a HISTORY_DEFAULT_BASENAME = \"history\"," \
+        -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = $LTIMESLOT.D0," \
+        -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"monitor\"," \
     >> $TMPDIR/letkf.conf
 
 mkdir -p $TMPOUT/${ATIME}/log/letkf

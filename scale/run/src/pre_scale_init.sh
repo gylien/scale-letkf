@@ -134,21 +134,21 @@ fi
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_init | \
-    sed -e "s/\[IO_LOG_BASENAME\]/ IO_LOG_BASENAME = \"${TMPSUBDIR}\/init_LOG\",/" \
-        -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
-        -e "s/\[RESTART_OUTPUT\]/ RESTART_OUTPUT = $RESTART_OUTPUT,/" \
-        -e "s/\[RESTART_OUT_BASENAME\]/ RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/init\",/" \
-        -e "s/\[TOPO_IN_BASENAME\]/ TOPO_IN_BASENAME = \"${TMPSUBDIR}\/topo\",/" \
-        -e "s/\[LANDUSE_IN_BASENAME\]/ LANDUSE_IN_BASENAME = \"${TMPSUBDIR}\/landuse\",/" \
-        -e "s/\[BASENAME_BOUNDARY\]/ BASENAME_BOUNDARY = \"${TMPSUBDIR}\/boundary\",/" \
-        -e "s/\[BASENAME_ORG\]/ BASENAME_ORG = \"${BASENAME_ORG}\",/" \
-        -e "s/\[FILETYPE_ORG\]/ FILETYPE_ORG = \"${FILETYPE_ORG}\",/" \
-        -e "s/\[NUMBER_OF_FILES\]/ NUMBER_OF_FILES = $NUMBER_OF_FILES,/" \
-        -e "s/\[NUMBER_OF_TSTEPS\]/ NUMBER_OF_TSTEPS = $NUMBER_OF_TSTEPS,/" \
-        -e "s/\[NUMBER_OF_SKIP_TSTEPS\]/ NUMBER_OF_SKIP_TSTEPS = $NUMBER_OF_SKIP_TSTEPS,/" \
-        -e "s/\[BOUNDARY_UPDATE_DT\]/ BOUNDARY_UPDATE_DT = $BDYINT.D0,/" \
-        -e "s/\[USE_NESTING\]/ USE_NESTING = $USE_NESTING,/" \
-        -e "s/\[OFFLINE\]/ OFFLINE = $OFFLINE,/" \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"${TMPSUBDIR}\/init_LOG\"," \
+        -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
+        -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = $RESTART_OUTPUT," \
+        -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/init\"," \
+        -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TMPSUBDIR}\/topo\"," \
+        -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${TMPSUBDIR}\/landuse\"," \
+        -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"${TMPSUBDIR}\/boundary\"," \
+        -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${BASENAME_ORG}\"," \
+        -e "/!--FILETYPE_ORG--/a FILETYPE_ORG = \"${FILETYPE_ORG}\"," \
+        -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = $NUMBER_OF_FILES," \
+        -e "/!--NUMBER_OF_TSTEPS--/a NUMBER_OF_TSTEPS = $NUMBER_OF_TSTEPS," \
+        -e "/!--NUMBER_OF_SKIP_TSTEPS--/a NUMBER_OF_SKIP_TSTEPS = $NUMBER_OF_SKIP_TSTEPS," \
+        -e "/!--BOUNDARY_UPDATE_DT--/a BOUNDARY_UPDATE_DT = $BDYINT.D0," \
+        -e "/!--USE_NESTING--/a USE_NESTING = $USE_NESTING," \
+        -e "/!--OFFLINE--/a OFFLINE = $OFFLINE," \
     > $TMPDIR/init.conf
 
 #===============================================================================

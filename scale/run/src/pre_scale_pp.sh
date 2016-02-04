@@ -60,14 +60,14 @@ fi
 TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
 
 cat $TMPDAT/conf/config.nml.scale_pp | \
-    sed -e "s/\[IO_LOG_BASENAME\]/ IO_LOG_BASENAME = \"${TMPSUBDIR}\/pp_LOG\",/" \
-        -e "s/\[TOPO_OUT_BASENAME\]/ TOPO_OUT_BASENAME = \"${TMPSUBDIR}\/topo\",/" \
-        -e "s/\[LANDUSE_OUT_BASENAME\]/ LANDUSE_OUT_BASENAME = \"${TMPSUBDIR}\/landuse\",/" \
-        -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
-        -e "s/\[CONVERT_TOPO\]/ CONVERT_TOPO = $CONVERT_TOPO,/" \
-        -e "s/\[CONVERT_LANDUSE\]/ CONVERT_LANDUSE = $CONVERT_LANDUSE,/" \
-        -e "s/\[CNVTOPO_name\]/ CNVTOPO_name = '$TOPO_FORMAT',/" \
-        -e "s/\[CNVLANDUSE_name\]/ CNVLANDUSE_name = '$LANDUSE_FORMAT',/" \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"${TMPSUBDIR}\/pp_LOG\"," \
+        -e "/!--TOPO_OUT_BASENAME--/a TOPO_OUT_BASENAME = \"${TMPSUBDIR}\/topo\"," \
+        -e "/!--LANDUSE_OUT_BASENAME--/a LANDUSE_OUT_BASENAME = \"${TMPSUBDIR}\/landuse\"," \
+        -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
+        -e "/!--CONVERT_TOPO--/a CONVERT_TOPO = $CONVERT_TOPO," \
+        -e "/!--CONVERT_LANDUSE--/a CONVERT_LANDUSE = $CONVERT_LANDUSE," \
+        -e "/!--CNVTOPO_name--/a CNVTOPO_name = '$TOPO_FORMAT'," \
+        -e "/!--CNVLANDUSE_name--/a CNVLANDUSE_name = '$LANDUSE_FORMAT'," \
     > $TMPDIR/pp.conf
 
 #===============================================================================
