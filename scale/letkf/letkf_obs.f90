@@ -35,9 +35,8 @@ MODULE letkf_obs
   real(r_size),save :: dlon_zero
   real(r_size),save :: dlat_zero
 
-  type(obs_info),save :: obs(nobsfiles)
+  type(obs_info),allocatable,save :: obs(:)
   type(obs_da_value),save :: obsda
-!  type(obs_da_value),save :: obsda
   type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
                                                     !!!!!! need to add %err and %dat if they can be determined in letkf_obs.f90
 
@@ -108,6 +107,8 @@ SUBROUTINE set_letkf_obs
   REAL(r_size) :: bias(nid_obs)
   REAL(r_size) :: rmse(nid_obs)
 
+  character(filelenmax) :: obsdafile
+  character(11) :: obsda_suffix = '.000000.dat'
 
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
@@ -152,16 +153,16 @@ SUBROUTINE set_letkf_obs
     if (im >= 1 .and. im <= MEMBER) then
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
             im, ', subdomain id #', proc2mem(2,it,myrank+1)
-      write (obsdafile(7:10),'(I4.4)') im
-      write (obsdafile(12:17),'(I6.6)') proc2mem(2,it,myrank+1)
+      call file_member_replace(im, OBSDA_IN_BASENAME, obsdafile)
+      write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
 
       if (.not. check) then
-        CALL get_nobs(obsdafile,7,obsda%nobs) ! H08
+        CALL get_nobs(trim(obsdafile)//obsda_suffix,7,obsda%nobs) ! H08
         WRITE(6,'(A,I9,A)') 'TOTAL: ', obsda%nobs, ' OBSERVATIONS'
         CALL obs_da_value_allocate(obsda,MEMBER)
       end if
 
-      call read_obs_da(obsdafile,obsda,im,check)
+      call read_obs_da(trim(obsdafile)//obsda_suffix,obsda,im,check)
       check = .true.
     end if
   end do ! [ it = 1, nitmax ]
@@ -262,7 +263,7 @@ SUBROUTINE set_letkf_obs
   write (6, '(A)') '******'
 
   !!!!!! may be moved to latter
-  do iof = 1, nobsfiles
+  do iof = 1, OBS_IN_NUM
     do n = 1, obs(iof)%nobs
       if (obs(iof)%elm(n) == id_radar_ref_obs) then
         if (obs(iof)%dat(n) >= 0.0d0 .and. obs(iof)%dat(n) < 1.0d10) then
@@ -283,7 +284,7 @@ SUBROUTINE set_letkf_obs
         obs(iof)%err(n) = OBSERR_RADAR_VR
       end if
     end do ! [ n = 1, obs(iof)%nobs ]
-  end do ! [ iof = 1, nobsfiles ]
+  end do ! [ iof = 1, OBS_IN_NUM ]
   !!!!!!
 
 

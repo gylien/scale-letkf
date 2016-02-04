@@ -94,7 +94,7 @@ CONTAINS
 SUBROUTINE obsope_cal(obs)
   IMPLICIT NONE
 
-  TYPE(obs_info),INTENT(IN) :: obs(nobsfiles)
+  TYPE(obs_info),INTENT(IN) :: obs(OBS_IN_NUM)
   type(obs_da_value) :: obsda
   REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
@@ -120,6 +120,9 @@ SUBROUTINE obsope_cal(obs)
   INTEGER :: ch
   INTEGER,ALLOCATABLE :: qc_H08(:)
 
+  character(filelenmax) :: obsdafile
+  character(11) :: obsda_suffix = '.000000.dat'
+
 !-----------------------------------------------------------------------
 
   integer :: ierr
@@ -130,7 +133,7 @@ SUBROUTINE obsope_cal(obs)
 
 
   obsda%nobs = 0
-  do iof = 1, nobsfiles
+  do iof = 1, OBS_IN_NUM
     obsda%nobs = obsda%nobs + obs(iof)%nobs
   end do
   call obs_da_value_allocate(obsda,0)
@@ -156,7 +159,7 @@ SUBROUTINE obsope_cal(obs)
         slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
         write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
 
-        call read_ens_history_iter('hist',it,islot,v3dg,v2dg)
+        call read_ens_history_iter(HISTORY_IN_BASENAME,it,islot,v3dg,v2dg)
 !  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
 
@@ -166,7 +169,7 @@ SUBROUTINE obsope_cal(obs)
   rrtimer00=rrtimer
 
 
-        do iof = 1, nobsfiles
+        do iof = 1, OBS_IN_NUM
 
           nslot = 0
           nprocslot = 0
@@ -298,7 +301,7 @@ SUBROUTINE obsope_cal(obs)
 
 
               if (obsda%qc(nn) == iqc_good) then
-                select case (obsfileformat(iof))
+                select case (OBS_IN_FORMAT(iof))
                 case (1)
                   call Trans_XtoY(obs(iof)%elm(n),ri(nn),rj(nn),rk, &
                                   obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
@@ -370,8 +373,8 @@ SUBROUTINE obsope_cal(obs)
 #endif
           ENDIF ! H08
 
-          write (6,'(3A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot = ', nslot
-          write (6,'(3A,I6,A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot and processed by rank ' &
+          write (6,'(3A,I10)') ' -- [', trim(OBS_IN_NAME(iof)), '] nobs in the slot = ', nslot
+          write (6,'(3A,I6,A,I10)') ' -- [', trim(OBS_IN_NAME(iof)), '] nobs in the slot and processed by rank ' &
                                     , myrank, ' = ', nprocslot
 
 
@@ -381,7 +384,7 @@ SUBROUTINE obsope_cal(obs)
   rrtimer00=rrtimer
 
 
-        end do ! [ do iof = 1, nobsfiles ]
+        end do ! [ do iof = 1, OBS_IN_NUM ]
 
 
 
@@ -409,9 +412,10 @@ SUBROUTINE obsope_cal(obs)
             im, ', subdomain id #', proc2mem(2,it,myrank+1)
       write (6,'(A,I8,A)') ' -- ', nproc, ' observations found'
 
-      write (obsdafile(7:10),'(I4.4)') im
-      write (obsdafile(12:17),'(I6.6)') proc2mem(2,it,myrank+1)
-      call write_obs_da(obsdafile,obsda,0)
+
+      call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
+      write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
+      call write_obs_da(trim(obsdafile)//obsda_suffix,obsda,0)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -445,7 +449,7 @@ end subroutine obsope_cal
 SUBROUTINE obsmake_cal(obs)
   IMPLICIT NONE
 
-  TYPE(obs_info),INTENT(INOUT) :: obs(nobsfiles)
+  TYPE(obs_info),INTENT(INOUT) :: obs(OBS_IN_NUM)
   REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
@@ -480,7 +484,7 @@ SUBROUTINE obsmake_cal(obs)
   allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
   allocate ( v2dg (nlonh,nlath,nv2dd) )
 
-  do iof = 1, nobsfiles
+  do iof = 1, OBS_IN_NUM
     obs(iof)%dat = 0.0d0
   end do
 
@@ -490,9 +494,9 @@ SUBROUTINE obsmake_cal(obs)
     slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
     write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
 
-    call read_ens_history_iter('hist',1,islot,v3dg,v2dg)
+    call read_ens_history_iter(HISTORY_IN_BASENAME,1,islot,v3dg,v2dg)
 
-    do iof = 1, nobsfiles
+    do iof = 1, OBS_IN_NUM
       IF(iof/=3)THEN ! except H08 obs
         nslot = 0
         nprocslot = 0
@@ -536,7 +540,7 @@ SUBROUTINE obsmake_cal(obs)
               if (iqc /= iqc_good) then
                 obs(iof)%dat(n) = undef
               else
-                select case (obsfileformat(iof))
+                select case (OBS_IN_FORMAT(iof))
                 case (1)
                   call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk, &
                                   obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
@@ -649,10 +653,10 @@ SUBROUTINE obsmake_cal(obs)
 #endif
       ENDIF
 
-    end do ! [ iof = 1, nobsfiles ]
+    end do ! [ iof = 1, OBS_IN_NUM ]
 
-    write (6,'(3A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot = ', nslot
-    write (6,'(3A,I6,A,I10)') ' -- [', trim(obsfile(iof)), '] nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
+    write (6,'(3A,I10)') ' -- [', trim(OBS_IN_NAME(iof)), '] nobs in the slot = ', nslot
+    write (6,'(3A,I6,A,I10)') ' -- [', trim(OBS_IN_NAME(iof)), '] nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
 
   end do ! [ islot = SLOT_START, SLOT_END ]
 
@@ -661,7 +665,7 @@ SUBROUTINE obsmake_cal(obs)
   if (PRC_myrank == 0) then
     nobsmax = 0
     nobsall = 0
-    do iof = 1, nobsfiles
+    do iof = 1, OBS_IN_NUM
       if (obs(iof)%nobs > nobsmax) nobsmax = obs(iof)%nobs
       nobsall = nobsall + obs(iof)%nobs
     end do
@@ -673,7 +677,7 @@ SUBROUTINE obsmake_cal(obs)
     ns = 0
   end if
 
-  do iof = 1, nobsfiles
+  do iof = 1, OBS_IN_NUM
 
     call MPI_REDUCE(obs(iof)%dat,bufr(1:obs(iof)%nobs),obs(iof)%nobs,MPI_r_size,MPI_SUM,0,MPI_COMM_d,ierr)
 
@@ -714,7 +718,7 @@ SUBROUTINE obsmake_cal(obs)
       ns = ns + obs(iof)%nobs
     end if ! [ PRC_myrank == 0 ]
 
-  end do ! [ iof = 1, nobsfiles ]
+  end do ! [ iof = 1, OBS_IN_NUM ]
 
   if (PRC_myrank == 0) then
     deallocate ( bufr )

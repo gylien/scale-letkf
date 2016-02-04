@@ -46,35 +46,45 @@ initbaselen=4
 if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd'
 #if [ -d "$TMPOUT/${ATIME}/gues/meanf" ]; then  # required....
   for ifile in $(cd $TMPOUT/${ATIME}/gues/meanf ; ls init*.nc 2> /dev/null); do
-    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/gues.mean${ifile:$initbaselen}
-    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/anal.mean${ifile:$initbaselen}
-    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/gues.sprd${ifile:$initbaselen}
-    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/anal.sprd${ifile:$initbaselen}
+#    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/gues.mean${ifile:$initbaselen}
+#    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/anal.mean${ifile:$initbaselen}
+#    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/gues.sprd${ifile:$initbaselen}
+#    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/anal.sprd${ifile:$initbaselen}
+    mkdir -p $TMPOUT/${ATIME}/gues/mean
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/gues/mean
+    mkdir -p $TMPOUT/${ATIME}/anal/mean
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/anal/mean
+    mkdir -p $TMPOUT/${ATIME}/gues/sprd
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/gues/sprd
+    mkdir -p $TMPOUT/${ATIME}/anal/sprd
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/anal/sprd
   done
 #fi
 
-  ln -fs ${TOPO}*.nc $TMPDIR
+#  ln -fs ${TOPO}*.nc $TMPDIR
 #  for ifile in $(cd $topodir ; ls ${topobase}*.nc 2> /dev/null); do
 #    ln -fs $topodir/${ifile} $TMPDIR/topo${ifile:$topobaselen}
 #  done
 else
-  if [ -d "$TMPOUT/${ATIME}/obsgues/${MEM}" ]; then
-    for ifile in $(cd $TMPOUT/${ATIME}/obsgues/${MEM} ; ls obsda.${MEM}.*.dat 2> /dev/null); do
-#      ln -fs $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile} $TMPDIR/${ifile}
-      ln -fs $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile} $TMPDIR/obsda.${MEMSEQ}${ifile:$obsdabaselen}
-    done
-  fi
-
-  if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
-#    for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls history*.nc 2> /dev/null); do
-#      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEMSEQ}${ifile:$historybaselen}
+#  if [ -d "$TMPOUT/${ATIME}/obsgues/${MEM}" ]; then
+#    for ifile in $(cd $TMPOUT/${ATIME}/obsgues/${MEM} ; ls obsda.${MEM}.*.dat 2> /dev/null); do
+##      ln -fs $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile} $TMPDIR/${ifile}
+#      ln -fs $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile} $TMPDIR/obsda.${MEMSEQ}${ifile:$obsdabaselen}
 #    done
+#  fi
+
+#  if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
+##    for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls history*.nc 2> /dev/null); do
+##      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEMSEQ}${ifile:$historybaselen}
+##    done
 
     for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls init*.nc 2> /dev/null); do
-      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/gues.${MEMSEQ}${ifile:$initbaselen}
-      cp -f $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/anal.${MEMSEQ}${ifile:$initbaselen}
+#      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/gues.${MEMSEQ}${ifile:$initbaselen}
+#      cp -f $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/anal.${MEMSEQ}${ifile:$initbaselen}
+      mkdir -p $TMPOUT/${ATIME}/anal/${MEM}
+      cp -f $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPOUT/${ATIME}/anal/${MEM}
     done
-  fi
+#  fi
 fi
 
 #===============================================================================

@@ -55,6 +55,12 @@ if ((USE_RANKDIR == 1)); then
   fi
 fi
 
+if ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
+  STDOUT=''
+else
+  STDOUT='NOUT'
+fi
+
 setting "$1" "$2" "$3" "$4" "$5"
 
 #-------------------------------------------------------------------------------
@@ -253,7 +259,7 @@ while ((time <= ETIME)); do
 
       echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: start" >&2
 
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "'$STDOUT'" ${stepexecdir[$s]} \
                     "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" $loop $it # > /dev/null
 
       echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: end" >&2
@@ -262,7 +268,7 @@ while ((time <= ETIME)); do
 
       echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: start" >&2
 
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "'$STDOUT'" . \
                     "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it # > /dev/null
 
       echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: end" >&2
@@ -271,10 +277,10 @@ while ((time <= ETIME)); do
         done
       else
         if ((USE_RANKDIR == 1)); then
-          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "'$STDOUT'" ${stepexecdir[$s]} \
                   "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" "$loop" # > /dev/null
         else
-          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "'$STDOUT'" . \
                   "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" # > /dev/null
         fi
       fi

@@ -176,16 +176,16 @@ MODULE common_obs_scale
 !    (/'CONVENTIONAL', 'RADAR'/)
     (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR'/)
 
-!  INTEGER,PARAMETER :: nobsfiles=2          !!!!!! goes to namelist ?????
-  INTEGER,PARAMETER :: nobsfiles=3 ! H08     !!!!!! goes to namelist ?????
-  CHARACTER(30) :: obsfile(nobsfiles) = &   !!!!
-!    (/'obs.dat', 'radar.dat'/)              !!!!
-    (/'obs.dat  ', 'radar.dat', 'H08.dat  '/)  ! H08   !!!!
-  INTEGER :: obsfileformat(nobsfiles) = &   !!!!
-!    (/1, 2/)                                !!!!
-    (/1, 2, 3/)  ! H08                     !!!!
+!!  INTEGER,PARAMETER :: nobsfiles=2          !!!!!! goes to namelist ?????
+!  INTEGER,PARAMETER :: nobsfiles=3 ! H08     !!!!!! goes to namelist ?????
+!  CHARACTER(30) :: obsfile(nobsfiles) = &   !!!!
+!!    (/'obs.dat', 'radar.dat'/)              !!!!
+!    (/'obs.dat  ', 'radar.dat', 'H08.dat  '/)  ! H08   !!!!
+!  INTEGER :: obsfileformat(nobsfiles) = &   !!!!
+!!    (/1, 2/)                                !!!!
+!    (/1, 2, 3/)  ! H08                     !!!!
 
-  CHARACTER(21) :: obsdafile='obsda.0000.000000.dat'
+!  CHARACTER(21) :: obsdafile='obsda.0000.000000.dat'
 
 
 
@@ -1291,7 +1291,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 
   REAL(RP),intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP),intent(in) :: v2dg(nlon,nlat,nv2d)
-  type(obs_info),intent(in) :: obs(nobsfiles)
+  type(obs_info),intent(in) :: obs(OBS_IN_NUM)
   type(obs_da_value),intent(in) :: obsda
   real(r_size),intent(in) :: topo(nlon,nlat)
   INTEGER,INTENT(OUT) :: nobs(nid_obs)
@@ -2091,14 +2091,14 @@ END SUBROUTINE write_obs_radar
 subroutine read_obs_all(obs)
   implicit none
 
-  type(obs_info), intent(out) :: obs(nobsfiles)
+  type(obs_info), intent(out) :: obs(OBS_IN_NUM)
   integer :: iof
   logical :: ex
 
-  do iof = 1, nobsfiles
-    inquire (file=obsfile(iof), exist=ex)
+  do iof = 1, OBS_IN_NUM
+    inquire (file=trim(OBS_IN_NAME(iof)), exist=ex)
     if (.not. ex) then
-      write(6,*) 'WARNING: FILE ',obsfile(iof),' NOT FOUND'
+      write(6,*) 'WARNING: FILE ',trim(OBS_IN_NAME(iof)),' NOT FOUND'
 
 
       obs(iof)%nobs = 0
@@ -2108,33 +2108,33 @@ subroutine read_obs_all(obs)
       cycle
     end if
 
-    select case (obsfileformat(iof))
+    select case (OBS_IN_FORMAT(iof))
     case (1)
-      call get_nobs(obsfile(iof),8,obs(iof)%nobs)
+      call get_nobs(trim(OBS_IN_NAME(iof)),8,obs(iof)%nobs)
     case (2)
-      call get_nobs_radar(obsfile(iof), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
+      call get_nobs_radar(trim(OBS_IN_NAME(iof)), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
     case (3) !H08 
-      call get_nobs_H08(obsfile(iof),obs(iof)%nobs) ! H08
+      call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
     case default
       write(6,*) 'Error: Unsupported observation file format!'
       stop
     end select
 
-    write(6,'(5A,I9,A)') 'OBS FILE [', trim(obsfile(iof)), '] (FORMAT ', &
-                         trim(obsformat_name(obsfileformat(iof))), '): TOTAL ', &
+    write(6,'(5A,I9,A)') 'OBS FILE [', trim(OBS_IN_NAME(iof)), '] (FORMAT ', &
+                         trim(obsformat_name(OBS_IN_FORMAT(iof))), '): TOTAL ', &
                          obs(iof)%nobs, ' OBSERVATIONS'
 
     call obs_info_allocate(obs(iof))
 
-    select case (obsfileformat(iof))
+    select case (OBS_IN_FORMAT(iof))
     case (1)
-      call read_obs(trim(obsfile(iof)),obs(iof))
+      call read_obs(trim(OBS_IN_NAME(iof)),obs(iof))
     case (2)
-      call read_obs_radar(trim(obsfile(iof)),obs(iof))
+      call read_obs_radar(trim(OBS_IN_NAME(iof)),obs(iof))
     case (3) ! H08 
-      call read_obs_H08(trim(obsfile(iof)),obs(iof)) ! H08
+      call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
     end select
-  end do ! [ iof = 1, nobsfiles ]
+  end do ! [ iof = 1, OBS_IN_NUM ]
 
   return
 end subroutine read_obs_all
@@ -2142,7 +2142,7 @@ end subroutine read_obs_all
 subroutine write_obs_all(obs, missing, file_suffix)
   implicit none
 
-  type(obs_info), intent(in) :: obs(nobsfiles)
+  type(obs_info), intent(in) :: obs(OBS_IN_NUM)
   logical, intent(in), optional :: missing
   character(len=*), intent(in), optional :: file_suffix
   logical :: missing_
@@ -2152,16 +2152,16 @@ subroutine write_obs_all(obs, missing, file_suffix)
   missing_ = .true.
   IF(present(missing)) missing_ = missing
 
-  do iof = 1, nobsfiles
+  do iof = 1, OBS_IN_NUM
     if (present(file_suffix)) then
-      strlen1 = len(trim(obsfile(iof)))
+      strlen1 = len(trim(OBS_IN_NAME(iof)))
       strlen2 = len(trim(file_suffix))
-      write (filestr(1:strlen1),'(A)') trim(obsfile(iof))
+      write (filestr(1:strlen1),'(A)') trim(OBS_IN_NAME(iof))
       write (filestr(strlen1+1:strlen1+strlen2),'(A)') trim(file_suffix)
     else
-      filestr = obsfile(iof)
+      filestr = OBS_IN_NAME(iof)
     end if
-    select case (obsfileformat(iof))
+    select case (OBS_IN_FORMAT(iof))
     case (1)
       call write_obs(trim(filestr),obs(iof),missing=missing_)
     case (2)
@@ -2169,7 +2169,7 @@ subroutine write_obs_all(obs, missing, file_suffix)
     case (3) ! H08 
       call write_obs_H08(trim(filestr),obs(iof),missing=missing_) ! H08
     end select
-  end do ! [ iof = 1, nobsfiles ]
+  end do ! [ iof = 1, OBS_IN_NUM ]
 
   return
 end subroutine write_obs_all

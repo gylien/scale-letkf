@@ -45,6 +45,10 @@ historybaselen=7
 #  done
 #fi
 
+if [ "$MEM" != 'mean' ]; then
+  mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
+fi
+
 #===============================================================================
 
 exit 0

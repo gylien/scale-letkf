@@ -65,18 +65,19 @@ done
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.obsope | \
-    sed -e "s/\[MEMBER\]/ MEMBER = $MEMBERSEQ,/" \
-        -e "s/\[HISTORY_IN_BASENAME\]/ HISTORY_IN_BASENAME = '${TMPOUT}/${ATIME}/gues/@@@@/history',/" \
-        -e "s/\[OBSDA_OUT_BASENAME\]/ OBSDA_OUT_BASENAME = '${TMPOUT}/${ATIME}/obsgues/@@@@/obsda',/" \
-        -e "s/\[OBS_IN_NAME\]/ OBS_IN_NAME = $OBS_IN_NAME_LIST/" \
-        -e "s/\[SLOT_START\]/ SLOT_START = $SLOT_START,/" \
-        -e "s/\[SLOT_END\]/ SLOT_END = $SLOT_END,/" \
-        -e "s/\[SLOT_BASE\]/ SLOT_BASE = $SLOT_BASE,/" \
-        -e "s/\[SLOT_TINTERVAL\]/ SLOT_TINTERVAL = $LTIMESLOT.D0,/" \
-        -e "s/\[NNODES\]/ NNODES = $NNODES,/" \
-        -e "s/\[PPN\]/ PPN = $PPN,/" \
-        -e "s/\[MEM_NODES\]/ MEM_NODES = $MEM_NODES,/" \
-        -e "s/\[MEM_NP\]/ MEM_NP = $MEM_NP,/" \
+    sed -e "s#\[MEMBER\]# MEMBER = $MEMBERSEQ,#" \
+        -e "s#\[HISTORY_IN_BASENAME\]# HISTORY_IN_BASENAME = '${TMPOUT}/${ATIME}/gues/@@@@/history',#" \
+        -e "s#\[OBSDA_OUT_BASENAME\]# OBSDA_OUT_BASENAME = '${TMPOUT}/${ATIME}/obsgues/@@@@/obsda',#" \
+        -e "s#\[OBS_IN_NUM\]# OBS_IN_NUM = $OBSNUM,#" \
+        -e "s#\[OBS_IN_NAME\]# OBS_IN_NAME = $OBS_IN_NAME_LIST#" \
+        -e "s#\[SLOT_START\]# SLOT_START = $SLOT_START,#" \
+        -e "s#\[SLOT_END\]# SLOT_END = $SLOT_END,#" \
+        -e "s#\[SLOT_BASE\]# SLOT_BASE = $SLOT_BASE,#" \
+        -e "s#\[SLOT_TINTERVAL\]# SLOT_TINTERVAL = $LTIMESLOT.D0,#" \
+        -e "s#\[NNODES\]# NNODES = $NNODES,#" \
+        -e "s#\[PPN\]# PPN = $PPN,#" \
+        -e "s#\[MEM_NODES\]# MEM_NODES = $MEM_NODES,#" \
+        -e "s#\[MEM_NP\]# MEM_NP = $MEM_NP,#" \
     > $TMPDIR/obsope.conf
 
 # These parameters are not important for obsope

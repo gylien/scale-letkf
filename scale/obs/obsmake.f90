@@ -22,7 +22,7 @@ PROGRAM obsmake
   CHARACTER(11) :: stdoutf='NOUT-000000'
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
-  type(obs_info) :: obs(nobsfiles)
+  type(obs_info),allocatable :: obs(:)
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -65,6 +65,7 @@ PROGRAM obsmake
 !-----------------------------------------------------------------------
 
     if (myrank_mem_use) then
+      allocate(obs(OBS_IN_NUM))
       call read_obs_all(obs)
     end if
 
@@ -87,6 +88,9 @@ PROGRAM obsmake
     rtimer00=rtimer
 
 
+    if (myrank_mem_use) then
+      deallocate(obs)
+    end if
 
     CALL unset_common_mpi_scale
 

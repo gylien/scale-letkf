@@ -1269,7 +1269,7 @@ letkf_1 () {
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
        $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
-       $mem_nodes $mem_np $slot_s $slot_e $slot_b $MEMBER
+       $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/${time}/topo/topo $MEMBER
 fi
 
 for it in $(seq $nitmax); do

@@ -178,6 +178,8 @@ cat $TMPDAT/conf/config.nml.scale | \
         -e "s#\[ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME\]# ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${TMPDAT}/rad/MIPAS\",#" \
     > $TMPDIR/run.conf
 
+#mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
+
 #===============================================================================
 
 exit 0

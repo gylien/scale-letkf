@@ -8,12 +8,12 @@
 
 . config.main
 
-if (($# < 10)); then
+if (($# < 11)); then
   cat >&2 << EOF
 
 [pre_letkf_node.sh]
 
-Usage: $0 MYRANK ATIME TMPDIR EXECDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE
+Usage: $0 MYRANK ATIME TMPDIR EXECDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO MEMBERSEQ
 
   MYRANK      My rank number (not used)
   ATIME       Analysis time (format: YYYYMMDDHHMMSS)
@@ -25,6 +25,7 @@ Usage: $0 MYRANK ATIME TMPDIR EXECDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_EN
   SLOT_START  Start observation timeslots
   SLOT_END    End observation timeslots
   SLOT_BASE   The base slot
+  TOPO        Basename of SCALE topography files
   MEMBERSEQ
 
 EOF
@@ -41,6 +42,7 @@ MEM_NP="$1"; shift
 SLOT_START="$1"; shift
 SLOT_END="$1"; shift
 SLOT_BASE="$1"; shift
+TOPO="$1"; shift
 MEMBERSEQ=${1:-$MEMBER}
 
 #===============================================================================
@@ -50,24 +52,36 @@ MEMBERSEQ=${1:-$MEMBER}
 
 #ln -fs $EXECDIR/letkf $TMPDIR
 
+OBS_IN_NAME_LIST=
 for iobs in $(seq $OBSNUM); do
   if [ "${OBSNAME[$iobs]}" != '' ]; then
-    ln -fs $OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat $TMPDIR/${OBSNAME[$iobs]}.dat
+#    ln -fs $OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat $TMPDIR/${OBSNAME[$iobs]}.dat
+    OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat', "
   fi
 done
 
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.letkf | \
-    sed -e "s/\[MEMBER\]/ MEMBER = $MEMBERSEQ,/" \
-        -e "s/\[SLOT_START\]/ SLOT_START = $SLOT_START,/" \
-        -e "s/\[SLOT_END\]/ SLOT_END = $SLOT_END,/" \
-        -e "s/\[SLOT_BASE\]/ SLOT_BASE = $SLOT_BASE,/" \
-        -e "s/\[SLOT_TINTERVAL\]/ SLOT_TINTERVAL = $LTIMESLOT.D0,/" \
-        -e "s/\[NNODES\]/ NNODES = $NNODES,/" \
-        -e "s/\[PPN\]/ PPN = $PPN,/" \
-        -e "s/\[MEM_NODES\]/ MEM_NODES = $MEM_NODES,/" \
-        -e "s/\[MEM_NP\]/ MEM_NP = $MEM_NP,/" \
+    sed -e "s#\[MEMBER\]# MEMBER = $MEMBERSEQ,#" \
+        -e "s#\[OBS_IN_NUM\]# OBS_IN_NUM = $OBSNUM,#" \
+        -e "s#\[OBS_IN_NAME\]# OBS_IN_NAME = $OBS_IN_NAME_LIST#" \
+        -e "s#\[OBSDA_IN_BASENAME\]# OBSDA_IN_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda\",#" \
+        -e "s#\[GUES_IN_BASENAME\]# GUES_IN_BASENAME = \"${TMPOUT}/${ATIME}/gues/@@@@/init\",#" \
+        -e "s#\[GUES_OUT_MEAN_BASENAME\]# GUES_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/gues/mean/init\",#" \
+        -e "s#\[GUES_OUT_SPRD_BASENAME\]# GUES_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/gues/sprd/init\",#" \
+        -e "s#\[ANAL_OUT_BASENAME\]# ANAL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/anal/@@@@/init\",#" \
+        -e "s#\[ANAL_OUT_MEAN_BASENAME\]# ANAL_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/anal/mean/init\",#" \
+        -e "s#\[ANAL_OUT_SPRD_BASENAME\]# ANAL_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/anal/sprd/init\",#" \
+        -e "s#\[LETKF_TOPO_IN_BASENAME\]# LETKF_TOPO_IN_BASENAME = \"${TOPO}\",#" \
+        -e "s#\[SLOT_START\]# SLOT_START = $SLOT_START,#" \
+        -e "s#\[SLOT_END\]# SLOT_END = $SLOT_END,#" \
+        -e "s#\[SLOT_BASE\]# SLOT_BASE = $SLOT_BASE,#" \
+        -e "s#\[SLOT_TINTERVAL\]# SLOT_TINTERVAL = $LTIMESLOT.D0,#" \
+        -e "s#\[NNODES\]# NNODES = $NNODES,#" \
+        -e "s#\[PPN\]# PPN = $PPN,#" \
+        -e "s#\[MEM_NODES\]# MEM_NODES = $MEM_NODES,#" \
+        -e "s#\[MEM_NP\]# MEM_NP = $MEM_NP,#" \
     > $TMPDIR/letkf.conf
 
 # These parameters are not important for obsope

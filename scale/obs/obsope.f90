@@ -19,10 +19,10 @@ PROGRAM obsope
   IMPLICIT NONE
   REAL(r_dble) :: rtimer00,rtimer
   INTEGER :: ierr
-  CHARACTER(11) :: stdoutf='NOUT-000000'
+  CHARACTER(7) :: stdoutf='-000000'
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
-  type(obs_info) :: obs(nobsfiles)
+  type(obs_info), allocatable :: obs(:)
 
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
@@ -35,30 +35,35 @@ PROGRAM obsope
   CALL initialize_mpi
   rtimer00 = MPI_WTIME()
 
-  if (command_argument_count() >= 3) then
-    call get_command_argument(2, icmd)
+  if (command_argument_count() >= 4) then
+    call get_command_argument(3, icmd)
     call chdir(trim(icmd))
     write (myranks, '(I10)') myrank
-    call get_command_argument(3, icmd)
+    call get_command_argument(4, icmd)
     cmd1 = 'bash ' // trim(icmd) // ' obsope_1' // ' ' // trim(myranks)
     cmd2 = 'bash ' // trim(icmd) // ' obsope_2' // ' ' // trim(myranks)
-    do iarg = 4, command_argument_count()
+    do iarg = 5, command_argument_count()
       call get_command_argument(iarg, icmd)
       cmd1 = trim(cmd1) // ' ' // trim(icmd)
       cmd2 = trim(cmd2) // ' ' // trim(icmd)
     end do
   end if
 
-  WRITE(stdoutf(6:11), '(I6.6)') myrank
-!  WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
-  OPEN(6,FILE=stdoutf)
-  WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
+  if (command_argument_count() >= 2) then
+    call get_command_argument(2, icmd)
+    if (trim(icmd) /= '') then
+      WRITE(stdoutf(2:7), '(I6.6)') myrank
+!      WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',trim(icmd)//stdoutf,' for MYRANK ', myrank
+      OPEN(6,FILE=trim(icmd)//stdoutf)
+      WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',trim(icmd)//stdoutf
+    end if
+  end if
 
 !-----------------------------------------------------------------------
 ! Pre-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 3) then
+  if (command_argument_count() >= 4) then
     write (6,'(A)') 'Run pre-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd1), ']'
     call system(trim(cmd1))
@@ -73,6 +78,7 @@ PROGRAM obsope
 
   call set_common_conf
 
+  call read_nml_obsope
   call read_nml_letkf
   call read_nml_letkf_obserr
   call read_nml_letkf_radar
@@ -97,9 +103,8 @@ PROGRAM obsope
 ! Read observations
 !-----------------------------------------------------------------------
 
-!    if (myrank_mem_use) then
-      call read_obs_all_mpi(obs)
-!    end if
+    allocate(obs(OBS_IN_NUM))
+    call read_obs_all_mpi(obs)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -118,6 +123,8 @@ PROGRAM obsope
     rtimer = MPI_WTIME()
     WRITE(6,timer_fmt) '### TIMER(OBS_OPERATOR):',rtimer-rtimer00
     rtimer00=rtimer
+
+    deallocate(obs)
 
     CALL unset_common_mpi_scale
 
@@ -140,7 +147,7 @@ PROGRAM obsope
 ! Post-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 3) then
+  if (command_argument_count() >= 4) then
     write (6,'(A)') 'Run post-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd2), ']'
     call system(trim(cmd2))
