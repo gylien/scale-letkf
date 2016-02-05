@@ -35,36 +35,35 @@ LOG_OPT="$1"
 
 #===============================================================================
 
-if [ "$TOPO_FORMAT" != 'prep' ]; then
-  mkdir -p $TMPOUT/${STIME}/topo
-  mv -f $TMPDIR/topo*.nc $TMPOUT/${STIME}/topo
-fi
+#if [ "$TOPO_FORMAT" != 'prep' ]; then
+#  mkdir -p $TMPOUT/${STIME}/topo
+#  mv -f $TMPDIR/topo*.nc $TMPOUT/${STIME}/topo
+#fi
 
-if [ "$LANDUSE_FORMAT" != 'prep' ]; then
-  mkdir -p $TMPOUT/${STIME}/landuse
-  mv -f $TMPDIR/landuse*.nc $TMPOUT/${STIME}/landuse
-fi
+#if [ "$LANDUSE_FORMAT" != 'prep' ]; then
+#  mkdir -p $TMPOUT/${STIME}/landuse
+#  mv -f $TMPDIR/landuse*.nc $TMPOUT/${STIME}/landuse
+#fi
 
-if ((LOG_OPT <= 2)); then
-  mkdir -p $TMPOUT/${STIME}/log/scale_pp
-  if [ -f "$TMPDIR/pp_LOG${SCALE_LOG_SFX}" ]; then
-    mv -f $TMPDIR/pp_LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale_pp/${MEM}_pp_LOG${SCALE_LOG_SFX}
-  fi
-fi
+#if ((LOG_OPT <= 2)); then
+#  mkdir -p $TMPOUT/${STIME}/log/scale_pp
+#  if [ -f "$TMPDIR/pp_LOG${SCALE_LOG_SFX}" ]; then
+#    mv -f $TMPDIR/pp_LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale_pp/${MEM}_pp_LOG${SCALE_LOG_SFX}
+#  fi
+#fi
 
-if ((LOG_OPT <= 1)); then
-  mkdir -p $TMPOUT/${STIME}/log/scale_pp
+if ((LOG_OPT <= 4)); then
   if [ -f "$TMPDIR/pp.conf" ]; then
     mv -f $TMPDIR/pp.conf $TMPOUT/${STIME}/log/scale_pp/${MEM}_pp.conf
   fi
 fi
 
-if ((MYRANK < MEM_NP)); then
-  if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
-    mkdir -p $TMPOUT/${STIME}/log/scale_pp
-    mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${STIME}/log/scale_pp
-  fi
-fi
+#if ((MYRANK < MEM_NP)); then
+#  if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
+#    mkdir -p $TMPOUT/${STIME}/log/scale_pp
+#    mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${STIME}/log/scale_pp
+#  fi
+#fi
 #if [ "$MEM" == '0001' ] || [ "$MEM" == 'mean' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
 #  mkdir -p $TMPOUT/${STIME}/log/scale_pp
 #  for q in $(seq $MEM_NP); do

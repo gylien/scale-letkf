@@ -66,8 +66,8 @@ rm -fr $TMPDIR/*
 
 TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
 
-ln -fs ${TOPO}*.nc $TMPDIR
-ln -fs ${LANDUSE}*.nc $TMPDIR
+#ln -fs ${TOPO}*.nc $TMPDIR
+#ln -fs ${LANDUSE}*.nc $TMPDIR
 
 #for q in $(seq $MEM_NP); do
 #  sfx=$(printf $SCALE_SFX $((q-1)))
@@ -89,14 +89,13 @@ if ((BDY_FORMAT == 1)); then
     echo "[Error] $0: Cannot find source boundary file '${BDYORG}.pe000000.nc'."
     exit 1
   fi
-  ln -fs ${BDYORG}*.nc $TMPDIR
 #  NUMBER_OF_FILES=$(((FCSTLEN-1)/BDYINT+2))
 #  NUMBER_OF_FILES=$(((FCSTLEN-1)/BDYINT+1+STARTFRAME))
   NUMBER_OF_FILES=1
   NUMBER_OF_TSTEPS=$(((FCSTLEN-1)/BDYINT+1+STARTFRAME))
   NUMBER_OF_SKIP_TSTEPS=$((STARTFRAME-1))
 
-  BASENAME_ORG="${TMPSUBDIR}\/history"
+  BASENAME_ORG="$BDYORG"
   FILETYPE_ORG='SCALE-LES'
   USE_NESTING='.true.'
   OFFLINE='.true.'
@@ -131,21 +130,24 @@ else
   exit 1
 fi
 
+mkdir -p $TMPOUT/${STIME}/bdy/${MEM}
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_init | \
-    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"${TMPSUBDIR}\/init_LOG\"," \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale_init/${MEM}_LOG\"," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = $RESTART_OUTPUT," \
         -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/init\"," \
-        -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TMPSUBDIR}\/topo\"," \
-        -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${TMPSUBDIR}\/landuse\"," \
-        -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"${TMPSUBDIR}\/boundary\"," \
+        -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
+        -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
+        -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT}/land/param.bucket.conf\"," \
+        -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"$TMPOUT/${STIME}/bdy/${MEM}/boundary\"," \
         -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${BASENAME_ORG}\"," \
         -e "/!--FILETYPE_ORG--/a FILETYPE_ORG = \"${FILETYPE_ORG}\"," \
-        -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = $NUMBER_OF_FILES," \
-        -e "/!--NUMBER_OF_TSTEPS--/a NUMBER_OF_TSTEPS = $NUMBER_OF_TSTEPS," \
-        -e "/!--NUMBER_OF_SKIP_TSTEPS--/a NUMBER_OF_SKIP_TSTEPS = $NUMBER_OF_SKIP_TSTEPS," \
+        -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = ${NUMBER_OF_FILES}," \
+        -e "/!--NUMBER_OF_TSTEPS--/a NUMBER_OF_TSTEPS = ${NUMBER_OF_TSTEPS}," \
+        -e "/!--NUMBER_OF_SKIP_TSTEPS--/a NUMBER_OF_SKIP_TSTEPS = ${NUMBER_OF_SKIP_TSTEPS}," \
         -e "/!--BOUNDARY_UPDATE_DT--/a BOUNDARY_UPDATE_DT = $BDYINT.D0," \
         -e "/!--USE_NESTING--/a USE_NESTING = $USE_NESTING," \
         -e "/!--OFFLINE--/a OFFLINE = $OFFLINE," \

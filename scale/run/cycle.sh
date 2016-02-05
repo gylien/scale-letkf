@@ -259,10 +259,6 @@ while ((time <= ETIME)); do
         stdout_dir="$TMPOUT/${atime}/log/$(basename ${stepexecdir[$s]})"
       fi
 
-echo "$stdout_dir" >&2
-echo ${stepexecdir[$s]} >&2
-echo $(rev_path ${stepexecdir[$s]}) >&2
-
       if ((enable_iter == 1)); then
         for it in $(seq $nitmax); do
           if ((USE_RANKDIR == 1)); then

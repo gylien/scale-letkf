@@ -99,7 +99,7 @@ fi
 #  fi
 #fi
 
-if ((LOG_OPT <= 1)); then
+if ((LOG_OPT <= 4)); then
   if [ -f "$TMPDIR/run.conf" ]; then
     mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/scale/${MEM}_run.conf
   fi
