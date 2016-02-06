@@ -33,6 +33,10 @@ SCPCALL="$1"
 
 setting
 
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ### 5-1" >&2
+fi
+
 #===============================================================================
 
 mkdir -p $TMPRUN/scale_pp
@@ -55,6 +59,10 @@ if [ "$LANDUSE_FORMAT" != 'prep' ]; then
   ln -fs $TMPDAT/landuse/${LANDUSE_FORMAT}/Products $TMPRUN/scale_pp/input_landuse
 fi
 
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ### 5-2" >&2
+fi
+
 mkdir -p $TMPRUN/scale_init
 ln -fs $TMPDAT/exec/scale-les_init_ens $TMPRUN/scale_init
 ln -fs $TMPDAT/rad/PARAG.29 $TMPRUN/scale_init
@@ -74,8 +82,16 @@ if ((BDY_FORMAT == 1)); then
   fi
 fi
 
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ### 5-3" >&2
+fi
+
 mkdir -p $TMPRUN/scale
 cp -f $TMPDAT/exec/scale-les_ens $TMPRUN/scale
+
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ### 5-4" >&2
+fi
 
 if [ "$SCPCALL" = 'cycle' ]; then
   mkdir -p $TMPRUN/obsope
@@ -90,6 +106,10 @@ if [ "$SCPCALL" = 'cycle' ]; then
 
   mkdir -p $TMPRUN/letkf
   cp -f $TMPDAT/exec/letkf $TMPRUN/letkf
+fi
+
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ### 5-5" >&2
 fi
 
 if [ "$SCPCALL" = 'cycle' ]; then
@@ -115,6 +135,10 @@ elif [ "$SCPCALL" = 'fcst' ]; then   ###### -- not verified !! ######
 
     time=$(datetime $time $((lcycles * CYCLE)) s)
   done
+fi
+
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ### 5-6" >&2
 fi
 
 #===============================================================================
