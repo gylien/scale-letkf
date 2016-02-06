@@ -193,10 +193,6 @@ fi
 
 echo "[$(datetime_now)] Finalization (stage out)"
 
-
-exit
-
-
 if ((ONLINE_STGOUT != 1)); then
   bash $SCRP_DIR/src/stage_out.sh a
 fi

@@ -8,12 +8,12 @@
 
 . config.main
 
-if (($# < 9)); then
+if (($# < 8)); then
   cat >&2 << EOF
 
 [pre_scale_pp_node.sh] 
 
-Usage: $0 MYRANK MEM_NODES MEM_NP TMPDIR EXECDIR DATADIR MEMBER_RUN MEMBER_ITER STIME
+Usage: $0 MYRANK MEM_NODES MEM_NP TMPDIR EXECDIR DATADIR MEMBER_RUN MEMBER_ITER
 
   MYRANK     My rank number (not used)
   MEM_NODES  Number of nodes for a member
@@ -23,7 +23,6 @@ Usage: $0 MYRANK MEM_NODES MEM_NP TMPDIR EXECDIR DATADIR MEMBER_RUN MEMBER_ITER 
   DATADIR    Directory of SCALE data files
   MEMBER_RUN
   MEMBER_ITER
-  STIME      Start time (format: YYYYMMDDHHMMSS)
 
 EOF
   exit 1
@@ -36,8 +35,7 @@ TMPDIR="$1"; shift
 EXECDIR="$1"; shift
 DATADIR="$1"; shift
 MEMBER_RUN="$1"; shift
-MEMBER_ITER="$1"; shift
-STIME="$1"
+MEMBER_ITER="$1"
 
 #===============================================================================
 
@@ -50,8 +48,6 @@ cat $TMPDAT/conf/config.nml.ensmodel | \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
     > $TMPDIR/scale-les_pp_ens.conf
-
-#mkdir -p $TMPOUT/${STIME}/log/scale_pp
 
 #===============================================================================
 

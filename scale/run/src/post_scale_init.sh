@@ -41,8 +41,8 @@ initbaselen=20
 
 #===============================================================================
 
-mkdir -p $TMPOUT/${STIME}/bdy/${MEM}
-mv -f $TMPDIR/boundary*.nc $TMPOUT/${STIME}/bdy/${MEM}
+#mkdir -p $TMPOUT/${STIME}/bdy/${MEM}
+#mv -f $TMPDIR/boundary*.nc $TMPOUT/${STIME}/bdy/${MEM}
 
 if ((MKINIT == 1)); then
   mkdir -p $TMPOUT/${STIME}/anal/${MEM}
@@ -56,26 +56,25 @@ elif ((OCEAN_INPUT == 1 && OCEAN_FORMAT == 99)); then
   done
 fi
 
-if ((LOG_OPT <= 2)); then
-  mkdir -p $TMPOUT/${STIME}/log/scale_init
-  if [ -f "$TMPDIR/init_LOG${SCALE_LOG_SFX}" ]; then
-    mv -f $TMPDIR/init_LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale_init/${MEM}_init_LOG${SCALE_LOG_SFX}
-  fi
-fi
+#if ((LOG_OPT <= 2)); then
+#  mkdir -p $TMPOUT/${STIME}/log/scale_init
+#  if [ -f "$TMPDIR/init_LOG${SCALE_LOG_SFX}" ]; then
+#    mv -f $TMPDIR/init_LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale_init/${MEM}_init_LOG${SCALE_LOG_SFX}
+#  fi
+#fi
 
-if ((LOG_OPT <= 1)); then
-  mkdir -p $TMPOUT/${STIME}/log/scale_init
+if ((LOG_OPT <= 4)); then
   if [ -f "$TMPDIR/init.conf" ]; then
     mv -f $TMPDIR/init.conf $TMPOUT/${STIME}/log/scale_init/${MEM}_init.conf
   fi
 fi
 
-if ((MYRANK < MEM_NP)); then
-  if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
-    mkdir -p $TMPOUT/${STIME}/log/scale_init
-    mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${STIME}/log/scale_init
-  fi
-fi
+#if ((MYRANK < MEM_NP)); then
+#  if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
+#    mkdir -p $TMPOUT/${STIME}/log/scale_init
+#    mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${STIME}/log/scale_init
+#  fi
+#fi
 #if [ "$MEM" == '0001' ] || [ "$MEM" == 'mean' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
 #  mkdir -p $TMPOUT/${STIME}/log/scale_init
 #  for q in $(seq $MEM_NP); do
