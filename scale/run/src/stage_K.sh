@@ -19,36 +19,52 @@ if [ -s "$STAGING_DIR/stagein.dat" ]; then
   while read line; do
     source="$(echo $line | cut -d '|' -s -f1)"
     destin="$(echo $line | cut -d '|' -s -f2)"
+    ftype="$(echo $line | cut -d '|' -s -f3)"
+    if [ -z "$ftype" ]; then
+      if ((TMPDAT_MODE == 3)); then
+        ftype='l'
+      else
+        ftype='s'
+      fi
+    fi
     if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
       if [ -d "$source" ]; then
         if ((USE_RANKDIR == 1)); then
-          if ((TMPDAT_MODE == 3)); then
-            echo "#PJM --stgin-dir \"rank=* ${source} %r:${TMPDAT_STG}/${destin} recursive=10\""
+          if [ "$ftype" = 'l' ]; then
+            echo "#PJM --stgin-dir \"rank=* ${source} %r:${TMPDAT_L_STG}/${destin} recursive=10\""
           else
-#            echo "#PJM --stgin-dir \"rank=0 ${source} 0:${TMPDAT_STG}/${destin} recursive=10\""
-            echo "#PJM --stgin-dir \"rank=${irank} ${source} ${irank}:${TMPDAT_STG}/${destin} recursive=10\""
+#            echo "#PJM --stgin-dir \"rank=0 ${source} 0:${TMPDAT_S_STG}/${destin} recursive=10\""
+            echo "#PJM --stgin-dir \"rank=${irank} ${source} ${irank}:${TMPDAT_S_STG}/${destin} recursive=10\""
             irank=$((irank+1))
             if ((irank >= $NNODES)); then
               irank=0
             fi
           fi
         else
-          echo "#PJM --stgin-dir \"${source} ${TMPDAT_STG}/${destin} recursive=10\""
+          if [ "$ftype" = 'l' ]; then
+            echo "#PJM --stgin-dir \"${source} ${TMPDAT_L_STG}/${destin} recursive=10\""
+          else
+            echo "#PJM --stgin-dir \"${source} ${TMPDAT_S_STG}/${destin} recursive=10\""
+          fi
         fi
       else
         if ((USE_RANKDIR == 1)); then
-          if ((TMPDAT_MODE == 3)); then
-            echo "#PJM --stgin \"rank=* ${source} %r:${TMPDAT_STG}/${destin}\""
+          if [ "$ftype" = 'l' ]; then
+            echo "#PJM --stgin \"rank=* ${source} %r:${TMPDAT_L_STG}/${destin}\""
           else
-#            echo "#PJM --stgin \"rank=0 ${source} 0:${TMPDAT_STG}/${destin}\""
-            echo "#PJM --stgin \"rank=${irank} ${source} ${irank}:${TMPDAT_STG}/${destin}\""
+#            echo "#PJM --stgin \"rank=0 ${source} 0:${TMPDAT_S_STG}/${destin}\""
+            echo "#PJM --stgin \"rank=${irank} ${source} ${irank}:${TMPDAT_S_STG}/${destin}\""
             irank=$((irank+1))
             if ((irank >= $NNODES)); then
               irank=0
             fi
           fi
         else
-          echo "#PJM --stgin \"${source} ${TMPDAT_STG}/${destin}\""
+          if [ "$ftype" = 'l' ]; then
+            echo "#PJM --stgin \"${source} ${TMPDAT_L_STG}/${destin}\""
+          else
+            echo "#PJM --stgin \"${source} ${TMPDAT_S_STG}/${destin}\""
+          fi
         fi
       fi
     fi

@@ -130,10 +130,13 @@ else
   exit 1
 fi
 
+LATLON_CATALOGUE_FNAME="$(dirname $(dirname $(dirname $BDYORG)))/latlon_domain_catalogue.txt"
+
 mkdir -p $TMPOUT/${STIME}/bdy/${MEM}
 
 #===============================================================================
 
+LATLON_CATALOGUE_FNAME
 cat $TMPDAT/conf/config.nml.scale_init | \
     sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale_init/${MEM}_LOG\"," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
@@ -149,6 +152,7 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--NUMBER_OF_TSTEPS--/a NUMBER_OF_TSTEPS = ${NUMBER_OF_TSTEPS}," \
         -e "/!--NUMBER_OF_SKIP_TSTEPS--/a NUMBER_OF_SKIP_TSTEPS = ${NUMBER_OF_SKIP_TSTEPS}," \
         -e "/!--BOUNDARY_UPDATE_DT--/a BOUNDARY_UPDATE_DT = $BDYINT.D0," \
+        -e "/!--LATLON_CATALOGUE_FNAME--/a LATLON_CATALOGUE_FNAME = \"${LATLON_CATALOGUE_FNAME}\"," \
         -e "/!--USE_NESTING--/a USE_NESTING = $USE_NESTING," \
         -e "/!--OFFLINE--/a OFFLINE = $OFFLINE," \
     > $TMPDIR/init.conf

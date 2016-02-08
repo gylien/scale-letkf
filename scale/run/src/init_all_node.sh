@@ -42,29 +42,12 @@ fi
 mkdir -p $TMPRUN/scale_pp
 cp -f $TMPDAT/exec/scale-les_pp_ens $TMPRUN/scale_pp
 
-######if [ "$TOPO_FORMAT" != 'prep' ]; then
-######  rm -f $TMPRUN/scale_pp/input_topo
-######  ln -fs $TMPDAT/topo/${TOPO_FORMAT}/Products $TMPRUN/scale_pp/input_topo
-######fi
-######if [ "$LANDUSE_FORMAT" != 'prep' ]; then
-######  rm -f $TMPRUN/scale_pp/input_landuse
-######  ln -fs $TMPDAT/landuse/${LANDUSE_FORMAT}/Products $TMPRUN/scale_pp/input_landuse
-######fi
-
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ### 5-2" >&2
 fi
 
 mkdir -p $TMPRUN/scale_init
 cp -f $TMPDAT/exec/scale-les_init_ens $TMPRUN/scale_init
-
-######if ((BDY_FORMAT == 1)); then
-######  if ((DATA_BDY_TMPLOC == 1)); then
-######    ln -fs $TMPDAT/bdyscale/latlon_domain_catalogue.txt $TMPRUN/scale_init/latlon_domain_catalogue.txt
-######  elif ((DATA_BDY_TMPLOC == 2)); then
-######    ln -fs $TMPOUT/bdyscale/latlon_domain_catalogue.txt $TMPRUN/scale_init/latlon_domain_catalogue.txt
-######  fi
-######fi
 
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ### 5-3" >&2

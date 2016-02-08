@@ -216,10 +216,18 @@ EOF
   fi
 
   if [ "$TOPO_FORMAT" != 'prep' ]; then
-    echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
+    if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
+      echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat
+    else
+      echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
+    fi
   fi
   if [ "$LANDUSE_FORMAT" != 'prep' ]; then
-    echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
+    if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
+      echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat
+    else
+      echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
+    fi
   fi
 
   time=$(datetime $STIME $LCYCLE s)
@@ -721,10 +729,15 @@ else
         if [ -s "$DATA_BDY_SCALE/${time_catalogue}/log/scale/latlon_domain_catalogue.txt" ]; then
           pathin="$DATA_BDY_SCALE/${time_catalogue}/log/scale/latlon_domain_catalogue.txt"
           path="bdyscale/latlon_domain_catalogue.txt"
-          if ((DATA_BDY_TMPLOC == 1)); then
+#          if ((DATA_BDY_TMPLOC == 1)); then
+#            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#          elif ((DATA_BDY_TMPLOC == 2)); then
+#            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+#          fi
+          if ((DISK_MODE_DATA_BDY == 2)); then
+            echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+          else
             echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-          elif ((DATA_BDY_TMPLOC == 2)); then
-            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
           fi
           find_catalogue=1
         fi
@@ -739,13 +752,19 @@ else
               pathin="$ifile"
               path="bdyscale/${time_bdy}/${name_m[$m]}/$(basename $ifile)"
 
-              if ((DATA_BDY_TMPLOC == 1)); then
+#              if ((DATA_BDY_TMPLOC == 1)); then
+#                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#              elif ((DATA_BDY_TMPLOC == 2)); then
+#                for q in $(seq $mem_np); do
+#                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]} ###### q: may be redundant ????
+#                done
+#              fi
+              if ((DISK_MODE_DATA_BDY == 2)); then
+                echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+              else
                 echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-              elif ((DATA_BDY_TMPLOC == 2)); then
-                for q in $(seq $mem_np); do
-                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]} ###### q: may be redundant ????
-                done
               fi
+
             done
 #            pathin="$DATA_BDY_SCALE/${time_bdy}/gues/${mem}"
 #            path="bdyscale/${time_bdy}/${name_m[$m]}"
@@ -762,10 +781,15 @@ else
             pathin="$ifile"
             path="bdyscale/${time_bdy}/mean/$(basename $ifile)"
 
-            if ((DATA_BDY_TMPLOC == 1)); then
+#            if ((DATA_BDY_TMPLOC == 1)); then
+#              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#            elif ((DATA_BDY_TMPLOC == 2)); then
+#              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+#            fi
+            if ((DISK_MODE_DATA_BDY == 2)); then
+              echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+            else
               echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-            elif ((DATA_BDY_TMPLOC == 2)); then
-              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
             fi
           done
 #          pathin="$DATA_BDY_SCALE/${time_bdy}/gues/meanf"
@@ -792,22 +816,32 @@ else
           pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_dby}"
           path="bdywrf/${name_m[$m]}/wrfout_${time_dby}"
 
-          if ((DATA_BDY_TMPLOC == 1)); then
+#          if ((DATA_BDY_TMPLOC == 1)); then
+#            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#          elif ((DATA_BDY_TMPLOC == 2)); then
+#            for q in $(seq $mem_np); do
+#              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]} ###### q: may be redundant ????
+#            done
+#          fi
+          if ((DISK_MODE_DATA_BDY == 2)); then
+            echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+          else
             echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-          elif ((DATA_BDY_TMPLOC == 2)); then
-            for q in $(seq $mem_np); do
-              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]} ###### q: may be redundant ????
-            done
           fi
         done
       else
         pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
         path="bdywrf/mean/wrfout_${time_dby}"
 
-        if ((DATA_BDY_TMPLOC == 1)); then
+#        if ((DATA_BDY_TMPLOC == 1)); then
+#          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#        elif ((DATA_BDY_TMPLOC == 2)); then
+#          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+#        fi
+        if ((DISK_MODE_DATA_BDY == 2)); then
+          echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+        else
           echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-        elif ((DATA_BDY_TMPLOC == 2)); then
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
         fi
       fi
       time_dby=$(datetime $time_dby $BDYINT s)
@@ -941,10 +975,15 @@ if ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
   echo "  ... skip this step (use prepared boundaries)"
   exit 1
 elif ((BDY_FORMAT == 1)); then
-  if ((DATA_BDY_TMPLOC == 1)); then
-    bdyscale_loc=$TMPDAT/bdyscale
-  elif ((DATA_BDY_TMPLOC == 2)); then
-    bdyscale_loc=$TMPOUT/bdyscale
+#  if ((DATA_BDY_TMPLOC == 1)); then
+#    bdyscale_loc=$TMPDAT/bdyscale
+#  elif ((DATA_BDY_TMPLOC == 2)); then
+#    bdyscale_loc=$TMPOUT/bdyscale
+#  fi
+  if ((DISK_MODE_DATA_BDY == 2)); then
+    bdyscale_loc=${TMPDAT_S}/bdyscale
+  else
+    bdyscale_loc=${TMPDAT_L}/bdyscale
   fi
   time_bdy=$(datetime $time $BDYCYCLE_INT s)
   for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
@@ -957,10 +996,15 @@ elif ((BDY_FORMAT == 1)); then
     time_bdy=$(datetime $time_bdy -${BDYINT} s)
   done
 elif ((BDY_FORMAT == 2)); then
-  if ((DATA_BDY_TMPLOC == 1)); then
-    bdywrf_loc=$TMPDAT/bdywrf
-  elif ((DATA_BDY_TMPLOC == 2)); then
-    bdywrf_loc=$TMPOUT/bdywrf
+#  if ((DATA_BDY_TMPLOC == 1)); then
+#    bdywrf_loc=$TMPDAT/bdywrf
+#  elif ((DATA_BDY_TMPLOC == 2)); then
+#    bdywrf_loc=$TMPOUT/bdywrf
+#  fi
+  if ((DISK_MODE_DATA_BDY == 2)); then
+    bdyscale_loc=${TMPDAT_S}/bdywrf
+  else
+    bdyscale_loc=${TMPDAT_L}/bdywrf
   fi
 fi
 

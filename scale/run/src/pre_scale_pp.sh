@@ -29,7 +29,7 @@ MYRANK="$1"; shift
 STIME="$1"; shift
 TMPDIR="$1"; shift
 EXECDIR="$1"; shift
-DATADIR="$1"
+DATADIR="$1"   ###### no use
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
@@ -53,21 +53,27 @@ if [ "$LANDUSE_FORMAT" != 'prep' ]; then
   CONVERT_LANDUSE='.true.'
 fi
 
+if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
+  DATADIR=$TMPDAT_S
+else
+  DATADIR=$TMPDAT_L
+fi
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_pp | \
-    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale_pp/${MEM}_LOG\"," \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale_pp/LOG\"," \
         -e "/!--TOPO_OUT_BASENAME--/a TOPO_OUT_BASENAME = \"$TMPOUT/${STIME}/topo/topo\"," \
         -e "/!--LANDUSE_OUT_BASENAME--/a LANDUSE_OUT_BASENAME = \"$TMPOUT/${STIME}/landuse/landuse\"," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--CONVERT_TOPO--/a CONVERT_TOPO = $CONVERT_TOPO," \
         -e "/!--CONVERT_LANDUSE--/a CONVERT_LANDUSE = $CONVERT_LANDUSE," \
         -e "/!--CNVTOPO_name--/a CNVTOPO_name = \"$TOPO_FORMAT\"," \
-        -e "/!--GTOPO30_IN_DIR--/a GTOPO30_IN_DIR = \"$TMPDAT/topo/GTOPO30/Products\"," \
-        -e "/!--DEM50M_IN_DIR--/a DEM50M_IN_DIR = \"$TMPDAT/topo/DEM50M/Products\"," \
+        -e "/!--GTOPO30_IN_DIR--/a GTOPO30_IN_DIR = \"$DATADIR/topo/GTOPO30/Products\"," \
+        -e "/!--DEM50M_IN_DIR--/a DEM50M_IN_DIR = \"$DATADIR/topo/DEM50M/Products\"," \
         -e "/!--CNVLANDUSE_name--/a CNVLANDUSE_name = '$LANDUSE_FORMAT'," \
-        -e "/!--GLCCv2_IN_DIR--/a GLCCv2_IN_DIR = \"$TMPDAT/landuse/GLCCv2/Products\"," \
-        -e "/!--LU100M_IN_DIR--/a LU100M_IN_DIR = \"$TMPDAT/landuse/LU100M/Products\"," \
+        -e "/!--GLCCv2_IN_DIR--/a GLCCv2_IN_DIR = \"$DATADIR/landuse/GLCCv2/Products\"," \
+        -e "/!--LU100M_IN_DIR--/a LU100M_IN_DIR = \"$DATADIR/landuse/LU100M/Products\"," \
     > $TMPDIR/pp.conf
 
 #===============================================================================

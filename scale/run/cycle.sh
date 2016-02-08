@@ -55,6 +55,11 @@ if ((USE_RANKDIR == 1)); then
   else
     TMPRUN="./run"
   fi
+  if ((TMPOUT_MODE <= 2)); then
+    TMPOUT="../out"
+  else
+    TMPOUT="./out"
+  fi
 fi
 
 if ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
@@ -282,8 +287,7 @@ while ((time <= ETIME)); do
           if ((USE_RANKDIR == 1)); then
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-#            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "$(rev_path ${stdout_dir})/NOUT-${it}" ${stepexecdir[$s]} \
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "./out/${time}/log/$(basename ${stepexecdir[$s]})/NOUT-${it}" ${stepexecdir[$s]} \
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" ${stepexecdir[$s]} \
                     "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" $loop $it # > /dev/null
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
@@ -299,8 +303,7 @@ while ((time <= ETIME)); do
       else
         if ((USE_RANKDIR == 1)); then
 
-#          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "$(rev_path ${stdout_dir})/NOUT" ${stepexecdir[$s]} \
-          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "./out/${atime}/log/$(basename ${stepexecdir[$s]})/NOUT" ${stepexecdir[$s]} \
+          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" ${stepexecdir[$s]} \
                   "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" "$loop" # > /dev/null
         else
 
