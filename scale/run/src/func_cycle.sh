@@ -1002,9 +1002,9 @@ elif ((BDY_FORMAT == 2)); then
 #    bdywrf_loc=$TMPOUT/bdywrf
 #  fi
   if ((DISK_MODE_DATA_BDY == 2)); then
-    bdyscale_loc=${TMPDAT_S}/bdywrf
+    bdywrf_loc=${TMPDAT_S}/bdywrf
   else
-    bdyscale_loc=${TMPDAT_L}/bdywrf
+    bdywrf_loc=${TMPDAT_L}/bdywrf
   fi
 fi
 

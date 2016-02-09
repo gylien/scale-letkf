@@ -136,7 +136,6 @@ mkdir -p $TMPOUT/${STIME}/bdy/${MEM}
 
 #===============================================================================
 
-LATLON_CATALOGUE_FNAME
 cat $TMPDAT/conf/config.nml.scale_init | \
     sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale_init/${MEM}_LOG\"," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
