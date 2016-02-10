@@ -340,6 +340,11 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
       fi
       time=$(datetime $time $LCYCLE s)
     done
+
+    if ((find_catalogue == 0)); then
+      echo "[Error] Cannot find a lat/lon domain catalogue file." >&2
+      exit 1
+    fi
   fi
 #-------------------
 else
@@ -804,6 +809,11 @@ else
       fi
       time=$(datetime $time $LCYCLE s)
     done
+
+    if ((find_catalogue == 0)); then
+      echo "[Error] Cannot find a lat/lon domain catalogue file." >&2
+      exit 1
+    fi
 
   #-------------------
   elif ((BDY_FORMAT == 2)); then

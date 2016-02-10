@@ -14,6 +14,12 @@ SCALE_SFX=".pe${PROCESS_FMT}.nc"
 SCALE_LOG_SFX='.pe000000'
 
 #===============================================================================
+# Default values
+
+DISK_MODE_DATA_BDY=${DISK_MODE_DATA_BDY:-2}
+DISK_MODE_TOPO_LANDUSE_DB=${DISK_MODE_TOPO_LANDUSE_DB:-2}
+
+#===============================================================================
 # Definition of sub-directories
 
 SCRP_DIR="$DIR/run"              # Job script directory
