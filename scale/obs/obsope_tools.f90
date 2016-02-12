@@ -107,6 +107,7 @@ SUBROUTINE obsope_cal(obs)
   real(r_size) :: ritmp,rjtmp
   real(r_size) :: slot_lb,slot_ub
 
+#ifdef H08
 ! -- for Himawari-8 obs --
   INTEGER :: nallprof ! H08: Num of all profiles (entire domain) required by RTTOV
   INTEGER :: ns ! H08 obs count
@@ -119,6 +120,7 @@ SUBROUTINE obsope_cal(obs)
   REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
   INTEGER :: ch
   INTEGER,ALLOCATABLE :: qc_H08(:)
+#endif
 
   character(filelenmax) :: obsdafile
   character(11) :: obsda_suffix = '.000000.dat'
@@ -462,10 +464,10 @@ SUBROUTINE obsmake_cal(obs)
   real(r_size),allocatable :: error(:)
 
   CHARACTER(10) :: obsoutfile = 'obsout.dat'
-
+  INTEGER :: ns 
+#ifdef H08
 ! -- for Himawari-8 obs --
   INTEGER :: nallprof ! H08: Num of all profiles (entire domain) required by RTTOV
-  INTEGER :: ns ! H08 obs count
   INTEGER :: nprof_H08 ! num of H08 obs
   REAL(r_size),ALLOCATABLE :: ri_H08(:),rj_H08(:)
   REAL(r_size),ALLOCATABLE :: lon_H08(:),lat_H08(:)
@@ -476,6 +478,7 @@ SUBROUTINE obsmake_cal(obs)
   INTEGER,ALLOCATABLE :: qc_H08(:)
   INTEGER,ALLOCATABLE :: idx_H08(:) ! index array
   INTEGER :: ich
+#endif
 
 !-----------------------------------------------------------------------
 
@@ -702,9 +705,11 @@ SUBROUTINE obsmake_cal(obs)
           obs(iof)%err(n) = OBSERR_RADAR_REF
         case(id_radar_vr_obs)
           obs(iof)%err(n) = OBSERR_RADAR_VR
-        case(id_H08IR_obs) ! H08
-          obs(iof)%err(n) = OBSERR_H08 !H08
-        case default
+!
+! -- Not available (02/09/2015)
+!        case(id_H08IR_obs) ! H08
+!          obs(iof)%err(n) = OBSERR_H08(ch) !H08
+!        case default
           write(6,'(A)') 'warning: skip assigning observation error (unsupported observation type)' 
         end select
 

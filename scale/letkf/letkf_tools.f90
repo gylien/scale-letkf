@@ -893,7 +893,7 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
           dlev = 0.0d0                                                                                                !GYL
         case (id_H08IR_obs)                                                         ! H08       
           dist = dist / SIGMA_OBS_H08                                               ! H08                       
-          dlev = ABS(LOG(obsda2(ip)%lev(nobs_use(n))) - LOG(rlev)) / SIGMA_OBSV_H08 ! H08 
+          dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n)))) - LOG(rlev)) / SIGMA_OBSV_H08 ! H08 ! bug fixed (02/09/2016) 
         case default                                                                                                  !GYL
           dist = dist / SIGMA_OBS                                                                                     !GYL
           dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n)))) - LOG(rlev)) / SIGMA_OBSV !GYL

@@ -108,6 +108,15 @@ MODULE common_nml
   real(r_size) :: OBSERR_H08 = 0.3d0 ! H08  
   logical :: USE_OBSERR_RADAR_REF = .false.
   logical :: USE_OBSERR_RADAR_VR = .false.
+!
+! 
+! -- Defalut error values will be updated based on a bug-fixed experiment
+! (02/09/2016)
+! -- ###Default obs err for Himawari-8 obs is based on Desroziers et al. 
+!     (2005 QJRMS)'s statistics conducted by T.Honda (12/25/2015)
+!
+  real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.5d0,7.2d0,8.6d0,5.0d0,&
+                                     5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
 
   !--- PARAM_LETKF_MONITOR
   logical :: DEPARTURE_STAT = .true.
