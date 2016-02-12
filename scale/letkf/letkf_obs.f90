@@ -528,16 +528,31 @@ SUBROUTINE set_letkf_obs
     IF(obs(obsda%set(n))%elm(obsda%idx(n)) == id_H08IR_obs)THEN
 
 #ifdef H08
-      IF(.not. DEPARTURE_STAT_H08) THEN 
-        write (6, '(2I6,2F8.2,4F12.4,I3)')obs(obsda%set(n))%elm(obsda%idx(n)), & ! id
-                                           int(obs(obsda%set(n))%lev(obsda%idx(n))), & ! ch num
-                                           obs(obsda%set(n))%lon(obsda%idx(n)), & 
-                                           obs(obsda%set(n))%lat(obsda%idx(n)), &
-                                           obsda%lev(n), & ! sensitive height
-                                           obs(obsda%set(n))%dat(obsda%idx(n)), &
-                                           obs(obsda%set(n))%err(obsda%idx(n)), &
-                                           obsda%val(n), &
-                                           obsda%qc(n) 
+      IF(DEPARTURE_STAT_H08)THEN 
+!
+! For obs err correlation statistics based on Desroziers et al. (2005, QJRMS).
+!
+        write(6, '(a,2I6,2F8.2,4F12.4,I6)')"H08-O-B", &
+             obs(obsda%set(n))%elm(obsda%idx(n)), &
+             nint(obsda%lev(n)), & ! obsda%lev includes the band num.
+             obs(obsda%set(n))%lon(obsda%idx(n)), &
+             obs(obsda%set(n))%lat(obsda%idx(n)), &
+             obsda%val(n),& ! O-B
+             obs(obsda%set(n))%lev(obsda%idx(n)), &
+             obs(obsda%set(n))%dat(obsda%idx(n)), &
+             obs(obsda%set(n))%err(obsda%idx(n)), &
+             obsda%qc(n)
+      ELSE
+        write(6, '(2I6,2F8.2,4F12.4,I3)') &
+             obs(obsda%set(n))%elm(obsda%idx(n)), & ! id
+             int(obs(obsda%set(n))%lev(obsda%idx(n))), & ! ch num
+             obs(obsda%set(n))%lon(obsda%idx(n)), & 
+             obs(obsda%set(n))%lat(obsda%idx(n)), &
+             obsda%lev(n), & ! sensitive height
+             obs(obsda%set(n))%dat(obsda%idx(n)), &
+             obs(obsda%set(n))%err(obsda%idx(n)), &
+             obsda%val(n), &
+             obsda%qc(n) 
       ENDIF !  [.not. DEPARTURE_STAT_H08]
 !
 ! Derived H08 obs height (based on the weighting function output from RTTOV fwd
@@ -566,29 +581,6 @@ SUBROUTINE set_letkf_obs
 
   END DO
 !$OMP END PARALLEL DO
-
-#ifdef H08
-!
-! For obs err correlation statistics based on Desroziers et al. (2005, QJRMS).
-! Here, the innovations are outputed in order.
-  if(DEPARTURE_STAT_H08) then 
-    do n = 1, obsda%nobs
-      if(obsda%qc(n) > 0) CYCLE
- 
-      if(obs(obsda%set(n))%elm(obsda%idx(n)) == id_H08IR_obs)then
-        write (6, '(a,2I6,2F8.2,4F12.4,I6)')"H08-O-B",obs(obsda%set(n))%elm(obsda%idx(n)), &
-                                       nint(obsda%lev(n)), & ! obsda%lev includes the band num.
-                                       obs(obsda%set(n))%lon(obsda%idx(n)), &
-                                       obs(obsda%set(n))%lat(obsda%idx(n)), &
-                                       obsda%val(n),& ! O-B
-                                       obs(obsda%set(n))%lev(obsda%idx(n)), &
-                                       obs(obsda%set(n))%dat(obsda%idx(n)), &
-                                       obs(obsda%set(n))%err(obsda%idx(n)), &
-                                       obsda%qc(n)
-      endif ! [id_H08IR_obs]
-    end do
-  endif ! [DEPARTURE_STAT_H08]
-#endif
 
 !!
 !! output departure statistics

@@ -1476,7 +1476,9 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 #ifdef H08
 !
 ! -- Count the number of the Himawari-8 obs "location" (=num of prof).
+!    Then, Trans_XtoY_H08 will be called without openMP.
 !
+
   if (DEPARTURE_STAT_H08) then !-- [DEPARTURE_STAT_H08]
 
     ALLOCATE(tmp_ri_H08(obsda%nobs))
@@ -1543,6 +1545,8 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
                           yobs_H08,plev_obs_H08,&
                           qc_H08,stggrd=1)
 
+      write (6, '(A)')"MEAN-HIMAWARI-8-STATISTICS",&
+
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns)
       do n = 1, obsda%nobs
         oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
@@ -1560,6 +1564,16 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 
           if(oqc(n) == iqc_good) then
             ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) 
+            write (6, '(A,2I6,2F8.2,4F12.4,I6)')"H08-O-A",&
+                  obs(obsda%set(n))%elm(obsda%idx(n)), &
+                  nint(obsda%lev(n)), & ! obsda%lev includes the band num.
+                  obs(obsda%set(n))%lon(obsda%idx(n)), &
+                  obs(obsda%set(n))%lat(obsda%idx(n)), &
+                  ohx(n), &! O-A
+                  plev_obs_H08(ns), &
+                  obs(obsda%set(n))%dat(obsda%idx(n)), &
+                  obs(obsda%set(n))%err(obsda%idx(n)), &
+                  oqc(n) 
           endif
 
         endif ! [DEPARTURE_STAT_T_RANGE]
@@ -1567,21 +1581,6 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 !$OMP END PARALLEL DO
 
     ENDIF ! [nprof_H08 >=1]
-
-
-    do n = 1, obsda%nobs
-      oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
-      if(oelm(n) /= id_H08IR_obs)cycle
-        write (6, '(a,2I6,2F8.2,4F12.4,I6)')"H08-O-A",obs(obsda%set(n))%elm(obsda%idx(n)), &
-                                       nint(obsda%lev(n)), & ! obsda%lev includes the band num.
-                                       obs(obsda%set(n))%lon(obsda%idx(n)), &
-                                       obs(obsda%set(n))%lat(obsda%idx(n)), &
-                                       ohx(n), &! O-A
-                                       plev_obs_H08(ns), &
-                                       obs(obsda%set(n))%dat(obsda%idx(n)), &
-                                       obs(obsda%set(n))%err(obsda%idx(n)), &
-                                       oqc(n) 
-    end do ! [ n = 1, obsda%nobs ]
 
     DEALLOCATE(yobs_H08, plev_obs_H08, qc_H08, n2prof)
 

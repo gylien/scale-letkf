@@ -105,7 +105,6 @@ MODULE common_nml
   real(r_size) :: OBSERR_PS = 100.0d0
   real(r_size) :: OBSERR_RADAR_REF = 5.0d0
   real(r_size) :: OBSERR_RADAR_VR = 3.0d0
-  real(r_size) :: OBSERR_H08 = 0.3d0 ! H08  
   logical :: USE_OBSERR_RADAR_REF = .false.
   logical :: USE_OBSERR_RADAR_VR = .false.
 !
