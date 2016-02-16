@@ -52,6 +52,17 @@ if ((USE_RANKDIR == 1)); then
   else
     TMPRUN="./run"
   fi
+  if ((TMPOUT_MODE <= 2)); then
+    TMPOUT="../out"
+  else
+    TMPOUT="./out"
+  fi
+fi
+
+if ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
+  STDOUT=''
+else
+  STDOUT='NOUT'
 fi
 
 setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9"
@@ -248,22 +259,32 @@ while ((time <= ETIME)); do
         enable_iter=1
       fi
 
+      stdout_dir="$TMPOUT/${stimes[1]}/log/$(basename ${stepexecdir[$s]})"
+
       if ((enable_iter == 1)); then
         for it in $(seq $nitmax); do
           if ((USE_RANKDIR == 1)); then
-            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+
+            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/fcst_NOUT-${it}" ${stepexecdir[$s]} \
                     "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop $it # > /dev/null
+
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           else
-            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+
+            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/fcst_NOUT-${it}" . \
                     "$SCRP_DIR/fcst_step.sh" $loop $it # > /dev/null
+
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           fi
         done
       else
         if ((USE_RANKDIR == 1)); then
-          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/fcst_NOUT" ${stepexecdir[$s]} \
                   "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop # > /dev/null
         else
-          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/fcst_NOUT" . \
                   "$SCRP_DIR/fcst_step.sh" $loop # > /dev/null
         fi
       fi

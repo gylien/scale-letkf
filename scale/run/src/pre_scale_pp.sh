@@ -13,13 +13,14 @@ if (($# < 5)); then
 
 [pre_scale_pp.sh] Prepare a temporary directory for scale-les_pp run.
 
-Usage: $0 MYRANK STIME TMPDIR EXECDIR DATADIR
+Usage: $0 MYRANK STIME TMPDIR EXECDIR DATADIR [LOGNAME]
 
   MYRANK   My rank number (not used)
   STIME    Start time (format: YYYYMMDDHHMMSS)
   TMPDIR   Temporary directory to run scale-les_pp
   EXECDIR  Directory of SCALE executable files
   DATADIR  Directory of SCALE data files
+  LOGNAME
 
 EOF
   exit 1
@@ -29,7 +30,8 @@ MYRANK="$1"; shift
 STIME="$1"; shift
 TMPDIR="$1"; shift
 EXECDIR="$1"; shift
-DATADIR="$1"   ###### no use
+DATADIR="$1"; shift   ###### no use
+LOGNAME="${1:-LOG}"
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
@@ -62,7 +64,7 @@ fi
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_pp | \
-    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale_pp/LOG\"," \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale_pp/${LOGNAME}\"," \
         -e "/!--TOPO_OUT_BASENAME--/a TOPO_OUT_BASENAME = \"$TMPOUT/${STIME}/topo/topo\"," \
         -e "/!--LANDUSE_OUT_BASENAME--/a LANDUSE_OUT_BASENAME = \"$TMPOUT/${STIME}/landuse/landuse\"," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \

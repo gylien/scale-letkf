@@ -5,10 +5,10 @@
 #
 #===============================================================================
 
-STIME='20130630000000'
-ETIME='20130630000000'
-MEMBERS='mean'
-CYCLE=1
+STIME='20130701000000'
+ETIME='20130701060000'
+MEMBERS='mean 1 5'
+CYCLE=2
 CYCLE_SKIP=1
 IF_VERF=0
 IF_EFSO=0
@@ -19,7 +19,7 @@ TIME_LIMIT='00:30:00'
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=86400      # SCALE forecast length in the forecast mode (second)
+FCSTLEN=21600       # SCALE forecast length in the forecast mode (second)
 #FCSTOUT=$LCYCLE    # SCALE forecast output interval in the forecast mode (second)
 FCSTOUT=3600
 
@@ -37,7 +37,7 @@ FCSTOUT=3600
 
 #===============================================================================
 
-MAKEINIT=1       # 0: No
+MAKEINIT=0       # 0: No
                  # 1: Yes
 PERTURB_BDY=0    # 0: No
                  # 1: Yes

@@ -101,16 +101,20 @@ if [ "$SCPCALL" = 'cycle' ]; then
     time=$(datetime $time $LCYCLE s)
     atime=$(datetime $time $LCYCLE s)
   done
-elif [ "$SCPCALL" = 'fcst' ]; then   ###### -- not verified !! ######
+elif [ "$SCPCALL" = 'fcst' ]; then
   lcycles=$((LCYCLE * CYCLE_SKIP))
   time=$STIME
   while ((time <= ETIME)); do
-    mkdir -p $TMPOUT/${time}/topo
-    mkdir -p $TMPOUT/${time}/landuse
-    mkdir -p $TMPOUT/${time}/log/scale_pp
-    mkdir -p $TMPOUT/${time}/log/scale_init
-    mkdir -p $TMPOUT/${time}/log/scale
-
+    for c in $(seq $CYCLE); do
+      time2=$(datetime $time $((lcycles * (c-1))) s)
+      if ((time2 <= ETIME)); then
+        mkdir -p $TMPOUT/${time2}/topo
+        mkdir -p $TMPOUT/${time2}/landuse
+        mkdir -p $TMPOUT/${time2}/log/scale_pp
+        mkdir -p $TMPOUT/${time2}/log/scale_init
+        mkdir -p $TMPOUT/${time2}/log/scale
+      fi
+    done
     time=$(datetime $time $((lcycles * CYCLE)) s)
   done
 fi

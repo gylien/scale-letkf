@@ -662,7 +662,7 @@ else
       #-------------------
       if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ] || ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
         if ((LOG_OPT <= 2)); then
-          path="${time}/log/scale_pp/pp_LOG${SCALE_LOG_SFX}"
+          path="${time}/log/scale_pp/LOG${SCALE_LOG_SFX}"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
         fi
       fi
@@ -670,7 +670,7 @@ else
       # log [scale_init: mean]
       #-------------------
       if ((BDY_FORMAT > 0)) && ((LOG_OPT <= 2)) && ((BDY_ENS != 1)); then
-        path="${time}/log/scale_init/mean_init_LOG${SCALE_LOG_SFX}"
+        path="${time}/log/scale_init/mean_LOG${SCALE_LOG_SFX}"
         echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[1]}
       fi
 
@@ -688,7 +688,7 @@ else
         # log [scale_init: members]
         #-------------------
         if ((BDY_FORMAT > 0)) && ((LOG_OPT <= 2)) && ((BDY_ENS == 1)); then
-          path="${time}/log/scale_init/${name_m[$m]}_init_LOG${SCALE_LOG_SFX}"
+          path="${time}/log/scale_init/${name_m[$m]}_LOG${SCALE_LOG_SFX}"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
         fi
 
@@ -1198,7 +1198,7 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT $((MEMBER+1)) $iter $time
+       $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT $((MEMBER+1)) $iter
 fi
 
 mkinit=0

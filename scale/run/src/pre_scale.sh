@@ -14,7 +14,7 @@ if (($# < 15)); then
 
 [pre_scale.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM_NP MEM INIT OCEAN BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR EXECDIR DATADIR [BDY_STIME]
+Usage: $0 MYRANK MEM_NP MEM INIT OCEAN BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR EXECDIR DATADIR [BDY_STIME] [LOGNAME]
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member
@@ -32,6 +32,7 @@ Usage: $0 MYRANK MEM_NP MEM INIT OCEAN BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HI
   EXECDIR  Directory of SCALE executable files
   DATADIR  Directory of SCALE data files
   BDY_STIME  (format: YYYYMMDDHHMMSS)
+  LOGNAME
 
 EOF
   exit 1
@@ -52,7 +53,8 @@ HISTINT="$1"; shift
 TMPDIR="$1"; shift
 EXECDIR="$1"; shift
 DATADIR="$1"; shift
-BDY_STIME="${1:-$STIME}"
+BDY_STIME="${1:-$STIME}"; shift
+LOGNAME="${1:-LOG}"
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
@@ -150,7 +152,7 @@ fi
 TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
 
 cat $TMPDAT/conf/config.nml.scale | \
-    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale/${MEM}_LOG\"," \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale/${MEM}_${LOGNAME}\"," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--TIME_DURATION--/a TIME_DURATION = ${FCSTLEN}.D0," \
         -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${FCSTINT}.D0," \

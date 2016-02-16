@@ -13,7 +13,7 @@ if (($# < 6)); then
 
 [post_scale_pp.sh] Post-process the scale-les_init outputs.
 
-Usage: $0 MYRANK MEM_NP STIME MEM TMPDIR LOG_OPT
+Usage: $0 MYRANK MEM_NP STIME MEM TMPDIR LOG_OPT [SCPCALL]
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member
@@ -21,6 +21,7 @@ Usage: $0 MYRANK MEM_NP STIME MEM TMPDIR LOG_OPT
   MEM
   TMPDIR   Temporary directory to run the model
   LOG_OPT
+  SCPCALL
 
 EOF
   exit 1
@@ -31,7 +32,8 @@ MEM_NP="$1"; shift
 STIME="$1"; shift
 MEM="$1"; shift
 TMPDIR="$1"; shift
-LOG_OPT="$1"
+LOG_OPT="$1"; shift
+SCPCALL="${1:-cycle}"
 
 #===============================================================================
 
@@ -52,9 +54,17 @@ LOG_OPT="$1"
 #  fi
 #fi
 
-if ((LOG_OPT <= 4)); then
-  if [ -f "$TMPDIR/pp.conf" ]; then
-    mv -f $TMPDIR/pp.conf $TMPOUT/${STIME}/log/scale_pp/${MEM}_pp.conf
+if [ "$SCPCALL" = 'fcst' ]; then
+  if ((LOG_OPT <= 3)); then
+    if [ -f "$TMPDIR/pp.conf" ]; then
+      mv -f $TMPDIR/pp.conf $TMPOUT/${STIME}/log/scale_pp/${MEM}_fcst_pp.conf
+    fi
+  fi
+elif [ "$SCPCALL" = 'cycle' ]; then
+  if ((LOG_OPT <= 4)); then
+    if [ -f "$TMPDIR/pp.conf" ]; then
+      mv -f $TMPDIR/pp.conf $TMPOUT/${STIME}/log/scale_pp/${MEM}_pp.conf
+    fi
   fi
 fi
 

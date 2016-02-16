@@ -38,7 +38,7 @@ FCSTLEN="$1"; shift
 TMPDIR="$1"; shift
 LOG_OPT="$1"; shift
 SCPCALL="$1"; shift
-MEMBER_ITER="${1:-1}"
+MEMBER_ITER="${1:-1}"  ###### no use
 
 ATIME=$(datetime $STIME $LCYCLE s)
 
@@ -99,9 +99,17 @@ fi
 #  fi
 #fi
 
-if ((LOG_OPT <= 4)); then
-  if [ -f "$TMPDIR/run.conf" ]; then
-    mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/scale/${MEM}_run.conf
+if [ "$SCPCALL" = 'fcst' ]; then
+  if ((LOG_OPT <= 3)); then
+    if [ -f "$TMPDIR/run.conf" ]; then
+      mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/scale/${MEM}_fcst_run.conf
+    fi
+  fi
+elif [ "$SCPCALL" = 'cycle' ]; then
+  if ((LOG_OPT <= 4)); then
+    if [ -f "$TMPDIR/run.conf" ]; then
+      mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/scale/${MEM}_run.conf
+    fi
   fi
 fi
 

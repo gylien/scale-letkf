@@ -74,7 +74,7 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=10          # Ensemble size
 
-NNODES=44          # Number of nodes
+NNODES=24          # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -107,6 +107,10 @@ TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (
 DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
                             #  1: in $TMPDAT
                             #  2: in $TMPOUT
+
+DISK_MODE_DATA_BDY=2
+
+DISK_MODE_TOPO_LANDUSE_DB=2
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
