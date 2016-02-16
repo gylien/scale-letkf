@@ -1521,7 +1521,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
       endif
     end do ! [ n = 1, obsda%nobs ]
 
-    IF(nprof_H08 >=1)THEN
+    IF(nprof_H08 >=1)THEN ! [nprof_H08 >=1]
       ALLOCATE(ri_H08(nprof_H08))
       ALLOCATE(rj_H08(nprof_H08))
       ALLOCATE(lon_H08(nprof_H08))
@@ -1545,7 +1545,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
                           yobs_H08,plev_obs_H08,&
                           qc_H08,stggrd=1)
 
-      write (6, '(A)')"MEAN-HIMAWARI-8-STATISTICS",&
+      write (6, '(A)')"MEAN-HIMAWARI-8-STATISTICS"
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns)
       do n = 1, obsda%nobs
@@ -1564,12 +1564,13 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 
           if(oqc(n) == iqc_good) then
             ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) 
-            write (6, '(A,2I6,2F8.2,4F12.4,I6)')"H08-O-A",&
+            write (6, '(A,2I6,2F8.2,5F11.4,I6)')"H08-O-A-B",&
                   obs(obsda%set(n))%elm(obsda%idx(n)), &
                   nint(obsda%lev(n)), & ! obsda%lev includes the band num.
                   obs(obsda%set(n))%lon(obsda%idx(n)), &
                   obs(obsda%set(n))%lat(obsda%idx(n)), &
                   ohx(n), &! O-A
+                  obsda%val(n), &! O-B
                   plev_obs_H08(ns), &
                   obs(obsda%set(n))%dat(obsda%idx(n)), &
                   obs(obsda%set(n))%err(obsda%idx(n)), &
@@ -1580,10 +1581,14 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
       end do ! [ n = 1, obsda%nobs ]
 !$OMP END PARALLEL DO
 
+      DEALLOCATE(yobs_H08, plev_obs_H08, qc_H08)
     ENDIF ! [nprof_H08 >=1]
 
-    DEALLOCATE(yobs_H08, plev_obs_H08, qc_H08, n2prof)
-
+    IF(ALLOCATED(n2prof)) DEALLOCATE(n2prof)
+    IF(ALLOCATED(tmp_ri_H08)) DEALLOCATE(tmp_ri_H08)
+    IF(ALLOCATED(tmp_rj_H08)) DEALLOCATE(tmp_rj_H08)
+    IF(ALLOCATED(tmp_lon_H08)) DEALLOCATE(tmp_lon_H08)
+    IF(ALLOCATED(tmp_lat_H08)) DEALLOCATE(tmp_lat_H08)
   endif !-- [DEPARTURE_STAT_H08]
 
 #endif
