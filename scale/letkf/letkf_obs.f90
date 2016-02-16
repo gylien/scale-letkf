@@ -35,11 +35,7 @@ MODULE letkf_obs
   real(r_size),save :: dlon_zero
   real(r_size),save :: dlat_zero
 
-#ifdef H08
-  type(obs_info),allocatable :: obs(:) ! H08
-#else
   type(obs_info),allocatable,save :: obs(:)
-#endif
   type(obs_da_value),save :: obsda
   type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
                                                     !!!!!! need to add %err and %dat if they can be determined in letkf_obs.f90
@@ -236,9 +232,6 @@ SUBROUTINE set_letkf_obs
       call MPI_BCAST(obsda%idx, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%ri, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%rj, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
-#ifdef H08
-      call MPI_BCAST(obsda%lev, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr) ! H08
-#endif
 !        CALL MPI_BARRIER(MPI_COMM_e,ierr)
 
 
