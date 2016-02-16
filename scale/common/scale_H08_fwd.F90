@@ -148,8 +148,10 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   REAL(r_size) :: r1ps, r2ps, r3ps ! components of the vector from P to the satellite 
   REAL(r_size) :: r1ep, r2ep, r3ep  ! components of the vector from the center of Earth to P
   REAL(r_size) :: z_angle_H08 ! zenith angle of Himawari-8
- 
-
+!
+! minQcfrac: Threshold for diagnosing cloud fraction
+!          = 0.01_jprb (tentative) by T.Honda (12/18/2015) ! same with JMA-NHM?
+   REAL(kind=jprb),PARAMETER :: minQcfrac = 0.01_jprb ! threshold mixing ratio (g kg-1) for cloud fraction diagnosis
 
   INTEGER, INTENT(IN) :: nprof
   INTEGER, INTENT(IN) :: nlevels
@@ -570,6 +572,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 !    profiles(iprof)%sunzenangle=0.0_jprb ! Not required for [opts % rt_ir % addsolar = .FALSE.] 
 !    profiles(iprof)%sunazangle=0.0_jprb  ! Not required for [opts % rt_ir % addsolar = .FALSE.]
 
+! These are parameters for simple cloud.
+! Not used.
     profiles(iprof) % ctp       = 500.0_jprb
     profiles(iprof) % cfraction = 0.0_jprb
  
@@ -601,14 +605,13 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
                    (liqc(ilev+1) + liqc(ilev)) * 0.5_jprb
         profiles(iprof) % cloud(6,ilev) = & 
                    (icec(ilev+1) + icec(ilev)) * 0.5_jprb
-!
-!  -- NOTE: Currently(11/18/2015), the SCALE-LES model regards cfrac = 1.0 (/0.0)
+!  -- NOTE: Currently(11/18/2015), the SCALE-LES model regards cfrac = 1.0 (/0.0) 
 !            in the grid point where QHYDRO > 0.0 (=0.0).
-!           If this treatment (probably not suitable for low resolution simulations) in SCALE is updated,
-!            it will be better to consider updating the following statements.
+!           If this treatment (probably not suitable for high resolution simulations)
+!            in SCALE is updated, it will be better to consider updating the following statements.
 !
-        if((profiles(iprof) % cloud(2,ilev) > 0.0_jprb) .or. &
-           (profiles(iprof) % cloud(6,ilev) > 0.0_jprb)) then
+!  -- NOTE: minQcfrac is added. (12/16/2016)
+        if(((profiles(iprof) % cloud(2,ilev) + profiles(iprof) % cloud(6,ilev)) > minQcfrac)) then
           profiles(iprof) % cfrac(ilev)   = 1.0_jprb  !cloud fraction 
         else
           profiles(iprof) % cfrac(ilev)   = 0.0_jprb  !cloud fraction 

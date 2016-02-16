@@ -80,7 +80,11 @@ MODULE common_scale
   INTEGER,PARAMETER :: nv3d=11   ! 3D state variables (in SCALE restart files)
   INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: nv2d=0    ! 2D state variables (in SCALE restart files)
+#ifdef H08
   INTEGER,PARAMETER :: nv2dd=9  ! H08  ! 2D diagnostic variables (in SCALE history files)
+#else
+  INTEGER,PARAMETER :: nv2dd=7  ! 2D diagnostic variables (in SCALE history files)
+#endif
   INTEGER,PARAMETER :: iv3d_rho=1  !-- State in restart files
   INTEGER,PARAMETER :: iv3d_rhou=2 !
   INTEGER,PARAMETER :: iv3d_rhov=3 !
@@ -117,8 +121,10 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv2dd_v10m=5
   INTEGER,PARAMETER :: iv2dd_t2m=6
   INTEGER,PARAMETER :: iv2dd_q2m=7
+#ifdef H08
   INTEGER,PARAMETER :: iv2dd_lsmask=8 ! H08
   INTEGER,PARAMETER :: iv2dd_skint=9 ! H08
+#endif
 !  INTEGER,PARAMETER :: iv2dd_tsfc=8
 
 
@@ -270,8 +276,10 @@ SUBROUTINE set_common_scale
     v2dd_name(iv2dd_v10m) = 'V10'
     v2dd_name(iv2dd_t2m) = 'T2'
     v2dd_name(iv2dd_q2m) = 'Q2'
+#ifdef H08
     v2dd_name(iv2dd_lsmask) = 'lsmask' ! H08
     v2dd_name(iv2dd_skint) = 'SFC_TEMP' ! H08
+#endif
 !    v2dd_name(iv2dd_tsfc) = 'SFC_TEMP'
     !
     ! Lon, Lat

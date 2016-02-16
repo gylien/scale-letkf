@@ -73,6 +73,13 @@ if [ "$SCPCALL" = 'cycle' ]; then
 
   mkdir -p $TMPRUN/letkf
   cp -f $TMPDAT/exec/letkf $TMPRUN/letkf
+  #-- H08 --
+  if [ -e "$TMPDAT/rttov/rtcoef_himawari_8_ahi.dat" ]; then
+    cp -f $TMPDAT/rttov/rtcoef_himawari_8_ahi.dat $TMPRUN/letkf
+  fi
+  if [ -e "$TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat" ]; then
+    cp -f $TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat $TMPRUN/letkf
+  fi
 fi
 
 if ((MYRANK == 0)); then

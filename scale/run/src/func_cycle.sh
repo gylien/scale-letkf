@@ -390,7 +390,9 @@ else
     if [ "$TOPO_FORMAT" = 'prep' ]; then
       if [ "$TOPO_TARGZ" = 'T' ]; then
         if [ ! -e ${DATA_TOPO}/topo.tar.gz ] ; then
-          tar czvfh topo.tar.gz topo*.nc -C ${DATA_TOPO}/ >/dev/null
+          cd ${DATA_TOPO}
+          tar czvfh topo.tar.gz topo*.nc >/dev/null
+          cd -
         fi
         pathin=${DATA_TOPO}/topo.tar.gz
         path=${time}/topo/topo.tar.gz
@@ -419,7 +421,9 @@ else
       fi
       if [ "$LANDUSE_TARGZ" = 'T' ]; then
         if [ ! -e ${pathin_pfx}/landuse.tar.gz ] ; then
-          tar czvfh landuse.tar.gz landuse*.nc -C ${pathin_pfx}/ >/dev/null
+          cd ${pathin_pfx}
+          tar czvfh landuse.tar.gz landuse*.nc >/dev/null
+          cd -
         fi
         pathin=${pathin_pfx}/landuse.tar.gz
         path=${time}/landuse/landuse.tar.gz
