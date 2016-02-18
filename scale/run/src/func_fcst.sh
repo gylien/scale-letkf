@@ -1177,18 +1177,18 @@ for it in $(seq $its $ite); do
     fi
 
     if (pdrun $g $PROC_OPT); then
-      if ((BDY_FORMAT == 1)); then
-        bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np ${name_m[$m]} \
-             $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
-             $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \
-             ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT $time_bdy fcst_LOG
-      elif ((BDY_FORMAT == 2)); then
+#      if ((BDY_FORMAT == 1)); then
+#        bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np ${name_m[$m]} \
+#             $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
+#             $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \
+#             ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT $time_bdy fcst_LOG
+#      elif ((BDY_FORMAT == 2)); then
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np ${name_m[$m]} \
              $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
              $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \
              ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT ${stimes[$c]} fcst_LOG
 #      elif ((BDY_FORMAT == 3)); then
-      fi
+#      fi
       
     fi
   fi
