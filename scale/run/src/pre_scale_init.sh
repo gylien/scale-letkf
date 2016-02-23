@@ -14,7 +14,7 @@ if (($# < 12)); then
 
 [pre_scale_init.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM_NP TOPO LANDUSE BDYORG STIME FCSTLEN MKINIT MEM TMPDIR EXECDIR DATADIR [STARTFRAME]
+Usage: $0 MYRANK MEM_NP TOPO LANDUSE BDYORG STIME FCSTLEN MKINIT MEM TMPDIR EXECDIR DATADIR [STARTFRAME] [LOGNAME]
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member
@@ -33,6 +33,7 @@ Usage: $0 MYRANK MEM_NP TOPO LANDUSE BDYORG STIME FCSTLEN MKINIT MEM TMPDIR EXEC
   EXECDIR  Directory of SCALE executable files
   DATADIR  Directory of SCALE data files
   STARTFRAME
+  LOGNAME
 
 EOF
   exit 1
@@ -50,7 +51,8 @@ MEM="$1"; shift
 TMPDIR="$1"; shift
 EXECDIR="$1"; shift
 DATADIR="$1"; shift
-STARTFRAME="${1:-1}"
+STARTFRAME="${1:-1}"; shift
+LOGNAME="${1:-LOG}"
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
@@ -66,8 +68,8 @@ rm -fr $TMPDIR/*
 
 TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
 
-ln -fs ${TOPO}*.nc $TMPDIR
-ln -fs ${LANDUSE}*.nc $TMPDIR
+#ln -fs ${TOPO}*.nc $TMPDIR
+#ln -fs ${LANDUSE}*.nc $TMPDIR
 
 #for q in $(seq $MEM_NP); do
 #  sfx=$(printf $SCALE_SFX $((q-1)))
@@ -89,14 +91,13 @@ if ((BDY_FORMAT == 1)); then
     echo "[Error] $0: Cannot find source boundary file '${BDYORG}.pe000000.nc'."
     exit 1
   fi
-  ln -fs ${BDYORG}*.nc $TMPDIR
 #  NUMBER_OF_FILES=$(((FCSTLEN-1)/BDYINT+2))
 #  NUMBER_OF_FILES=$(((FCSTLEN-1)/BDYINT+1+STARTFRAME))
   NUMBER_OF_FILES=1
   NUMBER_OF_TSTEPS=$(((FCSTLEN-1)/BDYINT+1+STARTFRAME))
   NUMBER_OF_SKIP_TSTEPS=$((STARTFRAME-1))
 
-  BASENAME_ORG="${TMPSUBDIR}\/history"
+  BASENAME_ORG="$BDYORG"
   FILETYPE_ORG='SCALE-LES'
   USE_NESTING='.true.'
   OFFLINE='.true.'
@@ -131,24 +132,30 @@ else
   exit 1
 fi
 
+LATLON_CATALOGUE_FNAME="$(dirname $(dirname $(dirname $BDYORG)))/latlon_domain_catalogue.txt"
+
+mkdir -p $TMPOUT/${STIME}/bdy/${MEM}
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_init | \
-    sed -e "s/\[IO_LOG_BASENAME\]/ IO_LOG_BASENAME = \"${TMPSUBDIR}\/init_LOG\",/" \
-        -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS,/" \
-        -e "s/\[RESTART_OUTPUT\]/ RESTART_OUTPUT = $RESTART_OUTPUT,/" \
-        -e "s/\[RESTART_OUT_BASENAME\]/ RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/init\",/" \
-        -e "s/\[TOPO_IN_BASENAME\]/ TOPO_IN_BASENAME = \"${TMPSUBDIR}\/topo\",/" \
-        -e "s/\[LANDUSE_IN_BASENAME\]/ LANDUSE_IN_BASENAME = \"${TMPSUBDIR}\/landuse\",/" \
-        -e "s/\[BASENAME_BOUNDARY\]/ BASENAME_BOUNDARY = \"${TMPSUBDIR}\/boundary\",/" \
-        -e "s/\[BASENAME_ORG\]/ BASENAME_ORG = \"${BASENAME_ORG}\",/" \
-        -e "s/\[FILETYPE_ORG\]/ FILETYPE_ORG = \"${FILETYPE_ORG}\",/" \
-        -e "s/\[NUMBER_OF_FILES\]/ NUMBER_OF_FILES = $NUMBER_OF_FILES,/" \
-        -e "s/\[NUMBER_OF_TSTEPS\]/ NUMBER_OF_TSTEPS = $NUMBER_OF_TSTEPS,/" \
-        -e "s/\[NUMBER_OF_SKIP_TSTEPS\]/ NUMBER_OF_SKIP_TSTEPS = $NUMBER_OF_SKIP_TSTEPS,/" \
-        -e "s/\[BOUNDARY_UPDATE_DT\]/ BOUNDARY_UPDATE_DT = $BDYINT.D0,/" \
-        -e "s/\[USE_NESTING\]/ USE_NESTING = $USE_NESTING,/" \
-        -e "s/\[OFFLINE\]/ OFFLINE = $OFFLINE,/" \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale_init/${MEM}_${LOGNAME}\"," \
+        -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
+        -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = $RESTART_OUTPUT," \
+        -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/init\"," \
+        -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
+        -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
+        -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT}/land/param.bucket.conf\"," \
+        -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"$TMPOUT/${STIME}/bdy/${MEM}/boundary\"," \
+        -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${BASENAME_ORG}\"," \
+        -e "/!--FILETYPE_ORG--/a FILETYPE_ORG = \"${FILETYPE_ORG}\"," \
+        -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = ${NUMBER_OF_FILES}," \
+        -e "/!--NUMBER_OF_TSTEPS--/a NUMBER_OF_TSTEPS = ${NUMBER_OF_TSTEPS}," \
+        -e "/!--NUMBER_OF_SKIP_TSTEPS--/a NUMBER_OF_SKIP_TSTEPS = ${NUMBER_OF_SKIP_TSTEPS}," \
+        -e "/!--BOUNDARY_UPDATE_DT--/a BOUNDARY_UPDATE_DT = $BDYINT.D0," \
+        -e "/!--LATLON_CATALOGUE_FNAME--/a LATLON_CATALOGUE_FNAME = \"${LATLON_CATALOGUE_FNAME}\"," \
+        -e "/!--USE_NESTING--/a USE_NESTING = $USE_NESTING," \
+        -e "/!--OFFLINE--/a OFFLINE = $OFFLINE," \
     > $TMPDIR/init.conf
 
 #===============================================================================

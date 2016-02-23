@@ -14,7 +14,7 @@ if (($# < 8)); then
 
 [post_scale.sh] Post-process the SCALE model outputs.
 
-Usage: $0 MYRANK MEM_NP STIME MEM FCSTLEN TMPDIR LOG_OPT SCPCALL
+Usage: $0 MYRANK MEM_NP STIME MEM FCSTLEN TMPDIR LOG_OPT SCPCALL MEMBER_ITER
 
   MYRANK   My rank number (not used)
   MEM_NP   Number of processes per member (not used !!!)
@@ -24,6 +24,7 @@ Usage: $0 MYRANK MEM_NP STIME MEM FCSTLEN TMPDIR LOG_OPT SCPCALL
   TMPDIR   Temporary directory to run the model
   LOG_OPT
   SCPCALL  Called from which script? (fcst/cycle)
+  MEMBER_ITER
 
 EOF
   exit 1
@@ -36,7 +37,8 @@ MEM="$1"; shift
 FCSTLEN="$1"; shift
 TMPDIR="$1"; shift
 LOG_OPT="$1"; shift
-SCPCALL="$1"
+SCPCALL="$1"; shift
+MEMBER_ITER="${1:-1}"  ###### no use
 
 ATIME=$(datetime $STIME $LCYCLE s)
 
@@ -71,16 +73,16 @@ restartbaselen=23  # 7 + 16
 #  done
 #fi
 
-if [ "$SCPCALL" == 'fcst' ]; then
+if [ "$SCPCALL" = 'fcst' ]; then
   mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
   mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
   file_prefix=$(cd $TMPDIR ; ls restart*.nc | head -n 1) # pick up the first restart output. ###### TO DO: explicitly calculate the time string???
   for ifile in $(cd $TMPDIR ; ls ${file_prefix:0:$restartbaselen}*.nc); do
     mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifile:$restartbaselen}
   done
-elif [ "$SCPCALL" == 'cycle' ]; then
+elif [ "$SCPCALL" = 'cycle' ]; then
   MEMtmp=$MEM
-  if [ "$MEM" == 'mean' ]; then
+  if [ "$MEM" = 'mean' ]; then
     MEMtmp='meanf'
   fi
   mkdir -p $TMPOUT/${ATIME}/gues/${MEMtmp}
@@ -91,37 +93,45 @@ elif [ "$SCPCALL" == 'cycle' ]; then
   done
 fi
 
-if ((LOG_OPT <= 3)); then
-  mkdir -p $TMPOUT/${STIME}/log/scale
-  if [ -f "$TMPDIR/LOG${SCALE_LOG_SFX}" ]; then
-    mv -f $TMPDIR/LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale/${MEM}_LOG${SCALE_LOG_SFX}
-  fi
-fi
+#if ((LOG_OPT <= 3)); then
+#  if [ -f "$TMPDIR/LOG${SCALE_LOG_SFX}" ]; then
+#    mv -f $TMPDIR/LOG${SCALE_LOG_SFX} $TMPOUT/${STIME}/log/scale/${MEM}_LOG${SCALE_LOG_SFX}
+#  fi
+#fi
 
-if ((LOG_OPT <= 1)); then
-  mkdir -p $TMPOUT/${STIME}/log/scale
-  if [ -f "$TMPDIR/run.conf" ]; then
-    mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/scale/${MEM}_run.conf
+if [ "$SCPCALL" = 'fcst' ]; then
+  if ((LOG_OPT <= 3)); then
+    if [ -f "$TMPDIR/run.conf" ]; then
+      mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/scale/${MEM}_fcst_run.conf
+    fi
+  fi
+elif [ "$SCPCALL" = 'cycle' ]; then
+  if ((LOG_OPT <= 4)); then
+    if [ -f "$TMPDIR/run.conf" ]; then
+      mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/scale/${MEM}_run.conf
+    fi
   fi
 fi
 
 ######
 if ((MYRANK == 0)); then
-  mkdir -p $TMPOUT/${STIME}/log/scale
   if [ -f "$TMPDIR/../latlon_domain_catalogue.txt" ]; then
     mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/scale/latlon_domain_catalogue.txt
   fi
 fi
 ######
 
-if ((MYRANK < MEM_NP)); then
-  if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
-    mkdir -p $TMPOUT/${STIME}/log/scale
-    mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${STIME}/log/scale
-  fi
-fi
+##if ((MYRANK < MEM_NP)); then
+##  mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${STIME}/log/scale
+#  if ((MEMBER_ITER == 1)); then
+#    mv -f $TMPDIR/../NOUT* $TMPOUT/${STIME}/log/scale
+#  else
+#    for ifile in $(cd $TMPDIR/.. ; ls NOUT* 2> /dev/null); do
+#      cat $TMPDIR/../${ifile} >> $TMPOUT/${STIME}/log/scale/${ifile}
+#    done
+#  fi
+#fi
 #if [ "$MEM" == '0001' ] && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
-#  mkdir -p $TMPOUT/${STIME}/log/scale
 #  for q in $(seq $MEM_NP); do
 #    if [ -e "$TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
 #      mv -f $TMPDIR/../NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${STIME}/log/scale

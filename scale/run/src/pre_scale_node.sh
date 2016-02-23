@@ -40,13 +40,13 @@ MEMBER_ITER="$1"
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.ensmodel | \
-    sed -e "s/\[MEMBER\]/ MEMBER = $MEMBER,/" \
-        -e "s/\[MEMBER_RUN\]/ MEMBER_RUN = $MEMBER_RUN,/" \
-        -e "s/\[MEMBER_ITER\]/ MEMBER_ITER = $MEMBER_ITER,/" \
-        -e "s/\[NNODES\]/ NNODES = $NNODES,/" \
-        -e "s/\[PPN\]/ PPN = $PPN,/" \
-        -e "s/\[MEM_NODES\]/ MEM_NODES = $MEM_NODES,/" \
-        -e "s/\[MEM_NP\]/ MEM_NP = $MEM_NP,/" \
+    sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
+        -e "/!--MEMBER_RUN--/a MEMBER_RUN = $MEMBER_RUN," \
+        -e "/!--MEMBER_ITER--/a MEMBER_ITER = $MEMBER_ITER," \
+        -e "/!--NNODES--/a NNODES = $NNODES," \
+        -e "/!--PPN--/a PPN = $PPN," \
+        -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
+        -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
     > $TMPDIR/scale-les_ens.conf
 
 #===============================================================================

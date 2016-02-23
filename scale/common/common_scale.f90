@@ -80,7 +80,11 @@ MODULE common_scale
   INTEGER,PARAMETER :: nv3d=11   ! 3D state variables (in SCALE restart files)
   INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
   INTEGER,PARAMETER :: nv2d=0    ! 2D state variables (in SCALE restart files)
+#ifdef H08
   INTEGER,PARAMETER :: nv2dd=9  ! H08  ! 2D diagnostic variables (in SCALE history files)
+#else
+  INTEGER,PARAMETER :: nv2dd=7  ! 2D diagnostic variables (in SCALE history files)
+#endif
   INTEGER,PARAMETER :: iv3d_rho=1  !-- State in restart files
   INTEGER,PARAMETER :: iv3d_rhou=2 !
   INTEGER,PARAMETER :: iv3d_rhov=3 !
@@ -117,8 +121,10 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv2dd_v10m=5
   INTEGER,PARAMETER :: iv2dd_t2m=6
   INTEGER,PARAMETER :: iv2dd_q2m=7
+#ifdef H08
   INTEGER,PARAMETER :: iv2dd_lsmask=8 ! H08
   INTEGER,PARAMETER :: iv2dd_skint=9 ! H08
+#endif
 !  INTEGER,PARAMETER :: iv2dd_tsfc=8
 
 
@@ -270,8 +276,10 @@ SUBROUTINE set_common_scale
     v2dd_name(iv2dd_v10m) = 'V10'
     v2dd_name(iv2dd_t2m) = 'T2'
     v2dd_name(iv2dd_q2m) = 'Q2'
+#ifdef H08
     v2dd_name(iv2dd_lsmask) = 'lsmask' ! H08
     v2dd_name(iv2dd_skint) = 'SFC_TEMP' ! H08
+#endif
 !    v2dd_name(iv2dd_tsfc) = 'SFC_TEMP'
     !
     ! Lon, Lat
@@ -741,8 +749,6 @@ SUBROUTINE read_topo(filename,topo)
     je = je + JHALO
   end if
 
-!  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
-
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
@@ -847,11 +853,13 @@ subroutine scale_calc_z(nij,topo,z)
   integer  :: k, i
 
   ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
+!$OMP PARALLEL DO PRIVATE(i,k)
   do k = 1, nlev
     do i = 1, nij
       z(i,k) = (ztop - topo(i)) / ztop * GRID_CZ(k+KHALO) + topo(i)
-    enddo
-  enddo
+    end do
+  end do
+!$OMP END PARALLEL DO
 
   return
 end subroutine scale_calc_z

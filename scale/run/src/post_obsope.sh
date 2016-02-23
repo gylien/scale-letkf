@@ -41,26 +41,21 @@ obsdabaselen=10
 
 #===============================================================================
 
-mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
-for ifile in $(cd $TMPDIR ; ls obsda.${MEMSEQ}.*.dat 2> /dev/null); do
-#  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile}
-  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/obsda.${MEM}${ifile:$obsdabaselen}
-done
+#mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
+#for ifile in $(cd $TMPDIR ; ls obsda.${MEMSEQ}.*.dat 2> /dev/null); do
+##  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile}
+#  mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/obsgues/${MEM}/obsda.${MEM}${ifile:$obsdabaselen}
+#done
 
-#if ((MYRANK < MEM_NP)); then
-#  if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
-#    mkdir -p $TMPOUT/${ATIME}/log/obsope
-#    mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${ATIME}/log/obsope
-#  fi
-#fi
-if ((MYRANK < MEM_NP)) && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
-  mkdir -p $TMPOUT/${ATIME}/log/obsope
-  for q in $(seq $MEM_NP); do
-    if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
-      mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${ATIME}/log/obsope
-    fi
-  done
-fi
+##if ((MYRANK < MEM_NP)) && ((LOG_OPT <= 4)); then ###### using a variable for '0001'
+##  mkdir -p $TMPOUT/${ATIME}/log/obsope
+##  for q in $(seq $MEM_NP); do
+##    if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
+##      mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${ATIME}/log/obsope
+##    fi
+##  done
+#  mv -f $TMPDIR/NOUT* $TMPOUT/${STIME}/log/obsope
+##fi
 
 #if [ "$MEM" == 'mean' ] && ((LOG_OPT <= 4)); then ###### using a variable for 'mean'
 #  mkdir -p $TMPOUT/${ATIME}/log/obsope

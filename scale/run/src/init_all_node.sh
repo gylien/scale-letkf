@@ -25,68 +25,102 @@ fi
 MYRANK="$1"; shift
 SCPCALL="$1"
 
-DATADIR="$TMPDAT"
-RUNDIR="$TMPRUN"
+#-------------------------------------------------------------------------------
+
+. config.${SCPCALL}
+. src/func_datetime.sh
+. src/func_${SCPCALL}.sh
+
+setting
+
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ### 5-1" >&2
+fi
 
 #===============================================================================
 
-mkdir -p $RUNDIR/scale_pp
-ln -fs $DATADIR/exec/scale-les_pp_ens $RUNDIR/scale_pp
-ln -fs $DATADIR/rad/PARAG.29 $RUNDIR/scale_pp
-ln -fs $DATADIR/rad/PARAPC.29 $RUNDIR/scale_pp
-ln -fs $DATADIR/rad/VARDATA.RM29 $RUNDIR/scale_pp
-ln -fs $DATADIR/rad/cira.nc $RUNDIR/scale_pp
-ln -fs $DATADIR/rad/MIPAS/day.atm $RUNDIR/scale_pp
-ln -fs $DATADIR/rad/MIPAS/equ.atm $RUNDIR/scale_pp
-ln -fs $DATADIR/rad/MIPAS/sum.atm $RUNDIR/scale_pp
-ln -fs $DATADIR/rad/MIPAS/win.atm $RUNDIR/scale_pp
-ln -fs $DATADIR/land/param.bucket.conf $RUNDIR/scale_pp
-if [ "$TOPO_FORMAT" != 'prep' ]; then
-  rm -f $RUNDIR/scale_pp/input_topo
-  ln -fs $DATADIR/topo/${TOPO_FORMAT}/Products $RUNDIR/scale_pp/input_topo
-fi
-if [ "$LANDUSE_FORMAT" != 'prep' ]; then
-  rm -f $RUNDIR/scale_pp/input_landuse
-  ln -fs $DATADIR/landuse/${LANDUSE_FORMAT}/Products $RUNDIR/scale_pp/input_landuse
+mkdir -p $TMPRUN/scale_pp
+cp -f $TMPDAT/exec/scale-les_pp_ens $TMPRUN/scale_pp
+
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ### 5-2" >&2
 fi
 
-mkdir -p $RUNDIR/scale_init
-ln -fs $DATADIR/exec/scale-les_init_ens $RUNDIR/scale_init
-ln -fs $DATADIR/rad/PARAG.29 $RUNDIR/scale_init
-ln -fs $DATADIR/rad/PARAPC.29 $RUNDIR/scale_init
-ln -fs $DATADIR/rad/VARDATA.RM29 $RUNDIR/scale_init
-ln -fs $DATADIR/rad/cira.nc $RUNDIR/scale_init
-ln -fs $DATADIR/rad/MIPAS/day.atm $RUNDIR/scale_init
-ln -fs $DATADIR/rad/MIPAS/equ.atm $RUNDIR/scale_init
-ln -fs $DATADIR/rad/MIPAS/sum.atm $RUNDIR/scale_init
-ln -fs $DATADIR/rad/MIPAS/win.atm $RUNDIR/scale_init
-ln -fs $DATADIR/land/param.bucket.conf $RUNDIR/scale_init
-if ((BDY_FORMAT == 1)); then
-  if ((DATA_BDY_TMPLOC == 1)); then
-    ln -fs $TMPDAT/bdyscale/latlon_domain_catalogue.txt $RUNDIR/scale_init/latlon_domain_catalogue.txt
-  elif ((DATA_BDY_TMPLOC == 2)); then
-    ln -fs $TMPOUT/bdyscale/latlon_domain_catalogue.txt $RUNDIR/scale_init/latlon_domain_catalogue.txt
+mkdir -p $TMPRUN/scale_init
+cp -f $TMPDAT/exec/scale-les_init_ens $TMPRUN/scale_init
+
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ### 5-3" >&2
+fi
+
+mkdir -p $TMPRUN/scale
+cp -f $TMPDAT/exec/scale-les_ens $TMPRUN/scale
+
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ### 5-4" >&2
+fi
+
+if [ "$SCPCALL" = 'cycle' ]; then
+  mkdir -p $TMPRUN/obsope
+  cp -f $TMPDAT/exec/obsope $TMPRUN/obsope
+  #-- H08 --
+  if [ -e "$TMPDAT/rttov/rtcoef_himawari_8_ahi.dat" ]; then
+    cp -f $TMPDAT/rttov/rtcoef_himawari_8_ahi.dat $TMPRUN/obsope
+  fi
+  if [ -e "$TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat" ]; then
+    cp -f $TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat $TMPRUN/obsope
+  fi
+
+  mkdir -p $TMPRUN/letkf
+  cp -f $TMPDAT/exec/letkf $TMPRUN/letkf
+  #-- H08 --
+  if [ -e "$TMPDAT/rttov/rtcoef_himawari_8_ahi.dat" ]; then
+    cp -f $TMPDAT/rttov/rtcoef_himawari_8_ahi.dat $TMPRUN/letkf
+  fi
+  if [ -e "$TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat" ]; then
+    cp -f $TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat $TMPRUN/letkf
   fi
 fi
 
-mkdir -p $RUNDIR/scale
-ln -fs $DATADIR/exec/scale-les_ens $RUNDIR/scale
-ln -fs $DATADIR/rad/PARAG.29 $RUNDIR/scale
-ln -fs $DATADIR/rad/PARAPC.29 $RUNDIR/scale
-ln -fs $DATADIR/rad/VARDATA.RM29 $RUNDIR/scale
-ln -fs $DATADIR/rad/cira.nc $RUNDIR/scale
-ln -fs $DATADIR/rad/MIPAS/day.atm $RUNDIR/scale
-ln -fs $DATADIR/rad/MIPAS/equ.atm $RUNDIR/scale
-ln -fs $DATADIR/rad/MIPAS/sum.atm $RUNDIR/scale
-ln -fs $DATADIR/rad/MIPAS/win.atm $RUNDIR/scale
-ln -fs $DATADIR/land/param.bucket.conf $RUNDIR/scale
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ### 5-5" >&2
+fi
 
-if [ "$SCPCALL" == 'cycle' ]; then
-  mkdir -p $RUNDIR/obsope
-  ln -fs $DATADIR/exec/obsope $RUNDIR/obsope
+if [ "$SCPCALL" = 'cycle' ]; then
+  time=$STIME
+  atime=$(datetime $time $LCYCLE s)
+  while ((time <= ETIME)); do
+    mkdir -p $TMPOUT/${time}/topo
+    mkdir -p $TMPOUT/${time}/landuse
+    mkdir -p $TMPOUT/${time}/log/scale_pp
+    mkdir -p $TMPOUT/${time}/log/scale_init
+    mkdir -p $TMPOUT/${time}/log/scale
+    mkdir -p $TMPOUT/${atime}/log/obsope
+    mkdir -p $TMPOUT/${atime}/log/letkf
 
-  mkdir -p $RUNDIR/letkf
-  ln -fs $DATADIR/exec/letkf $RUNDIR/letkf
+    time=$(datetime $time $LCYCLE s)
+    atime=$(datetime $time $LCYCLE s)
+  done
+elif [ "$SCPCALL" = 'fcst' ]; then
+  lcycles=$((LCYCLE * CYCLE_SKIP))
+  time=$STIME
+  while ((time <= ETIME)); do
+    for c in $(seq $CYCLE); do
+      time2=$(datetime $time $((lcycles * (c-1))) s)
+      if ((time2 <= ETIME)); then
+        mkdir -p $TMPOUT/${time2}/topo
+        mkdir -p $TMPOUT/${time2}/landuse
+        mkdir -p $TMPOUT/${time2}/log/scale_pp
+        mkdir -p $TMPOUT/${time2}/log/scale_init
+        mkdir -p $TMPOUT/${time2}/log/scale
+      fi
+    done
+    time=$(datetime $time $((lcycles * CYCLE)) s)
+  done
+fi
+
+if ((MYRANK == 0)); then
+  echo "[$(datetime_now)] ### 5-6" >&2
 fi
 
 #===============================================================================

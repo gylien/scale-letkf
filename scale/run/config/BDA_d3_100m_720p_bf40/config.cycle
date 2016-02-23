@@ -10,7 +10,7 @@ ETIME='20130713060000'
 #MEMBERS="$(seq 1 5)"
 ISTEP=
 FSTEP=
-TIME_LIMIT='01:00:00'
+TIME_LIMIT='00:08:00'
 
 #===============================================================================
 
@@ -50,7 +50,7 @@ OBSOPE=0         # 0: No    ! obsope options: not finished yet!!
 
                  #      anal              gues
                  #      mean/sprd members mean/sprd members history
-OUT_OPT=2        # 1:   o         o       o         o       o
+OUT_OPT=1        # 1:   o         o       o         o       o
                  # 2:   o         o       o         o
                  # 3:   o         o       o
                  # 4:   o                 o

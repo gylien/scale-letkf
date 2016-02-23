@@ -44,6 +44,10 @@ res=$? && ((res != 0)) && exit $res
 . src/func_util.sh
 . src/func_cycle.sh
 
+######
+echo "[$(datetime_now)] cycle_step: $@: start"
+######
+
 #-------------------------------------------------------------------------------
 
 setting
@@ -96,5 +100,9 @@ res=$? && ((res != 0)) && exit $res
 #echo $STEPFUNC $MYRANK $TIME $LOOP ... done 1>&2
 
 #===============================================================================
+
+######
+echo "[$(datetime_now)] cycle_step: $@: end"
+######
 
 exit 0

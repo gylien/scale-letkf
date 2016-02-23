@@ -814,16 +814,16 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
 
   real(r_size) :: rdx, rdy
 
-  real(r_size) :: radar_ri(nobsfiles)       !!!!!!
-  real(r_size) :: radar_rj(nobsfiles)       !!!!!!
+  real(r_size) :: radar_ri(OBS_IN_NUM)       !!!!!!
+  real(r_size) :: radar_rj(OBS_IN_NUM)       !!!!!!
   real(r_size) :: dist_radar_edge, dist_bdy !!!!!!
   integer :: iof                            !!!!!!
 
 
 
   if (RADAR_EDGE_TAPER_WIDTH > 0.0d0 .and. RADAR_RANGE > 0.0d0) then                !!!!!!
-    do iof = 1, nobsfiles                                                           !!!!!!
-      if (obsfileformat(iof) == 2) then                                             !!!!!!
+    do iof = 1, OBS_IN_NUM                                                           !!!!!!
+      if (OBS_IN_FORMAT(iof) == 2) then                                             !!!!!!
         call phys2ij(obs(iof)%meta(1),obs(iof)%meta(2),radar_ri(iof),radar_rj(iof)) !!!!!!
       end if                                                                        !!!!!!
     end do                                                                          !!!!!!
@@ -893,7 +893,7 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
           dlev = 0.0d0                                                                                                !GYL
         case (id_H08IR_obs)                                                         ! H08       
           dist = dist / SIGMA_OBS_H08                                               ! H08                       
-          dlev = ABS(LOG(obsda2(ip)%lev(nobs_use(n))) - LOG(rlev)) / SIGMA_OBSV_H08 ! H08 
+          dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n)))) - LOG(rlev)) / SIGMA_OBSV_H08 ! H08 ! bug fixed (02/09/2016) 
         case default                                                                                                  !GYL
           dist = dist / SIGMA_OBS                                                                                     !GYL
           dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n)))) - LOG(rlev)) / SIGMA_OBSV !GYL
@@ -959,7 +959,7 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
 
 
         if (RADAR_EDGE_TAPER_WIDTH > 0.0d0 .and. RADAR_RANGE > 0.0d0 .and. &                 !!!!!!
-            obsfileformat(obsda2(ip)%set(nobs_use(n))) == 2) then                            !!!!!!
+            OBS_IN_FORMAT(obsda2(ip)%set(nobs_use(n))) == 2) then                            !!!!!!
           rdx = (ri - radar_ri(obsda2(ip)%set(nobs_use(n)))) * DX                            !!!!!!
           rdy = (rj - radar_rj(obsda2(ip)%set(nobs_use(n)))) * DY                            !!!!!!
           dist_radar_edge = (RADAR_RANGE - sqrt(rdx*rdx + rdy*rdy)) / RADAR_EDGE_TAPER_WIDTH !!!!!!

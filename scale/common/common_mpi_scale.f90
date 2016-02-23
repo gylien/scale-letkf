@@ -241,7 +241,7 @@ END SUBROUTINE unset_common_mpi_scale
 
 
 
-subroutine set_common_mpi_grid(file)
+subroutine set_common_mpi_grid
   use scale_grid_index, only: &
     IHALO, &
     JHALO
@@ -249,7 +249,6 @@ subroutine set_common_mpi_grid(file)
     PRC_myrank
 
   implicit none
-  CHARACTER(*),INTENT(IN) :: file
   REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   REAL(r_size),ALLOCATABLE :: v3d(:,:,:)
@@ -306,7 +305,7 @@ subroutine set_common_mpi_grid(file)
 !  END DO
 
   if (myrank_e == lastmem_rank_e) then
-    call read_topo(file, topo)
+    call read_topo(LETKF_TOPO_IN_BASENAME, topo)
     v3dg(1,:,:,3) = topo
 
 !print *, v3dg(1,:,:,3)
@@ -844,14 +843,14 @@ END SUBROUTINE gather_grd_mpi
 SUBROUTINE read_ens_history_iter(file,iter,step,v3dg,v2dg,ensmean)
   IMPLICIT NONE
 
-  CHARACTER(4),INTENT(IN) :: file
+  CHARACTER(*),INTENT(IN) :: file
   INTEGER,INTENT(IN) :: iter
   INTEGER,INTENT(IN) :: step
   REAL(r_size),INTENT(OUT) :: v3dg(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size),INTENT(OUT) :: v2dg(nlonh,nlath,nv2dd)
   LOGICAL,INTENT(INOUT),OPTIONAL :: ensmean
-  CHARACTER(9) :: filename='file.0000'
 
+  character(filelenmax) :: filename
   integer :: mem
 
   mem = MEMBER
@@ -864,15 +863,8 @@ SUBROUTINE read_ens_history_iter(file,iter,step,v3dg,v2dg,ensmean)
   IF (myrank_mem_use) then
 
     IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= mem) THEN
-      WRITE(filename(1:4),'(A4)') file
-
-      if (proc2mem(1,iter,myrank+1) == MEMBER+1) then
-        WRITE(filename(6:9),'(A4)') 'mean'
-      else
-        WRITE(filename(6:9),'(I4.4)') proc2mem(1,iter,myrank+1)
-      end if
-
-      call read_history(filename,step,v3dg,v2dg)
+      call file_member_replace(proc2mem(1,iter,myrank+1), file, filename)  !!!!!! better to seperate 'mean' history filename using a different namelist variable !!!!!!
+      call read_history(trim(filename),step,v3dg,v2dg)
     END IF
 
   END IF
@@ -977,12 +969,12 @@ END SUBROUTINE read_ens_history_iter
 !-----------------------------------------------------------------------
 subroutine read_ens_mpi(file,v3d,v2d)
   implicit none
-  CHARACTER(4),INTENT(IN) :: file
+  CHARACTER(*),INTENT(IN) :: file
   REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,MEMBER,nv3d)
   REAL(r_size),INTENT(OUT) :: v2d(nij1,MEMBER,nv2d)
   REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
-  CHARACTER(9) :: filename='file.0000'
+  character(filelenmax) :: filename
   integer :: it,im,mstart,mend
 
 
@@ -996,8 +988,7 @@ subroutine read_ens_mpi(file,v3d,v2d)
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
     if (im >= 1 .and. im <= MEMBER) then
-      WRITE(filename(1:4),'(A4)') file
-      WRITE(filename(6:9),'(I4.4)') im
+      call file_member_replace(im, file, filename)
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
       call read_restart(filename,v3dg,v2dg)
 
@@ -1040,12 +1031,12 @@ end subroutine read_ens_mpi
 !-----------------------------------------------------------------------
 SUBROUTINE write_ens_mpi(file,v3d,v2d)
   implicit none
-  CHARACTER(4),INTENT(IN) :: file
+  CHARACTER(*),INTENT(IN) :: file
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,MEMBER,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nij1,MEMBER,nv2d)
   REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
-  CHARACTER(9) :: filename='file.0000'
+  character(filelenmax) :: filename
   integer :: it,im,mstart,mend
 
 
@@ -1072,8 +1063,7 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
 
 
     if (im >= 1 .and. im <= MEMBER) then
-      WRITE(filename(1:4),'(A4)') file
-      WRITE(filename(6:9),'(I4.4)') im
+      call file_member_replace(im, file, filename)
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
       call state_trans_inv(v3dg)
 
@@ -1325,11 +1315,12 @@ END SUBROUTINE buf_to_grd
 !-----------------------------------------------------------------------
 ! STORING DATA (ensemble mean and spread)
 !-----------------------------------------------------------------------
-SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
+SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   use scale_process, only: PRC_myrank
   implicit none
 
-  CHARACTER(4),INTENT(IN) :: file
+  CHARACTER(*),INTENT(IN) :: file_mean
+  CHARACTER(*),INTENT(IN) :: file_sprd
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,MEMBER,nv3d)
   REAL(r_size),INTENT(IN) :: v2d(nij1,MEMBER,nv2d)
   REAL(r_size) :: v3dm(nij1,nlev,nv3d)
@@ -1339,7 +1330,6 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
   REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   INTEGER :: i,k,m,n
-  CHARACTER(9) :: filename='file.0000'
 
   INTEGER :: nobs(nid_obs)
   INTEGER :: nobs_tmp(nid_obs)
@@ -1354,7 +1344,7 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
   INTEGER :: ierr
 
 
-  type(obs_info),intent(in) :: obs(nobsfiles)
+  type(obs_info),intent(in) :: obs(OBS_IN_NUM)
   type(obs_da_value),intent(in),allocatable :: obsda2(:)
 
 
@@ -1434,11 +1424,9 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
     call MPI_BCAST(bias_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
     call MPI_BCAST(rmse_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
     call MPI_BCAST(monit_type,nid_obs,MPI_LOGICAL,lastmem_rank_e,MPI_COMM_e,ierr)
-    WRITE(filename(1:4),'(A4)') file
-    WRITE(filename(6:9),'(A4)') 'mean'
-    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', filename, ']:'
+    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', file_mean, ']:'
     call monit_print(nobs,bias,rmse,monit_type)
-    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', filename, ']:'
+    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', file_mean, ']:'
     call monit_print(nobs_g,bias_g,rmse_g,monit_type)
 
 
@@ -1452,10 +1440,8 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
 
 
   IF(myrank_e == lastmem_rank_e) THEN
-    WRITE(filename(1:4),'(A4)') file
-    WRITE(filename(6:9),'(A4)') 'mean'
     call state_trans_inv(v3dg)
-    call write_restart(filename,v3dg,v2dg)
+    call write_restart(file_mean,v3dg,v2dg)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1509,10 +1495,8 @@ SUBROUTINE write_ensmspr_mpi(file,v3d,v2d,obs,obsda2)
 
 
   IF(myrank_e == lastmem_rank_e) THEN
-    WRITE(filename(1:4),'(A4)') file
-    WRITE(filename(6:9),'(A4)') 'sprd'
 !    call state_trans_inv(v3dg)             !!
-    call write_restart(filename,v3dg,v2dg)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
+    call write_restart(file_sprd,v3dg,v2dg)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1531,7 +1515,7 @@ END SUBROUTINE write_ensmspr_mpi
 subroutine read_obs_all_mpi(obs)
   implicit none
 
-  type(obs_info), intent(out) :: obs(nobsfiles)
+  type(obs_info), intent(out) :: obs(OBS_IN_NUM)
   integer :: iof, ierr
 
   REAL(r_dble) :: rrtimer00,rrtimer
@@ -1547,7 +1531,7 @@ subroutine read_obs_all_mpi(obs)
   WRITE(6,'(A,F10.2)') '###### read_obs_all_mpi:read_obs_all:',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
-  do iof = 1, nobsfiles
+  do iof = 1, OBS_IN_NUM
     call MPI_BCAST(obs(iof)%nobs, 1, MPI_INTEGER, 0, MPI_COMM_a, ierr)
     if (myrank_a /= 0) then
       call obs_info_allocate(obs(iof))
@@ -1562,7 +1546,7 @@ subroutine read_obs_all_mpi(obs)
     call MPI_BCAST(obs(iof)%typ, obs(iof)%nobs, MPI_INTEGER, 0, MPI_COMM_a, ierr)
     call MPI_BCAST(obs(iof)%dif, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
     call MPI_BCAST(obs(iof)%meta, max_obs_info_meta, MPI_r_size, 0, MPI_COMM_a, ierr)
-  end do ! [ iof = 1, nobsfiles ]
+  end do ! [ iof = 1, OBS_IN_NUM ]
 
   CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()

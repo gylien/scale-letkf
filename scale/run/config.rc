@@ -14,6 +14,12 @@ SCALE_SFX=".pe${PROCESS_FMT}.nc"
 SCALE_LOG_SFX='.pe000000'
 
 #===============================================================================
+# Default values
+
+DISK_MODE_DATA_BDY=${DISK_MODE_DATA_BDY:-2}
+DISK_MODE_TOPO_LANDUSE_DB=${DISK_MODE_TOPO_LANDUSE_DB:-2}
+
+#===============================================================================
 # Definition of sub-directories
 
 SCRP_DIR="$DIR/run"              # Job script directory
@@ -33,8 +39,6 @@ if ((MACHINE_TYPE == 10)); then
     TMP_STG='..'    #
     TMPL="$(pwd)"   #
     TMPL_STG='.'    #
-#    TMP="$(pwd)/.." #
-#    TMP_STG='..'    #
 #    TMPL="."        #
 #    TMPL_STG='.'    #
   else
@@ -48,6 +52,11 @@ fi
 
 STAGING_DIR="$TMP/staging"
 NODEFILE_DIR="$TMP/node"
+
+TMPDAT_S="$TMP/dat"              #
+TMPDAT_S_STG="$TMP_STG/dat"      #
+TMPDAT_L="$TMPL/dat"             #
+TMPDAT_L_STG="$TMPL_STG/dat"     #
 
 if ((TMPDAT_MODE <= 2)); then    # The 'dat' temporary directory (input data)
   TMPDAT="$TMP/dat"              #

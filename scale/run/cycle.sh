@@ -39,6 +39,8 @@ res=$? && ((res != 0)) && exit $res
 . src/func_util.sh
 . src/func_$myname1.sh
 
+echo "[$(datetime_now)] ### 1" >&2
+
 #-------------------------------------------------------------------------------
 
 if ((USE_RANKDIR == 1)); then
@@ -53,9 +55,22 @@ if ((USE_RANKDIR == 1)); then
   else
     TMPRUN="./run"
   fi
+  if ((TMPOUT_MODE <= 2)); then
+    TMPOUT="../out"
+  else
+    TMPOUT="./out"
+  fi
+fi
+
+if ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
+  STDOUT=''
+else
+  STDOUT='NOUT'
 fi
 
 setting "$1" "$2" "$3" "$4" "$5"
+
+echo "[$(datetime_now)] ### 2" >&2
 
 #-------------------------------------------------------------------------------
 
@@ -83,6 +98,8 @@ if ((BUILTIN_STAGING && ISTEP == 1)); then
   fi
 fi
 
+echo "[$(datetime_now)] ### 3" >&2
+
 #===============================================================================
 # Determine the distibution schemes
 
@@ -103,6 +120,8 @@ else
   distribute_da_cycle - - $NODEFILE_DIR/distr "$MEMBERS"
 fi
 
+echo "[$(datetime_now)] ### 4" >&2
+
 #===============================================================================
 # Determine the staging list and then stage in
 
@@ -116,6 +135,8 @@ if ((BUILTIN_STAGING && ISTEP == 1)); then
   fi
 fi
 
+echo "[$(datetime_now)] ### 5" >&2
+
 #===============================================================================
 # Run initialization scripts on all nodes
 
@@ -124,6 +145,8 @@ if ((TMPRUN_MODE <= 2)); then
 else
   pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1
 fi
+
+echo "[$(datetime_now)] ### 6" >&2
 
 #===============================================================================
 # Run data assimilation cycles
@@ -147,6 +170,8 @@ while ((time <= ETIME)); do
 
 #-------------------------------------------------------------------------------
 # Write the header of the log file
+
+  echo "[$(datetime_now)] ### 7" >&2
 
 #  exec > $LOGDIR/${myname1}_${time}.log
   exec > >(tee $LOGDIR/${myname1}_${time}.log)
@@ -247,34 +272,42 @@ while ((time <= ETIME)); do
         fi
       fi
 
+      if ((s <= 3)); then
+        stdout_dir="$TMPOUT/${time}/log/$(basename ${stepexecdir[$s]})"
+      else
+        stdout_dir="$TMPOUT/${atime}/log/$(basename ${stepexecdir[$s]})"
+      fi
+
+#echo "$stdout_dir" >&2
+#echo ${stepexecdir[$s]} >&2
+#echo $(rev_path ${stepexecdir[$s]}) >&2
+
       if ((enable_iter == 1)); then
         for it in $(seq $nitmax); do
           if ((USE_RANKDIR == 1)); then
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: start" >&2
-
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" ${stepexecdir[$s]} \
                     "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" $loop $it # > /dev/null
 
-      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: end" >&2
-
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           else
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: start" >&2
-
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
                     "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it # > /dev/null
 
-      echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $loop: $it: end" >&2
-
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           fi
         done
       else
         if ((USE_RANKDIR == 1)); then
-          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf ${stepexecdir[$s]} \
+
+          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" ${stepexecdir[$s]} \
                   "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" "$loop" # > /dev/null
         else
-          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf . \
+
+          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
                   "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" # > /dev/null
         fi
       fi

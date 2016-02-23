@@ -252,10 +252,18 @@ ${DATADIR}/land|land
 EOF
 
   if [ "$TOPO_FORMAT" != 'prep' ]; then
-    echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
+    if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
+      echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat
+    else
+      echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
+    fi
   fi
   if [ "$LANDUSE_FORMAT" != 'prep' ]; then
-    echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
+    if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
+      echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat
+    else
+      echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
+    fi
   fi
 
   if ((MACHINE_TYPE == 10)); then
@@ -345,6 +353,11 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
         done
       fi
     done
+
+    if ((find_catalogue == 0)); then
+      echo "[Error] Cannot find a lat/lon domain catalogue file." >&2
+      exit 1
+    fi
   fi
 #-------------------
 else
@@ -394,10 +407,13 @@ else
         # topo
         #-------------------
         if [ "$TOPO_FORMAT" = 'prep' ]; then
-          for q in $(seq $mem_np); do
-            pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
-            path="${time2}/topo/topo$(printf $SCALE_SFX $((q-1)))"
-            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+          for m in $(seq $fmember); do
+            mm=$(((c-1) * fmember + m))
+            for q in $(seq $mem_np); do
+              pathin="${DATA_TOPO}/topo$(printf $SCALE_SFX $((q-1)))"
+              path="${time2}/topo/topo$(printf $SCALE_SFX $((q-1)))"
+              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+            done
           done
         fi
 
@@ -409,27 +425,36 @@ else
           else
             pathin_pfx="${DATA_LANDUSE}"
           fi
-          for q in $(seq $mem_np); do
-            pathin="${pathin_pfx}/landuse$(printf $SCALE_SFX $((q-1)))"
-            path="${time2}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
-            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+          for m in $(seq $fmember); do
+            mm=$(((c-1) * fmember + m))
+            for q in $(seq $mem_np); do
+              pathin="${pathin_pfx}/landuse$(printf $SCALE_SFX $((q-1)))"
+              path="${time2}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+            done
           done
         fi
 
         # bdy (prepared)
         #-------------------
         if ((BDY_FORMAT == 0)); then
-          for q in $(seq $mem_np); do
-            pathin="${DATA_BDY_SCALE_PREP}/${time2}/mean/boundary$(printf $SCALE_SFX $((q-1)))"
-            path="${time2}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
-            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
-          done
+          if ((BDY_ENS == 0)); then
+            for m in $(seq $fmember); do
+              mm=$(((c-1) * fmember + m))
+              for q in $(seq $mem_np); do
+                pathin="${DATA_BDY_SCALE_PREP}/${time2}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+                path="${time2}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+              done
+            done
+          fi
           if ((BDY_ENS == 1)); then
-            for m in $(seq $MEMBER); do
+            for m in $(seq $fmember); do
+              mm=$(((c-1) * fmember + m))
               for q in $(seq $mem_np); do
                 pathin="${DATA_BDY_SCALE_PREP}/${time2}/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
                 path="${time2}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
-                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
               done
             done
           fi
@@ -520,14 +545,14 @@ else
             # log [scale_init: members]
             #-------------------
             if ((BDY_FORMAT > 0)) && ((LOG_OPT <= 2)) && ((BDY_ENS == 1)); then
-              path="${time2}/log/scale_init/${name_m[$mm]}_init_LOG${SCALE_LOG_SFX}"
+              path="${time2}/log/scale_init/${name_m[$mm]}_fcst_LOG${SCALE_LOG_SFX}"
               echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+1))]}
             fi
 
             # log [scale]
             #-------------------
             if ((LOG_OPT <= 3)); then
-              path="${time2}/log/scale/${name_m[$mm]}_LOG${SCALE_LOG_SFX}"
+              path="${time2}/log/scale/${name_m[$mm]}_fcst_LOG${SCALE_LOG_SFX}"
               echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+1))]}
               path="${time2}/log/scale/${name_m[$mm]}_latlon_domain_catalogue.txt"
               echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+1))]}
@@ -600,7 +625,7 @@ else
           #-------------------
           if [ "$TOPO_FORMAT" != 'prep' ] || [ "$LANDUSE_FORMAT" != 'prep' ]; then
             if ((LOG_OPT <= 2)); then
-              path="${time2}/log/scale_pp/pp_LOG${SCALE_LOG_SFX}"
+              path="${time2}/log/scale_pp/fcst_LOG${SCALE_LOG_SFX}"
               echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$((tmpidx+1))]}
             fi
           fi
@@ -608,7 +633,7 @@ else
           # log [scale_init: mean]
           #-------------------
           if ((BDY_FORMAT > 0)) && ((LOG_OPT <= 2)) && ((BDY_ENS != 1)); then
-            path="${time2}/log/scale_init/mean_init_LOG${SCALE_LOG_SFX}"
+            path="${time2}/log/scale_init/mean_fcst_LOG${SCALE_LOG_SFX}"
             echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$((tmpidx+1))]}
           fi
 
@@ -651,10 +676,15 @@ else
         if [ -s "$DATA_BDY_SCALE/${time_catalogue}/log/scale/latlon_domain_catalogue.txt" ]; then
           pathin="$DATA_BDY_SCALE/${time_catalogue}/log/scale/latlon_domain_catalogue.txt"
           path="bdyscale/latlon_domain_catalogue.txt"
-          if ((DATA_BDY_TMPLOC == 1)); then
+#          if ((DATA_BDY_TMPLOC == 1)); then
+#            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#          elif ((DATA_BDY_TMPLOC == 2)); then
+#            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+#          fi
+          if ((DISK_MODE_DATA_BDY == 2)); then
+            echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+          else
             echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-          elif ((DATA_BDY_TMPLOC == 2)); then
-            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
           fi
           find_catalogue=1
         fi
@@ -668,15 +698,20 @@ else
             pathin="$ifile"
             path="bdyscale/${time_bdy}/${name_m[$m]}/$(basename $ifile)"
 
-            if ((DATA_BDY_TMPLOC == 1)); then
+#            if ((DATA_BDY_TMPLOC == 1)); then
+#              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#            elif ((DATA_BDY_TMPLOC == 2)); then
+#              for c in $(seq $CYCLE); do
+#                mm=$(((c-1) * fmember + m))
+#                for q in $(seq $mem_np); do
+#                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]} ###### q: may be redundant ????
+#                done
+#              done
+#            fi
+            if ((DISK_MODE_DATA_BDY == 2)); then
+              echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+            else
               echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-            elif ((DATA_BDY_TMPLOC == 2)); then
-              for c in $(seq $CYCLE); do
-                mm=$(((c-1) * fmember + m))
-                for q in $(seq $mem_np); do
-                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]} ###### q: may be redundant ????
-                done
-              done
             fi
           done
 #            pathin="$DATA_BDY_SCALE/${time_bdy}/gues/${mem}"
@@ -694,10 +729,15 @@ else
           pathin="$ifile"
           path="bdyscale/${time_bdy}/mean/$(basename $ifile)"
 
-          if ((DATA_BDY_TMPLOC == 1)); then
+#          if ((DATA_BDY_TMPLOC == 1)); then
+#            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#          elif ((DATA_BDY_TMPLOC == 2)); then
+#            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+#          fi
+          if ((DISK_MODE_DATA_BDY == 2)); then
+            echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+          else
             echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-          elif ((DATA_BDY_TMPLOC == 2)); then
-            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
           fi
         done
 #          pathin="$DATA_BDY_SCALE/${time_bdy}/gues/meanf"
@@ -709,6 +749,11 @@ else
 #          fi
       fi
     done
+
+    if ((find_catalogue == 0)); then
+      echo "[Error] Cannot find a lat/lon domain catalogue file." >&2
+      exit 1
+    fi
 
   #-------------------
   elif ((BDY_FORMAT == 2)); then
@@ -725,25 +770,35 @@ else
           pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_dby}"
           path="bdywrf/${name_m[$m]}/wrfout_${time_dby}"
 
-          if ((DATA_BDY_TMPLOC == 1)); then
+#          if ((DATA_BDY_TMPLOC == 1)); then
+#            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#          elif ((DATA_BDY_TMPLOC == 2)); then
+#            for c in $(seq $CYCLE); do
+#              mm=$(((c-1) * fmember + m))
+#              for q in $(seq $mem_np); do
+#                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]} ###### q: may be redundant ????
+#              done
+#            done
+#          fi
+          if ((DISK_MODE_DATA_BDY == 2)); then
+            echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+          else
             echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-          elif ((DATA_BDY_TMPLOC == 2)); then
-            for c in $(seq $CYCLE); do
-              mm=$(((c-1) * fmember + m))
-              for q in $(seq $mem_np); do
-                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]} ###### q: may be redundant ????
-              done
-            done
           fi
         done
       else
         pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
         path="bdywrf/mean/wrfout_${time_dby}"
 
-        if ((DATA_BDY_TMPLOC == 1)); then
+#        if ((DATA_BDY_TMPLOC == 1)); then
+#          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#        elif ((DATA_BDY_TMPLOC == 2)); then
+#          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+#        fi
+        if ((DISK_MODE_DATA_BDY == 2)); then
+          echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+        else
           echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-        elif ((DATA_BDY_TMPLOC == 2)); then
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
         fi
       fi
       time_dby=$(datetime $time_dby $BDYINT s)
@@ -822,13 +877,10 @@ for it in $(seq $its $ite); do
     else
       c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
     fi
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Pre-processing  script] ${stimesfmt[$c]}, node ${node_m[$m]} [$(datetime_now)]"
-    fi
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK ${stimes[$c]} \
-           $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
+           $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT fcst_LOG
     fi
   fi
 done
@@ -866,13 +918,10 @@ for it in $(seq $its $ite); do
     else
       c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
     fi
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Post-processing script] ${stimesfmt[$c]}, node ${node_m[$m]} [$(datetime_now)]"
-    fi
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $mem_np ${stimes[$c]} \
-           ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT      ###### ${name_m[$m]}... will be buggy...
+           ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT fcst      ###### ${name_m[$m]}... will be buggy...
     fi
   fi
 done
@@ -893,16 +942,26 @@ if ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
   echo "  ... skip this step (use prepared boundaries)"
   exit 1
 elif ((BDY_FORMAT == 1)); then
-  if ((DATA_BDY_TMPLOC == 1)); then
-    bdyscale_loc=$TMPDAT/bdyscale
-  elif ((DATA_BDY_TMPLOC == 2)); then
-    bdyscale_loc=$TMPOUT/bdyscale
+#  if ((DATA_BDY_TMPLOC == 1)); then
+#    bdyscale_loc=$TMPDAT/bdyscale
+#  elif ((DATA_BDY_TMPLOC == 2)); then
+#    bdyscale_loc=$TMPOUT/bdyscale
+#  fi
+  if ((DISK_MODE_DATA_BDY == 2)); then
+    bdyscale_loc=${TMPDAT_S}/bdyscale
+  else
+    bdyscale_loc=${TMPDAT_L}/bdyscale
   fi
 elif ((BDY_FORMAT == 2)); then
-  if ((DATA_BDY_TMPLOC == 1)); then
-    bdywrf_loc=$TMPDAT/bdywrf
-  elif ((DATA_BDY_TMPLOC == 2)); then
-    bdywrf_loc=$TMPOUT/bdywrf
+#  if ((DATA_BDY_TMPLOC == 1)); then
+#    bdywrf_loc=$TMPDAT/bdywrf
+#  elif ((DATA_BDY_TMPLOC == 2)); then
+#    bdywrf_loc=$TMPOUT/bdywrf
+#  fi
+  if ((DISK_MODE_DATA_BDY == 2)); then
+    bdywrf_loc=${TMPDAT_S}/bdywrf
+  else
+    bdywrf_loc=${TMPDAT_L}/bdywrf
   fi
 fi
 
@@ -936,16 +995,10 @@ for it in $(seq $its $ite); do
       c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
     fi
 
-    history_files_for_bdy ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME 0
-    time_bdy=${history_times[1]}
-
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      if ((BDY_ENS == 1)); then
-        echo "  [Pre-processing  script] ${stimesfmt[$c]}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-      else
-        echo "  [Pre-processing  script] ${stimesfmt[$c]}, node ${node_m[$m]} [$(datetime_now)]"
-      fi
+    if ((BDY_FORMAT == 1)) || ((BDY_FORMAT == -1)); then
+      history_files_for_bdy ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME 0
     fi
+    time_bdy=${history_times[1]}
 
     if (pdrun $g $PROC_OPT); then
       #------
@@ -957,14 +1010,14 @@ for it in $(seq $its $ite); do
                ${bdyscale_loc}/${time_bdy}/${name_m[$m]}/history \
                ${stimes[$c]} $FCSTLEN $mkinit ${name_m[$m]} \
                $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT \
-               $((ntsteps_skip+1))
+               $((ntsteps_skip+1)) fcst_LOG
         else
           bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK $mem_np \
                $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \
                ${bdyscale_loc}/${time_bdy}/mean/history \
                ${stimes[$c]} $FCSTFLEN $mkinit mean \
                $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT \
-               $((ntsteps_skip+1))
+               $((ntsteps_skip+1)) fcst_LOG
         fi
       #------
       elif ((BDY_FORMAT == 2)); then
@@ -974,13 +1027,15 @@ for it in $(seq $its $ite); do
                $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \
                ${bdywrf_loc}/${name_m[$m]}/wrfout \
                ${stimes[$c]} $FCSTLEN $mkinit ${name_m[$m]} \
-               $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
+               $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT \
+               - fcst_LOG
         else
           bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK $mem_np \
                $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \
                ${bdywrf_loc}/mean/wrfout \
                ${stimes[$c]} $FCSTLEN $mkinit mean \
-               $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
+               $TMPRUN/scale_init/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT \
+               - fcst_LOG
         fi
       #------
 #      elif ((BDY_FORMAT == 3)); then
@@ -1032,22 +1087,15 @@ for it in $(seq $its $ite); do
     else
       c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
     fi
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      if ((BDY_ENS == 1)); then
-        echo "  [Post-processing script] ${stimesfmt[$c]}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-      else
-        echo "  [Post-processing script] ${stimesfmt[$c]}, node ${node_m[$m]} [$(datetime_now)]"
-      fi
-    fi
 
     if (pdrun $g $PROC_OPT); then
 #      if ((BDY_FORMAT == 1 || BDY_FORMAT == 2)); then
         if ((BDY_ENS == 1)); then
           bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np ${stimes[$c]} \
-               $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
+               $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT fcst
         else
           bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np ${stimes[$c]} \
-               $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
+               $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT fcst
         fi
 #      elif ((BDY_FORMAT == 3)); then
 #        ...
@@ -1117,9 +1165,6 @@ for it in $(seq $its $ite); do
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= fmembertot)); then
     c=$(((m-1)/fmember+1))
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Pre-processing  script] ${stimesfmt[$c]}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-    fi
 
 #    if ((PERTURB_BDY == 1)); then
 #      ...
@@ -1132,18 +1177,18 @@ for it in $(seq $its $ite); do
     fi
 
     if (pdrun $g $PROC_OPT); then
-      if ((BDY_FORMAT == 1)); then
-        bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
+#      if ((BDY_FORMAT == 1)); then
+#        bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np ${name_m[$m]} \
+#             $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
+#             $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \
+#             ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT $time_bdy fcst_LOG
+#      elif ((BDY_FORMAT == 2)); then
+        bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np ${name_m[$m]} \
              $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
              $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \
-             ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT $time_bdy
-      elif ((BDY_FORMAT == 2)); then
-        bash $SCRP_DIR/src/pre_scale.sh $MYRANK $mem_np \
-             $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
-             $TMPOUT/${stimes[$c]}/topo/topo $TMPOUT/${stimes[$c]}/landuse/landuse \
-             ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
+             ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT ${stimes[$c]} fcst_LOG
 #      elif ((BDY_FORMAT == 3)); then
-      fi
+#      fi
       
     fi
   fi
@@ -1166,9 +1211,6 @@ for it in $(seq $its $ite); do
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= fmembertot)); then
     c=$(((m-1)/fmember+1))
-    if [ ! -z "${proc2grpproc[$((MYRANK+1))]}" ] && ((${proc2grpproc[$((MYRANK+1))]} == 1)); then
-      echo "  [Post-processing script] ${stimesfmt[$c]}, member ${name_m[$m]}: node ${node_m[$m]} [$(datetime_now)]"
-    fi
 
 #    if ((PERTURB_BDY == 1)); then
 #      ...
@@ -1176,7 +1218,7 @@ for it in $(seq $its $ite); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $mem_np \
-           ${stimes[$c]} ${name_m[$m]} $FCSTLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT fcst
+           ${stimes[$c]} ${name_m[$m]} $FCSTLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT fcst $iter
     fi
   fi
 done

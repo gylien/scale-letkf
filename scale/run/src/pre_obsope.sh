@@ -36,13 +36,17 @@ historybaselen=7
 
 #===============================================================================
 
-if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
-  for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls history*.nc 2> /dev/null); do
-    ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEMSEQ}${ifile:$historybaselen}
-  done
+#if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
+#  for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls history*.nc 2> /dev/null); do
+#    ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEMSEQ}${ifile:$historybaselen}
+#  done
 #  for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls init*.nc 2> /dev/null); do
 #    ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/init.${MEMSEQ}${ifile:$initbaselen}
 #  done
+#fi
+
+if [ "$MEM" != 'mean' ]; then
+  mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
 fi
 
 #===============================================================================

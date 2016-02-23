@@ -37,7 +37,7 @@ program scaleles_ens
 
   REAL(8) :: rtimer00,rtimer
   INTEGER :: ierr, it, its, ite, im
-  CHARACTER(11) :: stdoutf='NOUT-000000'
+  CHARACTER(7) :: stdoutf='-000000'
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
   CHARACTER(len=H_LONG) :: confname='0000/run.conf'
@@ -82,30 +82,35 @@ program scaleles_ens
 
   WRITE(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ',universal_myrank,'/',universal_nprocs-1
 
-  if (command_argument_count() >= 3) then
-    call get_command_argument(2, icmd)
+  if (command_argument_count() >= 4) then
+    call get_command_argument(3, icmd)
     call chdir(trim(icmd))
     write (myranks, '(I10)') universal_myrank
-    call get_command_argument(3, icmd)
+    call get_command_argument(4, icmd)
     cmd1 = 'bash ' // trim(icmd) // ' ensfcst_1' // ' ' // trim(myranks)
     cmd2 = 'bash ' // trim(icmd) // ' ensfcst_2' // ' ' // trim(myranks)
-    do iarg = 4, command_argument_count()
+    do iarg = 5, command_argument_count()
       call get_command_argument(iarg, icmd)
       cmd1 = trim(cmd1) // ' ' // trim(icmd)
       cmd2 = trim(cmd2) // ' ' // trim(icmd)
     end do
   end if
 
-  WRITE(stdoutf(6:11), '(I6.6)') universal_myrank
-!  WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', universal_myrank
-  OPEN(6,FILE=stdoutf)
-  WRITE(6,'(A,I6.6,2A)') 'MYRANK=',universal_myrank,', STDOUTF=',stdoutf
+  if (command_argument_count() >= 2) then
+    call get_command_argument(2, icmd)
+    if (trim(icmd) /= '') then
+      WRITE(stdoutf(2:7), '(I6.6)') myrank
+!      WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',trim(icmd)//stdoutf,' for MYRANK ', myrank
+      OPEN(6,FILE=trim(icmd)//stdoutf)
+      WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',trim(icmd)//stdoutf
+    end if
+  end if
 
 !-----------------------------------------------------------------------
 ! Pre-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 3) then
+  if (command_argument_count() >= 4) then
     write (6,'(A)') 'Run pre-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd1), ']'
     call system(trim(cmd1))
@@ -129,14 +134,6 @@ program scaleles_ens
 !-----------------------------------------------------------------------
 ! Run SCALE-LES
 !-----------------------------------------------------------------------
-
-!  if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
-!    write(6,'(A,I10)') 'MEM_NP    = ', MEM_NP
-!    write(6,'(A,I10)') 'PRC_NUM_X = ', PRC_NUM_X
-!    write(6,'(A,I10)') 'PRC_NUM_Y = ', PRC_NUM_Y
-!    write(6,'(A)') 'MEM_NP should be equal to PRC_NUM_X * PRC_NUM_Y.'
-!    stop
-!  end if
 
   ! split MPI communicator for LETKF
   call PRC_MPIsplit_letkf( universal_comm,                   & ! [IN]
@@ -204,7 +201,7 @@ program scaleles_ens
 ! Post-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 3) then
+  if (command_argument_count() >= 4) then
     write (6,'(A)') 'Run post-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd2), ']'
     call system(trim(cmd2))

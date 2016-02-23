@@ -39,45 +39,40 @@ letkfbaselen=9
 
 #===============================================================================
 
-mkdir -p $TMPOUT/${ATIME}/anal/${MEM}
+#mkdir -p $TMPOUT/${ATIME}/anal/${MEM}
 
-if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd'
-  mkdir -p $TMPOUT/${ATIME}/gues/mean
-  for ifile in $(cd $TMPDIR ; ls gues.mean.*.nc 2> /dev/null); do
-    mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/mean/init${ifile:$letkfbaselen}
-  done
-  mkdir -p $TMPOUT/${ATIME}/anal/mean
-  for ifile in $(cd $TMPDIR ; ls anal.mean.*.nc 2> /dev/null); do
-    mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/mean/init${ifile:$letkfbaselen}
-  done
-  mkdir -p $TMPOUT/${ATIME}/gues/sprd
-  for ifile in $(cd $TMPDIR ; ls gues.sprd.*.nc 2> /dev/null); do
-    mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/sprd/init${ifile:$letkfbaselen}
-  done
-  mkdir -p $TMPOUT/${ATIME}/anal/sprd
-  for ifile in $(cd $TMPDIR ; ls anal.sprd.*.nc 2> /dev/null); do
-    mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/sprd/init${ifile:$letkfbaselen}
-  done
-else
-  for ifile in $(cd $TMPDIR ; ls anal.${MEMSEQ}.*.nc 2> /dev/null); do
-    mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/${MEM}/init${ifile:$letkfbaselen}
-  done
-fi
-
-#if ((MYRANK < MEM_NP)); then
-#  if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $MYRANK)" ]; then
-#    mkdir -p $TMPOUT/${ATIME}/log/letkf
-#    mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $MYRANK) $TMPOUT/${ATIME}/log/letkf
-#  fi
+#if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd'
+#  mkdir -p $TMPOUT/${ATIME}/gues/mean
+#  for ifile in $(cd $TMPDIR ; ls gues.mean.*.nc 2> /dev/null); do
+#    mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/mean/init${ifile:$letkfbaselen}
+#  done
+#  mkdir -p $TMPOUT/${ATIME}/anal/mean
+#  for ifile in $(cd $TMPDIR ; ls anal.mean.*.nc 2> /dev/null); do
+#    mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/mean/init${ifile:$letkfbaselen}
+#  done
+#  mkdir -p $TMPOUT/${ATIME}/gues/sprd
+#  for ifile in $(cd $TMPDIR ; ls gues.sprd.*.nc 2> /dev/null); do
+#    mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/sprd/init${ifile:$letkfbaselen}
+#  done
+#  mkdir -p $TMPOUT/${ATIME}/anal/sprd
+#  for ifile in $(cd $TMPDIR ; ls anal.sprd.*.nc 2> /dev/null); do
+#    mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/sprd/init${ifile:$letkfbaselen}
+#  done
+#else
+#  for ifile in $(cd $TMPDIR ; ls anal.${MEMSEQ}.*.nc 2> /dev/null); do
+#    mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/${MEM}/init${ifile:$letkfbaselen}
+#  done
 #fi
-if ((MYRANK < MEM_NP)) && ((LOG_OPT <= 4)); then
-  mkdir -p $TMPOUT/${ATIME}/log/letkf
-  for q in $(seq $MEM_NP); do
-    if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
-      mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${ATIME}/log/letkf
-    fi
-  done
-fi
+
+##if ((MYRANK < MEM_NP)) && ((LOG_OPT <= 4)); then
+##  mkdir -p $TMPOUT/${ATIME}/log/letkf
+##  for q in $(seq $MEM_NP); do
+##    if [ -e "$TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1)))" ]; then
+##      mv -f $TMPDIR/NOUT-$(printf $PROCESS_FMT $((q-1))) $TMPOUT/${ATIME}/log/letkf
+##    fi
+##  done
+#  mv -f $TMPDIR/NOUT* $TMPOUT/${STIME}/log/letkf
+##fi
 
 #if [ "$MEM" == 'mean' ] && ((LOG_OPT <= 4)); then ###### using a variable for 'mean'
 #  mkdir -p $TMPOUT/${ATIME}/log/letkf

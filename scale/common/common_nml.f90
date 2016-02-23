@@ -15,6 +15,9 @@ MODULE common_nml
 
   !----
   integer, parameter :: nvarmax = 100
+  integer, parameter :: nobsfilemax = 10
+  integer, parameter :: filelenmax = 256
+  integer, parameter :: memberflen = 4 ! Length of member # in filename
   integer, parameter :: nch = 10 ! Num of Himawari-8 (IR) channels 
 
   !--- PARAM_ENSEMBLE
@@ -22,7 +25,23 @@ MODULE common_nml
   integer :: MEMBER_RUN = 1  !
   integer :: MEMBER_ITER = 0 !
 
+  !--- PARAM_OBSOPE
+  character(filelenmax) :: HISTORY_IN_BASENAME = 'hist.@@@@'
+  character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
+
   !--- PARAM_LETKF
+  integer               :: OBS_IN_NUM = 1
+  character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
+  integer               :: OBS_IN_FORMAT(nobsfilemax) = 1
+  character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@'
+  character(filelenmax) :: GUES_IN_BASENAME = 'gues.@@@@'
+  character(filelenmax) :: GUES_OUT_MEAN_BASENAME = 'gues.mean'
+  character(filelenmax) :: GUES_OUT_SPRD_BASENAME = 'gues.sprd'
+  character(filelenmax) :: ANAL_OUT_BASENAME = 'anal.@@@@'
+  character(filelenmax) :: ANAL_OUT_MEAN_BASENAME = 'anal.mean'
+  character(filelenmax) :: ANAL_OUT_SPRD_BASENAME = 'anal.sprd'
+  character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
+
   integer :: SLOT_START = 1
   integer :: SLOT_END = 1
   integer :: SLOT_BASE = 1
@@ -86,9 +105,17 @@ MODULE common_nml
   real(r_size) :: OBSERR_PS = 100.0d0
   real(r_size) :: OBSERR_RADAR_REF = 5.0d0
   real(r_size) :: OBSERR_RADAR_VR = 3.0d0
-  real(r_size) :: OBSERR_H08 = 0.3d0 ! H08  
   logical :: USE_OBSERR_RADAR_REF = .false.
   logical :: USE_OBSERR_RADAR_VR = .false.
+!
+! 
+! -- Defalut error values will be updated based on a bug-fixed experiment
+! (02/09/2016)
+! -- ###Default obs err for Himawari-8 obs is based on Desroziers et al. 
+!     (2005 QJRMS)'s statistics conducted by T.Honda (12/25/2015)
+!
+  real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.5d0,7.2d0,8.6d0,5.0d0,&
+                                     5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
 
   !--- PARAM_LETKF_MONITOR
   logical :: DEPARTURE_STAT = .true.
@@ -164,6 +191,32 @@ subroutine read_nml_ensemble
 end subroutine read_nml_ensemble
 
 !-----------------------------------------------------------------------
+! PARAM_ENSEMBLE
+!-----------------------------------------------------------------------
+subroutine read_nml_obsope
+  implicit none
+  integer :: ierr
+  
+  namelist /PARAM_OBSOPE/ &
+    HISTORY_IN_BASENAME, &
+    OBSDA_OUT_BASENAME
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_OBSOPE,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Error: /PARAM_OBSOPE/ is not found in namelist. Check!'
+    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_OBSOPE. Check!'
+    stop
+  endif
+
+  write(6, nml=PARAM_OBSOPE)
+
+  return
+end subroutine read_nml_obsope
+
+!-----------------------------------------------------------------------
 ! PARAM_LETKF
 !-----------------------------------------------------------------------
 subroutine read_nml_letkf
@@ -171,6 +224,17 @@ subroutine read_nml_letkf
   integer :: ierr
   
   namelist /PARAM_LETKF/ &
+    OBS_IN_NUM, &
+    OBS_IN_NAME, &
+    OBS_IN_FORMAT, &
+    OBSDA_IN_BASENAME, &
+    GUES_IN_BASENAME, &
+    GUES_OUT_MEAN_BASENAME, &
+    GUES_OUT_SPRD_BASENAME, &
+    ANAL_OUT_BASENAME, &
+    ANAL_OUT_MEAN_BASENAME, &
+    ANAL_OUT_SPRD_BASENAME, &
+    LETKF_TOPO_IN_BASENAME, &
     SLOT_START, &
     SLOT_END, &
     SLOT_BASE, &
@@ -439,5 +503,42 @@ subroutine read_nml_letkf_h08
 
   return
 end subroutine read_nml_letkf_h08
+
+!-----------------------------------------------------------------------
+! file_member_replace
+!-----------------------------------------------------------------------
+
+subroutine file_member_replace(mem, filename, filename_out)
+  implicit none
+  integer, intent(in) :: mem
+  character(*), intent(in) :: filename
+  character(filelenmax), intent(out) :: filename_out
+
+  character(memberflen) :: memberfstr = '@@@@'
+  integer :: s, is
+
+  s = 0
+  filename_out = filename
+  do is = 1, len(filename)-memberflen+1
+    if (filename(is:is+memberflen-1) == memberfstr) then
+      if (mem <= MEMBER) then
+        write (filename_out(is:is+memberflen-1), '(I4.4)') mem
+      else if (mem == MEMBER+1) then
+        write (filename_out(is:is+memberflen-1), '(A4)') 'mean'  !!!!!! will be wrong if memberflen != 4 !!!!!!
+      else if (mem == MEMBER+2) then
+        write (filename_out(is:is+memberflen-1), '(A4)') 'sprd'  !!!!!! will be wrong if memberflen != 4 !!!!!!
+      end if
+      s = is
+      exit
+    end if
+  end do
+
+  if (s == 0) then
+    write (6, '(3A)') "[Warning] Keyword '@@@@' not found in '", filename, "'"
+    stop 1
+  end if
+
+  return
+end subroutine file_member_replace
 
 end module common_nml
