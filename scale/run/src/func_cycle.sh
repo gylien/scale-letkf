@@ -411,6 +411,20 @@ else
       exit 1
     fi
 
+    # topo (bdy_scale)
+    #-------------------
+    if ((BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
+      for ifile in $(ls ${DATA_TOPO_BDY_SCALE}/topo.*.nc 2> /dev/null); do
+        pathin="$ifile"
+        path="bdytopo/${time}/$(basename $ifile)"
+        if ((DISK_MODE_DATA_BDY == 2)); then
+          echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+        else
+          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+        fi
+      done
+    fi
+
     # landuse
     #-------------------
     if [ "$LANDUSE_FORMAT" = 'prep' ]; then
@@ -892,6 +906,16 @@ elif ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
   exit 1
 fi
 
+if ((BDY_FORMAT == 1)); then
+  if ((DISK_MODE_DATA_BDY == 2)); then
+    bdyscale_loc=${TMPDAT_S}/bdyscale
+    bdytopo_loc=${TMPDAT_S}/bdytopo
+  else
+    bdyscale_loc=${TMPDAT_L}/bdyscale
+    bdytopo_loc=${TMPDAT_L}/bdytopo
+  fi
+fi
+
 if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
@@ -917,7 +941,8 @@ for it in $(seq $its $ite); do
   if ((m >= 1 && m <= MEMBER_RUN)); then
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK $time \
-           $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT
+           $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT \
+           '' ${bdytopo_loc}/${time}/topo "${bdyscale_loc}/latlon_domain_catalogue.txt"
     fi
   fi
 

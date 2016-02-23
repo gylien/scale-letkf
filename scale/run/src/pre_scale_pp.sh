@@ -13,7 +13,7 @@ if (($# < 5)); then
 
 [pre_scale_pp.sh] Prepare a temporary directory for scale-les_pp run.
 
-Usage: $0 MYRANK STIME TMPDIR EXECDIR DATADIR [LOGNAME]
+Usage: $0 MYRANK STIME TMPDIR EXECDIR DATADIR [LOGNAME COPYTOPO CATALOGUE]
 
   MYRANK   My rank number (not used)
   STIME    Start time (format: YYYYMMDDHHMMSS)
@@ -21,6 +21,8 @@ Usage: $0 MYRANK STIME TMPDIR EXECDIR DATADIR [LOGNAME]
   EXECDIR  Directory of SCALE executable files
   DATADIR  Directory of SCALE data files
   LOGNAME
+  COPYTOPO
+  CATALOGUE
 
 EOF
   exit 1
@@ -31,7 +33,9 @@ STIME="$1"; shift
 TMPDIR="$1"; shift
 EXECDIR="$1"; shift
 DATADIR="$1"; shift   ###### no use
-LOGNAME="${1:-LOG}"
+LOGNAME="${1:-LOG}"; shift
+COPYTOPO="$1"; shift
+CATALOGUE="$1"
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
@@ -61,6 +65,12 @@ else
   DATADIR=$TMPDAT_L
 fi
 
+USE_NESTING='.false.'
+OFFLINE='.true.'
+if ((BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
+  USE_NESTING='.true.'
+fi
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_pp | \
@@ -76,6 +86,10 @@ cat $TMPDAT/conf/config.nml.scale_pp | \
         -e "/!--CNVLANDUSE_name--/a CNVLANDUSE_name = '$LANDUSE_FORMAT'," \
         -e "/!--GLCCv2_IN_DIR--/a GLCCv2_IN_DIR = \"$DATADIR/landuse/GLCCv2/Products\"," \
         -e "/!--LU100M_IN_DIR--/a LU100M_IN_DIR = \"$DATADIR/landuse/LU100M/Products\"," \
+        -e "/!--COPYTOPO_IN_BASENAME--/a COPYTOPO_IN_BASENAME = \"${COPYTOPO}\"," \
+        -e "/!--LATLON_CATALOGUE_FNAME--/a LATLON_CATALOGUE_FNAME = \"${CATALOGUE}\"," \
+        -e "/!--USE_NESTING--/a USE_NESTING = $USE_NESTING," \
+        -e "/!--OFFLINE--/a OFFLINE = $OFFLINE," \
     > $TMPDIR/pp.conf
 
 #===============================================================================
