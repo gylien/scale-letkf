@@ -75,9 +75,9 @@ echo "[$(datetime_now)] ### 2" >&2
 #-------------------------------------------------------------------------------
 
 mkdir -p $LOGDIR
-exec 3>&1 4>&2
-#exec 2>> $LOGDIR/${myname1}.err
-exec 2> >(tee -a $LOGDIR/${myname1}.err >&2)
+#exec 3>&1 4>&2
+##exec 2>> $LOGDIR/${myname1}.err
+#exec 2> >(tee -a $LOGDIR/${myname1}.err >&2)
 
 echo "[$(datetime_now)] Start $myname $@" >&2
 
@@ -173,8 +173,8 @@ while ((time <= ETIME)); do
 
   echo "[$(datetime_now)] ### 7" >&2
 
-#  exec > $LOGDIR/${myname1}_${time}.log
-  exec > >(tee $LOGDIR/${myname1}_${time}.log)
+##  exec > $LOGDIR/${myname1}_${time}.log
+#  exec > >(tee $LOGDIR/${myname1}_${time}.log)
 
   echo
   echo " +----------------------------------------------------------------+"
@@ -347,7 +347,7 @@ while ((time <= ETIME)); do
   echo " +----------------------------------------------------------------+"
   echo
 
-  exec 1>&3
+#  exec 1>&3
 
 #-------------------------------------------------------------------------------
 

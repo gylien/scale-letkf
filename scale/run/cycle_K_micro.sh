@@ -198,11 +198,11 @@ if ((ONLINE_STGOUT != 1)); then
 fi
 
 ###### To do: also online staging...
-mkdir -p $LOGDIR
-cp -f $TMP/log/${myname1}_*.log $LOGDIR
-if [ -f "$TMP/log/${myname1}.err" ]; then
-  cat $TMP/log/${myname1}.err >> $LOGDIR/${myname1}.err
-fi
+#mkdir -p $LOGDIR
+#cp -f $TMP/log/${myname1}_*.log $LOGDIR
+#if [ -f "$TMP/log/${myname1}.err" ]; then
+#  cat $TMP/log/${myname1}.err >> $LOGDIR/${myname1}.err
+#fi
 
 #safe_rm_tmpdir $TMP
 

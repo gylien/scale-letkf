@@ -156,7 +156,7 @@ fi
 # stage-in: scripts
 
 mkdir -p $LOGDIR
-touch $LOGDIR/${PROGNAME}.err
+#touch $LOGDIR/${PROGNAME}.err
 
 if ((USE_RANKDIR == 1)); then
   echo "#PJM --stgin \"rank=* $TMPS/config.main %r:./config.main\""
@@ -165,7 +165,7 @@ if ((USE_RANKDIR == 1)); then
   echo "#PJM --stgin \"rank=* $SCRP_DIR/${PROGNAME}.sh %r:./${PROGNAME}.sh\""
   echo "#PJM --stgin \"rank=* $SCRP_DIR/${PROGNAME}_step.sh %r:./${PROGNAME}_step.sh\""
   echo "#PJM --stgin \"rank=* $SCRP_DIR/src/* %r:./src/\""
-  echo "#PJM --stgin \"rank=0 $LOGDIR/${PROGNAME}.err 0:./log/${PROGNAME}.err\""
+#  echo "#PJM --stgin \"rank=0 $LOGDIR/${PROGNAME}.err 0:./log/${PROGNAME}.err\""
 else
   echo "#PJM --stgin \"$TMPS/config.main ./config.main\""
   echo "#PJM --stgin \"$SCRP_DIR/config.rc ./config.rc\""
@@ -173,7 +173,7 @@ else
   echo "#PJM --stgin \"$SCRP_DIR/${PROGNAME}.sh ./${PROGNAME}.sh\""
   echo "#PJM --stgin \"$SCRP_DIR/${PROGNAME}_step.sh ./${PROGNAME}_step.sh\""
   echo "#PJM --stgin \"$SCRP_DIR/src/* ./src/\""
-  echo "#PJM --stgin \"$LOGDIR/${PROGNAME}.err ./log/${PROGNAME}.err\""
+#  echo "#PJM --stgin \"$LOGDIR/${PROGNAME}.err ./log/${PROGNAME}.err\""
 fi
 
 #===============================================================================
@@ -257,11 +257,11 @@ if ((SIMPLE_STGOUT <= 1)); then
 #-------------------------------------------------------------------------------
 # stage-out: standard log files
 
-  if ((USE_RANKDIR == 1)); then
-    echo "#PJM --stgout \"rank=0 0:./log/* $LOGDIR/\""
-  else
-    echo "#PJM --stgout \"./log/* $LOGDIR/\""
-  fi
+#  if ((USE_RANKDIR == 1)); then
+#    echo "#PJM --stgout \"rank=0 0:./log/* $LOGDIR/\""
+#  else
+#    echo "#PJM --stgout \"./log/* $LOGDIR/\""
+#  fi
 
 #------
 else # [ SIMPLE_STGOUT <= 1 ]
@@ -273,12 +273,12 @@ else # [ SIMPLE_STGOUT <= 1 ]
   ALLOUTDIR="$OUTDIR/everything"
 
   if ((USE_RANKDIR == 1)); then
-    echo "#PJM --stgout-dir \"rank=* %r:./log $ALLOUTDIR/log recursive=10,stgout=all\""
+#    echo "#PJM --stgout-dir \"rank=* %r:./log $ALLOUTDIR/log recursive=10,stgout=all\""
     echo "#PJM --stgout-dir \"rank=* %r:./run $ALLOUTDIR/run recursive=10,stgout=all\""
     echo "#PJM --stgout-dir \"rank=* %r:./out $ALLOUTDIR/out recursive=10,stgout=all\""
     echo "#PJM --stgout \"rank=* %r:./* $ALLOUTDIR/\""
   else
-    echo "#PJM --stgout-dir \"./log $ALLOUTDIR/log recursive=10,stgout=all\""
+#    echo "#PJM --stgout-dir \"./log $ALLOUTDIR/log recursive=10,stgout=all\""
     echo "#PJM --stgout-dir \"./run $ALLOUTDIR/run recursive=10,stgout=all\""
     echo "#PJM --stgout-dir \"./out $ALLOUTDIR/out recursive=10,stgout=all\""
     echo "#PJM --stgout \"./* $ALLOUTDIR/\""
