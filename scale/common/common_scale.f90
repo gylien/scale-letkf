@@ -1035,6 +1035,14 @@ SUBROUTINE state_trans_inv(v3dg)
   real(RP) :: qdry,CVtot,Rtot,CVovCP
   integer :: i,j,k,iv3d
 
+  do iv3d = 1, nv3d
+    if (POSITIVE_DEFINITE_Q .and. iv3d == iv3d_q) then
+      v3dg(:,:,:,iv3d) = max(v3dg(:,:,:,iv3d), 0.0d0)
+    else if (POSITIVE_DEFINITE_QHYD .and. (iv3d == iv3d_qc .or. iv3d == iv3d_qr .or. iv3d == iv3d_qi .or. iv3d == iv3d_qs .or. iv3d == iv3d_qg)) then
+      v3dg(:,:,:,iv3d) = max(v3dg(:,:,:,iv3d), 0.0d0)
+    end if
+  end do
+
 !$OMP PARALLEL DO PRIVATE(i,j,k,iv3d,qdry,CVtot,Rtot,CVovCP,rho,rhot) COLLAPSE(2)
   do j = 1, nlat
     do i = 1, nlon

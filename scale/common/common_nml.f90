@@ -77,6 +77,9 @@ MODULE common_nml
 
   real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0
 
+  logical :: POSITIVE_DEFINITE_Q = .false.
+  logical :: POSITIVE_DEFINITE_QHYD = .false.
+
   !--- PARAM_LETKF_PRC
   integer :: NNODES = 1
   integer :: PPN = 1
@@ -262,7 +265,9 @@ subroutine read_nml_letkf
     GROSS_ERROR_RADAR_PRH, &
     LEV_UPDATE_Q, &
     Q_SPRD_MAX, &
-    BOUNDARY_TAPER_WIDTH
+    BOUNDARY_TAPER_WIDTH, &
+    POSITIVE_DEFINITE_Q, &
+    POSITIVE_DEFINITE_QHYD
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
