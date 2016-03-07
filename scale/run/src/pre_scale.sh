@@ -9,15 +9,14 @@
 
 . config.main
 
-if (($# < 15)); then
+if (($# < 12)); then
   cat >&2 << EOF
 
 [pre_scale.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM_NP MEM INIT OCEAN BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR EXECDIR DATADIR [BDY_STIME] [LOGNAME]
+Usage: $0 MYRANK MEM INIT OCEAN BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR [BDY_STIME] [LOGNAME]
 
   MYRANK   My rank number (not used)
-  MEM_NP   Number of processes per member
   MEM      Name of the ensemble member
   INIT     Basename of SCALE initial files
   OCEAN    Basename of SCALE initial ocean files
@@ -29,8 +28,6 @@ Usage: $0 MYRANK MEM_NP MEM INIT OCEAN BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HI
   FCSTINT  Output interval of restart files (second)
   HISTINT  Output interval of history files (second)
   TMPDIR   Temporary directory to run the model
-  EXECDIR  Directory of SCALE executable files
-  DATADIR  Directory of SCALE data files
   BDY_STIME  (format: YYYYMMDDHHMMSS)
   LOGNAME
 
@@ -39,7 +36,6 @@ EOF
 fi
 
 MYRANK="$1"; shift
-MEM_NP="$1"; shift
 MEM="$1"; shift
 INIT="$1"; shift
 OCEAN="$1"; shift
@@ -51,8 +47,6 @@ FCSTLEN="$1"; shift
 FCSTINT="$1"; shift
 HISTINT="$1"; shift
 TMPDIR="$1"; shift
-EXECDIR="$1"; shift
-DATADIR="$1"; shift
 BDY_STIME="${1:-$STIME}"; shift
 LOGNAME="${1:-LOG}"
 
@@ -91,61 +85,9 @@ if [ "${LANDUSE_TARGZ}" = 'T' ] ; then
   tar zxvf  ${LANDUSE}.tar.gz -C $UNCOMP_DIR > /dev/null
 fi
 
-#ln -fs $EXECDIR/scale-les $TMPDIR
-
-#ln -fs $DATADIR/rad/PARAG.29 $TMPDIR
-#ln -fs $DATADIR/rad/PARAPC.29 $TMPDIR
-#ln -fs $DATADIR/rad/VARDATA.RM29 $TMPDIR
-#ln -fs $DATADIR/rad/cira.nc $TMPDIR
-#ln -fs $DATADIR/rad/MIPAS/day.atm $TMPDIR
-#ln -fs $DATADIR/rad/MIPAS/equ.atm $TMPDIR
-#ln -fs $DATADIR/rad/MIPAS/sum.atm $TMPDIR
-#ln -fs $DATADIR/rad/MIPAS/win.atm $TMPDIR
-#ln -fs $DATADIR/land/param.bucket.conf $TMPDIR
-
-#ln -fs ${INIT}*.nc $TMPDIR
 if [ "$OCEAN" = '-' ]; then
   OCEAN=$INIT
-#else
-#  ln -fs ${OCEAN}*.nc $TMPDIR
 fi
-#ln -fs ${BDY}*.nc $TMPDIR
-#ln -fs ${TOPO}*.nc $TMPDIR
-#ln -fs ${LANDUSE}*.nc $TMPDIR
-
-###
-### Given $mem_np, do exact loop, use exact process
-###
-#for q in $(seq $MEM_NP); do
-#  sfx=$(printf $SCALE_SFX $((q-1)))
-##  if [ -e "$INIT$sfx" ]; then
-#    ln -fs $INIT$sfx $TMPDIR/init$sfx
-##  fi
-##  if [ -e "$BDY$sfx" ]; then
-#    ln -fs $BDY$sfx $TMPDIR/boundary$sfx
-##  fi
-##  if [ -e "$TOPO$sfx" ]; then
-#    ln -fs $TOPO$sfx $TMPDIR/topo$sfx
-##  fi
-##  if [ -e "$LANDUSE$sfx" ]; then
-#    ln -fs $LANDUSE$sfx $TMPDIR/landuse$sfx
-##  fi
-#done
-
-if ((LOG_OPT <= 1)); then
-  if [ -f "$TMPDIR/run.conf" ]; then
-    mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/scale/${MEM}_run.conf
-  fi
-fi
-
-######
-if ((MYRANK == 0)); then
-  if [ -f "$TMPDIR/../latlon_domain_catalogue.txt" ]; then
-    mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/scale/latlon_domain_catalogue.txt
-  fi
-fi
-######
-
 
 #===============================================================================
 

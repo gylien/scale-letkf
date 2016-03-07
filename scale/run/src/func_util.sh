@@ -460,80 +460,102 @@ exit $res
 
 #===============================================================================
 
-history_files_for_bdy () {
+bdy_setting () {
 #-------------------------------------------------------------------------------
-# Find the corresponding history files for preparing boundary files
+# Calculate scale_init namelist settings for boundary files
 #
-# Usage: history_files_for_bdy
+# Usage: bdy_setting TIME FCSTLEN PARENT_LCYCLE PARENT_REF_TIME PARENT_FOUT
 #
 #   TIME
 #   FCSTLEN
 #   PARENT_LCYCLE
-#   PARENT_FOUT
 #   PARENT_REF_TIME
-#   ONEFILE
+#   PARENT_FOUT
 #
 # Return variables:
-#   $nfiles
+#   $nbdy
 #   $ntsteps
 #   $ntsteps_skip
-#   $history_times[1...$nfiles]
+#   $ntsteps_total
+#   $bdy_times[1...$nbdy]
+#   $bdy_start_time
 #
 #  *Require source 'func_datetime' first.
 #-------------------------------------------------------------------------------
 
-if (($# < 5)); then
+if (($# < 4)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." >&2
   exit 1
 fi
 
-local TIME=$1; shift
+local TIME=$(datetime $1); shift
 local FCSTLEN=$1; shift
 local PARENT_LCYCLE=$1; shift
-local PARENT_FOUT=$1; shift
-local PARENT_REF_TIME=$1; shift
-local ONEFILE=${1:-0}
+local PARENT_REF_TIME=$(datetime $1); shift
+local PARENT_FOUT=${1:-$PARENT_LCYCLE}
 
 #-------------------------------------------------------------------------------
+# compute $ntsteps
 
-local parent_time_start=$PARENT_REF_TIME
-local parent_time_start_prev=$parent_time_start
-while ((parent_time_start <= TIME)); do
-  parent_time_start_prev=$parent_time_start
-  parent_time_start=$(datetime $parent_time_start $PARENT_LCYCLE s)
-done
-parent_time_start=$parent_time_start_prev
-
-while ((parent_time_start > TIME)); do
-  parent_time_start=$(datetime $parent_time_start -${PARENT_LCYCLE} s)
-done
-
-ntsteps_skip=0
-local itime=$parent_time_start
-while ((itime < TIME)); do
-  ntsteps_skip=$((ntsteps_skip+1))
-  itime=$(datetime $itime ${PARENT_FOUT} s)
-done
-if ((itime > TIME)); then
-  echo "[Error] $FUNCNAME: Cannot not find the requested timeframe ($TIME) in history files." >&2
+if ((PARENT_LCYCLE % PARENT_FOUT != 0)); then
+  echo "[Error] $FUNCNAME: $PARENT_LCYCLE needs to be an exact multiple of $PARENT_FOUT." >&2
   exit 1
 fi
+ntsteps=$((PARENT_LCYCLE / PARENT_FOUT))
+
+#-------------------------------------------------------------------------------
+# compute $parent_start_time based on $PARENT_REF_TIME and $PARENT_LCYCLE
+
+local parent_start_time=$PARENT_REF_TIME
+local parent_start_time_prev=$parent_start_time
+while ((parent_start_time <= TIME)); do
+  parent_start_time_prev=$parent_start_time
+  parent_start_time=$(datetime $parent_start_time $PARENT_LCYCLE s)
+done
+parent_start_time=$parent_start_time_prev
+
+while ((parent_start_time > TIME)); do
+  parent_start_time=$(datetime $parent_start_time -${PARENT_LCYCLE} s)
+done
+
+#-------------------------------------------------------------------------------
+# compute $bdy_start_time, $ntsteps_skip, and $ntsteps_total based on $parent_start_time and $PARENT_FOUT
+# (assume $bdy_start_time <= $TIME)
+
+ntsteps_skip=-1
+bdy_start_time=$parent_start_time
+while ((bdy_start_time <= TIME)); do
+  bdy_start_time_prev=$bdy_start_time
+  bdy_start_time=$(datetime $bdy_start_time $PARENT_FOUT s)
+  ntsteps_skip=$((ntsteps_skip+1))
+done
+bdy_start_time=$bdy_start_time_prev
 
 local ntsteps_total=$(((FCSTLEN-1)/PARENT_FOUT+2 + ntsteps_skip))
 
-if ((ONEFILE == 1)); then
-  ntsteps=$ntsteps_total
-  nfiles=1
-  history_times[1]=$(datetime $parent_time_start $PARENT_LCYCLE s)
-else
-  ntsteps=$((PARENT_LCYCLE / PARENT_FOUT))
-  nfiles=1
-  history_times[1]=$(datetime $parent_time_start $PARENT_LCYCLE s)
-  while ((ntsteps_total > ntsteps)); do
-    nfiles=$((nfiles+1))
-    history_times[$nfiles]=$(datetime ${history_times[$((nfiles-1))]} $PARENT_LCYCLE s)
-    ntsteps_total=$((ntsteps_total-ntsteps))
-  done
+if ((bdy_start_time != TIME)); then
+  if (($(datetime $bdy_start_time $(((ntsteps_total-1)*PARENT_FOUT)) s) < $(datetime $TIME $FCSTLEN s))); then
+    ntsteps_total=$((ntsteps_total+1))
+  fi
+fi
+
+#-------------------------------------------------------------------------------
+# compute $nbdy and $bdy_times[1...$nbdy]
+
+nbdy=1
+bdy_times[1]=$parent_start_time
+while ((ntsteps_total > ntsteps)); do
+  nbdy=$((nbdy+1))
+  bdy_times[$nbdy]=$(datetime ${bdy_times[$((nbdy-1))]} $PARENT_LCYCLE s)
+  ntsteps_total=$((ntsteps_total-ntsteps))
+done
+
+if ((nbdy == 1)); then
+  if (($((ntsteps_total+ntsteps_skip)) > ntsteps)); then
+    echo "[Error] $FUNCNAME: Something unexpected happened..." >&2
+    exit 1
+  fi
+  ntsteps=$((ntsteps_total+ntsteps_skip))
 fi
 
 #-------------------------------------------------------------------------------

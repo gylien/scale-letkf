@@ -19,6 +19,9 @@ SCALE_LOG_SFX='.pe000000'
 DISK_MODE_DATA_BDY=${DISK_MODE_DATA_BDY:-2}
 DISK_MODE_TOPO_LANDUSE_DB=${DISK_MODE_TOPO_LANDUSE_DB:-2}
 
+BDYINT=${BDYINT:-$LCYCLE}
+BDYCYCLE_INT=${BDYCYCLE_INT:-$BDYINT}
+
 #===============================================================================
 # Definition of sub-directories
 

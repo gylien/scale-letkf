@@ -68,7 +68,7 @@ if [ -s "$STAGING_DIR/stagein.dat" ]; then
         fi
       fi
     fi
-  done < "$STAGING_DIR/stagein.dat" # | sort | uniq
+  done < "$STAGING_DIR/stagein.dat" | sort | uniq
 fi
 
 #-------------------------------------------------------------------------------
@@ -113,7 +113,7 @@ if [ -s "$STAGING_DIR/stagein.out" ]; then
         fi
       fi
     fi
-  done < "$STAGING_DIR/stagein.out" # | sort | uniq
+  done < "$STAGING_DIR/stagein.out" | sort | uniq
 fi
 
 #-------------------
@@ -138,7 +138,7 @@ while [ -s "$STAGING_DIR/stagein.out.$((i+1))" ]; do
         fi
       fi
     fi
-  done < "$STAGING_DIR/stagein.out.$((i+1))" # | sort | uniq
+  done < "$STAGING_DIR/stagein.out.$((i+1))" | sort | uniq
   i=$((i+1))
 done
 
@@ -224,7 +224,7 @@ if ((SIMPLE_STGOUT <= 1)); then
           fi
         fi
       fi
-    done < "$STAGING_DIR/stageout.out" # | sort | uniq
+    done < "$STAGING_DIR/stageout.out" | sort | uniq
   fi
 
   #-------------------
@@ -250,7 +250,7 @@ if ((SIMPLE_STGOUT <= 1)); then
           fi
         fi
       fi
-    done < "$STAGING_DIR/stageout.out.$((i+1))" # | sort | uniq
+    done < "$STAGING_DIR/stageout.out.$((i+1))" | sort | uniq
     i=$((i+1))
   done
 
