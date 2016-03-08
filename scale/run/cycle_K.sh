@@ -110,6 +110,10 @@ echo "PPN=$PPN" >> $TMPS/config.main
 echo "NNODES_real=$NNODES_real" >> $TMPS/config.main
 echo "PPN_real=$PPN_real" >> $TMPS/config.main
 
+echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMPS/config.main
+
+echo "RUN_LEVEL=1" >> $TMPS/config.main
+
 if ((ENABLE_SET == 1)); then                                    ##
   echo "NNODES_all=$NNODES_all" >> $TMPS/config.main            ##
   echo "NNODES_real_all=$NNODES_real_all" >> $TMPS/config.main  ##
