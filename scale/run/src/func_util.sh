@@ -479,6 +479,7 @@ bdy_setting () {
 #   $ntsteps_total
 #   $bdy_times[1...$nbdy]
 #   $bdy_start_time
+#   $parent_start_time
 #
 #  *Require source 'func_datetime' first.
 #-------------------------------------------------------------------------------
@@ -506,7 +507,7 @@ ntsteps=$((PARENT_LCYCLE / PARENT_FOUT))
 #-------------------------------------------------------------------------------
 # compute $parent_start_time based on $PARENT_REF_TIME and $PARENT_LCYCLE
 
-local parent_start_time=$PARENT_REF_TIME
+parent_start_time=$PARENT_REF_TIME
 local parent_start_time_prev=$parent_start_time
 while ((parent_start_time <= TIME)); do
   parent_start_time_prev=$parent_start_time
@@ -550,13 +551,20 @@ while ((ntsteps_total > ntsteps)); do
   ntsteps_total=$((ntsteps_total-ntsteps))
 done
 
-if ((nbdy == 1)); then
-  if (($((ntsteps_total+ntsteps_skip)) > ntsteps)); then
-    echo "[Error] $FUNCNAME: Something unexpected happened..." >&2
-    exit 1
-  fi
-  ntsteps=$((ntsteps_total+ntsteps_skip))
-fi
+#   $nbdy
+#   $ntsteps
+#   $ntsteps_skip
+#   $ntsteps_total
+#   $bdy_times[1...$nbdy]
+#   $bdy_start_time
+#   $parent_start_time
+
+echo "\$nbdy              = $nbdy" >&2
+echo "\$ntsteps           = $ntsteps" >&2
+echo "\$ntsteps_skip      = $ntsteps_skip" >&2
+echo "\$ntsteps_total     = $ntsteps_total" >&2
+echo "\$bdy_start_time    = $bdy_start_time" >&2
+echo "\$parent_start_time = $parent_start_time" >&2
 
 #-------------------------------------------------------------------------------
 }

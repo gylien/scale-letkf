@@ -58,7 +58,7 @@ echo
 #-------------------------------------------------------------------------------
 
 if [ ${TMP:0:8} != '/scratch' ]; then
-  echo "[Error] $0: When using 'micro' resource group, \$TMP will be completely removed." >&2
+  echo "[Error] $0: When using 'micro' resource group, \$TMP will be removed." >&2
   echo "        Wrong setting detected:" >&2
   echo "        \$TMP = '$TMP'" >&2
   exit 1
@@ -204,7 +204,9 @@ fi
 #  cat $TMP/log/${myname1}.err >> $LOGDIR/${myname1}.err
 #fi
 
-#safe_rm_tmpdir $TMP
+if ((CLEAR_TMP == 1)); then
+  safe_rm_tmpdir $TMP
+fi
 
 #===============================================================================
 

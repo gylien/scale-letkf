@@ -143,6 +143,9 @@ if ((BDY_FORMAT >= 1)); then
       fi
       PARENT_REF_TIME=$(datetime $PARENT_REF_TIME -${BDYINT} s)
     done
+#  else
+#    bdy_setting $STIME $CYCLEFLEN $BDYCYCLE_INT $PARENT_REF_TIME $BDYINT
+#    PARENT_REF_TIME=$parent_start_time
   fi
 fi
 
@@ -785,7 +788,8 @@ else
           echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
         fi
       else
-        echo "[Error] Cannot find a lat/lon domain catalogue file." >&2
+        echo "[Error] Cannot find a lat/lon domain catalogue file at" >&2
+        echo "        '$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt'" >&2
         exit 1
       fi
     fi

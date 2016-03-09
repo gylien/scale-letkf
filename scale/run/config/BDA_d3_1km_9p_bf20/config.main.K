@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_100mem_111_pd_qhyd" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_100mem_113" # Directory for SCALE-LETKF output
 
 LOGDIR="$DIR/log"
 
@@ -20,7 +20,7 @@ DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/BDA_d3_1km_9p_bf20"
 DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/BDA_d2_5km_64p_bf16"
 DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/BDA_d3_1km_9p_bf20"
-DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2_5km_100mem"
+DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2_5km_100mem_tint-1hr"
 DATA_BDY_SCALE_PREP="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_100mem_109_newtopo"
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
@@ -41,7 +41,7 @@ LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=0            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
@@ -51,7 +51,7 @@ BDY_ENS=1               # 0: Fixed boundary files for all memebers
 BDYINT=300
 BDYCYCLE_INT=21600
 
-PARENT_REF_TIME=20130713060000
+#PARENT_REF_TIME=20130713060000
 
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
@@ -66,10 +66,10 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=300       # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=300       # SCALE forecast time when assimilation window ends (second)
-LCYCLE=300         # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=300      # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=30        # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=30        # SCALE forecast time when assimilation window ends (second)
+LCYCLE=30          # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
@@ -126,6 +126,10 @@ TMP=                        # (When $MACHINE_TYPE=10, this will be automatically
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 TMPL=                       # (When $MACHINE_TYPE=10, this will be automatically set)
 
+CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
+                            #  0: No
+                            #  1: Yes
+
 #===============================================================================
 # Environmental settings
 
@@ -134,8 +138,12 @@ MPIRUN="$MPIBIN/mpiexec"
 
 SCP='cp -L'
 SCP_HOSTPREFIX=''
+#SCP='rsync -Lq'
+#SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
+
+SCP_THREAD=8
 
 PYTHON="python"
 
