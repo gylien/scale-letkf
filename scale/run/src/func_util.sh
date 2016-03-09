@@ -551,20 +551,12 @@ while ((ntsteps_total > ntsteps)); do
   ntsteps_total=$((ntsteps_total-ntsteps))
 done
 
-#   $nbdy
-#   $ntsteps
-#   $ntsteps_skip
-#   $ntsteps_total
-#   $bdy_times[1...$nbdy]
-#   $bdy_start_time
-#   $parent_start_time
-
-echo "\$nbdy              = $nbdy" >&2
-echo "\$ntsteps           = $ntsteps" >&2
-echo "\$ntsteps_skip      = $ntsteps_skip" >&2
-echo "\$ntsteps_total     = $ntsteps_total" >&2
-echo "\$bdy_start_time    = $bdy_start_time" >&2
-echo "\$parent_start_time = $parent_start_time" >&2
+#echo "\$nbdy              = $nbdy" >&2
+#echo "\$ntsteps           = $ntsteps" >&2
+#echo "\$ntsteps_skip      = $ntsteps_skip" >&2
+#echo "\$ntsteps_total     = $ntsteps_total" >&2
+#echo "\$bdy_start_time    = $bdy_start_time" >&2
+#echo "\$parent_start_time = $parent_start_time" >&2
 
 #-------------------------------------------------------------------------------
 }
