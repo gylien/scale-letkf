@@ -12,6 +12,8 @@
 static struct server_connection *server_conn;
 static struct client_connection *client_conn;
 
+static void parse_config();
+
 struct timeval tv[10];
 
 #if 0
@@ -142,7 +144,7 @@ int copy_buffer_file(struct file_buffer *src_fbuf, struct file_buffer *dst_fbuf)
 
 void conn_init_(char *file_name, char *module_name) {
   //MPI_Init( NULL, NULL );
-  parse_config("../../sample.ini", module_name);
+  parse_config(file_name, module_name);
 }
 
 void conn_finalize_() {
@@ -159,6 +161,9 @@ struct server_connection *conn_serv_publish_port(const char *service_name,
 
   MPI_Comm_size(MPI_COMM_WORLD, &connection->server_size);
   MPI_Comm_rank(MPI_COMM_WORLD, &connection->server_rank);
+
+  connection->spare_buffer = NULL;
+  connection->spare_buffer_size = 0;
 
   /* The root server published the sevice name */
   if(connection->server_rank==0) {
@@ -198,6 +203,9 @@ struct client_connection* conn_client_connect(const char* service_name,
   MPI_Comm_rank(MPI_COMM_WORLD, &connection->client_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &connection->client_size);
 
+  connection->spare_buffer = NULL;
+  connection->spare_buffer_size = 0;
+
   strncpy(connection->service_name, service_name, 1024);
   int ierr = MPI_Lookup_name(connection->service_name, MPI_INFO_NULL, \
 		connection->port_name);
@@ -226,6 +234,109 @@ void conn_server_send_data(struct server_connection*connection,
   assert(ierr == MPI_SUCCESS);
 }
 
+void conn_server_alltoall_data(struct server_connection*connection,
+			       void* send_buffer,
+			       int send_count) {
+  size_t buffer_size = send_count*connection->client_size;
+    if(connection->spare_buffer_size < buffer_size) {
+    connection->spare_buffer = realloc(connection->spare_buffer, buffer_size);
+    assert(connection->spare_buffer);
+    connection->spare_buffer_size = send_count*buffer_size;
+  }
+
+  int ierr = MPI_Alltoall(send_buffer, send_count, MPI_BYTE,
+			  connection->spare_buffer, send_count, MPI_BYTE,
+			  connection->client);
+  assert(ierr == MPI_SUCCESS);
+}
+
+void conn_client_alltoall_data(struct client_connection*connection,
+			       void* recv_buffer,
+			       int send_count) {
+  size_t buffer_size = send_count * connection->server_size;
+  if(connection->spare_buffer_size < buffer_size) {
+    connection->spare_buffer = realloc(connection->spare_buffer, buffer_size);
+    assert(connection->spare_buffer);
+    connection->spare_buffer_size = buffer_size;
+  }
+
+  int ierr = MPI_Alltoall(connection->spare_buffer, send_count, MPI_BYTE,
+			  recv_buffer, send_count, MPI_BYTE,
+			  connection->server);
+  assert(ierr == MPI_SUCCESS);
+}
+
+
+void conn_server_allscatter_data(struct server_connection*connection,
+				 void* send_buffer,
+				 int send_count) {
+  int i;
+  for(i=0; i<connection->server_size; i++) {
+    int root = i == connection->server_rank ? MPI_ROOT : MPI_PROC_NULL;
+    int ierr = MPI_Scatter(send_buffer, send_count, MPI_BYTE,
+			   NULL, 0, MPI_BYTE,
+			   root,
+			   connection->client);
+    assert(ierr == MPI_SUCCESS);
+  }
+}
+
+void conn_client_allscatter_data(struct client_connection*connection,
+				  void* recv_buffer,
+				  int send_count) {
+  int i;
+  for(i=0; i<connection->server_size; i++) {
+    int ierr = MPI_Scatter(NULL, 0, MPI_BYTE,
+			   &((char*)recv_buffer)[i*send_count], send_count, MPI_BYTE,
+			   i,
+			   connection->server);
+    assert(ierr == MPI_SUCCESS);
+  }
+}
+
+
+void conn_server_allscatter_nb_data(struct server_connection*connection,
+				  void* send_buffer,
+				  int send_count) {
+#if HAVE_MPI3
+  MPI_Request reqs[connection->server_size];
+  int i;
+  for(i=0; i<connection->server_size; i++) {
+    int root = i == connection->server_rank ? MPI_ROOT : MPI_PROC_NULL;
+    int ierr = MPI_Iscatter(send_buffer, send_count, MPI_BYTE,
+			   NULL, 0, MPI_BYTE,
+			   root,
+			    connection->client,
+			    &reqs[i]);
+    assert(ierr == MPI_SUCCESS);
+  }
+  MPI_Waitall(i, reqs, MPI_STATUSES_IGNORE);
+#else
+  conn_server_allscatter_data(connection, send_buffer, send_count);
+#endif
+}
+
+void conn_client_allscatter_nb_data(struct client_connection*connection,
+				  void* recv_buffer,
+				  int send_count) {
+#if HAVE_MPI3
+  MPI_Request reqs[connection->server_size];
+  int i;
+  for(i=0; i<connection->server_size; i++) {
+    int ierr = MPI_Iscatter(NULL, 0, MPI_BYTE,
+			   &((char*)recv_buffer)[i*send_count], send_count, MPI_BYTE,
+			   i,
+			    connection->server,
+			    &reqs[i]);
+    assert(ierr == MPI_SUCCESS);
+  }
+  MPI_Waitall(i, reqs, MPI_STATUSES_IGNORE);
+#else
+  conn_client_allscatter_data(connection, recv_buffer, send_count);
+#endif
+}
+
+
 void conn_server_recv_data(struct server_connection*connection,
                            void* buffer,
                            int len,
@@ -233,7 +344,6 @@ void conn_server_recv_data(struct server_connection*connection,
                            int src){
   assert(src < connection->server_size);
   MPI_Status status;
-  MPI_Request request;
   int ierr = MPI_Recv(buffer, len, MPI_BYTE, src, MPI_ANY_TAG, \
                 connection->client, &status);
   connection->mpi_tag = status.MPI_TAG;
@@ -315,7 +425,7 @@ int pub_send_data1_(char *service_name){
   void *handle;
   char *my_buf = NULL;
   int size;
-  void * (*func_get_address)(void) = NULL;
+  char* (*func_get_address)(void) = NULL;
   int (*func_get_size)(void) = NULL;
   
   handle = dlopen("../../hack.so", RTLD_LAZY); 
@@ -324,7 +434,7 @@ int pub_send_data1_(char *service_name){
 	exit(EXIT_FAILURE);
   }
 
-  func_get_address = (char (*)(void)) dlsym(handle, "get_address"); 
+  func_get_address = (char* (*)(void)) dlsym(handle, "get_address"); 
   my_buf = func_get_address();
 
   func_get_size = (int(*)(void)) dlsym(handle, "get_size");
@@ -349,7 +459,6 @@ int pub_recv_data_(char *service_name){
   char *nbuf;
   for (i = 0; i < list_size; i++){
     fbuf = search_one_node(i);
-	struct buffer_node *node;
     if (fbuf && !strncmp(fbuf->direction, "rd", 2) && (fbuf->client_server_flag == 0)){
 	  	file_len = pub_client_recv_sz();
 		if (file_len % DEFAULT_NODE_BUF_SIZE > 0)
@@ -363,10 +472,8 @@ int pub_recv_data_(char *service_name){
             return ENOMEM;
 	
       	  pub_client_recv_data(nbuf, DEFAULT_NODE_BUF_SIZE);
-		  //printf("client recv: tag %d\n", client_conn->mpi_tag);
 		  add_to_buffer_node_list(fbuf, client_conn->mpi_tag/DEFAULT_NODE_BUF_SIZE, nbuf, 1);
 	  	} 
-	    printf("client recv: node %d, data size %d\n", get_buffer_list_size(fbuf), file_len);
 	    fbuf->buffer_pointer = NULL;
         fbuf->buffer_size =file_len;
       }
@@ -383,10 +490,8 @@ int pub_recv_data_(char *service_name){
             return ENOMEM;
 
           pub_server_recv_data(nbuf, DEFAULT_NODE_BUF_SIZE);
-          //printf("server recv: tag %d\n", client_conn->mpi_tag);
           add_to_buffer_node_list(fbuf, client_conn->mpi_tag/DEFAULT_NODE_BUF_SIZE, nbuf, 1);
         }
-        printf("server recv: node %d, data size %d\n", get_buffer_list_size(fbuf), file_len);
         fbuf->buffer_pointer = NULL;
         fbuf->buffer_size =file_len;	
       }
@@ -401,8 +506,8 @@ int pub_send_data_(char *service_name){
   gettimeofday(&tv[0], NULL);
   for (i = 0; i < size; i++){
     fbuf = search_one_node(i);
-	struct buffer_node *node = fbuf->buffer_list;
-	
+    struct buffer_node *node = fbuf->buffer_list;
+
     if (fbuf && !strcmp(fbuf->direction, "wr")){
 	  node_size = get_buffer_list_size(fbuf);
 
@@ -410,7 +515,7 @@ int pub_send_data_(char *service_name){
 		pub_client_send_sz(fbuf->buffer_size);
 		for (j = 0; j < node_size; j++){ 
 		  if (node && node->dirty_flag){
-		  	pub_client_send_data2(node->node_ptr, DEFAULT_NODE_BUF_SIZE, j*DEFAULT_NODE_BUF_SIZE);
+		    pub_client_send_data2(node->node_ptr, DEFAULT_NODE_BUF_SIZE, j*DEFAULT_NODE_BUF_SIZE);
 	        //printf("client send, node %d is dirty\n", j);
 		  }
 		  node = node->next;
@@ -463,7 +568,7 @@ void pub_server_recv_data(char *buff, long size){
 void pub_client_send_sz(long size){
 
   char buff[16];
-  sprintf(buff, "%d", size);
+  sprintf(buff, "%ld", size);
   pub_client_send_data(buff, 16);
 
 }

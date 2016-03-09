@@ -17,7 +17,6 @@
 
 //#define DEFAULT_NODE_BUF_SIZE (8*1024*1024)
 
-static char * buffer;
 
 struct server_connection{
   char service_name[1024];
@@ -27,6 +26,8 @@ struct server_connection{
   int server_rank; 		/* rank in the server MPI_COMM_WORLD */
   int client_size;		/* size of the client MPI_COMM_WORLD */
   int mpi_tag;
+  char* spare_buffer;
+  size_t spare_buffer_size;
 };
 
 struct client_connection{
@@ -37,6 +38,8 @@ struct client_connection{
   int client_size;		/* size of the client MPI_COMM_WORLD */
   int client_rank; 		/* rank in the client MPI_COMM_WORLD */
   int mpi_tag;
+  char* spare_buffer;
+  size_t spare_buffer_size;
 };
 
 enum req_status {
@@ -115,6 +118,8 @@ void conn_server_send_data(struct server_connection*connection,
 			   int tag,
 			   int dest);
 
+void pub_server_send_data2(char *buff, long size, int tag);
+
 /* receive data from a client
  *  * (Currently for SYNC between server and client)
  *   * should be replaced with netCDF related function
@@ -134,6 +139,8 @@ void conn_client_send_data(struct client_connection*connection,
                            int len,
                            int tag,
                            int dest);
+
+void pub_client_send_data2(char *buff, long size, int tag);
 
 /* --------------  functions used for SCALE-LETKF ----------------- */
 
@@ -165,7 +172,6 @@ void pub_netcdf_disconnect(void);
 
 struct file_buffer * pub_check_in_list(char *file_name);
 
-static void parse_config();
 struct async_request* async_mpi_send(const void *buf,
                      int count,
                      MPI_Datatype datatype,
@@ -174,5 +180,35 @@ struct async_request* async_mpi_send(const void *buf,
                      MPI_Comm comm);
 
 void* communication_thread(void*arg);
+
+
+/* all to all diffusion between SIM and DA processes */
+void conn_client_alltoall_data(struct client_connection*connection,
+			       void* recv_buffer,
+			       int send_count);
+
+void conn_server_alltoall_data(struct server_connection*connection,
+			       void* send_buffer,
+			       int send_count);
+
+/* all to all diffusion between SIM and DA processes that uses MPI_Scatter
+ * to reduce the number of messages
+ */
+void conn_client_allscatter_data(struct client_connection*connection,
+				  void* recv_buffer,
+				  int send_count);
+
+void conn_server_allscatter_data(struct server_connection*connection,
+				  void* send_buffer,
+				  int send_count);
+
+/* Similar to allscatter_data, but uses MPI_Iscatter */
+void conn_client_allscatter_nb_data(struct client_connection*connection,
+				    void* recv_buffer,
+				    int send_count);
+
+void conn_server_allscatter_nb_data(struct server_connection*connection,
+				    void* send_buffer,
+				    int send_count);
 
 #endif
