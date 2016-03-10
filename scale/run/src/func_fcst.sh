@@ -135,19 +135,21 @@ TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 #-------------------------------------------------------------------------------
 # common variables
 
-if ((BDY_FORMAT == 1)) || ((BDY_FORMAT == -1)); then
+if ((BDY_FORMAT >= 1)); then
   if ((BDYCYCLE_INT % BDYINT != 0)); then
     echo "[Error] \$BDYCYCLE_INT needs to be an exact multiple of \$BDYINT" >&2
     exit 1
   fi
-  BDY_STARTFRAME_MAX=$((BDYCYCLE_INT/BDYINT))
+  BDY_STARTFRAME_MAX=$((BDYCYCLE_INT / BDYINT))
   if [ -z "$PARENT_REF_TIME" ]; then
-    PARENT_REF_TIME=$(datetime $STIME $BDYCYCLE_INT s)
+    PARENT_REF_TIME=$STIME
     for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
-      if [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/gues/meanf/history.pe000000.nc" ]; then
+      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/$(datetime $PARENT_REF_TIME $BDYCYCLE_INT s)/gues/meanf/history.pe000000.nc" ]; then
+        break
+      if ((BDY_FORMAT == 2)) && [ -s "$DATA_BDY_WRF/mean/wrfout_${PARENT_REF_TIME}" ]; then
         break
       elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
-        echo "[Error] Cannot find boundary files from the SCALE history files." >&2
+        echo "[Error] Cannot find boundary files." >&2
         exit 1
       fi
       PARENT_REF_TIME=$(datetime $PARENT_REF_TIME -${BDYINT} s)

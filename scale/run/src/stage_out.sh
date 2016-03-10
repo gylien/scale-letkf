@@ -57,9 +57,23 @@ for ifile in $filelist; do
       fi
       if [ "$MYRANK" = 'a' ] || [ "$MYRANK" != 's' ] && [ -e "${TMPOUT}/${source}" ]; then
         if [ "$ftype" = 'd' ] || [ "$ftype" = 'drm' ]; then
-          $SCP -r ${TMPOUT}/${source}/* "${SCP_HOSTPREFIX}${destin}" > /dev/null 2>&1
+          if ((SCP_THREAD > 1)); then
+            while (($(jobs -p | wc -l) >= SCP_THREAD)); do
+              sleep 0.1s
+            done
+            $SCP -r ${TMPOUT}/${source}/* "${SCP_HOSTPREFIX}${destin}" > /dev/null 2>&1 &
+          else
+            $SCP -r ${TMPOUT}/${source}/* "${SCP_HOSTPREFIX}${destin}" > /dev/null 2>&1
+          fi
         else
-          $SCP "${TMPOUT}/${source}" "${SCP_HOSTPREFIX}${destin}"
+          if ((SCP_THREAD > 1)); then
+            while (($(jobs -p | wc -l) >= SCP_THREAD)); do
+              sleep 0.1s
+            done
+            $SCP "${TMPOUT}/${source}" "${SCP_HOSTPREFIX}${destin}" &
+          else
+            $SCP "${TMPOUT}/${source}" "${SCP_HOSTPREFIX}${destin}"
+          fi
         fi
         if ((ONLINE_STGOUT == 1)); then
           if [ "$ftype" = 'rm' ]; then
@@ -71,6 +85,9 @@ for ifile in $filelist; do
       fi
     fi
   done < "$ifile" # | sort | uniq
+  if ((SCP_THREAD > 1)); then
+    wait
+  fi
 done
 
 #===============================================================================

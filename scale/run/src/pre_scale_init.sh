@@ -14,25 +14,24 @@ if (($# < 12)); then
 
 [pre_scale_init.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM_NP TOPO LANDUSE BDYORG STIME FCSTLEN MKINIT MEM TMPDIR EXECDIR DATADIR [STARTFRAME] [LOGNAME]
+Usage: $0 MYRANK TOPO LANDUSE BDYORG STIME MKINIT MEM MEM_BDY TMPDIR BDY_TIME_LIST NUMBER_OF_TSTEPS NUMBER_OF_SKIP_TSTEPS [LOGNAME]
 
   MYRANK   My rank number (not used)
-  MEM_NP   Number of processes per member
   TOPO     Basename of SCALE topography files
   LANDUSE  Basename of SCALE land use files
   BDYORG   Path of the source boundary files
            SCALE history: XXX
            WRF: Basename of WRF files
   STIME    Start time (format: YYYYMMDDHHMMSS)
-  FCSTLEN  Forecast length (second)
   MKINIT   Make initial condition as well?
             0: No
             1: Yes
   MEM      Name of the ensemble member
+  MEM_BDY  Name of the ensemble member of the boundary data source
   TMPDIR   Temporary directory to run scale-les_init
-  EXECDIR  Directory of SCALE executable files
-  DATADIR  Directory of SCALE data files
-  STARTFRAME
+  BDY_TIME_LIST
+  NUMBER_OF_TSTEPS
+  NUMBER_OF_SKIP_TSTEPS
   LOGNAME
 
 EOF
@@ -40,18 +39,17 @@ EOF
 fi
 
 MYRANK="$1"; shift
-MEM_NP="$1"; shift
 TOPO="$1"; shift
 LANDUSE="$1"; shift
 BDYORG="$1"; shift
 STIME="$1"; shift
-FCSTLEN="$1"; shift
 MKINIT="$1"; shift
 MEM="$1"; shift
+MEM_BDY="$1"; shift
 TMPDIR="$1"; shift
-EXECDIR="$1"; shift
-DATADIR="$1"; shift
-STARTFRAME="${1:-1}"; shift
+BDY_TIME_LIST="$1"; shift
+NUMBER_OF_TSTEPS="$1"; shift
+NUMBER_OF_SKIP_TSTEPS="$1"; shift
 LOGNAME="${1:-LOG}"
 
 S_YYYY=${STIME:0:4}
@@ -61,6 +59,8 @@ S_HH=${STIME:8:2}
 S_II=${STIME:10:2}
 S_SS=${STIME:12:2}
 
+historybaselen=7
+
 #===============================================================================
 
 mkdir -p $TMPDIR
@@ -68,71 +68,55 @@ rm -fr $TMPDIR/*
 
 TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
 
-#ln -fs ${TOPO}*.nc $TMPDIR
-#ln -fs ${LANDUSE}*.nc $TMPDIR
-
-#for q in $(seq $MEM_NP); do
-#  sfx=$(printf $SCALE_SFX $((q-1)))
-##  if [ -e "$TOPO$sfx" ]; then
-#    ln -fs $TOPO$sfx $TMPDIR/topo$sfx
-##  fi
-##  if [ -e "$LANDUSE$sfx" ]; then
-#    ln -fs $LANDUSE$sfx $TMPDIR/landuse$sfx
-##  fi
-#done
-
 RESTART_OUTPUT='.false.'
 if ((MKINIT == 1 || (OCEAN_INPUT == 1 && OCEAN_FORMAT == 99))); then
   RESTART_OUTPUT='.true.'
 fi
 
 if ((BDY_FORMAT == 1)); then
-  if [ ! -s "${BDYORG}.pe000000.nc" ]; then
-    echo "[Error] $0: Cannot find source boundary file '${BDYORG}.pe000000.nc'."
-    exit 1
-  fi
-#  NUMBER_OF_FILES=$(((FCSTLEN-1)/BDYINT+2))
-#  NUMBER_OF_FILES=$(((FCSTLEN-1)/BDYINT+1+STARTFRAME))
-  NUMBER_OF_FILES=1
-  NUMBER_OF_TSTEPS=$(((FCSTLEN-1)/BDYINT+1+STARTFRAME))
-  NUMBER_OF_SKIP_TSTEPS=$((STARTFRAME-1))
-
-  BASENAME_ORG="$BDYORG"
   FILETYPE_ORG='SCALE-LES'
   USE_NESTING='.true.'
-  OFFLINE='.true.'
+  LATLON_CATALOGUE_FNAME="$BDYORG/latlon_domain_catalogue.txt"
 elif ((BDY_FORMAT == 2)); then
-  i=0
-  time=$STIME
-  etime_bdy=$(datetime $STIME $((FCSTLEN+BDYINT)) s)
-#  tmp_etime_bdy=$(datetime $STIME $((BDYINT+BDYINT)) s)  # T. Honda (may be not necessary?)
-#  if (( etime_bdy < tmp_etime_bdy )); then               #
-#    etime_bdy=${tmp_etime_bdy}                           #
-#  fi                                                     #
-  while ((time < etime_bdy)); do
-    if [ -s "${BDYORG}_${time}" ]; then
-      ln -fs "${BDYORG}_${time}" $TMPDIR/wrfout_$(printf %05d $i)
-    else
-      echo "[Error] $0: Cannot find source boundary file '${BDYORG}_${time}'."
-      exit 1
-    fi
-    i=$((i+1))
-    time=$(datetime $time $BDYINT s)
-  done
-  NUMBER_OF_FILES=$i
-  NUMBER_OF_TSTEPS=1
-  NUMBER_OF_SKIP_TSTEPS=0
-
-  BASENAME_ORG="${TMPSUBDIR}\/wrfout"
   FILETYPE_ORG='WRF-ARW'
   USE_NESTING='.false.'
-  OFFLINE='.true.'
+  LATLON_CATALOGUE_FNAME=
 else
   echo "[Error] $0: Unsupport boundary file types" >&2
   exit 1
 fi
 
-LATLON_CATALOGUE_FNAME="$(dirname $(dirname $(dirname $BDYORG)))/latlon_domain_catalogue.txt"
+NUMBER_OF_FILES=0
+for time_bdy in $BDY_TIME_LIST; do
+  NUMBER_OF_FILES=$((NUMBER_OF_FILES+1))
+done
+
+i=0
+for time_bdy in $BDY_TIME_LIST; do
+  if ((NUMBER_OF_FILES <= 1)); then
+    file_number=''
+  else
+    file_number="_$(printf %05d $i)"
+  fi
+  if ((BDY_FORMAT == 1)); then
+    if [ -s "${BDYORG}/${time_bdy}/${MEM_BDY}/history.pe000000.nc" ]; then
+      for ifile in $(cd ${BDYORG}/${time_bdy}/${MEM_BDY} ; ls history*.nc 2> /dev/null); do
+        ln -fs "${BDYORG}/${time_bdy}/${MEM_BDY}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
+      done
+    else
+      echo "[Error] $0: Cannot find source boundary file '${BDYORG}/${time_bdy}/${MEM_BDY}/history.*.nc'."
+      exit 1
+    fi
+  elif ((BDY_FORMAT == 2)); then
+    if [ -s "${BDYORG}/${MEM_BDY}/wrfout_${time_bdy}" ]; then
+      ln -fs "${BDYORG}/${MEM_BDY}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
+    else
+      echo "[Error] $0: Cannot find source boundary file '${BDYORG}/${MEM_BDY}/wrfout_${time_bdy}'."
+      exit 1
+    fi
+  fi
+  i=$((i+1))
+done
 
 mkdir -p $TMPOUT/${STIME}/bdy/${MEM}
 
@@ -147,7 +131,7 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
         -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT}/land/param.bucket.conf\"," \
         -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"$TMPOUT/${STIME}/bdy/${MEM}/boundary\"," \
-        -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${BASENAME_ORG}\"," \
+        -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${TMPSUBDIR}\/bdydata\"," \
         -e "/!--FILETYPE_ORG--/a FILETYPE_ORG = \"${FILETYPE_ORG}\"," \
         -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = ${NUMBER_OF_FILES}," \
         -e "/!--NUMBER_OF_TSTEPS--/a NUMBER_OF_TSTEPS = ${NUMBER_OF_TSTEPS}," \
@@ -155,7 +139,7 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--BOUNDARY_UPDATE_DT--/a BOUNDARY_UPDATE_DT = $BDYINT.D0," \
         -e "/!--LATLON_CATALOGUE_FNAME--/a LATLON_CATALOGUE_FNAME = \"${LATLON_CATALOGUE_FNAME}\"," \
         -e "/!--USE_NESTING--/a USE_NESTING = $USE_NESTING," \
-        -e "/!--OFFLINE--/a OFFLINE = $OFFLINE," \
+        -e "/!--OFFLINE--/a OFFLINE = .true.," \
     > $TMPDIR/init.conf
 
 #===============================================================================

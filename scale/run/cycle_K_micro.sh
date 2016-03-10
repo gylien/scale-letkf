@@ -204,7 +204,9 @@ fi
 #  cat $TMP/log/${myname1}.err >> $LOGDIR/${myname1}.err
 #fi
 
-#safe_rm_tmpdir $TMP
+if ((CLEAR_TMP == 1)); then
+  safe_rm_tmpdir $TMP
+fi
 
 #===============================================================================
 
