@@ -66,7 +66,7 @@ done
 
 cat $TMPDAT/conf/config.nml.obsope | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBERSEQ," \
-        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = '${TMPOUT}/${ATIME}/gues/@@@@/history'," \
+        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = '${TMPOUT}/${TIME}/hist/@@@@/history'," \
         -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = '${TMPOUT}/${ATIME}/obsgues/@@@@/obsda'," \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \

@@ -85,8 +85,9 @@ elif [ "$SCPCALL" = 'cycle' ]; then
   if [ "$MEM" = 'mean' ]; then
     MEMtmp='meanf'
   fi
+  mkdir -p $TMPOUT/${STIME}/hist/${MEMtmp}
+  mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/hist/${MEMtmp}
   mkdir -p $TMPOUT/${ATIME}/gues/${MEMtmp}
-  mv -f $TMPDIR/history*.nc $TMPOUT/${ATIME}/gues/${MEMtmp}
   file_prefix=$(cd $TMPDIR ; ls restart*.nc | head -n 1) # pick up the first restart output. ###### TO DO: explicitly calculate the time string???
   for ifile in $(cd $TMPDIR ; ls ${file_prefix:0:$restartbaselen}*.nc); do
     mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/gues/${MEMtmp}/init${ifile:$restartbaselen}

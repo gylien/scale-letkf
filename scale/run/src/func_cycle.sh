@@ -584,7 +584,7 @@ else
           # gues [history]
           #-------------------
           if ((OUT_OPT <= 1)); then
-            path="${atime}/gues/${name_m[$m]}/history$(printf $SCALE_SFX $((q-1)))"
+            path="${time}/hist/${name_m[$m]}/history$(printf $SCALE_SFX $((q-1)))"
             echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
           fi
 
@@ -684,7 +684,7 @@ else
         # meanf
         #-------------------
         if ((OUT_OPT <= 1)); then
-          path="${atime}/gues/meanf/history$(printf $SCALE_SFX $((q-1)))"
+          path="${time}/hist/meanf/history$(printf $SCALE_SFX $((q-1)))"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+q))]}
         fi
         if ((OUT_OPT <= 4)); then
@@ -816,12 +816,11 @@ else
 
           if ((BDY_FORMAT == 1)); then
 
-            time_bdy_e=$(datetime $time_bdy $BDYCYCLE_INT s)
             if ((BDY_ENS == 1)); then
               for m in $(seq $mmean); do
                 mem=${name_m[$m]}
                 [ "$mem" = 'mean' ] && mem='meanf'
-                for ifile in $(ls $DATA_BDY_SCALE/${time_bdy_e}/gues/${mem}/history.*.nc 2> /dev/null); do
+                for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/hist/${mem}/history.*.nc 2> /dev/null); do
                   pathin="$ifile"
                   path="bdyscale/${time_bdy}/${name_m[$m]}/$(basename $ifile)" # change the time of the boundary files to one cycle before
                   if ((DISK_MODE_DATA_BDY == 2)); then
@@ -832,7 +831,7 @@ else
                 done
               done
             else
-              for ifile in $(ls $DATA_BDY_SCALE/${time_bdy_e}/gues/meanf/history.*.nc 2> /dev/null); do
+              for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/hist/meanf/history.*.nc 2> /dev/null); do
                 pathin="$ifile"
                 path="bdyscale/${time_bdy}/mean/$(basename $ifile)" # change the time of the boundary files to one cycle before
                 if ((DISK_MODE_DATA_BDY == 2)); then
