@@ -8,14 +8,15 @@
 
 . config.main
 
-if (($# < 10)); then
+if (($# < 11)); then
   cat >&2 << EOF
 
 [pre_obsope_node.sh] 
 
-Usage: $0 MYRANK ATIME TMPDIR EXECDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE
+Usage: $0 MYRANK STIME ATIME TMPDIR EXECDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE
 
   MYRANK      My rank number (not used)
+  STIME       
   ATIME       Analysis time (format: YYYYMMDDHHMMSS)
   TMPDIR      Temporary directory to run the program
   EXECDIR     Directory of SCALE executable files
@@ -32,6 +33,7 @@ EOF
 fi
 
 MYRANK="$1"; shift
+STIME="$1"; shift
 ATIME="$1"; shift
 TMPDIR="$1"; shift
 EXECDIR="$1"; shift 
@@ -66,7 +68,7 @@ done
 
 cat $TMPDAT/conf/config.nml.obsope | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBERSEQ," \
-        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = '${TMPOUT}/${TIME}/hist/@@@@/history'," \
+        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = '${TMPOUT}/${STIME}/hist/@@@@/history'," \
         -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = '${TMPOUT}/${ATIME}/obsgues/@@@@/obsda'," \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \

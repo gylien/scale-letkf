@@ -238,8 +238,13 @@ while ((time <= ETIME)); do
           echo
           echo "===================================================================="
           continue
-        elif ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
+        elif ((BDY_FORMAT == 0)); then
           echo "  ... skip this step (use prepared boundaries)"
+          echo
+          echo "===================================================================="
+          continue
+        elif ((LANDUSE_UPDATE != 1 && loop > 1)); then
+          echo "  ... skip this step (already done in the first cycle)"
           echo
           echo "===================================================================="
           continue

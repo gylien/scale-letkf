@@ -5,12 +5,12 @@
 #
 #===============================================================================
 
-STIME='20130713043000'
-ETIME='20130713043000'
+STIME='20130713030300'
+ETIME='20130713030330'
 #MEMBERS="$(seq 1 6)"
 ISTEP=
 FSTEP=
-TIME_LIMIT='00:30:00'
+TIME_LIMIT='00:10:00'
 
 #===============================================================================
 
@@ -36,7 +36,7 @@ ADAPTINFL=0         # Adaptive inflation
 
 #===============================================================================
 
-MAKEINIT=1       # 0: No
+MAKEINIT=0       # 0: No
                  # 1: Yes
 PERTURB_BDY=0    # 0: No
                  # 1: Yes
@@ -50,27 +50,27 @@ OBSOPE=0         # 0: No    ! obsope options: not finished yet!!
 
                  #      anal              gues
                  #      mean/sprd members mean/sprd members history
-OUT_OPT=2        # 1:   o         o       o         o       o
+OUT_OPT=1        # 1:   o         o       o         o       o
                  # 2:   o         o       o         o
                  # 3:   o         o       o
                  # 4:   o                 o
 
-                 #      topo
+                 #      topo (only available when $TOPO_FORMAT != 'prep')
 TOPOOUT_OPT=1    # 1:   o
                  # 2:   (none)
 
-                 #      landuse
+                 #      landuse (only available when $LANDUSE_FORMAT != 'prep')
 LANDUSEOUT_OPT=1 # 1:   o
                  # 2:   (none)
 
-                 #      bdy
+                 #      bdy (only available when $BDY_FORMAT != 0)
                  #      mean members
-BDYOUT_OPT=3     # 1:   o    o
+BDYOUT_OPT=1     # 1:   o    o
                  # 2:   o
                  # 3:   (none)
 
                  #      obsgues obsanal obsdep
-OBSOUT_OPT=3     # 1:   o       o       o
+OBSOUT_OPT=1     # 1:   o       o       o
                  # 2:   o               o
                  # 3:                   o
                  # 4:   (none)

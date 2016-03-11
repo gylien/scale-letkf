@@ -31,7 +31,7 @@ MEM="$1"; shift
 MEMSEQ="$1"; shift
 TMPDIR="$1"
 
-historybaselen=7
+#historybaselen=7
 #initbaselen=4
 
 #===============================================================================
