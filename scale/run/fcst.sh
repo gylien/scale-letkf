@@ -69,11 +69,6 @@ setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9"
 
 #-------------------------------------------------------------------------------
 
-mkdir -p $LOGDIR
-exec 3>&1 4>&2
-#exec 2>> $LOGDIR/${myname1}.err
-exec 2> >(tee -a $LOGDIR/${myname1}.err >&2)
-
 echo "[$(datetime_now)] Start $myname $@" >&2
 
 for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
@@ -170,9 +165,6 @@ while ((time <= ETIME)); do
 
 #-------------------------------------------------------------------------------
 # Write the header of the log file
-
-#  exec > $LOGDIR/${myname1}_${stimes[1]}.log
-  exec > >(tee $LOGDIR/${myname1}_${stimes[1]}.log)
 
   echo
   echo " +----------------------------------------------------------------+"
@@ -324,8 +316,6 @@ while ((time <= ETIME)); do
   echo " |             SCALE-Forecasts successfully completed             |"
   echo " +----------------------------------------------------------------+"
   echo
-
-  exec 1>&3
 
 #-------------------------------------------------------------------------------
 

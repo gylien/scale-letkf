@@ -55,13 +55,13 @@ SCPCALL="${1:-cycle}"
 #fi
 
 if [ "$SCPCALL" = 'fcst' ]; then
-  if ((LOG_OPT <= 3)); then
+  if ((LOG_OPT <= 2)); then
     if [ -f "$TMPDIR/pp.conf" ]; then
       mv -f $TMPDIR/pp.conf $TMPOUT/${STIME}/log/scale_pp/${MEM}_fcst_pp.conf
     fi
   fi
 elif [ "$SCPCALL" = 'cycle' ]; then
-  if ((LOG_OPT <= 4)); then
+  if ((LOG_OPT <= 2)); then
     if [ -f "$TMPDIR/pp.conf" ]; then
       mv -f $TMPDIR/pp.conf $TMPOUT/${STIME}/log/scale_pp/${MEM}_pp.conf
     fi

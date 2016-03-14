@@ -66,13 +66,13 @@ fi
 #fi
 
 if [ "$SCPCALL" = 'fcst' ]; then
-  if ((LOG_OPT <= 3)); then
+  if ((LOG_OPT <= 2)); then
     if [ -f "$TMPDIR/init.conf" ]; then
       mv -f $TMPDIR/init.conf $TMPOUT/${STIME}/log/scale_init/${MEM}_fcst_init.conf
     fi
   fi
 elif [ "$SCPCALL" = 'cycle' ]; then
-  if ((LOG_OPT <= 4)); then
+  if ((LOG_OPT <= 2)); then
     if [ -f "$TMPDIR/init.conf" ]; then
       mv -f $TMPDIR/init.conf $TMPOUT/${STIME}/log/scale_init/${MEM}_init.conf
     fi

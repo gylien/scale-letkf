@@ -9,8 +9,6 @@ DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
 OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_100mem_115" # Directory for SCALE-LETKF output
 
-LOGDIR="$DIR/log"
-
 #===============================================================================
 # Location of model/data files
 

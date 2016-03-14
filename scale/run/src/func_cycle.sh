@@ -162,6 +162,24 @@ fi
 
 #===============================================================================
 
+print_setting () {
+#-------------------------------------------------------------------------------
+
+for vname in DIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BDY_SCALE \
+             DATA_BDY_SCALE_PREP DATA_BDY_WRF DATA_BDY_NICAM OBS OBSNCEP TOPO_FORMAT \
+             LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT \
+             PARENT_REF_TIME OCEAN_INPUT OCEAN_FORMAT OBSNUM WINDOW_S WINDOW_E \
+             LCYCLE LTIMESLOT MEMBER NNODES PPN THREADS SCALE_NP \
+             STIME ETIME MEMBERS ISTEP FSTEP FCSTOUT MAKEINIT OUT_OPT TOPOOUT_OPT \
+             LANDUSEOUT_OPT BDYOUT_OPT OBSOUT_OPT LOG_OPT LOG_TYPE; do
+  printf '  %-20s = %s\n' $vname "${!vname}"
+done
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
 staging_list () {
 #-------------------------------------------------------------------------------
 # Determine stage-in list of boundary files
@@ -654,21 +672,72 @@ else
 
       # log
       #-------------------
+      if ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
+        log_zeros='0'
+      else
+        log_zeros='000000'
+      fi
+
       if ((LOG_OPT <= 2)); then
-        path="${time}/log/scale_pp"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        path="${time}/log/scale_init"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        if ((LOG_TYPE == 1)); then
+          path="${time}/log/scale_pp/0001_pp.conf"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          path="${time}/log/scale_pp/0001_LOG.pe000000"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          path="${time}/log/scale_pp/NOUT.${log_zeros}"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          path="${time}/log/scale_init/0001_init.conf"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          path="${time}/log/scale_init/0001_LOG.pe000000"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          if ((BDY_ENS == 1)); then
+            path="${time}/log/scale_init/NOUT-1.${log_zeros}"
+          else
+            path="${time}/log/scale_init/NOUT.${log_zeros}"
+          fi
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        else
+          path="${time}/log/scale_pp"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+          path="${time}/log/scale_init"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        fi
       fi
       if ((LOG_OPT <= 3)); then
-        path="${time}/log/scale"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        if ((LOG_TYPE == 1)); then
+          path="${time}/log/scale/0001_run.conf"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          path="${time}/log/scale/0001_LOG.pe000000"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          path="${time}/log/scale/NOUT-1.${log_zeros}"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          path="${time}/log/scale/latlon_domain_catalogue.txt"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        else
+          path="${time}/log/scale"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        fi
       fi
       if ((LOG_OPT <= 4)); then
-        path="${atime}/log/obsope"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        path="${atime}/log/letkf"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        if ((LOG_TYPE == 1)); then
+          path="${atime}/log/obsope/obsope.conf"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          path="${atime}/log/obsope/LOG.pe000000"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          path="${atime}/log/obsope/NOUT.${log_zeros}"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          path="${atime}/log/letkf/letkf.conf"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          path="${atime}/log/letkf/LOG.pe000000"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          path="${atime}/log/letkf/NOUT.${log_zeros}"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        else
+          path="${atime}/log/obsope"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+          path="${atime}/log/letkf"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        fi
       fi
 
 #    #++++++
@@ -1586,23 +1655,85 @@ local TIME="$1"
 
 #-------------------------------------------------------------------------------
 
-  local otime=$(datetime $TIME)               # HISTORY_OUTPUT_STEP0 = .true.,
-#  local otime=$(datetime $TIME $LTIMESLOT s)  # HISTORY_OUTPUT_STEP0 = .false.,
-  local is=0
-  slot_s=0
-  while ((otime <= $(datetime $TIME $WINDOW_E s))); do
-    is=$((is+1))
-    time_sl[$is]=$otime
-    timefmt_sl[$is]="$(datetime_fmt ${otime})"
-    if ((slot_s == 0 && otime >= $(datetime $TIME $WINDOW_S s))); then
-      slot_s=$is
+local otime=$(datetime $TIME)               # HISTORY_OUTPUT_STEP0 = .true.,
+#local otime=$(datetime $TIME $LTIMESLOT s)  # HISTORY_OUTPUT_STEP0 = .false.,
+local is=0
+slot_s=0
+while ((otime <= $(datetime $TIME $WINDOW_E s))); do
+  is=$((is+1))
+  time_sl[$is]=$otime
+  timefmt_sl[$is]="$(datetime_fmt ${otime})"
+  if ((slot_s == 0 && otime >= $(datetime $TIME $WINDOW_S s))); then
+    slot_s=$is
+  fi
+  if ((otime == $(datetime $TIME $LCYCLE s))); then # $(datetime $TIME $LCYCLE,$WINDOW_S,$WINDOW_E,... s) as a variable
+    slot_b=$is
+  fi
+otime=$(datetime $otime $LTIMESLOT s)
+done
+slot_e=$is
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+finalization () {
+#-------------------------------------------------------------------------------
+
+if ((LOG_TYPE >= 3)); then
+  time=$STIME
+  atime=$(datetime $time $LCYCLE s)
+  while ((time <= ETIME)); do
+    if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time}/log/scale_pp" ]; then
+      if ((LOG_TYPE == 3)); then
+        tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/scale_pp.tar scale_pp
+      elif ((LOG_TYPE == 4)); then
+        tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/scale_pp.tar.gz scale_pp
+      fi
+      rm -fr $OUTDIR/${time}/log/scale_pp
     fi
-    if ((otime == $(datetime $TIME $LCYCLE s))); then # $(datetime $TIME $LCYCLE,$WINDOW_S,$WINDOW_E,... s) as a variable
-      slot_b=$is
+
+    if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time}/log/scale_init" ]; then
+      if ((LOG_TYPE == 3)); then
+        tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/scale_init.tar scale_init
+      elif ((LOG_TYPE == 4)); then
+        tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/scale_init.tar.gz scale_init
+      fi
+      rm -fr $OUTDIR/${time}/log/scale_init
     fi
-  otime=$(datetime $otime $LTIMESLOT s)
+
+    if ((LOG_OPT <= 3)) && [ -d "$OUTDIR/${time}/log/scale" ]; then
+      if ((LOG_TYPE == 3)); then
+        tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/scale.tar scale
+      elif ((LOG_TYPE == 4)); then
+        tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/scale.tar.gz scale
+      fi
+      rm -fr $OUTDIR/${time}/log/scale
+    fi
+
+    if ((LOG_OPT <= 4)) && [ -d "$OUTDIR/${atime}/log/obsope" ]; then
+      if ((LOG_TYPE == 3)); then
+        tar -C $OUTDIR/${atime}/log -cf $OUTDIR/${atime}/log/obsope.tar obsope
+      elif ((LOG_TYPE == 4)); then
+        tar -C $OUTDIR/${atime}/log -czf $OUTDIR/${atime}/log/obsope.tar.gz obsope
+      fi
+      rm -fr $OUTDIR/${atime}/log/obsope
+    fi
+
+    if ((LOG_OPT <= 4)) && [ -d "$OUTDIR/${atime}/log/letkf" ]; then
+      if ((LOG_TYPE == 3)); then
+        tar -C $OUTDIR/${atime}/log -cf $OUTDIR/${atime}/log/letkf.tar letkf
+      elif ((LOG_TYPE == 4)); then
+        tar -C $OUTDIR/${atime}/log -czf $OUTDIR/${atime}/log/letkf.tar.gz letkf
+      fi
+      rm -fr $OUTDIR/${atime}/log/letkf
+    fi
+
+    time=$(datetime $time $LCYCLE s)
+    atime=$(datetime $time $LCYCLE s)
   done
-  slot_e=$is
+fi
 
 #-------------------------------------------------------------------------------
 }

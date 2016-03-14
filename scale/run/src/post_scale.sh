@@ -107,7 +107,7 @@ if [ "$SCPCALL" = 'fcst' ]; then
     fi
   fi
 elif [ "$SCPCALL" = 'cycle' ]; then
-  if ((LOG_OPT <= 4)); then
+  if ((LOG_OPT <= 3)); then
     if [ -f "$TMPDIR/run.conf" ]; then
       mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/scale/${MEM}_run.conf
     fi

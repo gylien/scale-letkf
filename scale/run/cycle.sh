@@ -68,24 +68,13 @@ else
   STDOUT='NOUT'
 fi
 
-setting "$1" "$2" "$3" "$4" "$5"
-
-echo "[$(datetime_now)] ### 2" >&2
-
-#-------------------------------------------------------------------------------
-
-mkdir -p $LOGDIR
-#exec 3>&1 4>&2
-##exec 2>> $LOGDIR/${myname1}.err
-#exec 2> >(tee -a $LOGDIR/${myname1}.err >&2)
-
 echo "[$(datetime_now)] Start $myname $@" >&2
 
-for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
-             WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
-             STIME ETIME MEMBERS ISTEP FSTEP; do
-  printf '                      %-10s = %s\n' $vname "${!vname}" >&2
-done
+setting "$1" "$2" "$3" "$4" "$5"
+
+print_setting
+
+echo "[$(datetime_now)] ### 2" >&2
 
 #-------------------------------------------------------------------------------
 
@@ -173,9 +162,6 @@ while ((time <= ETIME)); do
 
   echo "[$(datetime_now)] ### 7" >&2
 
-##  exec > $LOGDIR/${myname1}_${time}.log
-#  exec > >(tee $LOGDIR/${myname1}_${time}.log)
-
   echo
   echo " +----------------------------------------------------------------+"
   echo " |                          SCALE-LETKF                           |"
@@ -201,11 +187,9 @@ while ((time <= ETIME)); do
   done
   echo
   echo "  Nodes used:               $NNODES"
-#  if ((MTYPE == 1)); then
-    for n in $(seq $NNODES); do
-      echo "    ${node[$n]}"
-    done
-#  fi
+  for n in $(seq $NNODES); do
+    echo "    ${node[$n]}"
+  done
   echo
   echo "  Processes per node:       $PPN"
   echo "  Total processes:          $totalnp"
@@ -218,7 +202,6 @@ while ((time <= ETIME)); do
     echo "      ${name_m[$m]}: ${node_m[$m]}"
   done
   echo
-  echo "===================================================================="
 
 #-------------------------------------------------------------------------------
 # Call functions to run the job
@@ -226,38 +209,28 @@ while ((time <= ETIME)); do
   for s in $(seq $nsteps); do
     if (((s_flag == 0 || s >= ISTEP) && (e_flag == 0 || s <= FSTEP))); then
 
-      echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2
-      echo
-      printf " %2d. %-55s\n" $s "${stepname[$s]}"
-      echo
-
       ######
       if ((s == 1)); then
         if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
-          echo "  ... skip this step (use prepared topo and landuse files)"
-          echo
-          echo "===================================================================="
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared topo and landuse files)" >&2
           continue
         elif ((BDY_FORMAT == 0)); then
-          echo "  ... skip this step (use prepared boundaries)"
-          echo
-          echo "===================================================================="
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
           continue
         elif ((LANDUSE_UPDATE != 1 && loop > 1)); then
-          echo "  ... skip this step (already done in the first cycle)"
-          echo
-          echo "===================================================================="
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (already done in the first cycle)" >&2
           continue
         fi
       fi
-      ######
       if ((s == 2)); then
         if ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
-          echo "  ... skip this step (use prepared boundaries)"
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
           continue
         fi
       fi
       ######
+
+      echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2
 
       enable_iter=0
       if ((s == 2 && BDY_ENS == 1)); then
@@ -317,9 +290,6 @@ while ((time <= ETIME)); do
         fi
       fi
 
-      echo
-      echo "===================================================================="
-
     fi
   done
 
@@ -346,13 +316,10 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 # Write the footer of the log file
 
-  echo
   echo " +----------------------------------------------------------------+"
   echo " |               SCALE-LETKF successfully completed               |"
   echo " +----------------------------------------------------------------+"
   echo
-
-#  exec 1>&3
 
 #-------------------------------------------------------------------------------
 

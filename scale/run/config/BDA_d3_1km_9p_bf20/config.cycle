@@ -5,8 +5,8 @@
 #
 #===============================================================================
 
-STIME='20130713030300'
-ETIME='20130713030330'
+STIME='20130713030400'
+ETIME='20130713030430'
 #MEMBERS="$(seq 1 6)"
 ISTEP=
 FSTEP=
@@ -82,5 +82,10 @@ LOG_OPT=2        # 1:   o    o       o   o              o     o      o
                  # 3:                                   o     o      o
                  # 4:                                         o      o
                  # 5:   (none)
+
+LOG_TYPE=3       # 1:   Only save the log file from the head process
+                 # 2:   Save all log files
+                 # 3:   Save all log files in an archive file
+                 # 4:   Save all log files in a compressed archive file
 
 #===============================================================================

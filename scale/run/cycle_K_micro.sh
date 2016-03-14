@@ -113,7 +113,6 @@ mkdir -p $TMP/src
 cp -L -r $SCRP_DIR/src/* $TMP/src
 
 echo "SCRP_DIR=\"$TMP\"" >> $TMP/config.main
-echo "LOGDIR=\"$TMP/log\"" >> $TMP/config.main
 
 echo "NNODES=$NNODES" >> $TMP/config.main
 echo "PPN=$PPN" >> $TMP/config.main
@@ -196,13 +195,6 @@ echo "[$(datetime_now)] Finalization (stage out)"
 if ((ONLINE_STGOUT != 1)); then
   bash $SCRP_DIR/src/stage_out.sh a
 fi
-
-###### To do: also online staging...
-#mkdir -p $LOGDIR
-#cp -f $TMP/log/${myname1}_*.log $LOGDIR
-#if [ -f "$TMP/log/${myname1}.err" ]; then
-#  cat $TMP/log/${myname1}.err >> $LOGDIR/${myname1}.err
-#fi
 
 if ((CLEAR_TMP == 1)); then
   safe_rm_tmpdir $TMP

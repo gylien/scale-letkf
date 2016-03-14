@@ -81,6 +81,13 @@ letkfbaselen=9
 #  done
 #fi
 
+if ((LOG_OPT <= 4 && MYRANK == 0)); then
+  if [ -f "$TMPDIR/letkf.conf" ]; then
+    mv -f $TMPDIR/letkf.conf $TMPOUT/${ATIME}/log/letkf/letkf.conf
+    mv -f $TMPDIR/LOG.pe000000 $TMPOUT/${ATIME}/log/letkf/LOG.pe000000
+  fi
+fi
+
 #===============================================================================
 
 exit 0
