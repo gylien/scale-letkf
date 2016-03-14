@@ -202,6 +202,8 @@ cp -f ${myname1}_${SYSNAME}.o${jobid} $OUTDIR/exp/${jobid}_${STIME}/job.o
 cp -f ${myname1}_${SYSNAME}.i${jobid} $OUTDIR/exp/${jobid}_${STIME}/job.i
 cp -f ${myname1}_${SYSNAME}.e${jobid} $OUTDIR/exp/${jobid}_${STIME}/job.e
 cp -f ${myname1}_${SYSNAME}.s${jobid} $OUTDIR/exp/${jobid}_${STIME}/job.s
+( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${STIME}/version )
+( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${STIME}/version )
 
 if ((CLEAR_TMP == 1)); then
   safe_rm_tmpdir $TMPS
