@@ -654,17 +654,17 @@ else
 
       # log
       #-------------------
-      if ((OBSOUT_OPT <= 2)); then
+      if ((LOG_OPT <= 2)); then
         path="${time}/log/scale_pp"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
         path="${time}/log/scale_init"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
-      if ((OBSOUT_OPT <= 3)); then
+      if ((LOG_OPT <= 3)); then
         path="${time}/log/scale"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
-      if ((OBSOUT_OPT <= 4)); then
+      if ((LOG_OPT <= 4)); then
         path="${atime}/log/obsope"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
         path="${atime}/log/letkf"
@@ -1464,7 +1464,7 @@ for it in $(seq $nitmax); do
   if ((m >= 1 && m <= mmean)); then
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
-           $mem_np ${atime} ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/obsope $LOG_OPT $OUT_OPT
+           $mem_np ${time} ${atime} ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/obsope $LOG_OPT $OUT_OPT
     fi
   fi
 

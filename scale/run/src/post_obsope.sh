@@ -8,15 +8,16 @@
 
 . config.main
 
-if (($# < 8)); then
+if (($# < 9)); then
   cat >&2 << EOF
 
 [post_obsope.sh]
 
-Usage: $0 MYRANK MEM_NP ATIME MEM TMPDIR LOG_OPT OUT_OPT
+Usage: $0 MYRANK MEM_NP STIME ATIME MEM TMPDIR LOG_OPT OUT_OPT
 
   MYRANK  My rank number
   MEM_NP  Number of processes per member
+  STIME
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
   MEM     Name of the ensemble member
   MEMSEQ
@@ -30,6 +31,7 @@ fi
 
 MYRANK="$1"; shift
 MEM_NP="$1"; shift
+STIME="$1"; shift
 ATIME="$1"; shift
 MEM="$1"; shift
 MEMSEQ="$1"; shift
@@ -65,8 +67,8 @@ obsdabaselen=10
 #fi
 
 if ((OUT_OPT >= 2)); then
-  if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
-    rm -f $TMPOUT/${ATIME}/gues/${MEM}/history*.nc
+  if [ -d "$TMPOUT/${STIME}/hist/${MEM}" ]; then
+    rm -f $TMPOUT/${STIME}/hist/${MEM}/*
   fi
 fi
 
