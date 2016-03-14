@@ -80,7 +80,7 @@ fi
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_pp | \
-    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale_pp/${LOGNAME}\"," \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale_pp/${MEM}_${LOGNAME}\"," \
         -e "/!--TOPO_OUT_BASENAME--/a TOPO_OUT_BASENAME = \"$TMPOUT/const/topo/topo\"," \
         -e "/!--LANDUSE_OUT_BASENAME--/a LANDUSE_OUT_BASENAME = \"${LANDUSE_OUT_BASENAME}\"," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \

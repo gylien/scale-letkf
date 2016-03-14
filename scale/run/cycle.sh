@@ -72,6 +72,7 @@ echo "[$(datetime_now)] Start $myname $@" >&2
 
 setting "$1" "$2" "$3" "$4" "$5"
 
+echo
 print_setting
 
 echo "[$(datetime_now)] ### 2" >&2
