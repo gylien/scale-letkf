@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_100mem_115" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_100mem_121" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -29,11 +29,11 @@ OBSNCEP=                                                 # directory of observat
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='DEM50M'    # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='LU100M' # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -49,7 +49,7 @@ BDY_ENS=1               # 0: Fixed boundary files for all memebers
 BDYINT=3600
 BDYCYCLE_INT=21600
 
-PARENT_REF_TIME=20130713000000
+PARENT_REF_TIME=20130713060000
 
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
@@ -64,17 +64,17 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=30        # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=30        # SCALE forecast time when assimilation window ends (second)
-LCYCLE=30          # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=300       # SCALE forecast time when assimilation window starts (second)
+WINDOW_E=300       # SCALE forecast time when assimilation window ends (second)
+LCYCLE=300         # Length of a GFS-LETKF cycle (second)
+LTIMESLOT=300      # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
 
-MEMBER=3           # Ensemble size
+MEMBER=100         # Ensemble size
 
-NNODES=36          # Number of nodes
+NNODES=90          # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -147,7 +147,7 @@ SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 
-SCP_THREAD=12
+SCP_THREAD=8
 
 PYTHON="python"
 

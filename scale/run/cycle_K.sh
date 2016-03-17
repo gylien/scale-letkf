@@ -31,7 +31,7 @@ res=$? && ((res != 0)) && exit $res
 #-------------------------------------------------------------------------------
 
 if ((TMPDAT_MODE == 1 || TMPRUN_MODE == 1 || TMPOUT_MODE == 1)); then
-  echo "[Error] $0: When using regular resource groups," >&2
+  echo "[Error] $0: When using a regular resource group," >&2
   echo "        \$TMPDAT_MODE, \$TMPRUN_MODE, \$TMPOUT_MODE all need to be 2 or 3." >&2
   exit 1
 fi
@@ -193,17 +193,17 @@ echo
 
 finalization
 
-mkdir -p $OUTDIR/exp/${jobid}_${STIME}
-cp -f $SCRP_DIR/config.main $OUTDIR/exp/${jobid}_${STIME}
-cp -f $SCRP_DIR/config.cycle $OUTDIR/exp/${jobid}_${STIME}
-cp -f $SCRP_DIR/config.nml.* $OUTDIR/exp/${jobid}_${STIME}
-cp -f $SCRP_DIR/cycle_job.sh $OUTDIR/exp/${jobid}_${STIME}
-cp -f ${myname1}_${SYSNAME}.o${jobid} $OUTDIR/exp/${jobid}_${STIME}/job.o
-cp -f ${myname1}_${SYSNAME}.i${jobid} $OUTDIR/exp/${jobid}_${STIME}/job.i
-cp -f ${myname1}_${SYSNAME}.e${jobid} $OUTDIR/exp/${jobid}_${STIME}/job.e
-cp -f ${myname1}_${SYSNAME}.s${jobid} $OUTDIR/exp/${jobid}_${STIME}/job.s
-( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${STIME}/version )
-( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${STIME}/version )
+mkdir -p $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/config.main $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/config.${myname1} $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/config.nml.* $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/${myname1}_job.sh $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f ${myname1}_${SYSNAME}.o${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.o
+cp -f ${myname1}_${SYSNAME}.e${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.e
+cp -f ${myname1}_${SYSNAME}.i${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.i
+cp -f ${myname1}_${SYSNAME}.s${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.s
+( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
+( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
 
 if ((CLEAR_TMP == 1)); then
   safe_rm_tmpdir $TMPS

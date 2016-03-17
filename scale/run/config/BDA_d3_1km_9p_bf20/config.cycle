@@ -5,16 +5,16 @@
 #
 #===============================================================================
 
-STIME='20130713030700'
-ETIME='20130713030730'
+STIME='20130713055000'
+ETIME='20130713062500'
 #MEMBERS="$(seq 1 6)"
 ISTEP=
 FSTEP=
-TIME_LIMIT='00:10:00'
+TIME_LIMIT='01:00:00'
 
 #===============================================================================
 
-FCSTOUT=30
+FCSTOUT=300
 
 #OBSOPE_OPT=1       # Observation operator options:
 #                   #  1: use LETKF built-in obsope
@@ -55,22 +55,22 @@ OUT_OPT=1        # 1:   o         o       o         o       o
                  # 3:   o         o       o
                  # 4:   o                 o
 
-                 #      topo (only available when $TOPO_FORMAT != 'prep')
-TOPOOUT_OPT=1    # 1:   o
+                 #      topo
+TOPOOUT_OPT=2    # 1:   o
                  # 2:   (none)
 
-                 #      landuse (only available when $LANDUSE_FORMAT != 'prep')
-LANDUSEOUT_OPT=1 # 1:   o
+                 #      landuse
+LANDUSEOUT_OPT=2 # 1:   o
                  # 2:   (none)
 
-                 #      bdy (only available when $BDY_FORMAT != 0)
+                 #      bdy
                  #      mean members
-BDYOUT_OPT=1     # 1:   o    o
+BDYOUT_OPT=3     # 1:   o    o
                  # 2:   o
                  # 3:   (none)
 
                  #      obsgues obsanal obsdep
-OBSOUT_OPT=1     # 1:   o       o       o
+OBSOUT_OPT=2     # 1:   o       o       o
                  # 2:   o               o
                  # 3:                   o
                  # 4:   (none)

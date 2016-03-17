@@ -65,17 +65,12 @@ else
   STDOUT='NOUT'
 fi
 
-setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9"
-
-#-------------------------------------------------------------------------------
-
 echo "[$(datetime_now)] Start $myname $@" >&2
 
-for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
-             FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT OUT_OPT LOG_OPT \
-             STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP PARENT_REF_TIME; do
-  printf '                      %-10s = %s\n' $vname "${!vname}" >&2
-done
+setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9"
+
+echo
+print_setting
 
 #-------------------------------------------------------------------------------
 
@@ -208,7 +203,6 @@ while ((time <= ETIME)); do
     done
   done
   echo
-  echo "===================================================================="
 
 #-------------------------------------------------------------------------------
 # Call functions to run the job
@@ -216,33 +210,28 @@ while ((time <= ETIME)); do
   for s in $(seq $nsteps); do
     if (((s_flag == 0 || s >= ISTEP) && (e_flag == 0 || s <= FSTEP))); then
 
-      echo "[$(datetime_now)] ${stimes[1]}: ${stepname[$s]}" >&2
-      echo
-      printf " %2d. %-55s\n" $s "${stepname[$s]}"
-      echo
-
       ######
       if ((s == 1)); then
         if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
-          echo "  ... skip this step (use prepared topo and landuse files)"
-          echo
-          echo "===================================================================="
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared topo and landuse files)" >&2
           continue
         elif ((BDY_FORMAT == 0)); then
-          echo "  ... skip this step (use prepared boundaries)"
-          echo
-          echo "===================================================================="
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
+          continue
+        elif ((LANDUSE_UPDATE != 1 && loop > 1)); then
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (already done in the first cycle)" >&2
           continue
         fi
       fi
-      ######
       if ((s == 2)); then
         if ((BDY_FORMAT == 0)); then
-          echo "  ... skip this step (use prepared boundaries)"
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
           continue
         fi
       fi
       ######
+
+      echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2
 
       enable_iter=0
       if ((s == 2 && BDY_ENS == 1)); then
@@ -281,10 +270,6 @@ while ((time <= ETIME)); do
         fi
       fi
 
-
-      echo
-      echo "===================================================================="
-
     fi
   done
 
@@ -311,7 +296,6 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 # Write the footer of the log file
 
-  echo
   echo " +----------------------------------------------------------------+"
   echo " |             SCALE-Forecasts successfully completed             |"
   echo " +----------------------------------------------------------------+"

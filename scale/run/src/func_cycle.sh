@@ -580,7 +580,7 @@ else
 
       # topo
       #-------------------
-      if ((loop == 1 && TOPOOUT_OPT <= 1)) && ((TOPOOUT_OPT <= 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
+      if ((loop == 1 && TOPOOUT_OPT <= 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
         path="const/topo"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
@@ -1311,17 +1311,12 @@ for it in $(seq $its $ite); do
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= MEMBER_RUN)); then
     if (pdrun $g $PROC_OPT); then
-      if ((BDY_FORMAT == 1 || BDY_FORMAT == 2)); then
-        if ((BDY_ENS == 1)); then
-          bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
-               $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
-        else
-          bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
-               $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
-        fi
-      elif ((BDY_FORMAT == 3)); then
-        echo
-        #........
+      if ((BDY_ENS == 1)); then
+        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
+             $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
+      else
+        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
+             $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
       fi
     fi
   fi
