@@ -133,7 +133,11 @@ MODULE common_nml
   LOGICAL :: OBSANAL_OUTPUT = .false.
 
   !--- PARAM_LETKF_RADAR
-  INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than 0.
+  INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than RADAR_REF_THRES_DBZ
+  INTEGER :: MIN_RADAR_REF_MEMBER_OBSREF = 1   !Ensemble members with
+
+  INTEGER :: LOW_REF_SHIFT = 0.0d0
+
   REAL(r_size) :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
   REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
 
@@ -452,6 +456,8 @@ subroutine read_nml_letkf_radar
 
   namelist /PARAM_LETKF_RADAR/ &
     MIN_RADAR_REF_MEMBER, &
+    MIN_RADAR_REF_MEMBER_OBSREF, &
+    LOW_REF_SHIFT, &
     MIN_RADAR_REF_DBZ, &
     RADAR_REF_THRES_DBZ, &
     RADAR_ZMAX, &

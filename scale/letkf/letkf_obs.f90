@@ -296,7 +296,7 @@ SUBROUTINE set_letkf_obs
       if (obs(iof)%elm(n) == id_radar_ref_obs) then
         if (obs(iof)%dat(n) >= 0.0d0 .and. obs(iof)%dat(n) < 1.0d10) then
           if (obs(iof)%dat(n) < MIN_RADAR_REF) then
-            obs(iof)%dat(n) = MIN_RADAR_REF_DBZ
+            obs(iof)%dat(n) = MIN_RADAR_REF_DBZ + LOW_REF_SHIFT
           else
             obs(iof)%dat(n) = 10.0d0 * log10(obs(iof)%dat(n))
           end if
@@ -447,13 +447,24 @@ SUBROUTINE set_letkf_obs
           mem_ref = mem_ref + 1
         end if
       end do
-      if (mem_ref < MIN_RADAR_REF_MEMBER) then
-        obsda%qc(n) = iqc_ref_mem
-!        write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
-!        write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
-!              '*  (lon,lat)=(',obs(obsda%set(n))%lon(obsda%idx(n)),',',obs(obsda%set(n))%lat(obsda%idx(n)),'), mem_ref=', &
-!              mem_ref,', ref_obs=', obs(obsda%set(n))%dat(obsda%idx(n))
-        cycle
+      if (obs(obsda%set(n))%dat(obsda%idx(n)) > RADAR_REF_THRES_DBZ+1.0d-6) then
+        if (mem_ref < MIN_RADAR_REF_MEMBER_OBSREF) then
+          obsda%qc(n) = iqc_ref_mem
+!          write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
+!          write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
+!                '*  (lon,lat)=(',obs(obsda%set(n))%lon(obsda%idx(n)),',',obs(obsda%set(n))%lat(obsda%idx(n)),'), mem_ref=', &
+!                mem_ref,', ref_obs=', obs(obsda%set(n))%dat(obsda%idx(n))
+          cycle
+        end if
+      else
+        if (mem_ref < MIN_RADAR_REF_MEMBER) then
+          obsda%qc(n) = iqc_ref_mem
+!          write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
+!          write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
+!                '*  (lon,lat)=(',obs(obsda%set(n))%lon(obsda%idx(n)),',',obs(obsda%set(n))%lat(obsda%idx(n)),'), mem_ref=', &
+!                mem_ref,', ref_obs=', obs(obsda%set(n))%dat(obsda%idx(n))
+          cycle
+        end if
       end if
     end if
 !!!###### end RADAR assimilation ######

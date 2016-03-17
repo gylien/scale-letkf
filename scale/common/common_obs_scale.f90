@@ -429,7 +429,7 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
 !!!!    else                      !!!!!! --------- Pesudo RH: TO BE DONE...
     if (radar_ref < MIN_RADAR_REF) then
       qc = iqc_ref_low
-      yobs = MIN_RADAR_REF_DBZ  !!! even if the above qc is bad, still return the value
+      yobs = MIN_RADAR_REF_DBZ + LOW_REF_SHIFT  !!! even if the above qc is bad, still return the value
     else
       yobs = 10.0d0 * log10(radar_ref)
     end if
