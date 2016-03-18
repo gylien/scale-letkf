@@ -1106,7 +1106,7 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_pp_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale_pp $TMPDAT/exec $TMPDAT $MEMBER_RUN $iter
+       $mem_nodes $mem_np $TMPRUN/scale_pp $MEMBER_RUN $iter
 fi
 
 if ((MYRANK == 0)); then
@@ -1122,9 +1122,9 @@ for it in $(seq $its $ite); do
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= MEMBER_RUN)); then
     if (pdrun $g $PROC_OPT); then
-      bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK $time \
-           $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT \
-           '' ${bdytopo} ${bdycatalogue}
+      bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK $time ${name_m[$m]} \
+           $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT \
+           cycle ${bdytopo} ${bdycatalogue}
     fi
   fi
 
@@ -1166,7 +1166,7 @@ for it in $(seq $its $ite); do
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= MEMBER_RUN)); then
     if (pdrun $g $PROC_OPT); then
-      bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $mem_np $time \
+      bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $time \
            ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT
     fi
   fi
@@ -1238,7 +1238,7 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_init_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale_init $TMPDAT/exec $TMPDAT $MEMBER_RUN $iter
+       $mem_nodes $mem_np $TMPRUN/scale_init $MEMBER_RUN $iter
 fi
 
 if ((MYRANK == 0)); then
@@ -1264,7 +1264,7 @@ for it in $(seq $its $ite); do
            $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
            ${bdy_loc} $time $mkinit ${name_m[$m]} $mem_bdy \
            $TMPRUN/scale_init/$(printf '%04d' $m) \
-           "$bdy_time_list" $ntsteps $ntsteps_skip
+           "$bdy_time_list" $ntsteps $ntsteps_skip cycle
     fi
   fi
 
@@ -1312,10 +1312,10 @@ for it in $(seq $its $ite); do
   if ((m >= 1 && m <= MEMBER_RUN)); then
     if (pdrun $g $PROC_OPT); then
       if ((BDY_ENS == 1)); then
-        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
+        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $time \
              $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
       else
-        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np $time \
+        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $time \
              $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
       fi
     fi
@@ -1367,7 +1367,7 @@ bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT $PARENT_REF_TIME $BDYINT
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT $((MEMBER+1)) $iter
+       $mem_nodes $mem_np $TMPRUN/scale $((MEMBER+1)) $iter
 fi
 
 mkinit=0
@@ -1416,7 +1416,7 @@ for it in $(seq $its $ite); do
            $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
            $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
            $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) \
-           $bdy_start_time
+           cycle $bdy_start_time
     fi
   fi
 
@@ -1451,8 +1451,8 @@ for it in $(seq $its $ite); do
 #    fi
 
     if (pdrun $g $PROC_OPT); then
-      bash $SCRP_DIR/src/post_scale.sh $MYRANK $mem_np \
-           $time ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT cycle $iter
+      bash $SCRP_DIR/src/post_scale.sh $MYRANK $time \
+           ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT cycle
     fi
   fi
 
@@ -1479,7 +1479,7 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_obsope_node.sh $MYRANK \
-       $time $atime $TMPRUN/obsope $TMPDAT/exec $TMPDAT/obs \
+       $time $atime $TMPRUN/obsope $TMPDAT/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b $MEMBER
 fi
 
@@ -1497,7 +1497,7 @@ for it in $(seq $nitmax); do
   if ((m >= 1 && m <= mmean)); then
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_obsope.sh $MYRANK \
-           $atime ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/obsope
+           $atime ${name_m[$m]}
     fi
   fi
 
@@ -1528,7 +1528,7 @@ for it in $(seq $nitmax); do
   if ((m >= 1 && m <= mmean)); then
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
-           $mem_np ${time} ${atime} ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/obsope $LOG_OPT $OUT_OPT
+           ${time} ${atime} ${name_m[$m]} $TMPRUN/obsope $LOG_OPT $OUT_OPT
     fi
   fi
 
@@ -1555,7 +1555,7 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
-       $atime $TMPRUN/letkf $TMPDAT/exec $TMPDAT/obs \
+       $atime $TMPRUN/letkf $TMPDAT/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo $MEMBER
 fi
 
@@ -1573,7 +1573,7 @@ for it in $(seq $nitmax); do
   if ((m >= 1 && m <= mmean)); then
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
-           $TMPOUT/const/topo/topo $atime ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/letkf
+           $atime ${name_m[$m]}
     fi
   fi
 
@@ -1604,7 +1604,7 @@ for it in $(seq $nitmax); do
   if ((m >= 1 && m <= mmean)); then
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_letkf.sh $MYRANK \
-           $mem_np ${atime} ${name_m[$m]} $(printf '%04d' $m) $TMPRUN/letkf $LOG_OPT
+           ${atime} $TMPRUN/letkf $LOG_OPT
     fi
   fi
 

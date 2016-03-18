@@ -62,12 +62,6 @@ if ((USE_RANKDIR == 1)); then
   fi
 fi
 
-if ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
-  STDOUT=''
-else
-  STDOUT='NOUT'
-fi
-
 echo "[$(datetime_now)] Start $myname $@" >&2
 
 setting "$1" "$2" "$3" "$4" "$5"

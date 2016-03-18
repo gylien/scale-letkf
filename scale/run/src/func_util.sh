@@ -539,6 +539,10 @@ while ((ntsteps_total > ntsteps)); do
   ntsteps_total=$((ntsteps_total-ntsteps))
 done
 
+if ((nbdy == 1)); then
+  ntsteps=$ntsteps_total
+fi
+
 #echo "\$nbdy              = $nbdy" >&2
 #echo "\$ntsteps           = $ntsteps" >&2
 #echo "\$ntsteps_skip      = $ntsteps_skip" >&2

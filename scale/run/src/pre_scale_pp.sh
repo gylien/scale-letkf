@@ -13,14 +13,14 @@ if (($# < 5)); then
 
 [pre_scale_pp.sh] Prepare a temporary directory for scale-les_pp run.
 
-Usage: $0 MYRANK STIME TMPDIR EXECDIR DATADIR [LOGNAME COPYTOPO CATALOGUE]
+Usage: $0 MYRANK STIME MEM TMPDIR DATADIR [SCPCALL COPYTOPO CATALOGUE]
 
   MYRANK   My rank number (not used)
   STIME    Start time (format: YYYYMMDDHHMMSS)
+  MEM
   TMPDIR   Temporary directory to run scale-les_pp
-  EXECDIR  Directory of SCALE executable files
   DATADIR  Directory of SCALE data files
-  LOGNAME
+  SCPCALL  Called from which script? (fcst/cycle)
   COPYTOPO
   CATALOGUE
 
@@ -30,10 +30,10 @@ fi
 
 MYRANK="$1"; shift
 STIME="$1"; shift
+MEM="$1"; shift
 TMPDIR="$1"; shift
-EXECDIR="$1"; shift
 DATADIR="$1"; shift   ###### no use
-LOGNAME="${1:-LOG}"; shift
+SCPCALL="${1:-cycle}"; shift
 COPYTOPO="$1"; shift
 CATALOGUE="$1"
 
@@ -77,10 +77,16 @@ else
   LANDUSE_OUT_BASENAME="$TMPOUT/const/landuse/landuse"
 fi
 
+if [ "$SCPCALL" = 'cycle' ]; then
+  IO_LOG_DIR='scale_pp'
+else
+  IO_LOG_DIR="${SCPCALL}_scale_pp"
+fi
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_pp | \
-    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale_pp/${MEM}_${LOGNAME}\"," \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
         -e "/!--TOPO_OUT_BASENAME--/a TOPO_OUT_BASENAME = \"$TMPOUT/const/topo/topo\"," \
         -e "/!--LANDUSE_OUT_BASENAME--/a LANDUSE_OUT_BASENAME = \"${LANDUSE_OUT_BASENAME}\"," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \

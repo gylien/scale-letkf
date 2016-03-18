@@ -118,9 +118,9 @@ elif [ "$SCPCALL" = 'fcst' ]; then
         if ((LANDUSE_UPDATE == 1)); then
           mkdir -p $TMPOUT/${time2}/landuse
         fi
-        mkdir -p $TMPOUT/${time2}/log/scale_pp
-        mkdir -p $TMPOUT/${time2}/log/scale_init
-        mkdir -p $TMPOUT/${time2}/log/scale
+        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_pp
+        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_init
+        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale
       fi
     done
     time=$(datetime $time $((lcycles * CYCLE)) s)

@@ -577,41 +577,45 @@ else
 
           if ((LOG_OPT <= 2)); then
             if ((LOG_TYPE == 1)); then
-              path="${time2}/log/scale_pp/${name_m[1]}_fcst_pp.conf"
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-              path="${time2}/log/scale_pp/${name_m[1]}_0001_fcst_LOG.pe000000"
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-              path="${time2}/log/scale_pp/fcst_NOUT.${log_zeros}"
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-              path="${time2}/log/scale_init/${name_m[1]}_fcst_init.conf"
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-              path="${time2}/log/scale_init/${name_m[1]}_fcst_LOG.pe000000"
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-              if ((BDY_ENS == 1)); then
-                path="${time2}/log/scale_init/fcst_NOUT-1.${log_zeros}"
-              else
-                path="${time2}/log/scale_init/fcst_NOUT.${log_zeros}"
+              if ((c == 1)); then
+                path="${time2}/log/fcst_scale_pp/${name_m[1]}_pp.conf"
+                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+                path="${time2}/log/fcst_scale_pp/${name_m[1]}_LOG.pe000000"
+                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+                path="${time2}/log/fcst_scale_pp/NOUT.${log_zeros}"
+                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+                path="${time2}/log/fcst_scale_init/${name_m[1]}_init.conf"
+                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+                path="${time2}/log/fcst_scale_init/${name_m[1]}_LOG.pe000000"
+                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+                if ((BDY_ENS == 1)); then
+                  path="${time2}/log/fcst_scale_init/NOUT-1.${log_zeros}"
+                else
+                  path="${time2}/log/fcst_scale_init/NOUT.${log_zeros}"
+                fi
+                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
               fi
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
             else
-              path="${time2}/log/scale_pp"
+              path="${time2}/log/fcst_scale_pp"
               echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-              path="${time2}/log/scale_init"
+              path="${time2}/log/fcst_scale_init"
               echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
             fi
           fi
           if ((LOG_OPT <= 3)); then
             if ((LOG_TYPE == 1)); then
-              path="${time2}/log/scale/${name_m[1]}_fcst_run.conf"
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-              path="${time2}/log/scale/${name_m[1]}_fcst_LOG.pe000000"
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-              path="${time2}/log/scale/fcst_NOUT-1.${log_zeros}"
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-              path="${time2}/log/scale/latlon_domain_catalogue.txt"
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+              if ((c == 1)); then
+                path="${time2}/log/fcst_scale/${name_m[1]}_run.conf"
+                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+                path="${time2}/log/fcst_scale/${name_m[1]}_LOG.pe000000"
+                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+                path="${time2}/log/fcst_scale/NOUT-1.${log_zeros}"
+                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+                path="${time2}/log/fcst_scale/latlon_domain_catalogue.txt"
+                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+              fi
             else
-              path="${time2}/log/scale"
+              path="${time2}/log/fcst_scale"
               echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
             fi
           fi
@@ -948,7 +952,7 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_pp_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale_pp $TMPDAT/exec $TMPDAT $MEMBER_RUN $iter
+       $mem_nodes $mem_np $TMPRUN/scale_pp $MEMBER_RUN $iter
 fi
 
 if ((MYRANK == 0)); then
@@ -970,9 +974,9 @@ for it in $(seq $its $ite); do
     fi
 
     if (pdrun $g $PROC_OPT); then
-      bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK ${stimes[$c]} \
-           $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT/exec $TMPDAT \
-           fcst_LOG ${bdytopo} ${bdycatalogue}
+      bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK ${stimes[$c]} ${name_m[$m]} \
+           $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT \
+           fcst ${bdytopo} ${bdycatalogue}
     fi
   fi
 
@@ -1020,8 +1024,8 @@ for it in $(seq $its $ite); do
     fi
 
     if (pdrun $g $PROC_OPT); then
-      bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $mem_np ${stimes[$c]} \
-           ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT fcst      ###### ${name_m[$m]}... will be buggy...
+      bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK ${stimes[$c]} \
+           ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT fcst
     fi
   fi
 
@@ -1080,7 +1084,7 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_init_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale_init $TMPDAT/exec $TMPDAT $MEMBER_RUN $iter
+       $mem_nodes $mem_np $TMPRUN/scale_init $MEMBER_RUN $iter
 fi
 
 if ((MYRANK == 0)); then
@@ -1123,7 +1127,7 @@ for it in $(seq $its $ite); do
            $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
            ${bdy_loc} ${stimes[$c]} $mkinit ${name_m[$m]} $mem_bdy \
            $TMPRUN/scale_init/$(printf '%04d' $m) \
-           "$bdy_time_list" $ntsteps $ntsteps_skip fcst_LOG
+           "$bdy_time_list" $ntsteps $ntsteps_skip fcst
     fi
   fi
 
@@ -1179,10 +1183,10 @@ for it in $(seq $its $ite); do
 
     if (pdrun $g $PROC_OPT); then
       if ((BDY_ENS == 1)); then
-        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np ${stimes[$c]} \
+        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK ${stimes[$c]} \
              $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT fcst
       else
-        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $mem_np ${stimes[$c]} \
+        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK ${stimes[$c]} \
              $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT fcst
       fi
     fi
@@ -1213,7 +1217,7 @@ MEMBER_RUN=$((fmember*rcycle))
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale $TMPDAT/exec $TMPDAT $MEMBER_RUN $iter
+       $mem_nodes $mem_np $TMPRUN/scale $MEMBER_RUN $iter
 fi
 
 mkinit=0
@@ -1265,7 +1269,7 @@ for it in $(seq $its $ite); do
            $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
            $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
            ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) \
-           $bdy_start_time fcst_LOG
+           fcst $bdy_start_time
     fi
   fi
 
@@ -1301,8 +1305,8 @@ for it in $(seq $its $ite); do
 #    fi
 
     if (pdrun $g $PROC_OPT); then
-      bash $SCRP_DIR/src/post_scale.sh $MYRANK $mem_np \
-           ${stimes[$c]} ${name_m[$m]} $FCSTLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT fcst $iter
+      bash $SCRP_DIR/src/post_scale.sh $MYRANK ${stimes[$c]} \
+           ${name_m[$m]} $FCSTLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT fcst
     fi
   fi
 
@@ -1326,31 +1330,31 @@ if ((LOG_TYPE >= 3)); then
     for c in $(seq $CYCLE); do
       time2=$(datetime $time $((lcycles * (c-1))) s)
 
-      if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time2}/log/scale_pp" ]; then
+      if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time2}/log/fcst_scale_pp" ]; then
         if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/scale_fcst_pp.tar scale_pp
+          tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale_pp.tar fcst_scale_pp
         elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/scale_fcst_pp.tar.gz scale_pp
+          tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale_pp.tar.gz fcst_scale_pp
         fi
-        rm -fr $OUTDIR/${time2}/log/scale_pp
+        rm -fr $OUTDIR/${time2}/log/fcst_scale_pp
       fi
 
-      if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time2}/log/scale_init" ]; then
+      if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time2}/log/fcst_scale_init" ]; then
         if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/scale_fcst_init.tar scale_init
+          tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale_init.tar fcst_scale_init
         elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/scale_fcst_init.tar.gz scale_init
+          tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale_init.tar.gz fcst_scale_init
         fi
-        rm -fr $OUTDIR/${time2}/log/scale_init
+        rm -fr $OUTDIR/${time2}/log/fcst_scale_init
       fi
 
-      if ((LOG_OPT <= 3)) && [ -d "$OUTDIR/${time2}/log/scale" ]; then
+      if ((LOG_OPT <= 3)) && [ -d "$OUTDIR/${time2}/log/fcst_scale" ]; then
         if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/scale_fcst.tar scale
+          tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale.tar fcst_scale
         elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/scale_fcst.tar.gz scale
+          tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale.tar.gz fcst_scale
         fi
-        rm -fr $OUTDIR/${time2}/log/scale
+        rm -fr $OUTDIR/${time2}/log/fcst_scale
       fi
 
     done
