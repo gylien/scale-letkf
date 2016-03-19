@@ -71,6 +71,7 @@ MODULE common_nml
   real(r_size) :: GROSS_ERROR_RADAR_REF = -1.0d0 ! < 0: same as GROSS_ERROR
   real(r_size) :: GROSS_ERROR_RADAR_VR = -1.0d0  ! < 0: same as GROSS_ERROR
   real(r_size) :: GROSS_ERROR_RADAR_PRH = -1.0d0 ! < 0: same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_H08 = -1.0d0      ! < 0: same as GROSS_ERROR
 
   integer :: LEV_UPDATE_Q = 100000        ! q and qc are only updated below and equal to this model level
   real(r_size) :: Q_SPRD_MAX = 0.5        ! maximum q (ensemble spread)/(ensemble mean)
@@ -160,6 +161,7 @@ MODULE common_nml
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
   !---PARAM_LETKF_H08
+  real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
   real(r_size) :: H08_LIMIT_LEV = 20000.0d0 ! (Pa) Upper limit level of the sensitive height for Himawari-8 IR
   integer :: H08_CH_USE(nch) = (/0,1,1,1,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
@@ -267,6 +269,7 @@ subroutine read_nml_letkf
     GROSS_ERROR_RADAR_REF, &
     GROSS_ERROR_RADAR_VR, &
     GROSS_ERROR_RADAR_PRH, &
+    GROSS_ERROR_H08, &
     LEV_UPDATE_Q, &
     Q_SPRD_MAX, &
     BOUNDARY_TAPER_WIDTH, &
@@ -294,6 +297,9 @@ subroutine read_nml_letkf
   end if
   if (GROSS_ERROR_RADAR_PRH < 0.0d0) then
     GROSS_ERROR_RADAR_PRH = GROSS_ERROR
+  end if
+  if (GROSS_ERROR_H08 < 0.0d0) then ! H08
+    GROSS_ERROR_H08 = GROSS_ERROR
   end if
   if (SIGMA_OBS_RAIN < 0.0d0) then
     SIGMA_OBS_RAIN = SIGMA_OBS
@@ -497,6 +503,7 @@ subroutine read_nml_letkf_h08
   integer :: ierr
 
   namelist /PARAM_LETKF_H08/ &
+    H08_RTTOV_MINQ, &
     H08_LIMIT_LEV, &
     H08_CH_USE
 

@@ -23,7 +23,13 @@ MODULE obsope_tools
 !       MPI_COMM_d => LOCAL_COMM_WORLD
 
   use scale_grid_index, only: &
+#ifdef H08
+    DX, DY, &
+    BUFFER_DX, BUFFER_DY,&
     KHALO, IHALO, JHALO
+#else
+    KHALO, IHALO, JHALO
+#endif
 
   IMPLICIT NONE
   PUBLIC
@@ -120,6 +126,26 @@ SUBROUTINE obsope_cal(obs)
   REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
   INTEGER :: ch
   INTEGER,ALLOCATABLE :: qc_H08(:)
+
+! -- tentative treatment around the TC center --
+!  REAL(r_size),PARAMETER :: MSLP_TC_LON = 145.7d0
+!  REAL(r_size),PARAMETER :: MSLP_TC_LAT =  15.2d0
+!  REAL(r_size) :: MSLP_TC_rig, MSLP_TC_rjg, dist_MSLP_TC
+!  REAL(r_size),PARAMETER :: dist_MSLP_TC_MIN = 200.0d3 ! (m)
+!
+! -- Rejecting obs over the buffer regions. --
+!
+! bris: "ri" at the wetern end of the domain excluding buffer regions
+! brie: "ri" at the eastern end of the domain excluding buffer regions
+! bris: "rj" at the southern end of the domain excluding buffer regions
+! bris: "rj" at the northern end of the domain excluding buffer regions
+!
+! e.g.,   ri:    ...bris...........brie...
+!             buffer |  NOT buffer  | buffer
+!
+!
+  REAL(r_size) :: bris, brie
+  REAL(r_size) :: brjs, brje
 #endif
 
   character(filelenmax) :: obsdafile
@@ -133,6 +159,13 @@ SUBROUTINE obsope_cal(obs)
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer00 = MPI_WTIME()
 
+#ifdef H08
+!  call phys2ij(MSLP_TC_LON,MSLP_TC_LAT,MSLP_TC_rig,MSLP_TC_rjg)
+  bris = real(BUFFER_DX/DX,r_size) + real(IHALO,r_size) 
+  brjs = real(BUFFER_DY/DY,r_size) + real(JHALO,r_size)
+  brie = (real(nlong+2*IHALO,r_size) - bris)
+  brje = (real(nlatg+2*JHALO,r_size) - brjs)
+#endif
 
   obsda%nobs = 0
   do iof = 1, OBS_IN_NUM
@@ -354,6 +387,24 @@ SUBROUTINE obsope_cal(obs)
               obsda%val(nn) = yobs_H08(ns)
               obsda%qc(nn) = qc_H08(ns)
 
+              if(obsda%qc(nn) == iqc_good)then
+                rig = obsda%ri(nn)
+                rjg = obsda%rj(nn)
+
+! -- tentative treatment around the TC center --
+!                dist_MSLP_TC = sqrt(((rig - MSLP_TC_rig) * DX)**2&
+!                                   +((rjg - MSLP_TC_rjg) * DY)**2)
+
+!                if(dist_MSLP_TC <= dist_MSLP_TC_MIN)then
+!                  obsda%qc(nn) = iqc_obs_bad
+!                endif
+
+! -- Rejecting Himawari-8 obs over the buffer regions. --
+                if((rig <= bris) .or. (rig >= brie) .or.&
+                   (rjg <= brjs) .or. (rjg >= brje))then
+                  obsda%qc(nn) = iqc_obs_bad
+                endif
+
 !
 !  NOTE: T.Honda (10/16/2015)
 !  The original H08 obs does not inlcude the level information.
@@ -466,6 +517,7 @@ SUBROUTINE obsmake_cal(obs)
   CHARACTER(10) :: obsoutfile = 'obsout.dat'
   INTEGER :: ns 
 #ifdef H08
+! obsmake for H08 is not available !! (03/17/2016) T.Honda
 ! -- for Himawari-8 obs --
   INTEGER :: nallprof ! H08: Num of all profiles (entire domain) required by RTTOV
   INTEGER :: nprof_H08 ! num of H08 obs
