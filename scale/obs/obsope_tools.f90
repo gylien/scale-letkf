@@ -23,12 +23,12 @@ MODULE obsope_tools
 !       MPI_COMM_d => LOCAL_COMM_WORLD
 
   use scale_grid_index, only: &
+    KHALO, IHALO, JHALO
 #ifdef H08
-    DX, DY, &
-    BUFFER_DX, BUFFER_DY,&
-    KHALO, IHALO, JHALO
-#else
-    KHALO, IHALO, JHALO
+  use scale_grid, only: &
+      DX, DY,           &
+      BUFFER_DX,        &
+      BUFFER_DY
 #endif
 
   IMPLICIT NONE
@@ -404,6 +404,7 @@ SUBROUTINE obsope_cal(obs)
                    (rjg <= brjs) .or. (rjg >= brje))then
                   obsda%qc(nn) = iqc_obs_bad
                 endif
+              endif
 
 !
 !  NOTE: T.Honda (10/16/2015)
