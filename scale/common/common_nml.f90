@@ -168,6 +168,7 @@ MODULE common_nml
                         !! ==0: NOT assimilate (rejected by QC in trans_XtoY_H08)
                         !! It is better to reject B11(ch=5) & B12(ch=6) obs because these bands are 
                         !! sensitive to chemicals.
+  real(r_size) :: TC_SEARCH_DIS = 200.0d3 ! (m) ! tentative! Should be modify !!
 
 contains
 !-----------------------------------------------------------------------

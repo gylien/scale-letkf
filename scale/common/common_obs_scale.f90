@@ -47,7 +47,7 @@ MODULE common_obs_scale
   PUBLIC
 
 !  INTEGER,PARAMETER :: nid_obs=11
-  INTEGER,PARAMETER :: nid_obs=12 !H08
+  INTEGER,PARAMETER :: nid_obs=13 !H08
 
   INTEGER,PARAMETER :: id_u_obs=2819
   INTEGER,PARAMETER :: id_v_obs=2820
@@ -67,6 +67,7 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: id_tclon_obs=99991  ! not used
   INTEGER,PARAMETER :: id_tclat_obs=99992  ! not used
   INTEGER,PARAMETER :: id_tcmip_obs=99993  ! not used
+  INTEGER,PARAMETER :: id_tcv_obs=99990  ! New TC vital format
 !
 ! radar observations
 !
@@ -111,23 +112,23 @@ MODULE common_obs_scale
 
   INTEGER,PARAMETER :: elem_uid(nid_obs)= &
      (/id_u_obs, id_v_obs, id_t_obs, id_tv_obs, id_q_obs, id_rh_obs, &
-       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs, id_H08IR_obs/) ! H08
+       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs, id_H08IR_obs, id_tcv_obs/) ! H08
 !       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs/)
 !       id_tclon_obs, id_tclat_obs, id_tcmip_obs/)
 
   CHARACTER(3),PARAMETER :: obelmlist(nid_obs)= &
 !     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH'/)
-     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH', 'H08'/) ! H08
+     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH', 'H08', 'TCV'/) ! H08
 !     'TCX', 'TCY', 'TCP'/)
 
 !  INTEGER,PARAMETER :: nobtype = 22
-  INTEGER,PARAMETER :: nobtype = 23 ! H08
+  INTEGER,PARAMETER :: nobtype = 24 ! H08
   CHARACTER(6),PARAMETER :: obtypelist(nobtype)= &
      (/'ADPUPA', 'AIRCAR', 'AIRCFT', 'SATWND', 'PROFLR', &
        'VADWND', 'SATEMP', 'ADPSFC', 'SFCSHP', 'SFCBOG', &
        'SPSSMI', 'SYNDAT', 'ERS1DA', 'GOESND', 'QKSWND', &
        'MSONET', 'GPSIPW', 'RASSDA', 'WDSATR', 'ASCATW', &
-       'TMPAPR', 'PHARAD', 'H08IRB'/) ! H08
+       'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL'/) ! H08
 !       'TMPAPR', 'PHARAD'/)
 
   INTEGER,PARAMETER :: max_obs_info_meta = 3 ! maximum array size for type(obs_info)%meta
@@ -173,10 +174,10 @@ MODULE common_obs_scale
   REAL(r_size),PARAMETER :: slotint=5.0d0 ! time interval between slots in second
 
 !  INTEGER,PARAMETER :: nobsformats=2
-  INTEGER,PARAMETER :: nobsformats=3 ! H08
+  INTEGER,PARAMETER :: nobsformats=4 ! H08
   CHARACTER(30) :: obsformat_name(nobsformats) = &
 !    (/'CONVENTIONAL', 'RADAR'/)
-    (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR'/)
+    (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR', 'TC-VITAL'/)
 
 !!  INTEGER,PARAMETER :: nobsfiles=2          !!!!!! goes to namelist ?????
 !  INTEGER,PARAMETER :: nobsfiles=3 ! H08     !!!!!! goes to namelist ?????
@@ -2381,6 +2382,82 @@ FUNCTION uid_obs(id_obs)
     uid_obs = -1 ! error
   END SELECT
 END FUNCTION uid_obs
+!
+!-----------------------------------------------------------------------
+!   TC vital obs subroutines by T. Honda (??/??/2016)
+!-----------------------------------------------------------------------
+!
+SUBROUTINE Trans_XtoY_TC(proc,ritc,rjtc,v2d,yobs_mslp,yobs_lon,yobs_lat)
+  use scale_grid, only: &
+      DX, &
+      DY
+  use scale_grid_index, only: &
+    IHALO, JHALO
+
+  IMPLICIT NONE
+  INTEGER :: i, j, ig, jg
+  REAL(r_size) :: xdis, ydis, rdis
+  REAL(r_size) :: tmp_mslp
+  INTEGER,INTENT(IN) :: proc
+  REAL(r_size),INTENT(IN) :: ritc, rjtc
+  REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
+  REAL(r_size),INTENT(OUT) :: yobs_mslp
+  REAL(r_size),INTENT(OUT) :: yobs_lon, yobs_lat
+
+  REAL(r_size) :: slp2d(nlonh,nlath)
+  REAL(r_size) :: dz, t, q
+
+  yobs_mslp = 9.99d33 
+  yobs_lon = undef
+  yobs_lat = undef
+
+  DO j = 1, nlat 
+  DO i = 1, nlon 
+    t = v2d(i,j,iv2dd_t2m)
+    q = v2d(i,j,iv2dd_q2m)
+    dz = -1.0d0 * v2d(i,j,iv2dd_topo)
+    call prsadj(slp2d(i,j),dz,t,q)
+  ENDDO
+  ENDDO
+
+  DO j = JHALO + 1, nlat - JHALO
+  DO i = IHALO + 1, nlon - IHALO
+    call ij_l2g(proc, i, j, ig, jg)
+    xdis = abs(real(ig,kind=r_size) - ritc) * DX
+    ydis = abs(real(jg,kind=r_size) - rjtc) * DY
+    rdis = sqrt(xdis*xdis + ydis*ydis)
+
+    IF(rdis > TC_SEARCH_DIS)CYCLE
+
+    call wgt_ave2d(slp2d(:,:),i,j,var5)
+
+    if(var5 < yobs_mslp)then
+      yobs_mslp = var5
+!      yobs_lon = 
+!      yobs_lat = 
+    endif
+
+  ENDDO
+  ENDDO
+
+  RETURN
+END SUBROUTINE Trans_XtoY_TC
+
+!-- 25 points weighted average (tentative)--
+SUBROUTINE wgt_ave2d(var,i,j,var5)
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: var(nlonh,nlath)
+  INTEGER,INTENT(IN) :: i,j,k
+  REAL(r_size),INTENT(OUT) :: var5
+
+  var5 = ((var(i,j) * 5.0d0 + &
+          (sum(var(i-1:i+1,j-1:j+1)) - var(i,j)) * 3.0d0 + &
+          (sum(var(i-2:i+2,j-2:j+2)) - sum(var(i-1:i+1,j-1:j+1)) * 1.0d0)) / 45.0d0
+
+  RETURN
+END SUBROUTINE wgt_ave2d
+
+
 !
 !-----------------------------------------------------------------------
 !   Himawari-8 obs subroutines by T. Honda (10/29/2015)
