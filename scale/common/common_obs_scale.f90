@@ -47,7 +47,7 @@ MODULE common_obs_scale
   PUBLIC
 
 !  INTEGER,PARAMETER :: nid_obs=11
-  INTEGER,PARAMETER :: nid_obs=13 !H08
+  INTEGER,PARAMETER :: nid_obs=15 !H08
 
   INTEGER,PARAMETER :: id_u_obs=2819
   INTEGER,PARAMETER :: id_v_obs=2820
@@ -67,7 +67,6 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: id_tclon_obs=99991  ! not used
   INTEGER,PARAMETER :: id_tclat_obs=99992  ! not used
   INTEGER,PARAMETER :: id_tcmip_obs=99993  ! not used
-  INTEGER,PARAMETER :: id_tcv_obs=99990  ! New TC vital format
 !
 ! radar observations
 !
@@ -112,14 +111,14 @@ MODULE common_obs_scale
 
   INTEGER,PARAMETER :: elem_uid(nid_obs)= &
      (/id_u_obs, id_v_obs, id_t_obs, id_tv_obs, id_q_obs, id_rh_obs, &
-       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs, id_H08IR_obs, id_tcv_obs/) ! H08
+       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs, &
+       id_H08IR_obs, id_tclon_obs, id_tclat_obs, id_tcmip_obs/)
 !       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs/)
-!       id_tclon_obs, id_tclat_obs, id_tcmip_obs/)
 
   CHARACTER(3),PARAMETER :: obelmlist(nid_obs)= &
 !     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH'/)
-     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH', 'H08', 'TCV'/) ! H08
-!     'TCX', 'TCY', 'TCP'/)
+     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH',&
+       'H08', 'TCX', 'TCY', 'TCP'/)
 
 !  INTEGER,PARAMETER :: nobtype = 22
   INTEGER,PARAMETER :: nobtype = 24 ! H08
@@ -174,10 +173,10 @@ MODULE common_obs_scale
   REAL(r_size),PARAMETER :: slotint=5.0d0 ! time interval between slots in second
 
 !  INTEGER,PARAMETER :: nobsformats=2
-  INTEGER,PARAMETER :: nobsformats=4 ! H08
+  INTEGER,PARAMETER :: nobsformats=3 ! H08
   CHARACTER(30) :: obsformat_name(nobsformats) = &
 !    (/'CONVENTIONAL', 'RADAR'/)
-    (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR', 'TC-VITAL'/)
+    (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR'/)
 
 !!  INTEGER,PARAMETER :: nobsfiles=2          !!!!!! goes to namelist ?????
 !  INTEGER,PARAMETER :: nobsfiles=3 ! H08     !!!!!! goes to namelist ?????
@@ -1197,6 +1196,35 @@ SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
 
   RETURN
 END SUBROUTINE phys2ij
+
+SUBROUTINE ij2phys(rig,rjg,rlon,rlat)
+  use scale_grid, only: &
+      GRID_CXG, &
+      GRID_CYG, &
+      DX, &
+      DY
+  use scale_mapproj, only: &
+      MPRJ_xy2lonlat
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: rig
+  REAL(r_size),INTENT(IN) :: rjg
+  REAL(r_size),INTENT(OUT) :: rlon ! (deg)
+  REAL(r_size),INTENT(OUT) :: rlat ! (deg)
+  REAL(r_size) :: x, y
+!
+! ri,rj -> rlon,rlat
+!
+  x = (rig - 1.0d0) * DX + GRID_CXG(1) 
+  y = (rjg - 1.0d0) * DY + GRID_CYG(1) 
+
+  call MPRJ_xy2lonlat(x,y,rlon,rlat)
+
+  rlon = rlon * rad2deg
+  rlat = rlat * rad2deg
+
+  RETURN
+END SUBROUTINE ij2phys
+!
 !-----------------------------------------------------------------------
 ! Interpolation
 !-----------------------------------------------------------------------
@@ -2372,12 +2400,12 @@ FUNCTION uid_obs(id_obs)
     uid_obs = 11
   CASE(id_H08IR_obs) ! H08
     uid_obs = 12     ! H08
-!  CASE(id_tclon_obs)
-!    uid_obs = 9
-!  CASE(id_tclat_obs)
-!    uid_obs = 10
-!  CASE(id_tcmip_obs)
-!    uid_obs = 11
+  CASE(id_tclon_obs)
+    uid_obs = 13
+  CASE(id_tclat_obs)
+    uid_obs = 14
+  CASE(id_tcmip_obs)
+    uid_obs = 15
   CASE DEFAULT
     uid_obs = -1 ! error
   END SELECT
@@ -2387,72 +2415,85 @@ END FUNCTION uid_obs
 !   TC vital obs subroutines by T. Honda (??/??/2016)
 !-----------------------------------------------------------------------
 !
-SUBROUTINE Trans_XtoY_TC(proc,ritc,rjtc,v2d,yobs_mslp,yobs_lon,yobs_lat)
+SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_lon,yobs_lat,yobs_mslp)
   use scale_grid, only: &
       DX, &
       DY
   use scale_grid_index, only: &
     IHALO, JHALO
+  use scale_process, only: &
+      PRC_myrank
 
   IMPLICIT NONE
-  INTEGER :: i, j, ig, jg
+  INTEGER :: il, jl, ig, jg
   REAL(r_size) :: xdis, ydis, rdis
   REAL(r_size) :: tmp_mslp
-  INTEGER,INTENT(IN) :: proc
   REAL(r_size),INTENT(IN) :: ritc, rjtc
   REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
-  REAL(r_size),INTENT(OUT) :: yobs_mslp
-  REAL(r_size),INTENT(OUT) :: yobs_lon, yobs_lat
+  REAL(r_size),INTENT(OUT) :: yobs_mslp !(Pa)
+  REAL(r_size),INTENT(OUT) :: yobs_lon, yobs_lat !(deg)
 
   REAL(r_size) :: slp2d(nlonh,nlath)
-  REAL(r_size) :: dz, t, q
+  REAL(r_size) :: dz, t, q, var5
 
-  yobs_mslp = 9.99d33 
+  yobs_mslp = undef
   yobs_lon = undef
   yobs_lat = undef
 
-  DO j = 1, nlat 
-  DO i = 1, nlon 
-    t = v2d(i,j,iv2dd_t2m)
-    q = v2d(i,j,iv2dd_q2m)
-    dz = -1.0d0 * v2d(i,j,iv2dd_topo)
-    call prsadj(slp2d(i,j),dz,t,q)
+  DO jl = 1, nlat 
+  DO il = 1, nlon 
+    t = v2d(il,jl,iv2dd_t2m)
+    q = v2d(il,jl,iv2dd_q2m)
+    dz = -1.0d0 * v2d(il,jl,iv2dd_topo)
+    call prsadj(slp2d(il,jl),dz,t,q)
   ENDDO
   ENDDO
 
-  DO j = JHALO + 1, nlat - JHALO
-  DO i = IHALO + 1, nlon - IHALO
-    call ij_l2g(proc, i, j, ig, jg)
+  DO jl = JHALO + 1, nlat - JHALO
+  DO il = IHALO + 1, nlon - IHALO
+    call ij_l2g(PRC_myrank, il, jl, ig, jg)
     xdis = abs(real(ig,kind=r_size) - ritc) * DX
     ydis = abs(real(jg,kind=r_size) - rjtc) * DY
     rdis = sqrt(xdis*xdis + ydis*ydis)
 
     IF(rdis > TC_SEARCH_DIS)CYCLE
 
-    call wgt_ave2d(slp2d(:,:),i,j,var5)
+    IF(IHALO >= 2 .and. JHALO >= 2)THEN
+      call wgt_ave2d(slp2d(:,:),il,jl,var5)
+    ELSE
+      var5 = slp2d(il,jl)
+    ENDIF
 
-    if(var5 < yobs_mslp)then
+    ! assume MSLP for background TC is larger than 700 hPa
+    if(var5 < yobs_mslp .or. yobs_mslp < 700.0d2)then
       yobs_mslp = var5
-!      yobs_lon = 
-!      yobs_lat = 
+      call ij2phys(real(ig,kind=r_size),real(jg,kind=r_size),&
+                   yobs_lon,yobs_lat)
     endif
 
   ENDDO
   ENDDO
 
   RETURN
-END SUBROUTINE Trans_XtoY_TC
+END SUBROUTINE search_tc_subdom
 
 !-- 25 points weighted average (tentative)--
+! 2D weight is...
+!     1 1 1 1 1
+!     1 3 3 3 1
+!     1 3 5 3 1
+!     1 3 3 3 1
+!     1 1 1 1 1
+!
 SUBROUTINE wgt_ave2d(var,i,j,var5)
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: var(nlonh,nlath)
-  INTEGER,INTENT(IN) :: i,j,k
+  INTEGER,INTENT(IN) :: i,j
   REAL(r_size),INTENT(OUT) :: var5
 
   var5 = ((var(i,j) * 5.0d0 + &
-          (sum(var(i-1:i+1,j-1:j+1)) - var(i,j)) * 3.0d0 + &
-          (sum(var(i-2:i+2,j-2:j+2)) - sum(var(i-1:i+1,j-1:j+1)) * 1.0d0)) / 45.0d0
+         (sum(var(i-1:i+1,j-1:j+1)) - var(i,j)) * 3.0d0 + &
+         (sum(var(i-2:i+2,j-2:j+2)) - sum(var(i-1:i+1,j-1:j+1))) * 1.0d0)) / 45.0d0
 
   RETURN
 END SUBROUTINE wgt_ave2d

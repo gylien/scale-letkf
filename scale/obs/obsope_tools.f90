@@ -25,6 +25,10 @@ MODULE obsope_tools
   use scale_grid_index, only: &
     KHALO, IHALO, JHALO
 
+  use scale_les_process, only: &
+    PRC_NUM_X, &
+    PRC_NUM_Y
+
   IMPLICIT NONE
   PUBLIC
 
@@ -122,6 +126,15 @@ SUBROUTINE obsope_cal(obs)
   INTEGER,ALLOCATABLE :: qc_H08(:)
 #endif
 
+! -- for TC vital assimilation --
+  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
+  INTEGER :: bTC_proc ! the process where the background TC is located.
+! bTC: background TC in each subdomain
+! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
+  REAL(r_size),ALLOCATABLE :: bTC(:,:)
+  REAL(r_size),ALLOCATABLE :: bufr(:,:)
+  REAL(r_size) :: bTC_mslp
+
   character(filelenmax) :: obsdafile
   character(11) :: obsda_suffix = '.000000.dat'
 
@@ -173,6 +186,10 @@ SUBROUTINE obsope_cal(obs)
 
         do iof = 1, OBS_IN_NUM
 
+          obs_idx_TCX = -1
+          obs_idx_TCY = -1
+          obs_idx_TCP = -1
+
           nslot = 0
           nprocslot = 0
 
@@ -183,6 +200,19 @@ SUBROUTINE obsope_cal(obs)
             ! do this small computtion first, without OpenMP
             nproc_0 = nproc
             do n = 1, obs(iof)%nobs
+
+              select case (obs(iof)%elm(n))
+              case (id_tclon_obs)
+                obs_idx_TCX = n
+                cycle
+              case (id_tclat_obs)
+                obs_idx_TCY = n
+                cycle
+              case (id_tcmip_obs)
+                obs_idx_TCP = n
+                cycle
+              end select
+
               if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
                 nslot = nslot + 1
                 call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
@@ -386,10 +416,67 @@ SUBROUTINE obsope_cal(obs)
   rrtimer00=rrtimer
 
 
+
+! ###  -- TC vital assimilation -- ###
+          if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0 .and. &
+              obs(iof)%dif(obs_idx_TCX) == obs(iof)%dif(obs_idx_TCY) .and. &
+              obs(iof)%dif(obs_idx_TCY) == obs(iof)%dif(obs_idx_TCP)) then
+           
+            if (obs(iof)%dif(obs_idx_TCX) > slot_lb .and. &
+              obs(iof)%dif(obs_idx_TCX) <= slot_ub) then
+              nslot = nslot + 3 ! TC vital obs should have 3 data (i.e., lon, lat, and MSLP)
+
+              ! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
+              allocate(bTC(3,0:PRC_NUM_X*PRC_NUM_Y-1))
+              allocate(bufr(3,0:PRC_NUM_X*PRC_NUM_Y-1))
+
+              bTC = undef
+              bufr = undef
+
+              call phys2ij(obs(iof)%dat(obs_idx_TCX),obs(iof)%dat(obs_idx_TCY),rig,rjg)
+              call search_tc_subdom(rig,rjg,v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
+  
+              CALL MPI_BARRIER(MPI_COMM_d,ierr)
+              CALL MPI_ALLREDUCE(bTC,bufr,3*PRC_NUM_X*PRC_NUM_Y,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
+              bTC = bufr
+
+              deallocate(bufr)
+
+              bTC_mslp = undef 
+              ! assume MSLP for background TC is larger than 700 hPa
+              do n = 0, (PRC_NUM_X * PRC_NUM_Y - 1)
+                if (bTC(3,n) < bTC_mslp .or. bTC(3,n) > 700.0d2)then
+                  bTC_mslp = bTC(3,n)
+                  bTC_proc = n
+                endif
+              enddo ! [ n = 0, PRC_NUM_X * PRC_NUMY - 1]
+
+              if (PRC_myrank == bTC_proc) then
+                call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
+                do n = 1, 3
+                  nproc = nproc + 1
+                  nprocslot = nprocslot + 1
+                  obsda%set(nproc) = iof
+                  if(n==1) obsda%idx(nproc) = obs_idx_TCX
+                  if(n==2) obsda%idx(nproc) = obs_idx_TCY
+                  if(n==3) obsda%idx(nproc) = obs_idx_TCY
+                  obsda%ri(nproc) = rig
+                  obsda%rj(nproc) = rjg
+                  ri(nproc) = ritmp
+                  rj(nproc) = rjtmp
+
+                  obsda%val(nproc) = bTC(n,bTC_proc)
+
+                enddo ! [ n = 1, 3 ]
+              endif
+
+
+            endif ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
+          endif ! [ obs_idx_TCX > 0 ...]
+
         end do ! [ do iof = 1, OBS_IN_NUM ]
 
-
-
+ 
 !      IF(NINT(elem(n)) == id_ps_obs .AND. odat(n) < -100.0d0) THEN
 !        CYCLE
 !      END IF
