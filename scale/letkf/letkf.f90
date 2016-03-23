@@ -210,7 +210,8 @@ PROGRAM letkf
     ! READ GUES
     !
 
-    call read_ens_mpi('gues',gues3d,gues2d)
+!    call read_ens_mpi('gues',gues3d,gues2d)
+    call read_ens_mpi_recv('gues',gues3d,gues2d)
 
 !  write (6,*) gues3d(20,:,3,iv3d_t)
 !!  write (6,*) gues2d

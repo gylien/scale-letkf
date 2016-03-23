@@ -7,12 +7,15 @@ program scaleles_ens
      myrank
   use common_nml
   use common_scale, only: &
-     set_common_conf
+     set_common_conf, &
+     set_common_scale
   use common_mpi_scale, only: &
      myrank_mem_use, & 
      proc2mem, &
      nitmax, &
-     set_mem_node_proc
+     set_mem_node_proc, &
+     set_common_mpi_scale, &
+     read_ens_mpi_send
 
   use scale_stdio, only: &
      H_LONG, &
@@ -196,6 +199,32 @@ program scaleles_ens
                         confname )
       end if
     end do ! [ it = its, ite ]
+
+
+
+
+
+
+    call set_common_scale
+    call set_common_mpi_scale
+
+!    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+!    rtimer = MPI_WTIME()
+!    WRITE(6,timer_fmt) '### TIMER(SCALE_LES):',rtimer-rtimer00
+!    rtimer00=rtimer
+
+!    ALLOCATE(gues3d(nij1,nlev,MEMBER,nv3d))
+!    ALLOCATE(gues2d(nij1,MEMBER,nv2d))
+
+    !
+    ! READ GUES
+    !
+    call read_ens_mpi_send('gues')
+
+
+
+
+
 
   else ! [ global_comm /= MPI_COMM_NULL ]
 

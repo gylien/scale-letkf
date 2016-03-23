@@ -1035,6 +1035,104 @@ subroutine read_ens_mpi(file,v3d,v2d)
 end subroutine read_ens_mpi
 
 
+
+
+
+
+subroutine read_ens_mpi_send(file)
+  implicit none
+  CHARACTER(4),INTENT(IN) :: file
+  REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
+  REAL(RP) :: v2dg(nlon,nlat,nv2d)
+  CHARACTER(9) :: filename='file.0000'
+  integer :: it,im,mstart,mend
+
+
+  integer :: ierr
+  REAL(r_dble) :: rrtimer00,rrtimer
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer00 = MPI_WTIME()
+
+
+  do it = 1, nitmax
+    im = proc2mem(1,it,myrank+1)
+    if (im >= 1 .and. im <= MEMBER) then
+      WRITE(filename(1:4),'(A4)') file
+      WRITE(filename(6:9),'(I4.4)') im
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+      call read_restart(filename,v3dg,v2dg)
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### read_ens_mpi:read_restart:              ',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+
+      call state_trans(v3dg)
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### read_ens_mpi:state_trans:               ',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+
+    end if
+    mstart = 1 + (it-1)*nprocs_e
+    mend = MIN(it*nprocs_e, MEMBER)
+!!!!!!
+!!!!!!    if (mstart <= mend) then
+!!!!!!      call pub_send_alltoall_data(file, mstart, mend, v3dg, v2dg, &
+!!!!!!                                  [in]  [in]    [in]  [in]  [in]
+!!!!!!                                  nlev, nlon, nlat, nv3d, nv2d, nij1, MEMBER, nij1max, nlevall, nprocs_e, RP)
+!!!!!!                                  [... potential input parameters ...]
+!!!!!!    end if
+!!!!!!
+print nlev, nlon, nlat, nv3d, nv2d, nij1, MEMBER, nij1max, nlevall, nprocs_e, RP
+
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### read_ens_mpi:scatter_grd_mpi_alltoall:  ',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+  end do ! [ it = 1, nitmax ]
+
+  return
+end subroutine read_ens_mpi_send
+
+
+
+subroutine read_ens_mpi_recv(file,v3d,v2d)
+  implicit none
+  CHARACTER(4),INTENT(IN) :: file
+  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,MEMBER,nv3d)
+  REAL(r_size),INTENT(OUT) :: v2d(nij1,MEMBER,nv2d)
+  integer :: it,mstart,mend
+  integer :: ierr
+
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+
+  do it = 1, nitmax
+    mstart = 1 + (it-1)*nprocs_e
+    mend = MIN(it*nprocs_e, MEMBER)
+!!!!!!
+!!!!!!    if (mstart <= mend) then
+!!!!!!      call pub_recv_alltoall_data(file, mstart, mend, v3d, v2d, &
+!!!!!!                                  [in]  [in]    [in][inout][inout]
+!!!!!!                                  nlev, nlon, nlat, nv3d, nv2d, nij1, MEMBER, nij1max, nlevall, nprocs_e, RP)
+!!!!!!                                  [... potential input parameters ...]
+!!!!!!    end if
+!!!!!!
+print nlev, nlon, nlat, nv3d, nv2d, nij1, MEMBER, nij1max, nlevall, nprocs_e, RP
+  end do ! [ it = 1, nitmax ]
+
+  return
+end subroutine read_ens_mpi_recv
+
+
 !-----------------------------------------------------------------------
 ! Write ensemble data after collecting data from processes
 !-----------------------------------------------------------------------
@@ -1106,8 +1204,8 @@ SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)!,ngp,ngpmax,n
 !  INTEGER,INTENT(IN) :: np
   REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
-  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,MEMBER,nv3d)
-  REAL(r_size),INTENT(OUT) :: v2d(nij1,MEMBER,nv2d)
+  REAL(r_size),INTENT(INOUT) :: v3d(nij1,nlev,MEMBER,nv3d)
+  REAL(r_size),INTENT(INOUT) :: v2d(nij1,MEMBER,nv2d)
   REAL(RP) :: bufs(nij1max,nlevall,nprocs_e)
   REAL(RP) :: bufr(nij1max,nlevall,nprocs_e)
 !  REAL(r_sngl),ALLOCATABLE :: bufs3(:,:,:) , bufr3(:,:,:)
