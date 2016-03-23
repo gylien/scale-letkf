@@ -469,7 +469,7 @@ SUBROUTINE obsope_cal(obs)
 
                 enddo ! [ n = 1, 3 ]
               endif
-
+              deallocate(bTC)
 
             endif ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
           endif ! [ obs_idx_TCX > 0 ...]
