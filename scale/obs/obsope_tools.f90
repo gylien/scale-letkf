@@ -459,7 +459,7 @@ SUBROUTINE obsope_cal(obs)
                   obsda%set(nproc) = iof
                   if(n==1) obsda%idx(nproc) = obs_idx_TCX
                   if(n==2) obsda%idx(nproc) = obs_idx_TCY
-                  if(n==3) obsda%idx(nproc) = obs_idx_TCY
+                  if(n==3) obsda%idx(nproc) = obs_idx_TCP
                   obsda%ri(nproc) = rig
                   obsda%rj(nproc) = rjg
                   ri(nproc) = ritmp
