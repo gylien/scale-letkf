@@ -2436,9 +2436,12 @@ SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_lon,yobs_lat,yobs_mslp)
   REAL(r_size) :: slp2d(nlonh,nlath)
   REAL(r_size) :: dz, t, q, var5
 
-  yobs_mslp = undef
-  yobs_lon = undef
-  yobs_lat = undef
+!  yobs_mslp = undef
+!  yobs_lon = undef
+!  yobs_lat = undef
+  yobs_mslp = 9.99d33
+  yobs_lon = 9.99d33
+  yobs_lat = 9.99d33
 
   DO jl = 1, nlat 
   DO il = 1, nlon 
@@ -2464,8 +2467,9 @@ SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_lon,yobs_lat,yobs_mslp)
       var5 = slp2d(il,jl)
     ENDIF
 
-    ! assume MSLP for background TC is larger than 700 hPa
-    if(var5 < yobs_mslp .or. yobs_mslp < 700.0d2)then
+!    ! assume MSLP for background TC is larger than 700 hPa
+!    if(var5 < yobs_mslp .or. yobs_mslp < 700.0d2)then
+    if(var5 < yobs_mslp)then
       yobs_mslp = var5
       call ij2phys(real(ig,kind=r_size),real(jg,kind=r_size),&
                    yobs_lon,yobs_lat)

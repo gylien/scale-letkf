@@ -430,22 +430,23 @@ SUBROUTINE obsope_cal(obs)
               allocate(bTC(3,0:PRC_NUM_X*PRC_NUM_Y-1))
               allocate(bufr(3,0:PRC_NUM_X*PRC_NUM_Y-1))
 
-              bTC = undef
-              bufr = undef
+              bTC = 9.99d33
+              bufr = 9.99d33
 
               call phys2ij(obs(iof)%dat(obs_idx_TCX),obs(iof)%dat(obs_idx_TCY),rig,rjg)
               call search_tc_subdom(rig,rjg,v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
   
               CALL MPI_BARRIER(MPI_COMM_d,ierr)
-              CALL MPI_ALLREDUCE(bTC,bufr,3*PRC_NUM_X*PRC_NUM_Y,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
+              CALL MPI_ALLREDUCE(bTC,bufr,3*PRC_NUM_X*PRC_NUM_Y,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
               bTC = bufr
 
               deallocate(bufr)
 
               bTC_mslp = undef 
-              ! assume MSLP for background TC is larger than 700 hPa
+!              ! assume MSLP for background TC is larger than 700 hPa
               do n = 0, (PRC_NUM_X * PRC_NUM_Y - 1)
-                if (bTC(3,n) < bTC_mslp .or. bTC(3,n) > 700.0d2)then
+!                if (bTC(3,n) < bTC_mslp .or. bTC(3,n) > 700.0d2)then
+                if (bTC(3,n) < bTC_mslp ) then
                   bTC_mslp = bTC(3,n)
                   bTC_proc = n
                 endif
