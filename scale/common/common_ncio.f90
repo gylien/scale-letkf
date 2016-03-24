@@ -10,6 +10,9 @@ module common_ncio
   use netcdf
   use common, only: r_size, r_dble, r_sngl
 
+  implicit none
+  public
+
 contains
 
 !-----------------------------------------------------------------------

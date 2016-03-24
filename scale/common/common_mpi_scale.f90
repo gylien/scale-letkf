@@ -25,8 +25,7 @@ module common_mpi_scale
   use common_obs_scale
 
   use scale_precision, only: RP
-  use scale_stdio
-  use scale_process, only: PRC_DOMAIN_nlim
+!  use scale_stdio
 !  use scale_prof
 !  use scale_grid_index
 
@@ -103,6 +102,40 @@ module common_mpi_scale
 !  character(9) scale_filename = 'file.0000'
 
 contains
+!-----------------------------------------------------------------------
+! initialize_mpi_scale
+!-----------------------------------------------------------------------
+subroutine initialize_mpi_scale
+  use scale_process, only: PRC_MPIstart
+  implicit none
+  integer :: universal_comm !! no use
+  integer :: ierr
+
+  call PRC_MPIstart(universal_comm)
+  call MPI_Comm_size(MPI_COMM_WORLD, nprocs, ierr)
+  call MPI_Comm_rank(MPI_COMM_WORLD, myrank, ierr)
+  write(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ', myrank, '/', nprocs-1
+  if (r_size == r_dble) then
+    MPI_r_size = MPI_DOUBLE_PRECISION
+  else if (r_size == r_sngl) then
+    MPI_r_size = MPI_REAL
+  end if
+
+  return
+end subroutine initialize_mpi_scale
+!-----------------------------------------------------------------------
+! finalize_mpi_scale
+!-----------------------------------------------------------------------
+subroutine finalize_mpi_scale
+!  use scale_process, only: PRC_MPIfinish
+  implicit none
+  integer :: ierr
+
+!  call PRC_MPIfinish
+  call MPI_Finalize(ierr)
+
+  return
+end subroutine finalize_mpi_scale
 !-----------------------------------------------------------------------
 ! set_common_mpi_scale
 !-----------------------------------------------------------------------
@@ -438,7 +471,12 @@ END SUBROUTINE
 subroutine set_scalelib
 
   use scale_precision
-  use scale_stdio, only: IO_FID_CONF
+  use scale_stdio, only: &
+    IO_LOG_setup, &
+    IO_FID_CONF, &
+    IO_FID_LOG, &
+    IO_L, &
+    H_LONG
 !  use scale_prof
 
   use gtool_history, only: &
@@ -454,7 +492,8 @@ subroutine set_scalelib
     PRC_LOCAL_setup, &
     PRC_masterrank, &
     PRC_myrank, &
-    PRC_mpi_alive
+    PRC_mpi_alive, &
+    PRC_DOMAIN_nlim
   use scale_les_process, only: &
     PRC_setup, &
     PRC_2Drank, &
@@ -695,6 +734,11 @@ end subroutine set_scalelib
 subroutine unset_scalelib
   use gtool_file, only: &
     FileCloseAll
+  use scale_stdio, only: &
+    IO_FID_CONF, &
+    IO_FID_LOG, &
+    IO_L, &
+    IO_FID_STDOUT
   implicit none
 
 !  call MONIT_finalize
@@ -1096,8 +1140,8 @@ SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)!,ngp,ngpmax,n
 !  INTEGER,INTENT(IN) :: np
   REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
-  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,MEMBER,nv3d)
-  REAL(r_size),INTENT(OUT) :: v2d(nij1,MEMBER,nv2d)
+  REAL(r_size),INTENT(INOUT) :: v3d(nij1,nlev,MEMBER,nv3d)
+  REAL(r_size),INTENT(INOUT) :: v2d(nij1,MEMBER,nv2d)
   REAL(RP) :: bufs(nij1max,nlevall,nprocs_e)
   REAL(RP) :: bufr(nij1max,nlevall,nprocs_e)
 !  REAL(r_sngl),ALLOCATABLE :: bufs3(:,:,:) , bufr3(:,:,:)
