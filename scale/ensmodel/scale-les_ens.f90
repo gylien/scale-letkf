@@ -205,17 +205,13 @@ program scaleles_ens
 
 
 
-    call set_common_scale
-    call set_common_mpi_scale
-
 !    CALL MPI_BARRIER(MPI_COMM_a,ierr)
 !    rtimer = MPI_WTIME()
 !    WRITE(6,timer_fmt) '### TIMER(SCALE_LES):',rtimer-rtimer00
 !    rtimer00=rtimer
 
-!    ALLOCATE(gues3d(nij1,nlev,MEMBER,nv3d))
-!    ALLOCATE(gues2d(nij1,MEMBER,nv2d))
-
+    call set_common_scale
+    call set_common_mpi_scale
     !
     ! READ GUES
     !

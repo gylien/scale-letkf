@@ -1038,7 +1038,6 @@ end subroutine read_ens_mpi
 
 
 
-
 subroutine read_ens_mpi_send(file)
   implicit none
   CHARACTER(4),INTENT(IN) :: file
@@ -1046,14 +1045,9 @@ subroutine read_ens_mpi_send(file)
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   CHARACTER(9) :: filename='file.0000'
   integer :: it,im,mstart,mend
-
-
   integer :: ierr
-  REAL(r_dble) :: rrtimer00,rrtimer
 
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer00 = MPI_WTIME()
-
+!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
 
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
@@ -1062,48 +1056,18 @@ subroutine read_ens_mpi_send(file)
       WRITE(filename(6:9),'(I4.4)') im
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
       call read_restart(filename,v3dg,v2dg)
-
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### read_ens_mpi:read_restart:              ',rrtimer-rrtimer00
-  rrtimer00=rrtimer
-
-
       call state_trans(v3dg)
-
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### read_ens_mpi:state_trans:               ',rrtimer-rrtimer00
-  rrtimer00=rrtimer
-
-
     end if
     mstart = 1 + (it-1)*nprocs_e
     mend = MIN(it*nprocs_e, MEMBER)
-!!!!!!
-!!!!!!    if (mstart <= mend) then
-!!!!!!      call pub_send_alltoall_data(file, mstart, mend, v3dg, v2dg, &
-!!!!!!                                  [in]  [in]    [in]  [in]  [in]
-!!!!!!                                  nlev, nlon, nlat, nv3d, nv2d, nij1, MEMBER, nij1max, nlevall, nprocs_e, RP)
-!!!!!!                                  [... potential input parameters ...]
-!!!!!!    end if
-!!!!!!
-print nlev, nlon, nlat, nv3d, nv2d, nij1, MEMBER, nij1max, nlevall, nprocs_e, RP
 
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### read_ens_mpi:scatter_grd_mpi_alltoall:  ',rrtimer-rrtimer00
-  rrtimer00=rrtimer
-
+    if (mstart <= mend) then
+      call scatter_grd_mpi_alltoall_send(mstart, mend, v3dg, v2dg)
+    end if
   end do ! [ it = 1, nitmax ]
 
   return
 end subroutine read_ens_mpi_send
-
-
 
 subroutine read_ens_mpi_recv(file,v3d,v2d)
   implicit none
@@ -1118,19 +1082,17 @@ subroutine read_ens_mpi_recv(file,v3d,v2d)
   do it = 1, nitmax
     mstart = 1 + (it-1)*nprocs_e
     mend = MIN(it*nprocs_e, MEMBER)
-!!!!!!
-!!!!!!    if (mstart <= mend) then
-!!!!!!      call pub_recv_alltoall_data(file, mstart, mend, v3d, v2d, &
-!!!!!!                                  [in]  [in]    [in][inout][inout]
-!!!!!!                                  nlev, nlon, nlat, nv3d, nv2d, nij1, MEMBER, nij1max, nlevall, nprocs_e, RP)
-!!!!!!                                  [... potential input parameters ...]
-!!!!!!    end if
-!!!!!!
-print nlev, nlon, nlat, nv3d, nv2d, nij1, MEMBER, nij1max, nlevall, nprocs_e, RP
+
+    if (mstart <= mend) then
+      call scatter_grd_mpi_alltoall_recv(mstart, mend, v3d, v2d)
+    end if
   end do ! [ it = 1, nitmax ]
 
   return
 end subroutine read_ens_mpi_recv
+
+
+
 
 
 !-----------------------------------------------------------------------
@@ -1268,6 +1230,131 @@ SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)!,ngp,ngpmax,n
 !  DEALLOCATE(bufr,bufs)
   RETURN
 END SUBROUTINE scatter_grd_mpi_alltoall
+
+
+
+
+
+!SUBROUTINE scatter_grd_mpi_alltoall_send(mstart,mend,v3dg,v2dg,v3d,v2d)
+SUBROUTINE scatter_grd_mpi_alltoall_send(mstart,mend,v3dg,v2dg)
+  INTEGER,INTENT(IN) :: mstart,mend
+  REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
+  REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
+!  REAL(r_size),INTENT(INOUT) :: v3d(nij1,nlev,MEMBER,nv3d)
+!  REAL(r_size),INTENT(INOUT) :: v2d(nij1,MEMBER,nv2d)
+  REAL(RP) :: bufs(nij1max,nlevall,nprocs_e)
+!  REAL(RP) :: bufr(nij1max,nlevall,nprocs_e)
+  INTEGER :: k,n,j,mcount,ierr
+  INTEGER :: ns(nprocs_e),nst(nprocs_e),nr(nprocs_e),nrt(nprocs_e)
+  integer :: MPI_RP
+
+!!!!!!
+  IF(RP == r_dble) THEN
+    MPI_RP = MPI_DOUBLE_PRECISION
+  ELSE IF(RP == r_sngl) THEN
+    MPI_RP = MPI_REAL
+  END IF
+!!!!!!
+
+  mcount = mend - mstart + 1
+  IF(mcount > nprocs_e .OR. mcount <= 0) STOP
+
+  IF(myrank_e < mcount) THEN
+    j=0
+    DO n=1,nv3d
+      DO k=1,nlev
+        j = j+1
+        CALL grd_to_buf(nprocs_e,v3dg(k,:,:,n),bufs(:,j,:))
+      END DO
+    END DO
+    DO n=1,nv2d
+      j = j+1
+      CALL grd_to_buf(nprocs_e,v2dg(:,:,n),bufs(:,j,:))
+    END DO
+  END IF
+
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+
+  IF(mcount == nprocs_e) THEN
+!    CALL MPI_ALLTOALL(bufs, nij1max*nlevall, MPI_RP, &
+!                      bufr, nij1max*nlevall, MPI_RP, MPI_COMM_e, ierr)
+!!!!!!
+!!!!!!    call pub_send_alltoall_data(bufs, nij1max*nlevall, MPI_RP, MPI_COMM_e)
+!!!!!!
+  ELSE
+    CALL set_alltoallv_counts(mcount,nij1max*nlevall,nprocs_e,nr,nrt,ns,nst)
+!    CALL MPI_ALLTOALLV(bufs, ns, nst, MPI_RP, &
+!                       bufr, nr, nrt, MPI_RP, MPI_COMM_e, ierr)
+!!!!!!
+!!!!!!    call pub_send_alltoall_data_v(bufs, ns, nst, nr, nrt, MPI_RP, MPI_COMM_e)
+!!!!!!
+  END IF
+
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+  RETURN
+END SUBROUTINE scatter_grd_mpi_alltoall_send
+
+!SUBROUTINE scatter_grd_mpi_alltoall_recv(mstart,mend,v3dg,v2dg,v3d,v2d)
+SUBROUTINE scatter_grd_mpi_alltoall_recv(mstart,mend,v3d,v2d)
+  INTEGER,INTENT(IN) :: mstart,mend
+!  REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
+!  REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
+  REAL(r_size),INTENT(INOUT) :: v3d(nij1,nlev,MEMBER,nv3d)
+  REAL(r_size),INTENT(INOUT) :: v2d(nij1,MEMBER,nv2d)
+!  REAL(RP) :: bufs(nij1max,nlevall,nprocs_e)
+  REAL(RP) :: bufr(nij1max,nlevall,nprocs_e)
+  INTEGER :: k,n,j,m,mcount,ierr
+  INTEGER :: ns(nprocs_e),nst(nprocs_e),nr(nprocs_e),nrt(nprocs_e)
+  integer :: MPI_RP
+
+!!!!!!
+  IF(RP == r_dble) THEN
+    MPI_RP = MPI_DOUBLE_PRECISION
+  ELSE IF(RP == r_sngl) THEN
+    MPI_RP = MPI_REAL
+  END IF
+!!!!!!
+
+  mcount = mend - mstart + 1
+  IF(mcount > nprocs_e .OR. mcount <= 0) STOP
+
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+
+  IF(mcount == nprocs_e) THEN
+!    CALL MPI_ALLTOALL(bufs, nij1max*nlevall, MPI_RP, &
+!                      bufr, nij1max*nlevall, MPI_RP, MPI_COMM_e, ierr)
+!!!!!!
+!!!!!!    call pub_recv_alltoall_data(bufr, nij1max*nlevall, MPI_RP, MPI_COMM_e)
+!!!!!!
+  ELSE
+    CALL set_alltoallv_counts(mcount,nij1max*nlevall,nprocs_e,nr,nrt,ns,nst)
+!    CALL MPI_ALLTOALLV(bufs, ns, nst, MPI_RP, &
+!                       bufr, nr, nrt, MPI_RP, MPI_COMM_e, ierr)
+!!!!!!
+!!!!!!    call pub_recv_alltoall_data_v(bufr, ns, nst, nr, nrt, MPI_RP, MPI_COMM_e)
+!!!!!!
+  END IF
+
+  DO m = mstart,mend
+    j=0
+    DO n=1,nv3d
+      DO k=1,nlev
+        j = j+1
+        v3d(:,k,m,n) = REAL(bufr(1:nij1,j,m-mstart+1),r_size)
+      END DO
+    END DO
+    DO n=1,nv2d
+      j = j+1
+      v2d(:,m,n) = REAL(bufr(1:nij1,j,m-mstart+1),r_size)
+    END DO
+  END DO
+
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+  RETURN
+END SUBROUTINE scatter_grd_mpi_alltoall_recv
+
+
+
 
 !-----------------------------------------------------------------------
 ! Gather gridded data using MPI_ALLTOALL(V) (all -> mstart~mend)
