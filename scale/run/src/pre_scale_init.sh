@@ -14,7 +14,7 @@ if (($# < 12)); then
 
 [pre_scale_init.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK TOPO LANDUSE BDYORG STIME MKINIT MEM MEM_BDY TMPDIR BDY_TIME_LIST NUMBER_OF_TSTEPS NUMBER_OF_SKIP_TSTEPS [LOGNAME]
+Usage: $0 MYRANK TOPO LANDUSE BDYORG STIME MKINIT MEM MEM_BDY TMPDIR BDY_TIME_LIST NUMBER_OF_TSTEPS NUMBER_OF_SKIP_TSTEPS [SCPCALL]
 
   MYRANK   My rank number (not used)
   TOPO     Basename of SCALE topography files
@@ -32,7 +32,7 @@ Usage: $0 MYRANK TOPO LANDUSE BDYORG STIME MKINIT MEM MEM_BDY TMPDIR BDY_TIME_LI
   BDY_TIME_LIST
   NUMBER_OF_TSTEPS
   NUMBER_OF_SKIP_TSTEPS
-  LOGNAME
+  SCPCALL
 
 EOF
   exit 1
@@ -50,7 +50,7 @@ TMPDIR="$1"; shift
 BDY_TIME_LIST="$1"; shift
 NUMBER_OF_TSTEPS="$1"; shift
 NUMBER_OF_SKIP_TSTEPS="$1"; shift
-LOGNAME="${1:-LOG}"
+SCPCALL="${1:-cycle}"
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
@@ -118,12 +118,18 @@ for time_bdy in $BDY_TIME_LIST; do
   i=$((i+1))
 done
 
+if [ "$SCPCALL" = 'cycle' ]; then
+  IO_LOG_DIR='scale_init'
+else
+  IO_LOG_DIR="${SCPCALL}_scale_init"
+fi
+
 mkdir -p $TMPOUT/${STIME}/bdy/${MEM}
 
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_init | \
-    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/scale_init/${MEM}_${LOGNAME}\"," \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = $RESTART_OUTPUT," \
         -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/init\"," \

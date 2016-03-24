@@ -90,9 +90,6 @@ mv -f ${jobname}.e${jobid} $CONFDIR/${jobid}.e
 mv -f ${jobname}.s${jobid} $CONFDIR/${jobid}.s
 mv -f ${jobname}.i${jobid} $CONFDIR/${jobid}.i
 
-mv -f $LOGDIR/${SCPNAME}_${STIME}.log $CONFDIR/${jobid}.lo
-mv -f $LOGDIR/${SCPNAME}.err $CONFDIR/${jobid}.le
-
 #-------------------------------------------------------------------------------
 
 exit $res

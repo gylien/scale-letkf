@@ -59,28 +59,12 @@ if ((USE_RANKDIR == 1)); then
   fi
 fi
 
-if ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
-  STDOUT=''
-else
-  STDOUT='NOUT'
-fi
+echo "[$(datetime_now)] Start $myname $@" >&2
 
 setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9"
 
-#-------------------------------------------------------------------------------
-
-mkdir -p $LOGDIR
-exec 3>&1 4>&2
-#exec 2>> $LOGDIR/${myname1}.err
-exec 2> >(tee -a $LOGDIR/${myname1}.err >&2)
-
-echo "[$(datetime_now)] Start $myname $@" >&2
-
-for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
-             FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT OUT_OPT LOG_OPT \
-             STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP PARENT_REF_TIME; do
-  printf '                      %-10s = %s\n' $vname "${!vname}" >&2
-done
+echo
+print_setting
 
 #-------------------------------------------------------------------------------
 
@@ -171,9 +155,6 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 # Write the header of the log file
 
-#  exec > $LOGDIR/${myname1}_${stimes[1]}.log
-  exec > >(tee $LOGDIR/${myname1}_${stimes[1]}.log)
-
   echo
   echo " +----------------------------------------------------------------+"
   echo " |                        SCALE-Forecasts                         |"
@@ -216,7 +197,6 @@ while ((time <= ETIME)); do
     done
   done
   echo
-  echo "===================================================================="
 
 #-------------------------------------------------------------------------------
 # Call functions to run the job
@@ -224,33 +204,28 @@ while ((time <= ETIME)); do
   for s in $(seq $nsteps); do
     if (((s_flag == 0 || s >= ISTEP) && (e_flag == 0 || s <= FSTEP))); then
 
-      echo "[$(datetime_now)] ${stimes[1]}: ${stepname[$s]}" >&2
-      echo
-      printf " %2d. %-55s\n" $s "${stepname[$s]}"
-      echo
-
       ######
       if ((s == 1)); then
         if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
-          echo "  ... skip this step (use prepared topo and landuse files)"
-          echo
-          echo "===================================================================="
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared topo and landuse files)" >&2
           continue
         elif ((BDY_FORMAT == 0)); then
-          echo "  ... skip this step (use prepared boundaries)"
-          echo
-          echo "===================================================================="
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
+          continue
+        elif ((LANDUSE_UPDATE != 1 && loop > 1)); then
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (already done in the first cycle)" >&2
           continue
         fi
       fi
-      ######
       if ((s == 2)); then
         if ((BDY_FORMAT == 0)); then
-          echo "  ... skip this step (use prepared boundaries)"
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
           continue
         fi
       fi
       ######
+
+      echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2
 
       enable_iter=0
       if ((s == 2 && BDY_ENS == 1)); then
@@ -259,21 +234,21 @@ while ((time <= ETIME)); do
         enable_iter=1
       fi
 
-      stdout_dir="$TMPOUT/${stimes[1]}/log/$(basename ${stepexecdir[$s]})"
+      stdout_dir="$TMPOUT/${stimes[1]}/log/fcst_$(basename ${stepexecdir[$s]})"
 
       if ((enable_iter == 1)); then
         for it in $(seq $nitmax); do
           if ((USE_RANKDIR == 1)); then
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/fcst_NOUT-${it}" ${stepexecdir[$s]} \
+            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" ${stepexecdir[$s]} \
                     "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop $it # > /dev/null
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           else
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/fcst_NOUT-${it}" . \
+            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
                     "$SCRP_DIR/fcst_step.sh" $loop $it # > /dev/null
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
@@ -281,17 +256,13 @@ while ((time <= ETIME)); do
         done
       else
         if ((USE_RANKDIR == 1)); then
-          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/fcst_NOUT" ${stepexecdir[$s]} \
+          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" ${stepexecdir[$s]} \
                   "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop # > /dev/null
         else
-          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/fcst_NOUT" . \
+          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
                   "$SCRP_DIR/fcst_step.sh" $loop # > /dev/null
         fi
       fi
-
-
-      echo
-      echo "===================================================================="
 
     fi
   done
@@ -319,13 +290,10 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 # Write the footer of the log file
 
-  echo
   echo " +----------------------------------------------------------------+"
   echo " |             SCALE-Forecasts successfully completed             |"
   echo " +----------------------------------------------------------------+"
   echo
-
-  exec 1>&3
 
 #-------------------------------------------------------------------------------
 

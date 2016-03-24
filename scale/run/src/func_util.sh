@@ -19,12 +19,6 @@ safe_init_tmpdir () {
 
 local DIRNAME="$1"
 
-
-
-#echo "###### $DIRNAME ######"
-
-
-
 #-------------------------------------------------------------------------------
 
 if [ -z "$DIRNAME" ]; then
@@ -62,12 +56,6 @@ safe_rm_tmpdir () {
 #-------------------------------------------------------------------------------
 
 local DIRNAME="$1"
-
-
-
-#echo "!!!!!! $DIRNAME !!!!!!"
-
-
 
 #-------------------------------------------------------------------------------
 
@@ -203,7 +191,7 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
   if ((USE_RANKDIR == 1)); then
 
-echo "mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS"
+#echo "mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS"
     mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS
     res=$?
     if ((res != 0)); then
@@ -214,7 +202,7 @@ echo "mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS"
 
   else
 
-echo "mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS"
+#echo "mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS"
     ( cd $progdir && mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS )
     res=$?
     if ((res != 0)); then 
@@ -550,6 +538,10 @@ while ((ntsteps_total > ntsteps)); do
   bdy_times[$nbdy]=$(datetime ${bdy_times[$((nbdy-1))]} $PARENT_LCYCLE s)
   ntsteps_total=$((ntsteps_total-ntsteps))
 done
+
+if ((nbdy == 1)); then
+  ntsteps=$ntsteps_total
+fi
 
 #echo "\$nbdy              = $nbdy" >&2
 #echo "\$ntsteps           = $ntsteps" >&2

@@ -8,17 +8,16 @@
 
 . config.main
 
-if (($# < 11)); then
+if (($# < 10)); then
   cat >&2 << EOF
 
 [pre_letkf_node.sh]
 
-Usage: $0 MYRANK ATIME TMPDIR EXECDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO MEMBERSEQ
+Usage: $0 MYRANK ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO [MEMBERSEQ]
 
   MYRANK      My rank number (not used)
   ATIME       Analysis time (format: YYYYMMDDHHMMSS)
   TMPDIR      Temporary directory to run the program
-  EXECDIR     Directory of SCALE executable files
   OBSDIR      Directory of SCALE data files
   MEM_NODES   Number of nodes for a member
   MEM_NP      Number of processes for a member
@@ -35,7 +34,6 @@ fi
 MYRANK="$1"; shift
 ATIME="$1"; shift
 TMPDIR="$1"; shift
-EXECDIR="$1"; shift 
 OBSDIR="$1"; shift
 MEM_NODES="$1"; shift
 MEM_NP="$1"; shift
@@ -46,11 +44,6 @@ TOPO="$1"; shift
 MEMBERSEQ=${1:-$MEMBER}
 
 #===============================================================================
-
-#mkdir -p $TMPDIR
-#rm -fr $TMPDIR/*
-
-#ln -fs $EXECDIR/letkf $TMPDIR
 
 OBS_IN_NAME_LIST=
 for iobs in $(seq $OBSNUM); do
@@ -89,8 +82,6 @@ cat $TMPDAT/conf/config.nml.scale | \
     sed -e "/!--TIME_DURATION--/a TIME_DURATION = $LTIMESLOT.D0," \
         -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = $LTIMESLOT.D0," \
     >> $TMPDIR/letkf.conf
-
-#mkdir -p $TMPOUT/${ATIME}/log/letkf
 
 #===============================================================================
 

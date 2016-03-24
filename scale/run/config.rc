@@ -16,6 +16,9 @@ SCALE_LOG_SFX='.pe000000'
 #===============================================================================
 # Default values
 
+DATA_TOPO="${DATA_TOPO:-$OUTDIR}"
+DATA_LANDUSE="${DATA_LANDUSE:-$OUTDIR}"
+
 DISK_MODE_DATA_BDY=${DISK_MODE_DATA_BDY:-2}
 DISK_MODE_TOPO_LANDUSE_DB=${DISK_MODE_TOPO_LANDUSE_DB:-2}
 

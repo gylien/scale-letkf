@@ -523,6 +523,10 @@ SUBROUTINE set_letkf_obs
       IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_PRH * obs(obsda%set(n))%err(obsda%idx(n))) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
+    case (id_H08IR_obs)
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
     case default
       IF(ABS(obsda%val(n)) > GROSS_ERROR * obs(obsda%set(n))%err(obsda%idx(n))) THEN
         obsda%qc(n) = iqc_gross_err
