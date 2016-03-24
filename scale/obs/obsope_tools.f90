@@ -130,7 +130,7 @@ SUBROUTINE obsope_cal(obs)
   INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
   INTEGER :: bTC_proc ! the process where the background TC is located.
 ! bTC: background TC in each subdomain
-! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
+! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp (Pa)
   REAL(r_size),ALLOCATABLE :: bTC(:,:)
   REAL(r_size),ALLOCATABLE :: bufr(:,:)
   REAL(r_size) :: bTC_mslp
@@ -426,7 +426,8 @@ SUBROUTINE obsope_cal(obs)
               obs(iof)%dif(obs_idx_TCX) <= slot_ub) then
               nslot = nslot + 3 ! TC vital obs should have 3 data (i.e., lon, lat, and MSLP)
 
-              ! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
+              !!! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
+              ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp
               allocate(bTC(3,0:PRC_NUM_X*PRC_NUM_Y-1))
               allocate(bufr(3,0:PRC_NUM_X*PRC_NUM_Y-1))
 
@@ -467,7 +468,7 @@ SUBROUTINE obsope_cal(obs)
                   rj(nproc) = rjtmp
 
                   obsda%val(nproc) = bTC(n,bTC_proc)
-
+                  obsda%qc(nproc) = iqc_good
                 enddo ! [ n = 1, 3 ]
               endif
               deallocate(bTC)

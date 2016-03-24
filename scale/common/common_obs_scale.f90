@@ -1210,7 +1210,7 @@ SUBROUTINE ij2phys(rig,rjg,rlon,rlat)
   REAL(r_size),INTENT(IN) :: rjg
   REAL(r_size),INTENT(OUT) :: rlon ! (deg)
   REAL(r_size),INTENT(OUT) :: rlat ! (deg)
-  REAL(r_size) :: x, y
+  REAL(r_size) :: x, y ! (m)
 !
 ! ri,rj -> rlon,rlat
 !
@@ -1925,10 +1925,13 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
 END SUBROUTINE get_nobs
 
 SUBROUTINE read_obs(cfile,obs)
+  use scale_mapproj, only: &
+      MPRJ_lonlat2xy
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(INOUT) :: obs
   REAL(r_sngl) :: wk(8)
+  REAL(r_size) :: x, y
   INTEGER :: n,iunit
 
 !  call obs_info_allocate(obs)
@@ -1958,6 +1961,16 @@ SUBROUTINE read_obs(cfile,obs)
     CASE(id_tcmip_obs)
       wk(5) = wk(5) * 100.0 ! hPa -> Pa
       wk(6) = wk(6) * 100.0 ! hPa -> Pa
+    CASE(id_tclon_obs)
+      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0d0,&
+                          REAL(wk(3),kind=r_size)*pi/180.0d0,&
+                          x,y)
+      obs%dat(n) = x
+    CASE(id_tclat_obs)
+      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0d0,&
+                          REAL(wk(3),kind=r_size)*pi/180.0d0,&
+                          x,y)
+      obs%dat(n) = y
     END SELECT
     obs%elm(n) = NINT(wk(1))
     obs%lon(n) = REAL(wk(2),r_size)
@@ -2415,12 +2428,15 @@ END FUNCTION uid_obs
 !   TC vital obs subroutines by T. Honda (??/??/2016)
 !-----------------------------------------------------------------------
 !
-SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_lon,yobs_lat,yobs_mslp)
+!SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_lon,yobs_lat,yobs_mslp)
+SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
   use scale_grid, only: &
+      GRID_CXG, &
+      GRID_CYG, &
       DX, &
       DY
   use scale_grid_index, only: &
-    IHALO, JHALO
+      IHALO, JHALO
   use scale_process, only: &
       PRC_myrank
 
@@ -2431,7 +2447,8 @@ SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_lon,yobs_lat,yobs_mslp)
   REAL(r_size),INTENT(IN) :: ritc, rjtc
   REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
   REAL(r_size),INTENT(OUT) :: yobs_mslp !(Pa)
-  REAL(r_size),INTENT(OUT) :: yobs_lon, yobs_lat !(deg)
+!  REAL(r_size),INTENT(OUT) :: yobs_lon, yobs_lat !(deg)
+  REAL(r_size),INTENT(OUT) :: yobs_tcx, yobs_tcy !(m)
 
   REAL(r_size) :: slp2d(nlonh,nlath)
   REAL(r_size) :: dz, t, q, var5
@@ -2440,8 +2457,10 @@ SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_lon,yobs_lat,yobs_mslp)
 !  yobs_lon = undef
 !  yobs_lat = undef
   yobs_mslp = 9.99d33
-  yobs_lon = 9.99d33
-  yobs_lat = 9.99d33
+!  yobs_lon = 9.99d33
+!  yobs_lat = 9.99d33
+  yobs_tcx = 9.99d33
+  yobs_tcy = 9.99d33
 
   DO jl = 1, nlat 
   DO il = 1, nlon 
@@ -2471,8 +2490,11 @@ SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_lon,yobs_lat,yobs_mslp)
 !    if(var5 < yobs_mslp .or. yobs_mslp < 700.0d2)then
     if(var5 < yobs_mslp)then
       yobs_mslp = var5
-      call ij2phys(real(ig,kind=r_size),real(jg,kind=r_size),&
-                   yobs_lon,yobs_lat)
+!      call ij2phys(real(ig,kind=r_size),real(jg,kind=r_size),&
+!                   yobs_lon,yobs_lat)
+      yobs_tcx = (real(ig,kind=r_size) - 1.0d0) * DX + GRID_CXG(1)
+      yobs_tcy = (real(jg,kind=r_size) - 1.0d0) * DY + GRID_CYG(1)
+
     endif
 
   ENDDO

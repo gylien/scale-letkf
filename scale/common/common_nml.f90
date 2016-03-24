@@ -79,6 +79,7 @@ MODULE common_nml
 
   logical :: POSITIVE_DEFINITE_Q = .false.
   logical :: POSITIVE_DEFINITE_QHYD = .false.
+  real(r_size) :: TC_SEARCH_DIS = 200.0d3 ! (m) ! tentative! Should be modify !!
 
   !--- PARAM_LETKF_PRC
   integer :: NNODES = 1
@@ -168,7 +169,6 @@ MODULE common_nml
                         !! ==0: NOT assimilate (rejected by QC in trans_XtoY_H08)
                         !! It is better to reject B11(ch=5) & B12(ch=6) obs because these bands are 
                         !! sensitive to chemicals.
-  real(r_size) :: TC_SEARCH_DIS = 200.0d3 ! (m) ! tentative! Should be modify !!
 
 contains
 !-----------------------------------------------------------------------
@@ -272,7 +272,8 @@ subroutine read_nml_letkf
     Q_SPRD_MAX, &
     BOUNDARY_TAPER_WIDTH, &
     POSITIVE_DEFINITE_Q, &
-    POSITIVE_DEFINITE_QHYD
+    POSITIVE_DEFINITE_QHYD, &
+    TC_SEARCH_DIS 
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
