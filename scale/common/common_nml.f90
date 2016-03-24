@@ -71,6 +71,9 @@ MODULE common_nml
   real(r_size) :: GROSS_ERROR_RADAR_REF = -1.0d0 ! < 0: same as GROSS_ERROR
   real(r_size) :: GROSS_ERROR_RADAR_VR = -1.0d0  ! < 0: same as GROSS_ERROR
   real(r_size) :: GROSS_ERROR_RADAR_PRH = -1.0d0 ! < 0: same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_TCX = -1.0d0 ! debug ! < 0: same as GROSS_ERROR 
+  real(r_size) :: GROSS_ERROR_TCY = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_TCP = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
 
   integer :: LEV_UPDATE_Q = 100000        ! q and qc are only updated below and equal to this model level
   real(r_size) :: Q_SPRD_MAX = 0.5        ! maximum q (ensemble spread)/(ensemble mean)
@@ -109,6 +112,9 @@ MODULE common_nml
   real(r_size) :: OBSERR_PS = 100.0d0
   real(r_size) :: OBSERR_RADAR_REF = 5.0d0
   real(r_size) :: OBSERR_RADAR_VR = 3.0d0
+  real(r_size) :: OBSERR_TCX = 50.0d3 ! (m)
+  real(r_size) :: OBSERR_TCY = 50.0d3 ! (m)
+  real(r_size) :: OBSERR_TCP = 5.0d2 ! (Pa)
   logical :: USE_OBSERR_RADAR_REF = .false.
   logical :: USE_OBSERR_RADAR_VR = .false.
 !
@@ -268,6 +274,9 @@ subroutine read_nml_letkf
     GROSS_ERROR_RADAR_REF, &
     GROSS_ERROR_RADAR_VR, &
     GROSS_ERROR_RADAR_PRH, &
+    GROSS_ERROR_TCX, &
+    GROSS_ERROR_TCY, &
+    GROSS_ERROR_TCP, &
     LEV_UPDATE_Q, &
     Q_SPRD_MAX, &
     BOUNDARY_TAPER_WIDTH, &
@@ -296,6 +305,15 @@ subroutine read_nml_letkf
   end if
   if (GROSS_ERROR_RADAR_PRH < 0.0d0) then
     GROSS_ERROR_RADAR_PRH = GROSS_ERROR
+  end if
+  if (GROSS_ERROR_TCX < 0.0d0) then
+    GROSS_ERROR_TCX = GROSS_ERROR
+  end if
+  if (GROSS_ERROR_TCY < 0.0d0) then
+    GROSS_ERROR_TCY = GROSS_ERROR
+  end if
+  if (GROSS_ERROR_TCP < 0.0d0) then
+    GROSS_ERROR_TCP = GROSS_ERROR
   end if
   if (SIGMA_OBS_RAIN < 0.0d0) then
     SIGMA_OBS_RAIN = SIGMA_OBS
@@ -398,6 +416,9 @@ subroutine read_nml_letkf_obserr
     OBSERR_PS, &
     OBSERR_RADAR_REF, &
     OBSERR_RADAR_VR, &
+    OBSERR_TCX, &
+    OBSERR_TCY, &
+    OBSERR_TCP, &
     OBSERR_H08, & ! H08
     USE_OBSERR_RADAR_REF, &
     USE_OBSERR_RADAR_VR

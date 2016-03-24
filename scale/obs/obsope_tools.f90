@@ -434,7 +434,11 @@ SUBROUTINE obsope_cal(obs)
               bTC = 9.99d33
               bufr = 9.99d33
 
-              call phys2ij(obs(iof)%dat(obs_idx_TCX),obs(iof)%dat(obs_idx_TCY),rig,rjg)
+              ! Note: obs(iof)%dat(obs_idx_TCX) is not longitude (deg) but X (m).
+              !       Units of the original TC vital position are converted in
+              !       subroutine read_obs in common_obs_scale.f90.
+              !
+              call phys2ij(obs(iof)%lon(obs_idx_TCX),obs(iof)%lat(obs_idx_TCX),rig,rjg)
               call search_tc_subdom(rig,rjg,v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
   
               CALL MPI_BARRIER(MPI_COMM_d,ierr)
@@ -443,10 +447,16 @@ SUBROUTINE obsope_cal(obs)
 
               deallocate(bufr)
 
-              bTC_mslp = undef 
-!              ! assume MSLP for background TC is larger than 700 hPa
+!              write(6,'(a)')"debug"
+!              write(6,'(a,i6)')"idx: ",obs_idx_TCX
+!              write(6,'(a,i6)')"idx: ",obs_idx_TCY
+!              write(6,'(a,i6)')"idx: ",obs_idx_TCP
+!              write(6,'(3e20.5)')bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank)
+!              write(6,'(a)')"debug2"
+
+              bTC_mslp = 9.99d33
               do n = 0, (PRC_NUM_X * PRC_NUM_Y - 1)
-!                if (bTC(3,n) < bTC_mslp .or. bTC(3,n) > 700.0d2)then
+!                write(6,'(3e20.1)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
                 if (bTC(3,n) < bTC_mslp ) then
                   bTC_mslp = bTC(3,n)
                   bTC_proc = n

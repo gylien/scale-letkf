@@ -1959,18 +1959,23 @@ SUBROUTINE read_obs(cfile,obs)
       wk(5) = wk(5) * 0.01 ! percent input
       wk(6) = wk(6) * 0.01 ! percent input
     CASE(id_tcmip_obs)
+      wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = wk(5) * 100.0 ! hPa -> Pa
-      wk(6) = wk(6) * 100.0 ! hPa -> Pa
+      wk(6) = real(OBSERR_TCP,kind=r_sngl)
     CASE(id_tclon_obs)
       call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0d0,&
                           REAL(wk(3),kind=r_size)*pi/180.0d0,&
                           x,y)
-      obs%dat(n) = x
+      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+      wk(5) = real(x,kind=r_sngl)
+      wk(6) = real(OBSERR_TCX,kind=r_sngl)
     CASE(id_tclat_obs)
       call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0d0,&
                           REAL(wk(3),kind=r_size)*pi/180.0d0,&
                           x,y)
-      obs%dat(n) = y
+      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+      wk(5) = real(y,kind=r_sngl)
+      wk(6) = real(OBSERR_TCY,kind=r_sngl)
     END SELECT
     obs%elm(n) = NINT(wk(1))
     obs%lon(n) = REAL(wk(2),r_size)
@@ -2467,6 +2472,7 @@ SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
     t = v2d(il,jl,iv2dd_t2m)
     q = v2d(il,jl,iv2dd_q2m)
     dz = -1.0d0 * v2d(il,jl,iv2dd_topo)
+    slp2d(il,jl) = v2d(il,jl,iv2dd_ps)
     call prsadj(slp2d(il,jl),dz,t,q)
   ENDDO
   ENDDO
