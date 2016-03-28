@@ -1362,6 +1362,14 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   INTEGER,ALLOCATABLE :: qc_H08(:)
 #endif
 
+! -- for TC vital assimilation --
+!  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
+!  INTEGER :: bTC_proc ! the process where the background TC is located.
+! bTC: background TC in each subdomain
+! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp (Pa)
+!  REAL(r_size),ALLOCATABLE :: bTC(:,:)
+!  REAL(r_size),ALLOCATABLE :: bufr(:,:)
+!  REAL(r_size) :: bTC_mslp
 
 !CALL MPI_BARRIER(MPI_COMM_a,ierr)
 !CALL CPU_TIME(timer)
@@ -1446,14 +1454,31 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 
   oqc = -1
 
+!  obs_idx_TCX = -1
+!  obs_idx_TCY = -1
+!  obs_idx_TCP = -1
+
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ri,rj,rk)
   do n = 1, obsda%nobs
 
     if (obsda%qc(n) /= iqc_good) write(6, *) '############', obsda%qc(n)
 
     oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
+
+!    select case (int(oelm(n)))
+!    case (id_tclon_obs)
+!      obs_idx_TCX = n
+!      cycle
+!    case (id_tclat_obs)
+!      obs_idx_TCY = n
+!      cycle
+!    case (id_tcmip_obs)
+!      obs_idx_TCP = n
+!      cycle
+!    end select
+
 #ifdef H08
-    if(oelm(n) == id_H08IR_obs)cycle
+    if(int(oelm(n)) == id_H08IR_obs)cycle
 #endif
 
     call rij_g2l_auto(proc,obsda%ri(n),obsda%rj(n),ri,rj)
@@ -1621,6 +1646,57 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   endif !-- [DEPARTURE_STAT_H08]
 
 #endif
+
+! ###  -- TC vital assimilation -- ###
+!  if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0 .and.&
+!    obs(obsda%set(obs_idx_TCX))%dif(obsda%idx(obs_idx_TCX)) == &
+!    obs(obsda%set(obs_idx_TCY))%dif(obsda%idx(obs_idx_TCY)) .and. &
+!    obs(obsda%set(obs_idx_TCY))%dif(obsda%idx(obs_idx_TCY)) == &
+!    obs(obsda%set(obs_idx_TCP))%dif(obsda%idx(obs_idx_TCP)) .and. & 
+!    (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
+!    abs(obs(obsda%set(obs_idx_TCX))%dif(obsda%idx(obs_idx_TCX))) <= DEPARTURE_STAT_T_RANGE))then
+!
+!    allocate(bTC(3,0:MEM_NP-1))
+!    allocate(bufr(3,0:MEM_NP-1))
+!
+!    bTC = 9.99d33
+!    bufr = 9.99d33
+!
+!    call search_tc_subdom(obsda%ri(obs_idx_TCX),obsda%rj(obs_idx_TCX),v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
+!
+!    CALL MPI_BARRIER(MPI_COMM_d,ierr)
+!    CALL MPI_ALLREDUCE(bTC,bufr,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
+!    bTC = bufr
+!
+!    deallocate(bufr)
+!
+!
+!    ! Assume MSLP of background TC is lower than 1100 (hPa). 
+!    bTC_mslp = 1100.0d2
+!    do n = 0, MEM_NP - 1
+!      write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
+!      if (bTC(3,n) < bTC_mslp ) then
+!        bTC_mslp = bTC(3,n)
+!        bTC_proc = n
+!      endif
+!    enddo ! [ n = 0, MEM_NP - 1]
+!
+!    do n = 1, 3
+!      if(n==1) i = obs_idx_TCX
+!      if(n==2) i = obs_idx_TCY
+!      if(n==3) i = obs_idx_TCP
+!
+!      ohx(i) = bTC(n,bTC_proc)
+!      oqc(i) = iqc_otype
+!      if(bTC_MSLP < 1100.0d2) oqc(i) = iqc_good
+!
+!      if (oqc(i) == iqc_good) then
+!        ohx(i) = obs(obsda%set(i))%dat(obsda%idx(i)) - ohx(i)
+!      end if
+!    enddo
+!
+!  endif ! [DEPARTURE_STAT_T_RANGE]
+
 
   call monit_dep(obsda%nobs,oelm,ohx,oqc,nobs,bias,rmse)
 
@@ -2430,10 +2506,9 @@ FUNCTION uid_obs(id_obs)
 END FUNCTION uid_obs
 !
 !-----------------------------------------------------------------------
-!   TC vital obs subroutines by T. Honda (??/??/2016)
+!   TC vital obs subroutines by T. Honda (03/28/2016)
 !-----------------------------------------------------------------------
 !
-!SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_lon,yobs_lat,yobs_mslp)
 SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
   use scale_grid, only: &
       GRID_CXG, &
@@ -2448,7 +2523,6 @@ SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
   IMPLICIT NONE
   INTEGER :: il, jl, ig, jg
   REAL(r_size) :: xdis, ydis, rdis
-  REAL(r_size) :: tmp_mslp
   REAL(r_size),INTENT(IN) :: ritc, rjtc
   REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
   REAL(r_size),INTENT(OUT) :: yobs_mslp !(Pa)
@@ -2458,12 +2532,7 @@ SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
   REAL(r_size) :: slp2d(nlonh,nlath)
   REAL(r_size) :: dz, t, q, var5
 
-!  yobs_mslp = undef
-!  yobs_lon = undef
-!  yobs_lat = undef
   yobs_mslp = 9.99d33
-!  yobs_lon = 9.99d33
-!  yobs_lat = 9.99d33
   yobs_tcx = 9.99d33
   yobs_tcy = 9.99d33
 
@@ -2492,17 +2561,11 @@ SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
       var5 = slp2d(il,jl)
     ENDIF
 
-!    ! assume MSLP for background TC is larger than 700 hPa
-!    if(var5 < yobs_mslp .or. yobs_mslp < 700.0d2)then
     if(var5 < yobs_mslp)then
       yobs_mslp = var5
-!      call ij2phys(real(ig,kind=r_size),real(jg,kind=r_size),&
-!                   yobs_lon,yobs_lat)
       yobs_tcx = (real(ig,kind=r_size) - 1.0d0) * DX + GRID_CXG(1)
       yobs_tcy = (real(jg,kind=r_size) - 1.0d0) * DY + GRID_CYG(1)
-
     endif
-
   ENDDO
   ENDDO
 

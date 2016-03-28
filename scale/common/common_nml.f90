@@ -51,10 +51,12 @@ MODULE common_nml
   real(r_size) :: SIGMA_OBS_RAIN = -1.0d0  ! < 0: same as SIGMA_OBS
   real(r_size) :: SIGMA_OBS_RADAR = -1.0d0 ! < 0: same as SIGMA_OBS
   real(r_size) :: SIGMA_OBS_H08 = -1.0d0 ! < 0: same as SIGMA_OBS ! H08
+  real(r_size) :: SIGMA_OBS_TC = -1.0d0 ! < 0: same as SIGMA_OBS 
   real(r_size) :: SIGMA_OBSV = 0.4d0
   real(r_size) :: SIGMA_OBSV_RAIN = -1.0d0 ! < 0: same as SIGMA_OBSV
   real(r_size) :: SIGMA_OBSZ_RADAR = 1000.0d0
   real(r_size) :: SIGMA_OBSV_H08 = -1.0d0 ! < 0: same as SIGMA_OBSV ! H08
+  real(r_size) :: SIGMA_OBSV_TC = -1.0d0 ! < 0: same as SIGMA_OBSV 
   real(r_size) :: SIGMA_OBST = 3.0d0
   real(r_size) :: BASE_OBSV_RAIN = 85000.0d0
 
@@ -257,9 +259,11 @@ subroutine read_nml_letkf
     SIGMA_OBS_RAIN, &
     SIGMA_OBS_RADAR, &
     SIGMA_OBS_H08, & ! H08
+    SIGMA_OBS_TC, & 
     SIGMA_OBSV, &
     SIGMA_OBSV_RAIN, &
     SIGMA_OBSV_H08, & ! H08
+    SIGMA_OBSV_TC, & 
     SIGMA_OBSZ_RADAR, &
     SIGMA_OBST, &
     BASE_OBSV_RAIN, &
@@ -330,6 +334,12 @@ subroutine read_nml_letkf
   end if
   if (SIGMA_OBSV_H08 < 0.0d0) then ! H08
     SIGMA_OBSV_H08 = SIGMA_OBSV
+  end if
+  if (SIGMA_OBS_TC < 0.0d0) then 
+    SIGMA_OBS_TC = SIGMA_OBS
+  end if
+  if (SIGMA_OBSV_TC < 0.0d0) then 
+    SIGMA_OBSV_TC = SIGMA_OBSV
   end if
 
   write(6, nml=PARAM_LETKF)

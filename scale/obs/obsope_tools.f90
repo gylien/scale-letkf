@@ -25,9 +25,6 @@ MODULE obsope_tools
   use scale_grid_index, only: &
     KHALO, IHALO, JHALO
 
-  use scale_les_process, only: &
-    PRC_NUM_X, &
-    PRC_NUM_Y
 
   IMPLICIT NONE
   PUBLIC
@@ -428,8 +425,8 @@ SUBROUTINE obsope_cal(obs)
 
               !!! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
               ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp
-              allocate(bTC(3,0:PRC_NUM_X*PRC_NUM_Y-1))
-              allocate(bufr(3,0:PRC_NUM_X*PRC_NUM_Y-1))
+              allocate(bTC(3,0:MEM_NP-1))
+              allocate(bufr(3,0:MEM_NP-1))
 
               bTC = 9.99d33
               bufr = 9.99d33
@@ -438,33 +435,27 @@ SUBROUTINE obsope_cal(obs)
               !       Units of the original TC vital position are converted in
               !       subroutine read_obs in common_obs_scale.f90.
               !
-              call phys2ij(obs(iof)%lon(obs_idx_TCX),obs(iof)%lat(obs_idx_TCX),rig,rjg)
+              call phys2ij(obs(iof)%lon(obs_idx_TCX),obs(iof)%lat(obs_idx_TCX),rig,rjg) 
+              call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)  
               call search_tc_subdom(rig,rjg,v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
   
               CALL MPI_BARRIER(MPI_COMM_d,ierr)
-              CALL MPI_ALLREDUCE(bTC,bufr,3*PRC_NUM_X*PRC_NUM_Y,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
+              CALL MPI_ALLREDUCE(bTC,bufr,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
               bTC = bufr
 
               deallocate(bufr)
 
-!              write(6,'(a)')"debug"
-!              write(6,'(a,i6)')"idx: ",obs_idx_TCX
-!              write(6,'(a,i6)')"idx: ",obs_idx_TCY
-!              write(6,'(a,i6)')"idx: ",obs_idx_TCP
-!              write(6,'(3e20.5)')bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank)
-!              write(6,'(a)')"debug2"
-
-              bTC_mslp = 9.99d33
-              do n = 0, (PRC_NUM_X * PRC_NUM_Y - 1)
-!                write(6,'(3e20.1)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
+              ! Assume MSLP of background TC is lower than 1100 (hPa). 
+              bTC_mslp = 1100.0d2
+              do n = 0, MEM_NP - 1
+                write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
                 if (bTC(3,n) < bTC_mslp ) then
                   bTC_mslp = bTC(3,n)
                   bTC_proc = n
                 endif
-              enddo ! [ n = 0, PRC_NUM_X * PRC_NUMY - 1]
+              enddo ! [ n = 0, MEM_NP - 1]
 
-              if (PRC_myrank == bTC_proc) then
-                call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
+              if (PRC_myrank == proc) then
                 do n = 1, 3
                   nproc = nproc + 1
                   nprocslot = nprocslot + 1
@@ -480,6 +471,7 @@ SUBROUTINE obsope_cal(obs)
                   obsda%val(nproc) = bTC(n,bTC_proc)
                   obsda%qc(nproc) = iqc_good
                 enddo ! [ n = 1, 3 ]
+
               endif
               deallocate(bTC)
 

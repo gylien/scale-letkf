@@ -889,8 +889,10 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
           dist = dist / SIGMA_OBS_RADAR                                                                               !GYL
           dlev = ABS(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n))) - rz) / SIGMA_OBSZ_RADAR       !GYL, vertical localization in Z; no LOG
         case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)                                                               !GYL
-          dist = dist / SIGMA_OBS                                                                                     !GYL
-          dlev = 0.0d0                                                                                                !GYL
+          dist = dist / SIGMA_OBS_TC                                                                                  !TH
+          dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%dat(obsda2(ip)%idx(nobs_use(n)))) - LOG(rlev)) / SIGMA_OBSV_TC !TH
+!          dist = dist / SIGMA_OBS                                                                                     !GYL
+!          dlev = 0.0d0                                                                                                !GYL
         case (id_H08IR_obs)                                                         ! H08       
           dist = dist / SIGMA_OBS_H08                                               ! H08                       
           dlev = ABS(LOG(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n)))) - LOG(rlev)) / SIGMA_OBSV_H08 ! H08 ! bug fixed (02/09/2016) 
