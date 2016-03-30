@@ -623,6 +623,9 @@ else
 #        done
         path="${time}/hist"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      else
+        path="${time}/hist/meanf"
+        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
 
       # gues
