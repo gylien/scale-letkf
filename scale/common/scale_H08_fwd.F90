@@ -1,8 +1,3 @@
-!
-! copied from
-! /home/hp150019/k02128/SCALE/0.2-0730/scale/scale-les/util/netcdf2grads_h/src 
-! original: mod_SCALE_RTTOV_fwd.F90 (2015/08/18)
-!
 module scale_H08_fwd
 implicit none
 
@@ -27,7 +22,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
                            tmp_lat,&
                            tmp_land,&
                            bt_out,& 
-                           trans_out) 
+                           trans_out,& 
+                           CLD) 
   !
   ! Copyright:
   !    This software was developed within the context of
@@ -113,7 +109,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
         Rdry    => CONST_Rdry, &
         Rvap    => CONST_Rvap, &
         Deg2Rad => CONST_D2R
-
+  USE common_nml, ONLY: &
+        minQ => H08_RTTOV_MINQ
   IMPLICIT NONE
 
 #include "rttov_parallel_direct.interface"
@@ -127,6 +124,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 #include "rttov_print_opts.interface"
 #include "rttov_print_profile.interface"
 #include "rttov_skipcommentline.interface"
+
+  LOGICAL,INTENT(IN) :: CLD
 
 !
 ! -  Added by T.Honda (11/18/2015)
@@ -150,8 +149,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   REAL(r_size) :: z_angle_H08 ! zenith angle of Himawari-8
 !
 ! minQcfrac: Threshold for diagnosing cloud fraction
-!          = 0.01_jprb (tentative) by T.Honda (12/18/2015) ! same with JMA-NHM?
-   REAL(kind=jprb),PARAMETER :: minQcfrac = 0.01_jprb ! threshold mixing ratio (g kg-1) for cloud fraction diagnosis
+  REAL(kind=jprb) :: minQcfrac ! threshold water/ice contents (g m-3) for cloud fraction diagnosis
 
   INTEGER, INTENT(IN) :: nprof
   INTEGER, INTENT(IN) :: nlevels
@@ -255,6 +253,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   epsb = Rd / Rv 
   repsb = 1.0_jprb / epsb
 
+  minQcfrac = real(minQ,kind=jprb)
+
   ALLOCATE(tmp_bt_out(nchannels,nprof))
   ALLOCATE(tmp_trans_out(nlevels,nchannels,nprof))
 
@@ -333,6 +333,9 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
   opts % rt_all % addrefrac         = .FALSE.  ! Include refraction in path calc
   opts % rt_ir % addclouds          = .TRUE. ! Include cloud effects
+  if (.not. CLD) then
+    opts % rt_ir % addclouds          = .FALSE. ! Include cloud effects
+  endif
   opts % rt_ir % user_cld_opt_param   = .FALSE. ! include cloud effects
   opts % rt_ir % addaerosl          = .FALSE. ! Don't include aerosol effects
 
@@ -606,9 +609,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
         profiles(iprof) % cloud(6,ilev) = & 
                    (icec(ilev+1) + icec(ilev)) * 0.5_jprb
 !  -- NOTE: Currently(11/18/2015), the SCALE-LES model regards cfrac = 1.0 (/0.0) 
-!            in the grid point where QHYDRO > 0.0 (=0.0).
-!           If this treatment (probably not suitable for high resolution simulations)
-!            in SCALE is updated, it will be better to consider updating the following statements.
+!            in the grid point where a sum of water/ice contents > 0.0 (=0.0).
 !
 !  -- NOTE: minQcfrac is added. (12/16/2016)
         if(((profiles(iprof) % cloud(2,ilev) + profiles(iprof) % cloud(6,ilev)) > minQcfrac)) then

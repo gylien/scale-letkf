@@ -50,6 +50,7 @@ MODULE common_nml
   real(r_size) :: SIGMA_OBS = 500.0d3
   real(r_size) :: SIGMA_OBS_RAIN = -1.0d0  ! < 0: same as SIGMA_OBS
   real(r_size) :: SIGMA_OBS_RADAR = -1.0d0 ! < 0: same as SIGMA_OBS
+  real(r_size) :: SIGMA_OBS_RADAR_OBSNOREF = -1.0d0 ! < 0: same as SIGMA_OBS_RADAR
   real(r_size) :: SIGMA_OBS_H08 = -1.0d0 ! < 0: same as SIGMA_OBS ! H08
   real(r_size) :: SIGMA_OBS_TC = -1.0d0 ! < 0: same as SIGMA_OBS 
   real(r_size) :: SIGMA_OBSV = 0.4d0
@@ -73,6 +74,7 @@ MODULE common_nml
   real(r_size) :: GROSS_ERROR_RADAR_REF = -1.0d0 ! < 0: same as GROSS_ERROR
   real(r_size) :: GROSS_ERROR_RADAR_VR = -1.0d0  ! < 0: same as GROSS_ERROR
   real(r_size) :: GROSS_ERROR_RADAR_PRH = -1.0d0 ! < 0: same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_H08 = -1.0d0      ! < 0: same as GROSS_ERROR
   real(r_size) :: GROSS_ERROR_TCX = -1.0d0 ! debug ! < 0: same as GROSS_ERROR 
   real(r_size) :: GROSS_ERROR_TCY = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
   real(r_size) :: GROSS_ERROR_TCP = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
@@ -145,7 +147,7 @@ MODULE common_nml
   INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than RADAR_REF_THRES_DBZ
   INTEGER :: MIN_RADAR_REF_MEMBER_OBSREF = 1   !Ensemble members with
 
-  INTEGER :: LOW_REF_SHIFT = 0.0d0
+  REAL(r_size) :: LOW_REF_SHIFT = 0.0d0
 
   REAL(r_size) :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
   REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
@@ -169,6 +171,7 @@ MODULE common_nml
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
   !---PARAM_LETKF_H08
+  real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
   real(r_size) :: H08_LIMIT_LEV = 20000.0d0 ! (Pa) Upper limit level of the sensitive height for Himawari-8 IR
   integer :: H08_CH_USE(nch) = (/0,1,1,1,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
@@ -258,6 +261,7 @@ subroutine read_nml_letkf
     SIGMA_OBS, &
     SIGMA_OBS_RAIN, &
     SIGMA_OBS_RADAR, &
+    SIGMA_OBS_RADAR_OBSNOREF, &
     SIGMA_OBS_H08, & ! H08
     SIGMA_OBS_TC, & 
     SIGMA_OBSV, &
@@ -278,6 +282,7 @@ subroutine read_nml_letkf
     GROSS_ERROR_RADAR_REF, &
     GROSS_ERROR_RADAR_VR, &
     GROSS_ERROR_RADAR_PRH, &
+    GROSS_ERROR_H08, &
     GROSS_ERROR_TCX, &
     GROSS_ERROR_TCY, &
     GROSS_ERROR_TCP, &
@@ -310,6 +315,9 @@ subroutine read_nml_letkf
   if (GROSS_ERROR_RADAR_PRH < 0.0d0) then
     GROSS_ERROR_RADAR_PRH = GROSS_ERROR
   end if
+  if (GROSS_ERROR_H08 < 0.0d0) then ! H08
+    GROSS_ERROR_H08 = GROSS_ERROR
+  end if
   if (GROSS_ERROR_TCX < 0.0d0) then
     GROSS_ERROR_TCX = GROSS_ERROR
   end if
@@ -324,6 +332,9 @@ subroutine read_nml_letkf
   end if
   if (SIGMA_OBS_RADAR < 0.0d0) then
     SIGMA_OBS_RADAR = SIGMA_OBS
+  end if
+  if (SIGMA_OBS_RADAR_OBSNOREF < 0.0d0) then
+    SIGMA_OBS_RADAR_OBSNOREF = SIGMA_OBS_RADAR
   end if
   if (SIGMA_OBSV_RAIN < 0.0d0) then
     SIGMA_OBSV_RAIN = SIGMA_OBSV
@@ -530,6 +541,7 @@ subroutine read_nml_letkf_h08
   integer :: ierr
 
   namelist /PARAM_LETKF_H08/ &
+    H08_RTTOV_MINQ, &
     H08_LIMIT_LEV, &
     H08_CH_USE
 

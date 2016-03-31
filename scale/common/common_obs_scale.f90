@@ -158,6 +158,7 @@ MODULE common_obs_scale
     ! 
 #ifdef H08
     REAL(r_size),ALLOCATABLE :: lev(:) ! H08
+    LOGICAL :: CLD
 #endif
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
@@ -2727,7 +2728,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
                        lat1d(1:nprof),& ! (deg)
                        lsmask1d(1:nprof),& ! (0-1)
                        bt_out(1:nch,1:nprof),& ! (K)
-                       trans_out(nlev:1:-1,1:nch,1:nprof)) ! ()
+                       trans_out(nlev:1:-1,1:nch,1:nprof),&
+                       CLD = .true.) ! ()
 !
 ! -- Compute max weight level using trans_out 
 ! -- (Transmittance from each user pressure level to Top Of the Atmosphere)
