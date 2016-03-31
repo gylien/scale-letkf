@@ -527,6 +527,18 @@ SUBROUTINE set_letkf_obs
       IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(obsda%set(n))%err(obsda%idx(n))) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
+    case (id_tclon_obs)
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_TCX * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
+    case (id_tclat_obs)
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_TCY * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
+    case (id_tcmip_obs)
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_TCP * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
     case default
       IF(ABS(obsda%val(n)) > GROSS_ERROR * obs(obsda%set(n))%err(obsda%idx(n))) THEN
         obsda%qc(n) = iqc_gross_err

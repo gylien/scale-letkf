@@ -623,6 +623,9 @@ else
 #        done
         path="${time}/hist"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      else
+        path="${time}/hist/meanf"
+        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
 
       # gues
@@ -1030,8 +1033,8 @@ else
 
             if ((BDY_ENS == 1)); then
               for m in $(seq $mmean); do
-                pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_dby}"
-                path="bdywrf/${name_m[$m]}/wrfout_${time_dby}"
+                pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_bdy}"
+                path="bdywrf/${name_m[$m]}/wrfout_${time_bdy}"
                 if ((DISK_MODE_DATA_BDY == 2)); then
                   echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
                 else
@@ -1039,8 +1042,8 @@ else
                 fi
               done
             else
-              pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
-              path="bdywrf/mean/wrfout_${time_dby}"
+              pathin="$DATA_BDY_WRF/mean/wrfout_${time_bdy}"
+              path="bdywrf/mean/wrfout_${time_bdy}"
               if ((DISK_MODE_DATA_BDY == 2)); then
                 echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
               else
