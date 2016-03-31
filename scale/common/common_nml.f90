@@ -50,6 +50,7 @@ MODULE common_nml
   real(r_size) :: SIGMA_OBS = 500.0d3
   real(r_size) :: SIGMA_OBS_RAIN = -1.0d0  ! < 0: same as SIGMA_OBS
   real(r_size) :: SIGMA_OBS_RADAR = -1.0d0 ! < 0: same as SIGMA_OBS
+  real(r_size) :: SIGMA_OBS_RADAR_OBSNOREF = -1.0d0 ! < 0: same as SIGMA_OBS_RADAR
   real(r_size) :: SIGMA_OBS_H08 = -1.0d0 ! < 0: same as SIGMA_OBS ! H08
   real(r_size) :: SIGMA_OBSV = 0.4d0
   real(r_size) :: SIGMA_OBSV_RAIN = -1.0d0 ! < 0: same as SIGMA_OBSV
@@ -137,7 +138,7 @@ MODULE common_nml
   INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than RADAR_REF_THRES_DBZ
   INTEGER :: MIN_RADAR_REF_MEMBER_OBSREF = 1   !Ensemble members with
 
-  INTEGER :: LOW_REF_SHIFT = 0.0d0
+  REAL(r_size) :: LOW_REF_SHIFT = 0.0d0
 
   REAL(r_size) :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
   REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
@@ -251,6 +252,7 @@ subroutine read_nml_letkf
     SIGMA_OBS, &
     SIGMA_OBS_RAIN, &
     SIGMA_OBS_RADAR, &
+    SIGMA_OBS_RADAR_OBSNOREF, &
     SIGMA_OBS_H08, & ! H08
     SIGMA_OBSV, &
     SIGMA_OBSV_RAIN, &
@@ -306,6 +308,9 @@ subroutine read_nml_letkf
   end if
   if (SIGMA_OBS_RADAR < 0.0d0) then
     SIGMA_OBS_RADAR = SIGMA_OBS
+  end if
+  if (SIGMA_OBS_RADAR_OBSNOREF < 0.0d0) then
+    SIGMA_OBS_RADAR_OBSNOREF = SIGMA_OBS_RADAR
   end if
   if (SIGMA_OBSV_RAIN < 0.0d0) then
     SIGMA_OBSV_RAIN = SIGMA_OBSV

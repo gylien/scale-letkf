@@ -886,7 +886,11 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
           dist = dist / SIGMA_OBS_RAIN                                                                                !GYL
           dlev = ABS(LOG(BASE_OBSV_RAIN) - LOG(rlev)) / SIGMA_OBSV_RAIN                                               !GYL
         case (id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs)                                                    !GYL
-          dist = dist / SIGMA_OBS_RADAR                                                                               !GYL
+          if (ielm == id_radar_ref_obs .and. obs(obsda2(ip)%set(nobs_use(n)))%dat(obsda2(ip)%idx(nobs_use(n))) <= RADAR_REF_THRES_DBZ+1.0d-6) then !GYL
+            dist = dist / SIGMA_OBS_RADAR_OBSNOREF                                                                    !GYL
+          else                                                                                                        !GYL
+            dist = dist / SIGMA_OBS_RADAR                                                                             !GYL
+          end if                                                                                                      !GYL
           dlev = ABS(obs(obsda2(ip)%set(nobs_use(n)))%lev(obsda2(ip)%idx(nobs_use(n))) - rz) / SIGMA_OBSZ_RADAR       !GYL, vertical localization in Z; no LOG
         case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)                                                               !GYL
           dist = dist / SIGMA_OBS                                                                                     !GYL
