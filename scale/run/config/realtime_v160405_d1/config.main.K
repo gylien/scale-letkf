@@ -29,11 +29,11 @@ OBSNCEP=                                                 # directory of observat
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -49,7 +49,7 @@ BDY_ENS=0               # 0: Fixed boundary files for all memebers
 BDYINT=21600
 BDYCYCLE_INT=21600
 
-PARENT_REF_TIME=20130713060000
+#PARENT_REF_TIME=20130713060000
 
 OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle

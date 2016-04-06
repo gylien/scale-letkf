@@ -28,15 +28,13 @@ myname1=${myname%.*}
 #===============================================================================
 # Configuration
 
-. config.main
-res=$? && ((res != 0)) && exit $res
-. config.$myname1
-res=$? && ((res != 0)) && exit $res
+. config.main || exit $?
+. config.$myname1 || exit $?
 
-. src/func_distribute.sh
-. src/func_datetime.sh
-. src/func_util.sh
-. src/func_$myname1.sh
+. src/func_distribute.sh || exit $?
+. src/func_datetime.sh || exit $?
+. src/func_util.sh || exit $?
+. src/func_$myname1.sh || exit $?
 
 #-------------------------------------------------------------------------------
 
@@ -61,19 +59,19 @@ fi
 
 echo "[$(datetime_now)] Start $myname $@" >&2
 
-setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9"
+setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" || exit $?
 
 echo
-print_setting
+print_setting || exit $?
 
 #-------------------------------------------------------------------------------
 
 if ((BUILTIN_STAGING && ISTEP == 1)); then
   if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
-    safe_init_tmpdir $TMP
+    safe_init_tmpdir $TMP || exit $?
   fi
   if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
-    safe_init_tmpdir $TMPL
+    safe_init_tmpdir $TMPL || exit $?
   fi
 fi
 
@@ -91,10 +89,10 @@ declare -a proc2grpproc
 
 #if ((BUILTIN_STAGING && ISTEP == 1)); then
 if ((BUILTIN_STAGING)); then
-  safe_init_tmpdir $NODEFILE_DIR
-  distribute_fcst "$MEMBERS" $CYCLE machinefile $NODEFILE_DIR
+  safe_init_tmpdir $NODEFILE_DIR || exit $?
+  distribute_fcst "$MEMBERS" $CYCLE machinefile $NODEFILE_DIR || exit $?
 else
-  distribute_fcst "$MEMBERS" $CYCLE - - $NODEFILE_DIR/distr
+  distribute_fcst "$MEMBERS" $CYCLE - - $NODEFILE_DIR/distr || exit $?
 fi
 
 #===============================================================================
@@ -103,10 +101,10 @@ fi
 if ((BUILTIN_STAGING)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
-  safe_init_tmpdir $STAGING_DIR
-  staging_list
+  safe_init_tmpdir $STAGING_DIR || exit $?
+  staging_list || exit $?
   if ((TMPDAT_MODE >= 2 || TMPOUT_MODE >= 2)); then
-    pdbash node all $SCRP_DIR/src/stage_in.sh
+    pdbash node all $SCRP_DIR/src/stage_in.sh || exit $?
   fi
 fi
 
@@ -114,9 +112,9 @@ fi
 # Run initialization scripts on all nodes
 
 if ((TMPRUN_MODE <= 2)); then
-  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1
+  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
 else
-  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1
+  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
 fi
 
 #===============================================================================
@@ -242,14 +240,14 @@ while ((time <= ETIME)); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
             mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" ${stepexecdir[$s]} \
-                    "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop $it # > /dev/null
+                    "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop $it || exit $?
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           else
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
             mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
-                    "$SCRP_DIR/fcst_step.sh" $loop $it # > /dev/null
+                    "$SCRP_DIR/fcst_step.sh" $loop $it || exit $?
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           fi
@@ -257,10 +255,10 @@ while ((time <= ETIME)); do
       else
         if ((USE_RANKDIR == 1)); then
           mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" ${stepexecdir[$s]} \
-                  "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop # > /dev/null
+                  "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop || exit $?
         else
           mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
-                  "$SCRP_DIR/fcst_step.sh" $loop # > /dev/null
+                  "$SCRP_DIR/fcst_step.sh" $loop || exit $?
         fi
       fi
 
@@ -277,8 +275,8 @@ while ((time <= ETIME)); do
     if ((BUILTIN_STAGING && $(datetime $time $((lcycles * CYCLE)) s) <= ETIME)); then
       if ((MACHINE_TYPE == 12)); then
         echo "[$(datetime_now)] ${stimes[1]}: Online stage out"
-        bash $SCRP_DIR/src/stage_out.sh s $loop
-        pdbash node all $SCRP_DIR/src/stage_out.sh $loop
+        bash $SCRP_DIR/src/stage_out.sh s $loop || exit $?
+        pdbash node all $SCRP_DIR/src/stage_out.sh $loop || exit $?
       else
         echo "[$(datetime_now)] ${stimes[1]}: Online stage out (background job)"
         ( bash $SCRP_DIR/src/stage_out.sh s $loop ;
@@ -313,11 +311,11 @@ if ((BUILTIN_STAGING)); then
   if ((TMPOUT_MODE >= 2)); then
     if ((ONLINE_STGOUT == 1)); then
       wait
-      bash $SCRP_DIR/src/stage_out.sh s $loop
-      pdbash node all $SCRP_DIR/src/stage_out.sh $loop
+      bash $SCRP_DIR/src/stage_out.sh s $loop || exit $?
+      pdbash node all $SCRP_DIR/src/stage_out.sh $loop || exit $?
     else
-      bash $SCRP_DIR/src/stage_out.sh s
-      pdbash node all $SCRP_DIR/src/stage_out.sh
+      bash $SCRP_DIR/src/stage_out.sh s || exit $?
+      pdbash node all $SCRP_DIR/src/stage_out.sh || exit $?
     fi
   fi
 
