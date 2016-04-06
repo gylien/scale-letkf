@@ -1125,7 +1125,7 @@ for it in $(seq $its $ite); do
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
            $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
-           ${bdy_loc} ${stimes[$c]} $mkinit ${name_m[$m]} $mem_bdy \
+           ${bdy_loc} ${stimes[$c]} $mkinit $mem_bdy \
            $TMPRUN/scale_init/$(printf '%04d' $m) \
            "$bdy_time_list" $ntsteps $ntsteps_skip fcst
     fi
