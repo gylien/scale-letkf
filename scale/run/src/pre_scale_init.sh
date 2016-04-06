@@ -9,12 +9,12 @@
 . config.main
 . src/func_datetime.sh
 
-if (($# < 11)); then
+if (($# < 12)); then
   cat >&2 << EOF
 
 [pre_scale_init.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK TOPO LANDUSE BDYORG STIME MKINIT MEM TMPDIR BDY_TIME_LIST NUMBER_OF_TSTEPS NUMBER_OF_SKIP_TSTEPS [SCPCALL]
+Usage: $0 MYRANK TOPO LANDUSE BDYORG STIME MKINIT MEM MEM_BDY TMPDIR BDY_TIME_LIST NUMBER_OF_TSTEPS NUMBER_OF_SKIP_TSTEPS [SCPCALL]
 
   MYRANK   My rank number (not used)
   TOPO     Basename of SCALE topography files
@@ -27,6 +27,7 @@ Usage: $0 MYRANK TOPO LANDUSE BDYORG STIME MKINIT MEM TMPDIR BDY_TIME_LIST NUMBE
             0: No
             1: Yes
   MEM      Name of the ensemble member
+  MEM_BDY  Name of the ensemble member of the boundary data source
   TMPDIR   Temporary directory to run scale-les_init
   BDY_TIME_LIST
   NUMBER_OF_TSTEPS
@@ -44,6 +45,7 @@ BDYORG="$1"; shift
 STIME="$1"; shift
 MKINIT="$1"; shift
 MEM="$1"; shift
+MEM_BDY="$1"; shift
 TMPDIR="$1"; shift
 BDY_TIME_LIST="$1"; shift
 NUMBER_OF_TSTEPS="$1"; shift
@@ -97,19 +99,19 @@ for time_bdy in $BDY_TIME_LIST; do
     file_number="_$(printf %05d $i)"
   fi
   if ((BDY_FORMAT == 1)); then
-    if [ -s "${BDYORG}/${time_bdy}/${MEM}/history.pe000000.nc" ]; then
-      for ifile in $(cd ${BDYORG}/${time_bdy}/${MEM} ; ls history*.nc 2> /dev/null); do
-        ln -fs "${BDYORG}/${time_bdy}/${MEM}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
+    if [ -s "${BDYORG}/${time_bdy}/${MEM_BDY}/history.pe000000.nc" ]; then
+      for ifile in $(cd ${BDYORG}/${time_bdy}/${MEM_BDY} ; ls history*.nc 2> /dev/null); do
+        ln -fs "${BDYORG}/${time_bdy}/${MEM_BDY}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
       done
     else
-      echo "[Error] $0: Cannot find source boundary file '${BDYORG}/${time_bdy}/${MEM}/history.*.nc'."
+      echo "[Error] $0: Cannot find source boundary file '${BDYORG}/${time_bdy}/${MEM_BDY}/history.*.nc'."
       exit 1
     fi
   elif ((BDY_FORMAT == 2)); then
-    if [ -s "${BDYORG}/${MEM}/wrfout_${time_bdy}" ]; then
-      ln -fs "${BDYORG}/${MEM}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
+    if [ -s "${BDYORG}/${MEM_BDY}/wrfout_${time_bdy}" ]; then
+      ln -fs "${BDYORG}/${MEM_BDY}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
     else
-      echo "[Error] $0: Cannot find source boundary file '${BDYORG}/${MEM}/wrfout_${time_bdy}'."
+      echo "[Error] $0: Cannot find source boundary file '${BDYORG}/${MEM_BDY}/wrfout_${time_bdy}'."
       exit 1
     fi
   fi
@@ -122,7 +124,7 @@ else
   IO_LOG_DIR="${SCPCALL}_scale_init"
 fi
 
-mkdir -p $TMPOUT/${STIME}/bdy/${MEM}
+mkdir -p $TMPOUT/${STIME}/bdy/${MEM_BDY}
 
 #===============================================================================
 
@@ -134,7 +136,7 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
         -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
         -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT}/land/param.bucket.conf\"," \
-        -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"$TMPOUT/${STIME}/bdy/${MEM}/boundary\"," \
+        -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"$TMPOUT/${STIME}/bdy/${MEM_BDY}/boundary\"," \
         -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${TMPSUBDIR}\/bdydata\"," \
         -e "/!--FILETYPE_ORG--/a FILETYPE_ORG = \"${FILETYPE_ORG}\"," \
         -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = ${NUMBER_OF_FILES}," \
