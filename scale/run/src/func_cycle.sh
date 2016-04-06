@@ -623,21 +623,21 @@ else
 #        done
         path="${time}/hist"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      else
+      elif ((OUT_OPT <= 2)); then
         path="${time}/hist/meanf"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
 
       # gues
       #-------------------
-      if ((OUT_OPT <= 2)); then
+      if ((OUT_OPT <= 3)); then
 #        for m in $(seq $msprd); do
 #          path="${atime}/gues/${name_m[$m]}"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #        done
         path="${atime}/gues"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      elif ((OUT_OPT <= 4)); then
+      elif ((OUT_OPT <= 5)); then
         path="${atime}/gues/mean"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
         path="${atime}/gues/sprd"
@@ -646,14 +646,14 @@ else
 
       # anal
       #-------------------
-      if ((OUT_OPT <= 3)); then
+      if ((OUT_OPT <= 4)); then
 #        for m in $(seq $msprd); do
 #          path="${atime}/anal/${name_m[$m]}"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #        done
         path="${atime}/anal"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      elif ((OUT_OPT <= 4)); then
+      elif ((OUT_OPT <= 5)); then
         path="${atime}/anal/mean"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
         path="${atime}/anal/sprd"
