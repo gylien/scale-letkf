@@ -191,8 +191,6 @@ job_end_check_PJM $jobid
 echo "[$(datetime_now)] Finalization"
 echo
 
-finalization
-
 n=0
 nmax=30
 while [ ! -s "${myname1}_${SYSNAME}.i${jobid}" ] && ((n < nmax)); do
@@ -211,6 +209,8 @@ cp -f ${myname1}_${SYSNAME}.i${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/j
 cp -f ${myname1}_${SYSNAME}.s${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.s
 ( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
 ( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
+
+finalization
 
 if ((CLEAR_TMP == 1)); then
   safe_rm_tmpdir $TMPS

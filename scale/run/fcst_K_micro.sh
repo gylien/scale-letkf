@@ -192,8 +192,6 @@ fi
 echo "[$(datetime_now)] Finalization"
 echo
 
-finalization
-
 mkdir -p $OUTDIR/exp/${jobid}_${myname1}_${STIME}
 cp -f $SCRP_DIR/config.main $OUTDIR/exp/${jobid}_${myname1}_${STIME}
 cp -f $SCRP_DIR/config.${myname1} $OUTDIR/exp/${jobid}_${myname1}_${STIME}
@@ -204,6 +202,8 @@ cp -f $TMP/${myname1}_${SYSNAME}.e${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STI
 cp -f $TMP/${myname1}_${SYSNAME}.i${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.i
 ( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
 ( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
+
+finalization
 
 if ((CLEAR_TMP == 1)); then
   safe_rm_tmpdir $TMP

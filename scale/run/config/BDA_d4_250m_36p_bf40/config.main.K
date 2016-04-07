@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d4_1km_100mem_451" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d4_250m_100mem_451" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -74,7 +74,7 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=100         # Ensemble size
 
-NNODES=1836        # Number of nodes
+NNODES=72          # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -148,6 +148,7 @@ SCP_HOSTPREFIX=''
 #SCP_HOSTPREFIX="XXXX:"
 
 SCP_THREAD=8
+TAR_THREAD=8
 
 PYTHON="python"
 
