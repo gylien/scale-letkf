@@ -192,10 +192,10 @@ echo "[$(datetime_now)] Finalization"
 echo
 
 n=0
-nmax=30
+nmax=12
 while [ ! -s "${myname1}_${SYSNAME}.i${jobid}" ] && ((n < nmax)); do
   n=$((n+1))
-  sleep 2s
+  sleep 5s
 done
 
 mkdir -p $OUTDIR/exp/${jobid}_${myname1}_${STIME}

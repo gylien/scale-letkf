@@ -59,7 +59,7 @@ for ifile in $filelist; do
         if [ "$ftype" = 'd' ] || [ "$ftype" = 'drm' ]; then
           if ((SCP_THREAD > 1)); then
             while (($(jobs -p | wc -l) >= SCP_THREAD)); do
-              sleep 0.1s
+              sleep 1s
             done
             $SCP -r ${TMPOUT}/${source}/* "${SCP_HOSTPREFIX}${destin}" > /dev/null 2>&1 &
           else
@@ -68,7 +68,7 @@ for ifile in $filelist; do
         else
           if ((SCP_THREAD > 1)); then
             while (($(jobs -p | wc -l) >= SCP_THREAD)); do
-              sleep 0.1s
+              sleep 1s
             done
             $SCP "${TMPOUT}/${source}" "${SCP_HOSTPREFIX}${destin}" &
           else
