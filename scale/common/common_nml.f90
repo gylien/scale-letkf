@@ -88,6 +88,10 @@ MODULE common_nml
   logical :: POSITIVE_DEFINITE_QHYD = .false.
   real(r_size) :: TC_SEARCH_DIS = 200.0d3 ! (m) ! tentative! Should be modify !!
 
+  real(r_size) :: PS_ADJUST_THRES = 100.d0
+
+  integer :: MAX_NOBS_PER_GRID = 0   ! <= 0: Do not use
+
   !--- PARAM_LETKF_PRC
   integer :: NNODES = 1
   integer :: PPN = 1
@@ -144,6 +148,10 @@ MODULE common_nml
   LOGICAL :: OBSANAL_OUTPUT = .false.
 
   !--- PARAM_LETKF_RADAR
+  logical :: USE_RADAR_REF       = .true.
+  logical :: USE_RADAR_VR        = .true.
+  logical :: USE_RADAR_PSEUDO_RH = .false.
+
   INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than RADAR_REF_THRES_DBZ
   INTEGER :: MIN_RADAR_REF_MEMBER_OBSREF = 1   !Ensemble members with
 
@@ -155,8 +163,6 @@ MODULE common_nml
   real(r_size) :: RADAR_ZMAX = 99.0d3          !Height limit of radar data to be used
 
   REAL(r_size) :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
-
-  logical :: USE_RADAR_PSEUDO_RH = .false.
 
   real(r_size) :: RADAR_EDGE_TAPER_WIDTH = 0.0d0
   real(r_size) :: RADAR_RANGE = 0.0d0              !!!!!! should not use this and should save this information in obs files !!!!!!
@@ -291,7 +297,9 @@ subroutine read_nml_letkf
     BOUNDARY_TAPER_WIDTH, &
     POSITIVE_DEFINITE_Q, &
     POSITIVE_DEFINITE_QHYD, &
-    TC_SEARCH_DIS 
+    TC_SEARCH_DIS, &
+    PS_ADJUST_THRES, &
+    MAX_NOBS_PER_GRID
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
@@ -499,6 +507,9 @@ subroutine read_nml_letkf_radar
   integer :: ierr
 
   namelist /PARAM_LETKF_RADAR/ &
+    USE_RADAR_REF, &
+    USE_RADAR_VR, &
+    USE_RADAR_PSEUDO_RH, &
     MIN_RADAR_REF_MEMBER, &
     MIN_RADAR_REF_MEMBER_OBSREF, &
     LOW_REF_SHIFT, &
@@ -506,7 +517,6 @@ subroutine read_nml_letkf_radar
     RADAR_REF_THRES_DBZ, &
     RADAR_ZMAX, &
     RADAR_PRH_ERROR, &
-    USE_RADAR_PSEUDO_RH, &
     RADAR_EDGE_TAPER_WIDTH, &
     RADAR_RANGE, &               !!!!!! should not use this and should save this information in obs files !!!!!!
     INTERPOLATION_TECHNIQUE, &
