@@ -53,6 +53,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size),ALLOCATABLE :: work2d(:,:)
   REAL(r_size),ALLOCATABLE :: work3da(:,:,:)     !GYL
   REAL(r_size),ALLOCATABLE :: work2da(:,:)       !GYL
+
+  REAL(r_size),ALLOCATABLE :: work3dl(:,:,:)
+  REAL(r_size),ALLOCATABLE :: work2dl(:,:)
+
   REAL(RP),ALLOCATABLE :: work3dg(:,:,:,:)
   REAL(RP),ALLOCATABLE :: work2dg(:,:,:)
   REAL(r_size) :: parm
@@ -167,13 +171,17 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! RTPS relaxation
   !
   IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN
-!    ALLOCATE( work3dg(nlon,nlat,nlev,nv3d) )
-!    ALLOCATE( work2dg(nlon,nlat,nv2d) )
     ALLOCATE( work3da(nij1,nlev,nv3d) )
     ALLOCATE( work2da(nij1,nv2d) )
     work3da = 1.0d0
     work2da = 1.0d0
   END IF
+
+  ALLOCATE( work3dl(nij1,nlev,nv3d) )
+  ALLOCATE( work2dl(nij1,nv2d) )
+  work3dl = 1.0d0
+  work2dl = 1.0d0
+
   !
   ! MAIN ASSIMILATION LOOP
   !
@@ -191,6 +199,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             pa(:,:,n) = pa(:,:,var_local_n2n(n))                                       !GYL
           END IF                                                                       !GYL
           work3d(ij,ilev,n) = work3d(ij,ilev,var_local_n2n(n))
+
+          work3dl(ij,ilev,n) = work3dl(ij,ilev,var_local_n2n(n))
+
         ELSE
           CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl)
           parm = work3d(ij,ilev,n)
@@ -202,6 +213,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                             trans(:,:,n),transm=transm(:,n),minfl=MIN_INFL_MUL)        !GYL
           END IF                                                                       !GYL
           work3d(ij,ilev,n) = parm
+
+          work3dl(ij,ilev,n) = real(nobsl,r_size)
+
         END IF
         IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) &
            .AND. ilev > LEV_UPDATE_Q) THEN !GYL, do not update upper-level q,qc
@@ -247,8 +261,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             END IF                                                                     !GYL
             IF(var_local_n2n(nv3d+n) <= nv3d) THEN                                     !GYL - correct the bug of the 2d variable update
               work2d(ij,n) = work3d(ij,ilev,var_local_n2n(nv3d+n))                     !GYL
+
+              work2dl(ij,n) = work3dl(ij,ilev,var_local_n2n(nv3d+n))                     !GYL
+
             ELSE                                                                       !GYL
               work2d(ij,n) = work2d(ij,var_local_n2n(nv3d+n)-nv3d)                     !GYL
+
+              work2dl(ij,n) = work2dl(ij,var_local_n2n(nv3d+n)-nv3d)                     !GYL
+
             END IF                                                                     !GYL
           ELSE
             CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl)
@@ -261,6 +281,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                               trans(:,:,nv3d+n),transm=transm(:,nv3d+n),minfl=MIN_INFL_MUL) !GYL
             END IF                                                                     !GYL
             work2d(ij,n) = parm
+
+            work2dl(ij,n) = real(nobsl,r_size)
+
           END IF
           IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2005)
             CALL weight_RTPP(trans(:,:,nv3d+n),transrlx)                               !GYL
@@ -292,28 +315,41 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Write updated inflation parameters
   !
   IF(COV_INFL_MUL < 0.0d0) THEN
-!    CALL gather_grd_mpi(lastmem_rank_e,work3d,work2d,work3dg,work2dg)
-!    IF(myrank_e == lastmem_rank_e) THEN
-!!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
-!!      call state_trans_inv(work3dg)
-!      call write_restart(inflfile,work3dg,work2dg)
-!    END IF
+    CALL gather_grd_mpi(lastmem_rank_e,work3d,work2d,work3dg,work2dg)
+    IF(myrank_e == lastmem_rank_e) THEN
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
+!      call state_trans_inv(work3dg)
+      call write_restart(inflfile,work3dg,work2dg)
+    END IF
     DEALLOCATE(work3d,work2d)
   END IF
   !
   ! Write inflation parameter (in analysis) corresponding to the RTPS method
   !
   IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN
-!    CALL gather_grd_mpi(lastmem_rank_e,work3da,work2da,work3dg,work2dg)
-!    IF(myrank_e == lastmem_rank_e) THEN
-!!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
-!!      call state_trans_inv(work3dg)
-!      call write_restart(inflfile,work3dg,work2dg)
-!    END IF
+    if (.not. allocated(work3dg)) allocate(work3dg(nlon,nlat,nlev,nv3d))
+    if (.not. allocated(work2dg)) allocate(work2dg(nlon,nlat,nv2d))
+    CALL gather_grd_mpi(lastmem_rank_e,work3da,work2da,work3dg,work2dg)
+    IF(myrank_e == lastmem_rank_e) THEN
+      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',INFL_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
+!      call state_trans_inv(work3dg)
+      call write_restart(INFL_OUT_BASENAME,work3dg,work2dg)
+    END IF
     DEALLOCATE(work3da,work2da)
   END IF
-  IF(ALLOCATED(work3dg)) DEALLOCATE(work3dg)
-  IF(ALLOCATED(work2dg)) DEALLOCATE(work2dg)
+
+  if (.not. allocated(work3dg)) allocate(work3dg(nlon,nlat,nlev,nv3d))
+  if (.not. allocated(work2dg)) allocate(work2dg(nlon,nlat,nv2d))
+  CALL gather_grd_mpi(lastmem_rank_e,work3dl,work2dl,work3dg,work2dg)
+  IF(myrank_e == lastmem_rank_e) THEN
+    WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',NOBS_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
+!    call state_trans_inv(work3dg)
+    call write_restart(NOBS_OUT_BASENAME,work3dg,work2dg)
+  END IF
+  DEALLOCATE(work3dl,work2dl)
+
+  IF (allocated(work3dg)) deallocate(work3dg)
+  IF (allocated(work2dg)) deallocate(work2dg)
   !
   ! Additive inflation
   !
@@ -1031,7 +1067,8 @@ SUBROUTINE obs_local(ri,rj,rlev,rz,nvar,hdxf,rdiag,rloc,dep,nobsl)
 
 
 
-  write(6, '(A,2I8)') '^^^^^^', nobsl_t(9,22), nobsl_t(10,22)
+  write(6, '(A,I8)') '******', nobsl
+  write(6, '(360I3)') nobsl_t(:,:)
 
 
 

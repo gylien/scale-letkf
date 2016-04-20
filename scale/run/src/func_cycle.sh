@@ -662,6 +662,19 @@ else
 
       ### anal_ocean [mean]
 
+
+
+
+
+        path="${atime}/diag/infl"
+        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        path="${atime}/diag/nobs"
+        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+
+
+
+
+
       # obsgues
       #-------------------
       if ((OBSOUT_OPT <= 2)); then

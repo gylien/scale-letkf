@@ -40,6 +40,16 @@ if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd
     cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/gues/sprd
     mkdir -p $TMPOUT/${ATIME}/anal/sprd
     cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/anal/sprd
+
+
+
+    mkdir -p $TMPOUT/${ATIME}/diag/infl
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/diag/infl
+    mkdir -p $TMPOUT/${ATIME}/diag/nobs
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/diag/nobs
+
+
+
   done
 #fi
 else

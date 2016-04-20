@@ -40,6 +40,8 @@ MODULE common_nml
   character(filelenmax) :: ANAL_OUT_BASENAME = 'anal.@@@@'
   character(filelenmax) :: ANAL_OUT_MEAN_BASENAME = 'anal.mean'
   character(filelenmax) :: ANAL_OUT_SPRD_BASENAME = 'anal.sprd'
+  character(filelenmax) :: INFL_OUT_BASENAME = 'infl'
+  character(filelenmax) :: NOBS_OUT_BASENAME = 'nobs'
   character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
 
   integer :: SLOT_START = 1
@@ -259,6 +261,8 @@ subroutine read_nml_letkf
     ANAL_OUT_BASENAME, &
     ANAL_OUT_MEAN_BASENAME, &
     ANAL_OUT_SPRD_BASENAME, &
+    INFL_OUT_BASENAME, &
+    NOBS_OUT_BASENAME, &
     LETKF_TOPO_IN_BASENAME, &
     SLOT_START, &
     SLOT_END, &
