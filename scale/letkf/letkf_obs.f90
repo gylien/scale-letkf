@@ -24,14 +24,11 @@ MODULE letkf_obs
   IMPLICIT NONE
   PUBLIC
 
-!  real(r_size),save :: sigma_obs_i(nid_obs,nobtype)
-!  real(r_size),save :: sigma_obs_j(nid_obs,nobtype)
-!  real(r_size),save :: sigma_obs_lnp(nid_obs,nobtype)
-!  real(r_size),save :: sigma_obs_z(nid_obs,nobtype)
+!  real(r_size),parameter :: dist_zero_fac = SQRT(10.0d0/3.0d0) * 2.0d0            ! 3.651483717
+!  real(r_size),parameter :: dist_zero_fac_square = dist_zero_fac * dist_zero_fac  ! 13.33333333
+  real(r_size),parameter :: dist_zero_fac = 3.651483717
+  real(r_size),parameter :: dist_zero_fac_square = 13.33333333
 
-  real(r_size),save :: dist_zero_fac
-!  real(r_size),save :: zero_obs_i(nid_obs,nobtype)
-!  real(r_size),save :: zero_obs_j(nid_obs,nobtype)
   real(r_size),save :: dlon_zero
   real(r_size),save :: dlat_zero
 
@@ -118,38 +115,15 @@ SUBROUTINE set_letkf_obs
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
 
-!  sigma_obs_i(:               ,:) = SIGMA_OBS
-!  sigma_obs_i(id_rain_obs     ,:) = SIGMA_OBS_RAIN
-!  sigma_obs_i(id_radar_ref_obs,:) = SIGMA_OBS_RADAR
-!  sigma_obs_i(id_radar_vr_obs ,:) = SIGMA_OBS_RADAR
-!  sigma_obs_i(id_radar_prh_obs,:) = SIGMA_OBS_RADAR
-!  sigma_obs_i(id_H08IR_obs    ,:) = SIGMA_OBS_H08
-
-!  sigma_obs_j = sigma_obs_i / DY
-!  sigma_obs_i = sigma_obs_i / DX
-
-  dist_zero_fac = SQRT(10.0d0/3.0d0) * 2.0d0
-!  zero_obs_i = sigma_obs_i * dist_zero_fac
-!  zero_obs_j = sigma_obs_j * dist_zero_fac
-
   !!!!!! changes for different observation types.... (do not communicate all observaitons in the same way...)
   dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF) * dist_zero_fac / DX
   dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF) * dist_zero_fac / DY
-!  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RAIN, SIGMA_OBS_RADAR) * dist_zero_fac / DX
-!  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RAIN, SIGMA_OBS_RADAR) * dist_zero_fac / DY
+!  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_RAIN) * dist_zero_fac / DX
+!  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_RAIN) * dist_zero_fac / DY
 #ifdef H08
   dlon_zero = max(dlon_zero,SIGMA_OBS_H08 * dist_zero_fac / DX) ! H08
   dlat_zero = max(dlat_zero,SIGMA_OBS_H08 * dist_zero_fac / DY) ! H08
 #endif
-
-!  sigma_obs_lnp(:           ,:) = SIGMA_OBSV
-!  sigma_obs_lnp(id_rain_obs ,:) = SIGMA_OBSV_RAIN
-!  sigma_obs_lnp(id_H08IR_obs,:) = SIGMA_OBSV_H08
-
-!  sigma_obs_z(:               ,:) = 1.0D-7
-!  sigma_obs_z(id_radar_ref_obs,:) = SIGMA_OBSZ_RADAR
-!  sigma_obs_z(id_radar_vr_obs ,:) = SIGMA_OBSZ_RADAR
-!  sigma_obs_z(id_radar_prh_obs,:) = SIGMA_OBSZ_RADAR
 
 
 ! Read observations

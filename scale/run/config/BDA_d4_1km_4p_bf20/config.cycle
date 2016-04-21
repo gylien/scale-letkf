@@ -50,7 +50,7 @@ OBSOPE=0         # 0: No    ! obsope options: not finished yet!!
 
                  #      anal              gues              history
                  #      mean/sprd members mean/sprd members mean members
-OUT_OPT=3        # 1:   o         o       o         o       o    o
+OUT_OPT=5        # 1:   o         o       o         o       o    o
                  # 2:   o         o       o         o       o
                  # 3:   o         o       o         o
                  # 4:   o         o       o
@@ -71,7 +71,7 @@ BDYOUT_OPT=3     # 1:   o    o
                  # 3:   (none)
 
                  #      obsgues obsanal obsdep
-OBSOUT_OPT=2     # 1:   o       o       o
+OBSOUT_OPT=4     # 1:   o       o       o
                  # 2:   o               o
                  # 3:                   o
                  # 4:   (none)

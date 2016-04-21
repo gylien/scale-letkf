@@ -2349,7 +2349,8 @@ SUBROUTINE read_obs_radar(cfile,obs)
     obs%lev(n) = REAL(wk(4),r_size)
     obs%dat(n) = REAL(wk(5),r_size)
     obs%err(n) = REAL(wk(6),r_size)
-    obs%typ(n) = NINT(wk(7))
+!    obs%typ(n) = NINT(wk(7))
+    obs%typ(n) = 22
     obs%dif(n) = 0.0d0
   END DO
   CLOSE(iunit)
