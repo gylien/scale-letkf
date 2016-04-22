@@ -96,7 +96,6 @@ MODULE common_obs_scale
        'SPSSMI', 'SYNDAT', 'ERS1DA', 'GOESND', 'QKSWND', &
        'MSONET', 'GPSIPW', 'RASSDA', 'WDSATR', 'ASCATW', &
        'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL'/) ! H08
-!       'TMPAPR', 'PHARAD'/)
 
   INTEGER,PARAMETER :: max_obs_info_meta = 3 ! maximum array size for type(obs_info)%meta
 

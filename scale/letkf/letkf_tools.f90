@@ -37,11 +37,9 @@ CONTAINS
 !-----------------------------------------------------------------------
 SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   IMPLICIT NONE
-  CHARACTER(8) :: inflfile='infl_mul'
-  CHARACTER(20) :: inflfile_0='infl_mul.pe000000.nc'
   REAL(r_size),INTENT(INOUT) :: gues3d(nij1,nlev,MEMBER,nv3d) ! background ensemble
   REAL(r_size),INTENT(INOUT) :: gues2d(nij1,MEMBER,nv2d)      !  output: destroyed
-  REAL(r_size),INTENT(OUT) :: anal3d(nij1,nlev,MEMBER,nv3d) ! analysis ensemble
+  REAL(r_size),INTENT(OUT) :: anal3d(nij1,nlev,MEMBER,nv3d)   ! analysis ensemble
   REAL(r_size),INTENT(OUT) :: anal2d(nij1,MEMBER,nv2d)
   REAL(r_size),ALLOCATABLE :: mean3d(:,:,:)
   REAL(r_size),ALLOCATABLE :: mean2d(:,:)
@@ -49,16 +47,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size),ALLOCATABLE :: rdiag(:)
   REAL(r_size),ALLOCATABLE :: rloc(:)
   REAL(r_size),ALLOCATABLE :: dep(:)
-  REAL(r_size),ALLOCATABLE :: work3d(:,:,:)
-  REAL(r_size),ALLOCATABLE :: work2d(:,:)
+  REAL(r_size) :: work3d(nij1,nlev,nv3d)
+  REAL(r_size) :: work2d(nij1,nv2d)
   REAL(r_size),ALLOCATABLE :: work3da(:,:,:)     !GYL
   REAL(r_size),ALLOCATABLE :: work2da(:,:)       !GYL
-
-  REAL(r_size),ALLOCATABLE :: work3dl(:,:,:)
-!  REAL(r_size),ALLOCATABLE :: work3dl(:,:,:,:,:)
-  REAL(r_size),ALLOCATABLE :: work2dl(:,:)
-!  REAL(r_size),ALLOCATABLE :: work2dl(:,:,:,:)
-
+  REAL(r_size),ALLOCATABLE :: work3dn(:,:,:,:)        !GYL
+  REAL(r_size),ALLOCATABLE :: work2dn(:,:,:)          !GYL
   REAL(RP),ALLOCATABLE :: work3dg(:,:,:,:)
   REAL(RP),ALLOCATABLE :: work2dg(:,:,:)
   REAL(r_size) :: parm
@@ -68,14 +62,13 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size) :: pa(MEMBER,MEMBER,nv3d+nv2d)    !GYL
   REAL(r_size) :: q_mean,q_sprd                  !GYL
   REAL(r_size) :: q_anal(MEMBER)                 !GYL
-!  LOGICAL :: ex
-!  INTEGER :: ij,ilev,n,m,i,j,k,nobsl,ierr,iret
   INTEGER :: ij,ilev,n,m,i,k,nobsl
-!  INTEGER :: nobsl_t(nid_obs,nobtype)
+  INTEGER :: nobsl_t(nid_obs,nobtype)            !GYL
+  REAL(r_size) :: tmpinfl                        !GYL
 
 
   WRITE(6,'(A)') 'Hello from das_letkf'
-  WRITE(6,'(A,F15.2)') '  COV_INFL_MUL = ',COV_INFL_MUL
+  WRITE(6,'(A,F15.2)') '  INFL_MUL = ',INFL_MUL
 
   WRITE(6,'(A,I8)') 'Target observation numbers (global) : NOBS=',nobstotalg
   WRITE(6,'(A,I8)') 'Target observation numbers processed in this subdomian : NOBS=',nobstotal
@@ -136,66 +129,43 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !
   ! multiplicative inflation
   !
-  IF(COV_INFL_MUL > 0.0d0) THEN ! fixed multiplicative inflation parameter
-    ALLOCATE( work3d(nij1,nlev,nv3d) )
-    ALLOCATE( work2d(nij1,nv2d) )
-    work3d = COV_INFL_MUL
-    work2d = COV_INFL_MUL
-  END IF
-  IF(COV_INFL_MUL <= 0.0d0) THEN ! 3D parameter values are read-in
-    ALLOCATE( work3dg(nlon,nlat,nlev,nv3d) )
-    ALLOCATE( work2dg(nlon,nlat,nv2d) )
-    ALLOCATE( work3d(nij1,nlev,nv3d) )
-    ALLOCATE( work2d(nij1,nv2d) )
+  IF(INFL_MUL > 0.0d0) THEN  ! fixed multiplicative inflation parameter
+    work3d = INFL_MUL
+    work2d = INFL_MUL
+  ELSE  ! 3D parameter values are read-in
+    allocate (work3dg(nlon,nlat,nlev,nv3d))
+    allocate (work2dg(nlon,nlat,nv2d))
     IF(myrank_e == lastmem_rank_e) THEN
-
-      IF(ADAPTIVE_INFL_INIT) THEN
-        work3dg = -1.0d0 * COV_INFL_MUL
-        work2dg = -1.0d0 * COV_INFL_MUL
-      ELSE
-!        WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
-        call read_restart(inflfile,work3dg,work2dg)
-!        call state_trans(work3dg)
-      END IF
-
-!      INQUIRE(FILE=inflfile_0,EXIST=ex)
-!      IF(ex) THEN
-!!        WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
-!        call read_restart(inflfile,work3dg,work2dg)
-!!        call state_trans(work3dg)
-!      ELSE
-!        WRITE(6,'(2A)') '!!WARNING: no such file exist: ',inflfile
-!        work3dg = -1.0d0 * COV_INFL_MUL
-!        work2dg = -1.0d0 * COV_INFL_MUL
-!      END IF
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',INFL_MUL_IN_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
+      call read_restart(INFL_MUL_IN_BASENAME,work3dg,work2dg)
     END IF
     CALL scatter_grd_mpi(lastmem_rank_e,work3dg,work2dg,work3d,work2d)
   END IF
   !
-  ! RTPS relaxation
+  ! RTPS relaxation: inflation output
   !
-  IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN
-    ALLOCATE( work3da(nij1,nlev,nv3d) )
-    ALLOCATE( work2da(nij1,nv2d) )
+  IF(RELAX_SPREAD_OUT) THEN
+    allocate (work3da(nij1,nlev,nv3d))
+    allocate (work2da(nij1,nv2d))
     work3da = 1.0d0
     work2da = 1.0d0
   END IF
-
-  ALLOCATE( work3dl(nij1,nlev,nv3d) )
-!  ALLOCATE( work3dl(nid_obs,nobtype,nij1,nlev,nv3d) )
-  ALLOCATE( work2dl(nij1,nv2d) )
-!  ALLOCATE( work2dl(nid_obs,nobtype,nij1,nv2d) )
-  work3dl = 1.0d0
-  work2dl = 1.0d0
-
+  !
+  ! NOBS output
+  !
+  IF(NOBS_OUT) THEN
+    allocate (work3dn(nobtype,nij1,nlev,nv3d))
+    allocate (work2dn(nobtype,nij1,nv2d))
+    work3dn = 0.0d0
+    work2dn = 0.0d0
+  END IF
   !
   ! MAIN ASSIMILATION LOOP
   !
   ALLOCATE( hdxf(1:nobstotal,1:MEMBER),rdiag(1:nobstotal),rloc(1:nobstotal),dep(1:nobstotal) )
   DO ilev=1,nlev
     WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,parm,trans,transm,transrlx,pa,m,k,q_mean,q_sprd,q_anal)
-!!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t,parm,trans,transm,transrlx,pa,m,k,q_mean,q_sprd,q_anal)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t,parm,trans,transm,transrlx,pa,m,k,q_mean,q_sprd,q_anal)
     DO ij=1,nij1
 !WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
       DO n=1,nv3d
@@ -206,28 +176,26 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             pa(:,:,n) = pa(:,:,var_local_n2n(n))                                       !GYL
           END IF                                                                       !GYL
           work3d(ij,ilev,n) = work3d(ij,ilev,var_local_n2n(n))
-
-          work3dl(ij,ilev,n) = work3dl(ij,ilev,var_local_n2n(n))
-!          work3dl(:,:,ij,ilev,n) = work3dl(:,:,ij,ilev,var_local_n2n(n))
-
+          IF(NOBS_OUT) THEN                                                            !GYL
+            work3dn(:,ij,ilev,n) = work3dn(:,ij,ilev,var_local_n2n(n))                 !GYL
+          END IF                                                                       !GYL
         ELSE
-          CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl)
-!          CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
+          CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
           parm = work3d(ij,ilev,n)
           IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
             CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &         !GYL
                             trans(:,:,n),transm=transm(:,n),pao=pa(:,:,n),   &         !GYL
-                            rdiag_wloc=.true.,minfl=MIN_INFL_MUL)                      !GYL
+                            rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                      !GYL
           ELSE                                                                         !GYL
             CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &         !GYL
                             trans(:,:,n),transm=transm(:,n),                 &         !GYL
-                            rdiag_wloc=.true.,minfl=MIN_INFL_MUL)                      !GYL
+                            rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                      !GYL
           END IF                                                                       !GYL
           work3d(ij,ilev,n) = parm
-
-          work3dl(ij,ilev,n) = real(nobsl,r_size)
-!          work3dl(:,:,ij,ilev,n) = real(nobsl_t,r_size)
-
+          IF(NOBS_OUT) THEN                                                            !GYL
+            work3dn(:,ij,ilev,n) = real(sum(nobsl_t, dim=1),r_size)                    !GYL
+            work3dn(21,ij,ilev,n) = real(nobsl_t(9,22),r_size)                         !GYL !!! addtionally save ref nobs in a special place
+          END IF                                                                       !GYL
         END IF
         IF((n == iv3d_q .OR. n == iv3d_qc .OR. n == iv3d_qr .OR. n == iv3d_qi .OR. n == iv3d_qs .OR. n == iv3d_qg) &
            .AND. ilev > LEV_UPDATE_Q) THEN !GYL, do not update upper-level q,qc
@@ -236,7 +204,11 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2005)
             CALL weight_RTPP(trans(:,:,n),transrlx)                                    !GYL
           ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL - RTPS method (Whitaker and Hamill 2012)
-            CALL weight_RTPS(trans(:,:,n),pa(:,:,n),gues3d(ij,ilev,:,n),transrlx,work3da(ij,ilev,n)) !GYL
+            IF(RELAX_SPREAD_OUT) THEN                                            !GYL
+              CALL weight_RTPS(trans(:,:,n),pa(:,:,n),gues3d(ij,ilev,:,n),transrlx,work3da(ij,ilev,n)) !GYL
+            ELSE                                                                       !GYL
+              CALL weight_RTPS(trans(:,:,n),pa(:,:,n),gues3d(ij,ilev,:,n),transrlx,tmpinfl) !GYL
+            END IF                                                                     !GYL
           ELSE                                                                         !GYL
             transrlx = trans(:,:,n)                                                    !GYL
           END IF                                                                       !GYL
@@ -273,16 +245,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             END IF                                                                     !GYL
             IF(var_local_n2n(nv3d+n) <= nv3d) THEN                                     !GYL - correct the bug of the 2d variable update
               work2d(ij,n) = work3d(ij,ilev,var_local_n2n(nv3d+n))                     !GYL
-
-              work2dl(ij,n) = work3dl(ij,ilev,var_local_n2n(nv3d+n))                     !GYL
-!              work2dl(:,:,ij,n) = work3dl(:,:,ij,ilev,var_local_n2n(nv3d+n))                     !GYL
-
+              IF(NOBS_OUT) THEN                                                        !GYL
+                work2dn(:,ij,n) = work3dn(:,ij,ilev,var_local_n2n(nv3d+n))             !GYL
+              END IF                                                                   !GYL
             ELSE                                                                       !GYL
               work2d(ij,n) = work2d(ij,var_local_n2n(nv3d+n)-nv3d)                     !GYL
-
-              work2dl(ij,n) = work2dl(ij,var_local_n2n(nv3d+n)-nv3d)                     !GYL
-!              work2dl(:,:,ij,n) = work2dl(:,:,ij,var_local_n2n(nv3d+n)-nv3d)                     !GYL
-
+              IF(NOBS_OUT) THEN                                                        !GYL
+                work2dn(:,ij,n) = work2dn(:,ij,var_local_n2n(nv3d+n)-nv3d)             !GYL
+              END IF                                                                   !GYL
             END IF                                                                     !GYL
           ELSE
             CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl)
@@ -291,22 +261,26 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
               CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &       !GYL
                               trans(:,:,nv3d+n),transm=transm(:,nv3d+n),pao=pa(:,:,nv3d+n), & !GYL
-                              rdiag_wloc=.true.,minfl=MIN_INFL_MUL)                    !GYL
+                              rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                    !GYL
             ELSE                                                                       !GYL
               CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &       !GYL
                               trans(:,:,nv3d+n),transm=transm(:,nv3d+n),       &       !GYL
-                              rdiag_wloc=.true.,minfl=MIN_INFL_MUL)                    !GYL
+                              rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                    !GYL
             END IF                                                                     !GYL
             work2d(ij,n) = parm
-
-            work2dl(ij,n) = real(nobsl,r_size)
-!            work2dl(:,:,ij,n) = real(nobsl_t,r_size)
-
+            IF(NOBS_OUT) THEN                                                          !GYL
+              work2dn(:,ij,n) = real(sum(nobsl_t,dim=1),r_size)                        !GYL
+              work2dn(21,ij,n) = real(nobsl_t(9,22),r_size)                            !GYL !!! addtionally save ref nobs in a special place
+            END IF                                                                     !GYL
           END IF
           IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2005)
             CALL weight_RTPP(trans(:,:,nv3d+n),transrlx)                               !GYL
           ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL - RTPS method (Whitaker and Hamill 2012)
-            CALL weight_RTPS(trans(:,:,nv3d+n),pa(:,:,nv3d+n),gues2d(ij,:,n),transrlx,work2da(ij,n)) !GYL
+            IF(RELAX_SPREAD_OUT) THEN                                            !GYL
+              CALL weight_RTPS(trans(:,:,nv3d+n),pa(:,:,nv3d+n),gues2d(ij,:,n),transrlx,work2da(ij,n)) !GYL
+            ELSE                                                                       !GYL
+              CALL weight_RTPS(trans(:,:,nv3d+n),pa(:,:,nv3d+n),gues2d(ij,:,n),transrlx,tmpinfl) !GYL
+            END IF                                                                     !GYL
           ELSE                                                                         !GYL
             transrlx = trans(:,:,nv3d+n)                                               !GYL
           END IF                                                                       !GYL
@@ -323,63 +297,63 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !$OMP END PARALLEL DO
   END DO ! [ ilev=1,nlev ]
   DEALLOCATE(hdxf,rdiag,rloc,dep)
-!  !
-!  ! Compute analyses of observations (Y^a)
-!  !
-!  IF(obsanal_output) THEN
-!    call das_letkf_obs(work3dg,work2dg)
-!  END IF
+  !
+  ! Compute analyses of observations (Y^a)
+  !
+!!  IF(obsanal_output) THEN
+!!    call das_letkf_obs(work3dg,work2dg)
+!!  END IF
   !
   ! Write updated inflation parameters
   !
-  IF(COV_INFL_MUL < 0.0d0) THEN
+  IF(INFL_MUL_ADAPTIVE) THEN
+    if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
+    if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
     CALL gather_grd_mpi(lastmem_rank_e,work3d,work2d,work3dg,work2dg)
     IF(myrank_e == lastmem_rank_e) THEN
-!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
-!      call state_trans_inv(work3dg)
-      call write_restart(inflfile,work3dg,work2dg)
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',INFL_MUL_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
+      call write_restart(INFL_MUL_OUT_BASENAME,work3dg,work2dg)
     END IF
-    DEALLOCATE(work3d,work2d)
   END IF
   !
   ! Write inflation parameter (in analysis) corresponding to the RTPS method
   !
-  IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN
-    if (.not. allocated(work3dg)) allocate(work3dg(nlon,nlat,nlev,nv3d))
-    if (.not. allocated(work2dg)) allocate(work2dg(nlon,nlat,nv2d))
+  IF(RELAX_SPREAD_OUT /= 0.0d0) THEN
+    if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
+    if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
     CALL gather_grd_mpi(lastmem_rank_e,work3da,work2da,work3dg,work2dg)
     IF(myrank_e == lastmem_rank_e) THEN
-      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',INFL_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
-!      call state_trans_inv(work3dg)
-      call write_restart(INFL_OUT_BASENAME,work3dg,work2dg)
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',RELAX_SPREAD_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
+      call write_restart(RELAX_SPREAD_OUT_BASENAME,work3dg,work2dg)
     END IF
     DEALLOCATE(work3da,work2da)
   END IF
-
-  if (.not. allocated(work3dg)) allocate(work3dg(nlon,nlat,nlev,nv3d))
-  if (.not. allocated(work2dg)) allocate(work2dg(nlon,nlat,nv2d))
-  CALL gather_grd_mpi(lastmem_rank_e,work3dl,work2dl,work3dg,work2dg)
-
-!  work3dl(1,1,:,:,1) = work3dl(9,22,:,:,1)
-!  work3dl(1,1,:,:,2) = work3dl(10,22,:,:,1)
-!  CALL gather_grd_mpi(lastmem_rank_e,work3dl(1,1,:,:,:),work2dl(1,1,:,:),work3dg,work2dg)
-
-  IF(myrank_e == lastmem_rank_e) THEN
-    WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',NOBS_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
-!    call state_trans_inv(work3dg)
-    call write_restart(NOBS_OUT_BASENAME,work3dg,work2dg)
+  !
+  ! Write observation numbers
+  !
+  IF(NOBS_OUT) THEN
+    if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
+    if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
+    work3d(:,:,1) = work3dn(1,:,:,iv3d_t)  !!! Assuming variable localization is not used so that obs numbers used are the same over variables,
+    work3d(:,:,2) = work3dn(3,:,:,iv3d_t)  !!! use "variable dimenstion" to save obs numbers of different observation types
+    work3d(:,:,3) = work3dn(4,:,:,iv3d_t)
+    work3d(:,:,4) = work3dn(8,:,:,iv3d_t)
+    work3d(:,:,5) = work3dn(21,:,:,iv3d_t)
+    work3d(:,:,6) = work3dn(22,:,:,iv3d_t)
+    CALL gather_grd_mpi(lastmem_rank_e,work3d,work2d,work3dg,work2dg)
+    IF(myrank_e == lastmem_rank_e) THEN
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',NOBS_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
+      call write_restart(NOBS_OUT_BASENAME,work3dg,work2dg)
+    END IF
+    DEALLOCATE(work3dn,work2dn)
   END IF
-  DEALLOCATE(work3dl,work2dl)
-
-  IF (allocated(work3dg)) deallocate(work3dg)
-  IF (allocated(work2dg)) deallocate(work2dg)
+  IF (allocated(work3dg)) deallocate (work3dg)
+  IF (allocated(work2dg)) deallocate (work2dg)
   !
   ! Additive inflation
   !
-  IF(SP_INFL_ADD > 0.0d0) THEN
-    CALL read_ens_mpi('addi',gues3d,gues2d)
-    ALLOCATE( work3d(nij1,nlev,nv3d) )
-    ALLOCATE( work2d(nij1,nv2d) )
+  IF(INFL_ADD > 0.0d0) THEN
+    CALL read_ens_mpi(INFL_ADD_IN_BASENAME,gues3d,gues2d)
     CALL ensmean_grd(MEMBER,nij1,gues3d,gues2d,work3d,work2d)
     DO n=1,nv3d
       DO m=1,MEMBER
@@ -402,9 +376,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       END DO
     END DO
 
-    DEALLOCATE(work3d,work2d)
     WRITE(6,'(A)') '===== Additive covariance inflation ====='
-    WRITE(6,'(A,F10.4)') '  parameter:',SP_INFL_ADD
+    WRITE(6,'(A,F10.4)') '  parameter:',INFL_ADD
     WRITE(6,'(A)') '========================================='
 !    parm = 0.7d0
 !    DO ilev=1,nlev
@@ -418,7 +391,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         DO ilev=1,nlev
           DO ij=1,nij1
             anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-              & + gues3d(ij,ilev,m,n) * SP_INFL_ADD
+              & + gues3d(ij,ilev,m,n) * INFL_ADD
           END DO
         END DO
 !$OMP END PARALLEL DO
@@ -428,12 +401,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       DO m=1,MEMBER
 !$OMP PARALLEL DO PRIVATE(ij)
         DO ij=1,nij1
-          anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,m,n) * SP_INFL_ADD
+          anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,m,n) * INFL_ADD
         END DO
 !$OMP END PARALLEL DO
       END DO
     END DO
-  END IF
+  END IF ! [ INFL_ADD > 0.0d0 ]
 
   DEALLOCATE(mean3d,mean2d)
   RETURN
@@ -1081,12 +1054,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
     end do ! [ ityp = 1, nobtype ]
   end if ! [ MAX_NOBS_PER_GRID > 0 ]
 
-
-
-  write(6, '(A,3I6,F20.8)') '******', nobsl, nobsl_t_(9,22), nobsl_t_(10,22), maxval(rdiag(1:nobsl))
-
-
-
+!  write(6, '(A,3I6,F20.8)') '******', nobsl, nobsl_t_(9,22), nobsl_t_(10,22), maxval(rdiag(1:nobsl))
 
   if (nobsl > nobstotal) then
     write (6,'(A,I5,A,I5)') 'FATAL ERROR, NOBSL=', nobsl, ' > NOBSTOTAL=', nobstotal

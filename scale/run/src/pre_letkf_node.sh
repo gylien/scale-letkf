@@ -8,12 +8,12 @@
 
 . config.main
 
-if (($# < 10)); then
+if (($# < 13)); then
   cat >&2 << EOF
 
 [pre_letkf_node.sh]
 
-Usage: $0 MYRANK ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO [MEMBERSEQ]
+Usage: $0 MYRANK ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO ADAPTINFL RTPS_INFL_OUT NOBS_OUT [MEMBERSEQ]
 
   MYRANK      My rank number (not used)
   ATIME       Analysis time (format: YYYYMMDDHHMMSS)
@@ -25,6 +25,9 @@ Usage: $0 MYRANK ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_B
   SLOT_END    End observation timeslots
   SLOT_BASE   The base slot
   TOPO        Basename of SCALE topography files
+  ADAPTINFL
+  RTPS_INFL_OUT
+  NOBS_OUT
   MEMBERSEQ
 
 EOF
@@ -41,6 +44,9 @@ SLOT_START="$1"; shift
 SLOT_END="$1"; shift
 SLOT_BASE="$1"; shift
 TOPO="$1"; shift
+ADAPTINFL="$1"; shift
+RTPS_INFL_OUT="$1"; shift
+NOBS_OUT="$1"; shift
 MEMBERSEQ=${1:-$MEMBER}
 
 #===============================================================================
@@ -52,6 +58,19 @@ for iobs in $(seq $OBSNUM); do
     OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat', "
   fi
 done
+
+INFL_MUL_ADAPTIVE='.false.'
+if ((ADAPTINFL == 1)); then
+  INFL_MUL_ADAPTIVE='.true.'
+fi
+RELAX_SPREAD_OUT='.false.'
+if ((RTPS_INFL_OUT == 1)); then
+  RELAX_SPREAD_OUT='.true.'
+fi
+NOBS_OUT_TF='.false.'
+if ((NOBS_OUT == 1)); then
+  NOBS_OUT_TF='.true.'
+fi
 
 #===============================================================================
 
@@ -66,13 +85,18 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/anal/@@@@/init\"," \
         -e "/!--ANAL_OUT_MEAN_BASENAME--/a ANAL_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/anal/mean/init\"," \
         -e "/!--ANAL_OUT_SPRD_BASENAME--/a ANAL_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/anal/sprd/init\"," \
-        -e "/!--INFL_OUT_BASENAME--/a INFL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/infl/init\"," \
-        -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/nobs/init\"," \
         -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${TOPO}\"," \
         -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \
         -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
         -e "/!--SLOT_BASE--/a SLOT_BASE = $SLOT_BASE," \
         -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = $LTIMESLOT.D0," \
+        -e "/!--INFL_MUL_ADAPTIVE--/a INFL_MUL_ADAPTIVE = ${INFL_MUL_ADAPTIVE}," \
+        -e "/!--INFL_MUL_IN_BASENAME--/a INFL_MUL_IN_BASENAME = \"${TMPOUT}/${ATIME}/diag/infl/init\"," \
+        -e "/!--INFL_MUL_OUT_BASENAME--/a INFL_MUL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/infl/init\"," \
+        -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RELAX_SPREAD_OUT}," \
+        -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/rtps/init\"," \
+        -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
+        -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/nobs/init\"," \
         -e "/!--NNODES--/a NNODES = $NNODES," \
         -e "/!--PPN--/a PPN = $PPN," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \

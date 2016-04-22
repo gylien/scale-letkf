@@ -40,8 +40,6 @@ MODULE common_nml
   character(filelenmax) :: ANAL_OUT_BASENAME = 'anal.@@@@'
   character(filelenmax) :: ANAL_OUT_MEAN_BASENAME = 'anal.mean'
   character(filelenmax) :: ANAL_OUT_SPRD_BASENAME = 'anal.sprd'
-  character(filelenmax) :: INFL_OUT_BASENAME = 'infl'
-  character(filelenmax) :: NOBS_OUT_BASENAME = 'nobs'
   character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
 
   integer :: SLOT_START = 1
@@ -63,13 +61,20 @@ MODULE common_nml
   real(r_size) :: SIGMA_OBST = 3.0d0
   real(r_size) :: BASE_OBSV_RAIN = 85000.0d0
 
-  real(r_size) :: COV_INFL_MUL = 1.0d0    ! > 0: globally constant covariance inflation
-                                          ! < 0: 3D inflation values input from a GPV file "infl_mul.grd"
-  real(r_size) :: MIN_INFL_MUL = 0.0d0    ! minimum inlfation factor
-  logical :: ADAPTIVE_INFL_INIT = .false.
+  real(r_size) :: INFL_MUL = 1.0d0           ! >  0: globally constant covariance inflation
+                                             ! <= 0: use 3D inflation field from 'INFL_MUL_IN_BASENAME' file
+  real(r_size) :: INFL_MUL_MIN = 0.0d0       ! minimum inlfation factor
+  logical :: INFL_MUL_ADAPTIVE = .false.     ! if true, outout adaptively estimated 3D inlfation field to 'INFL_MUL_OUT_BASENAME' file
+  character(filelenmax) :: INFL_MUL_IN_BASENAME = 'infl'
+  character(filelenmax) :: INFL_MUL_OUT_BASENAME = 'infl'
+
+  real(r_size) :: INFL_ADD = 0.0d0           ! additive inflation
+  character(filelenmax) :: INFL_ADD_IN_BASENAME = 'addi.@@@@'
+
   real(r_size) :: RELAX_ALPHA = 0.0d0        ! RTPP relaxation parameter
   real(r_size) :: RELAX_ALPHA_SPREAD = 0.0d0 ! RTPS relaxation parameter
-  real(r_size) :: SP_INFL_ADD = 0.0d0        ! additive inflation
+  logical :: RELAX_SPREAD_OUT = .false.
+  character(filelenmax) :: RELAX_SPREAD_OUT_BASENAME = 'rtps'
 
   real(r_size) :: GROSS_ERROR = 5.0d0
   real(r_size) :: GROSS_ERROR_RAIN = -1.0d0      ! < 0: same as GROSS_ERROR
@@ -92,7 +97,9 @@ MODULE common_nml
 
   real(r_size) :: PS_ADJUST_THRES = 100.d0
 
-  integer :: MAX_NOBS_PER_GRID = 0   ! <= 0: Do not use
+  integer :: MAX_NOBS_PER_GRID = 0   ! observation number limit; <= 0: Do not use
+  logical :: NOBS_OUT = .false.
+  character(filelenmax) :: NOBS_OUT_BASENAME = 'nobs'
 
   !--- PARAM_LETKF_PRC
   integer :: NNODES = 1
@@ -261,8 +268,6 @@ subroutine read_nml_letkf
     ANAL_OUT_BASENAME, &
     ANAL_OUT_MEAN_BASENAME, &
     ANAL_OUT_SPRD_BASENAME, &
-    INFL_OUT_BASENAME, &
-    NOBS_OUT_BASENAME, &
     LETKF_TOPO_IN_BASENAME, &
     SLOT_START, &
     SLOT_END, &
@@ -281,12 +286,17 @@ subroutine read_nml_letkf
     SIGMA_OBSZ_RADAR, &
     SIGMA_OBST, &
     BASE_OBSV_RAIN, &
-    COV_INFL_MUL, &
-    MIN_INFL_MUL, &
-    ADAPTIVE_INFL_INIT, &
+    INFL_MUL, &
+    INFL_MUL_MIN, &
+    INFL_MUL_ADAPTIVE, &
+    INFL_MUL_IN_BASENAME, &
+    INFL_MUL_OUT_BASENAME, &
+    INFL_ADD, &
+    INFL_ADD_IN_BASENAME, &
     RELAX_ALPHA, &
     RELAX_ALPHA_SPREAD, &
-    SP_INFL_ADD, &
+    RELAX_SPREAD_OUT, &
+    RELAX_SPREAD_OUT_BASENAME, &
     GROSS_ERROR, &
     GROSS_ERROR_RAIN, &
     GROSS_ERROR_RADAR_REF, &
@@ -303,7 +313,9 @@ subroutine read_nml_letkf
     POSITIVE_DEFINITE_QHYD, &
     TC_SEARCH_DIS, &
     PS_ADJUST_THRES, &
-    MAX_NOBS_PER_GRID
+    MAX_NOBS_PER_GRID, &
+    NOBS_OUT, &
+    NOBS_OUT_BASENAME
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
@@ -363,6 +375,22 @@ subroutine read_nml_letkf
   end if
   if (SIGMA_OBSV_TC < 0.0d0) then 
     SIGMA_OBSV_TC = SIGMA_OBSV
+  end if
+
+  if (trim(INFL_MUL_IN_BASENAME) == '') then
+    INFL_MUL = 1.0d0
+  end if
+  if (trim(INFL_MUL_OUT_BASENAME) == '') then
+    INFL_MUL_ADAPTIVE = .false.
+  end if
+  if (trim(INFL_ADD_IN_BASENAME) == '') then
+    INFL_ADD = 0.0d0
+  end if
+  if (trim(RELAX_SPREAD_OUT_BASENAME) == '') then
+    RELAX_SPREAD_OUT = .false.
+  end if
+  if (trim(NOBS_OUT_BASENAME) == '') then
+    NOBS_OUT = .false.
   end if
 
   write(6, nml=PARAM_LETKF)

@@ -35,7 +35,7 @@ ADAPTINFL=0         # Adaptive inflation
 
 #===============================================================================
 
-MAKEINIT=1       # 0: No
+MAKEINIT=0       # 0: No
                  # 1: Yes
 PERTURB_BDY=0    # 0: No
                  # 1: Yes
@@ -83,9 +83,14 @@ LOG_OPT=2        # 1:   o    o       o   o              o     o      o
                  # 4:                                         o      o
                  # 5:   (none)
 
-LOG_TYPE=3       # 1:   Only save the log file from the head process
+LOG_TYPE=4       # 1:   Only save the log file from the head process
                  # 2:   Save all log files
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file
+
+RTPS_INFL_OUT=1  # 0: No
+                 # 1: Yes
+NOBS_OUT=1       # 0: No
+                 # 1: Yes
 
 #===============================================================================

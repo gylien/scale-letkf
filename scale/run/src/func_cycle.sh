@@ -662,18 +662,20 @@ else
 
       ### anal_ocean [mean]
 
-
-
-
-
+      # diag
+      #-------------------
+      if ((ADAPTINFL == 1)); then
         path="${atime}/diag/infl"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      fi
+      if ((RTPS_INFL_OUT == 1)); then
+        path="${atime}/diag/rtps"
+        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      fi
+      if ((NOBS_OUT == 1)); then
         path="${atime}/diag/nobs"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-
-
-
-
+      fi
 
       # obsgues
       #-------------------
@@ -1572,7 +1574,9 @@ fi
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
        $atime $TMPRUN/letkf $TMPDAT/obs \
-       $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo $MEMBER
+       $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo \
+       $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT \
+       $MEMBER
 fi
 
 if ((MYRANK == 0)); then
@@ -1589,7 +1593,8 @@ for it in $(seq $nitmax); do
   if ((m >= 1 && m <= mmean)); then
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
-           $atime ${name_m[$m]}
+           $atime ${name_m[$m]} \
+           $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi
 
