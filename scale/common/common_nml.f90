@@ -86,10 +86,10 @@ MODULE common_nml
   real(r_size) :: GROSS_ERROR_TCY = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
   real(r_size) :: GROSS_ERROR_TCP = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
 
-  integer :: LEV_UPDATE_Q = 100000        ! q and qc are only updated below and equal to this model level
-  real(r_size) :: Q_SPRD_MAX = 0.5        ! maximum q (ensemble spread)/(ensemble mean)
+  real(r_size) :: Q_UPDATE_TOP = 0.0d0     ! water vapor and hydrometeors are updated only below this pressure level (Pa)
+  real(r_size) :: Q_SPRD_MAX = -1.0D0      ! maximum q (ensemble spread)/(ensemble mean) (only effective when > 0)
 
-  real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0
+  real(r_size) :: BOUNDARY_BUFFER_WIDTH = 0.0d0
 
   logical :: POSITIVE_DEFINITE_Q = .false.
   logical :: POSITIVE_DEFINITE_QHYD = .false.
@@ -172,9 +172,6 @@ MODULE common_nml
   real(r_size) :: RADAR_ZMAX = 99.0d3          !Height limit of radar data to be used
 
   REAL(r_size) :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
-
-  real(r_size) :: RADAR_EDGE_TAPER_WIDTH = 0.0d0
-  real(r_size) :: RADAR_RANGE = 0.0d0              !!!!!! should not use this and should save this information in obs files !!!!!!
 
   !These 2 flags affects the computation of model reflectivity and radial velocity. 
   INTEGER :: INTERPOLATION_TECHNIQUE = 1
@@ -306,9 +303,9 @@ subroutine read_nml_letkf
     GROSS_ERROR_TCX, &
     GROSS_ERROR_TCY, &
     GROSS_ERROR_TCP, &
-    LEV_UPDATE_Q, &
+    Q_UPDATE_TOP, &
     Q_SPRD_MAX, &
-    BOUNDARY_TAPER_WIDTH, &
+    BOUNDARY_BUFFER_WIDTH, &
     POSITIVE_DEFINITE_Q, &
     POSITIVE_DEFINITE_QHYD, &
     TC_SEARCH_DIS, &
@@ -549,8 +546,6 @@ subroutine read_nml_letkf_radar
     RADAR_REF_THRES_DBZ, &
     RADAR_ZMAX, &
     RADAR_PRH_ERROR, &
-    RADAR_EDGE_TAPER_WIDTH, &
-    RADAR_RANGE, &               !!!!!! should not use this and should save this information in obs files !!!!!!
     INTERPOLATION_TECHNIQUE, &
     METHOD_REF_CALC, &
     USE_TERMINAL_VELOCITY, &
