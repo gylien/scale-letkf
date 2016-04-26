@@ -877,7 +877,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   integer :: iidx, ityp
   integer :: ielm, ielm_u, ielm_varlocal
   integer :: n, nn, iob
-  integer :: s, ss
+  integer :: s, ss, tmpisort
   real(r_size) :: rdx, rdy
 
   real(r_size), allocatable :: rdiag_t(:,:,:)
@@ -1057,10 +1057,11 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
               !         save this obs by overwriting the temporary arrays at where the obs of the last priority is,
               !         and shift the sorting index array accordingly.
               !-----------------------------------------------------------------
-                isort_t(s,ielm_u,ityp) = isort_t(MAX_NOBS_PER_GRID,ielm_u,ityp)
+                tmpisort = isort_t(MAX_NOBS_PER_GRID,ielm_u,ityp)
                 do ss = MAX_NOBS_PER_GRID, s+1, -1
                   isort_t(ss,ielm_u,ityp) = isort_t(ss-1,ielm_u,ityp)
                 end do
+                isort_t(s,ielm_u,ityp) = tmpisort
 
                 ip_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = ip
                 iob_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = iob
