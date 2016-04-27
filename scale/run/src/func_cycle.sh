@@ -151,6 +151,8 @@ fi
 
 BUILTIN_STAGING=$((MACHINE_TYPE != 10 && MACHINE_TYPE != 11))
 
+OUT_CYCLE_SKIP=${OUT_CYCLE_SKIP:-1}
+
 if ((TMPRUN_MODE <= 2)); then
   PROC_OPT='one'
 else
