@@ -209,6 +209,7 @@ SUBROUTINE set_common_mpi_scale
 
   call MPI_Group_incl(MPI_G_WORLD,nprocs_e,ranks,MPI_G,ierr)
   call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_e,ierr)
+  call MPI_Group_free(MPI_G,ierr)
 
   call MPI_Comm_size(MPI_COMM_e,nprocs_e,ierr)
   call MPI_Comm_rank(MPI_COMM_e,myrank_e,ierr)
@@ -217,6 +218,8 @@ SUBROUTINE set_common_mpi_scale
 
   call MPI_Group_incl(MPI_G_WORLD,nprocs_e*MEM_NP,ranks_a,MPI_G,ierr)
   call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_a,ierr)
+  call MPI_Group_free(MPI_G,ierr)
+  call MPI_Group_free(MPI_G_WORLD,ierr)
 
   call MPI_Comm_size(MPI_COMM_a,nprocs_a,ierr)
   call MPI_Comm_rank(MPI_COMM_a,myrank_a,ierr)
@@ -580,6 +583,8 @@ subroutine set_scalelib
   integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
   character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim)
 
+!  integer :: ierr !!!!!!!!!!!!
+
   !-----------------------------------------------------------------------------
 
   NUM_DOMAIN = 1
@@ -587,10 +592,9 @@ subroutine set_scalelib
   CONF_FILES = ""
 
   ! start SCALE MPI
-!  call PRC_MPIstart( universal_comm ) ! [OUT]
-
   PRC_mpi_alive = .true.
   universal_comm = MPI_COMM_WORLD
+!  call PRC_MPIstart( universal_comm ) ! [OUT] !!!!!!!!!!!! Wei-kung Liao
 
   call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
                             universal_nprocs, & ! [OUT]
@@ -619,6 +623,8 @@ subroutine set_scalelib
                      confname_dummy    ) ! [OUT]
 
   MPI_COMM_d = local_comm
+
+!  call MPI_Comm_free(global_comm, ierr) !!!!!!!!!!!! Should be freed ???
 
   ! setup standard I/O
 !  call IO_setup( MODELNAME, .true., cnf_fname )
