@@ -161,7 +161,7 @@ cat >> $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$ISTEP" "$FSTEP"
+./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$ISTEP" "$FSTEP" || exit \$?
 EOF
 
 #===============================================================================
@@ -191,7 +191,12 @@ job_end_check_PJM $jobid
 echo "[$(datetime_now)] Finalization"
 echo
 
-finalization
+n=0
+nmax=12
+while [ ! -s "${myname1}_${SYSNAME}.i${jobid}" ] && ((n < nmax)); do
+  n=$((n+1))
+  sleep 5s
+done
 
 mkdir -p $OUTDIR/exp/${jobid}_${myname1}_${STIME}
 cp -f $SCRP_DIR/config.main $OUTDIR/exp/${jobid}_${myname1}_${STIME}
@@ -204,6 +209,8 @@ cp -f ${myname1}_${SYSNAME}.i${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/j
 cp -f ${myname1}_${SYSNAME}.s${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.s
 ( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
 ( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
+
+finalization
 
 if ((CLEAR_TMP == 1)); then
   safe_rm_tmpdir $TMPS

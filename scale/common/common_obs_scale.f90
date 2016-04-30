@@ -47,7 +47,7 @@ MODULE common_obs_scale
   PUBLIC
 
 !  INTEGER,PARAMETER :: nid_obs=11
-  INTEGER,PARAMETER :: nid_obs=12 !H08
+  INTEGER,PARAMETER :: nid_obs=15 !H08
 
   INTEGER,PARAMETER :: id_u_obs=2819
   INTEGER,PARAMETER :: id_v_obs=2820
@@ -111,23 +111,23 @@ MODULE common_obs_scale
 
   INTEGER,PARAMETER :: elem_uid(nid_obs)= &
      (/id_u_obs, id_v_obs, id_t_obs, id_tv_obs, id_q_obs, id_rh_obs, &
-       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs, id_H08IR_obs/) ! H08
+       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs, &
+       id_H08IR_obs, id_tclon_obs, id_tclat_obs, id_tcmip_obs/)
 !       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs/)
-!       id_tclon_obs, id_tclat_obs, id_tcmip_obs/)
 
   CHARACTER(3),PARAMETER :: obelmlist(nid_obs)= &
 !     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH'/)
-     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH', 'H08'/) ! H08
-!     'TCX', 'TCY', 'TCP'/)
+     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH',&
+       'H08', 'TCX', 'TCY', 'TCP'/)
 
 !  INTEGER,PARAMETER :: nobtype = 22
-  INTEGER,PARAMETER :: nobtype = 23 ! H08
+  INTEGER,PARAMETER :: nobtype = 24 ! H08
   CHARACTER(6),PARAMETER :: obtypelist(nobtype)= &
      (/'ADPUPA', 'AIRCAR', 'AIRCFT', 'SATWND', 'PROFLR', &
        'VADWND', 'SATEMP', 'ADPSFC', 'SFCSHP', 'SFCBOG', &
        'SPSSMI', 'SYNDAT', 'ERS1DA', 'GOESND', 'QKSWND', &
        'MSONET', 'GPSIPW', 'RASSDA', 'WDSATR', 'ASCATW', &
-       'TMPAPR', 'PHARAD', 'H08IRB'/) ! H08
+       'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL'/) ! H08
 !       'TMPAPR', 'PHARAD'/)
 
   INTEGER,PARAMETER :: max_obs_info_meta = 3 ! maximum array size for type(obs_info)%meta
@@ -1197,6 +1197,35 @@ SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
 
   RETURN
 END SUBROUTINE phys2ij
+
+SUBROUTINE ij2phys(rig,rjg,rlon,rlat)
+  use scale_grid, only: &
+      GRID_CXG, &
+      GRID_CYG, &
+      DX, &
+      DY
+  use scale_mapproj, only: &
+      MPRJ_xy2lonlat
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: rig
+  REAL(r_size),INTENT(IN) :: rjg
+  REAL(r_size),INTENT(OUT) :: rlon ! (deg)
+  REAL(r_size),INTENT(OUT) :: rlat ! (deg)
+  REAL(r_size) :: x, y ! (m)
+!
+! ri,rj -> rlon,rlat
+!
+  x = (rig - 1.0d0) * DX + GRID_CXG(1) 
+  y = (rjg - 1.0d0) * DY + GRID_CYG(1) 
+
+  call MPRJ_xy2lonlat(x,y,rlon,rlat)
+
+  rlon = rlon * rad2deg
+  rlat = rlat * rad2deg
+
+  RETURN
+END SUBROUTINE ij2phys
+!
 !-----------------------------------------------------------------------
 ! Interpolation
 !-----------------------------------------------------------------------
@@ -1334,6 +1363,14 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   INTEGER,ALLOCATABLE :: qc_H08(:)
 #endif
 
+! -- for TC vital assimilation --
+!  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
+!  INTEGER :: bTC_proc ! the process where the background TC is located.
+! bTC: background TC in each subdomain
+! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp (Pa)
+!  REAL(r_size),ALLOCATABLE :: bTC(:,:)
+!  REAL(r_size),ALLOCATABLE :: bufr(:,:)
+!  REAL(r_size) :: bTC_mslp
 
 !CALL MPI_BARRIER(MPI_COMM_a,ierr)
 !CALL CPU_TIME(timer)
@@ -1418,14 +1455,31 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 
   oqc = -1
 
+!  obs_idx_TCX = -1
+!  obs_idx_TCY = -1
+!  obs_idx_TCP = -1
+
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ri,rj,rk)
   do n = 1, obsda%nobs
 
     if (obsda%qc(n) /= iqc_good) write(6, *) '############', obsda%qc(n)
 
     oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
+
+!    select case (int(oelm(n)))
+!    case (id_tclon_obs)
+!      obs_idx_TCX = n
+!      cycle
+!    case (id_tclat_obs)
+!      obs_idx_TCY = n
+!      cycle
+!    case (id_tcmip_obs)
+!      obs_idx_TCP = n
+!      cycle
+!    end select
+
 #ifdef H08
-    if(oelm(n) == id_H08IR_obs)cycle
+    if(int(oelm(n)) == id_H08IR_obs)cycle
 #endif
 
     call rij_g2l_auto(proc,obsda%ri(n),obsda%rj(n),ri,rj)
@@ -1593,6 +1647,57 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   endif !-- [DEPARTURE_STAT_H08]
 
 #endif
+
+! ###  -- TC vital assimilation -- ###
+!  if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0 .and.&
+!    obs(obsda%set(obs_idx_TCX))%dif(obsda%idx(obs_idx_TCX)) == &
+!    obs(obsda%set(obs_idx_TCY))%dif(obsda%idx(obs_idx_TCY)) .and. &
+!    obs(obsda%set(obs_idx_TCY))%dif(obsda%idx(obs_idx_TCY)) == &
+!    obs(obsda%set(obs_idx_TCP))%dif(obsda%idx(obs_idx_TCP)) .and. & 
+!    (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
+!    abs(obs(obsda%set(obs_idx_TCX))%dif(obsda%idx(obs_idx_TCX))) <= DEPARTURE_STAT_T_RANGE))then
+!
+!    allocate(bTC(3,0:MEM_NP-1))
+!    allocate(bufr(3,0:MEM_NP-1))
+!
+!    bTC = 9.99d33
+!    bufr = 9.99d33
+!
+!    call search_tc_subdom(obsda%ri(obs_idx_TCX),obsda%rj(obs_idx_TCX),v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
+!
+!    CALL MPI_BARRIER(MPI_COMM_d,ierr)
+!    CALL MPI_ALLREDUCE(bTC,bufr,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
+!    bTC = bufr
+!
+!    deallocate(bufr)
+!
+!
+!    ! Assume MSLP of background TC is lower than 1100 (hPa). 
+!    bTC_mslp = 1100.0d2
+!    do n = 0, MEM_NP - 1
+!      write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
+!      if (bTC(3,n) < bTC_mslp ) then
+!        bTC_mslp = bTC(3,n)
+!        bTC_proc = n
+!      endif
+!    enddo ! [ n = 0, MEM_NP - 1]
+!
+!    do n = 1, 3
+!      if(n==1) i = obs_idx_TCX
+!      if(n==2) i = obs_idx_TCY
+!      if(n==3) i = obs_idx_TCP
+!
+!      ohx(i) = bTC(n,bTC_proc)
+!      oqc(i) = iqc_otype
+!      if(bTC_MSLP < 1100.0d2) oqc(i) = iqc_good
+!
+!      if (oqc(i) == iqc_good) then
+!        ohx(i) = obs(obsda%set(i))%dat(obsda%idx(i)) - ohx(i)
+!      end if
+!    enddo
+!
+!  endif ! [DEPARTURE_STAT_T_RANGE]
+
 
   call monit_dep(obsda%nobs,oelm,ohx,oqc,nobs,bias,rmse)
 
@@ -1897,10 +2002,13 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
 END SUBROUTINE get_nobs
 
 SUBROUTINE read_obs(cfile,obs)
+  use scale_mapproj, only: &
+      MPRJ_lonlat2xy
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(INOUT) :: obs
   REAL(r_sngl) :: wk(8)
+  REAL(r_size) :: x, y
   INTEGER :: n,iunit
 
 !  call obs_info_allocate(obs)
@@ -1928,8 +2036,23 @@ SUBROUTINE read_obs(cfile,obs)
       wk(5) = wk(5) * 0.01 ! percent input
       wk(6) = wk(6) * 0.01 ! percent input
     CASE(id_tcmip_obs)
+      wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = wk(5) * 100.0 ! hPa -> Pa
-      wk(6) = wk(6) * 100.0 ! hPa -> Pa
+      wk(6) = real(OBSERR_TCP,kind=r_sngl)
+    CASE(id_tclon_obs)
+      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0d0,&
+                          REAL(wk(3),kind=r_size)*pi/180.0d0,&
+                          x,y)
+      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+      wk(5) = real(x,kind=r_sngl)
+      wk(6) = real(OBSERR_TCX,kind=r_sngl)
+    CASE(id_tclat_obs)
+      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0d0,&
+                          REAL(wk(3),kind=r_size)*pi/180.0d0,&
+                          x,y)
+      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+      wk(5) = real(y,kind=r_sngl)
+      wk(6) = real(OBSERR_TCY,kind=r_sngl)
     END SELECT
     obs%elm(n) = NINT(wk(1))
     obs%lon(n) = REAL(wk(2),r_size)
@@ -2372,16 +2495,106 @@ FUNCTION uid_obs(id_obs)
     uid_obs = 11
   CASE(id_H08IR_obs) ! H08
     uid_obs = 12     ! H08
-!  CASE(id_tclon_obs)
-!    uid_obs = 9
-!  CASE(id_tclat_obs)
-!    uid_obs = 10
-!  CASE(id_tcmip_obs)
-!    uid_obs = 11
+  CASE(id_tclon_obs)
+    uid_obs = 13
+  CASE(id_tclat_obs)
+    uid_obs = 14
+  CASE(id_tcmip_obs)
+    uid_obs = 15
   CASE DEFAULT
     uid_obs = -1 ! error
   END SELECT
 END FUNCTION uid_obs
+!
+!-----------------------------------------------------------------------
+!   TC vital obs subroutines by T. Honda (03/28/2016)
+!-----------------------------------------------------------------------
+!
+SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
+  use scale_grid, only: &
+      GRID_CXG, &
+      GRID_CYG, &
+      DX, &
+      DY
+  use scale_grid_index, only: &
+      IHALO, JHALO
+  use scale_process, only: &
+      PRC_myrank
+
+  IMPLICIT NONE
+  INTEGER :: il, jl, ig, jg
+  REAL(r_size) :: xdis, ydis, rdis
+  REAL(r_size),INTENT(IN) :: ritc, rjtc
+  REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
+  REAL(r_size),INTENT(OUT) :: yobs_mslp !(Pa)
+!  REAL(r_size),INTENT(OUT) :: yobs_lon, yobs_lat !(deg)
+  REAL(r_size),INTENT(OUT) :: yobs_tcx, yobs_tcy !(m)
+
+  REAL(r_size) :: slp2d(nlonh,nlath)
+  REAL(r_size) :: dz, t, q, var5
+
+  yobs_mslp = 9.99d33
+  yobs_tcx = 9.99d33
+  yobs_tcy = 9.99d33
+
+  DO jl = 1, nlat 
+  DO il = 1, nlon 
+    t = v2d(il,jl,iv2dd_t2m)
+    q = v2d(il,jl,iv2dd_q2m)
+    dz = -1.0d0 * v2d(il,jl,iv2dd_topo)
+    slp2d(il,jl) = v2d(il,jl,iv2dd_ps)
+    call prsadj(slp2d(il,jl),dz,t,q)
+  ENDDO
+  ENDDO
+
+  DO jl = JHALO + 1, nlat - JHALO
+  DO il = IHALO + 1, nlon - IHALO
+    call ij_l2g(PRC_myrank, il, jl, ig, jg)
+    xdis = abs(real(ig,kind=r_size) - ritc) * DX
+    ydis = abs(real(jg,kind=r_size) - rjtc) * DY
+    rdis = sqrt(xdis*xdis + ydis*ydis)
+
+    IF(rdis > TC_SEARCH_DIS)CYCLE
+
+    IF(IHALO >= 2 .and. JHALO >= 2)THEN
+      call wgt_ave2d(slp2d(:,:),il,jl,var5)
+    ELSE
+      var5 = slp2d(il,jl)
+    ENDIF
+
+    if(var5 < yobs_mslp)then
+      yobs_mslp = var5
+      yobs_tcx = (real(ig,kind=r_size) - 1.0d0) * DX + GRID_CXG(1)
+      yobs_tcy = (real(jg,kind=r_size) - 1.0d0) * DY + GRID_CYG(1)
+    endif
+  ENDDO
+  ENDDO
+
+  RETURN
+END SUBROUTINE search_tc_subdom
+
+!-- 25 points weighted average (tentative)--
+! 2D weight is...
+!     1 1 1 1 1
+!     1 3 3 3 1
+!     1 3 5 3 1
+!     1 3 3 3 1
+!     1 1 1 1 1
+!
+SUBROUTINE wgt_ave2d(var,i,j,var5)
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: var(nlonh,nlath)
+  INTEGER,INTENT(IN) :: i,j
+  REAL(r_size),INTENT(OUT) :: var5
+
+  var5 = ((var(i,j) * 5.0d0 + &
+         (sum(var(i-1:i+1,j-1:j+1)) - var(i,j)) * 3.0d0 + &
+         (sum(var(i-2:i+2,j-2:j+2)) - sum(var(i-1:i+1,j-1:j+1))) * 1.0d0)) / 45.0d0
+
+  RETURN
+END SUBROUTINE wgt_ave2d
+
+
 !
 !-----------------------------------------------------------------------
 !   Himawari-8 obs subroutines by T. Honda (10/29/2015)

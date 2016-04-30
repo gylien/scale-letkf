@@ -873,8 +873,8 @@ else
               if ((BDY_ENS == 1)); then
                 for m in $(seq $fmember); do
 ##                  mm=$(((c-1) * fmember + m))
-                  pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_dby}"
-                  path="bdywrf/${name_m[$m]}/wrfout_${time_dby}"
+                  pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_bdy}"
+                  path="bdywrf/${name_m[$m]}/wrfout_${time_bdy}"
                   if ((DISK_MODE_DATA_BDY == 2)); then
                     echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
                   else
@@ -882,8 +882,8 @@ else
                   fi
                 done
               else
-                pathin="$DATA_BDY_WRF/mean/wrfout_${time_dby}"
-                path="bdywrf/mean/wrfout_${time_dby}"
+                pathin="$DATA_BDY_WRF/mean/wrfout_${time_bdy}"
+                path="bdywrf/mean/wrfout_${time_bdy}"
                 if ((DISK_MODE_DATA_BDY == 2)); then
                   echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
                 else
@@ -1331,35 +1331,68 @@ if ((LOG_TYPE >= 3)); then
       time2=$(datetime $time $((lcycles * (c-1))) s)
 
       if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time2}/log/fcst_scale_pp" ]; then
-        if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale_pp.tar fcst_scale_pp
-        elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale_pp.tar.gz fcst_scale_pp
+        if ((TAR_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+            sleep 1s
+          done
+          if ((LOG_TYPE == 3)); then
+            ( tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale_pp.tar fcst_scale_pp && rm -fr $OUTDIR/${time2}/log/fcst_scale_pp ) &
+          elif ((LOG_TYPE == 4)); then
+            ( tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale_pp.tar.gz fcst_scale_pp && rm -fr $OUTDIR/${time2}/log/fcst_scale_pp ) &
+          fi
+        else
+          if ((LOG_TYPE == 3)); then
+            tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale_pp.tar fcst_scale_pp && rm -fr $OUTDIR/${time2}/log/fcst_scale_pp
+          elif ((LOG_TYPE == 4)); then
+            tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale_pp.tar.gz fcst_scale_pp && rm -fr $OUTDIR/${time2}/log/fcst_scale_pp
+          fi
         fi
-        rm -fr $OUTDIR/${time2}/log/fcst_scale_pp
       fi
 
       if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time2}/log/fcst_scale_init" ]; then
-        if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale_init.tar fcst_scale_init
-        elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale_init.tar.gz fcst_scale_init
+        if ((TAR_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+            sleep 1s
+          done
+          if ((LOG_TYPE == 3)); then
+            ( tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale_init.tar fcst_scale_init && rm -fr $OUTDIR/${time2}/log/fcst_scale_init ) &
+          elif ((LOG_TYPE == 4)); then
+            ( tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale_init.tar.gz fcst_scale_init && rm -fr $OUTDIR/${time2}/log/fcst_scale_init ) &
+          fi
+        else
+          if ((LOG_TYPE == 3)); then
+            tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale_init.tar fcst_scale_init && rm -fr $OUTDIR/${time2}/log/fcst_scale_init
+          elif ((LOG_TYPE == 4)); then
+            tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale_init.tar.gz fcst_scale_init && rm -fr $OUTDIR/${time2}/log/fcst_scale_init
+          fi
         fi
-        rm -fr $OUTDIR/${time2}/log/fcst_scale_init
       fi
 
       if ((LOG_OPT <= 3)) && [ -d "$OUTDIR/${time2}/log/fcst_scale" ]; then
-        if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale.tar fcst_scale
-        elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale.tar.gz fcst_scale
+        if ((TAR_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+            sleep 1s
+          done
+          if ((LOG_TYPE == 3)); then
+            ( tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale.tar fcst_scale && rm -fr $OUTDIR/${time2}/log/fcst_scale ) &
+          elif ((LOG_TYPE == 4)); then
+            ( tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale.tar.gz fcst_scale && rm -fr $OUTDIR/${time2}/log/fcst_scale ) &
+          fi
+        else
+          if ((LOG_TYPE == 3)); then
+            tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale.tar fcst_scale && rm -fr $OUTDIR/${time2}/log/fcst_scale
+          elif ((LOG_TYPE == 4)); then
+            tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale.tar.gz fcst_scale && rm -fr $OUTDIR/${time2}/log/fcst_scale
+          fi
         fi
-        rm -fr $OUTDIR/${time2}/log/fcst_scale
       fi
 
     done
     time=$(datetime $time $((lcycles * CYCLE)) s)
   done
+  if ((TAR_THREAD > 1)); then
+    wait
+  fi
 fi
 
 #-------------------------------------------------------------------------------

@@ -124,7 +124,7 @@ else
   IO_LOG_DIR="${SCPCALL}_scale_init"
 fi
 
-mkdir -p $TMPOUT/${STIME}/bdy/${MEM}
+mkdir -p $TMPOUT/${STIME}/bdy/${MEM_BDY}
 
 #===============================================================================
 
@@ -136,7 +136,7 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
         -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
         -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT}/land/param.bucket.conf\"," \
-        -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"$TMPOUT/${STIME}/bdy/${MEM}/boundary\"," \
+        -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"$TMPOUT/${STIME}/bdy/${MEM_BDY}/boundary\"," \
         -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${TMPSUBDIR}\/bdydata\"," \
         -e "/!--FILETYPE_ORG--/a FILETYPE_ORG = \"${FILETYPE_ORG}\"," \
         -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = ${NUMBER_OF_FILES}," \

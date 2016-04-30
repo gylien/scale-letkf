@@ -29,7 +29,7 @@ if [ "$MYRANK" = 'a' ] ||
         mkdir -p "$(dirname ${TMPDAT}/${destin})"
         if ((SCP_THREAD > 1)); then
           while (($(jobs -p | wc -l) >= SCP_THREAD)); do
-            sleep 0.1s
+            sleep 1s
           done
           $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDAT}/${destin}" &
         else
@@ -65,7 +65,7 @@ for ifile in $filelist; do
       mkdir -p "$(dirname ${TMPOUT}/${destin})"
       if ((SCP_THREAD > 1)); then
         while (($(jobs -p | wc -l) >= SCP_THREAD)); do
-          sleep 0.1s
+          sleep 1s
         done
         $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPOUT}/${destin}" &
       else
