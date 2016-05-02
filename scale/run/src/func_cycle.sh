@@ -1461,6 +1461,11 @@ ensfcst_2 () {
 #echo "* Post-processing scripts"
 #echo
 
+DELETE_MEMBER=0
+if ((OUT_OPT >= 5 && (loop % OUT_CYCLE_SKIP != 1))); then
+  DELETE_MEMBER=1
+fi
+
 for it in $(seq $its $ite); do
   if ((MYRANK == 0)); then
     echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) start" >&2
@@ -1476,7 +1481,7 @@ for it in $(seq $its $ite); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $time \
-           ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT cycle
+           ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT cycle $DELETE_MEMBER
     fi
   fi
 

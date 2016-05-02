@@ -5,11 +5,11 @@
 #
 #===============================================================================
 
-STIME='20130713060630'
-ETIME='20130713060930'
+STIME='20130713061000'
+ETIME='20130713061930'
 ISTEP=
 FSTEP=
-TIME_LIMIT='02:30:00'
+TIME_LIMIT='03:30:00'
 
 #===============================================================================
 
@@ -49,11 +49,13 @@ OBSOPE=0         # 0: No    ! obsope options: not finished yet!!
 
                  #      anal              gues              history
                  #      mean/sprd members mean/sprd members mean members
-OUT_OPT=3        # 1:   o         o       o         o       o    o
+OUT_OPT=5        # 1:   o         o       o         o       o    o
                  # 2:   o         o       o         o       o
                  # 3:   o         o       o         o
                  # 4:   o         o       o
                  # 5:   o                 o
+
+OUT_CYCLE_SKIP=5
 
                  #      topo
 TOPOOUT_OPT=2    # 1:   o
@@ -70,7 +72,7 @@ BDYOUT_OPT=3     # 1:   o    o
                  # 3:   (none)
 
                  #      obsgues obsanal obsdep
-OBSOUT_OPT=2     # 1:   o       o       o
+OBSOUT_OPT=4     # 1:   o       o       o
                  # 2:   o               o
                  # 3:                   o
                  # 4:   (none)

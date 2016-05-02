@@ -44,7 +44,7 @@ if ((LOG_OPT <= 4 && MYRANK == 0)); then
   fi
 fi
 
-if ((OUT_OPT >= 2)); then
+if ((OUT_OPT >= 3)); then
   if [ -d "$TMPOUT/${STIME}/hist/${MEM}" ]; then
     rm -f $TMPOUT/${STIME}/hist/${MEM}/*
   fi
