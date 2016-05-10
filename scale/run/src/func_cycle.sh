@@ -151,6 +151,8 @@ fi
 
 BUILTIN_STAGING=$((MACHINE_TYPE != 10 && MACHINE_TYPE != 11))
 
+OUT_CYCLE_SKIP=${OUT_CYCLE_SKIP:-1}
+
 if ((TMPRUN_MODE <= 2)); then
   PROC_OPT='one'
 else
@@ -642,25 +644,44 @@ else
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
         path="${atime}/gues/sprd"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        path="${atime}/gues/0001"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
 
       # anal
       #-------------------
-      if ((OUT_OPT <= 4)); then
+      if ((OUT_OPT <= 4 || (OUT_OPT <= 5 && loop % OUT_CYCLE_SKIP == 0) || atime > ETIME)); then
 #        for m in $(seq $msprd); do
 #          path="${atime}/anal/${name_m[$m]}"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #        done
         path="${atime}/anal"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      elif ((OUT_OPT <= 5)); then
+      elif ((OUT_OPT <= 6)); then
         path="${atime}/anal/mean"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
         path="${atime}/anal/sprd"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        path="${atime}/anal/0001"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
 
       ### anal_ocean [mean]
+
+      # diag
+      #-------------------
+      if ((ADAPTINFL == 1)); then
+        path="${atime}/diag/infl"
+        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      fi
+      if ((RTPS_INFL_OUT == 1)); then
+        path="${atime}/diag/rtps"
+        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      fi
+      if ((NOBS_OUT == 1)); then
+        path="${atime}/diag/nobs"
+        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      fi
 
       # obsgues
       #-------------------
@@ -1440,6 +1461,11 @@ ensfcst_2 () {
 #echo "* Post-processing scripts"
 #echo
 
+DELETE_MEMBER=0
+if ((OUT_OPT >= 5 && (loop % OUT_CYCLE_SKIP != 1))); then
+  DELETE_MEMBER=1
+fi
+
 for it in $(seq $its $ite); do
   if ((MYRANK == 0)); then
     echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) start" >&2
@@ -1455,7 +1481,7 @@ for it in $(seq $its $ite); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $time \
-           ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT cycle
+           ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT cycle $DELETE_MEMBER
     fi
   fi
 
@@ -1559,7 +1585,9 @@ fi
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
        $atime $TMPRUN/letkf $TMPDAT/obs \
-       $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo $MEMBER
+       $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo \
+       $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT \
+       $MEMBER
 fi
 
 if ((MYRANK == 0)); then
@@ -1576,7 +1604,8 @@ for it in $(seq $nitmax); do
   if ((m >= 1 && m <= mmean)); then
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
-           $atime ${name_m[$m]}
+           $atime ${name_m[$m]} \
+           $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi
 
