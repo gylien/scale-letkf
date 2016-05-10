@@ -101,6 +101,12 @@ MODULE common_nml
   logical :: NOBS_OUT = .false.
   character(filelenmax) :: NOBS_OUT_BASENAME = 'nobs'
 
+  !*** for backward compatibility ***
+  real(r_size) :: COV_INFL_MUL = 1.0d0
+  real(r_size) :: MIN_INFL_MUL = 0.0d0
+  logical :: ADAPTIVE_INFL_INIT = .false.
+  real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0
+
   !--- PARAM_LETKF_PRC
   integer :: NNODES = 1
   integer :: PPN = 1
@@ -312,7 +318,12 @@ subroutine read_nml_letkf
     PS_ADJUST_THRES, &
     MAX_NOBS_PER_GRID, &
     NOBS_OUT, &
-    NOBS_OUT_BASENAME
+    NOBS_OUT_BASENAME, &
+    !*** for backward compatibility ***
+    COV_INFL_MUL, &
+    MIN_INFL_MUL, &
+    ADAPTIVE_INFL_INIT, &
+    BOUNDARY_TAPER_WIDTH
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
@@ -374,9 +385,6 @@ subroutine read_nml_letkf
     SIGMA_OBSV_TC = SIGMA_OBSV
   end if
 
-  if (trim(INFL_MUL_IN_BASENAME) == '') then
-    INFL_MUL = 1.0d0
-  end if
   if (trim(INFL_MUL_OUT_BASENAME) == '') then
     INFL_MUL_ADAPTIVE = .false.
   end if
@@ -388,6 +396,20 @@ subroutine read_nml_letkf
   end if
   if (trim(NOBS_OUT_BASENAME) == '') then
     NOBS_OUT = .false.
+  end if
+
+  !*** for backward compatibility ***
+  if (COV_INFL_MUL /= 1.0d0 .and. INFL_MUL == 1.0d0) then
+    INFL_MUL = COV_INFL_MUL
+  end if
+  if (MIN_INFL_MUL /= 0.0d0 .and. INFL_MUL_MIN == 0.0d0) then
+    INFL_MUL_MIN = MIN_INFL_MUL
+  end if
+  if (ADAPTIVE_INFL_INIT /= .false. .and. INFL_MUL_ADAPTIVE == .false.) then
+    INFL_MUL_ADAPTIVE = ADAPTIVE_INFL_INIT
+  end if
+  if (BOUNDARY_TAPER_WIDTH /= 0.0d0 .and. BOUNDARY_BUFFER_WIDTH == 0.0d0) then
+    BOUNDARY_BUFFER_WIDTH = BOUNDARY_TAPER_WIDTH
   end if
 
   write(6, nml=PARAM_LETKF)
