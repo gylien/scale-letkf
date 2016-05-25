@@ -9,8 +9,8 @@
 #include <sys/time.h>
 #include <dlfcn.h>
 
-static struct server_connection *server_conn;
-static struct client_connection *client_conn;
+static struct server_connection *server_conn = NULL;
+static struct client_connection *client_conn = NULL;
 
 static void parse_config();
 
@@ -181,9 +181,11 @@ struct server_connection *conn_serv_publish_port(const char *service_name,
 
   ierr = MPI_Comm_accept(connection->port_name, MPI_INFO_NULL, 0, \
 		MPI_COMM_WORLD, &connection->client);
-  
+
   assert(ierr == MPI_SUCCESS);
   MPI_Comm_remote_size(connection->client, &connection->client_size);
+
+  server_conn = connection;
   return connection;
 }
 
@@ -217,6 +219,7 @@ struct client_connection* conn_client_connect(const char* service_name,
 
   ierr = MPI_Comm_remote_size(connection->server, &connection->server_size);
   assert(ierr == MPI_SUCCESS);
+  client_conn = connection;
   return connection;
 }
 
@@ -379,6 +382,213 @@ void conn_client_recv_data(struct client_connection*connection,
 
 /* ------------------- functions used for scale-letkf  -----------------------*/
 
+#define DEFAULT_TAG 42
+
+void pub_client_allscatter_2d_range_data(struct client_connection*connexion,
+				       int nb_groups,
+				       int* recv_buffer,
+				       MPI_Datatype datatype,
+				       size_t buffer_size[2],
+				       int recv_count,
+				       int axis) {
+  switch(axis) {
+  case 0:
+    pub_client_allscatter_2d_row_range_data(connexion, nb_groups, recv_buffer,
+					   datatype, buffer_size, recv_count);
+    break;
+  case 1:
+    pub_client_allscatter_2d_col_range_data(connexion, nb_groups, recv_buffer,
+					  datatype, buffer_size, recv_count);
+    break;
+  default:
+    fprintf(stderr, "%s: Incorrect axis (%d)\n", __FUNCTION__, axis);
+    abort();
+  }
+}
+
+void pub_server_allscatter_2d_range_data(struct server_connection*connexion,
+					 int nb_groups,
+					 int* send_buffer,
+					 MPI_Datatype datatype,
+					 size_t buffer_size[2],
+					 int send_count,
+					 int axis) {
+  switch(axis) {
+  case 0:
+    pub_server_allscatter_2d_row_range_data(connexion, nb_groups, send_buffer,
+					    datatype, buffer_size, send_count);
+    break;
+  case 1:
+    pub_server_allscatter_2d_col_range_data(connexion, nb_groups, send_buffer,
+					    datatype, buffer_size, send_count);
+    break;
+  default:
+    fprintf(stderr, "%s: Incorrect axis (%d)\n", __FUNCTION__, axis);
+    abort();
+  }
+}
+
+/* scatter the columns of a 2D array  */
+void pub_server_allscatter_2d_row_range_data(struct server_connection*connexion,
+					     int nb_groups,
+					     int* send_buffer,
+					     MPI_Datatype datatype,
+					     size_t buffer_size[2],
+					     int row_send_count) {
+
+  int my_range = connexion->server_rank % nb_groups;
+  int i;
+
+  MPI_Datatype row;
+  int ierr = MPI_Type_vector(row_send_count,
+			     buffer_size[0],
+			     0,
+			     datatype,
+			     &row);
+  assert(ierr == MPI_SUCCESS);
+  ierr = MPI_Type_commit(&row);
+  assert(ierr == MPI_SUCCESS);
+
+  int nreqs = connexion->client_size/nb_groups;
+  MPI_Request reqs[nreqs];
+
+  for(i=0; i<connexion->client_size/nb_groups; i++) {
+    int dest = (nb_groups*i)+my_range;
+    int tag = DEFAULT_TAG;
+    int ierr = MPI_Isend(&send_buffer[buffer_size[0]*i*row_send_count], 1, row, dest, tag, connexion->client, &reqs[i]);
+    assert(ierr == MPI_SUCCESS);
+  }
+  MPI_Waitall(nreqs, reqs, MPI_STATUSES_IGNORE);
+}
+
+
+void pub_client_allscatter_2d_row_range_data(struct client_connection*connexion,
+					   int nb_groups,
+					   int* recv_buffer,
+					   MPI_Datatype datatype,
+					   size_t buffer_size[2],
+					   int row_recv_count) {
+  int my_range = connexion->client_rank % nb_groups;
+  int i;
+  MPI_Datatype row;
+  int ierr = MPI_Type_vector(row_recv_count,
+			     buffer_size[0],
+			     0,
+			     datatype,
+			     &row);
+  assert(ierr == MPI_SUCCESS);
+  ierr = MPI_Type_commit(&row);
+  assert(ierr == MPI_SUCCESS);
+
+  int nreqs = connexion->server_size/nb_groups;
+  MPI_Request reqs[nreqs];
+  for(i=0; i<connexion->server_size/nb_groups; i++) {
+    int src = (nb_groups*i)+my_range;
+    int tag = DEFAULT_TAG;
+    int ierr = MPI_Irecv(&recv_buffer[buffer_size[0]*row_recv_count*i], 1, row, src, tag, connexion->server, &reqs[i]);
+    assert(ierr == MPI_SUCCESS);
+  }
+  MPI_Waitall(nreqs, reqs, MPI_STATUSES_IGNORE);
+}
+
+/* scatter the columns of a 2D array  */
+void pub_server_allscatter_2d_col_range_data(struct server_connection*connexion,
+					     int nb_groups,
+					     int* send_buffer,
+					     MPI_Datatype datatype,
+					     size_t buffer_size[2],
+					     int col_send_count) {
+
+  int my_range = connexion->server_rank % nb_groups;
+  int i;
+
+  MPI_Datatype col;
+  int ierr = MPI_Type_vector(buffer_size[0],
+			     col_send_count,
+			     buffer_size[1],
+			     datatype,
+			     &col);
+  assert(ierr == MPI_SUCCESS);
+  ierr = MPI_Type_commit(&col);
+  assert(ierr == MPI_SUCCESS);
+
+  int nreqs = connexion->client_size/nb_groups;
+  MPI_Request reqs[nreqs];
+
+  for(i=0; i<connexion->client_size/nb_groups; i++) {
+    int dest = (nb_groups*i)+my_range;
+    int tag = DEFAULT_TAG;
+    int ierr = MPI_Isend(&send_buffer[i*col_send_count], 1, col, dest, tag, connexion->client, &reqs[i]);
+    assert(ierr == MPI_SUCCESS);
+  }
+  MPI_Waitall(nreqs, reqs, MPI_STATUSES_IGNORE);
+}
+
+
+void pub_client_allscatter_2d_col_range_data(struct client_connection*connexion,
+					   int nb_groups,
+					   int* recv_buffer,
+					   MPI_Datatype datatype,
+					   size_t buffer_size[2],
+					   int col_recv_count) {
+  int my_range = connexion->client_rank % nb_groups;
+  int i;
+  MPI_Datatype col;
+  int ierr = MPI_Type_vector(buffer_size[0],
+			     col_recv_count,
+			     buffer_size[1],
+			     datatype,
+			     &col);
+  assert(ierr == MPI_SUCCESS);
+  ierr = MPI_Type_commit(&col);
+  assert(ierr == MPI_SUCCESS);
+
+  int nreqs = connexion->server_size/nb_groups;
+  MPI_Request reqs[nreqs];
+  for(i=0; i<connexion->server_size/nb_groups; i++) {
+    int src = (nb_groups*i)+my_range;
+    int tag = DEFAULT_TAG;
+    int ierr = MPI_Irecv(&recv_buffer[col_recv_count*i], 1, col, src, tag, connexion->server, &reqs[i]);
+    assert(ierr == MPI_SUCCESS);
+  }
+  MPI_Waitall(nreqs, reqs, MPI_STATUSES_IGNORE);
+}
+
+
+void pub_server_allscatter_range_data(struct server_connection*connexion,
+				      int nb_groups,
+				      char* send_buffer,
+				      int send_count) {
+  int my_range = connexion->server_rank % nb_groups;
+  int i;
+  MPI_Request reqs[connexion->client_size/nb_groups];
+
+  for(i=0; i<connexion->client_size/nb_groups; i++) {
+    int dest = (nb_groups*i)+my_range;
+    int tag = DEFAULT_TAG;
+    int ierr = MPI_Isend(&send_buffer[send_count*i], send_count, MPI_BYTE, dest, tag, connexion->client, &reqs[i]);
+    assert(ierr == MPI_SUCCESS);
+  }
+  MPI_Waitall(connexion->client_size/nb_groups, reqs, MPI_STATUSES_IGNORE);
+}
+
+void pub_client_allscatter_range_data(struct client_connection*connexion,
+				  int nb_groups,
+				  char* recv_buffer,
+				  int recv_count) {
+
+  int my_range = connexion->client_rank % nb_groups;
+  int i;
+  MPI_Request reqs[connexion->server_size/nb_groups];
+  for(i=0; i<connexion->server_size/nb_groups; i++) {
+    int src = (nb_groups*i)+my_range;
+    int tag = DEFAULT_TAG;
+    int ierr = MPI_Irecv(&recv_buffer[recv_count*i], recv_count, MPI_BYTE, src, tag, connexion->server, &reqs[i]);
+    assert(ierr == MPI_SUCCESS);
+  }
+  MPI_Waitall(connexion->server_size/nb_groups, reqs, MPI_STATUSES_IGNORE);
+}
+
 void pub_server_connect_(char *service_name){
   char port_name[MPI_MAX_PORT_NAME];
   MPI_Comm client;
@@ -539,57 +749,62 @@ int pub_send_data_(char *service_name){
   return ENOERR; 
 }
 
-void pub_server_send_sz(long size){
+void pub_server_send_sz(size_t size){
+  assert(server_conn);
   int k = server_conn->server_rank;
-  conn_server_send_data(server_conn, &size, sizeof(long), 99, k);
+  conn_server_send_data(server_conn, &size, sizeof(size), 99, k);
 }
 
-void pub_server_send_data(char *buff, long size){
+void pub_server_send_data(void*buff, size_t size){
+  assert(server_conn);
   int k = server_conn->server_rank;
   conn_server_send_data(server_conn, buff, size, 100, k);
 }
 
-void pub_server_send_data2(char *buff, long size, int tag){
+void pub_server_send_data2(void *buff, size_t size, int tag){
+  assert(server_conn);
   int k = server_conn->server_rank;
   conn_server_send_data(server_conn, buff, size, tag, k);
 }
 
-long pub_server_recv_sz(){
-  char buff[16];
-  pub_server_recv_data(buff, 16);
-  return atol(buff);
-
+size_t pub_server_recv_sz(){
+  assert(server_conn);
+  size_t s;
+  pub_server_recv_data(&s, sizeof(s));
+  return s;
 }
 
-void pub_server_recv_data(char *buff, long size){
-    conn_server_recv_data(server_conn, buff, size, 100, server_conn->server_rank);
+void pub_server_recv_data(void *buff, size_t size){
+  assert(server_conn);
+  conn_server_recv_data(server_conn, buff, size, 100, server_conn->server_rank);
 }
 
-void pub_client_send_sz(long size){
-
-  char buff[16];
-  sprintf(buff, "%ld", size);
-  pub_client_send_data(buff, 16);
-
+void pub_client_send_sz(size_t size){
+  assert(client_conn);
+  pub_client_send_data(&size, sizeof(size));
 }
 
-void pub_client_send_data2(char *buff, long size, int tag){
+void pub_client_send_data2(void *buff, size_t size, int tag){
+  assert(client_conn);
   int k = client_conn->client_rank;
   conn_client_send_data(client_conn, buff, size, tag, k);
 }
 
-void pub_client_send_data(char *buff, long size){
+void pub_client_send_data(void *buff, size_t size){
+  assert(client_conn);
   int k = client_conn->client_rank;
   conn_client_send_data(client_conn, buff, size, 100, k);
 }
 
-long pub_client_recv_sz(void){
-  long k = -1;
-  conn_client_recv_data(client_conn, &k, sizeof(long), 99, client_conn->client_rank);
+size_t pub_client_recv_sz(void){
+  assert(client_conn);
+  size_t k = -1;
+  conn_client_recv_data(client_conn, &k, sizeof(k), 99, client_conn->client_rank);
   return k;
 }
 
-void pub_client_recv_data(char *buff, long size){
+void pub_client_recv_data(void *buff, size_t size){
+  assert(client_conn);
   conn_client_recv_data(client_conn, buff, size, 100, client_conn->client_rank);
 }
 

@@ -118,7 +118,7 @@ void conn_server_send_data(struct server_connection*connection,
 			   int tag,
 			   int dest);
 
-void pub_server_send_data2(char *buff, long size, int tag);
+void pub_server_send_data2(void *buff, size_t size, int tag);
 
 /* receive data from a client
  *  * (Currently for SYNC between server and client)
@@ -140,7 +140,7 @@ void conn_client_send_data(struct client_connection*connection,
                            int tag,
                            int dest);
 
-void pub_client_send_data2(char *buff, long size, int tag);
+void pub_client_send_data2(void *buff, size_t size, int tag);
 
 /* --------------  functions used for SCALE-LETKF ----------------- */
 
@@ -156,18 +156,18 @@ int pub_send_data1_(char *service_name);
 
 int pub_recv_data1_(char *service_name);
 
-void pub_server_send_sz(long size);
-void pub_server_send_data(char *buff, long size);
-long pub_server_recv_sz(void);
-void pub_server_recv_data(char *buff, long);
+void pub_server_send_sz(size_t size);
+void pub_server_send_data(void *buff, size_t size);
+size_t pub_server_recv_sz(void);
+void pub_server_recv_data(void *buff, size_t);
 
 
 void pub_netcdf_unpublish(void);
 
-void pub_client_send_sz(long size);
-void pub_client_send_data(char *buff, long size);
-long pub_client_recv_sz(void);
-void pub_client_recv_data(char *buff, long);
+void pub_client_send_sz(size_t size);
+void pub_client_send_data(void *buff, size_t size);
+size_t pub_client_recv_sz(void);
+void pub_client_recv_data(void *buff, size_t);
 void pub_netcdf_disconnect(void);
 
 struct file_buffer * pub_check_in_list(char *file_name);
@@ -210,5 +210,59 @@ void conn_client_allscatter_nb_data(struct client_connection*connection,
 void conn_server_allscatter_nb_data(struct server_connection*connection,
 				    void* send_buffer,
 				    int send_count);
+
+void pub_client_allscatter_range_data(struct client_connection*connexion,
+				    int nb_groups,
+				    char* recv_buffer,
+				    int recv_count);
+
+void pub_server_allscatter_range_data(struct server_connection*connexion,
+				      int nb_groups,
+				      char* send_buffer,
+				      int send_count);
+
+/* scatter a 2D array  */
+void pub_server_allscatter_2d_range_data(struct server_connection*connexion,
+					 int nb_groups,
+					 int* send_buffer,
+					 MPI_Datatype datatype,
+					 size_t buffer_size[2], // number of rows/columns
+					 int send_count, // number of rows/column to send
+					 int axis); // 0 -> send rows / 1-> send columns
+
+void pub_client_allscatter_2d_range_data(struct client_connection*connexion,
+				       int nb_groups,
+				       int* recv_buffer,
+				       MPI_Datatype datatype,
+				       size_t buffer_size[2],
+				       int recv_count,
+				       int axis); // 0 -> recv rows / 1-> recv columns
+
+
+void pub_server_allscatter_2d_col_range_data(struct server_connection*connexion,
+					     int nb_groups,
+					     int* send_buffer,
+					     MPI_Datatype datatype,
+					     size_t buffer_size[2],
+					     int col_send_count);
+void pub_client_allscatter_2d_col_range_data(struct client_connection*connexion,
+					   int nb_groups,
+					   int* recv_buffer,
+					   MPI_Datatype datatype,
+					   size_t buffer_size[2],
+					   int col_recv_count);
+
+void pub_server_allscatter_2d_row_range_data(struct server_connection*connexion,
+					     int nb_groups,
+					     int* send_buffer,
+					     MPI_Datatype datatype,
+					     size_t buffer_size[2],
+					     int row_send_count);
+void pub_client_allscatter_2d_row_range_data(struct client_connection*connexion,
+					   int nb_groups,
+					   int* recv_buffer,
+					   MPI_Datatype datatype,
+					   size_t buffer_size[2],
+					   int row_recv_count);
 
 #endif
