@@ -530,8 +530,8 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   real(r_dble) :: v3dgtmp(KMAX,IMAXB,JMAXB)
   real(r_dble) :: v2dgtmp(IMAXB,JMAXB)
 
-  call read_restart_par(filename,v3dg,v2dg)
-  return
+!  call read_restart_par(filename,v3dg,v2dg)
+!  return
 
   is = 1
   ie = IMAX
@@ -569,28 +569,30 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   RETURN
 END SUBROUTINE read_restart
 !-----------------------------------------------------------------------
-SUBROUTINE read_restart_par(filename,v3dg,v2dg)
-  use common_mpi_scale, only: &
-    MPI_COMM_a
+SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
+!  use common_mpi_scale, only: &
+!    MPI_COMM_a
   use scale_process, only: &
     PRC_myrank
   use scale_les_process, only: &
-    PRC_2Drank,  &
-    PRC_PERIODIC_X, PRC_PERIODIC_Y, &
-    PRC_HAS_W,  &
-    PRC_HAS_E,  &
-    PRC_HAS_S,  &
-    PRC_HAS_N
+    PRC_2Drank
+!    PRC_PERIODIC_X, PRC_PERIODIC_Y, &
+!    PRC_HAS_W,  &
+!    PRC_HAS_E,  &
+!    PRC_HAS_S,  &
+!    PRC_HAS_N
   use scale_grid_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
+  use common_mpi, only: myrank
   use pnetcdf
   IMPLICIT NONE
 
   CHARACTER(*),INTENT(IN) :: filename
   REAL(RP),INTENT(OUT) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
+  integer,intent(in) :: comm
   integer :: iv3d,iv2d,ncid
 
   integer :: err, varid, req, reqs(1), sts(1)
@@ -603,15 +605,14 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg)
   count(1) = KMAX
   count(2) = IMAX
   count(3) = JMAX
-  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
-  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
-
-  if (.NOT. PRC_HAS_W) start(2) = IHALO + 1
-  if (.NOT. PRC_HAS_S) start(3) = JHALO + 1
+  start(2) = start(2) + IHALO
+  start(3) = start(3) + JHALO
+!  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
+!  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
 
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is PnetCDF reading a file ',trim(filename)//".nc"
 
-  err = nfmpi_open(MPI_COMM_a, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)
+  err = nfmpi_open(comm, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
@@ -630,7 +631,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg)
     err = nfmpi_inq_varid(ncid, trim(v2d_name(iv2d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-    err = nfmpi_iget_vara_double(ncid, varid, start, count, v2dg(:,:,iv2d), req)
+    err = nfmpi_iget_vara_double(ncid, varid, start(2:3), count(2:3), v2dg(:,:,iv2d), req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_get_vara_double_all '//' '//nfmpi_strerror(err)
   end do
@@ -751,8 +752,8 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   real(r_dble) :: v3dgtmp(KMAX,IMAXB,JMAXB)
   real(r_dble) :: v2dgtmp(IMAXB,JMAXB)
 
-  call write_restart_par(filename,v3dg,v2dg)
-  return
+!  call write_restart_par(filename,v3dg,v2dg)
+!  return
 
   is = 1
   ie = IMAX
@@ -797,28 +798,30 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
 END SUBROUTINE write_restart
 
 !-----------------------------------------------------------------------
-SUBROUTINE write_restart_par(filename,v3dg,v2dg)
-  use common_mpi_scale, only: &
-    MPI_COMM_a
+SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
+!  use common_mpi_scale, only: &
+!    MPI_COMM_a
   use scale_process, only: &
     PRC_myrank
   use scale_les_process, only: &
-    PRC_2Drank,  &
-    PRC_PERIODIC_X, PRC_PERIODIC_Y, &
-    PRC_HAS_W,  &
-    PRC_HAS_E,  &
-    PRC_HAS_S,  &
-    PRC_HAS_N
+    PRC_2Drank
+!    PRC_PERIODIC_X, PRC_PERIODIC_Y, &
+!    PRC_HAS_W,  &
+!    PRC_HAS_E,  &
+!    PRC_HAS_S,  &
+!    PRC_HAS_N
   use scale_grid_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
+  use common_mpi, only: myrank
   use pnetcdf
   implicit none
 
   CHARACTER(*),INTENT(IN) :: filename
   REAL(RP),INTENT(INOUT) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP),INTENT(INOUT) :: v2dg(nlon,nlat,nv2d)
+  integer,intent(in) :: comm
   integer :: iv3d,iv2d,ncid
 
   integer :: err, varid, req, reqs(1), sts(1)
@@ -831,15 +834,14 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg)
   count(1) = KMAX
   count(2) = IMAX
   count(3) = JMAX
-  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
-  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
-
-  if (.NOT. PRC_HAS_W) start(2) = IHALO + 1
-  if (.NOT. PRC_HAS_S) start(3) = JHALO + 1
+  start(2) = start(2) + IHALO
+  start(3) = start(3) + JHALO
+!  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
+!  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
 
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is PnetCDF writing a file ',trim(filename)//".nc"
 
-  err = nfmpi_open(MPI_COMM_a, trim(filename)//".nc", NF_WRITE, MPI_INFO_NULL, ncid)
+  err = nfmpi_open(comm, trim(filename)//".nc", NF_WRITE, MPI_INFO_NULL, ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
@@ -858,7 +860,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg)
     err = nfmpi_inq_varid(ncid, trim(v2d_name(iv2d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-    err = nfmpi_iput_vara_double(ncid, varid, start, count, v2dg(:,:,iv2d), req)
+    err = nfmpi_iput_vara_double(ncid, varid, start(2:3), count(2:3), v2dg(:,:,iv2d), req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iput_vara_double '//' '//nfmpi_strerror(err)
   end do
@@ -926,6 +928,69 @@ SUBROUTINE read_topo(filename,topo)
 
   RETURN
 END SUBROUTINE read_topo
+
+!-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+SUBROUTINE read_topo_par(filename,topo,comm)
+  use scale_process, only: &
+    PRC_myrank
+  use scale_les_process, only: &
+    PRC_2Drank
+!    PRC_PERIODIC_X, PRC_PERIODIC_Y
+  use scale_grid_index, only: &
+    IHALO, JHALO, &
+    IMAX, JMAX
+  use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
+  use common_mpi, only: myrank
+  use pnetcdf
+  IMPLICIT NONE
+
+  CHARACTER(*),INTENT(IN) :: filename
+  REAL(RP),INTENT(OUT) :: topo(nlon,nlat)
+  integer,intent(in) :: comm
+
+  character(len=12) :: filesuffix = '.pe000000.nc'
+  integer :: ncid
+
+  integer :: err, varid, req, reqs(1), sts(1)
+  integer(KIND=MPI_OFFSET_KIND) :: start(2), count(2)
+
+  ! calculate subarray's start() and count() to the global variables
+  start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+  start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+  count(1) = IMAX
+  count(2) = JMAX
+  start(1) = start(1) + IHALO
+  start(2) = start(2) + JHALO
+!  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
+!  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
+
+  write (filesuffix(4:9),'(I6.6)') PRC_myrank
+  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is PnetCDF reading a file ',trim(filename)//".nc"
+
+  err = nfmpi_open(comm, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
+
+  write(6,'(1x,A,A15)') '*** Read 2D var: ', 'TOPO'
+  err = nfmpi_inq_varid(ncid, 'TOPO', varid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+  err = nfmpi_iget_vara_double(ncid, varid, start, count, topo, req)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_get_vara_double_all '//' '//nfmpi_strerror(err)
+
+  err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+
+  err = nfmpi_close(ncid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
+
+  RETURN
+END SUBROUTINE read_topo_par
 
 
 

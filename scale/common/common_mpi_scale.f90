@@ -341,7 +341,7 @@ subroutine set_common_mpi_grid
 !  END DO
 
   if (myrank_e == lastmem_rank_e) then
-    call read_topo(LETKF_TOPO_IN_BASENAME, topo)
+    call read_topo_par(LETKF_TOPO_IN_BASENAME, topo, MPI_COMM_d)
     v3dg(1,:,:,3) = topo
 
 !print *, v3dg(1,:,:,3)
@@ -1040,7 +1040,7 @@ subroutine read_ens_mpi(file,v3d,v2d)
     if (im >= 1 .and. im <= MEMBER) then
       call file_member_replace(im, file, filename)
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
-      call read_restart(filename,v3dg,v2dg)
+      call read_restart_par(filename,v3dg,v2dg,MPI_COMM_d)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1124,7 +1124,7 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
   rrtimer00=rrtimer
 
 
-      call write_restart(filename,v3dg,v2dg)
+      call write_restart_par(filename,v3dg,v2dg,MPI_COMM_d)
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
@@ -1491,7 +1491,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
   IF(myrank_e == lastmem_rank_e) THEN
     call state_trans_inv(v3dg)
-    call write_restart(file_mean,v3dg,v2dg)
+    call write_restart_par(file_mean,v3dg,v2dg,MPI_COMM_d)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1546,7 +1546,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
   IF(myrank_e == lastmem_rank_e) THEN
 !    call state_trans_inv(v3dg)             !!
-    call write_restart(file_sprd,v3dg,v2dg)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
+    call write_restart_par(file_sprd,v3dg,v2dg,MPI_COMM_d)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)

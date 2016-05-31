@@ -171,14 +171,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         work2dg = -1.0d0 * COV_INFL_MUL
       ELSE
 !        WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
-        call read_restart(inflfile,work3dg,work2dg)
+        call read_restart_par(inflfile,work3dg,work2dg,MPI_COMM_d)
 !        call state_trans(work3dg)
       END IF
 
 !      INQUIRE(FILE=inflfile_0,EXIST=ex)
 !      IF(ex) THEN
 !!        WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
-!        call read_restart(inflfile,work3dg,work2dg)
+!        call read_restart_par(inflfile,work3dg,work2dg,MPI_COMM_d)
 !!        call state_trans(work3dg)
 !      ELSE
 !        WRITE(6,'(2A)') '!!WARNING: no such file exist: ',inflfile
@@ -321,7 +321,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !    IF(myrank_e == lastmem_rank_e) THEN
 !!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
 !!      call state_trans_inv(work3dg)
-!      call write_restart(inflfile,work3dg,work2dg)
+!      call write_restart_par(inflfile,work3dg,work2dg,MPI_COMM_d)
 !    END IF
     DEALLOCATE(work3d,work2d)
   END IF
@@ -333,7 +333,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !    IF(myrank_e == lastmem_rank_e) THEN
 !!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',inflfile,'.pe',proc2mem(2,1,myrank+1),'.nc'
 !!      call state_trans_inv(work3dg)
-!      call write_restart(inflfile,work3dg,work2dg)
+!      call write_restart_par(inflfile,work3dg,work2dg,MPI_COMM_d)
 !    END IF
     DEALLOCATE(work3da,work2da)
   END IF
