@@ -102,7 +102,7 @@ res=$? && ((res != 0)) && exit $res
 #===============================================================================
 
 ######
-echo "[$(datetime_now)] cycle_step: $@: end"
+echo "[$(datetime_now)] cycle_step: end"
 ######
 
 exit 0

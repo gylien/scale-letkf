@@ -14,7 +14,7 @@ if (($# < 6)); then
 
 [post_scale.sh] Post-process the SCALE model outputs.
 
-Usage: $0 MYRANK STIME MEM FCSTLEN TMPDIR LOG_OPT [SCPCALL]
+Usage: $0 MYRANK STIME MEM FCSTLEN TMPDIR LOG_OPT [SCPCALL] [DELETE_MEMBER]
 
   MYRANK   My rank number (not used)
   STIME    Start time (format: YYYYMMDDHHMMSS)
@@ -23,6 +23,7 @@ Usage: $0 MYRANK STIME MEM FCSTLEN TMPDIR LOG_OPT [SCPCALL]
   TMPDIR   Temporary directory to run the model
   LOG_OPT
   SCPCALL  Called from which script? (fcst/cycle)
+  DELETE_MEMBER
 
 EOF
   exit 1
@@ -34,7 +35,8 @@ MEM="$1"; shift
 FCSTLEN="$1"; shift
 TMPDIR="$1"; shift
 LOG_OPT="$1"; shift
-SCPCALL="${1:-cycle}"
+SCPCALL="${1:-cycle}"; shift
+DELETE_MEMBER="${1:-0}"
 
 ATIME=$(datetime $STIME $LCYCLE s)
 
@@ -59,6 +61,15 @@ if [ "$SCPCALL" = 'cycle' ]; then
   if ((LOG_OPT <= 3)); then
     if [ -f "$TMPDIR/run.conf" ]; then
       mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/scale/${MEM}_run.conf
+    fi
+  fi
+
+  if ((DELETE_MEMBER == 1)) && [ "$MEM" != 'mean' ]; then
+    if [ -d "$TMPOUT/${STIME}/gues/${MEM}" ]; then
+      rm -f $TMPOUT/${STIME}/gues/${MEM}/*
+    fi
+    if [ -d "$TMPOUT/${STIME}/anal/${MEM}" ]; then
+      rm -f $TMPOUT/${STIME}/anal/${MEM}/*
     fi
   fi
 

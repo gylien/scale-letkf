@@ -25,6 +25,10 @@ DISK_MODE_TOPO_LANDUSE_DB=${DISK_MODE_TOPO_LANDUSE_DB:-2}
 BDYINT=${BDYINT:-$LCYCLE}
 BDYCYCLE_INT=${BDYCYCLE_INT:-$BDYINT}
 
+ADAPTINFL=${ADAPTINFL:-0}
+RTPS_INFL_OUT=${RTPS_INFL_OUT:-0}
+NOBS_OUT=${NOBS_OUT:-0}
+
 #===============================================================================
 # Definition of sub-directories
 

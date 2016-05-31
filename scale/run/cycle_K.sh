@@ -142,7 +142,7 @@ cat > $jobscrp << EOF
 #PJM --rsc-list "node=${NNODES_real}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
 #PJM --rsc-list "rscgrp=${rscgrp}"
-##PJM --rsc-list "node-quota=29G"
+#PJM --rsc-list "node-quota=29G"
 ##PJM --mpi "shape=${NNODES_real}"
 #PJM --mpi "proc=$NNODES"
 #PJM --mpi assign-online-node
