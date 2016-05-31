@@ -530,9 +530,6 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   real(r_dble) :: v3dgtmp(KMAX,IMAXB,JMAXB)
   real(r_dble) :: v2dgtmp(IMAXB,JMAXB)
 
-!  call read_restart_par(filename,v3dg,v2dg)
-!  return
-
   is = 1
   ie = IMAX
   js = 1
@@ -610,7 +607,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 !  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
 !  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
 
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is PnetCDF reading a file ',trim(filename)//".nc"
+  write (6,'(A,I6.6,3A,6I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(3), count(3) =', start, count
 
   err = nfmpi_open(comm, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)
   if ( err .NE. NF_NOERR ) &
@@ -752,9 +749,6 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   real(r_dble) :: v3dgtmp(KMAX,IMAXB,JMAXB)
   real(r_dble) :: v2dgtmp(IMAXB,JMAXB)
 
-!  call write_restart_par(filename,v3dg,v2dg)
-!  return
-
   is = 1
   ie = IMAX
   js = 1
@@ -839,7 +833,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 !  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
 !  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
 
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is PnetCDF writing a file ',trim(filename)//".nc"
+  write (6,'(A,I6.6,3A,6I6)') 'MYRANK ',myrank,' is writing a file ',trim(filename)//'.nc', ' >> PnetCDF start(3), count(3) =', start, count
 
   err = nfmpi_open(comm, trim(filename)//".nc", NF_WRITE, MPI_INFO_NULL, ncid)
   if ( err .NE. NF_NOERR ) &
@@ -950,7 +944,6 @@ SUBROUTINE read_topo_par(filename,topo,comm)
   REAL(RP),INTENT(OUT) :: topo(nlon,nlat)
   integer,intent(in) :: comm
 
-  character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: ncid
 
   integer :: err, varid, req, reqs(1), sts(1)
@@ -966,8 +959,7 @@ SUBROUTINE read_topo_par(filename,topo,comm)
 !  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
 !  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
 
-  write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is PnetCDF reading a file ',trim(filename)//".nc"
+  write (6,'(A,I6.6,3A,4I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(2), count(2) =', start, count
 
   err = nfmpi_open(comm, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)
   if ( err .NE. NF_NOERR ) &
