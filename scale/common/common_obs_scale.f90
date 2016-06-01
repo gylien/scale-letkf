@@ -46,19 +46,17 @@ MODULE common_obs_scale
   IMPLICIT NONE
   PUBLIC
 
-!  INTEGER,PARAMETER :: nid_obs=11
   INTEGER,PARAMETER :: nid_obs=15 !H08
-
+  INTEGER,PARAMETER :: nid_obs_varlocal=9 !H08
+!
+! conventional observations
+!
   INTEGER,PARAMETER :: id_u_obs=2819
   INTEGER,PARAMETER :: id_v_obs=2820
   INTEGER,PARAMETER :: id_t_obs=3073
   INTEGER,PARAMETER :: id_tv_obs=3074
   INTEGER,PARAMETER :: id_q_obs=3330
   INTEGER,PARAMETER :: id_rh_obs=3331
-!
-! Himawari-8 (H08) observations
-!
-  INTEGER,PARAMETER :: id_H08IR_obs=8800
 !
 ! surface observations codes > 9999
 !
@@ -73,52 +71,22 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: id_radar_ref_obs=4001
   INTEGER,PARAMETER :: id_radar_vr_obs=4002
   INTEGER,PARAMETER :: id_radar_prh_obs=4003
-
-!!!!!! goes to namelist !!!!!!
-  LOGICAL,PARAMETER :: USE_RADAR_REF =.TRUE.  ! not coded...
-  LOGICAL,PARAMETER :: USE_RADAR_VR  =.TRUE.  !
-  LOGICAL,PARAMETER :: USE_RADAR_PRH =.TRUE.  !
-
-  REAL(r_size),PARAMETER :: UNDEF_OBS = 9.99d9           !Code that will be assigned to obs outside the domain.(so we don't need qc0 array)
-!  INTEGER,PARAMETER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than 0.
-!  REAL(r_size),PARAMETER :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
-!  REAL(r_size),PARAMETER :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
-
-!  REAL(r_size),PARAMETER :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
-
-  REAL(r_size),SAVE :: MIN_RADAR_REF
-  REAL(r_size),SAVE :: RADAR_REF_THRES
-
-  REAL(r_size) :: PS_ADJUST_THRES = 100.d0
-
-  !These 2 flags affects the computation of model reflectivity and 
-  !radial velocity. 
-!  INTEGER,PARAMETER :: INTERPOLATION_TECHNIQUE=1
-!  INTEGER,PARAMETER :: METHOD_REF_CALC=3
-
-!  LOGICAL,PARAMETER :: USE_TERMINAL_VELOCITY=.FALSE.
-
-  ! PARAMETERS FOR RADAR DATA ASSIMILATION
-!  INTEGER, PARAMETER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2)
-!!!!!!
-
-
-
-
-!!!!!!  define the var_local category ???
-!!!!!!
-
+!
+! Himawari-8 (H08) observations
+!
+  INTEGER,PARAMETER :: id_H08IR_obs=8800
 
   INTEGER,PARAMETER :: elem_uid(nid_obs)= &
      (/id_u_obs, id_v_obs, id_t_obs, id_tv_obs, id_q_obs, id_rh_obs, &
        id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs, &
        id_H08IR_obs, id_tclon_obs, id_tclat_obs, id_tcmip_obs/)
-!       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs/)
 
   CHARACTER(3),PARAMETER :: obelmlist(nid_obs)= &
-!     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH'/)
      (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH',&
        'H08', 'TCX', 'TCY', 'TCP'/)
+
+  CHARACTER(3),PARAMETER :: obelmlist_varlocal(nid_obs_varlocal)= &
+     (/'WND', '  T', 'MOI', ' PS', 'PRC', 'TCV', 'REF', ' Vr', 'H08'/)
 
 !  INTEGER,PARAMETER :: nobtype = 22
   INTEGER,PARAMETER :: nobtype = 24 ! H08
@@ -128,7 +96,6 @@ MODULE common_obs_scale
        'SPSSMI', 'SYNDAT', 'ERS1DA', 'GOESND', 'QKSWND', &
        'MSONET', 'GPSIPW', 'RASSDA', 'WDSATR', 'ASCATW', &
        'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL'/) ! H08
-!       'TMPAPR', 'PHARAD'/)
 
   INTEGER,PARAMETER :: max_obs_info_meta = 3 ! maximum array size for type(obs_info)%meta
 
@@ -167,40 +134,9 @@ MODULE common_obs_scale
   END TYPE obs_da_value
   !!!!!! need to add %err and %dat for obsda2 if they can be determined in letkf_obs.f90 !!!!!!
 
-
-
-  INTEGER,PARAMETER :: nslots=1 ! number of time slots for 4D-LETKF
-  INTEGER,PARAMETER :: nbslot=1 ! basetime slot
-  REAL(r_size),PARAMETER :: slotint=5.0d0 ! time interval between slots in second
-
-!  INTEGER,PARAMETER :: nobsformats=2
   INTEGER,PARAMETER :: nobsformats=3 ! H08
   CHARACTER(30) :: obsformat_name(nobsformats) = &
-!    (/'CONVENTIONAL', 'RADAR'/)
     (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR'/)
-
-!!  INTEGER,PARAMETER :: nobsfiles=2          !!!!!! goes to namelist ?????
-!  INTEGER,PARAMETER :: nobsfiles=3 ! H08     !!!!!! goes to namelist ?????
-!  CHARACTER(30) :: obsfile(nobsfiles) = &   !!!!
-!!    (/'obs.dat', 'radar.dat'/)              !!!!
-!    (/'obs.dat  ', 'radar.dat', 'H08.dat  '/)  ! H08   !!!!
-!  INTEGER :: obsfileformat(nobsfiles) = &   !!!!
-!!    (/1, 2/)                                !!!!
-!    (/1, 2, 3/)  ! H08                     !!!!
-
-!  CHARACTER(21) :: obsdafile='obsda.0000.000000.dat'
-
-
-
-!  TYPE obs_csort
-!    INTEGER :: nobs = 0
-!    LOGICAL :: sorted = .false.
-!    INTEGER,ALLOCATABLE :: idx(:)
-!    INTEGER,ALLOCATABLE :: nobsgrd(:,:)
-!  END TYPE obs_csort
-
-
-
 
   INTEGER,PARAMETER :: iqc_good=0
   INTEGER,PARAMETER :: iqc_gross_err=5
@@ -215,8 +151,94 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: iqc_otype=90
   INTEGER,PARAMETER :: iqc_time=91
 
+  REAL(r_size),SAVE :: MIN_RADAR_REF
+  REAL(r_size),SAVE :: RADAR_REF_THRES
+
+!  REAL(r_size),PARAMETER :: UNDEF_OBS = 9.99d9           !Code that will be assigned to obs outside the domain.(so we don't need qc0 array)
+
+!  TYPE obs_csort
+!    INTEGER :: nobs = 0
+!    LOGICAL :: sorted = .false.
+!    INTEGER,ALLOCATABLE :: idx(:)
+!    INTEGER,ALLOCATABLE :: nobsgrd(:,:)
+!  END TYPE obs_csort
+
 CONTAINS
 
+!-----------------------------------------------------------------------
+! Convert a raw obsID to a sequential obsID (1 - nid_obs)
+!-----------------------------------------------------------------------
+function uid_obs(id_obs)
+  implicit none
+  integer :: id_obs
+  integer :: uid_obs
+
+  select case(id_obs)
+  case(id_u_obs)
+    uid_obs = 1
+  case(id_v_obs)
+    uid_obs = 2
+  case(id_t_obs)
+    uid_obs = 3
+  case(id_tv_obs)
+    uid_obs = 4
+  case(id_q_obs)
+    uid_obs = 5
+  case(id_rh_obs)
+    uid_obs = 6
+  case(id_ps_obs)
+    uid_obs = 7
+  case(id_rain_obs)
+    uid_obs = 8
+  case(id_radar_ref_obs)
+    uid_obs = 9
+  case(id_radar_vr_obs)
+    uid_obs = 10
+  case(id_radar_prh_obs)
+    uid_obs = 11
+  case(id_h08ir_obs) ! H08
+    uid_obs = 12     ! H08
+  case(id_tclon_obs)
+    uid_obs = 13
+  case(id_tclat_obs)
+    uid_obs = 14
+  case(id_tcmip_obs)
+    uid_obs = 15
+  case default
+    uid_obs = -1     ! error
+  end select
+end function uid_obs
+!-----------------------------------------------------------------------
+! Convert a raw obsID to a sequential obsID for variable localization (1 - nid_obs_verlocal)
+!-----------------------------------------------------------------------
+function uid_obs_varlocal(id_obs)
+  implicit none
+  integer :: id_obs
+  integer :: uid_obs_varlocal
+
+  select case(id_obs)
+  case(id_u_obs, id_v_obs)
+    uid_obs_varlocal = 1
+  case(id_t_obs, id_tv_obs)
+    uid_obs_varlocal = 2
+  case(id_q_obs, id_rh_obs)
+    uid_obs_varlocal = 3
+  case(id_ps_obs)
+    uid_obs_varlocal = 4
+  case(id_rain_obs)
+    uid_obs_varlocal = 5
+  case(id_tclon_obs, id_tclat_obs, id_tcmip_obs)
+    uid_obs_varlocal = 6
+  case(id_radar_ref_obs, id_radar_prh_obs)
+    uid_obs_varlocal = 7
+  case(id_radar_vr_obs)
+    uid_obs_varlocal = 8
+  case(id_h08ir_obs)      ! H08
+    uid_obs_varlocal = 9  ! H08
+  case default
+    uid_obs_varlocal = -1 ! error
+  end select
+end function uid_obs_varlocal
 
 !-----------------------------------------------------------------------
 !
@@ -2326,7 +2348,8 @@ SUBROUTINE read_obs_radar(cfile,obs)
     obs%lev(n) = REAL(wk(4),r_size)
     obs%dat(n) = REAL(wk(5),r_size)
     obs%err(n) = REAL(wk(6),r_size)
-    obs%typ(n) = NINT(wk(7))
+!    obs%typ(n) = NINT(wk(7))
+    obs%typ(n) = 22
     obs%dif(n) = 0.0d0
   END DO
   CLOSE(iunit)
@@ -2461,50 +2484,6 @@ subroutine write_obs_all(obs, missing, file_suffix)
 
   return
 end subroutine write_obs_all
-
-!-----------------------------------------------------------------------
-! 
-!-----------------------------------------------------------------------
-FUNCTION uid_obs(id_obs)
-  IMPLICIT NONE
-  INTEGER :: id_obs
-  INTEGER :: uid_obs
-
-  SELECT CASE(id_obs)
-  CASE(id_u_obs)
-    uid_obs = 1
-  CASE(id_v_obs)
-    uid_obs = 2
-  CASE(id_t_obs)
-    uid_obs = 3
-  CASE(id_tv_obs)
-    uid_obs = 4
-  CASE(id_q_obs)
-    uid_obs = 5
-  CASE(id_rh_obs)
-    uid_obs = 6
-  CASE(id_ps_obs)
-    uid_obs = 7
-  CASE(id_rain_obs)
-    uid_obs = 8
-  CASE(id_radar_ref_obs)
-    uid_obs = 9
-  CASE(id_radar_vr_obs)
-    uid_obs = 10
-  CASE(id_radar_prh_obs)
-    uid_obs = 11
-  CASE(id_H08IR_obs) ! H08
-    uid_obs = 12     ! H08
-  CASE(id_tclon_obs)
-    uid_obs = 13
-  CASE(id_tclat_obs)
-    uid_obs = 14
-  CASE(id_tcmip_obs)
-    uid_obs = 15
-  CASE DEFAULT
-    uid_obs = -1 ! error
-  END SELECT
-END FUNCTION uid_obs
 !
 !-----------------------------------------------------------------------
 !   TC vital obs subroutines by T. Honda (03/28/2016)

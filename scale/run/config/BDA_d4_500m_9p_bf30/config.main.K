@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d4_1km_100mem_418" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d4_500m_100mem_431" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -23,7 +23,7 @@ DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
 
-OBS="/volume63/data/hp150019/gylien/obs/QCED_1KM_v4_v500M_attn0.01" # directory of observation data in LETKF obs format
+OBS="/volume63/data/hp150019/gylien/obs/QCED_500M_v4_v500M_attn0.01" # directory of observation data in LETKF obs format
 OBSNCEP=                                                 # directory of observation data in NCEP BUFR format
 
 #===============================================================================
@@ -74,12 +74,12 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=100         # Ensemble size
 
-NNODES=404         # Number of nodes
+NNODES=27          # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
-SCALE_NP=4         # Number of processes to run SCALE
+SCALE_NP=9         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -148,6 +148,7 @@ SCP_HOSTPREFIX=''
 #SCP_HOSTPREFIX="XXXX:"
 
 SCP_THREAD=8
+TAR_THREAD=8
 
 PYTHON="python"
 

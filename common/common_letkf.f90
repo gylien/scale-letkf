@@ -35,14 +35,15 @@ CONTAINS
 !     rloc(nobs)       : localization weighting function
 !     dep(nobs)        : observation departure (yo-Hxb)
 !     parm_infl        : covariance inflation parameter
+!     rdiag_wloc       : (optional) flag indicating that rdiag = rdiag / rloc    !GYL
 !     minfl            : (optional) minimum covariance inflation parameter       !GYL
 !   OUTPUT
 !     parm_infl        : updated covariance inflation parameter
 !     trans(nbv,nbv)   : transformation matrix
 !     transm(nbv)      : (optional) transformation matrix mean                   !GYL
-!     pa(nbv,nbv)      : (optional) analysis covariance matrix in ensemble space !GYL
+!     pao(nbv,nbv)      : (optional) analysis covariance matrix in ensemble space !GYL
 !=======================================================================
-SUBROUTINE letkf_core(nbv,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans,transm,pao,minfl)
+SUBROUTINE letkf_core(nbv,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans,transm,pao,rdiag_wloc,minfl)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: nbv                     !GYL
   INTEGER,INTENT(IN) :: nobs
@@ -55,6 +56,7 @@ SUBROUTINE letkf_core(nbv,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans,transm,
   REAL(r_size),INTENT(OUT) :: trans(nbv,nbv)
   REAL(r_size),INTENT(OUT),OPTIONAL :: transm(nbv)
   REAL(r_size),INTENT(OUT),OPTIONAL :: pao(nbv,nbv)
+  LOGICAL,INTENT(IN),OPTIONAL :: rdiag_wloc     !GYL
   REAL(r_size),INTENT(IN),OPTIONAL :: minfl     !GYL
 
   REAL(r_size) :: hdxb_rinv(nobsl,nbv)
@@ -67,7 +69,12 @@ SUBROUTINE letkf_core(nbv,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans,transm,
   REAL(r_size) :: rho
   REAL(r_size) :: parm(4),sigma_o,gain
   REAL(r_size),PARAMETER :: sigma_b = 0.04d0 !error stdev of parm_infl
+  LOGICAL :: rdiag_wloc_
   INTEGER :: i,j,k
+
+  rdiag_wloc_ = .FALSE.                            !GYL
+  IF(present(rdiag_wloc)) rdiag_wloc_ = rdiag_wloc !GYL
+
   IF(nobsl == 0) THEN
     trans = 0.0d0
     DO i=1,nbv
@@ -87,11 +94,19 @@ SUBROUTINE letkf_core(nbv,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans,transm,
 !-----------------------------------------------------------------------
 !  hdxb Rinv
 !-----------------------------------------------------------------------
-  DO j=1,nbv
-    DO i=1,nobsl
-      hdxb_rinv(i,j) = hdxb(i,j) / rdiag(i) * rloc(i)
+  IF(rdiag_wloc_) THEN                             !GYL
+    DO j=1,nbv                                    !GYL
+      DO i=1,nobsl                                !GYL
+        hdxb_rinv(i,j) = hdxb(i,j) / rdiag(i)     !GYL
+      END DO                                      !GYL
+    END DO                                        !GYL
+  ELSE                                            !GYL
+    DO j=1,nbv
+      DO i=1,nobsl
+        hdxb_rinv(i,j) = hdxb(i,j) / rdiag(i) * rloc(i)
+      END DO
     END DO
-  END DO
+  END IF                                          !GYL
 !-----------------------------------------------------------------------
 !  hdxb^T Rinv hdxb
 !-----------------------------------------------------------------------
@@ -197,9 +212,15 @@ SUBROUTINE letkf_core(nbv,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans,transm,
 !  Inflation estimation
 !-----------------------------------------------------------------------
   parm = 0.0d0
-  DO i=1,nobsl
-    parm(1) = parm(1) + dep(i)*dep(i)/rdiag(i) * rloc(i)
-  END DO
+  IF(rdiag_wloc_) THEN                             !GYL
+    DO i=1,nobsl                                  !GYL
+      parm(1) = parm(1) + dep(i)*dep(i)/rdiag(i)  !GYL
+    END DO                                        !GYL
+  ELSE                                            !GYL
+    DO i=1,nobsl
+      parm(1) = parm(1) + dep(i)*dep(i)/rdiag(i) * rloc(i)
+    END DO
+  END IF                                          !GYL
   DO j=1,nbv
     DO i=1,nobsl
       parm(2) = parm(2) + hdxb_rinv(i,j) * hdxb(i,j)

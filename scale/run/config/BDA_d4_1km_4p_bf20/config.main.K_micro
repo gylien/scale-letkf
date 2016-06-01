@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_100mem_115" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d4_1km_100mem_410_test" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -16,24 +16,24 @@ MODELDIR="$DIR/../../bin/K"
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO=
-DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/BDA_d2_5km_64p_bf16"
+DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_100mem_122/const/topo"
 DATA_LANDUSE=
-DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2_5km_100mem_tint-1hr"
+DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_100mem_122"
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
 
-OBS="/volume63/data/hp150019/gylien/obs/QCED_1KM_v4"     # directory of observation data in LETKF obs format
+OBS="/volume63/data/hp150019/gylien/obs/QCED_1KM_v4_v500M_attn0.01" # directory of observation data in LETKF obs format
 OBSNCEP=                                                 # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='DEM50M'    # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='LU100M' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -46,10 +46,10 @@ BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain sett
 BDY_ENS=1               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 
-BDYINT=3600
-BDYCYCLE_INT=21600
+BDYINT=300
+BDYCYCLE_INT=300
 
-PARENT_REF_TIME=20130713000000
+PARENT_REF_TIME=20130713060000
 
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
@@ -72,14 +72,14 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=3           # Ensemble size
+MEMBER=10          # Ensemble size
 
-NNODES=36          # Number of nodes
+NNODES=44          # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
-SCALE_NP=9         # Number of processes to run SCALE
+SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -147,7 +147,7 @@ SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 
-SCP_THREAD=12
+SCP_THREAD=8
 
 PYTHON="python"
 
