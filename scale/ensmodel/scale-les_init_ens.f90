@@ -123,7 +123,7 @@ program scaleles_init_ens
 
 !-----------------------------------------------------------------------
 
-  call set_common_conf
+  call set_common_conf(nprocs)
   call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
   CALL MPI_BARRIER(universal_comm,ierr)

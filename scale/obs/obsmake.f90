@@ -28,7 +28,7 @@ PROGRAM obsmake
 ! Initial settings
 !-----------------------------------------------------------------------
 
-  CALL initialize_mpi
+  CALL initialize_mpi_scale
   rtimer00 = MPI_WTIME()
 
   WRITE(stdoutf(6:11), '(I6.6)') myrank
@@ -38,7 +38,7 @@ PROGRAM obsmake
 
 !-----------------------------------------------------------------------
 
-  call set_common_conf
+  call set_common_conf(nprocs)
 
   call read_nml_letkf
   call read_nml_letkf_obserr
@@ -111,7 +111,7 @@ PROGRAM obsmake
   WRITE(6,timer_fmt) '### TIMER(FINALIZE):',rtimer-rtimer00
   rtimer00=rtimer
 
-  CALL finalize_mpi
+  CALL finalize_mpi_scale
 
   STOP
 END PROGRAM obsmake

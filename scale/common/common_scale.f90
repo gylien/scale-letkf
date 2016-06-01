@@ -13,7 +13,7 @@ MODULE common_scale
 !$USE OMP_LIB
   USE common
   use common_nml
-  use common_mpi, only: nprocs, myrank
+!  use common_mpi, only: nprocs, myrank
 
 
 !  use scale_stdio
@@ -362,10 +362,11 @@ END SUBROUTINE set_common_scale
 
 
 
-subroutine set_common_conf
+subroutine set_common_conf(nprocs)
   use scale_stdio
 
   implicit none
+  integer, intent(in) :: nprocs
   character(len=H_MID), parameter :: MODELNAME = "SCALE-LETKF"
 
   ! setup standard I/O
@@ -516,6 +517,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     IHALO, JHALO, &
     IMAX, JMAX, KMAX, &
     IMAXB, JMAXB
+  use common_mpi, only: myrank
   use common_ncio
   IMPLICIT NONE
 
@@ -656,6 +658,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     IHALO, JHALO, &
     IMAX, JMAX, KMAX, &
     IMAXB, JMAXB
+  use common_mpi, only: myrank
   use common_ncio
   implicit none
 
@@ -726,6 +729,7 @@ SUBROUTINE read_topo(filename,topo)
     IHALO, JHALO, &
     IMAX, JMAX, &
     IMAXB, JMAXB
+  use common_mpi, only: myrank
   use common_ncio
   IMPLICIT NONE
 
@@ -779,6 +783,7 @@ SUBROUTINE read_history(filename,step,v3dg,v2dg)
   use scale_comm, only: &
       COMM_vars8, &
       COMM_wait
+  use common_mpi, only: myrank
   IMPLICIT NONE
 
   CHARACTER(*),INTENT(IN) :: filename
