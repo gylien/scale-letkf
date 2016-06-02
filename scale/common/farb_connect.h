@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2015, Advanced Institute for Computational Science, RIKEN
+ * Author: Jianwei Liao(liaotoad@gmail.com)
+ */
+
 #ifndef _CONNECTLIB_H
 #define _CONNECTLIB_H
 
@@ -265,4 +270,20 @@ void pub_client_allscatter_2d_row_range_data(struct client_connection*connexion,
 					   size_t buffer_size[2],
 					   int row_recv_count);
 
+/* scatter a 3D array  */
+void pub_server_allscatter_3d_range_data(struct server_connection*connexion,
+					 int nb_groups,
+					 int* send_buffer,
+					 MPI_Datatype datatype,
+					 size_t buffer_size[3], // size of the x/y/z dimensions
+					 int send_count, // number of rows/column to send
+					 int axis); // 0 -> send x / 1-> send y / 2-> send z
+
+void pub_client_allscatter_3d_range_data(struct client_connection*connexion,
+				       int nb_groups,
+				       int* recv_buffer,
+				       MPI_Datatype datatype,
+				       size_t buffer_size[3],
+				       int recv_count,
+				       int axis); // 0 -> recv x / 1-> recv y / 2 -> send z
 #endif

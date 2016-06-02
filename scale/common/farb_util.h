@@ -24,7 +24,7 @@ typedef struct buffer_node{
 struct file_buffer{
   char file_path[1024];         /* path of the file */
   char *buffer_pointer;         /* pointer of the buffer */
-  char **buffer_list;			/* buffer node list */
+  struct buffer_node *buffer_list; /* buffer node list */
   int buffer_size;              /* size of the buffer */
   char service_name[1024];		/* service name */
   char direction[8];			/* direction of send & recv */
@@ -46,8 +46,7 @@ int copy_buffer_file(struct file_buffer *src_fbuf, struct file_buffer *dst_fbuf)
 
 
 /*----------------- linked list (buffer node)--------------------------*/
-static struct buffer_node *buffer_node_tail;
-static struct buffer_node *buffer_node_curr;
+static struct buffer_node *buffer_node_curr __attribute__((unused));
 
 struct buffer_node* create_buffer_node_list(struct file_buffer *filebuf, int offset, char *ptr);
 
@@ -62,8 +61,8 @@ int get_buffer_list_size(struct file_buffer *filebuf);
 struct buffer_node *search_buffer_node(struct file_buffer *filebuf, int pos, struct buffer_node **prev);
 
 /*----------------- linked list (file buffer)--------------------------*/
-static struct file_buffer *head;
-static struct file_buffer *curr;
+static struct file_buffer *head __attribute__((unused));
+static struct file_buffer *curr __attribute__((unused));
 
 struct file_buffer* create_list(char *file_path);
 

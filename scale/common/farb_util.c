@@ -65,7 +65,7 @@ int read_from_buffer_node(struct file_buffer *fbuf, \
 int flush_data_to_disk(char *file_name, struct file_buffer *fbuf){
     printf("flush data to the disk %s\n", file_name);
     FILE *f = fopen(file_name, "wb");
-    struct buffer_node *node = (struct buffer_node*)fbuf->buffer_list;
+    struct buffer_node *node = fbuf->buffer_list;
     int ret, i = 0;
 
     fseek(f, 0, SEEK_END);
@@ -215,7 +215,7 @@ int delete_from_buffer_node_list(struct file_buffer *filebuf, int pos)
 }
 
 int delete_buffer_node_list(struct file_buffer *filebuf){
-    struct buffer_node *ptr = (struct buffer_node *)filebuf->buffer_list;
+    struct buffer_node *ptr = filebuf->buffer_list;
 	while(ptr != NULL)
 	{
 		buffer_node_curr = ptr->next;
@@ -231,7 +231,7 @@ int delete_buffer_node_list(struct file_buffer *filebuf){
 
 int get_buffer_list_size(struct file_buffer *filebuf){
     int i = 0;
-	buffer_node_curr = (struct buffer_node *)filebuf->buffer_list;
+	buffer_node_curr = filebuf->buffer_list;
 	while (buffer_node_curr != NULL){
 		i++;
 		buffer_node_curr = buffer_node_curr -> next;
@@ -242,7 +242,7 @@ int get_buffer_list_size(struct file_buffer *filebuf){
 struct buffer_node *search_buffer_node(struct file_buffer *filebuf, int pos, struct buffer_node **prev)
 {
     int i = 0;
-    struct buffer_node *node = (struct buffer_node *)filebuf->buffer_list;
+    struct buffer_node *node = filebuf->buffer_list;
     while (i < pos && node != NULL){
         if (prev != NULL)
 			*prev = node;
@@ -414,13 +414,13 @@ int delete_list(void)
     struct file_buffer *ptr = head;
     while(ptr != NULL)
     {
-        curr = ptr->next;	
-		delete_buffer_node_list(ptr);
-		
-		if (ptr->buffer_pointer != NULL)
-		  free(ptr->buffer_pointer);
-		free(ptr);
-		ptr = curr;
+        curr = ptr->next;
+	delete_buffer_node_list(ptr);
+
+	if (ptr->buffer_pointer != NULL)
+	  free(ptr->buffer_pointer);
+	free(ptr);
+	ptr = curr;
     }
     return 0;
 }
