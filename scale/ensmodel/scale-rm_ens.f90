@@ -132,7 +132,7 @@ program scaleles_ens
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------
-! Run SCALE-LES
+! Run SCALE-RM
 !-----------------------------------------------------------------------
 
   ! split MPI communicator for LETKF
@@ -194,7 +194,7 @@ program scaleles_ens
 
   CALL MPI_BARRIER(universal_comm,ierr)
   rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(SCALE_LES):',rtimer-rtimer00
+  WRITE(6,timer_fmt) '### TIMER(SCALE_RM):',rtimer-rtimer00
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------

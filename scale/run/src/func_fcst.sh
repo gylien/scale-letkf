@@ -13,13 +13,13 @@ setting () {
 nsteps=3
 stepname[1]='Run SCALE pp'
 stepexecdir[1]="$TMPRUN/scale_pp"
-stepexecname[1]="scale-les_pp_ens"
+stepexecname[1]="scale-rm_pp_ens"
 stepname[2]='Run SCALE init'
 stepexecdir[2]="$TMPRUN/scale_init"
-stepexecname[2]="scale-les_init_ens"
+stepexecname[2]="scale-rm_init_ens"
 stepname[3]='Run ensemble forecasts'
 stepexecdir[3]="$TMPRUN/scale"
-stepexecname[3]="scale-les_ens"
+stepexecname[3]="scale-rm_ens"
 #stepname[4]='Run verification'
 #stepexecdir[4]="$TMPRUN/verify"
 #stepexecname[4]="verify"
@@ -235,12 +235,12 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   exit 1
 #  safe_init_tmpdir $TMPDAT
 #  safe_init_tmpdir $TMPDAT/exec
-#  ln -fs $MODELDIR/scale-les_pp $TMPDAT/exec
-#  ln -fs $MODELDIR/scale-les_init $TMPDAT/exec
-#  ln -fs $MODELDIR/scale-les $TMPDAT/exec
-#  ln -fs $ENSMODEL_DIR/scale-les_pp_ens $TMPDAT/exec
-#  ln -fs $ENSMODEL_DIR/scale-les_init_ens $TMPDAT/exec
-#  ln -fs $ENSMODEL_DIR/scale-les_ens $TMPDAT/exec
+#  ln -fs $MODELDIR/scale-rm_pp $TMPDAT/exec
+#  ln -fs $MODELDIR/scale-rm_init $TMPDAT/exec
+#  ln -fs $MODELDIR/scale-rm $TMPDAT/exec
+#  ln -fs $ENSMODEL_DIR/scale-rm_pp_ens $TMPDAT/exec
+#  ln -fs $ENSMODEL_DIR/scale-rm_init_ens $TMPDAT/exec
+#  ln -fs $ENSMODEL_DIR/scale-rm_ens $TMPDAT/exec
 #  ln -fs $COMMON_DIR/pdbash $TMPDAT/exec
 #  ln -fs $DATADIR/rad $TMPDAT/rad
 #  ln -fs $DATADIR/land $TMPDAT/land
@@ -259,12 +259,12 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
 else
 #-------------------
   cat >> $STAGING_DIR/stagein.dat << EOF
-${MODELDIR}/scale-les_pp|exec/scale-les_pp
-${MODELDIR}/scale-les_init|exec/scale-les_init
-${MODELDIR}/scale-les|exec/scale-les
-${ENSMODEL_DIR}/scale-les_pp_ens|exec/scale-les_pp_ens
-${ENSMODEL_DIR}/scale-les_init_ens|exec/scale-les_init_ens
-${ENSMODEL_DIR}/scale-les_ens|exec/scale-les_ens
+${MODELDIR}/scale-rm_pp|exec/scale-rm_pp
+${MODELDIR}/scale-rm_init|exec/scale-rm_init
+${MODELDIR}/scale-rm|exec/scale-rm
+${ENSMODEL_DIR}/scale-rm_pp_ens|exec/scale-rm_pp_ens
+${ENSMODEL_DIR}/scale-rm_init_ens|exec/scale-rm_init_ens
+${ENSMODEL_DIR}/scale-rm_ens|exec/scale-rm_ens
 ${COMMON_DIR}/pdbash|exec/pdbash
 ${SCRP_DIR}/config.nml.scale_pp|conf/config.nml.scale_pp
 ${SCRP_DIR}/config.nml.scale_init|conf/config.nml.scale_init

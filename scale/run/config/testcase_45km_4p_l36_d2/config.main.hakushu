@@ -14,8 +14,8 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-#MODELDIR="/data6/gylien/scale-letkf/scale/scale-les/test/case_real/check_japan/run"
-MODELDIR="/home/gylien/scale-letkf/scale_history/v150809/scale_bugfix/scale-les/test/case_real/check_japan/run"
+#MODELDIR="/data6/gylien/scale-letkf/scale/scale-rm/test/case_real/check_japan/run"
+MODELDIR="/home/gylien/scale-letkf/scale_history/v150809/scale_bugfix/scale-rm/test/case_real/check_japan/run"
 DATADIR="/data6/gylien/scale-letkf/database"
 
 DATA_TOPO="/data6/gylien/exp/scale-letkf_test/testcase_45km_4p_d2/preptopo"

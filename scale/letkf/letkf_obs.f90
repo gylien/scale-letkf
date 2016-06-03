@@ -55,7 +55,7 @@ SUBROUTINE set_letkf_obs
   use scale_process, only: &
 !    MPI_COMM_d => LOCAL_COMM_WORLD, &
     PRC_myrank
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
 
@@ -142,7 +142,7 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
         CALL get_nobs(trim(obsdafile)//obsda_suffix,7,obsda%nobs) ! H08
 #else
-        CALL get_nobs(trim(obsdafile)//obsda_suffix,6,obsda%nobs) 
+        CALL get_nobs(trim(obsdafile)//obsda_suffix,6,obsda%nobs)
 #endif
         WRITE(6,'(A,I9,A)') 'TOTAL: ', obsda%nobs, ' OBSERVATIONS'
         CALL obs_da_value_allocate(obsda,MEMBER)
@@ -549,7 +549,7 @@ SUBROUTINE set_letkf_obs
       obs(iof)%lev(iidx) = obsda%lev(n)
       obsda%lev(n) = ch_num
 
-      IF(DEPARTURE_STAT_H08)THEN 
+      IF(DEPARTURE_STAT_H08)THEN
 !
 ! For obs err correlation statistics based on Desroziers et al. (2005, QJRMS).
 !
@@ -567,13 +567,13 @@ SUBROUTINE set_letkf_obs
         write(6, '(2I6,2F8.2,4F12.4,I3)') &
              obs(iof)%elm(iidx), & ! id
              nint(obsda%lev(n)), & ! band num
-             obs(iof)%lon(iidx), & 
+             obs(iof)%lon(iidx), &
              obs(iof)%lat(iidx), &
-             obs(iof)%lev(iidx), & ! sensitive height 
+             obs(iof)%lev(iidx), & ! sensitive height
              obs(iof)%dat(iidx), &
              obs(iof)%err(iidx), &
              obsda%val(n), &
-             obsda%qc(n) 
+             obsda%qc(n)
       ENDIF !  [.not. DEPARTURE_STAT_H08]
 #endif
     ELSE
@@ -1025,7 +1025,7 @@ END SUBROUTINE obs_choose
 !  CHARACTER(10) :: omafile='oma.dat'
 !  CHARACTER(14) :: obsguesfile='obsguesNNN.dat'
 !  CHARACTER(14) :: obsanalfile='obsanalNNN.dat'
-!  
+!
 !  IF(omb_output .AND. myrank == 0) THEN
 !    ALLOCATE(ohx(nobs),oqc(nobs),dep(nobs))
 !    CALL monit_output('gues',0,ohx,oqc)

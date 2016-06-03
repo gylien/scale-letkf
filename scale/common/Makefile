@@ -64,7 +64,7 @@ pdbash.o:	pdbash.f90
 	$(FC) $(FOPTS) -c pdbash.f90
 
 mod_admin_time.o:
-	$(FC) $(FOPTS) -c $(SCALE)/scale-les/src/admin/mod_admin_time.f90 $(SCALE_INC)
+	$(FC) $(FOPTS) -c $(SCALE)/scale-rm/src/admin/mod_admin_time.f90 $(SCALE_INC)
 
 clean:
 	rm -f *.o *.mod *.lst datetime pdbash

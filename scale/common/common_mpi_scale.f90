@@ -455,7 +455,7 @@ subroutine set_scalelib
     PRC_masterrank, &
     PRC_myrank, &
     PRC_mpi_alive
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_setup, &
     PRC_2Drank, &
     PRC_NUM_X, &
