@@ -16,8 +16,9 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common_scale.o     \
               $(COMMON_DIR)/common_obs_scale.o \
               $(COMMON_DIR)/common_mpi_scale.o \
-              $(COMMON_DIR)/common_nml.o     \
-              $(COMMON_DIR)/mod_admin_time.o
+              $(COMMON_DIR)/common_nml.o
+#              $(SCALE_RM_OBJDIR)/mod_admin_time.o \
+#              $(SCALE_RM_OBJDIR)/mod_atmos_vars.o
 #              $(COMMON_DIR)/common_scalelib.o
 #              $(COMMON_DIR)/common_precip.o
 

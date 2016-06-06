@@ -172,7 +172,7 @@ CONTAINS
 !  -1: MEMBER+1
 !-----------------------------------------------------------------------
 SUBROUTINE set_common_scale
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
   use scale_grid_index, only: &
@@ -508,7 +508,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   use netcdf, only: NF90_NOWRITE
   use scale_process, only: &
     PRC_myrank
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_HAS_W,  &
     PRC_HAS_E,  &
     PRC_HAS_S,  &
@@ -649,7 +649,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   use netcdf, only: NF90_WRITE
   use scale_process, only: &
     PRC_myrank
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_HAS_W,  &
     PRC_HAS_E,  &
     PRC_HAS_S,  &
@@ -720,7 +720,7 @@ SUBROUTINE read_topo(filename,topo)
   use netcdf, only: NF90_NOWRITE
   use scale_process, only: &
     PRC_myrank
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_HAS_W,  &
     PRC_HAS_E,  &
     PRC_HAS_S,  &
@@ -1085,7 +1085,7 @@ END SUBROUTINE state_trans_inv
 
 
 subroutine rank_1d_2d(proc, iproc, jproc)
-  use scale_les_process, only: PRC_2Drank
+  use scale_rm_process, only: PRC_2Drank
   implicit none
   integer, intent(in) :: proc
   integer, intent(out) :: iproc, jproc
@@ -1098,7 +1098,7 @@ end subroutine rank_1d_2d
 
 
 subroutine rank_2d_1d(iproc, jproc, proc)
-  use scale_les_process, only: PRC_NUM_X
+  use scale_rm_process, only: PRC_NUM_X
   implicit none
   integer, intent(in) :: iproc, jproc
   integer, intent(out) :: proc
@@ -1186,7 +1186,7 @@ SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
   use scale_grid_index, only: &
       IHALO,JHALO
 !      IA,JA                  ! [for validation]
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
       PRC_NUM_X,PRC_NUM_Y
 !      PRC_myrank             ! [for validation]
 !  use scale_grid, only: &    ! [for validation]

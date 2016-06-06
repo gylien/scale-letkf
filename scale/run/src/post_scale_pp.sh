@@ -11,7 +11,7 @@
 if (($# < 5)); then
   cat >&2 << EOF
 
-[post_scale_pp.sh] Post-process the scale-les_init outputs.
+[post_scale_pp.sh] Post-process the scale-rm_init outputs.
 
 Usage: $0 MYRANK STIME MEM TMPDIR LOG_OPT [SCPCALL]
 

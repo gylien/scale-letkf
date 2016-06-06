@@ -494,7 +494,7 @@ subroutine set_scalelib
     PRC_myrank, &
     PRC_mpi_alive, &
     PRC_DOMAIN_nlim
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_setup, &
     PRC_2Drank, &
     PRC_NUM_X, &
@@ -550,8 +550,8 @@ subroutine set_scalelib
   use scale_atmos_thermodyn, only: &
      ATMOS_THERMODYN_setup
 
-  use mod_admin_time, only: &
-     ADMIN_TIME_setup
+!  use mod_admin_time, only: &
+!     ADMIN_TIME_setup
 
 
   use scale_mapproj, only: &
@@ -646,7 +646,7 @@ subroutine set_scalelib
 !  call RANDOM_setup
 
   ! setup time
-  call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
+!  call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
 
 !  call PROF_setprefx('INIT')
 !  call PROF_rapstart('Initialize')
