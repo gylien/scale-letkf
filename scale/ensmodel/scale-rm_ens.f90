@@ -31,7 +31,7 @@ program scaleles_ens
      PRC_DOMAIN_nlim, &
      PRC_GLOBAL_COMM_WORLD, &
      PRC_LOCAL_COMM_WORLD
-  use mod_les_driver
+  use mod_rm_driver
 
   implicit none
 
@@ -173,10 +173,10 @@ program scaleles_ens
         WRITE(confname(1:4),'(I4.4)') proc2mem(1,it,universal_myrank+1)
         WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', confname
 
-        call scaleles ( local_comm, &
-                        intercomm_parent, &
-                        intercomm_child, &
-                        confname )
+        call scalerm ( local_comm, &
+                       intercomm_parent, &
+                       intercomm_child, &
+                       confname )
       end if
     end do ! [ it = its, ite ]
 
