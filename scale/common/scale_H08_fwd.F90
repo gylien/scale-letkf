@@ -608,7 +608,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
                    (liqc(ilev+1) + liqc(ilev)) * 0.5_jprb
         profiles(iprof) % cloud(6,ilev) = & 
                    (icec(ilev+1) + icec(ilev)) * 0.5_jprb
-!  -- NOTE: Currently(11/18/2015), the SCALE-LES model regards cfrac = 1.0 (/0.0) 
+!  -- NOTE: Currently(11/18/2015), the SCALE-RM model regards cfrac = 1.0 (/0.0) 
 !            in the grid point where a sum of water/ice contents > 0.0 (=0.0).
 !
 !  -- NOTE: minQcfrac is added. (12/16/2016)

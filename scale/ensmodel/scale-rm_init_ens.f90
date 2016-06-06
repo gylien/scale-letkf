@@ -1,4 +1,4 @@
-program scaleles_pp_ens
+program scaleles_init_ens
   !-----------------------------------------------------------------------------
 
   use mpi
@@ -31,7 +31,7 @@ program scaleles_pp_ens
      PRC_DOMAIN_nlim, &
      PRC_GLOBAL_COMM_WORLD, &
      PRC_LOCAL_COMM_WORLD
-  use mod_pp_driver
+  use mod_init_driver
 
   implicit none
 
@@ -40,7 +40,7 @@ program scaleles_pp_ens
   CHARACTER(7) :: stdoutf='-000000'
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
-  CHARACTER(len=H_LONG) :: confname='0000/pp.conf'
+  CHARACTER(len=H_LONG) :: confname='0000/init.conf'
   CHARACTER(len=H_LONG) :: confname_dummy
 
   integer :: universal_comm
@@ -87,8 +87,8 @@ program scaleles_pp_ens
     call chdir(trim(icmd))
     write (myranks, '(I10)') universal_myrank
     call get_command_argument(4, icmd)
-    cmd1 = 'bash ' // trim(icmd) // ' enspp_1' // ' ' // trim(myranks)
-    cmd2 = 'bash ' // trim(icmd) // ' enspp_2' // ' ' // trim(myranks)
+    cmd1 = 'bash ' // trim(icmd) // ' ensinit_1' // ' ' // trim(myranks)
+    cmd2 = 'bash ' // trim(icmd) // ' ensinit_2' // ' ' // trim(myranks)
     do iarg = 5, command_argument_count()
       call get_command_argument(iarg, icmd)
       cmd1 = trim(cmd1) // ' ' // trim(icmd)
@@ -132,7 +132,7 @@ program scaleles_pp_ens
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------
-! Run SCALE-LES_pp
+! Run SCALE-RM_init
 !-----------------------------------------------------------------------
 
   ! split MPI communicator for LETKF
@@ -173,10 +173,10 @@ program scaleles_pp_ens
         WRITE(confname(1:4),'(I4.4)') proc2mem(1,it,universal_myrank+1)
         WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', confname
 
-        call scaleles_pp ( local_comm, &
-                           intercomm_parent, &
-                           intercomm_child, &
-                           confname )
+        call scaleles_init ( local_comm, &
+                             intercomm_parent, &
+                             intercomm_child, &
+                             confname )
       end if
     end do ! [ it = its, ite ]
 
@@ -194,7 +194,7 @@ program scaleles_pp_ens
 
   CALL MPI_BARRIER(universal_comm,ierr)
   rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(SCALE_LES):',rtimer-rtimer00
+  WRITE(6,timer_fmt) '### TIMER(SCALE_RM):',rtimer-rtimer00
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------
@@ -221,4 +221,4 @@ program scaleles_pp_ens
   call MPI_Finalize(ierr)
 
   stop
-end program scaleles_pp_ens
+end program scaleles_init_ens

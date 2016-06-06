@@ -16,7 +16,7 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DDIR/../../scale/scale-les/test/case_real/check_japan/run"
+MODELDIR="$DDIR/../../scale/scale-rm/test/case_real/check_japan/run"
 DATADIR="$DDIR/../../database"
 
 DATA_TOPO="$DDIR/../../database/topo_prep/testcase_45km_4p_bf10"

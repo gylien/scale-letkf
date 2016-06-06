@@ -11,14 +11,14 @@
 if (($# < 5)); then
   cat >&2 << EOF
 
-[pre_scale_pp.sh] Prepare a temporary directory for scale-les_pp run.
+[pre_scale_pp.sh] Prepare a temporary directory for scale-rm_pp run.
 
 Usage: $0 MYRANK STIME MEM TMPDIR DATADIR [SCPCALL COPYTOPO CATALOGUE]
 
   MYRANK   My rank number (not used)
   STIME    Start time (format: YYYYMMDDHHMMSS)
   MEM
-  TMPDIR   Temporary directory to run scale-les_pp
+  TMPDIR   Temporary directory to run scale-rm_pp
   DATADIR  Directory of SCALE data files
   SCPCALL  Called from which script? (fcst/cycle)
   COPYTOPO

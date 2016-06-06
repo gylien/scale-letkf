@@ -853,7 +853,7 @@ END SUBROUTINE das_letkf
 subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobsl_t)
   use scale_grid, only: &
     DX, DY
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
   implicit none

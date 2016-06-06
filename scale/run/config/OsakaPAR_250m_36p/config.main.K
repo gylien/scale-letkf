@@ -14,7 +14,7 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="/volume63/data/ra000015/gylien/scale-letkf/scale_history/v150203/scale/scale-les/test/case_real/check_japan/run"
+MODELDIR="/volume63/data/ra000015/gylien/scale-letkf/scale_history/v150203/scale/scale-rm/test/case_real/check_japan/run"
 DATADIR="/volume63/data/ra000015/gylien/scale-letkf/database"
 
 DATA_BDY_WRF="/volume63/data/ra000015/gylien/model/wrfout_30sec"

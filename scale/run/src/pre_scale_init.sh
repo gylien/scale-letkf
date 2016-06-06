@@ -27,7 +27,7 @@ Usage: $0 MYRANK TOPO LANDUSE BDYORG STIME MKINIT MEM MEM_BDY TMPDIR BDY_TIME_LI
             1: Yes
   MEM      Name of the ensemble member
   MEM_BDY  Name of the ensemble member of the boundary data source
-  TMPDIR   Temporary directory to run scale-les_init
+  TMPDIR   Temporary directory to run scale-rm_init
   BDY_TIME_LIST
   NUMBER_OF_TSTEPS
   NUMBER_OF_SKIP_TSTEPS
@@ -73,7 +73,7 @@ if ((MKINIT == 1 || (OCEAN_INPUT == 1 && OCEAN_FORMAT == 99))); then
 fi
 
 if ((BDY_FORMAT == 1)); then
-  FILETYPE_ORG='SCALE-LES'
+  FILETYPE_ORG='SCALE-RM'
   USE_NESTING='.true.'
   LATLON_CATALOGUE_FNAME="$BDYORG/latlon_domain_catalogue.txt"
 elif ((BDY_FORMAT == 2)); then

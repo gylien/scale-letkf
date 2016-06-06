@@ -494,7 +494,7 @@ subroutine set_scalelib
     PRC_myrank, &
     PRC_mpi_alive, &
     PRC_DOMAIN_nlim
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_setup, &
     PRC_2Drank, &
     PRC_NUM_X, &

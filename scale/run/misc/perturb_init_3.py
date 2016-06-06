@@ -5,7 +5,7 @@ from scaleio import *
 
 import matplotlib.pyplot as plt
 
-initialfile = '/data1/gylien/scale/scale-les/test/case_real/ctl_36_large_domain/initial_WRF_pert3/init_00000000000.000'
+initialfile = '/data1/gylien/scale/scale-rm/test/case_real/ctl_36_large_domain/initial_WRF_pert3/init_00000000000.000'
 
 wavel1 = 30000.
 wavel2 = 100000.
