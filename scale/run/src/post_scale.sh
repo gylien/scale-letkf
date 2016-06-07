@@ -40,7 +40,7 @@ DELETE_MEMBER="${1:-0}"
 
 ATIME=$(datetime $STIME $LCYCLE s)
 
-restartbaselen=23  # 7 + 16
+restartbaselen=27  # 7 + 20
 
 #===============================================================================
 

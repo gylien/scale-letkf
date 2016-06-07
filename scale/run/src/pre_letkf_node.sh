@@ -104,10 +104,7 @@ cat $TMPDAT/conf/config.nml.letkf | \
     > $TMPDIR/letkf.conf
 
 # These parameters are not important for letkf
-cat $TMPDAT/conf/config.nml.scale | \
-    sed -e "/!--TIME_DURATION--/a TIME_DURATION = $LTIMESLOT.D0," \
-        -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = $LTIMESLOT.D0," \
-    >> $TMPDIR/letkf.conf
+cat $TMPDAT/conf/config.nml.scale >> $TMPDIR/letkf.conf
 
 #===============================================================================
 

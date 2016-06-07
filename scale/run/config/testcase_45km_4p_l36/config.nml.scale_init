@@ -34,7 +34,7 @@
  MKINIT_initname = "REAL",
 /
 
-&PARAM_MKINIT_REAL
+&PARAM_MKINIT_REAL_ATMOS
 !--BASENAME_BOUNDARY--
 !--BASENAME_ORG--
 !--FILETYPE_ORG--
@@ -42,16 +42,15 @@
 !--NUMBER_OF_TSTEPS--
 !--NUMBER_OF_SKIP_TSTEPS--
 !--BOUNDARY_UPDATE_DT--
- INTERP_SERC_DIV_NUM = 20,
 /
 
 &PARAM_MKINIT_REAL_WRFARW
  WRF_FILE_TYPE       = .true.,
 /
 
-&PARAM_INPUT_ATOM_WRF
- use_buildrho_real = .true.,
-/
+!&PARAM_INPUT_ATOM_WRF
+! use_buildrho_real = .true.,
+!/
 
 #################################################
 #

@@ -5,13 +5,9 @@
 #
 #===============================================================================
 
-DDIR="/volume63/data/hp150019/gylien/for_liao"
-
 DIR="$(cd "$(pwd)/.." && pwd)"                  # Root directory of the SCALE-LETKF
 
-OUTDIR="$DDIR/exp/testcase_45km_4p_l36" # Directory for SCALE-LETKF output
-
-LOGDIR="$DIR/log"                               # Directory for main log files
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/test/testcase_45km_4p_l36" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -19,24 +15,26 @@ LOGDIR="$DIR/log"                               # Directory for main log files
 MODELDIR="$DIR/../../bin/K"                                                  # Directory of the SCALE model executables
 DATADIR="$DIR/../../../database"                                             # Directory of the SCALE database
 
-DATA_TOPO="$DDIR/database/topo_prep/testcase_45km_4p_l36_bf10"       # Directory of the prepared topo files
-DATA_LANDUSE="$DDIR/database/landuse_prep/testcase_45km_4p_l36_bf10" # Directory of the prepared landuse files
-DATA_BDY_SCALE=                                                              # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PREP="$DDIR/database/bdy_prep/testcase_45km_4p_l36"   # Directory of the prepared SCALE boundary files
-DATA_BDY_WRF="$DDIR/ncepfnl/wrfout"                                  # Directory of the boundary data in WRF format
-DATA_BDY_NICAM=                                                              # Directory of the boundary data in NICAM format (not finished)
+DATA_TOPO=                                                           # Directory of the prepared topo files
+DATA_TOPO_BDY_SCALE=
+DATA_LANDUSE=                                                        # Directory of the prepared landuse files
+DATA_BDY_SCALE=                                                      # Directory of the boundary data in SCALE history format (parent domain)
+DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
+DATA_BDY_WRF="/volume63/data/hp150019/gylien/for_liao/ncepfnl/wrfout"         # Directory of the boundary data in WRF format
+# "/volume63/data/hp150019/gylien/model/ncepfnl/wrfout_init_2013070100"
+DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-OBS="$DDIR/obs/prepbufr_obs_eastasia"                                # Observation data in LETKF observation format
+OBS="/volume63/data/hp150019/gylien/for_liao/obs/prepbufr_obs_eastasia"       # Observation data in LETKF observation format
 OBSNCEP=
 
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -74,7 +72,7 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=10          # Ensemble size
 
-NNODES=24          # Number of nodes
+NNODES=44          # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -105,18 +103,22 @@ DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
                             #  1: in $TMPDAT
                             #  2: in $TMPOUT
 
+DISK_MODE_TOPO_LANDUSE_DB=2
+
 DISK_MODE_DATA_BDY=2
 
-DISK_MODE_TOPO_LANDUSE_DB=2
+DISK_MODE_DATA_TOPO=2
+DISK_MODE_DATA_LANDUSE=2
+DISK_MODE_DATA_BDYPREP=2
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
 
-SIMPLE_STGOUT=2             # Stage out the entire 'out' temporary directory instead of specifying each file?
-                            #  0: No
-                            #  1: Yes
-                            #  2: Stage-out everything
+#SIMPLE_STGOUT=2             # Stage out the entire 'out' temporary directory instead of specifying each file?
+#                            #  0: No
+#                            #  1: Yes
+#                            #  2: Stage-out everything
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
@@ -124,6 +126,10 @@ TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same
 TMP=                        # (When $MACHINE_TYPE=10, this will be automatically set)
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 TMPL=                       # (When $MACHINE_TYPE=10, this will be automatically set)
+
+CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
+                            #  0: No
+                            #  1: Yes
 
 #===============================================================================
 # Environmental settings
@@ -135,6 +141,8 @@ SCP='cp -L'
 SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
+
+SCP_THREAD=8
 
 PYTHON="python"
 

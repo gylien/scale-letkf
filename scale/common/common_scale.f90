@@ -778,8 +778,10 @@ SUBROUTINE read_history(filename,step,v3dg,v2dg)
   use scale_grid_index, only: &
       IHALO, JHALO, KHALO, &
       IS, IE, JS, JE, KS, KE, KA
-  use scale_history, only: &
-      HIST_get
+!  use scale_history, only: &
+!      HIST_get
+  use gtool_history, only: &
+      HistoryGet
   use scale_comm, only: &
       COMM_vars8, &
       COMM_wait
@@ -802,7 +804,11 @@ SUBROUTINE read_history(filename,step,v3dg,v2dg)
 
   DO iv3d = 1, nv3dd
     write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
-    call HIST_get(var3D, filename, trim(v3dd_name(iv3d)), step)
+!    call HIST_get(var3D, filename, trim(v3dd_name(iv3d)), step)
+    call HistoryGet( var3D,                 & ! [OUT]
+                     filename,              & ! [IN]
+                     trim(v3dd_name(iv3d)), & ! [IN]
+                     step                   ) ! [IN]
     FORALL (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
 
 !!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
@@ -823,7 +829,11 @@ SUBROUTINE read_history(filename,step,v3dg,v2dg)
 
   DO iv2d = 1, nv2dd
     write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
-    call HIST_get(var2D, filename, trim(v2dd_name(iv2d)), step)
+!    call HIST_get(var2D, filename, trim(v2dd_name(iv2d)), step)
+    call HistoryGet( var2D,                 & ! [OUT]
+                     filename,              & ! [IN]
+                     trim(v2dd_name(iv2d)), & ! [IN]
+                     step                   ) ! [IN]
     v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
   END DO
 

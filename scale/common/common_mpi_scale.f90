@@ -695,8 +695,8 @@ subroutine set_scalelib
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
 
     call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_masterrank, PRC_myrank, rankidx, &
-                     TIME_STARTDAYSEC, TIME_DTSEC, &
-                     namelist_fid=IO_FID_CONF)
+                     0.0d0, 1.0d0, &
+                     namelist_fid=IO_FID_CONF, default_basename='history')
   ! setup monitor I/O
 !  call MONIT_setup
 
@@ -1468,9 +1468,9 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
     call MPI_BCAST(bias_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
     call MPI_BCAST(rmse_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
     call MPI_BCAST(monit_type,nid_obs,MPI_LOGICAL,lastmem_rank_e,MPI_COMM_e,ierr)
-    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', file_mean, ']:'
+    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', trim(file_mean), ']:'
     call monit_print(nobs,bias,rmse,monit_type)
-    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', file_mean, ']:'
+    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', trim(file_mean), ']:'
     call monit_print(nobs_g,bias_g,rmse_g,monit_type)
 
 
