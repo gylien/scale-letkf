@@ -24,5 +24,9 @@
 !--MEM_NP--
 /
 
+!&PARAM_LETKF_RADAR
+! RADAR_ZMAX = 11.0D3,
+!/
+
 !*** Attach SCALE configuration below ***
 
