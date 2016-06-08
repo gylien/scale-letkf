@@ -789,13 +789,13 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
     lg= ( pi * rog * nog / ( ro * qg ) ) ** 0.25
 
     rofactor= ( roo / ro  ) ** 0.25
-    CALL com_gamma( 4.0d0 + b , tmp_factor )
+    CALL com_gamma( 4.0_r_size + b , tmp_factor )
     wr= a * tmp_factor / ( 6.0d0 * ( lr ** b ) )
     wr= 1.0d-2*wr * rofactor
-    CALL com_gamma( 4.0d0 + d , tmp_factor )
+    CALL com_gamma( 4.0_r_size + d , tmp_factor )
     ws= c * tmp_factor / ( 6.0d0 * ( ls ** d ) )
     ws= 1.0d-2*ws * rofactor
-    CALL com_gamma( 4.5d0 , tmp_factor )
+    CALL com_gamma( 4.5_r_size , tmp_factor )
     wg= tmp_factor * ( ( ( 4.0d0 * gg * 100.0d0 * rog )/( 3.0d0 * Cd * ro ) ) ** 0.5 )
     wg= 1.0d-2*wg / ( 6.0d0 * ( lg ** 0.5 ) )
 
@@ -895,7 +895,7 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
       rofactor= ( roo / ro  ) ** 0.5
 
       IF ( qr .GT. 0.0d0 )THEN
-      CALL com_gamma( 4.0d0 + b , tmp_factor )
+      CALL com_gamma( 4.0_r_size + b , tmp_factor )
       lr= ( pi * ror * nor / ( ro * qr ) ) ** 0.25
       wr= a * tmp_factor / ( 6.0d0 * ( lr ** b ) )
       wr= 1.0d-2 * wr * rofactor
@@ -905,7 +905,7 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
 
       IF( qs .GT. 0.0d0 )THEN
       ls= ( pi * ros * nos / ( ro * qs ) ) ** 0.25
-      CALL com_gamma( 4.0d0 + d , tmp_factor )
+      CALL com_gamma( 4.0_r_size + d , tmp_factor )
       ws= c * tmp_factor / ( 6.0d0 * ( ls ** d ) )
       ws= 1.0d-2 * ws * rofactor
       ELSE
@@ -914,7 +914,7 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
 
       IF ( qg .GT. 0.0d0 )THEN
       lg= ( pi * rog * nog / ( ro * qg ) ) ** 0.25
-      CALL com_gamma( 4.5d0 , tmp_factor )
+      CALL com_gamma( 4.5_r_size , tmp_factor )
       wg= tmp_factor * ( ( ( 4.0d0 * gg * 100.0d0 * rog )/( 3.0d0 * Cd * ro ) ) ** 0.5 )
       wg= 1.0d-2 * wg / ( 6.0d0 * ( lg ** 0.5 ) )
       ELSE
@@ -1213,7 +1213,7 @@ SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
 !
 ! rlon,rlat -> ri,rj
 !
-  call MPRJ_lonlat2xy(rlon*pi/180.0d0,rlat*pi/180.0d0,rig,rjg)
+  call MPRJ_lonlat2xy(rlon*pi/180.0_r_size,rlat*pi/180.0_r_size,rig,rjg)
   rig = (rig - GRID_CXG(1)) / DX + 1.0d0
   rjg = (rjg - GRID_CYG(1)) / DY + 1.0d0
 
@@ -2062,15 +2062,15 @@ SUBROUTINE read_obs(cfile,obs)
       wk(5) = wk(5) * 100.0 ! hPa -> Pa
       wk(6) = real(OBSERR_TCP,kind=r_sngl)
     CASE(id_tclon_obs)
-      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0d0,&
-                          REAL(wk(3),kind=r_size)*pi/180.0d0,&
+      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
+                          REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
                           x,y)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = real(x,kind=r_sngl)
       wk(6) = real(OBSERR_TCX,kind=r_sngl)
     CASE(id_tclat_obs)
-      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0d0,&
-                          REAL(wk(3),kind=r_size)*pi/180.0d0,&
+      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
+                          REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
                           x,y)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = real(y,kind=r_sngl)

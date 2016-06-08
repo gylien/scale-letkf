@@ -217,9 +217,9 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
   exit 1
 #  safe_init_tmpdir $TMPDAT
 #  safe_init_tmpdir $TMPDAT/exec
-#  ln -fs $MODELDIR/scale-rm_pp $TMPDAT/exec
-#  ln -fs $MODELDIR/scale-rm_init $TMPDAT/exec
-#  ln -fs $MODELDIR/scale-rm $TMPDAT/exec
+##  ln -fs $MODELDIR/scale-rm_pp $TMPDAT/exec
+##  ln -fs $MODELDIR/scale-rm_init $TMPDAT/exec
+##  ln -fs $MODELDIR/scale-rm $TMPDAT/exec
 #  ln -fs $ENSMODEL_DIR/scale-rm_pp_ens $TMPDAT/exec
 #  ln -fs $ENSMODEL_DIR/scale-rm_init_ens $TMPDAT/exec
 #  ln -fs $ENSMODEL_DIR/scale-rm_ens $TMPDAT/exec
@@ -252,9 +252,6 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
 else
 #-------------------
   cat >> $STAGING_DIR/stagein.dat << EOF
-${MODELDIR}/scale-rm_pp|exec/scale-rm_pp
-${MODELDIR}/scale-rm_init|exec/scale-rm_init
-${MODELDIR}/scale-rm|exec/scale-rm
 ${ENSMODEL_DIR}/scale-rm_pp_ens|exec/scale-rm_pp_ens
 ${ENSMODEL_DIR}/scale-rm_init_ens|exec/scale-rm_init_ens
 ${ENSMODEL_DIR}/scale-rm_ens|exec/scale-rm_ens
@@ -270,6 +267,9 @@ ${SCRP_DIR}/config.nml.letkf|conf/config.nml.letkf
 ${DATADIR}/rad|rad
 ${DATADIR}/land|land
 EOF
+#${MODELDIR}/scale-rm_pp|exec/scale-rm_pp
+#${MODELDIR}/scale-rm_init|exec/scale-rm_init
+#${MODELDIR}/scale-rm|exec/scale-rm
 
 # H08
   if [ -e "${RTTOV_COEF}" ] && [ -e "${RTTOV_SCCOEF}" ]; then

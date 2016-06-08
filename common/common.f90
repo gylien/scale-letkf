@@ -15,9 +15,13 @@ MODULE common
 !-----------------------------------------------------------------------
 ! Variable size definitions
 !-----------------------------------------------------------------------
-  INTEGER,PARAMETER :: r_size=kind(0.0d0)
   INTEGER,PARAMETER :: r_dble=kind(0.0d0)
   INTEGER,PARAMETER :: r_sngl=kind(0.0e0)
+#ifdef SINGLE
+  INTEGER,PARAMETER :: r_size=r_sngl
+#else
+  INTEGER,PARAMETER :: r_size=r_dble
+#endif
 !-----------------------------------------------------------------------
 ! Constants
 !-----------------------------------------------------------------------

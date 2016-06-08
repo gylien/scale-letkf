@@ -7,12 +7,12 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"                  # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/test/testcase_45km_4p_l36" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/test/testcase_45km_4p_l36_SP" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/K"                                                  # Directory of the SCALE model executables
+MODELDIR="$DIR/../../bin/${SCALE_SYS}"                                       # Directory of the SCALE model executables
 DATADIR="$DIR/../../../database"                                             # Directory of the SCALE database
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
