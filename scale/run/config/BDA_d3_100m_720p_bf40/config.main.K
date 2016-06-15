@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/set_3nest_d3_100m_100mem_720p/d3_100m_100mem_216" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/set_3nest_d3_100m_100mem_720p/d3_100m_100mem_222" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -18,8 +18,8 @@ DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 DATA_TOPO=
 DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/old/d2_1km_100mem/const/topo"
 DATA_LANDUSE=
-DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/old/d2_1km_100mem"
-DATA_BDY_SCALE_PREP=
+DATA_BDY_SCALE= #"/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/old/d2_1km_100mem_cycle-300s"
+DATA_BDY_SCALE_PREP="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/set_3nest_d3_100m_100mem_720p/d3_100m_100mem_noda_720p"
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
 
@@ -39,7 +39,7 @@ LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=0            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
@@ -47,7 +47,7 @@ BDY_ENS=1               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 
 BDYINT=30
-BDYCYCLE_INT=3600
+BDYCYCLE_INT=300
 
 PARENT_REF_TIME=20130713060000
 
@@ -72,9 +72,9 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=1           # Ensemble size
+MEMBER=100         # Ensemble size
 
-NNODES=720         # Number of nodes
+NNODES=5760        # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
