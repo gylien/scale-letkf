@@ -6,7 +6,7 @@
 #===============================================================================
 
 STIME='<STIME>'
-ETIME='<STIME>'
+ETIME='<ETIME>'
 ISTEP=
 FSTEP=
 TIME_LIMIT='<WTIME_L>'
