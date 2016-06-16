@@ -43,8 +43,12 @@ BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain sett
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
+BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
+
 BDY_ENS=0               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
+BDY_ROTATING=1          # 0: Use a same series of boundary files for all initial time
+                        # 1: Use different series of boundary files for different initial time
 
 BDYINT=21600
 BDYCYCLE_INT=21600

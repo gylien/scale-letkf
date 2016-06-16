@@ -191,42 +191,6 @@ done
 
 staging_list () {
 #-------------------------------------------------------------------------------
-# Determine stage-in list of boundary files
-#if ((BDY_FORMAT == 1)) || ((BDY_FORMAT == -1)); then
-#  nfiles_all=0
-#  lcycles=$((LCYCLE * CYCLE_SKIP))
-#  time=$STIME
-#  while ((time <= ETIME)); do
-#    for c in $(seq $CYCLE); do
-#      time2=$(datetime $time $((lcycles * (c-1))) s)
-#      if ((time2 <= ETIME)); then
-#        bdy_setting $time2 $FCSTLEN $BDYCYCLE_INT $PARENT_REF_TIME $BDYINT
-#        for ibdy in $(seq $nfiles); do
-#          newtime=1
-#          if ((nfiles_all > 0)); then
-#            for ibdy2 in $(seq $nfiles_all); do
-#              if ((${history_times[$ibdy]} == ${history_times_all[$ibdy2]})); then
-#                newtime=0
-#                break
-#              fi
-#            done
-#          fi
-#          if ((newtime == 1)); then
-#            nfiles_all=$((nfiles_all+1))
-#            history_times_all[$nfiles_all]=${history_times[$ibdy]}
-#          fi
-#        done
-#      fi
-#    done
-#    time=$(datetime $time $((lcycles * CYCLE)) s)
-#  done
-
-##  for ibdy in $(seq $nfiles_all); do
-##    echo "$ibdy - ${history_times_all[$ibdy]}"
-##  done
-#fi
-
-#-------------------------------------------------------------------------------
 # TMPDAT
 
 if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
@@ -249,7 +213,7 @@ if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
 
 #  if ((DATA_BDY_TMPLOC == 1)); then
 #    if ((BDY_FORMAT == 2)); then
-#      ln -fs $DATA_BDY_WRF $TMPDAT/bdywrf
+#      ln -fs $DATA_BDY_WRF $TMPDAT/bdyorg
 #    fi
 #  fi
 
@@ -335,17 +299,17 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
 
 #  if ((DATA_BDY_TMPLOC == 2)); then
 #    if ((BDY_FORMAT == 2)); then
-#      ln -fs $DATA_BDY_WRF $TMPOUT/bdywrf
+#      ln -fs $DATA_BDY_WRF $TMPOUT/bdyorg
 #    fi
 #  fi
 
 #  if ((BDY_FORMAT == 1)) || ((BDY_FORMAT == -1)); then
 #    if ((DATA_BDY_TMPLOC == 1)); then
-#      bdyscale_dir="$TMPDAT/bdyscale"
+#      bdyorgf="$TMPDAT/bdyorg"
 #    elif ((DATA_BDY_TMPLOC == 2)); then
-#      bdyscale_dir="$TMPOUT/bdyscale"
+#      bdyorgf="$TMPOUT/bdyorg"
 #    fi
-#    mkdir -p $bdyscale_dir
+#    mkdir -p $bdyorgf
 
 #    find_catalogue=0
 #    for ibdy in $(seq $nfiles_all); do
@@ -355,7 +319,7 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
 #        time_catalogue=$(datetime $time_bdy -$BDYCYCLE_INT s)
 #        if [ -s "$DATA_BDY_SCALE/${time_catalogue}/log/scale/latlon_domain_catalogue.txt" ]; then
 #          pathin="$DATA_BDY_SCALE/${time_catalogue}/log/scale/latlon_domain_catalogue.txt"
-#          ln -fs ${pathin} ${bdyscale_dir}/latlon_domain_catalogue.txt
+#          ln -fs ${pathin} ${bdyorgf}/latlon_domain_catalogue.txt
 #          find_catalogue=1
 #        fi
 #      fi
@@ -364,17 +328,17 @@ if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
 #        for m in $(seq $fmember); do
 #          mem=${name_m[$m]}
 #          [ "$mem" = 'mean' ] && mem='meanf'
-#          mkdir -p ${bdyscale_dir}/${time_bdy}/${name_m[$m]}
+#          mkdir -p ${bdyorgf}/${time_bdy}/${name_m[$m]}
 #          for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/gues/${mem}/history.*.nc 2> /dev/null); do
 #            pathin="$ifile"
-#            ln -fs ${pathin} ${bdyscale_dir}/${time_bdy}/${name_m[$m]}/$(basename $ifile)
+#            ln -fs ${pathin} ${bdyorgf}/${time_bdy}/${name_m[$m]}/$(basename $ifile)
 #          done
 #        done
 #      else
-#        mkdir -p ${bdyscale_dir}/${time_bdy}/mean
+#        mkdir -p ${bdyorgf}/${time_bdy}/mean
 #        for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/gues/meanf/history.*.nc 2> /dev/null); do
 #          pathin="$ifile"
-#          ln -fs ${pathin} ${bdyscale_dir}/${time_bdy}/mean/$(basename $ifile)
+#          ln -fs ${pathin} ${bdyorgf}/${time_bdy}/mean/$(basename $ifile)
 #        done
 #      fi
 #    done
@@ -789,7 +753,7 @@ else
     if ((BDY_FORMAT == 1)); then
       if [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt" ]; then
         pathin="$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt"
-        path="bdyscale/latlon_domain_catalogue.txt"
+        path="bdyorg/latlon_domain_catalogue.txt"
         if ((DISK_MODE_DATA_BDY == 2)); then
           echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
         else
@@ -808,7 +772,11 @@ else
       for c in $(seq $CYCLE); do
         time2=$(datetime $time $((lcycles * (c-1))) s)
 
-        bdy_setting $time2 $FCSTLEN $BDYCYCLE_INT $PARENT_REF_TIME $BDYINT
+        if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
+          bdy_setting $time2 $FCSTLEN - $BDYINT $PARENT_REF_TIME
+        else
+          bdy_setting $time2 $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
+        fi
 
         for ibdy in $(seq $nbdy); do
           time_bdy=${bdy_times[$ibdy]}
@@ -824,25 +792,36 @@ else
           if ((bdy_processed == 0)); then
             nbdy_all=$((nbdy_all+1))
             bdy_times_all[${nbdy_all}]=$time_bdy
+          fi
 
+          if ((bdy_processed == 0 || BDY_ROTATING == 1)); then
             if ((BDY_FORMAT == 1)); then
 
               if ((BDY_ENS == 1)); then
                 for m in $(seq $fmember); do
-##                  mm=$(((c-1) * fmember + m))
                   mem=${name_m[$m]}
-                  [ "$mem" = 'mean' ] && mem='meanf'
-#                  for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/hist/${mem}/history.*.nc 2> /dev/null); do
+                  if [ "$BDY_SCALE_DIR" = 'hist' ] && [ "$mem" = 'mean' ]; then
+                    mem='meanf'
+                  fi
+#                  for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}/history.*.nc 2> /dev/null); do
 #                    pathin="$ifile"
-#                    path="bdyscale/${time_bdy}/${name_m[$m]}/$(basename $ifile)"
+#                    if ((BDY_ROTATING == 1)); then
+#                      path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
+#                    else
+#                      path="bdyorg/const/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
+#                    fi
 #                    if ((DISK_MODE_DATA_BDY == 2)); then
 #                      echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
 #                    else
 #                      echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
 #                    fi
 #                  done
-                  pathin="$DATA_BDY_SCALE/${time_bdy}/hist/${mem}"
-                  path="bdyscale/${time_bdy}/${name_m[$m]}"
+                  pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}"
+                  if ((BDY_ROTATING == 1)); then
+                    path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}"
+                  else
+                    path="bdyorg/const/${name_m[$m]}/${time_bdy}"
+                  fi
                   if ((DISK_MODE_DATA_BDY == 2)); then
                     echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
                   else
@@ -850,17 +829,29 @@ else
                   fi
                 done
               else
-#                for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/hist/meanf/history.*.nc 2> /dev/null); do
+#                for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf/history.*.nc 2> /dev/null); do
 #                  pathin="$ifile"
-#                  path="bdyscale/${time_bdy}/mean/$(basename $ifile)"
+#                  if ((BDY_ROTATING == 1)); then
+#                    path="bdyorg/${time_bdy}/mean/${time_bdy}/$(basename $ifile)"
+#                  else
+#                    path="bdyorg/const/mean/${time_bdy}/$(basename $ifile)"
+#                  fi
 #                  if ((DISK_MODE_DATA_BDY == 2)); then
 #                    echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
 #                  else
 #                    echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
 #                  fi
 #                done
-                pathin="$DATA_BDY_SCALE/${time_bdy}/hist/meanf"
-                path="bdyscale/${time_bdy}/mean"
+                if [ "$BDY_SCALE_DIR" = 'hist' ]; then
+                  pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf"
+                else
+                  pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/mean"
+                fi
+                if ((BDY_ROTATING == 1)); then
+                  path="bdyorg/${time_bdy}/mean/${time_bdy}"
+                else
+                  path="bdyorg/const/mean/${time_bdy}"
+                fi
                 if ((DISK_MODE_DATA_BDY == 2)); then
                   echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
                 else
@@ -872,9 +863,13 @@ else
 
               if ((BDY_ENS == 1)); then
                 for m in $(seq $fmember); do
-##                  mm=$(((c-1) * fmember + m))
-                  pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_bdy}"
-                  path="bdywrf/${name_m[$m]}/wrfout_${time_bdy}"
+                  if ((BDY_ROTATING == 1)); then
+                    pathin="$DATA_BDY_WRF/${time2}/${name_m[$m]}/wrfout_${time_bdy}"
+                    path="bdyorg/${time2}/${name_m[$m]}/wrfout_${time_bdy}"
+                  else
+                    pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_bdy}"
+                    path="bdyorg/const/${name_m[$m]}/wrfout_${time_bdy}"
+                  fi
                   if ((DISK_MODE_DATA_BDY == 2)); then
                     echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
                   else
@@ -882,8 +877,13 @@ else
                   fi
                 done
               else
-                pathin="$DATA_BDY_WRF/mean/wrfout_${time_bdy}"
-                path="bdywrf/mean/wrfout_${time_bdy}"
+                if ((BDY_ROTATING == 1)); then
+                  pathin="$DATA_BDY_WRF/${time2}/mean/wrfout_${time_bdy}"
+                  path="bdyorg/${time2}/mean/wrfout_${time_bdy}"
+                else
+                  pathin="$DATA_BDY_WRF/mean/wrfout_${time_bdy}"
+                  path="bdyorg/const/mean/wrfout_${time_bdy}"
+                fi
                 if ((DISK_MODE_DATA_BDY == 2)); then
                   echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
                 else
@@ -892,7 +892,7 @@ else
               fi
 
             fi
-          fi # ((bdy_processed == 0))
+          fi # ((bdy_processed == 0 || BDY_ROTATING == 1))
         done
 
       done
@@ -936,10 +936,10 @@ fi
 
 if ((BDY_FORMAT == 1)); then
   if ((DISK_MODE_DATA_BDY == 2)); then
-    bdycatalogue=${TMPDAT_S}/bdyscale/latlon_domain_catalogue.txt
+    bdycatalogue=${TMPDAT_S}/bdyorg/latlon_domain_catalogue.txt
     bdytopo=${TMPDAT_S}/bdytopo/const/topo
   else
-    bdycatalogue=${TMPDAT_L}/bdyscale/latlon_domain_catalogue.txt
+    bdycatalogue=${TMPDAT_L}/bdyorg/latlon_domain_catalogue.txt
     bdytopo=${TMPDAT_L}/bdytopo/const/topo
   fi
 fi
@@ -1055,18 +1055,10 @@ if ((BDY_FORMAT == 0)); then
   exit 1
 fi
 
-if ((BDY_FORMAT == 1)); then
-  if ((DISK_MODE_DATA_BDY == 2)); then
-    bdy_loc=${TMPDAT_S}/bdyscale
-  else
-    bdy_loc=${TMPDAT_L}/bdyscale
-  fi
-elif ((BDY_FORMAT == 2)); then
-  if ((DISK_MODE_DATA_BDY == 2)); then
-    bdy_loc=${TMPDAT_S}/bdywrf
-  else
-    bdy_loc=${TMPDAT_L}/bdywrf
-  fi
+if ((DISK_MODE_DATA_BDY == 2)); then
+  bdyorgf=${TMPDAT_S}/bdyorg
+else
+  bdyorgf=${TMPDAT_L}/bdyorg
 fi
 
 if ((BDY_ENS == 1)); then
@@ -1110,7 +1102,11 @@ for it in $(seq $its $ite); do
       mem_bdy='mean'
     fi
 
-    bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT $PARENT_REF_TIME $BDYINT
+    if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
+      bdy_setting ${stimes[$c]} $FCSTLEN - $BDYINT $PARENT_REF_TIME
+    else
+      bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
+    fi
     bdy_time_list=''
     for ibdy in $(seq $nbdy); do
       bdy_time_list="${bdy_time_list}${bdy_times[$ibdy]} "
@@ -1125,7 +1121,7 @@ for it in $(seq $its $ite); do
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
            $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
-           ${bdy_loc} ${stimes[$c]} $mkinit ${name_m[$m]} $mem_bdy \
+           ${bdyorgf} ${stimes[$c]} $mkinit ${name_m[$m]} $mem_bdy \
            $TMPRUN/scale_init/$(printf '%04d' $m) \
            "$bdy_time_list" $ntsteps $ntsteps_skip fcst
     fi
@@ -1256,7 +1252,11 @@ for it in $(seq $its $ite); do
       bdy_base="$TMPOUT/${stimes[$c]}/bdy/mean/boundary"
     fi
 
-    bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT $PARENT_REF_TIME $BDYINT
+    if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
+      bdy_setting ${stimes[$c]} $FCSTLEN - $BDYINT $PARENT_REF_TIME
+    else
+      bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
+    fi
 
     if ((LANDUSE_UPDATE == 1)); then
       time_l=${stimes[$c]}
