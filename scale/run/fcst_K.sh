@@ -140,7 +140,7 @@ bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR $myname1 >> $jobscrp
 
 cat >> $jobscrp << EOF
 
-. /work/system/Env_base_1.2.0-17-2
+. /work/system/Env_base_1.2.0-20-1
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
