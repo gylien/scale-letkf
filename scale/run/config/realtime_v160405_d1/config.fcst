@@ -6,9 +6,9 @@
 #===============================================================================
 
 STIME='<STIME>'
-ETIME='<STIME>'
+ETIME='<ETIME>'
 MEMBERS='mean'
-CYCLE=1
+CYCLE=
 CYCLE_SKIP=1
 ISTEP=
 FSTEP=

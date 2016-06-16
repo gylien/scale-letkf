@@ -20,7 +20,7 @@ DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE=
 DATA_BDY_SCALE=
 DATA_BDY_SCALE_PREP=
-DATA_BDY_WRF="/volume63/data/hp150019/gylien/realtime/ctl/ncepgfs_wrf/<STIME>"
+DATA_BDY_WRF="/volume63/data/hp150019/gylien/realtime/ctl/<DATA_BDY_WRF>"
 DATA_BDY_NICAM=
 
 OBS="/volume63/data/hp150019/gylien/realtime/ctl/ncepobs" # directory of observation data in LETKF obs format

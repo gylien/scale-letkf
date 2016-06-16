@@ -124,7 +124,7 @@ else
   done
   MEMBERS="$tmpstr"
 fi
-CYCLE=${CYCLE:-1}
+CYCLE=${CYCLE:-0}
 CYCLE_SKIP=${CYCLE_SKIP:-1}
 IF_VERF=${IF_VERF:-0}
 IF_EFSO=${IF_EFSO:-0}
@@ -144,9 +144,11 @@ if ((BDY_FORMAT >= 1)); then
   if [ -z "$PARENT_REF_TIME" ]; then
     PARENT_REF_TIME=$STIME
     for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
-      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/$(datetime $PARENT_REF_TIME $BDYCYCLE_INT s)/gues/meanf/history.pe000000.nc" ]; then
+      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/meanf/history.pe000000.nc" ]; then
         break
-      elif ((BDY_FORMAT == 2)) && [ -s "$DATA_BDY_WRF/mean/wrfout_${PARENT_REF_TIME}" ]; then
+      elif ((BDY_FORMAT == 2 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_WRF/${PARENT_REF_TIME}/mean/wrfout_${PARENT_REF_TIME}" ]; then
+        break
+      elif ((BDY_FORMAT == 2 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_WRF/mean/wrfout_${PARENT_REF_TIME}" ]; then
         break
       elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
         echo "[Error] Cannot find boundary files." >&2
@@ -1221,13 +1223,6 @@ if ((loop == 1)); then
   mkinit=$MAKEINIT
 fi
 
-ocean_base='-'
-if ((OCEAN_INPUT == 1)); then
-  if ((mkinit != 1 || OCEAN_FORMAT != 99)); then
-    ocean_base="$TMPOUT/${stimes[$c]}/anal/mean/init_ocean"  ### always use mean???
-  fi
-fi
-
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script end" >&2
 fi
@@ -1245,6 +1240,13 @@ for it in $(seq $its $ite); do
 #    if ((PERTURB_BDY == 1)); then
 #      ...
 #    fi
+
+    ocean_base='-'
+    if ((OCEAN_INPUT == 1)); then
+      if ((mkinit != 1 || OCEAN_FORMAT != 99)); then
+        ocean_base="$TMPOUT/${stimes[$c]}/anal/mean/init_ocean"  ### always use mean???
+      fi
+    fi
 
     if ((BDY_ENS == 1)); then
       bdy_base="$TMPOUT/${stimes[$c]}/bdy/${name_m[$m]}/boundary"

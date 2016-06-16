@@ -133,9 +133,11 @@ if ((BDY_FORMAT >= 1)); then
   if [ -z "$PARENT_REF_TIME" ]; then
     PARENT_REF_TIME=$STIME
     for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
-      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/$(datetime $PARENT_REF_TIME $BDYCYCLE_INT s)/gues/meanf/history.pe000000.nc" ]; then
+      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/meanf/history.pe000000.nc" ]; then
         break
-      elif ((BDY_FORMAT == 2)) && [ -s "$DATA_BDY_WRF/mean/wrfout_${PARENT_REF_TIME}" ]; then
+      elif ((BDY_FORMAT == 2 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_WRF/${PARENT_REF_TIME}/mean/wrfout_${PARENT_REF_TIME}" ]; then
+        break
+      elif ((BDY_FORMAT == 2 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_WRF/mean/wrfout_${PARENT_REF_TIME}" ]; then
         break
       elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
         echo "[Error] Cannot find boundary files." >&2

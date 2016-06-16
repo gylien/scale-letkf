@@ -99,9 +99,9 @@ for time_bdy in $BDY_TIME_LIST; do
     file_number="_$(printf %05d $i)"
   fi
   if ((BDY_ROTATING == 1)); then
-    bdyorg_path="${BDYORG}/const/${MEM_BDY}"
-  else
     bdyorg_path="${BDYORG}/${STIME}/${MEM_BDY}"
+  else
+    bdyorg_path="${BDYORG}/const/${MEM_BDY}"
   fi
   if ((BDY_FORMAT == 1)); then
     if [ -s "${bdyorg_path}/${time_bdy}/history.pe000000.nc" ]; then

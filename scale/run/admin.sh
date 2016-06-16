@@ -10,36 +10,41 @@ res=$? && ((res != 0)) && exit $res
 
 #-------------------------------------------------------------------------------
 
-if (($# < 5)); then
+if (($# < 7)); then
   echo "$0: Insufficient arguments" >&2
   exit 1
 fi
 
-SCPNAME="$1"
-STIME="$2"
-TIME_DT="$3"
-TIME_DT_DYN="$4"
-NNODES="$5"
-WTIME_L="$6"
-
-#ETIME=$(datetime "$STIME" ${LCYCLE} s)
+SCPNAME="$1"; shift
+STIME="$1"; shift
+ETIME="$1"; shift
+TIME_DT="$1"; shift
+TIME_DT_DYN="$1"; shift
+NNODES="$1"; shift
+WTIME_L="$1"
 
 CONFIG='realtime_v160405_d1'
+
+if [ "$ETIME" = '-' ]; then
+  ETIME="$STIME"
+fi
 
 #-------------------------------------------------------------------------------
 
 if [ "$SCPNAME" = 'cycle' ]; then
-  STIME_DIR="${STIME}_da"
+  DATA_BDY_WRF="ncepgfs_wrf_da"
 else
-  STIME_DIR="${STIME}"
+  DATA_BDY_WRF="ncepgfs_wrf"
 fi
+#cat config/${CONFIG}/config.main.K_micro | \
 cat config/${CONFIG}/config.main.K | \
-    sed -e "s/<STIME>/${STIME_DIR}/g" | \
+    sed -e "s/<DATA_BDY_WRF>/${DATA_BDY_WRF}/g" | \
     sed -e "s/<NNODES>/${NNODES}/g" \
     > config.main
 
 cat config/${CONFIG}/config.${SCPNAME} | \
     sed -e "s/<STIME>/${STIME}/g" | \
+    sed -e "s/<ETIME>/${ETIME}/g" | \
     sed -e "s/<WTIME_L>/${WTIME_L}/g" \
     > config.${SCPNAME}
 
@@ -50,6 +55,7 @@ cat config/${CONFIG}/config.nml.scale | \
 
 #-------------------------------------------------------------------------------
 
+#./${SCPNAME}_K_micro.sh > ${SCPNAME}_K.log 2>&1
 ./${SCPNAME}_K.sh > ${SCPNAME}_K.log 2>&1
 res=$? && ((res != 0)) && exit $res
 

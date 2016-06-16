@@ -79,6 +79,10 @@ declare -a node_m
 safe_init_tmpdir $NODEFILE_DIR
 distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
 
+if ((CYCLE == 0)); then
+  CYCLE=$parallel_mems
+fi
+
 #===============================================================================
 # Determine the staging list
 
