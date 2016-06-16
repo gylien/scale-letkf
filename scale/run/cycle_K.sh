@@ -136,7 +136,6 @@ fi
 
 cat > $jobscrp << EOF
 #!/bin/sh
-##PJM -g ra000015
 #PJM -N ${myname1}_${SYSNAME}
 #PJM -s
 #PJM --rsc-list "node=${NNODES_real}"
