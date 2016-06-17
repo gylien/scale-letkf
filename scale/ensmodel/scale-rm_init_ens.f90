@@ -31,7 +31,7 @@ program scaleles_init_ens
      PRC_DOMAIN_nlim, &
      PRC_GLOBAL_COMM_WORLD, &
      PRC_LOCAL_COMM_WORLD
-  use mod_init_driver
+  use mod_rm_prep
 
   implicit none
 
@@ -123,7 +123,7 @@ program scaleles_init_ens
 
 !-----------------------------------------------------------------------
 
-  call set_common_conf
+  call set_common_conf(nprocs)
   call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
   CALL MPI_BARRIER(universal_comm,ierr)
@@ -132,7 +132,7 @@ program scaleles_init_ens
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------
-! Run SCALE-LES_init
+! Run SCALE-RM_init
 !-----------------------------------------------------------------------
 
   ! split MPI communicator for LETKF
@@ -173,10 +173,10 @@ program scaleles_init_ens
         WRITE(confname(1:4),'(I4.4)') proc2mem(1,it,universal_myrank+1)
         WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', confname
 
-        call scaleles_init ( local_comm, &
-                             intercomm_parent, &
-                             intercomm_child, &
-                             confname )
+        call scalerm_prep ( local_comm, &
+                            intercomm_parent, &
+                            intercomm_child, &
+                            confname )
       end if
     end do ! [ it = its, ite ]
 
@@ -194,7 +194,7 @@ program scaleles_init_ens
 
   CALL MPI_BARRIER(universal_comm,ierr)
   rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(SCALE_LES):',rtimer-rtimer00
+  WRITE(6,timer_fmt) '### TIMER(SCALE_RM):',rtimer-rtimer00
   rtimer00=rtimer
 
 !-----------------------------------------------------------------------

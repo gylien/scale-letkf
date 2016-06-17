@@ -61,13 +61,20 @@ MODULE common_nml
   real(r_size) :: SIGMA_OBST = 3.0d0
   real(r_size) :: BASE_OBSV_RAIN = 85000.0d0
 
-  real(r_size) :: COV_INFL_MUL = 1.0d0    ! > 0: globally constant covariance inflation
-                                          ! < 0: 3D inflation values input from a GPV file "infl_mul.grd"
-  real(r_size) :: MIN_INFL_MUL = 0.0d0    ! minimum inlfation factor
-  logical :: ADAPTIVE_INFL_INIT = .false.
+  real(r_size) :: INFL_MUL = 1.0d0           ! >  0: globally constant covariance inflation
+                                             ! <= 0: use 3D inflation field from 'INFL_MUL_IN_BASENAME' file
+  real(r_size) :: INFL_MUL_MIN = 0.0d0       ! minimum inlfation factor
+  logical :: INFL_MUL_ADAPTIVE = .false.     ! if true, outout adaptively estimated 3D inlfation field to 'INFL_MUL_OUT_BASENAME' file
+  character(filelenmax) :: INFL_MUL_IN_BASENAME = 'infl'
+  character(filelenmax) :: INFL_MUL_OUT_BASENAME = 'infl'
+
+  real(r_size) :: INFL_ADD = 0.0d0           ! additive inflation
+  character(filelenmax) :: INFL_ADD_IN_BASENAME = 'addi.@@@@'
+
   real(r_size) :: RELAX_ALPHA = 0.0d0        ! RTPP relaxation parameter
   real(r_size) :: RELAX_ALPHA_SPREAD = 0.0d0 ! RTPS relaxation parameter
-  real(r_size) :: SP_INFL_ADD = 0.0d0        ! additive inflation
+  logical :: RELAX_SPREAD_OUT = .false.
+  character(filelenmax) :: RELAX_SPREAD_OUT_BASENAME = 'rtps'
 
   real(r_size) :: GROSS_ERROR = 5.0d0
   real(r_size) :: GROSS_ERROR_RAIN = -1.0d0      ! < 0: same as GROSS_ERROR
@@ -79,14 +86,26 @@ MODULE common_nml
   real(r_size) :: GROSS_ERROR_TCY = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
   real(r_size) :: GROSS_ERROR_TCP = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
 
-  integer :: LEV_UPDATE_Q = 100000        ! q and qc are only updated below and equal to this model level
-  real(r_size) :: Q_SPRD_MAX = 0.5        ! maximum q (ensemble spread)/(ensemble mean)
+  real(r_size) :: Q_UPDATE_TOP = 0.0d0     ! water vapor and hydrometeors are updated only below this pressure level (Pa)
+  real(r_size) :: Q_SPRD_MAX = -1.0D0      ! maximum q (ensemble spread)/(ensemble mean) (only effective when > 0)
 
-  real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0
+  real(r_size) :: BOUNDARY_BUFFER_WIDTH = 0.0d0
 
   logical :: POSITIVE_DEFINITE_Q = .false.
   logical :: POSITIVE_DEFINITE_QHYD = .false.
   real(r_size) :: TC_SEARCH_DIS = 200.0d3 ! (m) ! tentative! Should be modify !!
+
+  real(r_size) :: PS_ADJUST_THRES = 100.d0
+
+  integer :: MAX_NOBS_PER_GRID = 0   ! observation number limit; <= 0: Do not use
+  logical :: NOBS_OUT = .false.
+  character(filelenmax) :: NOBS_OUT_BASENAME = 'nobs'
+
+  !*** for backward compatibility ***
+  real(r_size) :: COV_INFL_MUL = 1.0d0
+  real(r_size) :: MIN_INFL_MUL = 0.0d0
+  logical :: ADAPTIVE_INFL_INIT = .false.
+  real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0
 
   !--- PARAM_LETKF_PRC
   integer :: NNODES = 1
@@ -144,6 +163,10 @@ MODULE common_nml
   LOGICAL :: OBSANAL_OUTPUT = .false.
 
   !--- PARAM_LETKF_RADAR
+  logical :: USE_RADAR_REF       = .true.
+  logical :: USE_RADAR_VR        = .true.
+  logical :: USE_RADAR_PSEUDO_RH = .false.
+
   INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than RADAR_REF_THRES_DBZ
   INTEGER :: MIN_RADAR_REF_MEMBER_OBSREF = 1   !Ensemble members with
 
@@ -155,11 +178,6 @@ MODULE common_nml
   real(r_size) :: RADAR_ZMAX = 99.0d3          !Height limit of radar data to be used
 
   REAL(r_size) :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
-
-  logical :: USE_RADAR_PSEUDO_RH = .false.
-
-  real(r_size) :: RADAR_EDGE_TAPER_WIDTH = 0.0d0
-  real(r_size) :: RADAR_RANGE = 0.0d0              !!!!!! should not use this and should save this information in obs files !!!!!!
 
   !These 2 flags affects the computation of model reflectivity and radial velocity. 
   INTEGER :: INTERPOLATION_TECHNIQUE = 1
@@ -271,12 +289,17 @@ subroutine read_nml_letkf
     SIGMA_OBSZ_RADAR, &
     SIGMA_OBST, &
     BASE_OBSV_RAIN, &
-    COV_INFL_MUL, &
-    MIN_INFL_MUL, &
-    ADAPTIVE_INFL_INIT, &
+    INFL_MUL, &
+    INFL_MUL_MIN, &
+    INFL_MUL_ADAPTIVE, &
+    INFL_MUL_IN_BASENAME, &
+    INFL_MUL_OUT_BASENAME, &
+    INFL_ADD, &
+    INFL_ADD_IN_BASENAME, &
     RELAX_ALPHA, &
     RELAX_ALPHA_SPREAD, &
-    SP_INFL_ADD, &
+    RELAX_SPREAD_OUT, &
+    RELAX_SPREAD_OUT_BASENAME, &
     GROSS_ERROR, &
     GROSS_ERROR_RAIN, &
     GROSS_ERROR_RADAR_REF, &
@@ -286,12 +309,21 @@ subroutine read_nml_letkf
     GROSS_ERROR_TCX, &
     GROSS_ERROR_TCY, &
     GROSS_ERROR_TCP, &
-    LEV_UPDATE_Q, &
+    Q_UPDATE_TOP, &
     Q_SPRD_MAX, &
-    BOUNDARY_TAPER_WIDTH, &
+    BOUNDARY_BUFFER_WIDTH, &
     POSITIVE_DEFINITE_Q, &
     POSITIVE_DEFINITE_QHYD, &
-    TC_SEARCH_DIS 
+    TC_SEARCH_DIS, &
+    PS_ADJUST_THRES, &
+    MAX_NOBS_PER_GRID, &
+    NOBS_OUT, &
+    NOBS_OUT_BASENAME, &
+    !*** for backward compatibility ***
+    COV_INFL_MUL, &
+    MIN_INFL_MUL, &
+    ADAPTIVE_INFL_INIT, &
+    BOUNDARY_TAPER_WIDTH
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
@@ -351,6 +383,33 @@ subroutine read_nml_letkf
   end if
   if (SIGMA_OBSV_TC < 0.0d0) then 
     SIGMA_OBSV_TC = SIGMA_OBSV
+  end if
+
+  if (trim(INFL_MUL_OUT_BASENAME) == '') then
+    INFL_MUL_ADAPTIVE = .false.
+  end if
+  if (trim(INFL_ADD_IN_BASENAME) == '') then
+    INFL_ADD = 0.0d0
+  end if
+  if (trim(RELAX_SPREAD_OUT_BASENAME) == '') then
+    RELAX_SPREAD_OUT = .false.
+  end if
+  if (trim(NOBS_OUT_BASENAME) == '') then
+    NOBS_OUT = .false.
+  end if
+
+  !*** for backward compatibility ***
+  if (COV_INFL_MUL /= 1.0d0 .and. INFL_MUL == 1.0d0) then
+    INFL_MUL = COV_INFL_MUL
+  end if
+  if (MIN_INFL_MUL /= 0.0d0 .and. INFL_MUL_MIN == 0.0d0) then
+    INFL_MUL_MIN = MIN_INFL_MUL
+  end if
+  if (ADAPTIVE_INFL_INIT /= .false. .and. INFL_MUL_ADAPTIVE == .false.) then
+    INFL_MUL_ADAPTIVE = ADAPTIVE_INFL_INIT
+  end if
+  if (BOUNDARY_TAPER_WIDTH /= 0.0d0 .and. BOUNDARY_BUFFER_WIDTH == 0.0d0) then
+    BOUNDARY_BUFFER_WIDTH = BOUNDARY_TAPER_WIDTH
   end if
 
   write(6, nml=PARAM_LETKF)
@@ -499,6 +558,9 @@ subroutine read_nml_letkf_radar
   integer :: ierr
 
   namelist /PARAM_LETKF_RADAR/ &
+    USE_RADAR_REF, &
+    USE_RADAR_VR, &
+    USE_RADAR_PSEUDO_RH, &
     MIN_RADAR_REF_MEMBER, &
     MIN_RADAR_REF_MEMBER_OBSREF, &
     LOW_REF_SHIFT, &
@@ -506,9 +568,6 @@ subroutine read_nml_letkf_radar
     RADAR_REF_THRES_DBZ, &
     RADAR_ZMAX, &
     RADAR_PRH_ERROR, &
-    USE_RADAR_PSEUDO_RH, &
-    RADAR_EDGE_TAPER_WIDTH, &
-    RADAR_RANGE, &               !!!!!! should not use this and should save this information in obs files !!!!!!
     INTERPOLATION_TECHNIQUE, &
     METHOD_REF_CALC, &
     USE_TERMINAL_VELOCITY, &

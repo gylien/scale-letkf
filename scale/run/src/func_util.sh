@@ -191,7 +191,6 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
   if ((USE_RANKDIR == 1)); then
 
-#echo "mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS"
     mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS
     res=$?
     if ((res != 0)); then
@@ -202,7 +201,6 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
   else
 
-#echo "mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS"
     ( cd $progdir && mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS )
     res=$?
     if ((res != 0)); then 

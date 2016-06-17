@@ -42,21 +42,21 @@ fi
 #===============================================================================
 
 mkdir -p $TMPRUN/scale_pp
-cp -f $TMPDAT/exec/scale-les_pp_ens $TMPRUN/scale_pp
+cp -f $TMPDAT/exec/scale-rm_pp_ens $TMPRUN/scale_pp
 
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ### 5-2" >&2
 fi
 
 mkdir -p $TMPRUN/scale_init
-cp -f $TMPDAT/exec/scale-les_init_ens $TMPRUN/scale_init
+cp -f $TMPDAT/exec/scale-rm_init_ens $TMPRUN/scale_init
 
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ### 5-3" >&2
 fi
 
 mkdir -p $TMPRUN/scale
-cp -f $TMPDAT/exec/scale-les_ens $TMPRUN/scale
+cp -f $TMPDAT/exec/scale-rm_ens $TMPRUN/scale
 
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ### 5-4" >&2

@@ -81,10 +81,7 @@ cat $TMPDAT/conf/config.nml.obsope | \
     > $TMPDIR/obsope.conf
 
 # These parameters are not important for obsope
-cat $TMPDAT/conf/config.nml.scale | \
-    sed -e "/!--TIME_DURATION--/a TIME_DURATION = $LTIMESLOT.D0," \
-        -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = $LTIMESLOT.D0," \
-    >> $TMPDIR/obsope.conf
+cat $TMPDAT/conf/config.nml.scale >> $TMPDIR/obsope.conf
 
 #===============================================================================
 

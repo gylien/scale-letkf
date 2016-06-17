@@ -13,7 +13,7 @@ MODULE common_scale
 !$USE OMP_LIB
   USE common
   use common_nml
-  use common_mpi, only: nprocs, myrank
+!  use common_mpi, only: nprocs, myrank
 
 
 !  use scale_stdio
@@ -172,7 +172,7 @@ CONTAINS
 !  -1: MEMBER+1
 !-----------------------------------------------------------------------
 SUBROUTINE set_common_scale
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
   use scale_grid_index, only: &
@@ -362,10 +362,11 @@ END SUBROUTINE set_common_scale
 
 
 
-subroutine set_common_conf
+subroutine set_common_conf(nprocs)
   use scale_stdio
 
   implicit none
+  integer, intent(in) :: nprocs
   character(len=H_MID), parameter :: MODELNAME = "SCALE-LETKF"
 
   ! setup standard I/O
@@ -507,7 +508,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   use netcdf, only: NF90_NOWRITE
   use scale_process, only: &
     PRC_myrank
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_HAS_W,  &
     PRC_HAS_E,  &
     PRC_HAS_S,  &
@@ -516,6 +517,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     IHALO, JHALO, &
     IMAX, JMAX, KMAX, &
     IMAXB, JMAXB
+  use common_mpi, only: myrank
   use common_ncio
   IMPLICIT NONE
 
@@ -525,8 +527,8 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d,iv2d,ncid
   integer :: is, ie, js, je
-  real(r_dble) :: v3dgtmp(KMAX,IMAXB,JMAXB)
-  real(r_dble) :: v2dgtmp(IMAXB,JMAXB)
+  real(RP) :: v3dgtmp(KMAX,IMAXB,JMAXB)
+  real(RP) :: v2dgtmp(IMAXB,JMAXB)
 
   is = 1
   ie = IMAX
@@ -549,14 +551,14 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
 
   do iv3d = 1, nv3d
     write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
-    call ncio_read_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-    v3dg(:,:,:,iv3d) = real(v3dgtmp(:,is:ie,js:je), RP)
+    call ncio_read(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
+    v3dg(:,:,:,iv3d) = v3dgtmp(:,is:ie,js:je)
   end do
 
   do iv2d = 1, nv2d
     write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
-    call ncio_read_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-    v2dg(:,:,iv2d) = real(v2dgtmp(is:ie,js:je), RP)
+    call ncio_read(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+    v2dg(:,:,iv2d) = v2dgtmp(is:ie,js:je)
   end do
 
   call ncio_close(ncid)
@@ -585,8 +587,8 @@ END SUBROUTINE read_restart
 !  character(len=12) :: filesuffix = '.pe000000.nc'
 !  integer :: iv3d,iv2d,ncid
 
-!  REAL(r_dble) :: v3dgtmp(nlev,nlon,nlat)
-!  REAL(r_dble) :: v2dgtmp(nlon,nlat)
+!  REAL(RP) :: v3dgtmp(nlev,nlon,nlat)
+!  REAL(RP) :: v2dgtmp(nlon,nlat)
 
 !!  integer :: vid,error
 
@@ -602,16 +604,16 @@ END SUBROUTINE read_restart
 
 !  DO iv3d = 1, nv3d
 !    write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
-!    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, real(v3dg(:,:,:,iv3d),r_dble))
-!    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, v3dgtmp)
-!    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, v3dgtmp)
+!    call ncio_write(ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, v3dg(:,:,:,iv3d))
+!    call ncio_read (ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, v3dgtmp)
+!    call ncio_write(ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, v3dgtmp)
 !  END DO
 
 !  DO iv2d = 1, nv2d
 !    write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
-!    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, real(v2dg(:,:,iv2d),r_dble))
-!    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, v2dgtmp)
-!    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, v2dgtmp)
+!    call ncio_write(ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, v2dg(:,:,iv2d))
+!    call ncio_read (ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, v2dgtmp)
+!    call ncio_write(ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, v2dgtmp)
 !  END DO
 
 !!  DO iv3d = 1, nv3d
@@ -647,7 +649,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   use netcdf, only: NF90_WRITE
   use scale_process, only: &
     PRC_myrank
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_HAS_W,  &
     PRC_HAS_E,  &
     PRC_HAS_S,  &
@@ -656,6 +658,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     IHALO, JHALO, &
     IMAX, JMAX, KMAX, &
     IMAXB, JMAXB
+  use common_mpi, only: myrank
   use common_ncio
   implicit none
 
@@ -665,8 +668,8 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d,iv2d,ncid
   integer :: is, ie, js, je
-  real(r_dble) :: v3dgtmp(KMAX,IMAXB,JMAXB)
-  real(r_dble) :: v2dgtmp(IMAXB,JMAXB)
+  real(RP) :: v3dgtmp(KMAX,IMAXB,JMAXB)
+  real(RP) :: v2dgtmp(IMAXB,JMAXB)
 
   is = 1
   ie = IMAX
@@ -689,20 +692,20 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
 
   do iv3d = 1, nv3d
     write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
-    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-    v3dgtmp(:,is:ie,js:je) = real(v3dg(:,:,:,iv3d), r_dble)
-    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-!    call ncio_read_3d_r8 (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)  !!! read and write again to work around the endian problem on the K computer
-!    call ncio_write_3d_r8(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)  !
+    call ncio_read (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
+    v3dgtmp(:,is:ie,js:je) = v3dg(:,:,:,iv3d)
+    call ncio_write(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
+!    call ncio_read (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)  !!! read and write again to work around the endian problem on the K computer
+!    call ncio_write(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)  !
   end do
 
   do iv2d = 1, nv2d
     write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
-    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-    v2dgtmp(is:ie,js:je) = real(v2dg(:,:,iv2d), r_dble)
-    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-!    call ncio_read_2d_r8 (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !!! read and write again to work around the endian problem on the K computer
-!    call ncio_write_2d_r8(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !
+    call ncio_read (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+    v2dgtmp(is:ie,js:je) = v2dg(:,:,iv2d)
+    call ncio_write(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
+!    call ncio_read (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !!! read and write again to work around the endian problem on the K computer
+!    call ncio_write(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !
   end do
 
   call ncio_close(ncid)
@@ -717,7 +720,7 @@ SUBROUTINE read_topo(filename,topo)
   use netcdf, only: NF90_NOWRITE
   use scale_process, only: &
     PRC_myrank
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_HAS_W,  &
     PRC_HAS_E,  &
     PRC_HAS_S,  &
@@ -726,6 +729,7 @@ SUBROUTINE read_topo(filename,topo)
     IHALO, JHALO, &
     IMAX, JMAX, &
     IMAXB, JMAXB
+  use common_mpi, only: myrank
   use common_ncio
   IMPLICIT NONE
 
@@ -734,7 +738,7 @@ SUBROUTINE read_topo(filename,topo)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: ncid
   integer :: is, ie, js, je
-  real(r_dble) :: v2dgtmp(IMAXB,JMAXB)
+  real(RP) :: v2dgtmp(IMAXB,JMAXB)
 
   is = 1
   ie = IMAX
@@ -754,8 +758,8 @@ SUBROUTINE read_topo(filename,topo)
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
   write(6,'(1x,A,A15)') '*** Read 2D var: ', 'TOPO'
-  call ncio_read_2d_r8(ncid, 'TOPO', IMAXB, JMAXB, 1, v2dgtmp)
-  topo = real(v2dgtmp(is:ie,js:je), RP)
+  call ncio_read(ncid, 'TOPO', IMAXB, JMAXB, 1, v2dgtmp)
+  topo = v2dgtmp(is:ie,js:je)
 
   call ncio_close(ncid)
 
@@ -768,70 +772,161 @@ END SUBROUTINE read_topo
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
-SUBROUTINE read_history(filename,step,v3dg,v2dg)
+subroutine read_history(filename,step,v3dg,v2dg)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
       IHALO, JHALO, KHALO, &
       IS, IE, JS, JE, KS, KE, KA
-  use scale_history, only: &
-      HIST_get
+  use gtool_history, only: &
+      HistoryGet
   use scale_comm, only: &
       COMM_vars8, &
       COMM_wait
-  IMPLICIT NONE
+  use common_mpi, only: myrank
+  implicit none
 
-  CHARACTER(*),INTENT(IN) :: filename
-  INTEGER,INTENT(IN) :: step
-  REAL(r_size),INTENT(OUT) :: v3dg(nlevh,nlonh,nlath,nv3dd)
-  REAL(r_size),INTENT(OUT) :: v2dg(nlonh,nlath,nv2dd)
-  INTEGER :: i,j,k,iv3d,iv2d
+  character(*),intent(in) :: filename
+  integer,intent(in) :: step
+  real(r_size),intent(out) :: v3dg(nlevh,nlonh,nlath,nv3dd)
+  real(r_size),intent(out) :: v2dg(nlonh,nlath,nv2dd)
+  integer :: i,j,k,iv3d,iv2d
   character(len=12) :: filesuffix = '.pe000000.nc'
-  real(RP) :: var3D(nlon,nlat,nlev)
-  real(RP) :: var2D(nlon,nlat)
-
-!  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
+  real(RP) :: var3d(nlon,nlat,nlev)
+  real(RP) :: var2d(nlon,nlat)
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
 
-  DO iv3d = 1, nv3dd
+  ! 3D variables
+  !-------------
+  do iv3d = 1, nv3dd
     write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
-    call HIST_get(var3D, filename, trim(v3dd_name(iv3d)), step)
-    FORALL (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
+    call HistoryGet( var3D,                 & ! [OUT]
+                     filename,              & ! [IN]
+                     trim(v3dd_name(iv3d)), & ! [IN]
+                     step                   ) ! [IN]
+    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
+  end do
 
-!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j  = JS, JE
-      do i  = IS, IE
+  do iv3d = 1, nv3dd
+    call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
+  end do
+  do iv3d = 1, nv3dd
+    call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
+  end do
+
+  do iv3d = 1, nv3dd
+!!!!!!!$OMP PARALLEL DO PRIVATE(i,j) OMP_SCHEDULE_ COLLAPSE(2)
+    do j = JS, JE
+      do i = IS, IE
         v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
         v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
-      enddo
-    enddo
-  END DO
+      end do
+    end do
+  end do
 
-  DO iv3d = 1, nv3dd
-    call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
-  END DO
-  DO iv3d = 1, nv3dd
-    call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
-  END DO
-
-  DO iv2d = 1, nv2dd
+  ! 2D variables
+  !-------------
+  do iv2d = 1, nv2dd
     write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
-    call HIST_get(var2D, filename, trim(v2dd_name(iv2d)), step)
+    call HistoryGet( var2D,                 & ! [OUT]
+                     filename,              & ! [IN]
+                     trim(v2dd_name(iv2d)), & ! [IN]
+                     step                   ) ! [IN]
     v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
-  END DO
+  end do
 
-  DO iv2d = 1, nv2dd
+  do iv2d = 1, nv2dd
     call COMM_vars8( v2dg(:,:,iv2d), iv2d )
-  END DO
-  DO iv2d = 1, nv2dd
+  end do
+  do iv2d = 1, nv2dd
     call COMM_wait ( v2dg(:,:,iv2d), iv2d )
-  END DO
+  end do
 
-  RETURN
-END SUBROUTINE read_history
+  return
+end subroutine read_history
+!!-----------------------------------------------------------------------
+!! (version handling data type conversion)
+!!-----------------------------------------------------------------------
+!subroutine read_history(filename,step,v3dg,v2dg)
+!  use scale_process, only: &
+!      PRC_myrank
+!  use scale_grid_index, only: &
+!      IHALO, JHALO, KHALO, &
+!      IS, IE, JS, JE, KS, KE, KA
+!  use gtool_history, only: &
+!      HistoryGet
+!  use scale_comm, only: &
+!      COMM_vars8, &
+!      COMM_wait
+!  use common_mpi, only: myrank
+!  implicit none
 
+!  character(*),intent(in) :: filename
+!  integer,intent(in) :: step
+!  real(r_size),intent(out) :: v3dg(nlevh,nlonh,nlath,nv3dd)
+!  real(r_size),intent(out) :: v2dg(nlonh,nlath,nv2dd)
+!  integer :: i,j,k,iv3d,iv2d
+!  character(len=12) :: filesuffix = '.pe000000.nc'
+!  real(RP) :: var3d(nlon,nlat,nlev)
+!  real(RP) :: var2d(nlon,nlat)
+!  real(RP) :: v3dgtmp(nlevh,nlonh,nlath,nv3dd)
+!  real(RP) :: v2dgtmp(nlonh,nlath,nv2dd)
+
+!  write (filesuffix(4:9),'(I6.6)') PRC_myrank
+!  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+
+!  ! 3D variables
+!  !-------------
+!  do iv3d = 1, nv3dd
+!    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
+!    call HistoryGet( var3D,                 & ! [OUT]
+!                     filename,              & ! [IN]
+!                     trim(v3dd_name(iv3d)), & ! [IN]
+!                     step                   ) ! [IN]
+!    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dgtmp(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
+!  end do
+
+!  do iv3d = 1, nv3dd
+!    call COMM_vars8( v3dgtmp(:,:,:,iv3d), iv3d )
+!  end do
+!  do iv3d = 1, nv3dd
+!    call COMM_wait ( v3dgtmp(:,:,:,iv3d), iv3d )
+!  end do
+!  v3dg = real(v3dgtmp, r_size)
+
+!  do iv3d = 1, nv3dd
+!!!!!!$OMP PARALLEL DO PRIVATE(i,j) OMP_SCHEDULE_ COLLAPSE(2)
+!    do j = JS, JE
+!      do i = IS, IE
+!        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
+!        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
+!      end do
+!    end do
+!  end do
+
+!  ! 2D variables
+!  !-------------
+!  do iv2d = 1, nv2dd
+!    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
+!    call HistoryGet( var2D,                 & ! [OUT]
+!                     filename,              & ! [IN]
+!                     trim(v2dd_name(iv2d)), & ! [IN]
+!                     step                   ) ! [IN]
+!    v2dgtmp(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
+!  end do
+
+!  do iv2d = 1, nv2dd
+!    call COMM_vars8( v2dgtmp(:,:,iv2d), iv2d )
+!  end do
+!  do iv2d = 1, nv2dd
+!    call COMM_wait ( v2dgtmp(:,:,iv2d), iv2d )
+!  end do
+!  v2dg = real(v2dgtmp, r_size)
+
+!  return
+!end subroutine read_history
 
 
 
@@ -1080,7 +1175,7 @@ END SUBROUTINE state_trans_inv
 
 
 subroutine rank_1d_2d(proc, iproc, jproc)
-  use scale_les_process, only: PRC_2Drank
+  use scale_rm_process, only: PRC_2Drank
   implicit none
   integer, intent(in) :: proc
   integer, intent(out) :: iproc, jproc
@@ -1093,7 +1188,7 @@ end subroutine rank_1d_2d
 
 
 subroutine rank_2d_1d(iproc, jproc, proc)
-  use scale_les_process, only: PRC_NUM_X
+  use scale_rm_process, only: PRC_NUM_X
   implicit none
   integer, intent(in) :: iproc, jproc
   integer, intent(out) :: proc
@@ -1181,7 +1276,7 @@ SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
   use scale_grid_index, only: &
       IHALO,JHALO
 !      IA,JA                  ! [for validation]
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
       PRC_NUM_X,PRC_NUM_Y
 !      PRC_myrank             ! [for validation]
 !  use scale_grid, only: &    ! [for validation]

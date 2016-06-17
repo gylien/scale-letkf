@@ -46,7 +46,7 @@ PERTURB_BDY=0    # 0: No
 
                  #      fcst
                  #      history restart
-OUT_OPT=1        # 1:   o       o
+OUT_OPT=2        # 1:   o       o
                  # 2:   o
 
                  #      topo

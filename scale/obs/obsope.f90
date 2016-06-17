@@ -32,7 +32,7 @@ PROGRAM obsope
 ! Initial settings
 !-----------------------------------------------------------------------
 
-  CALL initialize_mpi
+  CALL initialize_mpi_scale
   rtimer00 = MPI_WTIME()
 
   if (command_argument_count() >= 4) then
@@ -76,7 +76,7 @@ PROGRAM obsope
 
 !-----------------------------------------------------------------------
 
-  call set_common_conf
+  call set_common_conf(nprocs)
 
   call read_nml_obsope
   call read_nml_letkf
@@ -162,7 +162,7 @@ PROGRAM obsope
 ! Finalize
 !-----------------------------------------------------------------------
 
-  CALL finalize_mpi
+  CALL finalize_mpi_scale
 
   STOP
 END PROGRAM obsope

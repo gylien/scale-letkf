@@ -6,11 +6,10 @@
 #===============================================================================
 
 STIME='20130713060000'
-ETIME='20130713060930'
-#MEMBERS="$(seq 1 6)"
+ETIME='20130713061930'
 ISTEP=
 FSTEP=
-TIME_LIMIT='01:45:00'
+TIME_LIMIT='02:30:00'
 
 #===============================================================================
 
@@ -50,11 +49,14 @@ OBSOPE=0         # 0: No    ! obsope options: not finished yet!!
 
                  #      anal              gues              history
                  #      mean/sprd members mean/sprd members mean members
-OUT_OPT=3        # 1:   o         o       o         o       o    o
+OUT_OPT=5        # 1:   o         o       o         o       o    o
                  # 2:   o         o       o         o       o
                  # 3:   o         o       o         o
                  # 4:   o         o       o
-                 # 5:   o                 o
+                 # 5:   o         *       o                               * = every $OUT_CYCLE_SKIP cycles and the last cycle
+                 # 6:   o         **      o                               ** = only the last cycle
+
+OUT_CYCLE_SKIP=10
 
                  #      topo
 TOPOOUT_OPT=2    # 1:   o
@@ -71,7 +73,7 @@ BDYOUT_OPT=3     # 1:   o    o
                  # 3:   (none)
 
                  #      obsgues obsanal obsdep
-OBSOUT_OPT=2     # 1:   o       o       o
+OBSOUT_OPT=4     # 1:   o       o       o
                  # 2:   o               o
                  # 3:                   o
                  # 4:   (none)
@@ -88,5 +90,10 @@ LOG_TYPE=4       # 1:   Only save the log file from the head process
                  # 2:   Save all log files
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file
+
+RTPS_INFL_OUT=1  # 0: No
+                 # 1: Yes
+NOBS_OUT=1       # 0: No
+                 # 1: Yes
 
 #===============================================================================

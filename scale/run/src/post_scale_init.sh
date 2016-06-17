@@ -37,7 +37,7 @@ TMPDIR="$1"; shift
 LOG_OPT="$1"; shift
 SCPCALL="${1:-cycle}"
 
-initbaselen=20
+initbaselen=24
 
 #===============================================================================
 

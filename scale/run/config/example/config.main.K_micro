@@ -7,7 +7,7 @@
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_100mem_115" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d4_1km_100mem_407" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -16,9 +16,9 @@ MODELDIR="$DIR/../../bin/K"
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO=
-DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/BDA_d2_5km_64p_bf16"
+DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_100mem_122/const/topo"
 DATA_LANDUSE=
-DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2_5km_100mem_tint-1hr"
+DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_100mem_122"
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
@@ -29,11 +29,11 @@ OBSNCEP=                                                 # directory of observat
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='DEM50M'    # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='LU100M' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -50,10 +50,10 @@ BDY_ENS=1               # 0: Fixed boundary files for all memebers
 BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial time
                         # 1: Use different series of boundary files for different initial time
 
-BDYINT=3600
-BDYCYCLE_INT=21600
+BDYINT=300
+BDYCYCLE_INT=300
 
-PARENT_REF_TIME=20130713000000
+PARENT_REF_TIME=20130713060000
 
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
@@ -76,14 +76,14 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=3           # Ensemble size
+MEMBER=100         # Ensemble size
 
-NNODES=36          # Number of nodes
+NNODES=404         # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
-SCALE_NP=9         # Number of processes to run SCALE
+SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -121,7 +121,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-#SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
+#SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
 #                            #  0: No
 #                            #  1: Yes
 

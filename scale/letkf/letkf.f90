@@ -38,7 +38,7 @@ PROGRAM letkf
 ! Initial settings
 !-----------------------------------------------------------------------
 
-  CALL initialize_mpi
+  CALL initialize_mpi_scale
   rtimer00 = MPI_WTIME()
 
   if (command_argument_count() >= 4) then
@@ -98,7 +98,7 @@ PROGRAM letkf
 
 !-----------------------------------------------------------------------
 
-  call set_common_conf
+  call set_common_conf(nprocs)
 
   call read_nml_letkf
   call read_nml_letkf_var_local
@@ -299,7 +299,7 @@ PROGRAM letkf
 ! Finalize
 !-----------------------------------------------------------------------
 
-  CALL finalize_mpi
+  CALL finalize_mpi_scale
 
   STOP
 END PROGRAM letkf
