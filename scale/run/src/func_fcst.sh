@@ -773,44 +773,71 @@ else
     while ((time <= ETIME)); do
       for c in $(seq $CYCLE); do
         time2=$(datetime $time $((lcycles * (c-1))) s)
+        if ((time2 <= ETIME)); then
 
-        if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
-          bdy_setting $time2 $FCSTLEN - $BDYINT $PARENT_REF_TIME
-        else
-          bdy_setting $time2 $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
-        fi
-
-        for ibdy in $(seq $nbdy); do
-          time_bdy=${bdy_times[$ibdy]}
-
-          bdy_processed=0
-          for ibdy2 in $(seq $nbdy_all); do
-            if ((${bdy_times_all[$ibdy2]} == $time_bdy)); then
-              bdy_processed=1
-              break
-            fi
-          done
-
-          if ((bdy_processed == 0)); then
-            nbdy_all=$((nbdy_all+1))
-            bdy_times_all[${nbdy_all}]=$time_bdy
+          if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
+            bdy_setting $time2 $FCSTLEN - $BDYINT $PARENT_REF_TIME
+          else
+            bdy_setting $time2 $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
           fi
 
-          if ((bdy_processed == 0 || BDY_ROTATING == 1)); then
-            if ((BDY_FORMAT == 1)); then
+          for ibdy in $(seq $nbdy); do
+            time_bdy=${bdy_times[$ibdy]}
 
-              if ((BDY_ENS == 1)); then
-                for m in $(seq $fmember); do
-                  mem=${name_m[$m]}
-                  if [ "$BDY_SCALE_DIR" = 'hist' ] && [ "$mem" = 'mean' ]; then
-                    mem='meanf'
-                  fi
-#                  for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}/history.*.nc 2> /dev/null); do
+            bdy_processed=0
+            for ibdy2 in $(seq $nbdy_all); do
+              if ((${bdy_times_all[$ibdy2]} == $time_bdy)); then
+                bdy_processed=1
+                break
+              fi
+            done
+
+            if ((bdy_processed == 0)); then
+              nbdy_all=$((nbdy_all+1))
+              bdy_times_all[${nbdy_all}]=$time_bdy
+            fi
+
+            if ((bdy_processed == 0 || BDY_ROTATING == 1)); then
+              if ((BDY_FORMAT == 1)); then
+
+                if ((BDY_ENS == 1)); then
+                  for m in $(seq $fmember); do
+                    mem=${name_m[$m]}
+                    if [ "$BDY_SCALE_DIR" = 'hist' ] && [ "$mem" = 'mean' ]; then
+                      mem='meanf'
+                    fi
+#                    for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}/history.*.nc 2> /dev/null); do
+#                      pathin="$ifile"
+#                      if ((BDY_ROTATING == 1)); then
+#                        path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
+#                      else
+#                        path="bdyorg/const/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
+#                      fi
+#                      if ((DISK_MODE_DATA_BDY == 2)); then
+#                        echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+#                      else
+#                        echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#                      fi
+#                    done
+                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}"
+                    if ((BDY_ROTATING == 1)); then
+                      path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}"
+                    else
+                      path="bdyorg/const/${name_m[$m]}/${time_bdy}"
+                    fi
+                    if ((DISK_MODE_DATA_BDY == 2)); then
+                      echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+                    else
+                      echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+                    fi
+                  done
+                else
+#                  for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf/history.*.nc 2> /dev/null); do
 #                    pathin="$ifile"
 #                    if ((BDY_ROTATING == 1)); then
-#                      path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
+#                      path="bdyorg/${time_bdy}/mean/${time_bdy}/$(basename $ifile)"
 #                    else
-#                      path="bdyorg/const/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
+#                      path="bdyorg/const/mean/${time_bdy}/$(basename $ifile)"
 #                    fi
 #                    if ((DISK_MODE_DATA_BDY == 2)); then
 #                      echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
@@ -818,85 +845,60 @@ else
 #                      echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
 #                    fi
 #                  done
-                  pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}"
-                  if ((BDY_ROTATING == 1)); then
-                    path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}"
+                  if [ "$BDY_SCALE_DIR" = 'hist' ]; then
+                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf"
                   else
-                    path="bdyorg/const/${name_m[$m]}/${time_bdy}"
+                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/mean"
+                  fi
+                  if ((BDY_ROTATING == 1)); then
+                    path="bdyorg/${time_bdy}/mean/${time_bdy}"
+                  else
+                    path="bdyorg/const/mean/${time_bdy}"
                   fi
                   if ((DISK_MODE_DATA_BDY == 2)); then
                     echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
                   else
                     echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
                   fi
-                done
-              else
-#                for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf/history.*.nc 2> /dev/null); do
-#                  pathin="$ifile"
-#                  if ((BDY_ROTATING == 1)); then
-#                    path="bdyorg/${time_bdy}/mean/${time_bdy}/$(basename $ifile)"
-#                  else
-#                    path="bdyorg/const/mean/${time_bdy}/$(basename $ifile)"
-#                  fi
-#                  if ((DISK_MODE_DATA_BDY == 2)); then
-#                    echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-#                  else
-#                    echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-#                  fi
-#                done
-                if [ "$BDY_SCALE_DIR" = 'hist' ]; then
-                  pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf"
-                else
-                  pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/mean"
                 fi
-                if ((BDY_ROTATING == 1)); then
-                  path="bdyorg/${time_bdy}/mean/${time_bdy}"
-                else
-                  path="bdyorg/const/mean/${time_bdy}"
-                fi
-                if ((DISK_MODE_DATA_BDY == 2)); then
-                  echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-                else
-                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-                fi
-              fi
 
-            elif ((BDY_FORMAT == 2)); then
+              elif ((BDY_FORMAT == 2)); then
 
-              if ((BDY_ENS == 1)); then
-                for m in $(seq $fmember); do
+                if ((BDY_ENS == 1)); then
+                  for m in $(seq $fmember); do
+                    if ((BDY_ROTATING == 1)); then
+                      pathin="$DATA_BDY_WRF/${time2}/${name_m[$m]}/wrfout_${time_bdy}"
+                      path="bdyorg/${time2}/${name_m[$m]}/wrfout_${time_bdy}"
+                    else
+                      pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_bdy}"
+                      path="bdyorg/const/${name_m[$m]}/wrfout_${time_bdy}"
+                    fi
+                    if ((DISK_MODE_DATA_BDY == 2)); then
+                      echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+                    else
+                      echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+                    fi
+                  done
+                else
                   if ((BDY_ROTATING == 1)); then
-                    pathin="$DATA_BDY_WRF/${time2}/${name_m[$m]}/wrfout_${time_bdy}"
-                    path="bdyorg/${time2}/${name_m[$m]}/wrfout_${time_bdy}"
+                    pathin="$DATA_BDY_WRF/${time2}/mean/wrfout_${time_bdy}"
+                    path="bdyorg/${time2}/mean/wrfout_${time_bdy}"
                   else
-                    pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_bdy}"
-                    path="bdyorg/const/${name_m[$m]}/wrfout_${time_bdy}"
+                    pathin="$DATA_BDY_WRF/mean/wrfout_${time_bdy}"
+                    path="bdyorg/const/mean/wrfout_${time_bdy}"
                   fi
                   if ((DISK_MODE_DATA_BDY == 2)); then
                     echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
                   else
                     echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
                   fi
-                done
-              else
-                if ((BDY_ROTATING == 1)); then
-                  pathin="$DATA_BDY_WRF/${time2}/mean/wrfout_${time_bdy}"
-                  path="bdyorg/${time2}/mean/wrfout_${time_bdy}"
-                else
-                  pathin="$DATA_BDY_WRF/mean/wrfout_${time_bdy}"
-                  path="bdyorg/const/mean/wrfout_${time_bdy}"
                 fi
-                if ((DISK_MODE_DATA_BDY == 2)); then
-                  echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-                else
-                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-                fi
+
               fi
+            fi # ((bdy_processed == 0 || BDY_ROTATING == 1))
+          done # [ ibdy in $(seq $nbdy) ]
 
-            fi
-          fi # ((bdy_processed == 0 || BDY_ROTATING == 1))
-        done
-
+        fi # ((time2 <= ETIME))
       done
       time=$(datetime $time $((lcycles * CYCLE)) s)
     done
