@@ -9,12 +9,12 @@
 . config.main
 . src/func_datetime.sh
 
-if (($# < 6)); then
+if (($# < 7)); then
   cat >&2 << EOF
 
 [post_scale.sh] Post-process the SCALE model outputs.
 
-Usage: $0 MYRANK STIME MEM FCSTLEN TMPDIR LOG_OPT [SCPCALL]
+Usage: $0 MYRANK STIME MEM FCSTLEN TMPDIR LOG_OPT OUT_OPT [SCPCALL]
 
   MYRANK   My rank number (not used)
   STIME    Start time (format: YYYYMMDDHHMMSS)
@@ -22,6 +22,7 @@ Usage: $0 MYRANK STIME MEM FCSTLEN TMPDIR LOG_OPT [SCPCALL]
   FCSTLEN  Forecast length (second)
   TMPDIR   Temporary directory to run the model
   LOG_OPT
+  OUT_OPT
   SCPCALL  Called from which script? (fcst/cycle)
 
 EOF
@@ -34,6 +35,7 @@ MEM="$1"; shift
 FCSTLEN="$1"; shift
 TMPDIR="$1"; shift
 LOG_OPT="$1"; shift
+OUT_OPT="$1"; shift
 SCPCALL="${1:-cycle}"
 
 ATIME=$(datetime $STIME $LCYCLE s)
