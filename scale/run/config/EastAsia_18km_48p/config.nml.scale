@@ -193,7 +193,7 @@
 
 &PARAM_ATMOS_DYN
  ATMOS_DYN_NUMERICAL_DIFF_COEF   = 1.D-2,
- ATMOS_DYN_NUMERICAL_DIFF_COEF_Q = 1.D-2,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF_Q = 9.D-4,
  ATMOS_DYN_enable_coriolis       = .true.,
 /
 
@@ -209,6 +209,16 @@
  ATMOS_PHY_RD_PROFILE_TOA                   = 100.D0,
  ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = "cira.nc",
  ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = ".",
+/
+
+&PARAM_ATMOS_PHY_MP_TOMITA08
+!  autoconv_usekk = .false.,
+!  Cr = 58.D0,
+!  Cs = 0.9D0,
+!  drag_g = 2.5D0,
+!  beta_saut = 6D-3,
+!  gamma_saut = 6D-2,
+!  gamma_sacr = 2D-2,
 /
 
 #################################################
