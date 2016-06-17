@@ -168,7 +168,7 @@
 #################################################
 
 &PARAM_ATMOS_VARS
- ATMOS_VARS_CHECKRANGE = .true.,
+ ATMOS_VARS_CHECKRANGE = .false.,
 /
 
 &PARAM_ATMOS_REFSTATE

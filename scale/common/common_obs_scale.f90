@@ -1275,7 +1275,9 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse)
 
     if (PRC_myrank /= proc) then
       write(6, *) '############ Error!'
-      stop
+      write(6, *) proc,obsda%ri(n),obsda%rj(n),ri,rj, PRC_myrank
+!      stop
+      cycle
     end if
 
 

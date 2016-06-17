@@ -47,7 +47,7 @@ OBSOPE=0         # 0: No    ! obsope options: not finished yet!!
 
                  #      anal              gues
                  #      mean/sprd members mean/sprd members history
-OUT_OPT=3        # 1:   o         o       o         o       o
+OUT_OPT=1        # 1:   o         o       o         o       o
                  # 2:   o         o       o         o
                  # 3:   o         o       o
                  # 4:   o                 o
