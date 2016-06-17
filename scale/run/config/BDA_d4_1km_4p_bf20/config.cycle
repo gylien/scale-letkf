@@ -6,10 +6,10 @@
 #===============================================================================
 
 STIME='20130713060000'
-ETIME='20130713061930'
+ETIME='20130713060230'
 ISTEP=
 FSTEP=
-TIME_LIMIT='02:30:00'
+TIME_LIMIT='00:30:00'
 
 #===============================================================================
 
@@ -56,7 +56,7 @@ OUT_OPT=5        # 1:   o         o       o         o       o    o
                  # 5:   o         *       o                               * = every $OUT_CYCLE_SKIP cycles and the last cycle
                  # 6:   o         **      o                               ** = only the last cycle
 
-OUT_CYCLE_SKIP=10
+OUT_CYCLE_SKIP=3
 
                  #      topo
 TOPOOUT_OPT=2    # 1:   o
@@ -91,9 +91,9 @@ LOG_TYPE=4       # 1:   Only save the log file from the head process
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file
 
-RTPS_INFL_OUT=1  # 0: No
+RTPS_INFL_OUT=0  # 0: No
                  # 1: Yes
-NOBS_OUT=1       # 0: No
+NOBS_OUT=0       # 0: No
                  # 1: Yes
 
 #===============================================================================
