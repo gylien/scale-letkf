@@ -450,13 +450,13 @@ bdy_setting () {
 #-------------------------------------------------------------------------------
 # Calculate scale_init namelist settings for boundary files
 #
-# Usage: bdy_setting TIME FCSTLEN PARENT_LCYCLE PARENT_REF_TIME PARENT_FOUT
+# Usage: bdy_setting TIME FCSTLEN PARENT_LCYCLE [PARENT_FOUT] [PARENT_REF_TIME]
 #
 #   TIME
 #   FCSTLEN
 #   PARENT_LCYCLE
-#   PARENT_REF_TIME
 #   PARENT_FOUT
+#   PARENT_REF_TIME
 #
 # Return variables:
 #   $nbdy
@@ -478,8 +478,16 @@ fi
 local TIME=$(datetime $1); shift
 local FCSTLEN=$1; shift
 local PARENT_LCYCLE=$1; shift
-local PARENT_REF_TIME=$(datetime $1); shift
-local PARENT_FOUT=${1:-$PARENT_LCYCLE}
+local PARENT_FOUT=${1:-$PARENT_LCYCLE}; shift
+local PARENT_REF_TIME=${1:-$TIME}
+
+if [ "$PARENT_FOUT" = '-' ]; then
+  PARENT_FOUT=$FCSTLEN
+fi
+if [ "$PARENT_LCYCLE" = '-' ]; then
+  PARENT_LCYCLE=$((FCSTLEN+PARENT_FOUT))
+fi
+PARENT_REF_TIME=$(datetime $PARENT_REF_TIME)
 
 #-------------------------------------------------------------------------------
 # compute $ntsteps

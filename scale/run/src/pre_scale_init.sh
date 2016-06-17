@@ -97,20 +97,25 @@ for time_bdy in $BDY_TIME_LIST; do
   else
     file_number="_$(printf %05d $i)"
   fi
+  if ((BDY_ROTATING == 1)); then
+    bdyorg_path="${BDYORG}/${STIME}/${MEM_BDY}"
+  else
+    bdyorg_path="${BDYORG}/const/${MEM_BDY}"
+  fi
   if ((BDY_FORMAT == 1)); then
-    if [ -s "${BDYORG}/${time_bdy}/${MEM_BDY}/history.pe000000.nc" ]; then
-      for ifile in $(cd ${BDYORG}/${time_bdy}/${MEM_BDY} ; ls history*.nc 2> /dev/null); do
-        ln -fs "${BDYORG}/${time_bdy}/${MEM_BDY}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
+    if [ -s "${bdyorg_path}/${time_bdy}/history.pe000000.nc" ]; then
+      for ifile in $(cd ${bdyorg_path}/${time_bdy} ; ls history*.nc 2> /dev/null); do
+        ln -fs "${bdyorg_path}/${time_bdy}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
       done
     else
-      echo "[Error] $0: Cannot find source boundary file '${BDYORG}/${time_bdy}/${MEM_BDY}/history.*.nc'."
+      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${time_bdy}/history.*.nc'."
       exit 1
     fi
   elif ((BDY_FORMAT == 2)); then
-    if [ -s "${BDYORG}/${MEM_BDY}/wrfout_${time_bdy}" ]; then
-      ln -fs "${BDYORG}/${MEM_BDY}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
+    if [ -s "${bdyorg_path}/wrfout_${time_bdy}" ]; then
+      ln -fs "${bdyorg_path}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
     else
-      echo "[Error] $0: Cannot find source boundary file '${BDYORG}/${MEM_BDY}/wrfout_${time_bdy}'."
+      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/wrfout_${time_bdy}'."
       exit 1
     fi
   fi

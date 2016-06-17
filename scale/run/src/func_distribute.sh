@@ -716,7 +716,7 @@ if (($# < 1)); then
 fi
 
 local MEMBERS="$1"; shift
-local CYCLE=${1:-1}; shift
+local CYCLE=${1:-0}; shift
 local NODEFILE=${1:-machinefile}; shift
 local NODEFILEDIR=${1:-'-'}; shift
 local DISTR_FILE=${1:-'-'}
@@ -765,6 +765,12 @@ for iname in $MEMBERS; do
   fmember=$((fmember+1))
   name_m[$fmember]=$iname
 done
+
+if ((CYCLE == 0)); then
+  set_mem_np $fmember $SCALE_NP $SCALE_NP
+  set_mem2node $fmember
+  CYCLE=$parallel_mems
+fi
 
 for c in $(seq 2 $CYCLE); do
   for m in $(seq $fmember); do

@@ -95,6 +95,10 @@ else
   distribute_fcst "$MEMBERS" $CYCLE - - $NODEFILE_DIR/distr || exit $?
 fi
 
+if ((CYCLE == 0)); then
+  CYCLE=$parallel_mems
+fi
+
 #===============================================================================
 # Determine the staging list and then stage in
 
@@ -112,9 +116,9 @@ fi
 # Run initialization scripts on all nodes
 
 if ((TMPRUN_MODE <= 2)); then
-  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
+  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1 $CYCLE || exit $?
 else
-  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
+  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1 $CYCLE || exit $?
 fi
 
 #===============================================================================
