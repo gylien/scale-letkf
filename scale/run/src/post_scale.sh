@@ -72,10 +72,12 @@ elif [ "$SCPCALL" = 'fcst' ]; then
 
   mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
   mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
-  file_prefix=$(cd $TMPDIR ; ls restart*.nc | head -n 1) # pick up the first restart output. ###### TO DO: explicitly calculate the time string???
-  for ifile in $(cd $TMPDIR ; ls ${file_prefix:0:$restartbaselen}*.nc); do
-    mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifile:$restartbaselen}
-  done
+  if ((OUT_OPT <= 1)); then
+    file_prefix=$(cd $TMPDIR ; ls restart*.nc | head -n 1) # pick up the first restart output. ###### TO DO: explicitly calculate the time string???
+    for ifile in $(cd $TMPDIR ; ls ${file_prefix:0:$restartbaselen}*.nc); do
+      mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifile:$restartbaselen}
+    done
+  fi
 
   if ((LOG_OPT <= 3)); then
     if [ -f "$TMPDIR/run.conf" ]; then
