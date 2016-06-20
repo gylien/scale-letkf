@@ -1,6 +1,6 @@
 include ../configure.user
 
-PROGS   = scale-les_pp_ens scale-les_init_ens scale-les_ens
+PROGS   = scale-rm_pp_ens scale-rm_init_ens scale-rm_ens
 
 OBJS    =
 
@@ -19,11 +19,11 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/farb_conf_dict.o \
               $(COMMON_DIR)/farb_conf_parse.o
 
-INCS    = $(SCALE_INC) -I$(SCALE_LES_OBJDIR)
+INCS    = $(SCALE_INC) -I$(SCALE_RM_OBJDIR)
 
 LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
 
-SCALE_LES_OBJS = $(shell ls $(SCALE_LES_OBJDIR)/*.o | grep -v "scale-les.o\|scale-les_pp.o\|scale-les_init.o")
+SCALE_RM_OBJS = $(shell ls $(SCALE_RM_OBJDIR)/*.o | grep -v "scale-rm.o\|scale-rm_pp.o\|scale-rm_init.o")
 
 ifeq ($(H08),T)
 COMMON_OBJS += $(COMMON_DIR)/scale_H08_fwd.o
@@ -32,26 +32,26 @@ endif
 
 all:	$(PROGS)
 
-scale-les_pp_ens:	scale-les_pp_ens.o $(OBJS) common_modules
-	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-les_pp_ens scale-les_pp_ens.o \
-	$(COMMON_OBJS) $(OBJS) $(SCALE_LES_OBJS) $(LIBS)
+scale-rm_pp_ens:	scale-rm_pp_ens.o $(OBJS) common_modules
+	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_pp_ens scale-rm_pp_ens.o \
+	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
-scale-les_pp_ens.o:	scale-les_pp_ens.f90 $(OBJS) common_modules
-	$(FC) $(FOPTS_SCALE) -c scale-les_pp_ens.f90 -I$(COMMON_DIR) $(INCS)
+scale-rm_pp_ens.o:	scale-rm_pp_ens.f90 $(OBJS) common_modules
+	$(FC) $(FOPTS_SCALE) -c scale-rm_pp_ens.f90 -I$(COMMON_DIR) $(INCS)
 
-scale-les_init_ens:	scale-les_init_ens.o $(OBJS) common_modules
-	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-les_init_ens scale-les_init_ens.o \
-	$(COMMON_OBJS) $(OBJS) $(SCALE_LES_OBJS) $(LIBS)
+scale-rm_init_ens:	scale-rm_init_ens.o $(OBJS) common_modules
+	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_init_ens scale-rm_init_ens.o \
+	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
-scale-les_init_ens.o:	scale-les_init_ens.f90 $(OBJS) common_modules
-	$(FC) $(FOPTS_SCALE) -c scale-les_init_ens.f90 -I$(COMMON_DIR) $(INCS)
+scale-rm_init_ens.o:	scale-rm_init_ens.f90 $(OBJS) common_modules
+	$(FC) $(FOPTS_SCALE) -c scale-rm_init_ens.f90 -I$(COMMON_DIR) $(INCS)
 
-scale-les_ens:	scale-les_ens.o $(OBJS) common_modules
-	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-les_ens scale-les_ens.o \
-	$(COMMON_OBJS) $(OBJS) $(SCALE_LES_OBJS) $(LIBS)
+scale-rm_ens:	scale-rm_ens.o $(OBJS) common_modules
+	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_ens scale-rm_ens.o \
+	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
-scale-les_ens.o:	scale-les_ens.f90 $(OBJS) common_modules
-	$(FC) $(FOPTS_SCALE) -c scale-les_ens.f90 -I$(COMMON_DIR) $(INCS)
+scale-rm_ens.o:	scale-rm_ens.f90 $(OBJS) common_modules
+	$(FC) $(FOPTS_SCALE) -c scale-rm_ens.f90 -I$(COMMON_DIR) $(INCS)
 
 common_modules:
 	( cd $(COMMON_DIR) ; make )

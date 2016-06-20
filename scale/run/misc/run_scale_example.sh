@@ -15,4 +15,4 @@ ulimit -s unlimited
 
 cd $PBS_O_WORKDIR
 
-time mpiexec_mpt -n 36 dplace -s1 scale-les run.conf
+time mpiexec_mpt -n 36 dplace -s1 scale-rm run.conf

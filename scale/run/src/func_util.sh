@@ -19,12 +19,6 @@ safe_init_tmpdir () {
 
 local DIRNAME="$1"
 
-
-
-#echo "###### $DIRNAME ######"
-
-
-
 #-------------------------------------------------------------------------------
 
 if [ -z "$DIRNAME" ]; then
@@ -62,12 +56,6 @@ safe_rm_tmpdir () {
 #-------------------------------------------------------------------------------
 
 local DIRNAME="$1"
-
-
-
-#echo "!!!!!! $DIRNAME !!!!!!"
-
-
 
 #-------------------------------------------------------------------------------
 
@@ -163,6 +151,8 @@ fi
 local NODEFILE="$1"; shift
 local PRELOAD="$1"; shift
 local PROG="$1"; shift
+local CONF="$1"; shift
+local STDOUT="$1"; shift
 local ARGS="$@"
 
 progbase=$(basename $PROG)
@@ -175,52 +165,49 @@ if ((MACHINE_TYPE == 1)); then
   local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
   HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
 
-  $MPIRUN -d $progdir $HOSTLIST 1 ./$progbase $ARGS
-#  $MPIRUN -d $progdir $HOSTLIST 1 omplace -nt ${THREADS} ./$progbase $ARGS
+  $MPIRUN -d $progdir $HOSTLIST 1 ./$progbase $CONF $STDOUT $ARGS
+#  $MPIRUN -d $progdir $HOSTLIST 1 omplace -nt ${THREADS} ./$progbase $CONF $STDOUT $ARGS
+  res=$?
+  if ((res != 0)); then
+    echo "[Error] $MPIRUN -d $progdir $HOSTLIST 1 ./$progbase $CONF $STDOUT $ARGS" >&2
+    echo "        Exit code: $res" >&2
+    exit $res
+  fi
 
 elif ((MACHINE_TYPE == 2)); then
 
-#  local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
-#  HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
-
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-#echo "$MPIRUN -np $NNP -wdir $progdir ./$progbase $ARGS"
-  $MPIRUN -np $NNP -wdir $progdir ./$progbase $ARGS
+  $MPIRUN -np $NNP -wdir $progdir ./$progbase $CONF $STDOUT $ARGS
+  res=$?
+  if ((res != 0)); then
+    echo "[Error] $MPIRUN -np $NNP -wdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
+    echo "        Exit code: $res" >&2
+    exit $res
+  fi
 
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
-  local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
+  NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
   if ((USE_RANKDIR == 1)); then
 
-#pwd 1>&2
-#mpiexec /work/system/bin/msh "/bin/ls -lL $progdir" 1>&2
-#echo "mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS" 1>&2
-
-    mpiexec -n $(cat $vcoordfile | wc -l) -x $PRELOAD -of-proc ./${progdir}/stdoe ./${progdir}/${progbase} $ARGS
-#    mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
-#echo "fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS"
-#    fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
-#    mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile ./${progdir}/${progbase} $ARGS
-#    mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile -mca mpi_deadlock_timeout 60 -mca mpi_deadlock_timeout_delay 20 ./${progdir}/${progbase} $ARGS
+    mpiexec -n $NNP -x $PRELOAD -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS
     res=$?
     if ((res != 0)); then
-      echo "[Error] mpiexec -n $(cat $vcoordfile | wc -l) ./${progdir}/${progbase} $ARGS" >&2
+      echo "[Error] mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS" >&2
       echo "        Exit code: $res" >&2
+      exit $res
     fi
 
   else
 
-    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile -x $PRELOAD -of-proc stdoe ./$progbase $ARGS )
-#echo "( cd $progdir && fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS )"
-#    ( cd $progdir && fipp -C -d Fprofd_${progbase} -Icall,hwm mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS )
-#    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile ./$progbase $ARGS )
-#    ( cd $progdir && mpiexec -n $(cat $vcoordfile | wc -l) -of-proc std-file -vcoordfile $vcoordfile -mca mpi_deadlock_timeout 60 -mca mpi_deadlock_timeout_delay 20 ./$progbase $ARGS )
+    ( cd $progdir && mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${NODEFILE}" -x $PRELOAD -of-proc $STDOUT ./$progbase $CONF '' $ARGS )
     res=$?
     if ((res != 0)); then 
-      echo "[Error] mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile ./$progbase $ARGS" >&2
+      echo "[Error] mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS" >&2
       echo "        Exit code: $res" >&2
+      exit $res
     fi
 
   fi
@@ -241,7 +228,6 @@ pdbash () {
 #   NODEFILE  Name of nodefile (omit the directory $NODEFILE_DIR)
 #   PROC_OPT  Options of using processes
 #             all:  run the script in all processes listed in $NODEFILE
-###             alln: run the script in all nodes list in $NODEFILE, one process per node
 #             one:  run the script only in the first process and node in $NODEFILE
 #   SCRIPT    Script (the working directory is set to $SCRP_DIR)
 #   ARGS      Arguments passed into the program
@@ -269,110 +255,94 @@ else
   exit 1
 fi
 
+if [ "$PROC_OPT" != 'all' ] && [ "$PROC_OPT" != 'one' ]; then
+  echo "[Error] $FUNCNAME: \$PROC_OPT needs to be {all|one}." >&2
+  exit 1
+fi
+
 #-------------------------------------------------------------------------------
 
 if ((MACHINE_TYPE == 1)); then
 
   if [ "$PROC_OPT" == 'all' ]; then
     local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
-###  elif [ "$PROC_OPT" == 'alln' ]; then
-###    local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE} | sort | uniq)
   elif [ "$PROC_OPT" == 'one' ]; then
     local HOSTLIST=$(head -n 1 ${NODEFILE_DIR}/${NODEFILE})
-  else
-    exit 1
   fi
   HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
 
-#echo "  $MPIRUN -d $SCRP_DIR $HOSTLIST 1 $pdbash_exec $SCRIPT $ARGS"
-
   $MPIRUN -d $SCRP_DIR $HOSTLIST 1 $pdbash_exec $SCRIPT $ARGS
 #  $MPIRUN -d $SCRP_DIR $HOSTLIST 1 bash $SCRIPT - $ARGS
+  res=$?
+  if ((res != 0)); then
+    echo "[Error] $MPIRUN -d $SCRP_DIR $HOSTLIST 1 $pdbash_exec $SCRIPT $ARGS" >&2
+    echo "        Exit code: $res" >&2
+    exit $res
+  fi
 
 elif ((MACHINE_TYPE == 2)); then
 
   if [ "$PROC_OPT" == 'all' ]; then
-#    local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
     NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
   elif [ "$PROC_OPT" == 'one' ]; then
-#    local HOSTLIST=$(head -n 1 ${NODEFILE_DIR}/${NODEFILE})
     NNP=1
-  else
-    exit 1
   fi
-#  HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
 
-#echo "$MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS"
   $MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS
+  res=$?
+  if ((res != 0)); then
+    echo "[Error] $MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS" >&2
+    echo "        Exit code: $res" >&2
+    exit $res
+  fi
 
 elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
-#echo 11
-  if [ "$PROC_OPT" == 'all' ]; then
-    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
-###  elif [ "$PROC_OPT" == 'alln' ]; then
-###    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}_tmp"
-###    cat ${NODEFILE_DIR}/${NODEFILE} | sort | uniq > $vcoordfile
-  elif [ "$PROC_OPT" == 'one' ]; then
-    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}"
-###    local vcoordfile="${NODEFILE_DIR}/${NODEFILE}_tmp"
-###    head -n 1 ${NODEFILE_DIR}/${NODEFILE} > $vcoordfile
-  else
-    exit 1
-  fi
-
-#echo 12
-#echo "======"
-#echo "pdbash $NODEFILE $PROC_OPT $SCRIPT $ARGS"
-#echo $vcoordfile
-#cat $vcoordfile
-#echo "======"
-
-
-
   if ((USE_RANKDIR == 1)); then
-
-
-#    pdbash_exec="./dat/exec/pdbash"
-
-
-#pwd 1>&2
-#ls -l .. 1>&2
-#ls -l 1>&2
-#ls -l src 1>&2
-#mpiexec /work/system/bin/msh "/bin/ls -l dat/exec"
-#echo "mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS" 1>&2
-#cat $vcoordfile 1>&2
-
-
-#    mpiexec -n $(cat $vcoordfile | wc -l) -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS
-#    mpiexec -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS
-#    mpiexec $pdbash_exec $SCRIPT $ARGS
-
     if [ "$PROC_OPT" == 'one' ]; then
-#      mpiexec -n 1 -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS
+
       mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS
+      res=$?
+      if ((res != 0)); then
+        echo "[Error] mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS" >&2
+        echo "        Exit code: $res" >&2
+        exit $res
+      fi
+
     else
-#      mpiexec -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS
+
       mpiexec $pdbash_exec $SCRIPT $ARGS
-    fi
+      res=$?
+      if ((res != 0)); then
+        echo "[Error] mpiexec $pdbash_exec $SCRIPT $ARGS" >&2
+        echo "        Exit code: $res" >&2
+        exit $res
+      fi
 
+    fi
   else
-
-
-
     if [ "$PROC_OPT" == 'one' ]; then
-#      ( cd $SCRP_DIR && mpiexec -n 1 -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS )
+
       ( cd $SCRP_DIR && mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS )
+      res=$?
+      if ((res != 0)); then
+        echo "[Error] mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS" >&2
+        echo "        Exit code: $res" >&2
+        exit $res
+      fi
+
     else
-#      ( cd $SCRP_DIR && mpiexec -vcoordfile $vcoordfile $pdbash_exec $SCRIPT $ARGS )
+
       ( cd $SCRP_DIR && mpiexec $pdbash_exec $SCRIPT $ARGS )
+      res=$?
+      if ((res != 0)); then
+        echo "[Error] mpiexec $pdbash_exec $SCRIPT $ARGS" >&2
+        echo "        Exit code: $res" >&2
+        exit $res
+      fi
+
     fi
-
-
   fi
-
-#echo 13
 
 fi
 
@@ -477,81 +447,115 @@ exit $res
 
 #===============================================================================
 
-history_files_for_bdy () {
+bdy_setting () {
 #-------------------------------------------------------------------------------
-# Find the corresponding history files for preparing boundary files
+# Calculate scale_init namelist settings for boundary files
 #
-# Usage: history_files_for_bdy
+# Usage: bdy_setting TIME FCSTLEN PARENT_LCYCLE [PARENT_FOUT] [PARENT_REF_TIME]
 #
 #   TIME
 #   FCSTLEN
 #   PARENT_LCYCLE
 #   PARENT_FOUT
 #   PARENT_REF_TIME
-#   ONEFILE
 #
 # Return variables:
-#   $nfiles
+#   $nbdy
 #   $ntsteps
 #   $ntsteps_skip
-#   $history_times[1...$nfiles]
+#   $ntsteps_total
+#   $bdy_times[1...$nbdy]
+#   $bdy_start_time
+#   $parent_start_time
 #
 #  *Require source 'func_datetime' first.
 #-------------------------------------------------------------------------------
 
-if (($# < 5)); then
+if (($# < 4)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." >&2
   exit 1
 fi
 
-local TIME=$1; shift
+local TIME=$(datetime $1); shift
 local FCSTLEN=$1; shift
 local PARENT_LCYCLE=$1; shift
-local PARENT_FOUT=$1; shift
-local PARENT_REF_TIME=$1; shift
-local ONEFILE=${1:-0}
+local PARENT_FOUT=${1:-$PARENT_LCYCLE}; shift
+local PARENT_REF_TIME=${1:-$TIME}
+
+if [ "$PARENT_FOUT" = '-' ]; then
+  PARENT_FOUT=$FCSTLEN
+fi
+if [ "$PARENT_LCYCLE" = '-' ]; then
+  PARENT_LCYCLE=$((FCSTLEN+PARENT_FOUT))
+fi
+PARENT_REF_TIME=$(datetime $PARENT_REF_TIME)
 
 #-------------------------------------------------------------------------------
+# compute $ntsteps
 
-local parent_time_start=$PARENT_REF_TIME
-local parent_time_start_prev=$parent_time_start
-while ((parent_time_start <= TIME)); do
-  parent_time_start_prev=$parent_time_start
-  parent_time_start=$(datetime $parent_time_start $PARENT_LCYCLE s)
-done
-parent_time_start=$parent_time_start_prev
-
-while ((parent_time_start > TIME)); do
-  parent_time_start=$(datetime $parent_time_start -${PARENT_LCYCLE} s)
-done
-
-ntsteps_skip=0
-local itime=$parent_time_start
-while ((itime < TIME)); do
-  ntsteps_skip=$((ntsteps_skip+1))
-  itime=$(datetime $itime ${PARENT_FOUT} s)
-done
-if ((itime > TIME)); then
-  echo "[Error] $FUNCNAME: Cannot not find the requested timeframe ($TIME) in history files." >&2
+if ((PARENT_LCYCLE % PARENT_FOUT != 0)); then
+  echo "[Error] $FUNCNAME: $PARENT_LCYCLE needs to be an exact multiple of $PARENT_FOUT." >&2
   exit 1
 fi
+ntsteps=$((PARENT_LCYCLE / PARENT_FOUT))
+
+#-------------------------------------------------------------------------------
+# compute $parent_start_time based on $PARENT_REF_TIME and $PARENT_LCYCLE
+
+parent_start_time=$PARENT_REF_TIME
+local parent_start_time_prev=$parent_start_time
+while ((parent_start_time <= TIME)); do
+  parent_start_time_prev=$parent_start_time
+  parent_start_time=$(datetime $parent_start_time $PARENT_LCYCLE s)
+done
+parent_start_time=$parent_start_time_prev
+
+while ((parent_start_time > TIME)); do
+  parent_start_time=$(datetime $parent_start_time -${PARENT_LCYCLE} s)
+done
+
+#-------------------------------------------------------------------------------
+# compute $bdy_start_time, $ntsteps_skip, and $ntsteps_total based on $parent_start_time and $PARENT_FOUT
+# (assume $bdy_start_time <= $TIME)
+
+ntsteps_skip=-1
+bdy_start_time=$parent_start_time
+while ((bdy_start_time <= TIME)); do
+  bdy_start_time_prev=$bdy_start_time
+  bdy_start_time=$(datetime $bdy_start_time $PARENT_FOUT s)
+  ntsteps_skip=$((ntsteps_skip+1))
+done
+bdy_start_time=$bdy_start_time_prev
 
 local ntsteps_total=$(((FCSTLEN-1)/PARENT_FOUT+2 + ntsteps_skip))
 
-if ((ONEFILE == 1)); then
-  ntsteps=$ntsteps_total
-  nfiles=1
-  history_times[1]=$(datetime $parent_time_start $PARENT_LCYCLE s)
-else
-  ntsteps=$((PARENT_LCYCLE / PARENT_FOUT))
-  nfiles=1
-  history_times[1]=$(datetime $parent_time_start $PARENT_LCYCLE s)
-  while ((ntsteps_total > ntsteps)); do
-    nfiles=$((nfiles+1))
-    history_times[$nfiles]=$(datetime ${history_times[$((nfiles-1))]} $PARENT_LCYCLE s)
-    ntsteps_total=$((ntsteps_total-ntsteps))
-  done
+if ((bdy_start_time != TIME)); then
+  if (($(datetime $bdy_start_time $(((ntsteps_total-1)*PARENT_FOUT)) s) < $(datetime $TIME $FCSTLEN s))); then
+    ntsteps_total=$((ntsteps_total+1))
+  fi
 fi
+
+#-------------------------------------------------------------------------------
+# compute $nbdy and $bdy_times[1...$nbdy]
+
+nbdy=1
+bdy_times[1]=$parent_start_time
+while ((ntsteps_total > ntsteps)); do
+  nbdy=$((nbdy+1))
+  bdy_times[$nbdy]=$(datetime ${bdy_times[$((nbdy-1))]} $PARENT_LCYCLE s)
+  ntsteps_total=$((ntsteps_total-ntsteps))
+done
+
+if ((nbdy == 1)); then
+  ntsteps=$ntsteps_total
+fi
+
+#echo "\$nbdy              = $nbdy" >&2
+#echo "\$ntsteps           = $ntsteps" >&2
+#echo "\$ntsteps_skip      = $ntsteps_skip" >&2
+#echo "\$ntsteps_total     = $ntsteps_total" >&2
+#echo "\$bdy_start_time    = $bdy_start_time" >&2
+#echo "\$parent_start_time = $parent_start_time" >&2
 
 #-------------------------------------------------------------------------------
 }
@@ -626,7 +630,7 @@ while true; do
       break
     fi
   fi
-  sleep 5s
+  sleep 30s
 done
 
 #-------------------------------------------------------------------------------

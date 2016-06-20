@@ -13,68 +13,58 @@ if (($# < 6)); then
 
 [pre_letkf.sh]
 
-Usage: $0 MYRANK TOPO ATIME MEM TMPDIR
+Usage: $0 MYRANK ATIME MEM ADAPTINFL RTPS_INFL_OUT NOBS_OUT
 
   MYRANK  My rank number (not used)
-  TOPO    Basename of SCALE topography files
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
   MEM     Name of the ensemble member
-  MEMSEQ
-  TMPDIR  Temporary directory to run the program
+  ADAPTINFL
+  RTPS_INFL_OUT
+  NOBS_OUT
 
 EOF
   exit 1
 fi
 
 MYRANK="$1"; shift
-TOPO="$1"; shift
 ATIME="$1"; shift
 MEM="$1"; shift
-MEMSEQ="$1"; shift
-TMPDIR="$1"
-
-#historybaselen=7
-obsdabaselen=10
-initbaselen=4
-
-#topodir=$(dirname $TOPO)
-#topobase=$(basename $TOPO)
-#topobaselen=${#topobase}
+ADAPTINFL="$1"; shift
+RTPS_INFL_OUT="$1"; shift
+NOBS_OUT="$1"
 
 #===============================================================================
 
 if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd'
 #if [ -d "$TMPOUT/${ATIME}/gues/meanf" ]; then  # required....
   for ifile in $(cd $TMPOUT/${ATIME}/gues/meanf ; ls init*.nc 2> /dev/null); do
-    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/gues.mean${ifile:$initbaselen}
-    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/anal.mean${ifile:$initbaselen}
-    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/gues.sprd${ifile:$initbaselen}
-    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPDIR/anal.sprd${ifile:$initbaselen}
+    mkdir -p $TMPOUT/${ATIME}/gues/mean
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/gues/mean
+    mkdir -p $TMPOUT/${ATIME}/anal/mean
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/anal/mean
+    mkdir -p $TMPOUT/${ATIME}/gues/sprd
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/gues/sprd
+    mkdir -p $TMPOUT/${ATIME}/anal/sprd
+    cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/anal/sprd
+    if ((ADAPTINFL == 1)) && [ ! -s "$TMPOUT/${ATIME}/diag/infl" ]; then
+      mkdir -p $TMPOUT/${ATIME}/diag/infl
+      cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/diag/infl
+    fi
+    if ((RTPS_INFL_OUT == 1)); then
+      mkdir -p $TMPOUT/${ATIME}/diag/rtps
+      cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/diag/rtps
+    fi
+    if ((NOBS_OUT == 1)); then
+      mkdir -p $TMPOUT/${ATIME}/diag/nobs
+      cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/diag/nobs
+    fi
   done
 #fi
-
-  ln -fs ${TOPO}*.nc $TMPDIR
-#  for ifile in $(cd $topodir ; ls ${topobase}*.nc 2> /dev/null); do
-#    ln -fs $topodir/${ifile} $TMPDIR/topo${ifile:$topobaselen}
-#  done
 else
-  if [ -d "$TMPOUT/${ATIME}/obsgues/${MEM}" ]; then
-    for ifile in $(cd $TMPOUT/${ATIME}/obsgues/${MEM} ; ls obsda.${MEM}.*.dat 2> /dev/null); do
-#      ln -fs $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile} $TMPDIR/${ifile}
-      ln -fs $TMPOUT/${ATIME}/obsgues/${MEM}/${ifile} $TMPDIR/obsda.${MEMSEQ}${ifile:$obsdabaselen}
-    done
-  fi
-
-  if [ -d "$TMPOUT/${ATIME}/gues/${MEM}" ]; then
-#    for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls history*.nc 2> /dev/null); do
-#      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/hist.${MEMSEQ}${ifile:$historybaselen}
-#    done
-
-    for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls init*.nc 2> /dev/null); do
-      ln -fs $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/gues.${MEMSEQ}${ifile:$initbaselen}
-      cp -f $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPDIR/anal.${MEMSEQ}${ifile:$initbaselen}
-    done
-  fi
+  for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls init*.nc 2> /dev/null); do
+    mkdir -p $TMPOUT/${ATIME}/anal/${MEM}
+    cp -f $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPOUT/${ATIME}/anal/${MEM}
+  done
 fi
 
 #===============================================================================

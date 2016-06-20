@@ -24,7 +24,7 @@ PROGRAM letkf
   REAL(r_size),ALLOCATABLE :: anal2d(:,:,:)
   REAL(r_dble) :: rtimer00,rtimer
   INTEGER :: ierr
-  CHARACTER(11) :: stdoutf='NOUT-000000'
+  CHARACTER(7) :: stdoutf='-000000'
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
 !  TYPE(obs_info) :: obs
@@ -49,35 +49,40 @@ PROGRAM letkf
   a = "letkf"
   b = "obs"
   !  call conn_init("sample.ini", a)
-  CALL initialize_mpi
+  CALL initialize_mpi_scale
   call conn_init("sample.ini", a)
-  rtimer00 = MPI_WTIME()
   call sleep(2)
   call pub_client_connect(b)
   call pub_server_connect(a)
   call pub_recv_data(a)
   call pub_recv_data1(b)
+
   rtimer00 = MPI_WTIME()
-!
-  if (command_argument_count() >= 3) then
-    call get_command_argument(2, icmd)
+
+  if (command_argument_count() >= 4) then
+    call get_command_argument(3, icmd)
     call chdir(trim(icmd))
     write (myranks, '(I10)') myrank
-    call get_command_argument(3, icmd)
+    call get_command_argument(4, icmd)
     cmd1 = 'bash ' // trim(icmd) // ' letkf_1' // ' ' // trim(myranks)
     cmd2 = 'bash ' // trim(icmd) // ' letkf_2' // ' ' // trim(myranks)
-    do iarg = 4, command_argument_count()
+    do iarg = 5, command_argument_count()
       call get_command_argument(iarg, icmd)
       cmd1 = trim(cmd1) // ' ' // trim(icmd)
       cmd2 = trim(cmd2) // ' ' // trim(icmd)
     end do
   end if
-!
-  WRITE(stdoutf(6:11), '(I6.6)') myrank
-!  WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
-  OPEN(6,FILE=stdoutf)
-  WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
-!
+
+  if (command_argument_count() >= 2) then
+    call get_command_argument(2, icmd)
+    if (trim(icmd) /= '') then
+      WRITE(stdoutf(2:7), '(I6.6)') myrank
+!      WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',trim(icmd)//stdoutf,' for MYRANK ', myrank
+      OPEN(6,FILE=trim(icmd)//stdoutf)
+      WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',trim(icmd)//stdoutf
+    end if
+  end if
+
   WRITE(6,'(A)') '============================================='
   WRITE(6,'(A)') '  LOCAL ENSEMBLE TRANSFORM KALMAN FILTERING  '
   WRITE(6,'(A)') '                                             '
@@ -93,19 +98,12 @@ PROGRAM letkf
   WRITE(6,'(A)') '  Based on Ott et al (2004) and Hunt (2005)  '
   WRITE(6,'(A)') '  Tested by Miyoshi and Yamane (2006)        '
   WRITE(6,'(A)') '============================================='
-!  WRITE(6,'(A)') '              LETKF PARAMETERS               '
-!  WRITE(6,'(A)') ' ------------------------------------------- '
-!  WRITE(6,'(A,I15)')   '  nbv          :',nbv
-!  WRITE(6,'(A,F15.2)') '  sigma_obs    :',sigma_obs
-!  WRITE(6,'(A,F15.2)') '  sigma_obsv   :',sigma_obsv
-!  WRITE(6,'(A,F15.2)') '  sigma_obst   :',sigma_obst
-!  WRITE(6,'(A)') '============================================='
 
 !-----------------------------------------------------------------------
 ! Pre-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 3) then
+  if (command_argument_count() >= 4) then
     write (6,'(A)') 'Run pre-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd1), ']'
     call system(trim(cmd1))
@@ -118,7 +116,7 @@ PROGRAM letkf
 
 !-----------------------------------------------------------------------
 
-  call set_common_conf
+  call set_common_conf(nprocs)
 
   call read_nml_letkf
   call read_nml_letkf_var_local
@@ -149,6 +147,7 @@ PROGRAM letkf
     !
     ! Read observations
     !
+    allocate(obs(OBS_IN_NUM))
     call read_obs_all_mpi(obs)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -197,7 +196,7 @@ PROGRAM letkf
     !
     ! LETKF GRID setup
     !
-    call set_common_mpi_grid('topo')
+    call set_common_mpi_grid
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -210,7 +209,7 @@ PROGRAM letkf
     ! READ GUES
     !
 
-    call read_ens_mpi('gues',gues3d,gues2d)
+    call read_ens_mpi(GUES_IN_BASENAME,gues3d,gues2d)
 
 !  write (6,*) gues3d(20,:,3,iv3d_t)
 !!  write (6,*) gues2d
@@ -225,7 +224,7 @@ PROGRAM letkf
     !
     ! WRITE ENS MEAN and SPRD
     !
-    CALL write_ensmspr_mpi('gues',gues3d,gues2d,obs,obsda2)
+    CALL write_ensmspr_mpi(GUES_OUT_MEAN_BASENAME,GUES_OUT_SPRD_BASENAME,gues3d,gues2d,obs,obsda2)
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -255,7 +254,7 @@ PROGRAM letkf
     !
 !    CALL MPI_BARRIER(MPI_COMM_a,ierr)
 
-    CALL write_ens_mpi('anal',anal3d,anal2d)
+    CALL write_ens_mpi(ANAL_OUT_BASENAME,anal3d,anal2d)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -264,7 +263,7 @@ PROGRAM letkf
     !
     ! WRITE ENS MEAN and SPRD
     !
-    CALL write_ensmspr_mpi('anal',anal3d,anal2d,obs,obsda2)
+    CALL write_ensmspr_mpi(ANAL_OUT_MEAN_BASENAME,ANAL_OUT_SPRD_BASENAME,anal3d,anal2d,obs,obsda2)
     !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -280,6 +279,7 @@ PROGRAM letkf
 !  WRITE(6,timer_fmt) '### TIMER(MONIT_MEAN):',rtimer-rtimer00
 !  rtimer00=rtimer
 
+    deallocate(obs)
 
     CALL unset_common_mpi_scale
 
@@ -302,7 +302,7 @@ PROGRAM letkf
 ! Post-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 3) then
+  if (command_argument_count() >= 4) then
     write (6,'(A)') 'Run post-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd2), ']'
     call system(trim(cmd2))
@@ -318,7 +318,7 @@ PROGRAM letkf
 !-----------------------------------------------------------------------
 
   call conn_finalize
-  CALL finalize_mpi
+  CALL finalize_mpi_scale
 
   STOP
 END PROGRAM letkf

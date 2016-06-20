@@ -7,10 +7,9 @@
 
 STIME='20130701000000'
 ETIME='20130701000000'
-#MEMBERS="$(seq 21 30)"
 ISTEP=
 FSTEP=
-TIME_LIMIT='00:15:00'
+TIME_LIMIT='00:20:00'
 
 #===============================================================================
 
@@ -29,7 +28,7 @@ TIME_LIMIT='00:15:00'
 #                   #  3: use thinned observations for satellite radiance observations only
 #                   #  4: use thinned observations for both conventional and satellite radiance observations
 
-ADAPTINFL=1         # Adaptive inflation
+ADAPTINFL=0         # Adaptive inflation
                     #  0: OFF
                     #  1: ON, using inflation parameter 1 cycle  ago as prior
                     #  2: ON, using inflation parameter 2 cycles ago as prior
@@ -48,12 +47,16 @@ OBSOPE=0         # 0: No    ! obsope options: not finished yet!!
 #===============================================================================
 # Diagnostic output settings
 
-                 #      anal              gues
-                 #      mean/sprd members mean/sprd members history
-OUT_OPT=1        # 1:   o         o       o         o       o
-                 # 2:   o         o       o         o
-                 # 3:   o         o       o
-                 # 4:   o                 o
+                 #      anal              gues              history
+                 #      mean/sprd members mean/sprd members mean members
+OUT_OPT=1        # 1:   o         o       o         o       o    o
+                 # 2:   o         o       o         o       o
+                 # 3:   o         o       o         o
+                 # 4:   o         o       o
+                 # 5:   o         *       o                               * = every $OUT_CYCLE_SKIP cycles and the last cycle
+                 # 6:   o         **      o                               ** = only the last cycle
+
+OUT_CYCLE_SKIP=1
 
                  #      topo
 TOPOOUT_OPT=2    # 1:   o
@@ -82,5 +85,15 @@ LOG_OPT=2        # 1:   o    o       o   o              o     o      o
                  # 3:                                   o     o      o
                  # 4:                                         o      o
                  # 5:   (none)
+
+LOG_TYPE=2       # 1:   Only save the log file from the head process
+                 # 2:   Save all log files
+                 # 3:   Save all log files in an archive file
+                 # 4:   Save all log files in a compressed archive file
+
+RTPS_INFL_OUT=1  # 0: No
+                 # 1: Yes
+NOBS_OUT=1       # 0: No
+                 # 1: Yes
 
 #===============================================================================

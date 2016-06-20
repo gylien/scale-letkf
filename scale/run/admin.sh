@@ -10,89 +10,83 @@ res=$? && ((res != 0)) && exit $res
 
 #-------------------------------------------------------------------------------
 
-if (($# < 5)); then
+if (($# < 7)); then
   echo "$0: Insufficient arguments" >&2
   exit 1
 fi
 
-SCPNAME="$1"
-STIME="$2"
-TIME_DT="$3"
-TIME_DT_DYN="$4"
-NNODES="$5"
-WTIME_L="$6"
+SCPNAME="$1"; shift
+STIME="$1"; shift
+ETIME="$1"; shift
+TIME_DT="$1"; shift
+TIME_DT_DYN="$1"; shift
+NNODES="$1"; shift
+WTIME_L="$1"
 
-#ETIME=$(datetime "$STIME" ${LCYCLE} s)
+CONFIG='realtime_v160405_d1'
 
-CONFDIR="$OUTDIR/${STIME}/${SCPNAME}_conf"
+if [ "$ETIME" = '-' ]; then
+  ETIME="$STIME"
+fi
 
 #-------------------------------------------------------------------------------
 
 if [ "$SCPNAME" = 'cycle' ]; then
-  STIME_DIR="${STIME}_da"
+  DATA_BDY_WRF="ncepgfs_wrf_da"
 else
-  STIME_DIR="${STIME}"
+  DATA_BDY_WRF="ncepgfs_wrf"
 fi
-cat config/EastAsia_18km_48p/config.main.K | \
-    sed -e "s/<STIME>/${STIME_DIR}/g" | \
+#cat config/${CONFIG}/config.main.K_micro | \
+cat config/${CONFIG}/config.main.K | \
+    sed -e "s/<DATA_BDY_WRF>/${DATA_BDY_WRF}/g" | \
     sed -e "s/<NNODES>/${NNODES}/g" \
     > config.main
 
-cat config/EastAsia_18km_48p/config.${SCPNAME} | \
+cat config/${CONFIG}/config.${SCPNAME} | \
     sed -e "s/<STIME>/${STIME}/g" | \
+    sed -e "s/<ETIME>/${ETIME}/g" | \
     sed -e "s/<WTIME_L>/${WTIME_L}/g" \
     > config.${SCPNAME}
 
-cat config/EastAsia_18km_48p/config.nml.scale | \
+cat config/${CONFIG}/config.nml.scale | \
     sed -e "s/<TIME_DT>/${TIME_DT}/g" | \
     sed -e "s/<TIME_DT_DYN>/${TIME_DT_DYN}/g" \
     > config.nml.scale
 
-mkdir -p $CONFDIR
-cp config.* $CONFDIR
-
 #-------------------------------------------------------------------------------
 
+#./${SCPNAME}_K_micro.sh > ${SCPNAME}_K.log 2>&1
 ./${SCPNAME}_K.sh > ${SCPNAME}_K.log 2>&1
 res=$? && ((res != 0)) && exit $res
 
 jobname="${SCPNAME}_${SYSNAME}"
 jobid=$(grep 'pjsub Job' ${SCPNAME}_K.log | cut -d ' ' -f6)
 
-n=0
-nmax=120
-while [ ! -s "${jobname}.o${jobid}" ] || [ ! -s "${jobname}.e${jobid}" ] ||
-      [ ! -s "${jobname}.s${jobid}" ] || [ ! -s "${jobname}.i${jobid}" ] && ((n < nmax)); do
-  n=$((n+1))
-  sleep 5s
-done
-
 #-------------------------------------------------------------------------------
 
-res=0
-if ((n >= nmax)); then
-  res=101
+if [ ! -s "${jobname}.o${jobid}" ] || [ ! -s "${jobname}.e${jobid}" ] || \
+   [ ! -s "${jobname}.i${jobid}" ] || [ ! -s "${jobname}.s${jobid}" ]; then
+  exit 101
 elif [ -n "$(grep 'ERR.' ${jobname}.e${jobid})" ]; then
-  res=102
+  exit 102
 elif [ -n "$(grep 'terminated' ${jobname}.e${jobid})" ]; then
-  res=103
-elif [ ! -s "${jobname}.s${jobid}" ]; then
-  res=104
-elif [ "$(tail -n 1 ${jobname}.s${jobid})" != "---(Stage-Out Error Information)---" ]; then
-  res=105
+  exit 103
+#elif [ ! -s "${jobname}.s${jobid}" ]; then
+#  exit 104
+#elif [ "$(tail -n 1 ${jobname}.s${jobid})" != "---(Stage-Out Error Information)---" ]; then
+#  exit 105
 fi
 
-mv -f ${SCPNAME}_job.sh $CONFDIR/${jobid}.b
-mv -f ${SCPNAME}_K.log $CONFDIR/${jobid}.l
+rm -f ${SCPNAME}_job.sh
+rm -f ${jobname}.o${jobid}
+rm -f ${jobname}.e${jobid}
+rm -f ${jobname}.s${jobid}
+rm -f ${jobname}.i${jobid}
 
-mv -f ${jobname}.o${jobid} $CONFDIR/${jobid}.o
-mv -f ${jobname}.e${jobid} $CONFDIR/${jobid}.e
-mv -f ${jobname}.s${jobid} $CONFDIR/${jobid}.s
-mv -f ${jobname}.i${jobid} $CONFDIR/${jobid}.i
-
-mv -f $LOGDIR/${SCPNAME}_${STIME}.log $CONFDIR/${jobid}.lo
-mv -f $LOGDIR/${SCPNAME}.err $CONFDIR/${jobid}.le
+mkdir -p exp
+rm -f exp/*
+ln -s $OUTDIR/exp/${jobid}_${SCPNAME}_${STIME} exp
 
 #-------------------------------------------------------------------------------
 
-exit $res
+exit 0

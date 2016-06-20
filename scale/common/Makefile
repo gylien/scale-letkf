@@ -3,7 +3,6 @@ include ../configure.user
 OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_letkf.o \
 	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
           common_nml.o \
-          mod_admin_time.o \
           farb_connect.o farb_util.o farb_conf_dict.o farb_conf_parse.o
           #common_precip.o
 
@@ -59,7 +58,7 @@ common_obs_scale.o:	common_obs_scale.f90 common.o common_scale.o
 	$(FC) $(FOPTS) -c common_obs_scale.f90 $(NETCDF_INC) $(SCALE_INC)
 endif
 common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o \
-	common_scale.o common_obs_scale.o mod_admin_time.o
+	common_scale.o common_obs_scale.o 
 	$(FC) $(FOPTS) -c common_mpi_scale.f90 $(NETCDF_INC) $(SCALE_INC)
 #common_precip.o:	common_precip.f90 common.o common_scale.o common_letkf.o
 #	$(SFC) $(FOPTS) -c common_precip.f90
@@ -72,9 +71,6 @@ datetime.o:	datetime.f90 common.o
 	$(SFC) $(FOPTS) -c datetime.f90
 pdbash.o:	pdbash.f90
 	$(FC) $(FOPTS) -c pdbash.f90
-
-mod_admin_time.o:
-	$(FC) $(FOPTS) -c $(SCALE)/scale-les/src/admin/mod_admin_time.f90 $(SCALE_INC)
 
 clean:
 	rm -f *.o *.mod *.lst datetime pdbash

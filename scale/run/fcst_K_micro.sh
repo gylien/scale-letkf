@@ -38,24 +38,18 @@ fi
 
 #-------------------------------------------------------------------------------
 
+echo "[$(datetime_now)] Start $(basename $0) $@"
+
 setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}"
 
-jobscrp="$TMP/${myname1}_job.sh"
-
-#-------------------------------------------------------------------------------
-
-echo "[$(datetime_now)] Start $(basename $0) $@"
+echo
+print_setting
 echo
 
-for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN \
-             FCSTLEN FCSTOUT EFSOFLEN EFSOFOUT OUT_OPT \
-             STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP PARENT_REF_TIME; do
-  printf '  %-10s = %s\n' $vname "${!vname}"
-done
+#===============================================================================
+# Create and clean the temporary directory
 
-echo
-
-#-------------------------------------------------------------------------------
+echo "[$(datetime_now)] Create and clean the temporary directory"
 
 if [ ${TMP:0:8} != '/scratch' ]; then
   echo "[Error] $0: When using 'micro' resource group, \$TMP will be completely removed." >&2
@@ -67,6 +61,8 @@ safe_init_tmpdir $TMP
 
 #===============================================================================
 # Determine the distibution schemes
+
+echo "[$(datetime_now)] Determine the distibution schemes"
 
 # K computer
 NNODES_real=$NNODES
@@ -83,17 +79,26 @@ declare -a node_m
 safe_init_tmpdir $NODEFILE_DIR
 distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
 
-#===============================================================================
-# Determine the staging list and then stage in
+if ((CYCLE == 0)); then
+  CYCLE=$parallel_mems
+fi
 
-echo "[$(datetime_now)] Initialization (stage in)"
+#===============================================================================
+# Determine the staging list
+
+echo "[$(datetime_now)] Determine the staging list"
 
 safe_init_tmpdir $STAGING_DIR
 staging_list
+
+#===============================================================================
+# Stage in
+
+echo "[$(datetime_now)] Initialization (stage in)"
+
 bash $SCRP_DIR/src/stage_in.sh a
 
 #-------------------------------------------------------------------------------
-# stage-in: scripts
 
 cp -L -r $SCRP_DIR/config.main $TMP/config.main
 cp -L -r $SCRP_DIR/config.rc $TMP/config.rc
@@ -104,17 +109,20 @@ mkdir -p $TMP/src
 cp -L -r $SCRP_DIR/src/* $TMP/src
 
 echo "SCRP_DIR=\"$TMP\"" >> $TMP/config.main
-echo "LOGDIR=\"$TMP/log\"" >> $TMP/config.main
 
 echo "NNODES=$NNODES" >> $TMP/config.main
 echo "PPN=$PPN" >> $TMP/config.main
 echo "NNODES_real=$NNODES_real" >> $TMP/config.main
 echo "PPN_real=$PPN_real" >> $TMP/config.main
 
-echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMPS/config.main
+echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMP/config.main
+
+echo "RUN_LEVEL='K_micro'" >> $TMP/config.main
 
 #===============================================================================
 # Creat a job script
+
+jobscrp="$TMP/${myname1}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
@@ -122,7 +130,6 @@ rscgrp="micro"
 
 cat > $jobscrp << EOF
 #!/bin/sh
-##PJM -g ra000015
 #PJM -N ${myname1}_${SYSNAME}
 #PJM -s
 #PJM --rsc-list "node=${NNODES_real}"
@@ -132,11 +139,11 @@ cat > $jobscrp << EOF
 #PJM --mpi "proc=$NNODES"
 #PJM --mpi assign-online-node
 
-. /work/system/Env_base
+. /work/system/Env_base_1.2.0-20-1
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
+./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" || exit \$?
 EOF
 
 #===============================================================================
@@ -182,14 +189,28 @@ if ((ONLINE_STGOUT != 1)); then
   bash $SCRP_DIR/src/stage_out.sh a
 fi
 
-###### To do: also online staging...
-mkdir -p $LOGDIR
-cp -f $TMP/log/${myname1}_*.log $LOGDIR
-if [ -f "$TMP/log/${myname1}.err" ]; then
-  cat $TMP/log/${myname1}.err >> $LOGDIR/${myname1}.err
-fi
+#===============================================================================
+# Finalization
 
-#safe_rm_tmpdir $TMP
+echo "[$(datetime_now)] Finalization"
+echo
+
+mkdir -p $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/config.main $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/config.${myname1} $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/config.nml.* $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $TMP/${myname1}_job.sh $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $TMP/${myname1}_${SYSNAME}.o${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.o
+cp -f $TMP/${myname1}_${SYSNAME}.e${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.e
+cp -f $TMP/${myname1}_${SYSNAME}.i${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.i
+( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
+( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
+
+finalization
+
+if ((CLEAR_TMP == 1)); then
+  safe_rm_tmpdir $TMP
+fi
 
 #===============================================================================
 

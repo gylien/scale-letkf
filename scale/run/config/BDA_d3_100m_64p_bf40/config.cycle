@@ -48,24 +48,25 @@ OBSOPE=0         # 0: No    ! obsope options: not finished yet!!
 #===============================================================================
 # Diagnostic output settings
 
-                 #      anal              gues
-                 #      mean/sprd members mean/sprd members history
-OUT_OPT=2        # 1:   o         o       o         o       o
-                 # 2:   o         o       o         o
-                 # 3:   o         o       o
-                 # 4:   o                 o
+                 #      anal              gues              history
+                 #      mean/sprd members mean/sprd members mean members
+OUT_OPT=3        # 1:   o         o       o         o       o    o
+                 # 2:   o         o       o         o       o
+                 # 3:   o         o       o         o
+                 # 4:   o         o       o
+                 # 5:   o                 o
 
                  #      topo
-TOPOOUT_OPT=2    # 1:   o
+TOPOOUT_OPT=1    # 1:   o
                  # 2:   (none)
 
                  #      landuse
-LANDUSEOUT_OPT=2 # 1:   o
+LANDUSEOUT_OPT=1 # 1:   o
                  # 2:   (none)
 
                  #      bdy
                  #      mean members
-BDYOUT_OPT=3     # 1:   o    o
+BDYOUT_OPT=1     # 1:   o    o
                  # 2:   o
                  # 3:   (none)
 
