@@ -1006,9 +1006,10 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
           nd_h = nd_h / SIGMA_OBS_TC
           nd_v = ABS(LOG(obs(iset)%lev(iidx)) - LOG(rlev)) / SIGMA_OBSV_TC
 !          nd_v = 0.0d0
-        case (id_H08IR_obs)                                                                                               ! H08       
-          nd_h = nd_h / SIGMA_OBS_H08                                                                                     ! H08                       
-          nd_v = ABS(LOG(obs(iset)%lev(iidx)) - LOG(rlev)) / SIGMA_OBSV_H08 ! H08 ! bug fixed (02/09/2016) 
+        case (id_H08IR_obs)                                                                 ! H08       
+          nd_h = nd_h / SIGMA_OBS_H08                                                       ! H08    
+          !!nd_v = ABS(LOG(obs(iset)%lev(iidx)) - LOG(rlev)) / SIGMA_OBSV_H08 ! H08 ! bug fixed (02/09/2016) 
+          nd_v = ABS(LOG(obsda2(ip)%lev(iob)) - LOG(rlev)) / SIGMA_OBSV_H08 ! H08 !(06/27/2016) 
         case default
           nd_h = nd_h / SIGMA_OBS
           nd_v = ABS(LOG(obs(iset)%lev(iidx)) - LOG(rlev)) / SIGMA_OBSV

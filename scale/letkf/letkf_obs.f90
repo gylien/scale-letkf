@@ -589,8 +589,6 @@ SUBROUTINE set_letkf_obs
 ! Band num. is substituded into obsda%lev. This will be used in monit_obs.
 !
       ch_num = obs(iof)%lev(iidx)
-      obs(iof)%lev(iidx) = obsda%lev(n)
-      obsda%lev(n) = ch_num
 
       IF(DEPARTURE_STAT_H08)THEN
 !
@@ -598,11 +596,11 @@ SUBROUTINE set_letkf_obs
 !
         write(6, '(a,2I6,2F8.2,4F12.4,2I6)')"H08-O-B", &
              obs(iof)%elm(iidx), &
-             nint(obsda%lev(n)), & ! obsda%lev includes band num.
+             nint(ch_num), & ! obsda%lev includes band num.
              obs(iof)%lon(iidx), &
              obs(iof)%lat(iidx), &
              obsda%val(n),& ! O-B
-             obs(iof)%lev(iidx), & ! sensitive height
+             obsda%lev(n), & ! sensitive height
              obs(iof)%dat(iidx), &
              obs(iof)%err(iidx), &
              obsda%qc(n),        &
@@ -610,10 +608,10 @@ SUBROUTINE set_letkf_obs
       ELSE
         write(6, '(2I6,2F8.2,4F12.4,I3)') &
              obs(iof)%elm(iidx), & ! id
-             nint(obsda%lev(n)), & ! band num
+             nint(ch_num), & ! band num
              obs(iof)%lon(iidx), &
-             obs(iof)%lat(iidx), &
-             obs(iof)%lev(iidx), & ! sensitive height
+             obs(iof)%lat(n), &
+             obsda%lev(iidx), & ! sensitive height
              obs(iof)%dat(iidx), &
              obs(iof)%err(iidx), &
              obsda%val(n), &
@@ -778,18 +776,18 @@ SUBROUTINE set_letkf_obs
 ! Communication
 !-----------------------------------
 
-#ifdef H08
+!#ifdef H08
 ! -- H08
-  if((obs(3)%nobs >= 1) .and. OBS_IN_NUM >= 3)then
-    allocate (bufr2(obs(3)%nobs))
-    bufr2 = 0.0d0
-    CALL MPI_BARRIER(MPI_COMM_d,ierr)
-    CALL MPI_ALLREDUCE(obs(3)%lev,bufr2,obs(3)%nobs,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
-    obs(3)%lev = bufr2
-    deallocate(bufr2)
-  endif
+!  if((obs(3)%nobs >= 1) .and. OBS_IN_NUM >= 3)then
+!    allocate (bufr2(obs(3)%nobs))
+!    bufr2 = 0.0d0
+!    CALL MPI_BARRIER(MPI_COMM_d,ierr)
+!    CALL MPI_ALLREDUCE(obs(3)%lev,bufr2,obs(3)%nobs,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
+!    obs(3)%lev = bufr2
+!    deallocate(bufr2)
+!  endif
 ! -- H08
-#endif
+!#endif
 
   allocate ( bufri2 (0:nlon,1:nlat,0:MEM_NP-1) )
   call MPI_ALLREDUCE(nobsgrd,bufri2,(nlon+1)*nlat*MEM_NP,MPI_INTEGER,MPI_SUM,MPI_COMM_d,ierr)
