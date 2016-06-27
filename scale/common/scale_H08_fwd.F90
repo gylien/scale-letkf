@@ -240,6 +240,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   Real(Kind=jprb),ALLOCATABLE :: tmp_btclr_out(:,:)
   Real(Kind=jprb),ALLOCATABLE :: tmp_trans_out(:,:,:)
   REAL(Kind=r_size),INTENT(OUT) :: btall_out(nchannels,nprof)
+  REAL(Kind=r_size),INTENT(OUT) :: btclr_out(nchannels,nprof)
   REAL(Kind=r_size),INTENT(OUT) :: trans_out(nlevels,nchannels,nprof)
 
   logical :: debug = .false.
@@ -257,6 +258,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   repsb = 1.0_jprb / epsb
 
   minQcfrac = real(H08_RTTOV_MINQ,kind=jprb)
+  jcfrac_cnst = real(H08_RTTOV_CFRAC_CNST,kind=jprb)
 
   ALLOCATE(tmp_btall_out(nchannels,nprof))
   ALLOCATE(tmp_btclr_out(nchannels,nprof))
