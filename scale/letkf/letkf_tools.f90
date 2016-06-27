@@ -382,7 +382,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !
   ! Write inflation parameter (in analysis) corresponding to the RTPS method
   !
-  IF(RELAX_SPREAD_OUT /= 0.0d0) THEN
+  IF(RELAX_SPREAD_OUT) THEN
     if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
     if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
     CALL gather_grd_mpi(lastmem_rank_e,work3da,work2da,work3dg,work2dg)

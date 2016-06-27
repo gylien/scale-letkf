@@ -405,7 +405,7 @@ subroutine read_nml_letkf
   if (MIN_INFL_MUL /= 0.0d0 .and. INFL_MUL_MIN == 0.0d0) then
     INFL_MUL_MIN = MIN_INFL_MUL
   end if
-  if (ADAPTIVE_INFL_INIT /= .false. .and. INFL_MUL_ADAPTIVE == .false.) then
+  if (ADAPTIVE_INFL_INIT .and. (.not. INFL_MUL_ADAPTIVE)) then
     INFL_MUL_ADAPTIVE = ADAPTIVE_INFL_INIT
   end if
   if (BOUNDARY_TAPER_WIDTH /= 0.0d0 .and. BOUNDARY_BUFFER_WIDTH == 0.0d0) then
