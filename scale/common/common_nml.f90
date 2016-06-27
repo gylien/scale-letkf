@@ -193,7 +193,7 @@ MODULE common_nml
   real(r_size) :: H08_BT_MIN = 0.0d0 ! Lower limit of the BT for Himawari-8 IR
   real(r_size) :: H08_CLDSKY_THRS = -5.0d0 ! Threshold for diagnosing the sky condition using [BT(all-sky) - BT(clr)].
                                            ! Negative values: turn off
-  integer :: H08_MIN_CLD_MEMBER = 10       ! If the number of the cloudy members is larger than H08_MIN_CLD_MEMBER,
+  integer :: H08_MIN_CLD_MEMBER = 1       ! If the number of the cloudy members is larger than H08_MIN_CLD_MEMBER,
                                            ! the first guess is diagnosed as cloudy. ! Not finished yet!
   integer :: H08_CH_USE(nch) = (/0,0,1,0,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
