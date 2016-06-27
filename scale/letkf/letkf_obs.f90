@@ -89,6 +89,7 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
   REAL(r_size),allocatable :: bufr2(:) ! H08
   REAL(r_size):: ch_num ! H08
+!  REAL(r_size),allocatable :: hx_sprd(:) ! H08
 #endif
   integer :: iproc,jproc
   integer,allocatable :: nnext(:,:)
@@ -472,6 +473,19 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_obs_bad
         cycle
       endif
+
+!
+! -- Counting how many members have cloud.
+! -- Cloudy members should have negative values.
+!
+      mem_ref = 0
+      do i = 1, MEMBER
+        if (obsda%ensval(i,n) < 0.0d0) then
+          mem_ref = mem_ref + 1
+          obsda%ensval(i,n) = obsda%ensval(i,n) * (-1.0d0)
+        end if
+      end do
+
 !
 ! -- reject Band #11(ch=5) & #12(ch=6) of Himawari-8 obs ! H08
 ! -- because these channels are sensitive to chemical tracers
@@ -498,6 +512,14 @@ SUBROUTINE set_letkf_obs
     END DO
     obsda%val(n) = obs(iof)%dat(iidx) - obsda%val(n) ! y-Hx
 
+!   compute sprd in obs space ! H08
+
+!    hx_sprd(n) = 0.0d0 !H08
+!    DO i=1,MEMBER
+!      hx_sprd(n) = hx_sprd(n) + obsda%ensval(i,n) * obsda%ensval(i,n)
+!    ENDDO
+!    hx_sprd(n) = dsqrt(hx_sprd(n) / REAL(MEMBER,r_size))
+
     select case (obs(iof)%elm(iidx)) !gross error
     case (id_rain_obs)
       IF(ABS(obsda%val(n)) > GROSS_ERROR_RAIN * obs(iof)%err(iidx)) THEN
@@ -516,9 +538,30 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_gross_err
       END IF
     case (id_H08IR_obs)
-      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
-        obsda%qc(n) = iqc_gross_err
+      ! Adaptive QC depending on the sky condition in the background.
+      ! !!Not finished yet!!
+      ! 
+      ! In config.nml.obsope,
+      !  H08_CLDSKY_THRS  < 0.0: turn off ! all members are diagnosed as cloudy.
+      !  H08_CLDSKY_THRS  > 0.0: turn on
+      !
+      IF(mem_ref < H08_MIN_CLD_MEMBER)THEN ! Clear sky
+        IF(ABS(obsda%val(n)) > 1.0d0 * obs(iof)%err(iidx)) THEN
+          obsda%qc(n) = iqc_gross_err
+        END IF
+      ELSE ! Cloudy sky
+        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+          obsda%qc(n) = iqc_gross_err
+        END IF
       END IF
+
+      IF(obs(iof)%dat(iidx) < H08_BT_MIN)THEN
+        obsda%qc(n) = iqc_gross_err
+      ENDIF
+
+!      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+!        obsda%qc(n) = iqc_gross_err
+!      END IF
     case (id_tclon_obs)
       IF(ABS(obsda%val(n)) > GROSS_ERROR_TCX * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
@@ -553,7 +596,7 @@ SUBROUTINE set_letkf_obs
 !
 ! For obs err correlation statistics based on Desroziers et al. (2005, QJRMS).
 !
-        write(6, '(a,2I6,2F8.2,4F12.4,I6)')"H08-O-B", &
+        write(6, '(a,2I6,2F8.2,4F12.4,2I6)')"H08-O-B", &
              obs(iof)%elm(iidx), &
              nint(obsda%lev(n)), & ! obsda%lev includes band num.
              obs(iof)%lon(iidx), &
@@ -562,7 +605,8 @@ SUBROUTINE set_letkf_obs
              obs(iof)%lev(iidx), & ! sensitive height
              obs(iof)%dat(iidx), &
              obs(iof)%err(iidx), &
-             obsda%qc(n)
+             obsda%qc(n),        &
+             mem_ref ! # of cloudy member
       ELSE
         write(6, '(2I6,2F8.2,4F12.4,I3)') &
              obs(iof)%elm(iidx), & ! id

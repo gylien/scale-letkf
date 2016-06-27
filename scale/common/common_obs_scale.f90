@@ -62,9 +62,9 @@ MODULE common_obs_scale
 !
   INTEGER,PARAMETER :: id_ps_obs=14593
   INTEGER,PARAMETER :: id_rain_obs=19999
-  INTEGER,PARAMETER :: id_tclon_obs=99991  ! not used
-  INTEGER,PARAMETER :: id_tclat_obs=99992  ! not used
-  INTEGER,PARAMETER :: id_tcmip_obs=99993  ! not used
+  INTEGER,PARAMETER :: id_tclon_obs=99991  ! TC vital
+  INTEGER,PARAMETER :: id_tclat_obs=99992  ! TC vital
+  INTEGER,PARAMETER :: id_tcmip_obs=99993  ! TC vital
 !
 ! radar observations
 !
@@ -125,7 +125,6 @@ MODULE common_obs_scale
     ! 
 #ifdef H08
     REAL(r_size),ALLOCATABLE :: lev(:) ! H08
-    LOGICAL :: CLD
 #endif
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
@@ -1622,6 +1621,9 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
                           yobs_H08,plev_obs_H08,&
                           qc_H08,stggrd=1)
 
+      ! yobs here should be positive!!
+      yobs_H08 = abs(yobs_H08)
+
       write (6, '(A)')"MEAN-HIMAWARI-8-STATISTICS"
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns)
@@ -2618,7 +2620,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
   REAL(r_size) :: lsmask1d(nprof)
 
 ! -- brightness temp from RTTOV
-  REAL(r_size) :: bt_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
+  REAL(r_size) :: btall_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
+  REAL(r_size) :: btclr_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
 ! -- transmittance from RTTOV
   REAL(r_size) :: trans_out(nlev,nch,nprof)
  
@@ -2706,13 +2709,13 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
                        lon1d(1:nprof),& ! (deg)
                        lat1d(1:nprof),& ! (deg)
                        lsmask1d(1:nprof),& ! (0-1)
-                       bt_out(1:nch,1:nprof),& ! (K)
-                       trans_out(nlev:1:-1,1:nch,1:nprof),&
-                       CLD = .true.) ! ()
+                       btall_out(1:nch,1:nprof),& ! (K)
+                       btclr_out(1:nch,1:nprof),& ! (K)
+                       trans_out(nlev:1:-1,1:nch,1:nprof))
 !
 ! -- Compute max weight level using trans_out 
 ! -- (Transmittance from each user pressure level to Top Of the Atmosphere)
-! -- bt_out is substituted into yobs
+! -- btall_out is substituted into yobs
 
   n = 0
   DO np = 1, nprof
@@ -2735,7 +2738,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
       endif
     ENDDO
 
-    yobs(n) = bt_out(ch,np)
+    yobs(n) = btall_out(ch,np)
 !
 ! ## comment out by T.Honda (02/09/2016)
 ! -- tentative QC here --
@@ -2751,6 +2754,19 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
     CASE DEFAULT
       qc(n) = iqc_obs_bad
     END SELECT
+
+    IF(H08_REJECT_LAND .and. (lsmask1d(np) > 0.5d0))THEN
+      qc(n) = iqc_obs_bad
+    ENDIF
+
+    IF(abs(btall_out(ch,np) - btclr_out(ch,np)) > H08_CLDSKY_THRS)THEN
+! Cloudy sky
+      yobs(n) = yobs(n) * (-1.0d0)
+    ELSE
+! Clear sky
+      yobs(n) = yobs(n) * 1.0d0
+    ENDIF
+
   ENDDO ! ch
   ENDDO ! np
 
