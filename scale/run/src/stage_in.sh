@@ -25,15 +25,23 @@ if [ "$MYRANK" = 'a' ] ||
     while read line; do
       source="$(echo $line | cut -d '|' -s -f1)"
       destin="$(echo $line | cut -d '|' -s -f2)"
+      ftype="$(echo $line | cut -d '|' -s -f3)"
+      if [ "$ftype" = 'l' ]; then
+        TMPDATtmp=$TMPDAT_L
+      elif [ "$ftype" = 's' ]; then
+        TMPDATtmp=$TMPDAT_S
+      else
+        TMPDATtmp=$TMPDAT
+      fi
       if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
-        mkdir -p "$(dirname ${TMPDAT}/${destin})"
+        mkdir -p "$(dirname ${TMPDATtmp}/${destin})"
         if ((SCP_THREAD > 1)); then
           while (($(jobs -p | wc -l) >= SCP_THREAD)); do
             sleep 1s
           done
-          $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDAT}/${destin}" &
+          $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDATtmp}/${destin}" &
         else
-          $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDAT}/${destin}"
+          $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDATtmp}/${destin}"
         fi
       fi
     done < "$STAGING_DIR/stagein.dat" | sort | uniq

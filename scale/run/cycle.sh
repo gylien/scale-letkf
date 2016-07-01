@@ -41,7 +41,7 @@ echo "[$(datetime_now)] ### 1" >&2
 
 #-------------------------------------------------------------------------------
 
-if ((USE_RANKDIR == 1)); then
+if [ "$STG_TYPE" = 'K_rankdir' ]; then
   SCRP_DIR="."
   if ((TMPDAT_MODE <= 2)); then
     TMPDAT="../dat"
@@ -71,7 +71,7 @@ echo "[$(datetime_now)] ### 2" >&2
 
 #-------------------------------------------------------------------------------
 
-if ((BUILTIN_STAGING && ISTEP == 1)); then
+if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
   if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
     safe_init_tmpdir $TMP || exit $?
   fi
@@ -94,8 +94,8 @@ declare -a proc2node
 declare -a proc2group
 declare -a proc2grpproc
 
-#if ((BUILTIN_STAGING && ISTEP == 1)); then
-if ((BUILTIN_STAGING)); then
+#if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
+if [ "$STG_TYPE" = 'builtin' ]; then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
   distribute_da_cycle machinefile $NODEFILE_DIR - "$MEMBERS" || exit $?
 else
@@ -107,7 +107,7 @@ echo "[$(datetime_now)] ### 4" >&2
 #===============================================================================
 # Determine the staging list and then stage in
 
-if ((BUILTIN_STAGING && ISTEP == 1)); then
+if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR || exit $?
@@ -255,7 +255,7 @@ while ((time <= ETIME)); do
 
       if ((enable_iter == 1)); then
         for it in $(seq $nitmax); do
-          if ((USE_RANKDIR == 1)); then
+          if [ "$STG_TYPE" = 'K_rankdir' ]; then
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
             mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" ${stepexecdir[$s]} \
@@ -272,7 +272,7 @@ while ((time <= ETIME)); do
           fi
         done
       else
-        if ((USE_RANKDIR == 1)); then
+        if [ "$STG_TYPE" = 'K_rankdir' ]; then
 
           mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" ${stepexecdir[$s]} \
                   "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" "$loop" || exit $?
@@ -289,22 +289,22 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 # Online stage out
 
-  if ((ONLINE_STGOUT == 1)); then
-    if ((MACHINE_TYPE == 11)); then
-      touch $TMP/loop.${loop}.done
-    fi
-    if ((BUILTIN_STAGING && $(datetime $time $LCYCLE s) <= ETIME)); then
-      if ((MACHINE_TYPE == 12)); then
-        echo "[$(datetime_now)] ${time}: Online stage out"
-        bash $SCRP_DIR/src/stage_out.sh s $loop || exit $?
-        pdbash node all $SCRP_DIR/src/stage_out.sh $loop || exit $?
-      else
-        echo "[$(datetime_now)] ${time}: Online stage out (background job)"
-        ( bash $SCRP_DIR/src/stage_out.sh s $loop ;
-          pdbash node all $SCRP_DIR/src/stage_out.sh $loop ) &
-      fi
-    fi
-  fi
+#  if ((ONLINE_STGOUT == 1)); then
+#    if ((MACHINE_TYPE == 11)); then
+#      touch $TMP/loop.${loop}.done
+#    fi
+#    if ((BUILTIN_STAGING && $(datetime $time $LCYCLE s) <= ETIME)); then
+#      if ((MACHINE_TYPE == 12)); then
+#        echo "[$(datetime_now)] ${time}: Online stage out"
+#        bash $SCRP_DIR/src/stage_out.sh s $loop || exit $?
+#        pdbash node all $SCRP_DIR/src/stage_out.sh $loop || exit $?
+#      else
+#        echo "[$(datetime_now)] ${time}: Online stage out (background job)"
+#        ( bash $SCRP_DIR/src/stage_out.sh s $loop ;
+#          pdbash node all $SCRP_DIR/src/stage_out.sh $loop ) &
+#      fi
+#    fi
+#  fi
 
 #-------------------------------------------------------------------------------
 # Write the footer of the log file
@@ -327,7 +327,7 @@ done
 #===============================================================================
 # Stage out
 
-if ((BUILTIN_STAGING)); then
+if [ "$STG_TYPE" = 'builtin' ]; then
   echo "[$(datetime_now)] Finalization (stage out)" >&2
 
   if ((TMPOUT_MODE >= 2)); then

@@ -3,6 +3,7 @@
 *.mod
 *.pyc
 *.lst
+*~
 scale/configure.user
 scale/common/datetime
 scale/common/pdbash
