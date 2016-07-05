@@ -25,7 +25,8 @@ FC        = mpif90
 FOPTS_SCALE = $(FFLAGS)
 
 #FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback -fpe0
-FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback -fpp
+#FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback -fpp
+FOPTS     = $(FOPTS_SCALE)
 
 FMCMODEL  = -mcmodel=medium
 FBYTESWAP = -convert little_endian

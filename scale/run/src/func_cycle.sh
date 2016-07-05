@@ -40,7 +40,7 @@ Configuration files:
 Steps:
 $(for i in $(seq $nsteps); do echo "  ${i}. ${stepname[$i]}"; done)
 
-Usage: $myname [STIME ETIME ISTEP FSTEP TIME_LIMIT]
+Usage: $myname [STIME ETIME MEMBERS ISTEP FSTEP TIME_LIMIT]
 
   STIME       Time of the first cycle (format: YYYY[MMDDHHMMSS])
   ETIME       Time of the last  cycle (format: YYYY[MMDDHHMMSS])

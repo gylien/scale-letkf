@@ -8,26 +8,33 @@
 RTTOV_COEF="/data6/gylien/scale-letkf/scale_run_himawari_test/letkf/scale/run/rtcoef_himawari_8_ahi.dat"
 RTTOV_SCCOEF="/data6/gylien/scale-letkf/scale_run_himawari_test/letkf/scale/run/sccldcoef_himawari_8_ahi.dat"
 
+PRESET='Linux_torque'
+
+MPI_TYPE='sgimpt'
+
+#===============================================================================
+
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/data6/gylien/exp/scale-letkf_testcase/testcase_45km_4p_l36" # Directory for SCALE-LETKF output
+DDIR="$(cd "$(pwd)/../../../.." && pwd)"
 
-LOGDIR="$DIR/log"
+OUTDIR="$DDIR/exp/testcase_45km_4p_l36" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/Linux64-intel-mpt-yamazaki"
-DATADIR="/data6/gylien/scale-letkf/database"
+MODELDIR="$DIR/../../bin/${SCALE_SYS}"
+DATADIR="$DDIR/database"
 
-DATA_TOPO="/data6/gylien/scale-letkf/database/topo_prep/testcase_45km_4p_bf10"
-DATA_LANDUSE="/data6/gylien/scale-letkf/database/landuse_prep/testcase_45km_4p_bf10"
+DATA_TOPO=
+DATA_TOPO_BDY_SCALE=
+DATA_LANDUSE=
 DATA_BDY_SCALE=
-DATA_BDY_SCALE_PREP="/data6/gylien/scale-letkf/database/bdy_prep/testcase_45km_4p"
-DATA_BDY_WRF="/data6/gylien/model/ncepfnl_large/wrfout"
+DATA_BDY_SCALE_PREP=
+DATA_BDY_WRF="$DDIR/ncepfnl/wrfout"
 DATA_BDY_NICAM=
 
-OBS="/data6/gylien/obs/prepbufr_obs_eastasia_test"    # directory of observation data in LETKF obs format
+OBS="$DDIR/obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
 OBSNCEP=                # directory of observation data in NCEP BUFR format
 
 #===============================================================================
@@ -75,8 +82,8 @@ LTIMESLOT=600      # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=3           # Ensemble size
 
-NNODES=1           # Number of nodes
-PPN=16             # Number of processes per node
+NNODES=2           # Number of nodes
+PPN=8              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
@@ -89,12 +96,6 @@ ENABLE_SET=0       ######
 #===============================================================================
 # Temporary directories to store runtime files
 
-MACHINE_TYPE=1              # Machine type
-                            #  1: Linux cluster with PBS
-                            # 10: K-computer
-                            # 11: K-computer (micro jobs)
-                            # 12: K-computer (interact jobs)
-
 TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
 TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
@@ -106,20 +107,32 @@ DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
                             #  1: in $TMPDAT
                             #  2: in $TMPOUT
 
-ONLINE_STGOUT=1             # Stage out right after each cycle (do not wait until the end of the job)?
+DISK_MODE_TOPO_LANDUSE_DB=2
+
+DISK_MODE_DATA_BDY=2
+
+DISK_MODE_DATA_TOPO=2
+DISK_MODE_DATA_LANDUSE=2
+DISK_MODE_DATA_BDYPREP=2
+
+ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
 
-SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
-                            #  0: No
-                            #  1: Yes
+#SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
+#                            #  0: No
+#                            #  1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
-TMPSUBDIR="scale-letkf_$(whoami)_${SYSNAME}" # (used to identify multiple runs in the same time)
+TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
 TMP="$DIR/tmp/$TMPSUBDIR"   # Temporary directory shared among all nodes
 TMPS="/dev/shm/$TMPSUBDIR"  # Temporary directory only on the server node
 TMPL="/dev/shm/$TMPSUBDIR"  # Local temporary directory on computing nodes
+
+CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
+                            #  0: No
+                            #  1: Yes
 
 #===============================================================================
 # Environmental settings
@@ -131,6 +144,9 @@ SCP='cp -L'
 SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
+
+SCP_THREAD=1
+TAR_THREAD=1
 
 PYTHON="python3"
 

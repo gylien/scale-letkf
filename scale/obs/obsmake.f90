@@ -47,9 +47,9 @@ PROGRAM obsmake
 
   call set_mem_node_proc(1,NNODES,PPN,MEM_NODES,MEM_NP)
 
-  if (myrank_use) then
+  call set_scalelib
 
-    call set_scalelib
+  if (myrank_use) then
 
     call set_common_scale
     CALL set_common_mpi_scale

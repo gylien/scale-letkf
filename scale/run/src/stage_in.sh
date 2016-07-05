@@ -26,9 +26,10 @@ if [ "$MYRANK" = 'a' ] ||
       source="$(echo $line | cut -d '|' -s -f1)"
       destin="$(echo $line | cut -d '|' -s -f2)"
       ftype="$(echo $line | cut -d '|' -s -f3)"
-      if [ "$ftype" = 'l' ]; then
-        TMPDATtmp=$TMPDAT_L
-      elif [ "$ftype" = 's' ]; then
+      if [ "$ftype" = 's' ]; then
+        if ((MYRANK > 0)); then
+          break
+        fi
         TMPDATtmp=$TMPDAT_S
       else
         TMPDATtmp=$TMPDAT

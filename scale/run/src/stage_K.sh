@@ -20,9 +20,7 @@ if [ -s "$STAGING_DIR/stagein.dat" ]; then
     source="$(echo $line | cut -d '|' -s -f1)"
     destin="$(echo $line | cut -d '|' -s -f2)"
     ftype="$(echo $line | cut -d '|' -s -f3)"
-    if [ "$ftype" = 'l' ]; then
-      TMPDAT_STGtmp=$TMPDAT_L_STG
-    elif [ "$ftype" = 's' ]; then
+    if [ "$ftype" = 's' ]; then
       TMPDAT_STGtmp=$TMPDAT_S_STG
     else
       TMPDAT_STGtmp=$TMPDAT_STG

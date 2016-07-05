@@ -113,6 +113,7 @@ if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
   safe_init_tmpdir $STAGING_DIR || exit $?
   staging_list || exit $?
   if ((TMPDAT_MODE >= 2 || TMPOUT_MODE >= 2)); then
+    pdbash node all $SCRP_DIR/src/stage_in_init.sh || exit $?
     pdbash node all $SCRP_DIR/src/stage_in.sh || exit $?
   fi
 fi
