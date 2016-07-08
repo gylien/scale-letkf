@@ -5,36 +5,41 @@
 #
 #===============================================================================
 
-DIR="$(cd "$(pwd)/.." && pwd)"                  # Root directory of the SCALE-LETKF
+PRESET='K'
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/test/testcase_45km_4p_l36_SP" # Directory for SCALE-LETKF output
+#===============================================================================
+
+DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
+
+DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
+
+OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/${SCALE_SYS}"                                       # Directory of the SCALE model executables
-DATADIR="$DIR/../../../database"                                             # Directory of the SCALE database
+MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
+DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE=                                                        # Directory of the prepared landuse files
 DATA_BDY_SCALE=                                                      # Directory of the boundary data in SCALE history format (parent domain)
 DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
-DATA_BDY_WRF="/volume63/data/hp150019/gylien/for_liao/ncepfnl/wrfout"         # Directory of the boundary data in WRF format
-# "/volume63/data/hp150019/gylien/model/ncepfnl/wrfout_init_2013070100"
+DATA_BDY_WRF="$DDIR/ncepfnl/wrfout"                                  # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-OBS="/volume63/data/hp150019/gylien/for_liao/obs/prepbufr_obs_eastasia"       # Observation data in LETKF observation format
+OBS="$DDIR/obs/prepbufr_obs_eastasia"                                # Observation data in LETKF observation format
 OBSNCEP=
 
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -44,12 +49,14 @@ BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain sett
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
+BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
+
 BDY_ENS=0               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 
 BDYINT=21600
 
-OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
+OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
 
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
@@ -85,12 +92,6 @@ BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
 #===============================================================================
 # Temporary directories to store runtime files
-
-MACHINE_TYPE=10             # Machine type
-                            #  1: Linux cluster with PBS
-                            # 10: K-computer
-                            # 11: K-computer (micro jobs)
-                            # 12: K-computer (interact jobs)
 
 TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
 TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
@@ -143,6 +144,7 @@ SCP_HOSTPREFIX=''
 #SCP_HOSTPREFIX="XXXX:"
 
 SCP_THREAD=8
+TAR_THREAD=8
 
 PYTHON="python"
 

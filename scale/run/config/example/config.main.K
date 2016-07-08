@@ -5,6 +5,10 @@
 #
 #===============================================================================
 
+PRESET='K'
+
+#===============================================================================
+
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
 OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d4_1km_100mem_407" # Directory for SCALE-LETKF output
@@ -146,10 +150,6 @@ MPIRUN="$MPIBIN/mpiexec"
 
 SCP='cp -L'
 SCP_HOSTPREFIX=''
-#SCP='rsync -Lq'
-#SCP_HOSTPREFIX=''
-#SCP="scp -q"
-#SCP_HOSTPREFIX="XXXX:"
 
 SCP_THREAD=8
 TAR_THREAD=8

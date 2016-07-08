@@ -14,6 +14,73 @@ SCALE_SFX=".pe${PROCESS_FMT}.nc"
 SCALE_LOG_SFX='.pe000000'
 
 #===============================================================================
+# Preset
+
+#new variables:
+# STG_TYPE: 'K', 'K_rankdir', 'builtin', (other: no stageing)
+# DISK_ALL_LOCAL: 1, (other)
+# NODELIST_TYPE: 'nodefile', 'K'
+# MPI_TYPE: 'K', 'sgimpt', 'openmpi'
+
+if [ "$PRESET" = 'K' ]; then
+  STG_TYPE='K'
+  TMPDAT_MODE=2
+  TMPRUN_MODE=2
+#  DISK_MODE_TOPO_LANDUSE_DB=2
+#  DISK_MODE_DATA_BDY=2
+#  DISK_MODE_DATA_TOPO=2
+#  DISK_MODE_DATA_LANDUSE=2
+#  DISK_MODE_DATA_BDYPREP=2
+  ONLINE_STGOUT=0
+  NODELIST_TYPE='K'
+  MPI_TYPE='K'
+elif [ "$PRESET" = 'K_rankdir' ]; then
+  STG_TYPE='K_rankdir'
+#  DISK_ALL_LOCAL=1
+  TMPDAT_MODE=3
+  TMPRUN_MODE=3
+  DISK_MODE_TOPO_LANDUSE_DB=2
+  DISK_MODE_DATA_BDY=2
+  DISK_MODE_DATA_TOPO=2
+  DISK_MODE_DATA_LANDUSE=2
+  DISK_MODE_DATA_BDYPREP=2
+  ONLINE_STGOUT=0
+  NODELIST_TYPE='K'
+  MPI_TYPE='K'
+elif [ "$PRESET" = 'K_micro' ]; then
+  STG_TYPE='builtin'
+  TMPDAT_MODE=2
+  TMPRUN_MODE=2
+#  DISK_MODE_TOPO_LANDUSE_DB=2
+#  DISK_MODE_DATA_BDY=2
+#  DISK_MODE_DATA_TOPO=2
+#  DISK_MODE_DATA_LANDUSE=2
+#  DISK_MODE_DATA_BDYPREP=2
+  NODELIST_TYPE='K'
+  MPI_TYPE='K'
+elif [ "$PRESET" = 'K_interact' ]; then
+  STG_TYPE=
+  TMPDAT_MODE=2
+  TMPRUN_MODE=2
+#  DISK_MODE_TOPO_LANDUSE_DB=2
+#  DISK_MODE_DATA_BDY=2
+#  DISK_MODE_DATA_TOPO=2
+#  DISK_MODE_DATA_LANDUSE=2
+#  DISK_MODE_DATA_BDYPREP=2
+  NODELIST_TYPE='K'
+  MPI_TYPE='K'
+elif [ "$PRESET" = 'Linux' ]; then
+  STG_TYPE='builtin'
+  NODELIST_TYPE='nodefile'
+elif [ "$PRESET" = 'Linux_torque' ]; then
+  STG_TYPE='builtin'
+  NODELIST_TYPE='nodefile'
+else
+  echo "[Error] Preset '$PRESET' not found" 1>&2
+  exit 1
+fi
+
+#===============================================================================
 # Default values
 
 DATA_TOPO="${DATA_TOPO:-$OUTDIR}"
@@ -31,6 +98,16 @@ ADAPTINFL=${ADAPTINFL:-0}
 RTPS_INFL_OUT=${RTPS_INFL_OUT:-0}
 NOBS_OUT=${NOBS_OUT:-0}
 
+#-------------------------------------------------------------------------------
+
+TMPOUT_MODE=$TMPRUN_MODE
+
+if ((TMPRUN_MODE <= 2)); then
+  PROC_OPT='one'
+else
+  PROC_OPT='alln'
+fi
+
 #===============================================================================
 # Definition of sub-directories
 
@@ -44,20 +121,20 @@ ENSMODEL_DIR="$DIR/ensmodel"
 
 #-------------------------------------------------------------------------------
 
-if ((MACHINE_TYPE == 10)); then
-  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
-    USE_RANKDIR=1   # The use of the rankdir of K-computer has not been successful...
-    TMP="$(pwd)/.." #
-    TMP_STG='..'    #
-    TMPL="$(pwd)"   #
-    TMPL_STG='.'    #
-#    TMPL="."        #
-#    TMPL_STG='.'    #
-  else
-    USE_RANKDIR=0
-    TMP="$(pwd)"
-    TMP_STG='.'
-  fi
+if [ "$STG_TYPE" = 'K' ]; then
+  TMP="$(pwd)"
+  TMP_STG='.'
+  echo "\$STG_TYPE = 'K': \$TMP reset to '$TMP'" 1>&2
+  echo "\$STG_TYPE = 'K': \$TMP_STG reset to '$TMP_STG'" 1>&2
+elif [ "$STG_TYPE" = 'K_rankdir' ]; then
+  TMP="$(pwd)/.."
+  TMP_STG='..'
+  TMPL="$(pwd)"
+  TMPL_STG='.'
+  echo "\$STG_TYPE = 'K_rankdir': \$TMP reset to '$TMP'" 1>&2
+  echo "\$STG_TYPE = 'K_rankdir': \$TMP_STG reset to '$TMP_STG'" 1>&2
+  echo "\$STG_TYPE = 'K_rankdir': \$TMPL reset to '$TMPL'" 1>&2
+  echo "\$STG_TYPE = 'K_rankdir': \$TMPL_STG reset to '$TMPL_STG'" 1>&2
 fi
 
 #-------------------------------------------------------------------------------

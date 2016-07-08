@@ -233,7 +233,7 @@ distribute_da_cycle () {
 #
 # Usage: distribute_da_cycle [NODEFILE NODEFILEDIR DISTR_FILE]
 #
-#   NODEFILE     The pre-determined nodefile (required when $MACHINE_TYPE = 1)
+#   NODEFILE     The pre-determined nodefile
 #   NODEFILEDIR  Directory to output nodefiles
 #                '-': No output (default)
 #   DISTR_FILE   Location of the 'distr' file
@@ -247,6 +247,7 @@ distribute_da_cycle () {
 #   $PPN         Number of processes per node
 #   $MEMBER_FMT
 #   $SCALE_NP
+#   $NODELIST_TYPE
 #   
 # Return variables:
 #   $node[1...$nnodes]                    Name of nodes
@@ -292,13 +293,9 @@ fi
 #-------------------------------------------------------------------------------
 # Set up node names and member names
 
-if ((MACHINE_TYPE == 1)); then
+if [ "$NODELIST_TYPE" = 'nodefile' ]; then
   read_nodefile_pbs "$NODEFILE"
-elif ((MACHINE_TYPE == 2)); then
-  ####
-  echo
-  ####
-elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
+elif [ "$NODELIST_TYPE" = 'K' ]; then
   local n
   local p
   if [ "$DISTR_FILE" = '-' ]; then
@@ -309,9 +306,6 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
       done
     done
   fi # [ "$DISTR_FILE" = '-' ]
-else
-  echo "[Error] Unsupported \$MACHINE_TYPE." >&2
-  exit 1
 fi
 
 if [ "$MEMBERS" = 'all' ]; then
@@ -380,7 +374,7 @@ distribute_da_cycle_set () {
 #
 # Usage: distribute_da_cycle [NODEFILE NODEFILEDIR DISTR_FILE]
 #
-#   NODEFILE     The pre-determined nodefile (required when $MACHINE_TYPE = 1)
+#   NODEFILE     The pre-determined nodefile
 #   NODEFILEDIR  Directory to output nodefiles
 #                '-': No output (default)
 #   DISTR_FILE   Location of the 'distr' file
@@ -392,6 +386,7 @@ distribute_da_cycle_set () {
 #   $PPN         Number of processes per node
 #   $MEMBER_FMT
 #   $SCALE_NP
+#   $NODELIST_TYPE
 #   
 # Return variables:
 #   $node[1...$nnodes]                    Name of nodes
@@ -439,13 +434,9 @@ fi
 mmean=$((MEMBER+1))
 msprd=$((MEMBER+2))
 
-if ((MACHINE_TYPE == 1)); then
+if [ "$NODELIST_TYPE" = 'nodefile' ]; then
   read_nodefile_pbs "$NODEFILE"
-elif ((MACHINE_TYPE == 2)); then
-  ####
-  echo
-  ####
-elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
+elif [ "$NODELIST_TYPE" = 'K' ]; then
   local n
   local p
 ######
@@ -465,9 +456,6 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 ######
   done
 ######
-else
-  echo "[Error] Unsupported \$MACHINE_TYPE." >&2
-  exit 1
 fi
 
 local m
@@ -524,141 +512,6 @@ done
 #-------------------------------------------------------------------------------
 }
 
-#distribute_da_cycle_set () {
-##-------------------------------------------------------------------------------
-## Distribute members on nodes for DA cycling run.
-##
-## Usage: distribute_da_cycle [NODEFILE NODEFILEDIR]
-##
-##   NODEFILE     The pre-determined nodefile (required when $MACHINE_TYPE = 1)
-##   NODEFILEDIR  Directory to output nodefiles
-##                '-': No output (default)
-##
-## Other input variables:
-##   $MEMBER      Ensemble size
-##   $NNODES      Number of total nodes
-##   $PPN         Number of processes per node
-##   $MEMBER_FMT
-##   $SCALE_NP
-##   
-## Return variables:
-##   $node[1...$nnodes]                    Name of nodes
-##
-##   $mem_nodes                            Number of nodes for a member
-##   $mem_np                               Number of processes for a member
-##   $totalnp                              Total number of processes
-##
-##   $mmean                                Index of the ensemble mean ($MEMBER+1)
-##   $msprd                                Index of the ensemble spread ($MEMBER+2)
-##   $node_m[1...$MEMBER+2]                Short node list description of each member
-##   $name_m[1...$MEMBER+2]                Name of members
-##
-##   $n_mem                                Number of members that use one round of nodes
-##   $n_mempn                              Number of members that run in parallel in a node
-##   $repeat_mems                          (= $n_mem)
-##   $parallel_mems                        Number of members that run in parallel
-##   $nitmax                               Number of parallel cycles needed to finish all members
-##   $mem2node[1...(($MEMBER+2)*$mem_np)]  Relation from (members, m_processes) to nodes (pseudo 2-D array)
-##   $mem2proc[1...(($MEMBER+2)*$mem_np)]  Relation from (members, m_processes) to processes (pseudo 2-D array)
-##   $proc2node[1...$totalnp]              Relation from processes to nodes
-##   $proc2group[1...$totalnp]             Relation from processes to groups
-##   $proc2grpproc[1...$totalnp]           Relation from processes to m_processes
-##
-## Output files:
-##   [$TMP/node/proc]       All processes
-##   [$TMP/node/node]       One process per node
-##   [$TMP/node/proc.MMMM]  Processes for each member
-##-------------------------------------------------------------------------------
-
-#local NODEFILE=${1:-machinefile}
-#local NODEFILEDIR=${2:-'-'}
-
-##-------------------------------------------------------------------------------
-## Set up node names and member names
-
-#mmean=$((MEMBER+1))
-#msprd=$((MEMBER+2))
-
-#if ((MACHINE_TYPE == 1)); then
-#  read_nodefile_pbs "$NODEFILE"
-#elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
-#  local n
-#  local p
-#######
-#  local s
-#  for s in $(seq 3); do
-#######
-#  for n in $(seq $NNODES_real); do
-#    for p in $(seq $PPN_real); do
-##      node[$(((n-1)*PPN_real+p))]="($((n-1)))"
-#      node[$(((s-1)*NNODES_real*PPN_real+(n-1)*PPN_real+p))]="($(((s-1)*NNODES_real+n-1)))"
-#    done
-#  done
-#######
-#  done
-#######
-#else
-#  echo "[Error] Unsupported \$MACHINE_TYPE." >&2
-#  exit 1
-#fi
-
-#local m
-#for m in $(seq $MEMBER); do
-#  name_m[$m]=$(printf $MEMBER_FMT $m)
-#done
-#name_m[$mmean]='mean'
-#name_m[$msprd]='sprd'
-
-##-------------------------------------------------------------------------------
-## Set up the distribution of members on nodes
-
-#set_mem_np $((MEMBER+1)) $SCALE_NP $SCALE_NP
-
-#set_mem2node $((MEMBER+1))
-
-#local p
-#for p in $(seq $mem_np); do
-#  mem2node[$(((msprd-1)*mem_np+p))]=${mem2node[$(((mmean-1)*mem_np+p))]}
-#  mem2proc[$(((msprd-1)*mem_np+p))]=${mem2proc[$(((mmean-1)*mem_np+p))]}
-#done
-#node_m[$msprd]=${node_m[$mmean]}
-
-##-------------------------------------------------------------------------------
-## Create nodefiles
-
-#######
-#for s in $(seq 3); do
-#######
-#if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
-#  local p
-#  for p in $(seq $totalnp); do
-#    if ((s == 1)); then ###
-#      echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc
-#    fi
-#    echo ${node[$(((s-1)*NNODES_real+${proc2node[$p]}))]} >> $NODEFILEDIR/set${s}.proc
-#  done
-#  for n in $(seq $NNODES); do
-#    if ((s == 1)); then ###
-#      echo ${node[$n]} >> $NODEFILEDIR/node
-#    fi
-#    echo ${node[$(((s-1)*NNODES_real+$n))]} >> $NODEFILEDIR/set${s}.node
-#  done
-#######  for m in $(seq $((MEMBER+1))); do
-#######    for p in $(seq $mem_np); do
-#######      if ((s == 1)); then ###
-#######        echo ${node[${mem2node[$(((m-1)*mem_np+p))]}]} >> $NODEFILEDIR/proc.${name_m[$m]}
-#######      fi
-#######      echo ${node[$(((s-1)*NNODES_real+${mem2node[$(((m-1)*mem_np+p))]}))]} >> $NODEFILEDIR/set${s}.proc.${name_m[$m]}
-#######    done
-#######  done
-#fi
-#######
-#done
-#######
-
-##-------------------------------------------------------------------------------
-#}
-
 #===============================================================================
 
 distribute_fcst () {
@@ -670,7 +523,7 @@ distribute_fcst () {
 #   MEMBERS      List of forecast members
 #   CYCLE        Number of forecast cycles run in parallel
 #                (default: 1)
-#   NODEFILE     The pre-determined nodefile (required when $MACHINE_TYPE = 1)
+#   NODEFILE     The pre-determined nodefile
 #   NODEFILEDIR  Directory to output nodefiles
 #                '-': No output (default)
 #
@@ -680,7 +533,7 @@ distribute_fcst () {
 #   $NNODES_real   XXXXXX
 #   $PPN_real      XXXXXX
 #   $SCALE_NP
-#   $MACHINE_TYPE
+#   $NODELIST_TYPE
 #   
 # Return variables:
 #   $node[1...$nnodes]                    Name of nodes
@@ -731,20 +584,20 @@ fi
 #-------------------------------------------------------------------------------
 # Set up node names and member names, and also get the number of members
 
-if ((MACHINE_TYPE == 1)); then
+if [ "$NODELIST_TYPE" = 'nodefile' ]; then
   read_nodefile_pbs "$NODEFILE"
-elif ((MACHINE_TYPE == 2)); then
-  local n
-  local p
-  if [ "$DISTR_FILE" = '-' ]; then
-    for n in $(seq $NNODES); do
-      for p in $(seq $PPN); do
-        node[$(((n-1)*PPN+p))]="($((n-1)))"
-        echo "node[$(((n-1)*PPN+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
-      done
-    done
-  fi # [ "$DISTR_FILE" = '-' ]
-elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
+#elif [ "$NODELIST_TYPE" = '???' ]; then
+#  local n
+#  local p
+#  if [ "$DISTR_FILE" = '-' ]; then
+#    for n in $(seq $NNODES); do
+#      for p in $(seq $PPN); do
+#        node[$(((n-1)*PPN+p))]="($((n-1)))"
+#        echo "node[$(((n-1)*PPN+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
+#      done
+#    done
+#  fi # [ "$DISTR_FILE" = '-' ]
+elif [ "$NODELIST_TYPE" = 'K' ]; then
   local n
   local p
   if [ "$DISTR_FILE" = '-' ]; then
@@ -755,9 +608,6 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
       done
     done
   fi # [ "$DISTR_FILE" = '-' ]
-else
-  echo "[Error] Unsupported \$MACHINE_TYPE." >&2
-  exit 1
 fi
 
 fmember=0

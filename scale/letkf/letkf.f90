@@ -109,9 +109,9 @@ PROGRAM letkf
 
   call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
-  if (myrank_use) then
+  call set_scalelib
 
-    call set_scalelib
+  if (myrank_use) then
 
     call set_common_scale
     call set_common_mpi_scale
