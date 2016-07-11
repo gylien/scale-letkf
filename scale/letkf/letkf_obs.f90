@@ -117,8 +117,8 @@ SUBROUTINE set_letkf_obs
 
 
   !!!!!! changes for different observation types.... (do not communicate all observaitons in the same way...)
-  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF) * dist_zero_fac / DX
-  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF) * dist_zero_fac / DY
+  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_TC) * dist_zero_fac / DX
+  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_TC) * dist_zero_fac / DY
 !  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_RAIN) * dist_zero_fac / DX
 !  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_RAIN) * dist_zero_fac / DY
 #ifdef H08
