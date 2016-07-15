@@ -100,14 +100,26 @@ contains
 ! initialize_mpi_scale
 !-----------------------------------------------------------------------
 subroutine initialize_mpi_scale
-  use scale_process, only: PRC_MPIstart
+  use scale_process, only: &
+     PRC_MPIstart, &
+     PRC_UNIVERSAL_setup, &
+     PRC_UNIVERSAL_myrank
   implicit none
-  integer :: universal_comm !! no use
+  integer :: universal_comm   ! dummy
+  integer :: universal_nprocs ! dummy
+  logical :: universal_master ! dummy
   integer :: ierr
 
-  call PRC_MPIstart(universal_comm)
-  call MPI_Comm_size(MPI_COMM_WORLD, nprocs, ierr)
-  call MPI_Comm_rank(MPI_COMM_WORLD, myrank, ierr)
+  call PRC_MPIstart( universal_comm ) ! [OUT]
+
+!  call MPI_Comm_size(MPI_COMM_WORLD, nprocs, ierr)
+!  call MPI_Comm_rank(MPI_COMM_WORLD, myrank, ierr)
+  call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
+                            universal_nprocs, & ! [OUT]
+                            universal_master  ) ! [OUT]
+  nprocs = universal_nprocs
+  myrank = PRC_UNIVERSAL_myrank
+
   write(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ', myrank, '/', nprocs-1
   if (r_size == r_dble) then
     MPI_r_size = MPI_DOUBLE_PRECISION
@@ -510,9 +522,9 @@ subroutine set_scalelib
 
   CHARACTER(len=H_LONG) :: confname_dummy
 
-  integer :: universal_comm
-  integer :: universal_nprocs
-  logical :: universal_master
+!  integer :: universal_comm
+!  integer :: universal_nprocs
+!  logical :: universal_master
   integer :: global_comm
   integer :: local_comm
   integer :: intercomm_parent
@@ -532,16 +544,21 @@ subroutine set_scalelib
 !  call PRC_MPIstart( universal_comm ) ! [OUT]
 
   PRC_mpi_alive = .true.
-  universal_comm = MPI_COMM_WORLD
+!  universal_comm = MPI_COMM_WORLD
 
-  call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
-                            universal_nprocs, & ! [OUT]
-                            universal_master  ) ! [OUT]
+!  call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
+!                            universal_nprocs, & ! [OUT]
+!                            universal_master  ) ! [OUT]
 
   ! split MPI communicator for LETKF
-  call PRC_MPIsplit_letkf( universal_comm,                   & ! [IN]
+  call PRC_MPIsplit_letkf( MPI_COMM_WORLD,                   & ! [IN]
                            MEM_NP, nitmax, nprocs, proc2mem, & ! [IN]
                            global_comm                       ) ! [OUT]
+
+  if (global_comm == MPI_COMM_NULL) then
+!    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
+    return
+  end if
 
   call PRC_GLOBAL_setup( .false.,    & ! [IN]
                          global_comm ) ! [IN]

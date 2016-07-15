@@ -99,10 +99,10 @@ program scaleles_init_ens
   if (command_argument_count() >= 2) then
     call get_command_argument(2, icmd)
     if (trim(icmd) /= '') then
-      WRITE(stdoutf(2:7), '(I6.6)') myrank
-!      WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',trim(icmd)//stdoutf,' for MYRANK ', myrank
+      WRITE(stdoutf(2:7), '(I6.6)') universal_myrank
+!      WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',trim(icmd)//stdoutf,' for MYRANK ', universal_myrank
       OPEN(6,FILE=trim(icmd)//stdoutf)
-      WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',trim(icmd)//stdoutf
+      WRITE(6,'(A,I6.6,2A)') 'MYRANK=',universal_myrank,', STDOUTF=',trim(icmd)//stdoutf
     end if
   end if
 
@@ -123,7 +123,7 @@ program scaleles_init_ens
 
 !-----------------------------------------------------------------------
 
-  call set_common_conf(nprocs)
+  call set_common_conf(universal_nprocs)
   call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
   CALL MPI_BARRIER(universal_comm,ierr)

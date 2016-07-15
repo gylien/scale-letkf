@@ -26,8 +26,7 @@ if [ -z "$DIRNAME" ]; then
   exit 1
 fi
 
-mkdir -p $DIRNAME
-res=$? && ((res != 0)) && exit $res
+mkdir -p $DIRNAME || exit $?
 
 if [ ! -d "$DIRNAME" ]; then
   echo "[Error] $FUNCNAME: '$DIRNAME' is not a directory." >&2
@@ -38,8 +37,7 @@ if [ ! -O "$DIRNAME" ]; then
   exit 1
 fi
 
-rm -fr $DIRNAME/*
-res=$? && ((res != 0)) && exit $res
+rm -fr $DIRNAME/* || exit $?
 
 #-------------------------------------------------------------------------------
 }
@@ -159,7 +157,7 @@ progdir=$(dirname $PROG)
 
 #-------------------------------------------------------------------------------
 
-if ((MACHINE_TYPE == 1)); then
+if [ "$MPI_TYPE" = 'sgimpt' ]; then
 
   local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
   HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
@@ -173,23 +171,23 @@ if ((MACHINE_TYPE == 1)); then
     exit $res
   fi
 
-elif ((MACHINE_TYPE == 2)); then
+elif [ "$MPI_TYPE" = 'openmpi' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  $MPIRUN -np $NNP -wdir $progdir ./$progbase $CONF $STDOUT $ARGS
+  $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $progdir ./$progbase $CONF $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $MPIRUN -np $NNP -wdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $$MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
 
-elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
+elif [ "$MPI_TYPE" = 'K' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  if ((USE_RANKDIR == 1)); then
+  if [ "$STG_TYPE" = 'K_rankdir' ]; then
 
     mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS
     res=$?
@@ -261,7 +259,7 @@ fi
 
 #-------------------------------------------------------------------------------
 
-if ((MACHINE_TYPE == 1)); then
+if [ "$MPI_TYPE" = 'sgimpt' ]; then
 
   if [ "$PROC_OPT" == 'all' ]; then
     local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
@@ -279,7 +277,7 @@ if ((MACHINE_TYPE == 1)); then
     exit $res
   fi
 
-elif ((MACHINE_TYPE == 2)); then
+elif [ "$MPI_TYPE" = 'openmpi' ]; then
 
   if [ "$PROC_OPT" == 'all' ]; then
     NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
@@ -287,17 +285,17 @@ elif ((MACHINE_TYPE == 2)); then
     NNP=1
   fi
 
-  $MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS
+  $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS" >&2
+    echo "[Error] $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
 
-elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
+elif [ "$MPI_TYPE" = 'K' ]; then
 
-  if ((USE_RANKDIR == 1)); then
+  if [ "$STG_TYPE" = 'K_rankdir' ]; then
     if [ "$PROC_OPT" == 'one' ]; then
 
       mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS
