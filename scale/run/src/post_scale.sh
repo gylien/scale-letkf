@@ -100,7 +100,7 @@ elif [ "$SCPCALL" = 'fcst' ]; then
 
   if ((MYRANK == 0)); then
     if [ -f "$TMPDIR/../latlon_domain_catalogue.txt" ]; then
-      mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/${SCPCALL}_log/scale/latlon_domain_catalogue.txt
+      mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/${SCPCALL}_scale/latlon_domain_catalogue.txt
     fi
   fi
 
