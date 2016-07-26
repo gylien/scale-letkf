@@ -942,6 +942,7 @@ fi
 
 if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=$rcycle
+#  MEMBER_RUN=1
 else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= fmember ? $((repeat_mems*rcycle)) : $((fmember*rcycle))))
 fi

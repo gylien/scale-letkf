@@ -558,6 +558,8 @@ distribute_fcst () {
 #   $proc2group[1...$totalnp]             Relation from processes to groups
 #   $proc2grpproc[1...$totalnp]           Relation from processes to m_processes
 #
+#   $cycle_auto                           Automatically determined $CYCLE value
+#
 # Output files:
 #   [$TMP/node/proc]            All processes
 #   [$TMP/node/node]            One process per node
@@ -619,7 +621,8 @@ done
 if ((CYCLE == 0)); then
   set_mem_np $fmember $SCALE_NP $SCALE_NP
   set_mem2node $fmember
-  CYCLE=$parallel_mems
+  CYCLE=$((parallel_mems / fmember))
+  cycle_auto=$CYCLE
 fi
 
 for c in $(seq 2 $CYCLE); do

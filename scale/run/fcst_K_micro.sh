@@ -80,7 +80,7 @@ safe_init_tmpdir $NODEFILE_DIR
 distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
 
 if ((CYCLE == 0)); then
-  CYCLE=$parallel_mems
+  CYCLE=$cycle_auto
 fi
 
 #===============================================================================

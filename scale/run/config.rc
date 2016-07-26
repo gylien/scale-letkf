@@ -123,13 +123,13 @@ ENSMODEL_DIR="$DIR/ensmodel"
 
 if [ "$STG_TYPE" = 'K' ]; then
   TMP="$(pwd)"
-  echo "\$STG_TYPE = 'K': \$TMP reset to '$TMP'" 1>&2
+#  echo "\$STG_TYPE = 'K': \$TMP reset to '$TMP'" 1>&2
   TMP_STG='.'
 elif [ "$STG_TYPE" = 'K_rankdir' ]; then
   TMP="$(pwd)/.."
   TMPL="$(pwd)"
-  echo "\$STG_TYPE = 'K_rankdir': \$TMP reset to '$TMP'" 1>&2
-  echo "\$STG_TYPE = 'K_rankdir': \$TMPL reset to '$TMPL'" 1>&2
+#  echo "\$STG_TYPE = 'K_rankdir': \$TMP reset to '$TMP'" 1>&2
+#  echo "\$STG_TYPE = 'K_rankdir': \$TMPL reset to '$TMPL'" 1>&2
   TMP_STG='..'
   TMPL_STG='.'
 fi

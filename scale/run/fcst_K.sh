@@ -77,7 +77,7 @@ safe_init_tmpdir $TMPS/node
 distribute_fcst "$MEMBERS" $CYCLE - $TMPS/node
 
 if ((CYCLE == 0)); then
-  CYCLE=$parallel_mems
+  CYCLE=$cycle_auto
 fi
 
 #===============================================================================
