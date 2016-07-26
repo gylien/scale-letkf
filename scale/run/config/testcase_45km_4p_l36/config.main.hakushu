@@ -58,8 +58,13 @@ BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FO
 
 BDY_ENS=0               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
+BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial time
+                        # 1: Use different series of boundary files for different initial time
 
 BDYINT=21600
+BDYCYCLE_INT=
+
+PARENT_REF_TIME=
 
 OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
