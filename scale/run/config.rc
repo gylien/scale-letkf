@@ -48,7 +48,7 @@ elif [ "$PRESET" = 'K_rankdir' ]; then
   NODELIST_TYPE='K'
   MPI_TYPE='K'
 elif [ "$PRESET" = 'K_micro' ]; then
-  STG_TYPE='builtin'
+  STG_TYPE=
   TMPDAT_MODE=2
   TMPRUN_MODE=2
 #  DISK_MODE_TOPO_LANDUSE_DB=2
@@ -123,18 +123,15 @@ ENSMODEL_DIR="$DIR/ensmodel"
 
 if [ "$STG_TYPE" = 'K' ]; then
   TMP="$(pwd)"
-  TMP_STG='.'
   echo "\$STG_TYPE = 'K': \$TMP reset to '$TMP'" 1>&2
-  echo "\$STG_TYPE = 'K': \$TMP_STG reset to '$TMP_STG'" 1>&2
+  TMP_STG='.'
 elif [ "$STG_TYPE" = 'K_rankdir' ]; then
   TMP="$(pwd)/.."
-  TMP_STG='..'
   TMPL="$(pwd)"
-  TMPL_STG='.'
   echo "\$STG_TYPE = 'K_rankdir': \$TMP reset to '$TMP'" 1>&2
-  echo "\$STG_TYPE = 'K_rankdir': \$TMP_STG reset to '$TMP_STG'" 1>&2
   echo "\$STG_TYPE = 'K_rankdir': \$TMPL reset to '$TMPL'" 1>&2
-  echo "\$STG_TYPE = 'K_rankdir': \$TMPL_STG reset to '$TMPL_STG'" 1>&2
+  TMP_STG='..'
+  TMPL_STG='.'
 fi
 
 #-------------------------------------------------------------------------------
