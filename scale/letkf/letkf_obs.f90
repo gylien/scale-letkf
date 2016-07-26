@@ -141,7 +141,8 @@ SUBROUTINE set_letkf_obs
 
       if (.not. check) then
 #ifdef H08
-        CALL get_nobs(trim(obsdafile)//obsda_suffix,7,obsda%nobs) ! H08
+!        CALL get_nobs(trim(obsdafile)//obsda_suffix,7,obsda%nobs) ! H08
+        CALL get_nobs(trim(obsdafile)//obsda_suffix,8,obsda%nobs) ! H08
 #else
         CALL get_nobs(trim(obsdafile)//obsda_suffix,6,obsda%nobs)
 #endif
@@ -239,6 +240,17 @@ SUBROUTINE set_letkf_obs
   deallocate(bufr2)
 
   obsda%lev = obsda%lev / REAL(MEMBER,r_size)
+
+! calculate the ensemble mean of obsda%val2 (clear sky BT)
+!
+  allocate (bufr2(obsda%nobs))
+  bufr2 = 0.0d0
+  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+  CALL MPI_ALLREDUCE(obsda%val2,bufr2,obsda%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
+  obsda%val2 = bufr2
+  deallocate(bufr2)
+
+  obsda%val2 = obsda%val2 / REAL(MEMBER,r_size)
 
 !-- H08
 #endif
@@ -507,6 +519,14 @@ SUBROUTINE set_letkf_obs
       obsda%val(n) = obsda%val(n) + obsda%ensval(i,n)
     END DO
     obsda%val(n) = obsda%val(n) / REAL(MEMBER,r_size)
+#ifdef H08
+! Compute CA (cloud effect average, Okamoto et al. 2014QJRMS)
+! CA is stored in obsda%val2
+
+    obsda%val2(n) = (abs(obsda%val(n) - obsda%val2(n)) & ! CM
+                   + abs(obs(iof)%dat(iidx) - obsda%val2(n)) &! CO
+                   &) * 0.5d0
+#endif
     DO i=1,MEMBER
       obsda%ensval(i,n) = obsda%ensval(i,n) - obsda%val(n) ! Hdx
     END DO
@@ -594,7 +614,7 @@ SUBROUTINE set_letkf_obs
 !
 ! For obs err correlation statistics based on Desroziers et al. (2005, QJRMS).
 !
-        write(6, '(a,2I6,2F8.2,4F12.4,2I6)')"H08-O-B", &
+        write(6, '(a,2I6,2F8.2,4F12.4,2I6,F10.4)')"H08-O-B", &
              obs(iof)%elm(iidx), &
              nint(ch_num), & ! obsda%lev includes band num.
              obs(iof)%lon(iidx), &
@@ -604,7 +624,8 @@ SUBROUTINE set_letkf_obs
              obs(iof)%dat(iidx), &
              obs(iof)%err(iidx), &
              obsda%qc(n),        &
-             mem_ref ! # of cloudy member
+             mem_ref,  &  ! # of cloudy member
+             obsda%val2(n)
       ELSE
         write(6, '(2I6,2F8.2,4F12.4,I3)') &
              obs(iof)%elm(iidx), & ! id
