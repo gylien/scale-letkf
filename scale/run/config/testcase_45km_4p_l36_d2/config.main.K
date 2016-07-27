@@ -5,6 +5,10 @@
 #
 #===============================================================================
 
+PRESET='K_rankdir'                          # 'K' or 'K_rankdir'
+
+#===============================================================================
+
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
 DDIR="/volume63/data/hp150019/gylien/test/scale-letkf/letkf/scale"
@@ -16,7 +20,7 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DDIR/../../scale/scale-rm/test/case_real/check_japan/run"
+MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
 DATADIR="$DDIR/../../database"
 
 DATA_TOPO="$DDIR/../../database/topo_prep/testcase_45km_4p_bf10"
@@ -88,19 +92,6 @@ ENABLE_SET=1       ######
 #===============================================================================
 # Temporary directories to store runtime files
 
-MACHINE_TYPE=10             # Machine type
-                            #  1: Linux cluster with PBS
-                            # 10: K-computer
-                            # 11: K-computer (micro jobs)
-                            # 12: K-computer (interact jobs)
-
-TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=2               # Disk type used for the 'run' temporary directory (runtime files)
-TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
-                            #  1: share (link to TMP)
-                            #  2: share (staging to TMP)
-                            #  3: local (staging to TMPL)
-
 DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
                             #  1: in $TMPDAT
                             #  2: in $TMPOUT
@@ -109,16 +100,12 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
-                            #  0: No
-                            #  1: Yes
-
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
-TMP=                        # (When $MACHINE_TYPE=10, this will be automatically set)
+#TMP=
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
-TMPL=                       # (When $MACHINE_TYPE=10, this will be automatically set)
+#TMPL=
 
 #===============================================================================
 # Environmental settings

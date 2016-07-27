@@ -86,17 +86,26 @@ fi
 DATA_TOPO="${DATA_TOPO:-$OUTDIR}"
 DATA_LANDUSE="${DATA_LANDUSE:-$OUTDIR}"
 
-DISK_MODE_DATA_BDY=${DISK_MODE_DATA_BDY:-2}
-DISK_MODE_TOPO_LANDUSE_DB=${DISK_MODE_TOPO_LANDUSE_DB:-2}
-
 BDY_SCALE_DIR="${BDY_SCALE_DIR:-hist}"
 
 BDYINT=${BDYINT:-$LCYCLE}
 BDYCYCLE_INT=${BDYCYCLE_INT:-$BDYINT}
 
+#-------------------------------------------------------------------------------
+
 ADAPTINFL=${ADAPTINFL:-0}
 RTPS_INFL_OUT=${RTPS_INFL_OUT:-0}
 NOBS_OUT=${NOBS_OUT:-0}
+
+#-------------------------------------------------------------------------------
+
+DISK_MODE_TOPO_LANDUSE_DB=${DISK_MODE_TOPO_LANDUSE_DB:-2}
+
+DISK_MODE_DATA_BDY=${DISK_MODE_DATA_BDY:-2}
+
+DISK_MODE_DATA_TOPO=${DISK_MODE_DATA_TOPO:-2}
+DISK_MODE_DATA_LANDUSE=${DISK_MODE_DATA_LANDUSE:-2}
+DISK_MODE_DATA_BDYPREP=${DISK_MODE_DATA_BDYPREP:-2}
 
 #-------------------------------------------------------------------------------
 
