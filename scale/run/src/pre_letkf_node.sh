@@ -8,14 +8,15 @@
 
 . config.main
 
-if (($# < 13)); then
+if (($# < 14)); then
   cat >&2 << EOF
 
 [pre_letkf_node.sh]
 
-Usage: $0 MYRANK ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO ADAPTINFL RTPS_INFL_OUT NOBS_OUT [MEMBERSEQ]
+Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO ADAPTINFL RTPS_INFL_OUT NOBS_OUT [MEMBERSEQ]
 
   MYRANK      My rank number (not used)
+  STIME
   ATIME       Analysis time (format: YYYYMMDDHHMMSS)
   TMPDIR      Temporary directory to run the program
   OBSDIR      Directory of SCALE data files
@@ -35,6 +36,7 @@ EOF
 fi
 
 MYRANK="$1"; shift
+STIME="$1"; shift
 ATIME="$1"; shift
 TMPDIR="$1"; shift
 OBSDIR="$1"; shift
@@ -59,6 +61,19 @@ for iobs in $(seq $OBSNUM); do
   fi
 done
 
+OBSDA_RUN_LIST=
+for iobs in $(seq $OBSNUM); do
+  if [ -n "${OBSOPE_SEPARATE[$iobs]}" ] && ((${OBSOPE_SEPARATE[$iobs]} == 1)); then
+    OBSDA_RUN_LIST="${OBSDA_RUN_LIST}.false., "
+  else
+    OBSDA_RUN_LIST="${OBSDA_RUN_LIST}.true., "
+  fi
+done
+
+OBSDA_IN='.false.'
+if ((OBSOPE_RUN == 1)); then
+  OBSDA_IN='.true.'
+fi
 INFL_MUL_ADAPTIVE='.false.'
 if ((ADAPTINFL == 1)); then
   INFL_MUL_ADAPTIVE='.true.'
@@ -78,7 +93,16 @@ cat $TMPDAT/conf/config.nml.letkf | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBERSEQ," \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
-        -e "/!--OBSDA_IN_BASENAME--/a OBSDA_IN_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda\"," \
+        -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
+        -e "/!--OBSDA_OUT--/a OBSDA_OUT = .true." \
+        -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda\"," \
+        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = '${TMPOUT}/${STIME}/hist/@@@@/history'," \
+        -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \
+        -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
+        -e "/!--SLOT_BASE--/a SLOT_BASE = $SLOT_BASE," \
+        -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = $LTIMESLOT.D0," \
+        -e "/!--OBSDA_IN--/a OBSDA_IN = $OBSDA_IN," \
+        -e "/!--OBSDA_IN_BASENAME--/a OBSDA_IN_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext\"," \
         -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${TMPOUT}/${ATIME}/gues/@@@@/init\"," \
         -e "/!--GUES_OUT_MEAN_BASENAME--/a GUES_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/gues/mean/init\"," \
         -e "/!--GUES_OUT_SPRD_BASENAME--/a GUES_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/gues/sprd/init\"," \
@@ -86,10 +110,6 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--ANAL_OUT_MEAN_BASENAME--/a ANAL_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/anal/mean/init\"," \
         -e "/!--ANAL_OUT_SPRD_BASENAME--/a ANAL_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/anal/sprd/init\"," \
         -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${TOPO}\"," \
-        -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \
-        -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
-        -e "/!--SLOT_BASE--/a SLOT_BASE = $SLOT_BASE," \
-        -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = $LTIMESLOT.D0," \
         -e "/!--INFL_MUL_ADAPTIVE--/a INFL_MUL_ADAPTIVE = ${INFL_MUL_ADAPTIVE}," \
         -e "/!--INFL_MUL_IN_BASENAME--/a INFL_MUL_IN_BASENAME = \"${TMPOUT}/${ATIME}/diag/infl/init\"," \
         -e "/!--INFL_MUL_OUT_BASENAME--/a INFL_MUL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/infl/init\"," \

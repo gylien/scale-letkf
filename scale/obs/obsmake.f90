@@ -64,10 +64,8 @@ PROGRAM obsmake
 ! Read observations
 !-----------------------------------------------------------------------
 
-    if (myrank_mem_use) then
-      allocate(obs(OBS_IN_NUM))
-      call read_obs_all(obs)
-    end if
+    allocate(obs(OBS_IN_NUM))
+    call read_obs_all(obs)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -78,9 +76,7 @@ PROGRAM obsmake
 ! Generate observations
 !-----------------------------------------------------------------------
 
-    if (myrank_mem_use) then
-      CALL obsmake_cal(obs)
-    end if
+    CALL obsmake_cal(obs)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -88,9 +84,7 @@ PROGRAM obsmake
     rtimer00=rtimer
 
 
-    if (myrank_mem_use) then
-      deallocate(obs)
-    end if
+    deallocate(obs)
 
     CALL unset_common_mpi_scale
 

@@ -80,7 +80,6 @@ module common_mpi_scale
   integer,save :: ens_mygroup = -1
   integer,save :: ens_myrank = -1
   logical,save :: myrank_use = .false.
-  logical,save :: myrank_mem_use = .false.
   integer,save :: lastmem_rank_e
 
 
@@ -400,9 +399,6 @@ mem_loop: DO it = 1, nitmax
   ens_myrank = proc2mem(2,1,myrank+1)
   if (ens_mygroup >= 1) then
     myrank_use = .true.
-  end if
-  if (ens_mygroup >= 1 .and. ens_mygroup <= mem) then
-    myrank_mem_use = .true.
   end if
 
   lastmem_rank_e = mod(mem-1, n_mem*n_mempn)
@@ -843,110 +839,15 @@ SUBROUTINE read_ens_history_iter(file,iter,step,v3dg,v2dg,ensmean)
     end if
   end if
 
-  IF (myrank_mem_use) then
-
-    IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= mem) THEN
-      call file_member_replace(proc2mem(1,iter,myrank+1), file, filename)  !!!!!! better to seperate 'mean' history filename using a different namelist variable !!!!!!
-      call read_history(trim(filename),step,v3dg,v2dg)
-    END IF
-
+  IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= mem) THEN
+    call file_member_replace(proc2mem(1,iter,myrank+1), file, filename)  !!!!!! better to seperate 'mean' history filename using a different namelist variable !!!!!!
+    call read_history(trim(filename),step,v3dg,v2dg)
   END IF
 
   RETURN
 END SUBROUTINE read_ens_history_iter
 
 
-
-
-!SUBROUTINE read_ens_history_mpi(file,iter,step,v3dg,v2dg,ensmean)
-!  use scale_grid_index, only: &
-!      IHALO, JHALO, KHALO, &
-!      IS, IE, JS, JE, KS, KE, KA
-!  use scale_history, only: &
-!     HIST_get
-!  use scale_comm, only: &
-!     COMM_vars8, &
-!     COMM_wait
-
-!  IMPLICIT NONE
-
-!  CHARACTER(4),INTENT(IN) :: file
-!  INTEGER,INTENT(IN) :: iter
-!  INTEGER,INTENT(IN) :: step
-!  REAL(r_size),INTENT(OUT) :: v3dg(nlevh,nlonh,nlath,nv3dd)
-!  REAL(r_size),INTENT(OUT) :: v2dg(nlonh,nlath,nv2dd)
-!  LOGICAL,INTENT(INOUT),OPTIONAL :: ensmean
-!  INTEGER :: i,j,k,iv3d,iv2d
-!  CHARACTER(9) :: filename='file.0000'
-
-!  real(RP), allocatable :: var3D(:,:,:)
-!  real(RP), allocatable :: var2D(:,:)
-
-!  integer :: mem
-
-!  mem = MEMBER
-!  if (present(ensmean)) then
-!    if (ensmean) then
-!      mem = MEMBER + 1
-!    end if
-!  end if
-
-!  IF (myrank_mem_use) then
-!    allocate( var3D(nlon,nlat,nlev) )
-!    allocate( var2D(nlon,nlat) )
-
-!    IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= mem) THEN
-!      WRITE(filename(1:4),'(A4)') file
-
-!      if (proc2mem(1,iter,myrank+1) == MEMBER+1) then
-!        WRITE(filename(6:9),'(A4)') 'mean'
-!      else
-!        WRITE(filename(6:9),'(I4.4)') proc2mem(1,iter,myrank+1)
-!      end if
-
-!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,iter,myrank+1),'.nc'
-
-!      DO iv3d = 1, nv3dd
-!        if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
-!        call HIST_get(var3D, filename, trim(v3dd_name(iv3d)), step)
-!        FORALL (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k)
-
-!!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-!        do j  = JS, JE
-!          do i  = IS, IE
-!            v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
-!            v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
-!          enddo
-!        enddo
-!      END DO
-
-!      DO iv3d = 1, nv3dd
-!        call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
-!      END DO
-!      DO iv3d = 1, nv3dd
-!        call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
-!      END DO
-
-!      DO iv2d = 1, nv2dd
-!        if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
-!        call HIST_get(var2D, filename, trim(v2dd_name(iv2d)), step)
-!        v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
-!      END DO
-
-!      DO iv2d = 1, nv2dd
-!        call COMM_vars8( v2dg(:,:,iv2d), iv2d )
-!      END DO
-!      DO iv2d = 1, nv2dd
-!        call COMM_wait ( v2dg(:,:,iv2d), iv2d )
-!      END DO
-!    END IF
-
-!    deallocate( var3D )
-!    deallocate( var2D )
-!  END IF
-
-!  RETURN
-!END SUBROUTINE read_ens_history_mpi
 !-----------------------------------------------------------------------
 ! Read ensemble data and distribute to processes
 !-----------------------------------------------------------------------

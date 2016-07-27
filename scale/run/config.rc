@@ -93,6 +93,16 @@ BDYCYCLE_INT=${BDYCYCLE_INT:-$BDYINT}
 
 #-------------------------------------------------------------------------------
 
+OBSOPE_RUN=0
+for iobs in $(seq $OBSNUM); do
+  if [ -n "${OBSOPE_SEPARATE[$iobs]}" ] && ((${OBSOPE_SEPARATE[$iobs]} == 1)); then
+    OBSOPE_RUN=1
+    break
+  fi
+done
+
+#-------------------------------------------------------------------------------
+
 ADAPTINFL=${ADAPTINFL:-0}
 RTPS_INFL_OUT=${RTPS_INFL_OUT:-0}
 NOBS_OUT=${NOBS_OUT:-0}

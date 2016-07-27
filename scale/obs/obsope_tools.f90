@@ -98,10 +98,11 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Observation operator calculation
 !-----------------------------------------------------------------------
-SUBROUTINE obsope_cal(obs)
+SUBROUTINE obsope_cal(obs, obsda_return)
   IMPLICIT NONE
 
   TYPE(obs_info),INTENT(IN) :: obs(OBS_IN_NUM)
+  type(obs_da_value),OPTIONAL,INTENT(INOUT) :: obsda_return
   type(obs_da_value) :: obsda
   REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
@@ -179,7 +180,9 @@ SUBROUTINE obsope_cal(obs)
 
   obsda%nobs = 0
   do iof = 1, OBS_IN_NUM
-    obsda%nobs = obsda%nobs + obs(iof)%nobs
+    if (OBSDA_RUN(iof)) then
+      obsda%nobs = obsda%nobs + obs(iof)%nobs
+    end if
   end do
   call obs_da_value_allocate(obsda,0)
   allocate ( ri(obsda%nobs) )
@@ -197,6 +200,11 @@ SUBROUTINE obsope_cal(obs)
 !write(6,*) '%%%%%%', MPI_WTIME(), 0
 
       nproc = 0
+
+      !!!!!!
+      if (obsda%nobs > 0) then
+      !!!!!!
+
       obsda%qc = iqc_time
 
       do islot = SLOT_START, SLOT_END
@@ -216,6 +224,8 @@ SUBROUTINE obsope_cal(obs)
 
         do iof = 1, OBS_IN_NUM
 
+          if (.not. OBSDA_RUN(iof)) cycle
+
           obs_idx_TCX = -1
           obs_idx_TCY = -1
           obs_idx_TCP = -1
@@ -225,9 +235,9 @@ SUBROUTINE obsope_cal(obs)
 
 !write(6,*) '%%%===', MPI_WTIME(), 'im:', im, 'islot:', islot, 'iof:', iof
 
-          IF(iof /= 3)THEN ! except H08 obs ! H08
+          IF(OBS_IN_FORMAT(iof) /= 3)THEN ! except H08 obs ! H08
 
-            ! do this small computtion first, without OpenMP
+            ! do this small computation first, without OpenMP
             nproc_0 = nproc
             do n = 1, obs(iof)%nobs
 
@@ -262,7 +272,7 @@ SUBROUTINE obsope_cal(obs)
             end do ! [ n = 1, obs%nobs ]
 
 #ifdef H08
-          ELSEIF( iof == 3) THEN ! for H08 obs (iof = 3) ! H08
+          ELSEIF( OBS_IN_FORMAT(iof) == 3) THEN ! for H08 obs (OBS_IN_FORMAT(iof) = 3) ! H08
 
             nprof_H08 = 0
             nproc_0 = nproc
@@ -319,7 +329,7 @@ SUBROUTINE obsope_cal(obs)
             DEALLOCATE(tmp_lon_H08,tmp_lat_H08)
 
 #endif
-          ENDIF ! end of nproc count [if (iof = 3)]
+          ENDIF ! end of nproc count [if (OBS_IN_FORMAT(iof) = 3)]
 
 
 
@@ -331,7 +341,7 @@ SUBROUTINE obsope_cal(obs)
 
           ! then do this heavy computation with OpenMP
 
-          IF(iof /= 3)THEN ! H08
+          IF(OBS_IN_FORMAT(iof) /= 3)THEN ! H08
 
 
 !write(6,*) '%%%===', MPI_WTIME(), nproc_0 + 1, nproc
@@ -392,7 +402,7 @@ SUBROUTINE obsope_cal(obs)
 !$OMP END PARALLEL DO
 
 #ifdef H08
-          ELSEIF((iof == 3).and.(nprof_H08 >=1 ))THEN ! H08
+          ELSEIF((OBS_IN_FORMAT(iof) == 3).and.(nprof_H08 >=1 ))THEN ! H08
 ! -- Note: Trans_XtoY_H08 is called without OpenMP but it can use a parallel (with OpenMP) RTTOV routine
 !
 
@@ -551,6 +561,10 @@ SUBROUTINE obsope_cal(obs)
 
 !write(6,*) '%%%%%%', MPI_WTIME(), nproc
 
+      !!!!!!
+      end if ! [ obsda%nobs > 0 ]
+      !!!!!!
+
       obsda%nobs = nproc
 
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' finishes processing member ', &
@@ -558,9 +572,37 @@ SUBROUTINE obsope_cal(obs)
       write (6,'(A,I8,A)') ' -- ', nproc, ' observations found'
 
 
-      call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
-      write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
-      call write_obs_da(trim(obsdafile)//obsda_suffix,obsda,0)
+      if (OBSDA_OUT) then
+        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is writing observations for member ', &
+              im, ', subdomain id #', proc2mem(2,it,myrank+1)
+        call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
+        write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
+        call write_obs_da(trim(obsdafile)//obsda_suffix,obsda,0)
+      end if
+
+      if (present(obsda_return)) then
+        ! variables without an ensemble dimension
+        if (it == 1) then
+          obsda_return%nobs = nproc + obsda_return%nobs ! obsda_return%nobs: additional space for externally processed observations
+          call obs_da_value_allocate(obsda_return,MEMBER)
+          obsda_return%set(1:nproc) = obsda%set(1:nproc)
+          obsda_return%idx(1:nproc) = obsda%idx(1:nproc)
+          obsda_return%ri(1:nproc) = obsda%ri(1:nproc)
+          obsda_return%rj(1:nproc) = obsda%rj(1:nproc)
+          obsda_return%qc(1:nproc) = obsda%qc(1:nproc)
+#ifdef H08
+          obsda_return%lev(1:nproc) = obsda%lev(1:nproc)
+#endif
+        else
+          obsda_return%qc(1:nproc) = max(obsda_return%qc(1:nproc), obsda%qc(1:nproc))
+#ifdef H08
+          obsda_return%lev(1:nproc) = obsda_return%lev(1:nproc) + obsda%lev(1:nproc)
+#endif
+        end if
+
+        ! variables with an ensemble dimension
+        obsda_return%ensval(im,1:nproc) = obsda%val(1:nproc)
+      end if ! [ present(obsda_return) ]
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -572,6 +614,8 @@ SUBROUTINE obsope_cal(obs)
     end if ! [ im >= 1 .and. im <= MEMBER ]
 
   end do ! [ it = 1, nitmax ]
+
+  call obs_da_value_deallocate(obsda)
 
   deallocate ( ri, rj, v3dg, v2dg )
 
@@ -644,7 +688,7 @@ SUBROUTINE obsmake_cal(obs)
     call read_ens_history_iter(HISTORY_IN_BASENAME,1,islot,v3dg,v2dg)
 
     do iof = 1, OBS_IN_NUM
-      IF(iof/=3)THEN ! except H08 obs
+      IF(OBS_IN_FORMAT(iof) /= 3)THEN ! except H08 obs
         nslot = 0
         nprocslot = 0
         do n = 1, obs(iof)%nobs
@@ -712,7 +756,7 @@ SUBROUTINE obsmake_cal(obs)
 
 #ifdef H08
 ! -- H08 part --
-      ELSEIF(iof==3)THEN ! H08
+      ELSEIF(OBS_IN_FORMAT(iof) == 3)THEN ! H08
         nslot = 0
         nprocslot = 0
         nprof_H08 = 0

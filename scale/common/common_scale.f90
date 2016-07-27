@@ -73,7 +73,6 @@ MODULE common_scale
 !  integer,save :: ens_mygroup = -1
 !  integer,save :: ens_myrank = -1
 !  logical,save :: myrank_use = .false.
-!  logical,save :: myrank_mem_use = .false.
 !  integer,save :: lastmem_rank_e
 
 
@@ -452,9 +451,6 @@ end subroutine set_common_conf
 !  ens_myrank = proc2mem(2,1,myrank+1)
 !  if (ens_mygroup >= 1) then
 !    myrank_use = .true.
-!  end if
-!  if (ens_mygroup >= 1 .and. ens_mygroup <= mem) then
-!    myrank_mem_use = .true.
 !  end if
 
 !  lastmem_rank_e = mod(mem-1, n_mem*n_mempn)
