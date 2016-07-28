@@ -108,7 +108,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
   integer :: it,islot,proc,im,iof
-  integer :: n,nn,nslot,nproc,nproc_0,nprocslot
+  integer :: n,nn,nslot,nobs,nobs_0,nobs_slot
 !  real(r_size) :: rig,rjg,ri,rj,rk
   real(r_size) :: rig,rjg,rk
   real(r_size),allocatable :: ri(:),rj(:)
@@ -199,7 +199,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
 !write(6,*) '%%%%%%', MPI_WTIME(), 0
 
-      nproc = 0
+      nobs = 0
 
       !!!!!!
       if (obsda%nobs > 0) then
@@ -231,14 +231,14 @@ SUBROUTINE obsope_cal(obs, obsda_return)
           obs_idx_TCP = -1
 
           nslot = 0
-          nprocslot = 0
+          nobs_slot = 0
 
 !write(6,*) '%%%===', MPI_WTIME(), 'im:', im, 'islot:', islot, 'iof:', iof
 
           IF(OBS_IN_FORMAT(iof) /= 3)THEN ! except H08 obs ! H08
 
             ! do this small computation first, without OpenMP
-            nproc_0 = nproc
+            nobs_0 = nobs
             do n = 1, obs(iof)%nobs
 
               select case (obs(iof)%elm(n))
@@ -259,14 +259,14 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                 call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
 
                 if (PRC_myrank == proc) then
-                  nproc = nproc + 1
-                  nprocslot = nprocslot + 1
-                  obsda%set(nproc) = iof
-                  obsda%idx(nproc) = n
-                  obsda%ri(nproc) = rig
-                  obsda%rj(nproc) = rjg
-                  ri(nproc) = ritmp
-                  rj(nproc) = rjtmp
+                  nobs = nobs + 1
+                  nobs_slot = nobs_slot + 1
+                  obsda%set(nobs) = iof
+                  obsda%idx(nobs) = n
+                  obsda%ri(nobs) = rig
+                  obsda%rj(nobs) = rjg
+                  ri(nobs) = ritmp
+                  rj(nobs) = rjtmp
                 end if ! [ PRC_myrank == proc ]
               end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
             end do ! [ n = 1, obs%nobs ]
@@ -275,7 +275,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
           ELSEIF( OBS_IN_FORMAT(iof) == 3) THEN ! for H08 obs (OBS_IN_FORMAT(iof) = 3) ! H08
 
             nprof_H08 = 0
-            nproc_0 = nproc
+            nobs_0 = nobs
             nallprof = obs(iof)%nobs/nch
 
             ALLOCATE(tmp_ri_H08(nallprof))
@@ -297,15 +297,15 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                   tmp_lon_H08(nprof_H08) = obs(iof)%lon(ns)
                   tmp_lat_H08(nprof_H08) = obs(iof)%lat(ns)
 
-                  nproc = nproc + nch
-                  nprocslot = nprocslot + 1
-                  obsda%set(nproc-nch+1:nproc) = iof
-                  obsda%ri(nproc-nch+1:nproc) = rig
-                  obsda%rj(nproc-nch+1:nproc) = rjg
-                  ri(nproc-nch+1:nproc) = ritmp
-                  rj(nproc-nch+1:nproc) = rjtmp
+                  nobs = nobs + nch
+                  nobs_slot = nobs_slot + 1
+                  obsda%set(nobs-nch+1:nobs) = iof
+                  obsda%ri(nobs-nch+1:nobs) = rig
+                  obsda%rj(nobs-nch+1:nobs) = rjg
+                  ri(nobs-nch+1:nobs) = ritmp
+                  rj(nobs-nch+1:nobs) = rjtmp
                   do ch = 1, nch
-                    obsda%idx(nproc-nch+ch) = ns + ch - 1
+                    obsda%idx(nobs-nch+ch) = ns + ch - 1
                   enddo
 
                 end if ! [ PRC_myrank == proc ]
@@ -329,7 +329,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
             DEALLOCATE(tmp_lon_H08,tmp_lat_H08)
 
 #endif
-          ENDIF ! end of nproc count [if (OBS_IN_FORMAT(iof) = 3)]
+          ENDIF ! end of nobs count [if (OBS_IN_FORMAT(iof) = 3)]
 
 
 
@@ -344,10 +344,10 @@ SUBROUTINE obsope_cal(obs, obsda_return)
           IF(OBS_IN_FORMAT(iof) /= 3)THEN ! H08
 
 
-!write(6,*) '%%%===', MPI_WTIME(), nproc_0 + 1, nproc
+!write(6,*) '%%%===', MPI_WTIME(), nobs_0 + 1, nobs
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,rk)
-            do nn = nproc_0 + 1, nproc
+            do nn = nobs_0 + 1, nobs
               n = obsda%idx(nn)
 
 !if (mod(nn,50) == 0) then
@@ -398,7 +398,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 !  rrtimer00=rrtimer
 
 
-            end do ! [ nn = nproc_0 + 1, nproc ]
+            end do ! [ nn = nobs_0 + 1, nobs ]
 !$OMP END PARALLEL DO
 
 #ifdef H08
@@ -415,10 +415,10 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                                 yobs_H08,plev_obs_H08,&
                                 qc_H08)
 
-            obsda%qc(nproc_0+1:nproc) = iqc_obs_bad
+            obsda%qc(nobs_0+1:nobs) = iqc_obs_bad
 
             ns = 0
-            DO nn = nproc_0 + 1, nproc
+            DO nn = nobs_0 + 1, nobs
               ns = ns + 1
 
               obsda%val(nn) = yobs_H08(ns)
@@ -454,7 +454,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
 !              write(6,'(a,f12.1,i9)')'H08 debug_plev',obsda%lev(nn),nn
 
-            END DO ! [ nn = nproc_0 + 1, nproc ]
+            END DO ! [ nn = nobs_0 + 1, nobs ]
 
             DEALLOCATE(ri_H08, rj_H08)
             DEALLOCATE(lon_H08, lat_H08)
@@ -466,7 +466,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
           write (6,'(3A,I10)') ' -- [', trim(OBS_IN_NAME(iof)), '] nobs in the slot = ', nslot
           write (6,'(3A,I6,A,I10)') ' -- [', trim(OBS_IN_NAME(iof)), '] nobs in the slot and processed by rank ' &
-                                    , myrank, ' = ', nprocslot
+                                    , myrank, ' = ', nobs_slot
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -519,19 +519,19 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
               if (PRC_myrank == proc) then
                 do n = 1, 3
-                  nproc = nproc + 1
-                  nprocslot = nprocslot + 1
-                  obsda%set(nproc) = iof
-                  if(n==1) obsda%idx(nproc) = obs_idx_TCX
-                  if(n==2) obsda%idx(nproc) = obs_idx_TCY
-                  if(n==3) obsda%idx(nproc) = obs_idx_TCP
-                  obsda%ri(nproc) = rig
-                  obsda%rj(nproc) = rjg
-                  ri(nproc) = ritmp
-                  rj(nproc) = rjtmp
+                  nobs = nobs + 1
+                  nobs_slot = nobs_slot + 1
+                  obsda%set(nobs) = iof
+                  if(n==1) obsda%idx(nobs) = obs_idx_TCX
+                  if(n==2) obsda%idx(nobs) = obs_idx_TCY
+                  if(n==3) obsda%idx(nobs) = obs_idx_TCP
+                  obsda%ri(nobs) = rig
+                  obsda%rj(nobs) = rjg
+                  ri(nobs) = ritmp
+                  rj(nobs) = rjtmp
 
-                  obsda%val(nproc) = bTC(n,bTC_proc)
-                  obsda%qc(nproc) = iqc_good
+                  obsda%val(nobs) = bTC(n,bTC_proc)
+                  obsda%qc(nobs) = iqc_good
                 enddo ! [ n = 1, 3 ]
 
               endif
@@ -559,17 +559,17 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
       end do ! [ islot = SLOT_START, SLOT_END ]
 
-!write(6,*) '%%%%%%', MPI_WTIME(), nproc
+!write(6,*) '%%%%%%', MPI_WTIME(), nobs
 
       !!!!!!
       end if ! [ obsda%nobs > 0 ]
       !!!!!!
 
-      obsda%nobs = nproc
+      obsda%nobs = nobs
 
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' finishes processing member ', &
             im, ', subdomain id #', proc2mem(2,it,myrank+1)
-      write (6,'(A,I8,A)') ' -- ', nproc, ' observations found'
+      write (6,'(A,I8,A)') ' -- ', nobs, ' observations found'
 
 
       if (OBSDA_OUT) then
@@ -583,25 +583,25 @@ SUBROUTINE obsope_cal(obs, obsda_return)
       if (present(obsda_return)) then
         ! variables without an ensemble dimension
         if (it == 1) then
-          obsda_return%nobs = nproc + obsda_return%nobs ! obsda_return%nobs: additional space for externally processed observations
+          obsda_return%nobs = nobs + obsda_return%nobs ! obsda_return%nobs: additional space for externally processed observations
           call obs_da_value_allocate(obsda_return,MEMBER)
-          obsda_return%set(1:nproc) = obsda%set(1:nproc)
-          obsda_return%idx(1:nproc) = obsda%idx(1:nproc)
-          obsda_return%ri(1:nproc) = obsda%ri(1:nproc)
-          obsda_return%rj(1:nproc) = obsda%rj(1:nproc)
-          obsda_return%qc(1:nproc) = obsda%qc(1:nproc)
+          obsda_return%set(1:nobs) = obsda%set(1:nobs)
+          obsda_return%idx(1:nobs) = obsda%idx(1:nobs)
+          obsda_return%ri(1:nobs) = obsda%ri(1:nobs)
+          obsda_return%rj(1:nobs) = obsda%rj(1:nobs)
+          obsda_return%qc(1:nobs) = obsda%qc(1:nobs)
 #ifdef H08
-          obsda_return%lev(1:nproc) = obsda%lev(1:nproc)
+          obsda_return%lev(1:nobs) = obsda%lev(1:nobs)
 #endif
         else
-          obsda_return%qc(1:nproc) = max(obsda_return%qc(1:nproc), obsda%qc(1:nproc))
+          obsda_return%qc(1:nobs) = max(obsda_return%qc(1:nobs), obsda%qc(1:nobs))
 #ifdef H08
-          obsda_return%lev(1:nproc) = obsda_return%lev(1:nproc) + obsda%lev(1:nproc)
+          obsda_return%lev(1:nobs) = obsda_return%lev(1:nobs) + obsda%lev(1:nobs)
 #endif
         end if
 
         ! variables with an ensemble dimension
-        obsda_return%ensval(im,1:nproc) = obsda%val(1:nproc)
+        obsda_return%ensval(im,1:nobs) = obsda%val(1:nobs)
       end if ! [ present(obsda_return) ]
 
 
@@ -643,7 +643,7 @@ SUBROUTINE obsmake_cal(obs)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
   integer :: islot,proc
-  integer :: n,nslot,nproc,nprocslot,ierr,iqc,iof
+  integer :: n,nslot,nobs,nobs_slot,ierr,iqc,iof
   integer :: nobsmax,nobsall
   real(r_size) :: rig,rjg,ri,rj,rk
   real(r_size) :: slot_lb,slot_ub
@@ -679,7 +679,7 @@ SUBROUTINE obsmake_cal(obs)
     obs(iof)%dat = 0.0d0
   end do
 
-  nproc = 0
+  nobs = 0
   do islot = SLOT_START, SLOT_END
     slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
     slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
@@ -690,7 +690,7 @@ SUBROUTINE obsmake_cal(obs)
     do iof = 1, OBS_IN_NUM
       IF(OBS_IN_FORMAT(iof) /= 3)THEN ! except H08 obs
         nslot = 0
-        nprocslot = 0
+        nobs_slot = 0
         do n = 1, obs(iof)%nobs
 
           if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
@@ -708,8 +708,8 @@ SUBROUTINE obsmake_cal(obs)
             end if
 
             if (PRC_myrank == proc) then
-              nproc = nproc + 1
-              nprocslot = nprocslot + 1
+              nobs = nobs + 1
+              nobs_slot = nobs_slot + 1
 
   !IF(NINT(elem(n)) == id_ps_obs) THEN
   !  CALL itpl_2d(v2d(:,:,iv2d_orog),ri,rj,dz)
@@ -758,7 +758,7 @@ SUBROUTINE obsmake_cal(obs)
 ! -- H08 part --
       ELSEIF(OBS_IN_FORMAT(iof) == 3)THEN ! H08
         nslot = 0
-        nprocslot = 0
+        nobs_slot = 0
         nprof_H08 = 0
 
         nallprof = obs(iof)%nobs/nch
@@ -790,8 +790,8 @@ SUBROUTINE obsmake_cal(obs)
               tmp_lon_H08(nprof_H08) = obs(iof)%lon(ns)
               tmp_lat_H08(nprof_H08) = obs(iof)%lat(ns)
 
-              nproc = nproc + nch
-              nprocslot = nprocslot + nch
+              nobs = nobs + nch
+              nobs_slot = nobs_slot + nch
 
             end if ! [ PRC_myrank == proc ]
 
@@ -847,7 +847,7 @@ SUBROUTINE obsmake_cal(obs)
     end do ! [ iof = 1, OBS_IN_NUM ]
 
     write (6,'(3A,I10)') ' -- [', trim(OBS_IN_NAME(iof)), '] nobs in the slot = ', nslot
-    write (6,'(3A,I6,A,I10)') ' -- [', trim(OBS_IN_NAME(iof)), '] nobs in the slot and processed by rank ', myrank, ' = ', nprocslot
+    write (6,'(3A,I6,A,I10)') ' -- [', trim(OBS_IN_NAME(iof)), '] nobs in the slot and processed by rank ', myrank, ' = ', nobs_slot
 
   end do ! [ islot = SLOT_START, SLOT_END ]
 
