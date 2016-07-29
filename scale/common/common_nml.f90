@@ -26,13 +26,22 @@ MODULE common_nml
   integer :: MEMBER_ITER = 0 !
 
   !--- PARAM_OBSOPE
-  character(filelenmax) :: HISTORY_IN_BASENAME = 'hist.@@@@'
-  character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
-
-  !--- PARAM_LETKF
   integer               :: OBS_IN_NUM = 1
   character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
   integer               :: OBS_IN_FORMAT(nobsfilemax) = 1
+  logical               :: OBSDA_RUN(nobsfilemax) = .true.
+  logical               :: OBSDA_OUT = .true.
+  character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
+
+  character(filelenmax) :: HISTORY_IN_BASENAME = 'hist.@@@@'
+
+  integer               :: SLOT_START = 1
+  integer               :: SLOT_END = 1
+  integer               :: SLOT_BASE = 1
+  real(r_size)          :: SLOT_TINTERVAL = 3600.0d0
+
+  !--- PARAM_LETKF
+  logical               :: OBSDA_IN = .false.
   character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@'
   character(filelenmax) :: GUES_IN_BASENAME = 'gues.@@@@'
   character(filelenmax) :: GUES_OUT_MEAN_BASENAME = 'gues.mean'
@@ -41,11 +50,6 @@ MODULE common_nml
   character(filelenmax) :: ANAL_OUT_MEAN_BASENAME = 'anal.mean'
   character(filelenmax) :: ANAL_OUT_SPRD_BASENAME = 'anal.sprd'
   character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
-
-  integer :: SLOT_START = 1
-  integer :: SLOT_END = 1
-  integer :: SLOT_BASE = 1
-  real(r_size) :: SLOT_TINTERVAL = 3600.0d0
 
   real(r_size) :: SIGMA_OBS = 500.0d3
   real(r_size) :: SIGMA_OBS_RAIN = -1.0d0  ! < 0: same as SIGMA_OBS
@@ -167,13 +171,12 @@ MODULE common_nml
   logical :: USE_RADAR_VR        = .true.
   logical :: USE_RADAR_PSEUDO_RH = .false.
 
+  REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
   INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than RADAR_REF_THRES_DBZ
   INTEGER :: MIN_RADAR_REF_MEMBER_OBSREF = 1   !Ensemble members with
 
-  REAL(r_size) :: LOW_REF_SHIFT = 0.0d0
-
   REAL(r_size) :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
-  REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
+  REAL(r_size) :: LOW_REF_SHIFT = 0.0d0
 
   real(r_size) :: RADAR_ZMAX = 99.0d3          !Height limit of radar data to be used
 
@@ -235,8 +238,17 @@ subroutine read_nml_obsope
   integer :: ierr
   
   namelist /PARAM_OBSOPE/ &
+    OBS_IN_NUM, &
+    OBS_IN_NAME, &
+    OBS_IN_FORMAT, &
+    OBSDA_RUN, &
+    OBSDA_OUT, &
+    OBSDA_OUT_BASENAME, &
     HISTORY_IN_BASENAME, &
-    OBSDA_OUT_BASENAME
+    SLOT_START, &
+    SLOT_END, &
+    SLOT_BASE, &
+    SLOT_TINTERVAL
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBSOPE,iostat=ierr)
@@ -261,9 +273,7 @@ subroutine read_nml_letkf
   integer :: ierr
   
   namelist /PARAM_LETKF/ &
-    OBS_IN_NUM, &
-    OBS_IN_NAME, &
-    OBS_IN_FORMAT, &
+    OBSDA_IN, &
     OBSDA_IN_BASENAME, &
     GUES_IN_BASENAME, &
     GUES_OUT_MEAN_BASENAME, &
@@ -272,10 +282,6 @@ subroutine read_nml_letkf
     ANAL_OUT_MEAN_BASENAME, &
     ANAL_OUT_SPRD_BASENAME, &
     LETKF_TOPO_IN_BASENAME, &
-    SLOT_START, &
-    SLOT_END, &
-    SLOT_BASE, &
-    SLOT_TINTERVAL, &
     SIGMA_OBS, &
     SIGMA_OBS_RAIN, &
     SIGMA_OBS_RADAR, &
@@ -561,11 +567,11 @@ subroutine read_nml_letkf_radar
     USE_RADAR_REF, &
     USE_RADAR_VR, &
     USE_RADAR_PSEUDO_RH, &
+    RADAR_REF_THRES_DBZ, &
     MIN_RADAR_REF_MEMBER, &
     MIN_RADAR_REF_MEMBER_OBSREF, &
-    LOW_REF_SHIFT, &
     MIN_RADAR_REF_DBZ, &
-    RADAR_REF_THRES_DBZ, &
+    LOW_REF_SHIFT, &
     RADAR_ZMAX, &
     RADAR_PRH_ERROR, &
     INTERPOLATION_TECHNIQUE, &

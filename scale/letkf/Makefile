@@ -22,6 +22,10 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
 #              $(COMMON_DIR)/common_scalelib.o
 #              $(COMMON_DIR)/common_precip.o
 
+OBSOPE_DIR = ../obs
+
+OBSOPE_OBJS = $(OBSOPE_DIR)/obsope_tools.o
+
 INCS    = $(SCALE_INC)
 
 LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
@@ -33,9 +37,9 @@ endif
 
 all:	$(PROGS)
 
-letkf:	letkf.o $(OBJS) common_modules
+letkf:	letkf.o $(OBJS) common_modules obsope_modules
 	$(FC) $(FOPTS) $(FMCMODEL) -o letkf letkf.o \
-	$(COMMON_OBJS) $(OBJS) $(LIBS)
+	$(COMMON_OBJS) $(OBSOPE_OBJS) $(OBJS) $(LIBS)
 mean:	mean.o letkf_obs.o common_modules
 	$(FC) $(FOPTS) $(FMCMODEL) -o mean mean.o \
 	$(COMMON_OBJS) $(OBJS) $(LIBS)
@@ -43,8 +47,8 @@ efso:	efso.o $(OBJS) common_modules
 	$(FC) $(FOPTS) $(FMCMODEL) -o efso efso.o \
 	$(COMMON_OBJS) $(OBJS) $(LIBS)
 
-letkf.o:	letkf.f90 $(OBJS) common_modules
-	$(FC) $(FOPTS) -c letkf.f90 -I$(COMMON_DIR) $(INCS)
+letkf.o:	letkf.f90 $(OBJS) common_modules obsope_modules
+	$(FC) $(FOPTS) -c letkf.f90 -I$(COMMON_DIR) -I$(OBSOPE_DIR) $(INCS)
 mean.o:	mean.f90 letkf_obs.o common_modules
 	$(FC) $(FOPTS) -c mean.f90 -I$(COMMON_DIR) $(INCS)
 efso.o:	efso.f90 $(OBJS) common_modules
@@ -63,6 +67,9 @@ efso_nml.o:	efso_nml.f90 common_modules
 
 common_modules:
 	( cd $(COMMON_DIR) ; make )
+
+obsope_modules:
+	( cd $(OBSOPE_DIR) ; make obsope_tools.o )
 
 clean:
 	rm -f *.o *.mod *.lst $(PROGS) letkf mean efso

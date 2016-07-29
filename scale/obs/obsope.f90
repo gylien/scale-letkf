@@ -79,7 +79,6 @@ PROGRAM obsope
   call set_common_conf(nprocs)
 
   call read_nml_obsope
-  call read_nml_letkf
   call read_nml_letkf_obserr
   call read_nml_letkf_radar
   call read_nml_letkf_h08
@@ -115,9 +114,7 @@ PROGRAM obsope
 ! Observation operator
 !-----------------------------------------------------------------------
 
-    if (myrank_mem_use) then
-      call obsope_cal(obs)
-    end if
+    call obsope_cal(obs)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()

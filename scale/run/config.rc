@@ -85,11 +85,22 @@ fi
 
 DATA_TOPO="${DATA_TOPO:-$OUTDIR}"
 DATA_LANDUSE="${DATA_LANDUSE:-$OUTDIR}"
+DATA_BDY_SCALE_PREP="${DATA_BDY_SCALE_PREP:-$OUTDIR}"
 
 BDY_SCALE_DIR="${BDY_SCALE_DIR:-hist}"
 
 BDYINT=${BDYINT:-$LCYCLE}
 BDYCYCLE_INT=${BDYCYCLE_INT:-$BDYINT}
+
+#-------------------------------------------------------------------------------
+
+OBSOPE_RUN=0
+for iobs in $(seq $OBSNUM); do
+  if [ -n "${OBSOPE_SEPARATE[$iobs]}" ] && ((${OBSOPE_SEPARATE[$iobs]} == 1)); then
+    OBSOPE_RUN=1
+    break
+  fi
+done
 
 #-------------------------------------------------------------------------------
 

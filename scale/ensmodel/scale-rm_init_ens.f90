@@ -9,7 +9,6 @@ program scaleles_init_ens
   use common_scale, only: &
      set_common_conf
   use common_mpi_scale, only: &
-     myrank_mem_use, & 
      proc2mem, &
      nitmax, &
      set_mem_node_proc

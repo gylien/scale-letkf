@@ -217,8 +217,14 @@ while ((time <= ETIME)); do
         fi
       fi
       if ((s == 2)); then
-        if ((BDY_FORMAT == 0 || BDY_FORMAT == -1)); then
+        if ((BDY_FORMAT == 0)); then
           echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
+          continue
+        fi
+      fi
+      if ((s == 4)); then
+        if ((OBSOPE_RUN == 0)); then
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (only use integrated observation operators)" >&2
           continue
         fi
       fi

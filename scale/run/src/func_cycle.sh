@@ -1588,7 +1588,7 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
-       $atime $TMPRUN/letkf $TMPDAT/obs \
+       $time $atime $TMPRUN/letkf $TMPDAT/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo \
        $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT \
        $MEMBER
