@@ -21,9 +21,9 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
                            tmp_lon,&
                            tmp_lat,&
                            tmp_land,&
-                           bt_out,& 
-                           trans_out,& 
-                           CLD) 
+                           btall_out,& 
+                           btclr_out,& 
+                           trans_out)
   !
   ! Copyright:
   !    This software was developed within the context of
@@ -110,7 +110,9 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
         Rvap    => CONST_Rvap, &
         Deg2Rad => CONST_D2R
   USE common_nml, ONLY: &
-        minQ => H08_RTTOV_MINQ
+        H08_RTTOV_MINQ, &
+        H08_RTTOV_CFRAC_CNST, &
+        H08_RTTOV_CLD
   IMPLICIT NONE
 
 #include "rttov_parallel_direct.interface"
@@ -125,7 +127,6 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 #include "rttov_print_profile.interface"
 #include "rttov_skipcommentline.interface"
 
-  LOGICAL,INTENT(IN) :: CLD
 
 !
 ! -  Added by T.Honda (11/18/2015)
@@ -149,6 +150,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   REAL(r_size) :: z_angle_H08 ! zenith angle of Himawari-8
 !
 ! minQcfrac: Threshold for diagnosing cloud fraction
+  REAL(kind=jprb) :: jcfrac_cnst
   REAL(kind=jprb) :: minQcfrac ! threshold water/ice contents (g m-3) for cloud fraction diagnosis
 
   INTEGER, INTENT(IN) :: nprof
@@ -234,9 +236,11 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   INTEGER            :: ios
 
 ! by T.Honda
-  Real(Kind=jprb),ALLOCATABLE :: tmp_bt_out(:,:)
+  Real(Kind=jprb),ALLOCATABLE :: tmp_btall_out(:,:)
+  Real(Kind=jprb),ALLOCATABLE :: tmp_btclr_out(:,:)
   Real(Kind=jprb),ALLOCATABLE :: tmp_trans_out(:,:,:)
-  REAL(Kind=r_size),INTENT(OUT) :: bt_out(nchannels,nprof)
+  REAL(Kind=r_size),INTENT(OUT) :: btall_out(nchannels,nprof)
+  REAL(Kind=r_size),INTENT(OUT) :: btclr_out(nchannels,nprof)
   REAL(Kind=r_size),INTENT(OUT) :: trans_out(nlevels,nchannels,nprof)
 
   logical :: debug = .false.
@@ -253,9 +257,11 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   epsb = Rd / Rv 
   repsb = 1.0_jprb / epsb
 
-  minQcfrac = real(minQ,kind=jprb)
+  minQcfrac = real(H08_RTTOV_MINQ,kind=jprb)
+  jcfrac_cnst = real(H08_RTTOV_CFRAC_CNST,kind=jprb)
 
-  ALLOCATE(tmp_bt_out(nchannels,nprof))
+  ALLOCATE(tmp_btall_out(nchannels,nprof))
+  ALLOCATE(tmp_btclr_out(nchannels,nprof))
   ALLOCATE(tmp_trans_out(nlevels,nchannels,nprof))
 
 
@@ -333,7 +339,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
   opts % rt_all % addrefrac         = .FALSE.  ! Include refraction in path calc
   opts % rt_ir % addclouds          = .TRUE. ! Include cloud effects
-  if (.not. CLD) then
+  if (.not. H08_RTTOV_CLD) then
     opts % rt_ir % addclouds          = .FALSE. ! Include cloud effects
   endif
   opts % rt_ir % user_cld_opt_param   = .FALSE. ! include cloud effects
@@ -608,22 +614,22 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
                    (liqc(ilev+1) + liqc(ilev)) * 0.5_jprb
         profiles(iprof) % cloud(6,ilev) = & 
                    (icec(ilev+1) + icec(ilev)) * 0.5_jprb
-!  -- NOTE: Currently(11/18/2015), the SCALE-RM model regards cfrac = 1.0 (/0.0) 
-!            in the grid point where a sum of water/ice contents > 0.0 (=0.0).
 !
-!  -- NOTE: minQcfrac is added. (12/16/2016)
-        if(((profiles(iprof) % cloud(2,ilev) + profiles(iprof) % cloud(6,ilev)) > minQcfrac)) then
-          profiles(iprof) % cfrac(ilev)   = 1.0_jprb  !cloud fraction 
+! cloud fraction diagnosis
+        if(jcfrac_cnst <= 0.0_jprb)then
+          if(((profiles(iprof) % cloud(2,ilev) + &
+               profiles(iprof) % cloud(6,ilev)) > minQcfrac)) then
+            profiles(iprof) % cfrac(ilev)   = 1.0_jprb  !cloud fraction 
+          else
+            profiles(iprof) % cfrac(ilev)   = 0.0_jprb  !cloud fraction 
+          endif
         else
-          profiles(iprof) % cfrac(ilev)   = 0.0_jprb  !cloud fraction 
-
+          profiles(iprof) % cfrac(ilev) = min((profiles(iprof) % cloud(2,ilev) + &
+                                               profiles(iprof) % cloud(6,ilev)) / jcfrac_cnst, 1.0_jprb)
         endif
-
-      end do
-
-    endif
-
-  ENDDO
+      end do ! ilev
+    endif ! addclouds
+  ENDDO ! prof
 
   deallocate(kgkg2gm3)
 
@@ -707,7 +713,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
     !
     nprint = 1 + INT((nchannels-1)/10)
 
-    tmp_bt_out(1:nchannels,iprof)=radiance%bt(1+joff:nchannels+joff) 
+    tmp_btall_out(1:nchannels,iprof)=radiance%bt(1+joff:nchannels+joff) 
+    tmp_btclr_out(1:nchannels,iprof)=radiance%bt_clear(1+joff:nchannels+joff)
 
     DO ilev = 1, nlevels
       tmp_trans_out(ilev,1:nchannels,iprof) = transmission % tau_levels(ilev,1+joff:nchannels+joff)
@@ -738,9 +745,10 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
 
   trans_out = REAL(tmp_trans_out,kind=r_size)
-  bt_out = REAL(tmp_bt_out,kind=r_size)
+  btall_out = REAL(tmp_btall_out,kind=r_size)
+  btclr_out = REAL(tmp_btclr_out,kind=r_size)
 
-  DEALLOCATE(tmp_bt_out,tmp_trans_out)
+  DEALLOCATE(tmp_btall_out,tmp_btclr_out,tmp_trans_out)
 
 !  CLOSE(ioout, iostat=ios)
 !  IF (ios /= 0) THEN

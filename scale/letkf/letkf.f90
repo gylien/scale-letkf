@@ -146,7 +146,7 @@ PROGRAM letkf
         call file_member_replace(proc2mem(1,1,myrank+1), OBSDA_IN_BASENAME, obsdafile)
         write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,1,myrank+1)
 #ifdef H08
-        CALL get_nobs(trim(obsdafile)//obsda_suffix,7,nobs_ext) ! H08
+        CALL get_nobs(trim(obsdafile)//obsda_suffix,8,nobs_ext) ! H08
 #else
         CALL get_nobs(trim(obsdafile)//obsda_suffix,6,nobs_ext)
 #endif

@@ -126,15 +126,10 @@ SUBROUTINE obsope_cal(obs, obsda_return)
   REAL(r_size),ALLOCATABLE :: tmp_lon_H08(:),tmp_lat_H08(:)
 
   REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
+  REAL(r_size),ALLOCATABLE :: yobs_H08_clr(:)
   INTEGER :: ch
   INTEGER,ALLOCATABLE :: qc_H08(:)
 
-! -- tentative treatment around the TC center --
-!  REAL(r_size),PARAMETER :: MSLP_TC_LON = 145.7d0
-!  REAL(r_size),PARAMETER :: MSLP_TC_LAT =  15.2d0
-!  REAL(r_size) :: MSLP_TC_rig, MSLP_TC_rjg, dist_MSLP_TC
-!  REAL(r_size),PARAMETER :: dist_MSLP_TC_MIN = 200.0d3 ! (m)
-!
 ! -- Rejecting obs over the buffer regions. --
 !
 ! bris: "ri" at the wetern end of the domain excluding buffer regions
@@ -407,13 +402,17 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 !
 
             ALLOCATE(yobs_H08(nprof_H08*nch))
+            ALLOCATE(yobs_H08_clr(nprof_H08*nch))
             ALLOCATE(plev_obs_H08(nprof_H08*nch))
             ALLOCATE(qc_H08(nprof_H08*nch))
 
             CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
                                 lon_H08,lat_H08,v3dg,v2dg,&
                                 yobs_H08,plev_obs_H08,&
-                                qc_H08)
+                                qc_H08,yobs_H08_clr=yobs_H08_clr)
+
+! Clear sky yobs(>0)
+! Cloudy sky yobs(<0)
 
             obsda%qc(nobs_0+1:nobs) = iqc_obs_bad
 
@@ -451,6 +450,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 !  The substituted level information is used in letkf_tools.f90
 !
               obsda%lev(nn) = plev_obs_H08(ns)
+              obsda%val2(nn) = yobs_H08_clr(ns)
 
 !              write(6,'(a,f12.1,i9)')'H08 debug_plev',obsda%lev(nn),nn
 
@@ -459,6 +459,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
             DEALLOCATE(ri_H08, rj_H08)
             DEALLOCATE(lon_H08, lat_H08)
             DEALLOCATE(yobs_H08, plev_obs_H08)
+            DEALLOCATE(yobs_H08_clr)
             DEALLOCATE(qc_H08)
 
 #endif
@@ -592,11 +593,13 @@ SUBROUTINE obsope_cal(obs, obsda_return)
           obsda_return%qc(1:nobs) = obsda%qc(1:nobs)
 #ifdef H08
           obsda_return%lev(1:nobs) = obsda%lev(1:nobs)
+          obsda_return%val2(1:nobs) = obsda%val2(1:nobs)
 #endif
         else
           obsda_return%qc(1:nobs) = max(obsda_return%qc(1:nobs), obsda%qc(1:nobs))
 #ifdef H08
           obsda_return%lev(1:nobs) = obsda_return%lev(1:nobs) + obsda%lev(1:nobs)
+          obsda_return%val2(1:nobs) = obsda_return%val2(1:nobs) + obsda%val2(1:nobs)
 #endif
         end if
 

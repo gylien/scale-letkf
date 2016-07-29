@@ -146,13 +146,8 @@ MODULE common_nml
   logical :: USE_OBSERR_RADAR_VR = .false.
 !
 ! 
-! -- Defalut error values will be updated based on a bug-fixed experiment
-! (02/09/2016)
-! -- ###Default obs err for Himawari-8 obs is based on Desroziers et al. 
-!     (2005 QJRMS)'s statistics conducted by T.Honda (12/25/2015)
-!
-  real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.5d0,7.2d0,8.6d0,5.0d0,&
-                                     5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
+  real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
+                                      5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
 
   !--- PARAM_LETKF_MONITOR
   logical :: DEPARTURE_STAT = .true.
@@ -192,9 +187,18 @@ MODULE common_nml
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
   !---PARAM_LETKF_H08
+  logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
+  logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
   real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
   real(r_size) :: H08_LIMIT_LEV = 20000.0d0 ! (Pa) Upper limit level of the sensitive height for Himawari-8 IR
-  integer :: H08_CH_USE(nch) = (/0,1,1,1,0,0,0,0,0,0/)
+  real(r_size) :: H08_RTTOV_CFRAC_CNST = 0.10d0 ! Denominator constant for diagnosing SEQUENTIAL(0-1) cloud fraction (g m-3)
+                                                ! Negative values indicate DISCRETE (0/1) cloud fraction 
+  real(r_size) :: H08_BT_MIN = 0.0d0 ! Lower limit of the BT for Himawari-8 IR
+  real(r_size) :: H08_CLDSKY_THRS = -5.0d0 ! Threshold for diagnosing the sky condition using [BT(all-sky) - BT(clr)].
+                                           ! Negative values: turn off
+  integer :: H08_MIN_CLD_MEMBER = 1       ! If the number of the cloudy members is larger than H08_MIN_CLD_MEMBER,
+                                           ! the first guess is diagnosed as cloudy. ! Not finished yet!
+  integer :: H08_CH_USE(nch) = (/0,0,1,0,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
                         !! (B07,B08,B09,B10,B11,B12,B13,B14,B15,B16)
                         !! ==1: Assimilate
@@ -606,8 +610,14 @@ subroutine read_nml_letkf_h08
   integer :: ierr
 
   namelist /PARAM_LETKF_H08/ &
+    H08_REJECT_LAND, &
+    H08_RTTOV_CLD, &
+    H08_MIN_CLD_MEMBER, &
+    H08_CLDSKY_THRS, &
     H08_RTTOV_MINQ, &
+    H08_RTTOV_CFRAC_CNST, &
     H08_LIMIT_LEV, &
+    H08_BT_MIN, &
     H08_CH_USE
 
   rewind(IO_FID_CONF)
