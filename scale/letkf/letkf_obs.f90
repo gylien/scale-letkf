@@ -36,6 +36,7 @@ MODULE letkf_obs
   type(obs_da_value),save :: obsda
   type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
                                                     !!!!!! need to add %err and %dat if they can be determined in letkf_obs.f90
+  integer,save :: nobs_ext
 
   integer,allocatable,save :: nobsgrd(:,:,:)
   integer,allocatable,save :: nobsgrd2(:,:,:)
@@ -82,7 +83,6 @@ SUBROUTINE set_letkf_obs
 !  INTEGER :: ii, jj                            ! GYL
 
   integer :: it,ip
-  logical :: check
   REAL(r_size),allocatable :: bufr(:,:)
   INTEGER,allocatable :: bufri(:)
   INTEGER,allocatable :: bufri2(:,:,:)
@@ -112,6 +112,8 @@ SUBROUTINE set_letkf_obs
   character(filelenmax) :: obsdafile
   character(11) :: obsda_suffix = '.000000.dat'
 
+  type(obs_da_value) :: obsda_ext
+
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
@@ -127,34 +129,75 @@ SUBROUTINE set_letkf_obs
 #endif
 
 
-! Read observations
+! Read externally processed observations
 !-----------------------------------
 
-  check = .false.
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
     if (im >= 1 .and. im <= MEMBER) then
-      write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
-            im, ', subdomain id #', proc2mem(2,it,myrank+1)
-      call file_member_replace(im, OBSDA_IN_BASENAME, obsdafile)
-      write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
-
-      if (.not. check) then
-#ifdef H08
-!        CALL get_nobs(trim(obsdafile)//obsda_suffix,7,obsda%nobs) ! H08
-        CALL get_nobs(trim(obsdafile)//obsda_suffix,8,obsda%nobs) ! H08
-#else
-        CALL get_nobs(trim(obsdafile)//obsda_suffix,6,obsda%nobs)
-#endif
-        WRITE(6,'(A,I9,A)') 'TOTAL: ', obsda%nobs, ' OBSERVATIONS'
-        CALL obs_da_value_allocate(obsda,MEMBER)
+      if (it == 1) then
+        WRITE(6,'(A,I10)') 'Internally processed observations: ', obsda%nobs - nobs_ext
+        WRITE(6,'(A,I10)') 'Externally processed observations: ', nobs_ext
+        WRITE(6,'(A,I10)') 'Total                observations: ', obsda%nobs
       end if
 
-      call read_obs_da(trim(obsdafile)//obsda_suffix,obsda,im,check)
-      check = .true.
-    end if
-  end do ! [ it = 1, nitmax ]
+      if (OBSDA_IN .and. nobs_ext > 0) then
+        obsda_ext%nobs = nobs_ext
+        call obs_da_value_allocate(obsda_ext,0)
+        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is reading externally processed observations for member ', &
+              im, ', subdomain id #', proc2mem(2,it,myrank+1)
+        call file_member_replace(im, OBSDA_IN_BASENAME, obsdafile)
+        write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
+        call read_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0)
 
+        if (OBSDA_OUT) then
+          write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is appending observations for member ', &
+                im, ', subdomain id #', proc2mem(2,it,myrank+1)
+          call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
+!          write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
+          call write_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0,append=.true.)
+        end if
+
+        ! variables without an ensemble dimension
+        if (it == 1) then
+          obsda%set(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%set
+          obsda%idx(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%idx
+          obsda%ri(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%ri
+          obsda%rj(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%rj
+          obsda%qc(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%qc
+#ifdef H08
+          obsda%lev(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%lev
+          obsda%val2(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%val2
+#endif
+        else
+          if (maxval(abs(obsda%set(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%set)) > 0) then
+            write (6,'(A)') 'error: obsda%set are inconsistent among the ensemble'
+            stop
+          end if
+          if (maxval(abs(obsda%idx(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%idx)) > 0) then
+            write (6,'(A)') 'error: obsda%idx are inconsistent among the ensemble'
+            stop
+          end if
+          if (maxval(abs(obsda%ri(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%ri)) > 1.e-6) then
+            write (6,'(A)') 'error: obsda%ri are inconsistent among the ensemble'
+            stop
+          end if
+          if (maxval(abs(obsda%rj(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%rj)) > 1.e-6) then
+            write (6,'(A)') 'error: obsda%rj are inconsistent among the ensemble'
+            stop
+          end if
+          obsda%qc(obsda%nobs-nobs_ext+1:obsda%nobs) = max(obsda%qc(obsda%nobs-nobs_ext+1:obsda%nobs), obsda_ext%qc)
+#ifdef H08
+          obsda%lev(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda%lev(obsda%nobs-nobs_ext+1:obsda%nobs) + obsda_ext%lev
+          obsda%val2(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda%val2(obsda%nobs-nobs_ext+1:obsda%nobs) + obsda_ext%val2
+#endif
+        end if
+
+        ! variables with an ensemble dimension
+        obsda%ensval(im,obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%val
+      end if ! [ OBSDA_IN .and. nobs_ext > 0 ]
+    end if ! [ im >= 1 .and. im <= MEMBER ]
+  end do ! [ it = 1, nitmax ]
 
 ! All_reduce the observations
 !-----------------------------------
@@ -213,6 +256,8 @@ SUBROUTINE set_letkf_obs
 
   end if ! [ nprocs_e > MEMBER ]
 
+
+! obsda%val not used; averaged from obsda%ensval later
 
   allocate (bufr(MEMBER,obsda%nobs))
   bufr = 0.0d0

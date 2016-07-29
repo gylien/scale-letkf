@@ -3,7 +3,7 @@ SCALE_INC = -I$(SCALE)/dc_utils \
             -I$(SCALE)/gtool    \
             -I$(SCALE)/include
 SCALE_LIB = -L$(SCALE)/lib -lscale -lgtool -ldcutils
-SCALE_LES_OBJDIR = $(SCALE)/scale-les/src/.libs
+SCALE_RM_OBJDIR = $(SCALE)/scale-rm/src/.libs
 
 include $(SCALE)/sysdep/Makedef.$(SCALE_SYS)
 include $(SCALE)/Mkinclude
@@ -23,17 +23,9 @@ BUFR_LIB  =
 #SFC       = frtpx
 #FC        = mpifrtpx
 
-FOPTS_SCALE = $(FFLAGS) -std=gnu -ffree-line-length-none
-#FOPTS_SCALE = -cpp -ffree-line-length-none
+FOPTS_SCALE = $(FFLAGS) -std=gnu
 
-#FOPTS     = -Kfast,ocl,openmp,noeval -V -Qa,d,i,p,t,x -Koptmsg=2 \
-#            -x-    \
-#            -Ksimd \
-#            -Kauto,threadsafe
-#FOPTS     = $(FOPTS_SCALE) \
-#            -Knoparallel,noeval,nopreex \
-#            -Kopenmp
-FOPTS     = $(FOPTS_SCALE)
+FOPTS     = $(FOPTS_SCALE) -fopenmp
 
 FMCMODEL  =
 FBYTESWAP = 

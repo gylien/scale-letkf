@@ -77,7 +77,7 @@ safe_init_tmpdir $TMPS/node
 distribute_fcst "$MEMBERS" $CYCLE - $TMPS/node
 
 if ((CYCLE == 0)); then
-  CYCLE=$parallel_mems
+  CYCLE=$cycle_auto
 fi
 
 #===============================================================================
@@ -135,7 +135,7 @@ cat > $jobscrp << EOF
 #PJM --stg-transfiles all
 EOF
 
-if ((USE_RANKDIR == 1)); then
+if [ "$STG_TYPE" = 'K_rankdir' ]; then
   echo "#PJM --mpi \"use-rankdir\"" >> $jobscrp
 fi
 

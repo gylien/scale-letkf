@@ -2168,16 +2168,11 @@ SUBROUTINE write_obs(cfile,obs,append,missing)
   RETURN
 END SUBROUTINE write_obs
 
-!
-! check = .false.: no check, overwrite anyway
-!         .true.:  check, stop if inconsistency occurs, use maximum qc
-!
-SUBROUTINE read_obs_da(cfile,obs,im,check)
+SUBROUTINE read_obs_da(cfile,obs,im)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_da_value),INTENT(INOUT) :: obs
   INTEGER,INTENT(IN) :: im
-  LOGICAL,INTENT(IN) :: check
 #ifdef H08
 !  REAL(r_sngl) :: wk(7) ! H08
   REAL(r_sngl) :: wk(8) ! H08
@@ -2192,37 +2187,19 @@ SUBROUTINE read_obs_da(cfile,obs,im,check)
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   DO n=1,obs%nobs
     READ(iunit) wk
-    if (check .and. obs%set(n) /= NINT(wk(1))) then
-      write (6,'(A)') 'error: obs_da_value%set are inconsistent among the ensemble'
-      stop
-    end if
     obs%set(n) = NINT(wk(1))
-    if (check .and. obs%idx(n) /= NINT(wk(2))) then
-      write (6,'(A)') 'error: obs_da_value%idx are inconsistent among the ensemble'
-      stop
-    end if
     obs%idx(n) = NINT(wk(2))  !!!!!! will overflow......
     if (im == 0) then
       obs%val(n) = REAL(wk(3),r_size)
     else
       obs%ensval(im,n) = REAL(wk(3),r_size)
     end if
-    if ((.not. check) .or. (check .and. obs%qc(n) < NINT(wk(4)))) then ! choose the maximum qc value if check = .true.
-      obs%qc(n) = NINT(wk(4))
-    end if
-    if (check .and. obs%ri(n) /= REAL(wk(5),r_size)) then
-      write (6,'(A)') 'error: obs_da_value%ri are inconsistent among the ensemble'
-      stop
-    end if
+    obs%qc(n) = NINT(wk(4))
     obs%ri(n) = REAL(wk(5),r_size)
-    if (check .and. obs%rj(n) /= REAL(wk(6),r_size)) then
-      write (6,'(A)') 'error: obs_da_value%rj are inconsistent among the ensemble'
-      stop
-    end if
     obs%rj(n) = REAL(wk(6),r_size)
 #ifdef H08
-    obs%lev(n) = obs%lev(n) + REAL(wk(7),r_size) ! H08
-    obs%val2(n) = obs%val2(n) + REAL(wk(8),r_size) ! H08
+    obs%lev(n) = REAL(wk(7),r_size) ! H08
+    obs%val2(n) = REAL(wk(8),r_size) ! H08
 #endif
   END DO
   CLOSE(iunit)

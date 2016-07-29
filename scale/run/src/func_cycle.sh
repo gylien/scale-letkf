@@ -40,7 +40,7 @@ Configuration files:
 Steps:
 $(for i in $(seq $nsteps); do echo "  ${i}. ${stepname[$i]}"; done)
 
-Usage: $myname [STIME ETIME ISTEP FSTEP TIME_LIMIT]
+Usage: $myname [STIME ETIME MEMBERS ISTEP FSTEP TIME_LIMIT]
 
   STIME       Time of the first cycle (format: YYYY[MMDDHHMMSS])
   ETIME       Time of the last  cycle (format: YYYY[MMDDHHMMSS])
@@ -82,10 +82,10 @@ TIME_LIMIT="${1:-$TIME_LIMIT}"
 #-------------------------------------------------------------------------------
 # error detection
 
-if ((MACHINE_TYPE == 10 && ONLINE_STGOUT != 0)); then
-  echo "[Error] $myname: When \$MACHINE_TYPE = 10, \$ONLINE_STGOUT needs to be 0." >&2
-  exit 1
-fi
+#if ((MACHINE_TYPE == 10 && ONLINE_STGOUT != 0)); then
+#  echo "[Error] $myname: When \$MACHINE_TYPE = 10, \$ONLINE_STGOUT needs to be 0." >&2
+#  exit 1
+#fi
 
 #... more detections...
 
@@ -148,15 +148,7 @@ if ((BDY_FORMAT >= 1)); then
   fi
 fi
 
-BUILTIN_STAGING=$((MACHINE_TYPE != 10 && MACHINE_TYPE != 11))
-
 OUT_CYCLE_SKIP=${OUT_CYCLE_SKIP:-1}
-
-if ((TMPRUN_MODE <= 2)); then
-  PROC_OPT='one'
-else
-  PROC_OPT='alln'
-fi
 
 #-------------------------------------------------------------------------------
 }
@@ -185,7 +177,7 @@ staging_list () {
 #-------------------------------------------------------------------------------
 # TMPDAT
 
-if ((TMPDAT_MODE == 1 && MACHINE_TYPE != 10)); then
+if ((TMPDAT_MODE == 1)); then
 #-------------------
   echo "[Error] \$TMPDAT_MODE == 1 not available in this version!" >&2
   exit 1
@@ -278,7 +270,7 @@ EOF
     time=$(datetime $time $LCYCLE s)
   done
 
-  if ((MACHINE_TYPE == 10)); then
+  if [ "$STG_TYPE" = 'K' ] || [ "$STG_TYPE" = 'K_rankdir' ]; then
     echo "${COMMON_DIR}/datetime|exec/datetime" >> $STAGING_DIR/stagein.dat
   fi
 #-------------------
@@ -287,7 +279,7 @@ fi
 #-------------------------------------------------------------------------------
 # TMPOUT
 
-if ((TMPOUT_MODE == 1 && MACHINE_TYPE != 10)); then
+if ((TMPOUT_MODE == 1)); then
 #-------------------
   echo "[Error] \$TMPOUT_MODE == 1 not available in this version!" >&2
   exit 1
@@ -670,7 +662,7 @@ else
 
       # log
       #-------------------
-      if ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
+      if [ "$MPI_TYPE" = 'K' ]; then
         log_zeros='0'
       else
         log_zeros='000000'
@@ -1596,7 +1588,7 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
-       $atime $TMPRUN/letkf $TMPDAT/obs \
+       $time $atime $TMPRUN/letkf $TMPDAT/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo \
        $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT \
        $MEMBER

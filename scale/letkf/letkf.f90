@@ -16,6 +16,7 @@ PROGRAM letkf
   USE common_nml
   USE letkf_obs
   USE letkf_tools
+  USE obsope_tools
 
   IMPLICIT NONE
   REAL(r_size),ALLOCATABLE :: gues3d(:,:,:,:)
@@ -27,12 +28,12 @@ PROGRAM letkf
   CHARACTER(7) :: stdoutf='-000000'
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
-!  TYPE(obs_info) :: obs
-!  TYPE(obs_da_value) :: obsval
-
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
   integer :: iarg
+
+  character(filelenmax) :: obsdafile
+  character(11) :: obsda_suffix = '.000000.dat'
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -100,6 +101,7 @@ PROGRAM letkf
 
   call set_common_conf(nprocs)
 
+  call read_nml_obsope
   call read_nml_letkf
   call read_nml_letkf_var_local
   call read_nml_letkf_obserr
@@ -109,9 +111,9 @@ PROGRAM letkf
 
   call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
-  if (myrank_use) then
+  call set_scalelib
 
-    call set_scalelib
+  if (myrank_use) then
 
     call set_common_scale
     call set_common_mpi_scale
@@ -123,12 +125,9 @@ PROGRAM letkf
     rtimer00=rtimer
 
 !-----------------------------------------------------------------------
-! Observations
+! Read observations
 !-----------------------------------------------------------------------
 
-    !
-    ! Read observations
-    !
     allocate(obs(OBS_IN_NUM))
     call read_obs_all_mpi(obs)
 
@@ -137,9 +136,39 @@ PROGRAM letkf
     WRITE(6,timer_fmt) '### TIMER(READ_OBS):',rtimer-rtimer00
     rtimer00=rtimer
 
-    !
-    ! Read and process observation data
-    !
+!-----------------------------------------------------------------------
+! Observation operator
+!-----------------------------------------------------------------------
+
+    ! get the number of externally processed observations first
+    if (OBSDA_IN) then
+      if (proc2mem(1,1,myrank+1) >= 1 .and. proc2mem(1,1,myrank+1) <= MEMBER) then
+        call file_member_replace(proc2mem(1,1,myrank+1), OBSDA_IN_BASENAME, obsdafile)
+        write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,1,myrank+1)
+#ifdef H08
+        CALL get_nobs(trim(obsdafile)//obsda_suffix,8,nobs_ext) ! H08
+#else
+        CALL get_nobs(trim(obsdafile)//obsda_suffix,6,nobs_ext)
+#endif
+      end if
+    else
+      nobs_ext = 0
+    end if
+
+    ! compute observation operator, return the results in obsda
+    ! with additional space for externally processed observations
+    obsda%nobs = nobs_ext
+    call obsope_cal(obs, obsda_return=obsda)
+
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    rtimer = MPI_WTIME()
+    WRITE(6,timer_fmt) '### TIMER(OBS_OPERATOR):',rtimer-rtimer00
+    rtimer00=rtimer
+
+!-----------------------------------------------------------------------
+! Process observation data
+!-----------------------------------------------------------------------
+
     CALL set_letkf_obs
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
