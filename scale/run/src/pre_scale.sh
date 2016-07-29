@@ -95,6 +95,49 @@ else
   IO_LOG_DIR="${SCPCALL}_scale"
 fi
 
+# --- Parameter estimation (Tomita 2008) ----
+
+# PARAM_EST is defined within config.main
+if [ "$PARAM_EST" == "T" ] ; then #-- PARAM_EST
+
+  if [ $MEM == "mean" ] ; then
+    idx=$((MEMBER+1))
+  else
+    idx=$((MEM))
+  fi
+
+  if [ -e ${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt ] ; then
+    PARAM_FILE=${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt
+  elif [ -e ${TMPDAT}/param/EPARAM_TOMITA_ANAL${STIME}.txt ] ; then
+    PARAM_FILE=${TMPDAT}/param/EPARAM_TOMITA_ANAL${STIME}.txt
+  fi
+
+  while read line
+  do
+    TOMITA_PARAM_LIST=($line)
+    PARAM_NAME=${TOMITA_PARAM_LIST[0]}
+
+  # get TOMITA08 parameters 
+
+    if [ "$PARAM_NAME" == "Cr" ] ; then
+      TOMITA_CR=${TOMITA_PARAM_LIST[$idx]}"D0"
+    elif [ "$PARAM_NAME" == "Cs" ] ; then
+      TOMITA_CS=${TOMITA_PARAM_LIST[$idx]}"D0"
+    elif [ "$PARAM_NAME" == "drag_g" ] ; then
+      TOMITA_DRAGG=${TOMITA_PARAM_LIST[$idx]}"D0"
+    elif [ "$PARAM_NAME" == "beta_saut" ] ; then
+      TOMITA_BETA_SAUT=${TOMITA_PARAM_LIST[$idx]}"D0"
+    elif [ "$PARAM_NAME" == "gamma_saut" ] ; then
+      TOMITA_GAMMA_SAUT=${TOMITA_PARAM_LIST[$idx]}"D0"
+    elif [ "$PARAM_NAME" == "gamma_sacr" ] ; then
+      TOMITA_GAMMA_SACR=${TOMITA_PARAM_LIST[$idx]}"D0"
+    fi
+  done < ${PARAM_FILE}
+
+fi # -- PARAM_EST
+
+# -------------------------------------------
+
 #===============================================================================
 
 TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
@@ -125,6 +168,15 @@ cat $TMPDAT/conf/config.nml.scale | \
         -e "/!--ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME--/a ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME = \"${TMPDAT}/rad/cira.nc\"," \
         -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${TMPDAT}/rad/MIPAS\"," \
     > $TMPDIR/run.conf
+
+if [ "$PARAM_EST" == "T" ] ; then #-- PARAM_EST
+  sed -i -e "/!--PARAM_ATMOS_PHY_MP_TOMITA08_CR--/a Cr = ${TOMITA_CR}," $TMPDIR/run.conf
+  sed -i -e "/!--PARAM_ATMOS_PHY_MP_TOMITA08_CS--/a Cs = ${TOMITA_CS}," $TMPDIR/run.conf
+  sed -i -e "/!--PARAM_ATMOS_PHY_MP_TOMITA08_DRAGG--/a drag_g = ${TOMITA_DRAGG}," $TMPDIR/run.conf
+  sed -i -e "/!--PARAM_ATMOS_PHY_MP_TOMITA08_BETA_SAUT--/a beta_saut = ${TOMITA_BETA_SAUT}," $TMPDIR/run.conf
+  sed -i -e "/!--PARAM_ATMOS_PHY_MP_TOMITA08_GAMMA_SAUT--/a gamma_saut = ${TOMITA_GAMMA_SAUT}," $TMPDIR/run.conf
+  sed -i -e "/!--PARAM_ATMOS_PHY_MP_TOMITA08_GAMMA_SACR--/a gamma_sacr = ${TOMITA_GAMMA_SACR}," $TMPDIR/run.conf
+fi # -- PARAM_EST
 
 #===============================================================================
 

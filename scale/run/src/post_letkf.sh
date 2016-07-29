@@ -40,4 +40,13 @@ fi
 
 #===============================================================================
 
+
+# --- Parameter estimation (Tomita 2008) ----
+if ((PARAM_EST == "T" && MYRANK == 0 )) ; then #-- PARAM_EST
+#  cp -f $TMPDIR/EPARAM_TOMITA.txt $TMPDAT/param/EPARAM_TOMITA_ANAL${ATIME}.txt
+  mv -f $TMPDIR/EPARAM_TOMITA_ANAL.txt $TMPOUT/${ATIME}/log/letkf/EPARAM_TOMITA_ANAL${ATIME}.txt
+fi
+
+# -------------------------------------------
+
 exit 0

@@ -245,6 +245,23 @@ ${RTTOV_SCCOEF}|rttov/sccldcoef_himawari_8_ahi.dat
 EOF
   fi
 
+# --- Parameter estimation (Tomita 2008) ----
+  if [  "$PARAM_EST" == "T" ] ; then
+    pathin="${OUTDIR}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt"
+    path="param/EPARAM_TOMITA_ANAL${STIME}.txt"
+    if [ ! -e ${pathin} ] ; then
+      echo "[Error] No parameter input for parameter estimation!"
+      echo ${pathin}
+      exit 1
+    else
+      echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+    fi
+  fi
+# -------------------------------------------
+
+
+
+
   if [ "$TOPO_FORMAT" != 'prep' ]; then
     if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
       echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat

@@ -87,6 +87,29 @@ if ((NOBS_OUT == 1)); then
   NOBS_OUT_TF='.true.'
 fi
 
+# --- Parameter estimation (Tomita 2008) ----
+
+if [ "$PARAM_EST" == "T" ] ; then #-- PARAM_EST
+
+  STIME=$(datetime $ATIME -$LCYCLE s)
+  if [ -e ${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt ] ; then
+    PARAM_FILE="${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt"
+  elif [ -e ${TMPDAT}/param/EPARAM_TOMITA_ANAL${STIME}.txt ] ; then
+    PARAM_FILE="${TMPDAT}/param/EPARAM_TOMITA_ANAL${STIME}.txt"
+  else
+    echo "No parameter input!! check! ""${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt"
+    echo "No parameter input!! check! ""${TMPDAT}/param/EPARAM_TOMITA_ANAL${STIME}.txt"
+    echo "No parameter input!! check! "$PARAM_FILE
+    exit 1
+  fi
+  
+  echo $PARAM_FILE
+  cp $PARAM_FILE $TMPDIR/EPARAM_TOMITA_GUES.txt
+
+fi
+
+# -------------------------------------------
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.letkf | \
