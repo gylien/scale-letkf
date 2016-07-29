@@ -1,10 +1,10 @@
 &PARAM_IO
-[IO_LOG_BASENAME]
+!--IO_LOG_BASENAME--
  IO_LOG_ALLNODE  = .false.,
 /
 
 &PARAM_TIME
-[TIME_STARTDATE]
+!--TIME_STARTDATE--
  TIME_STARTMS   = 0.D0,
 /
 
@@ -14,45 +14,45 @@
 /
 
 &PARAM_TOPO
-[TOPO_OUT_BASENAME]
+!--TOPO_OUT_BASENAME--
 /
 
 &PARAM_LANDUSE
-[LANDUSE_OUT_BASENAME]
+!--LANDUSE_OUT_BASENAME--
 /
 
 &PARAM_CONVERT
-[CONVERT_TOPO]
-[CONVERT_LANDUSE]
+!--CONVERT_TOPO--
+!--CONVERT_LANDUSE--
 /
 
 &PARAM_CNVTOPO
-[CNVTOPO_name]
- CNVTOPO_SMOOTH_MAXSLOPE = 6.00D0,
+!--CNVTOPO_name--
+ CNVTOPO_SMOOTH_MAXSLOPE = 4.00D0,
 /
 
 &PARAM_CNVTOPO_GTOPO30
  GTOPO30_IN_CATALOGUE = "GTOPO30_catalogue.txt",
- GTOPO30_IN_DIR       = "./input_topo",
+!--GTOPO30_IN_DIR--
 /
 
 &PARAM_CNVTOPO_DEM50M
- DEM50M_IN_CATALOGUE = "DEM50M_catalogue.txt",
- DEM50M_IN_DIR       = "./input_topo",
+ DEM50M_IN_CATALOGUE = "DEM50m_catalogue.txt",
+!--DEM50M_IN_DIR--
 /
 
 &PARAM_CNVLANDUSE
-[CNVLANDUSE_name]
+!--CNVLANDUSE_name--
 /
 
 &PARAM_CNVLANDUSE_GLCCv2
  GLCCv2_IN_CATALOGUE = "GLCCv2_catalogue.txt",
- GLCCv2_IN_DIR       = "./input_landuse",
+!--GLCCv2_IN_DIR--
 /
 
 &PARAM_CNVLANDUSE_LU100M
- LU100M_IN_CATALOGUE = "LU100M_catalogue.txt",
- LU100M_IN_DIR       = "./input_landuse",
+ LU100M_IN_CATALOGUE = "LU100m_catalogue.txt",
+!--LU100M_IN_DIR--
 /
 
 #################################################
