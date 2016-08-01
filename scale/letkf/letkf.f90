@@ -35,6 +35,11 @@ PROGRAM letkf
   character(filelenmax) :: obsdafile
   character(11) :: obsda_suffix = '.000000.dat'
 
+!-- Estimating Tomita (2008) parameters as global (0d) constant --!
+#ifdef PEST_TOMITA
+  REAL(r_size),ALLOCATABLE :: panal0d(:,:)
+#endif
+
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
@@ -108,6 +113,10 @@ PROGRAM letkf
   call read_nml_letkf_monitor
   call read_nml_letkf_radar
   call read_nml_letkf_h08
+
+#ifdef PEST_TOMITA
+    call read_nml_letkf_pest_tomita
+#endif
 
   call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
 
@@ -203,6 +212,9 @@ PROGRAM letkf
     ALLOCATE(anal3d(nij1,nlev,MEMBER,nv3d))
     ALLOCATE(anal2d(nij1,MEMBER,nv2d))
 
+#ifdef PEST_TOMITA
+    ALLOCATE(panal0d(MEMBER+2,PNUM_TOMITA))
+#endif
 
     !
     ! LETKF GRID setup
@@ -220,7 +232,12 @@ PROGRAM letkf
     ! READ GUES
     !
 
+#ifdef PEST_TOMITA
+    call read_ens_mpi(GUES_IN_BASENAME,gues3d,gues2d,pgues0d=panal0d)
+    write(6,'(a,5f8.2)')"PEST CHECK G: ",(panal0d(1:5,1))
+#else
     call read_ens_mpi(GUES_IN_BASENAME,gues3d,gues2d)
+#endif
 
 !  write (6,*) gues3d(20,:,3,iv3d_t)
 !!  write (6,*) gues2d
@@ -251,7 +268,13 @@ PROGRAM letkf
 !    anal3d = gues3d
 !    anal2d = gues2d
 
+#ifdef PEST_TOMITA
+    CALL das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d=panal0d)
+!    CALL write_para_txt("TEST.txt",panal0d)
+    write(6,'(a,5f8.2)')"PEST CHECK A: ",(panal0d(1:5,1))
+#else
     CALL das_letkf(gues3d,gues2d,anal3d,anal2d)
+#endif
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -265,7 +288,11 @@ PROGRAM letkf
     !
 !    CALL MPI_BARRIER(MPI_COMM_a,ierr)
 
+#ifdef PEST_TOMITA
+    CALL write_ens_mpi(ANAL_OUT_BASENAME,anal3d,anal2d,panal0d=panal0d)
+#else
     CALL write_ens_mpi(ANAL_OUT_BASENAME,anal3d,anal2d)
+#endif
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()

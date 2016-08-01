@@ -42,9 +42,13 @@ fi
 
 
 # --- Parameter estimation (Tomita 2008) ----
-if ((PARAM_EST == "T" && MYRANK == 0 )) ; then #-- PARAM_EST
-#  cp -f $TMPDIR/EPARAM_TOMITA.txt $TMPDAT/param/EPARAM_TOMITA_ANAL${ATIME}.txt
-  mv -f $TMPDIR/EPARAM_TOMITA_ANAL.txt $TMPOUT/${ATIME}/log/letkf/EPARAM_TOMITA_ANAL${ATIME}.txt
+if ((MYRANK == 0 )) && [ "$PARAM_EST" == "T" ] ; then
+  if [ -e $TMPDIR/EPARAM_TOMITA_ANAL.txt ] ; then
+    mv -f $TMPDIR/EPARAM_TOMITA_ANAL.txt $TMPOUT/${ATIME}/log/letkf/EPARAM_TOMITA_ANAL${ATIME}.txt
+  else
+    echo "[Error] No parameter analysis after DA!!"
+    exit 1
+  fi
 fi
 
 # -------------------------------------------

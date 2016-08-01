@@ -1319,6 +1319,97 @@ SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
   RETURN
 END SUBROUTINE rij_g2l_auto
 
+#ifdef PEST_TOMITA
+SUBROUTINE write_para_txt(filename,para0d)
+  IMPLICIT NONE
 
+  CHARACTER(*),INTENT(IN) :: filename
+  ! MEMBER + mean + sprd
+  REAL(r_size),INTENT(IN) :: para0d(1:MEMBER+2,PNUM_TOMITA)
+  CHARACTER(20) :: cfmt
+  CHARACTER(3) :: CMEM
+  INTEGER :: m, pr1
+
+  write(CMEM,'(i3)')MEMBER + 2
+  cfmt = '(a,1x,'//CMEM//'f25.20)'
+
+!  write(6,*)"DEBUG cfmt ",trim(cfmt)
+
+  OPEN(9999,file=trim(filename),form='formatted')
+  DO pr1 = 1, PNUM_TOMITA
+    write(9999,trim(cfmt))trim(PNAME_TOMITA(pr1)),(para0d(m,pr1),m=1,MEMBER+2)
+  ENDDO
+
+  RETURN
+END SUBROUTINE write_para_txt
+! -
+SUBROUTINE read_para_txt(filename,para0d)
+  IMPLICIT NONE
+
+  CHARACTER(*),INTENT(IN) :: filename
+  ! MEMBER + mean + sprd
+  REAL(r_size),INTENT(OUT) :: para0d(1:MEMBER+2,PNUM_TOMITA)
+  CHARACTER(10) :: pname
+  CHARACTER(20) :: cfmt
+  CHARACTER(3) :: CMEM
+  INTEGER :: m, pr1
+
+  write(CMEM,'(i3)')MEMBER + 2
+  cfmt = '(a,1x,'//CMEM//'f25.20)'
+
+  OPEN(9999,file=trim(filename),form='formatted')
+  DO pr1 = 1, PNUM_TOMITA
+    !read(9999,cfmt)pname,(para0d(m,pr1),m=1,MEMBER+1)
+    read(9999,*)pname,(para0d(m,pr1),m=1,MEMBER+2)
+    IF(trim(pname) /= trim(PNAME_TOMITA(pr1)))THEN
+      write(6,*) 'xxx Not appropriate names in parameter file! Check!'
+      stop
+    ENDIF
+    !write(6,*)"DEBUG CHECK",pname,(para0d(m,pr1),m=1,MEMBER+2)
+  ENDDO
+
+  RETURN
+END SUBROUTINE read_para_txt
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+!  copied from [module prm_functions]
+!
+!  created, Dec 2015 by Shunji Kotsuki, RIKEN-AICS
+!    to aapply parameter estimation of NICAM-LETKF
+!
+!---------------------------------------------------------------------
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+function prm2func ( pmin, pmax, xvar ) ! x --> y
+  IMPLICIT NONE
+  REAL(r_size) :: prm2func
+  REAL(r_size), INTENT(IN) :: pmin, pmax, xvar
+
+!  prm2func = datanh ( ( 2.0d0*xvar - ( pmax + pmin ) ) / ( pmax - pmin ) )
+!  print *, prm2func, fnc_datanh( ( 2.0d0*xvar - ( pmax + pmin ) ) / ( pmax -
+!  pmin ) )
+  prm2func = fnc_datanh( ( 2.0d0*xvar - ( pmax + pmin ) ) / ( pmax - pmin ) )
+
+end function prm2func
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+function func2prm ( pmin, pmax, yvar ) ! y --> x
+  IMPLICIT NONE
+  REAL(r_size) :: func2prm
+  REAL(r_size), INTENT(IN) :: pmin, pmax, yvar
+
+  func2prm = 0.5d0 * ( ( pmax + pmin ) + dtanh(yvar)*( pmax - pmin ) )
+
+end function func2prm
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+function fnc_datanh( xvar )
+  IMPLICIT NONE
+  REAL(r_size) :: fnc_datanh
+  REAL(r_size), INTENT(IN) :: xvar
+
+  fnc_datanh = 0.5d0 * ( dlog(1.0d0+xvar) - dlog(1.0d0-xvar) )
+
+end function fnc_datanh
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#endif
 
 END MODULE common_scale

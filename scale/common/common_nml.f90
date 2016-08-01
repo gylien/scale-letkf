@@ -19,6 +19,18 @@ MODULE common_nml
   integer, parameter :: filelenmax = 256
   integer, parameter :: memberflen = 4 ! Length of member # in filename
   integer, parameter :: nch = 10 ! Num of Himawari-8 (IR) channels 
+#ifdef PEST_TOMITA
+  integer,parameter  :: PNUM_TOMITA = 6 ! Number of the Tomita (2008)'s parameters.
+                                        ! [Cr, Cs, drag_g, beta_saut, gamma_saut,
+                                        ! gamma_sacr]
+  integer  :: EPNUM_TOMITA = 0 ! Number of  Tomita (2008) parameters to be estimated.
+                               ! Depending on  PEST_TOMITA_FLAG.
+  CHARACTER(10) :: PNAME_TOMITA(PNUM_TOMITA) = (/'Cr        ', 'Cs       ', &
+                                                 'drag_g    ', 'beta_saut', &
+                                                 'gamma_saut','gamma_sacr'/)
+  REAL(r_size) :: DEF_PARAM_TOMITA(PNUM_TOMITA) = (/58.D0, 0.9D0, 2.5D0,&
+                                                    6D-3, 6D-2, 2D-2/) ! Default parameters in Tomita (2008).
+#endif
 
   !--- PARAM_ENSEMBLE
   integer :: MEMBER = 3      ! ensemble size
@@ -205,6 +217,33 @@ MODULE common_nml
                         !! ==0: NOT assimilate (rejected by QC in trans_XtoY_H08)
                         !! It is better to reject B11(ch=5) & B12(ch=6) obs because these bands are 
                         !! sensitive to chemicals.
+
+#ifdef PEST_TOMITA
+  !---PARAM_LETKF_PEST_TOMITA 
+  !-- Parameter estimation for Tomita (2008)'s namelist parameters. 
+  !-- !! Parameters are treated as global constants.
+  !-- !! If you wish to estimate as a local parameter, you should change the
+  !-- !! source code of the SCALE-RM.
+  REAL(r_size),ALLOCATABLE :: EPARAM_TOMITA(:,:) ! Estimated parameters in Tomita (2008).
+                                                 ! To be allocated in
+                                                 ! subroutine read_nml_letkf_pest_tomita
+                                                 ! EPARAM_TOMITA(MEMBER+1,PNUM_TOMITA)
+  REAL(r_size),ALLOCATABLE :: EPARAM_TOMITA_CR(:) ! Estimating parameters in Tomita (2008).
+  REAL(r_size),ALLOCATABLE :: EPARAM_TOMITA_CS(:) ! Estimating parameters in Tomita (2008).
+  REAL(r_size),ALLOCATABLE :: EPARAM_TOMITA_DRAGG(:) ! Estimating parameters in Tomita (2008).
+  REAL(r_size),ALLOCATABLE :: EPARAM_TOMITA_BETAS(:) ! Estimating parameters in Tomita (2008).
+  REAL(r_size),ALLOCATABLE :: EPARAM_TOMITA_GAMMAT(:) ! Estimating parameters in Tomita (2008).
+  REAL(r_size),ALLOCATABLE :: EPARAM_TOMITA_GAMMAR(:) ! Estimating parameters in Tomita (2008).
+  LOGICAL :: PEST_TOMITA_FLAG(PNUM_TOMITA) = (/.false.,.false.,.false.,.false.,.false.,.false./)
+  REAL(r_size) :: EPARAM_TOMITA_CR_LIMIT(2) = (/30.0D0,100.0D0/) ! Max/min threshold for Tomita (2008) parameter (Cr)
+  REAL(r_size) :: EPARAM_TOMITA_CS_LIMIT(2) = (/0.8D0,1.0D0/) ! Max/min threshold for Tomita (2008) parameter (Cs)
+  REAL(r_size) :: EPARAM_TOMITA_DRAGG_LIMIT(2) = (/1.0D0,5.0D0/) ! Max/min threshold for Tomita (2008) parameter (drag_g)
+  REAL(r_size) :: EPARAM_TOMITA_BETAS_LIMIT(2) = (/0.5D-3,8.0D-3/) ! Max/min threshold for Tomita (2008) parameter (beta_saut)
+  REAL(r_size) :: EPARAM_TOMITA_GAMMAT_LIMIT(2) = (/1.0D-2,7.0D-2/) ! Max/min threshold for Tomita (2008) parameter (gamma_saut)
+  REAL(r_size) :: EPARAM_TOMITA_GAMMAR_LIMIT(2) = (/1.0D-2,7.0D-2/) ! Max/min threshold for Tomita (2008) parameter (gamma_sacr)
+  REAL(r_size),ALLOCATABLE :: EPARAM_TOMITA_LIMIT(:,:) ! Max/min threshold for Tomita (2008) parameters.
+#endif
+
 
 contains
 !-----------------------------------------------------------------------
@@ -634,6 +673,90 @@ subroutine read_nml_letkf_h08
 
   return
 end subroutine read_nml_letkf_h08
+
+#ifdef PEST_TOMITA
+!-----------------------------------------------------------------------
+! PARAM_LETKF_PEST_TOMITA
+!-----------------------------------------------------------------------
+subroutine read_nml_letkf_pest_tomita
+  implicit none
+  integer :: ierr
+  integer :: pr1
+
+  namelist /PARAM_LETKF_PEST_TOMITA/ &
+    PEST_TOMITA_FLAG,  &
+    EPNUM_TOMITA,      &
+!    EPARAM_TOMITA_CR,  &
+!    EPARAM_TOMITA_CS,  &
+!    EPARAM_TOMITA_DRAGG,  &
+!    EPARAM_TOMITA_BETAS,  &
+!    EPARAM_TOMITA_GAMMAT,  &
+!    EPARAM_TOMITA_GAMMAR,  &
+    EPARAM_TOMITA_CR_LIMIT, &
+    EPARAM_TOMITA_CS_LIMIT, &
+    EPARAM_TOMITA_DRAGG_LIMIT, &
+    EPARAM_TOMITA_BETAS_LIMIT, &
+    EPARAM_TOMITA_GAMMAT_LIMIT, &
+    EPARAM_TOMITA_GAMMAR_LIMIT
+
+! MEMBER + mean + sprd
+  if(.not.allocated(EPARAM_TOMITA)) allocate(EPARAM_TOMITA(1:MEMBER+2,1:PNUM_TOMITA))
+  if(.not.allocated(EPARAM_TOMITA_CR)) allocate(EPARAM_TOMITA_CR(1:MEMBER+2))
+  if(.not.allocated(EPARAM_TOMITA_CS)) allocate(EPARAM_TOMITA_CS(1:MEMBER+2))
+  if(.not.allocated(EPARAM_TOMITA_DRAGG)) allocate(EPARAM_TOMITA_DRAGG(1:MEMBER+2))
+  if(.not.allocated(EPARAM_TOMITA_BETAS)) allocate(EPARAM_TOMITA_BETAS(1:MEMBER+2))
+  if(.not.allocated(EPARAM_TOMITA_GAMMAT)) allocate(EPARAM_TOMITA_GAMMAT(1:MEMBER+2))
+  if(.not.allocated(EPARAM_TOMITA_GAMMAR)) allocate(EPARAM_TOMITA_GAMMAR(1:MEMBER+2))
+
+  if(.not.allocated(EPARAM_TOMITA_LIMIT)) allocate(EPARAM_TOMITA_LIMIT(2,1:PNUM_TOMITA))
+
+  EPARAM_TOMITA_CR = DEF_PARAM_TOMITA(1)
+  EPARAM_TOMITA_CS = DEF_PARAM_TOMITA(2)
+  EPARAM_TOMITA_DRAGG = DEF_PARAM_TOMITA(3)
+  EPARAM_TOMITA_BETAS = DEF_PARAM_TOMITA(4)
+  EPARAM_TOMITA_GAMMAT = DEF_PARAM_TOMITA(5)
+  EPARAM_TOMITA_GAMMAR = DEF_PARAM_TOMITA(6)
+
+!  do pr1 = 1, PNUM_TOMITA
+!    EPARAM_TOMITA(:,pr1) = DEF_PARAM_TOMITA(pr1) ! Set default parameter values
+!  enddo
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_LETKF_PEST_TOMITA,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_LETKF_PEST_TOMITA/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_PEST_TOMITA. Check!'
+    stop
+  endif
+
+  EPARAM_TOMITA(:,1) = EPARAM_TOMITA_CR(1:MEMBER+2)
+  EPARAM_TOMITA_LIMIT(:,1) = EPARAM_TOMITA_CR_LIMIT(1:2)
+
+  EPARAM_TOMITA(:,2) = EPARAM_TOMITA_CS(1:MEMBER+2)
+  EPARAM_TOMITA_LIMIT(:,2) = EPARAM_TOMITA_CS_LIMIT(1:2)
+
+  EPARAM_TOMITA(:,3) = EPARAM_TOMITA_DRAGG(1:MEMBER+2)
+  EPARAM_TOMITA_LIMIT(:,3) = EPARAM_TOMITA_DRAGG_LIMIT(1:2)
+
+  EPARAM_TOMITA(:,4) = EPARAM_TOMITA_BETAS(1:MEMBER+2)
+  EPARAM_TOMITA_LIMIT(:,4) = EPARAM_TOMITA_BETAS_LIMIT(1:2)
+
+  EPARAM_TOMITA(:,5) = EPARAM_TOMITA_GAMMAT(1:MEMBER+2)
+  EPARAM_TOMITA_LIMIT(:,5) = EPARAM_TOMITA_GAMMAT_LIMIT(1:2)
+
+  EPARAM_TOMITA(:,6) = EPARAM_TOMITA_GAMMAR(1:MEMBER+2)
+  EPARAM_TOMITA_LIMIT(:,6) = EPARAM_TOMITA_GAMMAR_LIMIT(1:2)
+
+  EPNUM_TOMITA = COUNT(PEST_TOMITA_FLAG)
+
+  write(6, nml=PARAM_LETKF_PEST_TOMITA)
+
+  return
+end subroutine read_nml_letkf_pest_tomita
+#endif
+!-----------------------------------------------------------------------
 
 !-----------------------------------------------------------------------
 ! file_member_replace

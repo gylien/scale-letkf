@@ -51,3 +51,11 @@ ifeq ($(H08),T)
 FOPTS     += -DH08
 FOPTS_SCALE += -DH08
 endif
+
+# -- Estimating global (namelist) parameters in Tomita (2008) (T.Honda)
+PEST_TOMITA       = F
+
+ifeq ($(PEST_TOMITA),T)
+FOPTS     += -DPEST_TOMITA
+FOPTS_SCALE += -DPEST_TOMITA
+endif

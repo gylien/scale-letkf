@@ -851,7 +851,7 @@ END SUBROUTINE read_ens_history_iter
 !-----------------------------------------------------------------------
 ! Read ensemble data and distribute to processes
 !-----------------------------------------------------------------------
-subroutine read_ens_mpi(file,v3d,v2d)
+subroutine read_ens_mpi(file,v3d,v2d,pgues0d)
   implicit none
   CHARACTER(*),INTENT(IN) :: file
   REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,MEMBER,nv3d)
@@ -861,6 +861,7 @@ subroutine read_ens_mpi(file,v3d,v2d)
   character(filelenmax) :: filename
   integer :: it,im,mstart,mend
 
+  REAL(r_size),OPTIONAL,INTENT(OUT) :: pgues0d(MEMBER+2,PNUM_TOMITA)  ! MEMBER + mean + sprd
 
   integer :: ierr
   REAL(r_dble) :: rrtimer00,rrtimer
@@ -891,6 +892,12 @@ subroutine read_ens_mpi(file,v3d,v2d)
   WRITE(6,'(A,F10.2)') '###### read_ens_mpi:state_trans:               ',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
+#ifdef PEST_TOMITA
+!  if (myrank == lastmem_rank_e) then
+      if(EPNUM_TOMITA >= 1) then
+        call read_para_txt("EPARAM_TOMITA_GUES.txt",pgues0d)
+      endif
+#endif
 
     end if
     mstart = 1 + (it-1)*nprocs_e
@@ -913,7 +920,7 @@ end subroutine read_ens_mpi
 !-----------------------------------------------------------------------
 ! Write ensemble data after collecting data from processes
 !-----------------------------------------------------------------------
-SUBROUTINE write_ens_mpi(file,v3d,v2d)
+SUBROUTINE write_ens_mpi(file,v3d,v2d,panal0d)
   implicit none
   CHARACTER(*),INTENT(IN) :: file
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,MEMBER,nv3d)
@@ -923,6 +930,7 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
   character(filelenmax) :: filename
   integer :: it,im,mstart,mend
 
+  REAL(r_size),OPTIONAL,INTENT(IN) :: panal0d(MEMBER+2,PNUM_TOMITA) ! MEMBER + mean + sprd
 
   integer :: ierr
   REAL(r_dble) :: rrtimer00,rrtimer
@@ -967,6 +975,13 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
 
     end if
   end do ! [ it = 1, nitmax ]
+
+#ifdef PEST_TOMITA
+  if ((myrank == lastmem_rank_e) .and. EPNUM_TOMITA >= 1 ) then
+!    write(6,'(a)')"debug check mpi_scale"
+    call write_para_txt("EPARAM_TOMITA_ANAL.txt",panal0d)
+  endif
+#endif
 
   return
 END SUBROUTINE write_ens_mpi
