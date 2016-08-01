@@ -5,7 +5,7 @@
 #
 #===============================================================================
 
-PRESET='K_rankdir'                          # 'K' or 'K_rankdir'
+PRESET='K_rankdir'                          # 'K' or 'K_rankdir' or 'K_micro'
 
 #===============================================================================
 
@@ -70,6 +70,8 @@ OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings
 OBSNUM=1
 OBSNAME[1]=obs                                    
 OBSNAME[2]=radar
+OBSOPE_SEPARATE[1]=0
+OBSOPE_SEPARATE[2]=0
 
 #===============================================================================
 # Cycling settings
@@ -121,7 +123,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
-#TMP=
+TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
 
