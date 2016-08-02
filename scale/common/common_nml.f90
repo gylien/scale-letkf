@@ -199,6 +199,10 @@ MODULE common_nml
                                            ! Negative values: turn off
   integer :: H08_MIN_CLD_MEMBER = 1       ! If the number of the cloudy members is larger than H08_MIN_CLD_MEMBER,
                                            ! the first guess is diagnosed as cloudy. ! Not finished yet!
+  logical :: H08_CLD_OBSERR = .false. ! Cloud dependent obs error for Him8. If this is true, obs error depending on CA is assigned in letkf
+  real(r_size) :: H08_CLD_OBSERR_WTH = 1.0d0 ! Bin width of CA for cloud dependent obs error.
+  integer :: H08_CLD_OBSERR_NBIN = 51 ! Number of bins for CA.
+  
   integer :: H08_CH_USE(nch) = (/0,0,1,0,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
                         !! (B07,B08,B09,B10,B11,B12,B13,B14,B15,B16)
@@ -620,6 +624,9 @@ subroutine read_nml_letkf_h08
     H08_RTTOV_CFRAC_CNST, &
     H08_LIMIT_LEV, &
     H08_BT_MIN, &
+    H08_CLD_OBSERR, &
+    H08_CLD_OBSERR_WTH, &
+    H08_CLD_OBSERR_NBIN, &
     H08_CH_USE
 
   rewind(IO_FID_CONF)

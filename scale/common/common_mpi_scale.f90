@@ -1171,7 +1171,7 @@ END SUBROUTINE buf_to_grd
 !-----------------------------------------------------------------------
 ! STORING DATA (ensemble mean and spread)
 !-----------------------------------------------------------------------
-SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
+SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2,Him8_OAB)
   use scale_process, only: PRC_myrank
   implicit none
 
@@ -1198,6 +1198,8 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   REAL(r_size) :: rmse_g(nid_obs)
   LOGICAL :: monit_type(nid_obs)
   INTEGER :: ierr
+
+! -- Him8 monitor for all IR bands
 #ifdef H08
   INTEGER :: nobs_H08(nch)
   INTEGER :: nobs_H08_tmp(nch)
@@ -1209,10 +1211,15 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   REAL(r_size) :: rmse_H08_tmp(nch)
   REAL(r_size) :: rmse_H08_g(nch)
 #endif
-
+  REAL(r_size),INTENT(INOUT),ALLOCATABLE,OPTIONAL :: Him8_OAB(:)
+  LOGICAL :: flag_Him8_ANAL = .false.
   type(obs_info),intent(in) :: obs(OBS_IN_NUM)
   type(obs_da_value),intent(in),allocatable :: obsda2(:)
-
+  INTEGER :: tmp_nHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Number of Him8 obs as a function of CA
+  INTEGER :: nHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Number of Him8 obs as a function of CA
+  REAL(r_size) :: tmp_sHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Sum of Him8's [O-A]x[O-B] as a function of CA
+  REAL(r_size) :: sHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Sum of Him8's [O-A]x[O-B] as a function of CA
+  INTEGER :: ch
 
   REAL(r_dble) :: rrtimer00,rrtimer
 
@@ -1222,6 +1229,13 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
   CALL ensmean_grd(MEMBER,nij1,v3d,v2d,v3dm,v2dm)
 
+#ifdef H08
+  if(Him8_OAB(1) > 0.0d0)then
+    flag_Him8_ANAL = .true.
+    nHim8_CA = 0     ! tentative !!
+    sHim8_CA = 0.0d0 ! tentative !!
+  endif
+#endif
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
@@ -1243,7 +1257,8 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
       if(DEPARTURE_STAT_H08_ALL)then
 #ifdef H08
         call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,nobs,bias,rmse,monit_type,&
-                       nobs_H08=nobs_H08,bias_H08=bias_H08,rmse_H08=rmse_H08)
+                       nobs_H08=nobs_H08,bias_H08=bias_H08,rmse_H08=rmse_H08,Him8_OAB=Him8_OAB,&
+                       nHim8=tmp_nHim8_CA,sHim8=tmp_sHim8_CA)
 #endif
       else
         call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,nobs,bias,rmse,monit_type)
@@ -1272,7 +1287,6 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
       call MPI_ALLREDUCE(nobs_tmp, nobs_g, nid_obs, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(bias_tmp, bias_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(rmse_tmp, rmse_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-
 
       do i = 1, nid_obs
         if (monit_type(i)) then
@@ -1318,6 +1332,18 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
           end if
         enddo
       endif ! -- DEPARTURE_STAT_H08_ALL
+
+      if(flag_Him8_ANAL .and. H08_CLD_OBSERR)then
+        call MPI_ALLREDUCE(tmp_nHim8_CA, nHim8_CA, nch*H08_CLD_OBSERR_NBIN, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+        call MPI_ALLREDUCE(tmp_sHim8_CA, sHim8_CA, nch*H08_CLD_OBSERR_NBIN, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+        do i = 1, H08_CLD_OBSERR_NBIN
+          do ch = 1, nch
+            sHim8_CA(ch,i) = sHim8_CA(ch,i) / REAL(nHim8_CA(ch,i),kind=r_size)
+            write(6,'(A,F10.3,I8)')"DEBUG ",sHim8_CA(ch,i),nHim8_CA(ch,i)
+          enddo
+        enddo
+      endif
+
 #endif
 
     end if
@@ -1346,7 +1372,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
       write(6,'(3A)') 'HIMAWARI-8 MONITOR FOR ALL IR BANDS (IN THIS SUBDOMAIN) [', trim(file_mean), ']:'
       call monit_print_H08(nobs_H08,bias_H08,rmse_H08)
       write(6,'(3A)') 'HIMAWARI-8 MONITOR FOR ALL IR BANDS (GLOBAL) [', trim(file_mean), ']:'
-      call monit_print(nobs_H08_g,bias_H08_g,rmse_H08_g)
+      call monit_print_H08(nobs_H08_g,bias_H08_g,rmse_H08_g)
     endif ! -- DEPARTURE_STAT_H08_ALL
 #endif
 

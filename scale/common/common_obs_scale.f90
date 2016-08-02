@@ -1326,7 +1326,8 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
-subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,nobs_H08,bias_H08,rmse_H08)
+subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
+                     nobs_H08,bias_H08,rmse_H08,Him8_OAB,nHim8,sHim8)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
@@ -1386,11 +1387,15 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,nobs_H08
   INTEGER :: ns
   INTEGER,ALLOCATABLE :: qc_H08(:)
   REAL(r_size),ALLOCATABLE :: ohx_H08(:)
-  REAL(r_size),ALLOCATABLE :: oband_H08(:)
+  INTEGER,ALLOCATABLE :: oband_H08(:)
 #endif
   REAL(r_size),INTENT(INOUT),OPTIONAL :: bias_H08(nch)
   REAL(r_size),INTENT(INOUT),OPTIONAL :: rmse_H08(nch)
   INTEGER,INTENT(INOUT),OPTIONAL :: nobs_H08(nch)
+  REAL(r_size),INTENT(INOUT),ALLOCATABLE,OPTIONAL :: Him8_OAB(:)
+  INTEGER,INTENT(INOUT),OPTIONAL :: nHim8(nch,H08_CLD_OBSERR_NBIN)
+  REAL(r_size),INTENT(INOUT),OPTIONAL :: sHim8(nch,H08_CLD_OBSERR_NBIN)
+  INTEGER :: ch, idx_CA
 
 ! -- for TC vital assimilation --
 !  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
@@ -1640,7 +1645,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,nobs_H08
 
       write (6, '(A)')"MEAN-HIMAWARI-8-STATISTICS"
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns,ch)
       do n = 1, obsda%nobs
         oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
         if(oelm(n) /= id_H08IR_obs)cycle
@@ -1679,16 +1684,22 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,nobs_H08
                   oqc(n),&
                   CA(n) 
           endif
-
+!
 ! Inputs for monit_H08
-          oband_H08(ns) = nint(obs(obsda%set(n))%lev(obsda%idx(n)))
-          ohx_H08(ns) = ohx(n)
+!
+! -- Him8 IR obs (10 bands) should be aligned!
+! -- For example, if obs%dat(n=1001) is Him8 band07, obs%dat(n=1010) should be Him8 band16,
+          ns = (n2prof(n) - 1) * nch
+          do ch = 1, nch
+            oband_H08(ns+ch) = ch + 6
+            ohx_H08(ns+ch) = obs(obsda%set(ns+ch))%dat(obsda%idx(ns+ch)) - yobs_H08(ns+ch) ! Obs-minus-[A or B] 
+          enddo
 
         endif ! [DEPARTURE_STAT_T_RANGE]
       end do ! [ n = 1, obsda%nobs ]
 !$OMP END PARALLEL DO
 
-      DEALLOCATE(yobs_H08, yobs_H08_clr, plev_obs_H08, qc_H08, CA)
+      DEALLOCATE(yobs_H08, yobs_H08_clr, plev_obs_H08, qc_H08)
     ENDIF ! [nprof_H08 >=1]
 
     IF(ALLOCATED(n2prof)) DEALLOCATE(n2prof)
@@ -1755,6 +1766,29 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,nobs_H08
 !  if(present(nobs_H08) .and. present(bias_H08) .and. present(rmse_H08))then
   if(DEPARTURE_STAT_H08_ALL)then
     call monit_dep_H08(nprof_H08*nch,ohx_H08,oband_H08,nobs_H08,bias_H08,rmse_H08)
+  endif
+
+  if(H08_CLD_OBSERR)then
+    if(Him8_OAB(1) > 0.0d0)then ! when this subroutine called after the LETKF
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n)
+      do n = 1, nprof_H08*nch
+        Him8_OAB(n) = Him8_OAB(n) * ohx_H08(n)
+      enddo
+!$OMP END PARALLEL DO
+
+      nHim8 = 0     ! tentative !!!
+      sHim8 = 0.0d0 ! tentative !!!
+      do n = 1, nprof_H08
+        ns = (n - 1) * nch
+        do ch = 1, nch
+            idx_CA = int(CA(ns+ch) / H08_CLD_OBSERR_WTH)
+            nHim8(ch,idx_CA) = nHim8(ch,idx_CA) + 1
+            sHim8(ch,idx_CA) = sHim8(ch,idx_CA) + Him8_OAB(ns+ch)
+        enddo
+      enddo
+    else ! when this subroutine called before the LETKF
+      Him8_OAB(1:nprof_H08*nch) = ohx_H08(1:nprof_H08*nch)
+    endif
   endif
 #endif
 

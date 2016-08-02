@@ -43,6 +43,10 @@ MODULE letkf_obs
   integer,save :: nobstotalg
   integer,save :: nobstotal
 
+! -- array for storing O-B and O-A of Him8
+  real(r_size),allocatable,save :: Him8_OAB(:)
+
+
 CONTAINS
 !-----------------------------------------------------------------------
 ! Initialize
@@ -90,6 +94,11 @@ SUBROUTINE set_letkf_obs
   REAL(r_size),allocatable :: bufr2(:) ! H08
   REAL(r_size):: ch_num ! H08
 !  REAL(r_size),allocatable :: hx_sprd(:) ! H08
+
+! cloud-dependent obs error for Him8
+  INTEGER :: nHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Number of Him8 obs as a function of CA
+  REAL(r_size) :: sHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Sum of Him8's [O-A]x[O-B] as a function of CA
+
 #endif
   integer :: iproc,jproc
   integer,allocatable :: nnext(:,:)
@@ -297,6 +306,11 @@ SUBROUTINE set_letkf_obs
 
   obsda%val2 = obsda%val2 / REAL(MEMBER,r_size)
 
+! -- allocate array for storing O-B and O-A of Him8
+  if (H08_CLD_OBSERR)then
+    allocate(Him8_OAB(obsda%nobs))
+    Him8_OAB = undef
+  endif
 !-- H08
 #endif
 
