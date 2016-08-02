@@ -153,6 +153,7 @@ MODULE common_nml
   logical :: DEPARTURE_STAT = .true.
   logical :: DEPARTURE_STAT_RADAR = .false.
   logical :: DEPARTURE_STAT_H08 = .false.
+  logical :: DEPARTURE_STAT_H08_ALL = .false.
   real(r_size) :: DEPARTURE_STAT_T_RANGE = 0.0d0 ! time range within which observations are considered in the departure statistics.
                                                  ! 0.0d0: no limit
 
@@ -539,6 +540,7 @@ subroutine read_nml_letkf_monitor
     DEPARTURE_STAT, &
     DEPARTURE_STAT_RADAR, &
     DEPARTURE_STAT_H08, &
+    DEPARTURE_STAT_H08_ALL, &
     DEPARTURE_STAT_T_RANGE, &
     OMB_OUTPUT, &
     OMA_OUTPUT, &

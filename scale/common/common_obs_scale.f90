@@ -1326,7 +1326,7 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
-subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
+subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,nobs_H08,bias_H08,rmse_H08)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
@@ -1385,7 +1385,12 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   REAL(r_size),ALLOCATABLE :: CA(:) ! (Okamoto et al., 2014QJRMS)
   INTEGER :: ns
   INTEGER,ALLOCATABLE :: qc_H08(:)
+  REAL(r_size),ALLOCATABLE :: ohx_H08(:)
+  REAL(r_size),ALLOCATABLE :: oband_H08(:)
 #endif
+  REAL(r_size),INTENT(INOUT),OPTIONAL :: bias_H08(nch)
+  REAL(r_size),INTENT(INOUT),OPTIONAL :: rmse_H08(nch)
+  INTEGER,INTENT(INOUT),OPTIONAL :: nobs_H08(nch)
 
 ! -- for TC vital assimilation --
 !  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
@@ -1606,6 +1611,10 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
       ALLOCATE(lon_H08(nprof_H08))
       ALLOCATE(lat_H08(nprof_H08))
 
+      ALLOCATE(ohx_H08(nprof_H08*nch))
+      !ALLOCATE(oelm_H08(nprof_H08*nch))
+      ALLOCATE(oband_H08(nprof_H08*nch))
+
       ri_H08 = tmp_ri_H08(1:nprof_H08)
       rj_H08 = tmp_rj_H08(1:nprof_H08)
       lon_H08 = tmp_lon_H08(1:nprof_H08)
@@ -1636,7 +1645,8 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
         oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
         if(oelm(n) /= id_H08IR_obs)cycle
   
-        ns = (n2prof(n) - 1) * nch + nint(obsda%lev(n) - 6.0) 
+        ns = (n2prof(n) - 1) * nch + nint(obs(obsda%set(n))%lev(obsda%idx(n)) - 6.0) 
+     
 
         if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. & 
           abs(obs(obsda%set(n))%dif(obsda%idx(n))) <= DEPARTURE_STAT_T_RANGE) then
@@ -1651,11 +1661,14 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
                    &) * 0.5d0 
                    
 
+! Compute O-A regardless of non-assimilated bands --
+          ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) ! O-A
+
           if(oqc(n) == iqc_good) then
-            ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) 
             write (6, '(A,2I6,2F8.2,5F11.4,I6,F10.4)')"H08-O-A-B",&
                   obs(obsda%set(n))%elm(obsda%idx(n)), &
-                  nint(obsda%lev(n)), & ! obsda%lev includes the band num.
+                  obs(obsda%set(n))%lev(obsda%idx(n)), & ! obsda%lev stores the band num.
+                  !nint(obsda%lev(n)), & ! obsda%lev includes the band num.
                   obs(obsda%set(n))%lon(obsda%idx(n)), &
                   obs(obsda%set(n))%lat(obsda%idx(n)), &
                   ohx(n), &! O-A
@@ -1666,6 +1679,10 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
                   oqc(n),&
                   CA(n) 
           endif
+
+! Inputs for monit_H08
+          oband_H08(ns) = nint(obs(obsda%set(n))%lev(obsda%idx(n)))
+          ohx_H08(ns) = ohx(n)
 
         endif ! [DEPARTURE_STAT_T_RANGE]
       end do ! [ n = 1, obsda%nobs ]
@@ -1733,8 +1750,13 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 !
 !  endif ! [DEPARTURE_STAT_T_RANGE]
 
-
   call monit_dep(obsda%nobs,oelm,ohx,oqc,nobs,bias,rmse)
+#ifdef H08
+!  if(present(nobs_H08) .and. present(bias_H08) .and. present(rmse_H08))then
+  if(DEPARTURE_STAT_H08_ALL)then
+    call monit_dep_H08(nprof_H08*nch,ohx_H08,oband_H08,nobs_H08,bias_H08,rmse_H08)
+  endif
+#endif
 
   monit_type = .false.
   monit_type(uid_obs(id_u_obs)) = .true.
@@ -1813,6 +1835,116 @@ SUBROUTINE monit_dep(nn,elm,dep,qc,nobs,bias,rmse)
 
   RETURN
 END SUBROUTINE monit_dep
+
+! monitor for Himawari-8 IR observations --
+SUBROUTINE monit_dep_H08(nn,dep,band,nobs,bias,rmse)
+  IMPLICIT NONE
+  INTEGER,INTENT(IN) :: nn
+  REAL(r_size),INTENT(IN) :: dep(nn)
+  INTEGER,INTENT(IN) :: band(nn)
+  INTEGER,INTENT(OUT) :: nobs(nch)
+  REAL(r_size),INTENT(OUT) :: bias(nch)
+  REAL(r_size),INTENT(OUT) :: rmse(nch)
+  INTEGER :: n,ch
+
+  nobs = 0
+  rmse = 0.0d0
+  bias = 0.0d0
+
+  DO n=1,nn
+    ch = band(n) - 6
+
+    nobs(ch) = nobs(ch) + 1
+    bias(ch) = bias(ch) + dep(n)
+    rmse(ch) = rmse(ch) + dep(n)**2
+  END DO
+
+  DO ch = 1, nch
+    IF(nobs(ch) == 0) THEN
+      bias(ch) = undef
+      rmse(ch) = undef
+    ELSE
+      bias(ch) = bias(ch) / REAL(nobs(ch),r_size)
+      rmse(ch) = SQRT(rmse(ch) / REAL(nobs(ch),r_size))
+    END IF
+  END DO
+
+  RETURN
+END SUBROUTINE monit_dep_H08
+! ---------
+#ifdef H08
+SUBROUTINE monit_print_H08(nobs,bias,rmse,monit_type)
+  IMPLICIT NONE
+  INTEGER,INTENT(IN) :: nobs(nch)
+  REAL(r_size),INTENT(IN) :: bias(nch)
+  REAL(r_size),INTENT(IN) :: rmse(nch)
+  LOGICAL,INTENT(IN),OPTIONAL :: monit_type(nch)
+
+  character(12) :: var_show(nch)
+  character(12) :: nobs_show(nch)
+  character(12) :: bias_show(nch)
+  character(12) :: rmse_show(nch)
+  character(12) :: flag_show(nch)
+
+  integer :: i, itv, n
+  character(4) :: nstr
+  character(12) :: tmpstr(nch)
+  character(12) :: tmpstr2(nch)
+
+  character(1) :: B1
+  character(2) :: B2
+  character(3) :: B3(nch)
+
+  logical :: monit_type_(nch)
+
+  monit_type_ = .true.
+  if (present(monit_type)) monit_type_ = monit_type
+
+  n = 0
+  do i = 1, nch
+    n = n + 1
+
+    if((i + 6) < 10)then
+      write(B1,'(A1)') i + 6
+      B3(i) = "B0" // B1
+    else
+      write(B2,'(A1)') i + 6
+      B3(i) = "B" // B2
+    endif
+
+    if(H08_CH_USE(i))then
+      write(flag_show(n),'(A12)') "Yes"
+    else
+      write(flag_show(n),'(A12)') " No"
+    endif
+
+    write(var_show(n),'(A12)') B3(i)
+    write(nobs_show(n),'(I12)') nobs(i)
+    if (nobs(i) > 0) then
+      write(bias_show(n),'(ES12.3)') bias(i)
+      write(rmse_show(n),'(ES12.3)') rmse(i)
+    else
+      write(bias_show(n),'(A12)') 'N/A'
+      write(rmse_show(n),'(A12)') 'N/A'
+    end if
+  end do
+  write(nstr, '(I4)') n
+  tmpstr(1:n) = '============'
+  tmpstr2(1:n) = '------------'
+
+  WRITE(6,'(A,' // trim(nstr) // 'A)') '======', tmpstr(1:n)
+  WRITE(6,'(6x,' // trim(nstr) // 'A)')          var_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') '------', tmpstr2(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') 'BIAS  ', bias_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') 'RMSE  ', rmse_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') 'NUMBER', nobs_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') 'ASSIMILATED?', flag_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') '======', tmpstr(1:n)
+
+  RETURN
+END SUBROUTINE monit_print_H08
+#endif
+
 !-----------------------------------------------------------------------
 ! Monitor departure
 !-----------------------------------------------------------------------
@@ -2755,13 +2887,13 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
       qc(n) = iqc_obs_bad
     ENDIF
 
-    IF(abs(btall_out(ch,np) - btclr_out(ch,np)) > H08_CLDSKY_THRS)THEN
+!    IF(abs(btall_out(ch,np) - btclr_out(ch,np)) > H08_CLDSKY_THRS)THEN
 ! Cloudy sky
-      yobs(n) = yobs(n) * (-1.0d0)
-    ELSE
+!      yobs(n) = yobs(n) * (-1.0d0)
+!    ELSE
 ! Clear sky
-      yobs(n) = yobs(n) * 1.0d0
-    ENDIF
+!      yobs(n) = yobs(n) * 1.0d0
+!    ENDIF
    
     yobs_H08_clr(n) = btclr_out(ch,np)
 

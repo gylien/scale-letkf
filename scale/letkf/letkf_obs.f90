@@ -286,7 +286,7 @@ SUBROUTINE set_letkf_obs
 
   obsda%lev = obsda%lev / REAL(MEMBER,r_size)
 
-! calculate the ensemble mean of obsda%val2 (clear sky BT)
+! calculate the ensemble mean of obsda%val2 (cloud effect parameter, CA; Okamoto et al. 2014QJRMS)
 !
   allocate (bufr2(obsda%nobs))
   bufr2 = 0.0d0
@@ -535,13 +535,13 @@ SUBROUTINE set_letkf_obs
 ! -- Counting how many members have cloud.
 ! -- Cloudy members should have negative values.
 !
-      mem_ref = 0
-      do i = 1, MEMBER
-        if (obsda%ensval(i,n) < 0.0d0) then
-          mem_ref = mem_ref + 1
-          obsda%ensval(i,n) = obsda%ensval(i,n) * (-1.0d0)
-        end if
-      end do
+!      mem_ref = 0
+!      do i = 1, MEMBER
+!        if (obsda%ensval(i,n) < 0.0d0) then
+!          mem_ref = mem_ref + 1
+!          obsda%ensval(i,n) = obsda%ensval(i,n) * (-1.0d0)
+!        end if
+!      end do
 
 !
 ! -- reject Band #11(ch=5) & #12(ch=6) of Himawari-8 obs ! H08
@@ -610,15 +610,15 @@ SUBROUTINE set_letkf_obs
       !  H08_CLDSKY_THRS  < 0.0: turn off ! all members are diagnosed as cloudy.
       !  H08_CLDSKY_THRS  > 0.0: turn on
       !
-      IF(mem_ref < H08_MIN_CLD_MEMBER)THEN ! Clear sky
-        IF(ABS(obsda%val(n)) > 1.0d0 * obs(iof)%err(iidx)) THEN
-          obsda%qc(n) = iqc_gross_err
-        END IF
-      ELSE ! Cloudy sky
+      !IF(mem_ref < H08_MIN_CLD_MEMBER)THEN ! Clear sky
+      !  IF(ABS(obsda%val(n)) > 1.0d0 * obs(iof)%err(iidx)) THEN
+      !    obsda%qc(n) = iqc_gross_err
+      !  END IF
+      !ELSE ! Cloudy sky
         IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
           obsda%qc(n) = iqc_gross_err
         END IF
-      END IF
+      !END IF
 
       IF(obs(iof)%dat(iidx) < H08_BT_MIN)THEN
         obsda%qc(n) = iqc_gross_err
@@ -651,7 +651,6 @@ SUBROUTINE set_letkf_obs
 !
 ! Derived H08 obs height (based on the weighting function output from RTTOV fwd
 ! model) is substituted into obs%lev.
-! Band num. is substituded into obsda%lev. This will be used in monit_obs.
 !
       ch_num = obs(iof)%lev(iidx)
 
@@ -828,6 +827,7 @@ SUBROUTINE set_letkf_obs
       obsda2(PRC_myrank)%rj(nnext(i,j)) = obsda%rj(n)
 #ifdef H08
       obsda2(PRC_myrank)%lev(nnext(i,j)) = obsda%lev(n) ! H08
+      obsda2(PRC_myrank)%val2(nnext(i,j)) = obsda%val2(n) ! H08
 #endif
 
       nnext(i,j) = nnext(i,j) + 1
@@ -934,6 +934,7 @@ SUBROUTINE set_letkf_obs
             obsbufs%rj(n) = obsda2(PRC_myrank)%rj(obsidx(n))
 #ifdef H08
             obsbufs%lev(n) = obsda2(PRC_myrank)%lev(obsidx(n)) ! H08
+            obsbufs%val2(n) = obsda2(PRC_myrank)%val2(obsidx(n)) ! H08
 #endif
           end do
         else
@@ -961,6 +962,7 @@ SUBROUTINE set_letkf_obs
     call MPI_GATHERV(obsbufs%rj, ns, MPI_r_size, obsbufr%rj, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
 #ifdef H08
     call MPI_GATHERV(obsbufs%lev, ns, MPI_r_size, obsbufr%lev, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
+    call MPI_GATHERV(obsbufs%val2, ns, MPI_r_size, obsbufr%val2, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
 #endif
 
 
@@ -977,6 +979,7 @@ SUBROUTINE set_letkf_obs
           obsda2(ip2)%rj = obsbufr%rj(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
 #ifdef H08
           obsda2(ip2)%lev = obsbufr%lev(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1)) ! H08
+          obsda2(ip2)%val2 = obsbufr%val2(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1)) ! H08
 #endif
 
 !            write(6,*) obsda2(ip2)%idx

@@ -1198,7 +1198,17 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   REAL(r_size) :: rmse_g(nid_obs)
   LOGICAL :: monit_type(nid_obs)
   INTEGER :: ierr
-
+#ifdef H08
+  INTEGER :: nobs_H08(nch)
+  INTEGER :: nobs_H08_tmp(nch)
+  INTEGER :: nobs_H08_g(nch)
+  REAL(r_size) :: bias_H08(nch)
+  REAL(r_size) :: bias_H08_tmp(nch)
+  REAL(r_size) :: bias_H08_g(nch)
+  REAL(r_size) :: rmse_H08(nch)
+  REAL(r_size) :: rmse_H08_tmp(nch)
+  REAL(r_size) :: rmse_H08_g(nch)
+#endif
 
   type(obs_info),intent(in) :: obs(OBS_IN_NUM)
   type(obs_da_value),intent(in),allocatable :: obsda2(:)
@@ -1230,7 +1240,14 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
   if (DEPARTURE_STAT) then
     if (myrank_e == lastmem_rank_e) then
-      call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,nobs,bias,rmse,monit_type)
+      if(DEPARTURE_STAT_H08_ALL)then
+#ifdef H08
+        call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,nobs,bias,rmse,monit_type,&
+                       nobs_H08=nobs_H08,bias_H08=bias_H08,rmse_H08=rmse_H08)
+#endif
+      else
+        call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,nobs,bias,rmse,monit_type)
+      endif
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1256,6 +1273,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
       call MPI_ALLREDUCE(bias_tmp, bias_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(rmse_tmp, rmse_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
 
+
       do i = 1, nid_obs
         if (monit_type(i)) then
           if (nobs_g(i) == 0) then
@@ -1271,6 +1289,37 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
           rmse_g(i) = undef
         end if
       end do
+
+#ifdef H08
+      if(DEPARTURE_STAT_H08_ALL)then
+
+        do i = 1, nch
+          nobs_H08_tmp(i) = nobs_H08(i)
+          if (nobs_H08(i) == 0) then
+            bias_H08_tmp(i) = 0.0d0
+            rmse_H08_tmp(i) = 0.0d0
+          else
+            bias_H08_tmp(i) = bias_H08(i) * REAL(nobs_H08(i),r_size)
+            rmse_H08_tmp(i) = rmse_H08(i) * rmse_H08(i) * REAL(nobs_H08(i),r_size)
+          end if
+        enddo
+
+        call MPI_ALLREDUCE(nobs_H08_tmp, nobs_H08_g, nch, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+        call MPI_ALLREDUCE(bias_H08_tmp, bias_H08_g, nch, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+        call MPI_ALLREDUCE(rmse_H08_tmp, rmse_H08_g, nch, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+
+        do i = 1, nch
+          if (nobs_H08_g(i) == 0) then
+            bias_H08_g(i) = undef
+            rmse_H08_g(i) = undef
+          else
+            bias_H08_g(i) = bias_H08_g(i) / REAL(nobs_H08_g(i),r_size)
+            rmse_H08_g(i) = sqrt(rmse_H08_g(i) / REAL(nobs_H08_g(i),r_size))
+          end if
+        enddo
+      endif ! -- DEPARTURE_STAT_H08_ALL
+#endif
+
     end if
 
     call MPI_BCAST(nobs,nid_obs,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
@@ -1285,6 +1334,21 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
     write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', trim(file_mean), ']:'
     call monit_print(nobs_g,bias_g,rmse_g,monit_type)
 
+
+#ifdef H08
+    if(DEPARTURE_STAT_H08_ALL)then
+      call MPI_BCAST(nobs_H08,nch,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
+      call MPI_BCAST(bias_H08,nch,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+      call MPI_BCAST(rmse_H08,nch,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+      call MPI_BCAST(nobs_H08_g,nch,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
+      call MPI_BCAST(bias_H08_g,nch,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+      call MPI_BCAST(rmse_H08_g,nch,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+      write(6,'(3A)') 'HIMAWARI-8 MONITOR FOR ALL IR BANDS (IN THIS SUBDOMAIN) [', trim(file_mean), ']:'
+      call monit_print_H08(nobs_H08,bias_H08,rmse_H08)
+      write(6,'(3A)') 'HIMAWARI-8 MONITOR FOR ALL IR BANDS (GLOBAL) [', trim(file_mean), ']:'
+      call monit_print(nobs_H08_g,bias_H08_g,rmse_H08_g)
+    endif ! -- DEPARTURE_STAT_H08_ALL
+#endif
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
