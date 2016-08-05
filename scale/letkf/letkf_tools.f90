@@ -143,6 +143,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     END IF
     CALL scatter_grd_mpi(lastmem_rank_e,work3dg,work2dg,work3d,work2d)
   END IF
+  IF(INFL_MUL_MIN > 0.0d0) THEN
+    work3d = max(work3d, INFL_MUL_MIN)
+    work2d = max(work2d, INFL_MUL_MIN)
+  END IF
   !
   ! RTPS relaxation: inflation output
   !
@@ -194,17 +198,20 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         ELSE
           ! compute weights with localized observations
           CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
-          parm = work3d(ij,ilev,n)
-          IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
-            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &         !GYL
-                            trans(:,:,n),transm=transm(:,n),pao=pa(:,:,n),   &         !GYL
-                            rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                      !GYL
+          IF(RELAX_TO_INFLATED_PRIOR) THEN                                             !GYL
+            parm = work3d(ij,ilev,n)                                                   !GYL
           ELSE                                                                         !GYL
-            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &         !GYL
-                            trans(:,:,n),transm=transm(:,n),                 &         !GYL
-                            rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                      !GYL
+            parm = 1.0d0                                                               !GYL
           END IF                                                                       !GYL
-          work3d(ij,ilev,n) = parm
+          IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
+            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
+                            trans(:,:,n),transm=transm(:,n),pao=pa(:,:,n),   &         !GYL
+                            rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)           !GYL
+          ELSE                                                                         !GYL
+            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
+                            trans(:,:,n),transm=transm(:,n),                 &         !GYL
+                            rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)           !GYL
+          END IF                                                                       !GYL
           IF(NOBS_OUT) THEN                                                            !GYL
             work3dn(:,ij,ilev,n) = real(sum(nobsl_t, dim=1),r_size)                    !GYL
             work3dn(21,ij,ilev,n) = real(nobsl_t(9,22),r_size)                         !GYL !!! addtionally save ref nobs in a special place
@@ -219,15 +226,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)                !GYL
         ELSE                                                                           !GYL
           ! relaxation via LETKF weight
-          IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2005)
-            CALL weight_RTPP(trans(:,:,n),transrlx)                                    !GYL
+          IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2004)
+            CALL weight_RTPP(trans(:,:,n),parm,transrlx)                               !GYL
           ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL - RTPS method (Whitaker and Hamill 2012)
             IF(RELAX_SPREAD_OUT) THEN                                                  !GYL
               CALL weight_RTPS(trans(:,:,n),pa(:,:,n),gues3d(ij,ilev,:,n), &           !GYL
-                               transrlx,work3da(ij,ilev,n))                            !GYL
+                               parm,transrlx,work3da(ij,ilev,n))                       !GYL
             ELSE                                                                       !GYL
               CALL weight_RTPS(trans(:,:,n),pa(:,:,n),gues3d(ij,ilev,:,n), &           !GYL
-                               transrlx,tmpinfl)                                       !GYL
+                               parm,transrlx,tmpinfl)                                  !GYL
             END IF                                                                     !GYL
           ELSE                                                                         !GYL
             transrlx = trans(:,:,n)                                                    !GYL - No relaxation
@@ -295,17 +302,20 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           ELSE
             ! compute weights with localized observations
             CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
-            parm = work2d(ij,n)
-            IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
-              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &       !GYL
-                              trans(:,:,nv3d+n),transm=transm(:,nv3d+n),pao=pa(:,:,nv3d+n), & !GYL
-                              rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                    !GYL
+            IF(RELAX_TO_INFLATED_PRIOR) THEN                                           !GYL
+              parm = work2d(ij,n)                                                      !GYL
             ELSE                                                                       !GYL
-              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &       !GYL
-                              trans(:,:,nv3d+n),transm=transm(:,nv3d+n),       &       !GYL
-                              rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                    !GYL
+              parm = 1.0d0                                                             !GYL
             END IF                                                                     !GYL
-            work2d(ij,n) = parm
+            IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
+              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
+                              trans(:,:,nv3d+n),transm=transm(:,nv3d+n),pao=pa(:,:,nv3d+n), & !GYL
+                              rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)         !GYL
+            ELSE                                                                       !GYL
+              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
+                              trans(:,:,nv3d+n),transm=transm(:,nv3d+n),       &       !GYL
+                              rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)         !GYL
+            END IF                                                                     !GYL
             IF(NOBS_OUT) THEN                                                          !GYL
               work2dn(:,ij,n) = real(sum(nobsl_t,dim=1),r_size)                        !GYL
               work2dn(21,ij,n) = real(nobsl_t(9,22),r_size)                            !GYL !!! addtionally save ref nobs in a special place
@@ -320,15 +330,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             anal2d(ij,:,n) = mean2d(ij,n) + gues2d(ij,:,n)                             !GYL
           ELSE                                                                         !GYL
             ! relaxation via LETKF weight
-            IF(RELAX_ALPHA /= 0.0d0) THEN                                              !GYL - RTPP method (Zhang et al. 2005)
-              CALL weight_RTPP(trans(:,:,nv3d+n),transrlx)                             !GYL
+            IF(RELAX_ALPHA /= 0.0d0) THEN                                              !GYL - RTPP method (Zhang et al. 2004)
+              CALL weight_RTPP(trans(:,:,nv3d+n),parm,transrlx)                        !GYL
             ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                  !GYL - RTPS method (Whitaker and Hamill 2012)
               IF(RELAX_SPREAD_OUT) THEN                                                !GYL
                 CALL weight_RTPS(trans(:,:,nv3d+n),pa(:,:,nv3d+n),gues2d(ij,:,n), &    !GYL
-                                 transrlx,work2da(ij,n))                               !GYL
+                                 parm,transrlx,work2da(ij,n))                          !GYL
               ELSE                                                                     !GYL
                 CALL weight_RTPS(trans(:,:,nv3d+n),pa(:,:,nv3d+n),gues2d(ij,:,n), &    !GYL
-                                 transrlx,tmpinfl)                                     !GYL
+                                 parm,transrlx,tmpinfl)                                !GYL
               END IF                                                                   !GYL
             ELSE                                                                       !GYL
               transrlx = trans(:,:,nv3d+n)                                             !GYL - No relaxation
@@ -631,7 +641,7 @@ END SUBROUTINE das_letkf
 !    ! LETKF computation
 !    !
 !    CALL obs_local(obslon(nn),obslat(nn),rlev,n,hdxf,rdiag,rloc,dep,nobsl)
-!    CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans,MIN_INFL_MUL,RELAX_ALPHA)
+!    CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans,RELAX_ALPHA)
 
 !    IF(n == iv3d_q .OR. n == iv3d_qc) THEN
 !      CALL itpl_2d(v3dinflx(:,:,LEV_UPDATE_Q,iv3d_p),ri,rj,p_update_q)
@@ -1221,15 +1231,16 @@ end subroutine relax_beta
 !-----------------------------------------------------------------------
 ! Relaxation via LETKF weight - RTPP method
 !-----------------------------------------------------------------------
-subroutine weight_RTPP(w, wrlx)
+subroutine weight_RTPP(w, infl, wrlx)
   implicit none
   real(r_size), intent(in) :: w(MEMBER,MEMBER)
+  real(r_size), intent(in) :: infl
   real(r_size), intent(out) :: wrlx(MEMBER,MEMBER)
   integer :: m
 
   wrlx = (1.0d0 - RELAX_ALPHA) * w
   do m = 1, MEMBER
-    wrlx(m,m) = wrlx(m,m) + RELAX_ALPHA
+    wrlx(m,m) = wrlx(m,m) + RELAX_ALPHA * sqrt(infl)
   end do
 
   return
@@ -1237,13 +1248,14 @@ end subroutine weight_RTPP
 !-----------------------------------------------------------------------
 ! Relaxation via LETKF weight - RTPS method
 !-----------------------------------------------------------------------
-subroutine weight_RTPS(w, pa, xb, wrlx, infl)
+subroutine weight_RTPS(w, pa, xb, infl, wrlx, infl_out)
   implicit none
   real(r_size), intent(in) :: w(MEMBER,MEMBER)
   real(r_size), intent(in) :: pa(MEMBER,MEMBER)
   real(r_size), intent(in) :: xb(MEMBER)
+  real(r_size), intent(in) :: infl
   real(r_size), intent(out) :: wrlx(MEMBER,MEMBER)
-  real(r_size), intent(out) :: infl
+  real(r_size), intent(out) :: infl_out
   real(r_size) :: var_g, var_a
   integer :: m, k
 
@@ -1256,12 +1268,14 @@ subroutine weight_RTPS(w, pa, xb, wrlx, infl)
     end do
   end do
   if (var_g > 0.0d0 .and. var_a > 0.0d0) then
-    infl = RELAX_ALPHA_SPREAD * sqrt(var_g / (var_a * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0   ! Whitaker and Hamill 2012
-!    infl = sqrt(RELAX_ALPHA_SPREAD * (var_g / (var_a * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0) ! Hamrud et al. 2015 (slightly modified)
-    wrlx = w * infl
+    infl_out = RELAX_ALPHA_SPREAD * sqrt(var_g * infl / (var_a * real(MEMBER-1,r_size))) &  ! Whitaker and Hamill 2012
+             - RELAX_ALPHA_SPREAD + 1.0d0                                                   !
+!    infl_out = sqrt(RELAX_ALPHA_SPREAD * (var_g * infl / (var_a * real(MEMBER-1,r_size))) & ! Hamrud et al. 2015 (slightly modified)
+!                  - RELAX_ALPHA_SPREAD + 1.0d0)                                             !
+    wrlx = w * infl_out
   else
     wrlx = w
-    infl = 1.0d0
+    infl_out = 1.0d0
   end if
 
   return
