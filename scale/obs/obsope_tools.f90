@@ -108,7 +108,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
   integer :: it,islot,proc,im,iof
-  integer :: n,nn,nslot,nobs,nobs_0,nobs_slot
+  integer :: n,nn,nslot,nobs,nobs_0,nobs_slot,nobs_ref
 !  real(r_size) :: rig,rjg,ri,rj,rk
   real(r_size) :: rig,rjg,rk
   real(r_size),allocatable :: ri(:),rj(:)
@@ -565,7 +565,12 @@ SUBROUTINE obsope_cal(obs, obsda_return)
       end if ! [ obsda%nobs > 0 ]
       !!!!!!
 
-      obsda%nobs = nobs
+      if (it == 1) then
+        nobs_ref = nobs
+      else if (nobs /= nobs_ref) then
+        write (6, '(A)') '[Error] numbers of observations found are different among members.'
+        stop
+      end if
 
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' finishes processing member ', &
             im, ', subdomain id #', proc2mem(2,it,myrank+1)
@@ -585,23 +590,27 @@ SUBROUTINE obsope_cal(obs, obsda_return)
         if (it == 1) then
           obsda_return%nobs = nobs + obsda_return%nobs ! obsda_return%nobs: additional space for externally processed observations
           call obs_da_value_allocate(obsda_return,MEMBER)
-          obsda_return%set(1:nobs) = obsda%set(1:nobs)
-          obsda_return%idx(1:nobs) = obsda%idx(1:nobs)
-          obsda_return%ri(1:nobs) = obsda%ri(1:nobs)
-          obsda_return%rj(1:nobs) = obsda%rj(1:nobs)
-          obsda_return%qc(1:nobs) = obsda%qc(1:nobs)
-#ifdef H08
-          obsda_return%lev(1:nobs) = obsda%lev(1:nobs)
-#endif
-        else
-          obsda_return%qc(1:nobs) = max(obsda_return%qc(1:nobs), obsda%qc(1:nobs))
-#ifdef H08
-          obsda_return%lev(1:nobs) = obsda_return%lev(1:nobs) + obsda%lev(1:nobs)
-#endif
         end if
+        if (nobs > 0) then
+          if (it == 1) then
+            obsda_return%set(1:nobs) = obsda%set(1:nobs)
+            obsda_return%idx(1:nobs) = obsda%idx(1:nobs)
+            obsda_return%ri(1:nobs) = obsda%ri(1:nobs)
+            obsda_return%rj(1:nobs) = obsda%rj(1:nobs)
+            obsda_return%qc(1:nobs) = obsda%qc(1:nobs)
+#ifdef H08
+            obsda_return%lev(1:nobs) = obsda%lev(1:nobs)
+#endif
+          else
+            obsda_return%qc(1:nobs) = max(obsda_return%qc(1:nobs), obsda%qc(1:nobs))
+#ifdef H08
+            obsda_return%lev(1:nobs) = obsda_return%lev(1:nobs) + obsda%lev(1:nobs)
+#endif
+          end if
 
-        ! variables with an ensemble dimension
-        obsda_return%ensval(im,1:nobs) = obsda%val(1:nobs)
+          ! variables with an ensemble dimension
+          obsda_return%ensval(im,1:nobs) = obsda%val(1:nobs)
+        end if ! [ nobs > 0 ]
       end if ! [ present(obsda_return) ]
 
 
