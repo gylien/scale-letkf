@@ -1946,7 +1946,7 @@ SUBROUTINE monit_print_H08(nobs,bias,rmse,monit_type)
       B3(i) = "B" // B2
     endif
 
-    if(H08_CH_USE(i))then
+    if(H08_CH_USE(i) == 1)then
       write(flag_show(n),'(A12)') "Yes"
     else
       write(flag_show(n),'(A12)') " No"
