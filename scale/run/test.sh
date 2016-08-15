@@ -67,6 +67,10 @@ fi
 
 #-------------------------------------------------------------------------------
 
+rm -f config.main
+rm -f config.${SCPNAME}
+rm -f config.nml.*
+
 cat config/${CONFIG}/config.main.${config_suffix} | \
     sed -e "s/<PRESET>/${PRESET}/g" | \
     sed -e "s/<MPI_TYPE>/${MPI_TYPE}/g" \
@@ -94,7 +98,7 @@ rc=${PIPESTATUS[0]}
 status_job='Done with errors'
 ((rc == 0)) || exit $rc
 
-jobname="${SCPNAME}_${CONFIG}"
+jobname="${SCPNAME}_${SYSNAME}"
 jobid=$(grep 'pjsub Job' test.log | cut -d ' ' -f6)
 
 #echo "jobname = ${jobname}"
