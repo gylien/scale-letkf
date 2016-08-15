@@ -1,19 +1,15 @@
+.PHONY:	all clean
+
 all:
-	( cd common ; make )
-	( cd .common_for_scale ; make )
-	( cd letkf ; make )
-#	( cd ssio ; make )
-	( cd obs ; make )
-#	( cd verify ; make )
-#	( cd util ; make )
-	( cd ensmodel ; make )
+	$(MAKE) -C common
+	$(MAKE) -C .common_for_scale
+	$(MAKE) -C ensmodel
+	$(MAKE) -C obs
+	$(MAKE) -C letkf
 
 clean:
-	( cd common ; make clean )
-	( cd .common_for_scale ; make clean )
-	( cd letkf ; make clean )
-#	( cd ssio ; make clean )
-	( cd obs ; make clean )
-#	( cd verify ; make clean )
-#	( cd util ; make clean )
-	( cd ensmodel ; make clean )
+	$(MAKE) -C common            clean
+	$(MAKE) -C .common_for_scale clean
+	$(MAKE) -C ensmodel          clean
+	$(MAKE) -C obs               clean
+	$(MAKE) -C letkf             clean
