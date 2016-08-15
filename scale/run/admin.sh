@@ -29,10 +29,10 @@ PRESET='K_rankdir'
 
 if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
   config_suffix='K'
-  script_suffix='K'
+  script_suffix='_K'
 elif [ "$PRESET" = 'K_micro' ]; then
   config_suffix='K'
-  script_suffix='K_micro'
+  script_suffix='_K_micro'
 else
   echo "[Error] Unsupported \$PRESET" >&2
   exit 1
@@ -79,19 +79,20 @@ ln -fs config/${CONFIG}/config.nml.scale_init .
 
 #-------------------------------------------------------------------------------
 
-./${SCPNAME}_${script_suffix}.sh > ${SCPNAME}_K.log 2>&1 || exit $?
-
-jobname="${SCPNAME}_${SYSNAME}"
-jobid=$(grep 'pjsub Job' ${SCPNAME}_K.log | cut -d ' ' -f6)
+./${SCPNAME}${script_suffix}.sh > ${SCPNAME}_K.log 2>&1 || exit $?
 
 #-------------------------------------------------------------------------------
 
 if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro' ]; then
-  stdout=${jobname}.o${jobid}
-  stderr=${jobname}.e${jobid}
-#  logdir="$OUTDIR/exp/${jobid}_${SCPNAME}_${STIME}"
-#  stdout="$logdir/job.o"
-#  stderr="$logdir/job.e"
+  jobname="${SCPNAME}_${SYSNAME}"
+  jobid=$(grep 'pjsub Job' ${SCPNAME}_K.log | cut -d ' ' -f6)
+  logdir="$OUTDIR/exp/${jobid}_${SCPNAME}_${STIME}"
+  stdout="$logdir/job.o"
+  stderr="$logdir/job.e"
+  jobinfo="$logdir/job.i"
+#  stdout="${jobname}.o${jobid}"
+#  stderr="${jobname}.e${jobid}"
+#  jobinfo="${jobname}.i${jobid}"
 fi
 
 if [ ! -e "$stdout" ] || [ ! -e "$stderr" ]; then

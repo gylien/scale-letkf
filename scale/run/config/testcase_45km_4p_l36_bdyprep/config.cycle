@@ -6,7 +6,7 @@
 #===============================================================================
 
 STIME='20130701000000'
-ETIME='20130701060000'
+ETIME='20130701000000'
 ISTEP=
 FSTEP=
 TIME_LIMIT='<WTIME_L>'
@@ -30,7 +30,7 @@ MAKEINIT=0       # 0: No
 
                  #      anal              gues              history
                  #      mean/sprd members mean/sprd members mean members
-OUT_OPT=1        # 1:   o         o       o         o       o    o
+OUT_OPT=3        # 1:   o         o       o         o       o    o
                  # 2:   o         o       o         o       o
                  # 3:   o         o       o         o
                  # 4:   o         o       o
@@ -40,11 +40,11 @@ OUT_OPT=1        # 1:   o         o       o         o       o    o
 OUT_CYCLE_SKIP=1
 
                  #      topo
-TOPOOUT_OPT=1    # 1:   o
+TOPOOUT_OPT=2    # 1:   o
                  # 2:   (none)
 
                  #      landuse
-LANDUSEOUT_OPT=1 # 1:   o
+LANDUSEOUT_OPT=2 # 1:   o
                  # 2:   (none)
 
                  #      bdy

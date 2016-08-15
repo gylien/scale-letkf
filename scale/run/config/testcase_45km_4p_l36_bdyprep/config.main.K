@@ -13,7 +13,7 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
-OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # Directory for SCALE-LETKF output
+OUTDIR="$DDIR/exp/testcase_45km_4p_l36_bdyprep" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -35,17 +35,17 @@ OBSNCEP=
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=0            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
@@ -70,8 +70,6 @@ OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings
 OBSNUM=1
 OBSNAME[1]=obs                                    
 OBSNAME[2]=radar
-OBSOPE_SEPARATE[1]=1
-OBSOPE_SEPARATE[2]=1
 
 #===============================================================================
 # Cycling settings
