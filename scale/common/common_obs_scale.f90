@@ -2392,6 +2392,7 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
   append_ = .false.
   IF(present(append)) append_ = append
   IF(append_) THEN
+    IF(obs%nobs <= 0) RETURN
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append',STATUS='replace')
   ELSE
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',STATUS='replace')
