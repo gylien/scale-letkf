@@ -108,7 +108,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
   integer :: it,islot,proc,im,iof
-  integer :: n,nn,nslot,nobs,nobs_0,nobs_slot,nobs_ref
+  integer :: n,nn,nslot,nobs,nobs_0,nobs_slot,nobs_alldomain
 !  real(r_size) :: rig,rjg,ri,rj,rk
   real(r_size) :: rig,rjg,rk
   real(r_size),allocatable :: ri(:),rj(:)
@@ -173,15 +173,16 @@ SUBROUTINE obsope_cal(obs, obsda_return)
   brje = (real(nlatg+2*JHALO,r_size) - brjs)
 #endif
 
-  obsda%nobs = 0
+  nobs_alldomain = 0
   do iof = 1, OBS_IN_NUM
     if (OBSDA_RUN(iof)) then
-      obsda%nobs = obsda%nobs + obs(iof)%nobs
+      nobs_alldomain = nobs_alldomain + obs(iof)%nobs
     end if
   end do
+  obsda%nobs = nobs_alldomain
   call obs_da_value_allocate(obsda,0)
-  allocate ( ri(obsda%nobs) )
-  allocate ( rj(obsda%nobs) )
+  allocate ( ri(nobs_alldomain) )
+  allocate ( rj(nobs_alldomain) )
 
   allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
   allocate ( v2dg (nlonh,nlath,nv2dd) )
@@ -197,7 +198,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
       nobs = 0
 
       !!!!!!
-      if (obsda%nobs > 0) then
+      if (nobs_alldomain > 0) then
       !!!!!!
 
       obsda%qc = iqc_time
@@ -563,12 +564,12 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 !write(6,*) '%%%%%%', MPI_WTIME(), nobs
 
       !!!!!!
-      end if ! [ obsda%nobs > 0 ]
+      end if ! [ nobs_alldomain > 0 ]
       !!!!!!
 
       if (it == 1) then
-        nobs_ref = nobs
-      else if (nobs /= nobs_ref) then
+        obsda%nobs = nobs
+      else if (nobs /= obsda%nobs) then
         write (6, '(A)') '[Error] numbers of observations found are different among members.'
         stop
       end if
