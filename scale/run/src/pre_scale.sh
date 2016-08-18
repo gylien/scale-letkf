@@ -9,17 +9,18 @@
 
 . config.main
 
-if (($# < 12)); then
+if (($# < 13)); then
   cat >&2 << EOF
 
 [pre_scale.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM INIT OCEAN BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR [SCPCALL BDY_STIME]
+Usage: $0 MYRANK MEM INIT OCEAN LAND BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR [SCPCALL BDY_STIME]
 
   MYRANK   My rank number (not used)
   MEM      Name of the ensemble member
   INIT     Basename of SCALE initial files
   OCEAN    Basename of SCALE initial ocean files
+  LAND     Basename of SCALE initial land files
   BDY      Basename of SCALE boundary files
   TOPO     Basename of SCALE topography files
   LANDUSE  Basename of SCALE land use files
@@ -39,6 +40,7 @@ MYRANK="$1"; shift
 MEM="$1"; shift
 INIT="$1"; shift
 OCEAN="$1"; shift
+LAND="$1"; shift
 BDY="$1"; shift
 TOPO="$1"; shift
 LANDUSE="$1"; shift
@@ -89,6 +91,10 @@ if [ "$OCEAN" = '-' ]; then
   OCEAN=$INIT
 fi
 
+if [ "$LAND" = '-' ]; then
+  LAND=$INIT
+fi
+
 if [ "$SCPCALL" = 'cycle' ]; then
   IO_LOG_DIR='scale'
 else
@@ -115,6 +121,7 @@ cat $TMPDAT/conf/config.nml.scale | \
         -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = $BS_YYYY, $BS_MM, $BS_DD, $BS_HH, $BS_II, $BS_SS," \
         -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0," \
         -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${OCEAN}\"," \
+        -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${LAND}\"," \
         -e "/!--HISTORY_DEFAULT_BASENAME--/a HISTORY_DEFAULT_BASENAME = \"${TMPSUBDIR}\/history\"," \
         -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = ${HISTINT}.D0," \
         -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_monitor\"," \

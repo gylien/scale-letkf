@@ -170,7 +170,7 @@ print_setting () {
 for vname in DIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BDY_SCALE \
              DATA_BDY_SCALE_PREP DATA_BDY_WRF DATA_BDY_NICAM OBS OBSNCEP TOPO_FORMAT \
              LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT \
-             PARENT_REF_TIME OCEAN_INPUT OCEAN_FORMAT OBSNUM WINDOW_S WINDOW_E \
+             PARENT_REF_TIME OCEAN_INPUT OCEAN_FORMAT LAND_INPUT LAND_FORMAT OBSNUM WINDOW_S WINDOW_E \
              LCYCLE LTIMESLOT MEMBER NNODES PPN THREADS SCALE_NP \
              STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP \
              FCSTLEN FCSTOUT MAKEINIT OUT_OPT TOPOOUT_OPT LANDUSEOUT_OPT BDYOUT_OPT \
@@ -382,6 +382,18 @@ else
 #            mm=$(((c-1) * fmember + m))
 #            for q in $(seq $mem_np); do
 #              path="${time2}/anal/${name_m[$mm]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
+#              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+#            done
+#          done
+#        fi
+
+        # anal_land
+        #-------------------
+#        if ((LAND_INPUT == 1)) && ((LAND_FORMAT == 0)); then
+#          for m in $(seq $fmember); do
+#            mm=$(((c-1) * fmember + m))
+#            for q in $(seq $mem_np); do
+#              path="${time2}/anal/${name_m[$mm]}/init_land$(printf $SCALE_SFX $((q-1)))"
 #              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
 #            done
 #          done
@@ -609,6 +621,13 @@ else
 #  #              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+q))]}
 #  #            fi
 
+#              # anal_land
+#              #-------------------
+#  #            if ((LAND_INPUT == 1)) && ((MAKEINIT != 1)); then
+#  #              path="${time2}/anal/${name_m[$mm]}/init_land$(printf $SCALE_SFX $((q-1)))"
+#  #              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mm-1)*mem_np+q))]}
+#  #            fi
+
 #              # fcst [history]
 #              #-------------------
 #              if ((OUT_OPT <= 2)); then
@@ -684,6 +703,13 @@ else
 #            #-------------------
 #            if ((OCEAN_INPUT == 1)) && ((MAKEINIT != 1)); then
 #              path="${time2}/anal/mean/init_ocean$(printf $SCALE_SFX $((q-1)))"
+#              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$((tmpidx+q))]}
+#            fi
+
+#            # anal_land [mean]
+#            #-------------------
+#            if ((LAND_INPUT == 1)) && ((MAKEINIT != 1)); then
+#              path="${time2}/anal/mean/init_land$(printf $SCALE_SFX $((q-1)))"
 #              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$((tmpidx+q))]}
 #            fi
 
@@ -1236,10 +1262,20 @@ for it in $(seq $its $ite); do
 #      ...
 #    fi
 
-    ocean_base='-'
-    if ((OCEAN_INPUT == 1)); then
-      if ((mkinit != 1 || OCEAN_FORMAT != 99)); then
+    if ((OCEAN_INPUT == 1 && mkinit != 1)); then
+      if ((OCEAN_FORMAT == 0)); then
         ocean_base="$TMPOUT/${stimes[$c]}/anal/mean/init_ocean"  ### always use mean???
+      elif ((OCEAN_FORMAT == 99)); then
+        ocean_base="$TMPOUT/${stimes[$c]}/anal/mean/init_bdy"  ### always use mean???
+      fi
+    fi
+
+    land_base='-'
+    if ((LAND_INPUT == 1 && mkinit != 1)); then
+      if ((LAND_FORMAT == 0)); then
+        land_base="$TMPOUT/${stimes[$c]}/anal/mean/init_land"  ### always use mean???
+      elif ((LAND_FORMAT == 99)); then
+        land_base="$TMPOUT/${stimes[$c]}/anal/mean/init_bdy"  ### always use mean???
       fi
     fi
 
@@ -1263,7 +1299,7 @@ for it in $(seq $its $ite); do
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
-           $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
+           $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $land_base $bdy_base \
            $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
            ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) \
            fcst $bdy_start_time

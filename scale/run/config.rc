@@ -97,13 +97,10 @@ BDYCYCLE_INT=${BDYCYCLE_INT:-$BDYINT}
 
 #-------------------------------------------------------------------------------
 
-OBSOPE_RUN=0
-for iobs in $(seq $OBSNUM); do
-  if [ -n "${OBSOPE_SEPARATE[$iobs]}" ] && ((${OBSOPE_SEPARATE[$iobs]} == 1)); then
-    OBSOPE_RUN=1
-    break
-  fi
-done
+OCEAN_INPUT=${OCEAN_INPUT:-0}
+OCEAN_FORMAT=${OCEAN_FORMAT:-99}
+LAND_INPUT=${LAND_INPUT:-0}
+LAND_FORMAT=${LAND_FORMAT:-99}
 
 #-------------------------------------------------------------------------------
 
@@ -120,6 +117,25 @@ DISK_MODE_DATA_BDY=${DISK_MODE_DATA_BDY:-2}
 DISK_MODE_DATA_TOPO=${DISK_MODE_DATA_TOPO:-2}
 DISK_MODE_DATA_LANDUSE=${DISK_MODE_DATA_LANDUSE:-2}
 DISK_MODE_DATA_BDYPREP=${DISK_MODE_DATA_BDYPREP:-2}
+
+#===============================================================================
+# Dependent variables
+
+OBSOPE_RUN=0
+for iobs in $(seq $OBSNUM); do
+  if [ -n "${OBSOPE_SEPARATE[$iobs]}" ] && ((${OBSOPE_SEPARATE[$iobs]} == 1)); then
+    OBSOPE_RUN=1
+    break
+  fi
+done
+
+#-------------------------------------------------------------------------------
+
+USE_INIT_FROM_BDY=0
+if (((OCEAN_INPUT == 1 && OCEAN_FORMAT == 99) || \
+     (LAND_INPUT == 1 && LAND_FORMAT == 99))); then
+  USE_INIT_FROM_BDY=1
+fi
 
 #-------------------------------------------------------------------------------
 
