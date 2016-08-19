@@ -1389,6 +1389,9 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2,Him8_OAB)
     call state_trans_inv(v3dg)
     call write_restart(file_mean,v3dg,v2dg)
 
+    if(DEPARTURE_STAT_H08_ALL .or. H08_CLD_OBSERR)then
+      call write_Him8_CA(sHim8_CA,nHim8_CA)
+    endif
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
@@ -1502,7 +1505,38 @@ subroutine read_obs_all_mpi(obs)
   return
 end subroutine read_obs_all_mpi
 
+subroutine read_Him8_ObsErr_CA_mpi(Him8_obserr_CA)
+  implicit none
 
+  REAL(r_size),INTENT(out) :: Him8_obserr_CA(nch,H08_CLD_OBSERR_NBIN) ! Sum of Him8's [O-A]x[O-B] as a function of CA
+
+  integer :: iof, ierr
+
+  REAL(r_dble) :: rrtimer00,rrtimer
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer00 = MPI_WTIME()
+
+  Him8_obserr_CA = 0.0d0
+
+  if (myrank_a == 0) then
+    call read_Him8_CA(Him8_obserr_CA)
+  end if
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### read_Him8_CA_mpi:read_Him8_CA_all:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+  call MPI_BCAST(Him8_obserr_CA, nch*H08_CLD_OBSERR_NBIN, MPI_r_size, 0, MPI_COMM_a, ierr)
+  WRITE(6,'(A,2ES15.3)') 'DEBUG OBSERR CA',Him8_obserr_CA(3,1),Him8_obserr_CA(3,2)
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### read_Him8_CA_mpi:bcast:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+  return
+end subroutine read_Him8_ObsErr_CA_mpi
 
 !!-----------------------------------------------------------------------
 !! Get number of observations from ensemble obs2 data,

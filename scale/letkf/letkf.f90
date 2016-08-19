@@ -169,6 +169,16 @@ PROGRAM letkf
 ! Process observation data
 !-----------------------------------------------------------------------
 
+    if(H08_CLD_OBSERR)then
+      allocate(Him8_obserr_CA(nch,H08_CLD_OBSERR_NBIN))
+      call read_Him8_ObsErr_CA_mpi(Him8_obserr_CA)
+
+      CALL MPI_BARRIER(MPI_COMM_a,ierr)
+      rtimer = MPI_WTIME()
+      WRITE(6,timer_fmt) '### TIMER(READ_HIM8_CA):',rtimer-rtimer00
+      rtimer00=rtimer
+    endif  ! -- [H08_CLD_OBSERR]
+
     CALL set_letkf_obs
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -235,12 +245,12 @@ PROGRAM letkf
     !
     ! WRITE ENS MEAN and SPRD
     !
-    if(H08_CLD_OBSERR)then
-      Him8_OAB = undef
-      CALL write_ensmspr_mpi(GUES_OUT_MEAN_BASENAME,GUES_OUT_SPRD_BASENAME,gues3d,gues2d,obs,obsda2,Him8_OAB=Him8_OAB)
-    else
-      CALL write_ensmspr_mpi(GUES_OUT_MEAN_BASENAME,GUES_OUT_SPRD_BASENAME,gues3d,gues2d,obs,obsda2)
-    endif
+#ifdef H08
+    CALL write_ensmspr_mpi(GUES_OUT_MEAN_BASENAME,GUES_OUT_SPRD_BASENAME,gues3d,gues2d,obs,obsda2,&
+                           Him8_OAB_l,Him8_iCA_l)
+#else
+    CALL write_ensmspr_mpi(GUES_OUT_MEAN_BASENAME,GUES_OUT_SPRD_BASENAME,gues3d,gues2d,obs,obsda2)
+#endif
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -279,11 +289,12 @@ PROGRAM letkf
     !
     ! WRITE ENS MEAN and SPRD
     !
-    if(H08_CLD_OBSERR)then
-      CALL write_ensmspr_mpi(ANAL_OUT_MEAN_BASENAME,ANAL_OUT_SPRD_BASENAME,anal3d,anal2d,obs,obsda2,Him8_OAB=Him8_OAB)
-    else
-      CALL write_ensmspr_mpi(ANAL_OUT_MEAN_BASENAME,ANAL_OUT_SPRD_BASENAME,anal3d,anal2d,obs,obsda2)
-    endif
+#ifdef H08
+    CALL write_ensmspr_mpi(ANAL_OUT_MEAN_BASENAME,ANAL_OUT_SPRD_BASENAME,anal3d,anal2d,obs,obsda2,&
+                           Him8_OAB_l,Him8_iCA_l)
+#else
+    CALL write_ensmspr_mpi(ANAL_OUT_MEAN_BASENAME,ANAL_OUT_SPRD_BASENAME,anal3d,anal2d,obs,obsda2)
+#endif
     !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()

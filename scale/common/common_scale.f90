@@ -924,6 +924,145 @@ end subroutine read_history
 !  return
 !end subroutine read_history
 
+subroutine write_Him8_CA(sHim8_CA,nHim8_CA)
+  implicit none
+
+  REAL(r_size),INTENT(in) :: sHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Sum of Him8's [O-A]x[O-B] as a function of CA
+  INTEGER,INTENT(in) :: nHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Number of Him8 obs as a function of CA
+  INTEGER :: ch, i
+  character(3) :: B3
+  character(4) :: nstr
+
+  character(15) :: obsbin_show(H08_CLD_OBSERR_NBIN)
+  character(15) :: sHim8_CA_show(H08_CLD_OBSERR_NBIN)
+  character(15) :: nHim8_CA_show(H08_CLD_OBSERR_NBIN)
+
+  INTEGER :: ios, mrec
+  REAL(r_size) :: tmp_wk(H08_CLD_OBSERR_NBIN)
+
+  write(nstr, '(I4)') H08_CLD_OBSERR_NBIN
+
+  do ch = 1, nch
+    B3 = ch2BB_Him8(ch)
+    if(H08_CH_USE(ch) == 1)then
+
+      do i = 1, H08_CLD_OBSERR_NBIN
+        write(obsbin_show(i),'(ES15.3)') real(i)*H08_CLD_OBSERR_WTH*0.5
+        write(sHim8_CA_show(i),'(ES15.3)') sHim8_CA(ch,i)
+        write(nHim8_CA_show(i),'(ES15.3)') nHim8_CA(ch,i)
+      enddo
+
+      !## text file
+      open(unit=8888,file='Him8_CA_'//B3//'.txt',form='formatted')
+      write(8888,'('//trim(nstr)//'a)')obsbin_show(1:H08_CLD_OBSERR_NBIN)
+      write(8888,'('//trim(nstr)//'a)')sHim8_CA_show(1:H08_CLD_OBSERR_NBIN)
+      write(8888,'('//trim(nstr)//'a)')nHim8_CA_show(1:H08_CLD_OBSERR_NBIN)
+      close(8888)
+
+      !## binary file
+      open(unit=8889,file='Him8_CA_'//B3//'.dat',form='unformatted',access='direct',&
+           recl=H08_CLD_OBSERR_NBIN*8)
+      mrec = 0 !-- get file length
+      do
+        read(8889,rec=mrec+1,iostat=ios) tmp_wk
+        if(ios /= 0) exit
+        read(8889,rec=mrec+2) tmp_wk
+        read(8889,rec=mrec+3) tmp_wk
+        mrec = mrec + 3
+      enddo
+
+      ! add Him8 information in the end of file 
+      write(8889,rec=mrec+1) (real(real(i)*H08_CLD_OBSERR_WTH*0.5,kind=r_size),i=1,H08_CLD_OBSERR_NBIN)
+      write(8889,rec=mrec+2) (real(sHim8_CA(ch,i),kind=r_size),i=1,H08_CLD_OBSERR_NBIN)
+      write(8889,rec=mrec+3) (real(nHim8_CA(ch,i),kind=r_size),i=1,H08_CLD_OBSERR_NBIN)
+
+      close(8889)
+
+    endif ! H08_CH_USE
+  enddo
+
+
+  return
+end subroutine write_Him8_CA
+
+subroutine read_Him8_CA(Him8_obserr_CA)
+  implicit none
+
+  REAL(r_size),INTENT(out) :: Him8_obserr_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 obs err as a function of CA
+  REAL(r_size) :: tmp_sHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Sum of Him8's [O-A]x[O-B] as a function of CA
+  INTEGER :: tmp_nHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Number of Him8 obs as a function of CA
+  REAL(r_size) :: obsbin(H08_CLD_OBSERR_NBIN)
+  INTEGER :: ch, i, it, exc
+  INTEGER,PARAMETER :: maxit = 100
+  LOGICAL :: ex
+  character(3) :: B3
+
+  INTEGER :: ios, mrec
+  REAL(r_size) :: tmp_wk(H08_CLD_OBSERR_NBIN)
+
+  Him8_obserr_CA = 0.0d0
+
+  do ch = 1, nch
+    B3 = ch2BB_Him8(ch)
+    if(H08_CH_USE(ch) == 1)then
+
+      !## binary file
+      open(unit=8889,file='Him8_CA_'//B3//'.dat',form='unformatted',access='direct',&
+           recl=H08_CLD_OBSERR_NBIN*8)
+      mrec = 0 !-- get file length
+      do
+        read(8889,rec=mrec+1,iostat=ios) tmp_wk
+        if(ios /= 0) exit
+        read(8889,rec=mrec+2) tmp_wk
+        read(8889,rec=mrec+3) tmp_wk
+        mrec = mrec + 3
+      enddo
+
+      mrec = max(mrec - 3, 0)
+      exc = 0
+      do it = 0, H08_CLD_OBSERR_MTIME-1
+        read(8889,rec=mrec+1-it*3,iostat=ios) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! obsbin !! not used !!
+        if(ios /= 0) exit
+        read(8889,rec=mrec+2-it*3) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! sHim8
+        tmp_sHim8_CA(ch,:) = tmp_wk
+        read(8889,rec=mrec+3-it*3) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! nHim8
+        tmp_sHim8_CA(ch,:) = nint(tmp_wk)
+
+        exc = exc + 1
+        Him8_obserr_CA(ch,:) = Him8_obserr_CA(ch,:) + dsqrt(tmp_sHim8_CA(ch,:) / real(tmp_nHim8_CA(ch,:),kind=r_size))
+      enddo ! it
+
+      if(exc /= 0)then
+        Him8_obserr_CA(ch,:) = Him8_obserr_CA(ch,:) / real(exc,kind=r_size)
+      else
+        Him8_obserr_CA(ch,:) = undef
+      endif
+
+    endif ! H08_CH_USE
+
+  enddo ! ch
+
+  return
+end subroutine read_Him8_CA
+
+function ch2BB_Him8(ch)
+  implicit none
+
+  character(1) :: B1
+  character(2) :: B2
+  character(3) :: ch2BB_Him8
+
+  integer,intent(in) :: ch
+
+  if((ch + 6) < 10)then
+    write(B1,'(I1)') ch + 6
+    ch2BB_Him8 = "B0" // B1
+  else
+    write(B2,'(I2)') ch + 6
+    ch2BB_Him8 = "B" // B2
+  endif
+
+end function ch2BB_Him8
 
 
 !-----------------------------------------------------------------------

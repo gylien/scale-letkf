@@ -38,6 +38,10 @@ if ((LOG_OPT <= 4 && MYRANK == 0)); then
   fi
 fi
 
+if ls $TMPDIR/Him8_CA_B??.txt > /dev/null 2>&1 ; then
+  cp ${TMPDIR}/Him8_CA_B??.txt $TMPOUT/${ATIME}/log/letkf/
+fi
+
 #===============================================================================
 
 exit 0

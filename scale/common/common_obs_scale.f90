@@ -1327,7 +1327,7 @@ END SUBROUTINE itpl_3d
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
 subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
-                     nobs_H08,bias_H08,rmse_H08,Him8_OAB,nHim8,sHim8)
+                     nobs_H08,bias_H08,rmse_H08,Him8_OAB,Him8_iCA)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
@@ -1392,10 +1392,9 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   REAL(r_size),INTENT(INOUT),OPTIONAL :: bias_H08(nch)
   REAL(r_size),INTENT(INOUT),OPTIONAL :: rmse_H08(nch)
   INTEGER,INTENT(INOUT),OPTIONAL :: nobs_H08(nch)
-  REAL(r_size),INTENT(INOUT),ALLOCATABLE,OPTIONAL :: Him8_OAB(:)
-  INTEGER,INTENT(INOUT),OPTIONAL :: nHim8(nch,H08_CLD_OBSERR_NBIN)
-  REAL(r_size),INTENT(INOUT),OPTIONAL :: sHim8(nch,H08_CLD_OBSERR_NBIN)
-  INTEGER :: ch, idx_CA
+  REAL(r_size),INTENT(INOUT),OPTIONAL :: Him8_OAB(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
+  INTEGER,INTENT(INOUT),OPTIONAL :: Him8_iCA(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
+  INTEGER :: ch, idx_B07, band
 
 ! -- for TC vital assimilation --
 !  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
@@ -1645,13 +1644,13 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 
       write (6, '(A)')"MEAN-HIMAWARI-8-STATISTICS"
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns,ch)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns,ns2,ch,band,idx_B07)
       do n = 1, obsda%nobs
         oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
         if(oelm(n) /= id_H08IR_obs)cycle
   
-        ns = (n2prof(n) - 1) * nch + nint(obs(obsda%set(n))%lev(obsda%idx(n)) - 6.0) 
-     
+        band = nint(obs(obsda%set(n))%lev(obsda%idx(n))) ! obsda%lev stores the band num.
+        ns = (n2prof(n) - 1) * nch + (band - 6)
 
         if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. & 
           abs(obs(obsda%set(n))%dif(obsda%idx(n))) <= DEPARTURE_STAT_T_RANGE) then
@@ -1669,32 +1668,34 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 ! Compute O-A regardless of non-assimilated bands --
           ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) ! O-A
 
-          if(oqc(n) == iqc_good) then
-            write (6, '(A,2I6,2F8.2,5F11.4,I6,F10.4)')"H08-O-A-B",&
-                  obs(obsda%set(n))%elm(obsda%idx(n)), &
-                  obs(obsda%set(n))%lev(obsda%idx(n)), & ! obsda%lev stores the band num.
-                  !nint(obsda%lev(n)), & ! obsda%lev includes the band num.
-                  obs(obsda%set(n))%lon(obsda%idx(n)), &
-                  obs(obsda%set(n))%lat(obsda%idx(n)), &
-                  ohx(n), &! O-A
-                  obsda%val(n), &! O-B
-                  plev_obs_H08(ns), &
-                  obs(obsda%set(n))%dat(obsda%idx(n)), &
-                  obs(obsda%set(n))%err(obsda%idx(n)), &
-                  oqc(n),&
-                  CA(n) 
-          endif
+!          if(oqc(n) == iqc_good) then
+!            write (6, '(A,2I6,2F8.2,5F11.4,I6,F10.4)')"H08-O-A-B",&
+!                  obs(obsda%set(n))%elm(obsda%idx(n)), &
+!                  obs(obsda%set(n))%lev(obsda%idx(n)), & ! obsda%lev stores the band num.
+!                  !nint(obsda%lev(n)), & ! obsda%lev includes the band num.
+!                  obs(obsda%set(n))%lon(obsda%idx(n)), &
+!                  obs(obsda%set(n))%lat(obsda%idx(n)), &
+!                  ohx(n), &! O-A
+!                  obsda%val(n), &! O-B
+!                  plev_obs_H08(ns), &
+!                  obs(obsda%set(n))%dat(obsda%idx(n)), &
+!                  obs(obsda%set(n))%err(obsda%idx(n)), &
+!                  oqc(n),&
+!                  CA(n) 
+!          endif
+
 !
 ! Inputs for monit_H08
 !
 ! -- Him8 IR obs (10 bands) should be aligned!
 ! -- For example, if obs%dat(n=1001) is Him8 band07, obs%dat(n=1010) should be Him8 band16,
           ns = (n2prof(n) - 1) * nch
+          ns2 = n - (band - 6)
+          idx_B07 = obsda%idx(n) - (band - 6)
           do ch = 1, nch
             oband_H08(ns+ch) = ch + 6
-            ohx_H08(ns+ch) = obs(obsda%set(ns+ch))%dat(obsda%idx(ns+ch)) - yobs_H08(ns+ch) ! Obs-minus-[A or B] 
+            ohx_H08(ns+ch) = obs(obsda%set(n))%dat(idx_B07+ch) - yobs_H08(ns+ch) ! Obs-minus-[A or B] 
           enddo
-
         endif ! [DEPARTURE_STAT_T_RANGE]
       end do ! [ n = 1, obsda%nobs ]
 !$OMP END PARALLEL DO
@@ -1770,25 +1771,14 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 
   if(H08_CLD_OBSERR)then
     if(Him8_OAB(1) > 0.0d0)then ! when this subroutine called after the LETKF
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n)
-      do n = 1, nprof_H08*nch
-        Him8_OAB(n) = Him8_OAB(n) * ohx_H08(n)
-      enddo
-!$OMP END PARALLEL DO
-
-      nHim8 = 0     ! tentative !!!
-      sHim8 = 0.0d0 ! tentative !!!
       do n = 1, nprof_H08
         ns = (n - 1) * nch
         do ch = 1, nch
-            idx_CA = int(CA(ns+ch) / H08_CLD_OBSERR_WTH)
-            nHim8(ch,idx_CA) = nHim8(ch,idx_CA) + 1
-            sHim8(ch,idx_CA) = sHim8(ch,idx_CA) + Him8_OAB(ns+ch)
+          Him8_iCA(ns+ch) = max(min(H08_CLD_OBSERR_NBIN, int(CA(ns+ch) / H08_CLD_OBSERR_WTH + 1)),1)
         enddo
       enddo
-    else ! when this subroutine called before the LETKF
-      Him8_OAB(1:nprof_H08*nch) = ohx_H08(1:nprof_H08*nch)
     endif
+    Him8_OAB(1:nprof_H08*nch) = ohx_H08(1:nprof_H08*nch)
   endif
 #endif
 
@@ -1925,8 +1915,6 @@ SUBROUTINE monit_print_H08(nobs,bias,rmse,monit_type)
   character(12) :: tmpstr(nch)
   character(12) :: tmpstr2(nch)
 
-  character(1) :: B1
-  character(2) :: B2
   character(3) :: B3(nch)
 
   logical :: monit_type_(nch)
@@ -1938,18 +1926,12 @@ SUBROUTINE monit_print_H08(nobs,bias,rmse,monit_type)
   do i = 1, nch
     n = n + 1
 
-    if((i + 6) < 10)then
-      write(B1,'(A1)') i + 6
-      B3(i) = "B0" // B1
-    else
-      write(B2,'(A1)') i + 6
-      B3(i) = "B" // B2
-    endif
+    B3(i) = ch2BB_Him8(i)
 
     if(H08_CH_USE(i) == 1)then
-      write(flag_show(n),'(A12)') "Yes"
+      write(flag_show(n),'(A12)') "YES"
     else
-      write(flag_show(n),'(A12)') " No"
+      write(flag_show(n),'(A12)') " NO"
     endif
 
     write(var_show(n),'(A12)') B3(i)
@@ -1972,7 +1954,7 @@ SUBROUTINE monit_print_H08(nobs,bias,rmse,monit_type)
   WRITE(6,'(A,' // trim(nstr) // 'A)') 'BIAS  ', bias_show(1:n)
   WRITE(6,'(A,' // trim(nstr) // 'A)') 'RMSE  ', rmse_show(1:n)
   WRITE(6,'(A,' // trim(nstr) // 'A)') 'NUMBER', nobs_show(1:n)
-  WRITE(6,'(A,' // trim(nstr) // 'A)') 'ASSIMILATED?', flag_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') 'USED? ', flag_show(1:n)
   WRITE(6,'(A,' // trim(nstr) // 'A)') '======', tmpstr(1:n)
 
   RETURN

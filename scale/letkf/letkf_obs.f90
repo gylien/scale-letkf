@@ -44,8 +44,9 @@ MODULE letkf_obs
   integer,save :: nobstotal
 
 ! -- array for storing O-B and O-A of Him8
-  real(r_size),allocatable,save :: Him8_OAB(:)
-
+  real(r_size),allocatable,save :: Him8_OAB_l(:)
+  integer,allocatable,save :: Him8_iCA_l(:)
+  REAL(r_size),allocatable,save :: Him8_obserr_CA(:,:) ! Sum of Him8's [O-A]x[O-B] as a function of CA
 
 CONTAINS
 !-----------------------------------------------------------------------
@@ -306,14 +307,8 @@ SUBROUTINE set_letkf_obs
 
   obsda%val2 = obsda%val2 / REAL(MEMBER,r_size)
 
-! -- allocate array for storing O-B and O-A of Him8
-  if (H08_CLD_OBSERR)then
-    allocate(Him8_OAB(obsda%nobs))
-    Him8_OAB = undef
-  endif
 !-- H08
 #endif
-
 
 !    call MPI_Comm_free(MPI_COMM_e,ierr)
 
@@ -1044,6 +1039,15 @@ print *, myrank, nobstotalg, nobstotal, nobsgrd(nlon,nlat,:)
     stop
   end if
 
+! -- allocate array for storing O-B and O-A of Him8
+!  if (H08_CLD_OBSERR)then
+!
+!   Array size should be greater than or equal to nch*nprof_H08 in
+!   subdomains.
+  allocate(Him8_OAB_l(int(obsda2(PRC_myrank)%nobs/sum(H08_CH_USE)+1)*nch))
+  allocate(Him8_iCA_l(int(obsda2(PRC_myrank)%nobs/sum(H08_CH_USE)+1)*nch))
+  Him8_OAB_l = 0.0d0
+  Him8_iCA_l = 1
 
 
 !do i = 0, MEM_NP-1

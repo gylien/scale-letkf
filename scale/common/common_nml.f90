@@ -149,6 +149,9 @@ MODULE common_nml
   real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
                                       5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
 
+  real(r_size) :: OBSERR_H08_MAX = 10.0d0
+  real(r_size) :: OBSERR_H08_MIN = 0.5d0
+
   !--- PARAM_LETKF_MONITOR
   logical :: DEPARTURE_STAT = .true.
   logical :: DEPARTURE_STAT_RADAR = .false.
@@ -202,7 +205,8 @@ MODULE common_nml
   logical :: H08_CLD_OBSERR = .false. ! Cloud dependent obs error for Him8. If this is true, obs error depending on CA is assigned in letkf
   real(r_size) :: H08_CLD_OBSERR_WTH = 1.0d0 ! Bin width of CA for cloud dependent obs error.
   integer :: H08_CLD_OBSERR_NBIN = 51 ! Number of bins for CA.
-  
+  integer :: H08_CLD_OBSERR_MTIME = 10 ! Max number of analysis time that is used to diagnose cloud dependent obserr  
+
   integer :: H08_CH_USE(nch) = (/0,0,1,0,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
                         !! (B07,B08,B09,B10,B11,B12,B13,B14,B15,B16)
@@ -515,6 +519,8 @@ subroutine read_nml_letkf_obserr
     OBSERR_TCY, &
     OBSERR_TCP, &
     OBSERR_H08, & ! H08
+    OBSERR_H08_MAX, & ! H08
+    OBSERR_H08_MIN, & ! H08
     USE_OBSERR_RADAR_REF, &
     USE_OBSERR_RADAR_VR
 
