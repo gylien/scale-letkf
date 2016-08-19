@@ -2904,14 +2904,6 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
       qc(n) = iqc_obs_bad
     ENDIF
 
-!    IF(abs(btall_out(ch,np) - btclr_out(ch,np)) > H08_CLDSKY_THRS)THEN
-! Cloudy sky
-!      yobs(n) = yobs(n) * (-1.0d0)
-!    ELSE
-! Clear sky
-!      yobs(n) = yobs(n) * 1.0d0
-!    ENDIF
-   
     yobs_H08_clr(n) = btclr_out(ch,np)
 
   ENDDO ! ch

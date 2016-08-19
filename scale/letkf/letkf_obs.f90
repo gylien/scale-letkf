@@ -96,10 +96,6 @@ SUBROUTINE set_letkf_obs
   REAL(r_size):: ch_num ! H08
 !  REAL(r_size),allocatable :: hx_sprd(:) ! H08
 
-! cloud-dependent obs error for Him8
-  INTEGER :: nHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Number of Him8 obs as a function of CA
-  REAL(r_size) :: sHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Sum of Him8's [O-A]x[O-B] as a function of CA
-
 #endif
   integer :: iproc,jproc
   integer,allocatable :: nnext(:,:)
@@ -539,34 +535,9 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_obs_bad
         cycle
       endif
-
-!
-! -- Counting how many members have cloud.
-! -- Cloudy members should have negative values.
-!
-!      mem_ref = 0
-!      do i = 1, MEMBER
-!        if (obsda%ensval(i,n) < 0.0d0) then
-!          mem_ref = mem_ref + 1
-!          obsda%ensval(i,n) = obsda%ensval(i,n) * (-1.0d0)
-!        end if
-!      end do
-
-!
-! -- reject Band #11(ch=5) & #12(ch=6) of Himawari-8 obs ! H08
-! -- because these channels are sensitive to chemical tracers
-! NOTE!!
-!    channel num of Himawari-8 obs is stored in obs%lev (T.Honda 11/04/2015)
-!      if ((int(obs(iof)%elm(iidx)) == 11) .or. &
-!          (int(obs(iof)%lev(iidx)) == 12)) then
-!        obsda%qc(n) = iqc_obs_bad
-!        cycle
-!      endif
     endif
 !!!###### end Himawari-8 assimilation ###### ! H08
 #endif
-
-
 
     obsda%val(n) = obsda%ensval(1,n)
     DO i=2,MEMBER
@@ -612,30 +583,14 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_gross_err
       END IF
     case (id_H08IR_obs)
-      ! Adaptive QC depending on the sky condition in the background.
-      ! !!Not finished yet!!
-      ! 
-      ! In config.nml.obsope,
-      !  H08_CLDSKY_THRS  < 0.0: turn off ! all members are diagnosed as cloudy.
-      !  H08_CLDSKY_THRS  > 0.0: turn on
-      !
-      !IF(mem_ref < H08_MIN_CLD_MEMBER)THEN ! Clear sky
-      !  IF(ABS(obsda%val(n)) > 1.0d0 * obs(iof)%err(iidx)) THEN
-      !    obsda%qc(n) = iqc_gross_err
-      !  END IF
-      !ELSE ! Cloudy sky
-        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
-          obsda%qc(n) = iqc_gross_err
-        END IF
-      !END IF
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
 
       IF(obs(iof)%dat(iidx) < H08_BT_MIN)THEN
         obsda%qc(n) = iqc_gross_err
       ENDIF
 
-!      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
-!        obsda%qc(n) = iqc_gross_err
-!      END IF
     case (id_tclon_obs)
       IF(ABS(obsda%val(n)) > GROSS_ERROR_TCX * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err

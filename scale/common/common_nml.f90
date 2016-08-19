@@ -198,10 +198,6 @@ MODULE common_nml
   real(r_size) :: H08_RTTOV_CFRAC_CNST = 0.10d0 ! Denominator constant for diagnosing SEQUENTIAL(0-1) cloud fraction (g m-3)
                                                 ! Negative values indicate DISCRETE (0/1) cloud fraction 
   real(r_size) :: H08_BT_MIN = 0.0d0 ! Lower limit of the BT for Himawari-8 IR
-  real(r_size) :: H08_CLDSKY_THRS = -5.0d0 ! Threshold for diagnosing the sky condition using [BT(all-sky) - BT(clr)].
-                                           ! Negative values: turn off
-  integer :: H08_MIN_CLD_MEMBER = 1       ! If the number of the cloudy members is larger than H08_MIN_CLD_MEMBER,
-                                           ! the first guess is diagnosed as cloudy. ! Not finished yet!
   logical :: H08_CLD_OBSERR = .false. ! Cloud dependent obs error for Him8. If this is true, obs error depending on CA is assigned in letkf
   real(r_size) :: H08_CLD_OBSERR_WTH = 1.0d0 ! Bin width of CA for cloud dependent obs error.
   integer :: H08_CLD_OBSERR_NBIN = 51 ! Number of bins for CA.
@@ -624,8 +620,6 @@ subroutine read_nml_letkf_h08
   namelist /PARAM_LETKF_H08/ &
     H08_REJECT_LAND, &
     H08_RTTOV_CLD, &
-    H08_MIN_CLD_MEMBER, &
-    H08_CLDSKY_THRS, &
     H08_RTTOV_MINQ, &
     H08_RTTOV_CFRAC_CNST, &
     H08_LIMIT_LEV, &
