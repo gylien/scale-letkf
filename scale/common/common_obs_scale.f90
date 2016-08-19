@@ -1384,7 +1384,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
   REAL(r_size),ALLOCATABLE :: yobs_H08_clr(:)
   REAL(r_size),ALLOCATABLE :: CA(:) ! (Okamoto et al., 2014QJRMS)
-  INTEGER :: ns
+  INTEGER :: ns, ns2
   INTEGER,ALLOCATABLE :: qc_H08(:)
   REAL(r_size),ALLOCATABLE :: ohx_H08(:)
   INTEGER,ALLOCATABLE :: oband_H08(:)
