@@ -88,11 +88,11 @@ if [ "${LANDUSE_TARGZ}" = 'T' ] ; then
 fi
 
 if [ "$OCEAN" = '-' ]; then
-  OCEAN=$INIT
+  OCEAN=
 fi
 
 if [ "$LAND" = '-' ]; then
-  LAND=$INIT
+  LAND=
 fi
 
 if [ "$SCPCALL" = 'cycle' ]; then
