@@ -2762,6 +2762,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
   REAL(r_size) :: lat1d(nprof)
   REAL(r_size) :: topo1d(nprof)
   REAL(r_size) :: lsmask1d(nprof)
+  REAL(r_size) :: hgt_top
 
 ! -- brightness temp from RTTOV
   REAL(r_size) :: btall_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
@@ -2837,6 +2838,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
   slev = 1 + KHALO
   elev = nlevh - KHALO
 
+  hgt_top = maxval(v3d(elev,:,:,iv3dd_hgt))
+
   CALL SCALE_RTTOV_fwd(nch, & ! num of channels
                        nlev,& ! num of levels
                        nprof,& ! num of profs
@@ -2854,6 +2857,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
                        lon1d(1:nprof),& ! (deg)
                        lat1d(1:nprof),& ! (deg)
                        lsmask1d(1:nprof),& ! (0-1)
+                       hgt_top, & (m)
                        btall_out(1:nch,1:nprof),& ! (K)
                        btclr_out(1:nch,1:nprof),& ! (K)
                        trans_out(nlev:1:-1,1:nch,1:nprof))

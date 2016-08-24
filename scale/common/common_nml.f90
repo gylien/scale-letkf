@@ -191,6 +191,7 @@ MODULE common_nml
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
   !---PARAM_LETKF_H08
+  logical :: H08_RTTOV_EXTRA_US76 = .false. ! true: extrapolate the RTTOV input profiles using the lapse rate from the U.S. standard atmosphre. (top is 47 km (stratopause))
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
   real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
@@ -622,6 +623,7 @@ subroutine read_nml_letkf_h08
     H08_RTTOV_CLD, &
     H08_RTTOV_MINQ, &
     H08_RTTOV_CFRAC_CNST, &
+    H08_RTTOV_EXTRA_US76, &
     H08_LIMIT_LEV, &
     H08_BT_MIN, &
     H08_CLD_OBSERR, &
