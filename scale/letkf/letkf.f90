@@ -232,11 +232,10 @@ PROGRAM letkf
     ! READ GUES
     !
 
-#ifdef PEST_TOMITA
-    call read_ens_mpi(GUES_IN_BASENAME,gues3d,gues2d,pgues0d=panal0d)
-    write(6,'(a,5f8.2)')"PEST CHECK G: ",(panal0d(1:5,1))
-#else
     call read_ens_mpi(GUES_IN_BASENAME,gues3d,gues2d)
+#ifdef PEST_TOMITA
+    call read_pest_para_mpi(panal0d)
+    !write(6,'(a,5f8.2)')"PEST DEBUG G: ",(panal0d(1:5,1))
 #endif
 
 !  write (6,*) gues3d(20,:,3,iv3d_t)
@@ -270,8 +269,7 @@ PROGRAM letkf
 
 #ifdef PEST_TOMITA
     CALL das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d=panal0d)
-!    CALL write_para_txt("TEST.txt",panal0d)
-    write(6,'(a,5f8.2)')"PEST CHECK A: ",(panal0d(1:5,1))
+    !write(6,'(a,5f8.2)')"PEST DEBUG A: ",(panal0d(1:5,1))
 #else
     CALL das_letkf(gues3d,gues2d,anal3d,anal2d)
 #endif
@@ -288,11 +286,7 @@ PROGRAM letkf
     !
 !    CALL MPI_BARRIER(MPI_COMM_a,ierr)
 
-#ifdef PEST_TOMITA
-    CALL write_ens_mpi(ANAL_OUT_BASENAME,anal3d,anal2d,panal0d=panal0d)
-#else
     CALL write_ens_mpi(ANAL_OUT_BASENAME,anal3d,anal2d)
-#endif
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -307,6 +301,15 @@ PROGRAM letkf
     rtimer = MPI_WTIME()
     WRITE(6,timer_fmt) '### TIMER(ANAL_MEAN):',rtimer-rtimer00
     rtimer00=rtimer
+
+#ifdef PEST_TOMITA
+    if ((myrank == 0)) then
+      call write_para_txt("EPARAM_TOMITA_ANAL.txt",panal0d)
+    endif
+#endif
+
+
+
 !!-----------------------------------------------------------------------
 !! Monitor
 !!-----------------------------------------------------------------------

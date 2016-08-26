@@ -43,16 +43,20 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
   REAL(r_size),INTENT(OUT) :: anal2d(nij1,MEMBER,nv2d)
 
 ! parameter estimation
-! IN: parameter gues, OUT: parameter anal (MEMBER + mean + sprd)
   REAL(r_size),OPTIONAL,INTENT(INOUT) :: panal0d(MEMBER+2,PNUM_TOMITA) ! background ensemble
 #ifdef PEST_TOMITA
-  REAL(r_size),ALLOCATABLE :: pgues0d(:,:) ! background ensemble
-  REAL(r_size),ALLOCATABLE :: pgues2d(:,:,:) ! background ensemble
-  REAL(r_size),ALLOCATABLE :: panal2d(:,:,:) ! analysis ensemble
+  REAL(r_size),ALLOCATABLE :: pgues0d(:,:) ! background ensemble for parameters
   REAL(r_size),ALLOCATABLE :: pmean0d(:) ! Ensemble mean of estimating parameters
+
+  ! tentative 2D arrays for PEST_TOMITA_LOCAL2D = T
+  REAL(r_size),ALLOCATABLE :: pgues2d(:,:,:) ! background ensemble for parameters
+  REAL(r_size),ALLOCATABLE :: panal2d(:,:,:) ! background ensemble for parameters
+
   INTEGER :: pr1 ! loop variables
   REAL(r_size),ALLOCATABLE :: rdiag0(:)
   REAL(r_size),ALLOCATABLE :: rloc0(:)
+  INTEGER :: nij1p
+  integer :: ierr
 #endif
 ! 
 
@@ -147,27 +151,31 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
 #ifdef PEST_TOMITA
   if (present(panal0d) .and. EPNUM_TOMITA >= 1)then
 
+
     allocate(pmean0d(PNUM_TOMITA))         ! ensemble mean
     allocate(pgues0d(MEMBER+2,PNUM_TOMITA)) ! background ensemble
 
     pgues0d = panal0d
 
-    !! Assume parameter is global constant!!
-    !! Parameters are converted to tanh function as in a parameter estimation
-    !! study with NICAM-LETKF (Kotsuki et al., 20XX)
-    DO pr1 = 1, PNUM_TOMITA ! parameter loop (pr1)
-      DO m=1,MEMBER
-        pgues0d(m,pr1) = prm2func(EPARAM_TOMITA_LIMIT(1,pr1),& ! Max threshold
-                                  EPARAM_TOMITA_LIMIT(2,pr1),& ! Min threshold
-                                  pgues0d(m,pr1))
-      ENDDO
-      pmean0d(pr1) = prm2func(EPARAM_TOMITA_LIMIT(1,pr1),& ! Max threshold
-                              EPARAM_TOMITA_LIMIT(2,pr1),& ! Min threshold
-                              pgues0d(MEMBER+1,pr1))
+    if(PEST_TOMITA_LOCAL2D)then
+      allocate(pgues2d(1:nij1,MEMBER,PNUM_TOMITA)) ! background ensemble
+      allocate(panal2d(1:nij1,MEMBER,PNUM_TOMITA)) ! background ensemble
+    endif
 
-      write(6,'(a,1f8.2)')"PEST DEBUG: INIT MEAN: ",pmean0d(pr1)
+    DO pr1 = 1, PNUM_TOMITA ! parameter loop (pr1)
+
+      pmean0d(pr1) = pgues0d(MEMBER+1,pr1)
+
+!      write(6,'(a,1f8.2)')"PEST DEBUG: INIT MEAN: ",&
+!                          prm2func(EPARAM_TOMITA_LIMIT(1,pr1),& ! Max threshold
+!                                   EPARAM_TOMITA_LIMIT(2,pr1),& ! Min threshold
+!                                   pmean0d(pr1))
+
       DO m=1,MEMBER
         pgues0d(m,pr1) = pgues0d(m,pr1) - pmean0d(pr1)
+        if(PEST_TOMITA_LOCAL2D)then
+          pgues2d(1:nij1,m,pr1) = pgues0d(m,pr1)
+        endif
       END DO
 
     END DO ! pr1
@@ -414,69 +422,109 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
 #ifdef PEST_TOMITA
   IF (present(panal0d) .AND. (EPNUM_TOMITA >= 1))THEN
 
-    ! No localization for parameter estimation because estimated
-    ! parameters from Tomita (2008) are global. by T. Honda (08/01/2016)
-    CALL obs_local_etkf(hdxf, rdiag0, rloc0, dep, nobsl)
-    parm = 1.0d0 ! Mutiplicative inflation is not avairable for parameter estimation.
-    IF(PEST_RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL
-      CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag0,rloc0,dep,parm, &       !GYL
-                      trans(:,:,nv3d),transm=transm(:,nv3d),pao=pa(:,:,nv3d), &  !GYL
-                      rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                      !GYL
-    ELSE                                                                         !GYL
-!    write(6,'(a)')"DEBUG CHECK0000"
-      CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag0,rloc0,dep,parm, &       !GYL
-                      trans(:,:,nv3d),transm=transm(:,nv3d),       &             !GYL
-                      rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                      !GYL
-!    write(6,'(a)')"DEBUG CHECK0001"
-    END IF                                                                       !GYL
-    work2d(1,n) = parm ! tentative
+    IF(.not. PEST_TOMITA_LOCAL2D)THEN ! PEST_TOMITA_LOCAL2D = F
+      nij1p = 1
+      ! 
+      ! In default, no localization is applied for parameter estimation because estimated
+      ! parameters from Tomita (2008) are global. by T. Honda (08/01/2016)
+      ! 
+      ! Localization can be applied for parameter estimation by setting
+      ! PEST_TOMITA_LOCAL2D = T. 
+      ! Parameters are updated in each grid point as apparent 2D variables, and
+      ! then averaged in whole the domain. See Aksoy et al. (2006).
+      !
+      CALL obs_local_etkf(hdxf, rdiag0, rloc0, dep, nobsl)
+      parm = 1.0d0 ! Mutiplicative inflation is not avairable for parameter estimation.
+      IF(PEST_RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL
+        CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag0,rloc0,dep,parm, &       !GYL
+                        trans(:,:,nv3d),transm=transm(:,nv3d),pao=pa(:,:,nv3d), &  !GYL
+                        rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                      !GYL
+      ELSE                                                                         !GYL
+        CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag0,rloc0,dep,parm, &       !GYL
+                        trans(:,:,nv3d),transm=transm(:,nv3d),       &             !GYL
+                        rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                      !GYL
+      END IF                                                                       !GYL
+      work2d(1,n) = parm ! tentative
+    ELSE ! PEST_TOMITA_LOCAL2D = T
+      nij1p = nij1
+    ENDIF 
+
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC)
+!PRIVATE(ij,pr1,n,m,k,hdxf,rdiag,rloc,dep,nobsl,nobsl_t,parm,beta,trans,transm,transrlx,pa,tmpinfl)
+    DO ij=1,nij1p
+
+      IF(PEST_TOMITA_LOCAL2D)THEN ! PEST_TOMITA_LOCAL2D = T
+        IF(PEST_RELAX_ALPHA_SPREAD /= 0.0d0) THEN
+          CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &
+                          trans(:,:,nv3d),transm=transm(:,nv3d),pao=pa(:,:,nv3d),&
+                          rdiag_wloc=.true.,minfl=INFL_MUL_MIN)
+        ELSE
+          CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, & 
+                          trans(:,:,nv3d),transm=transm(:,nv3d),       & 
+                          rdiag_wloc=.true.,minfl=INFL_MUL_MIN) 
+        END IF            
+      END IF            
+
+      ! No variable localization for parameters
+      DO pr1 = 1, PNUM_TOMITA
+        IF(PEST_TOMITA_FLAG(pr1))THEN ! [PEST_TOMITA_FLAG(pr1)]
+          IF(PEST_RELAX_ALPHA_SPREAD /= 0.0d0) THEN                           !GYL - RTPS method (Whitaker and Hamill 2012)
+            CALL weight_RTPS_PEST(trans(:,:,nv3d),pa(:,:,nv3d),pgues0d(1:MEMBER,pr1), &     !GYL
+                                  transrlx,tmpinfl)                                         !GYL
+          ELSE                                                                     !GYL
+            transrlx = trans(:,:,nv3d)                                             !GYL - No relaxation
+          END IF                                                                   !GYL
+
+          beta = 1.0d0 ! tentative!! CHECK!!
+
+          ! total weight matrix
+          DO m=1,MEMBER                                                            !GYL
+            DO k=1,MEMBER                                                          !GYL
+              transrlx(k,m) = (transrlx(k,m) + transm(k,nv3d)) * beta              !GYL
+            END DO                                                                 !GYL
+            transrlx(m,m) = transrlx(m,m) + (1.0d0-beta)                           !GYL
+          END DO                                                                   !GYL
+ 
+          ! parameter analysis update
+          DO m=1,MEMBER
+            IF(PEST_TOMITA_LOCAL2D)THEN ! PEST_TOMITA_LOCAL2D = T
+              panal2d(ij,m,pr1) = pmean0d(pr1)
+              DO k=1,MEMBER
+                panal2d(ij,m,pr1) = panal2d(ij,m,pr1) &
+                                  + pgues2d(ij,k,pr1) * transrlx(k,m)
+              END DO
+            ELSE
+              panal0d(m,pr1) = pmean0d(pr1)
+              DO k=1,MEMBER
+                panal0d(m,pr1) = panal0d(m,pr1) &
+                               + pgues0d(k,pr1) * transrlx(k,m)
+              END DO
+            ENDIF
+          END DO ! MEMBER
+ 
+        ENDIF ! [PEST_TOMITA_FLAG(pr1)]
+      END DO ! pr1
+
+    END DO ! [ ij=1,nij1p ]
+!$OMP END PARALLEL DO
+
+    ! domain averaging aparent 2D parameters. 
+    IF(PEST_TOMITA_LOCAL2D)THEN ! PEST_TOMITA_LOCAL2D = T
+      DO pr1 = 1, PNUM_TOMITA
+        DO m = 1, MEMBER
+          panal0d(m,pr1) = SUM(panal2d(1:nij1,m,pr1)) ! local sum
+        END DO ! m
+      END DO ! pr1
+
+      call MPI_ALLREDUCE(panal0d, panal0d, MEMBER*PNUM_TOMITA, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+      panal0d = panal0d / real(nlon*nlat,kind=r_size)
+    ENDIF
+
 
     DO pr1 = 1, PNUM_TOMITA
       IF(PEST_TOMITA_FLAG(pr1))THEN ! [PEST_TOMITA_FLAG(pr1)]
 
-        ! relaxation via LETKF weight
-        IF(PEST_RELAX_ALPHA /= 0.0d0) THEN                                       !GYL - RTPP method (Zhang et al. 2005)
-          CALL weight_RTPP(trans(:,:,nv3d),transrlx)                             !GYL
-        ELSE IF(PEST_RELAX_ALPHA_SPREAD /= 0.0d0) THEN                           !GYL - RTPS method (Whitaker and Hamill 2012)
-          CALL weight_RTPS(trans(:,:,nv3d),pa(:,:,nv3d),pgues0d(:,pr1), &        !GYL
-                           transrlx,tmpinfl)                                     !GYL
-        ELSE                                                                     !GYL
-          transrlx = trans(:,:,nv3d)                                             !GYL - No relaxation
-        END IF                                                                   !GYL
-
-        beta = 1.0d0 ! tentative!!
-
-        ! total weight matrix
-        DO m=1,MEMBER                                                            !GYL
-          DO k=1,MEMBER                                                          !GYL
-            transrlx(k,m) = (transrlx(k,m) + transm(k,nv3d+n)) * beta            !GYL
-          END DO                                                                 !GYL
-          transrlx(m,m) = transrlx(m,m) + (1.0d0-beta)                           !GYL
-        END DO                                                                   !GYL
-
-!            ! parameter analysis update
-        WRITE(6,'(a,3f10.5)')"DEBUG pmean0d",pmean0d(pr1),pgues0d(1,pr1),pgues0d(2,pr1)
-        DO m=1,MEMBER
-          panal0d(m,pr1) = pmean0d(pr1)
-          DO k=1,MEMBER
-            panal0d(m,pr1) = panal0d(m,pr1) &
-                           + pgues0d(k,pr1) * transrlx(k,m)
-          END DO
-        END DO ! MEMBER
-
-  !write(6,'(a,i5)')"PEST DEBUG: ",EPNUM_TOMITA
-  ! 3D parameter => 0D (global constant) parameter
-  !  write(6,'(a,1f8.2)')"PEST DEBUG: MAX: ",maxval(panal0d(1:MEMBER,1))
-  !  write(6,'(a,1f8.2)')"PEST DEBUG: MIN: ",minval(panal0d(1:MEMBER,1))
-        DO m=1,MEMBER
-          write(6,'(a,f10.3,2i6)')"PEST DEBUG00",panal0d(m,pr1),m,pr1
-          panal0d(m,pr1) = func2prm(EPARAM_TOMITA_LIMIT(1,pr1),& ! Max threshold
-                                    EPARAM_TOMITA_LIMIT(2,pr1),& ! Min threshold
-                                    panal0d(m,pr1))
-          write(6,'(a,f10.3,2i6)')"PEST DEBUG01",panal0d(m,pr1),m,pr1
-        END DO
-
-        ! Compute parameter mean [panal0d(MEMBER+1,:)] and sprd [panal0d(MEMBER+2,:)].
+        ! Compute parameter mean [panal0d(MEMBER+1,:)] and sprd [panal0d(MEMBER+2,:)] in tanh space.
         !
         panal0d(MEMBER+1,pr1) = sum(panal0d(1:MEMBER,pr1))/real(MEMBER,kind=r_size)
         panal0d(MEMBER+2,pr1) = (panal0d(1,pr1) - panal0d(MEMBER+1,pr1))**2
@@ -485,20 +533,20 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
         END DO
         panal0d(MEMBER+2,pr1) = SQRT(panal0d(MEMBER+2,pr1) / REAL(MEMBER-1,r_size))
 
-        !panal0d(m,pr1) = func2prm(EPARAM_TOMITA_LIMIT(1,pr1),& ! Max threshold
-        !                          EPARAM_TOMITA_LIMIT(2,pr1),& ! Min threshold
-        !                          panal0d(m,pr1))
       ELSE ! [PEST_TOMITA_FLAG(pr1)]
-        panal0d(1:MEMBER+2,pr1) = EPARAM_TOMITA(1:MEMBER+2,pr1)
+        panal0d(1:MEMBER+2,pr1) = DEF_PARAM_TOMITA(pr1)
       ENDIF ! [PEST_TOMITA_FLAG(pr1)]
     END DO ! pr1
 
-    write(6,'(a,5f8.2)')"PEST DEBUG: A: ",(panal0d(m,1),m=1,5)
+!    write(6,'(a,5f8.2)')"PEST DEBUG: A: ",(panal0d(m,1),m=1,5)
 
+    if(allocated(panal2d))deallocate(panal2d)
+    if(allocated(pgues2d))deallocate(pgues2d)
+   
   ENDIF ! [present(panal0d) .AND. (EPNUM_TOMITA >= 1)]
 #endif 
 
-  DEALLOCATE(hdxf,rdiag,rloc,dep)
+  DEALLOCATE(hdxf,rdiag,rloc,dep,rdiag0,rloc0)
   !
   ! Compute analyses of observations (Y^a)
   !
@@ -1405,6 +1453,41 @@ subroutine weight_RTPS(w, pa, xb, wrlx, infl)
   return
 end subroutine weight_RTPS
 
+#ifdef PEST_TOMITA
+!-----------------------------------------------------------------------
+! Relaxation via LETKF weight - RTPS method ! Parameter estimation
+!-----------------------------------------------------------------------
+subroutine weight_RTPS_PEST(w, pa, xb, wrlx, infl)
+  implicit none
+  real(r_size), intent(in) :: w(MEMBER,MEMBER)
+  real(r_size), intent(in) :: pa(MEMBER,MEMBER)
+  real(r_size), intent(in) :: xb(MEMBER)
+  real(r_size), intent(out) :: wrlx(MEMBER,MEMBER)
+  real(r_size), intent(out) :: infl
+  real(r_size) :: var_g, var_a
+  integer :: m, k
+
+  var_g = 0.0d0
+  var_a = 0.0d0
+  do m = 1, MEMBER
+    var_g = var_g + xb(m) * xb(m)
+    do k = 1, MEMBER
+      var_a = var_a + xb(k) * pa(k,m) * xb(m)
+    end do
+  end do
+  if (var_g > 0.0d0 .and. var_a > 0.0d0) then
+    infl = PEST_RELAX_ALPHA_SPREAD * sqrt(var_g / (var_a * real(MEMBER-1,r_size))) - PEST_RELAX_ALPHA_SPREAD + 1.0d0   ! Whitaker and Hamill 2012
+!    infl = sqrt(RELAX_ALPHA_SPREAD * (var_g / (var_a * real(MEMBER-1,r_size))) - RELAX_ALPHA_SPREAD + 1.0d0) ! Hamrud et al. 2015 (slightly modified)
+    wrlx = w * infl
+  else
+    wrlx = w
+    infl = 1.0d0
+  end if
+
+  return
+end subroutine weight_RTPS_PEST
+#endif
+
 !SUBROUTINE obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
 !  INTEGER,INTENT(IN) :: imin,imax,jmin,jmax
 !  INTEGER,INTENT(INOUT) :: nn, nobs_use(nobs)
@@ -1470,10 +1553,8 @@ subroutine obs_local_etkf(hdxf, rdiag0, rloc0, dep, nobsl)
   end if
 
   !
-  ! Do rough data search by a rectangle determined by grids,
-  ! and then do precise data search by normalized 3D distance and variable localization
-  !
   ! No localization for (global) parameter estimation
+  !
   imin1 = 1
   imax1 = PRC_NUM_X*nlon
   jmin1 = 1

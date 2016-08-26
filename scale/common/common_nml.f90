@@ -239,7 +239,6 @@ MODULE common_nml
   REAL(r_size) :: EPARAM_TOMITA_GAMMAT_LIMIT(2) = (/1.0D-2,7.0D-2/) ! Max/min threshold for Tomita (2008) parameter (gamma_saut)
   REAL(r_size) :: EPARAM_TOMITA_GAMMAR_LIMIT(2) = (/1.0D-2,7.0D-2/) ! Max/min threshold for Tomita (2008) parameter (gamma_sacr)
   REAL(r_size),ALLOCATABLE :: EPARAM_TOMITA_LIMIT(:,:) ! Max/min threshold for Tomita (2008) parameters.
-  REAL(r_size) :: PEST_RELAX_ALPHA = 0.0d0
   REAL(r_size) :: PEST_RELAX_ALPHA_SPREAD = 0.0d0
   LOGICAL :: PEST_TOMITA_ARCTAN = .true.
   LOGICAL :: PEST_TOMITA_LOCAL2D = .false.
@@ -693,7 +692,6 @@ subroutine read_nml_letkf_pest_tomita
     EPARAM_TOMITA_BETAS_LIMIT, &
     EPARAM_TOMITA_GAMMAT_LIMIT, &
     EPARAM_TOMITA_GAMMAR_LIMIT, &
-    PEST_RELAX_ALPHA,&
     PEST_RELAX_ALPHA_SPREAD,&
     PEST_TOMITA_ARCTAN, &
     PEST_TOMITA_LOCAL2D

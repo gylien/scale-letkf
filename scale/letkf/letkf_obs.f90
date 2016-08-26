@@ -128,6 +128,12 @@ SUBROUTINE set_letkf_obs
   dlat_zero = max(dlat_zero,SIGMA_OBS_H08 * dist_zero_fac / DY) ! H08
 #endif
 
+#ifdef PEST
+  if(.not. PEST_TOMITA_LOCAL2D)then  ! For ETKF in parameter estimation
+    dlon_zero = max(dlon_zero,SIGMA_OBS_PEST * dist_zero_fac / DX) ! PEST
+    dlat_zero = max(dlat_zero,SIGMA_OBS_PEST * dist_zero_fac / DY) ! PEST
+  endif
+#endif
 
 ! Read externally processed observations
 !-----------------------------------
@@ -624,9 +630,9 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_gross_err
       ENDIF
 
-!      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
-!        obsda%qc(n) = iqc_gross_err
-!      END IF
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
     case (id_tclon_obs)
       IF(ABS(obsda%val(n)) > GROSS_ERROR_TCX * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
