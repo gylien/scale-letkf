@@ -1385,6 +1385,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   REAL(r_size),ALLOCATABLE :: CA(:) ! (Okamoto et al., 2014QJRMS)
   INTEGER :: ns
   INTEGER,ALLOCATABLE :: qc_H08(:)
+  INTEGER :: ch, idx_B07, band
 #endif
 
 ! -- for TC vital assimilation --
@@ -1635,8 +1636,9 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
       do n = 1, obsda%nobs
         oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
         if(oelm(n) /= id_H08IR_obs)cycle
-  
-        ns = (n2prof(n) - 1) * nch + nint(obsda%lev(n) - 6.0) 
+ 
+        band = nint(obs(obsda%set(n))%lev(obsda%idx(n))) ! obsda%lev stores the band num.
+        ns = (n2prof(n) - 1) * nch + (band - 6) 
 
         if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. & 
           abs(obs(obsda%set(n))%dif(obsda%idx(n))) <= DEPARTURE_STAT_T_RANGE) then

@@ -851,7 +851,7 @@ END SUBROUTINE read_ens_history_iter
 !-----------------------------------------------------------------------
 ! Read ensemble data and distribute to processes
 !-----------------------------------------------------------------------
-subroutine read_ens_mpi(file,v3d,v2d,pgues0d)
+subroutine read_ens_mpi(file,v3d,v2d)
   implicit none
   CHARACTER(*),INTENT(IN) :: file
   REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,MEMBER,nv3d)
@@ -860,8 +860,6 @@ subroutine read_ens_mpi(file,v3d,v2d,pgues0d)
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   character(filelenmax) :: filename
   integer :: it,im,mstart,mend
-
-  REAL(r_size),OPTIONAL,INTENT(OUT) :: pgues0d(MEMBER+2,PNUM_TOMITA)  ! MEMBER + mean + sprd
 
   integer :: ierr
   REAL(r_dble) :: rrtimer00,rrtimer
@@ -892,12 +890,6 @@ subroutine read_ens_mpi(file,v3d,v2d,pgues0d)
   WRITE(6,'(A,F10.2)') '###### read_ens_mpi:state_trans:               ',rrtimer-rrtimer00
   rrtimer00=rrtimer
 
-#ifdef PEST_TOMITA
-!  if (myrank == lastmem_rank_e) then
-      if(EPNUM_TOMITA >= 1) then
-        call read_para_txt("EPARAM_TOMITA_GUES.txt",pgues0d)
-      endif
-#endif
 
     end if
     mstart = 1 + (it-1)*nprocs_e
@@ -920,7 +912,7 @@ end subroutine read_ens_mpi
 !-----------------------------------------------------------------------
 ! Write ensemble data after collecting data from processes
 !-----------------------------------------------------------------------
-SUBROUTINE write_ens_mpi(file,v3d,v2d,panal0d)
+SUBROUTINE write_ens_mpi(file,v3d,v2d)
   implicit none
   CHARACTER(*),INTENT(IN) :: file
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,MEMBER,nv3d)
@@ -929,8 +921,6 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d,panal0d)
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   character(filelenmax) :: filename
   integer :: it,im,mstart,mend
-
-  REAL(r_size),OPTIONAL,INTENT(IN) :: panal0d(MEMBER+2,PNUM_TOMITA) ! MEMBER + mean + sprd
 
   integer :: ierr
   REAL(r_dble) :: rrtimer00,rrtimer
@@ -976,17 +966,8 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d,panal0d)
     end if
   end do ! [ it = 1, nitmax ]
 
-#ifdef PEST_TOMITA
-  if ((myrank == lastmem_rank_e) .and. EPNUM_TOMITA >= 1 ) then
-!    write(6,'(a)')"debug check mpi_scale"
-    call write_para_txt("EPARAM_TOMITA_ANAL.txt",panal0d)
-  endif
-#endif
-
   return
 END SUBROUTINE write_ens_mpi
-
-
 
 
 
@@ -1300,7 +1281,6 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
     write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', trim(file_mean), ']:'
     call monit_print(nobs_g,bias_g,rmse_g,monit_type)
 
-
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
   WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:monit_obs_reduce_print:',rrtimer-rrtimer00
@@ -1427,6 +1407,38 @@ subroutine read_obs_all_mpi(obs)
   return
 end subroutine read_obs_all_mpi
 
+! --
+#ifdef PEST_TOMITA
+subroutine read_pest_para_mpi(pgues0d)
+  implicit none
+
+  REAL(r_size),INTENT(OUT) :: pgues0d(MEMBER+2,PNUM_TOMITA)  ! MEMBER + mean + sprd
+  integer :: iof, ierr
+  REAL(r_dble) :: rrtimer00,rrtimer
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer00 = MPI_WTIME()
+
+  if (myrank_a == 0) then
+    call read_para_txt("EPARAM_TOMITA_GUES.txt",pgues0d)
+  end if
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### read_pest_para_mpi:read_para:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+  call MPI_BCAST(pgues0d, PNUM_TOMITA*(MEMBER+2), MPI_r_size, 0, MPI_COMM_a, ierr)
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer = MPI_WTIME()
+  WRITE(6,'(A,F10.2)') '###### read_pest_para_mpi:bcast:',rrtimer-rrtimer00
+  rrtimer00=rrtimer
+
+  return
+end subroutine read_pest_para_mpi
+
+#endif
 
 
 !!-----------------------------------------------------------------------

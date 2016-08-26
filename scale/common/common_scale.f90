@@ -1320,53 +1320,86 @@ SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
 END SUBROUTINE rij_g2l_auto
 
 #ifdef PEST_TOMITA
-SUBROUTINE write_para_txt(filename,para0d)
+SUBROUTINE write_para_txt(filename,para0d_f)
   IMPLICIT NONE
 
   CHARACTER(*),INTENT(IN) :: filename
   ! MEMBER + mean + sprd
-  REAL(r_size),INTENT(IN) :: para0d(1:MEMBER+2,PNUM_TOMITA)
+  REAL(r_size),INTENT(IN) :: para0d_f(1:MEMBER+2,PNUM_TOMITA) ! function space
+  REAL(r_size) :: para0d(1:MEMBER+2,PNUM_TOMITA) ! physical space
   CHARACTER(20) :: cfmt
   CHARACTER(3) :: CMEM
   INTEGER :: m, pr1
 
-  write(CMEM,'(i3)')MEMBER + 2
-  cfmt = '(a,1x,'//CMEM//'f25.20)'
+!! Parameters (tanh) are converted back to physical parameters as in a parameter estimation
+!! study with NICAM-LETKF (Kotsuki et al., 20XX)
 
-!  write(6,*)"DEBUG cfmt ",trim(cfmt)
+  DO pr1 = 1, PNUM_TOMITA
+    DO m = 1, MEMBER
+      para0d(m,pr1) =  func2prm(EPARAM_TOMITA_LIMIT(1,pr1),& ! Max threshold
+                                EPARAM_TOMITA_LIMIT(2,pr1),& ! Min threshold
+                                para0d_f(m,pr1))
+    ENDDO ! m
+    para0d(MEMBER+1,pr1) = sum(para0d(1:MEMBER,pr1))/real(MEMBER,kind=r_size) ! mean in physical space
+
+    para0d(MEMBER+2,pr1) = (para0d(1,pr1) - para0d(MEMBER+1,pr1))**2
+    DO m = 2, MEMBER
+      para0d(MEMBER+2,pr1) = para0d(MEMBER+2,pr1) + (para0d(m,pr1) - para0d(MEMBER+1,pr1))**2
+    ENDDO
+    para0d(MEMBER+2,pr1) = SQRT(para0d(MEMBER+2,pr1) / real(MEMBER-1,kind=r_size)) ! sprd in physical space
+  ENDDO
+  
 
   OPEN(9999,file=trim(filename),form='formatted')
   DO pr1 = 1, PNUM_TOMITA
-    write(9999,trim(cfmt))trim(PNAME_TOMITA(pr1)),(para0d(m,pr1),m=1,MEMBER+2)
+    DO m = 1, MEMBER+2
+      write(9999,'(2D25.16)')para0d(m,pr1),para0d_f(m,pr1)
+    ENDDO ! m
   ENDDO
+  CLOSE(9999)
 
   RETURN
 END SUBROUTINE write_para_txt
 ! -
-SUBROUTINE read_para_txt(filename,para0d)
+SUBROUTINE read_para_txt(filename,para0d_f)
   IMPLICIT NONE
 
   CHARACTER(*),INTENT(IN) :: filename
   ! MEMBER + mean + sprd
-  REAL(r_size),INTENT(OUT) :: para0d(1:MEMBER+2,PNUM_TOMITA)
+  REAL(r_size),INTENT(OUT) :: para0d_f(1:MEMBER+2,PNUM_TOMITA)
+  REAL(r_size) :: tmp(2)
   CHARACTER(10) :: pname
   CHARACTER(20) :: cfmt
   CHARACTER(3) :: CMEM
   INTEGER :: m, pr1
 
-  write(CMEM,'(i3)')MEMBER + 2
-  cfmt = '(a,1x,'//CMEM//'f25.20)'
+!! Parameters are converted to tanh function as in a parameter estimation
+!! study with NICAM-LETKF (Kotsuki et al., 20XX)
 
   OPEN(9999,file=trim(filename),form='formatted')
   DO pr1 = 1, PNUM_TOMITA
-    !read(9999,cfmt)pname,(para0d(m,pr1),m=1,MEMBER+1)
-    read(9999,*)pname,(para0d(m,pr1),m=1,MEMBER+2)
-    IF(trim(pname) /= trim(PNAME_TOMITA(pr1)))THEN
-      write(6,*) 'xxx Not appropriate names in parameter file! Check!'
-      stop
-    ENDIF
-    !write(6,*)"DEBUG CHECK",pname,(para0d(m,pr1),m=1,MEMBER+2)
+    DO m = 1, MEMBER+2
+      !read(9999,*)para0d(m,pr1)
+      read(9999,*)tmp(1),tmp(2)
+      para0d_f(m,pr1) = tmp(1)
+      para0d_f(m,pr1) = prm2func(EPARAM_TOMITA_LIMIT(1,pr1),& ! Max threshold
+                                 EPARAM_TOMITA_LIMIT(2,pr1),& ! Min threshold
+                                 para0d_f(m,pr1))
+
+    ENDDO ! m
+
+    ! Parameter mean in tanh space
+    para0d_f(m+1,pr1) = sum(para0d_f(1:MEMBER,pr1)) / real(MEMBER,kind=r_size) 
+
+    ! Parameter spread in tanh space
+    para0d_f(m+2,pr1) = (para0d_f(1,pr1) - para0d_f(m+1,pr1))**2
+    DO m = 2, MEMBER
+      para0d_f(m+2,pr1) = para0d_f(m+2,pr1) + (para0d_f(1,pr1) - para0d_f(m+1,pr1))**2
+    ENDDO
+    para0d_f(m+2,pr1) = SQRT(para0d_f(m+2,pr1)/real(MEMBER-1,kind=r_size))
+
   ENDDO
+  CLOSE(9999)
 
   RETURN
 END SUBROUTINE read_para_txt
@@ -1388,7 +1421,11 @@ function prm2func ( pmin, pmax, xvar ) ! x --> y
 !  prm2func = datanh ( ( 2.0d0*xvar - ( pmax + pmin ) ) / ( pmax - pmin ) )
 !  print *, prm2func, fnc_datanh( ( 2.0d0*xvar - ( pmax + pmin ) ) / ( pmax -
 !  pmin ) )
-  prm2func = fnc_datanh( ( 2.0d0*xvar - ( pmax + pmin ) ) / ( pmax - pmin ) )
+  if(PEST_TOMITA_ARCTAN )then
+    prm2func = fnc_datanh( ( 2.0d0*xvar - ( pmax + pmin ) ) / ( pmax - pmin ) )
+  else
+    prm2func = xvar
+  endif
 
 end function prm2func
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1397,7 +1434,11 @@ function func2prm ( pmin, pmax, yvar ) ! y --> x
   REAL(r_size) :: func2prm
   REAL(r_size), INTENT(IN) :: pmin, pmax, yvar
 
-  func2prm = 0.5d0 * ( ( pmax + pmin ) + dtanh(yvar)*( pmax - pmin ) )
+  if(PEST_TOMITA_ARCTAN )then
+    func2prm = 0.5d0 * ( ( pmax + pmin ) + dtanh(yvar)*( pmax - pmin ) )
+  else
+    func2prm = yvar
+  endif
 
 end function func2prm
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
