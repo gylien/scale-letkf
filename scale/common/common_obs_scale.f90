@@ -2908,7 +2908,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
       qc(n) = iqc_obs_bad
     ENDIF
 
-    yobs_H08_clr(n) = btclr_out(ch,np)
+    IF (present(yobs_H08_clr)) yobs_H08_clr(n) = btclr_out(ch,np)
 
   ENDDO ! ch
   ENDDO ! np
