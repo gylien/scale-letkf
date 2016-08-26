@@ -89,21 +89,23 @@ fi
 
 # --- Parameter estimation (Tomita 2008) ----
 
-if [ "$PARAM_EST" == "T" ] ; then #-- PARAM_EST
+if ((MYRANK == 0 )) && [ "$PARAM_EST" == "T" ] ; then
 
-  STIME=$(datetime $ATIME -$LCYCLE s)
-  if [ -e ${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt ] ; then
-    PARAM_FILE="${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt"
-  elif [ -e ${TMPDAT}/param/EPARAM_TOMITA_ANAL${STIME}.txt ] ; then
+  if [ -e ${TMPDAT}/param/EPARAM_TOMITA_ANAL${STIME}.txt ] ; then
     PARAM_FILE="${TMPDAT}/param/EPARAM_TOMITA_ANAL${STIME}.txt"
+  elif [ -e ${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt ] ; then
+    PARAM_FILE="${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt"
   else
     echo "No parameter input!! check! ""${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt"
     echo "No parameter input!! check! ""${TMPDAT}/param/EPARAM_TOMITA_ANAL${STIME}.txt"
     echo "No parameter input!! check! "$PARAM_FILE
     exit 1
   fi
-  
-  echo $PARAM_FILE
+ 
+  if [ ! -e ${TMPOUT}/param ] ; then
+    mkdir -p ${TMPOUT}/param
+  fi
+ 
   cp $PARAM_FILE $TMPDIR/EPARAM_TOMITA_GUES.txt
 
 fi

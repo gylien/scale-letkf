@@ -232,6 +232,24 @@ EOF
 #${MODELDIR}/scale-rm_init|exec/scale-rm_init
 #${MODELDIR}/scale-rm|exec/scale-rm
 
+# --- Parameter estimation (Tomita 2008) ----
+  if [  "$PARAM_EST" == "T" ] ; then
+    #pathin1="${OUTDIR}/param/EPARAM_TOMITA_ANAL${STIME}.txt"
+    #pathin2="${OUTDIR}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt"
+    #pathin3="${SCRP_DIR}/EPARAM_TOMITA_ANAL${STIME}.txt"
+    pathin2="${SCRP_DIR}/EPARAM_TOMITA_ANAL${STIME}.dat"
+    path="param/EPARAM_TOMITA_ANAL${STIME}.dat"
+    if [ -e ${pathin2} ] ; then
+      echo "${pathin2}|${path}" >> $STAGING_DIR/stagein.dat
+    else
+      echo "[Error] You should prepare parameter input if you set [PARAM_EST = T]!"
+      echo ${pathin2}
+      exit 1
+    fi
+  fi
+# -------------------------------------------
+
+
   if [ "$TOPO_FORMAT" != 'prep' ]; then
     if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
       echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat

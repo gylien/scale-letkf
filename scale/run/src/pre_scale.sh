@@ -101,36 +101,50 @@ fi
 if [ "$PARAM_EST" == "T" ] ; then #-- PARAM_EST
 
   if [ $MEM == "mean" ] ; then
-    idx=$((MEMBER+1))
+    #idx=$((MEMBER+1))
+    idx=`expr ${MEMBER} + 1`
   else
-    idx=$((MEM))
+    #idx=$((MEM))
+    idx=`expr ${MEM} + 0`
   fi
 
-  if [ -e ${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt ] ; then
-    PARAM_FILE=${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt
-  elif [ -e ${TMPDAT}/param/EPARAM_TOMITA_ANAL${STIME}.txt ] ; then
+  if [ -e ${TMPDAT}/param/EPARAM_TOMITA_ANAL${STIME}.txt ] ; then
     PARAM_FILE=${TMPDAT}/param/EPARAM_TOMITA_ANAL${STIME}.txt
+  elif [ -e ${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt ] ; then
+    PARAM_FILE=${TMPOUT}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt
+  else
+    echo "[Error] You should prepare parameter input if you set [PARAM_EST = T]!"
+    echo $PARAM_FILE
+    exit 1
   fi
 
+  dlnum=`expr ${MEMBER} + 2` # MEMBER + mean + sprd
+  TOMITA_lnum1=`expr $idx`
+  TOMITA_lnum2=`expr ${TOMITA_lnum1} + ${dlnum}`
+  TOMITA_lnum3=`expr ${TOMITA_lnum2} + ${dlnum}`
+  TOMITA_lnum4=`expr ${TOMITA_lnum3} + ${dlnum}`
+  TOMITA_lnum5=`expr ${TOMITA_lnum4} + ${dlnum}`
+  TOMITA_lnum6=`expr ${TOMITA_lnum5} + ${dlnum}`
+
+  lnum=0
   while read line
   do
-    TOMITA_PARAM_LIST=($line)
-    PARAM_NAME=${TOMITA_PARAM_LIST[0]}
+    TOMITA_PARAM_TMP=($line)
 
-  # get TOMITA08 parameters 
+    lnum=`expr $lnum + 1`
 
-    if [ "$PARAM_NAME" == "Cr" ] ; then
-      TOMITA_CR=${TOMITA_PARAM_LIST[$idx]}"D0"
-    elif [ "$PARAM_NAME" == "Cs" ] ; then
-      TOMITA_CS=${TOMITA_PARAM_LIST[$idx]}"D0"
-    elif [ "$PARAM_NAME" == "drag_g" ] ; then
-      TOMITA_DRAGG=${TOMITA_PARAM_LIST[$idx]}"D0"
-    elif [ "$PARAM_NAME" == "beta_saut" ] ; then
-      TOMITA_BETA_SAUT=${TOMITA_PARAM_LIST[$idx]}"D0"
-    elif [ "$PARAM_NAME" == "gamma_saut" ] ; then
-      TOMITA_GAMMA_SAUT=${TOMITA_PARAM_LIST[$idx]}"D0"
-    elif [ "$PARAM_NAME" == "gamma_sacr" ] ; then
-      TOMITA_GAMMA_SACR=${TOMITA_PARAM_LIST[$idx]}"D0"
+    if (( lnum == TOMITA_lnum1 )) ; then
+      TOMITA_CR=$TOMITA_PARAM_TMP
+    elif (( lnum == TOMITA_lnum2 )) ; then
+      TOMITA_CS=$TOMITA_PARAM_TMP
+    elif (( lnum == TOMITA_lnum3 )) ; then
+      TOMITA_DRAGG=$TOMITA_PARAM_TMP
+    elif (( lnum == TOMITA_lnum4 )) ; then
+      TOMITA_BETA_SAUT=$TOMITA_PARAM_TMP
+    elif (( lnum == TOMITA_lnum5 )) ; then
+      TOMITA_GAMMA_SAUT=$TOMITA_PARAM_TMP
+    elif (( lnum == TOMITA_lnum6 )) ; then
+      TOMITA_GAMMA_SACR=$TOMITA_PARAM_TMP
     fi
   done < ${PARAM_FILE}
 

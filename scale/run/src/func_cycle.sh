@@ -247,14 +247,22 @@ EOF
 
 # --- Parameter estimation (Tomita 2008) ----
   if [  "$PARAM_EST" == "T" ] ; then
-    pathin="${OUTDIR}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt"
+    pathin1="${OUTDIR}/param/EPARAM_TOMITA_ANAL${STIME}.txt"
+    pathin2="${SCRP_DIR}/EPARAM_TOMITA_ANAL${STIME}.txt"
+    pathin3="${OUTDIR}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt"
     path="param/EPARAM_TOMITA_ANAL${STIME}.txt"
-    if [ ! -e ${pathin} ] ; then
-      echo "[Error] No parameter input for parameter estimation!"
-      echo ${pathin}
-      exit 1
+    if [ -e ${pathin1} ] ; then
+      echo "${pathin1}|${path}" >> $STAGING_DIR/stagein.dat
+    elif [ -e ${pathin2} ] ; then
+      echo "${pathin2}|${path}" >> $STAGING_DIR/stagein.dat
+    elif [ -e ${pathin3} ] ; then
+      echo "${pathin3}|${path}" >> $STAGING_DIR/stagein.dat
     else
-      echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+      echo "[Error] No parameter input for parameter estimation!"
+      echo ${pathin1}
+      echo ${pathin2}
+      echo ${pathin3}
+      exit 1
     fi
   fi
 # -------------------------------------------
@@ -746,6 +754,13 @@ else
           echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
         fi
       fi
+
+# --- Parameter estimation (Tomita 2008) ----
+      if [  "$PARAM_EST" == "T" ] ; then
+        path="param"
+        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      fi
+      
 
 #    #++++++
 #    else
