@@ -1334,6 +1334,8 @@ SUBROUTINE write_para_txt(filename,para0d_f)
 !! Parameters (tanh) are converted back to physical parameters as in a parameter estimation
 !! study with NICAM-LETKF (Kotsuki et al., 20XX)
 
+  write(6,'(A)')"hello from write_para"
+
   DO pr1 = 1, PNUM_TOMITA
     DO m = 1, MEMBER
       para0d(m,pr1) =  func2prm(EPARAM_TOMITA_LIMIT(1,pr1),& ! Max threshold
@@ -1358,6 +1360,8 @@ SUBROUTINE write_para_txt(filename,para0d_f)
   ENDDO
   CLOSE(9999)
 
+  write(6,'(A)')"end of write_para"
+
   RETURN
 END SUBROUTINE write_para_txt
 ! -
@@ -1372,15 +1376,22 @@ SUBROUTINE read_para_txt(filename,para0d_f)
   CHARACTER(20) :: cfmt
   CHARACTER(3) :: CMEM
   INTEGER :: m, pr1
+  LOGICAL :: ex
 
 !! Parameters are converted to tanh function as in a parameter estimation
 !! study with NICAM-LETKF (Kotsuki et al., 20XX)
 
+  INQUIRE(file=trim(filename),exist=ex)
+  IF(.not. ex)THEN
+     write(6,'(A)') 'No parameter input file!!'
+     write(6,'(A)') trim(filename)
+     stop
+  ENDIF
   OPEN(9999,file=trim(filename),form='formatted')
   DO pr1 = 1, PNUM_TOMITA
     DO m = 1, MEMBER+2
       !read(9999,*)para0d(m,pr1)
-      read(9999,*)tmp(1),tmp(2)
+      read(9999,'(2D25.16)')tmp(1),tmp(2)
       para0d_f(m,pr1) = tmp(1)
       para0d_f(m,pr1) = prm2func(EPARAM_TOMITA_LIMIT(1,pr1),& ! Max threshold
                                  EPARAM_TOMITA_LIMIT(2,pr1),& ! Min threshold

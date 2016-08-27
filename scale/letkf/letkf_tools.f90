@@ -52,10 +52,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
   REAL(r_size),ALLOCATABLE :: pgues2d(:,:,:) ! background ensemble for parameters
   REAL(r_size),ALLOCATABLE :: panal2d(:,:,:) ! background ensemble for parameters
 
-  INTEGER :: pr1 ! loop variables
+  INTEGER :: pr1 ! loop variable
+  REAL(r_size),ALLOCATABLE :: hdxf0(:,:)
   REAL(r_size),ALLOCATABLE :: rdiag0(:)
   REAL(r_size),ALLOCATABLE :: rloc0(:)
-  INTEGER :: nij1p
+  REAL(r_size),ALLOCATABLE :: dep0(:)
+  INTEGER :: nij1p, nobsl0
   integer :: ierr
 #endif
 ! 
@@ -224,8 +226,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
   ALLOCATE(dep  (nobstotal))
 
 #ifdef PEST_TOMITA
+  ALLOCATE(hdxf0 (nobstotal,MEMBER))
   ALLOCATE(rdiag0(nobstotal))
   ALLOCATE(rloc0 (nobstotal))
+  ALLOCATE(dep0  (nobstotal))
 #endif
 
   DO ilev=1,nlev
@@ -433,14 +437,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
       ! Parameters are updated in each grid point as apparent 2D variables, and
       ! then averaged in whole the domain. See Aksoy et al. (2006).
       !
-      CALL obs_local_etkf(hdxf, rdiag0, rloc0, dep, nobsl)
+      CALL obs_local_etkf(hdxf0, rdiag0, rloc0, dep0, nobsl0)
       parm = 1.0d0 ! Mutiplicative inflation is not avairable for parameter estimation.
       IF(PEST_RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL
-        CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag0,rloc0,dep,parm, &       !GYL
+        CALL letkf_core(MEMBER,nobstotal,nobsl0,hdxf0,rdiag0,rloc0,dep0,parm, &       !GYL
                         trans(:,:,nv3d),transm=transm(:,nv3d),pao=pa(:,:,nv3d), &  !GYL
                         rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                      !GYL
       ELSE                                                                         !GYL
-        CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag0,rloc0,dep,parm, &       !GYL
+        CALL letkf_core(MEMBER,nobstotal,nobsl0,hdxf0,rdiag0,rloc0,dep0,parm, &       !GYL
                         trans(:,:,nv3d),transm=transm(:,nv3d),       &             !GYL
                         rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                      !GYL
       END IF                                                                       !GYL
@@ -449,11 +453,17 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
       nij1p = nij1
     ENDIF 
 
+    ilev = 1
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC)
 !PRIVATE(ij,pr1,n,m,k,hdxf,rdiag,rloc,dep,nobsl,nobsl_t,parm,beta,trans,transm,transrlx,pa,tmpinfl)
     DO ij=1,nij1p
 
       IF(PEST_TOMITA_LOCAL2D)THEN ! PEST_TOMITA_LOCAL2D = T
+
+        ! compute weights with localized observations
+        CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),0,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
+        !CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
+
         IF(PEST_RELAX_ALPHA_SPREAD /= 0.0d0) THEN
           CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &
                           trans(:,:,nv3d),transm=transm(:,nv3d),pao=pa(:,:,nv3d),&
@@ -468,7 +478,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
       ! No variable localization for parameters
       DO pr1 = 1, PNUM_TOMITA
         IF(PEST_TOMITA_FLAG(pr1))THEN ! [PEST_TOMITA_FLAG(pr1)]
-          IF(PEST_RELAX_ALPHA_SPREAD /= 0.0d0) THEN                           !GYL - RTPS method (Whitaker and Hamill 2012)
+          IF(PEST_RELAX_ALPHA_SPREAD /= 0.0d0) THEN                     !GYL - RTPS method (Whitaker and Hamill 2012)
+            ! Note: pgues2d is horizontally uniform, and its component in each
+            ! grid is exactly the same with pgues0d. T. Honda (08/27/2016)
             CALL weight_RTPS_PEST(trans(:,:,nv3d),pa(:,:,nv3d),pgues0d(1:MEMBER,pr1), &     !GYL
                                   transrlx,tmpinfl)                                         !GYL
           ELSE                                                                     !GYL
@@ -512,11 +524,11 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
     IF(PEST_TOMITA_LOCAL2D)THEN ! PEST_TOMITA_LOCAL2D = T
       DO pr1 = 1, PNUM_TOMITA
         DO m = 1, MEMBER
-          panal0d(m,pr1) = SUM(panal2d(1:nij1,m,pr1)) ! local sum
+          pgues0d(m,pr1) = SUM(panal2d(1:nij1,m,pr1)) ! local sum
         END DO ! m
       END DO ! pr1
 
-      call MPI_ALLREDUCE(panal0d, panal0d, MEMBER*PNUM_TOMITA, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(pgues0d, panal0d, MEMBER*PNUM_TOMITA, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
       panal0d = panal0d / real(nlon*nlat,kind=r_size)
     ENDIF
 
@@ -538,7 +550,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
       ENDIF ! [PEST_TOMITA_FLAG(pr1)]
     END DO ! pr1
 
-!    write(6,'(a,5f8.2)')"PEST DEBUG: A: ",(panal0d(m,1),m=1,5)
+    write(6,'(a,5f8.2)')"PEST DEBUG: A: ",(panal0d(m,1),m=1,5)
 
     if(allocated(panal2d))deallocate(panal2d)
     if(allocated(pgues2d))deallocate(pgues2d)
@@ -546,7 +558,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
   ENDIF ! [present(panal0d) .AND. (EPNUM_TOMITA >= 1)]
 #endif 
 
-  DEALLOCATE(hdxf,rdiag,rloc,dep,rdiag0,rloc0)
+  DEALLOCATE(hdxf,rdiag,rloc,dep,hdxf0,rdiag0,rloc0,dep0)
   !
   ! Compute analyses of observations (Y^a)
   !
@@ -1519,18 +1531,18 @@ end subroutine weight_RTPS_PEST
 !END SUBROUTINE obs_local_sub
 
 #ifdef PEST_TOMITA
-subroutine obs_local_etkf(hdxf, rdiag0, rloc0, dep, nobsl)
+subroutine obs_local_etkf(hdxf0, rdiag0, rloc0, dep0, nobsl0)
   use scale_grid, only: &
     DX, DY
   use scale_rm_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
   implicit none
-  real(r_size), intent(out) :: hdxf(nobstotal,member)
+  real(r_size), intent(out) :: hdxf0(nobstotal,member)
   real(r_size), intent(out) :: rdiag0(nobstotal)
   real(r_size), intent(out) :: rloc0(nobstotal)
-  real(r_size), intent(out) :: dep(nobstotal)
-  integer, intent(out) :: nobsl
+  real(r_size), intent(out) :: dep0(nobstotal)
+  integer, intent(out) :: nobsl0
 ! 
   real(r_size) :: nd_h, nd_v ! normalized horizontal/vertical distances
   real(r_size) :: ndist      ! normalized 3D distance SQUARE
@@ -1561,7 +1573,7 @@ subroutine obs_local_etkf(hdxf, rdiag0, rloc0, dep, nobsl)
   jmax1 = PRC_NUM_Y*nlat
 
 
-  nobsl = 0
+  nobsl0 = 0
 
   do ip = 0, MEM_NP-1  ! loop over subdomains
 
@@ -1606,11 +1618,11 @@ subroutine obs_local_etkf(hdxf, rdiag0, rloc0, dep, nobsl)
         !-----------------------------------------------------------------------
         ! Directly prepare (hdxf, dep, rdiag, rloc) output here.
         !-----------------------------------------------------------------------
-          nobsl = nobsl + 1
-          hdxf(nobsl,:) = obsda2(ip)%ensval(:,iob)
-          dep(nobsl) = obsda2(ip)%val(iob)
-          rloc0(nobsl) = nrloc
-          rdiag0(nobsl) = nrloc
+          nobsl0 = nobsl0 + 1
+          hdxf0(nobsl0,:) = obsda2(ip)%ensval(:,iob)
+          dep0(nobsl0) = obsda2(ip)%val(iob)
+          rloc0(nobsl0) = nrloc
+          rdiag0(nobsl0) = nrdiag
 
       end do ! [ n = 1, nn ]
 
