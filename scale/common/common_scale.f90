@@ -1342,20 +1342,29 @@ SUBROUTINE write_para_txt(filename,para0d_f)
                                 EPARAM_TOMITA_LIMIT(2,pr1),& ! Min threshold
                                 para0d_f(m,pr1))
     ENDDO ! m
-    para0d(MEMBER+1,pr1) = sum(para0d(1:MEMBER,pr1))/real(MEMBER,kind=r_size) ! mean in physical space
 
+    ! Parameter mean in physical space
+    para0d(MEMBER+1,pr1) = para0d(1,pr1)
+    DO m = 2, MEMBER
+      para0d(MEMBER+1,pr1) = para0d(MEMBER+1,pr1) + para0d(m,pr1)
+    ENDDO ! m
+    para0d(MEMBER+1,pr1) = para0d(MEMBER+1,pr1) / real(MEMBER,kind=r_size) 
+
+    ! Parameter spread in physical space
     para0d(MEMBER+2,pr1) = (para0d(1,pr1) - para0d(MEMBER+1,pr1))**2
     DO m = 2, MEMBER
       para0d(MEMBER+2,pr1) = para0d(MEMBER+2,pr1) + (para0d(m,pr1) - para0d(MEMBER+1,pr1))**2
     ENDDO
-    para0d(MEMBER+2,pr1) = SQRT(para0d(MEMBER+2,pr1) / real(MEMBER-1,kind=r_size)) ! sprd in physical space
-  ENDDO
+    para0d(MEMBER+2,pr1) = SQRT(para0d(MEMBER+2,pr1)/real(MEMBER-1,kind=r_size))
+
+  ENDDO ! pr1
   
 
   OPEN(9999,file=trim(filename),form='formatted')
   DO pr1 = 1, PNUM_TOMITA
     DO m = 1, MEMBER+2
-      write(9999,'(2D25.16)')para0d(m,pr1),para0d_f(m,pr1)
+      !write(9999,'(2D25.16)')para0d(m,pr1),para0d_f(m,pr1)
+      write(9999,*)para0d(m,pr1),para0d_f(m,pr1)
     ENDDO ! m
   ENDDO
   CLOSE(9999)
@@ -1391,7 +1400,8 @@ SUBROUTINE read_para_txt(filename,para0d_f)
   DO pr1 = 1, PNUM_TOMITA
     DO m = 1, MEMBER+2
       !read(9999,*)para0d(m,pr1)
-      read(9999,'(2D25.16)')tmp(1),tmp(2)
+      !read(9999,'(2D25.16)')tmp(1),tmp(2)
+      read(9999,*)tmp(1),tmp(2)
       para0d_f(m,pr1) = tmp(1)
       para0d_f(m,pr1) = prm2func(EPARAM_TOMITA_LIMIT(1,pr1),& ! Max threshold
                                  EPARAM_TOMITA_LIMIT(2,pr1),& ! Min threshold
@@ -1400,14 +1410,18 @@ SUBROUTINE read_para_txt(filename,para0d_f)
     ENDDO ! m
 
     ! Parameter mean in tanh space
-    para0d_f(m+1,pr1) = sum(para0d_f(1:MEMBER,pr1)) / real(MEMBER,kind=r_size) 
+    para0d_f(MEMBER+1,pr1) = para0d_f(1,pr1)
+    DO m = 2, MEMBER
+      para0d_f(MEMBER+1,pr1) = para0d_f(MEMBER+1,pr1) + para0d_f(m,pr1)
+    ENDDO ! m
+    para0d_f(MEMBER+1,pr1) = para0d_f(MEMBER+1,pr1) / real(MEMBER,kind=r_size) 
 
     ! Parameter spread in tanh space
-    para0d_f(m+2,pr1) = (para0d_f(1,pr1) - para0d_f(m+1,pr1))**2
+    para0d_f(MEMBER+2,pr1) = (para0d_f(1,pr1) - para0d_f(MEMBER+1,pr1))**2
     DO m = 2, MEMBER
-      para0d_f(m+2,pr1) = para0d_f(m+2,pr1) + (para0d_f(1,pr1) - para0d_f(m+1,pr1))**2
+      para0d_f(MEMBER+2,pr1) = para0d_f(MEMBER+2,pr1) + (para0d_f(m,pr1) - para0d_f(MEMBER+1,pr1))**2
     ENDDO
-    para0d_f(m+2,pr1) = SQRT(para0d_f(m+2,pr1)/real(MEMBER-1,kind=r_size))
+    para0d_f(MEMBER+2,pr1) = SQRT(para0d_f(MEMBER+2,pr1)/real(MEMBER-1,kind=r_size))
 
   ENDDO
   CLOSE(9999)

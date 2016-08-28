@@ -303,9 +303,10 @@ PROGRAM letkf
     rtimer00=rtimer
 
 #ifdef PEST_TOMITA
-    if ((myrank == 0)) then
+    if ((myrank_a == 0)) then
       call write_para_txt("EPARAM_TOMITA_ANAL.txt",panal0d)
     endif
+    deallocate(panal0d)
 #endif
 
 

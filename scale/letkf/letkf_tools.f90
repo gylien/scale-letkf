@@ -454,9 +454,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
     ENDIF 
 
     ilev = 1
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC)
-!PRIVATE(ij,pr1,n,m,k,hdxf,rdiag,rloc,dep,nobsl,nobsl_t,parm,beta,trans,transm,transrlx,pa,tmpinfl)
-    DO ij=1,nij1p
+    ij = 1 ! tentative
+!#####!$OMP PARALLEL DO SCHEDULE(DYNAMIC)
+!#####!PRIVATE(ij,pr1,n,m,k,hdxf,rdiag,rloc,dep,nobsl,nobsl_t,parm,beta,trans,transm,transrlx,pa,tmpinfl)
+!    DO ij=1,nij1p
 
       IF(PEST_TOMITA_LOCAL2D)THEN ! PEST_TOMITA_LOCAL2D = T
 
@@ -517,8 +518,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
         ENDIF ! [PEST_TOMITA_FLAG(pr1)]
       END DO ! pr1
 
-    END DO ! [ ij=1,nij1p ]
-!$OMP END PARALLEL DO
+!####    END DO ! [ ij=1,nij1p ]
+!####!$OMP END PARALLEL DO
 
     ! domain averaging aparent 2D parameters. 
     IF(PEST_TOMITA_LOCAL2D)THEN ! PEST_TOMITA_LOCAL2D = T
@@ -533,6 +534,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
     ENDIF
 
 
+    write(6,'(a,5f8.2)')"PEST DEBUG: A0: ",(panal0d(m,1),m=1,5)
     DO pr1 = 1, PNUM_TOMITA
       IF(PEST_TOMITA_FLAG(pr1))THEN ! [PEST_TOMITA_FLAG(pr1)]
 
@@ -550,15 +552,16 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
       ENDIF ! [PEST_TOMITA_FLAG(pr1)]
     END DO ! pr1
 
-    write(6,'(a,5f8.2)')"PEST DEBUG: A: ",(panal0d(m,1),m=1,5)
+    write(6,'(a,5f8.2)')"PEST DEBUG: A1: ",(panal0d(m,1),m=1,5)
 
     if(allocated(panal2d))deallocate(panal2d)
     if(allocated(pgues2d))deallocate(pgues2d)
    
+    DEALLOCATE(hdxf0,rdiag0,rloc0,dep0)
   ENDIF ! [present(panal0d) .AND. (EPNUM_TOMITA >= 1)]
 #endif 
 
-  DEALLOCATE(hdxf,rdiag,rloc,dep,hdxf0,rdiag0,rloc0,dep0)
+  DEALLOCATE(hdxf,rdiag,rloc,dep)
   !
   ! Compute analyses of observations (Y^a)
   !
