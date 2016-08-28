@@ -1360,13 +1360,17 @@ SUBROUTINE write_para_txt(filename,para0d_f)
   ENDDO ! pr1
   
 
-  OPEN(9999,file=trim(filename),form='formatted')
+  OPEN(9990,file=trim(filename),form='formatted')
+  OPEN(9999,file=trim(filename)//'f',form='formatted')
   DO pr1 = 1, PNUM_TOMITA
     DO m = 1, MEMBER+2
       !write(9999,'(2D25.16)')para0d(m,pr1),para0d_f(m,pr1)
-      write(9999,*)para0d(m,pr1),para0d_f(m,pr1)
+      !write(9999,*)para0d(m,pr1),para0d_f(m,pr1)
+      write(9990,'(D22.14)')para0d(m,pr1)
+      write(9999,'(D22.14)')para0d_f(m,pr1)
     ENDDO ! m
   ENDDO
+  CLOSE(9990)
   CLOSE(9999)
 
   write(6,'(A)')"end of write_para"
@@ -1396,12 +1400,13 @@ SUBROUTINE read_para_txt(filename,para0d_f)
      write(6,'(A)') trim(filename)
      stop
   ENDIF
-  OPEN(9999,file=trim(filename),form='formatted')
+  OPEN(9990,file=trim(filename),form='formatted')
   DO pr1 = 1, PNUM_TOMITA
     DO m = 1, MEMBER+2
       !read(9999,*)para0d(m,pr1)
       !read(9999,'(2D25.16)')tmp(1),tmp(2)
-      read(9999,*)tmp(1),tmp(2)
+      !read(9990,*)tmp(1),tmp(2)
+      read(9990,'(D22.14)')tmp(1)
       para0d_f(m,pr1) = tmp(1)
       para0d_f(m,pr1) = prm2func(EPARAM_TOMITA_LIMIT(1,pr1),& ! Max threshold
                                  EPARAM_TOMITA_LIMIT(2,pr1),& ! Min threshold
@@ -1424,7 +1429,7 @@ SUBROUTINE read_para_txt(filename,para0d_f)
     para0d_f(MEMBER+2,pr1) = SQRT(para0d_f(MEMBER+2,pr1)/real(MEMBER-1,kind=r_size))
 
   ENDDO
-  CLOSE(9999)
+  CLOSE(9990)
 
   RETURN
 END SUBROUTINE read_para_txt
