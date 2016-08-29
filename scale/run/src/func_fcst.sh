@@ -236,14 +236,13 @@ EOF
   if [  "$PARAM_EST" == "T" ] ; then
     #pathin1="${OUTDIR}/param/EPARAM_TOMITA_ANAL${STIME}.txt"
     #pathin2="${OUTDIR}/${STIME}/log/letkf/EPARAM_TOMITA_ANAL${STIME}.txt"
-    #pathin3="${SCRP_DIR}/EPARAM_TOMITA_ANAL${STIME}.txt"
-    pathin2="${SCRP_DIR}/EPARAM_TOMITA_ANAL${STIME}.dat"
-    path="param/EPARAM_TOMITA_ANAL${STIME}.dat"
-    if [ -e ${pathin2} ] ; then
-      echo "${pathin2}|${path}" >> $STAGING_DIR/stagein.dat
+    pathin1="${SCRP_DIR}/EPARAM_TOMITA_ANAL${STIME}.txt"
+    path="param/EPARAM_TOMITA_ANAL${STIME}.txt"
+    if [ -e ${pathin1} ] ; then
+      echo "${pathin1}|${path}" >> $STAGING_DIR/stagein.dat
     else
       echo "[Error] You should prepare parameter input if you set [PARAM_EST = T]!"
-      echo ${pathin2}
+      echo ${pathin1}
       exit 1
     fi
   fi
