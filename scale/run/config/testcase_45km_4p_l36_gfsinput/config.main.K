@@ -5,7 +5,7 @@
 #
 #===============================================================================
 
-PRESET='K_rankdir'                          # 'K' or 'K_rankdir' or 'K_micro'
+PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
 
 #===============================================================================
 
@@ -21,11 +21,11 @@ OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # Directory for SCALE-LETKF output
 MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
-DATA_TOPO=                                                           # Directory of the prepared topo files
+DATA_TOPO="$DDIR/exp/testcase_45km_4p_l36_data"                      # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE=
-DATA_LANDUSE=                                                        # Directory of the prepared landuse files
+DATA_LANDUSE="$DDIR/exp/testcase_45km_4p_l36_data"                   # Directory of the prepared landuse files
 DATA_BDY_SCALE=                                                      # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
+DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_45km_4p_l36_data"            # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF="$DDIR/ncepfnl/wrfout"                                  # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 DATA_BDY_GRADS="$DDIR/ncepfnl_grads"                                 # Directory of the boundary data in GrADS format
@@ -46,7 +46,7 @@ LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=4            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
@@ -63,20 +63,17 @@ BDYCYCLE_INT=
 
 PARENT_REF_TIME=
 
-OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
+OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
+
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
-                        # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
-LAND_INPUT=1            # 0: No land input (use cycling land variables)
-                        # 1: Update the land variables every cycle
-LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
 OBSNAME[1]=obs                                    
 OBSNAME[2]=radar
-OBSOPE_SEPARATE[1]=0
-OBSOPE_SEPARATE[2]=0
+OBSOPE_SEPARATE[1]=1
+OBSOPE_SEPARATE[2]=1
 
 #===============================================================================
 # Cycling settings

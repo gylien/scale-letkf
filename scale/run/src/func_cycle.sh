@@ -139,6 +139,10 @@ if ((BDY_FORMAT >= 1)); then
         break
       elif ((BDY_FORMAT == 2 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_WRF/mean/wrfout_${PARENT_REF_TIME}" ]; then
         break
+      elif ((BDY_FORMAT == 4 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_GRADS/${PARENT_REF_TIME}/mean/atm_${PARENT_REF_TIME}.grd" ]; then
+        break
+      elif ((BDY_FORMAT == 4 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_GRADS/mean/atm_${PARENT_REF_TIME}.grd" ]; then
+        break
       elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
         echo "[Error] Cannot find boundary files." >&2
         exit 1
@@ -228,7 +232,6 @@ ${SCRP_DIR}/config.nml.scale_pp|conf/config.nml.scale_pp
 ${SCRP_DIR}/config.nml.scale_init|conf/config.nml.scale_init
 ${SCRP_DIR}/config.nml.scale|conf/config.nml.scale
 ${SCRP_DIR}/config.nml.ensmodel|conf/config.nml.ensmodel
-${SCRP_DIR}/config.nml.obsope|conf/config.nml.obsope
 ${SCRP_DIR}/config.nml.letkf|conf/config.nml.letkf
 ${DATADIR}/rad|rad
 ${DATADIR}/land|land
@@ -236,6 +239,13 @@ EOF
 #${MODELDIR}/scale-rm_pp|exec/scale-rm_pp
 #${MODELDIR}/scale-rm_init|exec/scale-rm_init
 #${MODELDIR}/scale-rm|exec/scale-rm
+
+  if [ -e "${SCRP_DIR}/config.nml.obsope" ]; then
+    echo "${SCRP_DIR}/config.nml.obsope|conf/config.nml.obsope" >> $STAGING_DIR/stagein.dat
+  fi
+  if [ -e "${SCRP_DIR}/config.nml.grads_boundary" ]; then
+    echo "${SCRP_DIR}/config.nml.grads_boundary|conf/config.nml.grads_boundary" >> $STAGING_DIR/stagein.dat
+  fi
 
 # H08
   if [ -e "${RTTOV_COEF}" ] && [ -e "${RTTOV_SCCOEF}" ]; then
@@ -689,6 +699,8 @@ else
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
           path="${time}/log/scale_init/0001_init.conf"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+          path="${time}/log/scale_init/0001_gradsbdy.conf"
+          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
           path="${time}/log/scale_init/0001_LOG.pe000000"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
           if ((BDY_ENS == 1)); then
@@ -1069,16 +1081,49 @@ else
               fi
             fi
 
-          elif ((BDY_FORMAT == 2)); then
+          elif ((BDY_FORMAT == 2 || BDY_FORMAT == 4)); then
+
+            if ((BDY_FORMAT == 2)); then
+              data_bdy_i=$DATA_BDY_WRF
+              filenum=1
+              filename_prefix[1]='wrfout_'
+              filename_suffix[1]=''
+            elif ((BDY_FORMAT == 4)); then
+              data_bdy_i=$DATA_BDY_GRADS
+              filenum=3
+              filename_prefix[1]='atm_'
+              filename_suffix[1]='.grd'
+              filename_prefix[2]='sfc_'
+              filename_suffix[2]='.grd'
+              filename_prefix[3]='land_'
+              filename_suffix[3]='.grd'
+            fi
 
             if ((BDY_ENS == 1)); then
               for m in $(seq $mmean); do
+                for ifile in $(seq $filenum); do
+                  if ((BDY_ROTATING == 1)); then
+                    pathin="$data_bdy_i/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+                    path="bdyorg/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
+                  else
+                    pathin="$data_bdy_i/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
+                    path="bdyorg/const/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
+                  fi
+                  if ((DISK_MODE_DATA_BDY == 2)); then
+                    echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+                  else
+                    echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+                  fi
+                done
+              done
+            else
+              for ifile in $(seq $filenum); do
                 if ((BDY_ROTATING == 1)); then
-                  pathin="$DATA_BDY_WRF/${time}/${name_m[$m]}/wrfout_${time_bdy}"
-                  path="bdyorg/${time}/${name_m[$m]}/wrfout_${time_bdy}"
+                  pathin="$data_bdy_i/${time}/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+                  path="bdyorg/${time}/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                 else
-                  pathin="$DATA_BDY_WRF/${name_m[$m]}/wrfout_${time_bdy}"
-                  path="bdyorg/const/${name_m[$m]}/wrfout_${time_bdy}"
+                  pathin="$data_bdy_i/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+                  path="bdyorg/const/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                 fi
                 if ((DISK_MODE_DATA_BDY == 2)); then
                   echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
@@ -1086,19 +1131,6 @@ else
                   echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
                 fi
               done
-            else
-              if ((BDY_ROTATING == 1)); then
-                pathin="$DATA_BDY_WRF/${time}/mean/wrfout_${time_bdy}"
-                path="bdyorg/${time}/mean/wrfout_${time_bdy}"
-              else
-                pathin="$DATA_BDY_WRF/mean/wrfout_${time_bdy}"
-                path="bdyorg/const/mean/wrfout_${time_bdy}"
-              fi
-              if ((DISK_MODE_DATA_BDY == 2)); then
-                echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-              else
-                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-              fi
             fi
 
           fi

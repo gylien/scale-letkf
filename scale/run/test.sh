@@ -10,6 +10,7 @@ function print_summary () {
 #  rm -f config.nml.scale
 #  rm -f config.nml.scale_pp
 #  rm -f config.nml.scale_init
+#  rm -f config.nml.grads_boundary
 
 #  rm -f ${SCPNAME[$i]}_job.sh
 #  rm -f ${jobname}.?${jobid}
@@ -136,10 +137,15 @@ for i in $(seq $NTEST); do
 
   ln -fs config/${CONFIG[$i]}/config.nml.ensmodel .
   ln -fs config/${CONFIG[$i]}/config.nml.letkf .
-  ln -fs config/${CONFIG[$i]}/config.nml.obsope .
   ln -fs config/${CONFIG[$i]}/config.nml.scale .
   ln -fs config/${CONFIG[$i]}/config.nml.scale_pp .
   ln -fs config/${CONFIG[$i]}/config.nml.scale_init .
+  if [ -e "config/${CONFIG[$i]}/config.nml.obsope" ]; then
+    ln -fs config/${CONFIG[$i]}/config.nml.obsope .
+  fi
+  if [ -e "config/${CONFIG[$i]}/config.nml.grads_boundary" ]; then
+    ln -fs config/${CONFIG[$i]}/config.nml.grads_boundary .
+  fi
 
   . config.main || exit $?
   . config.${SCPNAME[$i]} || exit $?
