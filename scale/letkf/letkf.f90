@@ -234,8 +234,10 @@ PROGRAM letkf
 
     call read_ens_mpi(GUES_IN_BASENAME,gues3d,gues2d)
 #ifdef PEST_TOMITA
-    call read_pest_para_mpi(panal0d)
-    !write(6,'(a,5f8.2)')"PEST DEBUG G: ",(panal0d(1:5,1))
+    if(EPNUM_TOMITA >= 1)then
+      call read_pest_para_mpi(panal0d)
+      !write(6,'(a,5f8.2)')"PEST DEBUG G: ",(panal0d(1:5,1))
+    endif
 #endif
 
 !  write (6,*) gues3d(20,:,3,iv3d_t)
@@ -303,7 +305,7 @@ PROGRAM letkf
     rtimer00=rtimer
 
 #ifdef PEST_TOMITA
-    if ((myrank_a == 0)) then
+    if ((myrank_a == 0).and.(EPNUM_TOMITA >= 1)) then
       call write_para_txt("EPARAM_TOMITA_ANAL.txt",panal0d)
     endif
     deallocate(panal0d)
