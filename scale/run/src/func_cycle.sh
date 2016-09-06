@@ -245,6 +245,23 @@ ${RTTOV_SCCOEF}|rttov/sccldcoef_himawari_8_ahi.dat
 EOF
   fi
 
+# -- Cloud dependent obs err for Him8 --
+
+  BB_LIST="07 08 09 10 11 12 13 14 15 16"
+  for BB in ${BB_LIST} ; do
+    pathin1="${OUTDIR}/Him8/Him8_ERR_CA_B${BB}_${STIME}.dat"
+    pathin2="${SCRP_DIR}/Him8_ERR_CA_B${BB}_${STIME}.dat"
+    pathin3="${OUTDIR}/${STIME}/log/Him8/Him8_ERR_CA_B${BB}_${STIME}.dat"
+    path="Him8/Him8_ERR_CA_B${BB}_${STIME}.dat"
+    if [ -e ${pathin1} ] ; then
+      echo "${pathin1}|${path}" >> $STAGING_DIR/stagein.dat
+    elif [ -e ${pathin2} ] ; then
+      echo "${pathin2}|${path}" >> $STAGING_DIR/stagein.dat
+    elif [ -e ${pathin3} ] ; then
+      echo "${pathin3}|${path}" >> $STAGING_DIR/stagein.dat
+    fi
+  done
+
   if [ "$TOPO_FORMAT" != 'prep' ]; then
     if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
       echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat
@@ -591,7 +608,8 @@ else
 #        done
         path="${time}/hist"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      elif ((OUT_OPT <= 2)); then
+      #elif ((OUT_OPT <= 2)); then # default
+      elif ((OUT_OPT <= 6)); then
         path="${time}/hist/meanf"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi

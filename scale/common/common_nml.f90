@@ -191,7 +191,6 @@ MODULE common_nml
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
   !---PARAM_LETKF_H08
-  logical :: H08_RTTOV_EXTRA_US76 = .false. ! true: extrapolate the RTTOV input profiles using the lapse rate from the U.S. standard atmosphre. (top is 47 km (stratopause))
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
   real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
@@ -203,6 +202,10 @@ MODULE common_nml
   real(r_size) :: H08_CLD_OBSERR_WTH = 1.0d0 ! Bin width of CA for cloud dependent obs error.
   integer :: H08_CLD_OBSERR_NBIN = 51 ! Number of bins for CA.
   integer :: H08_CLD_OBSERR_MTIME = 10 ! Max number of analysis time that is used to diagnose cloud dependent obserr  
+
+  real(r_size) :: H08_CLD_OBSERR_GROSS_ERR = 20.0d0
+  integer :: H08_CLD_OBSERR_MIN_SUMPLE = 1000
+  logical :: H08_DEBIAS_AMEAN = .false.
 
   integer :: H08_CH_USE(nch) = (/0,0,1,0,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
@@ -623,12 +626,14 @@ subroutine read_nml_letkf_h08
     H08_RTTOV_CLD, &
     H08_RTTOV_MINQ, &
     H08_RTTOV_CFRAC_CNST, &
-    H08_RTTOV_EXTRA_US76, &
     H08_LIMIT_LEV, &
     H08_BT_MIN, &
     H08_CLD_OBSERR, &
     H08_CLD_OBSERR_WTH, &
     H08_CLD_OBSERR_NBIN, &
+    H08_CLD_OBSERR_GROSS_ERR, &
+    H08_CLD_OBSERR_MIN_SUMPLE, &
+    H08_DEBIAS_AMEAN, &
     H08_CH_USE
 
   rewind(IO_FID_CONF)

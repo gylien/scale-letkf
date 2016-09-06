@@ -87,6 +87,17 @@ if ((NOBS_OUT == 1)); then
   NOBS_OUT_TF='.true.'
 fi
 
+# -- Cloud dependent obs err --
+
+BB_LIST="07 08 09 10 11 12 13 14 15 16"
+for BB in ${BB_LIST} ; do
+  CA_FILE1="${TMPDAT}/Him8/Him8_ERR_CA_B${BB}_${STIME}.dat"
+  CA_FILE2="Him8_ERR_CA_B${BB}.dat"
+  if [ -e ${CA_FILE1} ] ; then
+    cp $CA_FILE1 ${TMPDIR}/$CA_FILE2
+  fi
+done
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.letkf | \

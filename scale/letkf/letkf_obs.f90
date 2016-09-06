@@ -92,10 +92,13 @@ SUBROUTINE set_letkf_obs
   INTEGER,allocatable :: bufri(:)
   INTEGER,allocatable :: bufri2(:,:,:)
 #ifdef H08
-  REAL(r_size),allocatable :: bufr2(:) ! H08
-  REAL(r_size):: ch_num ! H08
-!  REAL(r_size),allocatable :: hx_sprd(:) ! H08
-
+  REAL(r_size),allocatable :: bufr2(:) 
+!  REAL(r_size),allocatable :: hx_sprd(:) 
+  integer :: ch_num, idx_CA
+  integer :: Him8_bcnt(nch)
+  real(r_size) :: Him8_bias(nch)
+  real(r_size) :: Him8_err
+  
 #endif
   integer :: iproc,jproc
   integer,allocatable :: nnext(:,:)
@@ -355,7 +358,7 @@ SUBROUTINE set_letkf_obs
   allocate(tmpelm(obsda%nobs))
 
 #ifdef H08
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,ch_num)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,ch_num,idx_CA,Him8_err)
 #else
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref)
 #endif
@@ -583,10 +586,15 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_gross_err
       END IF
     case (id_H08IR_obs)
-      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
-        obsda%qc(n) = iqc_gross_err
-      END IF
-
+      IF(H08_CLD_OBSERR)THEN
+        IF(ABS(obsda%val(n)) > H08_CLD_OBSERR_GROSS_ERR)THEN
+          obsda%qc(n) = iqc_gross_err
+        ENDIF
+      ELSE
+        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+          obsda%qc(n) = iqc_gross_err
+        END IF
+      ENDIF
       IF(obs(iof)%dat(iidx) < H08_BT_MIN)THEN
         obsda%qc(n) = iqc_gross_err
       ENDIF
@@ -611,40 +619,35 @@ SUBROUTINE set_letkf_obs
 
     IF(obs(iof)%elm(iidx) == id_H08IR_obs)THEN
 
+      IF(DEPARTURE_STAT_H08)THEN
 #ifdef H08
 !
 ! Derived H08 obs height (based on the weighting function output from RTTOV fwd
 ! model) is substituted into obs%lev.
 !
-      ch_num = obs(iof)%lev(iidx)
-
-      IF(DEPARTURE_STAT_H08)THEN
 !
 ! For obs err correlation statistics based on Desroziers et al. (2005, QJRMS).
 !
-        write(6, '(a,2I6,2F8.2,4F12.4,2I6,F10.4)')"H08-O-B", &
+
+        ch_num = nint(obs(iof)%lev(iidx)) - 6 ! 1-10
+        if(H08_CLD_OBSERR)then
+          idx_CA = max(min(H08_CLD_OBSERR_NBIN, int(obsda%val2(n) / H08_CLD_OBSERR_WTH + 1)),1)
+          Him8_err = max(min(Him8_obserr_CA(ch_num,idx_CA),OBSERR_H08_MAX),OBSERR_H08_MIN)
+        else
+          Him8_err = obs(iof)%err(iidx)
+        endif
+
+        write(6, '(a,2I6,2F8.2,F12.4,3F10.4,I6,F10.4)')"Him8 ", &
              obs(iof)%elm(iidx), &
-             nint(ch_num), & ! obsda%lev includes band num.
+             ch_num+6, & ! Him8 band number
              obs(iof)%lon(iidx), &
              obs(iof)%lat(iidx), &
-             obsda%val(n),& ! O-B
              obsda%lev(n), & ! sensitive height
+             obsda%val(n),& ! O-B
              obs(iof)%dat(iidx), &
-             obs(iof)%err(iidx), &
+             Him8_err,           &
              obsda%qc(n),        &
-             mem_ref,  &  ! # of cloudy member
              obsda%val2(n)
-      ELSE
-        write(6, '(2I6,2F8.2,4F12.4,I3)') &
-             obs(iof)%elm(iidx), & ! id
-             nint(ch_num), & ! band num
-             obs(iof)%lon(iidx), &
-             obs(iof)%lat(n), &
-             obsda%lev(iidx), & ! sensitive height
-             obs(iof)%dat(iidx), &
-             obs(iof)%err(iidx), &
-             obsda%val(n), &
-             obsda%qc(n)
       ENDIF !  [.not. DEPARTURE_STAT_H08]
 #endif
     ELSE
@@ -662,6 +665,53 @@ SUBROUTINE set_letkf_obs
 
   END DO ! [ n = 1, obsda%nobs ]
 !$OMP END PARALLEL DO
+
+#ifdef H08
+  if(H08_DEBIAS_AMEAN)then
+    write(6,'(a)')" ## start Him8 debias"
+    Him8_bcnt = 0
+    Him8_bias = 0.0d0
+    do n = 1, obsda%nobs
+      IF(obsda%qc(n) > 0) CYCLE
+      iof = obsda%set(n)
+      iidx = obsda%idx(n)
+
+      select case (obs(iof)%elm(iidx)) 
+      case (id_H08IR_obs)
+        ch_num = nint(obs(iof)%lev(iidx)) - 6 ! 1-10
+        if(H08_CH_USE(ch_num)/=1) cycle
+
+        Him8_bcnt(ch_num) = Him8_bcnt(ch_num) + 1
+        Him8_bias(ch_num) = Him8_bias(ch_num) + obsda%val(n)
+      case default
+        cycle
+      end select
+    enddo ! [ n = 1, obsda%nobs ]
+
+    do n = 1, nch
+      if(H08_CH_USE(n) /= 1 .or. Him8_bcnt(n) < 1) cycle
+      Him8_bias(n) = Him8_bias(n) / real(Him8_bcnt(n),kind=r_size)
+      write(6,'(a,f8.2,i3)')" ## O-B Him8 bias", Him8_bias(n), n+6
+    enddo
+
+    do n = 1, obsda%nobs
+      IF(obsda%qc(n) > 0) CYCLE
+      iof = obsda%set(n)
+      iidx = obsda%idx(n)
+
+      select case (obs(iof)%elm(iidx)) 
+      case (id_H08IR_obs)
+        ch_num = nint(obs(iof)%lev(iidx)) - 6 ! 1-10
+        if(H08_CH_USE(ch_num)/=1) cycle
+
+        obsda%val(n) = obsda%val(n) - Him8_bias(ch_num)
+      case default
+        cycle
+      end select
+    enddo ! [ n = 1, obsda%nobs ]
+
+  endif ! H08_DEBIAS_AMEAN
+#endif
 
 !!
 !! output departure statistics

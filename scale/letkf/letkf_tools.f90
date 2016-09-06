@@ -1043,9 +1043,11 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
         if(H08_CLD_OBSERR .and. ielm==id_H08IR_obs)then
           ch_num = nint(obs(iset)%lev(iidx)) - 6
           idx_CA = max(min(H08_CLD_OBSERR_NBIN, int(obsda2(ip)%val2(iob) / H08_CLD_OBSERR_WTH + 1)),1)
+          ! Negative values indicate that the sample size for a bin of a CA
+          ! value is too small to make statistical expectation.
           Him8_err = max(min(Him8_obserr_CA(ch_num,idx_CA),OBSERR_H08_MAX),OBSERR_H08_MIN)
           nrdiag = Him8_err * Him8_err / nrloc
-          write(6,'(a,f10.3)')"DEBUGGGG err",Him8_err
+          !write(6,'(a,f10.3)')"DEBUGGGG err",Him8_err
         endif
 #endif
         !
