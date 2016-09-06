@@ -42,7 +42,31 @@
 !--NUMBER_OF_TSTEPS--
 !--NUMBER_OF_SKIP_TSTEPS--
 !--BOUNDARY_UPDATE_DT--
+! PARENT_MP_TYPE = 3,
+! USE_FILE_DENSITY = .false.,
 /
+
+!&PARAM_MKINIT_REAL_OCEAN
+!#--BASENAME_ORG--
+!#--FILETYPE_ORG--
+!#--NUMBER_OF_FILES--
+!#--NUMBER_OF_TSTEPS--
+!#--NUMBER_OF_SKIP_TSTEPS--
+! INTRP_OCEAN_SFC_TEMP = "mask",
+! INTRP_OCEAN_TEMP = "mask",
+/
+
+!&PARAM_MKINIT_REAL_LAND
+!#--BASENAME_ORG--
+!#--FILETYPE_ORG--
+!#--NUMBER_OF_FILES--
+!#--NUMBER_OF_TSTEPS--
+!#--NUMBER_OF_SKIP_TSTEPS--
+! USE_FILE_LANDWATER   = .true.,
+! INTRP_LAND_TEMP      = "mask",
+! INTRP_LAND_WATER     = "fill",
+! INTRP_LAND_SFC_TEMP  = "fill",
+!/
 
 &PARAM_NEST
 !--USE_NESTING--
@@ -59,10 +83,6 @@
 &PARAM_MKINIT_REAL_WRFARW
  WRF_FILE_TYPE       = .true.,
 /
-
-!&PARAM_INPUT_ATOM_WRF
-! use_buildrho_real = .true.,
-!/
 
 #################################################
 #
