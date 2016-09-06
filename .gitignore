@@ -3,6 +3,7 @@
 *.mod
 *.pyc
 *.lst
+*.log
 *~
 /scale/configure.user
 /scale/common/datetime
