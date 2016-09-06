@@ -2762,7 +2762,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
   REAL(r_size) :: lat1d(nprof)
   REAL(r_size) :: topo1d(nprof)
   REAL(r_size) :: lsmask1d(nprof)
-  REAL(r_size) :: hgt_top
+  REAL(r_size) :: ztop1d(nprof)
 
 ! -- brightness temp from RTTOV
   REAL(r_size) :: btall_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
@@ -2800,6 +2800,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
     CALL itpl_2d(v2d(:,:,iv2dd_topo),ri(np),rj(np),topo1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_lsmask),ri(np),rj(np),lsmask1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_ps),ri(np),rj(np),psfc1d(np))
+    CALL itpl_2d(v3d(elev,:,:,iv3dd_hgt),ri(np),rj(np),ztop1d(np)) ! height at the column top
 !    call prsadj(yobs,rk-topo,t,q)
 !    if (abs(rk-topo) > PS_ADJUST_THRES) then
 !      write (6,'(A,F6.1)') 'warning: PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
@@ -2838,8 +2839,6 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
   slev = 1 + KHALO
   elev = nlevh - KHALO
 
-  hgt_top = maxval(v3d(elev,:,:,iv3dd_hgt))
-
   CALL SCALE_RTTOV_fwd(nch, & ! num of channels
                        nlev,& ! num of levels
                        nprof,& ! num of profs
@@ -2857,7 +2856,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
                        lon1d(1:nprof),& ! (deg)
                        lat1d(1:nprof),& ! (deg)
                        lsmask1d(1:nprof),& ! (0-1)
-                       hgt_top, & (m)
+                       ztop1d(1:nprof), & ! (m)
                        btall_out(1:nch,1:nprof),& ! (K)
                        btclr_out(1:nch,1:nprof),& ! (K)
                        trans_out(nlev:1:-1,1:nch,1:nprof))
@@ -2887,7 +2886,11 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
       endif
     ENDDO
 
-    yobs(n) = btall_out(ch,np)
+    if(H08_RTTOV_CLD)then
+      yobs(n) = btall_out(ch,np)
+    else
+      yobs(n) = btclr_out(ch,np)
+    endif
 !
 ! ## comment out by T.Honda (02/09/2016)
 ! -- tentative QC here --

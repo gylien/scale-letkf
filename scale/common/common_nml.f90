@@ -206,6 +206,7 @@ MODULE common_nml
   real(r_size) :: H08_CLD_OBSERR_GROSS_ERR = 20.0d0
   integer :: H08_CLD_OBSERR_MIN_SUMPLE = 1000
   logical :: H08_DEBIAS_AMEAN = .false.
+  logical :: H08_RTTOV_EXTRA_US76 = .true.
 
   integer :: H08_CH_USE(nch) = (/0,0,1,0,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
@@ -628,6 +629,7 @@ subroutine read_nml_letkf_h08
     H08_RTTOV_CFRAC_CNST, &
     H08_LIMIT_LEV, &
     H08_BT_MIN, &
+    H08_RTTOV_EXTRA_US76, &
     H08_CLD_OBSERR, &
     H08_CLD_OBSERR_WTH, &
     H08_CLD_OBSERR_NBIN, &

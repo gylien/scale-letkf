@@ -619,8 +619,8 @@ SUBROUTINE set_letkf_obs
 
     IF(obs(iof)%elm(iidx) == id_H08IR_obs)THEN
 
-      IF(DEPARTURE_STAT_H08)THEN
 #ifdef H08
+      IF(DEPARTURE_STAT_H08)THEN
 !
 ! Derived H08 obs height (based on the weighting function output from RTTOV fwd
 ! model) is substituted into obs%lev.
