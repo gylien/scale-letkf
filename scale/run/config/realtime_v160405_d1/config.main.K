@@ -16,7 +16,7 @@ OUTDIR="/volume63/data/hp150019/gylien/realtime/ctl/exp_d1" # Directory for SCAL
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
+MODELDIR="$DIR/../../bin"                               # Directory of the SCALE model executables
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO=
