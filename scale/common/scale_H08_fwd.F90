@@ -119,7 +119,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 !  use mod_net2g_vars, ONLY: & !
 !        H08_RTTOV_MINQ, &
 !        H08_RTTOV_CFRAC_CNST, &
-!        H08_RTTOV_CFRAC_CNST_TC99
+!        H08_RTTOV_CFRAC_CNST_TC99, &
+!        H08_RTTOV_EXTRA_US76 
   IMPLICIT NONE
 
 #include "rttov_parallel_direct.interface"
@@ -142,9 +143,6 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 !  real(RP), parameter :: CONST_PI      = 3.14159265358979_RP !< pi
 !  real(RP), parameter :: Deg2Rad     = CONST_PI / 180.0_RP
 !  real(RP), parameter :: CONST_GRAV    = 9.80665_RP  !< standard acceleration of gravity [m/s2]
-
-!  LOGICAL,INTENT(IN) :: CLD
-!  LOGICAL :: H08_RTTOV_EXTRA_US76 = .true.
 
 !
 ! -  Added by T.Honda (11/18/2015)
@@ -271,10 +269,10 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
                                      ! Extrapolation will be done only below Zm_US76(US76_midx)
   real(kind=jprb) :: Zm_US76(5) = (/0.0d0, 11000.0d0, 20000.0d0, 32000.0d0, 47000.0d0/) ! (m)
   real(kind=jprb) :: dTdZm_US76(4) = (/-6.5d-3, 0.0d-3, 1.0d-3, 2.8d-3/) ! (K/m)
-  integer :: nlevs_add
+  integer :: nlevs_add = 2
   real(kind=jprb),allocatable :: Zm_add(:) ! (m)
   real(kind=jprb),allocatable :: TK_add(:) ! (K)
-  real(kind=jprb),allocatable :: Phpa_add(:) ! (hPa)
+  real(kind=jprb),allocatable :: P_add(:) ! (Pa)
   real(kind=jprb),parameter :: dZm_add = 1000.0_jprb ! (m)
   real(kind=jprb) :: dz, ztop
   integer :: US76_sidx, US76_idx
@@ -282,47 +280,11 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
  
 ! - set arrays for extrapolation using the U.S. 1976 atmos. --
   if(H08_RTTOV_EXTRA_US76)then
-    ! maximum height 
-    ztop = maxval(tmp_ztop)
-    !--  search model top location
-    do j = 1, 4
-      if((ztop >= Zm_US76(j)) .and. (ztop < Zm_US76(j+1)))then
-        US76_sidx = j
-        exit
-      endif
-    enddo
-
-    nlevs_add = 5 - US76_sidx
-    !nlevs_add = int((Zm_US76(US76_midx) - tmp_ztop) / dZm_add + 0.99d0)
-    write(6,'(a,I10)'),"US76, nlevs_add ",nlevs_add
-
-    allocate(Zm_add(1:nlevs_add))
+    ! How many levels do you want to increase?
+    nlevs_add = 2 
+    allocate(Zm_add(0:nlevs_add))
     allocate(TK_add(1:nlevs_add))
-    allocate(Phpa_add(1:nlevs_add))
-
-    !--  set Z (m) levels
-    k = 1
-    do j = US76_sidx, 5
-      Zm_add(k) = Zm_US76(j)
-      k = k + 1
-    enddo
-
-!    Zm_add(nlevs_add) = real(int(hgt_top / 1000.0D0 + 0.99d0)*1000,kind=jprb)
-!    do ilev = nlevs_add - 1, 1, -1
-!      Zm_add(ilev) = Zm_add(ilev+1) + dZm_add
-!    enddo 
-!
-!    US76_sidx = 0
-!    do ilev = 1, US76_midx - 1
-!      if((hgt_top >= Zm_US76(ilev)) .and. (hgt_top < Zm_US76(ilev+1)))then
-!        US76_sidx = ilev
-!      endif
-!    enddo
-!
-!    if(US76_sidx==0)then
-!      write(6,'(a)')'Error from RTTOV!!' 
-!      stop
-!    endif
+    allocate(P_add(1:nlevs_add))
 
   else
     nlevs_add = 0
@@ -676,45 +638,32 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
 ! -- extrapolation --
     if(H08_RTTOV_EXTRA_US76)then
+
+      Zm_add(0) = real(tmp_ztop(iprof),kind=jprb)
+      Tk_add(0) = real(tmp_t(1,iprof),kind=jprb)
+      P_add(0) = real(tmp_p(1,iprof),kind=jprb)
+
       do k = 1, nlevs_add
-        if(k == 1)then
-          dz = Zm_add(k) - tmp_ztop(iprof)
-          TK_add(1) = real(tmp_t(elev,iprof),kind=jprb) + dTdZm_US76(US76_sidx) * dz
-          Phpa_add(1) = real(tmp_p(elev,iprof),kind=jprb) * dexp(-grav/Rd/TK_add(1) * dz)
-        else
-          dz = Zm_add(k) - Zm_add(k-1)
-          TK_add(k) = TK_add(k-1) + dTdZm_US76(US76_sidx+k-1) * dz
-          Phpa_add(k) = Phpa_add(k-1) * dexp(-grav/Rd/TK_add(k) * dz)
-        endif
+        US76_sidx = 0
+        do ilev = 1, US76_midx 
+          if((Zm_add(k-1) >= Zm_US76(ilev)) .and. (Zm_add(k-1) < Zm_US76(ilev+1)))then
+            US76_sidx = ilev
+          endif
+        enddo
+        Zm_add(k) = min(Zm_add(k-1) + dZm_add, Zm_US76(US76_sidx+1))
        
+        dz = Zm_add(k) - Zm_add(k-1)
+        TK_add(k) = TK_add(k-1) + dTdZm_US76(US76_sidx) * dz 
+        P_add(k) = P_add(k-1) * dexp(-grav/Rd/TK_add(k) * dz)
+
       enddo 
       ! Caution !
       ! Additional arrays (e.g., Zm_add) are stored from the surface to TOA,
       ! but input profiles are stored from TOA to surface.
       ! 
       profiles(iprof)%q(1:nlevs_add) = qmin + qmin * 0.01_jprb 
-      profiles(iprof)%p(1:nlevs_add) = Phpa_add(nlevs_add:1)
+      profiles(iprof)%p(1:nlevs_add) = P_add(nlevs_add:1) * 0.01_jprb
       profiles(iprof)%t(1:nlevs_add) = TK_add(nlevs_add:1)
-
-!      dz = Zm_add(nlevs_add) - hgt_top
-!      TK_add(nlevs_add) = real(tmp_t(1,iprof),kind=jprb) + dTdZm_US76(US76_sidx) * dz
-!      Phpa_add = real(tmp_p(1,iprof),kind=jprb) * dexp(-grav/Rd/TK_add(nlevs_add)*dz)
-!
-!      US76_idx = US76_sidx
-!      DO ilev = nlevs_add - 1, 1, -1
-!        dz = Zm_add(ilev) - Zm_add(ilev+1)
-!        if(Zm_add(ilev+1) > Zm_US76(US76_idx+1))then
-!          US76_idx = max(US76_idx + 1, US76_midx - 1)
-!        endif
-!        TK_add(ilev) = TK_add(ilev+1) + dTdZm_US76(US76_idx) * dz
-!        Phpa_add(ilev) = Phpa_add(ilev+1) * dexp(-grav/Rd/TK_add(ilev)*dz)
-!
-        !write(6,'(a,3F10.2)'),"US76, ",Zm_add(ilev),TK_add(ilev),Phpa_add(ilev)
-!      ENDDO
-  
-!      profiles(iprof)%p(1:nlevs_add) = Phpa_add(1:nlevs_add)
-!      profiles(iprof)%t(1:nlevs_add) = TK_add(1:nlevs_add)
-!      profiles(iprof)%q(1:nlevs_add) = qmin + qmin * 0.01_jprb 
 
     endif ! H08_RTTOV_EXTRA_US76
   ENDDO ! prof
