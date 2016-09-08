@@ -116,9 +116,9 @@ fi
 # Run initialization scripts on all nodes
 
 if ((TMPRUN_MODE <= 2)); then
-  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1 $CYCLE || exit $?
+  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1 $CYCLE $ntimax || exit $?
 else
-  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1 $CYCLE || exit $?
+  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1 $CYCLE $nitmax || exit $?
 fi
 
 #===============================================================================

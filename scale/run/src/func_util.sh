@@ -152,13 +152,6 @@ local CONF="$1"; shift
 local STDOUT="$1"; shift
 local ARGS="$@"
 
-#local ARGS1="$1"; shift
-#local ARGS2="$1"; shift
-#local ARGS3="$1"; shift
-#local ARGS4="$1"; shift
-#local ARGS5="$1"; shift
-#local ARGS6="$1"; shift
-
 progbase=$(basename $PROG)
 progdir=$(dirname $PROG)
 
@@ -196,7 +189,7 @@ elif [ "$MPI_TYPE" = 'K' ]; then
 
   if [ "$STG_TYPE" = 'K_rankdir' ]; then
 
-    fipp -C -Srange -d ./Fprofd -m 50000 -Icall,hwm mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS
+    fipp -C -Srange -d $STDOUT-Fprofd -m 50000 -Icall,hwm mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF - $ARGS
     res=$?
     if ((res != 0)); then
       echo "[Error] mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS" >&2
@@ -206,7 +199,7 @@ elif [ "$MPI_TYPE" = 'K' ]; then
 
   else
 
-    ( cd $progdir && fipp -C -Srange -d ./Fprofd -m 50000 -Icall,hwm mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS )
+    ( cd $progdir && fipp -C -Srange -d $STDOUT-Fprofd -m 50000 -Icall,hwm mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF - $ARGS )
     res=$?
     if ((res != 0)); then 
       echo "[Error] mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS" >&2

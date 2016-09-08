@@ -58,7 +58,7 @@ PROGRAM letkf
 
   if (command_argument_count() >= 2) then
     call get_command_argument(2, icmd)
-    if (trim(icmd) /= '') then
+    if (trim(icmd) /= '-') then
       WRITE(stdoutf(2:7), '(I6.6)') myrank
 !      WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',trim(icmd)//stdoutf,' for MYRANK ', myrank
       OPEN(6,FILE=trim(icmd)//stdoutf)

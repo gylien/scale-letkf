@@ -124,9 +124,9 @@ echo "[$(datetime_now)] ### 5" >&2
 # Run initialization scripts on all nodes
 
 if ((TMPRUN_MODE <= 2)); then
-  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
+  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1 '' $nitmax || exit $?
 else
-  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
+  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1 '' $nitmax || exit $?
 fi
 
 echo "[$(datetime_now)] ### 6" >&2

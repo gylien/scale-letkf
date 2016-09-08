@@ -38,11 +38,6 @@ if ((LOG_OPT <= 4 && MYRANK == 0)); then
   fi
 fi
 
-######
-#mkdir -p $TMPOUT/${ATIME}/log/letkf/Fprofd
-#mv -f $TMPDIR/../Fprofd/* $TMPOUT/${ATIME}/log/letkf/Fprofd
-######
-
 #===============================================================================
 
 exit 0

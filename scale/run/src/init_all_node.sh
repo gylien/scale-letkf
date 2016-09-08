@@ -13,7 +13,7 @@ if (($# < 2)); then
 
 [init_all_node.sh] 
 
-Usage: $0 MYRANK SCPCALL [FCST_CYCLE]
+Usage: $0 MYRANK SCPCALL [FCST_CYCLE] [NITMAX]
 
   MYRANK   My rank number (not used)
   SCPCALL  Called from which script? (fcst/cycle)
@@ -25,7 +25,8 @@ fi
 
 MYRANK="$1"; shift
 SCPCALL="$1"; shift
-FCST_CYCLE="${1:-CYCLE}"
+FCST_CYCLE="${1:-CYCLE}"; shift
+NITMAX="${1:-1}"
 
 #-------------------------------------------------------------------------------
 
@@ -42,7 +43,6 @@ fi
 #===============================================================================
 
 mkdir -p $TMPRUN/scale_pp
-mkdir -p $RUNDIR/scale_pp/Fprofd
 cp -f $TMPDAT/exec/scale-rm_pp_ens $TMPRUN/scale_pp
 
 if ((MYRANK == 0)); then
@@ -50,7 +50,6 @@ if ((MYRANK == 0)); then
 fi
 
 mkdir -p $TMPRUN/scale_init
-mkdir -p $RUNDIR/scale_init/Fprofd
 cp -f $TMPDAT/exec/scale-rm_init_ens $TMPRUN/scale_init
 
 if ((MYRANK == 0)); then
@@ -58,7 +57,6 @@ if ((MYRANK == 0)); then
 fi
 
 mkdir -p $TMPRUN/scale
-mkdir -p $RUNDIR/scale/Fprofd
 cp -f $TMPDAT/exec/scale-rm_ens $TMPRUN/scale
 
 if ((MYRANK == 0)); then
@@ -67,7 +65,6 @@ fi
 
 if [ "$SCPCALL" = 'cycle' ]; then
   mkdir -p $TMPRUN/obsope
-  mkdir -p $RUNDIR/obsope/Fprofd
   cp -f $TMPDAT/exec/obsope $TMPRUN/obsope
   #-- H08 --
   if [ -e "$TMPDAT/rttov/rtcoef_himawari_8_ahi.dat" ]; then
@@ -78,7 +75,6 @@ if [ "$SCPCALL" = 'cycle' ]; then
   fi
 
   mkdir -p $TMPRUN/letkf
-  mkdir -p $RUNDIR/letkf/Fprofd
   cp -f $TMPDAT/exec/letkf $TMPRUN/letkf
   #-- H08 --
   if [ -e "$TMPDAT/rttov/rtcoef_himawari_8_ahi.dat" ]; then
@@ -110,7 +106,15 @@ if [ "$SCPCALL" = 'cycle' ]; then
     mkdir -p $TMPOUT/${time}/log/scale
     mkdir -p $TMPOUT/${atime}/log/obsope
     mkdir -p $TMPOUT/${atime}/log/letkf
-
+    mkdir -p $TMPOUT/${time}/log/scale_pp/NOUT-Fprofd
+    mkdir -p $TMPOUT/${time}/log/scale_init/NOUT-Fprofd
+    mkdir -p $TMPOUT/${time}/log/scale/NOUT-Fprofd
+    mkdir -p $TMPOUT/${atime}/log/obsope/NOUT-Fprofd
+    mkdir -p $TMPOUT/${atime}/log/letkf/NOUT-Fprofd
+    for it in $(seq $NITMAX); do
+      mkdir -p $TMPOUT/${time}/log/scale_init/NOUT-${it}-Fprofd
+      mkdir -p $TMPOUT/${time}/log/scale/NOUT-${it}-Fprofd
+    done
     time=$(datetime $time $LCYCLE s)
     atime=$(datetime $time $LCYCLE s)
   done
@@ -128,6 +132,13 @@ elif [ "$SCPCALL" = 'fcst' ]; then
         mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_pp
         mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_init
         mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale
+        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_pp/NOUT-Fprofd
+        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_init/NOUT-Fprofd
+        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale/NOUT-Fprofd
+        for it in $(seq $NITMAX); do
+          mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_init/NOUT-${it}-Fprofd
+          mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale/NOUT-${it}-Fprofd
+        done
       fi
     done
     time=$(datetime $time $((lcycles * FCST_CYCLE)) s)
