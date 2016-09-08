@@ -548,7 +548,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
         panal0d(MEMBER+2,pr1) = SQRT(panal0d(MEMBER+2,pr1) / REAL(MEMBER-1,r_size))
 
       ELSE ! [PEST_TOMITA_FLAG(pr1)]
-        panal0d(1:MEMBER+2,pr1) = DEF_PARAM_TOMITA(pr1)
+        panal0d(1:MEMBER+1,pr1) = pmean0d(pr1) ! check
+        panal0d(MEMBER+2,pr1) = 0.0d0          ! check
       ENDIF ! [PEST_TOMITA_FLAG(pr1)]
     END DO ! pr1
 

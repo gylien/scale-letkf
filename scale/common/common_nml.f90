@@ -22,15 +22,6 @@ MODULE common_nml
   integer,parameter  :: PNUM_TOMITA = 6 ! Number of the Tomita (2008)'s parameters.
                                         ! [Cr, Cs, drag_g, beta_saut, gamma_saut,
                                         ! gamma_sacr]
-#ifdef PEST_TOMITA
-  integer  :: EPNUM_TOMITA = 0 ! Number of  Tomita (2008) parameters to be estimated.
-                               ! Depending on  PEST_TOMITA_FLAG.
-  CHARACTER(10) :: PNAME_TOMITA(PNUM_TOMITA) = (/'Cr        ', 'Cs        ', &
-                                                 'drag_g    ', 'beta_saut ', &
-                                                 'gamma_saut', 'gamma_sacr'/)
-  REAL(r_size) :: DEF_PARAM_TOMITA(PNUM_TOMITA) = (/58.D0, 0.9D0, 2.5D0,&
-                                                    6D-3, 6D-2, 2D-2/) ! Default parameters in Tomita (2008).
-#endif
 
   !--- PARAM_ENSEMBLE
   integer :: MEMBER = 3      ! ensemble size
@@ -231,13 +222,21 @@ MODULE common_nml
   !-- !! If you wish to treat in physical space, you should set
   !-- !! PEST_TOMITA_ARCTAN = F
   !
+  integer  :: EPNUM_TOMITA = 0 ! Number of  Tomita (2008) parameters to be estimated.
+                               ! Depending on  PEST_TOMITA_FLAG.
+  CHARACTER(10) :: PNAME_TOMITA(PNUM_TOMITA) = (/'Cr        ', 'Cs        ', &
+                                                 'drag_g    ', 'beta_saut ', &
+                                                 'gamma_saut', 'gamma_sacr'/)
   LOGICAL :: PEST_TOMITA_FLAG(PNUM_TOMITA) = (/.false.,.false.,.false.,.false.,.false.,.false./)
-  REAL(r_size) :: EPARAM_TOMITA_CR_LIMIT(2) = (/30.0D0,100.0D0/) ! Max/min threshold for Tomita (2008) parameter (Cr)
-  REAL(r_size) :: EPARAM_TOMITA_CS_LIMIT(2) = (/0.8D0,1.0D0/) ! Max/min threshold for Tomita (2008) parameter (Cs)
-  REAL(r_size) :: EPARAM_TOMITA_DRAGG_LIMIT(2) = (/1.0D0,5.0D0/) ! Max/min threshold for Tomita (2008) parameter (drag_g)
-  REAL(r_size) :: EPARAM_TOMITA_BETAS_LIMIT(2) = (/0.5D-3,8.0D-3/) ! Max/min threshold for Tomita (2008) parameter (beta_saut)
-  REAL(r_size) :: EPARAM_TOMITA_GAMMAT_LIMIT(2) = (/1.0D-2,7.0D-2/) ! Max/min threshold for Tomita (2008) parameter (gamma_saut)
-  REAL(r_size) :: EPARAM_TOMITA_GAMMAR_LIMIT(2) = (/1.0D-2,7.0D-2/) ! Max/min threshold for Tomita (2008) parameter (gamma_sacr)
+  REAL(r_size) :: DEF_PARAM_TOMITA(PNUM_TOMITA) = (/130.D0, 4.84D0, &
+                                                    0.6D0,  6.0D-3, & 
+                                                   60.0D-3, 25.0D-3/) ! Default parameters in Tomita (2008).
+  REAL(r_size) :: EPARAM_TOMITA_CR_LIMIT(2) = (/10.0D0,180.0D0/) ! Max/min threshold for Tomita (2008) parameter (Cr)
+  REAL(r_size) :: EPARAM_TOMITA_CS_LIMIT(2) = (/0.1D0,8.0D0/) ! Max/min threshold for Tomita (2008) parameter (Cs)
+  REAL(r_size) :: EPARAM_TOMITA_DRAGG_LIMIT(2) = (/0.1D0,5.0D0/) ! Max/min threshold for Tomita (2008) parameter (drag_g)
+  REAL(r_size) :: EPARAM_TOMITA_BETAS_LIMIT(2) = (/0.1D-3,10.0D-3/) ! Max/min threshold for Tomita (2008) parameter (beta_saut)
+  REAL(r_size) :: EPARAM_TOMITA_GAMMAT_LIMIT(2) = (/1.0D-3,7.0D-2/) ! Max/min threshold for Tomita (2008) parameter (gamma_saut)
+  REAL(r_size) :: EPARAM_TOMITA_GAMMAR_LIMIT(2) = (/0.1D-3,7.0D-2/) ! Max/min threshold for Tomita (2008) parameter (gamma_sacr)
   REAL(r_size),ALLOCATABLE :: EPARAM_TOMITA_LIMIT(:,:) ! Max/min threshold for Tomita (2008) parameters.
   REAL(r_size) :: PEST_RELAX_ALPHA_SPREAD = 0.0d0
   LOGICAL :: PEST_TOMITA_ARCTAN = .true.
@@ -686,6 +685,7 @@ subroutine read_nml_letkf_pest_tomita
   namelist /PARAM_LETKF_PEST_TOMITA/ &
     PEST_TOMITA_FLAG,  &
     EPNUM_TOMITA,      &
+    DEF_PARAM_TOMITA,  &
     EPARAM_TOMITA_CR_LIMIT, &
     EPARAM_TOMITA_CS_LIMIT, &
     EPARAM_TOMITA_DRAGG_LIMIT, &
