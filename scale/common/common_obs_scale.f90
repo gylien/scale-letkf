@@ -2791,6 +2791,9 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
   lon1d(:) = lon(:)
   lat1d(:) = lat(:)
 
+  slev = 1 + KHALO
+  elev = nlevh - KHALO
+
 ! -- make profile arrays for RTTOV --
   DO np = 1, nprof ! -- make profiles
 
@@ -2835,9 +2838,6 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
 !
 !        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using (lon,lat).
 !
-
-  slev = 1 + KHALO
-  elev = nlevh - KHALO
 
   CALL SCALE_RTTOV_fwd(nch, & ! num of channels
                        nlev,& ! num of levels
