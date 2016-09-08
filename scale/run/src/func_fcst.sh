@@ -1292,6 +1292,7 @@ for it in $(seq $its $ite); do
 #      ...
 #    fi
 
+    ocean_base='-'
     if ((OCEAN_INPUT == 1 && mkinit != 1)); then
       if ((OCEAN_FORMAT == 0)); then
         ocean_base="$TMPOUT/${stimes[$c]}/anal/mean/init_ocean"  ### always use mean???
