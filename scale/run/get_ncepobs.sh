@@ -91,7 +91,8 @@ while ((time <= ETIME)); do
   fi
 
   cd $TMPS/download
-  $WGET $OPT "${DATAURL}/${DATAF}"
+  #$WGET $OPT "${DATAURL}/${DATAF}"
+  $WGET $OPT "${DATAURL}/${yyyy}/${DATAF}"
   tar xzf $DATAF
   rm -f $DATAF
 

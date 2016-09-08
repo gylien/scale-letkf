@@ -8,23 +8,27 @@
 
 . config.main
 
-if (($# < 10)); then
+if (($# < 14)); then
   cat >&2 << EOF
 
 [pre_letkf_node.sh]
 
-Usage: $0 MYRANK ATIME TMPDIR EXECDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE
+Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO ADAPTINFL RTPS_INFL_OUT NOBS_OUT [MEMBERSEQ]
 
   MYRANK      My rank number (not used)
+  STIME
   ATIME       Analysis time (format: YYYYMMDDHHMMSS)
   TMPDIR      Temporary directory to run the program
-  EXECDIR     Directory of SCALE executable files
   OBSDIR      Directory of SCALE data files
   MEM_NODES   Number of nodes for a member
   MEM_NP      Number of processes for a member
   SLOT_START  Start observation timeslots
   SLOT_END    End observation timeslots
   SLOT_BASE   The base slot
+  TOPO        Basename of SCALE topography files
+  ADAPTINFL
+  RTPS_INFL_OUT
+  NOBS_OUT
   MEMBERSEQ
 
 EOF
@@ -32,63 +36,95 @@ EOF
 fi
 
 MYRANK="$1"; shift
+STIME="$1"; shift
 ATIME="$1"; shift
 TMPDIR="$1"; shift
-EXECDIR="$1"; shift 
 OBSDIR="$1"; shift
 MEM_NODES="$1"; shift
 MEM_NP="$1"; shift
 SLOT_START="$1"; shift
 SLOT_END="$1"; shift
 SLOT_BASE="$1"; shift
+TOPO="$1"; shift
+ADAPTINFL="$1"; shift
+RTPS_INFL_OUT="$1"; shift
+NOBS_OUT="$1"; shift
 MEMBERSEQ=${1:-$MEMBER}
 
 #===============================================================================
 
-#mkdir -p $TMPDIR
-#rm -fr $TMPDIR/*
-
-#ln -fs $EXECDIR/letkf $TMPDIR
-
+OBS_IN_NAME_LIST=
 for iobs in $(seq $OBSNUM); do
   if [ "${OBSNAME[$iobs]}" != '' ]; then
-    ln -fs $OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat $TMPDIR/${OBSNAME[$iobs]}.dat
+#    ln -fs $OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat $TMPDIR/${OBSNAME[$iobs]}.dat
+    OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat', "
   fi
 done
+
+OBSDA_RUN_LIST=
+for iobs in $(seq $OBSNUM); do
+  if [ -n "${OBSOPE_SEPARATE[$iobs]}" ] && ((${OBSOPE_SEPARATE[$iobs]} == 1)); then
+    OBSDA_RUN_LIST="${OBSDA_RUN_LIST}.false., "
+  else
+    OBSDA_RUN_LIST="${OBSDA_RUN_LIST}.true., "
+  fi
+done
+
+OBSDA_IN='.false.'
+if ((OBSOPE_RUN == 1)); then
+  OBSDA_IN='.true.'
+fi
+INFL_MUL_ADAPTIVE='.false.'
+if ((ADAPTINFL == 1)); then
+  INFL_MUL_ADAPTIVE='.true.'
+fi
+RELAX_SPREAD_OUT='.false.'
+if ((RTPS_INFL_OUT == 1)); then
+  RELAX_SPREAD_OUT='.true.'
+fi
+NOBS_OUT_TF='.false.'
+if ((NOBS_OUT == 1)); then
+  NOBS_OUT_TF='.true.'
+fi
 
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.letkf | \
-    sed -e "s/\[MEMBER\]/ MEMBER = $MEMBERSEQ,/" \
-        -e "s/\[SLOT_START\]/ SLOT_START = $SLOT_START,/" \
-        -e "s/\[SLOT_END\]/ SLOT_END = $SLOT_END,/" \
-        -e "s/\[SLOT_BASE\]/ SLOT_BASE = $SLOT_BASE,/" \
-        -e "s/\[SLOT_TINTERVAL\]/ SLOT_TINTERVAL = $LTIMESLOT.D0,/" \
-        -e "s/\[NNODES\]/ NNODES = $NNODES,/" \
-        -e "s/\[PPN\]/ PPN = $PPN,/" \
-        -e "s/\[MEM_NODES\]/ MEM_NODES = $MEM_NODES,/" \
-        -e "s/\[MEM_NP\]/ MEM_NP = $MEM_NP,/" \
+    sed -e "/!--MEMBER--/a MEMBER = $MEMBERSEQ," \
+        -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
+        -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
+        -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
+        -e "/!--OBSDA_OUT--/a OBSDA_OUT = .true." \
+        -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda\"," \
+        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = '${TMPOUT}/${STIME}/hist/@@@@/history'," \
+        -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \
+        -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
+        -e "/!--SLOT_BASE--/a SLOT_BASE = $SLOT_BASE," \
+        -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = $LTIMESLOT.D0," \
+        -e "/!--OBSDA_IN--/a OBSDA_IN = $OBSDA_IN," \
+        -e "/!--OBSDA_IN_BASENAME--/a OBSDA_IN_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext\"," \
+        -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${TMPOUT}/${ATIME}/gues/@@@@/init\"," \
+        -e "/!--GUES_OUT_MEAN_BASENAME--/a GUES_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/gues/mean/init\"," \
+        -e "/!--GUES_OUT_SPRD_BASENAME--/a GUES_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/gues/sprd/init\"," \
+        -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/anal/@@@@/init\"," \
+        -e "/!--ANAL_OUT_MEAN_BASENAME--/a ANAL_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/anal/mean/init\"," \
+        -e "/!--ANAL_OUT_SPRD_BASENAME--/a ANAL_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/anal/sprd/init\"," \
+        -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${TOPO}\"," \
+        -e "/!--INFL_MUL_ADAPTIVE--/a INFL_MUL_ADAPTIVE = ${INFL_MUL_ADAPTIVE}," \
+        -e "/!--INFL_MUL_IN_BASENAME--/a INFL_MUL_IN_BASENAME = \"${TMPOUT}/${ATIME}/diag/infl/init\"," \
+        -e "/!--INFL_MUL_OUT_BASENAME--/a INFL_MUL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/infl/init\"," \
+        -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RELAX_SPREAD_OUT}," \
+        -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/rtps/init\"," \
+        -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
+        -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/nobs/init\"," \
+        -e "/!--NNODES--/a NNODES = $NNODES," \
+        -e "/!--PPN--/a PPN = $PPN," \
+        -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
+        -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
     > $TMPDIR/letkf.conf
 
-# These parameters are not important for obsope
-cat $TMPDAT/conf/config.nml.scale | \
-    sed -e "s/\[IO_LOG_BASENAME\]/ IO_LOG_BASENAME = \"LOG\",/" \
-        -e "s/\[TIME_STARTDATE\]/ TIME_STARTDATE = 2014, 1, 1, 0, 0, 0,/" \
-        -e "s/\[TIME_DURATION\]/ TIME_DURATION = $LTIMESLOT.D0,/" \
-        -e "s/\[TIME_DT_ATMOS_RESTART\]/ TIME_DT_ATMOS_RESTART = $LTIMESLOT.D0,/" \
-        -e "s/\[TIME_DT_OCEAN_RESTART\]/ TIME_DT_OCEAN_RESTART = $LTIMESLOT.D0,/" \
-        -e "s/\[TIME_DT_LAND_RESTART\]/ TIME_DT_LAND_RESTART = $LTIMESLOT.D0,/" \
-        -e "s/\[TIME_DT_URBAN_RESTART\]/ TIME_DT_URBAN_RESTART = .D0,/" \
-        -e "s/\[RESTART_IN_BASENAME\]/ RESTART_IN_BASENAME = \"init\",/" \
-        -e "s/\[RESTART_OUT_BASENAME\]/ RESTART_OUT_BASENAME = \"restart\",/" \
-        -e "s/\[TOPO_IN_BASENAME\]/ TOPO_IN_BASENAME = \"topo\",/" \
-        -e "s/\[LANDUSE_IN_BASENAME\]/ LANDUSE_IN_BASENAME = \"landuse\",/" \
-        -e "s/\[ATMOS_BOUNDARY_IN_BASENAME\]/ ATMOS_BOUNDARY_IN_BASENAME = \"boundary\",/" \
-        -e "s/\[OCEAN_RESTART_IN_BASENAME\]/ OCEAN_RESTART_IN_BASENAME = \"init_ocean\",/" \
-        -e "s/\[HISTORY_DEFAULT_BASENAME\]/ HISTORY_DEFAULT_BASENAME = \"history\",/" \
-        -e "s/\[HISTORY_DEFAULT_TINTERVAL\]/ HISTORY_DEFAULT_TINTERVAL = $LTIMESLOT.D0,/" \
-        -e "s/\[MONITOR_OUT_BASENAME\]/ MONITOR_OUT_BASENAME = \"monitor\",/" \
-    >> $TMPDIR/letkf.conf
+# These parameters are not important for letkf
+cat $TMPDAT/conf/config.nml.scale >> $TMPDIR/letkf.conf
 
 #===============================================================================
 

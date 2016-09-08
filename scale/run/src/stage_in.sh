@@ -25,11 +25,30 @@ if [ "$MYRANK" = 'a' ] ||
     while read line; do
       source="$(echo $line | cut -d '|' -s -f1)"
       destin="$(echo $line | cut -d '|' -s -f2)"
-      if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
-        mkdir -p "$(dirname ${TMPDAT}/${destin})"
-        $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDAT}/${destin}"
+      ftype="$(echo $line | cut -d '|' -s -f3)"
+      if [ "$ftype" = 's' ]; then
+        if ((MYRANK > 0)); then
+          break
+        fi
+        TMPDATtmp=$TMPDAT_S
+      else
+        TMPDATtmp=$TMPDAT
       fi
-    done < "$STAGING_DIR/stagein.dat" # | sort | uniq
+      if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
+        mkdir -p "$(dirname ${TMPDATtmp}/${destin})"
+        if ((SCP_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= SCP_THREAD)); do
+            sleep 1s
+          done
+          $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDATtmp}/${destin}" &
+        else
+          $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDATtmp}/${destin}"
+        fi
+      fi
+    done < "$STAGING_DIR/stagein.dat" | sort | uniq
+    if ((SCP_THREAD > 1)); then
+      wait
+    fi
   fi
 
 fi
@@ -53,9 +72,19 @@ for ifile in $filelist; do
     destin="$(echo $line | cut -d '|' -s -f2)"
     if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
       mkdir -p "$(dirname ${TMPOUT}/${destin})"
-      $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPOUT}/${destin}"
+      if ((SCP_THREAD > 1)); then
+        while (($(jobs -p | wc -l) >= SCP_THREAD)); do
+          sleep 1s
+        done
+        $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPOUT}/${destin}" &
+      else
+        $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPOUT}/${destin}"
+      fi
     fi
-  done < "$ifile" # | sort | uniq
+  done < "$ifile" | sort | uniq
+  if ((SCP_THREAD > 1)); then
+    wait
+  fi
 done
 
 #===============================================================================

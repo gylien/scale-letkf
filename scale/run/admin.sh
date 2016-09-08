@@ -3,96 +3,114 @@
 
 cd "$(dirname "$0")"
 
-. config.main
-res=$? && ((res != 0)) && exit $res
-
-#. src/func_datetime.sh
-
 #-------------------------------------------------------------------------------
 
-if (($# < 5)); then
+if (($# < 7)); then
   echo "$0: Insufficient arguments" >&2
   exit 1
 fi
 
-SCPNAME="$1"
-STIME="$2"
-TIME_DT="$3"
-TIME_DT_DYN="$4"
-NNODES="$5"
-WTIME_L="$6"
+SCPNAME="$1"; shift
+STIME="$1"; shift
+ETIME="$1"; shift
+TIME_DT="$1"; shift
+TIME_DT_DYN="$1"; shift
+NNODES="$1"; shift
+WTIME_L="$1"
 
-#ETIME=$(datetime "$STIME" ${LCYCLE} s)
+if [ "$ETIME" = '-' ]; then
+  ETIME="$STIME"
+fi
 
-CONFDIR="$OUTDIR/${STIME}/${SCPNAME}_conf"
+CONFIG='realtime_v160804_d1'
+PRESET='K_rankdir'
 
 #-------------------------------------------------------------------------------
 
-if [ "$SCPNAME" = 'cycle' ]; then
-  STIME_DIR="${STIME}_da"
+if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
+  config_suffix='K'
+  script_suffix='_K'
+elif [ "$PRESET" = 'K_micro' ]; then
+  config_suffix='K'
+  script_suffix='_K_micro'
 else
-  STIME_DIR="${STIME}"
+  echo "[Error] Unsupported \$PRESET" >&2
+  exit 1
 fi
-cat config/EastAsia_18km_48p/config.main.K | \
-    sed -e "s/<STIME>/${STIME_DIR}/g" | \
+
+if [ "$SCPNAME" = 'cycle' ]; then
+  DATA_BDY_WRF="ncepgfs_wrf_da"
+else
+  DATA_BDY_WRF="ncepgfs_wrf"
+fi
+
+#-------------------------------------------------------------------------------
+
+rm -f config.main
+rm -f config.${SCPNAME}
+rm -f config.nml.*
+
+cat config/${CONFIG}/config.main.${config_suffix} | \
+    sed -e "s/<PRESET>/${PRESET}/g" | \
+    sed -e "s/<DATA_BDY_WRF>/${DATA_BDY_WRF}/g" | \
     sed -e "s/<NNODES>/${NNODES}/g" \
     > config.main
 
-cat config/EastAsia_18km_48p/config.${SCPNAME} | \
+cat config/${CONFIG}/config.${SCPNAME} | \
     sed -e "s/<STIME>/${STIME}/g" | \
+    sed -e "s/<ETIME>/${ETIME}/g" | \
     sed -e "s/<WTIME_L>/${WTIME_L}/g" \
     > config.${SCPNAME}
 
-cat config/EastAsia_18km_48p/config.nml.scale | \
+cat config/${CONFIG}/config.nml.scale | \
     sed -e "s/<TIME_DT>/${TIME_DT}/g" | \
     sed -e "s/<TIME_DT_DYN>/${TIME_DT_DYN}/g" \
     > config.nml.scale
 
-mkdir -p $CONFDIR
-cp config.* $CONFDIR
+ln -fs config/${CONFIG}/config.nml.ensmodel .
+ln -fs config/${CONFIG}/config.nml.letkf .
+ln -fs config/${CONFIG}/config.nml.obsope .
+ln -fs config/${CONFIG}/config.nml.scale_pp .
+ln -fs config/${CONFIG}/config.nml.scale_init .
+
+. config.main || exit $?
+#. config.$SCPNAME || exit $?
+#. src/func_datetime.sh || exit $?
 
 #-------------------------------------------------------------------------------
 
-./${SCPNAME}_K.sh > ${SCPNAME}_K.log 2>&1
-res=$? && ((res != 0)) && exit $res
-
-jobname="${SCPNAME}_${SYSNAME}"
-jobid=$(grep 'pjsub Job' ${SCPNAME}_K.log | cut -d ' ' -f6)
-
-n=0
-nmax=120
-while [ ! -s "${jobname}.o${jobid}" ] || [ ! -s "${jobname}.e${jobid}" ] ||
-      [ ! -s "${jobname}.s${jobid}" ] || [ ! -s "${jobname}.i${jobid}" ] && ((n < nmax)); do
-  n=$((n+1))
-  sleep 5s
-done
+./${SCPNAME}${script_suffix}.sh > ${SCPNAME}_K.log 2>&1 || exit $?
 
 #-------------------------------------------------------------------------------
 
-res=0
-if ((n >= nmax)); then
-  res=101
-elif [ -n "$(grep 'ERR.' ${jobname}.e${jobid})" ]; then
-  res=102
-elif [ -n "$(grep 'terminated' ${jobname}.e${jobid})" ]; then
-  res=103
-elif [ ! -s "${jobname}.s${jobid}" ]; then
-  res=104
-elif [ "$(tail -n 1 ${jobname}.s${jobid})" != "---(Stage-Out Error Information)---" ]; then
-  res=105
+if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro' ]; then
+  jobname="${SCPNAME}_${SYSNAME}"
+  jobid=$(grep 'pjsub Job' ${SCPNAME}_K.log | cut -d ' ' -f6)
+  logdir="$OUTDIR/exp/${jobid}_${SCPNAME}_${STIME}"
+  stdout="$logdir/job.o"
+  stderr="$logdir/job.e"
+  jobinfo="$logdir/job.i"
+#  stdout="${jobname}.o${jobid}"
+#  stderr="${jobname}.e${jobid}"
+#  jobinfo="${jobname}.i${jobid}"
 fi
 
-mv -f ${SCPNAME}_job.sh $CONFDIR/${jobid}.b
-mv -f ${SCPNAME}_K.log $CONFDIR/${jobid}.l
-
-mv -f ${jobname}.o${jobid} $CONFDIR/${jobid}.o
-mv -f ${jobname}.e${jobid} $CONFDIR/${jobid}.e
-mv -f ${jobname}.s${jobid} $CONFDIR/${jobid}.s
-mv -f ${jobname}.i${jobid} $CONFDIR/${jobid}.i
-
-mv -f $LOGDIR/${SCPNAME}_${STIME}.log $CONFDIR/${jobid}.lo
-mv -f $LOGDIR/${SCPNAME}.err $CONFDIR/${jobid}.le
+if [ ! -e "$stdout" ] || [ ! -e "$stderr" ]; then
+  exit 101
+fi
+if [ -z "$(tail -n 1 $stderr | grep "Finish ${SCPNAME}.sh")" ]; then
+  exit 102
+fi
 
 #-------------------------------------------------------------------------------
 
-exit $res
+rm -f ${SCPNAME}_job.sh
+rm -f ${jobname}.?${jobid}
+
+mkdir -p exp
+rm -f exp/*
+ln -s $OUTDIR/exp/${jobid}_${SCPNAME}_${STIME} exp
+
+#-------------------------------------------------------------------------------
+
+exit 0

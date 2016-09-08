@@ -31,36 +31,32 @@ res=$? && ((res != 0)) && exit $res
 #-------------------------------------------------------------------------------
 
 if ((TMPDAT_MODE == 1 || TMPRUN_MODE == 1 || TMPOUT_MODE == 1)); then
-  echo "[Error] $0: When using 'micro' resource group," >&2
+  echo "[Error] $0: When using a regular resource group," >&2
   echo "        \$TMPDAT_MODE, \$TMPRUN_MODE, \$TMPOUT_MODE all need to be 2 or 3." >&2
   exit 1
 fi
 
 #-------------------------------------------------------------------------------
 
+echo "[$(datetime_now)] Start $(basename $0) $@"
+
 setting "$1" "$2" "$3" "$4" "$5"
 
-jobscrp="${myname1}_job.sh"
-
-#-------------------------------------------------------------------------------
-
-echo "[$(datetime_now)] Start $(basename $0) $@"
+echo
+print_setting
 echo
 
-for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
-             WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
-             STIME ETIME MEMBERS ISTEP FSTEP; do
-  printf '  %-10s = %s\n' $vname "${!vname}"
-done
+#===============================================================================
+# Create and clean the temporary directory
 
-echo
-
-#-------------------------------------------------------------------------------
+echo "[$(datetime_now)] Create and clean the temporary directory"
 
 safe_init_tmpdir $TMPS
 
 #===============================================================================
 # Determine the distibution schemes
+
+echo "[$(datetime_now)] Determine the distibution schemes"
 
 # K computer
 NNODES_real=$NNODES
@@ -92,6 +88,8 @@ fi                                      ##
 #===============================================================================
 # Determine the staging list
 
+echo "[$(datetime_now)] Determine the staging list"
+
 STAGING_DIR="$TMPS/staging"
 
 safe_init_tmpdir $STAGING_DIR
@@ -103,12 +101,15 @@ cp $SCRP_DIR/config.main $TMPS
 
 echo "SCRP_DIR=\"\$(pwd)\"" >> $TMPS/config.main
 echo "NODEFILE_DIR=\"\$(pwd)/node\"" >> $TMPS/config.main
-echo "LOGDIR=\"\$(pwd)/log\"" >> $TMPS/config.main
 
 echo "NNODES=$NNODES" >> $TMPS/config.main
 echo "PPN=$PPN" >> $TMPS/config.main
 echo "NNODES_real=$NNODES_real" >> $TMPS/config.main
 echo "PPN_real=$PPN_real" >> $TMPS/config.main
+
+echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMPS/config.main
+
+echo "RUN_LEVEL='K'" >> $TMPS/config.main
 
 if ((ENABLE_SET == 1)); then                                    ##
   echo "NNODES_all=$NNODES_all" >> $TMPS/config.main            ##
@@ -120,6 +121,8 @@ fi                                                              ##
 
 #===============================================================================
 # Creat a job script
+
+jobscrp="${myname1}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
@@ -133,7 +136,6 @@ fi
 
 cat > $jobscrp << EOF
 #!/bin/sh
-##PJM -g ra000015
 #PJM -N ${myname1}_${SYSNAME}
 #PJM -s
 #PJM --rsc-list "node=${NNODES_real}"
@@ -146,30 +148,19 @@ cat > $jobscrp << EOF
 #PJM --stg-transfiles all
 EOF
 
-if ((USE_RANKDIR == 1)); then
+if [ "$STG_TYPE" = 'K_rankdir' ]; then
   echo "#PJM --mpi \"use-rankdir\"" >> $jobscrp
 fi
 
 bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR $myname1 >> $jobscrp
 
-#########################
-#cat >> $jobscrp << EOF
-##PJM --stgout "./* /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/ stgout=all"
-##PJM --stgout-dir "./node /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/node stgout=all"
-##PJM --stgout-dir "./dat /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/dat stgout=all"
-##PJM --stgout-dir "./run /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/run stgout=all"
-##PJM --stgout-dir "./out /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/out stgout=all"
-##PJM --stgout-dir "./log /volume63/data/ra000015/gylien/scale-letkf/scale/run/tmp/run stgout=all"
-#EOF
-#########################
-
 cat >> $jobscrp << EOF
 
-. /work/system/Env_base_1.2.0-17-2
+. /work/system/Env_base_1.2.0-20-1
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$ISTEP" "$FSTEP"
+./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$ISTEP" "$FSTEP" || exit \$?
 EOF
 
 #===============================================================================
@@ -182,7 +173,7 @@ pjstgchk $jobscrp
 res=$? && ((res != 0)) && exit $res
 echo
 
-#-------------------------------------------------------------------------------
+#===============================================================================
 # Run the job
 
 echo "[$(datetime_now)] Run ${myname1} job on PJM"
@@ -193,9 +184,36 @@ echo
 
 job_end_check_PJM $jobid
 
-#-------------------------------------------------------------------------------
+#===============================================================================
+# Finalization
 
-#safe_rm_tmpdir $TMPS
+echo "[$(datetime_now)] Finalization"
+echo
+
+n=0
+nmax=12
+while [ ! -s "${myname1}_${SYSNAME}.i${jobid}" ] && ((n < nmax)); do
+  n=$((n+1))
+  sleep 5s
+done
+
+mkdir -p $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/config.main $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/config.${myname1} $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/config.nml.* $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/${myname1}_job.sh $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f ${myname1}_${SYSNAME}.o${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.o
+cp -f ${myname1}_${SYSNAME}.e${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.e
+cp -f ${myname1}_${SYSNAME}.i${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.i
+cp -f ${myname1}_${SYSNAME}.s${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.s
+( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
+( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
+
+finalization
+
+if ((CLEAR_TMP == 1)); then
+  safe_rm_tmpdir $TMPS
+fi
 
 #===============================================================================
 

@@ -42,6 +42,10 @@ res=$? && ((res != 0)) && exit $res
 . src/func_util.sh
 . src/func_fcst.sh
 
+######
+echo "[$(datetime_now)] fcst_step: $@: start"
+######
+
 #-------------------------------------------------------------------------------
 
 setting
@@ -65,6 +69,10 @@ declare -a proc2group
 declare -a proc2grpproc
 
 distribute_fcst "$MEMBERS" $CYCLE machinefile - $NODEFILE_DIR/distr
+
+if ((CYCLE == 0)); then
+  CYCLE=$parallel_mems
+fi
 
 #===============================================================================
 # Run one step
@@ -109,5 +117,9 @@ res=$? && ((res != 0)) && exit $res
 #echo $STEPFUNC $MYRANK $TIME $LOOP ... done 1>&2
 
 #===============================================================================
+
+######
+echo "[$(datetime_now)] fcst_step: $@: end"
+######
 
 exit 0

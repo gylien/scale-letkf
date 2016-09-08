@@ -22,13 +22,13 @@ PROGRAM obsmake
   CHARACTER(11) :: stdoutf='NOUT-000000'
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
-  type(obs_info) :: obs(nobsfiles)
+  type(obs_info),allocatable :: obs(:)
 
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
 
-  CALL initialize_mpi
+  CALL initialize_mpi_scale
   rtimer00 = MPI_WTIME()
 
   WRITE(stdoutf(6:11), '(I6.6)') myrank
@@ -38,7 +38,7 @@ PROGRAM obsmake
 
 !-----------------------------------------------------------------------
 
-  call set_common_conf
+  call set_common_conf(nprocs)
 
   call read_nml_letkf
   call read_nml_letkf_obserr
@@ -47,9 +47,9 @@ PROGRAM obsmake
 
   call set_mem_node_proc(1,NNODES,PPN,MEM_NODES,MEM_NP)
 
-  if (myrank_use) then
+  call set_scalelib
 
-    call set_scalelib
+  if (myrank_use) then
 
     call set_common_scale
     CALL set_common_mpi_scale
@@ -64,9 +64,8 @@ PROGRAM obsmake
 ! Read observations
 !-----------------------------------------------------------------------
 
-    if (myrank_mem_use) then
-      call read_obs_all(obs)
-    end if
+    allocate(obs(OBS_IN_NUM))
+    call read_obs_all(obs)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -77,9 +76,7 @@ PROGRAM obsmake
 ! Generate observations
 !-----------------------------------------------------------------------
 
-    if (myrank_mem_use) then
-      CALL obsmake_cal(obs)
-    end if
+    CALL obsmake_cal(obs)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
@@ -87,6 +84,7 @@ PROGRAM obsmake
     rtimer00=rtimer
 
 
+    deallocate(obs)
 
     CALL unset_common_mpi_scale
 
@@ -107,7 +105,7 @@ PROGRAM obsmake
   WRITE(6,timer_fmt) '### TIMER(FINALIZE):',rtimer-rtimer00
   rtimer00=rtimer
 
-  CALL finalize_mpi
+  CALL finalize_mpi_scale
 
   STOP
 END PROGRAM obsmake

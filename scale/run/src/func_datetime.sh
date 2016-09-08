@@ -70,7 +70,7 @@ SS="${SS:-00}"
 
 if [ "$Unix_date_cmd" -eq 0 ]; then
 
-  if ((MACHINE_TYPE == 10 && PREP == 0)); then
+  if [ "$STG_TYPE" = 'K' ] || [ "$STG_TYPE" = 'K_rankdir' ]; then
     local datetime_prog="$TMPDAT_DIR/exec/datetime"
   else
     local datetime_prog="$COMMON_DIR/datetime"

@@ -24,22 +24,19 @@ MODULE letkf_obs
   IMPLICIT NONE
   PUBLIC
 
-!  real(r_size),save :: sigma_obs_i(nid_obs,nobtype)
-!  real(r_size),save :: sigma_obs_j(nid_obs,nobtype)
-!  real(r_size),save :: sigma_obs_lnp(nid_obs,nobtype)
-!  real(r_size),save :: sigma_obs_z(nid_obs,nobtype)
+!  real(r_size),parameter :: dist_zero_fac = SQRT(10.0d0/3.0d0) * 2.0d0            ! 3.651483717
+!  real(r_size),parameter :: dist_zero_fac_square = dist_zero_fac * dist_zero_fac  ! 13.33333333
+  real(r_size),parameter :: dist_zero_fac = 3.651483717
+  real(r_size),parameter :: dist_zero_fac_square = 13.33333333
 
-  real(r_size),save :: dist_zero_fac
-!  real(r_size),save :: zero_obs_i(nid_obs,nobtype)
-!  real(r_size),save :: zero_obs_j(nid_obs,nobtype)
   real(r_size),save :: dlon_zero
   real(r_size),save :: dlat_zero
 
-  type(obs_info),save :: obs(nobsfiles)
+  type(obs_info),allocatable,save :: obs(:)
   type(obs_da_value),save :: obsda
-!  type(obs_da_value),save :: obsda
   type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
                                                     !!!!!! need to add %err and %dat if they can be determined in letkf_obs.f90
+  integer,save :: nobs_ext
 
   integer,allocatable,save :: nobsgrd(:,:,:)
   integer,allocatable,save :: nobsgrd2(:,:,:)
@@ -59,14 +56,14 @@ SUBROUTINE set_letkf_obs
   use scale_process, only: &
 !    MPI_COMM_d => LOCAL_COMM_WORLD, &
     PRC_myrank
-  use scale_les_process, only: &
+  use scale_rm_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
 
 
   IMPLICIT NONE
 !  REAL(r_size),PARAMETER :: gross_error=10.0d0 !!!!! move to namelist
-  INTEGER :: n,i,j,ierr,im,iof
+  INTEGER :: n,i,j,ierr,im,iof,iidx
 
   integer :: mem_ref
 !  CHARACTER(8) :: cdffile_m='cdfm.grd'         ! GYL, PRECIP assimilation
@@ -86,10 +83,14 @@ SUBROUTINE set_letkf_obs
 !  INTEGER :: ii, jj                            ! GYL
 
   integer :: it,ip
-  logical :: check
   REAL(r_size),allocatable :: bufr(:,:)
   INTEGER,allocatable :: bufri(:)
   INTEGER,allocatable :: bufri2(:,:,:)
+#ifdef H08
+  REAL(r_size),allocatable :: bufr2(:) ! H08
+  REAL(r_size):: ch_num ! H08
+!  REAL(r_size),allocatable :: hx_sprd(:) ! H08
+#endif
   integer :: iproc,jproc
   integer,allocatable :: nnext(:,:)
 
@@ -108,64 +109,95 @@ SUBROUTINE set_letkf_obs
   REAL(r_size) :: bias(nid_obs)
   REAL(r_size) :: rmse(nid_obs)
 
+  character(filelenmax) :: obsdafile
+  character(11) :: obsda_suffix = '.000000.dat'
+
+  type(obs_da_value) :: obsda_ext
 
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
 
-!  sigma_obs_i(:               ,:) = SIGMA_OBS
-!  sigma_obs_i(id_rain_obs     ,:) = SIGMA_OBS_RAIN
-!  sigma_obs_i(id_radar_ref_obs,:) = SIGMA_OBS_RADAR
-!  sigma_obs_i(id_radar_vr_obs ,:) = SIGMA_OBS_RADAR
-!  sigma_obs_i(id_radar_prh_obs,:) = SIGMA_OBS_RADAR
-!  sigma_obs_i(id_H08IR_obs    ,:) = SIGMA_OBS_H08
-
-!  sigma_obs_j = sigma_obs_i / DY
-!  sigma_obs_i = sigma_obs_i / DX
-
-  dist_zero_fac = SQRT(10.0d0/3.0d0) * 2.0d0
-!  zero_obs_i = sigma_obs_i * dist_zero_fac
-!  zero_obs_j = sigma_obs_j * dist_zero_fac
-
   !!!!!! changes for different observation types.... (do not communicate all observaitons in the same way...)
-  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR) * dist_zero_fac / DX
-  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR) * dist_zero_fac / DY
-!  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RAIN, SIGMA_OBS_RADAR) * dist_zero_fac / DX
-!  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RAIN, SIGMA_OBS_RADAR) * dist_zero_fac / DY
-
-!  sigma_obs_lnp(:           ,:) = SIGMA_OBSV
-!  sigma_obs_lnp(id_rain_obs ,:) = SIGMA_OBSV_RAIN
-!  sigma_obs_lnp(id_H08IR_obs,:) = SIGMA_OBSV_H08
-
-!  sigma_obs_z(:               ,:) = 1.0D-7
-!  sigma_obs_z(id_radar_ref_obs,:) = SIGMA_OBSZ_RADAR
-!  sigma_obs_z(id_radar_vr_obs ,:) = SIGMA_OBSZ_RADAR
-!  sigma_obs_z(id_radar_prh_obs,:) = SIGMA_OBSZ_RADAR
+  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_TC) * dist_zero_fac / DX
+  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_TC) * dist_zero_fac / DY
+!  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_RAIN) * dist_zero_fac / DX
+!  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_RAIN) * dist_zero_fac / DY
+#ifdef H08
+  dlon_zero = max(dlon_zero,SIGMA_OBS_H08 * dist_zero_fac / DX) ! H08
+  dlat_zero = max(dlat_zero,SIGMA_OBS_H08 * dist_zero_fac / DY) ! H08
+#endif
 
 
-! Read observations
+! Read externally processed observations
 !-----------------------------------
 
-  check = .false.
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
     if (im >= 1 .and. im <= MEMBER) then
-      write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
-            im, ', subdomain id #', proc2mem(2,it,myrank+1)
-      write (obsdafile(7:10),'(I4.4)') im
-      write (obsdafile(12:17),'(I6.6)') proc2mem(2,it,myrank+1)
-
-      if (.not. check) then
-        CALL get_nobs(obsdafile,7,obsda%nobs) ! H08
-        WRITE(6,'(A,I9,A)') 'TOTAL: ', obsda%nobs, ' OBSERVATIONS'
-        CALL obs_da_value_allocate(obsda,MEMBER)
+      if (it == 1) then
+        WRITE(6,'(A,I10)') 'Internally processed observations: ', obsda%nobs - nobs_ext
+        WRITE(6,'(A,I10)') 'Externally processed observations: ', nobs_ext
+        WRITE(6,'(A,I10)') 'Total                observations: ', obsda%nobs
       end if
 
-      call read_obs_da(obsdafile,obsda,im,check)
-      check = .true.
-    end if
-  end do ! [ it = 1, nitmax ]
+      if (OBSDA_IN .and. nobs_ext > 0) then
+        obsda_ext%nobs = nobs_ext
+        call obs_da_value_allocate(obsda_ext,0)
+        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is reading externally processed observations for member ', &
+              im, ', subdomain id #', proc2mem(2,it,myrank+1)
+        call file_member_replace(im, OBSDA_IN_BASENAME, obsdafile)
+        write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
+        call read_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0)
 
+        if (OBSDA_OUT) then
+          write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is appending observations for member ', &
+                im, ', subdomain id #', proc2mem(2,it,myrank+1)
+          call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
+!          write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
+          call write_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0,append=.true.)
+        end if
+
+        ! variables without an ensemble dimension
+        if (it == 1) then
+          obsda%set(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%set
+          obsda%idx(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%idx
+          obsda%ri(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%ri
+          obsda%rj(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%rj
+          obsda%qc(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%qc
+#ifdef H08
+          obsda%lev(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%lev
+          obsda%val2(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%val2
+#endif
+        else
+          if (maxval(abs(obsda%set(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%set)) > 0) then
+            write (6,'(A)') 'error: obsda%set are inconsistent among the ensemble'
+            stop
+          end if
+          if (maxval(abs(obsda%idx(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%idx)) > 0) then
+            write (6,'(A)') 'error: obsda%idx are inconsistent among the ensemble'
+            stop
+          end if
+          if (maxval(abs(obsda%ri(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%ri)) > 1.e-6) then
+            write (6,'(A)') 'error: obsda%ri are inconsistent among the ensemble'
+            stop
+          end if
+          if (maxval(abs(obsda%rj(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%rj)) > 1.e-6) then
+            write (6,'(A)') 'error: obsda%rj are inconsistent among the ensemble'
+            stop
+          end if
+          obsda%qc(obsda%nobs-nobs_ext+1:obsda%nobs) = max(obsda%qc(obsda%nobs-nobs_ext+1:obsda%nobs), obsda_ext%qc)
+#ifdef H08
+          obsda%lev(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda%lev(obsda%nobs-nobs_ext+1:obsda%nobs) + obsda_ext%lev
+          obsda%val2(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda%val2(obsda%nobs-nobs_ext+1:obsda%nobs) + obsda_ext%val2
+#endif
+        end if
+
+        ! variables with an ensemble dimension
+        obsda%ensval(im,obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%val
+      end if ! [ OBSDA_IN .and. nobs_ext > 0 ]
+    end if ! [ im >= 1 .and. im <= MEMBER ]
+  end do ! [ it = 1, nitmax ]
 
 ! All_reduce the observations
 !-----------------------------------
@@ -217,7 +249,6 @@ SUBROUTINE set_letkf_obs
       CALL MPI_BARRIER(MPI_COMM_e,ierr)
       call MPI_BCAST(obsda%set, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%idx, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
-      call MPI_BCAST(obsda%lev, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr) ! H08
       call MPI_BCAST(obsda%ri, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%rj, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
 !        CALL MPI_BARRIER(MPI_COMM_e,ierr)
@@ -225,6 +256,8 @@ SUBROUTINE set_letkf_obs
 
   end if ! [ nprocs_e > MEMBER ]
 
+
+! obsda%val not used; averaged from obsda%ensval later
 
   allocate (bufr(MEMBER,obsda%nobs))
   bufr = 0.0d0
@@ -239,6 +272,34 @@ SUBROUTINE set_letkf_obs
   CALL MPI_ALLREDUCE(obsda%qc,bufri,obsda%nobs,MPI_INTEGER,MPI_MAX,MPI_COMM_e,ierr)
   obsda%qc = bufri
   deallocate(bufri)
+
+#ifdef H08
+!-- H08
+! calculate the ensemble mean of obsda%lev
+!
+  allocate (bufr2(obsda%nobs))
+  bufr2 = 0.0d0
+  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+  CALL MPI_ALLREDUCE(obsda%lev,bufr2,obsda%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
+  obsda%lev = bufr2
+  deallocate(bufr2)
+
+  obsda%lev = obsda%lev / REAL(MEMBER,r_size)
+
+! calculate the ensemble mean of obsda%val2 (clear sky BT)
+!
+  allocate (bufr2(obsda%nobs))
+  bufr2 = 0.0d0
+  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+  CALL MPI_ALLREDUCE(obsda%val2,bufr2,obsda%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
+  obsda%val2 = bufr2
+  deallocate(bufr2)
+
+  obsda%val2 = obsda%val2 / REAL(MEMBER,r_size)
+
+!-- H08
+#endif
+
 
 !    call MPI_Comm_free(MPI_COMM_e,ierr)
 
@@ -255,19 +316,15 @@ SUBROUTINE set_letkf_obs
 !  call read_ppmask(maskfile, ppmask)                                            ! GYL
 !  pp_ntotal = 0                                                                 ! GYL
 
-!!
-!! Pre-process radar observations
-!!
-
-  write (6, '(A)') '******'
-
-  !!!!!! may be moved to latter
-  do iof = 1, nobsfiles
+!
+! preprocess 'obs'
+!-----------------------------------
+  do iof = 1, OBS_IN_NUM
     do n = 1, obs(iof)%nobs
       if (obs(iof)%elm(n) == id_radar_ref_obs) then
         if (obs(iof)%dat(n) >= 0.0d0 .and. obs(iof)%dat(n) < 1.0d10) then
           if (obs(iof)%dat(n) < MIN_RADAR_REF) then
-            obs(iof)%dat(n) = MIN_RADAR_REF_DBZ
+            obs(iof)%dat(n) = MIN_RADAR_REF_DBZ + LOW_REF_SHIFT
           else
             obs(iof)%dat(n) = 10.0d0 * log10(obs(iof)%dat(n))
           end if
@@ -283,18 +340,27 @@ SUBROUTINE set_letkf_obs
         obs(iof)%err(n) = OBSERR_RADAR_VR
       end if
     end do ! [ n = 1, obs(iof)%nobs ]
-  end do ! [ iof = 1, nobsfiles ]
-  !!!!!!
+  end do ! [ iof = 1, OBS_IN_NUM ]
 
 
 ! Compute perturbation and departure
 ! gross error check
 !-----------------------------------
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,mem_ref)
+  allocate(tmpelm(obsda%nobs))
+
+#ifdef H08
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,ch_num)
+#else
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref)
+#endif
   do n = 1, obsda%nobs
     IF(obsda%qc(n) > 0) CYCLE
 
+    iof = obsda%set(n)
+    iidx = obsda%idx(n)
+
+    tmpelm(n) = obs(iof)%elm(iidx)
 
 
 !!!###### PRECIP assimilation ######
@@ -395,15 +461,13 @@ SUBROUTINE set_letkf_obs
 
 
 !!!###### RADAR assimilation ######
-!    if (USE_OBSERR_RADAR_REF .AND. obs(obsda%set(n))%elm(obsda%idx(n)) == id_radar_ref_obs) then
-!      obs(obsda%set(n))%err(obsda%idx(n)) = OBSERR_RADAR_REF
-!    end if
-!    if (USE_OBSERR_RADAR_VR .AND. obs(obsda%set(n))%elm(obsda%idx(n)) == id_radar_vr_obs) then
-!      obs(obsda%set(n))%err(obsda%idx(n)) = OBSERR_RADAR_VR
-!    end if
+    if (obs(iof)%elm(iidx) == id_radar_ref_obs) then
+      if (.not. USE_RADAR_REF) then
+        obsda%qc(n) = iqc_otype
+        cycle
+      end if
 
-    if (obs(obsda%set(n))%elm(obsda%idx(n)) == id_radar_ref_obs) then
-      if (obs(obsda%set(n))%dat(obsda%idx(n)) == undef) then
+      if (obs(iof)%dat(iidx) == undef) then
         obsda%qc(n) = iqc_obs_bad
         cycle
       end if
@@ -415,108 +479,226 @@ SUBROUTINE set_letkf_obs
           mem_ref = mem_ref + 1
         end if
       end do
-      if (mem_ref < MIN_RADAR_REF_MEMBER) then
-        obsda%qc(n) = iqc_ref_mem
-!        write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
-!        write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
-!              '*  (lon,lat)=(',obs(obsda%set(n))%lon(obsda%idx(n)),',',obs(obsda%set(n))%lat(obsda%idx(n)),'), mem_ref=', &
-!              mem_ref,', ref_obs=', obs(obsda%set(n))%dat(obsda%idx(n))
+      if (obs(iof)%dat(iidx) > RADAR_REF_THRES_DBZ+1.0d-6) then
+        if (mem_ref < MIN_RADAR_REF_MEMBER_OBSREF) then
+          obsda%qc(n) = iqc_ref_mem
+!          write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
+!          write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
+!                '*  (lon,lat)=(',obs(iof)%lon(iidx),',',obs(iof)%lat(iidx),'), mem_ref=', &
+!                mem_ref,', ref_obs=', obs(iof)%dat(iidx)
+          cycle
+        end if
+      else
+        if (mem_ref < MIN_RADAR_REF_MEMBER) then
+          obsda%qc(n) = iqc_ref_mem
+!          write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
+!          write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
+!                '*  (lon,lat)=(',obs(iof)%lon(iidx),',',obs(iof)%lat(iidx),'), mem_ref=', &
+!                mem_ref,', ref_obs=', obs(iof)%dat(iidx)
+          cycle
+        end if
+      end if
+    end if
+
+    if (obs(iof)%elm(iidx) == id_radar_vr_obs) then
+      if (.not. USE_RADAR_VR) then
+        obsda%qc(n) = iqc_otype
         cycle
       end if
     end if
+
+!    if (obs(iof)%elm(iidx) == id_radar_prh_obs) then
+!      if (.not. USE_RADAR_PSEUDO_RH) then
+!        obsda%qc(n) = iqc_otype
+!        cycle
+!      end if
+!    end if
 !!!###### end RADAR assimilation ######
 
+
+
+#ifdef H08
 !!!###### Himawari-8 assimilation ###### ! H08
-    if (obs(obsda%set(n))%elm(obsda%idx(n)) == id_H08IR_obs) then
-      if (obs(obsda%set(n))%dat(obsda%idx(n)) == undef) then
+    if (obs(iof)%elm(iidx) == id_H08IR_obs) then
+      if (obs(iof)%dat(iidx) == undef) then
         obsda%qc(n) = iqc_obs_bad
         cycle
       end if
 
-! -- reject Himawari-8 obs sensitivie above the 200 hPa ! H08 --
-      if (obsda%lev(n) < 20000.0) then
+! -- reject Himawari-8 obs sensitivie above H08_LIMIT_LEV (Pa) ! H08 --
+      if (obsda%lev(n) < H08_LIMIT_LEV) then
         obsda%qc(n) = iqc_obs_bad
         cycle
       endif
+
+!
+! -- Counting how many members have cloud.
+! -- Cloudy members should have negative values.
+!
+      mem_ref = 0
+      do i = 1, MEMBER
+        if (obsda%ensval(i,n) < 0.0d0) then
+          mem_ref = mem_ref + 1
+          obsda%ensval(i,n) = obsda%ensval(i,n) * (-1.0d0)
+        end if
+      end do
+
 !
 ! -- reject Band #11(ch=5) & #12(ch=6) of Himawari-8 obs ! H08
 ! -- because these channels are sensitive to chemical tracers
 ! NOTE!!
 !    channel num of Himawari-8 obs is stored in obs%lev (T.Honda 11/04/2015)
-      if ((int(obs(obsda%set(n))%elm(obsda%idx(n))) == 11) .or. &
-          (int(obs(obsda%set(n))%lev(obsda%idx(n))) == 12)) then
-        obsda%qc(n) = iqc_obs_bad
-        cycle
-      endif
+!      if ((int(obs(iof)%elm(iidx)) == 11) .or. &
+!          (int(obs(iof)%lev(iidx)) == 12)) then
+!        obsda%qc(n) = iqc_obs_bad
+!        cycle
+!      endif
     endif
 !!!###### end Himawari-8 assimilation ###### ! H08
+#endif
+
+
 
     obsda%val(n) = obsda%ensval(1,n)
     DO i=2,MEMBER
       obsda%val(n) = obsda%val(n) + obsda%ensval(i,n)
     END DO
     obsda%val(n) = obsda%val(n) / REAL(MEMBER,r_size)
+#ifdef H08
+! Compute CA (cloud effect average, Okamoto et al. 2014QJRMS)
+! CA is stored in obsda%val2
+
+    obsda%val2(n) = (abs(obsda%val(n) - obsda%val2(n)) & ! CM
+                   + abs(obs(iof)%dat(iidx) - obsda%val2(n)) &! CO
+                   &) * 0.5d0
+#endif
     DO i=1,MEMBER
       obsda%ensval(i,n) = obsda%ensval(i,n) - obsda%val(n) ! Hdx
     END DO
-    obsda%val(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - obsda%val(n) ! y-Hx
+    obsda%val(n) = obs(iof)%dat(iidx) - obsda%val(n) ! y-Hx
 
-    select case (obs(obsda%set(n))%elm(obsda%idx(n))) !gross error
+!   compute sprd in obs space ! H08
+
+!    hx_sprd(n) = 0.0d0 !H08
+!    DO i=1,MEMBER
+!      hx_sprd(n) = hx_sprd(n) + obsda%ensval(i,n) * obsda%ensval(i,n)
+!    ENDDO
+!    hx_sprd(n) = dsqrt(hx_sprd(n) / REAL(MEMBER,r_size))
+
+    select case (obs(iof)%elm(iidx)) !gross error
     case (id_rain_obs)
-      IF(ABS(obsda%val(n)) > GROSS_ERROR_RAIN * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_RAIN * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
     case (id_radar_ref_obs)
-      IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_REF * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_REF * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
     case (id_radar_vr_obs)
-      IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_VR * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_VR * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
     case (id_radar_prh_obs)
-      IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_PRH * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_PRH * obs(iof)%err(iidx)) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
+    case (id_H08IR_obs)
+      ! Adaptive QC depending on the sky condition in the background.
+      ! !!Not finished yet!!
+      ! 
+      ! In config.nml.obsope,
+      !  H08_CLDSKY_THRS  < 0.0: turn off ! all members are diagnosed as cloudy.
+      !  H08_CLDSKY_THRS  > 0.0: turn on
+      !
+      IF(mem_ref < H08_MIN_CLD_MEMBER)THEN ! Clear sky
+        IF(ABS(obsda%val(n)) > 1.0d0 * obs(iof)%err(iidx)) THEN
+          obsda%qc(n) = iqc_gross_err
+        END IF
+      ELSE ! Cloudy sky
+        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+          obsda%qc(n) = iqc_gross_err
+        END IF
+      END IF
+
+      IF(obs(iof)%dat(iidx) < H08_BT_MIN)THEN
+        obsda%qc(n) = iqc_gross_err
+      ENDIF
+
+!      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+!        obsda%qc(n) = iqc_gross_err
+!      END IF
+    case (id_tclon_obs)
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_TCX * obs(iof)%err(iidx)) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
+    case (id_tclat_obs)
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_TCY * obs(iof)%err(iidx)) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
+    case (id_tcmip_obs)
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_TCP * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
     case default
-      IF(ABS(obsda%val(n)) > GROSS_ERROR * obs(obsda%set(n))%err(obsda%idx(n))) THEN
+      IF(ABS(obsda%val(n)) > GROSS_ERROR * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
     end select
 
-    IF(obs(obsda%set(n))%elm(obsda%idx(n)) == id_H08IR_obs)then
-      write (6, '(2I6,2F8.2,4F12.4,2I3)')obs(obsda%set(n))%elm(obsda%idx(n)), &
-                                         obs(obsda%set(n))%typ(obsda%idx(n)), &
-                                         obs(obsda%set(n))%lon(obsda%idx(n)), &
-                                         obs(obsda%set(n))%lat(obsda%idx(n)), &
-                                         obsda%lev(n), &
-                                         obs(obsda%set(n))%dat(obsda%idx(n)), &
-                                         obs(obsda%set(n))%err(obsda%idx(n)), &
-                                         obsda%val(n), &
-                                         obsda%qc(n), &
-                                         int(obs(obsda%set(n))%lev(obsda%idx(n)))
+    IF(obs(iof)%elm(iidx) == id_H08IR_obs)THEN
 
+#ifdef H08
+!
+! Derived H08 obs height (based on the weighting function output from RTTOV fwd
+! model) is substituted into obs%lev.
+! Band num. is substituded into obsda%lev. This will be used in monit_obs.
+!
+      ch_num = obs(iof)%lev(iidx)
 
+      IF(DEPARTURE_STAT_H08)THEN
+!
+! For obs err correlation statistics based on Desroziers et al. (2005, QJRMS).
+!
+        write(6, '(a,2I6,2F8.2,4F12.4,2I6,F10.4)')"H08-O-B", &
+             obs(iof)%elm(iidx), &
+             nint(ch_num), & ! obsda%lev includes band num.
+             obs(iof)%lon(iidx), &
+             obs(iof)%lat(iidx), &
+             obsda%val(n),& ! O-B
+             obsda%lev(n), & ! sensitive height
+             obs(iof)%dat(iidx), &
+             obs(iof)%err(iidx), &
+             obsda%qc(n),        &
+             mem_ref,  &  ! # of cloudy member
+             obsda%val2(n)
+      ELSE
+        write(6, '(2I6,2F8.2,4F12.4,I3)') &
+             obs(iof)%elm(iidx), & ! id
+             nint(ch_num), & ! band num
+             obs(iof)%lon(iidx), &
+             obs(iof)%lat(n), &
+             obsda%lev(iidx), & ! sensitive height
+             obs(iof)%dat(iidx), &
+             obs(iof)%err(iidx), &
+             obsda%val(n), &
+             obsda%qc(n)
+      ENDIF !  [.not. DEPARTURE_STAT_H08]
+#endif
     ELSE
-      write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), &
-                                         obs(obsda%set(n))%typ(obsda%idx(n)), &
-                                         obs(obsda%set(n))%lon(obsda%idx(n)), &
-                                         obs(obsda%set(n))%lat(obsda%idx(n)), &
-                                         obs(obsda%set(n))%lev(obsda%idx(n)), &
-                                         obs(obsda%set(n))%dat(obsda%idx(n)), &
-                                         obs(obsda%set(n))%err(obsda%idx(n)), &
+      write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
+                                         obs(iof)%typ(iidx), &
+                                         obs(iof)%lon(iidx), &
+                                         obs(iof)%lat(iidx), &
+                                         obs(iof)%lev(iidx), &
+                                         obs(iof)%dat(iidx), &
+                                         obs(iof)%err(iidx), &
                                          obsda%val(n), &
                                          obsda%qc(n)
     ENDIF
 
 
-!write (6, '(A,15F8.2)') '-- ', obsda%ensval(:,n)
-
-
-
-  END DO
+  END DO ! [ n = 1, obsda%nobs ]
 !$OMP END PARALLEL DO
-
 
 !!
 !! output departure statistics
@@ -525,10 +707,6 @@ SUBROUTINE set_letkf_obs
 
   WRITE(6,'(A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN):'
 
-  allocate(tmpelm(obsda%nobs))
-  do n = 1, obsda%nobs
-    tmpelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
-  end do
   CALL monit_dep(obsda%nobs,tmpelm,obsda%val,obsda%qc,monit_nobs,bias,rmse)
   CALL monit_print(monit_nobs,bias,rmse)
   deallocate(tmpelm)
@@ -648,7 +826,9 @@ SUBROUTINE set_letkf_obs
       obsda2(PRC_myrank)%qc(nnext(i,j)) = obsda%qc(n)
       obsda2(PRC_myrank)%ri(nnext(i,j)) = obsda%ri(n)
       obsda2(PRC_myrank)%rj(nnext(i,j)) = obsda%rj(n)
+#ifdef H08
       obsda2(PRC_myrank)%lev(nnext(i,j)) = obsda%lev(n) ! H08
+#endif
 
       nnext(i,j) = nnext(i,j) + 1
     end if
@@ -661,6 +841,19 @@ SUBROUTINE set_letkf_obs
 
 ! Communication
 !-----------------------------------
+
+!#ifdef H08
+! -- H08
+!  if((obs(3)%nobs >= 1) .and. OBS_IN_NUM >= 3)then
+!    allocate (bufr2(obs(3)%nobs))
+!    bufr2 = 0.0d0
+!    CALL MPI_BARRIER(MPI_COMM_d,ierr)
+!    CALL MPI_ALLREDUCE(obs(3)%lev,bufr2,obs(3)%nobs,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
+!    obs(3)%lev = bufr2
+!    deallocate(bufr2)
+!  endif
+! -- H08
+!#endif
 
   allocate ( bufri2 (0:nlon,1:nlat,0:MEM_NP-1) )
   call MPI_ALLREDUCE(nobsgrd,bufri2,(nlon+1)*nlat*MEM_NP,MPI_INTEGER,MPI_SUM,MPI_COMM_d,ierr)
@@ -739,7 +932,9 @@ SUBROUTINE set_letkf_obs
             obsbufs%qc(n) = obsda2(PRC_myrank)%qc(obsidx(n))
             obsbufs%ri(n) = obsda2(PRC_myrank)%ri(obsidx(n))
             obsbufs%rj(n) = obsda2(PRC_myrank)%rj(obsidx(n))
+#ifdef H08
             obsbufs%lev(n) = obsda2(PRC_myrank)%lev(obsidx(n)) ! H08
+#endif
           end do
         else
           call obs_choose(imin2,imax2,jmin2,jmax2,ip2,nr(ip2+1))
@@ -764,7 +959,9 @@ SUBROUTINE set_letkf_obs
     call MPI_GATHERV(obsbufs%qc, ns, MPI_INTEGER, obsbufr%qc, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
     call MPI_GATHERV(obsbufs%ri, ns, MPI_r_size, obsbufr%ri, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
     call MPI_GATHERV(obsbufs%rj, ns, MPI_r_size, obsbufr%rj, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
+#ifdef H08
     call MPI_GATHERV(obsbufs%lev, ns, MPI_r_size, obsbufr%lev, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
+#endif
 
 
     if (PRC_myrank == ip) then
@@ -778,7 +975,9 @@ SUBROUTINE set_letkf_obs
           obsda2(ip2)%qc = obsbufr%qc(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
           obsda2(ip2)%ri = obsbufr%ri(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
           obsda2(ip2)%rj = obsbufr%rj(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
+#ifdef H08
           obsda2(ip2)%lev = obsbufr%lev(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1)) ! H08
+#endif
 
 !            write(6,*) obsda2(ip2)%idx
 
@@ -934,7 +1133,7 @@ END SUBROUTINE obs_choose
 !  CHARACTER(10) :: omafile='oma.dat'
 !  CHARACTER(14) :: obsguesfile='obsguesNNN.dat'
 !  CHARACTER(14) :: obsanalfile='obsanalNNN.dat'
-!  
+!
 !  IF(omb_output .AND. myrank == 0) THEN
 !    ALLOCATE(ohx(nobs),oqc(nobs),dep(nobs))
 !    CALL monit_output('gues',0,ohx,oqc)
