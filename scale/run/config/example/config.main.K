@@ -18,7 +18,7 @@ OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # Directory for SCALE-LETKF output
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
+MODELDIR="$DIR/../../bin"                               # Directory of the SCALE model executables
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
 DATA_TOPO=                                                           # Directory of the prepared topo files

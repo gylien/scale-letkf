@@ -16,7 +16,7 @@ OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2_5km_100
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
+MODELDIR="$DIR/../../bin"                               # Directory of the SCALE model executables
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/BDA_d2_5km_64p_bf16"
