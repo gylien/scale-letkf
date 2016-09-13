@@ -13,17 +13,19 @@ if (($# < 2)); then
 
 [init_all_node.sh] 
 
-Usage: $0 MYRANK SCPCALL
+Usage: $0 MYRANK SCPCALL [FCST_CYCLE]
 
   MYRANK   My rank number (not used)
   SCPCALL  Called from which script? (fcst/cycle)
+  FCST_CYCLE
 
 EOF
   exit 1
 fi
 
 MYRANK="$1"; shift
-SCPCALL="$1"
+SCPCALL="$1"; shift
+FCST_CYCLE="${1:-CYCLE}"
 
 #-------------------------------------------------------------------------------
 
@@ -40,21 +42,21 @@ fi
 #===============================================================================
 
 mkdir -p $TMPRUN/scale_pp
-cp -f $TMPDAT/exec/scale-les_pp_ens $TMPRUN/scale_pp
+cp -f $TMPDAT/exec/scale-rm_pp_ens $TMPRUN/scale_pp
 
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ### 5-2" >&2
 fi
 
 mkdir -p $TMPRUN/scale_init
-cp -f $TMPDAT/exec/scale-les_init_ens $TMPRUN/scale_init
+cp -f $TMPDAT/exec/scale-rm_init_ens $TMPRUN/scale_init
 
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ### 5-3" >&2
 fi
 
 mkdir -p $TMPRUN/scale
-cp -f $TMPDAT/exec/scale-les_ens $TMPRUN/scale
+cp -f $TMPDAT/exec/scale-rm_ens $TMPRUN/scale
 
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ### 5-4" >&2
@@ -111,7 +113,7 @@ elif [ "$SCPCALL" = 'fcst' ]; then
   lcycles=$((LCYCLE * CYCLE_SKIP))
   time=$STIME
   while ((time <= ETIME)); do
-    for c in $(seq $CYCLE); do
+    for c in $(seq $FCST_CYCLE); do
       time2=$(datetime $time $((lcycles * (c-1))) s)
       if ((time2 <= ETIME)); then
         mkdir -p $TMPOUT/${time2}/topo
@@ -123,7 +125,7 @@ elif [ "$SCPCALL" = 'fcst' ]; then
         mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale
       fi
     done
-    time=$(datetime $time $((lcycles * CYCLE)) s)
+    time=$(datetime $time $((lcycles * FCST_CYCLE)) s)
   done
 fi
 

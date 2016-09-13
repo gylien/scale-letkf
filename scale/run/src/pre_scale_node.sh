@@ -43,7 +43,7 @@ cat $TMPDAT/conf/config.nml.ensmodel | \
         -e "/!--PPN--/a PPN = $PPN," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
-    > $TMPDIR/scale-les_ens.conf
+    > $TMPDIR/scale-rm_ens.conf
 
 #===============================================================================
 

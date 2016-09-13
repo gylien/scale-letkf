@@ -79,6 +79,10 @@ declare -a node_m
 safe_init_tmpdir $NODEFILE_DIR
 distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
 
+if ((CYCLE == 0)); then
+  CYCLE=$cycle_auto
+fi
+
 #===============================================================================
 # Determine the staging list
 
@@ -126,7 +130,6 @@ rscgrp="micro"
 
 cat > $jobscrp << EOF
 #!/bin/sh
-##PJM -g ra000015
 #PJM -N ${myname1}_${SYSNAME}
 #PJM -s
 #PJM --rsc-list "node=${NNODES_real}"
@@ -136,7 +139,7 @@ cat > $jobscrp << EOF
 #PJM --mpi "proc=$NNODES"
 #PJM --mpi assign-online-node
 
-. /work/system/Env_base
+. /work/system/Env_base_1.2.0-20-1
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 

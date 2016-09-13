@@ -62,9 +62,9 @@ MODULE common_obs_scale
 !
   INTEGER,PARAMETER :: id_ps_obs=14593
   INTEGER,PARAMETER :: id_rain_obs=19999
-  INTEGER,PARAMETER :: id_tclon_obs=99991  ! not used
-  INTEGER,PARAMETER :: id_tclat_obs=99992  ! not used
-  INTEGER,PARAMETER :: id_tcmip_obs=99993  ! not used
+  INTEGER,PARAMETER :: id_tclon_obs=99991  ! TC vital
+  INTEGER,PARAMETER :: id_tclat_obs=99992  ! TC vital
+  INTEGER,PARAMETER :: id_tcmip_obs=99993  ! TC vital
 !
 ! radar observations
 !
@@ -125,7 +125,7 @@ MODULE common_obs_scale
     ! 
 #ifdef H08
     REAL(r_size),ALLOCATABLE :: lev(:) ! H08
-    LOGICAL :: CLD
+    REAL(r_size),ALLOCATABLE :: val2(:) ! H08 ! clear sky BT (gues)
 #endif
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
@@ -789,13 +789,13 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
     lg= ( pi * rog * nog / ( ro * qg ) ) ** 0.25
 
     rofactor= ( roo / ro  ) ** 0.25
-    CALL com_gamma( 4.0d0 + b , tmp_factor )
+    CALL com_gamma( 4.0_r_size + b , tmp_factor )
     wr= a * tmp_factor / ( 6.0d0 * ( lr ** b ) )
     wr= 1.0d-2*wr * rofactor
-    CALL com_gamma( 4.0d0 + d , tmp_factor )
+    CALL com_gamma( 4.0_r_size + d , tmp_factor )
     ws= c * tmp_factor / ( 6.0d0 * ( ls ** d ) )
     ws= 1.0d-2*ws * rofactor
-    CALL com_gamma( 4.5d0 , tmp_factor )
+    CALL com_gamma( 4.5_r_size , tmp_factor )
     wg= tmp_factor * ( ( ( 4.0d0 * gg * 100.0d0 * rog )/( 3.0d0 * Cd * ro ) ) ** 0.5 )
     wg= 1.0d-2*wg / ( 6.0d0 * ( lg ** 0.5 ) )
 
@@ -895,7 +895,7 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
       rofactor= ( roo / ro  ) ** 0.5
 
       IF ( qr .GT. 0.0d0 )THEN
-      CALL com_gamma( 4.0d0 + b , tmp_factor )
+      CALL com_gamma( 4.0_r_size + b , tmp_factor )
       lr= ( pi * ror * nor / ( ro * qr ) ) ** 0.25
       wr= a * tmp_factor / ( 6.0d0 * ( lr ** b ) )
       wr= 1.0d-2 * wr * rofactor
@@ -905,7 +905,7 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
 
       IF( qs .GT. 0.0d0 )THEN
       ls= ( pi * ros * nos / ( ro * qs ) ) ** 0.25
-      CALL com_gamma( 4.0d0 + d , tmp_factor )
+      CALL com_gamma( 4.0_r_size + d , tmp_factor )
       ws= c * tmp_factor / ( 6.0d0 * ( ls ** d ) )
       ws= 1.0d-2 * ws * rofactor
       ELSE
@@ -914,7 +914,7 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
 
       IF ( qg .GT. 0.0d0 )THEN
       lg= ( pi * rog * nog / ( ro * qg ) ) ** 0.25
-      CALL com_gamma( 4.5d0 , tmp_factor )
+      CALL com_gamma( 4.5_r_size , tmp_factor )
       wg= tmp_factor * ( ( ( 4.0d0 * gg * 100.0d0 * rog )/( 3.0d0 * Cd * ro ) ) ** 0.5 )
       wg= 1.0d-2 * wg / ( 6.0d0 * ( lg ** 0.5 ) )
       ELSE
@@ -1213,7 +1213,7 @@ SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
 !
 ! rlon,rlat -> ri,rj
 !
-  call MPRJ_lonlat2xy(rlon*pi/180.0d0,rlat*pi/180.0d0,rig,rjg)
+  call MPRJ_lonlat2xy(rlon*pi/180.0_r_size,rlat*pi/180.0_r_size,rig,rjg)
   rig = (rig - GRID_CXG(1)) / DX + 1.0d0
   rjg = (rjg - GRID_CYG(1)) / DY + 1.0d0
 
@@ -1381,6 +1381,8 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   INTEGER,ALLOCATABLE :: n2prof(:) ! obs num 2 prof num
 
   REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
+  REAL(r_size),ALLOCATABLE :: yobs_H08_clr(:)
+  REAL(r_size),ALLOCATABLE :: CA(:) ! (Okamoto et al., 2014QJRMS)
   INTEGER :: ns
   INTEGER,ALLOCATABLE :: qc_H08(:)
 #endif
@@ -1613,6 +1615,8 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
       DEALLOCATE(tmp_lon_H08, tmp_lat_H08)
 
       ALLOCATE(yobs_H08(nprof_H08*nch))
+      ALLOCATE(yobs_H08_clr(nprof_H08*nch))
+      ALLOCATE(CA(nprof_H08*nch))
       ALLOCATE(plev_obs_H08(nprof_H08*nch))
       ALLOCATE(qc_H08(nprof_H08*nch))
 
@@ -1620,7 +1624,10 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
       CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
                           lon_H08,lat_H08,v3dgh,v2dgh,&
                           yobs_H08,plev_obs_H08,&
-                          qc_H08,stggrd=1)
+                          qc_H08,stggrd=1,yobs_H08_clr=yobs_H08_clr)
+
+      ! yobs here should be positive!!
+      yobs_H08 = abs(yobs_H08)
 
       write (6, '(A)')"MEAN-HIMAWARI-8-STATISTICS"
 
@@ -1639,9 +1646,14 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
           ohx(n) = yobs_H08(ns)
 !          if(plev_obs_H08(ns) < H08_LIMIT_LEV) oqc(n) = iqc_obs_bad
 
+          CA(n) =  (abs(yobs_H08(ns) - yobs_H08_clr(ns)) & ! CM
+                   +  abs(obs(obsda%set(n))%dat(obsda%idx(n)) - yobs_H08_clr(ns)) & ! CO
+                   &) * 0.5d0 
+                   
+
           if(oqc(n) == iqc_good) then
             ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) 
-            write (6, '(A,2I6,2F8.2,5F11.4,I6)')"H08-O-A-B",&
+            write (6, '(A,2I6,2F8.2,5F11.4,I6,F10.4)')"H08-O-A-B",&
                   obs(obsda%set(n))%elm(obsda%idx(n)), &
                   nint(obsda%lev(n)), & ! obsda%lev includes the band num.
                   obs(obsda%set(n))%lon(obsda%idx(n)), &
@@ -1651,14 +1663,15 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
                   plev_obs_H08(ns), &
                   obs(obsda%set(n))%dat(obsda%idx(n)), &
                   obs(obsda%set(n))%err(obsda%idx(n)), &
-                  oqc(n) 
+                  oqc(n),&
+                  CA(n) 
           endif
 
         endif ! [DEPARTURE_STAT_T_RANGE]
       end do ! [ n = 1, obsda%nobs ]
 !$OMP END PARALLEL DO
 
-      DEALLOCATE(yobs_H08, plev_obs_H08, qc_H08)
+      DEALLOCATE(yobs_H08, yobs_H08_clr, plev_obs_H08, qc_H08, CA)
     ENDIF ! [nprof_H08 >=1]
 
     IF(ALLOCATED(n2prof)) DEALLOCATE(n2prof)
@@ -1917,6 +1930,7 @@ SUBROUTINE obs_da_value_allocate(obs,member)
   ALLOCATE( obs%val    (obs%nobs) )
 #ifdef H08
   ALLOCATE( obs%lev    (obs%nobs) ) ! H08
+  ALLOCATE( obs%val2    (obs%nobs) ) ! H08
 #endif
   ALLOCATE( obs%qc     (obs%nobs) )
   ALLOCATE( obs%ri     (obs%nobs) )
@@ -1926,6 +1940,7 @@ SUBROUTINE obs_da_value_allocate(obs,member)
   obs%val = 0.0d0
 #ifdef H08
   obs%lev = 0.0d0 ! H08
+  obs%val2 = 0.0d0 ! H08
 #endif
   obs%qc = 0
   obs%ri = 0.0d0
@@ -1950,6 +1965,7 @@ SUBROUTINE obs_da_value_deallocate(obs)
   IF(ALLOCATED(obs%val    )) DEALLOCATE(obs%val    )
 #ifdef H08
   IF(ALLOCATED(obs%lev    )) DEALLOCATE(obs%lev    ) ! H08
+  IF(ALLOCATED(obs%val2   )) DEALLOCATE(obs%val2   ) ! H08
 #endif
   IF(ALLOCATED(obs%ensval )) DEALLOCATE(obs%ensval )
   IF(ALLOCATED(obs%qc     )) DEALLOCATE(obs%qc     )
@@ -2062,15 +2078,15 @@ SUBROUTINE read_obs(cfile,obs)
       wk(5) = wk(5) * 100.0 ! hPa -> Pa
       wk(6) = real(OBSERR_TCP,kind=r_sngl)
     CASE(id_tclon_obs)
-      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0d0,&
-                          REAL(wk(3),kind=r_size)*pi/180.0d0,&
+      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
+                          REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
                           x,y)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = real(x,kind=r_sngl)
       wk(6) = real(OBSERR_TCX,kind=r_sngl)
     CASE(id_tclat_obs)
-      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0d0,&
-                          REAL(wk(3),kind=r_size)*pi/180.0d0,&
+      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
+                          REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
                           x,y)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = real(y,kind=r_sngl)
@@ -2152,18 +2168,14 @@ SUBROUTINE write_obs(cfile,obs,append,missing)
   RETURN
 END SUBROUTINE write_obs
 
-!
-! check = .false.: no check, overwrite anyway
-!         .true.:  check, stop if inconsistency occurs, use maximum qc
-!
-SUBROUTINE read_obs_da(cfile,obs,im,check)
+SUBROUTINE read_obs_da(cfile,obs,im)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_da_value),INTENT(INOUT) :: obs
   INTEGER,INTENT(IN) :: im
-  LOGICAL,INTENT(IN) :: check
 #ifdef H08
-  REAL(r_sngl) :: wk(7) ! H08
+!  REAL(r_sngl) :: wk(7) ! H08
+  REAL(r_sngl) :: wk(8) ! H08
 #else
   REAL(r_sngl) :: wk(6) ! H08
 #endif
@@ -2175,36 +2187,19 @@ SUBROUTINE read_obs_da(cfile,obs,im,check)
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   DO n=1,obs%nobs
     READ(iunit) wk
-    if (check .and. obs%set(n) /= NINT(wk(1))) then
-      write (6,'(A)') 'error: obs_da_value%set are inconsistent among the ensemble'
-      stop
-    end if
     obs%set(n) = NINT(wk(1))
-    if (check .and. obs%idx(n) /= NINT(wk(2))) then
-      write (6,'(A)') 'error: obs_da_value%idx are inconsistent among the ensemble'
-      stop
-    end if
     obs%idx(n) = NINT(wk(2))  !!!!!! will overflow......
     if (im == 0) then
       obs%val(n) = REAL(wk(3),r_size)
     else
       obs%ensval(im,n) = REAL(wk(3),r_size)
     end if
-    if ((.not. check) .or. (check .and. obs%qc(n) < NINT(wk(4)))) then ! choose the maximum qc value if check = .true.
-      obs%qc(n) = NINT(wk(4))
-    end if
-    if (check .and. obs%ri(n) /= REAL(wk(5),r_size)) then
-      write (6,'(A)') 'error: obs_da_value%ri are inconsistent among the ensemble'
-      stop
-    end if
+    obs%qc(n) = NINT(wk(4))
     obs%ri(n) = REAL(wk(5),r_size)
-    if (check .and. obs%rj(n) /= REAL(wk(6),r_size)) then
-      write (6,'(A)') 'error: obs_da_value%rj are inconsistent among the ensemble'
-      stop
-    end if
     obs%rj(n) = REAL(wk(6),r_size)
 #ifdef H08
-    obs%lev(n) = obs%lev(n) + REAL(wk(7),r_size) ! H08
+    obs%lev(n) = REAL(wk(7),r_size) ! H08
+    obs%val2(n) = REAL(wk(8),r_size) ! H08
 #endif
   END DO
   CLOSE(iunit)
@@ -2220,7 +2215,8 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
   LOGICAL,INTENT(IN),OPTIONAL :: append
   LOGICAL :: append_
 #ifdef H08
-  REAL(r_sngl) :: wk(7) ! H08
+!  REAL(r_sngl) :: wk(7) ! H08
+  REAL(r_sngl) :: wk(8) ! H08
 #else
   REAL(r_sngl) :: wk(6) 
 #endif
@@ -2230,6 +2226,7 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
   append_ = .false.
   IF(present(append)) append_ = append
   IF(append_) THEN
+    IF(obs%nobs <= 0) RETURN
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append',STATUS='replace')
   ELSE
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',STATUS='replace')
@@ -2247,6 +2244,7 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
     wk(6) = REAL(obs%rj(n),r_sngl)
 #ifdef H08
     wk(7) = REAL(obs%lev(n),r_sngl) ! H08
+    wk(8) = REAL(obs%val2(n),r_sngl) ! H08
 #endif
     WRITE(iunit) wk
   END DO
@@ -2580,7 +2578,7 @@ END SUBROUTINE wgt_ave2d
 !-----------------------------------------------------------------------
 #ifdef H08
 !
-SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
+SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yobs_H08_clr)
   use scale_mapproj, only: &
       MPRJ_rotcoef
   use scale_H08_fwd
@@ -2618,7 +2616,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
   REAL(r_size) :: lsmask1d(nprof)
 
 ! -- brightness temp from RTTOV
-  REAL(r_size) :: bt_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
+  REAL(r_size) :: btall_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
+  REAL(r_size) :: btclr_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
 ! -- transmittance from RTTOV
   REAL(r_size) :: trans_out(nlev,nch,nprof)
  
@@ -2626,6 +2625,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
   REAL(r_size) :: tmp_weight
 
   REAL(r_size),INTENT(OUT) :: yobs(nprof*nch)
+  REAL(r_size),OPTIONAL,INTENT(OUT) :: yobs_H08_clr(nprof*nch)
   INTEGER,INTENT(OUT) :: qc(nprof*nch)
   REAL(r_size),INTENT(OUT) :: plev_obs(nch*nprof)
 
@@ -2706,13 +2706,13 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
                        lon1d(1:nprof),& ! (deg)
                        lat1d(1:nprof),& ! (deg)
                        lsmask1d(1:nprof),& ! (0-1)
-                       bt_out(1:nch,1:nprof),& ! (K)
-                       trans_out(nlev:1:-1,1:nch,1:nprof),&
-                       CLD = .true.) ! ()
+                       btall_out(1:nch,1:nprof),& ! (K)
+                       btclr_out(1:nch,1:nprof),& ! (K)
+                       trans_out(nlev:1:-1,1:nch,1:nprof))
 !
 ! -- Compute max weight level using trans_out 
 ! -- (Transmittance from each user pressure level to Top Of the Atmosphere)
-! -- bt_out is substituted into yobs
+! -- btall_out is substituted into yobs
 
   n = 0
   DO np = 1, nprof
@@ -2735,7 +2735,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
       endif
     ENDDO
 
-    yobs(n) = bt_out(ch,np)
+    yobs(n) = btall_out(ch,np)
 !
 ! ## comment out by T.Honda (02/09/2016)
 ! -- tentative QC here --
@@ -2751,6 +2751,21 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd)
     CASE DEFAULT
       qc(n) = iqc_obs_bad
     END SELECT
+
+    IF(H08_REJECT_LAND .and. (lsmask1d(np) > 0.5d0))THEN
+      qc(n) = iqc_obs_bad
+    ENDIF
+
+    IF(abs(btall_out(ch,np) - btclr_out(ch,np)) > H08_CLDSKY_THRS)THEN
+! Cloudy sky
+      yobs(n) = yobs(n) * (-1.0d0)
+    ELSE
+! Clear sky
+      yobs(n) = yobs(n) * 1.0d0
+    ENDIF
+   
+    yobs_H08_clr(n) = btclr_out(ch,np)
+
   ENDDO ! ch
   ENDDO ! np
 

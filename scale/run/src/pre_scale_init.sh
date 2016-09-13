@@ -27,7 +27,7 @@ Usage: $0 MYRANK TOPO LANDUSE BDYORG STIME MKINIT MEM MEM_BDY TMPDIR BDY_TIME_LI
             1: Yes
   MEM      Name of the ensemble member
   MEM_BDY  Name of the ensemble member of the boundary data source
-  TMPDIR   Temporary directory to run scale-les_init
+  TMPDIR   Temporary directory to run scale-rm_init
   BDY_TIME_LIST
   NUMBER_OF_TSTEPS
   NUMBER_OF_SKIP_TSTEPS
@@ -73,11 +73,18 @@ if ((MKINIT == 1 || (OCEAN_INPUT == 1 && OCEAN_FORMAT == 99))); then
 fi
 
 if ((BDY_FORMAT == 1)); then
-  FILETYPE_ORG='SCALE-LES'
+  BASENAME_ORG="${TMPSUBDIR}/bdydata"
+  FILETYPE_ORG='SCALE-RM'
   USE_NESTING='.true.'
   LATLON_CATALOGUE_FNAME="$BDYORG/latlon_domain_catalogue.txt"
 elif ((BDY_FORMAT == 2)); then
+  BASENAME_ORG="${TMPSUBDIR}/bdydata"
   FILETYPE_ORG='WRF-ARW'
+  USE_NESTING='.false.'
+  LATLON_CATALOGUE_FNAME=
+elif ((BDY_FORMAT == 4)); then
+  BASENAME_ORG="${TMPSUBDIR}/gradsbdy.conf"
+  FILETYPE_ORG='GrADS'
   USE_NESTING='.false.'
   LATLON_CATALOGUE_FNAME=
 else
@@ -97,20 +104,44 @@ for time_bdy in $BDY_TIME_LIST; do
   else
     file_number="_$(printf %05d $i)"
   fi
+  if ((BDY_ROTATING == 1)); then
+    bdyorg_path="${BDYORG}/${STIME}/${MEM_BDY}"
+  else
+    bdyorg_path="${BDYORG}/const/${MEM_BDY}"
+  fi
   if ((BDY_FORMAT == 1)); then
-    if [ -s "${BDYORG}/${time_bdy}/${MEM_BDY}/history.pe000000.nc" ]; then
-      for ifile in $(cd ${BDYORG}/${time_bdy}/${MEM_BDY} ; ls history*.nc 2> /dev/null); do
-        ln -fs "${BDYORG}/${time_bdy}/${MEM_BDY}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
+    if [ -s "${bdyorg_path}/${time_bdy}/history.pe000000.nc" ]; then
+      for ifile in $(cd ${bdyorg_path}/${time_bdy} ; ls history*.nc 2> /dev/null); do
+        ln -fs "${bdyorg_path}/${time_bdy}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
       done
     else
-      echo "[Error] $0: Cannot find source boundary file '${BDYORG}/${time_bdy}/${MEM_BDY}/history.*.nc'."
+      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${time_bdy}/history.*.nc'."
       exit 1
     fi
   elif ((BDY_FORMAT == 2)); then
-    if [ -s "${BDYORG}/${MEM_BDY}/wrfout_${time_bdy}" ]; then
-      ln -fs "${BDYORG}/${MEM_BDY}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
+    if [ -s "${bdyorg_path}/wrfout_${time_bdy}" ]; then
+      ln -fs "${bdyorg_path}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
     else
-      echo "[Error] $0: Cannot find source boundary file '${BDYORG}/${MEM_BDY}/wrfout_${time_bdy}'."
+      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/wrfout_${time_bdy}'."
+      exit 1
+    fi
+  elif ((BDY_FORMAT == 4)); then
+    if [ -s "${bdyorg_path}/atm_${time_bdy}.grd" ]; then
+      ln -fs "${bdyorg_path}/atm_${time_bdy}.grd" $TMPDIR/bdyatm${file_number}.grd
+    else
+      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/atm_${time_bdy}.grd'."
+      exit 1
+    fi
+    if [ -s "${bdyorg_path}/sfc_${time_bdy}.grd" ]; then
+      ln -fs "${bdyorg_path}/sfc_${time_bdy}.grd" $TMPDIR/bdysfc${file_number}.grd
+    else
+      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/sfc_${time_bdy}.grd'."
+      exit 1
+    fi
+    if [ -s "${bdyorg_path}/land_${time_bdy}.grd" ]; then
+      ln -fs "${bdyorg_path}/land_${time_bdy}.grd" $TMPDIR/bdyland${file_number}.grd
+    else
+      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/land_${time_bdy}.grd'."
       exit 1
     fi
   fi
@@ -136,7 +167,7 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
         -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT}/land/param.bucket.conf\"," \
         -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"$TMPOUT/${STIME}/bdy/${MEM_BDY}/boundary\"," \
-        -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${TMPSUBDIR}\/bdydata\"," \
+        -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${BASENAME_ORG}\"," \
         -e "/!--FILETYPE_ORG--/a FILETYPE_ORG = \"${FILETYPE_ORG}\"," \
         -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = ${NUMBER_OF_FILES}," \
         -e "/!--NUMBER_OF_TSTEPS--/a NUMBER_OF_TSTEPS = ${NUMBER_OF_TSTEPS}," \
@@ -146,6 +177,10 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--USE_NESTING--/a USE_NESTING = $USE_NESTING," \
         -e "/!--OFFLINE--/a OFFLINE = .true.," \
     > $TMPDIR/init.conf
+
+cat $TMPDAT/conf/config.nml.grads_boundary | \
+    sed -e "s#--DIR--#${TMPSUBDIR}#g" \
+    > $TMPDIR/gradsbdy.conf
 
 #===============================================================================
 

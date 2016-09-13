@@ -9,12 +9,12 @@
 . config.main
 . src/func_datetime.sh
 
-if (($# < 6)); then
+if (($# < 7)); then
   cat >&2 << EOF
 
 [post_scale.sh] Post-process the SCALE model outputs.
 
-Usage: $0 MYRANK STIME MEM FCSTLEN TMPDIR LOG_OPT [SCPCALL] [DELETE_MEMBER]
+Usage: $0 MYRANK STIME MEM FCSTLEN TMPDIR LOG_OPT OUT_OPT [SCPCALL] [DELETE_MEMBER]
 
   MYRANK   My rank number (not used)
   STIME    Start time (format: YYYYMMDDHHMMSS)
@@ -22,6 +22,7 @@ Usage: $0 MYRANK STIME MEM FCSTLEN TMPDIR LOG_OPT [SCPCALL] [DELETE_MEMBER]
   FCSTLEN  Forecast length (second)
   TMPDIR   Temporary directory to run the model
   LOG_OPT
+  OUT_OPT
   SCPCALL  Called from which script? (fcst/cycle)
   DELETE_MEMBER
 
@@ -35,12 +36,13 @@ MEM="$1"; shift
 FCSTLEN="$1"; shift
 TMPDIR="$1"; shift
 LOG_OPT="$1"; shift
+OUT_OPT="$1"; shift
 SCPCALL="${1:-cycle}"; shift
 DELETE_MEMBER="${1:-0}"
 
 ATIME=$(datetime $STIME $LCYCLE s)
 
-restartbaselen=23  # 7 + 16
+restartbaselen=27  # 7 + 20
 
 #===============================================================================
 
@@ -83,10 +85,12 @@ elif [ "$SCPCALL" = 'fcst' ]; then
 
   mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
   mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
-  file_prefix=$(cd $TMPDIR ; ls restart*.nc | head -n 1) # pick up the first restart output. ###### TO DO: explicitly calculate the time string???
-  for ifile in $(cd $TMPDIR ; ls ${file_prefix:0:$restartbaselen}*.nc); do
-    mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifile:$restartbaselen}
-  done
+  if ((OUT_OPT <= 1)); then
+    file_prefix=$(cd $TMPDIR ; ls restart*.nc | head -n 1) # pick up the first restart output. ###### TO DO: explicitly calculate the time string???
+    for ifile in $(cd $TMPDIR ; ls ${file_prefix:0:$restartbaselen}*.nc); do
+      mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifile:$restartbaselen}
+    done
+  fi
 
   if ((LOG_OPT <= 3)); then
     if [ -f "$TMPDIR/run.conf" ]; then
@@ -96,7 +100,7 @@ elif [ "$SCPCALL" = 'fcst' ]; then
 
   if ((MYRANK == 0)); then
     if [ -f "$TMPDIR/../latlon_domain_catalogue.txt" ]; then
-      mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/${SCPCALL}_log/scale/latlon_domain_catalogue.txt
+      mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/${SCPCALL}_scale/latlon_domain_catalogue.txt
     fi
   fi
 

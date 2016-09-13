@@ -26,13 +26,22 @@ MODULE common_nml
   integer :: MEMBER_ITER = 0 !
 
   !--- PARAM_OBSOPE
-  character(filelenmax) :: HISTORY_IN_BASENAME = 'hist.@@@@'
-  character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
-
-  !--- PARAM_LETKF
   integer               :: OBS_IN_NUM = 1
   character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
   integer               :: OBS_IN_FORMAT(nobsfilemax) = 1
+  logical               :: OBSDA_RUN(nobsfilemax) = .true.
+  logical               :: OBSDA_OUT = .true.
+  character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
+
+  character(filelenmax) :: HISTORY_IN_BASENAME = 'hist.@@@@'
+
+  integer               :: SLOT_START = 1
+  integer               :: SLOT_END = 1
+  integer               :: SLOT_BASE = 1
+  real(r_size)          :: SLOT_TINTERVAL = 3600.0d0
+
+  !--- PARAM_LETKF
+  logical               :: OBSDA_IN = .false.
   character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@'
   character(filelenmax) :: GUES_IN_BASENAME = 'gues.@@@@'
   character(filelenmax) :: GUES_OUT_MEAN_BASENAME = 'gues.mean'
@@ -41,11 +50,6 @@ MODULE common_nml
   character(filelenmax) :: ANAL_OUT_MEAN_BASENAME = 'anal.mean'
   character(filelenmax) :: ANAL_OUT_SPRD_BASENAME = 'anal.sprd'
   character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
-
-  integer :: SLOT_START = 1
-  integer :: SLOT_END = 1
-  integer :: SLOT_BASE = 1
-  real(r_size) :: SLOT_TINTERVAL = 3600.0d0
 
   real(r_size) :: SIGMA_OBS = 500.0d3
   real(r_size) :: SIGMA_OBS_RAIN = -1.0d0  ! < 0: same as SIGMA_OBS
@@ -63,7 +67,7 @@ MODULE common_nml
 
   real(r_size) :: INFL_MUL = 1.0d0           ! >  0: globally constant covariance inflation
                                              ! <= 0: use 3D inflation field from 'INFL_MUL_IN_BASENAME' file
-  real(r_size) :: INFL_MUL_MIN = 0.0d0       ! minimum inlfation factor
+  real(r_size) :: INFL_MUL_MIN = -1.0d0      ! minimum inlfation factor (<= 0: not used)
   logical :: INFL_MUL_ADAPTIVE = .false.     ! if true, outout adaptively estimated 3D inlfation field to 'INFL_MUL_OUT_BASENAME' file
   character(filelenmax) :: INFL_MUL_IN_BASENAME = 'infl'
   character(filelenmax) :: INFL_MUL_OUT_BASENAME = 'infl'
@@ -73,6 +77,8 @@ MODULE common_nml
 
   real(r_size) :: RELAX_ALPHA = 0.0d0        ! RTPP relaxation parameter
   real(r_size) :: RELAX_ALPHA_SPREAD = 0.0d0 ! RTPS relaxation parameter
+  logical :: RELAX_TO_INFLATED_PRIOR = .false. ! .true. : relaxation to multiplicatively inflated prior
+                                               ! .false.: relaxation to original prior
   logical :: RELAX_SPREAD_OUT = .false.
   character(filelenmax) :: RELAX_SPREAD_OUT_BASENAME = 'rtps'
 
@@ -142,13 +148,8 @@ MODULE common_nml
   logical :: USE_OBSERR_RADAR_VR = .false.
 !
 ! 
-! -- Defalut error values will be updated based on a bug-fixed experiment
-! (02/09/2016)
-! -- ###Default obs err for Himawari-8 obs is based on Desroziers et al. 
-!     (2005 QJRMS)'s statistics conducted by T.Honda (12/25/2015)
-!
-  real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.5d0,7.2d0,8.6d0,5.0d0,&
-                                     5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
+  real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
+                                      5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
 
   !--- PARAM_LETKF_MONITOR
   logical :: DEPARTURE_STAT = .true.
@@ -167,13 +168,12 @@ MODULE common_nml
   logical :: USE_RADAR_VR        = .true.
   logical :: USE_RADAR_PSEUDO_RH = .false.
 
+  REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
   INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than RADAR_REF_THRES_DBZ
   INTEGER :: MIN_RADAR_REF_MEMBER_OBSREF = 1   !Ensemble members with
 
-  REAL(r_size) :: LOW_REF_SHIFT = 0.0d0
-
   REAL(r_size) :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
-  REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
+  REAL(r_size) :: LOW_REF_SHIFT = 0.0d0
 
   real(r_size) :: RADAR_ZMAX = 99.0d3          !Height limit of radar data to be used
 
@@ -189,9 +189,18 @@ MODULE common_nml
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
   !---PARAM_LETKF_H08
+  logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
+  logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
   real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
   real(r_size) :: H08_LIMIT_LEV = 20000.0d0 ! (Pa) Upper limit level of the sensitive height for Himawari-8 IR
-  integer :: H08_CH_USE(nch) = (/0,1,1,1,0,0,0,0,0,0/)
+  real(r_size) :: H08_RTTOV_CFRAC_CNST = 0.10d0 ! Denominator constant for diagnosing SEQUENTIAL(0-1) cloud fraction (g m-3)
+                                                ! Negative values indicate DISCRETE (0/1) cloud fraction 
+  real(r_size) :: H08_BT_MIN = 0.0d0 ! Lower limit of the BT for Himawari-8 IR
+  real(r_size) :: H08_CLDSKY_THRS = -5.0d0 ! Threshold for diagnosing the sky condition using [BT(all-sky) - BT(clr)].
+                                           ! Negative values: turn off
+  integer :: H08_MIN_CLD_MEMBER = 1       ! If the number of the cloudy members is larger than H08_MIN_CLD_MEMBER,
+                                           ! the first guess is diagnosed as cloudy. ! Not finished yet!
+  integer :: H08_CH_USE(nch) = (/0,0,1,0,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
                         !! (B07,B08,B09,B10,B11,B12,B13,B14,B15,B16)
                         !! ==1: Assimilate
@@ -235,8 +244,17 @@ subroutine read_nml_obsope
   integer :: ierr
   
   namelist /PARAM_OBSOPE/ &
+    OBS_IN_NUM, &
+    OBS_IN_NAME, &
+    OBS_IN_FORMAT, &
+    OBSDA_RUN, &
+    OBSDA_OUT, &
+    OBSDA_OUT_BASENAME, &
     HISTORY_IN_BASENAME, &
-    OBSDA_OUT_BASENAME
+    SLOT_START, &
+    SLOT_END, &
+    SLOT_BASE, &
+    SLOT_TINTERVAL
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBSOPE,iostat=ierr)
@@ -261,9 +279,7 @@ subroutine read_nml_letkf
   integer :: ierr
   
   namelist /PARAM_LETKF/ &
-    OBS_IN_NUM, &
-    OBS_IN_NAME, &
-    OBS_IN_FORMAT, &
+    OBSDA_IN, &
     OBSDA_IN_BASENAME, &
     GUES_IN_BASENAME, &
     GUES_OUT_MEAN_BASENAME, &
@@ -272,10 +288,6 @@ subroutine read_nml_letkf
     ANAL_OUT_MEAN_BASENAME, &
     ANAL_OUT_SPRD_BASENAME, &
     LETKF_TOPO_IN_BASENAME, &
-    SLOT_START, &
-    SLOT_END, &
-    SLOT_BASE, &
-    SLOT_TINTERVAL, &
     SIGMA_OBS, &
     SIGMA_OBS_RAIN, &
     SIGMA_OBS_RADAR, &
@@ -298,6 +310,7 @@ subroutine read_nml_letkf
     INFL_ADD_IN_BASENAME, &
     RELAX_ALPHA, &
     RELAX_ALPHA_SPREAD, &
+    RELAX_TO_INFLATED_PRIOR, &
     RELAX_SPREAD_OUT, &
     RELAX_SPREAD_OUT_BASENAME, &
     GROSS_ERROR, &
@@ -405,7 +418,7 @@ subroutine read_nml_letkf
   if (MIN_INFL_MUL /= 0.0d0 .and. INFL_MUL_MIN == 0.0d0) then
     INFL_MUL_MIN = MIN_INFL_MUL
   end if
-  if (ADAPTIVE_INFL_INIT /= .false. .and. INFL_MUL_ADAPTIVE == .false.) then
+  if (ADAPTIVE_INFL_INIT .and. (.not. INFL_MUL_ADAPTIVE)) then
     INFL_MUL_ADAPTIVE = ADAPTIVE_INFL_INIT
   end if
   if (BOUNDARY_TAPER_WIDTH /= 0.0d0 .and. BOUNDARY_BUFFER_WIDTH == 0.0d0) then
@@ -561,11 +574,11 @@ subroutine read_nml_letkf_radar
     USE_RADAR_REF, &
     USE_RADAR_VR, &
     USE_RADAR_PSEUDO_RH, &
+    RADAR_REF_THRES_DBZ, &
     MIN_RADAR_REF_MEMBER, &
     MIN_RADAR_REF_MEMBER_OBSREF, &
-    LOW_REF_SHIFT, &
     MIN_RADAR_REF_DBZ, &
-    RADAR_REF_THRES_DBZ, &
+    LOW_REF_SHIFT, &
     RADAR_ZMAX, &
     RADAR_PRH_ERROR, &
     INTERPOLATION_TECHNIQUE, &
@@ -600,8 +613,14 @@ subroutine read_nml_letkf_h08
   integer :: ierr
 
   namelist /PARAM_LETKF_H08/ &
+    H08_REJECT_LAND, &
+    H08_RTTOV_CLD, &
+    H08_MIN_CLD_MEMBER, &
+    H08_CLDSKY_THRS, &
     H08_RTTOV_MINQ, &
+    H08_RTTOV_CFRAC_CNST, &
     H08_LIMIT_LEV, &
+    H08_BT_MIN, &
     H08_CH_USE
 
   rewind(IO_FID_CONF)

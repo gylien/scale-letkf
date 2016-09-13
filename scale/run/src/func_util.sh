@@ -26,8 +26,7 @@ if [ -z "$DIRNAME" ]; then
   exit 1
 fi
 
-mkdir -p $DIRNAME
-res=$? && ((res != 0)) && exit $res
+mkdir -p $DIRNAME || exit $?
 
 if [ ! -d "$DIRNAME" ]; then
   echo "[Error] $FUNCNAME: '$DIRNAME' is not a directory." >&2
@@ -38,8 +37,7 @@ if [ ! -O "$DIRNAME" ]; then
   exit 1
 fi
 
-rm -fr $DIRNAME/*
-res=$? && ((res != 0)) && exit $res
+rm -fr $DIRNAME/* || exit $?
 
 #-------------------------------------------------------------------------------
 }
@@ -159,7 +157,7 @@ progdir=$(dirname $PROG)
 
 #-------------------------------------------------------------------------------
 
-if ((MACHINE_TYPE == 1)); then
+if [ "$MPI_TYPE" = 'sgimpt' ]; then
 
   local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
   HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
@@ -173,25 +171,24 @@ if ((MACHINE_TYPE == 1)); then
     exit $res
   fi
 
-elif ((MACHINE_TYPE == 2)); then
+elif [ "$MPI_TYPE" = 'openmpi' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  $MPIRUN -np $NNP -wdir $progdir ./$progbase $CONF $STDOUT $ARGS
+  $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $progdir ./$progbase $CONF $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $MPIRUN -np $NNP -wdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $$MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
 
-elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
+elif [ "$MPI_TYPE" = 'K' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  if ((USE_RANKDIR == 1)); then
+  if [ "$STG_TYPE" = 'K_rankdir' ]; then
 
-#echo "mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS"
     mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS
     res=$?
     if ((res != 0)); then
@@ -202,7 +199,6 @@ elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
 
   else
 
-#echo "mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS"
     ( cd $progdir && mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS )
     res=$?
     if ((res != 0)); then 
@@ -263,7 +259,7 @@ fi
 
 #-------------------------------------------------------------------------------
 
-if ((MACHINE_TYPE == 1)); then
+if [ "$MPI_TYPE" = 'sgimpt' ]; then
 
   if [ "$PROC_OPT" == 'all' ]; then
     local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
@@ -281,7 +277,7 @@ if ((MACHINE_TYPE == 1)); then
     exit $res
   fi
 
-elif ((MACHINE_TYPE == 2)); then
+elif [ "$MPI_TYPE" = 'openmpi' ]; then
 
   if [ "$PROC_OPT" == 'all' ]; then
     NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
@@ -289,17 +285,17 @@ elif ((MACHINE_TYPE == 2)); then
     NNP=1
   fi
 
-  $MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS
+  $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $MPIRUN -np $NNP -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS" >&2
+    echo "[Error] $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
 
-elif ((MACHINE_TYPE == 10 || MACHINE_TYPE == 11 || MACHINE_TYPE == 12)); then
+elif [ "$MPI_TYPE" = 'K' ]; then
 
-  if ((USE_RANKDIR == 1)); then
+  if [ "$STG_TYPE" = 'K_rankdir' ]; then
     if [ "$PROC_OPT" == 'one' ]; then
 
       mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS
@@ -452,13 +448,13 @@ bdy_setting () {
 #-------------------------------------------------------------------------------
 # Calculate scale_init namelist settings for boundary files
 #
-# Usage: bdy_setting TIME FCSTLEN PARENT_LCYCLE PARENT_REF_TIME PARENT_FOUT
+# Usage: bdy_setting TIME FCSTLEN PARENT_LCYCLE [PARENT_FOUT] [PARENT_REF_TIME]
 #
 #   TIME
 #   FCSTLEN
 #   PARENT_LCYCLE
-#   PARENT_REF_TIME
 #   PARENT_FOUT
+#   PARENT_REF_TIME
 #
 # Return variables:
 #   $nbdy
@@ -480,8 +476,16 @@ fi
 local TIME=$(datetime $1); shift
 local FCSTLEN=$1; shift
 local PARENT_LCYCLE=$1; shift
-local PARENT_REF_TIME=$(datetime $1); shift
-local PARENT_FOUT=${1:-$PARENT_LCYCLE}
+local PARENT_FOUT=${1:-$PARENT_LCYCLE}; shift
+local PARENT_REF_TIME=${1:-$TIME}
+
+if [ "$PARENT_FOUT" = '-' ]; then
+  PARENT_FOUT=$FCSTLEN
+fi
+if [ "$PARENT_LCYCLE" = '-' ]; then
+  PARENT_LCYCLE=$((FCSTLEN+PARENT_FOUT))
+fi
+PARENT_REF_TIME=$(datetime $PARENT_REF_TIME)
 
 #-------------------------------------------------------------------------------
 # compute $ntsteps

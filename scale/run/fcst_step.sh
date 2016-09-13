@@ -70,6 +70,10 @@ declare -a proc2grpproc
 
 distribute_fcst "$MEMBERS" $CYCLE machinefile - $NODEFILE_DIR/distr
 
+if ((CYCLE == 0)); then
+  CYCLE=$parallel_mems
+fi
+
 #===============================================================================
 # Run one step
 

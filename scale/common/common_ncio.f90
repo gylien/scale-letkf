@@ -13,6 +13,24 @@ module common_ncio
   implicit none
   public
 
+  interface ncio_read
+    module procedure ncio_read_1d_r4
+    module procedure ncio_read_2d_r4
+    module procedure ncio_read_3d_r4
+    module procedure ncio_read_1d_r8
+    module procedure ncio_read_2d_r8
+    module procedure ncio_read_3d_r8
+  end interface ncio_read
+
+  interface ncio_write
+    module procedure ncio_write_1d_r4
+    module procedure ncio_write_2d_r4
+    module procedure ncio_write_3d_r4
+    module procedure ncio_write_1d_r8
+    module procedure ncio_write_2d_r8
+    module procedure ncio_write_3d_r8
+  end interface ncio_write
+
 contains
 
 !-----------------------------------------------------------------------
@@ -83,6 +101,54 @@ end subroutine ncio_read_dim
 !  call ncio_check(nf90_get_att(ncid, nf90_global, attrname, attr))
 !end subroutine ncio_read_gattr_r4
 !-----------------------------------------------------------------------
+! Read netcdf single-precision 1-D variable
+!-----------------------------------------------------------------------
+subroutine ncio_read_1d_r4(ncid, varname, dim1, t, var)
+  implicit none
+  integer, intent(in) :: ncid
+  character(len=*), intent(in) :: varname
+  integer, intent(in) :: dim1, t
+  real(r_sngl), intent(out) :: var(dim1)
+  integer :: varid
+
+  call ncio_check(nf90_inq_varid(ncid, varname, varid))
+  call ncio_check(nf90_get_var(ncid, varid, var,   &
+                               start = (/ 1, t /), &
+                               count = (/ dim1, 1 /)))
+end subroutine ncio_read_1d_r4
+!-----------------------------------------------------------------------
+! Read netcdf single-precision 2-D variable
+!-----------------------------------------------------------------------
+subroutine ncio_read_2d_r4(ncid, varname, dim1, dim2, t, var)
+  implicit none
+  integer, intent(in) :: ncid
+  character(len=*), intent(in) :: varname
+  integer, intent(in) :: dim1, dim2, t
+  real(r_sngl), intent(out) :: var(dim1,dim2)
+  integer :: varid
+
+  call ncio_check(nf90_inq_varid(ncid, varname, varid))
+  call ncio_check(nf90_get_var(ncid, varid, var,      &
+                               start = (/ 1, 1, t /), &
+                               count = (/ dim1, dim2, 1 /)))
+end subroutine ncio_read_2d_r4
+!-----------------------------------------------------------------------
+! Read netcdf single-precision 3-D variable
+!-----------------------------------------------------------------------
+subroutine ncio_read_3d_r4(ncid, varname, dim1, dim2, dim3, t, var)
+  implicit none
+  integer, intent(in) :: ncid
+  character(len=*), intent(in) :: varname
+  integer, intent(in) :: dim1, dim2, dim3, t
+  real(r_sngl), intent(out) :: var(dim1,dim2,dim3)
+  integer :: varid
+
+  call ncio_check(nf90_inq_varid(ncid, varname, varid))
+  call ncio_check(nf90_get_var(ncid, varid, var,         &
+                               start = (/ 1, 1, 1, t /), &
+                               count = (/ dim1, dim2, dim3, 1 /)))
+end subroutine ncio_read_3d_r4
+!-----------------------------------------------------------------------
 ! Read netcdf double-precision 1-D variable
 !-----------------------------------------------------------------------
 subroutine ncio_read_1d_r8(ncid, varname, dim1, t, var)
@@ -147,6 +213,54 @@ subroutine ncio_read_text(ncid, varname, length, t, var)
                                count = (/ length, 1 /)))
 end subroutine ncio_read_text
 !-----------------------------------------------------------------------
+! Write netcdf single-precision 1-D variable
+!-----------------------------------------------------------------------
+subroutine ncio_write_1d_r4(ncid, varname, dim1, t, var)
+  implicit none
+  integer, intent(in) :: ncid
+  character(len=*), intent(in) :: varname
+  integer, intent(in) :: dim1, t
+  real(r_sngl), intent(in) :: var(dim1)
+  integer :: varid
+
+  call ncio_check(nf90_inq_varid(ncid, varname, varid))
+  call ncio_check(nf90_put_var(ncid, varid, var,   &
+                               start = (/ 1, t /), &
+                               count = (/ dim1, 1 /)))
+end subroutine ncio_write_1d_r4
+!-----------------------------------------------------------------------
+! Write netcdf single-precision 2-D variable
+!-----------------------------------------------------------------------
+subroutine ncio_write_2d_r4(ncid, varname, dim1, dim2, t, var)
+  implicit none
+  integer, intent(in) :: ncid
+  character(len=*), intent(in) :: varname
+  integer, intent(in) :: dim1, dim2, t
+  real(r_sngl), intent(in) :: var(dim1,dim2)
+  integer :: varid
+
+  call ncio_check(nf90_inq_varid(ncid, varname, varid))
+  call ncio_check(nf90_put_var(ncid, varid, var,      &
+                               start = (/ 1, 1, t /), &
+                               count = (/ dim1, dim2, 1 /)))
+end subroutine ncio_write_2d_r4
+!-----------------------------------------------------------------------
+! Write netcdf single-precision 3-D variable
+!-----------------------------------------------------------------------
+subroutine ncio_write_3d_r4(ncid, varname, dim1, dim2, dim3, t, var)
+  implicit none
+  integer, intent(in) :: ncid
+  character(len=*), intent(in) :: varname
+  integer, intent(in) :: dim1, dim2, dim3, t
+  real(r_sngl), intent(in) :: var(dim1,dim2,dim3)
+  integer :: varid
+
+  call ncio_check(nf90_inq_varid(ncid, varname, varid))
+  call ncio_check(nf90_put_var(ncid, varid, var,         &
+                               start = (/ 1, 1, 1, t /), &
+                               count = (/ dim1, dim2, dim3, 1 /)))
+end subroutine ncio_write_3d_r4
+!-----------------------------------------------------------------------
 ! Write netcdf double-precision 1-D variable
 !-----------------------------------------------------------------------
 subroutine ncio_write_1d_r8(ncid, varname, dim1, t, var)
@@ -181,7 +295,7 @@ end subroutine ncio_write_2d_r8
 !-----------------------------------------------------------------------
 ! Write netcdf double-precision 3-D variable
 !-----------------------------------------------------------------------
-subroutine ncio_write_3d_r8 (ncid, varname, dim1, dim2, dim3, t, var)
+subroutine ncio_write_3d_r8(ncid, varname, dim1, dim2, dim3, t, var)
   implicit none
   integer, intent(in) :: ncid
   character(len=*), intent(in) :: varname

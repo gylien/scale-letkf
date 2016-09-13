@@ -5,25 +5,25 @@
 #
 #===============================================================================
 
+PRESET='K_rankdir'                          # 'K' or 'K_rankdir' or 'K_micro'
+
+#===============================================================================
+
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_100m_100mem_211" # Directory for SCALE-LETKF output
-
-LOGDIR="$DIR/log"
-
-#LANDUSE_TARGZ="T"
-#TOPO_TARGZ="T"
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/set_3nest_d3_100m_100mem_720p/d3_100m_100mem_222" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/K"
+MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
-DATA_TOPO="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_100m_100mem_noda_720p/20130713060000/topo"
-DATA_LANDUSE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_100m_100mem_noda_720p/20130713060000/landuse"
-DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2_1km_100mem"
-DATA_BDY_SCALE_PREP="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_100m_100mem_noda_720p"
+DATA_TOPO=
+DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/old/d2_1km_100mem/const/topo"
+DATA_LANDUSE=
+DATA_BDY_SCALE= #"/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/old/d2_1km_100mem_cycle-300s"
+DATA_BDY_SCALE_PREP="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/set_3nest_d3_100m_100mem_720p/d3_100m_100mem_noda_720p"
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
 
@@ -51,7 +51,9 @@ BDY_ENS=1               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 
 BDYINT=30
-BDYCYCLE_INT=3600
+BDYCYCLE_INT=300
+
+PARENT_REF_TIME=20130713060000
 
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
@@ -74,9 +76,9 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=3           # Ensemble size
+MEMBER=100         # Ensemble size
 
-NNODES=1440        # Number of nodes
+NNODES=5760        # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -90,37 +92,32 @@ ENABLE_SET=0       ######
 #===============================================================================
 # Temporary directories to store runtime files
 
-MACHINE_TYPE=10             # Machine type
-                            #  1: Linux cluster with PBS
-                            # 10: K-computer
-                            # 11: K-computer (micro jobs)
-                            # 12: K-computer (interact jobs)
-
-TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
-TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
-                            #  1: share (link to TMP)
-                            #  2: share (staging to TMP)
-                            #  3: local (staging to TMPL)
-
 DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
                             #  1: in $TMPDAT
                             #  2: in $TMPOUT
 
-ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
-                            #  0: No
-                            #  1: Yes
+DISK_MODE_TOPO_LANDUSE_DB=2
 
-SIMPLE_STGOUT=2             # Stage out the entire 'out' temporary directory instead of specifying each file?
+DISK_MODE_DATA_BDY=2
+
+DISK_MODE_DATA_TOPO=2
+DISK_MODE_DATA_LANDUSE=2
+DISK_MODE_DATA_BDYPREP=2
+
+ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
-TMP=                        # (When $MACHINE_TYPE=10, this will be automatically set)
+TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
-TMPL=                       # (When $MACHINE_TYPE=10, this will be automatically set)
+#TMPL=
+
+CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
+                            #  0: No
+                            #  1: Yes
 
 #===============================================================================
 # Environmental settings
@@ -132,6 +129,9 @@ SCP='cp -L'
 SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
+
+SCP_THREAD=8
+TAR_THREAD=8
 
 PYTHON="python"
 

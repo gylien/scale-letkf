@@ -61,6 +61,7 @@ if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd
   done
 #fi
 else
+  mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
   for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls init*.nc 2> /dev/null); do
     mkdir -p $TMPOUT/${ATIME}/anal/${MEM}
     cp -f $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPOUT/${ATIME}/anal/${MEM}

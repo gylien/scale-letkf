@@ -62,14 +62,24 @@ for iobs in $(seq $OBSNUM); do
   fi
 done
 
+OBSDA_RUN_LIST=
+for iobs in $(seq $OBSNUM); do
+  if [ -n "${OBSOPE_SEPARATE[$iobs]}" ] && ((${OBSOPE_SEPARATE[$iobs]} == 1)); then
+    OBSDA_RUN_LIST="${OBSDA_RUN_LIST}.true., "
+  else
+    OBSDA_RUN_LIST="${OBSDA_RUN_LIST}.false., "
+  fi
+done
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.obsope | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBERSEQ," \
-        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = '${TMPOUT}/${STIME}/hist/@@@@/history'," \
-        -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = '${TMPOUT}/${ATIME}/obsgues/@@@@/obsda'," \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
+        -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
+        -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = '${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext'," \
+        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = '${TMPOUT}/${STIME}/hist/@@@@/history'," \
         -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \
         -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
         -e "/!--SLOT_BASE--/a SLOT_BASE = $SLOT_BASE," \
@@ -81,10 +91,7 @@ cat $TMPDAT/conf/config.nml.obsope | \
     > $TMPDIR/obsope.conf
 
 # These parameters are not important for obsope
-cat $TMPDAT/conf/config.nml.scale | \
-    sed -e "/!--TIME_DURATION--/a TIME_DURATION = $LTIMESLOT.D0," \
-        -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = $LTIMESLOT.D0," \
-    >> $TMPDIR/obsope.conf
+cat $TMPDAT/conf/config.nml.scale >> $TMPDIR/obsope.conf
 
 #===============================================================================
 

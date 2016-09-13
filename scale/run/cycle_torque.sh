@@ -58,6 +58,7 @@ cat > $jobscrp << EOF
 #PBS -l nodes=${NNODES}:ppn=${PPN}
 ##PBS -l walltime=${TIME_LIMIT}
 #PBS -W umask=027
+##PBS -k oe
 
 ulimit -s unlimited
 
@@ -75,7 +76,7 @@ cd \$PBS_O_WORKDIR
 rm -f machinefile
 cp -f \$PBS_NODEFILE machinefile
 
-./${myname1}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP"
+./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$ISTEP" "$FSTEP" || exit \$?
 EOF
 
 echo "[$(datetime_now)] Run ${myname1} job on PBS"

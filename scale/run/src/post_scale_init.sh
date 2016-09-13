@@ -37,7 +37,7 @@ TMPDIR="$1"; shift
 LOG_OPT="$1"; shift
 SCPCALL="${1:-cycle}"
 
-initbaselen=20
+initbaselen=24
 
 #===============================================================================
 
@@ -58,11 +58,17 @@ if [ "$SCPCALL" = 'cycle' ]; then
     if [ -f "$TMPDIR/init.conf" ]; then
       mv -f $TMPDIR/init.conf $TMPOUT/${STIME}/log/scale_init/${MEM}_init.conf
     fi
+    if [ -f "$TMPDIR/gradsbdy.conf" ]; then
+      mv -f $TMPDIR/gradsbdy.conf $TMPOUT/${STIME}/log/scale_init/${MEM}_gradsbdy.conf
+    fi
   fi
 elif [ "$SCPCALL" = 'fcst' ]; then
   if ((LOG_OPT <= 2)); then
     if [ -f "$TMPDIR/init.conf" ]; then
       mv -f $TMPDIR/init.conf $TMPOUT/${STIME}/log/${SCPCALL}_scale_init/${MEM}_init.conf
+    fi
+    if [ -f "$TMPDIR/gradsbdy.conf" ]; then
+      mv -f $TMPDIR/gradsbdy.conf $TMPOUT/${STIME}/log/${SCPCALL}_scale_init/${MEM}_gradsbdy.conf
     fi
   fi
 fi

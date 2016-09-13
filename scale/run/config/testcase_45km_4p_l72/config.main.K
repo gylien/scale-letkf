@@ -5,26 +5,31 @@
 #
 #===============================================================================
 
+PRESET='K_rankdir'                          # 'K' or 'K_rankdir' or 'K_micro'
+
+#===============================================================================
+
 DIR="$(cd "$(pwd)/.." && pwd)"                  # Root directory of the SCALE-LETKF
 
-OUTDIR="$DIR/../../../exp/testcase_45km_4p_l72" # Directory for SCALE-LETKF output
+DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
-LOGDIR="$DIR/log"                               # Directory for main log files
+OUTDIR="$DDIR/exp/testcase_45km_4p_l72"     # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/K"                                                  # Directory of the SCALE model executables
-DATADIR="$DIR/../../../database"                                             # Directory of the SCALE database
+MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
+DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
-DATA_TOPO="$DIR/../../../database/topo_prep/testcase_45km_4p_l72_bf10"       # Directory of the prepared topo files
-DATA_LANDUSE="$DIR/../../../database/landuse_prep/testcase_45km_4p_l72_bf10" # Directory of the prepared landuse files
-DATA_BDY_SCALE=                                                              # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PREP="$DIR/../../../database/bdy_prep/testcase_45km_4p_l72"   # Directory of the prepared SCALE boundary files
-DATA_BDY_WRF="$DIR/../../../ncepfnl/wrfout"                                  # Directory of the boundary data in WRF format
-DATA_BDY_NICAM=                                                              # Directory of the boundary data in NICAM format (not finished)
+DATA_TOPO=                                                           # Directory of the prepared topo files
+DATA_TOPO_BDY_SCALE=
+DATA_LANDUSE=                                                        # Directory of the prepared landuse files
+DATA_BDY_SCALE=                                                      # Directory of the boundary data in SCALE history format (parent domain)
+DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
+DATA_BDY_WRF="$DDIR/ncepfnl/wrfout"                                  # Directory of the boundary data in WRF format
+DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-OBS="$DIR/../../../obs/prepbufr_obs_eastasia"                                # Observation data in LETKF observation format
+OBS="$DDIR/obs/prepbufr_obs_eastasia"                                # Observation data in LETKF observation format
 OBSNCEP=
 
 #===============================================================================
@@ -44,10 +49,17 @@ BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain sett
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
+BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
+
 BDY_ENS=0               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
+BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial time
+                        # 1: Use different series of boundary files for different initial time
 
 BDYINT=21600
+BDYCYCLE_INT=
+
+PARENT_REF_TIME=
 
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
@@ -86,38 +98,36 @@ BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 #===============================================================================
 # Temporary directories to store runtime files
 
-MACHINE_TYPE=10             # Machine type
-                            #  1: Linux cluster with PBS
-                            # 10: K-computer
-                            # 11: K-computer (micro jobs)
-                            # 12: K-computer (interact jobs)
-
-TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=2               # Disk type used for the 'run' temporary directory (runtime files)
-TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
-                            #  1: share (link to TMP)
-                            #  2: share (staging to TMP)
-                            #  3: local (staging to TMPL)
-
 DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
                             #  1: in $TMPDAT
                             #  2: in $TMPOUT
+
+DISK_MODE_TOPO_LANDUSE_DB=2
+
+DISK_MODE_DATA_BDY=2
+
+DISK_MODE_DATA_TOPO=2
+DISK_MODE_DATA_LANDUSE=2
+DISK_MODE_DATA_BDYPREP=2
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
 
-SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
-                            #  0: No
-                            #  1: Yes
-                            #  2: Stage-out everything
+#SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
+#                            #  0: No
+#                            #  1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
-TMP=                        # (When $MACHINE_TYPE=10, this will be automatically set)
+TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
-TMPL=                       # (When $MACHINE_TYPE=10, this will be automatically set)
+#TMPL=
+
+CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
+                            #  0: No
+                            #  1: Yes
 
 #===============================================================================
 # Environmental settings
@@ -129,6 +139,9 @@ SCP='cp -L'
 SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
+
+SCP_THREAD=8
+TAR_THREAD=8
 
 PYTHON="python"
 

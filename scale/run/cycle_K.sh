@@ -136,20 +136,19 @@ fi
 
 cat > $jobscrp << EOF
 #!/bin/sh
-##PJM -g ra000015
 #PJM -N ${myname1}_${SYSNAME}
 #PJM -s
 #PJM --rsc-list "node=${NNODES_real}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
 #PJM --rsc-list "rscgrp=${rscgrp}"
-#PJM --rsc-list "node-quota=29G"
+##PJM --rsc-list "node-quota=29G"
 ##PJM --mpi "shape=${NNODES_real}"
 #PJM --mpi "proc=$NNODES"
 #PJM --mpi assign-online-node
 #PJM --stg-transfiles all
 EOF
 
-if ((USE_RANKDIR == 1)); then
+if [ "$STG_TYPE" = 'K_rankdir' ]; then
   echo "#PJM --mpi \"use-rankdir\"" >> $jobscrp
 fi
 
@@ -157,7 +156,7 @@ bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR $myname1 >> $jobscrp
 
 cat >> $jobscrp << EOF
 
-. /work/system/Env_base_1.2.0-17-2
+. /work/system/Env_base_1.2.0-20-1
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
