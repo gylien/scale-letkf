@@ -58,6 +58,9 @@ elif [ "$PRESET" = 'K_micro' ]; then
 #  DISK_MODE_DATA_BDYPREP=2
   NODELIST_TYPE='K'
   MPI_TYPE='K'
+#  if ((ENABLE_SET == 1)); then
+#    NNODES_all=$((NNODES*3))
+#  fi
 #elif [ "$PRESET" = 'K_interact' ]; then
 #  STG_TYPE=
 #  TMPDAT_MODE=2

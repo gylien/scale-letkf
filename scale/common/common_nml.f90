@@ -67,7 +67,7 @@ MODULE common_nml
 
   real(r_size) :: INFL_MUL = 1.0d0           ! >  0: globally constant covariance inflation
                                              ! <= 0: use 3D inflation field from 'INFL_MUL_IN_BASENAME' file
-  real(r_size) :: INFL_MUL_MIN = 0.0d0       ! minimum inlfation factor
+  real(r_size) :: INFL_MUL_MIN = -1.0d0      ! minimum inlfation factor (<= 0: not used)
   logical :: INFL_MUL_ADAPTIVE = .false.     ! if true, outout adaptively estimated 3D inlfation field to 'INFL_MUL_OUT_BASENAME' file
   character(filelenmax) :: INFL_MUL_IN_BASENAME = 'infl'
   character(filelenmax) :: INFL_MUL_OUT_BASENAME = 'infl'
@@ -77,6 +77,8 @@ MODULE common_nml
 
   real(r_size) :: RELAX_ALPHA = 0.0d0        ! RTPP relaxation parameter
   real(r_size) :: RELAX_ALPHA_SPREAD = 0.0d0 ! RTPS relaxation parameter
+  logical :: RELAX_TO_INFLATED_PRIOR = .false. ! .true. : relaxation to multiplicatively inflated prior
+                                               ! .false.: relaxation to original prior
   logical :: RELAX_SPREAD_OUT = .false.
   character(filelenmax) :: RELAX_SPREAD_OUT_BASENAME = 'rtps'
 
@@ -318,6 +320,7 @@ subroutine read_nml_letkf
     INFL_ADD_IN_BASENAME, &
     RELAX_ALPHA, &
     RELAX_ALPHA_SPREAD, &
+    RELAX_TO_INFLATED_PRIOR, &
     RELAX_SPREAD_OUT, &
     RELAX_SPREAD_OUT_BASENAME, &
     GROSS_ERROR, &

@@ -5,7 +5,7 @@
 #
 #===============================================================================
 
-PRESET='K_rankdir'                          # 'K' or 'K_rankdir'
+PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
 
 #===============================================================================
 
@@ -35,17 +35,17 @@ OBSNCEP=
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=0            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
@@ -70,6 +70,8 @@ OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings
 OBSNUM=1
 OBSNAME[1]=obs                                    
 OBSNAME[2]=radar
+OBSOPE_SEPARATE[1]=1
+OBSOPE_SEPARATE[2]=1
 
 #===============================================================================
 # Cycling settings
@@ -121,7 +123,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
-#TMP=
+TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
 
