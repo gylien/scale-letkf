@@ -5,7 +5,7 @@
 #
 #===============================================================================
 
-PRESET='K_rankdir'                          # 'K' or 'K_rankdir'
+PRESET='K_rankdir'                          # 'K' or 'K_rankdir' or 'K_micro'
 
 #===============================================================================
 
@@ -28,6 +28,7 @@ DATA_BDY_SCALE=                                                      # Directory
 DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF="$DDIR/ncepfnl/wrfout"                                  # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
+DATA_BDY_GRADS="$DDIR/ncepfnl_grads"                                 # Directory of the boundary data in GrADS format
 
 OBS="$DDIR/obs/prepbufr_obs_eastasia"                                # Observation data in LETKF observation format
 OBSNCEP=
@@ -49,6 +50,7 @@ BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain sett
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
+                        # 4: GrADS         (requires compatible 'config.nml.scale_init')
 BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
 
 BDY_ENS=0               # 0: Fixed boundary files for all memebers
@@ -70,6 +72,8 @@ OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings
 OBSNUM=1
 OBSNAME[1]=obs                                    
 OBSNAME[2]=radar
+OBSOPE_SEPARATE[1]=0
+OBSOPE_SEPARATE[2]=0
 
 #===============================================================================
 # Cycling settings
@@ -121,7 +125,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
-#TMP=
+TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
 

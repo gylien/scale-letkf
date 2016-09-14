@@ -26,31 +26,35 @@ COMMON_OBJS += $(COMMON_DIR)/scale_H08_fwd.o
 LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)
 endif
 
+.PHONY:	all clean FORCE
+
 all:	$(PROGS)
 
-scale-rm_pp_ens:	scale-rm_pp_ens.o $(OBJS) common_modules
+scale-rm_pp_ens:	scale-rm_pp_ens.o $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_pp_ens scale-rm_pp_ens.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
-scale-rm_pp_ens.o:	scale-rm_pp_ens.f90 $(OBJS) common_modules
-	$(FC) $(FOPTS_SCALE) -c scale-rm_pp_ens.f90 -I$(COMMON_DIR) $(INCS)
+scale-rm_pp_ens.o:	scale-rm_pp_ens.f90 $(OBJS) $(COMMON_DIR)
+	$(FC) $(FOPTS_SCALE) -c $< -I$(COMMON_DIR) $(INCS)
 
-scale-rm_init_ens:	scale-rm_init_ens.o $(OBJS) common_modules
+scale-rm_init_ens:	scale-rm_init_ens.o $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_init_ens scale-rm_init_ens.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
-scale-rm_init_ens.o:	scale-rm_init_ens.f90 $(OBJS) common_modules
-	$(FC) $(FOPTS_SCALE) -c scale-rm_init_ens.f90 -I$(COMMON_DIR) $(INCS)
+scale-rm_init_ens.o:	scale-rm_init_ens.f90 $(OBJS) $(COMMON_DIR)
+	$(FC) $(FOPTS_SCALE) -c $< -I$(COMMON_DIR) $(INCS)
 
-scale-rm_ens:	scale-rm_ens.o $(OBJS) common_modules
+scale-rm_ens:	scale-rm_ens.o $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_ens scale-rm_ens.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
-scale-rm_ens.o:	scale-rm_ens.f90 $(OBJS) common_modules
-	$(FC) $(FOPTS_SCALE) -c scale-rm_ens.f90 -I$(COMMON_DIR) $(INCS)
+scale-rm_ens.o:	scale-rm_ens.f90 $(OBJS) $(COMMON_DIR)
+	$(FC) $(FOPTS_SCALE) -c $< -I$(COMMON_DIR) $(INCS)
 
-common_modules:
-	( cd $(COMMON_DIR) ; make )
+$(COMMON_DIR):	FORCE
+	$(MAKE) -C $@
 
 clean:
 	rm -f *.o *.mod *.lst $(PROGS)
+
+FORCE:
