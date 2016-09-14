@@ -40,25 +40,24 @@ fi
 
 # -- Cloud dependent obs err --
 
-if ls $TMPDIR/Him8_CA_B??.txt > /dev/null 2>&1 ; then
-  cp ${TMPDIR}/Him8_CA_B??.txt $TMPOUT/${ATIME}/log/letkf/
-fi
-if ls $TMPDIR/Him8_ERR_CA_B??.txt > /dev/null 2>&1 ; then
-  cp ${TMPDIR}/Him8_ERR_CA_B??.txt $TMPOUT/${ATIME}/log/letkf/
-fi
-if ls $TMPDIR/Him8_CA_B??.dat > /dev/null 2>&1 ; then
-  cp ${TMPDIR}/Him8_CA_B??.dat $TMPOUT/${ATIME}/log/letkf/
-fi
+if ((MYRANK == 0)); then
 
-BB_LIST="07 08 09 10 11 12 13 14 15 16"
-for BB in ${BB_LIST} ; do
-  CA_FILE1="${TMPDIR}/Him8_ERR_CA_B${BB}.dat"
-  CA_FILE2="${TMPDAT}/Him8/Him8_ERR_CA_B${BB}_${ATIME}.dat"
-  if [ -e ${CA_FILE1} ] ; then
-    cp $CA_FILE1 $CA_FILE2
+  if ls $TMPDIR/Him8_ERR_CA_B??.txt > /dev/null 2>&1 ; then
+    cp ${TMPDIR}/Him8_ERR_CA_B??.txt $TMPOUT/${ATIME}/log/letkf/
   fi
-done
 
+  BB_LIST="07 08 09 10 11 12 13 14 15 16"
+  for BB in ${BB_LIST} ; do
+    CA_FILE1="${TMPDIR}/Him8_ERR_CA_B${BB}.dat"
+    CA_FILE2="${TMPDAT}/Him8/Him8_ERR_CA_B${BB}_${ATIME}.dat"
+    CA_FILE3="${TMPOUT}/${ATIME}/log/letkf/Him8_ERR_CA_B${BB}_${ATIME}.dat"
+    if [ -e ${CA_FILE1} ] ; then
+      cp $CA_FILE1 $CA_FILE2
+      cp $CA_FILE1 $CA_FILE3
+    fi
+  done
+
+fi
 
 #===============================================================================
 

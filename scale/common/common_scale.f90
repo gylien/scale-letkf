@@ -947,22 +947,22 @@ subroutine write_Him8_CA(sHim8_CA,nHim8_CA)
     B3 = ch2BB_Him8(ch)
     if(H08_CH_USE(ch) == 1)then
 
-      do i = 1, H08_CLD_OBSERR_NBIN
-        write(obsbin_show(i),'(ES12.3)') real(i)*H08_CLD_OBSERR_WTH*0.5
-        write(sHim8_CA_show(i),'(ES12.3)') sHim8_CA(ch,i)
-        write(nHim8_CA_show(i),'(I12)') nHim8_CA(ch,i)
-      enddo
+!      do i = 1, H08_CLD_OBSERR_NBIN
+!        write(obsbin_show(i),'(ES12.3)') real(i)*H08_CLD_OBSERR_WTH*0.5
+!        write(sHim8_CA_show(i),'(ES12.3)') sHim8_CA(ch,i)
+!        write(nHim8_CA_show(i),'(I12)') nHim8_CA(ch,i)
+!      enddo
 
       !## text file
-      open(unit=8888,file='Him8_CA_'//B3//'.txt',form='formatted')
-      write(8888,'('//trim(nstr)//'a)')obsbin_show(1:H08_CLD_OBSERR_NBIN)
-      write(8888,'('//trim(nstr)//'a)')sHim8_CA_show(1:H08_CLD_OBSERR_NBIN)
-      write(8888,'('//trim(nstr)//'a)')nHim8_CA_show(1:H08_CLD_OBSERR_NBIN)
-      close(8888)
+!      open(unit=8888,file='Him8_ERR_CA_'//B3//'.txt',form='formatted')
+!      write(8888,'('//trim(nstr)//'a)')obsbin_show(1:H08_CLD_OBSERR_NBIN)
+!      write(8888,'('//trim(nstr)//'a)')sHim8_CA_show(1:H08_CLD_OBSERR_NBIN)
+!      write(8888,'('//trim(nstr)//'a)')nHim8_CA_show(1:H08_CLD_OBSERR_NBIN)
+!      close(8888)
 
  
       !## binary file
-      open(unit=8889,file='Him8_CA_'//B3//'.dat',form='unformatted',access='direct',&
+      open(unit=8889,file='Him8_ERR_CA_'//B3//'.dat',form='unformatted',access='direct',&
            recl=H08_CLD_OBSERR_NBIN*8)
       mrec = 0 !-- get file length
       do
@@ -1022,7 +1022,7 @@ subroutine read_Him8_CA(Him8_obserr_CA)
     if(H08_CH_USE(ch) == 1)then
 
       !## binary file
-      open(unit=8889,file='Him8_CA_'//B3//'.dat',form='unformatted',access='direct',&
+      open(unit=8889,file='Him8_ERR_CA_'//B3//'.dat',form='unformatted',access='direct',&
            recl=H08_CLD_OBSERR_NBIN*8)
       mrec = 0 !-- get file length
       do
