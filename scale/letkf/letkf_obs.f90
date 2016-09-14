@@ -638,7 +638,7 @@ SUBROUTINE set_letkf_obs
         endif
 
         if(H08_OB_OBSERR)then
-          Him8_err = abs(obsda%val(n))
+          Him8_err = min(max(abs(obsda%val(n)),OBSERR_H08_MIN),OBSERR_H08_MAX)
         endif
 
         write(6, '(a,2I6,2F8.2,F12.4,3F10.4,I6,F10.4)')"Him8 ", &

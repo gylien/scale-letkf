@@ -1061,7 +1061,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
         endif
 
         if(H08_OB_OBSERR .and. ielm==id_H08IR_obs)then
-          Him8_err = abs(obsda2(ip)%val(iob))
+          Him8_err = min(max(abs(obsda2(ip)%val(iob)),OBSERR_H08_MIN),OBSERR_H08_MAX)
           nrdiag = Him8_err * Him8_err / nrloc
         endif
 
