@@ -1059,6 +1059,12 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
           nrdiag = Him8_err * Him8_err / nrloc
           !write(6,'(a,f10.3)')"DEBUGGGG err",Him8_err
         endif
+
+        if(H08_OB_OBSERR .and. ielm==id_H08IR_obs)then
+          Him8_err = abs(obsda2(ip)%val(iob))
+          nrdiag = Him8_err * Him8_err / nrloc
+        endif
+
 #endif
         !
         ! Process search results

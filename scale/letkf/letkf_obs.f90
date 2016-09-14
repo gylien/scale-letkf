@@ -637,6 +637,10 @@ SUBROUTINE set_letkf_obs
           Him8_err = obs(iof)%err(iidx)
         endif
 
+        if(H08_OB_OBSERR)then
+          Him8_err = abs(obsda%val(n))
+        endif
+
         write(6, '(a,2I6,2F8.2,F12.4,3F10.4,I6,F10.4)')"Him8 ", &
              obs(iof)%elm(iidx), &
              ch_num+6, & ! Him8 band number
