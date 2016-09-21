@@ -24,7 +24,7 @@ PROGRAM obsope
 
   type(obs_info), allocatable :: obs(:)
 
-  character(len=6400) :: cmd1, cmd2, icmd
+  character(len=6400) :: cmd1, cmd2, icmd, cwd
   character(len=10) :: myranks
   integer :: iarg
 
@@ -36,6 +36,8 @@ PROGRAM obsope
   rtimer00 = MPI_WTIME()
 
   if (command_argument_count() >= 4) then
+    call getcwd(cwd)
+    write(6, '(2A)') 'Current working directory: ', trim(cwd)
     call get_command_argument(3, icmd)
     call chdir(trim(icmd))
     write (myranks, '(I10)') myrank
@@ -166,6 +168,10 @@ PROGRAM obsope
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
+
+  if (command_argument_count() >= 4) then
+    call chdir(trim(cwd))
+  end if
 
   CALL finalize_mpi_scale
 

@@ -189,7 +189,7 @@ elif [ "$MPI_TYPE" = 'K' ]; then
 
   if [ "$STG_TYPE" = 'K_rankdir' ]; then
 
-    fipp -C -Srange -d $STDOUT-Fprofd -m 50000 -Icall,hwm mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF - $ARGS
+    fipp -C -Srange -d ${STDOUT}-Fprofd -m 50000 -Icall,hwm mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF - $ARGS
     res=$?
     if ((res != 0)); then
       echo "[Error] mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS" >&2
@@ -199,7 +199,7 @@ elif [ "$MPI_TYPE" = 'K' ]; then
 
   else
 
-    ( cd $progdir && fipp -C -Srange -d $STDOUT-Fprofd -m 50000 -Icall,hwm mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF - $ARGS )
+    ( cd $progdir && fipp -C -Srange -d ${STDOUT}-Fprofd -m 50000 -Icall,hwm mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF - $ARGS )
     res=$?
     if ((res != 0)); then 
       echo "[Error] mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS" >&2

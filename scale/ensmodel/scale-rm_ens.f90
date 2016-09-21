@@ -55,7 +55,7 @@ program scaleles_ens
   integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
   character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim)
 
-  character(len=6400) :: cmd1, cmd2, icmd
+  character(len=6400) :: cmd1, cmd2, icmd, cwd
   character(len=10) :: myranks
   integer :: iarg
 
@@ -82,6 +82,8 @@ program scaleles_ens
   WRITE(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ',universal_myrank,'/',universal_nprocs-1
 
   if (command_argument_count() >= 4) then
+    call getcwd(cwd)
+    write(6, '(2A)') 'Current working directory: ', trim(cwd)
     call get_command_argument(3, icmd)
     call chdir(trim(icmd))
     write (myranks, '(I10)') universal_myrank
@@ -222,6 +224,10 @@ program scaleles_ens
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
+
+  if (command_argument_count() >= 4) then
+    call chdir(trim(cwd))
+  end if
 
 !  call PRC_MPIfinish
 

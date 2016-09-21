@@ -28,7 +28,7 @@ PROGRAM letkf
   CHARACTER(7) :: stdoutf='-000000'
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
-  character(len=6400) :: cmd1, cmd2, icmd
+  character(len=6400) :: cmd1, cmd2, icmd, cwd
   character(len=10) :: myranks
   integer :: iarg
 
@@ -43,6 +43,8 @@ PROGRAM letkf
   rtimer00 = MPI_WTIME()
 
   if (command_argument_count() >= 4) then
+    call getcwd(cwd)
+    write(6, '(2A)') 'Current working directory: ', trim(cwd)
     call get_command_argument(3, icmd)
     call chdir(trim(icmd))
     write (myranks, '(I10)') myrank
@@ -335,6 +337,10 @@ PROGRAM letkf
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
+
+  if (command_argument_count() >= 4) then
+    call chdir(trim(cwd))
+  end if
 
   CALL finalize_mpi_scale
 
