@@ -62,6 +62,8 @@ fi
 
 echo "[$(datetime_now)] Start $myname $@" >&2
 
+TNO="$6"
+
 setting "$1" "$2" "$3" "$4" "$5" || exit $?
 
 echo
@@ -357,6 +359,14 @@ if [ "$STG_TYPE" = 'builtin' ]; then
 fi
 
 #===============================================================================
+
+echo "[$(datetime_now)] ### 8" >&2
+
+if ((TMPRUN_MODE <= 2)); then
+  pdbash node one $SCRP_DIR/src/final_all_node.sh ${TNO} $myname1 '' || exit $?
+else
+  pdbash node all $SCRP_DIR/src/final_all_node.sh ${TNO} $myname1 '' || exit $?
+fi
 
 echo "[$(datetime_now)] Finish $myname $@" >&2
 
