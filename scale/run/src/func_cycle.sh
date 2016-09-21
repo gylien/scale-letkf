@@ -68,7 +68,8 @@ ETIME=${1:-$ETIME}; shift
 ISTEP=${1:-$ISTEP}; shift
 FSTEP=${1:-$FSTEP}; shift
 CONF_MODE=${1:-$CONF_MODE}; shift
-TIME_LIMIT="${1:-$TIME_LIMIT}"
+TIME_LIMIT="${1:-$TIME_LIMIT}"; shift
+TNO="${1:-$TNO}"
 
 #if [ -z "$STIME" ]; then
 #  echo "[Error] $FUNCNAME: Insufficient arguments." >&2

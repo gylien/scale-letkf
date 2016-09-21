@@ -351,6 +351,16 @@ fi
 
 #===============================================================================
 
+echo "[$(datetime_now)] ### 8" >&2
+
+if [ "$CONF_MODE" != 'static' ]; then
+  if ((DISK_MODE <= 2)); then
+    pdbash node one $SCRP_DIR/src/final_all_node.sh ${TNO} $job '' || exit $?
+  else
+    pdbash node all $SCRP_DIR/src/final_all_node.sh ${TNO} $job '' || exit $?
+  fi
+fi
+
 echo "[$(datetime_now)] Finish $myname $@" >&2
 
 exit 0
