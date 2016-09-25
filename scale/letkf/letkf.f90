@@ -171,7 +171,8 @@ PROGRAM letkf
 
     if(H08_CLD_OBSERR)then
       allocate(Him8_obserr_CA(nch,H08_CLD_OBSERR_NBIN))
-      call read_Him8_ObsErr_CA_mpi(Him8_obserr_CA)
+      allocate(Him8_bias_CA(nch,H08_CLD_OBSERR_NBIN))
+      call read_Him8_ObsErr_CA_mpi(Him8_obserr_CA,Him8_bias_CA)
 
       CALL MPI_BARRIER(MPI_COMM_a,ierr)
       rtimer = MPI_WTIME()

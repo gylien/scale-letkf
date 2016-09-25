@@ -1393,7 +1393,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   REAL(r_size),INTENT(INOUT),OPTIONAL :: rmse_H08(nch)
   INTEGER,INTENT(INOUT),OPTIONAL :: nobs_H08(nch)
   REAL(r_size),INTENT(INOUT),OPTIONAL :: Him8_OAB(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
-  INTEGER,INTENT(INOUT),OPTIONAL :: Him8_iCA(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
+  INTEGER,INTENT(OUT),OPTIONAL :: Him8_iCA(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
   INTEGER :: ch, idx_B07, band
 
 ! -- for TC vital assimilation --
@@ -1665,30 +1665,15 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
                    &) * 0.5d0 
                    
 
-! Compute O-A regardless of non-assimilated bands --
-          ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) ! O-A
-
-!          if(oqc(n) == iqc_good) then
-!            write (6, '(A,2I6,2F8.2,5F11.4,I6,F10.4)')"H08-O-A-B",&
-!                  obs(obsda%set(n))%elm(obsda%idx(n)), &
-!                  obs(obsda%set(n))%lev(obsda%idx(n)), & ! obsda%lev stores the band num.
-!                  !nint(obsda%lev(n)), & ! obsda%lev includes the band num.
-!                  obs(obsda%set(n))%lon(obsda%idx(n)), &
-!                  obs(obsda%set(n))%lat(obsda%idx(n)), &
-!                  ohx(n), &! O-A
-!                  obsda%val(n), &! O-B
-!                  plev_obs_H08(ns), &
-!                  obs(obsda%set(n))%dat(obsda%idx(n)), &
-!                  obs(obsda%set(n))%err(obsda%idx(n)), &
-!                  oqc(n),&
-!                  CA(n) 
-!          endif
+!-- Compute O-A/O-B (y-Hx(mean)) for monit_obs --
+          ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) ! O-A/O-B
 
 !
 ! Inputs for monit_H08
 !
 ! -- Him8 IR obs (10 bands) should be aligned!
 ! -- For example, if obs%dat(n=1001) is Him8 band07, obs%dat(n=1010) should be Him8 band16,
+!
           ns = (n2prof(n) - 1) * nch
           ns2 = n - (band - 6)
           idx_B07 = obsda%idx(n) - (band - 6)
@@ -1699,6 +1684,16 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
         endif ! [DEPARTURE_STAT_T_RANGE]
       end do ! [ n = 1, obsda%nobs ]
 !$OMP END PARALLEL DO
+
+      if(H08_CLD_OBSERR)then
+        do n = 1, nprof_H08
+          ns = (n - 1) * nch
+          do ch = 1, nch
+            Him8_iCA(ns+ch) = max(min(H08_CLD_OBSERR_NBIN, int(CA(ns+ch) / H08_CLD_OBSERR_WTH + 1)),1)
+          enddo
+        enddo
+        Him8_OAB(1:nprof_H08*nch) = ohx_H08(1:nprof_H08*nch)
+      endif
 
       DEALLOCATE(yobs_H08, yobs_H08_clr, plev_obs_H08, qc_H08)
     ENDIF ! [nprof_H08 >=1]
@@ -1764,21 +1759,8 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 
   call monit_dep(obsda%nobs,oelm,ohx,oqc,nobs,bias,rmse)
 #ifdef H08
-!  if(present(nobs_H08) .and. present(bias_H08) .and. present(rmse_H08))then
   if(DEPARTURE_STAT_H08_ALL)then
     call monit_dep_H08(nprof_H08*nch,ohx_H08,oband_H08,nobs_H08,bias_H08,rmse_H08)
-  endif
-
-  if(H08_CLD_OBSERR)then
-    if(Him8_OAB(1) > 0.0d0)then ! when this subroutine called after the LETKF
-      do n = 1, nprof_H08
-        ns = (n - 1) * nch
-        do ch = 1, nch
-          Him8_iCA(ns+ch) = max(min(H08_CLD_OBSERR_NBIN, int(CA(ns+ch) / H08_CLD_OBSERR_WTH + 1)),1)
-        enddo
-      enddo
-    endif
-    Him8_OAB(1:nprof_H08*nch) = ohx_H08(1:nprof_H08*nch)
   endif
 #endif
 

@@ -209,6 +209,7 @@ MODULE common_nml
   real(r_size) :: H08_CLD_OBSERR_GROSS_ERR = 20.0d0
   integer :: H08_CLD_OBSERR_MIN_SUMPLE = 1000
   logical :: H08_DEBIAS_AMEAN = .false.
+  logical :: H08_DEBIAS_CA = .false.
   logical :: H08_RTTOV_EXTRA_US76 = .false.
 
   integer :: H08_CH_USE(nch) = (/0,0,1,0,0,0,0,0,0,0/)
@@ -626,22 +627,23 @@ subroutine read_nml_letkf_h08
   implicit none
   integer :: ierr
 
-  namelist /PARAM_LETKF_H08/ &
-    H08_REJECT_LAND, &
-    H08_RTTOV_CLD, &
-    H08_RTTOV_MINQ, &
-    H08_RTTOV_CFRAC_CNST, &
-    H08_LIMIT_LEV, &
-    H08_BT_MIN, &
-    H08_RTTOV_EXTRA_US76, &
-    H08_OB_OBSERR, &
-    H08_CLD_OBSERR, &
-    H08_CLD_OBSERR_WTH, &
-    H08_CLD_OBSERR_NBIN, &
-    H08_CLD_OBSERR_GROSS_ERR, &
+  namelist /PARAM_LETKF_H08/   &
+    H08_REJECT_LAND,           &
+    H08_RTTOV_CLD,             &
+    H08_RTTOV_MINQ,            &
+    H08_RTTOV_CFRAC_CNST,      &
+    H08_LIMIT_LEV,             &
+    H08_BT_MIN,                &
+    H08_RTTOV_EXTRA_US76,      &
+    H08_OB_OBSERR,             &
+    H08_CLD_OBSERR,            &
+    H08_CLD_OBSERR_WTH,        &
+    H08_CLD_OBSERR_NBIN,       &
+    H08_CLD_OBSERR_GROSS_ERR,  &
     H08_CLD_OBSERR_MIN_SUMPLE, &
-    H08_CLD_OBSERR_MTIME, &
-    H08_DEBIAS_AMEAN, &
+    H08_CLD_OBSERR_MTIME,      &
+    H08_DEBIAS_AMEAN,          &
+    H08_DEBIAS_CA,             &
     H08_CH_USE
 
   rewind(IO_FID_CONF)

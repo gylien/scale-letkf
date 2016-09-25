@@ -46,7 +46,8 @@ MODULE letkf_obs
 ! -- array for storing O-B and O-A of Him8
   real(r_size),allocatable,save :: Him8_OAB_l(:)
   integer,allocatable,save :: Him8_iCA_l(:)
-  REAL(r_size),allocatable,save :: Him8_obserr_CA(:,:) ! Sum of Him8's [O-A]x[O-B] as a function of CA
+  REAL(r_size),allocatable,save :: Him8_obserr_CA(:,:) ! Him8 obs error as a function of CA
+  REAL(r_size),allocatable,save :: Him8_bias_CA(:,:) ! Him8 bias as a function of CA
 
 CONTAINS
 !-----------------------------------------------------------------------
@@ -671,7 +672,29 @@ SUBROUTINE set_letkf_obs
 !$OMP END PARALLEL DO
 
 #ifdef H08
-  if(H08_DEBIAS_AMEAN)then
+  if(H08_DEBIAS_CA)then
+    write(6,'(a)')" ## start Him8 debias depending on CA"
+
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,iof,iidx,ch_num,idx_CA)
+    do n = 1, obsda%nobs
+      IF(obsda%qc(n) > 0) CYCLE
+      iof = obsda%set(n)
+      iidx = obsda%idx(n)
+
+      select case (obs(iof)%elm(iidx)) 
+      case (id_H08IR_obs)
+        ch_num = nint(obs(iof)%lev(iidx)) - 6 ! 1-10
+        if(H08_CH_USE(ch_num)/=1) cycle
+        idx_CA = max(min(H08_CLD_OBSERR_NBIN, int(obsda%val2(n) / H08_CLD_OBSERR_WTH + 1)),1)
+        Him8_bias(ch_num) = Him8_bias_CA(ch_num,idx_CA)
+        obsda%val(n) = obsda%val(n) - Him8_bias(ch_num)
+      case default
+        cycle
+      end select
+    enddo ! [ n = 1, obsda%nobs ]
+!$OMP END PARALLEL DO
+
+  elseif(H08_DEBIAS_AMEAN)then
     write(6,'(a)')" ## start Him8 debias"
     Him8_bcnt_tmp = 0
     Him8_bias_tmp = 0.0d0
@@ -701,14 +724,6 @@ SUBROUTINE set_letkf_obs
       write(6,'(a,f8.2,i3,i5)')" ## O-B Him8 bias", Him8_bias(n), n+6,Him8_bcnt(n)
     enddo
 
-! test
-    do n = 1, nch
-      if(H08_CH_USE(n) /= 1 .or. Him8_bcnt_tmp(n) < 1) cycle
-      Him8_bias_tmp(n) = Him8_bias_tmp(n) / real(Him8_bcnt_tmp(n),kind=r_size)
-      write(6,'(a,f8.2,i3,i5)')" ## test O-B Him8 bias", Him8_bias_tmp(n), n+6,Him8_bcnt_tmp(n)
-    enddo
-! test
-
     do n = 1, obsda%nobs
       IF(obsda%qc(n) > 0) CYCLE
       iof = obsda%set(n)
@@ -724,8 +739,9 @@ SUBROUTINE set_letkf_obs
         cycle
       end select
     enddo ! [ n = 1, obsda%nobs ]
-
-  endif ! H08_DEBIAS_AMEAN
+ 
+  endif 
+  write(6,'(a)')" ## End Him8 debias"
 #endif
 
 !!

@@ -90,6 +90,11 @@ fi
 # -- Cloud dependent obs err --
 
 BB_LIST="07 08 09 10 11 12 13 14 15 16"
+
+if [ ! -e ${TMPDAT}/Him8 ] ; then
+  mkdir ${TMPDAT}/Him8 
+fi
+
 for BB in ${BB_LIST} ; do
   CA_FILE1="${TMPDAT}/Him8/Him8_ERR_CA_B${BB}_${STIME}.dat"
   CA_FILE2="Him8_ERR_CA_B${BB}.dat"
