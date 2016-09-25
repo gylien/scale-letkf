@@ -95,8 +95,8 @@ SUBROUTINE set_letkf_obs
   REAL(r_size),allocatable :: bufr2(:) 
 !  REAL(r_size),allocatable :: hx_sprd(:) 
   integer :: ch_num, idx_CA
-  integer :: Him8_bcnt(nch)
-  real(r_size) :: Him8_bias(nch)
+  integer :: Him8_bcnt(nch), Him8_bcnt_tmp(nch)
+  real(r_size) :: Him8_bias(nch), Him8_bias_tmp(nch)
   real(r_size) :: Him8_err
   
 #endif
@@ -673,8 +673,8 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
   if(H08_DEBIAS_AMEAN)then
     write(6,'(a)')" ## start Him8 debias"
-    Him8_bcnt = 0
-    Him8_bias = 0.0d0
+    Him8_bcnt_tmp = 0
+    Him8_bias_tmp = 0.0d0
     do n = 1, obsda%nobs
       IF(obsda%qc(n) > 0) CYCLE
       iof = obsda%set(n)
@@ -685,18 +685,29 @@ SUBROUTINE set_letkf_obs
         ch_num = nint(obs(iof)%lev(iidx)) - 6 ! 1-10
         if(H08_CH_USE(ch_num)/=1) cycle
 
-        Him8_bcnt(ch_num) = Him8_bcnt(ch_num) + 1
-        Him8_bias(ch_num) = Him8_bias(ch_num) + obsda%val(n)
+        Him8_bcnt_tmp(ch_num) = Him8_bcnt_tmp(ch_num) + 1
+        Him8_bias_tmp(ch_num) = Him8_bias_tmp(ch_num) + obsda%val(n)
       case default
         cycle
       end select
     enddo ! [ n = 1, obsda%nobs ]
 
+    call MPI_ALLREDUCE(Him8_bcnt_tmp, Him8_bcnt, nch, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)  
+    call MPI_ALLREDUCE(Him8_bias_tmp, Him8_bias, nch, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)  
+
     do n = 1, nch
       if(H08_CH_USE(n) /= 1 .or. Him8_bcnt(n) < 1) cycle
       Him8_bias(n) = Him8_bias(n) / real(Him8_bcnt(n),kind=r_size)
-      write(6,'(a,f8.2,i3)')" ## O-B Him8 bias", Him8_bias(n), n+6
+      write(6,'(a,f8.2,i3,i5)')" ## O-B Him8 bias", Him8_bias(n), n+6,Him8_bcnt(n)
     enddo
+
+! test
+    do n = 1, nch
+      if(H08_CH_USE(n) /= 1 .or. Him8_bcnt_tmp(n) < 1) cycle
+      Him8_bias_tmp(n) = Him8_bias_tmp(n) / real(Him8_bcnt_tmp(n),kind=r_size)
+      write(6,'(a,f8.2,i3,i5)')" ## test O-B Him8 bias", Him8_bias_tmp(n), n+6,Him8_bcnt_tmp(n)
+    enddo
+! test
 
     do n = 1, obsda%nobs
       IF(obsda%qc(n) > 0) CYCLE

@@ -975,7 +975,7 @@ subroutine write_Him8_CA(sHim8_CA,nHim8_CA)
 
       !write(6,'(a,i7)')"DEBUG  mrec write:",mrec
       ! add Him8 information in the end of file 
-      write(8889,rec=mrec+1) (real(real(i)*H08_CLD_OBSERR_WTH*0.5,kind=r_size),i=1,H08_CLD_OBSERR_NBIN)
+      write(8889,rec=mrec+1) (real(real(i-1)*H08_CLD_OBSERR_WTH+H08_CLD_OBSERR_WTH*0.5,kind=r_size),i=1,H08_CLD_OBSERR_NBIN)
       write(8889,rec=mrec+2) (real(sHim8_CA(ch,i),kind=r_size),i=1,H08_CLD_OBSERR_NBIN) ! obs err
       write(8889,rec=mrec+3) (real(nHim8_CA(ch,i),kind=r_size),i=1,H08_CLD_OBSERR_NBIN) ! num of samples
 
@@ -1078,7 +1078,7 @@ subroutine read_Him8_CA(Him8_obserr_CA)
     if(H08_CH_USE(ch) == 1)then
 
       do nb = 1, H08_CLD_OBSERR_NBIN
-        write(obsbin_show(nb),'(ES11.3)') real(nb)*H08_CLD_OBSERR_WTH*0.5
+        write(obsbin_show(nb),'(ES11.3)')real(nb-1)*H08_CLD_OBSERR_WTH+H08_CLD_OBSERR_WTH*0.5
         write(sHim8_CA_show(nb),'(ES12.3)') min(Him8_obserr_CA(ch,nb), OBSERR_H08_MAX)
         write(nHim8_CA_show(nb),'(I12)') tmp2_nHim8_CA(ch,nb)
         obsbin_show(nb) = trim(obsbin_show(nb))//","
