@@ -126,7 +126,14 @@ MODULE common_scale
 #endif
 !  INTEGER,PARAMETER :: iv2dd_tsfc=8
 
-
+! -- Num of records of Him8 CA data file in each cycle
+! 1: Bin info., 
+! 2: Assigned Him8 obs errors 
+! 3: Num of samples as a function of CA
+! 4: Him8 bias [O-B] as a function of CA
+! 5: Him8 [O-B]**2 as a function of CA
+! 6: Him8 background spread**2 in obs space as a function of CA
+  INTEGER,PARAMETER :: nrec_CA = 6
 
   INTEGER,SAVE :: nlon  ! # grids in I-direction [subdomain]
   INTEGER,SAVE :: nlat  ! # grids in J-direction [subdomain]
@@ -924,12 +931,14 @@ end subroutine read_history
 !  return
 !end subroutine read_history
 
-subroutine write_Him8_CA(sHim8_OAB_CA,nHim8_CA,Him8_bias_CA)
+subroutine write_Him8_CA(sHim8_OAB_CA,nHim8_CA,Him8_bias_CA,Him8_OB2_CA,Him8_BSPRD2_CA)
   implicit none
 
   REAL(r_size),INTENT(in) :: sHim8_OAB_CA(nch,H08_CLD_OBSERR_NBIN) ! Sum of Him8's [O-A]x[O-B] as a function of CA
   INTEGER,INTENT(in) :: nHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Number of Him8 obs as a function of CA
   REAL(r_size),INTENT(in) :: Him8_bias_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 bias as a function of CA
+  REAL(r_size),INTENT(in) :: Him8_OB2_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 [O-B]**2 as a function of CA
+  REAL(r_size),INTENT(in) :: Him8_BSPRD2_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 background spread**2 in obs space as a function of CA
   INTEGER :: ch, i
   character(3) :: B3
   character(4) :: nstr
@@ -951,10 +960,7 @@ subroutine write_Him8_CA(sHim8_OAB_CA,nHim8_CA,Him8_bias_CA)
       do
         read(8889,rec=mrec+1,iostat=ios) tmp_wk
         if(ios /= 0) exit
-        read(8889,rec=mrec+2) tmp_wk
-        read(8889,rec=mrec+3) tmp_wk
-        read(8889,rec=mrec+4) tmp_wk
-        mrec = mrec + 4
+        mrec = mrec + nrec_CA
       enddo
 
       ! Add Him8 information in the end of file 
@@ -962,12 +968,19 @@ subroutine write_Him8_CA(sHim8_OAB_CA,nHim8_CA,Him8_bias_CA)
       write(8889,rec=mrec+2) (sHim8_OAB_CA(ch,i),i=1,H08_CLD_OBSERR_NBIN) ! obs err
       write(8889,rec=mrec+3) (real(nHim8_CA(ch,i),kind=r_size),i=1,H08_CLD_OBSERR_NBIN) ! num of samples
       write(8889,rec=mrec+4) (Him8_bias_CA(ch,i)*real(nHim8_CA(ch,i),kind=r_size),i=1,H08_CLD_OBSERR_NBIN) ! bias
+      write(8889,rec=mrec+5) (Him8_OB2_CA(ch,i),i=1,H08_CLD_OBSERR_NBIN) ! [O-B]**2
+      write(8889,rec=mrec+6) (Him8_BSPRD2_CA(ch,i),i=1,H08_CLD_OBSERR_NBIN) ! spread**2 in obs space
 
       close(8889)
 
       write(6,'(A,1x,A)') ' Him8 bias information ',B3
       do i = 1, H08_CLD_OBSERR_NBIN
-        write(6,'(A,f6.2,i8,f6.2)') ' bias,num,CA ',Him8_bias_CA(ch,i),nHim8_CA(ch,i),real(real(i-1)*H08_CLD_OBSERR_WTH+H08_CLD_OBSERR_WTH*0.5,kind=r_size)
+        write(6,'(A,f6.2,i8,3f6.2)') ' bias,num,CA ',&
+                                     Him8_bias_CA(ch,i),&
+                                     nHim8_CA(ch,i),&
+                                     real(real(i-1)*H08_CLD_OBSERR_WTH+H08_CLD_OBSERR_WTH*0.5,kind=r_size),&
+                                     Him8_OB2_CA(ch,i),&
+                                     sqrt(Him8_BSPRD2_CA(ch,i)/max(real(nHim8_CA(ch,i),kind=r_size),1.0d0))
       enddo
     endif ! H08_CH_USE
   enddo
@@ -982,9 +995,16 @@ subroutine read_Him8_CA(Him8_obserr_CA,Him8_bias_CA)
 
   REAL(r_size),INTENT(out) :: Him8_obserr_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 obs err as a function of CA
   REAL(r_size),INTENT(out) :: Him8_bias_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 bias as a function of CA
+
+  REAL(r_size) :: Him8_OB2_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 [O-B]**2 as a function of CA
+  REAL(r_size) :: Him8_BSPRD2_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 [O-B]**2 as a function of CA
+
   REAL(r_size) :: tmp_sHim8_OAB_CA(nch,H08_CLD_OBSERR_NBIN) ! Sum of Him8's [O-A]x[O-B] as a function of CA
   REAL(r_size) :: tmp_Him8_bias_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 bias as a function of CA
+  REAL(r_size) :: tmp_Him8_OB2_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 [O-B]**2 as a function of CA
+  REAL(r_size) :: tmp_Him8_BSPRD2_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 background spread**2 in obs space as a function of CA
   INTEGER :: tmp_nHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Number of Him8 obs as a function of CA
+
   REAL(r_size) :: obsbin(H08_CLD_OBSERR_NBIN)
   INTEGER :: ch, i, it, nb
   INTEGER,PARAMETER :: maxit = 100
@@ -996,12 +1016,21 @@ subroutine read_Him8_CA(Him8_obserr_CA,Him8_bias_CA)
   character(12) :: obsbin_show(H08_CLD_OBSERR_NBIN)
   character(12) :: sHim8_OAB_CA_show(H08_CLD_OBSERR_NBIN)
   character(12) :: Him8_bias_CA_show(H08_CLD_OBSERR_NBIN)
+  character(12) :: Him8_OB2_CA_show(H08_CLD_OBSERR_NBIN)
+  character(12) :: Him8_BSPRD2_CA_show(H08_CLD_OBSERR_NBIN)
   character(12) :: nHim8_CA_show(H08_CLD_OBSERR_NBIN)
 
   character(4) :: nstr
   write(nstr, '(I4)') H08_CLD_OBSERR_NBIN
 
   Him8_obserr_CA = 0.0d0
+  Him8_OB2_CA = 0.0d0
+
+  tmp_sHim8_OAB_CA = 0.0d0
+  tmp_nHim8_CA = 0
+  tmp_Him8_bias_CA = 0.0d0
+  tmp_Him8_OB2_CA = 0.0d0
+  tmp_Him8_BSPRD2_CA = 0.0d0
 
   do ch = 1, nch
     B3 = ch2BB_Him8(ch)
@@ -1014,35 +1043,40 @@ subroutine read_Him8_CA(Him8_obserr_CA,Him8_bias_CA)
       do
         read(8889,rec=mrec+1,iostat=ios) tmp_wk ! bin
         if(ios /= 0) exit
-        read(8889,rec=mrec+2) tmp_wk            ! sHim8
-        read(8889,rec=mrec+3) tmp_wk            ! nHim8
-        read(8889,rec=mrec+4) tmp_wk            ! Him8 bias
-        mrec = mrec + 4
+        mrec = mrec + nrec_CA
       enddo
 
-      tmp_sHim8_OAB_CA = 0.0d0
-      tmp_nHim8_CA = 0
-      tmp_Him8_bias_CA = 0.0d0
-
-      mrec = max(mrec - 4, 0)
+      mrec = max(mrec - nrec_CA, 0)
       do it = 0, H08_CLD_OBSERR_MTIME-1
-        read(8889,rec=mrec+1-it*4,iostat=ios) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! obsbin !! not used !!
+        read(8889,rec=mrec+1-it*nrec_CA,iostat=ios) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! obsbin !! not used !!
         if(ios /= 0) exit
-        read(8889,rec=mrec+2-it*4) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! sHim8
+        read(8889,rec=mrec+2-it*nrec_CA) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! sHim8
         tmp_sHim8_OAB_CA(ch,:) = tmp_sHim8_OAB_CA(ch,:) + tmp_wk
-        read(8889,rec=mrec+3-it*4) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! nHim8
+        read(8889,rec=mrec+3-it*nrec_CA) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! nHim8
         tmp_nHim8_CA(ch,:) = tmp_nHim8_CA(ch,:) + max(nint(tmp_wk), 0)
-        read(8889,rec=mrec+4-it*4) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! Him8 bias
+        read(8889,rec=mrec+4-it*nrec_CA) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! Him8 bias
         tmp_Him8_bias_CA(ch,:) = tmp_Him8_bias_CA(ch,:) + tmp_wk
+        read(8889,rec=mrec+5-it*nrec_CA) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! Him8 [O-B]**2
+        tmp_Him8_OB2_CA(ch,:) = tmp_Him8_OB2_CA(ch,:) + tmp_wk
+        read(8889,rec=mrec+6-it*nrec_CA) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! Him8 background spread**2 in obs space
+        tmp_Him8_BSPRD2_CA(ch,:) = tmp_Him8_BSPRD2_CA(ch,:) + tmp_wk
 
       enddo ! it
 
       do nb = 1, H08_CLD_OBSERR_NBIN
+        ! Him8 obs err
         if(tmp_nHim8_CA(ch,nb) >= H08_CLD_OBSERR_MIN_SUMPLE)then
-          Him8_obserr_CA(ch,nb) = min(max(tmp_sHim8_OAB_CA(ch,nb) / real(tmp_nHim8_CA(ch,nb),kind=r_size), OBSERR_H08_MIN), OBSERR_H08_MAX)
-          Him8_bias_CA(ch,nb) = tmp_Him8_bias_CA(ch,nb) / real(tmp_nHim8_CA(ch,nb),kind=r_size)
+          Him8_obserr_CA(ch,nb) = min(max(tmp_sHim8_OAB_CA(ch,nb) / real(tmp_nHim8_CA(ch,nb),kind=r_size), &
+                                      OBSERR_H08_MIN),&
+                                      OBSERR_H08_MAX)
         else
           Him8_obserr_CA(ch,nb) = OBSERR_H08_MAX
+        endif
+
+        ! Him8 bias
+        if(tmp_nHim8_CA(ch,nb) >= H08_DEBIAS_CA_MIN_SUMPLE)then
+          Him8_bias_CA(ch,nb) = tmp_Him8_bias_CA(ch,nb) / real(tmp_nHim8_CA(ch,nb),kind=r_size)
+        else
           if(nb == 1)then
             Him8_bias_CA(ch,1) = 0.0d0 
           else
@@ -1051,7 +1085,31 @@ subroutine read_Him8_CA(Him8_obserr_CA,Him8_bias_CA)
             Him8_bias_CA(ch,nb) = Him8_bias_CA(ch,1) 
           endif
         endif
+
+        if(tmp_nHim8_CA(ch,nb) >= 1)then
+          Him8_OB2_CA(ch,nb) = sqrt(tmp_Him8_OB2_CA(ch,nb) / real(tmp_nHim8_CA(ch,nb),kind=r_size))
+          Him8_BSPRD2_CA(ch,nb) = sqrt(tmp_Him8_BSPRD2_CA(ch,nb) / real(tmp_nHim8_CA(ch,nb),kind=r_size))
+          write(6,'(a,2f6.2,2i4)')"Him8 O-B and spread from the previous cycles,",&
+                                  Him8_OB2_CA(ch,nb),Him8_BSPRD2_CA(ch,nb),nb,ch
+        else ! No sample
+          Him8_OB2_CA(ch,nb) = OBSERR_H08_MAX
+          Him8_BSPRD2_CA(ch,nb) = 0.0d0
+        endif
+
       enddo ! nb
+
+!      if(maxval(tmp_nHim8_CA(ch,:)) < 1)then ! No sample
+!      endif
+
+      if(H08_CLD_OBSERR_OB2)then
+        do nb = 1, H08_CLD_OBSERR_NBIN
+          if(tmp_nHim8_CA(ch,nb) < H08_CLD_OBSERR_MIN_SUMPLE)then
+            !Him8_obserr_CA(ch,nb) = min(Him8_obserr_CA(ch,nb), maxval(Him8_OB2_CA(ch,1:H08_CLD_OBSERR_NBIN)))
+            Him8_obserr_CA(ch,nb) = min(max(Him8_OB2_CA(ch,nb),OBSERR_H08_MIN),OBSERR_H08_MAX)
+          endif
+        enddo ! nb
+      endif
+
     endif ! H08_CH_USE
 
   enddo ! ch
@@ -1065,10 +1123,14 @@ subroutine read_Him8_CA(Him8_obserr_CA,Him8_bias_CA)
         write(sHim8_OAB_CA_show(nb),'(ES12.3)') Him8_obserr_CA(ch,nb)
         write(nHim8_CA_show(nb),'(I12)') tmp_nHim8_CA(ch,nb)
         write(Him8_bias_CA_show(nb),'(ES12.3)') Him8_bias_CA(ch,nb)
+        write(Him8_OB2_CA_show(nb),'(ES12.3)') Him8_OB2_CA(ch,nb)
+        write(Him8_BSPRD2_CA_show(nb),'(ES12.3)') Him8_BSPRD2_CA(ch,nb)
         obsbin_show(nb) = trim(obsbin_show(nb))//","
         sHim8_OAB_CA_show(nb) = trim(sHim8_OAB_CA_show(nb))//","
         nHim8_CA_show(nb) = trim(nHim8_CA_show(nb))//","
         Him8_bias_CA_show(nb) = trim(Him8_bias_CA_show(nb))//","
+        Him8_OB2_CA_show(nb) = trim(Him8_OB2_CA_show(nb))//","
+        Him8_BSPRD2_CA_show(nb) = trim(Him8_BSPRD2_CA_show(nb))//","
       enddo
 
       !## text file
@@ -1077,6 +1139,8 @@ subroutine read_Him8_CA(Him8_obserr_CA,Him8_bias_CA)
       write(8888,'('//trim(nstr)//'a)')sHim8_OAB_CA_show(1:H08_CLD_OBSERR_NBIN)
       write(8888,'('//trim(nstr)//'a)')nHim8_CA_show(1:H08_CLD_OBSERR_NBIN)
       write(8888,'('//trim(nstr)//'a)')Him8_bias_CA_show(1:H08_CLD_OBSERR_NBIN)
+      write(8888,'('//trim(nstr)//'a)')Him8_OB2_CA_show(1:H08_CLD_OBSERR_NBIN)
+      write(8888,'('//trim(nstr)//'a)')Him8_BSPRD2_CA_show(1:H08_CLD_OBSERR_NBIN)
       close(8888)
     endif ! H08_CH_USE
 

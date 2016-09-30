@@ -88,7 +88,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
        & platform_name,       &
        & inst_name,           &
        & q_mixratio_to_ppmv,  &
-       & qmin ! H08
+       & qmin,                &
+       & tmin
 
   ! rttov_types contains definitions of all RTTOV data types
   USE rttov_types, ONLY :     &
@@ -256,6 +257,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
   logical :: debug = .false.
 !  logical :: debug = .true.
+  logical :: in_warning = .false.
 
   real(kind=jprb) :: Rd 
   real(kind=jprb) :: Rv 
@@ -269,7 +271,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
                                      ! Extrapolation will be done only below Zm_US76(US76_midx)
   real(kind=jprb) :: Zm_US76(5) = (/0.0d0, 11000.0d0, 20000.0d0, 32000.0d0, 47000.0d0/) ! (m)
   real(kind=jprb) :: dTdZm_US76(4) = (/-6.5d-3, 0.0d-3, 1.0d-3, 2.8d-3/) ! (K/m)
-  integer :: nlevs_add = 2
+  integer :: nlevs_add = 0
   real(kind=jprb),allocatable :: Zm_add(:) ! (m)
   real(kind=jprb),allocatable :: TK_add(:) ! (K)
   real(kind=jprb),allocatable :: P_add(:) ! (Pa)
@@ -278,6 +280,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   integer :: US76_sidx, US76_idx
   integer :: slev, elev, k
  
+  if(debug) write(6,'(1x,a)')"hello from RTTOV"
+
 ! - set arrays for extrapolation using the U.S. 1976 atmos. --
   if(H08_RTTOV_EXTRA_US76)then
     ! How many levels do you want to increase?
@@ -289,6 +293,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   else
     nlevs_add = 0
   endif ! H08_RTTOV_EXTRA_US76
+  if(debug) write(6,'(a,i5)')"nlevs_add",nlevs_add
+
 
 ! -- set thermodynamic constants
   Rd = real(Rdry,kind=jprb)
@@ -309,8 +315,6 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   allocate(kgkg2gm3(nlevs))
   allocate(icec(nlevs))
   allocate(liqc(nlevs))
-
-  if(debug) write(6,'(1x,a)')"hello from RTTOV"
 
   !
   ! The usual steps to take when running RTTOV are as follows:
@@ -522,15 +526,42 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   slev = nlevs+nlevs_add
   elev = nlevs_add+1
   DO iprof = 1, nprof
-    profiles(iprof)%p(elev:slev)=real(tmp_p(:,iprof),kind=jprb) * 0.01_jprb  ! (hpa)
-    profiles(iprof)%t(elev:slev)=real(tmp_t(:,iprof),kind=jprb)
-    profiles(iprof)%q(elev:slev)=real(tmp_qv(:,iprof),kind=jprb) * q_mixratio_to_ppmv ! (ppmv)
+    profiles(iprof)%p(elev:slev)=real(tmp_p(1:nlevs,iprof),kind=jprb) * 0.01_jprb  ! (hpa)
+    profiles(iprof)%t(elev:slev)=real(tmp_t(1:nlevs,iprof),kind=jprb)
+    profiles(iprof)%q(elev:slev)=real(tmp_qv(1:nlevs,iprof),kind=jprb) * q_mixratio_to_ppmv ! (ppmv)
     profiles(iprof)%s2m%t=real(tmp_t2m(iprof),kind=jprb)
     profiles(iprof)%s2m%q=real(tmp_q2m(iprof),kind=jprb) * q_mixratio_to_ppmv ! (ppmv)
 
+    if(profiles(iprof)%s2m%t < tmin) profiles(iprof)%s2m%t = tmin + tmin * 0.01_jprb
+    do ilev=elev,slev
+      if(profiles(iprof)%t(ilev) < tmin)then
+        if(.not.in_warning)then
+          write(6,*)'!! WARNING !! T input for RTTOV has unphysical values!!'
+          write(6,'(a,3f10.3)')'!! WARNING!!',profiles(iprof)%t(ilev),&
+                                              profiles(iprof)%p(ilev),&
+                                              profiles(iprof)%t(ilev)
+          write(6,'(a,3i8)')'!! WARNING!!',ilev,elev,slev
+          in_warning = .true.
+        endif
+
+        profiles(iprof)%t(ilev) = tmin + tmin * 0.01_jprb
+      endif
+    enddo
+
     if(profiles(iprof)%s2m%q < qmin) profiles(iprof)%s2m%q = qmin + qmin * 0.01_jprb
     do ilev=elev,slev
-      if(profiles(iprof)%q(ilev) < qmin) profiles(iprof)%q(ilev) = qmin + qmin * 0.01_jprb
+      if(profiles(iprof)%q(ilev) < qmin)then
+        if(.not.in_warning)then
+          write(6,*)'!! WARNING !! Q input for RTTOV has unphysical values!!'
+          write(6,'(a,3f10.3)')'!! WARNING!!',profiles(iprof)%t(ilev),&
+                                              profiles(iprof)%p(ilev),&
+                                              profiles(iprof)%t(ilev)
+          write(6,'(a,3i8)')'!! WARNING!!',ilev,elev,slev
+          in_warning = .true.
+        endif
+
+        profiles(iprof)%q(ilev) = qmin + qmin * 0.01_jprb
+      endif
     enddo
 
     profiles(iprof)%s2m%p=real(tmp_p2m(iprof),kind=jprb) * 0.01_jprb ! (hPa)
@@ -740,7 +771,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
     DO ilev = 1, nlevs
       tmp_trans_out(ilev,1:nchannels,iprof) = transmission % tau_levels(ilev+nlevs_add,1+joff:nchannels+joff)
-     if(debug .and. mod(iprof,5)==0) write(6,'(a,f10.7,i4)')"RTTOV debug trans",tmp_trans_out(ilev,1,iprof)
+     if(debug .and. mod(iprof,50)==0) write(6,'(a,f10.7,i4)')"RTTOV debug trans",tmp_trans_out(ilev,1,iprof)
      
     ENDDO
 

@@ -638,21 +638,41 @@ SUBROUTINE set_letkf_obs
           Him8_err = obs(iof)%err(iidx)
         endif
 
+        if(H08_DEBIAS_CA.and.H08_CLD_OBSERR)then
+          Him8_bias(ch_num) = Him8_bias_CA(ch_num,idx_CA)
+        else
+          Him8_bias(ch_num) = 0.0d0
+        endif
+
         if(H08_OB_OBSERR)then
           Him8_err = min(max(abs(obsda%val(n)),OBSERR_H08_MIN),OBSERR_H08_MAX)
         endif
 
-        write(6, '(a,2I6,2F8.2,F12.4,3F10.4,I6,F10.4)')"Him8 ", &
-             obs(iof)%elm(iidx), &
-             ch_num+6, & ! Him8 band number
-             obs(iof)%lon(iidx), &
-             obs(iof)%lat(iidx), &
-             obsda%lev(n), & ! sensitive height
-             obsda%val(n),& ! O-B
-             obs(iof)%dat(iidx), &
-             Him8_err,           &
-             obsda%qc(n),        &
-             obsda%val2(n)
+        if (myrank_e == lastmem_rank_e) then
+          write(6, '(a,2I5,2F7.2,F10.2,2F10.4,F7.2,I5,F9.4,2F10.4)')"Him8-O-B", &
+                obs(iof)%elm(iidx), &
+                ch_num+6, & ! Him8 band number
+                obs(iof)%lon(iidx), &
+                obs(iof)%lat(iidx), &
+                obsda%lev(n), & ! sensitive height
+                obsda%val(n),& ! O-B
+                obs(iof)%dat(iidx), &
+                Him8_err,           &
+                obsda%qc(n),        &
+                obsda%val2(n),      &
+                Him8_bias(ch_num),  &
+                obsda%val(n)/Him8_err ! O-B normalized by Him8 err
+        else
+          write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
+                                             obs(iof)%typ(iidx), &
+                                             obs(iof)%lon(iidx), &
+                                             obs(iof)%lat(iidx), &
+                                             obs(iof)%lev(iidx), &
+                                             obs(iof)%dat(iidx), &
+                                             obs(iof)%err(iidx), &
+                                             obsda%val(n), &
+                                             obsda%qc(n)
+        endif
       ENDIF !  [.not. DEPARTURE_STAT_H08]
 #endif
     ELSE
