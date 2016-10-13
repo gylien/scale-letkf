@@ -1391,14 +1391,15 @@ for it in $(seq $its $ite); do
   g=${proc2group[$((MYRANK+1))]}
   m=$(((it-1)*parallel_mems+g))
   if ((m >= 1 && m <= MEMBER_RUN)); then
+    if ((BDY_ENS == 1)); then
+      mem_bdy=${name_m[$m]}
+    else
+      mem_bdy='mean'
+    fi
+
     if (pdrun $g $PROC_OPT); then
-      if ((BDY_ENS == 1)); then
-        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $time \
-             $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
-      else
-        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $time \
-             $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
-      fi
+      bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $time \
+           $mkinit $mem_bdy $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
     fi
   fi
 
@@ -1460,24 +1461,6 @@ if ((loop == 1)); then
   mkinit=$MAKEINIT
 fi
 
-ocean_base='-'
-if ((OCEAN_INPUT == 1 && mkinit != 1)); then
-  if ((OCEAN_FORMAT == 0)); then
-    ocean_base="$TMPOUT/${time}/anal/mean/init_ocean"  ### always use mean???
-  elif ((OCEAN_FORMAT == 99)); then
-    ocean_base="$TMPOUT/${time}/anal/mean/init_bdy"  ### always use mean???
-  fi
-fi
-
-land_base='-'
-if ((LAND_INPUT == 1 && mkinit != 1)); then
-  if ((LAND_FORMAT == 0)); then
-    land_base="$TMPOUT/${time}/anal/mean/init_land"  ### always use mean???
-  elif ((LAND_FORMAT == 99)); then
-    land_base="$TMPOUT/${time}/anal/mean/init_bdy"  ### always use mean???
-  fi
-fi
-
 if ((LANDUSE_UPDATE == 1)); then
   time_l=${time}
 else
@@ -1502,9 +1485,29 @@ for it in $(seq $its $ite); do
 #    fi
 
     if ((BDY_ENS == 1)); then
-      bdy_base="$TMPOUT/${time}/bdy/${name_m[$m]}/boundary"
+      mem_bdy=${name_m[$m]}
     else
-      bdy_base="$TMPOUT/${time}/bdy/mean/boundary"
+      mem_bdy='mean'
+    fi
+
+    bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}/boundary"
+
+    ocean_base='-'
+    if ((OCEAN_INPUT == 1 && mkinit != 1)); then
+      if ((OCEAN_FORMAT == 0)); then
+        ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_ocean"
+      elif ((OCEAN_FORMAT == 99)); then
+        ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
+      fi
+    fi
+
+    land_base='-'
+    if ((LAND_INPUT == 1 && mkinit != 1)); then
+      if ((LAND_FORMAT == 0)); then
+        land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_land"
+      elif ((LAND_FORMAT == 99)); then
+        land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
+      fi
     fi
 
     if (pdrun $g $PROC_OPT); then
