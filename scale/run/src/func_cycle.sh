@@ -1465,14 +1465,14 @@ for it in $(seq $its $ite); do
       mem_bdy='mean'
     fi
 
-    bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}/boundary"
-
     ocean_base='-'
     if ((OCEAN_INPUT == 1)); then
       if ((mkinit != 1 || OCEAN_FORMAT != 99)); then
         ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_ocean"
       fi
     fi
+
+    bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}/boundary"
 
     if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
