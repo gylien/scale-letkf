@@ -1028,7 +1028,7 @@ SUBROUTINE state_trans(v3dg)
 !  use scale_history, only: &
 !     HIST_get
 
-  use scale_atmos_thermodyn, only: AQ_CV
+  use scale_tracer, only: TRACER_CV
     use scale_const, only: &
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
@@ -1055,7 +1055,7 @@ SUBROUTINE state_trans(v3dg)
        CVtot = 0.0d0
        do iv3d = iv3d_q, nv3d ! loop over all moisture variables
          qdry  = qdry - v3dg(k,i,j,iv3d)
-         CVtot = CVtot + v3dg(k,i,j,iv3d) * AQ_CV(iv3d-iv3d_q+1)
+         CVtot = CVtot + v3dg(k,i,j,iv3d) * TRACER_CV(iv3d-iv3d_q+1)
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rvap * v3dg(k,i,j,iv3d_q)
@@ -1111,7 +1111,7 @@ END SUBROUTINE state_trans
 
 
 SUBROUTINE state_trans_inv(v3dg)
-  use scale_atmos_thermodyn, only: AQ_CP, AQ_CV
+  use scale_tracer, only: TRACER_CV
     use scale_const, only: &
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
@@ -1140,7 +1140,7 @@ SUBROUTINE state_trans_inv(v3dg)
        CVtot = 0.0d0
        do iv3d = iv3d_q, nv3d ! loop over all moisture variables
          qdry  = qdry - v3dg(k,i,j,iv3d)
-         CVtot = CVtot + v3dg(k,i,j,iv3d) * AQ_CV(iv3d-iv3d_q+1)
+         CVtot = CVtot + v3dg(k,i,j,iv3d) * TRACER_CV(iv3d-iv3d_q+1)
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rvap * v3dg(k,i,j,iv3d_q)
