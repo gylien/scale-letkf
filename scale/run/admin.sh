@@ -40,8 +40,10 @@ fi
 
 if [ "$SCPNAME" = 'cycle' ]; then
   DATA_BDY_WRF="ncepgfs_wrf_da"
+  DATA_BDY_GRADS="ncepgfs_grads_da"
 else
   DATA_BDY_WRF="ncepgfs_wrf"
+  DATA_BDY_GRADS="ncepgfs_grads"
 fi
 
 #-------------------------------------------------------------------------------
@@ -53,6 +55,7 @@ rm -f config.nml.*
 cat config/${CONFIG}/config.main.${config_suffix} | \
     sed -e "s/<PRESET>/${PRESET}/g" | \
     sed -e "s/<DATA_BDY_WRF>/${DATA_BDY_WRF}/g" | \
+    sed -e "s/<DATA_BDY_GRADS>/${DATA_BDY_GRADS}/g" | \
     sed -e "s/<NNODES>/${NNODES}/g" \
     > config.main
 
@@ -69,9 +72,14 @@ cat config/${CONFIG}/config.nml.scale | \
 
 ln -fs config/${CONFIG}/config.nml.ensmodel .
 ln -fs config/${CONFIG}/config.nml.letkf .
-ln -fs config/${CONFIG}/config.nml.obsope .
 ln -fs config/${CONFIG}/config.nml.scale_pp .
 ln -fs config/${CONFIG}/config.nml.scale_init .
+if [ -e "config/${CONFIG}/config.nml.obsope" ]; then
+  ln -fs config/${CONFIG}/config.nml.obsope .
+fi
+if [ -e "config/${CONFIG}/config.nml.grads_boundary" ]; then
+  ln -fs config/${CONFIG}/config.nml.grads_boundary .
+fi
 
 . config.main || exit $?
 #. config.$SCPNAME || exit $?

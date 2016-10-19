@@ -16,7 +16,7 @@ OUTDIR="/volume63/data/hp150019/gylien/realtime/exp/EastAsia_18km_48p" # Directo
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
+MODELDIR="$DIR/../../bin"                               # Directory of the SCALE model executables
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/JapanWideA_d1_18km_48p_bf10"

@@ -482,8 +482,6 @@ subroutine set_scalelib
 !    URBAN_GRID_INDEX_setup
 !  use scale_urban_grid, only: &
 !    URBAN_GRID_setup
-  use scale_tracer, only: &
-    TRACER_setup
   use scale_fileio, only: &
     FILEIO_setup
   use scale_comm, only: &
@@ -500,8 +498,23 @@ subroutine set_scalelib
 
 !  use scale_atmos_hydrostatic, only: &
 !     ATMOS_HYDROSTATIC_setup
-  use scale_atmos_thermodyn, only: &
-     ATMOS_THERMODYN_setup
+!  use scale_atmos_thermodyn, only: &
+!     ATMOS_THERMODYN_setup
+  use scale_atmos_hydrometer, only: &
+     ATMOS_HYDROMETER_setup
+
+!  use mod_atmos_driver, only: &
+!     ATMOS_driver_config
+    use scale_atmos_phy_mp, only: &
+       ATMOS_PHY_MP_config
+!    use mod_atmos_admin, only: &
+!       ATMOS_PHY_MP_TYPE, &
+!       ATMOS_sw_phy_mp
+
+!  use mod_user, only: &
+!     USER_config, &
+!     USER_setup, &
+!     USER_step
 
 !  use mod_admin_time, only: &
 !     ADMIN_TIME_setup
@@ -532,6 +545,9 @@ subroutine set_scalelib
   integer :: NUM_DOMAIN
   integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
   character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim)
+
+  integer  :: HIST_item_limit    ! dummy
+  integer  :: HIST_variant_limit ! dummy
 
 !  integer :: ierr !!!!!!!!!!!!
 
@@ -597,6 +613,12 @@ subroutine set_scalelib
   ! setup PROF
 !  call PROF_setup
 
+
+!  ! profiler start
+!  call PROF_setprefx('INIT')
+!  call PROF_rapstart('Initialize', 0)
+
+
   ! setup constants
   call CONST_setup
 
@@ -609,9 +631,6 @@ subroutine set_scalelib
   ! setup time
 !  call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
 
-!  call PROF_setprefx('INIT')
-!  call PROF_rapstart('Initialize')
-
   ! setup horizontal/vertical grid coordinates
   call GRID_INDEX_setup
   call GRID_setup
@@ -623,7 +642,13 @@ subroutine set_scalelib
 !  call URBAN_GRID_setup
 
   ! setup tracer index
-  call TRACER_setup
+  call ATMOS_HYDROMETER_setup
+    call ATMOS_PHY_MP_config('TOMITA08') !!!!!!!!!!!!!!! tentative
+!    if ( ATMOS_sw_phy_mp ) then
+!       call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
+!    end if
+!  call ATMOS_driver_config
+!  call USER_config
 
   ! setup file I/O
   call FILEIO_setup
@@ -655,9 +680,22 @@ subroutine set_scalelib
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
 
-    call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_masterrank, PRC_myrank, rankidx, &
-                     0.0d0, 1.0d0, &
-                     namelist_fid=IO_FID_CONF, default_basename='history')
+    call HistoryInit( HIST_item_limit,                  & ! [OUT]
+                      HIST_variant_limit,               & ! [OUT]
+                      IMAX, JMAX, KMAX,                 & ! [IN]
+                      PRC_masterrank,                   & ! [IN]
+                      PRC_myrank,                       & ! [IN]
+                      rankidx,                          & ! [IN]
+                      '',                               & ! [IN]
+                      '',                               & ! [IN]
+                      '',                               & ! [IN]
+                      0.0d0,                            & ! [IN]
+                      1.0d0,                            & ! [IN]
+                      default_basename='history',       & ! [IN]
+                      default_zcoord = 'model',         & ! [IN]
+                      default_tinterval = 1.0d0,        & ! [IN]
+                      namelist_fid=IO_FID_CONF          ) ! [IN]
+
   ! setup monitor I/O
 !  call MONIT_setup
 
@@ -666,7 +704,7 @@ subroutine set_scalelib
 
   ! setup common tools
 !  call ATMOS_HYDROSTATIC_setup
-  call ATMOS_THERMODYN_setup
+!  call ATMOS_THERMODYN_setup
 !  call ATMOS_SATURATION_setup
 
 !  call BULKFLUX_setup
