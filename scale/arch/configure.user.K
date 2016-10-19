@@ -10,10 +10,8 @@ include $(SCALE)/Mkinclude
 
 #NETCDF_INC = -I/opt/aics/netcdf/k-serial-noszip/include
 #NETCDF_LIB = -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
-NETCDF_INC = -I/opt/aics/netcdf/k-serial-noszip/include -I/data/hp150019/liao/lib/include
-NETCDF_LIB = -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm -L/data/hp150019/liao/lib/pnetcdf/lib -lpnetcdf
-#NETCDF_INC = $(NETCDF_INCLUDE)
-#NETCDF_LIB = $(NETCDF_LIBS)
+NETCDF_INC = $(NETCDF_INCLUDE)
+NETCDF_LIB = $(NETCDF_LIBS)
 
 LAPACK_LIB = -SSL2BLAMP
 
