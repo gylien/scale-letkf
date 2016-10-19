@@ -168,9 +168,11 @@ echo
 job_submit_PJM $jobscrp
 echo
 
+res=0
 if ((ONLINE_STGOUT != 1)); then
 
   job_end_check_PJM $jobid
+  res=$?
 
 else # when using online stage-out, check the joub status in a special way.
 
@@ -229,4 +231,4 @@ fi
 
 echo "[$(datetime_now)] Finish $(basename $0) $@"
 
-exit 0
+exit $res
