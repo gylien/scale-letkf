@@ -1016,11 +1016,19 @@ for it in $(seq $its $ite); do
     fi
 
     if (pdrun $g $PROC_OPT); then
-      bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
-           $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
-           ${bdyorgf} ${stimes[$c]} $mkinit ${name_m[$m]} $mem_bdy \
-           $TMPRUN/scale_init/$(printf '%04d' $m) \
-           "$bdy_time_list" $ntsteps $ntsteps_skip fcst
+      if ((PNETCDF == 1)); then
+        bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
+             $TMPOUT/const/topo $TMPOUT/${time_l}/landuse \
+             ${bdyorgf} ${stimes[$c]} $mkinit ${name_m[$m]} $mem_bdy \
+             $TMPRUN/scale_init/$(printf '%04d' $m) \
+             "$bdy_time_list" $ntsteps $ntsteps_skip fcst
+      else
+        bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
+             $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
+             ${bdyorgf} ${stimes[$c]} $mkinit ${name_m[$m]} $mem_bdy \
+             $TMPRUN/scale_init/$(printf '%04d' $m) \
+             "$bdy_time_list" $ntsteps $ntsteps_skip fcst
+      fi
     fi
   fi
 

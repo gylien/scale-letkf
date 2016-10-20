@@ -1019,7 +1019,7 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
 
 
 #ifdef PNETCDF
-      if (IO_PNETCDF)
+      if (IO_PNETCDF) then
         call write_restart_par(filename,v3dg,v2dg,MPI_COMM_d)
       else
 #endif
