@@ -35,6 +35,10 @@ if [ "$PRESET" = 'K' ]; then
   NODELIST_TYPE='K'
   MPI_TYPE='K'
 elif [ "$PRESET" = 'K_rankdir' ]; then
+  if ((PNETCDF == 1)); then
+    echo "[Error] When PNETCDF is enabled, 'K_rankdir' preset cannot be used." 1>&2
+    exit 1
+  fi
   STG_TYPE='K_rankdir'
 #  DISK_ALL_LOCAL=1
   TMPDAT_MODE=3
@@ -81,6 +85,16 @@ elif [ "$PRESET" = 'Linux_torque' ]; then
 else
   echo "[Error] Preset '$PRESET' not found" 1>&2
   exit 1
+fi
+
+#===============================================================================
+# Error detection
+
+if ((PNETCDF == 1)); then
+  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3)); then
+    echo "[Error] When PNETCDF is enabled, local disks cannot be used." 1>&2
+    exit 1
+  fi
 fi
 
 #===============================================================================
