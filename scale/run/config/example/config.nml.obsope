@@ -2,6 +2,10 @@
 !--MEMBER--
 /
 
+&PARAM_IO
+!--IO_PNETCDF--
+/
+
 &PARAM_OBSOPE
 !--OBS_IN_NUM--
 !--OBS_IN_NAME--

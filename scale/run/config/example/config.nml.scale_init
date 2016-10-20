@@ -1,6 +1,7 @@
 &PARAM_IO
 !--IO_LOG_BASENAME--
  IO_LOG_ALLNODE  = .false.,
+!--IO_PNETCDF-- 
 /
 
 &PARAM_TIME

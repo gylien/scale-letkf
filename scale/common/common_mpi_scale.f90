@@ -24,6 +24,9 @@ module common_mpi_scale
 
   use scale_precision, only: RP
   use scale_comm, only: COMM_datatype
+#ifdef PNETCDF
+  use scale_stdio, only: IO_PNETCDF
+#endif
 
   implicit none
   public
@@ -321,7 +324,15 @@ subroutine set_common_mpi_grid
   end do
 
   if (myrank_e == lastmem_rank_e) then
-    call read_topo_par(LETKF_TOPO_IN_BASENAME, topo, MPI_COMM_d)
+#ifdef PNETCDF
+    if (IO_PNETCDF) then
+      call read_topo_par(LETKF_TOPO_IN_BASENAME, topo, MPI_COMM_d)
+    else
+#endif
+      call read_topo(LETKF_TOPO_IN_BASENAME, topo)
+#ifdef PNETCDF
+    end if
+#endif
     v3dg(1,:,:,3) = topo
   end if
 
@@ -549,8 +560,6 @@ subroutine set_scalelib
   integer  :: HIST_item_limit    ! dummy
   integer  :: HIST_variant_limit ! dummy
 
-!  integer :: ierr !!!!!!!!!!!!
-
   !-----------------------------------------------------------------------------
 
   NUM_DOMAIN = 1
@@ -558,9 +567,10 @@ subroutine set_scalelib
   CONF_FILES = ""
 
   ! start SCALE MPI
+!  call PRC_MPIstart( universal_comm ) ! [OUT]
+
   PRC_mpi_alive = .true.
 !  universal_comm = MPI_COMM_WORLD
-!  call PRC_MPIstart( universal_comm ) ! [OUT] !!!!!!!!!!!! Wei-kung Liao
 
 !  call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
 !                            universal_nprocs, & ! [OUT]
@@ -594,8 +604,6 @@ subroutine set_scalelib
                      confname_dummy    ) ! [OUT]
 
   MPI_COMM_d = local_comm
-
-!  call MPI_Comm_free(global_comm, ierr) !!!!!!!!!!!! Should be freed ???
 
   ! setup standard I/O
 !  call IO_setup( MODELNAME, .true., cnf_fname )
@@ -918,7 +926,15 @@ subroutine read_ens_mpi(file,v3d,v2d)
     if (im >= 1 .and. im <= MEMBER) then
       call file_member_replace(im, file, filename)
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
-      call read_restart_par(filename,v3dg,v2dg,MPI_COMM_d)
+#ifdef PNETCDF
+      if (IO_PNETCDF) then
+        call read_restart_par(filename,v3dg,v2dg,MPI_COMM_d)
+      else
+#endif
+        call read_restart(filename,v3dg,v2dg)
+#ifdef PNETCDF
+      end if
+#endif
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1002,7 +1018,15 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
   rrtimer00=rrtimer
 
 
-      call write_restart_par(filename,v3dg,v2dg,MPI_COMM_d)
+#ifdef PNETCDF
+      if (IO_PNETCDF)
+        call write_restart_par(filename,v3dg,v2dg,MPI_COMM_d)
+      else
+#endif
+        call write_restart(filename,v3dg,v2dg)
+#ifdef PNETCDF
+      end if
+#endif
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
@@ -1341,7 +1365,15 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
   IF(myrank_e == lastmem_rank_e) THEN
     call state_trans_inv(v3dg)
-    call write_restart_par(file_mean,v3dg,v2dg,MPI_COMM_d)
+#ifdef PNETCDF
+    if (IO_PNETCDF) then
+      call write_restart_par(file_mean,v3dg,v2dg,MPI_COMM_d)
+    else
+#endif
+      call write_restart(file_mean,v3dg,v2dg)
+#ifdef PNETCDF
+    end if
+#endif
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1395,8 +1427,16 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
 
   IF(myrank_e == lastmem_rank_e) THEN
-!    call state_trans_inv(v3dg)             !!
-    call write_restart_par(file_sprd,v3dg,v2dg,MPI_COMM_d)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
+!    call state_trans_inv(v3dg) !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
+#ifdef PNETCDF
+    if (IO_PNETCDF) then
+      call write_restart_par(file_sprd,v3dg,v2dg,MPI_COMM_d)
+    else
+#endif
+      call write_restart(file_sprd,v3dg,v2dg)
+#ifdef PNETCDF
+    end if
+#endif
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)

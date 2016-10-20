@@ -560,6 +560,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   RETURN
 END SUBROUTINE read_restart
 !-----------------------------------------------------------------------
+#ifdef PNETCDF
 SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 !  use common_mpi_scale, only: &
 !    MPI_COMM_a
@@ -637,6 +638,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 
   RETURN
 END SUBROUTINE read_restart_par
+#endif
 !!-----------------------------------------------------------------------
 !!
 !!-----------------------------------------------------------------------
@@ -735,8 +737,8 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   implicit none
 
   CHARACTER(*),INTENT(IN) :: filename
-  REAL(RP),INTENT(INOUT) :: v3dg(nlev,nlon,nlat,nv3d)
-  REAL(RP),INTENT(INOUT) :: v2dg(nlon,nlat,nv2d)
+  REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
+  REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d,iv2d,ncid
   integer :: is, ie, js, je
@@ -786,6 +788,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
 END SUBROUTINE write_restart
 
 !-----------------------------------------------------------------------
+#ifdef PNETCDF
 SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 !  use common_mpi_scale, only: &
 !    MPI_COMM_a
@@ -807,8 +810,8 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
   implicit none
 
   CHARACTER(*),INTENT(IN) :: filename
-  REAL(RP),INTENT(INOUT) :: v3dg(nlev,nlon,nlat,nv3d)
-  REAL(RP),INTENT(INOUT) :: v2dg(nlon,nlat,nv2d)
+  REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
+  REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
   integer,intent(in) :: comm
   integer :: iv3d,iv2d,ncid
 
@@ -863,6 +866,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 
   RETURN
 END SUBROUTINE write_restart_par
+#endif
 
 !-----------------------------------------------------------------------
 !
@@ -920,6 +924,7 @@ END SUBROUTINE read_topo
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
+#ifdef PNETCDF
 SUBROUTINE read_topo_par(filename,topo,comm)
   use scale_process, only: &
     PRC_myrank
@@ -977,6 +982,7 @@ SUBROUTINE read_topo_par(filename,topo,comm)
 
   RETURN
 END SUBROUTINE read_topo_par
+#endif
 
 
 

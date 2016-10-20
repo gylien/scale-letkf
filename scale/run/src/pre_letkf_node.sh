@@ -53,6 +53,11 @@ MEMBERSEQ=${1:-$MEMBER}
 
 #===============================================================================
 
+IO_PNETCDF=".false"
+if ((PNETCDF == 1)); then
+  IO_PNETCDF=".true."
+fi
+
 OBS_IN_NAME_LIST=
 for iobs in $(seq $OBSNUM); do
   if [ "${OBSNAME[$iobs]}" != '' ]; then
@@ -91,6 +96,7 @@ fi
 
 cat $TMPDAT/conf/config.nml.letkf | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBERSEQ," \
+        -e "/!--IO_PNETCDF--/a IO_PNETCDF = ${IO_PNETCDF}," \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
@@ -123,8 +129,10 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
     > $TMPDIR/letkf.conf
 
-# These parameters are not important for letkf
-cat $TMPDAT/conf/config.nml.scale >> $TMPDIR/letkf.conf
+# Most of these parameters are not important for letkf
+cat $TMPDAT/conf/config.nml.scale | \
+    sed -e "/!--IO_PNETCDF--/a IO_PNETCDF = ${IO_PNETCDF}," \
+    >> $TMPDIR/letkf.conf
 
 #===============================================================================
 
