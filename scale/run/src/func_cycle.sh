@@ -1319,27 +1319,43 @@ for it in $(seq $its $ite); do
 #      ...
 #    fi
 
+    ocean_base='-'
     if ((BDY_ENS == 1)); then
       mem_bdy=${name_m[$m]}
     else
       mem_bdy='mean'
     fi
 
-    ocean_base='-'
-    if ((OCEAN_INPUT == 1)); then
-      if ((mkinit != 1 || OCEAN_FORMAT != 99)); then
-        ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_ocean"
+    if ((PNETCDF == 1)); then
+      if ((OCEAN_INPUT == 1)); then
+        if ((mkinit != 1 || OCEAN_FORMAT != 99)); then
+          ocean_base="$TMPOUT/${time}/anal/${mem_bdy}.init_ocean"
+        fi
       fi
+      bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}.boundary"
+    else
+      if ((OCEAN_INPUT == 1)); then
+        if ((mkinit != 1 || OCEAN_FORMAT != 99)); then
+          ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_ocean"
+        fi
+      fi
+      bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}/boundary"
     fi
 
-    bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}/boundary"
-
     if (pdrun $g $PROC_OPT); then
-      bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
-           $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
-           $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
-           $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) \
-           cycle $bdy_start_time
+      if ((PNETCDF == 1)); then
+        bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
+             $TMPOUT/${time}/anal/${name_m[$m]}.init $ocean_base $bdy_base \
+             $TMPOUT/const/topo $TMPOUT/${time_l}/landuse \
+             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) \
+             cycle $bdy_start_time
+      else
+        bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
+             $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
+             $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
+             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) \
+             cycle $bdy_start_time
+      fi
     fi
   fi
 
