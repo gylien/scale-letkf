@@ -207,10 +207,11 @@ MODULE common_nml
   integer :: H08_CLD_OBSERR_MTIME = 18 ! Max number of analysis time that is used to diagnose cloud dependent obserr  
 
   real(r_size) :: H08_CLD_OBSERR_GROSS_ERR = 20.0d0
-  integer :: H08_CLD_OBSERR_MIN_SUMPLE = 1000
+  integer :: H08_CLD_OBSERR_MIN_SAMPLE = 500
   logical :: H08_DEBIAS_AMEAN = .false.
   logical :: H08_DEBIAS_CA = .false.
-  integer :: H08_DEBIAS_CA_MIN_SUMPLE = 10
+  integer :: H08_DEBIAS_CA_MIN_SAMPLE = 500
+  logical :: H08_DEBIAS_CA_CLR = .false.
   logical :: H08_CLD_OBSERR_OB2 = .false. ! Maximum threshold for Him8 obs err using sqrt([O-B]**2)
   logical :: H08_CLD_OBSERR_BSPRD2 = .false. ! Output background spread**2 in obs space as a function of CA ! ?? not used
   logical :: H08_RTTOV_EXTRA_US76 = .false.
@@ -643,11 +644,12 @@ subroutine read_nml_letkf_h08
     H08_CLD_OBSERR_WTH,        &
     H08_CLD_OBSERR_NBIN,       &
     H08_CLD_OBSERR_GROSS_ERR,  &
-    H08_CLD_OBSERR_MIN_SUMPLE, &
+    H08_CLD_OBSERR_MIN_SAMPLE, &
     H08_CLD_OBSERR_MTIME,      &
     H08_DEBIAS_AMEAN,          &
     H08_DEBIAS_CA,             &
-    H08_DEBIAS_CA_MIN_SUMPLE,  &
+    H08_DEBIAS_CA_CLR,         &
+    H08_DEBIAS_CA_MIN_SAMPLE,  &
     H08_CLD_OBSERR_OB2,        &
     H08_CLD_OBSERR_BSPRD2,     &
     H08_CH_USE

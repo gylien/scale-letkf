@@ -48,6 +48,7 @@ MODULE letkf_obs
   integer,allocatable,save :: Him8_iCA_l(:)
   REAL(r_size),allocatable,save :: Him8_obserr_CA(:,:) ! Him8 obs error as a function of CA
   REAL(r_size),allocatable,save :: Him8_bias_CA(:,:) ! Him8 bias as a function of CA
+  REAL(r_size),allocatable,save :: Him8_bias_CA_B_g(:,:)
 
 CONTAINS
 !-----------------------------------------------------------------------
@@ -638,7 +639,7 @@ SUBROUTINE set_letkf_obs
           Him8_err = obs(iof)%err(iidx)
         endif
 
-        if(H08_DEBIAS_CA.and.H08_CLD_OBSERR)then
+        if((H08_DEBIAS_CA .or. H08_DEBIAS_CA_CLR ).and.H08_CLD_OBSERR)then
           Him8_bias(ch_num) = Him8_bias_CA(ch_num,idx_CA)
         else
           Him8_bias(ch_num) = 0.0d0
@@ -692,9 +693,12 @@ SUBROUTINE set_letkf_obs
 !$OMP END PARALLEL DO
 
 #ifdef H08
-  if(H08_DEBIAS_CA)then
+  if(H08_DEBIAS_CA .or. H08_DEBIAS_CA_CLR)then
     write(6,'(a)')" ## start Him8 debias depending on CA"
 
+    if(H08_DEBIAS_CA_CLR)then
+      write(6,'(a)')" ## start Him8 debias by clear sky bias (lowest CA)"
+    endif
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,iof,iidx,ch_num,idx_CA)
     do n = 1, obsda%nobs
       IF(obsda%qc(n) > 0) CYCLE
@@ -1102,9 +1106,10 @@ print *, myrank, nobstotalg, nobstotal, nobsgrd(nlon,nlat,:)
 !   subdomains.
   allocate(Him8_OAB_l(int(obsda2(PRC_myrank)%nobs/sum(H08_CH_USE)+1)*nch))
   allocate(Him8_iCA_l(int(obsda2(PRC_myrank)%nobs/sum(H08_CH_USE)+1)*nch))
+  allocate(Him8_bias_CA_B_g(nch,H08_CLD_OBSERR_NBIN))
   Him8_OAB_l = 0.0d0
   Him8_iCA_l = 1
-
+  Him8_bias_CA_B_g = 0.0d0
 
 !do i = 0, MEM_NP-1
 !do j = 1, nlat

@@ -1327,7 +1327,7 @@ END SUBROUTINE itpl_3d
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
 subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
-                     nobs_H08,bias_H08,rmse_H08,Him8_OAB,Him8_iCA)
+                     nobs_H08,bias_H08,rmse_H08,Him8_OAB,Him8_iCA,Him8_bias_CA)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
@@ -1394,6 +1394,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   INTEGER,INTENT(INOUT),OPTIONAL :: nobs_H08(nch)
   REAL(r_size),INTENT(INOUT),OPTIONAL :: Him8_OAB(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
   INTEGER,INTENT(OUT),OPTIONAL :: Him8_iCA(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
+  REAL(r_size),INTENT(IN),OPTIONAL :: Him8_bias_CA(nch,H08_CLD_OBSERR_NBIN)
   INTEGER :: ch, idx_B07, band
 
 ! -- for TC vital assimilation --
@@ -1668,6 +1669,9 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 !-- Compute O-A/O-B (y-Hx(mean)) for monit_obs --
           ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) ! O-A/O-B
 
+          if(H08_DEBIAS_CA_CLR .and. H08_CLD_OBSERR)then
+            ohx(n) = ohx(n) - Him8_bias_CA(band-6,1)
+          endif
 !
 ! Inputs for monit_H08
 !
@@ -1680,6 +1684,9 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
           do ch = 1, nch
             oband_H08(ns+ch) = ch + 6
             ohx_H08(ns+ch) = obs(obsda%set(n))%dat(idx_B07+ch) - yobs_H08(ns+ch) ! Obs-minus-[A or B] 
+            if(H08_DEBIAS_CA_CLR .and. H08_CLD_OBSERR)then
+              ohx_H08(ns+ch) = ohx_H08(ns+ch) - Him8_bias_CA(ch,1)
+            endif
           enddo
         endif ! [DEPARTURE_STAT_T_RANGE]
       end do ! [ n = 1, obsda%nobs ]

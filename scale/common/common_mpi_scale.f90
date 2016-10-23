@@ -1173,7 +1173,8 @@ END SUBROUTINE buf_to_grd
 !-----------------------------------------------------------------------
 #ifdef H08
 SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2,&
-                             Him8_OAB_l,Him8_iCA_l,ANAL_HIM8)
+                             Him8_OAB_l,Him8_iCA_l,Him8_bias_CA_B_g,&
+                             Him8_bias_CA,ANAL_HIM8)
 #else
 SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 #endif
@@ -1222,6 +1223,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   REAL(r_size),INTENT(INOUT) :: Him8_OAB_l(int(obsda2(PRC_myrank)%nobs/sum(H08_CH_USE)+1)*nch)
   INTEGER,INTENT(INOUT) :: Him8_iCA_l(int(obsda2(PRC_myrank)%nobs/sum(H08_CH_USE)+1)*nch)
   LOGICAL,INTENT(IN),OPTIONAL :: ANAL_HIM8
+  REAL(r_size),INTENT(IN),OPTIONAL :: Him8_bias_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 bias as a function of CA [local]
 
   REAL,ALLOCATABLE :: Him8_OB_l(:)
   INTEGER,ALLOCATABLE :: Him8_CA_OB_l(:)
@@ -1232,8 +1234,9 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   REAL(r_size) :: sHim8_OAB_CA(nch,H08_CLD_OBSERR_NBIN) ! Sum of Him8's [O-A]x[O-B] as a function of CA [global]
   INTEGER :: ch, idx_CA
 
-  REAL(r_size) :: Him8_bias_CA_l(nch,H08_CLD_OBSERR_NBIN) ! Him8 bias as a function of CA [local]
   REAL(r_size) :: Him8_bias_CA_g(nch,H08_CLD_OBSERR_NBIN) ! Him8 bias as a function of CA [global]
+  REAL(r_size) :: Him8_bias_CA_l(nch,H08_CLD_OBSERR_NBIN) ! Him8 bias as a function of CA [local]
+  REAL(r_size),INTENT(INOUT),OPTIONAL :: Him8_bias_CA_B_g(nch,H08_CLD_OBSERR_NBIN) ! Him8 bias as a function of CA [global] ! background
   REAL(r_size) :: Him8_OB2_CA_l(nch,H08_CLD_OBSERR_NBIN) ! Him8 [O-B]**2 as a function of CA [local]
   REAL(r_size) :: Him8_OB2_CA_g(nch,H08_CLD_OBSERR_NBIN) ! Him8 [O-B]**2 as a function of CA [global]
   REAL(r_size) :: Him8_BSPRD2_CA_l(nch,H08_CLD_OBSERR_NBIN) ! Him8 background spread in obs space as a function of CA [local]
@@ -1280,7 +1283,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 #ifdef H08
         call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,nobs,bias,rmse,monit_type,&
                        nobs_H08=nobs_H08,bias_H08=bias_H08,rmse_H08=rmse_H08,Him8_OAB=Him8_OAB_l,&
-                       Him8_iCA=Him8_iCA_l)
+                       Him8_iCA=Him8_iCA_l,Him8_bias_CA=Him8_bias_CA)
  
         ! Compute Him8 bias as a function of CA
         Him8_bias_CA_l = 0.0d0
@@ -1357,28 +1360,32 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
       call MPI_ALLREDUCE(bias_tmp, bias_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(rmse_tmp, rmse_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
 
+#ifdef H08
       call MPI_ALLREDUCE(nHim8_CA_l, nHim8_CA, nch*H08_CLD_OBSERR_NBIN, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(Him8_bias_CA_l, Him8_bias_CA_g, nch*H08_CLD_OBSERR_NBIN, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(Him8_OB2_CA_l, Him8_OB2_CA_g, nch*H08_CLD_OBSERR_NBIN, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(Him8_BSPRD2_CA_l, Him8_BSPRD2_CA_g, nch*H08_CLD_OBSERR_NBIN, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
 
+      ! Debias O-B/O-A as a function of CA
+      ! Subtracting mean O-B(CA)/O-A(CA) calculated by the CURRENT samples.   
+      ! O-B/O-A samples in previous cycles are NOT used here!
+      ! O-B/O-A samples in previous cycles are used in common_scale.f90 and letkf_obs.f90!
       do i = 1, nch
-        if(nHim8_CA(i,1) /= 0 )then
-          Him8_bias_CA_g(i,1) = Him8_bias_CA_g(i,1) / REAL(nHim8_CA(i,1),r_size)
-        else
-          Him8_bias_CA_g(i,1) = 0.0d0
-        endif
 
-        do nb = 2, H08_CLD_OBSERR_NBIN
+        do nb = 1, H08_CLD_OBSERR_NBIN
           if(nHim8_CA(i,nb) >= 1)then
             Him8_bias_CA_g(i,nb) = Him8_bias_CA_g(i,nb) / REAL(nHim8_CA(i,nb),r_size)
           else
-          ! Even if the sample size is zero, 
-          ! clear-sky bias (nb=1) is considered.
-            Him8_bias_CA_g(i,nb) = Him8_bias_CA_g(i,1)
+            Him8_bias_CA_g(i,nb) = 0.0d0
           endif
         enddo
+
       enddo
+
+      if(.not.ANAL_HIM8)then
+        Him8_bias_CA_B_g = Him8_bias_CA_g
+      endif
+#endif
 
       do i = 1, nid_obs
         if (monit_type(i)) then
@@ -1437,11 +1444,11 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
 
               !!! debias !!
-              if(H08_DEBIAS_CA)then
-                Him8_OAB_l((k-1)*nch+i) = Him8_OAB_l((k-1)*nch+i) - Him8_bias_CA_g(i,idx_CA) 
-              else
-                Him8_OAB_l((k-1)*nch+i) = Him8_OAB_l((k-1)*nch+i) - bias_H08_g(i)
-              endif
+              !if(H08_DEBIAS_CA)then
+              Him8_OAB_l((k-1)*nch+i) = Him8_OAB_l((k-1)*nch+i) - Him8_bias_CA_g(i,idx_CA) 
+              !else
+              !  Him8_OAB_l((k-1)*nch+i) = Him8_OAB_l((k-1)*nch+i) - bias_H08_g(i)
+              !endif
               if(ANAL_HIM8)then
                 tmp_OB = Him8_OB_l((k-1)*nch+i)
                 if((abs(tmp_OB) <= H08_CLD_OBSERR_GROSS_ERR) .and. & ! gross-error check ! tentative !!
@@ -1459,20 +1466,6 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
         call MPI_ALLREDUCE(sHim8_OAB_CA_l, sHim8_OAB_CA, nch*H08_CLD_OBSERR_NBIN, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
 
-!        do i = 1, H08_CLD_OBSERR_NBIN
-!          do ch = 1, nch
-!            if(H08_CH_USE(ch) == 1)then
-!              if(nHim8_CA(ch,i) >= 1)then
-!                sHim8_OAB_CA(ch,i) = dsqrt(sHim8_OAB_CA(ch,i) / REAL(nHim8_CA(ch,i),kind=r_size))
-!              else
-!                sHim8_OAB_CA(ch,i) = undef
-!              endif
-!              if(ANAL_HIM8)then
-!                write(6,'(A,I3,ES12.3,I15)')"DIAGNOSIS at this analysis time ",ch+6,sHim8_OAB_CA(ch,i),nHim8_CA(ch,i)
-!              endif
-!            endif
-!          enddo
-!        enddo
       endif ! -- DEPARTURE_STAT_H08_ALL or H08_CLD_OBSERR
 #endif
 
@@ -1518,11 +1511,12 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   if(DEPARTURE_STAT_H08_ALL .and. H08_CLD_OBSERR .and. ANAL_HIM8)then
     call MPI_BCAST(sHim8_OAB_CA,nch*H08_CLD_OBSERR_NBIN,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
     call MPI_BCAST(nHim8_CA,nch*H08_CLD_OBSERR_NBIN,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
-    call MPI_BCAST(Him8_bias_CA_g,nch*H08_CLD_OBSERR_NBIN,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+!    call MPI_BCAST(Him8_bias_CA_B_g,nch*H08_CLD_OBSERR_NBIN,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
     call MPI_BCAST(Him8_OB2_CA_g,nch*H08_CLD_OBSERR_NBIN,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
     call MPI_BCAST(Him8_BSPRD2_CA_g,nch*H08_CLD_OBSERR_NBIN,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+
     if(myrank == 0) then
-      call write_Him8_CA(sHim8_OAB_CA,nHim8_CA,Him8_bias_CA_g,Him8_OB2_CA_g,Him8_BSPRD2_CA_g)
+      call write_Him8_CA(sHim8_OAB_CA,nHim8_CA,Him8_bias_CA_B_g,Him8_OB2_CA_g,Him8_BSPRD2_CA_g)
     endif
   endif
 #endif
