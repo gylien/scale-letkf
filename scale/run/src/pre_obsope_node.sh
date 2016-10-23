@@ -76,6 +76,12 @@ for iobs in $(seq $OBSNUM); do
   fi
 done
 
+if ((PNETCDF == 1)); then
+  HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@.history"
+else
+  HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@/history"
+fi
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.obsope | \
@@ -84,8 +90,8 @@ cat $TMPDAT/conf/config.nml.obsope | \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
-        -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = '${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext'," \
-        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = '${TMPOUT}/${STIME}/hist/@@@@/history'," \
+        -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext\"," \
+        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = \"${HISTORY_IN_BASENAME}\"," \
         -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \
         -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
         -e "/!--SLOT_BASE--/a SLOT_BASE = $SLOT_BASE," \

@@ -1498,11 +1498,19 @@ if ((MYRANK == 0)); then
 fi
 
 if (pdrun all $PROC_OPT); then
-  bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
-       $time $atime $TMPRUN/letkf $TMPDAT/obs \
-       $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo \
-       $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT \
-       $MEMBER
+  if ((PNETCDF == 1)); then
+    bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
+         $time $atime $TMPRUN/letkf $TMPDAT/obs \
+         $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo \
+         $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT \
+         $MEMBER
+  else
+    bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
+         $time $atime $TMPRUN/letkf $TMPDAT/obs \
+         $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo \
+         $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT \
+         $MEMBER
+  fi
 fi
 
 if ((MYRANK == 0)); then
