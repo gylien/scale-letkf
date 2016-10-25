@@ -893,7 +893,15 @@ SUBROUTINE read_ens_history_iter(file,iter,step,v3dg,v2dg,ensmean)
 
   IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= mem) THEN
     call file_member_replace(proc2mem(1,iter,myrank+1), file, filename)  !!!!!! better to seperate 'mean' history filename using a different namelist variable !!!!!!
-    call read_history(trim(filename),step,v3dg,v2dg)
+#ifdef PNETCDF
+    if (IO_PNETCDF) then
+      call read_history_par(trim(filename),step,v3dg,v2dg,MPI_COMM_d)
+    else
+#endif
+      call read_history(trim(filename),step,v3dg,v2dg)
+#ifdef PNETCDF
+    end if
+#endif
   END IF
 
   RETURN
