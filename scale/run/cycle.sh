@@ -240,7 +240,7 @@ while ((time <= ETIME)); do
       fi
 
       nodestr=proc
-      if ((ENABLE_SET == 1)); then                                    ##
+      if ((IO_ARB == 1)); then
         if ((s == 3)); then
           nodestr='set1.proc'
         elif ((s == 5)); then
@@ -270,7 +270,7 @@ while ((time <= ETIME)); do
           else
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            if ((ENABLE_SET == 1)); then ##
+            if ((IO_ARB == 1)); then ##
               mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
                       "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it || exit $? &
             else ##
@@ -288,7 +288,7 @@ while ((time <= ETIME)); do
                   "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" "$loop" || exit $?
         else
 
-          if ((ENABLE_SET == 1)); then ##                                 
+          if ((IO_ARB == 1)); then ##                                 
             mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
                     "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" || exit $? &
           else ##
@@ -301,9 +301,9 @@ while ((time <= ETIME)); do
     fi
   done
 
-  if ((ENABLE_SET == 1)); then ##                                 
-    wait                       ##
-  fi                           ##
+  if ((IO_ARB == 1)); then ##                                 
+    wait                   ##
+  fi                       ##
 
 #-------------------------------------------------------------------------------
 # Online stage out

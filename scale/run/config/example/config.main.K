@@ -100,8 +100,6 @@ SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
-#ENABLE_SET=1       ######
-
 #===============================================================================
 # Temporary directories to store runtime files
 
@@ -124,6 +122,10 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
 #SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
 #                            #  0: No
 #                            #  1: Yes
+
+IO_ARB=0                    # Use I/O arbitrator?
+                            # 0: No
+                            # 1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)

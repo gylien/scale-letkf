@@ -64,7 +64,7 @@ PPN_real=$PPN
 NNODES=$((NNODES*PPN))
 PPN=1
 
-if ((ENABLE_SET == 1)); then          ##
+if ((IO_ARB == 1)); then              ##
   NNODES_real_all=$((NNODES_real*2))  ##
   NNODES_all=$((NNODES*2))            ##
 fi                                    ##
@@ -79,7 +79,7 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $TMPS/node
-if ((ENABLE_SET == 1)); then            ##
+if ((IO_ARB == 1)); then                ##
   distribute_da_cycle_set - $TMPS/node  ##
 else                                    ##
   distribute_da_cycle - $TMPS/node - "$MEMBERS"
@@ -111,7 +111,7 @@ echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMPS/config.main
 
 echo "RUN_LEVEL='K'" >> $TMPS/config.main
 
-if ((ENABLE_SET == 1)); then                                    ##
+if ((IO_ARB == 1)); then                                        ##
   echo "NNODES_all=$NNODES_all" >> $TMPS/config.main            ##
   echo "NNODES_real_all=$NNODES_real_all" >> $TMPS/config.main  ##
                                                                 ##
