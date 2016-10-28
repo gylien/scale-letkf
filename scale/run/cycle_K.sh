@@ -65,8 +65,8 @@ NNODES=$((NNODES*PPN))
 PPN=1
 
 if ((ENABLE_SET == 1)); then          ##
-  NNODES_real_all=$((NNODES_real*3))  ##
-  NNODES_all=$((NNODES*3))            ##
+  NNODES_real_all=$((NNODES_real*2))  ##
+  NNODES_all=$((NNODES*2))            ##
 fi                                    ##
 
 declare -a node

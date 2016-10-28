@@ -199,7 +199,8 @@ elif [ "$MPI_TYPE" = 'K' ]; then
 
   else
 
-    ( cd $progdir && mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS )
+#    ( cd $progdir && mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS )
+    ( cd $progdir && mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${NODEFILE}" -of-proc $STDOUT ./$progbase $CONF '' $ARGS )
     res=$?
     if ((res != 0)); then 
       echo "[Error] mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS" >&2
