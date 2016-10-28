@@ -68,9 +68,9 @@ rm -fr $TMPDIR/*
 TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
 
 if ((PNETCDF == 1)); then
-  IO_PNETCDF=".true."
+  IO_AGGREGATE=".true."
 else
-  IO_PNETCDF=".false"
+  IO_AGGREGATE=".false"
 fi
 
 if ((MKINIT == 1 || (OCEAN_INPUT == 1 && OCEAN_FORMAT == 99))); then
@@ -185,7 +185,7 @@ fi
 
 cat $TMPDAT/conf/config.nml.scale_init | \
     sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
-        -e "/!--IO_PNETCDF--/a IO_PNETCDF = ${IO_PNETCDF}," \
+        -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = $RESTART_OUTPUT," \
         -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/init\"," \

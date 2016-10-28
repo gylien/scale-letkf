@@ -26,7 +26,7 @@ MODULE common_nml
   integer :: MEMBER_ITER = 0 !
 
 !  !--- PARAM_IO
-!  integer :: IO_PNETCDF = .false.
+!  integer :: IO_AGGREGATE = .false.
 
   !--- PARAM_OBSOPE
   integer               :: OBS_IN_NUM = 1
@@ -247,7 +247,7 @@ end subroutine read_nml_ensemble
 !  integer :: ierr
 
 !  namelist /PARAM_IO/ &
-!    IO_PNETCDF
+!    IO_AGGREGATE
 
 !  rewind(IO_FID_CONF)
 !  read(IO_FID_CONF,nml=PARAM_IO,iostat=ierr)

@@ -69,9 +69,9 @@ BS_SS=${BDY_STIME:12:2}
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
 
-IO_PNETCDF=".false"
+IO_AGGREGATE=".false"
 if ((PNETCDF == 1)); then
-  IO_PNETCDF=".true."
+  IO_AGGREGATE=".true."
 fi
 
 if [ "${TOPO_TARGZ}" = 'T' ] ; then
@@ -106,7 +106,7 @@ TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
 
 cat $TMPDAT/conf/config.nml.scale | \
     sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
-        -e "/!--IO_PNETCDF--/a IO_PNETCDF = ${IO_PNETCDF}," \
+        -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--TIME_DURATION--/a TIME_DURATION = ${FCSTLEN}.D0," \
         -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${FCSTINT}.D0," \

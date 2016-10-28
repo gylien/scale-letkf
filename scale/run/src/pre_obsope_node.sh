@@ -54,9 +54,9 @@ MEMBERSEQ=${1:-$MEMBER}
 #  ln -fs $TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat $TMPDIR
 #fi
 
-IO_PNETCDF=".false"
+IO_AGGREGATE=".false"
 if ((PNETCDF == 1)); then
-  IO_PNETCDF=".true."
+  IO_AGGREGATE=".true."
 fi
 
 OBS_IN_NAME_LIST=
@@ -86,7 +86,7 @@ fi
 
 cat $TMPDAT/conf/config.nml.obsope | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBERSEQ," \
-        -e "/!--IO_PNETCDF--/a IO_PNETCDF = ${IO_PNETCDF}," \
+        -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
@@ -104,7 +104,7 @@ cat $TMPDAT/conf/config.nml.obsope | \
 
 # Most of these parameters are not important for obsope
 cat $TMPDAT/conf/config.nml.scale | \
-    sed -e "/!--IO_PNETCDF--/a IO_PNETCDF = ${IO_PNETCDF}," \
+    sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
     >> $TMPDIR/obsope.conf
 
 #===============================================================================

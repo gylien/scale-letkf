@@ -25,7 +25,7 @@ module common_mpi_scale
   use scale_precision, only: RP
   use scale_comm, only: COMM_datatype
 #ifdef PNETCDF
-  use scale_stdio, only: IO_PNETCDF
+  use scale_stdio, only: IO_AGGREGATE
 #endif
 
   implicit none
@@ -325,7 +325,7 @@ subroutine set_common_mpi_grid
 
   if (myrank_e == lastmem_rank_e) then
 #ifdef PNETCDF
-    if (IO_PNETCDF) then
+    if (IO_AGGREGATE) then
       call read_topo_par(LETKF_TOPO_IN_BASENAME, topo, MPI_COMM_d)
     else
 #endif
@@ -894,7 +894,7 @@ SUBROUTINE read_ens_history_iter(file,iter,step,v3dg,v2dg,ensmean)
   IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= mem) THEN
     call file_member_replace(proc2mem(1,iter,myrank+1), file, filename)  !!!!!! better to seperate 'mean' history filename using a different namelist variable !!!!!!
 #ifdef PNETCDF
-    if (IO_PNETCDF) then
+    if (IO_AGGREGATE) then
       call read_history_par(trim(filename),step,v3dg,v2dg,MPI_COMM_d)
     else
 #endif
@@ -935,7 +935,7 @@ subroutine read_ens_mpi(file,v3d,v2d)
       call file_member_replace(im, file, filename)
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
 #ifdef PNETCDF
-      if (IO_PNETCDF) then
+      if (IO_AGGREGATE) then
         call read_restart_par(filename,v3dg,v2dg,MPI_COMM_d)
       else
 #endif
@@ -1027,7 +1027,7 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
 
 
 #ifdef PNETCDF
-      if (IO_PNETCDF) then
+      if (IO_AGGREGATE) then
         call write_restart_par(filename,v3dg,v2dg,MPI_COMM_d)
       else
 #endif
@@ -1374,7 +1374,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   IF(myrank_e == lastmem_rank_e) THEN
     call state_trans_inv(v3dg)
 #ifdef PNETCDF
-    if (IO_PNETCDF) then
+    if (IO_AGGREGATE) then
       call write_restart_par(file_mean,v3dg,v2dg,MPI_COMM_d)
     else
 #endif
@@ -1437,7 +1437,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   IF(myrank_e == lastmem_rank_e) THEN
 !    call state_trans_inv(v3dg) !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
 #ifdef PNETCDF
-    if (IO_PNETCDF) then
+    if (IO_AGGREGATE) then
       call write_restart_par(file_sprd,v3dg,v2dg,MPI_COMM_d)
     else
 #endif
