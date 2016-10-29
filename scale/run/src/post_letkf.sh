@@ -48,12 +48,17 @@ if ((MYRANK == 0)); then
 
   BB_LIST="07 08 09 10 11 12 13 14 15 16"
   for BB in ${BB_LIST} ; do
-    CA_FILE1="${TMPDIR}/Him8_ERR_CA_B${BB}.dat"
-    CA_FILE2="${TMPDAT}/Him8/Him8_ERR_CA_B${BB}_${ATIME}.dat"
-    CA_FILE3="${TMPOUT}/${ATIME}/log/letkf/Him8_ERR_CA_B${BB}_${ATIME}.dat"
-    if [ -e ${CA_FILE1} ] ; then
-      cp $CA_FILE1 $CA_FILE2
-      cp $CA_FILE1 $CA_FILE3
+    CA_FILE_A="${TMPDIR}/Him8_ERR_CA_A_B${BB}.dat"
+    CA_FILE_B="${TMPDIR}/Him8_ERR_CA_B_B${BB}.dat"
+    CA_FILE2_A="${TMPDAT}/Him8/Him8_ERR_CA_A_B${BB}_${ATIME}.dat"
+    CA_FILE3_A="${TMPOUT}/${ATIME}/log/letkf/Him8_ERR_CA_A_B${BB}_${ATIME}.dat"
+    CA_FILE2_B="${TMPDAT}/Him8/Him8_ERR_CA_B_B${BB}_${ATIME}.dat"
+    CA_FILE3_B="${TMPOUT}/${ATIME}/log/letkf/Him8_ERR_CA_B_B${BB}_${ATIME}.dat"
+    if [ -e ${CA_FILE_A} ] && [ -e ${CA_FILE_B} ] ; then
+      cp $CA_FILE_A $CA_FILE2_A
+      cp $CA_FILE_A $CA_FILE3_A
+      cp $CA_FILE_B $CA_FILE2_B
+      cp $CA_FILE_B $CA_FILE3_B
     fi
   done
 

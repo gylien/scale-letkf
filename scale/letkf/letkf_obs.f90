@@ -48,7 +48,6 @@ MODULE letkf_obs
   integer,allocatable,save :: Him8_iCA_l(:)
   REAL(r_size),allocatable,save :: Him8_obserr_CA(:,:) ! Him8 obs error as a function of CA
   REAL(r_size),allocatable,save :: Him8_bias_CA(:,:) ! Him8 bias as a function of CA
-  REAL(r_size),allocatable,save :: Him8_bias_CA_B_g(:,:)
 
 CONTAINS
 !-----------------------------------------------------------------------
@@ -1106,10 +1105,8 @@ print *, myrank, nobstotalg, nobstotal, nobsgrd(nlon,nlat,:)
 !   subdomains.
   allocate(Him8_OAB_l(int(obsda2(PRC_myrank)%nobs/sum(H08_CH_USE)+1)*nch))
   allocate(Him8_iCA_l(int(obsda2(PRC_myrank)%nobs/sum(H08_CH_USE)+1)*nch))
-  allocate(Him8_bias_CA_B_g(nch,H08_CLD_OBSERR_NBIN))
   Him8_OAB_l = 0.0d0
   Him8_iCA_l = 1
-  Him8_bias_CA_B_g = 0.0d0
 
 !do i = 0, MEM_NP-1
 !do j = 1, nlat

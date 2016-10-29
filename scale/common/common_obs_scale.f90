@@ -1327,7 +1327,7 @@ END SUBROUTINE itpl_3d
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
 subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
-                     nobs_H08,bias_H08,rmse_H08,Him8_OAB,Him8_iCA,Him8_bias_CA)
+                     nobs_H08,bias_H08,rmse_H08,Him8_OAB,Him8_iCA,Him8_bias_CA_in)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
@@ -1384,6 +1384,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
   REAL(r_size),ALLOCATABLE :: yobs_H08_clr(:)
   REAL(r_size),ALLOCATABLE :: CA(:) ! (Okamoto et al., 2014QJRMS)
+  REAL(r_size) :: CA_H08 ! (Okamoto et al., 2014QJRMS)
   INTEGER :: ns, ns2
   INTEGER,ALLOCATABLE :: qc_H08(:)
   REAL(r_size),ALLOCATABLE :: ohx_H08(:)
@@ -1394,8 +1395,8 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   INTEGER,INTENT(INOUT),OPTIONAL :: nobs_H08(nch)
   REAL(r_size),INTENT(INOUT),OPTIONAL :: Him8_OAB(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
   INTEGER,INTENT(OUT),OPTIONAL :: Him8_iCA(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
-  REAL(r_size),INTENT(IN),OPTIONAL :: Him8_bias_CA(nch,H08_CLD_OBSERR_NBIN)
-  INTEGER :: ch, idx_B07, band
+  REAL(r_size),INTENT(IN),OPTIONAL :: Him8_bias_CA_in(nch,H08_CLD_OBSERR_NBIN)
+  INTEGER :: ch, idx_B07, band, idx_CA
 
 ! -- for TC vital assimilation --
 !  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
@@ -1645,7 +1646,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 
       write (6, '(A)')"MEAN-HIMAWARI-8-STATISTICS"
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns,ns2,ch,band,idx_B07)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns,ns2,ch,band,idx_B07,idx_CA,CA_H08)
       do n = 1, obsda%nobs
         oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
         if(oelm(n) /= id_H08IR_obs)cycle
@@ -1655,11 +1656,9 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 
         if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. & 
           abs(obs(obsda%set(n))%dif(obsda%idx(n))) <= DEPARTURE_STAT_T_RANGE) then
-!          oqc(n) = iqc_otype
 
           oqc(n) = qc_H08(ns)
           ohx(n) = yobs_H08(ns)
-!          if(plev_obs_H08(ns) < H08_LIMIT_LEV) oqc(n) = iqc_obs_bad
 
           CA(n) =  (abs(yobs_H08(ns) - yobs_H08_clr(ns)) & ! CM
                    +  abs(obs(obsda%set(n))%dat(obsda%idx(n)) - yobs_H08_clr(ns)) & ! CO
@@ -1669,8 +1668,13 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 !-- Compute O-A/O-B (y-Hx(mean)) for monit_obs --
           ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) ! O-A/O-B
 
-          if(H08_DEBIAS_CA_CLR .and. H08_CLD_OBSERR)then
-            ohx(n) = ohx(n) - Him8_bias_CA(band-6,1)
+          idx_CA = max(min(H08_CLD_OBSERR_NBIN, int(CA(n) / H08_CLD_OBSERR_WTH + 1)),1)
+          if(H08_CLD_OBSERR)then
+            if(H08_DEBIAS_CA_CLR)then
+              ohx(n) = ohx(n) - Him8_bias_CA_in(band-6,1)
+            elseif(H08_DEBIAS_CA)then
+              ohx(n) = ohx(n) - Him8_bias_CA_in(band-6,idx_CA)
+            endif
           endif
 !
 ! Inputs for monit_H08
@@ -1684,8 +1688,18 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
           do ch = 1, nch
             oband_H08(ns+ch) = ch + 6
             ohx_H08(ns+ch) = obs(obsda%set(n))%dat(idx_B07+ch) - yobs_H08(ns+ch) ! Obs-minus-[A or B] 
-            if(H08_DEBIAS_CA_CLR .and. H08_CLD_OBSERR)then
-              ohx_H08(ns+ch) = ohx_H08(ns+ch) - Him8_bias_CA(ch,1)
+
+            CA_H08 =  (abs(yobs_H08(ns+ch) - yobs_H08_clr(ns+ch)) & ! CM
+                     +  abs(obs(obsda%set(n))%dat(idx_B07+ch) - yobs_H08_clr(ns+ch)) & ! CO
+                     &) * 0.5d0 
+
+            if(H08_CLD_OBSERR)then
+              idx_CA = max(min(H08_CLD_OBSERR_NBIN, int(CA_H08 / H08_CLD_OBSERR_WTH + 1)),1)
+              if(H08_DEBIAS_CA_CLR)then
+                ohx_H08(ns+ch) = ohx_H08(ns+ch) - Him8_bias_CA_in(ch,1)
+              elseif(H08_DEBIAS_CA)then
+                ohx_H08(ns+ch) = ohx_H08(ns+ch) - Him8_bias_CA_in(ch,idx_CA)
+              endif
             endif
           enddo
         endif ! [DEPARTURE_STAT_T_RANGE]

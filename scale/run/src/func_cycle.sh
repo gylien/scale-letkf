@@ -262,10 +262,13 @@ EOF
     #pathin1="${OUTDIR}/Him8/Him8_ERR_CA_B${BB}_${STIME}.dat"
     #pathin2="${SCRP_DIR}/Him8_ERR_CA_B${BB}_${STIME}.dat"
     #pathin3="${OUTDIR}/${STIME}/log/Him8/Him8_ERR_CA_B${BB}_${STIME}.dat"
-    pathin1="${OUTDIR}/${STIME}/log/letkf/Him8_ERR_CA_B${BB}_${STIME}.dat" # update in 9/11
-    path="Him8/Him8_ERR_CA_B${BB}_${STIME}.dat"
-    if [ -e ${pathin1} ] ; then
-      echo "${pathin1}|${path}" >> $STAGING_DIR/stagein.dat
+    pathin1="${OUTDIR}/${STIME}/log/letkf/Him8_ERR_CA_A_B${BB}_${STIME}.dat" # update in 9/11
+    pathin2="${OUTDIR}/${STIME}/log/letkf/Him8_ERR_CA_B_B${BB}_${STIME}.dat" # update in 9/11
+    path1="Him8/Him8_ERR_CA_A_B${BB}_${STIME}.dat"
+    path2="Him8/Him8_ERR_CA_B_B${BB}_${STIME}.dat"
+    if [ -e ${pathin1} ] && [ -e ${pathin2} ]  ; then
+      echo "${pathin1}|${path1}" >> $STAGING_DIR/stagein.dat
+      echo "${pathin2}|${path2}" >> $STAGING_DIR/stagein.dat
     #elif [ -e ${pathin2} ] ; then
     #  echo "${pathin2}|${path}" >> $STAGING_DIR/stagein.dat
     #elif [ -e ${pathin3} ] ; then
