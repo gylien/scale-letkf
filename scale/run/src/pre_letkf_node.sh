@@ -111,6 +111,24 @@ if ((MYRANK == 0 )) && [ "$PARAM_EST" == "T" ] ; then
 fi
 
 # -------------------------------------------
+# -- Cloud dependent obs err --
+
+BB_LIST="07 08 09 10 11 12 13 14 15 16"
+
+if [ ! -e ${TMPDAT}/Him8 ] ; then
+  mkdir ${TMPDAT}/Him8 
+fi
+
+for BB in ${BB_LIST} ; do
+  CA_FILE1_A="${TMPDAT}/Him8/Him8_ERR_CA_A_B${BB}_${STIME}.dat"
+  CA_FILE2_A="Him8_ERR_CA_A_B${BB}.dat"
+  CA_FILE1_B="${TMPDAT}/Him8/Him8_ERR_CA_A_B${BB}_${STIME}.dat"
+  CA_FILE2_B="Him8_ERR_CA_A_B${BB}.dat"
+  if [ -e ${CA_FILE1_A} ] && [ -e ${CA_FILE1_B} ] ; then
+    cp $CA_FILE1_A ${TMPDIR}/$CA_FILE2_A
+    cp $CA_FILE1_B ${TMPDIR}/$CA_FILE2_B
+  fi
+done
 
 #===============================================================================
 

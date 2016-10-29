@@ -38,6 +38,32 @@ if ((LOG_OPT <= 4 && MYRANK == 0)); then
   fi
 fi
 
+# -- Cloud dependent obs err --
+
+if ((MYRANK == 0)); then
+
+  if ls $TMPDIR/Him8_ERR_CA_B??.txt > /dev/null 2>&1 ; then
+    cp ${TMPDIR}/Him8_ERR_CA_B??.txt $TMPOUT/${ATIME}/log/letkf/
+  fi
+
+  BB_LIST="07 08 09 10 11 12 13 14 15 16"
+  for BB in ${BB_LIST} ; do
+    CA_FILE_A="${TMPDIR}/Him8_ERR_CA_A_B${BB}.dat"
+    CA_FILE_B="${TMPDIR}/Him8_ERR_CA_B_B${BB}.dat"
+    CA_FILE2_A="${TMPDAT}/Him8/Him8_ERR_CA_A_B${BB}_${ATIME}.dat"
+    CA_FILE3_A="${TMPOUT}/${ATIME}/log/letkf/Him8_ERR_CA_A_B${BB}_${ATIME}.dat"
+    CA_FILE2_B="${TMPDAT}/Him8/Him8_ERR_CA_B_B${BB}_${ATIME}.dat"
+    CA_FILE3_B="${TMPOUT}/${ATIME}/log/letkf/Him8_ERR_CA_B_B${BB}_${ATIME}.dat"
+    if [ -e ${CA_FILE_A} ] && [ -e ${CA_FILE_B} ] ; then
+      cp $CA_FILE_A $CA_FILE2_A
+      cp $CA_FILE_A $CA_FILE3_A
+      cp $CA_FILE_B $CA_FILE2_B
+      cp $CA_FILE_B $CA_FILE3_B
+    fi
+  done
+
+fi
+
 #===============================================================================
 
 

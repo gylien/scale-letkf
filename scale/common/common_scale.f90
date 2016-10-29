@@ -126,7 +126,15 @@ MODULE common_scale
 #endif
 !  INTEGER,PARAMETER :: iv2dd_tsfc=8
 
-
+! -- Num of records of Him8 CA data file in each cycle
+! 1: Bin info., 
+! 2: Assigned Him8 obs errors 
+! 3: Num of samples as a function of CA
+! 4: Him8 bias [O-B] as a function of CA
+! 5: Him8 [O-B]**2 as a function of CA
+! 6: Him8 background spread**2 in obs space as a function of CA
+  INTEGER,PARAMETER :: nrec_CA_A = 4
+  INTEGER,PARAMETER :: nrec_CA_B = 2
 
   INTEGER,SAVE :: nlon  ! # grids in I-direction [subdomain]
   INTEGER,SAVE :: nlat  ! # grids in J-direction [subdomain]
@@ -924,6 +932,295 @@ end subroutine read_history
 !  return
 !end subroutine read_history
 
+subroutine write_Him8_CA(sHim8_OAB_CA,nHim8_CA,Him8_bias_CA,Him8_OB2_CA,Him8_BSPRD2_CA,ANAL_HIM8)
+  implicit none
+
+  REAL(r_size),INTENT(in) :: sHim8_OAB_CA(nch,H08_CLD_OBSERR_NBIN) ! Sum of Him8's [O-A]x[O-B] as a function of CA
+  INTEGER,INTENT(in) :: nHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Number of Him8 obs as a function of CA
+  REAL(r_size),INTENT(in) :: Him8_bias_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 bias as a function of CA
+  REAL(r_size),INTENT(in) :: Him8_OB2_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 [O-B]**2 as a function of CA
+  REAL(r_size),INTENT(in) :: Him8_BSPRD2_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 background spread**2 in obs space as a function of CA
+  LOGICAL,INTENT(IN) :: ANAL_HIM8
+  INTEGER :: ch, i
+  character(3) :: B3
+  character(4) :: nstr
+  character(25) :: fname
+
+  INTEGER :: ios, mrec, nrec_CA
+  REAL(r_size) :: tmp_wk(H08_CLD_OBSERR_NBIN)
+
+  write(6,'(A)') '### Hello from write_Him8_CA ###'
+  write(nstr, '(I4)') H08_CLD_OBSERR_NBIN
+
+  do ch = 1, nch
+    B3 = ch2BB_Him8(ch)
+    if(H08_CH_USE(ch) == 1)then
+
+      if(ANAL_HIM8)then
+        fname = 'Him8_ERR_CA_A_'//B3//'.dat' 
+        nrec_CA = nrec_CA_A ! 1,2,3,6
+! 1: Bin info., 
+! 2: Assigned Him8 obs errors 
+! 3: Num of samples as a function of CA
+! 4: Him8 bias [O-B] as a function of CA
+! 5: Him8 [O-B]**2 as a function of CA
+! 6: Him8 background spread**2 in obs space as a function of CA
+      else
+        fname = 'Him8_ERR_CA_B_'//B3//'.dat' 
+        nrec_CA = nrec_CA_B ! 4,5
+      endif
+
+      !## binary file
+      open(unit=8889,file=trim(fname),form='unformatted',access='direct',&
+           recl=H08_CLD_OBSERR_NBIN*8)
+      mrec = 0 !-- get file length
+      do
+        read(8889,rec=mrec+1,iostat=ios) tmp_wk
+        if(ios /= 0) exit
+        mrec = mrec + nrec_CA
+      enddo
+
+      ! Add Him8 information in the end of file 
+      if(ANAL_HIM8)then
+        write(8889,rec=mrec+1) (real(real(i-1)*H08_CLD_OBSERR_WTH+H08_CLD_OBSERR_WTH*0.5,kind=r_size),i=1,H08_CLD_OBSERR_NBIN)
+        write(8889,rec=mrec+2) (sHim8_OAB_CA(ch,i),i=1,H08_CLD_OBSERR_NBIN) ! obs err
+        write(8889,rec=mrec+3) (real(nHim8_CA(ch,i),kind=r_size),i=1,H08_CLD_OBSERR_NBIN) ! num of samples
+        write(8889,rec=mrec+4) (Him8_BSPRD2_CA(ch,i),i=1,H08_CLD_OBSERR_NBIN) ! spread**2 in obs space
+      else
+        write(8889,rec=mrec+1) (Him8_bias_CA(ch,i)*real(nHim8_CA(ch,i),kind=r_size),i=1,H08_CLD_OBSERR_NBIN) ! bias
+        write(8889,rec=mrec+2) (Him8_OB2_CA(ch,i),i=1,H08_CLD_OBSERR_NBIN) ! [O-B]**2
+      endif
+
+      close(8889)
+
+      !write(6,'(A,1x,A)') ' Him8 bias information ',B3
+      !do i = 1, H08_CLD_OBSERR_NBIN
+      !  write(6,'(A,f6.2,i8,3f6.2)') ' bias,num,CA ',&
+      !                               Him8_bias_CA(ch,i),&
+      !                               nHim8_CA(ch,i),&
+      !                               real(real(i-1)*H08_CLD_OBSERR_WTH+H08_CLD_OBSERR_WTH*0.5,kind=r_size),&
+      !                               Him8_OB2_CA(ch,i),&
+      !                               sqrt(Him8_BSPRD2_CA(ch,i)/max(real(nHim8_CA(ch,i),kind=r_size),1.0d0))
+      !enddo
+    endif ! H08_CH_USE
+  enddo
+
+  write(6,'(A)') '### End of write_Him8_CA ###'
+
+  return
+end subroutine write_Him8_CA
+
+subroutine read_Him8_CA(Him8_obserr_CA,Him8_bias_CA)
+  implicit none
+
+  REAL(r_size),INTENT(out) :: Him8_obserr_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 obs err as a function of CA
+  REAL(r_size),INTENT(out) :: Him8_bias_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 bias as a function of CA
+
+  REAL(r_size) :: Him8_OB2_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 [O-B]**2 as a function of CA
+  REAL(r_size) :: Him8_BSPRD2_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 [O-B]**2 as a function of CA
+
+  REAL(r_size) :: tmp_sHim8_OAB_CA(nch,H08_CLD_OBSERR_NBIN) ! Sum of Him8's [O-A]x[O-B] as a function of CA
+  REAL(r_size) :: tmp_Him8_bias_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 bias as a function of CA
+  REAL(r_size) :: tmp_Him8_OB2_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 [O-B]**2 as a function of CA
+  REAL(r_size) :: tmp_Him8_BSPRD2_CA(nch,H08_CLD_OBSERR_NBIN) ! Him8 background spread**2 in obs space as a function of CA
+  INTEGER :: tmp_nHim8_CA(nch,H08_CLD_OBSERR_NBIN) ! Number of Him8 obs as a function of CA
+
+  REAL(r_size) :: obsbin(H08_CLD_OBSERR_NBIN)
+  INTEGER :: ch, i, it, nb
+  INTEGER,PARAMETER :: maxit = 100
+  LOGICAL :: ex
+  character(3) :: B3
+
+  INTEGER :: ios, mrec_A, mrec_B
+  REAL(r_size) :: tmp_wk(H08_CLD_OBSERR_NBIN)
+  character(12) :: obsbin_show(H08_CLD_OBSERR_NBIN)
+  character(12) :: sHim8_OAB_CA_show(H08_CLD_OBSERR_NBIN)
+  character(12) :: Him8_bias_CA_show(H08_CLD_OBSERR_NBIN)
+  character(12) :: Him8_OB2_CA_show(H08_CLD_OBSERR_NBIN)
+  character(12) :: Him8_BSPRD2_CA_show(H08_CLD_OBSERR_NBIN)
+  character(12) :: nHim8_CA_show(H08_CLD_OBSERR_NBIN)
+
+  character(4) :: nstr
+  character(25) :: fname_A
+  character(25) :: fname_B
+
+  write(nstr, '(I4)') H08_CLD_OBSERR_NBIN
+
+  Him8_obserr_CA = 0.0d0
+  Him8_OB2_CA = 0.0d0
+  Him8_BSPRD2_CA = 0.0d0
+
+  tmp_sHim8_OAB_CA = 0.0d0
+  tmp_nHim8_CA = 0
+  tmp_Him8_bias_CA = 0.0d0
+  tmp_Him8_OB2_CA = 0.0d0
+  tmp_Him8_BSPRD2_CA = 0.0d0
+
+  do ch = 1, nch
+    B3 = ch2BB_Him8(ch)
+    if(H08_CH_USE(ch) == 1)then
+
+      fname_A = 'Him8_ERR_CA_A_'//B3//'.dat'
+      fname_B = 'Him8_ERR_CA_B_'//B3//'.dat'
+
+      !## binary file
+      open(unit=8889,file=trim(fname_A),form='unformatted',access='direct',&
+           recl=H08_CLD_OBSERR_NBIN*8)
+      mrec_A = 0 !-- get file length
+      do
+        read(8889,rec=mrec_A+1,iostat=ios) tmp_wk ! bin
+        if(ios /= 0) exit
+        mrec_A = mrec_A + nrec_CA_A
+      enddo
+
+      !## binary file
+      open(unit=8890,file=trim(fname_B),form='unformatted',access='direct',&
+           recl=H08_CLD_OBSERR_NBIN*8)
+      mrec_B = 0 !-- get file length
+      do
+        read(8890,rec=mrec_B+1,iostat=ios) tmp_wk ! bin
+        if(ios /= 0) exit
+        mrec_B = mrec_B + nrec_CA_B
+      enddo
+
+
+
+      mrec_A = max(mrec_A - nrec_CA_A, 0)
+      do it = 0, H08_CLD_OBSERR_MTIME-1
+        read(8889,rec=mrec_A+1-it*nrec_CA_A,iostat=ios) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! obsbin !! not used !!
+        if(ios /= 0) exit
+        read(8889,rec=mrec_A+2-it*nrec_CA_A) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! sHim8
+        tmp_sHim8_OAB_CA(ch,:) = tmp_sHim8_OAB_CA(ch,:) + tmp_wk
+        read(8889,rec=mrec_A+3-it*nrec_CA_A) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! nHim8
+        tmp_nHim8_CA(ch,:) = tmp_nHim8_CA(ch,:) + max(nint(tmp_wk), 0)
+        read(8889,rec=mrec_A+4-it*nrec_CA_A) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! Him8 background spread**2 in obs space
+        tmp_Him8_BSPRD2_CA(ch,:) = tmp_Him8_BSPRD2_CA(ch,:) + tmp_wk
+      enddo ! it
+
+      mrec_B = max(mrec_B - nrec_CA_B, 0)
+      do it = 0, H08_CLD_OBSERR_MTIME-1
+        read(8890,rec=mrec_B+1-it*nrec_CA_B,iostat=ios) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! Him8 bias
+        if(ios /= 0) exit
+        tmp_Him8_bias_CA(ch,:) = tmp_Him8_bias_CA(ch,:) + tmp_wk
+        read(8890,rec=mrec_B+2-it*nrec_CA_B) (tmp_wk(i),i=1,H08_CLD_OBSERR_NBIN) ! Him8 [O-B]**2
+        tmp_Him8_OB2_CA(ch,:) = tmp_Him8_OB2_CA(ch,:) + tmp_wk
+      enddo ! it
+
+      close(8889)
+      close(8890)
+
+      do nb = 1, H08_CLD_OBSERR_NBIN
+        ! Him8 obs err
+        if(tmp_nHim8_CA(ch,nb) >= H08_CLD_OBSERR_MIN_SAMPLE)then
+          Him8_obserr_CA(ch,nb) = min(&
+                                  max(&
+                                  sqrt(tmp_sHim8_OAB_CA(ch,nb) / real(tmp_nHim8_CA(ch,nb),kind=r_size)), &
+                                  OBSERR_H08_MIN),&
+                                  OBSERR_H08_MAX)
+        else
+          Him8_obserr_CA(ch,nb) = OBSERR_H08_MAX
+        endif
+
+        ! Him8 bias
+        if(tmp_nHim8_CA(ch,nb) >= H08_DEBIAS_CA_MIN_SAMPLE)then
+          Him8_bias_CA(ch,nb) = tmp_Him8_bias_CA(ch,nb) / real(tmp_nHim8_CA(ch,nb),kind=r_size)
+        else
+          Him8_bias_CA(ch,nb) = 0.0d0
+          if(H08_DEBIAS_CA_CLR)then
+            ! Even if the sample size is less than H08_CLD_OBSERR_MIN_SAMPLE, 
+            ! clear-sky bias (nb=1) is considered.
+            Him8_bias_CA(ch,nb) = Him8_bias_CA(ch,1) 
+          endif
+        endif
+
+        if(tmp_nHim8_CA(ch,nb) >= 1)then
+          Him8_OB2_CA(ch,nb) = sqrt(tmp_Him8_OB2_CA(ch,nb) / real(tmp_nHim8_CA(ch,nb),kind=r_size))
+          Him8_BSPRD2_CA(ch,nb) = sqrt(tmp_Him8_BSPRD2_CA(ch,nb) / real(tmp_nHim8_CA(ch,nb),kind=r_size))
+        else ! No sample
+          Him8_OB2_CA(ch,nb) = OBSERR_H08_MAX
+          Him8_BSPRD2_CA(ch,nb) = 0.0d0
+        endif
+
+      enddo ! nb
+
+      if(H08_DEBIAS_CA_CLR)then
+        Him8_bias_CA(ch,2:H08_CLD_OBSERR_NBIN) = Him8_bias_CA(ch,1)
+      endif
+
+      if(H08_CLD_OBSERR_OB2)then
+        do nb = 1, H08_CLD_OBSERR_NBIN
+          if(tmp_nHim8_CA(ch,nb) < H08_CLD_OBSERR_MIN_SAMPLE)then
+            !Him8_obserr_CA(ch,nb) = min(Him8_obserr_CA(ch,nb), maxval(Him8_OB2_CA(ch,1:H08_CLD_OBSERR_NBIN)))
+            Him8_obserr_CA(ch,nb) = min(max(Him8_OB2_CA(ch,nb),OBSERR_H08_MIN),OBSERR_H08_MAX)
+          endif
+        enddo ! nb
+      endif
+
+      write(6,'(a)')"Him8 LOG: Num, Obserr, Bias, [O-B]**2, Spread(obs)"
+      do nb = 1, H08_CLD_OBSERR_NBIN
+         write(6,'(a,i9,4f7.2,2i4)')"Him8 LOG: ",tmp_nHim8_CA(ch,nb),&
+                                Him8_obserr_CA(ch,nb),Him8_bias_CA(ch,nb),&
+                                Him8_OB2_CA(ch,nb),Him8_BSPRD2_CA(ch,nb),nb,ch
+
+      enddo ! nb
+
+    endif ! H08_CH_USE
+
+  enddo ! ch
+
+  do ch = 1, nch
+    B3 = ch2BB_Him8(ch)
+    if(H08_CH_USE(ch) == 1)then
+
+      do nb = 1, H08_CLD_OBSERR_NBIN
+        write(obsbin_show(nb),'(ES11.3)')real(nb-1)*H08_CLD_OBSERR_WTH+H08_CLD_OBSERR_WTH*0.5
+        write(sHim8_OAB_CA_show(nb),'(ES11.3)') Him8_obserr_CA(ch,nb)
+        write(nHim8_CA_show(nb),'(I11)') tmp_nHim8_CA(ch,nb)
+        write(Him8_bias_CA_show(nb),'(ES11.3)') Him8_bias_CA(ch,nb)
+        write(Him8_OB2_CA_show(nb),'(ES11.3)') Him8_OB2_CA(ch,nb)
+        write(Him8_BSPRD2_CA_show(nb),'(ES11.3)') Him8_BSPRD2_CA(ch,nb)
+        obsbin_show(nb) = trim(obsbin_show(nb))//","
+        sHim8_OAB_CA_show(nb) = trim(sHim8_OAB_CA_show(nb))//","
+        nHim8_CA_show(nb) = trim(nHim8_CA_show(nb))//","
+        Him8_bias_CA_show(nb) = trim(Him8_bias_CA_show(nb))//","
+        Him8_OB2_CA_show(nb) = trim(Him8_OB2_CA_show(nb))//","
+        Him8_BSPRD2_CA_show(nb) = trim(Him8_BSPRD2_CA_show(nb))//","
+      enddo
+
+      !## text file
+      open(unit=8888,file='Him8_ERR_CA_'//B3//'.txt',form='formatted')
+      write(8888,'('//trim(nstr)//'a)')obsbin_show(1:H08_CLD_OBSERR_NBIN)
+      write(8888,'('//trim(nstr)//'a)')sHim8_OAB_CA_show(1:H08_CLD_OBSERR_NBIN)
+      write(8888,'('//trim(nstr)//'a)')nHim8_CA_show(1:H08_CLD_OBSERR_NBIN)
+      write(8888,'('//trim(nstr)//'a)')Him8_bias_CA_show(1:H08_CLD_OBSERR_NBIN)
+      write(8888,'('//trim(nstr)//'a)')Him8_OB2_CA_show(1:H08_CLD_OBSERR_NBIN)
+      write(8888,'('//trim(nstr)//'a)')Him8_BSPRD2_CA_show(1:H08_CLD_OBSERR_NBIN)
+      close(8888)
+    endif ! H08_CH_USE
+
+  enddo ! ch
+
+  return
+end subroutine read_Him8_CA
+
+function ch2BB_Him8(ch)
+  implicit none
+
+  character(1) :: B1
+  character(2) :: B2
+  character(3) :: ch2BB_Him8
+
+  integer,intent(in) :: ch
+
+  if((ch + 6) < 10)then
+    write(B1,'(I1)') ch + 6
+    ch2BB_Him8 = "B0" // B1
+  else
+    write(B2,'(I2)') ch + 6
+    ch2BB_Him8 = "B" // B2
+  endif
+
+end function ch2BB_Him8
 
 
 !-----------------------------------------------------------------------

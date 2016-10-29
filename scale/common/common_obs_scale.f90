@@ -1326,7 +1326,8 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
-subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
+subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
+                     nobs_H08,bias_H08,rmse_H08,Him8_OAB,Him8_iCA,Him8_bias_CA_in)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
@@ -1383,10 +1384,20 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
   REAL(r_size),ALLOCATABLE :: yobs_H08_clr(:)
   REAL(r_size),ALLOCATABLE :: CA(:) ! (Okamoto et al., 2014QJRMS)
-  INTEGER :: ns
+  REAL(r_size) :: CA_H08 ! (Okamoto et al., 2014QJRMS)
+  INTEGER :: ns, ns2
   INTEGER,ALLOCATABLE :: qc_H08(:)
   INTEGER :: ch, idx_B07, band
+  REAL(r_size),ALLOCATABLE :: ohx_H08(:)
+  INTEGER,ALLOCATABLE :: oband_H08(:)
 #endif
+  REAL(r_size),INTENT(INOUT),OPTIONAL :: bias_H08(nch)
+  REAL(r_size),INTENT(INOUT),OPTIONAL :: rmse_H08(nch)
+  INTEGER,INTENT(INOUT),OPTIONAL :: nobs_H08(nch)
+  REAL(r_size),INTENT(INOUT),OPTIONAL :: Him8_OAB(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
+  INTEGER,INTENT(OUT),OPTIONAL :: Him8_iCA(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
+  REAL(r_size),INTENT(IN),OPTIONAL :: Him8_bias_CA_in(nch,H08_CLD_OBSERR_NBIN)
+  INTEGER :: ch, idx_B07, band, idx_CA
 
 ! -- for TC vital assimilation --
 !  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
@@ -1607,6 +1618,10 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
       ALLOCATE(lon_H08(nprof_H08))
       ALLOCATE(lat_H08(nprof_H08))
 
+      ALLOCATE(ohx_H08(nprof_H08*nch))
+      !ALLOCATE(oelm_H08(nprof_H08*nch))
+      ALLOCATE(oband_H08(nprof_H08*nch))
+
       ri_H08 = tmp_ri_H08(1:nprof_H08)
       rj_H08 = tmp_rj_H08(1:nprof_H08)
       lon_H08 = tmp_lon_H08(1:nprof_H08)
@@ -1632,48 +1647,78 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 
       write (6, '(A)')"MEAN-HIMAWARI-8-STATISTICS"
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns,ns2,ch,band,idx_B07,idx_CA,CA_H08)
       do n = 1, obsda%nobs
         oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
         if(oelm(n) /= id_H08IR_obs)cycle
  
+  
         band = nint(obs(obsda%set(n))%lev(obsda%idx(n))) ! obsda%lev stores the band num.
-        ns = (n2prof(n) - 1) * nch + (band - 6) 
+        ns = (n2prof(n) - 1) * nch + (band - 6)
 
         if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. & 
           abs(obs(obsda%set(n))%dif(obsda%idx(n))) <= DEPARTURE_STAT_T_RANGE) then
-!          oqc(n) = iqc_otype
 
           oqc(n) = qc_H08(ns)
           ohx(n) = yobs_H08(ns)
-!          if(plev_obs_H08(ns) < H08_LIMIT_LEV) oqc(n) = iqc_obs_bad
 
           CA(n) =  (abs(yobs_H08(ns) - yobs_H08_clr(ns)) & ! CM
                    +  abs(obs(obsda%set(n))%dat(obsda%idx(n)) - yobs_H08_clr(ns)) & ! CO
                    &) * 0.5d0 
                    
 
-          if(oqc(n) == iqc_good) then
-            ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) 
-            write (6, '(A,2I6,2F8.2,5F11.4,I6,F10.4)')"H08-O-A-B",&
-                  obs(obsda%set(n))%elm(obsda%idx(n)), &
-                  nint(obsda%lev(n)), & ! obsda%lev includes the band num.
-                  obs(obsda%set(n))%lon(obsda%idx(n)), &
-                  obs(obsda%set(n))%lat(obsda%idx(n)), &
-                  ohx(n), &! O-A
-                  obsda%val(n), &! O-B
-                  plev_obs_H08(ns), &
-                  obs(obsda%set(n))%dat(obsda%idx(n)), &
-                  obs(obsda%set(n))%err(obsda%idx(n)), &
-                  oqc(n),&
-                  CA(n) 
-          endif
+!-- Compute O-A/O-B (y-Hx(mean)) for monit_obs --
+          ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) ! O-A/O-B
 
+          idx_CA = max(min(H08_CLD_OBSERR_NBIN, int(CA(n) / H08_CLD_OBSERR_WTH + 1)),1)
+          if(H08_CLD_OBSERR)then
+            if(H08_DEBIAS_CA_CLR)then
+              ohx(n) = ohx(n) - Him8_bias_CA_in(band-6,1)
+            elseif(H08_DEBIAS_CA)then
+              ohx(n) = ohx(n) - Him8_bias_CA_in(band-6,idx_CA)
+            endif
+          endif
+!
+! Inputs for monit_H08
+!
+! -- Him8 IR obs (10 bands) should be aligned!
+! -- For example, if obs%dat(n=1001) is Him8 band07, obs%dat(n=1010) should be Him8 band16,
+!
+          ns = (n2prof(n) - 1) * nch
+          ns2 = n - (band - 6)
+          idx_B07 = obsda%idx(n) - (band - 6)
+          do ch = 1, nch
+            oband_H08(ns+ch) = ch + 6
+            ohx_H08(ns+ch) = obs(obsda%set(n))%dat(idx_B07+ch) - yobs_H08(ns+ch) ! Obs-minus-[A or B] 
+
+            CA_H08 =  (abs(yobs_H08(ns+ch) - yobs_H08_clr(ns+ch)) & ! CM
+                     +  abs(obs(obsda%set(n))%dat(idx_B07+ch) - yobs_H08_clr(ns+ch)) & ! CO
+                     &) * 0.5d0 
+
+            if(H08_CLD_OBSERR)then
+              idx_CA = max(min(H08_CLD_OBSERR_NBIN, int(CA_H08 / H08_CLD_OBSERR_WTH + 1)),1)
+              if(H08_DEBIAS_CA_CLR)then
+                ohx_H08(ns+ch) = ohx_H08(ns+ch) - Him8_bias_CA_in(ch,1)
+              elseif(H08_DEBIAS_CA)then
+                ohx_H08(ns+ch) = ohx_H08(ns+ch) - Him8_bias_CA_in(ch,idx_CA)
+              endif
+            endif
+          enddo
         endif ! [DEPARTURE_STAT_T_RANGE]
       end do ! [ n = 1, obsda%nobs ]
 !$OMP END PARALLEL DO
 
-      DEALLOCATE(yobs_H08, yobs_H08_clr, plev_obs_H08, qc_H08, CA)
+      if(H08_CLD_OBSERR)then
+        do n = 1, nprof_H08
+          ns = (n - 1) * nch
+          do ch = 1, nch
+            Him8_iCA(ns+ch) = max(min(H08_CLD_OBSERR_NBIN, int(CA(ns+ch) / H08_CLD_OBSERR_WTH + 1)),1)
+          enddo
+        enddo
+        Him8_OAB(1:nprof_H08*nch) = ohx_H08(1:nprof_H08*nch)
+      endif
+
+      DEALLOCATE(yobs_H08, yobs_H08_clr, plev_obs_H08, qc_H08)
     ENDIF ! [nprof_H08 >=1]
 
     IF(ALLOCATED(n2prof)) DEALLOCATE(n2prof)
@@ -1735,8 +1780,12 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 !
 !  endif ! [DEPARTURE_STAT_T_RANGE]
 
-
   call monit_dep(obsda%nobs,oelm,ohx,oqc,nobs,bias,rmse)
+#ifdef H08
+  if(DEPARTURE_STAT_H08_ALL)then
+    call monit_dep_H08(nprof_H08*nch,ohx_H08,oband_H08,nobs_H08,bias_H08,rmse_H08)
+  endif
+#endif
 
   monit_type = .false.
   monit_type(uid_obs(id_u_obs)) = .true.
@@ -1815,6 +1864,108 @@ SUBROUTINE monit_dep(nn,elm,dep,qc,nobs,bias,rmse)
 
   RETURN
 END SUBROUTINE monit_dep
+
+! monitor for Himawari-8 IR observations --
+SUBROUTINE monit_dep_H08(nn,dep,band,nobs,bias,rmse)
+  IMPLICIT NONE
+  INTEGER,INTENT(IN) :: nn
+  REAL(r_size),INTENT(IN) :: dep(nn)
+  INTEGER,INTENT(IN) :: band(nn)
+  INTEGER,INTENT(OUT) :: nobs(nch)
+  REAL(r_size),INTENT(OUT) :: bias(nch)
+  REAL(r_size),INTENT(OUT) :: rmse(nch)
+  INTEGER :: n,ch
+
+  nobs = 0
+  rmse = 0.0d0
+  bias = 0.0d0
+
+  DO n=1,nn
+    ch = band(n) - 6
+
+    nobs(ch) = nobs(ch) + 1
+    bias(ch) = bias(ch) + dep(n)
+    rmse(ch) = rmse(ch) + dep(n)**2
+  END DO
+
+  DO ch = 1, nch
+    IF(nobs(ch) == 0) THEN
+      bias(ch) = undef
+      rmse(ch) = undef
+    ELSE
+      bias(ch) = bias(ch) / REAL(nobs(ch),r_size)
+      rmse(ch) = SQRT(rmse(ch) / REAL(nobs(ch),r_size))
+    END IF
+  END DO
+
+  RETURN
+END SUBROUTINE monit_dep_H08
+! ---------
+#ifdef H08
+SUBROUTINE monit_print_H08(nobs,bias,rmse,monit_type)
+  IMPLICIT NONE
+  INTEGER,INTENT(IN) :: nobs(nch)
+  REAL(r_size),INTENT(IN) :: bias(nch)
+  REAL(r_size),INTENT(IN) :: rmse(nch)
+  LOGICAL,INTENT(IN),OPTIONAL :: monit_type(nch)
+
+  character(12) :: var_show(nch)
+  character(12) :: nobs_show(nch)
+  character(12) :: bias_show(nch)
+  character(12) :: rmse_show(nch)
+  character(12) :: flag_show(nch)
+
+  integer :: i, itv, n
+  character(4) :: nstr
+  character(12) :: tmpstr(nch)
+  character(12) :: tmpstr2(nch)
+
+  character(3) :: B3(nch)
+
+  logical :: monit_type_(nch)
+
+  monit_type_ = .true.
+  if (present(monit_type)) monit_type_ = monit_type
+
+  n = 0
+  do i = 1, nch
+    n = n + 1
+
+    B3(i) = ch2BB_Him8(i)
+
+    if(H08_CH_USE(i) == 1)then
+      write(flag_show(n),'(A12)') "YES"
+    else
+      write(flag_show(n),'(A12)') " NO"
+    endif
+
+    write(var_show(n),'(A12)') B3(i)
+    write(nobs_show(n),'(I12)') nobs(i)
+    if (nobs(i) > 0) then
+      write(bias_show(n),'(ES12.3)') bias(i)
+      write(rmse_show(n),'(ES12.3)') rmse(i)
+    else
+      write(bias_show(n),'(A12)') 'N/A'
+      write(rmse_show(n),'(A12)') 'N/A'
+    end if
+  end do
+  write(nstr, '(I4)') n
+  tmpstr(1:n) = '============'
+  tmpstr2(1:n) = '------------'
+
+  WRITE(6,'(A,' // trim(nstr) // 'A)') '======', tmpstr(1:n)
+  WRITE(6,'(6x,' // trim(nstr) // 'A)')          var_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') '------', tmpstr2(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') 'BIAS  ', bias_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') 'RMSE  ', rmse_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') 'NUMBER', nobs_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') 'USED? ', flag_show(1:n)
+  WRITE(6,'(A,' // trim(nstr) // 'A)') '======', tmpstr(1:n)
+
+  RETURN
+END SUBROUTINE monit_print_H08
+#endif
+
 !-----------------------------------------------------------------------
 ! Monitor departure
 !-----------------------------------------------------------------------
@@ -2616,6 +2767,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
   REAL(r_size) :: lat1d(nprof)
   REAL(r_size) :: topo1d(nprof)
   REAL(r_size) :: lsmask1d(nprof)
+  REAL(r_size) :: ztop1d(nprof)
 
 ! -- brightness temp from RTTOV
   REAL(r_size) :: btall_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
@@ -2644,6 +2796,9 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
   lon1d(:) = lon(:)
   lat1d(:) = lat(:)
 
+  slev = 1 + KHALO
+  elev = nlevh - KHALO
+
 ! -- make profile arrays for RTTOV --
   DO np = 1, nprof ! -- make profiles
 
@@ -2653,6 +2808,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
     CALL itpl_2d(v2d(:,:,iv2dd_topo),ri(np),rj(np),topo1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_lsmask),ri(np),rj(np),lsmask1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_ps),ri(np),rj(np),psfc1d(np))
+    CALL itpl_2d(v3d(elev,:,:,iv3dd_hgt),ri(np),rj(np),ztop1d(np)) ! height at the column top
 !    call prsadj(yobs,rk-topo,t,q)
 !    if (abs(rk-topo) > PS_ADJUST_THRES) then
 !      write (6,'(A,F6.1)') 'warning: PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
@@ -2688,9 +2844,6 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
 !        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using (lon,lat).
 !
 
-  slev = 1 + KHALO
-  elev = nlevh - KHALO
-
   CALL SCALE_RTTOV_fwd(nch, & ! num of channels
                        nlev,& ! num of levels
                        nprof,& ! num of profs
@@ -2708,6 +2861,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
                        lon1d(1:nprof),& ! (deg)
                        lat1d(1:nprof),& ! (deg)
                        lsmask1d(1:nprof),& ! (0-1)
+                       ztop1d(1:nprof), & ! (m)
                        btall_out(1:nch,1:nprof),& ! (K)
                        btclr_out(1:nch,1:nprof),& ! (K)
                        trans_out(nlev:1:-1,1:nch,1:nprof))
@@ -2737,7 +2891,11 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
       endif
     ENDDO
 
-    yobs(n) = btall_out(ch,np)
+    if(H08_RTTOV_CLD)then
+      yobs(n) = btall_out(ch,np)
+    else
+      yobs(n) = btclr_out(ch,np)
+    endif
 !
 ! ## comment out by T.Honda (02/09/2016)
 ! -- tentative QC here --
@@ -2758,15 +2916,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
       qc(n) = iqc_obs_bad
     ENDIF
 
-    IF(abs(btall_out(ch,np) - btclr_out(ch,np)) > H08_CLDSKY_THRS)THEN
-! Cloudy sky
-      yobs(n) = yobs(n) * (-1.0d0)
-    ELSE
-! Clear sky
-      yobs(n) = yobs(n) * 1.0d0
-    ENDIF
-   
-    yobs_H08_clr(n) = btclr_out(ch,np)
+    IF (present(yobs_H08_clr)) yobs_H08_clr(n) = btclr_out(ch,np)
 
   ENDDO ! ch
   ENDDO ! np

@@ -412,9 +412,6 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                                 yobs_H08,plev_obs_H08,&
                                 qc_H08,yobs_H08_clr=yobs_H08_clr)
 
-! Clear sky yobs(>0)
-! Cloudy sky yobs(<0)
-
             obsda%qc(nobs_0+1:nobs) = iqc_obs_bad
 
             ns = 0

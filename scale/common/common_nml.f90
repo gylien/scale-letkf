@@ -155,10 +155,14 @@ MODULE common_nml
   real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
                                       5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
 
+  real(r_size) :: OBSERR_H08_MAX = 15.0d0
+  real(r_size) :: OBSERR_H08_MIN = 0.5d0
+
   !--- PARAM_LETKF_MONITOR
   logical :: DEPARTURE_STAT = .true.
   logical :: DEPARTURE_STAT_RADAR = .false.
   logical :: DEPARTURE_STAT_H08 = .false.
+  logical :: DEPARTURE_STAT_H08_ALL = .false.
   real(r_size) :: DEPARTURE_STAT_T_RANGE = 0.0d0 ! time range within which observations are considered in the departure statistics.
                                                  ! 0.0d0: no limit
 
@@ -200,10 +204,22 @@ MODULE common_nml
   real(r_size) :: H08_RTTOV_CFRAC_CNST = 0.10d0 ! Denominator constant for diagnosing SEQUENTIAL(0-1) cloud fraction (g m-3)
                                                 ! Negative values indicate DISCRETE (0/1) cloud fraction 
   real(r_size) :: H08_BT_MIN = 0.0d0 ! Lower limit of the BT for Himawari-8 IR
-  real(r_size) :: H08_CLDSKY_THRS = -5.0d0 ! Threshold for diagnosing the sky condition using [BT(all-sky) - BT(clr)].
-                                           ! Negative values: turn off
-  integer :: H08_MIN_CLD_MEMBER = 1       ! If the number of the cloudy members is larger than H08_MIN_CLD_MEMBER,
-                                           ! the first guess is diagnosed as cloudy. ! Not finished yet!
+  logical :: H08_OB_OBSERR = .false. ! Obs err for Him8 is assigned by using abs(O-B).
+  logical :: H08_CLD_OBSERR = .false. ! Cloud dependent obs error for Him8. If this is true, obs error depending on CA is assigned in letkf
+  real(r_size) :: H08_CLD_OBSERR_WTH = 1.0d0 ! Bin width of CA for cloud dependent obs error.
+  integer :: H08_CLD_OBSERR_NBIN = 51 ! Number of bins for CA.
+  integer :: H08_CLD_OBSERR_MTIME = 18 ! Max number of analysis time that is used to diagnose cloud dependent obserr  
+
+  real(r_size) :: H08_CLD_OBSERR_GROSS_ERR = 20.0d0
+  integer :: H08_CLD_OBSERR_MIN_SAMPLE = 500
+  logical :: H08_DEBIAS_AMEAN = .false.
+  logical :: H08_DEBIAS_CA = .false.
+  integer :: H08_DEBIAS_CA_MIN_SAMPLE = 500
+  logical :: H08_DEBIAS_CA_CLR = .false.
+  logical :: H08_CLD_OBSERR_OB2 = .false. ! Maximum threshold for Him8 obs err using sqrt([O-B]**2)
+  logical :: H08_CLD_OBSERR_BSPRD2 = .false. ! Output background spread**2 in obs space as a function of CA ! ?? not used
+  logical :: H08_RTTOV_EXTRA_US76 = .false.
+
   integer :: H08_CH_USE(nch) = (/0,0,1,0,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
                         !! (B07,B08,B09,B10,B11,B12,B13,B14,B15,B16)
@@ -551,6 +567,8 @@ subroutine read_nml_letkf_obserr
     OBSERR_TCY, &
     OBSERR_TCP, &
     OBSERR_H08, & ! H08
+    OBSERR_H08_MAX, & ! H08
+    OBSERR_H08_MIN, & ! H08
     USE_OBSERR_RADAR_REF, &
     USE_OBSERR_RADAR_VR
 
@@ -580,6 +598,7 @@ subroutine read_nml_letkf_monitor
     DEPARTURE_STAT, &
     DEPARTURE_STAT_RADAR, &
     DEPARTURE_STAT_H08, &
+    DEPARTURE_STAT_H08_ALL, &
     DEPARTURE_STAT_T_RANGE, &
     OMB_OUTPUT, &
     OMA_OUTPUT, &
@@ -650,15 +669,27 @@ subroutine read_nml_letkf_h08
   implicit none
   integer :: ierr
 
-  namelist /PARAM_LETKF_H08/ &
-    H08_REJECT_LAND, &
-    H08_RTTOV_CLD, &
-    H08_MIN_CLD_MEMBER, &
-    H08_CLDSKY_THRS, &
-    H08_RTTOV_MINQ, &
-    H08_RTTOV_CFRAC_CNST, &
-    H08_LIMIT_LEV, &
-    H08_BT_MIN, &
+  namelist /PARAM_LETKF_H08/   &
+    H08_REJECT_LAND,           &
+    H08_RTTOV_CLD,             &
+    H08_RTTOV_MINQ,            &
+    H08_RTTOV_CFRAC_CNST,      &
+    H08_LIMIT_LEV,             &
+    H08_BT_MIN,                &
+    H08_RTTOV_EXTRA_US76,      &
+    H08_OB_OBSERR,             &
+    H08_CLD_OBSERR,            &
+    H08_CLD_OBSERR_WTH,        &
+    H08_CLD_OBSERR_NBIN,       &
+    H08_CLD_OBSERR_GROSS_ERR,  &
+    H08_CLD_OBSERR_MIN_SAMPLE, &
+    H08_CLD_OBSERR_MTIME,      &
+    H08_DEBIAS_AMEAN,          &
+    H08_DEBIAS_CA,             &
+    H08_DEBIAS_CA_CLR,         &
+    H08_DEBIAS_CA_MIN_SAMPLE,  &
+    H08_CLD_OBSERR_OB2,        &
+    H08_CLD_OBSERR_BSPRD2,     &
     H08_CH_USE
 
   rewind(IO_FID_CONF)
