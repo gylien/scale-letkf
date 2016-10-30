@@ -1387,7 +1387,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   REAL(r_size) :: CA_H08 ! (Okamoto et al., 2014QJRMS)
   INTEGER :: ns, ns2
   INTEGER,ALLOCATABLE :: qc_H08(:)
-  INTEGER :: ch, idx_B07, band
+  INTEGER :: ch, idx_B07, band, idx_CA
   REAL(r_size),ALLOCATABLE :: ohx_H08(:)
   INTEGER,ALLOCATABLE :: oband_H08(:)
 #endif
@@ -1397,7 +1397,6 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   REAL(r_size),INTENT(INOUT),OPTIONAL :: Him8_OAB(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
   INTEGER,INTENT(OUT),OPTIONAL :: Him8_iCA(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
   REAL(r_size),INTENT(IN),OPTIONAL :: Him8_bias_CA_in(nch,H08_CLD_OBSERR_NBIN)
-  INTEGER :: ch, idx_B07, band, idx_CA
 
 ! -- for TC vital assimilation --
 !  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index

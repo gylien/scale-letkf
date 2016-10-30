@@ -1491,9 +1491,6 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
     write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', trim(file_mean), ']:'
     call monit_print(nobs_g,bias_g,rmse_g,monit_type)
 
-<<<<<<< HEAD
-=======
-
 #ifdef H08
     if(DEPARTURE_STAT_H08_ALL)then
       call MPI_BCAST(nobs_H08,nch,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
@@ -1657,6 +1654,7 @@ subroutine read_pest_para_mpi(pgues0d)
 
   REAL(r_size),INTENT(OUT) :: pgues0d(MEMBER+2,PNUM_TOMITA)  ! MEMBER + mean + sprd
   integer :: iof, ierr
+  REAL(r_dble) :: rrtimer00,rrtimer
 
   if (myrank_a == 0) then
     call read_para_txt("EPARAM_TOMITA_GUES.txt",pgues0d)

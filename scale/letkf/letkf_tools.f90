@@ -452,11 +452,11 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
       IF(PEST_RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL
         CALL letkf_core(MEMBER,nobstotal,nobsl0,hdxf0,rdiag0,rloc0,dep0,parm, &       !GYL
                         trans(:,:,nv3d),transm=transm(:,nv3d),pao=pa(:,:,nv3d), &  !GYL
-                        rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                      !GYL
+                        rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)                      !GYL
       ELSE                                                                         !GYL
         CALL letkf_core(MEMBER,nobstotal,nobsl0,hdxf0,rdiag0,rloc0,dep0,parm, &       !GYL
                         trans(:,:,nv3d),transm=transm(:,nv3d),       &             !GYL
-                        rdiag_wloc=.true.,minfl=INFL_MUL_MIN)                      !GYL
+                        rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)                      !GYL
       END IF                                                                       !GYL
       work2d(1,n) = parm ! tentative
     ELSE ! PEST_TOMITA_LOCAL2D = T
@@ -478,11 +478,11 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,panal0d)
         IF(PEST_RELAX_ALPHA_SPREAD /= 0.0d0) THEN
           CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, &
                           trans(:,:,nv3d),transm=transm(:,nv3d),pao=pa(:,:,nv3d),&
-                          rdiag_wloc=.true.,minfl=INFL_MUL_MIN)
+                          rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)
         ELSE
           CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm, & 
                           trans(:,:,nv3d),transm=transm(:,nv3d),       & 
-                          rdiag_wloc=.true.,minfl=INFL_MUL_MIN) 
+                          rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE) 
         END IF            
       END IF            
 
