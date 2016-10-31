@@ -714,8 +714,11 @@ SUBROUTINE set_letkf_obs
         ch_num = nint(obs(iof)%lev(iidx)) - 6 ! 1-10
         if(H08_CH_USE(ch_num)/=1) cycle
         idx_CA = max(min(H08_CLD_OBSERR_NBIN, int(obsda%val2(n) / H08_CLD_OBSERR_WTH + 1)),1)
-        Him8_bias(ch_num) = Him8_bias_CA(ch_num,idx_CA)
-        obsda%val(n) = obsda%val(n) - Him8_bias(ch_num)
+        if(H08_DEBIAS_CA_CLR)then
+          obsda%val(n) = obsda%val(n) - Him8_bias_CA(ch_num,1)
+        elseif(H08_DEBIAS_CA)then
+          obsda%val(n) = obsda%val(n) - Him8_bias_CA(ch_num,idx_CA)
+        endif
       case default
         cycle
       end select

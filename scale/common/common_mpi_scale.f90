@@ -1390,6 +1390,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
           else
             Him8_bias_CA_g(i,nb) = 0.0d0
           endif
+          !write(6,'(a,f6.1)')'DEBUG Him8 common_mpi_scale bias ',Him8_bias_CA_g(i,nb)
         enddo
 
       enddo
@@ -1506,16 +1507,18 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
       if(H08_CLD_OBSERR)then
         WRITE(6,'(A)') '###### DEBUG Him8: start BCAST'
+        call MPI_BCAST(nHim8_CA,nch*H08_CLD_OBSERR_NBIN,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
         if(ANAL_HIM8)then
           call MPI_BCAST(sHim8_OAB_CA,nch*H08_CLD_OBSERR_NBIN,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
-          call MPI_BCAST(nHim8_CA,nch*H08_CLD_OBSERR_NBIN,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
           call MPI_BCAST(Him8_BSPRD2_CA_g,nch*H08_CLD_OBSERR_NBIN,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
         else
+          call MPI_BCAST(Him8_bias_CA_g,nch*H08_CLD_OBSERR_NBIN,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
           call MPI_BCAST(Him8_OB2_CA_g,nch*H08_CLD_OBSERR_NBIN,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
         endif
         WRITE(6,'(A)') '###### DEBUG Him8: end BCAST'
 
         if(myrank == 0) then 
+          WRITE(6,'(A,f6.1)') '###### DEBUG Him8: bias:',Him8_bias_CA_g(3,1)
           call write_Him8_CA(sHim8_OAB_CA,nHim8_CA,Him8_bias_CA_g,Him8_OB2_CA_g,Him8_BSPRD2_CA_g,ANAL_HIM8)
         endif ! -- myrank == 0
       endif ! -- H08_CLD_OBSERR
