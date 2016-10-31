@@ -989,13 +989,18 @@ subroutine write_Him8_CA(sHim8_OAB_CA,nHim8_CA,Him8_bias_CA,Him8_OB2_CA,Him8_BSP
       else
         write(8889,rec=mrec+1) (Him8_bias_CA(ch,i)*real(nHim8_CA(ch,i),kind=r_size),i=1,H08_CLD_OBSERR_NBIN) ! bias
         write(8889,rec=mrec+2) (Him8_OB2_CA(ch,i),i=1,H08_CLD_OBSERR_NBIN) ! [O-B]**2
+        do i = 1, H08_CLD_OBSERR_NBIN
+          write(6,'(A,f6.1,i8)') 'Him8 write bias,num ',&
+                                 Him8_bias_CA(ch,i),&
+                                 nHim8_CA(ch,i)
+        enddo
       endif
 
       close(8889)
 
       !write(6,'(A,1x,A)') ' Him8 bias information ',B3
       !do i = 1, H08_CLD_OBSERR_NBIN
-      !  write(6,'(A,f6.2,i8,3f6.2)') ' bias,num,CA ',&
+      !  write(6,'(A,f6.1,i8,3f6.1)') ' bias,num,CA ',&
       !                               Him8_bias_CA(ch,i),&
       !                               nHim8_CA(ch,i),&
       !                               real(real(i-1)*H08_CLD_OBSERR_WTH+H08_CLD_OBSERR_WTH*0.5,kind=r_size),&
@@ -1122,14 +1127,16 @@ subroutine read_Him8_CA(Him8_obserr_CA,Him8_bias_CA)
         endif
 
         ! Him8 bias
-        if(tmp_nHim8_CA(ch,nb) >= H08_DEBIAS_CA_MIN_SAMPLE)then
-          Him8_bias_CA(ch,nb) = tmp_Him8_bias_CA(ch,nb) / real(tmp_nHim8_CA(ch,nb),kind=r_size)
-        else
-          Him8_bias_CA(ch,nb) = 0.0d0
-          if(H08_DEBIAS_CA_CLR)then
-            ! Even if the sample size is less than H08_CLD_OBSERR_MIN_SAMPLE, 
-            ! clear-sky bias (nb=1) is considered.
-            Him8_bias_CA(ch,nb) = Him8_bias_CA(ch,1) 
+        Him8_bias_CA(ch,nb) = 0.0d0
+        if(H08_DEBIAS_CA_CLR .or. H08_DEBIAS_CA)then
+          if(tmp_nHim8_CA(ch,nb) >= H08_DEBIAS_CA_MIN_SAMPLE)then
+            Him8_bias_CA(ch,nb) = tmp_Him8_bias_CA(ch,nb) / real(tmp_nHim8_CA(ch,nb),kind=r_size)
+          else
+            if(H08_DEBIAS_CA_CLR)then
+              ! Even if the sample size is less than H08_CLD_OBSERR_MIN_SAMPLE, 
+              ! clear-sky bias (nb=1) is considered.
+              Him8_bias_CA(ch,nb) = Him8_bias_CA(ch,1) 
+            endif
           endif
         endif
 
@@ -1143,10 +1150,6 @@ subroutine read_Him8_CA(Him8_obserr_CA,Him8_bias_CA)
 
       enddo ! nb
 
-      if(H08_DEBIAS_CA_CLR)then
-        Him8_bias_CA(ch,2:H08_CLD_OBSERR_NBIN) = Him8_bias_CA(ch,1)
-      endif
-
       if(H08_CLD_OBSERR_OB2)then
         do nb = 1, H08_CLD_OBSERR_NBIN
           if(tmp_nHim8_CA(ch,nb) < H08_CLD_OBSERR_MIN_SAMPLE)then
@@ -1158,7 +1161,7 @@ subroutine read_Him8_CA(Him8_obserr_CA,Him8_bias_CA)
 
       write(6,'(a)')"Him8 LOG: Num, Obserr, Bias, [O-B]**2, Spread(obs)"
       do nb = 1, H08_CLD_OBSERR_NBIN
-         write(6,'(a,i9,4f7.2,2i4)')"Him8 LOG: ",tmp_nHim8_CA(ch,nb),&
+         write(6,'(a,i9,4f7.1,2i4)')"Him8 LOG: ",tmp_nHim8_CA(ch,nb),&
                                 Him8_obserr_CA(ch,nb),Him8_bias_CA(ch,nb),&
                                 Him8_OB2_CA(ch,nb),Him8_BSPRD2_CA(ch,nb),nb,ch
 
