@@ -70,9 +70,9 @@ PPN_real=$PPN
 NNODES=$((NNODES*PPN))
 PPN=1
 
-if ((ENABLE_SET == 1)); then          ##
-  NNODES_real_all=$((NNODES_real*3))  ##
-  NNODES_all=$((NNODES*3))            ##
+if ((IO_ARB == 1)); then              ##
+  NNODES_real_all=$((NNODES_real*2))  ##
+  NNODES_all=$((NNODES*2))            ##
 fi                                    ##
 
 declare -a procs
@@ -82,7 +82,7 @@ declare -a name_m
 declare -a node_m
 
 safe_init_tmpdir $NODEFILE_DIR
-if ((ENABLE_SET == 1)); then               ##
+if ((IO_ARB == 1)); then                   ##
   distribute_da_cycle_set - $NODEFILE_DIR  ##
 else                                       ##
   distribute_da_cycle - $NODEFILE_DIR - "$MEMBERS"
@@ -124,7 +124,7 @@ echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMP/config.main
 
 echo "RUN_LEVEL='K_micro'" >> $TMP/config.main
 
-if ((ENABLE_SET == 1)); then                                    ##
+if ((IO_ARB == 1)); then                                        ##
   echo "NNODES_all=$NNODES_all" >> $TMP/config.main             ##
   echo "NNODES_real_all=$NNODES_real_all" >> $TMP/config.main   ##
                                                                 ##
@@ -168,9 +168,11 @@ echo
 job_submit_PJM $jobscrp
 echo
 
+res=0
 if ((ONLINE_STGOUT != 1)); then
 
   job_end_check_PJM $jobid
+  res=$?
 
 else # when using online stage-out, check the joub status in a special way.
 
@@ -229,4 +231,4 @@ fi
 
 echo "[$(datetime_now)] Finish $(basename $0) $@"
 
-exit 0
+exit $res

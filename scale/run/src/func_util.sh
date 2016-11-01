@@ -199,7 +199,8 @@ elif [ "$MPI_TYPE" = 'K' ]; then
 
   else
 
-    ( cd $progdir && fipp -C -Srange -d ${STDOUT}-Fprofd -m 50000 -Icall,hwm mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF - $ARGS )
+#    ( cd $progdir && fipp -C -Srange -d ${STDOUT}-Fprofd -m 50000 -Icall,hwm mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF - $ARGS )
+    ( cd $progdir && fipp -C -Srange -d ${STDOUT}-Fprofd -m 50000 -Icall,hwm mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${NODEFILE}" -of-proc $STDOUT ./$progbase $CONF - $ARGS )
     res=$?
     if ((res != 0)); then 
       echo "[Error] mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS" >&2
@@ -609,6 +610,11 @@ job_end_check_PJM () {
 # Usage: job_end_check_PJM JOBID
 #
 #   JOBID  Job ID monitored
+#
+# Return variables:
+#   $jobstat    Job status
+#   $jobec      Job exit code
+#   $jobreason  Job exit reason
 #-------------------------------------------------------------------------------
 
 if (($# < 1)); then
@@ -620,15 +626,41 @@ local JOBID="$1"
 
 #-------------------------------------------------------------------------------
 
+local res=0
+local tmp
 while true; do
-  jobnum=$(pjstat $JOBID | sed -n '2p' | awk '{print $10}')
-  if [[ "$jobnum" =~ ^[0-9]+$ ]]; then
-    if ((jobnum == 0)); then
-      break
+  tmp=$(pjstat --choose ST,EC,REASON ${JOBID} | tail -n 1)
+  if [ -z "$tmp" ]; then
+    echo "[Error] $FUNCNAME: Cannot find PJM job ${JOBID}." >&2
+    return 99
+  fi
+
+  jobstat=$(echo $tmp | cut -d ' ' -f1)
+  jobec=$(echo $tmp | cut -d ' ' -f2)
+  jobreason=$(echo $tmp | cut -d ' ' -f3-)
+
+  if [ "$jobstat" = 'RJT' ] || [ "$jobstat" = 'CCL' ]; then
+    res=98
+    break
+  elif [ "$jobstat" = 'EXT' ]; then
+    if [ "$jobreason" != '-' ]; then
+      res=97
+    elif ((jobec != 0)); then
+      res=$jobec
     fi
+    break
   fi
   sleep 30s
 done
+
+if ((res != 0)); then
+  echo "[Error] $FUNCNAME: PJM job $JOBID ended with errors." >&2
+  echo "        status      = $jobstat" >&2
+  echo "        exit code   = $jobec" >&2
+  echo "        exit reason = $jobreason" >&2
+  return $res
+fi
+return 0
 
 #-------------------------------------------------------------------------------
 }

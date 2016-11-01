@@ -45,8 +45,14 @@ if ((LOG_OPT <= 4 && MYRANK == 0)); then
 fi
 
 if ((OUT_OPT >= 3)); then
-  if [ -d "$TMPOUT/${STIME}/hist/${MEM}" ]; then
-    rm -f $TMPOUT/${STIME}/hist/${MEM}/*
+  if ((PNETCDF == 1)); then
+    if [ -e "$TMPOUT/${STIME}/hist/${MEM}.history.nc" ]; then
+      rm -f $TMPOUT/${STIME}/hist/${MEM}.history.nc
+    fi
+  else
+    if [ -d "$TMPOUT/${STIME}/hist/${MEM}" ]; then
+      rm -f $TMPOUT/${STIME}/hist/${MEM}/*
+    fi
   fi
 fi
 

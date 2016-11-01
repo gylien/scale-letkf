@@ -24,6 +24,9 @@ module common_mpi_scale
 
   use scale_precision, only: RP
   use scale_comm, only: COMM_datatype
+#ifdef PNETCDF
+  use scale_stdio, only: IO_AGGREGATE
+#endif
 
   implicit none
   public
@@ -214,6 +217,7 @@ SUBROUTINE set_common_mpi_scale
 
   call MPI_Group_incl(MPI_G_WORLD,nprocs_e,ranks,MPI_G,ierr)
   call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_e,ierr)
+  call MPI_Group_free(MPI_G,ierr)
 
   call MPI_Comm_size(MPI_COMM_e,nprocs_e,ierr)
   call MPI_Comm_rank(MPI_COMM_e,myrank_e,ierr)
@@ -222,6 +226,8 @@ SUBROUTINE set_common_mpi_scale
 
   call MPI_Group_incl(MPI_G_WORLD,nprocs_e*MEM_NP,ranks_a,MPI_G,ierr)
   call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_a,ierr)
+  call MPI_Group_free(MPI_G,ierr)
+  call MPI_Group_free(MPI_G_WORLD,ierr)
 
   call MPI_Comm_size(MPI_COMM_a,nprocs_a,ierr)
   call MPI_Comm_rank(MPI_COMM_a,myrank_a,ierr)
@@ -318,7 +324,15 @@ subroutine set_common_mpi_grid
   end do
 
   if (myrank_e == lastmem_rank_e) then
-    call read_topo(LETKF_TOPO_IN_BASENAME, topo)
+#ifdef PNETCDF
+    if (IO_AGGREGATE) then
+      call read_topo_par(LETKF_TOPO_IN_BASENAME, topo, MPI_COMM_d)
+    else
+#endif
+      call read_topo(LETKF_TOPO_IN_BASENAME, topo)
+#ifdef PNETCDF
+    end if
+#endif
     v3dg(1,:,:,3) = topo
   end if
 
@@ -479,8 +493,6 @@ subroutine set_scalelib
 !    URBAN_GRID_INDEX_setup
 !  use scale_urban_grid, only: &
 !    URBAN_GRID_setup
-  use scale_tracer, only: &
-    TRACER_setup
   use scale_fileio, only: &
     FILEIO_setup
   use scale_comm, only: &
@@ -497,8 +509,23 @@ subroutine set_scalelib
 
 !  use scale_atmos_hydrostatic, only: &
 !     ATMOS_HYDROSTATIC_setup
-  use scale_atmos_thermodyn, only: &
-     ATMOS_THERMODYN_setup
+!  use scale_atmos_thermodyn, only: &
+!     ATMOS_THERMODYN_setup
+  use scale_atmos_hydrometer, only: &
+     ATMOS_HYDROMETER_setup
+
+!  use mod_atmos_driver, only: &
+!     ATMOS_driver_config
+    use scale_atmos_phy_mp, only: &
+       ATMOS_PHY_MP_config
+!    use mod_atmos_admin, only: &
+!       ATMOS_PHY_MP_TYPE, &
+!       ATMOS_sw_phy_mp
+
+!  use mod_user, only: &
+!     USER_config, &
+!     USER_setup, &
+!     USER_step
 
 !  use mod_admin_time, only: &
 !     ADMIN_TIME_setup
@@ -529,6 +556,9 @@ subroutine set_scalelib
   integer :: NUM_DOMAIN
   integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
   character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim)
+
+  integer  :: HIST_item_limit    ! dummy
+  integer  :: HIST_variant_limit ! dummy
 
   !-----------------------------------------------------------------------------
 
@@ -591,6 +621,12 @@ subroutine set_scalelib
   ! setup PROF
 !  call PROF_setup
 
+
+!  ! profiler start
+!  call PROF_setprefx('INIT')
+!  call PROF_rapstart('Initialize', 0)
+
+
   ! setup constants
   call CONST_setup
 
@@ -603,9 +639,6 @@ subroutine set_scalelib
   ! setup time
 !  call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
 
-!  call PROF_setprefx('INIT')
-!  call PROF_rapstart('Initialize')
-
   ! setup horizontal/vertical grid coordinates
   call GRID_INDEX_setup
   call GRID_setup
@@ -617,7 +650,13 @@ subroutine set_scalelib
 !  call URBAN_GRID_setup
 
   ! setup tracer index
-  call TRACER_setup
+  call ATMOS_HYDROMETER_setup
+    call ATMOS_PHY_MP_config('TOMITA08') !!!!!!!!!!!!!!! tentative
+!    if ( ATMOS_sw_phy_mp ) then
+!       call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
+!    end if
+!  call ATMOS_driver_config
+!  call USER_config
 
   ! setup file I/O
   call FILEIO_setup
@@ -649,9 +688,22 @@ subroutine set_scalelib
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
 
-    call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_masterrank, PRC_myrank, rankidx, &
-                     0.0d0, 1.0d0, &
-                     namelist_fid=IO_FID_CONF, default_basename='history')
+    call HistoryInit( HIST_item_limit,                  & ! [OUT]
+                      HIST_variant_limit,               & ! [OUT]
+                      IMAX, JMAX, KMAX,                 & ! [IN]
+                      PRC_masterrank,                   & ! [IN]
+                      PRC_myrank,                       & ! [IN]
+                      rankidx,                          & ! [IN]
+                      '',                               & ! [IN]
+                      '',                               & ! [IN]
+                      '',                               & ! [IN]
+                      0.0d0,                            & ! [IN]
+                      1.0d0,                            & ! [IN]
+                      default_basename='history',       & ! [IN]
+                      default_zcoord = 'model',         & ! [IN]
+                      default_tinterval = 1.0d0,        & ! [IN]
+                      namelist_fid=IO_FID_CONF          ) ! [IN]
+
   ! setup monitor I/O
 !  call MONIT_setup
 
@@ -660,7 +712,7 @@ subroutine set_scalelib
 
   ! setup common tools
 !  call ATMOS_HYDROSTATIC_setup
-  call ATMOS_THERMODYN_setup
+!  call ATMOS_THERMODYN_setup
 !  call ATMOS_SATURATION_setup
 
 !  call BULKFLUX_setup
@@ -841,7 +893,15 @@ SUBROUTINE read_ens_history_iter(file,iter,step,v3dg,v2dg,ensmean)
 
   IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= mem) THEN
     call file_member_replace(proc2mem(1,iter,myrank+1), file, filename)  !!!!!! better to seperate 'mean' history filename using a different namelist variable !!!!!!
-    call read_history(trim(filename),step,v3dg,v2dg)
+#ifdef PNETCDF
+    if (IO_AGGREGATE) then
+      call read_history_par(trim(filename),step,v3dg,v2dg,MPI_COMM_d)
+    else
+#endif
+      call read_history(trim(filename),step,v3dg,v2dg)
+#ifdef PNETCDF
+    end if
+#endif
   END IF
 
   RETURN
@@ -874,7 +934,15 @@ subroutine read_ens_mpi(file,v3d,v2d)
     if (im >= 1 .and. im <= MEMBER) then
       call file_member_replace(im, file, filename)
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
-      call read_restart(filename,v3dg,v2dg)
+#ifdef PNETCDF
+      if (IO_AGGREGATE) then
+        call read_restart_par(filename,v3dg,v2dg,MPI_COMM_d)
+      else
+#endif
+        call read_restart(filename,v3dg,v2dg)
+#ifdef PNETCDF
+      end if
+#endif
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -958,7 +1026,15 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
   rrtimer00=rrtimer
 
 
-      call write_restart(filename,v3dg,v2dg)
+#ifdef PNETCDF
+      if (IO_AGGREGATE) then
+        call write_restart_par(filename,v3dg,v2dg,MPI_COMM_d)
+      else
+#endif
+        call write_restart(filename,v3dg,v2dg)
+#ifdef PNETCDF
+      end if
+#endif
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
@@ -1297,7 +1373,15 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
   IF(myrank_e == lastmem_rank_e) THEN
     call state_trans_inv(v3dg)
-    call write_restart(file_mean,v3dg,v2dg)
+#ifdef PNETCDF
+    if (IO_AGGREGATE) then
+      call write_restart_par(file_mean,v3dg,v2dg,MPI_COMM_d)
+    else
+#endif
+      call write_restart(file_mean,v3dg,v2dg)
+#ifdef PNETCDF
+    end if
+#endif
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1351,8 +1435,16 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
 
   IF(myrank_e == lastmem_rank_e) THEN
-!    call state_trans_inv(v3dg)             !!
-    call write_restart(file_sprd,v3dg,v2dg)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
+!    call state_trans_inv(v3dg) !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
+#ifdef PNETCDF
+    if (IO_AGGREGATE) then
+      call write_restart_par(file_sprd,v3dg,v2dg,MPI_COMM_d)
+    else
+#endif
+      call write_restart(file_sprd,v3dg,v2dg)
+#ifdef PNETCDF
+    end if
+#endif
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)

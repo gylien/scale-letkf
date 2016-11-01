@@ -18,7 +18,7 @@ OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # Directory for SCALE-LETKF output
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
+MODELDIR="$DIR/../../bin"                                            # Directory of the SCALE model executables
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
@@ -35,6 +35,9 @@ OBSNCEP=
 
 #===============================================================================
 # model/data file options
+
+PNETCDF=1               # 0: Do not use PnetCDF
+                        # 1: Use PnetCDF
 
 TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
@@ -97,8 +100,6 @@ SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
-#ENABLE_SET=1       ######
-
 #===============================================================================
 # Temporary directories to store runtime files
 
@@ -121,6 +122,10 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
 #SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
 #                            #  0: No
 #                            #  1: Yes
+
+IO_ARB=0                    # Use I/O arbitrator?
+                            # 0: No
+                            # 1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)

@@ -113,8 +113,10 @@ fi
 
 #-------------------
 
-i=0
-while [ -s "$STAGING_DIR/stagein.out.$((i+1))" ]; do
+filelist=$(cd $STAGING_DIR && ls stagein.out.[0-9]* 2> /dev/null | sort -n -t '.' -k 3)
+
+for ifile in $filelist; do
+  i=$((${ifile:12}-1))
   while read line; do
     source="$(echo $line | cut -d '|' -s -f1)"
     destin="$(echo $line | cut -d '|' -s -f2)"
@@ -133,8 +135,7 @@ while [ -s "$STAGING_DIR/stagein.out.$((i+1))" ]; do
         fi
       fi
     fi
-  done < "$STAGING_DIR/stagein.out.$((i+1))" | sort | uniq
-  i=$((i+1))
+  done < "$STAGING_DIR/${ifile}" | sort | uniq
 done
 
 #-------------------------------------------------------------------------------
@@ -219,8 +220,10 @@ fi
 
   #-------------------
 
-  i=0
-  while [ -s "$STAGING_DIR/stageout.out.$((i+1))" ]; do
+  filelist=$(cd $STAGING_DIR && ls stageout.out.[0-9]* 2> /dev/null | sort -n -t '.' -k 3)
+
+  for ifile in $filelist; do
+    i=$((${ifile:13}-1))
     while read line; do
       destin="$(echo $line | cut -d '|' -s -f1)"
       source="$(echo $line | cut -d '|' -s -f2)"
@@ -240,8 +243,7 @@ fi
           fi
         fi
       fi
-    done < "$STAGING_DIR/stageout.out.$((i+1))" # | sort | uniq
-    i=$((i+1))
+    done < "$STAGING_DIR/${ifile}" # | sort | uniq
   done
 
 #-------------------------------------------------------------------------------

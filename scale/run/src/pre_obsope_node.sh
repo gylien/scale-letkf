@@ -54,6 +54,11 @@ MEMBERSEQ=${1:-$MEMBER}
 #  ln -fs $TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat $TMPDIR
 #fi
 
+IO_AGGREGATE=".false"
+if ((PNETCDF == 1)); then
+  IO_AGGREGATE=".true."
+fi
+
 OBS_IN_NAME_LIST=
 for iobs in $(seq $OBSNUM); do
   if [ "${OBSNAME[$iobs]}" != '' ]; then
@@ -71,15 +76,22 @@ for iobs in $(seq $OBSNUM); do
   fi
 done
 
+if ((PNETCDF == 1)); then
+  HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@.history"
+else
+  HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@/history"
+fi
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.obsope | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBERSEQ," \
+        -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
-        -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = '${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext'," \
-        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = '${TMPOUT}/${STIME}/hist/@@@@/history'," \
+        -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext\"," \
+        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = \"${HISTORY_IN_BASENAME}\"," \
         -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \
         -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
         -e "/!--SLOT_BASE--/a SLOT_BASE = $SLOT_BASE," \
@@ -90,8 +102,10 @@ cat $TMPDAT/conf/config.nml.obsope | \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
     > $TMPDIR/obsope.conf
 
-# These parameters are not important for obsope
-cat $TMPDAT/conf/config.nml.scale >> $TMPDIR/obsope.conf
+# Most of these parameters are not important for obsope
+cat $TMPDAT/conf/config.nml.scale | \
+    sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+    >> $TMPDIR/obsope.conf
 
 #===============================================================================
 

@@ -35,6 +35,10 @@ if [ "$PRESET" = 'K' ]; then
   NODELIST_TYPE='K'
   MPI_TYPE='K'
 elif [ "$PRESET" = 'K_rankdir' ]; then
+  if ((PNETCDF == 1)); then
+    echo "[Error] When PNETCDF is enabled, 'K_rankdir' preset cannot be used." 1>&2
+    exit 1
+  fi
   STG_TYPE='K_rankdir'
 #  DISK_ALL_LOCAL=1
   TMPDAT_MODE=3
@@ -58,9 +62,6 @@ elif [ "$PRESET" = 'K_micro' ]; then
 #  DISK_MODE_DATA_BDYPREP=2
   NODELIST_TYPE='K'
   MPI_TYPE='K'
-#  if ((ENABLE_SET == 1)); then
-#    NNODES_all=$((NNODES*3))
-#  fi
 #elif [ "$PRESET" = 'K_interact' ]; then
 #  STG_TYPE=
 #  TMPDAT_MODE=2
@@ -129,6 +130,31 @@ if ((TMPRUN_MODE <= 2)); then
   PROC_OPT='one'
 else
   PROC_OPT='alln'
+fi
+
+#===============================================================================
+# Error detection
+
+if ((PNETCDF == 1)); then
+  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3)); then
+    echo "[Error] When PNETCDF is enabled, local disks cannot be used." 1>&2
+    exit 1
+  fi
+fi
+
+if ((IO_ARB == 1)); then
+  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3)); then
+    echo "[Error] When \$IO_ARB = 1, local disks cannot be used." 1>&2
+    exit 1
+  fi
+  if ((OBSOPE_RUN != 0)); then
+    echo "[Error] When \$IO_ARB = 1, a separate observation operator (obsope) is not allowed." 1>&2
+    exit 1
+  fi
+  if ((BDY_FORMAT != 0)); then
+    echo "[Error] When \$IO_ARB = 1, boundary files need to be prepared (\$BDY_FORMAT = 0)." 1>&2
+    exit 1
+  fi
 fi
 
 #===============================================================================

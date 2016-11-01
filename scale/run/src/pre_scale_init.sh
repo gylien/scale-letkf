@@ -67,9 +67,22 @@ rm -fr $TMPDIR/*
 
 TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
 
-RESTART_OUTPUT='.false.'
+if ((PNETCDF == 1)); then
+  IO_AGGREGATE=".true."
+else
+  IO_AGGREGATE=".false"
+fi
+
 if ((MKINIT == 1 || (OCEAN_INPUT == 1 && OCEAN_FORMAT == 99))); then
   RESTART_OUTPUT='.true.'
+else
+  RESTART_OUTPUT='.false.'
+fi
+
+if ((PNETCDF == 1)); then
+  BASENAME_BOUNDARY="$TMPOUT/${STIME}/bdy/${MEM_BDY}.boundary"
+else
+  BASENAME_BOUNDARY="$TMPOUT/${STIME}/bdy/${MEM_BDY}/boundary"
 fi
 
 if ((BDY_FORMAT == 1)); then
@@ -105,43 +118,52 @@ for time_bdy in $BDY_TIME_LIST; do
     file_number="_$(printf %05d $i)"
   fi
   if ((BDY_ROTATING == 1)); then
-    bdyorg_path="${BDYORG}/${STIME}/${MEM_BDY}"
+    bdyorg_path="${BDYORG}/${STIME}"
   else
-    bdyorg_path="${BDYORG}/const/${MEM_BDY}"
+    bdyorg_path="${BDYORG}/const"
   fi
   if ((BDY_FORMAT == 1)); then
-    if [ -s "${bdyorg_path}/${time_bdy}/history.pe000000.nc" ]; then
-      for ifile in $(cd ${bdyorg_path}/${time_bdy} ; ls history*.nc 2> /dev/null); do
-        ln -fs "${bdyorg_path}/${time_bdy}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
-      done
+    if ((PNETCDF == 1)); then
+      if [ -s "${bdyorg_path}/${time_bdy}/${MEM_BDY}.history.nc" ]; then
+        ln -fs "${bdyorg_path}/${time_bdy}/${MEM_BDY}.history.nc" $TMPDIR/bdydata${file_number}.nc ############ need to check !!!!
+      else
+        echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${time_bdy}/${MEM_BDY}.history.nc'."
+        exit 1
+      fi
     else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${time_bdy}/history.*.nc'."
-      exit 1
+      if [ -s "${bdyorg_path}/${time_bdy}/${MEM_BDY}/history.pe000000.nc" ]; then
+        for ifile in $(cd ${bdyorg_path}/${time_bdy}/${MEM_BDY} ; ls history*.nc 2> /dev/null); do
+          ln -fs "${bdyorg_path}/${time_bdy}/${MEM_BDY}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
+        done
+      else
+        echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${time_bdy}/${MEM_BDY}/history.*.nc'."
+        exit 1
+      fi
     fi
   elif ((BDY_FORMAT == 2)); then
-    if [ -s "${bdyorg_path}/wrfout_${time_bdy}" ]; then
-      ln -fs "${bdyorg_path}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
+    if [ -s "${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}" ]; then
+      ln -fs "${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
     else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/wrfout_${time_bdy}'."
+      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}'."
       exit 1
     fi
   elif ((BDY_FORMAT == 4)); then
-    if [ -s "${bdyorg_path}/atm_${time_bdy}.grd" ]; then
-      ln -fs "${bdyorg_path}/atm_${time_bdy}.grd" $TMPDIR/bdyatm${file_number}.grd
+    if [ -s "${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd" ]; then
+      ln -fs "${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd" $TMPDIR/bdyatm${file_number}.grd
     else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/atm_${time_bdy}.grd'."
+      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd'."
       exit 1
     fi
-    if [ -s "${bdyorg_path}/sfc_${time_bdy}.grd" ]; then
-      ln -fs "${bdyorg_path}/sfc_${time_bdy}.grd" $TMPDIR/bdysfc${file_number}.grd
+    if [ -s "${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd" ]; then
+      ln -fs "${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd" $TMPDIR/bdysfc${file_number}.grd
     else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/sfc_${time_bdy}.grd'."
+      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd'."
       exit 1
     fi
-    if [ -s "${bdyorg_path}/land_${time_bdy}.grd" ]; then
-      ln -fs "${bdyorg_path}/land_${time_bdy}.grd" $TMPDIR/bdyland${file_number}.grd
+    if [ -s "${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd" ]; then
+      ln -fs "${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd" $TMPDIR/bdyland${file_number}.grd
     else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/land_${time_bdy}.grd'."
+      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd'."
       exit 1
     fi
   fi
@@ -154,19 +176,23 @@ else
   IO_LOG_DIR="${SCPCALL}_scale_init"
 fi
 
-mkdir -p $TMPOUT/${STIME}/bdy/${MEM_BDY}
+mkdir -p $TMPOUT/${STIME}/bdy
+if ((PNETCDF != 1)); then
+  mkdir -p $TMPOUT/${STIME}/bdy/${MEM_BDY}
+fi
 
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_init | \
     sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
+        -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = $RESTART_OUTPUT," \
         -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/init\"," \
         -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
         -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
         -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT}/land/param.bucket.conf\"," \
-        -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"$TMPOUT/${STIME}/bdy/${MEM_BDY}/boundary\"," \
+        -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"${BASENAME_BOUNDARY}\"," \
         -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${BASENAME_ORG}\"," \
         -e "/!--FILETYPE_ORG--/a FILETYPE_ORG = \"${FILETYPE_ORG}\"," \
         -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = ${NUMBER_OF_FILES}," \

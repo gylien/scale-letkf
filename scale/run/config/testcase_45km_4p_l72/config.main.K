@@ -18,7 +18,7 @@ OUTDIR="$DDIR/exp/testcase_45km_4p_l72"     # Directory for SCALE-LETKF output
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
+MODELDIR="$DIR/../../bin"                                            # Directory of the SCALE model executables
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
@@ -92,8 +92,6 @@ THREADS=8          # Number of threads per process
 SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
-
-#ENABLE_SET=1       ######
 
 #===============================================================================
 # Temporary directories to store runtime files

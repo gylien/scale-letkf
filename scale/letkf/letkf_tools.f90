@@ -22,6 +22,9 @@ MODULE letkf_tools
 !  USE efso_tools
 
   use scale_precision, only: RP
+#ifdef PNETCDF
+  use scale_stdio, only: IO_AGGREGATE
+#endif
 
   IMPLICIT NONE
 
@@ -139,7 +142,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     allocate (work2dg(nlon,nlat,nv2d))
     IF(myrank_e == lastmem_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',INFL_MUL_IN_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
-      call read_restart(INFL_MUL_IN_BASENAME,work3dg,work2dg)
+#ifdef PNETCDF
+      if (IO_AGGREGATE) then
+        call read_restart_par(INFL_MUL_IN_BASENAME,work3dg,work2dg,MPI_COMM_d)
+      else
+#endif
+        call read_restart(INFL_MUL_IN_BASENAME,work3dg,work2dg)
+#ifdef PNETCDF
+      end if
+#endif
     END IF
     CALL scatter_grd_mpi(lastmem_rank_e,work3dg,work2dg,work3d,work2d)
   END IF
@@ -386,7 +397,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     CALL gather_grd_mpi(lastmem_rank_e,work3d,work2d,work3dg,work2dg)
     IF(myrank_e == lastmem_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',INFL_MUL_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
-      call write_restart(INFL_MUL_OUT_BASENAME,work3dg,work2dg)
+#ifdef PNETCDF
+      if (IO_AGGREGATE)
+        call write_restart_par(INFL_MUL_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
+      else
+#endif
+        call write_restart(INFL_MUL_OUT_BASENAME,work3dg,work2dg)
+#ifdef PNETCDF
+      end if
+#endif
     END IF
   END IF
   !
@@ -398,7 +417,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     CALL gather_grd_mpi(lastmem_rank_e,work3da,work2da,work3dg,work2dg)
     IF(myrank_e == lastmem_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',RELAX_SPREAD_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
-      call write_restart(RELAX_SPREAD_OUT_BASENAME,work3dg,work2dg)
+#ifdef PNETCDF
+      if (IO_AGGREGATE)
+        call write_restart_par(RELAX_SPREAD_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
+      else
+#endif
+        call write_restart(RELAX_SPREAD_OUT_BASENAME,work3dg,work2dg)
+#ifdef PNETCDF
+      end if
+#endif
     END IF
     DEALLOCATE(work3da,work2da)
   END IF
@@ -417,7 +444,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     CALL gather_grd_mpi(lastmem_rank_e,work3d,work2d,work3dg,work2dg)
     IF(myrank_e == lastmem_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',NOBS_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
-      call write_restart(NOBS_OUT_BASENAME,work3dg,work2dg)
+#ifdef PNETCDF
+      if (IO_AGGREGATE)
+        call write_restart_par(NOBS_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
+      else
+#endif
+        call write_restart(NOBS_OUT_BASENAME,work3dg,work2dg)
+#ifdef PNETCDF
+      end if
+#endif
     END IF
     DEALLOCATE(work3dn,work2dn)
   END IF

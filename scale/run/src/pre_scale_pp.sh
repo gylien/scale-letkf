@@ -49,14 +49,38 @@ S_SS=${STIME:12:2}
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
 
-CONVERT_TOPO='.false.'
-if [ "$TOPO_FORMAT" != 'prep' ]; then
-  CONVERT_TOPO='.true.'
+if ((PNETCDF == 1)); then
+  IO_AGGREGATE=".true."
+else
+  IO_AGGREGATE=".false"
 fi
 
-CONVERT_LANDUSE='.false.'
+if ((PNETCDF == 1)); then
+  TOPO_OUT_BASENAME="$TMPOUT/const/topo"
+  if ((LANDUSE_UPDATE == 1)); then
+    LANDUSE_OUT_BASENAME="$TMPOUT/${STIME}/landuse"
+  else
+    LANDUSE_OUT_BASENAME="$TMPOUT/const/landuse"
+  fi
+else
+  TOPO_OUT_BASENAME="$TMPOUT/const/topo/topo"
+  if ((LANDUSE_UPDATE == 1)); then
+    LANDUSE_OUT_BASENAME="$TMPOUT/${STIME}/landuse/landuse"
+  else
+    LANDUSE_OUT_BASENAME="$TMPOUT/const/landuse/landuse"
+  fi
+fi
+
+if [ "$TOPO_FORMAT" != 'prep' ]; then
+  CONVERT_TOPO='.true.'
+else
+  CONVERT_TOPO='.false.'
+fi
+
 if [ "$LANDUSE_FORMAT" != 'prep' ]; then
   CONVERT_LANDUSE='.true.'
+else
+  CONVERT_LANDUSE='.false.'
 fi
 
 if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
@@ -71,12 +95,6 @@ if ((BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
   USE_NESTING='.true.'
 fi
 
-if ((LANDUSE_UPDATE == 1)); then
-  LANDUSE_OUT_BASENAME="$TMPOUT/${STIME}/landuse/landuse"
-else
-  LANDUSE_OUT_BASENAME="$TMPOUT/const/landuse/landuse"
-fi
-
 if [ "$SCPCALL" = 'cycle' ]; then
   IO_LOG_DIR='scale_pp'
 else
@@ -87,7 +105,8 @@ fi
 
 cat $TMPDAT/conf/config.nml.scale_pp | \
     sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
-        -e "/!--TOPO_OUT_BASENAME--/a TOPO_OUT_BASENAME = \"$TMPOUT/const/topo/topo\"," \
+        -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+        -e "/!--TOPO_OUT_BASENAME--/a TOPO_OUT_BASENAME = \"${TOPO_OUT_BASENAME}\"," \
         -e "/!--LANDUSE_OUT_BASENAME--/a LANDUSE_OUT_BASENAME = \"${LANDUSE_OUT_BASENAME}\"," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--CONVERT_TOPO--/a CONVERT_TOPO = $CONVERT_TOPO," \
