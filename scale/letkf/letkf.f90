@@ -317,7 +317,7 @@ PROGRAM letkf
 #ifdef H08
     CALL write_ensmspr_mpi(ANAL_OUT_MEAN_BASENAME,ANAL_OUT_SPRD_BASENAME,anal3d,anal2d,obs,obsda2,&
                            Him8_OAB_l,Him8_iCA_l,&
-                           Him8_bias_CA_in=Him8_bias_CA,ANAL_HIM8=.true.)
+                           Him8_bias_CA_in=Him8_bias_CA,ANAL_HIM8=.true.,panal0d=panal0d)
 #else
     CALL write_ensmspr_mpi(ANAL_OUT_MEAN_BASENAME,ANAL_OUT_SPRD_BASENAME,anal3d,anal2d,obs,obsda2)
 #endif
@@ -327,12 +327,12 @@ PROGRAM letkf
     WRITE(6,timer_fmt) '### TIMER(ANAL_MEAN):',rtimer-rtimer00
     rtimer00=rtimer
 
-#ifdef PEST_TOMITA
-    if ((myrank_a == 0).and.(EPNUM_TOMITA >= 1)) then
-      call write_para_txt("EPARAM_TOMITA_ANAL.txt",panal0d)
-    endif
+!#ifdef PEST_TOMITA
+!    if ((myrank_a == 0).and.(EPNUM_TOMITA >= 1)) then
+!      call write_para_txt("EPARAM_TOMITA_ANAL.txt",panal0d)
+!    endif
     deallocate(panal0d)
-#endif
+!#endif
 
 
 

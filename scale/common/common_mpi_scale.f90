@@ -1170,7 +1170,7 @@ END SUBROUTINE buf_to_grd
 #ifdef H08
 SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2,&
                              Him8_OAB_l,Him8_iCA_l,&
-                             Him8_bias_CA_in,ANAL_HIM8)
+                             Him8_bias_CA_in,ANAL_HIM8,panal0d)
 #else
 SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 #endif
@@ -1240,6 +1240,9 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   INTEGER :: nb 
   REAL(r_size) :: tmp_OB, tmp_sprd2
   INTEGER :: iof, iidx
+
+!-- Estimating Tomita (2008) parameters as global (0d) constant --!
+  REAL(r_size),INTENT(IN),OPTIONAL :: panal0d(MEMBER+2,PNUM_TOMITA)
 
   CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer00 = MPI_WTIME()
@@ -1533,6 +1536,12 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
   end if ! [ DEPARTURE_STAT ]
 
+#ifdef PEST_TOMITA
+  if(present(panal0d))then
+    call MPI_BCAST(panal0d,(MEMBER+2)*PNUM_TOMITA,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
+    call write_para_txt("EPARAM_TOMITA_ANAL.txt",panal0d)
+  endif
+#endif
 
   IF(myrank_e == lastmem_rank_e) THEN
     call state_trans_inv(v3dg)
