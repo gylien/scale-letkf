@@ -266,7 +266,7 @@ PROGRAM letkf
     !
 #ifdef H08
     CALL write_ensmspr_mpi(GUES_OUT_MEAN_BASENAME,GUES_OUT_SPRD_BASENAME,gues3d,gues2d,obs,obsda2,&
-                           Him8_OAB_l,Him8_iCA_l,&
+                           nHim8_obsda, Him8_OAB_l,Him8_iCA_l,&
                            Him8_bias_CA_in=Him8_bias_CA,ANAL_HIM8=.false.)
 #else
     CALL write_ensmspr_mpi(GUES_OUT_MEAN_BASENAME,GUES_OUT_SPRD_BASENAME,gues3d,gues2d,obs,obsda2)
@@ -316,7 +316,7 @@ PROGRAM letkf
     !
 #ifdef H08
     CALL write_ensmspr_mpi(ANAL_OUT_MEAN_BASENAME,ANAL_OUT_SPRD_BASENAME,anal3d,anal2d,obs,obsda2,&
-                           Him8_OAB_l,Him8_iCA_l,&
+                           nHim8_obsda, Him8_OAB_l,Him8_iCA_l,&
                            Him8_bias_CA_in=Him8_bias_CA,ANAL_HIM8=.true.,panal0d=panal0d)
 #else
     CALL write_ensmspr_mpi(ANAL_OUT_MEAN_BASENAME,ANAL_OUT_SPRD_BASENAME,anal3d,anal2d,obs,obsda2)
