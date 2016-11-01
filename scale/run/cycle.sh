@@ -240,13 +240,11 @@ while ((time <= ETIME)); do
       fi
 
       nodestr=proc
-      if ((ENABLE_SET == 1)); then                                    ##
+      if ((IO_ARB == 1)); then
         if ((s == 3)); then
           nodestr='set1.proc'
-        elif ((s == 4)); then
-          nodestr='set2.proc'
         elif ((s == 5)); then
-          nodestr='set3.proc'
+          nodestr='set2.proc'
         fi
       fi
 
@@ -272,8 +270,13 @@ while ((time <= ETIME)); do
           else
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
-                    "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it || exit $?
+            if ((IO_ARB == 1)); then ##
+              mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
+                      "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it || exit $? &
+            else ##
+              mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
+                      "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it || exit $?
+            fi ##
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           fi
@@ -285,13 +288,22 @@ while ((time <= ETIME)); do
                   "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" "$loop" || exit $?
         else
 
-          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
-                  "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" || exit $?
+          if ((IO_ARB == 1)); then ##                                 
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
+                    "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" || exit $? &
+          else ##
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
+                    "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" || exit $?
+          fi ##
         fi
       fi
 
     fi
   done
+
+  if ((IO_ARB == 1)); then ##                                 
+    wait                   ##
+  fi                       ##
 
 #-------------------------------------------------------------------------------
 # Online stage out

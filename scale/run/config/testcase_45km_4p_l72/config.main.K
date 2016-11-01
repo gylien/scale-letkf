@@ -93,8 +93,6 @@ SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
-#ENABLE_SET=1       ######
-
 #===============================================================================
 # Temporary directories to store runtime files
 

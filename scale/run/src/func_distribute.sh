@@ -441,7 +441,7 @@ elif [ "$NODELIST_TYPE" = 'K' ]; then
   local p
 ######
   local s
-  for s in $(seq 3); do
+  for s in $(seq 2); do
 ######
   if [ "$DISTR_FILE" = '-' ]; then
     for n in $(seq $NNODES_real); do
@@ -483,7 +483,7 @@ node_m[$msprd]=${node_m[$mmean]}
 # Create nodefiles
 
 ######
-for s in $(seq 3); do
+for s in $(seq 2); do
 ######
 if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
   local p

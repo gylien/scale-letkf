@@ -24,6 +24,9 @@ module common_mpi_scale
 
   use scale_precision, only: RP
   use scale_comm, only: COMM_datatype
+#ifdef PNETCDF
+  use scale_stdio, only: IO_AGGREGATE
+#endif
 
   implicit none
   public
@@ -214,6 +217,7 @@ SUBROUTINE set_common_mpi_scale
 
   call MPI_Group_incl(MPI_G_WORLD,nprocs_e,ranks,MPI_G,ierr)
   call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_e,ierr)
+  call MPI_Group_free(MPI_G,ierr)
 
   call MPI_Comm_size(MPI_COMM_e,nprocs_e,ierr)
   call MPI_Comm_rank(MPI_COMM_e,myrank_e,ierr)
@@ -222,6 +226,8 @@ SUBROUTINE set_common_mpi_scale
 
   call MPI_Group_incl(MPI_G_WORLD,nprocs_e*MEM_NP,ranks_a,MPI_G,ierr)
   call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_a,ierr)
+  call MPI_Group_free(MPI_G,ierr)
+  call MPI_Group_free(MPI_G_WORLD,ierr)
 
   call MPI_Comm_size(MPI_COMM_a,nprocs_a,ierr)
   call MPI_Comm_rank(MPI_COMM_a,myrank_a,ierr)
@@ -318,7 +324,15 @@ subroutine set_common_mpi_grid
   end do
 
   if (myrank_e == lastmem_rank_e) then
-    call read_topo(LETKF_TOPO_IN_BASENAME, topo)
+#ifdef PNETCDF
+    if (IO_AGGREGATE) then
+      call read_topo_par(LETKF_TOPO_IN_BASENAME, topo, MPI_COMM_d)
+    else
+#endif
+      call read_topo(LETKF_TOPO_IN_BASENAME, topo)
+#ifdef PNETCDF
+    end if
+#endif
     v3dg(1,:,:,3) = topo
   end if
 
@@ -879,7 +893,15 @@ SUBROUTINE read_ens_history_iter(file,iter,step,v3dg,v2dg,ensmean)
 
   IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= mem) THEN
     call file_member_replace(proc2mem(1,iter,myrank+1), file, filename)  !!!!!! better to seperate 'mean' history filename using a different namelist variable !!!!!!
-    call read_history(trim(filename),step,v3dg,v2dg)
+#ifdef PNETCDF
+    if (IO_AGGREGATE) then
+      call read_history_par(trim(filename),step,v3dg,v2dg,MPI_COMM_d)
+    else
+#endif
+      call read_history(trim(filename),step,v3dg,v2dg)
+#ifdef PNETCDF
+    end if
+#endif
   END IF
 
   RETURN
@@ -912,7 +934,15 @@ subroutine read_ens_mpi(file,v3d,v2d)
     if (im >= 1 .and. im <= MEMBER) then
       call file_member_replace(im, file, filename)
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
-      call read_restart(filename,v3dg,v2dg)
+#ifdef PNETCDF
+      if (IO_AGGREGATE) then
+        call read_restart_par(filename,v3dg,v2dg,MPI_COMM_d)
+      else
+#endif
+        call read_restart(filename,v3dg,v2dg)
+#ifdef PNETCDF
+      end if
+#endif
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -996,7 +1026,15 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
   rrtimer00=rrtimer
 
 
-      call write_restart(filename,v3dg,v2dg)
+#ifdef PNETCDF
+      if (IO_AGGREGATE) then
+        call write_restart_par(filename,v3dg,v2dg,MPI_COMM_d)
+      else
+#endif
+        call write_restart(filename,v3dg,v2dg)
+#ifdef PNETCDF
+      end if
+#endif
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
@@ -1335,7 +1373,15 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
   IF(myrank_e == lastmem_rank_e) THEN
     call state_trans_inv(v3dg)
-    call write_restart(file_mean,v3dg,v2dg)
+#ifdef PNETCDF
+    if (IO_AGGREGATE) then
+      call write_restart_par(file_mean,v3dg,v2dg,MPI_COMM_d)
+    else
+#endif
+      call write_restart(file_mean,v3dg,v2dg)
+#ifdef PNETCDF
+    end if
+#endif
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1389,8 +1435,16 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
 
   IF(myrank_e == lastmem_rank_e) THEN
-!    call state_trans_inv(v3dg)             !!
-    call write_restart(file_sprd,v3dg,v2dg)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
+!    call state_trans_inv(v3dg) !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
+#ifdef PNETCDF
+    if (IO_AGGREGATE) then
+      call write_restart_par(file_sprd,v3dg,v2dg,MPI_COMM_d)
+    else
+#endif
+      call write_restart(file_sprd,v3dg,v2dg)
+#ifdef PNETCDF
+    end if
+#endif
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)

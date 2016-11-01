@@ -25,6 +25,9 @@ MODULE common_nml
   integer :: MEMBER_RUN = 1  !
   integer :: MEMBER_ITER = 0 !
 
+!  !--- PARAM_IO
+!  integer :: IO_AGGREGATE = .false.
+
   !--- PARAM_OBSOPE
   integer               :: OBS_IN_NUM = 1
   character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
@@ -235,6 +238,31 @@ subroutine read_nml_ensemble
 
   return
 end subroutine read_nml_ensemble
+
+!-----------------------------------------------------------------------
+! PARAM_IO
+!-----------------------------------------------------------------------
+!subroutine read_nml_io
+!  implicit none
+!  integer :: ierr
+
+!  namelist /PARAM_IO/ &
+!    IO_AGGREGATE
+
+!  rewind(IO_FID_CONF)
+!  read(IO_FID_CONF,nml=PARAM_IO,iostat=ierr)
+!  if (ierr < 0) then !--- missing
+!    write(6,*) 'Error: /PARAM_IO/ is not found in namelist. Check!'
+!    stop
+!  elseif (ierr > 0) then !--- fatal error
+!    write(6,*) 'xxx Not appropriate names in namelist PARAM_IO. Check!'
+!    stop
+!  endif
+
+!  write(6, nml=PARAM_IO)
+
+!  return
+!end subroutine read_nml_io
 
 !-----------------------------------------------------------------------
 ! PARAM_ENSEMBLE

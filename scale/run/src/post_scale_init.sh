@@ -42,15 +42,29 @@ initbaselen=24
 #===============================================================================
 
 if ((MKINIT == 1)); then
-  mkdir -p $TMPOUT/${STIME}/anal/${MEM}
-  for ifile in $(cd $TMPDIR ; ls init_*.nc 2> /dev/null); do
-    mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}/init${ifile:$initbaselen}
-  done
+  if ((PNETCDF == 1)); then
+    ifile="$(cd $TMPDIR ; ls init_*.nc 2> /dev/null)"
+    if [ -e "$TMPDIR/${ifile}" ]; then
+      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}.init.nc
+    fi
+  else
+    mkdir -p $TMPOUT/${STIME}/anal/${MEM}
+    for ifile in $(cd $TMPDIR ; ls init_*.nc 2> /dev/null); do
+      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}/init${ifile:$initbaselen}
+    done
+  fi
 elif ((OCEAN_INPUT == 1 && OCEAN_FORMAT == 99)); then
-  mkdir -p $TMPOUT/${STIME}/anal/${MEM}
-  for ifile in $(cd $TMPDIR ; ls init_*.nc 2> /dev/null); do
-    mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}/init_ocean${ifile:$initbaselen}
-  done
+  if ((PNETCDF == 1)); then
+    ifile="$(cd $TMPDIR ; ls init_*.nc 2> /dev/null)"
+    if [ -e "$TMPDIR/${ifile}" ]; then
+      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}.init_ocean.nc
+    fi
+  else
+    mkdir -p $TMPOUT/${STIME}/anal/${MEM}
+    for ifile in $(cd $TMPDIR ; ls init_*.nc 2> /dev/null); do
+      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}/init_ocean${ifile:$initbaselen}
+    done
+  fi
 fi
 
 if [ "$SCPCALL" = 'cycle' ]; then
