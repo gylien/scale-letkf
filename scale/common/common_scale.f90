@@ -613,7 +613,11 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
     err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+#ifdef SINGLE
+    err = nfmpi_iget_vara_real(ncid, varid, start, count, v3dg(:,:,:,iv3d), req)
+#else
     err = nfmpi_iget_vara_double(ncid, varid, start, count, v3dg(:,:,:,iv3d), req)
+#endif
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_get_vara_double_all '//' '//nfmpi_strerror(err)
   end do
@@ -623,7 +627,11 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
     err = nfmpi_inq_varid(ncid, trim(v2d_name(iv2d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+#ifdef SINGLE
+    err = nfmpi_iget_vara_real(ncid, varid, start(2:3), count(2:3), v2dg(:,:,iv2d), req)
+#else
     err = nfmpi_iget_vara_double(ncid, varid, start(2:3), count(2:3), v2dg(:,:,iv2d), req)
+#endif
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_get_vara_double_all '//' '//nfmpi_strerror(err)
   end do
@@ -841,7 +849,11 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
     err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+#ifdef SINGLE
+    err = nfmpi_iput_vara_real(ncid, varid, start, count, v3dg(:,:,:,iv3d), req)
+#else
     err = nfmpi_iput_vara_double(ncid, varid, start, count, v3dg(:,:,:,iv3d), req)
+#endif
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iput_vara_double '//' '//nfmpi_strerror(err)
   end do
@@ -851,7 +863,11 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
     err = nfmpi_inq_varid(ncid, trim(v2d_name(iv2d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+#ifdef SINGLE
+    err = nfmpi_iput_vara_real(ncid, varid, start(2:3), count(2:3), v2dg(:,:,iv2d), req)
+#else
     err = nfmpi_iput_vara_double(ncid, varid, start(2:3), count(2:3), v2dg(:,:,iv2d), req)
+#endif
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iput_vara_double '//' '//nfmpi_strerror(err)
   end do
@@ -968,7 +984,11 @@ SUBROUTINE read_topo_par(filename,topo,comm)
   err = nfmpi_inq_varid(ncid, 'TOPO', varid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+#ifdef SINGLE
+  err = nfmpi_iget_vara_real(ncid, varid, start, count, topo, req)
+#else
   err = nfmpi_iget_vara_double(ncid, varid, start, count, topo, req)
+#endif
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_get_vara_double_all '//' '//nfmpi_strerror(err)
 
