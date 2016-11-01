@@ -1327,7 +1327,7 @@ END SUBROUTINE itpl_3d
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
 subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
-                     nobs_H08,bias_H08,rmse_H08,Him8_OAB,Him8_iCA,Him8_bias_CA_in)
+                     nHim8_obsda,nobs_H08,bias_H08,rmse_H08,Him8_OAB,Him8_iCA,Him8_bias_CA_in)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
@@ -1389,14 +1389,22 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   INTEGER,ALLOCATABLE :: qc_H08(:)
   REAL(r_size),ALLOCATABLE :: ohx_H08(:)
   INTEGER,ALLOCATABLE :: oband_H08(:)
-#endif
-  REAL(r_size),INTENT(INOUT),OPTIONAL :: bias_H08(nch)
-  REAL(r_size),INTENT(INOUT),OPTIONAL :: rmse_H08(nch)
-  INTEGER,INTENT(INOUT),OPTIONAL :: nobs_H08(nch)
-  REAL(r_size),INTENT(INOUT),OPTIONAL :: Him8_OAB(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
-  INTEGER,INTENT(OUT),OPTIONAL :: Him8_iCA(int(obsda%nobs/sum(H08_CH_USE)+1)*nch)
-  REAL(r_size),INTENT(IN),OPTIONAL :: Him8_bias_CA_in(nch,H08_CLD_OBSERR_NBIN)
+  REAL(r_size),INTENT(INOUT) :: bias_H08(nch)
+  REAL(r_size),INTENT(INOUT) :: rmse_H08(nch)
+  INTEGER,INTENT(IN) :: nHim8_obsda
+  INTEGER,INTENT(INOUT) :: nobs_H08(nch)
+!  REAL(r_size),INTENT(INOUT),OPTIONAL :: Him8_OAB(nHim8_obsda)
+!  REAL(r_size),INTENT(INOUT),ALLOCATABLE :: Him8_OAB(:)
+  REAL(r_size),INTENT(INOUT) :: Him8_OAB(nHim8_obsda)
+!  INTEGER,INTENT(OUT),OPTIONAL :: Him8_iCA(nHim8_obsda)
+!  INTEGER,INTENT(OUT),ALLOCATABLE :: Him8_iCA(:)
+  INTEGER,INTENT(OUT) :: Him8_iCA(nHim8_obsda)
+  REAL(r_size),INTENT(IN) :: Him8_bias_CA_in(nch,H08_CLD_OBSERR_NBIN)
   INTEGER :: ch, idx_B07, band, idx_CA
+
+!  allocate(Him8_OAB(nHim8_obsda))
+!  allocate(Him8_iCA(nHim8_obsda))
+#endif
 
 ! -- for TC vital assimilation --
 !  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index

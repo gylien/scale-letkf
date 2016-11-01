@@ -48,6 +48,7 @@ MODULE letkf_obs
   integer,allocatable,save :: Him8_iCA_l(:)
   REAL(r_size),allocatable,save :: Him8_obserr_CA(:,:) ! Him8 obs error as a function of CA
   REAL(r_size),allocatable,save :: Him8_bias_CA(:,:) ! Him8 bias as a function of CA
+  integer,save :: nHim8_obsda
 
 CONTAINS
 !-----------------------------------------------------------------------
@@ -692,6 +693,29 @@ SUBROUTINE set_letkf_obs
 !$OMP END PARALLEL DO
 
 #ifdef H08
+
+! -- get the number of Him8 obs (All band) in obsda (PRC_myrank) [nHim8_obsda]--
+
+  nHim8_obsda = 0
+
+  do n = 1, obsda%nobs
+    iof = obsda%set(n)
+    iidx = obsda%idx(n)
+
+    tmpelm(1) = obs(iof)%elm(iidx)
+
+    if(tmpelm(1) /= id_H08IR_obs)cycle
+!    if(obsda%qc(n) /= iqc_good)cycle
+
+    nHim8_obsda = nHim8_obsda + 1
+  enddo ! n = 1, obsda%nobs
+
+  if(sum(H08_CH_USE(:)) == 0)then
+    nHim8_obsda = 1
+  else
+    nHim8_obsda = nHim8_obsda / sum(H08_CH_USE(:)) * nch
+  endif
+
   if(H08_DEBIAS_CA .or. H08_DEBIAS_CA_CLR)then
     write(6,'(a)')" ## start Him8 debias depending on CA"
 
@@ -1101,13 +1125,14 @@ print *, myrank, nobstotalg, nobstotal, nobsgrd(nlon,nlat,:)
     stop
   end if
 
+
 ! -- allocate array for storing O-B and O-A of Him8
 !  if (H08_CLD_OBSERR)then
 !
 !   Array size should be greater than or equal to nch*nprof_H08 in
 !   subdomains.
-  allocate(Him8_OAB_l(int(obsda2(PRC_myrank)%nobs/sum(H08_CH_USE)+1)*nch))
-  allocate(Him8_iCA_l(int(obsda2(PRC_myrank)%nobs/sum(H08_CH_USE)+1)*nch))
+  allocate(Him8_OAB_l(nHim8_obsda))
+  allocate(Him8_iCA_l(nHim8_obsda))
   Him8_OAB_l = 0.0d0
   Him8_iCA_l = 1
 
