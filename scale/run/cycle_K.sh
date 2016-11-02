@@ -183,6 +183,7 @@ job_submit_PJM $jobscrp
 echo
 
 job_end_check_PJM $jobid
+res=$?
 
 #===============================================================================
 # Finalization
@@ -219,4 +220,4 @@ fi
 
 echo "[$(datetime_now)] Finish $(basename $0) $@"
 
-exit 0
+exit $res

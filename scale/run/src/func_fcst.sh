@@ -1224,20 +1224,18 @@ for it in $(seq $its $ite); do
   if ((m >= 1 && m <= MEMBER_RUN)); then
     if ((BDY_ENS == 1)); then
       c=$(((m-1)/fmember+1))
+      mem_bdy=${name_m[$m]}
     elif ((TMPRUN_MODE <= 2)); then
       c=$m
+      mem_bdy='mean'
     else
       c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
+      mem_bdy='mean'
     fi
 
     if (pdrun $g $PROC_OPT); then
-      if ((BDY_ENS == 1)); then
-        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK ${stimes[$c]} \
-             $mkinit ${name_m[$m]} $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT fcst
-      else
-        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK ${stimes[$c]} \
-             $mkinit mean $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT fcst
-      fi
+      bash $SCRP_DIR/src/post_scale_init.sh $MYRANK ${stimes[$c]} \
+           $mkinit $mem_bdy $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT fcst
     fi
   fi
 
@@ -1292,28 +1290,31 @@ for it in $(seq $its $ite); do
 #      ...
 #    fi
 
+    if ((BDY_ENS == 1)); then
+      mem_bdy=${name_m[$m]}
+    else
+      mem_bdy='mean'
+    fi
+
+    ocean_base='-'
     if ((OCEAN_INPUT == 1 && mkinit != 1)); then
       if ((OCEAN_FORMAT == 0)); then
-        ocean_base="$TMPOUT/${stimes[$c]}/anal/mean/init_ocean"  ### always use mean???
+        ocean_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}/init_ocean"
       elif ((OCEAN_FORMAT == 99)); then
-        ocean_base="$TMPOUT/${stimes[$c]}/anal/mean/init_bdy"  ### always use mean???
+        ocean_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}/init_bdy"
       fi
     fi
 
     land_base='-'
     if ((LAND_INPUT == 1 && mkinit != 1)); then
       if ((LAND_FORMAT == 0)); then
-        land_base="$TMPOUT/${stimes[$c]}/anal/mean/init_land"  ### always use mean???
+        land_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}/init_land"
       elif ((LAND_FORMAT == 99)); then
-        land_base="$TMPOUT/${stimes[$c]}/anal/mean/init_bdy"  ### always use mean???
+        land_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}/init_bdy"
       fi
     fi
 
-    if ((BDY_ENS == 1)); then
-      bdy_base="$TMPOUT/${stimes[$c]}/bdy/${name_m[$m]}/boundary"
-    else
-      bdy_base="$TMPOUT/${stimes[$c]}/bdy/mean/boundary"
-    fi
+    bdy_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}/boundary"
 
     if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
       bdy_setting ${stimes[$c]} $FCSTLEN - $BDYINT $PARENT_REF_TIME
