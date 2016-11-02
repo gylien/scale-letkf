@@ -711,10 +711,12 @@ SUBROUTINE set_letkf_obs
   enddo ! n = 1, obsda%nobs
 
   if(sum(H08_CH_USE(:)) == 0)then
-    nHim8_obsda = 1
+    nHim8_obsda = nch
   else
-    nHim8_obsda = nHim8_obsda / sum(H08_CH_USE(:)) * nch
+    nHim8_obsda = max(nHim8_obsda / sum(H08_CH_USE(:)) * nch, nch)
   endif
+  write(6,'(a,i9)')"nHim8_obssda:",nHim8_obsda  
+
 
   if(H08_DEBIAS_CA .or. H08_DEBIAS_CA_CLR)then
     write(6,'(a)')" ## start Him8 debias depending on CA"
