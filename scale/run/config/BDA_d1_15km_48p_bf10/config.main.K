@@ -9,22 +9,22 @@ PRESET='K_rankdir'                          # 'K' or 'K_rankdir' or 'K_micro'
 
 #===============================================================================
 
-DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
+DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2_5km_v5dyn4" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d1_15km_v5dyn4" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin"                               # Directory of the SCALE model executables
+MODELDIR="$DIR/../../bin/${SCALE_SYS}"
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO=
-DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d1_15km_v5dyn4/const/topo"
+DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE=
-DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d1_15km_v5dyn4"
+DATA_BDY_SCALE=
 DATA_BDY_SCALE_PREP=
-DATA_BDY_WRF=
+DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl/wrfout_init_2013063000"
 DATA_BDY_NICAM=
 
 OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia" # directory of observation data in LETKF obs format
@@ -43,18 +43,18 @@ LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
 BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
 
-BDY_ENS=1               # 0: Fixed boundary files for all memebers
+BDY_ENS=0               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial time
                         # 1: Use different series of boundary files for different initial time
 
-BDYINT=3600
+BDYINT=21600
 BDYCYCLE_INT=21600
 
 PARENT_REF_TIME=
@@ -85,12 +85,12 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=100         # Ensemble size
 
-NNODES=2176        # Number of nodes
+NNODES=2448        # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
-SCALE_NP=64        # Number of processes to run SCALE
+SCALE_NP=48        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
