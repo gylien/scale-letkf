@@ -96,6 +96,8 @@ BDY_SCALE_DIR="${BDY_SCALE_DIR:-hist}"
 BDYINT=${BDYINT:-$LCYCLE}
 BDYCYCLE_INT=${BDYCYCLE_INT:-$BDYINT}
 
+PNETCDF_BDY_SCALE=${PNETCDF_BDY_SCALE:-$PNETCDF}
+
 #-------------------------------------------------------------------------------
 
 OBSOPE_RUN=0

@@ -472,7 +472,7 @@ else
     # topo (bdy_scale)
     #-------------------
     if ((loop == 1 && BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
-      if ((PNETCDF == 1)); then
+      if ((PNETCDF_BDY_SCALE == 1)); then
         pathin="${DATA_TOPO_BDY_SCALE}.nc"
         path="bdytopo/const/topo.nc"
       else
@@ -860,7 +860,7 @@ else
                 if [ "$BDY_SCALE_DIR" = 'hist' ] && [ "$mem" = 'mean' ]; then
                   mem='meanf'
                 fi
-                if ((PNETCDF == 1)); then
+                if ((PNETCDF_BDY_SCALE == 1)); then
                   pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}.history.nc"
                   if ((BDY_ROTATING == 1)); then
                     path="bdyorg/${time_bdy}/${time_bdy}/${name_m[$m]}.history.nc"
@@ -886,7 +886,7 @@ else
               if [ "$BDY_SCALE_DIR" = 'hist' ]; then
                 mem='meanf'
               fi
-              if ((PNETCDF == 1)); then
+              if ((PNETCDF_BDY_SCALE == 1)); then
                 pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}.history.nc"
                 if ((BDY_ROTATING == 1)); then
                   path="bdyorg/${time_bdy}/${time_bdy}/mean.history.nc"

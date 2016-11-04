@@ -123,7 +123,7 @@ for time_bdy in $BDY_TIME_LIST; do
     bdyorg_path="${BDYORG}/const"
   fi
   if ((BDY_FORMAT == 1)); then
-    if ((PNETCDF == 1)); then
+    if ((PNETCDF_BDY_SCALE == 1)); then
       if [ -s "${bdyorg_path}/${time_bdy}/${MEM_BDY}.history.nc" ]; then
         ln -fs "${bdyorg_path}/${time_bdy}/${MEM_BDY}.history.nc" $TMPDIR/bdydata${file_number}.nc ############ need to check !!!!
       else
