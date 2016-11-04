@@ -43,6 +43,7 @@ initbaselen=24
 
 if ((MKINIT == 1)); then
   if ((PNETCDF == 1)); then
+    mkdir -p $TMPOUT/${STIME}/anal
     ifile="$(cd $TMPDIR ; ls init_*.nc 2> /dev/null)"
     if [ -e "$TMPDIR/${ifile}" ]; then
       mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}.init.nc
@@ -55,6 +56,7 @@ if ((MKINIT == 1)); then
   fi
 elif ((OCEAN_INPUT == 1 && OCEAN_FORMAT == 99)); then
   if ((PNETCDF == 1)); then
+    mkdir -p $TMPOUT/${STIME}/anal
     ifile="$(cd $TMPDIR ; ls init_*.nc 2> /dev/null)"
     if [ -e "$TMPDIR/${ifile}" ]; then
       mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}.init_ocean.nc
