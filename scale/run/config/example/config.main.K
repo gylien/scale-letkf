@@ -39,6 +39,10 @@ OBSNCEP=
 PNETCDF=1               # 0: Do not use PnetCDF
                         # 1: Use PnetCDF
 
+PNETCDF_BDY_SCALE=      # Use PNETCDF I/O for the parent domain SCALE data? (default: $PNETCDF)
+                        # 0: Do not use PnetCDF
+                        # 1: Use PnetCDF
+
 TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
