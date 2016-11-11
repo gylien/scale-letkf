@@ -76,10 +76,10 @@ EOF
 echo "[$(datetime_now)] Run ${myname1} job on PBS"
 echo
 
-job_submit_PBS $jobscrp
+job_submit_torque $jobscrp
 echo
 
-job_end_check_PBS $jobid
+job_end_check_torque $jobid
 res=$?
 
 #===============================================================================

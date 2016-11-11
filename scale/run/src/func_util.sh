@@ -666,11 +666,11 @@ return 0
 
 #===============================================================================
 
-job_submit_PBS () {
+job_submit_torque () {
 #-------------------------------------------------------------------------------
 # Submit a PBS job.
 #
-# Usage: job_submit_PBS
+# Usage: job_submit_torque
 #
 #   JOBSCRP  Job script
 #
@@ -706,11 +706,11 @@ echo "qsub Job $jobid submitted."
 
 #===============================================================================
 
-job_end_check_PBS () {
+job_end_check_torque () {
 #-------------------------------------------------------------------------------
 # Check if a K-computer job has ended.
 #
-# Usage: job_end_check_PBS JOBID
+# Usage: job_end_check_torque JOBID
 #
 #   JOBID  Job ID monitored
 #
