@@ -18,7 +18,6 @@ MODULE letkf_tools
   USE common_letkf
 
   USE letkf_obs
-!  USE efso_nml
 !  USE efso_tools
 
   use scale_precision, only: RP
@@ -1280,35 +1279,5 @@ subroutine weight_RTPS(w, pa, xb, infl, wrlx, infl_out)
 
   return
 end subroutine weight_RTPS
-
-!SUBROUTINE obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!  INTEGER,INTENT(IN) :: imin,imax,jmin,jmax
-!  INTEGER,INTENT(INOUT) :: nn, nobs_use(nobs)
-!  INTEGER :: j,n,ib,ie,ip
-
-!  DO j=jmin,jmax
-!    IF(imin > 1) THEN
-!      ib = nobsgrd(imin-1,j)+1
-!    ELSE
-!      IF(j > 1) THEN
-!        ib = nobsgrd(nlon,j-1)+1
-!      ELSE
-!        ib = 1
-!      END IF
-!    END IF
-!    ie = nobsgrd(imax,j)
-!    n = ie - ib + 1
-!    IF(n == 0) CYCLE
-!    DO ip=ib,ie
-!      IF(nn > nobs) THEN
-!        WRITE(6,*) 'FATALERROR, NN > NOBS', NN, NOBS
-!      END IF
-!      nobs_use(nn) = ip
-!      nn = nn + 1
-!    END DO
-!  END DO
-
-!  RETURN
-!END SUBROUTINE obs_local_sub
 
 END MODULE letkf_tools

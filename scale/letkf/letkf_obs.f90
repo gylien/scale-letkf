@@ -18,16 +18,12 @@ MODULE letkf_obs
   USE common_obs_scale
   USE common_mpi_scale
   USE common_letkf
-!  USE common_scalelib
-!  USE common_precip
 
   IMPLICIT NONE
   PUBLIC
 
-!  real(r_size),parameter :: dist_zero_fac = SQRT(10.0d0/3.0d0) * 2.0d0            ! 3.651483717
-!  real(r_size),parameter :: dist_zero_fac_square = dist_zero_fac * dist_zero_fac  ! 13.33333333
-  real(r_size),parameter :: dist_zero_fac = 3.651483717
-  real(r_size),parameter :: dist_zero_fac_square = 13.33333333
+  real(r_size),parameter :: dist_zero_fac = 3.651483717        ! SQRT(10.0d0/3.0d0) * 2.0d0
+  real(r_size),parameter :: dist_zero_fac_square = 13.33333333 ! dist_zero_fac * dist_zero_fac
 
   real(r_size),save :: dlon_zero
   real(r_size),save :: dlat_zero
@@ -62,25 +58,9 @@ SUBROUTINE set_letkf_obs
 
 
   IMPLICIT NONE
-!  REAL(r_size),PARAMETER :: gross_error=10.0d0 !!!!! move to namelist
   INTEGER :: n,i,j,ierr,im,iof,iidx
 
   integer :: mem_ref
-!  CHARACTER(8) :: cdffile_m='cdfm.grd'         ! GYL, PRECIP assimilation
-!  CHARACTER(8) :: cdffile_o='cdfo.grd'         ! GYL
-!  CHARACTER(10) :: maskfile='ppmask.grd'       ! GYL
-!  REAL(r_size) :: ppcdf_m(nlon,nlat,0:ncdf)    ! GYL
-!  REAL(r_size) :: ppcdf_o(nlon,nlat,0:ncdf)    ! GYL
-!  REAL(r_size) :: ppzero_m(nlon,nlat)          ! GYL
-!  REAL(r_size) :: ppzero_o(nlon,nlat)          ! GYL
-!  REAL(r_size) :: ppmask(nlon,nlat)            ! GYL
-!  INTEGER :: pp_mem, il, bg_lev, ob_lev        ! GYL
-!  INTEGER :: pp_ntotal(pp_bg_nlev,pp_ob_nlev)  ! GYL
-!  INTEGER :: zero_mem                          ! GYL
-!  REAL(r_size) :: ym, sigma                    ! GYL
-!  REAL(r_size) :: ri, rj                       ! GYL
-!  REAL(r_size) :: tmpdat_o, obserr_p, obserr_n ! GYL
-!  INTEGER :: ii, jj                            ! GYL
 
   integer :: it,ip
   REAL(r_size),allocatable :: bufr(:,:)
@@ -251,8 +231,6 @@ SUBROUTINE set_letkf_obs
       call MPI_BCAST(obsda%idx, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%ri, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%rj, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
-!        CALL MPI_BARRIER(MPI_COMM_e,ierr)
-
 
   end if ! [ nprocs_e > MEMBER ]
 
@@ -300,21 +278,8 @@ SUBROUTINE set_letkf_obs
 !-- H08
 #endif
 
+!  call MPI_Comm_free(MPI_COMM_e,ierr)
 
-!    call MPI_Comm_free(MPI_COMM_e,ierr)
-
-
-!!                                                                               ! GYL, PRECIP assimilation
-!! reading precipitation transformation definition and mask                      ! GYL
-!!                                                                               ! GYL
-!  if (opt_pptrans >= 2) then                                                    ! GYL
-!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading.. ',cdffile_m          ! GYL
-!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading.. ',cdffile_o          ! GYL
-!    call read_ppcdf(cdffile_m, cdffile_o, ppcdf_m, ppcdf_o, ppzero_m, ppzero_o) ! GYL
-!  end if                                                                        ! GYL
-!  WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading.. ',maskfile             ! GYL
-!  call read_ppmask(maskfile, ppmask)                                            ! GYL
-!  pp_ntotal = 0                                                                 ! GYL
 
 !
 ! preprocess 'obs'
@@ -361,102 +326,6 @@ SUBROUTINE set_letkf_obs
     iidx = obsda%idx(n)
 
     tmpelm(n) = obs(iof)%elm(iidx)
-
-
-!!!###### PRECIP assimilation ######
-!!    if (tmpelm(n) == id_rain_obs) then
-
-!!      CALL phys2ij(tmplon(n),tmplat(n),ri,rj)
-!!      ii = CEILING(ri-0.5) ! nearest point
-!!      jj = CEILING(rj-0.5) ! nearest point
-!!      if (ii < 1)    ii = ii + nlon
-!!      if (ii > nlon) ii = ii - nlon
-!!      if (jj < 1)    jj = 1
-!!      if (jj > nlat) jj = nlat
-
-!!      if (ppmask(ii,jj) < mask_thres) then
-!!        tmpqc(n) = 0
-!!!        write (6,'(A)') '* Precipitation not used because of the mask file'
-!!!        write (6,'(A,F6.2,A,F6.2,A)') &
-!!!              '*  (lon,lat)=(',tmplon(n),',',tmplat(n),')'
-!!!        cycle
-!!      end if
-
-!!      pp_mem = 0
-!!      do i = 1, MEMBER
-!!        if (tmphdxf(n,i) >= ppzero_thres) then
-!!          pp_mem = pp_mem + 1
-!!        end if
-!!      end do
-
-!!      bg_lev = pp_bg_nlev
-!!      do il = 1, pp_bg_nlev-1
-!!        if (pp_mem < pp_bg_levs(il)) then
-!!          bg_lev = il
-!!          exit
-!!        end if
-!!      end do
-!!      ob_lev = pp_ob_nlev
-!!      do il = 1, pp_ob_nlev-1
-!!        if (tmpdat(n) < pp_ob_levs(il)) then
-!!          ob_lev = il
-!!          exit
-!!        end if
-!!      end do
-!!      pp_ntotal(bg_lev,ob_lev) = pp_ntotal(bg_lev,ob_lev) + 1
-!!      tmpqc(n) = 100 + pp_mem  !! For precip, qc = 100 + number of members with precip
-
-!!      if (.not. pp_criterion(bg_lev,ob_lev)) then
-!!        tmpqc(n) = 0
-!!!        write (6,'(A)') '* Precipitation does not fit assimilation criterion'
-!!!        write (6,'(A,F6.2,A,F6.2,A,I3,A,I2,A,F7.3,A,I2,A)') &
-!!!              '*  (lon,lat)=(',tmplon(n),',',tmplat(n),'), pp_mem=', &
-!!!              pp_mem, '(', bg_lev, '), pp_obs=', tmpdat(n), '(', ob_lev, ')'
-!!        cycle
-!!      end if
-
-!!      if (opt_pptrans >= 1) then
-!!        tmpdat_o = tmpdat(n)
-!!        tmplev(n) = tmpdat_o  !! For precip, lev = original observed value if transformation is used
-!!        if (opt_pptrans == 1) then ! log transformation
-!!          do i = 1, MEMBER
-!!            tmphdxf(n,i) = pptrans_log(tmphdxf(n,i))
-!!          end do
-!!          tmpdat(n) = pptrans_log(tmpdat_o)
-!!        else if (opt_pptrans == 2) then ! Gaussian transformation with median zero rain
-!!          do i = 1, MEMBER
-!!            tmphdxf(n,i) = pptrans_normal(tmphdxf(n,i), ppcdf_m(ii,jj,:), ppzero_m(ii,jj))
-!!          end do
-!!          tmpdat(n) = pptrans_normal(tmpdat_o, ppcdf_o(ii,jj,:), ppzero_o(ii,jj))
-!!        else if (opt_pptrans == 3) then ! Gaussian transformation with modified median zero rain
-!!          call pptrans_normal_mdzero_def(tmphdxf(n,:), ppcdf_m(ii,jj,:), ppzero_m(ii,jj), zero_mem, ym, sigma)
-!!          tmpdat(n) = pptrans_normal_mdzero(tmpdat_o, ppcdf_o(ii,jj,:), ppzero_o(ii,jj), ppzero_m(ii,jj), zero_mem, ym, sigma)
-!!        end if
-
-!!        if (opt_ppobserr == 1) then ! transformed obserr from obs data file
-!!          if (opt_pptrans == 1) then ! log transformation
-!!            tmperr(n) = tmperr(n) / (tmpdat_o + log_trans_tiny)
-!!            if (tmperr(n) < min_ppobserr) tmperr(n) = min_ppobserr
-!!          else if (opt_pptrans == 2) then ! Gaussian transformation with median zero rain
-!!            obserr_p = pptrans_normal(tmpdat_o+tmperr(n), ppcdf_o(ii,jj,:), ppzero_o(ii,jj)) - tmpdat(n)
-!!            if (obserr_p < min_ppobserr) obserr_p = min_ppobserr
-!!            obserr_n = tmpdat(n) - pptrans_normal(tmpdat_o-tmperr(n), ppcdf_o(ii,jj,:), ppzero_o(ii,jj))
-!!            if (obserr_n < min_ppobserr) obserr_n = min_ppobserr
-!!            tmperr(n) = 0.5d0 * (obserr_p + obserr_n)
-!!          else if (opt_pptrans == 3) then ! Gaussian transformation with modified median zero rain
-!!            obserr_p = pptrans_normal_mdzero(tmpdat_o+tmperr(n), ppcdf_o(ii,jj,:), ppzero_o(ii,jj), ppzero_m(ii,jj), zero_mem, ym, sigma) - tmpdat(n)
-!!            if (obserr_p < min_ppobserr) obserr_p = min_ppobserr
-!!            obserr_n = tmpdat(n) - pptrans_normal_mdzero(tmpdat_o-tmperr(n), ppcdf_o(ii,jj,:), ppzero_o(ii,jj), ppzero_m(ii,jj), zero_mem, ym, sigma)
-!!            if (obserr_n < min_ppobserr) obserr_n = min_ppobserr
-!!            tmperr(n) = 0.5d0 * (obserr_p + obserr_n)
-!!          end if
-!!        else if (opt_ppobserr == 2) then ! constant obserr
-!!          tmperr(n) = const_ppobserr
-!!        end if
-!!      end if ! [ opt_pptrans == 1 ]
-
-!!    end if ! [ tmpelm(n) == id_rain_obs ]
-!!!###### end PRECIP assimilation ######
 
 
 
@@ -721,9 +590,6 @@ SUBROUTINE set_letkf_obs
 !! SELECT OBS IN THE NODE
 !!
 
-!  nobs = nn
-!  WRITE(6,'(I10,A,I3.3)') nobs,' OBSERVATIONS TO BE ASSIMILATED IN MYRANK ',myrank
-
 
 
 ! Sorting
@@ -770,34 +636,6 @@ SUBROUTINE set_letkf_obs
       nobsgrd(i,j,PRC_myrank) = nobsgrd(i-1,j,PRC_myrank) + nobsgrd(i,j,PRC_myrank)
     end do
   end do
-
-!do i = 0, MEM_NP-1
-!do j = 1, nlat
-!write (6,'(31I4)') nobsgrd(:,j,i)
-!end do
-!write (6,*)
-!end do
-
-!write (6, *) 'XXXXXX'
-
-
-
-!do i = 0, MEM_NP-1
-!do j = 1, nlat
-!write (6,'(31I4)') nobsgrd(:,j,i)
-!end do
-!write (6,*)
-!end do
-
-!! global count
-!    do j = 1, nlat
-!      if (j > 1) then
-!        nobsgrd(0,j) = nobsgrd(nlon,j-1)
-!      end if
-!      do i = 1, nlon
-!        nobsgrd(i,j) = nobsgrd(i-1,j) + nobsgrd(i,j)
-!      end do
-!    end do
 
   allocate ( nnext (nlon,nlat) )
   nnext(1:nlon,:) = nobsgrd(0:nlon-1,:,PRC_myrank) + 1
@@ -880,7 +718,6 @@ SUBROUTINE set_letkf_obs
   allocate ( obsidx(maxval(nobsgrd(nlon,nlat,:))) )
 
   do ip = 0, MEM_NP-1
-!    do ip = 0, 0
 
     call rank_1d_2d(ip, iproc, jproc)
 
@@ -1020,30 +857,9 @@ SUBROUTINE set_letkf_obs
 
 
   if (nobstotal /= sum(nobsgrd(nlon,nlat,:))) then
-
-print *, myrank, nobstotalg, nobstotal, nobsgrd(nlon,nlat,:)
-
-    print *, 'FFFFFF wrong!!'
+    write (6,*) 'Error found in obsevration sorting:', myrank, nobstotalg, nobstotal, nobsgrd(nlon,nlat,:)
     stop
   end if
-
-
-
-!do i = 0, MEM_NP-1
-!do j = 1, nlat
-!write (6,'(31I4)') nobsgrd(:,j,i)
-!end do
-!write (6,*)
-!end do
-
-
-!do i = 0, MEM_NP-1
-!  write(6,*) obsda2(i)%val(20:23)
-!  write(6,*) obsda2(i)%ensval(:,20:23)
-!end do
-
-!    call unset_scalelib
-
 
   RETURN
 END SUBROUTINE set_letkf_obs
@@ -1052,13 +868,7 @@ END SUBROUTINE set_letkf_obs
 
 
 SUBROUTINE obs_choose(imin,imax,jmin,jmax,proc,nn,nobs_use,nobsgrdout)
-
-!  use scale_process, only: &
-!    PRC_myrank
-
-
   implicit none
-
   INTEGER,INTENT(IN) :: imin,imax,jmin,jmax,proc
   INTEGER,INTENT(INOUT) :: nn
   INTEGER,INTENT(INOUT),OPTIONAL :: nobs_use(:)
