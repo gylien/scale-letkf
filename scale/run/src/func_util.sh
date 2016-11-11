@@ -448,7 +448,7 @@ bdy_setting () {
 #-------------------------------------------------------------------------------
 # Calculate scale_init namelist settings for boundary files
 #
-# Usage: bdy_setting TIME FCSTLEN PARENT_LCYCLE [PARENT_FOUT] [PARENT_REF_TIME]
+# Usage: bdy_setting TIME FCSTLEN PARENT_LCYCLE PARENT_FOUT [PARENT_REF_TIME]
 #
 #   TIME
 #   FCSTLEN
