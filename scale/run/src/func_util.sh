@@ -691,14 +691,15 @@ local scrpname=$(basename $JOBSCRP)
 #-------------------------------------------------------------------------------
 
 res=$(cd $rundir && qsub $scrpname 2>&1)
-echo $res
-
 jobid=$(echo $res | cut -d '.' -f1)
+
 if ! [[ "$jobid" =~ ^[0-9]+$ ]] ; then
   jobid=
   echo "[Error] $FUNCNAME: Error found when submitting a job." >&2
   exit 1
 fi
+
+echo "qsub Job $jobid submitted."
 
 #-------------------------------------------------------------------------------
 }
