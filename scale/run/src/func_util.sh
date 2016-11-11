@@ -665,3 +665,79 @@ return 0
 }
 
 #===============================================================================
+
+job_submit_PBS () {
+#-------------------------------------------------------------------------------
+# Submit a PBS job.
+#
+# Usage: job_submit_PBS
+#
+#   JOBSCRP  Job script
+#
+# Return variables:
+#   $jobid  Job ID monitered
+#-------------------------------------------------------------------------------
+
+if (($# < 1)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local JOBSCRP="$1"
+
+local rundir=$(dirname $JOBSCRP)
+local scrpname=$(basename $JOBSCRP)
+
+#-------------------------------------------------------------------------------
+
+res=$(cd $rundir && qsub $scrpname 2>&1)
+echo $res
+
+jobid=$(echo $res | cut -d '.' -f1)
+if ! [[ "$jobid" =~ ^[0-9]+$ ]] ; then
+  jobid=
+  echo "[Error] $FUNCNAME: Error found when submitting a job." >&2
+  exit 1
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+job_end_check_PBS () {
+#-------------------------------------------------------------------------------
+# Check if a K-computer job has ended.
+#
+# Usage: job_end_check_PBS JOBID
+#
+#   JOBID  Job ID monitored
+#
+# * Do not support exit code yet
+#-------------------------------------------------------------------------------
+
+if (($# < 1)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local JOBID="$1"
+
+#-------------------------------------------------------------------------------
+
+local res=0
+local tmp
+while true; do
+  tmp=$(qstat ${JOBID} 2> /dev/null)
+  if (($? != 0)); then
+    break
+  fi
+  sleep 5s
+done
+
+return 0
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================

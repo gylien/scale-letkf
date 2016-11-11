@@ -30,25 +30,19 @@ res=$? && ((res != 0)) && exit $res
 
 #-------------------------------------------------------------------------------
 
-setting "$1" "$2" "$3" "$4" "$5"
-
-jobscrp="${myname1}_job.sh"
-
-#-------------------------------------------------------------------------------
-
 echo "[$(datetime_now)] Start $(basename $0) $@"
 echo
 
-for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
-             WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
-             STIME ETIME ISTEP FSTEP; do
-  printf '  %-10s = %s\n' $vname "${!vname}"
-done
+setting "$1" "$2" "$3" "$4" "$5"
 
+echo
+print_setting
 echo
 
 #===============================================================================
 # Creat a job script
+
+jobscrp="${myname1}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
@@ -82,20 +76,43 @@ EOF
 echo "[$(datetime_now)] Run ${myname1} job on PBS"
 echo
 
-
-
-exit
-
-
-
 job_submit_PBS $jobscrp
 echo
 
 job_end_check_PBS $jobid
+res=$?
+
+#===============================================================================
+# Finalization
+
+echo "[$(datetime_now)] Finalization"
+echo
+
+n=0
+nmax=12
+while [ ! -s "${jobscrp}.o${jobid}" ] && ((n < nmax)); do
+  n=$((n+1))
+  sleep 5s
+done
+
+mkdir -p $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/config.main $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/config.${myname1} $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/config.nml.* $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f $SCRP_DIR/${myname1}_job.sh $OUTDIR/exp/${jobid}_${myname1}_${STIME}
+cp -f ${jobscrp}.o${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.o
+cp -f ${jobscrp}.e${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.e
+( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
+( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
+
+finalization
+
+if ((CLEAR_TMP == 1)); then
+  safe_rm_tmpdir $TMPS
+fi
 
 #===============================================================================
 
-echo
 echo "[$(datetime_now)] Finish $(basename $0) $@"
 
-exit 0
+exit $res
