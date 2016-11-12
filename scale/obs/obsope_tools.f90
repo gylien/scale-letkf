@@ -286,6 +286,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                 call phys2ij(obs(iof)%lon(ns),obs(iof)%lat(ns),rig,rjg)
                 call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
 
+
                 if (PRC_myrank == proc) then
                   nprof_H08 = nprof_H08 + 1 ! num of prof in myrank node
                   tmp_ri_H08(nprof_H08) = ritmp
@@ -476,67 +477,68 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
 
 ! ###  -- TC vital assimilation -- ###
-          if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0 .and. &
-              obs(iof)%dif(obs_idx_TCX) == obs(iof)%dif(obs_idx_TCY) .and. &
-              obs(iof)%dif(obs_idx_TCY) == obs(iof)%dif(obs_idx_TCP)) then
+          if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0)then
+            if(obs(iof)%dif(obs_idx_TCX) == obs(iof)%dif(obs_idx_TCY) .and. &
+               obs(iof)%dif(obs_idx_TCY) == obs(iof)%dif(obs_idx_TCP)) then
            
-            if (obs(iof)%dif(obs_idx_TCX) > slot_lb .and. &
-              obs(iof)%dif(obs_idx_TCX) <= slot_ub) then
-              nslot = nslot + 3 ! TC vital obs should have 3 data (i.e., lon, lat, and MSLP)
+              if (obs(iof)%dif(obs_idx_TCX) > slot_lb .and. &
+                obs(iof)%dif(obs_idx_TCX) <= slot_ub) then
+                nslot = nslot + 3 ! TC vital obs should have 3 data (i.e., lon, lat, and MSLP)
 
-              !!! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
-              ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp
-              allocate(bTC(3,0:MEM_NP-1))
-              allocate(bufr(3,0:MEM_NP-1))
+                !!! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
+                ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp
+                allocate(bTC(3,0:MEM_NP-1))
+                allocate(bufr(3,0:MEM_NP-1))
 
-              bTC = 9.99d33
-              bufr = 9.99d33
+                bTC = 9.99d33
+                bufr = 9.99d33
 
-              ! Note: obs(iof)%dat(obs_idx_TCX) is not longitude (deg) but X (m).
-              !       Units of the original TC vital position are converted in
-              !       subroutine read_obs in common_obs_scale.f90.
-              !
-              call phys2ij(obs(iof)%lon(obs_idx_TCX),obs(iof)%lat(obs_idx_TCX),rig,rjg) 
-              call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)  
-              call search_tc_subdom(rig,rjg,v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
+                ! Note: obs(iof)%dat(obs_idx_TCX) is not longitude (deg) but X (m).
+                !       Units of the original TC vital position are converted in
+                !       subroutine read_obs in common_obs_scale.f90.
+                !
+                call phys2ij(obs(iof)%lon(obs_idx_TCX),obs(iof)%lat(obs_idx_TCX),rig,rjg) 
+                call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)  
+                call search_tc_subdom(rig,rjg,v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
   
-              CALL MPI_BARRIER(MPI_COMM_d,ierr)
-              CALL MPI_ALLREDUCE(bTC,bufr,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
-              bTC = bufr
+                CALL MPI_BARRIER(MPI_COMM_d,ierr)
+                CALL MPI_ALLREDUCE(bTC,bufr,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
+                bTC = bufr
 
-              deallocate(bufr)
+                deallocate(bufr)
 
-              ! Assume MSLP of background TC is lower than 1100 (hPa). 
-              bTC_mslp = 1100.0d2
-              do n = 0, MEM_NP - 1
-                write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
-                if (bTC(3,n) < bTC_mslp ) then
-                  bTC_mslp = bTC(3,n)
-                  bTC_proc = n
+                ! Assume MSLP of background TC is lower than 1100 (hPa). 
+                bTC_mslp = 1100.0d2
+                do n = 0, MEM_NP - 1
+                  write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
+                  if (bTC(3,n) < bTC_mslp ) then
+                    bTC_mslp = bTC(3,n)
+                    bTC_proc = n
+                  endif
+                enddo ! [ n = 0, MEM_NP - 1]
+
+                if (PRC_myrank == proc) then
+                  do n = 1, 3
+                    nobs = nobs + 1
+                    nobs_slot = nobs_slot + 1
+                    obsda%set(nobs) = iof
+                    if(n==1) obsda%idx(nobs) = obs_idx_TCX
+                    if(n==2) obsda%idx(nobs) = obs_idx_TCY
+                    if(n==3) obsda%idx(nobs) = obs_idx_TCP
+                    obsda%ri(nobs) = rig
+                    obsda%rj(nobs) = rjg
+                    ri(nobs) = ritmp
+                    rj(nobs) = rjtmp
+
+                    obsda%val(nobs) = bTC(n,bTC_proc)
+                    obsda%qc(nobs) = iqc_good
+                  enddo ! [ n = 1, 3 ]
+
                 endif
-              enddo ! [ n = 0, MEM_NP - 1]
+                deallocate(bTC)
 
-              if (PRC_myrank == proc) then
-                do n = 1, 3
-                  nobs = nobs + 1
-                  nobs_slot = nobs_slot + 1
-                  obsda%set(nobs) = iof
-                  if(n==1) obsda%idx(nobs) = obs_idx_TCX
-                  if(n==2) obsda%idx(nobs) = obs_idx_TCY
-                  if(n==3) obsda%idx(nobs) = obs_idx_TCP
-                  obsda%ri(nobs) = rig
-                  obsda%rj(nobs) = rjg
-                  ri(nobs) = ritmp
-                  rj(nobs) = rjtmp
-
-                  obsda%val(nobs) = bTC(n,bTC_proc)
-                  obsda%qc(nobs) = iqc_good
-                enddo ! [ n = 1, 3 ]
-
-              endif
-              deallocate(bTC)
-
-            endif ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
+              endif ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
+            endif ! [ obs(iof)%dif(obs_idx_TCX) == obs(iof)%dif(obs_idx_TCY)]
           endif ! [ obs_idx_TCX > 0 ...]
 
         end do ! [ do iof = 1, OBS_IN_NUM ]

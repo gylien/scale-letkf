@@ -674,6 +674,8 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   integer :: is, ie, js, je
   real(RP) :: v3dgtmp(KMAX,IMAXB,JMAXB)
   real(RP) :: v2dgtmp(IMAXB,JMAXB)
+  integer :: i,j,k ! debug
+  logical :: nanflag = .true. ! debug
 
   is = 1
   ie = IMAX
@@ -695,6 +697,20 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   call ncio_open(trim(filename) // filesuffix, NF90_WRITE, ncid)
 
   do iv3d = 1, nv3d
+    ! debug
+    if(nanflag)then
+      do k = 1, nlev
+        do j = 1, nlat
+        do i = 1, nlon
+          if(v3dg(k,i,j,iv3d) /= v3dg(k,i,j,iv3d))then
+            write(6,'(a)')'NaN is detected 3D!'
+            nanflag = .false.
+          endif
+        enddo
+        enddo
+      enddo
+    endif
+
     write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
     call ncio_read (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
     v3dgtmp(:,is:ie,js:je) = v3dg(:,:,:,iv3d)
@@ -704,6 +720,18 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   end do
 
   do iv2d = 1, nv2d
+    ! debug
+    if(nanflag)then
+      do j = 1, nlat
+      do i = 1, nlon
+        if(v2dg(i,j,iv3d) /= v2dg(i,j,iv2d))then
+          write(6,'(a)')'NaN is detected 2D!'
+          nanflag = .false.
+        endif
+      enddo
+      enddo
+    endif
+
     write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
     call ncio_read (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
     v2dgtmp(is:ie,js:je) = v2dg(:,:,iv2d)
@@ -781,7 +809,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
       PRC_myrank
   use scale_grid_index, only: &
       IHALO, JHALO, KHALO, &
-      IS, IE, JS, JE, KS, KE, KA
+      IS, IE, JS, JE, KS, KE, KA, IA, JA 
   use gtool_history, only: &
       HistoryGet
   use scale_comm, only: &
@@ -822,8 +850,8 @@ subroutine read_history(filename,step,v3dg,v2dg)
 
   do iv3d = 1, nv3dd
 !!!!!!!$OMP PARALLEL DO PRIVATE(i,j) OMP_SCHEDULE_ COLLAPSE(2)
-    do j = JS, JE
-      do i = IS, IE
+    do j = 1, JA
+      do i = 1, IA
         v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
         v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
       end do

@@ -100,7 +100,8 @@ SUBROUTINE set_letkf_obs
   integer :: Him8_bcnt(nch), Him8_bcnt_tmp(nch)
   real(r_size) :: Him8_bias(nch), Him8_bias_tmp(nch)
   real(r_size) :: Him8_err
-  
+  integer :: tmp_id 
+ 
 #endif
   integer :: iproc,jproc
   integer,allocatable :: nnext(:,:)
@@ -699,30 +700,32 @@ SUBROUTINE set_letkf_obs
   nHim8_obsda = 0
 
   do n = 1, obsda%nobs
+    IF(obsda%qc(n) > 0) CYCLE
     iof = obsda%set(n)
     iidx = obsda%idx(n)
 
-    tmpelm(1) = obs(iof)%elm(iidx)
-
-    if(tmpelm(1) /= id_H08IR_obs)cycle
+    tmp_id = obs(iof)%elm(iidx)
+    if(tmp_id /= id_H08IR_obs)cycle
 !    if(obsda%qc(n) /= iqc_good)cycle
 
     nHim8_obsda = nHim8_obsda + 1
   enddo ! n = 1, obsda%nobs
 
+  write(6,'(a,i9)')"nHim8_obsda0:",nHim8_obsda
+  write(6,'(a,i9)')"nHim8_obsda01:",sum(H08_CH_USE(:))
+  write(6,'(a,i9)')"nHim8_obsda02:",nHim8_obsda / sum(H08_CH_USE(:))
   if(sum(H08_CH_USE(:)) == 0)then
     nHim8_obsda = nch
   else
     nHim8_obsda = max(nHim8_obsda / sum(H08_CH_USE(:)) * nch, nch)
   endif
-  write(6,'(a,i9)')"nHim8_obssda:",nHim8_obsda  
-
+  write(6,'(a,i9)')"nHim8_obsda1:",nHim8_obsda
 
   if(H08_DEBIAS_CA .or. H08_DEBIAS_CA_CLR)then
-    write(6,'(a)')" ## start Him8 debias depending on CA"
+!    write(6,'(a)')" ## start Him8 debias depending on CA"
 
     if(H08_DEBIAS_CA_CLR)then
-      write(6,'(a)')" ## start Him8 debias by clear sky bias (lowest CA)"
+!      write(6,'(a)')" ## start Him8 debias by clear sky bias (lowest CA)"
     endif
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,iof,iidx,ch_num,idx_CA)
     do n = 1, obsda%nobs

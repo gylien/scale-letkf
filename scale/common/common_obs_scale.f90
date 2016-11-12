@@ -1392,7 +1392,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   REAL(r_size),INTENT(INOUT) :: bias_H08(nch)
   REAL(r_size),INTENT(INOUT) :: rmse_H08(nch)
   INTEGER,INTENT(IN) :: nHim8_obsda
-  INTEGER,INTENT(INOUT) :: nobs_H08(nch)
+  INTEGER,INTENT(OUT) :: nobs_H08(nch)
 !  REAL(r_size),INTENT(INOUT),OPTIONAL :: Him8_OAB(nHim8_obsda)
 !  REAL(r_size),INTENT(INOUT),ALLOCATABLE :: Him8_OAB(:)
   REAL(r_size),INTENT(INOUT) :: Him8_OAB(nHim8_obsda)
@@ -1405,6 +1405,10 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 !  allocate(Him8_OAB(nHim8_obsda))
 !  allocate(Him8_iCA(nHim8_obsda))
 #endif
+
+!  write(6,'(a,2i6)')'DEBUG monit_obs:',nHim8_obsda,nobs_H08(3)
+!  write(6,'(a,2i6)')'DEBUG monit_obs:',nHim8_obsda,nobs_H08(4)
+!  write(6,'(a,2i6)')'DEBUG monit_obs:',nHim8_obsda,sum(nobs_H08(:))
 
 ! -- for TC vital assimilation --
 !  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
@@ -1618,6 +1622,8 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
         n2prof(n) = nprof_H08
       endif
     end do ! [ n = 1, obsda%nobs ]
+
+   write(6,'(a,i7)')"HIM8 DEBUG:",nprof_H08
 
     IF(nprof_H08 >=1)THEN ! [nprof_H08 >=1]
       ALLOCATE(ri_H08(nprof_H08))
@@ -2832,6 +2838,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
     usfc1d(np) = utmp * rotc(1) - vtmp * rotc(2)
     vsfc1d(np) = utmp * rotc(2) + vtmp * rotc(1)
 
+    write(6,'(a,2f5.1)')"DEBUG HIM8,ri,rj;",ri(np),rj(np)
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_p),ri(np),rj(np),prs2d(:,np))
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_t),ri(np),rj(np),tk2d(:,np))
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_q),ri(np),rj(np),qv2d(:,np))
@@ -2871,6 +2878,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
                        btall_out(1:nch,1:nprof),& ! (K)
                        btclr_out(1:nch,1:nprof),& ! (K)
                        trans_out(nlev:1:-1,1:nch,1:nprof))
+
 !
 ! -- Compute max weight level using trans_out 
 ! -- (Transmittance from each user pressure level to Top Of the Atmosphere)
@@ -2883,7 +2891,6 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
 
     rdp = 1.0d0 / (prs2d(slev+1,np) - prs2d(slev,np))
     max_weight(ch,np) = abs((trans_out(2,ch,np) - trans_out(1,ch,np)) * rdp )
-
 
     plev_obs(n) = (prs2d(slev+1,np) + prs2d(slev,np)) * 0.5d0 ! (Pa)
 
