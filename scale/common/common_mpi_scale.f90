@@ -1309,9 +1309,18 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
             if(ANAL_HIM8)then
               tmp_OB = Him8_OB_l((k-1)*nch+i)
               idx_CA = Him8_CA_OB_l((k-1)*nch+i)
+              ! DEBUG
+              if((idx_CA < 1) .or. (idx_CA > H08_CLD_OBSERR_NBIN))then
+                write(6,'(a,i7)')"DEBUG Him8 undef idx_CA: ",idx_CA
+              endif
+              idx_CA = max(min(H08_CLD_OBSERR_NBIN, idx_CA),1)
             else
               tmp_OB = Him8_OAB_l((k-1)*nch+i)
               idx_CA = Him8_iCA_l((k-1)*nch+i)
+              if((idx_CA < 1) .or. (idx_CA > H08_CLD_OBSERR_NBIN))then
+                write(6,'(a,i7)')"DEBUG Him8 undef idx_CA: ",idx_CA
+              endif
+              idx_CA = max(min(H08_CLD_OBSERR_NBIN, idx_CA),1)
             endif
  
             !! if((abs(tmp_OB) <= H08_CLD_OBSERR_GROSS_ERR) .and. & ! gross-error check ! tentative !!
@@ -1377,8 +1386,16 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
           do k = 1, nobs_H08(i)
             if(ANAL_HIM8)then
               idx_CA = Him8_CA_OB_l((k-1)*nch+i)
+              if((idx_CA < 1) .or. (idx_CA > H08_CLD_OBSERR_NBIN))then
+                write(6,'(a,i7)')"DEBUG Him8 undef idx_CA: ",idx_CA
+              endif
+              idx_CA = max(min(H08_CLD_OBSERR_NBIN, idx_CA),1)
             else
               idx_CA = Him8_iCA_l((k-1)*nch+i)
+              if((idx_CA < 1) .or. (idx_CA > H08_CLD_OBSERR_NBIN))then
+                write(6,'(a,i7)')"DEBUG Him8 undef idx_CA: ",idx_CA
+              endif
+              idx_CA = max(min(H08_CLD_OBSERR_NBIN, idx_CA),1)
             endif
             !!! debias !!
             Him8_OAB_l((k-1)*nch+i) = Him8_OAB_l((k-1)*nch+i) - Him8_bias_CA_g(i,idx_CA) 

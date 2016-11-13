@@ -674,8 +674,6 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   integer :: is, ie, js, je
   real(RP) :: v3dgtmp(KMAX,IMAXB,JMAXB)
   real(RP) :: v2dgtmp(IMAXB,JMAXB)
-  integer :: i,j,k ! debug
-  logical :: nanflag = .true. ! debug
 
   is = 1
   ie = IMAX
@@ -697,19 +695,6 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   call ncio_open(trim(filename) // filesuffix, NF90_WRITE, ncid)
 
   do iv3d = 1, nv3d
-    ! debug
-    if(nanflag)then
-      do k = 1, nlev
-        do j = 1, nlat
-        do i = 1, nlon
-          if(v3dg(k,i,j,iv3d) /= v3dg(k,i,j,iv3d))then
-            write(6,'(a)')'NaN is detected 3D!'
-            nanflag = .false.
-          endif
-        enddo
-        enddo
-      enddo
-    endif
 
     write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
     call ncio_read (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)

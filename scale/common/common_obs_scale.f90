@@ -1332,7 +1332,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
       PRC_myrank
   use scale_grid_index, only: &
       IHALO, JHALO, KHALO, &
-      IS, IE, JS, JE, KS, KE, KA
+      IS, IE, IA, JS, JE, JA, KS, KE, KA
   use scale_grid, only: &
       GRID_CZ, &
       GRID_FZ
@@ -1393,22 +1393,13 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   REAL(r_size),INTENT(INOUT) :: rmse_H08(nch)
   INTEGER,INTENT(IN) :: nHim8_obsda
   INTEGER,INTENT(OUT) :: nobs_H08(nch)
-!  REAL(r_size),INTENT(INOUT),OPTIONAL :: Him8_OAB(nHim8_obsda)
-!  REAL(r_size),INTENT(INOUT),ALLOCATABLE :: Him8_OAB(:)
   REAL(r_size),INTENT(INOUT) :: Him8_OAB(nHim8_obsda)
-!  INTEGER,INTENT(OUT),OPTIONAL :: Him8_iCA(nHim8_obsda)
-!  INTEGER,INTENT(OUT),ALLOCATABLE :: Him8_iCA(:)
   INTEGER,INTENT(OUT) :: Him8_iCA(nHim8_obsda)
   REAL(r_size),INTENT(IN) :: Him8_bias_CA_in(nch,H08_CLD_OBSERR_NBIN)
   INTEGER :: ch, idx_B07, band, idx_CA
 
-!  allocate(Him8_OAB(nHim8_obsda))
-!  allocate(Him8_iCA(nHim8_obsda))
 #endif
 
-!  write(6,'(a,2i6)')'DEBUG monit_obs:',nHim8_obsda,nobs_H08(3)
-!  write(6,'(a,2i6)')'DEBUG monit_obs:',nHim8_obsda,nobs_H08(4)
-!  write(6,'(a,2i6)')'DEBUG monit_obs:',nHim8_obsda,sum(nobs_H08(:))
 
 ! -- for TC vital assimilation --
 !  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
@@ -1471,16 +1462,6 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 #endif
 
   do iv3d = 1, nv3dd
-!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j  = JS, JE
-      do i  = IS, IE
-        v3dgh(   1:KS-1,i,j,iv3d) = v3dgh(KS,i,j,iv3d)
-        v3dgh(KE+1:KA,  i,j,iv3d) = v3dgh(KE,i,j,iv3d)
-      end do
-    end do
-  end do
-
-  do iv3d = 1, nv3dd
     call COMM_vars8( v3dgh(:,:,:,iv3d), iv3d )
   end do
   do iv3d = 1, nv3dd
@@ -1494,6 +1475,15 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
     call COMM_wait ( v2dgh(:,:,iv2d), iv2d )
   end do
 
+  do iv3d = 1, nv3dd
+!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    do j  = 1, JA
+      do i  = 1, IA
+        v3dgh(   1:KS-1,i,j,iv3d) = v3dgh(KS,i,j,iv3d)
+        v3dgh(KE+1:KA,  i,j,iv3d) = v3dgh(KE,i,j,iv3d)
+      end do
+    end do
+  end do
 
 
 !    allocate (oelm(obsda%nobs))
@@ -1623,7 +1613,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
       endif
     end do ! [ n = 1, obsda%nobs ]
 
-   write(6,'(a,i7)')"HIM8 DEBUG:",nprof_H08
+   !write(6,'(a,i7)')"HIM8 DEBUG:",nprof_H08
 
     IF(nprof_H08 >=1)THEN ! [nprof_H08 >=1]
       ALLOCATE(ri_H08(nprof_H08))
@@ -1663,7 +1653,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns,ns2,ch,band,idx_B07,idx_CA,CA_H08)
       do n = 1, obsda%nobs
         oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
-        if(oelm(n) /= id_H08IR_obs)cycle
+        if(nint(oelm(n)) /= id_H08IR_obs)cycle
   
         band = nint(obs(obsda%set(n))%lev(obsda%idx(n))) ! obsda%lev stores the band num.
         ns = (n2prof(n) - 1) * nch + (band - 6)
@@ -1927,7 +1917,7 @@ SUBROUTINE monit_print_H08(nobs,bias,rmse,monit_type)
   character(12) :: rmse_show(nch)
   character(12) :: flag_show(nch)
 
-  integer :: i, itv, n
+  integer :: i, n
   character(4) :: nstr
   character(12) :: tmpstr(nch)
   character(12) :: tmpstr2(nch)
@@ -2838,7 +2828,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
     usfc1d(np) = utmp * rotc(1) - vtmp * rotc(2)
     vsfc1d(np) = utmp * rotc(2) + vtmp * rotc(1)
 
-    write(6,'(a,2f5.1)')"DEBUG HIM8,ri,rj;",ri(np),rj(np)
+    !write(6,'(a,2f5.1)')"DEBUG HIM8,ri,rj;",ri(np),rj(np)
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_p),ri(np),rj(np),prs2d(:,np))
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_t),ri(np),rj(np),tk2d(:,np))
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_q),ri(np),rj(np),qv2d(:,np))
