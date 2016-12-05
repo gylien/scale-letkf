@@ -18,7 +18,7 @@ OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # Directory for SCALE-LETKF output
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
+MODELDIR="$DIR/../../bin"                                            # Directory of the SCALE model executables
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
 DATA_TOPO="$DDIR/exp/testcase_45km_4p_l36_data"                      # Directory of the prepared topo files
@@ -61,10 +61,13 @@ BDYCYCLE_INT=
 
 PARENT_REF_TIME=
 
-OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
+OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
-
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+                        # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
+LAND_INPUT=1            # 0: No land input (use cycling land variables)
+                        # 1: Update the land variables every cycle
+LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1

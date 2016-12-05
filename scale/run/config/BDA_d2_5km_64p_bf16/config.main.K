@@ -11,32 +11,33 @@ PRESET='K_rankdir'                          # 'K' or 'K_rankdir' or 'K_micro'
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2_5km_100mem" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2_5km_1203" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
+MODELDIR="$DIR/../../bin"                               # Directory of the SCALE model executables
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
-DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/BDA_d2_5km_64p_bf16"
-DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf/database/landuse_prep/BDA_d2_5km_64p_bf16"
-DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d1_15km"
+DATA_TOPO=
+DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d1_15km_1103/const/topo"
+DATA_LANDUSE=
+DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d1_15km_1103"
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
 
-OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia"    # directory of observation data in LETKF obs format
+OBS="/volume63/data/hp150019/gylien/obs/prepbufr_obs_eastasia" # directory of observation data in LETKF obs format
 OBSNCEP=                                                 # directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -46,16 +47,26 @@ BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain sett
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
+BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
+
 BDY_ENS=1               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
+BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial time
+                        # 1: Use different series of boundary files for different initial time
 
 BDYINT=3600
 BDYCYCLE_INT=21600
 
-OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
-                        # 1: Update the ocean variables every cycle
+PARENT_REF_TIME=
 
+OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
+                        # 1: Update the ocean variables every cycle
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+                        # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
+
+LAND_INPUT=1            # 0: No land input (use cycling land variables)
+                        # 1: Update the land variables every cycle
+LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
@@ -68,7 +79,7 @@ OBSNAME[2]=radar
 WINDOW_S=10800     # SCALE forecast time when assimilation window starts (second)
 WINDOW_E=32400     # SCALE forecast time when assimilation window ends (second)
 LCYCLE=21600       # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=300      # Timeslot interval for 4D-LETKF (second)
+LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
@@ -93,6 +104,14 @@ DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
                             #  1: in $TMPDAT
                             #  2: in $TMPOUT
 
+DISK_MODE_TOPO_LANDUSE_DB=2
+
+DISK_MODE_DATA_BDY=2
+
+DISK_MODE_DATA_TOPO=2
+DISK_MODE_DATA_LANDUSE=2
+DISK_MODE_DATA_BDYPREP=2
+
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
@@ -104,6 +123,10 @@ TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among al
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
 
+CLEAR_TMP=1                 # Clear temporary directories after the completion of job?
+                            #  0: No
+                            #  1: Yes
+
 #===============================================================================
 # Environmental settings
 
@@ -114,6 +137,9 @@ SCP='cp -L'
 SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
+
+SCP_THREAD=8
+TAR_THREAD=8
 
 PYTHON="python"
 

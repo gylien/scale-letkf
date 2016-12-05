@@ -29,8 +29,6 @@ MODULE common_scale
 !    nitmax, &
 !    proc2mem
 
-!  use common_letkf, only: nbv
-
 !  use scale_precision
 !  use scale_stdio
 !  use scale_prof
