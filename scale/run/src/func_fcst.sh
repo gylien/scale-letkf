@@ -171,7 +171,7 @@ fi
 print_setting () {
 #-------------------------------------------------------------------------------
 
-for vname in DIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BDY_SCALE \
+for vname in DIR INDIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BDY_SCALE \
              DATA_BDY_SCALE_PREP DATA_BDY_WRF DATA_BDY_NICAM OBS OBSNCEP TOPO_FORMAT \
              LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT \
              PARENT_REF_TIME OCEAN_INPUT OCEAN_FORMAT LAND_INPUT LAND_FORMAT OBSNUM WINDOW_S WINDOW_E \
@@ -378,7 +378,7 @@ else
             mm=$(((c-1) * fmember + m))
             for q in $(seq $mem_np); do
               path="${time2}/anal/${name_m[$mm]}/init$(printf $SCALE_SFX $((q-1)))"
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+              echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
             done
           done
         fi
@@ -390,7 +390,7 @@ else
 #            mm=$(((c-1) * fmember + m))
 #            for q in $(seq $mem_np); do
 #              path="${time2}/anal/${name_m[$mm]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
-#              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+#              echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
 #            done
 #          done
 #        fi
@@ -402,7 +402,7 @@ else
 #            mm=$(((c-1) * fmember + m))
 #            for q in $(seq $mem_np); do
 #              path="${time2}/anal/${name_m[$mm]}/init_land$(printf $SCALE_SFX $((q-1)))"
-#              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+#              echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
 #            done
 #          done
 #        fi
