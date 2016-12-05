@@ -777,11 +777,7 @@ else
         time2=$(datetime $time $((lcycles * (c-1))) s)
         if ((time2 <= ETIME)); then
 
-          if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
-            bdy_setting $time2 $FCSTLEN - $BDYINT $PARENT_REF_TIME
-          else
-            bdy_setting $time2 $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
-          fi
+          bdy_setting $time2 $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME $BDY_SINGLE_FILE
 
           for ibdy in $(seq $nbdy); do
             time_bdy=${bdy_times[$ibdy]}
@@ -1129,11 +1125,7 @@ for it in $(seq $its $ite); do
       mem_bdy='mean'
     fi
 
-    if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
-      bdy_setting ${stimes[$c]} $FCSTLEN - $BDYINT $PARENT_REF_TIME
-    else
-      bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
-    fi
+    bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME $BDY_SINGLE_FILE
     bdy_time_list=''
     for ibdy in $(seq $nbdy); do
       bdy_time_list="${bdy_time_list}${bdy_times[$ibdy]} "
@@ -1279,11 +1271,7 @@ for it in $(seq $its $ite); do
 
     bdy_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}/boundary"
 
-    if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
-      bdy_setting ${stimes[$c]} $FCSTLEN - $BDYINT $PARENT_REF_TIME
-    else
-      bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
-    fi
+    bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME $BDY_SINGLE_FILE
 
     if ((LANDUSE_UPDATE == 1)); then
       time_l=${stimes[$c]}

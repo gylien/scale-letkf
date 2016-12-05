@@ -969,11 +969,7 @@ else
     nbdy_all=0
     time=$STIME
     while ((time <= ETIME)); do
-      if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
-        bdy_setting $time $CYCLEFLEN - $BDYINT $PARENT_REF_TIME
-      else
-        bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
-      fi        
+      bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME $BDY_SINGLE_FILE
 
       for ibdy in $(seq $nbdy); do
         time_bdy=${bdy_times[$ibdy]}
@@ -1257,11 +1253,7 @@ if ((BDY_FORMAT == 0)); then
   exit 1
 fi
 
-if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
-  bdy_setting $time $CYCLEFLEN - $BDYINT $PARENT_REF_TIME
-else
-  bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
-fi
+bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME $BDY_SINGLE_FILE
 bdy_time_list=''
 for ibdy in $(seq $nbdy); do
   bdy_time_list="${bdy_time_list}${bdy_times[$ibdy]} "
@@ -1399,11 +1391,7 @@ if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script start" >&2
 fi
 
-if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
-  bdy_setting $time $CYCLEFLEN - $BDYINT $PARENT_REF_TIME
-else
-  bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
-fi
+bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME $BDY_SINGLE_FILE
 
 ############
 #if ((BDY_FORMAT == 1)); then
