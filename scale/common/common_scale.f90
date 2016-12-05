@@ -705,17 +705,6 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   end do
 
   do iv2d = 1, nv2d
-    ! debug
-    if(nanflag)then
-      do j = 1, nlat
-      do i = 1, nlon
-        if(v2dg(i,j,iv3d) /= v2dg(i,j,iv2d))then
-          write(6,'(a)')'NaN is detected 2D!'
-          nanflag = .false.
-        endif
-      enddo
-      enddo
-    endif
 
     write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
     call ncio_read (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)

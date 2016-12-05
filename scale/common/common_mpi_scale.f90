@@ -1227,7 +1227,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   REAL(r_size),INTENT(IN),OPTIONAL :: Him8_bias_CA_in(nch,H08_CLD_OBSERR_NBIN) ! Him8 bias as a function of CA [current]
                                                                                ! Only used for monit_obs
 
-  REAL,ALLOCATABLE :: Him8_OB_l(:)
+  REAL(r_size),ALLOCATABLE :: Him8_OB_l(:)
   INTEGER,ALLOCATABLE :: Him8_CA_OB_l(:)
 #endif
   INTEGER :: nHim8_CA_l(nch,H08_CLD_OBSERR_NBIN) ! Number of Him8 obs as a function of CA [local]
@@ -1284,7 +1284,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
     if (myrank_e == lastmem_rank_e) then
       if(DEPARTURE_STAT_H08_ALL .or. H08_CLD_OBSERR)then
 #ifdef H08
-        if(ANAL_HIM8)then
+        if(ANAL_HIM8 .and. (nHim8_obsda>=1))then
           allocate(Him8_OB_l(nHim8_obsda))
           allocate(Him8_CA_OB_l(nHim8_obsda))
           Him8_OB_l = Him8_OAB_l
@@ -1306,7 +1306,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
         nHim8_CA_l = 0
         do i = 1, nch
           do k = 1, nobs_H08(i)
-            if(ANAL_HIM8)then
+            if(ANAL_HIM8 .and. (nHim8_obsda>=1))then
               tmp_OB = Him8_OB_l((k-1)*nch+i)
               idx_CA = Him8_CA_OB_l((k-1)*nch+i)
               ! DEBUG
@@ -1337,7 +1337,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
 
         Him8_BSPRD2_CA_l = 0.0d0
-        if(ANAL_HIM8)then
+        if(ANAL_HIM8 .and. (nHim8_obsda>=1))then
           do n = 1, obsda2(PRC_myrank)%nobs
             iof = obsda2(PRC_myrank)%set(n)
             iidx = obsda2(PRC_myrank)%idx(n)
@@ -1384,7 +1384,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
           enddo
 
           do k = 1, nobs_H08(i)
-            if(ANAL_HIM8)then
+            if(ANAL_HIM8 .and. (nHim8_obsda>=1))then
               idx_CA = Him8_CA_OB_l((k-1)*nch+i)
               if((idx_CA < 1) .or. (idx_CA > H08_CLD_OBSERR_NBIN))then
                 write(6,'(a,i7)')"DEBUG Him8 undef idx_CA: ",idx_CA
@@ -1399,7 +1399,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
             endif
             !!! debias !!
             Him8_OAB_l((k-1)*nch+i) = Him8_OAB_l((k-1)*nch+i) - Him8_bias_CA_g(i,idx_CA) 
-            if(ANAL_HIM8)then
+            if(ANAL_HIM8 .and. (nHim8_obsda>=1))then
               tmp_OB = Him8_OB_l((k-1)*nch+i)
               !if((abs(tmp_OB) <= H08_CLD_OBSERR_GROSS_ERR) .and. & ! gross-error check ! tentative !!
               !  (tmp_OB**2 >= 0.5d0))then ! Rejecting too small O-B SD. See section 3.2 in Okamoto et al. (2014QJRMS)
@@ -1411,9 +1411,9 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
         enddo ! [i = 1, nch]
         call MPI_ALLREDUCE(sHim8_OAB_CA_l, sHim8_OAB_CA_g, nch*H08_CLD_OBSERR_NBIN, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
 
-        if(ANAL_HIM8)then
-          deallocate(Him8_OB_l, Him8_CA_OB_l)
-        endif
+        !if(ANAL_HIM8 .and. (nHim8_obsda>=1))then
+        !  deallocate(Him8_OB_l, Him8_CA_OB_l)
+        !endif
 
         do i = 1, nch
           nobs_H08_tmp(i) = nobs_H08(i)
