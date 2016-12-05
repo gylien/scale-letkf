@@ -1332,7 +1332,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
       PRC_myrank
   use scale_grid_index, only: &
       IHALO, JHALO, KHALO, &
-      IS, IE, JS, JE, KS, KE, KA
+      IS, IE, IA, JS, JE, JA, KS, KE, KA
   use scale_grid, only: &
       GRID_CZ, &
       GRID_FZ
@@ -1383,29 +1383,24 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 
   REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
   REAL(r_size),ALLOCATABLE :: yobs_H08_clr(:)
-  REAL(r_size),ALLOCATABLE :: CA(:) ! (Okamoto et al., 2014QJRMS)
-  REAL(r_size) :: CA_H08 ! (Okamoto et al., 2014QJRMS)
+  REAL(r_size) :: CA ! (Okamoto et al., 2014QJRMS)
+  REAL(r_size),ALLOCATABLE :: CA_H08(:) ! (Okamoto et al., 2014QJRMS)
   INTEGER :: ns, ns2
   INTEGER,ALLOCATABLE :: qc_H08(:)
   INTEGER :: ch, idx_B07, band, idx_CA
   REAL(r_size),ALLOCATABLE :: ohx_H08(:)
   INTEGER,ALLOCATABLE :: oband_H08(:)
-#endif
   REAL(r_size),INTENT(INOUT) :: bias_H08(nch)
   REAL(r_size),INTENT(INOUT) :: rmse_H08(nch)
   INTEGER,INTENT(IN) :: nHim8_obsda
-  INTEGER,INTENT(INOUT) :: nobs_H08(nch)
-!  REAL(r_size),INTENT(INOUT),OPTIONAL :: Him8_OAB(nHim8_obsda)
-!  REAL(r_size),INTENT(INOUT),ALLOCATABLE :: Him8_OAB(:)
+  INTEGER,INTENT(OUT) :: nobs_H08(nch)
   REAL(r_size),INTENT(INOUT) :: Him8_OAB(nHim8_obsda)
-!  INTEGER,INTENT(OUT),OPTIONAL :: Him8_iCA(nHim8_obsda)
-!  INTEGER,INTENT(OUT),ALLOCATABLE :: Him8_iCA(:)
   INTEGER,INTENT(OUT) :: Him8_iCA(nHim8_obsda)
   REAL(r_size),INTENT(IN) :: Him8_bias_CA_in(nch,H08_CLD_OBSERR_NBIN)
   INTEGER :: ch, idx_B07, band, idx_CA
 
-!  allocate(Him8_OAB(nHim8_obsda))
-!  allocate(Him8_iCA(nHim8_obsda))
+#endif
+
 
 ! -- for TC vital assimilation --
 !  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
@@ -1431,7 +1426,8 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_rh) =
+! ! tentative !! check T.Honda
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_rh) = 0.0d0
 
   ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
 !$OMP PARALLEL DO PRIVATE(j,i,k)
@@ -1444,39 +1440,6 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   enddo
 !$OMP END PARALLEL DO
 
-  !!! use the 1st level as the surface (although it is not)
-  v2dgh(:,:,iv2dd_topo) = v3dgh(1+KHALO,:,:,iv3dd_hgt)
-
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_ps) = v3dg(1,:,:,iv3d_p)
-!  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) =
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_u10m) = v3dg(1,:,:,iv3d_u)
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_v10m) = v3dg(1,:,:,iv3d_v)
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_t2m) = v3dg(1,:,:,iv3d_t)
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_q2m) = v3dg(1,:,:,iv3d_q)
-
-#ifdef H08
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_skint) = v3dg(1,:,:,iv3d_t)
-
-  !!! assume the point where terrain height is less than 10 m is the ocean. T.Honda (02/09/2016)
-!$OMP PARALLEL DO PRIVATE(j,i)
-  do j = 1, nlat
-    do i = 1, nlon
-      v2dgh(i+IHALO,j+JHALO,iv2dd_lsmask) = min(max(topo(i,j) - 10.0d0, 0.0d0), 1.0d0)
-    enddo
-  enddo
-!$OMP END PARALLEL DO
-#endif
-
-  do iv3d = 1, nv3dd
-!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j  = JS, JE
-      do i  = IS, IE
-        v3dgh(   1:KS-1,i,j,iv3d) = v3dgh(KS,i,j,iv3d)
-        v3dgh(KE+1:KA,  i,j,iv3d) = v3dgh(KE,i,j,iv3d)
-      end do
-    end do
-  end do
-
   do iv3d = 1, nv3dd
     call COMM_vars8( v3dgh(:,:,:,iv3d), iv3d )
   end do
@@ -1484,14 +1447,45 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
     call COMM_wait ( v3dgh(:,:,:,iv3d), iv3d )
   end do
 
-  do iv2d = 1, nv2dd
-    call COMM_vars8( v2dgh(:,:,iv2d), iv2d )
-  end do
-  do iv2d = 1, nv2dd
-    call COMM_wait ( v2dgh(:,:,iv2d), iv2d )
+  do iv3d = 1, nv3dd
+!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    do j  = 1, JA
+      do i  = 1, IA
+        v3dgh(   1:KS-1,i,j,iv3d) = v3dgh(KS,i,j,iv3d)
+        v3dgh(KE+1:KA,  i,j,iv3d) = v3dgh(KE,i,j,iv3d)
+      end do
+    end do
   end do
 
+  !!! use the 1st level as the surface (although it is not)
+  v2dgh(1:nlonh,1:nlath,iv2dd_topo) = v3dgh(1+KHALO,1:nlonh,1:nlath,iv3dd_hgt)
+  v2dgh(1:nlonh,1:nlath,iv2dd_ps) = v3dgh(1,1:nlonh,1:nlath,iv3d_p)
+  v2dgh(1:nlonh,1:nlath,iv2dd_u10m) = v3dgh(1,1:nlonh,1:nlath,iv3d_u)
+  v2dgh(1:nlonh,1:nlath,iv2dd_v10m) = v3dgh(1,1:nlonh,1:nlath,iv3d_v)
+  v2dgh(1:nlonh,1:nlath,iv2dd_t2m) = v3dgh(1,1:nlonh,1:nlath,iv3d_t)
+  v2dgh(1:nlonh,1:nlath,iv2dd_q2m) = v3dgh(1,1:nlonh,1:nlath,iv3d_q)
 
+!  do iv2d = 1, nv2dd
+!    call COMM_vars8( v2dgh(:,:,iv2d), iv2d )
+!  end do
+!  do iv2d = 1, nv2dd
+!    call COMM_wait ( v2dgh(:,:,iv2d), iv2d )
+!  end do
+
+
+#ifdef H08
+  v2dgh(1:nlonh,1:nlath,iv2dd_skint) = v3dgh(1,1:nlonh,1:nlath,iv3d_t)
+
+
+  !!! assume the point where terrain height is less than 10 m is the ocean. T.Honda (02/09/2016)
+!$OMP PARALLEL DO PRIVATE(j,i)
+  do j = 1, nlath
+    do i = 1, nlonh
+      v2dgh(i,j,iv2dd_lsmask) = min(max(v2dgh(i,j,iv2dd_topo) - 10.0d0, 0.0d0), 1.0d0)
+    enddo
+  enddo
+!$OMP END PARALLEL DO
+#endif
 
 !    allocate (oelm(obsda%nobs))
 !    allocate (ohx(obsda%nobs))
@@ -1620,6 +1614,8 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
       endif
     end do ! [ n = 1, obsda%nobs ]
 
+   !write(6,'(a,i7)')"HIM8 DEBUG:",nprof_H08
+
     IF(nprof_H08 >=1)THEN ! [nprof_H08 >=1]
       ALLOCATE(ri_H08(nprof_H08))
       ALLOCATE(rj_H08(nprof_H08))
@@ -1640,7 +1636,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 
       ALLOCATE(yobs_H08(nprof_H08*nch))
       ALLOCATE(yobs_H08_clr(nprof_H08*nch))
-      ALLOCATE(CA(nprof_H08*nch))
+      ALLOCATE(CA_H08(nprof_H08*nch))
       ALLOCATE(plev_obs_H08(nprof_H08*nch))
       ALLOCATE(qc_H08(nprof_H08*nch))
 
@@ -1655,11 +1651,10 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
 
       write (6, '(A)')"MEAN-HIMAWARI-8-STATISTICS"
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns,ns2,ch,band,idx_B07,idx_CA,CA_H08)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns,ns2,ch,band,idx_B07,idx_CA,CA)
       do n = 1, obsda%nobs
         oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
-        if(oelm(n) /= id_H08IR_obs)cycle
- 
+        if(nint(oelm(n)) /= id_H08IR_obs)cycle
   
         band = nint(obs(obsda%set(n))%lev(obsda%idx(n))) ! obsda%lev stores the band num.
         ns = (n2prof(n) - 1) * nch + (band - 6)
@@ -1670,15 +1665,15 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
           oqc(n) = qc_H08(ns)
           ohx(n) = yobs_H08(ns)
 
-          CA(n) =  (abs(yobs_H08(ns) - yobs_H08_clr(ns)) & ! CM
-                   +  abs(obs(obsda%set(n))%dat(obsda%idx(n)) - yobs_H08_clr(ns)) & ! CO
-                   &) * 0.5d0 
+          CA =  (abs(yobs_H08(ns) - yobs_H08_clr(ns)) & ! CM
+                 +  abs(obs(obsda%set(n))%dat(obsda%idx(n)) - yobs_H08_clr(ns)) & ! CO
+                 &) * 0.5d0 
                    
 
 !-- Compute O-A/O-B (y-Hx(mean)) for monit_obs --
           ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) ! O-A/O-B
 
-          idx_CA = max(min(H08_CLD_OBSERR_NBIN, int(CA(n) / H08_CLD_OBSERR_WTH + 1)),1)
+          idx_CA = max(min(H08_CLD_OBSERR_NBIN, int(CA / H08_CLD_OBSERR_WTH + 1)),1)
           if(H08_CLD_OBSERR)then
             if(H08_DEBIAS_CA_CLR)then
               ohx(n) = ohx(n) - Him8_bias_CA_in(band-6,1)
@@ -1699,12 +1694,12 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
             oband_H08(ns+ch) = ch + 6
             ohx_H08(ns+ch) = obs(obsda%set(n))%dat(idx_B07+ch) - yobs_H08(ns+ch) ! Obs-minus-[A or B] 
 
-            CA_H08 =  (abs(yobs_H08(ns+ch) - yobs_H08_clr(ns+ch)) & ! CM
+            CA_H08(ns+ch) =  (abs(yobs_H08(ns+ch) - yobs_H08_clr(ns+ch)) & ! CM
                      +  abs(obs(obsda%set(n))%dat(idx_B07+ch) - yobs_H08_clr(ns+ch)) & ! CO
                      &) * 0.5d0 
 
             if(H08_CLD_OBSERR)then
-              idx_CA = max(min(H08_CLD_OBSERR_NBIN, int(CA_H08 / H08_CLD_OBSERR_WTH + 1)),1)
+              idx_CA = max(min(H08_CLD_OBSERR_NBIN, int(CA_H08(ns+ch) / H08_CLD_OBSERR_WTH + 1)),1)
               if(H08_DEBIAS_CA_CLR)then
                 ohx_H08(ns+ch) = ohx_H08(ns+ch) - Him8_bias_CA_in(ch,1)
               elseif(H08_DEBIAS_CA)then
@@ -1720,7 +1715,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
         do n = 1, nprof_H08
           ns = (n - 1) * nch
           do ch = 1, nch
-            Him8_iCA(ns+ch) = max(min(H08_CLD_OBSERR_NBIN, int(CA(ns+ch) / H08_CLD_OBSERR_WTH + 1)),1)
+            Him8_iCA(ns+ch) = max(min(H08_CLD_OBSERR_NBIN, int(CA_H08(ns+ch) / H08_CLD_OBSERR_WTH + 1)),1)
           enddo
         enddo
         Him8_OAB(1:nprof_H08*nch) = ohx_H08(1:nprof_H08*nch)
@@ -1734,6 +1729,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
     IF(ALLOCATED(tmp_rj_H08)) DEALLOCATE(tmp_rj_H08)
     IF(ALLOCATED(tmp_lon_H08)) DEALLOCATE(tmp_lon_H08)
     IF(ALLOCATED(tmp_lat_H08)) DEALLOCATE(tmp_lat_H08)
+    IF(ALLOCATED(CA_H08)) DEALLOCATE(CA_H08)
   endif !-- [DEPARTURE_STAT_H08]
 
 #endif
@@ -1791,7 +1787,11 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,&
   call monit_dep(obsda%nobs,oelm,ohx,oqc,nobs,bias,rmse)
 #ifdef H08
   if(DEPARTURE_STAT_H08_ALL)then
-    call monit_dep_H08(nprof_H08*nch,ohx_H08,oband_H08,nobs_H08,bias_H08,rmse_H08)
+    if(nprof_H08>=1)then
+      call monit_dep_H08(nprof_H08*nch,nobs_H08,bias_H08,rmse_H08,dep=ohx_H08,band=oband_H08)
+    else
+      call monit_dep_H08(nprof_H08*nch,nobs_H08,bias_H08,rmse_H08)
+    endif
   endif
 #endif
 
@@ -1874,11 +1874,11 @@ SUBROUTINE monit_dep(nn,elm,dep,qc,nobs,bias,rmse)
 END SUBROUTINE monit_dep
 
 ! monitor for Himawari-8 IR observations --
-SUBROUTINE monit_dep_H08(nn,dep,band,nobs,bias,rmse)
+SUBROUTINE monit_dep_H08(nn,nobs,bias,rmse,dep,band)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: nn
-  REAL(r_size),INTENT(IN) :: dep(nn)
-  INTEGER,INTENT(IN) :: band(nn)
+  REAL(r_size),OPTIONAL,INTENT(IN) :: dep(nn)
+  INTEGER,OPTIONAL,INTENT(IN) :: band(nn)
   INTEGER,INTENT(OUT) :: nobs(nch)
   REAL(r_size),INTENT(OUT) :: bias(nch)
   REAL(r_size),INTENT(OUT) :: rmse(nch)
@@ -1923,7 +1923,7 @@ SUBROUTINE monit_print_H08(nobs,bias,rmse,monit_type)
   character(12) :: rmse_show(nch)
   character(12) :: flag_show(nch)
 
-  integer :: i, itv, n
+  integer :: i, n
   character(4) :: nstr
   character(12) :: tmpstr(nch)
   character(12) :: tmpstr2(nch)
@@ -2834,6 +2834,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
     usfc1d(np) = utmp * rotc(1) - vtmp * rotc(2)
     vsfc1d(np) = utmp * rotc(2) + vtmp * rotc(1)
 
+    !write(6,'(a,2f5.1)')"DEBUG HIM8,ri,rj;",ri(np),rj(np)
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_p),ri(np),rj(np),prs2d(:,np))
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_t),ri(np),rj(np),tk2d(:,np))
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_q),ri(np),rj(np),qv2d(:,np))
@@ -2873,6 +2874,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
                        btall_out(1:nch,1:nprof),& ! (K)
                        btclr_out(1:nch,1:nprof),& ! (K)
                        trans_out(nlev:1:-1,1:nch,1:nprof))
+
 !
 ! -- Compute max weight level using trans_out 
 ! -- (Transmittance from each user pressure level to Top Of the Atmosphere)
@@ -2885,7 +2887,6 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
 
     rdp = 1.0d0 / (prs2d(slev+1,np) - prs2d(slev,np))
     max_weight(ch,np) = abs((trans_out(2,ch,np) - trans_out(1,ch,np)) * rdp )
-
 
     plev_obs(n) = (prs2d(slev+1,np) + prs2d(slev,np)) * 0.5d0 ! (Pa)
 
@@ -3059,3 +3060,4 @@ SUBROUTINE write_obs_H08(cfile,obs,append,missing)
 END SUBROUTINE write_obs_H08
 
 END MODULE common_obs_scale
+@

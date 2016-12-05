@@ -231,12 +231,11 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   REAL(KIND=jprb)    :: input_ems(mxchn), input_brdf(mxchn)
   CHARACTER(LEN=256) :: coef_filename='./rtcoef_himawari_8_ahi.dat'
   CHARACTER(LEN=256) :: sccoef_filename='./sccldcoef_himawari_8_ahi.dat'
-  CHARACTER(LEN=256) :: prof_filename
   INTEGER(KIND=jpim) :: dosolar
   INTEGER(KIND=jpim),intent(in) :: nchannels
   INTEGER(KIND=jpim) :: nchanprof
-  INTEGER(KIND=jpim) :: ivch, ich
-  REAL(KIND=jprb)    :: ems_val, brdf_val
+  INTEGER(KIND=jpim) :: ich
+  !REAL(KIND=jprb)    :: ems_val, brdf_val
   INTEGER(KIND=jpim) :: asw
   REAL(KIND=jprb), ALLOCATABLE :: emis(:), brdf(:)
   INTEGER(KIND=jpim), ALLOCATABLE :: nchan(:)
@@ -245,7 +244,6 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   INTEGER(KIND=jpim) :: nch
   INTEGER(KIND=jpim) :: ilev, nprint
   INTEGER(KIND=jpim) :: iprof, joff
-  INTEGER            :: ios
 
 ! by T.Honda
   Real(Kind=jprb),ALLOCATABLE :: tmp_btall_out(:,:)
