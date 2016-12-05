@@ -86,9 +86,11 @@ fi
 #===============================================================================
 # Default values
 
-DATA_TOPO="${DATA_TOPO:-$OUTDIR}"
-DATA_LANDUSE="${DATA_LANDUSE:-$OUTDIR}"
-DATA_BDY_SCALE_PREP="${DATA_BDY_SCALE_PREP:-$OUTDIR}"
+INDIR="${INDIR:-$OUTDIR}"
+
+DATA_TOPO="${DATA_TOPO:-$INDIR}"
+DATA_LANDUSE="${DATA_LANDUSE:-$INDIR}"
+DATA_BDY_SCALE_PREP="${DATA_BDY_SCALE_PREP:-$INDIR}"
 
 BDY_SCALE_DIR="${BDY_SCALE_DIR:-hist}"
 

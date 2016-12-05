@@ -39,7 +39,7 @@ jobscrp="${myname1}_job.sh"
 echo "[$(datetime_now)] Start $(basename $0) $@"
 echo
 
-for vname in DIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
+for vname in DIR INDIR OUTDIR DATA_TOPO DATA_LANDUSE DATA_BDY DATA_BDY_WRF OBS OBSNCEP MEMBER NNODES PPN THREADS \
              WINDOW_S WINDOW_E LCYCLE LTIMESLOT OUT_OPT LOG_OPT \
              STIME ETIME ISTEP FSTEP; do
   printf '  %-10s = %s\n' $vname "${!vname}"
