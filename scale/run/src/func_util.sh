@@ -468,7 +468,7 @@ bdy_setting () {
 #  *Require source 'func_datetime' first.
 #-------------------------------------------------------------------------------
 
-if (($# < 4)); then
+if (($# < 3)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." >&2
   exit 1
 fi
@@ -480,9 +480,6 @@ local PARENT_FOUT=${1:-$PARENT_LCYCLE}; shift
 local PARENT_REF_TIME=${1:-$TIME}; shift
 local SINGLE_FILE=${1:-0}
 
-if [ "$PARENT_FOUT" = '-' ]; then
-  PARENT_FOUT=$FCSTLEN
-fi
 PARENT_REF_TIME=$(datetime $PARENT_REF_TIME)
 
 #-------------------------------------------------------------------------------
