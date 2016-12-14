@@ -171,7 +171,7 @@ fi
 print_setting () {
 #-------------------------------------------------------------------------------
 
-for vname in DIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BDY_SCALE \
+for vname in DIR INDIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BDY_SCALE \
              DATA_BDY_SCALE_PREP DATA_BDY_WRF DATA_BDY_NICAM OBS OBSNCEP TOPO_FORMAT \
              LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT \
              PARENT_REF_TIME OCEAN_INPUT OCEAN_FORMAT OBSNUM WINDOW_S WINDOW_E \
@@ -378,7 +378,7 @@ else
             mm=$(((c-1) * fmember + m))
             for q in $(seq $mem_np); do
               path="${time2}/anal/${name_m[$mm]}/init$(printf $SCALE_SFX $((q-1)))"
-              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+              echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
             done
           done
         fi
@@ -390,7 +390,7 @@ else
 #            mm=$(((c-1) * fmember + m))
 #            for q in $(seq $mem_np); do
 #              path="${time2}/anal/${name_m[$mm]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
-#              echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+#              echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
 #            done
 #          done
 #        fi
@@ -777,11 +777,7 @@ else
         time2=$(datetime $time $((lcycles * (c-1))) s)
         if ((time2 <= ETIME)); then
 
-          if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
-            bdy_setting $time2 $FCSTLEN - $BDYINT $PARENT_REF_TIME
-          else
-            bdy_setting $time2 $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
-          fi
+          bdy_setting $time2 $FCSTLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 
           for ibdy in $(seq $nbdy); do
             time_bdy=${bdy_times[$ibdy]}
@@ -1129,11 +1125,7 @@ for it in $(seq $its $ite); do
       mem_bdy='mean'
     fi
 
-    if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
-      bdy_setting ${stimes[$c]} $FCSTLEN - $BDYINT $PARENT_REF_TIME
-    else
-      bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
-    fi
+    bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
     bdy_time_list=''
     for ibdy in $(seq $nbdy); do
       bdy_time_list="${bdy_time_list}${bdy_times[$ibdy]} "
@@ -1279,11 +1271,7 @@ for it in $(seq $its $ite); do
 
     bdy_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}/boundary"
 
-    if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
-      bdy_setting ${stimes[$c]} $FCSTLEN - $BDYINT $PARENT_REF_TIME
-    else
-      bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
-    fi
+    bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 
     if ((LANDUSE_UPDATE == 1)); then
       time_l=${stimes[$c]}

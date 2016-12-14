@@ -448,19 +448,19 @@ bdy_setting () {
 #-------------------------------------------------------------------------------
 # Calculate scale_init namelist settings for boundary files
 #
-# Usage: bdy_setting TIME FCSTLEN PARENT_LCYCLE [PARENT_FOUT] [PARENT_REF_TIME]
+# Usage: bdy_setting TIME FCSTLEN PARENT_LCYCLE [PARENT_FOUT] [PARENT_REF_TIME] [SINGLE_FILE]
 #
 #   TIME
 #   FCSTLEN
 #   PARENT_LCYCLE
 #   PARENT_FOUT
 #   PARENT_REF_TIME
+#   SINGLE_FILE
 #
 # Return variables:
 #   $nbdy
 #   $ntsteps
 #   $ntsteps_skip
-#   $ntsteps_total
 #   $bdy_times[1...$nbdy]
 #   $bdy_start_time
 #   $parent_start_time
@@ -468,7 +468,7 @@ bdy_setting () {
 #  *Require source 'func_datetime' first.
 #-------------------------------------------------------------------------------
 
-if (($# < 4)); then
+if (($# < 3)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." >&2
   exit 1
 fi
@@ -477,24 +477,10 @@ local TIME=$(datetime $1); shift
 local FCSTLEN=$1; shift
 local PARENT_LCYCLE=$1; shift
 local PARENT_FOUT=${1:-$PARENT_LCYCLE}; shift
-local PARENT_REF_TIME=${1:-$TIME}
+local PARENT_REF_TIME=${1:-$TIME}; shift
+local SINGLE_FILE=${1:-0}
 
-if [ "$PARENT_FOUT" = '-' ]; then
-  PARENT_FOUT=$FCSTLEN
-fi
-if [ "$PARENT_LCYCLE" = '-' ]; then
-  PARENT_LCYCLE=$((FCSTLEN+PARENT_FOUT))
-fi
 PARENT_REF_TIME=$(datetime $PARENT_REF_TIME)
-
-#-------------------------------------------------------------------------------
-# compute $ntsteps
-
-if ((PARENT_LCYCLE % PARENT_FOUT != 0)); then
-  echo "[Error] $FUNCNAME: $PARENT_LCYCLE needs to be an exact multiple of $PARENT_FOUT." >&2
-  exit 1
-fi
-ntsteps=$((PARENT_LCYCLE / PARENT_FOUT))
 
 #-------------------------------------------------------------------------------
 # compute $parent_start_time based on $PARENT_REF_TIME and $PARENT_LCYCLE
@@ -530,6 +516,20 @@ if ((bdy_start_time != TIME)); then
   if (($(datetime $bdy_start_time $(((ntsteps_total-1)*PARENT_FOUT)) s) < $(datetime $TIME $FCSTLEN s))); then
     ntsteps_total=$((ntsteps_total+1))
   fi
+fi
+
+#-------------------------------------------------------------------------------
+# compute $ntsteps
+
+if ((PARENT_LCYCLE % PARENT_FOUT != 0)); then
+  echo "[Error] $FUNCNAME: $PARENT_LCYCLE needs to be an exact multiple of $PARENT_FOUT." >&2
+  exit 1
+fi
+
+if ((SINGLE_FILE == 1)); then
+  ntsteps=$ntsteps_total
+else
+  ntsteps=$((PARENT_LCYCLE / PARENT_FOUT))
 fi
 
 #-------------------------------------------------------------------------------
