@@ -32,10 +32,9 @@ MODULE letkf_obs
   type(obs_da_value),save :: obsda
   type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
 
-  type obs_sort
-!    logical :: sorted = .false.
-    integer, allocatable :: accu_n(:,:)
-  end type obs_sort
+  type obs_grid
+    integer, allocatable :: n(:,:,:)
+  end type obs_grid
 
                                                     !!!!!! need to add %err and %dat if they can be determined in letkf_obs.f90
   integer,save :: nobs_ext

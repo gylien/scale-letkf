@@ -111,6 +111,8 @@ MODULE common_nml
 !  integer :: PRC_NUM_Y_LETKF = 1
 
   !--- PARAM_LETKF_OBS
+  logical :: USE_OBS(nobtype) = .true.
+
   ! >0: localization length scale (m)
   !  0: no localization XXX not implemented yet XXX
   ! <0: same as HORI_LOCAL_SIGMA(1)
@@ -139,6 +141,31 @@ MODULE common_nml
   real(r_size) :: HORI_LOCAL_RADAR_OBSNOREF = -1.0d0 ! <0: same as HORI_LOCAL(22=PHARAD)
   real(r_size) :: VERT_LOCAL_RAIN_BASE = 85000.0d0
 
+!  ! >0: observation number limit
+!  !  0: do not limit observation numbers
+!  ! <0: same as MAX_NOBS_PER_GRID(1)
+!   ! observation number limit; <= 0: Do not use
+!  integer :: MAX_NOBS_PER_GRID(nobtype) = &
+!    (/ 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
+!      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
+!      -1, -1, -1, -1/)
+
+  ! >0: typical minimum spacing of the obsetvation types in the densest observed area (not tuned carefully yet)
+  !     *this is only used for automatically determine OBS_SORT_GRID_SPACING. if using pre-set OBS_SORT_GRID_SPACING, this has no effect.
+  ! <=0: same as OBS_MINIMUM_SPACING(1)
+  real(r_size) :: OBS_MINIMUM_SPACING(nobtype) = &
+    (/300.0d3, 100.0d3, 100.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 100.0d3, 150.0d3, 150.0d3, &
+      150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 150.0d3, &
+      150.0d3,   1.0d3,  15.0d3,1000.0d3/)
+
+  ! >0: optimal grid spacing for bucket sorting of observations
+  !  0: automatically determined based on HORI_LOCAL, MAX_NOBS_PER_GRID, and OBS_MINIMUM_SPACING
+  ! <0: same as OBS_SORT_GRID_SPACING(1)
+  real(r_size) :: OBS_SORT_GRID_SPACING(nobtype) = &
+    (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+
   !--- PARAM_LETKF_VAR_LOCAL
   real(r_size) :: VAR_LOCAL_UV(nv3d+nv2d)        = 1.0d0
   real(r_size) :: VAR_LOCAL_T(nv3d+nv2d)         = 1.0d0
@@ -155,7 +182,7 @@ MODULE common_nml
   logical :: DEPARTURE_STAT_RADAR = .false.
   logical :: DEPARTURE_STAT_H08 = .false.
   real(r_size) :: DEPARTURE_STAT_T_RANGE = 0.0d0 ! time range within which observations are considered in the departure statistics.
-                                                 ! 0.0d0: no limit
+                                                 ! 0: no limit
 
   LOGICAL :: OMB_OUTPUT = .true.
   LOGICAL :: OMA_OUTPUT = .true.
@@ -448,11 +475,15 @@ subroutine read_nml_letkf_obs
   integer :: ierr
 
   namelist /PARAM_LETKF_OBS/ &
+    USE_OBS, &
     HORI_LOCAL, &
     VERT_LOCAL, &
     TIME_LOCAL, &
     HORI_LOCAL_RADAR_OBSNOREF, &
-    VERT_LOCAL_RAIN_BASE
+    VERT_LOCAL_RAIN_BASE, &
+!    MAX_NOBS_PER_GRID, &
+    OBS_MINIMUM_SPACING, &
+    OBS_SORT_GRID_SPACING
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_OBS,iostat=ierr)
@@ -473,6 +504,17 @@ subroutine read_nml_letkf_obs
     end if
     if (TIME_LOCAL(iob) < 0.0d0) then
       TIME_LOCAL(iob) = TIME_LOCAL(1)
+    end if
+
+!    if (MAX_NOBS_PER_GRID(iob) < 0) then
+!      MAX_NOBS_PER_GRID(iob) = MAX_NOBS_PER_GRID(1)
+!    end if
+
+    if (OBS_MINIMUM_SPACING(iob) <= 0.0d0) then
+      OBS_MINIMUM_SPACING(iob) = OBS_MINIMUM_SPACING(1)
+    end if
+    if (OBS_SORT_GRID_SPACING(iob) < 0.0d0) then
+      OBS_SORT_GRID_SPACING(iob) = OBS_SORT_GRID_SPACING(1)
     end if
   end do
 

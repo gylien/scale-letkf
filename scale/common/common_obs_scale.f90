@@ -88,7 +88,7 @@ MODULE common_obs_scale
   CHARACTER(3),PARAMETER :: obelmlist_varlocal(nid_obs_varlocal)= &
      (/'WND', '  T', 'MOI', ' PS', 'PRC', 'TCV', 'REF', ' Vr', 'H08'/)
 
-  ! Parameter 'nobtype' is set in common_nml_obs.f90
+  ! Parameter 'nobtype' is set in common_nml.f90
   CHARACTER(6),PARAMETER :: obtypelist(nobtype)= &
      (/'ADPUPA', 'AIRCAR', 'AIRCFT', 'SATWND', 'PROFLR', &
        'VADWND', 'SATEMP', 'ADPSFC', 'SFCSHP', 'SFCBOG', &
@@ -1927,6 +1927,7 @@ SUBROUTINE obs_da_value_allocate(obs,member)
 
   ALLOCATE( obs%set    (obs%nobs) )
   ALLOCATE( obs%idx    (obs%nobs) )
+  ALLOCATE( obs%sortkey(obs%nobs) )
   ALLOCATE( obs%val    (obs%nobs) )
 #ifdef H08
   ALLOCATE( obs%lev    (obs%nobs) ) ! H08
@@ -1962,6 +1963,7 @@ SUBROUTINE obs_da_value_deallocate(obs)
 
   IF(ALLOCATED(obs%set    )) DEALLOCATE(obs%set    )
   IF(ALLOCATED(obs%idx    )) DEALLOCATE(obs%idx    )
+  IF(ALLOCATED(obs%sortkey)) DEALLOCATE(obs%sortkey)
   IF(ALLOCATED(obs%val    )) DEALLOCATE(obs%val    )
 #ifdef H08
   IF(ALLOCATED(obs%lev    )) DEALLOCATE(obs%lev    ) ! H08

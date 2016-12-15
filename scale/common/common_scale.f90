@@ -23,8 +23,8 @@ MODULE common_scale
 ! General parameters
 !-----------------------------------------------------------------------
 
-  ! Parameter 'nv3d' is set in common_nml_obs.f90 ; 3D state variables (in SCALE restart files)
-  ! Parameter 'nv2d' is set in common_nml_obs.f90 ; 2D state variables (in SCALE restart files)
+  ! Parameter 'nv3d' is set in common_nml.f90 ; 3D state variables (in SCALE restart files)
+  ! Parameter 'nv2d' is set in common_nml.f90 ; 2D state variables (in SCALE restart files)
   INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
 #ifdef H08
   INTEGER,PARAMETER :: nv2dd=9  ! H08  ! 2D diagnostic variables (in SCALE history files)
