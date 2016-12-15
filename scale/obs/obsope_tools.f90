@@ -350,6 +350,11 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 !  write(6,*) '%%%%%%', MPI_WTIME(), nn
 !end if
 
+              if (.not. USE_OBS(obs(iof)%typ(n))) then
+                obsda%qc(nn) = iqc_otype
+                cycle
+              end if
+
               if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
                 if (obs(iof)%lev(n) > RADAR_ZMAX) then
                   obsda%qc(nn) = iqc_radar_vhi
@@ -401,6 +406,11 @@ SUBROUTINE obsope_cal(obs, obsda_return)
           ELSEIF((OBS_IN_FORMAT(iof) == 3).and.(nprof_H08 >=1 ))THEN ! H08
 ! -- Note: Trans_XtoY_H08 is called without OpenMP but it can use a parallel (with OpenMP) RTTOV routine
 !
+            !------
+            if (.not. USE_OBS(23)) then
+              obsda%qc(nobs_0+1:nobs) = iqc_otype
+            else
+            !------
 
             ALLOCATE(yobs_H08(nprof_H08*nch))
             ALLOCATE(yobs_H08_clr(nprof_H08*nch))
@@ -462,6 +472,10 @@ SUBROUTINE obsope_cal(obs, obsda_return)
             DEALLOCATE(yobs_H08, plev_obs_H08)
             DEALLOCATE(yobs_H08_clr)
             DEALLOCATE(qc_H08)
+
+            !------
+            end if ! [.not. USE_OBS(23)]
+            !------
 
 #endif
           ENDIF ! H08
