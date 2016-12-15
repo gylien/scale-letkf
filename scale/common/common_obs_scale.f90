@@ -88,8 +88,7 @@ MODULE common_obs_scale
   CHARACTER(3),PARAMETER :: obelmlist_varlocal(nid_obs_varlocal)= &
      (/'WND', '  T', 'MOI', ' PS', 'PRC', 'TCV', 'REF', ' Vr', 'H08'/)
 
-!  INTEGER,PARAMETER :: nobtype = 22
-  INTEGER,PARAMETER :: nobtype = 24 ! H08
+  ! Parameter 'nobtype' is set in common_nml_obs.f90
   CHARACTER(6),PARAMETER :: obtypelist(nobtype)= &
      (/'ADPUPA', 'AIRCAR', 'AIRCFT', 'SATWND', 'PROFLR', &
        'VADWND', 'SATEMP', 'ADPSFC', 'SFCSHP', 'SFCBOG', &
@@ -117,6 +116,7 @@ MODULE common_obs_scale
     INTEGER :: nobs = 0
     INTEGER,ALLOCATABLE :: set(:)
     INTEGER,ALLOCATABLE :: idx(:)
+    INTEGER,ALLOCATABLE :: sortkey(:)
     REAL(r_size),ALLOCATABLE :: val(:)
     !
     ! obsda%lev array is used only for Himawari-8 assimilation.

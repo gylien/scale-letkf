@@ -31,6 +31,12 @@ MODULE letkf_obs
   type(obs_info),allocatable,save :: obs(:)
   type(obs_da_value),save :: obsda
   type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
+
+  type obs_sort
+!    logical :: sorted = .false.
+    integer, allocatable :: accu_n(:,:)
+  end type obs_sort
+
                                                     !!!!!! need to add %err and %dat if they can be determined in letkf_obs.f90
   integer,save :: nobs_ext
 
@@ -98,15 +104,20 @@ SUBROUTINE set_letkf_obs
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
 
+!!!!!! temporary
+  dlon_zero = max(maxval(HORI_LOCAL), HORI_LOCAL_RADAR_OBSNOREF) * dist_zero_fac / DX
+  dlat_zero = max(maxval(HORI_LOCAL), HORI_LOCAL_RADAR_OBSNOREF) * dist_zero_fac / DY
+!!!!!!
+
   !!!!!! changes for different observation types.... (do not communicate all observaitons in the same way...)
-  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_TC) * dist_zero_fac / DX
-  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_TC) * dist_zero_fac / DY
-!  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_RAIN) * dist_zero_fac / DX
-!  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_RAIN) * dist_zero_fac / DY
-#ifdef H08
-  dlon_zero = max(dlon_zero,SIGMA_OBS_H08 * dist_zero_fac / DX) ! H08
-  dlat_zero = max(dlat_zero,SIGMA_OBS_H08 * dist_zero_fac / DY) ! H08
-#endif
+!  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_TC) * dist_zero_fac / DX
+!  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_TC) * dist_zero_fac / DY
+!!  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_RAIN) * dist_zero_fac / DX
+!!  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_RAIN) * dist_zero_fac / DY
+!#ifdef H08
+!  dlon_zero = max(dlon_zero,SIGMA_OBS_H08 * dist_zero_fac / DX) ! H08
+!  dlat_zero = max(dlat_zero,SIGMA_OBS_H08 * dist_zero_fac / DY) ! H08
+!#endif
 
 
 ! Read externally processed observations

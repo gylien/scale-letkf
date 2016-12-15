@@ -87,15 +87,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !
   ! Variable localization
   !
-  var_local(:,1) = VAR_LOCAL_UV(1:nv3d+nv2d)
-  var_local(:,2) = VAR_LOCAL_T(1:nv3d+nv2d)
-  var_local(:,3) = VAR_LOCAL_Q(1:nv3d+nv2d)
-  var_local(:,4) = VAR_LOCAL_PS(1:nv3d+nv2d)
-  var_local(:,5) = VAR_LOCAL_RAIN(1:nv3d+nv2d)
-  var_local(:,6) = VAR_LOCAL_TC(1:nv3d+nv2d)
-  var_local(:,7) = VAR_LOCAL_RADAR_REF(1:nv3d+nv2d)
-  var_local(:,8) = VAR_LOCAL_RADAR_VR(1:nv3d+nv2d)
-  var_local(:,9) = VAR_LOCAL_H08(1:nv3d+nv2d) ! H08
+  var_local(:,1) = VAR_LOCAL_UV(:)
+  var_local(:,2) = VAR_LOCAL_T(:)
+  var_local(:,3) = VAR_LOCAL_Q(:)
+  var_local(:,4) = VAR_LOCAL_PS(:)
+  var_local(:,5) = VAR_LOCAL_RAIN(:)
+  var_local(:,6) = VAR_LOCAL_TC(:)
+  var_local(:,7) = VAR_LOCAL_RADAR_REF(:)
+  var_local(:,8) = VAR_LOCAL_RADAR_VR(:)
+  var_local(:,9) = VAR_LOCAL_H08(:) ! H08
   var_local_n2n(1) = 1
   DO n=2,nv3d+nv2d
     DO i=1,n
@@ -982,7 +982,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 
 
         !
-        ! Calculate normalized horizontal/vertical distances
+        ! Calculate normalized horizontal distances
         !
         rdx = (ri - obsda2(ip)%ri(iob)) * DX
         rdy = (rj - obsda2(ip)%rj(iob)) * DY
@@ -997,34 +997,34 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 !        end if
 !        nd_h = sqrt(nd_h)
 
-        select case (ielm)
-        case (id_ps_obs)
-          nd_h = nd_h / SIGMA_OBS
-          nd_v = ABS(LOG(obs(iset)%dat(iidx)) - LOG(rlev)) / SIGMA_OBSV
-        case (id_rain_obs)
-          nd_h = nd_h / SIGMA_OBS_RAIN
-          nd_v = ABS(LOG(BASE_OBSV_RAIN) - LOG(rlev)) / SIGMA_OBSV_RAIN
-        case (id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs)
-          if (ielm == id_radar_ref_obs .and. obs(iset)%dat(iidx) <= RADAR_REF_THRES_DBZ+1.0d-6) then
-            nd_h = nd_h / SIGMA_OBS_RADAR_OBSNOREF
-          else
-            nd_h = nd_h / SIGMA_OBS_RADAR
-          end if
-          nd_v = ABS(obs(iset)%lev(iidx) - rz) / SIGMA_OBSZ_RADAR
-        case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)
-          nd_h = nd_h / SIGMA_OBS_TC
-          nd_v = ABS(LOG(obs(iset)%lev(iidx)) - LOG(rlev)) / SIGMA_OBSV_TC
-!          nd_v = 0.0d0
+!write(6,*) '$$$$$$', ityp
+        if (ityp == 22 .and. & ! obtypelist(ityp) == 'PHARAD'
+            ielm == id_radar_ref_obs .and. obs(iset)%dat(iidx) <= RADAR_REF_THRES_DBZ+1.0d-6) then
+
+!write(6,*) '######'
+
+          nd_h = nd_h / HORI_LOCAL_RADAR_OBSNOREF  ! for ref < RADAR_REF_THRES_DBZ, use HORI_LOCAL_RADAR_OBSNOREF for horizontal localization
+        else
+          nd_h = nd_h / HORI_LOCAL(ityp)
+        end if
+        !
+        ! Calculate normalized vertical distances
+        !
+        if (VERT_LOCAL(ityp) == 0.0d0) then
+          nd_v = 0.0d0                                                         ! no vertical localization
+        else if (ielm == id_ps_obs) then
+          nd_v = ABS(LOG(obs(iset)%dat(iidx)) - LOG(rlev)) / VERT_LOCAL(ityp)  ! for ps, use observed ps value for the base of vertical localization
+        else if (ielm == id_rain_obs) then
+          nd_v = ABS(LOG(VERT_LOCAL_RAIN_BASE) - LOG(rlev)) / VERT_LOCAL(ityp) ! for rain, use VERT_LOCAL_RAIN_BASE for the base of vertical localization
+        else if (ityp == 22) then ! obtypelist(ityp) == 'PHARAD'
+          nd_v = ABS(obs(iset)%lev(iidx) - rz) / VERT_LOCAL(ityp)              ! for PHARAD, use z-coordinate for vertical localization
 #ifdef H08
-        case (id_H08IR_obs)                                                                 ! H08       
-          nd_h = nd_h / SIGMA_OBS_H08                                                       ! H08    
-          !!nd_v = ABS(LOG(obs(iset)%lev(iidx)) - LOG(rlev)) / SIGMA_OBSV_H08 ! H08 ! bug fixed (02/09/2016) 
-          nd_v = ABS(LOG(obsda2(ip)%lev(iob)) - LOG(rlev)) / SIGMA_OBSV_H08 ! H08 !(06/27/2016) 
+        else if (ityp == 23) then ! obtypelist(ityp) == 'H08IRB'               ! H08
+          nd_v = ABS(LOG(obsda2(ip)%lev(iob)) - LOG(rlev)) / VERT_LOCAL(ityp)  ! H08 for H08IRB, use obsda2(ip)%lev(iob) for the base of vertical localization
 #endif
-        case default
-          nd_h = nd_h / SIGMA_OBS
-          nd_v = ABS(LOG(obs(iset)%lev(iidx)) - LOG(rlev)) / SIGMA_OBSV
-        end select
+        else
+          nd_v = ABS(LOG(obs(iset)%lev(iidx)) - LOG(rlev)) / VERT_LOCAL(ityp)
+        end if
         !
         ! Calculate (normalized 3D distances)^2
         !
