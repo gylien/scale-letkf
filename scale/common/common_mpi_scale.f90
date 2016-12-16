@@ -1201,7 +1201,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
 
   type(obs_info),intent(in) :: obs(OBS_IN_NUM)
-  type(obs_da_value),intent(in),allocatable :: obsda2(:)
+  type(obs_da_value),intent(in) :: obsda2
 
 
   REAL(r_dble) :: rrtimer00,rrtimer
@@ -1230,7 +1230,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
   if (DEPARTURE_STAT) then
     if (myrank_e == lastmem_rank_e) then
-      call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,nobs,bias,rmse,monit_type)
+      call monit_obs(v3dg,v2dg,obs,obsda2,topo,nobs,bias,rmse,monit_type,.true.)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)

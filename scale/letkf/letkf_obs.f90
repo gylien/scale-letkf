@@ -25,25 +25,37 @@ MODULE letkf_obs
   real(r_size),parameter :: dist_zero_fac = 3.651483717        ! SQRT(10.0d0/3.0d0) * 2.0d0
   real(r_size),parameter :: dist_zero_fac_square = 13.33333333 ! dist_zero_fac * dist_zero_fac
 
-  real(r_size),save :: dlon_zero
-  real(r_size),save :: dlat_zero
-
   type(obs_info),allocatable,save :: obs(:)
   type(obs_da_value),save :: obsda
-  type(obs_da_value),allocatable,save :: obsda2(:)  ! sorted
+  type(obs_da_value),save :: obsda2  ! sorted
 
-  type obs_grid
+  type obs_grid_type
+    integer :: ngrd_i
+    integer :: ngrd_j
+    real(r_size) :: grdspc_i
+    real(r_size) :: grdspc_j
+    integer :: ngrdsch_i
+    integer :: ngrdsch_j
+    integer :: ngrdext_i
+    integer :: ngrdext_j
     integer, allocatable :: n(:,:,:)
-  end type obs_grid
+    integer, allocatable :: ac(:,:,:)
+    integer, allocatable :: tot(:)
+    integer, allocatable :: n_ext(:,:)
+    integer, allocatable :: ac_ext(:,:)
+    integer :: tot_ext
+    integer, allocatable :: next(:,:) ! Temporary array
+  end type obs_grid_type
 
-                                                    !!!!!! need to add %err and %dat if they can be determined in letkf_obs.f90
   integer,save :: nobs_ext
 
-  integer,allocatable,save :: nobsgrd(:,:,:)
-  integer,allocatable,save :: nobsgrd2(:,:,:)
+  type(obs_grid_type),save :: obsgrd(nobtype)
+
+  integer,save :: nobstotal_sub
   integer,save :: nobstotalg
   integer,save :: nobstotal
-
+  integer,save :: maxnobs_sub_per_type
+  integer,save :: maxnobs_per_type
 CONTAINS
 !-----------------------------------------------------------------------
 ! Initialize
@@ -54,9 +66,9 @@ SUBROUTINE set_letkf_obs
     DY
   use scale_grid_index, only: &
     IHALO,JHALO
-  use scale_process, only: &
+!  use scale_process, only: &
 !    MPI_COMM_d => LOCAL_COMM_WORLD, &
-    PRC_myrank
+!    PRC_myrank
   use scale_rm_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
@@ -68,6 +80,11 @@ SUBROUTINE set_letkf_obs
   integer :: mem_ref
 
   integer :: it,ip
+
+  integer :: itype
+  real(r_size) :: max_hori_local
+  real(r_size) :: target_grdspc
+
   REAL(r_size),allocatable :: bufr(:,:)
   INTEGER,allocatable :: bufri(:)
   INTEGER,allocatable :: bufri2(:,:,:)
@@ -77,11 +94,19 @@ SUBROUTINE set_letkf_obs
 !  REAL(r_size),allocatable :: hx_sprd(:) ! H08
 #endif
   integer :: iproc,jproc
-  integer,allocatable :: nnext(:,:)
+  integer :: iproc2,jproc2
 
 !---
   integer :: ns
-  integer, allocatable :: nr(:), nrt(:), obsidx(:)
+  integer :: nr(MEM_NP)
+  integer :: nrt(MEM_NP)
+  integer, allocatable :: obsidx(:)
+
+  integer :: nk
+  integer :: nn_ext, nn_sub
+  integer :: ns_ext, ne_ext, ns_bufr, ne_bufr
+  integer :: ishift, jshift
+
   type(obs_da_value) :: obsbufs, obsbufr
   integer :: ip2, imin1,imax1,jmin1,jmax1,imin2,imax2,jmin2,jmax2
 !---
@@ -102,21 +127,6 @@ SUBROUTINE set_letkf_obs
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
-
-!!!!!! temporary
-  dlon_zero = max(maxval(HORI_LOCAL), HORI_LOCAL_RADAR_OBSNOREF) * dist_zero_fac / DX
-  dlat_zero = max(maxval(HORI_LOCAL), HORI_LOCAL_RADAR_OBSNOREF) * dist_zero_fac / DY
-!!!!!!
-
-  !!!!!! changes for different observation types.... (do not communicate all observaitons in the same way...)
-!  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_TC) * dist_zero_fac / DX
-!  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_TC) * dist_zero_fac / DY
-!!  dlon_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_RAIN) * dist_zero_fac / DX
-!!  dlat_zero = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF, SIGMA_OBS_RAIN) * dist_zero_fac / DY
-!#ifdef H08
-!  dlon_zero = max(dlon_zero,SIGMA_OBS_H08 * dist_zero_fac / DX) ! H08
-!  dlat_zero = max(dlat_zero,SIGMA_OBS_H08 * dist_zero_fac / DY) ! H08
-!#endif
 
 
 ! Read externally processed observations
@@ -605,90 +615,131 @@ SUBROUTINE set_letkf_obs
 ! Sorting
 !-----------------------------------
 
-  allocate ( obsda2(0:MEM_NP-1) )
+  ! determine grid spacing for bucket sorting
 
-  obsda2(PRC_myrank)%nobs = 0
-  allocate ( nobsgrd(0:nlon,1:nlat,0:MEM_NP-1) )
-  nobsgrd = 0
+  do itype = 1, nobtype
+    max_hori_local = HORI_LOCAL(itype)
+    if (itype == 22) then  !PHARAD
+      max_hori_local = max(max_hori_local, HORI_LOCAL_RADAR_OBSNOREF)
+    end if
+
+    if (OBS_SORT_GRID_SPACING(itype) > 0) then
+      target_grdspc = OBS_SORT_GRID_SPACING(itype)
+    else if (MAX_NOBS_PER_GRID > 0) then
+!    if (MAX_NOBS_PER_GRID(itype) > 0) then
+      target_grdspc = 0.1d0 * sqrt(real(MAX_NOBS_PER_GRID, r_size)) * OBS_MIN_SPACING(itype)        ! need to be tuned
+!      target_grdspc = 0.1d0 * sqrt(real(MAX_NOBS_PER_GRID(itype), r_size)) * OBS_MIN_SPACING(itype) ! need to be tuned
+    else
+      target_grdspc = max_hori_local * dist_zero_fac / 6.0d0                ! need to be tuned
+    end if
+    obsgrd(itype)%ngrd_i = ceiling(DX * real(nlon,r_size) / target_grdspc)
+    obsgrd(itype)%ngrd_j = ceiling(DY * real(nlat,r_size) / target_grdspc)
+    obsgrd(itype)%grdspc_i = DX * real(nlon,r_size) / obsgrd(itype)%ngrd_i
+    obsgrd(itype)%grdspc_j = DY * real(nlat,r_size) / obsgrd(itype)%ngrd_j
+    obsgrd(itype)%ngrdsch_i = ceiling(max_hori_local * dist_zero_fac / obsgrd(itype)%grdspc_i)
+    obsgrd(itype)%ngrdsch_j = ceiling(max_hori_local * dist_zero_fac / obsgrd(itype)%grdspc_j)
+    obsgrd(itype)%ngrdext_i = obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i * 2
+    obsgrd(itype)%ngrdext_j = obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j * 2
+
+    allocate (obsgrd(itype)%n (  obsgrd(itype)%ngrd_i, obsgrd(itype)%ngrd_j, 0:MEM_NP-1))
+    allocate (obsgrd(itype)%ac(0:obsgrd(itype)%ngrd_i, obsgrd(itype)%ngrd_j, 0:MEM_NP-1))
+    allocate (obsgrd(itype)%tot(0:MEM_NP-1))
+    allocate (obsgrd(itype)%n_ext (  obsgrd(itype)%ngrdext_i, obsgrd(itype)%ngrdext_j))
+    allocate (obsgrd(itype)%ac_ext(0:obsgrd(itype)%ngrdext_i, obsgrd(itype)%ngrdext_j))
+    obsgrd(itype)%n (:,:,:) = 0
+    obsgrd(itype)%ac(:,:,:) = 0
+    obsgrd(itype)%n_ext (:,:) = 0
+    obsgrd(itype)%ac_ext(:,:) = 0
+    obsgrd(itype)%tot(:) = 0
+    obsgrd(itype)%tot_ext = 0
+
+    allocate (obsgrd(itype)%next(obsgrd(itype)%ngrd_i, obsgrd(itype)%ngrd_j))
+  end do
+
+
+
   do n = 1, obsda%nobs
     if (obsda%qc(n) == iqc_good) then
-      obsda2(PRC_myrank)%nobs = obsda2(PRC_myrank)%nobs + 1
-!      call rank_1d_2d(PRC_myrank, iproc, jproc)
-!      i = ceiling(obsda%ri(n)-0.5) - IHALO - iproc * nlon
-!      j = ceiling(obsda%rj(n)-0.5) - JHALO - jproc * nlat
-      call ij_g2l(PRC_myrank, &
-                  ceiling(obsda%ri(n)-0.5) - IHALO, &
-                  ceiling(obsda%rj(n)-0.5) - JHALO, &
-                  i, j)
+      itype = obs(obsda%set(n))%typ(obsda%idx(n))
+      call ij_obsgrd(itype, obsda%ri(n), obsda%rj(n), i, j)
 
 !if (i < 1 .or. i > nlon .or. j < 1 .or. j > nlat) then
-!  call rank_1d_2d(PRC_myrank, iproc, jproc)
-!  print *, '%%%', myrank, PRC_myrank, obsda%ri(n) - real(IHALO + iproc * nlon, r_size), obsda%rj(n) - real(JHALO + jproc * nlat, r_size)
+!  call rank_1d_2d(myrank_d, iproc, jproc)
+!  print *, '%%%', myrank, myrank_d, obsda%ri(n) - real(IHALO + iproc * nlon, r_size), obsda%rj(n) - real(JHALO + jproc * nlat, r_size)
 !end if
 
-      if (i < 1) i = 1       ! Assume the process assignment was correct,
-      if (i > nlon) i = nlon ! so this correction is only to remedy the round-off problem.
-      if (j < 1) j = 1       !
-      if (j > nlat) j = nlat !
+      if (i < 1) i = 1                                       ! Assume the process assignment was correct,
+      if (i > obsgrd(itype)%ngrd_i) i = obsgrd(itype)%ngrd_i ! so this correction is only to remedy the round-off problem.
+      if (j < 1) j = 1                                       !
+      if (j > obsgrd(itype)%ngrd_j) j = obsgrd(itype)%ngrd_j !
 
-      nobsgrd(i,j,PRC_myrank) = nobsgrd(i,j,PRC_myrank) + 1
+      obsgrd(itype)%n(i,j,myrank_d) = obsgrd(itype)%n(i,j,myrank_d) + 1
     end if
   end do
 
-!  write (6,'(I10,A)') obsda2(PRC_myrank)%nobs,' OBSERVATIONS TO BE ASSIMILATED'
 
 ! regional count
-  do j = 1, nlat
-    if (j > 1) then
-      nobsgrd(0,j,PRC_myrank) = nobsgrd(nlon,j-1,PRC_myrank)
+  do itype = 1, nobtype
+    if (itype > 1) then
+      obsgrd(itype)%ac(0,1,myrank_d) = obsgrd(itype-1)%ac(obsgrd(itype-1)%ngrd_i,obsgrd(itype-1)%ngrd_j,myrank_d)
     end if
-    do i = 1, nlon
-      nobsgrd(i,j,PRC_myrank) = nobsgrd(i-1,j,PRC_myrank) + nobsgrd(i,j,PRC_myrank)
+    do j = 1, obsgrd(itype)%ngrd_j
+      if (j > 1) then
+        obsgrd(itype)%ac(0,j,myrank_d) = obsgrd(itype)%ac(obsgrd(itype)%ngrd_i,j-1,myrank_d)
+      end if
+      do i = 1, obsgrd(itype)%ngrd_i
+        obsgrd(itype)%ac(i,j,myrank_d) = obsgrd(itype)%ac(i-1,j,myrank_d) + obsgrd(itype)%n(i,j,myrank_d)
+!        obsgrd(itype)%next(i,j) = obsgrd(itype)%ac(i-1,j,myrank_d)
+      end do
     end do
+    obsgrd(itype)%next(1:obsgrd(itype)%ngrd_i,:) = obsgrd(itype)%ac(0:obsgrd(itype)%ngrd_i-1,:,myrank_d)
   end do
 
-  allocate ( nnext (nlon,nlat) )
-  nnext(1:nlon,:) = nobsgrd(0:nlon-1,:,PRC_myrank) + 1
-  call obs_da_value_allocate(obsda2(PRC_myrank),MEMBER)
+!  do itype = 1, nobtype
+!    if (itype > 1) then
+!      obsgrd(itype)%ac(0,1,myrank_d) = obsgrd(itype-1)%ac(obsgrd(itype-1)%ngrd_i,obsgrd(itype-1)%ngrd_j,myrank_d) + &
+!                                         obsgrd(itype-1)%n(obsgrd(itype-1)%ngrd_i,obsgrd(itype-1)%ngrd_j,myrank_d)
+!      obsgrd(itype)%ac(1,1,myrank_d) = obsgrd(itype)%ac(0,1,myrank_d)
+!    end if
+!    do j = 1, obsgrd(itype)%ngrd_j
+!      if (j > 1) then
+!        obsgrd(itype)%ac(0,j,myrank_d) = obsgrd(itype)%ac(obsgrd(itype)%ngrd_i,j-1,myrank_d) + &
+!                                           obsgrd(itype)%n(obsgrd(itype)%ngrd_i,j-1,myrank_d)
+!        obsgrd(itype)%ac(1,j,myrank_d) = obsgrd(itype)%ac(0,j,myrank_d)
+!      end if
+!      do i = 2, obsgrd(itype)%ngrd_i
+!        obsgrd(itype)%ac(i,j,myrank_d) = obsgrd(itype)%ac(i-1,j,myrank_d) + &
+!                                           obsgrd(itype)%n(i-1,j,myrank_d)
+!      end do
+!    end do
+!!    obsgrd(itype)%tot(myrank_d) = obsgrd(itype)%ac(obsgrd(itype)%ngrd_i,obsgrd(itype)%ngrd_j,myrank_d) + &
+!!                                  obsgrd(itype)%n(obsgrd(itype)%ngrd_i,obsgrd(itype)%ngrd_j,myrank_d)
+!  end do
+
   do n = 1, obsda%nobs
     if (obsda%qc(n) == iqc_good) then
-!      call rank_1d_2d(PRC_myrank, iproc, jproc)
-!      i = ceiling(obsda%ri(n)-0.5) - IHALO - iproc * nlon
-!      j = ceiling(obsda%rj(n)-0.5) - JHALO - jproc * nlat
-      call ij_g2l(PRC_myrank, &
-                  ceiling(obsda%ri(n)-0.5) - IHALO, &
-                  ceiling(obsda%rj(n)-0.5) - JHALO, &
-                  i, j)
+      itype = obs(obsda%set(n))%typ(obsda%idx(n))
+      call ij_obsgrd(itype, obsda%ri(n), obsda%rj(n), i, j)
+      if (i < 1) i = 1                                       ! Assume the process assignment was correct,
+      if (i > obsgrd(itype)%ngrd_i) i = obsgrd(itype)%ngrd_i ! so this correction is only to remedy the round-off problem.
+      if (j < 1) j = 1                                       !
+      if (j > obsgrd(itype)%ngrd_j) j = obsgrd(itype)%ngrd_j !
 
+      obsgrd(itype)%next(i,j) = obsgrd(itype)%next(i,j) + 1
+!      obsda%key(n) = obsgrd(itype)%next(i,j)
+      obsda%key(obsgrd(itype)%next(i,j)) = n
 
-      if (i < 1) i = 1       ! Assume the process assignment was correct,
-      if (i > nlon) i = nlon ! so this correction is only to remedy the round-off problem.
-      if (j < 1) j = 1       !
-      if (j > nlat) j = nlat !
+!      obsgrd(itype)%ac(i,j,myrank_d) = obsgrd(itype)%ac(i,j,myrank_d) + 1
+!      obsda%key(n) = obsgrd(itype)%ac(i,j,myrank_d)
 
-
-      obsda2(PRC_myrank)%set(nnext(i,j)) = obsda%set(n)
-      obsda2(PRC_myrank)%idx(nnext(i,j)) = obsda%idx(n)
-      obsda2(PRC_myrank)%val(nnext(i,j)) = obsda%val(n)
-      obsda2(PRC_myrank)%ensval(:,nnext(i,j)) = obsda%ensval(:,n)
-      obsda2(PRC_myrank)%qc(nnext(i,j)) = obsda%qc(n)
-      obsda2(PRC_myrank)%ri(nnext(i,j)) = obsda%ri(n)
-      obsda2(PRC_myrank)%rj(nnext(i,j)) = obsda%rj(n)
-#ifdef H08
-      obsda2(PRC_myrank)%lev(nnext(i,j)) = obsda%lev(n) ! H08
-#endif
-
-      nnext(i,j) = nnext(i,j) + 1
     end if
   end do
-  deallocate (nnext)
-
-  call obs_da_value_deallocate(obsda)
 
 
+!print *, obsda%key(:)
 
-! Communication
-!-----------------------------------
+
+
 
 !#ifdef H08
 ! -- H08
@@ -703,240 +754,471 @@ SUBROUTINE set_letkf_obs
 ! -- H08
 !#endif
 
-  allocate ( bufri2 (0:nlon,1:nlat,0:MEM_NP-1) )
-  call MPI_ALLREDUCE(nobsgrd,bufri2,(nlon+1)*nlat*MEM_NP,MPI_INTEGER,MPI_SUM,MPI_COMM_d,ierr)
-  nobsgrd(0:nlon,1:nlat,0:MEM_NP-1) = bufri2(0:nlon,1:nlat,0:MEM_NP-1)
-  deallocate ( bufri2 )
+!  allocate ( bufri2 (0:nlon,1:nlat,0:MEM_NP-1) )
+!  call MPI_ALLREDUCE(nobsgrd,bufri2,(nlon+1)*nlat*MEM_NP,MPI_INTEGER,MPI_SUM,MPI_COMM_d,ierr)
+!  nobsgrd(0:nlon,1:nlat,0:MEM_NP-1) = bufri2(0:nlon,1:nlat,0:MEM_NP-1)
+!  deallocate ( bufri2 )
 
-  nobstotalg = sum(nobsgrd(nlon,nlat,:))
-!  WRITE(6,'(A,I8)') 'Target observation numbers (global) : NOBS=',nobstotalg
+  do itype = 1, nobtype
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(itype)%n, obsgrd(itype)%ngrd_i*obsgrd(itype)%ngrd_j*MEM_NP, &
+                       MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(itype)%ac(0:obsgrd(itype)%ngrd_i,:,:), (obsgrd(itype)%ngrd_i+1)*obsgrd(itype)%ngrd_j*MEM_NP, &
+                       MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
 
-  allocate ( nobsgrd2(0:nlon,1:nlat,0:MEM_NP-1) )
-  nobsgrd2(:,:,PRC_myrank) = nobsgrd(:,:,PRC_myrank)
-
-  allocate(nr(MEM_NP),nrt(MEM_NP))
-
-
-!if (PRC_myrank == 0 .and. myrank_e == 0) then
-!print *, nobsgrd(nlon,nlat,:)
-!print *, maxval(nobsgrd(nlon,nlat,:))
-!end if
-
-  obsbufs%nobs = maxval(nobsgrd(nlon,nlat,:))
-  call obs_da_value_allocate(obsbufs,MEMBER)
-
-  allocate ( obsidx(maxval(nobsgrd(nlon,nlat,:))) )
-
-  do ip = 0, MEM_NP-1
-
-    call rank_1d_2d(ip, iproc, jproc)
-
-!if (PRC_myrank == 0 .and. myrank_e == 0) then
-!print *, PRC_NUM_X,nlon,iproc,jproc,SIGMA_OBS,DX,DY,dlon_zero,dlat_zero
-!end if
-
-    imin1 = max(1, iproc*nlon+1 - ceiling(dlon_zero))
-    imax1 = min(PRC_NUM_X*nlon, (iproc+1)*nlon + ceiling(dlon_zero))
-    jmin1 = max(1, jproc*nlat+1 - ceiling(dlat_zero))
-    jmax1 = min(PRC_NUM_Y*nlat, (jproc+1)*nlat + ceiling(dlat_zero))
-
-!if (myrank_e == 0) then
-!print *, PRC_myrank,imin1,imax1,jmin1,jmax1
-!end if
-
-    ns = 0
-    nr = 0
-    nrt = 0
-
-    do ip2 = 0, MEM_NP-1
-
-      if (ip2 /= ip) then
-        call rank_1d_2d(ip2, iproc, jproc)
-
-        imin2 = max(1, imin1 - iproc*nlon)
-        imax2 = min(nlon, imax1 - iproc*nlon)
-        jmin2 = max(1, jmin1 - jproc*nlat)
-        jmax2 = min(nlat, jmax1 - jproc*nlat)
-
-!if (myrank_e == 0) then
-!print *, PRC_myrank,ip2,imin2,imax2,jmin2,jmax2
-!end if
-
-        nr(ip2+1) = 0
-
-        if (ip == PRC_myrank) then
-          call obs_choose(imin2,imax2,jmin2,jmax2,ip2,nr(ip2+1),obsidx,.true.)
-          obsda2(ip2)%nobs = nr(ip2+1)
-          call obs_da_value_allocate(obsda2(ip2),MEMBER)
-        else if (ip2 == PRC_myrank) then
-          call obs_choose(imin2,imax2,jmin2,jmax2,ip2,nr(ip2+1),obsidx)
-          ns = nr(ip2+1)
-          do n = 1, ns
-            obsbufs%set(n) = obsda2(PRC_myrank)%set(obsidx(n))
-            obsbufs%idx(n) = obsda2(PRC_myrank)%idx(obsidx(n))
-            obsbufs%val(n) = obsda2(PRC_myrank)%val(obsidx(n))
-            obsbufs%ensval(:,n) = obsda2(PRC_myrank)%ensval(:,obsidx(n))
-            obsbufs%qc(n) = obsda2(PRC_myrank)%qc(obsidx(n))
-            obsbufs%ri(n) = obsda2(PRC_myrank)%ri(obsidx(n))
-            obsbufs%rj(n) = obsda2(PRC_myrank)%rj(obsidx(n))
-#ifdef H08
-            obsbufs%lev(n) = obsda2(PRC_myrank)%lev(obsidx(n)) ! H08
-#endif
-          end do
-        else
-          call obs_choose(imin2,imax2,jmin2,jmax2,ip2,nr(ip2+1))
-        end if
-
-
-      end if
-
-      if (ip2 > 0) then
-        nrt(ip2+1) = nrt(ip2) + nr(ip2)
-      end if
-
-    end do ! [ ip2 = 0, MEM_NP-1 ]
-
-    obsbufr%nobs = nrt(MEM_NP)+nr(MEM_NP)
-    call obs_da_value_allocate(obsbufr,MEMBER)
-
-    call MPI_GATHERV(obsbufs%set, ns, MPI_INTEGER, obsbufr%set, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
-    call MPI_GATHERV(obsbufs%idx, ns, MPI_INTEGER, obsbufr%idx, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
-    call MPI_GATHERV(obsbufs%val, ns, MPI_r_size, obsbufr%val, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
-    call MPI_GATHERV(obsbufs%ensval, ns*MEMBER, MPI_r_size, obsbufr%ensval, nr*MEMBER, nrt*MEMBER, MPI_r_size, ip, MPI_COMM_d, ierr)
-    call MPI_GATHERV(obsbufs%qc, ns, MPI_INTEGER, obsbufr%qc, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
-    call MPI_GATHERV(obsbufs%ri, ns, MPI_r_size, obsbufr%ri, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
-    call MPI_GATHERV(obsbufs%rj, ns, MPI_r_size, obsbufr%rj, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
-#ifdef H08
-    call MPI_GATHERV(obsbufs%lev, ns, MPI_r_size, obsbufr%lev, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
-#endif
-
-
-    if (PRC_myrank == ip) then
-
-      do ip2 = 0, MEM_NP-1
-        if (ip2 /= ip) then
-          obsda2(ip2)%set = obsbufr%set(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
-          obsda2(ip2)%idx = obsbufr%idx(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
-          obsda2(ip2)%val = obsbufr%val(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
-          obsda2(ip2)%ensval = obsbufr%ensval(:,nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
-          obsda2(ip2)%qc = obsbufr%qc(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
-          obsda2(ip2)%ri = obsbufr%ri(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
-          obsda2(ip2)%rj = obsbufr%rj(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1))
-#ifdef H08
-          obsda2(ip2)%lev = obsbufr%lev(nrt(ip2+1)+1:nrt(ip2+1)+nr(ip2+1)) ! H08
-#endif
-
-!            write(6,*) obsda2(ip2)%idx
-
-        end if
-      end do
-
-!      write(6,*) ns
-!      write(6,*) nr(:)
-!      write(6,*) nrt(:)
-!!        write(6,*)
-!!        write(6,*) nrt(MEM_NP)+nr(MEM_NP)
-!!        write(6,*)
-!!        write(6,*) obsbufr(:)
-
+    if (itype == 1) then
+      obsgrd(itype)%tot(:) = obsgrd(itype)%ac(obsgrd(itype)%ngrd_i,obsgrd(itype)%ngrd_j,:)
+    else
+      obsgrd(itype)%tot(:) = obsgrd(itype)%ac(obsgrd(itype)%ngrd_i,obsgrd(itype)%ngrd_j,:) &
+                           - obsgrd(itype-1)%ac(obsgrd(itype-1)%ngrd_i,obsgrd(itype-1)%ngrd_j,:)
     end if
 
-    call obs_da_value_deallocate(obsbufr)
-
-  end do ! [ ip = 0, MEM_MP ]
-
-
-  call obs_da_value_deallocate(obsbufs)
-  deallocate(obsidx)
-
-  nobsgrd = nobsgrd2
-
-  deallocate (nobsgrd2)
-
-  nobstotal = 0
-  do ip = 0, MEM_NP-1
-    nobstotal = nobstotal + obsda2(ip)%nobs
-
-
-!write(6,'(A,I4,A,I10)') 'nobs(', ip+1, ') =', obsda2(ip)%nobs
-
+    deallocate (obsgrd(itype)%next)
   end do
 
+  nobstotal_sub = obsgrd(nobtype)%ac(obsgrd(nobtype)%ngrd_i,obsgrd(nobtype)%ngrd_j,myrank_d)
+  nobstotalg = sum(obsgrd(nobtype)%ac(obsgrd(nobtype)%ngrd_i,obsgrd(nobtype)%ngrd_j,:))
 
-!write(6,'(A,I10)') 'nobstotal =', nobstotal
+!if (myrank == 0) then
+!print *, itype, obsgrd(itype)%tot(:)
+!end if
+
+!!!!!!!  write (6,'(I10,A)') obsda2%nobs,' OBSERVATIONS TO BE ASSIMILATED'
+
+!!!!!!!  WRITE(6,'(A,I8)') 'Target observation numbers (global) : NOBS=',nobstotalg
 
 
-  if (nobstotal /= sum(nobsgrd(nlon,nlat,:))) then
-    write (6,*) 'Error found in obsevration sorting:', myrank, nobstotalg, nobstotal, nobsgrd(nlon,nlat,:)
-    stop
+
+
+
+
+
+  ! Calculate the observation numbers in the extended domain
+  ! %n_ext, %ac_ext, nobstatal
+
+  do itype = 1, nobtype
+    call rank_1d_2d(myrank_d, iproc, jproc)
+!    imin1 = max(1, iproc*obsgrd(itype)%ngrd_i+1 - obsgrd(itype)%ngrdsch_i)
+!    imax1 = min(PRC_NUM_X*obsgrd(itype)%ngrd_i, (iproc+1)*obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i)
+!    jmin1 = max(1, jproc*obsgrd(itype)%ngrd_j+1 - obsgrd(itype)%ngrdsch_j)
+!    jmax1 = min(PRC_NUM_Y*obsgrd(itype)%ngrd_j, (jproc+1)*obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j)
+    imin1 = iproc*obsgrd(itype)%ngrd_i+1 - obsgrd(itype)%ngrdsch_i
+    imax1 = (iproc+1)*obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
+    jmin1 = jproc*obsgrd(itype)%ngrd_j+1 - obsgrd(itype)%ngrdsch_j
+    jmax1 = (jproc+1)*obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
+
+    do ip2 = 0, MEM_NP-1
+      call rank_1d_2d(ip2, iproc2, jproc2)
+      imin2 = max(1, imin1 - iproc2*obsgrd(itype)%ngrd_i)
+      imax2 = min(obsgrd(itype)%ngrd_i, imax1 - iproc2*obsgrd(itype)%ngrd_i)
+      jmin2 = max(1, jmin1 - jproc2*obsgrd(itype)%ngrd_j)
+      jmax2 = min(obsgrd(itype)%ngrd_j, jmax1 - jproc2*obsgrd(itype)%ngrd_j)
+
+      ishift = (iproc2 - iproc) * obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
+      jshift = (jproc2 - jproc) * obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
+      obsgrd(itype)%n_ext(imin2+ishift:imax2+ishift, jmin2+jshift:jmax2+jshift) = obsgrd(itype)%n(imin2:imax2, jmin2:jmax2, ip2)
+    end do
+
+    if (itype > 1) then
+      obsgrd(itype)%ac_ext(0,1) = obsgrd(itype-1)%ac_ext(obsgrd(itype-1)%ngrdext_i,obsgrd(itype-1)%ngrdext_j)
+    end if
+    do j = 1, obsgrd(itype)%ngrdext_j
+      if (j > 1) then
+        obsgrd(itype)%ac_ext(0,j) = obsgrd(itype)%ac_ext(obsgrd(itype)%ngrdext_i,j-1)
+      end if
+      do i = 1, obsgrd(itype)%ngrdext_i
+        obsgrd(itype)%ac_ext(i,j) = obsgrd(itype)%ac_ext(i-1,j) + obsgrd(itype)%n_ext(i,j)
+      end do
+    end do
+
+    if (itype == 1) then
+      obsgrd(itype)%tot_ext = obsgrd(itype)%ac_ext(obsgrd(itype)%ngrdext_i,obsgrd(itype)%ngrdext_j)
+    else
+      obsgrd(itype)%tot_ext = obsgrd(itype)%ac_ext(obsgrd(itype)%ngrdext_i,obsgrd(itype)%ngrdext_j) &
+                            - obsgrd(itype-1)%ac_ext(obsgrd(itype-1)%ngrdext_i,obsgrd(itype-1)%ngrdext_j)
+    end if
+  end do ! [ itype = 1, nobtype ]
+
+  nobstotal = obsgrd(nobtype)%ac_ext(obsgrd(nobtype)%ngrdext_i,obsgrd(nobtype)%ngrdext_j)
+
+
+
+  write(6,'(A,I10)') 'nobstotalg =', nobstotalg
+  write(6,'(A,I10)') 'nobstotal  =', nobstotal
+
+
+
+  ! Communicate obsda and save as obsda2 with sorted order
+  !
+  maxnobs_sub_per_type = maxval(obsgrd(1)%tot(:))
+  maxnobs_per_type = obsgrd(1)%tot_ext
+  do itype = 2, nobtype
+    maxnobs_sub_per_type = max(maxnobs_sub_per_type, maxval(obsgrd(itype)%tot(:)))
+    maxnobs_per_type = max(maxnobs_per_type, obsgrd(itype)%tot_ext)
+  end do
+  allocate (obsidx(maxnobs_sub_per_type))
+
+  obsbufs%nobs = maxnobs_sub_per_type
+  call obs_da_value_allocate(obsbufs, MEMBER)
+  obsbufr%nobs = 0
+  call obs_da_value_allocate(obsbufr, MEMBER)  ! This is necessary to present the error with not-allocated arrays
+
+  obsda2%nobs = nobstotal
+  call obs_da_value_allocate(obsda2, MEMBER)
+
+  nk = 0
+
+  do itype = 1, nobtype
+
+    ishift = obsgrd(itype)%ngrdsch_i
+    jshift = obsgrd(itype)%ngrdsch_j
+
+    do j = 1, obsgrd(itype)%ngrd_j
+      do n = 1, obsgrd(itype)%ac_ext(obsgrd(itype)%ngrd_i+ishift,j+jshift) &
+              - obsgrd(itype)%ac_ext(ishift,j+jshift)
+        nn_ext = n + obsgrd(itype)%ac_ext(ishift,j+jshift)
+        nn_sub = n + obsgrd(itype)%ac(0,j,myrank_d)
+        nk = nk + 1
+
+!if(myrank == 3) then
+!print *, obsda%key(:)
+!print *, '#####', n, nn_ext, nn_sub, nk, obsda%key(nn_sub)
+!end if
+
+        obsda2%set(nn_ext) = obsda%set(obsda%key(nn_sub))
+        obsda2%idx(nn_ext) = obsda%idx(obsda%key(nn_sub))
+        obsda2%key(nk) = nn_ext  ! save the keys of observations within the subdomain (excluding the localization buffer area)
+        obsda2%val(nn_ext) = obsda%val(obsda%key(nn_sub))
+        obsda2%ensval(:,nn_ext) = obsda%ensval(:,obsda%key(nn_sub))
+        obsda2%qc(nn_ext) = obsda%qc(obsda%key(nn_sub))
+        obsda2%ri(nn_ext) = obsda%ri(obsda%key(nn_sub))
+        obsda2%rj(nn_ext) = obsda%rj(obsda%key(nn_sub))
+#ifdef H08
+        obsda2%lev(nn_ext) = obsda%lev(obsda%key(nn_sub)) ! H08
+#endif
+      end do
+
+    end do
+
+
+
+    do ip = 0, MEM_NP-1
+
+      call rank_1d_2d(ip, iproc, jproc)
+!      imin1 = max(1, iproc*obsgrd(itype)%ngrd_i+1 - obsgrd(itype)%ngrdsch_i)
+!      imax1 = min(PRC_NUM_X*obsgrd(itype)%ngrd_i, (iproc+1)*obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i)
+!      jmin1 = max(1, jproc*obsgrd(itype)%ngrd_j+1 - obsgrd(itype)%ngrdsch_j)
+!      jmax1 = min(PRC_NUM_Y*obsgrd(itype)%ngrd_j, (jproc+1)*obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j)
+      imin1 = iproc*obsgrd(itype)%ngrd_i+1 - obsgrd(itype)%ngrdsch_i
+      imax1 = (iproc+1)*obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
+      jmin1 = jproc*obsgrd(itype)%ngrd_j+1 - obsgrd(itype)%ngrdsch_j
+      jmax1 = (jproc+1)*obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
+
+!if (myrank_e == 0) then
+!print *, myrank_d,imin1,imax1,jmin1,jmax1
+!end if
+
+      ns = 0
+      nr = 0
+      nrt = 0
+
+      do ip2 = 0, MEM_NP-1
+
+        if (ip2 /= ip) then
+
+          call rank_1d_2d(ip2, iproc2, jproc2)
+          imin2 = max(1, imin1 - iproc2*obsgrd(itype)%ngrd_i)
+          imax2 = min(obsgrd(itype)%ngrd_i, imax1 - iproc2*obsgrd(itype)%ngrd_i)
+          jmin2 = max(1, jmin1 - jproc2*obsgrd(itype)%ngrd_j)
+          jmax2 = min(obsgrd(itype)%ngrd_j, jmax1 - jproc2*obsgrd(itype)%ngrd_j)
+
+!if (myrank_e == 0) then
+!print *, myrank_d,ip2,imin2,imax2,jmin2,jmax2
+!end if
+
+          nr(ip2+1) = 0
+
+          if (myrank_d == ip2) then
+            call obs_choose(itype,ip2,imin2,imax2,jmin2,jmax2,nr(ip2+1),obsidx)
+            ns = nr(ip2+1)
+            do n = 1, ns
+              obsbufs%set(n) = obsda%set(obsda%key(obsidx(n)))
+              obsbufs%idx(n) = obsda%idx(obsda%key(obsidx(n)))
+              obsbufs%val(n) = obsda%val(obsda%key(obsidx(n)))
+              obsbufs%ensval(:,n) = obsda%ensval(:,obsda%key(obsidx(n)))
+              obsbufs%qc(n) = obsda%qc(obsda%key(obsidx(n)))
+              obsbufs%ri(n) = obsda%ri(obsda%key(obsidx(n)))
+              obsbufs%rj(n) = obsda%rj(obsda%key(obsidx(n)))
+#ifdef H08
+              obsbufs%lev(n) = obsda%lev(obsda%key(obsidx(n))) ! H08
+#endif
+            end do
+          else
+            call obs_choose(itype,ip2,imin2,imax2,jmin2,jmax2,nr(ip2+1))
+          end if
+
+        end if ! [ ip2 /= ip ]
+
+        if (ip2 > 0) then
+          nrt(ip2+1) = nrt(ip2) + nr(ip2)
+        end if
+
+      end do ! [ ip2 = 0, MEM_NP-1 ]
+
+      if (nrt(MEM_NP) + nr(MEM_NP) <= 0) cycle
+
+      if (nrt(MEM_NP) + nr(MEM_NP) > obsbufr%nobs) then
+        obsbufr%nobs = nrt(MEM_NP) + nr(MEM_NP)
+        call obs_da_value_allocate(obsbufr, MEMBER)  ! deallocate first inside the subroutine
+      end if
+
+!if(myrank == 3) then
+!print *, nr, nrt
+!end if
+
+      call MPI_GATHERV(obsbufs%set, ns, MPI_INTEGER, obsbufr%set, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
+      call MPI_GATHERV(obsbufs%idx, ns, MPI_INTEGER, obsbufr%idx, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
+      call MPI_GATHERV(obsbufs%val, ns, MPI_r_size, obsbufr%val, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
+      call MPI_GATHERV(obsbufs%ensval, ns*MEMBER, MPI_r_size, obsbufr%ensval, nr*MEMBER, nrt*MEMBER, MPI_r_size, ip, MPI_COMM_d, ierr)
+      call MPI_GATHERV(obsbufs%qc, ns, MPI_INTEGER, obsbufr%qc, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
+      call MPI_GATHERV(obsbufs%ri, ns, MPI_r_size, obsbufr%ri, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
+      call MPI_GATHERV(obsbufs%rj, ns, MPI_r_size, obsbufr%rj, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
+#ifdef H08
+      call MPI_GATHERV(obsbufs%lev, ns, MPI_r_size, obsbufr%lev, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
+#endif
+
+
+      if (myrank_d == ip) then
+
+        ne_bufr = 0
+
+        do ip2 = 0, MEM_NP-1
+
+          if (ip2 /= ip) then
+
+            call rank_1d_2d(ip2, iproc2, jproc2)
+
+            imin2 = max(1, imin1 - iproc2*obsgrd(itype)%ngrd_i)
+            imax2 = min(obsgrd(itype)%ngrd_i, imax1 - iproc2*obsgrd(itype)%ngrd_i)
+            jmin2 = max(1, jmin1 - jproc2*obsgrd(itype)%ngrd_j)
+            jmax2 = min(obsgrd(itype)%ngrd_j, jmax1 - jproc2*obsgrd(itype)%ngrd_j)
+
+            ishift = (iproc2 - iproc) * obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
+            jshift = (jproc2 - jproc) * obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
+
+!            ne_bufr = nrt(ip2+1)
+            if (ne_bufr /= nrt(ip2+1)) then
+              write (6, '(A)') '[Error] Error in copying receive buffer !!!'
+              stop 99
+            end if 
+
+            do j = jmin2, jmax2
+              ns_ext = obsgrd(itype)%ac_ext(imin2+ishift-1,j+jshift) + 1
+              ne_ext = obsgrd(itype)%ac_ext(imax2+ishift  ,j+jshift)
+
+!if(myrank == 3) then
+!print *, nr, nrt
+!end if
+              ns_bufr = ne_bufr + 1
+              ne_bufr = ne_bufr + obsgrd(itype)%ac(imax2,j,ip2) - obsgrd(itype)%ac(imin2-1,j,ip2)
+
+!              ns_bufr = nrt(ip2+1) + obsgrd(itype)%ac(imin2-1,j,ip2) + 1
+!              ne_bufr = nrt(ip2+1) + obsgrd(itype)%ac(imax2  ,j,ip2)
+
+
+
+
+              if (ne_ext - ns_ext /= ne_bufr - ns_bufr) then
+                write (6, '(A)') '[Error] observation grid indices have errors !!!'
+                write (6, *) itype, ip, ip2, j, imin1, imax1, jmin1, jmax1, imin2, imax2, jmin2, jmax2, ishift, jshift, &
+                             obsgrd(itype)%ngrd_i, obsgrd(itype)%ngrd_j, obsgrd(itype)%ngrdsch_i, obsgrd(itype)%ngrdsch_j, ns_ext, ne_ext, ns_bufr, ne_bufr
+                stop 99
+              end if
+
+
+
+
+
+              if (ns_ext > ne_ext) cycle
+
+!if(myrank == 3) then
+!print *, itype, ip, ip2, j, imin2, imax2, jmin2, jmax2, ishift, jshift, ns_ext, ne_ext, ns_bufr, ne_bufr
+!print *, nr, nrt
+!print *, obsbufr%val(ns_bufr:ne_bufr)
+!print *, obsbufr%ensval(:,ns_bufr:ne_bufr)
+!endif
+
+
+              obsda2%set(ns_ext:ne_ext) = obsbufr%set(ns_bufr:ne_bufr)
+              obsda2%idx(ns_ext:ne_ext) = obsbufr%idx(ns_bufr:ne_bufr)
+              obsda2%val(ns_ext:ne_ext) = obsbufr%val(ns_bufr:ne_bufr)
+              obsda2%ensval(:,ns_ext:ne_ext) = obsbufr%ensval(:,ns_bufr:ne_bufr)
+              obsda2%qc(ns_ext:ne_ext) = obsbufr%qc(ns_bufr:ne_bufr)
+              obsda2%ri(ns_ext:ne_ext) = obsbufr%ri(ns_bufr:ne_bufr)
+              obsda2%rj(ns_ext:ne_ext) = obsbufr%rj(ns_bufr:ne_bufr)
+#ifdef H08
+              obsda2%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr) ! H08
+#endif
+            end do
+
+          end if ! [ ip2 /= ip ]
+        end do ! [ ip2 = 0, MEM_NP-1 ]
+
+  !      write(6,*) ns
+  !      write(6,*) nr(:)
+  !      write(6,*) nrt(:)
+  !!        write(6,*)
+  !!        write(6,*) nrt(MEM_NP-1)+nr(MEM_NP-1)
+  !!        write(6,*)
+  !!        write(6,*) obsbufr(:)
+
+      end if ! [ myrank_d == ip ]
+
+    end do ! [ ip = 0, MEM_MP ]
+
+    deallocate (obsgrd(itype)%n)
+    deallocate (obsgrd(itype)%ac)
+
+  end do ! [ itype = 1, nobtype ]
+
+  call obs_da_value_deallocate(obsda)
+  call obs_da_value_deallocate(obsbufs)
+  call obs_da_value_deallocate(obsbufr)
+  deallocate (obsidx)
+
+
+  if (nk /= nobstotal_sub) then
+    write (6, '(A)') '[Error] Error with number of observations in the subdomain !!!'
+    stop 99
   end if
+
+  obsda2%nobs_in_key = nk
+
+
+!  write(6,'(A,I10)') 'nobstotalg =', nobstotalg
+!  write(6,'(A,I10)') 'nobstotal  =', nobstotal
+
+
+
 
   RETURN
 END SUBROUTINE set_letkf_obs
 
 
+!-----------------------------------------------------------------------
+! convert grid (i,j) values to obsgrid (ogi, ogj) values for sorting
+!-----------------------------------------------------------------------
+!subroutine ij_obsgrd(ngrd_i, ngrd_j, ri, rj, ogi, ogj, offset_i, offset_j)
+!  use scale_grid_index, only: &
+!      IHALO,JHALO
+!  implicit none
+!  integer, intent(in) :: ngrd_i, ngrd_j
+!  real(r_size), intent(in) :: ri, rj
+!  integer, intent(out) :: ogi, ogj
+!  integer, intent(in), optional :: offset_i, offset_j
 
+!  ogi = ceiling((ri - real(IHALO,r_size) - 0.5) * real(ngrd_i,r_size) / real(nlon,r_size))
+!  ogj = ceiling((rj - real(JHALO,r_size) - 0.5) * real(ngrd_j,r_size) / real(nlat,r_size))
+!  if (present(offset_i)) then
+!    ogi = ogi + offset_i
+!  end if
+!  if (present(offset_j)) then
+!    ogj = ogj + offset_j
+!  end if
 
-SUBROUTINE obs_choose(imin,imax,jmin,jmax,proc,nn,nobs_use,nobsgrdout)
+!  return
+!end subroutine ij_obsgrd
+
+subroutine ij_obsgrd(obtype, ri, rj, ogi, ogj)
+  use scale_grid_index, only: &
+    IHALO,JHALO
+!  use scale_process, only: &
+!    PRC_myrank
   implicit none
-  INTEGER,INTENT(IN) :: imin,imax,jmin,jmax,proc
-  INTEGER,INTENT(INOUT) :: nn
-  INTEGER,INTENT(INOUT),OPTIONAL :: nobs_use(:)
-  logical,intent(in),optional :: nobsgrdout
-  logical :: nobsgrdout_
-  INTEGER :: j,ip
+  integer, intent(in) :: obtype
+  real(r_size), intent(in) :: ri, rj
+  integer, intent(out) :: ogi, ogj
+  real(r_size) :: ril, rjl
 
-  nobsgrdout_ = .false.
-  if (present(nobsgrdout)) nobsgrdout_ = nobsgrdout
-  if (nobsgrdout_) then
-    nobsgrd2(:,:,proc) = 0
-  end if
+  call rij_g2l(myrank_d, ri, rj, ril, rjl)
+  ogi = ceiling((ril - real(IHALO,r_size) - 0.5) * real(obsgrd(obtype)%ngrd_i,r_size) / real(nlon,r_size))
+  ogj = ceiling((rjl - real(JHALO,r_size) - 0.5) * real(obsgrd(obtype)%ngrd_i,r_size) / real(nlat,r_size))
 
-  if (nobsgrd(nlon,nlat,proc) == 0) return
+  return
+end subroutine ij_obsgrd
 
-!  if (imin < 1 .or. imax > nlon) ....
-  if (imin > imax .or. jmin > jmax) then
-    return
-  end if
+subroutine ij_obsgrd_ext(obtype, ri, rj, ogi, ogj)
+  use scale_grid_index, only: &
+    IHALO,JHALO
+!  use scale_process, only: &
+!    PRC_myrank
+  implicit none
+  integer, intent(in) :: obtype
+  real(r_size), intent(in) :: ri, rj
+  integer, intent(out) :: ogi, ogj
+  real(r_size) :: ril, rjl
 
+  call rij_g2l(myrank_d, ri, rj, ril, rjl)
+  ogi = ceiling((ril - real(IHALO,r_size) - 0.5) * real(obsgrd(obtype)%ngrd_i,r_size) / real(nlon,r_size)) &
+      + obsgrd(obtype)%ngrdsch_i
+  ogj = ceiling((rjl - real(JHALO,r_size) - 0.5) * real(obsgrd(obtype)%ngrd_i,r_size) / real(nlat,r_size)) &
+      + obsgrd(obtype)%ngrdsch_j
 
-  DO j = jmin, jmax
+  return
+end subroutine ij_obsgrd_ext
 
-!if (myrank_e == 0 .and. PRC_myrank == 0) then
-!print *, nobsgrd(imin-1,j,proc)+1, nobsgrd(imax,j,proc)
-!end if
+!-----------------------------------------------------------------------
+!
+!-----------------------------------------------------------------------
+subroutine obs_choose(obtype, proc, imin, imax, jmin, jmax, nn, nobs_use)
+  implicit none
+  integer, intent(in) :: obtype
+  integer, intent(in) :: proc
+  integer, intent(in) :: imin, imax, jmin, jmax
+  integer, intent(inout) :: nn
+  integer, intent(inout), optional :: nobs_use(:)
+  integer :: n, j
 
+  if (imin > imax .or. jmin > jmax) return
+  if (obsgrd(obtype)%tot(proc) == 0) return
 
-    DO ip = nobsgrd(imin-1,j,proc)+1, nobsgrd(imax,j,proc)
-!      IF(nn > nobs) THEN
-!        WRITE(6,*) 'FATALERROR, NN > NOBS', NN, NOBS
-!      END IF
-      nn = nn + 1
-      if (present(nobs_use)) then
-        nobs_use(nn) = ip
-      end if
-    END DO
-
-    if (nobsgrdout_) then
-      if (j > 1) then
-        nobsgrd2(0:imax-1,j,proc) = nobsgrd2(nlon,j-1,proc)
-      end if
-      nobsgrd2(imin:imax,j,proc) = nobsgrd(imin:imax,j,proc) - nobsgrd(imin-1,j,proc) + nobsgrd2(imin-1,j,proc)
-      if (imax < nlon) then
-        nobsgrd2(imax+1:nlon,j,proc) = nobsgrd2(imax,j,proc)
-      end if
+  do j = jmin, jmax
+    if (present(nobs_use)) then
+      do n = obsgrd(obtype)%ac(imin-1,j,proc)+1, obsgrd(obtype)%ac(imax,j,proc)
+        nn = nn + 1
+        nobs_use(nn) = n
+      end do
+    else
+      nn = nn + obsgrd(obtype)%ac(imax,j,proc) - obsgrd(obtype)%ac(imin-1,j,proc)
     end if
+  end do
 
-  END DO
+  return
+end subroutine obs_choose
 
-  if (nobsgrdout_) then
-    if (jmax < nlat) then
-      nobsgrd2(:,jmax+1:nlat,proc) = nobsgrd2(nlon,jmax,proc)
+subroutine obs_choose_ext(obtype, imin, imax, jmin, jmax, nn, nobs_use)
+  implicit none
+  integer, intent(in) :: obtype
+  integer, intent(in) :: imin, imax, jmin, jmax
+  integer, intent(inout) :: nn
+  integer, intent(inout), optional :: nobs_use(:)
+  integer :: n, j
+
+  if (imin > imax .or. jmin > jmax) return
+  if (obsgrd(obtype)%tot_ext == 0) return
+
+  do j = jmin, jmax
+    if (present(nobs_use)) then
+      do n = obsgrd(obtype)%ac_ext(imin-1,j)+1, obsgrd(obtype)%ac_ext(imax,j)
+        nn = nn + 1
+        nobs_use(nn) = n
+      end do
+    else
+      nn = nn + obsgrd(obtype)%ac_ext(imax,j) - obsgrd(obtype)%ac_ext(imin-1,j)
     end if
-  end if
+  end do
 
-  RETURN
-END SUBROUTINE obs_choose
+  return
+end subroutine obs_choose_ext
 
 
 !!-----------------------------------------------------------------------

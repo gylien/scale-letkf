@@ -144,7 +144,6 @@ MODULE common_nml
 !  ! >0: observation number limit
 !  !  0: do not limit observation numbers
 !  ! <0: same as MAX_NOBS_PER_GRID(1)
-!   ! observation number limit; <= 0: Do not use
 !  integer :: MAX_NOBS_PER_GRID(nobtype) = &
 !    (/ 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
 !      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
@@ -152,14 +151,14 @@ MODULE common_nml
 
   ! >0: typical minimum spacing of the obsetvation types in the densest observed area (not tuned carefully yet)
   !     *this is only used for automatically determine OBS_SORT_GRID_SPACING. if using pre-set OBS_SORT_GRID_SPACING, this has no effect.
-  ! <=0: same as OBS_MINIMUM_SPACING(1)
-  real(r_size) :: OBS_MINIMUM_SPACING(nobtype) = &
+  ! <=0: same as OBS_MIN_SPACING(1)
+  real(r_size) :: OBS_MIN_SPACING(nobtype) = &
     (/300.0d3, 100.0d3, 100.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 100.0d3, 150.0d3, 150.0d3, &
       150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 150.0d3, &
       150.0d3,   1.0d3,  15.0d3,1000.0d3/)
 
   ! >0: optimal grid spacing for bucket sorting of observations
-  !  0: automatically determined based on HORI_LOCAL, MAX_NOBS_PER_GRID, and OBS_MINIMUM_SPACING
+  !  0: automatically determined based on HORI_LOCAL, MAX_NOBS_PER_GRID, and OBS_MIN_SPACING
   ! <0: same as OBS_SORT_GRID_SPACING(1)
   real(r_size) :: OBS_SORT_GRID_SPACING(nobtype) = &
     (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
@@ -471,7 +470,7 @@ end subroutine read_nml_letkf_prc
 !-----------------------------------------------------------------------
 subroutine read_nml_letkf_obs
   implicit none
-  integer :: iob
+  integer :: itype
   integer :: ierr
 
   namelist /PARAM_LETKF_OBS/ &
@@ -482,7 +481,7 @@ subroutine read_nml_letkf_obs
     HORI_LOCAL_RADAR_OBSNOREF, &
     VERT_LOCAL_RAIN_BASE, &
 !    MAX_NOBS_PER_GRID, &
-    OBS_MINIMUM_SPACING, &
+    OBS_MIN_SPACING, &
     OBS_SORT_GRID_SPACING
 
   rewind(IO_FID_CONF)
@@ -495,26 +494,26 @@ subroutine read_nml_letkf_obs
     stop
   endif
 
-  do iob = 2, nobtype
-    if (HORI_LOCAL(iob) < 0.0d0) then
-      HORI_LOCAL(iob) = HORI_LOCAL(1)
+  do itype = 2, nobtype
+    if (HORI_LOCAL(itype) < 0.0d0) then
+      HORI_LOCAL(itype) = HORI_LOCAL(1)
     end if
-    if (VERT_LOCAL(iob) < 0.0d0) then
-      VERT_LOCAL(iob) = VERT_LOCAL(1)
+    if (VERT_LOCAL(itype) < 0.0d0) then
+      VERT_LOCAL(itype) = VERT_LOCAL(1)
     end if
-    if (TIME_LOCAL(iob) < 0.0d0) then
-      TIME_LOCAL(iob) = TIME_LOCAL(1)
+    if (TIME_LOCAL(itype) < 0.0d0) then
+      TIME_LOCAL(itype) = TIME_LOCAL(1)
     end if
 
-!    if (MAX_NOBS_PER_GRID(iob) < 0) then
-!      MAX_NOBS_PER_GRID(iob) = MAX_NOBS_PER_GRID(1)
+!    if (MAX_NOBS_PER_GRID(itype) < 0) then
+!      MAX_NOBS_PER_GRID(itype) = MAX_NOBS_PER_GRID(1)
 !    end if
 
-    if (OBS_MINIMUM_SPACING(iob) <= 0.0d0) then
-      OBS_MINIMUM_SPACING(iob) = OBS_MINIMUM_SPACING(1)
+    if (OBS_MIN_SPACING(itype) <= 0.0d0) then
+      OBS_MIN_SPACING(itype) = OBS_MIN_SPACING(1)
     end if
-    if (OBS_SORT_GRID_SPACING(iob) < 0.0d0) then
-      OBS_SORT_GRID_SPACING(iob) = OBS_SORT_GRID_SPACING(1)
+    if (OBS_SORT_GRID_SPACING(itype) < 0.0d0) then
+      OBS_SORT_GRID_SPACING(itype) = OBS_SORT_GRID_SPACING(1)
     end if
   end do
 
