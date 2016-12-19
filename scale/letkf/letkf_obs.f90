@@ -44,14 +44,15 @@ MODULE letkf_obs
     integer, allocatable :: n_ext(:,:)
     integer, allocatable :: ac_ext(:,:)
     integer :: tot_ext
-    integer, allocatable :: next(:,:) ! Temporary array
+    integer :: tot_sub(2)             ! only for diagnostic print; 1: before QC; 2: after QC
+    integer :: tot_g(2)               ! only for diagnostic print
+    integer, allocatable :: next(:,:) ! temporary array
   end type obs_grid_type
 
   integer,save :: nobs_ext
 
   type(obs_grid_type),save :: obsgrd(nobtype)
 
-  integer,save :: nobstotal_sub
   integer,save :: nobstotalg
   integer,save :: nobstotal
   integer,save :: maxnobs_sub_per_type
@@ -80,8 +81,7 @@ SUBROUTINE set_letkf_obs
   integer :: mem_ref
 
   integer :: it,ip
-
-  integer :: itype
+  integer :: itype,uielm
   real(r_size) :: max_hori_local
   real(r_size) :: target_grdspc
 
@@ -95,6 +95,16 @@ SUBROUTINE set_letkf_obs
 #endif
   integer :: iproc,jproc
   integer :: iproc2,jproc2
+
+  integer :: nobs_sub(2),nobs_g(2)            ! 1: before QC; 2: after QC
+  integer :: nobstypevar_g(2,nid_obs,nobtype) !
+
+  character(len=3) :: use_obs_print
+  character(4) :: nstr
+  character(len=8) :: line1_str(nid_obs) = '========'
+  character(len=8) :: line2_str(nid_obs) = '--------'
+  
+
 
 !---
   integer :: ns
@@ -129,8 +139,9 @@ SUBROUTINE set_letkf_obs
 
 
 
+!-------------------------------------------------------------------------------
 ! Read externally processed observations
-!-----------------------------------
+!-------------------------------------------------------------------------------
 
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
@@ -199,14 +210,13 @@ SUBROUTINE set_letkf_obs
     end if ! [ im >= 1 .and. im <= MEMBER ]
   end do ! [ it = 1, nitmax ]
 
-! All_reduce the observations
-!-----------------------------------
-!
-! if the number of processors is greater then the ensemble size,
-! broadcast the observation indices and real grid numbers
-! from myrank_e=MEMBER-1 to the rest of processors that didn't read anything.
-!
-!####################### now broadcast to all, need to be corrected.
+  ! AllREDUCE observations:
+  !   if the number of processors is greater then the ensemble size,
+  !   broadcast the observation indices and real grid numbers
+  !   from myrank_e=MEMBER-1 to the rest of processors that didn't read anything
+  !   !!!!!! now broadcast to all --> need to be revised
+  !-----------------------------------------------------------------------------
+
   if (nprocs_e > MEMBER) then
 
 !      ALLOCATE(ranks(nprocs_e-MEMBER+1))
@@ -300,10 +310,13 @@ SUBROUTINE set_letkf_obs
 
 !  call MPI_Comm_free(MPI_COMM_e,ierr)
 
+!-------------------------------------------------------------------------------
+! Process observations and quality control (QC)
+!-------------------------------------------------------------------------------
 
-!
-! preprocess 'obs'
-!-----------------------------------
+  ! Pre-process radar data
+  !-----------------------------------------------------------------------------
+
   do iof = 1, OBS_IN_NUM
     do n = 1, obs(iof)%nobs
       if (obs(iof)%elm(n) == id_radar_ref_obs) then
@@ -327,10 +340,11 @@ SUBROUTINE set_letkf_obs
     end do ! [ n = 1, obs(iof)%nobs ]
   end do ! [ iof = 1, OBS_IN_NUM ]
 
-
-! Compute perturbation and departure
-! gross error check
-!-----------------------------------
+  ! Compute perturbation and departure
+  !  -- gross error check
+  !  -- QC based on background (radar reflectivity)
+  !  -- process Himawari-8 data
+  !-----------------------------------------------------------------------------
 
   allocate(tmpelm(obsda%nobs))
 
@@ -589,19 +603,8 @@ SUBROUTINE set_letkf_obs
   END DO ! [ n = 1, obsda%nobs ]
 !$OMP END PARALLEL DO
 
-!!
-!! output departure statistics
-!!
-!-------------------------------------------------------------------------------
-
-  WRITE(6,'(A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN):'
-
-  CALL monit_dep(obsda%nobs,tmpelm,obsda%val,obsda%qc,monit_nobs,bias,rmse)
-  CALL monit_print(monit_nobs,bias,rmse)
-  deallocate(tmpelm)
-
-!!
-!! temporal observation localization
+  ! Temporal observation localization !!!!!! not implemented yet !!!!!!
+  !-----------------------------------------------------------------------------
 !!
 !!  DO n=1,nobs
 !!    tmperr(n) = tmperr(n) * exp(0.25d0 * (tmpdif(n) / SIGMA_OBST)**2)
@@ -610,12 +613,22 @@ SUBROUTINE set_letkf_obs
 !! SELECT OBS IN THE NODE
 !!
 
+  ! Print departure statistics
+  !-------------------------------------------------------------------------------
 
+  write (6, *)  
+  write (6,'(A,I6,A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN #', myrank_d, '):'
 
-! Sorting
-!-----------------------------------
+  call monit_dep(obsda%nobs, tmpelm, obsda%val, obsda%qc, monit_nobs, bias, rmse)
+  call monit_print(monit_nobs, bias, rmse)
+  deallocate(tmpelm)
 
-  ! determine grid spacing for bucket sorting
+!-------------------------------------------------------------------------------
+! "Bucket sort" of observations of each type (with different sorting meshes)
+!-------------------------------------------------------------------------------
+
+  ! Determine mesh size for bucket sort
+  !-----------------------------------------------------------------------------
 
   do itype = 1, nobtype
     max_hori_local = HORI_LOCAL(itype)
@@ -632,8 +645,8 @@ SUBROUTINE set_letkf_obs
     else
       target_grdspc = max_hori_local * dist_zero_fac / 6.0d0                ! need to be tuned
     end if
-    obsgrd(itype)%ngrd_i = ceiling(DX * real(nlon,r_size) / target_grdspc)
-    obsgrd(itype)%ngrd_j = ceiling(DY * real(nlat,r_size) / target_grdspc)
+    obsgrd(itype)%ngrd_i = min(ceiling(DX * real(nlon,r_size) / target_grdspc), nlon)
+    obsgrd(itype)%ngrd_j = min(ceiling(DY * real(nlat,r_size) / target_grdspc), nlat)
     obsgrd(itype)%grdspc_i = DX * real(nlon,r_size) / obsgrd(itype)%ngrd_i
     obsgrd(itype)%grdspc_j = DY * real(nlat,r_size) / obsgrd(itype)%ngrd_j
     obsgrd(itype)%ngrdsch_i = ceiling(max_hori_local * dist_zero_fac / obsgrd(itype)%grdspc_i)
@@ -648,37 +661,76 @@ SUBROUTINE set_letkf_obs
     allocate (obsgrd(itype)%ac_ext(0:obsgrd(itype)%ngrdext_i, obsgrd(itype)%ngrdext_j))
     obsgrd(itype)%n (:,:,:) = 0
     obsgrd(itype)%ac(:,:,:) = 0
+    obsgrd(itype)%tot(:) = 0
     obsgrd(itype)%n_ext (:,:) = 0
     obsgrd(itype)%ac_ext(:,:) = 0
-    obsgrd(itype)%tot(:) = 0
     obsgrd(itype)%tot_ext = 0
+    obsgrd(itype)%tot_sub(:) = 0
+    obsgrd(itype)%tot_g(:) = 0
 
     allocate (obsgrd(itype)%next(obsgrd(itype)%ngrd_i, obsgrd(itype)%ngrd_j))
   end do
 
+  ! Print observation usage settings
+  !-----------------------------------------------------------------------------
 
+  write (6, *)
+  write (6, '(A)') 'OBSERVATION USAGE SETTINGS:'
+  write (6, '(A)') '=============================================================================='
+  write (6, '(A)') 'TYPE    USE HORI_LOC   VERT_LOC TIME_LOC MAX_NOBS MIN_SPAC SORT_MESH_X _MESH_Y'
+  write (6, '(A)') '                (km) (lnP or m)      (s)              (km)        (km)    (km)'
+  write (6, '(A)') '------------------------------------------------------------------------------'
+  do itype = 1, nobtype
+    if (USE_OBS(itype)) then
+      use_obs_print = 'Yes'
+    else
+      use_obs_print = 'No'
+    end if
+    select case (itype)
+    case (22) ! vertical localization in Z
+      write (6, '(A6,1x,A4,F9.2,F7.2,A4,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(itype), use_obs_print, HORI_LOCAL(itype)/1000.0d0, &
+!                VERT_LOCAL(itype)/1000.0d0, '[km]', TIME_LOCAL(itype)/1000.0d0, MAX_NOBS_PER_GRID(itype), &
+                VERT_LOCAL(itype)/1000.0d0, '[km]', TIME_LOCAL(itype)/1000.0d0, MAX_NOBS_PER_GRID, &
+                OBS_MIN_SPACING(itype)/1000.0d0, obsgrd(itype)%grdspc_i/1000.0d0, obsgrd(itype)%grdspc_j/1000.0d0
+    case default ! vertical localization in ln(p)
+      write (6, '(A6,1x,A4,F9.2,F11.3,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(itype), use_obs_print, HORI_LOCAL(itype)/1000.0d0, &
+!                VERT_LOCAL(itype), TIME_LOCAL(itype)/1000.0d0, MAX_NOBS_PER_GRID(itype), &
+                VERT_LOCAL(itype), TIME_LOCAL(itype)/1000.0d0, MAX_NOBS_PER_GRID, &
+                OBS_MIN_SPACING(itype)/1000.0d0, obsgrd(itype)%grdspc_i/1000.0d0, obsgrd(itype)%grdspc_j/1000.0d0
+    end select
+  end do
+  write (6, '(A)') '=============================================================================='
 
+  ! First scan: count the observation numbers in each mesh (in each subdomian)
+  !-----------------------------------------------------------------------------
+
+  nobstypevar_g(:,:,:) = 0
   do n = 1, obsda%nobs
+    uielm = uid_obs(obs(obsda%set(n))%elm(obsda%idx(n)))
     if (obsda%qc(n) == iqc_good) then
       itype = obs(obsda%set(n))%typ(obsda%idx(n))
       call ij_obsgrd(itype, obsda%ri(n), obsda%rj(n), i, j)
-
-!if (i < 1 .or. i > nlon .or. j < 1 .or. j > nlat) then
-!  call rank_1d_2d(myrank_d, iproc, jproc)
-!  print *, '%%%', myrank, myrank_d, obsda%ri(n) - real(IHALO + iproc * nlon, r_size), obsda%rj(n) - real(JHALO + jproc * nlat, r_size)
-!end if
-
       if (i < 1) i = 1                                       ! Assume the process assignment was correct,
       if (i > obsgrd(itype)%ngrd_i) i = obsgrd(itype)%ngrd_i ! so this correction is only to remedy the round-off problem.
       if (j < 1) j = 1                                       !
       if (j > obsgrd(itype)%ngrd_j) j = obsgrd(itype)%ngrd_j !
 
       obsgrd(itype)%n(i,j,myrank_d) = obsgrd(itype)%n(i,j,myrank_d) + 1
+      obsgrd(itype)%tot_sub(2) = obsgrd(itype)%tot_sub(2) + 1           ! only used for diagnostic print (obs number after qc)
+      if (uielm > 0) then                                               !
+        nobstypevar_g(2,uielm,itype) = nobstypevar_g(2,uielm,itype) + 1 !
+      end if                                                            !
     end if
+
+    obsgrd(itype)%tot_sub(1) = obsgrd(itype)%tot_sub(1) + 1             ! only used for diagnostic print (obs number prior to qc)
+    if (uielm > 0) then                                                 !
+      nobstypevar_g(1,uielm,itype) = nobstypevar_g(1,uielm,itype) + 1   !
+    end if                                                              !
   end do
 
+  ! Compute the accumulated numbers in each mesh
+  !-----------------------------------------------------------------------------
 
-! regional count
   do itype = 1, nobtype
     if (itype > 1) then
       obsgrd(itype)%ac(0,1,myrank_d) = obsgrd(itype-1)%ac(obsgrd(itype-1)%ngrd_i,obsgrd(itype-1)%ngrd_j,myrank_d)
@@ -695,26 +747,8 @@ SUBROUTINE set_letkf_obs
     obsgrd(itype)%next(1:obsgrd(itype)%ngrd_i,:) = obsgrd(itype)%ac(0:obsgrd(itype)%ngrd_i-1,:,myrank_d)
   end do
 
-!  do itype = 1, nobtype
-!    if (itype > 1) then
-!      obsgrd(itype)%ac(0,1,myrank_d) = obsgrd(itype-1)%ac(obsgrd(itype-1)%ngrd_i,obsgrd(itype-1)%ngrd_j,myrank_d) + &
-!                                         obsgrd(itype-1)%n(obsgrd(itype-1)%ngrd_i,obsgrd(itype-1)%ngrd_j,myrank_d)
-!      obsgrd(itype)%ac(1,1,myrank_d) = obsgrd(itype)%ac(0,1,myrank_d)
-!    end if
-!    do j = 1, obsgrd(itype)%ngrd_j
-!      if (j > 1) then
-!        obsgrd(itype)%ac(0,j,myrank_d) = obsgrd(itype)%ac(obsgrd(itype)%ngrd_i,j-1,myrank_d) + &
-!                                           obsgrd(itype)%n(obsgrd(itype)%ngrd_i,j-1,myrank_d)
-!        obsgrd(itype)%ac(1,j,myrank_d) = obsgrd(itype)%ac(0,j,myrank_d)
-!      end if
-!      do i = 2, obsgrd(itype)%ngrd_i
-!        obsgrd(itype)%ac(i,j,myrank_d) = obsgrd(itype)%ac(i-1,j,myrank_d) + &
-!                                           obsgrd(itype)%n(i-1,j,myrank_d)
-!      end do
-!    end do
-!!    obsgrd(itype)%tot(myrank_d) = obsgrd(itype)%ac(obsgrd(itype)%ngrd_i,obsgrd(itype)%ngrd_j,myrank_d) + &
-!!                                  obsgrd(itype)%n(obsgrd(itype)%ngrd_i,obsgrd(itype)%ngrd_j,myrank_d)
-!  end do
+  ! Second scan: save the indices of bucket-sorted observations in obsda%keys(:)
+  !-----------------------------------------------------------------------------
 
   do n = 1, obsda%nobs
     if (obsda%qc(n) == iqc_good) then
@@ -726,19 +760,9 @@ SUBROUTINE set_letkf_obs
       if (j > obsgrd(itype)%ngrd_j) j = obsgrd(itype)%ngrd_j !
 
       obsgrd(itype)%next(i,j) = obsgrd(itype)%next(i,j) + 1
-!      obsda%key(n) = obsgrd(itype)%next(i,j)
       obsda%key(obsgrd(itype)%next(i,j)) = n
-
-!      obsgrd(itype)%ac(i,j,myrank_d) = obsgrd(itype)%ac(i,j,myrank_d) + 1
-!      obsda%key(n) = obsgrd(itype)%ac(i,j,myrank_d)
-
     end if
   end do
-
-
-!print *, obsda%key(:)
-
-
 
 
 !#ifdef H08
@@ -759,11 +783,18 @@ SUBROUTINE set_letkf_obs
 !  nobsgrd(0:nlon,1:nlat,0:MEM_NP-1) = bufri2(0:nlon,1:nlat,0:MEM_NP-1)
 !  deallocate ( bufri2 )
 
+
+  ! ALLREDUCE observation number information from subdomains, and compute total numbers
+  !-----------------------------------------------------------------------------
+
+  nobs_sub(:) = 0
+  nobs_g(:) = 0
   do itype = 1, nobtype
     call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(itype)%n, obsgrd(itype)%ngrd_i*obsgrd(itype)%ngrd_j*MEM_NP, &
                        MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
     call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(itype)%ac(0:obsgrd(itype)%ngrd_i,:,:), (obsgrd(itype)%ngrd_i+1)*obsgrd(itype)%ngrd_j*MEM_NP, &
                        MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+    call MPI_ALLREDUCE(obsgrd(itype)%tot_sub, obsgrd(itype)%tot_g, 2, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
 
     if (itype == 1) then
       obsgrd(itype)%tot(:) = obsgrd(itype)%ac(obsgrd(itype)%ngrd_i,obsgrd(itype)%ngrd_j,:)
@@ -771,36 +802,64 @@ SUBROUTINE set_letkf_obs
       obsgrd(itype)%tot(:) = obsgrd(itype)%ac(obsgrd(itype)%ngrd_i,obsgrd(itype)%ngrd_j,:) &
                            - obsgrd(itype-1)%ac(obsgrd(itype-1)%ngrd_i,obsgrd(itype-1)%ngrd_j,:)
     end if
+    if (obsgrd(itype)%tot(myrank_d) /= obsgrd(itype)%tot_sub(2)) then
+      write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
+      stop 99
+    end if
+
+    nobs_sub(:) = nobs_sub(:) + obsgrd(itype)%tot_sub(:)
+    nobs_g(:) = nobs_g(:) + obsgrd(itype)%tot_g(:)
 
     deallocate (obsgrd(itype)%next)
   end do
 
-  nobstotal_sub = obsgrd(nobtype)%ac(obsgrd(nobtype)%ngrd_i,obsgrd(nobtype)%ngrd_j,myrank_d)
-  nobstotalg = sum(obsgrd(nobtype)%ac(obsgrd(nobtype)%ngrd_i,obsgrd(nobtype)%ngrd_j,:))
+  call MPI_ALLREDUCE(MPI_IN_PLACE, nobstypevar_g, 2*nid_obs*nobtype, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
 
-!if (myrank == 0) then
-!print *, itype, obsgrd(itype)%tot(:)
-!end if
+  if (obsgrd(nobtype)%ac(obsgrd(nobtype)%ngrd_i,obsgrd(nobtype)%ngrd_j,myrank_d) /= nobs_sub(2)) then
+    write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
+    stop 99
+  end if
+  if (sum(obsgrd(nobtype)%ac(obsgrd(nobtype)%ngrd_i,obsgrd(nobtype)%ngrd_j,:)) /= nobs_g(2)) then
+    write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
+    stop 99
+  end if
+  nobstotalg = nobs_g(2) ! total obs number in the global domain (all types)
 
-!!!!!!!  write (6,'(I10,A)') obsda2%nobs,' OBSERVATIONS TO BE ASSIMILATED'
+  ! Print observation counts for each types
+  !-----------------------------------------------------------------------------
 
-!!!!!!!  WRITE(6,'(A,I8)') 'Target observation numbers (global) : NOBS=',nobstotalg
+  write(nstr, '(I4)') nid_obs
 
+  write (6, *)
+  write (6, '(A)') 'OBSERVATION COUNTS BEFORE QC (GLOABL):'
+  write (6, '(A7,'//nstr//'A8,A)') '=======', line1_str(:), '=========='
+  write (6, '(A6,1x,'//nstr//'A8,A10)') 'TYPE  ', obelmlist(:), '     TOTAL'
+  write (6, '(A7,'//nstr//'A8,A)') '-------', line2_str(:), '----------'
+  do itype = 1, nobtype
+    write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(itype), nobstypevar_g(1,:,itype), obsgrd(itype)%tot_g(1)
+  end do
+  write (6, '(A7,'//nstr//'A8,A)') '-------', line2_str(:), '----------'
+  write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', sum(nobstypevar_g(1,:,:), dim=2), nobs_g(1)
+  write (6, '(A7,'//nstr//'A8,A)') '=======', line1_str(:), '=========='
 
+  write (6, *)
+  write (6, '(A)') 'OBSERVATION COUNTS AFTER QC (GLOABL):'
+  write (6, '(A7,'//nstr//'A8,A)') '=======', line1_str(:), '=========='
+  write (6, '(A6,1x,'//nstr//'A8,A10)') 'TYPE  ', obelmlist(:), '     TOTAL'
+  write (6, '(A7,'//nstr//'A8,A)') '-------', line2_str(:), '----------'
+  do itype = 1, nobtype
+    write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(itype), nobstypevar_g(2,:,itype), obsgrd(itype)%tot_g(2)
+  end do
+  write (6, '(A7,'//nstr//'A8,A)') '-------', line2_str(:), '----------'
+  write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', sum(nobstypevar_g(2,:,:), dim=2), nobs_g(2)
+  write (6, '(A7,'//nstr//'A8,A)') '=======', line1_str(:), '=========='
 
-
-
-
-
-  ! Calculate the observation numbers in the extended domain
-  ! %n_ext, %ac_ext, nobstatal
+  ! Calculate observation numbers in the extended (localization) subdomain,
+  ! in preparation for communicating obsetvations in the extended subdomain
+  !-----------------------------------------------------------------------------
 
   do itype = 1, nobtype
     call rank_1d_2d(myrank_d, iproc, jproc)
-!    imin1 = max(1, iproc*obsgrd(itype)%ngrd_i+1 - obsgrd(itype)%ngrdsch_i)
-!    imax1 = min(PRC_NUM_X*obsgrd(itype)%ngrd_i, (iproc+1)*obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i)
-!    jmin1 = max(1, jproc*obsgrd(itype)%ngrd_j+1 - obsgrd(itype)%ngrdsch_j)
-!    jmax1 = min(PRC_NUM_Y*obsgrd(itype)%ngrd_j, (jproc+1)*obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j)
     imin1 = iproc*obsgrd(itype)%ngrd_i+1 - obsgrd(itype)%ngrdsch_i
     imax1 = (iproc+1)*obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
     jmin1 = jproc*obsgrd(itype)%ngrd_j+1 - obsgrd(itype)%ngrdsch_j
@@ -838,17 +897,10 @@ SUBROUTINE set_letkf_obs
     end if
   end do ! [ itype = 1, nobtype ]
 
-  nobstotal = obsgrd(nobtype)%ac_ext(obsgrd(nobtype)%ngrdext_i,obsgrd(nobtype)%ngrdext_j)
+  nobstotal = obsgrd(nobtype)%ac_ext(obsgrd(nobtype)%ngrdext_i,obsgrd(nobtype)%ngrdext_j) ! total obs number in the extended subdomain (all types)
 
-
-
-  write(6,'(A,I10)') 'nobstotalg =', nobstotalg
-  write(6,'(A,I10)') 'nobstotal  =', nobstotal
-
-
-
-  ! Communicate obsda and save as obsda2 with sorted order
-  !
+  ! Construct sorted obsda2: 
+  !-----------------------------------------------------------------------------
   maxnobs_sub_per_type = maxval(obsgrd(1)%tot(:))
   maxnobs_per_type = obsgrd(1)%tot_ext
   do itype = 2, nobtype
@@ -869,6 +921,8 @@ SUBROUTINE set_letkf_obs
 
   do itype = 1, nobtype
 
+    ! 1) Copy the observation data in own subdomain to obsda2 with sorted order
+    !---------------------------------------------------------------------------
     ishift = obsgrd(itype)%ngrdsch_i
     jshift = obsgrd(itype)%ngrdsch_j
 
@@ -878,11 +932,6 @@ SUBROUTINE set_letkf_obs
         nn_ext = n + obsgrd(itype)%ac_ext(ishift,j+jshift)
         nn_sub = n + obsgrd(itype)%ac(0,j,myrank_d)
         nk = nk + 1
-
-!if(myrank == 3) then
-!print *, obsda%key(:)
-!print *, '#####', n, nn_ext, nn_sub, nk, obsda%key(nn_sub)
-!end if
 
         obsda2%set(nn_ext) = obsda%set(obsda%key(nn_sub))
         obsda2%idx(nn_ext) = obsda%idx(obsda%key(nn_sub))
@@ -899,8 +948,8 @@ SUBROUTINE set_letkf_obs
 
     end do
 
-
-
+    ! 2) Communicate observations within the extended (localization) subdomains
+    !---------------------------------------------------------------------------
     do ip = 0, MEM_NP-1
 
       call rank_1d_2d(ip, iproc, jproc)
@@ -913,27 +962,20 @@ SUBROUTINE set_letkf_obs
       jmin1 = jproc*obsgrd(itype)%ngrd_j+1 - obsgrd(itype)%ngrdsch_j
       jmax1 = (jproc+1)*obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
 
-!if (myrank_e == 0) then
-!print *, myrank_d,imin1,imax1,jmin1,jmax1
-!end if
-
       ns = 0
       nr = 0
       nrt = 0
 
+      ! a) Make send buffer with sorted order
+      !-------------------------------------------------------------------------
       do ip2 = 0, MEM_NP-1
 
         if (ip2 /= ip) then
-
           call rank_1d_2d(ip2, iproc2, jproc2)
           imin2 = max(1, imin1 - iproc2*obsgrd(itype)%ngrd_i)
           imax2 = min(obsgrd(itype)%ngrd_i, imax1 - iproc2*obsgrd(itype)%ngrd_i)
           jmin2 = max(1, jmin1 - jproc2*obsgrd(itype)%ngrd_j)
           jmax2 = min(obsgrd(itype)%ngrd_j, jmax1 - jproc2*obsgrd(itype)%ngrd_j)
-
-!if (myrank_e == 0) then
-!print *, myrank_d,ip2,imin2,imax2,jmin2,jmax2
-!end if
 
           nr(ip2+1) = 0
 
@@ -955,7 +997,6 @@ SUBROUTINE set_letkf_obs
           else
             call obs_choose(itype,ip2,imin2,imax2,jmin2,jmax2,nr(ip2+1))
           end if
-
         end if ! [ ip2 /= ip ]
 
         if (ip2 > 0) then
@@ -964,16 +1005,14 @@ SUBROUTINE set_letkf_obs
 
       end do ! [ ip2 = 0, MEM_NP-1 ]
 
+      ! b) GATHERV observation data
+      !-------------------------------------------------------------------------
       if (nrt(MEM_NP) + nr(MEM_NP) <= 0) cycle
 
       if (nrt(MEM_NP) + nr(MEM_NP) > obsbufr%nobs) then
         obsbufr%nobs = nrt(MEM_NP) + nr(MEM_NP)
         call obs_da_value_allocate(obsbufr, MEMBER)  ! deallocate first inside the subroutine
       end if
-
-!if(myrank == 3) then
-!print *, nr, nrt
-!end if
 
       call MPI_GATHERV(obsbufs%set, ns, MPI_INTEGER, obsbufr%set, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
       call MPI_GATHERV(obsbufs%idx, ns, MPI_INTEGER, obsbufr%idx, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
@@ -986,7 +1025,8 @@ SUBROUTINE set_letkf_obs
       call MPI_GATHERV(obsbufs%lev, ns, MPI_r_size, obsbufr%lev, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
 #endif
 
-
+      ! c) In the domain receiving data, copy the receive buffer to obsda2
+      !-------------------------------------------------------------------------
       if (myrank_d == ip) then
 
         ne_bufr = 0
@@ -994,9 +1034,7 @@ SUBROUTINE set_letkf_obs
         do ip2 = 0, MEM_NP-1
 
           if (ip2 /= ip) then
-
             call rank_1d_2d(ip2, iproc2, jproc2)
-
             imin2 = max(1, imin1 - iproc2*obsgrd(itype)%ngrd_i)
             imax2 = min(obsgrd(itype)%ngrd_i, imax1 - iproc2*obsgrd(itype)%ngrd_i)
             jmin2 = max(1, jmin1 - jproc2*obsgrd(itype)%ngrd_j)
@@ -1014,18 +1052,8 @@ SUBROUTINE set_letkf_obs
             do j = jmin2, jmax2
               ns_ext = obsgrd(itype)%ac_ext(imin2+ishift-1,j+jshift) + 1
               ne_ext = obsgrd(itype)%ac_ext(imax2+ishift  ,j+jshift)
-
-!if(myrank == 3) then
-!print *, nr, nrt
-!end if
               ns_bufr = ne_bufr + 1
               ne_bufr = ne_bufr + obsgrd(itype)%ac(imax2,j,ip2) - obsgrd(itype)%ac(imin2-1,j,ip2)
-
-!              ns_bufr = nrt(ip2+1) + obsgrd(itype)%ac(imin2-1,j,ip2) + 1
-!              ne_bufr = nrt(ip2+1) + obsgrd(itype)%ac(imax2  ,j,ip2)
-
-
-
 
               if (ne_ext - ns_ext /= ne_bufr - ns_bufr) then
                 write (6, '(A)') '[Error] observation grid indices have errors !!!'
@@ -1033,10 +1061,6 @@ SUBROUTINE set_letkf_obs
                              obsgrd(itype)%ngrd_i, obsgrd(itype)%ngrd_j, obsgrd(itype)%ngrdsch_i, obsgrd(itype)%ngrdsch_j, ns_ext, ne_ext, ns_bufr, ne_bufr
                 stop 99
               end if
-
-
-
-
 
               if (ns_ext > ne_ext) cycle
 
@@ -1046,7 +1070,6 @@ SUBROUTINE set_letkf_obs
 !print *, obsbufr%val(ns_bufr:ne_bufr)
 !print *, obsbufr%ensval(:,ns_bufr:ne_bufr)
 !endif
-
 
               obsda2%set(ns_ext:ne_ext) = obsbufr%set(ns_bufr:ne_bufr)
               obsda2%idx(ns_ext:ne_ext) = obsbufr%idx(ns_bufr:ne_bufr)
@@ -1059,17 +1082,9 @@ SUBROUTINE set_letkf_obs
               obsda2%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr) ! H08
 #endif
             end do
-
           end if ! [ ip2 /= ip ]
-        end do ! [ ip2 = 0, MEM_NP-1 ]
 
-  !      write(6,*) ns
-  !      write(6,*) nr(:)
-  !      write(6,*) nrt(:)
-  !!        write(6,*)
-  !!        write(6,*) nrt(MEM_NP-1)+nr(MEM_NP-1)
-  !!        write(6,*)
-  !!        write(6,*) obsbufr(:)
+        end do ! [ ip2 = 0, MEM_NP-1 ]
 
       end if ! [ myrank_d == ip ]
 
@@ -1085,49 +1100,36 @@ SUBROUTINE set_letkf_obs
   call obs_da_value_deallocate(obsbufr)
   deallocate (obsidx)
 
-
-  if (nk /= nobstotal_sub) then
+  if (nk /= nobs_sub(2)) then
     write (6, '(A)') '[Error] Error with number of observations in the subdomain !!!'
     stop 99
   end if
 
   obsda2%nobs_in_key = nk
 
+  ! Print observation counts
+  !-----------------------------------------------------------------------------
 
-!  write(6,'(A,I10)') 'nobstotalg =', nobstotalg
-!  write(6,'(A,I10)') 'nobstotal  =', nobstotal
-
-
-
+  write (6, *)
+  write (6, '(A,I6,A)') 'OBSERVATION COUNTS (GLOABL AND IN THIS SUBDOMAIN #', myrank_d, '):'
+  write (6, '(A)') '================================================================='
+  write (6, '(A)') 'TYPE        GLOBAL  SUBDOMAIN     GLOBAL  SUBDOMAIN EXT_SUBDOMAIN'
+  write (6, '(A)') '         before QC  before QC   after QC   after QC      after QC'
+  write (6, '(A)') '-----------------------------------------------------------------'
+  do itype = 1, nobtype
+    write (6, '(A6,1x,4I11,I14)') obtypelist(itype), obsgrd(itype)%tot_g(1), obsgrd(itype)%tot_sub(1), &
+              obsgrd(itype)%tot_g(2), obsgrd(itype)%tot_sub(2), obsgrd(itype)%tot_ext
+  end do
+  write (6, '(A)') '-----------------------------------------------------------------'
+    write (6, '(A6,1x,4I11,11x,A3)') 'TOTAL ', nobs_g(1), nobs_sub(1), nobs_g(2), nobs_sub(2), 'N/A'
+  write (6, '(A)') '================================================================='
 
   RETURN
 END SUBROUTINE set_letkf_obs
 
-
 !-----------------------------------------------------------------------
-! convert grid (i,j) values to obsgrid (ogi, ogj) values for sorting
+! Convert grid (i,j) values to obsgrid (ogi, ogj) sorting mesh
 !-----------------------------------------------------------------------
-!subroutine ij_obsgrd(ngrd_i, ngrd_j, ri, rj, ogi, ogj, offset_i, offset_j)
-!  use scale_grid_index, only: &
-!      IHALO,JHALO
-!  implicit none
-!  integer, intent(in) :: ngrd_i, ngrd_j
-!  real(r_size), intent(in) :: ri, rj
-!  integer, intent(out) :: ogi, ogj
-!  integer, intent(in), optional :: offset_i, offset_j
-
-!  ogi = ceiling((ri - real(IHALO,r_size) - 0.5) * real(ngrd_i,r_size) / real(nlon,r_size))
-!  ogj = ceiling((rj - real(JHALO,r_size) - 0.5) * real(ngrd_j,r_size) / real(nlat,r_size))
-!  if (present(offset_i)) then
-!    ogi = ogi + offset_i
-!  end if
-!  if (present(offset_j)) then
-!    ogj = ogj + offset_j
-!  end if
-
-!  return
-!end subroutine ij_obsgrd
-
 subroutine ij_obsgrd(obtype, ri, rj, ogi, ogj)
   use scale_grid_index, only: &
     IHALO,JHALO
@@ -1146,6 +1148,10 @@ subroutine ij_obsgrd(obtype, ri, rj, ogi, ogj)
   return
 end subroutine ij_obsgrd
 
+!-----------------------------------------------------------------------
+! Convert grid (i,j) values to obsgrid (ogi, ogj) sorting mesh
+! in the extended subdomain
+!-----------------------------------------------------------------------
 subroutine ij_obsgrd_ext(obtype, ri, rj, ogi, ogj)
   use scale_grid_index, only: &
     IHALO,JHALO
@@ -1167,7 +1173,7 @@ subroutine ij_obsgrd_ext(obtype, ri, rj, ogi, ogj)
 end subroutine ij_obsgrd_ext
 
 !-----------------------------------------------------------------------
-!
+! Choose observations in a rectangle using the bucket sort results
 !-----------------------------------------------------------------------
 subroutine obs_choose(obtype, proc, imin, imax, jmin, jmax, nn, nobs_use)
   implicit none
@@ -1195,6 +1201,10 @@ subroutine obs_choose(obtype, proc, imin, imax, jmin, jmax, nn, nobs_use)
   return
 end subroutine obs_choose
 
+!-----------------------------------------------------------------------
+! Choose observations in a rectangle using the bucket sort results
+! in the extended subdomain
+!-----------------------------------------------------------------------
 subroutine obs_choose_ext(obtype, imin, imax, jmin, jmax, nn, nobs_use)
   implicit none
   integer, intent(in) :: obtype
