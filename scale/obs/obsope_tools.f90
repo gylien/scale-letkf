@@ -151,7 +151,6 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 ! bTC: background TC in each subdomain
 ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp (Pa)
   REAL(r_size),ALLOCATABLE :: bTC(:,:)
-  REAL(r_size),ALLOCATABLE :: bufr(:,:)
   REAL(r_size) :: bTC_mslp
 
   character(filelenmax) :: obsdafile
@@ -504,10 +503,8 @@ SUBROUTINE obsope_cal(obs, obsda_return)
               !!! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
               ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp
               allocate(bTC(3,0:MEM_NP-1))
-              allocate(bufr(3,0:MEM_NP-1))
 
               bTC = 9.99d33
-              bufr = 9.99d33
 
               ! Note: obs(iof)%dat(obs_idx_TCX) is not longitude (deg) but X (m).
               !       Units of the original TC vital position are converted in
@@ -518,10 +515,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
               call search_tc_subdom(rig,rjg,v2dg,bTC(1,myrank_d),bTC(2,myrank_d),bTC(3,myrank_d))
   
               CALL MPI_BARRIER(MPI_COMM_d,ierr)
-              CALL MPI_ALLREDUCE(bTC,bufr,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
-              bTC = bufr
-
-              deallocate(bufr)
+              CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
 
               ! Assume MSLP of background TC is lower than 1100 (hPa). 
               bTC_mslp = 1100.0d2

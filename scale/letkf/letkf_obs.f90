@@ -85,11 +85,7 @@ SUBROUTINE set_letkf_obs
   real(r_size) :: max_hori_local
   real(r_size) :: target_grdspc
 
-  REAL(r_size),allocatable :: bufr(:,:)
-  INTEGER,allocatable :: bufri(:)
-  INTEGER,allocatable :: bufri2(:,:,:)
 #ifdef H08
-  REAL(r_size),allocatable :: bufr2(:) ! H08
   REAL(r_size):: ch_num ! H08
 !  REAL(r_size),allocatable :: hx_sprd(:) ! H08
 #endif
@@ -267,41 +263,25 @@ SUBROUTINE set_letkf_obs
 
 ! obsda%val not used; averaged from obsda%ensval later
 
-  allocate (bufr(MEMBER,obsda%nobs))
-  bufr = 0.0d0
   CALL MPI_BARRIER(MPI_COMM_e,ierr)
-  CALL MPI_ALLREDUCE(obsda%ensval,bufr,obsda%nobs*MEMBER,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
-  obsda%ensval = bufr
-  deallocate(bufr)
+  CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%ensval,obsda%nobs*MEMBER,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
 
-  allocate (bufri(obsda%nobs))
-  bufri = 0
   CALL MPI_BARRIER(MPI_COMM_e,ierr)
-  CALL MPI_ALLREDUCE(obsda%qc,bufri,obsda%nobs,MPI_INTEGER,MPI_MAX,MPI_COMM_e,ierr)
-  obsda%qc = bufri
-  deallocate(bufri)
+  CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%qc,obsda%nobs,MPI_INTEGER,MPI_MAX,MPI_COMM_e,ierr)
 
 #ifdef H08
 !-- H08
 ! calculate the ensemble mean of obsda%lev
 !
-  allocate (bufr2(obsda%nobs))
-  bufr2 = 0.0d0
   CALL MPI_BARRIER(MPI_COMM_e,ierr)
-  CALL MPI_ALLREDUCE(obsda%lev,bufr2,obsda%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
-  obsda%lev = bufr2
-  deallocate(bufr2)
+  CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%lev,obsda%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
 
   obsda%lev = obsda%lev / REAL(MEMBER,r_size)
 
 ! calculate the ensemble mean of obsda%val2 (clear sky BT)
 !
-  allocate (bufr2(obsda%nobs))
-  bufr2 = 0.0d0
   CALL MPI_BARRIER(MPI_COMM_e,ierr)
-  CALL MPI_ALLREDUCE(obsda%val2,bufr2,obsda%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
-  obsda%val2 = bufr2
-  deallocate(bufr2)
+  CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%val2,obsda%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
 
   obsda%val2 = obsda%val2 / REAL(MEMBER,r_size)
 
@@ -769,20 +749,11 @@ SUBROUTINE set_letkf_obs
 !#ifdef H08
 ! -- H08
 !  if((obs(3)%nobs >= 1) .and. OBS_IN_NUM >= 3)then
-!    allocate (bufr2(obs(3)%nobs))
-!    bufr2 = 0.0d0
 !    CALL MPI_BARRIER(MPI_COMM_d,ierr)
-!    CALL MPI_ALLREDUCE(obs(3)%lev,bufr2,obs(3)%nobs,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
-!    obs(3)%lev = bufr2
-!    deallocate(bufr2)
+!    CALL MPI_ALLREDUCE(MPI_IN_PLACE,obs(3)%lev,obs(3)%nobs,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
 !  endif
 ! -- H08
 !#endif
-
-!  allocate ( bufri2 (0:nlon,1:nlat,0:MEM_NP-1) )
-!  call MPI_ALLREDUCE(nobsgrd,bufri2,(nlon+1)*nlat*MEM_NP,MPI_INTEGER,MPI_SUM,MPI_COMM_d,ierr)
-!  nobsgrd(0:nlon,1:nlat,0:MEM_NP-1) = bufri2(0:nlon,1:nlat,0:MEM_NP-1)
-!  deallocate ( bufri2 )
 
 
   ! ALLREDUCE observation number information from subdomains, and compute total numbers
