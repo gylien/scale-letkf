@@ -55,7 +55,7 @@ MODULE letkf_obs
 
   integer,save :: nobstotalg
   integer,save :: nobstotal
-  integer,save :: maxnobs_sub_per_type
+!  integer,save :: maxnobs_sub_per_type
   integer,save :: maxnobs_per_type
 CONTAINS
 !-----------------------------------------------------------------------
@@ -707,8 +707,9 @@ SUBROUTINE set_letkf_obs
   nobstypevar_g(:,:,:) = 0
   do n = 1, obsda%nobs
     uielm = uid_obs(obs(obsda%set(n))%elm(obsda%idx(n)))
+    itype = obs(obsda%set(n))%typ(obsda%idx(n))
+
     if (obsda%qc(n) == iqc_good) then
-      itype = obs(obsda%set(n))%typ(obsda%idx(n))
       call ij_obsgrd(itype, obsda%ri(n), obsda%rj(n), i, j)
       if (i < 1) i = 1                                       ! Assume the process assignment was correct,
       if (i > obsgrd(itype)%ngrd_i) i = obsgrd(itype)%ngrd_i ! so this correction is only to remedy the round-off problem.
@@ -899,30 +900,24 @@ SUBROUTINE set_letkf_obs
 
   nobstotal = obsgrd(nobtype)%ac_ext(obsgrd(nobtype)%ngrdext_i,obsgrd(nobtype)%ngrdext_j) ! total obs number in the extended subdomain (all types)
 
-  ! Construct sorted obsda2: 
-  !-----------------------------------------------------------------------------
-  maxnobs_sub_per_type = maxval(obsgrd(1)%tot(:))
+!  maxnobs_sub_per_type = maxval(obsgrd(1)%tot(:))
   maxnobs_per_type = obsgrd(1)%tot_ext
   do itype = 2, nobtype
-    maxnobs_sub_per_type = max(maxnobs_sub_per_type, maxval(obsgrd(itype)%tot(:)))
+!    maxnobs_sub_per_type = max(maxnobs_sub_per_type, maxval(obsgrd(itype)%tot(:)))
     maxnobs_per_type = max(maxnobs_per_type, obsgrd(itype)%tot_ext)
   end do
-  allocate (obsidx(maxnobs_sub_per_type))
 
-  obsbufs%nobs = maxnobs_sub_per_type
-  call obs_da_value_allocate(obsbufs, MEMBER)
-  obsbufr%nobs = 0
-  call obs_da_value_allocate(obsbufr, MEMBER)  ! This is necessary to present the error with not-allocated arrays
+  ! Construct sorted obsda2: 
+  !-----------------------------------------------------------------------------
 
   obsda2%nobs = nobstotal
   call obs_da_value_allocate(obsda2, MEMBER)
 
+  ! 1) Copy the observation data in own subdomain to obsda2 with sorted order
+  !-----------------------------------------------------------------------------
   nk = 0
 
   do itype = 1, nobtype
-
-    ! 1) Copy the observation data in own subdomain to obsda2 with sorted order
-    !---------------------------------------------------------------------------
     ishift = obsgrd(itype)%ngrdsch_i
     jshift = obsgrd(itype)%ngrdsch_j
 
@@ -945,31 +940,38 @@ SUBROUTINE set_letkf_obs
         obsda2%lev(nn_ext) = obsda%lev(obsda%key(nn_sub)) ! H08
 #endif
       end do
-
     end do
+  end do ! [ itype = 1, nobtype ]
 
-    ! 2) Communicate observations within the extended (localization) subdomains
+  if (nk /= nobs_sub(2)) then
+    write (6, '(A)') '[Error] Error with number of observations in the subdomain !!!'
+    stop 99
+  end if
+
+  obsda2%nobs_in_key = nk
+
+  ! 2) Communicate observations within the extended (localization) subdomains
+  !-----------------------------------------------------------------------------
+  obsbufs%nobs = nobs_sub(2)
+  call obs_da_value_allocate(obsbufs, MEMBER)
+  allocate (obsidx(nobs_sub(2)))
+
+  do ip = 0, MEM_NP-1
+
+    ! a) Make send buffer with sorted order
     !---------------------------------------------------------------------------
-    do ip = 0, MEM_NP-1
+    ns = 0
+    nr = 0
+    nrt = 0
 
+    do itype = 1, nobtype
       call rank_1d_2d(ip, iproc, jproc)
-!      imin1 = max(1, iproc*obsgrd(itype)%ngrd_i+1 - obsgrd(itype)%ngrdsch_i)
-!      imax1 = min(PRC_NUM_X*obsgrd(itype)%ngrd_i, (iproc+1)*obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i)
-!      jmin1 = max(1, jproc*obsgrd(itype)%ngrd_j+1 - obsgrd(itype)%ngrdsch_j)
-!      jmax1 = min(PRC_NUM_Y*obsgrd(itype)%ngrd_j, (jproc+1)*obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j)
       imin1 = iproc*obsgrd(itype)%ngrd_i+1 - obsgrd(itype)%ngrdsch_i
       imax1 = (iproc+1)*obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
       jmin1 = jproc*obsgrd(itype)%ngrd_j+1 - obsgrd(itype)%ngrdsch_j
       jmax1 = (jproc+1)*obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
 
-      ns = 0
-      nr = 0
-      nrt = 0
-
-      ! a) Make send buffer with sorted order
-      !-------------------------------------------------------------------------
       do ip2 = 0, MEM_NP-1
-
         if (ip2 /= ip) then
           call rank_1d_2d(ip2, iproc2, jproc2)
           imin2 = max(1, imin1 - iproc2*obsgrd(itype)%ngrd_i)
@@ -977,63 +979,74 @@ SUBROUTINE set_letkf_obs
           jmin2 = max(1, jmin1 - jproc2*obsgrd(itype)%ngrd_j)
           jmax2 = min(obsgrd(itype)%ngrd_j, jmax1 - jproc2*obsgrd(itype)%ngrd_j)
 
-          nr(ip2+1) = 0
-
           if (myrank_d == ip2) then
             call obs_choose(itype,ip2,imin2,imax2,jmin2,jmax2,nr(ip2+1),obsidx)
-            ns = nr(ip2+1)
-            do n = 1, ns
-              obsbufs%set(n) = obsda%set(obsda%key(obsidx(n)))
-              obsbufs%idx(n) = obsda%idx(obsda%key(obsidx(n)))
-              obsbufs%val(n) = obsda%val(obsda%key(obsidx(n)))
-              obsbufs%ensval(:,n) = obsda%ensval(:,obsda%key(obsidx(n)))
-              obsbufs%qc(n) = obsda%qc(obsda%key(obsidx(n)))
-              obsbufs%ri(n) = obsda%ri(obsda%key(obsidx(n)))
-              obsbufs%rj(n) = obsda%rj(obsda%key(obsidx(n)))
-#ifdef H08
-              obsbufs%lev(n) = obsda%lev(obsda%key(obsidx(n))) ! H08
-#endif
-            end do
           else
             call obs_choose(itype,ip2,imin2,imax2,jmin2,jmax2,nr(ip2+1))
           end if
         end if ! [ ip2 /= ip ]
-
-        if (ip2 > 0) then
-          nrt(ip2+1) = nrt(ip2) + nr(ip2)
-        end if
-
       end do ! [ ip2 = 0, MEM_NP-1 ]
+    end do ! [ itype = 1, nobtype ]
 
-      ! b) GATHERV observation data
-      !-------------------------------------------------------------------------
-      if (nrt(MEM_NP) + nr(MEM_NP) <= 0) cycle
+    do ip2 = 1, MEM_NP-1
+      nrt(ip2+1) = nrt(ip2) + nr(ip2)
+    end do ! [ ip2 = 1, MEM_NP-1 ]
 
-      if (nrt(MEM_NP) + nr(MEM_NP) > obsbufr%nobs) then
-        obsbufr%nobs = nrt(MEM_NP) + nr(MEM_NP)
-        call obs_da_value_allocate(obsbufr, MEMBER)  ! deallocate first inside the subroutine
-      end if
-
-      call MPI_GATHERV(obsbufs%set, ns, MPI_INTEGER, obsbufr%set, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
-      call MPI_GATHERV(obsbufs%idx, ns, MPI_INTEGER, obsbufr%idx, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
-      call MPI_GATHERV(obsbufs%val, ns, MPI_r_size, obsbufr%val, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
-      call MPI_GATHERV(obsbufs%ensval, ns*MEMBER, MPI_r_size, obsbufr%ensval, nr*MEMBER, nrt*MEMBER, MPI_r_size, ip, MPI_COMM_d, ierr)
-      call MPI_GATHERV(obsbufs%qc, ns, MPI_INTEGER, obsbufr%qc, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
-      call MPI_GATHERV(obsbufs%ri, ns, MPI_r_size, obsbufr%ri, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
-      call MPI_GATHERV(obsbufs%rj, ns, MPI_r_size, obsbufr%rj, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
+    ns = nr(myrank_d+1)  ! When myrank_d == ip, this should be 0.
+    do n = 1, ns
+      obsbufs%set(n) = obsda%set(obsda%key(obsidx(n)))
+      obsbufs%idx(n) = obsda%idx(obsda%key(obsidx(n)))
+      obsbufs%val(n) = obsda%val(obsda%key(obsidx(n)))
+      obsbufs%ensval(:,n) = obsda%ensval(:,obsda%key(obsidx(n)))
+      obsbufs%qc(n) = obsda%qc(obsda%key(obsidx(n)))
+      obsbufs%ri(n) = obsda%ri(obsda%key(obsidx(n)))
+      obsbufs%rj(n) = obsda%rj(obsda%key(obsidx(n)))
 #ifdef H08
-      call MPI_GATHERV(obsbufs%lev, ns, MPI_r_size, obsbufr%lev, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
+      obsbufs%lev(n) = obsda%lev(obsda%key(obsidx(n))) ! H08
+#endif
+    end do
+
+    ! b) GATHERV observation data
+    !---------------------------------------------------------------------------
+    if (nrt(MEM_NP) + nr(MEM_NP) <= 0) cycle
+
+    obsbufr%nobs = nrt(MEM_NP) + nr(MEM_NP)
+    call obs_da_value_allocate(obsbufr, MEMBER)
+
+    call MPI_GATHERV(obsbufs%set, ns, MPI_INTEGER, obsbufr%set, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%idx, ns, MPI_INTEGER, obsbufr%idx, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%val, ns, MPI_r_size, obsbufr%val, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%ensval, ns*MEMBER, MPI_r_size, obsbufr%ensval, nr*MEMBER, nrt*MEMBER, MPI_r_size, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%qc, ns, MPI_INTEGER, obsbufr%qc, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%ri, ns, MPI_r_size, obsbufr%ri, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%rj, ns, MPI_r_size, obsbufr%rj, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
+#ifdef H08
+    call MPI_GATHERV(obsbufs%lev, ns, MPI_r_size, obsbufr%lev, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
 #endif
 
-      ! c) In the domain receiving data, copy the receive buffer to obsda2
-      !-------------------------------------------------------------------------
-      if (myrank_d == ip) then
+    ! c) In the domain receiving data, copy the receive buffer to obsda2
+    !---------------------------------------------------------------------------
+    if (myrank_d == ip) then
 
-        ne_bufr = 0
+      ne_bufr = 0
 
-        do ip2 = 0, MEM_NP-1
+      do ip2 = 0, MEM_NP-1
+        if (ip2 /= ip) then
 
-          if (ip2 /= ip) then
+          if (ne_bufr /= nrt(ip2+1)) then
+            write (6, '(A)') '[Error] Error in copying receive buffer !!!'
+            write (6, *) ip, ip2, ne_bufr, nrt(ip2+1)
+            write (6, *) nrt(:)
+            stop 99
+          end if 
+
+          do itype = 1, nobtype
+            call rank_1d_2d(ip, iproc, jproc)
+            imin1 = iproc*obsgrd(itype)%ngrd_i+1 - obsgrd(itype)%ngrdsch_i
+            imax1 = (iproc+1)*obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
+            jmin1 = jproc*obsgrd(itype)%ngrd_j+1 - obsgrd(itype)%ngrdsch_j
+            jmax1 = (jproc+1)*obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
+
             call rank_1d_2d(ip2, iproc2, jproc2)
             imin2 = max(1, imin1 - iproc2*obsgrd(itype)%ngrd_i)
             imax2 = min(obsgrd(itype)%ngrd_i, imax1 - iproc2*obsgrd(itype)%ngrd_i)
@@ -1043,19 +1056,11 @@ SUBROUTINE set_letkf_obs
             ishift = (iproc2 - iproc) * obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
             jshift = (jproc2 - jproc) * obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
 
-!            ne_bufr = nrt(ip2+1)
-            if (ne_bufr /= nrt(ip2+1)) then
-              write (6, '(A)') '[Error] Error in copying receive buffer !!!'
-              stop 99
-            end if 
-
             do j = jmin2, jmax2
               ns_ext = obsgrd(itype)%ac_ext(imin2+ishift-1,j+jshift) + 1
               ne_ext = obsgrd(itype)%ac_ext(imax2+ishift  ,j+jshift)
-              ns_bufr = ne_bufr + 1
-              ne_bufr = ne_bufr + obsgrd(itype)%ac(imax2,j,ip2) - obsgrd(itype)%ac(imin2-1,j,ip2)
 
-              if (ne_ext - ns_ext /= ne_bufr - ns_bufr) then
+              if (ne_ext - ns_ext + 1 /= obsgrd(itype)%ac(imax2,j,ip2) - obsgrd(itype)%ac(imin2-1,j,ip2)) then
                 write (6, '(A)') '[Error] observation grid indices have errors !!!'
                 write (6, *) itype, ip, ip2, j, imin1, imax1, jmin1, jmax1, imin2, imax2, jmin2, jmax2, ishift, jshift, &
                              obsgrd(itype)%ngrd_i, obsgrd(itype)%ngrd_j, obsgrd(itype)%ngrdsch_i, obsgrd(itype)%ngrdsch_j, ns_ext, ne_ext, ns_bufr, ne_bufr
@@ -1063,13 +1068,8 @@ SUBROUTINE set_letkf_obs
               end if
 
               if (ns_ext > ne_ext) cycle
-
-!if(myrank == 3) then
-!print *, itype, ip, ip2, j, imin2, imax2, jmin2, jmax2, ishift, jshift, ns_ext, ne_ext, ns_bufr, ne_bufr
-!print *, nr, nrt
-!print *, obsbufr%val(ns_bufr:ne_bufr)
-!print *, obsbufr%ensval(:,ns_bufr:ne_bufr)
-!endif
+              ns_bufr = ne_bufr + 1
+              ne_bufr = ns_bufr + ne_ext - ns_ext
 
               obsda2%set(ns_ext:ne_ext) = obsbufr%set(ns_bufr:ne_bufr)
               obsda2%idx(ns_ext:ne_ext) = obsbufr%idx(ns_bufr:ne_bufr)
@@ -1082,30 +1082,24 @@ SUBROUTINE set_letkf_obs
               obsda2%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr) ! H08
 #endif
             end do
-          end if ! [ ip2 /= ip ]
+          end do ! [ itype = 1, nobtype ]
 
-        end do ! [ ip2 = 0, MEM_NP-1 ]
+        end if ! [ ip2 /= ip ]
+      end do ! [ ip2 = 0, MEM_NP-1 ]
 
-      end if ! [ myrank_d == ip ]
+    end if ! [ myrank_d == ip ]
 
-    end do ! [ ip = 0, MEM_MP ]
+  end do ! [ ip = 0, MEM_NP-1 ]
 
+  do itype = 1, nobtype
     deallocate (obsgrd(itype)%n)
     deallocate (obsgrd(itype)%ac)
-
-  end do ! [ itype = 1, nobtype ]
-
+    deallocate (obsgrd(itype)%n_ext)
+  end do
   call obs_da_value_deallocate(obsda)
   call obs_da_value_deallocate(obsbufs)
   call obs_da_value_deallocate(obsbufr)
   deallocate (obsidx)
-
-  if (nk /= nobs_sub(2)) then
-    write (6, '(A)') '[Error] Error with number of observations in the subdomain !!!'
-    stop 99
-  end if
-
-  obsda2%nobs_in_key = nk
 
   ! Print observation counts
   !-----------------------------------------------------------------------------
