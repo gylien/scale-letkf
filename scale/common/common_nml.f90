@@ -92,7 +92,6 @@ MODULE common_nml
 
   real(r_size) :: PS_ADJUST_THRES = 100.d0
 
-  integer :: MAX_NOBS_PER_GRID = 0   ! observation number limit; <= 0: Do not use
   logical :: NOBS_OUT = .false.
   character(filelenmax) :: NOBS_OUT_BASENAME = 'nobs'
 
@@ -141,13 +140,17 @@ MODULE common_nml
   real(r_size) :: HORI_LOCAL_RADAR_OBSNOREF = -1.0d0 ! <0: same as HORI_LOCAL(22=PHARAD)
   real(r_size) :: VERT_LOCAL_RAIN_BASE = 85000.0d0
 
-!  ! >0: observation number limit
-!  !  0: do not limit observation numbers
-!  ! <0: same as MAX_NOBS_PER_GRID(1)
-!  integer :: MAX_NOBS_PER_GRID(nobtype) = &
-!    (/ 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
-!      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
-!      -1, -1, -1, -1/)
+  ! >0: observation number limit
+  !  0: do not limit observation numbers
+  ! <0: same as MAX_NOBS_PER_GRID(1)
+  integer :: MAX_NOBS_PER_GRID(nobtype) = &
+    (/ 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
+      -1, -1, -1, -1/)
+
+  integer :: MAX_NOBS_PER_GRID_CRITERION = 2 ! 1: normalized 3D distance (from closest)
+                                             ! 2: localization weight (from largest)
+                                             ! 3: weighted observation error variance (from smallest)
 
   ! >0: typical minimum spacing of the obsetvation types in the densest observed area (not tuned carefully yet)
   !     *this is only used for automatically determine OBS_SORT_GRID_SPACING. if using pre-set OBS_SORT_GRID_SPACING, this has no effect.
@@ -359,7 +362,6 @@ subroutine read_nml_letkf
     POSITIVE_DEFINITE_QHYD, &
     TC_SEARCH_DIS, &
     PS_ADJUST_THRES, &
-    MAX_NOBS_PER_GRID, &
     NOBS_OUT, &
     NOBS_OUT_BASENAME, &
     !*** for backward compatibility ***
@@ -480,7 +482,8 @@ subroutine read_nml_letkf_obs
     TIME_LOCAL, &
     HORI_LOCAL_RADAR_OBSNOREF, &
     VERT_LOCAL_RAIN_BASE, &
-!    MAX_NOBS_PER_GRID, &
+    MAX_NOBS_PER_GRID, &
+    MAX_NOBS_PER_GRID_CRITERION, &
     OBS_MIN_SPACING, &
     OBS_SORT_GRID_SPACING
 
@@ -505,9 +508,14 @@ subroutine read_nml_letkf_obs
       TIME_LOCAL(itype) = TIME_LOCAL(1)
     end if
 
-!    if (MAX_NOBS_PER_GRID(itype) < 0) then
-!      MAX_NOBS_PER_GRID(itype) = MAX_NOBS_PER_GRID(1)
-!    end if
+    if (MAX_NOBS_PER_GRID(itype) < 0) then
+      MAX_NOBS_PER_GRID(itype) = MAX_NOBS_PER_GRID(1)
+    end if
+
+    if (MAX_NOBS_PER_GRID_CRITERION < 1 .or. MAX_NOBS_PER_GRID_CRITERION > 3) then
+      write (6, '(A,I4)') "[Error] Unsupported 'MAX_NOBS_PER_GRID_CRITERION':", MAX_NOBS_PER_GRID_CRITERION
+      stop 99
+    end if
 
     if (OBS_MIN_SPACING(itype) <= 0.0d0) then
       OBS_MIN_SPACING(itype) = OBS_MIN_SPACING(1)

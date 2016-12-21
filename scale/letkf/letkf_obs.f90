@@ -618,10 +618,8 @@ SUBROUTINE set_letkf_obs
 
     if (OBS_SORT_GRID_SPACING(itype) > 0) then
       target_grdspc = OBS_SORT_GRID_SPACING(itype)
-    else if (MAX_NOBS_PER_GRID > 0) then
-!    if (MAX_NOBS_PER_GRID(itype) > 0) then
-      target_grdspc = 0.1d0 * sqrt(real(MAX_NOBS_PER_GRID, r_size)) * OBS_MIN_SPACING(itype)        ! need to be tuned
-!      target_grdspc = 0.1d0 * sqrt(real(MAX_NOBS_PER_GRID(itype), r_size)) * OBS_MIN_SPACING(itype) ! need to be tuned
+    else if (MAX_NOBS_PER_GRID(itype) > 0) then
+      target_grdspc = 0.1d0 * sqrt(real(MAX_NOBS_PER_GRID(itype), r_size)) * OBS_MIN_SPACING(itype) ! need to be tuned
     else
       target_grdspc = max_hori_local * dist_zero_fac / 6.0d0                ! need to be tuned
     end if
@@ -669,13 +667,11 @@ SUBROUTINE set_letkf_obs
     select case (itype)
     case (22) ! vertical localization in Z
       write (6, '(A6,1x,A4,F9.2,F7.2,A4,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(itype), use_obs_print, HORI_LOCAL(itype)/1000.0d0, &
-!                VERT_LOCAL(itype)/1000.0d0, '[km]', TIME_LOCAL(itype)/1000.0d0, MAX_NOBS_PER_GRID(itype), &
-                VERT_LOCAL(itype)/1000.0d0, '[km]', TIME_LOCAL(itype)/1000.0d0, MAX_NOBS_PER_GRID, &
+                VERT_LOCAL(itype)/1000.0d0, '[km]', TIME_LOCAL(itype)/1000.0d0, MAX_NOBS_PER_GRID(itype), &
                 OBS_MIN_SPACING(itype)/1000.0d0, obsgrd(itype)%grdspc_i/1000.0d0, obsgrd(itype)%grdspc_j/1000.0d0
     case default ! vertical localization in ln(p)
       write (6, '(A6,1x,A4,F9.2,F11.3,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(itype), use_obs_print, HORI_LOCAL(itype)/1000.0d0, &
-!                VERT_LOCAL(itype), TIME_LOCAL(itype)/1000.0d0, MAX_NOBS_PER_GRID(itype), &
-                VERT_LOCAL(itype), TIME_LOCAL(itype)/1000.0d0, MAX_NOBS_PER_GRID, &
+                VERT_LOCAL(itype), TIME_LOCAL(itype)/1000.0d0, MAX_NOBS_PER_GRID(itype), &
                 OBS_MIN_SPACING(itype)/1000.0d0, obsgrd(itype)%grdspc_i/1000.0d0, obsgrd(itype)%grdspc_j/1000.0d0
     end select
   end do
