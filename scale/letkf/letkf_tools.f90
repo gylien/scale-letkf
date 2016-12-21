@@ -875,23 +875,25 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   integer, intent(out) :: nobsl
   integer, intent(out), optional :: nobsl_t(nid_obs,nobtype)
 
-  real(r_size) :: nd_h, nd_v ! normalized horizontal/vertical distances
+!  real(r_size) :: nd_h, nd_v ! normalized horizontal/vertical distances
   real(r_size) :: ndist      ! normalized 3D distance SQUARE
   real(r_size) :: nrloc, nrdiag
   integer, allocatable :: nobs_use(:)
   integer :: ip
-  integer :: imin, imax, jmin, jmax
+!  integer :: imin, imax, jmin, jmax
   integer :: iproc, jproc
-  integer :: iset, iidx, ityp
-  integer :: ielm, ielm_u, ielm_varlocal
-  integer :: n, nn, iob
+  integer :: ityp, iob
+!  integer :: iset, iidx, ityp
+!  integer :: ielm, ielm_u, ielm_varlocal
+  integer :: ielm_u
+  integer :: n, nn
   integer :: s, ss, tmpisort
-  real(r_size) :: rdx, rdy
+!  real(r_size) :: rdx, rdy
 
-  real(r_size) :: max_hori_local
+  real(r_size) :: hori_loc
 
-  real(r_size) :: dist_zero_i
-  real(r_size) :: dist_zero_j
+!  real(r_size) :: dist_zero_i
+!  real(r_size) :: dist_zero_j
 
   real(r_size), allocatable :: rdiag_t(:,:,:)
   real(r_size), allocatable :: rloc_t(:,:,:)
@@ -917,155 +919,79 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
     allocate (rdiag_t(MAX_NOBS_PER_GRID, nid_obs, nobtype))
     allocate (rloc_t(MAX_NOBS_PER_GRID, nid_obs, nobtype))
     isort_t(:,:,:) = 0
+    nobsl_t_(:,:) = 0
   end if
 
   nobsl = 0
-  nobsl_t_(:,:) = 0
+
 
 
   do ityp = 1, nobtype
 
     if (obsgrd(ityp)%tot_ext > 0) then
 
+      hori_loc = HORI_LOCAL(ityp)
+      if (ityp == 22) then  !PHARAD
+        hori_loc = max(hori_loc, HORI_LOCAL_RADAR_OBSNOREF)
+      end if
+
+
+
       !
       ! Do rough data search by a rectangle determined by grids,
       ! and then do precise data search by normalized 3D distance and variable localization
       !
-      max_hori_local = HORI_LOCAL(ityp)
-      if (ityp == 22) then  !PHARAD
-        max_hori_local = max(max_hori_local, HORI_LOCAL_RADAR_OBSNOREF)
-      end if
-
-      dist_zero_i = max_hori_local * dist_zero_fac / DX
-      dist_zero_j = max_hori_local * dist_zero_fac / DY
-      call ij_obsgrd_ext(ityp, ri - dist_zero_i, rj - dist_zero_j, imin, jmin)
-      call ij_obsgrd_ext(ityp, ri + dist_zero_i, rj + dist_zero_j, imax, jmax)
-      imin = max(1, imin)
-      imax = min(obsgrd(ityp)%ngrdext_i, imax)
-      jmin = max(1, jmin)
-      jmax = min(obsgrd(ityp)%ngrdext_j, jmax)
-
-      nn = 0
-      call obs_choose_ext(ityp,imin,imax,jmin,jmax,nn,nobs_use)
-!write(6,'(A,6I8)') '$$$==', ityp,myrank_d,imin,imax,jmin,jmax,nn
-
-      do n = 1, nn  ! loop over observations within the search rectangle in a subdomain
-
-        iob = nobs_use(n)
-        iset = obsda2%set(iob)
-        iidx = obsda2%idx(iob)
-        ielm = obs(iset)%elm(iidx)
-        ielm_u = uid_obs(ielm)
-
-        if (obs(iset)%typ(iidx) /= ityp) then
-          write (6, '(A)') '[Error] The obs type is not properly sorted !!!'
-          stop 99
-        end if
-
-!print *, '@@@', iob, iidx, ielm, ielm_u
-        !
-        ! Check variable localization
-        !
-        if (nvar > 0) then  ! use variable localization only when nvar > 0
-          ielm_varlocal = uid_obs_varlocal(ielm)
-          if (ielm_varlocal <= 0) then
-            write (6,'(A)') '[Error] unsupport observation type in variable localization.'
-            stop 1
-          end if
-          if (var_local(nvar,ielm_varlocal) < tiny(var_local)) cycle  ! reject obs by variable localization
-        end if
 
 
-
-!        if (nobsl_t_(ielm_u,ityp) >= MAX_NOBS_PER_GRID) then
-!          ndist_cmax = sigma2_max * 2.0d0 * &
-!                       log(rdiag_t(isort_t(MAX_NOBS_PER_GRID,ielm_u,ityp),ielm_u,ityp) / obs(iset)%err(iidx) / obs(iset)%err(iidx))
-!        else
-!          ndist_cmax = sigma2_max * dist_zero_fac_square
-!        end if
-
-
-
-        !
-        ! Calculate normalized horizontal distances
-        !
-        rdx = (ri - obsda2%ri(iob)) * DX
-        rdy = (rj - obsda2%rj(iob)) * DY
-        nd_h = sqrt(rdx*rdx + rdy*rdy)
-
-!        nd_h = rdx*rdx + rdy*rdy
-!        if (nobsl_t_(ielm_u,ityp) >= MAX_NOBS_PER_GRID) then
-!          if (nd_h > sigma2_max * 2.0d0 * &
-!                     log(rdiag_t(isort_t(MAX_NOBS_PER_GRID,ielm_u,ityp),ielm_u,ityp) / obs(iset)%err(iidx) / obs(iset)%err(iidx))) then
-!            cycle
-!          end if
-!        end if
-!        nd_h = sqrt(nd_h)
-
-        if (ityp == 22 .and. & ! obtypelist(ityp) == 'PHARAD'
-            ielm == id_radar_ref_obs .and. obs(iset)%dat(iidx) <= RADAR_REF_THRES_DBZ+1.0d-6) then
-          nd_h = nd_h / HORI_LOCAL_RADAR_OBSNOREF  ! for ref < RADAR_REF_THRES_DBZ, use HORI_LOCAL_RADAR_OBSNOREF for horizontal localization
-        else
-          nd_h = nd_h / HORI_LOCAL(ityp)
-        end if
-        !
-        ! Calculate normalized vertical distances
-        !
-        if (VERT_LOCAL(ityp) == 0.0d0) then
-          nd_v = 0.0d0                                                         ! no vertical localization
-        else if (ielm == id_ps_obs) then
-          nd_v = ABS(LOG(obs(iset)%dat(iidx)) - LOG(rlev)) / VERT_LOCAL(ityp)  ! for ps, use observed ps value for the base of vertical localization
-        else if (ielm == id_rain_obs) then
-          nd_v = ABS(LOG(VERT_LOCAL_RAIN_BASE) - LOG(rlev)) / VERT_LOCAL(ityp) ! for rain, use VERT_LOCAL_RAIN_BASE for the base of vertical localization
-        else if (ityp == 22) then ! obtypelist(ityp) == 'PHARAD'
-          nd_v = ABS(obs(iset)%lev(iidx) - rz) / VERT_LOCAL(ityp)              ! for PHARAD, use z-coordinate for vertical localization
-#ifdef H08
-        else if (ityp == 23) then ! obtypelist(ityp) == 'H08IRB'               ! H08
-          nd_v = ABS(LOG(obsda2%lev(iob)) - LOG(rlev)) / VERT_LOCAL(ityp)      ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
-#endif
-        else
-          nd_v = ABS(LOG(obs(iset)%lev(iidx)) - LOG(rlev)) / VERT_LOCAL(ityp)
-        end if
-        !
-        ! Calculate (normalized 3D distances)^2
-        !
-        ndist = nd_h * nd_h + nd_v * nd_v
-        if (ndist > dist_zero_fac_square) cycle  ! reject obs by normalized 3D distance
-        !
-        ! Calculate observational localization
-        !
-        nrloc = EXP(-0.5d0 * ndist)
-        !
-        ! Calculate variable localization
-        !
-        if (nvar > 0) then  ! use variable localization only when nvar > 0
-          nrloc = nrloc * var_local(nvar,ielm_varlocal)
-        end if
-        !
-        ! Calculate (observation variance / localization)
-        !
-        nrdiag = obs(iset)%err(iidx) * obs(iset)%err(iidx) / nrloc
-        !
-        ! Process search results
-        !
-        if (MAX_NOBS_PER_GRID <= 0) then
+      if (MAX_NOBS_PER_GRID <= 0) then
         !-----------------------------------------------------------------------
         ! When obs number limit is not enabled,
         ! Directly prepare (hdxf, dep, rdiag, rloc) output here.
         !-----------------------------------------------------------------------
+
+        nn = 0
+        call obs_choose_loc(ityp, ri, rj, hori_loc, nn, nobs_use)
+
+        do n = 1, nn  ! loop over observations within the search rectangle in a subdomain
+          iob = nobs_use(n)
+
+          call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ndist, nrloc, nrdiag)
+          if (nrloc == 0.0d0) cycle
+          !
+          ! Process search results
+          !
           nobsl = nobsl + 1
-          nobsl_t_(ielm_u,ityp) = nobsl_t_(ielm_u,ityp) + 1
           hdxf(nobsl,:) = obsda2%ensval(:,iob)
           dep(nobsl) = obsda2%val(iob)
           rdiag(nobsl) = nrdiag
           rloc(nobsl) = nrloc
-        !-----------------------------------------------------------------------
-        else
+
+          if (present(nobsl_t)) then
+            ielm_u = uid_obs(obs(obsda2%set(iob))%elm(obsda2%idx(iob)))
+            nobsl_t(ielm_u,ityp) = nobsl_t(ielm_u,ityp) + 1
+          end if
+        end do ! [ n = 1, nn ]
+
+      else ! [ MAX_NOBS_PER_GRID <= 0 ]
         !-----------------------------------------------------------------------
         ! When obs number limit is enabled,
         ! Save only the observations within the limit in temporary arrays in a clever way
         ! and prepare (hdxf, dep, rdiag, rloc) output later.
         !-----------------------------------------------------------------------
+
+        nn = 0
+        call obs_choose_loc(ityp, ri, rj, hori_loc, nn, nobs_use)
+
+        do n = 1, nn  ! loop over observations within the search rectangle in a subdomain
+          iob = nobs_use(n)
+          ielm_u = uid_obs(obs(obsda2%set(iob))%elm(obsda2%idx(iob)))
+
+          call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ndist, nrloc, nrdiag)
+          if (nrdiag < 0.0d0) cycle
+          !
+          ! Process search results
+          !
+          !---------------------------------------------------------------------
           ! Case 0: If the number limit has been reached and the priority of
           !         this obs is lower than all of the obs in the current set of
           !         choice, skip right away.
@@ -1136,13 +1062,22 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
             end if
           end do ! [ s = 1, MAX_NOBS_PER_GRID ]
         !-----------------------------------------------------------------------
-        end if ! [ MAX_NOBS_PER_GRID <= 0 ]
 
-      end do ! [ n = 1, nn ]
+
+        end do ! [ n = 1, nn ]
+
+
+      end if ! [ MAX_NOBS_PER_GRID <= 0 ]
 
     end if ! [ obsgrd(ityp)%tot_ext > 0 ]
 
   end do ! [ ityp = 1, nobtype ]
+
+
+
+!  if (allocated(nobs_use)) deallocate (nobs_use)
+  deallocate (nobs_use)
+
 
   !
   ! When obs number limit is enabled,
@@ -1162,7 +1097,15 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
         end do ! [ s = 1, nobsl_t_(ielm_u,ityp) ]
       end do ! [ ielm_u = 1, nid_obs ]
     end do ! [ ityp = 1, nobtype ]
+
+    deallocate (isort_t)
+    deallocate (iob_t)
+    deallocate (rdiag_t)
+    deallocate (rloc_t)
+
+    if (present(nobsl_t)) nobsl_t = nobsl_t_
   end if ! [ MAX_NOBS_PER_GRID > 0 ]
+
 !  write(6, '(A,3I6,F20.8)') '******', nobsl, nobsl_t_(9,22), nobsl_t_(10,22), maxval(rdiag(1:nobsl))
 
   if (nobsl > nobstotal) then
@@ -1171,19 +1114,129 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
     stop 99
   end if
 
-  if (allocated(nobs_use)) deallocate (nobs_use)
+  return
+end subroutine obs_local
+!-----------------------------------------------------------------------
+! Choose observations in a rectangle in the extended subdomain
+! giving the horizontal localization cut-off length
+!-----------------------------------------------------------------------
+subroutine obs_choose_loc(obtype, ri, rj, hori_loc, nn, nobs_use)
+  use scale_grid, only: &
+    DX, DY
+  implicit none
+  integer, intent(in) :: obtype
+  real(r_size), intent(in) :: ri, rj
+  real(r_size), intent(in) :: hori_loc
+  integer, intent(inout) :: nn
+  integer, intent(inout) :: nobs_use(:)
 
-  if (MAX_NOBS_PER_GRID > 0) then
-    deallocate (isort_t)
-    deallocate (iob_t)
-    deallocate (rdiag_t)
-    deallocate (rloc_t)
+  real(r_size) :: dist_zero_i, dist_zero_j
+  integer :: imin, imax, jmin, jmax
+
+  dist_zero_i = hori_loc * dist_zero_fac / DX
+  dist_zero_j = hori_loc * dist_zero_fac / DY
+  call ij_obsgrd_ext(obtype, ri - dist_zero_i, rj - dist_zero_j, imin, jmin)
+  call ij_obsgrd_ext(obtype, ri + dist_zero_i, rj + dist_zero_j, imax, jmax)
+  imin = max(1, imin)
+  imax = min(obsgrd(obtype)%ngrdext_i, imax)
+  jmin = max(1, jmin)
+  jmax = min(obsgrd(obtype)%ngrdext_j, jmax)
+
+  call obs_choose_ext(obtype, imin, imax, jmin, jmax, nn, nobs_use)
+!print *, myrank_d, imin, imax, jmin, jmax, nn
+
+  return
+end subroutine obs_choose_loc
+!-----------------------------------------------------------------------
+! Subroutine for main calculation of obs_local
+!-----------------------------------------------------------------------
+subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ndist, nrloc, nrdiag)
+  use scale_grid, only: &
+    DX, DY
+  implicit none
+  real(r_size), intent(in) :: ri, rj, rlev, rz ! coordinate of the targeted model grid
+  integer, intent(in) :: nvar         ! index of targeted model variable
+  integer, intent(in) :: iob          ! index of observation in obsda2
+  real(r_size), intent(out) :: ndist  ! normalized 3D distance SQUARE
+  real(r_size), intent(out) :: nrloc  ! localization weight
+  real(r_size), intent(out) :: nrdiag ! weighted observation error variance
+
+  integer :: obset, obidx, obtype, obelm
+  real(r_size) :: rdx, rdy
+  real(r_size) :: nd_h, nd_v ! normalized horizontal/vertical distances
+
+  nrloc = 0.0d0
+  nrdiag = -1.0d0
+  ndist = -1.0d0
+
+  obset = obsda2%set(iob)
+  obidx = obsda2%idx(iob)
+  obelm = obs(obset)%elm(obidx)
+  obtype = obs(obset)%typ(obidx)
+  !
+  ! Calculate variable localization
+  !
+  if (nvar > 0) then  ! use variable localization only when nvar > 0
+    if (uid_obs_varlocal(obelm) <= 0) then
+      write (6,'(A)') '[Error] unsupport observation type in variable localization.'
+      stop 1
+    end if
+    nrloc = var_local(nvar,uid_obs_varlocal(obelm))
+    if (nrloc < tiny(var_local)) then  ! reject obs by variable localization
+      nrloc = 0.0d0
+      return
+    end if
   end if
+  !
+  ! Calculate normalized horizontal distances
+  !
+  rdx = (ri - obsda2%ri(iob)) * DX
+  rdy = (rj - obsda2%rj(iob)) * DY
+  nd_h = sqrt(rdx*rdx + rdy*rdy)
 
-  if (present(nobsl_t)) nobsl_t = nobsl_t_
+  if (obtype == 22 .and. & ! obtypelist(obtype) == 'PHARAD'
+      obelm == id_radar_ref_obs .and. obs(obset)%dat(obidx) < RADAR_REF_THRES_DBZ+tiny(obs(obset)%dat)) then
+    nd_h = nd_h / HORI_LOCAL_RADAR_OBSNOREF  ! for ref < RADAR_REF_THRES_DBZ, use HORI_LOCAL_RADAR_OBSNOREF for horizontal localization
+  else
+    nd_h = nd_h / HORI_LOCAL(obtype)
+  end if
+  !
+  ! Calculate normalized vertical distances
+  !
+  if (VERT_LOCAL(obtype) == 0.0d0) then
+    nd_v = 0.0d0                                                            ! no vertical localization
+  else if (obelm == id_ps_obs) then
+    nd_v = ABS(LOG(obs(obset)%dat(obidx)) - LOG(rlev)) / VERT_LOCAL(obtype) ! for ps, use observed ps value for the base of vertical localization
+  else if (obelm == id_rain_obs) then
+    nd_v = ABS(LOG(VERT_LOCAL_RAIN_BASE) - LOG(rlev)) / VERT_LOCAL(obtype)  ! for rain, use VERT_LOCAL_RAIN_BASE for the base of vertical localization
+  else if (obtype == 22) then ! obtypelist(obtype) == 'PHARAD'
+    nd_v = ABS(obs(obset)%lev(obidx) - rz) / VERT_LOCAL(obtype)             ! for PHARAD, use z-coordinate for vertical localization
+#ifdef H08
+  else if (obtype == 23) then ! obtypelist(obtype) == 'H08IRB'              ! H08
+    nd_v = ABS(LOG(obsda2%lev(iob)) - LOG(rlev)) / VERT_LOCAL(obtype)       ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
+#endif
+  else
+    nd_v = ABS(LOG(obs(obset)%lev(obidx)) - LOG(rlev)) / VERT_LOCAL(obtype)
+  end if
+  !
+  ! Calculate (normalized 3D distances)^2
+  !
+  ndist = nd_h * nd_h + nd_v * nd_v
+  if (ndist > dist_zero_fac_square) then  ! reject obs by normalized 3D distance
+    nrloc = 0.0d0
+    return
+  end if
+  !
+  ! Calculate observational localization
+  !
+  nrloc = nrloc * EXP(-0.5d0 * ndist)
+  !
+  ! Calculate (observation variance / localization)
+  !
+  nrdiag = obs(obset)%err(obidx) * obs(obset)%err(obidx) / nrloc
 
-  RETURN
-END SUBROUTINE obs_local
+  return
+end subroutine obs_local_cal
 !-----------------------------------------------------------------------
 ! Relaxation parameter based on grid locations (not for covariance inflation purpose)
 !-----------------------------------------------------------------------

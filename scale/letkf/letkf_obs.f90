@@ -81,7 +81,7 @@ SUBROUTINE set_letkf_obs
   integer :: mem_ref
 
   integer :: it,ip
-  integer :: itype,uielm
+  integer :: itype,ielm_u
   real(r_size) :: max_hori_local
   real(r_size) :: target_grdspc
 
@@ -686,7 +686,7 @@ SUBROUTINE set_letkf_obs
 
   nobstypevar_g(:,:,:) = 0
   do n = 1, obsda%nobs
-    uielm = uid_obs(obs(obsda%set(n))%elm(obsda%idx(n)))
+    ielm_u = uid_obs(obs(obsda%set(n))%elm(obsda%idx(n)))
     itype = obs(obsda%set(n))%typ(obsda%idx(n))
 
     if (obsda%qc(n) == iqc_good) then
@@ -697,16 +697,16 @@ SUBROUTINE set_letkf_obs
       if (j > obsgrd(itype)%ngrd_j) j = obsgrd(itype)%ngrd_j !
 
       obsgrd(itype)%n(i,j,myrank_d) = obsgrd(itype)%n(i,j,myrank_d) + 1
-      obsgrd(itype)%tot_sub(2) = obsgrd(itype)%tot_sub(2) + 1           ! only used for diagnostic print (obs number after qc)
-      if (uielm > 0) then                                               !
-        nobstypevar_g(2,uielm,itype) = nobstypevar_g(2,uielm,itype) + 1 !
-      end if                                                            !
+      obsgrd(itype)%tot_sub(2) = obsgrd(itype)%tot_sub(2) + 1             ! only used for diagnostic print (obs number after qc)
+      if (ielm_u > 0) then                                                !
+        nobstypevar_g(2,ielm_u,itype) = nobstypevar_g(2,ielm_u,itype) + 1 !
+      end if                                                              !
     end if
 
-    obsgrd(itype)%tot_sub(1) = obsgrd(itype)%tot_sub(1) + 1             ! only used for diagnostic print (obs number prior to qc)
-    if (uielm > 0) then                                                 !
-      nobstypevar_g(1,uielm,itype) = nobstypevar_g(1,uielm,itype) + 1   !
-    end if                                                              !
+    obsgrd(itype)%tot_sub(1) = obsgrd(itype)%tot_sub(1) + 1               ! only used for diagnostic print (obs number prior to qc)
+    if (ielm_u > 0) then                                                  !
+      nobstypevar_g(1,ielm_u,itype) = nobstypevar_g(1,ielm_u,itype) + 1   !
+    end if                                                                !
   end do
 
   ! Compute the accumulated numbers in each mesh
