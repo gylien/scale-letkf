@@ -625,8 +625,8 @@ SUBROUTINE set_letkf_obs
     end if
     obsgrd(itype)%ngrd_i = min(ceiling(DX * real(nlon,r_size) / target_grdspc), nlon)
     obsgrd(itype)%ngrd_j = min(ceiling(DY * real(nlat,r_size) / target_grdspc), nlat)
-    obsgrd(itype)%grdspc_i = DX * real(nlon,r_size) / obsgrd(itype)%ngrd_i
-    obsgrd(itype)%grdspc_j = DY * real(nlat,r_size) / obsgrd(itype)%ngrd_j
+    obsgrd(itype)%grdspc_i = DX * real(nlon,r_size) / real(obsgrd(itype)%ngrd_i,r_size)
+    obsgrd(itype)%grdspc_j = DY * real(nlat,r_size) / real(obsgrd(itype)%ngrd_j,r_size)
     obsgrd(itype)%ngrdsch_i = ceiling(max_hori_local * dist_zero_fac / obsgrd(itype)%grdspc_i)
     obsgrd(itype)%ngrdsch_j = ceiling(max_hori_local * dist_zero_fac / obsgrd(itype)%grdspc_j)
     obsgrd(itype)%ngrdext_i = obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i * 2
