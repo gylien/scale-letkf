@@ -58,7 +58,7 @@ subroutine partition(A, left, right, pivot, B, C, I)
   pivot = store_idx
 end subroutine partition
 
-subroutine middle_of_three(A, i1, i2, i3, i)
+subroutine median_of_three(A, i1, i2, i3, i)
   implicit none
   real(r_size), intent(in) :: A(:)
   integer, intent(in) :: i1, i2, i3
@@ -81,7 +81,33 @@ subroutine middle_of_three(A, i1, i2, i3, i)
       i = i2
     end if
   end if
-end subroutine middle_of_three
+end subroutine median_of_three
+
+subroutine sample_second_min(A, left, right, K, i_2)
+  implicit none
+  real(r_size), intent(in) :: A(:)
+  integer, intent(in) :: left, right
+  integer, intent(in) :: K
+  integer, intent(out) :: i_2
+  real(r_size) :: A_min, A_min_2
+  integer :: i, j
+
+  i = left
+  i_2 = left
+  A_min = huge(A)
+  A_min_2 = huge(A)
+  do j = left, right, K
+    if (A(j) < A_min) then
+      A_min_2 = A_min
+      A_min = A(j)
+      i_2 = i
+      i = j
+    else if (A(j) < A_min_2) then
+      A_min_2 = A(j)
+      i_2 = j
+    end if
+  end do
+end subroutine sample_second_min
 
 recursive subroutine QUICKSELECT(A, left, right, K, B, C, I)
   implicit none
@@ -93,8 +119,18 @@ recursive subroutine QUICKSELECT(A, left, right, K, B, C, I)
   integer :: middle, pivot
 
   if (left < right) then
-    middle = (left + right) / 2
-    call middle_of_three(A, left, middle, right, pivot)
+    if ((right-left)/K >= 2) then
+      call sample_second_min(A, left, right, K, pivot)
+
+!write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(pivot), 'sample_min'
+
+    else
+      middle = (left + right) / 2
+      call median_of_three(A, left, middle, right, pivot)
+
+!write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(pivot), 'median_of_three'
+
+    end if
     call partition(A, left, right, pivot, B, C, I)
     if (K < pivot) then
       call QUICKSELECT(A, left, pivot-1, K, B, C, I)
