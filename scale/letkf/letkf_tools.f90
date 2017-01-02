@@ -1012,8 +1012,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
         do ielm_u = 1, nid_obs
           inobsl = nobsl_t_(ielm_u)
           if (inobsl > MAX_NOBS_PER_GRID(ityp)) then
-            call QUICKSELECT(rdiag_tmp(1:inobsl,ielm_u), 1, inobsl, MAX_NOBS_PER_GRID(ityp), &
-                             B=rloc_tmp(1:inobsl,ielm_u), I=iob_tmp(1:inobsl,ielm_u))
+            call QUICKSELECT(rdiag_tmp(:,ielm_u), 1, inobsl, MAX_NOBS_PER_GRID(ityp), &
+                             B=rloc_tmp(:,ielm_u), I=iob_tmp(:,ielm_u))
 !!!!!! only valid for MAX_NOBS_PER_GRID_CRITERION = 3. MAX_NOBS_PER_GRID_CRITERION = 2 needs to be considered.
             inobsl = MAX_NOBS_PER_GRID(ityp)
           end if

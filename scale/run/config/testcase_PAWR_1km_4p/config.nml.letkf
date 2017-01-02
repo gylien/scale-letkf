@@ -63,6 +63,9 @@
 ! TIME_LOCAL = 3.0D0,
  HORI_LOCAL_RADAR_OBSNOREF = 2.0D3,
  MAX_NOBS_PER_GRID = 100,
+ OBS_SORT_GRID_SPACING = 0.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0,
+                        -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0, -1.0D0,
+                        -1.0D0,  1.0D3, 
 /
 
 &PARAM_LETKF_MONITOR
