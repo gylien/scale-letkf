@@ -839,6 +839,7 @@ SUBROUTINE set_letkf_obs
       imax2 = min(obsgrd(itype)%ngrd_i, imax1 - iproc2*obsgrd(itype)%ngrd_i)
       jmin2 = max(1, jmin1 - jproc2*obsgrd(itype)%ngrd_j)
       jmax2 = min(obsgrd(itype)%ngrd_j, jmax1 - jproc2*obsgrd(itype)%ngrd_j)
+      if (imin2 > imax2 .or. jmin2 > jmax2) cycle
 
       ishift = (iproc2 - iproc) * obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
       jshift = (jproc2 - jproc) * obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
@@ -945,6 +946,7 @@ SUBROUTINE set_letkf_obs
           imax2 = min(obsgrd(itype)%ngrd_i, imax1 - iproc2*obsgrd(itype)%ngrd_i)
           jmin2 = max(1, jmin1 - jproc2*obsgrd(itype)%ngrd_j)
           jmax2 = min(obsgrd(itype)%ngrd_j, jmax1 - jproc2*obsgrd(itype)%ngrd_j)
+          if (imin2 > imax2 .or. jmin2 > jmax2) cycle
 
           if (myrank_d == ip2) then
             call obs_choose(itype,ip2,imin2,imax2,jmin2,jmax2,nr(ip2+1),obsidx)
@@ -1019,6 +1021,7 @@ SUBROUTINE set_letkf_obs
             imax2 = min(obsgrd(itype)%ngrd_i, imax1 - iproc2*obsgrd(itype)%ngrd_i)
             jmin2 = max(1, jmin1 - jproc2*obsgrd(itype)%ngrd_j)
             jmax2 = min(obsgrd(itype)%ngrd_j, jmax1 - jproc2*obsgrd(itype)%ngrd_j)
+            if (imin2 > imax2 .or. jmin2 > jmax2) cycle
 
             ishift = (iproc2 - iproc) * obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
             jshift = (jproc2 - jproc) * obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
