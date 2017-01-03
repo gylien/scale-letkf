@@ -18,8 +18,8 @@ MODULE obsope_tools
 
   use common_nml
 
-  use scale_process, only: &
-       PRC_myrank
+!  use scale_process, only: &
+!       PRC_myrank
 !       MPI_COMM_d => LOCAL_COMM_WORLD
 
   use scale_grid_index, only: &
@@ -151,7 +151,6 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 ! bTC: background TC in each subdomain
 ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp (Pa)
   REAL(r_size),ALLOCATABLE :: bTC(:,:)
-  REAL(r_size),ALLOCATABLE :: bufr(:,:)
   REAL(r_size) :: bTC_mslp
 
   character(filelenmax) :: obsdafile
@@ -254,16 +253,16 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                 call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
                 call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
 
-                if (PRC_myrank == proc) then
+                if (myrank_d == proc) then
                   nobs = nobs + 1
                   nobs_slot = nobs_slot + 1
                   obsda%set(nobs) = iof
                   obsda%idx(nobs) = n
-                  obsda%ri(nobs) = rig
-                  obsda%rj(nobs) = rjg
-                  ri(nobs) = ritmp
-                  rj(nobs) = rjtmp
-                end if ! [ PRC_myrank == proc ]
+                  obsda%ri(nobs) = rig  ! obsda%ri: global grid coordinate
+                  obsda%rj(nobs) = rjg  !
+                  ri(nobs) = ritmp      ! ri: local grid coordinate
+                  rj(nobs) = rjtmp      !
+                end if ! [ myrank_d == proc ]
               end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
             end do ! [ n = 1, obs%nobs ]
 
@@ -286,7 +285,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                 call phys2ij(obs(iof)%lon(ns),obs(iof)%lat(ns),rig,rjg)
                 call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
 
-                if (PRC_myrank == proc) then
+                if (myrank_d == proc) then
                   nprof_H08 = nprof_H08 + 1 ! num of prof in myrank node
                   tmp_ri_H08(nprof_H08) = ritmp
                   tmp_rj_H08(nprof_H08) = rjtmp
@@ -304,7 +303,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                     obsda%idx(nobs-nch+ch) = ns + ch - 1
                   enddo
 
-                end if ! [ PRC_myrank == proc ]
+                end if ! [ myrank_d == proc ]
               end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
             end do ! [ n = 1, nallprof ]
 
@@ -349,6 +348,11 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 !if (mod(nn,50) == 0) then
 !  write(6,*) '%%%%%%', MPI_WTIME(), nn
 !end if
+
+              if (.not. USE_OBS(obs(iof)%typ(n))) then
+                obsda%qc(nn) = iqc_otype
+                cycle
+              end if
 
               if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
                 if (obs(iof)%lev(n) > RADAR_ZMAX) then
@@ -401,6 +405,11 @@ SUBROUTINE obsope_cal(obs, obsda_return)
           ELSEIF((OBS_IN_FORMAT(iof) == 3).and.(nprof_H08 >=1 ))THEN ! H08
 ! -- Note: Trans_XtoY_H08 is called without OpenMP but it can use a parallel (with OpenMP) RTTOV routine
 !
+            !------
+            if (.not. USE_OBS(23)) then
+              obsda%qc(nobs_0+1:nobs) = iqc_otype
+            else
+            !------
 
             ALLOCATE(yobs_H08(nprof_H08*nch))
             ALLOCATE(yobs_H08_clr(nprof_H08*nch))
@@ -463,6 +472,10 @@ SUBROUTINE obsope_cal(obs, obsda_return)
             DEALLOCATE(yobs_H08_clr)
             DEALLOCATE(qc_H08)
 
+            !------
+            end if ! [.not. USE_OBS(23)]
+            !------
+
 #endif
           ENDIF ! H08
 
@@ -479,8 +492,8 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
 
 ! ###  -- TC vital assimilation -- ###
-          if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0 .and. &
-              obs(iof)%dif(obs_idx_TCX) == obs(iof)%dif(obs_idx_TCY) .and. &
+          if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0) then
+          if (obs(iof)%dif(obs_idx_TCX) == obs(iof)%dif(obs_idx_TCY) .and. &
               obs(iof)%dif(obs_idx_TCY) == obs(iof)%dif(obs_idx_TCP)) then
            
             if (obs(iof)%dif(obs_idx_TCX) > slot_lb .and. &
@@ -490,10 +503,8 @@ SUBROUTINE obsope_cal(obs, obsda_return)
               !!! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
               ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp
               allocate(bTC(3,0:MEM_NP-1))
-              allocate(bufr(3,0:MEM_NP-1))
 
               bTC = 9.99d33
-              bufr = 9.99d33
 
               ! Note: obs(iof)%dat(obs_idx_TCX) is not longitude (deg) but X (m).
               !       Units of the original TC vital position are converted in
@@ -501,13 +512,10 @@ SUBROUTINE obsope_cal(obs, obsda_return)
               !
               call phys2ij(obs(iof)%lon(obs_idx_TCX),obs(iof)%lat(obs_idx_TCX),rig,rjg) 
               call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)  
-              call search_tc_subdom(rig,rjg,v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
+              call search_tc_subdom(rig,rjg,v2dg,bTC(1,myrank_d),bTC(2,myrank_d),bTC(3,myrank_d))
   
               CALL MPI_BARRIER(MPI_COMM_d,ierr)
-              CALL MPI_ALLREDUCE(bTC,bufr,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
-              bTC = bufr
-
-              deallocate(bufr)
+              CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
 
               ! Assume MSLP of background TC is lower than 1100 (hPa). 
               bTC_mslp = 1100.0d2
@@ -519,7 +527,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                 endif
               enddo ! [ n = 0, MEM_NP - 1]
 
-              if (PRC_myrank == proc) then
+              if (myrank_d == proc) then
                 do n = 1, 3
                   nobs = nobs + 1
                   nobs_slot = nobs_slot + 1
@@ -541,6 +549,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
             endif ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
           endif ! [ obs_idx_TCX > 0 ...]
+          endif !
 
         end do ! [ do iof = 1, OBS_IN_NUM ]
 
@@ -712,15 +721,15 @@ SUBROUTINE obsmake_cal(obs)
             call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
             call rij_g2l_auto(proc,rig,rjg,ri,rj)
 
-  !          if (PRC_myrank == 0) then
+  !          if (myrank_d == 0) then
   !            print *, proc, rig, rjg, ri, rj
   !          end if
 
-            if (proc < 0 .and. PRC_myrank == 0) then ! if outside of the global domain, processed by PRC_myrank == 0
+            if (proc < 0 .and. myrank_d == 0) then ! if outside of the global domain, processed by myrank_d == 0
               obs(iof)%dat(n) = undef
             end if
 
-            if (PRC_myrank == proc) then
+            if (myrank_d == proc) then
               nobs = nobs + 1
               nobs_slot = nobs_slot + 1
 
@@ -761,7 +770,7 @@ SUBROUTINE obsmake_cal(obs)
                 end if
               end if
 
-            end if ! [ PRC_myrank == proc ]
+            end if ! [ myrank_d == proc ]
 
           end if ! [ obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub ]
 
@@ -791,11 +800,11 @@ SUBROUTINE obsmake_cal(obs)
             call rij_g2l_auto(proc,rig,rjg,ri,rj)
 
 
-            if (proc < 0 .and. PRC_myrank == 0) then ! if outside of the global domain, processed by PRC_myrank == 0
+            if (proc < 0 .and. myrank_d == 0) then ! if outside of the global domain, processed by myrank_d == 0
               obs(iof)%dat(ns:ns+nch-1) = undef
             end if
 
-            if (PRC_myrank == proc) then
+            if (myrank_d == proc) then
               nprof_H08 = nprof_H08 + 1 ! num of prof in myrank node
               idx_H08(nprof_H08) = ns ! idx of prof in myrank node
               tmp_ri_H08(nprof_H08) = ri
@@ -806,7 +815,7 @@ SUBROUTINE obsmake_cal(obs)
               nobs = nobs + nch
               nobs_slot = nobs_slot + nch
 
-            end if ! [ PRC_myrank == proc ]
+            end if ! [ myrank_d == proc ]
 
           end if ! [ obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub ]
 
@@ -866,7 +875,7 @@ SUBROUTINE obsmake_cal(obs)
 
   deallocate ( v3dg, v2dg )
 
-  if (PRC_myrank == 0) then
+  if (myrank_d == 0) then
     nobsmax = 0
     nobsall = 0
     do iof = 1, OBS_IN_NUM
@@ -885,7 +894,7 @@ SUBROUTINE obsmake_cal(obs)
 
     call MPI_REDUCE(obs(iof)%dat,bufr(1:obs(iof)%nobs),obs(iof)%nobs,MPI_r_size,MPI_SUM,0,MPI_COMM_d,ierr)
 
-    if (PRC_myrank == 0) then
+    if (myrank_d == 0) then
       obs(iof)%dat = bufr(1:obs(iof)%nobs)
 
       do n = 1, obs(iof)%nobs
@@ -922,11 +931,11 @@ SUBROUTINE obsmake_cal(obs)
       end do ! [ n = 1, obs(iof)%nobs ]
 
       ns = ns + obs(iof)%nobs
-    end if ! [ PRC_myrank == 0 ]
+    end if ! [ myrank_d == 0 ]
 
   end do ! [ iof = 1, OBS_IN_NUM ]
 
-  if (PRC_myrank == 0) then
+  if (myrank_d == 0) then
     deallocate ( bufr )
     deallocate ( error )
 

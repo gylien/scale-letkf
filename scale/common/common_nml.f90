@@ -14,11 +14,14 @@ MODULE common_nml
   public
 
   !----
-  integer, parameter :: nvarmax = 100
+  integer, parameter :: nv3d = 11    ! number of 3D state variables (in SCALE restart files)
+  integer, parameter :: nv2d = 0     ! number of 2D state variables (in SCALE restart files)
+  integer, parameter :: nobtype = 24 ! number of observation types
+  integer, parameter :: nch = 10     ! H08 Num of Himawari-8 (IR) channels
+
   integer, parameter :: nobsfilemax = 10
   integer, parameter :: filelenmax = 256
   integer, parameter :: memberflen = 4 ! Length of member # in filename
-  integer, parameter :: nch = 10 ! Num of Himawari-8 (IR) channels 
 
   !--- PARAM_ENSEMBLE
   integer :: MEMBER = 3      ! ensemble size
@@ -50,20 +53,6 @@ MODULE common_nml
   character(filelenmax) :: ANAL_OUT_MEAN_BASENAME = 'anal.mean'
   character(filelenmax) :: ANAL_OUT_SPRD_BASENAME = 'anal.sprd'
   character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
-
-  real(r_size) :: SIGMA_OBS = 500.0d3
-  real(r_size) :: SIGMA_OBS_RAIN = -1.0d0  ! < 0: same as SIGMA_OBS
-  real(r_size) :: SIGMA_OBS_RADAR = -1.0d0 ! < 0: same as SIGMA_OBS
-  real(r_size) :: SIGMA_OBS_RADAR_OBSNOREF = -1.0d0 ! < 0: same as SIGMA_OBS_RADAR
-  real(r_size) :: SIGMA_OBS_H08 = -1.0d0 ! < 0: same as SIGMA_OBS ! H08
-  real(r_size) :: SIGMA_OBS_TC = -1.0d0 ! < 0: same as SIGMA_OBS 
-  real(r_size) :: SIGMA_OBSV = 0.4d0
-  real(r_size) :: SIGMA_OBSV_RAIN = -1.0d0 ! < 0: same as SIGMA_OBSV
-  real(r_size) :: SIGMA_OBSZ_RADAR = 1000.0d0
-  real(r_size) :: SIGMA_OBSV_H08 = -1.0d0 ! < 0: same as SIGMA_OBSV ! H08
-  real(r_size) :: SIGMA_OBSV_TC = -1.0d0 ! < 0: same as SIGMA_OBSV 
-  real(r_size) :: SIGMA_OBST = 3.0d0
-  real(r_size) :: BASE_OBSV_RAIN = 85000.0d0
 
   real(r_size) :: INFL_MUL = 1.0d0           ! >  0: globally constant covariance inflation
                                              ! <= 0: use 3D inflation field from 'INFL_MUL_IN_BASENAME' file
@@ -103,7 +92,6 @@ MODULE common_nml
 
   real(r_size) :: PS_ADJUST_THRES = 100.d0
 
-  integer :: MAX_NOBS_PER_GRID = 0   ! observation number limit; <= 0: Do not use
   logical :: NOBS_OUT = .false.
   character(filelenmax) :: NOBS_OUT_BASENAME = 'nobs'
 
@@ -121,42 +109,82 @@ MODULE common_nml
 !  integer :: PRC_NUM_X_LETKF = 1
 !  integer :: PRC_NUM_Y_LETKF = 1
 
-  !--- PARAM_LETKF_VAR_LOCAL
-  real(r_size) :: VAR_LOCAL_UV(nvarmax)        = 1.0d0
-  real(r_size) :: VAR_LOCAL_T(nvarmax)         = 1.0d0
-  real(r_size) :: VAR_LOCAL_Q(nvarmax)         = 1.0d0
-  real(r_size) :: VAR_LOCAL_PS(nvarmax)        = 1.0d0
-  real(r_size) :: VAR_LOCAL_RAIN(nvarmax)      = 1.0d0
-  real(r_size) :: VAR_LOCAL_TC(nvarmax)        = 1.0d0
-  real(r_size) :: VAR_LOCAL_RADAR_REF(nvarmax) = 1.0d0
-  real(r_size) :: VAR_LOCAL_RADAR_VR(nvarmax)  = 1.0d0
-  real(r_size) :: VAR_LOCAL_H08(nvarmax)       = 1.0d0 ! H08
+  !--- PARAM_LETKF_OBS
+  logical :: USE_OBS(nobtype) = .true.
 
-  !--- PARAM_LETKF_OBSERR
-  real(r_size) :: OBSERR_U = 1.0d0
-  real(r_size) :: OBSERR_V = 1.0d0
-  real(r_size) :: OBSERR_T = 1.0d0
-  real(r_size) :: OBSERR_Q = 0.001d0
-  real(r_size) :: OBSERR_RH = 10.0d0
-  real(r_size) :: OBSERR_PS = 100.0d0
-  real(r_size) :: OBSERR_RADAR_REF = 5.0d0
-  real(r_size) :: OBSERR_RADAR_VR = 3.0d0
-  real(r_size) :: OBSERR_TCX = 50.0d3 ! (m)
-  real(r_size) :: OBSERR_TCY = 50.0d3 ! (m)
-  real(r_size) :: OBSERR_TCP = 5.0d2 ! (Pa)
-  logical :: USE_OBSERR_RADAR_REF = .false.
-  logical :: USE_OBSERR_RADAR_VR = .false.
-!
-! 
-  real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
-                                      5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
+  ! >0: localization length scale (m)
+  !  0: no localization XXX not implemented yet XXX
+  ! <0: same as HORI_LOCAL_SIGMA(1)
+  real(r_size) :: HORI_LOCAL(nobtype) = &
+    (/500.0d3, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+       -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+
+  ! >0: localization length scale [ln(p) or m depends on obstype]
+  !  0: no localization
+  ! <0: same as VERTIME_LOCAL(1)
+  real(r_size) :: VERT_LOCAL(nobtype) = &
+    (/ 0.4d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+      -1.0d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+      -1.0d0, 1000.0d0, -1.0d0, -1.0d0/)
+!      -1.0d0, 1000.0d0, -1.0d0,  0.0d0/)
+
+  ! >0: localization length scale (sec) XXX not implemented yet XXX
+  !  0: no localization
+  ! <0: same as TIME_LOCAL_SIGMA(1)
+  real(r_size) :: TIME_LOCAL(nobtype) = &
+    (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+
+  real(r_size) :: HORI_LOCAL_RADAR_OBSNOREF = -1.0d0 ! <0: same as HORI_LOCAL(22=PHARAD)
+  real(r_size) :: VERT_LOCAL_RAIN_BASE = 85000.0d0
+
+  ! >0: observation number limit
+  !  0: do not limit observation numbers
+  ! <0: same as MAX_NOBS_PER_GRID(1)
+  integer :: MAX_NOBS_PER_GRID(nobtype) = &
+    (/ 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
+      -1, -1, -1, -1/)
+
+  integer :: MAX_NOBS_PER_GRID_CRITERION = 2 ! 1: normalized 3D distance (from closest)
+                                             ! 2: localization weight (from largest)
+                                             ! 3: weighted observation error variance (from smallest)
+
+  ! >0: typical minimum spacing of the obsetvation types in the densest observed area (not tuned carefully yet)
+  !     *this is only used for automatically determine OBS_SORT_GRID_SPACING. if using pre-set OBS_SORT_GRID_SPACING, this has no effect.
+  ! <=0: same as OBS_MIN_SPACING(1)
+  real(r_size) :: OBS_MIN_SPACING(nobtype) = &
+    (/300.0d3, 100.0d3, 100.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 100.0d3, 150.0d3, 150.0d3, &
+      150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 150.0d3, &
+      150.0d3,   1.0d3,  15.0d3,1000.0d3/)
+
+  ! >0: optimal grid spacing for bucket sorting of observations
+  !  0: automatically determined based on HORI_LOCAL, MAX_NOBS_PER_GRID, and OBS_MIN_SPACING
+  ! <0: same as OBS_SORT_GRID_SPACING(1)
+  real(r_size) :: OBS_SORT_GRID_SPACING(nobtype) = &
+    (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+
+  !--- PARAM_LETKF_VAR_LOCAL
+  real(r_size) :: VAR_LOCAL_UV(nv3d+nv2d)        = 1.0d0
+  real(r_size) :: VAR_LOCAL_T(nv3d+nv2d)         = 1.0d0
+  real(r_size) :: VAR_LOCAL_Q(nv3d+nv2d)         = 1.0d0
+  real(r_size) :: VAR_LOCAL_PS(nv3d+nv2d)        = 1.0d0
+  real(r_size) :: VAR_LOCAL_RAIN(nv3d+nv2d)      = 1.0d0
+  real(r_size) :: VAR_LOCAL_TC(nv3d+nv2d)        = 1.0d0
+  real(r_size) :: VAR_LOCAL_RADAR_REF(nv3d+nv2d) = 1.0d0
+  real(r_size) :: VAR_LOCAL_RADAR_VR(nv3d+nv2d)  = 1.0d0
+  real(r_size) :: VAR_LOCAL_H08(nv3d+nv2d)       = 1.0d0 ! H08
 
   !--- PARAM_LETKF_MONITOR
   logical :: DEPARTURE_STAT = .true.
   logical :: DEPARTURE_STAT_RADAR = .false.
   logical :: DEPARTURE_STAT_H08 = .false.
   real(r_size) :: DEPARTURE_STAT_T_RANGE = 0.0d0 ! time range within which observations are considered in the departure statistics.
-                                                 ! 0.0d0: no limit
+                                                 ! 0: no limit
 
   LOGICAL :: OMB_OUTPUT = .true.
   LOGICAL :: OMA_OUTPUT = .true.
@@ -167,6 +195,9 @@ MODULE common_nml
   logical :: USE_RADAR_REF       = .true.
   logical :: USE_RADAR_VR        = .true.
   logical :: USE_RADAR_PSEUDO_RH = .false.
+
+  logical :: USE_OBSERR_RADAR_REF = .false.
+  logical :: USE_OBSERR_RADAR_VR = .false.
 
   REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
   INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than RADAR_REF_THRES_DBZ
@@ -207,6 +238,21 @@ MODULE common_nml
                         !! ==0: NOT assimilate (rejected by QC in trans_XtoY_H08)
                         !! It is better to reject B11(ch=5) & B12(ch=6) obs because these bands are 
                         !! sensitive to chemicals.
+
+  !--- PARAM_OBS_ERROR
+  real(r_size) :: OBSERR_U = 1.0d0
+  real(r_size) :: OBSERR_V = 1.0d0
+  real(r_size) :: OBSERR_T = 1.0d0
+  real(r_size) :: OBSERR_Q = 0.001d0
+  real(r_size) :: OBSERR_RH = 10.0d0
+  real(r_size) :: OBSERR_PS = 100.0d0
+  real(r_size) :: OBSERR_RADAR_REF = 5.0d0
+  real(r_size) :: OBSERR_RADAR_VR = 3.0d0
+  real(r_size) :: OBSERR_TCX = 50.0d3 ! (m)
+  real(r_size) :: OBSERR_TCY = 50.0d3 ! (m)
+  real(r_size) :: OBSERR_TCP = 5.0d2 ! (Pa)
+  real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
+                                      5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
 
 contains
 !-----------------------------------------------------------------------
@@ -288,19 +334,6 @@ subroutine read_nml_letkf
     ANAL_OUT_MEAN_BASENAME, &
     ANAL_OUT_SPRD_BASENAME, &
     LETKF_TOPO_IN_BASENAME, &
-    SIGMA_OBS, &
-    SIGMA_OBS_RAIN, &
-    SIGMA_OBS_RADAR, &
-    SIGMA_OBS_RADAR_OBSNOREF, &
-    SIGMA_OBS_H08, & ! H08
-    SIGMA_OBS_TC, & 
-    SIGMA_OBSV, &
-    SIGMA_OBSV_RAIN, &
-    SIGMA_OBSV_H08, & ! H08
-    SIGMA_OBSV_TC, & 
-    SIGMA_OBSZ_RADAR, &
-    SIGMA_OBST, &
-    BASE_OBSV_RAIN, &
     INFL_MUL, &
     INFL_MUL_MIN, &
     INFL_MUL_ADAPTIVE, &
@@ -329,7 +362,6 @@ subroutine read_nml_letkf
     POSITIVE_DEFINITE_QHYD, &
     TC_SEARCH_DIS, &
     PS_ADJUST_THRES, &
-    MAX_NOBS_PER_GRID, &
     NOBS_OUT, &
     NOBS_OUT_BASENAME, &
     !*** for backward compatibility ***
@@ -371,31 +403,6 @@ subroutine read_nml_letkf
   end if
   if (GROSS_ERROR_TCP < 0.0d0) then
     GROSS_ERROR_TCP = GROSS_ERROR
-  end if
-  if (SIGMA_OBS_RAIN < 0.0d0) then
-    SIGMA_OBS_RAIN = SIGMA_OBS
-  end if
-  if (SIGMA_OBS_RADAR < 0.0d0) then
-    SIGMA_OBS_RADAR = SIGMA_OBS
-  end if
-  if (SIGMA_OBS_RADAR_OBSNOREF < 0.0d0) then
-    SIGMA_OBS_RADAR_OBSNOREF = SIGMA_OBS_RADAR
-  end if
-  if (SIGMA_OBSV_RAIN < 0.0d0) then
-    SIGMA_OBSV_RAIN = SIGMA_OBSV
-  end if
-
-  if (SIGMA_OBS_H08 < 0.0d0) then ! H08
-    SIGMA_OBS_H08 = SIGMA_OBS
-  end if
-  if (SIGMA_OBSV_H08 < 0.0d0) then ! H08
-    SIGMA_OBSV_H08 = SIGMA_OBSV
-  end if
-  if (SIGMA_OBS_TC < 0.0d0) then 
-    SIGMA_OBS_TC = SIGMA_OBS
-  end if
-  if (SIGMA_OBSV_TC < 0.0d0) then 
-    SIGMA_OBSV_TC = SIGMA_OBSV
   end if
 
   if (trim(INFL_MUL_OUT_BASENAME) == '') then
@@ -461,6 +468,73 @@ subroutine read_nml_letkf_prc
 end subroutine read_nml_letkf_prc
 
 !-----------------------------------------------------------------------
+! PARAM_LETKF_OBS
+!-----------------------------------------------------------------------
+subroutine read_nml_letkf_obs
+  implicit none
+  integer :: itype
+  integer :: ierr
+
+  namelist /PARAM_LETKF_OBS/ &
+    USE_OBS, &
+    HORI_LOCAL, &
+    VERT_LOCAL, &
+    TIME_LOCAL, &
+    HORI_LOCAL_RADAR_OBSNOREF, &
+    VERT_LOCAL_RAIN_BASE, &
+    MAX_NOBS_PER_GRID, &
+    MAX_NOBS_PER_GRID_CRITERION, &
+    OBS_MIN_SPACING, &
+    OBS_SORT_GRID_SPACING
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_LETKF_OBS,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_LETKF_OBS/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_OBS. Check!'
+    stop
+  endif
+
+  do itype = 2, nobtype
+    if (HORI_LOCAL(itype) < 0.0d0) then
+      HORI_LOCAL(itype) = HORI_LOCAL(1)
+    end if
+    if (VERT_LOCAL(itype) < 0.0d0) then
+      VERT_LOCAL(itype) = VERT_LOCAL(1)
+    end if
+    if (TIME_LOCAL(itype) < 0.0d0) then
+      TIME_LOCAL(itype) = TIME_LOCAL(1)
+    end if
+
+    if (MAX_NOBS_PER_GRID(itype) < 0) then
+      MAX_NOBS_PER_GRID(itype) = MAX_NOBS_PER_GRID(1)
+    end if
+
+    if (MAX_NOBS_PER_GRID_CRITERION < 1 .or. MAX_NOBS_PER_GRID_CRITERION > 3) then
+      write (6, '(A,I4)') "[Error] Unsupported 'MAX_NOBS_PER_GRID_CRITERION':", MAX_NOBS_PER_GRID_CRITERION
+      stop 99
+    end if
+
+    if (OBS_MIN_SPACING(itype) <= 0.0d0) then
+      OBS_MIN_SPACING(itype) = OBS_MIN_SPACING(1)
+    end if
+    if (OBS_SORT_GRID_SPACING(itype) < 0.0d0) then
+      OBS_SORT_GRID_SPACING(itype) = OBS_SORT_GRID_SPACING(1)
+    end if
+  end do
+
+  if (HORI_LOCAL_RADAR_OBSNOREF < 0.0d0) then
+    HORI_LOCAL_RADAR_OBSNOREF = HORI_LOCAL(22) !PHARAD
+  end if
+
+  write(6, nml=PARAM_LETKF_OBS)
+
+  return
+end subroutine read_nml_letkf_obs
+
+!-----------------------------------------------------------------------
 ! PARAM_LETKF_VAR_LOCAL
 !-----------------------------------------------------------------------
 subroutine read_nml_letkf_var_local
@@ -492,44 +566,6 @@ subroutine read_nml_letkf_var_local
 
   return
 end subroutine read_nml_letkf_var_local
-
-!-----------------------------------------------------------------------
-! PARAM_LETKF_OBSERR
-!-----------------------------------------------------------------------
-subroutine read_nml_letkf_obserr
-  implicit none
-  integer :: ierr
-
-  namelist /PARAM_LETKF_OBSERR/ &
-    OBSERR_U, &
-    OBSERR_V, &
-    OBSERR_T, &
-    OBSERR_Q, &
-    OBSERR_RH, &
-    OBSERR_PS, &
-    OBSERR_RADAR_REF, &
-    OBSERR_RADAR_VR, &
-    OBSERR_TCX, &
-    OBSERR_TCY, &
-    OBSERR_TCP, &
-    OBSERR_H08, & ! H08
-    USE_OBSERR_RADAR_REF, &
-    USE_OBSERR_RADAR_VR
-
-  rewind(IO_FID_CONF)
-  read(IO_FID_CONF,nml=PARAM_LETKF_OBSERR,iostat=ierr)
-  if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_LETKF_OBSERR/ is not found in namelist.'
-!    stop
-  elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_OBSERR. Check!'
-    stop
-  endif
-
-  write(6, nml=PARAM_LETKF_OBSERR)
-
-  return
-end subroutine read_nml_letkf_obserr
 
 !-----------------------------------------------------------------------
 ! PARAM_LETKF_MONITOR
@@ -574,6 +610,8 @@ subroutine read_nml_letkf_radar
     USE_RADAR_REF, &
     USE_RADAR_VR, &
     USE_RADAR_PSEUDO_RH, &
+    USE_OBSERR_RADAR_REF, &
+    USE_OBSERR_RADAR_VR, &
     RADAR_REF_THRES_DBZ, &
     MIN_RADAR_REF_MEMBER, &
     MIN_RADAR_REF_MEMBER_OBSREF, &
@@ -606,7 +644,7 @@ subroutine read_nml_letkf_radar
 end subroutine read_nml_letkf_radar
 
 !-----------------------------------------------------------------------
-! PARAM_LETKF_RADAR
+! PARAM_LETKF_H08
 !-----------------------------------------------------------------------
 subroutine read_nml_letkf_h08
   implicit none
@@ -639,9 +677,44 @@ subroutine read_nml_letkf_h08
 end subroutine read_nml_letkf_h08
 
 !-----------------------------------------------------------------------
+! PARAM_OBS_ERROR
+!-----------------------------------------------------------------------
+subroutine read_nml_obs_error
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_OBS_ERROR/ &
+    OBSERR_U, &
+    OBSERR_V, &
+    OBSERR_T, &
+    OBSERR_Q, &
+    OBSERR_RH, &
+    OBSERR_PS, &
+    OBSERR_RADAR_REF, &
+    OBSERR_RADAR_VR, &
+    OBSERR_TCX, &
+    OBSERR_TCY, &
+    OBSERR_TCP, &
+    OBSERR_H08    ! H08
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_OBS_ERROR,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_OBS_ERROR/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_OBS_ERROR. Check!'
+    stop
+  endif
+
+  write(6, nml=PARAM_OBS_ERROR)
+
+  return
+end subroutine read_nml_obs_error
+
+!-----------------------------------------------------------------------
 ! file_member_replace
 !-----------------------------------------------------------------------
-
 subroutine file_member_replace(mem, filename, filename_out)
   implicit none
   integer, intent(in) :: mem

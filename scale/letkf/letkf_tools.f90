@@ -18,7 +18,6 @@ MODULE letkf_tools
   USE common_letkf
 
   USE letkf_obs
-!  USE efso_nml
 !  USE efso_tools
 
   use scale_precision, only: RP
@@ -30,6 +29,11 @@ MODULE letkf_tools
 
   real(r_size),save :: var_local(nv3d+nv2d,nid_obs_varlocal)
   integer,save :: var_local_n2n(nv3d+nv2d)
+
+
+  real(r_size),save :: tt(23), ttomp(17)
+  integer,save :: ntt(23), nttomp(17)
+
 
 CONTAINS
 !-----------------------------------------------------------------------
@@ -72,10 +76,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size) :: q_anal(MEMBER)                 !GYL
 
 
-
   real(r_size) :: tt1, tt0
-  real(r_size) :: tt(20), ttomp(14)
-  integer :: ntt(20), nttomp(14)
   tt = 0.0d0
   ntt = 0
 
@@ -99,15 +100,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !
   ! Variable localization
   !
-  var_local(:,1) = VAR_LOCAL_UV(1:nv3d+nv2d)
-  var_local(:,2) = VAR_LOCAL_T(1:nv3d+nv2d)
-  var_local(:,3) = VAR_LOCAL_Q(1:nv3d+nv2d)
-  var_local(:,4) = VAR_LOCAL_PS(1:nv3d+nv2d)
-  var_local(:,5) = VAR_LOCAL_RAIN(1:nv3d+nv2d)
-  var_local(:,6) = VAR_LOCAL_TC(1:nv3d+nv2d)
-  var_local(:,7) = VAR_LOCAL_RADAR_REF(1:nv3d+nv2d)
-  var_local(:,8) = VAR_LOCAL_RADAR_VR(1:nv3d+nv2d)
-  var_local(:,9) = VAR_LOCAL_H08(1:nv3d+nv2d) ! H08
+  var_local(:,1) = VAR_LOCAL_UV(:)
+  var_local(:,2) = VAR_LOCAL_T(:)
+  var_local(:,3) = VAR_LOCAL_Q(:)
+  var_local(:,4) = VAR_LOCAL_PS(:)
+  var_local(:,5) = VAR_LOCAL_RAIN(:)
+  var_local(:,6) = VAR_LOCAL_TC(:)
+  var_local(:,7) = VAR_LOCAL_RADAR_REF(:)
+  var_local(:,8) = VAR_LOCAL_RADAR_VR(:)
+  var_local(:,9) = VAR_LOCAL_H08(:) ! H08
   var_local_n2n(1) = 1
   DO n=2,nv3d+nv2d
     DO i=1,n
@@ -248,7 +249,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
         ELSE
           ! compute weights with localized observations
-          CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,ttomp(2:9),nttomp(2:9),nobsl_t=nobsl_t)
+          CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
 
 
   tt0 = MPI_WTIME()
@@ -272,8 +273,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  ttomp(10) = ttomp(10) + tt1 - tt0
-  nttomp(10) = nttomp(10) + 1
+  ttomp(13) = ttomp(13) + tt1 - tt0
+  nttomp(13) = nttomp(13) + 1
   tt0 = tt1
 
 
@@ -285,8 +286,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  ttomp(11) = ttomp(11) + tt1 - tt0
-  nttomp(11) = nttomp(11) + 1
+  ttomp(14) = ttomp(14) + tt1 - tt0
+  nttomp(14) = nttomp(14) + 1
   tt0 = tt1
 
 
@@ -297,8 +298,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  ttomp(12) = ttomp(12) + tt1 - tt0
-  nttomp(12) = nttomp(12) + 1
+  ttomp(15) = ttomp(15) + tt1 - tt0
+  nttomp(15) = nttomp(15) + 1
   tt0 = tt1
 
 
@@ -341,8 +342,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  ttomp(13) = ttomp(13) + tt1 - tt0
-  nttomp(13) = nttomp(13) + 1
+  ttomp(16) = ttomp(16) + tt1 - tt0
+  nttomp(16) = nttomp(16) + 1
   tt0 = tt1
 
 
@@ -365,8 +366,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  ttomp(14) = ttomp(14) + tt1 - tt0
-  nttomp(14) = nttomp(14) + 1
+  ttomp(17) = ttomp(17) + tt1 - tt0
+  nttomp(17) = nttomp(17) + 1
   tt0 = tt1
 
 
@@ -405,7 +406,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
           ELSE
             ! compute weights with localized observations
-            CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,ttomp(2:9),nttomp(2:9),nobsl_t=nobsl_t)
+            CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
 
 
 
@@ -430,8 +431,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  ttomp(10) = ttomp(10) + tt1 - tt0
-  nttomp(10) = nttomp(10) + 1
+  ttomp(13) = ttomp(13) + tt1 - tt0
+  nttomp(13) = nttomp(13) + 1
   tt0 = tt1
 
 
@@ -443,8 +444,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  ttomp(11) = ttomp(11) + tt1 - tt0
-  nttomp(11) = nttomp(11) + 1
+  ttomp(14) = ttomp(14) + tt1 - tt0
+  nttomp(14) = nttomp(14) + 1
   tt0 = tt1
 
 
@@ -457,8 +458,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  ttomp(12) = ttomp(12) + tt1 - tt0
-  nttomp(12) = nttomp(12) + 1
+  ttomp(15) = ttomp(15) + tt1 - tt0
+  nttomp(15) = nttomp(15) + 1
   tt0 = tt1
 
 
@@ -500,8 +501,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           END IF ! [ beta == 0.0d0 ]                                                   !GYL
 
   tt1 = MPI_WTIME()
-  ttomp(13) = ttomp(13) + tt1 - tt0
-  nttomp(13) = nttomp(13) + 1
+  ttomp(16) = ttomp(16) + tt1 - tt0
+  nttomp(16) = nttomp(16) + 1
   tt0 = tt1
 
 
@@ -513,8 +514,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !$OMP END PARALLEL DO
 
 
-  tt(4:17) = tt(4:17) + ttomp(1:14)
-  ntt(4:17) = ntt(4:17) + nttomp(1:14)
+  tt(4:20) = tt(4:20) + ttomp(1:17)
+  ntt(4:20) = ntt(4:20) + nttomp(1:17)
 
 
 
@@ -563,8 +564,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  tt(18) = tt(18) + tt1 - tt0
-  ntt(18) = ntt(18) + 1
+  tt(21) = tt(21) + tt1 - tt0
+  ntt(21) = ntt(21) + 1
   tt0 = tt1
 
 
@@ -590,8 +591,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  tt(19) = tt(19) + tt1 - tt0
-  ntt(19) = ntt(19) + 1
+  tt(22) = tt(22) + tt1 - tt0
+  ntt(22) = ntt(22) + 1
   tt0 = tt1
 
 
@@ -656,8 +657,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  tt(20) = tt(20) + tt1 - tt0
-  ntt(20) = ntt(20) + 1
+  tt(23) = tt(23) + tt1 - tt0
+  ntt(23) = ntt(23) + 1
   tt0 = tt1
 
 
@@ -667,6 +668,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   write (6,'(10I10)') ntt(1:10)
   write (6,'(10F10.6)') tt(11:20)
   write (6,'(10I10)') ntt(11:20)
+  write (6,'(3F10.6)') tt(21:23)
+  write (6,'(3I10)') ntt(21:23)
   write (6,'(A)') '****************************************************************************'
 
 
@@ -1042,13 +1045,26 @@ END SUBROUTINE das_letkf
 !  DEALLOCATE(pfull)
 !  RETURN
 !END SUBROUTINE das_efso
-!-----------------------------------------------------------------------
-! Project global observations to local
-!     (hdxf_g,dep_g,rdiag_g) -> (hdxf,dep,rdiag)
-! -- modified, using (ri,rj,rlev,rz) instead of (ij,ilev), Guo-Yuan Lien
-! -- add an option to limit observation numbers, Guo-Yuan Lien
-!-----------------------------------------------------------------------
-subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, tt, ntt, nobsl_t)
+
+!-------------------------------------------------------------------------------
+! Find local observations to be used for a targeted grid
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   ri      : horizontal i-grid cooridnate of the targeted grid
+!   rj      : horizontal j-grid cooridnate of the targeted grid
+!   rlev    : vertical pressure of the targeted grid
+!   rz      : vertical height   of the targeted grid
+!   nvar    : variable index of the targeted grid
+! [OUT]
+!   hdxf    : fcstast ensemble perturbations in the observation space
+!   rdiag   : localization-weighted observation error variances
+!   rloc    : localization weights
+!   dep     : observation departure
+!   nobsl   : number of valid observations (in hdxf, rdiag, rloc, dep)
+!   nobsl_t : (optional) number of valid observations wrt. observation variables/types
+!-------------------------------------------------------------------------------
+subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobsl_t)
+  use common_sort
   use scale_grid, only: &
     DX, DY
   use scale_rm_process, only: &
@@ -1064,386 +1080,621 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, tt, 
   integer, intent(out) :: nobsl
   integer, intent(out), optional :: nobsl_t(nid_obs,nobtype)
 
-  real(r_size) :: nd_h, nd_v ! normalized horizontal/vertical distances
-  real(r_size) :: ndist      ! normalized 3D distance SQUARE
-  real(r_size) :: nrloc, nrdiag
-  integer, allocatable :: nobs_use(:)
-  integer :: ip
-  integer :: imin1, imax1, jmin1, jmax1
-  integer :: imin2, imax2, jmin2, jmax2
-  integer :: iproc, jproc
-  integer :: iset, iidx, ityp
-  integer :: ielm, ielm_u, ielm_varlocal
-  integer :: n, nn, iob
-  integer :: s, ss, tmpisort
-  real(r_size) :: rdx, rdy
+  real(r_size), allocatable :: rdiag_tmp(:,:)
+  real(r_size), allocatable :: rloc_tmp(:,:)
+  integer, allocatable :: iob_tmp(:,:)
 
-  real(r_size), allocatable :: rdiag_t(:,:,:)
-  real(r_size), allocatable :: rloc_t(:,:,:)
-  integer, allocatable :: ip_t(:,:,:)
-  integer, allocatable :: iob_t(:,:,:)
-  integer, allocatable :: isort_t(:,:,:)
-  integer :: nobsl_t_(nid_obs,nobtype)
+  integer, allocatable :: nobs_use(:)
+  real(r_size) :: ndist, nrloc, nrdiag
+!  real(r_size), allocatable :: dist_t(:,:)
+!  real(r_size), allocatable :: rloc_t(:,:)
+!  real(r_size), allocatable :: rdiag_t(:,:)
+!  integer, allocatable :: isort_t(:,:)
+!  integer, allocatable :: iob_t(:,:)
+  integer :: nobsl_t_(nid_obs)
+  integer :: inobsl
+
+  integer :: iob, ityp, ielm_u
+  integer :: imin, imax, jmin, jmax
+  integer :: imin_tmp, imax_tmp, jmin_tmp, jmax_tmp
+  integer :: n, nn
+  integer :: s, ss, tmpisort
+  logical :: condition
 
 
   real(r_size) :: tt0, tt1
-  real(r_size), intent(inout) :: tt(8)
-  integer, intent(inout) :: ntt(8)
 !  tt = 0.0d0
 !  ntt = 0
 
-!  real(r_size) :: sigma2_max, ndist_cmax
+  tt0 = MPI_WTIME()
+
+
+  !-----------------------------------------------------------------------------
+  ! Initialize
+  !-----------------------------------------------------------------------------
+
+  if (nobstotal == 0) then
+
+  end if
+
+  allocate (nobs_use(maxnobs_per_type))
+
+  if (maxval(MAX_NOBS_PER_GRID(:)) > 0) then
+
+    allocate (iob_tmp  (maxnobs_per_type, nid_obs))
+    allocate (rloc_tmp (maxnobs_per_type, nid_obs))
+    allocate (rdiag_tmp(maxnobs_per_type, nid_obs))
+
+
+!    allocate (isort_t(maxval(MAX_NOBS_PER_GRID(:)), nid_obs))
+!    allocate (iob_t  (maxval(MAX_NOBS_PER_GRID(:)), nid_obs))
+!    allocate (rloc_t (maxval(MAX_NOBS_PER_GRID(:)), nid_obs))
+!    allocate (rdiag_t(maxval(MAX_NOBS_PER_GRID(:)), nid_obs))
+!    if (MAX_NOBS_PER_GRID_CRITERION == 1) then
+!      allocate (dist_t(maxval(MAX_NOBS_PER_GRID(:)), nid_obs))
+!    end if
+  end if
+
+  nobsl = 0
+
+
+  tt1 = MPI_WTIME()
+  ttomp(2) = ttomp(2) + tt1 - tt0
+  nttomp(2) = nttomp(2) + 1
+  tt0 = tt1 
+
+
+  !-----------------------------------------------------------------------------
+  ! For each observation type,
+  ! do rough data search by a rectangle using the sorting mesh, and then
+  ! do precise data search by normalized 3D distance and variable localization
+  !-----------------------------------------------------------------------------
+
+  do ityp = 1, nobtype
+    if (obsgrd(ityp)%tot_ext > 0) then
+
+      if (MAX_NOBS_PER_GRID(ityp) <= 0) then
+      !-------------------------------------------------------------------------
+      ! When obs number limit is not enabled,
+      ! Directly prepare (hdxf, dep, rdiag, rloc) output.
+      !-------------------------------------------------------------------------
+
+        nn = 0
+        call obs_local_range(ityp, ri, rj, imin, imax, jmin, jmax)
+        call obs_choose_ext(ityp, imin, imax, jmin, jmax, nn, nobs_use)
+
+
+  tt1 = MPI_WTIME()
+  ttomp(3) = ttomp(3) + tt1 - tt0
+  nttomp(3) = nttomp(3) + 1
+  tt0 = tt1 
+
+
+        do n = 1, nn  ! loop over observations within the search rectangle
+          iob = nobs_use(n)
+
+          call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ndist, nrloc, nrdiag)
 
 
   tt0 = MPI_WTIME()
 
-  !
-  ! Initialize
-  !
-  if (maxval(nobsgrd(nlon,nlat,:)) > 0) then
-    allocate (nobs_use(maxval(nobsgrd(nlon,nlat,:))))
-  end if
 
-  if (MAX_NOBS_PER_GRID > 0) then
-    allocate (isort_t(MAX_NOBS_PER_GRID, nid_obs, nobtype))
-    allocate (ip_t(MAX_NOBS_PER_GRID, nid_obs, nobtype))
-    allocate (iob_t(MAX_NOBS_PER_GRID, nid_obs, nobtype))
-    allocate (rdiag_t(MAX_NOBS_PER_GRID, nid_obs, nobtype))
-    allocate (rloc_t(MAX_NOBS_PER_GRID, nid_obs, nobtype))
-    isort_t(:,:,:) = 0
-  end if
-  !
-  ! Do rough data search by a rectangle determined by grids,
-  ! and then do precise data search by normalized 3D distance and variable localization
-  !
-  imin1 = max(1, floor(ri - dlon_zero))
-  imax1 = min(PRC_NUM_X*nlon, ceiling(ri + dlon_zero))
-  jmin1 = max(1, floor(rj - dlat_zero))
-  jmax1 = min(PRC_NUM_Y*nlat, ceiling(rj + dlat_zero))
-
-  nobsl = 0
-  nobsl_t_(:,:) = 0
-
-
-  tt1 = MPI_WTIME()
-  tt(1) = tt(1) + tt1 - tt0
-  ntt(1) = ntt(1) + 1
-  tt0 = tt1
-
-!  sigma2_max = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF)
-!  sigma2_max = sigma2_max * sigma2_max
-
-
-  do ip = 0, MEM_NP-1  ! loop over subdomains
-
-    if (obsda2(ip)%nobs > 0) then
-
-      call rank_1d_2d(ip, iproc, jproc)
-
-      imin2 = max(1, imin1 - iproc*nlon)
-      imax2 = min(nlon, imax1 - iproc*nlon)
-      jmin2 = max(1, jmin1 - jproc*nlat)
-      jmax2 = min(nlat, jmax1 - jproc*nlat)
-
-      nn = 0
-      call obs_choose(imin2,imax2,jmin2,jmax2,ip,nn,nobs_use)
-!write(6,'(A,6I8)') '$$$==', imin2,imax2,jmin2,jmax2,ip,nn
-
-
-  tt1 = MPI_WTIME()
-  tt(2) = tt(2) + tt1 - tt0
-  ntt(2) = ntt(2) + 1
-  tt0 = tt1
-
-
-
-      do n = 1, nn  ! loop over observations within the search rectangle in a subdomain
-
-        iob = nobs_use(n)
-        iset = obsda2(ip)%set(iob)
-        iidx = obsda2(ip)%idx(iob)
-        ielm = obs(iset)%elm(iidx)
-        ielm_u = uid_obs(ielm)
-        ityp = obs(iset)%typ(iidx)
-!print *, '@@@', iob, iidx, ielm, ielm_u, ityp
-        !
-        ! Check variable localization
-        !
-
-
-  tt1 = MPI_WTIME()
-  tt(3) = tt(3) + tt1 - tt0
-  ntt(3) = ntt(3) + 1
-  tt0 = tt1
-
-
-        if (nvar > 0) then  ! use variable localization only when nvar > 0
-          ielm_varlocal = uid_obs_varlocal(ielm)
-          if (ielm_varlocal <= 0) then
-            write (6,'(A)') '[Error] unsupport observation type in variable localization.'
-            stop 1
-          end if
-          if (var_local(nvar,ielm_varlocal) < tiny(var_local)) cycle  ! reject obs by variable localization
-        end if
-
-
-
-!        if (nobsl_t_(ielm_u,ityp) >= MAX_NOBS_PER_GRID) then
-!          ndist_cmax = sigma2_max * 2.0d0 * &
-!                       log(rdiag_t(isort_t(MAX_NOBS_PER_GRID,ielm_u,ityp),ielm_u,ityp) / obs(iset)%err(iidx) / obs(iset)%err(iidx))
-!        else
-!          ndist_cmax = sigma2_max * dist_zero_fac_square
-!        end if
-
-
-
-        !
-        ! Calculate normalized horizontal/vertical distances
-        !
-        rdx = (ri - obsda2(ip)%ri(iob)) * DX
-        rdy = (rj - obsda2(ip)%rj(iob)) * DY
-        nd_h = sqrt(rdx*rdx + rdy*rdy)
-
-!        nd_h = rdx*rdx + rdy*rdy
-!        if (nobsl_t_(ielm_u,ityp) >= MAX_NOBS_PER_GRID) then
-!          if (nd_h > sigma2_max * 2.0d0 * &
-!                     log(rdiag_t(isort_t(MAX_NOBS_PER_GRID,ielm_u,ityp),ielm_u,ityp) / obs(iset)%err(iidx) / obs(iset)%err(iidx))) then
-!            cycle
-!          end if
-!        end if
-!        nd_h = sqrt(nd_h)
-
-        select case (ielm)
-        case (id_ps_obs)
-          nd_h = nd_h / SIGMA_OBS
-          nd_v = ABS(LOG(obs(iset)%dat(iidx)) - LOG(rlev)) / SIGMA_OBSV
-        case (id_rain_obs)
-          nd_h = nd_h / SIGMA_OBS_RAIN
-          nd_v = ABS(LOG(BASE_OBSV_RAIN) - LOG(rlev)) / SIGMA_OBSV_RAIN
-        case (id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs)
-          if (ielm == id_radar_ref_obs .and. obs(iset)%dat(iidx) <= RADAR_REF_THRES_DBZ+1.0d-6) then
-            nd_h = nd_h / SIGMA_OBS_RADAR_OBSNOREF
-          else
-            nd_h = nd_h / SIGMA_OBS_RADAR
-          end if
-          nd_v = ABS(obs(iset)%lev(iidx) - rz) / SIGMA_OBSZ_RADAR
-        case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)
-          nd_h = nd_h / SIGMA_OBS_TC
-          nd_v = ABS(LOG(obs(iset)%lev(iidx)) - LOG(rlev)) / SIGMA_OBSV_TC
-!          nd_v = 0.0d0
-#ifdef H08
-        case (id_H08IR_obs)                                                                 ! H08       
-          nd_h = nd_h / SIGMA_OBS_H08                                                       ! H08    
-          !!nd_v = ABS(LOG(obs(iset)%lev(iidx)) - LOG(rlev)) / SIGMA_OBSV_H08 ! H08 ! bug fixed (02/09/2016) 
-          nd_v = ABS(LOG(obsda2(ip)%lev(iob)) - LOG(rlev)) / SIGMA_OBSV_H08 ! H08 !(06/27/2016) 
-#endif
-        case default
-          nd_h = nd_h / SIGMA_OBS
-          nd_v = ABS(LOG(obs(iset)%lev(iidx)) - LOG(rlev)) / SIGMA_OBSV
-        end select
-        !
-        ! Calculate (normalized 3D distances)^2
-        !
-
-
-  tt1 = MPI_WTIME()
-  tt(4) = tt(4) + tt1 - tt0 
-  ntt(4) = ntt(4) + 1
-  tt0 = tt1 
-
-
-        ndist = nd_h * nd_h + nd_v * nd_v
-        if (ndist > dist_zero_fac_square) cycle  ! reject obs by normalized 3D distance
-        !
-        ! Calculate observational localization
-        !
-        nrloc = EXP(-0.5d0 * ndist)
-        !
-        ! Calculate variable localization
-        !
-        if (nvar > 0) then  ! use variable localization only when nvar > 0
-          nrloc = nrloc * var_local(nvar,ielm_varlocal)
-        end if
-        !
-        ! Calculate (observation variance / localization)
-        !
-        nrdiag = obs(iset)%err(iidx) * obs(iset)%err(iidx) / nrloc
-        !
-        ! Process search results
-        !
-
-  tt1 = MPI_WTIME()
-  tt(5) = tt(5) + tt1 - tt0 
-  ntt(5) = ntt(5) + 1
-  tt0 = tt1 
-
-
-
-        if (MAX_NOBS_PER_GRID <= 0) then
-        !-----------------------------------------------------------------------
-        ! When obs number limit is not enabled,
-        ! Directly prepare (hdxf, dep, rdiag, rloc) output here.
-        !-----------------------------------------------------------------------
+          if (nrloc == 0.0d0) cycle
+          !
+          ! Process search results
+          !
           nobsl = nobsl + 1
-          nobsl_t_(ielm_u,ityp) = nobsl_t_(ielm_u,ityp) + 1
-          hdxf(nobsl,:) = obsda2(ip)%ensval(:,iob)
-          dep(nobsl) = obsda2(ip)%val(iob)
+          hdxf(nobsl,:) = obsda2%ensval(:,iob)
+          dep(nobsl) = obsda2%val(iob)
           rdiag(nobsl) = nrdiag
           rloc(nobsl) = nrloc
-        !-----------------------------------------------------------------------
-        else
-        !-----------------------------------------------------------------------
-        ! When obs number limit is enabled,
-        ! Save only the observations within the limit in temporary arrays in a clever way
-        ! and prepare (hdxf, dep, rdiag, rloc) output later.
-        !-----------------------------------------------------------------------
-          ! Case 0: If the number limit has been reached and the priority of
-          !         this obs is lower than all of the obs in the current set of
-          !         choice, skip right away.
-          !---------------------------------------------------------------------
-          if ((nobsl_t_(ielm_u,ityp) >= MAX_NOBS_PER_GRID) .and. &
-              (nrdiag >= rdiag_t(isort_t(MAX_NOBS_PER_GRID,ielm_u,ityp),ielm_u,ityp))) then
-            cycle
+
+          if (present(nobsl_t)) then
+            ielm_u = uid_obs(obs(obsda2%set(iob))%elm(obsda2%idx(iob)))
+            nobsl_t(ielm_u,ityp) = nobsl_t(ielm_u,ityp) + 1
           end if
-
-          do s = 1, MAX_NOBS_PER_GRID
-            if (isort_t(s,ielm_u,ityp) == 0) then
-            !-------------------------------------------------------------------
-            ! Case 1: This obs is of the last priority,
-            !         but the number limit has NOT been reached,
-            !         save this obs in the spare space of the temporary arrays.
-            !-------------------------------------------------------------------
-              nobsl_t_(ielm_u,ityp) = nobsl_t_(ielm_u,ityp) + 1
-              isort_t(s,ielm_u,ityp) = nobsl_t_(ielm_u,ityp)
-
-              ip_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = ip    ! ip_t, iob_t: indices to retrieve ensval(:,:) and val(:) later
-              iob_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = iob  ! ... do not create the potentially very large ensval_t(:,:,:,:) array to save ensval(:,:)
-              rdiag_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = nrdiag
-              rloc_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = nrloc
-              exit  ! case matched, exit the loop
-            !-------------------------------------------------------------------
-            else if (nrdiag < rdiag_t(isort_t(s,ielm_u,ityp),ielm_u,ityp)) then
-            !-------------------------------------------------------------------
-              if (nobsl_t_(ielm_u,ityp) < MAX_NOBS_PER_GRID) then
-              !-----------------------------------------------------------------
-              ! Case 2: This obs has the priority higher than some obs in the current set of choice
-              !         and the number limit has NOT been reached,
-              !         save this obs in the spare space of the temporary arrays,
-              !         and shift the sorting index array accordingly.
-              !-----------------------------------------------------------------
-                nobsl_t_(ielm_u,ityp) = nobsl_t_(ielm_u,ityp) + 1
-                do ss = nobsl_t_(ielm_u,ityp), s+1, -1
-                  isort_t(ss,ielm_u,ityp) = isort_t(ss-1,ielm_u,ityp)
-                end do
-                isort_t(s,ielm_u,ityp) = nobsl_t_(ielm_u,ityp)
-
-                ip_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = ip
-                iob_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = iob
-                rdiag_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = nrdiag
-                rloc_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = nrloc
-              !-----------------------------------------------------------------
-              else
-              !-----------------------------------------------------------------
-              ! Case 3: This obs has the priority higher than some obs in the current set of choice
-              !         and the number limit has been reached,
-              !         save this obs by overwriting the temporary arrays at where the obs of the last priority is,
-              !         and shift the sorting index array accordingly.
-              !-----------------------------------------------------------------
-                tmpisort = isort_t(MAX_NOBS_PER_GRID,ielm_u,ityp)
-                do ss = MAX_NOBS_PER_GRID, s+1, -1
-                  isort_t(ss,ielm_u,ityp) = isort_t(ss-1,ielm_u,ityp)
-                end do
-                isort_t(s,ielm_u,ityp) = tmpisort
-
-                ip_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = ip
-                iob_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = iob
-                rdiag_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = nrdiag
-                rloc_t(isort_t(s,ielm_u,ityp),ielm_u,ityp) = nrloc
-              !-----------------------------------------------------------------
-              end if
-              exit  ! case matched, exit the loop
-            !-------------------------------------------------------------------
-            ! Otherwise, skip this obs because of its too low priority.
-            !-------------------------------------------------------------------
-            end if
-          end do ! [ s = 1, MAX_NOBS_PER_GRID ]
-        !-----------------------------------------------------------------------
-        end if ! [ MAX_NOBS_PER_GRID <= 0 ]
 
 
   tt1 = MPI_WTIME()
-  tt(6) = tt(6) + tt1 - tt0 
-  ntt(6) = ntt(6) + 1
+  ttomp(9) = ttomp(9) + tt1 - tt0
+  nttomp(9) = nttomp(9) + 1
   tt0 = tt1 
 
 
-      end do ! [ n = 1, nn ]
+        end do ! [ n = 1, nn ]
 
-    end if ! [ obsda2(ip)%nobs > 0 ]
+      !-------------------------------------------------------------------------
+      else if (MAX_NOBS_PER_GRID_CRITERION == 1) then
+      !-------------------------------------------------------------------------
+      ! XXX
+      !-------------------------------------------------------------------------
 
-  end do ! [ ip = 0, MEM_NP-1 ]
-  !
-  ! When obs number limit is enabled,
-  ! prepare (hdxf, dep, rdiag, rloc) output from the previous search result
-  !
-  if (MAX_NOBS_PER_GRID > 0) then
-    do ityp = 1, nobtype
-      do ielm_u = 1, nid_obs
-        do s = 1, nobsl_t_(ielm_u,ityp)
-          nobsl = nobsl + 1
-          ip = ip_t(s,ielm_u,ityp)
-          iob = iob_t(s,ielm_u,ityp)
+        write (6, '(A)') 'XXXXXX Not finished.'
 
-          hdxf(nobsl,:) = obsda2(ip)%ensval(:,iob)
-          dep(nobsl) = obsda2(ip)%val(iob)
-          rdiag(nobsl) = rdiag_t(s,ielm_u,ityp)
-          rloc(nobsl) = rloc_t(s,ielm_u,ityp)
-        end do ! [ s = 1, nobsl_t_(ielm_u,ityp) ]
-      end do ! [ ielm_u = 1, nid_obs ]
-    end do ! [ ityp = 1, nobtype ]
-  end if ! [ MAX_NOBS_PER_GRID > 0 ]
-!  write(6, '(A,3I6,F20.8)') '******', nobsl, nobsl_t_(9,22), nobsl_t_(10,22), maxval(rdiag(1:nobsl))
+      !-------------------------------------------------------------------------
+      else
+      !-------------------------------------------------------------------------
+      ! XXX
+      !-------------------------------------------------------------------------
+
+        nobsl_t_(:) = 0
+
+        nn = 0
+        call obs_local_range(ityp, ri, rj, imin, imax, jmin, jmax)
+        call obs_choose_ext(ityp, imin, imax, jmin, jmax, nn, nobs_use)
 
 
   tt1 = MPI_WTIME()
-  tt(7) = tt(7) + tt1 - tt0
-  ntt(7) = ntt(7) + 1
-  tt0 = tt1
+  ttomp(3) = ttomp(3) + tt1 - tt0
+  nttomp(3) = nttomp(3) + 1
+  tt0 = tt1 
 
+
+        do n = 1, nn  ! loop over observations within the search rectangle
+          iob = nobs_use(n)
+          ielm_u = uid_obs(obs(obsda2%set(iob))%elm(obsda2%idx(iob)))
+
+          call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ndist, nrloc, nrdiag)
+
+
+  tt0 = MPI_WTIME()
+
+
+          if (nrloc == 0.0d0) cycle
+
+          nobsl_t_(ielm_u) = nobsl_t_(ielm_u) + 1
+          iob_tmp(nobsl_t_(ielm_u),ielm_u) = iob
+          rloc_tmp(nobsl_t_(ielm_u),ielm_u) = nrloc
+          rdiag_tmp(nobsl_t_(ielm_u),ielm_u) = nrdiag
+
+
+  tt1 = MPI_WTIME()
+  ttomp(9) = ttomp(9) + tt1 - tt0
+  nttomp(9) = nttomp(9) + 1
+  tt0 = tt1 
+
+
+        end do
+
+        do ielm_u = 1, nid_obs
+          inobsl = nobsl_t_(ielm_u)
+          if (inobsl > MAX_NOBS_PER_GRID(ityp)) then
+            call QUICKSELECT(rdiag_tmp(:,ielm_u), 1, inobsl, MAX_NOBS_PER_GRID(ityp), &
+                             B=rloc_tmp(:,ielm_u), I=iob_tmp(:,ielm_u))
+!!!!!! only valid for MAX_NOBS_PER_GRID_CRITERION = 3. MAX_NOBS_PER_GRID_CRITERION = 2 needs to be considered.
+            inobsl = MAX_NOBS_PER_GRID(ityp)
+
+
+  tt1 = MPI_WTIME()
+  ttomp(10) = ttomp(10) + tt1 - tt0
+  nttomp(10) = nttomp(10) + 1
+  tt0 = tt1 
+
+
+          end if
+          rloc(nobsl+1:nobsl+inobsl) = rloc_tmp(1:inobsl,ielm_u)
+          rdiag(nobsl+1:nobsl+inobsl) = rdiag_tmp(1:inobsl,ielm_u)
+          do s = 1, inobsl
+            nobsl = nobsl + 1
+            iob = iob_tmp(s,ielm_u)
+            hdxf(nobsl,:) = obsda2%ensval(:,iob)
+            dep(nobsl) = obsda2%val(iob)
+          end do
+          if (present(nobsl_t)) nobsl_t(ielm_u,ityp) = inobsl
+
+
+  tt1 = MPI_WTIME()
+  ttomp(11) = ttomp(11) + tt1 - tt0
+  nttomp(11) = nttomp(11) + 1
+  tt0 = tt1 
+
+
+        end do
+
+      !-------------------------------------------------------------------------
+      end if ! [ MAX_NOBS_PER_GRID(ityp) <= 0 ]
+
+
+
+!!!!!!!!      else
+!!!!!!!!      !-------------------------------------------------------------------------
+!!!!!!!!      ! When obs number limit is enabled,
+!!!!!!!!      ! Save only the observations within the number limit in temporary arrays,
+!!!!!!!!      ! and prepare (hdxf, dep, rdiag, rloc) output later.
+!!!!!!!!      !-------------------------------------------------------------------------
+
+!!!!!!        isort_t(:,:) = 0
+!!!!!!        nobsl_t_(:) = 0
+
+!!!!!!        call obs_local_range(ityp, ri, rj, imin, imax, jmin, jmax)
+
+!!!!!!        search_incr_i = obsgrd(ityp)%grdspc_i / DX
+!!!!!!        search_incr_j = obsgrd(ityp)%grdspc_j / DY
+
+!!!!!!        q = 0
+!!!!!!        do
+!!!!!!          call ij_obsgrd_ext(ityp, ri-search_incr_i*q, rj-search_incr_j*q, imin_tmp, jmin_tmp)
+!!!!!!          call ij_obsgrd_ext(ityp, ri+search_incr_i*q, rj+search_incr_j*q, imax_tmp, jmax_tmp)
+
+!!!!!!          if (imin_tmp < imin .or. imax_tmp > imax .or. &
+!!!!!!              jmin_tmp < jmin .or. jmax_tmp > jmax) then
+!!!!!!            XXXXXX
+!!!!!!          end if
+!!!!!!          nn = 0
+!!!!!!          call obs_choose_ext(ityp, imin, imax, jmin, jmax, nn, nobs_use)
+
+!!!!!!!        call QUICKSELECT(MAX_NOBS_PER_GRID(ityp), obsda2%val(1:nn), nn, n)
+
+!!!!!!        ! Sort the first [MAX_NOBS_PER_GRID(ityp)] observations in terms of:
+!!!!!!        !  MAX_NOBS_PER_GRID_CRITERION = 1: smallest ndist
+!!!!!!        !  MAX_NOBS_PER_GRID_CRITERION = 2: largest nrloc
+!!!!!!        !  MAX_NOBS_PER_GRID_CRITERION = 3: smallest nrdiag
+
+!!!!!!        do n = 1, nn  ! loop over observations within the search rectangle
+
+!!!!!!          iob = nobs_use(n)
+!!!!!!          ielm_u = uid_obs(obs(obsda2%set(iob))%elm(obsda2%idx(iob)))
+
+!!!!!!          call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ndist, nrloc, nrdiag)
+!!!!!!          if (nrdiag < 0.0d0) cycle ! observation rejected XXX
+
+!!!!!!          !---------------------------------------------------------------------
+!!!!!!          ! Case 0: If the number limit has been reached and the priority of
+!!!!!!          !         this obs is lower than all of the obs in the current set of
+!!!!!!          !         choice, skip right away.
+!!!!!!          !---------------------------------------------------------------------
+!!!!!!          if (nobsl_t_(ielm_u) >= MAX_NOBS_PER_GRID(ityp)) then
+!!!!!!            condition = .false.
+!!!!!!            if (MAX_NOBS_PER_GRID_CRITERION == 1) then
+!!!!!!              if (ndist >= dist_t(isort_t(MAX_NOBS_PER_GRID(ityp),ielm_u),ielm_u)) condition = .true.
+!!!!!!            else if (MAX_NOBS_PER_GRID_CRITERION == 2) then
+!!!!!!              if (nrloc <= rloc_t(isort_t(MAX_NOBS_PER_GRID(ityp),ielm_u),ielm_u)) condition = .true.
+!!!!!!            else if (MAX_NOBS_PER_GRID_CRITERION == 3) then
+!!!!!!              if (nrdiag >= rdiag_t(isort_t(MAX_NOBS_PER_GRID(ityp),ielm_u),ielm_u)) condition = .true.
+!!!!!!            end if
+!!!!!!            if (condition) then
+!!!!!!              cycle
+!!!!!!            end if
+!!!!!!          end if
+
+!!!!!!          do s = 1, MAX_NOBS_PER_GRID(ityp)
+
+!!!!!!            !-------------------------------------------------------------------
+!!!!!!            ! Case 1: This obs is of the last priority,
+!!!!!!            !         but the number limit has NOT been reached,
+!!!!!!            !         save this obs in the spare space of the temporary arrays.
+!!!!!!            !-------------------------------------------------------------------
+!!!!!!            if (isort_t(s,ielm_u) == 0) then
+!!!!!!              nobsl_t_(ielm_u) = nobsl_t_(ielm_u) + 1
+!!!!!!              isort_t(s,ielm_u) = nobsl_t_(ielm_u)
+
+!!!!!!              iob_t(isort_t(s,ielm_u),ielm_u) = iob  ! iob_t: indices to retrieve ensval(:,:) and val(:) later
+!!!!!!                                                     !        [do not create the potentially very large ensval_t(:,:,:) array to save ensval(:)]
+!!!!!!              rloc_t(isort_t(s,ielm_u),ielm_u) = nrloc
+!!!!!!              rdiag_t(isort_t(s,ielm_u),ielm_u) = nrdiag
+!!!!!!              if (MAX_NOBS_PER_GRID_CRITERION == 1) then
+!!!!!!                dist_t(isort_t(s,ielm_u),ielm_u) = ndist
+!!!!!!              end if
+!!!!!!              exit  ! case matched, exit the loop
+!!!!!!            !-------------------------------------------------------------------
+!!!!!!            else
+!!!!!!            !-------------------------------------------------------------------
+!!!!!!              condition = .false.
+!!!!!!              if (MAX_NOBS_PER_GRID_CRITERION == 1) then
+!!!!!!                if (ndist < dist_t(isort_t(s,ielm_u),ielm_u)) condition = .true.
+!!!!!!              else if (MAX_NOBS_PER_GRID_CRITERION == 2) then
+!!!!!!                if (nrloc > rloc_t(isort_t(s,ielm_u),ielm_u)) condition = .true.
+!!!!!!              else if (MAX_NOBS_PER_GRID_CRITERION == 3) then
+!!!!!!                if (nrdiag < rdiag_t(isort_t(s,ielm_u),ielm_u)) condition = .true.
+!!!!!!              end if
+!!!!!!              if (condition) then
+!!!!!!              !-----------------------------------------------------------------
+!!!!!!                if (nobsl_t_(ielm_u) < MAX_NOBS_PER_GRID(ityp)) then
+!!!!!!                !---------------------------------------------------------------
+!!!!!!                ! Case 2: This obs has the priority higher than some obs in the current set of choice
+!!!!!!                !         and the number limit has NOT been reached,
+!!!!!!                !         save this obs in the spare space of the temporary arrays,
+!!!!!!                !         and shift the sorting index array accordingly.
+!!!!!!                !---------------------------------------------------------------
+!!!!!!                  nobsl_t_(ielm_u) = nobsl_t_(ielm_u) + 1
+!!!!!!                  do ss = nobsl_t_(ielm_u), s+1, -1
+!!!!!!                    isort_t(ss,ielm_u) = isort_t(ss-1,ielm_u)
+!!!!!!                  end do
+!!!!!!                  isort_t(s,ielm_u) = nobsl_t_(ielm_u)
+
+!!!!!!                  iob_t(isort_t(s,ielm_u),ielm_u) = iob
+!!!!!!                  rloc_t(isort_t(s,ielm_u),ielm_u) = nrloc
+!!!!!!                  rdiag_t(isort_t(s,ielm_u),ielm_u) = nrdiag
+!!!!!!                  if (MAX_NOBS_PER_GRID_CRITERION == 1) then
+!!!!!!                    dist_t(isort_t(s,ielm_u),ielm_u) = ndist
+!!!!!!                  end if
+!!!!!!                !---------------------------------------------------------------
+!!!!!!                else
+!!!!!!                !---------------------------------------------------------------
+!!!!!!                ! Case 3: This obs has the priority higher than some obs in the current set of choice
+!!!!!!                !         and the number limit has been reached,
+!!!!!!                !         save this obs by overwriting the temporary arrays at where the obs of the last priority is,
+!!!!!!                !         and shift the sorting index array accordingly.
+!!!!!!                !---------------------------------------------------------------
+!!!!!!                  tmpisort = isort_t(MAX_NOBS_PER_GRID(ityp),ielm_u)
+!!!!!!                  do ss = MAX_NOBS_PER_GRID(ityp), s+1, -1
+!!!!!!                    isort_t(ss,ielm_u) = isort_t(ss-1,ielm_u)
+!!!!!!                  end do
+!!!!!!                  isort_t(s,ielm_u) = tmpisort
+
+!!!!!!                  iob_t(isort_t(s,ielm_u),ielm_u) = iob
+!!!!!!                  rloc_t(isort_t(s,ielm_u),ielm_u) = nrloc
+!!!!!!                  rdiag_t(isort_t(s,ielm_u),ielm_u) = nrdiag
+!!!!!!                  if (MAX_NOBS_PER_GRID_CRITERION == 1) then
+!!!!!!                    dist_t(isort_t(s,ielm_u),ielm_u) = ndist
+!!!!!!                  end if
+!!!!!!                !---------------------------------------------------------------
+!!!!!!                end if
+!!!!!!                exit  ! case matched, exit the loop
+
+!!!!!!              !-----------------------------------------------------------------
+!!!!!!              end if
+!!!!!!            !-------------------------------------------------------------------
+!!!!!!            ! Otherwise, skip this obs because of its too low priority.
+!!!!!!            !-------------------------------------------------------------------
+!!!!!!            end if
+!!!!!!          end do ! [ s = 1, MAX_NOBS_PER_GRID(ityp) ]
+!!!!!!  
+!!!!!!        end do ! [ n = 1, nn ]
+
+!!!!!!        !
+!!!!!!        ! prepare (hdxf, dep, rdiag, rloc) output from the sort result
+!!!!!!        !
+
+!!!!!!        do ielm_u = 1, nid_obs
+!!!!!!          do s = 1, nobsl_t_(ielm_u)
+!!!!!!            nobsl = nobsl + 1
+!!!!!!            iob = iob_t(s,ielm_u)
+
+!!!!!!            hdxf(nobsl,:) = obsda2%ensval(:,iob)
+!!!!!!            dep(nobsl) = obsda2%val(iob)
+!!!!!!            rloc(nobsl) = rloc_t(s,ielm_u)
+!!!!!!            rdiag(nobsl) = rdiag_t(s,ielm_u)
+!!!!!!          end do ! [ s = 1, nobsl_t_(ielm_u) ]
+!!!!!!        end do ! [ ielm_u = 1, nid_obs ]
+
+!!!!!!        if (present(nobsl_t)) nobsl_t(:,ityp) = nobsl_t_(:)
+
+!!!!!!        !-----------------------------------------------------------------------
+!!!!!!      end if ! [ MAX_NOBS_PER_GRID(ityp) <= 0 ]
+
+    end if ! [ obsgrd(ityp)%tot_ext > 0 ]
+  end do ! [ ityp = 1, nobtype ]
+
+  !-----------------------------------------------------------------------------
+  ! Finalize
+  !-----------------------------------------------------------------------------
 
   if (nobsl > nobstotal) then
     write (6,'(A,I5,A,I5)') 'FATAL ERROR, NOBSL=', nobsl, ' > NOBSTOTAL=', nobstotal
-    write (6,*) 'RI,RJ,LEV,NOBSL,NOBSTOTAL=', ri, rj, rlev, nobsl, nobstotal
+    write (6,*) 'RI,RJ,LEV,NOBSL,NOBSTOTAL=', ri, rj, rlev, rz, nobsl, nobstotal
     stop 99
   end if
 
-  if (allocated(nobs_use)) deallocate (nobs_use)
+  deallocate (nobs_use)
 
-  if (MAX_NOBS_PER_GRID > 0) then
-    deallocate (isort_t)
-    deallocate (ip_t)
-    deallocate (iob_t)
-    deallocate (rdiag_t)
-    deallocate (rloc_t)
+  if (maxval(MAX_NOBS_PER_GRID(:)) > 0) then
+
+    deallocate (iob_tmp)
+    deallocate (rloc_tmp)
+    deallocate (rdiag_tmp)
+
+!    deallocate (isort_t)
+!    deallocate (iob_t)
+!    deallocate (rloc_t)
+!    deallocate (rdiag_t)
+!    if (MAX_NOBS_PER_GRID_CRITERION == 1) then
+!      deallocate (dist_t)
+!    end if
   end if
-
-  if (present(nobsl_t)) nobsl_t = nobsl_t_
 
 
   tt1 = MPI_WTIME()
-  tt(8) = tt(8) + tt1 - tt0
-  ntt(8) = ntt(8) + 1
+  ttomp(12) = ttomp(12) + tt1 - tt0
+  nttomp(12) = nttomp(12) + 1
+  tt0 = tt1 
+
+
+  return
+end subroutine obs_local
+
+!-------------------------------------------------------------------------------
+! Calculate the range of the rectangle that covers the (horizontal) localization
+! cut-off length in the extended subdomain, given the observation type
+!-------------------------------------------------------------------------------
+subroutine obs_local_range(obtype, ri, rj, imin, imax, jmin, jmax)
+  use scale_grid, only: &
+    DX, DY
+  implicit none
+  integer, intent(in) :: obtype
+  real(r_size), intent(in) :: ri, rj
+  integer, intent(out) :: imin, imax, jmin, jmax
+
+  real(r_size) :: hori_loc
+  real(r_size) :: dist_zero_i, dist_zero_j
+
+  hori_loc = HORI_LOCAL(obtype)
+  if (obtype == 22) then  !PHARAD
+    hori_loc = max(hori_loc, HORI_LOCAL_RADAR_OBSNOREF)
+  end if
+
+  dist_zero_i = hori_loc * dist_zero_fac / DX
+  dist_zero_j = hori_loc * dist_zero_fac / DY
+  call ij_obsgrd_ext(obtype, ri - dist_zero_i, rj - dist_zero_j, imin, jmin)
+  call ij_obsgrd_ext(obtype, ri + dist_zero_i, rj + dist_zero_j, imax, jmax)
+!  imin = max(1, imin)
+!  imax = min(obsgrd(obtype)%ngrdext_i, imax)
+!  jmin = max(1, jmin)
+!  jmax = min(obsgrd(obtype)%ngrdext_j, jmax)
+  if (imin < 1 .or. imax > obsgrd(obtype)%ngrdext_i .or. &
+      jmin < 1 .or. jmax > obsgrd(obtype)%ngrdext_j) then
+    write (6, '(A)') '[Error] The extended subdomain is not wide enough.'
+    stop 99
+  end if
+
+  return
+end subroutine obs_local_range
+
+!-------------------------------------------------------------------------------
+! Subroutine for main calculation of obs_local
+!-------------------------------------------------------------------------------
+subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ndist, nrloc, nrdiag)
+  use scale_grid, only: &
+    DX, DY
+  implicit none
+  real(r_size), intent(in) :: ri, rj, rlev, rz ! coordinate of the targeted model grid
+  integer, intent(in) :: nvar         ! index of targeted model variable
+  integer, intent(in) :: iob          ! index of observation in obsda2
+  real(r_size), intent(out) :: ndist  ! normalized 3D distance SQUARE
+  real(r_size), intent(out) :: nrloc  ! localization weight
+  real(r_size), intent(out) :: nrdiag ! weighted observation error variance
+
+  integer :: obset, obidx, obtype, obelm
+  real(r_size) :: rdx, rdy
+  real(r_size) :: nd_h, nd_v ! normalized horizontal/vertical distances
+
+
+  real(r_size) :: tt0, tt1
+!  tt = 0.0d0
+!  ntt = 0
+
+  tt0 = MPI_WTIME()
+
+
+  nrloc = 0.0d0
+  nrdiag = -1.0d0
+  ndist = -1.0d0
+
+  obset = obsda2%set(iob)
+  obidx = obsda2%idx(iob)
+  obelm = obs(obset)%elm(obidx)
+  obtype = obs(obset)%typ(obidx)
+  !
+  ! Calculate variable localization
+  !
+  if (nvar > 0) then  ! use variable localization only when nvar > 0
+    if (uid_obs_varlocal(obelm) <= 0) then
+      write (6,'(A)') '[Error] unsupport observation type in variable localization.'
+      stop 1
+    end if
+    nrloc = var_local(nvar,uid_obs_varlocal(obelm))
+
+
+  tt1 = MPI_WTIME()
+  ttomp(4) = ttomp(4) + tt1 - tt0
+  nttomp(4) = nttomp(4) + 1
+  tt0 = tt1 
+
+
+    !--- reject obs by variable localization
+    if (nrloc < tiny(var_local)) then
+      nrloc = 0.0d0
+      return
+    end if
+  end if
+  !
+  ! Calculate normalized vertical distances
+  !
+  if (VERT_LOCAL(obtype) == 0.0d0) then
+    nd_v = 0.0d0                                                            ! no vertical localization
+  else if (obelm == id_ps_obs) then
+    nd_v = ABS(LOG(obs(obset)%dat(obidx)) - LOG(rlev)) / VERT_LOCAL(obtype) ! for ps, use observed ps value for the base of vertical localization
+  else if (obelm == id_rain_obs) then
+    nd_v = ABS(LOG(VERT_LOCAL_RAIN_BASE) - LOG(rlev)) / VERT_LOCAL(obtype)  ! for rain, use VERT_LOCAL_RAIN_BASE for the base of vertical localization
+  else if (obtype == 22) then ! obtypelist(obtype) == 'PHARAD'
+    nd_v = ABS(obs(obset)%lev(obidx) - rz) / VERT_LOCAL(obtype)             ! for PHARAD, use z-coordinate for vertical localization
+#ifdef H08
+  else if (obtype == 23) then ! obtypelist(obtype) == 'H08IRB'              ! H08
+    nd_v = ABS(LOG(obsda2%lev(iob)) - LOG(rlev)) / VERT_LOCAL(obtype)       ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
+#endif
+  else
+    nd_v = ABS(LOG(obs(obset)%lev(obidx)) - LOG(rlev)) / VERT_LOCAL(obtype)
+  end if
+
+
+  tt1 = MPI_WTIME()
+  ttomp(5) = ttomp(5) + tt1 - tt0
+  nttomp(5) = nttomp(5) + 1
+  tt0 = tt1 
+
+
+
+  !--- reject obs by normalized vertical distance
+  !    (do this first because there is large possibility to reject obs by the vertical distrance)
+  if (nd_v > dist_zero_fac) then
+    nrloc = 0.0d0
+    return
+  end if
+  !
+  ! Calculate normalized horizontal distances
+  !
+  rdx = (ri - obsda2%ri(iob)) * DX
+  rdy = (rj - obsda2%rj(iob)) * DY
+  nd_h = sqrt(rdx*rdx + rdy*rdy)
+
+  if (obtype == 22 .and. & ! obtypelist(obtype) == 'PHARAD'
+      obelm == id_radar_ref_obs .and. obs(obset)%dat(obidx) < RADAR_REF_THRES_DBZ+tiny(obs(obset)%dat)) then
+    nd_h = nd_h / HORI_LOCAL_RADAR_OBSNOREF  ! for ref < RADAR_REF_THRES_DBZ, use HORI_LOCAL_RADAR_OBSNOREF for horizontal localization
+  else
+    nd_h = nd_h / HORI_LOCAL(obtype)
+  end if
+
+
+  tt1 = MPI_WTIME()
+  ttomp(6) = ttomp(6) + tt1 - tt0
+  nttomp(6) = nttomp(6) + 1
+  tt0 = tt1 
+
+
+  !--- reject obs by normalized horizontal distance
+  if (nd_h > dist_zero_fac) then
+    nrloc = 0.0d0
+    return
+  end if
+  !
+  ! Calculate (normalized 3D distances)^2
+  !
+  ndist = nd_h * nd_h + nd_v * nd_v
+
+
+  tt1 = MPI_WTIME()
+  ttomp(7) = ttomp(7) + tt1 - tt0
+  nttomp(7) = nttomp(7) + 1
   tt0 = tt1
 
 
-!  write (6,'(3F10.3,8F10.6)') ri, rj, rlev/100., tt(1:8)
-!  write (6,'(30x,8I10)') ntt(1:8)
+  !--- reject obs by normalized 3D distance
+  if (ndist > dist_zero_fac_square) then
+    nrloc = 0.0d0
+    return
+  end if
+  !
+  ! Calculate observational localization
+  !
+  nrloc = nrloc * EXP(-0.5d0 * ndist)
+  !
+  ! Calculate (observation variance / localization)
+  !
+  nrdiag = obs(obset)%err(obidx) * obs(obset)%err(obidx) / nrloc
 
-  RETURN
-END SUBROUTINE obs_local
-!-----------------------------------------------------------------------
+
+  tt1 = MPI_WTIME()
+  ttomp(8) = ttomp(8) + tt1 - tt0
+  nttomp(8) = nttomp(8) + 1
+  tt0 = tt1 
+
+
+  return
+end subroutine obs_local_cal
+
+!-------------------------------------------------------------------------------
 ! Relaxation parameter based on grid locations (not for covariance inflation purpose)
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine relax_beta(ri, rj, rlev, nvar, beta)
   use scale_grid, only: &
     DX, DY
@@ -1483,9 +1734,10 @@ subroutine relax_beta(ri, rj, rlev, nvar, beta)
 
   return
 end subroutine relax_beta
-!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 ! Relaxation via LETKF weight - RTPP method
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine weight_RTPP(w, infl, wrlx)
   implicit none
   real(r_size), intent(in) :: w(MEMBER,MEMBER)
@@ -1500,9 +1752,10 @@ subroutine weight_RTPP(w, infl, wrlx)
 
   return
 end subroutine weight_RTPP
-!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 ! Relaxation via LETKF weight - RTPS method
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine weight_RTPS(w, pa, xb, infl, wrlx, infl_out)
   implicit none
   real(r_size), intent(in) :: w(MEMBER,MEMBER)
@@ -1535,35 +1788,5 @@ subroutine weight_RTPS(w, pa, xb, infl, wrlx, infl_out)
 
   return
 end subroutine weight_RTPS
-
-!SUBROUTINE obs_local_sub(imin,imax,jmin,jmax,nn,nobs_use)
-!  INTEGER,INTENT(IN) :: imin,imax,jmin,jmax
-!  INTEGER,INTENT(INOUT) :: nn, nobs_use(nobs)
-!  INTEGER :: j,n,ib,ie,ip
-
-!  DO j=jmin,jmax
-!    IF(imin > 1) THEN
-!      ib = nobsgrd(imin-1,j)+1
-!    ELSE
-!      IF(j > 1) THEN
-!        ib = nobsgrd(nlon,j-1)+1
-!      ELSE
-!        ib = 1
-!      END IF
-!    END IF
-!    ie = nobsgrd(imax,j)
-!    n = ie - ib + 1
-!    IF(n == 0) CYCLE
-!    DO ip=ib,ie
-!      IF(nn > nobs) THEN
-!        WRITE(6,*) 'FATALERROR, NN > NOBS', NN, NOBS
-!      END IF
-!      nobs_use(nn) = ip
-!      nn = nn + 1
-!    END DO
-!  END DO
-
-!  RETURN
-!END SUBROUTINE obs_local_sub
 
 END MODULE letkf_tools

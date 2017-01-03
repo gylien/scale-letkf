@@ -13,11 +13,10 @@ if (($# < 2)); then
 
 [init_all_node.sh] 
 
-Usage: $0 MYRANK SCPCALL [FCST_CYCLE] [NITMAX]
+Usage: $0 MYRANK SCPCALL [NITMAX]
 
   MYRANK   My rank number (not used)
   SCPCALL  Called from which script? (fcst/cycle)
-  FCST_CYCLE
 
 EOF
   exit 1
@@ -25,7 +24,6 @@ fi
 
 MYRANK="$1"; shift
 SCPCALL="$1"; shift
-FCST_CYCLE="${1:-CYCLE}"; shift
 NITMAX="${1:-1}"
 
 #-------------------------------------------------------------------------------
@@ -122,26 +120,21 @@ elif [ "$SCPCALL" = 'fcst' ]; then
   lcycles=$((LCYCLE * CYCLE_SKIP))
   time=$STIME
   while ((time <= ETIME)); do
-    for c in $(seq $FCST_CYCLE); do
-      time2=$(datetime $time $((lcycles * (c-1))) s)
-      if ((time2 <= ETIME)); then
-        mkdir -p $TMPOUT/${time2}/topo
-        if ((LANDUSE_UPDATE == 1)); then
-          mkdir -p $TMPOUT/${time2}/landuse
-        fi
-        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_pp
-        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_init
-        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale
-        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_pp/NOUT-Fprofd
-        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_init/NOUT-Fprofd
-        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale/NOUT-Fprofd
-        for it in $(seq $NITMAX); do
-          mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_init/NOUT-${it}-Fprofd
-          mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale/NOUT-${it}-Fprofd
-        done
-      fi
+    if ((LANDUSE_UPDATE == 1)); then
+      mkdir -p $TMPOUT/${time}/landuse
+    fi
+    mkdir -p $TMPOUT/${time}/log/${SCPCALL}_scale_pp
+    mkdir -p $TMPOUT/${time}/log/${SCPCALL}_scale_init
+    mkdir -p $TMPOUT/${time}/log/${SCPCALL}_scale
+    mkdir -p $TMPOUT/${time}/log/${SCPCALL}_scale_pp/NOUT-Fprofd
+    mkdir -p $TMPOUT/${time}/log/${SCPCALL}_scale_init/NOUT-Fprofd
+    mkdir -p $TMPOUT/${time}/log/${SCPCALL}_scale/NOUT-Fprofd
+    for it in $(seq $NITMAX); do
+      mkdir -p $TMPOUT/${time}/log/${SCPCALL}_scale_init/NOUT-${it}-Fprofd
+      mkdir -p $TMPOUT/${time}/log/${SCPCALL}_scale/NOUT-${it}-Fprofd
     done
-    time=$(datetime $time $((lcycles * FCST_CYCLE)) s)
+
+    time=$(datetime $time $lcycles s)
   done
 fi
 

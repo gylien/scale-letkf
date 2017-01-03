@@ -1,8 +1,8 @@
 include ../configure.user
 
-OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_letkf.o \
+OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_sort.o common_letkf.o \
 	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
-          common_nml.o 
+          common_nml.o
           #common_precip.o
 
 ifeq ($(H08),T)
@@ -28,6 +28,8 @@ netlib.o:	../../common/netlib.f
 	$(SFC) $(FOPTS) -c $<
 netlibblas.o:	../../common/netlibblas.f
 	$(SFC) $(FOPTS) -c $<
+common_sort.o:	../../common/common_sort.f90 common.o
+	$(SFC) $(FOPTS) -c $<
 common_letkf.o:	../../common/common_letkf.f90 common.o common_mtx.o
 	$(SFC) $(FOPTS) -c $<
 common_ncio.o:	common_ncio.f90 common.o
@@ -37,10 +39,10 @@ common_scale.o:	common_scale.f90 common.o common_nml.o common_mpi.o common_ncio.
 ifeq ($(H08),T)
 scale_H08_fwd.o:        scale_H08_fwd.F90 common.o 
 	$(FC) $(FOPTS) -c $< $(RT_INCLUDE) $(RT_LDFLAGS) $(SCALE_INC)
-common_obs_scale.o:	common_obs_scale.f90 common.o common_scale.o scale_H08_fwd.o
+common_obs_scale.o:	common_obs_scale.f90 common.o common_nml.o common_scale.o scale_H08_fwd.o
 	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC)
 else
-common_obs_scale.o:	common_obs_scale.f90 common.o common_scale.o
+common_obs_scale.o:	common_obs_scale.f90 common.o common_nml.o common_scale.o
 	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC)
 endif
 common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o \

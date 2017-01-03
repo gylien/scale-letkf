@@ -26,12 +26,6 @@
 !--ANAL_OUT_MEAN_BASENAME--
 !--ANAL_OUT_SPRD_BASENAME--
 !--LETKF_TOPO_IN_BASENAME--
- SIGMA_OBS = 4.0D3,
-! SIGMA_OBSV = 0.3D0,
-! SIGMA_OBST = 3.0D0,
- SIGMA_OBS_RADAR = 4.0D3,
- SIGMA_OBS_RADAR_OBSNOREF = 2.0D3,
- SIGMA_OBSZ_RADAR = 2.0D3,
  INFL_MUL = 1.00D0,
 ! INFL_MUL_MIN = 0.0D0,
 !--INFL_MUL_ADAPTIVE--
@@ -41,6 +35,7 @@
  RELAX_ALPHA_SPREAD = 0.95D0,
 !--RELAX_SPREAD_OUT--
 !--RELAX_SPREAD_OUT_BASENAME--
+ RELAX_TO_INFLATED_PRIOR = .true.,
  GROSS_ERROR = 5.0D0,
  GROSS_ERROR_RADAR_REF = 10.0D0,
  GROSS_ERROR_RADAR_VR = 10.0D0,
@@ -50,7 +45,6 @@
  BOUNDARY_BUFFER_WIDTH = 20.0D3,
  POSITIVE_DEFINITE_Q = .false.,
  POSITIVE_DEFINITE_QHYD = .true.,
-! MAX_NOBS_PER_GRID = 100,
 !--NOBS_OUT--
 !--NOBS_OUT_BASENAME--
 /
@@ -62,11 +56,16 @@
 !--MEM_NP--
 /
 
-&PARAM_LETKF_OBSERR
- USE_OBSERR_RADAR_REF = .true.
- OBSERR_RADAR_REF = 5.0D0,
- USE_OBSERR_RADAR_VR = .true.
- OBSERR_RADAR_VR = 3.0D0,
+&PARAM_LETKF_OBS
+ HORI_LOCAL = 400.0D3,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
+                  -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
+                  -1., 4.0D3,   -1.,   -1.,
+ VERT_LOCAL =   0.3D0,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
+                  -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
+                  -1., 2.0D3,   -1.,   -1.,
+! TIME_LOCAL = 3.0D0,
+ HORI_LOCAL_RADAR_OBSNOREF = 2.0D3,
+! MAX_NOBS_PER_GRID = 100,
 /
 
 &PARAM_LETKF_MONITOR
@@ -76,12 +75,19 @@
 /
 
 &PARAM_LETKF_RADAR
+ USE_OBSERR_RADAR_REF = .true.
+ USE_OBSERR_RADAR_VR = .true.
  RADAR_REF_THRES_DBZ = 10.0D0,
  MIN_RADAR_REF_MEMBER = 20,
  MIN_RADAR_REF_MEMBER_OBSREF = 1,
  MIN_RADAR_REF_DBZ = 10.0D0,
  LOW_REF_SHIFT = -5.0D0,
  RADAR_ZMAX = 11.0D3,
+/
+
+&PARAM_OBS_ERROR
+ OBSERR_RADAR_REF = 5.0D0,
+ OBSERR_RADAR_VR = 3.0D0,
 /
 
 !*** Attach SCALE configuration below ***

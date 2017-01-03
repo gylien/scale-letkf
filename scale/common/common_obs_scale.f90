@@ -88,8 +88,7 @@ MODULE common_obs_scale
   CHARACTER(3),PARAMETER :: obelmlist_varlocal(nid_obs_varlocal)= &
      (/'WND', '  T', 'MOI', ' PS', 'PRC', 'TCV', 'REF', ' Vr', 'H08'/)
 
-!  INTEGER,PARAMETER :: nobtype = 22
-  INTEGER,PARAMETER :: nobtype = 24 ! H08
+  ! Parameter 'nobtype' is set in common_nml.f90
   CHARACTER(6),PARAMETER :: obtypelist(nobtype)= &
      (/'ADPUPA', 'AIRCAR', 'AIRCFT', 'SATWND', 'PROFLR', &
        'VADWND', 'SATEMP', 'ADPSFC', 'SFCSHP', 'SFCBOG', &
@@ -115,8 +114,10 @@ MODULE common_obs_scale
   !!!!!!
   TYPE obs_da_value
     INTEGER :: nobs = 0
+    INTEGER :: nobs_in_key = 0
     INTEGER,ALLOCATABLE :: set(:)
     INTEGER,ALLOCATABLE :: idx(:)
+    INTEGER,ALLOCATABLE :: key(:)
     REAL(r_size),ALLOCATABLE :: val(:)
     !
     ! obsda%lev array is used only for Himawari-8 assimilation.
@@ -1326,7 +1327,7 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
-subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
+subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
   use scale_process, only: &
       PRC_myrank
   use scale_grid_index, only: &
@@ -1352,19 +1353,18 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   REAL(r_size),INTENT(OUT) :: bias(nid_obs)
   REAL(r_size),INTENT(OUT) :: rmse(nid_obs)
   LOGICAL,INTENT(OUT) :: monit_type(nid_obs)
+  logical,intent(in) :: use_key
 
   REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
-  integer :: n,i,j,k,proc,iv3d,iv2d
+  integer :: nnobs
+  integer :: n,nn,i,j,k,proc,iv3d,iv2d
+  integer :: iset,iidx
   real(r_size) :: ri,rj,rk
 
-  real(r_size) :: oelm(obsda%nobs)
-  real(r_size) :: ohx(obsda%nobs)
-  integer :: oqc(obsda%nobs)
-
-!  real(r_size),allocatable :: oelm(:)
-!  real(r_size),allocatable :: ohx(:)
-!  integer,allocatable :: oqc(:)
+  real(r_size),allocatable :: oelm(:)
+  real(r_size),allocatable :: ohx(:)
+  integer,allocatable :: oqc(:)
 
 !  REAL(r_size) :: timer
 !  INTEGER :: ierr
@@ -1471,11 +1471,15 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
     call COMM_wait ( v2dgh(:,:,iv2d), iv2d )
   end do
 
+  if (use_key) then
+    nnobs = obsda%nobs_in_key
+  else
+    nnobs = obsda%nobs
+  end if
 
-
-!    allocate (oelm(obsda%nobs))
-!    allocate (ohx(obsda%nobs))
-!    allocate (oqc(obsda%nobs))
+  allocate (oelm(nnobs))
+  allocate (ohx(nnobs))
+  allocate (oqc(nnobs))
 
   oqc = -1
 
@@ -1483,12 +1487,24 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 !  obs_idx_TCY = -1
 !  obs_idx_TCP = -1
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ri,rj,rk)
-  do n = 1, obsda%nobs
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ri,rj,rk)
+  do n = 1, nnobs
 
-    if (obsda%qc(n) /= iqc_good) write(6, *) '############', obsda%qc(n)
+    if (use_key) then
+      nn = obsda%key(n)
+    else
+      nn = n
+    end if
 
-    oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
+!print *, n, nn
+
+
+    iset = obsda%set(nn)
+    iidx = obsda%idx(nn)
+
+    if (obsda%qc(nn) /= iqc_good) write(6, *) '############', obsda%qc(nn)
+
+    oelm(n) = obs(iset)%elm(iidx)
 
 !    select case (int(oelm(n)))
 !    case (id_tclon_obs)
@@ -1506,49 +1522,49 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
     if(int(oelm(n)) == id_H08IR_obs)cycle
 #endif
 
-    call rij_g2l_auto(proc,obsda%ri(n),obsda%rj(n),ri,rj)
+    call rij_g2l_auto(proc,obsda%ri(nn),obsda%rj(nn),ri,rj)
     if (PRC_myrank /= proc) then
-      write(6, *) '############ Error!', PRC_myrank,proc,obsda%ri(n),obsda%rj(n),ri,rj
+      write(6, *) '############ Error!', PRC_myrank,proc,obsda%ri(nn),obsda%rj(nn),ri,rj
       cycle
 !      stop
     end if
 
     if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
-        abs(obs(obsda%set(n))%dif(obsda%idx(n))) <= DEPARTURE_STAT_T_RANGE) then
+        abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE) then
 
       oqc(n) = iqc_otype
 
-      select case (obs(obsda%set(n))%elm(obsda%idx(n)))
+      select case (obs(iset)%elm(iidx))
       case(id_u_obs,id_v_obs,id_t_obs,id_tv_obs,id_q_obs,id_ps_obs) !,id_rh_obs)
-        call phys2ijk(v3dgh(:,:,:,iv3dd_p),obs(obsda%set(n))%elm(obsda%idx(n)), &
-                      ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
+        call phys2ijk(v3dgh(:,:,:,iv3dd_p),obs(iset)%elm(iidx), &
+                      ri,rj,obs(iset)%lev(iidx),rk,oqc(n))
         if (oqc(n) == iqc_good) then
-          call Trans_XtoY(obs(obsda%set(n))%elm(obsda%idx(n)),ri,rj,rk, &
-                          obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)), &
+          call Trans_XtoY(obs(iset)%elm(iidx),ri,rj,rk, &
+                          obs(iset)%lon(iidx),obs(iset)%lat(iidx), &
                           v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
         end if
 
       case(id_radar_ref_obs,id_radar_vr_obs,id_radar_prh_obs)
         if (DEPARTURE_STAT_RADAR) then
-          call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ri,rj,obs(obsda%set(n))%lev(obsda%idx(n)),rk,oqc(n))
+          call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ri,rj,obs(iset)%lev(iidx),rk,oqc(n))
           if (oqc(n) == iqc_good) then
-            call Trans_XtoY_radar(obs(obsda%set(n))%elm(obsda%idx(n)),obs(obsda%set(n))%meta(1), &
-                                  obs(obsda%set(n))%meta(2),obs(obsda%set(n))%meta(3),ri,rj,rk, &
-                                  obs(obsda%set(n))%lon(obsda%idx(n)),obs(obsda%set(n))%lat(obsda%idx(n)), &
-                                  obs(obsda%set(n))%lev(obsda%idx(n)),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
+            call Trans_XtoY_radar(obs(iset)%elm(iidx),obs(iset)%meta(1), &
+                                  obs(iset)%meta(2),obs(iset)%meta(3),ri,rj,rk, &
+                                  obs(iset)%lon(iidx),obs(iset)%lat(iidx), &
+                                  obs(iset)%lev(iidx),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
             if (oqc(n) == iqc_ref_low) oqc(n) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
           end if
         end if
       end select
 
       if (oqc(n) == iqc_good) then
-        ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n)
+        ohx(n) = obs(iset)%dat(iidx) - ohx(n)
       end if
-!write (6, '(2I6,2F8.2,4F12.4,I3)') obs(obsda%set(n))%elm(obsda%idx(n)), obs(obsda%set(n))%typ(obsda%idx(n)), obs(obsda%set(n))%lon(obsda%idx(n)), obs(obsda%set(n))%lat(obsda%idx(n)), obs(obsda%set(n))%lev(obsda%idx(n)), obs(obsda%set(n))%dat(obsda%idx(n)), obs(obsda%set(n))%err(obsda%idx(n)), ohx(n), oqc(n)
+!write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iset)%elm(iidx), obs(iset)%typ(iidx), obs(iset)%lon(iidx), obs(iset)%lat(iidx), obs(iset)%lev(iidx), obs(iset)%dat(iidx), obs(iset)%err(iidx), ohx(n), oqc(n)
 
     end if
 
-  end do ! [ n = 1, obsda%nobs ]
+  end do ! [ n = 1, nnobs ]
 !$OMP END PARALLEL DO
 
 
@@ -1560,19 +1576,27 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 
   if (DEPARTURE_STAT_H08) then !-- [DEPARTURE_STAT_H08]
 
-    ALLOCATE(tmp_ri_H08(obsda%nobs))
-    ALLOCATE(tmp_rj_H08(obsda%nobs))
-    ALLOCATE(tmp_lon_H08(obsda%nobs))
-    ALLOCATE(tmp_lat_H08(obsda%nobs))
-    ALLOCATE(n2prof(obsda%nobs))
+    ALLOCATE(tmp_ri_H08(nnobs))
+    ALLOCATE(tmp_rj_H08(nnobs))
+    ALLOCATE(tmp_lon_H08(nnobs))
+    ALLOCATE(tmp_lat_H08(nnobs))
+    ALLOCATE(n2prof(nnobs))
 
     n2prof = 0
     nprof_H08 = 0
-    do n = 1, obsda%nobs
-      oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
+    do n = 1, nnobs
+      if (use_key) then
+        nn = obsda%key(n)
+      else
+        nn = n
+      end if
+      iset = obsda%set(nn)
+      iidx = obsda%idx(nn)
+
+      oelm(n) = obs(iset)%elm(iidx)
       if(oelm(n) /= id_H08IR_obs)cycle
 
-      call rij_g2l_auto(proc,obsda%ri(n),obsda%rj(n),ri,rj)
+      call rij_g2l_auto(proc,obsda%ri(nn),obsda%rj(nn),ri,rj)
       if (PRC_myrank /= proc) then
         write(6, *) '############ Error from H08 monitor!', PRC_myrank,proc
         cycle
@@ -1586,19 +1610,19 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
           nprof_H08 = nprof_H08 + 1
           tmp_ri_H08(nprof_H08) = ri
           tmp_rj_H08(nprof_H08) = rj
-          tmp_lon_H08(nprof_H08) = obs(obsda%set(n))%lon(obsda%idx(n))
-          tmp_lat_H08(nprof_H08) = obs(obsda%set(n))%lat(obsda%idx(n))
+          tmp_lon_H08(nprof_H08) = obs(iset)%lon(iidx)
+          tmp_lat_H08(nprof_H08) = obs(iset)%lat(iidx)
           n2prof(n) = nprof_H08
         endif
       else ! nprof_H08 <= 1
         nprof_H08 = nprof_H08 + 1
         tmp_ri_H08(nprof_H08) = ri
         tmp_rj_H08(nprof_H08) = rj
-        tmp_lon_H08(nprof_H08) = obs(obsda%set(n))%lon(obsda%idx(n))
-        tmp_lat_H08(nprof_H08) = obs(obsda%set(n))%lat(obsda%idx(n))
+        tmp_lon_H08(nprof_H08) = obs(iset)%lon(iidx)
+        tmp_lat_H08(nprof_H08) = obs(iset)%lat(iidx)
         n2prof(n) = nprof_H08
       endif
-    end do ! [ n = 1, obsda%nobs ]
+    end do ! [ n = 1, nnobs ]
 
     IF(nprof_H08 >=1)THEN ! [nprof_H08 >=1]
       ALLOCATE(ri_H08(nprof_H08))
@@ -1631,15 +1655,23 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 
       write (6, '(A)')"MEAN-HIMAWARI-8-STATISTICS"
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ns)
-      do n = 1, obsda%nobs
-        oelm(n) = obs(obsda%set(n))%elm(obsda%idx(n))
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ns)
+      do n = 1, nnobs
+        if (use_key) then
+          nn = obsda%key(n)
+        else
+          nn = n
+        end if
+        iset = obsda%set(nn)
+        iidx = obsda%idx(nn)
+
+        oelm(n) = obs(iset)%elm(iidx)
         if(oelm(n) /= id_H08IR_obs)cycle
   
-        ns = (n2prof(n) - 1) * nch + nint(obsda%lev(n) - 6.0) 
+        ns = (n2prof(n) - 1) * nch + nint(obsda%lev(nn) - 6.0) 
 
         if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. & 
-          abs(obs(obsda%set(n))%dif(obsda%idx(n))) <= DEPARTURE_STAT_T_RANGE) then
+          abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE) then
 !          oqc(n) = iqc_otype
 
           oqc(n) = qc_H08(ns)
@@ -1647,28 +1679,28 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 !          if(plev_obs_H08(ns) < H08_LIMIT_LEV) oqc(n) = iqc_obs_bad
 
           CA(n) =  (abs(yobs_H08(ns) - yobs_H08_clr(ns)) & ! CM
-                   +  abs(obs(obsda%set(n))%dat(obsda%idx(n)) - yobs_H08_clr(ns)) & ! CO
+                   +  abs(obs(iset)%dat(iidx) - yobs_H08_clr(ns)) & ! CO
                    &) * 0.5d0 
                    
 
           if(oqc(n) == iqc_good) then
-            ohx(n) = obs(obsda%set(n))%dat(obsda%idx(n)) - ohx(n) 
+            ohx(n) = obs(iset)%dat(iidx) - ohx(n) 
             write (6, '(A,2I6,2F8.2,5F11.4,I6,F10.4)')"H08-O-A-B",&
-                  obs(obsda%set(n))%elm(obsda%idx(n)), &
-                  nint(obsda%lev(n)), & ! obsda%lev includes the band num.
-                  obs(obsda%set(n))%lon(obsda%idx(n)), &
-                  obs(obsda%set(n))%lat(obsda%idx(n)), &
+                  obs(iset)%elm(iidx), &
+                  nint(obsda%lev(nn)), & ! obsda%lev includes the band num.
+                  obs(iset)%lon(iidx), &
+                  obs(iset)%lat(iidx), &
                   ohx(n), &! O-A
-                  obsda%val(n), &! O-B
+                  obsda%val(nn), &! O-B
                   plev_obs_H08(ns), &
-                  obs(obsda%set(n))%dat(obsda%idx(n)), &
-                  obs(obsda%set(n))%err(obsda%idx(n)), &
+                  obs(iset)%dat(iidx), &
+                  obs(iset)%err(iidx), &
                   oqc(n),&
                   CA(n) 
           endif
 
         endif ! [DEPARTURE_STAT_T_RANGE]
-      end do ! [ n = 1, obsda%nobs ]
+      end do ! [ n = 1, nnobs ]
 !$OMP END PARALLEL DO
 
       DEALLOCATE(yobs_H08, yobs_H08_clr, plev_obs_H08, qc_H08, CA)
@@ -1734,7 +1766,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
 !  endif ! [DEPARTURE_STAT_T_RANGE]
 
 
-  call monit_dep(obsda%nobs,oelm,ohx,oqc,nobs,bias,rmse)
+  call monit_dep(nnobs,oelm,ohx,oqc,nobs,bias,rmse)
 
   monit_type = .false.
   monit_type(uid_obs(id_u_obs)) = .true.
@@ -1754,9 +1786,9 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type)
   end if
 
 
-!    deallocate (oelm)
-!    deallocate (ohx)
-!    deallocate (oqc)
+  deallocate (oelm)
+  deallocate (ohx)
+  deallocate (oqc)
 
 
 !CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1925,18 +1957,21 @@ SUBROUTINE obs_da_value_allocate(obs,member)
 
   call obs_da_value_deallocate(obs)
 
-  ALLOCATE( obs%set    (obs%nobs) )
-  ALLOCATE( obs%idx    (obs%nobs) )
-  ALLOCATE( obs%val    (obs%nobs) )
+  ALLOCATE( obs%set (obs%nobs) )
+  ALLOCATE( obs%idx (obs%nobs) )
+  ALLOCATE( obs%key (obs%nobs) )
+  ALLOCATE( obs%val (obs%nobs) )
 #ifdef H08
-  ALLOCATE( obs%lev    (obs%nobs) ) ! H08
-  ALLOCATE( obs%val2    (obs%nobs) ) ! H08
+  ALLOCATE( obs%lev (obs%nobs) ) ! H08
+  ALLOCATE( obs%val2(obs%nobs) ) ! H08
 #endif
-  ALLOCATE( obs%qc     (obs%nobs) )
-  ALLOCATE( obs%ri     (obs%nobs) )
-  ALLOCATE( obs%rj     (obs%nobs) )
+  ALLOCATE( obs%qc  (obs%nobs) )
+  ALLOCATE( obs%ri  (obs%nobs) )
+  ALLOCATE( obs%rj  (obs%nobs) )
 
+  obs%nobs_in_key = 0
   obs%idx = 0
+  obs%key = 0
   obs%val = 0.0d0
 #ifdef H08
   obs%lev = 0.0d0 ! H08
@@ -1960,17 +1995,20 @@ SUBROUTINE obs_da_value_deallocate(obs)
   IMPLICIT NONE
   TYPE(obs_da_value),INTENT(INOUT) :: obs
 
-  IF(ALLOCATED(obs%set    )) DEALLOCATE(obs%set    )
-  IF(ALLOCATED(obs%idx    )) DEALLOCATE(obs%idx    )
-  IF(ALLOCATED(obs%val    )) DEALLOCATE(obs%val    )
+  obs%nobs_in_key = 0
+
+  IF(ALLOCATED(obs%set   )) DEALLOCATE(obs%set   )
+  IF(ALLOCATED(obs%idx   )) DEALLOCATE(obs%idx   )
+  IF(ALLOCATED(obs%key   )) DEALLOCATE(obs%key   )
+  IF(ALLOCATED(obs%val   )) DEALLOCATE(obs%val   )
 #ifdef H08
-  IF(ALLOCATED(obs%lev    )) DEALLOCATE(obs%lev    ) ! H08
-  IF(ALLOCATED(obs%val2   )) DEALLOCATE(obs%val2   ) ! H08
+  IF(ALLOCATED(obs%lev   )) DEALLOCATE(obs%lev   ) ! H08
+  IF(ALLOCATED(obs%val2  )) DEALLOCATE(obs%val2  ) ! H08
 #endif
-  IF(ALLOCATED(obs%ensval )) DEALLOCATE(obs%ensval )
-  IF(ALLOCATED(obs%qc     )) DEALLOCATE(obs%qc     )
-  IF(ALLOCATED(obs%ri     )) DEALLOCATE(obs%ri     )
-  IF(ALLOCATED(obs%rj     )) DEALLOCATE(obs%rj     )
+  IF(ALLOCATED(obs%ensval)) DEALLOCATE(obs%ensval)
+  IF(ALLOCATED(obs%qc    )) DEALLOCATE(obs%qc    )
+  IF(ALLOCATED(obs%ri    )) DEALLOCATE(obs%ri    )
+  IF(ALLOCATED(obs%rj    )) DEALLOCATE(obs%rj    )
 
   RETURN
 END SUBROUTINE obs_da_value_deallocate

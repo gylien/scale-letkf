@@ -1188,20 +1188,17 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   INTEGER :: i,k,m,n
 
   INTEGER :: nobs(nid_obs)
-  INTEGER :: nobs_tmp(nid_obs)
   INTEGER :: nobs_g(nid_obs)
   REAL(r_size) :: bias(nid_obs)
-  REAL(r_size) :: bias_tmp(nid_obs)
   REAL(r_size) :: bias_g(nid_obs)
   REAL(r_size) :: rmse(nid_obs)
-  REAL(r_size) :: rmse_tmp(nid_obs)
   REAL(r_size) :: rmse_g(nid_obs)
   LOGICAL :: monit_type(nid_obs)
   INTEGER :: ierr
 
 
   type(obs_info),intent(in) :: obs(OBS_IN_NUM)
-  type(obs_da_value),intent(in),allocatable :: obsda2(:)
+  type(obs_da_value),intent(in) :: obsda2
 
 
   REAL(r_dble) :: rrtimer00,rrtimer
@@ -1230,7 +1227,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
   if (DEPARTURE_STAT) then
     if (myrank_e == lastmem_rank_e) then
-      call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,nobs,bias,rmse,monit_type)
+      call monit_obs(v3dg,v2dg,obs,obsda2,topo,nobs,bias,rmse,monit_type,.true.)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1241,20 +1238,20 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
       do i = 1, nid_obs
         if (monit_type(i)) then
-          nobs_tmp(i) = nobs(i)
+          nobs_g(i) = nobs(i)
           if (nobs(i) == 0) then
-            bias_tmp(i) = 0.0d0
-            rmse_tmp(i) = 0.0d0
+            bias_g(i) = 0.0d0
+            rmse_g(i) = 0.0d0
           else
-            bias_tmp(i) = bias(i) * REAL(nobs(i),r_size)
-            rmse_tmp(i) = rmse(i) * rmse(i) * REAL(nobs(i),r_size)
+            bias_g(i) = bias(i) * REAL(nobs(i),r_size)
+            rmse_g(i) = rmse(i) * rmse(i) * REAL(nobs(i),r_size)
           end if
         end if
       end do
 
-      call MPI_ALLREDUCE(nobs_tmp, nobs_g, nid_obs, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
-      call MPI_ALLREDUCE(bias_tmp, bias_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-      call MPI_ALLREDUCE(rmse_tmp, rmse_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_g, nid_obs, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, bias_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
 
       do i = 1, nid_obs
         if (monit_type(i)) then
