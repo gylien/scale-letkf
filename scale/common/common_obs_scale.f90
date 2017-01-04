@@ -46,7 +46,7 @@ MODULE common_obs_scale
   IMPLICIT NONE
   PUBLIC
 
-  INTEGER,PARAMETER :: nid_obs=15 !H08
+  INTEGER,PARAMETER :: nid_obs=16 !H08
   INTEGER,PARAMETER :: nid_obs_varlocal=9 !H08
 !
 ! conventional observations
@@ -69,6 +69,7 @@ MODULE common_obs_scale
 ! radar observations
 !
   INTEGER,PARAMETER :: id_radar_ref_obs=4001
+  INTEGER,PARAMETER :: id_radar_ref_zero_obs=4004
   INTEGER,PARAMETER :: id_radar_vr_obs=4002
   INTEGER,PARAMETER :: id_radar_prh_obs=4003
 !
@@ -78,11 +79,11 @@ MODULE common_obs_scale
 
   INTEGER,PARAMETER :: elem_uid(nid_obs)= &
      (/id_u_obs, id_v_obs, id_t_obs, id_tv_obs, id_q_obs, id_rh_obs, &
-       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_vr_obs, id_radar_prh_obs, &
+       id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_ref_zero_obs, id_radar_vr_obs, id_radar_prh_obs, &
        id_H08IR_obs, id_tclon_obs, id_tclat_obs, id_tcmip_obs/)
 
   CHARACTER(3),PARAMETER :: obelmlist(nid_obs)= &
-     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', ' Vr', 'PRH',&
+     (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', 'RE0', ' Vr', 'PRH',&
        'H08', 'TCX', 'TCY', 'TCP'/)
 
   CHARACTER(3),PARAMETER :: obelmlist_varlocal(nid_obs_varlocal)= &
@@ -155,15 +156,6 @@ MODULE common_obs_scale
   REAL(r_size),SAVE :: MIN_RADAR_REF
   REAL(r_size),SAVE :: RADAR_REF_THRES
 
-!  REAL(r_size),PARAMETER :: UNDEF_OBS = 9.99d9           !Code that will be assigned to obs outside the domain.(so we don't need qc0 array)
-
-!  TYPE obs_csort
-!    INTEGER :: nobs = 0
-!    LOGICAL :: sorted = .false.
-!    INTEGER,ALLOCATABLE :: idx(:)
-!    INTEGER,ALLOCATABLE :: nobsgrd(:,:)
-!  END TYPE obs_csort
-
 CONTAINS
 
 !-----------------------------------------------------------------------
@@ -193,18 +185,20 @@ function uid_obs(id_obs)
     uid_obs = 8
   case(id_radar_ref_obs)
     uid_obs = 9
-  case(id_radar_vr_obs)
+  case(id_radar_ref_zero_obs)
     uid_obs = 10
-  case(id_radar_prh_obs)
+  case(id_radar_vr_obs)
     uid_obs = 11
+  case(id_radar_prh_obs)
+    uid_obs = 12
   case(id_h08ir_obs) ! H08
-    uid_obs = 12     ! H08
+    uid_obs = 13     ! H08
   case(id_tclon_obs)
-    uid_obs = 13
-  case(id_tclat_obs)
     uid_obs = 14
-  case(id_tcmip_obs)
+  case(id_tclat_obs)
     uid_obs = 15
+  case(id_tcmip_obs)
+    uid_obs = 16
   case default
     uid_obs = -1     ! error
   end select
@@ -230,7 +224,7 @@ function uid_obs_varlocal(id_obs)
     uid_obs_varlocal = 5
   case(id_tclon_obs, id_tclat_obs, id_tcmip_obs)
     uid_obs_varlocal = 6
-  case(id_radar_ref_obs, id_radar_prh_obs)
+  case(id_radar_ref_obs, id_radar_ref_zero_obs, id_radar_prh_obs)
     uid_obs_varlocal = 7
   case(id_radar_vr_obs)
     uid_obs_varlocal = 8
@@ -440,7 +434,7 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
 
 
   SELECT CASE (elm)
-  CASE(id_radar_ref_obs)
+  CASE(id_radar_ref_obs,id_radar_ref_zero_obs)
 !!!!    if (radar_ref < MIN_RADAR_REF) then
 !!!!      !In this case we will replace the observation by -RH
 !!!!      !This allows us to use pseudo rh observations in some cases.
@@ -1544,7 +1538,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
                           v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
         end if
 
-      case(id_radar_ref_obs,id_radar_vr_obs,id_radar_prh_obs)
+      case(id_radar_ref_obs,id_radar_ref_zero_obs,id_radar_vr_obs,id_radar_prh_obs)
         if (DEPARTURE_STAT_RADAR) then
           call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ri,rj,obs(iset)%lev(iidx),rk,oqc(n))
           if (oqc(n) == iqc_good) then
@@ -1778,6 +1772,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
   monit_type(uid_obs(id_ps_obs)) = .true.
   if (DEPARTURE_STAT_RADAR) then
     monit_type(uid_obs(id_radar_ref_obs)) = .true.
+    monit_type(uid_obs(id_radar_ref_zero_obs)) = .true.
     monit_type(uid_obs(id_radar_vr_obs)) = .true.
 !    monit_type(uid_obs(id_radar_prh_obs)) = .true.
   end if
@@ -1826,6 +1821,11 @@ SUBROUTINE monit_dep(nn,elm,dep,qc,nobs,bias,rmse)
     if (ielm == id_tv_obs) then ! compute Tv as T
       ielm = id_t_obs
     end if
+!!!!!!
+    if (ielm == id_radar_ref_zero_obs) then ! compute RE0 as REF
+      ielm = id_radar_ref_obs
+    end if
+!!!!!!
     i = uid_obs(ielm)
 
     nobs(i) = nobs(i) + 1
@@ -1860,7 +1860,7 @@ SUBROUTINE monit_print(nobs,bias,rmse,monit_type)
   character(12) :: bias_show(nid_obs)
   character(12) :: rmse_show(nid_obs)
 
-  integer :: i, itv, n
+  integer :: i, n
   character(4) :: nstr
   character(12) :: tmpstr(nid_obs)
   character(12) :: tmpstr2(nid_obs)
@@ -1871,9 +1871,11 @@ SUBROUTINE monit_print(nobs,bias,rmse,monit_type)
   if (present(monit_type)) monit_type_ = monit_type
 
   n = 0
-  itv = uid_obs(id_tv_obs)
   do i = 1, nid_obs
-    if (monit_type_(i) .and. i /= itv) then
+!!!!!!
+!    if (monit_type_(i) .and. i /= uid_obs(id_tv_obs)) then
+    if (monit_type_(i) .and. i /= uid_obs(id_tv_obs) .and. i /= uid_obs(id_radar_ref_zero_obs)) then
+!!!!!!
       n = n + 1
       write(var_show(n),'(A12)') obelmlist(i)
       write(nobs_show(n),'(I12)') nobs(i)
@@ -2336,7 +2338,7 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
       READ(iunit,IOSTAT=ios) wk
       IF(ios /= 0) EXIT
       SELECT CASE(NINT(wk(1)))
-      CASE(id_radar_ref_obs)
+      CASE(id_radar_ref_obs,id_radar_ref_zero_obs)
         ir = ir + 1
       CASE(id_radar_vr_obs)
         iv = iv + 1
