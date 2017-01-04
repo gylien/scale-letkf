@@ -664,12 +664,19 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   write (6,'(A)') '****************************************************************************'
-  write (6,'(10F10.6)') tt(1:10)
-  write (6,'(10I10)') ntt(1:10)
-  write (6,'(10F10.6)') tt(11:20)
-  write (6,'(10I10)') ntt(11:20)
-  write (6,'(3F10.6)') tt(21:23)
-  write (6,'(3I10)') ntt(21:23)
+  write (6,'(10F12.6)') tt(1:10)
+  write (6,'(36x,7F12.6)') tt(4:10) / 8
+  write (6,'(10I12)') ntt(1:10)
+  write (6,'(10F12.6)') tt(1:10) / ntt(1:10)
+  write (6,'(A)') '----------------------------------------------------------------------------'
+  write (6,'(10F12.6)') tt(11:20)
+  write (6,'(10F12.6)') tt(11:20) / 8
+  write (6,'(10I12)') ntt(11:20)
+  write (6,'(10F12.6)') tt(11:20) / ntt(11:20)
+  write (6,'(A)') '----------------------------------------------------------------------------'
+  write (6,'(3F12.6)') tt(21:23)
+  write (6,'(3I12)') ntt(21:23)
+  write (6,'(3F12.6)') tt(21:23) / ntt(21:23)
   write (6,'(A)') '****************************************************************************'
 
 
@@ -1103,8 +1110,6 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 
 
   real(r_size) :: tt0, tt1
-!  tt = 0.0d0
-!  ntt = 0
 
   tt0 = MPI_WTIME()
 
@@ -1560,8 +1565,6 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ndist, nrloc, nrdiag)
 
 
   real(r_size) :: tt0, tt1
-!  tt = 0.0d0
-!  ntt = 0
 
   tt0 = MPI_WTIME()
 
