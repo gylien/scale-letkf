@@ -31,6 +31,11 @@ MODULE letkf_tools
   real(r_size),save :: var_local(nv3d+nv2d,nid_obs_varlocal)
   integer,save :: var_local_n2n(nv3d+nv2d)
 
+
+  real(r_size),save :: tt(20), ttomp(14)
+  integer,save :: ntt(20), nttomp(14)
+
+
 CONTAINS
 !-----------------------------------------------------------------------
 ! Data Assimilation
@@ -74,8 +79,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   real(r_size) :: tt1, tt0
-  real(r_size) :: tt(20), ttomp(14)
-  integer :: ntt(20), nttomp(14)
   tt = 0.0d0
   ntt = 0
 
@@ -248,7 +251,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
         ELSE
           ! compute weights with localized observations
-          CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,ttomp(2:9),nttomp(2:9),nobsl_t=nobsl_t)
+          CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
 
 
   tt0 = MPI_WTIME()
@@ -405,7 +408,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
           ELSE
             ! compute weights with localized observations
-            CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,ttomp(2:9),nttomp(2:9),nobsl_t=nobsl_t)
+            CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
 
 
 
@@ -663,10 +666,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   write (6,'(A)') '****************************************************************************'
-  write (6,'(10F10.6)') tt(1:10)
-  write (6,'(10I10)') ntt(1:10)
-  write (6,'(10F10.6)') tt(11:20)
-  write (6,'(10I10)') ntt(11:20)
+  write (6,'(10F12.6)') tt(1:10)
+  write (6,'(36x,7F12.6)') tt(4:10) / 8
+  write (6,'(10I12)') ntt(1:10)
+  write (6,'(10F12.6)') tt(1:10) / ntt(1:10)
+  write (6,'(A)') '----------------------------------------------------------------------------'
+  write (6,'(10F12.6)') tt(11:20)
+  write (6,'(10F12.6)') tt(11:20) / 8
+  write (6,'(10I12)') ntt(11:20)
+  write (6,'(10F12.6)') tt(11:20) / ntt(11:20)
   write (6,'(A)') '****************************************************************************'
 
 
@@ -1048,7 +1056,7 @@ END SUBROUTINE das_letkf
 ! -- modified, using (ri,rj,rlev,rz) instead of (ij,ilev), Guo-Yuan Lien
 ! -- add an option to limit observation numbers, Guo-Yuan Lien
 !-----------------------------------------------------------------------
-subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, tt, ntt, nobsl_t)
+subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobsl_t)
   use scale_grid, only: &
     DX, DY
   use scale_rm_process, only: &
@@ -1087,10 +1095,6 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, tt, 
 
 
   real(r_size) :: tt0, tt1
-  real(r_size), intent(inout) :: tt(8)
-  integer, intent(inout) :: ntt(8)
-!  tt = 0.0d0
-!  ntt = 0
 
 !  real(r_size) :: sigma2_max, ndist_cmax
 
@@ -1126,8 +1130,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, tt, 
 
 
   tt1 = MPI_WTIME()
-  tt(1) = tt(1) + tt1 - tt0
-  ntt(1) = ntt(1) + 1
+  ttomp(2) = ttomp(2) + tt1 - tt0
+  nttomp(2) = nttomp(2) + 1
   tt0 = tt1
 
 !  sigma2_max = max(SIGMA_OBS, SIGMA_OBS_RADAR, SIGMA_OBS_RADAR_OBSNOREF)
@@ -1151,8 +1155,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, tt, 
 
 
   tt1 = MPI_WTIME()
-  tt(2) = tt(2) + tt1 - tt0
-  ntt(2) = ntt(2) + 1
+  ttomp(3) = ttomp(3) + tt1 - tt0
+  nttomp(3) = nttomp(3) + 1
   tt0 = tt1
 
 
@@ -1172,8 +1176,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, tt, 
 
 
   tt1 = MPI_WTIME()
-  tt(3) = tt(3) + tt1 - tt0
-  ntt(3) = ntt(3) + 1
+  ttomp(4) = ttomp(4) + tt1 - tt0
+  nttomp(4) = nttomp(4) + 1
   tt0 = tt1
 
 
@@ -1247,8 +1251,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, tt, 
 
 
   tt1 = MPI_WTIME()
-  tt(4) = tt(4) + tt1 - tt0 
-  ntt(4) = ntt(4) + 1
+  ttomp(5) = ttomp(5) + tt1 - tt0
+  nttomp(5) = nttomp(5) + 1
   tt0 = tt1 
 
 
@@ -1273,8 +1277,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, tt, 
         !
 
   tt1 = MPI_WTIME()
-  tt(5) = tt(5) + tt1 - tt0 
-  ntt(5) = ntt(5) + 1
+  ttomp(6) = ttomp(6) + tt1 - tt0
+  nttomp(6) = nttomp(6) + 1
   tt0 = tt1 
 
 
@@ -1372,8 +1376,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, tt, 
 
 
   tt1 = MPI_WTIME()
-  tt(6) = tt(6) + tt1 - tt0 
-  ntt(6) = ntt(6) + 1
+  ttomp(7) = ttomp(7) + tt1 - tt0
+  nttomp(7) = nttomp(7) + 1
   tt0 = tt1 
 
 
@@ -1406,8 +1410,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, tt, 
 
 
   tt1 = MPI_WTIME()
-  tt(7) = tt(7) + tt1 - tt0
-  ntt(7) = ntt(7) + 1
+  ttomp(8) = ttomp(8) + tt1 - tt0
+  nttomp(8) = nttomp(8) + 1
   tt0 = tt1
 
 
@@ -1431,8 +1435,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, tt, 
 
 
   tt1 = MPI_WTIME()
-  tt(8) = tt(8) + tt1 - tt0
-  ntt(8) = ntt(8) + 1
+  ttomp(9) = ttomp(9) + tt1 - tt0
+  nttomp(9) = nttomp(9) + 1
   tt0 = tt1
 
 
