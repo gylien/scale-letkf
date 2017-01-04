@@ -29,6 +29,13 @@ MODULE letkf_obs
   type(obs_da_value),save :: obsda
   type(obs_da_value),save :: obsda2  ! sorted
 
+  ! combined obs type: {variable type (elm_u), report type (typ)}, allocated only when observations exist
+  integer,save :: nctype                        ! number of combined obs type
+  integer,save :: ctype_elmtyp(nid_obs,nobtype) ! array of ctype for each combination of (elm_u, typ)
+  integer,save :: elm_ctype(nid_obs*nobtype)    ! array of elm  for each combined obs type
+  integer,save :: elm_u_ctype(nid_obs*nobtype)  ! array of elm_u for each combined obs type
+  integer,save :: typ_ctype(nid_obs*nobtype)    ! array of typ  for each combined obs type
+
   type obs_grid_type
     integer :: ngrd_i
     integer :: ngrd_j
@@ -49,14 +56,14 @@ MODULE letkf_obs
     integer, allocatable :: next(:,:) ! temporary array
   end type obs_grid_type
 
-  integer,save :: nobs_ext
+  type(obs_grid_type),allocatable,save :: obsgrd(:)
 
-  type(obs_grid_type),save :: obsgrd(nobtype)
+  integer,save :: nobs_ext
 
   integer,save :: nobstotalg
   integer,save :: nobstotal
-!  integer,save :: maxnobs_sub_per_type
-  integer,save :: maxnobs_per_type
+!  integer,save :: maxnobs_sub_per_ctype
+  integer,save :: maxnobs_per_ctype
 CONTAINS
 !-----------------------------------------------------------------------
 ! Initialize
@@ -81,8 +88,8 @@ SUBROUTINE set_letkf_obs
   integer :: mem_ref
 
   integer :: it,ip
-  integer :: itype,ielm_u
-  real(r_size) :: max_hori_local
+  integer :: ityp,ielm_u,ictype
+  real(r_size) :: hori_loc
   real(r_size) :: target_grdspc
 
 #ifdef H08
@@ -92,8 +99,11 @@ SUBROUTINE set_letkf_obs
   integer :: iproc,jproc
   integer :: iproc2,jproc2
 
-  integer :: nobs_sub(2),nobs_g(2)            ! 1: before QC; 2: after QC
-  integer :: nobstypevar_g(2,nid_obs,nobtype) !
+  integer :: nobs_sub(2),nobs_g(2) ! 1: before QC; 2: after QC
+
+  integer :: nobs_elms(nid_obs)
+  integer :: nobs_elms_sum(nid_obs)
+
 
   character(len=3) :: use_obs_print
   character(4) :: nstr
@@ -129,6 +139,8 @@ SUBROUTINE set_letkf_obs
   character(11) :: obsda_suffix = '.000000.dat'
 
   type(obs_da_value) :: obsda_ext
+
+  logical :: ctype_use(nid_obs,nobtype)
 
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
@@ -294,14 +306,16 @@ SUBROUTINE set_letkf_obs
 ! Process observations and quality control (QC)
 !-------------------------------------------------------------------------------
 
-  ! Pre-process radar data
+  ! Pre-process data
   !-----------------------------------------------------------------------------
 
+  ctype_use(:,:) = .false.
   do iof = 1, OBS_IN_NUM
     do n = 1, obs(iof)%nobs
       if (obs(iof)%elm(n) == id_radar_ref_obs) then
         if (obs(iof)%dat(n) >= 0.0d0 .and. obs(iof)%dat(n) < 1.0d10) then
           if (obs(iof)%dat(n) < MIN_RADAR_REF) then
+            obs(iof)%elm(n) = id_radar_ref_zero_obs
             obs(iof)%dat(n) = MIN_RADAR_REF_DBZ + LOW_REF_SHIFT
           else
             obs(iof)%dat(n) = 10.0d0 * log10(obs(iof)%dat(n))
@@ -314,11 +328,38 @@ SUBROUTINE set_letkf_obs
         end if
       end if
 
+      if (obs(iof)%elm(n) == id_radar_ref_zero_obs) then
+        obs(iof)%dat(n) = MIN_RADAR_REF_DBZ + LOW_REF_SHIFT
+        if (USE_OBSERR_RADAR_REF) then
+          obs(iof)%err(n) = OBSERR_RADAR_REF
+        end if
+      end if
+
       if (USE_OBSERR_RADAR_VR .AND. obs(iof)%elm(n) == id_radar_vr_obs) then
         obs(iof)%err(n) = OBSERR_RADAR_VR
       end if
+
+      ! find (elm, typ) combinations for which observations exist
+      if (.not. ctype_use(uid_obs(obs(iof)%elm(n)), obs(iof)%typ(n))) then
+        ctype_use(uid_obs(obs(iof)%elm(n)), obs(iof)%typ(n)) = .true.
+      end if
     end do ! [ n = 1, obs(iof)%nobs ]
   end do ! [ iof = 1, OBS_IN_NUM ]
+
+  ! do this outside of the above obs loop, so these (ctype) arrays can be in ascending order
+  nctype = 0
+  ctype_elmtyp(:,:) = 0
+  do ityp = 1, nobtype
+    do ielm_u = 1, nid_obs
+      if (ctype_use(ielm_u, ityp)) then
+        nctype = nctype + 1
+        elm_ctype(nctype) = elem_uid(ielm_u)
+        elm_u_ctype(nctype) = ielm_u
+        typ_ctype(nctype) = ityp
+        ctype_elmtyp(ielm_u, ityp) = nctype
+      end if
+    end do
+  end do
 
   ! Compute perturbation and departure
   !  -- gross error check
@@ -344,7 +385,7 @@ SUBROUTINE set_letkf_obs
 
 
 !!!###### RADAR assimilation ######
-    if (obs(iof)%elm(iidx) == id_radar_ref_obs) then
+    if (obs(iof)%elm(iidx) == id_radar_ref_obs .or. obs(iof)%elm(iidx) == id_radar_ref_zero_obs) then
       if (.not. USE_RADAR_REF) then
         obsda%qc(n) = iqc_otype
         cycle
@@ -473,7 +514,7 @@ SUBROUTINE set_letkf_obs
       IF(ABS(obsda%val(n)) > GROSS_ERROR_RAIN * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
-    case (id_radar_ref_obs)
+    case (id_radar_ref_obs,id_radar_ref_zero_obs)
       IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_REF * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
@@ -604,124 +645,131 @@ SUBROUTINE set_letkf_obs
   deallocate(tmpelm)
 
 !-------------------------------------------------------------------------------
-! "Bucket sort" of observations of each type (with different sorting meshes)
+! "Bucket sort" of observations of each combined type (with different sorting meshes)
 !-------------------------------------------------------------------------------
+
+  allocate (obsgrd(nctype))
 
   ! Determine mesh size for bucket sort
   !-----------------------------------------------------------------------------
 
-  do itype = 1, nobtype
-    max_hori_local = HORI_LOCAL(itype)
-    if (itype == 22) then  !PHARAD
-      max_hori_local = max(max_hori_local, HORI_LOCAL_RADAR_OBSNOREF)
+  do ictype = 1, nctype
+    ityp = typ_ctype(ictype)
+
+    hori_loc = HORI_LOCAL(ityp)
+    if (elm_ctype(ictype) == id_radar_ref_zero_obs) then
+      hori_loc = HORI_LOCAL_RADAR_OBSNOREF
     end if
 
-    if (OBS_SORT_GRID_SPACING(itype) > 0) then
-      target_grdspc = OBS_SORT_GRID_SPACING(itype)
-    else if (MAX_NOBS_PER_GRID(itype) > 0) then
-      target_grdspc = 0.1d0 * sqrt(real(MAX_NOBS_PER_GRID(itype), r_size)) * OBS_MIN_SPACING(itype) ! need to be tuned
+    if (OBS_SORT_GRID_SPACING(ityp) > 0) then
+      target_grdspc = OBS_SORT_GRID_SPACING(ityp)
+    else if (MAX_NOBS_PER_GRID(ityp) > 0) then
+      target_grdspc = 0.1d0 * sqrt(real(MAX_NOBS_PER_GRID(ityp), r_size)) * OBS_MIN_SPACING(ityp) ! need to be tuned
     else
-      target_grdspc = max_hori_local * dist_zero_fac / 6.0d0                ! need to be tuned
+      target_grdspc = hori_loc * dist_zero_fac / 6.0d0                ! need to be tuned
     end if
-    obsgrd(itype)%ngrd_i = min(ceiling(DX * real(nlon,r_size) / target_grdspc), nlon)
-    obsgrd(itype)%ngrd_j = min(ceiling(DY * real(nlat,r_size) / target_grdspc), nlat)
-    obsgrd(itype)%grdspc_i = DX * real(nlon,r_size) / real(obsgrd(itype)%ngrd_i,r_size)
-    obsgrd(itype)%grdspc_j = DY * real(nlat,r_size) / real(obsgrd(itype)%ngrd_j,r_size)
-    obsgrd(itype)%ngrdsch_i = ceiling(max_hori_local * dist_zero_fac / obsgrd(itype)%grdspc_i)
-    obsgrd(itype)%ngrdsch_j = ceiling(max_hori_local * dist_zero_fac / obsgrd(itype)%grdspc_j)
-    obsgrd(itype)%ngrdext_i = obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i * 2
-    obsgrd(itype)%ngrdext_j = obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j * 2
+    obsgrd(ictype)%ngrd_i = min(ceiling(DX * real(nlon,r_size) / target_grdspc), nlon)
+    obsgrd(ictype)%ngrd_j = min(ceiling(DY * real(nlat,r_size) / target_grdspc), nlat)
+    obsgrd(ictype)%grdspc_i = DX * real(nlon,r_size) / real(obsgrd(ictype)%ngrd_i,r_size)
+    obsgrd(ictype)%grdspc_j = DY * real(nlat,r_size) / real(obsgrd(ictype)%ngrd_j,r_size)
+    obsgrd(ictype)%ngrdsch_i = ceiling(hori_loc * dist_zero_fac / obsgrd(ictype)%grdspc_i)
+    obsgrd(ictype)%ngrdsch_j = ceiling(hori_loc * dist_zero_fac / obsgrd(ictype)%grdspc_j)
+    obsgrd(ictype)%ngrdext_i = obsgrd(ictype)%ngrd_i + obsgrd(ictype)%ngrdsch_i * 2
+    obsgrd(ictype)%ngrdext_j = obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j * 2
 
-    allocate (obsgrd(itype)%n (  obsgrd(itype)%ngrd_i, obsgrd(itype)%ngrd_j, 0:MEM_NP-1))
-    allocate (obsgrd(itype)%ac(0:obsgrd(itype)%ngrd_i, obsgrd(itype)%ngrd_j, 0:MEM_NP-1))
-    allocate (obsgrd(itype)%tot(0:MEM_NP-1))
-    allocate (obsgrd(itype)%n_ext (  obsgrd(itype)%ngrdext_i, obsgrd(itype)%ngrdext_j))
-    allocate (obsgrd(itype)%ac_ext(0:obsgrd(itype)%ngrdext_i, obsgrd(itype)%ngrdext_j))
-    obsgrd(itype)%n (:,:,:) = 0
-    obsgrd(itype)%ac(:,:,:) = 0
-    obsgrd(itype)%tot(:) = 0
-    obsgrd(itype)%n_ext (:,:) = 0
-    obsgrd(itype)%ac_ext(:,:) = 0
-    obsgrd(itype)%tot_ext = 0
-    obsgrd(itype)%tot_sub(:) = 0
-    obsgrd(itype)%tot_g(:) = 0
+    allocate (obsgrd(ictype)%n (  obsgrd(ictype)%ngrd_i, obsgrd(ictype)%ngrd_j, 0:MEM_NP-1))
+    allocate (obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i, obsgrd(ictype)%ngrd_j, 0:MEM_NP-1))
+    allocate (obsgrd(ictype)%tot(0:MEM_NP-1))
+    allocate (obsgrd(ictype)%n_ext (  obsgrd(ictype)%ngrdext_i, obsgrd(ictype)%ngrdext_j))
+    allocate (obsgrd(ictype)%ac_ext(0:obsgrd(ictype)%ngrdext_i, obsgrd(ictype)%ngrdext_j))
 
-    allocate (obsgrd(itype)%next(obsgrd(itype)%ngrd_i, obsgrd(itype)%ngrd_j))
+    obsgrd(ictype)%n (:,:,:) = 0
+    obsgrd(ictype)%ac(:,:,:) = 0
+    obsgrd(ictype)%tot(:) = 0
+    obsgrd(ictype)%n_ext (:,:) = 0
+    obsgrd(ictype)%ac_ext(:,:) = 0
+    obsgrd(ictype)%tot_ext = 0
+    obsgrd(ictype)%tot_sub(:) = 0
+    obsgrd(ictype)%tot_g(:) = 0
+
+    allocate (obsgrd(ictype)%next(obsgrd(ictype)%ngrd_i, obsgrd(ictype)%ngrd_j))
   end do
 
   ! Print observation usage settings
   !-----------------------------------------------------------------------------
 
   write (6, *)
-  write (6, '(A)') 'OBSERVATION USAGE SETTINGS:'
-  write (6, '(A)') '=============================================================================='
-  write (6, '(A)') 'TYPE    USE HORI_LOC   VERT_LOC TIME_LOC MAX_NOBS MIN_SPAC SORT_MESH_X _MESH_Y'
-  write (6, '(A)') '                (km) (lnP or m)      (s)              (km)        (km)    (km)'
-  write (6, '(A)') '------------------------------------------------------------------------------'
-  do itype = 1, nobtype
-    if (USE_OBS(itype)) then
+  write (6, '(A)') 'OBSERVATION USAGE SETTINGS (LIST ONLY EXISTING TYPE-VAR):'
+  write (6, '(A)') '=================================================================================='
+  write (6, '(A)') 'TYPE   VAR  USE HORI_LOC   VERT_LOC TIME_LOC MAX_NOBS MIN_SPAC SORT_MESH_X _MESH_Y'
+  write (6, '(A)') '                    (km) (lnP or m)      (s)              (km)        (km)    (km)'
+  write (6, '(A)') '----------------------------------------------------------------------------------'
+  do ictype = 1, nctype
+    ityp = typ_ctype(ictype)
+    ielm_u = elm_u_ctype(ictype)
+
+    if (USE_OBS(ityp)) then
       use_obs_print = 'Yes'
     else
       use_obs_print = 'No'
     end if
-    select case (itype)
+    hori_loc = HORI_LOCAL(ityp)
+    if (elm_ctype(ictype) == id_radar_ref_zero_obs) then
+      hori_loc = HORI_LOCAL_RADAR_OBSNOREF
+    end if
+
+    select case (ityp)
     case (22) ! vertical localization in Z
-      write (6, '(A6,1x,A4,F9.2,F7.2,A4,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(itype), use_obs_print, HORI_LOCAL(itype)/1000.0d0, &
-                VERT_LOCAL(itype)/1000.0d0, '[km]', TIME_LOCAL(itype)/1000.0d0, MAX_NOBS_PER_GRID(itype), &
-                OBS_MIN_SPACING(itype)/1000.0d0, obsgrd(itype)%grdspc_i/1000.0d0, obsgrd(itype)%grdspc_j/1000.0d0
+      write (6, '(A6,1x,A3,1x,A4,F9.2,F7.2,A4,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc/1000.0d0, &
+                VERT_LOCAL(ityp)/1000.0d0, '[km]', TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
+                OBS_MIN_SPACING(ityp)/1000.0d0, obsgrd(ictype)%grdspc_i/1000.0d0, obsgrd(ictype)%grdspc_j/1000.0d0
     case default ! vertical localization in ln(p)
-      write (6, '(A6,1x,A4,F9.2,F11.3,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(itype), use_obs_print, HORI_LOCAL(itype)/1000.0d0, &
-                VERT_LOCAL(itype), TIME_LOCAL(itype)/1000.0d0, MAX_NOBS_PER_GRID(itype), &
-                OBS_MIN_SPACING(itype)/1000.0d0, obsgrd(itype)%grdspc_i/1000.0d0, obsgrd(itype)%grdspc_j/1000.0d0
+      write (6, '(A6,1x,A3,1x,A4,F9.2,F11.3,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc/1000.0d0, &
+                VERT_LOCAL(ityp), TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
+                OBS_MIN_SPACING(ityp)/1000.0d0, obsgrd(ictype)%grdspc_i/1000.0d0, obsgrd(ictype)%grdspc_j/1000.0d0
     end select
   end do
-  write (6, '(A)') '=============================================================================='
+  write (6, '(A)') '=================================================================================='
 
   ! First scan: count the observation numbers in each mesh (in each subdomian)
   !-----------------------------------------------------------------------------
 
-  nobstypevar_g(:,:,:) = 0
   do n = 1, obsda%nobs
     ielm_u = uid_obs(obs(obsda%set(n))%elm(obsda%idx(n)))
-    itype = obs(obsda%set(n))%typ(obsda%idx(n))
+    ityp = obs(obsda%set(n))%typ(obsda%idx(n))
+    ictype = ctype_elmtyp(ielm_u,ityp)
 
     if (obsda%qc(n) == iqc_good) then
-      call ij_obsgrd(itype, obsda%ri(n), obsda%rj(n), i, j)
-      if (i < 1) i = 1                                       ! Assume the process assignment was correct,
-      if (i > obsgrd(itype)%ngrd_i) i = obsgrd(itype)%ngrd_i ! so this correction is only to remedy the round-off problem.
-      if (j < 1) j = 1                                       !
-      if (j > obsgrd(itype)%ngrd_j) j = obsgrd(itype)%ngrd_j !
+      call ij_obsgrd(ictype, obsda%ri(n), obsda%rj(n), i, j)
+      if (i < 1) i = 1                                          ! Assume the process assignment was correct,
+      if (i > obsgrd(ictype)%ngrd_i) i = obsgrd(ictype)%ngrd_i  ! so this correction is only to remedy the round-off problem.
+      if (j < 1) j = 1                                          !
+      if (j > obsgrd(ictype)%ngrd_j) j = obsgrd(ictype)%ngrd_j  !
 
-      obsgrd(itype)%n(i,j,myrank_d) = obsgrd(itype)%n(i,j,myrank_d) + 1
-      obsgrd(itype)%tot_sub(2) = obsgrd(itype)%tot_sub(2) + 1             ! only used for diagnostic print (obs number after qc)
-      if (ielm_u > 0) then                                                !
-        nobstypevar_g(2,ielm_u,itype) = nobstypevar_g(2,ielm_u,itype) + 1 !
-      end if                                                              !
+      obsgrd(ictype)%n(i,j,myrank_d) = obsgrd(ictype)%n(i,j,myrank_d) + 1
+      obsgrd(ictype)%tot_sub(2) = obsgrd(ictype)%tot_sub(2) + 1 ! only used for diagnostic print (obs number after qc)
     end if
 
-    obsgrd(itype)%tot_sub(1) = obsgrd(itype)%tot_sub(1) + 1               ! only used for diagnostic print (obs number prior to qc)
-    if (ielm_u > 0) then                                                  !
-      nobstypevar_g(1,ielm_u,itype) = nobstypevar_g(1,ielm_u,itype) + 1   !
-    end if                                                                !
+    obsgrd(ictype)%tot_sub(1) = obsgrd(ictype)%tot_sub(1) + 1   ! only used for diagnostic print (obs number prior to qc)
   end do
 
   ! Compute the accumulated numbers in each mesh
   !-----------------------------------------------------------------------------
 
-  do itype = 1, nobtype
-    if (itype > 1) then
-      obsgrd(itype)%ac(0,1,myrank_d) = obsgrd(itype-1)%ac(obsgrd(itype-1)%ngrd_i,obsgrd(itype-1)%ngrd_j,myrank_d)
+  do ictype = 1, nctype
+    if (ictype > 1) then
+      obsgrd(ictype)%ac(0,1,myrank_d) = obsgrd(ictype-1)%ac(obsgrd(ictype-1)%ngrd_i,obsgrd(ictype-1)%ngrd_j,myrank_d)
     end if
-    do j = 1, obsgrd(itype)%ngrd_j
+    do j = 1, obsgrd(ictype)%ngrd_j
       if (j > 1) then
-        obsgrd(itype)%ac(0,j,myrank_d) = obsgrd(itype)%ac(obsgrd(itype)%ngrd_i,j-1,myrank_d)
+        obsgrd(ictype)%ac(0,j,myrank_d) = obsgrd(ictype)%ac(obsgrd(ictype)%ngrd_i,j-1,myrank_d)
       end if
-      do i = 1, obsgrd(itype)%ngrd_i
-        obsgrd(itype)%ac(i,j,myrank_d) = obsgrd(itype)%ac(i-1,j,myrank_d) + obsgrd(itype)%n(i,j,myrank_d)
-!        obsgrd(itype)%next(i,j) = obsgrd(itype)%ac(i-1,j,myrank_d)
+      do i = 1, obsgrd(ictype)%ngrd_i
+        obsgrd(ictype)%ac(i,j,myrank_d) = obsgrd(ictype)%ac(i-1,j,myrank_d) + obsgrd(ictype)%n(i,j,myrank_d)
+!        obsgrd(ictype)%next(i,j) = obsgrd(ictype)%ac(i-1,j,myrank_d)
       end do
     end do
-    obsgrd(itype)%next(1:obsgrd(itype)%ngrd_i,:) = obsgrd(itype)%ac(0:obsgrd(itype)%ngrd_i-1,:,myrank_d)
+    obsgrd(ictype)%next(1:obsgrd(ictype)%ngrd_i,:) = obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i-1,:,myrank_d)
   end do
 
   ! Second scan: save the indices of bucket-sorted observations in obsda%keys(:)
@@ -729,15 +777,18 @@ SUBROUTINE set_letkf_obs
 
   do n = 1, obsda%nobs
     if (obsda%qc(n) == iqc_good) then
-      itype = obs(obsda%set(n))%typ(obsda%idx(n))
-      call ij_obsgrd(itype, obsda%ri(n), obsda%rj(n), i, j)
-      if (i < 1) i = 1                                       ! Assume the process assignment was correct,
-      if (i > obsgrd(itype)%ngrd_i) i = obsgrd(itype)%ngrd_i ! so this correction is only to remedy the round-off problem.
-      if (j < 1) j = 1                                       !
-      if (j > obsgrd(itype)%ngrd_j) j = obsgrd(itype)%ngrd_j !
+      ielm_u = uid_obs(obs(obsda%set(n))%elm(obsda%idx(n)))
+      ityp = obs(obsda%set(n))%typ(obsda%idx(n))
+      ictype = ctype_elmtyp(ielm_u,ityp)
 
-      obsgrd(itype)%next(i,j) = obsgrd(itype)%next(i,j) + 1
-      obsda%key(obsgrd(itype)%next(i,j)) = n
+      call ij_obsgrd(ictype, obsda%ri(n), obsda%rj(n), i, j)
+      if (i < 1) i = 1                                         ! Assume the process assignment was correct,
+      if (i > obsgrd(ictype)%ngrd_i) i = obsgrd(ictype)%ngrd_i ! so this correction is only to remedy the round-off problem.
+      if (j < 1) j = 1                                         !
+      if (j > obsgrd(ictype)%ngrd_j) j = obsgrd(ictype)%ngrd_j !
+
+      obsgrd(ictype)%next(i,j) = obsgrd(ictype)%next(i,j) + 1
+      obsda%key(obsgrd(ictype)%next(i,j)) = n
     end if
   end do
 
@@ -757,37 +808,35 @@ SUBROUTINE set_letkf_obs
 
   nobs_sub(:) = 0
   nobs_g(:) = 0
-  do itype = 1, nobtype
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(itype)%n, obsgrd(itype)%ngrd_i*obsgrd(itype)%ngrd_j*MEM_NP, &
+  do ictype = 1, nctype
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%n, obsgrd(ictype)%ngrd_i*obsgrd(ictype)%ngrd_j*MEM_NP, &
                        MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(itype)%ac(0:obsgrd(itype)%ngrd_i,:,:), (obsgrd(itype)%ngrd_i+1)*obsgrd(itype)%ngrd_j*MEM_NP, &
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i,:,:), (obsgrd(ictype)%ngrd_i+1)*obsgrd(ictype)%ngrd_j*MEM_NP, &
                        MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
-    call MPI_ALLREDUCE(obsgrd(itype)%tot_sub, obsgrd(itype)%tot_g, 2, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+    call MPI_ALLREDUCE(obsgrd(ictype)%tot_sub, obsgrd(ictype)%tot_g, 2, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
 
-    if (itype == 1) then
-      obsgrd(itype)%tot(:) = obsgrd(itype)%ac(obsgrd(itype)%ngrd_i,obsgrd(itype)%ngrd_j,:)
+    if (ictype == 1) then
+      obsgrd(ictype)%tot(:) = obsgrd(ictype)%ac(obsgrd(ictype)%ngrd_i,obsgrd(ictype)%ngrd_j,:)
     else
-      obsgrd(itype)%tot(:) = obsgrd(itype)%ac(obsgrd(itype)%ngrd_i,obsgrd(itype)%ngrd_j,:) &
-                           - obsgrd(itype-1)%ac(obsgrd(itype-1)%ngrd_i,obsgrd(itype-1)%ngrd_j,:)
+      obsgrd(ictype)%tot(:) = obsgrd(ictype)%ac(obsgrd(ictype)%ngrd_i,obsgrd(ictype)%ngrd_j,:) &
+                            - obsgrd(ictype-1)%ac(obsgrd(ictype-1)%ngrd_i,obsgrd(ictype-1)%ngrd_j,:)
     end if
-    if (obsgrd(itype)%tot(myrank_d) /= obsgrd(itype)%tot_sub(2)) then
+    if (obsgrd(ictype)%tot(myrank_d) /= obsgrd(ictype)%tot_sub(2)) then
       write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
       stop 99
     end if
 
-    nobs_sub(:) = nobs_sub(:) + obsgrd(itype)%tot_sub(:)
-    nobs_g(:) = nobs_g(:) + obsgrd(itype)%tot_g(:)
+    nobs_sub(:) = nobs_sub(:) + obsgrd(ictype)%tot_sub(:)
+    nobs_g(:) = nobs_g(:) + obsgrd(ictype)%tot_g(:)
 
-    deallocate (obsgrd(itype)%next)
+    deallocate (obsgrd(ictype)%next)
   end do
 
-  call MPI_ALLREDUCE(MPI_IN_PLACE, nobstypevar_g, 2*nid_obs*nobtype, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
-
-  if (obsgrd(nobtype)%ac(obsgrd(nobtype)%ngrd_i,obsgrd(nobtype)%ngrd_j,myrank_d) /= nobs_sub(2)) then
+  if (obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,myrank_d) /= nobs_sub(2)) then
     write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
     stop 99
   end if
-  if (sum(obsgrd(nobtype)%ac(obsgrd(nobtype)%ngrd_i,obsgrd(nobtype)%ngrd_j,:)) /= nobs_g(2)) then
+  if (sum(obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,:)) /= nobs_g(2)) then
     write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
     stop 99
   end if
@@ -803,11 +852,19 @@ SUBROUTINE set_letkf_obs
   write (6, '(A7,'//nstr//'A8,A)') '=======', line1_str(:), '=========='
   write (6, '(A6,1x,'//nstr//'A8,A10)') 'TYPE  ', obelmlist(:), '     TOTAL'
   write (6, '(A7,'//nstr//'A8,A)') '-------', line2_str(:), '----------'
-  do itype = 1, nobtype
-    write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(itype), nobstypevar_g(1,:,itype), obsgrd(itype)%tot_g(1)
+  nobs_elms_sum(:) = 0
+  do ityp = 1, nobtype
+    nobs_elms(:) = 0
+    do ielm_u = 1, nid_obs
+      if (ctype_elmtyp(ielm_u,ityp) > 0) then
+        nobs_elms(ielm_u) = obsgrd(ctype_elmtyp(ielm_u,ityp))%tot_g(1)
+      end if
+    end do
+    nobs_elms_sum = nobs_elms_sum + nobs_elms
+    write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(ityp), nobs_elms(:), sum(nobs_elms(:))
   end do
   write (6, '(A7,'//nstr//'A8,A)') '-------', line2_str(:), '----------'
-  write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', sum(nobstypevar_g(1,:,:), dim=2), nobs_g(1)
+  write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', nobs_elms_sum(:), nobs_g(1)
   write (6, '(A7,'//nstr//'A8,A)') '=======', line1_str(:), '=========='
 
   write (6, *)
@@ -815,64 +872,72 @@ SUBROUTINE set_letkf_obs
   write (6, '(A7,'//nstr//'A8,A)') '=======', line1_str(:), '=========='
   write (6, '(A6,1x,'//nstr//'A8,A10)') 'TYPE  ', obelmlist(:), '     TOTAL'
   write (6, '(A7,'//nstr//'A8,A)') '-------', line2_str(:), '----------'
-  do itype = 1, nobtype
-    write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(itype), nobstypevar_g(2,:,itype), obsgrd(itype)%tot_g(2)
+  nobs_elms_sum(:) = 0
+  do ityp = 1, nobtype
+    nobs_elms(:) = 0
+    do ielm_u = 1, nid_obs
+      if (ctype_elmtyp(ielm_u,ityp) > 0) then
+        nobs_elms(ielm_u) = obsgrd(ctype_elmtyp(ielm_u,ityp))%tot_g(2)
+      end if
+    end do
+    nobs_elms_sum = nobs_elms_sum + nobs_elms
+    write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(ityp), nobs_elms(:), sum(nobs_elms(:))
   end do
   write (6, '(A7,'//nstr//'A8,A)') '-------', line2_str(:), '----------'
-  write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', sum(nobstypevar_g(2,:,:), dim=2), nobs_g(2)
+  write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', nobs_elms_sum(:), nobs_g(2)
   write (6, '(A7,'//nstr//'A8,A)') '=======', line1_str(:), '=========='
 
   ! Calculate observation numbers in the extended (localization) subdomain,
   ! in preparation for communicating obsetvations in the extended subdomain
   !-----------------------------------------------------------------------------
 
-  do itype = 1, nobtype
+  do ictype = 1, nctype
     call rank_1d_2d(myrank_d, iproc, jproc)
-    imin1 = iproc*obsgrd(itype)%ngrd_i+1 - obsgrd(itype)%ngrdsch_i
-    imax1 = (iproc+1)*obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
-    jmin1 = jproc*obsgrd(itype)%ngrd_j+1 - obsgrd(itype)%ngrdsch_j
-    jmax1 = (jproc+1)*obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
+    imin1 = iproc*obsgrd(ictype)%ngrd_i+1 - obsgrd(ictype)%ngrdsch_i
+    imax1 = (iproc+1)*obsgrd(ictype)%ngrd_i + obsgrd(ictype)%ngrdsch_i
+    jmin1 = jproc*obsgrd(ictype)%ngrd_j+1 - obsgrd(ictype)%ngrdsch_j
+    jmax1 = (jproc+1)*obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j
 
     do ip2 = 0, MEM_NP-1
       call rank_1d_2d(ip2, iproc2, jproc2)
-      imin2 = max(1, imin1 - iproc2*obsgrd(itype)%ngrd_i)
-      imax2 = min(obsgrd(itype)%ngrd_i, imax1 - iproc2*obsgrd(itype)%ngrd_i)
-      jmin2 = max(1, jmin1 - jproc2*obsgrd(itype)%ngrd_j)
-      jmax2 = min(obsgrd(itype)%ngrd_j, jmax1 - jproc2*obsgrd(itype)%ngrd_j)
+      imin2 = max(1, imin1 - iproc2*obsgrd(ictype)%ngrd_i)
+      imax2 = min(obsgrd(ictype)%ngrd_i, imax1 - iproc2*obsgrd(ictype)%ngrd_i)
+      jmin2 = max(1, jmin1 - jproc2*obsgrd(ictype)%ngrd_j)
+      jmax2 = min(obsgrd(ictype)%ngrd_j, jmax1 - jproc2*obsgrd(ictype)%ngrd_j)
       if (imin2 > imax2 .or. jmin2 > jmax2) cycle
 
-      ishift = (iproc2 - iproc) * obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
-      jshift = (jproc2 - jproc) * obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
-      obsgrd(itype)%n_ext(imin2+ishift:imax2+ishift, jmin2+jshift:jmax2+jshift) = obsgrd(itype)%n(imin2:imax2, jmin2:jmax2, ip2)
+      ishift = (iproc2 - iproc) * obsgrd(ictype)%ngrd_i + obsgrd(ictype)%ngrdsch_i
+      jshift = (jproc2 - jproc) * obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j
+      obsgrd(ictype)%n_ext(imin2+ishift:imax2+ishift, jmin2+jshift:jmax2+jshift) = obsgrd(ictype)%n(imin2:imax2, jmin2:jmax2, ip2)
     end do
 
-    if (itype > 1) then
-      obsgrd(itype)%ac_ext(0,1) = obsgrd(itype-1)%ac_ext(obsgrd(itype-1)%ngrdext_i,obsgrd(itype-1)%ngrdext_j)
+    if (ictype > 1) then
+      obsgrd(ictype)%ac_ext(0,1) = obsgrd(ictype-1)%ac_ext(obsgrd(ictype-1)%ngrdext_i,obsgrd(ictype-1)%ngrdext_j)
     end if
-    do j = 1, obsgrd(itype)%ngrdext_j
+    do j = 1, obsgrd(ictype)%ngrdext_j
       if (j > 1) then
-        obsgrd(itype)%ac_ext(0,j) = obsgrd(itype)%ac_ext(obsgrd(itype)%ngrdext_i,j-1)
+        obsgrd(ictype)%ac_ext(0,j) = obsgrd(ictype)%ac_ext(obsgrd(ictype)%ngrdext_i,j-1)
       end if
-      do i = 1, obsgrd(itype)%ngrdext_i
-        obsgrd(itype)%ac_ext(i,j) = obsgrd(itype)%ac_ext(i-1,j) + obsgrd(itype)%n_ext(i,j)
+      do i = 1, obsgrd(ictype)%ngrdext_i
+        obsgrd(ictype)%ac_ext(i,j) = obsgrd(ictype)%ac_ext(i-1,j) + obsgrd(ictype)%n_ext(i,j)
       end do
     end do
 
-    if (itype == 1) then
-      obsgrd(itype)%tot_ext = obsgrd(itype)%ac_ext(obsgrd(itype)%ngrdext_i,obsgrd(itype)%ngrdext_j)
+    if (ictype == 1) then
+      obsgrd(ictype)%tot_ext = obsgrd(ictype)%ac_ext(obsgrd(ictype)%ngrdext_i,obsgrd(ictype)%ngrdext_j)
     else
-      obsgrd(itype)%tot_ext = obsgrd(itype)%ac_ext(obsgrd(itype)%ngrdext_i,obsgrd(itype)%ngrdext_j) &
-                            - obsgrd(itype-1)%ac_ext(obsgrd(itype-1)%ngrdext_i,obsgrd(itype-1)%ngrdext_j)
+      obsgrd(ictype)%tot_ext = obsgrd(ictype)%ac_ext(obsgrd(ictype)%ngrdext_i,obsgrd(ictype)%ngrdext_j) &
+                             - obsgrd(ictype-1)%ac_ext(obsgrd(ictype-1)%ngrdext_i,obsgrd(ictype-1)%ngrdext_j)
     end if
-  end do ! [ itype = 1, nobtype ]
+  end do ! [ ictype = 1, nctype ]
 
-  nobstotal = obsgrd(nobtype)%ac_ext(obsgrd(nobtype)%ngrdext_i,obsgrd(nobtype)%ngrdext_j) ! total obs number in the extended subdomain (all types)
+  nobstotal = obsgrd(nctype)%ac_ext(obsgrd(nctype)%ngrdext_i,obsgrd(nctype)%ngrdext_j) ! total obs number in the extended subdomain (all types)
 
-!  maxnobs_sub_per_type = maxval(obsgrd(1)%tot(:))
-  maxnobs_per_type = obsgrd(1)%tot_ext
-  do itype = 2, nobtype
-!    maxnobs_sub_per_type = max(maxnobs_sub_per_type, maxval(obsgrd(itype)%tot(:)))
-    maxnobs_per_type = max(maxnobs_per_type, obsgrd(itype)%tot_ext)
+!  maxnobs_sub_per_ctype = maxval(obsgrd(1)%tot(:))
+  maxnobs_per_ctype = obsgrd(1)%tot_ext
+  do ictype = 2, nctype
+!    maxnobs_sub_per_ctype = max(maxnobs_sub_per_ctype, maxval(obsgrd(ictype)%tot(:)))
+    maxnobs_per_ctype = max(maxnobs_per_ctype, obsgrd(ictype)%tot_ext)
   end do
 
   ! Construct sorted obsda2: 
@@ -885,15 +950,15 @@ SUBROUTINE set_letkf_obs
   !-----------------------------------------------------------------------------
   nk = 0
 
-  do itype = 1, nobtype
-    ishift = obsgrd(itype)%ngrdsch_i
-    jshift = obsgrd(itype)%ngrdsch_j
+  do ictype = 1, nctype
+    ishift = obsgrd(ictype)%ngrdsch_i
+    jshift = obsgrd(ictype)%ngrdsch_j
 
-    do j = 1, obsgrd(itype)%ngrd_j
-      do n = 1, obsgrd(itype)%ac_ext(obsgrd(itype)%ngrd_i+ishift,j+jshift) &
-              - obsgrd(itype)%ac_ext(ishift,j+jshift)
-        nn_ext = n + obsgrd(itype)%ac_ext(ishift,j+jshift)
-        nn_sub = n + obsgrd(itype)%ac(0,j,myrank_d)
+    do j = 1, obsgrd(ictype)%ngrd_j
+      do n = 1, obsgrd(ictype)%ac_ext(obsgrd(ictype)%ngrd_i+ishift,j+jshift) &
+              - obsgrd(ictype)%ac_ext(ishift,j+jshift)
+        nn_ext = n + obsgrd(ictype)%ac_ext(ishift,j+jshift)
+        nn_sub = n + obsgrd(ictype)%ac(0,j,myrank_d)
         nk = nk + 1
 
         obsda2%set(nn_ext) = obsda%set(obsda%key(nn_sub))
@@ -909,7 +974,7 @@ SUBROUTINE set_letkf_obs
 #endif
       end do
     end do
-  end do ! [ itype = 1, nobtype ]
+  end do ! [ ictype = 1, nctype ]
 
   if (nk /= nobs_sub(2)) then
     write (6, '(A)') '[Error] Error with number of observations in the subdomain !!!'
@@ -932,30 +997,30 @@ SUBROUTINE set_letkf_obs
     nr = 0
     nrt = 0
 
-    do itype = 1, nobtype
+    do ictype = 1, nctype
       call rank_1d_2d(ip, iproc, jproc)
-      imin1 = iproc*obsgrd(itype)%ngrd_i+1 - obsgrd(itype)%ngrdsch_i
-      imax1 = (iproc+1)*obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
-      jmin1 = jproc*obsgrd(itype)%ngrd_j+1 - obsgrd(itype)%ngrdsch_j
-      jmax1 = (jproc+1)*obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
+      imin1 = iproc*obsgrd(ictype)%ngrd_i+1 - obsgrd(ictype)%ngrdsch_i
+      imax1 = (iproc+1)*obsgrd(ictype)%ngrd_i + obsgrd(ictype)%ngrdsch_i
+      jmin1 = jproc*obsgrd(ictype)%ngrd_j+1 - obsgrd(ictype)%ngrdsch_j
+      jmax1 = (jproc+1)*obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j
 
       do ip2 = 0, MEM_NP-1
         if (ip2 /= ip) then
           call rank_1d_2d(ip2, iproc2, jproc2)
-          imin2 = max(1, imin1 - iproc2*obsgrd(itype)%ngrd_i)
-          imax2 = min(obsgrd(itype)%ngrd_i, imax1 - iproc2*obsgrd(itype)%ngrd_i)
-          jmin2 = max(1, jmin1 - jproc2*obsgrd(itype)%ngrd_j)
-          jmax2 = min(obsgrd(itype)%ngrd_j, jmax1 - jproc2*obsgrd(itype)%ngrd_j)
+          imin2 = max(1, imin1 - iproc2*obsgrd(ictype)%ngrd_i)
+          imax2 = min(obsgrd(ictype)%ngrd_i, imax1 - iproc2*obsgrd(ictype)%ngrd_i)
+          jmin2 = max(1, jmin1 - jproc2*obsgrd(ictype)%ngrd_j)
+          jmax2 = min(obsgrd(ictype)%ngrd_j, jmax1 - jproc2*obsgrd(ictype)%ngrd_j)
           if (imin2 > imax2 .or. jmin2 > jmax2) cycle
 
           if (myrank_d == ip2) then
-            call obs_choose(itype,ip2,imin2,imax2,jmin2,jmax2,nr(ip2+1),obsidx)
+            call obs_choose(ictype,ip2,imin2,imax2,jmin2,jmax2,nr(ip2+1),obsidx)
           else
-            call obs_choose(itype,ip2,imin2,imax2,jmin2,jmax2,nr(ip2+1))
+            call obs_choose(ictype,ip2,imin2,imax2,jmin2,jmax2,nr(ip2+1))
           end if
         end if ! [ ip2 /= ip ]
       end do ! [ ip2 = 0, MEM_NP-1 ]
-    end do ! [ itype = 1, nobtype ]
+    end do ! [ ictype = 1, nctype ]
 
     do ip2 = 1, MEM_NP-1
       nrt(ip2+1) = nrt(ip2) + nr(ip2)
@@ -1009,31 +1074,31 @@ SUBROUTINE set_letkf_obs
             stop 99
           end if 
 
-          do itype = 1, nobtype
+          do ictype = 1, nctype
             call rank_1d_2d(ip, iproc, jproc)
-            imin1 = iproc*obsgrd(itype)%ngrd_i+1 - obsgrd(itype)%ngrdsch_i
-            imax1 = (iproc+1)*obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
-            jmin1 = jproc*obsgrd(itype)%ngrd_j+1 - obsgrd(itype)%ngrdsch_j
-            jmax1 = (jproc+1)*obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
+            imin1 = iproc*obsgrd(ictype)%ngrd_i+1 - obsgrd(ictype)%ngrdsch_i
+            imax1 = (iproc+1)*obsgrd(ictype)%ngrd_i + obsgrd(ictype)%ngrdsch_i
+            jmin1 = jproc*obsgrd(ictype)%ngrd_j+1 - obsgrd(ictype)%ngrdsch_j
+            jmax1 = (jproc+1)*obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j
 
             call rank_1d_2d(ip2, iproc2, jproc2)
-            imin2 = max(1, imin1 - iproc2*obsgrd(itype)%ngrd_i)
-            imax2 = min(obsgrd(itype)%ngrd_i, imax1 - iproc2*obsgrd(itype)%ngrd_i)
-            jmin2 = max(1, jmin1 - jproc2*obsgrd(itype)%ngrd_j)
-            jmax2 = min(obsgrd(itype)%ngrd_j, jmax1 - jproc2*obsgrd(itype)%ngrd_j)
+            imin2 = max(1, imin1 - iproc2*obsgrd(ictype)%ngrd_i)
+            imax2 = min(obsgrd(ictype)%ngrd_i, imax1 - iproc2*obsgrd(ictype)%ngrd_i)
+            jmin2 = max(1, jmin1 - jproc2*obsgrd(ictype)%ngrd_j)
+            jmax2 = min(obsgrd(ictype)%ngrd_j, jmax1 - jproc2*obsgrd(ictype)%ngrd_j)
             if (imin2 > imax2 .or. jmin2 > jmax2) cycle
 
-            ishift = (iproc2 - iproc) * obsgrd(itype)%ngrd_i + obsgrd(itype)%ngrdsch_i
-            jshift = (jproc2 - jproc) * obsgrd(itype)%ngrd_j + obsgrd(itype)%ngrdsch_j
+            ishift = (iproc2 - iproc) * obsgrd(ictype)%ngrd_i + obsgrd(ictype)%ngrdsch_i
+            jshift = (jproc2 - jproc) * obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j
 
             do j = jmin2, jmax2
-              ns_ext = obsgrd(itype)%ac_ext(imin2+ishift-1,j+jshift) + 1
-              ne_ext = obsgrd(itype)%ac_ext(imax2+ishift  ,j+jshift)
+              ns_ext = obsgrd(ictype)%ac_ext(imin2+ishift-1,j+jshift) + 1
+              ne_ext = obsgrd(ictype)%ac_ext(imax2+ishift  ,j+jshift)
 
-              if (ne_ext - ns_ext + 1 /= obsgrd(itype)%ac(imax2,j,ip2) - obsgrd(itype)%ac(imin2-1,j,ip2)) then
+              if (ne_ext - ns_ext + 1 /= obsgrd(ictype)%ac(imax2,j,ip2) - obsgrd(ictype)%ac(imin2-1,j,ip2)) then
                 write (6, '(A)') '[Error] observation grid indices have errors !!!'
-                write (6, *) itype, ip, ip2, j, imin1, imax1, jmin1, jmax1, imin2, imax2, jmin2, jmax2, ishift, jshift, &
-                             obsgrd(itype)%ngrd_i, obsgrd(itype)%ngrd_j, obsgrd(itype)%ngrdsch_i, obsgrd(itype)%ngrdsch_j, ns_ext, ne_ext, ns_bufr, ne_bufr
+                write (6, *) ictype, ip, ip2, j, imin1, imax1, jmin1, jmax1, imin2, imax2, jmin2, jmax2, ishift, jshift, &
+                             obsgrd(ictype)%ngrd_i, obsgrd(ictype)%ngrd_j, obsgrd(ictype)%ngrdsch_i, obsgrd(ictype)%ngrdsch_j, ns_ext, ne_ext, ns_bufr, ne_bufr
                 stop 99
               end if
 
@@ -1052,7 +1117,7 @@ SUBROUTINE set_letkf_obs
               obsda2%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr) ! H08
 #endif
             end do
-          end do ! [ itype = 1, nobtype ]
+          end do ! [ ictype = 1, nctype ]
 
         end if ! [ ip2 /= ip ]
       end do ! [ ip2 = 0, MEM_NP-1 ]
@@ -1061,10 +1126,10 @@ SUBROUTINE set_letkf_obs
 
   end do ! [ ip = 0, MEM_NP-1 ]
 
-  do itype = 1, nobtype
-    deallocate (obsgrd(itype)%n)
-    deallocate (obsgrd(itype)%ac)
-    deallocate (obsgrd(itype)%n_ext)
+  do ictype = 1, nctype
+    deallocate (obsgrd(ictype)%n)
+    deallocate (obsgrd(ictype)%ac)
+    deallocate (obsgrd(ictype)%n_ext)
   end do
   call obs_da_value_deallocate(obsda)
   call obs_da_value_deallocate(obsbufs)
@@ -1076,17 +1141,19 @@ SUBROUTINE set_letkf_obs
 
   write (6, *)
   write (6, '(A,I6,A)') 'OBSERVATION COUNTS (GLOABL AND IN THIS SUBDOMAIN #', myrank_d, '):'
-  write (6, '(A)') '================================================================='
-  write (6, '(A)') 'TYPE        GLOBAL  SUBDOMAIN     GLOBAL  SUBDOMAIN EXT_SUBDOMAIN'
-  write (6, '(A)') '         before QC  before QC   after QC   after QC      after QC'
-  write (6, '(A)') '-----------------------------------------------------------------'
-  do itype = 1, nobtype
-    write (6, '(A6,1x,4I11,I14)') obtypelist(itype), obsgrd(itype)%tot_g(1), obsgrd(itype)%tot_sub(1), &
-              obsgrd(itype)%tot_g(2), obsgrd(itype)%tot_sub(2), obsgrd(itype)%tot_ext
+  write (6, '(A)') '====================================================================='
+  write (6, '(A)') 'TYPE   VAR      GLOBAL     GLOBAL  SUBDOMAIN  SUBDOMAIN EXT_SUBDOMAIN'
+  write (6, '(A)') '             before QC   after QC  before QC   after QC      after QC'
+  write (6, '(A)') '---------------------------------------------------------------------'
+  do ictype = 1, nctype
+    ityp = typ_ctype(ictype)
+    ielm_u = elm_u_ctype(ictype)
+    write (6, '(A6,1x,A3,1x,4I11,I14)') obtypelist(ityp), obelmlist(ielm_u), obsgrd(ictype)%tot_g(1), obsgrd(ictype)%tot_g(2), &
+              obsgrd(ictype)%tot_sub(1), obsgrd(ictype)%tot_sub(2), obsgrd(ictype)%tot_ext
   end do
-  write (6, '(A)') '-----------------------------------------------------------------'
-    write (6, '(A6,1x,4I11,11x,A3)') 'TOTAL ', nobs_g(1), nobs_sub(1), nobs_g(2), nobs_sub(2), 'N/A'
-  write (6, '(A)') '================================================================='
+  write (6, '(A)') '---------------------------------------------------------------------'
+    write (6, '(A6,5x,4I11,11x,A3)') 'TOTAL ', nobs_g(1), nobs_sub(1), nobs_g(2), nobs_sub(2), 'N/A'
+  write (6, '(A)') '====================================================================='
 
   RETURN
 END SUBROUTINE set_letkf_obs
@@ -1094,20 +1161,20 @@ END SUBROUTINE set_letkf_obs
 !-----------------------------------------------------------------------
 ! Convert grid (i,j) values to obsgrid (ogi, ogj) sorting mesh
 !-----------------------------------------------------------------------
-subroutine ij_obsgrd(obtype, ri, rj, ogi, ogj)
+subroutine ij_obsgrd(ctype, ri, rj, ogi, ogj)
   use scale_grid_index, only: &
     IHALO,JHALO
 !  use scale_process, only: &
 !    PRC_myrank
   implicit none
-  integer, intent(in) :: obtype
+  integer, intent(in) :: ctype
   real(r_size), intent(in) :: ri, rj
   integer, intent(out) :: ogi, ogj
   real(r_size) :: ril, rjl
 
   call rij_g2l(myrank_d, ri, rj, ril, rjl)
-  ogi = ceiling((ril - real(IHALO,r_size) - 0.5) * real(obsgrd(obtype)%ngrd_i,r_size) / real(nlon,r_size))
-  ogj = ceiling((rjl - real(JHALO,r_size) - 0.5) * real(obsgrd(obtype)%ngrd_i,r_size) / real(nlat,r_size))
+  ogi = ceiling((ril - real(IHALO,r_size) - 0.5) * real(obsgrd(ctype)%ngrd_i,r_size) / real(nlon,r_size))
+  ogj = ceiling((rjl - real(JHALO,r_size) - 0.5) * real(obsgrd(ctype)%ngrd_i,r_size) / real(nlat,r_size))
 
   return
 end subroutine ij_obsgrd
@@ -1116,22 +1183,22 @@ end subroutine ij_obsgrd
 ! Convert grid (i,j) values to obsgrid (ogi, ogj) sorting mesh
 ! in the extended subdomain
 !-----------------------------------------------------------------------
-subroutine ij_obsgrd_ext(obtype, ri, rj, ogi, ogj)
+subroutine ij_obsgrd_ext(ctype, ri, rj, ogi, ogj)
   use scale_grid_index, only: &
     IHALO,JHALO
 !  use scale_process, only: &
 !    PRC_myrank
   implicit none
-  integer, intent(in) :: obtype
+  integer, intent(in) :: ctype
   real(r_size), intent(in) :: ri, rj
   integer, intent(out) :: ogi, ogj
   real(r_size) :: ril, rjl
 
   call rij_g2l(myrank_d, ri, rj, ril, rjl)
-  ogi = ceiling((ril - real(IHALO,r_size) - 0.5) * real(obsgrd(obtype)%ngrd_i,r_size) / real(nlon,r_size)) &
-      + obsgrd(obtype)%ngrdsch_i
-  ogj = ceiling((rjl - real(JHALO,r_size) - 0.5) * real(obsgrd(obtype)%ngrd_i,r_size) / real(nlat,r_size)) &
-      + obsgrd(obtype)%ngrdsch_j
+  ogi = ceiling((ril - real(IHALO,r_size) - 0.5) * real(obsgrd(ctype)%ngrd_i,r_size) / real(nlon,r_size)) &
+      + obsgrd(ctype)%ngrdsch_i
+  ogj = ceiling((rjl - real(JHALO,r_size) - 0.5) * real(obsgrd(ctype)%ngrd_i,r_size) / real(nlat,r_size)) &
+      + obsgrd(ctype)%ngrdsch_j
 
   return
 end subroutine ij_obsgrd_ext
@@ -1139,9 +1206,9 @@ end subroutine ij_obsgrd_ext
 !-----------------------------------------------------------------------
 ! Choose observations in a rectangle using the bucket sort results
 !-----------------------------------------------------------------------
-subroutine obs_choose(obtype, proc, imin, imax, jmin, jmax, nn, nobs_use)
+subroutine obs_choose(ctype, proc, imin, imax, jmin, jmax, nn, nobs_use)
   implicit none
-  integer, intent(in) :: obtype
+  integer, intent(in) :: ctype
   integer, intent(in) :: proc
   integer, intent(in) :: imin, imax, jmin, jmax
   integer, intent(inout) :: nn
@@ -1149,16 +1216,16 @@ subroutine obs_choose(obtype, proc, imin, imax, jmin, jmax, nn, nobs_use)
   integer :: n, j
 
   if (imin > imax .or. jmin > jmax) return
-  if (obsgrd(obtype)%tot(proc) == 0) return
+  if (obsgrd(ctype)%tot(proc) == 0) return
 
   do j = jmin, jmax
     if (present(nobs_use)) then
-      do n = obsgrd(obtype)%ac(imin-1,j,proc)+1, obsgrd(obtype)%ac(imax,j,proc)
+      do n = obsgrd(ctype)%ac(imin-1,j,proc)+1, obsgrd(ctype)%ac(imax,j,proc)
         nn = nn + 1
         nobs_use(nn) = n
       end do
     else
-      nn = nn + obsgrd(obtype)%ac(imax,j,proc) - obsgrd(obtype)%ac(imin-1,j,proc)
+      nn = nn + obsgrd(ctype)%ac(imax,j,proc) - obsgrd(ctype)%ac(imin-1,j,proc)
     end if
   end do
 
@@ -1169,25 +1236,25 @@ end subroutine obs_choose
 ! Choose observations in a rectangle using the bucket sort results
 ! in the extended subdomain
 !-----------------------------------------------------------------------
-subroutine obs_choose_ext(obtype, imin, imax, jmin, jmax, nn, nobs_use)
+subroutine obs_choose_ext(ctype, imin, imax, jmin, jmax, nn, nobs_use)
   implicit none
-  integer, intent(in) :: obtype
+  integer, intent(in) :: ctype
   integer, intent(in) :: imin, imax, jmin, jmax
   integer, intent(inout) :: nn
   integer, intent(inout), optional :: nobs_use(:)
   integer :: n, j
 
   if (imin > imax .or. jmin > jmax) return
-  if (obsgrd(obtype)%tot_ext == 0) return
+  if (obsgrd(ctype)%tot_ext == 0) return
 
   do j = jmin, jmax
     if (present(nobs_use)) then
-      do n = obsgrd(obtype)%ac_ext(imin-1,j)+1, obsgrd(obtype)%ac_ext(imax,j)
+      do n = obsgrd(ctype)%ac_ext(imin-1,j)+1, obsgrd(ctype)%ac_ext(imax,j)
         nn = nn + 1
         nobs_use(nn) = n
       end do
     else
-      nn = nn + obsgrd(obtype)%ac_ext(imax,j) - obsgrd(obtype)%ac_ext(imin-1,j)
+      nn = nn + obsgrd(ctype)%ac_ext(imax,j) - obsgrd(ctype)%ac_ext(imin-1,j)
     end if
   end do
 
