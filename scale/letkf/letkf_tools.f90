@@ -30,6 +30,8 @@ MODULE letkf_tools
   real(r_size),save :: var_local(nv3d+nv2d,nid_obs_varlocal)
   integer,save :: var_local_n2n(nv3d+nv2d)
 
+  integer,save :: ctype_merge(nid_obs,nobtype)
+
 CONTAINS
 !-----------------------------------------------------------------------
 ! Data Assimilation
@@ -103,6 +105,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       IF(MAXVAL(ABS(var_local(i,:)-var_local(n,:))) < TINY(var_local)) EXIT
     END DO
   END DO
+  !
+  ! Observation number limit (*to be moved to namelist*)
+  !
+  ctype_merge(:,:) = 0
+  ctype_merge(uid_obs(id_radar_ref_obs),22) = 1
+  ctype_merge(uid_obs(id_radar_ref_zero_obs),22) = 1
   !
   ! FCST PERTURBATIONS
   !
@@ -888,48 +896,54 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   integer, intent(out) :: nobsl
   integer, intent(out), optional :: nobsl_t(nid_obs,nobtype)
 
+  integer, allocatable :: nobs_use(:)
+
   real(r_size), allocatable :: rdiag_tmp(:)
   real(r_size), allocatable :: rloc_tmp(:)
   integer, allocatable :: iob_tmp(:)
 
-  integer, allocatable :: nobs_use(:)
-  real(r_size) :: ndist, nrloc, nrdiag
 !  real(r_size), allocatable :: dist_t(:,:)
 !  real(r_size), allocatable :: rloc_t(:,:)
 !  real(r_size), allocatable :: rdiag_t(:,:)
 !  integer, allocatable :: isort_t(:,:)
 !  integer, allocatable :: iob_t(:,:)
-  integer :: nobsl_t_
-  integer :: inobsl
-  integer :: inobs_ctype
 
-  integer :: iob, ityp, ielm, ielm_u, ictype
-
+  real(r_size) :: ndist, nrloc, nrdiag
+  integer :: iob, ityp, ielm, ielm_u
   integer :: imin, imax, jmin, jmax
-  integer :: imin_tmp, imax_tmp, jmin_tmp, jmax_tmp
-  integer :: n, nn
-  integer :: s, ss, tmpisort
-  logical :: condition
+  integer :: ic, ic2, icm
+  integer :: n, nn, ns
+  integer :: nobsl_prev, nobsl_incr
+  integer :: nobsl_max_master
+  integer :: ielm_u_master
 
-!!!!!!
-  integer :: nn2, ielm2, ictype2
-!!!!!!
+  logical :: ctype_skip(nctype)
+  integer :: ic_merge(nid_obs*nobtype)
+  integer :: n_merge
+
+!  integer :: imin_tmp, imax_tmp, jmin_tmp, jmax_tmp
+!  logical :: condition
+
+  !-----------------------------------------------------------------------------
+
+  if (nobstotal == 0) then
+    nobsl = 0
+    if (present(nobsl_t)) then
+      nobsl_t(:,:) = 0
+    end if  
+  end if
 
   !-----------------------------------------------------------------------------
   ! Initialize
   !-----------------------------------------------------------------------------
 
-  if (nobstotal == 0) then
-
-  end if
-
-  allocate (nobs_use(maxnobs_per_ctype))
 
   if (maxval(MAX_NOBS_PER_GRID(:)) > 0) then
 
-    allocate (iob_tmp  (maxnobs_per_ctype))
-    allocate (rloc_tmp (maxnobs_per_ctype))
-    allocate (rdiag_tmp(maxnobs_per_ctype))
+    allocate (nobs_use (nobstotal))
+    allocate (iob_tmp  (nobstotal))
+    allocate (rloc_tmp (nobstotal))
+    allocate (rdiag_tmp(nobstotal))
 
 
 !    allocate (isort_t(maxval(MAX_NOBS_PER_GRID(:)), nid_obs))
@@ -939,6 +953,11 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 !    if (MAX_NOBS_PER_GRID_CRITERION == 1) then
 !      allocate (dist_t(maxval(MAX_NOBS_PER_GRID(:)), nid_obs))
 !    end if
+
+  else
+
+    allocate (nobs_use(maxnobs_per_ctype))
+
   end if
 
   nobsl = 0
@@ -949,121 +968,129 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   ! do precise data search by normalized 3D distance and variable localization
   !-----------------------------------------------------------------------------
 
-  do ictype = 1, nctype
+  ctype_skip(:) = .false.
 
-    ielm = elm_ctype(ictype)
-    ielm_u = elm_u_ctype(ictype)
-    ityp = typ_ctype(ictype)
+  do ic = 1, nctype
+    if (ctype_skip(ic)) cycle
 
-!!!!!!
-    if (ictype == ctype_elmtyp(uid_obs(id_radar_ref_zero_obs),22)) cycle !PHARAD
-    inobs_ctype = obsgrd(ictype)%tot_ext
-    if (ictype == ctype_elmtyp(uid_obs(id_radar_ref_obs),22) .and. ctype_elmtyp(uid_obs(id_radar_ref_zero_obs),22) > 0) then
-      inobs_ctype = inobs_ctype + obsgrd(ctype_elmtyp(uid_obs(id_radar_ref_zero_obs),22))%tot_ext
+    n_merge = 1
+    ic_merge(1) = ic
+    if (ctype_merge(elm_u_ctype(ic),typ_ctype(ic)) > 0) then
+      do ic2 = ic+1, nctype
+        if (ctype_merge(elm_u_ctype(ic2),typ_ctype(ic2)) == ctype_merge(elm_u_ctype(ic),typ_ctype(ic))) then
+          n_merge = n_merge + 1
+          ic_merge(n_merge) = ic2
+          ctype_skip(ic2) = .true.
+!          write(6, '(9A)') '[Info] Observation number limit: Consider obs types (', obtypelist(typ_ctype(ic)), ', ', obelmlist(elm_u_ctype(ic)), &
+!                           ') and (', obtypelist(typ_ctype(ic2)), ', ', obelmlist(elm_u_ctype(ic2)), ') together'
+        end if
+      end do
     end if
-!!!!!!
 
-    if (obsgrd(ictype)%tot_ext > 0) then
+    nobsl_max_master = MAX_NOBS_PER_GRID(typ_ctype(ic)) ! Use the number limit setting of the "master" obs type for all group of obs types
+    ielm_u_master = elm_u_ctype(ic)                     ! Count observation numbers    at the "master" obs type for all group of obs types
 
-      if (MAX_NOBS_PER_GRID(ityp) <= 0) then
-      !-------------------------------------------------------------------------
-      ! When obs number limit is not enabled,
-      ! Directly prepare (hdxf, dep, rdiag, rloc) output.
-      !-------------------------------------------------------------------------
+    if (nobsl_max_master <= 0) then
+    !-------------------------------------------------------------------------
+    ! When obs number limit is not enabled,
+    ! Directly prepare (hdxf, dep, rdiag, rloc) output.
+    !-------------------------------------------------------------------------
 
-        nn = 0
-        call obs_local_range(ictype, ri, rj, imin, imax, jmin, jmax)
-        call obs_choose_ext(ictype, imin, imax, jmin, jmax, nn, nobs_use)
+      nobsl_prev = nobsl
 
-        do n = 1, nn  ! loop over observations within the search rectangle
-          iob = nobs_use(n)
+      do icm = 1, n_merge
+        ic2 = ic_merge(icm)
 
-          call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, ndist, nrloc, nrdiag)
-          if (nrloc == 0.0d0) cycle
-          !
-          ! Process search results
-          !
-          nobsl = nobsl + 1
-          hdxf(nobsl,:) = obsda2%ensval(:,iob)
-          dep(nobsl) = obsda2%val(iob)
-          rdiag(nobsl) = nrdiag
-          rloc(nobsl) = nrloc
+        if (obsgrd(ic2)%tot_ext > 0) then
+          ielm = elm_ctype(ic2)
+          ityp = typ_ctype(ic2)
 
-          if (present(nobsl_t)) then
-            nobsl_t(ielm_u,ityp) = nobsl_t(ielm_u,ityp) + 1
-          end if
-        end do ! [ n = 1, nn ]
+          nn = 0
+          call obs_local_range(ic, ri, rj, imin, imax, jmin, jmax)
+          call obs_choose_ext(ic, imin, imax, jmin, jmax, nn, nobs_use)
 
-      !-------------------------------------------------------------------------
-      else if (MAX_NOBS_PER_GRID_CRITERION == 1) then
-      !-------------------------------------------------------------------------
-      ! XXX
-      !-------------------------------------------------------------------------
+          do n = 1, nn
+            iob = nobs_use(n)
 
-        write (6, '(A)') 'XXXXXX Not finished.'
-
-      !-------------------------------------------------------------------------
-      else
-      !-------------------------------------------------------------------------
-      ! XXX
-      !-------------------------------------------------------------------------
-
-        nobsl_t_ = 0
-
-        nn = 0
-        call obs_local_range(ictype, ri, rj, imin, imax, jmin, jmax)
-        call obs_choose_ext(ictype, imin, imax, jmin, jmax, nn, nobs_use)
-
-!!!!!!
-        if (ictype == ctype_elmtyp(uid_obs(id_radar_ref_obs),22) .and. ctype_elmtyp(uid_obs(id_radar_ref_zero_obs),22) > 0) then
-          nn2 = nn
-          ictype2 = ctype_elmtyp(uid_obs(id_radar_ref_zero_obs),22)
-          ielm2 = elm_ctype(ictype2)
-          call obs_local_range(ictype2, ri, rj, imin, imax, jmin, jmax)
-          call obs_choose_ext(ictype2, imin, imax, jmin, jmax, nn, nobs_use)
-        end if
-!!!!!!
-
-        do n = 1, nn  ! loop over observations within the search rectangle
-          iob = nobs_use(n)
-
-!!!!!!
-          if (ictype == ctype_elmtyp(uid_obs(id_radar_ref_obs),22) .and. ctype_elmtyp(uid_obs(id_radar_ref_zero_obs),22) > 0 .and. n > nn2) then
-            call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm2, ityp, ndist, nrloc, nrdiag)
-          else
             call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, ndist, nrloc, nrdiag)
-          end if
-!!!!!!
-          if (nrloc == 0.0d0) cycle
+            if (nrloc == 0.0d0) cycle
 
-          nobsl_t_ = nobsl_t_ + 1
-          iob_tmp(nobsl_t_) = iob
-          rloc_tmp(nobsl_t_) = nrloc
-          rdiag_tmp(nobsl_t_) = nrdiag
-        end do
+            nobsl = nobsl + 1
+            hdxf(nobsl,:) = obsda2%ensval(:,iob)
+            dep(nobsl) = obsda2%val(iob)
+            rdiag(nobsl) = nrdiag
+            rloc(nobsl) = nrloc
+          end do ! [ n = 1, nn ]
+        end if ! [ obsgrd(ic2)%tot_ext > 0 ]
+      end do ! [ do icm = 1, n_merge ]
 
-        inobsl = nobsl_t_
-        if (inobsl > MAX_NOBS_PER_GRID(ityp)) then
-          call QUICKSELECT(rdiag_tmp, 1, inobsl, MAX_NOBS_PER_GRID(ityp), &
-                           B=rloc_tmp, I=iob_tmp)
+      if (present(nobsl_t)) then
+        nobsl_t(ielm_u_master,ityp) = nobsl - nobsl_prev
+      end if
+
+    !-------------------------------------------------------------------------
+    else if (MAX_NOBS_PER_GRID_CRITERION == 1) then
+    !-------------------------------------------------------------------------
+    ! XXX
+    !-------------------------------------------------------------------------
+
+
+
+    !-------------------------------------------------------------------------
+    else
+    !-------------------------------------------------------------------------
+    ! XXX
+    !-------------------------------------------------------------------------
+
+      nn = 0
+      nobsl_incr = 0
+      do icm = 1, n_merge
+        ic2 = ic_merge(icm)
+
+        if (obsgrd(ic2)%tot_ext > 0) then
+          ielm = elm_ctype(ic2)
+          ityp = typ_ctype(ic2)
+
+          ns = nn + 1
+          call obs_local_range(ic2, ri, rj, imin, imax, jmin, jmax)
+          call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
+
+          do n = ns, nn
+            iob = nobs_use(n)
+
+            call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, ndist, nrloc, nrdiag)
+            if (nrloc == 0.0d0) cycle
+
+            nobsl_incr = nobsl_incr + 1
+            iob_tmp(nobsl_incr) = iob
+            rloc_tmp(nobsl_incr) = nrloc
+            rdiag_tmp(nobsl_incr) = nrdiag
+          end do
+        end if ! [ obsgrd(ic2)%tot_ext > 0 ]
+      end do ! [ do icm = 1, n_merge ]
+
+      if (nobsl_incr > nobsl_max_master) then
+        call QUICKSELECT(rdiag_tmp, 1, nobsl_incr, nobsl_max_master, B=rloc_tmp, I=iob_tmp)
 !!!!!! only valid for MAX_NOBS_PER_GRID_CRITERION = 3. MAX_NOBS_PER_GRID_CRITERION = 2 needs to be considered.
-          inobsl = MAX_NOBS_PER_GRID(ityp)
-        end if
-        rloc(nobsl+1:nobsl+inobsl) = rloc_tmp(1:inobsl)
-        rdiag(nobsl+1:nobsl+inobsl) = rdiag_tmp(1:inobsl)
-        do s = 1, inobsl
-          nobsl = nobsl + 1
-          iob = iob_tmp(s)
-          hdxf(nobsl,:) = obsda2%ensval(:,iob)
-          dep(nobsl) = obsda2%val(iob)
-        end do
+        nobsl_incr = nobsl_max_master
+      end if
+      rloc(nobsl+1:nobsl+nobsl_incr) = rloc_tmp(1:nobsl_incr)
+      rdiag(nobsl+1:nobsl+nobsl_incr) = rdiag_tmp(1:nobsl_incr)
+      do n = 1, nobsl_incr
+        nobsl = nobsl + 1
+        iob = iob_tmp(n)
+        hdxf(nobsl,:) = obsda2%ensval(:,iob)
+        dep(nobsl) = obsda2%val(iob)
+      end do
 
-        if (present(nobsl_t)) then
-          nobsl_t(ielm_u,ityp) = inobsl
-        end if
+      if (present(nobsl_t)) then
+        nobsl_t(ielm_u_master,ityp) = nobsl_incr
+      end if
 
-      !-------------------------------------------------------------------------
-      end if ! [ MAX_NOBS_PER_GRID(ityp) <= 0 ]
+    !-------------------------------------------------------------------------
+    end if
+
+  end do ! [ ic = 1, nctype ]
 
 
 
@@ -1233,9 +1260,6 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 
 !!!!!!        !-----------------------------------------------------------------------
 !!!!!!      end if ! [ MAX_NOBS_PER_GRID(ityp) <= 0 ]
-
-    end if ! [ obsgrd(ictype)%tot_ext > 0 ]
-  end do ! [ ictype = 1, nctype ]
 
   !-----------------------------------------------------------------------------
   ! Finalize
