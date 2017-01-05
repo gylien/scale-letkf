@@ -898,9 +898,10 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 
   integer, allocatable :: nobs_use(:)
 
-  real(r_size), allocatable :: rdiag_tmp(:)
-  real(r_size), allocatable :: rloc_tmp(:)
   integer, allocatable :: iob_tmp(:)
+  real(r_size), allocatable :: dist_tmp(:)
+  real(r_size), allocatable :: rloc_tmp(:)
+  real(r_size), allocatable :: rdiag_tmp(:)
 
 !  real(r_size), allocatable :: dist_t(:,:)
 !  real(r_size), allocatable :: rloc_t(:,:)
@@ -912,16 +913,22 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   integer :: iob, ityp, ielm, ielm_u
   integer :: imin, imax, jmin, jmax
   integer :: ic, ic2, icm
-  integer :: n, nn, ns
+  integer :: n, nn, nn_prev
   integer :: nobsl_prev, nobsl_incr
   integer :: nobsl_max_master
-  integer :: ielm_u_master
+  integer :: ielm_u_master, ityp_master
 
   logical :: ctype_skip(nctype)
   integer :: ic_merge(nid_obs*nobtype)
   integer :: n_merge
 
-!  integer :: imin_tmp, imax_tmp, jmin_tmp, jmax_tmp
+  integer :: q
+  logical :: loop
+  integer :: nn_steps(nctype+1)
+  logical :: reach_cutoff
+  integer :: imin_cutoff, imax_cutoff, jmin_cutoff, jmax_cutoff
+  real(r_size) :: search_incr, search_incr_i, search_incr_j
+
 !  logical :: condition
 
   !-----------------------------------------------------------------------------
@@ -942,6 +949,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 
     allocate (nobs_use (nobstotal))
     allocate (iob_tmp  (nobstotal))
+    allocate (dist_tmp (nobstotal))
     allocate (rloc_tmp (nobstotal))
     allocate (rdiag_tmp(nobstotal))
 
@@ -989,6 +997,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 
     nobsl_max_master = MAX_NOBS_PER_GRID(typ_ctype(ic)) ! Use the number limit setting of the "master" obs type for all group of obs types
     ielm_u_master = elm_u_ctype(ic)                     ! Count observation numbers    at the "master" obs type for all group of obs types
+    ityp_master = typ_ctype(ic)                         !
 
     if (nobsl_max_master <= 0) then
     !-------------------------------------------------------------------------
@@ -1006,8 +1015,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
           ityp = typ_ctype(ic2)
 
           nn = 0
-          call obs_local_range(ic, ri, rj, imin, imax, jmin, jmax)
-          call obs_choose_ext(ic, imin, imax, jmin, jmax, nn, nobs_use)
+          call obs_local_range(ic2, ri, rj, imin, imax, jmin, jmax)
+          call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
 
           do n = 1, nn
             iob = nobs_use(n)
@@ -1025,7 +1034,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
       end do ! [ do icm = 1, n_merge ]
 
       if (present(nobsl_t)) then
-        nobsl_t(ielm_u_master,ityp) = nobsl - nobsl_prev
+        nobsl_t(ielm_u_master,ityp_master) = nobsl - nobsl_prev
       end if
 
     !-------------------------------------------------------------------------
@@ -1034,7 +1043,131 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
     ! XXX
     !-------------------------------------------------------------------------
 
+      nn = 0
+      do icm = 1, n_merge
+        ic2 = ic_merge(icm)
 
+        if (obsgrd(ic2)%tot_ext > 0) then
+          call obs_local_range(ic2, ri, rj, imin, imax, jmin, jmax)
+          call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
+        end if ! [ obsgrd(ic2)%tot_ext > 0 ]
+      end do ! [ do icm = 1, n_merge ]
+
+
+write (6, '(A,14x,I8)') '--- ALL      : ', nn
+
+
+      if (nn == 0) cycle
+
+
+
+
+      search_incr = max(obsgrd(ic)%grdspc_i, obsgrd(ic)%grdspc_j)
+      search_incr_i = search_incr / DX
+      search_incr_j = search_incr / DY
+
+      nobsl_incr = 0
+
+
+      q = 0
+      loop = .true.
+      do while (loop)
+        q = q + 1
+
+
+        nn = 0
+
+
+        reach_cutoff = .true.
+
+        do icm = 1, n_merge
+          ic2 = ic_merge(icm)
+
+          nn_steps(icm) = nn
+
+          if (obsgrd(ic2)%tot_ext > 0) then
+            call ij_obsgrd_ext(ic2, ri-search_incr_i*q, rj-search_incr_j*q, imin, jmin)
+            call ij_obsgrd_ext(ic2, ri+search_incr_i*q, rj+search_incr_j*q, imax, jmax)
+
+            call obs_local_range(ic2, ri, rj, imin_cutoff, imax_cutoff, jmin_cutoff, jmax_cutoff)
+            if (imin < imin_cutoff .or. imax > imax_cutoff .or. &
+                jmin < jmin_cutoff .or. jmax > jmax_cutoff) then
+              imin = imin_cutoff
+              imax = imax_cutoff
+              jmin = jmin_cutoff
+              jmax = jmax_cutoff
+            else
+              reach_cutoff = .false.
+            end if
+
+            call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
+          end if ! [ obsgrd(ic2)%tot_ext > 0 ]
+        end do ! [ do icm = 1, n_merge ]
+
+        nn_steps(n_merge+1) = nn
+
+write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cutoff, nn
+
+        if ((.not. reach_cutoff) .and. nn < nobsl_max_master) cycle
+
+        if (reach_cutoff) then
+          loop = .false.
+          if (nn == 0) exit
+        end if
+
+        nobsl_incr = 0
+
+        do icm = 1, n_merge
+          ic2 = ic_merge(icm)
+
+          if (nn_steps(icm+1) > nn_steps(icm)) then
+            ielm = elm_ctype(ic2)
+            ityp = typ_ctype(ic2)
+
+            do n = nn_steps(icm)+1, nn_steps(icm+1)
+              iob = nobs_use(n)
+
+              if (reach_cutoff) then
+                call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, ndist, nrloc, nrdiag)
+              else
+                call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, ndist, nrloc, nrdiag, cutoff=search_incr*q)
+              end if
+              if (nrloc == 0.0d0) cycle
+
+              nobsl_incr = nobsl_incr + 1
+              iob_tmp(nobsl_incr) = iob
+              dist_tmp(nobsl_incr) = ndist
+              rloc_tmp(nobsl_incr) = nrloc
+              rdiag_tmp(nobsl_incr) = nrdiag
+            end do
+          end if ! [ nn_steps(icm+1) > nn_steps(icm) ]
+        end do ! [ do icm = 1, n_merge ]
+
+write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cutoff, nn, nobsl_incr
+
+        if (nobsl_incr >= nobsl_max_master) loop = .false.
+
+      end do ! [ loop ]
+
+      if (nobsl_incr == 0) cycle
+
+      if (nobsl_incr > nobsl_max_master) then ! there is a small chance that nobsl_incr = nobsl_max_master, which does not need to perform selection
+        call QUICKSELECT(dist_tmp, 1, nobsl_incr, nobsl_max_master, B=rloc_tmp, C=rdiag_tmp, I=iob_tmp)
+        nobsl_incr = nobsl_max_master
+      end if
+
+      rloc(nobsl+1:nobsl+nobsl_incr) = rloc_tmp(1:nobsl_incr)
+      rdiag(nobsl+1:nobsl+nobsl_incr) = rdiag_tmp(1:nobsl_incr)
+      do n = 1, nobsl_incr
+        nobsl = nobsl + 1
+        iob = iob_tmp(n)
+        hdxf(nobsl,:) = obsda2%ensval(:,iob)
+        dep(nobsl) = obsda2%val(iob)
+      end do
+
+      if (present(nobsl_t)) then
+        nobsl_t(ielm_u_master,ityp_master) = nobsl_incr
+      end if
 
     !-------------------------------------------------------------------------
     else
@@ -1051,11 +1184,11 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
           ielm = elm_ctype(ic2)
           ityp = typ_ctype(ic2)
 
-          ns = nn + 1
+          nn_prev = nn
           call obs_local_range(ic2, ri, rj, imin, imax, jmin, jmax)
           call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
 
-          do n = ns, nn
+          do n = nn_prev+1, nn
             iob = nobs_use(n)
 
             call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, ndist, nrloc, nrdiag)
@@ -1069,11 +1202,14 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
         end if ! [ obsgrd(ic2)%tot_ext > 0 ]
       end do ! [ do icm = 1, n_merge ]
 
+      if (nobsl_incr == 0) cycle
+
       if (nobsl_incr > nobsl_max_master) then
         call QUICKSELECT(rdiag_tmp, 1, nobsl_incr, nobsl_max_master, B=rloc_tmp, I=iob_tmp)
 !!!!!! only valid for MAX_NOBS_PER_GRID_CRITERION = 3. MAX_NOBS_PER_GRID_CRITERION = 2 needs to be considered.
         nobsl_incr = nobsl_max_master
       end if
+
       rloc(nobsl+1:nobsl+nobsl_incr) = rloc_tmp(1:nobsl_incr)
       rdiag(nobsl+1:nobsl+nobsl_incr) = rdiag_tmp(1:nobsl_incr)
       do n = 1, nobsl_incr
@@ -1084,7 +1220,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
       end do
 
       if (present(nobsl_t)) then
-        nobsl_t(ielm_u_master,ityp) = nobsl_incr
+        nobsl_t(ielm_u_master,ityp_master) = nobsl_incr
       end if
 
     !-------------------------------------------------------------------------
@@ -1276,6 +1412,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   if (maxval(MAX_NOBS_PER_GRID(:)) > 0) then
 
     deallocate (iob_tmp)
+    deallocate (dist_tmp)
     deallocate (rloc_tmp)
     deallocate (rdiag_tmp)
 
@@ -1331,7 +1468,7 @@ end subroutine obs_local_range
 !-------------------------------------------------------------------------------
 ! Subroutine for main calculation of obs_local
 !-------------------------------------------------------------------------------
-subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc, nrdiag)
+subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc, nrdiag, cutoff)
   use scale_grid, only: &
     DX, DY
   implicit none
@@ -1343,7 +1480,9 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   real(r_size), intent(out) :: ndist  ! normalized 3D distance SQUARE
   real(r_size), intent(out) :: nrloc  ! localization weight
   real(r_size), intent(out) :: nrdiag ! weighted observation error variance
+  real(r_size), intent(in), optional :: cutoff
 
+  real(r_size) :: dist_zero_fac_cutoff
   integer :: obset, obidx
   real(r_size) :: rdx, rdy
   real(r_size) :: nd_h, nd_v ! normalized horizontal/vertical distances
@@ -1379,6 +1518,18 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
     end if
   end if
   !
+  ! Pre-process the cutoff distance
+  !
+  if (present(cutoff)) then
+    if (obelm == id_radar_ref_zero_obs) then
+      dist_zero_fac_cutoff = cutoff / HORI_LOCAL_RADAR_OBSNOREF
+    else
+      dist_zero_fac_cutoff = cutoff / HORI_LOCAL(obtyp)
+    end if
+  else
+    dist_zero_fac_cutoff = dist_zero_fac
+  end if
+  !
   ! Calculate normalized vertical distances
   !
   if (VERT_LOCAL(obtyp) == 0.0d0) then
@@ -1399,7 +1550,7 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
 
   !--- reject obs by normalized vertical distance
   !    (do this first because there is large possibility to reject obs by the vertical distrance)
-  if (nd_v > dist_zero_fac) then
+  if (nd_v > dist_zero_fac_cutoff) then
     nrloc = 0.0d0
     return
   end if
@@ -1408,16 +1559,14 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   !
   rdx = (ri - obsda2%ri(iob)) * DX
   rdy = (rj - obsda2%rj(iob)) * DY
-  nd_h = sqrt(rdx*rdx + rdy*rdy)
-
   if (obelm == id_radar_ref_zero_obs) then
-    nd_h = nd_h / HORI_LOCAL_RADAR_OBSNOREF
+    nd_h = sqrt(rdx*rdx + rdy*rdy) / HORI_LOCAL_RADAR_OBSNOREF
   else
-    nd_h = nd_h / HORI_LOCAL(obtyp)
+    nd_h = sqrt(rdx*rdx + rdy*rdy) / HORI_LOCAL(obtyp)
   end if
 
   !--- reject obs by normalized horizontal distance
-  if (nd_h > dist_zero_fac) then
+  if (nd_h > dist_zero_fac_cutoff) then
     nrloc = 0.0d0
     return
   end if
@@ -1427,9 +1576,16 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   ndist = nd_h * nd_h + nd_v * nd_v
 
   !--- reject obs by normalized 3D distance
-  if (ndist > dist_zero_fac_square) then
-    nrloc = 0.0d0
-    return
+  if (present(cutoff)) then
+    if (ndist > dist_zero_fac_cutoff * dist_zero_fac_cutoff) then
+      nrloc = 0.0d0
+      return
+    end if
+  else
+    if (ndist > dist_zero_fac_square) then
+      nrloc = 0.0d0
+      return
+    end if
   end if
   !
   ! Calculate observational localization
