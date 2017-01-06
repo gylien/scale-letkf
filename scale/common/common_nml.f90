@@ -148,7 +148,7 @@ MODULE common_nml
       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
       -1, -1, -1, -1/)
 
-  integer :: MAX_NOBS_PER_GRID_CRITERION = 2 ! 1: normalized 3D distance (from closest)
+  integer :: MAX_NOBS_PER_GRID_CRITERION = 1 ! 1: normalized 3D distance (from closest)
                                              ! 2: localization weight (from largest)
                                              ! 3: weighted observation error variance (from smallest)
 
