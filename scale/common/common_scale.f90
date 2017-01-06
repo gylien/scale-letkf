@@ -1224,19 +1224,25 @@ end subroutine rij_l2g
 ! proc = -1: outside the global domain
 !-----------------------------------------------------------------------
 SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
-  use scale_grid_index, only: &
-      IHALO,JHALO
-!      IA,JA                  ! [for validation]
   use scale_rm_process, only: &
-      PRC_NUM_X,PRC_NUM_Y
-!      PRC_myrank             ! [for validation]
-!  use scale_grid, only: &    ! [for validation]
-!      GRID_CX, &             ! [for validation]
-!      GRID_CY, &             ! [for validation]
-!      GRID_CXG, &            ! [for validation]
-!      GRID_CYG, &            ! [for validation]
-!      DX, &                  ! [for validation]
-!      DY                     ! [for validation]
+      PRC_NUM_X, PRC_NUM_Y
+#ifdef DEBUG
+  use scale_grid_index, only: &
+      IHALO, JHALO, &
+      IA, JA
+  use scale_process, only: &
+      PRC_myrank
+  use scale_grid, only: &
+      GRID_CX, &
+      GRID_CY, &
+      GRID_CXG, &
+      GRID_CYG, &
+      DX, &
+      DY
+#else
+  use scale_grid_index, only: &
+      IHALO, JHALO
+#endif
   IMPLICIT NONE
   integer,INTENT(OUT) :: proc
   REAL(r_size),INTENT(IN) :: ig
@@ -1259,17 +1265,19 @@ SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
   jl = jg - real(jproc * nlat,r_size)
   call rank_2d_1d(iproc,jproc,proc)
 
-!  if (PRC_myrank == proc) then                                                                                    ! [for validation]
-!    if (rig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                      ! [for validation]
-!        rig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                     ! [for validation]
-!        rjg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &                                                      ! [for validation]
-!        rjg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then                                                      ! [for validation]
-!      write (6,'(A)') 'Error: Process assignment fails!'                                                          ! [for validation]
-!      write (6,'(3F10.2)') rig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 ! [for validation]
-!      write (6,'(3F10.2)') rjg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0 ! [for validation]
-!      stop                                                                                                        ! [for validation]
-!    end if                                                                                                        ! [for validation]
-!  end if                                                                                                          ! [for validation]
+#ifdef DEBUG
+  if (PRC_myrank == proc) then
+    if (ig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &
+        ig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &
+        jg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &
+        jg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then
+      write (6,'(A)') '[Error] Process assignment fails!'
+      write (6,'(3F10.2)') ig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0
+      write (6,'(3F10.2)') jg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0
+      stop
+    end if
+  end if
+#endif
 
   RETURN
 END SUBROUTINE rij_g2l_auto

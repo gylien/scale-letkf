@@ -948,7 +948,6 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
   !WRITE(6,*) u , v , w
   !WRITE(6,*) wt , vr
   !WRITE(6,*) elev , az , deg2rad
-  !STOP
 
 
   RETURN
@@ -1050,7 +1049,6 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
       qc = iqc_out_vlo
 
 !print *, plev
-!stop
 !print *, elem, ri, rj, rlev, rk, qc
 
 
@@ -1517,11 +1515,13 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
 #endif
 
     call rij_g2l_auto(proc,obsda%ri(nn),obsda%rj(nn),ri,rj)
+#ifdef DEBUG
     if (PRC_myrank /= proc) then
       write(6, *) '############ Error!', PRC_myrank,proc,obsda%ri(nn),obsda%rj(nn),ri,rj
       cycle
 !      stop
     end if
+#endif
 
     if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
         abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE) then

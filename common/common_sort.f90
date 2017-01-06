@@ -317,15 +317,15 @@ recursive subroutine QUICKSELECT(A, left, right, K)
   if (left < right) then
     if ((right-left)/K >= 2) then
       call sample_second_min(A, left, right, K, pivot)
-
-!write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(pivot), 'sample_second_min'
-
+#ifdef DEBUG
+      write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(pivot), 'sample_second_min'
+#endif
     else
       middle = (left + right) / 2
       call median_of_three(A, left, middle, right, pivot)
-
-!write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(pivot), 'median_of_three'
-
+#ifdef DEBUG
+      write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(pivot), 'median_of_three'
+#endif
     end if
     call partition(A, left, right, pivot)
     if (K < pivot) then
@@ -349,15 +349,15 @@ recursive subroutine QUICKSELECT_arg(A, X, left, right, K)
   if (left < right) then
     if ((right-left)/K >= 2) then
       call sample_second_min_arg(A, X, left, right, K, pivot)
-
-!write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(X(pivot)), 'sample_second_min'
-
+#ifdef DEBUG
+      write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(X(pivot)), 'sample_second_min'
+#endif
     else
       middle = (left + right) / 2
       call median_of_three_arg(A, X, left, middle, right, pivot)
-
-!write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(X(pivot)), 'median_of_three'
-
+#ifdef DEBUG
+      write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(X(pivot)), 'median_of_three'
+#endif
     end if
     call partition_arg(A, X, left, right, pivot)
     if (K < pivot) then
@@ -380,15 +380,15 @@ recursive subroutine QUICKSELECT_desc(A, left, right, K)
   if (left < right) then
     if ((right-left)/K >= 2) then
       call sample_second_max(A, left, right, K, pivot)
-
-!write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(pivot), 'sample_second_max'
-
+#ifdef DEBUG
+      write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(pivot), 'sample_second_max'
+#endif
     else
       middle = (left + right) / 2
       call median_of_three(A, left, middle, right, pivot)
-
-!write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(pivot), 'median_of_three'
-
+#ifdef DEBUG
+      write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(pivot), 'median_of_three'
+#endif
     end if
     call partition_desc(A, left, right, pivot)
     if (K < pivot) then
@@ -412,15 +412,15 @@ recursive subroutine QUICKSELECT_desc_arg(A, X, left, right, K)
   if (left < right) then
     if ((right-left)/K >= 2) then
       call sample_second_max_arg(A, X, left, right, K, pivot)
-
-!write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(X(pivot)), 'sample_second_max'
-
+#ifdef DEBUG
+      write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(X(pivot)), 'sample_second_max'
+#endif
     else
       middle = (left + right) / 2
       call median_of_three_arg(A, X, left, middle, right, pivot)
-
-!write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(X(pivot)), 'median_of_three'
-
+#ifdef DEBUG
+      write (6, '(4I8,F10.4,A)') K, left, right, pivot, A(X(pivot)), 'median_of_three'
+#endif
     end if
     call partition_desc_arg(A, X, left, right, pivot)
     if (K < pivot) then
