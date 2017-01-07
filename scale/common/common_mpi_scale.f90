@@ -233,7 +233,6 @@ SUBROUTINE set_common_mpi_scale
 
 
 !write(6,'(A,9I6)') '######===', myrank, myrank_e, nprocs_e, ranks(:)
-!stop
 
   deallocate(ranks)
 !!!!!!------
@@ -402,10 +401,12 @@ mem_loop: DO it = 1, nitmax
   end if
 
   lastmem_rank_e = mod(mem-1, n_mem*n_mempn)
-!  if (lastmem_rank_e /= proc2mem(1,1,mem2proc(1,mem)+1)-1) then
-!    print *, 'XXXXXX wrong!!'
-!    stop
-!  end if
+#ifdef DEBUG
+  if (lastmem_rank_e /= proc2mem(1,1,mem2proc(1,mem)+1)-1) then
+    write (6, '(A)'), '[Error] XXXXXX wrong!!'
+    stop
+  end if
+#endif
 
   RETURN
 END SUBROUTINE
@@ -987,7 +988,9 @@ SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
   INTEGER :: ns(nprocs_e),nst(nprocs_e),nr(nprocs_e),nrt(nprocs_e)
 
   mcount = mend - mstart + 1
+#ifdef DEBUG
   IF(mcount > nprocs_e .OR. mcount <= 0) STOP
+#endif
 
   IF(myrank_e < mcount) THEN
     j=0
@@ -1047,7 +1050,9 @@ SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,v3d,v2d,v3dg,v2dg)
   INTEGER :: ns(nprocs_e),nst(nprocs_e),nr(nprocs_e),nrt(nprocs_e)
 
   mcount = mend - mstart + 1
+#ifdef DEBUG
   IF(mcount > nprocs_e .OR. mcount <= 0) STOP
+#endif
 
   DO m = mstart,mend
     j=0
@@ -1133,11 +1138,13 @@ SUBROUTINE grd_to_buf(np,grd,buf)
       j = m-1 + np * (i-1)
       ilon = MOD(j,nlon) + 1
       ilat = (j-ilon+1) / nlon + 1
-!if (i < 1 .or. i > nij1max .or. m < 1 .or. m > np .or. ilon < 1 .or. ilon > nlon .or. ilat < 1 .or. ilat > nlat) then
-!print *, '######', np, nij1max
-!print *, '########', i, m, ilon, ilat
-!stop
-!end if
+#ifdef DEBUG
+if (i < 1 .or. i > nij1max .or. m < 1 .or. m > np .or. ilon < 1 .or. ilon > nlon .or. ilat < 1 .or. ilat > nlat) then
+  write(6, *), '[Error] ######', np, nij1max
+  write(6, *), '[Error] ######', i, m, ilon, ilat
+  stop
+end if
+#endif
       buf(i,m) = grd(ilon,ilat)
     END DO
   END DO

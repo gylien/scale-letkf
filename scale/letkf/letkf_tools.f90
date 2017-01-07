@@ -1185,8 +1185,10 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
           n_merge = n_merge + 1
           ic_merge(n_merge) = ic2
           ctype_skip(ic2) = .true.
-!          write(6, '(9A)') '[Info] Observation number limit: Consider obs types (', obtypelist(typ_ctype(ic)), ', ', obelmlist(elm_u_ctype(ic)), &
-!                           ') and (', obtypelist(typ_ctype(ic2)), ', ', obelmlist(elm_u_ctype(ic2)), ') together'
+#ifdef DEBUG
+          write(6, '(9A)') '[Info] Observation number limit: Consider obs types (', obtypelist(typ_ctype(ic)), ', ', obelmlist(elm_u_ctype(ic)), &
+                           ') and (', obtypelist(typ_ctype(ic2)), ', ', obelmlist(elm_u_ctype(ic2)), ') together'
+#endif
         end if
       end do
     end if
@@ -1278,10 +1280,9 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 
         end if ! [ obsgrd(ic2)%tot_ext > 0 ]
       end do ! [ do icm = 1, n_merge ]
-
-
+#ifdef DEBUG
 write (6, '(A,14x,I8)') '--- ALL      : ', nn
-
+#endif
 
       if (nn == 0) cycle
 
@@ -1329,10 +1330,9 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
         end do ! [ do icm = 1, n_merge ]
 
         nn_steps(n_merge+1) = nn
-
-
+#ifdef DEBUG
 write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cutoff, nn
-
+#endif
 
         if ((.not. reach_cutoff) .and. nn < nobsl_max_master) cycle
         if (reach_cutoff) then
@@ -1386,10 +1386,9 @@ write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cut
             end do
           end if ! [ nn_steps(icm+1) > nn_steps(icm) ]
         end do ! [ do icm = 1, n_merge ]
-
-
+#ifdef DEBUG
 write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cutoff, nn, nobsl_incr
-
+#endif
 
         if (nobsl_incr >= nobsl_max_master) loop = .false.
       end do ! [ loop ]
@@ -1533,11 +1532,13 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
   ! Finalize
   !-----------------------------------------------------------------------------
 
+#ifdef DEBUG
   if (nobsl > nobstotal) then
     write (6,'(A,I5,A,I5)') 'FATAL ERROR, NOBSL=', nobsl, ' > NOBSTOTAL=', nobstotal
     write (6,*) 'RI,RJ,LEV,NOBSL,NOBSTOTAL=', ri, rj, rlev, rz, nobsl, nobstotal
     stop 99
   end if
+#endif
 
   deallocate (nobs_use)
   if (maxval(MAX_NOBS_PER_GRID(:)) > 0) then
@@ -1583,15 +1584,13 @@ subroutine obs_local_range(ctype, ri, rj, imin, imax, jmin, jmax)
   dist_zero_j = hori_loc * dist_zero_fac / DY
   call ij_obsgrd_ext(ctype, ri - dist_zero_i, rj - dist_zero_j, imin, jmin)
   call ij_obsgrd_ext(ctype, ri + dist_zero_i, rj + dist_zero_j, imax, jmax)
-!  imin = max(1, imin)
-!  imax = min(obsgrd(ctype)%ngrdext_i, imax)
-!  jmin = max(1, jmin)
-!  jmax = min(obsgrd(ctype)%ngrdext_j, jmax)
+#ifdef DEBUG
   if (imin < 1 .or. imax > obsgrd(ctype)%ngrdext_i .or. &
       jmin < 1 .or. jmax > obsgrd(ctype)%ngrdext_j) then
     write (6, '(A)') '[Error] The extended subdomain is not wide enough.'
     stop 99
   end if
+#endif
 
   return
 end subroutine obs_local_range
@@ -1628,6 +1627,7 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
 
   obset = obsda2%set(iob)
   obidx = obsda2%idx(iob)
+#ifdef DEBUG
   if (obelm /= obs(obset)%elm(obidx)) then
     write (6, '(A)') '[Error] inconsistent observation variable type !!!'
     stop 99
@@ -1636,14 +1636,17 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
     write (6, '(A)') '[Error] inconsistent observation report type !!!'
     stop 99
   end if
+#endif
   !
   ! Calculate variable localization
   !
   if (nvar > 0) then  ! use variable localization only when nvar > 0
+#ifdef DEBUG
     if (uid_obs_varlocal(obelm) <= 0) then
       write (6,'(A)') '[Error] unsupport observation type in variable localization.'
       stop 1
     end if
+#endif
     nrloc = var_local(nvar,uid_obs_varlocal(obelm))
 
 
@@ -1782,11 +1785,13 @@ subroutine relax_beta(ri, rj, rlev, nvar, beta)
   if (BOUNDARY_BUFFER_WIDTH > 0.0d0) then
     dist_bdy = min(min(ri-IHALO, nlong+IHALO+1-ri) * DX, &
                    min(rj-JHALO, nlatg+JHALO+1-rj) * DY) / BOUNDARY_BUFFER_WIDTH
-!    if (dist_bdy < 0.0d0) then
-!      write (6, '(A,4F10.3)') '[Error] Wrong dist_bdy:', &
-!            ri-IHALO, nlong+IHALO+1-ri, rj-JHALO, nlatg+JHALO+1-rj
-!      stop 1
-!    end if
+#ifdef DEBUG
+    if (dist_bdy < 0.0d0) then
+      write (6, '(A,4F10.3)') '[Error] Wrong dist_bdy:', &
+            ri-IHALO, nlong+IHALO+1-ri, rj-JHALO, nlatg+JHALO+1-rj
+      stop 99
+    end if
+#endif
     if (dist_bdy < 1.0d0) then
       beta = max(dist_bdy, 0.0d0)
     end if

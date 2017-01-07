@@ -357,7 +357,9 @@ SUBROUTINE obsope_cal(obs, obsda_return)
               if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_ref_zero_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
                 if (obs(iof)%lev(n) > RADAR_ZMAX) then
                   obsda%qc(nn) = iqc_radar_vhi
+#ifdef DEBUG
                   write(6,'(A,F8.1,A,I5)') 'warning: radar observation is too high: lev=', obs(iof)%lev(n), ', elem=', obs(iof)%elm(n)
+#endif
                 else
                   call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
                 end if

@@ -189,22 +189,24 @@ SUBROUTINE set_letkf_obs
           obsda%val2(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%val2
 #endif
         else
+#ifdef DEBUG
           if (maxval(abs(obsda%set(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%set)) > 0) then
             write (6,'(A)') 'error: obsda%set are inconsistent among the ensemble'
-            stop
+            stop 99
           end if
           if (maxval(abs(obsda%idx(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%idx)) > 0) then
             write (6,'(A)') 'error: obsda%idx are inconsistent among the ensemble'
-            stop
+            stop 99
           end if
           if (maxval(abs(obsda%ri(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%ri)) > 1.e-6) then
             write (6,'(A)') 'error: obsda%ri are inconsistent among the ensemble'
-            stop
+            stop 99
           end if
           if (maxval(abs(obsda%rj(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%rj)) > 1.e-6) then
             write (6,'(A)') 'error: obsda%rj are inconsistent among the ensemble'
-            stop
+            stop 99
           end if
+#endif
           obsda%qc(obsda%nobs-nobs_ext+1:obsda%nobs) = max(obsda%qc(obsda%nobs-nobs_ext+1:obsda%nobs), obsda_ext%qc)
 #ifdef H08
           obsda%lev(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda%lev(obsda%nobs-nobs_ext+1:obsda%nobs) + obsda_ext%lev
@@ -609,6 +611,7 @@ SUBROUTINE set_letkf_obs
       ENDIF !  [.not. DEPARTURE_STAT_H08]
 #endif
     ELSE
+#ifdef DEBUG
       write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
                                          obs(iof)%typ(iidx), &
                                          obs(iof)%lon(iidx), &
@@ -618,6 +621,7 @@ SUBROUTINE set_letkf_obs
                                          obs(iof)%err(iidx), &
                                          obsda%val(n), &
                                          obsda%qc(n)
+#endif
     ENDIF
 
 
@@ -821,10 +825,12 @@ SUBROUTINE set_letkf_obs
       obsgrd(ictype)%tot(:) = obsgrd(ictype)%ac(obsgrd(ictype)%ngrd_i,obsgrd(ictype)%ngrd_j,:) &
                             - obsgrd(ictype-1)%ac(obsgrd(ictype-1)%ngrd_i,obsgrd(ictype-1)%ngrd_j,:)
     end if
+#ifdef DEBUG
     if (obsgrd(ictype)%tot(myrank_d) /= obsgrd(ictype)%tot_sub(2)) then
       write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
       stop 99
     end if
+#endif
 
     nobs_sub(:) = nobs_sub(:) + obsgrd(ictype)%tot_sub(:)
     nobs_g(:) = nobs_g(:) + obsgrd(ictype)%tot_g(:)
@@ -832,6 +838,7 @@ SUBROUTINE set_letkf_obs
     deallocate (obsgrd(ictype)%next)
   end do
 
+#ifdef DEBUG
   if (obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,myrank_d) /= nobs_sub(2)) then
     write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
     stop 99
@@ -840,6 +847,7 @@ SUBROUTINE set_letkf_obs
     write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
     stop 99
   end if
+#endif
   nobstotalg = nobs_g(2) ! total obs number in the global domain (all types)
 
   ! Print observation counts for each types
@@ -976,10 +984,12 @@ SUBROUTINE set_letkf_obs
     end do
   end do ! [ ictype = 1, nctype ]
 
+#ifdef DEBUG
   if (nk /= nobs_sub(2)) then
     write (6, '(A)') '[Error] Error with number of observations in the subdomain !!!'
     stop 99
   end if
+#endif
 
   obsda2%nobs_in_key = nk
 
@@ -1067,12 +1077,14 @@ SUBROUTINE set_letkf_obs
       do ip2 = 0, MEM_NP-1
         if (ip2 /= ip) then
 
+#ifdef DEBUG
           if (ne_bufr /= nrt(ip2+1)) then
             write (6, '(A)') '[Error] Error in copying receive buffer !!!'
             write (6, *) ip, ip2, ne_bufr, nrt(ip2+1)
             write (6, *) nrt(:)
             stop 99
           end if 
+#endif
 
           do ictype = 1, nctype
             call rank_1d_2d(ip, iproc, jproc)
@@ -1095,12 +1107,14 @@ SUBROUTINE set_letkf_obs
               ns_ext = obsgrd(ictype)%ac_ext(imin2+ishift-1,j+jshift) + 1
               ne_ext = obsgrd(ictype)%ac_ext(imax2+ishift  ,j+jshift)
 
+#ifdef DEBUG
               if (ne_ext - ns_ext + 1 /= obsgrd(ictype)%ac(imax2,j,ip2) - obsgrd(ictype)%ac(imin2-1,j,ip2)) then
                 write (6, '(A)') '[Error] observation grid indices have errors !!!'
                 write (6, *) ictype, ip, ip2, j, imin1, imax1, jmin1, jmax1, imin2, imax2, jmin2, jmax2, ishift, jshift, &
                              obsgrd(ictype)%ngrd_i, obsgrd(ictype)%ngrd_j, obsgrd(ictype)%ngrdsch_i, obsgrd(ictype)%ngrdsch_j, ns_ext, ne_ext, ns_bufr, ne_bufr
                 stop 99
               end if
+#endif
 
               if (ns_ext > ne_ext) cycle
               ns_bufr = ne_bufr + 1
