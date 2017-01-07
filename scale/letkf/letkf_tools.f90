@@ -32,6 +32,8 @@ MODULE letkf_tools
 
   integer,save :: ctype_merge(nid_obs,nobtype)
 
+  integer,parameter :: n_search_incr = 8
+
   real(r_size),save :: tt(23), ttomp(17)
   integer,save :: ntt(23), nttomp(17)
 
@@ -1039,9 +1041,11 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   logical :: loop
   integer :: nn_steps(nctype+1)
   logical :: reach_cutoff
-  integer :: imin_cutoff, imax_cutoff, jmin_cutoff, jmax_cutoff
+  integer :: imin_cutoff(nid_obs*nobtype), imax_cutoff(nid_obs*nobtype)
+  integer :: jmin_cutoff(nid_obs*nobtype), jmax_cutoff(nid_obs*nobtype)
   real(r_size) :: search_incr, search_incr_i, search_incr_j
   real(r_size) :: dist_zero_fac_cutoff
+  real(r_size) :: hori_loc
 
 
   real(r_size) :: tt0, tt1
@@ -1195,9 +1199,21 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
 
       if (nn == 0) cycle
 
+      do icm = 1, n_merge
+        ic2 = ic_merge(icm)
+        call obs_local_range(ic2, ri, rj, imin_cutoff(icm), imax_cutoff(icm), jmin_cutoff(icm), jmax_cutoff(icm))
+      end do
+
       search_incr = max(obsgrd(ic)%grdspc_i, obsgrd(ic)%grdspc_j)
+      hori_loc = HORI_LOCAL(typ_ctype(ic))
+      if (elm_ctype(ic) == id_radar_ref_zero_obs) then
+        hori_loc = HORI_LOCAL_RADAR_OBSNOREF
+      end if
+      ! use integer times of sorting mesh size for search_incr
+      search_incr = search_incr * ceiling(hori_loc * dist_zero_fac / search_incr / real(n_search_incr, r_size))
       search_incr_i = search_incr / DX
       search_incr_j = search_incr / DY
+
       nobsl_incr = 0
       q = 0
       loop = .true.
@@ -1215,13 +1231,12 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
             call ij_obsgrd_ext(ic2, ri-search_incr_i*q, rj-search_incr_j*q, imin, jmin)
             call ij_obsgrd_ext(ic2, ri+search_incr_i*q, rj+search_incr_j*q, imax, jmax)
 
-            call obs_local_range(ic2, ri, rj, imin_cutoff, imax_cutoff, jmin_cutoff, jmax_cutoff)
-            if (imin < imin_cutoff .or. imax > imax_cutoff .or. &
-                jmin < jmin_cutoff .or. jmax > jmax_cutoff) then
-              imin = imin_cutoff
-              imax = imax_cutoff
-              jmin = jmin_cutoff
-              jmax = jmax_cutoff
+            if (imin < imin_cutoff(icm) .or. imax > imax_cutoff(icm) .or. &
+                jmin < jmin_cutoff(icm) .or. jmax > jmax_cutoff(icm)) then
+              imin = imin_cutoff(icm)
+              imax = imax_cutoff(icm)
+              jmin = jmin_cutoff(icm)
+              jmax = jmax_cutoff(icm)
             else
               reach_cutoff = .false.
             end if
