@@ -117,14 +117,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       IF(MAXVAL(ABS(var_local(i,:)-var_local(n,:))) < TINY(var_local)) EXIT
     END DO
   END DO
-
-
-  tt1 = MPI_WTIME()
-  tt(1) = tt(1) + tt1 - tt0
-  ntt(1) = ntt(1) + 1
-  tt0 = tt1
-
-
   !
   ! Observation number limit (*to be moved to namelist*)
   !
@@ -155,14 +147,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !$OMP END PARALLEL DO
     END DO
   END DO
-
-
-  tt1 = MPI_WTIME()
-  tt(2) = tt(2) + tt1 - tt0
-  ntt(2) = ntt(2) + 1
-  tt0 = tt1
-
-
   !
   ! multiplicative inflation
   !
@@ -210,9 +194,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  tt(3) = tt(3) + tt1 - tt0
-  ntt(3) = ntt(3) + 1
+  tt(1) = tt(1) + tt1 - tt0
+  ntt(1) = ntt(1) + 1
   tt0 = tt1
+
 
   DO ilev=1,nlev
     WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
@@ -255,12 +240,19 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
         ELSE
+
+
+  tt1 = MPI_WTIME()
+  ttomp(1) = ttomp(1) + tt1 - tt0
+  nttomp(1) = nttomp(1) + 1
+  tt0 = tt1
+
+
           ! compute weights with localized observations
           CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
 
 
   tt0 = MPI_WTIME()
-
 
 
           IF(RELAX_TO_INFLATED_PRIOR) THEN                                             !GYL
@@ -277,24 +269,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                             trans(:,:,n),transm=transm(:,n),                 &         !GYL
                             rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)           !GYL
           END IF                                                                       !GYL
-
-
-  tt1 = MPI_WTIME()
-  ttomp(13) = ttomp(13) + tt1 - tt0
-  nttomp(13) = nttomp(13) + 1
-  tt0 = tt1
-
-
           IF(NOBS_OUT) THEN                                                            !GYL
             work3dn(:,ij,ilev,n) = real(sum(nobsl_t, dim=1),r_size)                    !GYL
             work3dn(21,ij,ilev,n) = real(nobsl_t(9,22),r_size)                         !GYL !!! addtionally save ref nobs in a special place
           END IF                                                                       !GYL
 
 
-
   tt1 = MPI_WTIME()
-  ttomp(14) = ttomp(14) + tt1 - tt0
-  nttomp(14) = nttomp(14) + 1
+  ttomp(1) = ttomp(1) + tt1 - tt0
+  nttomp(1) = nttomp(1) + 1
   tt0 = tt1
 
 
@@ -302,13 +285,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
         ! weight parameter based on grid locations (not for cov inflation purpose)     !GYL
         CALL relax_beta(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),n,beta)               !GYL
-
-
-  tt1 = MPI_WTIME()
-  ttomp(15) = ttomp(15) + tt1 - tt0
-  nttomp(15) = nttomp(15) + 1
-  tt0 = tt1
-
 
         IF(beta == 0.0d0) THEN                                                         !GYL
           ! no analysis update needed
@@ -347,14 +323,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           END DO
         END IF ! [ beta == 0.0d0 ]                                                     !GYL
 
-
-  tt1 = MPI_WTIME()
-  ttomp(16) = ttomp(16) + tt1 - tt0
-  nttomp(16) = nttomp(16) + 1
-  tt0 = tt1
-
-
-
         ! limit q spread
         IF(Q_SPRD_MAX > 0.0d0 .and. n == iv3d_q) THEN                                  !GYL
           q_mean = SUM(anal3d(ij,ilev,:,n)) / REAL(MEMBER,r_size)                      !GYL
@@ -373,8 +341,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  ttomp(17) = ttomp(17) + tt1 - tt0
-  nttomp(17) = nttomp(17) + 1
+  ttomp(1) = ttomp(1) + tt1 - tt0
+  nttomp(1) = nttomp(1) + 1
   tt0 = tt1
 
 
@@ -412,9 +380,16 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
           ELSE
+
+
+  tt1 = MPI_WTIME()
+  ttomp(1) = ttomp(1) + tt1 - tt0
+  nttomp(1) = nttomp(1) + 1
+  tt0 = tt1
+
+
             ! compute weights with localized observations
             CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
-
 
 
   tt0 = MPI_WTIME()
@@ -434,16 +409,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                               trans(:,:,nv3d+n),transm=transm(:,nv3d+n),       &       !GYL
                               rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)         !GYL
             END IF                                                                     !GYL
-
-
-
-  tt1 = MPI_WTIME()
-  ttomp(13) = ttomp(13) + tt1 - tt0
-  nttomp(13) = nttomp(13) + 1
-  tt0 = tt1
-
-
-
             IF(NOBS_OUT) THEN                                                          !GYL
               work2dn(:,ij,n) = real(sum(nobsl_t,dim=1),r_size)                        !GYL
               work2dn(21,ij,n) = real(nobsl_t(9,22),r_size)                            !GYL !!! addtionally save ref nobs in a special place
@@ -451,24 +416,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  ttomp(14) = ttomp(14) + tt1 - tt0
-  nttomp(14) = nttomp(14) + 1
+  ttomp(1) = ttomp(1) + tt1 - tt0
+  nttomp(1) = nttomp(1) + 1
   tt0 = tt1
-
 
 
           END IF
 
           ! weight parameter based on grid locations (not for cov inflation purpose)   !GYL
           CALL relax_beta(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),nv3d+n,beta)        !GYL
-
-
-
-  tt1 = MPI_WTIME()
-  ttomp(15) = ttomp(15) + tt1 - tt0
-  nttomp(15) = nttomp(15) + 1
-  tt0 = tt1
-
 
           IF(beta == 0.0d0) THEN                                                       !GYL
             ! no analysis update needed
@@ -507,13 +463,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             END DO
           END IF ! [ beta == 0.0d0 ]                                                   !GYL
 
-  tt1 = MPI_WTIME()
-  ttomp(16) = ttomp(16) + tt1 - tt0
-  nttomp(16) = nttomp(16) + 1
-  tt0 = tt1
-
-
-
         END DO ! [ n=1,nv2d ]
       END IF ! [ ilev == 1 ]
 
@@ -521,13 +470,11 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !$OMP END PARALLEL DO
 
 
-  tt(4:20) = tt(4:20) + ttomp(1:17)
-  ntt(4:20) = ntt(4:20) + nttomp(1:17)
-
+  tt(2:6) = tt(2:6) + ttomp(1:5)
+  ntt(2:6) = ntt(2:6) + nttomp(1:5)
 
 
   END DO ! [ ilev=1,nlev ]
-
 
 
   tt0 = MPI_WTIME()
@@ -568,15 +515,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !
   ! Write observation numbers
   !
-
-
-  tt1 = MPI_WTIME()
-  tt(21) = tt(21) + tt1 - tt0
-  ntt(21) = ntt(21) + 1
-  tt0 = tt1
-
-
-
   IF(NOBS_OUT) THEN
     if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
     if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
@@ -595,14 +533,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   END IF
   IF (allocated(work3dg)) deallocate (work3dg)
   IF (allocated(work2dg)) deallocate (work2dg)
-
-
-  tt1 = MPI_WTIME()
-  tt(22) = tt(22) + tt1 - tt0
-  ntt(22) = ntt(22) + 1
-  tt0 = tt1
-
-
   !
   ! Additive inflation
   !
@@ -664,26 +594,16 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 
   tt1 = MPI_WTIME()
-  tt(23) = tt(23) + tt1 - tt0
-  ntt(23) = ntt(23) + 1
+  tt(7) = tt(7) + tt1 - tt0
+  ntt(7) = ntt(7) + 1
   tt0 = tt1
 
 
-
   write (6,'(A)') '****************************************************************************'
-  write (6,'(10F12.6)') tt(1:10)
-  write (6,'(36x,7F12.6)') tt(4:10) / 8
-  write (6,'(10I12)') ntt(1:10)
-  write (6,'(10F12.6)') tt(1:10) / ntt(1:10)
-  write (6,'(A)') '----------------------------------------------------------------------------'
-  write (6,'(10F12.6)') tt(11:20)
-  write (6,'(10F12.6)') tt(11:20) / 8
-  write (6,'(10I12)') ntt(11:20)
-  write (6,'(10F12.6)') tt(11:20) / ntt(11:20)
-  write (6,'(A)') '----------------------------------------------------------------------------'
-  write (6,'(3F12.6)') tt(21:23)
-  write (6,'(3I12)') ntt(21:23)
-  write (6,'(3F12.6)') tt(21:23) / ntt(21:23)
+  write (6,'(7F12.6)') tt(1:7)
+  write (6,'(12x,5F12.6)') tt(2:6) / 8
+  write (6,'(7I12)') ntt(1:7)
+  write (6,'(7F12.6)') tt(1:7) / ntt(1:7)
   write (6,'(A)') '****************************************************************************'
 
 
@@ -1159,13 +1079,6 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
     allocate (nobs_use(maxnobs_per_ctype))
   end if
 
-
-  tt1 = MPI_WTIME()
-  ttomp(2) = ttomp(2) + tt1 - tt0
-  nttomp(2) = nttomp(2) + 1
-  tt0 = tt1 
-
-
   !-----------------------------------------------------------------------------
   ! For each observation type,
   ! do rough data search by a rectangle using the sorting mesh, and then
@@ -1218,8 +1131,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 
 
   tt1 = MPI_WTIME()
-  ttomp(3) = ttomp(3) + tt1 - tt0
-  nttomp(3) = nttomp(3) + 1
+  ttomp(2) = ttomp(2) + tt1 - tt0
+  nttomp(2) = nttomp(2) + 1
   tt0 = tt1
 
 
@@ -1227,10 +1140,6 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
             iob = nobs_use(n)
 
             call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, ndist_dummy, nrloc, nrdiag)
-
-
-  tt0 = MPI_WTIME()
-
 
             if (nrloc == 0.0d0) cycle
 
@@ -1242,8 +1151,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 
 
   tt1 = MPI_WTIME()
-  ttomp(9) = ttomp(9) + tt1 - tt0
-  nttomp(9) = nttomp(9) + 1
+  ttomp(3) = ttomp(3) + tt1 - tt0
+  nttomp(3) = nttomp(3) + 1
   tt0 = tt1
 
 
@@ -1273,8 +1182,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 
 
   tt1 = MPI_WTIME()
-  ttomp(3) = ttomp(3) + tt1 - tt0
-  nttomp(3) = nttomp(3) + 1
+  ttomp(2) = ttomp(2) + tt1 - tt0
+  nttomp(2) = nttomp(2) + 1
   tt0 = tt1
 
 
@@ -1321,8 +1230,8 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
 
 
   tt1 = MPI_WTIME()
-  ttomp(3) = ttomp(3) + tt1 - tt0
-  nttomp(3) = nttomp(3) + 1
+  ttomp(2) = ttomp(2) + tt1 - tt0
+  nttomp(2) = nttomp(2) + 1
   tt0 = tt1
 
 
@@ -1356,11 +1265,6 @@ write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cut
                 
               if (rloc_tmp(iob) < 0.0d0) then
                 call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, dist_tmp(iob), rloc_tmp(iob), rdiag_tmp(iob))
-
-
-  tt0 = MPI_WTIME()
-
-
                 if (rloc_tmp(iob) == 0.0d0) cycle
               end if
 
@@ -1378,8 +1282,8 @@ write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cut
 
 
   tt1 = MPI_WTIME()
-  ttomp(9) = ttomp(9) + tt1 - tt0
-  nttomp(9) = nttomp(9) + 1
+  ttomp(3) = ttomp(3) + tt1 - tt0
+  nttomp(3) = nttomp(3) + 1
   tt0 = tt1
 
 
@@ -1398,14 +1302,6 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
       if (nobsl_incr > nobsl_max_master) then
         call QUICKSELECT_arg(dist_tmp, nobs_use2, 1, nobsl_incr, nobsl_max_master)
         nobsl_incr = nobsl_max_master
-
-
-  tt1 = MPI_WTIME()
-  ttomp(10) = ttomp(10) + tt1 - tt0
-  nttomp(10) = nttomp(10) + 1
-  tt0 = tt1
-
-
       end if
 
       do n = 1, nobsl_incr
@@ -1423,8 +1319,8 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
 
 
   tt1 = MPI_WTIME()
-  ttomp(11) = ttomp(11) + tt1 - tt0
-  nttomp(11) = nttomp(11) + 1
+  ttomp(4) = ttomp(4) + tt1 - tt0
+  nttomp(4) = nttomp(4) + 1
   tt0 = tt1
 
 
@@ -1451,8 +1347,8 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
 
 
   tt1 = MPI_WTIME()
-  ttomp(3) = ttomp(3) + tt1 - tt0
-  nttomp(3) = nttomp(3) + 1
+  ttomp(2) = ttomp(2) + tt1 - tt0
+  nttomp(2) = nttomp(2) + 1
   tt0 = tt1
 
 
@@ -1460,11 +1356,6 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
             iob = nobs_use(n)
 
             call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, ndist_dummy, rloc_tmp(iob), rdiag_tmp(iob))
-
-
-  tt0 = MPI_WTIME()
-
-
             if (rloc_tmp(iob) == 0.0d0) cycle
 
             nobsl_incr = nobsl_incr + 1
@@ -1472,8 +1363,8 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
 
 
   tt1 = MPI_WTIME()
-  ttomp(9) = ttomp(9) + tt1 - tt0
-  nttomp(9) = nttomp(9) + 1
+  ttomp(3) = ttomp(3) + tt1 - tt0
+  nttomp(3) = nttomp(3) + 1
   tt0 = tt1
 
 
@@ -1493,14 +1384,6 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
           stop 99
         end if
         nobsl_incr = nobsl_max_master
-
-
-  tt1 = MPI_WTIME()
-  ttomp(10) = ttomp(10) + tt1 - tt0
-  nttomp(10) = nttomp(10) + 1
-  tt0 = tt1
-
-
       end if
 
       do n = 1, nobsl_incr
@@ -1518,8 +1401,8 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
 
 
   tt1 = MPI_WTIME()
-  ttomp(11) = ttomp(11) + tt1 - tt0
-  nttomp(11) = nttomp(11) + 1
+  ttomp(4) = ttomp(4) + tt1 - tt0
+  nttomp(4) = nttomp(4) + 1
   tt0 = tt1
 
 
@@ -1552,8 +1435,8 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
 
 
   tt1 = MPI_WTIME()
-  ttomp(12) = ttomp(12) + tt1 - tt0
-  nttomp(12) = nttomp(12) + 1
+  ttomp(5) = ttomp(5) + tt1 - tt0
+  nttomp(5) = nttomp(5) + 1
   tt0 = tt1 
 
 
@@ -1615,12 +1498,6 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   real(r_size) :: rdx, rdy
   real(r_size) :: nd_h, nd_v ! normalized horizontal/vertical distances
 
-
-  real(r_size) :: tt0, tt1
-
-  tt0 = MPI_WTIME()
-
-
   nrloc = 0.0d0
   nrdiag = -1.0d0
   ndist = -1.0d0
@@ -1649,13 +1526,6 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
 #endif
     nrloc = var_local(nvar,uid_obs_varlocal(obelm))
 
-
-  tt1 = MPI_WTIME()
-  ttomp(4) = ttomp(4) + tt1 - tt0
-  nttomp(4) = nttomp(4) + 1
-  tt0 = tt1 
-
-
     !--- reject obs by variable localization
     if (nrloc < tiny(var_local)) then
       nrloc = 0.0d0
@@ -1681,14 +1551,6 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
     nd_v = ABS(LOG(obs(obset)%lev(obidx)) - LOG(rlev)) / VERT_LOCAL(obtyp)
   end if
 
-
-  tt1 = MPI_WTIME()
-  ttomp(5) = ttomp(5) + tt1 - tt0
-  nttomp(5) = nttomp(5) + 1
-  tt0 = tt1 
-
-
-
   !--- reject obs by normalized vertical distance
   !    (do this first because there is large possibility to reject obs by the vertical distrance)
   if (nd_v > dist_zero_fac) then
@@ -1706,13 +1568,6 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
     nd_h = sqrt(rdx*rdx + rdy*rdy) / HORI_LOCAL(obtyp)
   end if
 
-
-  tt1 = MPI_WTIME()
-  ttomp(6) = ttomp(6) + tt1 - tt0
-  nttomp(6) = nttomp(6) + 1
-  tt0 = tt1 
-
-
   !--- reject obs by normalized horizontal distance
   if (nd_h > dist_zero_fac) then
     nrloc = 0.0d0
@@ -1722,13 +1577,6 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   ! Calculate (normalized 3D distances)^2
   !
   ndist = nd_h * nd_h + nd_v * nd_v
-
-
-  tt1 = MPI_WTIME()
-  ttomp(7) = ttomp(7) + tt1 - tt0
-  nttomp(7) = nttomp(7) + 1
-  tt0 = tt1
-
 
   !--- reject obs by normalized 3D distance
   if (ndist > dist_zero_fac_square) then
@@ -1744,13 +1592,6 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   ! Calculate (observation variance / localization)
   !
   nrdiag = obs(obset)%err(obidx) * obs(obset)%err(obidx) / nrloc
-
-
-  tt1 = MPI_WTIME()
-  ttomp(8) = ttomp(8) + tt1 - tt0
-  nttomp(8) = nttomp(8) + 1
-  tt0 = tt1 
-
 
   return
 end subroutine obs_local_cal
