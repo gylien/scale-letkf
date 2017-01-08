@@ -40,8 +40,8 @@ PROGRAM obsmake
 
   call set_common_conf(nprocs)
 
+  call read_nml_obs_error
   call read_nml_letkf
-  call read_nml_letkf_obserr
   call read_nml_letkf_radar
   call read_nml_letkf_h08
 

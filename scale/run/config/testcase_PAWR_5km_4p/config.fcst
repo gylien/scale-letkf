@@ -5,11 +5,11 @@
 #
 #===============================================================================
 
-STIME='20130713061000'
-ETIME='20130713062000'
+STIME='20130713060000'
+ETIME='20130713060030'
 MEMBERS='mean 1'
-CYCLE=2
-CYCLE_SKIP=20
+CYCLE=
+CYCLE_SKIP=1
 IF_VERF=0
 IF_EFSO=0
 ISTEP=
@@ -19,7 +19,7 @@ TIME_LIMIT='01:00:00'
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=1800        # SCALE forecast length in the forecast mode (second)
+FCSTLEN=90          # SCALE forecast length in the forecast mode (second)
 FCSTOUT=30
 
 #===============================================================================
