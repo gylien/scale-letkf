@@ -162,7 +162,7 @@ OUT_CYCLE_SKIP=${OUT_CYCLE_SKIP:-1}
 print_setting () {
 #-------------------------------------------------------------------------------
 
-for vname in DIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BDY_SCALE \
+for vname in DIR INDIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BDY_SCALE \
              DATA_BDY_SCALE_PREP DATA_BDY_WRF DATA_BDY_NICAM OBS OBSNCEP TOPO_FORMAT \
              LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT \
              PARENT_REF_TIME OCEAN_INPUT OCEAN_FORMAT OBSNUM WINDOW_S WINDOW_E \
@@ -411,7 +411,7 @@ else
       for m in $(seq $mmean); do
         for q in $(seq $mem_np); do
           path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
         done
       done
     fi
@@ -422,7 +422,7 @@ else
 #      for m in $(seq $mmean); do
 #        for q in $(seq $mem_np); do
 #          path="${time}/anal/${name_m[$m]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
-#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+#          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
 #        done
 #      done
 #    fi
@@ -969,11 +969,7 @@ else
     nbdy_all=0
     time=$STIME
     while ((time <= ETIME)); do
-      if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
-        bdy_setting $time $CYCLEFLEN - $BDYINT $PARENT_REF_TIME
-      else
-        bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
-      fi        
+      bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 
       for ibdy in $(seq $nbdy); do
         time_bdy=${bdy_times[$ibdy]}
@@ -1257,11 +1253,7 @@ if ((BDY_FORMAT == 0)); then
   exit 1
 fi
 
-if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
-  bdy_setting $time $CYCLEFLEN - $BDYINT $PARENT_REF_TIME
-else
-  bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
-fi
+bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 bdy_time_list=''
 for ibdy in $(seq $nbdy); do
   bdy_time_list="${bdy_time_list}${bdy_times[$ibdy]} "
@@ -1399,11 +1391,7 @@ if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script start" >&2
 fi
 
-if ((BDY_FORMAT == 1 && BDY_ROTATING == 1)); then
-  bdy_setting $time $CYCLEFLEN - $BDYINT $PARENT_REF_TIME
-else
-  bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME
-fi
+bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 
 ############
 #if ((BDY_FORMAT == 1)); then
