@@ -994,7 +994,7 @@ else
     nbdy_all=0
     time=$STIME
     while ((time <= ETIME)); do
-      bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME $BDY_SINGLE_FILE
+      bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 
       for ibdy in $(seq $nbdy); do
         time_bdy=${bdy_times[$ibdy]}
@@ -1200,9 +1200,9 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= MEMBER_RUN)); then
-    if (pdrun $g $PROC_OPT); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= MEMBER_RUN)); then
       bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK $time ${name_m[$m]} \
            $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT \
            cycle ${bdytopo} ${bdycatalogue}
@@ -1244,9 +1244,9 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= MEMBER_RUN)); then
-    if (pdrun $g $PROC_OPT); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= MEMBER_RUN)); then
       bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $time \
            ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT
     fi
@@ -1278,7 +1278,7 @@ if ((BDY_FORMAT == 0)); then
   exit 1
 fi
 
-bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME $BDY_SINGLE_FILE
+bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 bdy_time_list=''
 for ibdy in $(seq $nbdy); do
   bdy_time_list="${bdy_time_list}${bdy_times[$ibdy]} "
@@ -1324,15 +1324,15 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= MEMBER_RUN)); then
-    if ((BDY_ENS == 1)); then
-      mem_bdy=${name_m[$m]}
-    else
-      mem_bdy='mean'
-    fi
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= MEMBER_RUN)); then
+      if ((BDY_ENS == 1)); then
+        mem_bdy=${name_m[$m]}
+      else
+        mem_bdy='mean'
+      fi
 
-    if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
            $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
            ${bdyorgf} $time $mkinit ${name_m[$m]} $mem_bdy \
@@ -1381,15 +1381,15 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= MEMBER_RUN)); then
-    if ((BDY_ENS == 1)); then
-      mem_bdy=${name_m[$m]}
-    else
-      mem_bdy='mean'
-    fi
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= MEMBER_RUN)); then
+      if ((BDY_ENS == 1)); then
+        mem_bdy=${name_m[$m]}
+      else
+        mem_bdy='mean'
+      fi
 
-    if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $time \
            $mkinit $mem_bdy $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
     fi
@@ -1416,7 +1416,7 @@ if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script start" >&2
 fi
 
-bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT $BDYINT $PARENT_REF_TIME $BDY_SINGLE_FILE
+bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 
 ############
 #if ((BDY_FORMAT == 1)); then
@@ -1465,40 +1465,39 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= mmean)); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= mmean)); then
+#      if ((PERTURB_BDY == 1)); then
+#        ...
+#      fi
 
-#    if ((PERTURB_BDY == 1)); then
-#      ...
-#    fi
-
-    if ((BDY_ENS == 1)); then
-      mem_bdy=${name_m[$m]}
-    else
-      mem_bdy='mean'
-    fi
-
-    ocean_base='-'
-    if ((OCEAN_INPUT == 1 && mkinit != 1)); then
-      if ((OCEAN_FORMAT == 0)); then
-        ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_ocean"
-      elif ((OCEAN_FORMAT == 99)); then
-        ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
+      if ((BDY_ENS == 1)); then
+        mem_bdy=${name_m[$m]}
+      else
+        mem_bdy='mean'
       fi
-    fi
 
-    land_base='-'
-    if ((LAND_INPUT == 1 && mkinit != 1)); then
-      if ((LAND_FORMAT == 0)); then
-        land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_land"
-      elif ((LAND_FORMAT == 99)); then
-        land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
+      ocean_base='-'
+      if ((OCEAN_INPUT == 1 && mkinit != 1)); then
+        if ((OCEAN_FORMAT == 0)); then
+          ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_ocean"
+        elif ((OCEAN_FORMAT == 99)); then
+          ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
+        fi
       fi
-    fi
 
-    bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}/boundary"
+      land_base='-'
+      if ((LAND_INPUT == 1 && mkinit != 1)); then
+        if ((LAND_FORMAT == 0)); then
+          land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_land"
+        elif ((LAND_FORMAT == 99)); then
+          land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
+        fi
+      fi
 
-    if (pdrun $g $PROC_OPT); then
+      bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}/boundary"
+
       bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
            $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $land_base $bdy_base \
            $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
@@ -1535,14 +1534,13 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= mmean)); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= mmean)); then
+#      if ((PERTURB_BDY == 1)); then
+#        ...
+#      fi
 
-#    if ((PERTURB_BDY == 1)); then
-#      ...
-#    fi
-
-    if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $time \
            ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT $OUT_OPT cycle $DELETE_MEMBER
     fi
@@ -1585,9 +1583,9 @@ for it in $(seq $nitmax); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= mmean)); then
-    if (pdrun $g $PROC_OPT); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= mmean)); then
       bash $SCRP_DIR/src/pre_obsope.sh $MYRANK \
            $atime ${name_m[$m]}
     fi
@@ -1616,9 +1614,9 @@ for it in $(seq $nitmax); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= mmean)); then
-    if (pdrun $g $PROC_OPT); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= mmean)); then
       bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
            ${time} ${atime} ${name_m[$m]} $TMPRUN/obsope $LOG_OPT $OUT_OPT
     fi
@@ -1663,9 +1661,9 @@ for it in $(seq $nitmax); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= mmean)); then
-    if (pdrun $g $PROC_OPT); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= mmean)); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
            $atime ${name_m[$m]} \
            $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT
@@ -1695,9 +1693,9 @@ for it in $(seq $nitmax); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= mmean)); then
-    if (pdrun $g $PROC_OPT); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= mmean)); then
       bash $SCRP_DIR/src/post_letkf.sh $MYRANK \
            ${atime} $TMPRUN/letkf $LOG_OPT
     fi

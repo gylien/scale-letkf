@@ -5,22 +5,22 @@
 #
 #===============================================================================
 
-STIME='<STIME>'
-ETIME='<STIME>'
-MEMBERS='mean'
-CYCLE=1
+STIME='20130713060000'
+ETIME='20130713060030'
+MEMBERS='mean 1'
+CYCLE=
 CYCLE_SKIP=1
 IF_VERF=0
 IF_EFSO=0
 ISTEP=
 FSTEP=
-TIME_LIMIT='<WTIME_L>'
+TIME_LIMIT='01:00:00'
 
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=432000     # SCALE forecast length in the forecast mode (second)
-FCSTOUT=3600
+FCSTLEN=90          # SCALE forecast length in the forecast mode (second)
+FCSTOUT=30
 
 #===============================================================================
 # EFSO settings
@@ -65,9 +65,14 @@ BDYOUT_OPT=3     # 1:   o    o
 
                  #      topo landuse bdy perturb        scale
                  #      log  log     log (not finished) log
-LOG_OPT=4        # 1:   o    o       o   o              o
+LOG_OPT=2        # 1:   o    o       o   o              o
                  # 2:   o    o       o                  o
                  # 3:                                   o
                  # 4:   (none)
+
+LOG_TYPE=4       # 1:   Only save the log file from the head process
+                 # 2:   Save all log files
+                 # 3:   Save all log files in an archive file
+                 # 4:   Save all log files in a compressed archive file
 
 #===============================================================================

@@ -13,11 +13,10 @@ if (($# < 2)); then
 
 [init_all_node.sh] 
 
-Usage: $0 MYRANK SCPCALL [FCST_CYCLE]
+Usage: $0 MYRANK SCPCALL
 
   MYRANK   My rank number (not used)
   SCPCALL  Called from which script? (fcst/cycle)
-  FCST_CYCLE
 
 EOF
   exit 1
@@ -25,7 +24,6 @@ fi
 
 MYRANK="$1"; shift
 SCPCALL="$1"; shift
-FCST_CYCLE="${1:-CYCLE}"
 
 #-------------------------------------------------------------------------------
 
@@ -113,19 +111,14 @@ elif [ "$SCPCALL" = 'fcst' ]; then
   lcycles=$((LCYCLE * CYCLE_SKIP))
   time=$STIME
   while ((time <= ETIME)); do
-    for c in $(seq $FCST_CYCLE); do
-      time2=$(datetime $time $((lcycles * (c-1))) s)
-      if ((time2 <= ETIME)); then
-        mkdir -p $TMPOUT/${time2}/topo
-        if ((LANDUSE_UPDATE == 1)); then
-          mkdir -p $TMPOUT/${time2}/landuse
-        fi
-        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_pp
-        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_init
-        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale
-      fi
-    done
-    time=$(datetime $time $((lcycles * FCST_CYCLE)) s)
+    if ((LANDUSE_UPDATE == 1)); then
+      mkdir -p $TMPOUT/${time}/landuse
+    fi
+    mkdir -p $TMPOUT/${time}/log/${SCPCALL}_scale_pp
+    mkdir -p $TMPOUT/${time}/log/${SCPCALL}_scale_init
+    mkdir -p $TMPOUT/${time}/log/${SCPCALL}_scale
+
+    time=$(datetime $time $lcycles s)
   done
 fi
 

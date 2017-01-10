@@ -468,7 +468,7 @@ bdy_setting () {
 #  *Require source 'func_datetime' first.
 #-------------------------------------------------------------------------------
 
-if (($# < 4)); then
+if (($# < 3)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." >&2
   exit 1
 fi
@@ -480,9 +480,6 @@ local PARENT_FOUT=${1:-$PARENT_LCYCLE}; shift
 local PARENT_REF_TIME=${1:-$TIME}; shift
 local SINGLE_FILE=${1:-0}
 
-if [ "$PARENT_FOUT" = '-' ]; then
-  PARENT_FOUT=$FCSTLEN
-fi
 PARENT_REF_TIME=$(datetime $PARENT_REF_TIME)
 
 #-------------------------------------------------------------------------------
@@ -662,6 +659,83 @@ if ((res != 0)); then
   echo "        exit reason = $jobreason" >&2
   return $res
 fi
+return 0
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+job_submit_torque () {
+#-------------------------------------------------------------------------------
+# Submit a PBS job.
+#
+# Usage: job_submit_torque
+#
+#   JOBSCRP  Job script
+#
+# Return variables:
+#   $jobid  Job ID monitered
+#-------------------------------------------------------------------------------
+
+if (($# < 1)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local JOBSCRP="$1"
+
+local rundir=$(dirname $JOBSCRP)
+local scrpname=$(basename $JOBSCRP)
+
+#-------------------------------------------------------------------------------
+
+res=$(cd $rundir && qsub $scrpname 2>&1)
+jobid=$(echo $res | cut -d '.' -f1)
+
+if ! [[ "$jobid" =~ ^[0-9]+$ ]] ; then
+  jobid=
+  echo "[Error] $FUNCNAME: Error found when submitting a job." >&2
+  exit 1
+fi
+
+echo "qsub Job $jobid submitted."
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+job_end_check_torque () {
+#-------------------------------------------------------------------------------
+# Check if a K-computer job has ended.
+#
+# Usage: job_end_check_torque JOBID
+#
+#   JOBID  Job ID monitored
+#
+# * Do not support exit code yet
+#-------------------------------------------------------------------------------
+
+if (($# < 1)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local JOBID="$1"
+
+#-------------------------------------------------------------------------------
+
+local res=0
+local tmp
+while true; do
+  tmp=$(qstat ${JOBID} 2> /dev/null)
+  if (($? != 0)); then
+    break
+  fi
+  sleep 5s
+done
+
 return 0
 
 #-------------------------------------------------------------------------------

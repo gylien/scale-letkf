@@ -170,9 +170,20 @@ for i in $(seq $NTEST); do
     letkflogname="NOUT.0"
     if [ -e "$jobinfo" ]; then
       Rtime[$i]=$(grep 'ELAPSE TIME (USE)' $jobinfo | cut -d '(' -f3 | cut -d ')' -f1)
+    else
+      Rtime[$i]=$(grep 'real' test.time | cut -d ' ' -f2)
     fi
-#  elif [ "${PRESET[$i]}" = 'Linux_torque' ]; then
-#    ...
+  elif [ "${PRESET[$i]}" = 'Linux_torque' ]; then
+    jobname="${SCPNAME[$i]}_job.sh"
+    jobid=$(grep 'qsub Job' test.log | cut -d ' ' -f3)
+    logdir="$OUTDIR/exp/${jobid}_${SCPNAME[$i]}_${STIME}"
+    stdout="$logdir/job.o"
+    stderr="$logdir/job.e"
+    letkflogname="NOUT-000000"
+    if [ -e "$jobinfo" ]; then
+      Rtime[$i]=$(grep 'ELAPSE TIME (USE)' $jobinfo | cut -d '(' -f3 | cut -d ')' -f1)
+    fi
+    Rtime[$i]=$(grep 'real' test.time | cut -d ' ' -f2)
 #  elif [ "${PRESET[$i]}" = 'Linux' ]; then
 #    ...
 #    Rtime[$i]=$(grep 'real' test.time | cut -d ' ' -f2)
