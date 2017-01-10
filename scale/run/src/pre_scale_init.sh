@@ -178,9 +178,11 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--OFFLINE--/a OFFLINE = .true.," \
     > $TMPDIR/init.conf
 
-cat $TMPDAT/conf/config.nml.grads_boundary | \
-    sed -e "s#--DIR--#${TMPSUBDIR}#g" \
-    > $TMPDIR/gradsbdy.conf
+if [ -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
+  cat $TMPDAT/conf/config.nml.grads_boundary | \
+      sed -e "s#--DIR--#${TMPSUBDIR}#g" \
+      > $TMPDIR/gradsbdy.conf
+fi
 
 #===============================================================================
 
