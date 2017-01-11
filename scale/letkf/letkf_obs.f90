@@ -88,7 +88,7 @@ SUBROUTINE set_letkf_obs
   integer :: mem_ref
 
   integer :: it,ip
-  integer :: ityp,ielm_u,ictype
+  integer :: ityp,ielm,ielm_u,ictype
   real(r_size) :: hori_loc
   real(r_size) :: target_grdspc
 
@@ -710,10 +710,19 @@ SUBROUTINE set_letkf_obs
   write (6, '(A)') '----------------------------------------------------------------------------------'
   do ictype = 1, nctype
     ityp = typ_ctype(ictype)
+    ielm = elm_ctype(ictype)
     ielm_u = elm_u_ctype(ictype)
 
     if (USE_OBS(ityp)) then
-      use_obs_print = 'Yes'
+      if ((ielm == id_radar_ref_obs .or. ielm == id_radar_ref_zero_obs) .and. (.not. USE_RADAR_REF)) then
+        use_obs_print = 'No'
+      else if (ielm == id_radar_vr_obs .and. (.not. USE_RADAR_VR)) then
+        use_obs_print = 'No'
+      else if (ielm == id_radar_prh_obs .and. (.not. USE_RADAR_PSEUDO_RH)) then
+        use_obs_print = 'No'
+      else
+        use_obs_print = 'Yes'
+      end if
     else
       use_obs_print = 'No'
     end if
