@@ -105,6 +105,8 @@ BDYCYCLE_INT=${BDYCYCLE_INT:-$BDYINT}
 
 #-------------------------------------------------------------------------------
 
+ENABLE_PARAM_USER=${ENABLE_PARAM_USER:-0}
+
 OCEAN_INPUT=${OCEAN_INPUT:-0}
 OCEAN_FORMAT=${OCEAN_FORMAT:-99}
 LAND_INPUT=${LAND_INPUT:-0}
