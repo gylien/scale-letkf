@@ -164,8 +164,8 @@ print_setting () {
 
 for vname in DIR INDIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BDY_SCALE \
              DATA_BDY_SCALE_PREP DATA_BDY_WRF DATA_BDY_NICAM OBS OBSNCEP TOPO_FORMAT \
-             LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT \
-             PARENT_REF_TIME OCEAN_INPUT OCEAN_FORMAT LAND_INPUT LAND_FORMAT OBSNUM WINDOW_S WINDOW_E \
+             LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT PARENT_REF_TIME \
+             ENABLE_PARAM_USER OCEAN_INPUT OCEAN_FORMAT LAND_INPUT LAND_FORMAT OBSNUM WINDOW_S WINDOW_E \
              LCYCLE LTIMESLOT MEMBER NNODES PPN THREADS SCALE_NP \
              STIME ETIME MEMBERS ISTEP FSTEP FCSTOUT MAKEINIT OUT_OPT TOPOOUT_OPT \
              LANDUSEOUT_OPT BDYOUT_OPT OBSOUT_OPT LOG_OPT LOG_TYPE; do
@@ -240,6 +240,9 @@ EOF
 #${MODELDIR}/scale-rm_init|exec/scale-rm_init
 #${MODELDIR}/scale-rm|exec/scale-rm
 
+  if [ -e "${SCRP_DIR}/config.nml.scale_user" ]; then
+    echo "${SCRP_DIR}/config.nml.scale_user|conf/config.nml.scale_user" >> $STAGING_DIR/stagein.dat
+  fi
   if [ -e "${SCRP_DIR}/config.nml.obsope" ]; then
     echo "${SCRP_DIR}/config.nml.obsope|conf/config.nml.obsope" >> $STAGING_DIR/stagein.dat
   fi

@@ -61,10 +61,16 @@ BDYCYCLE_INT=300
 
 PARENT_REF_TIME=20130713060000
 
-OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
-                        # 1: Update the ocean variables every cycle
+ENABLE_PARAM_USER=0     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
+                        # 1: Enable the 'PARAM_USER' section of the SCALE namelist (require 'config.nml.scale_user' and customized version of SCALE)
 
+OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
+                        # 1: Update the ocean variables every cycle
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+                        # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
+LAND_INPUT=1            # 0: No land input (use cycling land variables)
+                        # 1: Update the land variables every cycle
+LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=2

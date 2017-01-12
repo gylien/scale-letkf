@@ -74,6 +74,9 @@ ln -fs config/${CONFIG}/config.nml.ensmodel .
 ln -fs config/${CONFIG}/config.nml.letkf .
 ln -fs config/${CONFIG}/config.nml.scale_pp .
 ln -fs config/${CONFIG}/config.nml.scale_init .
+if [ -e "config/${CONFIG}/config.nml.scale_user" ]; then
+  ln -fs config/${CONFIG}/config.nml.scale_user .
+fi
 if [ -e "config/${CONFIG}/config.nml.obsope" ]; then
   ln -fs config/${CONFIG}/config.nml.obsope .
 fi

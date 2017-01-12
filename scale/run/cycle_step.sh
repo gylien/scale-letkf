@@ -11,10 +11,11 @@
 #  Use settings:
 #    config.main
 #    config.cycle
-#    config.nml.scale_pp_topo
-#    config.nml.scale_pp_landuse
+#    config.nml.scale_pp
 #    config.nml.scale_init
 #    config.nml.scale
+#    config.nml.scale_user
+#    config.nml.grads_boundary
 #    config.nml.obsope
 #    config.nml.letkf
 #
