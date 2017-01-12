@@ -88,7 +88,7 @@ SUBROUTINE set_letkf_obs
   integer :: mem_ref
 
   integer :: it,ip
-  integer :: ityp,ielm_u,ictype
+  integer :: ityp,ielm,ielm_u,ictype
   real(r_size) :: hori_loc
   real(r_size) :: target_grdspc
 
@@ -710,10 +710,19 @@ SUBROUTINE set_letkf_obs
   write (6, '(A)') '----------------------------------------------------------------------------------'
   do ictype = 1, nctype
     ityp = typ_ctype(ictype)
+    ielm = elm_ctype(ictype)
     ielm_u = elm_u_ctype(ictype)
 
     if (USE_OBS(ityp)) then
-      use_obs_print = 'Yes'
+      if ((ielm == id_radar_ref_obs .or. ielm == id_radar_ref_zero_obs) .and. (.not. USE_RADAR_REF)) then
+        use_obs_print = 'No'
+      else if (ielm == id_radar_vr_obs .and. (.not. USE_RADAR_VR)) then
+        use_obs_print = 'No'
+      else if (ielm == id_radar_prh_obs .and. (.not. USE_RADAR_PSEUDO_RH)) then
+        use_obs_print = 'No'
+      else
+        use_obs_print = 'Yes'
+      end if
     else
       use_obs_print = 'No'
     end if
@@ -839,13 +848,15 @@ SUBROUTINE set_letkf_obs
   end do
 
 #ifdef DEBUG
-  if (obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,myrank_d) /= nobs_sub(2)) then
-    write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
-    stop 99
-  end if
-  if (sum(obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,:)) /= nobs_g(2)) then
-    write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
-    stop 99
+  if (nctype > 0) then
+    if (obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,myrank_d) /= nobs_sub(2)) then
+      write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
+      stop 99
+    end if
+    if (sum(obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,:)) /= nobs_g(2)) then
+      write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
+      stop 99
+    end if
   end if
 #endif
   nobstotalg = nobs_g(2) ! total obs number in the global domain (all types)
@@ -939,14 +950,20 @@ SUBROUTINE set_letkf_obs
     end if
   end do ! [ ictype = 1, nctype ]
 
-  nobstotal = obsgrd(nctype)%ac_ext(obsgrd(nctype)%ngrdext_i,obsgrd(nctype)%ngrdext_j) ! total obs number in the extended subdomain (all types)
+  if (nctype > 0) then
+    nobstotal = obsgrd(nctype)%ac_ext(obsgrd(nctype)%ngrdext_i,obsgrd(nctype)%ngrdext_j) ! total obs number in the extended subdomain (all types)
 
-!  maxnobs_sub_per_ctype = maxval(obsgrd(1)%tot(:))
-  maxnobs_per_ctype = obsgrd(1)%tot_ext
-  do ictype = 2, nctype
-!    maxnobs_sub_per_ctype = max(maxnobs_sub_per_ctype, maxval(obsgrd(ictype)%tot(:)))
-    maxnobs_per_ctype = max(maxnobs_per_ctype, obsgrd(ictype)%tot_ext)
-  end do
+!    maxnobs_sub_per_ctype = maxval(obsgrd(1)%tot(:))
+    maxnobs_per_ctype = obsgrd(1)%tot_ext
+    do ictype = 2, nctype
+!      maxnobs_sub_per_ctype = max(maxnobs_sub_per_ctype, maxval(obsgrd(ictype)%tot(:)))
+      maxnobs_per_ctype = max(maxnobs_per_ctype, obsgrd(ictype)%tot_ext)
+    end do
+  else
+    nobstotal = 0
+!    maxnobs_sub_per_ctype = 0
+    maxnobs_per_ctype = 0
+  end if
 
   ! Construct sorted obsda2: 
   !-----------------------------------------------------------------------------
