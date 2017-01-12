@@ -16,6 +16,7 @@
 /scale/run/config.nml.scale_init
 /scale/run/config.nml.grads_boundary
 /scale/run/config.nml.scale
+/scale/run/config.nml.scale_user
 /scale/run/config.nml.obsope
 /scale/run/config.nml.letkf
 /scale/run/cycle_job.sh

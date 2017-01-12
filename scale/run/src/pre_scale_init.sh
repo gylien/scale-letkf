@@ -68,7 +68,7 @@ rm -fr $TMPDIR/*
 TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
 
 RESTART_OUTPUT='.false.'
-if ((MKINIT == 1 || (OCEAN_INPUT == 1 && OCEAN_FORMAT == 99))); then
+if ((MKINIT == 1 || USE_INIT_FROM_BDY == 1)); then
   RESTART_OUTPUT='.true.'
 fi
 

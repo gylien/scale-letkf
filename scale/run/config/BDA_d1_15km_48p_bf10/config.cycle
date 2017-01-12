@@ -5,15 +5,15 @@
 #
 #===============================================================================
 
-STIME='20130712060000'
-ETIME='20130713060000'
+STIME='20130712000000'
+ETIME='20130712180000'
 ISTEP=
 FSTEP=
-TIME_LIMIT='08:00:00'
+TIME_LIMIT='02:40:00'
 
 #===============================================================================
 
-FCSTOUT=3600
+FCSTOUT=
 
 ADAPTINFL=0         # Adaptive inflation
                     #  0: OFF
@@ -37,7 +37,7 @@ OUT_OPT=1        # 1:   o         o       o         o       o    o
                  # 5:   o         *       o                               * = every $OUT_CYCLE_SKIP cycles and the last cycle
                  # 6:   o         **      o                               ** = only the last cycle
 
-OUT_CYCLE_SKIP=1
+OUT_CYCLE_SKIP=4
 
                  #      topo
 TOPOOUT_OPT=2    # 1:   o

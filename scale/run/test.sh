@@ -10,6 +10,7 @@ function print_summary () {
 #  rm -f config.nml.scale
 #  rm -f config.nml.scale_pp
 #  rm -f config.nml.scale_init
+#  rm -f config.nml.scale_user
 #  rm -f config.nml.grads_boundary
 
 #  rm -f ${SCPNAME[$i]}_job.sh
@@ -140,6 +141,9 @@ for i in $(seq $NTEST); do
   ln -fs config/${CONFIG[$i]}/config.nml.scale .
   ln -fs config/${CONFIG[$i]}/config.nml.scale_pp .
   ln -fs config/${CONFIG[$i]}/config.nml.scale_init .
+  if [ -e "config/${CONFIG[$i]}/config.nml.scale_user" ]; then
+    ln -fs config/${CONFIG[$i]}/config.nml.scale_user .
+  fi
   if [ -e "config/${CONFIG[$i]}/config.nml.obsope" ]; then
     ln -fs config/${CONFIG[$i]}/config.nml.obsope .
   fi
