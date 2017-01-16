@@ -169,7 +169,7 @@ echo
 job_submit_PJM $jobscrp
 echo
 
-job_end_check_PJM $jobid
+job_end_check_PJM_K $jobid
 res=$?
 
 #===============================================================================
