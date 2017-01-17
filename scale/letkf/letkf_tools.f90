@@ -10,6 +10,7 @@ MODULE letkf_tools
 !   01/01/2014 Guo-Yuan Lien     merged to GFS-LETKF main development
 !
 !=======================================================================
+!$USE OMP_LIB
   USE common
   use common_nml
   USE common_mpi

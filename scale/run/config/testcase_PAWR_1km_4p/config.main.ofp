@@ -5,7 +5,7 @@
 #
 #===============================================================================
 
-PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
+PRESET='<PRESET>'
 
 #===============================================================================
 
@@ -83,8 +83,8 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=100         # Ensemble size
 
-NNODES=404         # Number of nodes
-PPN=1              # Number of processes per node
+NNODES=17          # Number of nodes
+PPN=24             # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
@@ -116,9 +116,9 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
-TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
-TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
-#TMPL=
+TMP="$DIR/tmp/$TMPSUBDIR"   # Temporary directory shared among all nodes
+TMPS="$TMP"                 # Temporary directory only on the server node
+TMPL="$TMP"                 # Local temporary directory on computing nodes
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
                             #  0: No
