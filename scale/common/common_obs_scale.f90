@@ -46,7 +46,6 @@ MODULE common_obs_scale
   IMPLICIT NONE
   PUBLIC
 
-  INTEGER,PARAMETER :: nid_obs=16 !H08
   INTEGER,PARAMETER :: nid_obs_varlocal=9 !H08
 !
 ! conventional observations
@@ -358,13 +357,14 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   qc = iqc_good
 
   if (stggrd_ == 1) then
-    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
-    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5,vr)  !######
+    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5d0,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
+    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5d0,vr)  !######
+    CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk-0.5d0,ri,rj,wr)  !######
   else
     CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,ur)
     CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,vr)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk,ri,rj,wr)
   end if
-  CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk,ri,rj,wr)
   CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,tr)
   CALL itpl_3d(v3d(:,:,:,iv3dd_p),rk,ri,rj,pr)
   CALL itpl_3d(v3d(:,:,:,iv3dd_q),rk,ri,rj,qvr)
@@ -1322,17 +1322,6 @@ END SUBROUTINE itpl_3d
 subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
   use scale_process, only: &
       PRC_myrank
-  use scale_grid_index, only: &
-      IHALO, JHALO, KHALO, &
-      IS, IE, JS, JE, KS, KE, KA
-  use scale_grid, only: &
-      GRID_CZ, &
-      GRID_FZ
-  use scale_comm, only: &
-      COMM_vars8, &
-      COMM_wait
-
-
 
   implicit none
 
@@ -1350,7 +1339,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
   REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
   integer :: nnobs
-  integer :: n,nn,i,j,k,proc,iv3d,iv2d
+  integer :: n,nn,proc
   integer :: iset,iidx
   real(r_size) :: ri,rj,rk
 
@@ -1360,8 +1349,6 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
 
 !  REAL(r_size) :: timer
 !  INTEGER :: ierr
-
-  real(r_size) :: ztop
 
 #ifdef H08
 ! -- for Himawari-8 obs --
@@ -1392,76 +1379,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
 !CALL CPU_TIME(timer)
 !if (myrank == 0) print *, '######', timer
 
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_u) = v3dg(:,:,:,iv3d_u)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_v) = v3dg(:,:,:,iv3d_v)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_w) = v3dg(:,:,:,iv3d_w)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_t) = v3dg(:,:,:,iv3d_t)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_p) = v3dg(:,:,:,iv3d_p)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q) = v3dg(:,:,:,iv3d_q)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
-!  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_rh) =
-
-  ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
-!$OMP PARALLEL DO PRIVATE(j,i,k)
-  do j = 1, nlat
-    do i = 1, nlon
-      do k = 1, nlev
-        v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dd_hgt) = (ztop - topo(i,j)) / ztop * GRID_CZ(k+KHALO) + topo(i,j)
-      end do
-    enddo
-  enddo
-!$OMP END PARALLEL DO
-
-  !!! use the 1st level as the surface (although it is not)
-  v2dgh(:,:,iv2dd_topo) = v3dgh(1+KHALO,:,:,iv3dd_hgt)
-
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_ps) = v3dg(1,:,:,iv3d_p)
-!  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) =
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_u10m) = v3dg(1,:,:,iv3d_u)
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_v10m) = v3dg(1,:,:,iv3d_v)
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_t2m) = v3dg(1,:,:,iv3d_t)
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_q2m) = v3dg(1,:,:,iv3d_q)
-
-#ifdef H08
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_skint) = v3dg(1,:,:,iv3d_t)
-
-  !!! assume the point where terrain height is less than 10 m is the ocean. T.Honda (02/09/2016)
-!$OMP PARALLEL DO PRIVATE(j,i)
-  do j = 1, nlat
-    do i = 1, nlon
-      v2dgh(i+IHALO,j+JHALO,iv2dd_lsmask) = min(max(topo(i,j) - 10.0d0, 0.0d0), 1.0d0)
-    enddo
-  enddo
-!$OMP END PARALLEL DO
-#endif
-
-  do iv3d = 1, nv3dd
-!!!!!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j  = JS, JE
-      do i  = IS, IE
-        v3dgh(   1:KS-1,i,j,iv3d) = v3dgh(KS,i,j,iv3d)
-        v3dgh(KE+1:KA,  i,j,iv3d) = v3dgh(KE,i,j,iv3d)
-      end do
-    end do
-  end do
-
-  do iv3d = 1, nv3dd
-    call COMM_vars8( v3dgh(:,:,:,iv3d), iv3d )
-  end do
-  do iv3d = 1, nv3dd
-    call COMM_wait ( v3dgh(:,:,:,iv3d), iv3d )
-  end do
-
-  do iv2d = 1, nv2dd
-    call COMM_vars8( v2dgh(:,:,iv2d), iv2d )
-  end do
-  do iv2d = 1, nv2dd
-    call COMM_wait ( v2dgh(:,:,iv2d), iv2d )
-  end do
+  call state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 
   if (use_key) then
     nnobs = obsda%nobs_in_key

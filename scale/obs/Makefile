@@ -1,6 +1,6 @@
 include ../configure.user
 
-PROGS   = obsope obsmake #dec_prepbufr
+PROGS   = obsope obsmake obssim #dec_prepbufr
 
 OBJS    = obsope_tools.o
 
@@ -35,7 +35,11 @@ obsope:	obsope.o $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS) $(FMCMODEL) -o obsope obsope.o \
 	$(COMMON_OBJS) $(OBJS) $(LIBS)
 obsmake:	obsmake.o $(OBS) $(COMMON_DIR)
-	$(FC) $(FOPTS) $(FMCMODEL) -o obsmake obsmake.o $(COMMON_OBJS) $(OBJS) $(LIBS)
+	$(FC) $(FOPTS) $(FMCMODEL) -o obsmake obsmake.o \
+	$(COMMON_OBJS) $(OBJS) $(LIBS)
+obssim:	obssim.o $(OBS) $(COMMON_DIR)
+	$(FC) $(FOPTS) $(FMCMODEL) -o obssim obssim.o \
+	$(COMMON_OBJS) $(OBJS) $(LIBS)
 dec_prepbufr:	dec_prepbufr.o $(COMMON_DIR)
 	$(FC) $(FOPTS) -o dec_prepbufr dec_prepbufr.o $(COMMON_OBJS) \
 	$(LIBS) $(BUFR_LIB)
@@ -43,6 +47,8 @@ dec_prepbufr:	dec_prepbufr.o $(COMMON_DIR)
 obsope.o:	obsope.f90 $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 obsmake.o:	obsmake.f90 $(OBJS) $(COMMON_DIR)
+	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
+obssim.o:	obssim.f90 $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 dec_prepbufr.o:	dec_prepbufr.f90 $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
