@@ -512,8 +512,8 @@ subroutine set_scalelib
 !     ATMOS_HYDROSTATIC_setup
 !  use scale_atmos_thermodyn, only: &
 !     ATMOS_THERMODYN_setup
-  use scale_atmos_hydrometer, only: &
-     ATMOS_HYDROMETER_setup
+  use scale_atmos_hydrometeor, only: &
+     ATMOS_HYDROMETEOR_setup
 
 !  use mod_atmos_driver, only: &
 !     ATMOS_driver_config
@@ -651,7 +651,7 @@ subroutine set_scalelib
 !  call URBAN_GRID_setup
 
   ! setup tracer index
-  call ATMOS_HYDROMETER_setup
+  call ATMOS_HYDROMETEOR_setup
     call ATMOS_PHY_MP_config('TOMITA08') !!!!!!!!!!!!!!! tentative
 !    if ( ATMOS_sw_phy_mp ) then
 !       call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
