@@ -708,13 +708,13 @@ for inode in $nodelist; do
   ippn=`cat $NODEFILE | grep $inode | wc -l`
   if ((ippn != PPN)); then
     echo "[Error] $FUNCNAME: Number of processes per node in \$NODEFILE" >&2
-    echo "          is not consistent to the setting in 'configure.sh'" >&2
+    echo "          is not consistent to the setting in 'config.main'" >&2
     exit 1
   fi
 done
 if ((n != NNODES)); then
   echo "[Error] $FUNCNAME: Number of nodes in \$NODEFILE" >&2
-  echo "          is not consistent to the setting in 'configure.sh'" >&2
+  echo "          is not consistent to the setting in 'config.main'" >&2
   exit 1
 fi
 

@@ -239,7 +239,6 @@ SUBROUTINE set_common_mpi_scale
 
 
 !write(6,'(A,9I6)') '######===', myrank, myrank_e, nprocs_e, ranks(:)
-!stop
 
   deallocate(ranks)
 !!!!!!------
@@ -416,10 +415,12 @@ mem_loop: DO it = 1, nitmax
   end if
 
   lastmem_rank_e = mod(mem-1, n_mem*n_mempn)
-!  if (lastmem_rank_e /= proc2mem(1,1,mem2proc(1,mem)+1)-1) then
-!    print *, 'XXXXXX wrong!!'
-!    stop
-!  end if
+#ifdef DEBUG
+  if (lastmem_rank_e /= proc2mem(1,1,mem2proc(1,mem)+1)-1) then
+    write (6, '(A)'), '[Error] XXXXXX wrong!!'
+    stop
+  end if
+#endif
 
   RETURN
 END SUBROUTINE
@@ -1063,7 +1064,9 @@ SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
   INTEGER :: ns(nprocs_e),nst(nprocs_e),nr(nprocs_e),nrt(nprocs_e)
 
   mcount = mend - mstart + 1
+#ifdef DEBUG
   IF(mcount > nprocs_e .OR. mcount <= 0) STOP
+#endif
 
   IF(myrank_e < mcount) THEN
     j=0
@@ -1123,7 +1126,9 @@ SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,v3d,v2d,v3dg,v2dg)
   INTEGER :: ns(nprocs_e),nst(nprocs_e),nr(nprocs_e),nrt(nprocs_e)
 
   mcount = mend - mstart + 1
+#ifdef DEBUG
   IF(mcount > nprocs_e .OR. mcount <= 0) STOP
+#endif
 
   DO m = mstart,mend
     j=0
@@ -1209,11 +1214,13 @@ SUBROUTINE grd_to_buf(np,grd,buf)
       j = m-1 + np * (i-1)
       ilon = MOD(j,nlon) + 1
       ilat = (j-ilon+1) / nlon + 1
-!if (i < 1 .or. i > nij1max .or. m < 1 .or. m > np .or. ilon < 1 .or. ilon > nlon .or. ilat < 1 .or. ilat > nlat) then
-!print *, '######', np, nij1max
-!print *, '########', i, m, ilon, ilat
-!stop
-!end if
+#ifdef DEBUG
+if (i < 1 .or. i > nij1max .or. m < 1 .or. m > np .or. ilon < 1 .or. ilon > nlon .or. ilat < 1 .or. ilat > nlat) then
+  write(6, *), '[Error] ######', np, nij1max
+  write(6, *), '[Error] ######', i, m, ilon, ilat
+  stop
+end if
+#endif
       buf(i,m) = grd(ilon,ilat)
     END DO
   END DO
@@ -1264,20 +1271,17 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   INTEGER :: i,k,m,n
 
   INTEGER :: nobs(nid_obs)
-  INTEGER :: nobs_tmp(nid_obs)
   INTEGER :: nobs_g(nid_obs)
   REAL(r_size) :: bias(nid_obs)
-  REAL(r_size) :: bias_tmp(nid_obs)
   REAL(r_size) :: bias_g(nid_obs)
   REAL(r_size) :: rmse(nid_obs)
-  REAL(r_size) :: rmse_tmp(nid_obs)
   REAL(r_size) :: rmse_g(nid_obs)
   LOGICAL :: monit_type(nid_obs)
   INTEGER :: ierr
 
 
   type(obs_info),intent(in) :: obs(OBS_IN_NUM)
-  type(obs_da_value),intent(in),allocatable :: obsda2(:)
+  type(obs_da_value),intent(in) :: obsda2
 
 
   REAL(r_dble) :: rrtimer00,rrtimer
@@ -1306,7 +1310,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
   if (DEPARTURE_STAT) then
     if (myrank_e == lastmem_rank_e) then
-      call monit_obs(v3dg,v2dg,obs,obsda2(PRC_myrank),topo,nobs,bias,rmse,monit_type)
+      call monit_obs(v3dg,v2dg,obs,obsda2,topo,nobs,bias,rmse,monit_type,.true.)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1317,20 +1321,20 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
       do i = 1, nid_obs
         if (monit_type(i)) then
-          nobs_tmp(i) = nobs(i)
+          nobs_g(i) = nobs(i)
           if (nobs(i) == 0) then
-            bias_tmp(i) = 0.0d0
-            rmse_tmp(i) = 0.0d0
+            bias_g(i) = 0.0d0
+            rmse_g(i) = 0.0d0
           else
-            bias_tmp(i) = bias(i) * REAL(nobs(i),r_size)
-            rmse_tmp(i) = rmse(i) * rmse(i) * REAL(nobs(i),r_size)
+            bias_g(i) = bias(i) * REAL(nobs(i),r_size)
+            rmse_g(i) = rmse(i) * rmse(i) * REAL(nobs(i),r_size)
           end if
         end if
       end do
 
-      call MPI_ALLREDUCE(nobs_tmp, nobs_g, nid_obs, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
-      call MPI_ALLREDUCE(bias_tmp, bias_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-      call MPI_ALLREDUCE(rmse_tmp, rmse_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_g, nid_obs, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, bias_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
 
       do i = 1, nid_obs
         if (monit_type(i)) then

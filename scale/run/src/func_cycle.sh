@@ -164,8 +164,8 @@ print_setting () {
 
 for vname in DIR INDIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BDY_SCALE \
              DATA_BDY_SCALE_PREP DATA_BDY_WRF DATA_BDY_NICAM OBS OBSNCEP TOPO_FORMAT \
-             LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT \
-             PARENT_REF_TIME OCEAN_INPUT OCEAN_FORMAT OBSNUM WINDOW_S WINDOW_E \
+             LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT PARENT_REF_TIME \
+             ENABLE_PARAM_USER OCEAN_INPUT OCEAN_FORMAT LAND_INPUT LAND_FORMAT OBSNUM WINDOW_S WINDOW_E \
              LCYCLE LTIMESLOT MEMBER NNODES PPN THREADS SCALE_NP \
              STIME ETIME MEMBERS ISTEP FSTEP FCSTOUT MAKEINIT OUT_OPT TOPOOUT_OPT \
              LANDUSEOUT_OPT BDYOUT_OPT OBSOUT_OPT LOG_OPT LOG_TYPE; do
@@ -240,6 +240,9 @@ EOF
 #${MODELDIR}/scale-rm_init|exec/scale-rm_init
 #${MODELDIR}/scale-rm|exec/scale-rm
 
+  if [ -e "${SCRP_DIR}/config.nml.scale_user" ]; then
+    echo "${SCRP_DIR}/config.nml.scale_user|conf/config.nml.scale_user" >> $STAGING_DIR/stagein.dat
+  fi
   if [ -e "${SCRP_DIR}/config.nml.obsope" ]; then
     echo "${SCRP_DIR}/config.nml.obsope|conf/config.nml.obsope" >> $STAGING_DIR/stagein.dat
   fi
@@ -434,6 +437,17 @@ else
 #            echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
 #          done
 #        fi
+#      done
+#    fi
+
+    # anal_land
+    #-------------------
+#    if ((LAND_INPUT == 1)) && ((LAND_FORMAT == 0)); then
+#      for m in $(seq $mmean); do
+#        for q in $(seq $mem_np); do
+#          path="${time}/anal/${name_m[$m]}/init_land$(printf $SCALE_SFX $((q-1)))"
+#          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+#        done
 #      done
 #    fi
 
@@ -1027,9 +1041,9 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= MEMBER_RUN)); then
-    if (pdrun $g $PROC_OPT); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= MEMBER_RUN)); then
       bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK $time ${name_m[$m]} \
            $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT \
            cycle ${bdytopo} ${bdycatalogue}
@@ -1071,9 +1085,9 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= MEMBER_RUN)); then
-    if (pdrun $g $PROC_OPT); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= MEMBER_RUN)); then
       bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $time \
            ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT
     fi
@@ -1151,15 +1165,15 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= MEMBER_RUN)); then
-    if ((BDY_ENS == 1)); then
-      mem_bdy=${name_m[$m]}
-    else
-      mem_bdy='mean'
-    fi
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= MEMBER_RUN)); then
+      if ((BDY_ENS == 1)); then
+        mem_bdy=${name_m[$m]}
+      else
+        mem_bdy='mean'
+      fi
 
-    if (pdrun $g $PROC_OPT); then
       if ((PNETCDF == 1)); then
         bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
              $TMPOUT/const/topo $TMPOUT/${time_l}/landuse \
@@ -1216,15 +1230,15 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= MEMBER_RUN)); then
-    if ((BDY_ENS == 1)); then
-      mem_bdy=${name_m[$m]}
-    else
-      mem_bdy='mean'
-    fi
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= MEMBER_RUN)); then
+      if ((BDY_ENS == 1)); then
+        mem_bdy=${name_m[$m]}
+      else
+        mem_bdy='mean'
+      fi
 
-    if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $time \
            $mkinit $mem_bdy $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
     fi
@@ -1300,46 +1314,68 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= mmean)); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= mmean)); then
+#      if ((PERTURB_BDY == 1)); then
+#        ...
+#      fi
 
-#    if ((PERTURB_BDY == 1)); then
-#      ...
-#    fi
+      if ((BDY_ENS == 1)); then
+        mem_bdy=${name_m[$m]}
+      else
+        mem_bdy='mean'
+      fi
 
-    ocean_base='-'
-    if ((BDY_ENS == 1)); then
-      mem_bdy=${name_m[$m]}
-    else
-      mem_bdy='mean'
-    fi
-
-    if ((PNETCDF == 1)); then
-      if ((OCEAN_INPUT == 1)); then
-        if ((mkinit != 1 || OCEAN_FORMAT != 99)); then
-          ocean_base="$TMPOUT/${time}/anal/${mem_bdy}.init_ocean"
+      ocean_base='-'
+      if ((OCEAN_INPUT == 1 && mkinit != 1)); then
+        if ((OCEAN_FORMAT == 0)); then
+          if ((PNETCDF == 1)); then
+            ocean_base="$TMPOUT/${time}/anal/${mem_bdy}.init_ocean"
+          else
+            ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_ocean"
+          fi
+        elif ((OCEAN_FORMAT == 99)); then
+          if ((PNETCDF == 1)); then
+            ocean_base="$TMPOUT/${time}/anal/${mem_bdy}.init_bdy"
+          else
+            ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
+          fi
         fi
       fi
-      bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}.boundary"
-    else
-      if ((OCEAN_INPUT == 1)); then
-        if ((mkinit != 1 || OCEAN_FORMAT != 99)); then
-          ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_ocean"
+
+      land_base='-'
+      if ((LAND_INPUT == 1 && mkinit != 1)); then
+        if ((LAND_FORMAT == 0)); then
+          if ((PNETCDF == 1)); then
+            land_base="$TMPOUT/${time}/anal/${mem_bdy}.init_land"
+          else
+            land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_land"
+          fi
+        elif ((LAND_FORMAT == 99)); then
+          if ((PNETCDF == 1)); then
+            land_base="$TMPOUT/${time}/anal/${mem_bdy}.init_bdy"
+          else
+            land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
+          fi
         fi
       fi
-      bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}/boundary"
-    fi
 
-    if (pdrun $g $PROC_OPT); then
+      if ((PNETCDF == 1)); then
+        bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}.boundary"
+      else
+        bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}/boundary"
+      fi
+
       if ((PNETCDF == 1)); then
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
-             $TMPOUT/${time}/anal/${name_m[$m]}.init $ocean_base $bdy_base \
+             $TMPOUT/${time}/anal/${name_m[$m]}.init $ocean_base $land_base $bdy_base \
              $TMPOUT/const/topo $TMPOUT/${time_l}/landuse \
              $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) \
              cycle $bdy_start_time
       else
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
-             $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
+             $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $land_base $bdy_base \
              $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
              $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) \
              cycle $bdy_start_time
@@ -1375,14 +1411,13 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= mmean)); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= mmean)); then
+#      if ((PERTURB_BDY == 1)); then
+#        ...
+#      fi
 
-#    if ((PERTURB_BDY == 1)); then
-#      ...
-#    fi
-
-    if (pdrun $g $PROC_OPT); then
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $time \
            ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT $OUT_OPT cycle $DELETE_MEMBER
     fi
@@ -1425,9 +1460,9 @@ for it in $(seq $nitmax); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= mmean)); then
-    if (pdrun $g $PROC_OPT); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= mmean)); then
       bash $SCRP_DIR/src/pre_obsope.sh $MYRANK \
            $atime ${name_m[$m]}
     fi
@@ -1456,9 +1491,9 @@ for it in $(seq $nitmax); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= mmean)); then
-    if (pdrun $g $PROC_OPT); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= mmean)); then
       bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
            ${time} ${atime} ${name_m[$m]} $TMPRUN/obsope $LOG_OPT $OUT_OPT
     fi
@@ -1518,9 +1553,9 @@ for it in $(seq $nitmax); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= mmean)); then
-    if (pdrun $g $PROC_OPT); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= mmean)); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
            $atime ${name_m[$m]} \
            $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT
@@ -1550,9 +1585,9 @@ for it in $(seq $nitmax); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= mmean)); then
-    if (pdrun $g $PROC_OPT); then
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= mmean)); then
       bash $SCRP_DIR/src/post_letkf.sh $MYRANK \
            ${atime} $TMPRUN/letkf $LOG_OPT
     fi

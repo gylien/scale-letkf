@@ -6,12 +6,10 @@
 #===============================================================================
 
 STIME='<STIME>'
-ETIME='<STIME>'
+ETIME='<ETIME>'
 MEMBERS='mean'
-CYCLE=1
+CYCLE=
 CYCLE_SKIP=1
-IF_VERF=0
-IF_EFSO=0
 ISTEP=
 FSTEP=
 TIME_LIMIT='<WTIME_L>'
@@ -19,26 +17,12 @@ TIME_LIMIT='<WTIME_L>'
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=432000     # SCALE forecast length in the forecast mode (second)
+FCSTLEN=432000      # SCALE forecast length in the forecast mode (second)
 FCSTOUT=3600
-
-#===============================================================================
-# EFSO settings
-
-#EFSOT=24           # EFSO validation time interval (from the analysis time) (hour)
-
-#OBSOUT_DIAG=0      # Store obsgues/obsanal (for EFSO) during the GFS-LETKF cycling run
-#                   #  0: No
-#                   #  1: Yes
-
-#EFSOFLEN=$EFSOT    # SCALE forecast length in the EFSO (ensemble) forecast mode (second)
-#EFSOFOUT=$LCYCLE   # SCALE forecast output interval in the EFSO (ensemble) forecast mode (second)
 
 #===============================================================================
 
 MAKEINIT=0       # 0: No
-                 # 1: Yes
-PERTURB_BDY=0    # 0: No
                  # 1: Yes
 
 #===============================================================================
@@ -65,9 +49,14 @@ BDYOUT_OPT=3     # 1:   o    o
 
                  #      topo landuse bdy perturb        scale
                  #      log  log     log (not finished) log
-LOG_OPT=4        # 1:   o    o       o   o              o
+LOG_OPT=2        # 1:   o    o       o   o              o
                  # 2:   o    o       o                  o
                  # 3:                                   o
                  # 4:   (none)
+
+LOG_TYPE=2       # 1:   Only save the log file from the head process
+                 # 2:   Save all log files
+                 # 3:   Save all log files in an archive file
+                 # 4:   Save all log files in a compressed archive file
 
 #===============================================================================

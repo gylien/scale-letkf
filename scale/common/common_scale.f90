@@ -13,70 +13,19 @@ MODULE common_scale
 !$USE OMP_LIB
   USE common
   use common_nml
-!  use common_mpi, only: nprocs, myrank
-
-
-!  use scale_stdio
-!  use scale_stdio, only: H_MID
 
   use scale_precision, only: RP, SP
-
   use scale_prof
-
-!  use common_mpi
-
-!  use common_mpi_scale, only: &
-!    nitmax, &
-!    proc2mem
-
-!  use scale_precision
-!  use scale_stdio
-!  use scale_prof
-!  use scale_grid_index
-
-
-!  use dc_log, only: &
-!    loginit
-!  use gtool_file, only: &
-!!     fileread, &
-!     filecloseall
-!  use scale_grid_index, only: &
-!    KHALO, IHALO, JHALO
 
   IMPLICIT NONE
   PUBLIC
 !-----------------------------------------------------------------------
 ! General parameters
 !-----------------------------------------------------------------------
-!  INTEGER,PARAMETER :: nlonsub=200
-!  INTEGER,PARAMETER :: nlatsub=200
-!  INTEGER,PARAMETER :: nlonns=6
-!  INTEGER,PARAMETER :: nlatns=6
-!  INTEGER,PARAMETER :: nlon=nlonsub*nlonns
-!  INTEGER,PARAMETER :: nlat=nlatsub*nlatns
-!  INTEGER,PARAMETER :: nlev=60
-!  integer,parameter :: nlonhalo=nlonsub+4
-!  integer,parameter :: nlathalo=nlatsub+4
-!  integer,parameter :: nlevhalo=nlev+4
 
-
-!  integer,save :: nitmax ! maximum number of model files processed by a process
-!  integer,allocatable,save :: procs(:)
-!  integer,allocatable,save :: mem2node(:,:)
-!  integer,allocatable,save :: mem2proc(:,:)
-!  integer,allocatable,save :: proc2mem(:,:,:)
-!  integer,save :: n_mem
-!  integer,save :: n_mempn
-
-!  integer,save :: ens_mygroup = -1
-!  integer,save :: ens_myrank = -1
-!  logical,save :: myrank_use = .false.
-!  integer,save :: lastmem_rank_e
-
-
-  INTEGER,PARAMETER :: nv3d=11   ! 3D state variables (in SCALE restart files)
+  ! Parameter 'nv3d' is set in common_nml.f90 ; 3D state variables (in SCALE restart files)
+  ! Parameter 'nv2d' is set in common_nml.f90 ; 2D state variables (in SCALE restart files)
   INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
-  INTEGER,PARAMETER :: nv2d=0    ! 2D state variables (in SCALE restart files)
 #ifdef H08
   INTEGER,PARAMETER :: nv2dd=9  ! H08  ! 2D diagnostic variables (in SCALE history files)
 #else
@@ -124,8 +73,6 @@ MODULE common_scale
 #endif
 !  INTEGER,PARAMETER :: iv2dd_tsfc=8
 
-
-
   INTEGER,SAVE :: nlon  ! # grids in I-direction [subdomain]
   INTEGER,SAVE :: nlat  ! # grids in J-direction [subdomain]
   INTEGER,SAVE :: nlev  ! # grids in K-direction
@@ -140,8 +87,23 @@ MODULE common_scale
   INTEGER,SAVE :: ngpv
   INTEGER,SAVE :: ngpvd
 
+  INTEGER,PARAMETER :: vname_max = 10
+  CHARACTER(vname_max),SAVE :: v3d_name(nv3d)
+  CHARACTER(vname_max),SAVE :: v3dd_name(nv3dd)
+  CHARACTER(vname_max),SAVE :: v2d_name(nv2d)
+  CHARACTER(vname_max),SAVE :: v2dd_name(nv2dd)
 
 
+!  INTEGER,PARAMETER :: nlonsub=200
+!  INTEGER,PARAMETER :: nlatsub=200
+!  INTEGER,PARAMETER :: nlonns=6
+!  INTEGER,PARAMETER :: nlatns=6
+!  INTEGER,PARAMETER :: nlon=nlonsub*nlonns
+!  INTEGER,PARAMETER :: nlat=nlatsub*nlatns
+!  INTEGER,PARAMETER :: nlev=60
+!  integer,parameter :: nlonhalo=nlonsub+4
+!  integer,parameter :: nlathalo=nlatsub+4
+!  integer,parameter :: nlevhalo=nlev+4
 
 !  REAL(r_size),SAVE :: lon(nlonsub,nlatsub)
 !  REAL(r_size),SAVE :: lat(nlonsub,nlatsub)
@@ -154,11 +116,6 @@ MODULE common_scale
 !!  REAL(r_size),SAVE :: dy2(nlatsub)
 !  REAL(r_size),SAVE :: fcori(nlatsub)
 !!  REAL(r_size),SAVE :: wg(nlonsub,nlatsub)
-  INTEGER,PARAMETER :: vname_max = 10
-  CHARACTER(vname_max),SAVE :: v3d_name(nv3d)
-  CHARACTER(vname_max),SAVE :: v3dd_name(nv3dd)
-  CHARACTER(vname_max),SAVE :: v2d_name(nv2d)
-  CHARACTER(vname_max),SAVE :: v2dd_name(nv2dd)
 
 CONTAINS
 !-----------------------------------------------------------------------
@@ -1665,19 +1622,25 @@ end subroutine rij_l2g
 ! proc = -1: outside the global domain
 !-----------------------------------------------------------------------
 SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
-  use scale_grid_index, only: &
-      IHALO,JHALO
-!      IA,JA                  ! [for validation]
   use scale_rm_process, only: &
-      PRC_NUM_X,PRC_NUM_Y
-!      PRC_myrank             ! [for validation]
-!  use scale_grid, only: &    ! [for validation]
-!      GRID_CX, &             ! [for validation]
-!      GRID_CY, &             ! [for validation]
-!      GRID_CXG, &            ! [for validation]
-!      GRID_CYG, &            ! [for validation]
-!      DX, &                  ! [for validation]
-!      DY                     ! [for validation]
+      PRC_NUM_X, PRC_NUM_Y
+#ifdef DEBUG
+  use scale_grid_index, only: &
+      IHALO, JHALO, &
+      IA, JA
+  use scale_process, only: &
+      PRC_myrank
+  use scale_grid, only: &
+      GRID_CX, &
+      GRID_CY, &
+      GRID_CXG, &
+      GRID_CYG, &
+      DX, &
+      DY
+#else
+  use scale_grid_index, only: &
+      IHALO, JHALO
+#endif
   IMPLICIT NONE
   integer,INTENT(OUT) :: proc
   REAL(r_size),INTENT(IN) :: ig
@@ -1700,17 +1663,19 @@ SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
   jl = jg - real(jproc * nlat,r_size)
   call rank_2d_1d(iproc,jproc,proc)
 
-!  if (PRC_myrank == proc) then                                                                                    ! [for validation]
-!    if (rig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                      ! [for validation]
-!        rig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &                                                     ! [for validation]
-!        rjg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &                                                      ! [for validation]
-!        rjg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then                                                      ! [for validation]
-!      write (6,'(A)') 'Error: Process assignment fails!'                                                          ! [for validation]
-!      write (6,'(3F10.2)') rig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 ! [for validation]
-!      write (6,'(3F10.2)') rjg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0 ! [for validation]
-!      stop                                                                                                        ! [for validation]
-!    end if                                                                                                        ! [for validation]
-!  end if                                                                                                          ! [for validation]
+#ifdef DEBUG
+  if (PRC_myrank == proc) then
+    if (ig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &
+        ig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &
+        jg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &
+        jg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then
+      write (6,'(A)') '[Error] Process assignment fails!'
+      write (6,'(3F10.2)') ig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0
+      write (6,'(3F10.2)') jg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0
+      stop
+    end if
+  end if
+#endif
 
   RETURN
 END SUBROUTINE rij_g2l_auto

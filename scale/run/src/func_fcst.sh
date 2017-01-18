@@ -173,8 +173,8 @@ print_setting () {
 
 for vname in DIR INDIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BDY_SCALE \
              DATA_BDY_SCALE_PREP DATA_BDY_WRF DATA_BDY_NICAM OBS OBSNCEP TOPO_FORMAT \
-             LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT \
-             PARENT_REF_TIME OCEAN_INPUT OCEAN_FORMAT OBSNUM WINDOW_S WINDOW_E \
+             LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT PARENT_REF_TIME \
+             ENABLE_PARAM_USER OCEAN_INPUT OCEAN_FORMAT LAND_INPUT LAND_FORMAT OBSNUM WINDOW_S WINDOW_E \
              LCYCLE LTIMESLOT MEMBER NNODES PPN THREADS SCALE_NP \
              STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP \
              FCSTLEN FCSTOUT MAKEINIT OUT_OPT TOPOOUT_OPT LANDUSEOUT_OPT BDYOUT_OPT \
@@ -236,6 +236,9 @@ EOF
 #${MODELDIR}/scale-rm_init|exec/scale-rm_init
 #${MODELDIR}/scale-rm|exec/scale-rm
 
+  if [ -e "${SCRP_DIR}/config.nml.scale_user" ]; then
+    echo "${SCRP_DIR}/config.nml.scale_user|conf/config.nml.scale_user" >> $STAGING_DIR/stagein.dat
+  fi
   if [ -e "${SCRP_DIR}/config.nml.grads_boundary" ]; then
     echo "${SCRP_DIR}/config.nml.grads_boundary|conf/config.nml.grads_boundary" >> $STAGING_DIR/stagein.dat
   fi
@@ -402,6 +405,18 @@ else
 #                echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
 #              done
 #            fi
+#          done
+#        fi
+
+        # anal_land
+        #-------------------
+#        if ((LAND_INPUT == 1)) && ((LAND_FORMAT == 0)); then
+#          for m in $(seq $fmember); do
+#            mm=$(((c-1) * fmember + m))
+#            for q in $(seq $mem_np); do
+#              path="${time2}/anal/${name_m[$mm]}/init_land$(printf $SCALE_SFX $((q-1)))"
+#              echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+#            done
 #          done
 #        fi
 
@@ -858,18 +873,20 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= MEMBER_RUN)); then
-    if ((TMPRUN_MODE <= 2)); then
-      c=$m
-    else
-      c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
-    fi
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= MEMBER_RUN)); then
+      if ((TMPRUN_MODE <= 2)); then
+        c=$m
+      else
+        c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
+      fi
 
-    if (pdrun $g $PROC_OPT); then
-      bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK ${stimes[$c]} ${name_m[$m]} \
-           $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT \
-           fcst ${bdytopo} ${bdycatalogue}
+      if [ -n "${stimes[$c]}" ]; then
+        bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK ${stimes[$c]} ${name_m[$m]} \
+             $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT \
+             fcst ${bdytopo} ${bdycatalogue}
+      fi
     fi
   fi
 
@@ -908,17 +925,19 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= MEMBER_RUN)); then
-    if ((TMPRUN_MODE <= 2)); then
-      c=$m
-    else
-      c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
-    fi
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= MEMBER_RUN)); then
+      if ((TMPRUN_MODE <= 2)); then
+        c=$m
+      else
+        c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
+      fi
 
-    if (pdrun $g $PROC_OPT); then
-      bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK ${stimes[$c]} \
-           ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT fcst
+      if [ -n "${stimes[$c]}" ]; then
+        bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK ${stimes[$c]} \
+             ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT fcst
+      fi
     fi
   fi
 
@@ -982,44 +1001,46 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= MEMBER_RUN)); then
-    if ((BDY_ENS == 1)); then
-      c=$(((m-1)/fmember+1))
-      mem_bdy=${name_m[$m]}
-    elif ((TMPRUN_MODE <= 2)); then
-      c=$m
-      mem_bdy='mean'
-    else
-      c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
-      mem_bdy='mean'
-    fi
-
-    bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
-    bdy_time_list=''
-    for ibdy in $(seq $nbdy); do
-      bdy_time_list="${bdy_time_list}${bdy_times[$ibdy]} "
-    done
-
-    if ((LANDUSE_UPDATE == 1)); then
-      time_l=${stimes[$c]}
-    else
-      time_l='const'
-    fi
-
-    if (pdrun $g $PROC_OPT); then
-      if ((PNETCDF == 1)); then
-        bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
-             $TMPOUT/const/topo $TMPOUT/${time_l}/landuse \
-             ${bdyorgf} ${stimes[$c]} $mkinit ${name_m[$m]} $mem_bdy \
-             $TMPRUN/scale_init/$(printf '%04d' $m) \
-             "$bdy_time_list" $ntsteps $ntsteps_skip fcst
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= MEMBER_RUN)); then
+      if ((BDY_ENS == 1)); then
+        c=$(((m-1)/fmember+1))
+        mem_bdy=${name_m[$m]}
+      elif ((TMPRUN_MODE <= 2)); then
+        c=$m
+        mem_bdy='mean'
       else
-        bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
-             $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
-             ${bdyorgf} ${stimes[$c]} $mkinit ${name_m[$m]} $mem_bdy \
-             $TMPRUN/scale_init/$(printf '%04d' $m) \
-             "$bdy_time_list" $ntsteps $ntsteps_skip fcst
+        c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
+        mem_bdy='mean'
+      fi
+
+      if [ -n "${stimes[$c]}" ]; then
+        bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
+        bdy_time_list=''
+        for ibdy in $(seq $nbdy); do
+          bdy_time_list="${bdy_time_list}${bdy_times[$ibdy]} "
+        done
+
+        if ((LANDUSE_UPDATE == 1)); then
+          time_l=${stimes[$c]}
+        else
+          time_l='const'
+        fi
+
+        if ((PNETCDF == 1)); then
+          bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
+               $TMPOUT/topo/topo $TMPOUT/${time_l}/landuse \
+               ${bdyorgf} ${stimes[$c]} $mkinit ${name_m[$m]} $mem_bdy \
+               $TMPRUN/scale_init/$(printf '%04d' $m) \
+               "$bdy_time_list" $ntsteps $ntsteps_skip fcst
+        else
+          bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
+               $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
+               ${bdyorgf} ${stimes[$c]} $mkinit ${name_m[$m]} $mem_bdy \
+               $TMPRUN/scale_init/$(printf '%04d' $m) \
+               "$bdy_time_list" $ntsteps $ntsteps_skip fcst
+        fi
       fi
     fi
   fi
@@ -1064,22 +1085,24 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= MEMBER_RUN)); then
-    if ((BDY_ENS == 1)); then
-      c=$(((m-1)/fmember+1))
-      mem_bdy=${name_m[$m]}
-    elif ((TMPRUN_MODE <= 2)); then
-      c=$m
-      mem_bdy='mean'
-    else
-      c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
-      mem_bdy='mean'
-    fi
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= MEMBER_RUN)); then
+      if ((BDY_ENS == 1)); then
+        c=$(((m-1)/fmember+1))
+        mem_bdy=${name_m[$m]}
+      elif ((TMPRUN_MODE <= 2)); then
+        c=$m
+        mem_bdy='mean'
+      else
+        c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
+        mem_bdy='mean'
+      fi
 
-    if (pdrun $g $PROC_OPT); then
-      bash $SCRP_DIR/src/post_scale_init.sh $MYRANK ${stimes[$c]} \
-           $mkinit $mem_bdy $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT fcst
+      if [ -n "${stimes[$c]}" ]; then
+        bash $SCRP_DIR/src/post_scale_init.sh $MYRANK ${stimes[$c]} \
+             $mkinit $mem_bdy $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT fcst
+      fi
     fi
   fi
 
@@ -1126,58 +1149,83 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= fmembertot)); then
-    c=$(((m-1)/fmember+1))
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= fmembertot)); then
+      c=$(((m-1)/fmember+1))
 
-#    if ((PERTURB_BDY == 1)); then
-#      ...
-#    fi
+      if [ -n "${stimes[$c]}" ]; then
+#        if ((PERTURB_BDY == 1)); then
+#          ...
+#        fi
 
-    ocean_base='-'
-    if ((BDY_ENS == 1)); then
-      mem_bdy=${name_m[$m]}
-    else
-      mem_bdy='mean'
-    fi
-
-    if ((PNETCDF == 1)); then
-      if ((OCEAN_INPUT == 1)); then
-        if ((mkinit != 1 || OCEAN_FORMAT != 99)); then
-          ocean_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}.init_ocean"
+        if ((BDY_ENS == 1)); then
+          mem_bdy=${name_m[$m]}
+        else
+          mem_bdy='mean'
         fi
-      fi
-      bdy_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}.boundary"
-    else
-      if ((OCEAN_INPUT == 1)); then
-        if ((mkinit != 1 || OCEAN_FORMAT != 99)); then
-          ocean_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}/init_ocean"
+
+        ocean_base='-'
+        if ((OCEAN_INPUT == 1 && mkinit != 1)); then
+          if ((OCEAN_FORMAT == 0)); then
+            if ((PNETCDF == 1)); then
+              ocean_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}.init_ocean"
+            else
+              ocean_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}/init_ocean"
+            fi
+          elif ((OCEAN_FORMAT == 99)); then
+            if ((PNETCDF == 1)); then
+              ocean_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}.init_bdy"
+            else
+              ocean_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}/init_bdy"
+            fi
+          fi
         fi
-      fi
-      bdy_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}/boundary"
-    fi
 
-    bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
+        land_base='-'
+        if ((LAND_INPUT == 1 && mkinit != 1)); then
+          if ((LAND_FORMAT == 0)); then
+            if ((PNETCDF == 1)); then
+              land_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}.init_land"
+            else
+              land_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}/init_land"
+            fi
+          elif ((LAND_FORMAT == 99)); then
+            if ((PNETCDF == 1)); then
+              land_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}.init_bdy"
+            else
+              land_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}/init_bdy"
+            fi
+          fi
+        fi
 
-    if ((LANDUSE_UPDATE == 1)); then
-      time_l=${stimes[$c]}
-    else
-      time_l='const'
-    fi
+        if ((PNETCDF == 1)); then
+          bdy_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}.boundary"
+        else
+          bdy_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}/boundary"
+        fi
 
-    if (pdrun $g $PROC_OPT); then
-      if ((PNETCDF == 1)); then
-        bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
-             $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
-             $TMPOUT/const/topo $TMPOUT/${time_l}/landuse \
-             ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) \
-             fcst $bdy_start_time
-      else
-        bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
-             $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $bdy_base \
-             $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
-             ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) \
-             fcst $bdy_start_time
+        bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
+
+        if ((LANDUSE_UPDATE == 1)); then
+          time_l=${stimes[$c]}
+        else
+          time_l='const'
+        fi
+
+        if ((PNETCDF == 1)); then
+          bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
+               $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $land_base $bdy_base \
+               $TMPOUT/const/topo $TMPOUT/${time_l}/landuse \
+               ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) \
+               fcst $bdy_start_time
+        else
+          bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
+               $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $land_base $bdy_base \
+               $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
+               ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) \
+               fcst $bdy_start_time
+        fi
       fi
     fi
   fi
@@ -1205,17 +1253,19 @@ for it in $(seq $its $ite); do
   fi
 
   g=${proc2group[$((MYRANK+1))]}
-  m=$(((it-1)*parallel_mems+g))
-  if ((m >= 1 && m <= fmembertot)); then
-    c=$(((m-1)/fmember+1))
+  if (pdrun $g $PROC_OPT); then
+    m=$(((it-1)*parallel_mems+g))
+    if ((m >= 1 && m <= fmembertot)); then
+      c=$(((m-1)/fmember+1))
 
-#    if ((PERTURB_BDY == 1)); then
-#      ...
-#    fi
+      if [ -n "${stimes[$c]}" ]; then
+#        if ((PERTURB_BDY == 1)); then
+#          ...
+#        fi
 
-    if (pdrun $g $PROC_OPT); then
-      bash $SCRP_DIR/src/post_scale.sh $MYRANK ${stimes[$c]} \
-           ${name_m[$m]} $FCSTLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT $OUT_OPT fcst
+        bash $SCRP_DIR/src/post_scale.sh $MYRANK ${stimes[$c]} \
+             ${name_m[$m]} $FCSTLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT $OUT_OPT fcst
+      fi
     fi
   fi
 
@@ -1236,68 +1286,64 @@ if ((LOG_TYPE >= 3)); then
   lcycles=$((LCYCLE * CYCLE_SKIP))
   time=$STIME
   while ((time <= ETIME)); do
-    for c in $(seq $CYCLE); do
-      time2=$(datetime $time $((lcycles * (c-1))) s)
-
-      if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time2}/log/fcst_scale_pp" ]; then
-        if ((TAR_THREAD > 1)); then
-          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
-            sleep 1s
-          done
-          if ((LOG_TYPE == 3)); then
-            ( tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale_pp.tar fcst_scale_pp && rm -fr $OUTDIR/${time2}/log/fcst_scale_pp ) &
-          elif ((LOG_TYPE == 4)); then
-            ( tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale_pp.tar.gz fcst_scale_pp && rm -fr $OUTDIR/${time2}/log/fcst_scale_pp ) &
-          fi
-        else
-          if ((LOG_TYPE == 3)); then
-            tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale_pp.tar fcst_scale_pp && rm -fr $OUTDIR/${time2}/log/fcst_scale_pp
-          elif ((LOG_TYPE == 4)); then
-            tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale_pp.tar.gz fcst_scale_pp && rm -fr $OUTDIR/${time2}/log/fcst_scale_pp
-          fi
+    if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time}/log/fcst_scale_pp" ]; then
+      if ((TAR_THREAD > 1)); then
+        while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+          sleep 1s
+        done
+        if ((LOG_TYPE == 3)); then
+          ( tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/fcst_scale_pp.tar fcst_scale_pp && rm -fr $OUTDIR/${time}/log/fcst_scale_pp ) &
+        elif ((LOG_TYPE == 4)); then
+          ( tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/fcst_scale_pp.tar.gz fcst_scale_pp && rm -fr $OUTDIR/${time}/log/fcst_scale_pp ) &
+        fi
+      else
+        if ((LOG_TYPE == 3)); then
+          tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/fcst_scale_pp.tar fcst_scale_pp && rm -fr $OUTDIR/${time}/log/fcst_scale_pp
+        elif ((LOG_TYPE == 4)); then
+          tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/fcst_scale_pp.tar.gz fcst_scale_pp && rm -fr $OUTDIR/${time}/log/fcst_scale_pp
         fi
       fi
+    fi
 
-      if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time2}/log/fcst_scale_init" ]; then
-        if ((TAR_THREAD > 1)); then
-          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
-            sleep 1s
-          done
-          if ((LOG_TYPE == 3)); then
-            ( tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale_init.tar fcst_scale_init && rm -fr $OUTDIR/${time2}/log/fcst_scale_init ) &
-          elif ((LOG_TYPE == 4)); then
-            ( tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale_init.tar.gz fcst_scale_init && rm -fr $OUTDIR/${time2}/log/fcst_scale_init ) &
-          fi
-        else
-          if ((LOG_TYPE == 3)); then
-            tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale_init.tar fcst_scale_init && rm -fr $OUTDIR/${time2}/log/fcst_scale_init
-          elif ((LOG_TYPE == 4)); then
-            tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale_init.tar.gz fcst_scale_init && rm -fr $OUTDIR/${time2}/log/fcst_scale_init
-          fi
+    if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time}/log/fcst_scale_init" ]; then
+      if ((TAR_THREAD > 1)); then
+        while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+          sleep 1s
+        done
+        if ((LOG_TYPE == 3)); then
+          ( tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/fcst_scale_init.tar fcst_scale_init && rm -fr $OUTDIR/${time}/log/fcst_scale_init ) &
+        elif ((LOG_TYPE == 4)); then
+          ( tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/fcst_scale_init.tar.gz fcst_scale_init && rm -fr $OUTDIR/${time}/log/fcst_scale_init ) &
+        fi
+      else
+        if ((LOG_TYPE == 3)); then
+          tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/fcst_scale_init.tar fcst_scale_init && rm -fr $OUTDIR/${time}/log/fcst_scale_init
+        elif ((LOG_TYPE == 4)); then
+          tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/fcst_scale_init.tar.gz fcst_scale_init && rm -fr $OUTDIR/${time}/log/fcst_scale_init
         fi
       fi
+    fi
 
-      if ((LOG_OPT <= 3)) && [ -d "$OUTDIR/${time2}/log/fcst_scale" ]; then
-        if ((TAR_THREAD > 1)); then
-          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
-            sleep 1s
-          done
-          if ((LOG_TYPE == 3)); then
-            ( tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale.tar fcst_scale && rm -fr $OUTDIR/${time2}/log/fcst_scale ) &
-          elif ((LOG_TYPE == 4)); then
-            ( tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale.tar.gz fcst_scale && rm -fr $OUTDIR/${time2}/log/fcst_scale ) &
-          fi
-        else
-          if ((LOG_TYPE == 3)); then
-            tar -C $OUTDIR/${time2}/log -cf $OUTDIR/${time2}/log/fcst_scale.tar fcst_scale && rm -fr $OUTDIR/${time2}/log/fcst_scale
-          elif ((LOG_TYPE == 4)); then
-            tar -C $OUTDIR/${time2}/log -czf $OUTDIR/${time2}/log/fcst_scale.tar.gz fcst_scale && rm -fr $OUTDIR/${time2}/log/fcst_scale
-          fi
+    if ((LOG_OPT <= 3)) && [ -d "$OUTDIR/${time}/log/fcst_scale" ]; then
+      if ((TAR_THREAD > 1)); then
+        while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+          sleep 1s
+        done
+        if ((LOG_TYPE == 3)); then
+          ( tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/fcst_scale.tar fcst_scale && rm -fr $OUTDIR/${time}/log/fcst_scale ) &
+        elif ((LOG_TYPE == 4)); then
+          ( tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/fcst_scale.tar.gz fcst_scale && rm -fr $OUTDIR/${time}/log/fcst_scale ) &
+        fi
+      else
+        if ((LOG_TYPE == 3)); then
+          tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/fcst_scale.tar fcst_scale && rm -fr $OUTDIR/${time}/log/fcst_scale
+        elif ((LOG_TYPE == 4)); then
+          tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/fcst_scale.tar.gz fcst_scale && rm -fr $OUTDIR/${time}/log/fcst_scale
         fi
       fi
+    fi
 
-    done
-    time=$(datetime $time $((lcycles * CYCLE)) s)
+    time=$(datetime $time $lcycles s)
   done
   if ((TAR_THREAD > 1)); then
     wait

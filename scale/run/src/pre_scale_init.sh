@@ -73,7 +73,7 @@ else
   IO_AGGREGATE=".false"
 fi
 
-if ((MKINIT == 1 || (OCEAN_INPUT == 1 && OCEAN_FORMAT == 99))); then
+if ((MKINIT == 1 || USE_INIT_FROM_BDY == 1)); then
   RESTART_OUTPUT='.true.'
 else
   RESTART_OUTPUT='.false.'
@@ -204,9 +204,11 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--OFFLINE--/a OFFLINE = .true.," \
     > $TMPDIR/init.conf
 
-cat $TMPDAT/conf/config.nml.grads_boundary | \
-    sed -e "s#--DIR--#${TMPSUBDIR}#g" \
-    > $TMPDIR/gradsbdy.conf
+if [ -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
+  cat $TMPDAT/conf/config.nml.grads_boundary | \
+      sed -e "s#--DIR--#${TMPSUBDIR}#g" \
+      > $TMPDIR/gradsbdy.conf
+fi
 
 #===============================================================================
 

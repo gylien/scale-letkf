@@ -54,17 +54,17 @@ if ((MKINIT == 1)); then
       mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}/init${ifile:$initbaselen}
     done
   fi
-elif ((OCEAN_INPUT == 1 && OCEAN_FORMAT == 99)); then
+elif ((USE_INIT_FROM_BDY == 1)); then
   if ((PNETCDF == 1)); then
     mkdir -p $TMPOUT/${STIME}/anal
     ifile="$(cd $TMPDIR ; ls init_*.nc 2> /dev/null)"
     if [ -e "$TMPDIR/${ifile}" ]; then
-      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}.init_ocean.nc
+      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}.init_bdy.nc
     fi
   else
     mkdir -p $TMPOUT/${STIME}/anal/${MEM}
     for ifile in $(cd $TMPDIR ; ls init_*.nc 2> /dev/null); do
-      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}/init_ocean${ifile:$initbaselen}
+      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}/init_bdy${ifile:$initbaselen}
     done
   fi
 fi

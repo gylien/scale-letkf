@@ -14,10 +14,11 @@
 #  Use settings:
 #    config.main
 #    config.fcst
-#    config.nml.scale_pp_topo
-#    config.nml.scale_pp_landuse
+#    config.nml.scale_pp
 #    config.nml.scale_init
 #    config.nml.scale
+#    config.nml.scale_user
+#    config.nml.grads_boundary
 #
 #===============================================================================
 
@@ -116,9 +117,9 @@ fi
 # Run initialization scripts on all nodes
 
 if ((TMPRUN_MODE <= 2)); then
-  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1 $CYCLE || exit $?
+  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
 else
-  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1 $CYCLE || exit $?
+  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
 fi
 
 #===============================================================================
