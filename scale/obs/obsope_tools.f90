@@ -951,7 +951,7 @@ end subroutine obsmake_cal
 !-------------------------------------------------------------------------------
 subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   use scale_grid, only: &
-      GRID_CXG, GRID_CYG, &
+      GRID_CX, GRID_CY, &
       DX, DY
   use scale_grid_index, only: &
       IHALO, JHALO, KHALO
@@ -981,7 +981,7 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
     do i = 1, nlon
       ri = real(i + IHALO, r_size)
-      call MPRJ_xy2lonlat((ri-1.0d0) * DX + GRID_CXG(1), (rj-1.0d0) * DY + GRID_CYG(1), lon, lat)
+      call MPRJ_xy2lonlat((ri-1.0d0) * DX + GRID_CX(1), (rj-1.0d0) * DY + GRID_CY(1), lon, lat)
       lon = lon * rad2deg
       lat = lat * rad2deg
 
@@ -995,10 +995,6 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
             call Trans_XtoY_radar(OBSSIM_3D_VARS_LIST(iv3dsim), OBSSIM_RADAR_LON, OBSSIM_RADAR_LAT, OBSSIM_RADAR_Z, ri, rj, rk, &
                                   lon, lat, lev, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
             if (tmpqc == iqc_ref_low) tmpqc = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
-!          case (id_H08IR_obs)
-!            call Trans_XtoY_radar_H08(...)
-!          case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)
-!            call ...
           case default
             call Trans_XtoY(OBSSIM_3D_VARS_LIST(iv3dsim), ri, rj, rk, &
                             lon, lat, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
@@ -1011,10 +1007,18 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
           end if
         end do ! [ iv3dsim = 1, OBSSIM_NUM_3D_VARS ]
 
+        ! 2D observations calculated when k = 1
         if (k == 1) then
           do iv2dsim = 1, OBSSIM_NUM_2D_VARS
-            call Trans_XtoY(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
-                            lon, lat, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
+            select case (OBSSIM_2D_VARS_LIST(iv2dsim))
+!            case (id_H08IR_obs)               !!!!!! H08 as 2D observations ???
+!              call Trans_XtoY_radar_H08(...)
+!            case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)
+!              call ...
+            case default
+              call Trans_XtoY(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
+                              lon, lat, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
+            end select
 
             if (tmpqc == 0) then
               v2dgsim(i,j,iv2dsim) = real(tmpobs, r_sngl)
@@ -1062,7 +1066,7 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d)
     iunit = 55
     inquire (iolength=iolen) iolen
     open (iunit, file=trim(filename), form='unformatted', access='direct', &
-          status='unknown', recl=nlong*nlatg*iolen)
+          status='unknown', convert='native', recl=nlong*nlatg*iolen)
     irec = (nlev * nv3dgrd + nv2dgrd) * (step-1)
   end if
 
