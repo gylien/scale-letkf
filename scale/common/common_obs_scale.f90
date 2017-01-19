@@ -1942,45 +1942,60 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
   INTEGER,INTENT(OUT) :: nn
   REAL(r_sngl),ALLOCATABLE :: wk(:)
   INTEGER :: ios
-  INTEGER :: iu,iv,it,iq,irh,ips,itc
+!  INTEGER :: iu,iv,it,iq,irh,ips,itc
   INTEGER :: iunit
   LOGICAL :: ex
+  INTEGER :: sz
 
   ALLOCATE(wk(nrec))
   nn = 0
-  iu = 0
-  iv = 0
-  it = 0
-  iq = 0
-  irh = 0
-  ips = 0
-  itc = 0
+!  iu = 0
+!  iv = 0
+!  it = 0
+!  iq = 0
+!  irh = 0
+!  ips = 0
+!  itc = 0
   iunit=91
   INQUIRE(FILE=cfile,EXIST=ex)
   IF(ex) THEN
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-    DO
-      READ(iunit,IOSTAT=ios) wk
-      IF(ios /= 0) EXIT
-!      SELECT CASE(NINT(wk(1)))
-!      CASE(id_u_obs)
-!        iu = iu + 1
-!      CASE(id_v_obs)
-!        iv = iv + 1
-!      CASE(id_t_obs,id_tv_obs)
-!        it = it + 1
-!      CASE(id_q_obs)
-!        iq = iq + 1
-!      CASE(id_rh_obs)
-!        irh = irh + 1
-!      CASE(id_ps_obs)
-!        ips = ips + 1
-!      CASE(id_tclon_obs)
-!        itc = itc + 1
-!      END SELECT
-      nn = nn + 1
-    END DO
-!    WRITE(6,'(I10,A)') nn,' OBSERVATIONS INPUT'
+
+! get file size by reading through the entire file... too slow for big files
+!-----------------------------
+!    DO
+!      READ(iunit,IOSTAT=ios) wk
+!      IF(ios /= 0) EXIT
+!!      SELECT CASE(NINT(wk(1)))
+!!      CASE(id_u_obs)
+!!        iu = iu + 1
+!!      CASE(id_v_obs)
+!!        iv = iv + 1
+!!      CASE(id_t_obs,id_tv_obs)
+!!        it = it + 1
+!!      CASE(id_q_obs)
+!!        iq = iq + 1
+!!      CASE(id_rh_obs)
+!!        irh = irh + 1
+!!      CASE(id_ps_obs)
+!!        ips = ips + 1
+!!      CASE(id_tclon_obs)
+!!        itc = itc + 1
+!!      END SELECT
+!      nn = nn + 1
+!    END DO
+
+! get file size by INQUIRE statement... may not work for some older fortran compilers
+!-----------------------------
+    INQUIRE(UNIT=iunit, SIZE=sz)
+    IF (MOD(sz, r_sngl * (nrec+2)) /= 0) THEN
+      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      RETURN
+    END IF
+    nn = sz / (r_sngl * (nrec+2))
+!-----------------------------
+
+    WRITE(6,'(I10,A)') nn,' OBSERVATIONS INPUT'
 !    WRITE(6,'(A12,I10)') '          U:',iu
 !    WRITE(6,'(A12,I10)') '          V:',iv
 !    WRITE(6,'(A12,I10)') '      T(Tv):',it
@@ -2217,14 +2232,15 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
   INTEGER,INTENT(OUT) :: nn
   REAL(r_sngl) :: wk(7),tmp
   INTEGER :: ios
-  INTEGER :: ir,iv
+!  INTEGER :: ir,iv
   INTEGER :: iunit
   LOGICAL :: ex
+  INTEGER :: sz
   REAL(r_size),INTENT(OUT) :: radarlon,radarlat,radarz
 
   nn = 0
-  iv = 0
-  ir = 0
+!  iv = 0
+!  ir = 0
   iunit=91
 
   radarlon=0.0d0
@@ -2241,35 +2257,51 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
     END IF
     radarlon=REAL(tmp,r_size)
     READ(iunit,IOSTAT=ios)tmp
-    IF(ios /= 0) THEN 
+    IF(ios /= 0) THEN
       WRITE(6,'(2A)') cfile,': Reading error -- skipped'
       RETURN
     END IF
     radarlat=REAL(tmp,r_size)
     READ(iunit,IOSTAT=ios)tmp
-    IF(ios /= 0) THEN 
+    IF(ios /= 0) THEN
       WRITE(6,'(2A)') cfile,': Reading error -- skipped'
       RETURN
     END IF
     radarz=REAL(tmp,r_size)
-    DO
-      READ(iunit,IOSTAT=ios) wk
-      IF(ios /= 0) EXIT
-      SELECT CASE(NINT(wk(1)))
-      CASE(id_radar_ref_obs,id_radar_ref_zero_obs)
-        ir = ir + 1
-      CASE(id_radar_vr_obs)
-        iv = iv + 1
-      END SELECT
-      nn = nn + 1
-    END DO
+
+! get file size by reading through the entire file... too slow for big files
+!-----------------------------
+!    DO
+!      READ(iunit,IOSTAT=ios) wk
+!      IF(ios /= 0) EXIT
+!!      SELECT CASE(NINT(wk(1)))
+!!      CASE(id_radar_ref_obs,id_radar_ref_zero_obs)
+!!        ir = ir + 1
+!!      CASE(id_radar_vr_obs)
+!!        iv = iv + 1
+!!      END SELECT
+!      nn = nn + 1
+!    END DO
+!-----------------------------
+
+! get file size by INQUIRE statement... may not work for some older fortran compilers
+!-----------------------------
+    INQUIRE(UNIT=iunit, SIZE=sz)
+    sz = sz - r_sngl * (1+2) * 3 ! substract the radar data header
+    IF (MOD(sz, r_sngl * (7+2)) /= 0) THEN
+      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      RETURN
+    END IF
+    nn = sz / (r_sngl * (7+2))
+!-----------------------------
+
     WRITE(6,*)' RADAR FILE ', cfile
     WRITE(6,*)' RADAR LON = ',radarlon
     WRITE(6,*)' RADAR LAT = ',radarlat
     WRITE(6,*)' RADAR Z   = ',radarz
     WRITE(6,'(I10,A)') nn,' OBSERVATIONS INPUT'
-    WRITE(6,'(A12,I10)') '   REFLECTIVITY:',ir
-    WRITE(6,'(A12,I10)') 'RADIAL VELOCITY:',iv
+!    WRITE(6,'(A12,I10)') '   REFLECTIVITY:',ir
+!    WRITE(6,'(A12,I10)') 'RADIAL VELOCITY:',iv
     CLOSE(iunit)
   ELSE
     WRITE(6,'(2A)') cfile,' does not exist -- skipped'
@@ -2740,6 +2772,7 @@ SUBROUTINE get_nobs_H08(cfile,nn)
   INTEGER :: iprof
   INTEGER :: iunit
   LOGICAL :: ex
+  INTEGER :: sz
 
   nn = 0 
   iprof = 0
@@ -2756,12 +2789,27 @@ SUBROUTINE get_nobs_H08(cfile,nn)
 !      RETURN
 !    END IF
     
-    DO
-      READ(iunit,IOSTAT=ios) wk
-      IF(ios /= 0) EXIT
-      iprof = iprof + 1
-      nn = nn + nch
-    END DO
+! get file size by reading through the entire file... too slow for big files
+!-----------------------------
+!    DO
+!      READ(iunit,IOSTAT=ios) wk
+!      IF(ios /= 0) EXIT
+!      iprof = iprof + 1
+!      nn = nn + nch
+!    END DO
+!-----------------------------
+
+! get file size by INQUIRE statement... may not work for some older fortran compilers
+!-----------------------------
+    INQUIRE(UNIT=iunit, SIZE=sz)
+    IF (MOD(sz, r_sngl * (4+nch+2)) /= 0) THEN
+      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      RETURN
+    END IF
+    iprof = sz / (r_sngl * (4+nch+2))
+    nn = iprof * nch
+!-----------------------------
+
     WRITE(6,*)' H08 FILE ', cfile
     WRITE(6,'(I10,A)') nn,' OBSERVATIONS INPUT'
     WRITE(6,'(A12,I10)') '   num of prof:',iprof
