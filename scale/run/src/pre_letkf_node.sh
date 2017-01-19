@@ -103,7 +103,7 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = $LTIMESLOT.D0," \
         -e "/!--OBSDA_IN--/a OBSDA_IN = $OBSDA_IN," \
         -e "/!--OBSDA_IN_BASENAME--/a OBSDA_IN_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext\"," \
-        -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${TMPOUT}/${ATIME}/gues/@@@@/init\"," \
+        -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${TMPOUT}/${ATIME}/anal/@@@@/init\"," \
         -e "/!--GUES_OUT_MEAN_BASENAME--/a GUES_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/gues/mean/init\"," \
         -e "/!--GUES_OUT_SPRD_BASENAME--/a GUES_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/gues/sprd/init\"," \
         -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/anal/@@@@/init\"," \

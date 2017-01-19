@@ -1332,7 +1332,7 @@ for it in $(seq $its $ite); do
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
              $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $land_base $bdy_base \
              $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
-             ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) \
+             ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) $OUT_OPT \
              fcst $bdy_start_time
       fi
     fi
