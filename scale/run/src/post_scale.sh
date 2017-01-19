@@ -40,13 +40,11 @@ OUT_OPT="$1"; shift
 SCPCALL="${1:-cycle}"; shift
 DELETE_MEMBER="${1:-0}"
 
-ATIME=$(datetime $STIME $LCYCLE s)
-
-restartbaselen=27  # 7 + 20
-
 #===============================================================================
 
 if [ "$SCPCALL" = 'cycle' ]; then
+
+  ATIME=$(datetime $STIME $LCYCLE s)
 
   MEMtmp=$MEM
   if [ "$MEM" = 'mean' ]; then
@@ -55,8 +53,9 @@ if [ "$SCPCALL" = 'cycle' ]; then
   mkdir -p $TMPOUT/${STIME}/hist/${MEMtmp}
   mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/hist/${MEMtmp}
   mkdir -p $TMPOUT/${ATIME}/gues/${MEMtmp}
-  file_prefix=$(cd $TMPDIR ; ls restart*.nc | head -n 1) # pick up the first restart output. ###### TO DO: explicitly calculate the time string???
-  for ifile in $(cd $TMPDIR ; ls ${file_prefix:0:$restartbaselen}*.nc); do
+  file_prefix="restart_${ATIME:0:8}-${ATIME:8:6}.000"
+  restartbaselen=27
+  for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
     mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/gues/${MEMtmp}/init${ifile:$restartbaselen}
   done
 
@@ -83,12 +82,15 @@ if [ "$SCPCALL" = 'cycle' ]; then
 
 elif [ "$SCPCALL" = 'fcst' ]; then
 
+  FTIME=$(datetime $STIME $FCSTLEN s)
+
   mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
   mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
   if ((OUT_OPT <= 1)); then
-    file_prefix=$(cd $TMPDIR ; ls restart*.nc | head -n 1) # pick up the first restart output. ###### TO DO: explicitly calculate the time string???
-    for ifile in $(cd $TMPDIR ; ls ${file_prefix:0:$restartbaselen}*.nc); do
-      mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_$(datetime ${STIME} $FCSTLEN s)${ifile:$restartbaselen}
+    file_prefix="restart_${FTIME:0:8}-${FTIME:8:6}.000"
+    restartbaselen=27
+    for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
+      mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_${FTIME}${ifile:$restartbaselen}
     done
   fi
 
