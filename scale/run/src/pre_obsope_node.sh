@@ -78,6 +78,7 @@ cat $TMPDAT/conf/config.nml.obsope | \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
+        -e "/!--OBSDA_OUT--/a OBSDA_OUT = .true." \
         -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = '${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext'," \
         -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = '${TMPOUT}/${STIME}/hist/@@@@/history'," \
         -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \

@@ -1649,7 +1649,7 @@ fi
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
        $time $atime $TMPRUN/letkf $TMPDAT/obs \
-       $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo \
+       $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo $OBSOUT_OPT \
        $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT \
        $MEMBER
 fi
@@ -1668,7 +1668,7 @@ for it in $(seq $nitmax); do
     m=$(((it-1)*parallel_mems+g))
     if ((m >= 1 && m <= mmean)); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
-           $atime ${name_m[$m]} \
+           $atime ${name_m[$m]} $OBSOUT_OPT \
            $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi

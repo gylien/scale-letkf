@@ -8,16 +8,17 @@
 
 . config.main
 
-if (($# < 6)); then
+if (($# < 7)); then
   cat >&2 << EOF
 
 [pre_letkf.sh]
 
-Usage: $0 MYRANK ATIME MEM ADAPTINFL RTPS_INFL_OUT NOBS_OUT
+Usage: $0 MYRANK ATIME MEM OBSOUT_OPT ADAPTINFL RTPS_INFL_OUT NOBS_OUT
 
   MYRANK  My rank number (not used)
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
   MEM     Name of the ensemble member
+  OBSOUT_OPT
   ADAPTINFL
   RTPS_INFL_OUT
   NOBS_OUT
@@ -29,6 +30,7 @@ fi
 MYRANK="$1"; shift
 ATIME="$1"; shift
 MEM="$1"; shift
+OBSOUT_OPT="$1"; shift
 ADAPTINFL="$1"; shift
 RTPS_INFL_OUT="$1"; shift
 NOBS_OUT="$1"
@@ -61,7 +63,9 @@ if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd
   done
 #fi
 else
-  mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
+  if ((OBSOUT_OPT <= 2)); then
+    mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
+  fi
   for ifile in $(cd $TMPOUT/${ATIME}/gues/${MEM} ; ls init*.nc 2> /dev/null); do
     mkdir -p $TMPOUT/${ATIME}/anal/${MEM}
     cp -f $TMPOUT/${ATIME}/gues/${MEM}/${ifile} $TMPOUT/${ATIME}/anal/${MEM}
