@@ -8,17 +8,18 @@
 
 . config.main
 
-if (($# < 4)); then
+if (($# < 5)); then
   cat >&2 << EOF
 
 [pre_letkf.sh]
 
-Usage: $0 MYRANK ATIME MEM OUT_OPT [ADAPTINFL RTPS_INFL_OUT NOBS_OUT]
+Usage: $0 MYRANK ATIME MEM OUT_OPT OBSOUT_OPT [ADAPTINFL RTPS_INFL_OUT NOBS_OUT]
 
   MYRANK  My rank number (not used)
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
   MEM     Name of the ensemble member
   OUT_OPT
+  OBSOUT_OPT
   ADAPTINFL
   RTPS_INFL_OUT
   NOBS_OUT
@@ -31,6 +32,7 @@ MYRANK="$1"; shift
 ATIME="$1"; shift
 MEM="$1"; shift
 OUT_OPT="$1"; shift
+OBSOUT_OPT="$1"; shift
 ADAPTINFL="${1:-0}"; shift
 RTPS_INFL_OUT="${1:-0}"; shift
 NOBS_OUT="${1:-0}"
@@ -66,7 +68,9 @@ if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd
     done
   fi
 else
-  mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
+  if ((OBSOUT_OPT <= 2)); then
+    mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
+  fi
 
   if ((OUT_OPT <= 3 && ENABLE_PARAM_USER != 1)); then
     for ifile in $(cd $TMPOUT/${ATIME}/anal/${MEM} ; ls init*.nc 2> /dev/null); do
