@@ -506,7 +506,7 @@ else
                   path="${time2}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
                   echo "${DATA_BDY_SCALE_PREP}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
                 done
-              else
+              fi
             done
           fi
         fi
