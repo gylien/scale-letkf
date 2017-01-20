@@ -87,6 +87,16 @@ TIME_LIMIT="${1:-$TIME_LIMIT}"
 #  exit 1
 #fi
 
+###### only need to check one file when $RUN_LEVEL option is implemented ######
+if ((ENABLE_PARAM_USER == 1)) && [ ! -e "$SCRP_DIR/config.nml.scale_user" ] && [ ! -e "$TMPDAT/conf/config.nml.scale_user" ]; then
+  echo "[Error] $myname: When \$ENABLE_PARAM_USER = 1, 'config.nml.scale_user' file is required." >&2
+  exit 1
+fi
+if ((BDY_FORMAT == 4)) && [ ! -e "$SCRP_DIR/config.nml.grads_boundary" ] && [ ! -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
+  echo "[Error] $myname: When \$BDY_FORMAT = 4, 'config.nml.grads_boundary' file is required." >&2
+  exit 1
+fi
+
 #... more detections...
 
 #-------------------------------------------------------------------------------
@@ -421,25 +431,25 @@ else
 
     # anal_ocean
     #-------------------
-#    if ((OCEAN_INPUT == 1)) && ((OCEAN_FORMAT == 0)); then
-#      for m in $(seq $mmean); do
-#        for q in $(seq $mem_np); do
-#          path="${time}/anal/${name_m[$m]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
-#          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
-#        done
-#      done
-#    fi
+    if ((OCEAN_INPUT == 1)) && ((OCEAN_FORMAT == 0)); then
+      for m in $(seq $mmean); do
+        for q in $(seq $mem_np); do
+          path="${time}/anal/${name_m[$m]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
+          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      done
+    fi
 
     # anal_land
     #-------------------
-#    if ((LAND_INPUT == 1)) && ((LAND_FORMAT == 0)); then
-#      for m in $(seq $mmean); do
-#        for q in $(seq $mem_np); do
-#          path="${time}/anal/${name_m[$m]}/init_land$(printf $SCALE_SFX $((q-1)))"
-#          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
-#        done
-#      done
-#    fi
+    if ((LAND_INPUT == 1)) && ((LAND_FORMAT == 0)); then
+      for m in $(seq $mmean); do
+        for q in $(seq $mem_np); do
+          path="${time}/anal/${name_m[$m]}/init_land$(printf $SCALE_SFX $((q-1)))"
+          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      done
+    fi
 
     # topo
     #-------------------
@@ -1482,19 +1492,19 @@ for it in $(seq $its $ite); do
       fi
 
       ocean_base='-'
-      if ((OCEAN_INPUT == 1 && mkinit != 1)); then
+      if ((OCEAN_INPUT == 1)); then
         if ((OCEAN_FORMAT == 0)); then
           ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_ocean"
-        elif ((OCEAN_FORMAT == 99)); then
+        elif ((OCEAN_FORMAT == 99 && mkinit != 1)); then
           ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
         fi
       fi
 
       land_base='-'
-      if ((LAND_INPUT == 1 && mkinit != 1)); then
+      if ((LAND_INPUT == 1)); then
         if ((LAND_FORMAT == 0)); then
           land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_land"
-        elif ((LAND_FORMAT == 99)); then
+        elif ((LAND_FORMAT == 99 && mkinit != 1)); then
           land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
         fi
       fi
