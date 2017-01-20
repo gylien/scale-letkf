@@ -16,7 +16,8 @@ MODULE common_nml
   !----
   integer, parameter :: nv3d = 11    ! number of 3D state variables (in SCALE restart files)
   integer, parameter :: nv2d = 0     ! number of 2D state variables (in SCALE restart files)
-  integer, parameter :: nobtype = 24 ! number of observation types
+  integer, parameter :: nid_obs = 16 ! number of variable types
+  integer, parameter :: nobtype = 24 ! number of observation report types
   integer, parameter :: nch = 10     ! H08 Num of Himawari-8 (IR) channels
 
   integer, parameter :: nobsfilemax = 10
@@ -253,6 +254,22 @@ MODULE common_nml
   real(r_size) :: OBSERR_TCP = 5.0d2 ! (Pa)
   real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
                                       5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
+
+  !--- PARAM_OBSSIM
+  character(filelenmax) :: OBSSIM_IN_TYPE = 'history'
+  character(filelenmax) :: OBSSIM_RESTART_IN_BASENAME = 'restart'
+  character(filelenmax) :: OBSSIM_HISTORY_IN_BASENAME = 'history'
+  character(filelenmax) :: OBSSIM_TOPO_IN_BASENAME = 'topo'
+  integer               :: OBSSIM_TIME_START = 1
+  integer               :: OBSSIM_TIME_END = 1
+  character(filelenmax) :: OBSSIM_GRADS_OUT_NAME = ''
+  integer               :: OBSSIM_NUM_3D_VARS = 0
+  integer               :: OBSSIM_3D_VARS_LIST(nid_obs) = 0
+  integer               :: OBSSIM_NUM_2D_VARS = 0
+  integer               :: OBSSIM_2D_VARS_LIST(nid_obs) = 0
+  real(r_size)          :: OBSSIM_RADAR_LON = 0.0d0
+  real(r_size)          :: OBSSIM_RADAR_LAT = 0.0d0
+  real(r_size)          :: OBSSIM_RADAR_Z = 0.0d0
 
 contains
 !-----------------------------------------------------------------------
@@ -711,6 +728,52 @@ subroutine read_nml_obs_error
 
   return
 end subroutine read_nml_obs_error
+
+!-----------------------------------------------------------------------
+! PARAM_OBSSIM
+!-----------------------------------------------------------------------
+subroutine read_nml_obssim
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_OBSSIM/ &
+    OBSSIM_IN_TYPE, &
+    OBSSIM_RESTART_IN_BASENAME, &
+    OBSSIM_HISTORY_IN_BASENAME, &
+    OBSSIM_TOPO_IN_BASENAME, &
+    OBSSIM_TIME_START, &
+    OBSSIM_TIME_END, &
+    OBSSIM_GRADS_OUT_NAME, &
+    OBSSIM_NUM_3D_VARS, &
+    OBSSIM_3D_VARS_LIST, &
+    OBSSIM_NUM_2D_VARS, &
+    OBSSIM_2D_VARS_LIST, &
+    OBSSIM_RADAR_LON, &
+    OBSSIM_RADAR_LAT, &
+    OBSSIM_RADAR_Z
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_OBSSIM,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_OBSSIM/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_OBSSIM. Check!'
+    stop
+  endif
+
+  if (trim(OBSSIM_GRADS_OUT_NAME) == '') then
+    if (trim(OBSSIM_IN_TYPE) == 'restart') then
+      OBSSIM_GRADS_OUT_NAME = trim(OBSSIM_RESTART_IN_BASENAME) // '.grd'
+    else if (trim(OBSSIM_IN_TYPE) == 'history') then
+      OBSSIM_GRADS_OUT_NAME = trim(OBSSIM_HISTORY_IN_BASENAME) // '.grd'
+    end if
+  end if
+
+  write(6, nml=PARAM_OBSSIM)
+
+  return
+end subroutine read_nml_obssim
 
 !-----------------------------------------------------------------------
 ! file_member_replace
