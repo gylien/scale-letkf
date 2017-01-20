@@ -1371,14 +1371,14 @@ for it in $(seq $its $ite); do
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
              $TMPOUT/${time}/anal/${name_m[$m]}.init $ocean_base $land_base $bdy_base \
              $TMPOUT/const/topo $TMPOUT/${time_l}/landuse \
-             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) \
-             cycle $bdy_start_time
+             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $OUT_OPT \
+             cycle $bdy_start_time $RTPS_INFL_OUT $NOBS_OUT
       else
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
              $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $land_base $bdy_base \
              $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
-             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) \
-             cycle $bdy_start_time
+             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $OUT_OPT \
+             cycle $bdy_start_time $RTPS_INFL_OUT $NOBS_OUT
       fi
     fi
   fi
@@ -1419,7 +1419,8 @@ for it in $(seq $its $ite); do
 #      fi
 
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $time \
-           ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT $OUT_OPT cycle $DELETE_MEMBER
+           ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT $OUT_OPT \
+           cycle $DELETE_MEMBER $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi
 
@@ -1531,13 +1532,13 @@ if (pdrun all $PROC_OPT); then
   if ((PNETCDF == 1)); then
     bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
          $time $atime $TMPRUN/letkf $TMPDAT/obs \
-         $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo \
+         $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo $OBSOUT_OPT \
          $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT \
          $MEMBER
   else
     bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
          $time $atime $TMPRUN/letkf $TMPDAT/obs \
-         $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo \
+         $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo $OBSOUT_OPT \
          $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT \
          $MEMBER
   fi
@@ -1557,7 +1558,7 @@ for it in $(seq $nitmax); do
     m=$(((it-1)*parallel_mems+g))
     if ((m >= 1 && m <= mmean)); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
-           $atime ${name_m[$m]} \
+           $atime ${name_m[$m]} $OUT_OPT $OBSOUT_OPT \
            $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi

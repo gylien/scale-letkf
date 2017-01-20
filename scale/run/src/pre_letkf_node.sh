@@ -8,12 +8,12 @@
 
 . config.main
 
-if (($# < 14)); then
+if (($# < 12)); then
   cat >&2 << EOF
 
 [pre_letkf_node.sh]
 
-Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO ADAPTINFL RTPS_INFL_OUT NOBS_OUT [MEMBERSEQ]
+Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO OBSOUT_OPT [ADAPTINFL RTPS_INFL_OUT NOBS_OUT MEMBERSEQ]
 
   MYRANK      My rank number (not used)
   STIME
@@ -26,6 +26,7 @@ Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END 
   SLOT_END    End observation timeslots
   SLOT_BASE   The base slot
   TOPO        Basename of SCALE topography files
+  OBSOUT_OPT
   ADAPTINFL
   RTPS_INFL_OUT
   NOBS_OUT
@@ -46,9 +47,10 @@ SLOT_START="$1"; shift
 SLOT_END="$1"; shift
 SLOT_BASE="$1"; shift
 TOPO="$1"; shift
-ADAPTINFL="$1"; shift
-RTPS_INFL_OUT="$1"; shift
-NOBS_OUT="$1"; shift
+OBSOUT_OPT="$1"; shift
+ADAPTINFL="${1:-0}"; shift
+RTPS_INFL_OUT="${1:-0}"; shift
+NOBS_OUT="${1:-0}"; shift
 MEMBERSEQ=${1:-$MEMBER}
 
 #===============================================================================
@@ -79,6 +81,10 @@ OBSDA_IN='.false.'
 if ((OBSOPE_RUN == 1)); then
   OBSDA_IN='.true.'
 fi
+OBSDA_OUT='.false.'
+if ((OBSOUT_OPT <= 2)); then
+  OBSDA_OUT='.true.'
+fi
 INFL_MUL_ADAPTIVE='.false.'
 if ((ADAPTINFL == 1)); then
   INFL_MUL_ADAPTIVE='.true.'
@@ -94,7 +100,7 @@ fi
 
 if ((PNETCDF == 1)); then
   HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@.history"
-  GUES_IN_BASENAME="${TMPOUT}/${ATIME}/gues/@@@@.init"
+  GUES_IN_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@.init"
   GUES_OUT_MEAN_BASENAME="${TMPOUT}/${ATIME}/gues/mean.init"
   GUES_OUT_SPRD_BASENAME="${TMPOUT}/${ATIME}/gues/sprd.init"
   ANAL_OUT_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@.init"
@@ -106,7 +112,7 @@ if ((PNETCDF == 1)); then
   NOBS_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/nobs"
 else
   HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@/history"
-  GUES_IN_BASENAME="${TMPOUT}/${ATIME}/gues/@@@@/init"
+  GUES_IN_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@/init"
   GUES_OUT_MEAN_BASENAME="${TMPOUT}/${ATIME}/gues/mean/init"
   GUES_OUT_SPRD_BASENAME="${TMPOUT}/${ATIME}/gues/sprd/init"
   ANAL_OUT_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@/init"
@@ -126,7 +132,7 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
-        -e "/!--OBSDA_OUT--/a OBSDA_OUT = .true." \
+        -e "/!--OBSDA_OUT--/a OBSDA_OUT = $OBSDA_OUT" \
         -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda\"," \
         -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = \"${HISTORY_IN_BASENAME}\"," \
         -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \

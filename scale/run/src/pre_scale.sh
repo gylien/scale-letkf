@@ -9,12 +9,12 @@
 
 . config.main
 
-if (($# < 13)); then
+if (($# < 14)); then
   cat >&2 << EOF
 
 [pre_scale.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM INIT OCEAN LAND BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR [SCPCALL BDY_STIME]
+Usage: $0 MYRANK MEM INIT OCEAN LAND BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR OUT_OPT [SCPCALL BDY_STIME RTPS_INFL_OUT NOBS_OUT]
 
   MYRANK   My rank number (not used)
   MEM      Name of the ensemble member
@@ -29,8 +29,11 @@ Usage: $0 MYRANK MEM INIT OCEAN LAND BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HIST
   FCSTINT  Output interval of restart files (second)
   HISTINT  Output interval of history files (second)
   TMPDIR   Temporary directory to run the model
+  OUT_OPT
   SCPCALL
   BDY_STIME  (format: YYYYMMDDHHMMSS)
+  RTPS_INFL_OUT
+  NOBS_OUT
 
 EOF
   exit 1
@@ -49,8 +52,11 @@ FCSTLEN="$1"; shift
 FCSTINT="$1"; shift
 HISTINT="$1"; shift
 TMPDIR="$1"; shift
+OUT_OPT="$1"; shift
 SCPCALL="${1:-cycle}"; shift
-BDY_STIME="${1:-$STIME}"
+BDY_STIME="${1:-$STIME}"; shift
+RTPS_INFL_OUT="${1:-0}"; shift
+NOBS_OUT="${1:-0}"
 
 S_YYYY=${STIME:0:4}
 S_MM=${STIME:4:2}
@@ -92,8 +98,22 @@ if [ "${LANDUSE_TARGZ}" = 'T' ] ; then
   tar zxvf  ${LANDUSE}.tar.gz -C $UNCOMP_DIR > /dev/null
 fi
 
+RESTART_OUT_NUM_COPIES=1
 if [ "$SCPCALL" = 'cycle' ]; then
   IO_LOG_DIR='scale'
+  if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd'
+    RESTART_OUT_NUM_COPIES=5
+    if ((RTPS_INFL_OUT == 1)); then
+      RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+1))
+    fi
+    if ((NOBS_OUT == 1)); then
+      RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+1))
+    fi
+  else
+    if ((OUT_OPT <= 3)); then
+      RESTART_OUT_NUM_COPIES=2
+    fi
+  fi
 else
   IO_LOG_DIR="${SCPCALL}_scale"
 fi
@@ -127,7 +147,10 @@ conf="$(cat $TMPDAT/conf/config.nml.scale | \
             -e "/!--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = \"${TMPDAT}/rad/VARDATA.RM29\"," \
             -e "/!--ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME--/a ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME = \"${TMPDAT}/rad/cira.nc\"," \
             -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${TMPDAT}/rad/MIPAS\",")"
-if ((ENABLE_PARAM_USER != 1)); then
+if ((ENABLE_PARAM_USER == 1)); then
+  conf="$(echo "$conf" | sed -e "/!--TIME_END_RESTART_OUT--/a TIME_END_RESTART_OUT = .false.,")"
+  conf="$(echo "$conf" | sed -e "/!--RESTART_OUT_NUM_COPIES--/a RESTART_OUT_NUM_COPIES = ${RESTART_OUT_NUM_COPIES},")"
+else
   if [ "$OCEAN" != '-' ]; then
     conf="$(echo "$conf" | sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${OCEAN}\",")"
   fi
