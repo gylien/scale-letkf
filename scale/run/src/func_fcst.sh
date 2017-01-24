@@ -237,7 +237,6 @@ ${ENSMODEL_DIR}/scale-rm_ens|exec/scale-rm_ens
 ${COMMON_DIR}/pdbash|exec/pdbash
 ${SCRP_DIR}/config.nml.scale_pp|conf/config.nml.scale_pp
 ${SCRP_DIR}/config.nml.scale_init|conf/config.nml.scale_init
-${SCRP_DIR}/config.nml.scale|conf/config.nml.scale
 ${SCRP_DIR}/config.nml.ensmodel|conf/config.nml.ensmodel
 ${DATADIR}/rad|rad
 ${DATADIR}/land|land
@@ -245,6 +244,13 @@ EOF
 #${MODELDIR}/scale-rm_pp|exec/scale-rm_pp
 #${MODELDIR}/scale-rm_init|exec/scale-rm_init
 #${MODELDIR}/scale-rm|exec/scale-rm
+
+  for m in $(seq $fmember); do
+    mem=${name_m[$m]}
+    cat >> $STAGING_DIR/stagein.dat << EOF
+${SCRP_DIR}/config.nml.scale.${mem}|conf/config.nml.scale.${mem}
+EOF
+  done
 
   if [ -e "${SCRP_DIR}/config.nml.scale_user" ]; then
     echo "${SCRP_DIR}/config.nml.scale_user|conf/config.nml.scale_user" >> $STAGING_DIR/stagein.dat
