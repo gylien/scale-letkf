@@ -13,7 +13,7 @@ if (($# < 12)); then
 
 [pre_letkf_node.sh]
 
-Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO OBSOUT_OPT [ADAPTINFL RTPS_INFL_OUT NOBS_OUT MEMBERSEQ]
+Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO OBSOUT_OPT [ADAPTINFL RTPS_INFL_OUT NOBS_OUT]
 
   MYRANK      My rank number (not used)
   STIME
@@ -30,7 +30,6 @@ Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END 
   ADAPTINFL
   RTPS_INFL_OUT
   NOBS_OUT
-  MEMBERSEQ
 
 EOF
   exit 1
@@ -50,8 +49,7 @@ TOPO="$1"; shift
 OBSOUT_OPT="$1"; shift
 ADAPTINFL="${1:-0}"; shift
 RTPS_INFL_OUT="${1:-0}"; shift
-NOBS_OUT="${1:-0}"; shift
-MEMBERSEQ=${1:-$MEMBER}
+NOBS_OUT="${1:-0}"
 
 #===============================================================================
 
@@ -96,7 +94,7 @@ fi
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.letkf | \
-    sed -e "/!--MEMBER--/a MEMBER = $MEMBERSEQ," \
+    sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \

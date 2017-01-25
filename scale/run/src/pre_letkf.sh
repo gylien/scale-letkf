@@ -66,16 +66,16 @@ if [ "$MEM" == 'mean' ]; then ###### using a variable for 'mean', 'sprd'
     done
   fi
 else
-  if ((OBSOUT_OPT <= 2)); then
-    mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
-  fi
-
   if ((OUT_OPT <= 3 && ENABLE_PARAM_USER != 1)); then
     for ifile in $(cd $TMPOUT/${ATIME}/anal/${MEM} ; ls init*.nc 2> /dev/null); do
       mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
       cp -f $TMPOUT/${ATIME}/anal/${MEM}/${ifile} $TMPOUT/${ATIME}/gues/${MEM}
     done
   fi
+fi
+
+if ((OBSOUT_OPT <= 2)); then
+  mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
 fi
 
 #===============================================================================

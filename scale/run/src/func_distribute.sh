@@ -231,7 +231,7 @@ distribute_da_cycle () {
 #-------------------------------------------------------------------------------
 # Distribute members on nodes for DA cycling run.
 #
-# Usage: distribute_da_cycle [NODEFILE NODEFILEDIR DISTR_FILE]
+# Usage: distribute_da_cycle [NODEFILE NODEFILEDIR DISTR_FILE MEMBERS]
 #
 #   NODEFILE     The pre-determined nodefile
 #   NODEFILEDIR  Directory to output nodefiles
@@ -257,7 +257,7 @@ distribute_da_cycle () {
 #   $totalnp                              Total number of processes
 #
 #   $mmean                                Index of the ensemble mean ($MEMBER+1)
-#   $msprd                                Index of the ensemble spread ($MEMBER+2)
+#   $mmdet                                Index of the deterministic run ($MEMBER+2)
 #   $node_m[1...$MEMBER+2]                Short node list description of each member
 #   $name_m[1...$MEMBER+2]                Name of members
 #
@@ -278,9 +278,9 @@ distribute_da_cycle () {
 #-------------------------------------------------------------------------------
 
 local NODEFILE=${1:-machinefile}; shift
-local NODEFILEDIR=${1:-'-'}; shift
-local DISTR_FILE=${1:-'-'}; shift
-local MEMBERS="${1:-'all'}"
+local NODEFILEDIR=${1:--}; shift
+local DISTR_FILE=${1:--}; shift
+local MEMBERS="${1:-all}"
 
 if [ "$DISTR_FILE" != '-' ]; then
   if [ -z "$DISTR_FILE" ]; then
@@ -326,24 +326,17 @@ else
 fi
 
 mmean=$((MEMBER+1))
-msprd=$((MEMBER+2))
+mmdet=$((MEMBER+2))
 name_m[$mmean]='mean'
-name_m[$msprd]='sprd'
+name_m[$mmdet]='mdet'
 
 #-------------------------------------------------------------------------------
 # Set up the distribution of members on nodes
 
-set_mem_np $((MEMBER+1)) $SCALE_NP $SCALE_NP
+set_mem_np $((MEMBER+2)) $SCALE_NP $SCALE_NP
 
-set_mem2node $((MEMBER+1))
-#set_mem2node $((MEMBER+1)) "$DISTR_FILE"
-
-local p
-for p in $(seq $mem_np); do
-  mem2node[$(((msprd-1)*mem_np+p))]=${mem2node[$(((mmean-1)*mem_np+p))]}
-  mem2proc[$(((msprd-1)*mem_np+p))]=${mem2proc[$(((mmean-1)*mem_np+p))]}
-done
-node_m[$msprd]=${node_m[$mmean]}
+set_mem2node $((MEMBER+2))
+#set_mem2node $((MEMBER+2)) "$DISTR_FILE"
 
 #-------------------------------------------------------------------------------
 # Create nodefiles
@@ -396,7 +389,7 @@ distribute_da_cycle_set () {
 #   $totalnp                              Total number of processes
 #
 #   $mmean                                Index of the ensemble mean ($MEMBER+1)
-#   $msprd                                Index of the ensemble spread ($MEMBER+2)
+#   $mmdet                                Index of the deterministic run ($MEMBER+2)
 #   $node_m[1...$MEMBER+2]                Short node list description of each member
 #   $name_m[1...$MEMBER+2]                Name of members
 #
@@ -417,8 +410,8 @@ distribute_da_cycle_set () {
 #-------------------------------------------------------------------------------
 
 local NODEFILE=${1:-machinefile}; shift
-local NODEFILEDIR=${1:-'-'}; shift
-local DISTR_FILE=${1:-'-'}
+local NODEFILEDIR=${1:--}; shift
+local DISTR_FILE=${1:--}
 
 if [ "$DISTR_FILE" != '-' ]; then
   if [ -z "$DISTR_FILE" ]; then
@@ -432,7 +425,7 @@ fi
 # Set up node names and member names
 
 mmean=$((MEMBER+1))
-msprd=$((MEMBER+2))
+mmdet=$((MEMBER+2))
 
 if [ "$NODELIST_TYPE" = 'nodefile' ]; then
   read_nodefile_pbs "$NODEFILE"
@@ -463,21 +456,14 @@ for m in $(seq $MEMBER); do
   name_m[$m]=$(printf $MEMBER_FMT $m)
 done
 name_m[$mmean]='mean'
-name_m[$msprd]='sprd'
+name_m[$mmdet]='mdet'
 
 #-------------------------------------------------------------------------------
 # Set up the distribution of members on nodes
 
-set_mem_np $((MEMBER+1)) $SCALE_NP $SCALE_NP
+set_mem_np $((MEMBER+2)) $SCALE_NP $SCALE_NP
 
-set_mem2node $((MEMBER+1)) "$DISTR_FILE"
-
-local p
-for p in $(seq $mem_np); do
-  mem2node[$(((msprd-1)*mem_np+p))]=${mem2node[$(((mmean-1)*mem_np+p))]}
-  mem2proc[$(((msprd-1)*mem_np+p))]=${mem2proc[$(((mmean-1)*mem_np+p))]}
-done
-node_m[$msprd]=${node_m[$mmean]}
+set_mem2node $((MEMBER+2)) "$DISTR_FILE"
 
 #-------------------------------------------------------------------------------
 # Create nodefiles
@@ -573,8 +559,8 @@ fi
 local MEMBERS="$1"; shift
 local CYCLE=${1:-0}; shift
 local NODEFILE=${1:-machinefile}; shift
-local NODEFILEDIR=${1:-'-'}; shift
-local DISTR_FILE=${1:-'-'}
+local NODEFILEDIR=${1:--}; shift
+local DISTR_FILE=${1:--}
 
 if [ "$DISTR_FILE" != '-' ]; then
   if [ -z "$DISTR_FILE" ]; then
