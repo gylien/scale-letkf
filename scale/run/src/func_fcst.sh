@@ -154,7 +154,7 @@ if ((BDY_FORMAT >= 1)); then
   if [ -z "$PARENT_REF_TIME" ]; then
     PARENT_REF_TIME=$STIME
     for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
-      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/meanf/history.pe000000.nc" ]; then
+      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/${BDY_MEAN}/history.pe000000.nc" ]; then
         break
       elif ((BDY_FORMAT == 2 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_WRF/${PARENT_REF_TIME}/mean/wrfout_${PARENT_REF_TIME}" ]; then
         break
@@ -840,8 +840,8 @@ else
                 if ((BDY_ENS == 1)); then
                   for m in $(seq $fmember); do
                     mem=${name_m[$m]}
-                    if [ "$BDY_SCALE_DIR" = 'hist' ] && [ "$mem" = 'mean' ]; then
-                      mem='meanf'
+                    if [ "$mem" = 'mean' ]; then
+                      mem="$BDY_MEAN"
                     fi
 #                    for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}/history.*.nc 2> /dev/null); do
 #                      pathin="$ifile"
@@ -882,11 +882,7 @@ else
 #                      echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
 #                    fi
 #                  done
-                  if [ "$BDY_SCALE_DIR" = 'hist' ]; then
-                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf"
-                  else
-                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/mean"
-                  fi
+                  pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${BDY_MEAN}"
                   if ((BDY_ROTATING == 1)); then
                     path="bdyorg/${time_bdy}/mean/${time_bdy}"
                   else

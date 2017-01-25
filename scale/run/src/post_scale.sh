@@ -50,46 +50,40 @@ if [ "$SCPCALL" = 'cycle' ]; then
 
   ATIME=$(datetime $STIME $LCYCLE s)
 
-  if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd'
+  if [ "$MEM" == 'mean' ]; then ###### using a variable for 'mean', 'sprd'
 
-    mkdir -p $TMPOUT/${STIME}/hist/meanf
-    mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/hist/meanf
+    mkdir -p $TMPOUT/${STIME}/hist/mean
+    mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/hist/mean
 
-    mkdir -p $TMPOUT/${ATIME}/gues/meanf
+    mkdir -p $TMPOUT/${ATIME}/anal/mean
     file_prefix="restart_${ATIME:0:8}-${ATIME:8:6}.000"
     restartbaselen=27
     for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
-      mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/gues/meanf/init${ifile:$restartbaselen}
+      mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/anal/mean/init${ifile:$restartbaselen}
     done
 
     if ((ENABLE_PARAM_USER == 1)); then
       restartbaselen=29
 
-      mkdir -p $TMPOUT/${ATIME}/anal/mean
-      file_prefix="restart_2_${ATIME:0:8}-${ATIME:8:6}.000"
-      for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
-        mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/anal/mean/init${ifile:$restartbaselen}
-      done
-
       mkdir -p $TMPOUT/${ATIME}/gues/mean
-      file_prefix="restart_3_${ATIME:0:8}-${ATIME:8:6}.000"
+      file_prefix="restart_2_${ATIME:0:8}-${ATIME:8:6}.000"
       for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
         mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/gues/mean/init${ifile:$restartbaselen}
       done
 
       mkdir -p $TMPOUT/${ATIME}/anal/sprd
-      file_prefix="restart_4_${ATIME:0:8}-${ATIME:8:6}.000"
+      file_prefix="restart_3_${ATIME:0:8}-${ATIME:8:6}.000"
       for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
         mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/anal/sprd/init${ifile:$restartbaselen}
       done
 
       mkdir -p $TMPOUT/${ATIME}/gues/sprd
-      file_prefix="restart_5_${ATIME:0:8}-${ATIME:8:6}.000"
+      file_prefix="restart_4_${ATIME:0:8}-${ATIME:8:6}.000"
       for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
         mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/gues/sprd/init${ifile:$restartbaselen}
       done
 
-      icopy=5
+      icopy=4
       if ((RTPS_INFL_OUT == 1)); then
         icopy=$((icopy+1))
         mkdir -p $TMPOUT/${ATIME}/diag/rtps

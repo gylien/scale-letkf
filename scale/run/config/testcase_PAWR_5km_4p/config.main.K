@@ -51,6 +51,7 @@ BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain sett
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
 BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
 
+BDY_MEAN='mean'         # (Directory) Name of the boundary files for mean
 BDY_ENS=1               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial time

@@ -39,31 +39,29 @@ NOBS_OUT="${1:-0}"
 
 #===============================================================================
 
-if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd'
-  for ifile in $(cd $TMPOUT/${ATIME}/gues/meanf ; ls init*.nc 2> /dev/null); do
+if [ "$MEM" == 'mean' ]; then ###### using a variable for 'mean', 'sprd'
+  for ifile in $(cd $TMPOUT/${ATIME}/anal/mean ; ls init*.nc 2> /dev/null); do
     if ((ADAPTINFL == 1)) && [ ! -s "$TMPOUT/${ATIME}/diag/infl" ]; then
       mkdir -p $TMPOUT/${ATIME}/diag/infl
-      cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/diag/infl
+      cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/diag/infl
     fi
   done
 
   if ((ENABLE_PARAM_USER != 1)); then
-    for ifile in $(cd $TMPOUT/${ATIME}/gues/meanf ; ls init*.nc 2> /dev/null); do
+    for ifile in $(cd $TMPOUT/${ATIME}/anal/mean ; ls init*.nc 2> /dev/null); do
       mkdir -p $TMPOUT/${ATIME}/gues/mean
-      cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/gues/mean
-      mkdir -p $TMPOUT/${ATIME}/anal/mean
-      cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/anal/mean
-      mkdir -p $TMPOUT/${ATIME}/gues/sprd
-      cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/gues/sprd
+      cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/gues/mean
       mkdir -p $TMPOUT/${ATIME}/anal/sprd
-      cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/anal/sprd
+      cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/anal/sprd
+      mkdir -p $TMPOUT/${ATIME}/gues/sprd
+      cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/gues/sprd
       if ((RTPS_INFL_OUT == 1)); then
         mkdir -p $TMPOUT/${ATIME}/diag/rtps
-        cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/diag/rtps
+        cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/diag/rtps
       fi
       if ((NOBS_OUT == 1)); then
         mkdir -p $TMPOUT/${ATIME}/diag/nobs
-        cp -f $TMPOUT/${ATIME}/gues/meanf/${ifile} $TMPOUT/${ATIME}/diag/nobs
+        cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/diag/nobs
       fi
     done
   fi

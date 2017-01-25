@@ -96,7 +96,7 @@ fi
 RESTART_OUT_NUM_COPIES=1
 if [ "$SCPCALL" = 'cycle' ]; then
   IO_LOG_DIR='scale'
-  if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd'
+  if [ "$MEM" == 'mean' ]; then ###### using a variable for 'mean', 'sprd'
     RESTART_OUT_NUM_COPIES=5
     if ((RTPS_INFL_OUT == 1)); then
       RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+1))
