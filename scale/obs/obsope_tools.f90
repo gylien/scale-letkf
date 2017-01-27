@@ -188,7 +188,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
-    if (im >= 1 .and. im <= MEMBER) then
+    if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
             im, ', subdomain id #', proc2mem(2,it,myrank+1)
 
@@ -602,7 +602,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
         ! variables without an ensemble dimension
         if (it == 1) then
           obsda_return%nobs = nobs + obsda_return%nobs ! obsda_return%nobs: additional space for externally processed observations
-          call obs_da_value_allocate(obsda_return,MEMBER)
+          call obs_da_value_allocate(obsda_return,MEMBER+1)
         end if
         if (nobs > 0) then
           if (it == 1) then
@@ -618,13 +618,19 @@ SUBROUTINE obsope_cal(obs, obsda_return)
           else
             obsda_return%qc(1:nobs) = max(obsda_return%qc(1:nobs), obsda%qc(1:nobs))
 #ifdef H08
-            obsda_return%lev(1:nobs) = obsda_return%lev(1:nobs) + obsda%lev(1:nobs)
-            obsda_return%val2(1:nobs) = obsda_return%val2(1:nobs) + obsda%val2(1:nobs)
+            if (im <= MEMBER) then ! only consider lev, val2 from members, not from the means
+              obsda_return%lev(1:nobs) = obsda_return%lev(1:nobs) + obsda%lev(1:nobs)
+              obsda_return%val2(1:nobs) = obsda_return%val2(1:nobs) + obsda%val2(1:nobs)
+            end if
 #endif
           end if
 
           ! variables with an ensemble dimension
-          obsda_return%ensval(im,1:nobs) = obsda%val(1:nobs)
+          if (im == mmdetin) then
+            obsda_return%ensval(MEMBER+1,1:nobs) = obsda%val(1:nobs)
+          else
+            obsda_return%ensval(im,1:nobs) = obsda%val(1:nobs)
+          end if
         end if ! [ nobs > 0 ]
       end if ! [ present(obsda_return) ]
 
@@ -635,7 +641,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
   rrtimer00=rrtimer
 
 
-    end if ! [ im >= 1 .and. im <= MEMBER ]
+    end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
 
   end do ! [ it = 1, nitmax ]
 

@@ -55,6 +55,8 @@ MODULE common_nml
   character(filelenmax) :: ANAL_OUT_SPRD_BASENAME = 'anal.sprd'
   character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
 
+  logical               :: DET_RUN_CYCLED = .false.
+
   real(r_size) :: INFL_MUL = 1.0d0           ! >  0: globally constant covariance inflation
                                              ! <= 0: use 3D inflation field from 'INFL_MUL_IN_BASENAME' file
   real(r_size) :: INFL_MUL_MIN = -1.0d0      ! minimum inlfation factor (<= 0: not used)
@@ -351,6 +353,7 @@ subroutine read_nml_letkf
     ANAL_OUT_MEAN_BASENAME, &
     ANAL_OUT_SPRD_BASENAME, &
     LETKF_TOPO_IN_BASENAME, &
+    DET_RUN_CYCLED, &
     INFL_MUL, &
     INFL_MUL_MIN, &
     INFL_MUL_ADAPTIVE, &
@@ -796,7 +799,7 @@ subroutine file_member_replace(mem, filename, filename_out)
       else if (mem == MEMBER+1) then
         write (filename_out(is:is+memberflen-1), '(A4)') 'mean'  !!!!!! will be wrong if memberflen != 4 !!!!!!
       else if (mem == MEMBER+2) then
-        write (filename_out(is:is+memberflen-1), '(A4)') 'sprd'  !!!!!! will be wrong if memberflen != 4 !!!!!!
+        write (filename_out(is:is+memberflen-1), '(A4)') 'mdet'  !!!!!! will be wrong if memberflen != 4 !!!!!!
       end if
       s = is
       exit

@@ -110,7 +110,7 @@ PROGRAM letkf
   call read_nml_letkf_radar
   call read_nml_letkf_h08
 
-  call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
+  call set_mem_node_proc(MEMBER+2)
 
   call set_scalelib
 
@@ -142,8 +142,10 @@ PROGRAM letkf
 !-----------------------------------------------------------------------
 
     ! get the number of externally processed observations first
+    !!!!!! read from process 0 and broadcast !!!!!!
     if (OBSDA_IN) then
-      if (proc2mem(1,1,myrank+1) >= 1 .and. proc2mem(1,1,myrank+1) <= MEMBER) then
+      if ((proc2mem(1,1,myrank+1) >= 1 .and. proc2mem(1,1,myrank+1) <= MEMBER) .or. &
+          proc2mem(1,1,myrank+1) == mmdetin) then
         call file_member_replace(proc2mem(1,1,myrank+1), OBSDA_IN_BASENAME, obsdafile)
         write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,1,myrank+1)
 #ifdef H08
@@ -199,10 +201,10 @@ PROGRAM letkf
 ! First guess ensemble
 !-----------------------------------------------------------------------
 
-    ALLOCATE(gues3d(nij1,nlev,MEMBER,nv3d))
-    ALLOCATE(gues2d(nij1,MEMBER,nv2d))
-    ALLOCATE(anal3d(nij1,nlev,MEMBER,nv3d))
-    ALLOCATE(anal2d(nij1,MEMBER,nv2d))
+    ALLOCATE(gues3d(nij1,nlev,MEMBER+2,nv3d))
+    ALLOCATE(gues2d(nij1,MEMBER+2,nv2d))
+    ALLOCATE(anal3d(nij1,nlev,MEMBER+2,nv3d))
+    ALLOCATE(anal2d(nij1,MEMBER+2,nv2d))
 
 
     !
@@ -236,6 +238,10 @@ PROGRAM letkf
     !
     ! WRITE ENS MEAN and SPRD
     !
+    if (mmdetin /= mmdet) then
+      gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
+      gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
+    end if
     CALL write_ensmspr_mpi(GUES_OUT_MEAN_BASENAME,GUES_OUT_SPRD_BASENAME,gues3d,gues2d,obs,obsda2)
 !
     CALL MPI_BARRIER(MPI_COMM_a,ierr)

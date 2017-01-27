@@ -120,10 +120,6 @@ MODULE common_scale
 CONTAINS
 !-----------------------------------------------------------------------
 ! Set the parameters
-! mem:
-!  >0: mem
-!  0:  MEMBER
-!  -1: MEMBER+1
 !-----------------------------------------------------------------------
 SUBROUTINE set_common_scale
   use scale_rm_process, only: &
@@ -138,28 +134,15 @@ SUBROUTINE set_common_scale
     KHALO
 
   IMPLICIT NONE
-!  integer, intent(in) :: mem
 !  REAL(r_sngl) :: slat(nlat), wlat(nlat)
 !  REAL(r_size) :: totalwg, wgtmp, latm1, latm2
 !  INTEGER :: i,j
 
   WRITE(6,'(A)') 'Hello from set_common_scale'
 
-!  ! setup standard I/O
-!  call IO_setup( MODELNAME, .false.)
-
   !
   ! Set up node and process distribution
   !
-!  if (mem == 0) then
-!    call set_mem_node_proc(MEMBER,NNODES,PPN,MEM_NODES,MEM_NP)
-!  else if (mem == -1) then
-!    call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
-!  else
-!    call set_mem_node_proc(mem,NNODES,PPN,MEM_NODES,MEM_NP)
-!  end if
-
-!! print process distribution!!!
 
 !  if (scale_IO_mygroup <= 0) then
 
@@ -936,25 +919,23 @@ end subroutine scale_calc_z
 !-----------------------------------------------------------------------
 ! Ensemble manipulations
 !-----------------------------------------------------------------------
-SUBROUTINE ensmean_grd(mem,nij,v3d,v2d,v3dm,v2dm)
+SUBROUTINE ensmean_grd(mem,nij,v3d,v2d)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: mem
   INTEGER,INTENT(IN) :: nij
-  REAL(r_size),INTENT(IN) :: v3d(nij,nlev,mem,nv3d)
-  REAL(r_size),INTENT(IN) :: v2d(nij,mem,nv2d)
-  REAL(r_size),INTENT(OUT) :: v3dm(nij,nlev,nv3d)
-  REAL(r_size),INTENT(OUT) :: v2dm(nij,nv2d)
+  REAL(r_size),INTENT(INOUT) :: v3d(nij,nlev,mem+2,nv3d)
+  REAL(r_size),INTENT(INOUT) :: v2d(nij,mem+2,nv2d)
   INTEGER :: i,k,m,n
 
   DO n=1,nv3d
 !$OMP PARALLEL DO PRIVATE(i,k,m)
     DO k=1,nlev
       DO i=1,nij
-        v3dm(i,k,n) = v3d(i,k,1,n)
+        v3d(i,k,mem+1,n) = v3d(i,k,1,n)
         DO m=2,mem
-          v3dm(i,k,n) = v3dm(i,k,n) + v3d(i,k,m,n)
+          v3d(i,k,mem+1,n) = v3d(i,k,mem+1,n) + v3d(i,k,m,n)
         END DO
-        v3dm(i,k,n) = v3dm(i,k,n) / REAL(mem,r_size)
+        v3d(i,k,mem+1,n) = v3d(i,k,mem+1,n) / REAL(mem,r_size)
       END DO
     END DO
 !$OMP END PARALLEL DO
@@ -963,11 +944,11 @@ SUBROUTINE ensmean_grd(mem,nij,v3d,v2d,v3dm,v2dm)
   DO n=1,nv2d
 !$OMP PARALLEL DO PRIVATE(i,m)
     DO i=1,nij
-      v2dm(i,n) = v2d(i,1,n)
+      v2d(i,mem+1,n) = v2d(i,1,n)
       DO m=2,mem
-        v2dm(i,n) = v2dm(i,n) + v2d(i,m,n)
+        v2d(i,mem+1,n) = v2d(i,mem+1,n) + v2d(i,m,n)
       END DO
-      v2dm(i,n) = v2dm(i,n) / REAL(mem,r_size)
+      v2d(i,mem+1,n) = v2d(i,mem+1,n) / REAL(mem,r_size)
     END DO
 !$OMP END PARALLEL DO
   END DO

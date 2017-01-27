@@ -83,7 +83,7 @@ PROGRAM obsope
   call read_nml_letkf_radar
   call read_nml_letkf_h08
 
-  call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
+  call set_mem_node_proc(MEMBER+2)
 
   call set_scalelib
 

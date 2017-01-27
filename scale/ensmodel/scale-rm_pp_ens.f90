@@ -123,7 +123,7 @@ program scaleles_pp_ens
 !-----------------------------------------------------------------------
 
   call set_common_conf(universal_nprocs)
-  call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
+  call set_mem_node_proc(MEMBER+2)
 
   CALL MPI_BARRIER(universal_comm,ierr)
   rtimer = MPI_WTIME()
