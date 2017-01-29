@@ -602,7 +602,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
         ! variables without an ensemble dimension
         if (it == 1) then
           obsda_return%nobs = nobs + obsda_return%nobs ! obsda_return%nobs: additional space for externally processed observations
-          call obs_da_value_allocate(obsda_return,MEMBER+1)
+          call obs_da_value_allocate(obsda_return, nensobs)
         end if
         if (nobs > 0) then
           if (it == 1) then
@@ -627,7 +627,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
           ! variables with an ensemble dimension
           if (im == mmdetin) then
-            obsda_return%ensval(MEMBER+1,1:nobs) = obsda%val(1:nobs)
+            obsda_return%ensval(mmdetobs,1:nobs) = obsda%val(1:nobs)
           else
             obsda_return%ensval(im,1:nobs) = obsda%val(1:nobs)
           end if

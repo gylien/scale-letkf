@@ -201,10 +201,10 @@ PROGRAM letkf
 ! First guess ensemble
 !-----------------------------------------------------------------------
 
-    ALLOCATE(gues3d(nij1,nlev,MEMBER+2,nv3d))
-    ALLOCATE(gues2d(nij1,MEMBER+2,nv2d))
-    ALLOCATE(anal3d(nij1,nlev,MEMBER+2,nv3d))
-    ALLOCATE(anal2d(nij1,MEMBER+2,nv2d))
+    ALLOCATE(gues3d(nij1,nlev,nens,nv3d))
+    ALLOCATE(gues2d(nij1,nens,nv2d))
+    ALLOCATE(anal3d(nij1,nlev,nens,nv3d))
+    ALLOCATE(anal2d(nij1,nens,nv2d))
 
 
     !

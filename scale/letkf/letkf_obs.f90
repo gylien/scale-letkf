@@ -218,7 +218,7 @@ SUBROUTINE set_letkf_obs
 
         ! variables with an ensemble dimension
         if (im == mmdetin) then
-          obsda%ensval(MEMBER+1,obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%val
+          obsda%ensval(mmdetobs,obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%val
         else
           obsda%ensval(im,obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%val
         end if
@@ -269,7 +269,7 @@ SUBROUTINE set_letkf_obs
 !    print *, myrank, obsda%nobs
 
       if (.not. allocated(obsda%ensval)) then
-        CALL obs_da_value_allocate(obsda,MEMBER+1)
+        call obs_da_value_allocate(obsda, nensobs)
       end if
 
       CALL MPI_BARRIER(MPI_COMM_e,ierr)
@@ -284,7 +284,7 @@ SUBROUTINE set_letkf_obs
 ! obsda%val not used; averaged from obsda%ensval later
 
   CALL MPI_BARRIER(MPI_COMM_e,ierr)
-  CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%ensval,obsda%nobs*(MEMBER+1),MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
+  CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%ensval,obsda%nobs*nensobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
 
   CALL MPI_BARRIER(MPI_COMM_e,ierr)
   CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%qc,obsda%nobs,MPI_INTEGER,MPI_MAX,MPI_COMM_e,ierr)
@@ -508,7 +508,7 @@ SUBROUTINE set_letkf_obs
       obsda%ensval(i,n) = obsda%ensval(i,n) - obsda%val(n) ! Hdx
     END DO
     obsda%val(n) = obs(iof)%dat(iidx) - obsda%val(n) ! y-Hx
-    obsda%ensval(MEMBER+1,n) = obs(iof)%dat(iidx) - obsda%ensval(MEMBER+1,n) ! y-Hx for deterministic run
+    obsda%ensval(mmdetobs,n) = obs(iof)%dat(iidx) - obsda%ensval(mmdetobs,n) ! y-Hx for deterministic run
 
 !   compute sprd in obs space ! H08
 
@@ -976,7 +976,7 @@ SUBROUTINE set_letkf_obs
   !-----------------------------------------------------------------------------
 
   obsda2%nobs = nobstotal
-  call obs_da_value_allocate(obsda2, MEMBER+1)
+  call obs_da_value_allocate(obsda2, nensobs)
 
   ! 1) Copy the observation data in own subdomain to obsda2 with sorted order
   !-----------------------------------------------------------------------------
@@ -1020,7 +1020,7 @@ SUBROUTINE set_letkf_obs
   ! 2) Communicate observations within the extended (localization) subdomains
   !-----------------------------------------------------------------------------
   obsbufs%nobs = nobs_sub(2)
-  call obs_da_value_allocate(obsbufs, MEMBER+1)
+  call obs_da_value_allocate(obsbufs, nensobs)
   allocate (obsidx(nobs_sub(2)))
 
   do ip = 0, MEM_NP-1
@@ -1079,12 +1079,12 @@ SUBROUTINE set_letkf_obs
     if (nrt(MEM_NP) + nr(MEM_NP) <= 0) cycle
 
     obsbufr%nobs = nrt(MEM_NP) + nr(MEM_NP)
-    call obs_da_value_allocate(obsbufr, MEMBER+1)
+    call obs_da_value_allocate(obsbufr, nensobs)
 
     call MPI_GATHERV(obsbufs%set, ns, MPI_INTEGER, obsbufr%set, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
     call MPI_GATHERV(obsbufs%idx, ns, MPI_INTEGER, obsbufr%idx, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
     call MPI_GATHERV(obsbufs%val, ns, MPI_r_size, obsbufr%val, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
-    call MPI_GATHERV(obsbufs%ensval, ns*(MEMBER+1), MPI_r_size, obsbufr%ensval, nr*(MEMBER+1), nrt*(MEMBER+1), MPI_r_size, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%ensval, ns*nensobs, MPI_r_size, obsbufr%ensval, nr*nensobs, nrt*nensobs, MPI_r_size, ip, MPI_COMM_d, ierr)
     call MPI_GATHERV(obsbufs%qc, ns, MPI_INTEGER, obsbufr%qc, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
     call MPI_GATHERV(obsbufs%ri, ns, MPI_r_size, obsbufr%ri, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
     call MPI_GATHERV(obsbufs%rj, ns, MPI_r_size, obsbufr%rj, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)

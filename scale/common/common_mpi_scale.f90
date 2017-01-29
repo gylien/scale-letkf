@@ -61,7 +61,7 @@ module common_mpi_scale
 !!!  real(r_size),allocatable,save :: lonv1(:),latv1(:)
 !!!  real(r_size),allocatable,save :: ri1(:),rj1(:)
 !!!!  real(r_size),allocatable,save :: wg1(:)
-  real(r_size),allocatable,save :: topo(:,:)
+  real(r_size),allocatable,save :: topo2d(:,:)
   real(r_size),allocatable,save :: rig1(:),rjg1(:)
   real(r_size),allocatable,save :: topo1(:)
   real(r_size),allocatable,save :: hgt1(:,:)
@@ -80,12 +80,17 @@ module common_mpi_scale
   integer,save :: ens_mygroup = -1
   integer,save :: ens_myrank = -1
   logical,save :: myrank_use = .false.
-  integer,save :: lastmem_rank_e
+
+  integer,save :: nens
+  integer,save :: nensobs
 
   integer,save :: mmean
   integer,save :: mmdet
   integer,save :: mmdetin
+  integer,save :: mmdetobs
 
+  integer,save :: mmean_rank_e
+  integer,save :: mmdet_rank_e
 
 
 
@@ -263,7 +268,7 @@ subroutine set_common_mpi_grid
   INTEGER :: i,j
   integer :: iproc, jproc
 
-  ALLOCATE(topo(nlon,nlat))
+  ALLOCATE(topo2d(nlon,nlat))
 
   ALLOCATE(rig1(nij1))
   ALLOCATE(rjg1(nij1))
@@ -286,12 +291,14 @@ subroutine set_common_mpi_grid
     end do
   end do
 
-  if (myrank_e == lastmem_rank_e) then
-    call read_topo(LETKF_TOPO_IN_BASENAME, topo)
-    v3dg(1,:,:,3) = topo
+  ! Note that only 'mmean_rank_e' processes have topo data in 'topo2d', 
+  ! that will be used later in the obs departure monitor calculation
+  if (myrank_e == mmean_rank_e) then
+    call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
+    v3dg(1,:,:,3) = topo2d
   end if
 
-  CALL scatter_grd_mpi(lastmem_rank_e,v3dg,v2dg,v3d,v2d)
+  CALL scatter_grd_mpi(mmean_rank_e,v3dg,v2dg,v3d,v2d)
 
   rig1   = v3d(:,1,1)
   rjg1   = v3d(:,1,2)
@@ -304,7 +311,7 @@ end subroutine set_common_mpi_grid
 
 
 !-----------------------------------------------------------------------
-! set_mem2proc
+! set_mem_node_proc
 !-----------------------------------------------------------------------
 SUBROUTINE set_mem_node_proc(mem)
   IMPLICIT NONE
@@ -370,24 +377,33 @@ mem_loop: DO it = 1, nitmax
     myrank_use = .true.
   end if
 
-  ! settings related to mean, mdet
-  ! (only valid when mem = MEMBER+2)
-  !---------------------------------
+  ! settings related to mean, mdet (only valid when mem = MEMBER+2)
+  !----------------------------------------------------------------
+  if (mem == MEMBER+2) then
+    nens = MEMBER+2
+    mmean = MEMBER+1
+    mmdet = MEMBER+2
+    if (DET_RUN_CYCLED) then
+      mmdetin = mmdet
+    else
+      mmdetin = mmean
+    end if
 
-  lastmem_rank_e = mod(mem-1, n_mem*n_mempn)
+    mmean_rank_e = mod(mmean-1, n_mem*n_mempn)
+    mmdet_rank_e = mod(mmdet-1, n_mem*n_mempn)
 #ifdef DEBUG
-  if (lastmem_rank_e /= proc2mem(1,1,mem2proc(1,mem)+1)-1) then
-    write (6, '(A)'), '[Error] XXXXXX wrong!!'
-    stop
-  end if
+    if (mmean_rank_e /= proc2mem(1,1,mem2proc(1,mmean)+1)-1) then
+      write (6, '(A)'), '[Error] XXXXXX wrong!!'
+      stop
+    end if
+    if (mmdet_rank_e /= proc2mem(1,1,mem2proc(1,mmdet)+1)-1) then
+      write (6, '(A)'), '[Error] XXXXXX wrong!!'
+      stop
+    end if
 #endif
 
-  mmean = MEMBER + 1
-  mmdet = MEMBER + 2
-  if (DET_RUN_CYCLED) then
-    mmdetin = MEMBER + 2
-  else
-    mmdetin = MEMBER + 1
+    nensobs = MEMBER+1
+    mmdetobs = MEMBER+1
   end if
 
   RETURN
@@ -813,7 +829,7 @@ SUBROUTINE read_ens_history_iter(file,iter,step,v3dg,v2dg)
 
   character(filelenmax) :: filename
 
-  IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= MEMBER+2) THEN
+  IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= nens) THEN
     call file_member_replace(proc2mem(1,iter,myrank+1), file, filename)
     call read_history(trim(filename),step,v3dg,v2dg)
   END IF
@@ -828,8 +844,8 @@ END SUBROUTINE read_ens_history_iter
 subroutine read_ens_mpi(file,v3d,v2d)
   implicit none
   CHARACTER(*),INTENT(IN) :: file
-  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,MEMBER+2,nv3d)
-  REAL(r_size),INTENT(OUT) :: v2d(nij1,MEMBER+2,nv2d)
+  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,nens,nv3d)
+  REAL(r_size),INTENT(OUT) :: v2d(nij1,nens,nv2d)
   REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   character(filelenmax) :: filename
@@ -867,7 +883,7 @@ subroutine read_ens_mpi(file,v3d,v2d)
 
     end if
     mstart = 1 + (it-1)*nprocs_e
-    mend = MIN(it*nprocs_e, MEMBER+2)
+    mend = MIN(it*nprocs_e, nens)
     if (mstart <= mend) then
       CALL scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
     end if
@@ -889,8 +905,8 @@ end subroutine read_ens_mpi
 SUBROUTINE write_ens_mpi(file,v3d,v2d)
   implicit none
   CHARACTER(*),INTENT(IN) :: file
-  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,MEMBER+2,nv3d)
-  REAL(r_size),INTENT(IN) :: v2d(nij1,MEMBER+2,nv2d)
+  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nens,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nij1,nens,nv2d)
   REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   character(filelenmax) :: filename
@@ -907,7 +923,7 @@ SUBROUTINE write_ens_mpi(file,v3d,v2d)
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
     mstart = 1 + (it-1)*nprocs_e
-    mend = MIN(it*nprocs_e, MEMBER+2)
+    mend = MIN(it*nprocs_e, nens)
     if (mstart <= mend) then
       CALL gather_grd_mpi_alltoall(mstart,mend,v3d,v2d,v3dg,v2dg)
     end if
@@ -952,8 +968,8 @@ SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
   INTEGER,INTENT(IN) :: mstart,mend
   REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
-  REAL(r_size),INTENT(INOUT) :: v3d(nij1,nlev,MEMBER+2,nv3d)
-  REAL(r_size),INTENT(INOUT) :: v2d(nij1,MEMBER+2,nv2d)
+  REAL(r_size),INTENT(INOUT) :: v3d(nij1,nlev,nens,nv3d)
+  REAL(r_size),INTENT(INOUT) :: v2d(nij1,nens,nv2d)
   REAL(RP) :: bufs(nij1max,nlevall,nprocs_e)
   REAL(RP) :: bufr(nij1max,nlevall,nprocs_e)
   INTEGER :: k,n,j,m,mcount,ierr
@@ -1012,8 +1028,8 @@ END SUBROUTINE scatter_grd_mpi_alltoall
 
 SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,v3d,v2d,v3dg,v2dg)
   INTEGER,INTENT(IN) :: mstart,mend
-  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,MEMBER+2,nv3d)
-  REAL(r_size),INTENT(IN) :: v2d(nij1,MEMBER+2,nv2d)
+  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nens,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nij1,nens,nv2d)
   REAL(RP),INTENT(OUT) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
   REAL(RP) :: bufs(nij1max,nlevall,nprocs_e)
@@ -1156,8 +1172,8 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
   CHARACTER(*),INTENT(IN) :: file_mean
   CHARACTER(*),INTENT(IN) :: file_sprd
-  REAL(r_size),INTENT(INOUT) :: v3d(nij1,nlev,MEMBER+2,nv3d)
-  REAL(r_size),INTENT(INOUT) :: v2d(nij1,MEMBER+2,nv2d)
+  REAL(r_size),INTENT(INOUT) :: v3d(nij1,nlev,nens,nv3d)
+  REAL(r_size),INTENT(INOUT) :: v2d(nij1,nens,nv2d)
   REAL(r_size) :: v3ds(nij1,nlev,nv3d)
   REAL(r_size) :: v2ds(nij1,nv2d)
   REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
@@ -1193,7 +1209,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   rrtimer00=rrtimer
 
 
-  CALL gather_grd_mpi(lastmem_rank_e,v3d(:,:,MEMBER+1,:),v2d(:,MEMBER+1,:),v3dg,v2dg)
+  CALL gather_grd_mpi(mmean_rank_e,v3d(:,:,mmean,:),v2d(:,mmean,:),v3dg,v2dg)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1203,8 +1219,9 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
 
   if (DEPARTURE_STAT) then
-    if (myrank_e == lastmem_rank_e) then
-      call monit_obs(v3dg,v2dg,obs,obsda2,topo,nobs,bias,rmse,monit_type,.true.)
+    ! need to use 'mmean_rank_e' processes to run this calculation because only these processes have read topo files in 'topo2d'
+    if (myrank_e == mmean_rank_e) then
+      call monit_obs(v3dg,v2dg,obs,obsda2,topo2d,nobs,bias,rmse,monit_type,.true.)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1247,13 +1264,13 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
       end do
     end if
 
-    call MPI_BCAST(nobs,nid_obs,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
-    call MPI_BCAST(bias,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
-    call MPI_BCAST(rmse,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
-    call MPI_BCAST(nobs_g,nid_obs,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
-    call MPI_BCAST(bias_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
-    call MPI_BCAST(rmse_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
-    call MPI_BCAST(monit_type,nid_obs,MPI_LOGICAL,lastmem_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(nobs,nid_obs,MPI_INTEGER,mmean_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(bias,nid_obs,MPI_r_size,mmean_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(rmse,nid_obs,MPI_r_size,mmean_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(nobs_g,nid_obs,MPI_INTEGER,mmean_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(bias_g,nid_obs,MPI_r_size,mmean_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(rmse_g,nid_obs,MPI_r_size,mmean_rank_e,MPI_COMM_e,ierr)
+    call MPI_BCAST(monit_type,nid_obs,MPI_LOGICAL,mmean_rank_e,MPI_COMM_e,ierr)
     write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', trim(file_mean), ']:'
     call monit_print(nobs,bias,rmse,monit_type)
     write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', trim(file_mean), ']:'
@@ -1269,7 +1286,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   end if ! [ DEPARTURE_STAT ]
 
 
-  IF(myrank_e == lastmem_rank_e) THEN
+  IF(myrank_e == mmean_rank_e) THEN
     call state_trans_inv(v3dg)
     call write_restart(file_mean,v3dg,v2dg)
 
@@ -1286,9 +1303,9 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 !$OMP PARALLEL DO PRIVATE(i,k,m)
     DO k=1,nlev
       DO i=1,nij1
-        v3ds(i,k,n) = (v3d(i,k,1,n)-v3d(i,k,MEMBER+1,n))**2
+        v3ds(i,k,n) = (v3d(i,k,1,n)-v3d(i,k,mmean,n))**2
         DO m=2,MEMBER
-          v3ds(i,k,n) = v3ds(i,k,n) + (v3d(i,k,m,n)-v3d(i,k,MEMBER+1,n))**2
+          v3ds(i,k,n) = v3ds(i,k,n) + (v3d(i,k,m,n)-v3d(i,k,mmean,n))**2
         END DO
         v3ds(i,k,n) = SQRT(v3ds(i,k,n) / REAL(MEMBER-1,r_size))
       END DO
@@ -1299,9 +1316,9 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   DO n=1,nv2d
 !$OMP PARALLEL DO PRIVATE(i,m)
     DO i=1,nij1
-      v2ds(i,n) = (v2d(i,1,n)-v2d(i,MEMBER+1,n))**2
+      v2ds(i,n) = (v2d(i,1,n)-v2d(i,mmean,n))**2
       DO m=2,MEMBER
-        v2ds(i,n) = v2ds(i,n) + (v2d(i,m,n)-v2d(i,MEMBER+1,n))**2
+        v2ds(i,n) = v2ds(i,n) + (v2d(i,m,n)-v2d(i,mmean,n))**2
       END DO
       v2ds(i,n) = SQRT(v2ds(i,n) / REAL(MEMBER-1,r_size))
     END DO
@@ -1315,7 +1332,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   rrtimer00=rrtimer
 
 
-  CALL gather_grd_mpi(lastmem_rank_e,v3ds,v2ds,v3dg,v2dg)
+  CALL gather_grd_mpi(mmean_rank_e,v3ds,v2ds,v3dg,v2dg)
 
 
 !  CALL MPI_BARRIER(MPI_COMM_a,ierr)
@@ -1324,7 +1341,7 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
   rrtimer00=rrtimer
 
 
-  IF(myrank_e == lastmem_rank_e) THEN
+  IF(myrank_e == mmean_rank_e) THEN
 !    call state_trans_inv(v3dg)             !!
     call write_restart(file_sprd,v3dg,v2dg)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
 
