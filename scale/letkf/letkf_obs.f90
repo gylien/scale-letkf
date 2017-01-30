@@ -32,9 +32,11 @@ MODULE letkf_obs
   ! combined obs type: {variable type (elm_u), report type (typ)}, allocated only when observations exist
   integer,save :: nctype                        ! number of combined obs type
   integer,save :: ctype_elmtyp(nid_obs,nobtype) ! array of ctype for each combination of (elm_u, typ)
-  integer,save :: elm_ctype(nid_obs*nobtype)    ! array of elm  for each combined obs type
-  integer,save :: elm_u_ctype(nid_obs*nobtype)  ! array of elm_u for each combined obs type
-  integer,save :: typ_ctype(nid_obs*nobtype)    ! array of typ  for each combined obs type
+  integer,allocatable,save :: elm_ctype(:)      ! array of elm  for each combined obs type
+  integer,allocatable,save :: elm_u_ctype(:)    ! array of elm_u for each combined obs type
+  integer,allocatable,save :: typ_ctype(:)      ! array of typ  for each combined obs type
+  integer,allocatable,save :: hori_loc_ctype(:) ! array of horizontal localization length for each combined obs type
+  integer,allocatable,save :: vert_loc_ctype(:) ! array of vertical localization length for each combined obs type
 
   type obs_grid_type
     integer :: ngrd_i
@@ -89,7 +91,6 @@ SUBROUTINE set_letkf_obs
 
   integer :: it,ip
   integer :: ityp,ielm,ielm_u,ictype
-  real(r_size) :: hori_loc
   real(r_size) :: target_grdspc
 
 #ifdef H08
@@ -312,6 +313,7 @@ SUBROUTINE set_letkf_obs
   !-----------------------------------------------------------------------------
 
   ctype_use(:,:) = .false.
+  nctype = 0
   do iof = 1, OBS_IN_NUM
     do n = 1, obs(iof)%nobs
       if (obs(iof)%elm(n) == id_radar_ref_obs) then
@@ -344,24 +346,46 @@ SUBROUTINE set_letkf_obs
       ! find (elm, typ) combinations for which observations exist
       if (.not. ctype_use(uid_obs(obs(iof)%elm(n)), obs(iof)%typ(n))) then
         ctype_use(uid_obs(obs(iof)%elm(n)), obs(iof)%typ(n)) = .true.
+        nctype = nctype + 1
       end if
     end do ! [ n = 1, obs(iof)%nobs ]
   end do ! [ iof = 1, OBS_IN_NUM ]
 
   ! do this outside of the above obs loop, so these (ctype) arrays can be in ascending order
-  nctype = 0
+  allocate (elm_ctype     (nctype))
+  allocate (elm_u_ctype   (nctype))
+  allocate (typ_ctype     (nctype))
+  allocate (hori_loc_ctype(nctype))
+  allocate (vert_loc_ctype(nctype))
+  ictype = 0
   ctype_elmtyp(:,:) = 0
   do ityp = 1, nobtype
     do ielm_u = 1, nid_obs
       if (ctype_use(ielm_u, ityp)) then
-        nctype = nctype + 1
-        elm_ctype(nctype) = elem_uid(ielm_u)
-        elm_u_ctype(nctype) = ielm_u
-        typ_ctype(nctype) = ityp
-        ctype_elmtyp(ielm_u, ityp) = nctype
-      end if
-    end do
-  end do
+        ictype = ictype + 1
+        ctype_elmtyp(ielm_u, ityp) = ictype
+
+        elm_ctype(ictype) = elem_uid(ielm_u)
+        elm_u_ctype(ictype) = ielm_u
+        typ_ctype(ictype) = ityp
+
+        ! horizontal localization
+        if (elm_ctype(ictype) == id_radar_ref_zero_obs) then
+          hori_loc_ctype(ictype) = HORI_LOCAL_RADAR_OBSNOREF
+        else if (elm_ctype(ictype) == id_radar_vr_obs) then
+          hori_loc_ctype(ictype) = HORI_LOCAL_RADAR_VR
+        else
+          hori_loc_ctype(ictype) = HORI_LOCAL(ityp)
+        end if
+        ! vertical localization
+        if (elm_ctype(ictype) == id_radar_vr_obs) then
+          vert_loc_ctype(ictype) = VERT_LOCAL_RADAR_VR
+        else
+          vert_loc_ctype(ictype) = VERT_LOCAL(ityp)
+        end if
+      end if ! [ ctype_use(ielm_u, ityp) ]
+    end do ! [ ielm_u = 1, nid_obs ]
+  end do ! [ ityp = 1, nobtype ]
 
   ! Compute perturbation and departure
   !  -- gross error check
@@ -660,24 +684,19 @@ SUBROUTINE set_letkf_obs
   do ictype = 1, nctype
     ityp = typ_ctype(ictype)
 
-    hori_loc = HORI_LOCAL(ityp)
-    if (elm_ctype(ictype) == id_radar_ref_zero_obs) then
-      hori_loc = HORI_LOCAL_RADAR_OBSNOREF
-    end if
-
     if (OBS_SORT_GRID_SPACING(ityp) > 0) then
       target_grdspc = OBS_SORT_GRID_SPACING(ityp)
     else if (MAX_NOBS_PER_GRID(ityp) > 0) then
       target_grdspc = 0.1d0 * sqrt(real(MAX_NOBS_PER_GRID(ityp), r_size)) * OBS_MIN_SPACING(ityp) ! need to be tuned
     else
-      target_grdspc = hori_loc * dist_zero_fac / 6.0d0                ! need to be tuned
+      target_grdspc = hori_loc_ctype(ictype) * dist_zero_fac / 6.0d0                ! need to be tuned
     end if
     obsgrd(ictype)%ngrd_i = min(ceiling(DX * real(nlon,r_size) / target_grdspc), nlon)
     obsgrd(ictype)%ngrd_j = min(ceiling(DY * real(nlat,r_size) / target_grdspc), nlat)
     obsgrd(ictype)%grdspc_i = DX * real(nlon,r_size) / real(obsgrd(ictype)%ngrd_i,r_size)
     obsgrd(ictype)%grdspc_j = DY * real(nlat,r_size) / real(obsgrd(ictype)%ngrd_j,r_size)
-    obsgrd(ictype)%ngrdsch_i = ceiling(hori_loc * dist_zero_fac / obsgrd(ictype)%grdspc_i)
-    obsgrd(ictype)%ngrdsch_j = ceiling(hori_loc * dist_zero_fac / obsgrd(ictype)%grdspc_j)
+    obsgrd(ictype)%ngrdsch_i = ceiling(hori_loc_ctype(ictype) * dist_zero_fac / obsgrd(ictype)%grdspc_i)
+    obsgrd(ictype)%ngrdsch_j = ceiling(hori_loc_ctype(ictype) * dist_zero_fac / obsgrd(ictype)%grdspc_j)
     obsgrd(ictype)%ngrdext_i = obsgrd(ictype)%ngrd_i + obsgrd(ictype)%ngrdsch_i * 2
     obsgrd(ictype)%ngrdext_j = obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j * 2
 
@@ -726,19 +745,15 @@ SUBROUTINE set_letkf_obs
     else
       use_obs_print = 'No'
     end if
-    hori_loc = HORI_LOCAL(ityp)
-    if (elm_ctype(ictype) == id_radar_ref_zero_obs) then
-      hori_loc = HORI_LOCAL_RADAR_OBSNOREF
-    end if
 
     select case (ityp)
     case (22) ! vertical localization in Z
-      write (6, '(A6,1x,A3,1x,A4,F9.2,F7.2,A4,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc/1000.0d0, &
-                VERT_LOCAL(ityp)/1000.0d0, '[km]', TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
+      write (6, '(A6,1x,A3,1x,A4,F9.2,F7.2,A4,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
+                vert_loc_ctype(ictype)/1000.0d0, '[km]', TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
                 OBS_MIN_SPACING(ityp)/1000.0d0, obsgrd(ictype)%grdspc_i/1000.0d0, obsgrd(ictype)%grdspc_j/1000.0d0
     case default ! vertical localization in ln(p)
-      write (6, '(A6,1x,A3,1x,A4,F9.2,F11.3,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc/1000.0d0, &
-                VERT_LOCAL(ityp), TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
+      write (6, '(A6,1x,A3,1x,A4,F9.2,F11.3,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
+                vert_loc_ctype(ictype), TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
                 OBS_MIN_SPACING(ityp)/1000.0d0, obsgrd(ictype)%grdspc_i/1000.0d0, obsgrd(ictype)%grdspc_j/1000.0d0
     end select
   end do

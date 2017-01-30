@@ -139,6 +139,8 @@ MODULE common_nml
       -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
 
   real(r_size) :: HORI_LOCAL_RADAR_OBSNOREF = -1.0d0 ! <0: same as HORI_LOCAL(22=PHARAD)
+  real(r_size) :: HORI_LOCAL_RADAR_VR = -1.0d0       ! <0: same as HORI_LOCAL(22=PHARAD)
+  real(r_size) :: VERT_LOCAL_RADAR_VR = -1.0d0       ! <0: same as VERT_LOCAL(22=PHARAD)
   real(r_size) :: VERT_LOCAL_RAIN_BASE = 85000.0d0
 
   ! >0: observation number limit
@@ -498,6 +500,8 @@ subroutine read_nml_letkf_obs
     VERT_LOCAL, &
     TIME_LOCAL, &
     HORI_LOCAL_RADAR_OBSNOREF, &
+    HORI_LOCAL_RADAR_VR, &
+    VERT_LOCAL_RADAR_VR, &
     VERT_LOCAL_RAIN_BASE, &
     MAX_NOBS_PER_GRID, &
     MAX_NOBS_PER_GRID_CRITERION, &
@@ -544,6 +548,12 @@ subroutine read_nml_letkf_obs
 
   if (HORI_LOCAL_RADAR_OBSNOREF < 0.0d0) then
     HORI_LOCAL_RADAR_OBSNOREF = HORI_LOCAL(22) !PHARAD
+  end if
+  if (HORI_LOCAL_RADAR_VR < 0.0d0) then
+    HORI_LOCAL_RADAR_VR = HORI_LOCAL(22) !PHARAD
+  end if
+  if (VERT_LOCAL_RADAR_VR < 0.0d0) then
+    VERT_LOCAL_RADAR_VR = VERT_LOCAL(22) !PHARAD
   end if
 
   write(6, nml=PARAM_LETKF_OBS)
