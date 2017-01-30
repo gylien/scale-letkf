@@ -928,7 +928,6 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   integer :: jmin_cutoff(nid_obs*nobtype), jmax_cutoff(nid_obs*nobtype)
   real(r_size) :: search_incr, search_incr_i, search_incr_j
   real(r_size) :: dist_zero_fac_cutoff
-  real(r_size) :: hori_loc
 
   !-----------------------------------------------------------------------------
 
@@ -1003,9 +1002,6 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
         ic2 = ic_merge(icm)
 
         if (obsgrd(ic2)%tot_ext > 0) then
-          ielm = elm_ctype(ic2)
-          ityp = typ_ctype(ic2)
-
           nn = 0
           call obs_local_range(ic2, ri, rj, imin, imax, jmin, jmax)
           call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
@@ -1013,7 +1009,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
           do n = 1, nn
             iob = nobs_use(n)
 
-            call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, ndist_dummy, nrloc, nrdiag)
+            call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic2, ndist_dummy, nrloc, nrdiag)
             if (nrloc == 0.0d0) cycle
 
             nobsl = nobsl + 1
@@ -1058,12 +1054,8 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
       end do
 
       search_incr = max(obsgrd(ic)%grdspc_i, obsgrd(ic)%grdspc_j)
-      hori_loc = HORI_LOCAL(typ_ctype(ic))
-      if (elm_ctype(ic) == id_radar_ref_zero_obs) then
-        hori_loc = HORI_LOCAL_RADAR_OBSNOREF
-      end if
       ! use integer times of sorting mesh size for search_incr
-      search_incr = search_incr * ceiling(hori_loc * dist_zero_fac / search_incr / real(n_search_incr, r_size))
+      search_incr = search_incr * ceiling(hori_loc_ctype(ic) * dist_zero_fac / search_incr / real(n_search_incr, r_size))
       search_incr_i = search_incr / DX
       search_incr_j = search_incr / DY
 
@@ -1115,25 +1107,18 @@ write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cut
           ic2 = ic_merge(icm)
 
           if (nn_steps(icm+1) > nn_steps(icm)) then
-            ielm = elm_ctype(ic2)
-            ityp = typ_ctype(ic2)
-
             do n = nn_steps(icm)+1, nn_steps(icm+1)
               iob = nobs_use(n)
 
               if (rloc_tmp(iob) == 0.0d0) cycle
                 
               if (rloc_tmp(iob) < 0.0d0) then
-                call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, dist_tmp(iob), rloc_tmp(iob), rdiag_tmp(iob))
+                call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic2, dist_tmp(iob), rloc_tmp(iob), rdiag_tmp(iob))
                 if (rloc_tmp(iob) == 0.0d0) cycle
               end if
 
               if (.not. reach_cutoff) then
-                if (ielm == id_radar_ref_zero_obs) then
-                  dist_zero_fac_cutoff = search_incr * q / HORI_LOCAL_RADAR_OBSNOREF
-                else
-                  dist_zero_fac_cutoff = search_incr * q / HORI_LOCAL(ityp)
-                end if
+                dist_zero_fac_cutoff = search_incr * q / hori_loc_ctype(ic2)
                 if (dist_tmp(iob) > dist_zero_fac_cutoff * dist_zero_fac_cutoff) cycle
               end if
 
@@ -1183,9 +1168,6 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
         ic2 = ic_merge(icm)
 
         if (obsgrd(ic2)%tot_ext > 0) then
-          ielm = elm_ctype(ic2)
-          ityp = typ_ctype(ic2)
-
           nn_prev = nn
           call obs_local_range(ic2, ri, rj, imin, imax, jmin, jmax)
           call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
@@ -1193,7 +1175,7 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
           do n = nn_prev+1, nn
             iob = nobs_use(n)
 
-            call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, ndist_dummy, rloc_tmp(iob), rdiag_tmp(iob))
+            call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic2, ndist_dummy, rloc_tmp(iob), rdiag_tmp(iob))
             if (rloc_tmp(iob) == 0.0d0) cycle
 
             nobsl_incr = nobsl_incr + 1
@@ -1271,16 +1253,10 @@ subroutine obs_local_range(ctype, ri, rj, imin, imax, jmin, jmax)
   real(r_size), intent(in) :: ri, rj
   integer, intent(out) :: imin, imax, jmin, jmax
 
-  real(r_size) :: hori_loc
   real(r_size) :: dist_zero_i, dist_zero_j
 
-  hori_loc = HORI_LOCAL(typ_ctype(ctype))
-  if (elm_ctype(ctype) == id_radar_ref_zero_obs) then
-    hori_loc = HORI_LOCAL_RADAR_OBSNOREF
-  end if
-
-  dist_zero_i = hori_loc * dist_zero_fac / DX
-  dist_zero_j = hori_loc * dist_zero_fac / DY
+  dist_zero_i = hori_loc_ctype(ctype) * dist_zero_fac / DX
+  dist_zero_j = hori_loc_ctype(ctype) * dist_zero_fac / DY
   call ij_obsgrd_ext(ctype, ri - dist_zero_i, rj - dist_zero_j, imin, jmin)
   call ij_obsgrd_ext(ctype, ri + dist_zero_i, rj + dist_zero_j, imax, jmax)
 #ifdef DEBUG
@@ -1297,20 +1273,22 @@ end subroutine obs_local_range
 !-------------------------------------------------------------------------------
 ! Subroutine for main calculation of obs_local
 !-------------------------------------------------------------------------------
-subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc, nrdiag)
+subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   use scale_grid, only: &
     DX, DY
   implicit none
   real(r_size), intent(in) :: ri, rj, rlev, rz ! coordinate of the targeted model grid
   integer, intent(in) :: nvar         ! index of targeted model variable
   integer, intent(in) :: iob          ! index of observation in obsda2
-  integer, intent(in) :: obelm        ! observation variable type
-  integer, intent(in) :: obtyp        ! observation report type
+  integer, intent(in) :: ic           ! observation combined type
   real(r_size), intent(out) :: ndist  ! normalized 3D distance SQUARE       (in case of rejected obs: -1.)
   real(r_size), intent(out) :: nrloc  ! localization weight                 (in case of rejected obs:  0.)
   real(r_size), intent(out) :: nrdiag ! weighted observation error variance (in case of rejected obs: -1.)
 
-  integer :: obset, obidx
+  integer :: obelm           ! observation variable type
+  integer :: obtyp           ! observation report type
+  integer :: obset
+  integer :: obidx
   real(r_size) :: rdx, rdy
   real(r_size) :: nd_h, nd_v ! normalized horizontal/vertical distances
 
@@ -1318,6 +1296,8 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   nrdiag = -1.0d0
   ndist = -1.0d0
 
+  obelm = elm_ctype(ic)
+  obtyp = typ_ctype(ic)
   obset = obsda2%set(iob)
   obidx = obsda2%idx(iob)
 #ifdef DEBUG
@@ -1351,20 +1331,20 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   !
   ! Calculate normalized vertical distances
   !
-  if (VERT_LOCAL(obtyp) == 0.0d0) then
-    nd_v = 0.0d0                                                           ! no vertical localization
+  if (vert_loc_ctype(ic) == 0.0d0) then
+    nd_v = 0.0d0                                                            ! no vertical localization
   else if (obelm == id_ps_obs) then
-    nd_v = ABS(LOG(obs(obset)%dat(obidx)) - LOG(rlev)) / VERT_LOCAL(obtyp) ! for ps, use observed ps value for the base of vertical localization
+    nd_v = ABS(LOG(obs(obset)%dat(obidx)) - LOG(rlev)) / vert_loc_ctype(ic) ! for ps, use observed ps value for the base of vertical localization
   else if (obelm == id_rain_obs) then
-    nd_v = ABS(LOG(VERT_LOCAL_RAIN_BASE) - LOG(rlev)) / VERT_LOCAL(obtyp)  ! for rain, use VERT_LOCAL_RAIN_BASE for the base of vertical localization
+    nd_v = ABS(LOG(VERT_LOCAL_RAIN_BASE) - LOG(rlev)) / vert_loc_ctype(ic)  ! for rain, use VERT_LOCAL_RAIN_BASE for the base of vertical localization
   else if (obtyp == 22) then ! obtypelist(obtyp) == 'PHARAD'
-    nd_v = ABS(obs(obset)%lev(obidx) - rz) / VERT_LOCAL(obtyp)             ! for PHARAD, use z-coordinate for vertical localization
+    nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)             ! for PHARAD, use z-coordinate for vertical localization
 #ifdef H08
-  else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'               ! H08
-    nd_v = ABS(LOG(obsda2%lev(iob)) - LOG(rlev)) / VERT_LOCAL(obtyp)       ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
+  else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'                ! H08
+    nd_v = ABS(LOG(obsda2%lev(iob)) - LOG(rlev)) / vert_loc_ctype(ic)       ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
 #endif
   else
-    nd_v = ABS(LOG(obs(obset)%lev(obidx)) - LOG(rlev)) / VERT_LOCAL(obtyp)
+    nd_v = ABS(LOG(obs(obset)%lev(obidx)) - LOG(rlev)) / vert_loc_ctype(ic)
   end if
 
   !--- reject obs by normalized vertical distance
@@ -1378,11 +1358,7 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   !
   rdx = (ri - obsda2%ri(iob)) * DX
   rdy = (rj - obsda2%rj(iob)) * DY
-  if (obelm == id_radar_ref_zero_obs) then
-    nd_h = sqrt(rdx*rdx + rdy*rdy) / HORI_LOCAL_RADAR_OBSNOREF
-  else
-    nd_h = sqrt(rdx*rdx + rdy*rdy) / HORI_LOCAL(obtyp)
-  end if
+  nd_h = sqrt(rdx*rdx + rdy*rdy) / hori_loc_ctype(ic)
 
   !--- reject obs by normalized horizontal distance
   if (nd_h > dist_zero_fac) then
