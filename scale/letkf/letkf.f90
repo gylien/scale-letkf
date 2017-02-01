@@ -4,7 +4,9 @@ PROGRAM letkf
 ! [PURPOSE:] Main program of LETKF
 !
 ! [HISTORY:]
-!   01/16/2009 Takemasa Miyoshi  created
+!   01/16/2009   Takemasa Miyoshi  created
+!   October 2014 Guo-Yuan Lien     modified for SCALE model
+!   ............ See git history for the following revisions
 !
 !=======================================================================
 !$USE OMP_LIB
@@ -146,7 +148,13 @@ PROGRAM letkf
     if (OBSDA_IN) then
       if ((proc2mem(1,1,myrank+1) >= 1 .and. proc2mem(1,1,myrank+1) <= MEMBER) .or. &
           proc2mem(1,1,myrank+1) == mmdetin) then
-        call file_member_replace(proc2mem(1,1,myrank+1), OBSDA_IN_BASENAME, obsdafile)
+        if (proc2mem(1,1,myrank+1) <= MEMBER) then
+          call file_member_replace(proc2mem(1,1,myrank+1), OBSDA_IN_BASENAME, obsdafile)
+        else if (proc2mem(1,1,myrank+1) == mmean) then
+          obsdafile = OBSDA_MEAN_IN_BASENAME
+        else if (proc2mem(1,1,myrank+1) == mmdet) then
+          obsdafile = OBSDA_MDET_IN_BASENAME
+        end if
         write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,1,myrank+1)
 #ifdef H08
         CALL get_nobs(trim(obsdafile)//obsda_suffix,8,nobs_ext) ! H08
@@ -179,24 +187,6 @@ PROGRAM letkf
     WRITE(6,timer_fmt) '### TIMER(PROCESS_OBS):',rtimer-rtimer00
     rtimer00=rtimer
 
-
-
-!!  write (6,*) obsda%idx
-!!  write (6,*) obsda%val(3)
-!!  write (6,*) obsda%ensval(:,3)
-!!  write (6,*) obsda%qc(3)
-!!  write (6,*) obsda%ri(3)
-!!  write (6,*) obsda%rj(3)
-!!  write (6,*) obsda2%idx
-!!  write (6,*) obsda2%val(3)
-!!  write (6,*) obsda2%ensval(:,3)
-!!  write (6,*) obsda2%qc(3)
-!!  write (6,*) obsda2%ri(3)
-!!  write (6,*) obsda2%rj(3)
-!  write (6,*) obsda2%ri
-!  write (6,*) obsda2%rj
-
-
 !-----------------------------------------------------------------------
 ! First guess ensemble
 !-----------------------------------------------------------------------
@@ -205,7 +195,6 @@ PROGRAM letkf
     ALLOCATE(gues2d(nij1,nens,nv2d))
     ALLOCATE(anal3d(nij1,nlev,nens,nv3d))
     ALLOCATE(anal2d(nij1,nens,nv2d))
-
 
     !
     ! LETKF GRID setup
@@ -217,76 +206,82 @@ PROGRAM letkf
     WRITE(6,timer_fmt) '### TIMER(SET_GRID):',rtimer-rtimer00
     rtimer00=rtimer
 
-
-
     !
     ! READ GUES
     !
+    call read_ens_mpi(gues3d, gues2d)
 
-    call read_ens_mpi(GUES_IN_BASENAME,gues3d,gues2d)
-
-!  write (6,*) gues3d(20,:,3,iv3d_t)
-!!  write (6,*) gues2d
-
+    if (mmdetin /= mmdet) then
+      gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
+      gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
+    end if
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
     WRITE(6,timer_fmt) '### TIMER(READ_GUES):',rtimer-rtimer00
     rtimer00=rtimer
 
-
     !
     ! WRITE ENS MEAN and SPRD
     !
-    if (mmdetin /= mmdet) then
-      gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
-      gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
+    call write_ensmean(GUES_MEAN_INOUT_BASENAME, gues3d, gues2d, calced=.false.,&
+                       monit=DEPARTURE_STAT, caption='OBSERVATIONAL DEPARTURE STATISTICS [GUESS]')
+
+    if (GUES_SPRD_OUT) then
+      call write_enssprd(GUES_SPRD_OUT_BASENAME, gues3d, gues2d)
     end if
-    CALL write_ensmspr_mpi(GUES_OUT_MEAN_BASENAME,GUES_OUT_SPRD_BASENAME,gues3d,gues2d,obs,obsda2)
-!
+
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
     WRITE(6,timer_fmt) '### TIMER(GUES_MEAN):',rtimer-rtimer00
     rtimer00=rtimer
-!!-----------------------------------------------------------------------
-!! Data Assimilation
-!!-----------------------------------------------------------------------
+
+!-----------------------------------------------------------------------
+! Data Assimilation
+!-----------------------------------------------------------------------
+
     !
     ! LETKF
     !
-
-!    anal3d = gues3d
-!    anal2d = gues2d
-
     CALL das_letkf(gues3d,gues2d,anal3d,anal2d)
-!
+
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
     WRITE(6,timer_fmt) '### TIMER(DAS_LETKF):',rtimer-rtimer00
     rtimer00=rtimer
+
 !-----------------------------------------------------------------------
 ! Analysis ensemble
 !-----------------------------------------------------------------------
+
     !
-    ! WRITE ANAL
+    ! COMPUTE ENS MEAN and SPRD
+    !
+    call ensmean_grd(MEMBER, nij1, anal3d, anal2d)
+    ! write analysis mean later in write_ens_mpi
+
+    if (ANAL_SPRD_OUT) then
+      call write_enssprd(ANAL_SPRD_OUT_BASENAME, anal3d, anal2d)
+    end if
+
+    CALL MPI_BARRIER(MPI_COMM_a,ierr)
+    rtimer = MPI_WTIME()
+    WRITE(6,timer_fmt) '### TIMER(ANAL_MEAN):',rtimer-rtimer00
+    rtimer00=rtimer
+
+    !
+    ! WRITE ANAL and ENS MEAN
     !
 !    CALL MPI_BARRIER(MPI_COMM_a,ierr)
 
-    CALL write_ens_mpi(ANAL_OUT_BASENAME,anal3d,anal2d)
+    call write_ens_mpi(anal3d, anal2d, &
+                       monit=DEPARTURE_STAT, caption='OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS]')
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
     WRITE(6,timer_fmt) '### TIMER(WRITE_ANAL):',rtimer-rtimer00
     rtimer00=rtimer
-    !
-    ! WRITE ENS MEAN and SPRD
-    !
-    CALL write_ensmspr_mpi(ANAL_OUT_MEAN_BASENAME,ANAL_OUT_SPRD_BASENAME,anal3d,anal2d,obs,obsda2)
-    !
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(ANAL_MEAN):',rtimer-rtimer00
-    rtimer00=rtimer
+
 !!-----------------------------------------------------------------------
 !! Monitor
 !!-----------------------------------------------------------------------

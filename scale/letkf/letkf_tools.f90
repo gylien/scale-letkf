@@ -4,10 +4,12 @@ MODULE letkf_tools
 ! [PURPOSE:] Module for LETKF with GFS
 !
 ! [HISTORY:]
-!   01/26/2009 Takemasa Miyoshi  created
-!   10/04/2012 Guo-Yuan Lien     modified for GFS model
-!   07/01/2013 Daisuke Hotta     ported EFSO code from Y.Ohta's code
-!   01/01/2014 Guo-Yuan Lien     merged to GFS-LETKF main development
+!   01/26/2009   Takemasa Miyoshi  created
+!   10/04/2012   Guo-Yuan Lien     modified for GFS model
+!   07/01/2013   Daisuke Hotta     ported EFSO code from Y.Ohta's code
+!   01/01/2014   Guo-Yuan Lien     merged to GFS-LETKF main development
+!   October 2014 Guo-Yuan Lien     modified for SCALE model
+!   ............ See git history for the following revisions
 !
 !=======================================================================
 !$USE OMP_LIB
@@ -119,7 +121,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !
   ! FCST PERTURBATIONS
   !
-!  .... this has been done by write_ensmspr_mpi
+!  .... this has been done by write_ensmean in letkf.f90
 !  CALL ensmean_grd(MEMBER,nij1,gues3d,gues2d,mean3d,mean2d)
   DO n=1,nv3d
     DO m=1,MEMBER
@@ -471,7 +473,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Additive inflation
   !
   IF(INFL_ADD > 0.0d0) THEN
-    CALL read_ens_mpi(INFL_ADD_IN_BASENAME,gues3d,gues2d)
+    CALL read_ens_mpi_addiinfl(gues3d,gues2d)
     CALL ensmean_grd(MEMBER,nij1,gues3d,gues2d)
     DO n=1,nv3d
       DO m=1,MEMBER
@@ -1052,12 +1054,12 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
             if (nrloc == 0.0d0) cycle
 
             nobsl = nobsl + 1
-            hdxf(nobsl,:) = obsda2%ensval(1:MEMBER,iob)
+            hdxf(nobsl,:) = obsda_sort%ensval(1:MEMBER,iob)
             rdiag(nobsl) = nrdiag
             rloc(nobsl) = nrloc
-            dep(nobsl) = obsda2%val(iob)
+            dep(nobsl) = obsda_sort%val(iob)
             if (present(depd)) then
-              depd(nobsl) = obsda2%ensval(mmdetobs,iob)
+              depd(nobsl) = obsda_sort%ensval(mmdetobs,iob)
             end if
           end do ! [ n = 1, nn ]
         end if ! [ obsgrd(ic2)%tot_ext > 0 ]
@@ -1197,12 +1199,12 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
       do n = 1, nobsl_incr
         nobsl = nobsl + 1
         iob = nobs_use2(n)
-        hdxf(nobsl,:) = obsda2%ensval(1:MEMBER,iob)
+        hdxf(nobsl,:) = obsda_sort%ensval(1:MEMBER,iob)
         rdiag(nobsl) = rdiag_tmp(iob)
         rloc(nobsl) = rloc_tmp(iob)
-        dep(nobsl) = obsda2%val(iob)
+        dep(nobsl) = obsda_sort%val(iob)
         if (present(depd)) then
-          depd(nobsl) = obsda2%ensval(mmdetobs,iob)
+          depd(nobsl) = obsda_sort%ensval(mmdetobs,iob)
         end if
       end do
 
@@ -1260,12 +1262,12 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
       do n = 1, nobsl_incr
         nobsl = nobsl + 1
         iob = nobs_use2(n)
-        hdxf(nobsl,:) = obsda2%ensval(1:MEMBER,iob)
+        hdxf(nobsl,:) = obsda_sort%ensval(1:MEMBER,iob)
         rdiag(nobsl) = rdiag_tmp(iob)
         rloc(nobsl) = rloc_tmp(iob)
-        dep(nobsl) = obsda2%val(iob)
+        dep(nobsl) = obsda_sort%val(iob)
         if (present(depd)) then
-          depd(nobsl) = obsda2%ensval(mmdetobs,iob)
+          depd(nobsl) = obsda_sort%ensval(mmdetobs,iob)
         end if
       end do
 
@@ -1347,7 +1349,7 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   implicit none
   real(r_size), intent(in) :: ri, rj, rlev, rz ! coordinate of the targeted model grid
   integer, intent(in) :: nvar         ! index of targeted model variable
-  integer, intent(in) :: iob          ! index of observation in obsda2
+  integer, intent(in) :: iob          ! index of observation in obsda_sort
   integer, intent(in) :: obelm        ! observation variable type
   integer, intent(in) :: obtyp        ! observation report type
   real(r_size), intent(out) :: ndist  ! normalized 3D distance SQUARE       (in case of rejected obs: -1.)
@@ -1362,8 +1364,8 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   nrdiag = -1.0d0
   ndist = -1.0d0
 
-  obset = obsda2%set(iob)
-  obidx = obsda2%idx(iob)
+  obset = obsda_sort%set(iob)
+  obidx = obsda_sort%idx(iob)
 #ifdef DEBUG
   if (obelm /= obs(obset)%elm(obidx)) then
     write (6, '(A)') '[Error] inconsistent observation variable type !!!'
@@ -1405,7 +1407,7 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
     nd_v = ABS(obs(obset)%lev(obidx) - rz) / VERT_LOCAL(obtyp)             ! for PHARAD, use z-coordinate for vertical localization
 #ifdef H08
   else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'               ! H08
-    nd_v = ABS(LOG(obsda2%lev(iob)) - LOG(rlev)) / VERT_LOCAL(obtyp)       ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
+    nd_v = ABS(LOG(obsda_sort%lev(iob)) - LOG(rlev)) / VERT_LOCAL(obtyp)       ! H08 for H08IRB, use obsda_sort%lev(iob) for the base of vertical localization
 #endif
   else
     nd_v = ABS(LOG(obs(obset)%lev(obidx)) - LOG(rlev)) / VERT_LOCAL(obtyp)
@@ -1420,8 +1422,8 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   !
   ! Calculate normalized horizontal distances
   !
-  rdx = (ri - obsda2%ri(iob)) * DX
-  rdy = (rj - obsda2%rj(iob)) * DY
+  rdx = (ri - obsda_sort%ri(iob)) * DX
+  rdy = (rj - obsda_sort%rj(iob)) * DY
   if (obelm == id_radar_ref_zero_obs) then
     nd_h = sqrt(rdx*rdx + rdy*rdy) / HORI_LOCAL_RADAR_OBSNOREF
   else

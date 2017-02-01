@@ -4,10 +4,12 @@ MODULE letkf_obs
 ! [PURPOSE:] Observational procedures
 !
 ! [HISTORY:]
-!   01/23/2009 Takemasa MIYOSHI  created
-!   10/04/2012 Guo-Yuan Lien     modified for GFS model
-!   08/30/2013 Guo-Yuan Lien     separating obs operator, following changes by Takemasa MIYOSHI
-!   01/01/2014 Guo-Yuan Lien     add EFSO, following changes by Daisuke HOTTA
+!   01/23/2009   Takemasa MIYOSHI  created
+!   10/04/2012   Guo-Yuan Lien     modified for GFS model
+!   08/30/2013   Guo-Yuan Lien     separating obs operator, following changes by Takemasa MIYOSHI
+!   01/01/2014   Guo-Yuan Lien     add EFSO, following changes by Daisuke HOTTA
+!   October 2014 Guo-Yuan Lien     modified for SCALE model
+!   ............ See git history for the following revisions
 !
 !=======================================================================
 !$USE OMP_LIB
@@ -25,9 +27,7 @@ MODULE letkf_obs
   real(r_size),parameter :: dist_zero_fac = 3.651483717        ! SQRT(10.0d0/3.0d0) * 2.0d0
   real(r_size),parameter :: dist_zero_fac_square = 13.33333333 ! dist_zero_fac * dist_zero_fac
 
-  type(obs_info),allocatable,save :: obs(:)
-  type(obs_da_value),save :: obsda
-  type(obs_da_value),save :: obsda2  ! sorted
+  type(obs_da_value),save :: obsda   ! unsortted; sorted data saved to obsda_sort, declared in common_obs_scale
 
   ! combined obs type: {variable type (elm_u), report type (typ)}, allocated only when observations exist
   integer,save :: nctype                        ! number of combined obs type
@@ -165,14 +165,26 @@ SUBROUTINE set_letkf_obs
         call obs_da_value_allocate(obsda_ext,0)
         write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is reading externally processed observations for member ', &
               im, ', subdomain id #', proc2mem(2,it,myrank+1)
-        call file_member_replace(im, OBSDA_IN_BASENAME, obsdafile)
+        if (im <= MEMBER) then
+          call file_member_replace(im, OBSDA_IN_BASENAME, obsdafile)
+        else if (im == mmean) then
+          obsdafile = OBSDA_MEAN_IN_BASENAME
+        else if (im == mmdet) then
+          obsdafile = OBSDA_MDET_IN_BASENAME
+        end if
         write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
         call read_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0)
 
         if (OBSDA_OUT) then
           write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is appending observations for member ', &
                 im, ', subdomain id #', proc2mem(2,it,myrank+1)
-          call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
+          if (im <= MEMBER) then
+            call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
+          else if (im == mmean) then
+            obsdafile = OBSDA_MEAN_OUT_BASENAME
+          else if (im == mmdet) then
+            obsdafile = OBSDA_MDET_OUT_BASENAME
+          end if
 !          write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
           call write_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0,append=.true.)
         end if
@@ -264,7 +276,7 @@ SUBROUTINE set_letkf_obs
 !      call MPI_Comm_free(MPI_COMM_obstmp,ierr)
 
 
-      CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!      CALL MPI_BARRIER(MPI_COMM_e,ierr)
       call MPI_BCAST(obsda%nobs, 1, MPI_INTEGER, 0, MPI_COMM_e, ierr)
 !    print *, myrank, obsda%nobs
 
@@ -272,7 +284,7 @@ SUBROUTINE set_letkf_obs
         call obs_da_value_allocate(obsda, nensobs)
       end if
 
-      CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!      CALL MPI_BARRIER(MPI_COMM_e,ierr)
       call MPI_BCAST(obsda%set, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%idx, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%ri, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
@@ -283,24 +295,24 @@ SUBROUTINE set_letkf_obs
 
 ! obsda%val not used; averaged from obsda%ensval later
 
-  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
   CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%ensval,obsda%nobs*nensobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
 
-  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
   CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%qc,obsda%nobs,MPI_INTEGER,MPI_MAX,MPI_COMM_e,ierr)
 
 #ifdef H08
 !-- H08
 ! calculate the ensemble mean of obsda%lev
 !
-  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
   CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%lev,obsda%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
 
   obsda%lev = obsda%lev / REAL(MEMBER,r_size)
 
 ! calculate the ensemble mean of obsda%val2 (clear sky BT)
 !
-  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
   CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%val2,obsda%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
 
   obsda%val2 = obsda%val2 / REAL(MEMBER,r_size)
@@ -972,13 +984,13 @@ SUBROUTINE set_letkf_obs
     maxnobs_per_ctype = 0
   end if
 
-  ! Construct sorted obsda2: 
+  ! Construct sorted obsda_sort: 
   !-----------------------------------------------------------------------------
 
-  obsda2%nobs = nobstotal
-  call obs_da_value_allocate(obsda2, nensobs)
+  obsda_sort%nobs = nobstotal
+  call obs_da_value_allocate(obsda_sort, nensobs)
 
-  ! 1) Copy the observation data in own subdomain to obsda2 with sorted order
+  ! 1) Copy the observation data in own subdomain to obsda_sort with sorted order
   !-----------------------------------------------------------------------------
   nk = 0
 
@@ -993,16 +1005,16 @@ SUBROUTINE set_letkf_obs
         nn_sub = n + obsgrd(ictype)%ac(0,j,myrank_d)
         nk = nk + 1
 
-        obsda2%set(nn_ext) = obsda%set(obsda%key(nn_sub))
-        obsda2%idx(nn_ext) = obsda%idx(obsda%key(nn_sub))
-        obsda2%key(nk) = nn_ext  ! save the keys of observations within the subdomain (excluding the localization buffer area)
-        obsda2%val(nn_ext) = obsda%val(obsda%key(nn_sub))
-        obsda2%ensval(:,nn_ext) = obsda%ensval(:,obsda%key(nn_sub))
-        obsda2%qc(nn_ext) = obsda%qc(obsda%key(nn_sub))
-        obsda2%ri(nn_ext) = obsda%ri(obsda%key(nn_sub))
-        obsda2%rj(nn_ext) = obsda%rj(obsda%key(nn_sub))
+        obsda_sort%set(nn_ext) = obsda%set(obsda%key(nn_sub))
+        obsda_sort%idx(nn_ext) = obsda%idx(obsda%key(nn_sub))
+        obsda_sort%key(nk) = nn_ext  ! save the keys of observations within the subdomain (excluding the localization buffer area)
+        obsda_sort%val(nn_ext) = obsda%val(obsda%key(nn_sub))
+        obsda_sort%ensval(:,nn_ext) = obsda%ensval(:,obsda%key(nn_sub))
+        obsda_sort%qc(nn_ext) = obsda%qc(obsda%key(nn_sub))
+        obsda_sort%ri(nn_ext) = obsda%ri(obsda%key(nn_sub))
+        obsda_sort%rj(nn_ext) = obsda%rj(obsda%key(nn_sub))
 #ifdef H08
-        obsda2%lev(nn_ext) = obsda%lev(obsda%key(nn_sub)) ! H08
+        obsda_sort%lev(nn_ext) = obsda%lev(obsda%key(nn_sub)) ! H08
 #endif
       end do
     end do
@@ -1015,7 +1027,7 @@ SUBROUTINE set_letkf_obs
   end if
 #endif
 
-  obsda2%nobs_in_key = nk
+  obsda_sort%nobs_in_key = nk
 
   ! 2) Communicate observations within the extended (localization) subdomains
   !-----------------------------------------------------------------------------
@@ -1092,7 +1104,7 @@ SUBROUTINE set_letkf_obs
     call MPI_GATHERV(obsbufs%lev, ns, MPI_r_size, obsbufr%lev, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
 #endif
 
-    ! c) In the domain receiving data, copy the receive buffer to obsda2
+    ! c) In the domain receiving data, copy the receive buffer to obsda_sort
     !---------------------------------------------------------------------------
     if (myrank_d == ip) then
 
@@ -1144,15 +1156,15 @@ SUBROUTINE set_letkf_obs
               ns_bufr = ne_bufr + 1
               ne_bufr = ns_bufr + ne_ext - ns_ext
 
-              obsda2%set(ns_ext:ne_ext) = obsbufr%set(ns_bufr:ne_bufr)
-              obsda2%idx(ns_ext:ne_ext) = obsbufr%idx(ns_bufr:ne_bufr)
-              obsda2%val(ns_ext:ne_ext) = obsbufr%val(ns_bufr:ne_bufr)
-              obsda2%ensval(:,ns_ext:ne_ext) = obsbufr%ensval(:,ns_bufr:ne_bufr)
-              obsda2%qc(ns_ext:ne_ext) = obsbufr%qc(ns_bufr:ne_bufr)
-              obsda2%ri(ns_ext:ne_ext) = obsbufr%ri(ns_bufr:ne_bufr)
-              obsda2%rj(ns_ext:ne_ext) = obsbufr%rj(ns_bufr:ne_bufr)
+              obsda_sort%set(ns_ext:ne_ext) = obsbufr%set(ns_bufr:ne_bufr)
+              obsda_sort%idx(ns_ext:ne_ext) = obsbufr%idx(ns_bufr:ne_bufr)
+              obsda_sort%val(ns_ext:ne_ext) = obsbufr%val(ns_bufr:ne_bufr)
+              obsda_sort%ensval(:,ns_ext:ne_ext) = obsbufr%ensval(:,ns_bufr:ne_bufr)
+              obsda_sort%qc(ns_ext:ne_ext) = obsbufr%qc(ns_bufr:ne_bufr)
+              obsda_sort%ri(ns_ext:ne_ext) = obsbufr%ri(ns_bufr:ne_bufr)
+              obsda_sort%rj(ns_ext:ne_ext) = obsbufr%rj(ns_bufr:ne_bufr)
 #ifdef H08
-              obsda2%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr) ! H08
+              obsda_sort%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr) ! H08
 #endif
             end do
           end do ! [ ictype = 1, nctype ]

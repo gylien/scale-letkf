@@ -5,6 +5,7 @@ PROGRAM obsope
 !
 ! [HISTORY:]
 !   11/12/2014 Guo-Yuan Lien     Created
+!   .......... See git history for the following revisions
 !
 !=======================================================================
 !$USE OMP_LIB
@@ -21,8 +22,6 @@ PROGRAM obsope
   INTEGER :: ierr
   CHARACTER(7) :: stdoutf='-000000'
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
-
-  type(obs_info), allocatable :: obs(:)
 
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks

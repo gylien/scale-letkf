@@ -1,5 +1,5 @@
 MODULE common_scale
-!=======================================================================
+!===============================================================================
 !
 ! [PURPOSE:] Common Information for SCALE
 !
@@ -8,8 +8,9 @@ MODULE common_scale
 !   01/23/2009 Takemasa Miyoshi  modified
 !   10/03/2012 Guo-Yuan Lien     modified for GFS model
 !   07/24/2014 Guo-Yuan Lien     modified for SCALE model
+!   .......... See git history for the following revisions
 !
-!=======================================================================
+!===============================================================================
 !$USE OMP_LIB
   USE common
   use common_nml
@@ -19,9 +20,9 @@ MODULE common_scale
 
   IMPLICIT NONE
   PUBLIC
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! General parameters
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 
   ! Parameter 'nv3d' is set in common_nml.f90 ; 3D state variables (in SCALE restart files)
   ! Parameter 'nv2d' is set in common_nml.f90 ; 2D state variables (in SCALE restart files)
@@ -93,7 +94,6 @@ MODULE common_scale
   CHARACTER(vname_max),SAVE :: v2d_name(nv2d)
   CHARACTER(vname_max),SAVE :: v2dd_name(nv2dd)
 
-
 !  INTEGER,PARAMETER :: nlonsub=200
 !  INTEGER,PARAMETER :: nlatsub=200
 !  INTEGER,PARAMETER :: nlonns=6
@@ -118,187 +118,10 @@ MODULE common_scale
 !!  REAL(r_size),SAVE :: wg(nlonsub,nlatsub)
 
 CONTAINS
-!-----------------------------------------------------------------------
-! Set the parameters
-!-----------------------------------------------------------------------
-SUBROUTINE set_common_scale
-  use scale_rm_process, only: &
-    PRC_NUM_X, &
-    PRC_NUM_Y
-  use scale_grid_index, only: &
-    IMAX, &
-    JMAX, &
-    KMAX, &
-    IHALO, &
-    JHALO, &
-    KHALO
 
-  IMPLICIT NONE
-!  REAL(r_sngl) :: slat(nlat), wlat(nlat)
-!  REAL(r_size) :: totalwg, wgtmp, latm1, latm2
-!  INTEGER :: i,j
-
-  WRITE(6,'(A)') 'Hello from set_common_scale'
-
-  !
-  ! Set up node and process distribution
-  !
-
-!  if (scale_IO_mygroup <= 0) then
-
-!    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
-
-!  else
-
-!    call set_scalelib
-
-    if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
-      write(6,'(A,I10)') 'MEM_NP    = ', MEM_NP
-      write(6,'(A,I10)') 'PRC_NUM_X = ', PRC_NUM_X
-      write(6,'(A,I10)') 'PRC_NUM_Y = ', PRC_NUM_Y
-      write(6,'(A)') 'MEM_NP should be equal to PRC_NUM_X * PRC_NUM_Y.'
-      stop
-    end if
-
-    nlon = IMAX
-    nlat = JMAX
-    nlev = KMAX
-    nlong = nlon * PRC_NUM_X
-    nlatg = nlat * PRC_NUM_Y
-    nlonh = nlon + IHALO * 2
-    nlath = nlat + JHALO * 2
-    nlevh = nlev + KHALO * 2
-
-    nij0 = nlon * nlat
-    nlevall  = nlev * nv3d  + nv2d
-    nlevalld = nlev * nv3dd + nv2dd
-    ngpv  = nij0 * nlevall
-    ngpvd = nij0 * nlevalld
-
-    !
-    ! Variable names (same as in the NetCDF file)
-    !
-    ! state variables (in 'restart' files, for LETKF)
-    v3d_name(iv3d_rho)  = 'DENS'
-    v3d_name(iv3d_rhou) = 'MOMX'
-    v3d_name(iv3d_rhov) = 'MOMY'
-    v3d_name(iv3d_rhow) = 'MOMZ'
-    v3d_name(iv3d_rhot) = 'RHOT'
-    v3d_name(iv3d_q)    = 'QV'
-    v3d_name(iv3d_qc)   = 'QC'
-    v3d_name(iv3d_qr)   = 'QR'
-    v3d_name(iv3d_qi)   = 'QI'
-    v3d_name(iv3d_qs)   = 'QS'
-    v3d_name(iv3d_qg)   = 'QG'
-    !
-    ! diagnostic variables (in 'history' files, for observation operators)
-    v3dd_name(iv3dd_u)    = 'U'
-    v3dd_name(iv3dd_v)    = 'V'
-    v3dd_name(iv3dd_w)    = 'W'
-    v3dd_name(iv3dd_t)    = 'T'
-    v3dd_name(iv3dd_p)    = 'PRES'
-    v3dd_name(iv3dd_q)    = 'QV'
-    v3dd_name(iv3dd_qc)   = 'QC'
-    v3dd_name(iv3dd_qr)   = 'QR'
-    v3dd_name(iv3dd_qi)   = 'QI'
-    v3dd_name(iv3dd_qs)   = 'QS'
-    v3dd_name(iv3dd_qg)   = 'QG'
-    v3dd_name(iv3dd_rh)   = 'RH'
-    v3dd_name(iv3dd_hgt)   = 'height'
-    !
-    v2dd_name(iv2dd_topo) = 'topo'
-    v2dd_name(iv2dd_ps) = 'SFC_PRES'
-    v2dd_name(iv2dd_rain) = 'PREC'
-    v2dd_name(iv2dd_u10m) = 'U10'
-    v2dd_name(iv2dd_v10m) = 'V10'
-    v2dd_name(iv2dd_t2m) = 'T2'
-    v2dd_name(iv2dd_q2m) = 'Q2'
-#ifdef H08
-    v2dd_name(iv2dd_lsmask) = 'lsmask' ! H08
-    v2dd_name(iv2dd_skint) = 'SFC_TEMP' ! H08
-#endif
-!    v2dd_name(iv2dd_tsfc) = 'SFC_TEMP'
-    !
-    ! Lon, Lat
-    !
-  !!$OMP PARALLEL DO PRIVATE(i)
-  !  DO i=1,nlon
-  !    lon(i) = 360.d0/nlon*(i-1)
-  !  END DO
-  !!$OMP END PARALLEL DO
-  !  CALL SPLAT(idrt,nlat,slat,wlat)
-  !  do j=1,nlat
-  !    lat(j) = 180.d0/pi*asin(slat(nlat-j+1))
-  !  end do
-  !  !
-  !  ! dx and dy
-  !  !
-  !!$OMP PARALLEL
-  !!$OMP WORKSHARE
-  !  dx(:) = 2.0d0 * pi * re * cos(lat(:) * pi / 180.0d0) / REAL(nlon,r_size)
-  !!$OMP END WORKSHARE
-
-  !!$OMP DO
-  !  DO i=1,nlat-1
-  !    dy(i) = 2.0d0 * pi * re * (lat(i+1) - lat(i)) / 360.0d0
-  !  END DO
-  !!$OMP END DO
-  !!$OMP END PARALLEL
-  !  dy(nlat) = 2.0d0 * pi * re * (90.0d0 - lat(nlat)) / 180.0d0
-
-  !!$OMP PARALLEL DO
-  !  DO i=2,nlat
-  !    dy2(i) = (dy(i-1) + dy(i)) * 0.5d0
-  !  END DO
-  !!$OMP END PARALLEL DO
-  !  dy2(1) = (dy(nlat) + dy(1)) * 0.5d0
-  !  !
-  !  ! Corioris parameter
-  !  !
-  !!$OMP PARALLEL WORKSHARE
-  !  fcori(:) = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
-  !!$OMP END PARALLEL WORKSHARE
-  !  !
-  !  ! Weight for global average
-  !  !
-  !  totalwg = 0.0_r_size
-  !  DO j=1,nlat
-  !    if (j == 1) then
-  !      latm1 = -0.5d0*pi !-90 degree
-  !    else
-  !      latm1 = 0.5d0*(lat(j-1) + lat(j))*pi/180.0d0
-  !    end if
-  !    if (j == nlat) then
-  !      latm2 = 0.5d0*pi !90 degree
-  !    else
-  !      latm2 = 0.5d0*(lat(j) + lat(j+1))*pi/180.0d0
-  !    end if
-  !    wgtmp = abs(sin(latm2) - sin(latm1))
-  !    wg(:,j) = wgtmp
-  !    totalwg = totalwg + wgtmp * nlon
-  !  END DO
-  !  totalwg = 1.0_r_size / totalwg
-  !  wg(:,:) = sqrt(wg(:,:) * totalwg)
-
-
-!  end if ! [ scale_IO_mygroup <= 0 ]
-
-
-  RETURN
-END SUBROUTINE set_common_scale
-
-!SUBROUTINE unset_common_scale
-!  IMPLICIT NONE
-
-!  if (scale_IO_mygroup > 0) then
-!    call unset_scalelib
-!  end if
-
-!  RETURN
-!END SUBROUTINE unset_common_scale
-
-
-
+!-------------------------------------------------------------------------------
+! Initialize standard I/O and read common namelist of SCALE-LETKF
+!-------------------------------------------------------------------------------
 subroutine set_common_conf(nprocs)
   use scale_stdio
 
@@ -323,13 +146,166 @@ subroutine set_common_conf(nprocs)
   return
 end subroutine set_common_conf
 
+!-------------------------------------------------------------------------------
+! Set the parameters related to the SCALE model
+!-------------------------------------------------------------------------------
+SUBROUTINE set_common_scale
+  use scale_rm_process, only: &
+    PRC_NUM_X, &
+    PRC_NUM_Y
+  use scale_grid_index, only: &
+    IMAX, &
+    JMAX, &
+    KMAX, &
+    IHALO, &
+    JHALO, &
+    KHALO
 
-!!-----------------------------------------------------------------------
-!! File I/O
-!!-----------------------------------------------------------------------
-!!-----------------------------------------------------------------------
-!!
-!!-----------------------------------------------------------------------
+  IMPLICIT NONE
+!  REAL(r_sngl) :: slat(nlat), wlat(nlat)
+!  REAL(r_size) :: totalwg, wgtmp, latm1, latm2
+!  INTEGER :: i,j
+
+  WRITE(6,'(A)') 'Hello from set_common_scale'
+
+  !
+  ! Set up node and process distribution
+  !
+  if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
+    write(6,'(A,I10)') 'MEM_NP    = ', MEM_NP
+    write(6,'(A,I10)') 'PRC_NUM_X = ', PRC_NUM_X
+    write(6,'(A,I10)') 'PRC_NUM_Y = ', PRC_NUM_Y
+    write(6,'(A)') 'MEM_NP should be equal to PRC_NUM_X * PRC_NUM_Y.'
+    stop
+  end if
+
+  nlon = IMAX
+  nlat = JMAX
+  nlev = KMAX
+  nlong = nlon * PRC_NUM_X
+  nlatg = nlat * PRC_NUM_Y
+  nlonh = nlon + IHALO * 2
+  nlath = nlat + JHALO * 2
+  nlevh = nlev + KHALO * 2
+
+  nij0 = nlon * nlat
+  nlevall  = nlev * nv3d  + nv2d
+  nlevalld = nlev * nv3dd + nv2dd
+  ngpv  = nij0 * nlevall
+  ngpvd = nij0 * nlevalld
+
+  !
+  ! Variable names (same as in the NetCDF file)
+  !
+  ! state variables (in 'restart' files, for LETKF)
+  v3d_name(iv3d_rho)  = 'DENS'
+  v3d_name(iv3d_rhou) = 'MOMX'
+  v3d_name(iv3d_rhov) = 'MOMY'
+  v3d_name(iv3d_rhow) = 'MOMZ'
+  v3d_name(iv3d_rhot) = 'RHOT'
+  v3d_name(iv3d_q)    = 'QV'
+  v3d_name(iv3d_qc)   = 'QC'
+  v3d_name(iv3d_qr)   = 'QR'
+  v3d_name(iv3d_qi)   = 'QI'
+  v3d_name(iv3d_qs)   = 'QS'
+  v3d_name(iv3d_qg)   = 'QG'
+  !
+  ! diagnostic variables (in 'history' files, for observation operators)
+  v3dd_name(iv3dd_u)    = 'U'
+  v3dd_name(iv3dd_v)    = 'V'
+  v3dd_name(iv3dd_w)    = 'W'
+  v3dd_name(iv3dd_t)    = 'T'
+  v3dd_name(iv3dd_p)    = 'PRES'
+  v3dd_name(iv3dd_q)    = 'QV'
+  v3dd_name(iv3dd_qc)   = 'QC'
+  v3dd_name(iv3dd_qr)   = 'QR'
+  v3dd_name(iv3dd_qi)   = 'QI'
+  v3dd_name(iv3dd_qs)   = 'QS'
+  v3dd_name(iv3dd_qg)   = 'QG'
+  v3dd_name(iv3dd_rh)   = 'RH'
+  v3dd_name(iv3dd_hgt)   = 'height'
+  !
+  v2dd_name(iv2dd_topo) = 'topo'
+  v2dd_name(iv2dd_ps) = 'SFC_PRES'
+  v2dd_name(iv2dd_rain) = 'PREC'
+  v2dd_name(iv2dd_u10m) = 'U10'
+  v2dd_name(iv2dd_v10m) = 'V10'
+  v2dd_name(iv2dd_t2m) = 'T2'
+  v2dd_name(iv2dd_q2m) = 'Q2'
+#ifdef H08
+  v2dd_name(iv2dd_lsmask) = 'lsmask' ! H08
+  v2dd_name(iv2dd_skint) = 'SFC_TEMP' ! H08
+#endif
+!  v2dd_name(iv2dd_tsfc) = 'SFC_TEMP'
+
+!  !
+!  ! Lon, Lat
+!  !
+!!$OMP PARALLEL DO PRIVATE(i)
+!  DO i=1,nlon
+!    lon(i) = 360.d0/nlon*(i-1)
+!  END DO
+!!$OMP END PARALLEL DO
+!  CALL SPLAT(idrt,nlat,slat,wlat)
+!  do j=1,nlat
+!    lat(j) = 180.d0/pi*asin(slat(nlat-j+1))
+!  end do
+!  !
+!  ! dx and dy
+!  !
+!!$OMP PARALLEL
+!!$OMP WORKSHARE
+!  dx(:) = 2.0d0 * pi * re * cos(lat(:) * pi / 180.0d0) / REAL(nlon,r_size)
+!!$OMP END WORKSHARE
+
+!!$OMP DO
+!  DO i=1,nlat-1
+!    dy(i) = 2.0d0 * pi * re * (lat(i+1) - lat(i)) / 360.0d0
+!  END DO
+!!$OMP END DO
+!!$OMP END PARALLEL
+!  dy(nlat) = 2.0d0 * pi * re * (90.0d0 - lat(nlat)) / 180.0d0
+
+!!$OMP PARALLEL DO
+!  DO i=2,nlat
+!    dy2(i) = (dy(i-1) + dy(i)) * 0.5d0
+!  END DO
+!!$OMP END PARALLEL DO
+!  dy2(1) = (dy(nlat) + dy(1)) * 0.5d0
+!  !
+!  ! Corioris parameter
+!  !
+!!$OMP PARALLEL WORKSHARE
+!  fcori(:) = 2.0d0 * r_omega * sin(lat(:)*pi/180.0d0)
+!!$OMP END PARALLEL WORKSHARE
+!  !
+!  ! Weight for global average
+!  !
+!  totalwg = 0.0_r_size
+!  DO j=1,nlat
+!    if (j == 1) then
+!      latm1 = -0.5d0*pi !-90 degree
+!    else
+!      latm1 = 0.5d0*(lat(j-1) + lat(j))*pi/180.0d0
+!    end if
+!    if (j == nlat) then
+!      latm2 = 0.5d0*pi !90 degree
+!    else
+!      latm2 = 0.5d0*(lat(j) + lat(j+1))*pi/180.0d0
+!    end if
+!    wgtmp = abs(sin(latm2) - sin(latm1))
+!    wg(:,j) = wgtmp
+!    totalwg = totalwg + wgtmp * nlon
+!  END DO
+!  totalwg = 1.0_r_size / totalwg
+!  wg(:,:) = sqrt(wg(:,:) * totalwg)
+
+  RETURN
+END SUBROUTINE set_common_scale
+
+!-------------------------------------------------------------------------------
+! [File I/O] Read SCALE restart files
+!-------------------------------------------------------------------------------
 !SUBROUTINE read_restart(filename,v3dg,v2dg)
 !  use gtool_file, only: FileRead, FileCloseAll
 !  use scale_process, only: PRC_myrank
@@ -357,9 +333,7 @@ end subroutine set_common_conf
 
 !  RETURN
 !END SUBROUTINE read_restart
-!-----------------------------------------------------------------------
-!
-!-----------------------------------------------------------------------
+
 SUBROUTINE read_restart(filename,v3dg,v2dg)
   use netcdf, only: NF90_NOWRITE
   use scale_process, only: &
@@ -421,15 +395,15 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
 
   RETURN
 END SUBROUTINE read_restart
-!!-----------------------------------------------------------------------
-!!
-!!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+! [File I/O] Write SCALE restart files
+!-------------------------------------------------------------------------------
 !SUBROUTINE write_restart(filename,v3dg,v2dg)
 !  use netcdf, only: NF90_WRITE
 
 !!  use gtool_file, only: FileOpen, FileClose, FileWrite
 !!  use gtool_file_h
-
 
 !  use scale_process, only: PRC_myrank
 !  use common_mpi, only: myrank
@@ -498,9 +472,7 @@ END SUBROUTINE read_restart
 
 !  RETURN
 !END SUBROUTINE write_restart
-!-----------------------------------------------------------------------
-!
-!-----------------------------------------------------------------------
+
 SUBROUTINE write_restart(filename,v3dg,v2dg)
   use netcdf, only: NF90_WRITE
   use scale_process, only: &
@@ -569,9 +541,9 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   RETURN
 END SUBROUTINE write_restart
 
-!-----------------------------------------------------------------------
-!
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! [File I/O] Read SCALE topography files
+!-------------------------------------------------------------------------------
 SUBROUTINE read_topo(filename,topo)
   use netcdf, only: NF90_NOWRITE
   use scale_process, only: &
@@ -622,12 +594,9 @@ SUBROUTINE read_topo(filename,topo)
   RETURN
 END SUBROUTINE read_topo
 
-
-
-
-!-----------------------------------------------------------------------
-!
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! [File I/O] Read SCALE history files
+!-------------------------------------------------------------------------------
 subroutine read_history(filename,step,v3dg,v2dg)
   use scale_process, only: &
       PRC_myrank
@@ -650,6 +619,8 @@ subroutine read_history(filename,step,v3dg,v2dg)
   character(len=12) :: filesuffix = '.pe000000.nc'
   real(RP) :: var3d(nlon,nlat,nlev)
   real(RP) :: var2d(nlon,nlat)
+!  real(RP) :: v3dgtmp(nlevh,nlonh,nlath,nv3dd) !!! to handle data type conversion
+!  real(RP) :: v2dgtmp(nlonh,nlath,nv2dd)       !
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
@@ -663,14 +634,18 @@ subroutine read_history(filename,step,v3dg,v2dg)
                      trim(v3dd_name(iv3d)), & ! [IN]
                      step                   ) ! [IN]
     forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
+!    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dgtmp(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
   end do
 
   do iv3d = 1, nv3dd
     call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
+!    call COMM_vars8( v3dgtmp(:,:,:,iv3d), iv3d )
   end do
   do iv3d = 1, nv3dd
     call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
+!    call COMM_wait ( v3dgtmp(:,:,:,iv3d), iv3d )
   end do
+!  v3dg = real(v3dgtmp, r_size)
 
   do iv3d = 1, nv3dd
 !!!!!!!$OMP PARALLEL DO PRIVATE(i,j) OMP_SCHEDULE_ COLLAPSE(2)
@@ -691,221 +666,38 @@ subroutine read_history(filename,step,v3dg,v2dg)
                      trim(v2dd_name(iv2d)), & ! [IN]
                      step                   ) ! [IN]
     v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
+!    v2dgtmp(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
   end do
 
   do iv2d = 1, nv2dd
     call COMM_vars8( v2dg(:,:,iv2d), iv2d )
+!    call COMM_vars8( v2dgtmp(:,:,iv2d), iv2d )
   end do
   do iv2d = 1, nv2dd
     call COMM_wait ( v2dg(:,:,iv2d), iv2d )
+!    call COMM_wait ( v2dgtmp(:,:,iv2d), iv2d )
   end do
+!  v2dg = real(v2dgtmp, r_size)
 
   return
 end subroutine read_history
-!!-----------------------------------------------------------------------
-!! (version handling data type conversion)
-!!-----------------------------------------------------------------------
-!subroutine read_history(filename,step,v3dg,v2dg)
-!  use scale_process, only: &
-!      PRC_myrank
-!  use scale_grid_index, only: &
-!      IHALO, JHALO, KHALO, &
-!      IS, IE, JS, JE, KS, KE, KA
-!  use gtool_history, only: &
-!      HistoryGet
-!  use scale_comm, only: &
-!      COMM_vars8, &
-!      COMM_wait
-!  use common_mpi, only: myrank
-!  implicit none
 
-!  character(*),intent(in) :: filename
-!  integer,intent(in) :: step
-!  real(r_size),intent(out) :: v3dg(nlevh,nlonh,nlath,nv3dd)
-!  real(r_size),intent(out) :: v2dg(nlonh,nlath,nv2dd)
-!  integer :: i,j,k,iv3d,iv2d
-!  character(len=12) :: filesuffix = '.pe000000.nc'
-!  real(RP) :: var3d(nlon,nlat,nlev)
-!  real(RP) :: var2d(nlon,nlat)
-!  real(RP) :: v3dgtmp(nlevh,nlonh,nlath,nv3dd)
-!  real(RP) :: v2dgtmp(nlonh,nlath,nv2dd)
-
-!  write (filesuffix(4:9),'(I6.6)') PRC_myrank
-!  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
-
-!  ! 3D variables
-!  !-------------
-!  do iv3d = 1, nv3dd
-!    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
-!    call HistoryGet( var3D,                 & ! [OUT]
-!                     filename,              & ! [IN]
-!                     trim(v3dd_name(iv3d)), & ! [IN]
-!                     step                   ) ! [IN]
-!    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dgtmp(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
-!  end do
-
-!  do iv3d = 1, nv3dd
-!    call COMM_vars8( v3dgtmp(:,:,:,iv3d), iv3d )
-!  end do
-!  do iv3d = 1, nv3dd
-!    call COMM_wait ( v3dgtmp(:,:,:,iv3d), iv3d )
-!  end do
-!  v3dg = real(v3dgtmp, r_size)
-
-!  do iv3d = 1, nv3dd
-!!!!!!$OMP PARALLEL DO PRIVATE(i,j) OMP_SCHEDULE_ COLLAPSE(2)
-!    do j = JS, JE
-!      do i = IS, IE
-!        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
-!        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
-!      end do
-!    end do
-!  end do
-
-!  ! 2D variables
-!  !-------------
-!  do iv2d = 1, nv2dd
-!    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
-!    call HistoryGet( var2D,                 & ! [OUT]
-!                     filename,              & ! [IN]
-!                     trim(v2dd_name(iv2d)), & ! [IN]
-!                     step                   ) ! [IN]
-!    v2dgtmp(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
-!  end do
-
-!  do iv2d = 1, nv2dd
-!    call COMM_vars8( v2dgtmp(:,:,iv2d), iv2d )
-!  end do
-!  do iv2d = 1, nv2dd
-!    call COMM_wait ( v2dgtmp(:,:,iv2d), iv2d )
-!  end do
-!  v2dg = real(v2dgtmp, r_size)
-
-!  return
-!end subroutine read_history
-
-
-
-!-----------------------------------------------------------------------
-!
-!-----------------------------------------------------------------------
-subroutine scale_calc_z(nij,topo,z)
-  use scale_grid, only: &
-     GRID_CZ, &
-     GRID_FZ
-  use scale_grid_index, only: &
-     KHALO, KS, KE
-  implicit none
-
-  INTEGER,INTENT(IN) :: nij
-  REAL(r_size),INTENT(IN) :: topo(nij)
-  REAL(RP),INTENT(OUT) :: z(nij,nlev)
-  real(r_size) :: ztop
-  integer  :: k, i
-
-  ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
-!$OMP PARALLEL DO PRIVATE(i,k)
-  do k = 1, nlev
-    do i = 1, nij
-      z(i,k) = (ztop - topo(i)) / ztop * GRID_CZ(k+KHALO) + topo(i)
-    end do
-  end do
-!$OMP END PARALLEL DO
-
-  return
-end subroutine scale_calc_z
-
-
-!-----------------------------------------------------------------------
-! Monitor
-!-----------------------------------------------------------------------
-!SUBROUTINE monit_grd(v3d,v2d)
-!  IMPLICIT NONE
-!  REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
-!  REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,nv2d)
-!  INTEGER :: k,n
-
-!  DO k=1,nlev
-!    WRITE(6,'(I2,A)') k,'th level'
-!    DO n=1,nv3d
-!      WRITE(6,'(A,2ES10.2)') v3dname(n),MAXVAL(v3d(:,:,k,n)),MINVAL(v3d(:,:,k,n))
-!    END DO
-!  END DO
-
-!  DO n=1,nv2d
-!    WRITE(6,'(A,2ES10.2)') v2dname(n),MAXVAL(v2d(:,:,n)),MINVAL(v2d(:,:,n))
-!  END DO
-
-!  RETURN
-!END SUBROUTINE monit_grd
-!-----------------------------------------------------------------------
-! Ensemble manipulations
-!-----------------------------------------------------------------------
-SUBROUTINE ensmean_grd(mem,nij,v3d,v2d)
-  IMPLICIT NONE
-  INTEGER,INTENT(IN) :: mem
-  INTEGER,INTENT(IN) :: nij
-  REAL(r_size),INTENT(INOUT) :: v3d(nij,nlev,mem+2,nv3d)
-  REAL(r_size),INTENT(INOUT) :: v2d(nij,mem+2,nv2d)
-  INTEGER :: i,k,m,n
-
-  DO n=1,nv3d
-!$OMP PARALLEL DO PRIVATE(i,k,m)
-    DO k=1,nlev
-      DO i=1,nij
-        v3d(i,k,mem+1,n) = v3d(i,k,1,n)
-        DO m=2,mem
-          v3d(i,k,mem+1,n) = v3d(i,k,mem+1,n) + v3d(i,k,m,n)
-        END DO
-        v3d(i,k,mem+1,n) = v3d(i,k,mem+1,n) / REAL(mem,r_size)
-      END DO
-    END DO
-!$OMP END PARALLEL DO
-  END DO
-
-  DO n=1,nv2d
-!$OMP PARALLEL DO PRIVATE(i,m)
-    DO i=1,nij
-      v2d(i,mem+1,n) = v2d(i,1,n)
-      DO m=2,mem
-        v2d(i,mem+1,n) = v2d(i,mem+1,n) + v2d(i,m,n)
-      END DO
-      v2d(i,mem+1,n) = v2d(i,mem+1,n) / REAL(mem,r_size)
-    END DO
-!$OMP END PARALLEL DO
-  END DO
-
-  RETURN
-END SUBROUTINE ensmean_grd
-
-
-
-
-SUBROUTINE state_trans(v3dg)
-!  use gtool_file, only: FileRead
-!  use scale_process, only: PRC_myrank
-!  use common_mpi, only: myrank
-!  use scale_history, only: &
-!     HIST_get
-
+!-------------------------------------------------------------------------------
+! Transform the SCALE restart variables to the LETKF state variables
+!-------------------------------------------------------------------------------
+subroutine state_trans(v3dg)
   use scale_atmos_thermodyn, only: AQ_CV
     use scale_const, only: &
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
        CVdry  => CONST_CVdry, &
        PRE00 => CONST_PRE00
+  implicit none
 
-  IMPLICIT NONE
-
-  REAL(RP),INTENT(INOUT) :: v3dg(nlev,nlon,nlat,nv3d)
-!  REAL(RP) :: pres(nlev,nlon,nlat)
-!  REAL(RP) :: temp(nlev,nlon,nlat)
-  REAL(RP) :: rho,pres,temp
+  real(RP), intent(inout) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(RP) :: rho,pres,temp
   real(RP) :: qdry,CVtot,Rtot,CPovCV
   integer :: i,j,k,iv3d
-
-
-!  REAL(RP) :: pres2(nlev,nlon,nlat)
 
 !$OMP PARALLEL DO PRIVATE(i,j,k,iv3d,qdry,CVtot,Rtot,CPovCV,rho,pres,temp) COLLAPSE(2)
   do j = 1, nlat
@@ -935,59 +727,31 @@ SUBROUTINE state_trans(v3dg)
   enddo
 !$OMP END PARALLEL DO
 
-!  v3dg(:,:,:,5) = v3dg(:,:,:,iv3d_rho) ! temporarily store density here
-!  v3dg(:,:,:,iv3d_u) = v3dg(:,:,:,iv3d_rhou) / v3dg(:,:,:,5)
-!  v3dg(:,:,:,iv3d_v) = v3dg(:,:,:,iv3d_rhov) / v3dg(:,:,:,5)
-!  v3dg(:,:,:,iv3d_w) = v3dg(:,:,:,iv3d_rhow) / v3dg(:,:,:,5)
-!  v3dg(:,:,:,iv3d_t) = temp
-!  v3dg(:,:,:,iv3d_p) = pres
+  return
+end subroutine state_trans
 
-!!write(6,*) pres(:,10,10)
-!write(6,*) v3dg(:,10,10,iv3d_t)
-!!write(6,*) v3dg(6,:,:,iv3d_rhou)
-
-!!write(6,*)
-
-!if(myrank == 0) then
-
-!  call HIST_get(pres2, 'hist.0001', 'T', 15)
-!  write(6,*) pres2(10,10,:)
-
-!!  call HIST_get(pres2, 'hist.0001', 'MOMX', 15)
-!!  write(6,*) pres2(:,:,6)
-
-!!  do i = 1, 15
-!!  call HIST_get(pres2, 'hist.0001', 'MOMX', i)
-!!  write(6,*) pres2(10,10,6)
-!!  end do
-
-!end if
-
-!write(6,*)
-
-
-  RETURN
-END SUBROUTINE state_trans
-
-
-SUBROUTINE state_trans_inv(v3dg)
-  use scale_atmos_thermodyn, only: AQ_CP, AQ_CV
+!-------------------------------------------------------------------------------
+! Inversely transform the LETKF state variables to the SCALE restart variables
+!-------------------------------------------------------------------------------
+subroutine state_trans_inv(v3dg)
+  use scale_atmos_thermodyn, only: AQ_CV
     use scale_const, only: &
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
        CVdry  => CONST_CVdry, &
        PRE00 => CONST_PRE00
-  IMPLICIT NONE
+  implicit none
 
-  REAL(RP),INTENT(INOUT) :: v3dg(nlev,nlon,nlat,nv3d)
-  REAL(RP) :: rho,rhot
+  real(RP), intent(inout) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(RP) :: rho,rhot
   real(RP) :: qdry,CVtot,Rtot,CVovCP
   integer :: i,j,k,iv3d
 
   do iv3d = 1, nv3d
     if (POSITIVE_DEFINITE_Q .and. iv3d == iv3d_q) then
       v3dg(:,:,:,iv3d) = max(v3dg(:,:,:,iv3d), 0.0d0)
-    else if (POSITIVE_DEFINITE_QHYD .and. (iv3d == iv3d_qc .or. iv3d == iv3d_qr .or. iv3d == iv3d_qi .or. iv3d == iv3d_qs .or. iv3d == iv3d_qg)) then
+    else if (POSITIVE_DEFINITE_QHYD .and. &
+             (iv3d == iv3d_qc .or. iv3d == iv3d_qr .or. iv3d == iv3d_qi .or. iv3d == iv3d_qs .or. iv3d == iv3d_qg)) then
       v3dg(:,:,:,iv3d) = max(v3dg(:,:,:,iv3d), 0.0d0)
     end if
   end do
@@ -1019,14 +783,12 @@ SUBROUTINE state_trans_inv(v3dg)
   enddo
 !$OMP END PARALLEL DO
 
-  RETURN
-END SUBROUTINE state_trans_inv
-
+  return
+end subroutine state_trans_inv
 
 !-------------------------------------------------------------------------------
-! Transform the state variables (from SCALE restart files) to 
-! the variables in SCALE history files (with HALO), 
-! so that they can be used for observation operator calculation
+! Transform the LETKF state variables to the variables in SCALE history files
+! (with HALO), so that they can be used for observation operator calculation
 !-------------------------------------------------------------------------------
 ! [INPUT]
 !   v3dg, v2dg   : 3D, 2D state variables
@@ -1056,7 +818,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   integer :: i, j, k, iv3d, iv2d
 
   ! Variables that can be directly copied
-  !-----------------------------------------------------------------------------
+  !---------------------------------------------------------
 
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_u) = v3dg(:,:,:,iv3d_u)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_v) = v3dg(:,:,:,iv3d_v)
@@ -1071,12 +833,12 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
 
   ! RH
-  !-----------------------------------------------------------------------------
+  !---------------------------------------------------------
 
 !  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_rh) = [[RH calculator]]
 
   ! Calculate height based the the topography and vertical coordinate
-  !-----------------------------------------------------------------------------
+  !---------------------------------------------------------
 
   ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
 !$OMP PARALLEL DO PRIVATE(j,i,k)
@@ -1090,7 +852,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 !$OMP END PARALLEL DO
 
   ! Surface variables: use the 1st level as the surface (although it is not)
-  !-----------------------------------------------------------------------------
+  !---------------------------------------------------------
 
   v2dgh(:,:,iv2dd_topo) = v3dgh(1+KHALO,:,:,iv3dd_hgt)                ! Use the first model level as topography (is this good?)
 !  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo) = topo(:,:) ! Use the real topography
@@ -1107,7 +869,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_skint) = v3dg(1,:,:,iv3d_t)
 
   ! Assume the point where terrain height is less than 10 m is the ocean. T.Honda (02/09/2016)
-  !-----------------------------------------------------------------------------
+  !---------------------------------------------------------
 
 !$OMP PARALLEL DO PRIVATE(j,i)
   do j = 1, nlat
@@ -1119,7 +881,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 #endif
 
   ! Pad the upper and lower halo areas
-  !-----------------------------------------------------------------------------
+  !---------------------------------------------------------
 
   do iv3d = 1, nv3dd
     do j  = JS, JE
@@ -1131,7 +893,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   end do
 
   ! Communicate the lateral halo areas
-  !-----------------------------------------------------------------------------
+  !---------------------------------------------------------
 
   do iv3d = 1, nv3dd
     call COMM_vars8( v3dgh(:,:,:,iv3d), iv3d )
@@ -1149,11 +911,179 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 
   return
 end subroutine state_to_history
+
 !-------------------------------------------------------------------------------
+! Monitor state variables
+!-------------------------------------------------------------------------------
+!SUBROUTINE monit_grd(v3d,v2d)
+!  IMPLICIT NONE
+!  REAL(r_size),INTENT(IN) :: v3d(nlon,nlat,nlev,nv3d)
+!  REAL(r_size),INTENT(IN) :: v2d(nlon,nlat,nv2d)
+!  INTEGER :: k,n
 
+!  DO k=1,nlev
+!    WRITE(6,'(I2,A)') k,'th level'
+!    DO n=1,nv3d
+!      WRITE(6,'(A,2ES10.2)') v3dname(n),MAXVAL(v3d(:,:,k,n)),MINVAL(v3d(:,:,k,n))
+!    END DO
+!  END DO
 
+!  DO n=1,nv2d
+!    WRITE(6,'(A,2ES10.2)') v2dname(n),MAXVAL(v2d(:,:,n)),MINVAL(v2d(:,:,n))
+!  END DO
 
+!  RETURN
+!END SUBROUTINE monit_grd
 
+!-------------------------------------------------------------------------------
+! Calculate 3D height coordinate given the topography height (on scattered grids)
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   nij         : scattered grid numbers
+!   topo(nij)   : topography height (on scattered grids)
+! [OUTPUT]
+!   z(nij,nlev) : 3D height coordinate (on scattered grids)
+!-------------------------------------------------------------------------------
+subroutine scale_calc_z(nij, topo, z)
+  use scale_grid, only: &
+     GRID_CZ, &
+     GRID_FZ
+  use scale_grid_index, only: &
+     KHALO, KS, KE
+  implicit none
+
+  integer, intent(in) :: nij
+  real(r_size), intent(in) :: topo(nij)
+  real(RP), intent(out) :: z(nij,nlev)
+  real(r_size) :: ztop
+  integer :: k, i
+
+  ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
+!$OMP PARALLEL DO PRIVATE(i,k)
+  do k = 1, nlev
+    do i = 1, nij
+      z(i,k) = (ztop - topo(i)) / ztop * GRID_CZ(k+KHALO) + topo(i)
+    end do
+  end do
+!$OMP END PARALLEL DO
+
+  return
+end subroutine scale_calc_z
+
+!-------------------------------------------------------------------------------
+! Calculate ensemble mean (on scattered grids)
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   mem                      : ensemble size
+!   nij                      : scattered grid numbers
+!   v3d(nij,nlev,mem+2,nv3d) : 3D ensemble state variables (on scattered grids)
+!                              inputted by (:,:,1..mem,:)
+!   v2d(nij,     mem+2,nv3d) : 2D ensemble state variables (on scattered grids)
+!                              inputted by (:,  1..mem,:)
+! [OUTPUT]
+!   v3d(nij,nlev,mem+2,nv3d) : ensemble mean of 3D state variables (on scattered grids)
+!                              outputted by (:,:,mem+1,:)
+!   v2d(nij,     mem+2,nv3d) : ensemble mean of 2D state variables (on scattered grids)
+!                              outputted by (:  ,mem+1,:)
+!-------------------------------------------------------------------------------
+subroutine ensmean_grd(mem, nij, v3d, v2d)
+  implicit none
+  integer, intent(in) :: mem
+  integer, intent(in) :: nij
+  real(r_size), intent(inout) :: v3d(nij,nlev,mem+2,nv3d)
+  real(r_size), intent(inout) :: v2d(nij,mem+2,nv2d)
+  integer :: i, k, m, n, mmean
+
+  mmean = mem + 1
+
+!$OMP PARALLEL DO PRIVATE(i,k,m,n) COLLAPSE(3)
+  do n = 1, nv3d
+    do k = 1, nlev
+      do i = 1, nij
+        v3d(i,k,mmean,n) = v3d(i,k,1,n)
+        do m = 2, mem
+          v3d(i,k,mmean,n) = v3d(i,k,mmean,n) + v3d(i,k,m,n)
+        end do
+        v3d(i,k,mmean,n) = v3d(i,k,mmean,n) / real(mem, r_size)
+      end do
+    end do
+  end do
+!$OMP END PARALLEL DO
+
+!$OMP PARALLEL DO PRIVATE(i,m,n) COLLAPSE(2)
+  do n = 1, nv2d
+    do i = 1, nij
+      v2d(i,mmean,n) = v2d(i,1,n)
+      do m = 2, mem
+        v2d(i,mmean,n) = v2d(i,mmean,n) + v2d(i,m,n)
+      end do
+      v2d(i,mmean,n) = v2d(i,mmean,n) / real(mem, r_size)
+    end do
+  end do
+!$OMP END PARALLEL DO
+
+  return
+end subroutine ensmean_grd
+
+!-------------------------------------------------------------------------------
+! Calculate ensemble spread (on scattered grids)
+! * the ensemble mean has to be already calculated
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   mem                      : ensemble size
+!   nij                      : scattered grid numbers
+!   v3d(nij,nlev,mem+2,nv3d) : 3D ensemble state variables with mean (on scattered grids)
+!                              inputted by (:,:,1..mem+1,:)
+!   v2d(nij,     mem+2,nv3d) : 2D ensemble state variables with mean (on scattered grids)
+!                              inputted by (:,  1..mem+1,:)
+! [OUTPUT]
+!   v3ds(nij,nlev,nv3d)      : ensemble spread of 3D state variables (on scattered grids)
+!   v2ds(nij,     nv3d)      : ensemble spread of 2D state variables (on scattered grids)
+!-------------------------------------------------------------------------------
+subroutine enssprd_grd(mem, nij, v3d, v2d, v3ds, v2ds)
+  implicit none
+  integer, intent(in) :: mem
+  integer, intent(in) :: nij
+  real(r_size), intent(in) :: v3d(nij,nlev,mem+2,nv3d)
+  real(r_size), intent(in) :: v2d(nij,mem+2,nv2d)
+  real(r_size), intent(out) :: v3ds(nij,nlev,nv3d)
+  real(r_size), intent(out) :: v2ds(nij,nv2d)
+  integer :: i, k, m, n, mmean
+
+  mmean = mem + 1
+
+!$OMP PARALLEL DO PRIVATE(i,k,m,n) COLLAPSE(3)
+  do n = 1, nv3d
+    do k = 1, nlev
+      do i = 1, nij
+        v3ds(i,k,n) = (v3d(i,k,1,n) - v3d(i,k,mmean,n)) ** 2
+        do m = 2, mem
+          v3ds(i,k,n) = v3ds(i,k,n) + (v3d(i,k,m,n) - v3d(i,k,mmean,n)) ** 2
+        end do
+        v3ds(i,k,n) = sqrt(v3ds(i,k,n) / real(mem-1, r_size))
+      end do
+    end do
+  end do
+!$OMP END PARALLEL DO
+
+!$OMP PARALLEL DO PRIVATE(i,m,n) COLLAPSE(2)
+  do n = 1, nv2d
+    do i = 1, nij
+      v2ds(i,n) = (v2d(i,1,n) - v2d(i,mmean,n)) ** 2
+      do m = 2, mem
+        v2ds(i,n) = v2ds(i,n) + (v2d(i,m,n) - v2d(i,mmean,n)) ** 2
+      end do
+      v2ds(i,n) = sqrt(v2ds(i,n) / real(mem-1, r_size))
+    end do
+  end do
+!$OMP END PARALLEL DO
+
+  return
+end subroutine enssprd_grd
+
+!-------------------------------------------------------------------------------
+! Convert 1D rank of process to 2D rank
+!-------------------------------------------------------------------------------
 subroutine rank_1d_2d(proc, iproc, jproc)
   use scale_rm_process, only: PRC_2Drank
   implicit none
@@ -1166,7 +1096,9 @@ subroutine rank_1d_2d(proc, iproc, jproc)
   return  
 end subroutine rank_1d_2d
 
-
+!-------------------------------------------------------------------------------
+! Convert 2D rank of process to 1D rank
+!-------------------------------------------------------------------------------
 subroutine rank_2d_1d(iproc, jproc, proc)
   use scale_rm_process, only: PRC_NUM_X
   implicit none
@@ -1178,7 +1110,9 @@ subroutine rank_2d_1d(iproc, jproc, proc)
   return  
 end subroutine rank_2d_1d
 
-
+!-------------------------------------------------------------------------------
+! Convert <integer> global grid coordinates (i,j) to local given the 1D rank of process
+!-------------------------------------------------------------------------------
 subroutine ij_g2l(proc, ig, jg, il, jl)
   implicit none
   integer, intent(in) :: proc
@@ -1195,7 +1129,9 @@ subroutine ij_g2l(proc, ig, jg, il, jl)
   return  
 end subroutine ij_g2l
 
-
+!-------------------------------------------------------------------------------
+! Convert <integer> local grid coordinates (i,j) to global given the 1D rank of process
+!-------------------------------------------------------------------------------
 subroutine ij_l2g(proc, il, jl, ig, jg)
   implicit none
   integer, intent(in) :: proc
@@ -1212,8 +1148,9 @@ subroutine ij_l2g(proc, il, jl, ig, jg)
   return  
 end subroutine ij_l2g
 
-
-
+!-------------------------------------------------------------------------------
+! Convert <real> global grid coordinates (i,j) to local given the 1D rank of process
+!-------------------------------------------------------------------------------
 subroutine rij_g2l(proc, ig, jg, il, jl)
   implicit none
   integer, intent(in) :: proc
@@ -1230,7 +1167,9 @@ subroutine rij_g2l(proc, ig, jg, il, jl)
   return  
 end subroutine rij_g2l
 
-
+!-------------------------------------------------------------------------------
+! Convert <real> local grid coordinates (i,j) to global given the 1D rank of process
+!-------------------------------------------------------------------------------
 subroutine rij_l2g(proc, il, jl, ig, jg)
   implicit none
   integer, intent(in) :: proc
@@ -1247,12 +1186,18 @@ subroutine rij_l2g(proc, il, jl, ig, jg)
   return  
 end subroutine rij_l2g
 
-
-!-----------------------------------------------------------------------
-! using halo!
-! proc = -1: outside the global domain
-!-----------------------------------------------------------------------
-SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
+!-------------------------------------------------------------------------------
+! Convert <real> global grid coordinates (i,j) to local where the grid resides
+! * HALO grids are used
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   ig, jg : global grid coordinates
+! [OUTPUT]
+!   proc   : the 1D rank of process where the grid resides;
+!            * return -1 if the grid is outside of the global domain
+!   il, jl : local grid coordinates
+!-------------------------------------------------------------------------------
+subroutine rij_g2l_auto(proc,ig,jg,il,jl)
   use scale_rm_process, only: &
       PRC_NUM_X, PRC_NUM_Y
 #ifdef DEBUG
@@ -1272,12 +1217,12 @@ SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
   use scale_grid_index, only: &
       IHALO, JHALO
 #endif
-  IMPLICIT NONE
-  integer,INTENT(OUT) :: proc
-  REAL(r_size),INTENT(IN) :: ig
-  REAL(r_size),INTENT(IN) :: jg
-  REAL(r_size),INTENT(OUT) :: il
-  REAL(r_size),INTENT(OUT) :: jl
+  implicit none
+  integer, intent(out) :: proc
+  real(r_size), intent(in) :: ig
+  real(r_size), intent(in) :: jg
+  real(r_size), intent(out) :: il
+  real(r_size), intent(out) :: jl
   integer :: iproc, jproc
 
   if (ig < real(1+IHALO,r_size) .or. ig > real(nlon*PRC_NUM_X+IHALO,r_size) .or. &
@@ -1308,9 +1253,8 @@ SUBROUTINE rij_g2l_auto(proc,ig,jg,il,jl)
   end if
 #endif
 
-  RETURN
-END SUBROUTINE rij_g2l_auto
+  return
+end subroutine rij_g2l_auto
 
-
-
+!===============================================================================
 END MODULE common_scale

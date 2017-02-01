@@ -5,6 +5,7 @@ MODULE obsope_tools
 !
 ! [HISTORY:]
 !   November 2014  Guo-Yuan Lien  created
+!   .............  See git history for the following revisions
 !
 !=======================================================================
 !$USE OMP_LIB
@@ -158,11 +159,12 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
 !-----------------------------------------------------------------------
 
-  integer :: ierr
-  REAL(r_dble) :: rrtimer00,rrtimer
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  integer :: ierr
+  REAL(r_dble) :: rrtimer00, rrtimer
+!  CALL MPI_BARRIER(MPI_COMM_a, ierr)
   rrtimer00 = MPI_WTIME()
+
 
 #ifdef H08
 !  call phys2ij(MSLP_TC_LON,MSLP_TC_LAT,MSLP_TC_rig,MSLP_TC_rjg)
@@ -207,14 +209,12 @@ SUBROUTINE obsope_cal(obs, obsda_return)
         slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
         write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
 
-        call read_ens_history_iter(HISTORY_IN_BASENAME,it,islot,v3dg,v2dg)
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+        call read_ens_history_iter(it,islot,v3dg,v2dg)
 
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
-  WRITE(6,'(A,I3,A,I3,A,4x,F15.7)') '###### obsope_cal:read_ens_history_iter:',it,':',islot,':',rrtimer-rrtimer00
-  rrtimer00=rrtimer
+  write (6,'(A,I3,A,I3,A,4x,F15.7)') '###### obsope_cal:read_ens_history_iter:', it, ':', islot, ':', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
 
 
         do iof = 1, OBS_IN_NUM
@@ -327,11 +327,9 @@ SUBROUTINE obsope_cal(obs, obsda_return)
           ENDIF ! end of nobs count [if (OBS_IN_FORMAT(iof) = 3)]
 
 
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
-  WRITE(6,'(A,I3,A,I3,A,I3,A,F15.7)') '###### obsope_cal:obsope_step_1:        ',it,':',islot,':',iof,':',rrtimer-rrtimer00
-  rrtimer00=rrtimer
+  write (6,'(A,I3,A,I3,A,I3,A,F15.7)') '###### obsope_cal:obsope_step_1:        ', it, ':', islot, ':', iof, ':', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
 
 
           ! then do this heavy computation with OpenMP
@@ -367,13 +365,6 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                 call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
               end if
 
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  rrtimer = MPI_WTIME()
-!  WRITE(6,'(A,I3,A,I3,A,I3,A,I8,A,F15.7)') '###### obsope_cal:obsope_step_2_phys2ijkz:',it,':',islot,':',iof,':',nn,':',rrtimer-rrtimer00
-!  rrtimer00=rrtimer
-
-
               if (obsda%qc(nn) == iqc_good) then
                 select case (OBS_IN_FORMAT(iof))
                 case (1)
@@ -392,14 +383,6 @@ SUBROUTINE obsope_cal(obs, obsda_return)
 
                 end select
               end if
-
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!  rrtimer = MPI_WTIME()
-!  WRITE(6,'(A,I3,A,I3,A,I3,A,I8,A,F15.7)') '###### obsope_cal:obsope_step_2_Trans_XtoY_radar:',it,':',islot,':',iof,':',nn,':',rrtimer-rrtimer00
-!  rrtimer00=rrtimer
-
-
             end do ! [ nn = nobs_0 + 1, nobs ]
 !$OMP END PARALLEL DO
 
@@ -486,10 +469,9 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                                     , myrank, ' = ', nobs_slot
 
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
-  WRITE(6,'(A,I3,A,I3,A,I3,A,F15.7)') '###### obsope_cal:obsope_step_2:        ',it,':',islot,':',iof,':',rrtimer-rrtimer00
-  rrtimer00=rrtimer
+  write (6,'(A,I3,A,I3,A,I3,A,F15.7)') '###### obsope_cal:obsope_step_2:        ', it, ':', islot, ':', iof, ':', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
 
 
 
@@ -516,7 +498,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
               call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)  
               call search_tc_subdom(rig,rjg,v2dg,bTC(1,myrank_d),bTC(2,myrank_d),bTC(3,myrank_d))
   
-              CALL MPI_BARRIER(MPI_COMM_d,ierr)
+!              CALL MPI_BARRIER(MPI_COMM_d,ierr)
               CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
 
               ! Assume MSLP of background TC is lower than 1100 (hPa). 
@@ -590,12 +572,28 @@ SUBROUTINE obsope_cal(obs, obsda_return)
       write (6,'(A,I8,A)') ' -- ', nobs, ' observations found'
 
 
+  rrtimer00 = MPI_WTIME()
+
+
       if (OBSDA_OUT) then
         write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is writing observations for member ', &
               im, ', subdomain id #', proc2mem(2,it,myrank+1)
-        call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
+        if (im <= MEMBER) then
+          call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
+        else if (im == mmean) then
+          obsdafile = OBSDA_MEAN_OUT_BASENAME
+        else if (im == mmdet) then
+          obsdafile = OBSDA_MDET_OUT_BASENAME
+        end if
         write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
         call write_obs_da(trim(obsdafile)//obsda_suffix,obsda,0)
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,I3,A,8x,F15.7)') '###### obsope_cal:write_obs_da:         ', it, ':', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
+
       end if
 
       if (present(obsda_return)) then
@@ -632,14 +630,14 @@ SUBROUTINE obsope_cal(obs, obsda_return)
             obsda_return%ensval(im,1:nobs) = obsda%val(1:nobs)
           end if
         end if ! [ nobs > 0 ]
-      end if ! [ present(obsda_return) ]
 
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer = MPI_WTIME()
-  WRITE(6,'(A,I3,A,8x,F15.7)') '###### obsope_cal:write_obs_da:         ',it,':',rrtimer-rrtimer00
-  rrtimer00=rrtimer
+  write (6,'(A,I3,A,8x,F15.7)') '###### obsope_cal:obsda_return:         ', it, ':', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
 
+
+      end if ! [ present(obsda_return) ]
 
     end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
 
@@ -715,7 +713,7 @@ SUBROUTINE obsmake_cal(obs)
     slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
     write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
 
-    call read_ens_history_iter(HISTORY_IN_BASENAME,1,islot,v3dg,v2dg)
+    call read_ens_history_iter(1,islot,v3dg,v2dg)
 
     do iof = 1, OBS_IN_NUM
       IF(OBS_IN_FORMAT(iof) /= 3)THEN ! except H08 obs

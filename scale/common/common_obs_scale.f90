@@ -7,6 +7,7 @@ MODULE common_obs_scale
 !   01/23/2009 Takemasa MIYOSHI  created
 !   10/04/2012 Guo-Yuan Lien     modified for GFS model
 !   07/25/2014 Guo-Yuan Lien     modified for SCALE model
+!   .......... See git history for the following revisions
 !
 !=======================================================================
 !
@@ -136,7 +137,7 @@ MODULE common_obs_scale
   !!!!!! need to add %err and %dat for obsda2 if they can be determined in letkf_obs.f90 !!!!!!
 
   INTEGER,PARAMETER :: nobsformats=3 ! H08
-  CHARACTER(30) :: obsformat_name(nobsformats) = &
+  CHARACTER(30),PARAMETER :: obsformat_name(nobsformats) = &
     (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR'/)
 
   INTEGER,PARAMETER :: iqc_good=0
@@ -151,6 +152,9 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: iqc_obs_bad=50
   INTEGER,PARAMETER :: iqc_otype=90
   INTEGER,PARAMETER :: iqc_time=91
+
+  type(obs_info),allocatable,save :: obs(:) ! observation information
+  type(obs_da_value),save :: obsda_sort     ! sorted obsda
 
   REAL(r_size),SAVE :: MIN_RADAR_REF
   REAL(r_size),SAVE :: RADAR_REF_THRES
@@ -1319,7 +1323,7 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
-subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
+subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
   use scale_process, only: &
       PRC_myrank
 
@@ -1327,8 +1331,6 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
 
   REAL(RP),intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP),intent(in) :: v2dg(nlon,nlat,nv2d)
-  type(obs_info),intent(in) :: obs(OBS_IN_NUM)
-  type(obs_da_value),intent(in) :: obsda
   real(r_size),intent(in) :: topo(nlon,nlat)
   INTEGER,INTENT(OUT) :: nobs(nid_obs)
   REAL(r_size),INTENT(OUT) :: bias(nid_obs)
@@ -1382,9 +1384,9 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
   call state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 
   if (use_key) then
-    nnobs = obsda%nobs_in_key
+    nnobs = obsda_sort%nobs_in_key
   else
-    nnobs = obsda%nobs
+    nnobs = obsda_sort%nobs
   end if
 
   allocate (oelm(nnobs))
@@ -1401,7 +1403,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
   do n = 1, nnobs
 
     if (use_key) then
-      nn = obsda%key(n)
+      nn = obsda_sort%key(n)
     else
       nn = n
     end if
@@ -1409,10 +1411,10 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
 !print *, n, nn
 
 
-    iset = obsda%set(nn)
-    iidx = obsda%idx(nn)
+    iset = obsda_sort%set(nn)
+    iidx = obsda_sort%idx(nn)
 
-    if (obsda%qc(nn) /= iqc_good) write(6, *) '############', obsda%qc(nn)
+    if (obsda_sort%qc(nn) /= iqc_good) write(6, *) '############', obsda_sort%qc(nn)
 
     oelm(n) = obs(iset)%elm(iidx)
 
@@ -1432,10 +1434,10 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
     if(int(oelm(n)) == id_H08IR_obs)cycle
 #endif
 
-    call rij_g2l_auto(proc,obsda%ri(nn),obsda%rj(nn),ri,rj)
+    call rij_g2l_auto(proc,obsda_sort%ri(nn),obsda_sort%rj(nn),ri,rj)
 #ifdef DEBUG
     if (PRC_myrank /= proc) then
-      write(6, *) '############ Error!', PRC_myrank,proc,obsda%ri(nn),obsda%rj(nn),ri,rj
+      write(6, *) '############ Error!', PRC_myrank,proc,obsda_sort%ri(nn),obsda_sort%rj(nn),ri,rj
       cycle
 !      stop
     end if
@@ -1498,17 +1500,17 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
     nprof_H08 = 0
     do n = 1, nnobs
       if (use_key) then
-        nn = obsda%key(n)
+        nn = obsda_sort%key(n)
       else
         nn = n
       end if
-      iset = obsda%set(nn)
-      iidx = obsda%idx(nn)
+      iset = obsda_sort%set(nn)
+      iidx = obsda_sort%idx(nn)
 
       oelm(n) = obs(iset)%elm(iidx)
       if(oelm(n) /= id_H08IR_obs)cycle
 
-      call rij_g2l_auto(proc,obsda%ri(nn),obsda%rj(nn),ri,rj)
+      call rij_g2l_auto(proc,obsda_sort%ri(nn),obsda_sort%rj(nn),ri,rj)
       if (PRC_myrank /= proc) then
         write(6, *) '############ Error from H08 monitor!', PRC_myrank,proc
         cycle
@@ -1570,17 +1572,17 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ns)
       do n = 1, nnobs
         if (use_key) then
-          nn = obsda%key(n)
+          nn = obsda_sort%key(n)
         else
           nn = n
         end if
-        iset = obsda%set(nn)
-        iidx = obsda%idx(nn)
+        iset = obsda_sort%set(nn)
+        iidx = obsda_sort%idx(nn)
 
         oelm(n) = obs(iset)%elm(iidx)
         if(oelm(n) /= id_H08IR_obs)cycle
   
-        ns = (n2prof(n) - 1) * nch + nint(obsda%lev(nn) - 6.0) 
+        ns = (n2prof(n) - 1) * nch + nint(obsda_sort%lev(nn) - 6.0) 
 
         if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. & 
           abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE) then
@@ -1599,11 +1601,11 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
             ohx(n) = obs(iset)%dat(iidx) - ohx(n) 
             write (6, '(A,2I6,2F8.2,5F11.4,I6,F10.4)')"H08-O-A-B",&
                   obs(iset)%elm(iidx), &
-                  nint(obsda%lev(nn)), & ! obsda%lev includes the band num.
+                  nint(obsda_sort%lev(nn)), & ! obsda_sort%lev includes the band num.
                   obs(iset)%lon(iidx), &
                   obs(iset)%lat(iidx), &
                   ohx(n), &! O-A
-                  obsda%val(nn), &! O-B
+                  obsda_sort%val(nn), &! O-B
                   plev_obs_H08(ns), &
                   obs(iset)%dat(iidx), &
                   obs(iset)%err(iidx), &
@@ -1629,12 +1631,12 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
 
 ! ###  -- TC vital assimilation -- ###
 !  if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0 .and.&
-!    obs(obsda%set(obs_idx_TCX))%dif(obsda%idx(obs_idx_TCX)) == &
-!    obs(obsda%set(obs_idx_TCY))%dif(obsda%idx(obs_idx_TCY)) .and. &
-!    obs(obsda%set(obs_idx_TCY))%dif(obsda%idx(obs_idx_TCY)) == &
-!    obs(obsda%set(obs_idx_TCP))%dif(obsda%idx(obs_idx_TCP)) .and. & 
+!    obs(obsda_sort%set(obs_idx_TCX))%dif(obsda_sort%idx(obs_idx_TCX)) == &
+!    obs(obsda_sort%set(obs_idx_TCY))%dif(obsda_sort%idx(obs_idx_TCY)) .and. &
+!    obs(obsda_sort%set(obs_idx_TCY))%dif(obsda_sort%idx(obs_idx_TCY)) == &
+!    obs(obsda_sort%set(obs_idx_TCP))%dif(obsda_sort%idx(obs_idx_TCP)) .and. & 
 !    (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
-!    abs(obs(obsda%set(obs_idx_TCX))%dif(obsda%idx(obs_idx_TCX))) <= DEPARTURE_STAT_T_RANGE))then
+!    abs(obs(obsda_sort%set(obs_idx_TCX))%dif(obsda_sort%idx(obs_idx_TCX))) <= DEPARTURE_STAT_T_RANGE))then
 !
 !    allocate(bTC(3,0:MEM_NP-1))
 !    allocate(bufr(3,0:MEM_NP-1))
@@ -1642,7 +1644,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
 !    bTC = 9.99d33
 !    bufr = 9.99d33
 !
-!    call search_tc_subdom(obsda%ri(obs_idx_TCX),obsda%rj(obs_idx_TCX),v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
+!    call search_tc_subdom(obsda_sort%ri(obs_idx_TCX),obsda_sort%rj(obs_idx_TCX),v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
 !
 !    CALL MPI_BARRIER(MPI_COMM_d,ierr)
 !    CALL MPI_ALLREDUCE(bTC,bufr,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
@@ -1671,7 +1673,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
 !      if(bTC_MSLP < 1100.0d2) oqc(i) = iqc_good
 !
 !      if (oqc(i) == iqc_good) then
-!        ohx(i) = obs(obsda%set(i))%dat(obsda%idx(i)) - ohx(i)
+!        ohx(i) = obs(obsda_sort%set(i))%dat(obsda_sort%idx(i)) - ohx(i)
 !      end if
 !    enddo
 !
@@ -1729,9 +1731,10 @@ SUBROUTINE monit_dep(nn,elm,dep,qc,nobs,bias,rmse)
   INTEGER :: n,i,ielm
 
   nobs = 0
-  rmse = 0.0d0
   bias = 0.0d0
+  rmse = 0.0d0
 
+!!!!!!!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,ielm) REDUCTION(+:nobs,bias,rmse)
   DO n=1,nn
     IF(qc(n) /= iqc_good) CYCLE
 
@@ -1739,13 +1742,11 @@ SUBROUTINE monit_dep(nn,elm,dep,qc,nobs,bias,rmse)
     if (ielm == id_tv_obs) then ! compute Tv as T
       ielm = id_t_obs
     end if
-!!!!!!
     if (ielm == id_radar_ref_zero_obs) then ! compute RE0 as REF
       ielm = id_radar_ref_obs
     end if
-!!!!!!
-    i = uid_obs(ielm)
 
+    i = uid_obs(ielm)
     nobs(i) = nobs(i) + 1
     bias(i) = bias(i) + dep(n)
     rmse(i) = rmse(i) + dep(n)**2
@@ -1870,40 +1871,40 @@ END SUBROUTINE obs_info_deallocate
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
-SUBROUTINE obs_da_value_allocate(obs,member)
+SUBROUTINE obs_da_value_allocate(obsda,member)
   IMPLICIT NONE
-  TYPE(obs_da_value),INTENT(INOUT) :: obs
+  TYPE(obs_da_value),INTENT(INOUT) :: obsda
   INTEGER,INTENT(IN) :: member
 
-  call obs_da_value_deallocate(obs)
+  call obs_da_value_deallocate(obsda)
 
-  ALLOCATE( obs%set (obs%nobs) )
-  ALLOCATE( obs%idx (obs%nobs) )
-  ALLOCATE( obs%key (obs%nobs) )
-  ALLOCATE( obs%val (obs%nobs) )
+  ALLOCATE( obsda%set (obsda%nobs) )
+  ALLOCATE( obsda%idx (obsda%nobs) )
+  ALLOCATE( obsda%key (obsda%nobs) )
+  ALLOCATE( obsda%val (obsda%nobs) )
 #ifdef H08
-  ALLOCATE( obs%lev (obs%nobs) ) ! H08
-  ALLOCATE( obs%val2(obs%nobs) ) ! H08
+  ALLOCATE( obsda%lev (obsda%nobs) ) ! H08
+  ALLOCATE( obsda%val2(obsda%nobs) ) ! H08
 #endif
-  ALLOCATE( obs%qc  (obs%nobs) )
-  ALLOCATE( obs%ri  (obs%nobs) )
-  ALLOCATE( obs%rj  (obs%nobs) )
+  ALLOCATE( obsda%qc  (obsda%nobs) )
+  ALLOCATE( obsda%ri  (obsda%nobs) )
+  ALLOCATE( obsda%rj  (obsda%nobs) )
 
-  obs%nobs_in_key = 0
-  obs%idx = 0
-  obs%key = 0
-  obs%val = 0.0d0
+  obsda%nobs_in_key = 0
+  obsda%idx = 0
+  obsda%key = 0
+  obsda%val = 0.0d0
 #ifdef H08
-  obs%lev = 0.0d0 ! H08
-  obs%val2 = 0.0d0 ! H08
+  obsda%lev = 0.0d0 ! H08
+  obsda%val2 = 0.0d0 ! H08
 #endif
-  obs%qc = 0
-  obs%ri = 0.0d0
-  obs%rj = 0.0d0
+  obsda%qc = 0
+  obsda%ri = 0.0d0
+  obsda%rj = 0.0d0
 
   if (member > 0) then
-    ALLOCATE( obs%ensval (member,obs%nobs) )
-    obs%ensval = 0.0d0
+    ALLOCATE( obsda%ensval (member,obsda%nobs) )
+    obsda%ensval = 0.0d0
   end if
 
   RETURN
@@ -1911,24 +1912,24 @@ END SUBROUTINE obs_da_value_allocate
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
-SUBROUTINE obs_da_value_deallocate(obs)
+SUBROUTINE obs_da_value_deallocate(obsda)
   IMPLICIT NONE
-  TYPE(obs_da_value),INTENT(INOUT) :: obs
+  TYPE(obs_da_value),INTENT(INOUT) :: obsda
 
-  obs%nobs_in_key = 0
+  obsda%nobs_in_key = 0
 
-  IF(ALLOCATED(obs%set   )) DEALLOCATE(obs%set   )
-  IF(ALLOCATED(obs%idx   )) DEALLOCATE(obs%idx   )
-  IF(ALLOCATED(obs%key   )) DEALLOCATE(obs%key   )
-  IF(ALLOCATED(obs%val   )) DEALLOCATE(obs%val   )
+  IF(ALLOCATED(obsda%set   )) DEALLOCATE(obsda%set   )
+  IF(ALLOCATED(obsda%idx   )) DEALLOCATE(obsda%idx   )
+  IF(ALLOCATED(obsda%key   )) DEALLOCATE(obsda%key   )
+  IF(ALLOCATED(obsda%val   )) DEALLOCATE(obsda%val   )
 #ifdef H08
-  IF(ALLOCATED(obs%lev   )) DEALLOCATE(obs%lev   ) ! H08
-  IF(ALLOCATED(obs%val2  )) DEALLOCATE(obs%val2  ) ! H08
+  IF(ALLOCATED(obsda%lev   )) DEALLOCATE(obsda%lev   ) ! H08
+  IF(ALLOCATED(obsda%val2  )) DEALLOCATE(obsda%val2  ) ! H08
 #endif
-  IF(ALLOCATED(obs%ensval)) DEALLOCATE(obs%ensval)
-  IF(ALLOCATED(obs%qc    )) DEALLOCATE(obs%qc    )
-  IF(ALLOCATED(obs%ri    )) DEALLOCATE(obs%ri    )
-  IF(ALLOCATED(obs%rj    )) DEALLOCATE(obs%rj    )
+  IF(ALLOCATED(obsda%ensval)) DEALLOCATE(obsda%ensval)
+  IF(ALLOCATED(obsda%qc    )) DEALLOCATE(obsda%qc    )
+  IF(ALLOCATED(obsda%ri    )) DEALLOCATE(obsda%ri    )
+  IF(ALLOCATED(obsda%rj    )) DEALLOCATE(obsda%rj    )
 
   RETURN
 END SUBROUTINE obs_da_value_deallocate
@@ -2141,10 +2142,10 @@ SUBROUTINE write_obs(cfile,obs,append,missing)
   RETURN
 END SUBROUTINE write_obs
 
-SUBROUTINE read_obs_da(cfile,obs,im)
+SUBROUTINE read_obs_da(cfile,obsda,im)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
-  TYPE(obs_da_value),INTENT(INOUT) :: obs
+  TYPE(obs_da_value),INTENT(INOUT) :: obsda
   INTEGER,INTENT(IN) :: im
 #ifdef H08
 !  REAL(r_sngl) :: wk(7) ! H08
@@ -2154,25 +2155,25 @@ SUBROUTINE read_obs_da(cfile,obs,im)
 #endif
   INTEGER :: n,iunit
 
-!  call obs_da_value_allocate(obs)
+!  call obs_da_value_allocate(obsda)
 
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
-  DO n=1,obs%nobs
+  DO n=1,obsda%nobs
     READ(iunit) wk
-    obs%set(n) = NINT(wk(1))
-    obs%idx(n) = NINT(wk(2))  !!!!!! will overflow......
+    obsda%set(n) = NINT(wk(1))
+    obsda%idx(n) = NINT(wk(2))  !!!!!! will overflow......
     if (im == 0) then
-      obs%val(n) = REAL(wk(3),r_size)
+      obsda%val(n) = REAL(wk(3),r_size)
     else
-      obs%ensval(im,n) = REAL(wk(3),r_size)
+      obsda%ensval(im,n) = REAL(wk(3),r_size)
     end if
-    obs%qc(n) = NINT(wk(4))
-    obs%ri(n) = REAL(wk(5),r_size)
-    obs%rj(n) = REAL(wk(6),r_size)
+    obsda%qc(n) = NINT(wk(4))
+    obsda%ri(n) = REAL(wk(5),r_size)
+    obsda%rj(n) = REAL(wk(6),r_size)
 #ifdef H08
-    obs%lev(n) = REAL(wk(7),r_size) ! H08
-    obs%val2(n) = REAL(wk(8),r_size) ! H08
+    obsda%lev(n) = REAL(wk(7),r_size) ! H08
+    obsda%val2(n) = REAL(wk(8),r_size) ! H08
 #endif
   END DO
   CLOSE(iunit)
@@ -2180,10 +2181,10 @@ SUBROUTINE read_obs_da(cfile,obs,im)
   RETURN
 END SUBROUTINE read_obs_da
 
-SUBROUTINE write_obs_da(cfile,obs,im,append)
+SUBROUTINE write_obs_da(cfile,obsda,im,append)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
-  TYPE(obs_da_value),INTENT(IN) :: obs
+  TYPE(obs_da_value),INTENT(IN) :: obsda
   INTEGER,INTENT(IN) :: im
   LOGICAL,INTENT(IN),OPTIONAL :: append
   LOGICAL :: append_
@@ -2199,25 +2200,25 @@ SUBROUTINE write_obs_da(cfile,obs,im,append)
   append_ = .false.
   IF(present(append)) append_ = append
   IF(append_) THEN
-    IF(obs%nobs <= 0) RETURN
+    IF(obsda%nobs <= 0) RETURN
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append',STATUS='replace')
   ELSE
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential',STATUS='replace')
   END IF
-  DO n=1,obs%nobs
-    wk(1) = REAL(obs%set(n),r_sngl)
-    wk(2) = REAL(obs%idx(n),r_sngl)  !!!!!! will overflow......
+  DO n=1,obsda%nobs
+    wk(1) = REAL(obsda%set(n),r_sngl)
+    wk(2) = REAL(obsda%idx(n),r_sngl)  !!!!!! will overflow......
     if (im == 0) then
-      wk(3) = REAL(obs%val(n),r_sngl)
+      wk(3) = REAL(obsda%val(n),r_sngl)
     else
-      wk(3) = REAL(obs%ensval(im,n),r_sngl)
+      wk(3) = REAL(obsda%ensval(im,n),r_sngl)
     end if
-    wk(4) = REAL(obs%qc(n),r_sngl)
-    wk(5) = REAL(obs%ri(n),r_sngl)
-    wk(6) = REAL(obs%rj(n),r_sngl)
+    wk(4) = REAL(obsda%qc(n),r_sngl)
+    wk(5) = REAL(obsda%ri(n),r_sngl)
+    wk(6) = REAL(obsda%rj(n),r_sngl)
 #ifdef H08
-    wk(7) = REAL(obs%lev(n),r_sngl) ! H08
-    wk(8) = REAL(obs%val2(n),r_sngl) ! H08
+    wk(7) = REAL(obsda%lev(n),r_sngl) ! H08
+    wk(8) = REAL(obsda%val2(n),r_sngl) ! H08
 #endif
     WRITE(iunit) wk
   END DO

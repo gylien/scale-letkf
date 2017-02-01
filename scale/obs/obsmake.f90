@@ -1,10 +1,11 @@
 PROGRAM obsmake
 !=======================================================================
 !
-! [PURPOSE:] Main program of observation operator
+! [PURPOSE:] Main program of synthetic observation generator
 !
 ! [HISTORY:]
 !   November 2014  Guo-Yuan Lien     Created
+!   .............  See git history for the following revisions
 !
 !=======================================================================
 !$USE OMP_LIB
@@ -21,8 +22,6 @@ PROGRAM obsmake
   INTEGER :: ierr
   CHARACTER(11) :: stdoutf='NOUT-000000'
   CHARACTER(11) :: timer_fmt='(A30,F10.2)'
-
-  type(obs_info),allocatable :: obs(:)
 
 !-----------------------------------------------------------------------
 ! Initial settings
