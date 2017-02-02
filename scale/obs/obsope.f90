@@ -113,7 +113,7 @@ PROGRAM obsope
 ! Observation operator
 !-----------------------------------------------------------------------
 
-    call obsope_cal(obs)
+    call obsope_cal
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()

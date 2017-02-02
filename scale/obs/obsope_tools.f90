@@ -36,74 +36,16 @@ MODULE obsope_tools
   IMPLICIT NONE
   PUBLIC
 
-!-----------------------------------------------------------------------
-! General parameters
-!-----------------------------------------------------------------------
-
-
-
 CONTAINS
-!!-----------------------------------------------------------------------
-!! Read namelist for obsope
-!!-----------------------------------------------------------------------
-!subroutine read_nml_obsope
-!  implicit none
-
-!  call read_nml_letkf
-!  call read_nml_letkf_prc
-
-!  return
-!end subroutine read_nml_obsope
-!!-----------------------------------------------------------------------
-!! Read namelist for obsmake
-!!-----------------------------------------------------------------------
-!subroutine read_nml_obsmake
-!  implicit none
-
-!  call read_nml_letkf
-!  call read_nml_letkf_prc
-!  call read_nml_letkf_obsmake
-
-!  return
-!end subroutine read_nml_obsmake
-!-----------------------------------------------------------------------
-! PARAM_LETKF_OBSMAKE
-!-----------------------------------------------------------------------
-!subroutine read_nml_letkf_obsmake
-!  implicit none
-!  integer :: ierr
-
-!  namelist /PARAM_LETKF_OBSMAKE/ &
-!    OBSERR_U, &
-!    OBSERR_V, &
-!    OBSERR_T, &
-!    OBSERR_Q, &
-!    OBSERR_RH, &
-!    OBSERR_PS, &
-!    OBSERR_RADAR_REF, &
-!    OBSERR_RADAR_VR
-
-!  rewind(IO_FID_CONF)
-!  read(IO_FID_CONF,nml=PARAM_LETKF_OBSMAKE,iostat=ierr)
-!  if (ierr < 0) then !--- missing
-!    write(6,*) 'xxx Not found namelist. Check!'
-!    stop
-!  elseif (ierr > 0) then !--- fatal error
-!    write(6,*) 'xxx Not appropriate names in namelist LETKF_PARAM_OBSMAKE. Check!'
-!    stop
-!  endif
-
-!  return
-!end subroutine read_nml_letkf_obsmake
 
 !-----------------------------------------------------------------------
 ! Observation operator calculation
 !-----------------------------------------------------------------------
-SUBROUTINE obsope_cal(obs, obsda_return)
+SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   IMPLICIT NONE
 
-  TYPE(obs_info),INTENT(IN) :: obs(OBS_IN_NUM)
-  type(obs_da_value),OPTIONAL,INTENT(INOUT) :: obsda_return
+  type(obs_da_value),optional,intent(inout) :: obsda_return
+  integer,optional,intent(in) :: nobs_extern
   type(obs_da_value) :: obsda
   REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
@@ -599,7 +541,11 @@ SUBROUTINE obsope_cal(obs, obsda_return)
       if (present(obsda_return)) then
         ! variables without an ensemble dimension
         if (it == 1) then
-          obsda_return%nobs = nobs + obsda_return%nobs ! obsda_return%nobs: additional space for externally processed observations
+          if (present(nobs_extern)) then
+            obsda_return%nobs = nobs + nobs_extern ! additional space for externally processed observations
+          else
+            obsda_return%nobs = nobs
+          end if
           call obs_da_value_allocate(obsda_return, nensobs)
         end if
         if (nobs > 0) then
@@ -646,17 +592,6 @@ SUBROUTINE obsope_cal(obs, obsda_return)
   call obs_da_value_deallocate(obsda)
 
   deallocate ( ri, rj, v3dg, v2dg )
-
-!write(6,*) ri(1),rj(1)
-!write(6,*) '$$$$ 0'
-!!  deallocate ( ri )
-!write(6,*) '$$$$ 1'
-!!  deallocate ( rj )
-!write(6,*) '$$$$ 2'
-!!  deallocate ( v3dg )
-!write(6,*) '$$$$ 3'
-!!  deallocate ( v2dg )
-!write(6,*) '$$$$ 4'
 
 end subroutine obsope_cal
 

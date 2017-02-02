@@ -12,10 +12,10 @@ MODULE common_obs_scale
 !=======================================================================
 !
 ! [LETKF observation format]
-!   (In file, all stored in single precision float)
+!   (In files, all variables are stored in single-precision float)
 !
 !  column  description
-!     (1)  variable type (1 to nid_obs; see 'id_*_obs' parameters)
+!     (1)  variable type (1..nid_obs; see 'id_*_obs' parameters)
 !     (2)  longitude (degree)
 !     (3)  latitude (degree)
 !     (4)  level/height
@@ -29,14 +29,8 @@ MODULE common_obs_scale
 !            surface pressure (hPa)
 !     (6)  observation error
 !            unit same as observation value
-!     (7)  observation platform type (1 to nobtype+1; see 'obtypelist' array)
-!
-!  --- columns below only exist in obs2 (after the observation operator processing)
-!     (8)  observation time relative to analysis time (hour)
-!     (9)  h(x) observation in model background
-!            unit same as observation value except
-!            surface pressure (Pa)
-!    (10)  quality control mark (1=pass; others=do not pass)
+!     (7)  observation platform type (1..nobtype+1; see 'obtypelist' array)
+!     (8)  observation time relative to analysis time (sec)
 !
 !=======================================================================
 !$USE OMP_LIB

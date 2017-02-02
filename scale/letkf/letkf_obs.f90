@@ -29,6 +29,8 @@ MODULE letkf_obs
 
   type(obs_da_value),save :: obsda   ! unsortted; sorted data saved to obsda_sort, declared in common_obs_scale
 
+  integer,save :: nobs_extern
+
   ! combined obs type: {variable type (elm_u), report type (typ)}, allocated only when observations exist
   integer,save :: nctype                        ! number of combined obs type
   integer,save :: ctype_elmtyp(nid_obs,nobtype) ! array of ctype for each combination of (elm_u, typ)
@@ -58,12 +60,11 @@ MODULE letkf_obs
 
   type(obs_grid_type),allocatable,save :: obsgrd(:)
 
-  integer,save :: nobs_ext
-
   integer,save :: nobstotalg
   integer,save :: nobstotal
 !  integer,save :: maxnobs_sub_per_ctype
   integer,save :: maxnobs_per_ctype
+
 CONTAINS
 !-----------------------------------------------------------------------
 ! Initialize
@@ -103,6 +104,8 @@ SUBROUTINE set_letkf_obs
 
   integer :: nobs_elms(nid_obs)
   integer :: nobs_elms_sum(nid_obs)
+
+  integer :: nobs_intern
 
 
   character(len=3) :: use_obs_print
@@ -155,13 +158,14 @@ SUBROUTINE set_letkf_obs
     im = proc2mem(1,it,myrank+1)
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
       if (it == 1) then
-        WRITE(6,'(A,I10)') 'Internally processed observations: ', obsda%nobs - nobs_ext
-        WRITE(6,'(A,I10)') 'Externally processed observations: ', nobs_ext
+        nobs_intern = obsda%nobs - nobs_extern
+        WRITE(6,'(A,I10)') 'Internally processed observations: ', nobs_intern
+        WRITE(6,'(A,I10)') 'Externally processed observations: ', nobs_extern
         WRITE(6,'(A,I10)') 'Total                observations: ', obsda%nobs
       end if
 
-      if (OBSDA_IN .and. nobs_ext > 0) then
-        obsda_ext%nobs = nobs_ext
+      if (OBSDA_IN .and. nobs_extern > 0) then
+        obsda_ext%nobs = nobs_extern
         call obs_da_value_allocate(obsda_ext,0)
         write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is reading externally processed observations for member ', &
               im, ', subdomain id #', proc2mem(2,it,myrank+1)
@@ -191,50 +195,52 @@ SUBROUTINE set_letkf_obs
 
         ! variables without an ensemble dimension
         if (it == 1) then
-          obsda%set(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%set
-          obsda%idx(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%idx
-          obsda%ri(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%ri
-          obsda%rj(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%rj
-          obsda%qc(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%qc
+          obsda%set(nobs_intern+1:obsda%nobs) = obsda_ext%set
+          obsda%idx(nobs_intern+1:obsda%nobs) = obsda_ext%idx
+          obsda%ri(nobs_intern+1:obsda%nobs) = obsda_ext%ri
+          obsda%rj(nobs_intern+1:obsda%nobs) = obsda_ext%rj
+          obsda%qc(nobs_intern+1:obsda%nobs) = obsda_ext%qc
 #ifdef H08
-          obsda%lev(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%lev
-          obsda%val2(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%val2
+          obsda%lev(nobs_intern+1:obsda%nobs) = obsda_ext%lev
+          obsda%val2(nobs_intern+1:obsda%nobs) = obsda_ext%val2
 #endif
         else
 #ifdef DEBUG
-          if (maxval(abs(obsda%set(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%set)) > 0) then
+          if (maxval(abs(obsda%set(nobs_intern+1:obsda%nobs) - obsda_ext%set)) > 0) then
             write (6,'(A)') 'error: obsda%set are inconsistent among the ensemble'
             stop 99
           end if
-          if (maxval(abs(obsda%idx(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%idx)) > 0) then
+          if (maxval(abs(obsda%idx(nobs_intern+1:obsda%nobs) - obsda_ext%idx)) > 0) then
             write (6,'(A)') 'error: obsda%idx are inconsistent among the ensemble'
             stop 99
           end if
-          if (maxval(abs(obsda%ri(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%ri)) > 1.e-6) then
+          if (maxval(abs(obsda%ri(nobs_intern+1:obsda%nobs) - obsda_ext%ri)) > 1.e-6) then
             write (6,'(A)') 'error: obsda%ri are inconsistent among the ensemble'
             stop 99
           end if
-          if (maxval(abs(obsda%rj(obsda%nobs-nobs_ext+1:obsda%nobs) - obsda_ext%rj)) > 1.e-6) then
+          if (maxval(abs(obsda%rj(nobs_intern+1:obsda%nobs) - obsda_ext%rj)) > 1.e-6) then
             write (6,'(A)') 'error: obsda%rj are inconsistent among the ensemble'
             stop 99
           end if
 #endif
-          obsda%qc(obsda%nobs-nobs_ext+1:obsda%nobs) = max(obsda%qc(obsda%nobs-nobs_ext+1:obsda%nobs), obsda_ext%qc)
+          obsda%qc(nobs_intern+1:obsda%nobs) = max(obsda%qc(nobs_intern+1:obsda%nobs), obsda_ext%qc)
 #ifdef H08
           if (im <= MEMBER) then ! only consider lev, val2 from members, not from the means
-            obsda%lev(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda%lev(obsda%nobs-nobs_ext+1:obsda%nobs) + obsda_ext%lev
-            obsda%val2(obsda%nobs-nobs_ext+1:obsda%nobs) = obsda%val2(obsda%nobs-nobs_ext+1:obsda%nobs) + obsda_ext%val2
+            obsda%lev(nobs_intern+1:obsda%nobs) = obsda%lev(nobs_intern+1:obsda%nobs) + obsda_ext%lev
+            obsda%val2(nobs_intern+1:obsda%nobs) = obsda%val2(nobs_intern+1:obsda%nobs) + obsda_ext%val2
           end if
 #endif
         end if
 
         ! variables with an ensemble dimension
         if (im == mmdetin) then
-          obsda%ensval(mmdetobs,obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%val
+          obsda%ensval(mmdetobs,nobs_intern+1:obsda%nobs) = obsda_ext%val
         else
-          obsda%ensval(im,obsda%nobs-nobs_ext+1:obsda%nobs) = obsda_ext%val
+          obsda%ensval(im,nobs_intern+1:obsda%nobs) = obsda_ext%val
         end if
-      end if ! [ OBSDA_IN .and. nobs_ext > 0 ]
+
+        call obs_da_value_deallocate(obsda_ext)
+      end if ! [ OBSDA_IN .and. nobs_extern > 0 ]
     end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
   end do ! [ it = 1, nitmax ]
 

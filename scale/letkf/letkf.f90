@@ -18,7 +18,8 @@ PROGRAM letkf
   USE common_nml
   USE letkf_obs
   USE letkf_tools
-  USE obsope_tools
+  use obsope_tools, only: &
+    obsope_cal
 
   IMPLICIT NONE
   REAL(r_size),ALLOCATABLE :: gues3d(:,:,:,:)
@@ -33,9 +34,6 @@ PROGRAM letkf
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
   integer :: iarg
-
-  character(filelenmax) :: obsdafile
-  character(11) :: obsda_suffix = '.000000.dat'
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -143,33 +141,17 @@ PROGRAM letkf
 ! Observation operator
 !-----------------------------------------------------------------------
 
-    ! get the number of externally processed observations first
-    !!!!!! read from process 0 and broadcast !!!!!!
     if (OBSDA_IN) then
-      if ((proc2mem(1,1,myrank+1) >= 1 .and. proc2mem(1,1,myrank+1) <= MEMBER) .or. &
-          proc2mem(1,1,myrank+1) == mmdetin) then
-        if (proc2mem(1,1,myrank+1) <= MEMBER) then
-          call file_member_replace(proc2mem(1,1,myrank+1), OBSDA_IN_BASENAME, obsdafile)
-        else if (proc2mem(1,1,myrank+1) == mmean) then
-          obsdafile = OBSDA_MEAN_IN_BASENAME
-        else if (proc2mem(1,1,myrank+1) == mmdet) then
-          obsdafile = OBSDA_MDET_IN_BASENAME
-        end if
-        write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,1,myrank+1)
-#ifdef H08
-        CALL get_nobs(trim(obsdafile)//obsda_suffix,8,nobs_ext) ! H08
-#else
-        CALL get_nobs(trim(obsdafile)//obsda_suffix,6,nobs_ext)
-#endif
-      end if
+      call get_nobs_da_mpi(nobs_extern)
     else
-      nobs_ext = 0
+      nobs_extern = 0
     end if
 
-    ! compute observation operator, return the results in obsda
+    !
+    ! Compute observation operator, return the results in obsda
     ! with additional space for externally processed observations
-    obsda%nobs = nobs_ext
-    call obsope_cal(obs, obsda_return=obsda)
+    !
+    call obsope_cal(obsda_return=obsda, nobs_extern=nobs_extern)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()

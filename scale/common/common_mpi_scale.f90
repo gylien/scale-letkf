@@ -103,9 +103,10 @@ module common_mpi_scale
 !  character(9) scale_filename = 'file.0000'
 
 contains
-!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 ! initialize_mpi_scale
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine initialize_mpi_scale
   use scale_process, only: &
      PRC_MPIstart, &
@@ -136,9 +137,10 @@ subroutine initialize_mpi_scale
 
   return
 end subroutine initialize_mpi_scale
-!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 ! finalize_mpi_scale
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine finalize_mpi_scale
 !  use scale_process, only: PRC_MPIfinish
   implicit none
@@ -149,9 +151,10 @@ subroutine finalize_mpi_scale
 
   return
 end subroutine finalize_mpi_scale
-!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 ! set_common_mpi_scale
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 SUBROUTINE set_common_mpi_scale
   use scale_grid_index, only: &
     IHALO, &
@@ -236,9 +239,10 @@ SUBROUTINE set_common_mpi_scale
 
   RETURN
 END SUBROUTINE set_common_mpi_scale
-!-----------------------------------------------------------------------
-! set_common_mpi_scale
-!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+! unset_common_mpi_scale
+!-------------------------------------------------------------------------------
 SUBROUTINE unset_common_mpi_scale
   implicit none
   integer:: ierr
@@ -250,9 +254,9 @@ SUBROUTINE unset_common_mpi_scale
   RETURN
 END SUBROUTINE unset_common_mpi_scale
 
-
-
-
+!-------------------------------------------------------------------------------
+! set_common_mpi_grid
+!-------------------------------------------------------------------------------
 subroutine set_common_mpi_grid
   use scale_grid_index, only: &
     IHALO, &
@@ -308,11 +312,9 @@ subroutine set_common_mpi_grid
 
 end subroutine set_common_mpi_grid
 
-
-
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! set_mem_node_proc
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 SUBROUTINE set_mem_node_proc(mem)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: mem
@@ -410,16 +412,9 @@ mem_loop: DO it = 1, nitmax
   RETURN
 END SUBROUTINE
 
-
-
-
-
-
-
-
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! Start using SCALE library
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine set_scalelib
 
   use scale_stdio, only: &
@@ -683,9 +678,9 @@ subroutine set_scalelib
   return
 end subroutine set_scalelib
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! Finish using SCALE library
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine unset_scalelib
   use gtool_file, only: &
     FileCloseAll
@@ -709,14 +704,9 @@ subroutine unset_scalelib
   return
 end subroutine unset_scalelib
 
-
-
-
-
-
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! Scatter gridded data to processes (nrank -> all)
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 SUBROUTINE scatter_grd_mpi(nrank,v3dg,v2dg,v3d,v2d)
   INTEGER,INTENT(IN) :: nrank
   REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
@@ -765,9 +755,10 @@ SUBROUTINE scatter_grd_mpi(nrank,v3dg,v2dg,v3d,v2d)
 
   RETURN
 END SUBROUTINE scatter_grd_mpi
-!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 ! Gather gridded data (all -> nrank)
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
   INTEGER,INTENT(IN) :: nrank
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
@@ -816,7 +807,6 @@ SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
 
   RETURN
 END SUBROUTINE gather_grd_mpi
-
 
 !-------------------------------------------------------------------------------
 ! Read ensemble SCALE history files, one file per time (iter)
@@ -1048,10 +1038,9 @@ subroutine write_ens_mpi(v3d, v2d, monit, caption)
   return
 end subroutine write_ens_mpi
 
-
-
-
-
+!-------------------------------------------------------------------------------
+! Scatter gridded data using MPI_ALLTOALL(V) (mstart~mend -> all)
+!-------------------------------------------------------------------------------
 SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
   INTEGER,INTENT(IN) :: mstart,mend
   REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
@@ -1110,10 +1099,9 @@ SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
   RETURN
 END SUBROUTINE scatter_grd_mpi_alltoall
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! Gather gridded data using MPI_ALLTOALL(V) (all -> mstart~mend)
-!-----------------------------------------------------------------------
-
+!-------------------------------------------------------------------------------
 SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,v3d,v2d,v3dg,v2dg)
   INTEGER,INTENT(IN) :: mstart,mend
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nens,nv3d)
@@ -1172,9 +1160,9 @@ SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,v3d,v2d,v3dg,v2dg)
   RETURN
 END SUBROUTINE gather_grd_mpi_alltoall
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! Set the send/recieve counts of MPI_ALLTOALLV
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 SUBROUTINE set_alltoallv_counts(mcount,ngpblock,np,n_ens,nt_ens,n_mem,nt_mem)
   INTEGER,INTENT(IN) :: mcount,ngpblock
   INTEGER,INTENT(IN) :: np
@@ -1199,10 +1187,9 @@ SUBROUTINE set_alltoallv_counts(mcount,ngpblock,np,n_ens,nt_ens,n_mem,nt_mem)
   RETURN
 END SUBROUTINE set_alltoallv_counts
 
-
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! gridded data -> buffer
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 SUBROUTINE grd_to_buf(np,grd,buf)
   INTEGER,INTENT(IN) :: np
   REAL(RP),INTENT(IN) :: grd(nlon,nlat)
@@ -1231,9 +1218,10 @@ end if
 
   RETURN
 END SUBROUTINE grd_to_buf
-!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 ! buffer -> gridded data
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 SUBROUTINE buf_to_grd(np,buf,grd)
   INTEGER,INTENT(IN) :: np
   REAL(RP),INTENT(IN) :: buf(nij1max,np)
@@ -1512,12 +1500,11 @@ subroutine write_enssprd(filename, v3d, v2d)
   return
 end subroutine write_enssprd
 
-!-----------------------------------------------------------------------
-! 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Read all observation data from files of various formats
+!-------------------------------------------------------------------------------
 subroutine read_obs_all_mpi(obs)
   implicit none
-
   type(obs_info), intent(out) :: obs(OBS_IN_NUM)
   integer :: iof, ierr
 
@@ -1568,6 +1555,51 @@ subroutine read_obs_all_mpi(obs)
 
   return
 end subroutine read_obs_all_mpi
+
+!-------------------------------------------------------------------------------
+! Read all observation data from files of various formats
+!-------------------------------------------------------------------------------
+subroutine get_nobs_da_mpi(nobs)
+  implicit none
+  integer, intent(out) :: nobs
+  character(filelenmax) :: obsdafile
+  character(11) :: obsda_suffix = '.000000.dat'
+  integer :: ierr
+
+! read from all available data by every processes
+!-----------------------------
+!  if ((proc2mem(1,1,myrank+1) >= 1 .and. proc2mem(1,1,myrank+1) <= MEMBER) .or. &
+!      proc2mem(1,1,myrank+1) == mmdetin) then
+!    if (proc2mem(1,1,myrank+1) <= MEMBER) then
+!      call file_member_replace(proc2mem(1,1,myrank+1), OBSDA_IN_BASENAME, obsdafile)
+!    else if (proc2mem(1,1,myrank+1) == mmean) then
+!      obsdafile = OBSDA_MEAN_IN_BASENAME
+!    else if (proc2mem(1,1,myrank+1) == mmdet) then
+!      obsdafile = OBSDA_MDET_IN_BASENAME
+!    end if
+!    write (obsda_suffix(2:7), '(I6.6)') proc2mem(2,1,myrank+1)
+!#ifdef H08
+!    call get_nobs(trim(obsdafile) // obsda_suffix, 8, nobs) ! H08
+!#else
+!    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs)
+!#endif
+!  end if
+
+! read by process 0 and broadcast
+!-----------------------------
+  if (myrank_e == 0) then
+    write (obsda_suffix(2:7), '(I6.6)') proc2mem(2,1,myrank+1)
+#ifdef H08
+    call get_nobs(trim(obsdafile) // obsda_suffix, 8, nobs) ! H08
+#else
+    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs)
+#endif
+  end if
+  call MPI_BCAST(nobs, 1, MPI_INTEGER, 0, MPI_COMM_e, ierr)
+!-----------------------------
+
+  return
+end subroutine get_nobs_da_mpi
 
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)
 !SUBROUTINE read_obs2_mpi(obsfile,nn,nbv,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,hdxf,iqc)
