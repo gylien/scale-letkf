@@ -51,7 +51,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
 
   integer :: it,islot,proc,im,iof
-  integer :: n,nn,nslot,nobs,nobs_0,nobs_slot,nobs_alldomain
+  integer :: n,nn,nslot,nobs,nobs_slot,nobs_alldomain
 
 
   integer :: nobs_max_per_file, nobs_max_per_file_sub
@@ -418,8 +418,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       obsda%qc = iqc_time
 
       do islot = SLOT_START, SLOT_END
-!!!        slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
-!!!        slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
+        slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
+        slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
         write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
 
         call read_ens_history_iter(it,islot,v3dg,v2dg)
@@ -562,11 +562,10 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
 !write(6,*) '%%%===', MPI_WTIME(), nobs_0 + 1, nobs
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,rk)
-
             n1 = bsna(islot-1, myrank_d) - bsna(SLOT_START-1, myrank_d) + 1
             n2 = bsna(islot, myrank_d) - bsna(SLOT_START-1, myrank_d)
 
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk)
             do nn = n1, n2
 !!!            do nn = nobs_0 + 1, nobs
               iof = obsda%set(nn)
