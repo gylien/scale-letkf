@@ -116,9 +116,9 @@ SUBROUTINE set_letkf_obs
 
 
 !---
-  integer :: ns
-  integer :: nr(MEM_NP)
-  integer :: nrt(MEM_NP)
+  integer :: cnts
+  integer :: cntr(MEM_NP)
+  integer :: dspr(MEM_NP)
   integer, allocatable :: obsidx(:)
 
   integer :: nk
@@ -1045,9 +1045,9 @@ SUBROUTINE set_letkf_obs
 
     ! a) Make send buffer with sorted order
     !---------------------------------------------------------------------------
-    ns = 0
-    nr = 0
-    nrt = 0
+    cnts = 0
+    cntr = 0
+    dspr = 0
 
     do ictype = 1, nctype
       call rank_1d_2d(ip, iproc, jproc)
@@ -1066,20 +1066,20 @@ SUBROUTINE set_letkf_obs
           if (imin2 > imax2 .or. jmin2 > jmax2) cycle
 
           if (myrank_d == ip2) then
-            call obs_choose(ictype,ip2,imin2,imax2,jmin2,jmax2,nr(ip2+1),obsidx)
+            call obs_choose(ictype,ip2,imin2,imax2,jmin2,jmax2,cntr(ip2+1),obsidx)
           else
-            call obs_choose(ictype,ip2,imin2,imax2,jmin2,jmax2,nr(ip2+1))
+            call obs_choose(ictype,ip2,imin2,imax2,jmin2,jmax2,cntr(ip2+1))
           end if
         end if ! [ ip2 /= ip ]
       end do ! [ ip2 = 0, MEM_NP-1 ]
     end do ! [ ictype = 1, nctype ]
 
     do ip2 = 1, MEM_NP-1
-      nrt(ip2+1) = nrt(ip2) + nr(ip2)
+      dspr(ip2+1) = dspr(ip2) + cntr(ip2)
     end do ! [ ip2 = 1, MEM_NP-1 ]
 
-    ns = nr(myrank_d+1)  ! When myrank_d == ip, this should be 0.
-    do n = 1, ns
+    cnts = cntr(myrank_d+1)  ! When myrank_d == ip, this should be 0.
+    do n = 1, cnts
       obsbufs%set(n) = obsda%set(obsda%key(obsidx(n)))
       obsbufs%idx(n) = obsda%idx(obsda%key(obsidx(n)))
       obsbufs%val(n) = obsda%val(obsda%key(obsidx(n)))
@@ -1094,20 +1094,20 @@ SUBROUTINE set_letkf_obs
 
     ! b) GATHERV observation data
     !---------------------------------------------------------------------------
-    if (nrt(MEM_NP) + nr(MEM_NP) <= 0) cycle
+    if (dspr(MEM_NP) + cntr(MEM_NP) <= 0) cycle
 
-    obsbufr%nobs = nrt(MEM_NP) + nr(MEM_NP)
+    obsbufr%nobs = dspr(MEM_NP) + cntr(MEM_NP)
     call obs_da_value_allocate(obsbufr, nensobs)
 
-    call MPI_GATHERV(obsbufs%set, ns, MPI_INTEGER, obsbufr%set, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
-    call MPI_GATHERV(obsbufs%idx, ns, MPI_INTEGER, obsbufr%idx, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
-    call MPI_GATHERV(obsbufs%val, ns, MPI_r_size, obsbufr%val, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
-    call MPI_GATHERV(obsbufs%ensval, ns*nensobs, MPI_r_size, obsbufr%ensval, nr*nensobs, nrt*nensobs, MPI_r_size, ip, MPI_COMM_d, ierr)
-    call MPI_GATHERV(obsbufs%qc, ns, MPI_INTEGER, obsbufr%qc, nr, nrt, MPI_INTEGER, ip, MPI_COMM_d, ierr)
-    call MPI_GATHERV(obsbufs%ri, ns, MPI_r_size, obsbufr%ri, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
-    call MPI_GATHERV(obsbufs%rj, ns, MPI_r_size, obsbufr%rj, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%set, cnts, MPI_INTEGER, obsbufr%set, cntr, dspr, MPI_INTEGER, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%idx, cnts, MPI_INTEGER, obsbufr%idx, cntr, dspr, MPI_INTEGER, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%val, cnts, MPI_r_size, obsbufr%val, cntr, dspr, MPI_r_size, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%ensval, cnts*nensobs, MPI_r_size, obsbufr%ensval, cntr*nensobs, dspr*nensobs, MPI_r_size, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%qc, cnts, MPI_INTEGER, obsbufr%qc, cntr, dspr, MPI_INTEGER, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%ri, cnts, MPI_r_size, obsbufr%ri, cntr, dspr, MPI_r_size, ip, MPI_COMM_d, ierr)
+    call MPI_GATHERV(obsbufs%rj, cnts, MPI_r_size, obsbufr%rj, cntr, dspr, MPI_r_size, ip, MPI_COMM_d, ierr)
 #ifdef H08
-    call MPI_GATHERV(obsbufs%lev, ns, MPI_r_size, obsbufr%lev, nr, nrt, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
+    call MPI_GATHERV(obsbufs%lev, cnts, MPI_r_size, obsbufr%lev, cntr, dspr, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
 #endif
 
     ! c) In the domain receiving data, copy the receive buffer to obsda_sort
@@ -1120,10 +1120,10 @@ SUBROUTINE set_letkf_obs
         if (ip2 /= ip) then
 
 #ifdef DEBUG
-          if (ne_bufr /= nrt(ip2+1)) then
+          if (ne_bufr /= dspr(ip2+1)) then
             write (6, '(A)') '[Error] Error in copying receive buffer !!!'
-            write (6, *) ip, ip2, ne_bufr, nrt(ip2+1)
-            write (6, *) nrt(:)
+            write (6, *) ip, ip2, ne_bufr, dspr(ip2+1)
+            write (6, *) dspr(:)
             stop 99
           end if 
 #endif
