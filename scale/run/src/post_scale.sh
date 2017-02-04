@@ -50,7 +50,7 @@ if [ "$SCPCALL" = 'cycle' ]; then
 
   ATIME=$(datetime $STIME $LCYCLE s)
 
-  if [ "$MEM" == 'mean' ]; then ###### using a variable for 'mean', 'sprd'
+  if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
 
     mkdir -p $TMPOUT/${STIME}/hist/mean
     mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/hist/mean
@@ -124,7 +124,7 @@ if [ "$SCPCALL" = 'cycle' ]; then
       done
     fi
 
-    if ((DELETE_MEMBER == 1)); then
+    if ((DELETE_MEMBER == 1)) && [ "$MEM" != 'mdet' ]; then
       if [ -d "$TMPOUT/${STIME}/anal/${MEM}" ]; then
         rm -f $TMPOUT/${STIME}/anal/${MEM}/*
       fi

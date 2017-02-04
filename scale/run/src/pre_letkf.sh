@@ -39,7 +39,7 @@ NOBS_OUT="${1:-0}"
 
 #===============================================================================
 
-if [ "$MEM" == 'mean' ]; then ###### using a variable for 'mean', 'sprd'
+if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'sprd'
   for ifile in $(cd $TMPOUT/${ATIME}/anal/mean ; ls init*.nc 2> /dev/null); do
     if ((ADAPTINFL == 1)) && [ ! -s "$TMPOUT/${ATIME}/diag/infl" ]; then
       mkdir -p $TMPOUT/${ATIME}/diag/infl
