@@ -96,18 +96,18 @@ fi
 RESTART_OUT_NUM_COPIES=1
 if [ "$SCPCALL" = 'cycle' ]; then
   IO_LOG_DIR='scale'
-  if [ "$MEM" == 'mean' ]; then ###### using a variable for 'mean', 'sprd'
-    RESTART_OUT_NUM_COPIES=5
+  if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
+    RESTART_OUT_NUM_COPIES=4
     if ((RTPS_INFL_OUT == 1)); then
       RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+1))
     fi
     if ((NOBS_OUT == 1)); then
       RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+1))
     fi
-  else
-    if ((OUT_OPT <= 3)); then
-      RESTART_OUT_NUM_COPIES=2
-    fi
+  elif [ "$MEM" = 'mdet' ]; then
+    RESTART_OUT_NUM_COPIES=2
+  elif ((OUT_OPT <= 3)); then
+    RESTART_OUT_NUM_COPIES=2
   fi
 else
   IO_LOG_DIR="${SCPCALL}_scale"

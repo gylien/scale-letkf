@@ -115,13 +115,15 @@ if [ "$SCPCALL" = 'cycle' ]; then
       mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/anal/${MEM}/init${ifile:$restartbaselen}
     done
 
-    if ((OUT_OPT <= 3 && ENABLE_PARAM_USER == 1)); then
-      mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
-      file_prefix="restart_2_${ATIME:0:8}-${ATIME:8:6}.000"
-      restartbaselen=29
-      for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
-        mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/gues/${MEM}/init${ifile:$restartbaselen}
-      done
+    if ((ENABLE_PARAM_USER == 1)); then
+      if ((OUT_OPT <= 3)) || [ "$MEM" = 'mdet' ]; then
+        mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
+        file_prefix="restart_2_${ATIME:0:8}-${ATIME:8:6}.000"
+        restartbaselen=29
+        for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
+          mv -f ${TMPDIR}/${ifile} $TMPOUT/${ATIME}/gues/${MEM}/init${ifile:$restartbaselen}
+        done
+      fi
     fi
 
     if ((DELETE_MEMBER == 1)) && [ "$MEM" != 'mdet' ]; then
