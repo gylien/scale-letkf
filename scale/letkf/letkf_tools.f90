@@ -233,7 +233,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           END IF                                                                       !GYL
           IF(NOBS_OUT) THEN                                                            !GYL
             work3dn(:,ij,ilev,n) = real(sum(nobsl_t, dim=1),r_size)                    !GYL
-            work3dn(21,ij,ilev,n) = real(nobsl_t(9,22),r_size)                         !GYL !!! addtionally save ref nobs in a special place
+            work3dn(19,ij,ilev,n) = real(nobsl_t(9,22),r_size)                         !GYL !!! addtionally save ref nobs in a special place
+            work3dn(20,ij,ilev,n) = real(nobsl_t(10,22),r_size)                        !GYL !!! addtionally save re0 nobs in a special place
+            work3dn(21,ij,ilev,n) = real(nobsl_t(11,22),r_size)                        !GYL !!! addtionally save vr  nobs in a special place
           END IF                                                                       !GYL
         END IF
 
@@ -352,7 +354,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             END IF                                                                     !GYL
             IF(NOBS_OUT) THEN                                                          !GYL
               work2dn(:,ij,n) = real(sum(nobsl_t,dim=1),r_size)                        !GYL
-              work2dn(21,ij,n) = real(nobsl_t(9,22),r_size)                            !GYL !!! addtionally save ref nobs in a special place
+              work2dn(19,ij,n) = real(nobsl_t(9,22),r_size)                            !GYL !!! addtionally save ref nobs in a special place
+              work2dn(20,ij,n) = real(nobsl_t(10,22),r_size)                           !GYL !!! addtionally save ref nobs in a special place
+              work2dn(21,ij,n) = real(nobsl_t(11,22),r_size)                           !GYL !!! addtionally save ref nobs in a special place
             END IF                                                                     !GYL
           END IF
 
@@ -458,8 +462,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     work3d(:,:,2) = work3dn(3,:,:,iv3d_t)  !!! use "variable dimenstion" to save obs numbers of different observation types
     work3d(:,:,3) = work3dn(4,:,:,iv3d_t)
     work3d(:,:,4) = work3dn(8,:,:,iv3d_t)
-    work3d(:,:,5) = work3dn(21,:,:,iv3d_t)
-    work3d(:,:,6) = work3dn(22,:,:,iv3d_t)
+    work3d(:,:,5) = work3dn(19,:,:,iv3d_t)
+    work3d(:,:,6) = work3dn(20,:,:,iv3d_t)
+    work3d(:,:,7) = work3dn(21,:,:,iv3d_t)
+    work3d(:,:,8) = work3dn(22,:,:,iv3d_t)
     CALL gather_grd_mpi(mmean_rank_e,work3d,work2d,work3dg,work2dg)
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',NOBS_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
@@ -968,19 +974,17 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   real(r_size) :: hori_loc
 
   !-----------------------------------------------------------------------------
-
-  if (nobstotal == 0) then
-    nobsl = 0
-    if (present(nobsl_t)) then
-      nobsl_t(:,:) = 0
-    end if  
-  end if
-
-  !-----------------------------------------------------------------------------
   ! Initialize
   !-----------------------------------------------------------------------------
 
   nobsl = 0
+  if (present(nobsl_t)) then
+    nobsl_t(:,:) = 0
+  end if
+
+  if (nobstotal == 0) then
+    return
+  end if
 
   if (maxval(MAX_NOBS_PER_GRID(:)) > 0) then
     allocate (nobs_use (nobstotal))
