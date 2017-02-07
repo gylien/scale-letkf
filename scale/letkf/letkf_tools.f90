@@ -74,6 +74,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   INTEGER :: ij,ilev,n,m,i,k,nobsl
   INTEGER :: nobsl_t(nid_obs,nobtype)            !GYL
+  REAL(r_size) :: cutd_t(nid_obs,nobtype)        !GYL
   REAL(r_size) :: beta                           !GYL
   REAL(r_size) :: tmpinfl                        !GYL
   REAL(r_size) :: q_mean,q_sprd                  !GYL
@@ -116,8 +117,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Observation number limit (*to be moved to namelist*)
   !
   ctype_merge(:,:) = 0
-  ctype_merge(uid_obs(id_radar_ref_obs),22) = 1
-  ctype_merge(uid_obs(id_radar_ref_zero_obs),22) = 1
+!  ctype_merge(uid_obs(id_radar_ref_obs),22) = 1
+!  ctype_merge(uid_obs(id_radar_ref_zero_obs),22) = 1
   !
   ! FCST PERTURBATIONS
   !
@@ -175,7 +176,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! NOBS output
   !
   IF(NOBS_OUT) THEN
-    allocate (work3dn(nobtype,nij1,nlev,nv3d))
+    allocate (work3dn(nobtype+6,nij1,nlev,nv3d))
     allocate (work2dn(nobtype,nij1,nv2d))
     work3dn = 0.0d0
     work2dn = 0.0d0
@@ -192,7 +193,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   DO ilev=1,nlev
     WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,parm,beta,trans,transm,transmd,transrlx,pa,tmpinfl,q_mean,q_sprd,q_anal)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,trans,transm,transmd,transrlx,pa,tmpinfl,q_mean,q_sprd,q_anal)
     DO ij=1,nij1
 !      WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
 
@@ -214,7 +215,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           END IF                                                                       !GYL
         ELSE
           ! compute weights with localized observations
-          CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,depd=depd)
+          CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t)
           IF(RELAX_TO_INFLATED_PRIOR) THEN                                             !GYL
             parm = work3d(ij,ilev,n)                                                   !GYL
           ELSE                                                                         !GYL
@@ -232,10 +233,13 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                             depd=depd,transmd=transmd(:,n))                            !GYL
           END IF                                                                       !GYL
           IF(NOBS_OUT) THEN                                                            !GYL
-            work3dn(:,ij,ilev,n) = real(sum(nobsl_t, dim=1),r_size)                    !GYL
-            work3dn(19,ij,ilev,n) = real(nobsl_t(9,22),r_size)                         !GYL !!! addtionally save ref nobs in a special place
-            work3dn(20,ij,ilev,n) = real(nobsl_t(10,22),r_size)                        !GYL !!! addtionally save re0 nobs in a special place
-            work3dn(21,ij,ilev,n) = real(nobsl_t(11,22),r_size)                        !GYL !!! addtionally save vr  nobs in a special place
+            work3dn(:,ij,ilev,n) = real(sum(nobsl_t, dim=1),r_size)                    !GYL !!! NOBS: sum over all variables for each report type
+            work3dn(nobtype+1,ij,ilev,n) = real(nobsl_t(9,22),r_size)                  !GYL !!! NOBS: ref
+            work3dn(nobtype+2,ij,ilev,n) = real(nobsl_t(10,22),r_size)                 !GYL !!! NOBS: re0
+            work3dn(nobtype+3,ij,ilev,n) = real(nobsl_t(11,22),r_size)                 !GYL !!! NOBS: vr
+            work3dn(nobtype+4,ij,ilev,n) = real(cutd_t(9,22),r_size)                   !GYL !!! CUTOFF_DIST: ref
+            work3dn(nobtype+5,ij,ilev,n) = real(cutd_t(10,22),r_size)                  !GYL !!! CUTOFF_DIST: re0
+            work3dn(nobtype+6,ij,ilev,n) = real(cutd_t(11,22),r_size)                  !GYL !!! CUTOFF_DIST: vr
           END IF                                                                       !GYL
         END IF
 
@@ -335,7 +339,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             END IF                                                                     !GYL
           ELSE
             ! compute weights with localized observations
-            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,depd=depd)
+            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t)
             IF(RELAX_TO_INFLATED_PRIOR) THEN                                           !GYL
               parm = work2d(ij,n)                                                      !GYL
             ELSE                                                                       !GYL
@@ -353,10 +357,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                               depd=depd,transmd=transmd(:,nv3d+n))                     !GYL
             END IF                                                                     !GYL
             IF(NOBS_OUT) THEN                                                          !GYL
-              work2dn(:,ij,n) = real(sum(nobsl_t,dim=1),r_size)                        !GYL
-              work2dn(19,ij,n) = real(nobsl_t(9,22),r_size)                            !GYL !!! addtionally save ref nobs in a special place
-              work2dn(20,ij,n) = real(nobsl_t(10,22),r_size)                           !GYL !!! addtionally save ref nobs in a special place
-              work2dn(21,ij,n) = real(nobsl_t(11,22),r_size)                           !GYL !!! addtionally save ref nobs in a special place
+              work2dn(:,ij,n) = real(sum(nobsl_t,dim=1),r_size)                        !GYL !!! NOBS: sum over all variables for each report type
             END IF                                                                     !GYL
           END IF
 
@@ -462,10 +463,13 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     work3d(:,:,2) = work3dn(3,:,:,iv3d_t)  !!! use "variable dimenstion" to save obs numbers of different observation types
     work3d(:,:,3) = work3dn(4,:,:,iv3d_t)
     work3d(:,:,4) = work3dn(8,:,:,iv3d_t)
-    work3d(:,:,5) = work3dn(19,:,:,iv3d_t)
-    work3d(:,:,6) = work3dn(20,:,:,iv3d_t)
-    work3d(:,:,7) = work3dn(21,:,:,iv3d_t)
-    work3d(:,:,8) = work3dn(22,:,:,iv3d_t)
+    work3d(:,:,5) = work3dn(22,:,:,iv3d_t)
+    work3d(:,:,6) = work3dn(nobtype+1,:,:,iv3d_t)
+    work3d(:,:,7) = work3dn(nobtype+2,:,:,iv3d_t)
+    work3d(:,:,8) = work3dn(nobtype+3,:,:,iv3d_t)
+    work3d(:,:,9) = work3dn(nobtype+4,:,:,iv3d_t)
+    work3d(:,:,10) = work3dn(nobtype+5,:,:,iv3d_t)
+    work3d(:,:,11) = work3dn(nobtype+6,:,:,iv3d_t)
     CALL gather_grd_mpi(mmean_rank_e,work3d,work2d,work3dg,work2dg)
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',NOBS_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
@@ -922,9 +926,11 @@ END SUBROUTINE das_letkf
 !   rloc    : localization weights
 !   dep     : observation departure
 !   nobsl   : number of valid observations (in hdxf, rdiag, rloc, dep)
-!   nobsl_t : (optional) number of valid observations wrt. observation variables/types
+!   depd    : (optional) observation departure for the deterministic run
+!   nobsl_t : (optional) number of assimilated observations wrt. observation variables/types
+!   cutd_t  : (optional) cutoff distance of assimilated observations wrt. observation variables/types
 !-------------------------------------------------------------------------------
-subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobsl_t, depd)
+subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd, nobsl_t, cutd_t)
   use common_sort
   use scale_grid, only: &
     DX, DY
@@ -940,8 +946,9 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   real(r_size), intent(out) :: rloc(nobstotal)
   real(r_size), intent(out) :: dep(nobstotal)
   integer, intent(out) :: nobsl
-  integer, intent(out), optional :: nobsl_t(nid_obs,nobtype)
   real(r_size), intent(out), optional :: depd(nobstotal)
+  integer, intent(out), optional :: nobsl_t(nid_obs,nobtype)
+  real(r_size), intent(out), optional :: cutd_t(nid_obs,nobtype)
 
   integer, allocatable :: nobs_use(:)
   integer, allocatable :: nobs_use2(:)
@@ -981,6 +988,18 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   if (present(nobsl_t)) then
     nobsl_t(:,:) = 0
   end if
+  if (present(cutd_t)) then
+    cutd_t(:,:) = 0.0d0
+    if (MAX_NOBS_PER_GRID_CRITERION == 1) then
+      do ic = 1, nctype
+        hori_loc = HORI_LOCAL(typ_ctype(ic))
+        if (elm_ctype(ic) == id_radar_ref_zero_obs) then
+          hori_loc = HORI_LOCAL_RADAR_OBSNOREF
+        end if
+        cutd_t(elm_u_ctype(ic),typ_ctype(ic)) = hori_loc * dist_zero_fac
+      end do
+    end if
+  end if
 
   if (nobstotal == 0) then
     return
@@ -1010,7 +1029,12 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   ctype_skip(:) = .false.
 
   do ic = 1, nctype
-    if (ctype_skip(ic)) cycle
+    if (ctype_skip(ic)) then
+      if (present(cutd_t)) then
+        cutd_t(elm_u_ctype(ic),typ_ctype(ic)) = 0.0d0
+      end if
+      cycle
+    end if
 
     n_merge = 1
     ic_merge(1) = ic
@@ -1042,11 +1066,10 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 
       do icm = 1, n_merge
         ic2 = ic_merge(icm)
+        ielm = elm_ctype(ic2)
+        ityp = typ_ctype(ic2)
 
         if (obsgrd(ic2)%tot_ext > 0) then
-          ielm = elm_ctype(ic2)
-          ityp = typ_ctype(ic2)
-
           nn = 0
           call obs_local_range(ic2, ri, rj, imin, imax, jmin, jmax)
           call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
@@ -1067,11 +1090,11 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
             end if
           end do ! [ n = 1, nn ]
         end if ! [ obsgrd(ic2)%tot_ext > 0 ]
-      end do ! [ do icm = 1, n_merge ]
 
-      if (present(nobsl_t)) then
-        nobsl_t(ielm_u_master,ityp_master) = nobsl - nobsl_prev
-      end if
+        if (present(nobsl_t)) then
+          nobsl_t(elm_u_ctype(ic2),ityp) = nobsl - nobsl_prev
+        end if
+      end do ! [ do icm = 1, n_merge ]
 
     !---------------------------------------------------------------------------
     else if (MAX_NOBS_PER_GRID_CRITERION == 1) then
@@ -1215,6 +1238,9 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
       if (present(nobsl_t)) then
         nobsl_t(ielm_u_master,ityp_master) = nobsl_incr
       end if
+      if (present(cutd_t)) then
+        cutd_t(ielm_u_master,ityp_master) = hori_loc * sqrt(dist_tmp(nobs_use2(nobsl_incr)))
+      end if
 
     !---------------------------------------------------------------------------
     else
@@ -1277,6 +1303,13 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
 
       if (present(nobsl_t)) then
         nobsl_t(ielm_u_master,ityp_master) = nobsl_incr
+      end if
+      if (present(cutd_t)) then
+        if (MAX_NOBS_PER_GRID_CRITERION == 2) then
+          cutd_t(ielm_u_master,ityp_master) = rloc_tmp(nobs_use2(nobsl_incr))
+        else if (MAX_NOBS_PER_GRID_CRITERION == 3) then
+          cutd_t(ielm_u_master,ityp_master) = rdiag_tmp(nobs_use2(nobsl_incr))
+        end if
       end if
 
     !---------------------------------------------------------------------------
