@@ -18,6 +18,9 @@ PROGRAM obsope
   USE obsope_tools
 
   IMPLICIT NONE
+
+  type(obs_da_value) :: obsda ! only used for calling obsope_cal subroutine, no use in this main program
+
   REAL(r_dble) :: rtimer00,rtimer
   INTEGER :: ierr
   CHARACTER(7) :: stdoutf='-000000'
@@ -113,7 +116,7 @@ PROGRAM obsope
 ! Observation operator
 !-----------------------------------------------------------------------
 
-    call obsope_cal
+    call obsope_cal(obsda, .false.)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()

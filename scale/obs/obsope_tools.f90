@@ -14,24 +14,18 @@ MODULE obsope_tools
   USE common_scale
   USE common_mpi_scale
   USE common_obs_scale
-
-!  use common_scalelib
-
   use common_nml
-
 !  use scale_process, only: &
-!       PRC_myrank
-!       MPI_COMM_d => LOCAL_COMM_WORLD
-
+!    PRC_myrank
+!    MPI_COMM_d => LOCAL_COMM_WORLD
   use scale_grid_index, only: &
     KHALO, IHALO, JHALO
 #ifdef H08
   use scale_grid, only: &
-      DX, DY,           &
-      BUFFER_DX,        &
-      BUFFER_DY
+    DX, DY,    &
+    BUFFER_DX, &
+    BUFFER_DY
 #endif
-
 
   IMPLICIT NONE
   PUBLIC
@@ -41,49 +35,58 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Observation operator calculation
 !-----------------------------------------------------------------------
-SUBROUTINE obsope_cal(obsda_return, nobs_extern)
+SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   IMPLICIT NONE
 
-  type(obs_da_value),optional,intent(inout) :: obsda_return
-  integer,optional,intent(in) :: nobs_extern
-  type(obs_da_value) :: obsda
-  REAL(r_size),ALLOCATABLE :: v3dg(:,:,:,:)
-  REAL(r_size),ALLOCATABLE :: v2dg(:,:,:)
+  type(obs_da_value), intent(out) :: obsda
+  logical, intent(in) :: obsda_return
+  integer, optional, intent(in) :: nobs_extern
 
-  integer :: it,islot,proc,im,iof
-  integer :: n,nn,nslot,nobs,nobs_slot,nobs_alldomain
+  integer :: it, im, iof, islot, ierr
+  integer :: n, nn, nn_0, nsub, nmod, n1, n2
 
+  integer :: nobs     ! observation number processed in this subroutine
+  integer :: nobs_all
+  integer :: nobs_max_per_file
+  integer :: nobs_max_per_file_sub
+  integer :: slot_nobsg
 
-  integer :: nobs_max_per_file, nobs_max_per_file_sub
-  integer :: nn_0, nsub, nmod, n1, n2
   integer :: ip, ibufs
   integer, allocatable :: cntr(:), dspr(:)
   integer, allocatable :: cnts(:), dsps(:)
   integer, allocatable :: bsn(:,:), bsna(:,:), bsnext(:,:)
+  integer :: islot_time_out, islot_domain_out
 
+  integer, allocatable :: obrank(:)
+  real(r_size), allocatable :: obri(:)
+  real(r_size), allocatable :: obrj(:)
+  integer, allocatable :: obrank_bufs(:)
+  real(r_size), allocatable :: ri_bufs(:)
+  real(r_size), allocatable :: rj_bufs(:)
 
-!  real(r_size) :: rig,rjg,ri,rj,rk
-  real(r_size) :: rig,rjg,rk
-  real(r_size),allocatable :: ri(:),rj(:)
+  integer, allocatable :: obset_bufs(:)
+  integer, allocatable :: obidx_bufs(:)
+  real(r_size), allocatable :: ri_bufs2(:)
+  real(r_size), allocatable :: rj_bufs2(:)
 
+  integer :: slot_id(SLOT_START:SLOT_END)
+  real(r_size) :: slot_lb(SLOT_START:SLOT_END)
+  real(r_size) :: slot_ub(SLOT_START:SLOT_END)
 
-!  real(r_size),allocatable :: obri(:),obrj(:)
-!  integer,allocatable :: obslot(:)
-  integer,allocatable :: obrank(:)
-  real(r_size),allocatable :: obri(:)
-  real(r_size),allocatable :: obrj(:)
-  integer,allocatable :: obrank_bufs(:)
-  real(r_size),allocatable :: ri_bufs(:)
-  real(r_size),allocatable :: rj_bufs(:)
+  real(r_size), allocatable :: v3dg(:,:,:,:)
+  real(r_size), allocatable :: v2dg(:,:,:)
 
-  integer,allocatable :: obset_bufs(:)
-  integer,allocatable :: obidx_bufs(:)
-  real(r_size),allocatable :: ri_bufs2(:)
-  real(r_size),allocatable :: rj_bufs2(:)
+  integer, allocatable :: qc_p(:)
+#ifdef H08
+  real(r_size), allocatable :: lev_p(:)
+  real(r_size), allocatable :: val2_p(:)
+#endif
 
+  real(r_size) :: ril, rjl, rk
 
-  real(r_size) :: ril, rjl
-  real(r_size) :: slot_lb,slot_ub
+  character(filelenmax) :: obsdafile
+  character(11) :: obsda_suffix = '.000000.dat'
+  character(4) :: nstr
 
 #ifdef H08
 ! -- for Himawari-8 obs --
@@ -116,21 +119,16 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 #endif
 
 ! -- for TC vital assimilation --
-  INTEGER :: obs_set_TCX, obs_set_TCY, obs_set_TCP ! obs set
-  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
+!  INTEGER :: obs_set_TCX, obs_set_TCY, obs_set_TCP ! obs set
+!  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
   INTEGER :: bTC_proc ! the process where the background TC is located.
 ! bTC: background TC in each subdomain
 ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp (Pa)
   REAL(r_size),ALLOCATABLE :: bTC(:,:)
   REAL(r_size) :: bTC_mslp
 
-  character(filelenmax) :: obsdafile
-  character(11) :: obsda_suffix = '.000000.dat'
-
 !-----------------------------------------------------------------------
 
-
-  integer :: ierr
   real(r_dble) :: rrtimer00, rrtimer
 !  call MPI_BARRIER(MPI_COMM_a, ierr)
   rrtimer00 = MPI_WTIME()
@@ -144,50 +142,44 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   brje = (real(nlatg+2*JHALO,r_size) - brjs)
 #endif
 
-  nobs_alldomain = 0
+
+!-------------------------------------------------------------------------------
+! First scan of all observation data: Compute their horizontal location and time
+!-------------------------------------------------------------------------------
+
+  nobs_all = 0
   nobs_max_per_file = 0
   do iof = 1, OBS_IN_NUM
     if (OBSDA_RUN(iof)) then
-      nobs_alldomain = nobs_alldomain + obs(iof)%nobs
+      nobs_all = nobs_all + obs(iof)%nobs
       if (obs(iof)%nobs > nobs_max_per_file) then
         nobs_max_per_file = obs(iof)%nobs
       end if
     end if
   end do
-!!!  obsda%nobs = nobs_alldomain
-!!!  call obs_da_value_allocate(obsda,0)
-!!!  allocate ( ri(nobs_alldomain) )
-!!!  allocate ( rj(nobs_alldomain) )
 
+!  obs_set_TCX = -1
+!  obs_set_TCY = -1
+!  obs_set_TCP = -1
+!  obs_idx_TCX = -1
+!  obs_idx_TCY = -1
+!  obs_idx_TCP = -1
 
+  allocate (obrank(nobs_all))
+  allocate (obri(nobs_all))
+  allocate (obrj(nobs_all))
 
-  allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
-  allocate ( v2dg (nlonh,nlath,nv2dd) )
-
-
-
-
-
-
-  obs_set_TCX = -1
-  obs_set_TCY = -1
-  obs_set_TCP = -1
-  obs_idx_TCX = -1
-  obs_idx_TCY = -1
-  obs_idx_TCP = -1
+  nobs_max_per_file_sub = (nobs_max_per_file - 1) / nprocs_a + 1
+  allocate (obrank_bufs(nobs_max_per_file_sub))
+  allocate (ri_bufs(nobs_max_per_file_sub))
+  allocate (rj_bufs(nobs_max_per_file_sub))
 
   allocate (cntr(nprocs_a))
   allocate (dspr(nprocs_a))
 
-  allocate ( obrank(nobs_alldomain) )
-  allocate ( obri(nobs_alldomain) )
-  allocate ( obrj(nobs_alldomain) )
-
-  nobs_max_per_file_sub = (nobs_max_per_file - 1) / nprocs_a + 1
-  allocate ( obrank_bufs(nobs_max_per_file_sub) )
-  allocate ( ri_bufs(nobs_max_per_file_sub) )
-  allocate ( rj_bufs(nobs_max_per_file_sub) )
-
+  ! Use all processes to compute the basic obsevration information
+  ! (locations in model grids and the subdomains they belong to)
+  !-----------------------------------------------------------------------------
 
   nn_0 = 0
   do iof = 1, OBS_IN_NUM
@@ -213,27 +205,23 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       ibufs = 0
       do n = n1, n2
         ibufs = ibufs + 1
-        select case (obs(iof)%elm(n))
-        case (id_tclon_obs)
-          obs_set_TCX = iof
-          obs_idx_TCX = n
-          cycle
-        case (id_tclat_obs)
-          obs_set_TCY = iof
-          obs_idx_TCY = n
-          cycle
-        case (id_tcmip_obs)
-          obs_set_TCP = iof
-          obs_idx_TCP = n
-          cycle
-        end select
+!        select case (obs(iof)%elm(n))
+!        case (id_tclon_obs)
+!          obs_set_TCX = iof
+!          obs_idx_TCX = n
+!          cycle
+!        case (id_tclat_obs)
+!          obs_set_TCY = iof
+!          obs_idx_TCY = n
+!          cycle
+!        case (id_tcmip_obs)
+!          obs_set_TCP = iof
+!          obs_idx_TCP = n
+!          cycle
+!        end select
 
-        islot = ceiling(obs(iof)%dif(n) / SLOT_TINTERVAL - 0.5d0) + SLOT_BASE
-
-        if (islot >= SLOT_START .and. islot <= SLOT_END) then
-          call phys2ij(obs(iof)%lon(n), obs(iof)%lat(n), ri_bufs(ibufs), rj_bufs(ibufs))
-          call rij_g2l_auto(obrank_bufs(ibufs), ri_bufs(ibufs), rj_bufs(ibufs), ril, rjl) ! rij, rjl discarded here; re-computed later
-        end if
+        call phys2ij(obs(iof)%lon(n), obs(iof)%lat(n), ri_bufs(ibufs), rj_bufs(ibufs))
+        call rij_g2l_auto(obrank_bufs(ibufs), ri_bufs(ibufs), rj_bufs(ibufs), ril, rjl) ! rij, rjl discarded here; re-computed later
       end do ! [ n = n1, n2 ]
 
 
@@ -248,7 +236,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       call MPI_GATHERV(rj_bufs,     cntr(myrank_a+1), MPI_r_size , obrj,   cntr, dspr, MPI_r_size,  0, MPI_COMM_a, ierr)
 
 
-
   rrtimer = MPI_WTIME()
   write (6,'(A,4x,F15.7)') '###### obsope_cal:first_scan_reduce:            ', rrtimer-rrtimer00
   rrtimer00 = rrtimer
@@ -261,18 +248,24 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   deallocate (cntr, dspr)
   deallocate (obrank_bufs, ri_bufs, rj_bufs)
 
-  allocate (bsna  (SLOT_START-1:SLOT_END, 0:nprocs_d-1))
+  ! Bucket sort of observation wrt. time slots and subdomains using the process rank 0
+  !-----------------------------------------------------------------------------
+
+  islot_time_out = SLOT_END + 1   ! slot = SLOT_END+1 for observation not in the assimilation time window
+  islot_domain_out = SLOT_END + 2 ! slot = SLOT_END+2 for observation outside of the model domain
+
+  allocate (bsn   (SLOT_START  :SLOT_END+2, 0:nprocs_d-1))
+  allocate (bsna  (SLOT_START-1:SLOT_END+2, 0:nprocs_d-1))
 
   if (myrank_e == 0) then
-    allocate ( obset_bufs(nobs_alldomain) )
-    allocate ( obidx_bufs(nobs_alldomain) )
-    allocate ( ri_bufs2(nobs_alldomain) )
-    allocate ( rj_bufs2(nobs_alldomain) )
+    allocate ( obset_bufs(nobs_all) )
+    allocate ( obidx_bufs(nobs_all) )
+    allocate ( ri_bufs2(nobs_all) )
+    allocate ( rj_bufs2(nobs_all) )
   end if
 
   if (myrank_a == 0) then
-    allocate (bsn   (SLOT_START  :SLOT_END, 0:nprocs_d-1))
-    allocate (bsnext(SLOT_START  :SLOT_END, 0:nprocs_d-1))
+    allocate (bsnext(SLOT_START  :SLOT_END+2, 0:nprocs_d-1))
     bsn(:,:) = 0
     bsna(:,:) = 0
     bsnext(:,:) = 0
@@ -282,15 +275,15 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       if (OBSDA_RUN(iof) .and. obs(iof)%nobs > 0) then
         do n = 1, obs(iof)%nobs
           nn = nn + 1
-          islot = ceiling(obs(iof)%dif(n) / SLOT_TINTERVAL - 0.5d0) + SLOT_BASE
-          if (islot >= SLOT_START .and. islot <= SLOT_END) then
-!            nslot = nslot + 1
-            if (obrank(nn) /= -1) then
-!              nobs = nobs + 1
-!              nobs_slot = nobs_slot + 1
-
-              bsn(islot, obrank(nn)) = bsn(islot, obrank(nn)) + 1
+          if (obrank(nn) == -1) then
+            ! process the observations outside of the model domain in process rank 0
+            bsn(islot_domain_out, 0) = bsn(islot_domain_out, 0) + 1
+          else
+            islot = ceiling(obs(iof)%dif(n) / SLOT_TINTERVAL - 0.5d0) + SLOT_BASE
+            if (islot < SLOT_START .or. islot > SLOT_END) then
+              islot = islot_time_out
             end if
+            bsn(islot, obrank(nn)) = bsn(islot, obrank(nn)) + 1
           end if
         end do ! [ n = 1, obs(iof)%nobs ]
       end if ! [ OBSDA_RUN(iof) .and. obs(iof)%nobs > 0 ]
@@ -298,12 +291,12 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
     do ip = 0, nprocs_d-1
       if (ip > 0) then
-        bsna(SLOT_START-1, ip) = bsna(SLOT_END, ip-1)
+        bsna(SLOT_START-1, ip) = bsna(SLOT_END+2, ip-1)
       end if
-      do islot = SLOT_START, SLOT_END
+      do islot = SLOT_START, SLOT_END+2
         bsna(islot, ip) = bsna(islot-1, ip) + bsn(islot, ip)
       end do
-      bsnext(SLOT_START:SLOT_END, ip) = bsna(SLOT_START-1:SLOT_END-1, ip)
+      bsnext(SLOT_START:SLOT_END+2, ip) = bsna(SLOT_START-1:SLOT_END+1, ip)
     end do
 
     nn = 0
@@ -311,25 +304,29 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       if (OBSDA_RUN(iof) .and. obs(iof)%nobs > 0) then
         do n = 1, obs(iof)%nobs
           nn = nn + 1
-          islot = ceiling(obs(iof)%dif(n) / SLOT_TINTERVAL - 0.5d0) + SLOT_BASE
-          if (islot >= SLOT_START .and. islot <= SLOT_END) then
-!            nslot = nslot + 1
-            if (obrank(nn) /= -1) then
-!              nobs = nobs + 1
-!              nobs_slot = nobs_slot + 1
-
-              bsnext(islot, obrank(nn)) = bsnext(islot, obrank(nn)) + 1
-              obset_bufs(bsnext(islot, obrank(nn))) = iof
-              obidx_bufs(bsnext(islot, obrank(nn))) = n
-              ri_bufs2(bsnext(islot, obrank(nn))) = obri(nn)
-              rj_bufs2(bsnext(islot, obrank(nn))) = obrj(nn)
+          if (obrank(nn) == -1) then
+            ! process the observations outside of the model domain in process rank 0
+            bsnext(islot_domain_out, 0) = bsnext(islot_domain_out, 0) + 1
+            obset_bufs(bsnext(islot_domain_out, 0)) = iof
+            obidx_bufs(bsnext(islot_domain_out, 0)) = n
+            ri_bufs2(bsnext(islot_domain_out, 0)) = obri(nn)
+            rj_bufs2(bsnext(islot_domain_out, 0)) = obrj(nn)
+          else
+            islot = ceiling(obs(iof)%dif(n) / SLOT_TINTERVAL - 0.5d0) + SLOT_BASE
+            if (islot < SLOT_START .or. islot > SLOT_END) then
+              islot = islot_time_out
             end if
+            bsnext(islot, obrank(nn)) = bsnext(islot, obrank(nn)) + 1
+            obset_bufs(bsnext(islot, obrank(nn))) = iof
+            obidx_bufs(bsnext(islot, obrank(nn))) = n
+            ri_bufs2(bsnext(islot, obrank(nn))) = obri(nn)
+            rj_bufs2(bsnext(islot, obrank(nn))) = obrj(nn)
           end if
         end do ! [ n = 1, obs(iof)%nobs ]
       end if ! [ OBSDA_RUN(iof) .and. obs(iof)%nobs > 0 ]
     end do ! [ do iof = 1, OBS_IN_NUM ]
 
-    deallocate (bsn, bsnext)
+    deallocate (bsnext)
 
 
   rrtimer = MPI_WTIME()
@@ -340,12 +337,16 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
   deallocate ( obrank, obri, obrj )
 
+  ! Broadcast the bucket-sort observation numbers to all processes and print
+  !-----------------------------------------------------------------------------
+
 
   call MPI_BARRIER(MPI_COMM_a, ierr)
   rrtimer00 = MPI_WTIME()
 
 
-  call MPI_BCAST(bsna, (SLOT_END-SLOT_START+2)*nprocs_d, MPI_INTEGER, 0, MPI_COMM_a, ierr)
+  call MPI_BCAST(bsn,  (SLOT_END-SLOT_START+3)*nprocs_d, MPI_INTEGER, 0, MPI_COMM_a, ierr)
+  call MPI_BCAST(bsna, (SLOT_END-SLOT_START+4)*nprocs_d, MPI_INTEGER, 0, MPI_COMM_a, ierr)
 
 
   rrtimer = MPI_WTIME()
@@ -353,15 +354,52 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   rrtimer00 = rrtimer
 
 
-  obsda%nobs = bsna(SLOT_END, myrank_d) - bsna(SLOT_START-1, myrank_d)
-  call obs_da_value_allocate(obsda, 0)
+  do islot = SLOT_START, SLOT_END
+    slot_id(islot) = islot - SLOT_START + 1
+    slot_lb(islot) = (real(islot - SLOT_BASE, r_size) - 0.5d0) * SLOT_TINTERVAL
+    slot_ub(islot) = (real(islot - SLOT_BASE, r_size) + 0.5d0) * SLOT_TINTERVAL
+  end do
+
+  write (nstr, '(I4)') SLOT_END - SLOT_START + 1
+  write (6, *)
+  write (6, '(A,I6,A)') 'OBSERVATION COUNTS BEFORE QC (FROM OBSOPE):'
+  write (6, '(A,'//nstr//"('=========='),A)") '====================', '===================='
+  write (6, '(A,'//nstr//'I10.4)') '            SLOT #  ', slot_id(:)
+  write (6, '(A,'//nstr//'F10.1') '            FROM (s)', slot_lb(:)
+  write (6, '(A,'//nstr//'F10.1,A)') 'SUBDOMAIN #   TO (s)', slot_ub(:), '  OUT_TIME     TOTAL'
+  write (6, '(A,'//nstr//"('----------'),A)") '--------------------', '--------------------'
+  do ip = 0, nprocs_d-1
+    write (6, '(I11.6,9x,'//nstr//'I10,2I10)') ip, bsn(SLOT_START:SLOT_END, ip), bsn(islot_time_out, ip), bsna(SLOT_END+1, ip) - bsna(SLOT_START-1, ip)
+  end do
+  write (6, '(A,'//nstr//"('----------'),A)") '--------------------', '--------------------'
+  write (6, '(A,'//nstr//'(10x),10x,I10)') ' OUT_DOMAIN         ', bsn(islot_domain_out, 0)
+  write (6, '(A,'//nstr//"('----------'),A)") '--------------------', '--------------------'
+  write (6, '(A,'//nstr//'I10,2I10)') '      TOTAL         ', sum(bsn(SLOT_START:SLOT_END, :), dim=2), sum(bsn(islot_time_out, :)), bsna(SLOT_END+2, nprocs_d-1)
+  write (6, '(A,'//nstr//"('=========='),A)") '====================', '===================='
+
+  ! Scatter the basic obsevration information to processes group {myrank_e = 0},
+  ! each of which only gets the data in its own subdomain
+  !-----------------------------------------------------------------------------
+
+  nobs = bsna(SLOT_END+2, myrank_d) - bsna(SLOT_START-1, myrank_d)
+  if (present(nobs_extern)) then
+    obsda%nobs = nobs + nobs_extern
+  else
+    obsda%nobs = nobs
+  end if
+
+  if (obsda_return) then
+    call obs_da_value_allocate(obsda, nensobs)
+  else
+    call obs_da_value_allocate(obsda, 0)
+  end if
 
   if (myrank_e == 0) then
     allocate (cnts(nprocs_d))
     allocate (dsps(nprocs_d))
     do ip = 0, nprocs_d-1
       dsps(ip+1) = bsna(SLOT_START-1, ip)
-      cnts(ip+1) = bsna(SLOT_END, ip) - dsps(ip+1)
+      cnts(ip+1) = bsna(SLOT_END+2, ip) - dsps(ip+1)
     end do
 
     call MPI_SCATTERV(obset_bufs, cnts, dsps, MPI_INTEGER, obsda%set, cnts(myrank_d+1), MPI_INTEGER, 0, MPI_COMM_d, ierr)
@@ -378,51 +416,90 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
     deallocate (obset_bufs, obidx_bufs, ri_bufs2, rj_bufs2)
   end if ! [ myrank_e == 0 ]
 
+  ! Broadcast the basic obsevration information
+  ! from processes group {myrank_e = 0} to all processes
+  !-----------------------------------------------------------------------------
+
 
   call MPI_BARRIER(MPI_COMM_a, ierr)
   rrtimer00 = MPI_WTIME()
 
 
-  call MPI_BCAST(obsda%set, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
-  call MPI_BCAST(obsda%idx, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
-  call MPI_BCAST(obsda%ri,  obsda%nobs, MPI_r_size,  0, MPI_COMM_e, ierr)
-  call MPI_BCAST(obsda%rj,  obsda%nobs, MPI_r_size,  0, MPI_COMM_e, ierr)
+  call MPI_BCAST(obsda%set, nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
+  call MPI_BCAST(obsda%idx, nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
+  call MPI_BCAST(obsda%ri,  nobs, MPI_r_size,  0, MPI_COMM_e, ierr)
+  call MPI_BCAST(obsda%rj,  nobs, MPI_r_size,  0, MPI_COMM_e, ierr)
 
 
   rrtimer = MPI_WTIME()
   write (6,'(A,4x,F15.7)') '###### obsope_cal:mpi_broadcast:                ', rrtimer-rrtimer00
   rrtimer00 = rrtimer
 
-!if (myrank_a == 37) then
-!print *, obsda%nobs
-!do n = 1, 100 !obsda%nobs
-!print *, obsda%set(n), obsda%idx(n), obsda%ri(n), obsda%rj(n)
-!end do
-!end if
 
+!-------------------------------------------------------------------------------
+! Second scan of observation data in own subdomain: Compute H(x), QC, ... etc.
+!-------------------------------------------------------------------------------
+
+  if (obsda_return .and. nitmax > 1 .and. nobs > 0) then
+    allocate (qc_p(nobs))
+#ifdef H08
+    allocate (lev_p(nobs))
+    allocate (val2_p(nobs))
+#endif
+  end if
+
+  allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
+  allocate ( v2dg (nlonh,nlath,nv2dd) )
 
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
+
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
             im, ', subdomain id #', proc2mem(2,it,myrank+1)
 
-!write(6,*) '%%%%%%', MPI_WTIME(), 0
+      if (nobs > 0) then
+        obsda%qc(1:nobs) = iqc_undef
+#ifdef H08
+!        obsda%lev(1:nobs) = 0.0d0
+!        obsda%val2(1:nobs) = 0.0d0
+#endif
+      end if
 
-!!!      nobs = 0
+      ! Observations not in the assimilation time window
+      ! 
+      n1 = bsna(islot_time_out-1, myrank_d) - bsna(SLOT_START-1, myrank_d) + 1
+      n2 = bsna(islot_time_out,   myrank_d) - bsna(SLOT_START-1, myrank_d)
+      if (n1 <= n2) then
+        obsda%qc(n1:n2) = iqc_time
+      end if
 
-      !!!!!!
-      if (nobs_alldomain > 0) then
-      !!!!!!
+      ! Observations outside of the model domain
+      ! 
+      n1 = bsna(islot_domain_out-1, myrank_d) - bsna(SLOT_START-1, myrank_d) + 1
+      n2 = bsna(islot_domain_out,   myrank_d) - bsna(SLOT_START-1, myrank_d)
+      if (n1 <= n2) then
+        obsda%qc(n1:n2) = iqc_out_h
+      end if
 
-      obsda%qc = iqc_time
-
+      ! Valid observations: loop over time slots
+      ! 
       do islot = SLOT_START, SLOT_END
-        slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
-        slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
-        write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
+        write (6, '(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time window (', slot_lb(islot), ',', slot_ub(islot), '] sec'
 
-        call read_ens_history_iter(it,islot,v3dg,v2dg)
+        n1 = bsna(islot-1, myrank_d) - bsna(SLOT_START-1, myrank_d) + 1
+        n2 = bsna(islot,   myrank_d) - bsna(SLOT_START-1, myrank_d)
+        slot_nobsg = sum(bsn(islot, :))
+
+        if (slot_nobsg <= 0) then
+          write (6, '(A)') ' -- no observations found in this time slot... do not need to read model data'
+          cycle
+        end if
+
+        write (6, '(A,I10)') ' -- # obs in the slot = ', slot_nobsg
+        write (6, '(A,I6,A,I6,A,I10)') ' -- # obs in the slot and processed by rank ', myrank, ' (subdomain #', myrank_d, ') = ', bsn(islot, myrank_d)
+
+        call read_ens_history_iter(it, islot, v3dg, v2dg)
 
 
   rrtimer = MPI_WTIME()
@@ -430,70 +507,11 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   rrtimer00 = rrtimer
 
 
-!!!        nn_0 = 0
-
-!!!        do iof = 1, OBS_IN_NUM
-
-!!!          if (.not. OBSDA_RUN(iof) .or. obs(iof)%nobs == 0) cycle
-
-!!!          obs_idx_TCX = -1
-!!!          obs_idx_TCY = -1
-!!!          obs_idx_TCP = -1
-
-!!!          nslot = 0
-!!!          nobs_slot = 0
-
-!!!!write(6,*) '%%%===', MPI_WTIME(), 'im:', im, 'islot:', islot, 'iof:', iof
-
-!!!          IF(OBS_IN_FORMAT(iof) /= 3)THEN ! except H08 obs ! H08
-
-!!!            ! do this small computation first, without OpenMP
-!!!            nobs_0 = nobs
-!!!            nn = nn_0
-!!!            do n = 1, obs(iof)%nobs
-
-!!!              select case (obs(iof)%elm(n))
-!!!              case (id_tclon_obs)
-!!!                obs_idx_TCX = n
-!!!                cycle
-!!!              case (id_tclat_obs)
-!!!                obs_idx_TCY = n
-!!!                cycle
-!!!              case (id_tcmip_obs)
-!!!                obs_idx_TCP = n
-!!!                cycle
-!!!              end select
-
-!!!              if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
-!!!                nslot = nslot + 1
-!!!                call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
-!!!                call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
-
-!!!                if (myrank_d == proc) then
-!!!                  nobs = nobs + 1
-!!!                  nobs_slot = nobs_slot + 1
-!!!                  obsda%set(nobs) = iof
-!!!                  obsda%idx(nobs) = n
-!!!                  obsda%ri(nobs) = rig  ! obsda%ri: global grid coordinate
-!!!                  obsda%rj(nobs) = rjg  !
-!!!                  ri(nobs) = ritmp      ! ri: local grid coordinate
-!!!                  rj(nobs) = rjtmp      !
-!!!                end if ! [ myrank_d == proc ]
-!!!              end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
-
-!!!!write (6, *) obsda%set(nobs), obsda%idx(nobs), obsda%ri(nobs), obsda%rj(nobs), ri(nobs), rj(nobs)
-
-!!!                end if
-!!!              end if
-
-
-!!!            end do ! [ n = 1, obs%nobs ]
-
 #ifdef H08
           ELSEIF( OBS_IN_FORMAT(iof) == 3) THEN ! for H08 obs (OBS_IN_FORMAT(iof) = 3) ! H08
 
             nprof_H08 = 0
-            nobs_0 = nobs
+!            nobs_0 = nobs
             nallprof = obs(iof)%nobs/nch
 
             ALLOCATE(tmp_ri_H08(nallprof))
@@ -503,8 +521,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
             do n = 1, nallprof
               ns = (n - 1) * nch + 1
-              if (obs(iof)%dif(ns) > slot_lb .and. obs(iof)%dif(ns) <= slot_ub) then
-                nslot = nslot + 1
+              if (obs(iof)%dif(ns) > slot_lb(islot) .and. obs(iof)%dif(ns) <= slot_ub(islot)) then
+!                nslot = nslot + 1
                 call phys2ij(obs(iof)%lon(ns),obs(iof)%lat(ns),rig,rjg)
                 call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
 
@@ -515,8 +533,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
                   tmp_lon_H08(nprof_H08) = obs(iof)%lon(ns)
                   tmp_lat_H08(nprof_H08) = obs(iof)%lat(ns)
 
-                  nobs = nobs + nch
-                  nobs_slot = nobs_slot + 1
+!                  nobs = nobs + nch
+!                  nobs_slot = nobs_slot + 1
                   obsda%set(nobs-nch+1:nobs) = iof
                   obsda%ri(nobs-nch+1:nobs) = rig
                   obsda%rj(nobs-nch+1:nobs) = rjg
@@ -527,7 +545,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
                   enddo
 
                 end if ! [ myrank_d == proc ]
-              end if ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
+              end if ! [ obs(iof)%dif(n) > slot_lb(islot) .and. obs(iof)%dif(n) <= slot_ub(islot) ]
             end do ! [ n = 1, nallprof ]
 
             IF(nprof_H08 >=1)THEN
@@ -547,44 +565,16 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
             DEALLOCATE(tmp_lon_H08,tmp_lat_H08)
 
 #endif
-!!!          ENDIF ! end of nobs count [if (OBS_IN_FORMAT(iof) = 3)]
 
-
-!!!  rrtimer = MPI_WTIME()
-!!!  write (6,'(A,I3,A,I3,A,I3,A,F15.7)') '###### obsope_cal:obsope_step_1:        ', it, ':', islot, ':', iof, ':', rrtimer-rrtimer00
-!!!  rrtimer00 = rrtimer
-
-
-          ! then do this heavy computation with OpenMP
-
-!!!          IF(OBS_IN_FORMAT(iof) /= 3)THEN ! H08
-
-
-!write(6,*) '%%%===', MPI_WTIME(), nobs_0 + 1, nobs
-
-            n1 = bsna(islot-1, myrank_d) - bsna(SLOT_START-1, myrank_d) + 1
-            n2 = bsna(islot, myrank_d) - bsna(SLOT_START-1, myrank_d)
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk)
             do nn = n1, n2
-!!!            do nn = nobs_0 + 1, nobs
               iof = obsda%set(nn)
               n = obsda%idx(nn)
 
 !              IF(OBS_IN_FORMAT(iof) /= 3)THEN ! H08 ????????????
 
-
               call rij_g2l(myrank_d, obsda%ri(nn), obsda%rj(nn), ril, rjl)
-
-
-!if (myrank_a == 0) then
-!print *, iof, n, obsda%ri(nn), obsda%rj(nn), ril, rjl
-!end if
-
-
-!if (mod(nn,50) == 0) then
-!  write(6,*) '%%%%%%', MPI_WTIME(), nn
-!end if
 
               if (.not. USE_OBS(obs(iof)%typ(n))) then
                 obsda%qc(nn) = iqc_otype
@@ -598,38 +588,32 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
                   write(6,'(A,F8.1,A,I5)') 'warning: radar observation is too high: lev=', obs(iof)%lev(n), ', elem=', obs(iof)%elm(n)
 #endif
                 else
-!!!                  call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
-                  call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ril,rjl,obs(iof)%lev(n),rk,obsda%qc(nn))
+                  call phys2ijkz(v3dg(:,:,:,iv3dd_hgt), ril, rjl, obs(iof)%lev(n), rk, obsda%qc(nn))
                 end if
               else
-!!!                call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
-                call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ril,rjl,obs(iof)%lev(n),rk,obsda%qc(nn))
+                call phys2ijk(v3dg(:,:,:,iv3dd_p), obs(iof)%elm(n), ril, rjl, obs(iof)%lev(n), rk, obsda%qc(nn))
               end if
 
               if (obsda%qc(nn) == iqc_good) then
                 select case (OBS_IN_FORMAT(iof))
                 case (1)
-!!!                  call Trans_XtoY(obs(iof)%elm(n),ri(nn),rj(nn),rk, &
-                  call Trans_XtoY(obs(iof)%elm(n),ril,rjl,rk, &
-                                  obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
+                  call Trans_XtoY(obs(iof)%elm(n), ril, rjl, rk, &
+                                  obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
                 case (2)
-!!!                  call Trans_XtoY_radar(obs(iof)%elm(n),obs(iof)%meta(1),obs(iof)%meta(2),obs(iof)%meta(3),ri(nn),rj(nn),rk, &
-                  call Trans_XtoY_radar(obs(iof)%elm(n),obs(iof)%meta(1),obs(iof)%meta(2),obs(iof)%meta(3),ril,rjl,rk, &
-                                        obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
+                  call Trans_XtoY_radar(obs(iof)%elm(n), obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3), ril, rjl, rk, &
+                                        obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%lev(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
                   if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
 
-                !!!!!! may not need to do this at this stage...
-                !if (obs(iof)%elm(n) == id_radar_ref_obs) then
-                !  obsda%val(nn) = 10.0d0 * log10(obsda%val(nn))
-                !end if
-                !!!!!!
-
+                  !!!!!! may not need to do this at this stage !!!!!!
+                  !if (obs(iof)%elm(n) == id_radar_ref_obs) then
+                  !  obsda%val(nn) = 10.0d0 * log10(obsda%val(nn))
+                  !end if
+                  !!!!!!
                 end select
               end if
 
 !              ENDIF ! H08 ????????????
 
-!            end do ! [ nn = nobs_0 + 1, nobs ]
             end do ! [ nn = n1, n2 ]
 !$OMP END PARALLEL DO
 
@@ -711,12 +695,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 #endif
 !!!          ENDIF ! H08
 
-!!!          write (6,'(3A,I10)') ' -- [', trim(OBS_IN_NAME(iof)), '] nobs in the slot = ', nslot
-!!!          write (6,'(3A,I6,A,I10)') ' -- [', trim(OBS_IN_NAME(iof)), '] nobs in the slot and processed by rank ' &
-!!!                                    , myrank, ' = ', nobs_slot
-          write (6,'(3A,I10)') ' -- [', trim(OBS_IN_NAME(iof)), '] nobs in the slot = ', sum(bsna(islot, :)) - sum(bsna(islot-1, :))
-          write (6,'(3A,I6,A,I10)') ' -- [', trim(OBS_IN_NAME(iof)), '] nobs in the slot and processed by rank ' &
-                                    , myrank, ' = ', bsna(islot, myrank_d) - bsna(islot-1, myrank_d)
 
 
   rrtimer = MPI_WTIME()
@@ -726,114 +704,76 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
 
 ! ###  -- TC vital assimilation -- ###
-          if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0) then
-          if (obs(iof)%dif(obs_idx_TCX) == obs(iof)%dif(obs_idx_TCY) .and. &
-              obs(iof)%dif(obs_idx_TCY) == obs(iof)%dif(obs_idx_TCP)) then
-           
-            if (obs(iof)%dif(obs_idx_TCX) > slot_lb .and. &
-              obs(iof)%dif(obs_idx_TCX) <= slot_ub) then
-              nslot = nslot + 3 ! TC vital obs should have 3 data (i.e., lon, lat, and MSLP)
+!          if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0) then
+!          if (obs(iof)%dif(obs_idx_TCX) == obs(iof)%dif(obs_idx_TCY) .and. &
+!              obs(iof)%dif(obs_idx_TCY) == obs(iof)%dif(obs_idx_TCP)) then
+!           
+!            if (obs(iof)%dif(obs_idx_TCX) > slot_lb(islot) .and. &
+!              obs(iof)%dif(obs_idx_TCX) <= slot_ub(islot)) then
+!              nslot = nslot + 3 ! TC vital obs should have 3 data (i.e., lon, lat, and MSLP)
 
-              !!! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
-              ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp
-              allocate(bTC(3,0:MEM_NP-1))
+!              !!! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
+!              ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp
+!              allocate(bTC(3,0:MEM_NP-1))
 
-              bTC = 9.99d33
+!              bTC = 9.99d33
 
-              ! Note: obs(iof)%dat(obs_idx_TCX) is not longitude (deg) but X (m).
-              !       Units of the original TC vital position are converted in
-              !       subroutine read_obs in common_obs_scale.f90.
-              !
-              call phys2ij(obs(iof)%lon(obs_idx_TCX),obs(iof)%lat(obs_idx_TCX),rig,rjg) 
-              call rij_g2l_auto(proc,rig,rjg,ril,rjl)  
-              call search_tc_subdom(rig,rjg,v2dg,bTC(1,myrank_d),bTC(2,myrank_d),bTC(3,myrank_d))
-  
-!              CALL MPI_BARRIER(MPI_COMM_d,ierr)
-              CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
+!              ! Note: obs(iof)%dat(obs_idx_TCX) is not longitude (deg) but X (m).
+!              !       Units of the original TC vital position are converted in
+!              !       subroutine read_obs in common_obs_scale.f90.
+!              !
+!              call phys2ij(obs(iof)%lon(obs_idx_TCX),obs(iof)%lat(obs_idx_TCX),rig,rjg) 
+!              call rij_g2l_auto(proc,rig,rjg,ril,rjl)  
+!              call search_tc_subdom(rig,rjg,v2dg,bTC(1,myrank_d),bTC(2,myrank_d),bTC(3,myrank_d))
+!  
+!!              CALL MPI_BARRIER(MPI_COMM_d,ierr)
+!              CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
 
-              ! Assume MSLP of background TC is lower than 1100 (hPa). 
-              bTC_mslp = 1100.0d2
-              do n = 0, MEM_NP - 1
-                write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
-                if (bTC(3,n) < bTC_mslp ) then
-                  bTC_mslp = bTC(3,n)
-                  bTC_proc = n
-                endif
-              enddo ! [ n = 0, MEM_NP - 1]
+!              ! Assume MSLP of background TC is lower than 1100 (hPa). 
+!              bTC_mslp = 1100.0d2
+!              do n = 0, MEM_NP - 1
+!                write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
+!                if (bTC(3,n) < bTC_mslp ) then
+!                  bTC_mslp = bTC(3,n)
+!                  bTC_proc = n
+!                endif
+!              enddo ! [ n = 0, MEM_NP - 1]
 
-              if (myrank_d == proc) then
-                do n = 1, 3
-                  nobs = nobs + 1
-                  nobs_slot = nobs_slot + 1
-                  obsda%set(nobs) = iof
-                  if(n==1) obsda%idx(nobs) = obs_idx_TCX
-                  if(n==2) obsda%idx(nobs) = obs_idx_TCY
-                  if(n==3) obsda%idx(nobs) = obs_idx_TCP
-                  obsda%ri(nobs) = rig
-                  obsda%rj(nobs) = rjg
-                  ri(nobs) = ril
-                  rj(nobs) = rjl
+!              if (myrank_d == proc) then
+!                do n = 1, 3
+!                  nobs = nobs + 1
+!                  nobs_slot = nobs_slot + 1
+!                  obsda%set(nobs) = iof
+!                  if(n==1) obsda%idx(nobs) = obs_idx_TCX
+!                  if(n==2) obsda%idx(nobs) = obs_idx_TCY
+!                  if(n==3) obsda%idx(nobs) = obs_idx_TCP
+!                  obsda%ri(nobs) = rig
+!                  obsda%rj(nobs) = rjg
+!                  ri(nobs) = ril
+!                  rj(nobs) = rjl
 
-                  obsda%val(nobs) = bTC(n,bTC_proc)
-                  obsda%qc(nobs) = iqc_good
-                enddo ! [ n = 1, 3 ]
+!                  obsda%val(nobs) = bTC(n,bTC_proc)
+!                  obsda%qc(nobs) = iqc_good
+!                enddo ! [ n = 1, 3 ]
 
-              endif
-              deallocate(bTC)
+!              endif
+!              deallocate(bTC)
 
-            endif ! [ obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub ]
-          endif ! [ obs_idx_TCX > 0 ...]
-          endif !
+!            endif ! [ obs(iof)%dif(n) > slot_lb(islot) .and. obs(iof)%dif(n) <= slot_ub(islot) ]
+!          endif ! [ obs_idx_TCX > 0 ...]
+!          endif !
 
-!!!          nn_0 = nn_0 + obs(iof)%nobs
-
-!!!        end do ! [ do iof = 1, OBS_IN_NUM ]
 
  
-!      IF(NINT(elem(n)) == id_ps_obs .AND. odat(n) < -100.0d0) THEN
-!        CYCLE
-!      END IF
-!      IF(NINT(elem(n)) == id_ps_obs) THEN
-!        CALL itpl_2d(v2d(:,:,iv2d_orog),ri,rj,dz)
-!        rk = rlev(n) - dz
-!        IF(ABS(rk) > threshold_dz) THEN ! pressure adjustment threshold
-!!          WRITE(6,'(A)') '* PS obs vertical adjustment beyond threshold'
-!!          WRITE(6,'(A,F10.2,A,F6.2,A,F6.2,A)') '*   dz=',rk,&
-!!           & ', (lon,lat)=(',elon(n),',',elat(n),')'
-!          CYCLE
-!        END IF
-!      END IF
 
       end do ! [ islot = SLOT_START, SLOT_END ]
-
-!write(6,*) '%%%%%%', MPI_WTIME(), nobs
-
-      !!!!!!
-      end if ! [ nobs_alldomain > 0 ]
-      !!!!!!
-
-!!!      if (it == 1) then
-!!!        obsda%nobs = nobs
-!!!      else if (nobs /= obsda%nobs) then
-!!!        write (6, '(A)') '[Error] numbers of observations found are different among members.'
-!!!        stop
-!!!      end if
-
-
-
-      nobs = obsda%nobs
-
-
-
-
-      write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' finishes processing member ', &
-            im, ', subdomain id #', proc2mem(2,it,myrank+1)
-      write (6,'(A,I8,A)') ' -- ', nobs, ' observations found'
 
 
   rrtimer00 = MPI_WTIME()
 
 
+      ! Write obsda data to files if OBSDA_OUT = .true.
+      ! 
       if (OBSDA_OUT) then
         write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is writing observations for member ', &
               im, ', subdomain id #', proc2mem(2,it,myrank+1)
@@ -855,63 +795,88 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
       end if
 
-      if (present(obsda_return)) then
-        ! variables without an ensemble dimension
-        if (it == 1) then
-          if (present(nobs_extern)) then
-            obsda_return%nobs = nobs + nobs_extern ! additional space for externally processed observations
-          else
-            obsda_return%nobs = nobs
-          end if
-          call obs_da_value_allocate(obsda_return, nensobs)
+      ! Prepare variables that will need to be communicated if obsda_return = .true.
+      ! 
+      if (obsda_return .and. nobs > 0) then
+        ! variables with an ensemble dimension
+        if (im == mmdetin) then
+          obsda%ensval(mmdetobs, 1:nobs) = obsda%val(1:nobs)
+        else
+          obsda%ensval(im, 1:nobs) = obsda%val(1:nobs)
         end if
-        if (nobs > 0) then
+
+        ! variables without an ensemble dimension: merge them with the previous iterations
+        if (nitmax > 1 .and. nobs > 0) then
           if (it == 1) then
-            obsda_return%set(1:nobs) = obsda%set(1:nobs)
-            obsda_return%idx(1:nobs) = obsda%idx(1:nobs)
-            obsda_return%ri(1:nobs) = obsda%ri(1:nobs)
-            obsda_return%rj(1:nobs) = obsda%rj(1:nobs)
-            obsda_return%qc(1:nobs) = obsda%qc(1:nobs)
+            qc_p(:) = obsda%qc(1:nobs)
 #ifdef H08
-            obsda_return%lev(1:nobs) = obsda%lev(1:nobs)
-            obsda_return%val2(1:nobs) = obsda%val2(1:nobs)
+            lev_p(:) = obsda%lev(1:nobs)
+            val2_p(:) = obsda%val2(1:nobs)
 #endif
           else
-            obsda_return%qc(1:nobs) = max(obsda_return%qc(1:nobs), obsda%qc(1:nobs))
+            qc_p(:) = max(qc_p(:), obsda%qc(1:nobs))
 #ifdef H08
             if (im <= MEMBER) then ! only consider lev, val2 from members, not from the means
-              obsda_return%lev(1:nobs) = obsda_return%lev(1:nobs) + obsda%lev(1:nobs)
-              obsda_return%val2(1:nobs) = obsda_return%val2(1:nobs) + obsda%val2(1:nobs)
+              lev_p(:) = lev_p(:) + obsda%lev(1:nobs)
+              val2_p(:) = val2_p(:) + obsda%val2(1:nobs)
             end if
 #endif
           end if
+        end if
+      end if ! [ obsda_return .and. nobs > 0 ]
 
-          ! variables with an ensemble dimension
-          if (im == mmdetin) then
-            obsda_return%ensval(mmdetobs,1:nobs) = obsda%val(1:nobs)
-          else
-            obsda_return%ensval(im,1:nobs) = obsda%val(1:nobs)
-          end if
-        end if ! [ nobs > 0 ]
+    end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
+  end do ! [ it = 1, nitmax ]
+
+  deallocate ( v3dg, v2dg )
+  deallocate ( bsn, bsna )
+
+!-------------------------------------------------------------------------------
+! If obsda_return = .true., allreduce the obsda data among ensemble members
+!-------------------------------------------------------------------------------
+
+
+  call MPI_BARRIER(MPI_COMM_a, ierr)
+  rrtimer00 = MPI_WTIME()
+
+
+  if (obsda_return .and. nobs > 0) then
+    ! variables with an ensemble dimension
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%ensval(:,1:nobs), nensobs*nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+
+    ! variables without an ensemble dimension
+    if (nitmax > 1) then
+      obsda%qc(1:nobs) = qc_p(:)
+      deallocate (qc_p)
+#ifdef H08
+      obsda%lev(1:nobs) = lev_p(:)
+      obsda%val2(1:nobs) = val2_p(:)
+      deallocate (lev_p)
+      deallocate (val2_p)
+#endif
+    end if
+
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(1:nobs), nobs, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)  ! maximum value of qc
+#ifdef H08
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%lev
+    obsda%lev(1:nobs) = obsda%lev(1:nobs) / REAL(MEMBER, r_size)                                                    !
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) ! ensemble mean of obsda%val2 (clear sky BT)
+    obsda%val2(1:nobs) = obsda%val2(1:nobs) / REAL(MEMBER, r_size)                                                  !
+#endif
 
 
   rrtimer = MPI_WTIME()
-  write (6,'(A,I3,A,8x,F15.7)') '###### obsope_cal:obsda_return:         ', it, ':', rrtimer-rrtimer00
+  write (6,'(A,I3,A,8x,F15.7)') '###### obsope_cal:mpi_allreduce:        ', it, ':', rrtimer-rrtimer00
   rrtimer00 = rrtimer
 
 
-      end if ! [ present(obsda_return) ]
+  end if ! [ obsda_return .and. nobs > 0 ]
 
-    end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
+  if (.not. obsda_return) then
+    call obs_da_value_deallocate(obsda)
+  end if
 
-  end do ! [ it = 1, nitmax ]
-
-  call obs_da_value_deallocate(obsda)
-
-!  deallocate ( ri, rj, v3dg, v2dg )
-  deallocate ( v3dg, v2dg )
-  deallocate ( bsna )
-
+  return
 end subroutine obsope_cal
 
 !-----------------------------------------------------------------------
@@ -965,7 +930,7 @@ SUBROUTINE obsmake_cal(obs)
   do islot = SLOT_START, SLOT_END
     slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
     slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
-    write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time interval (', slot_lb, ',', slot_ub, '] sec'
+    write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time window (', slot_lb, ',', slot_ub, '] sec'
 
     call read_ens_history_iter(1,islot,v3dg,v2dg)
 

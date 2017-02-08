@@ -88,6 +88,8 @@ SUBROUTINE set_letkf_obs
   IMPLICIT NONE
   INTEGER :: n,i,j,ierr,im,iof,iidx
 
+  integer :: n1, n2
+
   integer :: mem_ref
 
   integer :: it,ip
@@ -111,8 +113,6 @@ SUBROUTINE set_letkf_obs
 
   character(len=3) :: use_obs_print
   character(4) :: nstr
-  character(len=8) :: line1_str(nid_obs) = '========'
-  character(len=8) :: line2_str(nid_obs) = '--------'
   
 
 
@@ -149,23 +149,26 @@ SUBROUTINE set_letkf_obs
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
-
+  nobs_intern = obsda%nobs - nobs_extern
+  WRITE(6,'(A,I10)') 'Internally processed observations: ', nobs_intern
+  WRITE(6,'(A,I10)') 'Externally processed observations: ', nobs_extern
+  WRITE(6,'(A,I10)') 'Total                observations: ', obsda%nobs
 
 !-------------------------------------------------------------------------------
-! Read externally processed observations
+! Read and communicate externally processed observations
 !-------------------------------------------------------------------------------
 
-  do it = 1, nitmax
-    im = proc2mem(1,it,myrank+1)
-    if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
-      if (it == 1) then
-        nobs_intern = obsda%nobs - nobs_extern
-        WRITE(6,'(A,I10)') 'Internally processed observations: ', nobs_intern
-        WRITE(6,'(A,I10)') 'Externally processed observations: ', nobs_extern
-        WRITE(6,'(A,I10)') 'Total                observations: ', obsda%nobs
-      end if
+  if (OBSDA_IN .and. nobs_extern > 0) then
 
-      if (OBSDA_IN .and. nobs_extern > 0) then
+    ! Read externally processed observations
+    !---------------------------------------------------------------------------
+
+    n1 = nobs_intern + 1
+    n2 = obsda%nobs
+
+    do it = 1, nitmax
+      im = proc2mem(1,it,myrank+1)
+      if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
         obsda_ext%nobs = nobs_extern
         call obs_da_value_allocate(obsda_ext,0)
         write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is reading externally processed observations for member ', &
@@ -194,140 +197,82 @@ SUBROUTINE set_letkf_obs
           call write_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0,append=.true.)
         end if
 
+        ! variables with an ensemble dimension
+        if (im == mmdetin) then
+          obsda%ensval(mmdetobs,n1:n2) = obsda_ext%val
+        else
+          obsda%ensval(im,n1:n2) = obsda_ext%val
+        end if
+
         ! variables without an ensemble dimension
         if (it == 1) then
-          obsda%set(nobs_intern+1:obsda%nobs) = obsda_ext%set
-          obsda%idx(nobs_intern+1:obsda%nobs) = obsda_ext%idx
-          obsda%ri(nobs_intern+1:obsda%nobs) = obsda_ext%ri
-          obsda%rj(nobs_intern+1:obsda%nobs) = obsda_ext%rj
-          obsda%qc(nobs_intern+1:obsda%nobs) = obsda_ext%qc
+          obsda%set(n1:n2) = obsda_ext%set
+          obsda%idx(n1:n2) = obsda_ext%idx
+          obsda%ri(n1:n2) = obsda_ext%ri
+          obsda%rj(n1:n2) = obsda_ext%rj
+          obsda%qc(n1:n2) = obsda_ext%qc
 #ifdef H08
-          obsda%lev(nobs_intern+1:obsda%nobs) = obsda_ext%lev
-          obsda%val2(nobs_intern+1:obsda%nobs) = obsda_ext%val2
+          obsda%lev(n1:n2) = obsda_ext%lev
+          obsda%val2(n1:n2) = obsda_ext%val2
 #endif
         else
 #ifdef DEBUG
-          if (maxval(abs(obsda%set(nobs_intern+1:obsda%nobs) - obsda_ext%set)) > 0) then
+          if (maxval(abs(obsda%set(n1:n2) - obsda_ext%set)) > 0) then
             write (6,'(A)') 'error: obsda%set are inconsistent among the ensemble'
             stop 99
           end if
-          if (maxval(abs(obsda%idx(nobs_intern+1:obsda%nobs) - obsda_ext%idx)) > 0) then
+          if (maxval(abs(obsda%idx(n1:n2) - obsda_ext%idx)) > 0) then
             write (6,'(A)') 'error: obsda%idx are inconsistent among the ensemble'
             stop 99
           end if
-          if (maxval(abs(obsda%ri(nobs_intern+1:obsda%nobs) - obsda_ext%ri)) > 1.e-6) then
+          if (maxval(abs(obsda%ri(n1:n2) - obsda_ext%ri)) > 1.e-6) then
             write (6,'(A)') 'error: obsda%ri are inconsistent among the ensemble'
             stop 99
           end if
-          if (maxval(abs(obsda%rj(nobs_intern+1:obsda%nobs) - obsda_ext%rj)) > 1.e-6) then
+          if (maxval(abs(obsda%rj(n1:n2) - obsda_ext%rj)) > 1.e-6) then
             write (6,'(A)') 'error: obsda%rj are inconsistent among the ensemble'
             stop 99
           end if
 #endif
-          obsda%qc(nobs_intern+1:obsda%nobs) = max(obsda%qc(nobs_intern+1:obsda%nobs), obsda_ext%qc)
+          obsda%qc(n1:n2) = max(obsda%qc(n1:n2), obsda_ext%qc)
 #ifdef H08
           if (im <= MEMBER) then ! only consider lev, val2 from members, not from the means
-            obsda%lev(nobs_intern+1:obsda%nobs) = obsda%lev(nobs_intern+1:obsda%nobs) + obsda_ext%lev
-            obsda%val2(nobs_intern+1:obsda%nobs) = obsda%val2(nobs_intern+1:obsda%nobs) + obsda_ext%val2
+            obsda%lev(n1:n2) = obsda%lev(n1:n2) + obsda_ext%lev
+            obsda%val2(n1:n2) = obsda%val2(n1:n2) + obsda_ext%val2
           end if
 #endif
         end if
 
-        ! variables with an ensemble dimension
-        if (im == mmdetin) then
-          obsda%ensval(mmdetobs,nobs_intern+1:obsda%nobs) = obsda_ext%val
-        else
-          obsda%ensval(im,nobs_intern+1:obsda%nobs) = obsda_ext%val
-        end if
-
         call obs_da_value_deallocate(obsda_ext)
-      end if ! [ OBSDA_IN .and. nobs_extern > 0 ]
-    end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
-  end do ! [ it = 1, nitmax ]
+      end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
+    end do ! [ it = 1, nitmax ]
 
-  ! AllREDUCE observations:
-  !   if the number of processors is greater then the ensemble size,
-  !   broadcast the observation indices and real grid numbers
-  !   from myrank_e=MEMBER-1 to the rest of processors that didn't read anything
-  !   !!!!!! now broadcast to all --> need to be revised
-  !-----------------------------------------------------------------------------
+    ! Broadcast the observation information shared by members (e.g., grid numbers)
+    !---------------------------------------------------------------------------
 
-  if (nprocs_e > MEMBER) then
+    if (nprocs_e > MEMBER) then
+      call MPI_BCAST(obsda%set(n1:n2), nobs_extern, MPI_INTEGER, 0, MPI_COMM_e, ierr)
+      call MPI_BCAST(obsda%idx(n1:n2), nobs_extern, MPI_INTEGER, 0, MPI_COMM_e, ierr)
+      call MPI_BCAST(obsda%ri(n1:n2),  nobs_extern, MPI_r_size,  0, MPI_COMM_e, ierr)
+      call MPI_BCAST(obsda%rj(n1:n2),  nobs_extern, MPI_r_size,  0, MPI_COMM_e, ierr)
+    end if
 
-!      ALLOCATE(ranks(nprocs_e-MEMBER+1))
-!      do n = MEMBER, nprocs_e
-!        ranks(n-MEMBER+1) = n-1
-!      end do
-!      call MPI_Comm_group(MPI_COMM_e,MPI_G_e,ierr)
-!      call MPI_GROUP_INCL(MPI_G_e,nprocs_e-MEMBER+1,ranks,MPI_G_obstmp,ierr)
-!      call MPI_COMM_CREATE(MPI_COMM_e,MPI_G_obstmp,MPI_COMM_obstmp,ierr)
+    ! Allreduce externally processed observations
+    !---------------------------------------------------------------------------
 
-!      IF(myrank_e+1 >= MEMBER) THEN
-!        CALL MPI_BARRIER(MPI_COMM_obstmp,ierr)
-!        call MPI_BCAST(obsda%nobs, 1, MPI_INTEGER, 0, MPI_COMM_obstmp, ierr)
-!!    print *, myrank, obsda%nobs
+    ! variables with an ensemble dimension
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%ensval(:,n1:n2), nensobs*nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
 
-!        if (myrank_e+1 > MEMBER) then
-!          CALL obs_da_value_allocate(obsda,MEMBER)
-!        end if
-
-!        CALL MPI_BARRIER(MPI_COMM_obstmp,ierr)
-!        call MPI_BCAST(obsda%set, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_obstmp, ierr)
-!        call MPI_BCAST(obsda%idx, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_obstmp, ierr)
-!        call MPI_BCAST(obsda%ri, obsda%nobs, MPI_r_size, 0, MPI_COMM_obstmp, ierr)
-!        call MPI_BCAST(obsda%rj, obsda%nobs, MPI_r_size, 0, MPI_COMM_obstmp, ierr)
-!!        CALL MPI_BARRIER(MPI_COMM_obstmp,ierr)
-!      end if
-
-!      deallocate(ranks)
-!      call MPI_Comm_free(MPI_COMM_obstmp,ierr)
-
-
-!      CALL MPI_BARRIER(MPI_COMM_e,ierr)
-      call MPI_BCAST(obsda%nobs, 1, MPI_INTEGER, 0, MPI_COMM_e, ierr)
-!    print *, myrank, obsda%nobs
-
-      if (.not. allocated(obsda%ensval)) then
-        call obs_da_value_allocate(obsda, nensobs)
-      end if
-
-!      CALL MPI_BARRIER(MPI_COMM_e,ierr)
-      call MPI_BCAST(obsda%set, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
-      call MPI_BCAST(obsda%idx, obsda%nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
-      call MPI_BCAST(obsda%ri, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
-      call MPI_BCAST(obsda%rj, obsda%nobs, MPI_r_size, 0, MPI_COMM_e, ierr)
-
-  end if ! [ nprocs_e > MEMBER ]
-
-
-! obsda%val not used; averaged from obsda%ensval later
-
-!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
-  CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%ensval,obsda%nobs*nensobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
-
-!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
-  CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%qc,obsda%nobs,MPI_INTEGER,MPI_MAX,MPI_COMM_e,ierr)
-
+    ! variables without an ensemble dimension
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(n1:n2), nobs_extern, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)
 #ifdef H08
-!-- H08
-! calculate the ensemble mean of obsda%lev
-!
-!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
-  CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%lev,obsda%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
-
-  obsda%lev = obsda%lev / REAL(MEMBER,r_size)
-
-! calculate the ensemble mean of obsda%val2 (clear sky BT)
-!
-!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
-  CALL MPI_ALLREDUCE(MPI_IN_PLACE,obsda%val2,obsda%nobs,MPI_r_size,MPI_SUM,MPI_COMM_e,ierr)
-
-  obsda%val2 = obsda%val2 / REAL(MEMBER,r_size)
-
-!-- H08
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    obsda%lev(n1:n2) = obsda%lev(n1:n2) / REAL(MEMBER,r_size)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    obsda%val2(n1:n2) = obsda%val2(n1:n2) / REAL(MEMBER,r_size)
 #endif
 
-!  call MPI_Comm_free(MPI_COMM_e,ierr)
+  end if ! [ OBSDA_IN .and. nobs_extern > 0 ]
 
 !-------------------------------------------------------------------------------
 ! Process observations and quality control (QC)
@@ -904,13 +849,12 @@ SUBROUTINE set_letkf_obs
   ! Print observation counts for each types
   !-----------------------------------------------------------------------------
 
-  write(nstr, '(I4)') nid_obs
-
+  write (nstr, '(I4)') nid_obs
   write (6, *)
   write (6, '(A)') 'OBSERVATION COUNTS BEFORE QC (GLOABL):'
-  write (6, '(A7,'//nstr//'A8,A)') '=======', line1_str(:), '=========='
+  write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
   write (6, '(A6,1x,'//nstr//'A8,A10)') 'TYPE  ', obelmlist(:), '     TOTAL'
-  write (6, '(A7,'//nstr//'A8,A)') '-------', line2_str(:), '----------'
+  write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
   nobs_elms_sum(:) = 0
   do ityp = 1, nobtype
     nobs_elms(:) = 0
@@ -922,15 +866,15 @@ SUBROUTINE set_letkf_obs
     nobs_elms_sum = nobs_elms_sum + nobs_elms
     write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(ityp), nobs_elms(:), sum(nobs_elms(:))
   end do
-  write (6, '(A7,'//nstr//'A8,A)') '-------', line2_str(:), '----------'
+  write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
   write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', nobs_elms_sum(:), nobs_g(1)
-  write (6, '(A7,'//nstr//'A8,A)') '=======', line1_str(:), '=========='
+  write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
 
   write (6, *)
   write (6, '(A)') 'OBSERVATION COUNTS AFTER QC (GLOABL):'
-  write (6, '(A7,'//nstr//'A8,A)') '=======', line1_str(:), '=========='
+  write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
   write (6, '(A6,1x,'//nstr//'A8,A10)') 'TYPE  ', obelmlist(:), '     TOTAL'
-  write (6, '(A7,'//nstr//'A8,A)') '-------', line2_str(:), '----------'
+  write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
   nobs_elms_sum(:) = 0
   do ityp = 1, nobtype
     nobs_elms(:) = 0
@@ -942,9 +886,9 @@ SUBROUTINE set_letkf_obs
     nobs_elms_sum = nobs_elms_sum + nobs_elms
     write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(ityp), nobs_elms(:), sum(nobs_elms(:))
   end do
-  write (6, '(A7,'//nstr//'A8,A)') '-------', line2_str(:), '----------'
+  write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
   write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', nobs_elms_sum(:), nobs_g(2)
-  write (6, '(A7,'//nstr//'A8,A)') '=======', line1_str(:), '=========='
+  write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
 
   ! Calculate observation numbers in the extended (localization) subdomain,
   ! in preparation for communicating obsetvations in the extended subdomain

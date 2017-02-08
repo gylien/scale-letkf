@@ -142,10 +142,11 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: iqc_radar_vhi=19
   INTEGER,PARAMETER :: iqc_out_vhi=20
   INTEGER,PARAMETER :: iqc_out_vlo=21
-  INTEGER,PARAMETER :: iqc_out_h=22
   INTEGER,PARAMETER :: iqc_obs_bad=50
   INTEGER,PARAMETER :: iqc_otype=90
-  INTEGER,PARAMETER :: iqc_time=91
+  INTEGER,PARAMETER :: iqc_time=97
+  INTEGER,PARAMETER :: iqc_out_h=98
+  INTEGER,PARAMETER :: iqc_undef=99
 
   type(obs_info),allocatable,save :: obs(:) ! observation information
   type(obs_da_value),save :: obsda_sort     ! sorted obsda
@@ -1775,8 +1776,6 @@ SUBROUTINE monit_print(nobs,bias,rmse,monit_type)
 
   integer :: i, n
   character(4) :: nstr
-  character(12) :: tmpstr(nid_obs)
-  character(12) :: tmpstr2(nid_obs)
 
   logical :: monit_type_(nid_obs)
 
@@ -1802,16 +1801,14 @@ SUBROUTINE monit_print(nobs,bias,rmse,monit_type)
     end if
   end do
   write(nstr, '(I4)') n
-  tmpstr(1:n) = '============'
-  tmpstr2(1:n) = '------------'
 
-  WRITE(6,'(A,' // trim(nstr) // 'A)') '======', tmpstr(1:n)
+  WRITE(6,'(A,' // trim(nstr) // "('============'))") '======'
   WRITE(6,'(6x,' // trim(nstr) // 'A)')          var_show(1:n)
-  WRITE(6,'(A,' // trim(nstr) // 'A)') '------', tmpstr2(1:n)
+  WRITE(6,'(A,' // trim(nstr) // "('------------'))") '------'
   WRITE(6,'(A,' // trim(nstr) // 'A)') 'BIAS  ', bias_show(1:n)
   WRITE(6,'(A,' // trim(nstr) // 'A)') 'RMSE  ', rmse_show(1:n)
   WRITE(6,'(A,' // trim(nstr) // 'A)') 'NUMBER', nobs_show(1:n)
-  WRITE(6,'(A,' // trim(nstr) // 'A)') '======', tmpstr(1:n)
+  WRITE(6,'(A,' // trim(nstr) // "('============'))") '======'
 
   RETURN
 END SUBROUTINE monit_print

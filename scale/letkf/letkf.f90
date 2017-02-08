@@ -151,7 +151,7 @@ PROGRAM letkf
     ! Compute observation operator, return the results in obsda
     ! with additional space for externally processed observations
     !
-    call obsope_cal(obsda_return=obsda, nobs_extern=nobs_extern)
+    call obsope_cal(obsda, .true., nobs_extern=nobs_extern)
 
     CALL MPI_BARRIER(MPI_COMM_a,ierr)
     rtimer = MPI_WTIME()
