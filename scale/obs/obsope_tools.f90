@@ -365,7 +365,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   write (6, '(A,I6,A)') 'OBSERVATION COUNTS BEFORE QC (FROM OBSOPE):'
   write (6, '(A,'//nstr//"('=========='),A)") '====================', '===================='
   write (6, '(A,'//nstr//'I10.4)') '            SLOT #  ', slot_id(:)
-  write (6, '(A,'//nstr//'F10.1') '            FROM (s)', slot_lb(:)
+  write (6, '(A,'//nstr//'F10.1)') '            FROM (s)', slot_lb(:)
   write (6, '(A,'//nstr//'F10.1,A)') 'SUBDOMAIN #   TO (s)', slot_ub(:), '  OUT_TIME     TOTAL'
   write (6, '(A,'//nstr//"('----------'),A)") '--------------------', '--------------------'
   do ip = 0, nprocs_d-1
