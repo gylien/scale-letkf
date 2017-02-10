@@ -68,9 +68,9 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=10800     # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=32400     # SCALE forecast time when assimilation window ends (second)
-LCYCLE=21600       # Length of a GFS-LETKF cycle (second)
+WINDOW_S=10800     # SCALE forecast time when the assimilation window starts (second)
+WINDOW_E=32400     # SCALE forecast time when the assimilation window ends (second)
+LCYCLE=21600       # Length of a DA cycle (second)
 LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
