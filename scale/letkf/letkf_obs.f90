@@ -147,6 +147,10 @@ SUBROUTINE set_letkf_obs
   logical :: ctype_use(nid_obs,nobtype)
 
 
+  real(r_dble) :: rrtimer00, rrtimer
+  rrtimer00 = MPI_WTIME()
+
+
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
   nobs_intern = obsda%nobs - nobs_extern
@@ -247,6 +251,13 @@ SUBROUTINE set_letkf_obs
       end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
     end do ! [ it = 1, nitmax ]
 
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_letkf_obs:read_external_obs:             ', rrtimer-rrtimer00
+  call MPI_BARRIER(MPI_COMM_e, ierr)
+  rrtimer00 = MPI_WTIME()
+
+
     ! Broadcast the observation information shared by members (e.g., grid numbers)
     !---------------------------------------------------------------------------
 
@@ -271,6 +282,12 @@ SUBROUTINE set_letkf_obs
     call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
     obsda%val2(n1:n2) = obsda%val2(n1:n2) / REAL(MEMBER,r_size)
 #endif
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_letkf_obs:read_external_obs_allreduce:   ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
 
   end if ! [ OBSDA_IN .and. nobs_extern > 0 ]
 
@@ -355,6 +372,12 @@ SUBROUTINE set_letkf_obs
       end if ! [ ctype_use(ielm_u, ityp) ]
     end do ! [ ielm_u = 1, nid_obs ]
   end do ! [ ityp = 1, nobtype ]
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_letkf_obs:preprocess_data:               ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
 
   ! Compute perturbation and departure
   !  -- gross error check
@@ -622,6 +645,12 @@ SUBROUTINE set_letkf_obs
   END DO ! [ n = 1, obsda%nobs ]
 !$OMP END PARALLEL DO
 
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_letkf_obs:departure_cal_qc:              ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
+
   ! Temporal observation localization !!!!!! not implemented yet !!!!!!
   !-----------------------------------------------------------------------------
 !!
@@ -641,6 +670,12 @@ SUBROUTINE set_letkf_obs
   call monit_dep(obsda%nobs, tmpelm, obsda%val, obsda%qc, monit_nobs, bias, rmse)
   call monit_print(monit_nobs, bias, rmse)
   deallocate(tmpelm)
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_letkf_obs:departure_print:               ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
 
 !-------------------------------------------------------------------------------
 ! "Bucket sort" of observations of each combined type (with different sorting meshes)
@@ -729,6 +764,12 @@ SUBROUTINE set_letkf_obs
   end do
   write (6, '(A)') '=================================================================================='
 
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_letkf_obs:bucket_sort_prepare:           ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
+
   ! First scan: count the observation numbers in each mesh (in each subdomian)
   !-----------------------------------------------------------------------------
 
@@ -770,6 +811,12 @@ SUBROUTINE set_letkf_obs
     obsgrd(ictype)%next(1:obsgrd(ictype)%ngrd_i,:) = obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i-1,:,myrank_d)
   end do
 
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_letkf_obs:bucket_sort_first_scan:        ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
+
   ! Second scan: save the indices of bucket-sorted observations in obsda%keys(:)
   !-----------------------------------------------------------------------------
 
@@ -799,6 +846,12 @@ SUBROUTINE set_letkf_obs
 !  endif
 ! -- H08
 !#endif
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_letkf_obs:bucket_sort_second_scan:       ', rrtimer-rrtimer00
+  call MPI_BARRIER(MPI_COMM_d, ierr)
+  rrtimer00 = MPI_WTIME()
 
 
   ! ALLREDUCE observation number information from subdomains, and compute total numbers
@@ -831,6 +884,12 @@ SUBROUTINE set_letkf_obs
 
     deallocate (obsgrd(ictype)%next)
   end do
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_letkf_obs:bucket_sort_info_allreduce     ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
 
 #ifdef DEBUG
   if (nctype > 0) then
@@ -994,6 +1053,13 @@ SUBROUTINE set_letkf_obs
 
   obsda_sort%nobs_in_key = nk
 
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_letkf_obs:ext_subdomain_gatherv_prepare: ', rrtimer-rrtimer00
+  call MPI_BARRIER(MPI_COMM_d, ierr)
+  rrtimer00 = MPI_WTIME()
+
+
   ! 2) Communicate observations within the extended (localization) subdomains
   !-----------------------------------------------------------------------------
   obsbufs%nobs = nobs_sub(2)
@@ -1068,6 +1134,12 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
     call MPI_GATHERV(obsbufs%lev, cnts, MPI_r_size, obsbufr%lev, cntr, dspr, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
 #endif
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_letkf_obs:ext_subdomain_gatherv:         ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
 
     ! c) In the domain receiving data, copy the receive buffer to obsda_sort
     !---------------------------------------------------------------------------
@@ -1150,6 +1222,12 @@ SUBROUTINE set_letkf_obs
   call obs_da_value_deallocate(obsbufs)
   call obs_da_value_deallocate(obsbufr)
   deallocate (obsidx)
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_letkf_obs:ext_subdomain_gatherv:         ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
 
   ! Print observation counts
   !-----------------------------------------------------------------------------
