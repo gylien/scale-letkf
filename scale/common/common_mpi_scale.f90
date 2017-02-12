@@ -213,7 +213,8 @@ SUBROUTINE set_common_mpi_scale
 
   rrtimer = MPI_WTIME()
   write (6,'(A,F15.7)') '###### set_common_mpi_scale:mpi_group_incl_e:       ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+  rrtimer00 = MPI_WTIME()
 
 
   call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_e,ierr)
@@ -240,7 +241,8 @@ SUBROUTINE set_common_mpi_scale
 
   rrtimer = MPI_WTIME()
   write (6,'(A,F15.7)') '###### set_common_mpi_scale:mpi_group_incl_a:       ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+  rrtimer00 = MPI_WTIME()
 
 
   call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_a,ierr)
@@ -722,14 +724,32 @@ subroutine set_scalelib
   call IO_LOG_setup( local_myrank, local_ismaster )
   call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_scalelib:log_setup:                      ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
+
   ! setup process
   call PRC_setup
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_scalelib:prc_setup:                      ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
 
   ! setup PROF
 !  call PROF_setup
 
   ! setup constants
   call CONST_setup
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_scalelib:const_setup:                    ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
 
   ! setup calendar
 !  call CALENDAR_setup
@@ -747,6 +767,12 @@ subroutine set_scalelib
   call GRID_INDEX_setup
   call GRID_setup
 
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_scalelib:grid_setup:                     ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
+
 !  call LAND_GRID_INDEX_setup
 !  call LAND_GRID_setup
 
@@ -756,11 +782,29 @@ subroutine set_scalelib
   ! setup tracer index
   call TRACER_setup
 
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_scalelib:tracer_setup:                   ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
+
   ! setup file I/O
   call FILEIO_setup
 
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_scalelib:fileio_setup:                   ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
+
   ! setup mpi communication
   call COMM_setup
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_scalelib:comm_setup:                     ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
 
   ! setup topography
 !  call TOPO_setup
@@ -770,6 +814,12 @@ subroutine set_scalelib
 !  call REAL_setup
     ! setup map projection [[ in REAL_setup ]]
     call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_scalelib:mprj_setup:                     ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
 
   ! setup grid transfer metrics (uses in ATMOS_dynamics)
 !  call GTRANS_setup
@@ -789,6 +839,13 @@ subroutine set_scalelib
     call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_masterrank, PRC_myrank, rankidx, &
                      0.0d0, 1.0d0, &
                      namelist_fid=IO_FID_CONF, default_basename='history')
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_scalelib:history_init:                   ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
+
   ! setup monitor I/O
 !  call MONIT_setup
 
@@ -799,6 +856,12 @@ subroutine set_scalelib
 !  call ATMOS_HYDROSTATIC_setup
   call ATMOS_THERMODYN_setup
 !  call ATMOS_SATURATION_setup
+
+
+  rrtimer = MPI_WTIME()
+  write (6,'(A,F15.7)') '###### set_scalelib:atmos_thermodyn_setup:          ', rrtimer-rrtimer00
+  rrtimer00 = rrtimer
+
 
 !  call BULKFLUX_setup
 !  call ROUGHNESS_setup
@@ -816,11 +879,6 @@ subroutine set_scalelib
 !  call LAND_vars_setup
 !  call URBAN_vars_setup
 !  call CPL_vars_setup
-
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:other_setup:                    ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
 
 
   return
