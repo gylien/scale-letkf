@@ -550,7 +550,8 @@ subroutine set_scalelib
     PRC_masterrank, &
     PRC_myrank, &
     PRC_mpi_alive, &
-    PRC_DOMAIN_nlim
+    PRC_DOMAIN_nlim, &
+    PRC_UNIVERSAL_IsMaster
   use scale_rm_process, only: &
     PRC_setup, &
     PRC_2Drank, &
@@ -721,7 +722,7 @@ subroutine set_scalelib
 
 
   ! setup Log
-  call IO_LOG_setup( local_myrank, local_ismaster )
+  call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
   call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
 
