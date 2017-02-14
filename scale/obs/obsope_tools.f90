@@ -85,8 +85,9 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   real(r_size) :: ril, rjl, rk
 
   character(filelenmax) :: obsdafile
-  character(11) :: obsda_suffix = '.000000.dat'
-  character(4) :: nstr
+  character(len=11) :: obsda_suffix = '.000000.dat'
+  character(len=4) :: nstr
+  character(len=timer_name_width) :: timer_str
 
 #ifdef H08
 ! -- for Himawari-8 obs --
@@ -127,12 +128,9 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   REAL(r_size),ALLOCATABLE :: bTC(:,:)
   REAL(r_size) :: bTC_mslp
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 
-  real(r_dble) :: rrtimer00, rrtimer
-!  call MPI_BARRIER(MPI_COMM_a, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2)
 
 #ifdef H08
 !  call phys2ij(MSLP_TC_LON,MSLP_TC_LAT,MSLP_TC_rig,MSLP_TC_rjg)
@@ -141,7 +139,6 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   brie = (real(nlong+2*IHALO,r_size) - bris)
   brje = (real(nlatg+2*JHALO,r_size) - brjs)
 #endif
-
 
 !-------------------------------------------------------------------------------
 ! First scan of all observation data: Compute their horizontal location and time
@@ -224,22 +221,13 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         call rij_g2l_auto(obrank_bufs(ibufs), ri_bufs(ibufs), rj_bufs(ibufs), ril, rjl) ! rij, rjl discarded here; re-computed later
       end do ! [ n = n1, n2 ]
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,4x,F15.7)') '###### obsope_cal:first_scan_cal:               ', rrtimer-rrtimer00
-  call MPI_BARRIER(MPI_COMM_a, ierr)
-  rrtimer00 = MPI_WTIME()
-
+      call mpi_timer('obsope_cal:first_scan_cal:', 2, barrier=MPI_COMM_a)
 
       call MPI_GATHERV(obrank_bufs, cntr(myrank_a+1), MPI_INTEGER, obrank, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_a, ierr)
       call MPI_GATHERV(ri_bufs,     cntr(myrank_a+1), MPI_r_size , obri,   cntr, dspr, MPI_r_size,  0, MPI_COMM_a, ierr)
       call MPI_GATHERV(rj_bufs,     cntr(myrank_a+1), MPI_r_size , obrj,   cntr, dspr, MPI_r_size,  0, MPI_COMM_a, ierr)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,4x,F15.7)') '###### obsope_cal:first_scan_reduce:            ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+      call mpi_timer('obsope_cal:first_scan_reduce:', 2)
 
       nn_0 = nn_0 + obs(iof)%nobs
     end if ! [ OBSDA_RUN(iof) .and. obs(iof)%nobs > 0 ]
@@ -328,11 +316,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
     deallocate (bsnext)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,4x,F15.7)') '###### obsope_cal:bucket_sort:                  ', rrtimer-rrtimer00
-
-
+    call mpi_timer('obsope_cal:bucket_sort:', 2)
   end if ! [ myrank_a == 0 ]
 
   deallocate ( obrank, obri, obrj )
@@ -340,19 +324,12 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   ! Broadcast the bucket-sort observation numbers to all processes and print
   !-----------------------------------------------------------------------------
 
-
-  call MPI_BARRIER(MPI_COMM_a, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2, barrier=MPI_COMM_a)
 
   call MPI_BCAST(bsn,  (SLOT_END-SLOT_START+3)*nprocs_d, MPI_INTEGER, 0, MPI_COMM_a, ierr)
   call MPI_BCAST(bsna, (SLOT_END-SLOT_START+4)*nprocs_d, MPI_INTEGER, 0, MPI_COMM_a, ierr)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,4x,F15.7)') '###### obsope_cal:sort_info_bcast:              ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('obsope_cal:sort_info_bcast:', 2)
 
   do islot = SLOT_START, SLOT_END
     slot_id(islot) = islot - SLOT_START + 1
@@ -407,10 +384,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
     call MPI_SCATTERV(ri_bufs2,   cnts, dsps, MPI_r_size,  obsda%ri,  cnts(myrank_d+1), MPI_r_size,  0, MPI_COMM_d, ierr)
     call MPI_SCATTERV(rj_bufs2,   cnts, dsps, MPI_r_size,  obsda%rj,  cnts(myrank_d+1), MPI_r_size,  0, MPI_COMM_d, ierr)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,4x,F15.7)') '###### obsope_cal:mpi_scatterv:                 ', rrtimer-rrtimer00
-
+    call mpi_timer('obsope_cal:mpi_scatterv:', 2)
 
     deallocate (cnts, dsps)
     deallocate (obset_bufs, obidx_bufs, ri_bufs2, rj_bufs2)
@@ -420,21 +394,14 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   ! from processes group {myrank_e = 0} to all processes
   !-----------------------------------------------------------------------------
 
-
-  call MPI_BARRIER(MPI_COMM_a, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2, barrier=MPI_COMM_e)
 
   call MPI_BCAST(obsda%set, nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
   call MPI_BCAST(obsda%idx, nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
   call MPI_BCAST(obsda%ri,  nobs, MPI_r_size,  0, MPI_COMM_e, ierr)
   call MPI_BCAST(obsda%rj,  nobs, MPI_r_size,  0, MPI_COMM_e, ierr)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,4x,F15.7)') '###### obsope_cal:mpi_broadcast:                ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('obsope_cal:mpi_broadcast:', 2)
 
 !-------------------------------------------------------------------------------
 ! Second scan of observation data in own subdomain: Compute H(x), QC, ... etc.
@@ -501,11 +468,8 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
         call read_ens_history_iter(it, islot, v3dg, v2dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,I3,A,I3,A,4x,F15.7)') '###### obsope_cal:read_ens_history_iter:', it, ':', islot, ':', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+        write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:read_ens_history(t=', it, ', slot=', islot, '):'
+        call mpi_timer(trim(timer_str), 2)
 
 #ifdef H08
           ELSEIF( OBS_IN_FORMAT(iof) == 3) THEN ! for H08 obs (OBS_IN_FORMAT(iof) = 3) ! H08
@@ -697,9 +661,8 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
 
 
-  rrtimer = MPI_WTIME()
-  write (6,'(A,I3,A,I3,A,I3,A,F15.7)') '###### obsope_cal:obsope_step_2:        ', it, ':', islot, ':', iof, ':', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
+        write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:obsope_step_2   (t=', it, ', slot=', islot, '):'
+        call mpi_timer(trim(timer_str), 2)
 
 
 
@@ -768,9 +731,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
       end do ! [ islot = SLOT_START, SLOT_END ]
 
-
-  rrtimer00 = MPI_WTIME()
-
+      call mpi_timer('', 2)
 
       ! Write obsda data to files if OBSDA_OUT = .true.
       ! 
@@ -787,12 +748,8 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
         call write_obs_da(trim(obsdafile)//obsda_suffix,obsda,0)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,I3,A,8x,F15.7)') '###### obsope_cal:write_obs_da:         ', it, ':', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+        write (timer_str, '(A30,I4,A2)') 'obsope_cal:write_obs_da    (t=', it, '):'
+        call mpi_timer(trim(timer_str), 2)
       end if
 
       ! Prepare variables that will need to be communicated if obsda_return = .true.
@@ -835,10 +792,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 ! If obsda_return = .true., allreduce the obsda data among ensemble members
 !-------------------------------------------------------------------------------
 
-
-  call MPI_BARRIER(MPI_COMM_a, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2, barrier=MPI_COMM_e)
 
   if (obsda_return .and. nobs > 0) then
     ! variables with an ensemble dimension
@@ -864,12 +818,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
     obsda%val2(1:nobs) = obsda%val2(1:nobs) / REAL(MEMBER, r_size)                                                  !
 #endif
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,I3,A,8x,F15.7)') '###### obsope_cal:mpi_allreduce:        ', it, ':', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+    call mpi_timer('obsope_cal:mpi_allreduce:', 2)
   end if ! [ obsda_return .and. nobs > 0 ]
 
   if (.not. obsda_return) then

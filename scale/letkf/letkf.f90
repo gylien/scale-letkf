@@ -26,11 +26,8 @@ PROGRAM letkf
   REAL(r_size),ALLOCATABLE :: gues2d(:,:,:)
   REAL(r_size),ALLOCATABLE :: anal3d(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: anal2d(:,:,:)
-  REAL(r_dble) :: rtimer00,rtimer
-  INTEGER :: ierr
-  CHARACTER(7) :: stdoutf='-000000'
-  CHARACTER(11) :: timer_fmt='(A30,F10.2)'
 
+  character(7) :: stdoutf='-000000'
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
   integer :: iarg
@@ -39,8 +36,8 @@ PROGRAM letkf
 ! Initial settings
 !-----------------------------------------------------------------------
 
-  CALL initialize_mpi_scale
-  rtimer00 = MPI_WTIME()
+  call initialize_mpi_scale
+  call mpi_timer('', 1)
 
   if (command_argument_count() >= 4) then
     call get_command_argument(3, icmd)
@@ -92,10 +89,7 @@ PROGRAM letkf
     call system(trim(cmd1))
   end if
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(PRE_SCRIPT):',rtimer-rtimer00
-  rtimer00=rtimer
+  call mpi_timer('PRE_SCRIPT', 1, barrier=MPI_COMM_WORLD)
 
 !-----------------------------------------------------------------------
 
@@ -120,22 +114,16 @@ PROGRAM letkf
     call set_common_mpi_scale
     call set_common_obs_scale
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(INITIALIZE):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Read observations
 !-----------------------------------------------------------------------
 
-    allocate(obs(OBS_IN_NUM))
+    allocate (obs(OBS_IN_NUM))
     call read_obs_all_mpi(obs)
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(READ_OBS):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('READ_OBS', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Observation operator
@@ -153,40 +141,31 @@ PROGRAM letkf
     !
     call obsope_cal(obsda, .true., nobs_extern=nobs_extern)
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(OBS_OPERATOR):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Process observation data
 !-----------------------------------------------------------------------
 
-    CALL set_letkf_obs
+    call set_letkf_obs
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(PROCESS_OBS):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('PROCESS_OBS', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! First guess ensemble
 !-----------------------------------------------------------------------
 
-    ALLOCATE(gues3d(nij1,nlev,nens,nv3d))
-    ALLOCATE(gues2d(nij1,nens,nv2d))
-    ALLOCATE(anal3d(nij1,nlev,nens,nv3d))
-    ALLOCATE(anal2d(nij1,nens,nv2d))
+    allocate (gues3d(nij1,nlev,nens,nv3d))
+    allocate (gues2d(nij1,nens,nv2d))
+    allocate (anal3d(nij1,nlev,nens,nv3d))
+    allocate (anal2d(nij1,nens,nv2d))
 
     !
     ! LETKF GRID setup
     !
     call set_common_mpi_grid
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(SET_GRID):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
 
     !
     ! READ GUES
@@ -198,10 +177,7 @@ PROGRAM letkf
       gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
     end if
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(READ_GUES):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('READ_GUES', 1, barrier=MPI_COMM_a)
 
     !
     ! WRITE ENS MEAN and SPRD
@@ -213,10 +189,7 @@ PROGRAM letkf
       call write_enssprd(GUES_SPRD_OUT_BASENAME, gues3d, gues2d)
     end if
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(GUES_MEAN):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('GUES_MEAN', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Data Assimilation
@@ -225,12 +198,9 @@ PROGRAM letkf
     !
     ! LETKF
     !
-    CALL das_letkf(gues3d,gues2d,anal3d,anal2d)
+    call das_letkf(gues3d,gues2d,anal3d,anal2d)
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(DAS_LETKF):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('DAS_LETKF', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Analysis ensemble
@@ -246,37 +216,25 @@ PROGRAM letkf
       call write_enssprd(ANAL_SPRD_OUT_BASENAME, anal3d, anal2d)
     end if
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(ANAL_MEAN):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('ANAL_MEAN', 1, barrier=MPI_COMM_a)
 
     !
     ! WRITE ANAL and ENS MEAN
     !
-!    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-
     call write_ens_mpi(anal3d, anal2d, &
                        monit=DEPARTURE_STAT, caption='OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS]')
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(WRITE_ANAL):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('WRITE_ANAL', 1, barrier=MPI_COMM_a)
 
 !!-----------------------------------------------------------------------
 !! Monitor
 !!-----------------------------------------------------------------------
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
 !  CALL monit_obs
-!!
-!  rtimer = MPI_WTIME()
-!  WRITE(6,timer_fmt) '### TIMER(MONIT_MEAN):',rtimer-rtimer00
-!  rtimer00=rtimer
 
-    deallocate(obs)
+    deallocate (obs)
+    deallocate (gues3d, gues2d, anal3d, anal2d)
 
-    CALL unset_common_mpi_scale
+    call unset_common_mpi_scale
 
     call unset_scalelib
 
@@ -288,10 +246,7 @@ PROGRAM letkf
 
 !-----------------------------------------------------------------------
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(FINALIZE):',rtimer-rtimer00
-  rtimer00=rtimer
+  call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 
 !-----------------------------------------------------------------------
 ! Post-processing scripts
@@ -303,16 +258,13 @@ PROGRAM letkf
     call system(trim(cmd2))
   end if
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(POST_SCRIPT):',rtimer-rtimer00
-  rtimer00=rtimer
+  call mpi_timer('POST_SCRIPT', 1, barrier=MPI_COMM_WORLD)
 
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
 
-  CALL finalize_mpi_scale
+  call finalize_mpi_scale
 
   STOP
 END PROGRAM letkf

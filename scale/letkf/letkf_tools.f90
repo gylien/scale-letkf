@@ -80,11 +80,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size) :: q_mean,q_sprd                  !GYL
   REAL(r_size) :: q_anal(MEMBER)                 !GYL
 
+  character(len=timer_name_width) :: timer_str
 
-  integer :: ierr
-  real(r_dble) :: rrtimer00, rrtimer000, rrtimer
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2)
 
   WRITE(6,'(A)') 'Hello from das_letkf'
   WRITE(6,'(A,F15.2)') '  INFL_MUL = ',INFL_MUL
@@ -151,11 +149,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     END DO
   END DO
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### das_letkf:fcst_perturbation:                 ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('das_letkf:fcst_perturbation:', 2)
 
   !
   ! multiplicative inflation
@@ -170,26 +164,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',INFL_MUL_IN_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
       call read_restart(INFL_MUL_IN_BASENAME,work3dg,work2dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### das_letkf:adaptive_infl_read_restart:        ', rrtimer-rrtimer00
-
-
+      call mpi_timer('das_letkf:adaptive_infl_read_restart:', 2)
     END IF
 
-
-  call MPI_BARRIER(MPI_COMM_e, ierr)
-  rrtimer00 = MPI_WTIME()
-
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     CALL scatter_grd_mpi(mmean_rank_e,work3dg,work2dg,work3d,work2d)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### das_letkf:adaptive_infl_scatter:             ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+    call mpi_timer('das_letkf:adaptive_infl_scatter:', 2)
   END IF
   IF(INFL_MUL_MIN > 0.0d0) THEN
     work3d = max(work3d, INFL_MUL_MIN)
@@ -222,12 +204,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ALLOCATE(dep  (nobstotal))
   ALLOCATE(depd (nobstotal)) !GYL
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### das_letkf:other_allocation:                  ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-  rrtimer000 = rrtimer
-
+  call mpi_timer('das_letkf:other_allocation:', 2)
+  call mpi_timer('', 3)
 
   DO ilev=1,nlev
 
@@ -457,17 +435,11 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     END DO ! [ ij=1,nij1 ]
 !$OMP END PARALLEL DO
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,I4,A,F15.7)') '    ## das_letkf:letkf_core: ilev=', ilev, ':                         ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+    write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
+    call mpi_timer(trim(timer_str), 3)
   END DO ! [ ilev=1,nlev ]
 
-
-  write (6,'(A,F15.7)') '###### das_letkf:letkf_core:                        ', rrtimer-rrtimer000
-
+  call mpi_timer('das_letkf:letkf_core:', 2)
 
   DEALLOCATE(hdxf,rdiag,rloc,dep,depd)
   !
@@ -480,64 +452,38 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Write updated inflation parameters
   !
   IF(INFL_MUL_ADAPTIVE) THEN
-
-
-  call MPI_BARRIER(MPI_COMM_e, ierr)
-  rrtimer00 = MPI_WTIME()
-
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
     if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
     CALL gather_grd_mpi(mmean_rank_e,work3d,work2d,work3dg,work2dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### das_letkf:adaptive_infl_gather:              ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+    call mpi_timer('das_letkf:adaptive_infl_gather:', 2)
 
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',INFL_MUL_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
       call write_restart(INFL_MUL_OUT_BASENAME,work3dg,work2dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### das_letkf:adaptive_infl_write_restart:       ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+      call mpi_timer('das_letkf:adaptive_infl_write_restart:', 2)
     END IF
   END IF
   !
   ! Write inflation parameter (in analysis) corresponding to the RTPS method
   !
   IF(RELAX_SPREAD_OUT) THEN
-
-
-  call MPI_BARRIER(MPI_COMM_e, ierr)
-  rrtimer00 = MPI_WTIME()
-
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
     if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
     CALL gather_grd_mpi(mmean_rank_e,work3da,work2da,work3dg,work2dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### das_letkf:relax_spread_out_gather:           ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+    call mpi_timer('das_letkf:relax_spread_out_gather:', 2)
 
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',RELAX_SPREAD_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
       call write_restart(RELAX_SPREAD_OUT_BASENAME,work3dg,work2dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### das_letkf:relax_spread_out_write_restart:    ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+      call mpi_timer('das_letkf:relax_spread_out_write_restart:', 2)
     END IF
     DEALLOCATE(work3da,work2da)
   END IF
@@ -545,11 +491,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Write observation numbers
   !
   IF(NOBS_OUT) THEN
-
-
-  call MPI_BARRIER(MPI_COMM_e, ierr)
-  rrtimer00 = MPI_WTIME()
-
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
     if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
@@ -566,22 +508,13 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     work3d(:,:,11) = work3dn(nobtype+6,:,:,iv3d_t)
     CALL gather_grd_mpi(mmean_rank_e,work3d,work2d,work3dg,work2dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### das_letkf:nobs_out_gather:                   ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+    call mpi_timer('das_letkf:nobs_out_gather:', 2)
 
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',NOBS_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
       call write_restart(NOBS_OUT_BASENAME,work3dg,work2dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### das_letkf:nobs_out_write_restart:            ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+      call mpi_timer('das_letkf:nobs_out_write_restart:', 2)
     END IF
     DEALLOCATE(work3dn,work2dn)
   END IF
@@ -591,27 +524,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Additive inflation
   !
   IF(INFL_ADD > 0.0d0) THEN
-
-
-  call MPI_BARRIER(MPI_COMM_e, ierr)
-  rrtimer00 = MPI_WTIME()
-
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     CALL read_ens_mpi_addiinfl(gues3d,gues2d)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### das_letkf:additive_infl_read_ens_mpi:        ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+    call mpi_timer('das_letkf:additive_infl_read_ens_mpi:', 2)
 
     CALL ensmean_grd(MEMBER,nij1,gues3d,gues2d)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### das_letkf:additive_infl_ensmean_grd:         ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+    call mpi_timer('das_letkf:additive_infl_ensmean_grd:', 2)
 
     DO n=1,nv3d
       DO m=1,MEMBER
@@ -665,12 +586,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       END DO
     END DO
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### das_letkf:additive_infl_cal:                 ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+    call mpi_timer('das_letkf:additive_infl_cal:', 2)
   END IF ! [ INFL_ADD > 0.0d0 ]
 
   RETURN

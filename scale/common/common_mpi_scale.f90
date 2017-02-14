@@ -31,42 +31,10 @@ module common_mpi_scale
   integer,save :: nij1
   integer,save :: nij1max
   integer,allocatable,save :: nij1node(:)
-
-
-
-
-!  integer,save          :: universal_comm                         ! universal communicator
-!  integer,save          :: universal_nprocs                       ! number of procs in universal communicator
-!  logical,save          :: universal_master                       ! master process  in universal communicator?
-!  logical,save          :: universal_myrank                       ! 
-
-!  integer,save          :: global_comm                            ! communicator for each member
-
-!  integer,save          :: local_comm                             ! assigned local communicator
-!  integer,save          :: intercomm_parent                       ! inter communicator with parent
-!  integer,save          :: intercomm_child                        ! inter communicator with child
-
-!  integer,save          :: NUM_DOMAIN                   = 1       ! number of domains
-!  integer,save          :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0       ! number of total process in each domain
-!  character(len=H_LONG),save :: CONF_FILES (PRC_DOMAIN_nlim) = "" ! name of configulation files
-!  logical,save          :: ABORT_ALL_JOBS               = .false. ! abort all jobs or not?
-!  logical,save          :: LOG_SPLIT                    = .false. ! log-output for mpi splitting?
-
-
-
-!!!!  real(r_size),allocatable,save :: phi1(:)
-!!!  real(r_size),allocatable,save :: lon1(:),lat1(:)
-!!!  real(r_size),allocatable,save :: lonu1(:),latu1(:)
-!!!  real(r_size),allocatable,save :: lonv1(:),latv1(:)
-!!!  real(r_size),allocatable,save :: ri1(:),rj1(:)
-!!!!  real(r_size),allocatable,save :: wg1(:)
   real(r_size),allocatable,save :: topo2d(:,:)
   real(r_size),allocatable,save :: rig1(:),rjg1(:)
   real(r_size),allocatable,save :: topo1(:)
   real(r_size),allocatable,save :: hgt1(:,:)
-
-
-
 
   integer,save :: nitmax ! maximum number of model files processed by a process
   integer,allocatable,save :: procs(:)
@@ -92,15 +60,14 @@ module common_mpi_scale
   integer,save :: mmdet_rank_e
   integer,save :: msprd_rank_e
 
-
-
   integer,save :: MPI_COMM_e, nprocs_e, myrank_e
   integer,save :: MPI_COMM_d, nprocs_d, myrank_d
   integer,save :: MPI_COMM_a, nprocs_a, myrank_a
 
-
-
-!  character(9) scale_filename = 'file.0000'
+  integer, parameter :: max_timer_levels = 5
+  integer, parameter :: timer_name_width = 50
+  real(r_dble), private, parameter :: timer_neglect = 1.0d-3
+  real(r_dble), private, save :: timer_save(max_timer_levels) = -9.0d10
 
 contains
 
@@ -116,7 +83,7 @@ subroutine initialize_mpi_scale
   integer :: universal_comm   ! dummy
   integer :: universal_nprocs ! dummy
   logical :: universal_master ! dummy
-  integer :: ierr
+!  integer :: ierr
 
   call PRC_MPIstart( universal_comm ) ! [OUT]
 
@@ -164,20 +131,15 @@ SUBROUTINE set_common_mpi_scale
 
   implicit none
   INTEGER :: i,n
-  INTEGER :: ierr !,buf(4)
-!  LOGICAL :: ex
+  INTEGER :: ierr
 
   integer :: MPI_G_WORLD, MPI_G
-!  integer :: iproc,jproc
   integer,allocatable :: ranks(:)
   integer,allocatable :: ranks_a(:)
 
   integer :: ip
 
-
-  real(r_dble) :: rrtimer00, rrtimer
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2)
 
   WRITE(6,'(A)') 'Hello from set_common_mpi_scale'
 
@@ -189,11 +151,7 @@ SUBROUTINE set_common_mpi_scale
 
   call MPI_Comm_group(MPI_COMM_WORLD,MPI_G_WORLD,ierr)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_common_mpi_scale:mpi_comm_group_world:   ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_common_mpi_scale:mpi_comm_group_world:', 2)
 
   do ip = 1, nprocs
     if (proc2mem(1,1,ip) >= 1) then
@@ -210,68 +168,38 @@ SUBROUTINE set_common_mpi_scale
 
   call MPI_Group_incl(MPI_G_WORLD,nprocs_e,ranks,MPI_G,ierr)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_common_mpi_scale:mpi_group_incl_e:       ', rrtimer-rrtimer00
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('set_common_mpi_scale:mpi_group_incl_e:', 2, barrier=MPI_COMM_a)
 
   call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_e,ierr)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_common_mpi_scale:mpi_comm_create_e:      ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_common_mpi_scale:mpi_comm_create_e:', 2)
 
   call MPI_Comm_size(MPI_COMM_e,nprocs_e,ierr)
   call MPI_Comm_rank(MPI_COMM_e,myrank_e,ierr)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_common_mpi_scale:mpi_comm_size_rank_e:   ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_common_mpi_scale:mpi_comm_size_rank_e:', 2)
 
 !--
 
   call MPI_Group_incl(MPI_G_WORLD,nprocs_e*MEM_NP,ranks_a,MPI_G,ierr)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_common_mpi_scale:mpi_group_incl_a:       ', rrtimer-rrtimer00
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('set_common_mpi_scale:mpi_group_incl_a:', 2, barrier=MPI_COMM_a)
 
   call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_a,ierr)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_common_mpi_scale:mpi_comm_create_a:      ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_common_mpi_scale:mpi_comm_create_a:', 2)
 
   call MPI_Comm_size(MPI_COMM_a,nprocs_a,ierr)
   call MPI_Comm_rank(MPI_COMM_a,myrank_a,ierr)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_common_mpi_scale:mpi_comm_size_rank_a:   ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_common_mpi_scale:mpi_comm_size_rank_a:', 2)
 
 !--
 
   call MPI_Comm_size(MPI_COMM_d,nprocs_d,ierr)
   call MPI_Comm_rank(MPI_COMM_d,myrank_d,ierr)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_common_mpi_scale:mpi_comm_size_rank_d:   ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_common_mpi_scale:mpi_comm_size_rank_d:', 2)
 
 !write(6,'(A,9I6)') '######===', myrank, myrank_e, nprocs_e, ranks(:)
 
@@ -294,11 +222,7 @@ SUBROUTINE set_common_mpi_scale
     END IF
   END DO
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_common_mpi_scale:nij1_cal:               ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_common_mpi_scale:nij1_cal:', 2)
 
   RETURN
 END SUBROUTINE set_common_mpi_scale
@@ -335,11 +259,7 @@ subroutine set_common_mpi_grid
   INTEGER :: i,j
   integer :: iproc, jproc
 
-
-  integer :: ierr
-  real(r_dble) :: rrtimer00, rrtimer
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2)
 
   ALLOCATE(topo2d(nlon,nlat))
 
@@ -366,48 +286,29 @@ subroutine set_common_mpi_grid
       end do
     end do
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_common_mpi_grid:rij_cal:                 ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+    call mpi_timer('set_common_mpi_grid:rij_cal:', 2)
 
   ! Note that only 'mmean_rank_e' processes have topo data in 'topo2d', 
   ! that will be used later in the obs departure monitor calculation
     call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
     v3dg(1,:,:,3) = topo2d
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_common_mpi_grid:read_topo:               ', rrtimer-rrtimer00
-
-
+    call mpi_timer('set_common_mpi_grid:read_topo:', 2)
   end if
 
+  call mpi_timer('', 2, barrier=MPI_COMM_e)
 
-  call MPI_BARRIER(MPI_COMM_e, ierr)
-  rrtimer00 = MPI_WTIME()
-
-
-  CALL scatter_grd_mpi(mmean_rank_e,v3dg,v2dg,v3d,v2d)
+  call scatter_grd_mpi(mmean_rank_e,v3dg,v2dg,v3d,v2d)
 
   rig1   = v3d(:,1,1)
   rjg1   = v3d(:,1,2)
   topo1  = v3d(:,1,3)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_common_mpi_grid:scatter:                 ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_common_mpi_grid:scatter:', 2)
 
   call scale_calc_z(nij1, topo1, hgt1)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_common_mpi_grid:scale_calc_z:            ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_common_mpi_grid:scale_calc_z:', 2)
 
   return
 end subroutine set_common_mpi_grid
@@ -421,11 +322,7 @@ SUBROUTINE set_mem_node_proc(mem)
   INTEGER :: tppn,tppnt,tmod
   INTEGER :: n,ns,nn,m,q,qs,i,j,it,ip
 
-
-!  integer :: ierr
-  real(r_dble) :: rrtimer00, rrtimer
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2)
 
   ALLOCATE(procs(nprocs))
   ns = 0
@@ -515,11 +412,7 @@ mem_loop: DO it = 1, nitmax
     mmdetobs = MEMBER+1
   end if
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_mem_node_proc:                           ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_mem_node_proc:', 2)
 
   RETURN
 END SUBROUTINE
@@ -528,14 +421,12 @@ END SUBROUTINE
 ! Start using SCALE library
 !-------------------------------------------------------------------------------
 subroutine set_scalelib
-
   use scale_stdio, only: &
     IO_LOG_setup, &
     IO_FID_CONF, &
     IO_FID_LOG, &
     IO_L, &
     H_LONG
-
   use gtool_history, only: &
     HistoryInit
   use dc_log, only: &
@@ -557,7 +448,6 @@ subroutine set_scalelib
     PRC_2Drank, &
     PRC_NUM_X, &
     PRC_NUM_Y 
-
   use scale_const, only: &
     CONST_setup
   use scale_calendar, only: &
@@ -569,14 +459,11 @@ subroutine set_scalelib
   use scale_time, only: &
     TIME_DTSEC,       &
     TIME_STARTDAYSEC
-
   use scale_grid, only: &
     GRID_setup, &
     GRID_DOMAIN_CENTER_X, &
     GRID_DOMAIN_CENTER_Y
-
   use scale_grid_index
-
 !  use scale_grid_nest, only: &
 !    NEST_setup
 !  use scale_land_grid_index, only: &
@@ -599,53 +486,31 @@ subroutine set_scalelib
 !    LANDUSE_setup
 !  use scale_grid_real, only: &
 !    REAL_setup
-
 !  use scale_gridtrans, only: &
 !    GTRANS_setup
-
 !  use scale_atmos_hydrostatic, only: &
 !     ATMOS_HYDROSTATIC_setup
   use scale_atmos_thermodyn, only: &
      ATMOS_THERMODYN_setup
-
 !  use mod_admin_time, only: &
 !     ADMIN_TIME_setup
-
-
   use scale_mapproj, only: &
     MPRJ_setup
   implicit none
 
-
-
-!    character(len=H_MID) :: DATATYPE = 'DEFAULT' !< REAL4 or REAL8
   integer :: rankidx(2)
-
   integer :: local_myrank
   logical :: local_ismaster
-
-  CHARACTER(len=H_LONG) :: confname_dummy
-
-!  integer :: universal_comm
-!  integer :: universal_nprocs
-!  logical :: universal_master
+  character(len=H_LONG) :: confname_dummy
   integer :: global_comm
   integer :: local_comm
   integer :: intercomm_parent
   integer :: intercomm_child
-
   integer :: NUM_DOMAIN
   integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
   character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim)
 
-
-  integer :: ierr
-  real(r_dble) :: rrtimer00, rrtimer
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-  rrtimer00 = MPI_WTIME()
-
-
-  !-----------------------------------------------------------------------------
+  call mpi_timer('', 2, barrier=MPI_COMM_WORLD)
 
   NUM_DOMAIN = 1
   PRC_DOMAINS = 0
@@ -666,11 +531,7 @@ subroutine set_scalelib
                            MEM_NP, nitmax, nprocs, proc2mem, & ! [IN]
                            global_comm                       ) ! [OUT]
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:prc_mpisplit_letkf:             ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_scalelib:prc_mpisplit_letkf:', 2)
 
   if (global_comm == MPI_COMM_NULL) then
 !    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
@@ -680,12 +541,7 @@ subroutine set_scalelib
   call PRC_GLOBAL_setup( .false.,    & ! [IN]
                          global_comm ) ! [IN]
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:prc_global_setup:               ', rrtimer-rrtimer00
-  call MPI_BARRIER(global_comm, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('set_scalelib:prc_global_setup:', 2, barrier=global_comm)
 
   !--- split for nesting
   ! communicator split for nesting domains
@@ -703,11 +559,7 @@ subroutine set_scalelib
 
   MPI_COMM_d = local_comm
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:prc_mpisplit_local:             ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_scalelib:prc_mpisplit_local:', 2)
 
   ! setup standard I/O
 !  call IO_setup( MODELNAME, .true., cnf_fname )
@@ -715,42 +567,22 @@ subroutine set_scalelib
   ! setup MPI
   call PRC_LOCAL_setup( local_comm, local_myrank, local_ismaster )
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:prc_local_setup:                ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_scalelib:prc_local_setup:', 2)
 
   ! setup Log
   call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
   call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:log_setup:                      ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('set_scalelib:log_setup:', 2)
 
   ! setup process
   call PRC_setup
-
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:prc_setup:                      ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
 
   ! setup PROF
 !  call PROF_setup
 
   ! setup constants
   call CONST_setup
-
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:const_setup:                    ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
 
   ! setup calendar
 !  call CALENDAR_setup
@@ -760,77 +592,49 @@ subroutine set_scalelib
 
   ! setup time
 !  call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
-
 !  call PROF_setprefx('INIT')
 !  call PROF_rapstart('Initialize')
 
   ! setup horizontal/vertical grid coordinates
   call GRID_INDEX_setup
   call GRID_setup
-
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:grid_setup:                     ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
 !  call LAND_GRID_INDEX_setup
 !  call LAND_GRID_setup
-
 !  call URBAN_GRID_INDEX_setup
 !  call URBAN_GRID_setup
 
   ! setup tracer index
   call TRACER_setup
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:tracer_setup:                   ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
   ! setup file I/O
   call FILEIO_setup
-
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:fileio_setup:                   ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
 
   ! setup mpi communication
   call COMM_setup
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:comm_setup:                     ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
   ! setup topography
 !  call TOPO_setup
+
   ! setup land use category index/fraction
 !  call LANDUSE_setup
+
   ! setup grid coordinates (real world)
 !  call REAL_setup
     ! setup map projection [[ in REAL_setup ]]
     call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:mprj_setup:                     ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
   ! setup grid transfer metrics (uses in ATMOS_dynamics)
 !  call GTRANS_setup
+
   ! setup Z-ZS interpolation factor (uses in History)
 !  call INTERP_setup
 
   ! setup restart
 !  call ADMIN_restart_setup
+
   ! setup statistics
 !  call STAT_setup
+
   ! setup history I/O
 !  call HIST_setup
     ! setup history file I/O [[ in HIST_setup ]]
@@ -840,12 +644,6 @@ subroutine set_scalelib
     call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_masterrank, PRC_myrank, rankidx, &
                      0.0d0, 1.0d0, &
                      namelist_fid=IO_FID_CONF, default_basename='history')
-
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:history_init:                   ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
 
   ! setup monitor I/O
 !  call MONIT_setup
@@ -857,13 +655,6 @@ subroutine set_scalelib
 !  call ATMOS_HYDROSTATIC_setup
   call ATMOS_THERMODYN_setup
 !  call ATMOS_SATURATION_setup
-
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### set_scalelib:atmos_thermodyn_setup:          ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
 !  call BULKFLUX_setup
 !  call ROUGHNESS_setup
 
@@ -881,6 +672,7 @@ subroutine set_scalelib
 !  call URBAN_vars_setup
 !  call CPL_vars_setup
 
+  call mpi_timer('set_scalelib:other_setup:', 2)
 
   return
 end subroutine set_scalelib
@@ -1055,12 +847,7 @@ subroutine read_ens_mpi(v3d, v2d)
   character(len=filelenmax) :: filename
   integer :: it, im, mstart, mend
 
-
-  integer :: ierr
-  real(r_dble) :: rrtimer00, rrtimer
-!  call MPI_BARRIER(MPI_COMM_a, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2)
 
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
@@ -1079,26 +866,14 @@ subroutine read_ens_mpi(v3d, v2d)
 !      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
       call read_restart(filename, v3dg, v2dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### read_ens_mpi:read_restart:                   ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+      call mpi_timer('read_ens_mpi:read_restart:', 2)
 
       call state_trans(v3dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### read_ens_mpi:state_trans:                    ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+      call mpi_timer('read_ens_mpi:state_trans:', 2)
     end if
 
-
-  call MPI_BARRIER(MPI_COMM_e, ierr)
-  rrtimer00 = MPI_WTIME()
-
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     mstart = 1 + (it-1)*nprocs_e
     mend = min(it*nprocs_e, nens)
@@ -1106,12 +881,7 @@ subroutine read_ens_mpi(v3d, v2d)
       call scatter_grd_mpi_alltoall(mstart, mend, v3dg, v2dg, v3d, v2d)
     end if
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### read_ens_mpi:scatter_grd_mpi_alltoall:       ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+    call mpi_timer('read_ens_mpi:scatter_grd_mpi_alltoall:', 2)
   end do ! [ it = 1, nitmax ]
 
   return
@@ -1167,24 +937,13 @@ subroutine write_ens_mpi(v3d, v2d, monit, caption)
   integer :: it, im, mstart, mend
   logical :: monit_
 
-
-  integer :: ierr
-  real(r_dble) :: rrtimer00, rrtimer
-!  call MPI_BARRIER(MPI_COMM_a, ierr)
-  rrtimer00 = MPI_WTIME()
-
-
   monit_ = .false.
   if (present(monit) .and. present(caption)) then
     monit_ = monit
   end if
 
   do it = 1, nitmax
-
-
-  call MPI_BARRIER(MPI_COMM_e, ierr)
-  rrtimer00 = MPI_WTIME()
-
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     im = proc2mem(1,it,myrank+1)
 
@@ -1194,21 +953,12 @@ subroutine write_ens_mpi(v3d, v2d, monit, caption)
       call gather_grd_mpi_alltoall(mstart, mend, v3d, v2d, v3dg, v2dg)
     end if
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### write_ens_mpi:gather_grd_mpi_alltoall:       ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+    call mpi_timer('write_ens_mpi:gather_grd_mpi_alltoall:', 2)
 
     if (monit_ .and. mstart <= mmean .and. mmean <= mend) then
       call monit_obs_mpi(v3dg, v2dg, caption)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### write_ens_mpi:monit_obs_mpi:                 ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+      call mpi_timer('write_ens_mpi:monit_obs_mpi:', 2)
     end if
 
     ! Note: write all members + mean + mdet
@@ -1225,20 +975,11 @@ subroutine write_ens_mpi(v3d, v2d, monit, caption)
 !      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
       call state_trans_inv(v3dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### write_ens_mpi:state_trans_inv:               ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+      call mpi_timer('write_ens_mpi:state_trans_inv:', 2)
 
       call write_restart(filename, v3dg, v2dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### write_ens_mpi:write_restart:                 ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+      call mpi_timer('write_ens_mpi:write_restart:', 2)
     end if
   end do ! [ it = 1, nitmax ]
 
@@ -1465,11 +1206,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
   logical :: monit_type(nid_obs)
   integer :: i, ierr
 
-
-  REAL(r_dble) :: rrtimer00, rrtimer
-!  call MPI_BARRIER(MPI_COMM_a, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2)
 
   ! NOTE: need to use 'mmean_rank_e' processes to run this calculation
   !       because only these processes have read topo files in 'topo2d'
@@ -1477,11 +1214,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
   if (myrank_e == mmean_rank_e) then
     call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true.)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### monit_obs_mpi:monit_obs:                     ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+    call mpi_timer('monit_obs_mpi:monit_obs:', 2)
 
     do i = 1, nid_obs
       if (monit_type(i)) then
@@ -1516,20 +1249,11 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
       end if
     end do
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### monit_obs_mpi:mpi_allreduce(domain):         ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+    call mpi_timer('monit_obs_mpi:mpi_allreduce(domain):', 2)
   end if
 
   if (DEPARTURE_STAT_ALL_PROCESSES) then
-
-
-  call MPI_BARRIER(MPI_COMM_e, ierr)
-  rrtimer00 = MPI_WTIME()
-
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     call MPI_BCAST(nobs,       nid_obs, MPI_INTEGER, mmean_rank_e, MPI_COMM_e, ierr)
     call MPI_BCAST(bias,       nid_obs, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
@@ -1539,28 +1263,16 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
     call MPI_BCAST(rmse_g,     nid_obs, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
     call MPI_BCAST(monit_type, nid_obs, MPI_LOGICAL, mmean_rank_e, MPI_COMM_e, ierr)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### monit_obs_mpi:mpi_allreduce(ens):            ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+    call mpi_timer('monit_obs_mpi:mpi_allreduce(ens):', 2)
   end if
 
   if (DEPARTURE_STAT_ALL_PROCESSES .or. myrank_e == mmean_rank_e) then
-!    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', trim(file_mean), ']:'
     write(6,'(2A)') trim(caption), ' (IN THIS SUBDOMAIN):'
     call monit_print(nobs, bias, rmse, monit_type)
-!    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', trim(file_mean), ']:'
     write(6,'(2A)') trim(caption), ' (GLOBAL):'
     call monit_print(nobs_g, bias_g, rmse_g, monit_type)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### monit_obs_mpi:monit_print:                   ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+    call mpi_timer('monit_obs_mpi:monit_print:', 2)
   end if
 
   return
@@ -1582,12 +1294,7 @@ subroutine write_ensmean(filename, v3d, v2d, calced, monit, caption)
   real(RP) :: v2dg(nlon,nlat,nv2d)
   logical :: calced_, monit_
 
-
-  integer :: ierr
-  real(r_dble) :: rrtimer00, rrtimer
-!  call MPI_BARRIER(MPI_COMM_a, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2)
 
   calced_ = .false.
   if (present(calced)) then
@@ -1601,55 +1308,29 @@ subroutine write_ensmean(filename, v3d, v2d, calced, monit, caption)
   if (.not. calced) then
     call ensmean_grd(MEMBER, nij1, v3d, v2d)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### write_ensmean:ensmean_grd:                   ', rrtimer-rrtimer00
-  rrtimer00 = MPI_WTIME()
-
-
+    call mpi_timer('write_ensmean:ensmean_grd:', 2)
   end if
 
-
-  call MPI_BARRIER(MPI_COMM_e, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2, barrier=MPI_COMM_e)
 
   call gather_grd_mpi(mmean_rank_e, v3d(:,:,mmean,:), v2d(:,mmean,:), v3dg, v2dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### write_ensmean:gather_grd_mpi:                ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('write_ensmean:gather_grd_mpi:', 2)
 
   if (monit_) then
     call monit_obs_mpi(v3dg, v2dg, caption)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### write_ensmean:monit_obs_mpi:                 ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+    call mpi_timer('write_ensmean:monit_obs_mpi:', 2)
   end if
 
   if (myrank_e == mmean_rank_e) then
     call state_trans_inv(v3dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### write_ensmean:state_trans_inv:               ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+    call mpi_timer('write_ensmean:state_trans_inv:', 2)
 
     call write_restart(filename, v3dg, v2dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### write_ensmean:write_restart:                 ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+    call mpi_timer('write_ensmean:write_restart:', 2)
   end if
 
   return
@@ -1668,40 +1349,21 @@ subroutine write_enssprd(filename, v3d, v2d)
   real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP) :: v2dg(nlon,nlat,nv2d)
 
-
-  integer :: ierr
-  real(r_dble) :: rrtimer00, rrtimer
-!  call MPI_BARRIER(MPI_COMM_a, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2)
 
   call enssprd_grd(MEMBER, nij1, v3d, v2d, v3ds, v2ds)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### write_enssprd:enssprd_grd:                   ', rrtimer-rrtimer00
-  call MPI_BARRIER(MPI_COMM_e, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('write_enssprd:enssprd_grd:', 2, barrier=MPI_COMM_e)
 
   call gather_grd_mpi(msprd_rank_e, v3ds, v2ds, v3dg, v2dg)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### write_enssprd:gather_grd_mpi:                ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('write_enssprd:gather_grd_mpi:', 2)
 
   if (myrank_e == msprd_rank_e) then
 !    call state_trans_inv(v3dg)              !! do not transform the spread output
     call write_restart(filename, v3dg, v2dg) !!
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### write_enssprd:write_restart:                 ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+    call mpi_timer('write_enssprd:write_restart:', 2)
   end if
 
   return
@@ -1715,27 +1377,15 @@ subroutine read_obs_all_mpi(obs)
   type(obs_info), intent(out) :: obs(OBS_IN_NUM)
   integer :: iof, ierr
 
-
-  real(r_dble) :: rrtimer00, rrtimer
-!  call MPI_BARRIER(MPI_COMM_a, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2)
 
   if (myrank_a == 0) then
     call read_obs_all(obs)
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### read_obs_all_mpi:read_obs_all:               ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
-
+    call mpi_timer('read_obs_all_mpi:read_obs_all:', 2)
   end if
 
-
-  call MPI_BARRIER(MPI_COMM_a, ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2, barrier=MPI_COMM_a)
 
   do iof = 1, OBS_IN_NUM
     call MPI_BCAST(obs(iof)%nobs, 1, MPI_INTEGER, 0, MPI_COMM_a, ierr)
@@ -1754,11 +1404,7 @@ subroutine read_obs_all_mpi(obs)
     call MPI_BCAST(obs(iof)%meta, max_obs_info_meta, MPI_r_size, 0, MPI_COMM_a, ierr)
   end do ! [ iof = 1, OBS_IN_NUM ]
 
-
-  rrtimer = MPI_WTIME()
-  write (6,'(A,F15.7)') '###### read_obs_all_mpi:mpi_bcast:                  ', rrtimer-rrtimer00
-  rrtimer00 = rrtimer
-
+  call mpi_timer('read_obs_all_mpi:mpi_bcast:', 2)
 
   return
 end subroutine read_obs_all_mpi
@@ -1807,6 +1453,97 @@ subroutine get_nobs_da_mpi(nobs)
 
   return
 end subroutine get_nobs_da_mpi
+
+!-------------------------------------------------------------------------------
+! MPI timer
+!-------------------------------------------------------------------------------
+subroutine mpi_timer(sect_name, level, barrier)
+  implicit none
+  character(len=*), intent(in) :: sect_name
+  integer, intent(in) :: level
+  integer, intent(in), optional :: barrier
+
+  character(len=timer_name_width) :: sect_name_tmp
+  character(len=14) :: sect_prefix_1
+  character(len=12) :: sect_prefix_2
+  real(r_dble) :: timer_before_barrier
+  real(r_dble) :: timer_after_barrier
+  integer :: i, ierr
+  logical :: initialized
+
+  timer_before_barrier = MPI_WTIME()
+  timer_after_barrier = timer_before_barrier
+
+  if (present(barrier)) then
+    if (barrier /= MPI_COMM_NULL) then
+      call MPI_BARRIER(barrier, ierr)
+      timer_after_barrier = MPI_WTIME()
+    end if
+  end if
+
+  initialized = .true.
+  if (timer_save(level) < 0.0d0) then
+    initialized = .false.
+    do i = level-1, 1, -1
+      if (timer_save(i) >= 0.0d0) then
+        timer_save(level) = timer_save(i)
+        exit
+      end if
+    end do
+  end if
+
+  do i = max_timer_levels, level, -1
+    if (timer_save(i) >= 0.0d0) then
+      select case (i)
+      case (1)
+        sect_prefix_1 = '##### TIMER # '
+        sect_prefix_2 = ''
+      case (2)
+        sect_prefix_1 = ' #### TIMER # '
+        sect_prefix_2 = '...'
+      case (3)
+        sect_prefix_1 = '  ### TIMER # '
+        sect_prefix_2 = '......'
+      case (4)
+        sect_prefix_1 = '   ## TIMER # '
+        sect_prefix_2 = '.........'
+      case (5)
+        sect_prefix_1 = '    # TIMER # '
+        sect_prefix_2 = '............'
+      end select
+
+      if (i == level .and. initialized .and. trim(sect_name) /= '') then
+        sect_name_tmp = sect_name ! to left-align the text
+        write (6,'(3A,2F14.6,A)') sect_prefix_1, trim(sect_prefix_2), sect_name_tmp, &
+                                  timer_before_barrier - timer_save(i), &
+                                  timer_after_barrier - timer_save(i)
+      else if (timer_after_barrier - timer_save(i) >= timer_neglect) then
+        if (i == level .and. initialized) then
+          sect_name_tmp = ' (wait)'
+        else
+          sect_name_tmp = ' (unknown)'
+        end if
+        if (timer_before_barrier - timer_save(i) >= timer_neglect) then
+          write (6,'(3A,2F14.6,A)') sect_prefix_1, trim(sect_prefix_2), sect_name_tmp, &
+                                    timer_before_barrier - timer_save(i), &
+                                    timer_after_barrier - timer_save(i)
+        else
+          write (6,'(3A,14x,F14.6,A)') sect_prefix_1, trim(sect_prefix_2), sect_name_tmp, &
+                                       timer_after_barrier - timer_save(i)
+        end if
+      end if
+    end if
+
+    if (i == level) then
+      timer_save(i) = timer_after_barrier
+    else
+      timer_save(i) = -9.0d10 ! reset the timer for all levels under this level
+    end if
+
+  end do
+
+  return
+end subroutine mpi_timer
 
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)
 !SUBROUTINE read_obs2_mpi(obsfile,nn,nbv,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,hdxf,iqc)
