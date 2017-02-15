@@ -1243,7 +1243,7 @@ subroutine ij_obsgrd_ext(ctype, ri, rj, ogi, ogj)
   call rij_g2l(myrank_d, ri, rj, ril, rjl)
   ogi = ceiling((ril - real(IHALO,r_size) - 0.5) * real(obsgrd(ctype)%ngrd_i,r_size) / real(nlon,r_size)) &
       + obsgrd(ctype)%ngrdsch_i
-  ogj = ceiling((rjl - real(JHALO,r_size) - 0.5) * real(obsgrd(ctype)%ngrd_i,r_size) / real(nlat,r_size)) &
+  ogj = ceiling((rjl - real(JHALO,r_size) - 0.5) * real(obsgrd(ctype)%ngrd_j,r_size) / real(nlat,r_size)) &
       + obsgrd(ctype)%ngrdsch_j
 
   return
