@@ -168,7 +168,7 @@ SUBROUTINE set_common_mpi_scale
 
   call MPI_Group_incl(MPI_G_WORLD,nprocs_e,ranks,MPI_G,ierr)
 
-  call mpi_timer('set_common_mpi_scale:mpi_group_incl_e:', 2, barrier=MPI_COMM_a)
+  call mpi_timer('set_common_mpi_scale:mpi_group_incl_e:', 2)
 
   call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_e,ierr)
 
@@ -183,7 +183,7 @@ SUBROUTINE set_common_mpi_scale
 
   call MPI_Group_incl(MPI_G_WORLD,nprocs_e*MEM_NP,ranks_a,MPI_G,ierr)
 
-  call mpi_timer('set_common_mpi_scale:mpi_group_incl_a:', 2, barrier=MPI_COMM_a)
+  call mpi_timer('set_common_mpi_scale:mpi_group_incl_a:', 2)
 
   call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_a,ierr)
 
