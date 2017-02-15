@@ -18,22 +18,25 @@ PROGRAM obsmake
   USE obsope_tools
   IMPLICIT NONE
 
-  REAL(r_size) :: rtimer00,rtimer
-  INTEGER :: ierr
-  CHARACTER(11) :: stdoutf='NOUT-000000'
-  CHARACTER(11) :: timer_fmt='(A30,F10.2)'
+  character(len=7) :: stdoutf = '-000000'
+  character(len=6400) :: icmd
 
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
 
-  CALL initialize_mpi_scale
-  rtimer00 = MPI_WTIME()
+  call initialize_mpi_scale
+  call mpi_timer('', 1)
 
-  WRITE(stdoutf(6:11), '(I6.6)') myrank
-!  WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',stdoutf,' for MYRANK ', myrank
-  OPEN(6,FILE=stdoutf)
-  WRITE(6,'(A,I6.6,2A)') 'MYRANK=',myrank,', STDOUTF=',stdoutf
+  if (command_argument_count() >= 2) then
+    call get_command_argument(2, icmd)
+    if (trim(icmd) /= '') then
+      write (stdoutf(2:7), '(I6.6)') myrank
+!      write (6,'(3A,I6.6)') 'STDOUT goes to ', trim(icmd)//stdoutf, ' for MYRANK ', myrank
+      open (6, file=trim(icmd)//stdoutf)
+      write (6,'(A,I6.6,2A)') 'MYRANK=', myrank, ', STDOUTF=', trim(icmd)//stdoutf
+    end if
+  end if
 
 !-----------------------------------------------------------------------
 
@@ -51,13 +54,10 @@ PROGRAM obsmake
   if (myrank_use) then
 
     call set_common_scale
-    CALL set_common_mpi_scale
+    call set_common_mpi_scale
     call set_common_obs_scale
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(INITIALIZE):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Read observations
@@ -66,32 +66,25 @@ PROGRAM obsmake
     allocate(obs(OBS_IN_NUM))
     call read_obs_all(obs)
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(READ_OBS):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('READ_OBS', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Generate observations
 !-----------------------------------------------------------------------
 
-    CALL obsmake_cal(obs)
+    call obsmake_cal(obs)
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(OBSMAKE):',rtimer-rtimer00
-    rtimer00=rtimer
-
+    call mpi_timer('OBSMAKE', 1, barrier=MPI_COMM_a)
 
     deallocate(obs)
 
-    CALL unset_common_mpi_scale
+    call unset_common_mpi_scale
 
     call unset_scalelib
 
   else ! [ myrank_use ]
 
-    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
+    write (6, '(A,I6.6,A)') 'MYRANK=', myrank, ': This process is not used!'
 
   end if ! [ myrank_use ]
 
@@ -99,12 +92,9 @@ PROGRAM obsmake
 ! Finalize
 !-----------------------------------------------------------------------
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(FINALIZE):',rtimer-rtimer00
-  rtimer00=rtimer
+  call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 
-  CALL finalize_mpi_scale
+  call finalize_mpi_scale
 
   STOP
 END PROGRAM obsmake

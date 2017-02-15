@@ -20,14 +20,14 @@ PROGRAM letkf
   USE letkf_tools
   use obsope_tools, only: &
     obsope_cal
-
   IMPLICIT NONE
+
   REAL(r_size),ALLOCATABLE :: gues3d(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: gues2d(:,:,:)
   REAL(r_size),ALLOCATABLE :: anal3d(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: anal2d(:,:,:)
 
-  character(7) :: stdoutf='-000000'
+  character(len=7) :: stdoutf='-000000'
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
   integer :: iarg

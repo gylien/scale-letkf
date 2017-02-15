@@ -16,16 +16,11 @@ PROGRAM obsope
   USE common_obs_scale
   USE common_nml
   USE obsope_tools
-
   IMPLICIT NONE
 
   type(obs_da_value) :: obsda ! only used for calling obsope_cal subroutine, no use in this main program
 
-  REAL(r_dble) :: rtimer00,rtimer
-  INTEGER :: ierr
-  CHARACTER(7) :: stdoutf='-000000'
-  CHARACTER(11) :: timer_fmt='(A30,F10.2)'
-
+  character(len=7) :: stdoutf='-000000'
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
   integer :: iarg
@@ -34,8 +29,8 @@ PROGRAM obsope
 ! Initial settings
 !-----------------------------------------------------------------------
 
-  CALL initialize_mpi_scale
-  rtimer00 = MPI_WTIME()
+  call initialize_mpi_scale
+  call mpi_timer('', 1)
 
   if (command_argument_count() >= 4) then
     call get_command_argument(3, icmd)
@@ -71,10 +66,7 @@ PROGRAM obsope
     call system(trim(cmd1))
   end if
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(PRE_SCRIPT):',rtimer-rtimer00
-  rtimer00=rtimer
+  call mpi_timer('PRE_SCRIPT', 1, barrier=MPI_COMM_WORLD)
 
 !-----------------------------------------------------------------------
 
@@ -92,13 +84,10 @@ PROGRAM obsope
   if (myrank_use) then
 
     call set_common_scale
-    CALL set_common_mpi_scale
+    call set_common_mpi_scale
     call set_common_obs_scale
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(INITIALIZE):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Read observations
@@ -107,10 +96,7 @@ PROGRAM obsope
     allocate(obs(OBS_IN_NUM))
     call read_obs_all_mpi(obs)
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(READ_OBS):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('READ_OBS', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Observation operator
@@ -118,10 +104,7 @@ PROGRAM obsope
 
     call obsope_cal(obsda, .false.)
 
-    CALL MPI_BARRIER(MPI_COMM_a,ierr)
-    rtimer = MPI_WTIME()
-    WRITE(6,timer_fmt) '### TIMER(OBS_OPERATOR):',rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
 
     deallocate(obs)
 
@@ -137,10 +120,7 @@ PROGRAM obsope
 
 !-----------------------------------------------------------------------
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(FINALIZE):',rtimer-rtimer00
-  rtimer00=rtimer
+  call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 
 !-----------------------------------------------------------------------
 ! Post-processing scripts
@@ -152,16 +132,13 @@ PROGRAM obsope
     call system(trim(cmd2))
   end if
 
-  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(POST_SCRIPT):',rtimer-rtimer00
-  rtimer00=rtimer
+  call mpi_timer('POST_SCRIPT', 1, barrier=MPI_COMM_WORLD)
 
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
 
-  CALL finalize_mpi_scale
+  call finalize_mpi_scale
 
   STOP
 END PROGRAM obsope
