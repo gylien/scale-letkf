@@ -55,7 +55,6 @@ program obssim
   call read_nml_letkf_h08
 
   call set_mem_node_proc(1)
-
   call set_scalelib
 
   if (myrank_use) then
@@ -108,20 +107,16 @@ program obssim
       write (6, '(2A)') "[Error] Unsupported 'OBSSIM_IN_TYPE': ", trim(OBSSIM_IN_TYPE)
     end if
 
+    call mpi_timer('OBSSIM', 1, barrier=MPI_COMM_a)
+
     deallocate (v3dgh, v2dgh)
     deallocate (v3dgsim, v2dgsim)
 
-    call mpi_timer('OBSSIM', 1, barrier=MPI_COMM_a)
-
     call unset_common_mpi_scale
 
-    call unset_scalelib
-
-  else ! [ myrank_use ]
-
-    write (6, '(A,I6.6,A)') 'MYRANK=', myrank, ': This process is not used!'
-
   end if ! [ myrank_use ]
+
+  call unset_scalelib
 
 !-----------------------------------------------------------------------
 ! Finalize

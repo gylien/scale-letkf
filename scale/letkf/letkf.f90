@@ -105,7 +105,6 @@ PROGRAM letkf
   call read_nml_letkf_h08
 
   call set_mem_node_proc(MEMBER+2)
-
   call set_scalelib
 
   if (myrank_use) then
@@ -236,15 +235,9 @@ PROGRAM letkf
 
     call unset_common_mpi_scale
 
-    call unset_scalelib
-
-  else ! [ myrank_use ]
-
-    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
-
   end if ! [ myrank_use ]
 
-!-----------------------------------------------------------------------
+  call unset_scalelib
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 

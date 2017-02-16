@@ -866,7 +866,7 @@ SUBROUTINE obsmake_cal(obs)
 
 !-----------------------------------------------------------------------
 
-  write (6,'(A,I6.6,A,I6.6)') 'MYRANK ',myrank,' is processing subdomain id #', proc2mem(2,1,myrank+1)
+  write (6,'(A,I6.6,A,I6.6)') 'MYRANK ', myrank, ' is processing subdomain id #', myrank_d
 
   allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
   allocate ( v2dg (nlonh,nlath,nv2dd) )
@@ -1146,7 +1146,7 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
 !-------------------------------------------------------------------------------
 
-  write (6,'(A,I6.6,A,I6.6)') 'MYRANK ', myrank, ' is processing subdomain id #', proc2mem(2,1,myrank+1)
+  write (6,'(A,I6.6,A,I6.6)') 'MYRANK ', myrank, ' is processing subdomain id #', myrank_d
 
   do j = 1, nlat
     rj = real(j + JHALO, r_size)

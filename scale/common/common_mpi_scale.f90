@@ -44,8 +44,8 @@ module common_mpi_scale
   integer,save :: n_mem
   integer,save :: n_mempn
 
-  integer,save :: ens_mygroup = -1
-  integer,save :: ens_myrank = -1
+  integer,save, private :: ens_mygroup = -1
+  integer,save, private :: ens_myrank = -1
   logical,save :: myrank_use = .false.
 
   integer,save :: nens
@@ -122,124 +122,63 @@ end subroutine finalize_mpi_scale
 !-------------------------------------------------------------------------------
 ! set_common_mpi_scale
 !-------------------------------------------------------------------------------
-SUBROUTINE set_common_mpi_scale
-  use scale_grid_index, only: &
-    IHALO, &
-    JHALO
-!  use scale_process, only: &
-!    PRC_myrank, &
-
+subroutine set_common_mpi_scale
   implicit none
-  INTEGER :: i,n
-  INTEGER :: ierr
-
-  integer :: MPI_G_WORLD, MPI_G
-  integer,allocatable :: ranks(:)
-  integer,allocatable :: ranks_a(:)
-
-  integer :: ip
+  integer :: color, key
+  integer :: i, n, ierr
 
   call mpi_timer('', 2)
 
-  WRITE(6,'(A)') 'Hello from set_common_mpi_scale'
+  ! Communicator for 1-iteration ensemble member groups
+  !-----------------------------------------------------------------------------
 
-  nprocs_e = n_mem*n_mempn
-  nprocs_a = nprocs_e*MEM_NP
+  color = ens_myrank
+  key   = ens_mygroup - 1
 
-  allocate (ranks(nprocs_e))
-  allocate (ranks_a(nprocs_a))
+  call MPI_COMM_SPLIT(MPI_COMM_a, color, key, MPI_COMM_e, ierr)
 
-  call MPI_Comm_group(MPI_COMM_WORLD,MPI_G_WORLD,ierr)
+  call MPI_COMM_SIZE(MPI_COMM_e, nprocs_e, ierr)
+  call MPI_COMM_RANK(MPI_COMM_e, myrank_e, ierr)
 
-  call mpi_timer('set_common_mpi_scale:mpi_comm_group_world:', 2)
+  call mpi_timer('set_common_mpi_scale:mpi_comm_split_e:', 2)
 
-  do ip = 1, nprocs
-    if (proc2mem(1,1,ip) >= 1) then
-      if (proc2mem(2,1,ip) == proc2mem(2,1,myrank+1)) then
-        ranks(proc2mem(1,1,ip)) = ip-1
-      end if
-      ranks_a((proc2mem(1,1,ip)-1)*MEM_NP+proc2mem(2,1,ip)+1) = ip-1
+  ! Compute nij1, nij1max, nij1node
+  !-----------------------------------------------------------------------------
+
+  i = mod(nlon*nlat, nprocs_e)
+  nij1max = (nlon*nlat - i) / nprocs_e + 1
+  if (myrank_e < i) then
+    nij1 = nij1max
+  else
+    nij1 = nij1max - 1
+  end if
+  write (6,'(A,I6.6,A,I7)') 'MYRANK ', myrank, ' number of grid points: nij1 =', nij1
+
+  allocate (nij1node(nprocs_e))
+  do n = 1, nprocs_e
+    if (n-1 < i) then
+      nij1node(n) = nij1max
+    else
+      nij1node(n) = nij1max - 1
     end if
   end do
 
-!write(6,'(A,7I6)') '######===', myrank, ranks(:)
-
-!!!!!! rewrite using MPI_COMM_SPLIT ??? !!!!!!
-
-  call MPI_Group_incl(MPI_G_WORLD,nprocs_e,ranks,MPI_G,ierr)
-
-  call mpi_timer('set_common_mpi_scale:mpi_group_incl_e:', 2)
-
-  call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_e,ierr)
-
-  call mpi_timer('set_common_mpi_scale:mpi_comm_create_e:', 2)
-
-  call MPI_Comm_size(MPI_COMM_e,nprocs_e,ierr)
-  call MPI_Comm_rank(MPI_COMM_e,myrank_e,ierr)
-
-  call mpi_timer('set_common_mpi_scale:mpi_comm_size_rank_e:', 2)
-
-!--
-
-  call MPI_Group_incl(MPI_G_WORLD,nprocs_e*MEM_NP,ranks_a,MPI_G,ierr)
-
-  call mpi_timer('set_common_mpi_scale:mpi_group_incl_a:', 2)
-
-  call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_a,ierr)
-
-  call mpi_timer('set_common_mpi_scale:mpi_comm_create_a:', 2)
-
-  call MPI_Comm_size(MPI_COMM_a,nprocs_a,ierr)
-  call MPI_Comm_rank(MPI_COMM_a,myrank_a,ierr)
-
-  call mpi_timer('set_common_mpi_scale:mpi_comm_size_rank_a:', 2)
-
-!--
-
-  call MPI_Comm_size(MPI_COMM_d,nprocs_d,ierr)
-  call MPI_Comm_rank(MPI_COMM_d,myrank_d,ierr)
-
-  call mpi_timer('set_common_mpi_scale:mpi_comm_size_rank_d:', 2)
-
-!write(6,'(A,9I6)') '######===', myrank, myrank_e, nprocs_e, ranks(:)
-
-  deallocate(ranks)
-
-  i = MOD(nlon*nlat,nprocs_e)
-  nij1max = (nlon*nlat - i)/nprocs_e + 1
-  IF(myrank_e < i) THEN
-    nij1 = nij1max
-  ELSE
-    nij1 = nij1max - 1
-  END IF
-  WRITE(6,'(A,I6.6,A,I6)') 'MYRANK ',myrank,' number of grid points: nij1= ',nij1
-  ALLOCATE(nij1node(nprocs_e))
-  DO n=1,nprocs_e
-    IF(n-1 < i) THEN
-      nij1node(n) = nij1max
-    ELSE
-      nij1node(n) = nij1max - 1
-    END IF
-  END DO
-
   call mpi_timer('set_common_mpi_scale:nij1_cal:', 2)
 
-  RETURN
-END SUBROUTINE set_common_mpi_scale
+  return
+end subroutine set_common_mpi_scale
 
 !-------------------------------------------------------------------------------
 ! unset_common_mpi_scale
 !-------------------------------------------------------------------------------
-SUBROUTINE unset_common_mpi_scale
+subroutine unset_common_mpi_scale
   implicit none
   integer:: ierr
 
-  call MPI_Comm_free(MPI_COMM_e,ierr)
-  call MPI_Comm_free(MPI_COMM_a,ierr)
-!  call unset_scalelib
+  call MPI_COMM_FREE(MPI_COMM_e, ierr)
 
-  RETURN
-END SUBROUTINE unset_common_mpi_scale
+  return
+end subroutine unset_common_mpi_scale
 
 !-------------------------------------------------------------------------------
 ! set_common_mpi_grid
@@ -421,33 +360,32 @@ END SUBROUTINE
 ! Start using SCALE library
 !-------------------------------------------------------------------------------
 subroutine set_scalelib
+  use gtool_history, only: &
+    HistoryInit
+  use dc_log, only: &
+    LogInit
   use scale_stdio, only: &
     IO_LOG_setup, &
     IO_FID_CONF, &
     IO_FID_LOG, &
     IO_L, &
     H_LONG
-  use gtool_history, only: &
-    HistoryInit
-  use dc_log, only: &
-    LogInit
   use scale_process, only: &
-    PRC_UNIVERSAL_setup, &
-    PRC_MPIstart, &
+    PRC_mpi_alive, &
+!    PRC_MPIstart, &
+!    PRC_UNIVERSAL_setup, &
     PRC_MPIsplit_letkf, &
     PRC_MPIsplit, &
     PRC_GLOBAL_setup, &
     PRC_LOCAL_setup, &
-    PRC_masterrank, &
+    PRC_UNIVERSAL_IsMaster, &
+    PRC_nprocs, &
     PRC_myrank, &
-    PRC_mpi_alive, &
-    PRC_DOMAIN_nlim, &
-    PRC_UNIVERSAL_IsMaster
+    PRC_masterrank, &
+    PRC_DOMAIN_nlim
   use scale_rm_process, only: &
     PRC_setup, &
-    PRC_2Drank, &
-    PRC_NUM_X, &
-    PRC_NUM_Y 
+    PRC_2Drank
   use scale_const, only: &
     CONST_setup
   use scale_calendar, only: &
@@ -498,19 +436,54 @@ subroutine set_scalelib
     MPRJ_setup
   implicit none
 
-  integer :: rankidx(2)
-  integer :: local_myrank
-  logical :: local_ismaster
-  character(len=H_LONG) :: confname_dummy
-  integer :: global_comm
-  integer :: local_comm
-  integer :: intercomm_parent
-  integer :: intercomm_child
   integer :: NUM_DOMAIN
   integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
-  character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim)
+  character(len=H_LONG) :: CONF_FILES(PRC_DOMAIN_nlim)
+
+!  integer :: universal_comm
+!  integer :: universal_nprocs
+!  logical :: universal_master
+  integer :: global_comm
+  integer :: local_comm
+  integer :: local_myrank
+  logical :: local_ismaster
+  integer :: intercomm_parent
+  integer :: intercomm_child
+  character(len=H_LONG) :: confname_dummy
+
+  integer :: color, key, ierr
+  integer :: rankidx(2)
 
   call mpi_timer('', 2, barrier=MPI_COMM_WORLD)
+
+  ! Communicator for all processes used
+  !-----------------------------------------------------------------------------
+
+  if (myrank_use) then
+    color = 0
+    key   = (ens_mygroup - 1) * MEM_NP + ens_myrank
+!    key   = myrank
+  else
+    color = MPI_UNDEFINED
+    key   = MPI_UNDEFINED
+  end if
+
+  call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, MPI_COMM_a, ierr)
+
+  call mpi_timer('set_scalelib:mpi_comm_split_a:', 2)
+
+  if (.not. myrank_use) then
+    write (6, '(A,I6.6,A)') 'MYRANK=', myrank, ': This process is not used!'
+    return
+  end if
+
+  call mpi_timer('', 2, barrier=MPI_COMM_a)
+
+  call MPI_COMM_SIZE(MPI_COMM_a, nprocs_a, ierr)
+  call MPI_COMM_RANK(MPI_COMM_a, myrank_a, ierr)
+
+  ! Communicator for subdomains
+  !-----------------------------------------------------------------------------
 
   NUM_DOMAIN = 1
   PRC_DOMAINS = 0
@@ -520,28 +493,21 @@ subroutine set_scalelib
 !  call PRC_MPIstart( universal_comm ) ! [OUT]
 
   PRC_mpi_alive = .true.
-!  universal_comm = MPI_COMM_WORLD
+!  universal_comm = MPI_COMM_a
 
 !  call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
 !                            universal_nprocs, & ! [OUT]
 !                            universal_master  ) ! [OUT]
 
   ! split MPI communicator for LETKF
-  call PRC_MPIsplit_letkf( MPI_COMM_WORLD,                   & ! [IN]
+  call PRC_MPIsplit_letkf( MPI_COMM_a,                       & ! [IN]
                            MEM_NP, nitmax, nprocs, proc2mem, & ! [IN]
                            global_comm                       ) ! [OUT]
-
-  call mpi_timer('set_scalelib:prc_mpisplit_letkf:', 2)
-
-  if (global_comm == MPI_COMM_NULL) then
-!    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
-    return
-  end if
 
   call PRC_GLOBAL_setup( .false.,    & ! [IN]
                          global_comm ) ! [IN]
 
-  call mpi_timer('set_scalelib:prc_global_setup:', 2, barrier=global_comm)
+  call mpi_timer('set_scalelib:mpi_comm_split_d_global:', 2, barrier=global_comm)
 
   !--- split for nesting
   ! communicator split for nesting domains
@@ -559,21 +525,27 @@ subroutine set_scalelib
 
   MPI_COMM_d = local_comm
 
-  call mpi_timer('set_scalelib:prc_mpisplit_local:', 2)
-
-  ! setup standard I/O
-!  call IO_setup( MODELNAME, .true., cnf_fname )
-
-  ! setup MPI
   call PRC_LOCAL_setup( local_comm, local_myrank, local_ismaster )
 
-  call mpi_timer('set_scalelib:prc_local_setup:', 2)
+!  call MPI_COMM_SIZE(MPI_COMM_d, nprocs_d, ierr)
+  nprocs_d = PRC_nprocs
+!  call MPI_COMM_RANK(MPI_COMM_d, myrank_d, ierr)
+!  myrank_d = PRC_myrank
+  myrank_d = local_myrank
+
+  call mpi_timer('set_scalelib:mpi_comm_split_d_local:', 2)
+
+  ! Setup scalelib LOG output (only for the universal master rank)
+  !-----------------------------------------------------------------------------
 
   ! setup Log
   call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
   call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
-  call mpi_timer('set_scalelib:log_setup:', 2)
+  call mpi_timer('set_scalelib:log_setup_init:', 2, barrier=MPI_COMM_a)
+
+  ! Other minimal scalelib setups for LETKF
+  !-----------------------------------------------------------------------------
 
   ! setup process
   call PRC_setup
@@ -689,16 +661,21 @@ subroutine unset_scalelib
     IO_L, &
     IO_FID_STDOUT
   implicit none
+  integer :: ierr
 
-!  call MONIT_finalize
+  if (myrank_use) then
+!    call MONIT_finalize
+    call FileCloseAll
 
-  call FileCloseAll
+    ! Close logfile, configfile
+    if ( IO_L ) then
+      if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+    endif
+    close(IO_FID_CONF)
 
-  ! Close logfile, configfile
-  if ( IO_L ) then
-    if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
-  endif
-  close(IO_FID_CONF)
+    call MPI_COMM_FREE(MPI_COMM_d, ierr)
+    call MPI_COMM_FREE(MPI_COMM_a, ierr)
+  end if
 
   return
 end subroutine unset_scalelib
@@ -1421,16 +1398,16 @@ subroutine get_nobs_da_mpi(nobs)
 
 ! read from all available data by every processes
 !-----------------------------
-!  if ((proc2mem(1,1,myrank+1) >= 1 .and. proc2mem(1,1,myrank+1) <= MEMBER) .or. &
-!      proc2mem(1,1,myrank+1) == mmdetin) then
-!    if (proc2mem(1,1,myrank+1) <= MEMBER) then
-!      call file_member_replace(proc2mem(1,1,myrank+1), OBSDA_IN_BASENAME, obsdafile)
-!    else if (proc2mem(1,1,myrank+1) == mmean) then
+!  if ((myrank_e >= 1 .and. myrank_e <= MEMBER) .or. &
+!      myrank_e == mmdetin) then
+!    if (myrank_e <= MEMBER) then
+!      call file_member_replace(myrank_e, OBSDA_IN_BASENAME, obsdafile)
+!    else if (myrank_e == mmean) then
 !      obsdafile = OBSDA_MEAN_IN_BASENAME
-!    else if (proc2mem(1,1,myrank+1) == mmdet) then
+!    else if (myrank_e == mmdet) then
 !      obsdafile = OBSDA_MDET_IN_BASENAME
 !    end if
-!    write (obsda_suffix(2:7), '(I6.6)') proc2mem(2,1,myrank+1)
+!    write (obsda_suffix(2:7), '(I6.6)') myrank_d
 !#ifdef H08
 !    call get_nobs(trim(obsdafile) // obsda_suffix, 8, nobs) ! H08
 !#else
@@ -1441,7 +1418,7 @@ subroutine get_nobs_da_mpi(nobs)
 ! read by process 0 and broadcast
 !-----------------------------
   if (myrank_e == 0) then
-    write (obsda_suffix(2:7), '(I6.6)') proc2mem(2,1,myrank+1)
+    write (obsda_suffix(2:7), '(I6.6)') myrank_d
 #ifdef H08
     call get_nobs(trim(obsdafile) // obsda_suffix, 8, nobs) ! H08
 #else

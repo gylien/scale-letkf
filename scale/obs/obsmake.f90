@@ -48,7 +48,6 @@ PROGRAM obsmake
   call read_nml_letkf_h08
 
   call set_mem_node_proc(1)
-
   call set_scalelib
 
   if (myrank_use) then
@@ -80,13 +79,9 @@ PROGRAM obsmake
 
     call unset_common_mpi_scale
 
-    call unset_scalelib
-
-  else ! [ myrank_use ]
-
-    write (6, '(A,I6.6,A)') 'MYRANK=', myrank, ': This process is not used!'
-
   end if ! [ myrank_use ]
+
+  call unset_scalelib
 
 !-----------------------------------------------------------------------
 ! Finalize
