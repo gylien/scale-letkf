@@ -120,8 +120,7 @@ MODULE common_obs_scale
     ! For Himawari-8 assimilation, LETKF uses obsda%lev instead of obs%lev.
     ! 
 #ifdef H08
-    REAL(r_size),ALLOCATABLE :: lev(:) ! H08
-    REAL(r_size),ALLOCATABLE :: val2(:) ! H08 ! clear sky BT (gues)
+    REAL(r_size),ALLOCATABLE :: lev(:) ! Him8
 #endif
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
@@ -1874,8 +1873,7 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
   ALLOCATE( obsda%key (obsda%nobs) )
   ALLOCATE( obsda%val (obsda%nobs) )
 #ifdef H08
-  ALLOCATE( obsda%lev (obsda%nobs) ) ! H08
-  ALLOCATE( obsda%val2(obsda%nobs) ) ! H08
+  ALLOCATE( obsda%lev (obsda%nobs) ) ! Him8
 #endif
   ALLOCATE( obsda%qc  (obsda%nobs) )
   ALLOCATE( obsda%ri  (obsda%nobs) )
@@ -1886,8 +1884,7 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
   obsda%key = 0
   obsda%val = 0.0d0
 #ifdef H08
-  obsda%lev = 0.0d0 ! H08
-  obsda%val2 = 0.0d0 ! H08
+  obsda%lev = 0.0d0 ! Him8
 #endif
   obsda%qc = 0
   obsda%ri = 0.0d0
@@ -1914,8 +1911,7 @@ SUBROUTINE obs_da_value_deallocate(obsda)
   IF(ALLOCATED(obsda%key   )) DEALLOCATE(obsda%key   )
   IF(ALLOCATED(obsda%val   )) DEALLOCATE(obsda%val   )
 #ifdef H08
-  IF(ALLOCATED(obsda%lev   )) DEALLOCATE(obsda%lev   ) ! H08
-  IF(ALLOCATED(obsda%val2  )) DEALLOCATE(obsda%val2  ) ! H08
+  IF(ALLOCATED(obsda%lev   )) DEALLOCATE(obsda%lev   ) ! Him8
 #endif
   IF(ALLOCATED(obsda%ensval)) DEALLOCATE(obsda%ensval)
   IF(ALLOCATED(obsda%qc    )) DEALLOCATE(obsda%qc    )
@@ -2139,8 +2135,7 @@ SUBROUTINE read_obs_da(cfile,obsda,im)
   TYPE(obs_da_value),INTENT(INOUT) :: obsda
   INTEGER,INTENT(IN) :: im
 #ifdef H08
-!  REAL(r_sngl) :: wk(7) ! H08
-  REAL(r_sngl) :: wk(8) ! H08
+  REAL(r_sngl) :: wk(7) ! H08
 #else
   REAL(r_sngl) :: wk(6) ! H08
 #endif
@@ -2163,8 +2158,7 @@ SUBROUTINE read_obs_da(cfile,obsda,im)
     obsda%ri(n) = REAL(wk(5),r_size)
     obsda%rj(n) = REAL(wk(6),r_size)
 #ifdef H08
-    obsda%lev(n) = REAL(wk(7),r_size) ! H08
-    obsda%val2(n) = REAL(wk(8),r_size) ! H08
+    obsda%lev(n) = REAL(wk(7),r_size) ! Him8
 #endif
   END DO
   CLOSE(iunit)
@@ -2180,8 +2174,7 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
   LOGICAL,INTENT(IN),OPTIONAL :: append
   LOGICAL :: append_
 #ifdef H08
-!  REAL(r_sngl) :: wk(7) ! H08
-  REAL(r_sngl) :: wk(8) ! H08
+  REAL(r_sngl) :: wk(7) ! H08
 #else
   REAL(r_sngl) :: wk(6) 
 #endif
@@ -2208,8 +2201,7 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
     wk(5) = REAL(obsda%ri(n),r_sngl)
     wk(6) = REAL(obsda%rj(n),r_sngl)
 #ifdef H08
-    wk(7) = REAL(obsda%lev(n),r_sngl) ! H08
-    wk(8) = REAL(obsda%val2(n),r_sngl) ! H08
+    wk(7) = REAL(obsda%lev(n),r_sngl) ! Him8
 #endif
     WRITE(iunit) wk
   END DO
@@ -2405,7 +2397,7 @@ subroutine read_obs_all(obs)
     case (2)
       call get_nobs_radar(trim(OBS_IN_NAME(iof)), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
     case (3) !H08 
-      call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
+      call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! Him8
     case default
       write(6,*) 'Error: Unsupported observation file format!'
       stop
@@ -2422,8 +2414,8 @@ subroutine read_obs_all(obs)
       call read_obs(trim(OBS_IN_NAME(iof)),obs(iof))
     case (2)
       call read_obs_radar(trim(OBS_IN_NAME(iof)),obs(iof))
-    case (3) ! H08 
-      call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
+    case (3) ! Him8 
+      call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! Him8
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
 
@@ -2738,14 +2730,6 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
       qc(n) = iqc_obs_bad
     ENDIF
 
-    IF(abs(btall_out(ch,np) - btclr_out(ch,np)) > H08_CLDSKY_THRS)THEN
-! Cloudy sky
-      yobs(n) = yobs(n) * (-1.0d0)
-    ELSE
-! Clear sky
-      yobs(n) = yobs(n) * 1.0d0
-    ENDIF
-   
     yobs_H08_clr(n) = btclr_out(ch,np)
 
   ENDDO ! ch

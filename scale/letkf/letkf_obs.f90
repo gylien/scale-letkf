@@ -214,7 +214,6 @@ SUBROUTINE set_letkf_obs
           obsda%qc(n1:n2) = obsda_ext%qc
 #ifdef H08
           obsda%lev(n1:n2) = obsda_ext%lev
-          obsda%val2(n1:n2) = obsda_ext%val2
 #endif
         else
 #ifdef DEBUG
@@ -237,9 +236,8 @@ SUBROUTINE set_letkf_obs
 #endif
           obsda%qc(n1:n2) = max(obsda%qc(n1:n2), obsda_ext%qc)
 #ifdef H08
-          if (im <= MEMBER) then ! only consider lev, val2 from members, not from the means
+          if (im <= MEMBER) then ! only consider lev from members, not from the means
             obsda%lev(n1:n2) = obsda%lev(n1:n2) + obsda_ext%lev
-            obsda%val2(n1:n2) = obsda%val2(n1:n2) + obsda_ext%val2
           end if
 #endif
         end if
@@ -271,8 +269,6 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
     call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
     obsda%lev(n1:n2) = obsda%lev(n1:n2) / REAL(MEMBER,r_size)
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
-    obsda%val2(n1:n2) = obsda%val2(n1:n2) / REAL(MEMBER,r_size)
 #endif
 
     call mpi_timer('set_letkf_obs:read_external_obs_allreduce:', 2)
@@ -468,20 +464,9 @@ SUBROUTINE set_letkf_obs
         end if
       end do
 
-!
-! -- reject Band #11(ch=5) & #12(ch=6) of Himawari-8 obs ! H08
-! -- because these channels are sensitive to chemical tracers
-! NOTE!!
-!    channel num of Himawari-8 obs is stored in obs%lev (T.Honda 11/04/2015)
-!      if ((int(obs(iof)%elm(iidx)) == 11) .or. &
-!          (int(obs(iof)%lev(iidx)) == 12)) then
-!        obsda%qc(n) = iqc_obs_bad
-!        cycle
-!      endif
     endif
 !!!###### end Himawari-8 assimilation ###### ! H08
 #endif
-
 
 
     obsda%val(n) = obsda%ensval(1,n)
@@ -489,14 +474,7 @@ SUBROUTINE set_letkf_obs
       obsda%val(n) = obsda%val(n) + obsda%ensval(i,n)
     END DO
     obsda%val(n) = obsda%val(n) / REAL(MEMBER,r_size)
-#ifdef H08
-! Compute CA (cloud effect average, Okamoto et al. 2014QJRMS)
-! CA is stored in obsda%val2
 
-    obsda%val2(n) = (abs(obsda%val(n) - obsda%val2(n)) & ! CM
-                   + abs(obs(iof)%dat(iidx) - obsda%val2(n)) &! CO
-                   &) * 0.5d0
-#endif
     DO i=1,MEMBER
       obsda%ensval(i,n) = obsda%ensval(i,n) - obsda%val(n) ! Hdx
     END DO
@@ -529,30 +507,12 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_gross_err
       END IF
     case (id_H08IR_obs)
-      ! Adaptive QC depending on the sky condition in the background.
-      ! !!Not finished yet!!
-      ! 
-      ! In config.nml.obsope,
-      !  H08_CLDSKY_THRS  < 0.0: turn off ! all members are diagnosed as cloudy.
-      !  H08_CLDSKY_THRS  > 0.0: turn on
-      !
-      IF(mem_ref < H08_MIN_CLD_MEMBER)THEN ! Clear sky
-        IF(ABS(obsda%val(n)) > 1.0d0 * obs(iof)%err(iidx)) THEN
-          obsda%qc(n) = iqc_gross_err
-        END IF
-      ELSE ! Cloudy sky
-        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
-          obsda%qc(n) = iqc_gross_err
-        END IF
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+        obsda%qc(n) = iqc_gross_err
       END IF
-
       IF(obs(iof)%dat(iidx) < H08_BT_MIN)THEN
         obsda%qc(n) = iqc_gross_err
       ENDIF
-
-!      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
-!        obsda%qc(n) = iqc_gross_err
-!      END IF
     case (id_tclon_obs)
       IF(ABS(obsda%val(n)) > GROSS_ERROR_TCX * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
@@ -585,7 +545,7 @@ SUBROUTINE set_letkf_obs
 !
 ! For obs err correlation statistics based on Desroziers et al. (2005, QJRMS).
 !
-        write(6, '(a,2I6,2F8.2,4F12.4,2I6,F10.4)')"H08-O-B", &
+        write(6, '(a,2I6,2F8.2,4F12.4,I6)')"H08-O-B", &
              obs(iof)%elm(iidx), &
              nint(ch_num), & ! obsda%lev includes band num.
              obs(iof)%lon(iidx), &
@@ -594,9 +554,7 @@ SUBROUTINE set_letkf_obs
              obsda%lev(n), & ! sensitive height
              obs(iof)%dat(iidx), &
              obs(iof)%err(iidx), &
-             obsda%qc(n),        &
-             mem_ref,  &  ! # of cloudy member
-             obsda%val2(n)
+             obsda%qc(n)        
       ELSE
         write(6, '(2I6,2F8.2,4F12.4,I3)') &
              obs(iof)%elm(iidx), & ! id

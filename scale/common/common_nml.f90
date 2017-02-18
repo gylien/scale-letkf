@@ -250,7 +250,6 @@ MODULE common_nml
   real(r_size) :: H08_RTTOV_CFRAC_CNST = 0.10d0 ! Denominator constant for diagnosing SEQUENTIAL(0-1) cloud fraction (g m-3)
                                                 ! Negative values indicate DISCRETE (0/1) cloud fraction 
   real(r_size) :: H08_BT_MIN = 0.0d0 ! Lower limit of the BT for Himawari-8 IR
-  real(r_size) :: H08_CLDSKY_THRS = -5.0d0 ! Threshold for diagnosing the sky condition using [BT(all-sky) - BT(clr)].
                                            ! Negative values: turn off
   integer :: H08_MIN_CLD_MEMBER = 1       ! If the number of the cloudy members is larger than H08_MIN_CLD_MEMBER,
                                            ! the first guess is diagnosed as cloudy. ! Not finished yet!
@@ -753,7 +752,6 @@ subroutine read_nml_letkf_h08
     H08_REJECT_LAND, &
     H08_RTTOV_CLD, &
     H08_MIN_CLD_MEMBER, &
-    H08_CLDSKY_THRS, &
     H08_RTTOV_MINQ, &
     H08_RTTOV_CFRAC_CNST, &
     H08_LIMIT_LEV, &

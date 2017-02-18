@@ -49,5 +49,4 @@ RT_INCLUDE = -I$(DIR_RTTOV)/mod -I$(DIR_RTTOV)/include
 
 ifeq ($(H08),T)
 FOPTS     += -DH08
-FOPTS_SCALE += -DH08
 endif

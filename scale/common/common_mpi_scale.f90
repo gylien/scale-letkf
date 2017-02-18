@@ -1420,7 +1420,7 @@ subroutine get_nobs_da_mpi(nobs)
   if (myrank_e == 0) then
     write (obsda_suffix(2:7), '(I6.6)') myrank_d
 #ifdef H08
-    call get_nobs(trim(obsdafile) // obsda_suffix, 8, nobs) ! H08
+    call get_nobs(trim(obsdafile) // obsda_suffix, 7, nobs) ! Him8
 #else
     call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs)
 #endif
