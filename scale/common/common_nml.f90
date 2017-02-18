@@ -248,11 +248,14 @@ MODULE common_nml
   real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
   real(r_size) :: H08_LIMIT_LEV = 20000.0d0 ! (Pa) Upper limit level of the sensitive height for Himawari-8 IR
   real(r_size) :: H08_RTTOV_CFRAC_CNST = 0.10d0 ! Denominator constant for diagnosing SEQUENTIAL(0-1) cloud fraction (g m-3)
+  real(r_size) :: H08_RTTOV_MINQ_CTOP = 0.10d0 ! Threshold of water/ice contents for diagnosing the cloud top (g m-3)
                                                 ! Negative values indicate DISCRETE (0/1) cloud fraction 
   real(r_size) :: H08_BT_MIN = 0.0d0 ! Lower limit of the BT for Himawari-8 IR
                                            ! Negative values: turn off
-  integer :: H08_MIN_CLD_MEMBER = 1       ! If the number of the cloudy members is larger than H08_MIN_CLD_MEMBER,
-                                           ! the first guess is diagnosed as cloudy. ! Not finished yet!
+
+  logical :: H08_RTTOV_EXTRA_US76 = .false.
+  logical :: H08_VLOCAL_CTOP = .false.
+
   integer :: H08_CH_USE(nch) = (/0,0,1,0,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
                         !! (B07,B08,B09,B10,B11,B12,B13,B14,B15,B16)
@@ -751,10 +754,12 @@ subroutine read_nml_letkf_h08
   namelist /PARAM_LETKF_H08/ &
     H08_REJECT_LAND, &
     H08_RTTOV_CLD, &
-    H08_MIN_CLD_MEMBER, &
     H08_RTTOV_MINQ, &
-    H08_RTTOV_CFRAC_CNST, &
+    H08_RTTOV_MINQ_CTOP, &
     H08_LIMIT_LEV, &
+    H08_RTTOV_CFRAC_CNST, &
+    H08_RTTOV_EXTRA_US76, &
+    H08_VLOCAL_CTOP, &
     H08_BT_MIN, &
     H08_CH_USE
 
