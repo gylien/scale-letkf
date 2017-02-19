@@ -1274,7 +1274,9 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
         nobsl_t(ielm_u_master,ityp_master) = nobsl_incr
       end if
       if (present(cutd_t)) then
-        cutd_t(ielm_u_master,ityp_master) = hori_loc_ctype(ic) * sqrt(dist_tmp(nobs_use2(nobsl_incr)))
+        if (nobsl_incr == nobsl_max_master) then
+          cutd_t(ielm_u_master,ityp_master) = hori_loc_ctype(ic) * sqrt(dist_tmp(nobs_use2(nobsl_incr)))
+        end if
       end if
 
     !---------------------------------------------------------------------------
@@ -1337,10 +1339,12 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
         nobsl_t(ielm_u_master,ityp_master) = nobsl_incr
       end if
       if (present(cutd_t)) then
-        if (MAX_NOBS_PER_GRID_CRITERION == 2) then
-          cutd_t(ielm_u_master,ityp_master) = rloc_tmp(nobs_use2(nobsl_incr))
-        else if (MAX_NOBS_PER_GRID_CRITERION == 3) then
-          cutd_t(ielm_u_master,ityp_master) = rdiag_tmp(nobs_use2(nobsl_incr))
+        if (nobsl_incr == nobsl_max_master) then
+          if (MAX_NOBS_PER_GRID_CRITERION == 2) then
+            cutd_t(ielm_u_master,ityp_master) = rloc_tmp(nobs_use2(nobsl_incr))
+          else if (MAX_NOBS_PER_GRID_CRITERION == 3) then
+            cutd_t(ielm_u_master,ityp_master) = rdiag_tmp(nobs_use2(nobsl_incr))
+          end if
         end if
       end if
 
