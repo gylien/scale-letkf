@@ -35,6 +35,8 @@ MODULE common_nml
   integer :: MEMBER_RUN = 1  !
   integer :: MEMBER_ITER = 0 !
 
+  logical :: DET_RUN = .false.
+
   !--- PARAM_OBSOPE
   integer               :: OBS_IN_NUM = 1
   character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
@@ -71,7 +73,7 @@ MODULE common_nml
   character(filelenmax) :: ANAL_SPRD_OUT_BASENAME = ''
   character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
 
-  logical               :: DET_RUN_CYCLED = .false.
+  logical               :: DET_RUN_CYCLED = .true.
 
   real(r_size) :: INFL_MUL = 1.0d0           ! >  0: globally constant covariance inflation
                                              ! <= 0: use 3D inflation field from 'INFL_MUL_IN_BASENAME' file
@@ -304,7 +306,8 @@ subroutine read_nml_ensemble
   namelist /PARAM_ENSEMBLE/ &
     MEMBER, &
     MEMBER_RUN, &
-    MEMBER_ITER
+    MEMBER_ITER, &
+    DET_RUN
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)
