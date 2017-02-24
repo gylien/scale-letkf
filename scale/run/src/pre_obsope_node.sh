@@ -69,10 +69,16 @@ for iobs in $(seq $OBSNUM); do
   fi
 done
 
+DET_RUN_TF='.false.'
+if ((DET_RUN == 1)); then
+  DET_RUN_TF='.true.'
+fi
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.obsope | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
+        -e "/!--DET_RUN--/a DET_RUN = ${DET_RUN_TF}," \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \

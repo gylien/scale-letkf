@@ -37,6 +37,9 @@ OBSNCEP=
 #===============================================================================
 # model/data file options
 
+DET_RUN=0               # 0: Disable the deterministic run
+                        # 1: Enable  the deterministic run
+
 TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
@@ -91,7 +94,7 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=9           # Ensemble size
+MEMBER=8           # Ensemble size
 
 NNODES=2           # Number of nodes
 PPN=20             # Number of processes per node
