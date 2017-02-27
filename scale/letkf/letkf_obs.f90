@@ -1190,7 +1190,7 @@ SUBROUTINE set_letkf_obs
               obsgrd(ictype)%tot_sub(1), obsgrd(ictype)%tot_sub(2), obsgrd(ictype)%tot_ext
   end do
   write (6, '(A)') '---------------------------------------------------------------------'
-    write (6, '(A6,5x,4I11,11x,A3)') 'TOTAL ', nobs_g(1), nobs_sub(1), nobs_g(2), nobs_sub(2), 'N/A'
+    write (6, '(A6,5x,4I11,11x,A3)') 'TOTAL ', nobs_g(1), nobs_g(2), nobs_sub(1), nobs_sub(2), 'N/A'
   write (6, '(A)') '====================================================================='
 
   call mpi_timer('set_letkf_obs:obs_count_print:', 2)
