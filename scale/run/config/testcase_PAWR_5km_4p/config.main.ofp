@@ -35,6 +35,9 @@ OBSNCEP=
 #===============================================================================
 # model/data file options
 
+DET_RUN=0               # 0: Disable the deterministic run
+                        # 1: Enable  the deterministic run
+
 TOPO_FORMAT='DEM50M'    # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')

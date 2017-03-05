@@ -193,7 +193,7 @@ while ((time <= ETIME)); do
   echo "  Processes per SCALE run:  $mem_np"
   echo
   echo "  Ensemble size:            $MEMBER"
-  for m in $(seq $mmdet); do
+  for m in $(seq $mtot); do
     echo "      ${name_m[$m]}: ${node_m[$m]}"
   done
   echo

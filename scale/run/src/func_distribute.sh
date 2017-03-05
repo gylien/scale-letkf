@@ -239,10 +239,11 @@ distribute_da_cycle () {
 #   DISTR_FILE   Location of the 'distr' file
 #                '-': The first-time run; output 'distr' file in $NODEFILEDIR
 #   MEMBERS      List of forecast members
-#                '-': Sequential numbers (default)
+#                'all': All sequential numbers (default)
 #
 # Other input variables:
 #   $MEMBER      Ensemble size
+#   $DET_RUN     Whether the deterministic run is enabled
 #   $NNODES      Number of total nodes
 #   $PPN         Number of processes per node
 #   $MEMBER_FMT
@@ -256,18 +257,19 @@ distribute_da_cycle () {
 #   $mem_np                               Number of processes for a member
 #   $totalnp                              Total number of processes
 #
+#   $mtot                                 Number of members + ensemble mean (+ deterministic run)
 #   $mmean                                Index of the ensemble mean ($MEMBER+1)
 #   $mmdet                                Index of the deterministic run ($MEMBER+2)
-#   $node_m[1...$MEMBER+2]                Short node list description of each member
-#   $name_m[1...$MEMBER+2]                Name of members
+#   $node_m[1...$mtot]                    Short node list description of each member
+#   $name_m[1...$mtot]                    Name of members
 #
 #   $n_mem                                Number of members that use one round of nodes
 #   $n_mempn                              Number of members that run in parallel in a node
 #   $repeat_mems                          (= $n_mem)
 #   $parallel_mems                        Number of members that run in parallel
 #   $nitmax                               Number of parallel cycles needed to finish all members
-#   $mem2node[1...(($MEMBER+2)*$mem_np)]  Relation from (members, m_processes) to nodes (pseudo 2-D array)
-#   $mem2proc[1...(($MEMBER+2)*$mem_np)]  Relation from (members, m_processes) to processes (pseudo 2-D array)
+#   $mem2node[1...($mtot*$mem_np)]        Relation from (members, m_processes) to nodes (pseudo 2-D array)
+#   $mem2proc[1...($mtot*$mem_np)]        Relation from (members, m_processes) to processes (pseudo 2-D array)
 #   $proc2node[1...$totalnp]              Relation from processes to nodes
 #   $proc2group[1...$totalnp]             Relation from processes to groups
 #   $proc2grpproc[1...$totalnp]           Relation from processes to m_processes
@@ -325,18 +327,22 @@ else
   fi
 fi
 
+mtot=$((MEMBER+1))
 mmean=$((MEMBER+1))
-mmdet=$((MEMBER+2))
 name_m[$mmean]='mean'
-name_m[$mmdet]='mdet'
+if ((DET_RUN == 1)); then
+  mtot=$((MEMBER+2))
+  mmdet=$((MEMBER+2))
+  name_m[$mmdet]='mdet'
+fi
 
 #-------------------------------------------------------------------------------
 # Set up the distribution of members on nodes
 
-set_mem_np $((MEMBER+2)) $SCALE_NP $SCALE_NP
+set_mem_np $mtot $SCALE_NP $SCALE_NP
 
-set_mem2node $((MEMBER+2))
-#set_mem2node $((MEMBER+2)) "$DISTR_FILE"
+set_mem2node $mtot
+#set_mem2node $mtot "$DISTR_FILE"
 
 #-------------------------------------------------------------------------------
 # Create nodefiles
@@ -375,6 +381,7 @@ distribute_da_cycle_set () {
 #
 # Other input variables:
 #   $MEMBER      Ensemble size
+#   $DET_RUN     Whether the deterministic run is enabled
 #   $NNODES      Number of total nodes
 #   $PPN         Number of processes per node
 #   $MEMBER_FMT
@@ -388,18 +395,19 @@ distribute_da_cycle_set () {
 #   $mem_np                               Number of processes for a member
 #   $totalnp                              Total number of processes
 #
+#   $mtot                                 Number of members + ensemble mean (+ deterministic run)
 #   $mmean                                Index of the ensemble mean ($MEMBER+1)
 #   $mmdet                                Index of the deterministic run ($MEMBER+2)
-#   $node_m[1...$MEMBER+2]                Short node list description of each member
-#   $name_m[1...$MEMBER+2]                Name of members
+#   $node_m[1...$mtot]                    Short node list description of each member
+#   $name_m[1...$mtot]                    Name of members
 #
 #   $n_mem                                Number of members that use one round of nodes
 #   $n_mempn                              Number of members that run in parallel in a node
 #   $repeat_mems                          (= $n_mem)
 #   $parallel_mems                        Number of members that run in parallel
 #   $nitmax                               Number of parallel cycles needed to finish all members
-#   $mem2node[1...(($MEMBER+2)*$mem_np)]  Relation from (members, m_processes) to nodes (pseudo 2-D array)
-#   $mem2proc[1...(($MEMBER+2)*$mem_np)]  Relation from (members, m_processes) to processes (pseudo 2-D array)
+#   $mem2node[1...($mtot*$mem_np)]        Relation from (members, m_processes) to nodes (pseudo 2-D array)
+#   $mem2proc[1...($mtot*$mem_np)]        Relation from (members, m_processes) to processes (pseudo 2-D array)
 #   $proc2node[1...$totalnp]              Relation from processes to nodes
 #   $proc2group[1...$totalnp]             Relation from processes to groups
 #   $proc2grpproc[1...$totalnp]           Relation from processes to m_processes
@@ -423,9 +431,6 @@ fi
 
 #-------------------------------------------------------------------------------
 # Set up node names and member names
-
-mmean=$((MEMBER+1))
-mmdet=$((MEMBER+2))
 
 if [ "$NODELIST_TYPE" = 'nodefile' ]; then
   read_nodefile_pbs "$NODEFILE"
@@ -455,15 +460,22 @@ local m
 for m in $(seq $MEMBER); do
   name_m[$m]=$(printf $MEMBER_FMT $m)
 done
+
+mtot=$((MEMBER+1))
+mmean=$((MEMBER+1))
 name_m[$mmean]='mean'
-name_m[$mmdet]='mdet'
+if ((DET_RUN == 1)); then
+  mtot=$((MEMBER+2))
+  mmdet=$((MEMBER+2))
+  name_m[$mmdet]='mdet'
+fi
 
 #-------------------------------------------------------------------------------
 # Set up the distribution of members on nodes
 
-set_mem_np $((MEMBER+2)) $SCALE_NP $SCALE_NP
+set_mem_np $mtot $SCALE_NP $SCALE_NP
 
-set_mem2node $((MEMBER+2)) "$DISTR_FILE"
+set_mem2node $mtot "$DISTR_FILE"
 
 #-------------------------------------------------------------------------------
 # Create nodefiles

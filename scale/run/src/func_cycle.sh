@@ -404,7 +404,7 @@ else
     # anal
     #-------------------
     if ((loop == 1 && MAKEINIT != 1)); then
-      for m in $(seq $mmdet); do
+      for m in $(seq $mtot); do
         for q in $(seq $mem_np); do
           path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
           echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
@@ -415,7 +415,7 @@ else
     # anal_ocean
     #-------------------
     if ((OCEAN_INPUT == 1)) && ((OCEAN_FORMAT == 0)); then
-      for m in $(seq $mmdet); do
+      for m in $(seq $mtot); do
         for q in $(seq $mem_np); do
           path="${time}/anal/${name_m[$m]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
           echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
@@ -426,7 +426,7 @@ else
     # anal_land
     #-------------------
     if ((LAND_INPUT == 1)) && ((LAND_FORMAT == 0)); then
-      for m in $(seq $mmdet); do
+      for m in $(seq $mtot); do
         for q in $(seq $mem_np); do
           path="${time}/anal/${name_m[$m]}/init_land$(printf $SCALE_SFX $((q-1)))"
           echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
@@ -448,7 +448,7 @@ else
           path=const/topo/topo.tar.gz
           echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
         else
-          for m in $(seq $((repeat_mems <= mmdet ? repeat_mems : mmdet))); do
+          for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
             for q in $(seq $mem_np); do
               pathin="${DATA_TOPO}/const/topo/topo$(printf $SCALE_SFX $((q-1)))"
               path="const/topo/topo$(printf $SCALE_SFX $((q-1)))"
@@ -507,7 +507,7 @@ else
           fi
           echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
         else
-          for m in $(seq $((repeat_mems <= mmdet ? repeat_mems : mmdet))); do
+          for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
             for q in $(seq $mem_np); do
               if ((LANDUSE_UPDATE == 1)); then
                 pathin="${DATA_LANDUSE}/${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
@@ -530,7 +530,7 @@ else
     #-------------------
     if ((BDY_FORMAT == 0)); then
       if ((BDY_ENS == 0)); then
-        for m in $(seq $((repeat_mems <= mmdet ? repeat_mems : mmdet))); do
+        for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
           for q in $(seq $mem_np); do
             pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}/boundary$(printf $SCALE_SFX $((q-1)))"
             path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
@@ -538,7 +538,7 @@ else
           done
         done
       elif ((BDY_ENS == 1)); then
-        for m in $(seq $mmdet); do
+        for m in $(seq $mtot); do
           for q in $(seq $mem_np); do
             pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
             path="${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
@@ -585,7 +585,7 @@ else
       #-------------------
       if ((BDY_FORMAT != 0)); then
         if ((BDY_ENS == 1 && BDYOUT_OPT <= 1)); then
-#          for m in $(seq $mmdet); do
+#          for m in $(seq $mtot); do
 #            path="${time}/bdy/${name_m[$m]}"
 #            echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #          done
@@ -594,15 +594,17 @@ else
         elif ((BDYOUT_OPT <= 2)); then
           path="${time}/bdy/mean"
           echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-          path="${time}/bdy/mdet"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+          if ((DET_RUN == 1)); then
+            path="${time}/bdy/mdet"
+            echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+          fi
         fi
       fi
 
       # hist
       #-------------------
       if ((OUT_OPT <= 1)); then
-#        for m in $(seq $mmdet); do
+#        for m in $(seq $mtot); do
 #          path="${time}/hist/${name_m[$m]}"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #        done
@@ -611,14 +613,16 @@ else
       elif ((OUT_OPT <= 2)); then
         path="${time}/hist/mean"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        path="${time}/hist/mdet"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        if ((DET_RUN == 1)); then
+          path="${time}/hist/mdet"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        fi
       fi
 
       # gues
       #-------------------
       if ((OUT_OPT <= 3)); then
-#        for m in $(seq $mmdet); do
+#        for m in $(seq $mtot); do
 #          path="${atime}/gues/${name_m[$m]}"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #        done
@@ -629,10 +633,12 @@ else
       elif ((OUT_OPT <= 5)); then
         path="${atime}/gues/mean"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        path="${atime}/gues/mdet"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
         path="${atime}/gues/sprd"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        if ((DET_RUN == 1)); then
+          path="${atime}/gues/mdet"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        fi
 #        path="${atime}/gues/0001"
 #        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
@@ -640,7 +646,7 @@ else
       # anal
       #-------------------
       if ((OUT_OPT <= 4 || (OUT_OPT <= 5 && loop % OUT_CYCLE_SKIP == 0) || atime > ETIME)); then
-#        for m in $(seq $mmdet); do
+#        for m in $(seq $mtot); do
 #          path="${atime}/anal/${name_m[$m]}"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #        done
@@ -651,10 +657,12 @@ else
       elif ((OUT_OPT <= 6)); then
         path="${atime}/anal/mean"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        path="${atime}/anal/mdet"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
         path="${atime}/anal/sprd"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        if ((DET_RUN == 1)); then
+          path="${atime}/anal/mdet"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        fi
 #        path="${atime}/anal/0001"
 #        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
@@ -1022,7 +1030,7 @@ else
           if ((BDY_FORMAT == 1)); then
 
             if ((BDY_ENS == 1)); then
-              for m in $(seq $mmdet); do
+              for m in $(seq $mtot); do
 #                for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}/history.*.nc 2> /dev/null); do
 #                  pathin="$ifile"
 #                  if ((BDY_ROTATING == 1)); then
@@ -1094,7 +1102,7 @@ else
             fi
 
             if ((BDY_ENS == 1)); then
-              for m in $(seq $mmdet); do
+              for m in $(seq $mtot); do
                 for ifile in $(seq $filenum); do
                   if ((BDY_ROTATING == 1)); then
                     pathin="$data_bdy_i/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
@@ -1180,7 +1188,7 @@ fi
 if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
-  MEMBER_RUN=$((repeat_mems <= mmdet ? repeat_mems : mmdet))
+  MEMBER_RUN=$((repeat_mems <= mtot ? repeat_mems : mtot))
 fi
 
 if (pdrun all $PROC_OPT); then
@@ -1233,7 +1241,7 @@ fi
 if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
-  MEMBER_RUN=$((repeat_mems <= mmdet ? repeat_mems : mmdet))
+  MEMBER_RUN=$((repeat_mems <= mtot ? repeat_mems : mtot))
 fi
 
 for it in $(seq $its $ite); do
@@ -1289,11 +1297,11 @@ else
 fi
 
 if ((BDY_ENS == 1)); then
-  MEMBER_RUN=$mmdet
+  MEMBER_RUN=$mtot
 elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
-  MEMBER_RUN=$((repeat_mems <= mmdet ? repeat_mems : mmdet))
+  MEMBER_RUN=$((repeat_mems <= mtot ? repeat_mems : mtot))
 fi
 
 mkinit=0
@@ -1361,11 +1369,11 @@ if ((BDY_FORMAT == 0)); then
 fi
 
 if ((BDY_ENS == 1)); then
-  MEMBER_RUN=$mmdet
+  MEMBER_RUN=$mtot
 elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
-  MEMBER_RUN=$((repeat_mems <= mmdet ? repeat_mems : mmdet))
+  MEMBER_RUN=$((repeat_mems <= mtot ? repeat_mems : mtot))
 fi
 
 mkinit=0
@@ -1439,7 +1447,7 @@ bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SI
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale $mmdet $iter
+       $mem_nodes $mem_np $TMPRUN/scale $mtot $iter
 fi
 
 mkinit=0
@@ -1465,7 +1473,7 @@ for it in $(seq $its $ite); do
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= mmdet)); then
+    if ((m >= 1 && m <= mtot)); then
 #      if ((PERTURB_BDY == 1)); then
 #        ...
 #      fi
@@ -1534,7 +1542,7 @@ for it in $(seq $its $ite); do
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= mmdet)); then
+    if ((m >= 1 && m <= mtot)); then
 #      if ((PERTURB_BDY == 1)); then
 #        ...
 #      fi
@@ -1584,7 +1592,7 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= mmdet)); then
+    if ((m >= 1 && m <= mtot)); then
       bash $SCRP_DIR/src/pre_obsope.sh $MYRANK \
            $atime ${name_m[$m]}
     fi
@@ -1615,7 +1623,7 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= mmdet)); then
+    if ((m >= 1 && m <= mtot)); then
       bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
            ${time} ${atime} ${name_m[$m]} $TMPRUN/obsope $LOG_OPT $OUT_OPT
     fi
@@ -1662,7 +1670,7 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= mmdet)); then
+    if ((m >= 1 && m <= mtot)); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
            $atime ${name_m[$m]} $OUT_OPT $OBSOUT_OPT \
            $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT
@@ -1694,7 +1702,7 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= mmdet)); then
+    if ((m >= 1 && m <= mtot)); then
       bash $SCRP_DIR/src/post_letkf.sh $MYRANK \
            ${atime} $TMPRUN/letkf $LOG_OPT
     fi

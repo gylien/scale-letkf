@@ -127,7 +127,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! FCST PERTURBATIONS
   !
 !  .... this has been done by write_ensmean in letkf.f90
-!  CALL ensmean_grd(MEMBER,nij1,gues3d,gues2d,mean3d,mean2d)
+!  CALL ensmean_grd(MEMBER,nens,nij1,gues3d,gues2d,mean3d,mean2d)
   DO n=1,nv3d
     DO m=1,MEMBER
 !$OMP PARALLEL DO PRIVATE(i,k)
@@ -267,7 +267,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           DO m=1,MEMBER                                                                !GYL
             anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n) + gues3d(ij,ilev,m,n)        !GYL
           END DO                                                                       !GYL
-          anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n)                            !GYL
+          if (DET_RUN) then                                                            !GYL
+            anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n)                          !GYL
+          end if                                                                       !GYL
         ELSE                                                                           !GYL
           ! relaxation via LETKF weight
           IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2004)
@@ -302,13 +304,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           END DO
 
           ! analysis update of deterministic run
-          anal3d(ij,ilev,mmdet,n) = 0.0d0                                              !GYL
-          DO k=1,MEMBER                                                                !GYL
-            anal3d(ij,ilev,mmdet,n) = anal3d(ij,ilev,mmdet,n) &                        !GYL
-                                    + gues3d(ij,ilev,k,n) * transmd(k,n)               !GYL
-          END DO                                                                       !GYL
-          anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n) &                          !GYL
-                                  + anal3d(ij,ilev,mmdet,n) * beta                     !GYL
+          if (DET_RUN) then                                                            !GYL
+            anal3d(ij,ilev,mmdet,n) = 0.0d0                                            !GYL
+            DO k=1,MEMBER                                                              !GYL
+              anal3d(ij,ilev,mmdet,n) = anal3d(ij,ilev,mmdet,n) &                      !GYL
+                                      + gues3d(ij,ilev,k,n) * transmd(k,n)             !GYL
+            END DO                                                                     !GYL
+            anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n) &                        !GYL
+                                    + anal3d(ij,ilev,mmdet,n) * beta                   !GYL
+          end if                                                                       !GYL
         END IF ! [ beta == 0.0d0 ]                                                     !GYL
 
         ! limit q spread
@@ -385,6 +389,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             DO m=1,MEMBER                                                              !GYL
               anal2d(ij,m,n) = gues2d(ij,mmean,n) + gues2d(ij,m,n)                     !GYL
             END DO                                                                     !GYL
+            if (DET_RUN) then                                                          !GYL
+              anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n)                                  !GYL
+            end if                                                                     !GYL
           ELSE                                                                         !GYL
             ! relaxation via LETKF weight
             IF(RELAX_ALPHA /= 0.0d0) THEN                                              !GYL - RTPP method (Zhang et al. 2004)
@@ -419,13 +426,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             END DO
 
             ! analysis update of deterministic run
-            anal2d(ij,mmdet,n) = 0.0d0                                                 !GYL
-            DO k=1,MEMBER                                                              !GYL
-              anal2d(ij,mmdet,n) = anal2d(ij,mmdet,n) &                                !GYL
-                                 + gues2d(ij,k,n) * transmd(k,nv3d+n)                  !GYL
-            END DO                                                                     !GYL
-            anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n) &                                  !GYL
-                               + anal2d(ij,mmdet,n) * beta                             !GYL
+            if (DET_RUN) then                                                          !GYL
+              anal2d(ij,mmdet,n) = 0.0d0                                               !GYL
+              DO k=1,MEMBER                                                            !GYL
+                anal2d(ij,mmdet,n) = anal2d(ij,mmdet,n) &                              !GYL
+                                   + gues2d(ij,k,n) * transmd(k,nv3d+n)                !GYL
+              END DO                                                                   !GYL
+              anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n) &                                !GYL
+                                 + anal2d(ij,mmdet,n) * beta                           !GYL
+            end if                                                                     !GYL
 
           END IF ! [ beta == 0.0d0 ]                                                   !GYL
 
@@ -530,7 +539,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
     call mpi_timer('das_letkf:additive_infl_read_ens_mpi:', 2)
 
-    CALL ensmean_grd(MEMBER,nij1,gues3d,gues2d)
+    CALL ensmean_grd(MEMBER,nens,nij1,gues3d,gues2d)
 
     call mpi_timer('das_letkf:additive_infl_ensmean_grd:', 2)
 
@@ -1047,6 +1056,15 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
     end if
   end if
 
+#ifdef DEBUG
+  if (present(depd)) then
+    if (.not. DET_RUN) then
+      write (6, '(A)') "[Error] If 'depd' optional input is given, 'DET_RUN' needs to be enabled.'"
+      stop 99
+    end if
+  end if
+#endif
+
   if (nobstotal == 0) then
     return
   end if
@@ -1274,7 +1292,9 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
         nobsl_t(ielm_u_master,ityp_master) = nobsl_incr
       end if
       if (present(cutd_t)) then
-        cutd_t(ielm_u_master,ityp_master) = hori_loc_ctype(ic) * sqrt(dist_tmp(nobs_use2(nobsl_incr)))
+        if (nobsl_incr == nobsl_max_master) then
+          cutd_t(ielm_u_master,ityp_master) = hori_loc_ctype(ic) * sqrt(dist_tmp(nobs_use2(nobsl_incr)))
+        end if
       end if
 
     !---------------------------------------------------------------------------
@@ -1337,10 +1357,12 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
         nobsl_t(ielm_u_master,ityp_master) = nobsl_incr
       end if
       if (present(cutd_t)) then
-        if (MAX_NOBS_PER_GRID_CRITERION == 2) then
-          cutd_t(ielm_u_master,ityp_master) = rloc_tmp(nobs_use2(nobsl_incr))
-        else if (MAX_NOBS_PER_GRID_CRITERION == 3) then
-          cutd_t(ielm_u_master,ityp_master) = rdiag_tmp(nobs_use2(nobsl_incr))
+        if (nobsl_incr == nobsl_max_master) then
+          if (MAX_NOBS_PER_GRID_CRITERION == 2) then
+            cutd_t(ielm_u_master,ityp_master) = rloc_tmp(nobs_use2(nobsl_incr))
+          else if (MAX_NOBS_PER_GRID_CRITERION == 3) then
+            cutd_t(ielm_u_master,ityp_master) = rdiag_tmp(nobs_use2(nobsl_incr))
+          end if
         end if
       end if
 

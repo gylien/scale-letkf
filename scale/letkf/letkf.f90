@@ -104,7 +104,11 @@ PROGRAM letkf
   call read_nml_letkf_radar
   call read_nml_letkf_h08
 
-  call set_mem_node_proc(MEMBER+2)
+  if (DET_RUN) then
+    call set_mem_node_proc(MEMBER+2)
+  else
+    call set_mem_node_proc(MEMBER+1)
+  end if
   call set_scalelib
 
   if (myrank_use) then
@@ -171,7 +175,7 @@ PROGRAM letkf
     !
     call read_ens_mpi(gues3d, gues2d)
 
-    if (mmdetin /= mmdet) then
+    if (DET_RUN .and. mmdetin /= mmdet) then
       gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
       gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
     end if
@@ -208,7 +212,7 @@ PROGRAM letkf
     !
     ! COMPUTE ENS MEAN and SPRD
     !
-    call ensmean_grd(MEMBER, nij1, anal3d, anal2d)
+    call ensmean_grd(MEMBER, nens, nij1, anal3d, anal2d)
     ! write analysis mean later in write_ens_mpi
 
     if (ANAL_SPRD_OUT) then

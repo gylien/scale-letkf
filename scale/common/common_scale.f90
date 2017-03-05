@@ -974,24 +974,26 @@ end subroutine scale_calc_z
 ! Calculate ensemble mean (on scattered grids)
 !-------------------------------------------------------------------------------
 ! [INPUT]
-!   mem                      : ensemble size
-!   nij                      : scattered grid numbers
-!   v3d(nij,nlev,mem+2,nv3d) : 3D ensemble state variables (on scattered grids)
-!                              inputted by (:,:,1..mem,:)
-!   v2d(nij,     mem+2,nv3d) : 2D ensemble state variables (on scattered grids)
-!                              inputted by (:,  1..mem,:)
+!   mem                     : ensemble size
+!   nens                    : ensemble demension of state variables
+!   nij                     : scattered grid numbers
+!   v3d(nij,nlev,nens,nv3d) : 3D ensemble state variables (on scattered grids)
+!                             inputted by (:,:,1..mem,:)
+!   v2d(nij,     nens,nv3d) : 2D ensemble state variables (on scattered grids)
+!                             inputted by (:,  1..mem,:)
 ! [OUTPUT]
-!   v3d(nij,nlev,mem+2,nv3d) : ensemble mean of 3D state variables (on scattered grids)
-!                              outputted by (:,:,mem+1,:)
-!   v2d(nij,     mem+2,nv3d) : ensemble mean of 2D state variables (on scattered grids)
-!                              outputted by (:  ,mem+1,:)
+!   v3d(nij,nlev,nens,nv3d) : ensemble mean of 3D state variables (on scattered grids)
+!                             outputted by (:,:,mem+1,:)
+!   v2d(nij,     nens,nv3d) : ensemble mean of 2D state variables (on scattered grids)
+!                             outputted by (:  ,mem+1,:)
 !-------------------------------------------------------------------------------
-subroutine ensmean_grd(mem, nij, v3d, v2d)
+subroutine ensmean_grd(mem, nens, nij, v3d, v2d)
   implicit none
   integer, intent(in) :: mem
+  integer, intent(in) :: nens
   integer, intent(in) :: nij
-  real(r_size), intent(inout) :: v3d(nij,nlev,mem+2,nv3d)
-  real(r_size), intent(inout) :: v2d(nij,mem+2,nv2d)
+  real(r_size), intent(inout) :: v3d(nij,nlev,nens,nv3d)
+  real(r_size), intent(inout) :: v2d(nij,nens,nv2d)
   integer :: i, k, m, n, mmean
 
   mmean = mem + 1
@@ -1030,22 +1032,24 @@ end subroutine ensmean_grd
 ! * the ensemble mean has to be already calculated
 !-------------------------------------------------------------------------------
 ! [INPUT]
-!   mem                      : ensemble size
-!   nij                      : scattered grid numbers
-!   v3d(nij,nlev,mem+2,nv3d) : 3D ensemble state variables with mean (on scattered grids)
-!                              inputted by (:,:,1..mem+1,:)
-!   v2d(nij,     mem+2,nv3d) : 2D ensemble state variables with mean (on scattered grids)
-!                              inputted by (:,  1..mem+1,:)
+!   mem                     : ensemble size
+!   nens                    : ensemble demension of state variables
+!   nij                     : scattered grid numbers
+!   v3d(nij,nlev,nens,nv3d) : 3D ensemble state variables with mean (on scattered grids)
+!                             inputted by (:,:,1..mem+1,:)
+!   v2d(nij,     nens,nv3d) : 2D ensemble state variables with mean (on scattered grids)
+!                             inputted by (:,  1..mem+1,:)
 ! [OUTPUT]
-!   v3ds(nij,nlev,nv3d)      : ensemble spread of 3D state variables (on scattered grids)
-!   v2ds(nij,     nv3d)      : ensemble spread of 2D state variables (on scattered grids)
+!   v3ds(nij,nlev,nv3d)     : ensemble spread of 3D state variables (on scattered grids)
+!   v2ds(nij,     nv3d)     : ensemble spread of 2D state variables (on scattered grids)
 !-------------------------------------------------------------------------------
-subroutine enssprd_grd(mem, nij, v3d, v2d, v3ds, v2ds)
+subroutine enssprd_grd(mem, nens, nij, v3d, v2d, v3ds, v2ds)
   implicit none
   integer, intent(in) :: mem
+  integer, intent(in) :: nens
   integer, intent(in) :: nij
-  real(r_size), intent(in) :: v3d(nij,nlev,mem+2,nv3d)
-  real(r_size), intent(in) :: v2d(nij,mem+2,nv2d)
+  real(r_size), intent(in) :: v3d(nij,nlev,nens,nv3d)
+  real(r_size), intent(in) :: v2d(nij,nens,nv2d)
   real(r_size), intent(out) :: v3ds(nij,nlev,nv3d)
   real(r_size), intent(out) :: v2ds(nij,nv2d)
   integer :: i, k, m, n, mmean

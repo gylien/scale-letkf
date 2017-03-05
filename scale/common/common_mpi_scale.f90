@@ -48,17 +48,17 @@ module common_mpi_scale
   integer,save, private :: ens_myrank = -1
   logical,save :: myrank_use = .false.
 
-  integer,save :: nens
-  integer,save :: nensobs
+  integer,save :: nens = -1
+  integer,save :: nensobs = -1
 
-  integer,save :: mmean
-  integer,save :: mmdet
-  integer,save :: mmdetin
-  integer,save :: mmdetobs
+  integer,save :: mmean = -1
+  integer,save :: mmdet = -1
+  integer,save :: mmdetin = -1
+  integer,save :: mmdetobs = -1
 
-  integer,save :: mmean_rank_e
-  integer,save :: mmdet_rank_e
-  integer,save :: msprd_rank_e
+  integer,save :: mmean_rank_e = -1
+  integer,save :: mmdet_rank_e = -1
+  integer,save :: msprd_rank_e = -1
 
   integer,save :: MPI_COMM_e, nprocs_e, myrank_e
   integer,save :: MPI_COMM_d, nprocs_d, myrank_d
@@ -321,11 +321,33 @@ mem_loop: DO it = 1, nitmax
     myrank_use = .true.
   end if
 
-  ! settings related to mean, mdet (only valid when mem = MEMBER+2)
+  ! settings related to mean (only valid when mem >= MEMBER+1)
   !----------------------------------------------------------------
-  if (mem == MEMBER+2) then
-    nens = MEMBER+2
+  if (mem >= MEMBER+1) then
+    nens = mem
     mmean = MEMBER+1
+
+    mmean_rank_e = mod(mmean-1, n_mem*n_mempn)
+#ifdef DEBUG
+    if (mmean_rank_e /= proc2mem(1,1,mem2proc(1,mmean)+1)-1) then
+      write (6, '(A)'), '[Error] XXXXXX wrong!!'
+      stop
+    end if
+#endif
+
+    msprd_rank_e = mmean_rank_e
+
+    if (DET_RUN) then
+      nensobs = MEMBER+1
+      mmdetobs = MEMBER+1
+    else
+      nensobs = MEMBER
+    end if
+  end if
+
+  ! settings related to mdet (only valid when mem >= MEMBER+2)
+  !----------------------------------------------------------------
+  if (mem >= MEMBER+2 .and. DET_RUN) then
     mmdet = MEMBER+2
     if (DET_RUN_CYCLED) then
       mmdetin = mmdet
@@ -333,22 +355,13 @@ mem_loop: DO it = 1, nitmax
       mmdetin = mmean
     end if
 
-    mmean_rank_e = mod(mmean-1, n_mem*n_mempn)
     mmdet_rank_e = mod(mmdet-1, n_mem*n_mempn)
-    msprd_rank_e = mmean_rank_e !!!!!! may be changed to mmdet_rank_e for (potential) imporved performance !!!!!!
 #ifdef DEBUG
-    if (mmean_rank_e /= proc2mem(1,1,mem2proc(1,mmean)+1)-1) then
-      write (6, '(A)'), '[Error] XXXXXX wrong!!'
-      stop
-    end if
     if (mmdet_rank_e /= proc2mem(1,1,mem2proc(1,mmdet)+1)-1) then
       write (6, '(A)'), '[Error] XXXXXX wrong!!'
       stop
     end if
 #endif
-
-    nensobs = MEMBER+1
-    mmdetobs = MEMBER+1
   end if
 
   call mpi_timer('set_mem_node_proc:', 2)
@@ -940,7 +953,7 @@ subroutine write_ens_mpi(v3d, v2d, monit, caption)
 
     ! Note: write all members + mean + mdet
     ! 
-    if (im >= 1 .and. im <= nens) then
+    if ((im >= 1 .and. im <= MEMBER) .or. im == mmean .or. im == mmdet) then
       if (im <= MEMBER) then
         call file_member_replace(im, ANAL_OUT_BASENAME, filename)
       else if (im == mmean) then
@@ -1283,7 +1296,7 @@ subroutine write_ensmean(filename, v3d, v2d, calced, monit, caption)
   end if
 
   if (.not. calced) then
-    call ensmean_grd(MEMBER, nij1, v3d, v2d)
+    call ensmean_grd(MEMBER, nens, nij1, v3d, v2d)
 
     call mpi_timer('write_ensmean:ensmean_grd:', 2)
   end if
@@ -1328,7 +1341,7 @@ subroutine write_enssprd(filename, v3d, v2d)
 
   call mpi_timer('', 2)
 
-  call enssprd_grd(MEMBER, nij1, v3d, v2d, v3ds, v2ds)
+  call enssprd_grd(MEMBER, nens, nij1, v3d, v2d, v3ds, v2ds)
 
   call mpi_timer('write_enssprd:enssprd_grd:', 2, barrier=MPI_COMM_e)
 
