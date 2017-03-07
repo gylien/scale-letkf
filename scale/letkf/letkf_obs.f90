@@ -37,8 +37,8 @@ MODULE letkf_obs
   integer,allocatable,save :: elm_ctype(:)      ! array of elm  for each combined obs type
   integer,allocatable,save :: elm_u_ctype(:)    ! array of elm_u for each combined obs type
   integer,allocatable,save :: typ_ctype(:)      ! array of typ  for each combined obs type
-  integer,allocatable,save :: hori_loc_ctype(:) ! array of horizontal localization length for each combined obs type
-  integer,allocatable,save :: vert_loc_ctype(:) ! array of vertical localization length for each combined obs type
+  real(r_size),allocatable,save :: hori_loc_ctype(:) ! array of horizontal localization length for each combined obs type
+  real(r_size),allocatable,save :: vert_loc_ctype(:) ! array of vertical localization length for each combined obs type
 
   type obs_grid_type
     integer :: ngrd_i
@@ -716,25 +716,25 @@ SUBROUTINE set_letkf_obs
 
     if (USE_OBS(ityp)) then
       if ((ielm == id_radar_ref_obs .or. ielm == id_radar_ref_zero_obs) .and. (.not. USE_RADAR_REF)) then
-        use_obs_print = 'No'
+        use_obs_print = ' No'
       else if (ielm == id_radar_vr_obs .and. (.not. USE_RADAR_VR)) then
-        use_obs_print = 'No'
+        use_obs_print = ' No'
       else if (ielm == id_radar_prh_obs .and. (.not. USE_RADAR_PSEUDO_RH)) then
-        use_obs_print = 'No'
+        use_obs_print = ' No'
       else
         use_obs_print = 'Yes'
       end if
     else
-      use_obs_print = 'No'
+      use_obs_print = ' No'
     end if
 
     select case (ityp)
     case (22) ! vertical localization in Z
-      write (6, '(A6,1x,A3,1x,A4,F9.2,F7.2,A4,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
+      write (6, '(A6,1x,A3,2x,A3,F9.2,F7.2,A4,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
                 vert_loc_ctype(ictype)/1000.0d0, '[km]', TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
                 OBS_MIN_SPACING(ityp)/1000.0d0, obsgrd(ictype)%grdspc_i/1000.0d0, obsgrd(ictype)%grdspc_j/1000.0d0
     case default ! vertical localization in ln(p)
-      write (6, '(A6,1x,A3,1x,A4,F9.2,F11.3,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
+      write (6, '(A6,1x,A3,2x,A3,F9.2,F11.2,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
                 vert_loc_ctype(ictype), TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
                 OBS_MIN_SPACING(ityp)/1000.0d0, obsgrd(ictype)%grdspc_i/1000.0d0, obsgrd(ictype)%grdspc_j/1000.0d0
     end select
