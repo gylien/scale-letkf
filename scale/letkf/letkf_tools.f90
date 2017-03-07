@@ -1059,7 +1059,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
 #ifdef DEBUG
   if (present(depd)) then
     if (.not. DET_RUN) then
-      write (6, '(A)') "[Error] If 'depd' optional input is given, 'DET_RUN' needs to be enabled.'"
+      write (6, '(A)') "[Error] If 'depd' optional input is given, 'DET_RUN' needs to be enabled."
       stop 99
     end if
   end if

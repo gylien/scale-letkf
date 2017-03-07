@@ -626,15 +626,19 @@ else
 #          path="${atime}/gues/${name_m[$m]}"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #        done
-#        path="${atime}/gues/sprd"
-#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        if ((SPRD_OUT == 1)); then
+#          path="${atime}/gues/sprd"
+#          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        fi
         path="${atime}/gues"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      elif ((OUT_OPT <= 5)); then
+      elif ((OUT_OPT <= 6)); then
         path="${atime}/gues/mean"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        path="${atime}/gues/sprd"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        if ((SPRD_OUT == 1)); then
+          path="${atime}/gues/sprd"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        fi
         if ((DET_RUN == 1)); then
           path="${atime}/gues/mdet"
           echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
@@ -650,15 +654,19 @@ else
 #          path="${atime}/anal/${name_m[$m]}"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #        done
-#        path="${atime}/sprd/${name_m[$m]}"
-#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        if ((SPRD_OUT == 1)); then
+#          path="${atime}/sprd/${name_m[$m]}"
+#          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        fi
         path="${atime}/anal"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      elif ((OUT_OPT <= 6)); then
+      elif ((OUT_OPT <= 7)); then
         path="${atime}/anal/mean"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        path="${atime}/anal/sprd"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        if ((SPRD_OUT == 1)); then
+          path="${atime}/anal/sprd"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        fi
         if ((DET_RUN == 1)); then
           path="${atime}/anal/mdet"
           echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
@@ -1508,7 +1516,7 @@ for it in $(seq $its $ite); do
            $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $land_base $bdy_base \
            $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
            $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $OUT_OPT \
-           cycle $bdy_start_time $RTPS_INFL_OUT $NOBS_OUT
+           cycle $bdy_start_time $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi
 
@@ -1549,7 +1557,7 @@ for it in $(seq $its $ite); do
 
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $time \
            ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT $OUT_OPT \
-           cycle $DELETE_MEMBER $RTPS_INFL_OUT $NOBS_OUT
+           cycle $DELETE_MEMBER $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi
 
@@ -1654,7 +1662,7 @@ if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
        $time $atime $TMPRUN/letkf $TMPDAT/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo $OBSOUT_OPT \
-       $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT \
+       $ADAPTINFL $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT \
        $MEMBER
 fi
 
@@ -1673,7 +1681,7 @@ for it in $(seq $nitmax); do
     if ((m >= 1 && m <= mtot)); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
            $atime ${name_m[$m]} $OUT_OPT $OBSOUT_OPT \
-           $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT
+           $ADAPTINFL $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi
 
