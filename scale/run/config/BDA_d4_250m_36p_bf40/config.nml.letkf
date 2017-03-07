@@ -1,5 +1,6 @@
 &PARAM_ENSEMBLE
 !--MEMBER--
+!--DET_RUN--
 /
 
 &PARAM_OBSOPE

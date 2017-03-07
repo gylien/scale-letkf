@@ -172,8 +172,8 @@ SUBROUTINE set_letkf_obs
       if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
         obsda_ext%nobs = nobs_extern
         call obs_da_value_allocate(obsda_ext,0)
-        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is reading externally processed observations for member ', &
-              im, ', subdomain id #', proc2mem(2,it,myrank+1)
+!        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is reading externally processed observations for member ', &
+!              im, ', subdomain id #', proc2mem(2,it,myrank+1)
         if (im <= MEMBER) then
           call file_member_replace(im, OBSDA_IN_BASENAME, obsdafile)
         else if (im == mmean) then
@@ -182,11 +182,12 @@ SUBROUTINE set_letkf_obs
           obsdafile = OBSDA_MDET_IN_BASENAME
         end if
         write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
+        write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is reading an externally processed obsda file ', trim(obsdafile)//obsda_suffix
         call read_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0)
 
         if (OBSDA_OUT) then
-          write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is appending observations for member ', &
-                im, ', subdomain id #', proc2mem(2,it,myrank+1)
+!          write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is appending observations for member ', &
+!                im, ', subdomain id #', proc2mem(2,it,myrank+1)
           if (im <= MEMBER) then
             call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
           else if (im == mmean) then
@@ -195,6 +196,7 @@ SUBROUTINE set_letkf_obs
             obsdafile = OBSDA_MDET_OUT_BASENAME
           end if
 !          write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
+          write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is writing (appending) an obsda file ', trim(obsdafile)//obsda_suffix
           call write_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0,append=.true.)
         end if
 
