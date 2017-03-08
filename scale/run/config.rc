@@ -98,6 +98,8 @@ DATA_TOPO="${DATA_TOPO:-$INDIR}"
 DATA_LANDUSE="${DATA_LANDUSE:-$INDIR}"
 DATA_BDY_SCALE_PREP="${DATA_BDY_SCALE_PREP:-$INDIR}"
 
+DET_RUN="${DET_RUN:-0}"
+
 BDY_SINGLE_FILE="${BDY_SINGLE_FILE:-0}"
 if ((BDY_SINGLE_FILE == 1 && BDY_ROTATING != 1)); then
   echo "[Warning] When \$BDY_SINGLE_FILE = 1, \$BDY_ROTATING needs to be enabled: \$BDY_ROTATING reset to 1" 1>&2
@@ -122,6 +124,7 @@ LAND_FORMAT=${LAND_FORMAT:-99}
 #-------------------------------------------------------------------------------
 
 ADAPTINFL=${ADAPTINFL:-0}
+SPRD_OUT=${SPRD_OUT:-1}
 RTPS_INFL_OUT=${RTPS_INFL_OUT:-0}
 NOBS_OUT=${NOBS_OUT:-0}
 

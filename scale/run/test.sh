@@ -230,9 +230,10 @@ for i in $(seq $NTEST); do
 
   if [ "${SCPNAME[$i]}" = 'cycle' ]; then
     eatime=$(datetime $ETIME $LCYCLE s)
-    str_search="OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL)"
-    sed -n "/${str_search}/,+7p" $OUTDIR/${eatime}/log/letkf/${letkflogname} | grep -v "$str_search" > test.letkf
-    sed -n "/${str_search}/,+7p" $OUTDIR/results/${eatime}/log/letkf/${letkflogname} | grep -v "$str_search" > test.letkf.ref
+    str_search="OBSERVATIONAL DEPARTURE STATISTICS.*GLOBAL\|GLOBAL.*OBSERVATIONAL DEPARTURE STATISTICS"
+    str_grep="OBSERVATIONAL DEPARTURE STATISTICS"
+    sed -n "/${str_search}/,+7p" $OUTDIR/${eatime}/log/letkf/${letkflogname} | grep -v "$str_grep" > test.letkf
+    sed -n "/${str_search}/,+7p" $OUTDIR/results/${eatime}/log/letkf/${letkflogname} | grep -v "$str_grep" > test.letkf.ref
 
     if [ -n "$(diff test.letkf test.letkf.ref)" ]; then
       echo

@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle.sh [STIME ETIME MEMBERS ISTEP FSTEP]
+#    cycle.sh [STIME ETIME ISTEP FSTEP]
 #
 #  Use settings:
 #    config.main
@@ -98,9 +98,9 @@ declare -a proc2grpproc
 #if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
 if [ "$STG_TYPE" = 'builtin' ]; then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
-  distribute_da_cycle machinefile $NODEFILE_DIR - "$MEMBERS" || exit $?
+  distribute_da_cycle machinefile $NODEFILE_DIR || exit $?
 else
-  distribute_da_cycle - - $NODEFILE_DIR/distr "$MEMBERS" || exit $?
+  distribute_da_cycle - - $NODEFILE_DIR/distr || exit $?
 fi
 
 echo "[$(datetime_now)] ### 4" >&2
@@ -193,7 +193,7 @@ while ((time <= ETIME)); do
   echo "  Processes per SCALE run:  $mem_np"
   echo
   echo "  Ensemble size:            $MEMBER"
-  for m in $(seq $msprd); do
+  for m in $(seq $mtot); do
     echo "      ${name_m[$m]}: ${node_m[$m]}"
   done
   echo

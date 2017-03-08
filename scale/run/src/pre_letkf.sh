@@ -13,7 +13,7 @@ if (($# < 5)); then
 
 [pre_letkf.sh]
 
-Usage: $0 MYRANK ATIME MEM OUT_OPT OBSOUT_OPT [ADAPTINFL RTPS_INFL_OUT NOBS_OUT]
+Usage: $0 MYRANK ATIME MEM OUT_OPT OBSOUT_OPT [ADAPTINFL SPRD_OUT RTPS_INFL_OUT NOBS_OUT]
 
   MYRANK  My rank number (not used)
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
@@ -21,6 +21,7 @@ Usage: $0 MYRANK ATIME MEM OUT_OPT OBSOUT_OPT [ADAPTINFL RTPS_INFL_OUT NOBS_OUT]
   OUT_OPT
   OBSOUT_OPT
   ADAPTINFL
+  SPRD_OUT
   RTPS_INFL_OUT
   NOBS_OUT
 
@@ -34,12 +35,13 @@ MEM="$1"; shift
 OUT_OPT="$1"; shift
 OBSOUT_OPT="$1"; shift
 ADAPTINFL="${1:-0}"; shift
+SPRD_OUT="${1:-1}"; shift
 RTPS_INFL_OUT="${1:-0}"; shift
 NOBS_OUT="${1:-0}"
 
 #===============================================================================
 
-if [ "$MEM" == 'mean' ]; then ###### using a variable for 'mean', 'sprd'
+if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'sprd'
   for ifile in $(cd $TMPOUT/${ATIME}/anal/mean ; ls init*.nc 2> /dev/null); do
     if ((ADAPTINFL == 1)) && [ ! -s "$TMPOUT/${ATIME}/diag/infl" ]; then
       mkdir -p $TMPOUT/${ATIME}/diag/infl
@@ -51,10 +53,12 @@ if [ "$MEM" == 'mean' ]; then ###### using a variable for 'mean', 'sprd'
     for ifile in $(cd $TMPOUT/${ATIME}/anal/mean ; ls init*.nc 2> /dev/null); do
       mkdir -p $TMPOUT/${ATIME}/gues/mean
       cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/gues/mean
-      mkdir -p $TMPOUT/${ATIME}/anal/sprd
-      cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/anal/sprd
-      mkdir -p $TMPOUT/${ATIME}/gues/sprd
-      cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/gues/sprd
+      if ((SPRD_OUT == 1)); then
+        mkdir -p $TMPOUT/${ATIME}/anal/sprd
+        cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/anal/sprd
+        mkdir -p $TMPOUT/${ATIME}/gues/sprd
+        cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/gues/sprd
+      fi
       if ((RTPS_INFL_OUT == 1)); then
         mkdir -p $TMPOUT/${ATIME}/diag/rtps
         cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/diag/rtps
@@ -66,16 +70,18 @@ if [ "$MEM" == 'mean' ]; then ###### using a variable for 'mean', 'sprd'
     done
   fi
 else
-  if ((OBSOUT_OPT <= 2)); then
-    mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
+  if ((ENABLE_PARAM_USER != 1)); then
+    if ((OUT_OPT <= 3)) || [ "$MEM" = 'mdet' ]; then
+      for ifile in $(cd $TMPOUT/${ATIME}/anal/${MEM} ; ls init*.nc 2> /dev/null); do
+        mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
+        cp -f $TMPOUT/${ATIME}/anal/${MEM}/${ifile} $TMPOUT/${ATIME}/gues/${MEM}
+      done
+    fi
   fi
+fi
 
-  if ((OUT_OPT <= 3 && ENABLE_PARAM_USER != 1)); then
-    for ifile in $(cd $TMPOUT/${ATIME}/anal/${MEM} ; ls init*.nc 2> /dev/null); do
-      mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
-      cp -f $TMPOUT/${ATIME}/anal/${MEM}/${ifile} $TMPOUT/${ATIME}/gues/${MEM}
-    done
-  fi
+if ((OBSOUT_OPT <= 2)); then
+  mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
 fi
 
 #===============================================================================

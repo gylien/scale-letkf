@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_torque.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP TIME_LIMIT]
+#    cycle_torque.sh [STIME ETIME CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP TIME_LIMIT]
 #
 #===============================================================================
 
@@ -70,7 +70,7 @@ cd \$PBS_O_WORKDIR
 rm -f machinefile
 cp -f \$PBS_NODEFILE machinefile
 
-./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$ISTEP" "$FSTEP" || exit \$?
+./${myname1}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
 EOF
 
 echo "[$(datetime_now)] Run ${myname1} job on PBS"

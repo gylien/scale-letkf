@@ -35,6 +35,9 @@ OBSNCEP=
 #===============================================================================
 # model/data file options
 
+DET_RUN=0               # 0: Disable the deterministic run
+                        # 1: Enable  the deterministic run
+
 TOPO_FORMAT='DEM50M'    # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
@@ -81,9 +84,9 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=30        # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=30        # SCALE forecast time when assimilation window ends (second)
-LCYCLE=30          # Length of a GFS-LETKF cycle (second)
+WINDOW_S=30        # SCALE forecast time when the assimilation window starts (second)
+WINDOW_E=30        # SCALE forecast time when the assimilation window ends (second)
+LCYCLE=30          # Length of a DA cycle (second)
 LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================

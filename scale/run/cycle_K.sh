@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_K.sh [STIME ETIME MEMBERS ISTEP FSTEP TIME_LIMIT]
+#    cycle_K.sh [STE ISTEP FSTEP TIME_LIMIT]
 #
 #===============================================================================
 
@@ -82,7 +82,7 @@ safe_init_tmpdir $TMPS/node
 if ((ENABLE_SET == 1)); then            ##
   distribute_da_cycle_set - $TMPS/node  ##
 else                                    ##
-  distribute_da_cycle - $TMPS/node - "$MEMBERS"
+  distribute_da_cycle - $TMPS/node
 fi                                      ##
 
 #===============================================================================
@@ -160,7 +160,7 @@ cat >> $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$ISTEP" "$FSTEP" || exit \$?
+./${myname1}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
 EOF
 
 #===============================================================================
