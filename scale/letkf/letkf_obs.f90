@@ -266,14 +266,20 @@ SUBROUTINE set_letkf_obs
     !---------------------------------------------------------------------------
 
     ! variables with an ensemble dimension
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%ensval(:,n1:n2), nensobs*nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    if (nprocs_e > 1) then
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%ensval(:,n1:n2), nensobs*nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    end if
 
     ! variables without an ensemble dimension
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(n1:n2), nobs_extern, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)
+    if (nprocs_e > 1) then
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(n1:n2), nobs_extern, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)
+    end if
 #ifdef H08
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    if (nprocs_e > 1) then
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    end if
     obsda%lev(n1:n2) = obsda%lev(n1:n2) / REAL(MEMBER,r_size)
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
     obsda%val2(n1:n2) = obsda%val2(n1:n2) / REAL(MEMBER,r_size)
 #endif
 
@@ -813,7 +819,9 @@ SUBROUTINE set_letkf_obs
 ! -- H08
 !  if((obs(3)%nobs >= 1) .and. OBS_IN_NUM >= 3)then
 !    CALL MPI_BARRIER(MPI_COMM_d,ierr)
-!    CALL MPI_ALLREDUCE(MPI_IN_PLACE,obs(3)%lev,obs(3)%nobs,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
+!    if (nprocs_d > 1) then
+!      CALL MPI_ALLREDUCE(MPI_IN_PLACE,obs(3)%lev,obs(3)%nobs,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
+!    end if
 !  endif
 ! -- H08
 !#endif
@@ -826,10 +834,12 @@ SUBROUTINE set_letkf_obs
   nobs_sub(:) = 0
   nobs_g(:) = 0
   do ictype = 1, nctype
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%n, obsgrd(ictype)%ngrd_i*obsgrd(ictype)%ngrd_j*MEM_NP, &
-                       MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i,:,:), (obsgrd(ictype)%ngrd_i+1)*obsgrd(ictype)%ngrd_j*MEM_NP, &
-                       MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+    if (nprocs_d > 1) then
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%n, obsgrd(ictype)%ngrd_i*obsgrd(ictype)%ngrd_j*MEM_NP, &
+                         MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i,:,:), (obsgrd(ictype)%ngrd_i+1)*obsgrd(ictype)%ngrd_j*MEM_NP, &
+                         MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+    end if
     call MPI_ALLREDUCE(obsgrd(ictype)%tot_sub, obsgrd(ictype)%tot_g, 2, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
 
     if (ictype == 1) then

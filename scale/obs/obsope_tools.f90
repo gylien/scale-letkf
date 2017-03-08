@@ -690,7 +690,9 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 !              call search_tc_subdom(rig,rjg,v2dg,bTC(1,myrank_d),bTC(2,myrank_d),bTC(3,myrank_d))
 !  
 !!              CALL MPI_BARRIER(MPI_COMM_d,ierr)
-!              CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
+!              if (nprocs_d > 1) then
+!                CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
+!              end if
 
 !              ! Assume MSLP of background TC is lower than 1100 (hPa). 
 !              bTC_mslp = 1100.0d2
@@ -797,7 +799,9 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
   if (obsda_return .and. nobs > 0) then
     ! variables with an ensemble dimension
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%ensval(:,1:nobs), nensobs*nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    if (nprocs_e > 1) then
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%ensval(:,1:nobs), nensobs*nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    end if
 
     ! variables without an ensemble dimension
     if (nitmax > 1) then
@@ -811,11 +815,15 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 #endif
     end if
 
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(1:nobs), nobs, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)  ! maximum value of qc
+    if (nprocs_e > 1) then
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(1:nobs), nobs, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)  ! maximum value of qc
+    end if
 #ifdef H08
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%lev
+    if (nprocs_e > 1) then
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%lev
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) ! ensemble mean of obsda%val2 (clear sky BT)
+    end if
     obsda%lev(1:nobs) = obsda%lev(1:nobs) / REAL(MEMBER, r_size)                                                    !
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) ! ensemble mean of obsda%val2 (clear sky BT)
     obsda%val2(1:nobs) = obsda%val2(1:nobs) / REAL(MEMBER, r_size)                                                  !
 #endif
 
