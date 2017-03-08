@@ -1219,9 +1219,11 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
       end if
     end do
 
-    call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_g, nid_obs, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
-    call MPI_ALLREDUCE(MPI_IN_PLACE, bias_g, nid_obs, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
-    call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_g, nid_obs, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+    if (nprocs_d > 1) then
+      call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_g, nid_obs, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, bias_g, nid_obs, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_g, nid_obs, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+    end if
 
     do i = 1, nid_obs
       if (monit_type(i)) then
@@ -1411,13 +1413,13 @@ subroutine get_nobs_da_mpi(nobs)
 
 ! read from all available data by every processes
 !-----------------------------
-!  if ((myrank_e >= 1 .and. myrank_e <= MEMBER) .or. &
-!      myrank_e == mmdetin) then
-!    if (myrank_e <= MEMBER) then
-!      call file_member_replace(myrank_e, OBSDA_IN_BASENAME, obsdafile)
-!    else if (myrank_e == mmean) then
+!  if ((ens_mygroup >= 1 .and. ens_mygroup <= MEMBER) .or. &
+!      ens_mygroup == mmdetin) then
+!    if (ens_mygroup <= MEMBER) then
+!      call file_member_replace(ens_mygroup, OBSDA_IN_BASENAME, obsdafile)
+!    else if (ens_mygroup == mmean) then
 !      obsdafile = OBSDA_MEAN_IN_BASENAME
-!    else if (myrank_e == mmdet) then
+!    else if (ens_mygroup == mmdet) then
 !      obsdafile = OBSDA_MDET_IN_BASENAME
 !    end if
 !    write (obsda_suffix(2:7), '(I6.6)') myrank_d
@@ -1431,6 +1433,7 @@ subroutine get_nobs_da_mpi(nobs)
 ! read by process 0 and broadcast
 !-----------------------------
   if (myrank_e == 0) then
+    call file_member_replace(1, OBSDA_IN_BASENAME, obsdafile)
     write (obsda_suffix(2:7), '(I6.6)') myrank_d
 #ifdef H08
     call get_nobs(trim(obsdafile) // obsda_suffix, 7, nobs) ! Him8

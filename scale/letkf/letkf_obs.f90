@@ -37,8 +37,8 @@ MODULE letkf_obs
   integer,allocatable,save :: elm_ctype(:)      ! array of elm  for each combined obs type
   integer,allocatable,save :: elm_u_ctype(:)    ! array of elm_u for each combined obs type
   integer,allocatable,save :: typ_ctype(:)      ! array of typ  for each combined obs type
-  integer,allocatable,save :: hori_loc_ctype(:) ! array of horizontal localization length for each combined obs type
-  integer,allocatable,save :: vert_loc_ctype(:) ! array of vertical localization length for each combined obs type
+  real(r_size),allocatable,save :: hori_loc_ctype(:) ! array of horizontal localization length for each combined obs type
+  real(r_size),allocatable,save :: vert_loc_ctype(:) ! array of vertical localization length for each combined obs type
 
   type obs_grid_type
     integer :: ngrd_i
@@ -172,8 +172,8 @@ SUBROUTINE set_letkf_obs
       if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
         obsda_ext%nobs = nobs_extern
         call obs_da_value_allocate(obsda_ext,0)
-        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is reading externally processed observations for member ', &
-              im, ', subdomain id #', proc2mem(2,it,myrank+1)
+!        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is reading externally processed observations for member ', &
+!              im, ', subdomain id #', proc2mem(2,it,myrank+1)
         if (im <= MEMBER) then
           call file_member_replace(im, OBSDA_IN_BASENAME, obsdafile)
         else if (im == mmean) then
@@ -182,11 +182,12 @@ SUBROUTINE set_letkf_obs
           obsdafile = OBSDA_MDET_IN_BASENAME
         end if
         write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
+        write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is reading an externally processed obsda file ', trim(obsdafile)//obsda_suffix
         call read_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0)
 
         if (OBSDA_OUT) then
-          write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is appending observations for member ', &
-                im, ', subdomain id #', proc2mem(2,it,myrank+1)
+!          write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is appending observations for member ', &
+!                im, ', subdomain id #', proc2mem(2,it,myrank+1)
           if (im <= MEMBER) then
             call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
           else if (im == mmean) then
@@ -195,6 +196,7 @@ SUBROUTINE set_letkf_obs
             obsdafile = OBSDA_MDET_OUT_BASENAME
           end if
 !          write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
+          write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is writing (appending) an obsda file ', trim(obsdafile)//obsda_suffix
           call write_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0,append=.true.)
         end if
 
@@ -262,12 +264,19 @@ SUBROUTINE set_letkf_obs
     !---------------------------------------------------------------------------
 
     ! variables with an ensemble dimension
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%ensval(:,n1:n2), nensobs*nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    if (nprocs_e > 1) then
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%ensval(:,n1:n2), nensobs*nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    end if
 
     ! variables without an ensemble dimension
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(n1:n2), nobs_extern, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)
+    if (nprocs_e > 1) then
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(n1:n2), nobs_extern, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)
+    end if
 #ifdef H08
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    if (nprocs_e > 1) then
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    end if
     obsda%lev(n1:n2) = obsda%lev(n1:n2) / REAL(MEMBER,r_size)
 #endif
 
@@ -674,25 +683,25 @@ SUBROUTINE set_letkf_obs
 
     if (USE_OBS(ityp)) then
       if ((ielm == id_radar_ref_obs .or. ielm == id_radar_ref_zero_obs) .and. (.not. USE_RADAR_REF)) then
-        use_obs_print = 'No'
+        use_obs_print = ' No'
       else if (ielm == id_radar_vr_obs .and. (.not. USE_RADAR_VR)) then
-        use_obs_print = 'No'
+        use_obs_print = ' No'
       else if (ielm == id_radar_prh_obs .and. (.not. USE_RADAR_PSEUDO_RH)) then
-        use_obs_print = 'No'
+        use_obs_print = ' No'
       else
         use_obs_print = 'Yes'
       end if
     else
-      use_obs_print = 'No'
+      use_obs_print = ' No'
     end if
 
     select case (ityp)
     case (22) ! vertical localization in Z
-      write (6, '(A6,1x,A3,1x,A4,F9.2,F7.2,A4,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
+      write (6, '(A6,1x,A3,2x,A3,F9.2,F7.2,A4,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
                 vert_loc_ctype(ictype)/1000.0d0, '[km]', TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
                 OBS_MIN_SPACING(ityp)/1000.0d0, obsgrd(ictype)%grdspc_i/1000.0d0, obsgrd(ictype)%grdspc_j/1000.0d0
     case default ! vertical localization in ln(p)
-      write (6, '(A6,1x,A3,1x,A4,F9.2,F11.3,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
+      write (6, '(A6,1x,A3,2x,A3,F9.2,F11.2,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
                 vert_loc_ctype(ictype), TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
                 OBS_MIN_SPACING(ityp)/1000.0d0, obsgrd(ictype)%grdspc_i/1000.0d0, obsgrd(ictype)%grdspc_j/1000.0d0
     end select
@@ -769,7 +778,9 @@ SUBROUTINE set_letkf_obs
 ! -- H08
 !  if((obs(3)%nobs >= 1) .and. OBS_IN_NUM >= 3)then
 !    CALL MPI_BARRIER(MPI_COMM_d,ierr)
-!    CALL MPI_ALLREDUCE(MPI_IN_PLACE,obs(3)%lev,obs(3)%nobs,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
+!    if (nprocs_d > 1) then
+!      CALL MPI_ALLREDUCE(MPI_IN_PLACE,obs(3)%lev,obs(3)%nobs,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
+!    end if
 !  endif
 ! -- H08
 !#endif
@@ -782,10 +793,12 @@ SUBROUTINE set_letkf_obs
   nobs_sub(:) = 0
   nobs_g(:) = 0
   do ictype = 1, nctype
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%n, obsgrd(ictype)%ngrd_i*obsgrd(ictype)%ngrd_j*MEM_NP, &
-                       MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
-    call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i,:,:), (obsgrd(ictype)%ngrd_i+1)*obsgrd(ictype)%ngrd_j*MEM_NP, &
-                       MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+    if (nprocs_d > 1) then
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%n, obsgrd(ictype)%ngrd_i*obsgrd(ictype)%ngrd_j*MEM_NP, &
+                         MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i,:,:), (obsgrd(ictype)%ngrd_i+1)*obsgrd(ictype)%ngrd_j*MEM_NP, &
+                         MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+    end if
     call MPI_ALLREDUCE(obsgrd(ictype)%tot_sub, obsgrd(ictype)%tot_g, 2, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
 
     if (ictype == 1) then

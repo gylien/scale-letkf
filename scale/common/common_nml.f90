@@ -309,7 +309,8 @@ subroutine read_nml_ensemble
     MEMBER, &
     MEMBER_RUN, &
     MEMBER_ITER, &
-    DET_RUN
+    DET_RUN, &
+    DET_RUN_CYCLED
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)
@@ -402,7 +403,6 @@ subroutine read_nml_letkf
     ANAL_SPRD_OUT, &
     ANAL_SPRD_OUT_BASENAME, &
     LETKF_TOPO_IN_BASENAME, &
-    DET_RUN_CYCLED, &
     INFL_MUL, &
     INFL_MUL_MIN, &
     INFL_MUL_ADAPTIVE, &

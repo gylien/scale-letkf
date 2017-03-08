@@ -124,6 +124,7 @@ LAND_FORMAT=${LAND_FORMAT:-99}
 #-------------------------------------------------------------------------------
 
 ADAPTINFL=${ADAPTINFL:-0}
+SPRD_OUT=${SPRD_OUT:-1}
 RTPS_INFL_OUT=${RTPS_INFL_OUT:-0}
 NOBS_OUT=${NOBS_OUT:-0}
 
