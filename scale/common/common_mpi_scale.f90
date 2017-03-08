@@ -1,5 +1,5 @@
 module common_mpi_scale
-!=======================================================================
+!===============================================================================
 !
 ! [PURPOSE:] MPI procedures
 !
@@ -12,9 +12,9 @@ module common_mpi_scale
 !   10/03/2012 Guo-Yuan Lien     modified for GFS model
 !   12/30/2013 Guo-Yuan Lien     add get_nobs_mpi and read_obs2_mpi
 !   08/14/2014 Guo-Yuan Lien     modified for SCALE model
-!   01/08/2015 Guo-Yuan Lien     modified for SCALE model
+!   .......... See git history for the following revisions
 !
-!=======================================================================
+!===============================================================================
 !$USE OMP_LIB
   use common
   use common_nml
@@ -28,46 +28,13 @@ module common_mpi_scale
   implicit none
   public
 
-!  integer,parameter :: mpibufsize=1000000
   integer,save :: nij1
   integer,save :: nij1max
   integer,allocatable,save :: nij1node(:)
-
-
-
-
-!  integer,save          :: universal_comm                         ! universal communicator
-!  integer,save          :: universal_nprocs                       ! number of procs in universal communicator
-!  logical,save          :: universal_master                       ! master process  in universal communicator?
-!  logical,save          :: universal_myrank                       ! 
-
-!  integer,save          :: global_comm                            ! communicator for each member
-
-!  integer,save          :: local_comm                             ! assigned local communicator
-!  integer,save          :: intercomm_parent                       ! inter communicator with parent
-!  integer,save          :: intercomm_child                        ! inter communicator with child
-
-!  integer,save          :: NUM_DOMAIN                   = 1       ! number of domains
-!  integer,save          :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0       ! number of total process in each domain
-!  character(len=H_LONG),save :: CONF_FILES (PRC_DOMAIN_nlim) = "" ! name of configulation files
-!  logical,save          :: ABORT_ALL_JOBS               = .false. ! abort all jobs or not?
-!  logical,save          :: LOG_SPLIT                    = .false. ! log-output for mpi splitting?
-
-
-
-!!!!  real(r_size),allocatable,save :: phi1(:)
-!!!  real(r_size),allocatable,save :: lon1(:),lat1(:)
-!!!  real(r_size),allocatable,save :: lonu1(:),latu1(:)
-!!!  real(r_size),allocatable,save :: lonv1(:),latv1(:)
-!!!  real(r_size),allocatable,save :: ri1(:),rj1(:)
-!!!!  real(r_size),allocatable,save :: wg1(:)
-  real(r_size),allocatable,save :: topo(:,:)
+  real(r_size),allocatable,save :: topo2d(:,:)
   real(r_size),allocatable,save :: rig1(:),rjg1(:)
   real(r_size),allocatable,save :: topo1(:)
   real(r_size),allocatable,save :: hgt1(:,:)
-
-
-
 
   integer,save :: nitmax ! maximum number of model files processed by a process
   integer,allocatable,save :: procs(:)
@@ -77,27 +44,36 @@ module common_mpi_scale
   integer,save :: n_mem
   integer,save :: n_mempn
 
-  integer,save :: ens_mygroup = -1
-  integer,save :: ens_myrank = -1
+  integer,save, private :: ens_mygroup = -1
+  integer,save, private :: ens_myrank = -1
   logical,save :: myrank_use = .false.
-  integer,save :: lastmem_rank_e
 
+  integer,save :: nens = -1
+  integer,save :: nensobs = -1
 
+  integer,save :: mmean = -1
+  integer,save :: mmdet = -1
+  integer,save :: mmdetin = -1
+  integer,save :: mmdetobs = -1
 
-
+  integer,save :: mmean_rank_e = -1
+  integer,save :: mmdet_rank_e = -1
+  integer,save :: msprd_rank_e = -1
 
   integer,save :: MPI_COMM_e, nprocs_e, myrank_e
   integer,save :: MPI_COMM_d, nprocs_d, myrank_d
   integer,save :: MPI_COMM_a, nprocs_a, myrank_a
 
-
-
-!  character(9) scale_filename = 'file.0000'
+  integer, parameter :: max_timer_levels = 5
+  integer, parameter :: timer_name_width = 50
+  real(r_dble), private, parameter :: timer_neglect = 1.0d-3
+  real(r_dble), private, save :: timer_save(max_timer_levels) = -9.0d10
 
 contains
-!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 ! initialize_mpi_scale
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine initialize_mpi_scale
   use scale_process, only: &
      PRC_MPIstart, &
@@ -107,7 +83,7 @@ subroutine initialize_mpi_scale
   integer :: universal_comm   ! dummy
   integer :: universal_nprocs ! dummy
   logical :: universal_master ! dummy
-  integer :: ierr
+!  integer :: ierr
 
   call PRC_MPIstart( universal_comm ) ! [OUT]
 
@@ -128,9 +104,10 @@ subroutine initialize_mpi_scale
 
   return
 end subroutine initialize_mpi_scale
-!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 ! finalize_mpi_scale
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine finalize_mpi_scale
 !  use scale_process, only: PRC_MPIfinish
   implicit none
@@ -141,143 +118,71 @@ subroutine finalize_mpi_scale
 
   return
 end subroutine finalize_mpi_scale
-!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 ! set_common_mpi_scale
-!-----------------------------------------------------------------------
-SUBROUTINE set_common_mpi_scale
-  use scale_grid_index, only: &
-    IHALO, &
-    JHALO
-!  use scale_process, only: &
-!    PRC_myrank, &
-
-
+!-------------------------------------------------------------------------------
+subroutine set_common_mpi_scale
   implicit none
-  INTEGER :: i,n
-  INTEGER :: ierr !,buf(4)
-!  LOGICAL :: ex
+  integer :: color, key
+  integer :: i, n, ierr
 
+  call mpi_timer('', 2)
 
-!  if (myrank == 0) then
-!  print *, procs
-!  print *, mem2node
-!  print *, mem2proc
-!  print *, proc2mem
-!  end if
-  integer :: MPI_G_WORLD, MPI_G
-  integer :: n_mem,n_mempn
-!  integer :: iproc,jproc
-  integer,allocatable :: ranks(:)
-  integer,allocatable :: ranks_a(:)
+  ! Communicator for 1-iteration ensemble member groups
+  !-----------------------------------------------------------------------------
 
-  integer :: ip
+  color = ens_myrank
+  key   = ens_mygroup - 1
 
+  call MPI_COMM_SPLIT(MPI_COMM_a, color, key, MPI_COMM_e, ierr)
 
+  call MPI_COMM_SIZE(MPI_COMM_e, nprocs_e, ierr)
+  call MPI_COMM_RANK(MPI_COMM_e, myrank_e, ierr)
 
+  call mpi_timer('set_common_mpi_scale:mpi_comm_split_e:', 2)
 
-  WRITE(6,'(A)') 'Hello from set_common_mpi_scale'
+  ! Compute nij1, nij1max, nij1node
+  !-----------------------------------------------------------------------------
 
+  i = mod(nlon*nlat, nprocs_e)
+  nij1max = (nlon*nlat - i) / nprocs_e + 1
+  if (myrank_e < i) then
+    nij1 = nij1max
+  else
+    nij1 = nij1max - 1
+  end if
+  write (6,'(A,I6.6,A,I7)') 'MYRANK ', myrank, ' number of grid points: nij1 =', nij1
 
-!  CALL set_mem_node_proc(mem+1,NNODES,PPN,MEM_NODES,MEM_NP)
-
-
-
-!!!!!!------
-!    call set_scalelib(MEM_NP, nitmax, nprocs, proc2mem)
-
-
-  IF(MEM_NODES > 1) THEN
-    n_mem = NNODES / MEM_NODES
-    n_mempn = 1
-  ELSE
-    n_mem = NNODES
-    n_mempn = PPN / MEM_NP
-  END IF
-  nprocs_e = n_mem*n_mempn
-  nprocs_a = nprocs_e*MEM_NP
-
-  allocate (ranks(nprocs_e))
-  allocate (ranks_a(nprocs_a))
-
-  call MPI_Comm_group(MPI_COMM_WORLD,MPI_G_WORLD,ierr)
-
-  do ip = 1, nprocs
-    if (proc2mem(1,1,ip) >= 1) then
-      if (proc2mem(2,1,ip) == proc2mem(2,1,myrank+1)) then
-        ranks(proc2mem(1,1,ip)) = ip-1
-      end if
-      ranks_a((proc2mem(1,1,ip)-1)*MEM_NP+proc2mem(2,1,ip)+1) = ip-1
+  allocate (nij1node(nprocs_e))
+  do n = 1, nprocs_e
+    if (n-1 < i) then
+      nij1node(n) = nij1max
+    else
+      nij1node(n) = nij1max - 1
     end if
   end do
 
-!write(6,'(A,7I6)') '######===', myrank, ranks(:)
+  call mpi_timer('set_common_mpi_scale:nij1_cal:', 2)
 
-  call MPI_Group_incl(MPI_G_WORLD,nprocs_e,ranks,MPI_G,ierr)
-  call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_e,ierr)
+  return
+end subroutine set_common_mpi_scale
 
-  call MPI_Comm_size(MPI_COMM_e,nprocs_e,ierr)
-  call MPI_Comm_rank(MPI_COMM_e,myrank_e,ierr)
-
-!--
-
-  call MPI_Group_incl(MPI_G_WORLD,nprocs_e*MEM_NP,ranks_a,MPI_G,ierr)
-  call MPI_Comm_create(MPI_COMM_WORLD,MPI_G,MPI_COMM_a,ierr)
-
-  call MPI_Comm_size(MPI_COMM_a,nprocs_a,ierr)
-  call MPI_Comm_rank(MPI_COMM_a,myrank_a,ierr)
-
-!--
-
-  call MPI_Comm_size(MPI_COMM_d,nprocs_d,ierr)
-  call MPI_Comm_rank(MPI_COMM_d,myrank_d,ierr)
-
-
-!write(6,'(A,9I6)') '######===', myrank, myrank_e, nprocs_e, ranks(:)
-
-  deallocate(ranks)
-!!!!!!------
-
-
-
-
-  i = MOD(nlon*nlat,nprocs_e)
-  nij1max = (nlon*nlat - i)/nprocs_e + 1
-  IF(myrank_e < i) THEN
-    nij1 = nij1max
-  ELSE
-    nij1 = nij1max - 1
-  END IF
-  WRITE(6,'(A,I6.6,A,I6)') 'MYRANK ',myrank,' number of grid points: nij1= ',nij1
-  ALLOCATE(nij1node(nprocs_e))
-  DO n=1,nprocs_e
-    IF(n-1 < i) THEN
-      nij1node(n) = nij1max
-    ELSE
-      nij1node(n) = nij1max - 1
-    END IF
-  END DO
-
-
-
-  RETURN
-END SUBROUTINE set_common_mpi_scale
-!-----------------------------------------------------------------------
-! set_common_mpi_scale
-!-----------------------------------------------------------------------
-SUBROUTINE unset_common_mpi_scale
+!-------------------------------------------------------------------------------
+! unset_common_mpi_scale
+!-------------------------------------------------------------------------------
+subroutine unset_common_mpi_scale
   implicit none
   integer:: ierr
 
-  call MPI_Comm_free(MPI_COMM_e,ierr)
-  call MPI_Comm_free(MPI_COMM_a,ierr)
-!  call unset_scalelib
+  call MPI_COMM_FREE(MPI_COMM_e, ierr)
 
-  RETURN
-END SUBROUTINE unset_common_mpi_scale
+  return
+end subroutine unset_common_mpi_scale
 
-
-
-
+!-------------------------------------------------------------------------------
+! set_common_mpi_grid
+!-------------------------------------------------------------------------------
 subroutine set_common_mpi_grid
   use scale_grid_index, only: &
     IHALO, &
@@ -293,7 +198,9 @@ subroutine set_common_mpi_grid
   INTEGER :: i,j
   integer :: iproc, jproc
 
-  ALLOCATE(topo(nlon,nlat))
+  call mpi_timer('', 2)
+
+  ALLOCATE(topo2d(nlon,nlat))
 
   ALLOCATE(rig1(nij1))
   ALLOCATE(rjg1(nij1))
@@ -304,64 +211,78 @@ subroutine set_common_mpi_grid
   ALLOCATE(v3d(nij1,nlev,nv3d))
   ALLOCATE(v2d(nij1,nv2d))
 
-!!!!!! ----- need to be replaced by more native communication!!!!
-  v3dg = 0.0d0
-  v2dg = 0.0d0
+!!!!!! ----- need to be replaced by more native communication !!!!!!
 
-  call rank_1d_2d(PRC_myrank, iproc, jproc)
-  do j = 1, nlat
-    do i = 1, nlon
-      v3dg(1,i,j,1) = real(i + iproc * nlon + IHALO, RP)
-      v3dg(1,i,j,2) = real(j + jproc * nlat + JHALO, RP)
+  if (myrank_e == mmean_rank_e) then
+    v3dg = 0.0d0
+    v2dg = 0.0d0
+
+    call rank_1d_2d(PRC_myrank, iproc, jproc)
+    do j = 1, nlat
+      do i = 1, nlon
+        v3dg(1,i,j,1) = real(i + iproc * nlon + IHALO, RP)
+        v3dg(1,i,j,2) = real(j + jproc * nlat + JHALO, RP)
+      end do
     end do
-  end do
 
-  if (myrank_e == lastmem_rank_e) then
-    call read_topo(LETKF_TOPO_IN_BASENAME, topo)
-    v3dg(1,:,:,3) = topo
+    call mpi_timer('set_common_mpi_grid:rij_cal:', 2)
+
+  ! Note that only 'mmean_rank_e' processes have topo data in 'topo2d', 
+  ! that will be used later in the obs departure monitor calculation
+    call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
+    v3dg(1,:,:,3) = topo2d
+
+    call mpi_timer('set_common_mpi_grid:read_topo:', 2)
   end if
 
-  CALL scatter_grd_mpi(lastmem_rank_e,v3dg,v2dg,v3d,v2d)
+  call mpi_timer('', 2, barrier=MPI_COMM_e)
+
+  call scatter_grd_mpi(mmean_rank_e,v3dg,v2dg,v3d,v2d)
 
   rig1   = v3d(:,1,1)
   rjg1   = v3d(:,1,2)
   topo1  = v3d(:,1,3)
 
+  call mpi_timer('set_common_mpi_grid:scatter:', 2)
+
   call scale_calc_z(nij1, topo1, hgt1)
 
+  call mpi_timer('set_common_mpi_grid:scale_calc_z:', 2)
+
+  return
 end subroutine set_common_mpi_grid
 
-
-
-!-----------------------------------------------------------------------
-! set_mem2proc
-!-----------------------------------------------------------------------
-SUBROUTINE set_mem_node_proc(mem,nnodes,ppn,mem_nodes,mem_np)
+!-------------------------------------------------------------------------------
+! set_mem_node_proc
+!-------------------------------------------------------------------------------
+SUBROUTINE set_mem_node_proc(mem)
   IMPLICIT NONE
-  INTEGER,INTENT(IN) :: mem,nnodes,ppn,mem_nodes,mem_np
+  INTEGER,INTENT(IN) :: mem
   INTEGER :: tppn,tppnt,tmod
   INTEGER :: n,ns,nn,m,q,qs,i,j,it,ip
 
+  call mpi_timer('', 2)
+
   ALLOCATE(procs(nprocs))
   ns = 0
-  DO n = 1, nnodes
-    procs(ns+1:ns+ppn) = n
-    ns = ns + ppn
+  DO n = 1, NNODES
+    procs(ns+1:ns+PPN) = n
+    ns = ns + PPN
   END DO
 
-  IF(mem_nodes > 1) THEN
-    n_mem = nnodes / mem_nodes
+  IF(MEM_NODES > 1) THEN
+    n_mem = NNODES / MEM_NODES
     n_mempn = 1
   ELSE
-    n_mem = nnodes
-    n_mempn = ppn / mem_np
+    n_mem = NNODES
+    n_mempn = PPN / MEM_NP
   END IF
   nitmax = (mem - 1) / (n_mem * n_mempn) + 1
-  tppn = mem_np / mem_nodes
-  tmod = MOD(mem_np, mem_nodes)
+  tppn = MEM_NP / MEM_NODES
+  tmod = MOD(MEM_NP, MEM_NODES)
 
-  ALLOCATE(mem2node(mem_np,mem))
-  ALLOCATE(mem2proc(mem_np,mem))
+  ALLOCATE(mem2node(MEM_NP,mem))
+  ALLOCATE(mem2proc(MEM_NP,mem))
   ALLOCATE(proc2mem(2,nitmax,nprocs))
   proc2mem = -1
   m = 1
@@ -371,14 +292,14 @@ mem_loop: DO it = 1, nitmax
       DO j = 0, n_mem-1
         IF(m > mem .and. it > 1) EXIT mem_loop
         qs = 0
-        DO nn = 0, mem_nodes-1
+        DO nn = 0, MEM_NODES-1
           IF(nn < tmod) THEN
             tppnt = tppn + 1
           ELSE
             tppnt = tppn
           END IF
           DO q = 0, tppnt-1
-            ip = (n+nn)*ppn + i*mem_np + q
+            ip = (n+nn)*PPN + i*MEM_NP + q
             if (m <= mem) then
               mem2node(qs+1,m) = n+nn
               mem2proc(qs+1,m) = ip
@@ -389,7 +310,7 @@ mem_loop: DO it = 1, nitmax
           END DO
         END DO
         m = m + 1
-        n = n + mem_nodes
+        n = n + MEM_NODES
       END DO
     END DO
   END DO mem_loop
@@ -400,57 +321,84 @@ mem_loop: DO it = 1, nitmax
     myrank_use = .true.
   end if
 
-  lastmem_rank_e = mod(mem-1, n_mem*n_mempn)
+  ! settings related to mean (only valid when mem >= MEMBER+1)
+  !----------------------------------------------------------------
+  if (mem >= MEMBER+1) then
+    nens = mem
+    mmean = MEMBER+1
+
+    mmean_rank_e = mod(mmean-1, n_mem*n_mempn)
 #ifdef DEBUG
-  if (lastmem_rank_e /= proc2mem(1,1,mem2proc(1,mem)+1)-1) then
-    write (6, '(A)'), '[Error] XXXXXX wrong!!'
-    stop
-  end if
+    if (mmean_rank_e /= proc2mem(1,1,mem2proc(1,mmean)+1)-1) then
+      write (6, '(A)'), '[Error] XXXXXX wrong!!'
+      stop
+    end if
 #endif
+
+    msprd_rank_e = mmean_rank_e
+
+    if (DET_RUN) then
+      nensobs = MEMBER+1
+      mmdetobs = MEMBER+1
+    else
+      nensobs = MEMBER
+    end if
+  end if
+
+  ! settings related to mdet (only valid when mem >= MEMBER+2)
+  !----------------------------------------------------------------
+  if (mem >= MEMBER+2 .and. DET_RUN) then
+    mmdet = MEMBER+2
+    if (DET_RUN_CYCLED) then
+      mmdetin = mmdet
+    else
+      mmdetin = mmean
+    end if
+
+    mmdet_rank_e = mod(mmdet-1, n_mem*n_mempn)
+#ifdef DEBUG
+    if (mmdet_rank_e /= proc2mem(1,1,mem2proc(1,mmdet)+1)-1) then
+      write (6, '(A)'), '[Error] XXXXXX wrong!!'
+      stop
+    end if
+#endif
+  end if
+
+  call mpi_timer('set_mem_node_proc:', 2)
 
   RETURN
 END SUBROUTINE
 
-
-
-
-
-
-
-
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! Start using SCALE library
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine set_scalelib
-
+  use gtool_history, only: &
+    HistoryInit
+  use dc_log, only: &
+    LogInit
   use scale_stdio, only: &
     IO_LOG_setup, &
     IO_FID_CONF, &
     IO_FID_LOG, &
     IO_L, &
     H_LONG
-
-  use gtool_history, only: &
-    HistoryInit
-  use dc_log, only: &
-    LogInit
   use scale_process, only: &
-    PRC_UNIVERSAL_setup, &
-    PRC_MPIstart, &
+    PRC_mpi_alive, &
+!    PRC_MPIstart, &
+!    PRC_UNIVERSAL_setup, &
     PRC_MPIsplit_letkf, &
     PRC_MPIsplit, &
     PRC_GLOBAL_setup, &
     PRC_LOCAL_setup, &
-    PRC_masterrank, &
+    PRC_UNIVERSAL_IsMaster, &
+    PRC_nprocs, &
     PRC_myrank, &
-    PRC_mpi_alive, &
+    PRC_masterrank, &
     PRC_DOMAIN_nlim
   use scale_rm_process, only: &
     PRC_setup, &
-    PRC_2Drank, &
-    PRC_NUM_X, &
-    PRC_NUM_Y 
-
+    PRC_2Drank
   use scale_const, only: &
     CONST_setup
   use scale_calendar, only: &
@@ -462,14 +410,11 @@ subroutine set_scalelib
   use scale_time, only: &
     TIME_DTSEC,       &
     TIME_STARTDAYSEC
-
   use scale_grid, only: &
     GRID_setup, &
     GRID_DOMAIN_CENTER_X, &
     GRID_DOMAIN_CENTER_Y
-
   use scale_grid_index
-
 !  use scale_grid_nest, only: &
 !    NEST_setup
 !  use scale_land_grid_index, only: &
@@ -492,45 +437,65 @@ subroutine set_scalelib
 !    LANDUSE_setup
 !  use scale_grid_real, only: &
 !    REAL_setup
-
 !  use scale_gridtrans, only: &
 !    GTRANS_setup
-
 !  use scale_atmos_hydrostatic, only: &
 !     ATMOS_HYDROSTATIC_setup
   use scale_atmos_thermodyn, only: &
      ATMOS_THERMODYN_setup
-
 !  use mod_admin_time, only: &
 !     ADMIN_TIME_setup
-
-
   use scale_mapproj, only: &
     MPRJ_setup
   implicit none
 
-
-
-!    character(len=H_MID) :: DATATYPE = 'DEFAULT' !< REAL4 or REAL8
-  integer :: rankidx(2)
-
-  integer :: local_myrank
-  logical :: local_ismaster
-
-  CHARACTER(len=H_LONG) :: confname_dummy
+  integer :: NUM_DOMAIN
+  integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
+  character(len=H_LONG) :: CONF_FILES(PRC_DOMAIN_nlim)
 
 !  integer :: universal_comm
 !  integer :: universal_nprocs
 !  logical :: universal_master
   integer :: global_comm
   integer :: local_comm
+  integer :: local_myrank
+  logical :: local_ismaster
   integer :: intercomm_parent
   integer :: intercomm_child
+  character(len=H_LONG) :: confname_dummy
 
-  integer :: NUM_DOMAIN
-  integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
-  character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim)
+  integer :: color, key, ierr
+  integer :: rankidx(2)
 
+  call mpi_timer('', 2, barrier=MPI_COMM_WORLD)
+
+  ! Communicator for all processes used
+  !-----------------------------------------------------------------------------
+
+  if (myrank_use) then
+    color = 0
+    key   = (ens_mygroup - 1) * MEM_NP + ens_myrank
+!    key   = myrank
+  else
+    color = MPI_UNDEFINED
+    key   = MPI_UNDEFINED
+  end if
+
+  call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, MPI_COMM_a, ierr)
+
+  call mpi_timer('set_scalelib:mpi_comm_split_a:', 2)
+
+  if (.not. myrank_use) then
+    write (6, '(A,I6.6,A)') 'MYRANK=', myrank, ': This process is not used!'
+    return
+  end if
+
+  call mpi_timer('', 2, barrier=MPI_COMM_a)
+
+  call MPI_COMM_SIZE(MPI_COMM_a, nprocs_a, ierr)
+  call MPI_COMM_RANK(MPI_COMM_a, myrank_a, ierr)
+
+  ! Communicator for subdomains
   !-----------------------------------------------------------------------------
 
   NUM_DOMAIN = 1
@@ -541,24 +506,21 @@ subroutine set_scalelib
 !  call PRC_MPIstart( universal_comm ) ! [OUT]
 
   PRC_mpi_alive = .true.
-!  universal_comm = MPI_COMM_WORLD
+!  universal_comm = MPI_COMM_a
 
 !  call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
 !                            universal_nprocs, & ! [OUT]
 !                            universal_master  ) ! [OUT]
 
   ! split MPI communicator for LETKF
-  call PRC_MPIsplit_letkf( MPI_COMM_WORLD,                   & ! [IN]
+  call PRC_MPIsplit_letkf( MPI_COMM_a,                       & ! [IN]
                            MEM_NP, nitmax, nprocs, proc2mem, & ! [IN]
                            global_comm                       ) ! [OUT]
 
-  if (global_comm == MPI_COMM_NULL) then
-!    write (6, '(A,I6.6,A)') 'MYRANK=',myrank,': This process is not used!'
-    return
-  end if
-
   call PRC_GLOBAL_setup( .false.,    & ! [IN]
                          global_comm ) ! [IN]
+
+  call mpi_timer('set_scalelib:mpi_comm_split_d_global:', 2, barrier=global_comm)
 
   !--- split for nesting
   ! communicator split for nesting domains
@@ -576,15 +538,27 @@ subroutine set_scalelib
 
   MPI_COMM_d = local_comm
 
-  ! setup standard I/O
-!  call IO_setup( MODELNAME, .true., cnf_fname )
-
-  ! setup MPI
   call PRC_LOCAL_setup( local_comm, local_myrank, local_ismaster )
 
+!  call MPI_COMM_SIZE(MPI_COMM_d, nprocs_d, ierr)
+  nprocs_d = PRC_nprocs
+!  call MPI_COMM_RANK(MPI_COMM_d, myrank_d, ierr)
+!  myrank_d = PRC_myrank
+  myrank_d = local_myrank
+
+  call mpi_timer('set_scalelib:mpi_comm_split_d_local:', 2)
+
+  ! Setup scalelib LOG output (only for the universal master rank)
+  !-----------------------------------------------------------------------------
+
   ! setup Log
-  call IO_LOG_setup( local_myrank, local_ismaster )
+  call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
   call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
+
+  call mpi_timer('set_scalelib:log_setup_init:', 2, barrier=MPI_COMM_a)
+
+  ! Other minimal scalelib setups for LETKF
+  !-----------------------------------------------------------------------------
 
   ! setup process
   call PRC_setup
@@ -603,17 +577,14 @@ subroutine set_scalelib
 
   ! setup time
 !  call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
-
 !  call PROF_setprefx('INIT')
 !  call PROF_rapstart('Initialize')
 
   ! setup horizontal/vertical grid coordinates
   call GRID_INDEX_setup
   call GRID_setup
-
 !  call LAND_GRID_INDEX_setup
 !  call LAND_GRID_setup
-
 !  call URBAN_GRID_INDEX_setup
 !  call URBAN_GRID_setup
 
@@ -628,8 +599,10 @@ subroutine set_scalelib
 
   ! setup topography
 !  call TOPO_setup
+
   ! setup land use category index/fraction
 !  call LANDUSE_setup
+
   ! setup grid coordinates (real world)
 !  call REAL_setup
     ! setup map projection [[ in REAL_setup ]]
@@ -637,13 +610,16 @@ subroutine set_scalelib
 
   ! setup grid transfer metrics (uses in ATMOS_dynamics)
 !  call GTRANS_setup
+
   ! setup Z-ZS interpolation factor (uses in History)
 !  call INTERP_setup
 
   ! setup restart
 !  call ADMIN_restart_setup
+
   ! setup statistics
 !  call STAT_setup
+
   ! setup history I/O
 !  call HIST_setup
     ! setup history file I/O [[ in HIST_setup ]]
@@ -653,6 +629,7 @@ subroutine set_scalelib
     call HistoryInit('', '', '', IMAX*JMAX*KMAX, PRC_masterrank, PRC_myrank, rankidx, &
                      0.0d0, 1.0d0, &
                      namelist_fid=IO_FID_CONF, default_basename='history')
+
   ! setup monitor I/O
 !  call MONIT_setup
 
@@ -663,7 +640,6 @@ subroutine set_scalelib
 !  call ATMOS_HYDROSTATIC_setup
   call ATMOS_THERMODYN_setup
 !  call ATMOS_SATURATION_setup
-
 !  call BULKFLUX_setup
 !  call ROUGHNESS_setup
 
@@ -681,12 +657,14 @@ subroutine set_scalelib
 !  call URBAN_vars_setup
 !  call CPL_vars_setup
 
+  call mpi_timer('set_scalelib:other_setup:', 2)
+
   return
 end subroutine set_scalelib
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! Finish using SCALE library
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine unset_scalelib
   use gtool_file, only: &
     FileCloseAll
@@ -696,28 +674,28 @@ subroutine unset_scalelib
     IO_L, &
     IO_FID_STDOUT
   implicit none
+  integer :: ierr
 
-!  call MONIT_finalize
+  if (myrank_use) then
+!    call MONIT_finalize
+    call FileCloseAll
 
-  call FileCloseAll
+    ! Close logfile, configfile
+    if ( IO_L ) then
+      if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+    endif
+    close(IO_FID_CONF)
 
-  ! Close logfile, configfile
-  if ( IO_L ) then
-    if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
-  endif
-  close(IO_FID_CONF)
+    call MPI_COMM_FREE(MPI_COMM_d, ierr)
+    call MPI_COMM_FREE(MPI_COMM_a, ierr)
+  end if
 
   return
 end subroutine unset_scalelib
 
-
-
-
-
-
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! Scatter gridded data to processes (nrank -> all)
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 SUBROUTINE scatter_grd_mpi(nrank,v3dg,v2dg,v3d,v2d)
   INTEGER,INTENT(IN) :: nrank
   REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
@@ -745,7 +723,7 @@ SUBROUTINE scatter_grd_mpi(nrank,v3dg,v2dg,v3d,v2d)
     END DO
   END IF
 
-  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
   CALL MPI_SCATTER(bufs,ns,COMM_datatype,&
                  & bufr,nr,COMM_datatype,nrank,MPI_COMM_e,ierr)
 
@@ -762,13 +740,14 @@ SUBROUTINE scatter_grd_mpi(nrank,v3dg,v2dg,v3d,v2d)
     v2d(:,n) = REAL(bufr(1:nij1,j),r_size)
   END DO
 
-  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
 
   RETURN
 END SUBROUTINE scatter_grd_mpi
-!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 ! Gather gridded data (all -> nrank)
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
   INTEGER,INTENT(IN) :: nrank
   REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nv3d)
@@ -794,7 +773,7 @@ SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
     bufs(1:nij1,j) = REAL(v2d(:,n),RP)
   END DO
 
-  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
   CALL MPI_GATHER(bufs,ns,COMM_datatype,&
                 & bufr,nr,COMM_datatype,nrank,MPI_COMM_e,ierr)
 
@@ -813,175 +792,199 @@ SUBROUTINE gather_grd_mpi(nrank,v3d,v2d,v3dg,v2dg)
     END DO
   END IF
 
-  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
 
   RETURN
 END SUBROUTINE gather_grd_mpi
 
-
-
-SUBROUTINE read_ens_history_iter(file,iter,step,v3dg,v2dg,ensmean)
-  IMPLICIT NONE
-
-  CHARACTER(*),INTENT(IN) :: file
-  INTEGER,INTENT(IN) :: iter
-  INTEGER,INTENT(IN) :: step
-  REAL(r_size),INTENT(OUT) :: v3dg(nlevh,nlonh,nlath,nv3dd)
-  REAL(r_size),INTENT(OUT) :: v2dg(nlonh,nlath,nv2dd)
-  LOGICAL,INTENT(INOUT),OPTIONAL :: ensmean
-
+!-------------------------------------------------------------------------------
+! Read ensemble SCALE history files, one file per time (iter)
+!-------------------------------------------------------------------------------
+subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
+  implicit none
+  integer, intent(in) :: iter
+  integer, intent(in) :: step
+  real(r_size), intent(out) :: v3dg(nlevh,nlonh,nlath,nv3dd)
+  real(r_size), intent(out) :: v2dg(nlonh,nlath,nv2dd)
   character(filelenmax) :: filename
-  integer :: mem
+  integer :: im
 
-  mem = MEMBER
-  if (present(ensmean)) then
-    if (ensmean) then
-      mem = MEMBER + 1
+  im = proc2mem(1,iter,myrank+1)
+  if (im >= 1 .and. im <= nens) then
+    if (im <= MEMBER) then
+      call file_member_replace(im, HISTORY_IN_BASENAME, filename)
+    else if (im == mmean) then
+      filename = HISTORY_MEAN_IN_BASENAME
+    else if (im == mmdet) then
+      filename = HISTORY_MDET_IN_BASENAME
     end if
+
+    call read_history(trim(filename), step, v3dg, v2dg)
   end if
 
-  IF(proc2mem(1,iter,myrank+1) >= 1 .and. proc2mem(1,iter,myrank+1) <= mem) THEN
-    call file_member_replace(proc2mem(1,iter,myrank+1), file, filename)  !!!!!! better to seperate 'mean' history filename using a different namelist variable !!!!!!
-    call read_history(trim(filename),step,v3dg,v2dg)
-  END IF
+  return
+end subroutine read_ens_history_iter
 
-  RETURN
-END SUBROUTINE read_ens_history_iter
-
-
-!-----------------------------------------------------------------------
-! Read ensemble data and distribute to processes
-!-----------------------------------------------------------------------
-subroutine read_ens_mpi(file,v3d,v2d)
+!-------------------------------------------------------------------------------
+! Read ensemble first guess data and distribute to processes
+!-------------------------------------------------------------------------------
+subroutine read_ens_mpi(v3d, v2d)
   implicit none
-  CHARACTER(*),INTENT(IN) :: file
-  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,MEMBER,nv3d)
-  REAL(r_size),INTENT(OUT) :: v2d(nij1,MEMBER,nv2d)
-  REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
-  REAL(RP) :: v2dg(nlon,nlat,nv2d)
-  character(filelenmax) :: filename
-  integer :: it,im,mstart,mend
+  real(r_size), intent(out) :: v3d(nij1,nlev,nens,nv3d)
+  real(r_size), intent(out) :: v2d(nij1,nens,nv2d)
+  real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(RP) :: v2dg(nlon,nlat,nv2d)
+  character(len=filelenmax) :: filename
+  integer :: it, im, mstart, mend
 
-
-  integer :: ierr
-  REAL(r_dble) :: rrtimer00,rrtimer
-
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer00 = MPI_WTIME()
-
+  call mpi_timer('', 2)
 
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
-    if (im >= 1 .and. im <= MEMBER) then
-      call file_member_replace(im, file, filename)
-!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
-      call read_restart(filename,v3dg,v2dg)
 
+    ! Note: read all members + mdetin
+    ! 
+    if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
+      if (im <= MEMBER) then
+        call file_member_replace(im, GUES_IN_BASENAME, filename)
+      else if (im == mmean) then
+        filename = GUES_MEAN_INOUT_BASENAME
+      else if (im == mmdet) then
+        filename = GUES_MDET_IN_BASENAME
+      end if
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### read_ens_mpi:read_restart:              ',rrtimer-rrtimer00
-  rrtimer00=rrtimer
+!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+      call read_restart(filename, v3dg, v2dg)
 
+      call mpi_timer('read_ens_mpi:read_restart:', 2)
 
       call state_trans(v3dg)
 
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### read_ens_mpi:state_trans:               ',rrtimer-rrtimer00
-  rrtimer00=rrtimer
-
-
+      call mpi_timer('read_ens_mpi:state_trans:', 2)
     end if
+
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
+
     mstart = 1 + (it-1)*nprocs_e
-    mend = MIN(it*nprocs_e, MEMBER)
+    mend = min(it*nprocs_e, nens)
     if (mstart <= mend) then
-      CALL scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
+      call scatter_grd_mpi_alltoall(mstart, mend, v3dg, v2dg, v3d, v2d)
     end if
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### read_ens_mpi:scatter_grd_mpi_alltoall:  ',rrtimer-rrtimer00
-  rrtimer00=rrtimer
-
+    call mpi_timer('read_ens_mpi:scatter_grd_mpi_alltoall:', 2)
   end do ! [ it = 1, nitmax ]
 
   return
 end subroutine read_ens_mpi
 
-
-!-----------------------------------------------------------------------
-! Write ensemble data after collecting data from processes
-!-----------------------------------------------------------------------
-SUBROUTINE write_ens_mpi(file,v3d,v2d)
+!-------------------------------------------------------------------------------
+! Read ensemble additive inflation parameter and distribute to processes
+!-------------------------------------------------------------------------------
+subroutine read_ens_mpi_addiinfl(v3d, v2d)
   implicit none
-  CHARACTER(*),INTENT(IN) :: file
-  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,MEMBER,nv3d)
-  REAL(r_size),INTENT(IN) :: v2d(nij1,MEMBER,nv2d)
-  REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
-  REAL(RP) :: v2dg(nlon,nlat,nv2d)
-  character(filelenmax) :: filename
-  integer :: it,im,mstart,mend
-
-
-  integer :: ierr
-  REAL(r_dble) :: rrtimer00,rrtimer
-
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer00 = MPI_WTIME()
-
+  real(r_size), intent(out) :: v3d(nij1,nlev,nens,nv3d)
+  real(r_size), intent(out) :: v2d(nij1,nens,nv2d)
+  real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(RP) :: v2dg(nlon,nlat,nv2d)
+  character(len=filelenmax) :: filename
+  integer :: it, im, mstart, mend
 
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
-    mstart = 1 + (it-1)*nprocs_e
-    mend = MIN(it*nprocs_e, MEMBER)
-    if (mstart <= mend) then
-      CALL gather_grd_mpi_alltoall(mstart,mend,v3d,v2d,v3dg,v2dg)
+
+    ! Note: read all members
+    ! 
+    if (im >= 1 .and. im <= MEMBER) then
+      call file_member_replace(im, INFL_ADD_IN_BASENAME, filename)
+
+!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+      call read_restart(filename, v3dg, v2dg)
+      call state_trans(v3dg)
     end if
 
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### write_ens_mpi:gather_grd_mpi_alltoall:  ',rrtimer-rrtimer00
-  rrtimer00=rrtimer
-
-
-    if (im >= 1 .and. im <= MEMBER) then
-      call file_member_replace(im, file, filename)
-!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
-      call state_trans_inv(v3dg)
-
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### write_ens_mpi:state_trans_inv:          ',rrtimer-rrtimer00
-  rrtimer00=rrtimer
-
-
-      call write_restart(filename,v3dg,v2dg)
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### write_ens_mpi:write_restart:            ',rrtimer-rrtimer00
-  rrtimer00=rrtimer
-
+    mstart = 1 + (it-1)*nprocs_e
+    mend = min(it*nprocs_e, MEMBER)
+    if (mstart <= mend) then
+      call scatter_grd_mpi_alltoall(mstart, mend, v3dg, v2dg, v3d, v2d)
     end if
   end do ! [ it = 1, nitmax ]
 
   return
-END SUBROUTINE write_ens_mpi
+end subroutine read_ens_mpi_addiinfl
 
+!-------------------------------------------------------------------------------
+! Write ensemble analysis data after collecting from processes
+!-------------------------------------------------------------------------------
+subroutine write_ens_mpi(v3d, v2d, monit, caption)
+  implicit none
+  real(r_size), intent(in) :: v3d(nij1,nlev,nens,nv3d)
+  real(r_size), intent(in) :: v2d(nij1,nens,nv2d)
+  logical, intent(in), optional :: monit
+  character(len=*), intent(in), optional :: caption
+  real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(RP) :: v2dg(nlon,nlat,nv2d)
+  character(len=filelenmax) :: filename
+  integer :: it, im, mstart, mend
+  logical :: monit_
 
+  monit_ = .false.
+  if (present(monit) .and. present(caption)) then
+    monit_ = monit
+  end if
 
+  do it = 1, nitmax
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
+    im = proc2mem(1,it,myrank+1)
 
+    mstart = 1 + (it-1)*nprocs_e
+    mend = min(it*nprocs_e, nens)
+    if (mstart <= mend) then
+      call gather_grd_mpi_alltoall(mstart, mend, v3d, v2d, v3dg, v2dg)
+    end if
+
+    call mpi_timer('write_ens_mpi:gather_grd_mpi_alltoall:', 2)
+
+    if (monit_ .and. mstart <= mmean .and. mmean <= mend) then
+      call monit_obs_mpi(v3dg, v2dg, caption)
+
+      call mpi_timer('write_ens_mpi:monit_obs_mpi:', 2)
+    end if
+
+    ! Note: write all members + mean + mdet
+    ! 
+    if ((im >= 1 .and. im <= MEMBER) .or. im == mmean .or. im == mmdet) then
+      if (im <= MEMBER) then
+        call file_member_replace(im, ANAL_OUT_BASENAME, filename)
+      else if (im == mmean) then
+        filename = ANAL_MEAN_OUT_BASENAME
+      else if (im == mmdet) then
+        filename = ANAL_MDET_OUT_BASENAME
+      end if
+
+!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+      call state_trans_inv(v3dg)
+
+      call mpi_timer('write_ens_mpi:state_trans_inv:', 2)
+
+      call write_restart(filename, v3dg, v2dg)
+
+      call mpi_timer('write_ens_mpi:write_restart:', 2)
+    end if
+  end do ! [ it = 1, nitmax ]
+
+  return
+end subroutine write_ens_mpi
+
+!-------------------------------------------------------------------------------
+! Scatter gridded data using MPI_ALLTOALL(V) (mstart~mend -> all)
+!-------------------------------------------------------------------------------
 SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
   INTEGER,INTENT(IN) :: mstart,mend
   REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
-  REAL(r_size),INTENT(INOUT) :: v3d(nij1,nlev,MEMBER,nv3d)
-  REAL(r_size),INTENT(INOUT) :: v2d(nij1,MEMBER,nv2d)
+  REAL(r_size),INTENT(INOUT) :: v3d(nij1,nlev,nens,nv3d)
+  REAL(r_size),INTENT(INOUT) :: v2d(nij1,nens,nv2d)
   REAL(RP) :: bufs(nij1max,nlevall,nprocs_e)
   REAL(RP) :: bufr(nij1max,nlevall,nprocs_e)
   INTEGER :: k,n,j,m,mcount,ierr
@@ -1006,7 +1009,7 @@ SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
     END DO
   END IF
 
-  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
   IF(mcount == nprocs_e) THEN
     CALL MPI_ALLTOALL(bufs, nij1max*nlevall, COMM_datatype, &
                       bufr, nij1max*nlevall, COMM_datatype, MPI_COMM_e, ierr)
@@ -1030,18 +1033,17 @@ SUBROUTINE scatter_grd_mpi_alltoall(mstart,mend,v3dg,v2dg,v3d,v2d)
     END DO
   END DO
 
-  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
   RETURN
 END SUBROUTINE scatter_grd_mpi_alltoall
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! Gather gridded data using MPI_ALLTOALL(V) (all -> mstart~mend)
-!-----------------------------------------------------------------------
-
+!-------------------------------------------------------------------------------
 SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,v3d,v2d,v3dg,v2dg)
   INTEGER,INTENT(IN) :: mstart,mend
-  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,MEMBER,nv3d)
-  REAL(r_size),INTENT(IN) :: v2d(nij1,MEMBER,nv2d)
+  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,nens,nv3d)
+  REAL(r_size),INTENT(IN) :: v2d(nij1,nens,nv2d)
   REAL(RP),INTENT(OUT) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
   REAL(RP) :: bufs(nij1max,nlevall,nprocs_e)
@@ -1068,7 +1070,7 @@ SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,v3d,v2d,v3dg,v2dg)
     END DO
   END DO
 
-  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
   IF(mcount == nprocs_e) THEN
     CALL MPI_ALLTOALL(bufs, nij1max*nlevall, COMM_datatype, &
                       bufr, nij1max*nlevall, COMM_datatype, MPI_COMM_e, ierr)
@@ -1092,13 +1094,13 @@ SUBROUTINE gather_grd_mpi_alltoall(mstart,mend,v3d,v2d,v3dg,v2dg)
     END DO
   END IF
 
-  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
   RETURN
 END SUBROUTINE gather_grd_mpi_alltoall
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! Set the send/recieve counts of MPI_ALLTOALLV
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 SUBROUTINE set_alltoallv_counts(mcount,ngpblock,np,n_ens,nt_ens,n_mem,nt_mem)
   INTEGER,INTENT(IN) :: mcount,ngpblock
   INTEGER,INTENT(IN) :: np
@@ -1123,10 +1125,9 @@ SUBROUTINE set_alltoallv_counts(mcount,ngpblock,np,n_ens,nt_ens,n_mem,nt_mem)
   RETURN
 END SUBROUTINE set_alltoallv_counts
 
-
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! gridded data -> buffer
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 SUBROUTINE grd_to_buf(np,grd,buf)
   INTEGER,INTENT(IN) :: np
   REAL(RP),INTENT(IN) :: grd(nlon,nlat)
@@ -1155,9 +1156,10 @@ end if
 
   RETURN
 END SUBROUTINE grd_to_buf
-!-----------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
 ! buffer -> gridded data
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 SUBROUTINE buf_to_grd(np,buf,grd)
   INTEGER,INTENT(IN) :: np
   REAL(RP),INTENT(IN) :: buf(nij1max,np)
@@ -1175,221 +1177,207 @@ SUBROUTINE buf_to_grd(np,buf,grd)
 
   RETURN
 END SUBROUTINE buf_to_grd
-!-----------------------------------------------------------------------
-! STORING DATA (ensemble mean and spread)
-!-----------------------------------------------------------------------
-SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
-  use scale_process, only: PRC_myrank
+
+!-------------------------------------------------------------------------------
+! MPI driver for monitoring observation departure statistics
+!-------------------------------------------------------------------------------
+subroutine monit_obs_mpi(v3dg, v2dg, caption)
   implicit none
+  real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(RP), intent(in) :: v2dg(nlon,nlat,nv2d)
+  character(len=*), intent(in) :: caption
 
-  CHARACTER(*),INTENT(IN) :: file_mean
-  CHARACTER(*),INTENT(IN) :: file_sprd
-  REAL(r_size),INTENT(IN) :: v3d(nij1,nlev,MEMBER,nv3d)
-  REAL(r_size),INTENT(IN) :: v2d(nij1,MEMBER,nv2d)
-  REAL(r_size) :: v3dm(nij1,nlev,nv3d)
-  REAL(r_size) :: v2dm(nij1,nv2d)
-  REAL(r_size) :: v3ds(nij1,nlev,nv3d)
-  REAL(r_size) :: v2ds(nij1,nv2d)
-  REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
-  REAL(RP) :: v2dg(nlon,nlat,nv2d)
-  INTEGER :: i,k,m,n
+  integer :: nobs(nid_obs)
+  integer :: nobs_g(nid_obs)
+  real(r_size) :: bias(nid_obs)
+  real(r_size) :: bias_g(nid_obs)
+  real(r_size) :: rmse(nid_obs)
+  real(r_size) :: rmse_g(nid_obs)
+  logical :: monit_type(nid_obs)
+  integer :: i, ierr
 
-  INTEGER :: nobs(nid_obs)
-  INTEGER :: nobs_g(nid_obs)
-  REAL(r_size) :: bias(nid_obs)
-  REAL(r_size) :: bias_g(nid_obs)
-  REAL(r_size) :: rmse(nid_obs)
-  REAL(r_size) :: rmse_g(nid_obs)
-  LOGICAL :: monit_type(nid_obs)
-  INTEGER :: ierr
+  call mpi_timer('', 2)
 
+  ! NOTE: need to use 'mmean_rank_e' processes to run this calculation
+  !       because only these processes have read topo files in 'topo2d'
+  ! 
+  if (myrank_e == mmean_rank_e) then
+    call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true.)
 
-  type(obs_info),intent(in) :: obs(OBS_IN_NUM)
-  type(obs_da_value),intent(in) :: obsda2
+    call mpi_timer('monit_obs_mpi:monit_obs:', 2)
 
-
-  REAL(r_dble) :: rrtimer00,rrtimer
-
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer00 = MPI_WTIME()
-
-
-  CALL ensmean_grd(MEMBER,nij1,v3d,v2d,v3dm,v2dm)
-
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:calc_mean:',rrtimer-rrtimer00
-  rrtimer00=rrtimer
-
-
-  CALL gather_grd_mpi(lastmem_rank_e,v3dm,v2dm,v3dg,v2dg)
-
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:gather_grd_mpi:',rrtimer-rrtimer00
-  rrtimer00=rrtimer
-
-
-  if (DEPARTURE_STAT) then
-    if (myrank_e == lastmem_rank_e) then
-      call monit_obs(v3dg,v2dg,obs,obsda2,topo,nobs,bias,rmse,monit_type,.true.)
-
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:monit_obs:',rrtimer-rrtimer00
-  rrtimer00=rrtimer
-
-
-      do i = 1, nid_obs
-        if (monit_type(i)) then
-          nobs_g(i) = nobs(i)
-          if (nobs(i) == 0) then
-            bias_g(i) = 0.0d0
-            rmse_g(i) = 0.0d0
-          else
-            bias_g(i) = bias(i) * REAL(nobs(i),r_size)
-            rmse_g(i) = rmse(i) * rmse(i) * REAL(nobs(i),r_size)
-          end if
-        end if
-      end do
-
-      call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_g, nid_obs, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
-      call MPI_ALLREDUCE(MPI_IN_PLACE, bias_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-      call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_g, nid_obs, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-
-      do i = 1, nid_obs
-        if (monit_type(i)) then
-          if (nobs_g(i) == 0) then
-            bias_g(i) = undef
-            rmse_g(i) = undef
-          else
-            bias_g(i) = bias_g(i) / REAL(nobs_g(i),r_size)
-            rmse_g(i) = sqrt(rmse_g(i) / REAL(nobs_g(i),r_size))
-          end if
+    do i = 1, nid_obs
+      if (monit_type(i)) then
+        nobs_g(i) = nobs(i)
+        if (nobs(i) == 0) then
+          bias_g(i) = 0.0d0
+          rmse_g(i) = 0.0d0
         else
-          nobs_g(i) = -1
-          bias_g(i) = undef
-          rmse_g(i) = undef
+          bias_g(i) = bias(i) * real(nobs(i), r_size)
+          rmse_g(i) = rmse(i) * rmse(i) * real(nobs(i), r_size)
         end if
-      end do
+      end if
+    end do
+
+    if (nprocs_d > 1) then
+      call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_g, nid_obs, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, bias_g, nid_obs, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_g, nid_obs, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
     end if
 
-    call MPI_BCAST(nobs,nid_obs,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
-    call MPI_BCAST(bias,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
-    call MPI_BCAST(rmse,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
-    call MPI_BCAST(nobs_g,nid_obs,MPI_INTEGER,lastmem_rank_e,MPI_COMM_e,ierr)
-    call MPI_BCAST(bias_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
-    call MPI_BCAST(rmse_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
-    call MPI_BCAST(monit_type,nid_obs,MPI_LOGICAL,lastmem_rank_e,MPI_COMM_e,ierr)
-    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', trim(file_mean), ']:'
-    call monit_print(nobs,bias,rmse,monit_type)
-    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', trim(file_mean), ']:'
-    call monit_print(nobs_g,bias_g,rmse_g,monit_type)
+    do i = 1, nid_obs
+      if (monit_type(i)) then
+        if (nobs_g(i) == 0) then
+          bias_g(i) = undef
+          rmse_g(i) = undef
+        else
+          bias_g(i) = bias_g(i) / REAL(nobs_g(i),r_size)
+          rmse_g(i) = sqrt(rmse_g(i) / REAL(nobs_g(i),r_size))
+        end if
+      else
+        nobs_g(i) = -1
+        bias_g(i) = undef
+        rmse_g(i) = undef
+      end if
+    end do
 
+    call mpi_timer('monit_obs_mpi:mpi_allreduce(domain):', 2)
+  end if
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:monit_obs_reduce_print:',rrtimer-rrtimer00
-  rrtimer00=rrtimer
+  if (DEPARTURE_STAT_ALL_PROCESSES) then
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
+    call MPI_BCAST(nobs,       nid_obs, MPI_INTEGER, mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(bias,       nid_obs, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(rmse,       nid_obs, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(nobs_g,     nid_obs, MPI_INTEGER, mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(bias_g,     nid_obs, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(rmse_g,     nid_obs, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(monit_type, nid_obs, MPI_LOGICAL, mmean_rank_e, MPI_COMM_e, ierr)
 
-  end if ! [ DEPARTURE_STAT ]
+    call mpi_timer('monit_obs_mpi:mpi_allreduce(ens):', 2)
+  end if
 
+  if (DEPARTURE_STAT_ALL_PROCESSES .or. myrank_e == mmean_rank_e) then
+    write(6,'(2A)') trim(caption), ' (IN THIS SUBDOMAIN):'
+    call monit_print(nobs, bias, rmse, monit_type)
+    write(6,'(2A)') trim(caption), ' (GLOBAL):'
+    call monit_print(nobs_g, bias_g, rmse_g, monit_type)
 
-  IF(myrank_e == lastmem_rank_e) THEN
+    call mpi_timer('monit_obs_mpi:monit_print:', 2)
+  end if
+
+  return
+end subroutine monit_obs_mpi
+
+!-------------------------------------------------------------------------------
+! Gather ensemble mean to {mmean_rank_e} and write SCALE restart files
+!-------------------------------------------------------------------------------
+subroutine write_ensmean(filename, v3d, v2d, calced, monit, caption)
+  implicit none
+  character(len=*), intent(in) :: filename
+  real(r_size), intent(inout) :: v3d(nij1,nlev,nens,nv3d)
+  real(r_size), intent(inout) :: v2d(nij1,nens,nv2d)
+  logical, intent(in), optional :: calced
+  logical, intent(in), optional :: monit
+  character(len=*), intent(in), optional :: caption
+
+  real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(RP) :: v2dg(nlon,nlat,nv2d)
+  logical :: calced_, monit_
+
+  call mpi_timer('', 2)
+
+  calced_ = .false.
+  if (present(calced)) then
+    calced_ = calced
+  end if
+  monit_ = .false.
+  if (present(monit) .and. present(caption)) then
+    monit_ = monit
+  end if
+
+  if (.not. calced) then
+    call ensmean_grd(MEMBER, nens, nij1, v3d, v2d)
+
+    call mpi_timer('write_ensmean:ensmean_grd:', 2)
+  end if
+
+  call mpi_timer('', 2, barrier=MPI_COMM_e)
+
+  call gather_grd_mpi(mmean_rank_e, v3d(:,:,mmean,:), v2d(:,mmean,:), v3dg, v2dg)
+
+  call mpi_timer('write_ensmean:gather_grd_mpi:', 2)
+
+  if (monit_) then
+    call monit_obs_mpi(v3dg, v2dg, caption)
+
+    call mpi_timer('write_ensmean:monit_obs_mpi:', 2)
+  end if
+
+  if (myrank_e == mmean_rank_e) then
     call state_trans_inv(v3dg)
-    call write_restart(file_mean,v3dg,v2dg)
 
+    call mpi_timer('write_ensmean:state_trans_inv:', 2)
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:write_mean:',rrtimer-rrtimer00
-  rrtimer00=rrtimer
+    call write_restart(filename, v3dg, v2dg)
 
+    call mpi_timer('write_ensmean:write_restart:', 2)
+  end if
 
-  END IF
+  return
+end subroutine write_ensmean
 
-  DO n=1,nv3d
-!$OMP PARALLEL DO PRIVATE(i,k,m)
-    DO k=1,nlev
-      DO i=1,nij1
-        v3ds(i,k,n) = (v3d(i,k,1,n)-v3dm(i,k,n))**2
-        DO m=2,MEMBER
-          v3ds(i,k,n) = v3ds(i,k,n) + (v3d(i,k,m,n)-v3dm(i,k,n))**2
-        END DO
-        v3ds(i,k,n) = SQRT(v3ds(i,k,n) / REAL(MEMBER-1,r_size))
-      END DO
-    END DO
-!$OMP END PARALLEL DO
-  END DO
+!-------------------------------------------------------------------------------
+! Gather ensemble spread to {msprd_rank_e} and write SCALE restart files
+!-------------------------------------------------------------------------------
+subroutine write_enssprd(filename, v3d, v2d)
+  implicit none
+  character(len=*), intent(in) :: filename
+  real(r_size), intent(in) :: v3d(nij1,nlev,nens,nv3d)
+  real(r_size), intent(in) :: v2d(nij1,nens,nv2d)
+  real(r_size) :: v3ds(nij1,nlev,nv3d)
+  real(r_size) :: v2ds(nij1,nv2d)
+  real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(RP) :: v2dg(nlon,nlat,nv2d)
 
-  DO n=1,nv2d
-!$OMP PARALLEL DO PRIVATE(i,m)
-    DO i=1,nij1
-      v2ds(i,n) = (v2d(i,1,n)-v2dm(i,n))**2
-      DO m=2,MEMBER
-        v2ds(i,n) = v2ds(i,n) + (v2d(i,m,n)-v2dm(i,n))**2
-      END DO
-      v2ds(i,n) = SQRT(v2ds(i,n) / REAL(MEMBER-1,r_size))
-    END DO
-!$OMP END PARALLEL DO
-  END DO
+  call mpi_timer('', 2)
 
+  call enssprd_grd(MEMBER, nens, nij1, v3d, v2d, v3ds, v2ds)
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:calc_spread:',rrtimer-rrtimer00
-  rrtimer00=rrtimer
+  call mpi_timer('write_enssprd:enssprd_grd:', 2, barrier=MPI_COMM_e)
 
+  call gather_grd_mpi(msprd_rank_e, v3ds, v2ds, v3dg, v2dg)
 
-  CALL gather_grd_mpi(lastmem_rank_e,v3ds,v2ds,v3dg,v2dg)
+  call mpi_timer('write_enssprd:gather_grd_mpi:', 2)
 
+  if (myrank_e == msprd_rank_e) then
+!    call state_trans_inv(v3dg)              !! do not transform the spread output
+    call write_restart(filename, v3dg, v2dg) !!
 
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:gather_grd_mpi:',rrtimer-rrtimer00
-  rrtimer00=rrtimer
+    call mpi_timer('write_enssprd:write_restart:', 2)
+  end if
 
+  return
+end subroutine write_enssprd
 
-  IF(myrank_e == lastmem_rank_e) THEN
-!    call state_trans_inv(v3dg)             !!
-    call write_restart(file_sprd,v3dg,v2dg)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
-
-
-!  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### write_ensmspr_mpi:write_spread:',rrtimer-rrtimer00
-  rrtimer00=rrtimer
-
-
-  END IF
-
-  RETURN
-END SUBROUTINE write_ensmspr_mpi
-
-
-
+!-------------------------------------------------------------------------------
+! Read all observation data from files of various formats
+!-------------------------------------------------------------------------------
 subroutine read_obs_all_mpi(obs)
   implicit none
-
   type(obs_info), intent(out) :: obs(OBS_IN_NUM)
   integer :: iof, ierr
 
-  REAL(r_dble) :: rrtimer00,rrtimer
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer00 = MPI_WTIME()
+  call mpi_timer('', 2)
 
   if (myrank_a == 0) then
     call read_obs_all(obs)
+
+    call mpi_timer('read_obs_all_mpi:read_obs_all:', 2)
   end if
 
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()  
-  WRITE(6,'(A,F10.2)') '###### read_obs_all_mpi:read_obs_all:',rrtimer-rrtimer00
-  rrtimer00=rrtimer
+  call mpi_timer('', 2, barrier=MPI_COMM_a)
 
   do iof = 1, OBS_IN_NUM
     call MPI_BCAST(obs(iof)%nobs, 1, MPI_INTEGER, 0, MPI_COMM_a, ierr)
@@ -1408,200 +1396,151 @@ subroutine read_obs_all_mpi(obs)
     call MPI_BCAST(obs(iof)%meta, max_obs_info_meta, MPI_r_size, 0, MPI_COMM_a, ierr)
   end do ! [ iof = 1, OBS_IN_NUM ]
 
-  CALL MPI_BARRIER(MPI_COMM_a,ierr)
-  rrtimer = MPI_WTIME()
-  WRITE(6,'(A,F10.2)') '###### read_obs_all_mpi:bcast:',rrtimer-rrtimer00
-  rrtimer00=rrtimer
+  call mpi_timer('read_obs_all_mpi:mpi_bcast:', 2)
 
   return
 end subroutine read_obs_all_mpi
 
+!-------------------------------------------------------------------------------
+! Read all observation data from files of various formats
+!-------------------------------------------------------------------------------
+subroutine get_nobs_da_mpi(nobs)
+  implicit none
+  integer, intent(out) :: nobs
+  character(filelenmax) :: obsdafile
+  character(11) :: obsda_suffix = '.000000.dat'
+  integer :: ierr
 
+! read from all available data by every processes
+!-----------------------------
+!  if ((ens_mygroup >= 1 .and. ens_mygroup <= MEMBER) .or. &
+!      ens_mygroup == mmdetin) then
+!    if (ens_mygroup <= MEMBER) then
+!      call file_member_replace(ens_mygroup, OBSDA_IN_BASENAME, obsdafile)
+!    else if (ens_mygroup == mmean) then
+!      obsdafile = OBSDA_MEAN_IN_BASENAME
+!    else if (ens_mygroup == mmdet) then
+!      obsdafile = OBSDA_MDET_IN_BASENAME
+!    end if
+!    write (obsda_suffix(2:7), '(I6.6)') myrank_d
+!#ifdef H08
+!    call get_nobs(trim(obsdafile) // obsda_suffix, 8, nobs) ! H08
+!#else
+!    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs)
+!#endif
+!  end if
 
-!!-----------------------------------------------------------------------
-!! Get number of observations from ensemble obs2 data,
-!! assuming all members have the identical obs records
-!!  -- 12/30/2013, Guo-Yuan Lien
-!!-----------------------------------------------------------------------
+! read by process 0 and broadcast
+!-----------------------------
+  if (myrank_e == 0) then
+    call file_member_replace(1, OBSDA_IN_BASENAME, obsdafile)
+    write (obsda_suffix(2:7), '(I6.6)') myrank_d
+#ifdef H08
+    call get_nobs(trim(obsdafile) // obsda_suffix, 8, nobs) ! H08
+#else
+    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs)
+#endif
+  end if
+  call MPI_BCAST(nobs, 1, MPI_INTEGER, 0, MPI_COMM_e, ierr)
+!-----------------------------
+
+  return
+end subroutine get_nobs_da_mpi
+
+!-------------------------------------------------------------------------------
+! MPI timer
+!-------------------------------------------------------------------------------
+subroutine mpi_timer(sect_name, level, barrier)
+  implicit none
+  character(len=*), intent(in) :: sect_name
+  integer, intent(in) :: level
+  integer, intent(in), optional :: barrier
+
+  character(len=timer_name_width) :: sect_name_tmp
+  character(len=14) :: sect_prefix_1
+  character(len=12) :: sect_prefix_2
+  real(r_dble) :: timer_before_barrier
+  real(r_dble) :: timer_after_barrier
+  integer :: i, ierr
+  logical :: initialized
+
+  timer_before_barrier = MPI_WTIME()
+  timer_after_barrier = timer_before_barrier
+
+  if (present(barrier)) then
+    if (barrier /= MPI_COMM_NULL) then
+      call MPI_BARRIER(barrier, ierr)
+      timer_after_barrier = MPI_WTIME()
+    end if
+  end if
+
+  initialized = .true.
+  if (timer_save(level) < 0.0d0) then
+    initialized = .false.
+    do i = level-1, 1, -1
+      if (timer_save(i) >= 0.0d0) then
+        timer_save(level) = timer_save(i)
+        exit
+      end if
+    end do
+  end if
+
+  do i = max_timer_levels, level, -1
+    if (timer_save(i) >= 0.0d0) then
+      select case (i)
+      case (1)
+        sect_prefix_1 = '##### TIMER # '
+        sect_prefix_2 = ''
+      case (2)
+        sect_prefix_1 = ' #### TIMER # '
+        sect_prefix_2 = '...'
+      case (3)
+        sect_prefix_1 = '  ### TIMER # '
+        sect_prefix_2 = '......'
+      case (4)
+        sect_prefix_1 = '   ## TIMER # '
+        sect_prefix_2 = '.........'
+      case (5)
+        sect_prefix_1 = '    # TIMER # '
+        sect_prefix_2 = '............'
+      end select
+
+      if (i == level .and. initialized .and. trim(sect_name) /= '') then
+        sect_name_tmp = sect_name ! to left-align the text
+        write (6,'(3A,2F14.6,A)') sect_prefix_1, trim(sect_prefix_2), sect_name_tmp, &
+                                  timer_before_barrier - timer_save(i), &
+                                  timer_after_barrier - timer_save(i)
+      else if (timer_after_barrier - timer_save(i) >= timer_neglect) then
+        if (i == level .and. initialized) then
+          sect_name_tmp = ' (wait)'
+        else
+          sect_name_tmp = ' (unknown)'
+        end if
+        if (timer_before_barrier - timer_save(i) >= timer_neglect) then
+          write (6,'(3A,2F14.6,A)') sect_prefix_1, trim(sect_prefix_2), sect_name_tmp, &
+                                    timer_before_barrier - timer_save(i), &
+                                    timer_after_barrier - timer_save(i)
+        else
+          write (6,'(3A,14x,F14.6,A)') sect_prefix_1, trim(sect_prefix_2), sect_name_tmp, &
+                                       timer_after_barrier - timer_save(i)
+        end if
+      end if
+    end if
+
+    if (i == level) then
+      timer_save(i) = timer_after_barrier
+    else
+      timer_save(i) = -9.0d10 ! reset the timer for all levels under this level
+    end if
+
+  end do
+
+  return
+end subroutine mpi_timer
+
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)
-!  IMPLICIT NONE
-!  CHARACTER(*),INTENT(IN) :: obsfile
-!  INTEGER,INTENT(IN) :: nrec
-!  INTEGER,INTENT(OUT) :: nn
-!  CHARACTER(LEN=LEN(obsfile)) :: obsfile1
-!  INTEGER :: ms1,ms2,ierr
-
-!  IF(myrank == 0) THEN
-!    ms1 = LEN(obsfile)-6
-!    ms2 = LEN(obsfile)-4
-!    obsfile1 = obsfile
-!    WRITE(obsfile1(ms1:ms2),'(I3.3)') 1
-!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading a file ',obsfile1
-!    CALL get_nobs(obsfile1,nrec,nn)
-!  END IF
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!  CALL MPI_BCAST(nn,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-
-!  RETURN
-!END SUBROUTINE get_nobs_mpi
-!!-----------------------------------------------------------------------
-!! Read ensemble obs2 observation data and ALLREDUCE of hdxf and qc
-!!  -- 12/30/2013, Guo-Yuan Lien (do not consider mpibufsize)
-!!-----------------------------------------------------------------------
 !SUBROUTINE read_obs2_mpi(obsfile,nn,nbv,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,hdxf,iqc)
-!  IMPLICIT NONE
-!  CHARACTER(*),INTENT(IN) :: obsfile
-!  INTEGER,INTENT(IN) :: nn
-!  INTEGER,INTENT(IN) :: nbv
-!  REAL(r_size),INTENT(OUT) :: elem(nn)
-!  REAL(r_size),INTENT(OUT) :: rlon(nn)
-!  REAL(r_size),INTENT(OUT) :: rlat(nn)
-!  REAL(r_size),INTENT(OUT) :: rlev(nn)
-!  REAL(r_size),INTENT(OUT) :: odat(nn)
-!  REAL(r_size),INTENT(OUT) :: oerr(nn)
-!  REAL(r_size),INTENT(OUT) :: otyp(nn)
-!  REAL(r_size),INTENT(OUT) :: tdif(nn)
-!  REAL(r_size),INTENT(OUT) :: hdxf(nn,nbv)
-!  INTEGER,INTENT(OUT) :: iqc(nn,nbv)
-!  CHARACTER(LEN=LEN(obsfile)) :: obsfile1
-!  INTEGER :: l,im,n
-!  INTEGER :: MPI_C,MPI_G,MPI_G_WORLD,ierr
-!  INTEGER :: ms1,ms2
-!  INTEGER,ALLOCATABLE :: useranks(:)
-
-!  hdxf = 0.0d0
-!  iqc = 0
-!  ms1 = LEN(obsfile)-6
-!  ms2 = LEN(obsfile)-4
-!  obsfile1 = obsfile
-!  l=0
-!  DO
-!    im = myrank+1 + nprocs * l
-!    IF(im > nbv) EXIT
-!    WRITE(obsfile1(ms1:ms2),'(I3.3)') im
-!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading a file ',obsfile1
-!    CALL read_obs2(obsfile1,nn,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,hdxf(:,im),iqc(:,im))
-!    l = l+1
-!  END DO
-!!
-!! if the total number of processors is greater then the ensemble size,
-!! broadcast the first 8 observation records(elm/lon/lat/.../dif)
-!! from myrank=nbv-1 to the rest of processors that didn't read anything.
-!!
-!  IF(nprocs > nbv) THEN
-!    ALLOCATE(useranks(nprocs-nbv+1))
-!    do n = nbv, nprocs
-!      useranks(n-nbv+1) = n-1
-!    end do
-!    call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_G_WORLD,ierr)
-!    call MPI_GROUP_INCL(MPI_G_WORLD,nprocs-nbv+1,useranks,MPI_G,ierr)
-!    call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_G,MPI_C,ierr)
-
-!    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!    IF(myrank+1 >= nbv) THEN
-!      CALL MPI_BCAST(elem,nn,MPI_r_size,0,MPI_C,ierr)
-!      CALL MPI_BCAST(rlon,nn,MPI_r_size,0,MPI_C,ierr)
-!      CALL MPI_BCAST(rlat,nn,MPI_r_size,0,MPI_C,ierr)
-!      CALL MPI_BCAST(rlev,nn,MPI_r_size,0,MPI_C,ierr)
-!      CALL MPI_BCAST(odat,nn,MPI_r_size,0,MPI_C,ierr)
-!      CALL MPI_BCAST(oerr,nn,MPI_r_size,0,MPI_C,ierr)
-!      CALL MPI_BCAST(otyp,nn,MPI_r_size,0,MPI_C,ierr)
-!      CALL MPI_BCAST(tdif,nn,MPI_r_size,0,MPI_C,ierr)
-!    END IF
-!    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!    DEALLOCATE(useranks)
-!  END IF
-
-!  CALL allreduce_obs_mpi(nn,nbv,hdxf,iqc)
-
-!  RETURN
-!END SUBROUTINE read_obs2_mpi
-!!!!!!!!!-----------------------------------------------------------------------
-!!!!!!!!!
-!!!!!!!!!-----------------------------------------------------------------------
-!!!!!!!!SUBROUTINE obs_info_allreduce(obs)
-!!!!!!!!  IMPLICIT NONE
-!!!!!!!!  TYPE(obs_info),INTENT(INOUT) :: obs
-
-!!!!!!!!  ALLOCATE( obs%dat (obs%nobs) )
-
-!!!!!!!!  CALL MPI_ALLREDUCE(ibufs,ibufr,obs%nobs,MPI_INTEGER,MPI_MAX,&
-!!!!!!!!          & MPI_COMM_WORLD,ierr)
-
-
-!!!!!!!!  RETURN
-!!!!!!!!END SUBROUTINE obs_info_allreduce
-!!-----------------------------------------------------------------------
-!! MPI_ALLREDUCE of hdxf and qc
-!!-----------------------------------------------------------------------
 !SUBROUTINE allreduce_obs_mpi(n,nbv,hdxf,iqc)
-!  INTEGER,INTENT(IN) :: n
-!  INTEGER,INTENT(IN) :: nbv
-!  REAL(r_size),INTENT(INOUT) :: hdxf(n,nbv)
-!  INTEGER,INTENT(INOUT) :: iqc(n,nbv)
-!  REAL(r_size) :: bufs(mpibufsize)
-!  REAL(r_size) :: bufr(mpibufsize)
-!  REAL(r_size),ALLOCATABLE :: tmp(:,:)
-!  INTEGER :: ibufs(mpibufsize)
-!  INTEGER :: ibufr(mpibufsize)
-!  INTEGER,ALLOCATABLE :: itmp(:,:)
-!  INTEGER :: i,j,k
-!  INTEGER :: iter,niter
-!  INTEGER :: ierr
 
-!  niter = CEILING(REAL(n*nbv)/REAL(mpibufsize))
-!  ALLOCATE(tmp(mpibufsize,niter))
-!  ALLOCATE(itmp(mpibufsize,niter))
-!  bufs=0.0d0
-!  ibufs=0
-!  i=1
-!  iter=1
-!  DO k=1,nbv
-!    DO j=1,n
-!      bufs(i) = hdxf(j,k)
-!      ibufs(i) = iqc(j,k)
-!      i=i+1
-!      IF(i > mpibufsize) THEN
-!        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!        CALL MPI_ALLREDUCE(bufs,bufr,mpibufsize,MPI_r_size,MPI_SUM,&
-!          & MPI_COMM_WORLD,ierr)
-!        tmp(:,iter) = bufr
-!        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!        CALL MPI_ALLREDUCE(ibufs,ibufr,mpibufsize,MPI_INTEGER,MPI_MAX,&
-!          & MPI_COMM_WORLD,ierr)
-!        itmp(:,iter) = ibufr
-!        i=1
-!        iter=iter+1
-!      END IF
-!    END DO
-!  END DO
-!  IF(iter == niter) THEN
-!    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!    CALL MPI_ALLREDUCE(bufs,bufr,mpibufsize,MPI_r_size,MPI_SUM,&
-!      & MPI_COMM_WORLD,ierr)
-!    tmp(:,iter) = bufr
-!    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!    CALL MPI_ALLREDUCE(ibufs,ibufr,mpibufsize,MPI_INTEGER,MPI_MAX,&
-!      & MPI_COMM_WORLD,ierr)
-!    itmp(:,iter) = ibufr
-!  END IF
-
-!  i=1
-!  iter=1
-!  DO k=1,nbv
-!    DO j=1,n
-!      hdxf(j,k) = tmp(i,iter)
-!      iqc(j,k) = itmp(i,iter)
-!      i=i+1
-!      IF(i > mpibufsize) THEN
-!        i=1
-!        iter=iter+1
-!      END IF
-!    END DO
-!  END DO
-!  DEALLOCATE(tmp,itmp)
-
-!  RETURN
-!END SUBROUTINE allreduce_obs_mpi
-
+!===============================================================================
 END MODULE common_mpi_scale

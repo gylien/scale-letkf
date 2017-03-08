@@ -18,7 +18,7 @@ OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # Directory for SCALE-LETKF output
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
+MODELDIR="$DIR/../../bin"                                            # Directory of the SCALE model executables
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
 DATA_TOPO="$DDIR/exp/testcase_45km_4p_l36_data"                      # Directory of the prepared topo files
@@ -78,9 +78,9 @@ OBSOPE_SEPARATE[2]=1
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=10800     # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=32400     # SCALE forecast time when assimilation window ends (second)
-LCYCLE=21600       # Length of a GFS-LETKF cycle (second)
+WINDOW_S=10800     # SCALE forecast time when the assimilation window starts (second)
+WINDOW_E=32400     # SCALE forecast time when the assimilation window ends (second)
+LCYCLE=21600       # Length of a DA cycle (second)
 LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================

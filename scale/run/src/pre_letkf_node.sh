@@ -13,7 +13,7 @@ if (($# < 12)); then
 
 [pre_letkf_node.sh]
 
-Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO OBSOUT_OPT [ADAPTINFL RTPS_INFL_OUT NOBS_OUT MEMBERSEQ]
+Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO OBSOUT_OPT [ADAPTINFL SPRD_OUT RTPS_INFL_OUT NOBS_OUT]
 
   MYRANK      My rank number (not used)
   STIME
@@ -28,9 +28,9 @@ Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END 
   TOPO        Basename of SCALE topography files
   OBSOUT_OPT
   ADAPTINFL
+  SPRD_OUT
   RTPS_INFL_OUT
   NOBS_OUT
-  MEMBERSEQ
 
 EOF
   exit 1
@@ -49,9 +49,9 @@ SLOT_BASE="$1"; shift
 TOPO="$1"; shift
 OBSOUT_OPT="$1"; shift
 ADAPTINFL="${1:-0}"; shift
+SPRD_OUT="${1:-1}"; shift
 RTPS_INFL_OUT="${1:-0}"; shift
-NOBS_OUT="${1:-0}"; shift
-MEMBERSEQ=${1:-$MEMBER}
+NOBS_OUT="${1:-0}"
 
 #===============================================================================
 
@@ -72,6 +72,10 @@ for iobs in $(seq $OBSNUM); do
   fi
 done
 
+DET_RUN_TF='.false.'
+if ((DET_RUN == 1)); then
+  DET_RUN_TF='.true.'
+fi
 OBSDA_IN='.false.'
 if ((OBSOPE_RUN == 1)); then
   OBSDA_IN='.true.'
@@ -80,13 +84,17 @@ OBSDA_OUT='.false.'
 if ((OBSOUT_OPT <= 2)); then
   OBSDA_OUT='.true.'
 fi
+SPRD_OUT_TF='.true.'
+if ((SPRD_OUT == 0)); then
+  SPRD_OUT_TF='.false.'
+fi
 INFL_MUL_ADAPTIVE='.false.'
 if ((ADAPTINFL == 1)); then
   INFL_MUL_ADAPTIVE='.true.'
 fi
-RELAX_SPREAD_OUT='.false.'
+RTPS_INFL_OUT_TF='.false.'
 if ((RTPS_INFL_OUT == 1)); then
-  RELAX_SPREAD_OUT='.true.'
+  RTPS_INFL_OUT_TF='.true.'
 fi
 NOBS_OUT_TF='.false.'
 if ((NOBS_OUT == 1)); then
@@ -96,7 +104,8 @@ fi
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.letkf | \
-    sed -e "/!--MEMBER--/a MEMBER = $MEMBERSEQ," \
+    sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
+        -e "/!--DET_RUN--/a DET_RUN = ${DET_RUN_TF}," \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
@@ -109,17 +118,15 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = $LTIMESLOT.D0," \
         -e "/!--OBSDA_IN--/a OBSDA_IN = $OBSDA_IN," \
         -e "/!--OBSDA_IN_BASENAME--/a OBSDA_IN_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext\"," \
-        -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${TMPOUT}/${ATIME}/gues/@@@@/init\"," \
-        -e "/!--GUES_OUT_MEAN_BASENAME--/a GUES_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/gues/mean/init\"," \
-        -e "/!--GUES_OUT_SPRD_BASENAME--/a GUES_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/gues/sprd/init\"," \
+        -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${TMPOUT}/${ATIME}/anal/@@@@/init\"," \
+        -e "/!--GUES_SPRD_OUT--/a GUES_SPRD_OUT = ${SPRD_OUT_TF}," \
         -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/anal/@@@@/init\"," \
-        -e "/!--ANAL_OUT_MEAN_BASENAME--/a ANAL_OUT_MEAN_BASENAME = \"${TMPOUT}/${ATIME}/anal/mean/init\"," \
-        -e "/!--ANAL_OUT_SPRD_BASENAME--/a ANAL_OUT_SPRD_BASENAME = \"${TMPOUT}/${ATIME}/anal/sprd/init\"," \
+        -e "/!--ANAL_SPRD_OUT--/a ANAL_SPRD_OUT = ${SPRD_OUT_TF}," \
         -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${TOPO}\"," \
         -e "/!--INFL_MUL_ADAPTIVE--/a INFL_MUL_ADAPTIVE = ${INFL_MUL_ADAPTIVE}," \
         -e "/!--INFL_MUL_IN_BASENAME--/a INFL_MUL_IN_BASENAME = \"${TMPOUT}/${ATIME}/diag/infl/init\"," \
         -e "/!--INFL_MUL_OUT_BASENAME--/a INFL_MUL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/infl/init\"," \
-        -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RELAX_SPREAD_OUT}," \
+        -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RTPS_INFL_OUT_TF}," \
         -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/rtps/init\"," \
         -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
         -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/nobs/init\"," \

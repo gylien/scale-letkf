@@ -183,6 +183,18 @@ elif [ "$MPI_TYPE" = 'openmpi' ]; then
     exit $res
   fi
 
+elif [ "$MPI_TYPE" = 'impi' ]; then
+
+  NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
+
+  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} -gwdir $progdir ./$progbase $CONF $STDOUT $ARGS
+  res=$?
+  if ((res != 0)); then
+    echo "[Error] $$MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} -gwdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
+    echo "        Exit code: $res" >&2
+    exit $res
+  fi
+
 elif [ "$MPI_TYPE" = 'K' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
@@ -289,6 +301,22 @@ elif [ "$MPI_TYPE" = 'openmpi' ]; then
   res=$?
   if ((res != 0)); then
     echo "[Error] $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS" >&2
+    echo "        Exit code: $res" >&2
+    exit $res
+  fi
+
+elif [ "$MPI_TYPE" = 'impi' ]; then
+
+  if [ "$PROC_OPT" == 'all' ]; then
+    NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
+  elif [ "$PROC_OPT" == 'one' ]; then
+    NNP=1
+  fi
+
+  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} -gwdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS
+  res=$?
+  if ((res != 0)); then
+    echo "[Error] $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} -gwdir $SCRP_DIR $pdbash_exec $SCRIPT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
@@ -586,7 +614,7 @@ local scrpname=$(basename $JOBSCRP)
 res=$(cd $rundir && pjsub $scrpname 2>&1)
 echo $res
 
-if [ -z "$(echo $res | grep '\[ERR.\]')" ]; then
+if [ -z "$(echo $res | grep 'ERR')" ]; then
   jobid=$(echo $res | grep 'submitted' | cut -d ' ' -f 6)
   if [ -z "$jobid" ]; then
     echo "[Error] $FUNCNAME: Error found when submitting a job." >&2
@@ -604,9 +632,65 @@ fi
 
 job_end_check_PJM () {
 #-------------------------------------------------------------------------------
-# Check if a K-computer job has ended.
+# Check if a PJM job has ended.
 #
 # Usage: job_end_check_PJM JOBID
+#
+#   JOBID  Job ID monitored
+#
+# Return variables:
+#   $jobstat    Job status
+#-------------------------------------------------------------------------------
+
+if (($# < 1)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local JOBID="$1"
+
+#-------------------------------------------------------------------------------
+
+local res=0
+local tmp
+while true; do
+  tmp=$(pjstat ${JOBID} | tail -n 1)
+  if [ -z "$(echo $tmp | grep ${JOBID})" ]; then
+    break
+  fi
+  sleep 10s
+done
+
+tmp=$(pjstat -H ${JOBID} | tail -n 1)
+if [ -z "$(echo $tmp | grep ${JOBID})" ]; then
+  echo "[Error] $FUNCNAME: Cannot find PJM job ${JOBID}." >&2
+  return 99
+else
+  jobstat=$(echo $tmp | cut -d ' ' -f3)
+  if [ "$jobstat" = 'REJECT' ] || [ "$jobstat" = 'CANCEL' ]; then
+    res=98
+  elif [ "$jobstat" = 'ERROR' ]; then
+    res=97
+  fi  
+fi
+
+if ((res != 0)); then
+  echo "[Error] $FUNCNAME: PJM job $JOBID ended with errors." >&2
+  echo "        status      = $jobstat" >&2
+  return $res
+fi
+return 0
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+job_end_check_PJM_K () {
+#-------------------------------------------------------------------------------
+# Check if a PJM job has ended (specialized for the K computer).
+#
+# Usage: job_end_check_PJM_K JOBID
 #
 #   JOBID  Job ID monitored
 #
@@ -668,7 +752,7 @@ return 0
 
 job_submit_torque () {
 #-------------------------------------------------------------------------------
-# Submit a PBS job.
+# Submit a torque job.
 #
 # Usage: job_submit_torque
 #
@@ -708,7 +792,7 @@ echo "qsub Job $jobid submitted."
 
 job_end_check_torque () {
 #-------------------------------------------------------------------------------
-# Check if a K-computer job has ended.
+# Check if a torque job has ended.
 #
 # Usage: job_end_check_torque JOBID
 #

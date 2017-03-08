@@ -11,7 +11,8 @@ program scaleles_init_ens
   use common_mpi_scale, only: &
      proc2mem, &
      nitmax, &
-     set_mem_node_proc
+     set_mem_node_proc, &
+     mpi_timer
 
   use scale_stdio, only: &
      H_LONG, &
@@ -34,13 +35,11 @@ program scaleles_init_ens
 
   implicit none
 
-  REAL(8) :: rtimer00,rtimer
-  INTEGER :: ierr, it, its, ite, im
-  CHARACTER(7) :: stdoutf='-000000'
-  CHARACTER(11) :: timer_fmt='(A30,F10.2)'
+  integer :: it, its, ite, im, ierr
+  character(7) :: stdoutf='-000000'
 
-  CHARACTER(len=H_LONG) :: confname='0000/init.conf'
-  CHARACTER(len=H_LONG) :: confname_dummy
+  character(len=H_LONG) :: confname = '0000/init.conf'
+  character(len=H_LONG) :: confname_dummy
 
   integer :: universal_comm
   integer :: universal_nprocs
@@ -53,7 +52,7 @@ program scaleles_init_ens
 
   integer :: NUM_DOMAIN
   integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
-  character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim)
+  character(len=H_LONG) :: CONF_FILES(PRC_DOMAIN_nlim)
 
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
@@ -70,7 +69,7 @@ program scaleles_init_ens
   ! start MPI
   call PRC_MPIstart( universal_comm ) ! [OUT]
 
-  rtimer00 = MPI_WTIME()
+  call mpi_timer('', 1)
 
   call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
                             universal_nprocs, & ! [OUT]
@@ -115,20 +114,14 @@ program scaleles_init_ens
     call system(trim(cmd1))
   end if
 
-  CALL MPI_BARRIER(universal_comm,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(PRE_SCRIPT):',rtimer-rtimer00
-  rtimer00=rtimer
+  call mpi_timer('PRE_SCRIPT', 1, barrier=universal_comm)
 
 !-----------------------------------------------------------------------
 
   call set_common_conf(universal_nprocs)
-  call set_mem_node_proc(MEMBER+1,NNODES,PPN,MEM_NODES,MEM_NP)
+  call set_mem_node_proc(MEMBER+2)
 
-  CALL MPI_BARRIER(universal_comm,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(INITIALIZE):',rtimer-rtimer00
-  rtimer00=rtimer
+  call mpi_timer('INITIALIZE', 1, barrier=universal_comm)
 
 !-----------------------------------------------------------------------
 ! Run SCALE-RM_init
@@ -191,10 +184,7 @@ program scaleles_init_ens
   endif
   close(IO_FID_CONF)
 
-  CALL MPI_BARRIER(universal_comm,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(SCALE_RM):',rtimer-rtimer00
-  rtimer00=rtimer
+  call mpi_timer('SCALE_RM', 1, barrier=universal_comm)
 
 !-----------------------------------------------------------------------
 ! Post-processing scripts
@@ -206,10 +196,7 @@ program scaleles_init_ens
     call system(trim(cmd2))
   end if
 
-  CALL MPI_BARRIER(universal_comm,ierr)
-  rtimer = MPI_WTIME()
-  WRITE(6,timer_fmt) '### TIMER(POST_SCRIPT):',rtimer-rtimer00
-  rtimer00=rtimer
+  call mpi_timer('POST_SCRIPT', 1, barrier=universal_comm)
 
 !-----------------------------------------------------------------------
 ! Finalize

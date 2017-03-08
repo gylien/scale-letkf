@@ -48,38 +48,41 @@ echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
 cat > $jobscrp << EOF
 #!/bin/sh
-##PBS -N ${myname1}_${SYSNAME}
-#PBS -l nodes=${NNODES}:ppn=${PPN}
-##PBS -l walltime=${TIME_LIMIT}
-#PBS -W umask=027
-##PBS -k oe
-
-ulimit -s unlimited
-
-HOSTLIST=\$(cat \$PBS_NODEFILE | sort | uniq)
-HOSTLIST=\$(echo \$HOSTLIST | sed 's/  */,/g')
-export MPI_UNIVERSE="\$HOSTLIST $((PPN*THREADS))"
-
-export OMP_NUM_THREADS=${THREADS}
-#export PARALLEL=${THREADS}
-
-export FORT_FMT_RECL=400
-
-cd \$PBS_O_WORKDIR
+#PJM -L rscgrp=regular-flat
+#PJM -L node=${NNODES}
+#PJM -L elapse=${TIME_LIMIT}
+#PJM --mpi proc=$((NNODES*PPN))
+#PJM --omp thread=${THREADS}
+#PJM -g gh51
+##PJM -j
 
 rm -f machinefile
-cp -f \$PBS_NODEFILE machinefile
+for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
+  for ippn in \$(seq $PPN); do
+    echo "\$inode" >> machinefile
+  done
+done
+
+module load hdf5/1.8.17
+module load netcdf/4.4.1
+module load netcdf-fortran/4.4.3
+
+ulimit -s unlimited
+export OMP_STACKSIZE=128m
 
 ./${myname1}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
 EOF
 
-echo "[$(datetime_now)] Run ${myname1} job on PBS"
+#===============================================================================
+# Run the job
+
+echo "[$(datetime_now)] Run ${myname1} job on PJM"
 echo
 
-job_submit_torque $jobscrp
+job_submit_PJM $jobscrp
 echo
 
-job_end_check_torque $jobid
+job_end_check_PJM $jobid
 res=$?
 
 #===============================================================================

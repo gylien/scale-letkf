@@ -18,8 +18,8 @@ OUTDIR="$DDIR/exp/testcase_PAWR_1km_4p"     # Directory for SCALE-LETKF output
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin/${SCALE_SYS}"                               # Directory of the SCALE model executables
-DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
+MODELDIR="$DIR/../../bin"                                            # Directory of the SCALE model executables
+DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
 DATA_TOPO="$DDIR/exp/testcase_PAWR_1km_4p_data"                      # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
@@ -73,9 +73,9 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=30        # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=30        # SCALE forecast time when assimilation window ends (second)
-LCYCLE=30          # Length of a GFS-LETKF cycle (second)
+WINDOW_S=30        # SCALE forecast time when the assimilation window starts (second)
+WINDOW_E=30        # SCALE forecast time when the assimilation window ends (second)
+LCYCLE=30          # Length of a DA cycle (second)
 LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================

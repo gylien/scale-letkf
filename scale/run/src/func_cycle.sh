@@ -40,14 +40,11 @@ Configuration files:
 Steps:
 $(for i in $(seq $nsteps); do echo "  ${i}. ${stepname[$i]}"; done)
 
-Usage: $myname [STIME ETIME MEMBERS ISTEP FSTEP TIME_LIMIT]
+Usage: $myname [STIME ETIME ISTEP FSTEP TIME_LIMIT]
 
   STIME       Time of the first cycle (format: YYYY[MMDDHHMMSS])
   ETIME       Time of the last  cycle (format: YYYY[MMDDHHMMSS])
                (default: same as STIME)
-  MEMBERS     List of forecast members
-               all:     Run all members (default)
-               '2 4 6': Run members 2, 4, 6
   ISTEP       The initial step in the first cycle from which this script starts
                (default: the first step)
   FSTEP       The final step in the last cycle by which this script ends
@@ -66,7 +63,6 @@ Usage: $myname [STIME ETIME MEMBERS ISTEP FSTEP TIME_LIMIT]
 
 STIME=${1:-$STIME}; shift
 ETIME=${1:-$ETIME}; shift
-MEMBERS=${1:-$MEMBERS}; shift
 ISTEP=${1:-$ISTEP}; shift
 FSTEP=${1:-$FSTEP}; shift
 TIME_LIMIT="${1:-$TIME_LIMIT}"
@@ -104,19 +100,6 @@ fi
 
 STIME=$(datetime $STIME)
 ETIME=$(datetime ${ETIME:-$STIME})
-if [ -z "$MEMBERS" ] || [ "$MEMBERS" = 'all' ]; then
-  MEMBERS='all'
-#  MEMBERS="$(printf "$MEMBER_FMT " $(seq $MEMBER))"
-else
-  MEMBER=0
-  tmpstr=''
-  for m in $MEMBERS; do
-    MEMBER=$((MEMBER+1))
-    tmpstr="$tmpstr$(printf $MEMBER_FMT $((10#$m))) "
-    (($? != 0)) && exit 1
-  done
-  MEMBERS="$tmpstr"
-fi
 ISTEP=${ISTEP:-1}
 FSTEP=${FSTEP:-$nsteps}
 TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
@@ -143,15 +126,15 @@ if ((BDY_FORMAT >= 1)); then
   if [ -z "$PARENT_REF_TIME" ]; then
     PARENT_REF_TIME=$STIME
     for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
-      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/meanf/history.pe000000.nc" ]; then
+      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/${BDY_MEAN}/history.pe000000.nc" ]; then
         break
-      elif ((BDY_FORMAT == 2 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_WRF/${PARENT_REF_TIME}/mean/wrfout_${PARENT_REF_TIME}" ]; then
+      elif ((BDY_FORMAT == 2 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_WRF/${PARENT_REF_TIME}/${BDY_MEAN}/wrfout_${PARENT_REF_TIME}" ]; then
         break
-      elif ((BDY_FORMAT == 2 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_WRF/mean/wrfout_${PARENT_REF_TIME}" ]; then
+      elif ((BDY_FORMAT == 2 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_WRF/${BDY_MEAN}/wrfout_${PARENT_REF_TIME}" ]; then
         break
-      elif ((BDY_FORMAT == 4 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_GRADS/${PARENT_REF_TIME}/mean/atm_${PARENT_REF_TIME}.grd" ]; then
+      elif ((BDY_FORMAT == 4 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_GRADS/${PARENT_REF_TIME}/${BDY_MEAN}/atm_${PARENT_REF_TIME}.grd" ]; then
         break
-      elif ((BDY_FORMAT == 4 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_GRADS/mean/atm_${PARENT_REF_TIME}.grd" ]; then
+      elif ((BDY_FORMAT == 4 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_GRADS/${BDY_MEAN}/atm_${PARENT_REF_TIME}.grd" ]; then
         break
       elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
         echo "[Error] Cannot find boundary files." >&2
@@ -177,7 +160,7 @@ for vname in DIR INDIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BD
              LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT PARENT_REF_TIME \
              ENABLE_PARAM_USER OCEAN_INPUT OCEAN_FORMAT LAND_INPUT LAND_FORMAT OBSNUM WINDOW_S WINDOW_E \
              LCYCLE LTIMESLOT MEMBER NNODES PPN THREADS SCALE_NP \
-             STIME ETIME MEMBERS ISTEP FSTEP FCSTOUT MAKEINIT OUT_OPT TOPOOUT_OPT \
+             STIME ETIME ISTEP FSTEP FCSTOUT MAKEINIT OUT_OPT TOPOOUT_OPT \
              LANDUSEOUT_OPT BDYOUT_OPT OBSOUT_OPT LOG_OPT LOG_TYPE; do
   printf '  %-20s = %s\n' $vname "${!vname}"
 done
@@ -421,7 +404,7 @@ else
     # anal
     #-------------------
     if ((loop == 1 && MAKEINIT != 1)); then
-      for m in $(seq $mmean); do
+      for m in $(seq $mtot); do
         for q in $(seq $mem_np); do
           path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
           echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
@@ -432,7 +415,7 @@ else
     # anal_ocean
     #-------------------
     if ((OCEAN_INPUT == 1)) && ((OCEAN_FORMAT == 0)); then
-      for m in $(seq $mmean); do
+      for m in $(seq $mtot); do
         for q in $(seq $mem_np); do
           path="${time}/anal/${name_m[$m]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
           echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
@@ -443,7 +426,7 @@ else
     # anal_land
     #-------------------
     if ((LAND_INPUT == 1)) && ((LAND_FORMAT == 0)); then
-      for m in $(seq $mmean); do
+      for m in $(seq $mtot); do
         for q in $(seq $mem_np); do
           path="${time}/anal/${name_m[$m]}/init_land$(printf $SCALE_SFX $((q-1)))"
           echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
@@ -465,7 +448,7 @@ else
           path=const/topo/topo.tar.gz
           echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
         else
-          for m in $(seq $((repeat_mems <= mmean ? repeat_mems : mmean))); do
+          for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
             for q in $(seq $mem_np); do
               pathin="${DATA_TOPO}/const/topo/topo$(printf $SCALE_SFX $((q-1)))"
               path="const/topo/topo$(printf $SCALE_SFX $((q-1)))"
@@ -524,7 +507,7 @@ else
           fi
           echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
         else
-          for m in $(seq $((repeat_mems <= mmean ? repeat_mems : mmean))); do
+          for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
             for q in $(seq $mem_np); do
               if ((LANDUSE_UPDATE == 1)); then
                 pathin="${DATA_LANDUSE}/${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
@@ -547,15 +530,15 @@ else
     #-------------------
     if ((BDY_FORMAT == 0)); then
       if ((BDY_ENS == 0)); then
-        for m in $(seq $((repeat_mems <= mmean ? repeat_mems : mmean))); do
+        for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
           for q in $(seq $mem_np); do
-            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}/boundary$(printf $SCALE_SFX $((q-1)))"
             path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
             echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
           done
         done
       elif ((BDY_ENS == 1)); then
-        for m in $(seq $mmean); do
+        for m in $(seq $mtot); do
           for q in $(seq $mem_np); do
             pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
             path="${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
@@ -602,7 +585,7 @@ else
       #-------------------
       if ((BDY_FORMAT != 0)); then
         if ((BDY_ENS == 1 && BDYOUT_OPT <= 1)); then
-#          for m in $(seq $mmean); do
+#          for m in $(seq $mtot); do
 #            path="${time}/bdy/${name_m[$m]}"
 #            echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #          done
@@ -611,39 +594,55 @@ else
         elif ((BDYOUT_OPT <= 2)); then
           path="${time}/bdy/mean"
           echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+          if ((DET_RUN == 1)); then
+            path="${time}/bdy/mdet"
+            echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+          fi
         fi
       fi
 
       # hist
       #-------------------
       if ((OUT_OPT <= 1)); then
-#        for m in $(seq $mmean); do
-#          mem=${name_m[$m]}
-#          [ "$mem" = 'mean' ] && mem='meanf'
-#          path="${time}/hist/${mem}"
+#        for m in $(seq $mtot); do
+#          path="${time}/hist/${name_m[$m]}"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #        done
         path="${time}/hist"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       elif ((OUT_OPT <= 2)); then
-        path="${time}/hist/meanf"
+        path="${time}/hist/mean"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        if ((DET_RUN == 1)); then
+          path="${time}/hist/mdet"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        fi
       fi
 
       # gues
       #-------------------
       if ((OUT_OPT <= 3)); then
-#        for m in $(seq $msprd); do
+#        for m in $(seq $mtot); do
 #          path="${atime}/gues/${name_m[$m]}"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #        done
+#        if ((SPRD_OUT == 1)); then
+#          path="${atime}/gues/sprd"
+#          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        fi
         path="${atime}/gues"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      elif ((OUT_OPT <= 5)); then
+      elif ((OUT_OPT <= 6)); then
         path="${atime}/gues/mean"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        path="${atime}/gues/sprd"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        if ((SPRD_OUT == 1)); then
+          path="${atime}/gues/sprd"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        fi
+        if ((DET_RUN == 1)); then
+          path="${atime}/gues/mdet"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        fi
 #        path="${atime}/gues/0001"
 #        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
@@ -651,17 +650,27 @@ else
       # anal
       #-------------------
       if ((OUT_OPT <= 4 || (OUT_OPT <= 5 && loop % OUT_CYCLE_SKIP == 0) || atime > ETIME)); then
-#        for m in $(seq $msprd); do
+#        for m in $(seq $mtot); do
 #          path="${atime}/anal/${name_m[$m]}"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #        done
+#        if ((SPRD_OUT == 1)); then
+#          path="${atime}/sprd/${name_m[$m]}"
+#          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        fi
         path="${atime}/anal"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      elif ((OUT_OPT <= 6)); then
+      elif ((OUT_OPT <= 7)); then
         path="${atime}/anal/mean"
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        path="${atime}/anal/sprd"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        if ((SPRD_OUT == 1)); then
+          path="${atime}/anal/sprd"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        fi
+        if ((DET_RUN == 1)); then
+          path="${atime}/anal/mdet"
+          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        fi
 #        path="${atime}/anal/0001"
 #        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
@@ -1029,12 +1038,8 @@ else
           if ((BDY_FORMAT == 1)); then
 
             if ((BDY_ENS == 1)); then
-              for m in $(seq $mmean); do
-                mem=${name_m[$m]}
-                if [ "$BDY_SCALE_DIR" = 'hist' ] && [ "$mem" = 'mean' ]; then
-                  mem='meanf'
-                fi
-#                for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}/history.*.nc 2> /dev/null); do
+              for m in $(seq $mtot); do
+#                for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}/history.*.nc 2> /dev/null); do
 #                  pathin="$ifile"
 #                  if ((BDY_ROTATING == 1)); then
 #                    path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
@@ -1047,7 +1052,7 @@ else
 #                    echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
 #                  fi
 #                done
-                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}"
+                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}"
                 if ((BDY_ROTATING == 1)); then
                   path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}"
                 else
@@ -1060,7 +1065,7 @@ else
                 fi
               done
             else
-#              for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf/history.*.nc 2> /dev/null); do
+#              for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${BDY_MEAN}/history.*.nc 2> /dev/null); do
 #                pathin="$ifile"
 #                if ((BDY_ROTATING == 1)); then
 #                  path="bdyorg/${time_bdy}/mean/${time_bdy}/$(basename $ifile)"
@@ -1073,11 +1078,7 @@ else
 #                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
 #                fi
 #              done
-              if [ "$BDY_SCALE_DIR" = 'hist' ]; then
-                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf"
-              else
-                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/mean"
-              fi
+              pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${BDY_MEAN}"
               if ((BDY_ROTATING == 1)); then
                 path="bdyorg/${time_bdy}/mean/${time_bdy}"
               else
@@ -1109,7 +1110,7 @@ else
             fi
 
             if ((BDY_ENS == 1)); then
-              for m in $(seq $mmean); do
+              for m in $(seq $mtot); do
                 for ifile in $(seq $filenum); do
                   if ((BDY_ROTATING == 1)); then
                     pathin="$data_bdy_i/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
@@ -1128,10 +1129,10 @@ else
             else
               for ifile in $(seq $filenum); do
                 if ((BDY_ROTATING == 1)); then
-                  pathin="$data_bdy_i/${time}/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+                  pathin="$data_bdy_i/${time}/${BDY_MEAN}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                   path="bdyorg/${time}/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                 else
-                  pathin="$data_bdy_i/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+                  pathin="$data_bdy_i/${BDY_MEAN}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                   path="bdyorg/const/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                 fi
                 if ((DISK_MODE_DATA_BDY == 2)); then
@@ -1195,7 +1196,7 @@ fi
 if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
-  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
+  MEMBER_RUN=$((repeat_mems <= mtot ? repeat_mems : mtot))
 fi
 
 if (pdrun all $PROC_OPT); then
@@ -1248,7 +1249,7 @@ fi
 if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
-  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
+  MEMBER_RUN=$((repeat_mems <= mtot ? repeat_mems : mtot))
 fi
 
 for it in $(seq $its $ite); do
@@ -1304,11 +1305,11 @@ else
 fi
 
 if ((BDY_ENS == 1)); then
-  MEMBER_RUN=$mmean
+  MEMBER_RUN=$mtot
 elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
-  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
+  MEMBER_RUN=$((repeat_mems <= mtot ? repeat_mems : mtot))
 fi
 
 mkinit=0
@@ -1376,11 +1377,11 @@ if ((BDY_FORMAT == 0)); then
 fi
 
 if ((BDY_ENS == 1)); then
-  MEMBER_RUN=$mmean
+  MEMBER_RUN=$mtot
 elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
-  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
+  MEMBER_RUN=$((repeat_mems <= mtot ? repeat_mems : mtot))
 fi
 
 mkinit=0
@@ -1454,7 +1455,7 @@ bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SI
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale $((MEMBER+1)) $iter
+       $mem_nodes $mem_np $TMPRUN/scale $mtot $iter
 fi
 
 mkinit=0
@@ -1480,7 +1481,7 @@ for it in $(seq $its $ite); do
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= mmean)); then
+    if ((m >= 1 && m <= mtot)); then
 #      if ((PERTURB_BDY == 1)); then
 #        ...
 #      fi
@@ -1514,8 +1515,8 @@ for it in $(seq $its $ite); do
       bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
            $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $land_base $bdy_base \
            $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
-           $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) \
-           cycle $bdy_start_time
+           $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $OUT_OPT \
+           cycle $bdy_start_time $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi
 
@@ -1549,13 +1550,14 @@ for it in $(seq $its $ite); do
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= mmean)); then
+    if ((m >= 1 && m <= mtot)); then
 #      if ((PERTURB_BDY == 1)); then
 #        ...
 #      fi
 
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $time \
-           ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT $OUT_OPT cycle $DELETE_MEMBER
+           ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT $OUT_OPT \
+           cycle $DELETE_MEMBER $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi
 
@@ -1598,7 +1600,7 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= mmean)); then
+    if ((m >= 1 && m <= mtot)); then
       bash $SCRP_DIR/src/pre_obsope.sh $MYRANK \
            $atime ${name_m[$m]}
     fi
@@ -1629,7 +1631,7 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= mmean)); then
+    if ((m >= 1 && m <= mtot)); then
       bash $SCRP_DIR/src/post_obsope.sh $MYRANK \
            ${time} ${atime} ${name_m[$m]} $TMPRUN/obsope $LOG_OPT $OUT_OPT
     fi
@@ -1660,7 +1662,7 @@ if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
        $time $atime $TMPRUN/letkf $TMPDAT/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo $OBSOUT_OPT \
-       $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT \
+       $ADAPTINFL $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT \
        $MEMBER
 fi
 
@@ -1676,10 +1678,10 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= mmean)); then
+    if ((m >= 1 && m <= mtot)); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
-           $atime ${name_m[$m]} $OBSOUT_OPT \
-           $ADAPTINFL $RTPS_INFL_OUT $NOBS_OUT
+           $atime ${name_m[$m]} $OUT_OPT $OBSOUT_OPT \
+           $ADAPTINFL $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi
 
@@ -1708,7 +1710,7 @@ for it in $(seq $nitmax); do
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= mmean)); then
+    if ((m >= 1 && m <= mtot)); then
       bash $SCRP_DIR/src/post_letkf.sh $MYRANK \
            ${atime} $TMPRUN/letkf $LOG_OPT
     fi

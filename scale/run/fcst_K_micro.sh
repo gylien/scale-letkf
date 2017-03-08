@@ -158,7 +158,7 @@ echo
 res=0
 if ((ONLINE_STGOUT != 1)); then
 
-  job_end_check_PJM $jobid
+  job_end_check_PJM_K $jobid
   res=$?
 
 else # when using online stage-out, check the joub status in a special way.

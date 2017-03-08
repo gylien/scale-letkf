@@ -119,13 +119,13 @@ fi
 STIME=$(datetime $STIME)
 ETIME=$(datetime ${ETIME:-$STIME})
 if [ -z "$MEMBERS" ] || [ "$MEMBERS" = 'all' ]; then
-  MEMBERS="mean $(printf "$MEMBER_FMT " $(seq $MEMBER))"
+  MEMBERS="mean mdet $(printf "$MEMBER_FMT " $(seq $MEMBER))"
 elif [ "$MEMBERS" = 'mems' ]; then
   MEMBERS=$(printf "$MEMBER_FMT " $(seq $MEMBER))
 else
   tmpstr=''
   for m in $MEMBERS; do
-    if [ "$m" = 'mean' ] || [ "$m" = 'sprd' ]; then
+    if [ "$m" = 'mean' ] || [ "$m" = 'mdet' ]; then
       tmpstr="$tmpstr$m "
     else
       tmpstr="$tmpstr$(printf $MEMBER_FMT $((10#$m))) "
@@ -154,15 +154,15 @@ if ((BDY_FORMAT >= 1)); then
   if [ -z "$PARENT_REF_TIME" ]; then
     PARENT_REF_TIME=$STIME
     for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
-      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/meanf/history.pe000000.nc" ]; then
+      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/${BDY_MEAN}/history.pe000000.nc" ]; then
         break
-      elif ((BDY_FORMAT == 2 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_WRF/${PARENT_REF_TIME}/mean/wrfout_${PARENT_REF_TIME}" ]; then
+      elif ((BDY_FORMAT == 2 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_WRF/${PARENT_REF_TIME}/${BDY_MEAN}/wrfout_${PARENT_REF_TIME}" ]; then
         break
-      elif ((BDY_FORMAT == 2 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_WRF/mean/wrfout_${PARENT_REF_TIME}" ]; then
+      elif ((BDY_FORMAT == 2 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_WRF/${BDY_MEAN}/wrfout_${PARENT_REF_TIME}" ]; then
         break
-      elif ((BDY_FORMAT == 4 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_GRADS/${PARENT_REF_TIME}/mean/atm_${PARENT_REF_TIME}.grd" ]; then
+      elif ((BDY_FORMAT == 4 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_GRADS/${PARENT_REF_TIME}/${BDY_MEAN}/atm_${PARENT_REF_TIME}.grd" ]; then
         break
-      elif ((BDY_FORMAT == 4 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_GRADS/mean/atm_${PARENT_REF_TIME}.grd" ]; then
+      elif ((BDY_FORMAT == 4 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_GRADS/${BDY_MEAN}/atm_${PARENT_REF_TIME}.grd" ]; then
         break
       elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
         echo "[Error] Cannot find boundary files." >&2
@@ -479,7 +479,7 @@ else
             for m in $(seq $fmember); do
               mm=$(((c-1) * fmember + m))
               for q in $(seq $mem_np); do
-                pathin="${DATA_BDY_SCALE_PREP}/${time2}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+                pathin="${DATA_BDY_SCALE_PREP}/${time2}/bdy/${BDY_MEAN}/boundary$(printf $SCALE_SFX $((q-1)))"
                 path="${time2}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
                 echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
               done
@@ -839,11 +839,7 @@ else
 
                 if ((BDY_ENS == 1)); then
                   for m in $(seq $fmember); do
-                    mem=${name_m[$m]}
-                    if [ "$BDY_SCALE_DIR" = 'hist' ] && [ "$mem" = 'mean' ]; then
-                      mem='meanf'
-                    fi
-#                    for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}/history.*.nc 2> /dev/null); do
+#                    for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}/history.*.nc 2> /dev/null); do
 #                      pathin="$ifile"
 #                      if ((BDY_ROTATING == 1)); then
 #                        path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
@@ -856,7 +852,7 @@ else
 #                        echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
 #                      fi
 #                    done
-                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}"
+                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}"
                     if ((BDY_ROTATING == 1)); then
                       path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}"
                     else
@@ -869,7 +865,7 @@ else
                     fi
                   done
                 else
-#                  for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf/history.*.nc 2> /dev/null); do
+#                  for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${BDY_MEAN}/history.*.nc 2> /dev/null); do
 #                    pathin="$ifile"
 #                    if ((BDY_ROTATING == 1)); then
 #                      path="bdyorg/${time_bdy}/mean/${time_bdy}/$(basename $ifile)"
@@ -882,11 +878,7 @@ else
 #                      echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
 #                    fi
 #                  done
-                  if [ "$BDY_SCALE_DIR" = 'hist' ]; then
-                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf"
-                  else
-                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/mean"
-                  fi
+                  pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${BDY_MEAN}"
                   if ((BDY_ROTATING == 1)); then
                     path="bdyorg/${time_bdy}/mean/${time_bdy}"
                   else
@@ -937,10 +929,10 @@ else
                 else
                   for ifile in $(seq $filenum); do
                     if ((BDY_ROTATING == 1)); then
-                      pathin="$data_bdy_i/${time2}/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+                      pathin="$data_bdy_i/${time2}/${BDY_MEAN}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                       path="bdyorg/${time2}/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                     else
-                      pathin="$data_bdy_i/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+                      pathin="$data_bdy_i/${BDY_MEAN}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                       path="bdyorg/const/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                     fi
                     if ((DISK_MODE_DATA_BDY == 2)); then
@@ -1342,7 +1334,7 @@ for it in $(seq $its $ite); do
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
              $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $land_base $bdy_base \
              $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
-             ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) \
+             ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf '%04d' $m) $OUT_OPT \
              fcst $bdy_start_time
       fi
     fi
