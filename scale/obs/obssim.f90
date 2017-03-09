@@ -5,8 +5,6 @@ program obssim
 !
 !=======================================================================
 !$use OMP_LIB
-  use scale_precision, only: RP
-
   use common, only: r_size
   use common_mpi
   use common_scale
@@ -14,7 +12,7 @@ program obssim
   use common_obs_scale
   use common_nml
   use obsope_tools
-
+  use scale_precision, only: RP
   implicit none
 
   real(RP), allocatable :: v3dg(:,:,:,:)
@@ -28,10 +26,7 @@ program obssim
 
   integer :: it
 
-  real(r_size) :: rtimer00, rtimer
-  integer :: ierr
   character(len=7) :: stdoutf = '-000000'
-  character(len=11) :: timer_fmt = '(A30,F10.2)'
   character(len=6400) :: icmd
 
 !-----------------------------------------------------------------------
@@ -39,7 +34,7 @@ program obssim
 !-----------------------------------------------------------------------
 
   call initialize_mpi_scale
-  rtimer00 = MPI_WTIME()
+  call mpi_timer('', 1)
 
   if (command_argument_count() >= 2) then
     call get_command_argument(2, icmd)
@@ -59,8 +54,7 @@ program obssim
   call read_nml_letkf_radar
   call read_nml_letkf_h08
 
-  call set_mem_node_proc(1, NNODES, PPN, MEM_NODES, MEM_NP)
-
+  call set_mem_node_proc(1)
   call set_scalelib
 
   if (myrank_use) then
@@ -69,10 +63,7 @@ program obssim
     call set_common_mpi_scale
     call set_common_obs_scale
 
-    call MPI_BARRIER(MPI_COMM_a, ierr)
-    rtimer = MPI_WTIME()
-    write (6, timer_fmt) '### TIMER(INITIALIZE):', rtimer-rtimer00
-    rtimer00=rtimer
+    call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Read restart/history input data and run the model-to-obs simulator
@@ -116,32 +107,22 @@ program obssim
       write (6, '(2A)') "[Error] Unsupported 'OBSSIM_IN_TYPE': ", trim(OBSSIM_IN_TYPE)
     end if
 
+    call mpi_timer('OBSSIM', 1, barrier=MPI_COMM_a)
+
     deallocate (v3dgh, v2dgh)
     deallocate (v3dgsim, v2dgsim)
 
-    call MPI_BARRIER(MPI_COMM_a, ierr)
-    rtimer = MPI_WTIME()
-    write (6, timer_fmt) '### TIMER(OBSSIM):', rtimer-rtimer00
-    rtimer00=rtimer
-
     call unset_common_mpi_scale
 
-    call unset_scalelib
-
-  else ! [ myrank_use ]
-
-    write (6, '(A,I6.6,A)') 'MYRANK=', myrank, ': This process is not used!'
-
   end if ! [ myrank_use ]
+
+  call unset_scalelib
 
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
 
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-  rtimer = MPI_WTIME()
-  write (6, timer_fmt) '### TIMER(FINALIZE):', rtimer-rtimer00
-  rtimer00=rtimer
+  call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 
   call finalize_mpi_scale
 

@@ -14,7 +14,7 @@ if (($# < 14)); then
 
 [pre_scale.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK MEM INIT OCEAN LAND BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR OUT_OPT [SCPCALL BDY_STIME RTPS_INFL_OUT NOBS_OUT]
+Usage: $0 MYRANK MEM INIT OCEAN LAND BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HISTINT TMPDIR OUT_OPT [SCPCALL BDY_STIME SPRD_OUT RTPS_INFL_OUT NOBS_OUT]
 
   MYRANK   My rank number (not used)
   MEM      Name of the ensemble member
@@ -32,6 +32,7 @@ Usage: $0 MYRANK MEM INIT OCEAN LAND BDY TOPO LANDUSE STIME FCSTLEN FCSTINT HIST
   OUT_OPT
   SCPCALL
   BDY_STIME  (format: YYYYMMDDHHMMSS)
+  SPRD_OUT
   RTPS_INFL_OUT
   NOBS_OUT
 
@@ -55,6 +56,7 @@ TMPDIR="$1"; shift
 OUT_OPT="$1"; shift
 SCPCALL="${1:-cycle}"; shift
 BDY_STIME="${1:-$STIME}"; shift
+SPRD_OUT="${1:-1}"; shift
 RTPS_INFL_OUT="${1:-0}"; shift
 NOBS_OUT="${1:-0}"
 
@@ -101,18 +103,21 @@ fi
 RESTART_OUT_NUM_COPIES=1
 if [ "$SCPCALL" = 'cycle' ]; then
   IO_LOG_DIR='scale'
-  if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd'
-    RESTART_OUT_NUM_COPIES=5
+  if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
+    RESTART_OUT_NUM_COPIES=2
+    if ((SPRD_OUT == 1)); then
+      RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+2))
+    fi
     if ((RTPS_INFL_OUT == 1)); then
       RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+1))
     fi
     if ((NOBS_OUT == 1)); then
       RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+1))
     fi
-  else
-    if ((OUT_OPT <= 3)); then
-      RESTART_OUT_NUM_COPIES=2
-    fi
+  elif [ "$MEM" = 'mdet' ]; then
+    RESTART_OUT_NUM_COPIES=2
+  elif ((OUT_OPT <= 3)); then
+    RESTART_OUT_NUM_COPIES=2
   fi
 else
   IO_LOG_DIR="${SCPCALL}_scale"

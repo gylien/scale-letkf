@@ -1,12 +1,13 @@
 MODULE common_nml
-!=======================================================================
+!===============================================================================
 !
 ! [PURPOSE:] Read namelist
 !
 ! [HISTORY:]
 !   November 2014   Guo-Yuan Lien     created
+!   .............   See git history for the following revisions
 !
-!=======================================================================
+!===============================================================================
   use common, only: r_size
   use scale_stdio, only: IO_FID_CONF
 
@@ -22,12 +23,19 @@ MODULE common_nml
 
   integer, parameter :: nobsfilemax = 10
   integer, parameter :: filelenmax = 256
-  integer, parameter :: memberflen = 4 ! Length of member # in filename
+
+  integer, parameter :: memflen = 4                           ! Length of formatted member strings
+  character(len=memflen), parameter :: memf_notation = '@@@@' ! Notation of the member string
+  character(len=memflen), parameter :: memf_mean = 'mean'
+  character(len=memflen), parameter :: memf_mdet = 'mdet'
+  character(len=memflen), parameter :: memf_sprd = 'sprd'
 
   !--- PARAM_ENSEMBLE
   integer :: MEMBER = 3      ! ensemble size
   integer :: MEMBER_RUN = 1  !
   integer :: MEMBER_ITER = 0 !
+
+  logical :: DET_RUN = .false.
 
 !  !--- PARAM_IO
 !  integer :: IO_AGGREGATE = .false.
@@ -39,8 +47,12 @@ MODULE common_nml
   logical               :: OBSDA_RUN(nobsfilemax) = .true.
   logical               :: OBSDA_OUT = .true.
   character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
+  character(filelenmax) :: OBSDA_MEAN_OUT_BASENAME = ''
+  character(filelenmax) :: OBSDA_MDET_OUT_BASENAME = ''
 
   character(filelenmax) :: HISTORY_IN_BASENAME = 'hist.@@@@'
+  character(filelenmax) :: HISTORY_MEAN_IN_BASENAME = ''
+  character(filelenmax) :: HISTORY_MDET_IN_BASENAME = ''
 
   integer               :: SLOT_START = 1
   integer               :: SLOT_END = 1
@@ -50,13 +62,21 @@ MODULE common_nml
   !--- PARAM_LETKF
   logical               :: OBSDA_IN = .false.
   character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@'
+  character(filelenmax) :: OBSDA_MEAN_IN_BASENAME = ''
+  character(filelenmax) :: OBSDA_MDET_IN_BASENAME = ''
   character(filelenmax) :: GUES_IN_BASENAME = 'gues.@@@@'
-  character(filelenmax) :: GUES_OUT_MEAN_BASENAME = 'gues.mean'
-  character(filelenmax) :: GUES_OUT_SPRD_BASENAME = 'gues.sprd'
+  character(filelenmax) :: GUES_MEAN_INOUT_BASENAME = ''
+  character(filelenmax) :: GUES_MDET_IN_BASENAME = ''
+  logical               :: GUES_SPRD_OUT = .true.
+  character(filelenmax) :: GUES_SPRD_OUT_BASENAME = ''
   character(filelenmax) :: ANAL_OUT_BASENAME = 'anal.@@@@'
-  character(filelenmax) :: ANAL_OUT_MEAN_BASENAME = 'anal.mean'
-  character(filelenmax) :: ANAL_OUT_SPRD_BASENAME = 'anal.sprd'
+  character(filelenmax) :: ANAL_MEAN_OUT_BASENAME = ''
+  character(filelenmax) :: ANAL_MDET_OUT_BASENAME = ''
+  logical               :: ANAL_SPRD_OUT = .true.
+  character(filelenmax) :: ANAL_SPRD_OUT_BASENAME = ''
   character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
+
+  logical               :: DET_RUN_CYCLED = .true.
 
   real(r_size) :: INFL_MUL = 1.0d0           ! >  0: globally constant covariance inflation
                                              ! <= 0: use 3D inflation field from 'INFL_MUL_IN_BASENAME' file
@@ -142,6 +162,8 @@ MODULE common_nml
       -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
 
   real(r_size) :: HORI_LOCAL_RADAR_OBSNOREF = -1.0d0 ! <0: same as HORI_LOCAL(22=PHARAD)
+  real(r_size) :: HORI_LOCAL_RADAR_VR = -1.0d0       ! <0: same as HORI_LOCAL(22=PHARAD)
+  real(r_size) :: VERT_LOCAL_RADAR_VR = -1.0d0       ! <0: same as VERT_LOCAL(22=PHARAD)
   real(r_size) :: VERT_LOCAL_RAIN_BASE = 85000.0d0
 
   ! >0: observation number limit
@@ -187,8 +209,10 @@ MODULE common_nml
   logical :: DEPARTURE_STAT = .true.
   logical :: DEPARTURE_STAT_RADAR = .false.
   logical :: DEPARTURE_STAT_H08 = .false.
-  real(r_size) :: DEPARTURE_STAT_T_RANGE = 0.0d0 ! time range within which observations are considered in the departure statistics.
-                                                 ! 0: no limit
+  real(r_size) :: DEPARTURE_STAT_T_RANGE = 0.0d0   ! time range within which observations are considered in the departure statistics.
+                                                   ! 0: no limit
+  logical :: DEPARTURE_STAT_ALL_PROCESSES = .true. ! print the departure statistics by all processes?
+                                                   ! if set to .false., the statistics are only printed by the ensemble mean group, which may save time
 
   LOGICAL :: OMB_OUTPUT = .true.
   LOGICAL :: OMA_OUTPUT = .true.
@@ -275,9 +299,9 @@ MODULE common_nml
   real(r_size)          :: OBSSIM_RADAR_Z = 0.0d0
 
 contains
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! PARAM_ENSEMBLE
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine read_nml_ensemble
   implicit none
   integer :: ierr
@@ -285,7 +309,9 @@ subroutine read_nml_ensemble
   namelist /PARAM_ENSEMBLE/ &
     MEMBER, &
     MEMBER_RUN, &
-    MEMBER_ITER
+    MEMBER_ITER, &
+    DET_RUN, &
+    DET_RUN_CYCLED
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)
@@ -302,9 +328,9 @@ subroutine read_nml_ensemble
   return
 end subroutine read_nml_ensemble
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! PARAM_IO
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 !subroutine read_nml_io
 !  implicit none
 !  integer :: ierr
@@ -327,9 +353,9 @@ end subroutine read_nml_ensemble
 !  return
 !end subroutine read_nml_io
 
-!-----------------------------------------------------------------------
-! PARAM_ENSEMBLE
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! PARAM_OBSOPE
+!-------------------------------------------------------------------------------
 subroutine read_nml_obsope
   implicit none
   integer :: ierr
@@ -341,7 +367,11 @@ subroutine read_nml_obsope
     OBSDA_RUN, &
     OBSDA_OUT, &
     OBSDA_OUT_BASENAME, &
+    OBSDA_MEAN_OUT_BASENAME, &
+    OBSDA_MDET_OUT_BASENAME, &
     HISTORY_IN_BASENAME, &
+    HISTORY_MEAN_IN_BASENAME, &
+    HISTORY_MDET_IN_BASENAME, &
     SLOT_START, &
     SLOT_END, &
     SLOT_BASE, &
@@ -357,14 +387,28 @@ subroutine read_nml_obsope
     stop
   endif
 
+  if (trim(OBSDA_MEAN_OUT_BASENAME) == '') then
+    call file_member_replace(0, OBSDA_OUT_BASENAME, OBSDA_MEAN_OUT_BASENAME, memf_mean)
+  end if
+  if (trim(OBSDA_MDET_OUT_BASENAME) == '') then
+    call file_member_replace(0, OBSDA_OUT_BASENAME, OBSDA_MDET_OUT_BASENAME, memf_mdet)
+  end if
+
+  if (trim(HISTORY_MEAN_IN_BASENAME) == '') then
+    call file_member_replace(0, HISTORY_IN_BASENAME, HISTORY_MEAN_IN_BASENAME, memf_mean)
+  end if
+  if (trim(HISTORY_MDET_IN_BASENAME) == '') then
+    call file_member_replace(0, HISTORY_IN_BASENAME, HISTORY_MDET_IN_BASENAME, memf_mdet)
+  end if
+
   write(6, nml=PARAM_OBSOPE)
 
   return
 end subroutine read_nml_obsope
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! PARAM_LETKF
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine read_nml_letkf
   implicit none
   integer :: ierr
@@ -372,12 +416,18 @@ subroutine read_nml_letkf
   namelist /PARAM_LETKF/ &
     OBSDA_IN, &
     OBSDA_IN_BASENAME, &
+    OBSDA_MEAN_IN_BASENAME, &
+    OBSDA_MDET_IN_BASENAME, &
     GUES_IN_BASENAME, &
-    GUES_OUT_MEAN_BASENAME, &
-    GUES_OUT_SPRD_BASENAME, &
+    GUES_MEAN_INOUT_BASENAME, &
+    GUES_MDET_IN_BASENAME, &
+    GUES_SPRD_OUT, &
+    GUES_SPRD_OUT_BASENAME, &
     ANAL_OUT_BASENAME, &
-    ANAL_OUT_MEAN_BASENAME, &
-    ANAL_OUT_SPRD_BASENAME, &
+    ANAL_MEAN_OUT_BASENAME, &
+    ANAL_MDET_OUT_BASENAME, &
+    ANAL_SPRD_OUT, &
+    ANAL_SPRD_OUT_BASENAME, &
     LETKF_TOPO_IN_BASENAME, &
     INFL_MUL, &
     INFL_MUL_MIN, &
@@ -450,6 +500,32 @@ subroutine read_nml_letkf
     GROSS_ERROR_TCP = GROSS_ERROR
   end if
 
+  if (trim(OBSDA_MEAN_IN_BASENAME) == '') then
+    call file_member_replace(0, OBSDA_IN_BASENAME, OBSDA_MEAN_IN_BASENAME, memf_mean)
+  end if
+  if (trim(OBSDA_MDET_IN_BASENAME) == '') then
+    call file_member_replace(0, OBSDA_IN_BASENAME, OBSDA_MDET_IN_BASENAME, memf_mdet)
+  end if
+
+  if (trim(GUES_MEAN_INOUT_BASENAME) == '') then
+    call file_member_replace(0, GUES_IN_BASENAME, GUES_MEAN_INOUT_BASENAME, memf_mean)
+  end if
+  if (trim(GUES_MDET_IN_BASENAME) == '') then
+    call file_member_replace(0, GUES_IN_BASENAME, GUES_MDET_IN_BASENAME, memf_mdet)
+  end if
+  if (trim(GUES_SPRD_OUT_BASENAME) == '') then
+    call file_member_replace(0, GUES_IN_BASENAME, GUES_SPRD_OUT_BASENAME, memf_sprd)
+  end if
+  if (trim(ANAL_MEAN_OUT_BASENAME) == '') then
+    call file_member_replace(0, ANAL_OUT_BASENAME, ANAL_MEAN_OUT_BASENAME, memf_mean)
+  end if
+  if (trim(ANAL_MDET_OUT_BASENAME) == '') then
+    call file_member_replace(0, ANAL_OUT_BASENAME, ANAL_MDET_OUT_BASENAME, memf_mdet)
+  end if
+  if (trim(ANAL_SPRD_OUT_BASENAME) == '') then
+    call file_member_replace(0, ANAL_OUT_BASENAME, ANAL_SPRD_OUT_BASENAME, memf_sprd)
+  end if
+
   if (trim(INFL_MUL_OUT_BASENAME) == '') then
     INFL_MUL_ADAPTIVE = .false.
   end if
@@ -482,9 +558,9 @@ subroutine read_nml_letkf
   return
 end subroutine read_nml_letkf
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! PARAM_LETKF_PRC
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine read_nml_letkf_prc
   implicit none
   integer :: ierr
@@ -512,9 +588,9 @@ subroutine read_nml_letkf_prc
   return
 end subroutine read_nml_letkf_prc
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! PARAM_LETKF_OBS
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine read_nml_letkf_obs
   implicit none
   integer :: itype
@@ -526,6 +602,8 @@ subroutine read_nml_letkf_obs
     VERT_LOCAL, &
     TIME_LOCAL, &
     HORI_LOCAL_RADAR_OBSNOREF, &
+    HORI_LOCAL_RADAR_VR, &
+    VERT_LOCAL_RADAR_VR, &
     VERT_LOCAL_RAIN_BASE, &
     MAX_NOBS_PER_GRID, &
     MAX_NOBS_PER_GRID_CRITERION, &
@@ -573,15 +651,21 @@ subroutine read_nml_letkf_obs
   if (HORI_LOCAL_RADAR_OBSNOREF < 0.0d0) then
     HORI_LOCAL_RADAR_OBSNOREF = HORI_LOCAL(22) !PHARAD
   end if
+  if (HORI_LOCAL_RADAR_VR < 0.0d0) then
+    HORI_LOCAL_RADAR_VR = HORI_LOCAL(22) !PHARAD
+  end if
+  if (VERT_LOCAL_RADAR_VR < 0.0d0) then
+    VERT_LOCAL_RADAR_VR = VERT_LOCAL(22) !PHARAD
+  end if
 
   write(6, nml=PARAM_LETKF_OBS)
 
   return
 end subroutine read_nml_letkf_obs
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! PARAM_LETKF_VAR_LOCAL
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine read_nml_letkf_var_local
   implicit none
   integer :: ierr
@@ -612,9 +696,9 @@ subroutine read_nml_letkf_var_local
   return
 end subroutine read_nml_letkf_var_local
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! PARAM_LETKF_MONITOR
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine read_nml_letkf_monitor
   implicit none
   integer :: ierr
@@ -624,6 +708,7 @@ subroutine read_nml_letkf_monitor
     DEPARTURE_STAT_RADAR, &
     DEPARTURE_STAT_H08, &
     DEPARTURE_STAT_T_RANGE, &
+    DEPARTURE_STAT_ALL_PROCESSES, &
     OMB_OUTPUT, &
     OMA_OUTPUT, &
     OBSGUES_OUTPUT, &
@@ -644,9 +729,9 @@ subroutine read_nml_letkf_monitor
   return
 end subroutine read_nml_letkf_monitor
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! PARAM_LETKF_RADAR
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine read_nml_letkf_radar
   implicit none
   integer :: ierr
@@ -688,9 +773,9 @@ subroutine read_nml_letkf_radar
   return
 end subroutine read_nml_letkf_radar
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! PARAM_LETKF_H08
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine read_nml_letkf_h08
   implicit none
   integer :: ierr
@@ -721,9 +806,9 @@ subroutine read_nml_letkf_h08
   return
 end subroutine read_nml_letkf_h08
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! PARAM_OBS_ERROR
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine read_nml_obs_error
   implicit none
   integer :: ierr
@@ -757,9 +842,9 @@ subroutine read_nml_obs_error
   return
 end subroutine read_nml_obs_error
 
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 ! PARAM_OBSSIM
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
 subroutine read_nml_obssim
   implicit none
   integer :: ierr
@@ -803,28 +888,33 @@ subroutine read_nml_obssim
   return
 end subroutine read_nml_obssim
 
-!-----------------------------------------------------------------------
-! file_member_replace
-!-----------------------------------------------------------------------
-subroutine file_member_replace(mem, filename, filename_out)
+!-------------------------------------------------------------------------------
+! Replace the member notation by the formatted member string
+! * will be wrong if memflen /= 4
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   mem          : member number
+!   filename     : input filename string
+!   str          : (optional) use this formatted member string if mem <= 0
+! [OUTPUT]
+!   filename_out : output filename string with the member notation replaced
+!-------------------------------------------------------------------------------
+subroutine file_member_replace(mem, filename, filename_out, memfstr)
   implicit none
   integer, intent(in) :: mem
-  character(*), intent(in) :: filename
-  character(filelenmax), intent(out) :: filename_out
-
-  character(memberflen) :: memberfstr = '@@@@'
+  character(len=*), intent(in) :: filename
+  character(len=filelenmax), intent(out) :: filename_out
+  character(len=memflen), intent(in), optional :: memfstr
   integer :: s, is
 
   s = 0
   filename_out = filename
-  do is = 1, len(filename)-memberflen+1
-    if (filename(is:is+memberflen-1) == memberfstr) then
-      if (mem <= MEMBER) then
-        write (filename_out(is:is+memberflen-1), '(I4.4)') mem
-      else if (mem == MEMBER+1) then
-        write (filename_out(is:is+memberflen-1), '(A4)') 'mean'  !!!!!! will be wrong if memberflen != 4 !!!!!!
-      else if (mem == MEMBER+2) then
-        write (filename_out(is:is+memberflen-1), '(A4)') 'sprd'  !!!!!! will be wrong if memberflen != 4 !!!!!!
+  do is = 1, len(filename)-memflen+1
+    if (filename(is:is+memflen-1) == memf_notation) then
+      if (mem >= 1) then
+        write (filename_out(is:is+memflen-1), '(I4.4)') mem
+      else if (present(memfstr)) then
+        write (filename_out(is:is+memflen-1), '(A4)') memfstr
       end if
       s = is
       exit
@@ -833,10 +923,11 @@ subroutine file_member_replace(mem, filename, filename_out)
 
   if (s == 0) then
     write (6, '(3A)') "[Warning] Keyword '@@@@' not found in '", filename, "'"
-    stop 1
+    stop 99
   end if
 
   return
 end subroutine file_member_replace
 
+!===============================================================================
 end module common_nml

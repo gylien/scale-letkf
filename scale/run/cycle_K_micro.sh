@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_K_micro.sh [STIME ETIME MEMBERS ISTEP FSTEP TIME_LIMIT]
+#    cycle_K_micro.sh [STIME ETIME ISTEP FSTEP TIME_LIMIT]
 #
 #===============================================================================
 
@@ -85,7 +85,7 @@ safe_init_tmpdir $NODEFILE_DIR
 if ((IO_ARB == 1)); then                   ##
   distribute_da_cycle_set - $NODEFILE_DIR  ##
 else                                       ##
-  distribute_da_cycle - $NODEFILE_DIR - "$MEMBERS"
+  distribute_da_cycle - $NODEFILE_DIR
 fi                                         ##
 
 #===============================================================================
@@ -156,7 +156,7 @@ cat > $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$ISTEP" "$FSTEP" || exit \$?
+./${myname1}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
 EOF
 
 #===============================================================================

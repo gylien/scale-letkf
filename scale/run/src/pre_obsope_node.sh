@@ -13,7 +13,7 @@ if (($# < 10)); then
 
 [pre_obsope_node.sh] 
 
-Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE [MEMBERSEQ]
+Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE
 
   MYRANK      My rank number (not used)
   STIME       
@@ -25,7 +25,6 @@ Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END 
   SLOT_START  Start observation timeslots
   SLOT_END    End observation timeslots
   SLOT_BASE   The base slot
-  MEMBERSEQ
 
 EOF
   exit 1
@@ -40,8 +39,7 @@ MEM_NODES="$1"; shift
 MEM_NP="$1"; shift
 SLOT_START="$1"; shift
 SLOT_END="$1"; shift
-SLOT_BASE="$1"; shift
-MEMBERSEQ=${1:-$MEMBER}
+SLOT_BASE="$1"
 
 #===============================================================================
 
@@ -76,6 +74,11 @@ for iobs in $(seq $OBSNUM); do
   fi
 done
 
+DET_RUN_TF='.false.'
+if ((DET_RUN == 1)); then
+  DET_RUN_TF='.true.'
+fi
+
 if ((PNETCDF == 1)); then
   HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@.history"
 else
@@ -85,8 +88,8 @@ fi
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.obsope | \
-    sed -e "/!--MEMBER--/a MEMBER = $MEMBERSEQ," \
-        -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+    sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
+        -e "/!--DET_RUN--/a DET_RUN = ${DET_RUN_TF}," \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
@@ -101,6 +104,7 @@ cat $TMPDAT/conf/config.nml.obsope | \
         -e "/!--PPN--/a PPN = $PPN," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
+        -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
     > $TMPDIR/obsope.conf
 
 # Most of these parameters are not important for obsope

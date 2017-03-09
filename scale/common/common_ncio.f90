@@ -5,6 +5,7 @@ module common_ncio
 !
 ! [HISTORY:]
 !   07/24/2014 Guo-Yuan Lien  created
+!   .......... See git history for the following revisions
 !
 !=======================================================================
   use netcdf

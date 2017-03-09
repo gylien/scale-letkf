@@ -4,10 +4,12 @@ MODULE letkf_tools
 ! [PURPOSE:] Module for LETKF with GFS
 !
 ! [HISTORY:]
-!   01/26/2009 Takemasa Miyoshi  created
-!   10/04/2012 Guo-Yuan Lien     modified for GFS model
-!   07/01/2013 Daisuke Hotta     ported EFSO code from Y.Ohta's code
-!   01/01/2014 Guo-Yuan Lien     merged to GFS-LETKF main development
+!   01/26/2009   Takemasa Miyoshi  created
+!   10/04/2012   Guo-Yuan Lien     modified for GFS model
+!   07/01/2013   Daisuke Hotta     ported EFSO code from Y.Ohta's code
+!   01/01/2014   Guo-Yuan Lien     merged to GFS-LETKF main development
+!   October 2014 Guo-Yuan Lien     modified for SCALE model
+!   ............ See git history for the following revisions
 !
 !=======================================================================
 !$USE OMP_LIB
@@ -44,13 +46,13 @@ CONTAINS
 !-----------------------------------------------------------------------
 SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   IMPLICIT NONE
-  REAL(r_size),INTENT(INOUT) :: gues3d(nij1,nlev,MEMBER,nv3d) ! background ensemble
-  REAL(r_size),INTENT(INOUT) :: gues2d(nij1,MEMBER,nv2d)      !  output: destroyed
-  REAL(r_size),INTENT(OUT) :: anal3d(nij1,nlev,MEMBER,nv3d)   ! analysis ensemble
-  REAL(r_size),INTENT(OUT) :: anal2d(nij1,MEMBER,nv2d)
+  REAL(r_size),INTENT(INOUT) :: gues3d(nij1,nlev,nens,nv3d) ! background ensemble
+  REAL(r_size),INTENT(INOUT) :: gues2d(nij1,nens,nv2d)      !  output: destroyed
+  REAL(r_size),INTENT(OUT) :: anal3d(nij1,nlev,nens,nv3d)   ! analysis ensemble
+  REAL(r_size),INTENT(OUT) :: anal2d(nij1,nens,nv2d)
 
-  REAL(r_size) :: mean3d(nij1,nlev,nv3d)
-  REAL(r_size) :: mean2d(nij1,nv2d)
+!  REAL(r_size) :: mean3d(nij1,nlev,nv3d)
+!  REAL(r_size) :: mean2d(nij1,nv2d)
   REAL(r_size) :: work3d(nij1,nlev,nv3d)
   REAL(r_size) :: work2d(nij1,nv2d)
   REAL(r_size),ALLOCATABLE :: work3da(:,:,:)     !GYL
@@ -64,28 +66,35 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size),ALLOCATABLE :: rdiag(:)
   REAL(r_size),ALLOCATABLE :: rloc(:)
   REAL(r_size),ALLOCATABLE :: dep(:)
+  REAL(r_size),ALLOCATABLE :: depd(:)            !GYL
 
   REAL(r_size) :: parm
   REAL(r_size) :: trans(MEMBER,MEMBER,nv3d+nv2d)
   REAL(r_size) :: transm(MEMBER,nv3d+nv2d)       !GYL
+  REAL(r_size) :: transmd(MEMBER,nv3d+nv2d)      !GYL
   REAL(r_size) :: transrlx(MEMBER,MEMBER)        !GYL
   REAL(r_size) :: pa(MEMBER,MEMBER,nv3d+nv2d)    !GYL
 
   INTEGER :: ij,ilev,n,m,i,k,nobsl
   INTEGER :: nobsl_t(nid_obs,nobtype)            !GYL
+  REAL(r_size) :: cutd_t(nid_obs,nobtype)        !GYL
   REAL(r_size) :: beta                           !GYL
   REAL(r_size) :: tmpinfl                        !GYL
   REAL(r_size) :: q_mean,q_sprd                  !GYL
   REAL(r_size) :: q_anal(MEMBER)                 !GYL
+
+  character(len=timer_name_width) :: timer_str
+
+  call mpi_timer('', 2)
 
   WRITE(6,'(A)') 'Hello from das_letkf'
   WRITE(6,'(A,F15.2)') '  INFL_MUL = ',INFL_MUL
 
   WRITE(6,'(A,I8)') 'Target observation numbers (global) : NOBS=',nobstotalg
   WRITE(6,'(A,I8)') 'Target observation numbers processed in this subdomian : NOBS=',nobstotal
-  !
-  ! In case of no obs
-  !
+!!  !
+!!  ! In case of no obs
+!!  !
 !!  IF(nobstotal == 0) THEN
 !!    WRITE(6,'(A)') 'No observation assimilated'
 !!    anal3d = gues3d
@@ -115,18 +124,19 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Observation number limit (*to be moved to namelist*)
   !
   ctype_merge(:,:) = 0
-  ctype_merge(uid_obs(id_radar_ref_obs),22) = 1
-  ctype_merge(uid_obs(id_radar_ref_zero_obs),22) = 1
+!  ctype_merge(uid_obs(id_radar_ref_obs),22) = 1
+!  ctype_merge(uid_obs(id_radar_ref_zero_obs),22) = 1
   !
   ! FCST PERTURBATIONS
   !
-  CALL ensmean_grd(MEMBER,nij1,gues3d,gues2d,mean3d,mean2d)
+!  .... this has been done by write_ensmean in letkf.f90
+!  CALL ensmean_grd(MEMBER,nens,nij1,gues3d,gues2d,mean3d,mean2d)
   DO n=1,nv3d
     DO m=1,MEMBER
 !$OMP PARALLEL DO PRIVATE(i,k)
       DO k=1,nlev
         DO i=1,nij1
-          gues3d(i,k,m,n) = gues3d(i,k,m,n) - mean3d(i,k,n)
+          gues3d(i,k,m,n) = gues3d(i,k,m,n) - gues3d(i,k,mmean,n)
         END DO
       END DO
 !$OMP END PARALLEL DO
@@ -136,11 +146,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     DO m=1,MEMBER
 !$OMP PARALLEL DO PRIVATE(i)
       DO i=1,nij1
-        gues2d(i,m,n) = gues2d(i,m,n) - mean2d(i,n)
+        gues2d(i,m,n) = gues2d(i,m,n) - gues2d(i,mmean,n)
       END DO
 !$OMP END PARALLEL DO
     END DO
   END DO
+
+  call mpi_timer('das_letkf:fcst_perturbation:', 2)
+
   !
   ! multiplicative inflation
   !
@@ -150,8 +163,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ELSE  ! 3D parameter values are read-in
     allocate (work3dg(nlon,nlat,nlev,nv3d))
     allocate (work2dg(nlon,nlat,nv2d))
-    IF(myrank_e == lastmem_rank_e) THEN
-!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',INFL_MUL_IN_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
+    IF(myrank_e == mmean_rank_e) THEN
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',INFL_MUL_IN_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
       if (IO_AGGREGATE) then
         call read_restart_par(INFL_MUL_IN_BASENAME,work3dg,work2dg,MPI_COMM_d)
@@ -161,8 +174,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 #ifdef PNETCDF
       end if
 #endif
+
+      call mpi_timer('das_letkf:adaptive_infl_read_restart:', 2)
     END IF
-    CALL scatter_grd_mpi(lastmem_rank_e,work3dg,work2dg,work3d,work2d)
+
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
+
+    CALL scatter_grd_mpi(mmean_rank_e,work3dg,work2dg,work3d,work2d)
+
+    call mpi_timer('das_letkf:adaptive_infl_scatter:', 2)
   END IF
   IF(INFL_MUL_MIN > 0.0d0) THEN
     work3d = max(work3d, INFL_MUL_MIN)
@@ -181,7 +201,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! NOBS output
   !
   IF(NOBS_OUT) THEN
-    allocate (work3dn(nobtype,nij1,nlev,nv3d))
+    allocate (work3dn(nobtype+6,nij1,nlev,nv3d))
     allocate (work2dn(nobtype,nij1,nv2d))
     work3dn = 0.0d0
     work2dn = 0.0d0
@@ -193,11 +213,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ALLOCATE(rdiag(nobstotal))
   ALLOCATE(rloc (nobstotal))
   ALLOCATE(dep  (nobstotal))
+  ALLOCATE(depd (nobstotal)) !GYL
+
+  call mpi_timer('das_letkf:other_allocation:', 2)
+  call mpi_timer('', 3)
 
   DO ilev=1,nlev
-    WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,m,k,hdxf,rdiag,rloc,dep,nobsl,nobsl_t,parm,beta,trans,transm,transrlx,pa,tmpinfl,q_mean,q_sprd,q_anal)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,trans,transm,transmd,transrlx,pa,tmpinfl,q_mean,q_sprd,q_anal)
     DO ij=1,nij1
 !      WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
 
@@ -209,6 +232,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           ! if weights already computed for other variables can be re-used(no variable localization), copy from there 
           trans(:,:,n) = trans(:,:,var_local_n2n(n))
           transm(:,n) = transm(:,var_local_n2n(n))                                     !GYL
+          transmd(:,n) = transmd(:,var_local_n2n(n))                                   !GYL
           IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
             pa(:,:,n) = pa(:,:,var_local_n2n(n))                                       !GYL
           END IF                                                                       !GYL
@@ -218,7 +242,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           END IF                                                                       !GYL
         ELSE
           ! compute weights with localized observations
-          CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
+          CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t)
           IF(RELAX_TO_INFLATED_PRIOR) THEN                                             !GYL
             parm = work3d(ij,ilev,n)                                                   !GYL
           ELSE                                                                         !GYL
@@ -227,24 +251,36 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
             CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
                             trans(:,:,n),transm=transm(:,n),pao=pa(:,:,n),   &         !GYL
-                            rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)           !GYL
+                            rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &         !GYL
+                            depd=depd,transmd=transmd(:,n))                            !GYL
           ELSE                                                                         !GYL
             CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
                             trans(:,:,n),transm=transm(:,n),                 &         !GYL
-                            rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)           !GYL
+                            rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &         !GYL
+                            depd=depd,transmd=transmd(:,n))                            !GYL
           END IF                                                                       !GYL
           IF(NOBS_OUT) THEN                                                            !GYL
-            work3dn(:,ij,ilev,n) = real(sum(nobsl_t, dim=1),r_size)                    !GYL
-            work3dn(21,ij,ilev,n) = real(nobsl_t(9,22),r_size)                         !GYL !!! addtionally save ref nobs in a special place
+            work3dn(:,ij,ilev,n) = real(sum(nobsl_t, dim=1),r_size)                    !GYL !!! NOBS: sum over all variables for each report type
+            work3dn(nobtype+1,ij,ilev,n) = real(nobsl_t(9,22),r_size)                  !GYL !!! NOBS: ref
+            work3dn(nobtype+2,ij,ilev,n) = real(nobsl_t(10,22),r_size)                 !GYL !!! NOBS: re0
+            work3dn(nobtype+3,ij,ilev,n) = real(nobsl_t(11,22),r_size)                 !GYL !!! NOBS: vr
+            work3dn(nobtype+4,ij,ilev,n) = real(cutd_t(9,22),r_size)                   !GYL !!! CUTOFF_DIST: ref
+            work3dn(nobtype+5,ij,ilev,n) = real(cutd_t(10,22),r_size)                  !GYL !!! CUTOFF_DIST: re0
+            work3dn(nobtype+6,ij,ilev,n) = real(cutd_t(11,22),r_size)                  !GYL !!! CUTOFF_DIST: vr
           END IF                                                                       !GYL
         END IF
 
         ! weight parameter based on grid locations (not for cov inflation purpose)     !GYL
-        CALL relax_beta(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),n,beta)               !GYL
+        CALL relax_beta(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),n,beta)         !GYL
 
         IF(beta == 0.0d0) THEN                                                         !GYL
           ! no analysis update needed
-          anal3d(ij,ilev,:,n) = mean3d(ij,ilev,n) + gues3d(ij,ilev,:,n)                !GYL
+          DO m=1,MEMBER                                                                !GYL
+            anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n) + gues3d(ij,ilev,m,n)        !GYL
+          END DO                                                                       !GYL
+          if (DET_RUN) then                                                            !GYL
+            anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n)                          !GYL
+          end if                                                                       !GYL
         ELSE                                                                           !GYL
           ! relaxation via LETKF weight
           IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2004)
@@ -269,14 +305,25 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             transrlx(m,m) = transrlx(m,m) + (1.0d0-beta)                               !GYL
           END DO                                                                       !GYL
 
-          ! analysis update
+          ! analysis update of members
           DO m=1,MEMBER
-            anal3d(ij,ilev,m,n) = mean3d(ij,ilev,n)
+            anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n)                              !GYL
             DO k=1,MEMBER
               anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &                              !GYL
                                   + gues3d(ij,ilev,k,n) * transrlx(k,m)                !GYL
             END DO  
           END DO
+
+          ! analysis update of deterministic run
+          if (DET_RUN) then                                                            !GYL
+            anal3d(ij,ilev,mmdet,n) = 0.0d0                                            !GYL
+            DO k=1,MEMBER                                                              !GYL
+              anal3d(ij,ilev,mmdet,n) = anal3d(ij,ilev,mmdet,n) &                      !GYL
+                                      + gues3d(ij,ilev,k,n) * transmd(k,n)             !GYL
+            END DO                                                                     !GYL
+            anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n) &                        !GYL
+                                    + anal3d(ij,ilev,mmdet,n) * beta                   !GYL
+          end if                                                                       !GYL
         END IF ! [ beta == 0.0d0 ]                                                     !GYL
 
         ! limit q spread
@@ -306,6 +353,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             ! if weights already computed for other variables can be re-used(no variable localization), copy from there 
             trans(:,:,nv3d+n) = trans(:,:,var_local_n2n(nv3d+n))
             transm(:,nv3d+n) = transm(:,var_local_n2n(nv3d+n))                         !GYL
+            transmd(:,nv3d+n) = transmd(:,var_local_n2n(nv3d+n))                       !GYL
             IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
               pa(:,:,nv3d+n) = pa(:,:,var_local_n2n(nv3d+n))                           !GYL
             END IF                                                                     !GYL
@@ -322,7 +370,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             END IF                                                                     !GYL
           ELSE
             ! compute weights with localized observations
-            CALL obs_local(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t)
+            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t)
             IF(RELAX_TO_INFLATED_PRIOR) THEN                                           !GYL
               parm = work2d(ij,n)                                                      !GYL
             ELSE                                                                       !GYL
@@ -331,24 +379,30 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
               CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
                               trans(:,:,nv3d+n),transm=transm(:,nv3d+n),pao=pa(:,:,nv3d+n), & !GYL
-                              rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)         !GYL
+                              rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &       !GYL
+                              depd=depd,transmd=transmd(:,nv3d+n))                     !GYL
             ELSE                                                                       !GYL
               CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
                               trans(:,:,nv3d+n),transm=transm(:,nv3d+n),       &       !GYL
-                              rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)         !GYL
+                              rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &       !GYL
+                              depd=depd,transmd=transmd(:,nv3d+n))                     !GYL
             END IF                                                                     !GYL
             IF(NOBS_OUT) THEN                                                          !GYL
-              work2dn(:,ij,n) = real(sum(nobsl_t,dim=1),r_size)                        !GYL
-              work2dn(21,ij,n) = real(nobsl_t(9,22),r_size)                            !GYL !!! addtionally save ref nobs in a special place
+              work2dn(:,ij,n) = real(sum(nobsl_t,dim=1),r_size)                        !GYL !!! NOBS: sum over all variables for each report type
             END IF                                                                     !GYL
           END IF
 
           ! weight parameter based on grid locations (not for cov inflation purpose)   !GYL
-          CALL relax_beta(rig1(ij),rjg1(ij),mean3d(ij,ilev,iv3d_p),nv3d+n,beta)        !GYL
+          CALL relax_beta(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),nv3d+n,beta)  !GYL
 
           IF(beta == 0.0d0) THEN                                                       !GYL
             ! no analysis update needed
-            anal2d(ij,:,n) = mean2d(ij,n) + gues2d(ij,:,n)                             !GYL
+            DO m=1,MEMBER                                                              !GYL
+              anal2d(ij,m,n) = gues2d(ij,mmean,n) + gues2d(ij,m,n)                     !GYL
+            END DO                                                                     !GYL
+            if (DET_RUN) then                                                          !GYL
+              anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n)                                  !GYL
+            end if                                                                     !GYL
           ELSE                                                                         !GYL
             ! relaxation via LETKF weight
             IF(RELAX_ALPHA /= 0.0d0) THEN                                              !GYL - RTPP method (Zhang et al. 2004)
@@ -373,14 +427,26 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
               transrlx(m,m) = transrlx(m,m) + (1.0d0-beta)                             !GYL
             END DO                                                                     !GYL
 
-            ! analysis update
+            ! analysis update of members
             DO m=1,MEMBER
-              anal2d(ij,m,n) = mean2d(ij,n)
+              anal2d(ij,m,n) = gues2d(ij,mmean,n)                                      !GYL
               DO k=1,MEMBER
-                anal2d(ij,m,n) = anal2d(ij,m,n) &                                      !GYL - sum trans and transm here
+                anal2d(ij,m,n) = anal2d(ij,m,n) &                                      !GYL
                                + gues2d(ij,k,n) * transrlx(k,m)                        !GYL
               END DO
             END DO
+
+            ! analysis update of deterministic run
+            if (DET_RUN) then                                                          !GYL
+              anal2d(ij,mmdet,n) = 0.0d0                                               !GYL
+              DO k=1,MEMBER                                                            !GYL
+                anal2d(ij,mmdet,n) = anal2d(ij,mmdet,n) &                              !GYL
+                                   + gues2d(ij,k,n) * transmd(k,nv3d+n)                !GYL
+              END DO                                                                   !GYL
+              anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n) &                                !GYL
+                                 + anal2d(ij,mmdet,n) * beta                           !GYL
+            end if                                                                     !GYL
+
           END IF ! [ beta == 0.0d0 ]                                                   !GYL
 
         END DO ! [ n=1,nv2d ]
@@ -389,9 +455,13 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     END DO ! [ ij=1,nij1 ]
 !$OMP END PARALLEL DO
 
+    write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
+    call mpi_timer(trim(timer_str), 3)
   END DO ! [ ilev=1,nlev ]
 
-  DEALLOCATE(hdxf,rdiag,rloc,dep)
+  call mpi_timer('das_letkf:letkf_core:', 2)
+
+  DEALLOCATE(hdxf,rdiag,rloc,dep,depd)
   !
   ! Compute analyses of observations (Y^a)
   !
@@ -402,11 +472,16 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Write updated inflation parameters
   !
   IF(INFL_MUL_ADAPTIVE) THEN
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
+
     if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
     if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
-    CALL gather_grd_mpi(lastmem_rank_e,work3d,work2d,work3dg,work2dg)
-    IF(myrank_e == lastmem_rank_e) THEN
-!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',INFL_MUL_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
+    CALL gather_grd_mpi(mmean_rank_e,work3d,work2d,work3dg,work2dg)
+
+    call mpi_timer('das_letkf:adaptive_infl_gather:', 2)
+
+    IF(myrank_e == mmean_rank_e) THEN
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',INFL_MUL_OUT_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
       if (IO_AGGREGATE)
         call write_restart_par(INFL_MUL_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
@@ -416,17 +491,24 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 #ifdef PNETCDF
       end if
 #endif
+
+      call mpi_timer('das_letkf:adaptive_infl_write_restart:', 2)
     END IF
   END IF
   !
   ! Write inflation parameter (in analysis) corresponding to the RTPS method
   !
   IF(RELAX_SPREAD_OUT) THEN
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
+
     if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
     if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
-    CALL gather_grd_mpi(lastmem_rank_e,work3da,work2da,work3dg,work2dg)
-    IF(myrank_e == lastmem_rank_e) THEN
-!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',RELAX_SPREAD_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
+    CALL gather_grd_mpi(mmean_rank_e,work3da,work2da,work3dg,work2dg)
+
+    call mpi_timer('das_letkf:relax_spread_out_gather:', 2)
+
+    IF(myrank_e == mmean_rank_e) THEN
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',RELAX_SPREAD_OUT_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
       if (IO_AGGREGATE)
         call write_restart_par(RELAX_SPREAD_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
@@ -436,6 +518,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 #ifdef PNETCDF
       end if
 #endif
+
+      call mpi_timer('das_letkf:relax_spread_out_write_restart:', 2)
     END IF
     DEALLOCATE(work3da,work2da)
   END IF
@@ -443,17 +527,27 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Write observation numbers
   !
   IF(NOBS_OUT) THEN
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
+
     if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
     if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
     work3d(:,:,1) = work3dn(1,:,:,iv3d_t)  !!! Assuming variable localization is not used so that obs numbers used are the same over variables,
     work3d(:,:,2) = work3dn(3,:,:,iv3d_t)  !!! use "variable dimenstion" to save obs numbers of different observation types
     work3d(:,:,3) = work3dn(4,:,:,iv3d_t)
     work3d(:,:,4) = work3dn(8,:,:,iv3d_t)
-    work3d(:,:,5) = work3dn(21,:,:,iv3d_t)
-    work3d(:,:,6) = work3dn(22,:,:,iv3d_t)
-    CALL gather_grd_mpi(lastmem_rank_e,work3d,work2d,work3dg,work2dg)
-    IF(myrank_e == lastmem_rank_e) THEN
-!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',NOBS_OUT_BASENAME,'.pe',proc2mem(2,1,myrank+1),'.nc'
+    work3d(:,:,5) = work3dn(22,:,:,iv3d_t)
+    work3d(:,:,6) = work3dn(nobtype+1,:,:,iv3d_t)
+    work3d(:,:,7) = work3dn(nobtype+2,:,:,iv3d_t)
+    work3d(:,:,8) = work3dn(nobtype+3,:,:,iv3d_t)
+    work3d(:,:,9) = work3dn(nobtype+4,:,:,iv3d_t)
+    work3d(:,:,10) = work3dn(nobtype+5,:,:,iv3d_t)
+    work3d(:,:,11) = work3dn(nobtype+6,:,:,iv3d_t)
+    CALL gather_grd_mpi(mmean_rank_e,work3d,work2d,work3dg,work2dg)
+
+    call mpi_timer('das_letkf:nobs_out_gather:', 2)
+
+    IF(myrank_e == mmean_rank_e) THEN
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',NOBS_OUT_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
       if (IO_AGGREGATE)
         call write_restart_par(NOBS_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
@@ -463,6 +557,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 #ifdef PNETCDF
       end if
 #endif
+
+      call mpi_timer('das_letkf:nobs_out_write_restart:', 2)
     END IF
     DEALLOCATE(work3dn,work2dn)
   END IF
@@ -472,14 +568,22 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Additive inflation
   !
   IF(INFL_ADD > 0.0d0) THEN
-    CALL read_ens_mpi(INFL_ADD_IN_BASENAME,gues3d,gues2d)
-    CALL ensmean_grd(MEMBER,nij1,gues3d,gues2d,work3d,work2d)
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
+
+    CALL read_ens_mpi_addiinfl(gues3d,gues2d)
+
+    call mpi_timer('das_letkf:additive_infl_read_ens_mpi:', 2)
+
+    CALL ensmean_grd(MEMBER,nens,nij1,gues3d,gues2d)
+
+    call mpi_timer('das_letkf:additive_infl_ensmean_grd:', 2)
+
     DO n=1,nv3d
       DO m=1,MEMBER
 !$OMP PARALLEL DO PRIVATE(i,k)
         DO k=1,nlev
           DO i=1,nij1
-            gues3d(i,k,m,n) = gues3d(i,k,m,n) - work3d(i,k,n)
+            gues3d(i,k,m,n) = gues3d(i,k,m,n) - gues3d(i,k,mmean,n) !GYL
           END DO
         END DO
 !$OMP END PARALLEL DO
@@ -489,7 +593,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       DO m=1,MEMBER
 !$OMP PARALLEL DO PRIVATE(i)
         DO i=1,nij1
-          gues2d(i,m,n) = gues2d(i,m,n) - work2d(i,n)
+          gues2d(i,m,n) = gues2d(i,m,n) - gues2d(i,mmean,n) !GYL
         END DO
 !$OMP END PARALLEL DO
       END DO
@@ -525,6 +629,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !$OMP END PARALLEL DO
       END DO
     END DO
+
+    call mpi_timer('das_letkf:additive_infl_cal:', 2)
   END IF ! [ INFL_ADD > 0.0d0 ]
 
   RETURN
@@ -915,9 +1021,11 @@ END SUBROUTINE das_letkf
 !   rloc    : localization weights
 !   dep     : observation departure
 !   nobsl   : number of valid observations (in hdxf, rdiag, rloc, dep)
-!   nobsl_t : (optional) number of valid observations wrt. observation variables/types
+!   depd    : (optional) observation departure for the deterministic run
+!   nobsl_t : (optional) number of assimilated observations wrt. observation variables/types
+!   cutd_t  : (optional) cutoff distance of assimilated observations wrt. observation variables/types
 !-------------------------------------------------------------------------------
-subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobsl_t)
+subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd, nobsl_t, cutd_t)
   use common_sort
   use scale_grid, only: &
     DX, DY
@@ -928,12 +1036,14 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
 
   real(r_size), intent(in) :: ri, rj, rlev, rz
   integer, intent(in) :: nvar
-  real(r_size), intent(out) :: hdxf(nobstotal,member)
+  real(r_size), intent(out) :: hdxf(nobstotal,MEMBER)
   real(r_size), intent(out) :: rdiag(nobstotal)
   real(r_size), intent(out) :: rloc(nobstotal)
   real(r_size), intent(out) :: dep(nobstotal)
   integer, intent(out) :: nobsl
+  real(r_size), intent(out), optional :: depd(nobstotal)
   integer, intent(out), optional :: nobsl_t(nid_obs,nobtype)
+  real(r_size), intent(out), optional :: cutd_t(nid_obs,nobtype)
 
   integer, allocatable :: nobs_use(:)
   integer, allocatable :: nobs_use2(:)
@@ -963,22 +1073,36 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   integer :: jmin_cutoff(nid_obs*nobtype), jmax_cutoff(nid_obs*nobtype)
   real(r_size) :: search_incr, search_incr_i, search_incr_j
   real(r_size) :: dist_zero_fac_cutoff
-  real(r_size) :: hori_loc
-
-  !-----------------------------------------------------------------------------
-
-  if (nobstotal == 0) then
-    nobsl = 0
-    if (present(nobsl_t)) then
-      nobsl_t(:,:) = 0
-    end if  
-  end if
 
   !-----------------------------------------------------------------------------
   ! Initialize
   !-----------------------------------------------------------------------------
 
   nobsl = 0
+  if (present(nobsl_t)) then
+    nobsl_t(:,:) = 0
+  end if
+  if (present(cutd_t)) then
+    cutd_t(:,:) = 0.0d0
+    if (MAX_NOBS_PER_GRID_CRITERION == 1) then
+      do ic = 1, nctype
+        cutd_t(elm_u_ctype(ic),typ_ctype(ic)) = hori_loc_ctype(ic) * dist_zero_fac
+      end do
+    end if
+  end if
+
+#ifdef DEBUG
+  if (present(depd)) then
+    if (.not. DET_RUN) then
+      write (6, '(A)') "[Error] If 'depd' optional input is given, 'DET_RUN' needs to be enabled."
+      stop 99
+    end if
+  end if
+#endif
+
+  if (nobstotal == 0) then
+    return
+  end if
 
   if (maxval(MAX_NOBS_PER_GRID(:)) > 0) then
     allocate (nobs_use (nobstotal))
@@ -1004,7 +1128,12 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
   ctype_skip(:) = .false.
 
   do ic = 1, nctype
-    if (ctype_skip(ic)) cycle
+    if (ctype_skip(ic)) then
+      if (present(cutd_t)) then
+        cutd_t(elm_u_ctype(ic),typ_ctype(ic)) = 0.0d0
+      end if
+      cycle
+    end if
 
     n_merge = 1
     ic_merge(1) = ic
@@ -1029,18 +1158,17 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
     if (nobsl_max_master <= 0) then
     !---------------------------------------------------------------------------
     ! When obs number limit is not enabled,
-    ! directly prepare (hdxf, dep, rdiag, rloc) output.
+    ! directly prepare (hdxf, dep, depd, rdiag, rloc) output.
     !---------------------------------------------------------------------------
 
       nobsl_prev = nobsl
 
       do icm = 1, n_merge
         ic2 = ic_merge(icm)
+        ielm = elm_ctype(ic2)
+        ityp = typ_ctype(ic2)
 
         if (obsgrd(ic2)%tot_ext > 0) then
-          ielm = elm_ctype(ic2)
-          ityp = typ_ctype(ic2)
-
           nn = 0
           call obs_local_range(ic2, ri, rj, imin, imax, jmin, jmax)
           call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
@@ -1048,21 +1176,24 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, nobs
           do n = 1, nn
             iob = nobs_use(n)
 
-            call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, ndist_dummy, nrloc, nrdiag)
+            call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic2, ndist_dummy, nrloc, nrdiag)
             if (nrloc == 0.0d0) cycle
 
             nobsl = nobsl + 1
-            hdxf(nobsl,:) = obsda2%ensval(:,iob)
-            dep(nobsl) = obsda2%val(iob)
+            hdxf(nobsl,:) = obsda_sort%ensval(1:MEMBER,iob)
             rdiag(nobsl) = nrdiag
             rloc(nobsl) = nrloc
+            dep(nobsl) = obsda_sort%val(iob)
+            if (present(depd)) then
+              depd(nobsl) = obsda_sort%ensval(mmdetobs,iob)
+            end if
           end do ! [ n = 1, nn ]
         end if ! [ obsgrd(ic2)%tot_ext > 0 ]
-      end do ! [ do icm = 1, n_merge ]
 
-      if (present(nobsl_t)) then
-        nobsl_t(ielm_u_master,ityp_master) = nobsl - nobsl_prev
-      end if
+        if (present(nobsl_t)) then
+          nobsl_t(elm_u_ctype(ic2),ityp) = nobsl - nobsl_prev
+        end if
+      end do ! [ do icm = 1, n_merge ]
 
     !---------------------------------------------------------------------------
     else if (MAX_NOBS_PER_GRID_CRITERION == 1) then
@@ -1093,12 +1224,8 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
       end do
 
       search_incr = max(obsgrd(ic)%grdspc_i, obsgrd(ic)%grdspc_j)
-      hori_loc = HORI_LOCAL(typ_ctype(ic))
-      if (elm_ctype(ic) == id_radar_ref_zero_obs) then
-        hori_loc = HORI_LOCAL_RADAR_OBSNOREF
-      end if
       ! use integer times of sorting mesh size for search_incr
-      search_incr = search_incr * ceiling(hori_loc * dist_zero_fac / search_incr / real(n_search_incr, r_size))
+      search_incr = search_incr * ceiling(hori_loc_ctype(ic) * dist_zero_fac / search_incr / real(n_search_incr, r_size))
       search_incr_i = search_incr / DX
       search_incr_j = search_incr / DY
 
@@ -1150,25 +1277,18 @@ write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cut
           ic2 = ic_merge(icm)
 
           if (nn_steps(icm+1) > nn_steps(icm)) then
-            ielm = elm_ctype(ic2)
-            ityp = typ_ctype(ic2)
-
             do n = nn_steps(icm)+1, nn_steps(icm+1)
               iob = nobs_use(n)
 
               if (rloc_tmp(iob) == 0.0d0) cycle
                 
               if (rloc_tmp(iob) < 0.0d0) then
-                call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, dist_tmp(iob), rloc_tmp(iob), rdiag_tmp(iob))
+                call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic2, dist_tmp(iob), rloc_tmp(iob), rdiag_tmp(iob))
                 if (rloc_tmp(iob) == 0.0d0) cycle
               end if
 
               if (.not. reach_cutoff) then
-                if (ielm == id_radar_ref_zero_obs) then
-                  dist_zero_fac_cutoff = search_incr * q / HORI_LOCAL_RADAR_OBSNOREF
-                else
-                  dist_zero_fac_cutoff = search_incr * q / HORI_LOCAL(ityp)
-                end if
+                dist_zero_fac_cutoff = search_incr * q / hori_loc_ctype(ic2)
                 if (dist_tmp(iob) > dist_zero_fac_cutoff * dist_zero_fac_cutoff) cycle
               end if
 
@@ -1194,14 +1314,22 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
       do n = 1, nobsl_incr
         nobsl = nobsl + 1
         iob = nobs_use2(n)
-        hdxf(nobsl,:) = obsda2%ensval(:,iob)
+        hdxf(nobsl,:) = obsda_sort%ensval(1:MEMBER,iob)
         rdiag(nobsl) = rdiag_tmp(iob)
         rloc(nobsl) = rloc_tmp(iob)
-        dep(nobsl) = obsda2%val(iob)
+        dep(nobsl) = obsda_sort%val(iob)
+        if (present(depd)) then
+          depd(nobsl) = obsda_sort%ensval(mmdetobs,iob)
+        end if
       end do
 
       if (present(nobsl_t)) then
         nobsl_t(ielm_u_master,ityp_master) = nobsl_incr
+      end if
+      if (present(cutd_t)) then
+        if (nobsl_incr == nobsl_max_master) then
+          cutd_t(ielm_u_master,ityp_master) = hori_loc_ctype(ic) * sqrt(dist_tmp(nobs_use2(nobsl_incr)))
+        end if
       end if
 
     !---------------------------------------------------------------------------
@@ -1218,9 +1346,6 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
         ic2 = ic_merge(icm)
 
         if (obsgrd(ic2)%tot_ext > 0) then
-          ielm = elm_ctype(ic2)
-          ityp = typ_ctype(ic2)
-
           nn_prev = nn
           call obs_local_range(ic2, ri, rj, imin, imax, jmin, jmax)
           call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
@@ -1228,7 +1353,7 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
           do n = nn_prev+1, nn
             iob = nobs_use(n)
 
-            call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ielm, ityp, ndist_dummy, rloc_tmp(iob), rdiag_tmp(iob))
+            call obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic2, ndist_dummy, rloc_tmp(iob), rdiag_tmp(iob))
             if (rloc_tmp(iob) == 0.0d0) cycle
 
             nobsl_incr = nobsl_incr + 1
@@ -1254,14 +1379,26 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
       do n = 1, nobsl_incr
         nobsl = nobsl + 1
         iob = nobs_use2(n)
-        hdxf(nobsl,:) = obsda2%ensval(:,iob)
+        hdxf(nobsl,:) = obsda_sort%ensval(1:MEMBER,iob)
         rdiag(nobsl) = rdiag_tmp(iob)
         rloc(nobsl) = rloc_tmp(iob)
-        dep(nobsl) = obsda2%val(iob)
+        dep(nobsl) = obsda_sort%val(iob)
+        if (present(depd)) then
+          depd(nobsl) = obsda_sort%ensval(mmdetobs,iob)
+        end if
       end do
 
       if (present(nobsl_t)) then
         nobsl_t(ielm_u_master,ityp_master) = nobsl_incr
+      end if
+      if (present(cutd_t)) then
+        if (nobsl_incr == nobsl_max_master) then
+          if (MAX_NOBS_PER_GRID_CRITERION == 2) then
+            cutd_t(ielm_u_master,ityp_master) = rloc_tmp(nobs_use2(nobsl_incr))
+          else if (MAX_NOBS_PER_GRID_CRITERION == 3) then
+            cutd_t(ielm_u_master,ityp_master) = rdiag_tmp(nobs_use2(nobsl_incr))
+          end if
+        end if
       end if
 
     !---------------------------------------------------------------------------
@@ -1306,16 +1443,10 @@ subroutine obs_local_range(ctype, ri, rj, imin, imax, jmin, jmax)
   real(r_size), intent(in) :: ri, rj
   integer, intent(out) :: imin, imax, jmin, jmax
 
-  real(r_size) :: hori_loc
   real(r_size) :: dist_zero_i, dist_zero_j
 
-  hori_loc = HORI_LOCAL(typ_ctype(ctype))
-  if (elm_ctype(ctype) == id_radar_ref_zero_obs) then
-    hori_loc = HORI_LOCAL_RADAR_OBSNOREF
-  end if
-
-  dist_zero_i = hori_loc * dist_zero_fac / DX
-  dist_zero_j = hori_loc * dist_zero_fac / DY
+  dist_zero_i = hori_loc_ctype(ctype) * dist_zero_fac / DX
+  dist_zero_j = hori_loc_ctype(ctype) * dist_zero_fac / DY
   call ij_obsgrd_ext(ctype, ri - dist_zero_i, rj - dist_zero_j, imin, jmin)
   call ij_obsgrd_ext(ctype, ri + dist_zero_i, rj + dist_zero_j, imax, jmax)
 #ifdef DEBUG
@@ -1332,20 +1463,22 @@ end subroutine obs_local_range
 !-------------------------------------------------------------------------------
 ! Subroutine for main calculation of obs_local
 !-------------------------------------------------------------------------------
-subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc, nrdiag)
+subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   use scale_grid, only: &
     DX, DY
   implicit none
   real(r_size), intent(in) :: ri, rj, rlev, rz ! coordinate of the targeted model grid
   integer, intent(in) :: nvar         ! index of targeted model variable
-  integer, intent(in) :: iob          ! index of observation in obsda2
-  integer, intent(in) :: obelm        ! observation variable type
-  integer, intent(in) :: obtyp        ! observation report type
+  integer, intent(in) :: iob          ! index of observation in obsda_sort
+  integer, intent(in) :: ic           ! observation combined type
   real(r_size), intent(out) :: ndist  ! normalized 3D distance SQUARE       (in case of rejected obs: -1.)
   real(r_size), intent(out) :: nrloc  ! localization weight                 (in case of rejected obs:  0.)
   real(r_size), intent(out) :: nrdiag ! weighted observation error variance (in case of rejected obs: -1.)
 
-  integer :: obset, obidx
+  integer :: obelm           ! observation variable type
+  integer :: obtyp           ! observation report type
+  integer :: obset
+  integer :: obidx
   real(r_size) :: rdx, rdy
   real(r_size) :: nd_h, nd_v ! normalized horizontal/vertical distances
 
@@ -1353,8 +1486,10 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   nrdiag = -1.0d0
   ndist = -1.0d0
 
-  obset = obsda2%set(iob)
-  obidx = obsda2%idx(iob)
+  obelm = elm_ctype(ic)
+  obtyp = typ_ctype(ic)
+  obset = obsda_sort%set(iob)
+  obidx = obsda_sort%idx(iob)
 #ifdef DEBUG
   if (obelm /= obs(obset)%elm(obidx)) then
     write (6, '(A)') '[Error] inconsistent observation variable type !!!'
@@ -1386,20 +1521,20 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   !
   ! Calculate normalized vertical distances
   !
-  if (VERT_LOCAL(obtyp) == 0.0d0) then
-    nd_v = 0.0d0                                                           ! no vertical localization
+  if (vert_loc_ctype(ic) == 0.0d0) then
+    nd_v = 0.0d0                                                            ! no vertical localization
   else if (obelm == id_ps_obs) then
-    nd_v = ABS(LOG(obs(obset)%dat(obidx)) - LOG(rlev)) / VERT_LOCAL(obtyp) ! for ps, use observed ps value for the base of vertical localization
+    nd_v = ABS(LOG(obs(obset)%dat(obidx)) - LOG(rlev)) / vert_loc_ctype(ic) ! for ps, use observed ps value for the base of vertical localization
   else if (obelm == id_rain_obs) then
-    nd_v = ABS(LOG(VERT_LOCAL_RAIN_BASE) - LOG(rlev)) / VERT_LOCAL(obtyp)  ! for rain, use VERT_LOCAL_RAIN_BASE for the base of vertical localization
+    nd_v = ABS(LOG(VERT_LOCAL_RAIN_BASE) - LOG(rlev)) / vert_loc_ctype(ic)  ! for rain, use VERT_LOCAL_RAIN_BASE for the base of vertical localization
   else if (obtyp == 22) then ! obtypelist(obtyp) == 'PHARAD'
-    nd_v = ABS(obs(obset)%lev(obidx) - rz) / VERT_LOCAL(obtyp)             ! for PHARAD, use z-coordinate for vertical localization
+    nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)             ! for PHARAD, use z-coordinate for vertical localization
 #ifdef H08
-  else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'               ! H08
-    nd_v = ABS(LOG(obsda2%lev(iob)) - LOG(rlev)) / VERT_LOCAL(obtyp)       ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
+  else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'                ! H08
+    nd_v = ABS(LOG(obsda_sort%lev(iob)) - LOG(rlev)) / vert_loc_ctype(ic)   ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
 #endif
   else
-    nd_v = ABS(LOG(obs(obset)%lev(obidx)) - LOG(rlev)) / VERT_LOCAL(obtyp)
+    nd_v = ABS(LOG(obs(obset)%lev(obidx)) - LOG(rlev)) / vert_loc_ctype(ic)
   end if
 
   !--- reject obs by normalized vertical distance
@@ -1411,13 +1546,9 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, obelm, obtyp, ndist, nrloc
   !
   ! Calculate normalized horizontal distances
   !
-  rdx = (ri - obsda2%ri(iob)) * DX
-  rdy = (rj - obsda2%rj(iob)) * DY
-  if (obelm == id_radar_ref_zero_obs) then
-    nd_h = sqrt(rdx*rdx + rdy*rdy) / HORI_LOCAL_RADAR_OBSNOREF
-  else
-    nd_h = sqrt(rdx*rdx + rdy*rdy) / HORI_LOCAL(obtyp)
-  end if
+  rdx = (ri - obsda_sort%ri(iob)) * DX
+  rdy = (rj - obsda_sort%rj(iob)) * DY
+  nd_h = sqrt(rdx*rdx + rdy*rdy) / hori_loc_ctype(ic)
 
   !--- reject obs by normalized horizontal distance
   if (nd_h > dist_zero_fac) then

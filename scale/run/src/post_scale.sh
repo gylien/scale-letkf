@@ -14,7 +14,7 @@ if (($# < 7)); then
 
 [post_scale.sh] Post-process the SCALE model outputs.
 
-Usage: $0 MYRANK STIME MEM FCSTLEN TMPDIR LOG_OPT OUT_OPT [SCPCALL DELETE_MEMBER RTPS_INFL_OUT NOBS_OUT]
+Usage: $0 MYRANK STIME MEM FCSTLEN TMPDIR LOG_OPT OUT_OPT [SCPCALL DELETE_MEMBER SPRD_OUT RTPS_INFL_OUT NOBS_OUT]
 
   MYRANK   My rank number (not used)
   STIME    Start time (format: YYYYMMDDHHMMSS)
@@ -25,6 +25,7 @@ Usage: $0 MYRANK STIME MEM FCSTLEN TMPDIR LOG_OPT OUT_OPT [SCPCALL DELETE_MEMBER
   OUT_OPT
   SCPCALL  Called from which script? (fcst/cycle)
   DELETE_MEMBER
+  SPRD_OUT
   RTPS_INFL_OUT
   NOBS_OUT
 
@@ -41,6 +42,7 @@ LOG_OPT="$1"; shift
 OUT_OPT="$1"; shift
 SCPCALL="${1:-cycle}"; shift
 DELETE_MEMBER="${1:-0}"; shift
+SPRD_OUT="${1:-1}"; shift
 RTPS_INFL_OUT="${1:-0}"; shift
 NOBS_OUT="${1:-0}"
 
@@ -50,83 +52,80 @@ if [ "$SCPCALL" = 'cycle' ]; then
 
   ATIME=$(datetime $STIME $LCYCLE s)
 
-  if [ "$MEM" == 'mean' ]; then ###### using a variable for 'meanf', 'mean', 'sprd'
+  if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
 
     if ((PNETCDF == 1)); then
       mkdir -p $TMPOUT/${STIME}/hist
-      mv -f $TMPDIR/history.nc $TMPOUT/${STIME}/hist/meanf.history.nc
+      mv -f $TMPDIR/history.nc $TMPOUT/${STIME}/hist/mean.history.nc
     else
-      mkdir -p $TMPOUT/${STIME}/hist/meanf
-      mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/hist/meanf
+      mkdir -p $TMPOUT/${STIME}/hist/mean
+      mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/hist/mean
     fi
 
     if ((PNETCDF == 1)); then
-      mkdir -p $TMPOUT/${ATIME}/gues
+      mkdir -p $TMPOUT/${ATIME}/anal
       ifile="restart_${ATIME:0:8}-${ATIME:8:6}.000.nc"
       if [ -e "$TMPDIR/${ifile}" ]; then
-        mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/meanf.init.nc
+        mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/mean.init.nc
       fi
     else
-      mkdir -p $TMPOUT/${ATIME}/gues/meanf
+      mkdir -p $TMPOUT/${ATIME}/anal/mean
       file_prefix="restart_${ATIME:0:8}-${ATIME:8:6}.000"
       restartbaselen=27
       for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
-        mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/meanf/init${ifile:$restartbaselen}
+        mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/mean/init${ifile:$restartbaselen}
       done
     fi
 
     if ((ENABLE_PARAM_USER == 1)); then
       if ((PNETCDF == 1)); then
-        mkdir -p $TMPOUT/${ATIME}/anal
-
         ifile="restart_2_${ATIME:0:8}-${ATIME:8:6}.000.nc"
-        if [ -e "$TMPDIR/${ifile}" ]; then
-          mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/mean.init.nc
-        fi
-
-        ifile="restart_3_${ATIME:0:8}-${ATIME:8:6}.000.nc"
         if [ -e "$TMPDIR/${ifile}" ]; then
           mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/mean.init.nc
         fi
 
-        ifile="restart_4_${ATIME:0:8}-${ATIME:8:6}.000.nc"
-        if [ -e "$TMPDIR/${ifile}" ]; then
-          mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/sprd.init.nc
-        fi
+        icopy=2
+        if ((SPRD_OUT == 1)); then
+          icopy=$((icopy+1))
+          mkdir -p $TMPOUT/${ATIME}/anal
+          ifile="restart_${icopy}_${ATIME:0:8}-${ATIME:8:6}.000.nc"
+          if [ -e "$TMPDIR/${ifile}" ]; then
+            mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/sprd.init.nc
+          fi
 
-        ifile="restart_5_${ATIME:0:8}-${ATIME:8:6}.000.nc"
-        if [ -e "$TMPDIR/${ifile}" ]; then
-          mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/sprd.init.nc
+          icopy=$((icopy+1))
+          ifile="restart_${icopy}_${ATIME:0:8}-${ATIME:8:6}.000.nc"
+          if [ -e "$TMPDIR/${ifile}" ]; then
+            mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/sprd.init.nc
+          fi
         fi
       else
         restartbaselen=29
 
-        mkdir -p $TMPOUT/${ATIME}/anal/mean
-        file_prefix="restart_2_${ATIME:0:8}-${ATIME:8:6}.000"
-        for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
-          mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/mean/init${ifile:$restartbaselen}
-        done
-
         mkdir -p $TMPOUT/${ATIME}/gues/mean
-        file_prefix="restart_3_${ATIME:0:8}-${ATIME:8:6}.000"
+        file_prefix="restart_2_${ATIME:0:8}-${ATIME:8:6}.000"
         for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
           mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/mean/init${ifile:$restartbaselen}
         done
 
-        mkdir -p $TMPOUT/${ATIME}/anal/sprd
-        file_prefix="restart_4_${ATIME:0:8}-${ATIME:8:6}.000"
-        for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
-          mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/sprd/init${ifile:$restartbaselen}
-        done
+        icopy=2
+        if ((SPRD_OUT == 1)); then
+          icopy=$((icopy+1))
+          mkdir -p $TMPOUT/${ATIME}/anal/sprd
+          file_prefix="restart_${icopy}_${ATIME:0:8}-${ATIME:8:6}.000"
+          for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
+            mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/sprd/init${ifile:$restartbaselen}
+          done
 
-        mkdir -p $TMPOUT/${ATIME}/gues/sprd
-        file_prefix="restart_5_${ATIME:0:8}-${ATIME:8:6}.000"
-        for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
-          mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/sprd/init${ifile:$restartbaselen}
-        done
+          icopy=$((icopy+1))
+          mkdir -p $TMPOUT/${ATIME}/gues/sprd
+          file_prefix="restart_${icopy}_${ATIME:0:8}-${ATIME:8:6}.000"
+          for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
+            mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/sprd/init${ifile:$restartbaselen}
+          done
+        fi
       fi
 
-      icopy=5
       if ((RTPS_INFL_OUT == 1)); then
         icopy=$((icopy+1))
         if ((PNETCDF == 1)); then
@@ -187,24 +186,26 @@ if [ "$SCPCALL" = 'cycle' ]; then
       done
     fi
 
-    if ((OUT_OPT <= 3 && ENABLE_PARAM_USER == 1)); then
-      if ((PNETCDF == 1)); then
-        mkdir -p $TMPOUT/${ATIME}/gues
-        ifile="restart_2_${ATIME:0:8}-${ATIME:8:6}.000.nc"
-        if [ -e "$TMPDIR/${ifile}" ]; then
-          mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/${MEM}.init.nc
+    if ((ENABLE_PARAM_USER == 1)); then
+      if ((OUT_OPT <= 3)) || [ "$MEM" = 'mdet' ]; then
+        if ((PNETCDF == 1)); then
+          mkdir -p $TMPOUT/${ATIME}/gues
+          ifile="restart_2_${ATIME:0:8}-${ATIME:8:6}.000.nc"
+          if [ -e "$TMPDIR/${ifile}" ]; then
+            mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/${MEM}.init.nc
+          fi
+        else
+          mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
+          file_prefix="restart_2_${ATIME:0:8}-${ATIME:8:6}.000"
+          restartbaselen=29
+          for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
+            mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/${MEM}/init${ifile:$restartbaselen}
+          done
         fi
-      else
-        mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
-        file_prefix="restart_2_${ATIME:0:8}-${ATIME:8:6}.000"
-        restartbaselen=29
-        for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
-          mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/${MEM}/init${ifile:$restartbaselen}
-        done
       fi
     fi
 
-    if ((DELETE_MEMBER == 1)); then
+    if ((DELETE_MEMBER == 1)) && [ "$MEM" != 'mdet' ]; then
       if ((PNETCDF == 1)); then
         if [ -e "$TMPOUT/${STIME}/anal/${MEM}.init.nc" ]; then
           rm -f $TMPOUT/${STIME}/anal/${MEM}.init.nc

@@ -41,13 +41,15 @@ CONTAINS
 !     parm_infl        : covariance inflation parameter
 !     rdiag_wloc       : (optional) flag indicating that rdiag = rdiag / rloc    !GYL
 !     infl_update      : (optional) flag to return updated inflation parameter   !GYL
+!     depd(nobs)       : observation departure (yo-Hxb)                          !GYL
 !   OUTPUT
 !     parm_infl        : updated covariance inflation parameter
 !     trans(ne,ne)     : transformation matrix
 !     transm(ne)       : (optional) transformation matrix mean                   !GYL
 !     pao(ne,ne)       : (optional) analysis covariance matrix in ensemble space !GYL
+!     transmd(ne)      : (optional) transformation matrix mean for deterministic run !GYL
 !=======================================================================
-SUBROUTINE letkf_core(ne,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans,transm,pao,rdiag_wloc,infl_update)
+SUBROUTINE letkf_core(ne,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans,transm,pao,rdiag_wloc,infl_update,depd,transmd)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: ne                      !GYL
   INTEGER,INTENT(IN) :: nobs
@@ -62,6 +64,8 @@ SUBROUTINE letkf_core(ne,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans,transm,p
   REAL(r_size),INTENT(OUT),OPTIONAL :: pao(ne,ne)
   LOGICAL,INTENT(IN),OPTIONAL :: rdiag_wloc     !GYL
   LOGICAL,INTENT(IN),OPTIONAL :: infl_update    !GYL
+  REAL(r_size),INTENT(IN),OPTIONAL :: depd(1:nobs) !GYL
+  REAL(r_size),INTENT(OUT),OPTIONAL :: transmd(ne)  !GYL
 
   REAL(r_size) :: hdxb_rinv(nobsl,ne)
   REAL(r_size) :: eivec(ne,ne)
@@ -89,6 +93,9 @@ SUBROUTINE letkf_core(ne,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans,transm,p
     END DO
     IF (PRESENT(transm)) THEN   !GYL
       transm = 0.0d0            !GYL
+    END IF                      !GYL
+    IF (PRESENT(transmd)) THEN  !GYL
+      transmd = 0.0d0           !GYL
     END IF                      !GYL
     IF (PRESENT(pao)) THEN                        !GYL
       pao = 0.0d0                                 !GYL
@@ -178,6 +185,14 @@ SUBROUTINE letkf_core(ne,nobs,nobsl,hdxb,rdiag,rloc,dep,parm_infl,trans,transm,p
       work3(i) = work3(i) + work2(i,j) * dep(j)
     END DO
   END DO
+  IF (PRESENT(depd) .AND. PRESENT(transmd)) THEN       !GYL
+    DO i=1,ne                                          !GYL
+      transmd(i) = work2(i,1) * depd(1)                !GYL
+      DO j=2,nobsl                                     !GYL
+        transmd(i) = transmd(i) + work2(i,j) * depd(j) !GYL
+      END DO                                           !GYL
+    END DO                                             !GYL
+  END IF                                               !GYL
 !-----------------------------------------------------------------------
 !  T = sqrt[(m-1)Pa]
 !-----------------------------------------------------------------------
