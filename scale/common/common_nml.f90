@@ -36,6 +36,7 @@ MODULE common_nml
   integer :: MEMBER_ITER = 0 !
 
   logical :: DET_RUN = .false.
+  logical :: DET_RUN_CYCLED = .true.
 
   !--- PARAM_OBSOPE
   integer               :: OBS_IN_NUM = 1
@@ -72,8 +73,6 @@ MODULE common_nml
   logical               :: ANAL_SPRD_OUT = .true.
   character(filelenmax) :: ANAL_SPRD_OUT_BASENAME = ''
   character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
-
-  logical               :: DET_RUN_CYCLED = .true.
 
   real(r_size) :: INFL_MUL = 1.0d0           ! >  0: globally constant covariance inflation
                                              ! <= 0: use 3D inflation field from 'INFL_MUL_IN_BASENAME' file
