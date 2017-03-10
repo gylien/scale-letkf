@@ -19,7 +19,7 @@ OUTDIR="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf" # Directory for SCALE-LETKF outp
 # Location of model/data files
 
 MODELDIR="$DIR/../../bin"                                            # Directory of the SCALE model executables
-DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
+DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
 DATA_TOPO="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"              # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
@@ -70,7 +70,6 @@ PARENT_REF_TIME=20130713060000
 
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
-
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
@@ -81,9 +80,9 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=30        # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=30        # SCALE forecast time when assimilation window ends (second)
-LCYCLE=30          # Length of a GFS-LETKF cycle (second)
+WINDOW_S=30        # SCALE forecast time when the assimilation window starts (second)
+WINDOW_E=30        # SCALE forecast time when the assimilation window ends (second)
+LCYCLE=30          # Length of a DA cycle (second)
 LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================

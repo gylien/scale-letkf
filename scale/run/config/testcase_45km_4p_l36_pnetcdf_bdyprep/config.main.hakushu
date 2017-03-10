@@ -66,6 +66,9 @@ BDYCYCLE_INT=
 
 PARENT_REF_TIME=
 
+ENABLE_PARAM_USER=0     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
+                        # 1: Enable the 'PARAM_USER' section of the SCALE namelist (require 'config.nml.scale_user' and customized version of SCALE)
+
 OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
 
@@ -79,9 +82,9 @@ OBSNAME[2]=radar
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=1800      # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=3600      # SCALE forecast time when assimilation window ends (second)
-LCYCLE=3600        # Length of a GFS-LETKF cycle (second)
+WINDOW_S=1800      # SCALE forecast time when the assimilation window starts (second)
+WINDOW_E=3600      # SCALE forecast time when the assimilation window ends (second)
+LCYCLE=3600        # Length of a DA cycle (second)
 LTIMESLOT=600      # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
