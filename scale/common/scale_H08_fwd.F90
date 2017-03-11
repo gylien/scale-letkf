@@ -540,7 +540,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
       if(profiles(iprof)%t(ilev) < tmin)then
         if(.not.in_warning)then
           write(6,*)'!! WARNING !! T input for RTTOV has unphysical values!!'
-          write(6,'(a,3f10.3)')'!! WARNING!!',profiles(iprof)%t(ilev),&
+          write(6,'(a,3f10.3)')'!! WARNING!!',profiles(iprof)%q(ilev),&
                                               profiles(iprof)%p(ilev),&
                                               profiles(iprof)%t(ilev)
           write(6,'(a,3i8)')'!! WARNING!!',ilev,elev,slev
@@ -555,11 +555,10 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
     do ilev=elev,slev
       if(profiles(iprof)%q(ilev) < qmin)then
         if(.not.in_warning)then
-          write(6,*)'!! WARNING !! Q input for RTTOV has unphysical values!!'
-          write(6,'(a,3f10.3)')'!! WARNING!!',profiles(iprof)%t(ilev),&
+          write(6,*)'!! WARNING !! Q input for RTTOV is too small!'
+          write(6,'(a,3f10.3)')'!! WARNING!!',profiles(iprof)%q(ilev),&
                                               profiles(iprof)%p(ilev),&
                                               profiles(iprof)%t(ilev)
-          write(6,'(a,3i8)')'!! WARNING!!',ilev,elev,slev
           in_warning = .true.
         endif
 

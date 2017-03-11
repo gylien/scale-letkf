@@ -148,7 +148,6 @@ MODULE common_nml
     (/ 0.4d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0, 1000.0d0, -1.0d0, -1.0d0/)
-!      -1.0d0, 1000.0d0, -1.0d0,  0.0d0/)
 
   ! >0: localization length scale (sec) XXX not implemented yet XXX
   !  0: no localization
@@ -248,10 +247,10 @@ MODULE common_nml
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
   real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
+                                          ! Negative values indicate DISCRETE (0/1) cloud fraction 
   real(r_size) :: H08_LIMIT_LEV = 20000.0d0 ! (Pa) Upper limit level of the sensitive height for Himawari-8 IR
   real(r_size) :: H08_RTTOV_CFRAC_CNST = 0.10d0 ! Denominator constant for diagnosing SEQUENTIAL(0-1) cloud fraction (g m-3)
   real(r_size) :: H08_RTTOV_MINQ_CTOP = 0.10d0 ! Threshold of water/ice contents for diagnosing the cloud top (g m-3)
-                                                ! Negative values indicate DISCRETE (0/1) cloud fraction 
   real(r_size) :: H08_BT_MIN = 0.0d0 ! Lower limit of the BT for Himawari-8 IR
                                            ! Negative values: turn off
 
@@ -278,8 +277,8 @@ MODULE common_nml
   real(r_size) :: OBSERR_TCX = 50.0d3 ! (m)
   real(r_size) :: OBSERR_TCY = 50.0d3 ! (m)
   real(r_size) :: OBSERR_TCP = 5.0d2 ! (Pa)
-  real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
-                                      5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
+  real(r_size) :: OBSERR_H08(nch) = (/3.0d0,3.0d0,3.0d0,3.0d0,3.0d0,&
+                                      3.0d0,3.0d0,3.0d0,3.0d0,3.0d0/) ! H08
 
   !--- PARAM_OBSSIM
   character(filelenmax) :: OBSSIM_IN_TYPE = 'history'

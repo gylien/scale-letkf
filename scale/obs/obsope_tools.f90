@@ -498,7 +498,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
             ! Him8 observations: count the number of profiles required for RTTOV
             ! 
 
-            nallprof = int((n2 - n1) / nch)
+            nallprof = max(n2 - n1, nch)
             allocate(nnB07(nallprof))
             allocate(tmp_ri_H08(nallprof))
             allocate(tmp_rj_H08(nallprof))
@@ -512,17 +512,16 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
               if (obs(iof)%elm(n) /= id_H08IR_obs) cycle
 
-              if (nint(obs(iof)%lev(nn)) == 7) then
+              if (nint(obs(iof)%lev(n)) == 7) then
                 nprof = nprof + 1
                 nnB07(nprof) = nn
                 call rij_g2l(myrank_d, obsda%ri(nn), obsda%rj(nn), ril, rjl)
-              endif
 
-              if (nprof >= 1) then
                 tmp_ri_H08(nprof) = ril
                 tmp_rj_H08(nprof) = rjl
-                tmp_lon_H08(nprof) = obs(iof)%lon(nnB07(nprof))
-                tmp_lat_H08(nprof) = obs(iof)%lat(nnB07(nprof))
+                tmp_lon_H08(nprof) = obs(iof)%lon(n)
+                tmp_lat_H08(nprof) = obs(iof)%lat(n)
+                write(6,'(a,2i4)')'Him8 debug obsope',nint(obs(iof)%lev(n)),nint(obs(iof)%lev(n+1))
               endif
 
             end do ! [ nn = n1, n2 ]
@@ -546,9 +545,10 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
             ! Him8 observation: debug
             ! 
             !do nn = 1, nprof
-            !  if (lon_H08(nn) /= lon_H08(nnB07(nn) + 1)) then
+            !  if (lon_H08(nn) /= obs(iof)%lon(obsda%idx(nnB07(nn)) + 1)) then
             !    print *,"Waring!! Him8 obsope!"
             !  endif
+            !  write(6,'(a,2i6,2f6.1)') "Him8 debug",nn,nnB07(nn),lon_H08(nn),lat_H08(nn)
             !enddo
 
             ! Him8 observation: apply radiative transfer model (RTTOV) 
@@ -748,7 +748,6 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 #ifdef H08
     if (nprocs_e > 1) then
       call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%lev
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) ! ensemble mean of obsda%val2 (clear sky BT)
     end if
     obsda%lev(1:nobs) = obsda%lev(1:nobs) / REAL(MEMBER, r_size)                                                    !
 #endif

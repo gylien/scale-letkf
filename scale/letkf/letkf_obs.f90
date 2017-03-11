@@ -275,7 +275,6 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
     if (nprocs_e > 1) then
       call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
     end if
     obsda%lev(n1:n2) = obsda%lev(n1:n2) / REAL(MEMBER,r_size)
 #endif
@@ -445,8 +444,6 @@ SUBROUTINE set_letkf_obs
 !    end if
 !!!###### end RADAR assimilation ######
 
-
-
 #ifdef H08
 !!!###### Himawari-8 assimilation ###### ! H08
     if (obs(iof)%elm(iidx) == id_H08IR_obs) then
@@ -460,18 +457,6 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_obs_bad
         cycle
       endif
-
-!
-! -- Counting how many members have cloud.
-! -- Cloudy members should have negative values.
-!
-      mem_ref = 0
-      do i = 1, MEMBER
-        if (obsda%ensval(i,n) < 0.0d0) then
-          mem_ref = mem_ref + 1
-          obsda%ensval(i,n) = obsda%ensval(i,n) * (-1.0d0)
-        end if
-      end do
 
     endif
 !!!###### end Himawari-8 assimilation ###### ! H08
@@ -542,56 +527,35 @@ SUBROUTINE set_letkf_obs
       END IF
     end select
 
-    IF(obs(iof)%elm(iidx) == id_H08IR_obs)THEN
 
 #ifdef H08
-!
-! Derived H08 obs height (based on the weighting function output from RTTOV fwd
-! model) is substituted into obs%lev.
-! Band num. is substituded into obsda%lev. This will be used in monit_obs.
-!
+    IF(obs(iof)%elm(iidx) == id_H08IR_obs)THEN
       ch_num = obs(iof)%lev(iidx)
 
-      IF(DEPARTURE_STAT_H08)THEN
-!
-! For obs err correlation statistics based on Desroziers et al. (2005, QJRMS).
-!
-        write(6, '(a,2I6,2F8.2,4F12.4,I6)')"H08-O-B", &
-             obs(iof)%elm(iidx), &
-             nint(ch_num), & ! obsda%lev includes band num.
-             obs(iof)%lon(iidx), &
-             obs(iof)%lat(iidx), &
-             obsda%val(n),& ! O-B
-             obsda%lev(n), & ! sensitive height
-             obs(iof)%dat(iidx), &
-             obs(iof)%err(iidx), &
-             obsda%qc(n)        
-      ELSE
-        write(6, '(2I6,2F8.2,4F12.4,I3)') &
-             obs(iof)%elm(iidx), & ! id
-             nint(ch_num), & ! band num
-             obs(iof)%lon(iidx), &
-             obs(iof)%lat(n), &
-             obsda%lev(iidx), & ! sensitive height
-             obs(iof)%dat(iidx), &
-             obs(iof)%err(iidx), &
-             obsda%val(n), &
-             obsda%qc(n)
-      ENDIF !  [.not. DEPARTURE_STAT_H08]
-#endif
-    ELSE
-#ifdef DEBUG
-      write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
-                                         obs(iof)%typ(iidx), &
-                                         obs(iof)%lon(iidx), &
-                                         obs(iof)%lat(iidx), &
-                                         obs(iof)%lev(iidx), &
-                                         obs(iof)%dat(iidx), &
-                                         obs(iof)%err(iidx), &
-                                         obsda%val(n), &
-                                         obsda%qc(n)
-#endif
+      write(6, '(a,2I6,2F8.2,4F12.4,I3)') "Him8 obs:", &
+            obs(iof)%elm(iidx), & ! id
+            nint(ch_num), & ! band num
+            obs(iof)%lon(iidx), &
+            obs(iof)%lat(iidx), &
+            obsda%lev(n), & ! sensitive height
+            obs(iof)%dat(iidx), &
+            obs(iof)%err(iidx), &
+            obsda%val(n), &
+           obsda%qc(n)
     ENDIF
+#endif
+
+#ifdef DEBUG
+    write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
+                                       obs(iof)%typ(iidx), &
+                                       obs(iof)%lon(iidx), &
+                                       obs(iof)%lat(iidx), &
+                                       obs(iof)%lev(iidx), &
+                                       obs(iof)%dat(iidx), &
+                                       obs(iof)%err(iidx), &
+                                       obsda%val(n), &
+                                       obsda%qc(n)
+#endif
 
 
   END DO ! [ n = 1, obsda%nobs ]

@@ -851,30 +851,40 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   enddo
 !$OMP END PARALLEL DO
 
+  ! Communicate the lateral halo areas
+  !---------------------------------------------------------
+
+  do iv3d = 1, nv3dd
+    call COMM_vars8( v3dgh(:,:,:,iv3d), iv3d )
+  end do
+  do iv3d = 1, nv3dd
+    call COMM_wait ( v3dgh(:,:,:,iv3d), iv3d )
+  end do
+
   ! Surface variables: use the 1st level as the surface (although it is not)
   !---------------------------------------------------------
 
-  v2dgh(:,:,iv2dd_topo) = v3dgh(1+KHALO,:,:,iv3dd_hgt)                ! Use the first model level as topography (is this good?)
+  v2dgh(:,:,iv2dd_topo) = v3dgh(KHALO,:,:,iv3dd_hgt)                ! Use the first model level as topography (is this good?)
 !  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo) = topo(:,:) ! Use the real topography
 
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_ps) = v3dg(1,:,:,iv3d_p)
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_u10m) = v3dg(1,:,:,iv3d_u)
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_v10m) = v3dg(1,:,:,iv3d_v)
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_t2m) = v3dg(1,:,:,iv3d_t)
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_q2m) = v3dg(1,:,:,iv3d_q)
+  v2dgh(:,:,iv2dd_ps) = v3dgh(1+KHALO,:,:,iv3d_p)
+  v2dgh(:,:,iv2dd_u10m) = v3dgh(1+KHALO,:,:,iv3d_u)
+  v2dgh(:,:,iv2dd_v10m) = v3dgh(1+KHALO,:,:,iv3d_v)
+  v2dgh(:,:,iv2dd_t2m) = v3dgh(1+KHALO,:,:,iv3d_t)
+  v2dgh(:,:,iv2dd_q2m) = v3dgh(1+KHALO,:,:,iv3d_q)
 
 !  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) = [[No way]]
 
 #ifdef H08
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_skint) = v3dg(1,:,:,iv3d_t)
+  v2dgh(:,:,iv2dd_skint) = v3dgh(1+KHALO,:,:,iv3d_t)
 
   ! Assume the point where terrain height is less than 10 m is the ocean. T.Honda (02/09/2016)
   !---------------------------------------------------------
 
 !$OMP PARALLEL DO PRIVATE(j,i)
-  do j = 1, nlat
-    do i = 1, nlon
-      v2dgh(i+IHALO,j+JHALO,iv2dd_lsmask) = min(max(topo(i,j) - 10.0d0, 0.0d0), 1.0d0)
+  do j = 1, nlath
+    do i = 1, nlonh
+      v2dgh(i,j,iv2dd_lsmask) = min(max(topo(i,j) - 10.0d0, 0.0d0), 1.0d0)
     enddo
   enddo
 !$OMP END PARALLEL DO
@@ -892,22 +902,15 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
     end do
   end do
 
-  ! Communicate the lateral halo areas
-  !---------------------------------------------------------
-
-  do iv3d = 1, nv3dd
-    call COMM_vars8( v3dgh(:,:,:,iv3d), iv3d )
-  end do
-  do iv3d = 1, nv3dd
-    call COMM_wait ( v3dgh(:,:,:,iv3d), iv3d )
-  end do
-
-  do iv2d = 1, nv2dd
-    call COMM_vars8( v2dgh(:,:,iv2d), iv2d )
-  end do
-  do iv2d = 1, nv2dd
-    call COMM_wait ( v2dgh(:,:,iv2d), iv2d )
-  end do
+!
+! Most 2D diagnostic variables (except for iv2dd_rain) have already been prepared with lateral halo areas.
+!
+!  do iv2d = 1, nv2dd
+!    call COMM_vars8( v2dgh(:,:,iv2d), iv2d )
+!  end do
+!  do iv2d = 1, nv2dd
+!    call COMM_wait ( v2dgh(:,:,iv2d), iv2d )
+!  end do
 
   return
 end subroutine state_to_history
@@ -1259,6 +1262,27 @@ subroutine rij_g2l_auto(proc,ig,jg,il,jl)
 
   return
 end subroutine rij_g2l_auto
+
+#ifdef H08
+function ch2BB_Him8(ch)
+  implicit none
+
+  character(1) :: B1
+  character(2) :: B2
+  character(3) :: ch2BB_Him8
+
+  integer,intent(in) :: ch
+
+  if((ch + 6) < 10)then
+    write(B1,'(I1)') ch + 6
+    ch2BB_Him8 = "B0" // B1
+  else
+    write(B2,'(I2)') ch + 6
+    ch2BB_Him8 = "B" // B2
+  endif
+
+end function ch2BB_Him8
+#endif
 
 !===============================================================================
 END MODULE common_scale
