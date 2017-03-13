@@ -64,17 +64,6 @@ safe_init_tmpdir $TMP
 
 echo "[$(datetime_now)] Determine the distibution schemes"
 
-# K computer
-NNODES_real=$NNODES
-PPN_real=$PPN
-NNODES=$((NNODES*PPN))
-PPN=1
-
-if ((IO_ARB == 1)); then              ##
-  NNODES_real_all=$((NNODES_real*2))  ##
-  NNODES_all=$((NNODES*2))            ##
-fi                                    ##
-
 declare -a procs
 declare -a mem2node
 declare -a node
@@ -115,21 +104,13 @@ cp -L -r $SCRP_DIR/src/* $TMP/src
 
 echo "SCRP_DIR=\"$TMP\"" >> $TMP/config.main
 
-echo "NNODES=$NNODES" >> $TMP/config.main
-echo "PPN=$PPN" >> $TMP/config.main
-echo "NNODES_real=$NNODES_real" >> $TMP/config.main
-echo "PPN_real=$PPN_real" >> $TMP/config.main
-
 echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMP/config.main
 
 echo "RUN_LEVEL='K_micro'" >> $TMP/config.main
 
 if ((IO_ARB == 1)); then                                        ##
-  echo "NNODES_all=$NNODES_all" >> $TMP/config.main             ##
-  echo "NNODES_real_all=$NNODES_real_all" >> $TMP/config.main   ##
-                                                                ##
-  NNODES=$NNODES_all                                            ##
-  NNODES_real=$NNODES_real_all                                  ##
+  NNODES=$((NNODES*2))                                          ##
+  NNODES_APPAR=$((NNODES_APPAR*2))                              ##
 fi                                                              ##
 
 #===============================================================================
@@ -145,11 +126,11 @@ cat > $jobscrp << EOF
 #!/bin/sh
 #PJM -N ${myname1}_${SYSNAME}
 #PJM -s
-#PJM --rsc-list "node=${NNODES_real}"
+#PJM --rsc-list "node=${NNODES}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
 #PJM --rsc-list "rscgrp=${rscgrp}"
-##PJM --mpi "shape=${NNODES_real}"
-#PJM --mpi "proc=$NNODES"
+##PJM --mpi "shape=${NNODES}"
+#PJM --mpi "proc=${totalnp}"
 #PJM --mpi assign-online-node
 
 . /work/system/Env_base_1.2.0-20-1

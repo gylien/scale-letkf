@@ -100,8 +100,8 @@ cat $TMPDAT/conf/config.nml.obsope | \
         -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
         -e "/!--SLOT_BASE--/a SLOT_BASE = $SLOT_BASE," \
         -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = $LTIMESLOT.D0," \
-        -e "/!--NNODES--/a NNODES = $NNODES," \
-        -e "/!--PPN--/a PPN = $PPN," \
+        -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
+        -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
         -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \

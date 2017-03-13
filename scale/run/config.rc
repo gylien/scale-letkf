@@ -43,6 +43,7 @@ elif [ "$PRESET" = 'K_rankdir' ]; then
 #  DISK_ALL_LOCAL=1
   TMPDAT_MODE=3
   TMPRUN_MODE=3
+  DISK_ALL_RANK_LOCAL=1
   DISK_MODE_TOPO_LANDUSE_DB=2
   DISK_MODE_DATA_BDY=2
   DISK_MODE_DATA_TOPO=2
@@ -132,6 +133,16 @@ RTPS_INFL_OUT=${RTPS_INFL_OUT:-0}
 NOBS_OUT=${NOBS_OUT:-0}
 
 #-------------------------------------------------------------------------------
+
+DISK_ALL_RANK_LOCAL=${DISK_ALL_RANK_LOCAL:-0}
+
+if ((DISK_ALL_RANK_LOCAL == 1)); then
+  NNODES_APPAR=$((NNODES*PPN))
+  PPN_APPAR=1
+else
+  NNODES_APPAR=$NNODES
+  PPN_APPAR=$PPN
+fi
 
 DISK_MODE_TOPO_LANDUSE_DB=${DISK_MODE_TOPO_LANDUSE_DB:-2}
 
@@ -252,15 +263,5 @@ else                             #
   TMPOUT="$TMPL/out"             #
   TMPOUT_STG="$TMPL_STG/out"     #
 fi                               #
-
-#-------------------------------------------------------------------------------
-
-###### to be replaced by a variable: PROCESS_ALL_LOCAL ######
-if ((MACHINE_TYPE == 12)); then
-  NNODES_real=$NNODES
-  PPN_real=$PPN
-  NNODES=$((NNODES*PPN))
-  PPN=1
-fi
 
 #===============================================================================

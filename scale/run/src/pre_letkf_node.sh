@@ -153,8 +153,8 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${RELAX_SPREAD_OUT_BASENAME}\"," \
         -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
         -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${NOBS_OUT_BASENAME}\"," \
-        -e "/!--NNODES--/a NNODES = $NNODES," \
-        -e "/!--PPN--/a PPN = $PPN," \
+        -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
+        -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
         -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \

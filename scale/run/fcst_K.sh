@@ -58,12 +58,6 @@ safe_init_tmpdir $TMPS
 
 echo "[$(datetime_now)] Determine the distibution schemes"
 
-# K computer
-NNODES_real=$NNODES
-PPN_real=$PPN
-NNODES=$((NNODES*PPN))
-PPN=1
-
 declare -a node
 declare -a node_m
 declare -a name_m
@@ -97,11 +91,6 @@ cp $SCRP_DIR/config.main $TMPS
 echo "SCRP_DIR=\"\$(pwd)\"" >> $TMPS/config.main
 echo "NODEFILE_DIR=\"\$(pwd)/node\"" >> $TMPS/config.main
 
-echo "NNODES=$NNODES" >> $TMPS/config.main
-echo "PPN=$PPN" >> $TMPS/config.main
-echo "NNODES_real=$NNODES_real" >> $TMPS/config.main
-echo "PPN_real=$PPN_real" >> $TMPS/config.main
-
 echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMPS/config.main
 
 echo "RUN_LEVEL='K'" >> $TMPS/config.main
@@ -113,9 +102,9 @@ jobscrp="${myname1}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
-if ((NNODES_real > 36864)); then
+if ((NNODES > 36864)); then
   rscgrp="huge"
-elif ((NNODES_real > 384)); then
+elif ((NNODES > 384)); then
   rscgrp="large"
 else
   rscgrp="small"
@@ -125,12 +114,12 @@ cat > $jobscrp << EOF
 #!/bin/sh
 #PJM -N ${myname1}_${SYSNAME}
 #PJM -s
-#PJM --rsc-list "node=${NNODES_real}"
+#PJM --rsc-list "node=${NNODES}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
 #PJM --rsc-list "rscgrp=${rscgrp}"
 ##PJM --rsc-list "node-quota=29G"
-##PJM --mpi "shape=${NNODES_real}"
-#PJM --mpi "proc=$NNODES"
+##PJM --mpi "shape=${NNODES}"
+#PJM --mpi "proc=${totalnp}"
 #PJM --mpi assign-online-node
 #PJM --stg-transfiles all
 EOF

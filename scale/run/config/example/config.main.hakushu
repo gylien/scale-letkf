@@ -122,6 +122,10 @@ TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (
                             #  2: share (staging to TMP)
                             #  3: local (staging to TMPL)
 
+DISK_ALL_RANK_LOCAL=0       # Local disks for each process in the same node are independent?
+                            #  0: No
+                            #  1: Yes
+
 DISK_MODE_TOPO_LANDUSE_DB=2
 
 DISK_MODE_DATA_BDY=2

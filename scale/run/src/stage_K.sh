@@ -39,7 +39,7 @@ if [ -s "$STAGING_DIR/stagein.dat" ]; then
 #            echo "#PJM --stgin-dir \"rank=0 ${source} 0:${TMPDAT_STGtmp}/${destin} recursive=10\""
             echo "#PJM --stgin-dir \"rank=${irank} ${source} ${irank}:${TMPDAT_STGtmp}/${destin} recursive=10\""
             irank=$((irank+1))
-            if ((irank >= $NNODES)); then
+            if ((irank >= $NNODES_APPAR)); then
               irank=0
             fi
           fi
@@ -54,7 +54,7 @@ if [ -s "$STAGING_DIR/stagein.dat" ]; then
 #            echo "#PJM --stgin \"rank=0 ${source} 0:${TMPDAT_STGtmp}/${destin}\""
             echo "#PJM --stgin \"rank=${irank} ${source} ${irank}:${TMPDAT_STGtmp}/${destin}\""
             irank=$((irank+1))
-            if ((irank >= $NNODES)); then
+            if ((irank >= $NNODES_APPAR)); then
               irank=0
             fi
           fi
@@ -84,7 +84,7 @@ if [ -s "$STAGING_DIR/stagein.out" ]; then
 #            echo "#PJM --stgin-dir \"rank=0 ${source} 0:${TMPOUT_STG}/${destin} recursive=10\""
             echo "#PJM --stgin-dir \"rank=${irank} ${source} ${irank}:${TMPOUT_STG}/${destin} recursive=10\""
             irank=$((irank+1))
-            if ((irank >= $NNODES)); then
+            if ((irank >= $NNODES_APPAR)); then
               irank=0
             fi
           fi
@@ -99,7 +99,7 @@ if [ -s "$STAGING_DIR/stagein.out" ]; then
 #            echo "#PJM --stgin \"rank=0 ${source} 0:${TMPOUT_STG}/${destin}\""
             echo "#PJM --stgin \"rank=${irank} ${source} ${irank}:${TMPOUT_STG}/${destin}\""
             irank=$((irank+1))
-            if ((irank >= $NNODES)); then
+            if ((irank >= $NNODES_APPAR)); then
               irank=0
             fi
           fi
@@ -191,7 +191,7 @@ fi
 #              echo "#PJM --stgout-dir \"rank=0 0:${TMPOUT_STG}/${source} ${destin} recursive=10\""
               echo "#PJM --stgout-dir \"rank=${irank} ${irank}:${TMPOUT_STG}/${source} ${destin} recursive=10\""
               irank=$((irank+1))
-              if ((irank >= $NNODES)); then
+              if ((irank >= $NNODES_APPAR)); then
                 irank=0
               fi
             fi
@@ -206,7 +206,7 @@ fi
 #              echo "#PJM --stgout \"rank=0 0:${TMPOUT_STG}/${source} ${destin}\""
               echo "#PJM --stgout \"rank=${irank} ${irank}:${TMPOUT_STG}/${source} ${destin}\""
               irank=$((irank+1))
-              if ((irank >= $NNODES)); then
+              if ((irank >= $NNODES_APPAR)); then
                 irank=0
               fi
             fi

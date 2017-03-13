@@ -178,14 +178,14 @@ while ((time <= ETIME)); do
   echo "  Forecast length:          $FCSTLEN s"
   echo "  Output interval:          $FCSTOUT s"
   echo
-  echo "  Nodes used:               $NNODES"
+  echo "  Nodes used:               $NNODES_APPAR"
 #  if ((MTYPE == 1)); then
-    for n in $(seq $NNODES); do
+    for n in $(seq $NNODES_APPAR); do
       echo "    ${node[$n]}"
     done
 #  fi
   echo
-  echo "  Processes per node:       $PPN"
+  echo "  Processes per node:       $PPN_APPAR"
   echo "  Total processes:          $totalnp"
   echo
   echo "  Nodes per SCALE run:      $mem_nodes"

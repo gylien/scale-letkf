@@ -51,7 +51,7 @@ cat > $jobscrp << EOF
 #PJM -L rscgrp=regular-flat
 #PJM -L node=${NNODES}
 #PJM -L elapse=${TIME_LIMIT}
-#PJM --mpi proc=$((NNODES*PPN))
+#PJM --mpi proc=${totalnp}
 #PJM --omp thread=${THREADS}
 #PJM -g gh51
 ##PJM -j
