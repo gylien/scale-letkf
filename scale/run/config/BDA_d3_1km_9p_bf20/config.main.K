@@ -97,10 +97,6 @@ BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 #===============================================================================
 # Temporary directories to store runtime files
 
-DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
-                            #  1: in $TMPDAT
-                            #  2: in $TMPOUT
-
 DISK_MODE_TOPO_LANDUSE_DB=2
 
 DISK_MODE_DATA_BDY=2
