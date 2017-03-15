@@ -236,6 +236,7 @@ fi
 
 STAGING_DIR="$TMP/staging"
 NODEFILE_DIR="$TMP/node"
+CONFIG_DIR="$TMP"
 
 TMPDAT_S="$TMP/dat"              #
 TMPDAT_S_STG="$TMP_STG/dat"      #
@@ -257,11 +258,11 @@ else                             #
   TMPRUN_STG="$TMPL_STG/run"     #
 fi                               #
 if ((TMPOUT_MODE <= 2)); then    # The 'out' temporary directory (output)
-  TMPOUT="$TMP/out"              #
-  TMPOUT_STG="$TMP_STG/out"      #
+  TMPOUT="$TMP"                  #
+  TMPOUT_STG="$TMP_STG"          #
 else                             #
-  TMPOUT="$TMPL/out"             #
-  TMPOUT_STG="$TMPL_STG/out"     #
+  TMPOUT="$TMPL"                 #
+  TMPOUT_STG="$TMPL_STG"         #
 fi                               #
 
 #===============================================================================

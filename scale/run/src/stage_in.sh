@@ -34,15 +34,21 @@ if [ "$MYRANK" = 'a' ] ||
       else
         TMPDATtmp=$TMPDAT
       fi
-      if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
-        mkdir -p "$(dirname ${TMPDATtmp}/${destin})"
-        if ((SCP_THREAD > 1)); then
-          while (($(jobs -p | wc -l) >= SCP_THREAD)); do
-            sleep 1s
-          done
-          $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDATtmp}/${destin}" &
-        else
-          $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDATtmp}/${destin}"
+      if [ -z "$source" ]; then
+        if [ "${destin: -1}" = '/' ]; then
+          mkdir -p "${TMPDATtmp}/${destin}"
+        fi
+      else
+        if [ ! -z "$destin" ]; then
+          mkdir -p "$(dirname ${TMPDATtmp}/${destin})"
+          if ((SCP_THREAD > 1)); then
+            while (($(jobs -p | wc -l) >= SCP_THREAD)); do
+              sleep 1s
+            done
+            $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDATtmp}/${destin}" &
+          else
+            $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDATtmp}/${destin}"
+          fi
         fi
       fi
     done < "$STAGING_DIR/stagein.dat" | sort | uniq
@@ -70,15 +76,21 @@ for ifile in $filelist; do
   while read line; do
     source="$(echo $line | cut -d '|' -s -f1)"
     destin="$(echo $line | cut -d '|' -s -f2)"
-    if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
-      mkdir -p "$(dirname ${TMPOUT}/${destin})"
-      if ((SCP_THREAD > 1)); then
-        while (($(jobs -p | wc -l) >= SCP_THREAD)); do
-          sleep 1s
-        done
-        $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPOUT}/${destin}" &
-      else
-        $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPOUT}/${destin}"
+    if [ -z "$source" ]; then
+      if [ "${destin: -1}" = '/' ]; then
+        mkdir -p "${TMPOUT}/${destin}"
+      fi
+    else
+      if [ ! -z "$destin" ]; then
+        mkdir -p "$(dirname ${TMPOUT}/${destin})"
+        if ((SCP_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= SCP_THREAD)); do
+            sleep 1s
+          done
+          $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPOUT}/${destin}" &
+        else
+          $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPOUT}/${destin}"
+        fi
       fi
     fi
   done < "$ifile" | sort | uniq
