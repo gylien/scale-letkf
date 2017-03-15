@@ -52,7 +52,7 @@ program scaleles_pp_ens
 
   integer :: NUM_DOMAIN
   integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
-  character(len=H_LONG) :: CONF_FILES(PRC_DOMAIN_nlim)
+  character(len=H_LONG) :: confname_dummy2(PRC_DOMAIN_nlim)
 
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
@@ -64,7 +64,7 @@ program scaleles_pp_ens
 
   NUM_DOMAIN = 1
   PRC_DOMAINS = 0
-  CONF_FILES = ""
+  confname_dummy2 = ""
 
   ! start MPI
   call PRC_MPIstart( universal_comm ) ! [OUT]
@@ -142,7 +142,7 @@ program scaleles_pp_ens
     call PRC_MPIsplit( global_comm,      & ! [IN]
                        NUM_DOMAIN,       & ! [IN]
                        PRC_DOMAINS(:),   & ! [IN]
-                       CONF_FILES (:),   & ! [IN]
+                       confname_dummy2(:), & ! [IN]
                        .false.,          & ! [IN]
                        .false.,          & ! [IN] flag bulk_split
                        .false.,          & ! [IN] no reordering
