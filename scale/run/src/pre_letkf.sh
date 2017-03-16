@@ -58,7 +58,7 @@ if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'sprd'
 
   if ((ENABLE_PARAM_USER != 1)); then
     if ((PNETCDF == 1)); then
-      mkdir -p $TMPOUT/${ATIME}/anal
+      mkdir -p $TMPOUT/${ATIME}/gues
       cp -f $TMPOUT/${ATIME}/anal/mean.init.nc $TMPOUT/${ATIME}/gues/mean.init.nc
       if ((SPRD_OUT == 1)); then
         cp -f $TMPOUT/${ATIME}/anal/mean.init.nc $TMPOUT/${ATIME}/gues/sprd.init.nc
