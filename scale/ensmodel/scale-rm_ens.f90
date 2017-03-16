@@ -165,9 +165,9 @@ program scaleles_ens
         if (im <= MEMBER) then
           call file_member_replace(im, CONF_FILES, confname)
         else if (im == MEMBER+1) then
-          call file_member_replace(im, CONF_FILES, confname, memf_mean)
+          call file_member_replace(0, CONF_FILES, confname, memf_mean)
         else if (im == MEMBER+2) then
-          call file_member_replace(im, CONF_FILES, confname, memf_sprd)
+          call file_member_replace(0, CONF_FILES, confname, memf_mdet)
         end if
         WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', trim(confname)
 
