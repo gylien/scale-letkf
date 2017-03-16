@@ -657,8 +657,8 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
   implicit none
 
   CHARACTER(*),INTENT(IN) :: filename
-  REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
-  REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
+  REAL(RP),INTENT(INOUT) :: v3dg(nlev,nlon,nlat,nv3d)
+  REAL(RP),INTENT(INOUT) :: v2dg(nlon,nlat,nv2d)
   integer,intent(in) :: comm
   integer :: iv3d,iv2d,ncid
 

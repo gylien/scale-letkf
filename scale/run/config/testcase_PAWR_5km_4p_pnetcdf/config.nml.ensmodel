@@ -1,0 +1,13 @@
+&PARAM_ENSEMBLE
+!--MEMBER--
+!--MEMBER_RUN--
+!--MEMBER_ITER--
+!--CONF_FILES--
+/
+
+&PARAM_LETKF_PRC
+!--NNODES--
+!--PPN--
+!--MEM_NODES--
+!--MEM_NP--
+/
