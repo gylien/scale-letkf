@@ -163,7 +163,7 @@ program scaleles_ens
       im = proc2mem(1,it,universal_myrank+1)
       if (im >= 1 .and. im <= MEMBER_RUN) then
         WRITE(confname(1:4),'(I4.4)') proc2mem(1,it,universal_myrank+1)
-        WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', confname
+        WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', trim(confname)
 
         call scalerm ( local_comm, &
                        intercomm_parent, &
