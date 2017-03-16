@@ -73,14 +73,14 @@ echo "[$(datetime_now)] ### 2" >&2
 
 #-------------------------------------------------------------------------------
 
-#if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
+if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
 #  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
-#    safe_init_tmpdir $TMP || exit $?
+    safe_init_tmpdir $TMP || exit $?
 #  fi
 #  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
 #    safe_init_tmpdir $TMPL || exit $?
 #  fi
-#fi
+fi
 
 echo "[$(datetime_now)] ### 3" >&2
 
@@ -96,29 +96,33 @@ declare -a proc2node
 declare -a proc2group
 declare -a proc2grpproc
 
-##if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
-#if [ "$STG_TYPE" = 'builtin' ]; then
-#  safe_init_tmpdir $NODEFILE_DIR || exit $?
-#  distribute_da_cycle machinefile $NODEFILE_DIR || exit $?
-#else
+#if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
+if [ "$STG_TYPE" = 'builtin' ]; then
+  safe_init_tmpdir $NODEFILE_DIR || exit $?
+  distribute_da_cycle machinefile $NODEFILE_DIR || exit $?
+else
   distribute_da_cycle - - $NODEFILE_DIR/distr || exit $?
-#fi
+fi
 
 echo "[$(datetime_now)] ### 4" >&2
 
 #===============================================================================
 # Determine the staging list and then stage in
 
-#if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
-#  echo "[$(datetime_now)] Initialization (stage in)" >&2
+if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
+  echo "[$(datetime_now)] Initialization (stage in)" >&2
 
-#  safe_init_tmpdir $STAGING_DIR || exit $?
-#  staging_list || exit $?
-#  if ((TMPDAT_MODE >= 2 || TMPOUT_MODE >= 2)); then
+  safe_init_tmpdir $STAGING_DIR || exit $?
+  staging_list_simple || exit $?
+
+######  safe_init_tmpdir $CONFIG_DIR || exit $?
+  config_file_list || exit $?
+
+  if ((TMPDAT_MODE >= 2 || TMPOUT_MODE >= 2)); then
 #    pdbash node all $SCRP_DIR/src/stage_in_init.sh || exit $?
-#    pdbash node all $SCRP_DIR/src/stage_in.sh || exit $?
-#  fi
-#fi
+    pdbash node all $SCRP_DIR/src/stage_in.sh || exit $?
+  fi
+fi
 
 echo "[$(datetime_now)] ### 5" >&2
 

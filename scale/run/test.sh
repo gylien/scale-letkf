@@ -117,7 +117,7 @@ for i in $(seq $NTEST); do
     script_suffix='_ofp'
   elif [ "${PRESET[$i]}" = 'Linux_torque' ]; then
     config_suffix='hakushu'
-    script_suffix='_torque'
+    script_suffix='_torque_simple'
   else
     echo "[Error] Unsupported \$PRESET: ${PRESET[$i]}" >&2
     print_result
