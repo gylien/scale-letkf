@@ -387,22 +387,31 @@ while ((time <= ETIME)); do
 #  echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> $STAGING_DIR/stagein.out
 
   for m in $(seq $mtot); do
-    RESTART_OUT_NUM_COPIES=1
     if [ "${name_m[$m]}" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
-      RESTART_OUT_NUM_COPIES=2
+      RESTART_OUT_ADDITIONAL_COPIES=1
+      RESTART_OUT_ADDITIONAL_BASENAME="\"mean/gues.d01\", "
       if ((SPRD_OUT == 1)); then
-        RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+2))
+        RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
+        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"sprd/anal.d01\", "
+        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"sprd/gues.d01\", "
       fi
 #          if ((RTPS_INFL_OUT == 1)); then
-#            RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+1))
+#            RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
+#            RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"rtpsinfl.d01\", "
 #          fi
 #          if ((NOBS_OUT == 1)); then
-#            RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+1))
+#            RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
+#            RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"nobs.d01\", "
 #          fi
     elif [ "${name_m[$m]}" = 'mdet' ]; then
-      RESTART_OUT_NUM_COPIES=2
+      RESTART_OUT_ADDITIONAL_COPIES=1
+      RESTART_OUT_ADDITIONAL_BASENAME="\"mdet/gues.d01\", "
     elif ((OUT_OPT <= 3)); then
-      RESTART_OUT_NUM_COPIES=2
+      RESTART_OUT_ADDITIONAL_COPIES=1
+      RESTART_OUT_ADDITIONAL_BASENAME="\"${name_m[$m]}/gues.d01\", "
+    else
+      RESTART_OUT_ADDITIONAL_COPIES=0
+      RESTART_OUT_ADDITIONAL_BASENAME=
     fi
     if ((BDY_ENS == 1)); then
       mem_bdy=${name_m[$m]}
@@ -440,7 +449,8 @@ while ((time <= ETIME)); do
             -e "/!--ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME--/a ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME = \"dat/rad/cira.nc\"," \
             -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"dat/rad/MIPAS\"," \
             -e "/!--TIME_END_RESTART_OUT--/a TIME_END_RESTART_OUT = .false.," \
-            -e "/!--RESTART_OUT_NUM_COPIES--/a RESTART_OUT_NUM_COPIES = ${RESTART_OUT_NUM_COPIES}," \
+            -e "/!--RESTART_OUT_ADDITIONAL_COPIES--/a RESTART_OUT_ADDITIONAL_COPIES = ${RESTART_OUT_ADDITIONAL_COPIES}," \
+            -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}" \
         > $CONFIG_DIR/${conf_file}
 #    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+1))]}
   done

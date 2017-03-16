@@ -22,11 +22,11 @@ BUFR_LIB  = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
 SFC       = ifort
 FC        = mpif90
 
-FOPTS_SCALE = $(FFLAGS)
+FOPTS_SCALE = $(FFLAGS) -g -traceback -check bounds,pointers
 
 #FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback -fpe0
 #FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback -fpp
-FOPTS     = $(FOPTS_SCALE)
+FOPTS     = $(FOPTS_SCALE) -fpe0 # -DDEBUG
 
 FMCMODEL  = -mcmodel=medium
 FBYTESWAP = -convert little_endian
