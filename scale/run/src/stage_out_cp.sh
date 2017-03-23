@@ -1,7 +1,7 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Built-in stage-in script (run on the server side)
+#  Built-in stage-out script (run on the computing-node side)
 #
 #===============================================================================
 
@@ -13,8 +13,8 @@ if (($# < 3)); then
 Usage: $MYNAME NRANKS STGLIST STGDIR [THREAD]
 
    NRANKS   Total number of nodes
-   STGLIST  File of the stage-in list
-   STGDIR   Directory where the files are staged into
+   STGLIST  File of the stage-out list
+   STGDIR   Directory where the files are staged out from
    THREAD   Number of parallel copying threads (default: 1)
 
 EOF
@@ -28,55 +28,48 @@ THREAD="${1:-1}"
 
 #-------------------------------------------------------------------------------
 
-function stage_in_cp_sub () {
-  local source="$(echo $line | cut -d '|' -s -f1)"
-  local destin="$(echo $line | cut -d '|' -s -f2)"
-  local destinstg="${STGDIR}/${destin}"
-  if [[ -z "$destin" ]]; then
+function stage_out_cp_sub () {
+  local destin="$(echo $line | cut -d '|' -s -f1)"
+  local source="$(echo $line | cut -d '|' -s -f2)"
+  local sourcestg="${STGDIR}/${source}"
+  local flag="$(echo $line | cut -d '|' -s -f3)"
+  if [[ -z "$source" || -z "$destin" ]]; then
     : # do nothing
-  elif [[ -z "$source" ]]; then
-    if [[ "$destinstg" != */ ]]; then
-      if (mkdir -p "$(dirname "$destinstg")"); then
-        touch "$destinstg" # create an empty file
-      fi
-    else
-      mkdir -p "$destinstg" # create an empty directory
-    fi
-  elif [[ "$source" != /* ]]; then
-    echo "$MYNAME: source '$source' is not an absolute path" >&2
-  elif [[ "$source" != */ && "$destinstg" != */ ]]; then # files
-    if [[ -d "$destinstg" ]]; then
-      echo "$MYNAME: source '$source' is a regular file, but destination '$destinstg' exists and is a directory" >&2
-    elif (mkdir -p "$(dirname "$destinstg")"); then
+  elif [[ "$destin" != /* ]]; then
+    echo "$MYNAME: destination '$destin' is not an absolute path" >&2
+#  elif [[ ! -e "$sourcestg" ]]; then
+#    echo "$MYNAME: source '$sourcestg' does not exists" >&2
+  elif [[ "$sourcestg" != */ && "$destin" != */ ]]; then # files
+    if [[ -d "$destin" ]]; then
+      echo "$MYNAME: source '$sourcestg' is a regular file, but destination '$destin' exists and is a directory" >&2
+    elif (mkdir -p "$(dirname "$destin")"); then
       if ((THREAD > 1)); then
         while (($(jobs -p | wc -l) >= THREAD)); do
           sleep 1s
         done
-        cp -L "$source" "$destinstg" &
+        ( cp -L "$sourcestg" "$destin" && [ "$flag" = 'r' ] && rm -f "$sourcestg" ) &
       else
-        cp -L "$source" "$destinstg"
+        cp -L "$sourcestg" "$destin" && [ "$flag" = 'r' ] && rm -f "$sourcestg"
       fi
     fi
-  elif [[ "$source" == */ && "$destinstg" == */ ]]; then # directories
-    if (mkdir -p "$destinstg"); then
+  elif [[ "$sourcestg" == */ && "$destin" == */ ]]; then # directories
+    if (mkdir -p "$destin"); then
       if ((THREAD > 1)); then
         while (($(jobs -p | wc -l) >= THREAD)); do
           sleep 1s
         done
-        cp -rL "$source"* "$destinstg" > /dev/null 2>&1 &
+        ( cp -rL "$sourcestg"* "$destin" > /dev/null 2>&1 && [ "$flag" = 'r' ] && rm -fr "$sourcestg" ) &
       else
-        cp -rL "$source"* "$destinstg" > /dev/null 2>&1
+        cp -rL "$sourcestg"* "$destin" > /dev/null 2>&1 && [ "$flag" = 'r' ] && rm -fr "$sourcestg"
       fi
     fi
   else
-    echo "$MYNAME: source '$source' and destination '$destinstg' need to be the same type" >&2
+    echo "$MYNAME: source '$sourcestg' and destination '$destin' need to be the same type" >&2
   fi
 }
 
 #-------------------------------------------------------------------------------
 # Check the validity of $STGDIR for safety
-
-mkdir -p $STGDIR || exit $?
 
 if [[ ! -d "$STGDIR" ]]; then
   echo "[Error] $MYNAME: '$STGDIR' is not a directory." >&2
@@ -88,18 +81,18 @@ if [[ ! -O "$STGDIR" ]]; then
 fi
 
 #-------------------------------------------------------------------------------
-# Stage-in
+# Stage-out
 
 if [[ -s "$STGLIST" ]]; then
   while read line; do
-    stage_in_cp_sub
+    stage_out_cp_sub
   done < "$STGLIST" # | sort | uniq
 fi
 
 for n in $(seq $NRANKS); do
   if [[ -s "$STGLIST.$n" ]]; then
     while read line; do
-      stage_in_cp_sub
+      stage_out_cp_sub
     done < "$STGLIST.$n" # | sort | uniq
   fi
 done

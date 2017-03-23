@@ -73,8 +73,7 @@ if [ ! -O "$DIRNAME" ]; then
   exit 1
 fi
 
-rm -fr $DIRNAME
-res=$? && ((res != 0)) && exit $res
+rm -fr $DIRNAME || exit $?
 
 #-------------------------------------------------------------------------------
 }
