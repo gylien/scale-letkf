@@ -236,7 +236,6 @@ fi
 
 STAGING_DIR="$TMP/staging"
 NODEFILE_DIR="$TMP/node"
-CONFIG_DIR="$TMP"
 
 TMPDAT_S="$TMP/dat"              #
 TMPDAT_S_STG="$TMP_STG/dat"      #
@@ -264,5 +263,73 @@ else                             #
   TMPOUT="$TMPL"                 #
   TMPOUT_STG="$TMPL_STG"         #
 fi                               #
+
+#-------------------------------------------------------------------------------
+
+USE_TMPL=0
+
+DISK_MODE=${DISK_MODE:-2}
+if ((DISK_MODE == 1)); then
+  STAGING_INFILE="$STAGING_DIR/stagein_link"
+  STAGING_OUTFILE="$STAGING_DIR/stageout_link"
+  TMP_MAIN="$TMP"
+  STAGING_INFILE_EXE="$STAGING_DIR/stagein_link"
+  TMP_EXE="$TMP"
+  CONFIG_DIR="$TMP"
+elif ((DISK_MODE == 2)); then
+  STAGING_INFILE="$STAGING_DIR/stagein_share"
+  STAGING_OUTFILE="$STAGING_DIR/stageout_share"
+  TMP_MAIN="$TMP"
+  STAGING_INFILE_EXE="$STAGING_DIR/stagein_share"
+  TMP_EXE="$TMP"
+  CONFIG_DIR="$TMP"
+elif ((DISK_MODE == 3)); then
+  USE_TMPL=1
+  STAGING_INFILE="$STAGING_DIR/stagein_local"
+  STAGING_OUTFILE="$STAGING_DIR/stageout_local"
+  TMP_MAIN="$TMPL"
+  STAGING_INFILE_EXE="$STAGING_DIR/stagein_local"
+  TMP_EXE="$TMPL"
+  CONFIG_DIR="$TMP/config"
+fi
+
+DISK_MODE_CONSTDB=${DISK_MODE_CONSTDB:-$DISK_MODE}
+if ((DISK_MODE_CONSTDB == 1)); then
+  STAGING_INFILE_CONSTDB="$STAGING_DIR/stagein_link"
+  TMP_CONSTDB="$TMP"
+elif ((DISK_MODE_CONSTDB == 2)); then
+  STAGING_INFILE_CONSTDB="$STAGING_DIR/stagein_share"
+  TMP_CONSTDB="$TMP"
+elif ((DISK_MODE_CONSTDB == 3)); then
+  USE_TMPL=1
+  STAGING_INFILE_CONSTDB="$STAGING_DIR/stagein_local"
+  TMP_CONSTDB="$TMPL"
+fi
+
+DISK_MODE_BDYDATA=${DISK_MODE_BDYDATA:-$DISK_MODE}
+if ((DISK_MODE_BDYDATA == 1)); then
+  STAGING_INFILE_BDYDATA="$STAGING_DIR/stagein_link"
+  TMP_BDYDATA="$TMP"
+elif ((DISK_MODE_BDYDATA == 2)); then
+  STAGING_INFILE_BDYDATA="$STAGING_DIR/stagein_share"
+  TMP_BDYDATA="$TMP"
+elif ((DISK_MODE_BDYDATA == 3)); then
+  USE_TMPL=1
+  STAGING_INFILE_BDYDATA="$STAGING_DIR/stagein_local"
+  TMP_BDYDATA="$TMPL"
+fi
+
+DISK_MODE_OBS=${DISK_MODE_OBS:-$DISK_MODE}
+if ((DISK_MODE_OBS == 1)); then
+  STAGING_INFILE_OBS="$STAGING_DIR/stagein_link"
+  TMP_OBS="$TMP"
+elif ((DISK_MODE_OBS == 2)); then
+  STAGING_INFILE_OBS="$STAGING_DIR/stagein_share"
+  TMP_OBS="$TMP"
+elif ((DISK_MODE_OBS == 3)); then
+  USE_TMPL=1
+  STAGING_INFILE_OBS="$STAGING_DIR/stagein_local"
+  TMP_OBS="$TMPL"
+fi
 
 #===============================================================================

@@ -74,12 +74,7 @@ echo "[$(datetime_now)] ### 2" >&2
 #-------------------------------------------------------------------------------
 
 if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
-#  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
-    safe_init_tmpdir $TMP || exit $?
-#  fi
-#  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
-#    safe_init_tmpdir $TMPL || exit $?
-#  fi
+  safe_init_tmpdir $TMP || exit $?
 fi
 
 echo "[$(datetime_now)] ### 3" >&2
@@ -115,12 +110,45 @@ if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
   safe_init_tmpdir $STAGING_DIR || exit $?
   staging_list_simple || exit $?
 
-######  safe_init_tmpdir $CONFIG_DIR || exit $?
   config_file_list || exit $?
 
-  if ((TMPDAT_MODE >= 2 || TMPOUT_MODE >= 2)); then
-#    pdbash node all $SCRP_DIR/src/stage_in_init.sh || exit $?
-    pdbash node all $SCRP_DIR/src/stage_in.sh || exit $?
+  if [ -s "$STAGING_DIR/stagein_link" ] || [ -s "$STAGING_DIR/stagein_link.1" ]; then
+#    safe_init_tmpdir $TMP || exit $?
+    errmsg=$(bash $SCRP_DIR/src/stage_in_ln.sh $NNODES $STAGING_DIR/stagein_link $TMP 2>&1)
+    if [ -n "$errmsg" ]; then
+      echo "$errmsg" >&2
+      exit 1
+    fi
+  fi
+  if [ -s "$STAGING_DIR/stagein_share" ] || [ -s "$STAGING_DIR/stagein_share.1" ]; then
+#    safe_init_tmpdir $TMP || exit $?
+#    pdbash node all $SCRP_DIR/src/stage_in_init_stgdir_node.sh $TMP share || exit $?
+    errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES $STAGING_DIR/stagein_share $TMP share $SCP_THREAD 2>&1)
+    if [ -n "$errmsg" ]; then
+      echo "$errmsg" >&2
+      exit 1
+    fi
+  fi
+  if [ -s "$STAGING_DIR/stagein_local" ] || [ -s "$STAGING_DIR/stagein_local.1" ]; then
+    pdbash node all $SCRP_DIR/src/stage_in_init_stgdir_node.sh $TMPL local || exit $?
+    errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES $STAGING_DIR/stagein_local $TMPL local $SCP_THREAD 2>&1)
+    if [ -n "$errmsg" ]; then
+      echo "$errmsg" >&2
+      exit 1
+    fi
+  fi
+
+  if ((DISK_MODE == 1)); then
+    if [ -s "$STAGING_DIR/stageout_link" ] || [ -s "$STAGING_DIR/stageout_link.1" ]; then
+      errmsg=$(bash $SCRP_DIR/src/stage_out_ln.sh $NNODES $STAGING_DIR/stageout_link $TMP 2>&1)
+      if [ -n "$errmsg" ]; then
+        echo "$errmsg" >&2
+        exit 1
+      fi
+#      if ((CLEAR_TMP == 1)); then
+#        safe_rm_tmpdir $TMP || exit $?
+#      fi
+    fi
   fi
 fi
 
@@ -139,6 +167,12 @@ echo "[$(datetime_now)] ### 6" >&2
 
 #===============================================================================
 # Run data assimilation cycles
+
+if [ "$STG_TYPE" = 'builtin' ]; then
+  cd $TMP_EXE
+fi
+
+#-------------------------------------------------------------------------------
 
 s_flag=1
 e_flag=0
@@ -262,8 +296,14 @@ while ((time <= ETIME)); do
 #echo ${stepexecdir[$s]} >&2
 #echo $(rev_path ${stepexecdir[$s]}) >&2
 
-      NNP=$(cat ${NODEFILE_DIR}/${nodestr} | wc -l)
-      mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${nodestr}" -of-proc log/${stepexecname[$s]}.NOUT_${conf_time} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf || exit $?
+#      NNP=$(cat ${NODEFILE_DIR}/${nodestr} | wc -l)
+##      mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${nodestr}" -of-proc log/${stepexecname[$s]}.NOUT_${conf_time} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf || exit $?
+#echo "      mpiexec -n $NNP -vcoordfile \"${NODEFILE_DIR}/${nodestr}\" -of-proc log/${stepexecname[$s]}.NOUT_${conf_time} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf || exit \$?"
+
+      HOSTLIST=$(cat ${NODEFILE_DIR}/${nodestr})
+      HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
+      $MPIRUN $HOSTLIST 1 ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
+#      echo "$MPIRUN $HOSTLIST 1 ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit \$?"
 
 #      if [ "$STG_TYPE" = 'K_rankdir' ]; then
 
@@ -283,9 +323,9 @@ while ((time <= ETIME)); do
     fi
   done
 
-  if ((IO_ARB == 1)); then ##                                 
-    wait                   ##
-  fi                       ##
+######  if ((IO_ARB == 1)); then ##                                 
+######    wait                   ##
+######  fi                       ##
 
 #-------------------------------------------------------------------------------
 # Online stage out

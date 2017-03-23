@@ -126,13 +126,10 @@ DISK_ALL_RANK_LOCAL=0       # Local disks for each process in the same node are 
                             #  0: No
                             #  1: Yes
 
-DISK_MODE_TOPO_LANDUSE_DB=2
-
-DISK_MODE_DATA_BDY=2
-
-DISK_MODE_DATA_TOPO=2
-DISK_MODE_DATA_LANDUSE=2
-DISK_MODE_DATA_BDYPREP=2
+DISK_MODE=2
+DISK_MODE_CONSTDB=2
+DISK_MODE_BDYDATA=2
+DISK_MODE_OBS=2
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No

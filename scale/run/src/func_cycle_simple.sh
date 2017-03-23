@@ -7,9 +7,8 @@
 
 staging_list_simple () {
 #-------------------------------------------------------------------------------
-# TMPDAT
 
-cat >> $STAGING_DIR/stagein.out << EOF
+cat >> $STAGING_INFILE_EXE << EOF
 ${ENSMODEL_DIR}/scale-rm_pp_ens|scale-rm_pp_ens
 ${ENSMODEL_DIR}/scale-rm_init_ens|scale-rm_init_ens
 ${ENSMODEL_DIR}/scale-rm_ens|scale-rm_ens
@@ -17,47 +16,48 @@ ${OBSUTIL_DIR}/obsope|obsope
 ${LETKF_DIR}/letkf|letkf
 ${COMMON_DIR}/pdbash|pdbash
 ${COMMON_DIR}/datetime|datetime
-${DATADIR}/rad|dat/rad
-${DATADIR}/land|dat/land
-|sprd/
-|log/
+EOF
+
+cat >> $STAGING_INFILE_CONSTDB << EOF
+${DATADIR}/rad/|dat/rad/
+${DATADIR}/land/|dat/land/
 EOF
 
 ## H08
 #  if [ -e "${RTTOV_COEF}" ] && [ -e "${RTTOV_SCCOEF}" ]; then
-#    cat >> $STAGING_DIR/stagein.out << EOF
+#    cat >> $STAGING_INFILE_CONSTDB << EOF
 #${RTTOV_COEF}|dat/rttov/rtcoef_himawari_8_ahi.dat
 #${RTTOV_SCCOEF}|dat/rttov/sccldcoef_himawari_8_ahi.dat
 #EOF
 #  fi
 
 if [ "$TOPO_FORMAT" != 'prep' ]; then
-  if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
-    echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|dat/topo/${TOPO_FORMAT}/Products|s" >> $STAGING_DIR/stagein.out
-  else
-    echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|dat/topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.out
-  fi
+  echo "${DATADIR}/topo/${TOPO_FORMAT}/Products/|dat/topo/${TOPO_FORMAT}/Products/" >> $STAGING_INFILE_CONSTDB
 fi
 if [ "$LANDUSE_FORMAT" != 'prep' ]; then
-  if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
-    echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|dat/landuse/${LANDUSE_FORMAT}/Products|s" >> $STAGING_DIR/stagein.out
-  else
-    echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|dat/landuse/${LANDUSE_FORMAT}/Products" >> $STAGING_DIR/stagein.out
-  fi
+  echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products/|dat/landuse/${LANDUSE_FORMAT}/Products/" >> $STAGING_INFILE_CONSTDB
 fi
+
+#-------------------------------------------------------------------------------
 
 time=$(datetime $STIME $LCYCLE s)
 while ((time <= $(datetime $ETIME $LCYCLE s))); do
   for iobs in $(seq $OBSNUM); do
     if [ "${OBSNAME[$iobs]}" != '' ] && [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
-      echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time}.dat" >> $STAGING_DIR/stagein.out
+      echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time}.dat" >> $STAGING_INFILE_OBS
     fi
   done
   time=$(datetime $time $LCYCLE s)
 done
 
 #-------------------------------------------------------------------------------
-# TMPOUT
+
+cat >> $STAGING_INFILE << EOF
+|sprd/
+|log/
+EOF
+
+#-------------------------------------------------------------------------------
 
 time=$STIME
 atime=$(datetime $time $LCYCLE s)
@@ -65,9 +65,9 @@ loop=0
 while ((time <= ETIME)); do
   loop=$((loop+1))
   if ((ONLINE_STGOUT == 1)); then
-    stgoutstep="stageout.loop.${loop}"
+    staging_outfile_step="${STAGING_OUTFILE}_${loop}"
   else
-    stgoutstep='stageout.out'
+    staging_outfile_step="${STAGING_OUTFILE}"
   fi
 
   #-------------------
@@ -80,7 +80,7 @@ while ((time <= ETIME)); do
     for m in $(seq $mtot); do
       pathin="${INDIR}/${time}/anal/${name_m[$m]}.init.nc"
       path="${name_m[$m]}/anal.d01_$(datetime_scale $time).nc"
-      echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+1))]}
+      echo "${pathin}|${path}" >> ${STAGING_INFILE}.${mem2node[$(((m-1)*mem_np+1))]}
     done
   fi
 
@@ -89,7 +89,7 @@ while ((time <= ETIME)); do
   if ((loop == 1)) && [ "$TOPO_FORMAT" = 'prep' ]; then
     pathin="${DATA_TOPO}/const/topo.nc"
     path="topo.d01.nc"
-    echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+    echo "${pathin}|${path}" >> $STAGING_INFILE
   fi
 
 #    # topo (bdy_scale)
@@ -97,7 +97,7 @@ while ((time <= ETIME)); do
 #    if ((loop == 1 && BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
 #      pathin="${DATA_TOPO_BDY_SCALE}.nc"
 #      path="bdytopo.nc"
-#      echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+#      echo "${pathin}|${path}" >> $STAGING_INFILE_BDYDATA
 #    fi
 
   # landuse
@@ -105,7 +105,7 @@ while ((time <= ETIME)); do
   if ((loop == 1)) && [ "$LANDUSE_FORMAT" = 'prep' ]; then
     pathin="${DATA_LANDUSE}/const/landuse.nc"
     path="landuse.d01.nc"
-    echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+    echo "${pathin}|${path}" >> $STAGING_INFILE
   fi
 
   # bdy (prepared)
@@ -114,12 +114,12 @@ while ((time <= ETIME)); do
     if ((BDY_ENS == 0)); then
       pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}.boundary.nc"
       path="mean/bdy_$(datetime_scale $time).nc"
-      echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+      echo "${pathin}|${path}" >> $STAGING_INFILE
     elif ((BDY_ENS == 1)); then
       for m in $(seq $mtot); do
         pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${name_m[$m]}.boundary.nc"
         path="${name_m[$m]}/bdy_$(datetime_scale $time).nc"
-        echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+1))]}
+        echo "${pathin}|${path}" >> ${STAGING_INFILE}.${mem2node[$(((m-1)*mem_np+1))]}
       done
     fi
   fi
@@ -134,7 +134,7 @@ while ((time <= ETIME)); do
     for m in $(seq $mtot); do
       path="${name_m[$m]}/anal.d01_$(datetime_scale $time).nc"
       pathout="${OUTDIR}/${time}/anal/${name_m[$m]}.init.nc"
-      echo "${pathout}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
+      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
     done
   fi
 
@@ -143,7 +143,7 @@ while ((time <= ETIME)); do
 #    if ((loop == 1 && TOPOOUT_OPT <= 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
 #      path="topo.d01.nc"
 #      pathout="${OUTDIR}/const/topo.nc"
-#      echo "${pathout}|${path}" >> $STAGING_DIR/${stgoutstep}
+#      echo "${pathout}|${path}" >> $staging_outfile_step
 #    fi
 
 #    # landuse
@@ -151,7 +151,7 @@ while ((time <= ETIME)); do
 #    if ((loop == 1 && LANDUSEOUT_OPT <= 1)) && [ "$LANDUSE_FORMAT" != 'prep' ]; then
 #      path="landuse.d01.nc"
 #      pathout="${OUTDIR}/const/landuse.nc"
-#      echo "${pathout}|${path}" >> $STAGING_DIR/${stgoutstep}
+#      echo "${pathout}|${path}" >> $staging_outfile_step
 #    fi
 
 #    # bdy
@@ -160,12 +160,12 @@ while ((time <= ETIME)); do
 #      if ((BDY_ENS == 0)); then
 #        path="mean/bdy.nc"
 #        pathout="${OUTDIR}/${time}/bdy/mean.boundary.nc"
-#        echo "${pathout}|${path}" >> $STAGING_DIR/${stgoutstep}
+#        echo "${pathout}|${path}" >> $staging_outfile_step
 #      elif ((BDY_ENS == 1)); then
 #        for m in $(seq $mtot); do
 #          path="${name_m[$m]}/bdy.nc"
 #          pathout="${OUTDIR}/${time}/bdy/${name_m[$m]}.boundary.nc"
-#          echo "${pathout}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
+#          echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
 #        done
 #      fi
 #    fi
@@ -183,7 +183,7 @@ while ((time <= ETIME)); do
   for m in $mlist; do
     path="${name_m[$m]}/hist.d01_$(datetime_scale $time).nc"
     pathout="${OUTDIR}/${time}/hist/${name_m[$m]}.history.nc"
-    echo "${pathout}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
+    echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
   done
 
   # gues
@@ -199,11 +199,11 @@ while ((time <= ETIME)); do
   for m in $mlist; do
     path="${name_m[$m]}/gues.d01_$(datetime_scale $atime).nc"
     pathout="${OUTDIR}/${atime}/gues/${name_m[$m]}.init.nc"
-    echo "${pathout}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
+    echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
     if ((m == mmean && SPRD_OUT == 1)); then
       path="sprd/gues.d01_$(datetime_scale $atime).nc"
       pathout="${OUTDIR}/${atime}/gues/sprd.init.nc"
-      echo "${pathout}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
+      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
     fi
   done
 
@@ -220,11 +220,11 @@ while ((time <= ETIME)); do
   for m in $mlist; do
     path="${name_m[$m]}/anal.d01_$(datetime_scale $atime).nc"
     pathout="${OUTDIR}/${atime}/anal/${name_m[$m]}.init.nc"
-    echo "${pathout}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
+    echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
     if ((m == mmean && SPRD_OUT == 1)); then
       path="sprd/anal.d01_$(datetime_scale $atime).nc"
       pathout="${OUTDIR}/${atime}/anal/sprd.init.nc"
-      echo "${pathout}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
+      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
     fi
   done
 
@@ -233,12 +233,12 @@ while ((time <= ETIME)); do
 #    if ((RTPS_INFL_OUT == 1)); then
 #      path="rtpsinfl.d01_$(datetime_scale $atime).nc"
 #      pathout="${OUTDIR}/${atime}/diag/rtpsinfl.init.nc"
-#      echo "${pathout}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+1))]}
+#      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((mmean-1)*mem_np+1))]}
 #    fi
 #    if ((NOBS_OUT == 1)); then
 #      path="nobs.d01_$(datetime_scale $atime).nc"
 #      pathout="${OUTDIR}/${atime}/diag/nobs.init.nc"
-#      echo "${pathout}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((mmean-1)*mem_np+1))]}
+#      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((mmean-1)*mem_np+1))]}
 #    fi
 
 #    # obsgues
@@ -247,7 +247,7 @@ while ((time <= ETIME)); do
 #      for m in $(seq $mtot); do ###### either $mmean or $mmdet ? ######
 #        path="${name_m[$m]}/obsgues.d01_${atime}.dat"
 #        pathout="${OUTDIR}/${atime}/obsgues/${name_m[$m]}.obsda.dat"
-#        echo "${pathout}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+1))]}
+#        echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
 #      done
 #    fi
 
@@ -262,64 +262,64 @@ while ((time <= ETIME)); do
 ######    if ((LOG_OPT <= 2)); then
 ######      if ((LOG_TYPE == 1)); then
 ######        path="${time}/log/scale_pp/0001_pp.conf"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        path="${time}/log/scale_pp/0001_LOG.pe000000"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        path="${time}/log/scale_pp/NOUT.${log_zeros}"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        path="${time}/log/scale_init/0001_init.conf"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        path="${time}/log/scale_init/0001_gradsbdy.conf"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        path="${time}/log/scale_init/0001_LOG.pe000000"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        if ((BDY_ENS == 1)); then
 ######          path="${time}/log/scale_init/NOUT-1.${log_zeros}"
 ######        else
 ######          path="${time}/log/scale_init/NOUT.${log_zeros}"
 ######        fi
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######      else
 ######        path="${time}/log/scale_pp"
-######        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+######        echo "${OUTDIR}/${path}|${path}|d" >> ${staging_outfile_step}  ############
 ######        path="${time}/log/scale_init"
-######        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+######        echo "${OUTDIR}/${path}|${path}|d" >> ${staging_outfile_step}  ############
 ######      fi
 ######    fi
 ######    if ((LOG_OPT <= 3)); then
 ######      if ((LOG_TYPE == 1)); then
 ######        path="${time}/log/scale/0001_run.conf"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        path="${time}/log/scale/0001_LOG.pe000000"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        path="${time}/log/scale/NOUT-1.${log_zeros}"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        path="${time}/log/scale/latlon_domain_catalogue.txt"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######      else
 ######        path="${time}/log/scale"
-######        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+######        echo "${OUTDIR}/${path}|${path}|d" >> ${staging_outfile_step}  ############
 ######      fi
 ######    fi
 ######    if ((LOG_OPT <= 4)); then
 ######      if ((LOG_TYPE == 1)); then
 ######        path="${atime}/log/obsope/obsope.conf"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        path="${atime}/log/obsope/LOG.pe000000"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        path="${atime}/log/obsope/NOUT.${log_zeros}"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        path="${atime}/log/letkf/letkf.conf"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        path="${atime}/log/letkf/LOG.pe000000"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######        path="${atime}/log/letkf/NOUT.${log_zeros}"
-######        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
 ######      else
 ######        path="${atime}/log/obsope"
-######        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+######        echo "${OUTDIR}/${path}|${path}|d" >> ${staging_outfile_step}  ############
 ######        path="${atime}/log/letkf"
-######        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+######        echo "${OUTDIR}/${path}|${path}|d" >> ${staging_outfile_step}  ############
 ######      fi
 ######    fi
 
@@ -336,7 +336,10 @@ done
 config_file_list () {
 #-------------------------------------------------------------------------------
 
+echo
 echo "Generate configration files..."
+
+mkdir -p $CONFIG_DIR
 
 time=$STIME
 atime=$(datetime $time $LCYCLE s)
@@ -384,7 +387,9 @@ while ((time <= ETIME)); do
           -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
           -e "/!--MEM_NP--/a MEM_NP = $mem_np," \
       > $CONFIG_DIR/${conf_file}
-#  echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> $STAGING_DIR/stagein.out
+  if ((DISK_MODE == 3)); then
+    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> $STAGING_INFILE_EXE
+  fi
 
   for m in $(seq $mtot); do
     if [ "${name_m[$m]}" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
@@ -452,7 +457,9 @@ while ((time <= ETIME)); do
             -e "/!--RESTART_OUT_ADDITIONAL_COPIES--/a RESTART_OUT_ADDITIONAL_COPIES = ${RESTART_OUT_ADDITIONAL_COPIES}," \
             -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}" \
         > $CONFIG_DIR/${conf_file}
-#    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+1))]}
+    if ((DISK_MODE == 3)); then
+      echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_INFILE}.${mem2node[$(((m-1)*mem_np+1))]}
+    fi
   done
 
   #-----------------------------------------------------------------------------
@@ -531,7 +538,9 @@ while ((time <= ETIME)); do
   cat $SCRP_DIR/config.nml.scale | \
       sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = .true.," \
       >> $CONFIG_DIR/${conf_file}
-#  echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> $STAGING_DIR/stagein.out
+  if ((DISK_MODE == 3)); then
+    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> $STAGING_INFILE_EXE
+  fi
 
 
 
@@ -539,13 +548,14 @@ while ((time <= ETIME)); do
 #      NNP=$(cat ${NODEFILE_DIR}/${nodestr} | wc -l)
 #      mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${nodestr}" -of-proc log/${stepexecname[$s]}.NOUT_${conf_time} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf || exit $?
 
-#    fi
-#  done
+
 
   #-------------------
   time=$(datetime $time $LCYCLE s)
   atime=$(datetime $time $LCYCLE s)
 done
+
+echo
 
 #-------------------------------------------------------------------------------
 }
