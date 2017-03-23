@@ -7,6 +7,7 @@
 
 staging_list_simple () {
 #-------------------------------------------------------------------------------
+# executable files
 
 cat >> $STAGING_INFILE_EXE << EOF
 ${ENSMODEL_DIR}/scale-rm_pp_ens|scale-rm_pp_ens
@@ -17,6 +18,9 @@ ${LETKF_DIR}/letkf|letkf
 ${COMMON_DIR}/pdbash|pdbash
 ${COMMON_DIR}/datetime|datetime
 EOF
+
+#-------------------------------------------------------------------------------
+# database
 
 cat >> $STAGING_INFILE_CONSTDB << EOF
 ${DATADIR}/rad/|dat/rad/
@@ -39,6 +43,7 @@ if [ "$LANDUSE_FORMAT" != 'prep' ]; then
 fi
 
 #-------------------------------------------------------------------------------
+# observations
 
 time=$(datetime $STIME $LCYCLE s)
 while ((time <= $(datetime $ETIME $LCYCLE s))); do
@@ -51,6 +56,7 @@ while ((time <= $(datetime $ETIME $LCYCLE s))); do
 done
 
 #-------------------------------------------------------------------------------
+# create empty directories
 
 cat >> $STAGING_INFILE << EOF
 |sprd/
@@ -58,6 +64,28 @@ cat >> $STAGING_INFILE << EOF
 EOF
 
 #-------------------------------------------------------------------------------
+# time-invariant outputs
+
+#-------------------
+# stage-out
+#-------------------
+
+if ((ONLINE_STGOUT == 1)); then
+  staging_outfile_step="${STAGING_OUTFILE}_1"
+else
+  staging_outfile_step="${STAGING_OUTFILE}"
+fi
+
+# domain catalogue
+#-------------------
+if ((LOG_OPT <= 4)); then
+  path="latlon_domain_catalogue.txt"
+  pathout="${OUTDIR}/const/log/latlon_domain_catalogue.txt"
+  echo "${pathout}|${path}" >> ${staging_outfile_step}.1
+fi
+
+#-------------------------------------------------------------------------------
+# time-variant outputs
 
 time=$STIME
 atime=$(datetime $time $LCYCLE s)
@@ -251,77 +279,60 @@ while ((time <= ETIME)); do
 #      done
 #    fi
 
-######    # log
-######    #-------------------
-######    if [ "$MPI_TYPE" = 'K' ]; then
-######      log_zeros='0'
-######    else
-######      log_zeros='000000'
-######    fi
+  # log
+  #-------------------
+  if [ "$MPI_TYPE" = 'K' ]; then
+    log_nfmt='.%d'
+  else
+    log_nfmt='-%06d'
+  fi
 
-######    if ((LOG_OPT <= 2)); then
-######      if ((LOG_TYPE == 1)); then
-######        path="${time}/log/scale_pp/0001_pp.conf"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######        path="${time}/log/scale_pp/0001_LOG.pe000000"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######        path="${time}/log/scale_pp/NOUT.${log_zeros}"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######        path="${time}/log/scale_init/0001_init.conf"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######        path="${time}/log/scale_init/0001_gradsbdy.conf"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######        path="${time}/log/scale_init/0001_LOG.pe000000"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######        if ((BDY_ENS == 1)); then
-######          path="${time}/log/scale_init/NOUT-1.${log_zeros}"
-######        else
-######          path="${time}/log/scale_init/NOUT.${log_zeros}"
-######        fi
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######      else
-######        path="${time}/log/scale_pp"
-######        echo "${OUTDIR}/${path}|${path}|d" >> ${staging_outfile_step}  ############
-######        path="${time}/log/scale_init"
-######        echo "${OUTDIR}/${path}|${path}|d" >> ${staging_outfile_step}  ############
-######      fi
-######    fi
-######    if ((LOG_OPT <= 3)); then
-######      if ((LOG_TYPE == 1)); then
-######        path="${time}/log/scale/0001_run.conf"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######        path="${time}/log/scale/0001_LOG.pe000000"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######        path="${time}/log/scale/NOUT-1.${log_zeros}"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######        path="${time}/log/scale/latlon_domain_catalogue.txt"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######      else
-######        path="${time}/log/scale"
-######        echo "${OUTDIR}/${path}|${path}|d" >> ${staging_outfile_step}  ############
-######      fi
-######    fi
-######    if ((LOG_OPT <= 4)); then
-######      if ((LOG_TYPE == 1)); then
-######        path="${atime}/log/obsope/obsope.conf"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######        path="${atime}/log/obsope/LOG.pe000000"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######        path="${atime}/log/obsope/NOUT.${log_zeros}"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######        path="${atime}/log/letkf/letkf.conf"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
+  if ((LOG_OPT <= 3)); then
+    if ((LOG_TYPE == 1)); then
+      mlist='1'
+      nlist='1'
+    else
+      mlist=$(seq $mtot)
+      nlist=$(seq $totalnp)
+    fi
+    for m in $mlist; do
+      path="log/scale.${name_m[$m]}.LOG_${time}.pe000000"
+      pathout="${OUTDIR}/${time}/log/scale/${name_m[$m]}_LOG.pe000000"
+      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
+      path="log/scale.${name_m[$m]}.monitor_${time}.pe000000"
+      pathout="${OUTDIR}/${time}/log/scale/${name_m[$m]}_monitor.pe000000"
+      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
+    done
+    for n in $nlist; do
+      path="log/scale-rm_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((n-1)))"
+      pathout="${OUTDIR}/${time}/log/scale/NOUT$(printf -- "${log_nfmt}" $((n-1)))"
+      echo "${pathout}|${path}" >> ${staging_outfile_step}.${proc2node[$n]}
+    done
+  fi
+
+  if ((LOG_OPT <= 4)); then
+    if ((LOG_TYPE == 1)); then
+      nlist='1'
+    else
+      nlist=$(seq $totalnp)
+    fi
+    for n in $nlist; do
+      path="log/letkf.NOUT_${atime}$(printf -- "${log_nfmt}" $((n-1)))"
+      pathout="${OUTDIR}/${atime}/log/letkf/NOUT$(printf -- "${log_nfmt}" $((n-1)))"
+      echo "${pathout}|${path}" >> ${staging_outfile_step}.${proc2node[$n]}
+    done
+  fi
+
+
+
+
+
 ######        path="${atime}/log/letkf/LOG.pe000000"
 ######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######        path="${atime}/log/letkf/NOUT.${log_zeros}"
-######        echo "${OUTDIR}/${path}|${path}" >> ${staging_outfile_step}.1
-######      else
-######        path="${atime}/log/obsope"
-######        echo "${OUTDIR}/${path}|${path}|d" >> ${staging_outfile_step}  ############
-######        path="${atime}/log/letkf"
-######        echo "${OUTDIR}/${path}|${path}|d" >> ${staging_outfile_step}  ############
-######      fi
-######    fi
+
+
+
+
 
   #-------------------
   time=$(datetime $time $LCYCLE s)
@@ -390,6 +401,7 @@ while ((time <= ETIME)); do
   if ((DISK_MODE == 3)); then
     echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> $STAGING_INFILE_EXE
   fi
+  echo "${OUTDIR}/${time}/log/scale/scale-rm_ens.conf|${conf_file}" >> $STAGING_DIR/stageout
 
   for m in $(seq $mtot); do
     if [ "${name_m[$m]}" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
@@ -460,6 +472,7 @@ while ((time <= ETIME)); do
     if ((DISK_MODE == 3)); then
       echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_INFILE}.${mem2node[$(((m-1)*mem_np+1))]}
     fi
+    echo "${OUTDIR}/${time}/log/scale/${name_m[$m]}_run.conf|${conf_file}" >> $STAGING_DIR/stageout.${mem2node[$(((m-1)*mem_np+1))]}
   done
 
   #-----------------------------------------------------------------------------
@@ -541,6 +554,7 @@ while ((time <= ETIME)); do
   if ((DISK_MODE == 3)); then
     echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> $STAGING_INFILE_EXE
   fi
+  echo "${OUTDIR}/${atime}/log/letkf/letkf.conf|${conf_file}" >> $STAGING_DIR/stageout
 
 
 
