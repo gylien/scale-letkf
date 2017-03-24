@@ -13,20 +13,20 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname1='cycle'
+job='cycle'
 
 #===============================================================================
 # Configuration
 
 . config.main
 res=$? && ((res != 0)) && exit $res
-. config.$myname1
+. config.$job
 res=$? && ((res != 0)) && exit $res
 
 #. src/func_distribute.sh
 . src/func_datetime.sh
 . src/func_util.sh
-. src/func_$myname1.sh
+. src/func_$job.sh
 
 #-------------------------------------------------------------------------------
 
@@ -42,7 +42,7 @@ echo
 #===============================================================================
 # Creat a job script
 
-jobscrp="${myname1}_job.sh"
+jobscrp="${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
@@ -70,13 +70,13 @@ module load netcdf-fortran/4.4.3
 ulimit -s unlimited
 export OMP_STACKSIZE=128m
 
-./${myname1}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
+./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
 EOF
 
 #===============================================================================
 # Run the job
 
-echo "[$(datetime_now)] Run ${myname1} job on PJM"
+echo "[$(datetime_now)] Run ${job} job on PJM"
 echo
 
 job_submit_PJM $jobscrp
@@ -91,28 +91,13 @@ res=$?
 echo "[$(datetime_now)] Finalization"
 echo
 
-n=0
-nmax=12
-while [ ! -s "${jobscrp}.o${jobid}" ] && ((n < nmax)); do
-  n=$((n+1))
-  sleep 5s
-done
+backup_exp_setting $job $SCRP_DIR $jobid $jobscrp 'o e'
 
-mkdir -p $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/config.main $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/config.${myname1} $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/config.nml.* $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/${myname1}_job.sh $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f ${jobscrp}.o${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.o
-cp -f ${jobscrp}.e${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.e
-( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
-( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
+archive_log
 
-finalization
-
-if ((CLEAR_TMP == 1)); then
-  safe_rm_tmpdir $TMPS
-fi
+#if ((CLEAR_TMP == 1)); then
+#  safe_rm_tmpdir $TMP
+#fi
 
 #===============================================================================
 

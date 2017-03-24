@@ -13,21 +13,21 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname1='cycle'
+job='cycle'
 
 #===============================================================================
 # Configuration
 
 . config.main
 res=$? && ((res != 0)) && exit $res
-. config.$myname1
+. config.$job
 res=$? && ((res != 0)) && exit $res
 
 . src/func_distribute.sh
 . src/func_datetime.sh
 . src/func_util.sh
-. src/func_$myname1.sh
-. src/func_${myname1}_simple.sh
+. src/func_$job.sh
+. src/func_${job}_simple.sh
 
 #-------------------------------------------------------------------------------
 
@@ -95,8 +95,8 @@ bash $SCRP_DIR/src/stage_in.sh a
 
 cp -L -r $SCRP_DIR/config.main $TMP/config.main
 cp -L -r $SCRP_DIR/config.rc $TMP/config.rc
-cp -L -r $SCRP_DIR/config.${myname1} $TMP/config.${myname1}
-cp -L -r $SCRP_DIR/${myname1}_simple.sh $TMP/${myname1}_simple.sh
+cp -L -r $SCRP_DIR/config.${job} $TMP/config.${job}
+cp -L -r $SCRP_DIR/${job}_simple.sh $TMP/${job}_simple.sh
 mkdir -p $TMP/src
 cp -L -r $SCRP_DIR/src/* $TMP/src
 
@@ -114,7 +114,7 @@ fi                                                              ##
 #===============================================================================
 # Creat a job script
 
-jobscrp="$TMP/${myname1}_job.sh"
+jobscrp="$TMP/${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
@@ -122,7 +122,7 @@ rscgrp="micro"
 
 cat > $jobscrp << EOF
 #!/bin/sh
-#PJM -N ${myname1}_${SYSNAME}
+#PJM -N ${job}_${SYSNAME}
 #PJM -s
 #PJM --rsc-list "node=${NNODES}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
@@ -135,7 +135,7 @@ cat > $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${myname1}_simple.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
+./${job}_simple.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
 EOF
 
 
@@ -148,7 +148,7 @@ exit
 #===============================================================================
 # Run the job
 
-echo "[$(datetime_now)] Run ${myname1} job on PJM"
+echo "[$(datetime_now)] Run ${job} job on PJM"
 echo
 
 job_submit_PJM $jobscrp
@@ -170,18 +170,9 @@ bash $SCRP_DIR/src/stage_out.sh a
 echo "[$(datetime_now)] Finalization"
 echo
 
-mkdir -p $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/config.main $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/config.${myname1} $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/config.nml.* $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $TMP/${myname1}_job.sh $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $TMP/${myname1}_${SYSNAME}.o${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.o
-cp -f $TMP/${myname1}_${SYSNAME}.e${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.e
-cp -f $TMP/${myname1}_${SYSNAME}.i${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.i
-( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
-( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
+backup_exp_setting $job $TMP $jobid ${job}_${SYSNAME} 'o e i s' i
 
-finalization
+archive_log
 
 if ((CLEAR_TMP == 1)); then
   safe_rm_tmpdir $TMP

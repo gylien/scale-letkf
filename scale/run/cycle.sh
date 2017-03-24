@@ -25,18 +25,18 @@
 
 cd "$(dirname "$0")"
 myname='cycle.sh'
-myname1=${myname%.*}
+job=${myname%.*}
 
 #===============================================================================
 # Configuration
 
 . config.main || exit $?
-. config.$myname1 || exit $?
+. config.$job || exit $?
 
 . src/func_distribute.sh || exit $?
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
-. src/func_$myname1.sh || exit $?
+. src/func_$job.sh || exit $?
 
 echo "[$(datetime_now)] ### 1" >&2
 
@@ -125,9 +125,9 @@ echo "[$(datetime_now)] ### 5" >&2
 # Run initialization scripts on all nodes
 
 if ((TMPRUN_MODE <= 2)); then
-  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
+  pdbash node one $SCRP_DIR/src/init_all_node.sh $job || exit $?
 else
-  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
+  pdbash node all $SCRP_DIR/src/init_all_node.sh $job || exit $?
 fi
 
 echo "[$(datetime_now)] ### 6" >&2
@@ -265,7 +265,7 @@ while ((time <= ETIME)); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
             mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" ${stepexecdir[$s]} \
-                    "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" $loop $it || exit $?
+                    "$(rev_path ${stepexecdir[$s]})/${job}_step.sh" "$time" $loop $it || exit $?
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           else
@@ -273,10 +273,10 @@ while ((time <= ETIME)); do
 
             if ((IO_ARB == 1)); then ##
               mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
-                      "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it || exit $? &
+                      "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $? &
             else ##
               mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
-                      "$SCRP_DIR/${myname1}_step.sh" "$time" $loop $it || exit $?
+                      "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
             fi ##
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
@@ -286,15 +286,15 @@ while ((time <= ETIME)); do
         if [ "$STG_TYPE" = 'K_rankdir' ]; then
 
           mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" ${stepexecdir[$s]} \
-                  "$(rev_path ${stepexecdir[$s]})/${myname1}_step.sh" "$time" "$loop" || exit $?
+                  "$(rev_path ${stepexecdir[$s]})/${job}_step.sh" "$time" "$loop" || exit $?
         else
 
           if ((IO_ARB == 1)); then ##                                 
             mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
-                    "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" || exit $? &
+                    "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $? &
           else ##
             mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
-                    "$SCRP_DIR/${myname1}_step.sh" "$time" "$loop" || exit $?
+                    "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
           fi ##
         fi
       fi

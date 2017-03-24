@@ -13,20 +13,20 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname1='fcst'
+job='fcst'
 
 #===============================================================================
 # Configuration
 
 . config.main
 res=$? && ((res != 0)) && exit $res
-. config.$myname1
+. config.$job
 res=$? && ((res != 0)) && exit $res
 
 . src/func_distribute.sh
 . src/func_datetime.sh
 . src/func_util.sh
-. src/func_$myname1.sh
+. src/func_$job.sh
 
 #-------------------------------------------------------------------------------
 
@@ -98,7 +98,7 @@ echo "RUN_LEVEL='K'" >> $TMPS/config.main
 #===============================================================================
 # Creat a job script
 
-jobscrp="${myname1}_job.sh"
+jobscrp="${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
@@ -112,7 +112,7 @@ fi
 
 cat > $jobscrp << EOF
 #!/bin/sh
-#PJM -N ${myname1}_${SYSNAME}
+#PJM -N ${job}_${SYSNAME}
 #PJM -s
 #PJM --rsc-list "node=${NNODES}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
@@ -128,7 +128,7 @@ if [ "$STG_TYPE" = 'K_rankdir' ]; then
   echo "#PJM --mpi \"use-rankdir\"" >> $jobscrp
 fi
 
-bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR $myname1 >> $jobscrp
+bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR $job >> $jobscrp
 
 cat >> $jobscrp << EOF
 
@@ -136,7 +136,7 @@ cat >> $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" || exit \$?
+./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" || exit \$?
 EOF
 
 #===============================================================================
@@ -152,7 +152,7 @@ echo
 #===============================================================================
 # Run the job
 
-echo "[$(datetime_now)] Run ${myname1} job on PJM"
+echo "[$(datetime_now)] Run ${job} job on PJM"
 echo
 
 job_submit_PJM $jobscrp
@@ -167,26 +167,9 @@ res=$?
 echo "[$(datetime_now)] Finalization"
 echo
 
-n=0
-nmax=12
-while [ ! -s "${myname1}_${SYSNAME}.i${jobid}" ] && ((n < nmax)); do
-  n=$((n+1))
-  sleep 5s
-done
+backup_exp_setting $job $SCRP_DIR $jobid ${job}_${SYSNAME} 'o e i s' i
 
-mkdir -p $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/config.main $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/config.${myname1} $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/config.nml.* $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/${myname1}_job.sh $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f ${myname1}_${SYSNAME}.o${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.o
-cp -f ${myname1}_${SYSNAME}.e${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.e
-cp -f ${myname1}_${SYSNAME}.i${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.i
-cp -f ${myname1}_${SYSNAME}.s${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.s
-( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
-( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
-
-finalization
+archive_log
 
 if ((CLEAR_TMP == 1)); then
   safe_rm_tmpdir $TMPS

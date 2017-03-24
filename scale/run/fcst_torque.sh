@@ -13,20 +13,20 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname1='fcst'
+job='fcst'
 
 #===============================================================================
 # Configuration
 
 . config.main
 res=$? && ((res != 0)) && exit $res
-. config.$myname1
+. config.$job
 res=$? && ((res != 0)) && exit $res
 
 #. src/func_distribute.sh
 . src/func_datetime.sh
 . src/func_util.sh
-. src/func_$myname1.sh
+. src/func_$job.sh
 
 #-------------------------------------------------------------------------------
 
@@ -42,13 +42,13 @@ echo
 #===============================================================================
 # Creat a job script
 
-jobscrp="${myname1}_job.sh"
+jobscrp="${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
 cat > $jobscrp << EOF
 #!/bin/sh
-##PBS -N ${myname1}_${SYSNAME}
+##PBS -N ${job}_${SYSNAME}
 #PBS -l nodes=${NNODES}:ppn=${PPN}
 ##PBS -l walltime=${TIME_LIMIT}
 #PBS -W umask=027
@@ -70,10 +70,10 @@ cd \$PBS_O_WORKDIR
 rm -f machinefile
 cp -f \$PBS_NODEFILE machinefile
 
-./${myname1}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
+./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
 EOF
 
-echo "[$(datetime_now)] Run ${myname1} job on PBS"
+echo "[$(datetime_now)] Run ${job} job on PBS"
 echo
 
 job_submit_torque $jobscrp
@@ -88,28 +88,13 @@ res=$?
 echo "[$(datetime_now)] Finalization"
 echo
 
-n=0
-nmax=12
-while [ ! -s "${jobscrp}.o${jobid}" ] && ((n < nmax)); do
-  n=$((n+1))
-  sleep 5s
-done
+backup_exp_setting $job $SCRP_DIR $jobid $jobscrp 'o e'
 
-mkdir -p $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/config.main $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/config.${myname1} $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/config.nml.* $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f $SCRP_DIR/${myname1}_job.sh $OUTDIR/exp/${jobid}_${myname1}_${STIME}
-cp -f ${jobscrp}.o${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.o
-cp -f ${jobscrp}.e${jobid} $OUTDIR/exp/${jobid}_${myname1}_${STIME}/job.e
-( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
-( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${myname1}_${STIME}/version )
+archive_log
 
-finalization
-
-if ((CLEAR_TMP == 1)); then
-  safe_rm_tmpdir $TMPS
-fi
+#if ((CLEAR_TMP == 1)); then
+#  safe_rm_tmpdir $TMP
+#fi
 
 #===============================================================================
 

@@ -24,18 +24,18 @@
 
 cd "$(dirname "$0")"
 myname='fcst.sh'
-myname1=${myname%.*}
+job=${myname%.*}
 
 #===============================================================================
 # Configuration
 
 . config.main || exit $?
-. config.$myname1 || exit $?
+. config.$job || exit $?
 
 . src/func_distribute.sh || exit $?
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
-. src/func_$myname1.sh || exit $?
+. src/func_$job.sh || exit $?
 
 #-------------------------------------------------------------------------------
 
@@ -117,9 +117,9 @@ fi
 # Run initialization scripts on all nodes
 
 if ((TMPRUN_MODE <= 2)); then
-  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
+  pdbash node one $SCRP_DIR/src/init_all_node.sh $job || exit $?
 else
-  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
+  pdbash node all $SCRP_DIR/src/init_all_node.sh $job || exit $?
 fi
 
 #===============================================================================
