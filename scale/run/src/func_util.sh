@@ -827,3 +827,67 @@ return 0
 }
 
 #===============================================================================
+
+backup_exp_setting () {
+#-------------------------------------------------------------------------------
+# Backup experimental settings
+#
+# Usage: backup_exp_setting JOBNAME JOB_DIR JOB_ID JOB_LOG_PREFIX JOB_LOG_TYPES [JOB_LOG_TYPE_WAIT]
+#
+#   JOBNAME
+#   JOB_DIR
+#   JOB_ID
+#   JOB_LOG_PREFIX
+#   JOB_LOG_TYPES
+#   JOB_LOG_TYPE_WAIT
+#
+# Other input variables:
+#   $OUTDIR
+#   $SCRP_DIR
+#   $MODELDIR
+#   $STIME
+#-------------------------------------------------------------------------------
+
+if (($# < 5)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local JOBNAME="$1"; shift
+local JOB_DIR="$1"; shift
+local JOB_ID="$1"; shift
+local JOB_LOG_PREFIX="$1"; shift
+local JOB_LOG_TYPES="$1"; shift
+local JOB_LOG_TYPE_WAIT="$1"
+
+#-------------------------------------------------------------------------------
+
+if [ -n "$JOB_LOG_TYPE_WAIT" ]; then
+  n=0
+  nmax=30
+  while [ ! -s "$JOB_DIR/${JOB_LOG_PREFIX}.${JOB_LOG_TYPE_WAIT}${JOB_ID}" ] && ((n < nmax)); do
+    n=$((n+1))
+    sleep 2s
+  done
+fi
+
+mkdir -p $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}
+cp -f $SCRP_DIR/config.main $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}
+cp -f $SCRP_DIR/config.${JOBNAME} $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}
+cp -f $SCRP_DIR/config.nml.* $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}
+cp -f $JOB_DIR/${JOBNAME}_job.sh $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}
+for p in ${JOB_LOG_TYPES}; do
+  if [ -f "$JOB_DIR/${JOB_LOG_PREFIX}.${p}${JOB_ID}" ]; then
+    cp -f $JOB_DIR/${JOB_LOG_PREFIX}.${p}${JOB_ID} $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}/job.${p}
+  fi
+done
+
+( cd $SCRP_DIR && git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}/version )
+( cd $MODELDIR && git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}/version )
+
+return 0
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
