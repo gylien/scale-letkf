@@ -272,13 +272,15 @@ DISK_MODE=${DISK_MODE:-2}
 if ((DISK_MODE == 1)); then
   STAGING_INFILE="$STAGING_DIR/stagein_link"
   STAGING_OUTFILE="$STAGING_DIR/stageout_link"
+  STAGING_OUTFILE_NOLINK="$STAGING_DIR/stageout_share"
   TMP_MAIN="$TMP"
   STAGING_INFILE_EXE="$STAGING_DIR/stagein_link"
   TMP_EXE="$TMP"
   CONFIG_DIR="$TMP"
 elif ((DISK_MODE == 2)); then
   STAGING_INFILE="$STAGING_DIR/stagein_share"
-  STAGING_OUTFILE="$STAGING_DIR/stageout"
+  STAGING_OUTFILE="$STAGING_DIR/stageout_share"
+  STAGING_OUTFILE_NOLINK="$STAGING_DIR/stageout_share"
   TMP_MAIN="$TMP"
   STAGING_INFILE_EXE="$STAGING_DIR/stagein_share"
   TMP_EXE="$TMP"
@@ -286,7 +288,8 @@ elif ((DISK_MODE == 2)); then
 elif ((DISK_MODE == 3)); then
   USE_TMPL=1
   STAGING_INFILE="$STAGING_DIR/stagein_local"
-  STAGING_OUTFILE="$STAGING_DIR/stageout"
+  STAGING_OUTFILE="$STAGING_DIR/stageout_local"
+  STAGING_OUTFILE_NOLINK="$STAGING_DIR/stageout_local"
   TMP_MAIN="$TMPL"
   STAGING_INFILE_EXE="$STAGING_DIR/stagein_local"
   TMP_EXE="$TMPL"

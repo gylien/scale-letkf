@@ -74,13 +74,6 @@ cp -f \$PBS_NODEFILE machinefile
 ./${myname1}_simple.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
 EOF
 
-
-
-
-exit
-
-
-
 echo "[$(datetime_now)] Run ${myname1} job on PBS"
 echo
 
@@ -89,6 +82,14 @@ echo
 
 job_end_check_torque $jobid
 res=$?
+
+
+
+
+exit
+
+
+
 
 #===============================================================================
 # Finalization

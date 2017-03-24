@@ -330,22 +330,22 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 # Online stage out
 
-#  if ((ONLINE_STGOUT == 1)); then
-#    if ((MACHINE_TYPE == 11)); then
-#      touch $TMP/loop.${loop}.done
-#    fi
-#    if ((BUILTIN_STAGING && $(datetime $time $LCYCLE s) <= ETIME)); then
-#      if ((MACHINE_TYPE == 12)); then
-#        echo "[$(datetime_now)] ${time}: Online stage out"
-#        bash $SCRP_DIR/src/stage_out.sh s $loop || exit $?
-#        pdbash node all $SCRP_DIR/src/stage_out.sh $loop || exit $?
-#      else
-#        echo "[$(datetime_now)] ${time}: Online stage out (background job)"
-#        ( bash $SCRP_DIR/src/stage_out.sh s $loop ;
-#          pdbash node all $SCRP_DIR/src/stage_out.sh $loop ) &
-#      fi
-#    fi
-#  fi
+######  if ((ONLINE_STGOUT == 1)); then
+######    if ((MACHINE_TYPE == 11)); then
+######      touch $TMP/loop.${loop}.done
+######    fi
+######    if ((BUILTIN_STAGING && $(datetime $time $LCYCLE s) <= ETIME)); then
+######      if ((MACHINE_TYPE == 12)); then
+######        echo "[$(datetime_now)] ${time}: Online stage out"
+######        bash $SCRP_DIR/src/stage_out.sh s $loop || exit $?
+######        pdbash node all $SCRP_DIR/src/stage_out.sh $loop || exit $?
+######      else
+######        echo "[$(datetime_now)] ${time}: Online stage out (background job)"
+######        ( bash $SCRP_DIR/src/stage_out.sh s $loop ;
+######          pdbash node all $SCRP_DIR/src/stage_out.sh $loop ) &
+######      fi
+######    fi
+######  fi
 
 #-------------------------------------------------------------------------------
 # Write the footer of the log file
@@ -368,27 +368,36 @@ done
 #===============================================================================
 # Stage out
 
-#if [ "$STG_TYPE" = 'builtin' ]; then
-#  echo "[$(datetime_now)] Finalization (stage out)" >&2
+if [ "$STG_TYPE" = 'builtin' ]; then
+  echo "[$(datetime_now)] Finalization (stage out)" >&2
 
-#  if ((TMPOUT_MODE >= 2)); then
-#    if ((ONLINE_STGOUT == 1)); then
-#      wait
-#      bash $SCRP_DIR/src/stage_out.sh s $loop || exit $?
-#      pdbash node all $SCRP_DIR/src/stage_out.sh $loop || exit $?
-#    else
-#      bash $SCRP_DIR/src/stage_out.sh s || exit $?
-#      pdbash node all $SCRP_DIR/src/stage_out.sh || exit $?
-#    fi
+  if ((ONLINE_STGOUT == 1)); then
+    wait  ######
+    :     ######
+  else
+    if [ -s "$STAGING_DIR/stageout_share" ] || [ -s "$STAGING_DIR/stageout_share.1" ]; then
+      errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STAGING_DIR/stageout_share $TMP $SCP_THREAD 2>&1)
+      if [ -n "$errmsg" ]; then
+        echo "$errmsg" >&2
+#        exit 1
+      fi
+    fi
+    if [ -s "$STAGING_DIR/stageout_local" ] || [ -s "$STAGING_DIR/stageout_local.1" ]; then
+      errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STAGING_DIR/stageout_local $TMP $SCP_THREAD 2>&1)
+      if [ -n "$errmsg" ]; then
+        echo "$errmsg" >&2
+#        exit 1
+      fi
+      if ((CLEAR_TMP == 1)); then
+        pdbash node all $SCRP_DIR/src/stage_out_rm_stgdir_node.sh $TMPL local # || exit $?
+      fi
+    fi
+  fi
+
+#  if ((CLEAR_TMP == 1)); then
+#    safe_rm_tmpdir $TMP || exit $?
 #  fi
-
-##  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
-##    safe_rm_tmpdir $TMP
-##  fi
-##  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
-##    safe_rm_tmpdir $TMPL
-##  fi
-#fi
+fi
 
 #===============================================================================
 
