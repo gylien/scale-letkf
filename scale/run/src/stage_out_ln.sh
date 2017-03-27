@@ -30,7 +30,6 @@ function stage_out_ln_sub () {
   local destin="$(echo $line | cut -d '|' -s -f1)"
   local source="$(echo $line | cut -d '|' -s -f2)"
   local sourcestg="${STGDIR}/${source}"
-  local flag="$(echo $line | cut -d '|' -s -f3)"
   if [[ -z "$source" || -z "$destin" ]]; then
     : # do nothing
   elif [[ "$destin" != /* ]]; then

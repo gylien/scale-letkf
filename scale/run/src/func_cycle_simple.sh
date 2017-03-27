@@ -70,18 +70,12 @@ EOF
 # stage-out
 #-------------------
 
-if ((ONLINE_STGOUT == 1)); then
-  staging_outfile_step="${STAGING_OUTFILE}_loop1"
-else
-  staging_outfile_step="${STAGING_OUTFILE}"
-fi
-
 # domain catalogue
 #-------------------
 if ((LOG_OPT <= 4)); then
   path="latlon_domain_catalogue.txt"
   pathout="${OUTDIR}/const/log/latlon_domain_catalogue.txt"
-  echo "${pathout}|${path}" >> ${staging_outfile_step}.1
+  echo "${pathout}|${path}|1" >> ${STAGING_OUTFILE}.1
 fi
 
 #-------------------------------------------------------------------------------
@@ -92,13 +86,6 @@ atime=$(datetime $time $LCYCLE s)
 loop=0
 while ((time <= ETIME)); do
   loop=$((loop+1))
-  if ((ONLINE_STGOUT == 1)); then
-    staging_outfile_step="${STAGING_OUTFILE}_loop${loop}"
-    staging_outfile_nolink_step="${STAGING_OUTFILE_NOLINK}_loop${loop}"
-  else
-    staging_outfile_step="${STAGING_OUTFILE}"
-    staging_outfile_nolink_step="${STAGING_OUTFILE_NOLINK}"
-  fi
 
   #-------------------
   # stage-in
@@ -163,8 +150,8 @@ while ((time <= ETIME)); do
 #    if ((loop == 1 && TOPOOUT_OPT <= 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
 #      path="topo.d01.nc"
 #      pathout="${OUTDIR}/const/topo.nc"
-##      echo "${pathout}|${path}" >> $staging_outfile_step
-#      echo "${pathout}|${path}" >> $staging_outfile_nolink_step
+##      echo "${pathout}|${path}|${loop}" >> $STAGING_OUTFILE
+#      echo "${pathout}|${path}|${loop}" >> $STAGING_OUTFILE_NOLINK
 #    fi
 
 #    # landuse
@@ -172,8 +159,8 @@ while ((time <= ETIME)); do
 #    if ((loop == 1 && LANDUSEOUT_OPT <= 1)) && [ "$LANDUSE_FORMAT" != 'prep' ]; then
 #      path="landuse.d01.nc"
 #      pathout="${OUTDIR}/const/landuse.nc"
-##      echo "${pathout}|${path}" >> $staging_outfile_step
-#      echo "${pathout}|${path}" >> $staging_outfile_nolink_step
+##      echo "${pathout}|${path}|${loop}" >> $STAGING_OUTFILE
+#      echo "${pathout}|${path}|${loop}" >> $STAGING_OUTFILE_NOLINK
 #    fi
 
 #    # bdy
@@ -182,14 +169,14 @@ while ((time <= ETIME)); do
 #      if ((BDY_ENS == 0)); then
 #        path="mean/bdy.nc"
 #        pathout="${OUTDIR}/${time}/bdy/mean.boundary.nc"
-##        echo "${pathout}|${path}" >> $staging_outfile_step
-#        echo "${pathout}|${path}" >> $staging_outfile_nolink_step
+##        echo "${pathout}|${path}|${loop}" >> $STAGING_OUTFILE
+#        echo "${pathout}|${path}|${loop}" >> $STAGING_OUTFILE_NOLINK
 #      elif ((BDY_ENS == 1)); then
 #        for m in $(seq $mtot); do
 #          path="${name_m[$m]}/bdy.nc"
 #          pathout="${OUTDIR}/${time}/bdy/${name_m[$m]}.boundary.nc"
-##          echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
-#          echo "${pathout}|${path}" >> ${staging_outfile_nolink_step}.${mem2node[$(((m-1)*mem_np+1))]}
+##          echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${mem2node[$(((m-1)*mem_np+1))]}
+#          echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
 #        done
 #      fi
 #    fi
@@ -200,8 +187,8 @@ while ((time <= ETIME)); do
     for m in $(seq $mtot); do
       path="${name_m[$m]}/anal.d01_$(datetime_scale $time).nc"
       pathout="${OUTDIR}/${time}/anal/${name_m[$m]}.init.nc"
-#      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
-      echo "${pathout}|${path}" >> ${staging_outfile_nolink_step}.${mem2node[$(((m-1)*mem_np+1))]}
+#      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${mem2node[$(((m-1)*mem_np+1))]}
+      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
     done
   fi
 
@@ -218,13 +205,13 @@ while ((time <= ETIME)); do
   for m in $mlist; do
     path="${name_m[$m]}/anal.d01_$(datetime_scale $atime).nc"
     pathout="${OUTDIR}/${atime}/anal/${name_m[$m]}.init.nc"
-#    echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
-    echo "${pathout}|${path}" >> ${staging_outfile_nolink_step}.${mem2node[$(((m-1)*mem_np+1))]}
+#    echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${mem2node[$(((m-1)*mem_np+1))]}
+    echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
     if ((m == mmean && SPRD_OUT == 1)); then
       path="sprd/anal.d01_$(datetime_scale $atime).nc"
       pathout="${OUTDIR}/${atime}/anal/sprd.init.nc"
-#      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
-      echo "${pathout}|${path}" >> ${staging_outfile_nolink_step}.${mem2node[$(((m-1)*mem_np+1))]}
+#      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${mem2node[$(((m-1)*mem_np+1))]}
+      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
     fi
   done
 
@@ -241,13 +228,13 @@ while ((time <= ETIME)); do
   for m in $mlist; do
     path="${name_m[$m]}/gues.d01_$(datetime_scale $atime).nc"
     pathout="${OUTDIR}/${atime}/gues/${name_m[$m]}.init.nc"
-#    echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
-    echo "${pathout}|${path}" >> ${staging_outfile_nolink_step}.${mem2node[$(((m-1)*mem_np+1))]}
+#    echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${mem2node[$(((m-1)*mem_np+1))]}
+    echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
     if ((m == mmean && SPRD_OUT == 1)); then
       path="sprd/gues.d01_$(datetime_scale $atime).nc"
       pathout="${OUTDIR}/${atime}/gues/sprd.init.nc"
-#      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
-      echo "${pathout}|${path}" >> ${staging_outfile_nolink_step}.${mem2node[$(((m-1)*mem_np+1))]}
+#      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${mem2node[$(((m-1)*mem_np+1))]}
+      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
     fi
   done
 
@@ -264,8 +251,8 @@ while ((time <= ETIME)); do
   for m in $mlist; do
     path="${name_m[$m]}/hist.d01_$(datetime_scale $time).nc"
     pathout="${OUTDIR}/${time}/hist/${name_m[$m]}.history.nc"
-#    echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
-    echo "${pathout}|${path}" >> ${staging_outfile_nolink_step}.${mem2node[$(((m-1)*mem_np+1))]}
+#    echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${mem2node[$(((m-1)*mem_np+1))]}
+    echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
   done
 
 #    # diag
@@ -273,14 +260,14 @@ while ((time <= ETIME)); do
 #    if ((RTPS_INFL_OUT == 1)); then
 #      path="rtpsinfl.d01_$(datetime_scale $atime).nc"
 #      pathout="${OUTDIR}/${atime}/diag/rtpsinfl.init.nc"
-##      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((mmean-1)*mem_np+1))]}
-#      echo "${pathout}|${path}" >> ${staging_outfile_nolink_step}.${mem2node[$(((mmean-1)*mem_np+1))]}
+##      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${mem2node[$(((mmean-1)*mem_np+1))]}
+#      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE_NOLINK}.${mem2node[$(((mmean-1)*mem_np+1))]}
 #    fi
 #    if ((NOBS_OUT == 1)); then
 #      path="nobs.d01_$(datetime_scale $atime).nc"
 #      pathout="${OUTDIR}/${atime}/diag/nobs.init.nc"
-##      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((mmean-1)*mem_np+1))]}
-#      echo "${pathout}|${path}" >> ${staging_outfile_nolink_step}.${mem2node[$(((mmean-1)*mem_np+1))]}
+##      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${mem2node[$(((mmean-1)*mem_np+1))]}
+#      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE_NOLINK}.${mem2node[$(((mmean-1)*mem_np+1))]}
 #    fi
 
 #    # obsgues
@@ -289,7 +276,7 @@ while ((time <= ETIME)); do
 #      for m in $(seq $mtot); do ###### either $mmean or $mmdet ? ######
 #        path="${name_m[$m]}/obsgues.d01_${atime}.dat"
 #        pathout="${OUTDIR}/${atime}/obsgues/${name_m[$m]}.obsda.dat"
-#        echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
+#        echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${mem2node[$(((m-1)*mem_np+1))]}
 #      done
 #    fi
 
@@ -312,15 +299,15 @@ while ((time <= ETIME)); do
     for m in $mlist; do
       path="log/scale.${name_m[$m]}.LOG_${time}.pe000000"
       pathout="${OUTDIR}/${time}/log/scale/${name_m[$m]}_LOG.pe000000"
-      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
+      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${mem2node[$(((m-1)*mem_np+1))]}
       path="log/scale.${name_m[$m]}.monitor_${time}.pe000000"
       pathout="${OUTDIR}/${time}/log/scale/${name_m[$m]}_monitor.pe000000"
-      echo "${pathout}|${path}" >> ${staging_outfile_step}.${mem2node[$(((m-1)*mem_np+1))]}
+      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${mem2node[$(((m-1)*mem_np+1))]}
     done
     for p in $plist; do
       path="log/scale-rm_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
       pathout="${OUTDIR}/${time}/log/scale/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
-      echo "${pathout}|${path}" >> ${staging_outfile_step}.${proc2node[$p]}
+      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${proc2node[$p]}
     done
   fi
 
@@ -333,7 +320,7 @@ while ((time <= ETIME)); do
     for p in $plist; do
       path="log/letkf.NOUT_${atime}$(printf -- "${log_nfmt}" $((p-1)))"
       pathout="${OUTDIR}/${atime}/log/letkf/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
-      echo "${pathout}|${path}" >> ${staging_outfile_step}.${proc2node[$p]}
+      echo "${pathout}|${path}|${loop}" >> ${STAGING_OUTFILE}.${proc2node[$p]}
     done
   fi
 
@@ -360,11 +347,6 @@ atime=$(datetime $time $LCYCLE s)
 loop=0
 while ((time <= ETIME)); do
   loop=$((loop+1))
-  if ((ONLINE_STGOUT == 1)); then
-    staging_outfile_nolink_step="${STAGING_OUTFILE_NOLINK}_loop${loop}"
-  else
-    staging_outfile_nolink_step="${STAGING_OUTFILE_NOLINK}"
-  fi
 
 #  for s in $(seq $nsteps); do
 #    if (((s_flag == 0 || s >= ISTEP) && (e_flag == 0 || s <= FSTEP))); then
@@ -409,10 +391,10 @@ while ((time <= ETIME)); do
           -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
           -e "/!--MEM_NP--/a MEM_NP = $mem_np," \
       > $CONFIG_DIR/${conf_file}
-  if ((DISK_MODE == 3)); then
+  if ((DISK_MODE == 3)) || [ "$CONFIG_DIR" != "$TMP_MAIN" ]; then
     echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> $STAGING_INFILE_EXE
   fi
-  echo "${OUTDIR}/${time}/log/scale/scale-rm_ens.conf|${conf_file}" >> $staging_outfile_nolink_step
+  echo "${OUTDIR}/${time}/log/scale/scale-rm_ens.conf|${conf_file}|${loop}" >> $STAGING_OUTFILE_NOLINK
 
   #-----------------------------------------------------------------------------
   # scale (each member)
@@ -484,10 +466,10 @@ while ((time <= ETIME)); do
             -e "/!--RESTART_OUT_ADDITIONAL_COPIES--/a RESTART_OUT_ADDITIONAL_COPIES = ${RESTART_OUT_ADDITIONAL_COPIES}," \
             -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}" \
         > $CONFIG_DIR/${conf_file}
-    if ((DISK_MODE == 3)); then
+    if ((DISK_MODE == 3)) || [ "$CONFIG_DIR" != "$TMP_MAIN" ]; then
       echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_INFILE}.${mem2node[$(((m-1)*mem_np+1))]}
     fi
-    echo "${OUTDIR}/${time}/log/scale/${name_m[$m]}_run.conf|${conf_file}" >> ${staging_outfile_nolink_step}.${mem2node[$(((m-1)*mem_np+1))]}
+    echo "${OUTDIR}/${time}/log/scale/${name_m[$m]}_run.conf|${conf_file}|${loop}" >> ${STAGING_OUTFILE_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
   done
 
   #-----------------------------------------------------------------------------
@@ -566,10 +548,10 @@ while ((time <= ETIME)); do
   cat $SCRP_DIR/config.nml.scale | \
       sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = .true.," \
       >> $CONFIG_DIR/${conf_file}
-  if ((DISK_MODE == 3)); then
+  if ((DISK_MODE == 3)) || [ "$CONFIG_DIR" != "$TMP_MAIN" ]; then
     echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> $STAGING_INFILE_EXE
   fi
-  echo "${OUTDIR}/${atime}/log/letkf/letkf.conf|${conf_file}" >> $staging_outfile_nolink_step
+  echo "${OUTDIR}/${atime}/log/letkf/letkf.conf|${conf_file}|${loop}" >> $STAGING_OUTFILE_NOLINK
 
   #-------------------
   time=$(datetime $time $LCYCLE s)

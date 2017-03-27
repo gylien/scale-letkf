@@ -10,7 +10,7 @@ MYNAME=$(basename $0)
 if (($# < 4)); then
   cat >&2 << EOF
 
-Usage: $MYNAME MYRANK NRANKS STGLIST STGDIR [THREAD]
+Usage: $MYNAME MYRANK NRANKS STGLIST STGDIR [THREAD STEP]
 
    MYRANK   (number): Rank of this node
             '-'     : Determinte the rank of this node automatically
@@ -18,6 +18,8 @@ Usage: $MYNAME MYRANK NRANKS STGLIST STGDIR [THREAD]
    STGLIST  File of the stage-out list
    STGDIR   Directory where the files are staged out from
    THREAD   Number of parallel copying threads (default: 1)
+   STEP     Step ID with which the files are processed
+            'a': process all steps (default)
 
 EOF
   exit 1
@@ -27,7 +29,8 @@ MYRANK="$1"; shift
 NRANKS="$1"; shift
 STGLIST="$1"; shift
 STGDIR="$1"; shift
-THREAD="${1:-1}"
+THREAD="${1:-1}"; shift
+STEP="${1:-a}"
 
 # This may not work...
 if [[ "$MYRANK" == '-' ]]; then
@@ -40,8 +43,14 @@ function stage_out_cp_sub () {
   local destin="$(echo $line | cut -d '|' -s -f1)"
   local source="$(echo $line | cut -d '|' -s -f2)"
   local sourcestg="${STGDIR}/${source}"
-  local flag="$(echo $line | cut -d '|' -s -f3)"
-  if [[ -z "$source" || -z "$destin" ]]; then
+  local istep="$(echo $line | cut -d '|' -s -f3)"
+  local flag=
+  if [[ "$STEP" != 'a' ]]; then
+    local flag="$(echo $line | cut -d '|' -s -f4)"
+  fi
+  if [[ "$STEP" != 'a' && "$istep" -ne "$STEP" ]]; then
+    : # do nothing
+  elif [[ -z "$source" || -z "$destin" ]]; then
     : # do nothing
   elif [[ "$destin" != /* ]]; then
     echo "$MYNAME: destination '$destin' is not an absolute path" >&2

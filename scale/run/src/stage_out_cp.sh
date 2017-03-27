@@ -10,12 +10,14 @@ MYNAME=$(basename $0)
 if (($# < 3)); then
   cat >&2 << EOF
 
-Usage: $MYNAME NRANKS STGLIST STGDIR [THREAD]
+Usage: $MYNAME NRANKS STGLIST STGDIR [THREAD STEP]
 
    NRANKS   Total number of nodes
    STGLIST  File of the stage-out list
    STGDIR   Directory where the files are staged out from
    THREAD   Number of parallel copying threads (default: 1)
+   STEP     Step ID with which the files are processed
+            'a': process all steps (default)
 
 EOF
   exit 1
@@ -24,7 +26,8 @@ fi
 NRANKS="$1"; shift
 STGLIST="$1"; shift
 STGDIR="$1"; shift
-THREAD="${1:-1}"
+THREAD="${1:-1}"; shift
+STEP="${1:-a}"
 
 #-------------------------------------------------------------------------------
 
@@ -32,8 +35,14 @@ function stage_out_cp_sub () {
   local destin="$(echo $line | cut -d '|' -s -f1)"
   local source="$(echo $line | cut -d '|' -s -f2)"
   local sourcestg="${STGDIR}/${source}"
-  local flag="$(echo $line | cut -d '|' -s -f3)"
-  if [[ -z "$source" || -z "$destin" ]]; then
+  local istep="$(echo $line | cut -d '|' -s -f3)"
+  local flag=
+  if [[ "$STEP" != 'a' ]]; then
+    local flag="$(echo $line | cut -d '|' -s -f4)"
+  fi
+  if [[ "$STEP" != 'a' && "$istep" -ne "$STEP" ]]; then
+    : # do nothing
+  elif [[ -z "$source" || -z "$destin" ]]; then
     : # do nothing
   elif [[ "$destin" != /* ]]; then
     echo "$MYNAME: destination '$destin' is not an absolute path" >&2
