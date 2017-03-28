@@ -35,6 +35,7 @@ myname="$(basename "$0")"
 . src/func_distribute.sh || exit $?
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
+. src/func_stage.sh || exit $?
 . src/func_cycle.sh || exit $?
 . src/func_cycle_simple.sh || exit $?
 
@@ -111,41 +112,7 @@ if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
 
   config_file_list || exit $?
 
-  if [ -s "$STAGING_DIR/stagein_link.1" ] || [ -s "$STAGING_DIR/stagein_link" ]; then
-#    safe_init_tmpdir $TMP || exit $?
-    errmsg=$(bash $SCRP_DIR/src/stage_in_ln.sh $NNODES $STAGING_DIR/stagein_link $TMP 2>&1)
-    if [ -n "$errmsg" ]; then
-      echo "$errmsg" >&2
-      exit 1
-    fi
-  fi
-  if [ -s "$STAGING_DIR/stagein_share.1" ] || [ -s "$STAGING_DIR/stagein_share" ]; then
-#    safe_init_tmpdir $TMP || exit $?
-#    pdbash node all $SCRP_DIR/src/stage_in_init_stgdir_node.sh $TMP share || exit $?
-    errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES $STAGING_DIR/stagein_share $TMP share $SCP_THREAD 2>&1)
-    if [ -n "$errmsg" ]; then
-      echo "$errmsg" >&2
-      exit 1
-    fi
-  fi
-  if [ -s "$STAGING_DIR/stagein_local.1" ] || [ -s "$STAGING_DIR/stagein_local" ]; then
-    pdbash node all $SCRP_DIR/src/stage_in_init_stgdir_node.sh $TMPL local || exit $?
-    errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES $STAGING_DIR/stagein_local $TMPL local $SCP_THREAD 2>&1)
-    if [ -n "$errmsg" ]; then
-      echo "$errmsg" >&2
-      exit 1
-    fi
-  fi
-
-  if ((DISK_MODE == 1)); then
-    if [ -s "$STAGING_DIR/stageout_link.1" ] || [ -s "$STAGING_DIR/stageout_link" ]; then
-      errmsg=$(bash $SCRP_DIR/src/stage_out_ln.sh $NNODES $STAGING_DIR/stageout_link $TMP 2>&1)
-      if [ -n "$errmsg" ]; then
-        echo "$errmsg" >&2
-        exit 1
-      fi
-    fi
-  fi
+  stage_in || exit $?
 fi
 
 echo "[$(datetime_now)] ### 5" >&2
@@ -173,20 +140,7 @@ function online_stgout_bgjob () {
     sleep 1s
   done
 
-  if [ -s "$STAGING_DIR/stageout_share.1" ] || [ -s "$STAGING_DIR/stageout_share" ]; then
-    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STAGING_DIR/stageout_share $TMP $SCP_THREAD $ILOOP 2>&1)
-    if [ -n "$errmsg" ]; then
-      echo "$errmsg" >&2
-#      exit 1
-    fi
-  fi
-  if [ -s "$STAGING_DIR/stageout_local.1" ] || [ -s "$STAGING_DIR/stageout_local" ]; then
-    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STAGING_DIR/stageout_local $TMPL $SCP_THREAD $ILOOP 2>&1)
-    if [ -n "$errmsg" ]; then
-      echo "$errmsg" >&2
-#      exit 1
-    fi
-  fi
+  stage_out $ILOOP || exit $?
 
   echo "[$(datetime_now)] ${ITIME}: Stage-out (background job completed)" >&2
   rm -f lock.$ILOOP
@@ -389,20 +343,7 @@ if [ "$STG_TYPE" = 'builtin' ]; then
   else
     echo "[$(datetime_now)] Finalization (stage-out)" >&2
 
-    if [ -s "$STAGING_DIR/stageout_share.1" ] || [ -s "$STAGING_DIR/stageout_share" ]; then
-      errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STAGING_DIR/stageout_share $TMP $SCP_THREAD a 2>&1)
-      if [ -n "$errmsg" ]; then
-        echo "$errmsg" >&2
-#        exit 1
-      fi
-    fi
-    if [ -s "$STAGING_DIR/stageout_local.1" ] || [ -s "$STAGING_DIR/stageout_local" ]; then
-      errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STAGING_DIR/stageout_local $TMPL $SCP_THREAD a 2>&1)
-      if [ -n "$errmsg" ]; then
-        echo "$errmsg" >&2
-#        exit 1
-      fi
-    fi
+    stage_out || exit $?
   fi
 
   if ((CLEAR_TMP == 1 && USE_TMPL == 1)); then

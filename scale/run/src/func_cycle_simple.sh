@@ -391,7 +391,7 @@ while ((time <= ETIME)); do
           -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
           -e "/!--MEM_NP--/a MEM_NP = $mem_np," \
       > $CONFIG_DIR/${conf_file}
-  if ((DISK_MODE == 3)) || [ "$CONFIG_DIR" != "$TMP_MAIN" ]; then
+  if ((DISK_MODE == 3)) || [ "$CONFIG_DIR" != "$TMP_DIR" ]; then
     echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> $STAGING_INFILE_EXE
   fi
   echo "${OUTDIR}/${time}/log/scale/scale-rm_ens.conf|${conf_file}|${loop}" >> $STAGING_OUTFILE_NOLINK
@@ -466,7 +466,7 @@ while ((time <= ETIME)); do
             -e "/!--RESTART_OUT_ADDITIONAL_COPIES--/a RESTART_OUT_ADDITIONAL_COPIES = ${RESTART_OUT_ADDITIONAL_COPIES}," \
             -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}" \
         > $CONFIG_DIR/${conf_file}
-    if ((DISK_MODE == 3)) || [ "$CONFIG_DIR" != "$TMP_MAIN" ]; then
+    if ((DISK_MODE == 3)) || [ "$CONFIG_DIR" != "$TMP_DIR" ]; then
       echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_INFILE}.${mem2node[$(((m-1)*mem_np+1))]}
     fi
     echo "${OUTDIR}/${time}/log/scale/${name_m[$m]}_run.conf|${conf_file}|${loop}" >> ${STAGING_OUTFILE_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
@@ -548,7 +548,7 @@ while ((time <= ETIME)); do
   cat $SCRP_DIR/config.nml.scale | \
       sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = .true.," \
       >> $CONFIG_DIR/${conf_file}
-  if ((DISK_MODE == 3)) || [ "$CONFIG_DIR" != "$TMP_MAIN" ]; then
+  if ((DISK_MODE == 3)) || [ "$CONFIG_DIR" != "$TMP_DIR" ]; then
     echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> $STAGING_INFILE_EXE
   fi
   echo "${OUTDIR}/${atime}/log/letkf/letkf.conf|${conf_file}|${loop}" >> $STAGING_OUTFILE_NOLINK

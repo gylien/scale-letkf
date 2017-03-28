@@ -473,6 +473,108 @@ exit $res
 
 #===============================================================================
 
+stage_in () {
+#-------------------------------------------------------------------------------
+# Stage-in files into the runtime temporary directories based on the staging lists
+#
+# Usage: stage_in
+#
+# Other input variables:
+#   $SCRP_DIR
+#   $TMP
+#   $TMPL
+#   $STGDIR_IN_LINK
+#   $STGDIR_IN_SHARE
+#   $STGDIR_IN_LOCAL
+#   $STGDIR_OUT_LINK
+#   $NNODES
+#   $STAGE_THREAD
+#-------------------------------------------------------------------------------
+
+if [ -s "$STGDIR_IN_LINK.1" ] || [ -s "$STGDIR_IN_LINK" ]; then
+#  safe_init_tmpdir $TMP || return $?
+  local errmsg=$(bash $SCRP_DIR/src/stage_in_ln.sh $NNODES $STGDIR_IN_LINK $TMP 2>&1)
+  if [ -n "$errmsg" ]; then
+    echo "$errmsg" >&2
+    return 1
+  fi
+fi
+if [ -s "$STGDIR_IN_SHARE.1" ] || [ -s "$STGDIR_IN_SHARE" ]; then
+#  safe_init_tmpdir $TMP || return $?
+#  pdbash node all $SCRP_DIR/src/stage_in_init_stgdir_node.sh $TMP share || return $?
+  local errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES $STGDIR_IN_SHARE $TMP share $STAGE_THREAD 2>&1)
+  if [ -n "$errmsg" ]; then
+    echo "$errmsg" >&2
+    return 1
+  fi
+fi
+if [ -s "$STGDIR_IN_LOCAL.1" ] || [ -s "$STGDIR_IN_LOCAL" ]; then
+  pdbash node all $SCRP_DIR/src/stage_in_init_stgdir_node.sh $TMPL local || return $?
+  local errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES $STGDIR_IN_LOCAL $TMPL local $STAGE_THREAD 2>&1)
+  if [ -n "$errmsg" ]; then
+    echo "$errmsg" >&2
+    return 1
+  fi
+fi
+
+if ((DISK_MODE == 1)); then
+  if [ -s "$STGDIR_OUT_LINK.1" ] || [ -s "$STGDIR_OUT_LINK" ]; then
+    local errmsg=$(bash $SCRP_DIR/src/stage_out_ln.sh $NNODES $STGDIR_OUT_LINK $TMP 2>&1)
+    if [ -n "$errmsg" ]; then
+      echo "$errmsg" >&2
+      return 1
+    fi
+  fi
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+stage_out () {
+#-------------------------------------------------------------------------------
+# Stage-out files from the runtime temporary directories based on the staging lists
+#
+# Usage: stage_out [STEP]
+#
+#   STEP  Step ID with which the files are processed
+#         'a': process all steps (default)
+#
+# Other input variables:
+#   $SCRP_DIR
+#   $TMP
+#   $TMPL
+#   $STGDIR_OUT_SHARE
+#   $STGDIR_OUT_LOCAL
+#   $NNODES
+#   $STAGE_THREAD
+#-------------------------------------------------------------------------------
+
+local STEP="${1:-a}"
+
+#-------------------------------------------------------------------------------
+
+if [ -s "$STGDIR_OUT_SHARE.1" ] || [ -s "$STGDIR_OUT_SHARE" ]; then
+  errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STGDIR_OUT_SHARE $TMP $STAGE_THREAD $STEP 2>&1)
+  if [ -n "$errmsg" ]; then
+    echo "$errmsg" >&2
+#    return 1
+  fi
+fi
+if [ -s "$STGDIR_OUT_LOCAL.1" ] || [ -s "$STGDIR_OUT_LOCAL" ]; then
+  errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STGDIR_OUT_LOCAL $TMPL $STAGE_THREAD $STEP 2>&1)
+  if [ -n "$errmsg" ]; then
+    echo "$errmsg" >&2
+#    return 1
+  fi
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
 bdy_setting () {
 #-------------------------------------------------------------------------------
 # Calculate scale_init namelist settings for boundary files

@@ -41,8 +41,8 @@ if [ "$MYRANK" = 'a' ] ||
       else
         if [ ! -z "$destin" ]; then
           mkdir -p "$(dirname ${TMPDATtmp}/${destin})"
-          if ((SCP_THREAD > 1)); then
-            while (($(jobs -p | wc -l) >= SCP_THREAD)); do
+          if ((STAGE_THREAD > 1)); then
+            while (($(jobs -p | wc -l) >= STAGE_THREAD)); do
               sleep 1s
             done
             $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPDATtmp}/${destin}" &
@@ -52,7 +52,7 @@ if [ "$MYRANK" = 'a' ] ||
         fi
       fi
     done < "$STAGING_DIR/stagein.dat" | sort | uniq
-    if ((SCP_THREAD > 1)); then
+    if ((STAGE_THREAD > 1)); then
       wait
     fi
   fi
@@ -83,8 +83,8 @@ for ifile in $filelist; do
     else
       if [ ! -z "$destin" ]; then
         mkdir -p "$(dirname ${TMPOUT}/${destin})"
-        if ((SCP_THREAD > 1)); then
-          while (($(jobs -p | wc -l) >= SCP_THREAD)); do
+        if ((STAGE_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= STAGE_THREAD)); do
             sleep 1s
           done
           $SCP -r "${SCP_HOSTPREFIX}${source}" "${TMPOUT}/${destin}" &
@@ -94,7 +94,7 @@ for ifile in $filelist; do
       fi
     fi
   done < "$ifile" | sort | uniq
-  if ((SCP_THREAD > 1)); then
+  if ((STAGE_THREAD > 1)); then
     wait
   fi
 done
