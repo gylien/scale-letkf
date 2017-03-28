@@ -10,13 +10,15 @@ MYNAME=$(basename $0)
 if (($# < 4)); then
   cat >&2 << EOF
 
-Usage: $MYNAME MYRANK NRANKS STGLIST STGDIR [THREAD STEP]
+Usage: $MYNAME MYRANK NRANKS STGLIST STGDIR [TYPE THREAD STEP]
 
    MYRANK   (number): Rank of this node
             '-'     : Determinte the rank of this node automatically
    NRANKS   Total number of nodes
    STGLIST  File of the stage-out list
    STGDIR   Directory where the files are staged out from
+   TYPE     'share': Stage-in to a shared directory (default)
+            'local': Stage-in to local directories
    THREAD   Number of parallel copying threads (default: 1)
    STEP     Step ID with which the files are processed
             'a': process all steps (default)
@@ -29,6 +31,7 @@ MYRANK="$1"; shift
 NRANKS="$1"; shift
 STGLIST="$1"; shift
 STGDIR="$1"; shift
+TYPE="${1:-share}"; shift
 THREAD="${1:-1}"; shift
 STEP="${1:-a}"
 
@@ -57,7 +60,9 @@ function stage_out_cp_sub () {
 #  elif [[ ! -e "$sourcestg" ]]; then
 #    echo "$MYNAME: source '$sourcestg' does not exists" >&2
   elif [[ "$sourcestg" != */ && "$destin" != */ ]]; then # files
-    if [[ -d "$destin" ]]; then
+    if [[ "$skipfiles" == 'yes' ]]; then
+      : # do nothing
+    elif [[ -d "$destin" ]]; then
       echo "$MYNAME: source '$sourcestg' is a regular file, but destination '$destin' exists and is a directory" >&2
     elif (mkdir -p "$(dirname "$destin")"); then
       if ((THREAD > 1)); then
@@ -103,13 +108,19 @@ fi
 if [[ -s "$STGLIST" ]]; then
   i=0
   while read line; do
-    if ((i % NRANKS == MYRANK)); then
+    if [[ "$TYPE" == 'local' ]] || ((i % NRANKS == MYRANK)); then
+      if ((i % NRANKS != MYRANK)); then
+        skipfiles='yes'
+      else
+        skipfiles=
+      fi
       stage_out_cp_sub
     fi
     i=$((i+1))
   done < "$STGLIST" # | sort | uniq
 fi
 
+skipfiles=
 if [[ -s "$STGLIST.$((MYRANK+1))" ]]; then
   while read line; do
     stage_out_cp_sub

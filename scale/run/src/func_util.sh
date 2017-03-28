@@ -578,7 +578,7 @@ if [ -s "$STGDIR_OUT_SHARE.1" ] || [ -s "$STGDIR_OUT_SHARE" ]; then
   if [ "$RUN_ON" = 'server' ]; then
     errmsg=$(bash $SCRP_DIR/src/stage_out_cp.sh $NNODES $STGDIR_OUT_SHARE $TMP $STAGE_THREAD $STEP 2>&1)
   else
-    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STGDIR_OUT_SHARE $TMP $STAGE_THREAD $STEP 2>&1)
+    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STGDIR_OUT_SHARE $TMP share $STAGE_THREAD $STEP 2>&1)
   fi
   if [ -n "$errmsg" ]; then
     echo "$errmsg" >&2
@@ -588,7 +588,7 @@ fi
 
 if [ "$RUN_ON" = 'node' ]; then # stage-out from local directories can only be done on the computing-node side
   if [ -s "$STGDIR_OUT_LOCAL.1" ] || [ -s "$STGDIR_OUT_LOCAL" ]; then
-    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STGDIR_OUT_LOCAL $TMPL $STAGE_THREAD $STEP 2>&1)
+    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STGDIR_OUT_LOCAL $TMPL local $STAGE_THREAD $STEP 2>&1)
     if [ -n "$errmsg" ]; then
       echo "$errmsg" >&2
 #      return 1
