@@ -1,7 +1,7 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Built-in stage-in script (run on the computing-node side)
+#  Built-in stage-in script (run parallelly on all computing nodes)
 #
 #===============================================================================
 

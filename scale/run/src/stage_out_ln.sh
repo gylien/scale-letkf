@@ -1,7 +1,7 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Built-in stage-out script (run on the server side)
+#  Built-in stage-out script (run on a single node)
 #
 #===============================================================================
 

@@ -35,7 +35,6 @@ myname="$(basename "$0")"
 . src/func_distribute.sh || exit $?
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
-. src/func_stage.sh || exit $?
 . src/func_cycle.sh || exit $?
 . src/func_cycle_simple.sh || exit $?
 
@@ -112,7 +111,7 @@ if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
 
   config_file_list || exit $?
 
-  stage_in || exit $?
+  stage_in node || exit $?
 fi
 
 echo "[$(datetime_now)] ### 5" >&2
@@ -140,7 +139,7 @@ function online_stgout_bgjob () {
     sleep 1s
   done
 
-  stage_out $ILOOP || exit $?
+  stage_out node $ILOOP || exit $?
 
   echo "[$(datetime_now)] ${ITIME}: Stage-out (background job completed)" >&2
   rm -f lock.$ILOOP
@@ -343,7 +342,7 @@ if [ "$STG_TYPE" = 'builtin' ]; then
   else
     echo "[$(datetime_now)] Finalization (stage-out)" >&2
 
-    stage_out || exit $?
+    stage_out node || exit $?
   fi
 
   if ((CLEAR_TMP == 1 && USE_TMPL == 1)); then

@@ -477,7 +477,11 @@ stage_in () {
 #-------------------------------------------------------------------------------
 # Stage-in files into the runtime temporary directories based on the staging lists
 #
-# Usage: stage_in
+# Usage: stage_in [RUN_ON]
+#
+#   RUN_ON  Run on which side?
+#           'server': run on the server side
+#           'node':   run on the computing-node side (using 'pdbash') (default)
 #
 # Other input variables:
 #   $SCRP_DIR
@@ -491,35 +495,46 @@ stage_in () {
 #   $STAGE_THREAD
 #-------------------------------------------------------------------------------
 
+local RUN_ON="${1:-node}"
+
+#-------------------------------------------------------------------------------
+
 if [ -s "$STGDIR_IN_LINK.1" ] || [ -s "$STGDIR_IN_LINK" ]; then
 #  safe_init_tmpdir $TMP || return $?
-  local errmsg=$(bash $SCRP_DIR/src/stage_in_ln.sh $NNODES $STGDIR_IN_LINK $TMP 2>&1)
-  if [ -n "$errmsg" ]; then
-    echo "$errmsg" >&2
-    return 1
-  fi
-fi
-if [ -s "$STGDIR_IN_SHARE.1" ] || [ -s "$STGDIR_IN_SHARE" ]; then
-#  safe_init_tmpdir $TMP || return $?
-#  pdbash node all $SCRP_DIR/src/stage_in_init_stgdir_node.sh $TMP share || return $?
-  local errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES $STGDIR_IN_SHARE $TMP share $STAGE_THREAD 2>&1)
-  if [ -n "$errmsg" ]; then
-    echo "$errmsg" >&2
-    return 1
-  fi
-fi
-if [ -s "$STGDIR_IN_LOCAL.1" ] || [ -s "$STGDIR_IN_LOCAL" ]; then
-  pdbash node all $SCRP_DIR/src/stage_in_init_stgdir_node.sh $TMPL local || return $?
-  local errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES $STGDIR_IN_LOCAL $TMPL local $STAGE_THREAD 2>&1)
+  local errmsg=$(bash $SCRP_DIR/src/stage_in_ln.sh $NNODES $STGDIR_IN_LINK $TMP 2>&1) # code same for both server and computing-node sides
   if [ -n "$errmsg" ]; then
     echo "$errmsg" >&2
     return 1
   fi
 fi
 
+if [ -s "$STGDIR_IN_SHARE.1" ] || [ -s "$STGDIR_IN_SHARE" ]; then
+#  safe_init_tmpdir $TMP || return $?
+  if [ "$RUN_ON" = 'server' ]; then
+    local errmsg=$(bash $SCRP_DIR/src/stage_in_cp.sh $NNODES $STGDIR_IN_SHARE $TMP $STAGE_THREAD 2>&1)
+  else
+    local errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES $STGDIR_IN_SHARE $TMP share $STAGE_THREAD 2>&1)
+  fi
+  if [ -n "$errmsg" ]; then
+    echo "$errmsg" >&2
+    return 1
+  fi
+fi
+
+if [ "$RUN_ON" = 'node' ]; then # stage-in to local directories can only be done on the computing-node side
+  if [ -s "$STGDIR_IN_LOCAL.1" ] || [ -s "$STGDIR_IN_LOCAL" ]; then
+    pdbash node all $SCRP_DIR/src/stage_in_init_stgdir_node.sh $TMPL local || return $?
+    local errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES $STGDIR_IN_LOCAL $TMPL local $STAGE_THREAD 2>&1)
+    if [ -n "$errmsg" ]; then
+      echo "$errmsg" >&2
+      return 1
+    fi
+  fi
+fi
+
 if ((DISK_MODE == 1)); then
   if [ -s "$STGDIR_OUT_LINK.1" ] || [ -s "$STGDIR_OUT_LINK" ]; then
-    local errmsg=$(bash $SCRP_DIR/src/stage_out_ln.sh $NNODES $STGDIR_OUT_LINK $TMP 2>&1)
+    local errmsg=$(bash $SCRP_DIR/src/stage_out_ln.sh $NNODES $STGDIR_OUT_LINK $TMP 2>&1) # code same for both server and computing-node sides
     if [ -n "$errmsg" ]; then
       echo "$errmsg" >&2
       return 1
@@ -536,10 +551,13 @@ stage_out () {
 #-------------------------------------------------------------------------------
 # Stage-out files from the runtime temporary directories based on the staging lists
 #
-# Usage: stage_out [STEP]
+# Usage: stage_out [RUN_ON STEP]
 #
-#   STEP  Step ID with which the files are processed
-#         'a': process all steps (default)
+#   RUN_ON  Run on which side?
+#           'server': run on the server side
+#           'node':   run on the computing-node side (using 'pdbash') (default)
+#   STEP    Step ID with which the files are processed
+#           'a': process all steps (default)
 #
 # Other input variables:
 #   $SCRP_DIR
@@ -551,22 +569,30 @@ stage_out () {
 #   $STAGE_THREAD
 #-------------------------------------------------------------------------------
 
+local RUN_ON="${1:-node}"; shift
 local STEP="${1:-a}"
 
 #-------------------------------------------------------------------------------
 
 if [ -s "$STGDIR_OUT_SHARE.1" ] || [ -s "$STGDIR_OUT_SHARE" ]; then
-  errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STGDIR_OUT_SHARE $TMP $STAGE_THREAD $STEP 2>&1)
+  if [ "$RUN_ON" = 'server' ]; then
+    errmsg=$(bash $SCRP_DIR/src/stage_out_cp.sh $NNODES $STGDIR_OUT_SHARE $TMP $STAGE_THREAD $STEP 2>&1)
+  else
+    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STGDIR_OUT_SHARE $TMP $STAGE_THREAD $STEP 2>&1)
+  fi
   if [ -n "$errmsg" ]; then
     echo "$errmsg" >&2
 #    return 1
   fi
 fi
-if [ -s "$STGDIR_OUT_LOCAL.1" ] || [ -s "$STGDIR_OUT_LOCAL" ]; then
-  errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STGDIR_OUT_LOCAL $TMPL $STAGE_THREAD $STEP 2>&1)
-  if [ -n "$errmsg" ]; then
-    echo "$errmsg" >&2
-#    return 1
+
+if [ "$RUN_ON" = 'node' ]; then # stage-out from local directories can only be done on the computing-node side
+  if [ -s "$STGDIR_OUT_LOCAL.1" ] || [ -s "$STGDIR_OUT_LOCAL" ]; then
+    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STGDIR_OUT_LOCAL $TMPL $STAGE_THREAD $STEP 2>&1)
+    if [ -n "$errmsg" ]; then
+      echo "$errmsg" >&2
+#      return 1
+    fi
   fi
 fi
 
