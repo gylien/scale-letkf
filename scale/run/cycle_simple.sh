@@ -252,52 +252,25 @@ while ((time <= ETIME)); do
       echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2
 
       nodestr=proc
-      if ((IO_ARB == 1)); then
-        if ((s == 3)); then
-          nodestr='set1.proc'
-        elif ((s == 5)); then
-          nodestr='set2.proc'
-        fi
-      fi
+######      if ((IO_ARB == 1)); then
+######        if ((s == 3)); then
+######          nodestr='set1.proc'
+######        elif ((s == 5)); then
+######          nodestr='set2.proc'
+######        fi
+######      fi
 
-#      if ((s <= 3)); then
-#        stdout_dir="$TMPOUT/${time}/log/$(basename ${stepexecdir[$s]})"
-#      else
-#        stdout_dir="$TMPOUT/${atime}/log/$(basename ${stepexecdir[$s]})"
-#      fi
       if ((s <= 3)); then
         conf_time=$time
       else
         conf_time=$atime
       fi
 
-#echo "$stdout_dir" >&2
-#echo ${stepexecdir[$s]} >&2
-#echo $(rev_path ${stepexecdir[$s]}) >&2
-
-#      NNP=$(cat ${NODEFILE_DIR}/${nodestr} | wc -l)
-##      mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${nodestr}" -of-proc log/${stepexecname[$s]}.NOUT_${conf_time} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf || exit $?
-#echo "      mpiexec -n $NNP -vcoordfile \"${NODEFILE_DIR}/${nodestr}\" -of-proc log/${stepexecname[$s]}.NOUT_${conf_time} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf || exit \$?"
-
-      HOSTLIST=$(cat ${NODEFILE_DIR}/${nodestr})
-      HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
-      $MPIRUN $HOSTLIST 1 ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
-#      echo "$MPIRUN $HOSTLIST 1 ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit \$?"
-
-#      if [ "$STG_TYPE" = 'K_rankdir' ]; then
-
-#        mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" ${stepexecdir[$s]} \
-#                "$(rev_path ${stepexecdir[$s]})/cycle_step.sh" "$time" "$loop" || exit $?
-#      else
-
-#        if ((IO_ARB == 1)); then ##                                 
-#          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
-#                  "$SCRP_DIR/cycle_step.sh" "$time" "$loop" || exit $? &
-#        else ##
-#          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
-#                  "$SCRP_DIR/cycle_step.sh" "$time" "$loop" || exit $?
-#        fi ##
-#      fi
+######      if ((IO_ARB == 1)); then ##                                 
+######        mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} &
+######      else ##
+        mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time}
+######      fi ##
 
     fi
   done

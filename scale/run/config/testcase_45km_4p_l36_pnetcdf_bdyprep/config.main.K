@@ -64,7 +64,7 @@ BDYCYCLE_INT=
 
 PARENT_REF_TIME=
 
-ENABLE_PARAM_USER=1     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
+ENABLE_PARAM_USER=0     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
                         # 1: Enable the 'PARAM_USER' section of the SCALE namelist (require 'config.nml.scale_user' and customized version of SCALE)
 
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)

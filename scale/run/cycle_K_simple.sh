@@ -13,20 +13,19 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
+#myname="$(basename "$0")"
 job='cycle'
 
 #===============================================================================
 # Configuration
 
-. config.main
-res=$? && ((res != 0)) && exit $res
-. config.$job
-res=$? && ((res != 0)) && exit $res
+. config.main || exit $?
+. config.$job || exit $?
 
 . src/func_distribute.sh
 . src/func_datetime.sh
 . src/func_util.sh
-. src/func_$job.sh
+. src/func_${job}.sh
 . src/func_${job}_simple.sh
 
 #-------------------------------------------------------------------------------
@@ -36,7 +35,7 @@ echo "[$(datetime_now)] Start $(basename $0) $@"
 setting "$1" "$2" "$3" "$4" "$5"
 
 echo
-print_setting
+print_setting || exit $?
 echo
 
 #===============================================================================
@@ -50,46 +49,47 @@ if [ ${TMP:0:8} != '/scratch' ]; then
   echo "        \$TMP = '$TMP'" >&2
   exit 1
 fi
-safe_init_tmpdir $TMP
+safe_init_tmpdir $TMP || exit $?
 
 #===============================================================================
 # Determine the distibution schemes
 
 echo "[$(datetime_now)] Determine the distibution schemes"
 
-declare -a procs
-declare -a mem2node
-declare -a node
-declare -a name_m
 declare -a node_m
+declare -a name_m
+declare -a mem2node
+declare -a mem2proc
+declare -a proc2node
+declare -a proc2group
+declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR
-if ((IO_ARB == 1)); then                   ##
-  distribute_da_cycle_set - $NODEFILE_DIR  ##
-else                                       ##
+if ((IO_ARB == 1)); then                              ##
+  distribute_da_cycle_set - $NODEFILE_DIR || exit $?  ##
+else                                                  ##
   distribute_da_cycle - $NODEFILE_DIR
-fi                                         ##
+fi                                                    ##
 
 #===============================================================================
 # Determine the staging list
 
 echo "[$(datetime_now)] Determine the staging list"
 
-safe_init_tmpdir $STAGING_DIR
-staging_list_simple
+safe_init_tmpdir $STAGING_DIR || exit $?
+staging_list_simple || exit $?
 
 #===============================================================================
 # Generate configuration files
 
-######safe_init_tmpdir $CONFIG_DIR
-config_file_list
+config_file_list || exit $?
 
 #===============================================================================
 # Stage in
 
 echo "[$(datetime_now)] Initialization (stage in)"
 
-bash $SCRP_DIR/src/stage_in.sh a
+stage_in server || exit $?
 
 #-------------------------------------------------------------------------------
 
@@ -138,13 +138,6 @@ export PARALLEL=${THREADS}
 ./${job}_simple.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
 EOF
 
-
-
-
-exit
-
-
-
 #===============================================================================
 # Run the job
 
@@ -162,7 +155,7 @@ res=$?
 
 echo "[$(datetime_now)] Finalization (stage out)"
 
-bash $SCRP_DIR/src/stage_out.sh a
+stage_out server || exit $?
 
 #===============================================================================
 # Finalization

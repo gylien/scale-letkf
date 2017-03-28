@@ -466,6 +466,10 @@ while ((time <= ETIME)); do
             -e "/!--RESTART_OUT_ADDITIONAL_COPIES--/a RESTART_OUT_ADDITIONAL_COPIES = ${RESTART_OUT_ADDITIONAL_COPIES}," \
             -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}" \
         > $CONFIG_DIR/${conf_file}
+#    cat $SCRP_DIR/config.nml.scale_user | \
+#        sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"XXXXXX\"," \
+#        sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"XXXXXX\"," \
+#        >> $CONFIG_DIR/${conf_file}
     if ((DISK_MODE == 3)) || [ "$CONFIG_DIR" != "$TMP_DIR" ]; then
       echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_INFILE}.${mem2node[$(((m-1)*mem_np+1))]}
     fi
