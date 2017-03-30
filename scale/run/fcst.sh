@@ -39,7 +39,7 @@ job=${myname%.*}
 
 #-------------------------------------------------------------------------------
 
-if [ "$STG_TYPE" = 'K_rankdir' ]; then
+if [ "$PRESET" = 'K_rankdir' ]; then
   SCRP_DIR="."
   if ((TMPDAT_MODE <= 2)); then
     TMPDAT="../dat"
@@ -241,7 +241,7 @@ while ((time <= ETIME)); do
 
       if ((enable_iter == 1)); then
         for it in $(seq $nitmax); do
-          if [ "$STG_TYPE" = 'K_rankdir' ]; then
+          if [ "$PRESET" = 'K_rankdir' ]; then
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
             mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" ${stepexecdir[$s]} \
@@ -258,7 +258,7 @@ while ((time <= ETIME)); do
           fi
         done
       else
-        if [ "$STG_TYPE" = 'K_rankdir' ]; then
+        if [ "$PRESET" = 'K_rankdir' ]; then
           mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" ${stepexecdir[$s]} \
                   "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop || exit $?
         else

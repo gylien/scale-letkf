@@ -1,14 +1,12 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Wrap cycle.sh in a K-computer job script (micro) and run it.
-#
-#  February 2015, created,                Guo-Yuan Lien
+#  Wrap cycle.sh in a K-computer job script and run it.
 #
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_K_micro.sh [STIME ETIME ISTEP FSTEP TIME_LIMIT]
+#    cycle_K_simple.sh [STIME ETIME ISTEP FSTEP TIME_LIMIT]
 #
 #===============================================================================
 
@@ -28,6 +26,21 @@ job='cycle'
 . src/func_${job}.sh
 . src/func_${job}_simple.sh
 
+STAGING_DIR="$TMPS/staging"
+NODEFILE_DIR="$TMPS/node"
+
+#-------------------------------------------------------------------------------
+
+if ((USE_TMP_LINK == 1)); then
+  echo "[Error] $0: Wrong disk mode for K computer regular jobs." >&2
+  exit 1
+fi
+
+if [ "$PRESET" = 'K_rankdir' ] && ((PNETCDF == 1)); then
+  echo "[Error] When PNETCDF is enabled, 'K_rankdir' preset cannot be used." 1>&2
+  exit 1
+fi
+
 #-------------------------------------------------------------------------------
 
 echo "[$(datetime_now)] Start $(basename $0) $@"
@@ -43,13 +56,7 @@ echo
 
 echo "[$(datetime_now)] Create and clean the temporary directory"
 
-if [ ${TMP:0:8} != '/scratch' ]; then
-  echo "[Error] $0: When using 'micro' resource group, \$TMP will be completely removed." >&2
-  echo "        Wrong setting detected:" >&2
-  echo "        \$TMP = '$TMP'" >&2
-  exit 1
-fi
-safe_init_tmpdir $TMP || exit $?
+safe_init_tmpdir $TMPS || exit $?
 
 #===============================================================================
 # Determine the distibution schemes
@@ -64,47 +71,57 @@ declare -a proc2node
 declare -a proc2group
 declare -a proc2grpproc
 
-safe_init_tmpdir $NODEFILE_DIR
-if ((IO_ARB == 1)); then                              ##
-  distribute_da_cycle_set - $NODEFILE_DIR || exit $?  ##
-else                                                  ##
-  distribute_da_cycle - $NODEFILE_DIR
-fi                                                    ##
+safe_init_tmpdir $TMPS/node
+if ((IO_ARB == 1)); then                           ##
+  distribute_da_cycle_set - $TMPS/node || exit $?  ##
+else                                               ##
+  distribute_da_cycle - $TMPS/node || exit $?
+fi                                                 ##
 
 #===============================================================================
 # Determine the staging list
 
 echo "[$(datetime_now)] Determine the staging list"
 
+cp -L $SCRP_DIR/config.main $TMPS/config.main
+
+if [ "$PRESET" = 'K_rankdir' ]; then
+  echo "TMP='..'" >> $TMPS/config.main
+  echo "TMPL='.'" >> $TMPS/config.main
+else
+  echo "TMP='.'" >> $TMPS/config.main
+fi
+if ((DISK_MODE == 2)); then
+  echo "SCRP_DIR=\"\$TMP\"" >> $TMPS/config.main
+elif ((DISK_MODE == 3)); then
+  echo "SCRP_DIR=\"\$TMPL\"" >> $TMPS/config.main
+fi
+
+echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMPS/config.main
+
+echo "RUN_LEVEL=2" >> $TMPS/config.main
+
 safe_init_tmpdir $STAGING_DIR || exit $?
 staging_list_simple || exit $?
+
+#-------------------------------------------------------------------------------
+# Add shell scripts and node distribution files into the staging list
+
+cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${TMPS}/config.main|config.main
+${SCRP_DIR}/config.rc|config.rc
+${SCRP_DIR}/config.${job}|config.${job}
+${SCRP_DIR}/${job}_simple.sh|${job}_simple.sh
+${SCRP_DIR}/src/|src/
+${TMPS}/node/|node/
+EOF
 
 #===============================================================================
 # Generate configuration files
 
-config_file_list || exit $?
+config_file_list $TMPS/config || exit $?
 
 #===============================================================================
-# Stage in
-
-echo "[$(datetime_now)] Initialization (stage in)"
-
-stage_in server || exit $?
-
-#-------------------------------------------------------------------------------
-
-cp -L -r $SCRP_DIR/config.main $TMP/config.main
-cp -L -r $SCRP_DIR/config.rc $TMP/config.rc
-cp -L -r $SCRP_DIR/config.${job} $TMP/config.${job}
-cp -L -r $SCRP_DIR/${job}_simple.sh $TMP/${job}_simple.sh
-mkdir -p $TMP/src
-cp -L -r $SCRP_DIR/src/* $TMP/src
-
-echo "SCRP_DIR=\"$TMP\"" >> $TMP/config.main
-
-echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMP/config.main
-
-echo "RUN_LEVEL='K_micro'" >> $TMP/config.main
 
 if ((IO_ARB == 1)); then                                        ##
   NNODES=$((NNODES*2))                                          ##
@@ -114,11 +131,17 @@ fi                                                              ##
 #===============================================================================
 # Creat a job script
 
-jobscrp="$TMP/${job}_job.sh"
+jobscrp="${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
-rscgrp="micro"
+if ((NNODES > 36864)); then
+  rscgrp="huge"
+elif ((NNODES > 384)); then
+  rscgrp="large"
+else
+  rscgrp="small"
+fi
 
 cat > $jobscrp << EOF
 #!/bin/sh
@@ -127,16 +150,37 @@ cat > $jobscrp << EOF
 #PJM --rsc-list "node=${NNODES}"
 #PJM --rsc-list "elapse=${TIME_LIMIT}"
 #PJM --rsc-list "rscgrp=${rscgrp}"
+##PJM --rsc-list "node-quota=29G"
 ##PJM --mpi "shape=${NNODES}"
 #PJM --mpi "proc=${totalnp}"
 #PJM --mpi assign-online-node
+#PJM --stg-transfiles all
+EOF
+
+if [ "$PRESET" = 'K_rankdir' ]; then
+  echo "#PJM --mpi \"use-rankdir\"" >> $jobscrp
+  stage_K_inout 1
+else
+  stage_K_inout 0
+fi
+
+cat >> $jobscrp << EOF
 
 . /work/system/Env_base_1.2.0-20-1
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${job}_simple.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
+./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
 EOF
+
+#===============================================================================
+# Check the staging list
+
+echo "[$(datetime_now)] Run pjstgchk"
+echo
+
+pjstgchk $jobscrp || exit $?
+echo
 
 #===============================================================================
 # Run the job
@@ -151,24 +195,17 @@ job_end_check_PJM_K $jobid
 res=$?
 
 #===============================================================================
-# Stage out
-
-echo "[$(datetime_now)] Finalization (stage out)"
-
-stage_out server || exit $?
-
-#===============================================================================
 # Finalization
 
 echo "[$(datetime_now)] Finalization"
 echo
 
-backup_exp_setting $job $TMP $jobid ${job}_${SYSNAME} 'o e i s' i
+backup_exp_setting $job $SCRP_DIR $jobid ${job}_${SYSNAME} 'o e i s' i
 
 archive_log
 
 if ((CLEAR_TMP == 1)); then
-  safe_rm_tmpdir $TMP
+  safe_rm_tmpdir $TMPS
 fi
 
 #===============================================================================

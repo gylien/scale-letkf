@@ -53,6 +53,7 @@ function stage_in_K_sub () {
     fi
     if [[ "$source" != /* && "$source" != "$emptyfile" ]]; then
       echo "$MYNAME: source '$source' is not an absolute path" >&2
+      exit 1
     elif [[ "$source" != */ && "$destin" != */ ]]; then # files
       if ((USE_RANKDIR == 1)) && [[ "$TYPE" == 'share' ]]; then
         echo "#PJM --stgin \"rank=$((i % NRANKS)) $source $((i % NRANKS)):../${destin}\""
@@ -80,6 +81,7 @@ function stage_in_K_sub () {
       fi
     else
       echo "$MYNAME: source '$source' and destination '$destin' need to be the same type" >&2
+      exit 1
     fi
   fi
 }
@@ -107,35 +109,6 @@ for n in $(seq $NRANKS); do
     done < "$STGLIST.$n" # | sort | uniq
   fi
 done
-
-##-------------------------------------------------------------------------------
-## stage-in: nodefiles
-
-#if [ "$STG_TYPE" = 'K_rankdir' ]; then
-#  echo "#PJM --stgin-dir \"rank=* $TMPS/node %r:./node\""
-##  echo "#PJM --stgin-dir \"rank=0 $TMPS/node 0:./node\""
-#else
-#  echo "#PJM --stgin-dir \"$TMPS/node ./node\""
-#fi
-
-##-------------------------------------------------------------------------------
-## stage-in: scripts
-
-#if [ "$STG_TYPE" = 'K_rankdir' ]; then
-#  echo "#PJM --stgin \"rank=* $TMPS/config.main %r:./config.main\""
-#  echo "#PJM --stgin \"rank=* $SCRP_DIR/config.rc %r:./config.rc\""
-#  echo "#PJM --stgin \"rank=* $SCRP_DIR/config.${PROGNAME} %r:./config.${PROGNAME}\""
-#  echo "#PJM --stgin \"rank=* $SCRP_DIR/${PROGNAME}.sh %r:./${PROGNAME}.sh\""
-#  echo "#PJM --stgin \"rank=* $SCRP_DIR/${PROGNAME}_step.sh %r:./${PROGNAME}_step.sh\""
-#  echo "#PJM --stgin \"rank=* $SCRP_DIR/src/* %r:./src/\""
-#else
-#  echo "#PJM --stgin \"$TMPS/config.main ./config.main\""
-#  echo "#PJM --stgin \"$SCRP_DIR/config.rc ./config.rc\""
-#  echo "#PJM --stgin \"$SCRP_DIR/config.${PROGNAME} ./config.${PROGNAME}\""
-#  echo "#PJM --stgin \"$SCRP_DIR/${PROGNAME}.sh ./${PROGNAME}.sh\""
-#  echo "#PJM --stgin \"$SCRP_DIR/${PROGNAME}_step.sh ./${PROGNAME}_step.sh\""
-#  echo "#PJM --stgin \"$SCRP_DIR/src/* ./src/\""
-#fi
 
 #===============================================================================
 

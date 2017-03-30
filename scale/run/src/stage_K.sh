@@ -32,7 +32,7 @@ if [ -s "$STAGING_DIR/stagein.dat" ]; then
     fi
     if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
       if [ -d "$source" ]; then
-        if [ "$STG_TYPE" = 'K_rankdir' ]; then
+        if [ "$PRESET" = 'K_rankdir' ]; then
           if [ "$ftype" = 'l' ]; then
             echo "#PJM --stgin-dir \"rank=* ${source} %r:${TMPDAT_STGtmp}/${destin} recursive=10\""
           else
@@ -47,7 +47,7 @@ if [ -s "$STAGING_DIR/stagein.dat" ]; then
           echo "#PJM --stgin-dir \"${source} ${TMPDAT_STGtmp}/${destin} recursive=10\""
         fi
       else
-        if [ "$STG_TYPE" = 'K_rankdir' ]; then
+        if [ "$PRESET" = 'K_rankdir' ]; then
           if [ "$ftype" = 'l' ]; then
             echo "#PJM --stgin \"rank=* ${source} %r:${TMPDAT_STGtmp}/${destin}\""
           else
@@ -77,7 +77,7 @@ if [ -s "$STAGING_DIR/stagein.out" ]; then
     destin="$(echo $line | cut -d '|' -s -f2)"
     if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
       if [ -d "$source" ]; then
-        if [ "$STG_TYPE" = 'K_rankdir' ]; then
+        if [ "$PRESET" = 'K_rankdir' ]; then
           if ((TMPOUT_MODE == 3)); then
             echo "#PJM --stgin-dir \"rank=* ${source} %r:${TMPOUT_STG}/${destin} recursive=10\""
           else
@@ -92,7 +92,7 @@ if [ -s "$STAGING_DIR/stagein.out" ]; then
           echo "#PJM --stgin-dir \"${source} ${TMPOUT_STG}/${destin} recursive=10\""
         fi
       else
-        if [ "$STG_TYPE" = 'K_rankdir' ]; then
+        if [ "$PRESET" = 'K_rankdir' ]; then
           if ((TMPOUT_MODE == 3)); then
             echo "#PJM --stgin \"rank=* ${source} %r:${TMPOUT_STG}/${destin}\""
           else
@@ -122,13 +122,13 @@ for ifile in $filelist; do
     destin="$(echo $line | cut -d '|' -s -f2)"
     if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
       if [ -d "$source" ]; then
-        if [ "$STG_TYPE" = 'K_rankdir' ]; then
+        if [ "$PRESET" = 'K_rankdir' ]; then
           echo "#PJM --stgin-dir \"rank=${i} ${source} ${i}:${TMPOUT_STG}/${destin} recursive=10\""
         else
           echo "#PJM --stgin-dir \"${source} ${TMPOUT_STG}/${destin} recursive=10\""
         fi
       else
-        if [ "$STG_TYPE" = 'K_rankdir' ]; then
+        if [ "$PRESET" = 'K_rankdir' ]; then
           echo "#PJM --stgin \"rank=${i} ${source} ${i}:${TMPOUT_STG}/${destin}\""
         else
           echo "#PJM --stgin \"${source} ${TMPOUT_STG}/${destin}\""
@@ -141,7 +141,7 @@ done
 #-------------------------------------------------------------------------------
 # stage-in: nodefiles
 
-if [ "$STG_TYPE" = 'K_rankdir' ]; then
+if [ "$PRESET" = 'K_rankdir' ]; then
   echo "#PJM --stgin-dir \"rank=* $TMPS/node %r:./node\""
 #  echo "#PJM --stgin-dir \"rank=0 $TMPS/node 0:./node\""
 else
@@ -151,7 +151,7 @@ fi
 #-------------------------------------------------------------------------------
 # stage-in: scripts
 
-if [ "$STG_TYPE" = 'K_rankdir' ]; then
+if [ "$PRESET" = 'K_rankdir' ]; then
   echo "#PJM --stgin \"rank=* $TMPS/config.main %r:./config.main\""
   echo "#PJM --stgin \"rank=* $SCRP_DIR/config.rc %r:./config.rc\""
   echo "#PJM --stgin \"rank=* $SCRP_DIR/config.${PROGNAME} %r:./config.${PROGNAME}\""
@@ -184,7 +184,7 @@ fi
       ftype="$(echo $line | cut -d '|' -s -f3)"
       if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
         if [ "$ftype" = 'd' ] || [ "$ftype" = 'drm' ]; then
-          if [ "$STG_TYPE" = 'K_rankdir' ]; then
+          if [ "$PRESET" = 'K_rankdir' ]; then
             if ((TMPOUT_MODE == 3)); then
               echo "#PJM --stgout-dir \"rank=* %r:${TMPOUT_STG}/${source} ${destin} recursive=10\""
             else
@@ -199,7 +199,7 @@ fi
             echo "#PJM --stgout-dir \"${TMPOUT_STG}/${source} ${destin} recursive=10\""
           fi
         else
-          if [ "$STG_TYPE" = 'K_rankdir' ]; then
+          if [ "$PRESET" = 'K_rankdir' ]; then
             if ((TMPOUT_MODE == 3)); then
               echo "#PJM --stgout \"rank=* %r:${TMPOUT_STG}/${source} ${destin}\""
             else
@@ -230,13 +230,13 @@ fi
       ftype="$(echo $line | cut -d '|' -s -f3)"
       if [ ! -z "$source" ] && [ ! -z "$destin" ]; then
         if [ "$ftype" = 'd' ] || [ "$ftype" = 'drm' ]; then
-          if [ "$STG_TYPE" = 'K_rankdir' ]; then
+          if [ "$PRESET" = 'K_rankdir' ]; then
             echo "#PJM --stgout-dir \"rank=${i} ${i}:${TMPOUT_STG}/${source} ${destin} recursive=10\""
           else
             echo "#PJM --stgout-dir \"${TMPOUT_STG}/${source} ${destin} recursive=10\""
           fi
         else
-          if [ "$STG_TYPE" = 'K_rankdir' ]; then
+          if [ "$PRESET" = 'K_rankdir' ]; then
             echo "#PJM --stgout \"rank=${i} ${i}:${TMPOUT_STG}/${source} ${destin}\""
           else
             echo "#PJM --stgout \"${TMPOUT_STG}/${source} ${destin}\""
@@ -258,7 +258,7 @@ fi
 
 #  ALLOUTDIR="$OUTDIR/everything"
 
-#  if [ "$STG_TYPE" = 'K_rankdir' ]; then
+#  if [ "$PRESET" = 'K_rankdir' ]; then
 ##    echo "#PJM --stgout-dir \"rank=* %r:./log $ALLOUTDIR/log recursive=10,stgout=all\""
 #    echo "#PJM --stgout-dir \"rank=* %r:./run $ALLOUTDIR/run recursive=10,stgout=all\""
 #    echo "#PJM --stgout-dir \"rank=* %r:./out $ALLOUTDIR/out recursive=10,stgout=all\""

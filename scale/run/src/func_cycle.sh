@@ -276,7 +276,7 @@ EOF
     time=$(datetime $time $LCYCLE s)
   done
 
-  if [ "$STG_TYPE" = 'K' ] || [ "$STG_TYPE" = 'K_rankdir' ]; then
+  if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
     echo "${COMMON_DIR}/datetime|exec/datetime" >> $STAGING_DIR/stagein.dat
   fi
 #-------------------

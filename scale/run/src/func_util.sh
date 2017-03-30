@@ -198,7 +198,7 @@ elif [ "$MPI_TYPE" = 'K' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  if [ "$STG_TYPE" = 'K_rankdir' ]; then
+  if [ "$PRESET" = 'K_rankdir' ]; then
 
     mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS
     res=$?
@@ -324,7 +324,7 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
 
 elif [ "$MPI_TYPE" = 'K' ]; then
 
-  if [ "$STG_TYPE" = 'K_rankdir' ]; then
+  if [ "$PRESET" = 'K_rankdir' ]; then
     if [ "$PROC_OPT" == 'one' ]; then
 
       mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS
@@ -487,10 +487,11 @@ stage_in () {
 #   $SCRP_DIR
 #   $TMP
 #   $TMPL
-#   $STGDIR_IN_LINK
-#   $STGDIR_IN_SHARE
-#   $STGDIR_IN_LOCAL
-#   $STGDIR_OUT_LINK
+#   $STAGING_DIR
+#   $STGINLIST_LINK
+#   $STGINLIST_SHARE
+#   $STGINLIST_LOCAL
+#   $STGOUTLIST_LINK
 #   $NNODES
 #   $STAGE_THREAD
 #-------------------------------------------------------------------------------
@@ -499,21 +500,21 @@ local RUN_ON="${1:-node}"
 
 #-------------------------------------------------------------------------------
 
-if [ -s "$STGDIR_IN_LINK.1" ] || [ -s "$STGDIR_IN_LINK" ]; then
+if [ -s "${STAGING_DIR}/${STGINLIST_LINK}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_LINK}" ]; then
 #  safe_init_tmpdir $TMP || return $?
-  local errmsg=$(bash $SCRP_DIR/src/stage_in_ln.sh $NNODES $STGDIR_IN_LINK $TMP 2>&1) # code same for both server and computing-node sides
+  local errmsg=$(bash $SCRP_DIR/src/stage_in_ln.sh $NNODES ${STAGING_DIR}/${STGINLIST_LINK} $TMP 2>&1) # code same for both server and computing-node sides
   if [ -n "$errmsg" ]; then
     echo "$errmsg" >&2
     return 1
   fi
 fi
 
-if [ -s "$STGDIR_IN_SHARE.1" ] || [ -s "$STGDIR_IN_SHARE" ]; then
+if [ -s "${STAGING_DIR}/${STGINLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_SHARE}" ]; then
 #  safe_init_tmpdir $TMP || return $?
   if [ "$RUN_ON" = 'server' ]; then
-    local errmsg=$(bash $SCRP_DIR/src/stage_in_cp.sh $NNODES $STGDIR_IN_SHARE $TMP $STAGE_THREAD 2>&1)
+    local errmsg=$(bash $SCRP_DIR/src/stage_in_cp.sh $NNODES ${STAGING_DIR}/${STGINLIST_SHARE} $TMP $STAGE_THREAD 2>&1)
   else
-    local errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES $STGDIR_IN_SHARE $TMP share $STAGE_THREAD 2>&1)
+    local errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES ${STAGING_DIR}/${STGINLIST_SHARE} $TMP share $STAGE_THREAD 2>&1)
   fi
   if [ -n "$errmsg" ]; then
     echo "$errmsg" >&2
@@ -522,9 +523,9 @@ if [ -s "$STGDIR_IN_SHARE.1" ] || [ -s "$STGDIR_IN_SHARE" ]; then
 fi
 
 if [ "$RUN_ON" = 'node' ]; then # stage-in to local directories can only be done on the computing-node side
-  if [ -s "$STGDIR_IN_LOCAL.1" ] || [ -s "$STGDIR_IN_LOCAL" ]; then
+  if [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}" ]; then
     pdbash node all $SCRP_DIR/src/stage_in_init_stgdir_node.sh $TMPL local || return $?
-    local errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES $STGDIR_IN_LOCAL $TMPL local $STAGE_THREAD 2>&1)
+    local errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $TMPL local $STAGE_THREAD 2>&1)
     if [ -n "$errmsg" ]; then
       echo "$errmsg" >&2
       return 1
@@ -533,8 +534,8 @@ if [ "$RUN_ON" = 'node' ]; then # stage-in to local directories can only be done
 fi
 
 if ((DISK_MODE == 1)); then
-  if [ -s "$STGDIR_OUT_LINK.1" ] || [ -s "$STGDIR_OUT_LINK" ]; then
-    local errmsg=$(bash $SCRP_DIR/src/stage_out_ln.sh $NNODES $STGDIR_OUT_LINK $TMP 2>&1) # code same for both server and computing-node sides
+  if [ -s "${STAGING_DIR}/${STGOUTLIST_LINK}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_LINK}" ]; then
+    local errmsg=$(bash $SCRP_DIR/src/stage_out_ln.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_LINK} $TMP 2>&1) # code same for both server and computing-node sides
     if [ -n "$errmsg" ]; then
       echo "$errmsg" >&2
       return 1
@@ -563,8 +564,9 @@ stage_out () {
 #   $SCRP_DIR
 #   $TMP
 #   $TMPL
-#   $STGDIR_OUT_SHARE
-#   $STGDIR_OUT_LOCAL
+#   $STAGING_DIR
+#   $STGOUTLIST_SHARE
+#   $STGOUTLIST_LOCAL
 #   $NNODES
 #   $STAGE_THREAD
 #-------------------------------------------------------------------------------
@@ -574,11 +576,11 @@ local STEP="${1:-a}"
 
 #-------------------------------------------------------------------------------
 
-if [ -s "$STGDIR_OUT_SHARE.1" ] || [ -s "$STGDIR_OUT_SHARE" ]; then
+if [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}" ]; then
   if [ "$RUN_ON" = 'server' ]; then
-    errmsg=$(bash $SCRP_DIR/src/stage_out_cp.sh $NNODES $STGDIR_OUT_SHARE $TMP $STAGE_THREAD $STEP 2>&1)
+    errmsg=$(bash $SCRP_DIR/src/stage_out_cp.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_SHARE} $TMP $STAGE_THREAD $STEP 2>&1)
   else
-    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STGDIR_OUT_SHARE $TMP share $STAGE_THREAD $STEP 2>&1)
+    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_SHARE} $TMP share $STAGE_THREAD $STEP 2>&1)
   fi
   if [ -n "$errmsg" ]; then
     echo "$errmsg" >&2
@@ -587,13 +589,55 @@ if [ -s "$STGDIR_OUT_SHARE.1" ] || [ -s "$STGDIR_OUT_SHARE" ]; then
 fi
 
 if [ "$RUN_ON" = 'node' ]; then # stage-out from local directories can only be done on the computing-node side
-  if [ -s "$STGDIR_OUT_LOCAL.1" ] || [ -s "$STGDIR_OUT_LOCAL" ]; then
-    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES $STGDIR_OUT_LOCAL $TMPL local $STAGE_THREAD $STEP 2>&1)
+  if [ -s "${STAGING_DIR}/${STGOUTLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_LOCAL}" ]; then
+    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_LOCAL} $TMPL local $STAGE_THREAD $STEP 2>&1)
     if [ -n "$errmsg" ]; then
       echo "$errmsg" >&2
 #      return 1
     fi
   fi
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+stage_K_inout () {
+#-------------------------------------------------------------------------------
+# Print stage-in/out scripts for K-computer jobs based on the staging lists
+#
+# Usage: stage_out [USE_RANKDIR]
+#
+#   USE_RANKDIR  Whether enable the rank-directory?
+#                0: No (default)
+#                1: Yes
+#
+# Other input variables:
+#   $SCRP_DIR
+#   $STAGING_DIR
+#   $STGINLIST_SHARE
+#   $STGINLIST_LOCAL
+#   $STGOUTLIST_SHARE
+#   $STGOUTLIST_LOCAL
+#   $NNODES
+#-------------------------------------------------------------------------------
+
+USE_RANKDIR="${1:-0}"
+
+#-------------------------------------------------------------------------------
+
+if [ -s "${STAGING_DIR}/${STGINLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_SHARE}" ]; then
+  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_SHARE} $USE_RANKDIR share 1>> $jobscrp || exit $?
+fi
+if [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}" ]; then
+  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $USE_RANKDIR local 1>> $jobscrp || exit $?
+fi
+if [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}" ]; then
+  bash $SCRP_DIR/src/stage_out_K.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_SHARE} $USE_RANKDIR share 1>> $jobscrp || exit $?
+fi
+if [ -s "${STAGING_DIR}/${STGOUTLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_LOCAL}" ]; then
+  bash $SCRP_DIR/src/stage_out_K.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_LOCAL} $USE_RANKDIR local 1>> $jobscrp || exit $?
 fi
 
 #-------------------------------------------------------------------------------

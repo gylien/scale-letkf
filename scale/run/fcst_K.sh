@@ -124,7 +124,7 @@ cat > $jobscrp << EOF
 #PJM --stg-transfiles all
 EOF
 
-if [ "$STG_TYPE" = 'K_rankdir' ]; then
+if [ "$PRESET" = 'K_rankdir' ]; then
   echo "#PJM --mpi \"use-rankdir\"" >> $jobscrp
 fi
 

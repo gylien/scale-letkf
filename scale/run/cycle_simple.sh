@@ -21,6 +21,13 @@
 #    config.nml.obsope
 #    config.nml.letkf
 #
+#-------------------------------------------------------------------------------
+#
+#  RUN_LEVEL:
+#    0: Run everything (default)
+#    1: Staging list files are ready; skip generating them (not implemented yet...)
+#    2: File staging has been done; skip staging
+#
 #===============================================================================
 
 cd "$(dirname "$0")"
@@ -38,28 +45,11 @@ myname="$(basename "$0")"
 . src/func_cycle.sh || exit $?
 . src/func_cycle_simple.sh || exit $?
 
+RUN_LEVEL=${RUN_LEVEL:-0}
+
 echo "[$(datetime_now)] ### 1" >&2
 
 #-------------------------------------------------------------------------------
-
-#if [ "$STG_TYPE" = 'K_rankdir' ]; then
-#  SCRP_DIR="."
-#  if ((TMPDAT_MODE <= 2)); then
-#    TMPDAT="../dat"
-#  else
-#    TMPDAT="./dat"
-#  fi
-#  if ((TMPRUN_MODE <= 2)); then
-#    TMPRUN="../run"
-#  else
-#    TMPRUN="./run"
-#  fi
-#  if ((TMPOUT_MODE <= 2)); then
-#    TMPOUT="../out"
-#  else
-#    TMPOUT="./out"
-#  fi
-#fi
 
 echo "[$(datetime_now)] Start $myname $@" >&2
 
@@ -73,7 +63,7 @@ echo "[$(datetime_now)] ### 2" >&2
 #===============================================================================
 # Initialize temporary directories
 
-if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
+if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
   safe_init_tmpdir $TMP || exit $?
 fi
 
@@ -90,8 +80,8 @@ declare -a proc2node
 declare -a proc2group
 declare -a proc2grpproc
 
-#if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
-if [ "$STG_TYPE" = 'builtin' ]; then
+#if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
+if ((RUN_LEVEL <= 1)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
   distribute_da_cycle machinefile $NODEFILE_DIR || exit $?
 else
@@ -103,7 +93,7 @@ echo "[$(datetime_now)] ### 4" >&2
 #===============================================================================
 # Determine the staging list and then stage in
 
-if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
+if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
   echo "[$(datetime_now)] Initialization (stage-in)" >&2
 
   safe_init_tmpdir $STAGING_DIR || exit $?
@@ -147,9 +137,7 @@ function online_stgout_bgjob () {
 
 #-------------------------------------------------------------------------------
 
-if [ "$STG_TYPE" = 'builtin' ]; then
-  cd $TMP_EXE
-fi
+cd $TMP_DIR
 
 #-------------------------------------------------------------------------------
 
@@ -282,7 +270,7 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 # Online stage out
 
-  if [ "$STG_TYPE" = 'builtin' ]; then
+  if ((RUN_LEVEL <= 1)); then
     if ((ONLINE_STGOUT == 1)); then
       online_stgout_bgjob $loop $time &
     fi
@@ -309,7 +297,7 @@ done
 #===============================================================================
 # Stage out
 
-if [ "$STG_TYPE" = 'builtin' ]; then
+if ((RUN_LEVEL <= 1)); then
   if ((ONLINE_STGOUT == 1)); then
     wait
   else
@@ -326,7 +314,7 @@ fi
 #===============================================================================
 # Remove temporary directories
 
-if [ "$STG_TYPE" = 'builtin' ]; then
+if ((RUN_LEVEL <= 1)); then
   if ((CLEAR_TMP == 1)); then
     safe_rm_tmpdir $TMP || exit $?
   fi

@@ -44,6 +44,7 @@ function stage_out_K_sub () {
     : # do nothing
   elif [[ "$destin" != /* ]]; then
     echo "$MYNAME: destination '$destin' is not an absolute path" >&2
+    exit 1
   elif [[ "$source" != */ && "$destin" != */ ]]; then # files
     if ((USE_RANKDIR == 1)) && [[ "$TYPE" == 'share' ]]; then
       echo "#PJM --stgout \"rank=$((i % NRANKS)) $((i % NRANKS)):../${source} $destin\""
@@ -71,6 +72,7 @@ function stage_out_K_sub () {
     fi
   else
     echo "$MYNAME: source '$source' and destination '$destin' need to be the same type" >&2
+    exit 1
   fi
 }
 
