@@ -2,6 +2,7 @@
 !--MEMBER--
 !--MEMBER_RUN--
 !--MEMBER_ITER--
+!--CONF_FILES--
 /
 
 &PARAM_LETKF_PRC
