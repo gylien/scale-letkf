@@ -13,7 +13,7 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
-OUTDIR="$DDIR/exp/testcase_PAWR_5km_4p"     # Directory for SCALE-LETKF output
+OUTDIR="$DDIR/exp/testcase_PAWR_5km_4p_pnetcdf" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -21,11 +21,11 @@ OUTDIR="$DDIR/exp/testcase_PAWR_5km_4p"     # Directory for SCALE-LETKF output
 MODELDIR="$DIR/../../bin"                                            # Directory of the SCALE model executables
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
-DATA_TOPO="$DDIR/exp/testcase_PAWR_5km_4p_data"                      # Directory of the prepared topo files
+DATA_TOPO="$DDIR/exp/testcase_PAWR_5km_4p_pnetcdf_data"              # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
-DATA_LANDUSE="$DDIR/exp/testcase_PAWR_5km_4p_data"                   # Directory of the prepared landuse files
+DATA_LANDUSE="$DDIR/exp/testcase_PAWR_5km_4p_pnetcdf_data"           # Directory of the prepared landuse files
 DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
+DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_PAWR_5km_4p_pnetcdf_data"    # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
@@ -35,20 +35,27 @@ OBSNCEP=
 #===============================================================================
 # model/data file options
 
-DET_RUN=0               # 0: Disable the deterministic run
+PNETCDF=1               # 0: Do not use PnetCDF
+                        # 1: Use PnetCDF
+
+PNETCDF_BDY_SCALE=0     # Use PNETCDF I/O for the parent domain SCALE data? (default: $PNETCDF)
+                        # 0: Do not use PnetCDF
+                        # 1: Use PnetCDF
+
+DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
 
-TOPO_FORMAT='DEM50M'    # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='LU100M' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=0            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
@@ -92,9 +99,9 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=100         # Ensemble size
+MEMBER=8           # Ensemble size
 
-NNODES=404         # Number of nodes
+NNODES=40          # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
