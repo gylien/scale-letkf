@@ -100,32 +100,45 @@ if [ "${LANDUSE_TARGZ}" = 'T' ] ; then
   tar zxvf  ${LANDUSE}.tar.gz -C $UNCOMP_DIR > /dev/null
 fi
 
-RESTART_OUT_NUM_COPIES=1
+TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
+
+RESTART_OUT_ADDITIONAL_COPIES=0
+RESTART_OUT_ADDITIONAL_BASENAME=
 if [ "$SCPCALL" = 'cycle' ]; then
   IO_LOG_DIR='scale'
   if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
-    RESTART_OUT_NUM_COPIES=2
+    RESTART_OUT_ADDITIONAL_COPIES=1
+    RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPSUBDIR}\/restart_2\", "
+    icopy=2
     if ((SPRD_OUT == 1)); then
-      RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+2))
+      RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
+      icopy=$((icopy+1))
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPSUBDIR}\/restart_${icopy}\", "
+      icopy=$((icopy+1))
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPSUBDIR}\/restart_${icopy}\", "
     fi
     if ((RTPS_INFL_OUT == 1)); then
-      RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+1))
+      RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
+      icopy=$((icopy+1))
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPSUBDIR}\/restart_${icopy}\", "
     fi
     if ((NOBS_OUT == 1)); then
-      RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+1))
+      RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
+      icopy=$((icopy+1))
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPSUBDIR}\/restart_${icopy}\", "
     fi
   elif [ "$MEM" = 'mdet' ]; then
-    RESTART_OUT_NUM_COPIES=2
+    RESTART_OUT_ADDITIONAL_COPIES=1
+    RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPSUBDIR}\/restart_2\", "
   elif ((OUT_OPT <= 3)); then
-    RESTART_OUT_NUM_COPIES=2
+    RESTART_OUT_ADDITIONAL_COPIES=1
+    RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPSUBDIR}\/restart_2\", "
   fi
 else
   IO_LOG_DIR="${SCPCALL}_scale"
 fi
 
 #===============================================================================
-
-TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
 
 conf="$(cat $TMPDAT/conf/config.nml.scale | \
         sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
@@ -154,7 +167,8 @@ conf="$(cat $TMPDAT/conf/config.nml.scale | \
             -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${TMPDAT}/rad/MIPAS\",")"
 if ((ENABLE_PARAM_USER == 1)); then
   conf="$(echo "$conf" | sed -e "/!--TIME_END_RESTART_OUT--/a TIME_END_RESTART_OUT = .false.,")"
-  conf="$(echo "$conf" | sed -e "/!--RESTART_OUT_NUM_COPIES--/a RESTART_OUT_NUM_COPIES = ${RESTART_OUT_NUM_COPIES},")"
+  conf="$(echo "$conf" | sed -e "/!--RESTART_OUT_ADDITIONAL_COPIES--/a RESTART_OUT_ADDITIONAL_COPIES = ${RESTART_OUT_ADDITIONAL_COPIES},")"
+  conf="$(echo "$conf" | sed -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}")"
 else
   if [ "$OCEAN" != '-' ]; then
     conf="$(echo "$conf" | sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${OCEAN}\",")"

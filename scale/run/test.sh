@@ -111,13 +111,15 @@ for i in $(seq $NTEST); do
     script_suffix='_K'
   elif [ "${PRESET[$i]}" = 'K_micro' ]; then
     config_suffix='K'
-    script_suffix='_K_simple'
+    script_suffix='_K'
+#    script_suffix='_K_simple'
   elif [ "${PRESET[$i]}" = 'OFP' ]; then
     config_suffix='ofp'
     script_suffix='_ofp'
   elif [ "${PRESET[$i]}" = 'Linux_torque' ]; then
     config_suffix='hakushu'
-    script_suffix='_torque_simple'
+    script_suffix='_torque'
+#    script_suffix='_torque_simple'
   else
     echo "[Error] Unsupported \$PRESET: ${PRESET[$i]}" >&2
     print_result
