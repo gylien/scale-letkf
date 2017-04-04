@@ -214,70 +214,62 @@ if ((TMPDAT_MODE == 1)); then
 #-------------------
 else
 #-------------------
-  cat >> $STAGING_DIR/stagein.dat << EOF
-${ENSMODEL_DIR}/scale-rm_pp_ens|exec/scale-rm_pp_ens
-${ENSMODEL_DIR}/scale-rm_init_ens|exec/scale-rm_init_ens
-${ENSMODEL_DIR}/scale-rm_ens|exec/scale-rm_ens
-${COMMON_DIR}/pdbash|exec/pdbash
-${OBSUTIL_DIR}/obsope|exec/obsope
-${LETKF_DIR}/letkf|exec/letkf
-${SCRP_DIR}/config.nml.scale_pp|conf/config.nml.scale_pp
-${SCRP_DIR}/config.nml.scale_init|conf/config.nml.scale_init
-${SCRP_DIR}/config.nml.scale|conf/config.nml.scale
-${SCRP_DIR}/config.nml.ensmodel|conf/config.nml.ensmodel
-${SCRP_DIR}/config.nml.letkf|conf/config.nml.letkf
-${DATADIR}/rad|rad
-${DATADIR}/land|land
+  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${ENSMODEL_DIR}/scale-rm_pp_ens|${DAT_SUBDIR}/exec/scale-rm_pp_ens
+${ENSMODEL_DIR}/scale-rm_init_ens|${DAT_SUBDIR}/exec/scale-rm_init_ens
+${ENSMODEL_DIR}/scale-rm_ens|${DAT_SUBDIR}/exec/scale-rm_ens
+${COMMON_DIR}/pdbash|${DAT_SUBDIR}/exec/pdbash
+${OBSUTIL_DIR}/obsope|${DAT_SUBDIR}/exec/obsope
+${LETKF_DIR}/letkf|${DAT_SUBDIR}/exec/letkf
+${SCRP_DIR}/config.nml.scale_pp|${DAT_SUBDIR}/conf/config.nml.scale_pp
+${SCRP_DIR}/config.nml.scale_init|${DAT_SUBDIR}/conf/config.nml.scale_init
+${SCRP_DIR}/config.nml.scale|${DAT_SUBDIR}/conf/config.nml.scale
+${SCRP_DIR}/config.nml.ensmodel|${DAT_SUBDIR}/conf/config.nml.ensmodel
+${SCRP_DIR}/config.nml.letkf|${DAT_SUBDIR}/conf/config.nml.letkf
+${DATADIR}/rad/|${DAT_SUBDIR}/rad/
+${DATADIR}/land/|${DAT_SUBDIR}/land/
 EOF
-#${MODELDIR}/scale-rm_pp|exec/scale-rm_pp
-#${MODELDIR}/scale-rm_init|exec/scale-rm_init
-#${MODELDIR}/scale-rm|exec/scale-rm
+#${MODELDIR}/scale-rm_pp|${DAT_SUBDIR}/exec/scale-rm_pp
+#${MODELDIR}/scale-rm_init|${DAT_SUBDIR}/exec/scale-rm_init
+#${MODELDIR}/scale-rm|${DAT_SUBDIR}/exec/scale-rm
 
   if [ -e "${SCRP_DIR}/config.nml.scale_user" ]; then
-    echo "${SCRP_DIR}/config.nml.scale_user|conf/config.nml.scale_user" >> $STAGING_DIR/stagein.dat
+    echo "${SCRP_DIR}/config.nml.scale_user|${DAT_SUBDIR}/conf/config.nml.scale_user" >> ${STAGING_DIR}/${STGINLIST}
   fi
   if [ -e "${SCRP_DIR}/config.nml.obsope" ]; then
-    echo "${SCRP_DIR}/config.nml.obsope|conf/config.nml.obsope" >> $STAGING_DIR/stagein.dat
+    echo "${SCRP_DIR}/config.nml.obsope|${DAT_SUBDIR}/conf/config.nml.obsope" >> ${STAGING_DIR}/${STGINLIST}
   fi
   if [ -e "${SCRP_DIR}/config.nml.grads_boundary" ]; then
-    echo "${SCRP_DIR}/config.nml.grads_boundary|conf/config.nml.grads_boundary" >> $STAGING_DIR/stagein.dat
+    echo "${SCRP_DIR}/config.nml.grads_boundary|${DAT_SUBDIR}/conf/config.nml.grads_boundary" >> ${STAGING_DIR}/${STGINLIST}
   fi
 
 # H08
   if [ -e "${RTTOV_COEF}" ] && [ -e "${RTTOV_SCCOEF}" ]; then
-    cat >> $STAGING_DIR/stagein.dat << EOF
-${RTTOV_COEF}|rttov/rtcoef_himawari_8_ahi.dat
-${RTTOV_SCCOEF}|rttov/sccldcoef_himawari_8_ahi.dat
+    cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${RTTOV_COEF}|${DAT_SUBDIR}/rttov/rtcoef_himawari_8_ahi.dat
+${RTTOV_SCCOEF}|${DAT_SUBDIR}/rttov/sccldcoef_himawari_8_ahi.dat
 EOF
   fi
 
   if [ "$TOPO_FORMAT" != 'prep' ]; then
-    if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
-      echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat
-    else
-      echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
-    fi
+    echo "${DATADIR}/topo/${TOPO_FORMAT}/Products/|${DAT_SUBDIR}/topo/${TOPO_FORMAT}/Products/" >> ${STAGING_DIR}/${STGINLIST_CONSTDB}
   fi
   if [ "$LANDUSE_FORMAT" != 'prep' ]; then
-    if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
-      echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat
-    else
-      echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
-    fi
+    echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products/|${DAT_SUBDIR}/landuse/${LANDUSE_FORMAT}/Products/" >> ${STAGING_DIR}/${STGINLIST_CONSTDB}
   fi
 
   time=$(datetime $STIME $LCYCLE s)
   while ((time <= $(datetime $ETIME $LCYCLE s))); do
     for iobs in $(seq $OBSNUM); do
       if [ "${OBSNAME[$iobs]}" != '' ] && [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
-        echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs/${OBSNAME[$iobs]}_${time}.dat" >> $STAGING_DIR/stagein.dat
+        echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|${DAT_SUBDIR}/obs/${OBSNAME[$iobs]}_${time}.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
       fi
     done
     time=$(datetime $time $LCYCLE s)
   done
 
   if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
-    echo "${COMMON_DIR}/datetime|exec/datetime" >> $STAGING_DIR/stagein.dat
+    echo "${COMMON_DIR}/datetime|${DAT_SUBDIR}/exec/datetime" >> ${STAGING_DIR}/${STGINLIST}
   fi
 #-------------------
 fi
@@ -392,11 +384,7 @@ else
   loop=0
   while ((time <= ETIME)); do
     loop=$((loop+1))
-    if ((ONLINE_STGOUT == 1)); then
-      stgoutstep="stageout.loop.${loop}"
-    else
-      stgoutstep='stageout.out'
-    fi
+
     #-------------------
     # stage-in
     #-------------------
@@ -407,11 +395,11 @@ else
       for m in $(seq $mtot); do
         if ((PNETCDF == 1)); then
           path="${time}/anal/${name_m[$m]}.init.nc"
-          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+1))]}
+          echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
         else
           for q in $(seq $mem_np); do
             path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
-            echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+            echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
           done
         fi
       done
@@ -423,11 +411,11 @@ else
       for m in $(seq $mtot); do
         if ((PNETCDF == 1)); then
           path="${time}/anal/${name_m[$m]}.init_ocean.nc"
-          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+1))]}
+          echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
         else
           for q in $(seq $mem_np); do
             path="${time}/anal/${name_m[$m]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
-            echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+            echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
           done
         fi
       done
@@ -439,11 +427,11 @@ else
       for m in $(seq $mtot); do
         if ((PNETCDF == 1)); then
           path="${time}/anal/${name_m[$m]}.init_land.nc"
-          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+1))]}
+          echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
         else
           for q in $(seq $mem_np); do
             path="${time}/anal/${name_m[$m]}/init_land$(printf $SCALE_SFX $((q-1)))"
-            echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+            echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
           done
         fi
       done
@@ -461,16 +449,16 @@ else
           fi
           pathin=${DATA_TOPO}/topo.tar.gz
           path=const/topo/topo.tar.gz
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+          echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
         else
           for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
             if ((PNETCDF == 1)); then
               path="const/topo.nc"
-              echo "${DATA_TOPO}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+1))]}
+              echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
             else
               for q in $(seq $mem_np); do
                 path="const/topo/topo$(printf $SCALE_SFX $((q-1)))"
-                echo "${DATA_TOPO}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+                echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
               done
             fi
           done
@@ -488,14 +476,10 @@ else
         pathin="${DATA_TOPO_BDY_SCALE}.nc"
         path="bdytopo/const/topo.nc"
       else
-        pathin="${DATA_TOPO_BDY_SCALE}"
-        path="bdytopo/const"
+        pathin="${DATA_TOPO_BDY_SCALE}/"
+        path="bdytopo/const/"
       fi
-      if ((DISK_MODE_DATA_BDY == 2)); then
-        echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-      else
-        echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-      fi
+      echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
     fi
 
     # landuse
@@ -520,7 +504,7 @@ else
             pathin=${DATA_LANDUSE}/landuse.tar.gz
             path=const/landuse/landuse.tar.gz
           fi
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+          echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
         else
           for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
             if ((PNETCDF == 1)); then
@@ -529,7 +513,7 @@ else
               else
                 path="const/landuse.nc"
               fi
-              echo "${DATA_LANDUSE}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+1))]}
+              echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
             else
               for q in $(seq $mem_np); do
                 if ((LANDUSE_UPDATE == 1)); then
@@ -537,7 +521,7 @@ else
                 else
                   path="const/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
                 fi
-                echo "${DATA_LANDUSE}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+                echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
               done
             fi
           done
@@ -556,12 +540,12 @@ else
           if ((PNETCDF == 1)); then
             pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}.boundary.nc"
             path="${time}/bdy/mean.boundary.nc"
-            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+1))]}
+            echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
           else
             for q in $(seq $mem_np); do
               pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}/boundary$(printf $SCALE_SFX $((q-1)))"
               path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
-              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+              echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
             done
           fi
         done
@@ -569,11 +553,11 @@ else
         for m in $(seq $mmtot); do
           if ((PNETCDF == 1)); then
             path="${time}/bdy/${name_m[$m]}.boundary.nc"
-            echo "${DATA_BDY_SCALE_PREP}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+1))]}
+            echo "${DATA_BDY_SCALE_PREP}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
           else
             for q in $(seq $mem_np); do
               path="${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
-              echo "${DATA_BDY_SCALE_PREP}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+              echo "${DATA_BDY_SCALE_PREP}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
             done
           fi
         done
@@ -587,8 +571,8 @@ else
     # anal
     #-------------------
     if ((loop == 1 && MAKEINIT == 1)); then
-      path="${time}/anal"
-      echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      path="${time}/anal/"
+      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
     fi
 
     # topo
@@ -596,10 +580,10 @@ else
     if ((loop == 1 && TOPOOUT_OPT <= 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
       if ((PNETCDF == 1)); then
         path="const/topo.nc"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       else
-        path="const/topo"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        path="const/topo/"
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       fi
     fi
 
@@ -612,14 +596,14 @@ else
         else
           path="const/landuse.nc"
         fi
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       else
         if ((LANDUSE_UPDATE == 1)); then
-          path="${time}/landuse"
+          path="${time}/landuse/"
         else
-          path="const/landuse"
+          path="const/landuse/"
         fi
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       fi
     fi
 
@@ -627,18 +611,18 @@ else
     #-------------------
     if ((BDY_FORMAT != 0)); then
       if ((BDY_ENS == 1 && BDYOUT_OPT <= 1)); then
-        path="${time}/bdy"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        path="${time}/bdy/"
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       elif ((BDYOUT_OPT <= 2)); then
         if ((PNETCDF == 1)); then
           path="${time}/bdy/mean.boundary.nc"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         else
-          path="${time}/bdy/mean"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+          path="${time}/bdy/mean/"
+          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
           if ((DET_RUN == 1)); then
-            path="${time}/bdy/mdet"
-            echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+            path="${time}/bdy/mdet/"
+            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
           fi
         fi
       fi
@@ -647,18 +631,18 @@ else
     # hist
     #-------------------
     if ((OUT_OPT <= 1)); then
-      path="${time}/hist"
-      echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      path="${time}/hist/"
+      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
     elif ((OUT_OPT <= 2)); then
       if ((PNETCDF == 1)); then
         path="${time}/hist/mean.history.nc"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       else
-        path="${time}/hist/mean"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        path="${time}/hist/mean/"
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         if ((DET_RUN == 1)); then
-          path="${time}/hist/mdet"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+          path="${time}/hist/mdet/"
+          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         fi
       fi
     fi
@@ -666,70 +650,70 @@ else
     # gues
     #-------------------
     if ((OUT_OPT <= 3)); then
-      path="${atime}/gues"
-      echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      path="${atime}/gues/"
+      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
     elif ((OUT_OPT <= 6)); then
       if ((PNETCDF == 1)); then
         path="${atime}/gues/mean.init.nc"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         if ((SPRD_OUT == 1)); then
           path="${atime}/gues/sprd.init.nc"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         fi
         if ((DET_RUN == 1)); then
           path="${atime}/gues/mdet.init.nc"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         fi
 #        path="${atime}/gues/0001.init.nc"
-#        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+#        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       else
-        path="${atime}/gues/mean"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        path="${atime}/gues/mean/"
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         if ((SPRD_OUT == 1)); then
-          path="${atime}/gues/sprd"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+          path="${atime}/gues/sprd/"
+          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         fi
         if ((DET_RUN == 1)); then
-          path="${atime}/gues/mdet"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+          path="${atime}/gues/mdet/"
+          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         fi
-#        path="${atime}/gues/0001"
-#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        path="${atime}/gues/0001/"
+#        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       fi
     fi
 
     # anal
     #-------------------
     if ((OUT_OPT <= 4 || (OUT_OPT <= 5 && loop % OUT_CYCLE_SKIP == 0) || atime > ETIME)); then
-      path="${atime}/anal"
-      echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      path="${atime}/anal/"
+      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
     elif ((OUT_OPT <= 7)); then
       if ((PNETCDF == 1)); then
         path="${atime}/anal/mean.init.nc"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         if ((SPRD_OUT == 1)); then
           path="${atime}/anal/sprd.init.nc"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         fi
         if ((DET_RUN == 1)); then
           path="${atime}/anal/mdet.init.nc"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         fi
 #        path="${atime}/anal/0001.init.nc"
-#        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+#        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       else
-        path="${atime}/anal/mean"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        path="${atime}/anal/mean/"
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         if ((SPRD_OUT == 1)); then
-          path="${atime}/anal/sprd"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+          path="${atime}/anal/sprd/"
+          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         fi
         if ((DET_RUN == 1)); then
-          path="${atime}/anal/mdet"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+          path="${atime}/anal/mdet/"
+          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         fi
-#        path="${atime}/anal/0001"
-#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        path="${atime}/anal/0001/"
+#        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       fi
     fi
 
@@ -740,36 +724,36 @@ else
     if ((ADAPTINFL == 1)); then
       if ((PNETCDF == 1)); then
         path="${atime}/diag/infl.init.nc"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       else
-        path="${atime}/diag/infl"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        path="${atime}/diag/infl/"
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       fi
     fi
     if ((RTPS_INFL_OUT == 1)); then
       if ((PNETCDF == 1)); then
         path="${atime}/diag/rtps.init.nc"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       else
-        path="${atime}/diag/rtps"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        path="${atime}/diag/rtps/"
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       fi
     fi
     if ((NOBS_OUT == 1)); then
       if ((PNETCDF == 1)); then
         path="${atime}/diag/nobs.init.nc"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       else
-        path="${atime}/diag/nobs"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        path="${atime}/diag/nobs/"
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       fi
     fi
 
     # obsgues
     #-------------------
     if ((OBSOUT_OPT <= 2)); then
-      path="${atime}/obsgues"
-      echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      path="${atime}/obsgues/"
+      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
     fi
 
     # log
@@ -783,64 +767,64 @@ else
     if ((LOG_OPT <= 2)); then
       if ((LOG_TYPE == 1)); then
         path="${time}/log/scale_pp/0001_pp.conf"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         path="${time}/log/scale_pp/0001_LOG.pe000000"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         path="${time}/log/scale_pp/NOUT.${log_zeros}"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         path="${time}/log/scale_init/0001_init.conf"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         path="${time}/log/scale_init/0001_gradsbdy.conf"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         path="${time}/log/scale_init/0001_LOG.pe000000"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         if ((BDY_ENS == 1)); then
           path="${time}/log/scale_init/NOUT-1.${log_zeros}"
         else
           path="${time}/log/scale_init/NOUT.${log_zeros}"
         fi
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       else
-        path="${time}/log/scale_pp"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        path="${time}/log/scale_init"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        path="${time}/log/scale_pp/"
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+        path="${time}/log/scale_init/"
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       fi
     fi
     if ((LOG_OPT <= 3)); then
       if ((LOG_TYPE == 1)); then
         path="${time}/log/scale/0001_run.conf"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         path="${time}/log/scale/0001_LOG.pe000000"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         path="${time}/log/scale/NOUT-1.${log_zeros}"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         path="${time}/log/scale/latlon_domain_catalogue.txt"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       else
-        path="${time}/log/scale"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        path="${time}/log/scale/"
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       fi
     fi
     if ((LOG_OPT <= 4)); then
       if ((LOG_TYPE == 1)); then
         path="${atime}/log/obsope/obsope.conf"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         path="${atime}/log/obsope/LOG.pe000000"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         path="${atime}/log/obsope/NOUT.${log_zeros}"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         path="${atime}/log/letkf/letkf.conf"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         path="${atime}/log/letkf/LOG.pe000000"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
         path="${atime}/log/letkf/NOUT.${log_zeros}"
-        echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       else
-        path="${atime}/log/obsope"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        path="${atime}/log/letkf"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+        path="${atime}/log/obsope/"
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+        path="${atime}/log/letkf/"
+        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       fi
     fi
 
@@ -860,11 +844,7 @@ else
       if [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt" ]; then
         pathin="$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt"
         path="bdyorg/latlon_domain_catalogue.txt"
-        if ((DISK_MODE_DATA_BDY == 2)); then
-          echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-        else
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-        fi
+        echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
       else
         echo "[Error] Cannot find a lat/lon domain catalogue file at" >&2
         echo "        '$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt'" >&2
@@ -906,18 +886,14 @@ else
                     path="bdyorg/const/${time_bdy}/${name_m[$m]}.history.nc"
                   fi
                 else
-                  pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}"
+                  pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}/"
                   if ((BDY_ROTATING == 1)); then
-                    path="bdyorg/${time_bdy}/${time_bdy}/${name_m[$m]}"
+                    path="bdyorg/${time_bdy}/${time_bdy}/${name_m[$m]}/"
                   else
-                    path="bdyorg/const/${time_bdy}/${name_m[$m]}"
+                    path="bdyorg/const/${time_bdy}/${name_m[$m]}/"
                   fi
                 fi
-                if ((DISK_MODE_DATA_BDY == 2)); then
-                  echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-                else
-                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-                fi
+                echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
               done
             else
               if ((PNETCDF_BDY_SCALE == 1)); then
@@ -928,18 +904,14 @@ else
                   path="bdyorg/const/${time_bdy}/mean.history.nc"
                 fi
               else             
-                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${BDY_MEAN}"
+                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${BDY_MEAN}/"
                 if ((BDY_ROTATING == 1)); then
-                  path="bdyorg/${time_bdy}/mean/${time_bdy}"
+                  path="bdyorg/${time_bdy}/mean/${time_bdy}/"
                 else
-                  path="bdyorg/const/mean/${time_bdy}"
+                  path="bdyorg/const/mean/${time_bdy}/"
                 fi
               fi
-              if ((DISK_MODE_DATA_BDY == 2)); then
-                echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-              else
-                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-              fi
+              echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
             fi
 
           elif ((BDY_FORMAT == 2 || BDY_FORMAT == 4)); then
@@ -964,33 +936,25 @@ else
               for m in $(seq $mtot); do
                 for ifile in $(seq $filenum); do
                   if ((BDY_ROTATING == 1)); then
-                    pathin="$data_bdy_i/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-                    path="bdyorg/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
+                    pathin="$data_bdy_i/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}/"
+                    path="bdyorg/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}/"
                   else
-                    pathin="$data_bdy_i/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
-                    path="bdyorg/const/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
+                    pathin="$data_bdy_i/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}/"
+                    path="bdyorg/const/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}/"
                   fi
-                  if ((DISK_MODE_DATA_BDY == 2)); then
-                    echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-                  else
-                    echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-                  fi
+                  echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
                 done
               done
             else
               for ifile in $(seq $filenum); do
                 if ((BDY_ROTATING == 1)); then
-                  pathin="$data_bdy_i/${time}/${BDY_MEAN}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-                  path="bdyorg/${time}/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+                  pathin="$data_bdy_i/${time}/${BDY_MEAN}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}/"
+                  path="bdyorg/${time}/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}/"
                 else
-                  pathin="$data_bdy_i/${BDY_MEAN}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-                  path="bdyorg/const/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+                  pathin="$data_bdy_i/${BDY_MEAN}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}/"
+                  path="bdyorg/const/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}/"
                 fi
-                if ((DISK_MODE_DATA_BDY == 2)); then
-                  echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-                else
-                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-                fi
+                echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
               done
             fi
 
