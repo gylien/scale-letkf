@@ -198,49 +198,6 @@ DISK_MODE_DATA_LANDUSE=$DISK_MODE
 DISK_MODE_DATA_BDYPREP=$DISK_MODE_BDYDATA
 
 #-------------------------------------------------------------------------------
-#if [ "$PRESET" = 'K' ]; then
-#  TMP="$(pwd)"
-##  echo "\$PRESET = 'K': \$TMP reset to '$TMP'" 1>&2
-#  TMP_STG='.'
-#elif [ "$PRESET" = 'K_rankdir' ]; then
-#  TMP="$(pwd)/.."
-#  TMPL="$(pwd)"
-##  echo "\$PRESET = 'K_rankdir': \$TMP reset to '$TMP'" 1>&2
-##  echo "\$PRESET = 'K_rankdir': \$TMPL reset to '$TMPL'" 1>&2
-#  TMP_STG='..'
-#  TMPL_STG='.'
-#fi
-
-#-------------------------------------------------------------------------------
-
-#TMPDAT_S="$TMP/dat"              #
-#TMPDAT_S_STG="$TMP_STG/dat"      #
-#TMPDAT_L="$TMPL/dat"             #
-#TMPDAT_L_STG="$TMPL_STG/dat"     #
-
-#if ((TMPDAT_MODE <= 2)); then    # The 'dat' temporary directory (input data)
-#  TMPDAT="$TMP/dat"              #
-#  TMPDAT_STG="$TMP_STG/dat"      #
-#else                             #
-#  TMPDAT="$TMPL/dat"             #
-#  TMPDAT_STG="$TMPL_STG/dat"     #
-#fi                               #
-#if ((TMPRUN_MODE <= 2)); then    # The 'run' temporary directory (runtime files)
-#  TMPRUN="$TMP/run"              #
-#  TMPRUN_STG="$TMP_STG/run"      #
-#else                             #
-#  TMPRUN="$TMPL/run"             #
-#  TMPRUN_STG="$TMPL_STG/run"     #
-#fi                               #
-#if ((TMPOUT_MODE <= 2)); then    # The 'out' temporary directory (output)
-#  TMPOUT="$TMP"                  #
-#  TMPOUT_STG="$TMP_STG"          #
-#else                             #
-#  TMPOUT="$TMPL"                 #
-#  TMPOUT_STG="$TMPL_STG"         #
-#fi                               #
-
-#-------------------------------------------------------------------------------
 
 USE_TMP_LINK=0
 USE_TMPL=0
@@ -294,6 +251,10 @@ OUT_SUBDIR="out"
 TMPDAT="$TMPROOT/${DAT_SUBDIR}"
 TMPRUN="$TMPROOT/${RUN_SUBDIR}"
 TMPOUT="$TMPROOT/${OUT_SUBDIR}"
+
+TMPDAT_CONSTDB="${TMPROOT_CONSTDB}/${DAT_SUBDIR}"
+TMPDAT_BDYDATA="${TMPROOT_BDYDATA}/${DAT_SUBDIR}"
+TMPDAT_OBS="${TMPROOT_OBS}/${DAT_SUBDIR}"
 
 #-------------------------------------------------------------------------------
 

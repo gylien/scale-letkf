@@ -39,6 +39,7 @@ cat $TMPDAT/conf/config.nml.ensmodel | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
         -e "/!--MEMBER_RUN--/a MEMBER_RUN = $MEMBER_RUN," \
         -e "/!--MEMBER_ITER--/a MEMBER_ITER = $MEMBER_ITER," \
+        -e "/!--CONF_FILES--/a CONF_FILES = \"@@@@/run.conf\"," \
         -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \

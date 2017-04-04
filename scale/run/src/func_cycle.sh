@@ -550,7 +550,7 @@ else
           fi
         done
       elif ((BDY_ENS == 1)); then
-        for m in $(seq $mmtot); do
+        for m in $(seq $mtot); do
           if ((PNETCDF == 1)); then
             path="${time}/bdy/${name_m[$m]}.boundary.nc"
             echo "${DATA_BDY_SCALE_PREP}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
@@ -999,13 +999,8 @@ elif ((LANDUSE_UPDATE != 1 && loop > 1)); then
 fi
 
 if ((BDY_FORMAT == 1)); then
-  if ((DISK_MODE_DATA_BDY == 2)); then
-    bdycatalogue=${TMPDAT_S}/bdyorg/latlon_domain_catalogue.txt
-    bdytopo=${TMPDAT_S}/bdytopo/const/topo
-  else
-    bdycatalogue=${TMPDAT_L}/bdyorg/latlon_domain_catalogue.txt
-    bdytopo=${TMPDAT_L}/bdytopo/const/topo
-  fi
+  bdycatalogue=${TMPDAT_BDYDATA}/bdyorg/latlon_domain_catalogue.txt
+  bdytopo=${TMPDAT_BDYDATA}/bdytopo/const/topo
 fi
 
 if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
@@ -1033,7 +1028,7 @@ for it in $(seq $its $ite); do
     m=$(((it-1)*parallel_mems+g))
     if ((m >= 1 && m <= MEMBER_RUN)); then
       bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK $time ${name_m[$m]} \
-           $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT \
+           $TMPRUN/scale_pp/${name_m[$m]} $TMPDAT \
            cycle ${bdytopo} ${bdycatalogue}
     fi
   fi
@@ -1077,7 +1072,7 @@ for it in $(seq $its $ite); do
     m=$(((it-1)*parallel_mems+g))
     if ((m >= 1 && m <= MEMBER_RUN)); then
       bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $time \
-           ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT
+           ${name_m[$m]} $TMPRUN/scale_pp/${name_m[$m]} $LOG_OPT
     fi
   fi
 
@@ -1113,11 +1108,7 @@ for ibdy in $(seq $nbdy); do
   bdy_time_list="${bdy_time_list}${bdy_times[$ibdy]} "
 done
 
-if ((DISK_MODE_DATA_BDY == 2)); then
-  bdyorgf=${TMPDAT_S}/bdyorg
-else
-  bdyorgf=${TMPDAT_L}/bdyorg
-fi
+bdyorgf=${TMPDAT_BDYDATA}/bdyorg
 
 if ((BDY_ENS == 1)); then
   MEMBER_RUN=$mtot
@@ -1166,13 +1157,13 @@ for it in $(seq $its $ite); do
         bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
              $TMPOUT/const/topo $TMPOUT/${time_l}/landuse \
              ${bdyorgf} $time $mkinit ${name_m[$m]} $mem_bdy \
-             $TMPRUN/scale_init/$(printf '%04d' $m) \
+             $TMPRUN/scale_init/${name_m[$m]} \
              "$bdy_time_list" $ntsteps $ntsteps_skip cycle
       else
         bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
              $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
              ${bdyorgf} $time $mkinit ${name_m[$m]} $mem_bdy \
-             $TMPRUN/scale_init/$(printf '%04d' $m) \
+             $TMPRUN/scale_init/${name_m[$m]} \
              "$bdy_time_list" $ntsteps $ntsteps_skip cycle
       fi
     fi
@@ -1228,7 +1219,7 @@ for it in $(seq $its $ite); do
       fi
 
       bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $time \
-           $mkinit $mem_bdy $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
+           $mkinit $mem_bdy $TMPRUN/scale_init/${name_m[$m]} $LOG_OPT
     fi
   fi
 
@@ -1359,13 +1350,13 @@ for it in $(seq $its $ite); do
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
              $TMPOUT/${time}/anal/${name_m[$m]}.init $ocean_base $land_base $bdy_base \
              $TMPOUT/const/topo $TMPOUT/${time_l}/landuse \
-             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $OUT_OPT \
+             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $OUT_OPT \
              cycle $bdy_start_time $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
       else
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
              $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $land_base $bdy_base \
              $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
-             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/$(printf '%04d' $m) $OUT_OPT \
+             $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $OUT_OPT \
              cycle $bdy_start_time $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
       fi
     fi
@@ -1407,7 +1398,7 @@ for it in $(seq $its $ite); do
 #      fi
 
       bash $SCRP_DIR/src/post_scale.sh $MYRANK $time \
-           ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/$(printf '%04d' $m) $LOG_OPT $OUT_OPT \
+           ${name_m[$m]} $CYCLEFLEN $TMPRUN/scale/${name_m[$m]} $LOG_OPT $OUT_OPT \
            cycle $DELETE_MEMBER $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi

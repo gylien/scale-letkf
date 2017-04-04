@@ -24,8 +24,8 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname='cycle.sh'
-job=${myname%.*}
+myname="$(basename "$0")"
+job='cycle'
 
 #===============================================================================
 # Configuration
@@ -38,28 +38,11 @@ job=${myname%.*}
 . src/func_util.sh || exit $?
 . src/func_$job.sh || exit $?
 
+RUN_LEVEL=${RUN_LEVEL:-0}
+
 echo "[$(datetime_now)] ### 1" >&2
 
 #-------------------------------------------------------------------------------
-
-if [ "$PRESET" = 'K_rankdir' ]; then
-  SCRP_DIR="."
-  if ((TMPDAT_MODE <= 2)); then
-    TMPDAT="../dat"
-  else
-    TMPDAT="./dat"
-  fi
-  if ((TMPRUN_MODE <= 2)); then
-    TMPRUN="../run"
-  else
-    TMPRUN="./run"
-  fi
-  if ((TMPOUT_MODE <= 2)); then
-    TMPOUT="../out"
-  else
-    TMPOUT="./out"
-  fi
-fi
 
 echo "[$(datetime_now)] Start $myname $@" >&2
 
@@ -72,13 +55,8 @@ echo "[$(datetime_now)] ### 2" >&2
 
 #-------------------------------------------------------------------------------
 
-if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
-  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
-    safe_init_tmpdir $TMP || exit $?
-  fi
-  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
-    safe_init_tmpdir $TMPL || exit $?
-  fi
+if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
+  safe_init_tmpdir $TMP || exit $?
 fi
 
 echo "[$(datetime_now)] ### 3" >&2
@@ -95,8 +73,8 @@ declare -a proc2node
 declare -a proc2group
 declare -a proc2grpproc
 
-#if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
-if [ "$STG_TYPE" = 'builtin' ]; then
+#if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
+if ((RUN_LEVEL <= 1)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
   distribute_da_cycle machinefile $NODEFILE_DIR || exit $?
 else
@@ -108,15 +86,13 @@ echo "[$(datetime_now)] ### 4" >&2
 #===============================================================================
 # Determine the staging list and then stage in
 
-if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
+if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR || exit $?
   staging_list || exit $?
-  if ((TMPDAT_MODE >= 2 || TMPOUT_MODE >= 2)); then
-    pdbash node all $SCRP_DIR/src/stage_in_init.sh || exit $?
-    pdbash node all $SCRP_DIR/src/stage_in.sh || exit $?
-  fi
+
+  stage_in node || exit $?
 fi
 
 echo "[$(datetime_now)] ### 5" >&2
@@ -134,6 +110,27 @@ echo "[$(datetime_now)] ### 6" >&2
 
 #===============================================================================
 # Run data assimilation cycles
+
+function online_stgout_bgjob () {
+  local ILOOP="$1"; shift
+  local ITIME="$1"
+  touch lock.$ILOOP
+  echo "[$(datetime_now)] ${ITIME}: Stage-out (background job)" >&2
+  while [ -e "lock.$((ILOOP-1))" ]; do
+    sleep 1s
+  done
+
+  stage_out node $ILOOP || exit $?
+
+  echo "[$(datetime_now)] ${ITIME}: Stage-out (background job completed)" >&2
+  rm -f lock.$ILOOP
+}
+
+#-------------------------------------------------------------------------------
+
+cd $TMP_DIR
+
+#-------------------------------------------------------------------------------
 
 s_flag=1
 e_flag=0
@@ -309,22 +306,11 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 # Online stage out
 
-#  if ((ONLINE_STGOUT == 1)); then
-#    if ((MACHINE_TYPE == 11)); then
-#      touch $TMP/loop.${loop}.done
-#    fi
-#    if ((BUILTIN_STAGING && $(datetime $time $LCYCLE s) <= ETIME)); then
-#      if ((MACHINE_TYPE == 12)); then
-#        echo "[$(datetime_now)] ${time}: Online stage out"
-#        bash $SCRP_DIR/src/stage_out.sh s $loop || exit $?
-#        pdbash node all $SCRP_DIR/src/stage_out.sh $loop || exit $?
-#      else
-#        echo "[$(datetime_now)] ${time}: Online stage out (background job)"
-#        ( bash $SCRP_DIR/src/stage_out.sh s $loop ;
-#          pdbash node all $SCRP_DIR/src/stage_out.sh $loop ) &
-#      fi
-#    fi
-#  fi
+  if ((RUN_LEVEL <= 1)); then
+    if ((ONLINE_STGOUT == 1)); then
+      online_stgout_bgjob $loop $time &
+    fi
+  fi
 
 #-------------------------------------------------------------------------------
 # Write the footer of the log file
@@ -347,26 +333,27 @@ done
 #===============================================================================
 # Stage out
 
-if [ "$STG_TYPE" = 'builtin' ]; then
-  echo "[$(datetime_now)] Finalization (stage out)" >&2
+if ((RUN_LEVEL <= 1)); then
+  if ((ONLINE_STGOUT == 1)); then
+    wait
+  else
+    echo "[$(datetime_now)] Finalization (stage-out)" >&2
 
-  if ((TMPOUT_MODE >= 2)); then
-    if ((ONLINE_STGOUT == 1)); then
-      wait
-      bash $SCRP_DIR/src/stage_out.sh s $loop || exit $?
-      pdbash node all $SCRP_DIR/src/stage_out.sh $loop || exit $?
-    else
-      bash $SCRP_DIR/src/stage_out.sh s || exit $?
-      pdbash node all $SCRP_DIR/src/stage_out.sh || exit $?
-    fi
+    stage_out node || exit $?
   fi
 
-#  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
-#    safe_rm_tmpdir $TMP
-#  fi
-#  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
-#    safe_rm_tmpdir $TMPL
-#  fi
+  if ((CLEAR_TMP == 1 && USE_TMPL == 1)); then
+    pdbash node all $SCRP_DIR/src/stage_out_rm_stgdir_node.sh $TMPL local # || exit $?
+  fi
+fi
+
+#===============================================================================
+# Remove temporary directories
+
+if ((RUN_LEVEL <= 1)); then
+  if ((CLEAR_TMP == 1)); then
+    safe_rm_tmpdir $TMP || exit $?
+  fi
 fi
 
 #===============================================================================
