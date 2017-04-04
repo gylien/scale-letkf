@@ -38,7 +38,7 @@ program scaleles_init_ens
   integer :: it, its, ite, im, ierr
   character(7) :: stdoutf='-000000'
 
-  character(len=H_LONG) :: confname = '0000/init.conf'
+  character(len=H_LONG) :: confname
   character(len=H_LONG) :: confname_dummy
 
   integer :: universal_comm
@@ -162,13 +162,19 @@ program scaleles_init_ens
     do it = its, ite
       im = proc2mem(1,it,universal_myrank+1)
       if (im >= 1 .and. im <= MEMBER_RUN) then
-        WRITE(confname(1:4),'(I4.4)') proc2mem(1,it,universal_myrank+1)
+        if (im <= MEMBER) then
+          call file_member_replace(im, CONF_FILES, confname)
+        else if (im == MEMBER+1) then
+          call file_member_replace(0, CONF_FILES, confname, memf_mean)
+        else if (im == MEMBER+2) then
+          call file_member_replace(0, CONF_FILES, confname, memf_mdet)
+        end if
         WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', trim(confname)
 
         call scalerm_prep ( local_comm, &
                             intercomm_parent, &
                             intercomm_child, &
-                            confname )
+                            trim(confname) )
       end if
     end do ! [ it = its, ite ]
 
