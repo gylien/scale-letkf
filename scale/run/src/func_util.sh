@@ -621,6 +621,7 @@ stage_K_inout () {
 #   $STGOUTLIST_SHARE
 #   $STGOUTLIST_LOCAL
 #   $NNODES
+#   $jobscrp
 #-------------------------------------------------------------------------------
 
 USE_RANKDIR="${1:-0}"

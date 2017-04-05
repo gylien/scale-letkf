@@ -40,7 +40,7 @@ Configuration files:
 Steps:
 $(for i in $(seq $nsteps); do echo "  ${i}. ${stepname[$i]}"; done)
 
-Usage: $myname [STIME ETIME ISTEP FSTEP TIME_LIMIT]
+Usage: $myname [STIME ETIME ISTEP FSTEP CONF_MODE TIME_LIMIT]
 
   STIME       Time of the first cycle (format: YYYY[MMDDHHMMSS])
   ETIME       Time of the last  cycle (format: YYYY[MMDDHHMMSS])
@@ -49,6 +49,8 @@ Usage: $myname [STIME ETIME ISTEP FSTEP TIME_LIMIT]
                (default: the first step)
   FSTEP       The final step in the last cycle by which this script ends
                (default: the last step)
+  CONF_MODE   Mode of creating runtime configuration files: 'dynamic' or 'static'
+               (default: 'dynamic')
   TIME_LIMIT  Requested time limit (only used when using a job scheduler)
                (default: 30 minutes)
 "
@@ -65,6 +67,7 @@ STIME=${1:-$STIME}; shift
 ETIME=${1:-$ETIME}; shift
 ISTEP=${1:-$ISTEP}; shift
 FSTEP=${1:-$FSTEP}; shift
+CONF_MODE=${1:-$CONF_MODE}; shift
 TIME_LIMIT="${1:-$TIME_LIMIT}"
 
 #-------------------------------------------------------------------------------
@@ -102,6 +105,7 @@ STIME=$(datetime $STIME)
 ETIME=$(datetime ${ETIME:-$STIME})
 ISTEP=${ISTEP:-1}
 FSTEP=${FSTEP:-$nsteps}
+CONF_MODE=${CONF_MODE:-"dynamic"}
 TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 
 #-------------------------------------------------------------------------------
@@ -160,7 +164,7 @@ for vname in DIR INDIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BD
              LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT PARENT_REF_TIME \
              ENABLE_PARAM_USER OCEAN_INPUT OCEAN_FORMAT LAND_INPUT LAND_FORMAT OBSNUM WINDOW_S WINDOW_E \
              LCYCLE LTIMESLOT MEMBER NNODES NNODES_APPAR PPN PPN_APPAR THREADS SCALE_NP \
-             STIME ETIME ISTEP FSTEP FCSTOUT MAKEINIT OUT_OPT TOPOOUT_OPT \
+             STIME ETIME ISTEP FSTEP CONF_MODE FCSTOUT MAKEINIT OUT_OPT TOPOOUT_OPT \
              LANDUSEOUT_OPT BDYOUT_OPT OBSOUT_OPT LOG_OPT LOG_TYPE; do
   printf '  %-20s = %s\n' $vname "${!vname}"
 done

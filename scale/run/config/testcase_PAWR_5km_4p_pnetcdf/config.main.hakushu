@@ -117,13 +117,6 @@ ENABLE_SET=0       ######
 #===============================================================================
 # Temporary directories to store runtime files
 
-TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=2               # Disk type used for the 'run' temporary directory (runtime files)
-TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
-                            #  1: share (link to TMP)
-                            #  2: share (staging to TMP)
-                            #  3: local (staging to TMPL)
-
 DISK_MODE=2
 DISK_MODE_CONSTDB=
 DISK_MODE_BDYDATA=

@@ -5,11 +5,11 @@
 #
 #===============================================================================
 
-staging_list_simple () {
+staging_list_static () {
 #-------------------------------------------------------------------------------
 # Prepare all the staging list files
 #
-# Usage: staging_list_simple
+# Usage: staging_list_static
 #
 # Other input variables:
 #   $STAGING_DIR

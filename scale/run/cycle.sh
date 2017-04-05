@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle.sh [STIME ETIME ISTEP FSTEP]
+#    cycle.sh [..]
 #
 #  Use settings:
 #    config.main
@@ -21,6 +21,13 @@
 #    config.nml.obsope
 #    config.nml.letkf
 #
+#-------------------------------------------------------------------------------
+#
+#  RUN_LEVEL:
+#    0: Run everything (default)
+#    1: Staging list files are ready; skip generating them (not implemented yet...)
+#    2: File staging has been done; skip staging
+#
 #===============================================================================
 
 cd "$(dirname "$0")"
@@ -31,12 +38,16 @@ job='cycle'
 # Configuration
 
 . config.main || exit $?
-. config.$job || exit $?
+. config.${job} || exit $?
 
 . src/func_distribute.sh || exit $?
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
-. src/func_$job.sh || exit $?
+. src/func_${job}.sh || exit $?
+
+if [ "$CONF_MODE" = 'static' ]; then
+  . src/func_${job}_static.sh || exit $?
+fi
 
 RUN_LEVEL=${RUN_LEVEL:-0}
 
@@ -46,14 +57,15 @@ echo "[$(datetime_now)] ### 1" >&2
 
 echo "[$(datetime_now)] Start $myname $@" >&2
 
-setting "$1" "$2" "$3" "$4" "$5" || exit $?
+setting "$@" || exit $?
 
 echo
 print_setting || exit $?
 
 echo "[$(datetime_now)] ### 2" >&2
 
-#-------------------------------------------------------------------------------
+#===============================================================================
+# Initialize temporary directories
 
 if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
   safe_init_tmpdir $TMP || exit $?
@@ -64,7 +76,6 @@ echo "[$(datetime_now)] ### 3" >&2
 #===============================================================================
 # Determine the distibution schemes
 
-declare -a node
 declare -a node_m
 declare -a name_m
 declare -a mem2node
@@ -87,10 +98,15 @@ echo "[$(datetime_now)] ### 4" >&2
 # Determine the staging list and then stage in
 
 if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
-  echo "[$(datetime_now)] Initialization (stage in)" >&2
+  echo "[$(datetime_now)] Initialization (stage-in)" >&2
 
   safe_init_tmpdir $STAGING_DIR || exit $?
-  staging_list || exit $?
+  if [ "$CONF_MODE" = 'static' ]; then
+    staging_list_static || exit $?
+    config_file_list || exit $?
+  else
+    staging_list || exit $?
+  fi
 
   stage_in node || exit $?
 fi
@@ -100,10 +116,12 @@ echo "[$(datetime_now)] ### 5" >&2
 #===============================================================================
 # Run initialization scripts on all nodes
 
-if ((TMPRUN_MODE <= 2)); then
-  pdbash node one $SCRP_DIR/src/init_all_node.sh $job || exit $?
-else
-  pdbash node all $SCRP_DIR/src/init_all_node.sh $job || exit $?
+if [ "$CONF_MODE" != 'static' ]; then
+  if ((TMPRUN_MODE <= 2)); then
+    pdbash node one $SCRP_DIR/src/init_all_node.sh $job || exit $?
+  else
+    pdbash node all $SCRP_DIR/src/init_all_node.sh $job || exit $?
+  fi
 fi
 
 echo "[$(datetime_now)] ### 6" >&2
@@ -128,7 +146,7 @@ function online_stgout_bgjob () {
 
 #-------------------------------------------------------------------------------
 
-cd $TMP_DIR
+cd $TMPROOT
 
 #-------------------------------------------------------------------------------
 
@@ -247,53 +265,56 @@ while ((time <= ETIME)); do
       fi
 
       if ((s <= 3)); then
-        stdout_dir="$TMPOUT/${time}/log/$(basename ${stepexecdir[$s]})"
+        conf_time=$time
       else
-        stdout_dir="$TMPOUT/${atime}/log/$(basename ${stepexecdir[$s]})"
+        conf_time=$atime
       fi
 
-#echo "$stdout_dir" >&2
-#echo ${stepexecdir[$s]} >&2
-#echo $(rev_path ${stepexecdir[$s]}) >&2
+      if [ "$CONF_MODE" = 'static' ]; then
 
-      if ((enable_iter == 1)); then
-        for it in $(seq $nitmax); do
-          if [ "$PRESET" = 'K_rankdir' ]; then
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+        mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time}
 
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" ${stepexecdir[$s]} \
-                    "$(rev_path ${stepexecdir[$s]})/${job}_step.sh" "$time" $loop $it || exit $?
-
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          else
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
-
-            if ((IO_ARB == 1)); then ##
-              mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
-                      "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $? &
-            else ##
-              mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
-                      "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
-            fi ##
-
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          fi
-        done
       else
-        if [ "$PRESET" = 'K_rankdir' ]; then
 
-          mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" ${stepexecdir[$s]} \
-                  "$(rev_path ${stepexecdir[$s]})/${job}_step.sh" "$time" "$loop" || exit $?
+        stdout_dir="$TMPOUT/${conf_time}/log/$(basename ${stepexecdir[$s]})"
+        if ((enable_iter == 1)); then
+          for it in $(seq $nitmax); do
+            if [ "$PRESET" = 'K_rankdir' ]; then
+              echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+
+              mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" ${stepexecdir[$s]} \
+                      "$(rev_path ${stepexecdir[$s]})/${job}_step.sh" "$time" $loop $it || exit $?
+
+              echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
+            else
+              echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+
+              if ((IO_ARB == 1)); then ##
+                mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
+                        "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $? &
+              else ##
+                mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
+                        "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
+              fi ##
+
+              echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
+            fi
+          done
         else
-
-          if ((IO_ARB == 1)); then ##                                 
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
-                    "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $? &
-          else ##
-            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
-                    "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
-          fi ##
+          if [ "$PRESET" = 'K_rankdir' ]; then
+            mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" ${stepexecdir[$s]} \
+                    "$(rev_path ${stepexecdir[$s]})/${job}_step.sh" "$time" "$loop" || exit $?
+          else
+            if ((IO_ARB == 1)); then ##                                 
+              mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
+                      "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $? &
+            else ##
+              mpirunf $nodestr ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
+                      "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
+            fi ##
+          fi
         fi
+
       fi
 
     fi
