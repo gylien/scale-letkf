@@ -213,7 +213,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ALLOCATE(rdiag(nobstotal))
   ALLOCATE(rloc (nobstotal))
   ALLOCATE(dep  (nobstotal))
-  ALLOCATE(depd (nobstotal)) !GYL
+  if (DET_RUN) then            !GYL
+    ALLOCATE(depd (nobstotal)) !GYL
+  end if                       !GYL
 
   call mpi_timer('das_letkf:other_allocation:', 2)
   call mpi_timer('', 3)
@@ -232,7 +234,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           ! if weights already computed for other variables can be re-used(no variable localization), copy from there 
           trans(:,:,n) = trans(:,:,var_local_n2n(n))
           transm(:,n) = transm(:,var_local_n2n(n))                                     !GYL
-          transmd(:,n) = transmd(:,var_local_n2n(n))                                   !GYL
+          if (DET_RUN) then                                                            !GYL
+            transmd(:,n) = transmd(:,var_local_n2n(n))                                 !GYL
+          end if                                                                       !GYL
           IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
             pa(:,:,n) = pa(:,:,var_local_n2n(n))                                       !GYL
           END IF                                                                       !GYL
@@ -242,22 +246,38 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           END IF                                                                       !GYL
         ELSE
           ! compute weights with localized observations
-          CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t)
+          if (DET_RUN) then                                                            !GYL
+            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t) !GYL
+          else                                                                         !GYL
+            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,cutd_t=cutd_t) !GYL
+          end if                                                                       !GYL
           IF(RELAX_TO_INFLATED_PRIOR) THEN                                             !GYL
             parm = work3d(ij,ilev,n)                                                   !GYL
           ELSE                                                                         !GYL
             parm = 1.0d0                                                               !GYL
           END IF                                                                       !GYL
           IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
-            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
-                            trans(:,:,n),transm=transm(:,n),pao=pa(:,:,n),   &         !GYL
-                            rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &         !GYL
-                            depd=depd,transmd=transmd(:,n))                            !GYL
+            if (DET_RUN) then                                                          !GYL
+              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
+                              trans(:,:,n),transm=transm(:,n),pao=pa(:,:,n),   &       !GYL
+                              rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &       !GYL
+                              depd=depd,transmd=transmd(:,n))                          !GYL
+            else                                                                       !GYL
+              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
+                              trans(:,:,n),transm=transm(:,n),pao=pa(:,:,n),   &       !GYL
+                              rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)         !GYL
+            end if                                                                     !GYL
           ELSE                                                                         !GYL
-            CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
-                            trans(:,:,n),transm=transm(:,n),                 &         !GYL
-                            rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &         !GYL
-                            depd=depd,transmd=transmd(:,n))                            !GYL
+            if (DET_RUN) then                                                          !GYL
+              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
+                              trans(:,:,n),transm=transm(:,n),                 &       !GYL
+                              rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &       !GYL
+                              depd=depd,transmd=transmd(:,n))                          !GYL
+            else                                                                       !GYL
+              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
+                              trans(:,:,n),transm=transm(:,n),                 &       !GYL
+                              rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)         !GYL
+            end if                                                                     !GYL
           END IF                                                                       !GYL
           IF(NOBS_OUT) THEN                                                            !GYL
             work3dn(:,ij,ilev,n) = real(sum(nobsl_t, dim=1),r_size)                    !GYL !!! NOBS: sum over all variables for each report type
@@ -353,7 +373,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             ! if weights already computed for other variables can be re-used(no variable localization), copy from there 
             trans(:,:,nv3d+n) = trans(:,:,var_local_n2n(nv3d+n))
             transm(:,nv3d+n) = transm(:,var_local_n2n(nv3d+n))                         !GYL
-            transmd(:,nv3d+n) = transmd(:,var_local_n2n(nv3d+n))                       !GYL
+            if (DET_RUN) then                                                          !GYL
+              transmd(:,nv3d+n) = transmd(:,var_local_n2n(nv3d+n))                     !GYL
+            end if                                                                     !GYL
             IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
               pa(:,:,nv3d+n) = pa(:,:,var_local_n2n(nv3d+n))                           !GYL
             END IF                                                                     !GYL
@@ -370,22 +392,38 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             END IF                                                                     !GYL
           ELSE
             ! compute weights with localized observations
-            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t)
+            if (DET_RUN) then                                                          !GYL
+              CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t)
+            else                                                                       !GYL
+              CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,cutd_t=cutd_t)
+            end if                                                                     !GYL
             IF(RELAX_TO_INFLATED_PRIOR) THEN                                           !GYL
               parm = work2d(ij,n)                                                      !GYL
             ELSE                                                                       !GYL
               parm = 1.0d0                                                             !GYL
             END IF                                                                     !GYL
             IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
-              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
-                              trans(:,:,nv3d+n),transm=transm(:,nv3d+n),pao=pa(:,:,nv3d+n), & !GYL
-                              rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &       !GYL
-                              depd=depd,transmd=transmd(:,nv3d+n))                     !GYL
+              if (DET_RUN) then                                                        !GYL
+                CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
+                                trans(:,:,nv3d+n),transm=transm(:,nv3d+n),pao=pa(:,:,nv3d+n), & !GYL
+                                rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &     !GYL
+                                depd=depd,transmd=transmd(:,nv3d+n))                   !GYL
+              else                                                                     !GYL
+                CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
+                                trans(:,:,nv3d+n),transm=transm(:,nv3d+n),pao=pa(:,:,nv3d+n), & !GYL
+                                rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)       !GYL
+              end if                                                                   !GYL
             ELSE                                                                       !GYL
-              CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
-                              trans(:,:,nv3d+n),transm=transm(:,nv3d+n),       &       !GYL
-                              rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &       !GYL
-                              depd=depd,transmd=transmd(:,nv3d+n))                     !GYL
+              if (DET_RUN) then                                                        !GYL
+                CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
+                                trans(:,:,nv3d+n),transm=transm(:,nv3d+n),       &     !GYL
+                                rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &     !GYL
+                                depd=depd,transmd=transmd(:,nv3d+n))                   !GYL
+              else                                                                     !GYL
+                CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
+                                trans(:,:,nv3d+n),transm=transm(:,nv3d+n),       &     !GYL
+                                rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)       !GYL
+              end if                                                                   !GYL
             END IF                                                                     !GYL
             IF(NOBS_OUT) THEN                                                          !GYL
               work2dn(:,ij,n) = real(sum(nobsl_t,dim=1),r_size)                        !GYL !!! NOBS: sum over all variables for each report type
@@ -461,7 +499,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   call mpi_timer('das_letkf:letkf_core:', 2)
 
-  DEALLOCATE(hdxf,rdiag,rloc,dep,depd)
+  DEALLOCATE(hdxf,rdiag,rloc,dep)
+  if (DET_RUN) then
+    deallocate(depd)
+  end if
   !
   ! Compute analyses of observations (Y^a)
   !

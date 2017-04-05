@@ -41,7 +41,7 @@ CONTAINS
 !     parm_infl        : covariance inflation parameter
 !     rdiag_wloc       : (optional) flag indicating that rdiag = rdiag / rloc    !GYL
 !     infl_update      : (optional) flag to return updated inflation parameter   !GYL
-!     depd(nobs)       : observation departure (yo-Hxb)                          !GYL
+!     depd(nobs)       : observation departure (yo-Hxb) for deterministic run    !GYL
 !   OUTPUT
 !     parm_infl        : updated covariance inflation parameter
 !     trans(ne,ne)     : transformation matrix
