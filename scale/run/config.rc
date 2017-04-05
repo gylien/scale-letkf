@@ -238,8 +238,8 @@ elif ((DISK_MODE_OBS == 3)); then
   USE_TMPL=1
 fi
 
-STAGING_DIR="$TMPROOT/staging"
-NODEFILE_DIR="$TMPROOT/node"
+STAGING_DIR="$TMP/staging"
+NODEFILE_DIR="$TMP/node"
 CONFIG_DIR="$TMPROOT"
 
 #-------------------------------------------------------------------------------

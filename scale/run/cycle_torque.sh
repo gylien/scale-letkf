@@ -26,16 +26,16 @@ job='cycle'
 . src/func_util.sh || exit $?
 . src/func_${job}.sh || exit $?
 
-if [ "$CONF_MODE" = 'static' ]; then
-  . src/func_${job}_static.sh || exit $?
-fi
-
 #-------------------------------------------------------------------------------
 
 echo "[$(datetime_now)] Start $myname $@"
 echo
 
 setting "$@" || exit $?
+
+if [ "$CONF_MODE" = 'static' ]; then
+  . src/func_${job}_static.sh || exit $?
+fi
 
 echo
 print_setting || exit $?

@@ -45,12 +45,6 @@ job='cycle'
 . src/func_util.sh || exit $?
 . src/func_${job}.sh || exit $?
 
-if [ "$CONF_MODE" = 'static' ]; then
-  . src/func_${job}_static.sh || exit $?
-fi
-
-RUN_LEVEL=${RUN_LEVEL:-0}
-
 echo "[$(datetime_now)] ### 1" >&2
 
 #-------------------------------------------------------------------------------
@@ -58,6 +52,10 @@ echo "[$(datetime_now)] ### 1" >&2
 echo "[$(datetime_now)] Start $myname $@" >&2
 
 setting "$@" || exit $?
+
+if [ "$CONF_MODE" = 'static' ]; then
+  . src/func_${job}_static.sh || exit $?
+fi
 
 echo
 print_setting || exit $?
@@ -103,7 +101,11 @@ if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
   safe_init_tmpdir $STAGING_DIR || exit $?
   if [ "$CONF_MODE" = 'static' ]; then
     staging_list_static || exit $?
-    config_file_list || exit $?
+    if ((DISK_MODE == 3)); then
+      config_file_list $TMP/config || exit $?
+    else
+      config_file_list || exit $?
+    fi
   else
     staging_list || exit $?
   fi

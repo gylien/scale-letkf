@@ -277,8 +277,8 @@ distribute_da_cycle () {
 #   $proc2grpproc[1...$totalnp]           Relation from processes to m_processes
 #
 # Output files:
-#   [$TMP/node/proc]       All processes
-#   [$TMP/node/node]       One process per node
+#   [$NODEFILEDIR/proc]       All processes
+#   [$NODEFILEDIR/node]       One process per node
 #-------------------------------------------------------------------------------
 
 local NODEFILE=${1:-machinefile}; shift
@@ -418,8 +418,8 @@ distribute_da_cycle_set () {
 #   $proc2grpproc[1...$totalnp]           Relation from processes to m_processes
 #
 # Output files:
-#   [$TMP/node/proc]       All processes
-#   [$TMP/node/node]       One process per node
+#   [$NODEFILEDIR/proc]       All processes
+#   [$NODEFILEDIR/node]       One process per node
 #-------------------------------------------------------------------------------
 
 local NODEFILE=${1:-machinefile}; shift
@@ -563,8 +563,8 @@ distribute_fcst () {
 #   $cycle_auto                           Automatically determined $CYCLE value
 #
 # Output files:
-#   [$TMP/node/proc]            All processes
-#   [$TMP/node/node]            One process per node
+#   [$NODEFILEDIR/proc]            All processes
+#   [$NODEFILEDIR/node]            One process per node
 #-------------------------------------------------------------------------------
 
 if (($# < 1)); then

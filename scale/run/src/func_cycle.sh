@@ -111,6 +111,8 @@ TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 #-------------------------------------------------------------------------------
 # common variables
 
+RUN_LEVEL=${RUN_LEVEL:-0}
+
 CYCLEFLEN=$WINDOW_E     # Model forecast length in a cycle (second)
 if [ -z "$FCSTOUT" ] || ((FCSTOUT >= LTIMESLOT)); then
   CYCLEFOUT=$LTIMESLOT  # Model forecast output interval (second)
@@ -178,10 +180,10 @@ staging_list () {
 #-------------------------------------------------------------------------------
 # TMPDAT
 
-if ((TMPDAT_MODE == 1)); then
-#-------------------
-  echo "[Error] \$TMPDAT_MODE == 1 not available in this version!" >&2
-  exit 1
+#if ((TMPDAT_MODE == 1)); then
+##-------------------
+#  echo "[Error] \$TMPDAT_MODE == 1 not available in this version!" >&2
+#  exit 1
 #  safe_init_tmpdir $TMPDAT
 #  safe_init_tmpdir $TMPDAT/exec
 ##  ln -fs $MODELDIR/scale-rm_pp $TMPDAT/exec
@@ -215,9 +217,9 @@ if ((TMPDAT_MODE == 1)); then
 
 #  safe_init_tmpdir $TMPDAT/conf
 #  ln -fs $SCRP_DIR/config.* $TMPDAT/conf
-#-------------------
-else
-#-------------------
+##-------------------
+#else
+##-------------------
   cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 ${ENSMODEL_DIR}/scale-rm_pp_ens|${DAT_SUBDIR}/exec/scale-rm_pp_ens
 ${ENSMODEL_DIR}/scale-rm_init_ens|${DAT_SUBDIR}/exec/scale-rm_init_ens
@@ -230,12 +232,15 @@ ${SCRP_DIR}/config.nml.scale_init|${DAT_SUBDIR}/conf/config.nml.scale_init
 ${SCRP_DIR}/config.nml.scale|${DAT_SUBDIR}/conf/config.nml.scale
 ${SCRP_DIR}/config.nml.ensmodel|${DAT_SUBDIR}/conf/config.nml.ensmodel
 ${SCRP_DIR}/config.nml.letkf|${DAT_SUBDIR}/conf/config.nml.letkf
-${DATADIR}/rad/|${DAT_SUBDIR}/rad/
-${DATADIR}/land/|${DAT_SUBDIR}/land/
 EOF
 #${MODELDIR}/scale-rm_pp|${DAT_SUBDIR}/exec/scale-rm_pp
 #${MODELDIR}/scale-rm_init|${DAT_SUBDIR}/exec/scale-rm_init
 #${MODELDIR}/scale-rm|${DAT_SUBDIR}/exec/scale-rm
+
+  cat >> ${STAGING_DIR}/${STGINLIST_CONSTDB} << EOF
+${DATADIR}/rad/|${DAT_SUBDIR}/rad/
+${DATADIR}/land/|${DAT_SUBDIR}/land/
+EOF
 
   if [ -e "${SCRP_DIR}/config.nml.scale_user" ]; then
     echo "${SCRP_DIR}/config.nml.scale_user|${DAT_SUBDIR}/conf/config.nml.scale_user" >> ${STAGING_DIR}/${STGINLIST}
@@ -249,7 +254,7 @@ EOF
 
 # H08
   if [ -e "${RTTOV_COEF}" ] && [ -e "${RTTOV_SCCOEF}" ]; then
-    cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+    cat >> ${STAGING_DIR}/${STGINLIST_CONSTDB} << EOF
 ${RTTOV_COEF}|${DAT_SUBDIR}/rttov/rtcoef_himawari_8_ahi.dat
 ${RTTOV_SCCOEF}|${DAT_SUBDIR}/rttov/sccldcoef_himawari_8_ahi.dat
 EOF
@@ -275,16 +280,16 @@ EOF
   if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
     echo "${COMMON_DIR}/datetime|${DAT_SUBDIR}/exec/datetime" >> ${STAGING_DIR}/${STGINLIST}
   fi
-#-------------------
-fi
+##-------------------
+#fi
 
 #-------------------------------------------------------------------------------
 # TMPOUT
 
-if ((TMPOUT_MODE == 1)); then
-#-------------------
-  echo "[Error] \$TMPOUT_MODE == 1 not available in this version!" >&2
-  exit 1
+#if ((TMPOUT_MODE == 1)); then
+##-------------------
+#  echo "[Error] \$TMPOUT_MODE == 1 not available in this version!" >&2
+#  exit 1
 #  mkdir -p $(dirname $TMPOUT)
 #  ln -fs $OUTDIR $TMPOUT
 
@@ -380,9 +385,9 @@ if ((TMPOUT_MODE == 1)); then
 #      exit 1
 #    fi
 #  fi
-#-------------------
-else
-#-------------------
+##-------------------
+#else
+##-------------------
   time=$STIME
   atime=$(datetime $time $LCYCLE s)
   loop=0
@@ -972,8 +977,8 @@ else
 
   #-------------------
 
-#-------------------
-fi
+##-------------------
+#fi
 
 #-------------------------------------------------------------------------------
 }
@@ -1430,7 +1435,7 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_obsope_node.sh $MYRANK \
-       $time $atime $TMPRUN/obsope $TMPDAT/obs \
+       $time $atime $TMPRUN/obsope ${TMPDAT_OBS}/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b $MEMBER
 fi
 
@@ -1514,13 +1519,13 @@ fi
 if (pdrun all $PROC_OPT); then
   if ((PNETCDF == 1)); then
     bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
-         $time $atime $TMPRUN/letkf $TMPDAT/obs \
+         $time $atime $TMPRUN/letkf ${TMPDAT_OBS}/obs \
          $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo $OBSOUT_OPT \
          $ADAPTINFL $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT \
          $MEMBER
   else
     bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
-         $time $atime $TMPRUN/letkf $TMPDAT/obs \
+         $time $atime $TMPRUN/letkf ${TMPDAT_OBS}/obs \
          $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/topo/topo $OBSOUT_OPT \
          $ADAPTINFL $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT \
          $MEMBER
