@@ -15,9 +15,6 @@ DIR_RTTOV=/data/share005/honda/RTTOV
 RTTOV_COEF=${DIR_RTTOV}/rtcoef_rttov11/rttov7pred54L/rtcoef_himawari_8_ahi.dat
 RTTOV_SCCOEF=${DIR_RTTOV}/rtcoef_rttov11/cldaer/sccldcoef_himawari_8_ahi.dat
 
-LANDUSE_TARGZ="F"
-TOPO_TARGZ="F"
-
 EXP="TC201513_D1"
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
