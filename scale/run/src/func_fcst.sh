@@ -433,7 +433,7 @@ EOF
 
         # topo
         #-------------------
-        if ((loop == 1)) && [ "$TOPO_FORMAT" = 'prep' ]; then
+        if ((loop == 1 && c == 1)) && [ "$TOPO_FORMAT" = 'prep' ]; then
           if ((DISK_MODE == 3)); then
             for m in $(seq $fmember); do
               mm=$(((c-1) * fmember + m))
@@ -462,7 +462,7 @@ EOF
 
         # topo (bdy_scale)
         #-------------------
-        if ((loop == 1 && BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
+        if ((loop == 1 && c == 1 && BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
           if ((PNETCDF_BDY_SCALE == 1)); then
             pathin="${DATA_TOPO_BDY_SCALE}.nc"
             path="bdytopo/const/topo.nc"
@@ -475,7 +475,7 @@ EOF
 
         # landuse
         #-------------------
-        if ((loop == 1 || LANDUSE_UPDATE == 1)) && [ "$LANDUSE_FORMAT" = 'prep' ]; then
+        if (((loop == 1 && c == 1) || LANDUSE_UPDATE == 1)) && [ "$LANDUSE_FORMAT" = 'prep' ]; then
           if ((DISK_MODE == 3)); then
             for m in $(seq $fmember); do
               mm=$(((c-1) * fmember + m))
@@ -579,10 +579,11 @@ EOF
 
         # topo
         #-------------------
-        if ((loop == 1 && TOPOOUT_OPT <= 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
+        if ((loop == 1 && c == 1 && TOPOOUT_OPT <= 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
           if ((PNETCDF == 1)); then
             path="const/topo.nc"
-            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
           else
             path="const/topo/"
             echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
@@ -591,14 +592,15 @@ EOF
 
         # landuse
         #-------------------
-        if ((loop == 1 || LANDUSE_UPDATE == 1)) && ((LANDUSEOUT_OPT <= 1)) && [ "$LANDUSE_FORMAT" != 'prep' ]; then
+        if (((loop == 1 && c == 1) || LANDUSE_UPDATE == 1)) && ((LANDUSEOUT_OPT <= 1)) && [ "$LANDUSE_FORMAT" != 'prep' ]; then
           if ((PNETCDF == 1)); then
             if ((LANDUSE_UPDATE == 1)); then
               path="${time2}/landuse.nc"
             else
               path="const/landuse.nc"
             fi
-            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
           else
             if ((LANDUSE_UPDATE == 1)); then
               path="${time2}/landuse/"
@@ -618,7 +620,8 @@ EOF
           elif ((BDYOUT_OPT <= 2)); then
             if ((PNETCDF == 1)); then
               path="${time2}/bdy/mean.boundary.nc"
-              echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#              echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+              echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
             else
               path="${time2}/bdy/mean/"
               echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
