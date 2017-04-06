@@ -8,31 +8,32 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_K.sh [STE ISTEP FSTEP TIME_LIMIT]
+#    cycle_K.sh [..]
 #
 #===============================================================================
 
 cd "$(dirname "$0")"
+myname="$(basename "$0")"
 job='cycle'
 
 #===============================================================================
 # Configuration
 
-. config.main
-res=$? && ((res != 0)) && exit $res
-. config.$job
-res=$? && ((res != 0)) && exit $res
+. config.main || exit $?
+. config.${job} || exit $?
 
 . src/func_distribute.sh
 . src/func_datetime.sh
 . src/func_util.sh
-. src/func_$job.sh
+. src/func_${job}.sh
+
+STAGING_DIR="$TMPS/staging"
+NODEFILE_DIR="$TMPS/node"
 
 #-------------------------------------------------------------------------------
 
-if ((TMPDAT_MODE == 1 || TMPRUN_MODE == 1 || TMPOUT_MODE == 1)); then
-  echo "[Error] $0: When using a regular resource group," >&2
-  echo "        \$TMPDAT_MODE, \$TMPRUN_MODE, \$TMPOUT_MODE all need to be 2 or 3." >&2
+if ((USE_TMP_LINK == 1)); then
+  echo "[Error] $0: Wrong disk mode for K computer regular jobs." >&2
   exit 1
 fi
 
@@ -43,12 +44,16 @@ fi
 
 #-------------------------------------------------------------------------------
 
-echo "[$(datetime_now)] Start $(basename $0) $@"
+echo "[$(datetime_now)] Start $myname $@"
 
-setting "$1" "$2" "$3" "$4" "$5"
+setting "$@" || exit $?
+
+if [ "$CONF_MODE" = 'static' ]; then
+  . src/func_${job}_static.sh || exit $?
+fi
 
 echo
-print_setting
+print_setting || exit $?
 echo
 
 #===============================================================================
@@ -56,14 +61,13 @@ echo
 
 echo "[$(datetime_now)] Create and clean the temporary directory"
 
-safe_init_tmpdir $TMPS
+safe_init_tmpdir $TMPS || exit $?
 
 #===============================================================================
 # Determine the distibution schemes
 
 echo "[$(datetime_now)] Determine the distibution schemes"
 
-declare -a node
 declare -a node_m
 declare -a name_m
 declare -a mem2node
@@ -72,33 +76,70 @@ declare -a proc2node
 declare -a proc2group
 declare -a proc2grpproc
 
-safe_init_tmpdir $TMPS/node
-if ((IO_ARB == 1)); then                ##
-  distribute_da_cycle_set - $TMPS/node  ##
-else                                    ##
-  distribute_da_cycle - $TMPS/node
-fi                                      ##
+safe_init_tmpdir $NODEFILE_DIR || exit $?
+if ((IO_ARB == 1)); then                           ##
+  distribute_da_cycle_set - $NODEFILE_DIR || exit  ##
+else                                               ##
+  distribute_da_cycle - $NODEFILE_DIR || exit
+fi                                                 ##
 
 #===============================================================================
 # Determine the staging list
 
 echo "[$(datetime_now)] Determine the staging list"
 
-STAGING_DIR="$TMPS/staging"
+cp -L $SCRP_DIR/config.main $TMPS/config.main
 
-safe_init_tmpdir $STAGING_DIR
-staging_list
+#if [ "$CONF_MODE" = 'static' ]; then
+  if [ "$PRESET" = 'K_rankdir' ]; then
+    echo "TMP='..'" >> $TMPS/config.main
+    echo "TMPL='.'" >> $TMPS/config.main
+  else
+    echo "TMP='.'" >> $TMPS/config.main
+  fi
 
-#-------------------------------------------------------------------------------
+#  echo "STAGING_DIR=..." >> $TMPS/config.main
+#  echo "NODEFILE_DIR=..." >> $TMPS/config.main
 
-cp $SCRP_DIR/config.main $TMPS
+#else
+#fi
 
-echo "SCRP_DIR=\"\$(pwd)\"" >> $TMPS/config.main
-echo "NODEFILE_DIR=\"\$(pwd)/node\"" >> $TMPS/config.main
+echo ". config.rc" >> $TMPS/config.main
+
+echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMPS/config.main
+
+#  echo "SCRP_DIR=\"\$(pwd)\"" >> $TMPS/config.main
+#  echo "NODEFILE_DIR=\"\$(pwd)/node\"" >> $TMPS/config.main
 
 echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMPS/config.main
 
-echo "RUN_LEVEL='K'" >> $TMPS/config.main
+echo "RUN_LEVEL=2" >> $TMPS/config.main
+
+safe_init_tmpdir $STAGING_DIR || exit $?
+if [ "$CONF_MODE" = 'static' ]; then
+  staging_list_static || exit $?
+  config_file_list $TMPS/config || exit $?
+else
+  staging_list || exit $?
+fi
+
+#-------------------------------------------------------------------------------
+# Add shell scripts and node distribution files into the staging list
+
+cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${TMPS}/config.main|config.main
+${SCRP_DIR}/config.rc|config.rc
+${SCRP_DIR}/config.${job}|config.${job}
+${SCRP_DIR}/${job}.sh|${job}.sh
+${SCRP_DIR}/src/|src/
+${NODEFILE_DIR}/|node/
+EOF
+
+if [ "$CONF_MODE" != 'static' ]; then
+  echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
+fi
+
+#===============================================================================
 
 if ((IO_ARB == 1)); then                                        ##
   NNODES=$((NNODES*2))                                          ##
@@ -136,9 +177,10 @@ EOF
 
 if [ "$PRESET" = 'K_rankdir' ]; then
   echo "#PJM --mpi \"use-rankdir\"" >> $jobscrp
+  stage_K_inout 1
+else
+  stage_K_inout 0
 fi
-
-bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR $job >> $jobscrp
 
 cat >> $jobscrp << EOF
 
@@ -155,8 +197,7 @@ EOF
 echo "[$(datetime_now)] Run pjstgchk"
 echo
 
-pjstgchk $jobscrp
-res=$? && ((res != 0)) && exit $res
+pjstgchk $jobscrp || exit $?
 echo
 
 #===============================================================================
@@ -187,6 +228,6 @@ fi
 
 #===============================================================================
 
-echo "[$(datetime_now)] Finish $(basename $0) $@"
+echo "[$(datetime_now)] Finish $myname $@"
 
 exit $res
