@@ -8,35 +8,37 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    fcst_torque.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP TIME_LIMIT]
+#    fcst_torque.sh [..]
 #
 #===============================================================================
 
 cd "$(dirname "$0")"
+myname="$(basename "$0")"
 job='fcst'
 
 #===============================================================================
 # Configuration
 
-. config.main
-res=$? && ((res != 0)) && exit $res
-. config.$job
-res=$? && ((res != 0)) && exit $res
+. config.main || exit $?
+. config.${job} || exit $?
 
-#. src/func_distribute.sh
-. src/func_datetime.sh
-. src/func_util.sh
-. src/func_$job.sh
+. src/func_datetime.sh || exit $?
+. src/func_util.sh || exit $?
+. src/func_${job}.sh || exit $?
 
 #-------------------------------------------------------------------------------
 
-echo "[$(datetime_now)] Start $(basename $0) $@"
+echo "[$(datetime_now)] Start $myname $@"
 echo
 
-setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}"
+setting "$@" || exit $?
+
+###if [ "$CONF_MODE" = 'static' ]; then
+###  . src/func_${job}_static.sh || exit $?
+###fi
 
 echo
-print_setting
+print_setting || exit $?
 echo
 
 #===============================================================================
@@ -70,7 +72,7 @@ cd \$PBS_O_WORKDIR
 rm -f machinefile
 cp -f \$PBS_NODEFILE machinefile
 
-./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP"
+./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
 
 echo "[$(datetime_now)] Run ${job} job on PBS"
@@ -98,6 +100,6 @@ archive_log
 
 #===============================================================================
 
-echo "[$(datetime_now)] Finish $(basename $0) $@"
+echo "[$(datetime_now)] Finish $myname $@"
 
 exit $res

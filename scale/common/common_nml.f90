@@ -35,6 +35,7 @@ MODULE common_nml
   integer :: MEMBER_RUN = 1  !
   integer :: MEMBER_ITER = 0 !
   character(filelenmax) :: CONF_FILES = 'run.@@@@.conf'
+  logical :: CONF_FILES_SEQNUM = .false.
 
   logical :: DET_RUN = .false.
   logical :: DET_RUN_CYCLED = .true.
@@ -311,6 +312,7 @@ subroutine read_nml_ensemble
     MEMBER_RUN, &
     MEMBER_ITER, &
     CONF_FILES, &
+    CONF_FILES_SEQNUM, &
     DET_RUN, &
     DET_RUN_CYCLED
 

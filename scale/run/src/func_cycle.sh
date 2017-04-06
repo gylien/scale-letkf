@@ -1,6 +1,6 @@
 #!/bin/bash
-#===============================================================================
 #
+#===============================================================================
 #  Steps of 'cycle.sh'
 #  October 2014, created   Guo-Yuan Lien
 #
@@ -113,6 +113,8 @@ TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 
 RUN_LEVEL=${RUN_LEVEL:-0}
 
+OUT_CYCLE_SKIP=${OUT_CYCLE_SKIP:-1}
+
 CYCLEFLEN=$WINDOW_E     # Model forecast length in a cycle (second)
 if [ -z "$FCSTOUT" ] || ((FCSTOUT >= LTIMESLOT)); then
   CYCLEFOUT=$LTIMESLOT  # Model forecast output interval (second)
@@ -150,8 +152,6 @@ if ((BDY_FORMAT >= 1)); then
     done
   fi
 fi
-
-OUT_CYCLE_SKIP=${OUT_CYCLE_SKIP:-1}
 
 #-------------------------------------------------------------------------------
 }
@@ -304,30 +304,28 @@ while ((time <= ETIME)); do
 
   # topo
   #-------------------
-  if ((loop == 1)); then
-    if [ "$TOPO_FORMAT" = 'prep' ]; then
-      if ((DISK_MODE == 3)); then
-        for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
-          if ((PNETCDF == 1)); then
-            path="const/topo.nc"
-            echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-          else
-            for q in $(seq $mem_np); do
-              path="const/topo/topo$(printf $SCALE_SFX $((q-1)))"
-              echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-            done
-          fi
-        done
-      else
+  if ((loop == 1)) && [ "$TOPO_FORMAT" = 'prep' ]; then
+    if ((DISK_MODE == 3)); then
+      for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
         if ((PNETCDF == 1)); then
           path="const/topo.nc"
-          echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+          echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
         else
           for q in $(seq $mem_np); do
             path="const/topo/topo$(printf $SCALE_SFX $((q-1)))"
-            echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+            echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
           done
         fi
+      done
+    else
+      if ((PNETCDF == 1)); then
+        path="const/topo.nc"
+        echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+      else
+        for q in $(seq $mem_np); do
+          path="const/topo/topo$(printf $SCALE_SFX $((q-1)))"
+          echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+        done
       fi
     fi
   fi
@@ -347,36 +345,16 @@ while ((time <= ETIME)); do
 
   # landuse
   #-------------------
-  if ((loop == 1 || LANDUSE_UPDATE == 1)); then
-    if [ "$LANDUSE_FORMAT" = 'prep' ]; then
-      if ((DISK_MODE == 3)); then
-        for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
-          if ((PNETCDF == 1)); then
-            if ((LANDUSE_UPDATE == 1)); then
-              path="${time}/landuse.nc"
-            else
-              path="const/landuse.nc"
-            fi
-            echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-          else
-            for q in $(seq $mem_np); do
-              if ((LANDUSE_UPDATE == 1)); then
-                path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
-              else
-                path="const/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
-              fi
-              echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-            done
-          fi
-        done
-      else
+  if ((loop == 1 || LANDUSE_UPDATE == 1)) && [ "$LANDUSE_FORMAT" = 'prep' ]; then
+    if ((DISK_MODE == 3)); then
+      for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
         if ((PNETCDF == 1)); then
           if ((LANDUSE_UPDATE == 1)); then
             path="${time}/landuse.nc"
           else
             path="const/landuse.nc"
           fi
-          echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+          echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
         else
           for q in $(seq $mem_np); do
             if ((LANDUSE_UPDATE == 1)); then
@@ -384,9 +362,27 @@ while ((time <= ETIME)); do
             else
               path="const/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
             fi
-            echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+            echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
           done
         fi
+      done
+    else
+      if ((PNETCDF == 1)); then
+        if ((LANDUSE_UPDATE == 1)); then
+          path="${time}/landuse.nc"
+        else
+          path="const/landuse.nc"
+        fi
+        echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+      else
+        for q in $(seq $mem_np); do
+          if ((LANDUSE_UPDATE == 1)); then
+            path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+          else
+            path="const/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+          fi
+          echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+        done
       fi
     fi
   fi
@@ -879,7 +875,7 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_pp_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale_pp $MEMBER_RUN $iter
+       $mem_nodes $mem_np $TMPRUN/scale_pp $MEMBER_RUN $iter cycle
 fi
 
 if ((MYRANK == 0)); then
@@ -999,7 +995,7 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_init_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale_init $MEMBER_RUN $iter
+       $mem_nodes $mem_np $TMPRUN/scale_init $MEMBER_RUN $iter cycle
 fi
 
 if ((MYRANK == 0)); then
@@ -1137,7 +1133,7 @@ bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SI
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale $mtot $iter
+       $mem_nodes $mem_np $TMPRUN/scale $mtot $iter cycle
 fi
 
 mkinit=0
