@@ -116,10 +116,6 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-#SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
-#                            #  0: No
-#                            #  1: Yes
-
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
