@@ -872,7 +872,7 @@ if ((BDY_FORMAT == 1)); then
   bdytopo=${TMPDAT_BDYDATA}/bdytopo/const/topo
 fi
 
-if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+if ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= mtot ? repeat_mems : mtot))
@@ -925,7 +925,7 @@ elif ((BDY_FORMAT == 0)); then
   return 1
 fi
 
-if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+if ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= mtot ? repeat_mems : mtot))
@@ -981,7 +981,7 @@ bdyorgf=${TMPDAT_BDYDATA}/bdyorg
 
 if ((BDY_ENS == 1)); then
   MEMBER_RUN=$mtot
-elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+elif ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= mtot ? repeat_mems : mtot))
@@ -1061,7 +1061,7 @@ fi
 
 if ((BDY_ENS == 1)); then
   MEMBER_RUN=$mtot
-elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+elif ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=1
 else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= mtot ? repeat_mems : mtot))

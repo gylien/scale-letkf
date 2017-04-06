@@ -101,14 +101,6 @@ BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 #===============================================================================
 # Temporary directories to store runtime files
 
-DISK_MODE_TOPO_LANDUSE_DB=2
-
-DISK_MODE_DATA_BDY=2
-
-DISK_MODE_DATA_TOPO=2
-DISK_MODE_DATA_LANDUSE=2
-DISK_MODE_DATA_BDYPREP=2
-
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes

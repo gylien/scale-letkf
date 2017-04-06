@@ -118,9 +118,9 @@ ENABLE_SET=0       ######
 # Temporary directories to store runtime files
 
 DISK_MODE=2
-DISK_MODE_CONSTDB=
-DISK_MODE_BDYDATA=
-DISK_MODE_OBS=
+DISK_MODE_CONSTDB=2
+DISK_MODE_BDYDATA=2
+DISK_MODE_OBS=2
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No

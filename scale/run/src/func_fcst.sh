@@ -751,7 +751,7 @@ if ((BDY_FORMAT == 1)); then
   bdytopo=${TMPDAT_BDYDATA}/bdytopo/const/topo
 fi
 
-if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+if ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=$rcycle
 #  MEMBER_RUN=1
 else # local run directory: run multiple members as needed
@@ -776,7 +776,7 @@ for it in $(seq $its $ite); do
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
     if ((m >= 1 && m <= MEMBER_RUN)); then
-      if ((TMPRUN_MODE <= 2)); then
+      if ((DISK_MODE <= 2)); then
         c=$m
       else
         c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
@@ -813,7 +813,7 @@ elif ((BDY_FORMAT == 0)); then
   return 1
 fi
 
-if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+if ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=$rcycle
 else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= fmember ? $((repeat_mems*rcycle)) : $((fmember*rcycle))))
@@ -828,7 +828,7 @@ for it in $(seq $its $ite); do
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
     if ((m >= 1 && m <= MEMBER_RUN)); then
-      if ((TMPRUN_MODE <= 2)); then
+      if ((DISK_MODE <= 2)); then
         c=$m
       else
         c=$((repeat_mems <= fmember ? $(((m-1)/repeat_mems+1)) : $(((m-1)/fmember+1))))
@@ -871,7 +871,7 @@ bdyorgf=${TMPDAT_BDYDATA}/bdyorg
 
 if ((BDY_ENS == 1)); then
   MEMBER_RUN=$((fmember*rcycle))
-elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+elif ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=$rcycle
 else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= fmember ? $((repeat_mems*rcycle)) : $((fmember*rcycle))))
@@ -903,7 +903,7 @@ for it in $(seq $its $ite); do
       if ((BDY_ENS == 1)); then
         c=$(((m-1)/fmember+1))
         mem_bdy=${name_m[$m]}
-      elif ((TMPRUN_MODE <= 2)); then
+      elif ((DISK_MODE <= 2)); then
         c=$m
         mem_bdy='mean'
       else
@@ -964,7 +964,7 @@ fi
 
 if ((BDY_ENS == 1)); then
   MEMBER_RUN=$((fmember*rcycle))
-elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+elif ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
   MEMBER_RUN=$rcycle
 else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= fmember ? $((repeat_mems*rcycle)) : $((fmember*rcycle))))
@@ -987,7 +987,7 @@ for it in $(seq $its $ite); do
       if ((BDY_ENS == 1)); then
         c=$(((m-1)/fmember+1))
         mem_bdy=${name_m[$m]}
-      elif ((TMPRUN_MODE <= 2)); then
+      elif ((DISK_MODE <= 2)); then
         c=$m
         mem_bdy='mean'
       else

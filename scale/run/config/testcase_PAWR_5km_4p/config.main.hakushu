@@ -110,20 +110,13 @@ ENABLE_SET=0       ######
 #===============================================================================
 # Temporary directories to store runtime files
 
-TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
-TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
+DISK_MODE=3                 # Disk type used for the main temporary directory
                             #  1: share (link to TMP)
                             #  2: share (staging to TMP)
                             #  3: local (staging to TMPL)
-
-DISK_MODE_TOPO_LANDUSE_DB=3
-
-DISK_MODE_DATA_BDY=3
-
-DISK_MODE_DATA_TOPO=3
-DISK_MODE_DATA_LANDUSE=3
-DISK_MODE_DATA_BDYPREP=3
+DISK_MODE_CONSTDB=2         # Disk type used for the temporary directory of static database
+DISK_MODE_BDYDATA=2         # Disk type used for the temporary directory of raw boundary data 
+DISK_MODE_OBS=2             # Disk type used for the temporary directory of observation data
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
