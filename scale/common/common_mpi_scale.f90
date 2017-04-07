@@ -31,7 +31,6 @@ module common_mpi_scale
   integer,save :: nij1
   integer,save :: nij1max
   integer,allocatable,save :: nij1node(:)
-  real(r_size),allocatable,save :: topo2d(:,:)
   real(r_size),allocatable,save :: rig1(:),rjg1(:)
   real(r_size),allocatable,save :: topo1(:)
   real(r_size),allocatable,save :: hgt1(:,:)
@@ -125,7 +124,7 @@ end subroutine finalize_mpi_scale
 subroutine set_common_mpi_scale
   implicit none
   integer :: color, key
-  integer :: i, n, ierr
+  integer :: ierr
 
   call mpi_timer('', 2)
 
@@ -142,28 +141,36 @@ subroutine set_common_mpi_scale
 
   call mpi_timer('set_common_mpi_scale:mpi_comm_split_e:', 2)
 
-  ! Compute nij1, nij1max, nij1node
-  !-----------------------------------------------------------------------------
+!!!  ! Read/calculate model coordinates
+!!!  !-----------------------------------------------------------------------------
 
-  i = mod(nlon*nlat, nprocs_e)
-  nij1max = (nlon*nlat - i) / nprocs_e + 1
-  if (myrank_e < i) then
-    nij1 = nij1max
-  else
-    nij1 = nij1max - 1
-  end if
-  write (6,'(A,I6.6,A,I7)') 'MYRANK ', myrank, ' number of grid points: nij1 =', nij1
+!!!  if (VERIFY_MAPPROJ) then
 
-  allocate (nij1node(nprocs_e))
-  do n = 1, nprocs_e
-    if (n-1 < i) then
-      nij1node(n) = nij1max
-    else
-      nij1node(n) = nij1max - 1
-    end if
-  end do
 
-  call mpi_timer('set_common_mpi_scale:nij1_cal:', 2)
+!!!  if (myrank_e == 0) then
+!!!    v3dg = 0.0d0
+!!!    v2dg = 0.0d0
+
+!!!    call rank_1d_2d(PRC_myrank, iproc, jproc)
+!!!    do j = 1, nlat
+!!!      do i = 1, nlon
+!!!        v3dg(1,i,j,1) = real(i + iproc * nlon + IHALO, RP)
+!!!        v3dg(1,i,j,2) = real(j + jproc * nlat + JHALO, RP)
+!!!      end do
+!!!    end do
+
+!!!    call mpi_timer('set_common_mpi_grid:rij_cal:', 2)
+
+!!!  ! Note that only 'mmean_rank_e' processes have topo data in 'topo2d', 
+!!!  ! that will be used later in the obs departure monitor calculation
+!!!    call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
+!!!    v3dg(1,:,:,3) = topo2d
+
+!!!    call mpi_timer('set_common_mpi_grid:read_topo:', 2)
+!!!  end if
+
+
+
 
   return
 end subroutine set_common_mpi_scale
@@ -195,12 +202,34 @@ subroutine set_common_mpi_grid
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   REAL(r_size),ALLOCATABLE :: v3d(:,:,:)
   REAL(r_size),ALLOCATABLE :: v2d(:,:)
-  INTEGER :: i,j
+  INTEGER :: i, j, n
   integer :: iproc, jproc
+#ifdef DEBUG
+  real(r_size) :: topo2dtmp(nlon,nlat)
+#endif
 
   call mpi_timer('', 2)
 
-  ALLOCATE(topo2d(nlon,nlat))
+  ! Compute nij1, nij1max, nij1node
+  !-----------------------------------------------------------------------------
+
+  i = mod(nlon*nlat, nprocs_e)
+  nij1max = (nlon*nlat - i) / nprocs_e + 1
+  if (myrank_e < i) then
+    nij1 = nij1max
+  else
+    nij1 = nij1max - 1
+  end if
+  write (6,'(A,I6.6,A,I7)') 'MYRANK ', myrank, ' number of grid points: nij1 =', nij1
+
+  allocate (nij1node(nprocs_e))
+  do n = 1, nprocs_e
+    if (n-1 < i) then
+      nij1node(n) = nij1max
+    else
+      nij1node(n) = nij1max - 1
+    end if
+  end do
 
   ALLOCATE(rig1(nij1))
   ALLOCATE(rjg1(nij1))
@@ -210,6 +239,8 @@ subroutine set_common_mpi_grid
 
   ALLOCATE(v3d(nij1,nlev,nv3d))
   ALLOCATE(v2d(nij1,nv2d))
+
+  call mpi_timer('set_common_mpi_grid:nij1_cal:', 2)
 
 !!!!!! ----- need to be replaced by more native communication !!!!!!
 
@@ -227,9 +258,21 @@ subroutine set_common_mpi_grid
 
     call mpi_timer('set_common_mpi_grid:rij_cal:', 2)
 
-  ! Note that only 'mmean_rank_e' processes have topo data in 'topo2d', 
-  ! that will be used later in the obs departure monitor calculation
-    call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
+    if (allocated(topo2d)) then
+      write (6, '(1x,A,A15,A)') '*** Read 2D var: ', trim(topo2d_name), ' -- skipped because it was read previously'
+#ifdef DEBUG
+      call read_topo(LETKF_TOPO_IN_BASENAME, topo2dtmp)
+      if (maxval(abs(topo2dtmp - topo2d)) > tiny(topo2d)) then
+        write (6, '(A,F15.7)') '[Error] topo height in history files and restart files are inconsistent; max diff = ', maxval(abs(topo2dtmp - topo2d))
+        stop
+      end if
+#endif
+    else
+      ! Note that in this case, only 'mmean_rank_e' processes have topo data in 'topo2d', 
+      ! that will be used later in the obs departure monitor calculation
+      call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
+    end if
+
     v3dg(1,:,:,3) = topo2d
 
     call mpi_timer('set_common_mpi_grid:read_topo:', 2)

@@ -72,6 +72,7 @@ PROGRAM obsope
 
   call set_common_conf(nprocs)
 
+!  call read_nml_model
   call read_nml_obs_error
   call read_nml_obsope
   call read_nml_letkf_radar

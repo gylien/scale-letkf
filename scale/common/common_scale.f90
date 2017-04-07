@@ -24,14 +24,13 @@ MODULE common_scale
 ! General parameters
 !-------------------------------------------------------------------------------
 
-  ! Parameter 'nv3d' is set in common_nml.f90 ; 3D state variables (in SCALE restart files)
-  ! Parameter 'nv2d' is set in common_nml.f90 ; 2D state variables (in SCALE restart files)
-  INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
-#ifdef H08
-  INTEGER,PARAMETER :: nv2dd=9  ! H08  ! 2D diagnostic variables (in SCALE history files)
-#else
-  INTEGER,PARAMETER :: nv2dd=7  ! 2D diagnostic variables (in SCALE history files)
-#endif
+  INTEGER,PARAMETER :: vname_max = 10
+
+  ! 
+  !--- 3D, 2D state variables (in SCALE restart files)
+  ! 
+  ! Parameter 'nv3d' is set in common_nml.f90
+  ! Parameter 'nv2d' is set in common_nml.f90
   INTEGER,PARAMETER :: iv3d_rho=1  !-- State in restart files
   INTEGER,PARAMETER :: iv3d_rhou=2 !
   INTEGER,PARAMETER :: iv3d_rhov=3 !
@@ -42,12 +41,26 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv3d_w=3    !
   INTEGER,PARAMETER :: iv3d_t=4    !
   INTEGER,PARAMETER :: iv3d_p=5    !
-  INTEGER,PARAMETER :: iv3d_q=6
-  INTEGER,PARAMETER :: iv3d_qc=7
-  INTEGER,PARAMETER :: iv3d_qr=8
-  INTEGER,PARAMETER :: iv3d_qi=9
-  INTEGER,PARAMETER :: iv3d_qs=10
-  INTEGER,PARAMETER :: iv3d_qg=11
+  INTEGER,PARAMETER :: iv3d_q=6    !
+  INTEGER,PARAMETER :: iv3d_qc=7   !
+  INTEGER,PARAMETER :: iv3d_qr=8   !
+  INTEGER,PARAMETER :: iv3d_qi=9   !
+  INTEGER,PARAMETER :: iv3d_qs=10  !
+  INTEGER,PARAMETER :: iv3d_qg=11  !
+  CHARACTER(vname_max),PARAMETER :: v3d_name(nv3d) = &
+     (/'DENS', 'MOMX', 'MOMY', 'MOMZ', 'RHOT', &
+       'QV', 'QC', 'QR', 'QI', 'QS', 'QG'/)
+  CHARACTER(vname_max) :: v2d_name(nv2d)
+
+  ! 
+  !--- 3D, 2D diagnostic variables (in SCALE history files)
+  ! 
+  INTEGER,PARAMETER :: nv3dd=13
+#ifdef H08
+  INTEGER,PARAMETER :: nv2dd=9  ! H08
+#else
+  INTEGER,PARAMETER :: nv2dd=7
+#endif
   INTEGER,PARAMETER :: iv3dd_u=1
   INTEGER,PARAMETER :: iv3dd_v=2
   INTEGER,PARAMETER :: iv3dd_w=3
@@ -72,8 +85,33 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv2dd_lsmask=8 ! H08
   INTEGER,PARAMETER :: iv2dd_skint=9 ! H08
 #endif
-!  INTEGER,PARAMETER :: iv2dd_tsfc=8
+  CHARACTER(vname_max),PARAMETER :: v3dd_name(nv3dd) = &
+     (/'U', 'V', 'W', 'T', 'PRES', &
+       'QV', 'QC', 'QR', 'QI', 'QS', 'QG', 'RH', 'height'/)
+#ifdef H08
+  CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &       ! H08
+     (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2', & ! H08
+       'lsmask', 'SFC_TEMP'/)                                  ! H08
+#else
+  CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &
+     (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2'/)
+#endif
 
+  ! 
+  !--- Variables for model coordinates
+  ! 
+  REAL(r_size),ALLOCATABLE,SAVE :: height3d(:,:,:)
+  REAL(r_size),ALLOCATABLE,SAVE :: lon2d(:,:)
+  REAL(r_size),ALLOCATABLE,SAVE :: lat2d(:,:)
+  REAL(r_size),ALLOCATABLE,SAVE :: topo2d(:,:)
+  CHARACTER(vname_max),PARAMETER :: height3d_name = 'height' ! (in SCALE restart files)
+  CHARACTER(vname_max),PARAMETER :: lon2d_name = 'lon'       ! (in SCALE restart files)
+  CHARACTER(vname_max),PARAMETER :: lat2d_name = 'lat'       ! (in SCALE restart files)
+  CHARACTER(vname_max),PARAMETER :: topo2d_name = 'TOPO'     ! (in SCALE topo files)
+
+  ! 
+  !--- grid settings
+  ! 
   INTEGER,SAVE :: nlon  ! # grids in I-direction [subdomain]
   INTEGER,SAVE :: nlat  ! # grids in J-direction [subdomain]
   INTEGER,SAVE :: nlev  ! # grids in K-direction
@@ -87,12 +125,6 @@ MODULE common_scale
   INTEGER,SAVE :: nlevalld
   INTEGER,SAVE :: ngpv
   INTEGER,SAVE :: ngpvd
-
-  INTEGER,PARAMETER :: vname_max = 10
-  CHARACTER(vname_max),SAVE :: v3d_name(nv3d)
-  CHARACTER(vname_max),SAVE :: v3dd_name(nv3dd)
-  CHARACTER(vname_max),SAVE :: v2d_name(nv2d)
-  CHARACTER(vname_max),SAVE :: v2dd_name(nv2dd)
 
 !  INTEGER,PARAMETER :: nlonsub=200
 !  INTEGER,PARAMETER :: nlatsub=200
@@ -193,50 +225,6 @@ SUBROUTINE set_common_scale
   nlevalld = nlev * nv3dd + nv2dd
   ngpv  = nij0 * nlevall
   ngpvd = nij0 * nlevalld
-
-  !
-  ! Variable names (same as in the NetCDF file)
-  !
-  ! state variables (in 'restart' files, for LETKF)
-  v3d_name(iv3d_rho)  = 'DENS'
-  v3d_name(iv3d_rhou) = 'MOMX'
-  v3d_name(iv3d_rhov) = 'MOMY'
-  v3d_name(iv3d_rhow) = 'MOMZ'
-  v3d_name(iv3d_rhot) = 'RHOT'
-  v3d_name(iv3d_q)    = 'QV'
-  v3d_name(iv3d_qc)   = 'QC'
-  v3d_name(iv3d_qr)   = 'QR'
-  v3d_name(iv3d_qi)   = 'QI'
-  v3d_name(iv3d_qs)   = 'QS'
-  v3d_name(iv3d_qg)   = 'QG'
-  !
-  ! diagnostic variables (in 'history' files, for observation operators)
-  v3dd_name(iv3dd_u)    = 'U'
-  v3dd_name(iv3dd_v)    = 'V'
-  v3dd_name(iv3dd_w)    = 'W'
-  v3dd_name(iv3dd_t)    = 'T'
-  v3dd_name(iv3dd_p)    = 'PRES'
-  v3dd_name(iv3dd_q)    = 'QV'
-  v3dd_name(iv3dd_qc)   = 'QC'
-  v3dd_name(iv3dd_qr)   = 'QR'
-  v3dd_name(iv3dd_qi)   = 'QI'
-  v3dd_name(iv3dd_qs)   = 'QS'
-  v3dd_name(iv3dd_qg)   = 'QG'
-  v3dd_name(iv3dd_rh)   = 'RH'
-  v3dd_name(iv3dd_hgt)   = 'height'
-  !
-  v2dd_name(iv2dd_topo) = 'topo'
-  v2dd_name(iv2dd_ps) = 'SFC_PRES'
-  v2dd_name(iv2dd_rain) = 'PREC'
-  v2dd_name(iv2dd_u10m) = 'U10'
-  v2dd_name(iv2dd_v10m) = 'V10'
-  v2dd_name(iv2dd_t2m) = 'T2'
-  v2dd_name(iv2dd_q2m) = 'Q2'
-#ifdef H08
-  v2dd_name(iv2dd_lsmask) = 'lsmask' ! H08
-  v2dd_name(iv2dd_skint) = 'SFC_TEMP' ! H08
-#endif
-!  v2dd_name(iv2dd_tsfc) = 'SFC_TEMP'
 
 !  !
 !  ! Lon, Lat
@@ -340,9 +328,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     PRC_myrank
   use scale_rm_process, only: &
     PRC_HAS_W,  &
-    PRC_HAS_E,  &
-    PRC_HAS_S,  &
-    PRC_HAS_N
+    PRC_HAS_S
   use scale_grid_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX, &
@@ -479,9 +465,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     PRC_myrank
   use scale_rm_process, only: &
     PRC_HAS_W,  &
-    PRC_HAS_E,  &
-    PRC_HAS_S,  &
-    PRC_HAS_N
+    PRC_HAS_S
   use scale_grid_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX, &
@@ -542,6 +526,74 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
 END SUBROUTINE write_restart
 
 !-------------------------------------------------------------------------------
+! [File I/O] Read SCALE restart files for model coordinates
+!-------------------------------------------------------------------------------
+SUBROUTINE read_restart_coor(filename)
+  use netcdf, only: NF90_NOWRITE
+  use scale_process, only: &
+    PRC_myrank
+  use scale_rm_process, only: &
+    PRC_HAS_W,  &
+    PRC_HAS_S
+  use scale_grid_index, only: &
+    IHALO, JHALO, &
+    IMAX, JMAX, KMAX, &
+    IMAXB, JMAXB
+  use common_mpi, only: myrank
+  use common_ncio
+  IMPLICIT NONE
+
+  CHARACTER(*),INTENT(IN) :: filename
+  character(len=12) :: filesuffix = '.pe000000.nc'
+  integer :: ncid
+  integer :: is, ie, js, je
+  real(RP) :: v3dgtmp(KMAX,IMAXB,JMAXB)
+  real(RP) :: v2dgtmp(IMAXB,JMAXB)
+
+  is = 1
+  ie = IMAX
+  js = 1
+  je = JMAX
+  if ( .not. PRC_HAS_W ) then
+    is = is + IHALO
+    ie = ie + IHALO
+  end if
+  if ( .not. PRC_HAS_S ) then
+    js = js + JHALO
+    je = je + JHALO
+  end if
+
+  write (filesuffix(4:9),'(I6.6)') PRC_myrank
+  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+  call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
+
+  if (.not. allocated(height3d)) then
+    allocate (height3d(nlev,nlon,nlat))
+  end if
+  write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(height3d_name)
+  call ncio_read(ncid, trim(height3d_name), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
+  height3d = v3dgtmp(:,is:ie,js:je)
+
+  if (.not. allocated(lon2d)) then
+    allocate (lon2d(nlon,nlat))
+  end if
+  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lon2d_name)
+  call ncio_read(ncid, trim(lon2d_name), IMAXB, JMAXB, 1, v2dgtmp)
+  lon2d = v2dgtmp(is:ie,js:je)
+
+  if (.not. allocated(lat2d)) then
+    allocate (lat2d(nlon,nlat))
+  end if
+  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lat2d_name)
+  call ncio_read(ncid, trim(lat2d_name), IMAXB, JMAXB, 1, v2dgtmp)
+  lat2d = v2dgtmp(is:ie,js:je)
+
+  call ncio_close(ncid)
+
+  RETURN
+END SUBROUTINE read_restart_coor
+
+!-------------------------------------------------------------------------------
 ! [File I/O] Read SCALE topography files
 !-------------------------------------------------------------------------------
 SUBROUTINE read_topo(filename,topo)
@@ -550,9 +602,7 @@ SUBROUTINE read_topo(filename,topo)
     PRC_myrank
   use scale_rm_process, only: &
     PRC_HAS_W,  &
-    PRC_HAS_E,  &
-    PRC_HAS_S,  &
-    PRC_HAS_N
+    PRC_HAS_S
   use scale_grid_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, &
@@ -585,8 +635,8 @@ SUBROUTINE read_topo(filename,topo)
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
-  write(6,'(1x,A,A15)') '*** Read 2D var: ', 'TOPO'
-  call ncio_read(ncid, 'TOPO', IMAXB, JMAXB, 1, v2dgtmp)
+  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(topo2d_name)
+  call ncio_read(ncid, trim(topo2d_name), IMAXB, JMAXB, 1, v2dgtmp)
   topo = v2dgtmp(is:ie,js:je)
 
   call ncio_close(ncid)
@@ -678,6 +728,13 @@ subroutine read_history(filename,step,v3dg,v2dg)
 !    call COMM_wait ( v2dgtmp(:,:,iv2d), iv2d )
   end do
 !  v2dg = real(v2dgtmp, r_size)
+
+  ! Save topo for later use
+  !-------------
+  if (.not. allocated(topo2d)) then
+    allocate (topo2d(nlon,nlat))
+    topo2d = v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo)
+  end if
 
   return
 end subroutine read_history

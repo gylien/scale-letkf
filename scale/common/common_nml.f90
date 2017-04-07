@@ -38,6 +38,10 @@ MODULE common_nml
   logical :: DET_RUN = .false.
   logical :: DET_RUN_CYCLED = .true.
 
+  !--- PARAM_MODEL
+  character(len=10) :: MODEL = 'scale-rm'
+  logical :: VERIFY_MAPPROJ = .false.
+
   !--- PARAM_OBSOPE
   integer               :: OBS_IN_NUM = 1
   character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
@@ -134,7 +138,7 @@ MODULE common_nml
 
   ! >0: localization length scale (m)
   !  0: no localization XXX not implemented yet XXX
-  ! <0: same as HORI_LOCAL_SIGMA(1)
+  ! <0: same as HORI_LOCAL(1)
   real(r_size) :: HORI_LOCAL(nobtype) = &
     (/500.0d3, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
        -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
@@ -142,7 +146,7 @@ MODULE common_nml
 
   ! >0: localization length scale [ln(p) or m depends on obstype]
   !  0: no localization
-  ! <0: same as VERTIME_LOCAL(1)
+  ! <0: same as VERT_LOCAL(1)
   real(r_size) :: VERT_LOCAL(nobtype) = &
     (/ 0.4d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
@@ -151,7 +155,7 @@ MODULE common_nml
 
   ! >0: localization length scale (sec) XXX not implemented yet XXX
   !  0: no localization
-  ! <0: same as TIME_LOCAL_SIGMA(1)
+  ! <0: same as TIME_LOCAL(1)
   real(r_size) :: TIME_LOCAL(nobtype) = &
     (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
@@ -323,6 +327,32 @@ subroutine read_nml_ensemble
 
   return
 end subroutine read_nml_ensemble
+
+!-------------------------------------------------------------------------------
+! PARAM_MODEL
+!-------------------------------------------------------------------------------
+subroutine read_nml_model
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_MODEL/ &
+    MODEL, &
+    VERIFY_MAPPROJ
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_MODEL,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_MODEL/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_MODEL. Check!'
+    stop
+  endif
+
+  write(6, nml=PARAM_MODEL)
+
+  return
+end subroutine read_nml_model
 
 !-------------------------------------------------------------------------------
 ! PARAM_OBSOPE
