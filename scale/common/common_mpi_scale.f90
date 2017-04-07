@@ -122,9 +122,22 @@ end subroutine finalize_mpi_scale
 ! set_common_mpi_scale
 !-------------------------------------------------------------------------------
 subroutine set_common_mpi_scale
+  use scale_grid, only: &
+      GRID_CX, GRID_CY, &
+      DX, DY
+  use scale_grid_index, only: &
+      IHALO, JHALO
+  use scale_mapproj, only: &
+      MPRJ_xy2lonlat
   implicit none
   integer :: color, key
   integer :: ierr
+  character(len=filelenmax) :: filename
+  real(r_size), allocatable :: height3dtmp(:,:,:)
+  real(r_size), allocatable :: lon2dtmp(:,:)
+  real(r_size), allocatable :: lat2dtmp(:,:)
+  integer :: i, j
+  real(r_size) :: ri, rj
 
   call mpi_timer('', 2)
 
@@ -141,36 +154,55 @@ subroutine set_common_mpi_scale
 
   call mpi_timer('set_common_mpi_scale:mpi_comm_split_e:', 2)
 
-!!!  ! Read/calculate model coordinates
-!!!  !-----------------------------------------------------------------------------
+  ! Read/calculate model coordinates
+  !-----------------------------------------------------------------------------
 
-!!!  if (VERIFY_MAPPROJ) then
+  if (VERIFY_COORD) then
+    if (myrank_e == 0) then
+!      allocate (height3d(nlev,nlon,nlat))
+      allocate (lon2d(nlon,nlat))
+      allocate (lat2d(nlon,nlat))
+      allocate (height3dtmp(nlev,nlon,nlat))
+      allocate (lon2dtmp(nlon,nlat))
+      allocate (lat2dtmp(nlon,nlat))
 
+      if (.not. allocated(topo2d)) then
+        allocate (topo2d(nlon,nlat))
+        call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
+      end if
+!      call scale_calc_z(topo2d, height3d)
 
-!!!  if (myrank_e == 0) then
-!!!    v3dg = 0.0d0
-!!!    v2dg = 0.0d0
+!$OMP PARALLEL DO PRIVATE(i,j,ri,rj) COLLAPSE(2)
+      do j = 1, nlat
+        do i = 1, nlon
+          ri = real(i + IHALO, r_size)
+          rj = real(j + JHALO, r_size)
+          call MPRJ_xy2lonlat((ri-1.0d0) * DX + GRID_CX(1), (rj-1.0d0) * DY + GRID_CY(1), lon2d(i,j), lat2d(i,j))
+          lon2d(i,j) = lon2d(i,j) * rad2deg
+          lat2d(i,j) = lat2d(i,j) * rad2deg
+        end do
+      end do
+!$OMP END PARALLEL DO
 
-!!!    call rank_1d_2d(PRC_myrank, iproc, jproc)
-!!!    do j = 1, nlat
-!!!      do i = 1, nlon
-!!!        v3dg(1,i,j,1) = real(i + iproc * nlon + IHALO, RP)
-!!!        v3dg(1,i,j,2) = real(j + jproc * nlat + JHALO, RP)
-!!!      end do
-!!!    end do
+      call file_member_replace(proc2mem(1,1,myrank+1), GUES_IN_BASENAME, filename)
+      call read_restart_coor(filename, lon2dtmp, lat2dtmp, height3dtmp)
 
-!!!    call mpi_timer('set_common_mpi_grid:rij_cal:', 2)
+      if (maxval(abs(lon2dtmp - lon2d)) > 1.0d-6 .or. maxval(abs(lat2dtmp - lat2d)) > 1.0d-6) then
+        write (6, '(A,F15.7,A,F15.7)') '[Error] Map projection settings are incorrect! -- maxdiff(lon) = ', &
+                                       maxval(abs(lon2dtmp - lon2d)), ', maxdiff(lat) = ', maxval(abs(lat2dtmp - lat2d))
+        stop
+      end if
+!      if (maxval(abs(height3dtmp - height3d)) > 1.0d-6) then
+!        write (6, '(A,F15.7)') '[Error] 3D height calculation are incorrect, possibily due to inconsistent topography files! -- maxdiff(height) = ', &
+!                               maxval(abs(height3dtmp - height3d))
+!        stop
+!      end if
 
-!!!  ! Note that only 'mmean_rank_e' processes have topo data in 'topo2d', 
-!!!  ! that will be used later in the obs departure monitor calculation
-!!!    call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
-!!!    v3dg(1,:,:,3) = topo2d
+      write (6, '(A)') 'VERIFY_COORD: Model coordinate calculation is good.'
 
-!!!    call mpi_timer('set_common_mpi_grid:read_topo:', 2)
-!!!  end if
-
-
-
+      call mpi_timer('set_common_mpi_scale:verify_coord:', 2)
+    end if
+  end if
 
   return
 end subroutine set_common_mpi_scale
@@ -262,14 +294,13 @@ subroutine set_common_mpi_grid
       write (6, '(1x,A,A15,A)') '*** Read 2D var: ', trim(topo2d_name), ' -- skipped because it was read previously'
 #ifdef DEBUG
       call read_topo(LETKF_TOPO_IN_BASENAME, topo2dtmp)
-      if (maxval(abs(topo2dtmp - topo2d)) > tiny(topo2d)) then
-        write (6, '(A,F15.7)') '[Error] topo height in history files and restart files are inconsistent; max diff = ', maxval(abs(topo2dtmp - topo2d))
+      if (maxval(abs(topo2dtmp - topo2d)) > 1.0d-6) then
+        write (6, '(A,F15.7)') '[Error] topo height in history files and restart files are inconsistent; maxdiff = ', maxval(abs(topo2dtmp - topo2d))
         stop
       end if
 #endif
     else
-      ! Note that in this case, only 'mmean_rank_e' processes have topo data in 'topo2d', 
-      ! that will be used later in the obs departure monitor calculation
+      allocate (topo2d(nlon,nlat))
       call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
     end if
 
@@ -288,7 +319,7 @@ subroutine set_common_mpi_grid
 
   call mpi_timer('set_common_mpi_grid:scatter:', 2)
 
-  call scale_calc_z(nij1, topo1, hgt1)
+  call scale_calc_z_grd(nij1, topo1, hgt1)
 
   call mpi_timer('set_common_mpi_grid:scale_calc_z:', 2)
 

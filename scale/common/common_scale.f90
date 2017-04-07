@@ -528,7 +528,7 @@ END SUBROUTINE write_restart
 !-------------------------------------------------------------------------------
 ! [File I/O] Read SCALE restart files for model coordinates
 !-------------------------------------------------------------------------------
-SUBROUTINE read_restart_coor(filename)
+SUBROUTINE read_restart_coor(filename,lon,lat,height)
   use netcdf, only: NF90_NOWRITE
   use scale_process, only: &
     PRC_myrank
@@ -544,6 +544,9 @@ SUBROUTINE read_restart_coor(filename)
   IMPLICIT NONE
 
   CHARACTER(*),INTENT(IN) :: filename
+  REAL(RP),INTENT(OUT) :: lon(nlon,nlat)
+  REAL(RP),INTENT(OUT) :: lat(nlon,nlat)
+  REAL(RP),INTENT(OUT) :: height(nlev,nlon,nlat)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: ncid
   integer :: is, ie, js, je
@@ -567,26 +570,18 @@ SUBROUTINE read_restart_coor(filename)
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
-  if (.not. allocated(height3d)) then
-    allocate (height3d(nlev,nlon,nlat))
-  end if
-  write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(height3d_name)
-  call ncio_read(ncid, trim(height3d_name), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-  height3d = v3dgtmp(:,is:ie,js:je)
+!!! restart files do not contain 3D height variable before SCALE v5.1
+!  write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(height3d_name)
+!  call ncio_read(ncid, trim(height3d_name), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
+!  height = v3dgtmp(:,is:ie,js:je)
 
-  if (.not. allocated(lon2d)) then
-    allocate (lon2d(nlon,nlat))
-  end if
   write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lon2d_name)
   call ncio_read(ncid, trim(lon2d_name), IMAXB, JMAXB, 1, v2dgtmp)
-  lon2d = v2dgtmp(is:ie,js:je)
+  lon = v2dgtmp(is:ie,js:je)
 
-  if (.not. allocated(lat2d)) then
-    allocate (lat2d(nlon,nlat))
-  end if
   write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lat2d_name)
   call ncio_read(ncid, trim(lat2d_name), IMAXB, JMAXB, 1, v2dgtmp)
-  lat2d = v2dgtmp(is:ie,js:je)
+  lat = v2dgtmp(is:ie,js:je)
 
   call ncio_close(ncid)
 
@@ -871,7 +866,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   real(r_size), intent(out) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   real(r_size), intent(out) :: v2dgh(nlonh,nlath,nv2dd)
 
-  real(r_size) :: ztop
+  real(r_size) :: height(nlev,nlon,nlat)
   integer :: i, j, k, iv3d, iv2d
 
   ! Variables that can be directly copied
@@ -897,16 +892,8 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   ! Calculate height based the the topography and vertical coordinate
   !---------------------------------------------------------
 
-  ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
-!$OMP PARALLEL DO PRIVATE(j,i,k)
-  do j = 1, nlat
-    do i = 1, nlon
-      do k = 1, nlev
-        v3dgh(k+KHALO, i+IHALO, j+JHALO, iv3dd_hgt) = (ztop - topo(i,j)) / ztop * GRID_CZ(k+KHALO) + topo(i,j)
-      end do
-    enddo
-  enddo
-!$OMP END PARALLEL DO
+  call scale_calc_z(topo, height)
+  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = height
 
   ! Surface variables: use the 1st level as the surface (although it is not)
   !---------------------------------------------------------
@@ -993,6 +980,42 @@ end subroutine state_to_history
 !END SUBROUTINE monit_grd
 
 !-------------------------------------------------------------------------------
+! Calculate 3D height coordinate given the topography height (on original grids)
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   nij         : scattered grid numbers
+!   topo(nij)   : topography height (on scattered grids)
+! [OUTPUT]
+!   z(nij,nlev) : 3D height coordinate (on scattered grids)
+!-------------------------------------------------------------------------------
+subroutine scale_calc_z(topo, z)
+  use scale_grid, only: &
+     GRID_CZ, &
+     GRID_FZ
+  use scale_grid_index, only: &
+     KHALO, KS, KE
+  implicit none
+
+  real(r_size), intent(in) :: topo(nlon,nlat)
+  real(r_size), intent(out) :: z(nlev,nlon,nlat)
+  real(r_size) :: ztop
+  integer :: i, j, k
+
+  ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
+!$OMP PARALLEL DO PRIVATE(j,i,k) COLLAPSE(2)
+  do j = 1, nlat
+    do i = 1, nlon
+      do k = 1, nlev
+        z(k, i, j) = (ztop - topo(i,j)) / ztop * GRID_CZ(k+KHALO) + topo(i,j)
+      end do
+    enddo
+  enddo
+!$OMP END PARALLEL DO
+
+  return
+end subroutine scale_calc_z
+
+!-------------------------------------------------------------------------------
 ! Calculate 3D height coordinate given the topography height (on scattered grids)
 !-------------------------------------------------------------------------------
 ! [INPUT]
@@ -1001,7 +1024,7 @@ end subroutine state_to_history
 ! [OUTPUT]
 !   z(nij,nlev) : 3D height coordinate (on scattered grids)
 !-------------------------------------------------------------------------------
-subroutine scale_calc_z(nij, topo, z)
+subroutine scale_calc_z_grd(nij, topo, z)
   use scale_grid, only: &
      GRID_CZ, &
      GRID_FZ
@@ -1011,7 +1034,7 @@ subroutine scale_calc_z(nij, topo, z)
 
   integer, intent(in) :: nij
   real(r_size), intent(in) :: topo(nij)
-  real(RP), intent(out) :: z(nij,nlev)
+  real(r_size), intent(out) :: z(nij,nlev)
   real(r_size) :: ztop
   integer :: k, i
 
@@ -1025,7 +1048,7 @@ subroutine scale_calc_z(nij, topo, z)
 !$OMP END PARALLEL DO
 
   return
-end subroutine scale_calc_z
+end subroutine scale_calc_z_grd
 
 !-------------------------------------------------------------------------------
 ! Calculate ensemble mean (on scattered grids)

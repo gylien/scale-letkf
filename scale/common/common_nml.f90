@@ -40,7 +40,7 @@ MODULE common_nml
 
   !--- PARAM_MODEL
   character(len=10) :: MODEL = 'scale-rm'
-  logical :: VERIFY_MAPPROJ = .false.
+  logical :: VERIFY_COORD = .false.
 
   !--- PARAM_OBSOPE
   integer               :: OBS_IN_NUM = 1
@@ -337,7 +337,7 @@ subroutine read_nml_model
 
   namelist /PARAM_MODEL/ &
     MODEL, &
-    VERIFY_MAPPROJ
+    VERIFY_COORD
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_MODEL,iostat=ierr)
