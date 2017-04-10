@@ -23,11 +23,14 @@ SCALE_LOG_SFX='.pe000000'
 # MPI_TYPE: 'K', 'sgimpt', 'openmpi'
 
 if [ "$PRESET" = 'K' ]; then
+  TMP='.'
   DISK_MODE=2
   ONLINE_STGOUT=0
   NODELIST_TYPE='K'
   MPI_TYPE='K'
 elif [ "$PRESET" = 'K_rankdir' ]; then
+  TMP='..'
+  TMPL='.'
   DISK_ALL_RANK_LOCAL=1
   DISK_MODE=3
   DISK_MODE_CONSTDB=2

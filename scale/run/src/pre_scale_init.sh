@@ -65,8 +65,6 @@ historybaselen=7
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
 
-TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
-
 if ((PNETCDF == 1)); then
   IO_AGGREGATE=".true."
 else
@@ -86,17 +84,17 @@ else
 fi
 
 if ((BDY_FORMAT == 1)); then
-  BASENAME_ORG="${TMPSUBDIR}/bdydata"
+  BASENAME_ORG="${TMPDIR}/bdydata"
   FILETYPE_ORG='SCALE-RM'
   USE_NESTING='.true.'
   LATLON_CATALOGUE_FNAME="$BDYORG/latlon_domain_catalogue.txt"
 elif ((BDY_FORMAT == 2)); then
-  BASENAME_ORG="${TMPSUBDIR}/bdydata"
+  BASENAME_ORG="${TMPDIR}/bdydata"
   FILETYPE_ORG='WRF-ARW'
   USE_NESTING='.false.'
   LATLON_CATALOGUE_FNAME=
 elif ((BDY_FORMAT == 4)); then
-  BASENAME_ORG="${TMPSUBDIR}/gradsbdy.conf"
+  BASENAME_ORG="${TMPDIR}/gradsbdy.conf"
   FILETYPE_ORG='GrADS'
   USE_NESTING='.false.'
   LATLON_CATALOGUE_FNAME=
@@ -118,9 +116,9 @@ for time_bdy in $BDY_TIME_LIST; do
     file_number="_$(printf %05d $i)"
   fi
   if ((BDY_ROTATING == 1)); then
-    bdyorg_path="${BDYORG}/${STIME}"
+    bdyorg_path="$(cd "${BDYORG}/${STIME}" && pwd)"
   else
-    bdyorg_path="${BDYORG}/const"
+    bdyorg_path="$(cd "${BDYORG}/const" && pwd)"
   fi
   if ((BDY_FORMAT == 1)); then
     if ((PNETCDF_BDY_SCALE == 1)); then
@@ -188,7 +186,7 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = $RESTART_OUTPUT," \
-        -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/init\"," \
+        -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPDIR}\/init\"," \
         -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
         -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
         -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT_CONSTDB}/land/param.bucket.conf\"," \
@@ -206,7 +204,7 @@ cat $TMPDAT/conf/config.nml.scale_init | \
 
 if [ -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
   cat $TMPDAT/conf/config.nml.grads_boundary | \
-      sed -e "s#--DIR--#${TMPSUBDIR}#g" \
+      sed -e "s#--DIR--#${TMPDIR}#g" \
       > $TMPDIR/gradsbdy.conf
 fi
 

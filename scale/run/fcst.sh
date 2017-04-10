@@ -90,7 +90,7 @@ fi
 # Determine the staging list and then stage in
 
 if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
-  echo "[$(datetime_now)] Initialization (stage-in)" >&2
+  echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR || exit $?
 ###  if [ "$CONF_MODE" = 'static' ]; then
@@ -327,7 +327,7 @@ if ((RUN_LEVEL <= 1)); then
   if ((ONLINE_STGOUT == 1)); then
     wait
   else
-    echo "[$(datetime_now)] Finalization (stage-out)" >&2
+    echo "[$(datetime_now)] Finalization (stage out)" >&2
 
     stage_out node || exit $?
   fi

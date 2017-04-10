@@ -1,17 +1,18 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Built-in stage-in script (run on a single node)
+#  Built-in stage-in script (run on the server side)
 #
 #===============================================================================
 
 MYNAME=$(basename $0)
 
-if (($# < 3)); then
+if (($# < 4)); then
   cat >&2 << EOF
 
-Usage: $MYNAME NRANKS STGLIST STGDIR
+Usage: $MYNAME MYRANK NRANKS STGLIST STGDIR
 
+   MYRANK   No use (dummy for using 'pdbash')
    NRANKS   Total number of nodes
    STGLIST  File of the stage-in list
    STGDIR   Directory where the files are staged into
@@ -20,6 +21,7 @@ EOF
   exit 1
 fi
 
+MYRANK="$1"; shift
 NRANKS="$1"; shift
 STGLIST="$1"; shift
 STGDIR="$1"
@@ -48,7 +50,7 @@ function stage_in_ln_sub () {
     echo "$MYNAME: should not create a link inside a link of directory '$(dirname "$destinstg")'" >&2
   elif [[ ("$source" != */ && "$destinstg" != */) || ("$source" == */ && "$destinstg" == */) ]]; then
     if (mkdir -p "$(dirname "$destinstg")"); then
-      ln -s "${source%/}" "${destinstg%/}" # remove possible trailing slashes
+      ln -s "$(dirname "$source")/$(basename "$source")" "$(dirname "$destinstg")/$(basename "$destinstg")" # remove possible trailing slashes
     fi
   else
     echo "$MYNAME: source '$source' and destination '$destinstg' need to be the same type" >&2

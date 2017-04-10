@@ -84,39 +84,37 @@ if ((PNETCDF == 1)); then
   IO_AGGREGATE=".true."
 fi
 
-TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
-
 RESTART_OUT_ADDITIONAL_COPIES=0
 RESTART_OUT_ADDITIONAL_BASENAME=
 if [ "$SCPCALL" = 'cycle' ]; then
   IO_LOG_DIR='scale'
   if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
     RESTART_OUT_ADDITIONAL_COPIES=1
-    RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPSUBDIR}\/restart_2\", "
+    RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPDIR}\/restart_2\", "
     icopy=2
     if ((SPRD_OUT == 1)); then
       RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
       icopy=$((icopy+1))
-      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPSUBDIR}\/restart_${icopy}\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPDIR}\/restart_${icopy}\", "
       icopy=$((icopy+1))
-      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPSUBDIR}\/restart_${icopy}\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPDIR}\/restart_${icopy}\", "
     fi
     if ((RTPS_INFL_OUT == 1)); then
       RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
       icopy=$((icopy+1))
-      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPSUBDIR}\/restart_${icopy}\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPDIR}\/restart_${icopy}\", "
     fi
     if ((NOBS_OUT == 1)); then
       RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
       icopy=$((icopy+1))
-      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPSUBDIR}\/restart_${icopy}\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPDIR}\/restart_${icopy}\", "
     fi
   elif [ "$MEM" = 'mdet' ]; then
     RESTART_OUT_ADDITIONAL_COPIES=1
-    RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPSUBDIR}\/restart_2\", "
+    RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPDIR}\/restart_2\", "
   elif ((OUT_OPT <= 3)); then
     RESTART_OUT_ADDITIONAL_COPIES=1
-    RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPSUBDIR}\/restart_2\", "
+    RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPDIR}\/restart_2\", "
   fi
 else
   IO_LOG_DIR="${SCPCALL}_scale"
@@ -134,13 +132,13 @@ conf="$(cat $TMPDAT/conf/config.nml.scale | \
             -e "/!--TIME_DT_LAND_RESTART--/a TIME_DT_LAND_RESTART = ${FCSTINT}.D0," \
             -e "/!--TIME_DT_URBAN_RESTART--/a TIME_DT_URBAN_RESTART = ${FCSTINT}.D0," \
             -e "/!--RESTART_IN_BASENAME--/a RESTART_IN_BASENAME = \"${INIT}\"," \
-            -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/restart\"," \
+            -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPDIR}\/restart\"," \
             -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
             -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
             -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${BDY}\"," \
             -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = $BS_YYYY, $BS_MM, $BS_DD, $BS_HH, $BS_II, $BS_SS," \
             -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0," \
-            -e "/!--HISTORY_DEFAULT_BASENAME--/a HISTORY_DEFAULT_BASENAME = \"${TMPSUBDIR}\/history\"," \
+            -e "/!--HISTORY_DEFAULT_BASENAME--/a HISTORY_DEFAULT_BASENAME = \"${TMPDIR}\/history\"," \
             -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = ${HISTINT}.D0," \
             -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_monitor\"," \
             -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT_CONSTDB}/land/param.bucket.conf\"," \

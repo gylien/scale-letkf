@@ -22,10 +22,10 @@ job='cycle'
 . config.main || exit $?
 . config.${job} || exit $?
 
-. src/func_distribute.sh
-. src/func_datetime.sh
-. src/func_util.sh
-. src/func_${job}.sh
+. src/func_distribute.sh || exit $?
+. src/func_datetime.sh || exit $?
+. src/func_util.sh || exit $?
+. src/func_${job}.sh || exit $?
 
 STAGING_DIR="$TMPS/staging"
 NODEFILE_DIR="$TMPS/node"
@@ -33,7 +33,7 @@ NODEFILE_DIR="$TMPS/node"
 #-------------------------------------------------------------------------------
 
 if ((USE_TMP_LINK == 1)); then
-  echo "[Error] $0: Wrong disk mode for K computer regular jobs." >&2
+  echo "[Error] $0: Wrong disk mode for K computer staged jobs." >&2
   exit 1
 fi
 
@@ -77,11 +77,11 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR || exit $?
-if ((IO_ARB == 1)); then                           ##
-  distribute_da_cycle_set - $NODEFILE_DIR || exit  ##
-else                                               ##
-  distribute_da_cycle - $NODEFILE_DIR || exit
-fi                                                 ##
+if ((IO_ARB == 1)); then                              ##
+  distribute_da_cycle_set - $NODEFILE_DIR || exit $?  ##
+else                                                  ##
+  distribute_da_cycle - $NODEFILE_DIR || exit $?
+fi                                                    ##
 
 #===============================================================================
 # Determine the staging list
@@ -90,30 +90,11 @@ echo "[$(datetime_now)] Determine the staging list"
 
 cp -L $SCRP_DIR/config.main $TMPS/config.main
 
-#if [ "$CONF_MODE" = 'static' ]; then
-  if [ "$PRESET" = 'K_rankdir' ]; then
-    echo "TMP='..'" >> $TMPS/config.main
-    echo "TMPL='.'" >> $TMPS/config.main
-  else
-    echo "TMP='.'" >> $TMPS/config.main
-  fi
-
-#  echo "STAGING_DIR=..." >> $TMPS/config.main
-#  echo "NODEFILE_DIR=..." >> $TMPS/config.main
-
-#else
-#fi
-
-echo ". config.rc" >> $TMPS/config.main
-
 echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMPS/config.main
-
-#  echo "SCRP_DIR=\"\$(pwd)\"" >> $TMPS/config.main
-#  echo "NODEFILE_DIR=\"\$(pwd)/node\"" >> $TMPS/config.main
+echo "NODEFILE_DIR=\"\$TMPROOT/node\"" >> $TMPS/config.main
+echo "RUN_LEVEL=2" >> $TMPS/config.main
 
 echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMPS/config.main
-
-echo "RUN_LEVEL=2" >> $TMPS/config.main
 
 safe_init_tmpdir $STAGING_DIR || exit $?
 if [ "$CONF_MODE" = 'static' ]; then
@@ -188,7 +169,7 @@ cat >> $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
+./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
 
 #===============================================================================

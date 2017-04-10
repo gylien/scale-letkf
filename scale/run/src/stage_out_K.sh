@@ -58,17 +58,16 @@ function stage_out_K_sub () {
       echo "#PJM --stgout \"./${source} $destin\""
     fi
   elif [[ "$source" == */ && "$destin" == */ ]]; then # directories
-    # remove trailing slashes
     if ((USE_RANKDIR == 1)) && [[ "$TYPE" == 'share' ]]; then
-      echo "#PJM --stgout-dir \"rank=$((i % NRANKS)) $((i % NRANKS)):../$(dirname "$source")/$(basename "$source") $(dirname "$destin")/$(basename "$destin") recursive=${max_depth}\""
+      echo "#PJM --stgout-dir \"rank=$((i % NRANKS)) $((i % NRANKS)):../${source%/} ${destin%/} recursive=${max_depth}\"" # remove trailing slashes
     elif ((USE_RANKDIR == 1)) && [[ "$TYPE" == 'local' ]]; then
       if ((n == 0)); then
-        echo "#PJM --stgout-dir \"rank=* %r:./$(dirname "$source")/$(basename "$source") $(dirname "$destin")/$(basename "$destin") recursive=${max_depth}\""
+        echo "#PJM --stgout-dir \"rank=* %r:./${source%/} ${destin%/} recursive=${max_depth}\""
       else
-        echo "#PJM --stgout-dir \"rank=${i} ${i}:./$(dirname "$source")/$(basename "$source") $(dirname "$destin")/$(basename "$destin") recursive=${max_depth}\""
+        echo "#PJM --stgout-dir \"rank=${i} ${i}:./${source%/} ${destin%/} recursive=${max_depth}\""
       fi
     else # ((USE_RANKDIR == 0)) && [[ "$TYPE" == 'share' ]]
-      echo "#PJM --stgout-dir \"./$(dirname "$source")/$(basename "$source") $(dirname "$destin")/$(basename "$destin") recursive=${max_depth}\""
+      echo "#PJM --stgout-dir \"./${source%/} ${destin%/} recursive=${max_depth}\""
     fi
   else
     echo "$MYNAME: source '$source' and destination '$destin' need to be the same type" >&2

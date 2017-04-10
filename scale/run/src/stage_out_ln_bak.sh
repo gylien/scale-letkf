@@ -1,17 +1,18 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Built-in stage-out script (run on a single node)
+#  Built-in stage-out script (run on the server side)
 #
 #===============================================================================
 
 MYNAME=$(basename $0)
 
-if (($# < 3)); then
+if (($# < 4)); then
   cat >&2 << EOF
 
-Usage: $MYNAME NRANKS STGLIST STGDIR
+Usage: $MYNAME MYRANK NRANKS STGLIST STGDIR
 
+   MYRANK   No use (dummy for using 'pdbash')
    NRANKS   Total number of nodes
    STGLIST  File of the stage-out list
    STGDIR   Directory where the files are staged out from
@@ -20,6 +21,7 @@ EOF
   exit 1
 fi
 
+MYRANK="$1"; shift
 NRANKS="$1"; shift
 STGLIST="$1"; shift
 STGDIR="$1"
@@ -48,7 +50,7 @@ function stage_out_ln_sub () {
   elif [[ "$sourcestg" == */ && "$destin" == */ ]]; then # directories
     if (mkdir -p "$destin") && (mkdir -p "$(dirname "$sourcestg")"); then
       rm -fr "$destin"*
-      ln -s "${destin%/}" "${sourcestg%/}" # remove possible trailing slashes
+      ln -s "$(dirname "$destin")/$(basename "$destin")" "$(dirname "$sourcestg")/$(basename "$sourcestg")"
     fi
   else
     echo "$MYNAME: source '$sourcestg' and destination '$destin' need to be the same type" >&2

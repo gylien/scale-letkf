@@ -161,11 +161,11 @@ if [ "$MPI_TYPE" = 'sgimpt' ]; then
   local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
   HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
 
-  $MPIRUN -d $progdir $HOSTLIST 1 ./$progbase $CONF $STDOUT $ARGS
-#  $MPIRUN -d $progdir $HOSTLIST 1 omplace -nt ${THREADS} ./$progbase $CONF $STDOUT $ARGS
+  $MPIRUN $HOSTLIST 1 $PROG $CONF $STDOUT $ARGS
+#  $MPIRUN $HOSTLIST 1 omplace -nt ${THREADS} $PROG $CONF $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $MPIRUN -d $progdir $HOSTLIST 1 ./$progbase $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $MPIRUN $HOSTLIST 1 $PROG $CONF $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
@@ -174,10 +174,10 @@ elif [ "$MPI_TYPE" = 'openmpi' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $progdir ./$progbase $CONF $STDOUT $ARGS
+  $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $$MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $$MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
@@ -186,10 +186,10 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} -gwdir $progdir ./$progbase $CONF $STDOUT $ARGS
+  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $$MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} -gwdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $$MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
@@ -199,27 +199,21 @@ elif [ "$MPI_TYPE" = 'K' ]; then
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
   if [ "$PRESET" = 'K_rankdir' ]; then
-
-    mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS
+    mpiexec -n $NNP -of-proc $STDOUT $PROG $CONF '' $ARGS
     res=$?
     if ((res != 0)); then
-      echo "[Error] mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS" >&2
+      echo "[Error] mpiexec -n $NNP -of-proc $STDOUT $PROG $CONF '' $ARGS" >&2
       echo "        Exit code: $res" >&2
       exit $res
     fi
-
   else
-
-#    ( cd $progdir && mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS )
-    ( cd $progdir && mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${NODEFILE}" -of-proc $STDOUT ./$progbase $CONF '' $ARGS )
+    mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${NODEFILE}" -of-proc $STDOUT $PROG $CONF '' $ARGS
     res=$?
     if ((res != 0)); then 
-#      echo "[Error] mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS" >&2
-      echo "[Error] mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${NODEFILE}" -of-proc $STDOUT ./$progbase $CONF '' $ARGS" >&2
+      echo "[Error] mpiexec -n $NNP -vcoordfile \"${NODEFILE_DIR}/${NODEFILE}\" -of-proc $STDOUT $PROG $CONF '' $ARGS" >&2
       echo "        Exit code: $res" >&2
       exit $res
     fi
-
   fi
 
 fi
@@ -324,49 +318,21 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
 
 elif [ "$MPI_TYPE" = 'K' ]; then
 
-  if [ "$PRESET" = 'K_rankdir' ]; then
-    if [ "$PROC_OPT" == 'one' ]; then
-
-      mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS
-      res=$?
-      if ((res != 0)); then
-        echo "[Error] mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS" >&2
-        echo "        Exit code: $res" >&2
-        exit $res
-      fi
-
-    else
-
-      mpiexec $pdbash_exec $SCRIPT $ARGS
-      res=$?
-      if ((res != 0)); then
-        echo "[Error] mpiexec $pdbash_exec $SCRIPT $ARGS" >&2
-        echo "        Exit code: $res" >&2
-        exit $res
-      fi
-
+  if [ "$PROC_OPT" == 'one' ]; then
+    mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS
+    res=$?
+    if ((res != 0)); then
+      echo "[Error] mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS" >&2
+      echo "        Exit code: $res" >&2
+      exit $res
     fi
   else
-    if [ "$PROC_OPT" == 'one' ]; then
-
-      ( cd $SCRP_DIR && mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS )
-      res=$?
-      if ((res != 0)); then
-        echo "[Error] mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS" >&2
-        echo "        Exit code: $res" >&2
-        exit $res
-      fi
-
-    else
-
-      ( cd $SCRP_DIR && mpiexec $pdbash_exec $SCRIPT $ARGS )
-      res=$?
-      if ((res != 0)); then
-        echo "[Error] mpiexec $pdbash_exec $SCRIPT $ARGS" >&2
-        echo "        Exit code: $res" >&2
-        exit $res
-      fi
-
+    mpiexec $pdbash_exec $SCRIPT $ARGS
+    res=$?
+    if ((res != 0)); then
+      echo "[Error] mpiexec $pdbash_exec $SCRIPT $ARGS" >&2
+      echo "        Exit code: $res" >&2
+      exit $res
     fi
   fi
 
