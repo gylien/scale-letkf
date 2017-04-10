@@ -346,22 +346,22 @@ config_file_list () {
 #-------------------------------------------------------------------------------
 # Prepare all runtime configuration files
 #
-# Usage: config_file_list [CONFIG_DIR_TMP]
+# Usage: config_file_list [CONFIG_DIR]
 #
-#   CONFIG_DIR_TMP  Temporary directory of configuration files to be staged to $CONFIG_DIR
-#                   '-': Do not use a temporary directory and stage;
-#                        output configuration files directly to $CONFIG_DIR
+#   CONFIG_DIR  Temporary directory of configuration files to be staged to $TMPROOT
+#               '-': Do not use a temporary directory and stage;
+#                    output configuration files directly to $TMPROOT
 #
 # Other input variables:
+#   $TMPROOT
 #   $STAGING_DIR
-#   ...
 #-------------------------------------------------------------------------------
 
-local CONFIG_DIR_TMP="${1:--}"
+local CONFIG_DIR="${1:--}"
 
 local stage_config=1
-if [ "$CONFIG_DIR_TMP" = '-' ]; then
-  CONFIG_DIR_TMP="$CONFIG_DIR"
+if [ "$CONFIG_DIR" = '-' ]; then
+  CONFIG_DIR="$TMPROOT"
   stage_config=0
 fi
 
@@ -370,7 +370,7 @@ fi
 echo
 echo "Generate configration files..."
 
-mkdir -p $CONFIG_DIR_TMP
+mkdir -p $CONFIG_DIR
 
 time=$STIME
 atime=$(datetime $time $LCYCLE s)
@@ -420,9 +420,9 @@ while ((time <= ETIME)); do
           -e "/!--PPN--/a PPN = $PPN_APPAR," \
           -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
           -e "/!--MEM_NP--/a MEM_NP = $mem_np," \
-      > $CONFIG_DIR_TMP/${conf_file}
+      > $CONFIG_DIR/${conf_file}
   if ((stage_config == 1)); then
-    echo "$CONFIG_DIR_TMP/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
+    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
   fi
   echo "${OUTDIR}/${time}/log/scale/scale-rm_ens.conf|${conf_file}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
 
@@ -465,7 +465,7 @@ while ((time <= ETIME)); do
 
     conf_file="${name_m[$m]}/run_${time}.conf"
     echo "  $conf_file"
-    mkdir -p $CONFIG_DIR_TMP/${name_m[$m]}
+    mkdir -p $CONFIG_DIR/${name_m[$m]}
     cat $SCRP_DIR/config.nml.scale | \
         sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale.${name_m[$m]}.LOG_${time}\"," \
             -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = .true.," \
@@ -495,13 +495,13 @@ while ((time <= ETIME)); do
             -e "/!--TIME_END_RESTART_OUT--/a TIME_END_RESTART_OUT = .false.," \
             -e "/!--RESTART_OUT_ADDITIONAL_COPIES--/a RESTART_OUT_ADDITIONAL_COPIES = ${RESTART_OUT_ADDITIONAL_COPIES}," \
             -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}" \
-        > $CONFIG_DIR_TMP/${conf_file}
+        > $CONFIG_DIR/${conf_file}
 #    cat $SCRP_DIR/config.nml.scale_user | \
 #        sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"XXXXXX\"," \
 #        sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"XXXXXX\"," \
-#        >> $CONFIG_DIR_TMP/${conf_file}
+#        >> $CONFIG_DIR/${conf_file}
     if ((stage_config == 1)); then
-      echo "$CONFIG_DIR_TMP/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+      echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
     fi
     echo "${OUTDIR}/${time}/log/scale/${name_m[$m]}_run.conf|${conf_file}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
   done
@@ -577,13 +577,13 @@ while ((time <= ETIME)); do
           -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
           -e "/!--MEM_NP--/a MEM_NP = $mem_np," \
           -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = .true.," \
-      > $CONFIG_DIR_TMP/${conf_file}
+      > $CONFIG_DIR/${conf_file}
   # Most of these parameters are not important for letkf
   cat $SCRP_DIR/config.nml.scale | \
       sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = .true.," \
-      >> $CONFIG_DIR_TMP/${conf_file}
+      >> $CONFIG_DIR/${conf_file}
   if ((stage_config == 1)); then
-    echo "$CONFIG_DIR_TMP/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
+    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
   fi
   echo "${OUTDIR}/${atime}/log/letkf/letkf.conf|${conf_file}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
 

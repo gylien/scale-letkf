@@ -220,7 +220,6 @@ fi
 
 STAGING_DIR="$TMP/staging"
 NODEFILE_DIR="$TMP/node"
-CONFIG_DIR="$TMPROOT"
 
 #-------------------------------------------------------------------------------
 
