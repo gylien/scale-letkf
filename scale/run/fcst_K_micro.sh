@@ -8,42 +8,44 @@
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    fcst_K_micro.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP TIME_LIMIT]
+#    fcst_K_micro.sh [..]
 #
 #===============================================================================
 
 cd "$(dirname "$0")"
+myname="$(basename "$0")"
 job='fcst'
 
 #===============================================================================
 # Configuration
 
-. config.main
-res=$? && ((res != 0)) && exit $res
-. config.$job
-res=$? && ((res != 0)) && exit $res
+. config.main || exit $?
+. config.${job} || exit $?
 
-. src/func_distribute.sh
-. src/func_datetime.sh
-. src/func_util.sh
-. src/func_$job.sh
+. src/func_distribute.sh || exit $?
+. src/func_datetime.sh || exit $?
+. src/func_util.sh || exit $?
+. src/func_${job}.sh || exit $?
 
 #-------------------------------------------------------------------------------
 
-if ((TMPDAT_MODE != 2 || TMPRUN_MODE != 2 || TMPOUT_MODE != 2)); then
-  echo "[Error] $0: When using 'micro' resource group," >&2
-  echo "        \$TMPDAT_MODE, \$TMPRUN_MODE, \$TMPOUT_MODE all need to be 2." >&2
+if ((USE_TMP_LINK == 1 || USE_TMPL == 1)); then
+  echo "[Error] $0: Wrong disk mode for K computer micro jobs." >&2
   exit 1
 fi
 
 #-------------------------------------------------------------------------------
 
-echo "[$(datetime_now)] Start $(basename $0) $@"
+echo "[$(datetime_now)] Start $myname $@"
 
-setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}"
+setting "$@" || exit $?
+
+#if [ "$CONF_MODE" = 'static' ]; then
+#  . src/func_${job}_static.sh || exit $?
+#fi
 
 echo
-print_setting
+print_setting || exit $?
 echo
 
 #===============================================================================
@@ -57,21 +59,23 @@ if [ ${TMP:0:8} != '/scratch' ]; then
   echo "        \$TMP = '$TMP'" >&2
   exit 1
 fi
-safe_init_tmpdir $TMP
+safe_init_tmpdir $TMP || exit $?
 
 #===============================================================================
 # Determine the distibution schemes
 
 echo "[$(datetime_now)] Determine the distibution schemes"
 
-declare -a procs
-declare -a mem2node
-declare -a node
-declare -a name_m
 declare -a node_m
+declare -a name_m
+declare -a mem2node
+declare -a mem2proc
+declare -a proc2node
+declare -a proc2group
+declare -a proc2grpproc
 
-safe_init_tmpdir $NODEFILE_DIR
-distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
+safe_init_tmpdir $NODEFILE_DIR || exit $?
+distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR || exit $?
 
 if ((CYCLE == 0)); then
   CYCLE=$cycle_auto
@@ -82,31 +86,41 @@ fi
 
 echo "[$(datetime_now)] Determine the staging list"
 
-safe_init_tmpdir $STAGING_DIR
-staging_list
+cp -L $SCRP_DIR/config.main $TMP/config.main
+
+echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMP/config.main
+echo "RUN_LEVEL=2" >> $TMP/config.main
+
+echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMP/config.main
+
+safe_init_tmpdir $STAGING_DIR || exit $?
+###if [ "$CONF_MODE" = 'static' ]; then
+###  staging_list_static || exit $?
+###  config_file_list $TMPS/config || exit $?
+###else
+  staging_list || exit $?
+###fi
+
+#-------------------------------------------------------------------------------
+# Add shell scripts and node distribution files into the staging list
+
+cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${SCRP_DIR}/config.rc|config.rc
+${SCRP_DIR}/config.${job}|config.${job}
+${SCRP_DIR}/${job}.sh|${job}.sh
+${SCRP_DIR}/src/|src/
+EOF
+
+if [ "$CONF_MODE" != 'static' ]; then
+  echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
+fi
 
 #===============================================================================
 # Stage in
 
 echo "[$(datetime_now)] Initialization (stage in)"
 
-bash $SCRP_DIR/src/stage_in.sh a
-
-#-------------------------------------------------------------------------------
-
-cp -L -r $SCRP_DIR/config.main $TMP/config.main
-cp -L -r $SCRP_DIR/config.rc $TMP/config.rc
-cp -L -r $SCRP_DIR/config.${job} $TMP/config.${job}
-cp -L -r $SCRP_DIR/${job}.sh $TMP/${job}.sh
-cp -L -r $SCRP_DIR/${job}_step.sh $TMP/${job}_step.sh
-mkdir -p $TMP/src
-cp -L -r $SCRP_DIR/src/* $TMP/src
-
-echo "SCRP_DIR=\"$TMP\"" >> $TMP/config.main
-
-echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMP/config.main
-
-echo "RUN_LEVEL='K_micro'" >> $TMP/config.main
+stage_in server || exit $?
 
 #===============================================================================
 # Creat a job script
@@ -132,7 +146,7 @@ cat > $jobscrp << EOF
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
-./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" || exit \$?
+./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
 
 #===============================================================================
@@ -144,41 +158,15 @@ echo
 job_submit_PJM $jobscrp
 echo
 
-res=0
-if ((ONLINE_STGOUT != 1)); then
-
-  job_end_check_PJM_K $jobid
-  res=$?
-
-else # when using online stage-out, check the joub status in a special way.
-
-  loop=1
-  while (($(pjstat $jobid | sed -n '2p' | awk '{print $10}') >= 1)); do
-    if [ -e "$TMP/loop.${loop}.done" ]; then
-      echo "[$(datetime_now)] Online stage out: Loop # $loop"
-      bash $SCRP_DIR/src/stage_out.sh a $loop &
-      loop=$((loop+1))
-    fi
-    sleep 5s
-  done
-  wait
-
-  while [ -e "$TMP/loop.${loop}.done" ]; do
-    echo "[$(datetime_now)] Online stage out: Loop # $loop"
-    bash $SCRP_DIR/src/stage_out.sh a $loop
-    loop=$((loop+1))
-  done
-
-fi
+job_end_check_PJM_K $jobid
+res=$?
 
 #===============================================================================
 # Stage out
 
 echo "[$(datetime_now)] Finalization (stage out)"
 
-if ((ONLINE_STGOUT != 1)); then
-  bash $SCRP_DIR/src/stage_out.sh a
-fi
+stage_out server || exit $?
 
 #===============================================================================
 # Finalization
@@ -196,6 +184,6 @@ fi
 
 #===============================================================================
 
-echo "[$(datetime_now)] Finish $(basename $0) $@"
+echo "[$(datetime_now)] Finish $myname $@"
 
 exit $res

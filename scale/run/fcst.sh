@@ -83,7 +83,7 @@ else
 fi
 
 if ((CYCLE == 0)); then
-  CYCLE=$parallel_mems
+  CYCLE=$cycle_auto
 fi
 
 #===============================================================================
