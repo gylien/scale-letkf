@@ -260,33 +260,18 @@ while ((time <= ETIME)); do
 
 ###      else
 
+        execpath="${stepexecdir[$s]}/${stepexecname[$s]}"
         stdout_dir="$TMPOUT/${stimes[1]}/log/fcst_$(basename ${stepexecdir[$s]})"
         if ((enable_iter == 1)); then
           for it in $(seq $nitmax); do
-            if [ "$PRESET" = 'K_rankdir' ]; then
-              echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-              mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" ${stepexecdir[$s]} \
-                      "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop $it || exit $?
+            mpirunf proc $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/fcst_step.sh" $loop $it || exit $?
 
-              echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-            else
-              echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
-
-              mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
-                      "$SCRP_DIR/fcst_step.sh" $loop $it || exit $?
-
-              echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-            fi
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           done
         else
-          if [ "$PRESET" = 'K_rankdir' ]; then
-            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" ${stepexecdir[$s]} \
-                    "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop || exit $?
-          else
-            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
-                    "$SCRP_DIR/fcst_step.sh" $loop || exit $?
-          fi
+          mpirunf proc $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/fcst_step.sh" $loop || exit $?
         fi
 
 ###      fi

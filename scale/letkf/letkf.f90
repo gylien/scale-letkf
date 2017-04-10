@@ -39,14 +39,12 @@ PROGRAM letkf
   call initialize_mpi_scale
   call mpi_timer('', 1)
 
-  if (command_argument_count() >= 4) then
-    call get_command_argument(3, icmd)
-    call chdir(trim(icmd))
+  if (command_argument_count() >= 3) then
     write (myranks, '(I10)') myrank
-    call get_command_argument(4, icmd)
+    call get_command_argument(3, icmd)
     cmd1 = 'bash ' // trim(icmd) // ' letkf_1' // ' ' // trim(myranks)
     cmd2 = 'bash ' // trim(icmd) // ' letkf_2' // ' ' // trim(myranks)
-    do iarg = 5, command_argument_count()
+    do iarg = 4, command_argument_count()
       call get_command_argument(iarg, icmd)
       cmd1 = trim(cmd1) // ' ' // trim(icmd)
       cmd2 = trim(cmd2) // ' ' // trim(icmd)

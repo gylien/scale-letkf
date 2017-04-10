@@ -285,18 +285,18 @@ while ((time <= ETIME)); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
             if ((IO_ARB == 1)); then ##
-              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" . "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $? &
+              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $? &
             else ##
-              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" . "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
+              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
             fi ##
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           done
         else
           if ((IO_ARB == 1)); then ##                                 
-            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" . "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $? &
+            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $? &
           else ##
-            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" . "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
+            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
           fi ##
         fi
 
