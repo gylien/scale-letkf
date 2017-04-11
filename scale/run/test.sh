@@ -216,7 +216,7 @@ for i in $(seq $NTEST); do
   cat $stderr
   echo "========================================"
 
-  if [ -z "$(tail -n 1 $stderr | grep "Finish ${SCPNAME[$i]}.sh")" ]; then
+  if [ -z "$(tail -n 1 $stderr | grep "Finish")" ]; then
     print_result
     continue
   fi

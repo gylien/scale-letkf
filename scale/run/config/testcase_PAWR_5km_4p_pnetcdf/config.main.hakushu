@@ -27,7 +27,7 @@ DATA_TOPO="$DDIR/exp/testcase_PAWR_5km_4p_pnetcdf_data"              # Directory
 DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
 DATA_LANDUSE="$DDIR/exp/testcase_PAWR_5km_4p_pnetcdf_data"           # Directory of the prepared landuse files
 DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
+DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_PAWR_5km_4p_pnetcdf_data"    # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
@@ -103,8 +103,8 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=8           # Ensemble size
 
-NNODES=1           # Number of nodes
-PPN=40             # Number of processes per node
+NNODES=2           # Number of nodes
+PPN=20             # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
@@ -117,20 +117,10 @@ ENABLE_SET=0       ######
 #===============================================================================
 # Temporary directories to store runtime files
 
-TMPDAT_MODE=2               # Disk type used for the 'dat' temporary directory (input data)
-TMPRUN_MODE=2               # Disk type used for the 'run' temporary directory (runtime files)
-TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
-                            #  1: share (link to TMP)
-                            #  2: share (staging to TMP)
-                            #  3: local (staging to TMPL)
-
-DISK_MODE_TOPO_LANDUSE_DB=2
-
-DISK_MODE_DATA_BDY=2
-
-DISK_MODE_DATA_TOPO=2
-DISK_MODE_DATA_LANDUSE=2
-DISK_MODE_DATA_BDYPREP=2
+DISK_MODE=2
+DISK_MODE_CONSTDB=2
+DISK_MODE_BDYDATA=2
+DISK_MODE_OBS=2
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
@@ -160,7 +150,7 @@ SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 
-SCP_THREAD=1
+STAGE_THREAD=1
 TAR_THREAD=1
 
 PYTHON="python3"

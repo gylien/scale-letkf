@@ -84,48 +84,48 @@ if ((PNETCDF == 1)); then
   IO_AGGREGATE=".true."
 fi
 
-if [ "${TOPO_TARGZ}" = 'T' ] ; then
-  tmp_length=${#TOPO}
-  tmp_length=$((tmp_length-4)) # cut "topo"
-  UNCOMP_DIR="$(echo $TOPO | cut -c 1-${tmp_length} )"
-
-  tar zxvf  ${TOPO}.tar.gz -C $UNCOMP_DIR > /dev/null
-fi
-
-if [ "${LANDUSE_TARGZ}" = 'T' ] ; then
-  tmp_length=${#LANDUSE}
-  tmp_length=$((tmp_length-7)) # cut "landuse"
-  UNCOMP_DIR="$(echo $LANDUSE | cut -c 1-${tmp_length} )"
-
-  tar zxvf  ${LANDUSE}.tar.gz -C $UNCOMP_DIR > /dev/null
-fi
-
-RESTART_OUT_NUM_COPIES=1
+RESTART_OUT_ADDITIONAL_COPIES=0
+RESTART_OUT_ADDITIONAL_BASENAME=
 if [ "$SCPCALL" = 'cycle' ]; then
   IO_LOG_DIR='scale'
   if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
-    RESTART_OUT_NUM_COPIES=2
+    RESTART_OUT_ADDITIONAL_COPIES=1
+    RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPDIR}\/restart_2\", "
+    icopy=2
     if ((SPRD_OUT == 1)); then
-      RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+2))
+      RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
+      icopy=$((icopy+1))
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPDIR}\/restart_${icopy}\", "
+      icopy=$((icopy+1))
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPDIR}\/restart_${icopy}\", "
     fi
     if ((RTPS_INFL_OUT == 1)); then
-      RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+1))
+      RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
+      icopy=$((icopy+1))
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPDIR}\/restart_${icopy}\", "
     fi
     if ((NOBS_OUT == 1)); then
-      RESTART_OUT_NUM_COPIES=$((RESTART_OUT_NUM_COPIES+1))
+      RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
+      icopy=$((icopy+1))
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${TMPDIR}\/restart_${icopy}\", "
     fi
   elif [ "$MEM" = 'mdet' ]; then
-    RESTART_OUT_NUM_COPIES=2
+    RESTART_OUT_ADDITIONAL_COPIES=1
+    RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPDIR}\/restart_2\", "
   elif ((OUT_OPT <= 3)); then
-    RESTART_OUT_NUM_COPIES=2
+    RESTART_OUT_ADDITIONAL_COPIES=1
+    RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPDIR}\/restart_2\", "
   fi
 else
   IO_LOG_DIR="${SCPCALL}_scale"
 fi
 
-#===============================================================================
+DOMAIN_CATALOGUE_OUTPUT=".false."
+if [ "$(basename $TMPDIR)" == '0001' ]; then ###### using a variable for '0001'
+  DOMAIN_CATALOGUE_OUTPUT=".true."
+fi
 
-TMPSUBDIR=$(basename "$(cd "$TMPDIR" && pwd)")
+#===============================================================================
 
 conf="$(cat $TMPDAT/conf/config.nml.scale | \
         sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
@@ -137,24 +137,27 @@ conf="$(cat $TMPDAT/conf/config.nml.scale | \
             -e "/!--TIME_DT_LAND_RESTART--/a TIME_DT_LAND_RESTART = ${FCSTINT}.D0," \
             -e "/!--TIME_DT_URBAN_RESTART--/a TIME_DT_URBAN_RESTART = ${FCSTINT}.D0," \
             -e "/!--RESTART_IN_BASENAME--/a RESTART_IN_BASENAME = \"${INIT}\"," \
-            -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPSUBDIR}\/restart\"," \
+            -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPDIR}\/restart\"," \
             -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
             -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
             -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${BDY}\"," \
             -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = $BS_YYYY, $BS_MM, $BS_DD, $BS_HH, $BS_II, $BS_SS," \
             -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0," \
-            -e "/!--HISTORY_DEFAULT_BASENAME--/a HISTORY_DEFAULT_BASENAME = \"${TMPSUBDIR}\/history\"," \
+            -e "/!--HISTORY_DEFAULT_BASENAME--/a HISTORY_DEFAULT_BASENAME = \"${TMPDIR}\/history\"," \
             -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = ${HISTINT}.D0," \
             -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_monitor\"," \
-            -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT}/land/param.bucket.conf\"," \
-            -e "/!--ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME = \"${TMPDAT}/rad/PARAG.29\"," \
-            -e "/!--ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME = \"${TMPDAT}/rad/PARAPC.29\"," \
-            -e "/!--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = \"${TMPDAT}/rad/VARDATA.RM29\"," \
-            -e "/!--ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME--/a ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME = \"${TMPDAT}/rad/cira.nc\"," \
-            -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${TMPDAT}/rad/MIPAS\",")"
+            -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT_CONSTDB}/land/param.bucket.conf\"," \
+            -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"$TMPOUT/const/log/latlon_domain_catalogue.txt\"," \
+            -e "/!--DOMAIN_CATALOGUE_OUTPUT--/a DOMAIN_CATALOGUE_OUTPUT = ${DOMAIN_CATALOGUE_OUTPUT}," \
+            -e "/!--ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME = \"${TMPDAT_CONSTDB}/rad/PARAG.29\"," \
+            -e "/!--ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME = \"${TMPDAT_CONSTDB}/rad/PARAPC.29\"," \
+            -e "/!--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = \"${TMPDAT_CONSTDB}/rad/VARDATA.RM29\"," \
+            -e "/!--ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME--/a ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME = \"${TMPDAT_CONSTDB}/rad/cira.nc\"," \
+            -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${TMPDAT_CONSTDB}/rad/MIPAS\",")"
 if ((ENABLE_PARAM_USER == 1)); then
   conf="$(echo "$conf" | sed -e "/!--TIME_END_RESTART_OUT--/a TIME_END_RESTART_OUT = .false.,")"
-  conf="$(echo "$conf" | sed -e "/!--RESTART_OUT_NUM_COPIES--/a RESTART_OUT_NUM_COPIES = ${RESTART_OUT_NUM_COPIES},")"
+  conf="$(echo "$conf" | sed -e "/!--RESTART_OUT_ADDITIONAL_COPIES--/a RESTART_OUT_ADDITIONAL_COPIES = ${RESTART_OUT_ADDITIONAL_COPIES},")"
+  conf="$(echo "$conf" | sed -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}")"
 else
   if [ "$OCEAN" != '-' ]; then
     conf="$(echo "$conf" | sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${OCEAN}\",")"

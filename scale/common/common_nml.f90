@@ -34,6 +34,8 @@ MODULE common_nml
   integer :: MEMBER = 3      ! ensemble size
   integer :: MEMBER_RUN = 1  !
   integer :: MEMBER_ITER = 0 !
+  character(filelenmax) :: CONF_FILES = 'run.@@@@.conf'
+  logical :: CONF_FILES_SEQNUM = .false.
 
   logical :: DET_RUN = .false.
   logical :: DET_RUN_CYCLED = .true.
@@ -309,6 +311,8 @@ subroutine read_nml_ensemble
     MEMBER, &
     MEMBER_RUN, &
     MEMBER_ITER, &
+    CONF_FILES, &
+    CONF_FILES_SEQNUM, &
     DET_RUN, &
     DET_RUN_CYCLED
 
@@ -902,7 +906,7 @@ subroutine file_member_replace(mem, filename, filename_out, memfstr)
   implicit none
   integer, intent(in) :: mem
   character(len=*), intent(in) :: filename
-  character(len=filelenmax), intent(out) :: filename_out
+  character(len=*), intent(out) :: filename_out
   character(len=memflen), intent(in), optional :: memfstr
   integer :: s, is
 

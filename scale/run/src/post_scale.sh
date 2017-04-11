@@ -64,13 +64,13 @@ if [ "$SCPCALL" = 'cycle' ]; then
 
     if ((PNETCDF == 1)); then
       mkdir -p $TMPOUT/${ATIME}/anal
-      ifile="restart_${ATIME:0:8}-${ATIME:8:6}.000.nc"
+      ifile="restart_$(datetime_scale $ATIME).nc"
       if [ -e "$TMPDIR/${ifile}" ]; then
         mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/mean.init.nc
       fi
     else
       mkdir -p $TMPOUT/${ATIME}/anal/mean
-      file_prefix="restart_${ATIME:0:8}-${ATIME:8:6}.000"
+      file_prefix="restart_$(datetime_scale $ATIME)"
       restartbaselen=27
       for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
         mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/mean/init${ifile:$restartbaselen}
@@ -79,7 +79,7 @@ if [ "$SCPCALL" = 'cycle' ]; then
 
     if ((ENABLE_PARAM_USER == 1)); then
       if ((PNETCDF == 1)); then
-        ifile="restart_2_${ATIME:0:8}-${ATIME:8:6}.000.nc"
+        ifile="restart_2_$(datetime_scale $ATIME).nc"
         if [ -e "$TMPDIR/${ifile}" ]; then
           mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/mean.init.nc
         fi
@@ -88,13 +88,13 @@ if [ "$SCPCALL" = 'cycle' ]; then
         if ((SPRD_OUT == 1)); then
           icopy=$((icopy+1))
           mkdir -p $TMPOUT/${ATIME}/anal
-          ifile="restart_${icopy}_${ATIME:0:8}-${ATIME:8:6}.000.nc"
+          ifile="restart_${icopy}_$(datetime_scale $ATIME).nc"
           if [ -e "$TMPDIR/${ifile}" ]; then
             mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/sprd.init.nc
           fi
 
           icopy=$((icopy+1))
-          ifile="restart_${icopy}_${ATIME:0:8}-${ATIME:8:6}.000.nc"
+          ifile="restart_${icopy}_$(datetime_scale $ATIME).nc"
           if [ -e "$TMPDIR/${ifile}" ]; then
             mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/sprd.init.nc
           fi
@@ -103,7 +103,7 @@ if [ "$SCPCALL" = 'cycle' ]; then
         restartbaselen=29
 
         mkdir -p $TMPOUT/${ATIME}/gues/mean
-        file_prefix="restart_2_${ATIME:0:8}-${ATIME:8:6}.000"
+        file_prefix="restart_2_$(datetime_scale $ATIME)"
         for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
           mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/mean/init${ifile:$restartbaselen}
         done
@@ -112,14 +112,14 @@ if [ "$SCPCALL" = 'cycle' ]; then
         if ((SPRD_OUT == 1)); then
           icopy=$((icopy+1))
           mkdir -p $TMPOUT/${ATIME}/anal/sprd
-          file_prefix="restart_${icopy}_${ATIME:0:8}-${ATIME:8:6}.000"
+          file_prefix="restart_${icopy}_$(datetime_scale $ATIME)"
           for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
             mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/sprd/init${ifile:$restartbaselen}
           done
 
           icopy=$((icopy+1))
           mkdir -p $TMPOUT/${ATIME}/gues/sprd
-          file_prefix="restart_${icopy}_${ATIME:0:8}-${ATIME:8:6}.000"
+          file_prefix="restart_${icopy}_$(datetime_scale $ATIME)"
           for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
             mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/sprd/init${ifile:$restartbaselen}
           done
@@ -130,13 +130,13 @@ if [ "$SCPCALL" = 'cycle' ]; then
         icopy=$((icopy+1))
         if ((PNETCDF == 1)); then
           mkdir -p $TMPOUT/${ATIME}/diag
-          ifile="restart_${icopy}_${ATIME:0:8}-${ATIME:8:6}.000.nc"
+          ifile="restart_${icopy}_$(datetime_scale $ATIME).nc"
           if [ -e "$TMPDIR/${ifile}" ]; then
             mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/diag/rtps.init.nc
           fi
         else
           mkdir -p $TMPOUT/${ATIME}/diag/rtps
-          file_prefix="restart_${icopy}_${ATIME:0:8}-${ATIME:8:6}.000"
+          file_prefix="restart_${icopy}_$(datetime_scale $ATIME)"
           for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
             mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/diag/rtps/init${ifile:$restartbaselen}
           done
@@ -147,13 +147,13 @@ if [ "$SCPCALL" = 'cycle' ]; then
         icopy=$((icopy+1))
         if ((PNETCDF == 1)); then
           mkdir -p $TMPOUT/${ATIME}/diag
-          ifile="restart_${icopy}_${ATIME:0:8}-${ATIME:8:6}.000.nc"
+          ifile="restart_${icopy}_$(datetime_scale $ATIME).nc"
           if [ -e "$TMPDIR/${ifile}" ]; then
             mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/diag/nobs.init.nc
           fi
         else
           mkdir -p $TMPOUT/${ATIME}/diag/nobs
-          file_prefix="restart_${icopy}_${ATIME:0:8}-${ATIME:8:6}.000"
+          file_prefix="restart_${icopy}_$(datetime_scale $ATIME)"
           for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
             mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/diag/nobs/init${ifile:$restartbaselen}
           done
@@ -173,13 +173,13 @@ if [ "$SCPCALL" = 'cycle' ]; then
 
     if ((PNETCDF == 1)); then
       mkdir -p $TMPOUT/${ATIME}/anal
-      ifile="restart_${ATIME:0:8}-${ATIME:8:6}.000.nc"
+      ifile="restart_$(datetime_scale $ATIME).nc"
       if [ -e "$TMPDIR/${ifile}" ]; then
         mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/${MEM}.init.nc
       fi
     else
       mkdir -p $TMPOUT/${ATIME}/anal/${MEM}
-      file_prefix="restart_${ATIME:0:8}-${ATIME:8:6}.000"
+      file_prefix="restart_$(datetime_scale $ATIME)"
       restartbaselen=27
       for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
         mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/${MEM}/init${ifile:$restartbaselen}
@@ -190,13 +190,13 @@ if [ "$SCPCALL" = 'cycle' ]; then
       if ((OUT_OPT <= 3)) || [ "$MEM" = 'mdet' ]; then
         if ((PNETCDF == 1)); then
           mkdir -p $TMPOUT/${ATIME}/gues
-          ifile="restart_2_${ATIME:0:8}-${ATIME:8:6}.000.nc"
+          ifile="restart_2_$(datetime_scale $ATIME).nc"
           if [ -e "$TMPDIR/${ifile}" ]; then
             mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/${MEM}.init.nc
           fi
         else
           mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
-          file_prefix="restart_2_${ATIME:0:8}-${ATIME:8:6}.000"
+          file_prefix="restart_2_$(datetime_scale $ATIME)"
           restartbaselen=29
           for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
             mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/${MEM}/init${ifile:$restartbaselen}
@@ -222,12 +222,6 @@ if [ "$SCPCALL" = 'cycle' ]; then
   if ((LOG_OPT <= 3)); then
     if [ -f "$TMPDIR/run.conf" ]; then
       mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/scale/${MEM}_run.conf
-    fi
-  fi
-
-  if ((MYRANK == 0)); then
-    if [ -f "$TMPDIR/../latlon_domain_catalogue.txt" ]; then
-      mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/scale/latlon_domain_catalogue.txt
     fi
   fi
 
@@ -261,12 +255,6 @@ elif [ "$SCPCALL" = 'fcst' ]; then
   if ((LOG_OPT <= 3)); then
     if [ -f "$TMPDIR/run.conf" ]; then
       mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/${SCPCALL}_scale/${MEM}_run.conf
-    fi
-  fi
-
-  if ((MYRANK == 0)); then
-    if [ -f "$TMPDIR/../latlon_domain_catalogue.txt" ]; then
-      mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/${SCPCALL}_scale/latlon_domain_catalogue.txt
     fi
   fi
 

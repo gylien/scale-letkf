@@ -40,7 +40,6 @@ OUT_OPT="$1"
 if ((LOG_OPT <= 4 && MYRANK == 0)); then
   if [ -f "$TMPDIR/obsope.conf" ]; then
     mv -f $TMPDIR/obsope.conf $TMPOUT/${ATIME}/log/obsope/obsope.conf
-    mv -f $TMPDIR/LOG.pe000000 $TMPOUT/${ATIME}/log/obsope/LOG.pe000000
   fi
 fi
 

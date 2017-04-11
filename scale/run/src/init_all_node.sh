@@ -87,6 +87,7 @@ if ((MYRANK == 0)); then
 fi
 
 mkdir -p $TMPOUT/const
+mkdir -p $TMPOUT/const/log
 if ((PNETCDF != 1)); then
   mkdir -p $TMPOUT/const/topo
   if ((LANDUSE_UPDATE != 1)); then

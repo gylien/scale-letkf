@@ -1,3 +1,4 @@
+
 #!/bin/bash
 #===============================================================================
 #
@@ -17,67 +18,36 @@ SCALE_LOG_SFX='.pe000000'
 # Preset
 
 #new variables:
-# STG_TYPE: 'K', 'K_rankdir', 'builtin', (other: no stageing)
-# DISK_ALL_LOCAL: 1, (other)
+# STG_TYPE: 'K', 'K_rankdir', 'builtin', (other: no stageing) ###### to be removed
 # NODELIST_TYPE: 'nodefile', 'K'
 # MPI_TYPE: 'K', 'sgimpt', 'openmpi'
 
 if [ "$PRESET" = 'K' ]; then
-  STG_TYPE='K'
-  TMPDAT_MODE=2
-  TMPRUN_MODE=2
-#  DISK_MODE_TOPO_LANDUSE_DB=2
-#  DISK_MODE_DATA_BDY=2
-#  DISK_MODE_DATA_TOPO=2
-#  DISK_MODE_DATA_LANDUSE=2
-#  DISK_MODE_DATA_BDYPREP=2
+  TMP='.'
+  DISK_MODE=2
   ONLINE_STGOUT=0
   NODELIST_TYPE='K'
   MPI_TYPE='K'
 elif [ "$PRESET" = 'K_rankdir' ]; then
-  if ((PNETCDF == 1)); then
-    echo "[Error] When PNETCDF is enabled, 'K_rankdir' preset cannot be used." 1>&2
-    exit 1
-  fi
-  STG_TYPE='K_rankdir'
-#  DISK_ALL_LOCAL=1
-  TMPDAT_MODE=3
-  TMPRUN_MODE=3
+  TMP='..'
+  TMPL='.'
   DISK_ALL_RANK_LOCAL=1
-  DISK_MODE_TOPO_LANDUSE_DB=2
-  DISK_MODE_DATA_BDY=2
-  DISK_MODE_DATA_TOPO=2
-  DISK_MODE_DATA_LANDUSE=2
-  DISK_MODE_DATA_BDYPREP=2
+  DISK_MODE=3
+  DISK_MODE_CONSTDB=2
+  DISK_MODE_BDYDATA=2
+#  DISK_MODE_OBS=2
   ONLINE_STGOUT=0
   NODELIST_TYPE='K'
   MPI_TYPE='K'
 elif [ "$PRESET" = 'K_micro' ]; then
-  STG_TYPE=
-  TMPDAT_MODE=2
-  TMPRUN_MODE=2
-#  DISK_MODE_TOPO_LANDUSE_DB=2
-#  DISK_MODE_DATA_BDY=2
-#  DISK_MODE_DATA_TOPO=2
-#  DISK_MODE_DATA_LANDUSE=2
-#  DISK_MODE_DATA_BDYPREP=2
+  DISK_MODE=2
   NODELIST_TYPE='K'
   MPI_TYPE='K'
 #elif [ "$PRESET" = 'K_interact' ]; then
-#  STG_TYPE=
-#  TMPDAT_MODE=2
-#  TMPRUN_MODE=2
-##  DISK_MODE_TOPO_LANDUSE_DB=2
-##  DISK_MODE_DATA_BDY=2
-##  DISK_MODE_DATA_TOPO=2
-##  DISK_MODE_DATA_LANDUSE=2
-##  DISK_MODE_DATA_BDYPREP=2
-#  NODELIST_TYPE='K'
-#  MPI_TYPE='K'
+#  ...
 elif [ "$PRESET" = 'OFP' ]; then
   STG_TYPE='builtin'
-  TMPDAT_MODE=2
-  TMPRUN_MODE=2
+  DISK_MODE=2
   NODELIST_TYPE='nodefile'
   MPI_TYPE='impi'
 elif [ "$PRESET" = 'Linux' ]; then
@@ -144,14 +114,6 @@ else
   PPN_APPAR=$PPN
 fi
 
-DISK_MODE_TOPO_LANDUSE_DB=${DISK_MODE_TOPO_LANDUSE_DB:-2}
-
-DISK_MODE_DATA_BDY=${DISK_MODE_DATA_BDY:-2}
-
-DISK_MODE_DATA_TOPO=${DISK_MODE_DATA_TOPO:-2}
-DISK_MODE_DATA_LANDUSE=${DISK_MODE_DATA_LANDUSE:-2}
-DISK_MODE_DATA_BDYPREP=${DISK_MODE_DATA_BDYPREP:-2}
-
 #===============================================================================
 # Dependent variables
 
@@ -173,9 +135,7 @@ fi
 
 #-------------------------------------------------------------------------------
 
-TMPOUT_MODE=$TMPRUN_MODE
-
-if ((TMPRUN_MODE <= 2)); then
+if ((DISK_MODE <= 2)); then
   PROC_OPT='one'
 else
   PROC_OPT='alln'
@@ -184,15 +144,8 @@ fi
 #===============================================================================
 # Error detection
 
-if ((PNETCDF == 1)); then
-  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3)); then
-    echo "[Error] When PNETCDF is enabled, local disks cannot be used." 1>&2
-    exit 1
-  fi
-fi
-
 if ((IO_ARB == 1)); then
-  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3)); then
+  if ((DISK_MODE == 3)); then
     echo "[Error] When \$IO_ARB = 1, local disks cannot be used." 1>&2
     exit 1
   fi
@@ -219,49 +172,121 @@ ENSMODEL_DIR="$DIR/ensmodel"
 
 #-------------------------------------------------------------------------------
 
-if [ "$STG_TYPE" = 'K' ]; then
-  TMP="$(pwd)"
-#  echo "\$STG_TYPE = 'K': \$TMP reset to '$TMP'" 1>&2
-  TMP_STG='.'
-elif [ "$STG_TYPE" = 'K_rankdir' ]; then
-  TMP="$(pwd)/.."
-  TMPL="$(pwd)"
-#  echo "\$STG_TYPE = 'K_rankdir': \$TMP reset to '$TMP'" 1>&2
-#  echo "\$STG_TYPE = 'K_rankdir': \$TMPL reset to '$TMPL'" 1>&2
-  TMP_STG='..'
-  TMPL_STG='.'
-fi
+DISK_MODE=${DISK_MODE:-2}
+DISK_MODE_CONSTDB=${DISK_MODE_CONSTDB:-$DISK_MODE}
+DISK_MODE_BDYDATA=${DISK_MODE_BDYDATA:-$DISK_MODE}
+DISK_MODE_OBS=${DISK_MODE_OBS:-$DISK_MODE}
 
 #-------------------------------------------------------------------------------
+
+USE_TMP_LINK=0
+USE_TMPL=0
+if ((DISK_MODE == 1)); then
+  TMPROOT="$TMP"
+  USE_TMP_LINK=1
+elif ((DISK_MODE == 2)); then
+  TMPROOT="$TMP"
+elif ((DISK_MODE == 3)); then
+  TMPROOT="$TMPL"
+  USE_TMPL=1
+fi
+if ((DISK_MODE_CONSTDB == 1)); then
+  TMPROOT_CONSTDB="$TMP"
+  USE_TMP_LINK=1
+elif ((DISK_MODE_CONSTDB == 2)); then
+  TMPROOT_CONSTDB="$TMP"
+elif ((DISK_MODE_CONSTDB == 3)); then
+  TMPROOT_CONSTDB="$TMPL"
+  USE_TMPL=1
+fi
+if ((DISK_MODE_BDYDATA == 1)); then
+  TMPROOT_BDYDATA="$TMP"
+  USE_TMP_LINK=1
+elif ((DISK_MODE_BDYDATA == 2)); then
+  TMPROOT_BDYDATA="$TMP"
+elif ((DISK_MODE_BDYDATA == 3)); then
+  TMPROOT_BDYDATA="$TMPL"
+  USE_TMPL=1
+fi
+if ((DISK_MODE_OBS == 1)); then
+  TMPROOT_OBS="$TMP"
+  USE_TMP_LINK=1
+elif ((DISK_MODE_OBS == 2)); then
+  TMPROOT_OBS="$TMP"
+elif ((DISK_MODE_OBS == 3)); then
+  TMPROOT_OBS="$TMPL"
+  USE_TMPL=1
+fi
 
 STAGING_DIR="$TMP/staging"
 NODEFILE_DIR="$TMP/node"
 
-TMPDAT_S="$TMP/dat"              #
-TMPDAT_S_STG="$TMP_STG/dat"      #
-TMPDAT_L="$TMPL/dat"             #
-TMPDAT_L_STG="$TMPL_STG/dat"     #
+#-------------------------------------------------------------------------------
 
-if ((TMPDAT_MODE <= 2)); then    # The 'dat' temporary directory (input data)
-  TMPDAT="$TMP/dat"              #
-  TMPDAT_STG="$TMP_STG/dat"      #
-else                             #
-  TMPDAT="$TMPL/dat"             #
-  TMPDAT_STG="$TMPL_STG/dat"     #
-fi                               #
-if ((TMPRUN_MODE <= 2)); then    # The 'run' temporary directory (runtime files)
-  TMPRUN="$TMP/run"              #
-  TMPRUN_STG="$TMP_STG/run"      #
-else                             #
-  TMPRUN="$TMPL/run"             #
-  TMPRUN_STG="$TMPL_STG/run"     #
-fi                               #
-if ((TMPOUT_MODE <= 2)); then    # The 'out' temporary directory (output)
-  TMPOUT="$TMP/out"              #
-  TMPOUT_STG="$TMP_STG/out"      #
-else                             #
-  TMPOUT="$TMPL/out"             #
-  TMPOUT_STG="$TMPL_STG/out"     #
-fi                               #
+DAT_SUBDIR="dat"
+RUN_SUBDIR="run"
+OUT_SUBDIR="out"
+
+TMPDAT="$TMPROOT/${DAT_SUBDIR}"
+TMPRUN="$TMPROOT/${RUN_SUBDIR}"
+TMPOUT="$TMPROOT/${OUT_SUBDIR}"
+
+TMPDAT_CONSTDB="${TMPROOT_CONSTDB}/${DAT_SUBDIR}"
+TMPDAT_BDYDATA="${TMPROOT_BDYDATA}/${DAT_SUBDIR}"
+TMPDAT_OBS="${TMPROOT_OBS}/${DAT_SUBDIR}"
+
+#-------------------------------------------------------------------------------
+
+#if ((PNETCDF == 1 && USE_TMPL == 1)); then
+#  echo "[Error] When PNETCDF is enabled, local disks cannot be used." 1>&2
+#  exit 1
+#fi
+
+#-------------------------------------------------------------------------------
+
+STGINLIST_LINK="stgin_link"
+STGINLIST_SHARE="stgin_share"
+STGINLIST_LOCAL="stgin_local"
+STGOUTLIST_LINK="stgout_link"
+STGOUTLIST_SHARE="stgout_share"
+STGOUTLIST_LOCAL="stgout_local"
+
+if ((DISK_MODE == 1)); then
+  STGINLIST="$STGINLIST_LINK"
+  STGOUTLIST="$STGOUTLIST_LINK"
+  STGOUTLIST_NOLINK="$STGOUTLIST_SHARE"
+elif ((DISK_MODE == 2)); then
+  STGINLIST="$STGINLIST_SHARE"
+  STGOUTLIST="$STGOUTLIST_SHARE"
+  STGOUTLIST_NOLINK="$STGOUTLIST_SHARE"
+elif ((DISK_MODE == 3)); then
+  STGINLIST="$STGINLIST_LOCAL"
+  STGOUTLIST="$STGOUTLIST_LOCAL"
+  STGOUTLIST_NOLINK="$STGOUTLIST_LOCAL"
+fi
+
+if ((DISK_MODE_CONSTDB == 1)); then
+  STGINLIST_CONSTDB="$STGINLIST_LINK"
+elif ((DISK_MODE_CONSTDB == 2)); then
+  STGINLIST_CONSTDB="$STGINLIST_SHARE"
+elif ((DISK_MODE_CONSTDB == 3)); then
+  STGINLIST_CONSTDB="$STGINLIST_LOCAL"
+fi
+
+if ((DISK_MODE_BDYDATA == 1)); then
+  STGINLIST_BDYDATA="$STGINLIST_LINK"
+elif ((DISK_MODE_BDYDATA == 2)); then
+  STGINLIST_BDYDATA="$STGINLIST_SHARE"
+elif ((DISK_MODE_BDYDATA == 3)); then
+  STGINLIST_BDYDATA="$STGINLIST_LOCAL"
+fi
+
+if ((DISK_MODE_OBS == 1)); then
+  STGINLIST_OBS="$STGINLIST_LINK"
+elif ((DISK_MODE_OBS == 2)); then
+  STGINLIST_OBS="$STGINLIST_SHARE"
+elif ((DISK_MODE_OBS == 3)); then
+  STGINLIST_OBS="$STGINLIST_LOCAL"
+fi
 
 #===============================================================================

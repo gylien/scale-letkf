@@ -13,7 +13,7 @@ if (($# < 6)); then
 
 [pre_scale_pp_node.sh] 
 
-Usage: $0 MYRANK MEM_NODES MEM_NP TMPDIR MEMBER_RUN MEMBER_ITER
+Usage: $0 MYRANK MEM_NODES MEM_NP TMPDIR MEMBER_RUN MEMBER_ITER [SCPCALL]
 
   MYRANK     My rank number (not used)
   MEM_NODES  Number of nodes for a member
@@ -21,6 +21,7 @@ Usage: $0 MYRANK MEM_NODES MEM_NP TMPDIR MEMBER_RUN MEMBER_ITER
   TMPDIR     Temporary directory to run the model
   MEMBER_RUN
   MEMBER_ITER
+  SCPCALL
 
 EOF
   exit 1
@@ -31,7 +32,16 @@ MEM_NODES="$1"; shift
 MEM_NP="$1"; shift
 TMPDIR="$1"; shift
 MEMBER_RUN="$1"; shift
-MEMBER_ITER="$1"
+MEMBER_ITER="$1"; shift
+SCPCALL="${1:-cycle}"
+
+#===============================================================================
+
+if [ "$SCPCALL" = 'cycle' ]; then
+  CONF_FILES_SEQNUM='.false.'
+else
+  CONF_FILES_SEQNUM='.true.'
+fi
 
 #===============================================================================
 
@@ -39,6 +49,8 @@ cat $TMPDAT/conf/config.nml.ensmodel | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
         -e "/!--MEMBER_RUN--/a MEMBER_RUN = $MEMBER_RUN," \
         -e "/!--MEMBER_ITER--/a MEMBER_ITER = $MEMBER_ITER," \
+        -e "/!--CONF_FILES--/a CONF_FILES = \"${TMPDIR}/@@@@/pp.conf\"," \
+        -e "/!--CONF_FILES_SEQNUM--/a CONF_FILES_SEQNUM = $CONF_FILES_SEQNUM," \
         -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \

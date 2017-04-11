@@ -107,21 +107,9 @@ BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 #===============================================================================
 # Temporary directories to store runtime files
 
-DISK_MODE_TOPO_LANDUSE_DB=2
-
-DISK_MODE_DATA_BDY=2
-
-DISK_MODE_DATA_TOPO=2
-DISK_MODE_DATA_LANDUSE=2
-DISK_MODE_DATA_BDYPREP=2
-
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
-
-#SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
-#                            #  0: No
-#                            #  1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
@@ -145,7 +133,7 @@ SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 
-SCP_THREAD=8
+STAGE_THREAD=8
 TAR_THREAD=8
 
 PYTHON="python"
