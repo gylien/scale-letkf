@@ -65,7 +65,8 @@
 /
 
 &PARAM_DOMAIN_CATALOGUE
- DOMAIN_CATALOGUE_OUTPUT = .true.,
+!--DOMAIN_CATALOGUE_FNAME--
+!--DOMAIN_CATALOGUE_OUTPUT--
 /
 
 #################################################

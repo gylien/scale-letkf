@@ -120,6 +120,11 @@ else
   IO_LOG_DIR="${SCPCALL}_scale"
 fi
 
+DOMAIN_CATALOGUE_OUTPUT=".false."
+if [ "$(basename $TMPDIR)" == '0001' ]; then ###### using a variable for '0001'
+  DOMAIN_CATALOGUE_OUTPUT=".true."
+fi
+
 #===============================================================================
 
 conf="$(cat $TMPDAT/conf/config.nml.scale | \
@@ -142,6 +147,8 @@ conf="$(cat $TMPDAT/conf/config.nml.scale | \
             -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = ${HISTINT}.D0," \
             -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_monitor\"," \
             -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT_CONSTDB}/land/param.bucket.conf\"," \
+            -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"$TMPOUT/const/log/latlon_domain_catalogue.txt\"," \
+            -e "/!--DOMAIN_CATALOGUE_OUTPUT--/a DOMAIN_CATALOGUE_OUTPUT = ${DOMAIN_CATALOGUE_OUTPUT}," \
             -e "/!--ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME = \"${TMPDAT_CONSTDB}/rad/PARAG.29\"," \
             -e "/!--ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME = \"${TMPDAT_CONSTDB}/rad/PARAPC.29\"," \
             -e "/!--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = \"${TMPDAT_CONSTDB}/rad/VARDATA.RM29\"," \

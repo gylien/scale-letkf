@@ -225,12 +225,6 @@ if [ "$SCPCALL" = 'cycle' ]; then
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    if [ -f "$TMPDIR/../latlon_domain_catalogue.txt" ]; then
-      mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/scale/latlon_domain_catalogue.txt
-    fi
-  fi
-
 elif [ "$SCPCALL" = 'fcst' ]; then
 
   FTIME=$(datetime $STIME $FCSTLEN s)
@@ -261,12 +255,6 @@ elif [ "$SCPCALL" = 'fcst' ]; then
   if ((LOG_OPT <= 3)); then
     if [ -f "$TMPDIR/run.conf" ]; then
       mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/${SCPCALL}_scale/${MEM}_run.conf
-    fi
-  fi
-
-  if ((MYRANK == 0)); then
-    if [ -f "$TMPDIR/../latlon_domain_catalogue.txt" ]; then
-      mv -f $TMPDIR/../latlon_domain_catalogue.txt $TMPOUT/${STIME}/log/${SCPCALL}_scale/latlon_domain_catalogue.txt
     fi
   fi
 

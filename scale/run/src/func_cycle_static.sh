@@ -80,10 +80,10 @@ EOF
 
 # domain catalogue
 #-------------------
-if ((LOG_OPT <= 4)); then
+if ((LOG_OPT <= 3)); then
   path="latlon_domain_catalogue.txt"
   pathout="${OUTDIR}/const/log/latlon_domain_catalogue.txt"
-  echo "${pathout}|${path}|1" >> ${STAGING_DIR}/${STGOUTLIST}.1
+  echo "${pathout}|${path}|1" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[1]}
 fi
 
 #-------------------------------------------------------------------------------
@@ -462,6 +462,10 @@ while ((time <= ETIME)); do
     else
       mem_bdy='mean'
     fi
+    DOMAIN_CATALOGUE_OUTPUT=".false."
+    if ((m == 1)); then
+      DOMAIN_CATALOGUE_OUTPUT=".true."
+    fi
 
     conf_file="${name_m[$m]}/run_${time}.conf"
     echo "  $conf_file"
@@ -487,6 +491,8 @@ while ((time <= ETIME)); do
             -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
             -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"log/scale.${name_m[$m]}.monitor_${time}\"," \
             -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\"," \
+            -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"latlon_domain_catalogue.txt\"," \
+            -e "/!--DOMAIN_CATALOGUE_OUTPUT--/a DOMAIN_CATALOGUE_OUTPUT = ${DOMAIN_CATALOGUE_OUTPUT}," \
             -e "/!--ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/PARAG.29\"," \
             -e "/!--ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/PARAPC.29\"," \
             -e "/!--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/VARDATA.RM29\"," \

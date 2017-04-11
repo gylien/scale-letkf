@@ -638,6 +638,11 @@ while ((time <= ETIME)); do
     log_zeros='000000'
   fi
 
+  if ((loop == 1 && LOG_OPT <= 3)); then
+    path="const/log/latlon_domain_catalogue.txt"
+    echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+  fi
+
   if ((LOG_OPT <= 2)); then
     if ((LOG_TYPE == 1)); then
       path="${time}/log/scale_pp/0001_pp.conf"
@@ -673,8 +678,6 @@ while ((time <= ETIME)); do
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       path="${time}/log/scale/NOUT-1.${log_zeros}"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${time}/log/scale/latlon_domain_catalogue.txt"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
     else
       path="${time}/log/scale/"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
@@ -684,13 +687,9 @@ while ((time <= ETIME)); do
     if ((LOG_TYPE == 1)); then
       path="${atime}/log/obsope/obsope.conf"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${atime}/log/obsope/LOG.pe000000"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       path="${atime}/log/obsope/NOUT.${log_zeros}"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       path="${atime}/log/letkf/letkf.conf"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${atime}/log/letkf/LOG.pe000000"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       path="${atime}/log/letkf/NOUT.${log_zeros}"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
@@ -715,13 +714,13 @@ done
 #-------------------
 if ((BDY_FORMAT >= 1)); then
   if ((BDY_FORMAT == 1)); then
-    if [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt" ]; then
-      pathin="$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt"
+    if [ -s "$DATA_BDY_SCALE/const/log/latlon_domain_catalogue.txt" ]; then
+      pathin="$DATA_BDY_SCALE/const/log/latlon_domain_catalogue.txt"
       path="bdyorg/latlon_domain_catalogue.txt"
       echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
     else
       echo "[Error] Cannot find a lat/lon domain catalogue file at" >&2
-      echo "        '$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt'" >&2
+      echo "        '$DATA_BDY_SCALE/const/log/latlon_domain_catalogue.txt'" >&2
       exit 1
     fi
   fi
