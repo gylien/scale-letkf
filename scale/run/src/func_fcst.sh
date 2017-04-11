@@ -313,7 +313,7 @@ while ((time <= ETIME)); do
 
       # topo
       #-------------------
-      if ((loop == 1 && c == 1)) && [ "$TOPO_FORMAT" = 'prep' ]; then
+      if ((loop == 1)) && [ "$TOPO_FORMAT" = 'prep' ]; then
         if ((DISK_MODE == 3)); then
           for m in $(seq $fmember); do
             mm=$(((c-1) * fmember + m))
@@ -328,14 +328,16 @@ while ((time <= ETIME)); do
             fi
           done
         else
-          if ((PNETCDF == 1)); then
-            path="const/topo.nc"
-            echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
-          else
-            for q in $(seq $mem_np); do
-              path="const/topo/topo$(printf $SCALE_SFX $((q-1)))"
+          if ((c == 1)); then
+            if ((PNETCDF == 1)); then
+              path="const/topo.nc"
               echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
-            done
+            else
+              for q in $(seq $mem_np); do
+                path="const/topo/topo$(printf $SCALE_SFX $((q-1)))"
+                echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+              done
+            fi
           fi
         fi
       fi
@@ -355,7 +357,7 @@ while ((time <= ETIME)); do
 
       # landuse
       #-------------------
-      if (((loop == 1 && c == 1) || LANDUSE_UPDATE == 1)) && [ "$LANDUSE_FORMAT" = 'prep' ]; then
+      if ((loop == 1 || LANDUSE_UPDATE == 1)) && [ "$LANDUSE_FORMAT" = 'prep' ]; then
         if ((DISK_MODE == 3)); then
           for m in $(seq $fmember); do
             mm=$(((c-1) * fmember + m))
@@ -378,22 +380,24 @@ while ((time <= ETIME)); do
             fi
           done
         else
-          if ((PNETCDF == 1)); then
-            if ((LANDUSE_UPDATE == 1)); then
-              path="${time2}/landuse.nc"
-            else
-              path="const/landuse.nc"
-            fi
-            echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
-          else
-            for q in $(seq $mem_np); do
+          if ((c == 1 || LANDUSE_UPDATE == 1)); then
+            if ((PNETCDF == 1)); then
               if ((LANDUSE_UPDATE == 1)); then
-                path="${time2}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+                path="${time2}/landuse.nc"
               else
-                path="const/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+                path="const/landuse.nc"
               fi
               echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
-            done
+            else
+              for q in $(seq $mem_np); do
+                if ((LANDUSE_UPDATE == 1)); then
+                  path="${time2}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+                else
+                  path="const/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+                fi
+                echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+              done
+            fi
           fi
         fi
       fi
@@ -462,7 +466,7 @@ while ((time <= ETIME)); do
       if ((loop == 1 && c == 1 && TOPOOUT_OPT <= 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
         if ((PNETCDF == 1)); then
           path="const/topo.nc"
-#            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
           echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
         else
           path="const/topo/"
@@ -479,7 +483,7 @@ while ((time <= ETIME)); do
           else
             path="const/landuse.nc"
           fi
-#            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
           echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
         else
           if ((LANDUSE_UPDATE == 1)); then
@@ -500,7 +504,7 @@ while ((time <= ETIME)); do
         elif ((BDYOUT_OPT <= 2)); then
           if ((PNETCDF == 1)); then
             path="${time2}/bdy/mean.boundary.nc"
-#              echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
             echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
           else
             path="${time2}/bdy/mean/"
