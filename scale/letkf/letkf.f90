@@ -93,6 +93,7 @@ PROGRAM letkf
 
   call set_common_conf(nprocs)
 
+  call read_nml_model
   call read_nml_obs_error
   call read_nml_obsope
   call read_nml_letkf
@@ -156,15 +157,15 @@ PROGRAM letkf
 ! First guess ensemble
 !-----------------------------------------------------------------------
 
-    allocate (gues3d(nij1,nlev,nens,nv3d))
-    allocate (gues2d(nij1,nens,nv2d))
-    allocate (anal3d(nij1,nlev,nens,nv3d))
-    allocate (anal2d(nij1,nens,nv2d))
-
     !
     ! LETKF GRID setup
     !
     call set_common_mpi_grid
+
+    allocate (gues3d(nij1,nlev,nens,nv3d))
+    allocate (gues2d(nij1,nens,nv2d))
+    allocate (anal3d(nij1,nlev,nens,nv3d))
+    allocate (anal2d(nij1,nens,nv2d))
 
     call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
 

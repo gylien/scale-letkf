@@ -34,7 +34,6 @@ module common_mpi_scale
   integer,save :: nij1
   integer,save :: nij1max
   integer,allocatable,save :: nij1node(:)
-  real(r_size),allocatable,save :: topo2d(:,:)
   real(r_size),allocatable,save :: rig1(:),rjg1(:)
   real(r_size),allocatable,save :: topo1(:)
   real(r_size),allocatable,save :: hgt1(:,:)
@@ -126,9 +125,22 @@ end subroutine finalize_mpi_scale
 ! set_common_mpi_scale
 !-------------------------------------------------------------------------------
 subroutine set_common_mpi_scale
+  use scale_grid, only: &
+      GRID_CX, GRID_CY, &
+      DX, DY
+  use scale_grid_index, only: &
+      IHALO, JHALO
+  use scale_mapproj, only: &
+      MPRJ_xy2lonlat
   implicit none
   integer :: color, key
-  integer :: i, n, ierr
+  integer :: ierr
+  character(len=filelenmax) :: filename
+  real(r_size), allocatable :: height3dtmp(:,:,:)
+  real(r_size), allocatable :: lon2dtmp(:,:)
+  real(r_size), allocatable :: lat2dtmp(:,:)
+  integer :: i, j
+  real(r_size) :: ri, rj
 
   call mpi_timer('', 2)
 
@@ -145,28 +157,55 @@ subroutine set_common_mpi_scale
 
   call mpi_timer('set_common_mpi_scale:mpi_comm_split_e:', 2)
 
-  ! Compute nij1, nij1max, nij1node
+  ! Read/calculate model coordinates
   !-----------------------------------------------------------------------------
 
-  i = mod(nlon*nlat, nprocs_e)
-  nij1max = (nlon*nlat - i) / nprocs_e + 1
-  if (myrank_e < i) then
-    nij1 = nij1max
-  else
-    nij1 = nij1max - 1
-  end if
-  write (6,'(A,I6.6,A,I7)') 'MYRANK ', myrank, ' number of grid points: nij1 =', nij1
+  if (VERIFY_COORD) then
+    if (myrank_e == 0) then
+!      allocate (height3d(nlev,nlon,nlat))
+      allocate (lon2d(nlon,nlat))
+      allocate (lat2d(nlon,nlat))
+      allocate (height3dtmp(nlev,nlon,nlat))
+      allocate (lon2dtmp(nlon,nlat))
+      allocate (lat2dtmp(nlon,nlat))
 
-  allocate (nij1node(nprocs_e))
-  do n = 1, nprocs_e
-    if (n-1 < i) then
-      nij1node(n) = nij1max
-    else
-      nij1node(n) = nij1max - 1
+      if (.not. allocated(topo2d)) then
+        allocate (topo2d(nlon,nlat))
+        call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
+      end if
+!      call scale_calc_z(topo2d, height3d)
+
+!$OMP PARALLEL DO PRIVATE(i,j,ri,rj) COLLAPSE(2)
+      do j = 1, nlat
+        do i = 1, nlon
+          ri = real(i + IHALO, r_size)
+          rj = real(j + JHALO, r_size)
+          call MPRJ_xy2lonlat((ri-1.0d0) * DX + GRID_CX(1), (rj-1.0d0) * DY + GRID_CY(1), lon2d(i,j), lat2d(i,j))
+          lon2d(i,j) = lon2d(i,j) * rad2deg
+          lat2d(i,j) = lat2d(i,j) * rad2deg
+        end do
+      end do
+!$OMP END PARALLEL DO
+
+      call file_member_replace(proc2mem(1,1,myrank+1), GUES_IN_BASENAME, filename)
+      call read_restart_coor(filename, lon2dtmp, lat2dtmp, height3dtmp)
+
+      if (maxval(abs(lon2dtmp - lon2d)) > 1.0d-6 .or. maxval(abs(lat2dtmp - lat2d)) > 1.0d-6) then
+        write (6, '(A,F15.7,A,F15.7)') '[Error] Map projection settings are incorrect! -- maxdiff(lon) = ', &
+                                       maxval(abs(lon2dtmp - lon2d)), ', maxdiff(lat) = ', maxval(abs(lat2dtmp - lat2d))
+        stop
+      end if
+!      if (maxval(abs(height3dtmp - height3d)) > 1.0d-6) then
+!        write (6, '(A,F15.7)') '[Error] 3D height calculation are incorrect, possibily due to inconsistent topography files! -- maxdiff(height) = ', &
+!                               maxval(abs(height3dtmp - height3d))
+!        stop
+!      end if
+
+      write (6, '(A)') 'VERIFY_COORD: Model coordinate calculation is good.'
+
+      call mpi_timer('set_common_mpi_scale:verify_coord:', 2)
     end if
-  end do
-
-  call mpi_timer('set_common_mpi_scale:nij1_cal:', 2)
+  end if
 
   return
 end subroutine set_common_mpi_scale
@@ -198,12 +237,34 @@ subroutine set_common_mpi_grid
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   REAL(r_size),ALLOCATABLE :: v3d(:,:,:)
   REAL(r_size),ALLOCATABLE :: v2d(:,:)
-  INTEGER :: i,j
+  INTEGER :: i, j, n
   integer :: iproc, jproc
+#ifdef DEBUG
+  real(r_size) :: topo2dtmp(nlon,nlat)
+#endif
 
   call mpi_timer('', 2)
 
-  ALLOCATE(topo2d(nlon,nlat))
+  ! Compute nij1, nij1max, nij1node
+  !-----------------------------------------------------------------------------
+
+  i = mod(nlon*nlat, nprocs_e)
+  nij1max = (nlon*nlat - i) / nprocs_e + 1
+  if (myrank_e < i) then
+    nij1 = nij1max
+  else
+    nij1 = nij1max - 1
+  end if
+  write (6,'(A,I6.6,A,I7)') 'MYRANK ', myrank, ' number of grid points: nij1 =', nij1
+
+  allocate (nij1node(nprocs_e))
+  do n = 1, nprocs_e
+    if (n-1 < i) then
+      nij1node(n) = nij1max
+    else
+      nij1node(n) = nij1max - 1
+    end if
+  end do
 
   ALLOCATE(rig1(nij1))
   ALLOCATE(rjg1(nij1))
@@ -213,6 +274,8 @@ subroutine set_common_mpi_grid
 
   ALLOCATE(v3d(nij1,nlev,nv3d))
   ALLOCATE(v2d(nij1,nv2d))
+
+  call mpi_timer('set_common_mpi_grid:nij1_cal:', 2)
 
 !!!!!! ----- need to be replaced by more native communication !!!!!!
 
@@ -230,17 +293,36 @@ subroutine set_common_mpi_grid
 
     call mpi_timer('set_common_mpi_grid:rij_cal:', 2)
 
-  ! Note that only 'mmean_rank_e' processes have topo data in 'topo2d', 
-  ! that will be used later in the obs departure monitor calculation
+    if (allocated(topo2d)) then
+      write (6, '(1x,A,A15,A)') '*** Read 2D var: ', trim(topo2d_name), ' -- skipped because it was read previously'
+#ifdef DEBUG
 #ifdef PNETCDF
-    if (IO_AGGREGATE) then
-      call read_topo_par(LETKF_TOPO_IN_BASENAME, topo2d, MPI_COMM_d)
+      if (IO_AGGREGATE) then
+        call read_topo_par(LETKF_TOPO_IN_BASENAME, topo2dtmp, MPI_COMM_d)
+      else
+#endif
+        call read_topo(LETKF_TOPO_IN_BASENAME, topo2dtmp)
+#ifdef PNETCDF
+      end if
+#endif
+      if (maxval(abs(topo2dtmp - topo2d)) > 1.0d-6) then
+        write (6, '(A,F15.7)') '[Error] topo height in history files and restart files are inconsistent; maxdiff = ', maxval(abs(topo2dtmp - topo2d))
+        stop
+      end if
+#endif
     else
-#endif
-      call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
+      allocate (topo2d(nlon,nlat))
 #ifdef PNETCDF
-    end if
+      if (IO_AGGREGATE) then
+        call read_topo_par(LETKF_TOPO_IN_BASENAME, topo2d, MPI_COMM_d)
+      else
 #endif
+        call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
+#ifdef PNETCDF
+      end if
+#endif
+    end if
+
     v3dg(1,:,:,3) = topo2d
 
     call mpi_timer('set_common_mpi_grid:read_topo:', 2)
@@ -256,7 +338,7 @@ subroutine set_common_mpi_grid
 
   call mpi_timer('set_common_mpi_grid:scatter:', 2)
 
-  call scale_calc_z(nij1, topo1, hgt1)
+  call scale_calc_z_grd(nij1, topo1, hgt1)
 
   call mpi_timer('set_common_mpi_grid:scale_calc_z:', 2)
 
