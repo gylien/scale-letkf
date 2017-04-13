@@ -348,7 +348,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
         ! limit q spread
         IF(Q_SPRD_MAX > 0.0d0 .and. n == iv3d_q) THEN                                  !GYL
-          q_mean = SUM(anal3d(ij,ilev,:,n)) / REAL(MEMBER,r_size)                      !GYL
+          q_mean = SUM(anal3d(ij,ilev,1:MEMBER,n)) / REAL(MEMBER,r_size)               !GYL
           q_sprd = 0.0d0                                                               !GYL
           DO m=1,MEMBER                                                                !GYL
             q_anal(m) = anal3d(ij,ilev,m,n) - q_mean                                   !GYL
