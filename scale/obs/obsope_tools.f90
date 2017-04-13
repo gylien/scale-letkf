@@ -91,12 +91,13 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   real(r_size), allocatable :: tmp_lon_H08(:),tmp_lat_H08(:)
   integer, allocatable :: nnB07(:) ! index of Him8 band 7
   integer :: nprof ! num of Him8 profile
-  real(r_size), allocatable :: yobs_H08(:),plev_obs_H08(:)
-  real(r_size), allocatable :: yobs_H08_clr(:)
-  integer, allocatable :: qc_H08(:)
+  !real(r_size), allocatable :: yobs_H08(:),plev_obs_H08(:)
+  !real(r_size), allocatable :: yobs_H08_clr(:)
+  !integer, allocatable :: qc_H08(:)
+  real(r_size), allocatable :: yobs_H08(:,:),plev_obs_H08(:,:)
+  real(r_size), allocatable :: yobs_H08_clr(:,:)
+  integer, allocatable :: qc_H08(:,:)
   integer :: ch
-
-
 
 #endif
 
@@ -399,9 +400,9 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
       if (nobs > 0) then
         obsda%qc(1:nobs) = iqc_undef
-!#ifdef H08
-!!        obsda%lev(1:nobs) = 0.0d0
-!#endif
+#ifdef H08
+        obsda%lev(1:nobs) = 0.0d0
+#endif
       end if
 
       ! Observations not in the assimilation time window
@@ -521,7 +522,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
                 tmp_rj_H08(nprof) = rjl
                 tmp_lon_H08(nprof) = obs(iof)%lon(n)
                 tmp_lat_H08(nprof) = obs(iof)%lat(n)
-                write(6,'(a,2i4)')'Him8 debug obsope',nint(obs(iof)%lev(n)),nint(obs(iof)%lev(n+1))
+                !write(6,'(a,2i4)')'Him8 debug obsope',nint(obs(iof)%lev(n)),nint(obs(iof)%lev(n+1))
               endif
 
             end do ! [ nn = n1, n2 ]
@@ -556,10 +557,14 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
             !                    
 
             if(nprof >=1) then
-              allocate(yobs_H08(nprof*nch))
-              allocate(yobs_H08_clr(nprof*nch))
-              allocate(plev_obs_H08(nprof*nch))
-              allocate(qc_H08(nprof*nch))
+              !allocate(yobs_H08(nprof*nch))
+              !allocate(yobs_H08_clr(nprof*nch))
+              !allocate(plev_obs_H08(nprof*nch))
+              !allocate(qc_H08(nprof*nch))
+              allocate(yobs_H08(nch,nprof))
+              allocate(yobs_H08_clr(nch,nprof))
+              allocate(plev_obs_H08(nch,nprof))
+              allocate(qc_H08(nch,nprof))
 
               call Trans_XtoY_H08(nprof,ri_H08,rj_H08,&
                                   lon_H08,lat_H08,v3dg,v2dg,&
@@ -575,9 +580,12 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
               ! use OpenMP?? T.Honda (02/18/2017)
               do nn = 1, nprof
                 do ch = 1, nch
-                  obsda%val(nnB07(nn)+ch-1) = yobs_H08((nn-1)*nch+ch) 
-                  obsda%qc(nnB07(nn)+ch-1) = qc_H08((nn-1)*nch+ch) 
-                  obsda%lev(nnB07(nn)+ch-1) = plev_obs_H08((nn-1)*nch+ch) 
+                  !obsda%val(nnB07(nn)+ch-1) = yobs_H08((nn-1)*nch+ch) 
+                  !obsda%qc(nnB07(nn)+ch-1) = qc_H08((nn-1)*nch+ch) 
+                  !obsda%lev(nnB07(nn)+ch-1) = plev_obs_H08((nn-1)*nch+ch) 
+                  obsda%val(nnB07(nn)+ch-1) = yobs_H08(ch,nn) 
+                  obsda%qc(nnB07(nn)+ch-1) = qc_H08(ch,nn) 
+                  obsda%lev(nnB07(nn)+ch-1) = plev_obs_H08(ch,nn) 
                 enddo
               enddo
 

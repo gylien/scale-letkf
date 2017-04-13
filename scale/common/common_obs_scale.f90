@@ -2704,10 +2704,14 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
   REAL(r_size) :: max_weight(nch,nprof)
   REAL(r_size) :: tmp_weight
 
-  REAL(r_size),INTENT(OUT) :: yobs(nprof*nch)
-  REAL(r_size),OPTIONAL,INTENT(OUT) :: yobs_H08_clr(nprof*nch)
-  INTEGER,INTENT(OUT) :: qc(nprof*nch)
-  REAL(r_size),INTENT(OUT) :: plev_obs(nch*nprof)
+!  REAL(r_size),INTENT(OUT) :: yobs(nprof*nch)
+!  REAL(r_size),OPTIONAL,INTENT(OUT) :: yobs_H08_clr(nprof*nch)
+!  INTEGER,INTENT(OUT) :: qc(nprof*nch)
+!  REAL(r_size),INTENT(OUT) :: plev_obs(nch*nprof)
+  REAL(r_size),INTENT(OUT) :: yobs(nch,nprof)
+  REAL(r_size),OPTIONAL,INTENT(OUT) :: yobs_H08_clr(nch,nprof)
+  INTEGER,INTENT(OUT) :: qc(nch,nprof)
+  REAL(r_size),INTENT(OUT) :: plev_obs(nch,nprof)
 
   REAL(r_size) :: rdp ! delta p
   INTEGER :: slev, elev
@@ -2807,7 +2811,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
     max_weight(ch,np) = abs((trans_out(2,ch,np) - trans_out(1,ch,np)) * rdp )
 
 
-    plev_obs(n) = (prs2d(slev+1,np) + prs2d(slev,np)) * 0.5d0 ! (Pa)
+    !plev_obs(n) = (prs2d(slev+1,np) + prs2d(slev,np)) * 0.5d0 ! (Pa)
+    plev_obs(ch,np) = (prs2d(slev+1,np) + prs2d(slev,np)) * 0.5d0 ! (Pa)
 
     DO k = 2, nlev-1
 
@@ -2815,31 +2820,36 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
       tmp_weight = (trans_out(k+1,ch,np) - trans_out(k,ch,np)) * rdp 
       if(tmp_weight > max_weight(ch,np))then
         max_weight(ch,np) = tmp_weight
-        plev_obs(n) = (prs2d(slev+k,np) + prs2d(slev+k-1,np)) * 0.5d0 ! (Pa)
+        plev_obs(ch,np) = (prs2d(slev+k,np) + prs2d(slev+k-1,np)) * 0.5d0 ! (Pa)
       endif
     ENDDO
 
-    yobs(n) = btall_out(ch,np)
+    !yobs(n) = btall_out(ch,np)
+    yobs(ch,np) = btall_out(ch,np)
 
     if(H08_VLOCAL_CTOP)then
-      if((ctop_out(n) > 0.0d0) .and. (ctop_out(n) < plev_obs(n)) .and. &
-         (plev_obs(n)>H08_LIMIT_LEV)) then
-        plev_obs(n) = (ctop_out(n)+plev_obs(n))*0.5d0
-      endif
+!      if((ctop_out(n) > 0.0d0) .and. (ctop_out(n) < plev_obs(n)) .and. &
+!         (plev_obs(n)>H08_LIMIT_LEV)) then
+!        plev_obs(n) = (ctop_out(n)+plev_obs(n))*0.5d0
+!      endif
     endif
 
     SELECT CASE(H08_CH_USE(ch))
     CASE(1)
-      qc(n) = iqc_good
+!      qc(n) = iqc_good
+      qc(ch,np) = iqc_good
     CASE DEFAULT
-      qc(n) = iqc_obs_bad
+!      qc(n) = iqc_obs_bad
+      qc(ch,np) = iqc_obs_bad
     END SELECT
 
     IF(H08_REJECT_LAND .and. (lsmask1d(np) > 0.5d0))THEN
-      qc(n) = iqc_obs_bad
+!      qc(n) = iqc_obs_bad
+      qc(ch,np) = iqc_obs_bad
     ENDIF
 
-    yobs_H08_clr(n) = btclr_out(ch,np)
+    !yobs_H08_clr(n) = btclr_out(ch,np)
+    yobs_H08_clr(ch,np) = btclr_out(ch,np)
 
   ENDDO ! ch
   ENDDO ! np
