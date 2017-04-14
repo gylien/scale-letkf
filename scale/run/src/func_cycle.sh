@@ -1248,7 +1248,7 @@ ensfcst_2 () {
 #echo
 
 DELETE_MEMBER=0
-if ((OUT_OPT >= 5 && (loop % OUT_CYCLE_SKIP != 1))); then
+if ((OUT_OPT >= 5 && ((loop - 1) % OUT_CYCLE_SKIP != 0))); then
   DELETE_MEMBER=1
 fi
 

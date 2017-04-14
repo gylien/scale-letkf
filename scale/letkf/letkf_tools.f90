@@ -124,8 +124,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Observation number limit (*to be moved to namelist*)
   !
   ctype_merge(:,:) = 0
-!  ctype_merge(uid_obs(id_radar_ref_obs),22) = 1
-!  ctype_merge(uid_obs(id_radar_ref_zero_obs),22) = 1
+  ctype_merge(uid_obs(id_radar_ref_obs),22) = 1
+  ctype_merge(uid_obs(id_radar_ref_zero_obs),22) = 1
   !
   ! FCST PERTURBATIONS
   !
