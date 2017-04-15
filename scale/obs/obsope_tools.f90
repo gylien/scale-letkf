@@ -102,13 +102,15 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 #endif
 
 ! -- for TC vital assimilation --
-!  INTEGER :: obs_set_TCX, obs_set_TCY, obs_set_TCP ! obs set
-!  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
-  INTEGER :: bTC_proc ! the process where the background TC is located.
 ! bTC: background TC in each subdomain
 ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp (Pa)
-  REAL(r_size),ALLOCATABLE :: bTC(:,:)
-  REAL(r_size) :: bTC_mslp
+  real(r_size),allocatable :: bTC(:,:)
+  real(r_size) :: bTC_mslp
+
+! Multiple TCs are not considered (04/14/2017)
+  real(r_size) :: TC_rij(2) = -1.0d0
+  integer :: bTC_rank_d ! the process where the background TC is located.
+  integer :: obs_nn_TCX, obs_nn_TCY, obs_nn_TCP ! TCX, TCY, TCP
 
 !-------------------------------------------------------------------------------
 
@@ -128,13 +130,6 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
       end if
     end if
   end do
-
-!  obs_set_TCX = -1
-!  obs_set_TCY = -1
-!  obs_set_TCP = -1
-!  obs_idx_TCX = -1
-!  obs_idx_TCY = -1
-!  obs_idx_TCP = -1
 
   allocate (obrank(nobs_all))
   allocate (obri(nobs_all))
@@ -176,23 +171,15 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
       ibufs = 0
       do n = n1, n2
         ibufs = ibufs + 1
-!        select case (obs(iof)%elm(n))
-!        case (id_tclon_obs)
-!          obs_set_TCX = iof
-!          obs_idx_TCX = n
-!          cycle
-!        case (id_tclat_obs)
-!          obs_set_TCY = iof
-!          obs_idx_TCY = n
-!          cycle
-!        case (id_tcmip_obs)
-!          obs_set_TCP = iof
-!          obs_idx_TCP = n
-!          cycle
-!        end select
 
         call phys2ij(obs(iof)%lon(n), obs(iof)%lat(n), ri_bufs(ibufs), rj_bufs(ibufs))
         call rij_g2l_auto(obrank_bufs(ibufs), ri_bufs(ibufs), rj_bufs(ibufs), ril, rjl) ! rij, rjl discarded here; re-computed later
+#ifdef TCV
+        if (obs(iof)%elm(n) == id_tcmip_obs)then
+          TC_rij(1) = ri_bufs(ibufs)
+          TC_rij(2) = rj_bufs(ibufs)
+        endif
+#endif
       end do ! [ n = n1, n2 ]
 
       call mpi_timer('obsope_cal:first_scan_cal:', 2, barrier=MPI_COMM_a)
@@ -209,6 +196,10 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
   deallocate (cntr, dspr)
   deallocate (obrank_bufs, ri_bufs, rj_bufs)
+
+#ifdef TCV
+  call MPI_ALLREDUCE(MPI_IN_PLACE, TC_rij, 2, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)  ! 
+#endif
 
   ! Bucket sort of observation wrt. time slots and subdomains using the process rank 0
   !-----------------------------------------------------------------------------
@@ -448,9 +439,26 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
               iof = obsda%set(nn)
               n = obsda%idx(nn)
 
+
 #ifdef H08
               !! Him8 obs will be processed separatly !!
               if (obs(iof)%elm(n) == id_H08IR_obs) cycle 
+#endif
+
+
+#ifdef TCV
+              !! TC vital !!
+              select case (obs(iof)%elm(n))
+              case (id_tclon_obs)
+                obs_nn_TCX = nn
+                cycle
+              case (id_tclat_obs)
+                obs_nn_TCY = nn
+                cycle
+              case (id_tcmip_obs)
+                obs_nn_TCP = nn
+                cycle
+              end select
 #endif
 
               call rij_g2l(myrank_d, obsda%ri(nn), obsda%rj(nn), ril, rjl)
@@ -557,10 +565,6 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
             !                    
 
             if(nprof >=1) then
-              !allocate(yobs_H08(nprof*nch))
-              !allocate(yobs_H08_clr(nprof*nch))
-              !allocate(plev_obs_H08(nprof*nch))
-              !allocate(qc_H08(nprof*nch))
               allocate(yobs_H08(nch,nprof))
               allocate(yobs_H08_clr(nch,nprof))
               allocate(plev_obs_H08(nch,nprof))
@@ -580,9 +584,6 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
               ! use OpenMP?? T.Honda (02/18/2017)
               do nn = 1, nprof
                 do ch = 1, nch
-                  !obsda%val(nnB07(nn)+ch-1) = yobs_H08((nn-1)*nch+ch) 
-                  !obsda%qc(nnB07(nn)+ch-1) = qc_H08((nn-1)*nch+ch) 
-                  !obsda%lev(nnB07(nn)+ch-1) = plev_obs_H08((nn-1)*nch+ch) 
                   obsda%val(nnB07(nn)+ch-1) = yobs_H08(ch,nn) 
                   obsda%qc(nnB07(nn)+ch-1) = qc_H08(ch,nn) 
                   obsda%lev(nnB07(nn)+ch-1) = plev_obs_H08(ch,nn) 
@@ -597,78 +598,68 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
             endif ! [nprof >= 1]
 
-#endif
 
+#endif
+!    -- End of Him8 DA part --
+
+!   -- TC vital DA -- 
+#ifdef TCV
+        if(minval(TC_rij) > 0.0d0)then
+          !
+          ! TC vital obs should have 3 data (i.e., lon, lat, and MSLP)
+          ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp
+
+          ! (1) Get "local (each subdomain's)" TC information 
+          !
+          !     *A local TC simply corresponds to the minimum SLP in each
+          !     subdomain. 
+          !     *If the diagnosed TC position in a subdomain is too far
+          !     from the vital position, the subdomain is regarded as a no TC
+          !     subdomain.
+
+          allocate(bTC(3,0:MEM_NP-1))
+
+          bTC = 9.99d33
+          call search_tc_subdom(TC_rij(1),TC_rij(2),v2dg,bTC(1,myrank_d),bTC(2,myrank_d),bTC(3,myrank_d))
+          ! Note: obs(iof)%dat(obs_idx_TCX) is not longitude (deg) but X (m).
+          !       Units of the original TC vital position are converted in
+          !       subroutine read_obs in common_obs_scale.f90.
+          !
+
+          ! (2) Compare local TCs in each subdomain and assign the strongest one as a background TC in each member
+          !
+          if (nprocs_d > 1) then
+             CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
+          end if
+
+          bTC_mslp = 1100.0d2 ! Assume MSLP of background TC is lower than 1100 (hPa). 
+          do n = 0, MEM_NP - 1
+            !write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
+            if (bTC(3,n) < bTC_mslp ) then
+              bTC_mslp = bTC(3,n)
+              bTC_rank_d = n
+            endif
+          enddo ! [ n = 0, MEM_NP - 1]
+
+          ! (3) Substitute Hx in a subdomain that covers an observed TC
+          !
+          if (myrank_d == bTC_rank_d) then
+            do n = 1, 3
+              if (n == 1) nn = obs_nn_TCX
+              if (n == 2) nn = obs_nn_TCY
+              if (n == 3) nn = obs_nn_TCP
+              obsda%val(nn) = bTC(n,btc_rank_d)
+              obsda%qc(nn) = iqc_good
+            enddo ! [ n = 1, 3 ]
+          endif ! [myrank_d == bTC_rank_d]
+          deallocate(bTC)
+
+        endif ! [minval(TC_rij) > 0.0d0]
+#endif
+!   -- End of TC vital DA -- 
 
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:obsope_step_2   (t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
-
-
-
-! ###  -- TC vital assimilation -- ###
-!          if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0) then
-!          if (obs(iof)%dif(obs_idx_TCX) == obs(iof)%dif(obs_idx_TCY) .and. &
-!              obs(iof)%dif(obs_idx_TCY) == obs(iof)%dif(obs_idx_TCP)) then
-!           
-!            if (obs(iof)%dif(obs_idx_TCX) > slot_lb(islot) .and. &
-!              obs(iof)%dif(obs_idx_TCX) <= slot_ub(islot)) then
-!              nslot = nslot + 3 ! TC vital obs should have 3 data (i.e., lon, lat, and MSLP)
-
-!              !!! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
-!              ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp
-!              allocate(bTC(3,0:MEM_NP-1))
-
-!              bTC = 9.99d33
-
-!              ! Note: obs(iof)%dat(obs_idx_TCX) is not longitude (deg) but X (m).
-!              !       Units of the original TC vital position are converted in
-!              !       subroutine read_obs in common_obs_scale.f90.
-!              !
-!              call phys2ij(obs(iof)%lon(obs_idx_TCX),obs(iof)%lat(obs_idx_TCX),rig,rjg) 
-!              call rij_g2l_auto(proc,rig,rjg,ril,rjl)  
-!              call search_tc_subdom(rig,rjg,v2dg,bTC(1,myrank_d),bTC(2,myrank_d),bTC(3,myrank_d))
-!  
-!!              CALL MPI_BARRIER(MPI_COMM_d,ierr)
-!              if (nprocs_d > 1) then
-!                CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
-!              end if
-
-!              ! Assume MSLP of background TC is lower than 1100 (hPa). 
-!              bTC_mslp = 1100.0d2
-!              do n = 0, MEM_NP - 1
-!                write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
-!                if (bTC(3,n) < bTC_mslp ) then
-!                  bTC_mslp = bTC(3,n)
-!                  bTC_proc = n
-!                endif
-!              enddo ! [ n = 0, MEM_NP - 1]
-
-!              if (myrank_d == proc) then
-!                do n = 1, 3
-!                  nobs = nobs + 1
-!                  nobs_slot = nobs_slot + 1
-!                  obsda%set(nobs) = iof
-!                  if(n==1) obsda%idx(nobs) = obs_idx_TCX
-!                  if(n==2) obsda%idx(nobs) = obs_idx_TCY
-!                  if(n==3) obsda%idx(nobs) = obs_idx_TCP
-!                  obsda%ri(nobs) = rig
-!                  obsda%rj(nobs) = rjg
-!                  ri(nobs) = ril
-!                  rj(nobs) = rjl
-
-!                  obsda%val(nobs) = bTC(n,bTC_proc)
-!                  obsda%qc(nobs) = iqc_good
-!                enddo ! [ n = 1, 3 ]
-
-!              endif
-!              deallocate(bTC)
-
-!            endif ! [ obs(iof)%dif(n) > slot_lb(islot) .and. obs(iof)%dif(n) <= slot_ub(islot) ]
-!          endif ! [ obs_idx_TCX > 0 ...]
-!          endif !
-
-
- 
 
       end do ! [ islot = SLOT_START, SLOT_END ]
 

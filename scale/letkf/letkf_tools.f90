@@ -1539,6 +1539,10 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'                ! H08
     nd_v = ABS(LOG(obsda_sort%lev(iob)) - LOG(rlev)) / vert_loc_ctype(ic)   ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
 #endif
+#ifdef TCV
+  else if (obtyp == 24) then ! obtypelist(obtyp) == 'TCVITL'                ! for TCVITL, vertical localization is NOT applied 
+    nd_v = 0.0d0 
+#endif
   else
     nd_v = ABS(LOG(obs(obset)%lev(obidx)) - LOG(rlev)) / vert_loc_ctype(ic)
   end if

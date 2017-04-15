@@ -142,7 +142,7 @@ MODULE common_nml
   real(r_size) :: HORI_LOCAL(nobtype) = &
     (/500.0d3, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
        -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-       -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+       -1.0d0, -1.0d0, 20.0d3, 200.0d3/)
 
   ! >0: localization length scale [ln(p) or m depends on obstype]
   !  0: no localization
@@ -150,7 +150,7 @@ MODULE common_nml
   real(r_size) :: VERT_LOCAL(nobtype) = &
     (/ 0.4d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0, 1000.0d0, -1.0d0, -1.0d0/)
+      -1.0d0, 1000.0d0,  0.5d0,  0.0d0/)
 
   ! >0: localization length scale (sec) XXX not implemented yet XXX
   !  0: no localization
@@ -277,9 +277,9 @@ MODULE common_nml
   real(r_size) :: OBSERR_PS = 100.0d0
   real(r_size) :: OBSERR_RADAR_REF = 5.0d0
   real(r_size) :: OBSERR_RADAR_VR = 3.0d0
-  real(r_size) :: OBSERR_TCX = 50.0d3 ! (m)
-  real(r_size) :: OBSERR_TCY = 50.0d3 ! (m)
-  real(r_size) :: OBSERR_TCP = 5.0d2 ! (Pa)
+  real(r_size) :: OBSERR_TCX = 30.0d3 ! (m)
+  real(r_size) :: OBSERR_TCY = 30.0d3 ! (m)
+  real(r_size) :: OBSERR_TCP = 3.0d2 ! (Pa)
   real(r_size) :: OBSERR_H08(nch) = (/3.0d0,3.0d0,3.0d0,3.0d0,3.0d0,&
                                       3.0d0,3.0d0,3.0d0,3.0d0,3.0d0/) ! H08
 

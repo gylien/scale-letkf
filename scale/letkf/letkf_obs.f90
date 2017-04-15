@@ -541,7 +541,7 @@ SUBROUTINE set_letkf_obs
             obs(iof)%dat(iidx), &
             obs(iof)%err(iidx), &
             obsda%val(n), &
-           obsda%qc(n)
+            obsda%qc(n)
     ENDIF
 #endif
 

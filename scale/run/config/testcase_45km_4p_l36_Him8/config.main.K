@@ -115,7 +115,7 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
 
 OBSNUM=2
 #OBSNAME[1]=obs                                    
-OBSNAME[1]=radar                                    
+OBSNAME[1]=vital
 OBSNAME[2]=H08
 OBSOPE_SEPARATE[1]=0
 OBSOPE_SEPARATE[2]=0

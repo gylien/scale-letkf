@@ -1372,18 +1372,14 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
 #endif
 
-! -- for TC vital assimilation --
-!  INTEGER :: obs_idx_TCX, obs_idx_TCY, obs_idx_TCP ! obs index
-!  INTEGER :: bTC_proc ! the process where the background TC is located.
-! bTC: background TC in each subdomain
+! Multiple TCs are not considered (04/14/2017)
+  real(r_size) :: TC_rij(2) = -1.0d0
+  integer :: obs_nn_TCX, obs_nn_TCY, obs_nn_TCP ! TCX, TCY, TCP
+  real(r_size),allocatable :: bTC(:,:)
+  integer :: bTC_rank_d ! the process where the background TC is located.
 ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp (Pa)
-!  REAL(r_size),ALLOCATABLE :: bTC(:,:)
-!  REAL(r_size),ALLOCATABLE :: bufr(:,:)
-!  REAL(r_size) :: bTC_mslp
+  real(r_size) :: bTC_mslp
 
-!CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!CALL CPU_TIME(timer)
-!if (myrank == 0) print *, '######', timer
 
   call state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 
@@ -1399,9 +1395,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
   oqc = -1
 
-!  obs_idx_TCX = -1
-!  obs_idx_TCY = -1
-!  obs_idx_TCP = -1
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ri,rj,rk)
   do n = 1, nnobs
@@ -1422,21 +1415,28 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
     oelm(n) = obs(iset)%elm(iidx)
 
-!    select case (int(oelm(n)))
-!    case (id_tclon_obs)
-!      obs_idx_TCX = n
-!      cycle
-!    case (id_tclat_obs)
-!      obs_idx_TCY = n
-!      cycle
-!    case (id_tcmip_obs)
-!      obs_idx_TCP = n
-!      cycle
-!    end select
-
 #ifdef H08
     if(int(oelm(n)) == id_H08IR_obs)cycle
 #endif
+
+
+#ifdef TCV
+!    !! TC vital !!
+!    select case (oelm(n))
+!    case (id_tclon_obs)
+!      obs_nn_TCX = nn
+!      cycle
+!    case (id_tclat_obs)
+!      obs_nn_TCY = nn
+!      cycle
+!    case (id_tcmip_obs)
+!      obs_nn_TCP = nn
+!      TC_rij(1) = obsda_sort%ri(nn)
+!      TC_rij(2) = obsda_sort%rj(nn)
+!      cycle
+!    end select
+#endif
+
 
     call rij_g2l_auto(proc,obsda_sort%ri(nn),obsda_sort%rj(nn),ri,rj)
 #ifdef DEBUG
@@ -1539,14 +1539,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
     endif
     n2prof(n) = nprof
 
-
-!    if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
-!        abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE) then
-!
-!      oqc(n) = iqc_otype
-!
-!    endif ! DEPARTURE_STAT_T_RANGE 
-
   end do ! [ n = 1, nnobs ]
 
   if(nprof >=1) then
@@ -1610,57 +1602,57 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
   endif ! [nprof >= 1]
 
 #endif
+!    -- End of Him8 DA part --
 
-
-! ###  -- TC vital assimilation -- ###
-!  if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0 .and.&
-!    obs(obsda_sort%set(obs_idx_TCX))%dif(obsda_sort%idx(obs_idx_TCX)) == &
-!    obs(obsda_sort%set(obs_idx_TCY))%dif(obsda_sort%idx(obs_idx_TCY)) .and. &
-!    obs(obsda_sort%set(obs_idx_TCY))%dif(obsda_sort%idx(obs_idx_TCY)) == &
-!    obs(obsda_sort%set(obs_idx_TCP))%dif(obsda_sort%idx(obs_idx_TCP)) .and. & 
-!    (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
-!    abs(obs(obsda_sort%set(obs_idx_TCX))%dif(obsda_sort%idx(obs_idx_TCX))) <= DEPARTURE_STAT_T_RANGE))then
+!   -- TC vital DA -- 
+#ifdef TCV
 !
+!  call MPI_ALLREDUCE(MPI_IN_PLACE, TC_rij, 2, MPI_r_size, MPI_MAX, MPI_COMM_d, ierr)  
+!  if(minval(TC_rij) > 0.0d0)then
+!
+!    ! (1) Get "local (each subdomain's)" TC information 
+!    !
 !    allocate(bTC(3,0:MEM_NP-1))
-!    allocate(bufr(3,0:MEM_NP-1))
 !
 !    bTC = 9.99d33
-!    bufr = 9.99d33
+!    call search_tc_subdom(TC_rij(1),TC_rij(2),v2dg,bTC(1,myrank_d),bTC(2,myrank_d),bTC(3,myrank_d))
 !
-!    call search_tc_subdom(obsda_sort%ri(obs_idx_TCX),obsda_sort%rj(obs_idx_TCX),v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
+!    ! (2) Compare local TCs in each subdomain and assign the strongest one
+!    ! as a background TC in each member
+!    !
+!    if (nprocs_d > 1) then
+!       CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
+!    end if
 !
-!    CALL MPI_BARRIER(MPI_COMM_d,ierr)
-!    CALL MPI_ALLREDUCE(bTC,bufr,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
-!    bTC = bufr
-!
-!    deallocate(bufr)
-!
-!
-!    ! Assume MSLP of background TC is lower than 1100 (hPa). 
-!    bTC_mslp = 1100.0d2
+!    bTC_mslp = 1100.0d2 ! Assume MSLP of background TC is lower than 1100 (hPa). 
 !    do n = 0, MEM_NP - 1
-!      write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
 !      if (bTC(3,n) < bTC_mslp ) then
 !        bTC_mslp = bTC(3,n)
-!        bTC_proc = n
+!        bTC_rank_d = n
 !      endif
 !    enddo ! [ n = 0, MEM_NP - 1]
 !
-!    do n = 1, 3
-!      if(n==1) i = obs_idx_TCX
-!      if(n==2) i = obs_idx_TCY
-!      if(n==3) i = obs_idx_TCP
+!    ! (3) Substitute Hx in a subdomain that covers an observed TC
+!    !
+!    if (myrank_d == bTC_rank_d) then
+!      do n = 1, 3
+!        if (n == 1) nn = obs_nn_TCX
+!        if (n == 2) nn = obs_nn_TCY
+!        if (n == 3) nn = obs_nn_TCP
+!  
+!        iset = obsda_sort%set(nn)
+!        iidx = obsda_sort%idx(nn)
 !
-!      ohx(i) = bTC(n,bTC_proc)
-!      oqc(i) = iqc_otype
-!      if(bTC_MSLP < 1100.0d2) oqc(i) = iqc_good
+!        ohx(nn) = obs(iset)%dat(iidx) - bTC(n,btc_rank_d)
+!        oqc(nn) = iqc_good
+!      enddo ! [ n = 1, 3 ]
+!    endif ! [myrank_d == bTC_rank_d]
+!    deallocate(bTC)
 !
-!      if (oqc(i) == iqc_good) then
-!        ohx(i) = obs(obsda_sort%set(i))%dat(obsda_sort%idx(i)) - ohx(i)
-!      end if
-!    enddo
-!
-!  endif ! [DEPARTURE_STAT_T_RANGE]
+!  endif ! [minval(TC_rij) > 0.0d0]
+
+#endif
+!   -- End of TC vital DA -- 
 
 
   call monit_dep(nnobs,oelm,ohx,oqc,nobs,bias,rmse)
