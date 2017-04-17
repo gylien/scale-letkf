@@ -581,7 +581,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 !!  so that we substitute the level information into obsda%lev.  
 !!  The substituted level information is used in letkf_tools.f90
 
-              ! use OpenMP?? T.Honda (02/18/2017)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,ch)
               do nn = 1, nprof
                 do ch = 1, nch
                   obsda%val(nnB07(nn)+ch-1) = yobs_H08(ch,nn) 
@@ -589,6 +589,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
                   obsda%lev(nnB07(nn)+ch-1) = plev_obs_H08(ch,nn) 
                 enddo
               enddo
+!$OMP END PARALLEL DO
 
               deallocate(ri_H08, rj_H08)
               deallocate(lon_H08, lat_H08)

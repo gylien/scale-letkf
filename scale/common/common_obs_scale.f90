@@ -2655,7 +2655,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
     KHALO
 
   IMPLICIT NONE
-  INTEGER :: n, np, k, ch
+  INTEGER :: np, k, ch
   INTEGER,INTENT(IN) :: nprof ! Num of Brightness Temp "Loc" observed by Himawari-8
                               ! NOTE: multiple channels (obs) on each grid point !!
   REAL(r_size),INTENT(IN) :: ri(nprof),rj(nprof)
@@ -2794,16 +2794,12 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
 ! -- (Transmittance from each user pressure level to Top Of the Atmosphere)
 ! -- btall_out is substituted into yobs
 
-  n = 0
   DO np = 1, nprof
   DO ch = 1, nch
-    n = n + 1
 
     rdp = 1.0d0 / (prs2d(slev+1,np) - prs2d(slev,np))
     max_weight(ch,np) = abs((trans_out(2,ch,np) - trans_out(1,ch,np)) * rdp )
 
-
-    !plev_obs(n) = (prs2d(slev+1,np) + prs2d(slev,np)) * 0.5d0 ! (Pa)
     plev_obs(ch,np) = (prs2d(slev+1,np) + prs2d(slev,np)) * 0.5d0 ! (Pa)
 
     DO k = 2, nlev-1
@@ -2816,31 +2812,26 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
       endif
     ENDDO
 
-    !yobs(n) = btall_out(ch,np)
     yobs(ch,np) = btall_out(ch,np)
 
     if(H08_VLOCAL_CTOP)then
-!      if((ctop_out(n) > 0.0d0) .and. (ctop_out(n) < plev_obs(n)) .and. &
-!         (plev_obs(n)>H08_LIMIT_LEV)) then
-!        plev_obs(n) = (ctop_out(n)+plev_obs(n))*0.5d0
-!      endif
+      if((ctop_out(np) > 0.0d0) .and. (ctop_out(np) < plev_obs(ch,np)) .and. &
+         (plev_obs(ch,np)>H08_LIMIT_LEV)) then
+        plev_obs(ch,np) = (ctop_out(np)+plev_obs(ch,np))*0.5d0
+      endif
     endif
 
     SELECT CASE(H08_CH_USE(ch))
     CASE(1)
-!      qc(n) = iqc_good
       qc(ch,np) = iqc_good
     CASE DEFAULT
-!      qc(n) = iqc_obs_bad
       qc(ch,np) = iqc_obs_bad
     END SELECT
 
     IF(H08_REJECT_LAND .and. (lsmask1d(np) > 0.5d0))THEN
-!      qc(n) = iqc_obs_bad
       qc(ch,np) = iqc_obs_bad
     ENDIF
 
-    !yobs_H08_clr(n) = btclr_out(ch,np)
     yobs_H08_clr(ch,np) = btclr_out(ch,np)
 
   ENDDO ! ch

@@ -37,6 +37,13 @@ FBYTESWAP =
 FFREE     = -Free
 FFIXED    = -Fixed
 
+# TC vital DA
+TCV       = F
+
+ifeq ($(TCV),T)
+FOPTS     += -DTCV
+endif
+
 # -- for Himawari-8 assimilatin on the K computer (T.Honda)
 # -- If you want to compile without RTTOV (Himawari assimilation),
 # -- you should set "H08 = F".
