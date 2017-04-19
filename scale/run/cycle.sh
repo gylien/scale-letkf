@@ -45,6 +45,8 @@ job='cycle'
 . src/func_util.sh || exit $?
 . src/func_${job}.sh || exit $?
 
+RUN_LEVEL=${RUN_LEVEL:-0}
+
 echo "[$(datetime_now)] ### 1" >&2
 
 #-------------------------------------------------------------------------------

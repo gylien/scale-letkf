@@ -71,6 +71,15 @@ CONF_MODE=${1:-$CONF_MODE}; shift
 TIME_LIMIT="${1:-$TIME_LIMIT}"
 
 #-------------------------------------------------------------------------------
+# assign default values to and standardize the parameters
+
+STIME=$(datetime $STIME)
+ETIME=$(datetime ${ETIME:-$STIME})
+ISTEP=${ISTEP:-1}
+FSTEP=${FSTEP:-$nsteps}
+TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
+
+#-------------------------------------------------------------------------------
 # if some necessary parameters are not given, print the usage help and exit
 
 #if [ -z "$STIME" ]; then
@@ -96,22 +105,23 @@ if ((BDY_FORMAT == 4)) && [ ! -e "$SCRP_DIR/config.nml.grads_boundary" ] && [ ! 
   exit 1
 fi
 
+###### need to be modified when $RUN_LEVEL option is implemented ######
+if ((RUN_LEVEL == 0)); then
+  if ((MAKEINIT == 1)); then
+    if [ -d "${OUTDIR}/${STIME}/anal" ]; then
+      if [ -n "$(ls ${OUTDIR}/${STIME}/anal 2> /dev/null)" ]; then
+        echo "[Error] $myname: Initial ensemble is to be generated (\$MAKEINIT = 1) at \"${OUTDIR}/${STIME}/anal/\", but existing data are found there;" >&2
+        echo "        Set \$MAKEINIT = 0 or remove \"${OUTDIR}/${STIME}/anal/*\" before running this job." >&2
+        exit 1
+      fi
+    fi
+  fi
+fi
+
 #... more detections...
 
 #-------------------------------------------------------------------------------
-# assign default values to and standardize the parameters
-
-STIME=$(datetime $STIME)
-ETIME=$(datetime ${ETIME:-$STIME})
-ISTEP=${ISTEP:-1}
-FSTEP=${FSTEP:-$nsteps}
-CONF_MODE=${CONF_MODE:-"dynamic"}
-TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
-
-#-------------------------------------------------------------------------------
 # common variables
-
-RUN_LEVEL=${RUN_LEVEL:-0}
 
 OUT_CYCLE_SKIP=${OUT_CYCLE_SKIP:-1}
 

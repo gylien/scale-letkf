@@ -149,8 +149,6 @@ TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 #-------------------------------------------------------------------------------
 # common variables
 
-RUN_LEVEL=${RUN_LEVEL:-0}
-
 if ((BDY_FORMAT >= 1)); then
   if ((BDYCYCLE_INT % BDYINT != 0)); then
     echo "[Error] \$BDYCYCLE_INT needs to be an exact multiple of \$BDYINT" >&2
