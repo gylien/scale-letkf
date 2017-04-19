@@ -92,7 +92,7 @@ cp -L $SCRP_DIR/config.main $TMPS/config.main
 
 echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMPS/config.main
 echo "NODEFILE_DIR=\"\$TMPROOT/node\"" >> $TMPS/config.main
-echo "RUN_LEVEL=2" >> $TMPS/config.main
+echo "RUN_LEVEL=4" >> $TMPS/config.main
 
 echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMPS/config.main
 

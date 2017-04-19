@@ -104,14 +104,15 @@ TIME_LIMIT="${1:-$TIME_LIMIT}"
 #  exit 1
 #fi
 
-###### only need to check one file when $RUN_LEVEL option is implemented ######
-if ((ENABLE_PARAM_USER == 1)) && [ ! -e "$SCRP_DIR/config.nml.scale_user" ] && [ ! -e "$TMPDAT/conf/config.nml.scale_user" ]; then
-  echo "[Error] $myname: When \$ENABLE_PARAM_USER = 1, 'config.nml.scale_user' file is required." >&2
-  exit 1
-fi
-if ((BDY_FORMAT == 4)) && [ ! -e "$SCRP_DIR/config.nml.grads_boundary" ] && [ ! -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
-  echo "[Error] $myname: When \$BDY_FORMAT = 4, 'config.nml.grads_boundary' file is required." >&2
-  exit 1
+if ((RUN_LEVEL == 0)); then
+  if ((ENABLE_PARAM_USER == 1)) && [ ! -e "$SCRP_DIR/config.nml.scale_user" ]; then
+    echo "[Error] $myname: When \$ENABLE_PARAM_USER = 1, 'config.nml.scale_user' file is required." >&2
+    exit 1
+  fi
+  if ((BDY_FORMAT == 4)) && [ ! -e "$SCRP_DIR/config.nml.grads_boundary" ]; then
+    echo "[Error] $myname: When \$BDY_FORMAT = 4, 'config.nml.grads_boundary' file is required." >&2
+    exit 1
+  fi
 fi
 
 #... more detections...

@@ -72,6 +72,8 @@ cd \$PBS_O_WORKDIR
 rm -f machinefile
 cp -f \$PBS_NODEFILE machinefile
 
+export RUN_LEVEL=1
+
 ./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
 

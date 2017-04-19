@@ -70,7 +70,9 @@ module load netcdf-fortran/4.4.3
 ulimit -s unlimited
 export OMP_STACKSIZE=128m
 
-./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" || exit \$?
+export RUN_LEVEL=1
+
+./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
 
 #===============================================================================

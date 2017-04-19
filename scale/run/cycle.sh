@@ -21,13 +21,6 @@
 #    config.nml.obsope
 #    config.nml.letkf
 #
-#-------------------------------------------------------------------------------
-#
-#  RUN_LEVEL:
-#    0: Run everything (default)
-#    1: Staging list files are ready; skip generating them (not implemented yet...)
-#    2: File staging has been done; skip staging
-#
 #===============================================================================
 
 cd "$(dirname "$0")"
@@ -44,8 +37,6 @@ job='cycle'
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
 . src/func_${job}.sh || exit $?
-
-RUN_LEVEL=${RUN_LEVEL:-0}
 
 echo "[$(datetime_now)] ### 1" >&2
 
@@ -67,7 +58,7 @@ echo "[$(datetime_now)] ### 2" >&2
 #===============================================================================
 # Initialize temporary directories
 
-if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
+if ((RUN_LEVEL <= 2)) && ((ISTEP == 1)); then
   safe_init_tmpdir $TMP || exit $?
 fi
 
@@ -84,8 +75,8 @@ declare -a proc2node
 declare -a proc2group
 declare -a proc2grpproc
 
-#if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
-if ((RUN_LEVEL <= 1)); then
+#if ((RUN_LEVEL <= 2)) && ((ISTEP == 1)); then
+if ((RUN_LEVEL <= 2)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
   distribute_da_cycle machinefile $NODEFILE_DIR || exit $?
 else
@@ -314,7 +305,7 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 # Online stage out
 
-  if ((RUN_LEVEL <= 1)); then
+  if ((RUN_LEVEL <= 3)); then
     if ((ONLINE_STGOUT == 1)); then
       online_stgout_bgjob $loop $time &
     fi
@@ -341,7 +332,7 @@ done
 #===============================================================================
 # Stage out
 
-if ((RUN_LEVEL <= 1)); then
+if ((RUN_LEVEL <= 3)); then
   if ((ONLINE_STGOUT == 1)); then
     wait
   else
@@ -358,7 +349,7 @@ fi
 #===============================================================================
 # Remove temporary directories
 
-if ((RUN_LEVEL <= 1)); then
+if ((RUN_LEVEL <= 3)); then
   if ((CLEAR_TMP == 1)); then
     safe_rm_tmpdir $TMP || exit $?
   fi

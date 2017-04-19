@@ -1,4 +1,3 @@
-
 #!/bin/bash
 #===============================================================================
 #
@@ -18,7 +17,6 @@ SCALE_LOG_SFX='.pe000000'
 # Preset
 
 #new variables:
-# STG_TYPE: 'K', 'K_rankdir', 'builtin', (other: no stageing) ###### to be removed
 # NODELIST_TYPE: 'nodefile', 'K'
 # MPI_TYPE: 'K', 'sgimpt', 'openmpi'
 
@@ -46,15 +44,12 @@ elif [ "$PRESET" = 'K_micro' ]; then
 #elif [ "$PRESET" = 'K_interact' ]; then
 #  ...
 elif [ "$PRESET" = 'OFP' ]; then
-  STG_TYPE='builtin'
   DISK_MODE=2
   NODELIST_TYPE='nodefile'
   MPI_TYPE='impi'
 elif [ "$PRESET" = 'Linux' ]; then
-  STG_TYPE='builtin'
   NODELIST_TYPE='nodefile'
 elif [ "$PRESET" = 'Linux_torque' ]; then
-  STG_TYPE='builtin'
   NODELIST_TYPE='nodefile'
 else
   echo "[Error] Preset '$PRESET' not found" 1>&2
@@ -63,6 +58,17 @@ fi
 
 #===============================================================================
 # Default values
+
+# RUN_LEVEL:
+#   0: Run everything (default)
+#   1: Run everything but skipping detecting errors
+#   2: Staging list files are ready; skip generating them (not implemented yet...)
+#   3: Staging-in has been done; skip staging
+#   4: Staging-in/out is done outside this script; skiping staging
+
+RUN_LEVEL=${RUN_LEVEL:-0}
+
+#-------------------------------------------------------------------------------
 
 INDIR="${INDIR:-$OUTDIR}"
 

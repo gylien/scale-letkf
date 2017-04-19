@@ -89,7 +89,7 @@ echo "[$(datetime_now)] Determine the staging list"
 cp -L $SCRP_DIR/config.main $TMP/config.main
 
 echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMP/config.main
-echo "RUN_LEVEL=2" >> $TMP/config.main
+echo "RUN_LEVEL=4" >> $TMP/config.main
 
 echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMP/config.main
 
