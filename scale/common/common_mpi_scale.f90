@@ -1279,6 +1279,14 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
   real(r_size) :: rmse_H08_g(nch)
 #endif
 
+#ifdef TCV
+!  real(r_size) :: bTC(3,0:MEM_NP-1) 
+!  real(r_size) :: eTC(3,0:MEM_NP-1)
+!  real(r_size) :: bTC_mslp
+!  integer :: bTC_rank_d ! the process where the background TC is located.
+!
+#endif
+
   call mpi_timer('', 2)
 
   ! NOTE: need to use 'mmean_rank_e' processes to run this calculation
@@ -1293,6 +1301,52 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
 #endif
 
     call mpi_timer('monit_obs_mpi:monit_obs:', 2)
+
+#ifdef TCV
+!    bTC = 0.0d0
+!    eTC = 0.0d0
+!    if (nobs(uid_obs(id_tcmip_obs)) > 0)then
+!      do i = 1, nid_obs
+!        if(i == uid_obs(id_tclon_obs)) bTC(1,myrank_d) = bias(i)
+!        if(i == uid_obs(id_tclon_obs)) eTC(1,myrank_d) = rmse(i)
+!        if(i == uid_obs(id_tclat_obs)) bTC(2,myrank_d) = bias(i)
+!        if(i == uid_obs(id_tclat_obs)) eTC(2,myrank_d) = rmse(i)
+!        if(i == uid_obs(id_tcmip_obs)) bTC(3,myrank_d) = bias(i)
+!        if(i == uid_obs(id_tcmip_obs)) eTC(3,myrank_d) = rmse(i)
+!      enddo
+!    endif
+!
+!    if (nprocs_d > 1) then
+!      CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_SUM,MPI_COMM_d,ierr)
+!      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eTC,3*MEM_NP,MPI_r_size,MPI_SUM,MPI_COMM_d,ierr)
+!    endif
+!
+!    if (nobs(uid_obs(id_tcmip_obs)) > 0)then
+!      ! Largest bias (smallest MSLP) will be assigned as a TC in background/analysis.
+!      bTC_mslp = -9.99d33
+!      do i = 0, MEM_NP - 1
+!        if (bTC(3,i) > bTC_mslp ) then
+!          bTC_mslp = bTC(3,i)
+!          bTC_rank_d = i
+!        endif
+!      enddo ! [ i = 0, MEM_NP - 1]
+!
+!      do i = 1, nid_obs
+!        if(i == uid_obs(id_tclon_obs)) then
+!          bias(i) =  bTC(1,bTC_rank_d)
+!          rmse(i) =  bTC(1,bTC_rank_d)
+!        endif
+!        if(i == uid_obs(id_tclat_obs)) then
+!          bias(i) =  bTC(2,bTC_rank_d)
+!          rmse(i) =  bTC(2,bTC_rank_d)
+!        endif
+!        if(i == uid_obs(id_tcmip_obs)) then
+!          bias(i) =  bTC(3,bTC_rank_d)
+!          rmse(i) =  bTC(3,bTC_rank_d)
+!        endif
+!      enddo
+!    endif
+#endif
 
     do i = 1, nid_obs
       if (monit_type(i)) then
@@ -1328,6 +1382,10 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
       call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_H08_g, nch, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE, bias_H08_g, nch, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_H08_g, nch, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+#endif
+
+#ifdef TCV
+
 #endif
     end if
 

@@ -509,12 +509,8 @@ SUBROUTINE set_letkf_obs
       IF(obs(iof)%dat(iidx) < H08_BT_MIN)THEN
         obsda%qc(n) = iqc_gross_err
       ENDIF
-    case (id_tclon_obs)
-      IF(ABS(obsda%val(n)) > GROSS_ERROR_TCX * obs(iof)%err(iidx)) THEN
-        obsda%qc(n) = iqc_gross_err
-      END IF
-    case (id_tclat_obs)
-      IF(ABS(obsda%val(n)) > GROSS_ERROR_TCY * obs(iof)%err(iidx)) THEN
+    case (id_tclon_obs, id_tclat_obs)
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_TCXY * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
     case (id_tcmip_obs)
@@ -529,20 +525,20 @@ SUBROUTINE set_letkf_obs
 
 
 #ifdef H08
-    IF(obs(iof)%elm(iidx) == id_H08IR_obs)THEN
-      ch_num = obs(iof)%lev(iidx)
-
-      write(6, '(a,2I6,2F8.2,4F12.4,I3)') "Him8 obs:", &
-            obs(iof)%elm(iidx), & ! id
-            nint(ch_num), & ! band num
-            obs(iof)%lon(iidx), &
-            obs(iof)%lat(iidx), &
-            obsda%lev(n), & ! sensitive height
-            obs(iof)%dat(iidx), &
-            obs(iof)%err(iidx), &
-            obsda%val(n), &
-            obsda%qc(n)
-    ENDIF
+!    IF(obs(iof)%elm(iidx) == id_H08IR_obs)THEN
+!      ch_num = obs(iof)%lev(iidx)
+!
+!      write(6, '(a,2I6,2F8.2,4F12.4,I3)') "Him8 obs:", &
+!            obs(iof)%elm(iidx), & ! id
+!            nint(ch_num), & ! band num
+!            obs(iof)%lon(iidx), &
+!            obs(iof)%lat(iidx), &
+!            obsda%lev(n), & ! sensitive height
+!            obs(iof)%dat(iidx), &
+!            obs(iof)%err(iidx), &
+!            obsda%val(n), &
+!            obsda%qc(n)
+!    ENDIF
 #endif
 
 #ifdef DEBUG

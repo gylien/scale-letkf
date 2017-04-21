@@ -67,13 +67,13 @@ OBS="${DDIR}/OUTPUT/test/obs/prepbufr_obs_eastasia"  # Observation data in LETKF
 #===============================================================================
 # model/data file options
 
-#TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
-TOPO_FORMAT='prep'   # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
+#TOPO_FORMAT='prep'   # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-#LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
-LANDUSE_FORMAT='prep' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+#LANDUSE_FORMAT='prep' # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -114,8 +114,7 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
 #OBSOPE_SEPARATE[2]=1
 
 OBSNUM=2
-#OBSNAME[1]=obs                                    
-OBSNAME[1]=vital
+OBSNAME[1]=vital                                    
 OBSNAME[2]=H08
 OBSOPE_SEPARATE[1]=0
 OBSOPE_SEPARATE[2]=0

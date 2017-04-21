@@ -1359,27 +1359,23 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
   integer :: nallprof ! Maximum number of Him8 profiles required for RTTOV
   real(r_size), allocatable :: ri_H08(:),rj_H08(:)
   real(r_size), allocatable :: lon_H08(:),lat_H08(:)
-  real(r_size), allocatable :: tmp_ri_H08(:),tmp_rj_H08(:)
-  real(r_size), allocatable :: tmp_lon_H08(:),tmp_lat_H08(:)
   integer :: nprof ! num of Him8 profile
-  real(r_size), allocatable :: yobs_H08(:),plev_obs_H08(:)
-  real(r_size), allocatable :: yobs_H08_clr(:)
-  integer, allocatable :: qc_H08(:)
+  real(r_size), allocatable :: yobs_H08(:,:),plev_obs_H08(:,:)
+  real(r_size), allocatable :: yobs_H08_clr(:,:)
+  integer, allocatable :: qc_H08(:,:)
   integer, allocatable :: n2prof(:) ! Him8 prof num
   integer, allocatable :: prof2B07(:) ! index of Him8 band 7
   integer :: ch
-  integer :: idx_H08
 
 #endif
 
+#ifdef TCV
 ! Multiple TCs are not considered (04/14/2017)
-  real(r_size) :: TC_rij(2) = -1.0d0
-  integer :: obs_nn_TCX, obs_nn_TCY, obs_nn_TCP ! TCX, TCY, TCP
-  real(r_size),allocatable :: bTC(:,:)
-  integer :: bTC_rank_d ! the process where the background TC is located.
-! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp (Pa)
-  real(r_size) :: bTC_mslp
-
+!  real(r_size) :: TC_rij(2) = -1.0d0
+!  integer :: obs_n_TCX, obs_n_TCY, obs_n_TCP ! TCX, TCY, TCP
+!  real(r_size) :: bTC(3) = 9.99d33
+!  integer :: k
+#endif
 
   call state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 
@@ -1394,7 +1390,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
   allocate (oqc(nnobs))
 
   oqc = -1
-
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ri,rj,rk)
   do n = 1, nnobs
@@ -1422,15 +1417,15 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
 #ifdef TCV
 !    !! TC vital !!
-!    select case (oelm(n))
+!    select case (int(oelm(n)))
 !    case (id_tclon_obs)
-!      obs_nn_TCX = nn
+!      obs_n_TCX = n
 !      cycle
 !    case (id_tclat_obs)
-!      obs_nn_TCY = nn
+!      obs_n_TCY = n
 !      cycle
 !    case (id_tcmip_obs)
-!      obs_nn_TCP = nn
+!      obs_n_TCP = n
 !      TC_rij(1) = obsda_sort%ri(nn)
 !      TC_rij(2) = obsda_sort%rj(nn)
 !      cycle
@@ -1496,14 +1491,14 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
   allocate(n2prof(nnobs))
   allocate(prof2B07(nallprof))
-  allocate(tmp_ri_H08(0:nallprof))
-  allocate(tmp_rj_H08(0:nallprof))
-  allocate(tmp_lon_H08(nallprof))
-  allocate(tmp_lat_H08(nallprof))
+  allocate(ri_H08(0:nallprof))
+  allocate(rj_H08(0:nallprof))
+  allocate(lon_H08(nallprof))
+  allocate(lat_H08(nallprof))
 
   nprof = 0
-  tmp_ri_H08(0) = -99.0d0
-  tmp_rj_H08(0) = -99.0d0
+  ri_H08(0) = -99.0d0
+  rj_H08(0) = -99.0d0
 
   do n = 1, nnobs
     if (use_key) then
@@ -1526,13 +1521,13 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
     end if
 #endif
 
-    if((nprof == 0) .or. ((ri /= tmp_ri_H08(nprof)) .and. (rj /= tmp_rj_H08(nprof))))then
+    if((nprof == 0) .or. ((ri /= ri_H08(nprof)) .and. (rj /= rj_H08(nprof))))then
       nprof = nprof + 1
 
-      tmp_ri_H08(nprof) = ri
-      tmp_rj_H08(nprof) = rj
-      tmp_lon_H08(nprof) = obs(iset)%lon(iidx)
-      tmp_lat_H08(nprof) = obs(iset)%lat(iidx)
+      ri_H08(nprof) = ri
+      rj_H08(nprof) = rj
+      lon_H08(nprof) = obs(iset)%lon(iidx)
+      lat_H08(nprof) = obs(iset)%lat(iidx)
 
       ch = nint(obs(iset)%lev(iidx)) - 6 ! 
       prof2B07(nprof) = iidx - ch + 1
@@ -1541,31 +1536,19 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
   end do ! [ n = 1, nnobs ]
 
-  if(nprof >=1) then
-    allocate(ri_H08(nprof))
-    allocate(rj_H08(nprof))
-    allocate(lon_H08(nprof))
-    allocate(lat_H08(nprof))
+  if(nprof >= 1) then
 
-    ri_H08 = tmp_ri_H08(1:nprof)
-    rj_H08 = tmp_rj_H08(1:nprof)
-    lon_H08 = tmp_lon_H08(1:nprof)
-    lat_H08 = tmp_lat_H08(1:nprof)
+    allocate(yobs_H08(nch,nprof))
+    allocate(yobs_H08_clr(nch,nprof))
+    allocate(plev_obs_H08(nch,nprof))
+    allocate(qc_H08(nch,nprof))
 
-    deallocate(tmp_ri_H08, tmp_rj_H08)
-    deallocate(tmp_lon_H08, tmp_lat_H08)
-
-    allocate(yobs_H08(nprof*nch))
-    allocate(yobs_H08_clr(nprof*nch))
-    allocate(plev_obs_H08(nprof*nch))
-    allocate(qc_H08(nprof*nch))
-
-    call Trans_XtoY_H08(nprof,ri_H08,rj_H08,&
-                        lon_H08,lat_H08,v3dgh,v2dgh,&
+    call Trans_XtoY_H08(nprof,ri_H08(1:nprof),rj_H08(1:nprof),&
+                        lon_H08(1:nprof),lat_H08(1:nprof),v3dgh,v2dgh,&
                         yobs_H08,plev_obs_H08,&
                         qc_H08,yobs_H08_clr=yobs_H08_clr)
 
-    ! use OpenMP?? T.Honda (02/18/2017)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ch)
     do n = 1, nnobs
       if (use_key) then
         nn = obsda_sort%key(n)
@@ -1579,12 +1562,12 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
       if(oelm(n) /= id_H08IR_obs)cycle
 
       ch = nint(obs(iset)%lev(iidx)) - 6 ! 
-      idx_H08 = (n2prof(n) - 1) * nch + ch
 
-      ohx(n) = obs(iset)%dat(iidx) - yobs_H08(idx_H08) ! Obs - B/A
-      oqc(n) = qc_H08(idx_H08)
+      ohx(n) = obs(iset)%dat(iidx) - yobs_H08(ch,n2prof(n)) ! Obs - B/A
+      oqc(n) = qc_H08(ch,n2prof(n))
 
     end do ! [ n = 1, nnobs ]
+!$OMP END PARALLEL DO
 
     deallocate(ri_H08, rj_H08)
     deallocate(lon_H08, lat_H08)
@@ -1593,11 +1576,13 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
     deallocate(qc_H08)
 
     ! get [Obs - B/A] for Him8 monitor
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ch)
     do n = 1, nprof
       do ch = 1, nch
-        yobs_H08((n-1)*nch+ch) = obs(iset)%dat(prof2B07(n)+ch-1) - yobs_H08((n-1)*nch+ch)
+        yobs_H08(ch,n) = obs(iset)%dat(prof2B07(n)+ch-1) - yobs_H08(ch,n)
       enddo
     enddo
+!$OMP END PARALLEL DO
 
   endif ! [nprof >= 1]
 
@@ -1607,50 +1592,35 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 !   -- TC vital DA -- 
 #ifdef TCV
 !
-!  call MPI_ALLREDUCE(MPI_IN_PLACE, TC_rij, 2, MPI_r_size, MPI_MAX, MPI_COMM_d, ierr)  
 !  if(minval(TC_rij) > 0.0d0)then
-!
 !    ! (1) Get "local (each subdomain's)" TC information 
 !    !
-!    allocate(bTC(3,0:MEM_NP-1))
-!
-!    bTC = 9.99d33
-!    call search_tc_subdom(TC_rij(1),TC_rij(2),v2dg,bTC(1,myrank_d),bTC(2,myrank_d),bTC(3,myrank_d))
+!    call search_tc_subdom(TC_rij(1),TC_rij(2),v2dg,bTC(1),bTC(2),bTC(3))
 !
 !    ! (2) Compare local TCs in each subdomain and assign the strongest one
 !    ! as a background TC in each member
-!    !
-!    if (nprocs_d > 1) then
-!       CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
-!    end if
-!
-!    bTC_mslp = 1100.0d2 ! Assume MSLP of background TC is lower than 1100 (hPa). 
-!    do n = 0, MEM_NP - 1
-!      if (bTC(3,n) < bTC_mslp ) then
-!        bTC_mslp = bTC(3,n)
-!        bTC_rank_d = n
-!      endif
-!    enddo ! [ n = 0, MEM_NP - 1]
+!    ! * This process will be done in monit_obs_mpi
 !
 !    ! (3) Substitute Hx in a subdomain that covers an observed TC
 !    !
-!    if (myrank_d == bTC_rank_d) then
-!      do n = 1, 3
-!        if (n == 1) nn = obs_nn_TCX
-!        if (n == 2) nn = obs_nn_TCY
-!        if (n == 3) nn = obs_nn_TCP
-!  
-!        iset = obsda_sort%set(nn)
-!        iidx = obsda_sort%idx(nn)
+!    do k = 1, 3
+!      if (k == 1) n = obs_n_TCX
+!      if (k == 2) n = obs_n_TCY
+!      if (k == 3) n = obs_n_TCP
 !
-!        ohx(nn) = obs(iset)%dat(iidx) - bTC(n,btc_rank_d)
-!        oqc(nn) = iqc_good
-!      enddo ! [ n = 1, 3 ]
-!    endif ! [myrank_d == bTC_rank_d]
-!    deallocate(bTC)
+!      if (use_key) then
+!        nn = obsda_sort%key(n)
+!      else
+!        nn = n
+!      end if
 !
-!  endif ! [minval(TC_rij) > 0.0d0]
-
+!      iset = obsda_sort%set(nn)
+!      iidx = obsda_sort%idx(nn)
+!
+!      ohx(n) = obs(iset)%dat(iidx) - bTC(k)
+!      oqc(n) = iqc_good
+!    enddo ! [ n = 1, 3 ]
+!  endif
 #endif
 !   -- End of TC vital DA -- 
 
@@ -1687,6 +1657,11 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
     monit_type(uid_obs(id_H08IR_obs)) = .true.
   end if
 
+#ifdef TCV
+!  monit_type(uid_obs(id_tclon_obs)) = .true.
+!  monit_type(uid_obs(id_tclat_obs)) = .true.
+!  monit_type(uid_obs(id_tcmip_obs)) = .true.
+#endif
 
   deallocate (oelm)
   deallocate (ohx)
@@ -2139,14 +2114,14 @@ SUBROUTINE read_obs(cfile,obs)
                           x,y)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = real(x,kind=r_sngl)
-      wk(6) = real(OBSERR_TCX,kind=r_sngl)
+      wk(6) = real(OBSERR_TCXY,kind=r_sngl)
     CASE(id_tclat_obs)
       call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
                           REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
                           x,y)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = real(y,kind=r_sngl)
-      wk(6) = real(OBSERR_TCY,kind=r_sngl)
+      wk(6) = real(OBSERR_TCXY,kind=r_sngl)
     END SELECT
     obs%elm(n) = NINT(wk(1))
     obs%lon(n) = REAL(wk(2),r_size)
@@ -2646,6 +2621,7 @@ END SUBROUTINE wgt_ave2d
 !   Himawari-8 obs subroutines by T. Honda (10/29/2015)
 !-----------------------------------------------------------------------
 #ifdef H08
+! --
 !
 SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yobs_H08_clr)
   use scale_mapproj, only: &

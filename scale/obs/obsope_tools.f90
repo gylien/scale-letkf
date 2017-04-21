@@ -87,13 +87,8 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   integer :: nallprof ! Maximum number of Him8 profiles required for RTTOV
   real(r_size), allocatable :: ri_H08(:),rj_H08(:)
   real(r_size), allocatable :: lon_H08(:),lat_H08(:)
-  real(r_size), allocatable :: tmp_ri_H08(:),tmp_rj_H08(:)
-  real(r_size), allocatable :: tmp_lon_H08(:),tmp_lat_H08(:)
   integer, allocatable :: nnB07(:) ! index of Him8 band 7
   integer :: nprof ! num of Him8 profile
-  !real(r_size), allocatable :: yobs_H08(:),plev_obs_H08(:)
-  !real(r_size), allocatable :: yobs_H08_clr(:)
-  !integer, allocatable :: qc_H08(:)
   real(r_size), allocatable :: yobs_H08(:,:),plev_obs_H08(:,:)
   real(r_size), allocatable :: yobs_H08_clr(:,:)
   integer, allocatable :: qc_H08(:,:)
@@ -199,6 +194,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
 #ifdef TCV
   call MPI_ALLREDUCE(MPI_IN_PLACE, TC_rij, 2, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)  ! 
+  write(6,'(a,2f9.1)')"DEBUG",TC_rij(1),TC_rij(2)
 #endif
 
   ! Bucket sort of observation wrt. time slots and subdomains using the process rank 0
@@ -434,7 +430,12 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:read_ens_history(t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
 
+#ifdef TCV
+!!--!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk,obs_nn_TCX,obs_nn_TCY,obs_nn_TCP)
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk)
+#else
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk)
+#endif
             do nn = n1, n2
               iof = obsda%set(nn)
               n = obsda%idx(nn)
@@ -451,6 +452,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
               select case (obs(iof)%elm(n))
               case (id_tclon_obs)
                 obs_nn_TCX = nn
+                write(6,'(a,i8)')"DEBUG112",obs_nn_TCX
                 cycle
               case (id_tclat_obs)
                 obs_nn_TCY = nn
@@ -507,12 +509,12 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
             ! Him8 observations: count the number of profiles required for RTTOV
             ! 
 
-            nallprof = max(n2 - n1, nch)
+            nallprof = int((n2 - n1 + 1) / nch)
             allocate(nnB07(nallprof))
-            allocate(tmp_ri_H08(nallprof))
-            allocate(tmp_rj_H08(nallprof))
-            allocate(tmp_lon_H08(nallprof))
-            allocate(tmp_lat_H08(nallprof))
+            allocate(ri_H08(nallprof))
+            allocate(rj_H08(nallprof))
+            allocate(lon_H08(nallprof))
+            allocate(lat_H08(nallprof))
 
             nprof = 0
             do nn = n1, n2
@@ -526,39 +528,13 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
                 nnB07(nprof) = nn
                 call rij_g2l(myrank_d, obsda%ri(nn), obsda%rj(nn), ril, rjl)
 
-                tmp_ri_H08(nprof) = ril
-                tmp_rj_H08(nprof) = rjl
-                tmp_lon_H08(nprof) = obs(iof)%lon(n)
-                tmp_lat_H08(nprof) = obs(iof)%lat(n)
-                !write(6,'(a,2i4)')'Him8 debug obsope',nint(obs(iof)%lev(n)),nint(obs(iof)%lev(n+1))
+                ri_H08(nprof) = ril
+                rj_H08(nprof) = rjl
+                lon_H08(nprof) = obs(iof)%lon(n)
+                lat_H08(nprof) = obs(iof)%lat(n)
               endif
 
             end do ! [ nn = n1, n2 ]
-
-            if(nprof >=1) then
-              allocate(ri_H08(nprof))
-              allocate(rj_H08(nprof))
-              allocate(lon_H08(nprof))
-              allocate(lat_H08(nprof))
-
-              ri_H08 = tmp_ri_H08(1:nprof)
-              rj_H08 = tmp_rj_H08(1:nprof)
-              lon_H08 = tmp_lon_H08(1:nprof)
-              lat_H08 = tmp_lat_H08(1:nprof)
-
-            endif
-
-            deallocate(tmp_ri_H08,tmp_rj_H08)
-            deallocate(tmp_lon_H08,tmp_lat_H08)
-
-            ! Him8 observation: debug
-            ! 
-            !do nn = 1, nprof
-            !  if (lon_H08(nn) /= obs(iof)%lon(obsda%idx(nnB07(nn)) + 1)) then
-            !    print *,"Waring!! Him8 obsope!"
-            !  endif
-            !  write(6,'(a,2i6,2f6.1)') "Him8 debug",nn,nnB07(nn),lon_H08(nn),lat_H08(nn)
-            !enddo
 
             ! Him8 observation: apply radiative transfer model (RTTOV) 
             !             Note: OpenMP will be used within SCALE_H08_fwd
@@ -570,16 +546,10 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
               allocate(plev_obs_H08(nch,nprof))
               allocate(qc_H08(nch,nprof))
 
-              call Trans_XtoY_H08(nprof,ri_H08,rj_H08,&
-                                  lon_H08,lat_H08,v3dg,v2dg,&
+              call Trans_XtoY_H08(nprof,ri_H08(1:nprof),rj_H08(1:nprof),&
+                                  lon_H08(1:nprof),lat_H08(1:nprof),v3dg,v2dg,&
                                   yobs_H08,plev_obs_H08,&
                                   qc_H08,yobs_H08_clr=yobs_H08_clr)
-
-!!  NOTE: T.Honda (10/16/2015)
-!!  The original Him8 obs does not inlcude the level information.
-!!  However, we have the level information derived by RTTOV (plev_obs_H08) here, 
-!!  so that we substitute the level information into obsda%lev.  
-!!  The substituted level information is used in letkf_tools.f90
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,ch)
               do nn = 1, nprof
@@ -633,14 +603,15 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
              CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
           end if
 
-          bTC_mslp = 1100.0d2 ! Assume MSLP of background TC is lower than 1100 (hPa). 
+          bTC_mslp = 9.99d33
           do n = 0, MEM_NP - 1
-            !write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
+            write(6,'(a,3e20.5)')"DEBUG TC",bTC(1,n),bTC(2,n),bTC(3,n) ! debug
             if (bTC(3,n) < bTC_mslp ) then
               bTC_mslp = bTC(3,n)
               bTC_rank_d = n
             endif
           enddo ! [ n = 0, MEM_NP - 1]
+          write(6,'(a,e20.5,2i9)')"DEBUG TC",bTC_mslp, bTC_rank_d, myrank_d
 
           ! (3) Substitute Hx in a subdomain that covers an observed TC
           !
@@ -652,6 +623,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
               obsda%val(nn) = bTC(n,btc_rank_d)
               obsda%qc(nn) = iqc_good
             enddo ! [ n = 1, 3 ]
+            write(6,'(a,f10.1,4i8)')"DEBUG111",obsda%val(nn),nn,obs_nn_TCX,obs_nn_TCY,obs_nn_TCP
           endif ! [myrank_d == bTC_rank_d]
           deallocate(bTC)
 
