@@ -73,6 +73,8 @@
  H08_VLOCAL_CTOP = .true.,
  H08_BT_MIN = 0.0d0,
  H08_CH_USE = 0,0,1,0,0,0,0,0,0,0,
+ H08_BIAS_SIMPLE = .true.,
+ H08_CLDERR_SIMPLE = .true.,
 /
 
 

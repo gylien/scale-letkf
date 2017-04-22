@@ -121,6 +121,7 @@ MODULE common_obs_scale
     ! 
 #ifdef H08
     REAL(r_size),ALLOCATABLE :: lev(:) ! Him8
+    REAL(r_size),ALLOCATABLE :: val2(:) ! Him8 CA
 #endif
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
@@ -1365,7 +1366,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
   integer, allocatable :: qc_H08(:,:)
   integer, allocatable :: n2prof(:) ! Him8 prof num
   integer, allocatable :: prof2B07(:) ! index of Him8 band 7
-  integer :: ch
+  integer :: ch, np
+  integer :: iset_H08
+  real(r_size) :: CA ! (Okamoto et al., 2014QJRMS)
 
 #endif
 
@@ -1532,7 +1535,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
       ch = nint(obs(iset)%lev(iidx)) - 6 ! 
       prof2B07(nprof) = iidx - ch + 1
     endif
-    n2prof(n) = nprof
+
+    if(nprof >= 1) n2prof(n) = nprof
 
   end do ! [ n = 1, nnobs ]
 
@@ -1548,7 +1552,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
                         yobs_H08,plev_obs_H08,&
                         qc_H08,yobs_H08_clr=yobs_H08_clr)
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ch)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ch,CA)
     do n = 1, nnobs
       if (use_key) then
         nn = obsda_sort%key(n)
@@ -1561,9 +1565,21 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
       oelm(n) = obs(iset)%elm(iidx)
       if(oelm(n) /= id_H08IR_obs)cycle
 
+      iset_H08 = iset
       ch = nint(obs(iset)%lev(iidx)) - 6 ! 
 
+      CA = (abs(yobs_H08(ch,n2prof(n)) - yobs_H08_clr(ch,n2prof(n))) & !CM
+            + abs(obs(iset)%dat(iidx) - yobs_H08_clr(ch,n2prof(n))) ) * 0.5d0 !CO
+
       ohx(n) = obs(iset)%dat(iidx) - yobs_H08(ch,n2prof(n)) ! Obs - B/A
+      !!! simple bias correction here !!!
+      if(H08_BIAS_SIMPLE)then
+        if(CA > H08_CA_THRES)then
+          ohx(n) = ohx(n) - H08_BIAS_CLOUD(ch)
+        else
+          ohx(n) = ohx(n) - H08_BIAS_CLEAR(ch)
+        endif
+      endif
       oqc(n) = qc_H08(ch,n2prof(n))
 
     end do ! [ n = 1, nnobs ]
@@ -1572,17 +1588,29 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
     deallocate(ri_H08, rj_H08)
     deallocate(lon_H08, lat_H08)
     deallocate(plev_obs_H08)
-    deallocate(yobs_H08_clr)
     deallocate(qc_H08)
-
+  
     ! get [Obs - B/A] for Him8 monitor
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,ch)
-    do n = 1, nprof
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(np,ch,CA)
+    do np = 1, nprof
       do ch = 1, nch
-        yobs_H08(ch,n) = obs(iset)%dat(prof2B07(n)+ch-1) - yobs_H08(ch,n)
+        yobs_H08(ch,np) = obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08(ch,np)
+
+        if(H08_BIAS_SIMPLE)then
+          CA = (abs(yobs_H08(ch,np) - yobs_H08_clr(ch,np)) & !CM
+               + abs(obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08_clr(ch,np))) * 0.5d0 !CO
+          if(CA > H08_CA_THRES)then
+            yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLOUD(ch)
+          else
+            yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLEAR(ch)
+          endif
+        endif
+
       enddo
     enddo
 !$OMP END PARALLEL DO
+
+    deallocate(yobs_H08_clr)
 
   endif ! [nprof >= 1]
 
@@ -1627,15 +1655,14 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
   call monit_dep(nnobs,oelm,ohx,oqc,nobs,bias,rmse)
 #ifdef H08
-!  if(DEPARTURE_STAT_H08_ALL)then
   if(nprof >=1)then
-    call monit_dep_H08(nprof*nch,yobs_H08,nobs_H08,bias_H08,rmse_H08)
+    call monit_dep_H08(nprof,yobs_H08,nobs_H08,bias_H08,rmse_H08)
+    write(6,'(a,3i8)')"DEBUG Him8 NOBS",nprof,nobs_H08(1),nobs_H08(9)
   else 
     nobs_H08 = 0
     bias_H08 = 0.0d0
     rmse_H08 = 0.0d0
   endif ! [nprof >= 1]
-!  endif
 #endif
 
 
@@ -1782,10 +1809,10 @@ END SUBROUTINE monit_print
 !
 ! monitor for Himawari-8 IR observations --
 #ifdef H08
-SUBROUTINE monit_dep_H08(nn,dep,nobs,bias,rmse)
+SUBROUTINE monit_dep_H08(np,dep,nobs,bias,rmse)
   IMPLICIT NONE
-  INTEGER,INTENT(IN) :: nn
-  REAL(r_size),INTENT(IN) :: dep(nn)
+  INTEGER,INTENT(IN) :: np ! Num of profiles
+  REAL(r_size),INTENT(IN) :: dep(nch,np)
   INTEGER,INTENT(OUT) :: nobs(nch)
   REAL(r_size),INTENT(OUT) :: bias(nch)
   REAL(r_size),INTENT(OUT) :: rmse(nch)
@@ -1795,15 +1822,12 @@ SUBROUTINE monit_dep_H08(nn,dep,nobs,bias,rmse)
   rmse = 0.0d0
   bias = 0.0d0
     
-  DO n = 1 , nn
-    ch = mod(n,nch)
-    if(ch == 0)then
-      ch = nch
-    endif
-
+  DO n = 1 , np ! profile
+  DO ch = 1 , nch ! band
     nobs(ch) = nobs(ch) + 1
-    bias(ch) = bias(ch) + dep(n)
-    rmse(ch) = rmse(ch) + dep(n)**2
+    bias(ch) = bias(ch) + dep(ch,n)
+    rmse(ch) = rmse(ch) + dep(ch,n)**2
+  END DO
   END DO
 
   DO ch = 1, nch
@@ -1944,6 +1968,7 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
   ALLOCATE( obsda%val (obsda%nobs) )
 #ifdef H08
   ALLOCATE( obsda%lev (obsda%nobs) ) ! Him8
+  ALLOCATE( obsda%val2 (obsda%nobs) ) ! Him8
 #endif
   ALLOCATE( obsda%qc  (obsda%nobs) )
   ALLOCATE( obsda%ri  (obsda%nobs) )
@@ -1955,6 +1980,7 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
   obsda%val = 0.0d0
 #ifdef H08
   obsda%lev = 0.0d0 ! Him8
+  obsda%val2 = 0.0d0 ! Him8
 #endif
   obsda%qc = 0
   obsda%ri = 0.0d0
@@ -1982,6 +2008,7 @@ SUBROUTINE obs_da_value_deallocate(obsda)
   IF(ALLOCATED(obsda%val   )) DEALLOCATE(obsda%val   )
 #ifdef H08
   IF(ALLOCATED(obsda%lev   )) DEALLOCATE(obsda%lev   ) ! Him8
+  IF(ALLOCATED(obsda%val2   )) DEALLOCATE(obsda%val2   ) ! Him8
 #endif
   IF(ALLOCATED(obsda%ensval)) DEALLOCATE(obsda%ensval)
   IF(ALLOCATED(obsda%qc    )) DEALLOCATE(obsda%qc    )
@@ -2205,7 +2232,8 @@ SUBROUTINE read_obs_da(cfile,obsda,im)
   TYPE(obs_da_value),INTENT(INOUT) :: obsda
   INTEGER,INTENT(IN) :: im
 #ifdef H08
-  REAL(r_sngl) :: wk(7) ! H08
+!  REAL(r_sngl) :: wk(7) ! H08
+  REAL(r_sngl) :: wk(8) ! H08
 #else
   REAL(r_sngl) :: wk(6) ! H08
 #endif
@@ -2229,6 +2257,7 @@ SUBROUTINE read_obs_da(cfile,obsda,im)
     obsda%rj(n) = REAL(wk(6),r_size)
 #ifdef H08
     obsda%lev(n) = REAL(wk(7),r_size) ! Him8
+    obsda%val2(n) = REAL(wk(8),r_size) ! Him8
 #endif
   END DO
   CLOSE(iunit)
@@ -2244,7 +2273,8 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
   LOGICAL,INTENT(IN),OPTIONAL :: append
   LOGICAL :: append_
 #ifdef H08
-  REAL(r_sngl) :: wk(7) ! H08
+!  REAL(r_sngl) :: wk(7) ! H08
+  REAL(r_sngl) :: wk(8) ! H08
 #else
   REAL(r_sngl) :: wk(6) 
 #endif
@@ -2272,6 +2302,7 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
     wk(6) = REAL(obsda%rj(n),r_sngl)
 #ifdef H08
     wk(7) = REAL(obsda%lev(n),r_sngl) ! Him8
+    wk(8) = REAL(obsda%val2(n),r_sngl) ! Him8
 #endif
     WRITE(iunit) wk
   END DO

@@ -1537,7 +1537,7 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
     nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)             ! for PHARAD, use z-coordinate for vertical localization
 #ifdef H08
   else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'                ! H08
-    nd_v = ABS(LOG(obsda_sort%lev(iob)) - LOG(rlev)) / vert_loc_ctype(ic)   ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
+    nd_v = ABS(LOG(obsda_sort%lev(iob)) - LOG(rlev)) / vert_loc_ctype(ic)   ! H08 for H08IRB, use obsda_sort%lev(iob) for vertical localization
 #endif
 #ifdef TCV
   else if (obtyp == 24) then ! obtypelist(obtyp) == 'TCVITL'                ! for TCVITL, vertical localization is NOT applied 
@@ -1584,6 +1584,14 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   ! Calculate (observation variance / localization)
   !
   nrdiag = obs(obset)%err(obidx) * obs(obset)%err(obidx) / nrloc
+
+  if ((obtyp == 23) .and. H08_CLDERR_SIMPLE) then ! obtypelist(obtyp) == 'H08IRB' 
+    if(obsda_sort%val2(iob) > H08_CA_THRES)then
+      nrdiag = H08_CLDERR_CLOUD(obs(obset)%lev(obidx)) * H08_CLDERR_CLOUD(obs(obset)%lev(obidx)) / nrloc
+    else 
+      nrdiag = H08_CLDERR_CLEAR(obs(obset)%lev(obidx)) * H08_CLDERR_CLEAR(obs(obset)%lev(obidx)) / nrloc
+    endif
+  endif
 
   return
 end subroutine obs_local_cal

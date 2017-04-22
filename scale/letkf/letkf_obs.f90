@@ -930,6 +930,7 @@ SUBROUTINE set_letkf_obs
         obsda_sort%rj(nn_ext) = obsda%rj(obsda%key(nn_sub))
 #ifdef H08
         obsda_sort%lev(nn_ext) = obsda%lev(obsda%key(nn_sub)) ! H08
+        obsda_sort%val2(nn_ext) = obsda%val2(obsda%key(nn_sub)) ! H08
 #endif
       end do
     end do
@@ -1000,6 +1001,7 @@ SUBROUTINE set_letkf_obs
       obsbufs%rj(n) = obsda%rj(obsda%key(obsidx(n)))
 #ifdef H08
       obsbufs%lev(n) = obsda%lev(obsda%key(obsidx(n))) ! H08
+      obsbufs%val2(n) = obsda%val2(obsda%key(obsidx(n))) ! H08
 #endif
     end do
 
@@ -1019,6 +1021,7 @@ SUBROUTINE set_letkf_obs
     call MPI_GATHERV(obsbufs%rj, cnts, MPI_r_size, obsbufr%rj, cntr, dspr, MPI_r_size, ip, MPI_COMM_d, ierr)
 #ifdef H08
     call MPI_GATHERV(obsbufs%lev, cnts, MPI_r_size, obsbufr%lev, cntr, dspr, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
+    call MPI_GATHERV(obsbufs%val2, cnts, MPI_r_size, obsbufr%val2, cntr, dspr, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
 #endif
 
     ! c) In the domain receiving data, copy the receive buffer to obsda_sort
@@ -1082,6 +1085,7 @@ SUBROUTINE set_letkf_obs
               obsda_sort%rj(ns_ext:ne_ext) = obsbufr%rj(ns_bufr:ne_bufr)
 #ifdef H08
               obsda_sort%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr) ! H08
+              obsda_sort%val2(ns_ext:ne_ext) = obsbufr%val2(ns_bufr:ne_bufr) ! H08
 #endif
             end do
           end do ! [ ictype = 1, nctype ]

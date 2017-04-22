@@ -257,7 +257,25 @@ MODULE common_nml
                                            ! Negative values: turn off
 
   logical :: H08_RTTOV_EXTRA_US76 = .false.
-  logical :: H08_VLOCAL_CTOP = .false.
+  logical :: H08_VLOCAL_CTOP = .true.
+
+  logical :: H08_BIAS_SIMPLE = .false. ! Simple bias correction (just subtract prescribed constant)
+  logical :: H08_CLDERR_SIMPLE = .false. ! Simple cloud dependent obs 
+  ! Sky condition is diagnosed by CA (Okamoto et al. 2014 for each band)
+  ! CA > H08_CA_THRES: Cloudy
+  ! CA <= H08_CA_THRES: Clear
+  !
+  ! Constant values for band 9 are based on Honda et al. (2017 submitted to MWR)
+  real(r_size) :: H08_CA_THRES = 1.0d0 ! Threshhold of CA
+  real(r_size) :: H08_BIAS_CLEAR(nch) =  (/0.0d0, 0.0d0, 0.171d0, 0.0d0, 0.0d0, &
+                                           0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0/) ! Constant bias for clear sky conditions
+  real(r_size) :: H08_BIAS_CLOUD(nch) = (/0.0d0, 0.0d0, -3.482d0, 0.0d0, 0.0d0, &
+                                          0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0/) ! Constant bias for cloudy sky conditions
+  !
+  real(r_size) :: H08_CLDERR_CLEAR(nch) =  (/3.0d0, 3.0d0, 0.954d0, 3.0d0, 3.0d0, &
+                                           3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0/) ! Constant obs err for clear sky conditions
+  real(r_size) :: H08_CLDERR_CLOUD(nch) = (/3.0d0, 3.0d0, 6.311d0, 3.0d0, 3.0d0, &
+                                          3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0/) ! Constant obs err for cloudy sky conditions
 
   integer :: H08_CH_USE(nch) = (/0,0,1,0,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
@@ -278,8 +296,8 @@ MODULE common_nml
   real(r_size) :: OBSERR_RADAR_VR = 3.0d0
   real(r_size) :: OBSERR_TCXY = 30.0d3 ! (m)
   real(r_size) :: OBSERR_TCP = 3.0d2 ! (Pa)
-  real(r_size) :: OBSERR_H08(nch) = (/3.0d0,3.0d0,3.0d0,3.0d0,3.0d0,&
-                                      3.0d0,3.0d0,3.0d0,3.0d0,3.0d0/) ! H08
+  real(r_size) :: OBSERR_H08(nch) = (/6.0d0,6.0d0,6.0d0,6.0d0,6.0d0,&
+                                      6.0d0,6.0d0,6.0d0,6.0d0,6.0d0/) ! H08
 
   !--- PARAM_OBSSIM
   character(filelenmax) :: OBSSIM_IN_TYPE = 'history'
@@ -786,7 +804,14 @@ subroutine read_nml_letkf_h08
     H08_RTTOV_EXTRA_US76, &
     H08_VLOCAL_CTOP, &
     H08_BT_MIN, &
-    H08_CH_USE
+    H08_CH_USE, &
+    H08_BIAS_SIMPLE, &
+    H08_CLDERR_SIMPLE, &
+    H08_CA_THRES, &
+    H08_BIAS_CLEAR, &
+    H08_BIAS_CLOUD, &
+    H08_CLDERR_CLEAR, &
+    H08_CLDERR_CLOUD
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_H08,iostat=ierr)
