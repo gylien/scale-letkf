@@ -433,11 +433,12 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         call mpi_timer(trim(timer_str), 2)
 
 #ifdef TCV
-!!--!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk,obs_nn_TCX,obs_nn_TCY,obs_nn_TCP)
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk)
-#else
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk)
+        obs_nn_TCX = -1
+        obs_nn_TCY = -1
+        obs_nn_TCP = -1
 #endif
+
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk)
             do nn = n1, n2
               iof = obsda%set(nn)
               n = obsda%idx(nn)
@@ -454,7 +455,6 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
               select case (obs(iof)%elm(n))
               case (id_tclon_obs)
                 obs_nn_TCX = nn
-                write(6,'(a,i8)')"DEBUG112",obs_nn_TCX
                 cycle
               case (id_tclat_obs)
                 obs_nn_TCY = nn
@@ -625,17 +625,15 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
           bTC_mslp = 9.99d33
           do n = 0, MEM_NP - 1
-            write(6,'(a,3e20.5)')"DEBUG TC",bTC(1,n),bTC(2,n),bTC(3,n) ! debug
             if (bTC(3,n) < bTC_mslp ) then
               bTC_mslp = bTC(3,n)
               bTC_rank_d = n
             endif
           enddo ! [ n = 0, MEM_NP - 1]
-          write(6,'(a,e20.5,2i9)')"DEBUG TC",bTC_mslp, bTC_rank_d, myrank_d
 
           ! (3) Substitute Hx in a subdomain that covers an observed TC
           !
-          if (myrank_d == bTC_rank_d) then
+          if (obs_nn_TCP > 0) then
             do n = 1, 3
               if (n == 1) nn = obs_nn_TCX
               if (n == 2) nn = obs_nn_TCY
@@ -643,8 +641,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
               obsda%val(nn) = bTC(n,btc_rank_d)
               obsda%qc(nn) = iqc_good
             enddo ! [ n = 1, 3 ]
-            write(6,'(a,f10.1,4i8)')"DEBUG111",obsda%val(nn),nn,obs_nn_TCX,obs_nn_TCY,obs_nn_TCP
-          endif ! [myrank_d == bTC_rank_d]
+          endif ! [ obs_nn_TCP > 0]
           deallocate(bTC)
 
         endif ! [minval(TC_rij) > 0.0d0]
@@ -1076,9 +1073,23 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   real(r_size) :: tmpobs
   integer :: tmpqc
 
+#ifdef H08
+! -- for Himawari-8 obs --
+  real(r_size) :: ri_H08(nlon*nlat),rj_H08(nlon*nlat)
+  real(r_size) :: lon_H08(nlon*nlat),lat_H08(nlon*nlat)
+  integer :: np ! num of Him8 profile
+  real(r_size) :: yobs_H08(nch,nlon*nlat),plev_obs_H08(nch,nlon*nlat)
+  integer :: qc_H08(nch,nlon*nlat)
+  integer :: ch
+
+  np = 0
+
+#endif
+
 !-------------------------------------------------------------------------------
 
   write (6,'(A,I6.6,A,I6.6)') 'MYRANK ', myrank, ' is processing subdomain id #', myrank_d
+
 
   do j = 1, nlat
     rj = real(j + JHALO, r_size)
@@ -1088,6 +1099,15 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
       call MPRJ_xy2lonlat((ri-1.0d0) * DX + GRID_CX(1), (rj-1.0d0) * DY + GRID_CY(1), lon, lat)
       lon = lon * rad2deg
       lat = lat * rad2deg
+
+#ifdef H08
+      np = np + 1
+
+      ri_H08(np) = ri
+      rj_H08(np) = rj
+      lon_H08(np) = lon
+      lat_H08(np) = lat
+#endif
 
       do k = 1, nlev
         rk = real(k + KHALO, r_size)
@@ -1115,8 +1135,8 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
         if (k == 1) then
           do iv2dsim = 1, OBSSIM_NUM_2D_VARS
             select case (OBSSIM_2D_VARS_LIST(iv2dsim))
-!            case (id_H08IR_obs)               !!!!!! H08 as 2D observations ???
-!              call Trans_XtoY_radar_H08(...)
+            case (id_H08IR_obs)   
+              cycle
 !            case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)
 !              call ...
             case default
@@ -1137,6 +1157,35 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
     end do ! [ i = 1, nlon ]
 
   end do ! [ j = 1, nlat ]
+
+
+#ifdef H08
+  call Trans_XtoY_H08(np,ri_H08(1:np),rj_H08(1:np),&
+                      lon_H08(1:np),lat_H08(1:np),v3dgh,v2dgh,&
+                      yobs_H08,plev_obs_H08,&
+                      qc_H08)
+
+  np = 0
+  do j = 1, nlat
+
+    do i = 1, nlon
+
+      np = np + 1
+      ch = 0
+
+      do iv2dsim = 1, OBSSIM_NUM_2D_VARS
+        if(OBSSIM_2D_VARS_LIST(iv2dsim) /= id_H08IR_obs .and. ch <= nch)cycle
+
+        ch = ch + 1
+        v2dgsim(i,j,iv2dsim) = real(yobs_H08(ch,np), r_sngl)
+      enddo ! [iv2dsim = 1, OBSSIM_NUM_2D_VARS]
+
+    end do ! [ i = 1, nlon ]
+
+  end do ! [ j = 1, nlat ]
+
+
+#endif
 
 !-------------------------------------------------------------------------------
 
