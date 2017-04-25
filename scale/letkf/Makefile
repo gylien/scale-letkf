@@ -23,7 +23,7 @@ OBS_DIR = ../obs
 
 OBS_OBJS = $(OBS_DIR)/obsope_tools.o
 
-INCS    = $(SCALE_INC)
+INCS    = $(SCALE_INC) $(NETCDF_INC)
 
 LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
 

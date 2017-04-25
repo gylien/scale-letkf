@@ -524,7 +524,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',INFL_MUL_OUT_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE)
+      if (IO_AGGREGATE) then
         call write_restart_par(INFL_MUL_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
       else
 #endif
@@ -551,7 +551,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',RELAX_SPREAD_OUT_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE)
+      if (IO_AGGREGATE) then
         call write_restart_par(RELAX_SPREAD_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
       else
 #endif
@@ -590,7 +590,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',NOBS_OUT_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE)
+      if (IO_AGGREGATE) then
         call write_restart_par(NOBS_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
       else
 #endif
