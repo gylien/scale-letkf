@@ -259,7 +259,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   REAL(Kind=r_size) :: ptmp
 
   logical :: debug = .false.
-!  logical :: debug = .true.
+  !logical :: debug = .true.
   logical :: in_warning = .false.
 
   real(kind=jprb) :: Rd 

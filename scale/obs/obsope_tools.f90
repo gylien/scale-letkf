@@ -195,7 +195,6 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
 #ifdef TCV
   call MPI_ALLREDUCE(MPI_IN_PLACE, TC_rij, 2, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)  ! 
-  write(6,'(a,2f9.1)')"DEBUG",TC_rij(1),TC_rij(2)
 #endif
 
   ! Bucket sort of observation wrt. time slots and subdomains using the process rank 0
@@ -511,7 +510,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
             ! Him8 observations: count the number of profiles required for RTTOV
             ! 
 
-            nallprof = int((n2 - n1 + 1) / nch)
+            nallprof = max(int((n2 - n1 + 1) / nch), nch)
             allocate(nnB07(nallprof))
             allocate(ri_H08(nallprof))
             allocate(rj_H08(nallprof))
@@ -550,8 +549,8 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
               call Trans_XtoY_H08(nprof,ri_H08(1:nprof),rj_H08(1:nprof),&
                                   lon_H08(1:nprof),lat_H08(1:nprof),v3dg,v2dg,&
-                                  yobs_H08,plev_obs_H08,&
-                                  qc_H08,yobs_H08_clr=yobs_H08_clr)
+                                  yobs_H08,yobs_H08_clr,&
+                                  plev_obs_H08,qc_H08)
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,ch,iof,n)
               do nn = 1, nprof
@@ -581,14 +580,17 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
               enddo
 !$OMP END PARALLEL DO
 
-              deallocate(ri_H08, rj_H08)
-              deallocate(lon_H08, lat_H08)
               deallocate(yobs_H08, plev_obs_H08)
               deallocate(yobs_H08_clr)
               deallocate(qc_H08)
 
             endif ! [nprof >= 1]
 
+            if(allocated(nnB07))deallocate(nnB07)
+            if(allocated(ri_H08))deallocate(ri_H08)
+            if(allocated(rj_H08))deallocate(rj_H08)
+            if(allocated(lon_H08))deallocate(lon_H08)
+            if(allocated(lat_H08))deallocate(lat_H08)
 
 #endif
 !    -- End of Him8 DA part --
@@ -787,7 +789,8 @@ SUBROUTINE obsmake_cal(obs)
   REAL(r_size),ALLOCATABLE :: tmp_ri_H08(:),tmp_rj_H08(:)
   REAL(r_size),ALLOCATABLE :: tmp_lon_H08(:),tmp_lat_H08(:)
 
-  REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
+  REAL(r_size),ALLOCATABLE :: yobs_H08(:),yobs_H08_clr(:)
+  REAL(r_size),ALLOCATABLE :: plev_obs_H08(:)
   INTEGER,ALLOCATABLE :: qc_H08(:)
   INTEGER,ALLOCATABLE :: idx_H08(:) ! index array
   INTEGER :: ich
@@ -936,13 +939,14 @@ SUBROUTINE obsmake_cal(obs)
           lat_H08 = tmp_lat_H08(1:nprof_H08)
 
           ALLOCATE(yobs_H08(nprof_H08*nch))
+          ALLOCATE(yobs_H08_clr(nprof_H08*nch))
           ALLOCATE(plev_obs_H08(nprof_H08*nch))
           ALLOCATE(qc_H08(nprof_H08*nch))
 
           CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
                               lon_H08,lat_H08,v3dg,v2dg,&
-                              yobs_H08,plev_obs_H08,&
-                              qc_H08)
+                              yobs_H08,yobs_H08_clr,&
+                              plev_obs_H08,qc_H08)
 
           DO n = 1, nprof_H08
             ns = idx_H08(n)
@@ -1078,9 +1082,12 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   real(r_size) :: ri_H08(nlon*nlat),rj_H08(nlon*nlat)
   real(r_size) :: lon_H08(nlon*nlat),lat_H08(nlon*nlat)
   integer :: np ! num of Him8 profile
-  real(r_size) :: yobs_H08(nch,nlon*nlat),plev_obs_H08(nch,nlon*nlat)
+  real(r_size) :: yobs_H08(nch,nlon*nlat),yobs_H08_clr(nch,nlon*nlat)
+  real(r_size) :: plev_obs_H08(nch,nlon*nlat)
   integer :: qc_H08(nch,nlon*nlat)
-  integer :: ch
+  integer :: ch, it
+  integer :: dp, sp, ep
+  integer, parameter :: itmax = 2
 
   np = 0
 
@@ -1160,10 +1167,20 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
 
 #ifdef H08
-  call Trans_XtoY_H08(np,ri_H08(1:np),rj_H08(1:np),&
-                      lon_H08(1:np),lat_H08(1:np),v3dgh,v2dgh,&
-                      yobs_H08,plev_obs_H08,&
-                      qc_H08)
+
+  dp = int(np / itmax)
+
+  do it = 1, itmax
+    sp = 1 + dp * (it - 1)
+    ep = dp * it
+    if(it == itmax)ep = np
+
+    call Trans_XtoY_H08(ep-sp+1,ri_H08(sp:ep),rj_H08(sp:ep),&
+                        lon_H08(sp:ep),lat_H08(sp:ep),v3dgh,v2dgh,&
+                        yobs_H08(1:nch,sp:ep),yobs_H08_clr(1:nch,sp:ep),&
+                        plev_obs_H08(1:nch,sp:ep),qc_H08(1:nch,sp:ep))
+
+  enddo ! [it = 1, itmax]
 
   np = 0
   do j = 1, nlat
@@ -1174,7 +1191,7 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
       ch = 0
 
       do iv2dsim = 1, OBSSIM_NUM_2D_VARS
-        if(OBSSIM_2D_VARS_LIST(iv2dsim) /= id_H08IR_obs .and. ch <= nch)cycle
+        if(OBSSIM_2D_VARS_LIST(iv2dsim) /= id_H08IR_obs .or. ch > nch)cycle
 
         ch = ch + 1
         v2dgsim(i,j,iv2dsim) = real(yobs_H08(ch,np), r_sngl)

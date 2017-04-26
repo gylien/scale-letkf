@@ -447,6 +447,13 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
 !!!###### Himawari-8 assimilation ###### ! H08
     if (obs(iof)%elm(iidx) == id_H08IR_obs) then
+      ch_num = nint(obs(iof)%lev(iidx)) - 6
+
+      if (H08_CH_USE(ch_num) /= 1) then
+        obsda%qc(n) = iqc_obs_bad
+        cycle
+      end if
+
       if (obs(iof)%dat(iidx) == undef) then
         obsda%qc(n) = iqc_obs_bad
         cycle
