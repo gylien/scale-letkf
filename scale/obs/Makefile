@@ -18,10 +18,13 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common_mpi_scale.o \
               $(COMMON_DIR)/common_nml.o
 
-INCS    = $(SCALE_INC)
+INCS    = $(SCALE_INC) $(NETCDF_INC)
 
 LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
 
+ifeq ($(WRF),T)
+COMMON_OBJS += $(COMMON_DIR)/common_wrf.o
+endif
 ifeq ($(H08),T)
 COMMON_OBJS += $(COMMON_DIR)/scale_H08_fwd.o
 LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)

@@ -15,8 +15,7 @@ MODULE common_nml
   public
 
   !----
-  integer, parameter :: nv3d = 11    ! number of 3D state variables (in SCALE restart files)
-  integer, parameter :: nv2d = 0     ! number of 2D state variables (in SCALE restart files)
+  integer, parameter :: nvarmax = 12 ! Maximun number of 3D+2D state variables (in SCALE restart files)
   integer, parameter :: nid_obs = 16 ! number of variable types
   integer, parameter :: nobtype = 24 ! number of observation report types
   integer, parameter :: nch = 10     ! H08 Num of Himawari-8 (IR) channels
@@ -41,7 +40,7 @@ MODULE common_nml
   logical :: DET_RUN_CYCLED = .true.
 
   !--- PARAM_MODEL
-  character(len=10) :: MODEL = 'scale-rm'
+!  character(len=10) :: MODEL = 'scale-rm'
   logical :: VERIFY_COORD = .false.
 
 !  !--- PARAM_IO
@@ -200,15 +199,15 @@ MODULE common_nml
       -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
 
   !--- PARAM_LETKF_VAR_LOCAL
-  real(r_size) :: VAR_LOCAL_UV(nv3d+nv2d)        = 1.0d0
-  real(r_size) :: VAR_LOCAL_T(nv3d+nv2d)         = 1.0d0
-  real(r_size) :: VAR_LOCAL_Q(nv3d+nv2d)         = 1.0d0
-  real(r_size) :: VAR_LOCAL_PS(nv3d+nv2d)        = 1.0d0
-  real(r_size) :: VAR_LOCAL_RAIN(nv3d+nv2d)      = 1.0d0
-  real(r_size) :: VAR_LOCAL_TC(nv3d+nv2d)        = 1.0d0
-  real(r_size) :: VAR_LOCAL_RADAR_REF(nv3d+nv2d) = 1.0d0
-  real(r_size) :: VAR_LOCAL_RADAR_VR(nv3d+nv2d)  = 1.0d0
-  real(r_size) :: VAR_LOCAL_H08(nv3d+nv2d)       = 1.0d0 ! H08
+  real(r_size) :: VAR_LOCAL_UV(nvarmax)        = 1.0d0
+  real(r_size) :: VAR_LOCAL_T(nvarmax)         = 1.0d0
+  real(r_size) :: VAR_LOCAL_Q(nvarmax)         = 1.0d0
+  real(r_size) :: VAR_LOCAL_PS(nvarmax)        = 1.0d0
+  real(r_size) :: VAR_LOCAL_RAIN(nvarmax)      = 1.0d0
+  real(r_size) :: VAR_LOCAL_TC(nvarmax)        = 1.0d0
+  real(r_size) :: VAR_LOCAL_RADAR_REF(nvarmax) = 1.0d0
+  real(r_size) :: VAR_LOCAL_RADAR_VR(nvarmax)  = 1.0d0
+  real(r_size) :: VAR_LOCAL_H08(nvarmax)       = 1.0d0 ! H08
 
   !--- PARAM_LETKF_MONITOR
   logical :: DEPARTURE_STAT = .true.
@@ -343,7 +342,7 @@ subroutine read_nml_model
   integer :: ierr
 
   namelist /PARAM_MODEL/ &
-    MODEL, &
+!    MODEL, &
     VERIFY_COORD
 
   rewind(IO_FID_CONF)

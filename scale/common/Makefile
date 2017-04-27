@@ -2,11 +2,16 @@ include ../configure.user
 
 OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_sort.o common_letkf.o \
 	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
-          common_nml.o
+          common_nml.o \
           #common_precip.o
+ifeq ($(WRF),T)
+OBJ_WRF = common_wrf.o
+OBJS    += $(OBJ_WRF)
+endif
 
 ifeq ($(H08),T)
-OBJS    += scale_H08_fwd.o
+OBJ_H08 = scale_H08_fwd.o
+OBJS    += $(OBJ_H08)
 endif
 
 all:	$(OBJS) datetime pdbash 
@@ -34,19 +39,20 @@ common_letkf.o:	../../common/common_letkf.f90 common.o common_mtx.o
 	$(SFC) $(FOPTS) -c $<
 common_ncio.o:	common_ncio.f90 common.o
 	$(SFC) $(FOPTS) -c $< $(NETCDF_INC)
-common_scale.o:	common_scale.f90 common.o common_nml.o common_mpi.o common_ncio.o
+common_scale.o:	common_scale.f90 common.o common_nml.o common_mpi.o common_ncio.o $(OBJ_WRF)
 	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC)
+ifeq ($(WRF),T)
+common_wrf.o:	common_wrf.f90 common.o common_nml.o common_mpi.o common_ncio.o
+	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC)
+endif
 ifeq ($(H08),T)
 scale_H08_fwd.o:        scale_H08_fwd.F90 common.o 
 	$(FC) $(FOPTS) -c $< $(RT_INCLUDE) $(RT_LDFLAGS) $(SCALE_INC)
-common_obs_scale.o:	common_obs_scale.f90 common.o common_nml.o common_scale.o scale_H08_fwd.o
-	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC)
-else
-common_obs_scale.o:	common_obs_scale.f90 common.o common_nml.o common_scale.o
-	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC)
 endif
+common_obs_scale.o:	common_obs_scale.f90 common.o common_nml.o common_scale.o $(OBJ_WRF) $(OBS_H08)
+	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC)
 common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o \
-	common_scale.o common_obs_scale.o 
+	common_scale.o common_obs_scale.o $(OBJ_WRF)
 	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC)
 #common_precip.o:	common_precip.f90 common.o common_scale.o common_letkf.o
 #	$(SFC) $(FOPTS) -c $<

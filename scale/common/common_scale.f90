@@ -18,19 +18,26 @@ MODULE common_scale
   use scale_precision, only: RP, SP
   use scale_prof
 
+#ifdef WRF
+  use common_wrf, only: vname_max, nv3d, nv2d, nv3dd, nv2dd, v3d_name, v2d_name, v3dd_name, v2dd_name, &
+      nlon, nlat, nlev, nlong, nlatg, nlonh, nlath, nlevh, nij0, nlevall, nlevalld, ngpv, ngpvd
+#endif
+
   IMPLICIT NONE
   PUBLIC
 !-------------------------------------------------------------------------------
 ! General parameters
 !-------------------------------------------------------------------------------
 
+#ifndef WRF
   INTEGER,PARAMETER :: vname_max = 10
 
   ! 
   !--- 3D, 2D state variables (in SCALE restart files)
   ! 
-  ! Parameter 'nv3d' is set in common_nml.f90
-  ! Parameter 'nv2d' is set in common_nml.f90
+  INTEGER,PARAMETER :: nv3d = 11
+  INTEGER,PARAMETER :: nv2d = 0
+#endif
   INTEGER,PARAMETER :: iv3d_rho=1  !-- State in restart files
   INTEGER,PARAMETER :: iv3d_rhou=2 !
   INTEGER,PARAMETER :: iv3d_rhov=3 !
@@ -47,19 +54,23 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv3d_qi=9   !
   INTEGER,PARAMETER :: iv3d_qs=10  !
   INTEGER,PARAMETER :: iv3d_qg=11  !
+#ifndef WRF
   CHARACTER(vname_max),PARAMETER :: v3d_name(nv3d) = &
      (/'DENS', 'MOMX', 'MOMY', 'MOMZ', 'RHOT', &
        'QV', 'QC', 'QR', 'QI', 'QS', 'QG'/)
   CHARACTER(vname_max) :: v2d_name(nv2d)
+#endif
 
   ! 
   !--- 3D, 2D diagnostic variables (in SCALE history files)
   ! 
+#ifndef WRF
   INTEGER,PARAMETER :: nv3dd=13
 #ifdef H08
   INTEGER,PARAMETER :: nv2dd=9  ! H08
 #else
   INTEGER,PARAMETER :: nv2dd=7
+#endif
 #endif
   INTEGER,PARAMETER :: iv3dd_u=1
   INTEGER,PARAMETER :: iv3dd_v=2
@@ -85,6 +96,7 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv2dd_lsmask=8 ! H08
   INTEGER,PARAMETER :: iv2dd_skint=9 ! H08
 #endif
+#ifndef WRF
   CHARACTER(vname_max),PARAMETER :: v3dd_name(nv3dd) = &
      (/'U', 'V', 'W', 'T', 'PRES', &
        'QV', 'QC', 'QR', 'QI', 'QS', 'QG', 'RH', 'height'/)
@@ -95,6 +107,7 @@ MODULE common_scale
 #else
   CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &
      (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2'/)
+#endif
 #endif
 
   ! 
@@ -109,6 +122,7 @@ MODULE common_scale
   CHARACTER(vname_max),PARAMETER :: lat2d_name = 'lat'       ! (in SCALE restart files)
   CHARACTER(vname_max),PARAMETER :: topo2d_name = 'TOPO'     ! (in SCALE topo files)
 
+#ifndef WRF
   ! 
   !--- grid settings
   ! 
@@ -125,6 +139,7 @@ MODULE common_scale
   INTEGER,SAVE :: nlevalld
   INTEGER,SAVE :: ngpv
   INTEGER,SAVE :: ngpvd
+#endif
 
 !  INTEGER,PARAMETER :: nlonsub=200
 !  INTEGER,PARAMETER :: nlatsub=200
@@ -385,6 +400,7 @@ END SUBROUTINE read_restart
 !-------------------------------------------------------------------------------
 ! [File I/O] Read SCALE restart files <PnetCDF>
 !-------------------------------------------------------------------------------
+#ifndef WRF
 #ifdef PNETCDF
 SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 !  use common_mpi_scale, only: &
@@ -471,6 +487,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 
   RETURN
 END SUBROUTINE read_restart_par
+#endif
 #endif
 
 !-------------------------------------------------------------------------------
@@ -619,6 +636,7 @@ END SUBROUTINE write_restart
 !-------------------------------------------------------------------------------
 ! [File I/O] Write SCALE restart files <PnetCDF>
 !-------------------------------------------------------------------------------
+#ifndef WRF
 #ifdef PNETCDF
 SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 !  use common_mpi_scale, only: &
@@ -705,6 +723,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 
   RETURN
 END SUBROUTINE write_restart_par
+#endif
 #endif
 
 !-------------------------------------------------------------------------------
@@ -986,6 +1005,7 @@ end subroutine read_history
 !-------------------------------------------------------------------------------
 ! [File I/O] Read SCALE history files <PnetCDF>
 !-------------------------------------------------------------------------------
+#ifndef WRF
 #ifdef PNETCDF
 subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   use scale_process, only: &
@@ -1133,6 +1153,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   return
 end subroutine read_history_par
 #endif
+#endif
 
 !-------------------------------------------------------------------------------
 ! Transform the SCALE restart variables to the LETKF state variables
@@ -1248,6 +1269,7 @@ end subroutine state_trans_inv
 ! [OUTPUT]
 !   v3dgh, v2dgh : 3D, 2D SCALE history variables
 !-------------------------------------------------------------------------------
+#ifndef WRF
 subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   use scale_grid_index, only: &
       IHALO, JHALO, KHALO, &
@@ -1355,6 +1377,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 
   return
 end subroutine state_to_history
+#endif
 
 !-------------------------------------------------------------------------------
 ! Monitor state variables

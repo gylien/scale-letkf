@@ -7,7 +7,15 @@ program obssim
 !$use OMP_LIB
   use common, only: r_size
   use common_mpi
+#ifdef WRF
+  use common_scale, only: &
+    set_common_conf, &
+    set_common_scale, &
+    state_trans !!!!
+  use common_wrf
+#else
   use common_scale
+#endif
   use common_mpi_scale
   use common_obs_scale
   use common_nml

@@ -16,7 +16,33 @@ MODULE letkf_tools
   USE common
   use common_nml
   USE common_mpi
-  USE common_scale
+#ifdef WRF
+  use common_scale, only: &
+!    set_common_conf, &
+!    set_common_scale, &
+!    read_restart, &
+!    write_restart, &
+!!!    read_restart_coor, &
+!!!    read_topo, &
+!!!    read_topo_par, &
+!    read_history, &
+!    state_trans, &
+!    state_trans_inv, &
+!    state_calc_z, &
+!    state_calc_z_grd, &
+    ensmean_grd
+!    enssprd_grd, &
+!    rank_1d_2d, &
+!    rank_2d_1d, &
+!    ij_g2l, &
+!    ij_l2g, &
+!    rij_g2l, &
+!    rij_l2g, &
+!    rij_g2l_auto
+  use common_wrf
+#else
+  use common_scale
+#endif
   USE common_mpi_scale
   USE common_letkf
 
@@ -104,15 +130,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !
   ! Variable localization
   !
-  var_local(:,1) = VAR_LOCAL_UV(:)
-  var_local(:,2) = VAR_LOCAL_T(:)
-  var_local(:,3) = VAR_LOCAL_Q(:)
-  var_local(:,4) = VAR_LOCAL_PS(:)
-  var_local(:,5) = VAR_LOCAL_RAIN(:)
-  var_local(:,6) = VAR_LOCAL_TC(:)
-  var_local(:,7) = VAR_LOCAL_RADAR_REF(:)
-  var_local(:,8) = VAR_LOCAL_RADAR_VR(:)
-  var_local(:,9) = VAR_LOCAL_H08(:) ! H08
+  var_local(:,1) = VAR_LOCAL_UV(1:nv3d+nv2d)
+  var_local(:,2) = VAR_LOCAL_T(1:nv3d+nv2d)
+  var_local(:,3) = VAR_LOCAL_Q(1:nv3d+nv2d)
+  var_local(:,4) = VAR_LOCAL_PS(1:nv3d+nv2d)
+  var_local(:,5) = VAR_LOCAL_RAIN(1:nv3d+nv2d)
+  var_local(:,6) = VAR_LOCAL_TC(1:nv3d+nv2d)
+  var_local(:,7) = VAR_LOCAL_RADAR_REF(1:nv3d+nv2d)
+  var_local(:,8) = VAR_LOCAL_RADAR_VR(1:nv3d+nv2d)
+  var_local(:,9) = VAR_LOCAL_H08(1:nv3d+nv2d) ! H08
   var_local_n2n(1) = 1
   DO n=2,nv3d+nv2d
     DO i=1,n
@@ -167,7 +193,11 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',INFL_MUL_IN_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
       if (IO_AGGREGATE) then
+#ifdef WRF
+        call read_restart_par(INFL_MUL_IN_BASENAME,work3dg,work2dg,MPI_COMM_d,trans=.false.)
+#else
         call read_restart_par(INFL_MUL_IN_BASENAME,work3dg,work2dg,MPI_COMM_d)
+#endif
       else
 #endif
         call read_restart(INFL_MUL_IN_BASENAME,work3dg,work2dg)
@@ -524,8 +554,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',INFL_MUL_OUT_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE)
+      if (IO_AGGREGATE) then
+#ifdef WRF
+        call write_restart_par(INFL_MUL_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d,trans=.false.)
+#else
         call write_restart_par(INFL_MUL_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
+#endif
       else
 #endif
         call write_restart(INFL_MUL_OUT_BASENAME,work3dg,work2dg)
@@ -551,8 +585,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',RELAX_SPREAD_OUT_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE)
+      if (IO_AGGREGATE) then
+#ifdef WRF
+        call write_restart_par(RELAX_SPREAD_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d,trans=.false.)
+#else
         call write_restart_par(RELAX_SPREAD_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
+#endif
       else
 #endif
         call write_restart(RELAX_SPREAD_OUT_BASENAME,work3dg,work2dg)
@@ -590,8 +628,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',NOBS_OUT_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE)
+      if (IO_AGGREGATE) then
+#ifdef WRF
+        call write_restart_par(NOBS_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d,trans=.false.)
+#else
         call write_restart_par(NOBS_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
+#endif
       else
 #endif
         call write_restart(NOBS_OUT_BASENAME,work3dg,work2dg)

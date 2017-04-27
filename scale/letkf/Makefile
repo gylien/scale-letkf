@@ -23,10 +23,13 @@ OBS_DIR = ../obs
 
 OBS_OBJS = $(OBS_DIR)/obsope_tools.o
 
-INCS    = $(SCALE_INC)
+INCS    = $(SCALE_INC) $(NETCDF_INC)
 
 LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
 
+ifeq ($(WRF),T)
+COMMON_OBJS += $(COMMON_DIR)/common_wrf.o
+endif
 ifeq ($(H08),T)
 COMMON_OBJS += $(COMMON_DIR)/scale_H08_fwd.o
 LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)

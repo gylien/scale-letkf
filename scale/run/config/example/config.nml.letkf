@@ -1,5 +1,4 @@
 &PARAM_MODEL
- MODEL = "scale-rm",
  VERIFY_COORD = .false.,
 /
 

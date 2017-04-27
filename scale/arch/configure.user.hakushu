@@ -10,8 +10,10 @@ include $(SCALE)/Mkinclude
 
 #NETCDF_INC = -I/data/opt/netcdf/4.3.2_intel/include -I/data/opt/netcdf-fortran/4.4.1_intel/include
 #NETCDF_LIB = -L/data/opt/netcdf/4.3.2_intel/lib -L/data/opt/netcdf-fortran/4.4.1_intel/lib -L/data/opt/hdf5/1.8.14_intel/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz
-NETCDF_INC = $(NETCDF_INCLUDE)
-NETCDF_LIB = $(NETCDF_LIBS)
+#NETCDF_INC = $(NETCDF_INCLUDE)
+#NETCDF_LIB = $(NETCDF_LIBS)
+NETCDF_INC = -I/data/opt/netcdf/4.3.2_intel/include -I/data/opt/netcdf-fortran/4.4.1_intel/include -I/data/gylien/parallel-netcdf/1.8.1_intel/include -DPNETCDF
+NETCDF_LIB = -L/data/opt/netcdf/4.3.2_intel/lib -L/data/opt/netcdf-fortran/4.4.1_intel/lib -L/data/opt/hdf5/1.8.14_intel/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz -L/data/gylien/parallel-netcdf/1.8.1_intel/lib -lpnetcdf
 
 LAPACK_LIB = -mkl
 
@@ -32,6 +34,12 @@ FMCMODEL  = -mcmodel=medium
 FBYTESWAP = -convert little_endian
 FFREE     = -free
 FFIXED    = -fixed
+
+# -- WRF
+ifeq ($(WRF),T)
+FOPTS += -DWRF
+#FOPTS_SCALE += -DWRF
+endif
 
 # -- for Himawari-8 assimilatin on the K computer (T.Honda)
 # -- If you want to compile without RTTOV (Himawari assimilation),

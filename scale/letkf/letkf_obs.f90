@@ -16,7 +16,33 @@ MODULE letkf_obs
   USE common
   use common_nml
   USE common_mpi
-  USE common_scale
+#ifdef WRF
+  use common_scale, only: &
+!    set_common_conf, &
+!    set_common_scale, &
+!    read_restart, &
+!    write_restart, &
+!!!    read_restart_coor, &
+!!!    read_topo, &
+!!!    read_topo_par, &
+!    read_history, &
+!    state_trans, &
+!    state_trans_inv, &
+!    state_calc_z, &
+!    state_calc_z_grd, &
+!    ensmean_grd, &
+!    enssprd_grd, &
+    rank_1d_2d, &
+!    rank_2d_1d, &
+!    ij_g2l, &
+!    ij_l2g, &
+    rij_g2l
+!    rij_l2g, &
+!    rij_g2l_auto
+  use common_wrf
+#else
+  use common_scale
+#endif
   USE common_obs_scale
   USE common_mpi_scale
   USE common_letkf

@@ -12,7 +12,14 @@ PROGRAM letkf
 !$USE OMP_LIB
   USE common
   USE common_mpi
-  USE common_scale
+#ifdef WRF
+  use common_scale, only: &
+    set_common_conf, &
+    set_common_scale
+  use common_wrf
+#else
+  use common_scale
+#endif
   USE common_mpi_scale
   USE common_obs_scale
   USE common_nml

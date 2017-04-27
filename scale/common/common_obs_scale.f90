@@ -36,7 +36,36 @@ MODULE common_obs_scale
 !$USE OMP_LIB
   USE common
   USE common_nml
-  USE common_scale
+#ifdef WRF
+  use common_scale, only: &
+!    set_common_conf, &
+!    set_common_scale, &
+!    read_restart, &
+!    write_restart, &
+!!!    read_restart_coor, &
+!!!    read_topo, &
+!!!    read_topo_par, &
+!    read_history, &
+!    state_to_history, &
+!    state_trans, &
+!    state_trans_inv, &
+!    state_calc_z, &
+!    state_calc_z_grd, &
+!    ensmean_grd, &
+!    enssprd_grd, &
+!    rank_1d_2d, &
+!    rank_2d_1d, &
+!    ij_g2l, &
+    ij_l2g, &
+!    rij_g2l, &
+!    rij_l2g, &
+    rij_g2l_auto
+  use common_wrf
+#else
+  use common_scale
+#endif
+
+  use scale_precision, only: RP
 
   IMPLICIT NONE
   PUBLIC
@@ -308,8 +337,10 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
     end if
 !  CASE(id_rain_obs) ! RAIN                        ############# (not finished)
 !    CALL itpl_2d(v2d(:,:,iv2dd_rain),ri,rj,yobs) !#############
+#ifndef WRF
   CASE(id_rh_obs) ! RH
     CALL itpl_3d(v3d(:,:,:,iv3dd_rh),rk,ri,rj,yobs)
+#endif
 !  CASE(id_tclon_obs)
 !    CALL tctrk(v2d(:,:,iv2d_ps),v2d(:,:,iv2d_t2),ri,rj,dummy)
 !    yobs = dummy(1)

@@ -19,7 +19,33 @@ module common_mpi_scale
   use common
   use common_nml
   use common_mpi
+#ifdef WRF
+  use common_scale, only: &
+    set_common_conf, &
+    set_common_scale, &
+    read_restart, &        !!!!!!!!!!
+    write_restart, &       !!!!!!!!!!
+    read_restart_coor, &      !!!!
+    read_topo, &              !!!!
+    read_topo_par, &          !!!!
+    read_history, &        !!!!!!!!!!
+!    state_trans, &
+!    state_trans_inv, &
+!    scale_calc_z, &
+    scale_calc_z_grd, &
+    ensmean_grd, &
+    enssprd_grd, &
+    rank_1d_2d
+!    rank_2d_1d, &
+!    ij_g2l, &
+!    ij_l2g, &
+!    rij_g2l, &
+!    rij_l2g, &
+!    rij_g2l_auto
+  use common_wrf
+#else
   use common_scale
+#endif
   use common_obs_scale
 
   use scale_precision, only: RP
@@ -139,6 +165,8 @@ subroutine set_common_mpi_scale
   real(r_size), allocatable :: height3dtmp(:,:,:)
   real(r_size), allocatable :: lon2dtmp(:,:)
   real(r_size), allocatable :: lat2dtmp(:,:)
+  real(RP), allocatable :: v3dgtmp(:,:,:,:)
+  real(RP), allocatable :: v2dgtmp(:,:,:)
   integer :: i, j
   real(r_size) :: ri, rj
 
@@ -162,18 +190,10 @@ subroutine set_common_mpi_scale
 
   if (VERIFY_COORD) then
     if (myrank_e == 0) then
-!      allocate (height3d(nlev,nlon,nlat))
       allocate (lon2d(nlon,nlat))
       allocate (lat2d(nlon,nlat))
-      allocate (height3dtmp(nlev,nlon,nlat))
       allocate (lon2dtmp(nlon,nlat))
       allocate (lat2dtmp(nlon,nlat))
-
-      if (.not. allocated(topo2d)) then
-        allocate (topo2d(nlon,nlat))
-        call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
-      end if
-!      call scale_calc_z(topo2d, height3d)
 
 !$OMP PARALLEL DO PRIVATE(i,j,ri,rj) COLLAPSE(2)
       do j = 1, nlat
@@ -187,10 +207,28 @@ subroutine set_common_mpi_scale
       end do
 !$OMP END PARALLEL DO
 
-      call file_member_replace(proc2mem(1,1,myrank+1), GUES_IN_BASENAME, filename)
-      call read_restart_coor(filename, lon2dtmp, lat2dtmp, height3dtmp)
+#ifndef WRF
+!      if (.not. allocated(topo2d)) then
+!        allocate (topo2d(nlon,nlat))
+!        call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
+!      end if
+!      allocate (height3d(nlev,nlon,nlat))
+!      call scale_calc_z(topo2d, height3d)
+      allocate (height3dtmp(nlev,nlon,nlat))
+#endif
 
+      call file_member_replace(proc2mem(1,1,myrank+1), GUES_IN_BASENAME, filename)
+#ifdef WRF
+      call read_coor_par(filename, MPI_COMM_d, lon=lon2dtmp, lat=lat2dtmp)
+#else
+      call read_restart_coor(filename, lon2dtmp, lat2dtmp, height3dtmp)
+#endif
+
+#ifdef WRF
+      if (maxval(abs(lon2dtmp - lon2d)) > 1.0d-2 .or. maxval(abs(lat2dtmp - lat2d)) > 1.0d-2) then
+#else
       if (maxval(abs(lon2dtmp - lon2d)) > 1.0d-6 .or. maxval(abs(lat2dtmp - lat2d)) > 1.0d-6) then
+#endif
         write (6, '(A,F15.7,A,F15.7)') '[Error] Map projection settings are incorrect! -- maxdiff(lon) = ', &
                                        maxval(abs(lon2dtmp - lon2d)), ', maxdiff(lat) = ', maxval(abs(lat2dtmp - lat2d))
         stop
@@ -200,6 +238,18 @@ subroutine set_common_mpi_scale
 !                               maxval(abs(height3dtmp - height3d))
 !        stop
 !      end if
+
+      deallocate (lon2dtmp, lat2dtmp)
+#ifndef WRF
+      deallocate (height3dtmp)
+#endif
+
+#ifdef WRF
+      allocate (v3dgtmp(nlev,nlon,nlat,nv3d))
+      allocate (v2dgtmp(nlon,nlat,nv2d))
+      call read_restart_par(filename,v3dgtmp,v2dgtmp,MPI_COMM_d,verify_p=.true.)
+      deallocate (v3dgtmp, v2dgtmp)
+#endif
 
       write (6, '(A)') 'VERIFY_COORD: Model coordinate calculation is good.'
 
@@ -735,6 +785,7 @@ subroutine set_scalelib
 
   ! setup history I/O
 !  call HIST_setup
+#ifndef WRF
     ! setup history file I/O [[ in HIST_setup ]]
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
@@ -754,6 +805,7 @@ subroutine set_scalelib
                       default_zcoord = 'model',         & ! [IN]
                       default_tinterval = 1.0d0,        & ! [IN]
                       namelist_fid=IO_FID_CONF          ) ! [IN]
+#endif
 
   ! setup monitor I/O
 !  call MONIT_setup
@@ -999,7 +1051,9 @@ subroutine read_ens_mpi(v3d, v2d)
 
       call mpi_timer('read_ens_mpi:read_restart:', 2)
 
+#ifndef WRF
       call state_trans(v3dg)
+#endif
 
       call mpi_timer('read_ens_mpi:state_trans:', 2)
     end if
@@ -1048,7 +1102,9 @@ subroutine read_ens_mpi_addiinfl(v3d, v2d)
 #ifdef PNETCDF
       end if
 #endif
+#ifndef WRF
       call state_trans(v3dg)
+#endif
     end if
 
     mstart = 1 + (it-1)*nprocs_e
@@ -1112,7 +1168,9 @@ subroutine write_ens_mpi(v3d, v2d, monit, caption)
       end if
 
 !      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+#ifndef WRF
       call state_trans_inv(v3dg)
+#endif
 
       call mpi_timer('write_ens_mpi:state_trans_inv:', 2)
 
@@ -1473,7 +1531,9 @@ subroutine write_ensmean(filename, v3d, v2d, calced, monit, caption)
   end if
 
   if (myrank_e == mmean_rank_e) then
+#ifndef WRF
     call state_trans_inv(v3dg)
+#endif
 
     call mpi_timer('write_ensmean:state_trans_inv:', 2)
 
@@ -1520,7 +1580,11 @@ subroutine write_enssprd(filename, v3d, v2d)
 !    call state_trans_inv(v3dg)              !! do not transform the spread output
 #ifdef PNETCDF
     if (IO_AGGREGATE) then
+#ifdef WRF
+      call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d, trans=.false.)
+#else
       call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
+#endif
     else
 #endif
       call write_restart(filename, v3dg, v2dg) !!
