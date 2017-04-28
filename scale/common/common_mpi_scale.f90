@@ -225,7 +225,7 @@ subroutine set_common_mpi_scale
 #endif
 
 #ifdef WRF
-      if (maxval(abs(lon2dtmp - lon2d)) > 1.0d-2 .or. maxval(abs(lat2dtmp - lat2d)) > 1.0d-2) then
+      if (maxval(abs(lon2dtmp - lon2d)) > 1.0d-4 .or. maxval(abs(lat2dtmp - lat2d)) > 1.0d-4) then
 #else
       if (maxval(abs(lon2dtmp - lon2d)) > 1.0d-6 .or. maxval(abs(lat2dtmp - lat2d)) > 1.0d-6) then
 #endif

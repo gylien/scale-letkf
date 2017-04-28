@@ -22,25 +22,27 @@ MODULE common_wrf
   ! 
   !--- 3D, 2D state variables (in SCALE restart files)
   ! 
-  INTEGER,PARAMETER :: nv3d = 11
+  INTEGER,PARAMETER :: nv3d = 12
   INTEGER,PARAMETER :: nv2d = 1
   INTEGER,PARAMETER :: iv3d_theta_pert=4 !-- in restart files
-  INTEGER,PARAMETER :: iv3d_ph_pert=5    !
+  INTEGER,PARAMETER :: iv3d_p_pert=5     !
+  INTEGER,PARAMETER :: iv3d_ph_pert=6    !
   INTEGER,PARAMETER :: iv2d_mu_pert=1    !
   INTEGER,PARAMETER :: iv3d_u=1          !-- for LETKF
   INTEGER,PARAMETER :: iv3d_v=2          !
   INTEGER,PARAMETER :: iv3d_w=3          !
   INTEGER,PARAMETER :: iv3d_t=4          !
   INTEGER,PARAMETER :: iv3d_p=5          !
-  INTEGER,PARAMETER :: iv3d_q=6          !
-  INTEGER,PARAMETER :: iv3d_qc=7         !
-  INTEGER,PARAMETER :: iv3d_qr=8         !
-  INTEGER,PARAMETER :: iv3d_qi=9         !
-  INTEGER,PARAMETER :: iv3d_qs=10        !
-  INTEGER,PARAMETER :: iv3d_qg=11        !
+  INTEGER,PARAMETER :: iv3d_ph=6         !
+  INTEGER,PARAMETER :: iv3d_q=7          !
+  INTEGER,PARAMETER :: iv3d_qc=8         !
+  INTEGER,PARAMETER :: iv3d_qr=9         !
+  INTEGER,PARAMETER :: iv3d_qi=10        !
+  INTEGER,PARAMETER :: iv3d_qs=11        !
+  INTEGER,PARAMETER :: iv3d_qg=12        !
   INTEGER,PARAMETER :: iv2d_mu=1         !
   CHARACTER(vname_max),PARAMETER :: v3d_name(nv3d) = &
-     (/'U', 'V', 'W', 'T', 'PH', &
+     (/'U', 'V', 'W', 'T', 'P', 'PH', &
        'QVAPOR', 'QCLOUD', 'QRAIN', 'QICE', 'QSNOW', 'QGRAUP'/)
   CHARACTER(vname_max),PARAMETER :: v2d_name(nv2d) = &
      (/'MU'/)
@@ -287,8 +289,8 @@ subroutine read_restart_par(filename,v3dg,v2dg,comm,trans,verify_p)
   implicit none
 
   character(*),intent(in) :: filename
-  real(RP),intent(out) :: v3dg(nlev,nlon,nlat,nv3d)
-  real(RP),intent(out) :: v2dg(nlon,nlat,nv2d)
+  real(r_size),intent(out) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(r_size),intent(out) :: v2dg(nlon,nlat,nv2d)
   integer,intent(in) :: comm
   logical,intent(in),optional :: trans
   logical,intent(in),optional :: verify_p
@@ -298,29 +300,17 @@ subroutine read_restart_par(filename,v3dg,v2dg,comm,trans,verify_p)
   integer :: i,j,k,iv3d,iv2d
   real(SP) :: var3D(nlon,nlat,nlev)
   real(SP) :: var2D(nlon,nlat)
-  real(SP) :: var_ph(nlon,nlat,nlev+1)
   real(r_size), allocatable :: var_p(:,:,:)
   real(r_size) :: kappa, kapdiv, Rd_wrf, RvRd_wrf, p00_kappa_inv
   real(r_size) :: tmprho, tmptheta_p00_kappa_inv
 
   integer :: err, ncid, varid, req, reqs(1), sts(1)
   integer(KIND=MPI_OFFSET_KIND) :: start(4), count(4)
-  integer(KIND=MPI_OFFSET_KIND) :: start2(4), count2(4)
 
   trans_ = .true.
   if (present(trans)) trans_ = trans
   verify_p_ = .false.
   if (present(verify_p)) verify_p_ = (trans_ .and. verify_p)
-
-  ! calculate subarray's start() and count() to the global variables
-  start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
-  start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
-  start(3) = 1
-  start(4) = 1
-  count(1) = IMAX
-  count(2) = JMAX
-  count(3) = KMAX
-  count(4) = 1
 
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename)
 
@@ -329,105 +319,37 @@ subroutine read_restart_par(filename,v3dg,v2dg,comm,trans,verify_p)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//nfmpi_strerror(err)
 
+  start(4) = 1
+  count(1) = IMAX
+  count(2) = JMAX
+  count(3) = KMAX
+  count(4) = 1
+
   ! 3D variables
   !-------------
   do iv3d = 1, nv3d
     select case (iv3d)
     case (iv3d_u)
-      start2(:) = start(:)
-      count2(:) = count(:)
-      start2(1) = start2(1) + 1
-
-      write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3d_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start2, count2
-
-      err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iget_vara_real(ncid, varid, start2, count2, var3D, req)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-      err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-
-      forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k,i,j,iv3d) = real(var3D(i,j,k), r_size)
+      start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 2
+      start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+      start(3) = 1
     case (iv3d_v)
-      start2(:) = start(:)
-      count2(:) = count(:)
-      start2(2) = start2(2) + 1
-
-      write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3d_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start2, count2
-
-      err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iget_vara_real(ncid, varid, start2, count2, var3D, req)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-      err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-
-      forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k,i,j,iv3d) = real(var3D(i,j,k), r_size)
-    case (iv3d_w)
-      start2(:) = start(:)
-      count2(:) = count(:)
-      start2(3) = start2(3) + 1
-
-      write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3d_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start2, count2
-
-      err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iget_vara_real(ncid, varid, start2, count2, var3D, req)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-      err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-
-      forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k,i,j,iv3d) = real(var3D(i,j,k), r_size)
-    case (iv3d_ph_pert)
-      start2(:) = start(:)
-      count2(:) = count(:)
-      count2(3) = count2(3) + 1
-
-      write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3d_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start2, count2
-
-      err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iget_vara_real(ncid, varid, start2, count2, var_ph, req)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-      err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-
-      if (.not. trans_) then
-        forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k,i,j,iv3d) = 0.5_r_size * real(var_ph(i,j,k) + var_ph(i,j,k+1), r_size)
-      end if
+      start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+      start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 2
+      start(3) = 1
+    case (iv3d_w, iv3d_ph_pert)
+      start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+      start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+      start(3) = 2
     case default
-      write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3d_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start, count
-
-      err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iget_vara_real(ncid, varid, start, count, var3D, req)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-      err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-
-      forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k,i,j,iv3d) = real(var3D(i,j,k), r_size)
+      start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+      start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+      start(3) = 1
     end select
-  end do
 
-  if (verify_p_) then
-    write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3dd_name(iv3dd_p_pert)), ' >> PnetCDF start(4), count(4) =', start, count
+    write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3d_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start, count
 
-    err = nfmpi_inq_varid(ncid, trim(v3dd_name(iv3dd_p_pert)), varid)
+    err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
     err = nfmpi_iget_vara_real(ncid, varid, start, count, var3D, req)
@@ -437,11 +359,14 @@ subroutine read_restart_par(filename,v3dg,v2dg,comm,trans,verify_p)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
 
-    allocate (var_p(nlev,nlon,nlat))
-    forall (i=1:nlon, j=1:nlat, k=1:nlev) var_p(k,i,j) = real(var3D(i,j,k), r_size)
-  end if
+    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k,i,j,iv3d) = real(var3D(i,j,k), r_size)
+  end do
 
+  start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+  start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
   start(3) = 1
+  count(1) = IMAX
+  count(2) = JMAX
   count(3) = 1
 
   ! 2D variables
@@ -455,7 +380,6 @@ subroutine read_restart_par(filename,v3dg,v2dg,comm,trans,verify_p)
     err = nfmpi_iget_vara_real(ncid, varid, start(1:3), count(1:3), var2D, req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-
     err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
@@ -469,19 +393,14 @@ subroutine read_restart_par(filename,v3dg,v2dg,comm,trans,verify_p)
 
   ! transform
   !----------
-!!!  if (t00 == undef .or. p00 == undef .or. &
-!!!      (verify_p_ .and. (.not. allocated(p_base3d))) .or. &
-!!!      (.not. allocated(ph_base3d)) .or. (.not. allocated(mu_base2d)) .or. (.not. allocated(eta_stag))) then
-    if (verify_p_ .and. (.not. allocated(p_base3d))) allocate(p_base3d(nlev,nlon,nlat))
+  if (t00 == undef .or. p00 == undef .or. &
+      (.not. allocated(p_base3d)) .or. (.not. allocated(ph_base3d)) .or. (.not. allocated(mu_base2d)) .or. (.not. allocated(eta_stag))) then
+    if (.not. allocated(p_base3d)) allocate(p_base3d(nlev,nlon,nlat))
     if (.not. allocated(ph_base3d)) allocate(ph_base3d(nlev+1,nlon,nlat))
     if (.not. allocated(mu_base2d)) allocate(mu_base2d(nlon,nlat))
     if (.not. allocated(eta_stag)) allocate(eta_stag(nlev+1))
-    if (verify_p_) then
-      call read_coor_par(filename, comm, t00=t00, p00=p00, p_base=p_base3d, ph_base=ph_base3d, mu_base=mu_base2d, eta_stag=eta_stag)
-    else
-      call read_coor_par(filename, comm, t00=t00, p00=p00, ph_base=ph_base3d, mu_base=mu_base2d, eta_stag=eta_stag)
-    end if
-!!!  end if
+    call read_coor_par(filename, comm, t00=t00, p00=p00, p_base=p_base3d, ph_base=ph_base3d, mu_base=mu_base2d, eta_stag=eta_stag)
+  end if
 
   if (trans_) then
     kappa = 2.0_r_size / 7.0_r_size
@@ -489,36 +408,34 @@ subroutine read_restart_par(filename,v3dg,v2dg,comm,trans,verify_p)
     Rd_wrf = 287.0_r_size
     RvRd_wrf = 461.6_r_size / Rd_wrf
     p00_kappa_inv = p00 ** (- kappa)
+    if (verify_p_) then
+      allocate (var_p(nlev,nlon,nlat))
+    end if
 
     do j = 1, nlat
       do i = 1, nlon
         v2dg(i,j,iv2d_mu) = mu_base2d(i,j) + v2dg(i,j,iv2d_mu_pert)
 
         do k = 1, nlev
-          tmprho = v2dg(i,j,iv2d_mu) * (eta_stag(k) - eta_stag(k+1)) / (ph_base3d(k+1,i,j) - ph_base3d(k,i,j) + real(var_ph(i,j,k+1) - var_ph(i,j,k), r_size))
+          v3dg(k,i,j,iv3d_ph) = ph_base3d(k+1,i,j) + v3dg(k,i,j,iv3d_ph_pert)
+          v3dg(k,i,j,iv3d_p) = p_base3d(k,i,j) + v3dg(k,i,j,iv3d_p_pert)
           tmptheta_p00_kappa_inv = (t00 + v3dg(k,i,j,iv3d_theta_pert)) * p00_kappa_inv
-          v3dg(k,i,j,iv3d_p) = (tmprho * Rd_wrf * tmptheta_p00_kappa_inv * (1.0_r_size + v3dg(k,i,j,iv3d_q) * RvRd_wrf)) ** kapdiv
           v3dg(k,i,j,iv3d_t) = tmptheta_p00_kappa_inv * v3dg(k,i,j,iv3d_p) ** kappa
 
-if (i == 10 .and. j == 10) then
-write (6, *) k, v2dg(i,j,iv2d_mu), tmprho, v3dg(k,i,j,iv3d_t)
-end if
-
+          if (verify_p_) then
+            if (k == 1) then
+              tmprho = v2dg(i,j,iv2d_mu) * (eta_stag(k) - eta_stag(k+1)) / (v3dg(k,i,j,iv3d_ph) - ph_base3d(k,i,j))
+            else
+              tmprho = v2dg(i,j,iv2d_mu) * (eta_stag(k) - eta_stag(k+1)) / (v3dg(k,i,j,iv3d_ph) - v3dg(k-1,i,j,iv3d_ph))
+            end if
+            var_p(k,i,j) = (tmprho * Rd_wrf * tmptheta_p00_kappa_inv * (1.0_r_size + v3dg(k,i,j,iv3d_q) * RvRd_wrf)) ** kapdiv
+          end if
         end do
       end do
     end do
 
     if (verify_p_) then
-      do j = 1, nlat
-        do i = 1, nlon
-          do k = 1, nlev
-            var_p(k,i,j) = p_base3d(k,i,j) + var_p(k,i,j)
-          end do
-        end do
-      end do
-write (6, *) '######', v3dg(:,10,10,iv3d_p)
-write (6, *) '######', var_p(:,10,10)
-      if (maxval(abs(v3dg(:,:,:,iv3d_p) - var_p)) > 1.0d-6) then
+      if (maxval(abs(v3dg(:,:,:,iv3d_p) - var_p)) > 20d0) then
         write (6, '(A,F15.7)') '[Error] Pressure calculation is incorrect! -- maxdiff(p) = ', &
                                maxval(abs(v3dg(:,:,:,iv3d_p) - var_p))
         stop
@@ -534,8 +451,11 @@ end subroutine read_restart_par
 !-------------------------------------------------------------------------------
 ! [File I/O] Write WRF restart files <PnetCDF>
 !-------------------------------------------------------------------------------
+! mode  1: Use PH analysis; output P analysis as well as it is (default)
+!       2: Use P analysis; output re-constructed PH field
+!-------------------------------------------------------------------------------
 #ifdef PNETCDF
-subroutine write_restart_par(filename,v3dg,v2dg,comm,trans)
+subroutine write_restart_par(filename,v3dg,v2dg,comm,trans,mode)
   use scale_process, only: &
       PRC_myrank
   use scale_rm_process, only: &
@@ -548,34 +468,37 @@ subroutine write_restart_par(filename,v3dg,v2dg,comm,trans)
   implicit none
 
   character(*),intent(in) :: filename
-  real(RP),intent(inout) :: v3dg(nlev,nlon,nlat,nv3d)
-  real(RP),intent(inout) :: v2dg(nlon,nlat,nv2d)
+  real(r_size),intent(inout) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(r_size),intent(inout) :: v2dg(nlon,nlat,nv2d)
   integer,intent(in) :: comm
   logical,intent(in),optional :: trans
+  integer,intent(in),optional :: mode
   logical :: trans_
+  integer :: mode_
 
   integer :: i,j,k,iv3d,iv2d
   real(SP) :: var3D(nlon,nlat,nlev)
   real(SP) :: var2D(nlon,nlat)
-  real(SP) :: var_ph(nlon,nlat,nlev+1)
   real(r_size) :: kappa, Rd_wrf, RvRd_wrf, p00_kappa
   real(r_size) :: tmprho, tmptheta
 
   integer :: err, ncid, varid, req, reqs(1), sts(1)
   integer(KIND=MPI_OFFSET_KIND) :: start(4), count(4)
-  integer(KIND=MPI_OFFSET_KIND) :: start2(4), count2(4)
 
   trans_ = .true.
   if (present(trans)) trans_ = trans
+  mode_ = 1
+  if (present(mode)) mode_ = mode
 
   ! transform
   !----------
   if (t00 == undef .or. p00 == undef .or. &
-      (.not. allocated(ph_base3d)) .or. (.not. allocated(mu_base2d)) .or. (.not. allocated(eta_stag))) then
+      (.not. allocated(p_base3d)) .or. (.not. allocated(ph_base3d)) .or. (.not. allocated(mu_base2d)) .or. (.not. allocated(eta_stag))) then
+    if (.not. allocated(p_base3d)) allocate(p_base3d(nlev,nlon,nlat))
     if (.not. allocated(ph_base3d)) allocate(ph_base3d(nlev+1,nlon,nlat))
     if (.not. allocated(mu_base2d)) allocate(mu_base2d(nlon,nlat))
     if (.not. allocated(eta_stag)) allocate(eta_stag(nlev+1))
-    call read_coor_par(filename, comm, t00=t00, p00=p00, ph_base=ph_base3d, mu_base=mu_base2d, eta_stag=eta_stag)
+    call read_coor_par(filename, comm, t00=t00, p00=p00, p_base=p_base3d, ph_base=ph_base3d, mu_base=mu_base2d, eta_stag=eta_stag)
   end if
 
   if (trans_) then
@@ -586,29 +509,26 @@ subroutine write_restart_par(filename,v3dg,v2dg,comm,trans)
 
     do j = 1, nlat
       do i = 1, nlon
-        var_ph(i,j,1) = 0.0_SP
-
         do k = 1, nlev
           tmptheta = v3dg(k,i,j,iv3d_t) * p00_kappa * v3dg(k,i,j,iv3d_p) ** (- kappa)
+          tmprho = v3dg(k,i,j,iv3d_p) / (v3dg(k,i,j,iv3d_t) * (1.0_r_size + v3dg(k,i,j,iv3d_q) * RvRd_wrf) * Rd_wrf)
+!          tmprho = (p00_kappa * v3dg(k,i,j,iv3d_p) ** (1.0_r_size - kappa)) / (tmptheta * (1.0_r_size + v3dg(k,i,j,iv3d_q) * RvRd_wrf) * Rd_wrf)
           v3dg(k,i,j,iv3d_theta_pert) = tmptheta - t00
-          tmprho = (p00_kappa * v3dg(k,i,j,iv3d_p) ** (1.0_r_size - kappa)) / (tmptheta * (1.0_r_size + v3dg(k,i,j,iv3d_q) * RvRd_wrf) * Rd_wrf)
-          var_ph(i,j,k+1) = var_ph(i,j,k) + ph_base3d(k,i,j) + v2dg(i,j,iv2d_mu) * (eta_stag(k) - eta_stag(k+1)) / tmprho - ph_base3d(k+1,i,j)
+          if (mode_ == 2) then
+            if (k == 1) then
+              v3dg(k,i,j,iv3d_ph) = ph_base3d(k,i,j) + v2dg(i,j,iv2d_mu) * (eta_stag(k) - eta_stag(k+1)) / tmprho
+            else
+              v3dg(k,i,j,iv3d_ph) = v3dg(k-1,i,j,iv3d_ph) + v2dg(i,j,iv2d_mu) * (eta_stag(k) - eta_stag(k+1)) / tmprho
+            end if
+          end if
+          v3dg(k,i,j,iv3d_p_pert) = v3dg(k,i,j,iv3d_p) - p_base3d(k,i,j)
+          v3dg(k,i,j,iv3d_ph_pert) = v3dg(k,i,j,iv3d_ph) - ph_base3d(k+1,i,j)
         end do
 
         v2dg(i,j,iv2d_mu_pert) = v2dg(i,j,iv2d_mu) - mu_base2d(i,j)
       end do
     end do
   end if ! [ trans_ ]
-
-  ! calculate subarray's start() and count() to the global variables
-  start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
-  start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
-  start(3) = 1
-  start(4) = 1
-  count(1) = IMAX
-  count(2) = JMAX
-  count(3) = KMAX
-  count(4) = 1
 
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is writing a file ',trim(filename)
 
@@ -617,109 +537,54 @@ subroutine write_restart_par(filename,v3dg,v2dg,comm,trans)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//nfmpi_strerror(err)
 
+  start(4) = 1
+  count(1) = IMAX
+  count(2) = JMAX
+  count(3) = KMAX
+  count(4) = 1
+
   ! 3D variables
   !-------------
   do iv3d = 1, nv3d
     select case (iv3d)
     case (iv3d_u)
-      start2(:) = start(:)
-      count2(:) = count(:)
-      start2(1) = start2(1) + 1
-
-      write(6,'(1x,A,A15,A,8I6)') '*** Write 3D var: ', trim(v3d_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start2, count2
-
-      forall (i=1:nlon, j=1:nlat, k=1:nlev) var3D(i,j,k) = real(v3dg(k,i,j,iv3d), SP)
-
-      err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iput_vara_real(ncid, varid, start2, count2, var3D, req)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_iput_vara_real '//' '//nfmpi_strerror(err)
-      err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+      start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 2
+      start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+      start(3) = 1
     case (iv3d_v)
-      start2(:) = start(:)
-      count2(:) = count(:)
-      start2(2) = start2(2) + 1
-
-      write(6,'(1x,A,A15,A,8I6)') '*** Write 3D var: ', trim(v3d_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start2, count2
-
-      forall (i=1:nlon, j=1:nlat, k=1:nlev) var3D(i,j,k) = real(v3dg(k,i,j,iv3d), SP)
-
-      err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iput_vara_real(ncid, varid, start2, count2, var3D, req)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_iput_vara_real '//' '//nfmpi_strerror(err)
-      err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-    case (iv3d_w)
-      start2(:) = start(:)
-      count2(:) = count(:)
-      start2(3) = start2(3) + 1
-
-      write(6,'(1x,A,A15,A,8I6)') '*** Write 3D var: ', trim(v3d_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start2, count2
-
-      forall (i=1:nlon, j=1:nlat, k=1:nlev) var3D(i,j,k) = real(v3dg(k,i,j,iv3d), SP)
-
-      err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iput_vara_real(ncid, varid, start2, count2, var3D, req)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_iput_vara_real '//' '//nfmpi_strerror(err)
-      err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-    case (iv3d_ph_pert)
-      start2(:) = start(:)
-      count2(:) = count(:)
-      count2(3) = count2(3) + 1
-
-      write(6,'(1x,A,A15,A,8I6)') '*** Write 3D var: ', trim(v3d_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start2, count2
-
-      if (.not. trans_) then
-        do j = 1, nlat
-          do i = 1, nlon
-            var_ph(i,j,1) = 0.0_SP
-            do k = 1, nlev
-              var_ph(i,j,k+1) = real(2.0_r_size * v3dg(k,i,j,iv3d), SP) - var_ph(i,j,k)
-            end do
-          end do
-        end do
-      end if
-
-      err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iput_vara_real(ncid, varid, start2, count2, var_ph, req)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_iput_vara_real '//' '//nfmpi_strerror(err)
-      err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+      start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+      start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 2
+      start(3) = 1
+    case (iv3d_w, iv3d_ph_pert)
+      start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+      start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+      start(3) = 2
     case default
-      write(6,'(1x,A,A15,A,8I6)') '*** Write 3D var: ', trim(v3d_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start, count
-
-      forall (i=1:nlon, j=1:nlat, k=1:nlev) var3D(i,j,k) = real(v3dg(k,i,j,iv3d), SP)
-
-      err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iput_vara_real(ncid, varid, start, count, var3D, req)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_iput_vara_real '//' '//nfmpi_strerror(err)
-      err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-      if ( err .NE. NF_NOERR ) &
-         write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+      start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+      start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+      start(3) = 1
     end select
+
+    write(6,'(1x,A,A15,A,8I6)') '*** Write 3D var: ', trim(v3d_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start, count
+
+    forall (i=1:nlon, j=1:nlat, k=1:nlev) var3D(i,j,k) = real(v3dg(k,i,j,iv3d), SP)
+
+    err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+    err = nfmpi_iput_vara_real(ncid, varid, start, count, var3D, req)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_iput_vara_real '//' '//nfmpi_strerror(err)
+    err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
   end do
 
+  start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+  start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
   start(3) = 1
+  count(1) = IMAX
+  count(2) = JMAX
   count(3) = 1
 
   ! 2D variables
@@ -735,7 +600,6 @@ subroutine write_restart_par(filename,v3dg,v2dg,comm,trans)
     err = nfmpi_iput_vara_real(ncid, varid, start(1:3), count(1:3), var2D, req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iput_vara_real '//' '//nfmpi_strerror(err)
-
     err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
@@ -791,17 +655,6 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
 
   integer :: err, ncid, varid, req, reqs(1), sts(1)
   integer(KIND=MPI_OFFSET_KIND) :: start(4), count(4)
-  integer(KIND=MPI_OFFSET_KIND) :: start2(4), count2(4)
-
-  ! calculate subarray's start() and count() to the global variables
-  start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
-  start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
-  start(3) = 1
-  start(4) = 1
-  count(1) = IMAX
-  count(2) = JMAX
-  count(3) = KMAX
-  count(4) = 1
 
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename)
 
@@ -809,9 +662,20 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//nfmpi_strerror(err)
 
-  ! p_base
-  !-------
+  ! 3D variables
+  !-------------
+  start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+  start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+  start(3) = 1
+  start(4) = 1
+  count(1) = IMAX
+  count(2) = JMAX
+  count(4) = 1
+
+  !--- p_base
   if (present(p_base)) then
+    count(3) = KMAX
+
     write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(p_base3d_name), ' >> PnetCDF start(4), count(4) =', start, count
 
     err = nfmpi_inq_varid(ncid, trim(p_base3d_name), varid)
@@ -828,19 +692,16 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     forall (i=1:nlon, j=1:nlat, k=1:nlev) p_base(k,i,j) = real(var3D(i,j,k), r_size)
   end if
 
-  ! ph_base
-  !--------
+  !--- ph_base
   if (present(ph_base)) then
-    start2(:) = start(:)
-    count2(:) = count(:)
-    count2(3) = count2(3) + 1
+    count(3) = KMAX + 1
 
-    write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(ph_base3d_name), ' >> PnetCDF start(4), count(4) =', start2, count2
+    write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(ph_base3d_name), ' >> PnetCDF start(4), count(4) =', start, count
 
     err = nfmpi_inq_varid(ncid, trim(ph_base3d_name), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-    err = nfmpi_iget_vara_real(ncid, varid, start2, count2, var3D_stag, req)
+    err = nfmpi_iget_vara_real(ncid, varid, start, count, var3D_stag, req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
     err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
@@ -851,19 +712,16 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     forall (i=1:nlon, j=1:nlat, k=1:nlev+1) ph_base(k,i,j) = real(var3D_stag(i,j,k), r_size)
   end if
 
-  ! ph_pert
-  !--------
+  !--- ph_pert
   if (present(ph_pert)) then
-    start2(:) = start(:)
-    count2(:) = count(:)
-    count2(3) = count2(3) + 1
+    count(3) = KMAX + 1
 
-    write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(ph_pert3d_name), ' >> PnetCDF start(4), count(4) =', start2, count2
+    write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(ph_pert3d_name), ' >> PnetCDF start(4), count(4) =', start, count
 
     err = nfmpi_inq_varid(ncid, trim(ph_pert3d_name), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-    err = nfmpi_iget_vara_real(ncid, varid, start2, count2, var3D_stag, req)
+    err = nfmpi_iget_vara_real(ncid, varid, start, count, var3D_stag, req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
     err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
@@ -874,11 +732,16 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     forall (i=1:nlon, j=1:nlat, k=1:nlev+1) ph_pert(k,i,j) = real(var3D_stag(i,j,k), r_size)
   end if
 
+  ! 2D variables
+  !-------------
+  start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+  start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
   start(3) = 1
+  count(1) = IMAX
+  count(2) = JMAX
   count(3) = 1
 
-  ! mu_base
-  !--------
+  !--- mu_base
   if (present(mu_base)) then
     write(6,'(1x,A,A15,A,6I6)') '*** Read 2D var: ', trim(mu_base2d_name), ' >> PnetCDF start(3), count(3) =', start(1:3), count(1:3)
 
@@ -888,7 +751,6 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     err = nfmpi_iget_vara_real(ncid, varid, start(1:3), count(1:3), var2D, req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-
     err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
@@ -897,8 +759,7 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     mu_base(:,:) = real(var2D(:,:), r_size)
   end if
 
-  ! lon
-  !----
+  !--- lon
   if (present(lon)) then
     write(6,'(1x,A,A15,A,6I6)') '*** Read 2D var: ', trim(lon2d_name), ' >> PnetCDF start(3), count(3) =', start(1:3), count(1:3)
 
@@ -908,7 +769,6 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     err = nfmpi_iget_vara_real(ncid, varid, start(1:3), count(1:3), var2D, req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-
     err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
@@ -917,8 +777,7 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     lon(:,:) = real(var2D(:,:), r_size)
   end if
 
-  ! lat
-  !----
+  !--- lat
   if (present(lat)) then
     write(6,'(1x,A,A15,A,6I6)') '*** Read 2D var: ', trim(lat2d_name), ' >> PnetCDF start(3), count(3) =', start(1:3), count(1:3)
 
@@ -928,7 +787,6 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     err = nfmpi_iget_vara_real(ncid, varid, start(1:3), count(1:3), var2D, req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-
     err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
@@ -937,8 +795,7 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     lat(:,:) = real(var2D(:,:), r_size)
   end if
 
-  ! topo
-  !-----
+  !--- topo
   if (present(topo)) then
     write(6,'(1x,A,A15,A,6I6)') '*** Read 2D var: ', trim(topo2d_name), ' >> PnetCDF start(3), count(3) =', start(1:3), count(1:3)
 
@@ -948,7 +805,6 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     err = nfmpi_iget_vara_real(ncid, varid, start(1:3), count(1:3), var2D, req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-
     err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
@@ -957,14 +813,16 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     topo(:,:) = real(var2D(:,:), r_size)
   end if
 
+  ! 1D variables
+  !-------------
   start(1) = 1
   start(2) = 1
-  count(1) = KMAX
   count(2) = 1
 
-  ! eta
-  !----
+  !--- eta
   if (present(eta)) then
+    count(1) = KMAX
+
     write(6,'(1x,A,A15,A,4I6)') '*** Read 2D var: ', trim(eta_name), ' >> PnetCDF start(2), count(2) =', start(1:2), count(1:2)
 
     err = nfmpi_inq_varid(ncid, trim(eta_name), varid)
@@ -973,7 +831,6 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     err = nfmpi_iget_vara_real(ncid, varid, start(1:2), count(1:2), var1DZ, req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-
     err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
@@ -982,14 +839,10 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     eta(:) = real(var1DZ(:), r_size)
   end if
 
-  start(1) = 1
-  start(2) = 1
-  count(1) = KMAX+1
-  count(2) = 1
-
-  ! eta_stag
-  !---------
+  !--- eta_stag
   if (present(eta_stag)) then
+    count(1) = KMAX + 1
+
     write(6,'(1x,A,A15,A,4I6)') '*** Read 2D var: ', trim(eta_stag_name), ' >> PnetCDF start(2), count(2) =', start(1:2), count(1:2)
 
     err = nfmpi_inq_varid(ncid, trim(eta_stag_name), varid)
@@ -998,7 +851,6 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     err = nfmpi_iget_vara_real(ncid, varid, start(1:2), count(1:2), var1DZ_stag, req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-
     err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
@@ -1007,49 +859,23 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     eta_stag(:) = real(var1DZ_stag(:), r_size)
   end if
 
+
+  ! Scalar variables
+  !-----------------
   start(1) = 1
   count(1) = 1
 
-  ! t00
-  !----
+  !--- t00
   if (present(t00)) then
-    write(6,'(1x,A,A15,A,2I6)') '*** Read 2D var: ', trim(t00_name), ' >> PnetCDF start(1), count(1) =', start(1:1), count(1:1)
-
-    err = nfmpi_inq_varid(ncid, trim(t00_name), varid)
-    if ( err .NE. NF_NOERR ) &
-       write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-    err = nfmpi_iget_vara_real(ncid, varid, start(1:1), count(1:1), var0D, req)
-    if ( err .NE. NF_NOERR ) &
-       write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-
-    err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-    if ( err .NE. NF_NOERR ) &
-       write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-
-    t00 = real(var0D(1), r_size)
+    t00 = 300.0_r_size
   end if
 
-  ! p00
-  !----
+  !--- p00
   if (present(p00)) then
-    write(6,'(1x,A,A15,A,2I6)') '*** Read 2D var: ', trim(p00_name), ' >> PnetCDF start(1), count(1) =', start(1:1), count(1:1)
-
-    err = nfmpi_inq_varid(ncid, trim(p00_name), varid)
-    if ( err .NE. NF_NOERR ) &
-       write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-    err = nfmpi_iget_vara_real(ncid, varid, start(1:1), count(1:1), var0D, req)
-    if ( err .NE. NF_NOERR ) &
-       write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-
-    err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-    if ( err .NE. NF_NOERR ) &
-       write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-
-    p00 = real(var0D(1), r_size)
+    p00 = 100000.0_r_size
   end if
 
-  ! ptop
-  !-----
+  !--- ptop
   if (present(ptop)) then
     write(6,'(1x,A,A15,A,2I6)') '*** Read 2D var: ', trim(ptop_name), ' >> PnetCDF start(1), count(1) =', start(1:1), count(1:1)
 
@@ -1059,7 +885,6 @@ subroutine read_coor_par(filename,comm,t00,p00,ptop,p_base,ph_base,ph_pert,mu_ba
     err = nfmpi_iget_vara_real(ncid, varid, start(1:1), count(1:1), var0D, req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-
     err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
@@ -1078,8 +903,10 @@ end subroutine read_coor_par
 !-------------------------------------------------------------------------------
 ! [File I/O] Read SCALE history files <PnetCDF>
 !-------------------------------------------------------------------------------
+! If v3dg_state and v2dg_state present, return the state variables as well
+!-------------------------------------------------------------------------------
 #ifdef PNETCDF
-subroutine read_history_par(filename,step,v3dg,v2dg,comm,trans)
+subroutine read_history_par(filename,step,v3dg,v2dg,comm,trans,v3dg_state,v2dg_state)
   use scale_process, only: &
       PRC_myrank
   use scale_rm_process, only: &
@@ -1102,7 +929,10 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm,trans)
   real(r_size),intent(out) :: v2dg(nlonh,nlath,nv2dd)
   integer,intent(in) :: comm
   logical,intent(in),optional :: trans
+  real(r_size),intent(out),optional :: v3dg_state(nlev,nlon,nlat,nv3d)
+  real(r_size),intent(out),optional :: v2dg_state(nlon,nlat,nv2d)
   logical :: trans_
+  logical :: return_state
 
   integer :: i,j,k,iv3d,iv2d
   real(SP) :: var3D(nlon,nlat,nlev)
@@ -1111,24 +941,15 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm,trans)
   real(SP) :: var_v(nlon,nlat+1,nlev)
   real(SP) :: var_w(nlon,nlat,nlev+1)
   real(SP) :: var_ph(nlon,nlat,nlev+1)
-  real(r_size) :: kappa, p00_denom
+  real(r_size) :: kappa, p00_kappa_inv
 
   integer :: err, ncid, varid, req, reqs(1), sts(1)
   integer(KIND=MPI_OFFSET_KIND) :: start(4), count(4)
-  integer(KIND=MPI_OFFSET_KIND) :: start2(4), count2(4)
 
   trans_ = .true.
   if (present(trans)) trans_ = trans
-
-  ! calculate subarray's start() and count() to the global variables
-  start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
-  start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
-  start(3) = 1
-  start(4) = step
-  count(1) = IMAX
-  count(2) = JMAX
-  count(3) = KMAX
-  count(4) = 1
+  return_state = .false.
+  if (present(v3dg_state) .and. present(v2dg_state)) return_state = .true.
 
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename)
 
@@ -1139,19 +960,25 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm,trans)
 
   ! 3D variables
   !-------------
+  start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+  start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+  start(3) = 1
+  start(4) = step
+  count(4) = 1
+
   do iv3d = 1, nv3dd
     select case (iv3d)
     case (iv3dd_u)
-      start2(:) = start(:)
-      count2(:) = count(:)
-      count2(1) = count2(1) + 1
+      count(1) = IMAX + 1
+      count(2) = JMAX
+      count(3) = KMAX
 
-      write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3dd_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start2, count2
+      write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3dd_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start, count
 
       err = nfmpi_inq_varid(ncid, trim(v3dd_name(iv3d)), varid)
       if ( err .NE. NF_NOERR ) &
          write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iget_vara_real(ncid, varid, start2, count2, var_u, req)
+      err = nfmpi_iget_vara_real(ncid, varid, start, count, var_u, req)
       if ( err .NE. NF_NOERR ) &
          write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
       err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
@@ -1160,16 +987,16 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm,trans)
 
       forall (i=1:nlon+1, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO-1,j+JHALO,iv3d) = real(var_u(i,j,k), r_size)
     case (iv3dd_v)
-      start2(:) = start(:)
-      count2(:) = count(:)
-      count2(2) = count2(2) + 1
+      count(1) = IMAX
+      count(2) = JMAX + 1
+      count(3) = KMAX
 
-      write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3dd_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start2, count2
+      write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3dd_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start, count
 
       err = nfmpi_inq_varid(ncid, trim(v3dd_name(iv3d)), varid)
       if ( err .NE. NF_NOERR ) &
          write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iget_vara_real(ncid, varid, start2, count2, var_v, req)
+      err = nfmpi_iget_vara_real(ncid, varid, start, count, var_v, req)
       if ( err .NE. NF_NOERR ) &
          write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
       err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
@@ -1178,16 +1005,16 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm,trans)
 
       forall (i=1:nlon, j=1:nlat+1, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO-1,iv3d) = real(var_v(i,j,k), r_size)
     case (iv3dd_w)
-      start2(:) = start(:)
-      count2(:) = count(:)
-      count2(3) = count2(3) + 1
+      count(1) = IMAX
+      count(2) = JMAX
+      count(3) = KMAX + 1
 
-      write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3dd_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start2, count2
+      write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3dd_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start, count
 
       err = nfmpi_inq_varid(ncid, trim(v3dd_name(iv3d)), varid)
       if ( err .NE. NF_NOERR ) &
          write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iget_vara_real(ncid, varid, start2, count2, var_w, req)
+      err = nfmpi_iget_vara_real(ncid, varid, start, count, var_w, req)
       if ( err .NE. NF_NOERR ) &
          write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
       err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
@@ -1196,16 +1023,16 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm,trans)
 
       forall (i=1:nlon, j=1:nlat, k=1:nlev+1) v3dg(k+KHALO-1,i+IHALO,j+JHALO,iv3d) = real(var_w(i,j,k), r_size)
     case (iv3dd_ph_pert)
-      start2(:) = start(:)
-      count2(:) = count(:)
-      count2(3) = count2(3) + 1
+      count(1) = IMAX
+      count(2) = JMAX
+      count(3) = KMAX + 1
 
-      write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3dd_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start2, count2
+      write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3dd_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start, count
 
       err = nfmpi_inq_varid(ncid, trim(v3dd_name(iv3d)), varid)
       if ( err .NE. NF_NOERR ) &
          write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-      err = nfmpi_iget_vara_real(ncid, varid, start2, count2, var_ph, req)
+      err = nfmpi_iget_vara_real(ncid, varid, start, count, var_ph, req)
       if ( err .NE. NF_NOERR ) &
          write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
       err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
@@ -1214,6 +1041,10 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm,trans)
 
       forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = 0.5_r_size * real(var_ph(i,j,k) + var_ph(i,j,k+1), r_size)
     case default
+      count(1) = IMAX
+      count(2) = JMAX
+      count(3) = KMAX
+
       write(6,'(1x,A,A15,A,8I6)') '*** Read 3D var: ', trim(v3dd_name(iv3d)), ' >> PnetCDF start(4), count(4) =', start, count
 
       err = nfmpi_inq_varid(ncid, trim(v3dd_name(iv3d)), varid)
@@ -1230,11 +1061,15 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm,trans)
     end select
   end do
 
-  start(3) = step
-  count(3) = 1
-
   ! 2D variables
   !-------------
+  start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+  start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+  start(3) = step
+  count(1) = IMAX
+  count(2) = JMAX
+  count(3) = 1
+
   do iv2d = 1, nv2dd
     write(6,'(1x,A,A15,A,6I6)') '*** Read 2D var: ', trim(v2dd_name(iv2d)), ' >> PnetCDF start(3), count(3) =', start(1:3), count(1:3)
 
@@ -1244,7 +1079,6 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm,trans)
     err = nfmpi_iget_vara_real(ncid, varid, start(1:3), count(1:3), var2D, req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-
     err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
@@ -1252,36 +1086,85 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm,trans)
     v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = real(var2D(:,:), r_size)
   end do
 
+  if (return_state) then
+    !--- MU
+    write(6,'(1x,A,A15,A,6I6)') '*** Read 2D var: ', trim(v2d_name(iv2d_mu)), ' >> PnetCDF start(3), count(3) =', start(1:3), count(1:3)
+
+    err = nfmpi_inq_varid(ncid, trim(v2d_name(iv2d_mu)), varid)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+    err = nfmpi_iget_vara_real(ncid, varid, start(1:3), count(1:3), var2D, req)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
+    err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+
+    v2dg_state(:,:,iv2d_mu) = real(var2D(:,:), r_size)
+  end if
+
   err = nfmpi_close(ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
 
+  ! additionally return state variables
+  !------------------------------------
+  if (return_state) then
+    v3dg_state(:,:,:,iv3d_u ) = v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_u )
+    v3dg_state(:,:,:,iv3d_v ) = v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_v )
+    v3dg_state(:,:,:,iv3d_w ) = v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_w )
+    v3dg_state(:,:,:,iv3d_q ) = v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q )
+    v3dg_state(:,:,:,iv3d_qc) = v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qc)
+    v3dg_state(:,:,:,iv3d_qr) = v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qr)
+    v3dg_state(:,:,:,iv3d_qi) = v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi)
+    v3dg_state(:,:,:,iv3d_qs) = v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs)
+    v3dg_state(:,:,:,iv3d_qg) = v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg)
+  end if
+
   ! transform
   !----------
   if (t00 == undef .or. p00 == undef .or. &
-      (.not. allocated(p_base3d)) .or. (.not. allocated(ph_base3d))) then
+      (.not. allocated(p_base3d)) .or. (.not. allocated(ph_base3d)) .or. (.not. allocated(mu_base2d))) then
     if (.not. allocated(p_base3d)) allocate(p_base3d(nlev,nlon,nlat))
     if (.not. allocated(ph_base3d)) allocate(ph_base3d(nlev+1,nlon,nlat))
     if (.not. allocated(mu_base2d)) allocate(mu_base2d(nlon,nlat))
     if (.not. allocated(eta_stag)) allocate(eta_stag(nlev+1))
-!    call read_coor_par(filename, comm, t00=t00, p00=p00, p_base=p_base3d, ph_base=ph_base3d)
+!    call read_coor_par(filename, comm, t00=t00, p00=p00, p_base=p_base3d, ph_base=ph_base3d, mu_base=mu_base2d)
     call read_coor_par(filename, comm, t00=t00, p00=p00, p_base=p_base3d, ph_base=ph_base3d, mu_base=mu_base2d, eta_stag=eta_stag)
   end if
 
   if (trans_) then
     kappa = 2.0_r_size / 7.0_r_size
-    p00_denom = p00 ** (- kappa)
+    p00_kappa_inv = p00 ** (- kappa)
 
     do j = 1+JHALO, nlat+JHALO
       do i = 1+IHALO, nlon+IHALO
         do k = 1+KHALO, nlev+KHALO
           v3dg(k,i,j,iv3dd_p) = p_base3d(k-KHALO,i-IHALO,j-JHALO) + v3dg(k,i,j,iv3dd_p_pert)
-          v3dg(k,i,j,iv3dd_t) = (t00 + v3dg(k,i,j,iv3dd_theta_pert)) * p00_denom * v3dg(k,i,j,iv3dd_p) ** kappa
+          v3dg(k,i,j,iv3dd_t) = (t00 + v3dg(k,i,j,iv3dd_theta_pert)) * p00_kappa_inv * v3dg(k,i,j,iv3dd_p) ** kappa
           v3dg(k,i,j,iv3dd_hgt) = (0.5_r_size * (ph_base3d(k-KHALO,i-IHALO,j-JHALO) + ph_base3d(k-KHALO+1,i-IHALO,j-JHALO)) + &
                                    v3dg(k,i,j,iv3dd_ph_pert)) / gg
         end do
       end do
     end do
+
+    if (return_state) then
+      v3dg_state(:,:,:,iv3d_t) = v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_t)
+      v3dg_state(:,:,:,iv3d_p) = v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_p)
+      forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg_state(k,i,j,iv3d_ph) = ph_base3d(k+1,i,j) + real(var_ph(i,j,k+1), r_size)
+
+      do j = 1, nlat
+        do i = 1, nlon
+          v2dg_state(i,j,iv2d_mu) = mu_base2d(i,j) + v2dg_state(i,j,iv2d_mu_pert)
+        end do
+      end do
+    end if
+  else ! [ trans_ ]
+    if (return_state) then
+      v3dg_state(:,:,:,iv3d_theta_pert) = v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_theta_pert)
+      v3dg_state(:,:,:,iv3d_p_pert    ) = v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_p_pert    )
+      forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg_state(k,i,j,iv3d_ph_pert) = real(var_ph(i,j,k+1), r_size)
+    end if
   end if ! [ trans_ ]
 
   ! communicate halo
