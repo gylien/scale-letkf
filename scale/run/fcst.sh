@@ -249,7 +249,7 @@ while ((time <= ETIME)); do
 
 ###      if [ "$CONF_MODE" = 'static' ]; then
 
-###        mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time}
+###        mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
 
 ###      else
 

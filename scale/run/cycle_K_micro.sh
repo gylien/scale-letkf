@@ -116,18 +116,19 @@ if [ "$CONF_MODE" != 'static' ]; then
 fi
 
 #===============================================================================
+
+if ((IO_ARB == 1)); then                                              ##
+  echo "${SCRP_DIR}/sleep.sh|sleep.sh" >> ${STAGING_DIR}/${STGINLIST} ##
+  NNODES=$((NNODES*2))                                                ##
+  NNODES_APPAR=$((NNODES_APPAR*2))                                    ##
+fi                                                                    ##
+
+#===============================================================================
 # Stage in
 
 echo "[$(datetime_now)] Initialization (stage in)"
 
 stage_in server || exit $?
-
-#===============================================================================
-
-if ((IO_ARB == 1)); then                                        ##
-  NNODES=$((NNODES*2))                                          ##
-  NNODES_APPAR=$((NNODES_APPAR*2))                              ##
-fi                                                              ##
 
 #===============================================================================
 # Creat a job script
