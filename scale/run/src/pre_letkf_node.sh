@@ -108,6 +108,8 @@ fi
 if ((PNETCDF == 1)); then
   HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@.history"
   GUES_IN_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@.init"
+  GUES_MEAN_INOUT_BASENAME="${TMPOUT}/${ATIME}/gues/mean.init"
+  GUES_SPRD_OUT_BASENAME="${TMPOUT}/${ATIME}/gues/sprd.init"
   ANAL_OUT_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@.init"
   INFL_MUL_IN_BASENAME="${TMPOUT}/${ATIME}/diag/infl"
   INFL_MUL_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/infl"
@@ -116,6 +118,8 @@ if ((PNETCDF == 1)); then
 else
   HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@/history"
   GUES_IN_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@/init"
+  GUES_MEAN_INOUT_BASENAME="${TMPOUT}/${ATIME}/gues/mean/init"
+  GUES_SPRD_OUT_BASENAME="${TMPOUT}/${ATIME}/gues/sprd/init"
   ANAL_OUT_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@/init"
   INFL_MUL_IN_BASENAME="${TMPOUT}/${ATIME}/diag/infl/init"
   INFL_MUL_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/infl/init"
@@ -141,6 +145,8 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--OBSDA_IN--/a OBSDA_IN = $OBSDA_IN," \
         -e "/!--OBSDA_IN_BASENAME--/a OBSDA_IN_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext\"," \
         -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${GUES_IN_BASENAME}\"," \
+        -e "/!--GUES_MEAN_INOUT_BASENAME--/a GUES_MEAN_INOUT_BASENAME = \"${GUES_MEAN_INOUT_BASENAME}\"," \
+        -e "/!--GUES_SPRD_OUT_BASENAME--/a GUES_SPRD_OUT_BASENAME = \"${GUES_SPRD_OUT_BASENAME}\"," \
         -e "/!--GUES_SPRD_OUT--/a GUES_SPRD_OUT = ${SPRD_OUT_TF}," \
         -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${ANAL_OUT_BASENAME}\"," \
         -e "/!--ANAL_SPRD_OUT--/a ANAL_SPRD_OUT = ${SPRD_OUT_TF}," \
