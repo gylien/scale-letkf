@@ -439,6 +439,8 @@ subroutine read_restart_par(filename,v3dg,v2dg,comm,trans,verify_p)
         write (6, '(A,F15.7)') '[Error] Pressure calculation is incorrect! -- maxdiff(p) = ', &
                                maxval(abs(v3dg(:,:,:,iv3d_p) - var_p))
         stop
+      else
+        write (6, '(A)') 'VERIFY_COORD: Pressure calculation is verified!'
       end if
       deallocate (var_p)
     end if

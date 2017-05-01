@@ -232,11 +232,15 @@ subroutine set_common_mpi_scale
         write (6, '(A,F15.7,A,F15.7)') '[Error] Map projection settings are incorrect! -- maxdiff(lon) = ', &
                                        maxval(abs(lon2dtmp - lon2d)), ', maxdiff(lat) = ', maxval(abs(lat2dtmp - lat2d))
         stop
+      else
+        write (6, '(A)') 'VERIFY_COORD: Map projection settings are verified!'
       end if
 !      if (maxval(abs(height3dtmp - height3d)) > 1.0d-6) then
-!        write (6, '(A,F15.7)') '[Error] 3D height calculation are incorrect, possibily due to inconsistent topography files! -- maxdiff(height) = ', &
+!        write (6, '(A,F15.7)') '[Error] 3D height calculation is incorrect, possibily due to inconsistent topography files! -- maxdiff(height) = ', &
 !                               maxval(abs(height3dtmp - height3d))
 !        stop
+!      else
+!        write (6, '(A)') 'VERIFY_COORD: 3D height calculation is verified!'
 !      end if
 
       deallocate (lon2dtmp, lat2dtmp)
@@ -343,6 +347,7 @@ subroutine set_common_mpi_grid
 
     call mpi_timer('set_common_mpi_grid:rij_cal:', 2)
 
+#ifndef WRF
     if (allocated(topo2d)) then
       write (6, '(1x,A,A15,A)') '*** Read 2D var: ', trim(topo2d_name), ' -- skipped because it was read previously'
 #ifdef DEBUG
@@ -376,6 +381,7 @@ subroutine set_common_mpi_grid
     v3dg(1,:,:,3) = topo2d
 
     call mpi_timer('set_common_mpi_grid:read_topo:', 2)
+#endif
   end if
 
   call mpi_timer('', 2, barrier=MPI_COMM_e)
@@ -384,13 +390,17 @@ subroutine set_common_mpi_grid
 
   rig1   = v3d(:,1,1)
   rjg1   = v3d(:,1,2)
+#ifndef WRF
   topo1  = v3d(:,1,3)
+#endif
 
   call mpi_timer('set_common_mpi_grid:scatter:', 2)
 
+#ifndef WRF
   call scale_calc_z_grd(nij1, topo1, hgt1)
 
   call mpi_timer('set_common_mpi_grid:scale_calc_z:', 2)
+#endif
 
   return
 end subroutine set_common_mpi_grid
@@ -977,12 +987,20 @@ END SUBROUTINE gather_grd_mpi
 !-------------------------------------------------------------------------------
 ! Read ensemble SCALE history files, one file per time (iter)
 !-------------------------------------------------------------------------------
+#ifdef WRF
+subroutine read_ens_history_iter(iter, step, v3dg, v2dg, v3dg_state, v2dg_state)
+#else
 subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
+#endif
   implicit none
   integer, intent(in) :: iter
   integer, intent(in) :: step
   real(r_size), intent(out) :: v3dg(nlevh,nlonh,nlath,nv3dd)
   real(r_size), intent(out) :: v2dg(nlonh,nlath,nv2dd)
+#ifdef WRF
+  real(r_size), intent(out), optional :: v3dg_state(nlev,nlon,nlat,nv3d)
+  real(r_size), intent(out), optional :: v2dg_state(nlon,nlat,nv2d)
+#endif
   character(filelenmax) :: filename
   integer :: im
 
@@ -998,7 +1016,11 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
 
 #ifdef PNETCDF
     if (IO_AGGREGATE) then
+#ifdef WRF
+      call read_history_par(trim(filename), step, v3dg, v2dg, MPI_COMM_d, v3dg_state=v3dg_state, v2dg_state=v2dg_state)
+#else
       call read_history_par(trim(filename), step, v3dg, v2dg, MPI_COMM_d)
+#endif
     else
 #endif
       call read_history(trim(filename), step, v3dg, v2dg)

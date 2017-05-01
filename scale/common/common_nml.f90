@@ -15,7 +15,7 @@ MODULE common_nml
   public
 
   !----
-  integer, parameter :: nvarmax = 12 ! Maximun number of 3D+2D state variables (in SCALE restart files)
+  integer, parameter :: nvarmax = 13 ! Maximun number of 3D+2D state variables (in SCALE restart files)
   integer, parameter :: nid_obs = 16 ! number of variable types
   integer, parameter :: nobtype = 24 ! number of observation report types
   integer, parameter :: nch = 10     ! H08 Num of Himawari-8 (IR) channels
@@ -70,6 +70,7 @@ MODULE common_nml
   character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@'
   character(filelenmax) :: OBSDA_MEAN_IN_BASENAME = ''
   character(filelenmax) :: OBSDA_MDET_IN_BASENAME = ''
+  logical               :: GUES_IN_FROM_HISTORY = .false.
   character(filelenmax) :: GUES_IN_BASENAME = 'gues.@@@@'
   character(filelenmax) :: GUES_MEAN_INOUT_BASENAME = ''
   character(filelenmax) :: GUES_MDET_IN_BASENAME = ''
@@ -450,6 +451,7 @@ subroutine read_nml_letkf
     OBSDA_IN_BASENAME, &
     OBSDA_MEAN_IN_BASENAME, &
     OBSDA_MDET_IN_BASENAME, &
+    GUES_IN_FROM_HISTORY, &
     GUES_IN_BASENAME, &
     GUES_MEAN_INOUT_BASENAME, &
     GUES_MDET_IN_BASENAME, &

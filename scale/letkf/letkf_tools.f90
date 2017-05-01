@@ -180,6 +180,18 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   call mpi_timer('das_letkf:fcst_perturbation:', 2)
 
+#ifdef WRF
+!$OMP PARALLEL DO PRIVATE(i,k)
+  do k = 1, nlev
+    do i = 1, nij1
+      hgt1(i,k) = gues3d(i,k,mmean,iv3d_ph) / gg
+    end do
+  end do
+!$OMP END PARALLEL DO
+
+  call mpi_timer('das_letkf:height_calc:', 2)
+#endif
+
   !
   ! multiplicative inflation
   !
