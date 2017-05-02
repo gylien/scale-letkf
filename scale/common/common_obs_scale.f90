@@ -1349,7 +1349,11 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
+#ifdef WRF
+subroutine monit_obs(v3dg,v2dg,nobs,bias,rmse,monit_type,use_key)
+#else
 subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
+#endif
   use scale_process, only: &
       PRC_myrank
 
@@ -1357,7 +1361,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
   REAL(RP),intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP),intent(in) :: v2dg(nlon,nlat,nv2d)
+#ifndef WRF
   real(r_size),intent(in) :: topo(nlon,nlat)
+#endif
   INTEGER,INTENT(OUT) :: nobs(nid_obs)
   REAL(r_size),INTENT(OUT) :: bias(nid_obs)
   REAL(r_size),INTENT(OUT) :: rmse(nid_obs)
@@ -1407,7 +1413,22 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 !CALL CPU_TIME(timer)
 !if (myrank == 0) print *, '######', timer
 
+#ifdef WRF
+  if (ptop == undef .or. (.not. allocated(ph_base3d)) .or. (.not. allocated(eta_stag))) then
+    write (6, '(A)') '[Error] ph_base3d, eta_stag, ptop should be initialized before.'
+    stop 1
+  end if
+  if (trim(WRF_ANALYSIS_VARS) == 'PH') then
+    call state_to_history(v3dg, v2dg, ph_base3d, eta_stag, ptop, v3dgh, v2dgh, mode=1)
+  else if (trim(WRF_ANALYSIS_VARS) == 'P') then
+    call state_to_history(v3dg, v2dg, ph_base3d, eta_stag, ptop, v3dgh, v2dgh, mode=2)
+  else
+    write (6, '(3A)') "[Error] Unsupported WRF_ANALYSIS_VARS = '", trim(WRF_ANALYSIS_VARS), "'"
+    stop 1
+  end if
+#else
   call state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
+#endif
 
   if (use_key) then
     nnobs = obsda_sort%nobs_in_key

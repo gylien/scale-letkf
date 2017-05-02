@@ -623,8 +623,13 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern, v3d_state, v2d_state)
               if (obsda%qc(nn) == iqc_good) then
                 select case (OBS_IN_FORMAT(iof))
                 case (1)
+#ifdef WRF
+                  call Trans_XtoY(obs(iof)%elm(n), ril, rjl, rk, &
+                                  obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn), stggrd=1)
+#else
                   call Trans_XtoY(obs(iof)%elm(n), ril, rjl, rk, &
                                   obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
+#endif
                 case (2)
                   call Trans_XtoY_radar(obs(iof)%elm(n), obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3), ril, rjl, rk, &
                                         obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%lev(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
@@ -1033,8 +1038,13 @@ SUBROUTINE obsmake_cal(obs)
               else
                 select case (OBS_IN_FORMAT(iof))
                 case (1)
+#ifdef WRF
+                  call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk, &
+                                  obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obs(iof)%dat(n),iqc,stggrd=1)
+#else
                   call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk, &
                                   obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
+#endif
                 case (2)
                   call Trans_XtoY_radar(obs(iof)%elm(n),obs(iof)%meta(1),obs(iof)%meta(2),obs(iof)%meta(3),ri,rj,rk, &
                                         obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obs(iof)%dat(n),iqc)

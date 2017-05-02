@@ -91,7 +91,11 @@ program obssim
       call read_restart(OBSSIM_RESTART_IN_BASENAME, v3dg, v2dg)
       call state_trans(v3dg)
       call read_topo(OBSSIM_TOPO_IN_BASENAME, topog)
+#ifdef WRF
+      call state_to_history(v3dg, v2dg, ph_base3d, eta_stag, ptop, v3dgh, v2dgh, mode=1) !! currently does not work
+#else
       call state_to_history(v3dg, v2dg, topog, v3dgh, v2dgh)
+#endif
 
       deallocate (v3dg, v2dg, topog)
 

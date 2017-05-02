@@ -165,8 +165,6 @@ subroutine set_common_mpi_scale
   real(r_size), allocatable :: height3dtmp(:,:,:)
   real(r_size), allocatable :: lon2dtmp(:,:)
   real(r_size), allocatable :: lat2dtmp(:,:)
-  real(RP), allocatable :: v3dgtmp(:,:,:,:)
-  real(RP), allocatable :: v2dgtmp(:,:,:)
   integer :: i, j
   real(r_size) :: ri, rj
 
@@ -248,15 +246,6 @@ subroutine set_common_mpi_scale
       deallocate (height3dtmp)
 #endif
 
-#ifdef WRF
-      allocate (v3dgtmp(nlev,nlon,nlat,nv3d))
-      allocate (v2dgtmp(nlon,nlat,nv2d))
-      call read_restart_par(filename,v3dgtmp,v2dgtmp,MPI_COMM_d,verify_p=.true.)
-      deallocate (v3dgtmp, v2dgtmp)
-#endif
-
-      write (6, '(A)') 'VERIFY_COORD: Model coordinate calculation is good.'
-
       call mpi_timer('set_common_mpi_scale:verify_coord:', 2)
     end if
   end if
@@ -291,7 +280,10 @@ subroutine set_common_mpi_grid
   REAL(RP) :: v2dg(nlon,nlat,nv2d)
   REAL(r_size),ALLOCATABLE :: v3d(:,:,:)
   REAL(r_size),ALLOCATABLE :: v2d(:,:)
-  INTEGER :: i, j, n
+  real(RP), allocatable :: v3dgtmp(:,:,:,:)
+  real(RP), allocatable :: v2dgtmp(:,:,:)
+  character(len=filelenmax) :: filename
+  INTEGER :: i, j, n, im
   integer :: iproc, jproc
 #ifdef DEBUG
   real(r_size) :: topo2dtmp(nlon,nlat)
@@ -330,6 +322,41 @@ subroutine set_common_mpi_grid
   ALLOCATE(v2d(nij1,nv2d))
 
   call mpi_timer('set_common_mpi_grid:nij1_cal:', 2)
+
+#ifdef WRF
+  im = proc2mem(1,1,myrank+1)
+  if (im >= 1 .and. im <= nens) then
+    if (im <= MEMBER) then
+      call file_member_replace(im, GUES_IN_BASENAME, filename)
+    else if (im == mmean) then
+      filename = GUES_MEAN_INOUT_BASENAME
+    else if (im == mmdet) then
+      filename = GUES_MDET_IN_BASENAME
+    end if
+    if (.not. allocated(p_base3d)) allocate(p_base3d(nlev,nlon,nlat))
+    if (.not. allocated(ph_base3d)) allocate(ph_base3d(nlev+1,nlon,nlat))
+    if (.not. allocated(mu_base2d)) allocate(mu_base2d(nlon,nlat))
+    if (.not. allocated(eta_stag)) allocate(eta_stag(nlev+1))
+    call read_coor_par(filename, MPI_COMM_d, t00=t00, p00=p00, ptop=ptop, p_base=p_base3d, ph_base=ph_base3d, mu_base=mu_base2d, eta_stag=eta_stag)
+  end if
+
+  call mpi_timer('set_common_mpi_grid:read_coor:', 2)
+
+  if (VERIFY_COORD) then
+    if (myrank_e == 0) then
+      call file_member_replace(proc2mem(1,1,myrank+1), GUES_IN_BASENAME, filename)
+
+      allocate (v3dgtmp(nlev,nlon,nlat,nv3d))
+      allocate (v2dgtmp(nlon,nlat,nv2d))
+      call read_restart_par(filename,v3dgtmp,v2dgtmp,MPI_COMM_d,verify_p=.true.)
+      deallocate (v3dgtmp, v2dgtmp)
+
+      write (6, '(A)') 'VERIFY_COORD: Model coordinate calculation is good.'
+
+      call mpi_timer('set_common_mpi_grid:verify_coord:', 2)
+    end if
+  end if
+#endif
 
 !!!!!! ----- need to be replaced by more native communication !!!!!!
 
@@ -1192,7 +1219,18 @@ subroutine write_ens_mpi(v3d, v2d, monit, caption)
 
 #ifdef PNETCDF
       if (IO_AGGREGATE) then
+#ifdef WRF
+        if (trim(WRF_ANALYSIS_VARS) == 'PH') then
+          call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d, mode=1)
+        else if (trim(WRF_ANALYSIS_VARS) == 'P') then
+          call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d, mode=2)
+        else
+          write (6, '(3A)') "[Error] Unsupported WRF_ANALYSIS_VARS = '", trim(WRF_ANALYSIS_VARS), "'"
+          stop 1
+        end if
+#else
         call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
+#endif
       else
 #endif
         call write_restart(filename, v3dg, v2dg)
@@ -1433,7 +1471,11 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
   !       because only these processes have read topo files in 'topo2d'
   ! 
   if (myrank_e == mmean_rank_e) then
+#ifdef WRF
+    call monit_obs(v3dg, v2dg, nobs, bias, rmse, monit_type, .true.)
+#else
     call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true.)
+#endif
 
     call mpi_timer('monit_obs_mpi:monit_obs:', 2)
 
@@ -1555,7 +1597,18 @@ subroutine write_ensmean(filename, v3d, v2d, calced, monit, caption)
 
 #ifdef PNETCDF
     if (IO_AGGREGATE) then
+#ifdef WRF
+      if (trim(WRF_ANALYSIS_VARS) == 'PH') then
+        call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d, mode=1)
+      else if (trim(WRF_ANALYSIS_VARS) == 'P') then
+        call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d, mode=2)
+      else
+        write (6, '(3A)') "[Error] Unsupported WRF_ANALYSIS_VARS = '", trim(WRF_ANALYSIS_VARS), "'"
+        stop 1
+      end if
+#else
       call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
+#endif
     else
 #endif
       call write_restart(filename, v3dg, v2dg)
