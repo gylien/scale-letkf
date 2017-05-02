@@ -953,7 +953,11 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm,trans,v3dg_state,v2dg_s
   return_state = .false.
   if (present(v3dg_state) .and. present(v2dg_state)) return_state = .true.
 
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename)
+  write (6,'(A,I6.6,3A,I5)') 'MYRANK ',myrank,' is reading a file ',trim(filename),', t =',step
+
+  if (return_state) then
+    write (6,'(A)') '*** Also return the state variables from this history file ***'
+  end if
 
   err = nfmpi_open(comm, trim(filename), NF_NOWRITE, MPI_INFO_NULL, ncid)
 

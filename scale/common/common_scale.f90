@@ -936,7 +936,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
 !  real(RP) :: v2dgtmp(nlonh,nlath,nv2dd)       !
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+  write (6,'(A,I6.6,3A,I5)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix,', t =',step
 
   ! 3D variables
   !-------------
@@ -1056,7 +1056,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 !  if (.NOT. PRC_PERIODIC_X) start(1) = start(1) + IHALO
 !  if (.NOT. PRC_PERIODIC_Y) start(2) = start(2) + JHALO
 
-  write (6,'(A,I6.6,3A,8I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(4), count(4) =', start, count
+  write (6,'(A,I6.6,3A,I5,A,8I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc',', t =',step, ' >> PnetCDF start(4), count(4) =', start, count
 
 !  call FILEIO_open( fid, trim(filename) )
   err = nfmpi_open(comm, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)

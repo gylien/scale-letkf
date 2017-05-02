@@ -61,15 +61,19 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Observation operator calculation
 !-----------------------------------------------------------------------
-SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
+SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern, v3d_state, v2d_state)
   IMPLICIT NONE
 
   type(obs_da_value), intent(out) :: obsda
   logical, intent(in) :: obsda_return
   integer, optional, intent(in) :: nobs_extern
+  real(r_size), intent(out), optional :: v3d_state(nij1,nlev,nens,nv3d)
+  real(r_size), intent(out), optional :: v2d_state(nij1,nens,nv2d)
 
+  logical :: return_state
   integer :: it, im, iof, islot, ierr
   integer :: n, nn, nn_0, nsub, nmod, n1, n2
+  integer :: mstart, mend
 
   integer :: nobs     ! observation number processed in this subroutine
   integer :: nobs_all
@@ -101,6 +105,8 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
   real(r_size), allocatable :: v3dg(:,:,:,:)
   real(r_size), allocatable :: v2dg(:,:,:)
+  real(r_size), allocatable :: v3dg_state(:,:,:,:)
+  real(r_size), allocatable :: v2dg_state(:,:,:)
 
   integer, allocatable :: qc_p(:)
 #ifdef H08
@@ -157,6 +163,9 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 !-------------------------------------------------------------------------------
 
   call mpi_timer('', 2)
+
+  return_state = .false.
+  if (present(v3d_state) .and. present(v2d_state)) return_state = .true.
 
 #ifdef H08
 !  call phys2ij(MSLP_TC_LON,MSLP_TC_LAT,MSLP_TC_rig,MSLP_TC_rjg)
@@ -443,6 +452,10 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
   allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
   allocate ( v2dg (nlonh,nlath,nv2dd) )
+  if (return_state) then
+    allocate ( v3dg_state(nlev,nlon,nlat,nv3d) )
+    allocate ( v2dg_state(nlon,nlat,nv2d) )
+  end if
 
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
@@ -475,24 +488,47 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         obsda%qc(n1:n2) = iqc_out_h
       end if
 
+      ! Read base slot if it is before the assimilation time window
+      ! 
+      if (return_state .and. SLOT_BASE < SLOT_START) then
+        write (6, '(A)') 'Read state variables from the base slot'
+        call read_ens_history_iter(it, SLOT_BASE, v3dg, v2dg, v3dg_state=v3dg_state, v2dg_state=v2dg_state)
+
+        write (timer_str, '(A30,I4,A2)') 'obsope_cal:read_base_slot  (t=', it, '):'
+        call mpi_timer(trim(timer_str), 2)
+      end if
+
       ! Valid observations: loop over time slots
       ! 
       do islot = SLOT_START, SLOT_END
-        write (6, '(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time window (', slot_lb(islot), ',', slot_ub(islot), '] sec'
+        if (islot == SLOT_BASE) then
+          write (6, '(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time window (', slot_lb(islot), ',', slot_ub(islot), '] sec -- This is the base slot'
+        else
+          write (6, '(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time window (', slot_lb(islot), ',', slot_ub(islot), '] sec'
+        end if
 
         n1 = bsna(islot-1, myrank_d) - bsna(SLOT_START-1, myrank_d) + 1
         n2 = bsna(islot,   myrank_d) - bsna(SLOT_START-1, myrank_d)
         slot_nobsg = sum(bsn(islot, :))
 
         if (slot_nobsg <= 0) then
-          write (6, '(A)') ' -- no observations found in this time slot... do not need to read model data'
+          if (return_state .and. islot == SLOT_BASE) then
+            write (6, '(A)') ' -- no observations found in this time slot... still read state variables from the base slot of model data'
+            call read_ens_history_iter(it, islot, v3dg, v2dg, v3dg_state=v3dg_state, v2dg_state=v2dg_state)
+          else
+            write (6, '(A)') ' -- no observations found in this time slot... do not need to read model data'
+          end if
           cycle
         end if
 
         write (6, '(A,I10)') ' -- # obs in the slot = ', slot_nobsg
         write (6, '(A,I6,A,I6,A,I10)') ' -- # obs in the slot and processed by rank ', myrank, ' (subdomain #', myrank_d, ') = ', bsn(islot, myrank_d)
 
-        call read_ens_history_iter(it, islot, v3dg, v2dg)
+        if (return_state .and. islot == SLOT_BASE) then
+          call read_ens_history_iter(it, islot, v3dg, v2dg, v3dg_state=v3dg_state, v2dg_state=v2dg_state)
+        else
+          call read_ens_history_iter(it, islot, v3dg, v2dg)
+        end if
 
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:read_ens_history(t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
@@ -761,6 +797,16 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
       call mpi_timer('', 2)
 
+      ! Read base slot if it is after the assimilation time window
+      ! 
+      if (return_state .and. SLOT_BASE > SLOT_END) then
+        write (6, '(A)') 'Read state variables from the base slot'
+        call read_ens_history_iter(it, SLOT_BASE, v3dg, v2dg, v3dg_state=v3dg_state, v2dg_state=v2dg_state)
+
+        write (timer_str, '(A30,I4,A2)') 'obsope_cal:read_base_slot  (t=', it, '):'
+        call mpi_timer(trim(timer_str), 2)
+      end if
+
       ! Write obsda data to files if OBSDA_OUT = .true.
       ! 
       if (OBSDA_OUT) then
@@ -811,11 +857,34 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         end if
       end if ! [ obsda_return .and. nobs > 0 ]
 
+      if (return_state) then
+#ifndef WRF
+        call state_trans(v3dg_state)
+
+        write (timer_str, '(A30,I4,A2)') 'obsope_cal:state_trans     (t=', it, '):'
+        call mpi_timer(trim(timer_str), 2)
+#endif
+      end if
+
     end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
+
+    if (return_state) then
+      mstart = 1 + (it-1)*nprocs_e
+      mend = min(it*nprocs_e, nens)
+      if (mstart <= mend) then
+        call scatter_grd_mpi_alltoall(mstart, mend, v3dg_state, v2dg_state, v3d_state, v2d_state)
+      end if
+
+      write (timer_str, '(A38,I4,A2)') 'obsope_cal:scatter_grd_mpi_alltoall(t=', it, '):'
+      call mpi_timer(trim(timer_str), 2)
+    end if
   end do ! [ it = 1, nitmax ]
 
-  deallocate ( v3dg, v2dg )
   deallocate ( bsn, bsna )
+  deallocate ( v3dg, v2dg )
+  if (return_state) then
+    deallocate ( v3dg_state, v2dg_state )
+  end if
 
 !-------------------------------------------------------------------------------
 ! If obsda_return = .true., allreduce the obsda data among ensemble members

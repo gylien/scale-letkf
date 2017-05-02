@@ -987,20 +987,14 @@ END SUBROUTINE gather_grd_mpi
 !-------------------------------------------------------------------------------
 ! Read ensemble SCALE history files, one file per time (iter)
 !-------------------------------------------------------------------------------
-#ifdef WRF
 subroutine read_ens_history_iter(iter, step, v3dg, v2dg, v3dg_state, v2dg_state)
-#else
-subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
-#endif
   implicit none
   integer, intent(in) :: iter
   integer, intent(in) :: step
   real(r_size), intent(out) :: v3dg(nlevh,nlonh,nlath,nv3dd)
   real(r_size), intent(out) :: v2dg(nlonh,nlath,nv2dd)
-#ifdef WRF
   real(r_size), intent(out), optional :: v3dg_state(nlev,nlon,nlat,nv3d)
   real(r_size), intent(out), optional :: v2dg_state(nlon,nlat,nv2d)
-#endif
   character(filelenmax) :: filename
   integer :: im
 
@@ -1075,9 +1069,9 @@ subroutine read_ens_mpi(v3d, v2d)
 
 #ifndef WRF
       call state_trans(v3dg)
-#endif
 
       call mpi_timer('read_ens_mpi:state_trans:', 2)
+#endif
     end if
 
     call mpi_timer('', 2, barrier=MPI_COMM_e)
@@ -1192,9 +1186,9 @@ subroutine write_ens_mpi(v3d, v2d, monit, caption)
 !      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
 #ifndef WRF
       call state_trans_inv(v3dg)
-#endif
 
       call mpi_timer('write_ens_mpi:state_trans_inv:', 2)
+#endif
 
 #ifdef PNETCDF
       if (IO_AGGREGATE) then

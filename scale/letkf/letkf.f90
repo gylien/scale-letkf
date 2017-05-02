@@ -125,6 +125,13 @@ PROGRAM letkf
 
     call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_a)
 
+    !
+    ! LETKF GRID setup
+    !
+    call set_common_mpi_grid
+
+    call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
+
 !-----------------------------------------------------------------------
 ! Read observations
 !-----------------------------------------------------------------------
@@ -148,9 +155,21 @@ PROGRAM letkf
     ! Compute observation operator, return the results in obsda
     ! with additional space for externally processed observations
     !
-    call obsope_cal(obsda, .true., nobs_extern=nobs_extern)
+#ifdef WRF
+    if (GUES_IN_FROM_HISTORY) then
+      allocate (gues3d(nij1,nlev,nens,nv3d))
+      allocate (gues2d(nij1,nens,nv2d))
+      call obsope_cal(obsda, .true., nobs_extern=nobs_extern, v3d_state=gues3d, v2d_state=gues2d)
 
-    call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
+      call mpi_timer('OBS_OPERATOR & READ_GUESS', 1, barrier=MPI_COMM_a)
+    else
+#endif
+      call obsope_cal(obsda, .true., nobs_extern=nobs_extern)
+
+      call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
+#ifdef WRF
+    end if
+#endif
 
 !-----------------------------------------------------------------------
 ! Process observation data
@@ -165,28 +184,24 @@ PROGRAM letkf
 !-----------------------------------------------------------------------
 
     !
-    ! LETKF GRID setup
-    !
-    call set_common_mpi_grid
-
-    allocate (gues3d(nij1,nlev,nens,nv3d))
-    allocate (gues2d(nij1,nens,nv2d))
-    allocate (anal3d(nij1,nlev,nens,nv3d))
-    allocate (anal2d(nij1,nens,nv2d))
-
-    call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
-
-    !
     ! READ GUES
     !
-    call read_ens_mpi(gues3d, gues2d)
+#ifdef WRF
+    if (.not. GUES_IN_FROM_HISTORY) then
+#endif
+      allocate (gues3d(nij1,nlev,nens,nv3d))
+      allocate (gues2d(nij1,nens,nv2d))
+      call read_ens_mpi(gues3d, gues2d)
+
+      call mpi_timer('READ_GUES', 1, barrier=MPI_COMM_a)
+#ifdef WRF
+    end if
+#endif
 
     if (DET_RUN .and. mmdetin /= mmdet) then
       gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
       gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
     end if
-
-    call mpi_timer('READ_GUES', 1, barrier=MPI_COMM_a)
 
     !
     ! WRITE ENS MEAN and SPRD
@@ -203,6 +218,9 @@ PROGRAM letkf
 !-----------------------------------------------------------------------
 ! Data Assimilation
 !-----------------------------------------------------------------------
+
+    allocate (anal3d(nij1,nlev,nens,nv3d))
+    allocate (anal2d(nij1,nens,nv2d))
 
     !
     ! LETKF
