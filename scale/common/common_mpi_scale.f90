@@ -215,10 +215,15 @@ subroutine set_common_mpi_scale
       allocate (height3dtmp(nlev,nlon,nlat))
 #endif
 
-      call file_member_replace(proc2mem(1,1,myrank+1), GUES_IN_BASENAME, filename)
 #ifdef WRF
+      if (GUES_IN_FROM_HISTORY) then
+        call file_member_replace(proc2mem(1,1,myrank+1), HISTORY_IN_BASENAME, filename)
+      else
+        call file_member_replace(proc2mem(1,1,myrank+1), GUES_IN_BASENAME, filename)
+      end if
       call read_coor_par(filename, MPI_COMM_d, lon=lon2dtmp, lat=lat2dtmp)
 #else
+      call file_member_replace(proc2mem(1,1,myrank+1), GUES_IN_BASENAME, filename)
       call read_restart_coor(filename, lon2dtmp, lat2dtmp, height3dtmp)
 #endif
 
@@ -326,12 +331,22 @@ subroutine set_common_mpi_grid
 #ifdef WRF
   im = proc2mem(1,1,myrank+1)
   if (im >= 1 .and. im <= nens) then
-    if (im <= MEMBER) then
-      call file_member_replace(im, GUES_IN_BASENAME, filename)
-    else if (im == mmean) then
-      filename = GUES_MEAN_INOUT_BASENAME
-    else if (im == mmdet) then
-      filename = GUES_MDET_IN_BASENAME
+    if (GUES_IN_FROM_HISTORY) then
+      if (im <= MEMBER) then
+        call file_member_replace(im, HISTORY_IN_BASENAME, filename)
+      else if (im == mmean) then
+        filename = HISTORY_MEAN_IN_BASENAME
+      else if (im == mmdet) then
+        filename = HISTORY_MDET_IN_BASENAME
+      end if
+    else
+      if (im <= MEMBER) then
+        call file_member_replace(im, GUES_IN_BASENAME, filename)
+      else if (im == mmean) then
+        filename = GUES_MEAN_INOUT_BASENAME
+      else if (im == mmdet) then
+        filename = GUES_MDET_IN_BASENAME
+      end if
     end if
     if (.not. allocated(p_base3d)) allocate(p_base3d(nlev,nlon,nlat))
     if (.not. allocated(ph_base3d)) allocate(ph_base3d(nlev+1,nlon,nlat))
@@ -344,7 +359,11 @@ subroutine set_common_mpi_grid
 
   if (VERIFY_COORD) then
     if (myrank_e == 0) then
-      call file_member_replace(proc2mem(1,1,myrank+1), GUES_IN_BASENAME, filename)
+      if (GUES_IN_FROM_HISTORY) then
+        call file_member_replace(proc2mem(1,1,myrank+1), HISTORY_IN_BASENAME, filename)
+      else
+        call file_member_replace(proc2mem(1,1,myrank+1), GUES_IN_BASENAME, filename)
+      end if
 
       allocate (v3dgtmp(nlev,nlon,nlat,nv3d))
       allocate (v2dgtmp(nlon,nlat,nv2d))
