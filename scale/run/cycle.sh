@@ -267,7 +267,16 @@ while ((time <= ETIME)); do
 
       if [ "$CONF_MODE" = 'static' ]; then
 
-        mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time}
+        if ((IO_ARB == 1)); then ##
+          if ((s == 5)); then ##
+            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} \
+                    "$SCRP_DIR/sleep.sh" || exit $? &
+          else ##
+            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
+          fi ##
+        else ##
+          mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
+        fi ##
 
       else
 

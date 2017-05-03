@@ -65,7 +65,7 @@ PROGRAM obsope
 ! Pre-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 4) then
+  if (command_argument_count() >= 3) then
     write (6,'(A)') 'Run pre-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd1), ']'
     call system(trim(cmd1))
@@ -129,7 +129,7 @@ PROGRAM obsope
 ! Post-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 4) then
+  if (command_argument_count() >= 3) then
     write (6,'(A)') 'Run post-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd2), ']'
     call system(trim(cmd2))
