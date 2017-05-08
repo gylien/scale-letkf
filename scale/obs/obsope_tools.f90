@@ -570,7 +570,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
                   ! Simple bias correction depending on the sky condition
                   ! (diagnosed by CA)
                   if(H08_BIAS_SIMPLE)then
-                    if(obsda%val2(nnB07(nn)+ch-1) > H08_CA_THRES)then
+                    if((obsda%val2(nnB07(nn)+ch-1) > H08_CA_THRES) .and. ( .not. H08_BIAS_SIMPLE_CLR) )then
                       obsda%val(nnB07(nn)+ch-1) = obsda%val(nnB07(nn)+ch-1) + H08_BIAS_CLOUD(ch)
                     else
                       obsda%val(nnB07(nn)+ch-1) = obsda%val(nnB07(nn)+ch-1) + H08_BIAS_CLEAR(ch)

@@ -259,7 +259,8 @@ MODULE common_nml
   logical :: H08_RTTOV_EXTRA_US76 = .false.
   logical :: H08_VLOCAL_CTOP = .true.
 
-  logical :: H08_BIAS_SIMPLE = .false. ! Simple bias correction (just subtract prescribed constant)
+  logical :: H08_BIAS_SIMPLE = .false. ! Simple bias correction (just subtract prescribed constant (clear/cloudy))
+  logical :: H08_BIAS_SIMPLE_CLR = .false. ! Simple bias correction (just subtract prescribed constant (only clear sky value))
   logical :: H08_CLDERR_SIMPLE = .false. ! Simple cloud dependent obs 
   ! Sky condition is diagnosed by CA (Okamoto et al. 2014 for each band)
   ! CA > H08_CA_THRES: Cloudy
@@ -806,6 +807,7 @@ subroutine read_nml_letkf_h08
     H08_BT_MIN, &
     H08_CH_USE, &
     H08_BIAS_SIMPLE, &
+    H08_BIAS_SIMPLE_CLR, &
     H08_CLDERR_SIMPLE, &
     H08_CA_THRES, &
     H08_BIAS_CLEAR, &

@@ -1571,7 +1571,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
       ohx(n) = obs(iset)%dat(iidx) - yobs_H08(ch,n2prof(n)) ! Obs - B/A
       !!! simple bias correction here !!!
       if(H08_BIAS_SIMPLE)then
-        if(CA > H08_CA_THRES)then
+        if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
           ohx(n) = ohx(n) - H08_BIAS_CLOUD(ch)
         else
           ohx(n) = ohx(n) - H08_BIAS_CLEAR(ch)
@@ -1594,7 +1594,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
         if(H08_BIAS_SIMPLE)then
           CA = (abs(yobs_H08(ch,np) - yobs_H08_clr(ch,np)) & !CM
                + abs(obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08_clr(ch,np))) * 0.5d0 !CO
-          if(CA > H08_CA_THRES)then
+          if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
             yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLOUD(ch)
           else
             yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLEAR(ch)
