@@ -1521,20 +1521,25 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
     end if
 #endif
 
-    if((nprof == 0) .or. ((ri /= ri_H08(nprof)) .or. (rj /= rj_H08(nprof))))then
-      nprof = nprof + 1
+    if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
+        abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE) then
 
-      iset_H08 = iset
-      ri_H08(nprof) = ri
-      rj_H08(nprof) = rj
-      lon_H08(nprof) = obs(iset)%lon(iidx)
-      lat_H08(nprof) = obs(iset)%lat(iidx)
+      if((nprof == 0) .or. ((ri /= ri_H08(nprof)) .or. (rj /= rj_H08(nprof))))then
+        nprof = nprof + 1
 
-      ch = nint(obs(iset)%lev(iidx)) - 6 ! 
-      prof2B07(nprof) = iidx - ch + 1
-    endif
+        iset_H08 = iset
+        ri_H08(nprof) = ri
+        rj_H08(nprof) = rj
+        lon_H08(nprof) = obs(iset)%lon(iidx)
+        lat_H08(nprof) = obs(iset)%lat(iidx)
 
-    if(nprof >= 1) n2prof(n) = nprof
+        ch = nint(obs(iset)%lev(iidx)) - 6 ! 
+        prof2B07(nprof) = iidx - ch + 1
+      endif
+
+      if(nprof >= 1) n2prof(n) = nprof
+
+    endif ! [DEPARTURE_STAT_T_RANGE]
 
   end do ! [ n = 1, nnobs ]
 
@@ -1563,22 +1568,27 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
       oelm(n) = obs(iset)%elm(iidx)
       if(oelm(n) /= id_H08IR_obs)cycle
 
-      ch = nint(obs(iset)%lev(iidx)) - 6 ! 
+      if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
+          abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE) then
 
-      CA = (abs(yobs_H08(ch,n2prof(n)) - yobs_H08_clr(ch,n2prof(n))) & !CM
-            + abs(obs(iset)%dat(iidx) - yobs_H08_clr(ch,n2prof(n))) ) * 0.5d0 !CO
 
-      ohx(n) = obs(iset)%dat(iidx) - yobs_H08(ch,n2prof(n)) ! Obs - B/A
-      !!! simple bias correction here !!!
-      if(H08_BIAS_SIMPLE)then
-        if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
-          ohx(n) = ohx(n) - H08_BIAS_CLOUD(ch)
-        else
-          ohx(n) = ohx(n) - H08_BIAS_CLEAR(ch)
+        ch = nint(obs(iset)%lev(iidx)) - 6 ! 
+
+        CA = (abs(yobs_H08(ch,n2prof(n)) - yobs_H08_clr(ch,n2prof(n))) & !CM
+              + abs(obs(iset)%dat(iidx) - yobs_H08_clr(ch,n2prof(n))) ) * 0.5d0 !CO
+
+        ohx(n) = obs(iset)%dat(iidx) - yobs_H08(ch,n2prof(n)) ! Obs - B/A
+        !!! simple bias correction here !!!
+        if(H08_BIAS_SIMPLE)then
+          if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
+            ohx(n) = ohx(n) - H08_BIAS_CLOUD(ch)
+          else
+            ohx(n) = ohx(n) - H08_BIAS_CLEAR(ch)
+          endif
         endif
-      endif
-      oqc(n) = qc_H08(ch,n2prof(n))
+        oqc(n) = qc_H08(ch,n2prof(n))
 
+      endif ! [DEPARTURE_STAT_T_RANGE]
     end do ! [ n = 1, nnobs ]
 !$OMP END PARALLEL DO
 
