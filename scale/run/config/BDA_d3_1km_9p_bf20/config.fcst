@@ -5,16 +5,16 @@
 #
 #===============================================================================
 
-STIME='20130713055000'
-ETIME='20130713063000'
+STIME='20130713061000'
+ETIME='20130713070000'
 MEMBERS='mean 1'
-CYCLE=5
+CYCLE=
 CYCLE_SKIP=2
 IF_VERF=0
 IF_EFSO=0
 ISTEP=
 FSTEP=
-TIME_LIMIT='00:45:00'
+TIME_LIMIT='01:00:00'
 
 #===============================================================================
 # Forecast settings
@@ -46,7 +46,7 @@ PERTURB_BDY=0    # 0: No
 
                  #      fcst
                  #      history restart
-OUT_OPT=1        # 1:   o       o
+OUT_OPT=2        # 1:   o       o
                  # 2:   o
 
                  #      topo
