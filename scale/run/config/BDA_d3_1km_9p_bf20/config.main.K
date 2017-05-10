@@ -26,6 +26,7 @@ DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
+DATA_ADDINFL=
 
 OBS="/volume63/data/hp150019/gylien/obs/QCED_1KM_v4_v500M_attn0.01" # directory of observation data in LETKF obs format
 OBSNCEP=                                                 # directory of observation data in NCEP BUFR format

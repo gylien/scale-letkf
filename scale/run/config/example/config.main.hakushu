@@ -35,6 +35,7 @@ DATA_BDY_SCALE_PREP=                                                 # Directory
 DATA_BDY_WRF="$DDIR/ncepfnl/wrfout"                                  # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 DATA_BDY_GRADS="$DDIR/ncepfnl_grads"                                 # Directory of the boundary data in GrADS format
+DATA_ADDINFL=                                                        # Directory of the additive inflation files
 
 OBS="$DDIR/obs/prepbufr_obs_eastasia"                                # Observation data in LETKF observation format
 OBSNCEP=

@@ -42,6 +42,7 @@ CONTAINS
 ! Data Assimilation
 !-----------------------------------------------------------------------
 SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
+  use common_rand
   IMPLICIT NONE
   REAL(r_size),INTENT(INOUT) :: gues3d(nij1,nlev,nens,nv3d) ! background ensemble
   REAL(r_size),INTENT(INOUT) :: gues2d(nij1,nens,nv2d)      !  output: destroyed
@@ -79,6 +80,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size) :: tmpinfl                        !GYL
   REAL(r_size) :: q_mean,q_sprd                  !GYL
   REAL(r_size) :: q_anal(MEMBER)                 !GYL
+
+  INTEGER :: mshuf,ierr                          !GYL
+  INTEGER :: ishuf(MEMBER)                       !GYL
 
   character(len=timer_name_width) :: timer_str
 
@@ -607,6 +611,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
     WRITE(6,'(A)') '===== Additive covariance inflation ====='
     WRITE(6,'(A,F10.4)') '  parameter:',INFL_ADD
+    if (INFL_ADD_SHUFFLE) then
+      if (myrank_a == 0) then
+        call Knuth_Shuffle(MEMBER, ishuf)
+      end if
+      call MPI_BCAST(ishuf, MEMBER, MPI_INTEGER, 0, MPI_COMM_a, ierr)
+      write (6, '(A)') '  suffle members: on'
+      write (6, *) ' suffle sequence: ', ishuf
+    end if
     WRITE(6,'(A)') '========================================='
 !    parm = 0.7d0
 !    DO ilev=1,nlev
@@ -616,11 +628,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !    END DO
     DO n=1,nv3d
       DO m=1,MEMBER
+        mshuf = m
+        if (INFL_ADD_SHUFFLE) then
+          mshuf = ishuf(m)
+        end if
 !$OMP PARALLEL DO PRIVATE(ij,ilev)
         DO ilev=1,nlev
           DO ij=1,nij1
             anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-              & + gues3d(ij,ilev,m,n) * INFL_ADD
+              & + gues3d(ij,ilev,mshuf,n) * INFL_ADD
           END DO
         END DO
 !$OMP END PARALLEL DO
