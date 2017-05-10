@@ -632,14 +632,26 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         if (INFL_ADD_SHUFFLE) then
           mshuf = ishuf(m)
         end if
+        if (INFL_ADD_Q_RATIO .and. &
+            (n == iv3d_q .or. n == iv3d_qc .or. n == iv3d_qr .or. n == iv3d_qi .or. n == iv3d_qs .or. n == iv3d_qg)) then
 !$OMP PARALLEL DO PRIVATE(ij,ilev)
-        DO ilev=1,nlev
-          DO ij=1,nij1
-            anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-              & + gues3d(ij,ilev,mshuf,n) * INFL_ADD
+          DO ilev=1,nlev
+            DO ij=1,nij1
+              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
+                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD * anal3d(ij,ilev,m,n)
+            END DO
           END DO
-        END DO
 !$OMP END PARALLEL DO
+        else
+!$OMP PARALLEL DO PRIVATE(ij,ilev)
+          DO ilev=1,nlev
+            DO ij=1,nij1
+              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
+                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD
+            END DO
+          END DO
+!$OMP END PARALLEL DO
+        end if
       END DO
     END DO
     DO n=1,nv2d

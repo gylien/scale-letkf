@@ -563,7 +563,7 @@ else
 
     # additive inflation
     #-------------------
-    if ((loop == 1)); then
+    if ((loop == 1 && ADDINFL == 1)); then
       for m in $(seq $MEMBER); do
         for q in $(seq $mem_np); do
           pathin="${DATA_ADDINFL}/const/addi/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
