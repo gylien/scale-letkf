@@ -638,7 +638,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           DO ilev=1,nlev
             DO ij=1,nij1
               anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD * anal3d(ij,ilev,m,n)
+                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD * anal3d(ij,ilev,mmean,n)
             END DO
           END DO
 !$OMP END PARALLEL DO
@@ -656,9 +656,13 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     END DO
     DO n=1,nv2d
       DO m=1,MEMBER
+        mshuf = m
+        if (INFL_ADD_SHUFFLE) then
+          mshuf = ishuf(m)
+        end if
 !$OMP PARALLEL DO PRIVATE(ij)
         DO ij=1,nij1
-          anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,m,n) * INFL_ADD
+          anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,mshuf,n) * INFL_ADD
         END DO
 !$OMP END PARALLEL DO
       END DO
