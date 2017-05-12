@@ -561,6 +561,18 @@ else
       fi
     fi
 
+    # additive inflation
+    #-------------------
+    if ((loop == 1 && ADDINFL == 1)); then
+      for m in $(seq $MEMBER); do
+        for q in $(seq $mem_np); do
+          pathin="${DATA_ADDINFL}/const/addi/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
+          path="const/addi/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
+          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      done
+    fi
+
     #-------------------
     # stage-out
     #-------------------

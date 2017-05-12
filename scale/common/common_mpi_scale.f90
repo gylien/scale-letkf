@@ -973,7 +973,7 @@ subroutine read_ens_mpi_addiinfl(v3d, v2d)
 
 !      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
       call read_restart(filename, v3dg, v2dg)
-      call state_trans(v3dg)
+!      call state_trans(v3dg)
     end if
 
     mstart = 1 + (it-1)*nprocs_e
