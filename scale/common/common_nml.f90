@@ -297,8 +297,8 @@ MODULE common_nml
   real(r_size) :: OBSERR_RADAR_VR = 3.0d0
   real(r_size) :: OBSERR_TCXY = 30.0d3 ! (m)
   real(r_size) :: OBSERR_TCP = 3.0d2 ! (Pa)
-  real(r_size) :: OBSERR_H08(nch) = (/6.0d0,6.0d0,6.0d0,6.0d0,6.0d0,&
-                                      6.0d0,6.0d0,6.0d0,6.0d0,6.0d0/) ! H08
+  real(r_size) :: OBSERR_H08(nch) = (/3.0d0,3.0d0,3.0d0,3.0d0,3.0d0,&
+                                      3.0d0,3.0d0,3.0d0,3.0d0,3.0d0/) ! H08
 
   !--- PARAM_OBSSIM
   character(filelenmax) :: OBSSIM_IN_TYPE = 'history'

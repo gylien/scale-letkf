@@ -1521,25 +1521,20 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
     end if
 #endif
 
-    if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
-        abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE) then
+    if((nprof == 0) .or. ((ri /= ri_H08(nprof)) .or. (rj /= rj_H08(nprof))))then
+      nprof = nprof + 1
 
-      if((nprof == 0) .or. ((ri /= ri_H08(nprof)) .or. (rj /= rj_H08(nprof))))then
-        nprof = nprof + 1
+      iset_H08 = iset
+      ri_H08(nprof) = ri
+      rj_H08(nprof) = rj
+      lon_H08(nprof) = obs(iset)%lon(iidx)
+      lat_H08(nprof) = obs(iset)%lat(iidx)
 
-        iset_H08 = iset
-        ri_H08(nprof) = ri
-        rj_H08(nprof) = rj
-        lon_H08(nprof) = obs(iset)%lon(iidx)
-        lat_H08(nprof) = obs(iset)%lat(iidx)
+      ch = nint(obs(iset)%lev(iidx)) - 6 ! 
+      prof2B07(nprof) = iidx - ch + 1
+    endif
 
-        ch = nint(obs(iset)%lev(iidx)) - 6 ! 
-        prof2B07(nprof) = iidx - ch + 1
-      endif
-
-      if(nprof >= 1) n2prof(n) = nprof
-
-    endif ! [DEPARTURE_STAT_T_RANGE]
+    if(nprof >= 1) n2prof(n) = nprof
 
   end do ! [ n = 1, nnobs ]
 
@@ -1555,7 +1550,10 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
                         yobs_H08,yobs_H08_clr,&
                         plev_obs_H08,qc_H08)
 
+! !!"DEBUG mode" compile enables to get O-B statistics!!
+#ifndef DEBUG
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ch,CA)
+#endif
     do n = 1, nnobs
       if (use_key) then
         nn = obsda_sort%key(n)
@@ -1568,29 +1566,33 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
       oelm(n) = obs(iset)%elm(iidx)
       if(oelm(n) /= id_H08IR_obs)cycle
 
-      if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
-          abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE) then
+      ch = nint(obs(iset)%lev(iidx)) - 6 ! 
 
+      CA = (abs(yobs_H08(ch,n2prof(n)) - yobs_H08_clr(ch,n2prof(n))) & !CM
+            + abs(obs(iset)%dat(iidx) - yobs_H08_clr(ch,n2prof(n))) ) * 0.5d0 !CO
 
-        ch = nint(obs(iset)%lev(iidx)) - 6 ! 
-
-        CA = (abs(yobs_H08(ch,n2prof(n)) - yobs_H08_clr(ch,n2prof(n))) & !CM
-              + abs(obs(iset)%dat(iidx) - yobs_H08_clr(ch,n2prof(n))) ) * 0.5d0 !CO
-
-        ohx(n) = obs(iset)%dat(iidx) - yobs_H08(ch,n2prof(n)) ! Obs - B/A
-        !!! simple bias correction here !!!
-        if(H08_BIAS_SIMPLE)then
-          if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
-            ohx(n) = ohx(n) - H08_BIAS_CLOUD(ch)
-          else
-            ohx(n) = ohx(n) - H08_BIAS_CLEAR(ch)
-          endif
+      ohx(n) = obs(iset)%dat(iidx) - yobs_H08(ch,n2prof(n)) ! Obs - B/A
+      !!! simple bias correction here !!!
+      if(H08_BIAS_SIMPLE)then
+        if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
+          ohx(n) = ohx(n) - H08_BIAS_CLOUD(ch)
+        else
+          ohx(n) = ohx(n) - H08_BIAS_CLEAR(ch)
         endif
-        oqc(n) = qc_H08(ch,n2prof(n))
+      endif
+      oqc(n) = qc_H08(ch,n2prof(n))
 
-      endif ! [DEPARTURE_STAT_T_RANGE]
+#ifdef DEBUG
+      write(6,'(a10,i4,a1,f8.2,a1,f8.2,a1,f8.2,a1,f8.2,a1,f8.2,a1,i7)')"Him8-STAT,",&
+                    ch+6,",",obs(iset)%lon(iidx),",",obs(iset)%lat(iidx),",",&
+                    obs(iset)%dat(iidx),",",ohx(n),",",yobs_H08_clr(ch,n2prof(n)),",",&
+                    oqc(n)
+#endif
+
     end do ! [ n = 1, nnobs ]
+#ifndef DEBUG
 !$OMP END PARALLEL DO
+#endif
 
     deallocate(ri_H08, rj_H08)
     deallocate(lon_H08, lat_H08)

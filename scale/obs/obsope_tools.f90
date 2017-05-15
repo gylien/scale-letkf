@@ -20,6 +20,12 @@ MODULE obsope_tools
 !    MPI_COMM_d => LOCAL_COMM_WORLD
   use scale_grid_index, only: &
     KHALO, IHALO, JHALO
+#ifdef H08
+  use scale_grid, only: &
+      DX, DY,           &
+      BUFFER_DX,        &
+      BUFFER_DY
+#endif
 
   IMPLICIT NONE
   PUBLIC
@@ -95,6 +101,20 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   integer, allocatable :: qc_H08(:,:)
   integer :: ch
 
+! -- Rejecting Him8 obs over the buffer regions --
+!
+! bris: "ri" at the wetern end of the domain excluding buffer regions
+! brie: "ri" at the eastern end of the domain excluding buffer regions
+! bris: "rj" at the southern end of the domain excluding buffer regions
+! bris: "rj" at the northern end of the domain excluding buffer regions
+!
+! e.g.,   ri:    ...bris...........brie...
+!             buffer |  NOT buffer  | buffer
+!
+
+  REAL(r_size) :: bris, brie
+  REAL(r_size) :: brjs, brje
+
 #endif
 
 ! -- for TC vital assimilation --
@@ -111,6 +131,13 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 !-------------------------------------------------------------------------------
 
   call mpi_timer('', 2)
+
+#ifdef H08
+  bris = real(BUFFER_DX/DX,r_size) + real(IHALO,r_size)
+  brjs = real(BUFFER_DY/DY,r_size) + real(JHALO,r_size)
+  brie = (real(nlong+2*IHALO,r_size) - bris)
+  brje = (real(nlatg+2*JHALO,r_size) - brjs)
+#endif
 
 !-------------------------------------------------------------------------------
 ! First scan of all observation data: Compute their horizontal location and time
@@ -523,6 +550,14 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
               n = obsda%idx(nn)
 
               if (obs(iof)%elm(n) /= id_H08IR_obs) cycle
+
+              ! Reject Him8 obs over the buffre regions
+              if ((obs(iof)%elm(n) == id_H08IR_obs) .and. ((obsda%ri(nn) <= bris) .or. (obsda%ri(nn) >= brie) .or. &
+                  (obsda%rj(nn) <= brjs) .or. (obsda%rj(nn) >= brje))) then
+                 obsda%qc(nn) = iqc_obs_bad
+                 cycle
+              endif
+
 
               if (nint(obs(iof)%lev(n)) == 7) then
                 nprof = nprof + 1
