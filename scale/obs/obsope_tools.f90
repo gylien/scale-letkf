@@ -126,7 +126,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 ! Multiple TCs are not considered (04/14/2017)
   real(r_size) :: TC_rij(2) = -1.0d0
   integer :: bTC_rank_d ! the process where the background TC is located.
-  integer :: obs_nn_TCX, obs_nn_TCY, obs_nn_TCP ! TCX, TCY, TCP
+  integer :: obs_nn_TCP ! TCP
 
 !-------------------------------------------------------------------------------
 
@@ -459,9 +459,17 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         call mpi_timer(trim(timer_str), 2)
 
 #ifdef TCV
-        obs_nn_TCX = -1
-        obs_nn_TCY = -1
         obs_nn_TCP = -1
+        do nn = n1, n2
+          iof = obsda%set(nn)
+          n = obsda%idx(nn)
+
+          !! TC vital !!
+          if (obs(iof)%elm(n)== id_tcmip_obs)then
+            obs_nn_TCP = nn
+            cycle
+          endif
+        end do ! [ nn = n1, n2 ]
 #endif
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk)
@@ -475,21 +483,6 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
               if (obs(iof)%elm(n) == id_H08IR_obs) cycle 
 #endif
 
-
-#ifdef TCV
-              !! TC vital !!
-              select case (obs(iof)%elm(n))
-              case (id_tclon_obs)
-                obs_nn_TCX = nn
-                cycle
-              case (id_tclat_obs)
-                obs_nn_TCY = nn
-                cycle
-              case (id_tcmip_obs)
-                obs_nn_TCP = nn
-                cycle
-              end select
-#endif
 
               call rij_g2l(myrank_d, obsda%ri(nn), obsda%rj(nn), ril, rjl)
 
@@ -632,7 +625,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
 !   -- TC vital DA -- 
 #ifdef TCV
-        if(minval(TC_rij) > 0.0d0)then
+        if(TC_rij(2) > 0.0d0)then
           !
           ! TC vital obs should have 3 data (i.e., lon, lat, and MSLP)
           ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp
@@ -672,9 +665,8 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
           !
           if (obs_nn_TCP > 0) then
             do n = 1, 3
-              if (n == 1) nn = obs_nn_TCX
-              if (n == 2) nn = obs_nn_TCY
-              if (n == 3) nn = obs_nn_TCP
+              nn = obs_nn_TCP - (3 - n)
+
               obsda%val(nn) = bTC(n,btc_rank_d)
               obsda%qc(nn) = iqc_good
             enddo ! [ n = 1, 3 ]

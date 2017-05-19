@@ -111,7 +111,7 @@ MODULE common_nml
 
   logical :: POSITIVE_DEFINITE_Q = .false.
   logical :: POSITIVE_DEFINITE_QHYD = .false.
-  real(r_size) :: TC_SEARCH_DIS = 200.0d3 ! (m) ! tentative! Should be modify !!
+  real(r_size) :: TC_SEARCH_DIS = 100.0d3 ! (m) ! Similar to Kunii (2015WAF) but he used a 200 x 200 km box surronuding the observed TC center.
 
   real(r_size) :: PS_ADJUST_THRES = 100.d0
 
