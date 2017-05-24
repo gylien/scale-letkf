@@ -578,6 +578,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Additive inflation
   !
   IF(INFL_ADD > 0.0d0) THEN
+    if (INFL_ADD_Q_RATIO) then
+      work3d = gues3d(:,:,mmean,:)
+    end if
+
     call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     CALL read_ens_mpi_addiinfl(gues3d,gues2d)
@@ -638,7 +642,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           DO ilev=1,nlev
             DO ij=1,nij1
               anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD * anal3d(ij,ilev,mmean,n)
+                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD * work3d(ij,ilev,n)
             END DO
           END DO
 !$OMP END PARALLEL DO
