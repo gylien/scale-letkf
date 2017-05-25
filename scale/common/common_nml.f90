@@ -89,6 +89,7 @@ MODULE common_nml
   character(filelenmax) :: INFL_ADD_IN_BASENAME = 'addi.@@@@'
   logical :: INFL_ADD_SHUFFLE = .false.      ! shuffle the additive inflation members?
   logical :: INFL_ADD_Q_RATIO = .false.
+  logical :: INFL_ADD_REF_ONLY = .false.
 
   real(r_size) :: RELAX_ALPHA = 0.0d0        ! RTPP relaxation parameter
   real(r_size) :: RELAX_ALPHA_SPREAD = 0.0d0 ! RTPS relaxation parameter
@@ -441,6 +442,7 @@ subroutine read_nml_letkf
     INFL_ADD_IN_BASENAME, &
     INFL_ADD_SHUFFLE, &
     INFL_ADD_Q_RATIO, &
+    INFL_ADD_REF_ONLY, &
     RELAX_ALPHA, &
     RELAX_ALPHA_SPREAD, &
     RELAX_TO_INFLATED_PRIOR, &

@@ -42,6 +42,8 @@ CONTAINS
 ! Data Assimilation
 !-----------------------------------------------------------------------
 SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
+  use scale_grid, only: &
+    DX, DY
   use common_rand
   IMPLICIT NONE
   REAL(r_size),INTENT(INOUT) :: gues3d(nij1,nlev,nens,nv3d) ! background ensemble
@@ -83,6 +85,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   INTEGER :: mshuf,ierr                          !GYL
   INTEGER :: ishuf(MEMBER)                       !GYL
+  real(r_size), allocatable :: addinfl_weight(:) !GYL
+  real(r_size) :: rdx,rdy,rdxy,ref_min_dist      !GYL
+  integer :: ic,iob                              !GYL
 
   character(len=timer_name_width) :: timer_str
 
@@ -578,11 +583,41 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! Additive inflation
   !
   IF(INFL_ADD > 0.0d0) THEN
+    call mpi_timer('', 2, barrier=MPI_COMM_e)
+
     if (INFL_ADD_Q_RATIO) then
-      work3d = gues3d(:,:,mmean,:)
+      work3d(:,:,:) = gues3d(:,:,mmean,:)
+    else
+      work3d(:,:,:) = 1.0d0
     end if
 
-    call mpi_timer('', 2, barrier=MPI_COMM_e)
+    allocate (addinfl_weight(nij1))
+    if (INFL_ADD_REF_ONLY) then
+      addinfl_weight(:) = 0.0d0
+      ic = ctype_elmtyp(uid_obs(id_radar_ref_obs), 22)
+      if (ic > 0) then
+        do ij = 1, nij1
+          ref_min_dist = 1.0d33
+          do iob = obsgrd(ic)%ac_ext(0, 1), obsgrd(ic)%ac_ext(obsgrd(ic)%ngrdext_i, obsgrd(ic)%ngrdext_j)
+            rdx = (rig1(ij) - obsda_sort%ri(iob)) * DX
+            rdy = (rjg1(ij) - obsda_sort%rj(iob)) * DY
+            rdxy = rdx*rdx + rdy*rdy
+            if (rdxy < ref_min_dist) then
+              ref_min_dist = rdxy
+            end if
+          end do
+
+          ref_min_dist = ref_min_dist / (hori_loc_ctype(ic) * hori_loc_ctype(ic))
+          if (ref_min_dist <= dist_zero_fac_square) then
+            addinfl_weight(ij) = EXP(-0.5d0 * ref_min_dist)
+          end if
+        end do
+      end if
+    else
+      addinfl_weight(:) = 1.0d0
+    end if
+
+    call mpi_timer('das_letkf:additive_infl_addinfl_weight:', 2)
 
     CALL read_ens_mpi_addiinfl(gues3d,gues2d)
 
@@ -636,13 +671,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         if (INFL_ADD_SHUFFLE) then
           mshuf = ishuf(m)
         end if
-        if (INFL_ADD_Q_RATIO .and. &
-            (n == iv3d_q .or. n == iv3d_qc .or. n == iv3d_qr .or. n == iv3d_qi .or. n == iv3d_qs .or. n == iv3d_qg)) then
+        if (n == iv3d_q .or. n == iv3d_qc .or. n == iv3d_qr .or. n == iv3d_qi .or. n == iv3d_qs .or. n == iv3d_qg) then
 !$OMP PARALLEL DO PRIVATE(ij,ilev)
           DO ilev=1,nlev
             DO ij=1,nij1
               anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD * work3d(ij,ilev,n)
+                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD * addinfl_weight(ij) * work3d(ij,ilev,n)
             END DO
           END DO
 !$OMP END PARALLEL DO
@@ -651,7 +685,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           DO ilev=1,nlev
             DO ij=1,nij1
               anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD
+                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD * addinfl_weight(ij)
             END DO
           END DO
 !$OMP END PARALLEL DO
@@ -666,11 +700,13 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         end if
 !$OMP PARALLEL DO PRIVATE(ij)
         DO ij=1,nij1
-          anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,mshuf,n) * INFL_ADD
+          anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,mshuf,n) * INFL_ADD * addinfl_weight(ij)
         END DO
 !$OMP END PARALLEL DO
       END DO
     END DO
+
+    deallocate (addinfl_weight)
 
     call mpi_timer('das_letkf:additive_infl_cal:', 2)
   END IF ! [ INFL_ADD > 0.0d0 ]
