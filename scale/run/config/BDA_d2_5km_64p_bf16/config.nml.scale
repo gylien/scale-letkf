@@ -204,11 +204,11 @@
 
 &PARAM_ATMOS_DYN
  ATMOS_DYN_TINTEG_LARGE_TYPE          = "EULER",
- ATMOS_DYN_TINTEG_SHORT_TYPE          = "RK4",
- ATMOS_DYN_TINTEG_TRACER_TYPE         = "RK3WS2002",
+ ATMOS_DYN_TINTEG_SHORT_TYPE          = "RK3WS2002", ! "RK4",
+ ATMOS_DYN_TINTEG_TRACER_TYPE         = "EULER",     ! "RK3WS2002",
  ATMOS_DYN_FVM_FLUX_TYPE              = "CD4",
- ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
- ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
+ ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "CD4",       ! "UD3KOREN1993",
+ ATMOS_DYN_FLAG_FCT_TRACER            = .true.,      ! .false.,
  ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.0D-2,
  ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 2.5D-3,
  ATMOS_DYN_enable_coriolis       = .true.,
@@ -235,9 +235,9 @@
 
 &PARAM_ATMOS_PHY_MP_TOMITA08
  enable_kk2000 = .false.,
- Cr = 58.D0,
+ Cr = 130.D0,
  Cs = 0.9D0,
- drag_g = 2.5D0,
+ drag_g = 0.6D0,
  beta_saut = 6D-3,
  gamma_saut = 6D-2,
  gamma_sacr = 2D-2,
