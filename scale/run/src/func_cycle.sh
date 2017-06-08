@@ -561,6 +561,18 @@ else
       fi
     fi
 
+    # additive inflation
+    #-------------------
+    if ((loop == 1 && ADDINFL == 1)); then
+      for m in $(seq $MEMBER); do
+        for q in $(seq $mem_np); do
+          pathin="${DATA_ADDINFL}/const/addi/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
+          path="const/addi/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
+          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      done
+    fi
+
     #-------------------
     # stage-out
     #-------------------
@@ -1052,7 +1064,11 @@ else
 
             if ((BDY_ENS == 1)); then
               for m in $(seq $mtot); do
-#                for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}/history.*.nc 2> /dev/null); do
+                mem=${name_m[$m]}
+                if [ "$mem" = 'mean' ]; then
+                  mem="$BDY_MEAN"
+                fi
+#                for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}/history.*.nc 2> /dev/null); do
 #                  pathin="$ifile"
 #                  if ((BDY_ROTATING == 1)); then
 #                    path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
@@ -1065,7 +1081,7 @@ else
 #                    echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
 #                  fi
 #                done
-                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}"
+                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}"
                 if ((BDY_ROTATING == 1)); then
                   path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}"
                 else

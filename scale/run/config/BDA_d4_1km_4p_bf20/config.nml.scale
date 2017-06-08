@@ -3,26 +3,22 @@
  IO_LOG_ALLNODE = .false.,
 /
 
-!&PARAM_PROF
-! PROF_mpi_barrier = .true.,
-!/
-
 &PARAM_TIME
 !--TIME_STARTDATE--
  TIME_STARTMS               = 0.D0,
 !--TIME_DURATION--
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 2.D0,
+ TIME_DT                    = 1.5D0,
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = 0.4D0,
+ TIME_DT_ATMOS_DYN          = 0.5D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = 2.D0,
+ TIME_DT_ATMOS_PHY_MP       = 1.5D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_RD       = 30.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_SF       = 2.D0,
+ TIME_DT_ATMOS_PHY_SF       = 30.D0,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_TB       = 2.D0,
+ TIME_DT_ATMOS_PHY_TB       = 1.5D0,
  TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",
  TIME_DT_OCEAN              = 30.D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
@@ -216,11 +212,11 @@
 
 &PARAM_ATMOS_DYN
  ATMOS_DYN_TINTEG_LARGE_TYPE          = "EULER",
- ATMOS_DYN_TINTEG_SHORT_TYPE          = "RK4",
- ATMOS_DYN_TINTEG_TRACER_TYPE         = "RK3WS2002",
+ ATMOS_DYN_TINTEG_SHORT_TYPE          = "RK3WS2002",
+ ATMOS_DYN_TINTEG_TRACER_TYPE         = "EULER",
  ATMOS_DYN_FVM_FLUX_TYPE              = "CD4",
- ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
- ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
+ ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "CD4",
+ ATMOS_DYN_FLAG_FCT_TRACER            = .true.,
  ATMOS_DYN_NUMERICAL_DIFF_COEF        = 2.5D-3,
  ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 1.0D-4,
  ATMOS_DYN_enable_coriolis       = .true.,
@@ -247,9 +243,9 @@
 
 &PARAM_ATMOS_PHY_MP_TOMITA08
  enable_kk2000 = .false.,
- Cr = 58.D0,
+ Cr = 130.D0,
  Cs = 0.9D0,
- drag_g = 2.5D0,
+ drag_g = 0.6D0,
  beta_saut = 6D-3,
  gamma_saut = 6D-2,
  gamma_sacr = 2D-2,
