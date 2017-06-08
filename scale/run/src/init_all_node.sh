@@ -70,6 +70,12 @@ if [ "$SCPCALL" = 'cycle' ]; then
   if [ -e "$TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat" ]; then
     cp -f $TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat $TMPRUN/obsope
   fi
+  if [ -e "$TMPDAT/rttov/rtcoef_himawari_8_ahi.bin" ]; then
+    cp -f $TMPDAT/rttov/rtcoef_himawari_8_ahi.bin $TMPRUN/obsope
+  fi
+  if [ -e "$TMPDAT/rttov/sccldcoef_himawari_8_ahi.bin" ]; then
+    cp -f $TMPDAT/rttov/sccldcoef_himawari_8_ahi.bin $TMPRUN/obsope
+  fi
 
   mkdir -p $TMPRUN/letkf
   cp -f $TMPDAT/exec/letkf $TMPRUN/letkf
@@ -79,6 +85,12 @@ if [ "$SCPCALL" = 'cycle' ]; then
   fi
   if [ -e "$TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat" ]; then
     cp -f $TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat $TMPRUN/letkf
+  fi
+  if [ -e "$TMPDAT/rttov/rtcoef_himawari_8_ahi.bin" ]; then
+    cp -f $TMPDAT/rttov/rtcoef_himawari_8_ahi.bin $TMPRUN/letkf
+  fi
+  if [ -e "$TMPDAT/rttov/sccldcoef_himawari_8_ahi.bin" ]; then
+    cp -f $TMPDAT/rttov/sccldcoef_himawari_8_ahi.bin $TMPRUN/letkf
   fi
 fi
 

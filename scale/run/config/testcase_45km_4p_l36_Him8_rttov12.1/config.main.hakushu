@@ -5,8 +5,8 @@
 #
 #===============================================================================
 
-RTTOV_COEF="/data6/gylien/scale-letkf/scale_run_himawari_test/letkf/scale/run/rtcoef_himawari_8_ahi.dat"
-RTTOV_SCCOEF="/data6/gylien/scale-letkf/scale_run_himawari_test/letkf/scale/run/sccldcoef_himawari_8_ahi.dat"
+RTTOV_COEF="/data6/honda/RTTOV12.1/rtcoef_rttov12/rttov7pred54L/rtcoef_himawari_8_ahi.bin"
+RTTOV_SCCOEF=" /data6/honda/RTTOV12.1/rtcoef_rttov12/cldaer/sccldcoef_himawari_8_ahi.bin"
 
 PRESET='Linux_torque'
 

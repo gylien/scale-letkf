@@ -2667,7 +2667,7 @@ END SUBROUTINE wgt_ave2d
 SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,stggrd)
   use scale_mapproj, only: &
       MPRJ_rotcoef
-  use scale_H08_fwd
+  use scale_H08_fwd12
   use scale_grid_index, only: &
     KHALO
 
@@ -2779,8 +2779,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,
 !        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using (lon,lat).
 !
 
-  CALL SCALE_RTTOV_fwd(nch, & ! num of channels
-                       nlev,& ! num of levels
+  CALL SCALE_RTTOV12_fwd(nlev,& ! num of levels
                        nprof,& ! num of profs
                        prs2d(elev:slev:-1,1:nprof),& ! (Pa)
                        tk2d(elev:slev:-1,1:nprof),& ! (K)

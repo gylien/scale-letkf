@@ -263,6 +263,12 @@ ${RTTOV_COEF}|rttov/rtcoef_himawari_8_ahi.dat
 ${RTTOV_SCCOEF}|rttov/sccldcoef_himawari_8_ahi.dat
 EOF
   fi
+  if [ -e "${RTTOV_COEFB}" ] && [ -e "${RTTOV_SCCOEFB}" ]; then
+    cat >> $STAGING_DIR/stagein.dat << EOF
+${RTTOV_COEFB}|rttov/rtcoef_himawari_8_ahi.bin
+${RTTOV_SCCOEFB}|rttov/sccldcoef_himawari_8_ahi.bin
+EOF
+  fi
 
   if [ "$TOPO_FORMAT" != 'prep' ]; then
     if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then

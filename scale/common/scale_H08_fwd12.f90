@@ -1,7 +1,9 @@
+module scale_H08_fwd12
+implicit none
+
 contains
 
-subroutine SCALE_RTTOV12_fwd(nchannels,&
-                             nlevs,&
+subroutine SCALE_RTTOV12_fwd(nlevels,&
                              nprof,&
                              tmp_p,&
                              tmp_t,&
@@ -43,20 +45,19 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
        & errorstatus_fatal,   &
        & platform_name,       &
        & inst_name,           &
-       & q_mixratio_to_ppmv,  &
        & qmin,                &
        & tmin
 
   ! rttov_types contains definitions of all RTTOV data types
   USE rttov_types, ONLY :     &
-       & rttov_options,       &
-       & rttov_coefs,         &
-       & profile_type,        &
-       & transmission_type,   &
-       & radiance_type,       &
-       & rttov_chanprof,      &
-       & rttov_emissivity,    &
-       & rttov_reflectance
+         rttov_options,       &
+         rttov_coefs,         &
+         rttov_profile,       &
+         rttov_transmission,  &
+         rttov_radiance,      &
+         rttov_chanprof,      &
+         rttov_emissivity,    &
+         rttov_reflectance
 
   ! jpim, jprb and jplm are the RTTOV integer, real and logical KINDs
   USE parkind1, ONLY : jpim, jprb, jplm
@@ -71,21 +72,21 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
   USE common_nml, ONLY: &
         H08_RTTOV_CFRAC_CNST, &
         H08_RTTOV_EXTRA_US76, &
-        H08_RTTOV_MINQ_CTOP
+        H08_RTTOV_MINQ_CTOP,  &
+        nch
 
   IMPLICIT NONE
 
-#include "rttov_parallel_direct.interface"
 #include "rttov_direct.interface"
+#include "rttov_parallel_direct.interface"
 #include "rttov_read_coefs.interface"
 #include "rttov_dealloc_coefs.interface"
-#include "rttov_alloc_rad.interface"
-#include "rttov_alloc_transmission.interface"
-#include "rttov_alloc_prof.interface"
+#include "rttov_alloc_direct.interface"
 #include "rttov_user_options_checkinput.interface"
 #include "rttov_print_opts.interface"
 #include "rttov_print_profile.interface"
 #include "rttov_skipcommentline.interface"
+
 
 !
 ! -  Added by T.Honda (11/18/2015)
@@ -114,13 +115,13 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
   REAL(kind=jprb) :: minQcfrac ! threshold water/ice contents (g m-3) for cloud fraction diagnosis
 
   INTEGER, INTENT(IN) :: nprof
-  INTEGER, INTENT(IN) :: nlevs
+  INTEGER, INTENT(IN) :: nlevels
 
-  Real(r_size),INTENT(IN) :: tmp_p(nlevs, nprof)
-  Real(r_size),INTENT(IN) :: tmp_t(nlevs, nprof)
-  Real(r_size),INTENT(IN) :: tmp_qv(nlevs, nprof)
-  Real(r_size),INTENT(IN) :: tmp_qc(nlevs, nprof)
-  Real(r_size),INTENT(IN) :: tmp_qice(nlevs, nprof)
+  Real(r_size),INTENT(IN) :: tmp_p(nlevels, nprof)
+  Real(r_size),INTENT(IN) :: tmp_t(nlevels, nprof)
+  Real(r_size),INTENT(IN) :: tmp_qv(nlevels, nprof)
+  Real(r_size),INTENT(IN) :: tmp_qc(nlevels, nprof)
+  Real(r_size),INTENT(IN) :: tmp_qice(nlevels, nprof)
   Real(r_size),INTENT(IN) :: tmp_t2m(nprof)
   Real(r_size),INTENT(IN) :: tmp_q2m(nprof)
   Real(r_size),INTENT(IN) :: tmp_p2m(nprof)
@@ -142,41 +143,34 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
 
   ! RTTOV variables/structures
   !====================
-  TYPE(rttov_options)                  :: opts           ! Options structure
-  TYPE(rttov_coefs)                    :: coefs          ! Coefficients structure
-  TYPE(rttov_chanprof),    ALLOCATABLE :: chanprof(:)    ! Input channel/profile list
-  TYPE(profile_type),      ALLOCATABLE :: profiles(:)    ! Input profiles
-  LOGICAL(KIND=jplm),      ALLOCATABLE :: calcemis(:)    ! Flag to indicate calculation of emissivity within RTTOV
-  TYPE(rttov_emissivity),  ALLOCATABLE :: emissivity(:)  ! Input/output surface emissivity
-  LOGICAL(KIND=jplm),      ALLOCATABLE :: calcrefl(:)    ! Flag to indicate calculation of BRDF within RTTOV
-  TYPE(rttov_reflectance), ALLOCATABLE :: reflectance(:) ! Input/output surface BRDF
-  TYPE(transmission_type)              :: transmission   ! Output transmittances
-  TYPE(radiance_type)                  :: radiance       ! Output radiances
+  TYPE(rttov_options)              :: opts                     ! Options structure
+  TYPE(rttov_coefs)                :: coefs                    ! Coefficients structure
+  TYPE(rttov_chanprof),    POINTER :: chanprof(:)    => NULL() ! Input channel/profile list
+  LOGICAL(KIND=jplm),      POINTER :: calcemis(:)    => NULL() ! Flag to indicate calculation of emissivity within RTTOV
+  TYPE(rttov_emissivity),  POINTER :: emissivity(:)  => NULL() ! Input/output surface emissivity
+  LOGICAL(KIND=jplm),      POINTER :: calcrefl(:)    => NULL() ! Flag to indicate calculation of BRDF within RTTOV
+  TYPE(rttov_reflectance), POINTER :: reflectance(:) => NULL() ! Input/output surface BRDF
+  TYPE(rttov_profile),     POINTER :: profiles(:)    => NULL() ! Input profiles
+  TYPE(rttov_transmission)         :: transmission             ! Output transmittances
+  TYPE(rttov_radiance)             :: radiance                 ! Output radiances
 
-  INTEGER(KIND=jpim)                   :: errorstatus    ! Return error status of RTTOV subroutine calls
+  INTEGER(KIND=jpim)               :: errorstatus              ! Return error status of RTTOV subroutine calls
 
-  INTEGER(KIND=jpim) :: alloc_status(10)
+
+  INTEGER(KIND=jpim) :: alloc_status
   CHARACTER(LEN=11)  :: NameOfRoutine = 'example_fwd'
 
   ! variables for input
   !====================
-  INTEGER(KIND=jpim) :: input_chan(mxchn)
-  REAL(KIND=jprb)    :: input_ems(mxchn), input_brdf(mxchn)
   CHARACTER(LEN=256) :: coef_filename='./rtcoef_himawari_8_ahi.bin'
   CHARACTER(LEN=256) :: cld_coef_filename='./sccldcoef_himawari_8_ahi.bin'
   INTEGER(KIND=jpim) :: nthreads 
   INTEGER(KIND=jpim) :: dosolar = 0
-  INTEGER(KIND=jpim),intent(in) :: nchannels
   INTEGER(KIND=jpim) :: nchanprof
-  INTEGER(KIND=jpim) :: ich
-  !REAL(KIND=jprb)    :: ems_val, brdf_val
-  INTEGER(KIND=jpim) :: asw
-  REAL(KIND=jprb), ALLOCATABLE :: emis(:), brdf(:)
-  INTEGER(KIND=jpim), ALLOCATABLE :: nchan(:)
   INTEGER(KIND=jpim), ALLOCATABLE :: channel_list(:)
   ! loop variables
-  INTEGER(KIND=jpim) :: j, jch
-  INTEGER(KIND=jpim) :: nch
+  INTEGER(KIND=jpim) :: j
+  INTEGER(KIND=jpim) :: ich, jch
   INTEGER(KIND=jpim) :: ilev, nprint
   INTEGER(KIND=jpim) :: iprof, joff
 
@@ -184,9 +178,9 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
   Real(Kind=jprb),ALLOCATABLE :: tmp_btall_out(:,:)
   Real(Kind=jprb),ALLOCATABLE :: tmp_btclr_out(:,:)
   Real(Kind=jprb),ALLOCATABLE :: tmp_trans_out(:,:,:)
-  REAL(Kind=r_size),INTENT(OUT) :: btall_out(nchannels,nprof)
-  REAL(Kind=r_size),INTENT(OUT) :: btclr_out(nchannels,nprof)
-  REAL(Kind=r_size),INTENT(OUT) :: trans_out(nlevs,nchannels,nprof)
+  REAL(Kind=r_size),INTENT(OUT) :: btall_out(nch,nprof)
+  REAL(Kind=r_size),INTENT(OUT) :: btclr_out(nch,nprof)
+  REAL(Kind=r_size),INTENT(OUT) :: trans_out(nlevels,nch,nprof)
   REAL(Kind=r_size),INTENT(OUT) :: ctop_out(nprof)
   REAL(Kind=r_size) :: ptmp
 
@@ -201,6 +195,8 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
   real(kind=jprb) :: epsb 
   real(kind=jprb) :: repsb 
 
+  integer :: slev, elev
+
   if(debug) write(6,'(1x,a)')"hello from RTTOV"
 
 
@@ -214,9 +210,9 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
 
   jcfrac_cnst = real(H08_RTTOV_CFRAC_CNST,kind=jprb)
 
-  ALLOCATE(tmp_btall_out(nchannels,nprof))
-  ALLOCATE(tmp_btclr_out(nchannels,nprof))
-  ALLOCATE(tmp_trans_out(nlevs,nchannels,nprof))
+  ALLOCATE(tmp_btall_out(nch,nprof))
+  ALLOCATE(tmp_btclr_out(nch,nprof))
+  ALLOCATE(tmp_trans_out(nlevels,nch,nprof))
 
 
 
@@ -232,13 +228,6 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
   !   8. Deallocate all structures and arrays
 
   errorstatus     = 0_jpim
-  alloc_status(:) = 0_jpim
-
-  do ich = 1, nchannels
-    input_chan(ich)=ich
-  end do
-  input_ems(:)=0.0
-  input_brdf(:)=0.0
 
   if(debug) write(6,'(1x,a)')"hello from RTTOV2"
 
@@ -295,11 +284,6 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
     CALL rttov_exit(errorstatus)
   ENDIF
 
-  ! Ensure input number of channels is not higher than number stored in coefficient file
-  IF (nchannels > coefs % coef % fmv_chn) THEN
-    nchannels = coefs % coef % fmv_chn
-  ENDIF
-
   ! Ensure the options and coefficients are consistent
   CALL rttov_user_options_checkinput(errorstatus, opts, coefs)
   IF (errorstatus /= errorstatus_success) THEN
@@ -317,7 +301,9 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
   ! In this example we simulate all specified channels for each profile, but
   ! in general one can simulate a different number of channels for each profile.
 
-  nchanprof = nchannels * nprof
+  nchanprof = nch * nprof
+
+  write(6,'(a,3i9)')"DEBUG",nchanprof, nch, nprof
 
   ! Allocate structures for rttov_direct
   CALL rttov_alloc_direct( &
@@ -347,17 +333,15 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
   ! 4. Build the list of profile/channel indices in chanprof
   ! --------------------------------------------------------------------------
 
-  nch = 0_jpim
+  ich = 0_jpim
   DO j = 1, nprof
-    DO jch = 1, nchannels
-      nch = nch + 1_jpim
-      chanprof(nch)%prof = j
-      chanprof(nch)%chan = channel_list(jch)
+    DO jch = 1, nch
+      ich = ich + 1_jpim
+      chanprof(ich)%prof = j
+      chanprof(ich)%chan = jch
+!      chanprof(ich)%chan = channel_list(jch)
     ENDDO
   ENDDO
-
-
-  IF (errorstatus /= errorstatus_success) THEN
 
 
   ! --------------------------------------------------------------------------
@@ -376,27 +360,27 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
     WRITE(6,*) 'max qv, min qv',maxval(tmp_qv),minval(tmp_qv)
     WRITE(6,*) '-- t prof --'
     WRITE(6,*) 'size t:',size(tmp_t(:,1)),size(tmp_p(:,1))
-    do j = 1, nlevs
+    do j = 1, nlevels
       WRITE(6,*) 'qv:',tmp_qv(j,2)
     enddo
     WRITE(6,*) '-- end t prof --'
-    do j = 1, nlevs
+    do j = 1, nlevels
       WRITE(6,*) 't:',tmp_t(j,2)
     enddo
   endif
 
   if(debug) WRITE(6,*) 'START SUBSTITUTE PROFILE'
   ! Note: Profiles are from top to surface.
-  slev = nlevs
+  slev = nlevels
   elev = 1
 
   ! Loop over all profiles
   do iprof = 1, nprof
 
     ! Pressure (hPa), temp (K), WV (kg/kg)
-    profiles(iprof)%p(elev:slev)=real(tmp_p(1:nlevs,iprof),kind=jprb) * 0.01_jprb  ! (hpa)
-    profiles(iprof)%t(elev:slev)=real(tmp_t(1:nlevs,iprof),kind=jprb)
-    profiles(iprof)%q(elev:slev)=real(tmp_qv(1:nlevs,iprof),kind=jprb) * q_mixratio_to_ppmv ! (ppmv)
+    profiles(iprof)%p(elev:slev)=real(tmp_p(1:nlevels,iprof),kind=jprb) * 0.01_jprb  ! (hPa)
+    profiles(iprof)%t(elev:slev)=real(tmp_t(1:nlevels,iprof),kind=jprb)
+    profiles(iprof)%q(elev:slev)=real(tmp_qv(1:nlevels,iprof),kind=jprb) ! (kg kg-1)
 
     ! Check T & Q inputs
     do ilev=elev,slev
@@ -492,7 +476,7 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
 
 
     ctop_out(iprof) = -1.0d0 
-    do ilev=1,nlevs-1
+    do ilev=1,nlevels-1
       ! Stratus maritime 
       profiles(iprof) % cloud(2,ilev) = max(real((tmp_qc(ilev,iprof) + tmp_qc(ilev+1,iprof)) * 0.5_jprb,&
                                             kind=jprb),&
@@ -517,8 +501,9 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
         endif
       endif
 
+    enddo ! ilev
   enddo ! iprof
-  if(debug) WRITE(6,*) 'END SUBSTITUTE PROFILE'
+  if(debug) WRITE(6,*) '[RTTOV12]: END SUBSTITUTE PROFILE'
 
   ! --------------------------------------------------------------------------
   ! 6. Specify surface emissivity and reflectance
@@ -545,9 +530,9 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
   ! 7. Call RTTOV forward model
   ! --------------------------------------------------------------------------
 
-  if(debug) write(6,*)"Enter direct"
-
-  nthreads = omp_get_num_threads()
+  if(debug) write(6,*)"[RTTOV]: Enter direct"
+  if(debug) write(6,*)"[RTTOV]: We assume that this job is excuted with 8 threads as in the K computer."
+  nthreads = 8
 
   IF (nthreads <= 1) THEN
     CALL rttov_direct(                &
@@ -590,33 +575,21 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
 
   DO iprof = 1, nprof 
 
-    joff = (iprof-1_jpim) * nchannels
+    joff = (iprof-1_jpim) * nch
 
     !
     !     OUTPUT RESULTS
     !
-    nprint = 1 + INT((nchannels-1)/10)
+    nprint = 1 + INT((nch-1)/10)
 
-    tmp_btall_out(1:nchannels,iprof)=radiance%bt(1+joff:nchannels+joff) 
-    tmp_btclr_out(1:nchannels,iprof)=radiance%bt_clear(1+joff:nchannels+joff)
+    tmp_btall_out(1:nch,iprof)=radiance%bt(1+joff:nch+joff) 
+    tmp_btclr_out(1:nch,iprof)=radiance%bt_clear(1+joff:nch+joff)
 
-    DO ilev = 1, nlevs
-      tmp_trans_out(ilev,1:nchannels,iprof) = transmission % tau_levels(ilev,1+joff:nchannels+joff)
+    DO ilev = 1, nlevels
+      tmp_trans_out(ilev,1:nch,iprof) = transmission % tau_levels(ilev,1+joff:nch+joff)
      if(debug .and. mod(iprof,50)==0) write(6,'(a,f10.7,i4)')"RTTOV debug trans",tmp_trans_out(ilev,1,iprof)
     ENDDO
 
-!    DO ich = 1, nchannels
-      ! Select transmittance based on channel type (VIS/NIR or IR)
-!      IF (coefs % coef % ss_val_chn(chanprof(j+joff) % chan) == 2) THEN
-!        DO ilev = 1, nlevs
-!         tmp_trans_out(ilev,ich,iprof)=transmission % tau_levels_path1(ilev,joff+ich) 
-!        ENDDO
-!      ELSE
-!        DO ilev = 1, nlevs
-!         tmp_trans_out(ilev,ich,iprof)=transmission % tau_levels(ilev,joff+ich)
-!        ENDDO
-!      ENDIF
-!    ENDDO
 
   ENDDO
 
@@ -643,7 +616,7 @@ subroutine SCALE_RTTOV12_fwd(nchannels,&
         0_jpim,                  &  ! 0 => deallocate
         nprof,                   &
         nchanprof,               &
-        nlevels,                 &
+        nlevels,                   &
         chanprof,                &
         opts,                    &
         profiles,                &

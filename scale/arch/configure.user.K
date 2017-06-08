@@ -45,9 +45,14 @@ TCV       = F
 # -- you should set "H08 = F".
 H08       = F
 
-DIR_RTTOV = /data/share005/honda/RTTOV
-RT_LDFLAGS = -L$(DIR_RTTOV)/lib -lrttov11.2.0_test -lrttov11.2.0_other \
-             -lrttov11.2.0_coef_io -lrttov11.2.0_parallel -lrttov11.2.0_main
+#DIR_RTTOV = /data/share005/honda/RTTOV
+#RT_LDFLAGS = -L$(DIR_RTTOV)/lib -lrttov11.2.0_test -lrttov11.2.0_other \
+#             -lrttov11.2.0_coef_io -lrttov11.2.0_parallel -lrttov11.2.0_main
+#RT_INCLUDE = -I$(DIR_RTTOV)/mod -I$(DIR_RTTOV)/include
+
+DIR_RTTOV = /data/share005/honda/RTTOV12.1
+RT_LDFLAGS = -L$(DIR_RTTOV)/lib -lrttov12_test -lrttov12_other \
+             -lrttov12_coef_io -lrttov12_parallel -lrttov12_main
 RT_INCLUDE = -I$(DIR_RTTOV)/mod -I$(DIR_RTTOV)/include
 
 ifeq ($(TCV),T)

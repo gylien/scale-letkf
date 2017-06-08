@@ -39,9 +39,15 @@ OBSNCEP=
 # for Honda environment
 # -- H08 --
 # -- RTTOV_DIR --
-DIR_RTTOV=/data/share005/honda/RTTOV
-RTTOV_COEF=${DIR_RTTOV}/rtcoef_rttov11/rttov7pred54L/rtcoef_himawari_8_ahi.dat
-RTTOV_SCCOEF=${DIR_RTTOV}/rtcoef_rttov11/cldaer/sccldcoef_himawari_8_ahi.dat
+#DIR_RTTOV=/data/share005/honda/RTTOV
+#RTTOV_COEF=${DIR_RTTOV}/rtcoef_rttov11/rttov7pred54L/rtcoef_himawari_8_ahi.dat
+#RTTOV_SCCOEF=${DIR_RTTOV}/rtcoef_rttov11/cldaer/sccldcoef_himawari_8_ahi.dat
+
+DIR_RTTOV=/data/share005/honda/RTTOV12.1
+RTTOV_COEF=${DIR_RTTOV}/rtcoef_rttov12/rttov7pred54L/rtcoef_himawari_8_ahi.dat
+RTTOV_SCCOEF=${DIR_RTTOV}/rtcoef_rttov12/cldaer/sccldcoef_himawari_8_ahi.dat
+RTTOV_COEFB=${DIR_RTTOV}/rtcoef_rttov12/rttov7pred54L/rtcoef_himawari_8_ahi.bin
+RTTOV_SCCOEFB=${DIR_RTTOV}/rtcoef_rttov12/cldaer_ir/sccldcoef_himawari_8_ahi.bin
 
 DDIR="/volume63/data/ra000015/honda/SCALE-LETKF/scale-5.1.2"
 #DDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-5.1.1"
