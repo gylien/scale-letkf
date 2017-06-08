@@ -839,7 +839,11 @@ else
 
                 if ((BDY_ENS == 1)); then
                   for m in $(seq $fmember); do
-#                    for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}/history.*.nc 2> /dev/null); do
+                    mem=${name_m[$m]}
+                    if [ "$mem" = 'mean' ]; then
+                      mem="$BDY_MEAN"
+                    fi
+#                    for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}/history.*.nc 2> /dev/null); do
 #                      pathin="$ifile"
 #                      if ((BDY_ROTATING == 1)); then
 #                        path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
@@ -852,7 +856,7 @@ else
 #                        echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
 #                      fi
 #                    done
-                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}"
+                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}"
                     if ((BDY_ROTATING == 1)); then
                       path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}"
                     else

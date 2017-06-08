@@ -1,6 +1,6 @@
 include ../configure.user
 
-OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_sort.o common_letkf.o \
+OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_sort.o common_rand.o common_letkf.o \
 	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
           common_nml.o
           #common_precip.o
@@ -30,6 +30,8 @@ netlib.o:	../../common/netlib.f
 netlibblas.o:	../../common/netlibblas.f
 	$(SFC) $(FOPTS) -c $<
 common_sort.o:	../../common/common_sort.f90 common.o
+	$(SFC) $(FOPTS) -c $<
+common_rand.o:	../../common/common_rand.f90
 	$(SFC) $(FOPTS) -c $<
 common_letkf.o:	../../common/common_letkf.f90 common.o common_mtx.o
 	$(SFC) $(FOPTS) -c $<

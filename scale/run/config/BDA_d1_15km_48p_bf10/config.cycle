@@ -5,11 +5,11 @@
 #
 #===============================================================================
 
-STIME='20130712000000'
-ETIME='20130712180000'
+STIME='20130708000000'
+ETIME='20130708000000'
 ISTEP=
 FSTEP=
-TIME_LIMIT='02:40:00'
+TIME_LIMIT='01:00:00'
 
 #===============================================================================
 
@@ -72,6 +72,8 @@ LOG_TYPE=4       # 1:   Only save the log file from the head process
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file
 
+SPRD_OUT=1       # 0: No
+                 # 1: Yes
 RTPS_INFL_OUT=0  # 0: No
                  # 1: Yes
 NOBS_OUT=0       # 0: No
