@@ -2702,7 +2702,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,
   REAL(r_size) :: lat1d(nprof)
   REAL(r_size) :: topo1d(nprof)
   REAL(r_size) :: lsmask1d(nprof)
-  REAL(r_size) :: ztop1d(nprof)
+!  REAL(r_size) :: ztop1d(nprof)
 
 ! -- brightness temp from RTTOV
   REAL(r_size) :: btall_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
@@ -2729,22 +2729,24 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,
 
   if (present(stggrd)) stggrd_ = stggrd
 
-  lon1d(:) = lon(:)
-  lat1d(:) = lat(:)
-
   slev = 1 + KHALO
   elev = nlevh - KHALO
 
 ! -- make profile arrays for RTTOV --
   DO np = 1, nprof ! -- make profiles
 
+    lon1d(np) = lon(np)
+    lat1d(np) = lat(np)
+
+
     CALL itpl_2d(v2d(:,:,iv2dd_skint),ri(np),rj(np),tsfc1d(np)) ! T2 is better??
 !    CALL itpl_2d(v2d(:,:,iv2dd_t2m),ri(np),rj(np),tsfc1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_q2m),ri(np),rj(np),qsfc1d(np))
-    CALL itpl_2d(v2d(:,:,iv2dd_topo),ri(np),rj(np),topo1d(np))
+!    CALL itpl_2d(v2d(:,:,iv2dd_topo),ri(np),rj(np),topo1d(np))
+    CALL itpl_2d(v3d(KHALO+1,:,:,iv3dd_hgt),ri(np),rj(np),topo1d(np)) ! topo is not filled in halo!
     CALL itpl_2d(v2d(:,:,iv2dd_lsmask),ri(np),rj(np),lsmask1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_ps),ri(np),rj(np),psfc1d(np))
-    CALL itpl_2d(v3d(elev,:,:,iv3dd_hgt),ri(np),rj(np),ztop1d(np)) ! height at the column top
+!    CALL itpl_2d(v3d(elev,:,:,iv3dd_hgt),ri(np),rj(np),ztop1d(np)) ! height at the column top
 
 !    call prsadj(yobs,rk-topo,t,q)
 !    if (abs(rk-topo) > PS_ADJUST_THRES) then
@@ -2782,26 +2784,26 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,
 !
 
   CALL SCALE_RTTOV12_fwd(nlev,& ! num of levels
-                       nprof,& ! num of profs
-                       prs2d(elev:slev:-1,1:nprof),& ! (Pa)
-                       tk2d(elev:slev:-1,1:nprof),& ! (K)
-                       qv2d(elev:slev:-1,1:nprof),& ! (kg/kg)
-                       qliq2d(elev:slev:-1,1:nprof),& ! (kg/kg)
-                       qice2d(elev:slev:-1,1:nprof),& ! (kg/kg)
-                       tsfc1d(1:nprof),& ! (K)
-                       qsfc1d(1:nprof),& ! (kg/kg)
-                       psfc1d(1:nprof),& ! (Pa)
-                       usfc1d(1:nprof),& ! (m/s)
-                       vsfc1d(1:nprof),& ! (m/s)
-                       topo1d(1:nprof),& ! (m)
-                       lon1d(1:nprof),& ! (deg)
-                       lat1d(1:nprof),& ! (deg)
-                       lsmask1d(1:nprof),& ! (0-1)
-                       ztop1d(1:nprof), & ! (m)
-                       btall_out(1:nch,1:nprof),& ! (K)
-                       btclr_out(1:nch,1:nprof),& ! (K)
-                       trans_out(nlev:1:-1,1:nch,1:nprof), &
-                       ctop_out(1:nprof))
+                         nprof,& ! num of profs
+                         prs2d(elev:slev:-1,1:nprof),& ! (Pa)
+                         tk2d(elev:slev:-1,1:nprof),& ! (K)
+                         qv2d(elev:slev:-1,1:nprof),& ! (kg/kg)
+                         qliq2d(elev:slev:-1,1:nprof),& ! (kg/kg)
+                         qice2d(elev:slev:-1,1:nprof),& ! (kg/kg)
+                         tsfc1d(1:nprof),& ! (K)
+                         qsfc1d(1:nprof),& ! (kg/kg)
+                         psfc1d(1:nprof),& ! (Pa)
+                         usfc1d(1:nprof),& ! (m/s)
+                         vsfc1d(1:nprof),& ! (m/s)
+                         topo1d(1:nprof),& ! (m)
+                         lon1d(1:nprof),& ! (deg)
+                         lat1d(1:nprof),& ! (deg)
+                         lsmask1d(1:nprof),& ! (0-1)
+                         !ztop1d(1:nprof), & ! (m)
+                         btall_out(1:nch,1:nprof),& ! (K)
+                         btclr_out(1:nch,1:nprof),& ! (K)
+                         trans_out(nlev:1:-1,1:nch,1:nprof), &
+                         ctop_out(1:nprof))
 !
 ! -- Compute max weight level using trans_out 
 ! -- (Transmittance from each user pressure level to Top Of the Atmosphere)

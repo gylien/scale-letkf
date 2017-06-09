@@ -80,6 +80,7 @@ if [ "$1" = '-f' ]; then
   done < "$FILENAME"
 else
   if (($# < 5)); then
+    echo "./test.sh CONFIG JOB PRESET MPI_TYPE WTIME"
     echo "$0: Insufficient arguments" >&2
     exit 1
   fi

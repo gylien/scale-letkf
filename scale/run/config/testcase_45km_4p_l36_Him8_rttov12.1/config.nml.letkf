@@ -53,6 +53,7 @@
 !--NOBS_OUT_BASENAME--
  GROSS_ERROR_TCXY = 1000.0d0, ! test
  GROSS_ERROR_TCP = 1000.0d0, !test
+ GROSS_ERROR_H08 = 1000.0d0, !test
 /
 
 &PARAM_LETKF_PRC
@@ -73,8 +74,16 @@
  H08_VLOCAL_CTOP = .true.,
  H08_BT_MIN = 0.0d0,
  H08_CH_USE = 0,0,1,0,0,0,0,0,0,0,
- H08_BIAS_SIMPLE = .true.,
+ H08_BIAS_SIMPLE = .false.,
  H08_CLDERR_SIMPLE = .true.,
+ H08_CLDERR_CLEAR = 3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0,
+                    3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0,
+ H08_CLDERR_CLOUD = 6.0d0, 6.0d0, 6.0d0, 6.0d0, 6.0d0,
+                    6.0d0, 6.0d0, 6.0d0, 6.0d0, 6.0d0,
+ H08_BIAS_CLEAR = 0.0d0, 0.0d0, 0.4d0, 0.0d0,0.0d0,
+                  0.0d0, 0.0d0, 0.0d0, 0.0d0,0.0d0,
+ H08_BIAS_CLOUD = 0.0d0, 0.0d0, 0.4d0, 0.0d0,0.0d0,
+                  0.0d0, 0.0d0, 0.0d0, 0.0d0,0.0d0,
 /
 
 

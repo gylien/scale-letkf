@@ -12,19 +12,19 @@ subroutine SCALE_RTTOV12_fwd(nlevels,&
                              tmp_qice,&
                              tmp_t2m,&
                              tmp_q2m,&
-                           tmp_p2m,&
-                           tmp_u2m,&
-                           tmp_v2m,&
+                             tmp_p2m,&
+                             tmp_u2m,&
+                             tmp_v2m,&
 !                     & tmp_soze, tmp_soaz, tmp_saze, tmp_saaz,       &
-                           tmp_elev,&
-                           tmp_lon,&
-                           tmp_lat,&
-                           tmp_land,&
-                           tmp_ztop,&
-                           btall_out,& 
-                           btclr_out,& 
-                           trans_out,&
-                           ctop_out)
+                             tmp_elev,&
+                             tmp_lon,&
+                             tmp_lat,&
+                             tmp_land,&
+                           !tmp_ztop,&
+                             btall_out,& 
+                             btclr_out,& 
+                             trans_out,&
+                             ctop_out)
   !
   ! Copyright:
   !    This software was developed within the context of
@@ -131,7 +131,7 @@ subroutine SCALE_RTTOV12_fwd(nlevels,&
   Real(r_size),INTENT(IN) :: tmp_lon(nprof)
   Real(r_size),INTENT(IN) :: tmp_lat(nprof)
   Real(r_size),INTENT(IN) :: tmp_land(nprof)
-  Real(r_size),INTENT(IN) :: tmp_ztop(nprof)
+  !Real(r_size),INTENT(IN) :: tmp_ztop(nprof)
 
 
 
@@ -378,7 +378,7 @@ subroutine SCALE_RTTOV12_fwd(nlevels,&
   do iprof = 1, nprof
 
     ! Pressure (hPa), temp (K), WV (kg/kg)
-    profiles(iprof)%p(elev:slev)=real(tmp_p(1:nlevels,iprof),kind=jprb) * 0.01_jprb  ! (hPa)
+    profiles(iprof)%p(elev:slev)=real(tmp_p(1:nlevels,iprof) * 0.01,kind=jprb) ! (hPa)
     profiles(iprof)%t(elev:slev)=real(tmp_t(1:nlevels,iprof),kind=jprb)
     profiles(iprof)%q(elev:slev)=real(tmp_qv(1:nlevels,iprof),kind=jprb) ! (kg kg-1)
 
@@ -411,7 +411,7 @@ subroutine SCALE_RTTOV12_fwd(nlevels,&
     enddo ! End of check T & Q inputs
 
     ! 2 meter air variables
-    profiles(iprof)%s2m%p=real(tmp_p2m(iprof),kind=jprb) * 0.01_jprb ! (hPa)
+    profiles(iprof)%s2m%p=real(tmp_p2m(iprof) * 0.01,kind=jprb) ! (hPa)
     profiles(iprof)%s2m%t=real(tmp_t2m(iprof),kind=jprb) ! (K)
     profiles(iprof)%s2m%q=real(tmp_q2m(iprof),kind=jprb) ! (kg/kg)
     if(profiles(iprof)%s2m%t < tmin) profiles(iprof)%s2m%t = tmin + tmin * 0.01_jprb
@@ -427,7 +427,7 @@ subroutine SCALE_RTTOV12_fwd(nlevels,&
     profiles(iprof)%s2m%wfetc= 100000.0_jprb
 
     ! Elevation, latitude and longitude
-    profiles(iprof) % elevation = real(tmp_elev(iprof),kind=jprb) * 0.001_jprb ! (km)
+    profiles(iprof) % elevation = real(tmp_elev(iprof)*0.001,kind=jprb) ! (km)
     profiles(iprof) % latitude  = real(tmp_lat(iprof),kind=jprb)
     profiles(iprof) % longitude = real(tmp_lon(iprof),kind=jprb)
 
