@@ -44,6 +44,7 @@ initbaselen=24
 if ((MKINIT == 1)); then
   if ((PNETCDF == 1)); then
     ifile="$(cd $TMPDIR ; ls init_*.nc 2> /dev/null)"
+    mkdir -p $TMPOUT/${STIME}/anal
     if [ -e "$TMPDIR/${ifile}" ]; then
       mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}.init.nc
     fi
