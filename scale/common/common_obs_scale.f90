@@ -2729,22 +2729,23 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,
 
   if (present(stggrd)) stggrd_ = stggrd
 
-  lon1d(:) = lon(:)
-  lat1d(:) = lat(:)
-
   slev = 1 + KHALO
   elev = nlevh - KHALO
 
 ! -- make profile arrays for RTTOV --
   DO np = 1, nprof ! -- make profiles
 
+    lon1d(np) = lon(np)
+    lat1d(np) = lat(np)
+
+
     CALL itpl_2d(v2d(:,:,iv2dd_skint),ri(np),rj(np),tsfc1d(np)) ! T2 is better??
 !    CALL itpl_2d(v2d(:,:,iv2dd_t2m),ri(np),rj(np),tsfc1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_q2m),ri(np),rj(np),qsfc1d(np))
-    CALL itpl_2d(v2d(:,:,iv2dd_topo),ri(np),rj(np),topo1d(np))
+    CALL itpl_2d(v3d(KHALO+1,:,:,iv3dd_hgt),ri(np),rj(np),topo1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_lsmask),ri(np),rj(np),lsmask1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_ps),ri(np),rj(np),psfc1d(np))
-    CALL itpl_2d(v3d(elev,:,:,iv3dd_hgt),ri(np),rj(np),ztop1d(np)) ! height at the column top
+    !CALL itpl_2d(v3d(elev,:,:,iv3dd_hgt),ri(np),rj(np),ztop1d(np)) ! height at the column top
 
 !    call prsadj(yobs,rk-topo,t,q)
 !    if (abs(rk-topo) > PS_ADJUST_THRES) then
