@@ -613,6 +613,9 @@ if ((CYCLE == 0)); then
   set_mem_np $fmember $SCALE_NP $SCALE_NP
   set_mem2node $fmember
   CYCLE=$((parallel_mems / fmember))
+  if ((CYCLE < 1)); then
+    CYCLE=1
+  fi
   cycle_auto=$CYCLE
 fi
 

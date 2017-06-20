@@ -48,12 +48,12 @@ if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'sprd'
       cp -f $TMPOUT/${ATIME}/anal/mean.init.nc $TMPOUT/${ATIME}/diag/infl.nc
     fi
   else
-    for ifile in $(cd $TMPOUT/${ATIME}/anal/mean ; ls init*.nc 2> /dev/null); do
-      if ((ADAPTINFL == 1)) && [ ! -s "$TMPOUT/${ATIME}/diag/infl" ]; then
+    if ((ADAPTINFL == 1)) && [ ! -s "$TMPOUT/${ATIME}/diag/infl" ]; then
+      for ifile in $(cd $TMPOUT/${ATIME}/anal/mean ; ls init*.nc 2> /dev/null); do
         mkdir -p $TMPOUT/${ATIME}/diag/infl
         cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/diag/infl
-      fi
-    done
+      done
+    fi
   fi
 
   if ((ENABLE_PARAM_USER != 1)); then

@@ -441,6 +441,22 @@ while ((time <= ETIME)); do
     fi
   fi
 
+  # additive inflation
+  #-------------------
+  if ((loop == 1 && ADDINFL == 1)); then
+    for m in $(seq $MEMBER); do
+      if ((PNETCDF == 1)); then
+        path="const/addi/${name_m[$m]}.init.nc"
+        echo "${DATA_ADDINFL}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+      else
+        for q in $(seq $mem_np); do
+          path="const/addi/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
+          echo "${DATA_ADDINFL}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      fi
+    done
+  fi
+
   #-------------------
   # stage-out
   #-------------------
@@ -759,15 +775,19 @@ if ((BDY_FORMAT >= 1)); then
 
           if ((BDY_ENS == 1)); then
             for m in $(seq $mtot); do
+              mem=${name_m[$m]}
+              if [ "$mem" = 'mean' ]; then
+                mem="$BDY_MEAN"
+              fi
               if ((PNETCDF_BDY_SCALE == 1)); then
-                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}.history.nc"
+                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}.history.nc"
                 if ((BDY_ROTATING == 1)); then
                   path="bdyorg/${time_bdy}/${time_bdy}/${name_m[$m]}.history.nc"
                 else
                   path="bdyorg/const/${time_bdy}/${name_m[$m]}.history.nc"
                 fi
               else
-                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}/"
+                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}/"
                 if ((BDY_ROTATING == 1)); then
                   path="bdyorg/${time_bdy}/${time_bdy}/${name_m[$m]}/"
                 else

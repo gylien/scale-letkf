@@ -12,6 +12,7 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common_mtx.o     \
               $(COMMON_DIR)/netlib.o         \
               $(COMMON_DIR)/common_sort.o    \
+              $(COMMON_DIR)/common_rand.o    \
               $(COMMON_DIR)/common_letkf.o   \
               $(COMMON_DIR)/common_ncio.o    \
               $(COMMON_DIR)/common_scale.o     \

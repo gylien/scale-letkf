@@ -61,10 +61,6 @@
  WRF_FILE_TYPE       = .true.,
 /
 
-!&PARAM_INPUT_ATOM_WRF
-! use_buildrho_real = .true.,
-!/
-
 #################################################
 #
 # model configuration: process

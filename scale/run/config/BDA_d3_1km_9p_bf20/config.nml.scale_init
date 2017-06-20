@@ -61,10 +61,6 @@
  WRF_FILE_TYPE       = .true.,
 /
 
-!&PARAM_INPUT_ATOM_WRF
-! use_buildrho_real = .true.,
-!/
-
 #################################################
 #
 # model configuration: process
@@ -151,7 +147,7 @@
  ATMOS_PHY_MP_TYPE = "TOMITA08",
  ATMOS_PHY_RD_TYPE = "MSTRNX",
  ATMOS_PHY_SF_TYPE = "COUPLE",
- ATMOS_PHY_TB_TYPE = "HYBRID",
+ ATMOS_PHY_TB_TYPE = "MYNN",
 /
 
 &PARAM_OCEAN

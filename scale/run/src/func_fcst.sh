@@ -633,15 +633,19 @@ if ((BDY_FORMAT >= 1)); then
 
               if ((BDY_ENS == 1)); then
                 for m in $(seq $fmember); do
+                  mem=${name_m[$m]}
+                  if [ "$mem" = 'mean' ]; then
+                    mem="$BDY_MEAN"
+                  fi
                   if ((PNETCDF_BDY_SCALE == 1)); then
-                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}.history.nc"
+                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}.history.nc"
                     if ((BDY_ROTATING == 1)); then
                       path="bdyorg/${time_bdy}/${time_bdy}/${name_m[$m]}.history.nc"
                     else
                       path="bdyorg/const/${time_bdy}/${name_m[$m]}.history.nc"
                     fi
                   else
-                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${name_m[$m]}/"
+                    pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}/"
                     if ((BDY_ROTATING == 1)); then
                       path="bdyorg/${time_bdy}/${time_bdy}/${name_m[$m]}/"
                     else

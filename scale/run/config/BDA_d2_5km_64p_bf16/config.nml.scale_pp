@@ -29,7 +29,7 @@
 
 &PARAM_CNVTOPO
 !--CNVTOPO_name--
- CNVTOPO_SMOOTH_MAXSLOPE = 10.00D0,
+ CNVTOPO_SMOOTH_MAXSLOPE = 4.00D0,
  CNVTOPO_SMOOTH_local    = .true.,
  CNVTOPO_SMOOTH_itelim   = 10000,
  CNVTOPO_copy_parent     = .true.,

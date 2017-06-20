@@ -113,6 +113,7 @@ if ((PNETCDF == 1)); then
   ANAL_OUT_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@.init"
   INFL_MUL_IN_BASENAME="${TMPOUT}/${ATIME}/diag/infl"
   INFL_MUL_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/infl"
+  INFL_ADD_IN_BASENAME="${TMPOUT}/const/addi/@@@@.init"
   RELAX_SPREAD_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/rtps"
   NOBS_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/nobs"
 else
@@ -123,6 +124,7 @@ else
   ANAL_OUT_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@/init"
   INFL_MUL_IN_BASENAME="${TMPOUT}/${ATIME}/diag/infl/init"
   INFL_MUL_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/infl/init"
+  INFL_ADD_IN_BASENAME="${TMPOUT}/const/addi/@@@@/init"
   RELAX_SPREAD_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/rtps/init"
   NOBS_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/nobs/init"
 fi
@@ -154,6 +156,7 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--INFL_MUL_ADAPTIVE--/a INFL_MUL_ADAPTIVE = ${INFL_MUL_ADAPTIVE}," \
         -e "/!--INFL_MUL_IN_BASENAME--/a INFL_MUL_IN_BASENAME = \"${INFL_MUL_IN_BASENAME}\"," \
         -e "/!--INFL_MUL_OUT_BASENAME--/a INFL_MUL_OUT_BASENAME = \"${INFL_MUL_OUT_BASENAME}\"," \
+        -e "/!--INFL_ADD_IN_BASENAME--/a INFL_ADD_IN_BASENAME = \"${INFL_ADD_IN_BASENAME}\"," \
         -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RTPS_INFL_OUT_TF}," \
         -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${RELAX_SPREAD_OUT_BASENAME}\"," \
         -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
