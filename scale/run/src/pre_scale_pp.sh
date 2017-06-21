@@ -83,10 +83,9 @@ else
   CONVERT_LANDUSE='.false.'
 fi
 
-USE_NESTING='.false.'
-OFFLINE='.true.'
+OFFLINE_PARENT_BASENAME=
 if ((BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
-  USE_NESTING='.true.'
+  OFFLINE_PARENT_BASENAME="$COPYTOPO"
 fi
 
 if [ "$SCPCALL" = 'cycle' ]; then
@@ -113,8 +112,7 @@ cat $TMPDAT/conf/config.nml.scale_pp | \
         -e "/!--LU100M_IN_DIR--/a LU100M_IN_DIR = \"${TMPDAT_CONSTDB}/landuse/LU100M/Products\"," \
         -e "/!--COPYTOPO_IN_BASENAME--/a COPYTOPO_IN_BASENAME = \"${COPYTOPO}\"," \
         -e "/!--LATLON_CATALOGUE_FNAME--/a LATLON_CATALOGUE_FNAME = \"${CATALOGUE}\"," \
-        -e "/!--USE_NESTING--/a USE_NESTING = $USE_NESTING," \
-        -e "/!--OFFLINE--/a OFFLINE = $OFFLINE," \
+        -e "/!--OFFLINE_PARENT_BASENAME--/a OFFLINE_PARENT_BASENAME = \"${OFFLINE_PARENT_BASENAME}\"," \
     > $TMPDIR/pp.conf
 
 #===============================================================================

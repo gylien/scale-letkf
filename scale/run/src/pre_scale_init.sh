@@ -86,17 +86,14 @@ fi
 if ((BDY_FORMAT == 1)); then
   BASENAME_ORG="${TMPDIR}/bdydata"
   FILETYPE_ORG='SCALE-RM'
-  USE_NESTING='.true.'
   LATLON_CATALOGUE_FNAME="$BDYORG/latlon_domain_catalogue.txt"
 elif ((BDY_FORMAT == 2)); then
   BASENAME_ORG="${TMPDIR}/bdydata"
   FILETYPE_ORG='WRF-ARW'
-  USE_NESTING='.false.'
   LATLON_CATALOGUE_FNAME=
 elif ((BDY_FORMAT == 4)); then
   BASENAME_ORG="${TMPDIR}/gradsbdy.conf"
   FILETYPE_ORG='GrADS'
-  USE_NESTING='.false.'
   LATLON_CATALOGUE_FNAME=
 else
   echo "[Error] $0: Unsupport boundary file types" >&2
@@ -107,6 +104,15 @@ NUMBER_OF_FILES=0
 for time_bdy in $BDY_TIME_LIST; do
   NUMBER_OF_FILES=$((NUMBER_OF_FILES+1))
 done
+
+OFFLINE_PARENT_BASENAME=
+if ((BDY_FORMAT == 1)); then
+  if ((NUMBER_OF_FILES <= 1)); then
+    OFFLINE_PARENT_BASENAME="${TMPDIR}/bdydata"
+  else
+    OFFLINE_PARENT_BASENAME="${TMPDIR}/bdydata_$(printf %05d 0)"
+  fi
+fi
 
 i=0
 for time_bdy in $BDY_TIME_LIST; do
@@ -198,8 +204,7 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--NUMBER_OF_SKIP_TSTEPS--/a NUMBER_OF_SKIP_TSTEPS = ${NUMBER_OF_SKIP_TSTEPS}," \
         -e "/!--BOUNDARY_UPDATE_DT--/a BOUNDARY_UPDATE_DT = $BDYINT.D0," \
         -e "/!--LATLON_CATALOGUE_FNAME--/a LATLON_CATALOGUE_FNAME = \"${LATLON_CATALOGUE_FNAME}\"," \
-        -e "/!--USE_NESTING--/a USE_NESTING = $USE_NESTING," \
-        -e "/!--OFFLINE--/a OFFLINE = .true.," \
+        -e "/!--OFFLINE_PARENT_BASENAME--/a OFFLINE_PARENT_BASENAME = \"${OFFLINE_PARENT_BASENAME}\"," \
     > $TMPDIR/init.conf
 
 if [ -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
