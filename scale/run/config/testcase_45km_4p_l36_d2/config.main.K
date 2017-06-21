@@ -20,7 +20,7 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin"                                            # Directory of the SCALE model executables
+SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="$DDIR/../../database"
 
 DATA_TOPO="$DDIR/../../database/topo_prep/testcase_45km_4p_bf10"

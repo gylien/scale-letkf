@@ -18,7 +18,7 @@ OUTDIR="$DDIR/exp/testcase_45km_4p_l36_pnetcdf_bdyprep" # Directory for SCALE-LE
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin"                                            # Directory of the SCALE model executables
+SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
 DATA_TOPO="$DDIR/exp/testcase_45km_4p_l36_pnetcdf_data"              # Directory of the prepared topo files
