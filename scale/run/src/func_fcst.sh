@@ -216,13 +216,18 @@ ${SCRP_DIR}/config.nml.scale_init|${DAT_SUBDIR}/conf/config.nml.scale_init
 ${SCRP_DIR}/config.nml.scale|${DAT_SUBDIR}/conf/config.nml.scale
 ${SCRP_DIR}/config.nml.ensmodel|${DAT_SUBDIR}/conf/config.nml.ensmodel
 EOF
-#${MODELDIR}/scale-rm_pp|${DAT_SUBDIR}/exec/scale-rm_pp
-#${MODELDIR}/scale-rm_init|${DAT_SUBDIR}/exec/scale-rm_init
-#${MODELDIR}/scale-rm|${DAT_SUBDIR}/exec/scale-rm
+#${SCALEDIR}/bin/scale-rm_pp|${DAT_SUBDIR}/exec/scale-rm_pp
+#${SCALEDIR}/bin/scale-rm_init|${DAT_SUBDIR}/exec/scale-rm_init
+#${SCALEDIR}/bin/scale-rm|${DAT_SUBDIR}/exec/scale-rm
 
 cat >> ${STAGING_DIR}/${STGINLIST_CONSTDB} << EOF
-${DATADIR}/rad/|${DAT_SUBDIR}/rad/
-${DATADIR}/land/|${DAT_SUBDIR}/land/
+${SCALEDIR}/scale-rm/test/data/rad/cira.nc|${DAT_SUBDIR}/rad/cira.nc
+${SCALEDIR}/scale-rm/test/data/rad/PARAG.29|${DAT_SUBDIR}/rad/PARAG.29
+${SCALEDIR}/scale-rm/test/data/rad/PARAPC.29|${DAT_SUBDIR}/rad/PARAPC.29
+${SCALEDIR}/scale-rm/test/data/rad/rad_o3_profs.txt|${DAT_SUBDIR}/rad/rad_o3_profs.txt
+${SCALEDIR}/scale-rm/test/data/rad/VARDATA.RM29|${DAT_SUBDIR}/rad/VARDATA.RM29
+${SCALEDIR}/scale-rm/test/data/rad/MIPAS/|${DAT_SUBDIR}/rad/MIPAS/
+${SCALEDIR}/scale-rm/test/data/land/|${DAT_SUBDIR}/land/
 EOF
 
 if [ -e "${SCRP_DIR}/config.nml.scale_user" ]; then

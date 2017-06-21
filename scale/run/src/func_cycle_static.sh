@@ -31,8 +31,13 @@ EOF
 # database
 
 cat >> ${STAGING_DIR}/${STGINLIST_CONSTDB} << EOF
-${DATADIR}/rad/|dat/rad/
-${DATADIR}/land/|dat/land/
+${SCALEDIR}/scale-rm/test/data/rad/cira.nc|dat/rad/cira.nc
+${SCALEDIR}/scale-rm/test/data/rad/PARAG.29|dat/rad/PARAG.29
+${SCALEDIR}/scale-rm/test/data/rad/PARAPC.29|dat/rad/PARAPC.29
+${SCALEDIR}/scale-rm/test/data/rad/rad_o3_profs.txt|dat/rad/rad_o3_profs.txt
+${SCALEDIR}/scale-rm/test/data/rad/VARDATA.RM29|dat/rad/VARDATA.RM29
+${SCALEDIR}/scale-rm/test/data/rad/MIPAS/|dat/rad/MIPAS/
+${SCALEDIR}/scale-rm/test/data/land/|dat/land/
 EOF
 
 ## H08

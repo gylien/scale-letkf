@@ -72,6 +72,10 @@ RUN_LEVEL=${RUN_LEVEL:-0}
 
 INDIR="${INDIR:-$OUTDIR}"
 
+if [ -z "$SCALEDIR" ] && [ -n "$MODELDIR" ]; then # for backward compatibility
+  SCALEDIR="${MODELDIR}/.."                       #
+fi                                                #
+
 DATA_TOPO="${DATA_TOPO:-$INDIR}"
 DATA_LANDUSE="${DATA_LANDUSE:-$INDIR}"
 DATA_BDY_SCALE_PREP="${DATA_BDY_SCALE_PREP:-$INDIR}"

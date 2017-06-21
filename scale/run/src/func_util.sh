@@ -983,7 +983,7 @@ backup_exp_setting () {
 # Other input variables:
 #   $OUTDIR
 #   $SCRP_DIR
-#   $MODELDIR
+#   $SCALEDIR
 #   $STIME
 #-------------------------------------------------------------------------------
 
@@ -1022,7 +1022,7 @@ for p in ${JOB_LOG_TYPES}; do
 done
 
 ( cd $SCRP_DIR && git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}/version )
-( cd $MODELDIR && git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}/version )
+( cd $SCALEDIR/scale-rm && git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}/version )
 
 return 0
 
