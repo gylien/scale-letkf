@@ -142,7 +142,7 @@ cat > $jobscrp << EOF
 #PJM --mpi "proc=${totalnp}"
 #PJM --mpi assign-online-node
 
-. /work/system/Env_base_1.2.0-20-1
+. /work/system/Env_base_1.2.0-22
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 

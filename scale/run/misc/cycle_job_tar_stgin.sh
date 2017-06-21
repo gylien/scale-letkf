@@ -19,7 +19,7 @@
 #PJM --stgout-dir "rank=* %r:./out/20130713060030/log/obsope /volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/set_3nest_d3_100m_100mem_720p/d3_100m_100mem_225/20130713060030/log/obsope recursive=3"
 #PJM --stgout-dir "rank=* %r:./out/20130713060030/log/letkf /volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/set_3nest_d3_100m_100mem_720p/d3_100m_100mem_225/20130713060030/log/letkf recursive=3"
 
-. /work/system/Env_base_1.2.0-20-1
+. /work/system/Env_base_1.2.0-22
 export OMP_NUM_THREADS=8
 export PARALLEL=8
 
