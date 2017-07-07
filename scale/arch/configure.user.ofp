@@ -8,8 +8,8 @@ SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
-NETCDF_INC = $(NETCDF_INCLUDE)
-NETCDF_LIB = $(NETCDF_LIBS)
+NETCDF_INC = $(SCALE_NETCDF_INCLUDE)
+NETCDF_LIB = $(SCALE_NETCDF_LIBS)
 
 LAPACK_LIB = -mkl=sequential
 
