@@ -216,6 +216,7 @@ SUBROUTINE set_letkf_obs
           obsda%qc(n1:n2) = obsda_ext%qc
 #ifdef H08
           obsda%lev(n1:n2) = obsda_ext%lev
+          obsda%val2(n1:n2) = obsda_ext%val2
 #endif
         else
 #ifdef DEBUG
@@ -240,6 +241,7 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
           if (im <= MEMBER) then ! only consider lev from members, not from the means
             obsda%lev(n1:n2) = obsda%lev(n1:n2) + obsda_ext%lev
+            obsda%val2(n1:n2) = obsda%val2(n1:n2) + obsda_ext%val2
           end if
 #endif
         end if
@@ -275,8 +277,10 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
     if (nprocs_e > 1) then
       call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
     end if
     obsda%lev(n1:n2) = obsda%lev(n1:n2) / REAL(MEMBER,r_size)
+    obsda%val2(n1:n2) = obsda%val2(n1:n2) / REAL(MEMBER,r_size)
 #endif
 
     call mpi_timer('set_letkf_obs:read_external_obs_allreduce:', 2)
