@@ -177,7 +177,7 @@ subroutine set_common_mpi_scale
         do i = 1, nlon
           ri = real(i + IHALO, r_size)
           rj = real(j + JHALO, r_size)
-          call MPRJ_xy2lonlat((ri-1.0d0) * DX + GRID_CX(1), (rj-1.0d0) * DY + GRID_CY(1), lon2d(i,j), lat2d(i,j))
+          call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1), lon2d(i,j), lat2d(i,j))
           lon2d(i,j) = lon2d(i,j) * rad2deg
           lat2d(i,j) = lat2d(i,j) * rad2deg
         end do

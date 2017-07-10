@@ -277,8 +277,8 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
   SELECT CASE (elm)
   CASE(id_u_obs,id_v_obs)  ! U,V
     if (stggrd_ == 1) then
-      CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5,rj,u)  !###### should modity itpl_3d to prevent '1.0' problem....??
-      CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5,v)  !######
+      CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,u)  !###### should modity itpl_3d to prevent '1.0' problem....??
+      CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,v)  !######
     else
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
@@ -357,9 +357,9 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   qc = iqc_good
 
   if (stggrd_ == 1) then
-    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5d0,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
-    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5d0,vr)  !######
-    CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk-0.5d0,ri,rj,wr)  !######
+    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
+    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,vr)  !######
+    CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk-0.5_r_size,ri,rj,wr)  !######
   else
     CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,ur)
     CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,vr)
