@@ -85,7 +85,7 @@ fi
 
 echo "[$(datetime_now)] Determine the staging list"
 
-STAGING_DIR="$TMPS/staging"
+STAGING_DIR="$TMPSL/staging"
 
 safe_init_tmpdir $STAGING_DIR
 staging_list
@@ -201,6 +201,7 @@ finalization
 
 if ((CLEAR_TMP == 1)); then
   safe_rm_tmpdir $TMPS
+  safe_rm_tmpdir $TMPSL
 fi
 
 #===============================================================================

@@ -109,6 +109,7 @@ finalization
 
 if ((CLEAR_TMP == 1)); then
   safe_rm_tmpdir $TMPS
+  safe_rm_tmpdir $TMPSL
 fi
 
 #===============================================================================

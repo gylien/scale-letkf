@@ -140,6 +140,7 @@ TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same
 
 TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
+#TMPSL="/tmp/gylien/$TMPSUBDIR" # Temporary directory only on the server node and on a local file system
 #TMPL=
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
