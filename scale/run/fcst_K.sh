@@ -27,7 +27,7 @@ job='fcst'
 . src/func_util.sh || exit $?
 . src/func_${job}.sh || exit $?
 
-STAGING_DIR="$TMPS/staging"
+STAGING_DIR="$TMPSL/staging"
 NODEFILE_DIR="$TMPS/node"
 
 #-------------------------------------------------------------------------------
@@ -198,6 +198,7 @@ archive_log
 
 if ((CLEAR_TMP == 1)); then
   safe_rm_tmpdir $TMPS
+  safe_rm_tmpdir $TMPSL
 fi
 
 #===============================================================================

@@ -70,6 +70,10 @@ RUN_LEVEL=${RUN_LEVEL:-0}
 
 #-------------------------------------------------------------------------------
 
+TMPSL="${TMPSL:-$TMPS}"
+
+#-------------------------------------------------------------------------------
+
 INDIR="${INDIR:-$OUTDIR}"
 
 if [ -z "$SCALEDIR" ] && [ -n "$MODELDIR" ]; then # for backward compatibility
@@ -124,6 +128,8 @@ else
   NNODES_APPAR=$NNODES
   PPN_APPAR=$PPN
 fi
+
+CLEAR_TMP=${CLEAR_TMP:-1}
 
 #===============================================================================
 # Dependent variables
