@@ -11,7 +11,7 @@ PRESET='K_rankdir'                          # 'K' or 'K_rankdir' or 'K_micro'
 
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d4_250m_1461" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d4_250m_2481re" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -20,9 +20,9 @@ MODELDIR="$DIR/../../bin"                               # Directory of the SCALE
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO=
-DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_1303/const/topo"
+DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_312/const/topo"
 DATA_LANDUSE=
-DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_1303"
+DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_312"
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
@@ -32,6 +32,9 @@ OBSNCEP=                                                 # directory of observat
 
 #===============================================================================
 # model/data file options
+
+DET_RUN=1               # 0: Disable the deterministic run
+                        # 1: Enable  the deterministic run
 
 TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
@@ -47,6 +50,9 @@ BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain sett
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
+                        # 4: GrADS         (requires compatible 'config.nml.scale_init')
+BDY_SINGLE_FILE=0       # 0: Length of a boundary file = $BDYCYCLE_INT (e.g., files made by data assimilation cycles)
+                        # 1: Length of a boundary file is long enough so that only a single boundary file is used for each forecast
 BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
 
 BDY_ENS=1               # 0: Fixed boundary files for all memebers
@@ -59,14 +65,16 @@ BDYCYCLE_INT=300
 
 PARENT_REF_TIME=20130713060000
 
-OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
-                        # 1: Update the ocean variables every cycle
-OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
-                        # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
+ENABLE_PARAM_USER=1     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
+                        # 1: Enable the 'PARAM_USER' section of the SCALE namelist (require 'config.nml.scale_user' and customized version of SCALE)
 
-LAND_INPUT=1            # 0: No land input (use cycling land variables)
+OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
+                        # 1: Update the ocean variables every cycle
+OCEAN_FORMAT=0          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+                        # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
+LAND_INPUT=0            # 0: No land input (use cycling land variables)
                         # 1: Update the land variables every cycle
-LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+LAND_FORMAT=0           # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=2
@@ -86,7 +94,7 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=100         # Ensemble size
 
-NNODES=3636        # Number of nodes
+NNODES=3672        # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -94,8 +102,6 @@ THREADS=8          # Number of threads per process
 SCALE_NP=36        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
-
-ENABLE_SET=0       ######
 
 #===============================================================================
 # Temporary directories to store runtime files

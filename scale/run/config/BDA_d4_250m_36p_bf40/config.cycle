@@ -36,6 +36,7 @@ OUT_OPT=5        # 1:   o         o       o         o       o    o
                  # 4:   o         o       o
                  # 5:   o         *       o                               * = every $OUT_CYCLE_SKIP cycles and the last cycle
                  # 6:   o         **      o                               ** = only the last cycle
+                 # 7:   o         **
 
 OUT_CYCLE_SKIP=5
 
@@ -72,6 +73,8 @@ LOG_TYPE=4       # 1:   Only save the log file from the head process
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file
 
+SPRD_OUT=1       # 0: No
+                 # 1: Yes
 RTPS_INFL_OUT=1  # 0: No
                  # 1: Yes
 NOBS_OUT=1       # 0: No
