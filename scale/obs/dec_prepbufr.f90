@@ -2,9 +2,18 @@ PROGRAM dec_prepbufr
 !
 ! NOTE: output goes to fort.90
 !
-  USE common
-  USE common_scale
-  USE common_obs_scale
+  USE common,           ONLY : r_dble, &
+                               r_sngl, &
+                               t0c
+
+  USE common_nml,       ONLY : nobtype
+  !USE common_scale
+  USE common_obs_scale, ONLY : obtypelist, &
+                               id_q_obs, &
+                               id_t_obs, &
+                               id_u_obs, &
+                               id_v_obs, &
+                               id_ps_obs
 
   IMPLICIT NONE
 
@@ -72,7 +81,7 @@ PROGRAM dec_prepbufr
         EXIT
       END IF
     END DO
-    wk(7) = REAL(n)
+    wk(7) = REAL(n, r_sngl)
 !    IF(n /= 15) CYCLE      ! for debugging
     !
     ! station location (lon, lat)
