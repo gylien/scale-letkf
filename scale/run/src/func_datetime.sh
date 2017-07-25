@@ -2,7 +2,6 @@
 #===============================================================================
 #
 #  Date and time utilities
-#  May 2014, Guo-Yuan Lien
 #
 #  *Require source 'config.main' first.
 #
@@ -42,7 +41,7 @@ datetime () {
 #   YYYYMMDDHHIISS  Resultant full timestamp
 #-------------------------------------------------------------------------------
 
-if [ "$#" -lt 1 ]; then
+if (($# < 1)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." 1>&2
   exit 1
 fi
@@ -70,7 +69,7 @@ SS="${SS:-00}"
 
 if [ "$Unix_date_cmd" -eq 0 ]; then
 
-  if [ "$STG_TYPE" = 'K' ] || [ "$STG_TYPE" = 'K_rankdir' ]; then
+  if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
     local datetime_prog="$TMPDAT_DIR/exec/datetime"
   else
     local datetime_prog="$COMMON_DIR/datetime"
@@ -131,7 +130,7 @@ datetime_fmt () {
 #                     SS:   second
 #-------------------------------------------------------------------------------
 
-if [ "$#" -lt 1 ]; then
+if (($# < 1)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." 1>&2
   exit 1
 fi
@@ -154,6 +153,40 @@ echo "${YYYY}-${MM}-${DD} ${HH}:${II}:${SS}"
 
 #===============================================================================
 
+datetime_scale () {
+#-------------------------------------------------------------------------------
+# Print formatted date and time
+#
+# Usage: datetime_fmt YYYY[MMDDHHIISS]
+#
+#   YYYYMMDDHHIISS  Reference (partial) timestamp
+#                     YYYY: year
+#                     MM:   month
+#                     DD:   day
+#                     HH:   hour
+#                     II:   minute
+#                     SS:   second
+#-------------------------------------------------------------------------------
+
+if (($# < 1)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." 1>&2
+  exit 1
+fi
+
+local YYYYMMDDHHIISS=$(datetime $1)
+
+#-------------------------------------------------------------------------------
+
+local YYYYMMDD="${YYYYMMDDHHIISS:0:8}"
+local HHIISS="${YYYYMMDDHHIISS:8:6}"
+
+echo "${YYYYMMDD}-${HHIISS}.000"
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
 datetime_grads () {
 #-------------------------------------------------------------------------------
 # Print formatted date and time for GrADS
@@ -168,7 +201,7 @@ datetime_grads () {
 #                   II:   minute
 #-------------------------------------------------------------------------------
 
-if [ "$#" -lt 1 ]; then
+if (($# < 1)); then
   echo "[Error] $FUNCNAME: Insufficient arguments." 1>&2
   exit 1
 fi

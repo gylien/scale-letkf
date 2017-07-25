@@ -23,13 +23,13 @@ function print_summary () {
   if ((NTEST > 0)); then
     echo
     echo "TEST SUMMARY:"
-    echo "==================================================================================="
-    echo "Config                        Job    Preset    MPI_type  -> Time(s)  Result"
-    echo "-----------------------------------------------------------------------------------"
+    echo "=========================================================================================="
+    echo "Config                               Job    Preset    MPI_type  -> Time(s)  Result"
+    echo "------------------------------------------------------------------------------------------"
     for j in $(seq $NTEST); do
-      printf "%-30s%-7s%-10s%-10s-> %-9s%-15s\n" "${CONFIG[$j]}" "${SCPNAME[$j]}" "${PRESET[$j]}" "${MPI_TYPE[$j]}" "${Rtime[$j]}" "${Rstatus[$j]}"
+      printf "%-37s%-7s%-10s%-10s-> %-9s%-15s\n" "${CONFIG[$j]}" "${SCPNAME[$j]}" "${PRESET[$j]}" "${MPI_TYPE[$j]}" "${Rtime[$j]}" "${Rstatus[$j]}"
     done
-    echo "==================================================================================="
+    echo "=========================================================================================="
 
     pass=0
     fail=0
@@ -216,7 +216,7 @@ for i in $(seq $NTEST); do
   cat $stderr
   echo "========================================"
 
-  if [ -z "$(tail -n 1 $stderr | grep "Finish ${SCPNAME[$i]}.sh")" ]; then
+  if [ -z "$(tail -n 1 $stderr | grep "Finish")" ]; then
     print_result
     continue
   fi

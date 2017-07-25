@@ -52,10 +52,14 @@ SLOT_BASE="$1"
 #  ln -fs $TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat $TMPDIR
 #fi
 
+IO_AGGREGATE=".false"
+if ((PNETCDF == 1)); then
+  IO_AGGREGATE=".true."
+fi
+
 OBS_IN_NAME_LIST=
 for iobs in $(seq $OBSNUM); do
   if [ "${OBSNAME[$iobs]}" != '' ]; then
-#    ln -fs $OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat $TMPDIR/${OBSNAME[$iobs]}.dat
     OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat', "
   fi
 done
@@ -74,6 +78,12 @@ if ((DET_RUN == 1)); then
   DET_RUN_TF='.true.'
 fi
 
+if ((PNETCDF == 1)); then
+  HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@.history"
+else
+  HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@/history"
+fi
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.obsope | \
@@ -83,20 +93,23 @@ cat $TMPDAT/conf/config.nml.obsope | \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
         -e "/!--OBSDA_OUT--/a OBSDA_OUT = .true." \
-        -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = '${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext'," \
-        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = '${TMPOUT}/${STIME}/hist/@@@@/history'," \
+        -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext\"," \
+        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = \"${HISTORY_IN_BASENAME}\"," \
         -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \
         -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
         -e "/!--SLOT_BASE--/a SLOT_BASE = $SLOT_BASE," \
         -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = $LTIMESLOT.D0," \
-        -e "/!--NNODES--/a NNODES = $NNODES," \
-        -e "/!--PPN--/a PPN = $PPN," \
+        -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
+        -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
+        -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
     > $TMPDIR/obsope.conf
 
-# These parameters are not important for obsope
-cat $TMPDAT/conf/config.nml.scale >> $TMPDIR/obsope.conf
+# Most of these parameters are not important for obsope
+cat $TMPDAT/conf/config.nml.scale | \
+    sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+    >> $TMPDIR/obsope.conf
 
 #===============================================================================
 

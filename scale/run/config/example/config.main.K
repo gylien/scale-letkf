@@ -19,7 +19,7 @@ OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # Directory for SCALE-LETKF output
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin"                                            # Directory of the SCALE model executables
+SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
@@ -37,6 +37,13 @@ OBSNCEP=
 
 #===============================================================================
 # model/data file options
+
+PNETCDF=1               # 0: Do not use PnetCDF
+                        # 1: Use PnetCDF
+
+PNETCDF_BDY_SCALE=      # Use PNETCDF I/O for the parent domain SCALE data? (default: $PNETCDF)
+                        # 0: Do not use PnetCDF
+                        # 1: Use PnetCDF
 
 DET_RUN=0               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
@@ -110,36 +117,23 @@ SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
-#ENABLE_SET=1       ######
-
 #===============================================================================
 # Temporary directories to store runtime files
-
-DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
-                            #  1: in $TMPDAT
-                            #  2: in $TMPOUT
-
-DISK_MODE_TOPO_LANDUSE_DB=2
-
-DISK_MODE_DATA_BDY=2
-
-DISK_MODE_DATA_TOPO=2
-DISK_MODE_DATA_LANDUSE=2
-DISK_MODE_DATA_BDYPREP=2
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
 
-#SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
-#                            #  0: No
-#                            #  1: Yes
+IO_ARB=0                    # Use I/O arbitrator?
+                            # 0: No
+                            # 1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
 TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
+#TMPSL="/tmp/gylien/$TMPSUBDIR" # Temporary directory only on the server node and on a local file system
 #TMPL=
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
@@ -157,7 +151,7 @@ SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 
-SCP_THREAD=8
+STAGE_THREAD=8
 TAR_THREAD=8
 
 PYTHON="python"

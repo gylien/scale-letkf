@@ -86,17 +86,23 @@ if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ### 5-5" >&2
 fi
 
-mkdir -p $TMPOUT/const/topo
-if ((LANDUSE_UPDATE != 1)); then
-  mkdir -p $TMPOUT/const/landuse
+mkdir -p $TMPOUT/const
+mkdir -p $TMPOUT/const/log
+if ((PNETCDF != 1)); then
+  mkdir -p $TMPOUT/const/topo
+  if ((LANDUSE_UPDATE != 1)); then
+    mkdir -p $TMPOUT/const/landuse
+  fi
 fi
 
 if [ "$SCPCALL" = 'cycle' ]; then
   time=$STIME
   atime=$(datetime $time $LCYCLE s)
   while ((time <= ETIME)); do
-    if ((LANDUSE_UPDATE == 1)); then
-      mkdir -p $TMPOUT/${time}/landuse
+    if ((PNETCDF != 1)); then
+      if ((LANDUSE_UPDATE == 1)); then
+        mkdir -p $TMPOUT/${time}/landuse
+      fi
     fi
     mkdir -p $TMPOUT/${time}/log/scale_pp
     mkdir -p $TMPOUT/${time}/log/scale_init
@@ -111,8 +117,10 @@ elif [ "$SCPCALL" = 'fcst' ]; then
   lcycles=$((LCYCLE * CYCLE_SKIP))
   time=$STIME
   while ((time <= ETIME)); do
-    if ((LANDUSE_UPDATE == 1)); then
-      mkdir -p $TMPOUT/${time}/landuse
+    if ((PNETCDF != 1)); then
+      if ((LANDUSE_UPDATE == 1)); then
+        mkdir -p $TMPOUT/${time}/landuse
+      fi
     fi
     mkdir -p $TMPOUT/${time}/log/${SCPCALL}_scale_pp
     mkdir -p $TMPOUT/${time}/log/${SCPCALL}_scale_init

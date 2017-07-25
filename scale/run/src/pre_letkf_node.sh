@@ -55,10 +55,14 @@ NOBS_OUT="${1:-0}"
 
 #===============================================================================
 
+IO_AGGREGATE=".false"
+if ((PNETCDF == 1)); then
+  IO_AGGREGATE=".true."
+fi
+
 OBS_IN_NAME_LIST=
 for iobs in $(seq $OBSNUM); do
   if [ "${OBSNAME[$iobs]}" != '' ]; then
-#    ln -fs $OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat $TMPDIR/${OBSNAME[$iobs]}.dat
     OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat', "
   fi
 done
@@ -101,6 +105,30 @@ if ((NOBS_OUT == 1)); then
   NOBS_OUT_TF='.true.'
 fi
 
+if ((PNETCDF == 1)); then
+  HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@.history"
+  GUES_IN_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@.init"
+  GUES_MEAN_INOUT_BASENAME="${TMPOUT}/${ATIME}/gues/mean.init"
+  GUES_SPRD_OUT_BASENAME="${TMPOUT}/${ATIME}/gues/sprd.init"
+  ANAL_OUT_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@.init"
+  INFL_MUL_IN_BASENAME="${TMPOUT}/${ATIME}/diag/infl"
+  INFL_MUL_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/infl"
+  INFL_ADD_IN_BASENAME="${TMPOUT}/const/addi/@@@@.init"
+  RELAX_SPREAD_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/rtps"
+  NOBS_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/nobs"
+else
+  HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@/history"
+  GUES_IN_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@/init"
+  GUES_MEAN_INOUT_BASENAME="${TMPOUT}/${ATIME}/gues/mean/init"
+  GUES_SPRD_OUT_BASENAME="${TMPOUT}/${ATIME}/gues/sprd/init"
+  ANAL_OUT_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@/init"
+  INFL_MUL_IN_BASENAME="${TMPOUT}/${ATIME}/diag/infl/init"
+  INFL_MUL_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/infl/init"
+  INFL_ADD_IN_BASENAME="${TMPOUT}/const/addi/@@@@/init"
+  RELAX_SPREAD_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/rtps/init"
+  NOBS_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/nobs/init"
+fi
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.letkf | \
@@ -111,36 +139,39 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
         -e "/!--OBSDA_OUT--/a OBSDA_OUT = $OBSDA_OUT" \
         -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda\"," \
-        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = '${TMPOUT}/${STIME}/hist/@@@@/history'," \
+        -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = \"${HISTORY_IN_BASENAME}\"," \
         -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \
         -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
         -e "/!--SLOT_BASE--/a SLOT_BASE = $SLOT_BASE," \
         -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = $LTIMESLOT.D0," \
         -e "/!--OBSDA_IN--/a OBSDA_IN = $OBSDA_IN," \
         -e "/!--OBSDA_IN_BASENAME--/a OBSDA_IN_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext\"," \
-        -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${TMPOUT}/${ATIME}/anal/@@@@/init\"," \
-        -e "/!--GUES_MEAN_INOUT_BASENAME--/a GUES_MEAN_INOUT_BASENAME = \"${TMPOUT}/${ATIME}/gues/mean/init\"," \
-        -e "/!--GUES_SPRD_OUT_BASENAME--/a GUES_SPRD_OUT_BASENAME = \"${TMPOUT}/${ATIME}/gues/sprd/init\"," \
+        -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${GUES_IN_BASENAME}\"," \
+        -e "/!--GUES_MEAN_INOUT_BASENAME--/a GUES_MEAN_INOUT_BASENAME = \"${GUES_MEAN_INOUT_BASENAME}\"," \
+        -e "/!--GUES_SPRD_OUT_BASENAME--/a GUES_SPRD_OUT_BASENAME = \"${GUES_SPRD_OUT_BASENAME}\"," \
         -e "/!--GUES_SPRD_OUT--/a GUES_SPRD_OUT = ${SPRD_OUT_TF}," \
-        -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/anal/@@@@/init\"," \
+        -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${ANAL_OUT_BASENAME}\"," \
         -e "/!--ANAL_SPRD_OUT--/a ANAL_SPRD_OUT = ${SPRD_OUT_TF}," \
         -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${TOPO}\"," \
         -e "/!--INFL_MUL_ADAPTIVE--/a INFL_MUL_ADAPTIVE = ${INFL_MUL_ADAPTIVE}," \
-        -e "/!--INFL_MUL_IN_BASENAME--/a INFL_MUL_IN_BASENAME = \"${TMPOUT}/${ATIME}/diag/infl/init\"," \
-        -e "/!--INFL_MUL_OUT_BASENAME--/a INFL_MUL_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/infl/init\"," \
-        -e "/!--INFL_ADD_IN_BASENAME--/a INFL_ADD_IN_BASENAME = \"${TMPOUT}/const/addi/@@@@/init\"," \
+        -e "/!--INFL_MUL_IN_BASENAME--/a INFL_MUL_IN_BASENAME = \"${INFL_MUL_IN_BASENAME}\"," \
+        -e "/!--INFL_MUL_OUT_BASENAME--/a INFL_MUL_OUT_BASENAME = \"${INFL_MUL_OUT_BASENAME}\"," \
+        -e "/!--INFL_ADD_IN_BASENAME--/a INFL_ADD_IN_BASENAME = \"${INFL_ADD_IN_BASENAME}\"," \
         -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RTPS_INFL_OUT_TF}," \
-        -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/rtps/init\"," \
+        -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${RELAX_SPREAD_OUT_BASENAME}\"," \
         -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
-        -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${TMPOUT}/${ATIME}/diag/nobs/init\"," \
-        -e "/!--NNODES--/a NNODES = $NNODES," \
-        -e "/!--PPN--/a PPN = $PPN," \
+        -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${NOBS_OUT_BASENAME}\"," \
+        -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
+        -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
+        -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
     > $TMPDIR/letkf.conf
 
-# These parameters are not important for letkf
-cat $TMPDAT/conf/config.nml.scale >> $TMPDIR/letkf.conf
+# Most of these parameters are not important for letkf
+cat $TMPDAT/conf/config.nml.scale | \
+    sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+    >> $TMPDIR/letkf.conf
 
 #===============================================================================
 
