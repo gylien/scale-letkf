@@ -20,7 +20,7 @@ LOGDIR="$DIR/log"
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin"                                            # Directory of the SCALE model executables
+SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="$DDIR/../../database"
 
 DATA_TOPO="$DDIR/../../database/topo_prep/testcase_45km_4p_bf10"
@@ -87,14 +87,8 @@ SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
-ENABLE_SET=1       ######
-
 #===============================================================================
 # Temporary directories to store runtime files
-
-DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
-                            #  1: in $TMPDAT
-                            #  2: in $TMPOUT
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No

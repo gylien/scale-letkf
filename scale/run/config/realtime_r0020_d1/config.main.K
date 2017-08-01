@@ -19,7 +19,7 @@ OUTDIR="/volume63/data/hp150019/gylien/realtime/${EXPNAME}/exp_d${EXPDOMAIN}" # 
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin"
+SCALEDIR="$DIR/../.."
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO=
@@ -102,18 +102,6 @@ ENABLE_SET=0       ######
 #===============================================================================
 # Temporary directories to store runtime files
 
-DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
-                            #  1: in $TMPDAT
-                            #  2: in $TMPOUT
-
-DISK_MODE_TOPO_LANDUSE_DB=2
-
-DISK_MODE_DATA_BDY=2
-
-DISK_MODE_DATA_TOPO=2
-DISK_MODE_DATA_LANDUSE=2
-DISK_MODE_DATA_BDYPREP=2
-
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
@@ -140,7 +128,7 @@ SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 
-SCP_THREAD=8
+STAGE_THREAD=8
 TAR_THREAD=8
 
 PYTHON="python"

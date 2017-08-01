@@ -15,7 +15,7 @@ MODULE common_scale
   USE common
   use common_nml
 
-  use scale_precision, only: RP
+  use scale_precision, only: RP, SP
   use scale_prof
 
   IMPLICIT NONE
@@ -383,6 +383,97 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
 END SUBROUTINE read_restart
 
 !-------------------------------------------------------------------------------
+! [File I/O] Read SCALE restart files <PnetCDF>
+!-------------------------------------------------------------------------------
+#ifdef PNETCDF
+SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
+!  use common_mpi_scale, only: &
+!    MPI_COMM_a
+  use scale_process, only: &
+    PRC_myrank
+  use scale_rm_process, only: &
+    PRC_2Drank
+!    PRC_PERIODIC_X, PRC_PERIODIC_Y, &
+!    PRC_HAS_W,  &
+!    PRC_HAS_E,  &
+!    PRC_HAS_S,  &
+!    PRC_HAS_N
+  use scale_grid_index, only: &
+    IHALO, JHALO, &
+    IMAX, JMAX, KMAX
+  use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
+  use common_mpi, only: myrank
+  use pnetcdf
+  IMPLICIT NONE
+
+  CHARACTER(*),INTENT(IN) :: filename
+  REAL(RP),INTENT(OUT) :: v3dg(nlev,nlon,nlat,nv3d)
+  REAL(RP),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
+  integer,intent(in) :: comm
+  integer :: iv3d,iv2d,ncid
+
+  integer :: err, varid, req, reqs(1), sts(1)
+  integer(KIND=MPI_OFFSET_KIND) :: start(3), count(3)
+
+  ! calculate subarray's start() and count() to the global variables
+  start(1) = 1
+  start(2) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+  start(3) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+  count(1) = KMAX
+  count(2) = IMAX
+  count(3) = JMAX
+  start(2) = start(2) + IHALO
+  start(3) = start(3) + JHALO
+!  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
+!  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
+
+  write (6,'(A,I6.6,3A,6I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(3), count(3) =', start, count
+
+  err = nfmpi_open(comm, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
+
+  do iv3d = 1, nv3d
+    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+    err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+#ifdef SINGLE
+    err = nfmpi_iget_vara_real(ncid, varid, start, count, v3dg(:,:,:,iv3d), req)
+#else
+    err = nfmpi_iget_vara_double(ncid, varid, start, count, v3dg(:,:,:,iv3d), req)
+#endif
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_get_vara_double_all '//' '//nfmpi_strerror(err)
+  end do
+
+  do iv2d = 1, nv2d
+    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
+    err = nfmpi_inq_varid(ncid, trim(v2d_name(iv2d)), varid)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+#ifdef SINGLE
+    err = nfmpi_iget_vara_real(ncid, varid, start(2:3), count(2:3), v2dg(:,:,iv2d), req)
+#else
+    err = nfmpi_iget_vara_double(ncid, varid, start(2:3), count(2:3), v2dg(:,:,iv2d), req)
+#endif
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_get_vara_double_all '//' '//nfmpi_strerror(err)
+  end do
+
+  err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+
+  err = nfmpi_close(ncid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
+
+  RETURN
+END SUBROUTINE read_restart_par
+#endif
+
+!-------------------------------------------------------------------------------
 ! [File I/O] Write SCALE restart files
 !-------------------------------------------------------------------------------
 !SUBROUTINE write_restart(filename,v3dg,v2dg)
@@ -526,6 +617,97 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
 END SUBROUTINE write_restart
 
 !-------------------------------------------------------------------------------
+! [File I/O] Write SCALE restart files <PnetCDF>
+!-------------------------------------------------------------------------------
+#ifdef PNETCDF
+SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
+!  use common_mpi_scale, only: &
+!    MPI_COMM_a
+  use scale_process, only: &
+    PRC_myrank
+  use scale_rm_process, only: &
+    PRC_2Drank
+!    PRC_PERIODIC_X, PRC_PERIODIC_Y, &
+!    PRC_HAS_W,  &
+!    PRC_HAS_E,  &
+!    PRC_HAS_S,  &
+!    PRC_HAS_N
+  use scale_grid_index, only: &
+    IHALO, JHALO, &
+    IMAX, JMAX, KMAX
+  use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
+  use common_mpi, only: myrank
+  use pnetcdf
+  implicit none
+
+  CHARACTER(*),INTENT(IN) :: filename
+  REAL(RP),INTENT(INOUT) :: v3dg(nlev,nlon,nlat,nv3d)
+  REAL(RP),INTENT(INOUT) :: v2dg(nlon,nlat,nv2d)
+  integer,intent(in) :: comm
+  integer :: iv3d,iv2d,ncid
+
+  integer :: err, varid, req, reqs(1), sts(1)
+  integer(KIND=MPI_OFFSET_KIND) :: start(3), count(3)
+
+  ! calculate subarray's start() and count() to the global variables
+  start(1) = 1
+  start(2) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+  start(3) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+  count(1) = KMAX
+  count(2) = IMAX
+  count(3) = JMAX
+  start(2) = start(2) + IHALO
+  start(3) = start(3) + JHALO
+!  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
+!  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
+
+  write (6,'(A,I6.6,3A,6I6)') 'MYRANK ',myrank,' is writing a file ',trim(filename)//'.nc', ' >> PnetCDF start(3), count(3) =', start, count
+
+  err = nfmpi_open(comm, trim(filename)//".nc", NF_WRITE, MPI_INFO_NULL, ncid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
+
+  do iv3d = 1, nv3d
+    write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+    err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+#ifdef SINGLE
+    err = nfmpi_iput_vara_real(ncid, varid, start, count, v3dg(:,:,:,iv3d), req)
+#else
+    err = nfmpi_iput_vara_double(ncid, varid, start, count, v3dg(:,:,:,iv3d), req)
+#endif
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_iput_vara_double '//' '//nfmpi_strerror(err)
+  end do
+
+  do iv2d = 1, nv2d
+    write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+    err = nfmpi_inq_varid(ncid, trim(v2d_name(iv2d)), varid)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+#ifdef SINGLE
+    err = nfmpi_iput_vara_real(ncid, varid, start(2:3), count(2:3), v2dg(:,:,iv2d), req)
+#else
+    err = nfmpi_iput_vara_double(ncid, varid, start(2:3), count(2:3), v2dg(:,:,iv2d), req)
+#endif
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_iput_vara_double '//' '//nfmpi_strerror(err)
+  end do
+
+  err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+
+  err = nfmpi_close(ncid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
+
+  RETURN
+END SUBROUTINE write_restart_par
+#endif
+
+!-------------------------------------------------------------------------------
 ! [File I/O] Read SCALE restart files for model coordinates
 !-------------------------------------------------------------------------------
 SUBROUTINE read_restart_coor(filename,lon,lat,height)
@@ -640,6 +822,73 @@ SUBROUTINE read_topo(filename,topo)
 END SUBROUTINE read_topo
 
 !-------------------------------------------------------------------------------
+! [File I/O] Read SCALE topography files <PnetCDF>
+!-------------------------------------------------------------------------------
+#ifdef PNETCDF
+SUBROUTINE read_topo_par(filename,topo,comm)
+  use scale_process, only: &
+    PRC_myrank
+  use scale_rm_process, only: &
+    PRC_2Drank
+!    PRC_PERIODIC_X, PRC_PERIODIC_Y
+  use scale_grid_index, only: &
+    IHALO, JHALO, &
+    IMAX, JMAX
+  use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
+  use common_mpi, only: myrank
+  use pnetcdf
+  IMPLICIT NONE
+
+  CHARACTER(*),INTENT(IN) :: filename
+  REAL(RP),INTENT(OUT) :: topo(nlon,nlat)
+  integer,intent(in) :: comm
+
+  integer :: ncid
+
+  integer :: err, varid, req, reqs(1), sts(1)
+  integer(KIND=MPI_OFFSET_KIND) :: start(2), count(2)
+
+  ! calculate subarray's start() and count() to the global variables
+  start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+  start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+  count(1) = IMAX
+  count(2) = JMAX
+  start(1) = start(1) + IHALO
+  start(2) = start(2) + JHALO
+!  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
+!  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
+
+  write (6,'(A,I6.6,3A,4I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(2), count(2) =', start, count
+
+  err = nfmpi_open(comm, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
+
+  write(6,'(1x,A,A15)') '*** Read 2D var: ', 'TOPO'
+  err = nfmpi_inq_varid(ncid, 'TOPO', varid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+#ifdef SINGLE
+  err = nfmpi_iget_vara_real(ncid, varid, start, count, topo, req)
+#else
+  err = nfmpi_iget_vara_double(ncid, varid, start, count, topo, req)
+#endif
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_get_vara_double_all '//' '//nfmpi_strerror(err)
+
+  err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+
+  err = nfmpi_close(ncid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
+
+  RETURN
+END SUBROUTINE read_topo_par
+#endif
+
+!-------------------------------------------------------------------------------
 ! [File I/O] Read SCALE history files
 !-------------------------------------------------------------------------------
 subroutine read_history(filename,step,v3dg,v2dg)
@@ -735,10 +984,161 @@ subroutine read_history(filename,step,v3dg,v2dg)
 end subroutine read_history
 
 !-------------------------------------------------------------------------------
+! [File I/O] Read SCALE history files <PnetCDF>
+!-------------------------------------------------------------------------------
+#ifdef PNETCDF
+subroutine read_history_par(filename,step,v3dg,v2dg,comm)
+  use scale_process, only: &
+      PRC_myrank
+  use scale_rm_process, only: &
+    PRC_2Drank
+!    PRC_PERIODIC_X, PRC_PERIODIC_Y
+  use scale_grid_index, only: &
+      IHALO, JHALO, KHALO, &
+      IS, IE, JS, JE, KS, KE, KA, &
+      IMAX, JMAX, KMAX
+!  use gtool_history, only: &
+!      HistoryGet
+  use scale_comm, only: &
+      COMM_vars8, &
+      COMM_wait
+  use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
+  use common_mpi, only: myrank
+  use pnetcdf
+  implicit none
+
+  character(*),intent(in) :: filename
+  integer,intent(in) :: step
+  real(r_size),intent(out) :: v3dg(nlevh,nlonh,nlath,nv3dd)
+  real(r_size),intent(out) :: v2dg(nlonh,nlath,nv2dd)
+  integer,intent(in) :: comm
+  integer :: i,j,k,iv3d,iv2d
+  real(SP) :: var3D(nlon,nlat,nlev)
+  real(SP) :: var2D(nlon,nlat)
+
+!  integer :: fid
+  integer :: ncid
+
+  integer :: err, varid, req, reqs(1), sts(1)
+  integer(KIND=MPI_OFFSET_KIND) :: start(4), count(4)
+
+  ! calculate subarray's start() and count() to the global variables
+  start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+  start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
+  start(3) = 1
+  start(4) = step
+  count(1) = IMAX
+  count(2) = JMAX
+  count(3) = KMAX
+  count(4) = 1
+!  start(1) = start(1) + IHALO   ! History files always have no halo
+!  start(2) = start(2) + JHALO   !
+!  if (.NOT. PRC_PERIODIC_X) start(1) = start(1) + IHALO
+!  if (.NOT. PRC_PERIODIC_Y) start(2) = start(2) + JHALO
+
+  write (6,'(A,I6.6,3A,8I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(4), count(4) =', start, count
+
+!  call FILEIO_open( fid, trim(filename) )
+  err = nfmpi_open(comm, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
+
+  ! 3D variables
+  !-------------
+  do iv3d = 1, nv3dd
+    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
+
+!--- neither of these work now ---
+!    call FILEIO_read( var3D,         & ! [OUT]
+!                      fid, trim(v3dd_name(iv3d)),  'XYZ', step=step ) ! [IN]  !!! 'XYZ' is not supported.
+!    call HistoryGet( var3D,                 & ! [OUT]                         !!! 'HistoryGet' does not support PNETCDF
+!                     filename,              & ! [IN]
+!                     trim(v3dd_name(iv3d)), & ! [IN]
+!                     step                   ) ! [IN]
+    err = nfmpi_inq_varid(ncid, trim(v3dd_name(iv3d)), varid)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+    err = nfmpi_iget_vara_real(ncid, varid, start, count, var3D, req)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
+
+!    call FILEIO_flush( fid )
+    err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+
+    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = real(var3D(i,j,k), r_size) ! use FORALL to change order of dimensions
+  end do
+
+  do iv3d = 1, nv3dd
+    call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
+  end do
+  do iv3d = 1, nv3dd
+    call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
+  end do
+
+  do iv3d = 1, nv3dd
+!!!!!!!$OMP PARALLEL DO PRIVATE(i,j) OMP_SCHEDULE_ COLLAPSE(2)
+    do j = JS, JE
+      do i = IS, IE
+        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
+        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
+      end do
+    end do
+  end do
+
+  start(3) = step
+  count(3) = 1
+
+  ! 2D variables
+  !-------------
+  do iv2d = 1, nv2dd
+    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
+
+!--- neither of these work now ---
+!    call FILEIO_read( var2D,         & ! [OUT]
+!                      fid, trim(v2dd_name(iv2d)),  'XY', step=step ) ! [IN]
+!    call HistoryGet( var2D,                 & ! [OUT]                        !!! 'HistoryGet' does not support PNETCDF
+!                     filename,              & ! [IN]
+!                     trim(v2dd_name(iv2d)), & ! [IN]
+!                     step                   ) ! [IN]
+
+    err = nfmpi_inq_varid(ncid, trim(v2dd_name(iv2d)), varid)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+    err = nfmpi_iget_vara_real(ncid, varid, start(1:3), count(1:3), var2D, req)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
+
+!    call FILEIO_flush( fid )
+    err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+
+    v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = real(var2D(:,:), r_size)
+  end do
+
+  do iv2d = 1, nv2dd
+    call COMM_vars8( v2dg(:,:,iv2d), iv2d )
+  end do
+  do iv2d = 1, nv2dd
+    call COMM_wait ( v2dg(:,:,iv2d), iv2d )
+  end do
+
+!  call FILEIO_close( fid )
+  err = nfmpi_close(ncid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
+
+  return
+end subroutine read_history_par
+#endif
+
+!-------------------------------------------------------------------------------
 ! Transform the SCALE restart variables to the LETKF state variables
 !-------------------------------------------------------------------------------
 subroutine state_trans(v3dg)
-  use scale_atmos_thermodyn, only: AQ_CV
+  use scale_tracer, only: TRACER_CV
     use scale_const, only: &
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
@@ -759,7 +1159,7 @@ subroutine state_trans(v3dg)
        CVtot = 0.0d0
        do iv3d = iv3d_q, nv3d ! loop over all moisture variables
          qdry  = qdry - v3dg(k,i,j,iv3d)
-         CVtot = CVtot + v3dg(k,i,j,iv3d) * AQ_CV(iv3d-iv3d_q+1)
+         CVtot = CVtot + v3dg(k,i,j,iv3d) * TRACER_CV(iv3d-iv3d_q+1)
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rvap * v3dg(k,i,j,iv3d_q)
@@ -786,7 +1186,7 @@ end subroutine state_trans
 ! Inversely transform the LETKF state variables to the SCALE restart variables
 !-------------------------------------------------------------------------------
 subroutine state_trans_inv(v3dg)
-  use scale_atmos_thermodyn, only: AQ_CV
+  use scale_tracer, only: TRACER_CV
     use scale_const, only: &
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
@@ -816,7 +1216,7 @@ subroutine state_trans_inv(v3dg)
        CVtot = 0.0d0
        do iv3d = iv3d_q, nv3d ! loop over all moisture variables
          qdry  = qdry - v3dg(k,i,j,iv3d)
-         CVtot = CVtot + v3dg(k,i,j,iv3d) * AQ_CV(iv3d-iv3d_q+1)
+         CVtot = CVtot + v3dg(k,i,j,iv3d) * TRACER_CV(iv3d-iv3d_q+1)
        enddo
        CVtot = CVdry * qdry + CVtot
        Rtot  = Rdry  * qdry + Rvap * v3dg(k,i,j,iv3d_q)

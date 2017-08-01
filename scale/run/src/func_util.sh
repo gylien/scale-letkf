@@ -73,8 +73,7 @@ if [ ! -O "$DIRNAME" ]; then
   exit 1
 fi
 
-rm -fr $DIRNAME
-res=$? && ((res != 0)) && exit $res
+rm -fr $DIRNAME || exit $?
 
 #-------------------------------------------------------------------------------
 }
@@ -162,11 +161,11 @@ if [ "$MPI_TYPE" = 'sgimpt' ]; then
   local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
   HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
 
-  $MPIRUN -d $progdir $HOSTLIST 1 ./$progbase $CONF $STDOUT $ARGS
-#  $MPIRUN -d $progdir $HOSTLIST 1 omplace -nt ${THREADS} ./$progbase $CONF $STDOUT $ARGS
+  $MPIRUN $HOSTLIST 1 $PROG $CONF $STDOUT $ARGS
+#  $MPIRUN $HOSTLIST 1 omplace -nt ${THREADS} $PROG $CONF $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $MPIRUN -d $progdir $HOSTLIST 1 ./$progbase $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $MPIRUN $HOSTLIST 1 $PROG $CONF $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
@@ -175,10 +174,10 @@ elif [ "$MPI_TYPE" = 'openmpi' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $progdir ./$progbase $CONF $STDOUT $ARGS
+  $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $$MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $$MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
@@ -187,10 +186,10 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} -gwdir $progdir ./$progbase $CONF $STDOUT $ARGS
+  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $$MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} -gwdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $$MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
@@ -199,26 +198,22 @@ elif [ "$MPI_TYPE" = 'K' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  if [ "$STG_TYPE" = 'K_rankdir' ]; then
-
-    mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS
+  if [ "$PRESET" = 'K_rankdir' ]; then
+    mpiexec -n $NNP -of-proc $STDOUT $PROG $CONF '' $ARGS
     res=$?
     if ((res != 0)); then
-      echo "[Error] mpiexec -n $NNP -of-proc $STDOUT ./${progdir}/${progbase} $CONF '' $ARGS" >&2
+      echo "[Error] mpiexec -n $NNP -of-proc $STDOUT $PROG $CONF '' $ARGS" >&2
       echo "        Exit code: $res" >&2
       exit $res
     fi
-
   else
-
-    ( cd $progdir && mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS )
+    mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${NODEFILE}" -of-proc $STDOUT $PROG $CONF '' $ARGS
     res=$?
     if ((res != 0)); then 
-      echo "[Error] mpiexec -n $NNP -of-proc $STDOUT ./$progbase $CONF '' $ARGS" >&2
+      echo "[Error] mpiexec -n $NNP -vcoordfile \"${NODEFILE_DIR}/${NODEFILE}\" -of-proc $STDOUT $PROG $CONF '' $ARGS" >&2
       echo "        Exit code: $res" >&2
       exit $res
     fi
-
   fi
 
 fi
@@ -323,49 +318,21 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
 
 elif [ "$MPI_TYPE" = 'K' ]; then
 
-  if [ "$STG_TYPE" = 'K_rankdir' ]; then
-    if [ "$PROC_OPT" == 'one' ]; then
-
-      mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS
-      res=$?
-      if ((res != 0)); then
-        echo "[Error] mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS" >&2
-        echo "        Exit code: $res" >&2
-        exit $res
-      fi
-
-    else
-
-      mpiexec $pdbash_exec $SCRIPT $ARGS
-      res=$?
-      if ((res != 0)); then
-        echo "[Error] mpiexec $pdbash_exec $SCRIPT $ARGS" >&2
-        echo "        Exit code: $res" >&2
-        exit $res
-      fi
-
+  if [ "$PROC_OPT" == 'one' ]; then
+    mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS
+    res=$?
+    if ((res != 0)); then
+      echo "[Error] mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS" >&2
+      echo "        Exit code: $res" >&2
+      exit $res
     fi
   else
-    if [ "$PROC_OPT" == 'one' ]; then
-
-      ( cd $SCRP_DIR && mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS )
-      res=$?
-      if ((res != 0)); then
-        echo "[Error] mpiexec -n 1 $pdbash_exec $SCRIPT $ARGS" >&2
-        echo "        Exit code: $res" >&2
-        exit $res
-      fi
-
-    else
-
-      ( cd $SCRP_DIR && mpiexec $pdbash_exec $SCRIPT $ARGS )
-      res=$?
-      if ((res != 0)); then
-        echo "[Error] mpiexec $pdbash_exec $SCRIPT $ARGS" >&2
-        echo "        Exit code: $res" >&2
-        exit $res
-      fi
-
+    mpiexec $pdbash_exec $SCRIPT $ARGS
+    res=$?
+    if ((res != 0)); then
+      echo "[Error] mpiexec $pdbash_exec $SCRIPT $ARGS" >&2
+      echo "        Exit code: $res" >&2
+      exit $res
     fi
   fi
 
@@ -466,6 +433,179 @@ elif ((GROUP <= parallel_mems)); then
 fi
 
 exit $res
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+stage_in () {
+#-------------------------------------------------------------------------------
+# Stage-in files into the runtime temporary directories based on the staging lists
+#
+# Usage: stage_in [RUN_ON]
+#
+#   RUN_ON  Run on which side?
+#           'server': run on the server side
+#           'node':   run on the computing-node side (using 'pdbash') (default)
+#
+# Other input variables:
+#   $SCRP_DIR
+#   $TMP
+#   $TMPL
+#   $STAGING_DIR
+#   $STGINLIST_LINK
+#   $STGINLIST_SHARE
+#   $STGINLIST_LOCAL
+#   $STGOUTLIST_LINK
+#   $NNODES
+#   $STAGE_THREAD
+#-------------------------------------------------------------------------------
+
+local RUN_ON="${1:-node}"
+
+#-------------------------------------------------------------------------------
+
+if [ -s "${STAGING_DIR}/${STGINLIST_LINK}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_LINK}" ]; then
+#  safe_init_tmpdir $TMP || return $?
+  local errmsg=$(bash $SCRP_DIR/src/stage_in_ln.sh $NNODES ${STAGING_DIR}/${STGINLIST_LINK} $TMP 2>&1) # code same for both server and computing-node sides
+  if [ -n "$errmsg" ]; then
+    echo "$errmsg" >&2
+    return 1
+  fi
+fi
+
+if [ -s "${STAGING_DIR}/${STGINLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_SHARE}" ]; then
+#  safe_init_tmpdir $TMP || return $?
+  if [ "$RUN_ON" = 'server' ]; then
+    local errmsg=$(bash $SCRP_DIR/src/stage_in_cp.sh $NNODES ${STAGING_DIR}/${STGINLIST_SHARE} $TMP $STAGE_THREAD 2>&1)
+  else
+    local errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES ${STAGING_DIR}/${STGINLIST_SHARE} $TMP share $STAGE_THREAD 2>&1)
+  fi
+  if [ -n "$errmsg" ]; then
+    echo "$errmsg" >&2
+    return 1
+  fi
+fi
+
+if [ "$RUN_ON" = 'node' ]; then # stage-in to local directories can only be done on the computing-node side
+  if [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}" ]; then
+    pdbash node all $SCRP_DIR/src/stage_in_init_stgdir_node.sh $TMPL local || return $?
+    local errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $TMPL local $STAGE_THREAD 2>&1)
+    if [ -n "$errmsg" ]; then
+      echo "$errmsg" >&2
+      return 1
+    fi
+  fi
+fi
+
+if ((DISK_MODE == 1)); then
+  if [ -s "${STAGING_DIR}/${STGOUTLIST_LINK}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_LINK}" ]; then
+    local errmsg=$(bash $SCRP_DIR/src/stage_out_ln.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_LINK} $TMP 2>&1) # code same for both server and computing-node sides
+    if [ -n "$errmsg" ]; then
+      echo "$errmsg" >&2
+      return 1
+    fi
+  fi
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+stage_out () {
+#-------------------------------------------------------------------------------
+# Stage-out files from the runtime temporary directories based on the staging lists
+#
+# Usage: stage_out [RUN_ON STEP]
+#
+#   RUN_ON  Run on which side?
+#           'server': run on the server side
+#           'node':   run on the computing-node side (using 'pdbash') (default)
+#   STEP    Step ID with which the files are processed
+#           'a': process all steps (default)
+#
+# Other input variables:
+#   $SCRP_DIR
+#   $TMP
+#   $TMPL
+#   $STAGING_DIR
+#   $STGOUTLIST_SHARE
+#   $STGOUTLIST_LOCAL
+#   $NNODES
+#   $STAGE_THREAD
+#-------------------------------------------------------------------------------
+
+local RUN_ON="${1:-node}"; shift
+local STEP="${1:-a}"
+
+#-------------------------------------------------------------------------------
+
+if [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}" ]; then
+  if [ "$RUN_ON" = 'server' ]; then
+    errmsg=$(bash $SCRP_DIR/src/stage_out_cp.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_SHARE} $TMP $STAGE_THREAD $STEP 2>&1)
+  else
+    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_SHARE} $TMP share $STAGE_THREAD $STEP 2>&1)
+  fi
+  if [ -n "$errmsg" ]; then
+    echo "$errmsg" >&2
+#    return 1
+  fi
+fi
+
+if [ "$RUN_ON" = 'node' ]; then # stage-out from local directories can only be done on the computing-node side
+  if [ -s "${STAGING_DIR}/${STGOUTLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_LOCAL}" ]; then
+    errmsg=$(pdbash node all $SCRP_DIR/src/stage_out_cp_node.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_LOCAL} $TMPL local $STAGE_THREAD $STEP 2>&1)
+    if [ -n "$errmsg" ]; then
+      echo "$errmsg" >&2
+#      return 1
+    fi
+  fi
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+stage_K_inout () {
+#-------------------------------------------------------------------------------
+# Print stage-in/out scripts for K-computer jobs based on the staging lists
+#
+# Usage: stage_out [USE_RANKDIR]
+#
+#   USE_RANKDIR  Whether enable the rank-directory?
+#                0: No (default)
+#                1: Yes
+#
+# Other input variables:
+#   $SCRP_DIR
+#   $STAGING_DIR
+#   $STGINLIST_SHARE
+#   $STGINLIST_LOCAL
+#   $STGOUTLIST_SHARE
+#   $STGOUTLIST_LOCAL
+#   $NNODES
+#   $jobscrp
+#-------------------------------------------------------------------------------
+
+USE_RANKDIR="${1:-0}"
+
+#-------------------------------------------------------------------------------
+
+if [ -s "${STAGING_DIR}/${STGINLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_SHARE}" ]; then
+  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_SHARE} $USE_RANKDIR share 1>> $jobscrp || exit $?
+fi
+if [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}" ]; then
+  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $USE_RANKDIR local 1>> $jobscrp || exit $?
+fi
+if [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}" ]; then
+  bash $SCRP_DIR/src/stage_out_K.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_SHARE} $USE_RANKDIR share 1>> $jobscrp || exit $?
+fi
+if [ -s "${STAGING_DIR}/${STGOUTLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_LOCAL}" ]; then
+  bash $SCRP_DIR/src/stage_out_K.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_LOCAL} $USE_RANKDIR local 1>> $jobscrp || exit $?
+fi
 
 #-------------------------------------------------------------------------------
 }
@@ -819,6 +959,70 @@ while true; do
   fi
   sleep 5s
 done
+
+return 0
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+backup_exp_setting () {
+#-------------------------------------------------------------------------------
+# Backup experimental settings
+#
+# Usage: backup_exp_setting JOBNAME JOB_DIR JOB_ID JOB_LOG_PREFIX JOB_LOG_TYPES [JOB_LOG_TYPE_WAIT]
+#
+#   JOBNAME
+#   JOB_DIR
+#   JOB_ID
+#   JOB_LOG_PREFIX
+#   JOB_LOG_TYPES
+#   JOB_LOG_TYPE_WAIT
+#
+# Other input variables:
+#   $OUTDIR
+#   $SCRP_DIR
+#   $SCALEDIR
+#   $STIME
+#-------------------------------------------------------------------------------
+
+if (($# < 5)); then
+  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+  exit 1
+fi
+
+local JOBNAME="$1"; shift
+local JOB_DIR="$1"; shift
+local JOB_ID="$1"; shift
+local JOB_LOG_PREFIX="$1"; shift
+local JOB_LOG_TYPES="$1"; shift
+local JOB_LOG_TYPE_WAIT="$1"
+
+#-------------------------------------------------------------------------------
+
+if [ -n "$JOB_LOG_TYPE_WAIT" ]; then
+  n=0
+  nmax=30
+  while [ ! -s "$JOB_DIR/${JOB_LOG_PREFIX}.${JOB_LOG_TYPE_WAIT}${JOB_ID}" ] && ((n < nmax)); do
+    n=$((n+1))
+    sleep 2s
+  done
+fi
+
+mkdir -p $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}
+cp -f $SCRP_DIR/config.main $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}
+cp -f $SCRP_DIR/config.${JOBNAME} $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}
+cp -f $SCRP_DIR/config.nml.* $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}
+cp -f $JOB_DIR/${JOBNAME}_job.sh $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}
+for p in ${JOB_LOG_TYPES}; do
+  if [ -f "$JOB_DIR/${JOB_LOG_PREFIX}.${p}${JOB_ID}" ]; then
+    cp -f $JOB_DIR/${JOB_LOG_PREFIX}.${p}${JOB_ID} $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}/job.${p}
+  fi
+done
+
+( cd $SCRP_DIR && git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}/version )
+( cd $SCALEDIR/scale-rm && git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${JOB_ID}_${JOBNAME}_${STIME}/version )
 
 return 0
 

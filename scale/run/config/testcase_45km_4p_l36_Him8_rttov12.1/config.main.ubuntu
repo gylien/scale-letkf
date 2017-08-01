@@ -11,6 +11,7 @@ MPI_TYPE='openmpi'
 
 #===============================================================================
 
+EXP="TC201513_D1"
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"
@@ -21,6 +22,7 @@ OUTDIR="$DDIR/exp/testcase_45km_4p_l36" # Directory for SCALE-LETKF output
 # Location of model/data files
 
 MODELDIR="$DIR/../../bin/${SCALE_SYS}"
+SCALEDIR="$DIR/../.."                                   # Directory of the SCALE model
 DATADIR="$DDIR/database"
 
 DATA_TOPO=
@@ -96,11 +98,10 @@ SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
-ENABLE_SET=0       ######
-
 #===============================================================================
 # Temporary directories to store runtime files
 
+<<<<<<< HEAD:scale/run/config/testcase_45km_4p_l36_Him8_rttov12.1/config.main.ubuntu
 TMPDAT_MODE=3               # Disk type used for the 'dat' temporary directory (input data)
 TMPRUN_MODE=3               # Disk type used for the 'run' temporary directory (runtime files)
 TMPOUT_MODE=$TMPRUN_MODE    # Disk type used for the 'out' temporary directory (output)
@@ -124,10 +125,6 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-#SIMPLE_STGOUT=0             # Stage out the entire 'out' temporary directory instead of specifying each file?
-#                            #  0: No
-#                            #  1: Yes
-
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
@@ -150,8 +147,8 @@ SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 
-SCP_THREAD=1
-TAR_THREAD=1
+STAGE_THREAD=8
+TAR_THREAD=8
 
 PYTHON="python3"
 

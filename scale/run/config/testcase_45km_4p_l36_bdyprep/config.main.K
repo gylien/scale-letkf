@@ -18,7 +18,7 @@ OUTDIR="$DDIR/exp/testcase_45km_4p_l36_bdyprep" # Directory for SCALE-LETKF outp
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin"                                            # Directory of the SCALE model executables
+SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
 DATA_TOPO="$DDIR/exp/testcase_45km_4p_l36_data"                      # Directory of the prepared topo files
@@ -61,9 +61,16 @@ BDYCYCLE_INT=
 
 PARENT_REF_TIME=
 
+ENABLE_PARAM_USER=1     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
+                        # 1: Enable the 'PARAM_USER' section of the SCALE namelist (require 'config.nml.scale_user' and customized version of SCALE)
+
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+                        # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
+LAND_INPUT=0            # 0: No land input (use cycling land variables)
+                        # 1: Update the land variables every cycle
+LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
@@ -92,30 +99,12 @@ SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
-#ENABLE_SET=1       ######
-
 #===============================================================================
 # Temporary directories to store runtime files
-
-DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
-                            #  1: in $TMPDAT
-                            #  2: in $TMPOUT
-
-DISK_MODE_TOPO_LANDUSE_DB=2
-
-DISK_MODE_DATA_BDY=2
-
-DISK_MODE_DATA_TOPO=2
-DISK_MODE_DATA_LANDUSE=2
-DISK_MODE_DATA_BDYPREP=2
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
-
-#SIMPLE_STGOUT=1             # Stage out the entire 'out' temporary directory instead of specifying each file?
-#                            #  0: No
-#                            #  1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
@@ -139,7 +128,7 @@ SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 
-SCP_THREAD=8
+STAGE_THREAD=8
 TAR_THREAD=8
 
 PYTHON="python"

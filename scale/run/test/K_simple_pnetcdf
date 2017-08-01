@@ -1,0 +1,4 @@
+testcase_45km_4p_l36_pnetcdf         cycle K       K 0:20:00
+testcase_45km_4p_l36_pnetcdf_bdyprep cycle K       K 0:10:00
+testcase_45km_4p_l36_pnetcdf_bdyprep cycle K_micro K 0:10:00
+testcase_PAWR_1km_4p_pnetcdf         cycle K       K 0:12:00

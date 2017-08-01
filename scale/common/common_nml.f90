@@ -34,6 +34,8 @@ MODULE common_nml
   integer :: MEMBER = 3      ! ensemble size
   integer :: MEMBER_RUN = 1  !
   integer :: MEMBER_ITER = 0 !
+  character(filelenmax) :: CONF_FILES = 'run.@@@@.conf'
+  logical :: CONF_FILES_SEQNUM = .false.
 
   logical :: DET_RUN = .false.
   logical :: DET_RUN_CYCLED = .true.
@@ -41,6 +43,9 @@ MODULE common_nml
   !--- PARAM_MODEL
   character(len=10) :: MODEL = 'scale-rm'
   logical :: VERIFY_COORD = .false.
+
+!  !--- PARAM_IO
+!  integer :: IO_AGGREGATE = .false.
 
   !--- PARAM_OBSOPE
   integer               :: OBS_IN_NUM = 1
@@ -331,6 +336,8 @@ subroutine read_nml_ensemble
     MEMBER, &
     MEMBER_RUN, &
     MEMBER_ITER, &
+    CONF_FILES, &
+    CONF_FILES_SEQNUM, &
     DET_RUN, &
     DET_RUN_CYCLED
 
@@ -374,6 +381,31 @@ subroutine read_nml_model
 
   return
 end subroutine read_nml_model
+
+!-------------------------------------------------------------------------------
+! PARAM_IO
+!-------------------------------------------------------------------------------
+!subroutine read_nml_io
+!  implicit none
+!  integer :: ierr
+
+!  namelist /PARAM_IO/ &
+!    IO_AGGREGATE
+
+!  rewind(IO_FID_CONF)
+!  read(IO_FID_CONF,nml=PARAM_IO,iostat=ierr)
+!  if (ierr < 0) then !--- missing
+!    write(6,*) 'Warning: /PARAM_IO/ is not found in namelist.'
+!!    stop
+!  elseif (ierr > 0) then !--- fatal error
+!    write(6,*) 'xxx Not appropriate names in namelist PARAM_IO. Check!'
+!    stop
+!  endif
+
+!  write(6, nml=PARAM_IO)
+
+!  return
+!end subroutine read_nml_io
 
 !-------------------------------------------------------------------------------
 ! PARAM_OBSOPE
@@ -932,7 +964,7 @@ subroutine file_member_replace(mem, filename, filename_out, memfstr)
   implicit none
   integer, intent(in) :: mem
   character(len=*), intent(in) :: filename
-  character(len=filelenmax), intent(out) :: filename_out
+  character(len=*), intent(out) :: filename_out
   character(len=memflen), intent(in), optional :: memfstr
   integer :: s, is
 

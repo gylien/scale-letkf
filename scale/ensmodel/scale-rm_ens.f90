@@ -38,7 +38,7 @@ program scaleles_ens
   integer :: it, its, ite, im, ierr
   character(7) :: stdoutf='-000000'
 
-  character(len=H_LONG) :: confname = '0000/run.conf'
+  character(len=H_LONG) :: confname
   character(len=H_LONG) :: confname_dummy
 
   integer :: universal_comm
@@ -52,7 +52,7 @@ program scaleles_ens
 
   integer :: NUM_DOMAIN
   integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
-  character(len=H_LONG) :: CONF_FILES(PRC_DOMAIN_nlim)
+  character(len=H_LONG) :: confname_dummy2(PRC_DOMAIN_nlim)
 
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
@@ -64,7 +64,7 @@ program scaleles_ens
 
   NUM_DOMAIN = 1
   PRC_DOMAINS = 0
-  CONF_FILES = ""
+  confname_dummy2 = ""
 
   ! start MPI
   call PRC_MPIstart( universal_comm ) ! [OUT]
@@ -80,14 +80,12 @@ program scaleles_ens
 
   WRITE(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ',universal_myrank,'/',universal_nprocs-1
 
-  if (command_argument_count() >= 4) then
-    call get_command_argument(3, icmd)
-    call chdir(trim(icmd))
+  if (command_argument_count() >= 3) then
     write (myranks, '(I10)') universal_myrank
-    call get_command_argument(4, icmd)
+    call get_command_argument(3, icmd)
     cmd1 = 'bash ' // trim(icmd) // ' ensfcst_1' // ' ' // trim(myranks)
     cmd2 = 'bash ' // trim(icmd) // ' ensfcst_2' // ' ' // trim(myranks)
-    do iarg = 5, command_argument_count()
+    do iarg = 4, command_argument_count()
       call get_command_argument(iarg, icmd)
       cmd1 = trim(cmd1) // ' ' // trim(icmd)
       cmd2 = trim(cmd2) // ' ' // trim(icmd)
@@ -108,7 +106,7 @@ program scaleles_ens
 ! Pre-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 4) then
+  if (command_argument_count() >= 3) then
     write (6,'(A)') 'Run pre-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd1), ']'
     call system(trim(cmd1))
@@ -142,7 +140,7 @@ program scaleles_ens
     call PRC_MPIsplit( global_comm,      & ! [IN]
                        NUM_DOMAIN,       & ! [IN]
                        PRC_DOMAINS(:),   & ! [IN]
-                       CONF_FILES (:),   & ! [IN]
+                       confname_dummy2(:), & ! [IN]
                        .false.,          & ! [IN]
                        .false.,          & ! [IN] flag bulk_split
                        .false.,          & ! [IN] no reordering
@@ -162,13 +160,23 @@ program scaleles_ens
     do it = its, ite
       im = proc2mem(1,it,universal_myrank+1)
       if (im >= 1 .and. im <= MEMBER_RUN) then
-        WRITE(confname(1:4),'(I4.4)') proc2mem(1,it,universal_myrank+1)
-        WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', confname
+        if (CONF_FILES_SEQNUM) then
+          call file_member_replace(im, CONF_FILES, confname)
+        else
+          if (im <= MEMBER) then
+            call file_member_replace(im, CONF_FILES, confname)
+          else if (im == MEMBER+1) then
+            call file_member_replace(0, CONF_FILES, confname, memf_mean)
+          else if (im == MEMBER+2) then
+            call file_member_replace(0, CONF_FILES, confname, memf_mdet)
+          end if
+        end if
+        WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', trim(confname)
 
         call scalerm ( local_comm, &
                        intercomm_parent, &
                        intercomm_child, &
-                       confname )
+                       trim(confname) )
       end if
     end do ! [ it = its, ite ]
 
@@ -190,7 +198,7 @@ program scaleles_ens
 ! Post-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 4) then
+  if (command_argument_count() >= 3) then
     write (6,'(A)') 'Run post-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd2), ']'
     call system(trim(cmd2))

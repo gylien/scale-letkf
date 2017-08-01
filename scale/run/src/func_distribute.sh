@@ -23,9 +23,9 @@ set_mem_np () {
 #           (default: infinity)
 #
 # Other input variables:
-#   $MEMBER  Ensemble size (if $MEM is not given)
-#   $NNODES  Number of total nodes
-#   $PPN     Number of processes per node
+#   $MEMBER        Ensemble size (if $MEM is not given)
+#   $NNODES_APPAR  Apparent number of total nodes
+#   $PPN_APPAR     Apparent number of processes per node
 #
 # Return variables:
 #   $mem_nodes  Number of nodes for a member
@@ -39,19 +39,19 @@ local MAX_NP=${3:-none}
 
 #-------------------------------------------------------------------------------
 # Determine optimal numbers of nodes ($mem_nodes) and processes ($mem_np)
-# based on the number of members ($MEM) and total nodes ($NNODES) and processes per node ($PPN).
+# based on the number of members ($MEM) and total nodes ($NNODES_APPAR) and processes per node ($PPN_APPAR).
 # The 'optimal' here means minimum $mem_np but still can occupy all avaiable processes at once.
 
-if ((NNODES >= MEM)); then
-  mem_nodes=$((NNODES/MEM))
-  mem_np=$((PPN*mem_nodes))
+if ((NNODES_APPAR >= MEM)); then
+  mem_nodes=$((NNODES_APPAR/MEM))
+  mem_np=$((PPN_APPAR*mem_nodes))
 else
   mem_nodes=1
-  local mempn=$(((MEM-1)/NNODES+1))
-  if ((mempn > PPN)); then
+  local mempn=$(((MEM-1)/NNODES_APPAR+1))
+  if ((mempn > PPN_APPAR)); then
     mem_np=1
   else
-    mem_np=$((PPN/mempn))
+    mem_np=$((PPN_APPAR/mempn))
   fi
 fi
 
@@ -71,15 +71,15 @@ fi
 # the period that members run on repeated nodes ($repeat_mems), and
 # the number of members that can be run parallelly ($parallel_mems).
 
-mem_nodes=$(((mem_np-1)/PPN+1))
-if ((mem_nodes > NNODES)); then
+mem_nodes=$(((mem_np-1)/PPN_APPAR+1))
+if ((mem_nodes > NNODES_APPAR)); then
   echo "[Error] Total number of nodes is insufficient." >&2
   exit 1
 fi
 
 #-------------------------------------------------------------------------------
 
-totalnp=$((NNODES*PPN))
+totalnp=$((NNODES_APPAR*PPN_APPAR))
 
 #-------------------------------------------------------------------------------
 }
@@ -96,12 +96,12 @@ set_mem2node () {
 #        (default: $MEMBER)
 #
 # Input variables:
-#   $MEMBER             Ensemble size (if $MEM is not given)
-#   $NNODES             Number of total nodes
-#   $PPN                Number of processes per node
-#   $mem_nodes          Number of nodes for a member
-#   $mem_np             Number of processes for a member
-#   $node[1...$NNODES]  Name of nodes
+#   $MEMBER                   Ensemble size (if $MEM is not given)
+#   $NNODES_APPAR             Apparent number of total nodes
+#   $PPN_APPAR                Apparent number of processes per node
+#   $mem_nodes                Number of nodes for a member
+#   $mem_np                   Number of processes for a member
+#   $node[1...$NNODES_APPAR]  Name of nodes
 #   $NODEFILEDIR
 #   $DISTR_FILE         Location of the 'distr' file
 #                       '-': The first-time run; output 'distr' file in $NODEFILEDIR
@@ -129,21 +129,21 @@ local n
 local p
 
 if [ "$DISTR_FILE" = '-' ]; then
-  for n in $(seq $NNODES); do
-    for p in $(seq $((ns+1)) $((ns+PPN))); do
+  for n in $(seq $NNODES_APPAR); do
+    for p in $(seq $((ns+1)) $((ns+PPN_APPAR))); do
       proc2node[$p]=$n
       echo "proc2node[$p]=$n" >> $NODEFILEDIR/distr
     done
-    ns=$((ns+PPN))
+    ns=$((ns+PPN_APPAR))
   done
 fi # [ "$DISTR_FILE" = '-' ]
 
 if ((mem_nodes > 1)); then
-  n_mem=$((NNODES / mem_nodes))
+  n_mem=$((NNODES_APPAR / mem_nodes))
   n_mempn=1
 else
-  n_mem=$NNODES
-  n_mempn=$((PPN / mem_np))
+  n_mem=$NNODES_APPAR
+  n_mempn=$((PPN_APPAR / mem_np))
 fi
 repeat_mems=$n_mem
 parallel_mems=$((n_mem * n_mempn))
@@ -172,7 +172,7 @@ if [ "$DISTR_FILE" = '-' ]; then
             tppnt=$tppn
           fi
           for q in $(seq 0 $((tppnt-1))); do
-            ip=$(((n+nn)*PPN + i*mem_np + q))
+            ip=$(((n+nn)*PPN_APPAR + i*mem_np + q))
             if ((m <= MEM)); then
               mem2node[$(((m-1)*mem_np+qs+1))]=$((n+nn+1))
               echo "mem2node[$(((m-1)*mem_np+qs+1))]=$((n+nn+1))" >> $NODEFILEDIR/distr
@@ -242,10 +242,12 @@ distribute_da_cycle () {
 #                'all': All sequential numbers (default)
 #
 # Other input variables:
-#   $MEMBER      Ensemble size
-#   $DET_RUN     Whether the deterministic run is enabled
-#   $NNODES      Number of total nodes
-#   $PPN         Number of processes per node
+#   $MEMBER        Ensemble size
+#   $DET_RUN       Whether the deterministic run is enabled
+#   $NNODES        Number of total nodes
+#   $PPN           Number of processes per node
+#   $NNODES_APPAR  Apparent number of total nodes
+#   $PPN_APPAR     Apparent number of processes per node
 #   $MEMBER_FMT
 #   $SCALE_NP
 #   $NODELIST_TYPE
@@ -275,8 +277,8 @@ distribute_da_cycle () {
 #   $proc2grpproc[1...$totalnp]           Relation from processes to m_processes
 #
 # Output files:
-#   [$TMP/node/proc]       All processes
-#   [$TMP/node/node]       One process per node
+#   [$NODEFILEDIR/proc]       All processes
+#   [$NODEFILEDIR/node]       One process per node
 #-------------------------------------------------------------------------------
 
 local NODEFILE=${1:-machinefile}; shift
@@ -300,11 +302,12 @@ if [ "$NODELIST_TYPE" = 'nodefile' ]; then
 elif [ "$NODELIST_TYPE" = 'K' ]; then
   local n
   local p
+  local appar_npn=$((NNODES_APPAR/NNODES))
   if [ "$DISTR_FILE" = '-' ]; then
-    for n in $(seq $NNODES_real); do
-      for p in $(seq $PPN_real); do
-        node[$(((n-1)*PPN_real+p))]="($((n-1)))"
-        echo "node[$(((n-1)*PPN_real+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
+    for n in $(seq $NNODES); do
+      for p in $(seq $appar_npn); do
+        node[$(((n-1)*appar_npn+p))]="($((n-1)))"
+        echo "node[$(((n-1)*appar_npn+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
       done
     done
   fi # [ "$DISTR_FILE" = '-' ]
@@ -352,7 +355,7 @@ if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
   for p in $(seq $totalnp); do  
     echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc
   done
-  for n in $(seq $NNODES); do
+  for n in $(seq $NNODES_APPAR); do
     echo ${node[$n]} >> $NODEFILEDIR/node
   done
 ######  for m in $(seq $((MEMBER+1))); do
@@ -380,10 +383,12 @@ distribute_da_cycle_set () {
 #                '-': The first-time run; output 'distr' file in $NODEFILEDIR
 #
 # Other input variables:
-#   $MEMBER      Ensemble size
-#   $DET_RUN     Whether the deterministic run is enabled
-#   $NNODES      Number of total nodes
-#   $PPN         Number of processes per node
+#   $MEMBER        Ensemble size
+#   $DET_RUN       Whether the deterministic run is enabled
+#   $NNODES        Number of total nodes
+#   $PPN           Number of processes per node
+#   $NNODES_APPAR  Apparent number of total nodes
+#   $PPN_APPAR     Apparent number of processes per node
 #   $MEMBER_FMT
 #   $SCALE_NP
 #   $NODELIST_TYPE
@@ -413,8 +418,8 @@ distribute_da_cycle_set () {
 #   $proc2grpproc[1...$totalnp]           Relation from processes to m_processes
 #
 # Output files:
-#   [$TMP/node/proc]       All processes
-#   [$TMP/node/node]       One process per node
+#   [$NODEFILEDIR/proc]       All processes
+#   [$NODEFILEDIR/node]       One process per node
 #-------------------------------------------------------------------------------
 
 local NODEFILE=${1:-machinefile}; shift
@@ -437,17 +442,16 @@ if [ "$NODELIST_TYPE" = 'nodefile' ]; then
 elif [ "$NODELIST_TYPE" = 'K' ]; then
   local n
   local p
+  local appar_npn=$((NNODES_APPAR/NNODES))
 ######
   local s
-  for s in $(seq 3); do
+  for s in $(seq 2); do
 ######
   if [ "$DISTR_FILE" = '-' ]; then
-    for n in $(seq $NNODES_real); do
-      for p in $(seq $PPN_real); do
-#        node[$(((n-1)*PPN_real+p))]="($((n-1)))"
-#        echo "node[$(((n-1)*PPN_real+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
-        node[$(((s-1)*NNODES_real*PPN_real+(n-1)*PPN_real+p))]="($(((s-1)*NNODES_real+n-1)))"
-        echo "node[$(((s-1)*NNODES_real*PPN_real+(n-1)*PPN_real+p))]=\"($(((s-1)*NNODES_real+n-1)))\"" >> $NODEFILEDIR/distr
+    for n in $(seq $NNODES); do
+      for p in $(seq $appar_npn); do
+        node[$(((s-1)*NNODES*appar_npn+(n-1)*appar_npn+p))]="($(((s-1)*NNODES+n-1)))"
+        echo "node[$(((s-1)*NNODES*appar_npn+(n-1)*appar_npn+p))]=\"($(((s-1)*NNODES+n-1)))\"" >> $NODEFILEDIR/distr
       done
     done
   fi # [ "$DISTR_FILE" = '-' ]
@@ -481,7 +485,7 @@ set_mem2node $mtot "$DISTR_FILE"
 # Create nodefiles
 
 ######
-for s in $(seq 3); do
+for s in $(seq 2); do
 ######
 if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
   local p
@@ -489,13 +493,13 @@ if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
     if ((s == 1)); then ###
       echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc
     fi
-    echo ${node[$(((s-1)*NNODES_real+${proc2node[$p]}))]} >> $NODEFILEDIR/set${s}.proc
+    echo ${node[$(((s-1)*NNODES+${proc2node[$p]}))]} >> $NODEFILEDIR/set${s}.proc
   done
-  for n in $(seq $NNODES); do
+  for n in $(seq $NNODES_APPAR); do
     if ((s == 1)); then ###
       echo ${node[$n]} >> $NODEFILEDIR/node
     fi
-    echo ${node[$(((s-1)*NNODES_real+$n))]} >> $NODEFILEDIR/set${s}.node
+    echo ${node[$(((s-1)*NNODES+$n))]} >> $NODEFILEDIR/set${s}.node
   done
 ######  for m in $(seq $((MEMBER+1))); do
 ######    for p in $(seq $mem_np); do
@@ -528,8 +532,8 @@ distribute_fcst () {
 # Other input variables:
 #   $NNODES        Number of total nodes
 #   $PPN           Number of processes per node
-#   $NNODES_real   XXXXXX
-#   $PPN_real      XXXXXX
+#   $NNODES_APPAR  Apparent number of total nodes
+#   $PPN_APPAR     Apparent number of processes per node
 #   $SCALE_NP
 #   $NODELIST_TYPE
 #   
@@ -559,8 +563,8 @@ distribute_fcst () {
 #   $cycle_auto                           Automatically determined $CYCLE value
 #
 # Output files:
-#   [$TMP/node/proc]            All processes
-#   [$TMP/node/node]            One process per node
+#   [$NODEFILEDIR/proc]            All processes
+#   [$NODEFILEDIR/node]            One process per node
 #-------------------------------------------------------------------------------
 
 if (($# < 1)); then
@@ -586,25 +590,14 @@ fi
 
 if [ "$NODELIST_TYPE" = 'nodefile' ]; then
   read_nodefile_pbs "$NODEFILE"
-#elif [ "$NODELIST_TYPE" = '???' ]; then
-#  local n
-#  local p
-#  if [ "$DISTR_FILE" = '-' ]; then
-#    for n in $(seq $NNODES); do
-#      for p in $(seq $PPN); do
-#        node[$(((n-1)*PPN+p))]="($((n-1)))"
-#        echo "node[$(((n-1)*PPN+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
-#      done
-#    done
-#  fi # [ "$DISTR_FILE" = '-' ]
 elif [ "$NODELIST_TYPE" = 'K' ]; then
   local n
   local p
   if [ "$DISTR_FILE" = '-' ]; then
-    for n in $(seq $NNODES_real); do
-      for p in $(seq $PPN_real); do
-        node[$(((n-1)*PPN_real+p))]="($((n-1)))"
-        echo "node[$(((n-1)*PPN_real+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
+    for n in $(seq $NNODES); do
+      for p in $(seq $PPN); do
+        node[$(((n-1)*PPN+p))]="($((n-1)))"
+        echo "node[$(((n-1)*PPN+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
       done
     done
   fi # [ "$DISTR_FILE" = '-' ]
@@ -649,7 +642,7 @@ if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
   for p in $(seq $totalnp); do
     echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc
   done
-  for n in $(seq $NNODES); do
+  for n in $(seq $NNODES_APPAR); do
     echo ${node[$n]} >> $NODEFILEDIR/node
   done
 ######  for c in $(seq $CYCLE); do
@@ -671,15 +664,15 @@ fi
 read_nodefile_pbs () {
 #-------------------------------------------------------------------------------
 # Parse the PBS-type nodefile.
-# check if it is consistent to the $NNODES and $PPN settings and get the node names.
+# check if it is consistent to the $NNODES_APPAR and $PPN_APPAR settings and get the node names.
 #
 # Usage: read_nodefile_pbs NODEFILE
 #
 #   NODEFILE  PBS-type Nodefile for mpiexec
 #
 # Other input variables:
-#   $NNODES  Number of total nodes
-#   $PPN     Number of processes per node
+#   $NNODES_APPAR  Apparent number of total nodes
+#   $PPN_APPAR     Apparent number of processes per node
 #   
 # Return variables:
 #   $node[1...$nnodes]  Name of each node
@@ -707,13 +700,13 @@ for inode in $nodelist; do
   n=$((n+1))
   node[$n]=$inode
   ippn=`cat $NODEFILE | grep $inode | wc -l`
-  if ((ippn != PPN)); then
+  if ((ippn != PPN_APPAR)); then
     echo "[Error] $FUNCNAME: Number of processes per node in \$NODEFILE" >&2
     echo "          is not consistent to the setting in 'config.main'" >&2
     exit 1
   fi
 done
-if ((n != NNODES)); then
+if ((n != NNODES_APPAR)); then
   echo "[Error] $FUNCNAME: Number of nodes in \$NODEFILE" >&2
   echo "          is not consistent to the setting in 'config.main'" >&2
   exit 1

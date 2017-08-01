@@ -16,7 +16,7 @@ OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_100m_10
 #===============================================================================
 # Location of model/data files
 
-MODELDIR="$DIR/../../bin"                               # Directory of the SCALE model executables
+SCALEDIR="$DIR/../.."                                   # Directory of the SCALE model
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 
 DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf/database/topo_prep/BDA_d3_100m_64p_bf40"
@@ -85,18 +85,8 @@ SCALE_NP=64        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
-ENABLE_SET=0       ######
-
 #===============================================================================
 # Temporary directories to store runtime files
-
-DATA_BDY_TMPLOC=1           # Location of the temporary directory for DATA_BDY
-                            #  1: in $TMPDAT
-                            #  2: in $TMPOUT
-
-DISK_MODE_DATA_BDY=2
-
-DISK_MODE_TOPO_LANDUSE_DB=2
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No

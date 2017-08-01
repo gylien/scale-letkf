@@ -4,12 +4,11 @@
 #  Run ensemble forecasts and (optional) verifications.
 #
 #  August  2014, modified from GFS-LETKF, Guo-Yuan Lien
-#  October 2014, modified,                Guo-Yuan Lien
 #
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    fcst.sh [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP]
+#    fcst.sh [..]
 #
 #  Use settings:
 #    config.main
@@ -23,63 +22,43 @@
 #===============================================================================
 
 cd "$(dirname "$0")"
-myname='fcst.sh'
-myname1=${myname%.*}
+myname="$(basename "$0")"
+job='fcst'
 
 #===============================================================================
 # Configuration
 
 . config.main || exit $?
-. config.$myname1 || exit $?
+. config.${job} || exit $?
 
 . src/func_distribute.sh || exit $?
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
-. src/func_$myname1.sh || exit $?
+. src/func_${job}.sh || exit $?
 
 #-------------------------------------------------------------------------------
 
-if [ "$STG_TYPE" = 'K_rankdir' ]; then
-  SCRP_DIR="."
-  if ((TMPDAT_MODE <= 2)); then
-    TMPDAT="../dat"
-  else
-    TMPDAT="./dat"
-  fi
-  if ((TMPRUN_MODE <= 2)); then
-    TMPRUN="../run"
-  else
-    TMPRUN="./run"
-  fi
-  if ((TMPOUT_MODE <= 2)); then
-    TMPOUT="../out"
-  else
-    TMPOUT="./out"
-  fi
-fi
-
 echo "[$(datetime_now)] Start $myname $@" >&2
 
-setting "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" || exit $?
+setting "$@" || exit $?
+
+###if [ "$CONF_MODE" = 'static' ]; then
+###  . src/func_${job}_static.sh || exit $?
+###fi
 
 echo
 print_setting || exit $?
 
-#-------------------------------------------------------------------------------
+#===============================================================================
+# Initialize temporary directories
 
-if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
-  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
-    safe_init_tmpdir $TMP || exit $?
-  fi
-  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
-    safe_init_tmpdir $TMPL || exit $?
-  fi
+if ((RUN_LEVEL <= 2)) && ((ISTEP == 1)); then
+  safe_init_tmpdir $TMP || exit $?
 fi
 
 #===============================================================================
 # Determine the distibution schemes
 
-declare -a node
 declare -a node_m
 declare -a name_m
 declare -a mem2node
@@ -88,8 +67,8 @@ declare -a proc2node
 declare -a proc2group
 declare -a proc2grpproc
 
-#if [ "$STG_TYPE" = 'builtin' ] && ((&& ISTEP == 1)); then
-if [ "$STG_TYPE" = 'builtin' ]; then
+#if ((RUN_LEVEL <= 2)) && ((ISTEP == 1)); then
+if ((RUN_LEVEL <= 2)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
   distribute_fcst "$MEMBERS" $CYCLE machinefile $NODEFILE_DIR || exit $?
 else
@@ -97,33 +76,64 @@ else
 fi
 
 if ((CYCLE == 0)); then
-  CYCLE=$parallel_mems
+  CYCLE=$cycle_auto
 fi
 
 #===============================================================================
 # Determine the staging list and then stage in
 
-if [ "$STG_TYPE" = 'builtin' ]; then
+if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR || exit $?
-  staging_list || exit $?
-  if ((TMPDAT_MODE >= 2 || TMPOUT_MODE >= 2)); then
-    pdbash node all $SCRP_DIR/src/stage_in.sh || exit $?
-  fi
+###  if [ "$CONF_MODE" = 'static' ]; then
+###    staging_list_static || exit $?
+###    if ((DISK_MODE == 3)); then
+###      config_file_list $TMP/config || exit $?
+###    else
+###      config_file_list || exit $?
+###    fi
+###  else
+    staging_list || exit $?
+###  fi
+
+  stage_in node || exit $?
 fi
 
 #===============================================================================
 # Run initialization scripts on all nodes
 
-if ((TMPRUN_MODE <= 2)); then
-  pdbash node one $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
-else
-  pdbash node all $SCRP_DIR/src/init_all_node.sh $myname1 || exit $?
+if [ "$CONF_MODE" != 'static' ]; then
+  if ((DISK_MODE <= 2)); then
+    pdbash node one $SCRP_DIR/src/init_all_node.sh $job || exit $?
+  else
+    pdbash node all $SCRP_DIR/src/init_all_node.sh $job || exit $?
+  fi
 fi
 
 #===============================================================================
 # Run cycles of forecasts
+
+function online_stgout_bgjob () {
+  local ILOOP="$1"; shift
+  local ITIME="$1"
+  touch lock.$ILOOP
+  echo "[$(datetime_now)] ${ITIME}: Stage-out (background job)" >&2
+  while [ -e "lock.$((ILOOP-1))" ]; do
+    sleep 1s
+  done
+
+  stage_out node $ILOOP || exit $?
+
+  echo "[$(datetime_now)] ${ITIME}: Stage-out (background job completed)" >&2
+  rm -f lock.$ILOOP
+}
+
+#-------------------------------------------------------------------------------
+
+cd $TMPROOT
+
+#-------------------------------------------------------------------------------
 
 declare -a stimes
 declare -a stimesfmt
@@ -178,14 +188,14 @@ while ((time <= ETIME)); do
   echo "  Forecast length:          $FCSTLEN s"
   echo "  Output interval:          $FCSTOUT s"
   echo
-  echo "  Nodes used:               $NNODES"
+  echo "  Nodes used:               $NNODES_APPAR"
 #  if ((MTYPE == 1)); then
-    for n in $(seq $NNODES); do
+    for n in $(seq $NNODES_APPAR); do
       echo "    ${node[$n]}"
     done
 #  fi
   echo
-  echo "  Processes per node:       $PPN"
+  echo "  Processes per node:       $PPN_APPAR"
   echo "  Total processes:          $totalnp"
   echo
   echo "  Nodes per SCALE run:      $mem_nodes"
@@ -237,35 +247,27 @@ while ((time <= ETIME)); do
         enable_iter=1
       fi
 
-      stdout_dir="$TMPOUT/${stimes[1]}/log/fcst_$(basename ${stepexecdir[$s]})"
+###      if [ "$CONF_MODE" = 'static' ]; then
 
-      if ((enable_iter == 1)); then
-        for it in $(seq $nitmax); do
-          if [ "$STG_TYPE" = 'K_rankdir' ]; then
+###        mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
+
+###      else
+
+        execpath="${stepexecdir[$s]}/${stepexecname[$s]}"
+        stdout_dir="$TMPOUT/${stimes[1]}/log/fcst_$(basename ${stepexecdir[$s]})"
+        if ((enable_iter == 1)); then
+          for it in $(seq $nitmax); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" ${stepexecdir[$s]} \
-                    "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop $it || exit $?
+            mpirunf proc $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/fcst_step.sh" $loop $it || exit $?
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          else
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
-
-            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
-                    "$SCRP_DIR/fcst_step.sh" $loop $it || exit $?
-
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          fi
-        done
-      else
-        if [ "$STG_TYPE" = 'K_rankdir' ]; then
-          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" ${stepexecdir[$s]} \
-                  "$(rev_path ${stepexecdir[$s]})/fcst_step.sh" $loop || exit $?
+          done
         else
-          mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT" . \
-                  "$SCRP_DIR/fcst_step.sh" $loop || exit $?
+          mpirunf proc $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/fcst_step.sh" $loop || exit $?
         fi
-      fi
+
+###      fi
 
     fi
   done
@@ -273,22 +275,11 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 # Online stage out
 
-#  if ((ONLINE_STGOUT == 1)); then
-#    if ((MACHINE_TYPE == 11)); then
-#      touch $TMP/loop.${loop}.done
-#    fi
-#    if ((BUILTIN_STAGING && $(datetime $time $((lcycles * CYCLE)) s) <= ETIME)); then
-#      if ((MACHINE_TYPE == 12)); then
-#        echo "[$(datetime_now)] ${stimes[1]}: Online stage out"
-#        bash $SCRP_DIR/src/stage_out.sh s $loop || exit $?
-#        pdbash node all $SCRP_DIR/src/stage_out.sh $loop || exit $?
-#      else
-#        echo "[$(datetime_now)] ${stimes[1]}: Online stage out (background job)"
-#        ( bash $SCRP_DIR/src/stage_out.sh s $loop ;
-#          pdbash node all $SCRP_DIR/src/stage_out.sh $loop ) &
-#      fi
-#    fi
-#  fi
+  if ((RUN_LEVEL <= 3)); then
+    if ((ONLINE_STGOUT == 1)); then
+      online_stgout_bgjob $loop $time &
+    fi
+  fi
 
 #-------------------------------------------------------------------------------
 # Write the footer of the log file
@@ -310,26 +301,27 @@ done
 #===============================================================================
 # Stage out
 
-if [ "$STG_TYPE" = 'builtin' ]; then
-  echo "[$(datetime_now)] Finalization (stage out)" >&2
+if ((RUN_LEVEL <= 3)); then
+  if ((ONLINE_STGOUT == 1)); then
+    wait
+  else
+    echo "[$(datetime_now)] Finalization (stage out)" >&2
 
-  if ((TMPOUT_MODE >= 2)); then
-    if ((ONLINE_STGOUT == 1)); then
-      wait
-      bash $SCRP_DIR/src/stage_out.sh s $loop || exit $?
-      pdbash node all $SCRP_DIR/src/stage_out.sh $loop || exit $?
-    else
-      bash $SCRP_DIR/src/stage_out.sh s || exit $?
-      pdbash node all $SCRP_DIR/src/stage_out.sh || exit $?
-    fi
+    stage_out node || exit $?
   fi
 
-#  if ((TMPDAT_MODE <= 2 || TMPRUN_MODE <= 2 || TMPOUT_MODE <= 2)); then
-#    safe_rm_tmpdir $TMP
-#  fi
-#  if ((TMPDAT_MODE == 3 || TMPRUN_MODE == 3 || TMPOUT_MODE == 3)); then
-#    safe_rm_tmpdir $TMPL
-#  fi
+  if ((CLEAR_TMP == 1 && USE_TMPL == 1)); then
+    pdbash node all $SCRP_DIR/src/stage_out_rm_stgdir_node.sh $TMPL local # || exit $?
+  fi
+fi
+
+#===============================================================================
+# Remove temporary directories
+
+if ((RUN_LEVEL <= 3)); then
+  if ((CLEAR_TMP == 1)); then
+    safe_rm_tmpdir $TMP || exit $?
+  fi
 fi
 
 #===============================================================================
