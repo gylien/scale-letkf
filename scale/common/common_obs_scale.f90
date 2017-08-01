@@ -2410,6 +2410,9 @@ subroutine read_obs_all(obs)
       call get_nobs_radar(trim(OBS_IN_NAME(iof)), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
     case (3) !H08 
       call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
+    case (4) ! precip
+      call get_nobs_precip( ) ! precip
+
     case default
       write(6,*) 'Error: Unsupported observation file format!'
       stop
@@ -2428,6 +2431,9 @@ subroutine read_obs_all(obs)
       call read_obs_radar(trim(OBS_IN_NAME(iof)),obs(iof))
     case (3) ! H08 
       call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
+    case (4) ! precip
+      call read_obs_precip()  ! precip
+
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
 
@@ -2463,6 +2469,9 @@ subroutine write_obs_all(obs, missing, file_suffix)
       call write_obs_radar(trim(filestr),obs(iof),missing=missing_)
     case (3) ! H08 
       call write_obs_H08(trim(filestr),obs(iof),missing=missing_) ! H08
+
+    case (4) ! precip
+      call write_obs_precip() ! precip
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
 
@@ -2899,5 +2908,22 @@ SUBROUTINE write_obs_H08(cfile,obs,append,missing)
 
   RETURN
 END SUBROUTINE write_obs_H08
+
+
+SUBROUTINE get_nobs_precip()
+  IMPLICIT NONE 
+  PRINT*, "sub get_nobs_precip()"
+END SUBROUTINE get_nobs_precip
+
+SUBROUTINE read_obs_precip()
+  IMPLICIT NONE 
+  PRINT*, "sub read_obs_precip()"
+END SUBROUTINE read_obs_precip
+
+SUBROUTINE write_obs_precip()
+  IMPLICIT NONE 
+  PRINT*, "sub read_obs_precip()"
+END SUBROUTINE write_obs_precip
+
 
 END MODULE common_obs_scale
