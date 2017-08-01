@@ -1,4 +1,3 @@
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
 !  module common_precip
 !
@@ -7,6 +6,7 @@
 !  created  Jan. 2012, Guo-Yuan Lien, UMD
 !  adopted to GFS-LETKF and modified, May 2013, Guo-Yuan Lien, UMD
 !  modified, Spetember 2013, Guo-Yuan Lien, UMD
+!  adopted to SCALE-LETKF, Aug 1, 2017, Cheng Da, UMD
 !
 !  function dinvnorm(p) modified from Ren-Raw Chen, 
 !    Rutgers University in New Brunswick, New Jersey
@@ -15,7 +15,6 @@
 !-------------------------------------------------------------------------------
 !
 !  subroutine read_ppcdf     (cdffile_m, cdffile_o, ppcdf_m, ppcdf_o, ppzero_m, ppzero_o)
-!  subroutine read_ppmask    (maskfile, ppmask)
 !  function   pptrans_normal (pp, ppcdf, ppzero)
 !  function   pptrans_log    (pp)
 !  subroutine pptrans_normal_mdzero_def (pp_ens, ppcdf, ppzero,           zero_mem, ym, sigma)
@@ -23,151 +22,86 @@
 !  function   compact_tail   (pos_cdf)
 !  function   dinvnorm       (p)
 !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+!-------------------------------------------------------------------------------
 module common_precip
 
-  use common
-  !use common_gfs, only: nlon, nlat
-  !use common_letkf, only: nbv
+  use common,       only : r_size, pi
+  use common_nml,   only : MEMBER, &
+                           use_precip, ncdf, ppzero_thres, gausstail_thres, &
+                           opt_pptrans, opt_ppobserr, log_trans_tiny, &
+                           const_ppobserr, min_ppobserr
+
+
+  !use common_scale, only : nlon, nlat, nlonh, nlath, nlong, nlatg
   implicit none
 
 !-------------------------------------------------------------------------------
+  public 
 
-  integer, parameter :: ncdf = 200   ! # of cdf bins
+  !logical      :: use_precip      = .false.
+  !
+  !integer      :: ncdf            = 200            ! # of cdf bins
+  !
+  !real(r_size) :: ppzero_thres    = 0.001d0         ! threshold of no precipitation
+  !real(r_size) :: gausstail_thres = 0.001d0
+  !
+  !integer      :: opt_pptrans     = 2              ! 0: no transformation
+  !                                                 ! 1: log transformation
+  !                                                 ! 2: Gaussian transformation with median zero rain
+  !                                                 ! 3: Gaussian transformation with modified median zero rain
+  !
+  !integer      :: opt_ppobserr    = 2              ! 0: original obserr form  obs data file
+  !                                                 ! 1: transformed obserr from obs data file
+  !                                                 ! 2: constant obserr
+  !real(r_size) :: log_trans_tiny  = 0.6d0
+  !real(r_size) :: const_ppobserr  = 0.5d0
+  !real(r_size) :: min_ppobserr    = 0.1d0
+  !
 
-  real(r_size), parameter :: ppzero_thres = 0.06d0 ! threshold of no precipitation
-  real(r_size), parameter :: mask_thres = 0.35d0   ! threshold of assimilation area wrt. the mask file
-
-  integer, parameter :: opt_pptrans = 3  ! 0: no transformation
-                                         ! 1: log transformation
-                                         ! 2: Gaussian transformation with median zero rain
-                                         ! 3: Gaussian transformation with modified median zero rain
-  real(r_size), parameter :: log_trans_tiny = 0.6d0
-  real(r_size), parameter :: gausstail_thres = 0.001d0
-
-  integer, parameter :: opt_ppobserr = 2 ! 0: original obserr form  obs data file
-                                         ! 1: transformed obserr from obs data file
-                                         ! 2: constant obserr
-  real(r_size), parameter :: const_ppobserr = 0.5d0
-  real(r_size), parameter :: min_ppobserr = 0.1d0
-
-!-------------------------------------------------------------------------------
-
-  integer, parameter :: pp_bg_nlev = 2
-  integer, parameter :: pp_bg_levs(pp_bg_nlev-1) = &
-                        (/24/)
-  integer, parameter :: pp_ob_nlev = 2
-  real(r_size), parameter :: pp_ob_levs(pp_ob_nlev-1) = &
-                        (/ppzero_thres/)
-  logical, parameter :: pp_criterion(pp_bg_nlev,pp_ob_nlev) = reshape((/ &
-!           bg1   , bg2
-           .false.,.true., &  ! ob1
-           .false.,.true.  &  ! ob2
-           /), (/pp_bg_nlev,pp_ob_nlev/))
-
-!  integer, parameter :: pp_bg_nlev = 4
-!  integer, parameter :: pp_bg_levs(pp_bg_nlev-1) = &
-!                        (/20,24,28/)
-!  integer, parameter :: pp_ob_nlev = 3
-!  real(r_size), parameter :: pp_ob_levs(pp_ob_nlev-1) = &
-!                        (/ppzero_thres,1.d0/)
-!  logical, parameter :: pp_criterion(pp_bg_nlev,pp_ob_nlev) = reshape((/ &
-!!           bg1   , bg2,  , bg3   , bg4
-!           .false.,.false.,.false.,.true., &  ! ob1
-!           .false.,.false.,.true. ,.true., &  ! ob2
-!           .false.,.true. ,.true. ,.true.  &  ! ob3
-!           /), (/pp_bg_nlev,pp_ob_nlev/))
+  real(r_size),allocatable,save :: ppcdf_m(:,:,:) ! nlon*nlat*(0:ncdf)
+  real(r_size),allocatable,save :: ppcdf_o(:,:,:) ! nlon*nlat*(0:ncdf)
+  real(r_size),allocatable,save :: ppzero_m(:,:,:) ! nlon*nlat
+  real(r_size),allocatable,save :: ppzero_o(:,:,:) ! nlon*nlat
 
 !-------------------------------------------------------------------------------
+
+  !integer, parameter :: pp_bg_nlev = 2
+  !integer, parameter :: pp_bg_levs(pp_bg_nlev-1) = &
+  !                      (/24/)
+  !integer, parameter :: pp_ob_nlev = 2
+  !real(r_size), parameter :: pp_ob_levs(pp_ob_nlev-1) = &
+  !                      (/ppzero_thres/)
+  !logical, parameter :: pp_criterion(pp_bg_nlev,pp_ob_nlev) = reshape((/ &
+! !          bg1   , bg2
+  !         .false.,.true., &  ! ob1
+  !         .false.,.true.  &  ! ob2
+  !         /), (/pp_bg_nlev,pp_ob_nlev/))
 
 contains
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-------------------------------------------------------------------------------
 
-subroutine read_ppcdf (cdffile_m, cdffile_o, ppcdf_m, ppcdf_o, ppzero_m, ppzero_o)
+!subroutine read_ppcdf (cdffile_m, cdffile_o, ppcdf_m, ppcdf_o, ppzero_m, ppzero_o)
+!
+!  implicit none
+!
+!  character(len=*), intent(in) :: cdffile_m
+!  character(len=*), intent(in) :: cdffile_o
+!  real(r_size), intent(out) :: ppcdf_m(nlon,nlat,0:ncdf)
+!  real(r_size), intent(out) :: ppcdf_o(nlon,nlat,0:ncdf)
+!  real(r_size), intent(out) :: ppzero_m(nlon,nlat)
+!  real(r_size), intent(out) :: ppzero_o(nlon,nlat)
+!
+!  real(r_sngl) :: ppcdf_ms(nlon,nlat,0:ncdf)
+!  real(r_sngl) :: ppzero_ms(nlon,nlat)
+!  real(r_sngl) :: ppcdf_os(nlon,nlat,0:ncdf)
+!  real(r_sngl) :: ppzero_os(nlon,nlat)
+!  integer :: i, j, b, iolen
+!  logical :: ex
+!
+!end subroutine read_ppcdf
 
-  implicit none
-
-  character(len=*), intent(in) :: cdffile_m
-  character(len=*), intent(in) :: cdffile_o
-  real(r_size), intent(out) :: ppcdf_m(nlon,nlat,0:ncdf)
-  real(r_size), intent(out) :: ppcdf_o(nlon,nlat,0:ncdf)
-  real(r_size), intent(out) :: ppzero_m(nlon,nlat)
-  real(r_size), intent(out) :: ppzero_o(nlon,nlat)
-
-  real(r_sngl) :: ppcdf_ms(nlon,nlat,0:ncdf)
-  real(r_sngl) :: ppzero_ms(nlon,nlat)
-  real(r_sngl) :: ppcdf_os(nlon,nlat,0:ncdf)
-  real(r_sngl) :: ppzero_os(nlon,nlat)
-  integer :: i, j, b, iolen
-  logical :: ex
-
-  inquire (iolength=iolen) iolen
-
-  inquire (file=trim(cdffile_m), exist=ex)
-  if (ex) then
-    open (90, file=trim(cdffile_m), status='old', form='unformatted', &
-              access='direct', recl=iolen*nlon*nlat)
-    do b = 0, ncdf
-      read (90, rec=(b+1)) ((ppcdf_ms(i,j,b), i=1,nlon), j=1,nlat)
-    end do
-    read (90, rec=(2*(ncdf+1)+2)) ((ppzero_ms(i,j), i=1,nlon), j=1,nlat)
-    close (90)
-    ppcdf_m = real(ppcdf_ms, r_size)
-    ppzero_m = real(ppzero_ms, r_size)
-  else
-    write (6,'(3A)') "CDF file ", cdffile_m, " does not exist -- skipped"
-  end if
-
-  inquire (file=trim(cdffile_o), exist=ex)
-  if (ex) then
-    open (91, file=trim(cdffile_o), status='old', form='unformatted', &
-              access='direct', recl=iolen*nlon*nlat)
-    do b = 0, ncdf
-      read (91, rec=(b+1)) ((ppcdf_os(i,j,b), i=1,nlon), j=1,nlat)
-    end do
-    read (91, rec=(2*(ncdf+1)+2)) ((ppzero_os(i,j), i=1,nlon), j=1,nlat)
-    close (91)
-    ppcdf_o = real(ppcdf_os, r_size)
-    ppzero_o = real(ppzero_os, r_size)
-  else
-    write (6,'(3A)') "CDF file ", cdffile_o, " does not exist -- skipped"
-  end if
-
-end subroutine read_ppcdf
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-subroutine read_ppmask (maskfile, ppmask)
-
-  implicit none
-
-  character(len=*), intent(in) :: maskfile
-  real(r_size), intent(out) :: ppmask(nlon,nlat)
-
-  real(r_sngl) :: ppmask_s(nlon,nlat)
-  integer :: i, j, iolen
-  logical :: ex
-
-  inquire (iolength=iolen) iolen
-
-  inquire (file=trim(maskfile), exist=ex)
-  if (ex) then
-    open (92, file=trim(maskfile), status='old', form='unformatted', &
-              access='direct', recl=iolen*nlon*nlat)
-    read (92, rec=1) ((ppmask_s(i,j), i=1,nlon), j=1,nlat)
-    close (92)
-    ppmask = real(ppmask_s, r_size)
-  else
-    write (6,'(3A)') "Mask file ", maskfile, " does not exist -- skipped"
-    ppmask = 1.0e10  ! All data are used.
-  end if
-
-end subroutine read_ppmask
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+!-------------------------------------------------------------------------------
 function pptrans_normal (pp, ppcdf, ppzero)
 
   implicit none
@@ -218,8 +152,7 @@ function pptrans_normal (pp, ppcdf, ppzero)
 
 end function pptrans_normal
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+!-------------------------------------------------------------------------------
 function pptrans_log (pp)
 
   implicit none
@@ -241,7 +174,7 @@ subroutine pptrans_normal_mdzero_def (pp_ens, ppcdf, ppzero, zero_mem, ym, sigma
 
   implicit none
 
-  real(r_size), intent(inout) :: pp_ens(nbv)
+  real(r_size), intent(inout) :: pp_ens(MEMBER)
   real(r_size), intent(in)    :: ppcdf(0:ncdf)
   real(r_size), intent(in)    :: ppzero
   integer, intent(out)        :: zero_mem
@@ -252,11 +185,11 @@ subroutine pptrans_normal_mdzero_def (pp_ens, ppcdf, ppzero, zero_mem, ym, sigma
   real(r_size) :: ppzero_b, pprain_b
   real(r_size) :: y_trace, y_trace_b
   real(r_size) :: alpha, beta
-  logical :: zero(nbv)
+  logical :: zero(MEMBER)
   integer :: n
 
 !------
-!  real(r_size) :: pp_ens_ori(nbv)
+!  real(r_size) :: pp_ens_ori(MEMBER)
 !  pp_ens_ori = pp_ens
 !------
 
@@ -272,7 +205,7 @@ subroutine pptrans_normal_mdzero_def (pp_ens, ppcdf, ppzero, zero_mem, ym, sigma
   beta = 0.0d0
   zero_mem = 0
   zero = .false.
-  do n = 1, nbv
+  do n = 1, MEMBER
     if (pp_ens(n) < ppzero_thres) then
       zero_mem = zero_mem + 1
       zero(n) = .true.
@@ -281,8 +214,8 @@ subroutine pptrans_normal_mdzero_def (pp_ens, ppcdf, ppzero, zero_mem, ym, sigma
       beta = beta + pp_ens(n)
     end if
   end do
-  beta = beta / real(nbv, r_size)
-  ppzero_b = real(zero_mem, r_size) / real(nbv, r_size)
+  beta = beta / real(MEMBER, r_size)
+  ppzero_b = real(zero_mem, r_size) / real(MEMBER, r_size)
   pprain_b = 1.0d0 - ppzero_b
 
   y_trace = dinvnorm(compact_tail(ppzero))
@@ -292,7 +225,7 @@ subroutine pptrans_normal_mdzero_def (pp_ens, ppcdf, ppzero, zero_mem, ym, sigma
   ym = (alpha * y_trace + beta * y_trace_b) / (alpha + pprain_b * y_trace_b)
   sigma = (pprain_b * y_trace - beta) / (alpha + pprain_b * y_trace_b)
 
-  do n = 1, nbv
+  do n = 1, MEMBER
     if (zero(n)) then
       pos_cdf = ppzero_b * 0.5d0
       pp_ens(n) = ym + sigma * dinvnorm(compact_tail(pos_cdf))
@@ -303,15 +236,14 @@ subroutine pptrans_normal_mdzero_def (pp_ens, ppcdf, ppzero, zero_mem, ym, sigma
 !  print *, '----'
 !  print *, ppzero, ppzero_b, dinvnorm(pos_cdf)
 !  print *, y_trace, ym, sigma
-!  do n = 1, nbv
+!  do n = 1, MEMBER
 !    print *, pp_ens_ori(n), pp_ens(n), zero(n)
 !  end do
 !------
 
 end subroutine pptrans_normal_mdzero_def
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+!-------------------------------------------------------------------------------
 function pptrans_normal_mdzero (pp, ppcdf, ppzero, ppzero_m, zero_mem, ym, sigma)
 
   implicit none
@@ -368,7 +300,7 @@ function pptrans_normal_mdzero (pp, ppcdf, ppzero, ppzero_m, zero_mem, ym, sigma
 !------
 
   if (pos_cdf < ppzero_m) then
-    pos_cdf = (pos_cdf / ppzero_m) * (real(zero_mem, r_size) / real(nbv, r_size))
+    pos_cdf = (pos_cdf / ppzero_m) * (real(zero_mem, r_size) / real(MEMBER, r_size))
     pptrans_normal_mdzero = ym + sigma * dinvnorm(compact_tail(pos_cdf))
   else
     pptrans_normal_mdzero = dinvnorm(compact_tail(pos_cdf))
@@ -381,8 +313,7 @@ function pptrans_normal_mdzero (pp, ppcdf, ppzero, ppzero_m, zero_mem, ym, sigma
 
 end function pptrans_normal_mdzero
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+!-------------------------------------------------------------------------------
 function compact_tail (pos_cdf)
 
   implicit none
@@ -396,12 +327,13 @@ function compact_tail (pos_cdf)
 
 end function compact_tail
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-------------------------------------------------------------------------------
 ! ren-raw chen, rutgers business school
 ! normal inverse
 ! translate from http://home.online.no/~pjacklam/notes/invnorm
 ! a routine written by john herrero
-
+!-------------------------------------------------------------------------------
+! ren-raw chen, rutgers business school
 real*8 function dinvnorm(p)
       real*8 p,p_low,p_high
       real*8 a1,a2,a3,a4,a5,a6
@@ -450,8 +382,6 @@ real*8 function dinvnorm(p)
       return
 end function dinvnorm
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 end module common_precip
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

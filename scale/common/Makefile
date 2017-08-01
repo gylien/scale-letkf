@@ -2,8 +2,8 @@ include ../configure.user
 
 OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_sort.o common_rand.o common_letkf.o \
 	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
-          common_nml.o
-          #common_precip.o
+          common_nml.o \
+          common_precip.o
 
 ifeq ($(H08),T)
 OBJS    += scale_H08_fwd.o
@@ -50,8 +50,8 @@ endif
 common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o \
 	common_scale.o common_obs_scale.o 
 	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC)
-#common_precip.o:	common_precip.f90 common.o common_scale.o common_letkf.o
-#	$(SFC) $(FOPTS) -c $<
+common_precip.o:	common_precip.f90 common.o common_nml.o
+	$(SFC) $(FOPTS) -c $<
 common_nml.o:	common_nml.f90 common.o
 	$(FC) $(FOPTS) -c $< $(INCS) $(SCALE_INC)
 

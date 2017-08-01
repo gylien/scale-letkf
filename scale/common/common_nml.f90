@@ -275,6 +275,25 @@ MODULE common_nml
                         !! It is better to reject B11(ch=5) & B12(ch=6) obs because these bands are 
                         !! sensitive to chemicals.
 
+
+  !---PARAM_LETKF_PRECIP ( currently all low alphabets, in case my eye burns ) 
+  logical      :: use_precip      = .FALSE.        ! assimilate precipitation if .true.
+  integer      :: ncdf            = 200            ! # of cdf bins
+  real(r_size) :: ppzero_thres    = 0.001d0        ! threshold of no precipitation
+  real(r_size) :: gausstail_thres = 0.001d0
+  integer      :: opt_pptrans     = 2              ! 0: no transformation
+                                                   ! 1: log transformation
+                                                   ! 2: Gaussian transformation with median zero rain
+                                                   ! 3: Gaussian transformation with modified median zero rain
+  integer      :: opt_ppobserr    = 2              ! 0: original obserr form  obs data file
+                                                   ! 1: transformed obserr from obs data file
+                                                   ! 2: constant obserr
+  real(r_size) :: log_trans_tiny  = 0.6d0
+  real(r_size) :: const_ppobserr  = 0.5d0
+  real(r_size) :: min_ppobserr    = 0.1d0
+
+
+
   !--- PARAM_OBS_ERROR
   real(r_size) :: OBSERR_U = 1.0d0
   real(r_size) :: OBSERR_V = 1.0d0
@@ -844,6 +863,40 @@ subroutine read_nml_letkf_h08
 
   return
 end subroutine read_nml_letkf_h08
+
+!-------------------------------------------------------------------------------
+! PARAM_LETKF_PRECIP  
+!-------------------------------------------------------------------------------
+subroutine read_nml_letkf_precip
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_LETKF_PRECIP/ &
+            use_precip,      &
+            ncdf,            &
+            ppzero_thres,    &
+            gausstail_thres, &
+            log_trans_tiny,  &
+            opt_pptrans,     &
+            opt_ppobserr,    &
+            const_ppobserr,  &
+            min_ppobserr
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_LETKF_PRECIP,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_LETKF_PRECIP/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_PRECIP. Check!'
+    stop
+  endif
+  write(6, nml=PARAM_LETKF_PRECIP)
+  return
+
+endsubroutine read_nml_letkf_precip
+ 
+
 
 !-------------------------------------------------------------------------------
 ! PARAM_OBS_ERROR
