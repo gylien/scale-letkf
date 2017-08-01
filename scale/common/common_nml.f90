@@ -18,7 +18,8 @@ MODULE common_nml
   integer, parameter :: nv3d = 11    ! number of 3D state variables (in SCALE restart files)
   integer, parameter :: nv2d = 0     ! number of 2D state variables (in SCALE restart files)
   integer, parameter :: nid_obs = 16 ! number of variable types
-  integer, parameter :: nobtype = 24 ! number of observation report types
+  !integer, parameter :: nobtype = 24 ! number of observation report types 
+  integer, parameter :: nobtype = 25 ! number of observation report types (add level-3 precip)
   integer, parameter :: nch = 10     ! H08 Num of Himawari-8 (IR) channels
 
   integer, parameter :: nobsfilemax = 10
@@ -150,7 +151,7 @@ MODULE common_nml
   real(r_size) :: HORI_LOCAL(nobtype) = &
     (/500.0d3, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
        -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-       -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
 
   ! >0: localization length scale [ln(p) or m depends on obstype]
   !  0: no localization
@@ -158,7 +159,7 @@ MODULE common_nml
   real(r_size) :: VERT_LOCAL(nobtype) = &
     (/ 0.4d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0, 1000.0d0, -1.0d0, -1.0d0/)
+      -1.0d0, 1000.0d0, -1.0d0, -1.0d0, -1.0d0/)
 !      -1.0d0, 1000.0d0, -1.0d0,  0.0d0/)
 
   ! >0: localization length scale (sec) XXX not implemented yet XXX
@@ -167,7 +168,7 @@ MODULE common_nml
   real(r_size) :: TIME_LOCAL(nobtype) = &
     (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
 
   real(r_size) :: HORI_LOCAL_RADAR_OBSNOREF = -1.0d0 ! <0: same as HORI_LOCAL(22=PHARAD)
   real(r_size) :: HORI_LOCAL_RADAR_VR = -1.0d0       ! <0: same as HORI_LOCAL(22=PHARAD)
@@ -180,7 +181,7 @@ MODULE common_nml
   integer :: MAX_NOBS_PER_GRID(nobtype) = &
     (/ 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
-      -1, -1, -1, -1/)
+      -1, -1, -1, -1, -1/)
 
   integer :: MAX_NOBS_PER_GRID_CRITERION = 1 ! 1: normalized 3D distance (from closest)
                                              ! 2: localization weight (from largest)
@@ -192,7 +193,7 @@ MODULE common_nml
   real(r_size) :: OBS_MIN_SPACING(nobtype) = &
     (/300.0d3, 100.0d3, 100.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 100.0d3, 150.0d3, 150.0d3, &
       150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 150.0d3, &
-      150.0d3,   1.0d3,  15.0d3,1000.0d3/)
+      150.0d3,   1.0d3,  15.0d3,1000.0d3, 350.0d3/)
 
   ! >0: optimal grid spacing for bucket sorting of observations
   !  0: automatically determined based on HORI_LOCAL, MAX_NOBS_PER_GRID, and OBS_MIN_SPACING
@@ -200,7 +201,7 @@ MODULE common_nml
   real(r_size) :: OBS_SORT_GRID_SPACING(nobtype) = &
     (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
 
   !--- PARAM_LETKF_VAR_LOCAL
   real(r_size) :: VAR_LOCAL_UV(nv3d+nv2d)        = 1.0d0
@@ -217,6 +218,7 @@ MODULE common_nml
   logical :: DEPARTURE_STAT = .true.
   logical :: DEPARTURE_STAT_RADAR = .false.
   logical :: DEPARTURE_STAT_H08 = .false.
+  logical :: DEPARTURE_STAT_RAIN = .false.   ! precip
   real(r_size) :: DEPARTURE_STAT_T_RANGE = 0.0d0   ! time range within which observations are considered in the departure statistics.
                                                    ! 0: no limit
   logical :: DEPARTURE_STAT_ALL_PROCESSES = .true. ! print the departure statistics by all processes?
@@ -308,6 +310,7 @@ MODULE common_nml
   real(r_size) :: OBSERR_TCP = 5.0d2 ! (Pa)
   real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
                                       5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
+  real(r_size) :: OBSERR_RAIN = 0.18 ! error in log(RR6h+1) space (LOPEZ, 2010), maybe don't need this 
 
   !--- PARAM_OBSSIM
   character(filelenmax) :: OBSSIM_IN_TYPE = 'history'
@@ -917,7 +920,8 @@ subroutine read_nml_obs_error
     OBSERR_TCX, &
     OBSERR_TCY, &
     OBSERR_TCP, &
-    OBSERR_H08    ! H08
+    OBSERR_H08, &    ! H08
+    OBSERR_RAIN      ! precip
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBS_ERROR,iostat=ierr)

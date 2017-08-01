@@ -89,7 +89,7 @@ MODULE common_obs_scale
        'VADWND', 'SATEMP', 'ADPSFC', 'SFCSHP', 'SFCBOG', &
        'SPSSMI', 'SYNDAT', 'ERS1DA', 'GOESND', 'QKSWND', &
        'MSONET', 'GPSIPW', 'RASSDA', 'WDSATR', 'ASCATW', &
-       'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL'/) ! H08
+       'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL', 'L3RAIN'/) ! H08, Lv-3 PRECIP
 
   INTEGER,PARAMETER :: max_obs_info_meta = 3 ! maximum array size for type(obs_info)%meta
 
@@ -1464,6 +1464,10 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
             if (oqc(n) == iqc_ref_low) oqc(n) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
           end if
         end if
+      case ( id_rain_obs ) 
+        ! empty block
+        print*, "Trans_XtoY_precip()"
+
       end select
 
       if (oqc(n) == iqc_good) then

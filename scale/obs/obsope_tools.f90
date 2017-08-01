@@ -1102,7 +1102,7 @@ SUBROUTINE obsmake_cal(obs)
 ! -- Not available (02/09/2015)
 !        case(id_H08IR_obs) ! H08
 !          obs(iof)%err(n) = OBSERR_H08(ch) !H08
-!        case default
+        case default
           write(6,'(A)') 'warning: skip assigning observation error (unsupported observation type)' 
         end select
 
