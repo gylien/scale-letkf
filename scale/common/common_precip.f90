@@ -28,8 +28,8 @@
 module common_precip
 
   use common
-  use common_gfs, only: nlon, nlat
-  use common_letkf, only: nbv
+  !use common_gfs, only: nlon, nlat
+  !use common_letkf, only: nbv
   implicit none
 
 !-------------------------------------------------------------------------------
