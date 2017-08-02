@@ -109,6 +109,7 @@ if [ "$SCPCALL" = 'cycle' ]; then
     mkdir -p $TMPOUT/${time}/log/scale
     mkdir -p $TMPOUT/${atime}/log/obsope
     mkdir -p $TMPOUT/${atime}/log/letkf
+    mkdir -p $TMPOUT/${atime}/obs
 
     time=$(datetime $time $LCYCLE s)
     atime=$(datetime $time $LCYCLE s)

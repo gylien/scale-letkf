@@ -1064,21 +1064,20 @@ end subroutine read_ens_mpi_addiinfl
 !-------------------------------------------------------------------------------
 ! Write ensemble analysis data after collecting from processes
 !-------------------------------------------------------------------------------
-subroutine write_ens_mpi(v3d, v2d, monit, caption)
+subroutine write_ens_mpi(v3d, v2d, monit_step)
   implicit none
   real(r_size), intent(in) :: v3d(nij1,nlev,nens,nv3d)
   real(r_size), intent(in) :: v2d(nij1,nens,nv2d)
-  logical, intent(in), optional :: monit
-  character(len=*), intent(in), optional :: caption
+  integer, intent(in), optional :: monit_step
   real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP) :: v2dg(nlon,nlat,nv2d)
   character(len=filelenmax) :: filename
   integer :: it, im, mstart, mend
-  logical :: monit_
+  integer :: monit_step_
 
-  monit_ = .false.
-  if (present(monit) .and. present(caption)) then
-    monit_ = monit
+  monit_step_ = 0
+  if (present(monit_step)) then
+    monit_step_ = monit_step
   end if
 
   do it = 1, nitmax
@@ -1094,8 +1093,8 @@ subroutine write_ens_mpi(v3d, v2d, monit, caption)
 
     call mpi_timer('write_ens_mpi:gather_grd_mpi_alltoall:', 2)
 
-    if (monit_ .and. mstart <= mmean .and. mmean <= mend) then
-      call monit_obs_mpi(v3dg, v2dg, caption)
+    if (monit_step_ > 0 .and. mstart <= mmean .and. mmean <= mend) then
+      call monit_obs_mpi(v3dg, v2dg, monit_step_)
 
       call mpi_timer('write_ens_mpi:monit_obs_mpi:', 2)
     end if
@@ -1338,11 +1337,11 @@ END SUBROUTINE buf_to_grd
 !-------------------------------------------------------------------------------
 ! MPI driver for monitoring observation departure statistics
 !-------------------------------------------------------------------------------
-subroutine monit_obs_mpi(v3dg, v2dg, caption)
+subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   implicit none
   real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP), intent(in) :: v2dg(nlon,nlat,nv2d)
-  character(len=*), intent(in) :: caption
+  integer, intent(in) :: monit_step
 
   integer :: nobs(nid_obs)
   integer :: nobs_g(nid_obs)
@@ -1351,7 +1350,11 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
   real(r_size) :: rmse(nid_obs)
   real(r_size) :: rmse_g(nid_obs)
   logical :: monit_type(nid_obs)
-  integer :: i, ierr
+  type(obs_da_value) :: obsdep_g
+  integer :: cnts
+  integer :: cntr(MEM_NP)
+  integer :: dspr(MEM_NP)
+  integer :: i, ip, ierr
 
   call mpi_timer('', 2)
 
@@ -1359,7 +1362,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
   !       because only these processes have read topo files in 'topo2d'
   ! 
   if (myrank_e == mmean_rank_e) then
-    call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true.)
+    call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true., monit_step)
 
     call mpi_timer('monit_obs_mpi:monit_obs:', 2)
 
@@ -1398,8 +1401,42 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
       end if
     end do
 
-    call mpi_timer('monit_obs_mpi:mpi_allreduce(domain):', 2)
-  end if
+    call mpi_timer('monit_obs_mpi:stat:mpi_allreduce(domain):', 2)
+
+    if (OBSDEP_OUT .and. monit_step == 2) then
+      cnts = obsdep%nobs
+      cntr = 0
+      cntr(myrank_d+1) = cnts
+      call MPI_ALLREDUCE(MPI_IN_PLACE, cntr, MEM_NP, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+      dspr = 0
+      do ip = 1, MEM_NP-1
+        dspr(ip+1) = dspr(ip) + cntr(ip)
+      end do
+
+      obsdep_g%nobs = dspr(MEM_NP) + cntr(MEM_NP)
+      if (myrank_d == 0) then
+        call obs_da_value_allocate(obsdep_g, 0)
+      end if
+
+      if (obsdep_g%nobs > 0) then
+        call MPI_GATHERV(obsdep%set, cnts, MPI_INTEGER, obsdep_g%set, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep%idx, cnts, MPI_INTEGER, obsdep_g%idx, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep%val, cnts, MPI_r_size,  obsdep_g%val, cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep%qc,  cnts, MPI_INTEGER, obsdep_g%qc,  cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep%ri,  cnts, MPI_r_size,  obsdep_g%ri,  cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep%rj,  cnts, MPI_r_size,  obsdep_g%rj,  cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
+      end if
+
+      if (myrank_d == 0) then
+        write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is writing an obsda file ', trim(OBSDEP_OUT_BASENAME)//'.dat'
+        call write_obs_da(trim(OBSDEP_OUT_BASENAME)//'.dat', obsdep_g, 0)
+        call obs_da_value_deallocate(obsdep_g)
+      end if
+      call obs_da_value_deallocate(obsdep)
+
+      call mpi_timer('monit_obs_mpi:obsdep:mpi_allreduce(domain):', 2)
+    end if ! [ OBSDEP_OUT .and. monit_step == 2 ]
+  end if ! [ myrank_e == mmean_rank_e ]
 
   if (DEPARTURE_STAT_ALL_PROCESSES) then
     call mpi_timer('', 2, barrier=MPI_COMM_e)
@@ -1416,9 +1453,18 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
   end if
 
   if (DEPARTURE_STAT_ALL_PROCESSES .or. myrank_e == mmean_rank_e) then
-    write(6,'(2A)') trim(caption), ' (IN THIS SUBDOMAIN):'
+    if (monit_step == 1) then
+      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (IN THIS SUBDOMAIN):'
+    else if (monit_step == 2) then
+      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (IN THIS SUBDOMAIN):'
+    end if
     call monit_print(nobs, bias, rmse, monit_type)
-    write(6,'(2A)') trim(caption), ' (GLOBAL):'
+
+    if (monit_step == 1) then
+      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (GLOBAL):'
+    else if (monit_step == 2) then
+      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (GLOBAL):'
+    end if
     call monit_print(nobs_g, bias_g, rmse_g, monit_type)
 
     call mpi_timer('monit_obs_mpi:monit_print:', 2)
@@ -1430,18 +1476,18 @@ end subroutine monit_obs_mpi
 !-------------------------------------------------------------------------------
 ! Gather ensemble mean to {mmean_rank_e} and write SCALE restart files
 !-------------------------------------------------------------------------------
-subroutine write_ensmean(filename, v3d, v2d, calced, monit, caption)
+subroutine write_ensmean(filename, v3d, v2d, calced, monit_step)
   implicit none
   character(len=*), intent(in) :: filename
   real(r_size), intent(inout) :: v3d(nij1,nlev,nens,nv3d)
   real(r_size), intent(inout) :: v2d(nij1,nens,nv2d)
   logical, intent(in), optional :: calced
-  logical, intent(in), optional :: monit
-  character(len=*), intent(in), optional :: caption
+  integer, intent(in), optional :: monit_step
 
   real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP) :: v2dg(nlon,nlat,nv2d)
-  logical :: calced_, monit_
+  logical :: calced_
+  integer :: monit_step_
 
   call mpi_timer('', 2)
 
@@ -1449,9 +1495,9 @@ subroutine write_ensmean(filename, v3d, v2d, calced, monit, caption)
   if (present(calced)) then
     calced_ = calced
   end if
-  monit_ = .false.
-  if (present(monit) .and. present(caption)) then
-    monit_ = monit
+  monit_step_ = 0
+  if (present(monit_step)) then
+    monit_step_ = monit_step
   end if
 
   if (.not. calced) then
@@ -1466,8 +1512,8 @@ subroutine write_ensmean(filename, v3d, v2d, calced, monit, caption)
 
   call mpi_timer('write_ensmean:gather_grd_mpi:', 2)
 
-  if (monit_) then
-    call monit_obs_mpi(v3dg, v2dg, caption)
+  if (monit_step_ > 0) then
+    call monit_obs_mpi(v3dg, v2dg, monit_step_)
 
     call mpi_timer('write_ensmean:monit_obs_mpi:', 2)
   end if

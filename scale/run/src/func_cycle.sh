@@ -652,6 +652,13 @@ while ((time <= ETIME)); do
     fi
   fi
 
+  # obs
+  #-------------------
+  if ((OBSOUT_OPT <= 3)); then
+    path="${atime}/obs/"
+    echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+  fi
+
   # obsgues
   #-------------------
   if ((OBSOUT_OPT <= 2)); then

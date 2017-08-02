@@ -88,6 +88,10 @@ OBSDA_OUT='.false.'
 if ((OBSOUT_OPT <= 2)); then
   OBSDA_OUT='.true.'
 fi
+OBSDEP_OUT_TF='.false.'
+if ((OBSOUT_OPT <= 3)); then
+  OBSDEP_OUT_TF='.true.'
+fi
 SPRD_OUT_TF='.true.'
 if ((SPRD_OUT == 0)); then
   SPRD_OUT_TF='.false.'
@@ -165,6 +169,8 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
+        -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = ${OBSDEP_OUT_TF}," \
+        -e "/!--OBSDEP_OUT_BASENAME--/a OBSDEP_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obs/obsdep\"," \
         -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
     > $TMPDIR/letkf.conf
 

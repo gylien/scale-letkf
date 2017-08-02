@@ -150,6 +150,7 @@ MODULE common_obs_scale
 
   type(obs_info),allocatable,save :: obs(:) ! observation information
   type(obs_da_value),save :: obsda_sort     ! sorted obsda
+  type(obs_da_value),save :: obsdep         ! obsdep information
 
   REAL(r_size),SAVE :: MIN_RADAR_REF
   REAL(r_size),SAVE :: RADAR_REF_THRES
@@ -1318,7 +1319,7 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
-subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
+subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   use scale_process, only: &
       PRC_myrank
 
@@ -1332,6 +1333,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
   REAL(r_size),INTENT(OUT) :: rmse(nid_obs)
   LOGICAL,INTENT(OUT) :: monit_type(nid_obs)
   logical,intent(in) :: use_key
+  integer,intent(in) :: step
 
   REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
@@ -1388,6 +1390,17 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
   allocate (ohx(nnobs))
   allocate (oqc(nnobs))
 
+#ifdef DEBUG
+  if (step < 0 .or. step > 2) then
+    write (6, *) '[Error] monit_obs: step should be 0, 1, or 2.'
+    stop
+  end if
+#endif
+  if (step == 1) then
+    obsdep%nobs = nnobs
+    call obs_da_value_allocate(obsdep, 0)
+  end if
+
   oqc = -1
 
 !  obs_idx_TCX = -1
@@ -1403,11 +1416,29 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
       nn = n
     end if
 
-!print *, n, nn
-
-
     iset = obsda_sort%set(nn)
     iidx = obsda_sort%idx(nn)
+
+    if (step == 1) then
+      obsdep%set(n) = iset
+      obsdep%idx(n) = iidx
+      obsdep%val(n) = obs(iset)%dat(iidx)
+#ifdef DEBUG
+    else if (step == 2) then
+      if (obsdep%set(n) /= iset) then
+        write (6, *) "[Error] 'set' for y_b and y_a are inconsistent!"
+        stop
+      end if
+      if (obsdep%idx(n) /= iidx) then
+        write (6, *) "[Error] 'idx' for y_b and y_a are inconsistent!"
+        stop
+      end if
+      if (obsdep%val(n) /= obs(iset)%dat(iidx)) then
+        write (6, *) "[Error] 'val' for y_b and y_a are inconsistent!"
+        stop
+      end if
+#endif
+    end if
 
     if (obsda_sort%qc(nn) /= iqc_good) write(6, *) '############', obsda_sort%qc(nn)
 
@@ -1468,6 +1499,18 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
       if (oqc(n) == iqc_good) then
         ohx(n) = obs(iset)%dat(iidx) - ohx(n)
+      else
+        ohx(n) = undef
+      end if
+
+      if (step == 1) then
+        obsdep%qc(n) = oqc(n)
+        obsdep%ri(n) = ohx(n)
+      else if (step == 2) then
+        if (obsdep%qc(n) == iqc_good) then ! Use the QC value of y_a only if the QC of y_b is good
+          obsdep%qc(n) = oqc(n)            !
+        end if                             !
+        obsdep%rj(n) = ohx(n)
       end if
 !write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iset)%elm(iidx), obs(iset)%typ(iidx), obs(iset)%lon(iidx), obs(iset)%lat(iidx), obs(iset)%lev(iidx), obs(iset)%dat(iidx), obs(iset)%err(iidx), ohx(n), oqc(n)
 
@@ -1501,6 +1544,12 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
       end if
       iset = obsda_sort%set(nn)
       iidx = obsda_sort%idx(nn)
+
+      if (step == 1) then
+        obsdep%set(n) = iset
+        obsdep%idx(n) = iidx
+        obsdep%val(n) = obs(iset)%dat(iidx)
+      end if
 
       oelm(n) = obs(iset)%elm(iidx)
       if(oelm(n) /= id_H08IR_obs)cycle
@@ -1590,8 +1639,17 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
           CA(n) =  (abs(yobs_H08(ns) - yobs_H08_clr(ns)) & ! CM
                    +  abs(obs(iset)%dat(iidx) - yobs_H08_clr(ns)) & ! CO
                    &) * 0.5d0 
-                   
 
+          if (step == 1) then
+            obsdep%qc(n) = oqc(n)
+            obsdep%ri(n) = ohx(n)
+          else if (step == 2) then
+            if (obsdep%qc(n) == iqc_good) then ! Use the QC value of y_a only if the QC of y_b is good
+              obsdep%qc(n) = oqc(n)            !
+            end if                             !
+            obsdep%rj(n) = ohx(n)
+          end if
+                   
           if(oqc(n) == iqc_good) then
             ohx(n) = obs(iset)%dat(iidx) - ohx(n) 
             write (6, '(A,2I6,2F8.2,5F11.4,I6,F10.4)')"H08-O-A-B",&
