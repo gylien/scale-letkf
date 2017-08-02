@@ -65,6 +65,8 @@
 &PARAM_LETKF_MONITOR
  DEPARTURE_STAT = .true.
 ! DEPARTURE_STAT_T_RANGE = 0.0d0
+!--OBSDEP_OUT--
+!--OBSDEP_OUT_BASENAME--
 /
 
 !*** Attach SCALE configuration below ***
