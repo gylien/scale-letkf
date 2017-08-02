@@ -186,8 +186,11 @@ PROGRAM letkf
     !
     ! WRITE ENS MEAN and SPRD
     !
-    call write_ensmean(GUES_MEAN_INOUT_BASENAME, gues3d, gues2d, calced=.false.,&
-                       monit=DEPARTURE_STAT, caption='OBSERVATIONAL DEPARTURE STATISTICS [GUESS]')
+    if (DEPARTURE_STAT) then
+      call write_ensmean(GUES_MEAN_INOUT_BASENAME, gues3d, gues2d, calced=.false., monit_step=1)
+    else
+      call write_ensmean(GUES_MEAN_INOUT_BASENAME, gues3d, gues2d, calced=.false.)
+    end if
 
     if (GUES_SPRD_OUT) then
       call write_enssprd(GUES_SPRD_OUT_BASENAME, gues3d, gues2d)
@@ -225,15 +228,17 @@ PROGRAM letkf
     !
     ! WRITE ANAL and ENS MEAN
     !
-    call write_ens_mpi(anal3d, anal2d, &
-                       monit=DEPARTURE_STAT, caption='OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS]')
+    if (DEPARTURE_STAT) then
+      call write_ens_mpi(anal3d, anal2d, monit_step=2)
+    else
+      call write_ens_mpi(anal3d, anal2d)
+    end if
 
     call mpi_timer('WRITE_ANAL', 1, barrier=MPI_COMM_a)
 
 !!-----------------------------------------------------------------------
 !! Monitor
 !!-----------------------------------------------------------------------
-!  CALL monit_obs
 
     deallocate (obs)
     deallocate (gues3d, gues2d, anal3d, anal2d)

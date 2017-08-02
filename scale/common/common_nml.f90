@@ -217,10 +217,12 @@ MODULE common_nml
   logical :: DEPARTURE_STAT_ALL_PROCESSES = .true. ! print the departure statistics by all processes?
                                                    ! if set to .false., the statistics are only printed by the ensemble mean group, which may save time
 
-  LOGICAL :: OMB_OUTPUT = .true.
-  LOGICAL :: OMA_OUTPUT = .true.
-  LOGICAL :: OBSGUES_OUTPUT = .false.
-  LOGICAL :: OBSANAL_OUTPUT = .false.
+  LOGICAL               :: OBSDEP_OUT = .true.
+  character(filelenmax) :: OBSDEP_OUT_BASENAME = 'obsdep'
+  LOGICAL               :: OBSGUES_OUT = .false.                  !XXX not implemented yet...
+  character(filelenmax) :: OBSGUES_OUT_BASENAME = 'obsgues.@@@@'  !XXX not implemented yet...
+  LOGICAL               :: OBSANAL_OUT = .false.                  !XXX not implemented yet...
+  character(filelenmax) :: OBSANAL_OUT_BASENAME = 'obsanal.@@@@'  !XXX not implemented yet...
 
   !--- PARAM_LETKF_RADAR
   logical :: USE_RADAR_REF       = .true.
@@ -716,10 +718,12 @@ subroutine read_nml_letkf_monitor
     DEPARTURE_STAT_H08, &
     DEPARTURE_STAT_T_RANGE, &
     DEPARTURE_STAT_ALL_PROCESSES, &
-    OMB_OUTPUT, &
-    OMA_OUTPUT, &
-    OBSGUES_OUTPUT, &
-    OBSANAL_OUTPUT
+    OBSDEP_OUT, &
+    OBSDEP_OUT_BASENAME, &
+    OBSGUES_OUT, &
+    OBSGUES_OUT_BASENAME, &
+    OBSANAL_OUT, &
+    OBSANAL_OUT_BASENAME
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_MONITOR,iostat=ierr)

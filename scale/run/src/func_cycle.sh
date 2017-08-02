@@ -717,6 +717,13 @@ else
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
 
+      # obs
+      #-------------------
+      if ((OBSOUT_OPT <= 3)); then
+        path="${atime}/obs"
+        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+      fi
+
       # obsgues
       #-------------------
       if ((OBSOUT_OPT <= 2)); then
