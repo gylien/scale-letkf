@@ -29,7 +29,8 @@ module common_precip
   use common_nml,   only : MEMBER, &
                            use_precip, ncdf, ppzero_thres, gausstail_thres, &
                            opt_pptrans, opt_ppobserr, log_trans_tiny, &
-                           const_ppobserr, min_ppobserr
+                           min_obserr_rain, obserr_rain_percent, obserr_rain_lt, &
+                           obserr_rain_gt
 
 
   !use common_scale, only : nlon, nlat, nlonh, nlath, nlong, nlatg
@@ -37,26 +38,6 @@ module common_precip
 
 !-------------------------------------------------------------------------------
   public 
-
-  !logical      :: use_precip      = .false.
-  !
-  !integer      :: ncdf            = 200            ! # of cdf bins
-  !
-  !real(r_size) :: ppzero_thres    = 0.001d0         ! threshold of no precipitation
-  !real(r_size) :: gausstail_thres = 0.001d0
-  !
-  !integer      :: opt_pptrans     = 2              ! 0: no transformation
-  !                                                 ! 1: log transformation
-  !                                                 ! 2: Gaussian transformation with median zero rain
-  !                                                 ! 3: Gaussian transformation with modified median zero rain
-  !
-  !integer      :: opt_ppobserr    = 2              ! 0: original obserr form  obs data file
-  !                                                 ! 1: transformed obserr from obs data file
-  !                                                 ! 2: constant obserr
-  !real(r_size) :: log_trans_tiny  = 0.6d0
-  !real(r_size) :: const_ppobserr  = 0.5d0
-  !real(r_size) :: min_ppobserr    = 0.1d0
-  !
 
   real(r_size),allocatable,save :: ppcdf_m(:,:,:) ! nlon*nlat*(0:ncdf)
   real(r_size),allocatable,save :: ppcdf_o(:,:,:) ! nlon*nlat*(0:ncdf)

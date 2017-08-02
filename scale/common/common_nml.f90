@@ -173,7 +173,7 @@ MODULE common_nml
   real(r_size) :: HORI_LOCAL_RADAR_OBSNOREF = -1.0d0 ! <0: same as HORI_LOCAL(22=PHARAD)
   real(r_size) :: HORI_LOCAL_RADAR_VR = -1.0d0       ! <0: same as HORI_LOCAL(22=PHARAD)
   real(r_size) :: VERT_LOCAL_RADAR_VR = -1.0d0       ! <0: same as VERT_LOCAL(22=PHARAD)
-  real(r_size) :: VERT_LOCAL_RAIN_BASE = 85000.0d0
+  real(r_size) :: VERT_LOCAL_RAIN_BASE = 85000.0d0   ! (Pa)
 
   ! >0: observation number limit
   !  0: do not limit observation numbers
@@ -287,12 +287,15 @@ MODULE common_nml
                                                    ! 1: log transformation
                                                    ! 2: Gaussian transformation with median zero rain
                                                    ! 3: Gaussian transformation with modified median zero rain
-  integer      :: opt_ppobserr    = 2              ! 0: original obserr form  obs data file
-                                                   ! 1: transformed obserr from obs data file
-                                                   ! 2: constant obserr
+  integer      :: opt_ppobserr    = 3              ! 0: original error (not supported)
+                                                   ! 1: obs-depdent error
+                                                   ! 2: log-transform obs error
+                                                   ! 3: Gaussian-transform obs error
   real(r_size) :: log_trans_tiny  = 0.6d0
-  real(r_size) :: const_ppobserr  = 0.5d0
-  real(r_size) :: min_ppobserr    = 0.1d0
+  real(r_size) :: min_obserr_rain     = 0.3d0      ! mm/6hr 
+  real(r_size) :: obserr_rain_percent = 0.5d0      ! 
+  real(r_size) :: obserr_rain_lt      = 0.18d0     ! 
+  real(r_size) :: obserr_rain_gt      = 0.5d0      !
 
 
 
@@ -421,7 +424,7 @@ subroutine read_nml_obsope
   namelist /PARAM_OBSOPE/ &
     OBS_IN_NUM, &
     OBS_IN_NAME, &
-    OBS_IN_FORMAT, &
+    OBS_IN_FORMAT, &   ! 1-prepbufr, 2-radar, 3-H08, 4-precip
     OBSDA_RUN, &
     OBSDA_OUT, &
     OBSDA_OUT_BASENAME, &
@@ -882,8 +885,11 @@ subroutine read_nml_letkf_precip
             log_trans_tiny,  &
             opt_pptrans,     &
             opt_ppobserr,    &
-            const_ppobserr,  &
-            min_ppobserr
+            min_obserr_rain, &
+            obserr_rain_percent, &
+            obserr_rain_lt, &
+            obserr_rain_gt
+
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_PRECIP,iostat=ierr)

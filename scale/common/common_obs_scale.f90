@@ -2408,11 +2408,10 @@ subroutine read_obs_all(obs)
       call get_nobs(trim(OBS_IN_NAME(iof)),8,obs(iof)%nobs)
     case (2)
       call get_nobs_radar(trim(OBS_IN_NAME(iof)), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
-    case (3) !H08 
-      call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
+    case (3) ! H08 
+      call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs)   ! H08
     case (4) ! precip
-      call get_nobs_precip( ) ! precip
-
+      call get_nobs_precip(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! precip
     case default
       write(6,*) 'Error: Unsupported observation file format!'
       stop
@@ -2430,10 +2429,9 @@ subroutine read_obs_all(obs)
     case (2)
       call read_obs_radar(trim(OBS_IN_NAME(iof)),obs(iof))
     case (3) ! H08 
-      call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
+      call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof))   ! H08
     case (4) ! precip
-      call read_obs_precip()  ! precip
-
+      call read_obs_precip(trim(OBS_IN_NAME(iof)),obs(iof)) ! precip
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
 
@@ -2471,7 +2469,7 @@ subroutine write_obs_all(obs, missing, file_suffix)
       call write_obs_H08(trim(filestr),obs(iof),missing=missing_) ! H08
 
     case (4) ! precip
-      call write_obs_precip() ! precip
+      call write_obs_precip(trim(filestr),obs(iof),missing=missing_) ! precip
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
 
@@ -2910,19 +2908,136 @@ SUBROUTINE write_obs_H08(cfile,obs,append,missing)
 END SUBROUTINE write_obs_H08
 
 
-SUBROUTINE get_nobs_precip()
-  IMPLICIT NONE 
-  PRINT*, "sub get_nobs_precip()"
+SUBROUTINE get_nobs_precip(cfile,nn)
+  IMPLICIT NONE
+  CHARACTER(*),INTENT(IN)  :: cfile
+  INTEGER,     INTENT(OUT) :: nn
+
+  REAL(r_sngl) :: wk(3)   ! /lon/lat/dat
+  INTEGER :: ios
+  INTEGER :: iunit
+  LOGICAL :: ex
+  INTEGER :: sz
+
+  nn    = 0
+  iunit = 91
+  INQUIRE(FILE=cfile,EXIST=ex)
+  IF(ex) THEN
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+    ! get file size by reading through the entire file... 
+    !-----------------------------
+    !    DO
+    !      READ(iunit,IOSTAT=ios) wk
+    !      IF(ios /= 0) EXIT
+    !      nn = nn + nch
+    !    END DO
+    !-----------------------------
+
+    ! get file size by INQUIRE statement... may not work for some older fortran compilers
+    !-----------------------------
+    INQUIRE(UNIT=iunit, SIZE=sz)
+    IF (MOD(sz, r_sngl * (3+2)) /= 0) THEN
+      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      RETURN
+    END IF
+    nn = sz / (r_sngl * (3+2))
+    !-----------------------------
+
+    WRITE(6,'(2A)') ' PRECIP FILE ', cfile
+    WRITE(6,'(I10,A)') nn,' OBSERVATIONS INPUT'
+    CLOSE(iunit)
+  ELSE
+    WRITE(6,'(2A)') cfile,' does not exist -- skipped'
+  END IF
+
+  RETURN ! don't know why we need this. Anyway, follow others' style
+
 END SUBROUTINE get_nobs_precip
 
-SUBROUTINE read_obs_precip()
+
+SUBROUTINE read_obs_precip(cfile,obs)
   IMPLICIT NONE 
-  PRINT*, "sub read_obs_precip()"
+  CHARACTER(*),  INTENT(IN)    :: cfile
+  TYPE(obs_info),INTENT(INOUT) :: obs
+
+  REAL(r_sngl) :: wk(3)  ! lon/lat/dat
+  REAL(r_size) :: x, y
+  INTEGER :: n,iunit
+
+!  call obs_info_allocate(obs)
+
+  iunit=91
+  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+  DO n=1,obs%nobs
+    READ(iunit) wk
+    obs%elm(n) = id_rain_obs
+    obs%typ(n) = 25          ! L3RAIN in obtypelist(1:nobtype)
+    obs%lon(n) = REAL(wk(1),r_size)
+    obs%lat(n) = REAL(wk(2),r_size)
+    obs%lev(n) = VERT_LOCAL_RAIN_BASE
+    obs%dat(n) = REAL(wk(3),r_size)
+    obs%dif(n) = 0.0d0
+    obs%err(n) = OBSERR_RAIN ! will change it later
+  END DO
+  CLOSE(iunit)
+
+! should I put a simple QC here since dat might be missing value?
+! in addition, do I need to the trans here?
+  SELECT CASE( opt_ppobserr ) 
+    CASE (1) ! obs-percent error (e.g., err=obs*frac) (Lien et al., MWR, 2016b)
+      DO n=1,obs%nobs
+         obs%err(n) = max(obs%dat(n)*OBSERR_RAIN_PERCENT,MIN_OBSERR_RAIN)
+      ENDDO
+    CASE (2) ! log-transform error (Lopez, MWR, 2010)
+      DO n=1,obs%nobs
+         obs%err(n) = OBSERR_RAIN_LT
+      ENDDO
+    CASE (3) ! gaussain-transform error (Lien et al., 2016b)
+      DO n=1,obs%nobs
+         obs%err(n) = OBSERR_RAIN_GT
+      ENDDO
+    CASE DEFAULT
+  END SELECT
+
+  RETURN
+ 
 END SUBROUTINE read_obs_precip
 
-SUBROUTINE write_obs_precip()
-  IMPLICIT NONE 
-  PRINT*, "sub read_obs_precip()"
+
+SUBROUTINE write_obs_precip(cfile,obs,append,missing)
+  IMPLICIT NONE
+  CHARACTER(*),  INTENT(IN) :: cfile
+  TYPE(obs_info),INTENT(IN) :: obs
+  LOGICAL,INTENT(IN),OPTIONAL :: append
+  LOGICAL,INTENT(IN),OPTIONAL :: missing
+  LOGICAL :: append_
+  LOGICAL :: missing_
+  REAL(r_sngl) :: wk(3)
+  INTEGER :: n,iunit
+
+  iunit=92
+  append_ = .false.
+  IF(present(append)) append_ = append
+  missing_ = .true.
+  IF(present(missing)) missing_ = missing
+
+  IF(append_) THEN
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='append')
+  ELSE
+    OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+  END IF
+
+  DO n=1,obs%nobs
+    wk(1) = REAL(obs%lon(n),r_sngl)
+    wk(2) = REAL(obs%lat(n),r_sngl)
+    wk(3) = REAL(obs%dat(n),r_sngl)
+    WRITE(iunit) wk
+  ENDDO
+
+  CLOSE(iunit)
+
+  RETURN
+
 END SUBROUTINE write_obs_precip
 
 
