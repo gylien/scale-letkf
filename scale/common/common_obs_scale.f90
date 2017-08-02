@@ -2977,26 +2977,34 @@ SUBROUTINE read_obs_precip(cfile,obs)
     obs%lev(n) = VERT_LOCAL_RAIN_BASE
     obs%dat(n) = REAL(wk(3),r_size)
     obs%dif(n) = 0.0d0
-    obs%err(n) = OBSERR_RAIN ! will change it later
+    obs%err(n) = MIN_OBSERR_RAIN ! will change it later
   END DO
   CLOSE(iunit)
 
 ! should I put a simple QC here since dat might be missing value?
 ! in addition, do I need to the trans here?
+
   SELECT CASE( opt_ppobserr ) 
     CASE (1) ! obs-percent error (e.g., err=obs*frac) (Lien et al., MWR, 2016b)
+      WRITE(6,'(A)') ' PRECIP_DA: obs-depdent obs error'
       DO n=1,obs%nobs
          obs%err(n) = max(obs%dat(n)*OBSERR_RAIN_PERCENT,MIN_OBSERR_RAIN)
       ENDDO
     CASE (2) ! log-transform error (Lopez, MWR, 2010)
+      WRITE(6,'(A)') ' PRECIP_DA: log-transform obs error'
       DO n=1,obs%nobs
          obs%err(n) = OBSERR_RAIN_LT
       ENDDO
     CASE (3) ! gaussain-transform error (Lien et al., 2016b)
+      WRITE(6,'(A)') ' PRECIP_DA: Gaussian-transform obs error'
       DO n=1,obs%nobs
          obs%err(n) = OBSERR_RAIN_GT
       ENDDO
     CASE DEFAULT
+      WRITE(6,'(A)') ' PRECIP_DA: Unsuupported option for obs error!!! set obs-dependent error'
+      DO n=1,obs%nobs
+         obs%err(n) = max(obs%dat(n)*OBSERR_RAIN_PERCENT,MIN_OBSERR_RAIN)
+      ENDDO
   END SELECT
 
   RETURN
