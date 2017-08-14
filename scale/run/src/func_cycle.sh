@@ -659,13 +659,6 @@ while ((time <= ETIME)); do
     echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
   fi
 
-  # obsgues
-  #-------------------
-  if ((OBSOUT_OPT <= 2)); then
-    path="${atime}/obsgues/"
-    echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-  fi
-
   # log
   #-------------------
   if [ "$MPI_TYPE" = 'K' ]; then
@@ -1445,7 +1438,7 @@ for it in $(seq $nitmax); do
     m=$(((it-1)*parallel_mems+g))
     if ((m >= 1 && m <= mtot)); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
-           $atime ${name_m[$m]} $OUT_OPT $OBSOUT_OPT \
+           $atime ${name_m[$m]} $OUT_OPT \
            $ADAPTINFL $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi

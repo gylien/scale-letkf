@@ -52,7 +52,7 @@ MODULE common_nml
   character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
   integer               :: OBS_IN_FORMAT(nobsfilemax) = 1
   logical               :: OBSDA_RUN(nobsfilemax) = .true.
-  logical               :: OBSDA_OUT = .true.
+  logical               :: OBSDA_OUT = .false.
   character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
   character(filelenmax) :: OBSDA_MEAN_OUT_BASENAME = ''
   character(filelenmax) :: OBSDA_MDET_OUT_BASENAME = ''
