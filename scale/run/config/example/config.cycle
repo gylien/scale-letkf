@@ -58,8 +58,8 @@ BDYOUT_OPT=3     # 1:   o    o
                  # 3:   (none)
 
                  #      obsgues obsanal obsdep
-OBSOUT_OPT=2     # 1:   o       o       o
-                 # 2:   o               o
+OBSOUT_OPT=3     # 1:   o       o       o      (not implemented yet)
+                 # 2:   o               o      (not implemented yet)
                  # 3:                   o
                  # 4:   (none)
 

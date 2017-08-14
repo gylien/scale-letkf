@@ -724,17 +724,6 @@ else
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
 
-      # obsgues
-      #-------------------
-      if ((OBSOUT_OPT <= 2)); then
-#        for m in $(seq $MEMBER); do
-#          path="${atime}/obsgues/${name_m[$m]}"
-#          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-#        done
-        path="${atime}/obsgues"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      fi
-
       # log
       #-------------------
       if [ "$MPI_TYPE" = 'K' ]; then
@@ -861,13 +850,6 @@ else
 #  #          path="${time}/anal/${name_m[$m]}/init_land$(printf $SCALE_SFX $((q-1)))"
 #  #          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
 #  #        fi
-
-#          # obsgues
-#          #-------------------
-#          if ((OBSOUT_OPT <= 2)); then
-#            path="${atime}/obsgues/${name_m[$m]}/obsda.${name_m[$m]}.$(printf $PROCESS_FMT $((q-1))).dat"
-#            echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.${mem2node[$(((m-1)*mem_np+q))]}
-#          fi
 
 #          #-------------------
 #        done
@@ -1716,7 +1698,7 @@ for it in $(seq $nitmax); do
     m=$(((it-1)*parallel_mems+g))
     if ((m >= 1 && m <= mtot)); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
-           $atime ${name_m[$m]} $OUT_OPT $OBSOUT_OPT \
+           $atime ${name_m[$m]} $OUT_OPT \
            $ADAPTINFL $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi

@@ -8,18 +8,17 @@
 
 . config.main
 
-if (($# < 5)); then
+if (($# < 4)); then
   cat >&2 << EOF
 
 [pre_letkf.sh]
 
-Usage: $0 MYRANK ATIME MEM OUT_OPT OBSOUT_OPT [ADAPTINFL SPRD_OUT RTPS_INFL_OUT NOBS_OUT]
+Usage: $0 MYRANK ATIME MEM OUT_OPT [ADAPTINFL SPRD_OUT RTPS_INFL_OUT NOBS_OUT]
 
   MYRANK  My rank number (not used)
   ATIME   Analysis time (format: YYYYMMDDHHMMSS)
   MEM     Name of the ensemble member
   OUT_OPT
-  OBSOUT_OPT
   ADAPTINFL
   SPRD_OUT
   RTPS_INFL_OUT
@@ -33,7 +32,6 @@ MYRANK="$1"; shift
 ATIME="$1"; shift
 MEM="$1"; shift
 OUT_OPT="$1"; shift
-OBSOUT_OPT="$1"; shift
 ADAPTINFL="${1:-0}"; shift
 SPRD_OUT="${1:-1}"; shift
 RTPS_INFL_OUT="${1:-0}"; shift
@@ -78,10 +76,6 @@ else
       done
     fi
   fi
-fi
-
-if ((OBSOUT_OPT <= 2)); then
-  mkdir -p $TMPOUT/${ATIME}/obsgues/${MEM}
 fi
 
 #===============================================================================
