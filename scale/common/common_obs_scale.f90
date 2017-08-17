@@ -784,15 +784,29 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
     lg= ( pi * rog * nog / ( ro * qg ) ) ** 0.25
 
     rofactor= ( roo / ro  ) ** 0.25
-    CALL com_gamma( 4.0_r_size + b , tmp_factor )
-    wr= a * tmp_factor / ( 6.0d0 * ( lr ** b ) )
-    wr= 1.0d-2*wr * rofactor
-    CALL com_gamma( 4.0_r_size + d , tmp_factor )
-    ws= c * tmp_factor / ( 6.0d0 * ( ls ** d ) )
-    ws= 1.0d-2*ws * rofactor
-    CALL com_gamma( 4.5_r_size , tmp_factor )
-    wg= tmp_factor * ( ( ( 4.0d0 * gg * 100.0d0 * rog )/( 3.0d0 * Cd * ro ) ) ** 0.5 )
-    wg= 1.0d-2*wg / ( 6.0d0 * ( lg ** 0.5 ) )
+    if(qr > 0.0d0)then
+      CALL com_gamma( 4.0_r_size + b , tmp_factor )
+      wr= a * tmp_factor / ( 6.0d0 * ( lr ** b ) )
+      wr= 1.0d-2*wr * rofactor
+    else
+      wr = 0.0d0
+    endif
+
+    if(qs > 0.0d0)then
+      CALL com_gamma( 4.0_r_size + d , tmp_factor )
+      ws= c * tmp_factor / ( 6.0d0 * ( ls ** d ) )
+      ws= 1.0d-2*ws * rofactor
+    else
+      ws = 0.0d0
+    endif
+ 
+    if(qg > 0.0d0)then
+      CALL com_gamma( 4.5_r_size , tmp_factor )
+      wg= tmp_factor * ( ( ( 4.0d0 * gg * 100.0d0 * rog )/( 3.0d0 * Cd * ro ) ) ** 0.5 )
+      wg= 1.0d-2*wg / ( 6.0d0 * ( lg ** 0.5 ) )
+    else
+      wg = 0.0d0
+    endif
 
     !Reflectivity weighted terminal velocity. 
     wt = ( wr * zr + ws * zs + wg * zg )/ ( zr + zs + zg )
