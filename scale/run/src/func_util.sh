@@ -541,7 +541,7 @@ bdy_start_time=$bdy_start_time_prev
 local ntsteps_total=$(((FCSTLEN-1)/PARENT_FOUT+2 + ntsteps_skip))
 
 if ((bdy_start_time != TIME)); then
-  if (($(datetime $bdy_start_time $(((ntsteps_total-1)*PARENT_FOUT)) s) < $(datetime $TIME $FCSTLEN s))); then
+  if (($(datetime $bdy_start_time $(((ntsteps_total-ntsteps_skip-1)*PARENT_FOUT)) s) < $(datetime $TIME $FCSTLEN s))); then
     ntsteps_total=$((ntsteps_total+1))
   fi
 fi
