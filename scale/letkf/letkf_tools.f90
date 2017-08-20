@@ -34,6 +34,8 @@ MODULE letkf_tools
   integer,save :: var_local_n2n(nv3d+nv2d)
 
   integer,save :: ctype_merge(nid_obs,nobtype)
+  integer,allocatable,save :: n_merge(:)
+  integer,allocatable,save :: ic_merge(:,:)
 
   integer,parameter :: n_search_incr = 8
 
@@ -87,7 +89,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   INTEGER :: ishuf(MEMBER)                       !GYL
   real(r_size), allocatable :: addinfl_weight(:) !GYL
   real(r_size) :: rdx,rdy,rdxy,ref_min_dist      !GYL
-  integer :: ic,iob                              !GYL
+  integer :: ic,ic2,iob                          !GYL
 
   character(len=timer_name_width) :: timer_str
 
@@ -132,6 +134,29 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ctype_merge(:,:) = 0
   ctype_merge(uid_obs(id_radar_ref_obs),22) = 1
   ctype_merge(uid_obs(id_radar_ref_zero_obs),22) = 1
+
+  allocate (n_merge(nctype))
+  allocate (ic_merge(nid_obs*nobtype,nctype))
+
+  n_merge(:) = 1
+  do ic = 1, nctype
+    if (n_merge(ic) > 0) then
+      ic_merge(1,ic) = ic
+      if (ctype_merge(elm_u_ctype(ic),typ_ctype(ic)) > 0) then
+        do ic2 = ic+1, nctype
+          if (ctype_merge(elm_u_ctype(ic2),typ_ctype(ic2)) == ctype_merge(elm_u_ctype(ic),typ_ctype(ic))) then
+            n_merge(ic) = n_merge(ic) + 1
+            ic_merge(n_merge(ic),ic) = ic2
+            n_merge(ic2) = 0
+#ifdef DEBUG
+            write(6, '(9A)') '[Info] Observation number limit: Consider obs types (', obtypelist(typ_ctype(ic)), ', ', obelmlist(elm_u_ctype(ic)), &
+                             ') and (', obtypelist(typ_ctype(ic2)), ', ', obelmlist(elm_u_ctype(ic2)), ') together'
+#endif
+          end if
+        end do
+      end if ! [ ctype_merge(elm_u_ctype(ic),typ_ctype(ic)) > 0 ]
+    end if ! [ n_merge(ic) > 0 ]
+  end do ! [ ic = 1, nctype ]
   !
   ! FCST PERTURBATIONS
   !
@@ -498,6 +523,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   call mpi_timer('das_letkf:letkf_core:', 2)
 
   DEALLOCATE(hdxf,rdiag,rloc,dep)
+  deallocate(n_merge,ic_merge)
   if (DET_RUN) then
     deallocate(depd)
   end if
@@ -1139,10 +1165,6 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
   integer :: nobsl_max_master
   integer :: ielm_u_master, ityp_master
 
-  logical :: ctype_skip(nctype)
-  integer :: ic_merge(nid_obs*nobtype)
-  integer :: n_merge
-
   integer :: q
   logical :: loop
   integer :: nn_steps(nctype+1)
@@ -1203,30 +1225,12 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
   ! do precise data search by normalized 3D distance and variable localization.
   !-----------------------------------------------------------------------------
 
-  ctype_skip(:) = .false.
-
   do ic = 1, nctype
-    if (ctype_skip(ic)) then
+    if (n_merge(ic) == 0) then
       if (present(cutd_t)) then
         cutd_t(elm_u_ctype(ic),typ_ctype(ic)) = 0.0d0
       end if
       cycle
-    end if
-
-    n_merge = 1
-    ic_merge(1) = ic
-    if (ctype_merge(elm_u_ctype(ic),typ_ctype(ic)) > 0) then
-      do ic2 = ic+1, nctype
-        if (ctype_merge(elm_u_ctype(ic2),typ_ctype(ic2)) == ctype_merge(elm_u_ctype(ic),typ_ctype(ic))) then
-          n_merge = n_merge + 1
-          ic_merge(n_merge) = ic2
-          ctype_skip(ic2) = .true.
-#ifdef DEBUG
-          write(6, '(9A)') '[Info] Observation number limit: Consider obs types (', obtypelist(typ_ctype(ic)), ', ', obelmlist(elm_u_ctype(ic)), &
-                           ') and (', obtypelist(typ_ctype(ic2)), ', ', obelmlist(elm_u_ctype(ic2)), ') together'
-#endif
-        end if
-      end do
     end if
 
     nobsl_max_master = MAX_NOBS_PER_GRID(typ_ctype(ic)) ! Use the number limit setting of the "master" obs type for all group of obs types
@@ -1241,8 +1245,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
 
       nobsl_prev = nobsl
 
-      do icm = 1, n_merge
-        ic2 = ic_merge(icm)
+      do icm = 1, n_merge(ic)
+        ic2 = ic_merge(icm,ic)
         ielm = elm_ctype(ic2)
         ityp = typ_ctype(ic2)
 
@@ -1271,7 +1275,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
         if (present(nobsl_t)) then
           nobsl_t(elm_u_ctype(ic2),ityp) = nobsl - nobsl_prev
         end if
-      end do ! [ do icm = 1, n_merge ]
+      end do ! [ do icm = 1, n_merge(ic) ]
 
     !---------------------------------------------------------------------------
     else if (MAX_NOBS_PER_GRID_CRITERION == 1) then
@@ -1282,22 +1286,22 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
     !---------------------------------------------------------------------------
 
       nn = 0
-      do icm = 1, n_merge
-        ic2 = ic_merge(icm)
+      do icm = 1, n_merge(ic)
+        ic2 = ic_merge(icm,ic)
 
         if (obsgrd(ic2)%tot_ext > 0) then
           call obs_local_range(ic2, ri, rj, imin, imax, jmin, jmax)
           call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
         end if ! [ obsgrd(ic2)%tot_ext > 0 ]
-      end do ! [ do icm = 1, n_merge ]
+      end do ! [ do icm = 1, n_merge(ic) ]
 #ifdef DEBUG
 write (6, '(A,14x,I8)') '--- ALL      : ', nn
 #endif
 
       if (nn == 0) cycle
 
-      do icm = 1, n_merge
-        ic2 = ic_merge(icm)
+      do icm = 1, n_merge(ic)
+        ic2 = ic_merge(icm,ic)
         call obs_local_range(ic2, ri, rj, imin_cutoff(icm), imax_cutoff(icm), jmin_cutoff(icm), jmax_cutoff(icm))
       end do
 
@@ -1316,8 +1320,8 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
         nn = 0
         reach_cutoff = .true.
 
-        do icm = 1, n_merge
-          ic2 = ic_merge(icm)
+        do icm = 1, n_merge(ic)
+          ic2 = ic_merge(icm,ic)
           nn_steps(icm) = nn
 
           if (obsgrd(ic2)%tot_ext > 0) then
@@ -1336,9 +1340,9 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
 
             call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
           end if ! [ obsgrd(ic2)%tot_ext > 0 ]
-        end do ! [ do icm = 1, n_merge ]
+        end do ! [ do icm = 1, n_merge(ic) ]
 
-        nn_steps(n_merge+1) = nn
+        nn_steps(n_merge(ic)+1) = nn
 #ifdef DEBUG
 write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cutoff, nn
 #endif
@@ -1351,8 +1355,8 @@ write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cut
 
         nobsl_incr = 0
 
-        do icm = 1, n_merge
-          ic2 = ic_merge(icm)
+        do icm = 1, n_merge(ic)
+          ic2 = ic_merge(icm,ic)
 
           if (nn_steps(icm+1) > nn_steps(icm)) then
             do n = nn_steps(icm)+1, nn_steps(icm+1)
@@ -1374,7 +1378,7 @@ write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cut
               nobs_use2(nobsl_incr) = iob
             end do
           end if ! [ nn_steps(icm+1) > nn_steps(icm) ]
-        end do ! [ do icm = 1, n_merge ]
+        end do ! [ do icm = 1, n_merge(ic) ]
 #ifdef DEBUG
 write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cutoff, nn, nobsl_incr
 #endif
@@ -1420,8 +1424,8 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
       nn = 0
       nobsl_incr = 0
 
-      do icm = 1, n_merge
-        ic2 = ic_merge(icm)
+      do icm = 1, n_merge(ic)
+        ic2 = ic_merge(icm,ic)
 
         if (obsgrd(ic2)%tot_ext > 0) then
           nn_prev = nn
@@ -1438,7 +1442,7 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
             nobs_use2(nobsl_incr) = iob
           end do
         end if ! [ obsgrd(ic2)%tot_ext > 0 ]
-      end do ! [ do icm = 1, n_merge ]
+      end do ! [ do icm = 1, n_merge(ic) ]
 
       if (nobsl_incr == 0) cycle
 
