@@ -259,29 +259,46 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   DO ilev=1,nlev
 
+#ifdef DEBUG
+    call mpi_timer('', 4)
+#endif
+
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,trans,transm,transmd,transrlx,pa,trans_done,tmpinfl,q_mean,q_sprd,q_anal)
     DO ij=1,nij1
-!      WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
 
       trans_done(:) = .false.                                                          !GYL
+
+#ifdef DEBUG
+      call mpi_timer('', 5)
+#endif
+
+      ! weight parameter based on grid locations (not for covariance inflation
+      ! purpose)
+      ! if the weight is zero, no analysis update is needed
+      call relax_beta(rig1(ij),rjg1(ij),hgt1(ij,ilev),beta) !GYL
+
+#ifdef DEBUG
+      write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:relax_beta(lev=', ilev, ',ij=', ij, '):'
+      call mpi_timer(trim(timer_str), 5)
+#endif
 
       ! update 3D variables
       DO n=1,nv3d
 
-        ! weight parameter based on grid locations (not for covariance inflation purpose)
-        ! if the weight is zero, no analysis update is needed
-        call relax_beta(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n,beta) !GYL
-
-        if (beta == 0.0d0) then                                                        !GYL
+        if (beta == 0.0d0 .or. &                                                       !GYL
+            (gues3d(ij,ilev,mmean,iv3d_p) < Q_UPDATE_TOP .and. n >= iv3d_q .and. n <= iv3d_qg)) then !GYL - Upper bound of Q update levels
           do m = 1, MEMBER                                                             !GYL
             anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n) + gues3d(ij,ilev,m,n)        !GYL
           end do                                                                       !GYL
           if (DET_RUN) then                                                            !GYL
             anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n)                          !GYL
           end if                                                                       !GYL
+
 #ifdef DEBUG
-          write (6, '(A,3I6)') 'skipped analysis: ilev,ij,nv3d =', ilev, ij, n         !GYL
+          write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+          call mpi_timer(trim(timer_str), 5)
 #endif
+
           cycle                                                                        !GYL
         end if                                                                         !GYL
 
@@ -300,6 +317,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           IF(NOBS_OUT) THEN                                                            !GYL
             work3dn(:,ij,ilev,n) = work3dn(:,ij,ilev,var_local_n2n(n))                 !GYL
           END IF                                                                       !GYL
+
+#ifdef DEBUG
+          write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_copy(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+          call mpi_timer(trim(timer_str), 5)
+#endif
+
         ELSE
           ! compute weights with localized observations
           if (DET_RUN) then                                                            !GYL
@@ -347,6 +370,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             work3dn(nobtype+5,ij,ilev,n) = real(cutd_t(10,22),r_size)                  !GYL !!! CUTOFF_DIST: re0
             work3dn(nobtype+6,ij,ilev,n) = real(cutd_t(11,22),r_size)                  !GYL !!! CUTOFF_DIST: vr
           END IF                                                                       !GYL
+
+#ifdef DEBUG
+          write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+          call mpi_timer(trim(timer_str), 5)
+#endif
+
         END IF
 
         ! relaxation via LETKF weight
@@ -408,15 +437,22 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           END IF                                                                       !GYL
         END IF                                                                         !GYL
 
+#ifdef DEBUG
+        write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+        call mpi_timer(trim(timer_str), 5)
+#endif
+
       END DO ! [ n=1,nv3d ]
+
+#ifdef DEBUG
+      write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, ',ij=', ij, '):'
+      call mpi_timer(trim(timer_str), 4)
+#endif
 
       ! update 2D variables at ilev = 1
       IF(ilev == 1) THEN 
-        DO n=1,nv2d
 
-          ! weight parameter based on grid locations (not for covariance inflation purpose)
-          ! if the weight is zero, no analysis update is needed
-          call relax_beta(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,beta) !GYL
+        DO n=1,nv2d
 
           if (beta == 0.0d0) then                                                      !GYL
             do m = 1, MEMBER                                                           !GYL
@@ -425,9 +461,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             if (DET_RUN) then                                                          !GYL
               anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n)                                  !GYL
             end if                                                                     !GYL
+
 #ifdef DEBUG
-            write (6, '(A,2I6)') 'skipped analysis: ij,nv2d =', ij, n                  !GYL
+            write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_skip(2d,ij=', ij, ',n=', n, '):'
+            call mpi_timer(trim(timer_str), 5)
 #endif
+
             cycle                                                                      !GYL
           end if                                                                       !GYL
 
@@ -453,6 +492,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                 work2dn(:,ij,n) = work2dn(:,ij,var_local_n2n(nv3d+n)-nv3d)             !GYL
               END IF                                                                   !GYL
             END IF                                                                     !GYL
+
+#ifdef DEBUG
+            write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_copy(2d,ij=', ij, ',n=', n, '):'
+            call mpi_timer(trim(timer_str), 5)
+#endif
+
           ELSE
             ! compute weights with localized observations
             if (DET_RUN) then                                                          !GYL
@@ -492,6 +537,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             IF(NOBS_OUT) THEN                                                          !GYL
               work2dn(:,ij,n) = real(sum(nobsl_t,dim=1),r_size)                        !GYL !!! NOBS: sum over all variables for each report type
             END IF                                                                     !GYL
+
+#ifdef DEBUG
+            write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(2d,ij=', ij, ',n=', n, '):'
+            call mpi_timer(trim(timer_str), 5)
+#endif
+
           END IF
 
           ! relaxation via LETKF weight
@@ -537,7 +588,18 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                                + anal2d(ij,mmdet,n) * beta                           !GYL
           end if                                                                     !GYL
 
+#ifdef DEBUG
+          write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(2d,ij=', ij, ',n=', n, '):'
+          call mpi_timer(trim(timer_str), 5)
+#endif
+
         END DO ! [ n=1,nv2d ]
+
+#ifdef DEBUG
+        write (timer_str, '(A27,I4,A2)') 'das_letkf:letkf_core(2d,ij=', ij, '):'
+        call mpi_timer(trim(timer_str), 4)
+#endif
+
       END IF ! [ ilev == 1 ]
 
     END DO ! [ ij=1,nij1 ]
@@ -1720,14 +1782,13 @@ end subroutine obs_local_cal
 !-------------------------------------------------------------------------------
 ! Relaxation parameter based on grid locations (not for covariance inflation purpose)
 !-------------------------------------------------------------------------------
-subroutine relax_beta(ri, rj, rlev, rz, nvar, beta)
+subroutine relax_beta(ri, rj, rz, beta)
   use scale_grid, only: &
     DX, DY
   use scale_grid_index, only: &
     IHALO, JHALO
   implicit none
-  real(r_size), intent(in) :: ri, rj, rlev, rz
-  integer, intent(in) :: nvar
+  real(r_size), intent(in) :: ri, rj, rz
   real(r_size), intent(out) :: beta
   real(r_size) :: dist_bdy
 
@@ -1738,15 +1799,6 @@ subroutine relax_beta(ri, rj, rlev, rz, nvar, beta)
   if (radar_only .and. rz > RADAR_ZMAX + max(VERT_LOCAL(22), VERT_LOCAL_RADAR_VR) * dist_zero_fac) then
     beta = 0.0d0
     return
-  end if
-  !
-  ! Upper bound of Q update levels
-  !
-  if (rlev < Q_UPDATE_TOP) then
-    if (nvar >= iv3d_q .and. nvar <= iv3d_qg) then
-      beta = 0.0d0
-      return
-    end if
   end if
   !
   ! Boundary buffer
