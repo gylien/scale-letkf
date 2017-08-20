@@ -91,6 +91,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   real(r_size) :: rdx,rdy,rdxy,ref_min_dist      !GYL
   integer :: ic,ic2,iob                          !GYL
 
+  integer,allocatable :: search_q0(:,:,:)
+
   character(len=timer_name_width) :: timer_str
 
   call mpi_timer('', 2)
@@ -137,7 +139,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   allocate (n_merge(nctype))
   allocate (ic_merge(nid_obs*nobtype,nctype))
-
   n_merge(:) = 1
   do ic = 1, nctype
     if (n_merge(ic) > 0) then
@@ -157,6 +158,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       end if ! [ ctype_merge(elm_u_ctype(ic),typ_ctype(ic)) > 0 ]
     end if ! [ n_merge(ic) > 0 ]
   end do ! [ ic = 1, nctype ]
+
+  allocate (search_q0(nctype,nv3d+1,nij1))
+  search_q0(:,:,:) = 1
   !
   ! FCST PERTURBATIONS
   !
@@ -270,9 +274,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         ELSE
           ! compute weights with localized observations
           if (DET_RUN) then                                                            !GYL
-            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t) !GYL
+            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t,srch_q0=search_q0(:,n,ij)) !GYL
           else                                                                         !GYL
-            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,cutd_t=cutd_t) !GYL
+            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,cutd_t=cutd_t,srch_q0=search_q0(:,n,ij)) !GYL
           end if                                                                       !GYL
           IF(RELAX_TO_INFLATED_PRIOR) THEN                                             !GYL
             parm = work3d(ij,ilev,n)                                                   !GYL
@@ -416,9 +420,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           ELSE
             ! compute weights with localized observations
             if (DET_RUN) then                                                          !GYL
-              CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t)
+              CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t,srch_q0=search_q0(:,nv3d+1,ij))
             else                                                                       !GYL
-              CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,cutd_t=cutd_t)
+              CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,cutd_t=cutd_t,srch_q0=search_q0(:,nv3d+1,ij))
             end if                                                                     !GYL
             IF(RELAX_TO_INFLATED_PRIOR) THEN                                           !GYL
               parm = work2d(ij,n)                                                      !GYL
@@ -524,6 +528,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   DEALLOCATE(hdxf,rdiag,rloc,dep)
   deallocate(n_merge,ic_merge)
+  deallocate(search_q0)
   if (DET_RUN) then
     deallocate(depd)
   end if
@@ -1119,6 +1124,7 @@ END SUBROUTINE das_letkf
 !   rlev    : vertical pressure of the targeted grid
 !   rz      : vertical height   of the targeted grid
 !   nvar    : variable index of the targeted grid
+!   srch_q0 : (optional) first guess of the multiplier of incremental search distances
 ! [OUT]
 !   hdxf    : fcstast ensemble perturbations in the observation space
 !   rdiag   : localization-weighted observation error variances
@@ -1128,8 +1134,9 @@ END SUBROUTINE das_letkf
 !   depd    : (optional) observation departure for the deterministic run
 !   nobsl_t : (optional) number of assimilated observations wrt. observation variables/types
 !   cutd_t  : (optional) cutoff distance of assimilated observations wrt. observation variables/types
+!   srch_q0 : (optional) revised first guess of the multiplier of incremental search distances for the next call
 !-------------------------------------------------------------------------------
-subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd, nobsl_t, cutd_t)
+subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd, nobsl_t, cutd_t, srch_q0)
   use common_sort
   use scale_grid, only: &
     DX, DY
@@ -1148,6 +1155,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
   real(r_size), intent(out), optional :: depd(nobstotal)
   integer, intent(out), optional :: nobsl_t(nid_obs,nobtype)
   real(r_size), intent(out), optional :: cutd_t(nid_obs,nobtype)
+  integer, intent(inout), optional :: srch_q0(nctype)
 
   integer, allocatable :: nobs_use(:)
   integer, allocatable :: nobs_use2(:)
@@ -1312,7 +1320,11 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
       search_incr_j = search_incr / DY
 
       nobsl_incr = 0
-      q = 0
+      if (present(srch_q0)) then
+        q = srch_q0(ic) - 1
+      else
+        q = 0
+      end if
       loop = .true.
 
       do while (loop)
@@ -1385,6 +1397,14 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
 
         if (nobsl_incr >= nobsl_max_master) loop = .false.
       end do ! [ loop ]
+
+      if (present(srch_q0)) then
+        if (q == srch_q0(ic) .and. nobsl_incr > nobsl_max_master * 3) then ! when (nobsl_incr >= nobsl_max_master) too soon, decrease srch_q0
+          srch_q0(ic) = q - 1
+        else if (q > srch_q0(ic)) then ! when (nobsl_incr >= nobsl_max_master) too late, increase srch_q0
+          srch_q0(ic) = q
+        end if
+      end if
 
       if (nobsl_incr == 0) cycle
 
