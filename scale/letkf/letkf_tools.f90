@@ -520,6 +520,20 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     END DO ! [ ij=1,nij1 ]
 !$OMP END PARALLEL DO
 
+#ifdef DEBUG
+    do ic = 1, nctype
+      write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
+      write (6, *) search_q0(ic,1,:)
+    end do
+    if (ilev == 1) then
+      write (6, '(A)') 'For 2d variables:'
+      do ic = 1, nctype
+        write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
+        write (6, *) search_q0(ic,nv3d+1,:)
+      end do
+    end if
+#endif
+
     write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
     call mpi_timer(trim(timer_str), 3)
   END DO ! [ ilev=1,nlev ]
