@@ -545,7 +545,8 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
                 cycle
               end if
 
-              if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_ref_zero_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
+!              if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_ref_zero_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
+              if (obs(iof)%typ(n) == 22) then
                 if (obs(iof)%lev(n) > RADAR_ZMAX) then
                   obsda%qc(nn) = iqc_radar_vhi
 #ifdef DEBUG
@@ -927,7 +928,8 @@ SUBROUTINE obsmake_cal(obs)
   !  END IF
   !END IF
 
-              if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_ref_zero_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
+!              if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_ref_zero_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
+              if (obs(iof)%typ(n) == 22) then
                 call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri,rj,obs(iof)%lev(n),rk,iqc)
               else
                 call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri,rj,obs(iof)%lev(n),rk,iqc)
