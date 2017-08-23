@@ -259,34 +259,59 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   DO ilev=1,nlev
 
-#ifdef DEBUG
-    call mpi_timer('', 4)
-#endif
-
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,trans,transm,transmd,transrlx,pa,trans_done,tmpinfl,q_mean,q_sprd,q_anal)
     DO ij=1,nij1
 
+#ifdef DEBUG
+      call mpi_timer('', 4)
+#endif
+
       trans_done(:) = .false.                                                          !GYL
+
+      ! weight parameter based on grid locations (not for covariance inflation purpose)
+      ! if the weight is zero, no analysis update is needed
+      call relax_beta(rig1(ij),rjg1(ij),hgt1(ij,ilev),beta)
+
+#ifdef DEBUG
+      write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:relax_beta(lev=', ilev, ',ij=', ij, '):'
+      call mpi_timer(trim(timer_str), 4)
+#endif
+
+      if (beta == 0.0d0) then
+        do n = 1, nv3d
+          do m = 1, MEMBER
+            anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n) + gues3d(ij,ilev,m,n)
+          end do
+          if (DET_RUN) then
+            anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n)
+          end if
+        end do
+        if (ilev == 1) then
+          do n = 1, nv2d
+            do m = 1, MEMBER
+              anal2d(ij,m,n) = gues2d(ij,mmean,n) + gues2d(ij,m,n)
+            end do
+            if (DET_RUN) then
+              anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n)
+            end if
+          end do
+        end if
+
+#ifdef DEBUG
+        write (timer_str, '(A30,I4,A4,I4,A7)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',allv):'
+        call mpi_timer(trim(timer_str), 4)
+#endif
+        cycle
+      end if
 
 #ifdef DEBUG
       call mpi_timer('', 5)
 #endif
 
-      ! weight parameter based on grid locations (not for covariance inflation
-      ! purpose)
-      ! if the weight is zero, no analysis update is needed
-      call relax_beta(rig1(ij),rjg1(ij),hgt1(ij,ilev),beta) !GYL
-
-#ifdef DEBUG
-      write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:relax_beta(lev=', ilev, ',ij=', ij, '):'
-      call mpi_timer(trim(timer_str), 5)
-#endif
-
       ! update 3D variables
       DO n=1,nv3d
 
-        if (beta == 0.0d0 .or. &                                                       !GYL
-            (gues3d(ij,ilev,mmean,iv3d_p) < Q_UPDATE_TOP .and. n >= iv3d_q .and. n <= iv3d_qg)) then !GYL - Upper bound of Q update levels
+        if (gues3d(ij,ilev,mmean,iv3d_p) < Q_UPDATE_TOP .and. n >= iv3d_q .and. n <= iv3d_qg) then !GYL - Upper bound of Q update levels
           do m = 1, MEMBER                                                             !GYL
             anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n) + gues3d(ij,ilev,m,n)        !GYL
           end do                                                                       !GYL
@@ -298,7 +323,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',n=', n, '):'
           call mpi_timer(trim(timer_str), 5)
 #endif
-
           cycle                                                                        !GYL
         end if                                                                         !GYL
 
@@ -453,22 +477,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       IF(ilev == 1) THEN 
 
         DO n=1,nv2d
-
-          if (beta == 0.0d0) then                                                      !GYL
-            do m = 1, MEMBER                                                           !GYL
-              anal2d(ij,m,n) = gues2d(ij,mmean,n) + gues2d(ij,m,n)                     !GYL
-            end do                                                                     !GYL
-            if (DET_RUN) then                                                          !GYL
-              anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n)                                  !GYL
-            end if                                                                     !GYL
-
-#ifdef DEBUG
-            write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_skip(2d,ij=', ij, ',n=', n, '):'
-            call mpi_timer(trim(timer_str), 5)
-#endif
-
-            cycle                                                                      !GYL
-          end if                                                                       !GYL
 
           ! calculate mean and perturbation weights
           IF(var_local_n2n(nv3d+n) < nv3d+n .and. trans_done(var_local_n2n(nv3d+n))) THEN !GYL
