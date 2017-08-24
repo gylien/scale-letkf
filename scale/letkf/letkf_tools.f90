@@ -283,9 +283,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   call mpi_timer('das_letkf:other_allocation:', 2)
   call mpi_timer('', 3)
 
+!$OMP PARALLEL PRIVATE(ilev,ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,n2n,n2nc,trans,transm,transmd,transrlx,pa,trans_done,tmpinfl,q_mean,q_sprd,q_anal,timer_str)
   DO ilev=1,nlev
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,n2n,n2nc,trans,transm,transmd,transrlx,pa,trans_done,tmpinfl,q_mean,q_sprd,q_anal)
+!$OMP DO SCHEDULE(GUIDED)
     DO ij=1,nij1
 
 #ifdef DEBUG
@@ -631,8 +632,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       END IF ! [ ilev == 1 ]
 
     END DO ! [ ij=1,nij1 ]
-!$OMP END PARALLEL DO
+!$OMP END DO NOWAIT
 
+!$OMP MASTER
 #ifdef DEBUG
     do ic = 1, nctype
       write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
@@ -649,7 +651,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
     write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
     call mpi_timer(trim(timer_str), 3)
+!$OMP END MASTER
+
   END DO ! [ ilev=1,nlev ]
+!$OMP END PARALLEL
 
   call mpi_timer('das_letkf:letkf_core:', 2)
 
