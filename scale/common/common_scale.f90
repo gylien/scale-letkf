@@ -557,6 +557,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   use scale_grid_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
+  use mpi, only: MPI_WTIME
   use common_mpi, only: myrank
   use common_ncio
   implicit none
@@ -567,6 +568,11 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d, iv2d, ncid, varid
   integer :: is, js
+
+  real(r_dble) :: timer_1
+  real(r_dble) :: timer_2
+
+  timer_1 = MPI_WTIME()
 
   is = 1
   js = 1
@@ -583,12 +589,20 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is writing a file ',trim(filename) // filesuffix
   call ncio_open(trim(filename) // filesuffix, NF90_WRITE, ncid)
 
+  timer_2 = MPI_WTIME()
+  write (6, '(A,F14.6)') '  ### TIMER # ......write_restart_open: ', timer_2 - timer_1
+  timer_1 = timer_2
+
   do iv3d = 1, nv3d
     write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
     call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
     call ncio_check(nf90_put_var(ncid, varid, v3dg(:,:,:,iv3d), &
                                  start = (/ 1, is, js, 1 /),    &
                                  count = (/ KMAX, IMAX, JMAX, 1 /)))
+
+    timer_2 = MPI_WTIME()
+    write (6, '(A,I3,A,F14.6)') '  ### TIMER # ......write_restart_put_var(iv3d=', iv3d, '): ', timer_2 - timer_1
+    timer_1 = timer_2
   end do
 
   do iv2d = 1, nv2d
@@ -597,9 +611,17 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     call ncio_check(nf90_put_var(ncid, varid, v2dg(:,:,iv2d), &
                                  start = (/ is, js, 1 /),     &
                                  count = (/ IMAX, JMAX, 1 /)))
+
+    timer_2 = MPI_WTIME()
+    write (6, '(A,I3,A,F14.6)') '  ### TIMER # ......write_restart_put_var(iv2d=', iv2d, '): ', timer_2 - timer_1
+    timer_1 = timer_2
   end do
 
   call ncio_close(ncid)
+
+  timer_2 = MPI_WTIME()
+  write (6, '(A,F14.6)') '  ### TIMER # ......write_restart_close: ', timer_2 - timer_1
+  timer_1 = timer_2
 
   RETURN
 END SUBROUTINE write_restart
