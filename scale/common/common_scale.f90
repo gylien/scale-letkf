@@ -323,7 +323,7 @@ END SUBROUTINE set_common_scale
 !END SUBROUTINE read_restart
 
 SUBROUTINE read_restart(filename,v3dg,v2dg)
-  use netcdf, only: NF90_NOWRITE
+  use netcdf
   use scale_process, only: &
     PRC_myrank
   use scale_rm_process, only: &
@@ -331,8 +331,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     PRC_HAS_S
   use scale_grid_index, only: &
     IHALO, JHALO, &
-    IMAX, JMAX, KMAX, &
-    IMAXB, JMAXB
+    IMAX, JMAX, KMAX
   use common_mpi, only: myrank
   use common_ncio
   IMPLICIT NONE
@@ -341,22 +340,16 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   REAL(RP),INTENT(OUT) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
   character(len=12) :: filesuffix = '.pe000000.nc'
-  integer :: iv3d,iv2d,ncid
-  integer :: is, ie, js, je
-  real(RP) :: v3dgtmp(KMAX,IMAXB,JMAXB)
-  real(RP) :: v2dgtmp(IMAXB,JMAXB)
+  integer :: iv3d, iv2d, ncid, varid
+  integer :: is, js
 
   is = 1
-  ie = IMAX
   js = 1
-  je = JMAX
-  if ( .not. PRC_HAS_W ) then
+  if (.not. PRC_HAS_W) then
     is = is + IHALO
-    ie = ie + IHALO
   end if
-  if ( .not. PRC_HAS_S ) then
+  if (.not. PRC_HAS_S) then
     js = js + JHALO
-    je = je + JHALO
   end if
 
 !  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
@@ -367,14 +360,18 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
 
   do iv3d = 1, nv3d
     write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
-    call ncio_read(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-    v3dg(:,:,:,iv3d) = v3dgtmp(:,is:ie,js:je)
+    call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
+    call ncio_check(nf90_get_var(ncid, varid, v3dg(:,:,:,iv3d), &
+                                 start = (/ 1, is, js, 1 /),    &
+                                 count = (/ KMAX, IMAX, JMAX, 1 /)))
   end do
 
   do iv2d = 1, nv2d
     write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
-    call ncio_read(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-    v2dg(:,:,iv2d) = v2dgtmp(is:ie,js:je)
+    call ncio_check(nf90_inq_varid(ncid, trim(v2d_name(iv2d)), varid))
+    call ncio_check(nf90_get_var(ncid, varid, v2dg(:,:,iv2d), &
+                                 start = (/ is, js, 1 /),     &
+                                 count = (/ IMAX, JMAX, 1 /)))
   end do
 
   call ncio_close(ncid)
@@ -460,7 +457,7 @@ END SUBROUTINE read_restart
 !END SUBROUTINE write_restart
 
 SUBROUTINE write_restart(filename,v3dg,v2dg)
-  use netcdf, only: NF90_WRITE
+  use netcdf
   use scale_process, only: &
     PRC_myrank
   use scale_rm_process, only: &
@@ -468,8 +465,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     PRC_HAS_S
   use scale_grid_index, only: &
     IHALO, JHALO, &
-    IMAX, JMAX, KMAX, &
-    IMAXB, JMAXB
+    IMAX, JMAX, KMAX
   use common_mpi, only: myrank
   use common_ncio
   implicit none
@@ -478,22 +474,16 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,nv3d)
   REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
   character(len=12) :: filesuffix = '.pe000000.nc'
-  integer :: iv3d,iv2d,ncid
-  integer :: is, ie, js, je
-  real(RP) :: v3dgtmp(KMAX,IMAXB,JMAXB)
-  real(RP) :: v2dgtmp(IMAXB,JMAXB)
+  integer :: iv3d, iv2d, ncid, varid
+  integer :: is, js
 
   is = 1
-  ie = IMAX
   js = 1
-  je = JMAX
-  if ( .not. PRC_HAS_W ) then
+  if (.not. PRC_HAS_W) then
     is = is + IHALO
-    ie = ie + IHALO
   end if
-  if ( .not. PRC_HAS_S ) then
+  if (.not. PRC_HAS_S) then
     js = js + JHALO
-    je = je + JHALO
   end if
 
 !  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',PRC_myrank,'.nc'
@@ -504,20 +494,18 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
 
   do iv3d = 1, nv3d
     write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
-    call ncio_read (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-    v3dgtmp(:,is:ie,js:je) = v3dg(:,:,:,iv3d)
-    call ncio_write(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-!    call ncio_read (ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)  !!! read and write again to work around the endian problem on the K computer
-!    call ncio_write(ncid, trim(v3d_name(iv3d)), KMAX, IMAXB, JMAXB, 1, v3dgtmp)  !
+    call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
+    call ncio_check(nf90_put_var(ncid, varid, v3dg(:,:,:,iv3d), &
+                                 start = (/ 1, is, js, 1 /),    &
+                                 count = (/ KMAX, IMAX, JMAX, 1 /)))
   end do
 
   do iv2d = 1, nv2d
     write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
-    call ncio_read (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-    v2dgtmp(is:ie,js:je) = v2dg(:,:,iv2d)
-    call ncio_write(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)
-!    call ncio_read (ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !!! read and write again to work around the endian problem on the K computer
-!    call ncio_write(ncid, trim(v2d_name(iv2d)), IMAXB, JMAXB, 1, v2dgtmp)  !
+    call ncio_check(nf90_inq_varid(ncid, trim(v2d_name(iv2d)), varid))
+    call ncio_check(nf90_put_var(ncid, varid, v2dg(:,:,iv2d), &
+                                 start = (/ is, js, 1 /),     &
+                                 count = (/ IMAX, JMAX, 1 /)))
   end do
 
   call ncio_close(ncid)
@@ -529,7 +517,7 @@ END SUBROUTINE write_restart
 ! [File I/O] Read SCALE restart files for model coordinates
 !-------------------------------------------------------------------------------
 SUBROUTINE read_restart_coor(filename,lon,lat,height)
-  use netcdf, only: NF90_NOWRITE
+  use netcdf
   use scale_process, only: &
     PRC_myrank
   use scale_rm_process, only: &
@@ -537,8 +525,7 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
     PRC_HAS_S
   use scale_grid_index, only: &
     IHALO, JHALO, &
-    IMAX, JMAX, KMAX, &
-    IMAXB, JMAXB
+    IMAX, JMAX, KMAX
   use common_mpi, only: myrank
   use common_ncio
   IMPLICIT NONE
@@ -548,22 +535,16 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
   REAL(RP),INTENT(OUT) :: lat(nlon,nlat)
   REAL(RP),INTENT(OUT) :: height(nlev,nlon,nlat)
   character(len=12) :: filesuffix = '.pe000000.nc'
-  integer :: ncid
-  integer :: is, ie, js, je
-  real(RP) :: v3dgtmp(KMAX,IMAXB,JMAXB)
-  real(RP) :: v2dgtmp(IMAXB,JMAXB)
+  integer :: ncid, varid
+  integer :: is, js
 
   is = 1
-  ie = IMAX
   js = 1
-  je = JMAX
-  if ( .not. PRC_HAS_W ) then
+  if (.not. PRC_HAS_W) then
     is = is + IHALO
-    ie = ie + IHALO
   end if
-  if ( .not. PRC_HAS_S ) then
+  if (.not. PRC_HAS_S) then
     js = js + JHALO
-    je = je + JHALO
   end if
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
@@ -572,16 +553,22 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
 
 !!! restart files do not contain 3D height variable before SCALE v5.1
 !  write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(height3d_name)
-!  call ncio_read(ncid, trim(height3d_name), KMAX, IMAXB, JMAXB, 1, v3dgtmp)
-!  height = v3dgtmp(:,is:ie,js:je)
+!  call ncio_check(nf90_inq_varid(ncid, trim(height3d_name), varid))
+!  call ncio_check(nf90_get_var(ncid, varid, height,        &
+!                               start = (/ 1, is, js, 1 /), &
+!                               count = (/ KMAX, IMAX, JMAX, 1 /)))
 
   write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lon2d_name)
-  call ncio_read(ncid, trim(lon2d_name), IMAXB, JMAXB, 1, v2dgtmp)
-  lon = v2dgtmp(is:ie,js:je)
+  call ncio_check(nf90_inq_varid(ncid, trim(lon2d_name), varid))
+  call ncio_check(nf90_get_var(ncid, varid, lon,        &
+                               start = (/ is, js, 1 /), &
+                               count = (/ IMAX, JMAX, 1 /)))
 
   write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lat2d_name)
-  call ncio_read(ncid, trim(lat2d_name), IMAXB, JMAXB, 1, v2dgtmp)
-  lat = v2dgtmp(is:ie,js:je)
+  call ncio_check(nf90_inq_varid(ncid, trim(lat2d_name), varid))
+  call ncio_check(nf90_get_var(ncid, varid, lat,        &
+                               start = (/ is, js, 1 /), &
+                               count = (/ IMAX, JMAX, 1 /)))
 
   call ncio_close(ncid)
 
@@ -592,7 +579,7 @@ END SUBROUTINE read_restart_coor
 ! [File I/O] Read SCALE topography files
 !-------------------------------------------------------------------------------
 SUBROUTINE read_topo(filename,topo)
-  use netcdf, only: NF90_NOWRITE
+  use netcdf
   use scale_process, only: &
     PRC_myrank
   use scale_rm_process, only: &
@@ -600,8 +587,7 @@ SUBROUTINE read_topo(filename,topo)
     PRC_HAS_S
   use scale_grid_index, only: &
     IHALO, JHALO, &
-    IMAX, JMAX, &
-    IMAXB, JMAXB
+    IMAX, JMAX
   use common_mpi, only: myrank
   use common_ncio
   IMPLICIT NONE
@@ -609,21 +595,16 @@ SUBROUTINE read_topo(filename,topo)
   CHARACTER(*),INTENT(IN) :: filename
   REAL(RP),INTENT(OUT) :: topo(nlon,nlat)
   character(len=12) :: filesuffix = '.pe000000.nc'
-  integer :: ncid
-  integer :: is, ie, js, je
-  real(RP) :: v2dgtmp(IMAXB,JMAXB)
+  integer :: ncid, varid
+  integer :: is, js
 
   is = 1
-  ie = IMAX
   js = 1
-  je = JMAX
-  if ( .not. PRC_HAS_W ) then
+  if (.not. PRC_HAS_W) then
     is = is + IHALO
-    ie = ie + IHALO
   end if
-  if ( .not. PRC_HAS_S ) then
+  if (.not. PRC_HAS_S) then
     js = js + JHALO
-    je = je + JHALO
   end if
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
@@ -631,8 +612,10 @@ SUBROUTINE read_topo(filename,topo)
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
   write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(topo2d_name)
-  call ncio_read(ncid, trim(topo2d_name), IMAXB, JMAXB, 1, v2dgtmp)
-  topo = v2dgtmp(is:ie,js:je)
+  call ncio_check(nf90_inq_varid(ncid, trim(topo2d_name), varid))
+  call ncio_check(nf90_get_var(ncid, varid, topo,       &
+                               start = (/ is, js, 1 /), &
+                               count = (/ IMAX, JMAX, 1 /)))
 
   call ncio_close(ncid)
 
