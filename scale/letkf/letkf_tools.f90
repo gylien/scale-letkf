@@ -153,11 +153,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   do n = 1, nv3d+nv2d
     write (6, '(A,I3,A,I3,A,I3,A,I3)') '[INFO] var_local_n2n(', n, ')=', var_local_n2n(n), '; var_local_n2nc(', n, ')=', var_local_n2nc(n)
   end do
-
-  allocate (trans  (MEMBER,MEMBER,var_local_n2nc_max))
-  allocate (transm (MEMBER,var_local_n2nc_max))
-  allocate (transmd(MEMBER,var_local_n2nc_max))
-  allocate (pa     (MEMBER,MEMBER,var_local_n2nc_max))
   !
   ! Observation number limit (*to be moved to namelist*)
   !
@@ -202,26 +197,28 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !
 !  .... this has been done by write_ensmean in letkf.f90
 !  CALL ensmean_grd(MEMBER,nens,nij1,gues3d,gues2d,mean3d,mean2d)
+!$OMP PARALLEL PRIVATE(n,m,k,i)
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
   DO n=1,nv3d
     DO m=1,MEMBER
-!$OMP PARALLEL DO PRIVATE(i,k)
       DO k=1,nlev
         DO i=1,nij1
           gues3d(i,k,m,n) = gues3d(i,k,m,n) - gues3d(i,k,mmean,n)
         END DO
       END DO
-!$OMP END PARALLEL DO
     END DO
   END DO
+!$OMP END DO NOWAIT
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
   DO n=1,nv2d
     DO m=1,MEMBER
-!$OMP PARALLEL DO PRIVATE(i)
       DO i=1,nij1
         gues2d(i,m,n) = gues2d(i,m,n) - gues2d(i,mmean,n)
       END DO
-!$OMP END PARALLEL DO
     END DO
   END DO
+!$OMP END DO
+!$OMP END PARALLEL
 
   call mpi_timer('das_letkf:fcst_perturbation:', 2)
 
@@ -269,29 +266,37 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     work3dn = 0.0d0
     work2dn = 0.0d0
   END IF
+
+  call mpi_timer('das_letkf:allocation_shared_vars:', 2)
+
+!$OMP PARALLEL PRIVATE(ilev,ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,n2n,n2nc,trans,transm,transmd,transrlx,pa,trans_done,tmpinfl,q_mean,q_sprd,q_anal,timer_str)
+  allocate (hdxf (nobstotal,MEMBER))
+  allocate (rdiag(nobstotal))
+  allocate (rloc (nobstotal))
+  allocate (dep  (nobstotal))
+  if (DET_RUN) then
+    allocate (depd (nobstotal))
+  end if
+  allocate (trans  (MEMBER,MEMBER,var_local_n2nc_max))
+  allocate (transm (MEMBER,       var_local_n2nc_max))
+  allocate (transmd(MEMBER,       var_local_n2nc_max))
+  allocate (pa     (MEMBER,MEMBER,var_local_n2nc_max))
+
+!$OMP MASTER
+  call mpi_timer('das_letkf:allocation_private_vars:', 2)
+  call mpi_timer('', 3)
+!$OMP END MASTER
   !
   ! MAIN ASSIMILATION LOOP
   !
-  ALLOCATE(hdxf (nobstotal,MEMBER))
-  ALLOCATE(rdiag(nobstotal))
-  ALLOCATE(rloc (nobstotal))
-  ALLOCATE(dep  (nobstotal))
-  if (DET_RUN) then            !GYL
-    ALLOCATE(depd (nobstotal)) !GYL
-  end if                       !GYL
-
-  call mpi_timer('das_letkf:other_allocation:', 2)
-  call mpi_timer('', 3)
-
-!$OMP PARALLEL PRIVATE(ilev,ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,n2n,n2nc,trans,transm,transmd,transrlx,pa,trans_done,tmpinfl,q_mean,q_sprd,q_anal,timer_str)
   DO ilev=1,nlev
+
+#ifdef DEBUG
+    call mpi_timer('', 4)
+#endif
 
 !$OMP DO SCHEDULE(GUIDED)
     DO ij=1,nij1
-
-#ifdef DEBUG
-      call mpi_timer('', 4)
-#endif
 
       trans_done(:) = .false.                                                          !GYL
 
@@ -654,17 +659,18 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !$OMP END MASTER
 
   END DO ! [ ilev=1,nlev ]
+
+  deallocate (hdxf,rdiag,rloc,dep)
+  if (DET_RUN) then
+    deallocate (depd)
+  end if
+  deallocate (trans,transm,transmd,pa)
 !$OMP END PARALLEL
 
   call mpi_timer('das_letkf:letkf_core:', 2)
 
-  deallocate (trans,transm,transmd,pa)
-  deallocate (hdxf,rdiag,rloc,dep)
   deallocate (n_merge,ic_merge)
   deallocate (search_q0)
-  if (DET_RUN) then
-    deallocate (depd)
-  end if
   !
   ! Compute analyses of observations (Y^a)
   !
@@ -791,29 +797,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
     call mpi_timer('das_letkf:additive_infl_ensmean_grd:', 2)
 
-    DO n=1,nv3d
-      DO m=1,MEMBER
-!$OMP PARALLEL DO PRIVATE(i,k)
-        DO k=1,nlev
-          DO i=1,nij1
-            gues3d(i,k,m,n) = gues3d(i,k,m,n) - gues3d(i,k,mmean,n) !GYL
-          END DO
-        END DO
-!$OMP END PARALLEL DO
-      END DO
-    END DO
-    DO n=1,nv2d
-      DO m=1,MEMBER
-!$OMP PARALLEL DO PRIVATE(i)
-        DO i=1,nij1
-          gues2d(i,m,n) = gues2d(i,m,n) - gues2d(i,mmean,n) !GYL
-        END DO
-!$OMP END PARALLEL DO
-      END DO
-    END DO
-
-    WRITE(6,'(A)') '===== Additive covariance inflation ====='
-    WRITE(6,'(A,F10.4)') '  parameter:',INFL_ADD
+    write (6, '(A)') '===== Additive covariance inflation ====='
+    write (6, '(A,F10.4)') '  parameter:', INFL_ADD
     if (INFL_ADD_SHUFFLE) then
       if (myrank_a == 0) then
         call Knuth_Shuffle(MEMBER, ishuf)
@@ -822,53 +807,71 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       write (6, '(A)') '  suffle members: on'
       write (6, *) ' suffle sequence: ', ishuf
     end if
-    WRITE(6,'(A)') '========================================='
-!    parm = 0.7d0
-!    DO ilev=1,nlev
-!      parm_infl_damp(ilev) = 1.0d0 + parm &
-!        & + parm * REAL(1-ilev,r_size)/REAL(nlev_dampinfl,r_size)
-!      parm_infl_damp(ilev) = MAX(parm_infl_damp(ilev),1.0d0)
-!    END DO
+    write (6,'(A)') '========================================='
+
+!$OMP PARALLEL PRIVATE(n,m,k,i,mshuf)
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
     DO n=1,nv3d
       DO m=1,MEMBER
-        mshuf = m
-        if (INFL_ADD_SHUFFLE) then
-          mshuf = ishuf(m)
-        end if
-        if (n == iv3d_q .or. n == iv3d_qc .or. n == iv3d_qr .or. n == iv3d_qi .or. n == iv3d_qs .or. n == iv3d_qg) then
-!$OMP PARALLEL DO PRIVATE(ij,ilev)
-          DO ilev=1,nlev
-            DO ij=1,nij1
-              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD * addinfl_weight(ij) * work3d(ij,ilev,n)
-            END DO
+        DO k=1,nlev
+          DO i=1,nij1
+            gues3d(i,k,m,n) = gues3d(i,k,m,n) - gues3d(i,k,mmean,n)
           END DO
-!$OMP END PARALLEL DO
-        else
-!$OMP PARALLEL DO PRIVATE(ij,ilev)
-          DO ilev=1,nlev
-            DO ij=1,nij1
-              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD * addinfl_weight(ij)
-            END DO
-          END DO
-!$OMP END PARALLEL DO
-        end if
+        END DO
       END DO
     END DO
+!$OMP END DO NOWAIT
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
     DO n=1,nv2d
       DO m=1,MEMBER
-        mshuf = m
-        if (INFL_ADD_SHUFFLE) then
-          mshuf = ishuf(m)
-        end if
-!$OMP PARALLEL DO PRIVATE(ij)
-        DO ij=1,nij1
-          anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,mshuf,n) * INFL_ADD * addinfl_weight(ij)
+        DO i=1,nij1
+          gues2d(i,m,n) = gues2d(i,m,n) - gues2d(i,mmean,n)
         END DO
-!$OMP END PARALLEL DO
       END DO
     END DO
+!$OMP END DO
+
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
+    DO n=1,nv3d
+      DO m=1,MEMBER
+        if (INFL_ADD_SHUFFLE) then
+          mshuf = ishuf(m)
+        else
+          mshuf = m
+        end if
+        if (n == iv3d_q .or. n == iv3d_qc .or. n == iv3d_qr .or. n == iv3d_qi .or. n == iv3d_qs .or. n == iv3d_qg) then
+          DO k=1,nlev
+            DO i=1,nij1
+              anal3d(i,k,m,n) = anal3d(i,k,m,n) &
+                & + gues3d(i,k,mshuf,n) * INFL_ADD * addinfl_weight(i) * work3d(i,k,n)
+            END DO
+          END DO
+        else
+          DO k=1,nlev
+            DO i=1,nij1
+              anal3d(i,k,m,n) = anal3d(i,k,m,n) &
+                & + gues3d(i,k,mshuf,n) * INFL_ADD * addinfl_weight(i)
+            END DO
+          END DO
+        end if
+      END DO
+    END DO
+!$OMP END DO NOWAIT
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+    DO n=1,nv2d
+      DO m=1,MEMBER
+        if (INFL_ADD_SHUFFLE) then
+          mshuf = ishuf(m)
+        else
+          mshuf = m
+        end if
+        DO i=1,nij1
+          anal2d(i,m,n) = anal2d(i,m,n) + gues2d(i,mshuf,n) * INFL_ADD * addinfl_weight(i)
+        END DO
+      END DO
+    END DO
+!$OMP END DO
+!$OMP END PARALLEL
 
     deallocate (addinfl_weight)
 
