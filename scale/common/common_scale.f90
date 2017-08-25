@@ -1078,7 +1078,8 @@ subroutine ensmean_grd(mem, nens, nij, v3d, v2d)
 
   mmean = mem + 1
 
-!$OMP PARALLEL DO PRIVATE(i,k,m,n) COLLAPSE(3)
+!$OMP PARALLEL PRIVATE(i,k,m,n)
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
   do n = 1, nv3d
     do k = 1, nlev
       do i = 1, nij
@@ -1090,9 +1091,8 @@ subroutine ensmean_grd(mem, nens, nij, v3d, v2d)
       end do
     end do
   end do
-!$OMP END PARALLEL DO
-
-!$OMP PARALLEL DO PRIVATE(i,m,n) COLLAPSE(2)
+!$OMP END DO NOWAIT
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
   do n = 1, nv2d
     do i = 1, nij
       v2d(i,mmean,n) = v2d(i,1,n)
@@ -1102,7 +1102,8 @@ subroutine ensmean_grd(mem, nens, nij, v3d, v2d)
       v2d(i,mmean,n) = v2d(i,mmean,n) / real(mem, r_size)
     end do
   end do
-!$OMP END PARALLEL DO
+!$OMP END DO
+!$OMP END PARALLEL
 
   return
 end subroutine ensmean_grd
@@ -1136,7 +1137,8 @@ subroutine enssprd_grd(mem, nens, nij, v3d, v2d, v3ds, v2ds)
 
   mmean = mem + 1
 
-!$OMP PARALLEL DO PRIVATE(i,k,m,n) COLLAPSE(3)
+!$OMP PARALLEL PRIVATE(i,k,m,n)
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
   do n = 1, nv3d
     do k = 1, nlev
       do i = 1, nij
@@ -1148,9 +1150,8 @@ subroutine enssprd_grd(mem, nens, nij, v3d, v2d, v3ds, v2ds)
       end do
     end do
   end do
-!$OMP END PARALLEL DO
-
-!$OMP PARALLEL DO PRIVATE(i,m,n) COLLAPSE(2)
+!$OMP END DO NOWAIT
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
   do n = 1, nv2d
     do i = 1, nij
       v2ds(i,n) = (v2d(i,1,n) - v2d(i,mmean,n)) ** 2
@@ -1160,7 +1161,8 @@ subroutine enssprd_grd(mem, nens, nij, v3d, v2d, v3ds, v2ds)
       v2ds(i,n) = sqrt(v2ds(i,n) / real(mem-1, r_size))
     end do
   end do
-!$OMP END PARALLEL DO
+!$OMP END DO
+!$OMP END PARALLEL
 
   return
 end subroutine enssprd_grd
