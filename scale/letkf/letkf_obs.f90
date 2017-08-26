@@ -1130,19 +1130,23 @@ SUBROUTINE set_letkf_obs
     !---------------------------------------------------------------------------
     if (myrank_d == ip) then
 
-      ne_bufr = 0
+!      ne_bufr = 0
 
+!$OMP PARALLEL DO SCHEDULE(STATIC) PRIVATE(ip2,iproc2,jproc2,ictype,imin1,imax1,jmin1,jmax1,imin2,imax2,jmin2,jmax2,ishift,jshift,j,ns_ext,ne_ext,ns_bufr,ne_bufr)
       do ip2 = 0, MEM_NP-1
         if (ip2 /= ip) then
 
-#ifdef DEBUG
-          if (ne_bufr /= dspr(ip2+1)) then
-            write (6, '(A)') '[Error] Error in copying receive buffer !!!'
-            write (6, *) ip, ip2, ne_bufr, dspr(ip2+1)
-            write (6, *) dspr(:)
-            stop 99
-          end if 
-#endif
+!#ifdef DEBUG
+!          if (ne_bufr /= dspr(ip2+1)) then
+!            write (6, '(A)') '[Error] Error in copying receive buffer !!!'
+!            write (6, *) ip, ip2, ne_bufr, dspr(ip2+1)
+!            write (6, *) dspr(:)
+!            stop 99
+!          end if 
+!#endif
+
+          ne_bufr = dspr(ip2+1)
+          call rank_1d_2d(ip2, iproc2, jproc2)
 
           do ictype = 1, nctype
             imin1 = iproc*obsgrd(ictype)%ngrd_i+1 - obsgrd(ictype)%ngrdsch_i
@@ -1150,7 +1154,6 @@ SUBROUTINE set_letkf_obs
             jmin1 = jproc*obsgrd(ictype)%ngrd_j+1 - obsgrd(ictype)%ngrdsch_j
             jmax1 = (jproc+1)*obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j
 
-            call rank_1d_2d(ip2, iproc2, jproc2)
             imin2 = max(1, imin1 - iproc2*obsgrd(ictype)%ngrd_i)
             imax2 = min(obsgrd(ictype)%ngrd_i, imax1 - iproc2*obsgrd(ictype)%ngrd_i)
             jmin2 = max(1, jmin1 - jproc2*obsgrd(ictype)%ngrd_j)
@@ -1192,6 +1195,7 @@ SUBROUTINE set_letkf_obs
 
         end if ! [ ip2 /= ip ]
       end do ! [ ip2 = 0, MEM_NP-1 ]
+!$OMP END PARALLEL DO
 
       write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_obsbufrecv(ip=', ip, '):'
       call mpi_timer(trim(timer_str), 3)
