@@ -212,10 +212,8 @@ elif [ "$SCPCALL" = 'fcst' ]; then
   FTIME=$(datetime $STIME $FCSTLEN s)
 
   if ((PNETCDF == 1)); then
-    mkdir -p $TMPOUT/${STIME}/fcst
     mv -f $TMPDIR/history.nc $TMPOUT/${STIME}/fcst/${MEM}.history.nc
   else
-    mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
     mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
   fi
 

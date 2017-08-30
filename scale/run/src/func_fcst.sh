@@ -294,9 +294,9 @@ while ((time <= ETIME)); do
       # stage-in
       #-------------------
 
-      # anal
+      # anal (init)
       #-------------------
-      if ((MAKEINIT != 1)); then
+      if ((MAKEINIT != 1)); then # (existing)
         for m in $(seq $fmember); do
           mm=$(((c-1) * fmember + m))
           if ((PNETCDF == 1)); then
@@ -309,6 +309,24 @@ while ((time <= ETIME)); do
             done
           fi
         done
+      else # (create empty directories)
+        if ((PNETCDF == 1)); then
+          echo "|${OUT_SUBDIR}/${time2}/anal/" >> ${STAGING_DIR}/${STGINLIST}
+        else
+          if ((DISK_MODE <= 2)); then
+            for m in $(seq $fmember); do
+              mm=$(((c-1) * fmember + m))
+              echo "|${OUT_SUBDIR}/${time2}/anal/${name_m[$mm]}/" >> ${STAGING_DIR}/${STGINLIST}
+            done
+          else
+            for m in $(seq $fmember); do
+              mm=$(((c-1) * fmember + m))
+              for q in $(seq $mem_np); do
+                echo "|${OUT_SUBDIR}/${time2}/anal/${name_m[$mm]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
+              done
+            done
+          fi
+        fi
       fi
 
       # anal_ocean
@@ -343,6 +361,12 @@ while ((time <= ETIME)); do
             done
           fi
         done
+      fi
+
+      # anal_ocean/land (create empty directories)
+      #-------------------
+      if ((PNETCDF != 1 && BDY_ENS == 0 && USE_INIT_FROM_BDY == 1)); then
+        echo "|${OUT_SUBDIR}/${time2}/anal/mean/" >> ${STAGING_DIR}/${STGINLIST}
       fi
 
       # topo
@@ -436,9 +460,9 @@ while ((time <= ETIME)); do
         fi
       fi
 
-      # bdy (prepared)
+      # bdy
       #-------------------
-      if ((BDY_FORMAT == 0)); then
+      if ((BDY_FORMAT == 0)); then # (prepared)
         if ((BDY_ENS == 0)); then
           if ((DISK_MODE == 3)); then
             for m in $(seq $fmember); do
@@ -472,14 +496,54 @@ while ((time <= ETIME)); do
           for m in $(seq $fmember); do
             mm=$(((c-1) * fmember + m))
             if ((PNETCDF == 1)); then
-              path="${time2}/bdy/${name_m[$m]}.boundary.nc"
+              path="${time2}/bdy/${name_m[$mm]}.boundary.nc"
               echo "${DATA_BDY_SCALE_PREP}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+1))]}
             else
               for q in $(seq $mem_np); do
-                path="${time2}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
+                path="${time2}/bdy/${name_m[$mm]}/boundary$(printf $SCALE_SFX $((q-1)))"
                 echo "${DATA_BDY_SCALE_PREP}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
               done
             fi
+          done
+        fi
+      else # (create empty directories)
+        if ((PNETCDF == 1)); then
+          echo "|${OUT_SUBDIR}/${time2}/bdy/" >> ${STAGING_DIR}/${STGINLIST}
+        else
+          if ((BDY_ENS == 0)); then
+            echo "|${OUT_SUBDIR}/${time2}/bdy/mean/" >> ${STAGING_DIR}/${STGINLIST}
+          elif ((DISK_MODE <= 2)); then
+            for m in $(seq $fmember); do
+              mm=$(((c-1) * fmember + m))
+              echo "|${OUT_SUBDIR}/${time2}/bdy/${name_m[$mm]}/" >> ${STAGING_DIR}/${STGINLIST}
+            done
+          else
+            for m in $(seq $fmember); do
+              mm=$(((c-1) * fmember + m))
+              for q in $(seq $mem_np); do
+                echo "|${OUT_SUBDIR}/${time2}/bdy/${name_m[$mm]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
+              done
+            done
+          fi
+        fi
+      fi
+
+      # fcst (empty directories)
+      #-------------------
+      if ((PNETCDF == 1)); then
+        echo "|${OUT_SUBDIR}/${time2}/fcst/" >> ${STAGING_DIR}/${STGINLIST}
+      else
+        if ((DISK_MODE <= 2)); then
+          for m in $(seq $fmember); do
+            mm=$(((c-1) * fmember + m))
+            echo "|${OUT_SUBDIR}/${time2}/fcst/${name_m[$mm]}/" >> ${STAGING_DIR}/${STGINLIST}
+          done
+        else
+          for m in $(seq $fmember); do
+            mm=$(((c-1) * fmember + m))
+            for q in $(seq $mem_np); do
+              echo "|${OUT_SUBDIR}/${time2}/fcst/${name_m[$mm]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
+            done
           done
         fi
       fi
@@ -488,7 +552,7 @@ while ((time <= ETIME)); do
       # stage-out
       #-------------------
 
-      # anal
+      # anal (init)
       #-------------------
       if ((MAKEINIT == 1)); then
         path="${time2}/anal/"
