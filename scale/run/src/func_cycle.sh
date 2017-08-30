@@ -302,40 +302,38 @@ while ((time <= ETIME)); do
   # stage-in
   #-------------------
 
-  # anal
+  # anal (init)
   #-------------------
-  if ((loop == 1 && MAKEINIT != 1)); then # (existing)
-    for m in $(seq $mtot); do
-      if ((PNETCDF == 1)); then
-        path="${time}/anal/${name_m[$m]}.init.nc"
-        echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-      else
-        for q in $(seq $mem_np); do
-          path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
-          echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-        done
-      fi
-    done
-  else # (create empty directories)
-    if ((PNETCDF == 1)); then
-      echo "|${OUT_SUBDIR}/${time}/anal/" >> ${STAGING_DIR}/${STGINLIST}
-    else
-      if ((DISK_MODE <= 2)); then
-        for m in $(seq $mtot); do
-          echo "|${OUT_SUBDIR}/${time}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
-        done
-      else
-        for m in $(seq $mtot); do
+  if ((loop == 1)); then
+    if ((MAKEINIT != 1)); then # (existing)
+      for m in $(seq $mtot); do
+        if ((PNETCDF == 1)); then
+          path="${time}/anal/${name_m[$m]}.init.nc"
+          echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+        else
           for q in $(seq $mem_np); do
-            echo "|${OUT_SUBDIR}/${time}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+            path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
+            echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
           done
-        done
+        fi
+      done
+    else # (create empty directories)
+      if ((PNETCDF == 1)); then
+        echo "|${OUT_SUBDIR}/${time}/anal/" >> ${STAGING_DIR}/${STGINLIST}
+      else
+        if ((DISK_MODE <= 2)); then
+          for m in $(seq $mtot); do
+            echo "|${OUT_SUBDIR}/${time}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+          done
+        else
+          for m in $(seq $mtot); do
+            for q in $(seq $mem_np); do
+              echo "|${OUT_SUBDIR}/${time}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+            done
+          done
+        fi
       fi
     fi
-  fi
-
-  if ((PNETCDF != 1 && BDY_ENS == 0 && USE_INIT_FROM_BDY == 1)); then
-    echo "|${OUT_SUBDIR}/${time}/anal/mean/" >> ${STAGING_DIR}/${STGINLIST}
   fi
 
   # anal_ocean
@@ -368,6 +366,30 @@ while ((time <= ETIME)); do
         done
       fi
     done
+  fi
+
+  # anal_ocean/land (create empty directories)
+  #-------------------
+  if ((PNETCDF != 1 && BDY_ENS == 0 && USE_INIT_FROM_BDY == 1)); then
+    echo "|${OUT_SUBDIR}/${time}/anal/mean/" >> ${STAGING_DIR}/${STGINLIST}
+  fi
+
+  # infl (init)
+  #-------------------
+  if ((ADAPTINFL == 1)); then
+    if ((PNETCDF == 1)); then
+      if [ -s "${time}/diag/infl.nc" ]; then
+        path="${time}/diag/infl.nc"
+        echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+1))]}
+      fi
+    else
+      if [ -s "${time}/diag/infl/init$(printf $SCALE_SFX 0)" ]; then
+        for q in $(seq $mem_np); do
+          path="${time}/diag/infl/init$(printf $SCALE_SFX $((q-1)))"
+          echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+        done
+      fi
+    fi
   fi
 
   # topo
@@ -519,6 +541,84 @@ while ((time <= ETIME)); do
     fi
   fi
 
+  # hist,gues,anal (empty directories)
+  #-------------------
+  if ((PNETCDF == 1)); then
+    echo "|${OUT_SUBDIR}/${time}/hist/" >> ${STAGING_DIR}/${STGINLIST}
+    echo "|${OUT_SUBDIR}/${atime}/gues/" >> ${STAGING_DIR}/${STGINLIST}
+    echo "|${OUT_SUBDIR}/${atime}/anal/" >> ${STAGING_DIR}/${STGINLIST}
+  else
+    if ((DISK_MODE <= 2)); then
+      for m in $(seq $mtot); do
+        echo "|${OUT_SUBDIR}/${time}/hist/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+        echo "|${OUT_SUBDIR}/${atime}/gues/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+        echo "|${OUT_SUBDIR}/${atime}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+      done
+      if ((SPRD_OUT == 1)); then
+        echo "|${OUT_SUBDIR}/${atime}/gues/sprd/" >> ${STAGING_DIR}/${STGINLIST}
+        echo "|${OUT_SUBDIR}/${atime}/anal/sprd/" >> ${STAGING_DIR}/${STGINLIST}
+      fi
+    else
+      for m in $(seq $mtot); do
+        for q in $(seq $mem_np); do
+          echo "|${OUT_SUBDIR}/${time}/hist/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+          echo "|${OUT_SUBDIR}/${atime}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+        if ((m == mmean || m == mmdet || OUT_OPT <= 3)); then
+          for q in $(seq $mem_np); do
+            echo "|${OUT_SUBDIR}/${atime}/gues/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+          done
+        fi
+      done
+      if ((SPRD_OUT == 1)); then
+        for q in $(seq $mem_np); do
+          echo "|${OUT_SUBDIR}/${atime}/gues/sprd/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+          echo "|${OUT_SUBDIR}/${atime}/anal/sprd/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+        done
+      fi
+    fi
+  fi
+
+  # obsgues (empty directories)
+  #-------------------
+  if ((OBSOPE_RUN == 1)); then
+    if ((DISK_MODE <= 2)); then
+      for m in $(seq $mtot); do
+        echo "|${OUT_SUBDIR}/${atime}/obsgues/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+      done
+    else
+      for m in $(seq $mtot); do
+        for q in $(seq $mem_np); do
+          echo "|${OUT_SUBDIR}/${atime}/obsgues/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      done
+    fi
+  fi
+
+  # diag (empty directories)
+  #-------------------
+  if ((RTPS_INFL_OUT == 1 || NOBS_OUT == 1)); then
+    if ((PNETCDF == 1)); then
+      echo "|${OUT_SUBDIR}/${atime}/diag/" >> ${STAGING_DIR}/${STGINLIST}
+    else
+      if ((RTPS_INFL_OUT == 1)); then
+        for q in $(seq $mem_np); do
+          echo "|${OUT_SUBDIR}/${atime}/diag/rtps/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+        done
+      fi
+      if ((NOBS_OUT == 1)); then
+        for q in $(seq $mem_np); do
+          echo "|${OUT_SUBDIR}/${atime}/diag/nobs/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+        done
+      fi
+      if ((ADAPTINFL == 1)); then
+        for q in $(seq $mem_np); do
+          echo "|${OUT_SUBDIR}/${atime}/diag/infl/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+        done
+      fi
+    fi
+  fi
+
   # additive inflation
   #-------------------
   if ((loop == 1 && ADDINFL == 1)); then
@@ -539,7 +639,7 @@ while ((time <= ETIME)); do
   # stage-out
   #-------------------
 
-  # anal
+  # anal (init)
   #-------------------
   if ((loop == 1 && MAKEINIT == 1)); then
     path="${time}/anal/"
@@ -1408,24 +1508,24 @@ if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ${time}: ${stepname[4]}: Pre-processing script end" >&2
 fi
 
-for it in $(seq $nitmax); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) start" >&2
-  fi
+#for it in $(seq $nitmax); do
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
-  g=${proc2group[$((MYRANK+1))]}
-  if (pdrun $g $PROC_OPT); then
-    m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= mtot)); then
-      bash $SCRP_DIR/src/pre_obsope.sh $MYRANK \
-           $atime ${name_m[$m]}
-    fi
-  fi
+#  g=${proc2group[$((MYRANK+1))]}
+#  if (pdrun $g $PROC_OPT); then
+#    m=$(((it-1)*parallel_mems+g))
+#    if ((m >= 1 && m <= mtot)); then
+#      bash $SCRP_DIR/src/pre_obsope.sh $MYRANK \
+#           $atime ${name_m[$m]}
+#    fi
+#  fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) end" >&2
-  fi
-done
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) end" >&2
+#  fi
+#done
 
 #-------------------------------------------------------------------------------
 }

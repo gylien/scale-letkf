@@ -108,7 +108,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   call mpi_timer('', 2)
 
   WRITE(6,'(A)') 'Hello from das_letkf'
-  WRITE(6,'(A,F15.2)') '  INFL_MUL = ',INFL_MUL
 
   WRITE(6,'(A,I8)') 'Target observation numbers (global) : NOBS=',nobstotalg
   WRITE(6,'(A,I8)') 'Target observation numbers processed in this subdomian : NOBS=',nobstotal
@@ -228,10 +227,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !
   ! multiplicative inflation
   !
-  IF(INFL_MUL > 0.0d0) THEN  ! fixed multiplicative inflation parameter
+  IF(trim(INFL_MUL_IN_BASENAME) == '') THEN  ! fixed multiplicative inflation parameter
+    WRITE(6,'(A,F15.2)') '  INFL_MUL = ',INFL_MUL
     work3d = INFL_MUL
     work2d = INFL_MUL
   ELSE  ! 3D parameter values are read-in
+    WRITE(6,'(A)') '  Use INFL_MUL field from file'
     allocate (work3dg(nlon,nlat,nlev,nv3d))
     allocate (work2dg(nlon,nlat,nv2d))
     IF(myrank_e == mmean_rank_e) THEN

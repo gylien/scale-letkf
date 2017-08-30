@@ -111,7 +111,11 @@ if ((PNETCDF == 1)); then
   GUES_MEAN_INOUT_BASENAME="${TMPOUT}/${ATIME}/gues/mean.init"
   GUES_SPRD_OUT_BASENAME="${TMPOUT}/${ATIME}/gues/sprd.init"
   ANAL_OUT_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@.init"
-  INFL_MUL_IN_BASENAME="${TMPOUT}/${ATIME}/diag/infl"
+  if [ -s "${TMPOUT}/${STIME}/diag/infl.nc" ]; then
+    INFL_MUL_IN_BASENAME="${TMPOUT}/${STIME}/diag/infl"
+  else
+    INFL_MUL_IN_BASENAME=
+  fi
   INFL_MUL_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/infl"
   INFL_ADD_IN_BASENAME="${TMPOUT}/const/addi/@@@@.init"
   RELAX_SPREAD_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/rtps"
@@ -122,7 +126,11 @@ else
   GUES_MEAN_INOUT_BASENAME="${TMPOUT}/${ATIME}/gues/mean/init"
   GUES_SPRD_OUT_BASENAME="${TMPOUT}/${ATIME}/gues/sprd/init"
   ANAL_OUT_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@/init"
-  INFL_MUL_IN_BASENAME="${TMPOUT}/${ATIME}/diag/infl/init"
+  if [ -s "${TMPOUT}/${STIME}/diag/infl/init$(printf $SCALE_SFX 0)" ]; then
+    INFL_MUL_IN_BASENAME="${TMPOUT}/${STIME}/diag/infl/init"
+  else
+    INFL_MUL_IN_BASENAME=
+  fi
   INFL_MUL_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/infl/init"
   INFL_ADD_IN_BASENAME="${TMPOUT}/const/addi/@@@@/init"
   RELAX_SPREAD_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/rtps/init"
