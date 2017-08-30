@@ -304,7 +304,7 @@ while ((time <= ETIME)); do
 
   # anal
   #-------------------
-  if ((loop == 1 && MAKEINIT != 1)); then
+  if ((loop == 1 && MAKEINIT != 1)); then # (existing)
     for m in $(seq $mtot); do
       if ((PNETCDF == 1)); then
         path="${time}/anal/${name_m[$m]}.init.nc"
@@ -316,6 +316,26 @@ while ((time <= ETIME)); do
         done
       fi
     done
+  else # (create empty directories)
+    if ((PNETCDF == 1)); then
+      echo "|${OUT_SUBDIR}/${time}/anal/" >> ${STAGING_DIR}/${STGINLIST}
+    else
+      if ((DISK_MODE <= 2)); then
+        for m in $(seq $mtot); do
+          echo "|${OUT_SUBDIR}/${time}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+        done
+      else
+        for m in $(seq $mtot); do
+          for q in $(seq $mem_np); do
+            echo "|${OUT_SUBDIR}/${time}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+          done
+        done
+      fi
+    fi
+  fi
+
+  if ((PNETCDF != 1 && BDY_ENS == 0 && USE_INIT_FROM_BDY == 1)); then
+    echo "|${OUT_SUBDIR}/${time}/anal/mean/" >> ${STAGING_DIR}/${STGINLIST}
   fi
 
   # anal_ocean
@@ -435,9 +455,9 @@ while ((time <= ETIME)); do
     fi
   fi
 
-  # bdy (prepared)
+  # bdy
   #-------------------
-  if ((BDY_FORMAT == 0)); then
+  if ((BDY_FORMAT == 0)); then # (prepared)
     if ((BDY_ENS == 0)); then
       if ((DISK_MODE == 3)); then
         for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
@@ -478,6 +498,24 @@ while ((time <= ETIME)); do
           done
         fi
       done
+    fi
+  else # (create empty directories)
+    if ((PNETCDF == 1)); then
+      echo "|${OUT_SUBDIR}/${time}/bdy/" >> ${STAGING_DIR}/${STGINLIST}
+    else
+      if ((BDY_ENS == 0)); then
+        echo "|${OUT_SUBDIR}/${time}/bdy/mean/" >> ${STAGING_DIR}/${STGINLIST}
+      elif ((DISK_MODE <= 2)); then
+        for m in $(seq $mtot); do
+          echo "|${OUT_SUBDIR}/${time}/bdy/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+        done
+      else
+        for m in $(seq $mtot); do
+          for q in $(seq $mem_np); do
+            echo "|${OUT_SUBDIR}/${time}/bdy/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+          done
+        done
+      fi
     fi
   fi
 

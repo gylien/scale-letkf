@@ -43,26 +43,22 @@ initbaselen=24
 
 if ((MKINIT == 1)); then
   if ((PNETCDF == 1)); then
-    mkdir -p $TMPOUT/${STIME}/anal
     ifile="$(cd $TMPDIR ; ls init_*.nc 2> /dev/null)"
     if [ -e "$TMPDIR/${ifile}" ]; then
       mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}.init.nc
     fi
   else
-    mkdir -p $TMPOUT/${STIME}/anal/${MEM}
     for ifile in $(cd $TMPDIR ; ls init_*.nc 2> /dev/null); do
       mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}/init${ifile:$initbaselen}
     done
   fi
 elif ((USE_INIT_FROM_BDY == 1)); then
   if ((PNETCDF == 1)); then
-    mkdir -p $TMPOUT/${STIME}/anal
     ifile="$(cd $TMPDIR ; ls init_*.nc 2> /dev/null)"
     if [ -e "$TMPDIR/${ifile}" ]; then
       mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}.init_bdy.nc
     fi
   else
-    mkdir -p $TMPOUT/${STIME}/anal/${MEM}
     for ifile in $(cd $TMPDIR ; ls init_*.nc 2> /dev/null); do
       mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}/init_bdy${ifile:$initbaselen}
     done
