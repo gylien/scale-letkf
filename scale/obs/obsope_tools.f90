@@ -1164,7 +1164,7 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
     do i = 1, nlon
       ri = real(i + IHALO, r_size)
-      call MPRJ_xy2lonlat((ri-1.0d0) * DX + GRID_CX(1), (rj-1.0d0) * DY + GRID_CY(1), lon, lat)
+      call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1), lon, lat)
       lon = lon * rad2deg
       lat = lat * rad2deg
 
