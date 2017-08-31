@@ -232,6 +232,8 @@ MODULE common_nml
   logical :: USE_OBSERR_RADAR_REF = .false.
   logical :: USE_OBSERR_RADAR_VR = .false.
 
+  logical :: RADAR_OBS_4D = .false.
+
   REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
   INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than RADAR_REF_THRES_DBZ
   INTEGER :: MIN_RADAR_REF_MEMBER_OBSREF = 1   !Ensemble members with
@@ -753,6 +755,7 @@ subroutine read_nml_letkf_radar
     USE_RADAR_PSEUDO_RH, &
     USE_OBSERR_RADAR_REF, &
     USE_OBSERR_RADAR_VR, &
+    RADAR_OBS_4D, &
     RADAR_REF_THRES_DBZ, &
     MIN_RADAR_REF_MEMBER, &
     MIN_RADAR_REF_MEMBER_OBSREF, &
