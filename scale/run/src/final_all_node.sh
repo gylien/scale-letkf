@@ -49,6 +49,11 @@ if [ "$SCPCALL" = 'cycle' ]; then
   while ((time <= ETIME)); do
     mv -f $TMPOUT/${time}/log $TMPOUT/${time}/log_${TNO}
     mv -f $TMPOUT/${atime}/log $TMPOUT/${atime}/log_${TNO}
+    mkdir -p $TMPOUT/${time}/log/scale_pp
+    mkdir -p $TMPOUT/${time}/log/scale_init
+    mkdir -p $TMPOUT/${time}/log/scale
+    mkdir -p $TMPOUT/${atime}/log/obsope
+    mkdir -p $TMPOUT/${atime}/log/letkf
     time=$(datetime $time $LCYCLE s)
     atime=$(datetime $time $LCYCLE s)
   done
@@ -60,6 +65,9 @@ elif [ "$SCPCALL" = 'fcst' ]; then
       time2=$(datetime $time $((lcycles * (c-1))) s)
       if ((time2 <= ETIME)); then
         mv -f $TMPOUT/${time2}/log $TMPOUT/${time2}/log_${TNO}
+        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_pp
+        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale_init
+        mkdir -p $TMPOUT/${time2}/log/${SCPCALL}_scale
       fi
     done
     time=$(datetime $time $((lcycles * FCST_CYCLE)) s)
