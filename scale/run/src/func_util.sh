@@ -595,10 +595,10 @@ USE_RANKDIR="${1:-0}"
 #-------------------------------------------------------------------------------
 
 if [ -s "${STAGING_DIR}/${STGINLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_SHARE}" ]; then
-  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_SHARE} $USE_RANKDIR share 1>> $jobscrp || exit $?
+  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_SHARE} $USE_RANKDIR share $TMPS 1>> $jobscrp || exit $?
 fi
 if [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}" ]; then
-  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $USE_RANKDIR local 1>> $jobscrp || exit $?
+  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $USE_RANKDIR local $TMPS 1>> $jobscrp || exit $?
 fi
 if [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}" ]; then
   bash $SCRP_DIR/src/stage_out_K.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_SHARE} $USE_RANKDIR share 1>> $jobscrp || exit $?

@@ -277,8 +277,8 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
   SELECT CASE (elm)
   CASE(id_u_obs,id_v_obs)  ! U,V
     if (stggrd_ == 1) then
-      CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5,rj,u)  !###### should modity itpl_3d to prevent '1.0' problem....??
-      CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5,v)  !######
+      CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,u)  !###### should modity itpl_3d to prevent '1.0' problem....??
+      CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,v)  !######
     else
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
@@ -357,9 +357,9 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   qc = iqc_good
 
   if (stggrd_ == 1) then
-    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5d0,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
-    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5d0,vr)  !######
-    CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk-0.5d0,ri,rj,wr)  !######
+    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
+    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,vr)  !######
+    CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk-0.5_r_size,ri,rj,wr)  !######
   else
     CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,ur)
     CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,vr)
@@ -2293,7 +2293,9 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(OUT) :: nn
-  REAL(r_sngl) :: wk(7),tmp
+!  REAL(r_sngl) :: wk(8)
+  INTEGER :: nrec
+  REAL(r_sngl) :: tmp
   INTEGER :: ios
 !  INTEGER :: ir,iv
   INTEGER :: iunit
@@ -2301,6 +2303,11 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
   INTEGER :: sz
   REAL(r_size),INTENT(OUT) :: radarlon,radarlat,radarz
 
+  IF(RADAR_OBS_4D) THEN
+    nrec = 8
+  ELSE
+    nrec = 7
+  END IF
   nn = 0
 !  iv = 0
 !  ir = 0
@@ -2335,7 +2342,7 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
 ! get file size by reading through the entire file... too slow for big files
 !-----------------------------
 !    DO
-!      READ(iunit,IOSTAT=ios) wk
+!      READ(iunit,IOSTAT=ios) wk(1:nrec)
 !      IF(ios /= 0) EXIT
 !!      SELECT CASE(NINT(wk(1)))
 !!      CASE(id_radar_ref_obs,id_radar_ref_zero_obs)
@@ -2351,11 +2358,11 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
 !-----------------------------
     INQUIRE(UNIT=iunit, SIZE=sz)
     sz = sz - r_sngl * (1+2) * 3 ! substract the radar data header
-    IF (MOD(sz, r_sngl * (7+2)) /= 0) THEN
+    IF (MOD(sz, r_sngl * (nrec+2)) /= 0) THEN
       WRITE(6,'(2A)') cfile,': Reading error -- skipped'
       RETURN
     END IF
-    nn = sz / (r_sngl * (7+2))
+    nn = sz / (r_sngl * (nrec+2))
 !-----------------------------
 
     WRITE(6,*)' RADAR FILE ', cfile
@@ -2377,12 +2384,18 @@ SUBROUTINE read_obs_radar(cfile,obs)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(INOUT) :: obs
-  REAL(r_sngl) :: wk(7)
+  REAL(r_sngl) :: wk(8)
+  INTEGER :: nrec
   REAL(r_sngl) :: tmp
   INTEGER :: n,iunit,ios
 
 !  call obs_info_allocate(obs)
 
+  IF(RADAR_OBS_4D) THEN
+    nrec = 8
+  ELSE
+    nrec = 7
+  END IF
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   READ(iunit, iostat=ios)tmp
@@ -2392,7 +2405,7 @@ SUBROUTINE read_obs_radar(cfile,obs)
   READ(iunit, iostat=ios)tmp
   IF(ios /= 0) RETURN
   DO n=1,obs%nobs
-    READ(iunit) wk
+    READ(iunit) wk(1:nrec)
     obs%elm(n) = NINT(wk(1))
     obs%lon(n) = REAL(wk(2),r_size)
     obs%lat(n) = REAL(wk(3),r_size)
@@ -2401,7 +2414,11 @@ SUBROUTINE read_obs_radar(cfile,obs)
     obs%err(n) = REAL(wk(6),r_size)
 !    obs%typ(n) = NINT(wk(7))
     obs%typ(n) = 22
-    obs%dif(n) = 0.0d0
+    IF(RADAR_OBS_4D) THEN
+      obs%dif(n) = REAL(wk(8),r_size)
+    ELSE
+      obs%dif(n) = 0.0d0
+    END IF
   END DO
   CLOSE(iunit)
 
@@ -2416,9 +2433,15 @@ SUBROUTINE write_obs_radar(cfile,obs,append,missing)
   LOGICAL,INTENT(IN),OPTIONAL :: missing
   LOGICAL :: append_
   LOGICAL :: missing_
-  REAL(r_sngl) :: wk(7)
+  REAL(r_sngl) :: wk(8)
+  INTEGER :: nrec
   INTEGER :: n,iunit
 
+  IF(RADAR_OBS_4D) THEN
+    nrec = 8
+  ELSE
+    nrec = 7
+  END IF
   iunit=92
   append_ = .false.
   IF(present(append)) append_ = append
@@ -2442,7 +2465,10 @@ SUBROUTINE write_obs_radar(cfile,obs,append,missing)
       wk(5) = REAL(obs%dat(n),r_sngl)
       wk(6) = REAL(obs%err(n),r_sngl)
       wk(7) = REAL(obs%typ(n),r_sngl)
-      WRITE(iunit) wk
+      IF(RADAR_OBS_4D) THEN
+        wk(8) = REAL(obs%dif(n),r_sngl)
+      END IF
+      WRITE(iunit) wk(1:nrec)
     end if
   END DO
   CLOSE(iunit)
