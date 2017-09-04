@@ -321,17 +321,9 @@ while ((time <= ETIME)); do
       if ((PNETCDF == 1)); then
         echo "|${OUT_SUBDIR}/${time}/anal/" >> ${STAGING_DIR}/${STGINLIST}
       else
-        if ((DISK_MODE <= 2)); then
-          for m in $(seq $mtot); do
-            echo "|${OUT_SUBDIR}/${time}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
-          done
-        else
-          for m in $(seq $mtot); do
-            for q in $(seq $mem_np); do
-              echo "|${OUT_SUBDIR}/${time}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-            done
-          done
-        fi
+        for m in $(seq $mtot); do
+          echo "|${OUT_SUBDIR}/${time}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+        done
       fi
     fi
   fi
@@ -527,15 +519,9 @@ while ((time <= ETIME)); do
     else
       if ((BDY_ENS == 0)); then
         echo "|${OUT_SUBDIR}/${time}/bdy/mean/" >> ${STAGING_DIR}/${STGINLIST}
-      elif ((DISK_MODE <= 2)); then
-        for m in $(seq $mtot); do
-          echo "|${OUT_SUBDIR}/${time}/bdy/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
-        done
       else
         for m in $(seq $mtot); do
-          for q in $(seq $mem_np); do
-            echo "|${OUT_SUBDIR}/${time}/bdy/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-          done
+          echo "|${OUT_SUBDIR}/${time}/bdy/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
         done
       fi
     fi
@@ -548,51 +534,37 @@ while ((time <= ETIME)); do
     echo "|${OUT_SUBDIR}/${atime}/gues/" >> ${STAGING_DIR}/${STGINLIST}
     echo "|${OUT_SUBDIR}/${atime}/anal/" >> ${STAGING_DIR}/${STGINLIST}
   else
-    if ((DISK_MODE <= 2)); then
-      for m in $(seq $mtot); do
-        echo "|${OUT_SUBDIR}/${time}/hist/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+    for m in $(seq $mtot); do
+      echo "|${OUT_SUBDIR}/${time}/hist/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+      echo "|${OUT_SUBDIR}/${atime}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+      if ((OUT_OPT <= 3)); then
         echo "|${OUT_SUBDIR}/${atime}/gues/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
-        echo "|${OUT_SUBDIR}/${atime}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
-      done
-      if ((SPRD_OUT == 1)); then
-        echo "|${OUT_SUBDIR}/${atime}/gues/sprd/" >> ${STAGING_DIR}/${STGINLIST}
-        echo "|${OUT_SUBDIR}/${atime}/anal/sprd/" >> ${STAGING_DIR}/${STGINLIST}
       fi
-    else
-      for m in $(seq $mtot); do
-        for q in $(seq $mem_np); do
-          echo "|${OUT_SUBDIR}/${time}/hist/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-          echo "|${OUT_SUBDIR}/${atime}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-        done
-        if ((m == mmean || m == mmdet || OUT_OPT <= 3)); then
-          for q in $(seq $mem_np); do
-            echo "|${OUT_SUBDIR}/${atime}/gues/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-          done
-        fi
+    done
+    if ((OUT_OPT >= 4)); then
+      for q in $(seq $mem_np); do
+        echo "|${OUT_SUBDIR}/${atime}/gues/mean/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
       done
-      if ((SPRD_OUT == 1)); then
+      if ((DET_RUN == 1)); then
         for q in $(seq $mem_np); do
-          echo "|${OUT_SUBDIR}/${atime}/gues/sprd/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
-          echo "|${OUT_SUBDIR}/${atime}/anal/sprd/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+          echo "|${OUT_SUBDIR}/${atime}/gues/mdet/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmdet-1)*mem_np+q))]}
         done
       fi
+    fi
+    if ((SPRD_OUT == 1)); then
+      for q in $(seq $mem_np); do
+        echo "|${OUT_SUBDIR}/${atime}/gues/sprd/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+        echo "|${OUT_SUBDIR}/${atime}/anal/sprd/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+      done
     fi
   fi
 
   # obsgues (empty directories)
   #-------------------
   if ((OBSOPE_RUN == 1)); then
-    if ((DISK_MODE <= 2)); then
-      for m in $(seq $mtot); do
-        echo "|${OUT_SUBDIR}/${atime}/obsgues/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
-      done
-    else
-      for m in $(seq $mtot); do
-        for q in $(seq $mem_np); do
-          echo "|${OUT_SUBDIR}/${atime}/obsgues/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-        done
-      done
-    fi
+    for m in $(seq $mtot); do
+      echo "|${OUT_SUBDIR}/${atime}/obsgues/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+    done
   fi
 
   # diag (empty directories)
