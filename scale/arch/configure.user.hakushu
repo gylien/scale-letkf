@@ -41,7 +41,7 @@ TCV       = F
 # -- you should set "H08 = F".
 H08       = T
 
-DIR_RTTOV = /home/honda/local/RTTOV
+DIR_RTTOV = /data6/honda/RTTOV11.2
 RT_LDFLAGS = -L$(DIR_RTTOV)/lib -lrttov11.2.0_test -lrttov11.2.0_other \
              -lrttov11.2.0_coef_io -lrttov11.2.0_parallel -lrttov11.2.0_main
 RT_INCLUDE = -I$(DIR_RTTOV)/mod -I$(DIR_RTTOV)/include
