@@ -150,6 +150,7 @@ MODULE common_obs_scale
 
   type(obs_info),allocatable,save :: obs(:) ! observation information
   type(obs_da_value),save :: obsda_sort     ! sorted obsda
+  type(obs_da_value),save :: obsdep         ! obsdep information
 
   REAL(r_size),SAVE :: MIN_RADAR_REF
   REAL(r_size),SAVE :: RADAR_REF_THRES
@@ -276,8 +277,8 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
   SELECT CASE (elm)
   CASE(id_u_obs,id_v_obs)  ! U,V
     if (stggrd_ == 1) then
-      CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5,rj,u)  !###### should modity itpl_3d to prevent '1.0' problem....??
-      CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5,v)  !######
+      CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,u)  !###### should modity itpl_3d to prevent '1.0' problem....??
+      CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,v)  !######
     else
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
@@ -356,9 +357,9 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   qc = iqc_good
 
   if (stggrd_ == 1) then
-    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5d0,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
-    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5d0,vr)  !######
-    CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk-0.5d0,ri,rj,wr)  !######
+    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
+    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,vr)  !######
+    CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk-0.5_r_size,ri,rj,wr)  !######
   else
     CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,ur)
     CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,vr)
@@ -778,20 +779,33 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
     d=0.25d0
     Cd=0.6d0
 
-    lr= ( pi * ror * nor / ( ro * qr ) ) ** 0.25
-    ls= ( pi * ros * nos / ( ro * qs ) ) ** 0.25
-    lg= ( pi * rog * nog / ( ro * qg ) ) ** 0.25
-
     rofactor= ( roo / ro  ) ** 0.25
-    CALL com_gamma( 4.0_r_size + b , tmp_factor )
-    wr= a * tmp_factor / ( 6.0d0 * ( lr ** b ) )
-    wr= 1.0d-2*wr * rofactor
-    CALL com_gamma( 4.0_r_size + d , tmp_factor )
-    ws= c * tmp_factor / ( 6.0d0 * ( ls ** d ) )
-    ws= 1.0d-2*ws * rofactor
-    CALL com_gamma( 4.5_r_size , tmp_factor )
-    wg= tmp_factor * ( ( ( 4.0d0 * gg * 100.0d0 * rog )/( 3.0d0 * Cd * ro ) ) ** 0.5 )
-    wg= 1.0d-2*wg / ( 6.0d0 * ( lg ** 0.5 ) )
+    if(qr > 0.0d0)then
+      CALL com_gamma( 4.0_r_size + b , tmp_factor )
+      lr= ( pi * ror * nor / ( ro * qr ) ) ** 0.25
+      wr= a * tmp_factor / ( 6.0d0 * ( lr ** b ) )
+      wr= 1.0d-2*wr * rofactor
+    else
+      wr = 0.0d0
+    endif
+
+    if(qs > 0.0d0)then
+      CALL com_gamma( 4.0_r_size + d , tmp_factor )
+      ls= ( pi * ros * nos / ( ro * qs ) ) ** 0.25
+      ws= c * tmp_factor / ( 6.0d0 * ( ls ** d ) )
+      ws= 1.0d-2*ws * rofactor
+    else
+      ws = 0.0d0
+    endif
+ 
+    if(qg > 0.0d0)then
+      CALL com_gamma( 4.5_r_size , tmp_factor )
+      lg= ( pi * rog * nog / ( ro * qg ) ) ** 0.25
+      wg= tmp_factor * ( ( ( 4.0d0 * gg * 100.0d0 * rog )/( 3.0d0 * Cd * ro ) ) ** 0.5 )
+      wg= 1.0d-2*wg / ( 6.0d0 * ( lg ** 0.5 ) )
+    else
+      wg = 0.0d0
+    endif
 
     !Reflectivity weighted terminal velocity. 
     wt = ( wr * zr + ws * zs + wg * zg )/ ( zr + zs + zg )
@@ -1320,9 +1334,9 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 #ifdef H08
 subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,&
-                     nobs_H08,bias_H08,rmse_H08)
+                     nobs_H08,bias_H08,rmse_H08,step)
 #else
-subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
+subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 #endif
   use scale_process, only: &
       PRC_myrank
@@ -1337,6 +1351,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
   REAL(r_size),INTENT(OUT) :: rmse(nid_obs)
   LOGICAL,INTENT(OUT) :: monit_type(nid_obs)
   logical,intent(in) :: use_key
+  integer,intent(in) :: step
 
   REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
@@ -1391,6 +1406,17 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
   allocate (ohx(nnobs))
   allocate (oqc(nnobs))
 
+#ifdef DEBUG
+  if (step < 0 .or. step > 2) then
+    write (6, *) '[Error] monit_obs: step should be 0, 1, or 2.'
+    stop
+  end if
+#endif
+  if (step == 1) then
+    obsdep%nobs = nnobs
+    call obs_da_value_allocate(obsdep, 0)
+  end if
+
   oqc = -1
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ri,rj,rk)
@@ -1402,11 +1428,29 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
       nn = n
     end if
 
-!print *, n, nn
-
-
     iset = obsda_sort%set(nn)
     iidx = obsda_sort%idx(nn)
+
+    if (step == 1) then
+      obsdep%set(n) = iset
+      obsdep%idx(n) = iidx
+      obsdep%val(n) = obs(iset)%dat(iidx)
+#ifdef DEBUG
+    else if (step == 2) then
+      if (obsdep%set(n) /= iset) then
+        write (6, *) "[Error] 'set' for y_b and y_a are inconsistent!"
+        stop
+      end if
+      if (obsdep%idx(n) /= iidx) then
+        write (6, *) "[Error] 'idx' for y_b and y_a are inconsistent!"
+        stop
+      end if
+      if (obsdep%val(n) /= obs(iset)%dat(iidx)) then
+        write (6, *) "[Error] 'val' for y_b and y_a are inconsistent!"
+        stop
+      end if
+#endif
+    end if
 
     if (obsda_sort%qc(nn) /= iqc_good) write(6, *) '############', obsda_sort%qc(nn)
 
@@ -1474,6 +1518,18 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
       if (oqc(n) == iqc_good) then
         ohx(n) = obs(iset)%dat(iidx) - ohx(n)
+      else
+        ohx(n) = undef
+      end if
+
+      if (step == 1) then
+        obsdep%qc(n) = oqc(n)
+        obsdep%ri(n) = ohx(n)
+      else if (step == 2) then
+        if (obsdep%qc(n) == iqc_good) then ! Use the QC value of y_a only if the QC of y_b is good
+          obsdep%qc(n) = oqc(n)            !
+        end if                             !
+        obsdep%rj(n) = ohx(n)
       end if
 !write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iset)%elm(iidx), obs(iset)%typ(iidx), obs(iset)%lon(iidx), obs(iset)%lat(iidx), obs(iset)%lev(iidx), obs(iset)%dat(iidx), obs(iset)%err(iidx), ohx(n), oqc(n)
 
@@ -1563,6 +1619,12 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
       iset = obsda_sort%set(nn)
       iidx = obsda_sort%idx(nn)
 
+      if (step == 1) then
+        obsdep%set(n) = iset
+        obsdep%idx(n) = iidx
+        obsdep%val(n) = obs(iset)%dat(iidx)
+      end if
+
       oelm(n) = obs(iset)%elm(iidx)
       if(oelm(n) /= id_H08IR_obs)cycle
 
@@ -1582,6 +1644,17 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
       endif
       oqc(n) = qc_H08(ch,n2prof(n))
 
+
+      if (step == 1) then
+        obsdep%qc(n) = oqc(n)
+        obsdep%ri(n) = ohx(n)
+      else if (step == 2) then
+        if (obsdep%qc(n) == iqc_good) then ! Use the QC value of y_a only if the QC of y_b is good
+          obsdep%qc(n) = oqc(n)            !
+        end if                             !
+        obsdep%rj(n) = ohx(n)
+      end if
+
 #ifdef DEBUG
       write(6,'(a10,i4,a1,f8.2,a1,f8.2,a1,f8.2,a1,f8.2,a1,f8.2,a1,i7)')"Him8-STAT,",&
                     ch+6,",",obs(iset)%lon(iidx),",",obs(iset)%lat(iidx),",",&
@@ -1593,6 +1666,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 #ifndef DEBUG
 !$OMP END PARALLEL DO
 #endif
+
+
 
     deallocate(ri_H08, rj_H08)
     deallocate(lon_H08, lat_H08)
@@ -1613,8 +1688,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
           endif
         endif
 
-      enddo
-    enddo
+      enddo ! ch
+    enddo ! np
 !!$OMP END PARALLEL DO
 
     deallocate(yobs_H08_clr)
@@ -2327,7 +2402,9 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(OUT) :: nn
-  REAL(r_sngl) :: wk(7),tmp
+!  REAL(r_sngl) :: wk(8)
+  INTEGER :: nrec
+  REAL(r_sngl) :: tmp
   INTEGER :: ios
 !  INTEGER :: ir,iv
   INTEGER :: iunit
@@ -2335,6 +2412,11 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
   INTEGER :: sz
   REAL(r_size),INTENT(OUT) :: radarlon,radarlat,radarz
 
+  IF(RADAR_OBS_4D) THEN
+    nrec = 8
+  ELSE
+    nrec = 7
+  END IF
   nn = 0
 !  iv = 0
 !  ir = 0
@@ -2369,7 +2451,7 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
 ! get file size by reading through the entire file... too slow for big files
 !-----------------------------
 !    DO
-!      READ(iunit,IOSTAT=ios) wk
+!      READ(iunit,IOSTAT=ios) wk(1:nrec)
 !      IF(ios /= 0) EXIT
 !!      SELECT CASE(NINT(wk(1)))
 !!      CASE(id_radar_ref_obs,id_radar_ref_zero_obs)
@@ -2385,11 +2467,11 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
 !-----------------------------
     INQUIRE(UNIT=iunit, SIZE=sz)
     sz = sz - r_sngl * (1+2) * 3 ! substract the radar data header
-    IF (MOD(sz, r_sngl * (7+2)) /= 0) THEN
+    IF (MOD(sz, r_sngl * (nrec+2)) /= 0) THEN
       WRITE(6,'(2A)') cfile,': Reading error -- skipped'
       RETURN
     END IF
-    nn = sz / (r_sngl * (7+2))
+    nn = sz / (r_sngl * (nrec+2))
 !-----------------------------
 
     WRITE(6,*)' RADAR FILE ', cfile
@@ -2411,12 +2493,18 @@ SUBROUTINE read_obs_radar(cfile,obs)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(INOUT) :: obs
-  REAL(r_sngl) :: wk(7)
+  REAL(r_sngl) :: wk(8)
+  INTEGER :: nrec
   REAL(r_sngl) :: tmp
   INTEGER :: n,iunit,ios
 
 !  call obs_info_allocate(obs)
 
+  IF(RADAR_OBS_4D) THEN
+    nrec = 8
+  ELSE
+    nrec = 7
+  END IF
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   READ(iunit, iostat=ios)tmp
@@ -2426,7 +2514,7 @@ SUBROUTINE read_obs_radar(cfile,obs)
   READ(iunit, iostat=ios)tmp
   IF(ios /= 0) RETURN
   DO n=1,obs%nobs
-    READ(iunit) wk
+    READ(iunit) wk(1:nrec)
     obs%elm(n) = NINT(wk(1))
     obs%lon(n) = REAL(wk(2),r_size)
     obs%lat(n) = REAL(wk(3),r_size)
@@ -2435,7 +2523,11 @@ SUBROUTINE read_obs_radar(cfile,obs)
     obs%err(n) = REAL(wk(6),r_size)
 !    obs%typ(n) = NINT(wk(7))
     obs%typ(n) = 22
-    obs%dif(n) = 0.0d0
+    IF(RADAR_OBS_4D) THEN
+      obs%dif(n) = REAL(wk(8),r_size)
+    ELSE
+      obs%dif(n) = 0.0d0
+    END IF
   END DO
   CLOSE(iunit)
 
@@ -2450,9 +2542,15 @@ SUBROUTINE write_obs_radar(cfile,obs,append,missing)
   LOGICAL,INTENT(IN),OPTIONAL :: missing
   LOGICAL :: append_
   LOGICAL :: missing_
-  REAL(r_sngl) :: wk(7)
+  REAL(r_sngl) :: wk(8)
+  INTEGER :: nrec
   INTEGER :: n,iunit
 
+  IF(RADAR_OBS_4D) THEN
+    nrec = 8
+  ELSE
+    nrec = 7
+  END IF
   iunit=92
   append_ = .false.
   IF(present(append)) append_ = append
@@ -2476,7 +2574,10 @@ SUBROUTINE write_obs_radar(cfile,obs,append,missing)
       wk(5) = REAL(obs%dat(n),r_sngl)
       wk(6) = REAL(obs%err(n),r_sngl)
       wk(7) = REAL(obs%typ(n),r_sngl)
-      WRITE(iunit) wk
+      IF(RADAR_OBS_4D) THEN
+        wk(8) = REAL(obs%dif(n),r_sngl)
+      END IF
+      WRITE(iunit) wk(1:nrec)
     end if
   END DO
   CLOSE(iunit)

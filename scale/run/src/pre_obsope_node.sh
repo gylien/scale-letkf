@@ -43,15 +43,6 @@ SLOT_BASE="$1"
 
 #===============================================================================
 
-# Moved to init_all_node.sh
-#-- H08 --
-#if [ -e "$TMPDAT/rttov/rtcoef_himawari_8_ahi.dat" ]; then
-#  ln -fs $TMPDAT/rttov/rtcoef_himawari_8_ahi.dat $TMPDIR
-#fi
-#if [ -e "$TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat" ]; then
-#  ln -fs $TMPDAT/rttov/sccldcoef_himawari_8_ahi.dat $TMPDIR
-#fi
-
 IO_AGGREGATE=".false"
 if ((PNETCDF == 1)); then
   IO_AGGREGATE=".true."

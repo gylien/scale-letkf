@@ -52,7 +52,7 @@ MODULE common_nml
   character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
   integer               :: OBS_IN_FORMAT(nobsfilemax) = 1
   logical               :: OBSDA_RUN(nobsfilemax) = .true.
-  logical               :: OBSDA_OUT = .true.
+  logical               :: OBSDA_OUT = .false.
   character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
   character(filelenmax) :: OBSDA_MEAN_OUT_BASENAME = ''
   character(filelenmax) :: OBSDA_MDET_OUT_BASENAME = ''
@@ -220,10 +220,12 @@ MODULE common_nml
   logical :: DEPARTURE_STAT_ALL_PROCESSES = .true. ! print the departure statistics by all processes?
                                                    ! if set to .false., the statistics are only printed by the ensemble mean group, which may save time
 
-  LOGICAL :: OMB_OUTPUT = .true.
-  LOGICAL :: OMA_OUTPUT = .true.
-  LOGICAL :: OBSGUES_OUTPUT = .false.
-  LOGICAL :: OBSANAL_OUTPUT = .false.
+  LOGICAL               :: OBSDEP_OUT = .true.
+  character(filelenmax) :: OBSDEP_OUT_BASENAME = 'obsdep'
+  LOGICAL               :: OBSGUES_OUT = .false.                  !XXX not implemented yet...
+  character(filelenmax) :: OBSGUES_OUT_BASENAME = 'obsgues.@@@@'  !XXX not implemented yet...
+  LOGICAL               :: OBSANAL_OUT = .false.                  !XXX not implemented yet...
+  character(filelenmax) :: OBSANAL_OUT_BASENAME = 'obsanal.@@@@'  !XXX not implemented yet...
 
   !--- PARAM_LETKF_RADAR
   logical :: USE_RADAR_REF       = .true.
@@ -232,6 +234,8 @@ MODULE common_nml
 
   logical :: USE_OBSERR_RADAR_REF = .false.
   logical :: USE_OBSERR_RADAR_VR = .false.
+
+  logical :: RADAR_OBS_4D = .false.
 
   REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
   INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than RADAR_REF_THRES_DBZ
@@ -762,10 +766,12 @@ subroutine read_nml_letkf_monitor
     DEPARTURE_STAT_H08, &
     DEPARTURE_STAT_T_RANGE, &
     DEPARTURE_STAT_ALL_PROCESSES, &
-    OMB_OUTPUT, &
-    OMA_OUTPUT, &
-    OBSGUES_OUTPUT, &
-    OBSANAL_OUTPUT
+    OBSDEP_OUT, &
+    OBSDEP_OUT_BASENAME, &
+    OBSGUES_OUT, &
+    OBSGUES_OUT_BASENAME, &
+    OBSANAL_OUT, &
+    OBSANAL_OUT_BASENAME
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_MONITOR,iostat=ierr)
@@ -795,6 +801,7 @@ subroutine read_nml_letkf_radar
     USE_RADAR_PSEUDO_RH, &
     USE_OBSERR_RADAR_REF, &
     USE_OBSERR_RADAR_VR, &
+    RADAR_OBS_4D, &
     RADAR_REF_THRES_DBZ, &
     MIN_RADAR_REF_MEMBER, &
     MIN_RADAR_REF_MEMBER_OBSREF, &

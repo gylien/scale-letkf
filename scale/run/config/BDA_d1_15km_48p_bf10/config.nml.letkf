@@ -9,8 +9,6 @@
 !--OBS_IN_NAME--
  OBS_IN_FORMAT = 1, 2, 3,
 !--OBSDA_RUN--
-!--OBSDA_OUT--
-!--OBSDA_OUT_BASENAME--
 !--HISTORY_IN_BASENAME--
 !--SLOT_START--
 !--SLOT_END--
@@ -65,6 +63,8 @@
 &PARAM_LETKF_MONITOR
  DEPARTURE_STAT = .true.
 ! DEPARTURE_STAT_T_RANGE = 0.0d0
+!--OBSDEP_OUT--
+!--OBSDEP_OUT_BASENAME--
 /
 
 !*** Attach SCALE configuration below ***

@@ -84,9 +84,9 @@ OBSDA_IN='.false.'
 if ((OBSOPE_RUN == 1)); then
   OBSDA_IN='.true.'
 fi
-OBSDA_OUT='.false.'
-if ((OBSOUT_OPT <= 2)); then
-  OBSDA_OUT='.true.'
+OBSDEP_OUT_TF='.false.'
+if ((OBSOUT_OPT <= 3)); then
+  OBSDEP_OUT_TF='.true.'
 fi
 SPRD_OUT_TF='.true.'
 if ((SPRD_OUT == 0)); then
@@ -137,8 +137,6 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
-        -e "/!--OBSDA_OUT--/a OBSDA_OUT = $OBSDA_OUT" \
-        -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda\"," \
         -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = \"${HISTORY_IN_BASENAME}\"," \
         -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \
         -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
@@ -165,6 +163,8 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
+        -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = ${OBSDEP_OUT_TF}," \
+        -e "/!--OBSDEP_OUT_BASENAME--/a OBSDEP_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obs/obsdep\"," \
         -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
     > $TMPDIR/letkf.conf
 
