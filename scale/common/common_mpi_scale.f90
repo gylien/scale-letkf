@@ -1414,9 +1414,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       end do
 
       obsdep_g%nobs = dspr(MEM_NP) + cntr(MEM_NP)
-      if (myrank_d == 0) then
-        call obs_da_value_allocate(obsdep_g, 0)
-      end if
+      call obs_da_value_allocate(obsdep_g, 0)
 
       if (obsdep_g%nobs > 0) then
         call MPI_GATHERV(obsdep%set, cnts, MPI_INTEGER, obsdep_g%set, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
@@ -1430,8 +1428,8 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       if (myrank_d == 0) then
         write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is writing an obsda file ', trim(OBSDEP_OUT_BASENAME)//'.dat'
         call write_obs_da(trim(OBSDEP_OUT_BASENAME)//'.dat', obsdep_g, 0)
-        call obs_da_value_deallocate(obsdep_g)
       end if
+      call obs_da_value_deallocate(obsdep_g)
       call obs_da_value_deallocate(obsdep)
 
       call mpi_timer('monit_obs_mpi:obsdep:mpi_allreduce(domain):', 2)
