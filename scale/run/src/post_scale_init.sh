@@ -56,11 +56,11 @@ elif ((USE_INIT_FROM_BDY == 1)); then
   if ((PNETCDF == 1)); then
     ifile="$(cd $TMPDIR ; ls init_*.nc 2> /dev/null)"
     if [ -e "$TMPDIR/${ifile}" ]; then
-      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}.init_bdy.nc
+      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/bdy/${MEM}.init_bdy.nc
     fi
   else
     for ifile in $(cd $TMPDIR ; ls init_*.nc 2> /dev/null); do
-      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/anal/${MEM}/init_bdy${ifile:$initbaselen}
+      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/bdy/${MEM}/init_bdy${ifile:$initbaselen}
     done
   fi
 fi
