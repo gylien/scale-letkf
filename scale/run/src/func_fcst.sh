@@ -207,18 +207,12 @@ staging_list () {
 # TMPDAT
 
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${ENSMODEL_DIR}/scale-rm_pp_ens|${DAT_SUBDIR}/exec/scale-rm_pp_ens
-${ENSMODEL_DIR}/scale-rm_init_ens|${DAT_SUBDIR}/exec/scale-rm_init_ens
-${ENSMODEL_DIR}/scale-rm_ens|${DAT_SUBDIR}/exec/scale-rm_ens
 ${COMMON_DIR}/pdbash|${DAT_SUBDIR}/exec/pdbash
 ${SCRP_DIR}/config.nml.scale_pp|${DAT_SUBDIR}/conf/config.nml.scale_pp
 ${SCRP_DIR}/config.nml.scale_init|${DAT_SUBDIR}/conf/config.nml.scale_init
 ${SCRP_DIR}/config.nml.scale|${DAT_SUBDIR}/conf/config.nml.scale
 ${SCRP_DIR}/config.nml.ensmodel|${DAT_SUBDIR}/conf/config.nml.ensmodel
 EOF
-#${SCALEDIR}/bin/scale-rm_pp|${DAT_SUBDIR}/exec/scale-rm_pp
-#${SCALEDIR}/bin/scale-rm_init|${DAT_SUBDIR}/exec/scale-rm_init
-#${SCALEDIR}/bin/scale-rm|${DAT_SUBDIR}/exec/scale-rm
 
 cat >> ${STAGING_DIR}/${STGINLIST_CONSTDB} << EOF
 ${SCALEDIR}/scale-rm/test/data/rad/cira.nc|${DAT_SUBDIR}/rad/cira.nc
@@ -249,7 +243,29 @@ if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
 fi
 
 #-------------------------------------------------------------------------------
+# TMPRUN
+
+cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${ENSMODEL_DIR}/scale-rm_pp_ens|${RUN_SUBDIR}/scale_pp/scale-rm_pp_ens
+${ENSMODEL_DIR}/scale-rm_init_ens|${RUN_SUBDIR}/scale_init/scale-rm_init_ens
+${ENSMODEL_DIR}/scale-rm_ens|${RUN_SUBDIR}/scale/scale-rm_ens
+EOF
+
+#-------------------------------------------------------------------------------
 # TMPOUT
+
+# empty directories
+#-------------------
+
+echo "|${OUT_SUBDIR}/const/log/" >> ${STAGING_DIR}/${STGINLIST}
+if ((PNETCDF != 1)); then
+  echo "|${OUT_SUBDIR}/const/topo/" >> ${STAGING_DIR}/${STGINLIST}
+  if ((LANDUSE_UPDATE != 1)); then
+    echo "|${OUT_SUBDIR}/const/landuse/" >> ${STAGING_DIR}/${STGINLIST}
+  fi
+fi
+
+#-------------------
 
 lcycles=$((LCYCLE * CYCLE_SKIP))
 time=$STIME
@@ -260,6 +276,20 @@ while ((time <= ETIME)); do
   for c in $(seq $CYCLE); do
     time2=$(datetime $time $((lcycles * (c-1))) s)
     if ((time2 <= ETIME)); then
+
+      # empty directories
+      #-------------------
+
+      if ((PNETCDF != 1)); then
+        if ((LANDUSE_UPDATE == 1)); then
+          echo "|${OUT_SUBDIR}/${time2}/landuse/" >> ${STAGING_DIR}/${STGINLIST}
+        fi
+      fi
+
+      echo "|${OUT_SUBDIR}/${time2}/log/fcst_scale_pp/" >> ${STAGING_DIR}/${STGINLIST}
+      echo "|${OUT_SUBDIR}/${time2}/log/fcst_scale_init/" >> ${STAGING_DIR}/${STGINLIST}
+      echo "|${OUT_SUBDIR}/${time2}/log/fcst_scale/" >> ${STAGING_DIR}/${STGINLIST}
+
       #-------------------
       # stage-in
       #-------------------

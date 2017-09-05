@@ -146,6 +146,8 @@ SUBROUTINE set_letkf_obs
 
   logical :: ctype_use(nid_obs,nobtype)
 
+  character(len=timer_name_width) :: timer_str
+
   call mpi_timer('', 2)
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
@@ -1025,13 +1027,15 @@ SUBROUTINE set_letkf_obs
 
   obsda_sort%nobs_in_key = nk
 
-  call mpi_timer('set_letkf_obs:ext_subdomain_gatherv_prepare:', 2, barrier=MPI_COMM_d)
+  call mpi_timer('set_letkf_obs:ext_subdomain_gatherv_prepare:', 2)
 
   ! 2) Communicate observations within the extended (localization) subdomains
   !-----------------------------------------------------------------------------
   obsbufs%nobs = nobs_sub(2)
   call obs_da_value_allocate(obsbufs, nensobs)
   allocate (obsidx(nobs_sub(2)))
+
+  call mpi_timer('', 3)
 
   do ip = 0, MEM_NP-1
 
@@ -1070,6 +1074,9 @@ SUBROUTINE set_letkf_obs
       dspr(ip2+1) = dspr(ip2) + cntr(ip2)
     end do ! [ ip2 = 1, MEM_NP-1 ]
 
+    write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_obschoose (ip=', ip, '):'
+    call mpi_timer(trim(timer_str), 3)
+
     cnts = cntr(myrank_d+1)  ! When myrank_d == ip, this should be 0.
     do n = 1, cnts
       obsbufs%set(n) = obsda%set(obsda%key(obsidx(n)))
@@ -1084,9 +1091,16 @@ SUBROUTINE set_letkf_obs
 #endif
     end do
 
+    write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_obsbufsend(ip=', ip, '):'
+    call mpi_timer(trim(timer_str), 3, barrier=MPI_COMM_d)
+
     ! b) GATHERV observation data
     !---------------------------------------------------------------------------
-    if (dspr(MEM_NP) + cntr(MEM_NP) <= 0) cycle
+    if (dspr(MEM_NP) + cntr(MEM_NP) <= 0) then
+      write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_noobs     (ip=', ip, '):'
+      call mpi_timer(trim(timer_str), 3)
+      cycle
+    end if
 
     obsbufr%nobs = dspr(MEM_NP) + cntr(MEM_NP)
     call obs_da_value_allocate(obsbufr, nensobs)
@@ -1101,6 +1115,9 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
     call MPI_GATHERV(obsbufs%lev, cnts, MPI_r_size, obsbufr%lev, cntr, dspr, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
 #endif
+
+    write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_gatherv   (ip=', ip, '):'
+    call mpi_timer(trim(timer_str), 3)
 
     ! c) In the domain receiving data, copy the receive buffer to obsda_sort
     !---------------------------------------------------------------------------
@@ -1169,6 +1186,9 @@ SUBROUTINE set_letkf_obs
 
         end if ! [ ip2 /= ip ]
       end do ! [ ip2 = 0, MEM_NP-1 ]
+
+      write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_obsbufrecv(ip=', ip, '):'
+      call mpi_timer(trim(timer_str), 3)
 
     end if ! [ myrank_d == ip ]
 
