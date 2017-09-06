@@ -972,17 +972,17 @@ SUBROUTINE set_letkf_obs
 
     ! a) Make send buffer with sorted order
     !---------------------------------------------------------------------------
-    cnts = 0
     cntr = 0
-    dspr = 0
+    call rank_1d_2d(ip, iproc, jproc)
 
+!$OMP PARALLEL PRIVATE(ictype,imin1,imax1,jmin1,jmax1)
     do ictype = 1, nctype
-      call rank_1d_2d(ip, iproc, jproc)
       imin1 = iproc*obsgrd(ictype)%ngrd_i+1 - obsgrd(ictype)%ngrdsch_i
       imax1 = (iproc+1)*obsgrd(ictype)%ngrd_i + obsgrd(ictype)%ngrdsch_i
       jmin1 = jproc*obsgrd(ictype)%ngrd_j+1 - obsgrd(ictype)%ngrdsch_j
       jmax1 = (jproc+1)*obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j
 
+!$OMP DO SCHEDULE(STATIC) PRIVATE(ip2,iproc2,jproc2,imin2,imax2,jmin2,jmax2)
       do ip2 = 0, MEM_NP-1
         if (ip2 /= ip) then
           call rank_1d_2d(ip2, iproc2, jproc2)
@@ -999,17 +999,16 @@ SUBROUTINE set_letkf_obs
           end if
         end if ! [ ip2 /= ip ]
       end do ! [ ip2 = 0, MEM_NP-1 ]
+!$OMP END DO
     end do ! [ ictype = 1, nctype ]
 
-    do ip2 = 1, MEM_NP-1
-      dspr(ip2+1) = dspr(ip2) + cntr(ip2)
-    end do ! [ ip2 = 1, MEM_NP-1 ]
-
+!$OMP MASTER
     write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_obschoose (ip=', ip, '):'
     call mpi_timer(trim(timer_str), 3)
+!$OMP END MASTER
 
-    cnts = cntr(myrank_d+1)  ! When myrank_d == ip, this should be 0.
-    do n = 1, cnts
+!$OMP DO SCHEDULE(STATIC) PRIVATE(n)
+    do n = 1, cntr(myrank_d+1)
       obsbufs%set(n) = obsda%set(obsda%key(obsidx(n)))
       obsbufs%idx(n) = obsda%idx(obsda%key(obsidx(n)))
       obsbufs%val(n) = obsda%val(obsda%key(obsidx(n)))
@@ -1022,6 +1021,14 @@ SUBROUTINE set_letkf_obs
       obsbufs%val2(n) = obsda%val2(obsda%key(obsidx(n))) ! H08
 #endif
     end do
+!$OMP END DO
+!$OMP END PARALLEL
+
+    cnts = cntr(myrank_d+1)  ! When myrank_d == ip, this should be 0.
+    dspr(1) = 0
+    do ip2 = 1, MEM_NP-1
+      dspr(ip2+1) = dspr(ip2) + cntr(ip2)
+    end do ! [ ip2 = 1, MEM_NP-1 ]
 
     write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_obsbufsend(ip=', ip, '):'
     call mpi_timer(trim(timer_str), 3, barrier=MPI_COMM_d)
@@ -1056,28 +1063,30 @@ SUBROUTINE set_letkf_obs
     !---------------------------------------------------------------------------
     if (myrank_d == ip) then
 
-      ne_bufr = 0
+!      ne_bufr = 0
 
+!$OMP PARALLEL DO SCHEDULE(STATIC) PRIVATE(ip2,iproc2,jproc2,ictype,imin1,imax1,jmin1,jmax1,imin2,imax2,jmin2,jmax2,ishift,jshift,j,ns_ext,ne_ext,ns_bufr,ne_bufr)
       do ip2 = 0, MEM_NP-1
         if (ip2 /= ip) then
 
-#ifdef DEBUG
-          if (ne_bufr /= dspr(ip2+1)) then
-            write (6, '(A)') '[Error] Error in copying receive buffer !!!'
-            write (6, *) ip, ip2, ne_bufr, dspr(ip2+1)
-            write (6, *) dspr(:)
-            stop 99
-          end if 
-#endif
+!#ifdef DEBUG
+!          if (ne_bufr /= dspr(ip2+1)) then
+!            write (6, '(A)') '[Error] Error in copying receive buffer !!!'
+!            write (6, *) ip, ip2, ne_bufr, dspr(ip2+1)
+!            write (6, *) dspr(:)
+!            stop 99
+!          end if 
+!#endif
+
+          ne_bufr = dspr(ip2+1)
+          call rank_1d_2d(ip2, iproc2, jproc2)
 
           do ictype = 1, nctype
-            call rank_1d_2d(ip, iproc, jproc)
             imin1 = iproc*obsgrd(ictype)%ngrd_i+1 - obsgrd(ictype)%ngrdsch_i
             imax1 = (iproc+1)*obsgrd(ictype)%ngrd_i + obsgrd(ictype)%ngrdsch_i
             jmin1 = jproc*obsgrd(ictype)%ngrd_j+1 - obsgrd(ictype)%ngrdsch_j
             jmax1 = (jproc+1)*obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j
 
-            call rank_1d_2d(ip2, iproc2, jproc2)
             imin2 = max(1, imin1 - iproc2*obsgrd(ictype)%ngrd_i)
             imax2 = min(obsgrd(ictype)%ngrd_i, imax1 - iproc2*obsgrd(ictype)%ngrd_i)
             jmin2 = max(1, jmin1 - jproc2*obsgrd(ictype)%ngrd_j)
@@ -1120,6 +1129,7 @@ SUBROUTINE set_letkf_obs
 
         end if ! [ ip2 /= ip ]
       end do ! [ ip2 = 0, MEM_NP-1 ]
+!$OMP END PARALLEL DO
 
       write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_obsbufrecv(ip=', ip, '):'
       call mpi_timer(trim(timer_str), 3)
