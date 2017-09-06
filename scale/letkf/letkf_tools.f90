@@ -1852,13 +1852,13 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   !
   nrdiag = obs(obset)%err(obidx) * obs(obset)%err(obidx) / nrloc
 
-  if ((obtyp == 23) .and. H08_CLDERR_SIMPLE) then ! obtypelist(obtyp) == 'H08IRB' 
-    if(obsda_sort%val2(iob) > H08_CA_THRES)then
-      nrdiag = H08_CLDERR_CLOUD(obs(obset)%lev(obidx)) * H08_CLDERR_CLOUD(obs(obset)%lev(obidx)) / nrloc
-    else 
-      nrdiag = H08_CLDERR_CLEAR(obs(obset)%lev(obidx)) * H08_CLDERR_CLEAR(obs(obset)%lev(obidx)) / nrloc
-    endif
-  endif
+!  if ((obtyp == 23) .and. H08_CLDERR_SIMPLE) then ! obtypelist(obtyp) == 'H08IRB' 
+!    if(obsda_sort%val2(iob) > H08_CA_THRES)then
+!      nrdiag = H08_CLDERR_CLOUD(obs(obset)%lev(obidx)) * H08_CLDERR_CLOUD(obs(obset)%lev(obidx)) / nrloc
+!    else 
+!      nrdiag = H08_CLDERR_CLEAR(obs(obset)%lev(obidx)) * H08_CLDERR_CLEAR(obs(obset)%lev(obidx)) / nrloc
+!    endif
+!  endif
 
   return
 end subroutine obs_local_cal
