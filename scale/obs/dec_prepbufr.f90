@@ -151,7 +151,11 @@ SUBROUTINE output(id)
     wk(4) = prs(1,ilev,1) ! hPa
     iqm = NINT(prs(3,ilev,1))
     IF(iqm < 0 .OR. 2 < iqm) CYCLE
-    iqm = NINT(obs(3,ilev,1))
+    IF(obs(3,ilev,1) > REAL(HUGE(iqm),r_dble)) THEN
+      iqm = HUGE(iqm)
+    ELSE
+      iqm = NINT(obs(3,ilev,1))
+    END IF
     wk(5:6) = obs(1:2,ilev,1)
 
     IF(id == id_q_obs) THEN
