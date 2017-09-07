@@ -258,6 +258,7 @@ MODULE common_nml
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
   !---PARAM_LETKF_H08
+  character(filelenmax) :: H08_RTTOV_COEF_PATH = '.'
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
   real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
@@ -858,7 +859,8 @@ subroutine read_nml_letkf_h08
     H08_BIAS_CLEAR, &
     H08_BIAS_CLOUD, &
     H08_CLDERR_CLEAR, &
-    H08_CLDERR_CLOUD
+    H08_CLDERR_CLOUD, &
+    H08_RTTOV_COEF_PATH
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_H08,iostat=ierr)

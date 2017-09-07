@@ -1569,6 +1569,9 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (IN THIS SUBDOMAIN):'
     end if
     call monit_print(nobs, bias, rmse, monit_type)
+#ifdef H08
+    call monit_print_H08(nobs_H08, bias_H08, rmse_H08)
+#endif
 
     if (monit_step == 1) then
       write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (GLOBAL):'
@@ -1576,11 +1579,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (GLOBAL):'
     end if
     call monit_print(nobs_g, bias_g, rmse_g, monit_type)
-
 #ifdef H08
-    write(6,'(2A)') trim(caption), ' (IN THIS SUBDOMAIN):'
-    call monit_print_H08(nobs_H08, bias_H08, rmse_H08)
-    write(6,'(2A)') trim(caption), ' (GLOBAL):'
     call monit_print_H08(nobs_H08_g, bias_H08_g, rmse_H08_g)
 #endif
 

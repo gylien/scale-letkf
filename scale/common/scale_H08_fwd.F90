@@ -117,7 +117,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
         H08_RTTOV_MINQ, &
         H08_RTTOV_CFRAC_CNST, &
         H08_RTTOV_EXTRA_US76, &
-        H08_RTTOV_MINQ_CTOP
+        H08_RTTOV_MINQ_CTOP, &
+        H08_RTTOV_COEF_PATH
 ! for Obs sim.
 !  use mod_net2g_vars, ONLY: & !
 !        H08_RTTOV_MINQ, &
@@ -232,8 +233,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   !====================
   INTEGER(KIND=jpim) :: input_chan(mxchn)
   REAL(KIND=jprb)    :: input_ems(mxchn), input_brdf(mxchn)
-  CHARACTER(LEN=256) :: coef_filename='./rtcoef_himawari_8_ahi.dat'
-  CHARACTER(LEN=256) :: sccoef_filename='./sccldcoef_himawari_8_ahi.dat'
+  CHARACTER(LEN=256) :: coef_filename='/rtcoef_himawari_8_ahi.dat'
+  CHARACTER(LEN=256) :: sccoef_filename='/sccldcoef_himawari_8_ahi.dat'
   INTEGER(KIND=jpim) :: dosolar
   INTEGER(KIND=jpim),intent(in) :: nchannels
   INTEGER(KIND=jpim) :: nchanprof
@@ -377,8 +378,9 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   ! 2. Read coefficients
   ! --------------------------------------------------------------------------
   if(debug) write(6,'(1x,a)')"hello from RTTOV3"
-  CALL rttov_read_coefs(errorstatus, coefs, opts, form_coef='formatted', file_coef=coef_filename, &
-                       &file_sccld=sccoef_filename)
+  CALL rttov_read_coefs(errorstatus, coefs, opts, form_coef='formatted', &
+                       &file_coef=trim(H08_RTTOV_COEF_PATH)//trim(coef_filename), &
+                       &file_sccld=trim(H08_RTTOV_COEF_PATH)//trim(sccoef_filename))
   IF (errorstatus /= errorstatus_success) THEN
     WRITE(*,*) 'fatal error reading coefficients'
     CALL rttov_exit(errorstatus)
