@@ -327,8 +327,10 @@ while ((time <= ETIME)); do
           done
         else
           for m in $(seq $mtot); do
-            for q in $(seq $mem_np); do
-              echo "|${OUT_SUBDIR}/${time}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+            echo "|${OUT_SUBDIR}/${time}/anal/${name_m[$m]}/|${mem2node[$(((m-1)*mem_np+1))]}-${mem2node[$((m*mem_np))]}" \
+                 >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+            for q in $(seq 2 $mem_np); do
+              echo "|${OUT_SUBDIR}/${time}/anal/${name_m[$m]}/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
             done
           done
         fi
@@ -561,8 +563,10 @@ while ((time <= ETIME)); do
         done
       else
         for m in $(seq $mtot); do
-          for q in $(seq $mem_np); do
-            echo "|${OUT_SUBDIR}/${time}/bdy/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+          echo "|${OUT_SUBDIR}/${time}/bdy/${name_m[$m]}/|${mem2node[$(((m-1)*mem_np+1))]}-${mem2node[$((m*mem_np))]}" \
+               >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+          for q in $(seq 2 $mem_np); do
+            echo "|${OUT_SUBDIR}/${time}/bdy/${name_m[$m]}/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
           done
         done
       fi
@@ -588,20 +592,30 @@ while ((time <= ETIME)); do
       fi
     else
       for m in $(seq $mtot); do
-        for q in $(seq $mem_np); do
-          echo "|${OUT_SUBDIR}/${time}/hist/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-          echo "|${OUT_SUBDIR}/${atime}/anal/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+        echo "|${OUT_SUBDIR}/${time}/hist/${name_m[$m]}/|${mem2node[$(((m-1)*mem_np+1))]}-${mem2node[$((m*mem_np))]}" \
+             >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+        echo "|${OUT_SUBDIR}/${atime}/anal/${name_m[$m]}/|${mem2node[$(((m-1)*mem_np+1))]}-${mem2node[$((m*mem_np))]}" \
+             >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+        for q in $(seq 2 $mem_np); do
+          echo "|${OUT_SUBDIR}/${time}/hist/${name_m[$m]}/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+          echo "|${OUT_SUBDIR}/${atime}/anal/${name_m[$m]}/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
         done
         if ((m == mmean || m == mmdet || OUT_OPT <= 3)); then
-          for q in $(seq $mem_np); do
-            echo "|${OUT_SUBDIR}/${atime}/gues/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+          echo "|${OUT_SUBDIR}/${atime}/gues/${name_m[$m]}/|${mem2node[$(((m-1)*mem_np+1))]}-${mem2node[$((m*mem_np))]}" \
+               >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+          for q in $(seq 2 $mem_np); do
+            echo "|${OUT_SUBDIR}/${atime}/gues/${name_m[$m]}/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
           done
         fi
       done
       if ((SPRD_OUT == 1)); then
-        for q in $(seq $mem_np); do
-          echo "|${OUT_SUBDIR}/${atime}/gues/sprd/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
-          echo "|${OUT_SUBDIR}/${atime}/anal/sprd/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+        echo "|${OUT_SUBDIR}/${atime}/gues/sprd/|${mem2node[$(((mmean-1)*mem_np+1))]}-${mem2node[$((mmean*mem_np))]}" \
+             >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+1))]}
+        echo "|${OUT_SUBDIR}/${atime}/anal/sprd/|${mem2node[$(((mmean-1)*mem_np+1))]}-${mem2node[$((mmean*mem_np))]}" \
+             >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+1))]}
+        for q in $(seq 2 $mem_np); do
+          echo "|${OUT_SUBDIR}/${atime}/gues/sprd/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+          echo "|${OUT_SUBDIR}/${atime}/anal/sprd/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
         done
       fi
     fi
@@ -616,8 +630,10 @@ while ((time <= ETIME)); do
       done
     else
       for m in $(seq $mtot); do
-        for q in $(seq $mem_np); do
-          echo "|${OUT_SUBDIR}/${atime}/obsgues/${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+        echo "|${OUT_SUBDIR}/${atime}/obsgues/${name_m[$m]}/|${mem2node[$(((m-1)*mem_np+1))]}-${mem2node[$((m*mem_np))]}" \
+             >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+        for q in $(seq 2 $mem_np); do
+          echo "|${OUT_SUBDIR}/${atime}/obsgues/${name_m[$m]}/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
         done
       done
     fi
@@ -630,18 +646,24 @@ while ((time <= ETIME)); do
       echo "|${OUT_SUBDIR}/${atime}/diag/" >> ${STAGING_DIR}/${STGINLIST}
     else
       if ((RTPS_INFL_OUT == 1)); then
-        for q in $(seq $mem_np); do
-          echo "|${OUT_SUBDIR}/${atime}/diag/rtps/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+        echo "|${OUT_SUBDIR}/${atime}/diag/rtps/|${mem2node[$(((mmean-1)*mem_np+1))]}-${mem2node[$((mmean*mem_np))]}" \
+             >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+1))]}
+        for q in $(seq 2 $mem_np); do
+          echo "|${OUT_SUBDIR}/${atime}/diag/rtps/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
         done
       fi
       if ((NOBS_OUT == 1)); then
-        for q in $(seq $mem_np); do
-          echo "|${OUT_SUBDIR}/${atime}/diag/nobs/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+        echo "|${OUT_SUBDIR}/${atime}/diag/nobs/|${mem2node[$(((mmean-1)*mem_np+1))]}-${mem2node[$((mmean*mem_np))]}" \
+             >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+1))]}
+        for q in $(seq 2 $mem_np); do
+          echo "|${OUT_SUBDIR}/${atime}/diag/nobs/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
         done
       fi
       if ((ADAPTINFL == 1)); then
-        for q in $(seq $mem_np); do
-          echo "|${OUT_SUBDIR}/${atime}/diag/infl/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
+        echo "|${OUT_SUBDIR}/${atime}/diag/infl/|${mem2node[$(((mmean-1)*mem_np+1))]}-${mem2node[$((mmean*mem_np))]}" \
+             >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+1))]}
+        for q in $(seq 2 $mem_np); do
+          echo "|${OUT_SUBDIR}/${atime}/diag/infl/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mmean-1)*mem_np+q))]}
         done
       fi
     fi

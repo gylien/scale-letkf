@@ -321,8 +321,10 @@ while ((time <= ETIME)); do
           else
             for m in $(seq $fmember); do
               mm=$(((c-1) * fmember + m))
-              for q in $(seq $mem_np); do
-                echo "|${OUT_SUBDIR}/${time2}/anal/${name_m[$mm]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
+              echo "|${OUT_SUBDIR}/${time2}/anal/${name_m[$mm]}/|${mem2node[$(((mm-1)*mem_np+1))]}-${mem2node[$((mm*mem_np))]}" \
+                   >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+1))]}
+              for q in $(seq 2 $mem_np); do
+                echo "|${OUT_SUBDIR}/${time2}/anal/${name_m[$mm]}/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
               done
             done
           fi
@@ -548,8 +550,10 @@ while ((time <= ETIME)); do
           else
             for m in $(seq $fmember); do
               mm=$(((c-1) * fmember + m))
-              for q in $(seq $mem_np); do
-                echo "|${OUT_SUBDIR}/${time2}/bdy/${name_m[$mm]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
+              echo "|${OUT_SUBDIR}/${time2}/bdy/${name_m[$mm]}/|${mem2node[$(((mm-1)*mem_np+1))]}-${mem2node[$((mm*mem_np))]}" \
+                   >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+1))]}
+              for q in $(seq 2 $mem_np); do
+                echo "|${OUT_SUBDIR}/${time2}/bdy/${name_m[$mm]}/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
               done
             done
           fi
@@ -569,8 +573,10 @@ while ((time <= ETIME)); do
         else
           for m in $(seq $fmember); do
             mm=$(((c-1) * fmember + m))
-            for q in $(seq $mem_np); do
-              echo "|${OUT_SUBDIR}/${time2}/fcst/${name_m[$mm]}/" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
+            echo "|${OUT_SUBDIR}/${time2}/fcst/${name_m[$mm]}/|${mem2node[$(((mm-1)*mem_np+1))]}-${mem2node[$((mm*mem_np))]}" \
+                 >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+1))]}
+            for q in $(seq 2 $mem_np); do
+              echo "|${OUT_SUBDIR}/${time2}/fcst/${name_m[$mm]}/|x" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
             done
           done
         fi
