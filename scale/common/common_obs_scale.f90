@@ -2767,7 +2767,7 @@ END SUBROUTINE wgt_ave2d
 #ifdef H08
 ! --
 !
-SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,stggrd)
+SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc,stggrd)
   use scale_mapproj, only: &
       MPRJ_rotcoef
   use scale_H08_fwd
@@ -2808,18 +2808,13 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,
 ! -- brightness temp from RTTOV
   REAL(r_size) :: btall_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
   REAL(r_size) :: btclr_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
-! -- transmittance from RTTOV
-  REAL(r_size) :: trans_out(nlev,nch,nprof)
 ! -- cloud top height
   REAL(r_size) :: ctop_out(nprof) 
-
-  REAL(r_size) :: max_weight(nch,nprof)
-  REAL(r_size) :: tmp_weight
 
   REAL(r_size),INTENT(OUT) :: yobs(nch,nprof)
   REAL(r_size),INTENT(OUT) :: yobs_clr(nch,nprof)
   INTEGER,INTENT(OUT) :: qc(nch,nprof)
-  REAL(r_size),INTENT(OUT) :: plev_obs(nch,nprof)
+  REAL(r_size),INTENT(OUT) :: mwgt_plev(nch,nprof)
 
   REAL(r_size) :: rdp ! delta p
   INTEGER :: slev, elev
@@ -2903,44 +2898,27 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,
                        ztop1d(1:nprof), & ! (m)
                        btall_out(1:nch,1:nprof),& ! (K)
                        btclr_out(1:nch,1:nprof),& ! (K)
-                       trans_out(nlev:1:-1,1:nch,1:nprof), &
+                       mwgt_plev(1:nch,1:nprof),& ! (Pa)
                        ctop_out(1:nprof))
 !
-! -- Compute max weight level using trans_out 
-! -- (Transmittance from each user pressure level to Top Of the Atmosphere)
 ! -- btall_out is substituted into yobs
-
-  DO np = 1, nprof
-  DO ch = 1, nch
-
-    rdp = 1.0d0 / (prs2d(slev+1,np) - prs2d(slev,np))
-    max_weight(ch,np) = abs((trans_out(2,ch,np) - trans_out(1,ch,np)) * rdp )
-
-    plev_obs(ch,np) = (prs2d(slev+1,np) + prs2d(slev,np)) * 0.5d0 ! (Pa)
-
-    DO k = 2, nlev-1
-
-      rdp = 1.0d0 / abs(prs2d(slev+k,np) - prs2d(slev+k-1,np))
-      tmp_weight = (trans_out(k+1,ch,np) - trans_out(k,ch,np)) * rdp 
-      if(tmp_weight > max_weight(ch,np))then
-        max_weight(ch,np) = tmp_weight
-        plev_obs(ch,np) = (prs2d(slev+k,np) + prs2d(slev+k-1,np)) * 0.5d0 ! (Pa)
-      endif
-    ENDDO
+!
+  do np = 1, nprof
+  do ch = 1, nch
 
     yobs(ch,np) = btall_out(ch,np)
     qc(ch,np) = iqc_good
 
     if(H08_VLOCAL_CTOP)then
-      if((ctop_out(np) > 0.0d0) .and. (ctop_out(np) < plev_obs(ch,np)) .and. &
-         (plev_obs(ch,np)>H08_LIMIT_LEV)) then
-        plev_obs(ch,np) = (ctop_out(np)+plev_obs(ch,np))*0.5d0
+      if((ctop_out(np) > 0.0d0) .and. (ctop_out(np) < mwgt_plev(ch,np)) .and. &
+         (mwgt_plev(ch,np)>H08_LIMIT_LEV)) then
+        mwgt_plev(ch,np) = (ctop_out(np) + mwgt_plev(ch,np))*0.5d0
       endif
     endif
 
-    IF(H08_REJECT_LAND .and. (lsmask1d(np) > 0.5d0))THEN
+    if(H08_REJECT_LAND .and. (lsmask1d(np) > 0.5d0))then
       qc(ch,np) = iqc_obs_bad
-    ENDIF
+    endif
 
     ! QC
     if(yobs(ch,np) > btmax .or. yobs(ch,np) < btmin .or. yobs(ch,np) /= yobs(ch,np))then
@@ -2949,10 +2927,10 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,
 
     yobs_clr(ch,np) = btclr_out(ch,np)
 
-  ENDDO ! ch
-  ENDDO ! np
+  enddo ! ch
+  enddo ! np
 
-  RETURN
+  return
 END SUBROUTINE Trans_XtoY_H08
 #endif
 

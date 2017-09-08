@@ -24,7 +24,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
                            tmp_ztop,&
                            btall_out,& 
                            btclr_out,& 
-                           trans_out,&
+                           mwgt_plev,&
                            ctop_out)
   !
   ! Copyright:
@@ -246,18 +246,19 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   ! loop variables
   INTEGER(KIND=jpim) :: j, jch
   INTEGER(KIND=jpim) :: nch
-  INTEGER(KIND=jpim) :: ilev, nprint
+  INTEGER(KIND=jpim) :: ilev
   INTEGER(KIND=jpim) :: iprof, joff
 
 ! by T.Honda
   Real(Kind=jprb),ALLOCATABLE :: tmp_btall_out(:,:)
   Real(Kind=jprb),ALLOCATABLE :: tmp_btclr_out(:,:)
-  Real(Kind=jprb),ALLOCATABLE :: tmp_trans_out(:,:,:)
   REAL(Kind=r_size),INTENT(OUT) :: btall_out(nchannels,nprof)
   REAL(Kind=r_size),INTENT(OUT) :: btclr_out(nchannels,nprof)
-  REAL(Kind=r_size),INTENT(OUT) :: trans_out(nlevs,nchannels,nprof)
   REAL(Kind=r_size),INTENT(OUT) :: ctop_out(nprof)
   REAL(Kind=r_size) :: ptmp
+
+  REAL(Kind=r_size) :: rdp, max_wgt, tmp_wgt
+  REAL(Kind=r_size),INTENT(OUT) :: mwgt_plev(nchannels,nprof) ! Max weight level (Pa)
 
   logical :: debug = .false.
   !logical :: debug = .true.
@@ -313,7 +314,6 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
   ALLOCATE(tmp_btall_out(nchannels,nprof))
   ALLOCATE(tmp_btclr_out(nchannels,nprof))
-  ALLOCATE(tmp_trans_out(nlevs,nchannels,nprof))
 
 
   allocate(kgkg2gm3(nlevs))
@@ -574,11 +574,14 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
     profiles(iprof)%s2m%wfetc= 100000.0_jprb
 
     profiles(iprof) % skin % t = real(tmp_t2m(iprof),kind=jprb)
+!
+!   fastem is used for MW
 !    profiles(iprof) % skin % fastem(1) = 3.0 ! comment out (11/18/2015)
 !    profiles(iprof) % skin % fastem(2) = 5.0 ! comment out (11/18/2015)
 !    profiles(iprof) % skin % fastem(3) =15.0 ! comment out (11/18/2015)
 !    profiles(iprof) % skin % fastem(4) = 0.1 ! comment out (11/18/2015)
 !    profiles(iprof) % skin % fastem(5) = 0.3 ! comment out (11/18/2015)
+!
 
     profiles(iprof) % skin % surftype = int(tmp_land(iprof))
     profiles(iprof) % skin % watertype = 1 ! tentative (11/18/2015)
@@ -751,8 +754,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
   if(debug) write(6,*)"Enter direct"
 
-  CALL rttov_parallel_direct(                &
-!  CALL rttov_direct(                &
+!  CALL rttov_parallel_direct(                &
+  CALL rttov_direct(                &
         & errorstatus,              &! out   error flag
         & chanprof,                 &! in    channel and profile index structure
         & opts,                     &! in    options structure
@@ -763,8 +766,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
         & calcemis    = calcemis,   &! in    flag for internal emissivity calcs
         & emissivity  = emissivity, &! inout input/output emissivities per channel
         & calcrefl    = calcrefl,   &! in    flag for internal BRDF calcs
-        & reflectance = reflectance)!,& ! inout input/output BRDFs per channel
-!        & nthreads    = 8) ! tentative (10/14/2015) T.Honda
+        & reflectance = reflectance) !,& ! inout input/output BRDFs per channel
+!        & nthreads    = 8) ! Assume K computer
   IF (errorstatus /= errorstatus_success) THEN
     WRITE (6,*) 'rttov_direct error'
     CALL rttov_exit(errorstatus)
@@ -776,45 +779,43 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
 
 
-  DO iprof = 1, nprof 
+  do iprof = 1, nprof 
 
     joff = (iprof-1_jpim) * nchannels
 
     !
     !     OUTPUT RESULTS
     !
-    nprint = 1 + INT((nchannels-1)/10)
-
     tmp_btall_out(1:nchannels,iprof)=radiance%bt(1+joff:nchannels+joff) 
     tmp_btclr_out(1:nchannels,iprof)=radiance%bt_clear(1+joff:nchannels+joff)
 
-    DO ilev = 1, nlevs
-      tmp_trans_out(ilev,1:nchannels,iprof) = transmission % tau_levels(ilev+nlevs_add,1+joff:nchannels+joff)
-     if(debug .and. mod(iprof,50)==0) write(6,'(a,f10.7,i4)')"RTTOV debug trans",tmp_trans_out(ilev,1,iprof)
-     
-    ENDDO
+    do ich = 1, nchannels
+      rdp = 1.0d0 / (abs(profiles(iprof)%p(elev) - profiles(iprof)%p(elev+1)) * 1.0d2) ! Pa
+      max_wgt = abs(transmission % tau_levels(elev+nlevs_add,joff+ich) & 
+                  - transmission % tau_levels(elev+1+nlevs_add,joff+ich)) * rdp
+      mwgt_plev(ich,iprof) = (profiles(iprof)%p(elev) + profiles(iprof)%p(elev+1)) * 0.5d2 ! Pa
 
-!    DO ich = 1, nchannels
-      ! Select transmittance based on channel type (VIS/NIR or IR)
-!      IF (coefs % coef % ss_val_chn(chanprof(j+joff) % chan) == 2) THEN
-!        DO ilev = 1, nlevs
-!         tmp_trans_out(ilev,ich,iprof)=transmission % tau_levels_path1(ilev,joff+ich) 
-!        ENDDO
-!      ELSE
-!        DO ilev = 1, nlevs
-!         tmp_trans_out(ilev,ich,iprof)=transmission % tau_levels(ilev,joff+ich)
-!        ENDDO
-!      ENDIF
-!    ENDDO
+      ! TOA to the ground
+      do ilev = elev+1, slev - 1
+        rdp = 1.0d0 / (abs(profiles(iprof)%p(ilev) - profiles(iprof)%p(ilev+1)) * 1.0d2) ! Pa
+        tmp_wgt = abs(transmission % tau_levels(ilev+nlevs_add,joff+ich) &
+                    - transmission % tau_levels(ilev+1+nlevs_add,joff+ich)) * rdp
 
-  ENDDO
+        if(tmp_wgt > max_wgt)then
+          max_wgt = tmp_wgt
+          mwgt_plev(ich,iprof) = (profiles(iprof)%p(ilev) + profiles(iprof)%p(ilev+1)) * 0.5d2 ! Pa
+        endif
+
+      enddo ! ilev
+    enddo ! ich
+
+  enddo ! iprof
 
 
-  trans_out = REAL(tmp_trans_out,kind=r_size)
   btall_out = REAL(tmp_btall_out,kind=r_size)
   btclr_out = REAL(tmp_btclr_out,kind=r_size)
 
-  DEALLOCATE(tmp_btall_out,tmp_btclr_out,tmp_trans_out)
+  deallocate(tmp_btall_out,tmp_btclr_out)
 
 
   ! --- End of output section -----------------------------------------------
