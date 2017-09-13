@@ -547,6 +547,12 @@ subroutine set_scalelib
 !    USER_config
 !  use mod_admin_time, only: &
 !    ADMIN_TIME_setup
+#ifdef H08
+  use scale_atmos_phy_rd_profile, only: &
+    ATMOS_PHY_RD_PROFILE_setup
+!  use mod_admin_time, only: &
+!    ADMIN_TIME_setup
+#endif
   use scale_mapproj, only: &
     MPRJ_setup
   implicit none
@@ -703,6 +709,13 @@ subroutine set_scalelib
 !    end if
 !  call ATMOS_driver_config
 !  call USER_config
+
+#ifdef H08
+  ! setup climatological profile for radiation
+  call ATMOS_PHY_RD_PROFILE_setup
+  !! setup current time
+  !call ADMIN_TIME_setup(.false.)
+#endif
 
   ! setup file I/O
   call FILEIO_setup

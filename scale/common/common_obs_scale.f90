@@ -1943,7 +1943,7 @@ SUBROUTINE monit_print_H08(nobs,bias,rmse,monit_type)
   character(12) :: rmse_show(nch)
   character(12) :: flag_show(nch)
 
-  integer :: i, itv, n
+  integer :: i, n
   character(4) :: nstr
   character(12) :: tmpstr(nch)
   character(12) :: tmpstr2(nch)
@@ -2772,10 +2772,20 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
       MPRJ_rotcoef
   use scale_H08_fwd
   use scale_grid_index, only: &
-    KHALO
+      KHALO, KMAX, &
+      JHALO, IHALO
+  use scale_const, only: &
+      CONST_D2R
+  use scale_atmos_phy_rd_profile, only: &
+      ATMOS_PHY_RD_PROFILE_read, &
+      ATMOS_PHY_RD_PROFILE_setup_zgrid
+  use scale_atmos_hydrometeor, only: &
+      N_HYD
+  use scale_atmos_aerosol, only: &
+      N_AE
 
   IMPLICIT NONE
-  INTEGER :: np, k, ch
+  INTEGER :: np, ch
   INTEGER,INTENT(IN) :: nprof ! Num of Brightness Temp "Loc" observed by Himawari-8
                               ! NOTE: multiple channels (obs) on each grid point !!
   REAL(r_size),INTENT(IN) :: ri(nprof),rj(nprof)
@@ -2803,7 +2813,6 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
   REAL(r_size) :: lat1d(nprof)
   REAL(r_size) :: topo1d(nprof)
   REAL(r_size) :: lsmask1d(nprof)
-  REAL(r_size) :: ztop1d(nprof)
 
 ! -- brightness temp from RTTOV
   REAL(r_size) :: btall_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
@@ -2816,12 +2825,118 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
   INTEGER,INTENT(OUT) :: qc(nch,nprof)
   REAL(r_size),INTENT(OUT) :: mwgt_plev(nch,nprof)
 
-  REAL(r_size) :: rdp ! delta p
   INTEGER :: slev, elev
 
   REAL(r_size) :: utmp, vtmp ! U10m & V10m tmp for rotation
   REAL(r_size),PARAMETER :: btmax = 400.0d0
   REAL(r_size),PARAMETER :: btmin = 100.0d0
+
+  real(r_size) :: blon, blat ! lat/lon at the domain center
+  integer :: k, kidx_rlx
+
+  real(RP), parameter:: RD_TOA  = 100.0_RP !< top of atmosphere [km]
+  integer, parameter :: RD_KADD = 10     !< RD_KMAX = KMAX + RD_KADD
+  integer :: RD_KMAX ! # of computational cells: z for radiation scheme
+
+  integer, parameter :: MSTRN_ngas     =  7 !< # of gas species ! MSTRNX
+  integer, parameter :: MSTRN_ncfc     = 28 !< # of CFC species ! MSTRNX
+
+  integer, parameter :: ngas = MSTRN_ngas
+  integer, parameter :: ncfc = MSTRN_ncfc
+  integer, parameter :: RD_naero      = N_HYD + N_AE ! # of cloud/aerosol species
+
+  real(RP), allocatable :: RD_zh          (:)   ! altitude    at the interface [km]
+  real(RP), allocatable :: RD_z           (:)   ! altitude    at the center [km]
+  real(RP), allocatable :: RD_rhodz       (:)   ! density * delta z [kg/m2]
+  real(RP), allocatable :: RD_pres        (:)   ! pressure    at the center [hPa]
+  real(RP), allocatable :: RD_presh       (:)   ! pressure    at the interface [hPa]
+  real(RP), allocatable :: RD_temp        (:)   ! temperature at the center [K]
+  real(RP), allocatable :: RD_temph       (:)   ! temperature at the interface [K]
+  real(RP), allocatable :: RD_gas         (:,:) ! gas species   volume mixing ratio [ppmv]
+  real(RP), allocatable :: RD_cfc         (:,:) ! CFCs          volume mixing ratio [ppmv]
+  real(RP), allocatable :: RD_aerosol_conc(:,:) ! cloud/aerosol volume mixing ratio [ppmv]
+  real(RP), allocatable :: RD_aerosol_radi(:,:) ! cloud/aerosol effective radius [cm]
+  real(RP), allocatable :: RD_cldfrac     (:)   ! cloud fraction (0-1)
+
+
+  !
+  ! Extrapolate input profiles by using climatology (MIPAS)
+  ! Based on "scalelib/src/atmos-physics/scale_atmos_phy_rd_mstrnx.F90"
+  !
+
+  ! Get basepoint lat/lon
+  call ij2phys(real(nlong/2+IHALO, kind=r_size),&
+               real(nlatg/2+JHALO, kind=r_size),&
+               blon, blat)
+
+!  print *,"DEBUG blon/blat,",blon,blat,H08_NOWDATE(1),H08_NOWDATE(2),H08_NOWDATE(3),H08_NOWDATE(4)
+
+  ! --- setup MSTRN parameter
+  !call RD_MSTRN_setup( ngas, & ! [OUT]
+  !                     ncfc  ) ! [OUT]
+
+  !--- setup climatological profile
+  !    Done from common_mpi_scale
+
+  !--- setup climatological profile
+  !    Done from common_mpi_scale
+
+  RD_KMAX      = KMAX + RD_KADD
+
+  !--- allocate arrays
+  ! input
+  allocate( RD_zh   (RD_KMAX+1) )
+  allocate( RD_z    (RD_KMAX  ) )
+
+  allocate( RD_rhodz(RD_KMAX  ) )
+  allocate( RD_pres (RD_KMAX  ) )
+  allocate( RD_presh(RD_KMAX+1) )
+  allocate( RD_temp (RD_KMAX  ) )
+  allocate( RD_temph(RD_KMAX+1) )
+
+  allocate( RD_gas         (RD_KMAX,ngas    ) )
+  allocate( RD_cfc         (RD_KMAX,ncfc    ) )
+  allocate( RD_aerosol_conc(RD_KMAX,RD_naero) )
+  allocate( RD_aerosol_radi(RD_KMAX,RD_naero) )
+  allocate( RD_cldfrac     (RD_KMAX         ) )
+
+  !--- setup vartical grid for radiation (larger TOA than Model domain)
+  call ATMOS_PHY_RD_PROFILE_setup_zgrid( RD_TOA, RD_KMAX, RD_KADD, & ! [IN]
+                                         RD_zh(:), RD_z(:)         ) ! [INOUT]
+
+  !--- read climatological profile
+  call ATMOS_PHY_RD_PROFILE_read( RD_KMAX,                & ! [IN]
+                                  ngas,                   & ! [IN]
+                                  ncfc,                   & ! [IN]
+                                  RD_naero,               & ! [IN]
+                                  blat*CONST_D2R,         & ! [IN]
+                                  H08_NOWDATE    (:),     & ! [IN]
+                                  RD_zh          (:),     & ! [IN]
+                                  RD_z           (:),     & ! [IN]
+                                  RD_rhodz       (:),     & ! [OUT]
+                                  RD_pres        (:),     & ! [OUT]
+                                  RD_presh       (:),     & ! [OUT]
+                                  RD_temp        (:),     & ! [OUT]
+                                  RD_temph       (:),     & ! [OUT]
+                                  RD_gas         (:,:),   & ! [OUT]
+                                  RD_cfc         (:,:),   & ! [OUT]
+                                  RD_aerosol_conc(:,:),   & ! [OUT]
+                                  RD_aerosol_radi(:,:),   & ! [OUT]
+                                  RD_cldfrac     (:)      ) ! [OUT]
+
+  kidx_rlx = 1
+  do k = 1, RD_KMAX + 1
+    if(RD_zh(k)*1.0d3 < H08_RTTOV_RLX_HGT)then
+      kidx_rlx = k - RD_KADD
+      exit
+    endif
+  enddo
+
+!  print *,"DEBUG kidx_rlx:",kidx_rlx,RD_zh(kidx_rlx+RD_KADD)
+!
+!  do k = 1, RD_KMAX + 1
+!    print *,"DEBUG RD,",k,RD_presh(k),RD_temph(k),RD_zh(k)
+!  enddo
 
   if (present(stggrd)) stggrd_ = stggrd
 
@@ -2841,7 +2956,6 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
     CALL itpl_2d(v3d(KHALO+1,:,:,iv3dd_hgt),ri(np),rj(np),topo1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_lsmask),ri(np),rj(np),lsmask1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_ps),ri(np),rj(np),psfc1d(np))
-    !CALL itpl_2d(v3d(elev,:,:,iv3dd_hgt),ri(np),rj(np),ztop1d(np)) ! height at the column top
 
 !    call prsadj(yobs,rk-topo,t,q)
 !    if (abs(rk-topo) > PS_ADJUST_THRES) then
@@ -2871,6 +2985,10 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
   ENDDO ! -- make profiles
 
 
+!  do k = elev, slev, -1
+!    print *,"DEBUG PROF,",k,prs2d(k,1),tk2d(k,1)
+!  enddo
+
 !
 ! -- NOTE: The channel number for RTTOV is always 10, because it should be the same
 !          with that in Himawari-8 RTTOV coef files.
@@ -2895,11 +3013,20 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
                        lon1d(1:nprof),& ! (deg)
                        lat1d(1:nprof),& ! (deg)
                        lsmask1d(1:nprof),& ! (0-1)
-                       ztop1d(1:nprof), & ! (m)
+                       kidx_rlx, & ! ()
+                       RD_KADD,  & ! ()
+                       RD_presh(1:RD_KMAX+1), & ! (hPa) 
+                       RD_temph(1:RD_KMAX+1), & ! (K) 
                        btall_out(1:nch,1:nprof),& ! (K)
                        btclr_out(1:nch,1:nprof),& ! (K)
                        mwgt_plev(1:nch,1:nprof),& ! (Pa)
                        ctop_out(1:nprof))
+
+
+  deallocate(RD_zh,RD_z,RD_rhodz,RD_pres,RD_presh)
+  deallocate(RD_temp,RD_temph,RD_gas,RD_cfc,RD_cldfrac)
+  deallocate(RD_aerosol_conc,RD_aerosol_radi)
+
 !
 ! -- btall_out is substituted into yobs
 !
@@ -2938,8 +3065,8 @@ SUBROUTINE get_nobs_H08(cfile,nn)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(OUT) :: nn ! num of all H08 obs
-  REAL(r_sngl) :: wk(4+nch)
-  INTEGER :: ios 
+!  REAL(r_sngl) :: wk(4+nch)
+!  INTEGER :: ios 
   INTEGER :: iprof
   INTEGER :: iunit
   LOGICAL :: ex

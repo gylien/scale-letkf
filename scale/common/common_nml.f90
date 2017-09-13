@@ -259,17 +259,22 @@ MODULE common_nml
 
   !---PARAM_LETKF_H08
   character(filelenmax) :: H08_RTTOV_COEF_PATH = '.'
+  integer :: H08_NOWDATE(6) = (/0,1,1,0,0,0/)
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
-  real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
-                                          ! Negative values indicate DISCRETE (0/1) cloud fraction 
   real(r_size) :: H08_LIMIT_LEV = 20000.0d0 ! (Pa) Upper limit level of the sensitive height for Himawari-8 IR
   real(r_size) :: H08_RTTOV_CFRAC_CNST = 0.10d0 ! Denominator constant for diagnosing SEQUENTIAL(0-1) cloud fraction (g m-3)
   real(r_size) :: H08_RTTOV_MINQ_CTOP = 0.10d0 ! Threshold of water/ice contents for diagnosing the cloud top (g m-3)
   real(r_size) :: H08_BT_MIN = 0.0d0 ! Lower limit of the BT for Himawari-8 IR
                                            ! Negative values: turn off
+  logical :: H08_RTTOV_PROF_SHIFT = .false. ! true: shift the climatological profile above the model top 
+                                            !       (equivalent to extrapolate by using the climatological
+                                            !       lapse rate)
+                                            ! false: relax the original (model)
+                                            ! profiles above [H08_RTTOV_RLX_HGT] m back to the climatological profile 
+  integer :: H08_RTTOV_KADD = 0
+  real(r_size) :: H08_RTTOV_RLX_HGT = 20.0d3 ! (m) Lowest hight for relaxing profiles to climatology
 
-  logical :: H08_RTTOV_EXTRA_US76 = .false.
   logical :: H08_VLOCAL_CTOP = .true.
 
   logical :: H08_BIAS_SIMPLE = .false. ! Simple bias correction (just subtract prescribed constant (clear/cloudy))
@@ -842,13 +847,15 @@ subroutine read_nml_letkf_h08
   integer :: ierr
 
   namelist /PARAM_LETKF_H08/ &
+    H08_NOWDATE, &
     H08_REJECT_LAND, &
     H08_RTTOV_CLD, &
-    H08_RTTOV_MINQ, &
     H08_RTTOV_MINQ_CTOP, &
     H08_LIMIT_LEV, &
     H08_RTTOV_CFRAC_CNST, &
-    H08_RTTOV_EXTRA_US76, &
+    H08_RTTOV_PROF_SHIFT, &
+    H08_RTTOV_KADD,       &
+    H08_RTTOV_RLX_HGT,    &
     H08_VLOCAL_CTOP, &
     H08_BT_MIN, &
     H08_CH_USE, &

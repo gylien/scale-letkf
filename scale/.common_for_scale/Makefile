@@ -34,7 +34,7 @@ common_scale.o:	../common/common_scale.f90 common.o common_nml.o common_mpi.o co
 	$(FC) $(FOPTS_SCALE) -c $< $(NETCDF_INC) $(SCALE_INC)
 ifeq ($(H08),T)
 scale_H08_fwd.o: ../common/scale_H08_fwd.F90 common.o
-	$(FC) $(FOPTS) -c $< $(RT_INCLUDE) $(RT_LDFLAGS) $(SCALE_INC)
+	$(FC) $(FOPTS_SCALE) -c $< $(RT_INCLUDE) $(RT_LDFLAGS) $(SCALE_INC)
 common_obs_scale.o:	../common/common_obs_scale.f90 common.o common_nml.o common_scale.o scale_H08_fwd.o
 	$(FC) $(FOPTS_SCALE) -c $< $(NETCDF_INC) $(SCALE_INC)
 else
@@ -42,7 +42,7 @@ common_obs_scale.o:	../common/common_obs_scale.f90 common.o common_nml.o common_
 	$(FC) $(FOPTS_SCALE) -c $< $(NETCDF_INC) $(SCALE_INC)
 endif
 common_mpi_scale.o:	../common/common_mpi_scale.f90 common.o common_nml.o common_mpi.o \
-	common_scale.o common_obs_scale.o
+	common_scale.o common_obs_scale.o 
 	$(FC) $(FOPTS_SCALE) -c $< $(NETCDF_INC) $(SCALE_INC)
 common_nml.o:	../common/common_nml.f90 common.o
 	$(FC) $(FOPTS_SCALE) -c $< $(INCS) $(SCALE_INC)
