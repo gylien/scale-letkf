@@ -22,6 +22,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
                            tmp_lon,&
                            tmp_lat,&
                            tmp_land,&
+                           tmp_zenith,&
                            kidx_rlx, &
                            kadd_org, &
                            RD_presh, &
@@ -141,28 +142,6 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 #include "rttov_print_profile.interface"
 #include "rttov_skipcommentline.interface"
 
-!
-! -  Added by T.Honda (11/18/2015)
-! -- Note: Computation of the zenith angle in each obs point (P) is based on the formula in
-!          LRIT/HRIT Global Specification.
-!          http://www.cgms-info.org/index_.php/cgms/page?cat=publications&page=technical+publications
-! 
-  REAL(r_size),PARAMETER :: Rpol = 6356.7523d3 ! a polar radius of Earth (m) 
-  REAL(r_size) :: Rl ! a local radius of Earth
-  REAL(r_size),PARAMETER :: sub_lon_H08 = 140.7d0 ! longitude of Himawari-8 satellite
-  REAL(r_size) :: rlon,rlat ! (lon,lat) (Radian)
-!
-!
-! Vector components for a satellite coordinate frame
-!
-!
-  REAL(r_size) :: rnps, rnep, c_lat ! auxiliary variables
-  REAL(r_size) :: r1, r2, r3       ! components of location vector for point P 
-  REAL(r_size) :: r1ps, r2ps, r3ps ! components of the vector from P to the satellite 
-  REAL(r_size) :: r1ep, r2ep, r3ep  ! components of the vector from the center of Earth to P
-  REAL(r_size) :: z_angle_H08 ! zenith angle of Himawari-8
-!
-
   INTEGER, INTENT(IN) :: nprof
   INTEGER, INTENT(IN) :: nlevs
   integer(kind=jpim):: icecld_ish=4, icecld_idg=0  !improved Baran, new in rttov11.2 recommended in  Rttov11
@@ -186,6 +165,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   Real(r_size),INTENT(IN) :: tmp_lon(nprof)
   Real(r_size),INTENT(IN) :: tmp_lat(nprof)
   Real(r_size),INTENT(IN) :: tmp_land(nprof)
+  Real(r_size),INTENT(IN) :: tmp_zenith(nprof)
 
 
   Real(Kind=jprb) :: kgkg2gm3 ! convert parameter [kg/kg] => [gm^-3]
@@ -481,7 +461,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   ! Note: Profiles are from top to surface.
   rdz = 1.0d3 / (GRID_FZ(nlevs+KHALO) - GRID_FZ(nlevs+KHALO-kidx_rlx))
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(iprof,ilev,rat,rdk,orgk,rlat,rlon,c_lat,Rl,r1,r2,r3,rnps,r1ps,r2ps,r3ps,rnep,r1ep,r2ep,r3ep,z_angle_H08,ptmp,tv,kgkg2gm3,icec1,icec2,liqc1,liqc2,dz,tmp_dif)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(iprof,ilev,rat,rdk,orgk,ptmp,tv,kgkg2gm3,icec1,icec2,liqc1,liqc2,dz,tmp_dif)
   DO iprof = 1, nprof ! iprof
 
     if(H08_RTTOV_PROF_SHIFT)then
@@ -571,35 +551,10 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
     profiles(iprof) % latitude  = real(tmp_lat(iprof),kind=jprb)
     profiles(iprof) % longitude = real(tmp_lon(iprof),kind=jprb)
 
-! sattelite zenith angle 
 
-    rlat = tmp_lat(iprof)*Deg2Rad
-    rlon = tmp_lon(iprof)*Deg2Rad
-
-    c_lat = datan(0.993305616d0 * dtan(rlat))
-    Rl = Rpol / dsqrt(1.0d0 - 0.00669438444d0 * dcos(c_lat)*dcos(c_lat))
-    r1 = 42164.0d3 - Rl * dcos(c_lat) * dcos(rlon - sub_lon_H08*Deg2Rad)
-    r2 = -Rl * dcos(c_lat) * dsin(rlon - sub_lon_H08*Deg2Rad)
-    r3 = Rl * dsin(c_lat)
-    rnps = dsqrt(r1*r1+r2*r2+r3*r3)
-
-    r1ps = r1 * (-1.0d0)
-    r2ps = r2 * (-1.0d0)
-    r3ps = r3 * (-1.0d0)
-
-    r1ep = r1 - 42164.0d3
-    r2ep = r2 
-    r3ep = r3
- 
-    rnep = dsqrt(r1ep*r1ep+r2ep*r2ep+r3ep*r3ep)
-
-    z_angle_H08 = r1ps * r1ep + r2ps * r2ep + r3ps * r3ep ! internal product 
-    z_angle_H08 = dacos(z_angle_H08/(rnps*rnep))/Deg2Rad  
-
-
-    profiles(iprof)% zenangle = real(z_angle_H08,kind=jprb) ! (11/18/2015)
+    profiles(iprof)% zenangle = real(tmp_zenith(iprof),kind=jprb) ! (11/18/2015)
     if(mod(iprof,1000) == 0 .and. debug)write(6,'(a,f15.10)'),'zenangle ',profiles(iprof)% zenangle
-    if(mod(iprof,1000) == 0 .and. debug)write(6,'(a,4f10.5)'),' ',rlon,rlat,tmp_lon(iprof),tmp_lat(iprof)
+    if(mod(iprof,1000) == 0 .and. debug)write(6,'(a,2f10.5)'),' ',tmp_lon(iprof),tmp_lat(iprof)
 
 !    profiles(iprof)% zenangle = 30.0_jprb ! tentative
 !    profiles(iprof)%azangle=0.0_jprb     ! Not required for [opts % rt_ir % addsolar = .FALSE.] 
