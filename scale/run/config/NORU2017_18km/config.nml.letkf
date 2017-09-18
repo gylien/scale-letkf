@@ -77,17 +77,8 @@
  H08_RTTOV_PROF_SHIFT = .true.,
  H08_RTTOV_RLX_HGT = 15.0d3,
  H08_CH_USE = 0,0,1,0,0,0,0,0,0,0,
-! H08_BT_MIN = 200.0d0, ! turn off? Apply only first 1 hour (6 cycles)?
- H08_BIAS_SIMPLE = .false.,
- H08_CLDERR_SIMPLE = .true.,
- H08_CLDERR_CLEAR = 3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0,
-                    3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0,
- H08_CLDERR_CLOUD = 6.0d0, 6.0d0, 6.0d0, 6.0d0, 6.0d0,
-                    6.0d0, 6.0d0, 6.0d0, 6.0d0, 6.0d0,
- H08_BIAS_CLEAR = 0.0d0, 0.0d0, 0.0d0, 0.0d0,0.0d0,
-                  0.0d0, 0.0d0, 0.0d0, 0.0d0,0.0d0,
- H08_BIAS_CLOUD = 0.0d0, 0.0d0, 0.0d0, 0.0d0,0.0d0,
-                  0.0d0, 0.0d0, 0.0d0, 0.0d0,0.0d0,
+ H08_AOEI = .true.,
+ H08_AOEI_QC = 1, ! standard method
 /
 
 

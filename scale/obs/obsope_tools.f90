@@ -79,7 +79,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   integer, allocatable :: qc_p(:)
 #ifdef H08
   real(r_size), allocatable :: lev_p(:)
-  real(r_size), allocatable :: val2_p(:)
+  !real(r_size), allocatable :: val2_p(:)
 #endif
 
   real(r_size) :: ril, rjl, rk
@@ -399,7 +399,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
     allocate (qc_p(nobs))
 #ifdef H08
     allocate (lev_p(nobs))
-    allocate (val2_p(nobs))
+    !allocate (val2_p(nobs))
 #endif
   end if
 
@@ -593,18 +593,18 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
                   iof = obsda%set(nnB07(nn)+ch-1)
                   n = obsda%idx(nnB07(nn)+ch-1)
 
-                  obsda%val2(nnB07(nn)+ch-1) = (abs(yobs_H08(ch,nn) - yobs_H08_clr(ch,nn)) &
-                                                + abs(obs(iof)%dat(n) - yobs_H08_clr(ch,nn))) * 0.5d0
+                  !obsda%val2(nnB07(nn)+ch-1) = (abs(yobs_H08(ch,nn) - yobs_H08_clr(ch,nn)) &
+                  !                              + abs(obs(iof)%dat(n) - yobs_H08_clr(ch,nn))) * 0.5d0
                   !
                   ! Simple bias correction depending on the sky condition
                   ! (diagnosed by CA)
-                  if(H08_BIAS_SIMPLE)then
-                    if((obsda%val2(nnB07(nn)+ch-1) > H08_CA_THRES) .and. ( .not. H08_BIAS_SIMPLE_CLR) )then
-                      obsda%val(nnB07(nn)+ch-1) = obsda%val(nnB07(nn)+ch-1) - H08_BIAS_CLOUD(ch)
-                    else
-                      obsda%val(nnB07(nn)+ch-1) = obsda%val(nnB07(nn)+ch-1) - H08_BIAS_CLEAR(ch)
-                    endif
-                  endif
+                  !if(H08_BIAS_SIMPLE)then
+                  !  if((obsda%val2(nnB07(nn)+ch-1) > H08_CA_THRES) .and. ( .not. H08_BIAS_SIMPLE_CLR) )then
+                  !    obsda%val(nnB07(nn)+ch-1) = obsda%val(nnB07(nn)+ch-1) - H08_BIAS_CLOUD(ch)
+                  !  else
+                  !    obsda%val(nnB07(nn)+ch-1) = obsda%val(nnB07(nn)+ch-1) - H08_BIAS_CLEAR(ch)
+                  !  endif
+                  !endif
                 enddo
               enddo
 !$OMP END PARALLEL DO
@@ -721,14 +721,14 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
             qc_p(:) = obsda%qc(1:nobs)
 #ifdef H08
             lev_p(:) = obsda%lev(1:nobs)
-            val2_p(:) = obsda%val2(1:nobs)
+            !val2_p(:) = obsda%val2(1:nobs)
 #endif
           else
             qc_p(:) = max(qc_p(:), obsda%qc(1:nobs))
 #ifdef H08
             if (im <= MEMBER) then ! only consider lev from members, not from the means
               lev_p(:) = lev_p(:) + obsda%lev(1:nobs)
-              val2_p(:) = val2_p(:) + obsda%val2(1:nobs)
+              !val2_p(:) = val2_p(:) + obsda%val2(1:nobs)
             end if
 #endif
           end if
@@ -760,8 +760,8 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 #ifdef H08
       obsda%lev(1:nobs) = lev_p(:)
       deallocate (lev_p)
-      obsda%val2(1:nobs) = val2_p(:)
-      deallocate (val2_p)
+      !obsda%val2(1:nobs) = val2_p(:)
+      !deallocate (val2_p)
 #endif
     end if
 
@@ -771,10 +771,10 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 #ifdef H08
     if (nprocs_e > 1) then
       call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%lev
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%val2
+      !call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%val2
     end if
     obsda%lev(1:nobs) = obsda%lev(1:nobs) / REAL(MEMBER, r_size)                                                    !
-    obsda%val2(1:nobs) = obsda%val2(1:nobs) / REAL(MEMBER, r_size)                                                    !
+    !obsda%val2(1:nobs) = obsda%val2(1:nobs) / REAL(MEMBER, r_size)                                                    !
 #endif
 
     call mpi_timer('obsope_cal:mpi_allreduce:', 2)

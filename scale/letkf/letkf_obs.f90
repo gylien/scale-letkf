@@ -98,6 +98,8 @@ SUBROUTINE set_letkf_obs
 
 #ifdef H08
   REAL(r_size):: ch_num ! H08
+  REAL(r_size):: sig_b ! sigma_b for AOEI
+  REAL(r_size):: sig_o ! sigma_o derived from  AOEI
 !  REAL(r_size),allocatable :: hx_sprd(:) ! H08
 #endif
   integer :: iproc,jproc
@@ -218,7 +220,7 @@ SUBROUTINE set_letkf_obs
           obsda%qc(n1:n2) = obsda_ext%qc
 #ifdef H08
           obsda%lev(n1:n2) = obsda_ext%lev
-          obsda%val2(n1:n2) = obsda_ext%val2
+          obsda%val2(n1:n2) = obsda_ext%val2 ! empty
 #endif
         else
 #ifdef DEBUG
@@ -243,7 +245,7 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
           if (im <= MEMBER) then ! only consider lev from members, not from the means
             obsda%lev(n1:n2) = obsda%lev(n1:n2) + obsda_ext%lev
-            obsda%val2(n1:n2) = obsda%val2(n1:n2) + obsda_ext%val2
+            obsda%val2(n1:n2) = obsda%val2(n1:n2) + obsda_ext%val2 ! empty
           end if
 #endif
         end if
@@ -279,10 +281,10 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
     if (nprocs_e > 1) then
       call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) ! empty
     end if
     obsda%lev(n1:n2) = obsda%lev(n1:n2) / REAL(MEMBER,r_size)
-    obsda%val2(n1:n2) = obsda%val2(n1:n2) / REAL(MEMBER,r_size)
+    obsda%val2(n1:n2) = obsda%val2(n1:n2) / REAL(MEMBER,r_size) ! empty
 #endif
 
     call mpi_timer('set_letkf_obs:read_external_obs_allreduce:', 2)
@@ -381,7 +383,7 @@ SUBROUTINE set_letkf_obs
   allocate(tmpelm(obsda%nobs))
 
 #ifdef H08
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,ch_num)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,ch_num,sig_b,sig_o)
 #else
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref)
 #endif
@@ -490,13 +492,15 @@ SUBROUTINE set_letkf_obs
       obsda%ensval(mmdetobs,n) = obs(iof)%dat(iidx) - obsda%ensval(mmdetobs,n) ! y-Hx for deterministic run
     end if
 
-!   compute sprd in obs space ! H08
-
-!    hx_sprd(n) = 0.0d0 !H08
-!    DO i=1,MEMBER
-!      hx_sprd(n) = hx_sprd(n) + obsda%ensval(i,n) * obsda%ensval(i,n)
-!    ENDDO
-!    hx_sprd(n) = dsqrt(hx_sprd(n) / REAL(MEMBER,r_size))
+#ifdef H08
+!   compute sprd in obs space (sigma_b for AOEI) ! H08
+    sig_b = 0.0d0 !H08
+    DO i=1,MEMBER
+      sig_b = sig_b + obsda%ensval(i,n) * obsda%ensval(i,n)
+    ENDDO
+    sig_b = dsqrt(sig_b / REAL(MEMBER-1,r_size))
+    obsda%val2(n) = sig_b
+#endif
 
     select case (obs(iof)%elm(iidx)) !gross error
     case (id_rain_obs)
@@ -515,13 +519,25 @@ SUBROUTINE set_letkf_obs
       IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_PRH * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
+#ifdef H08
     case (id_H08IR_obs)
-      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
-        obsda%qc(n) = iqc_gross_err
-      END IF
+      sig_o = dsqrt(max(obs(iof)%err(iidx)**2,obsda%val(n)**2 - obsda%val2(n)**2))
+      IF(H08_AOEI .and. H08_AOEI_QC == 1)THEN
+        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+          obsda%qc(n) = iqc_gross_err
+        END IF
+!      ELSEIF(H08_AOEI .and. H08_AOEI_QC == 2)THEN !not yet
+!
+!      ENDIF
+      ELSE
+        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+          obsda%qc(n) = iqc_gross_err
+        END IF
+      ENDIF
       IF(obs(iof)%dat(iidx) < H08_BT_MIN)THEN
         obsda%qc(n) = iqc_gross_err
       ENDIF
+#endif
     case (id_tclon_obs, id_tclat_obs)
       IF(ABS(obsda%val(n)) > GROSS_ERROR_TCXY * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
@@ -536,24 +552,6 @@ SUBROUTINE set_letkf_obs
       END IF
     end select
 
-
-#ifdef H08
-!    IF(obs(iof)%elm(iidx) == id_H08IR_obs)THEN
-!      ch_num = obs(iof)%lev(iidx)
-!
-!      write(6, '(a,2I6,2F8.2,4F12.4,I3)') "Him8 obs:", &
-!            obs(iof)%elm(iidx), & ! id
-!            nint(ch_num), & ! band num
-!            obs(iof)%lon(iidx), &
-!            obs(iof)%lat(iidx), &
-!            obsda%lev(n), & ! sensitive height
-!            obs(iof)%dat(iidx), &
-!            obs(iof)%err(iidx), &
-!            obsda%val(n), &
-!            obsda%qc(n)
-!    ENDIF
-#endif
-
 #ifdef DEBUG
     write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
                                        obs(iof)%typ(iidx), &
@@ -561,7 +559,11 @@ SUBROUTINE set_letkf_obs
                                        obs(iof)%lat(iidx), &
                                        obs(iof)%lev(iidx), &
                                        obs(iof)%dat(iidx), &
+#ifdef H08
+                                       sig_o, &
+#else
                                        obs(iof)%err(iidx), &
+#endif
                                        obsda%val(n), &
                                        obsda%qc(n)
 #endif
@@ -745,18 +747,6 @@ SUBROUTINE set_letkf_obs
       obsda%key(obsgrd(ictype)%next(i,j)) = n
     end if
   end do
-
-
-!#ifdef H08
-! -- H08
-!  if((obs(3)%nobs >= 1) .and. OBS_IN_NUM >= 3)then
-!    CALL MPI_BARRIER(MPI_COMM_d,ierr)
-!    if (nprocs_d > 1) then
-!      CALL MPI_ALLREDUCE(MPI_IN_PLACE,obs(3)%lev,obs(3)%nobs,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
-!    end if
-!  endif
-! -- H08
-!#endif
 
   call mpi_timer('set_letkf_obs:bucket_sort_second_scan:', 2, barrier=MPI_COMM_d)
 

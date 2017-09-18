@@ -276,25 +276,29 @@ MODULE common_nml
   real(r_size) :: H08_RTTOV_RLX_HGT = 20.0d3 ! (m) Lowest hight for relaxing profiles to climatology
 
   logical :: H08_VLOCAL_CTOP = .true.
+  logical :: H08_AOEI = .false. ! Use AOEI (Zhang et al. 2016; Minamide and Zhang 2017)?
+  integer :: H08_AOEI_QC = 0 !  0: AOEI w/o any QC
+                             !  1: AOEI w/ a standard QC based on the ratio btw O-B and obs err
+                             !  Not yet 2: AOEI w/ a QC method based on the ratio defind by O-B, obs err, and variances (Aksoy et al. 2017AMS annual meeting)
 
-  logical :: H08_BIAS_SIMPLE = .false. ! Simple bias correction (just subtract prescribed constant (clear/cloudy))
-  logical :: H08_BIAS_SIMPLE_CLR = .false. ! Simple bias correction (just subtract prescribed constant (only clear sky value))
-  logical :: H08_CLDERR_SIMPLE = .false. ! Simple cloud dependent obs 
-  ! Sky condition is diagnosed by CA (Okamoto et al. 2014 for each band)
-  ! CA > H08_CA_THRES: Cloudy
-  ! CA <= H08_CA_THRES: Clear
-  !
+  !logical :: H08_BIAS_SIMPLE = .false. ! Simple bias correction (just subtract prescribed constant (clear/cloudy))
+  !logical :: H08_BIAS_SIMPLE_CLR = .false. ! Simple bias correction (just subtract prescribed constant (only clear sky value))
+  !logical :: H08_CLDERR_SIMPLE = .false. ! Simple cloud dependent obs 
+  !! Sky condition is diagnosed by CA (Okamoto et al. 2014 for each band)
+  !! CA > H08_CA_THRES: Cloudy
+  !! CA <= H08_CA_THRES: Clear
+  !!
   ! Constant values for band 9 are based on Honda et al. (2017 submitted to MWR)
-  real(r_size) :: H08_CA_THRES = 1.0d0 ! Threshhold of CA
-  real(r_size) :: H08_BIAS_CLEAR(nch) =  (/0.0d0, 0.0d0, 0.171d0, 0.0d0, 0.0d0, &
-                                           0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0/) ! Constant bias for clear sky conditions
-  real(r_size) :: H08_BIAS_CLOUD(nch) = (/0.0d0, 0.0d0, -3.482d0, 0.0d0, 0.0d0, &
-                                          0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0/) ! Constant bias for cloudy sky conditions
+  !real(r_size) :: H08_CA_THRES = 1.0d0 ! Threshhold of CA
+  !real(r_size) :: H08_BIAS_CLEAR(nch) =  (/0.0d0, 0.0d0, 0.171d0, 0.0d0, 0.0d0, &
+  !                                         0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0/) ! Constant bias for clear sky conditions
+  !real(r_size) :: H08_BIAS_CLOUD(nch) = (/0.0d0, 0.0d0, -3.482d0, 0.0d0, 0.0d0, &
+  !                                        0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0/) ! Constant bias for cloudy sky conditions
   !
-  real(r_size) :: H08_CLDERR_CLEAR(nch) =  (/3.0d0, 3.0d0, 0.954d0, 3.0d0, 3.0d0, &
-                                           3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0/) ! Constant obs err for clear sky conditions
-  real(r_size) :: H08_CLDERR_CLOUD(nch) = (/3.0d0, 3.0d0, 6.311d0, 3.0d0, 3.0d0, &
-                                          3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0/) ! Constant obs err for cloudy sky conditions
+  !real(r_size) :: H08_CLDERR_CLEAR(nch) =  (/3.0d0, 3.0d0, 0.954d0, 3.0d0, 3.0d0, &
+  !                                         3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0/) ! Constant obs err for clear sky conditions
+  !real(r_size) :: H08_CLDERR_CLOUD(nch) = (/3.0d0, 3.0d0, 6.311d0, 3.0d0, 3.0d0, &
+  !                                        3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0/) ! Constant obs err for cloudy sky conditions
 
   integer :: H08_CH_USE(nch) = (/0,0,1,0,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
@@ -859,14 +863,16 @@ subroutine read_nml_letkf_h08
     H08_VLOCAL_CTOP, &
     H08_BT_MIN, &
     H08_CH_USE, &
-    H08_BIAS_SIMPLE, &
-    H08_BIAS_SIMPLE_CLR, &
-    H08_CLDERR_SIMPLE, &
-    H08_CA_THRES, &
-    H08_BIAS_CLEAR, &
-    H08_BIAS_CLOUD, &
-    H08_CLDERR_CLEAR, &
-    H08_CLDERR_CLOUD, &
+    H08_AOEI, &
+    H08_AOEI_QC,&
+    !H08_BIAS_SIMPLE, &
+    !H08_BIAS_SIMPLE_CLR, &
+    !H08_CLDERR_SIMPLE, &
+    !H08_CA_THRES, &
+    !H08_BIAS_CLEAR, &
+    !H08_BIAS_CLOUD, &
+    !H08_CLDERR_CLEAR, &
+    !H08_CLDERR_CLOUD, &
     H08_RTTOV_COEF_PATH
 
   rewind(IO_FID_CONF)

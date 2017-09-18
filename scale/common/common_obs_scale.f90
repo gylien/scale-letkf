@@ -121,7 +121,7 @@ MODULE common_obs_scale
     ! 
 #ifdef H08
     REAL(r_size),ALLOCATABLE :: lev(:) ! Him8
-    REAL(r_size),ALLOCATABLE :: val2(:) ! Him8 CA
+    REAL(r_size),ALLOCATABLE :: val2(:) ! Him8 sigma_o for AOEI (not CA)
 #endif
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
@@ -1630,18 +1630,18 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 
       ch = nint(obs(iset)%lev(iidx)) - 6 ! 
 
-      CA = (abs(yobs_H08(ch,n2prof(n)) - yobs_H08_clr(ch,n2prof(n))) & !CM
-            + abs(obs(iset)%dat(iidx) - yobs_H08_clr(ch,n2prof(n))) ) * 0.5d0 !CO
+      !CA = (abs(yobs_H08(ch,n2prof(n)) - yobs_H08_clr(ch,n2prof(n))) & !CM
+      !      + abs(obs(iset)%dat(iidx) - yobs_H08_clr(ch,n2prof(n))) ) * 0.5d0 !CO
 
       ohx(n) = obs(iset)%dat(iidx) - yobs_H08(ch,n2prof(n)) ! Obs - B/A
       !!! simple bias correction here !!!
-      if(H08_BIAS_SIMPLE)then
-        if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
-          ohx(n) = ohx(n) - H08_BIAS_CLOUD(ch)
-        else
-          ohx(n) = ohx(n) - H08_BIAS_CLEAR(ch)
-        endif
-      endif
+      !if(H08_BIAS_SIMPLE)then
+      !  if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
+      !    ohx(n) = ohx(n) - H08_BIAS_CLOUD(ch)
+      !  else
+      !    ohx(n) = ohx(n) - H08_BIAS_CLEAR(ch)
+      !  endif
+      !endif
       oqc(n) = qc_H08(ch,n2prof(n))
 
 
@@ -1678,15 +1678,15 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     do np = 1, nprof
       do ch = 1, nch
         yobs_H08(ch,np) = obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08(ch,np)
-        if(H08_BIAS_SIMPLE)then
-          CA = (abs(yobs_H08(ch,np) - yobs_H08_clr(ch,np)) & !CM
-               + abs(obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08_clr(ch,np))) * 0.5d0 !CO
-          if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
-            yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLOUD(ch)
-          else
-            yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLEAR(ch)
-          endif
-        endif
+        !if(H08_BIAS_SIMPLE)then
+        !  CA = (abs(yobs_H08(ch,np) - yobs_H08_clr(ch,np)) & !CM
+        !       + abs(obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08_clr(ch,np))) * 0.5d0 !CO
+        !  if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
+        !    yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLOUD(ch)
+        !  else
+        !    yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLEAR(ch)
+        !  endif
+        !endif
 
       enddo ! ch
     enddo ! np
@@ -2786,6 +2786,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
 
   IMPLICIT NONE
   INTEGER :: np, ch
+  REAL(r_size),PARAMETER :: HIM8_LON = 140.7d0
+
   INTEGER,INTENT(IN) :: nprof ! Num of Brightness Temp "Loc" observed by Himawari-8
                               ! NOTE: multiple channels (obs) on each grid point !!
   REAL(r_size),INTENT(IN) :: ri(nprof),rj(nprof)
@@ -2813,6 +2815,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
   REAL(r_size) :: lat1d(nprof)
   REAL(r_size) :: topo1d(nprof)
   REAL(r_size) :: lsmask1d(nprof)
+  REAL(r_size) :: zenith1d(nprof)
 
 ! -- brightness temp from RTTOV
   REAL(r_size) :: btall_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
@@ -2949,6 +2952,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
     lon1d(np) = lon(np)
     lat1d(np) = lat(np)
 
+    CALL zenith_geosat(HIM8_LON,lon(np),lat(np),zenith1d(np))
 
     CALL itpl_2d(v2d(:,:,iv2dd_skint),ri(np),rj(np),tsfc1d(np)) ! T2 is better??
 !    CALL itpl_2d(v2d(:,:,iv2dd_t2m),ri(np),rj(np),tsfc1d(np))
@@ -3013,6 +3017,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
                        lon1d(1:nprof),& ! (deg)
                        lat1d(1:nprof),& ! (deg)
                        lsmask1d(1:nprof),& ! (0-1)
+                       zenith1d(1:nprof), & ! (deg) 
                        kidx_rlx, & ! ()
                        RD_KADD,  & ! ()
                        RD_presh(1:RD_KMAX+1), & ! (hPa) 
@@ -3059,7 +3064,69 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
 
   return
 END SUBROUTINE Trans_XtoY_H08
+
 #endif
+
+
+SUBROUTINE zenith_geosat(sat_lon,lon,lat,z_angle)
+! 
+! Compute geostatinoary-satelitte zenith angle from lat/lon information
+!
+! -- Note: Computation of the zenith angle in each obs point (P) is based on the
+! formula in
+!          LRIT/HRIT Global Specification.
+!          http://www.cgms-info.org/index_.php/cgms/page?cat=publications&page=technical+publications
+! 
+  USE scale_const, ONLY: &
+      Deg2Rad => CONST_D2R
+
+  IMPLICIT NONE 
+
+  REAL(r_size),INTENT(IN) :: sat_lon ! longitude of Himawari-8 satellite
+  REAL(r_size),INTENT(IN) :: lon, lat ! (degree)
+  REAL(r_size),INTENT(OUT) :: z_angle ! zenith angle
+
+  REAL(r_size),PARAMETER :: Rpol = 6356.7523d3 ! a polar radius of Earth (m) 
+  REAL(r_size) :: Rl ! a local radius of Earth
+  REAL(r_size) :: rlon, rlat ! (Radian)
+!
+!
+! Vector components for a satellite coordinate frame
+!
+!
+  REAL(r_size) :: rnps, rnep, c_lat ! auxiliary variables
+  REAL(r_size) :: r1, r2, r3       ! components of location vector for point P 
+  REAL(r_size) :: r1ps, r2ps, r3ps ! components of the vector from P to the satellite 
+  REAL(r_size) :: r1ep, r2ep, r3ep  ! components of the vector from the center of Earth to P
+
+! sattelite zenith angle 
+
+  rlat = lat * Deg2Rad
+  rlon = lon * Deg2Rad
+
+  c_lat = datan(0.993305616d0 * dtan(rlat))
+  Rl = Rpol / dsqrt(1.0d0 - 0.00669438444d0 * dcos(c_lat)*dcos(c_lat))
+  r1 = 42164.0d3 - Rl * dcos(c_lat) * dcos(rlon - sat_lon*Deg2Rad)
+  r2 = -Rl * dcos(c_lat) * dsin(rlon - sat_lon*Deg2Rad)
+  r3 = Rl * dsin(c_lat)
+  rnps = dsqrt(r1*r1+r2*r2+r3*r3)
+
+  r1ps = r1 * (-1.0d0)
+  r2ps = r2 * (-1.0d0)
+  r3ps = r3 * (-1.0d0)
+
+  r1ep = r1 - 42164.0d3
+  r2ep = r2
+  r3ep = r3
+
+  rnep = dsqrt(r1ep*r1ep+r2ep*r2ep+r3ep*r3ep)
+
+  z_angle = r1ps * r1ep + r2ps * r2ep + r3ps * r3ep ! internal product 
+  z_angle = dacos(z_angle/(rnps*rnep))/Deg2Rad
+
+
+  RETURN
+END SUBROUTINE zenith_geosat
 
 SUBROUTINE get_nobs_H08(cfile,nn)
   IMPLICIT NONE
