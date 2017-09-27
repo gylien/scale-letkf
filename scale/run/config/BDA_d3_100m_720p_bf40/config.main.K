@@ -122,8 +122,10 @@ CLEAR_TMP=0                 # Clear temporary directories after the completion o
 #===============================================================================
 # Environmental settings
 
-MPIBIN=$(dirname $(which mpiexec))
-MPIRUN="$MPIBIN/mpiexec"
+MPIRUN="mpiexec"
+if (which $MPIRUN > /dev/null 2>&1); then
+  MPIRUN=$(which $MPIRUN)
+fi
 
 SCP='cp -L'
 SCP_HOSTPREFIX=''
