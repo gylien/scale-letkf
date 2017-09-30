@@ -79,7 +79,9 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   integer, allocatable :: qc_p(:)
 #ifdef H08
   real(r_size), allocatable :: lev_p(:)
-  !real(r_size), allocatable :: val2_p(:)
+  real(r_size), allocatable :: val2_p(:)
+  real(r_size), allocatable :: pred1_p(:)
+  real(r_size), allocatable :: pred2_p(:)
 #endif
 
   real(r_size) :: ril, rjl, rk
@@ -99,6 +101,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   real(r_size), allocatable :: yobs_H08(:,:),plev_obs_H08(:,:)
   real(r_size), allocatable :: yobs_H08_clr(:,:)
   integer, allocatable :: qc_H08(:,:)
+  real(r_size), allocatable :: zangle_H08(:)
   integer :: ch
 
 ! -- Rejecting Him8 obs over the buffer regions --
@@ -399,7 +402,9 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
     allocate (qc_p(nobs))
 #ifdef H08
     allocate (lev_p(nobs))
-    !allocate (val2_p(nobs))
+    allocate (val2_p(nobs))
+    allocate (pred1_p(nobs))
+    allocate (pred2_p(nobs))
 #endif
   end if
 
@@ -417,6 +422,9 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         obsda%qc(1:nobs) = iqc_undef
 #ifdef H08
         obsda%lev(1:nobs) = 0.0d0
+        obsda%val2(1:nobs) = 0.0d0
+        obsda%pred1(1:nobs) = 0.0d0
+        obsda%pred2(1:nobs) = 0.0d0
 #endif
       end if
 
@@ -531,7 +539,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
             ! Him8 observations: count the number of profiles required for RTTOV
             ! 
 
-            nallprof = max(int((n2 - n1 + 1) / nch), nch)
+            nallprof = max(int((n2 - n1 + 1) / NIRB_HIM8), NIRB_HIM8)
             allocate(nnB07(nallprof))
             allocate(ri_H08(nallprof))
             allocate(rj_H08(nallprof))
@@ -571,28 +579,41 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
             !                    
 
             if(nprof >=1) then
-              allocate(yobs_H08(nch,nprof))
-              allocate(yobs_H08_clr(nch,nprof))
-              allocate(plev_obs_H08(nch,nprof))
-              allocate(qc_H08(nch,nprof))
+              allocate(yobs_H08(NIRB_HIM8,nprof))
+              allocate(yobs_H08_clr(NIRB_HIM8,nprof))
+              allocate(plev_obs_H08(NIRB_HIM8,nprof))
+              allocate(qc_H08(NIRB_HIM8,nprof))
+              allocate(zangle_H08(nprof))
 
               call Trans_XtoY_H08(nprof,ri_H08(1:nprof),rj_H08(1:nprof),&
                                   lon_H08(1:nprof),lat_H08(1:nprof),v3dg,v2dg,&
                                   yobs_H08,yobs_H08_clr,&
-                                  plev_obs_H08,qc_H08)
+                                  plev_obs_H08,qc_H08,&
+                                  zangle_H08)
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,ch,iof,n)
               do nn = 1, nprof
-                do ch = 1, nch
+                do ch = 1, NIRB_HIM8
+                  iof = obsda%set(nnB07(nn)+ch-1)
+                  n = obsda%idx(nnB07(nn)+ch-1)
+ 
+                  if (obs(iof)%elm(n) /= id_H08IR_obs) cycle
+                  if (qc_H08(ch,nn) /= iqc_good) cycle
+
                   obsda%val(nnB07(nn)+ch-1) = yobs_H08(ch,nn) 
                   obsda%qc(nnB07(nn)+ch-1) = qc_H08(ch,nn) 
                   obsda%lev(nnB07(nn)+ch-1) = plev_obs_H08(ch,nn) 
+                  obsda%pred1(nnB07(nn)+ch-1) = zangle_H08(nn)  ! predictor (1)
+                  obsda%pred2(nnB07(nn)+ch-1) = yobs_H08(ch,nn)  ! predictor (2)
+
+                  !print *,"DEBUG Him8",yobs_H08(ch,nn),obs(iof)%dat(n),ch+6
+
                   !obsda%val2(nnB07(nn)+ch-1) = yobs_H08_clr(ch,nn) 
                   ! Get CA (Okamoto et al. 2014)
-
-                  iof = obsda%set(nnB07(nn)+ch-1)
-                  n = obsda%idx(nnB07(nn)+ch-1)
-
+                  !
+                  !iof = obsda%set(nnB07(nn)+ch-1)
+                  !n = obsda%idx(nnB07(nn)+ch-1)
+                  ! 
                   !obsda%val2(nnB07(nn)+ch-1) = (abs(yobs_H08(ch,nn) - yobs_H08_clr(ch,nn)) &
                   !                              + abs(obs(iof)%dat(n) - yobs_H08_clr(ch,nn))) * 0.5d0
                   !
@@ -612,6 +633,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
               deallocate(yobs_H08, plev_obs_H08)
               deallocate(yobs_H08_clr)
               deallocate(qc_H08)
+              deallocate(zangle_H08)
 
             endif ! [nprof >= 1]
 
@@ -721,17 +743,29 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
             qc_p(:) = obsda%qc(1:nobs)
 #ifdef H08
             lev_p(:) = obsda%lev(1:nobs)
-            !val2_p(:) = obsda%val2(1:nobs)
+            val2_p(:) = obsda%val2(1:nobs)
+            pred1_p(:) = obsda%pred1(1:nobs)
+            pred2_p(:) = obsda%pred2(1:nobs)
 #endif
           else
             qc_p(:) = max(qc_p(:), obsda%qc(1:nobs))
 #ifdef H08
             if (im <= MEMBER) then ! only consider lev from members, not from the means
               lev_p(:) = lev_p(:) + obsda%lev(1:nobs)
-              !val2_p(:) = val2_p(:) + obsda%val2(1:nobs)
+              val2_p(:) = val2_p(:) + obsda%val2(1:nobs)
+              pred1_p(:) = pred1_p(:) + obsda%pred1(1:nobs)
+              pred2_p(:) = pred2_p(:) + obsda%pred2(1:nobs)
             end if
 #endif
           end if
+#ifdef H08
+        ! only consider lev/val2 and others from members (reset mean/mdet)
+        elseif (nitmax == 1 .and. nobs > 0 .and. im > MEMBER)then
+          obsda%lev(1:nobs) = 0.0d0
+          obsda%val2(1:nobs) = 0.0d0
+          obsda%pred1(1:nobs) = 0.0d0
+          obsda%pred2(1:nobs) = 0.0d0
+#endif
         end if
       end if ! [ obsda_return .and. nobs > 0 ]
 
@@ -760,8 +794,12 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 #ifdef H08
       obsda%lev(1:nobs) = lev_p(:)
       deallocate (lev_p)
-      !obsda%val2(1:nobs) = val2_p(:)
-      !deallocate (val2_p)
+      obsda%val2(1:nobs) = val2_p(:)
+      deallocate (val2_p)
+      obsda%pred1(1:nobs) = pred1_p(:)
+      deallocate (pred1_p)
+      obsda%pred2(1:nobs) = pred2_p(:)
+      deallocate (pred2_p)
 #endif
     end if
 
@@ -771,10 +809,14 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 #ifdef H08
     if (nprocs_e > 1) then
       call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%lev
-      !call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%val2
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%val2
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%pred1(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%pred1
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%pred2(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%pred2
     end if
     obsda%lev(1:nobs) = obsda%lev(1:nobs) / REAL(MEMBER, r_size)                                                    !
-    !obsda%val2(1:nobs) = obsda%val2(1:nobs) / REAL(MEMBER, r_size)                                                    !
+    obsda%val2(1:nobs) = obsda%val2(1:nobs) / REAL(MEMBER, r_size)                                                    !
+    obsda%pred1(1:nobs) = obsda%pred1(1:nobs) / REAL(MEMBER, r_size)                                                    !
+    obsda%pred2(1:nobs) = obsda%pred2(1:nobs) / REAL(MEMBER, r_size)                                                    !
 #endif
 
     call mpi_timer('obsope_cal:mpi_allreduce:', 2)
@@ -820,6 +862,7 @@ SUBROUTINE obsmake_cal(obs)
   REAL(r_size),ALLOCATABLE :: yobs_H08(:),yobs_H08_clr(:)
   REAL(r_size),ALLOCATABLE :: plev_obs_H08(:)
   INTEGER,ALLOCATABLE :: qc_H08(:)
+  REAL(r_size),ALLOCATABLE :: zangle_H08(:)
   INTEGER,ALLOCATABLE :: idx_H08(:) ! index array
   INTEGER :: ich
 #endif
@@ -918,7 +961,7 @@ SUBROUTINE obsmake_cal(obs)
         nobs_slot = 0
         nprof_H08 = 0
 
-        nallprof = obs(iof)%nobs/nch
+        nallprof = obs(iof)%nobs/NIRB_HIM8
 
         ALLOCATE(tmp_ri_H08(nallprof))
         ALLOCATE(tmp_rj_H08(nallprof))
@@ -927,7 +970,7 @@ SUBROUTINE obsmake_cal(obs)
         ALLOCATE(idx_H08(nallprof))
 
         do n = 1, nallprof
-          ns = (n - 1) * nch + 1
+          ns = (n - 1) * NIRB_HIM8 + 1
           if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
             nslot = nslot + 1
 
@@ -936,7 +979,7 @@ SUBROUTINE obsmake_cal(obs)
 
 
             if (proc < 0 .and. myrank_d == 0) then ! if outside of the global domain, processed by myrank_d == 0
-              obs(iof)%dat(ns:ns+nch-1) = undef
+              obs(iof)%dat(ns:ns+NIRB_HIM8-1) = undef
             end if
 
             if (myrank_d == proc) then
@@ -947,8 +990,8 @@ SUBROUTINE obsmake_cal(obs)
               tmp_lon_H08(nprof_H08) = obs(iof)%lon(ns)
               tmp_lat_H08(nprof_H08) = obs(iof)%lat(ns)
 
-              nobs = nobs + nch
-              nobs_slot = nobs_slot + nch
+              nobs = nobs + NIRB_HIM8
+              nobs_slot = nobs_slot + NIRB_HIM8
 
             end if ! [ myrank_d == proc ]
 
@@ -967,23 +1010,25 @@ SUBROUTINE obsmake_cal(obs)
           lon_H08 = tmp_lon_H08(1:nprof_H08)
           lat_H08 = tmp_lat_H08(1:nprof_H08)
 
-          ALLOCATE(yobs_H08(nprof_H08*nch))
-          ALLOCATE(yobs_H08_clr(nprof_H08*nch))
-          ALLOCATE(plev_obs_H08(nprof_H08*nch))
-          ALLOCATE(qc_H08(nprof_H08*nch))
+          ALLOCATE(yobs_H08(nprof_H08*NIRB_HIM8))
+          ALLOCATE(yobs_H08_clr(nprof_H08*NIRB_HIM8))
+          ALLOCATE(plev_obs_H08(nprof_H08*NIRB_HIM8))
+          ALLOCATE(qc_H08(nprof_H08*NIRB_HIM8))
+          ALLOCATE(zangle_H08(nprof_H08))
 
           CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
                               lon_H08,lat_H08,v3dg,v2dg,&
                               yobs_H08,yobs_H08_clr,&
-                              plev_obs_H08,qc_H08)
+                              plev_obs_H08,qc_H08,&
+                              zangle_H08)
 
           DO n = 1, nprof_H08
             ns = idx_H08(n)
 
-            obs(iof)%lon(ns:ns+nch-1)=lon_H08(n:n+nch-1)
-            obs(iof)%lat(ns:ns+nch-1)=lat_H08(n:n+nch-1)
+            obs(iof)%lon(ns:ns+NIRB_HIM8-1)=lon_H08(n:n+NIRB_HIM8-1)
+            obs(iof)%lat(ns:ns+NIRB_HIM8-1)=lat_H08(n:n+NIRB_HIM8-1)
 
-            DO ich = 1, nch-1
+            DO ich = 1, NIRB_HIM8-1
               IF(qc_H08(n+ich-1) == iqc_good)THEN
                 obs(iof)%dat(ns+ich-1)=undef
               ELSE
@@ -1111,9 +1156,10 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   real(r_size) :: ri_H08(nlon*nlat),rj_H08(nlon*nlat)
   real(r_size) :: lon_H08(nlon*nlat),lat_H08(nlon*nlat)
   integer :: np ! num of Him8 profile
-  real(r_size) :: yobs_H08(nch,nlon*nlat),yobs_H08_clr(nch,nlon*nlat)
-  real(r_size) :: plev_obs_H08(nch,nlon*nlat)
-  integer :: qc_H08(nch,nlon*nlat)
+  real(r_size) :: yobs_H08(NIRB_HIM8,nlon*nlat),yobs_H08_clr(NIRB_HIM8,nlon*nlat)
+  real(r_size) :: plev_obs_H08(NIRB_HIM8,nlon*nlat)
+  integer :: qc_H08(NIRB_HIM8,nlon*nlat)
+  real(r_size) :: zangle_H08(nlon*nlat)
   integer :: ch, it
   integer :: dp, sp, ep
   integer, parameter :: itmax = 2
@@ -1206,8 +1252,9 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
     call Trans_XtoY_H08(ep-sp+1,ri_H08(sp:ep),rj_H08(sp:ep),&
                         lon_H08(sp:ep),lat_H08(sp:ep),v3dgh,v2dgh,&
-                        yobs_H08(1:nch,sp:ep),yobs_H08_clr(1:nch,sp:ep),&
-                        plev_obs_H08(1:nch,sp:ep),qc_H08(1:nch,sp:ep))
+                        yobs_H08(1:NIRB_HIM8,sp:ep),yobs_H08_clr(1:NIRB_HIM8,sp:ep),&
+                        plev_obs_H08(1:NIRB_HIM8,sp:ep),qc_H08(1:NIRB_HIM8,sp:ep),&
+                        zangle_H08(sp:ep))
 
   enddo ! [it = 1, itmax]
 
@@ -1220,7 +1267,7 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
       ch = 0
 
       do iv2dsim = 1, OBSSIM_NUM_2D_VARS
-        if(OBSSIM_2D_VARS_LIST(iv2dsim) /= id_H08IR_obs .or. ch > nch)cycle
+        if(OBSSIM_2D_VARS_LIST(iv2dsim) /= id_H08IR_obs .or. ch > NIRB_HIM8)cycle
 
         ch = ch + 1
         v2dgsim(i,j,iv2dsim) = real(yobs_H08(ch,np), r_sngl)

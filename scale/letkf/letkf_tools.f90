@@ -1856,8 +1856,10 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   if (obtyp == 23 .and. H08_AOEI) then ! obtypelist(obtyp) == 'H08IRB'
     ! obs%err: sigma_ot/true (not inflated) obs error 
     ! obsda%val: O–B (innovation)
-    ! obsda%val2: sigma_b/background variance (in obs space)
-    nrdiag = max(obs(obset)%err(obidx)**2, obsda_sort%val(iob)**2 - obsda_sort%val2(iob)**2)**2 / nrloc 
+    !! obsda%val2: sigma_b/background variance (in obs space)
+    ! obsda%val2: sigma_o (inflated obs error)
+    !nrdiag = max(obs(obset)%err(obidx)**2, obsda_sort%val(iob)**2 - obsda_sort%val2(iob)**2)**2 / nrloc 
+    nrdiag = obsda_sort%val2(iob)**2 / nrloc 
   endif
 #endif
 

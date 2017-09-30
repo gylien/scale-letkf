@@ -258,10 +258,18 @@ ${RTTOV_COEF}|${RUN_SUBDIR}/letkf/rtcoef_himawari_8_ahi.dat
 ${RTTOV_SCCOEF}|${RUN_SUBDIR}/obsope/sccldcoef_himawari_8_ahi.dat
 ${RTTOV_SCCOEF}|${RUN_SUBDIR}/letkf/sccldcoef_himawari_8_ahi.dat
 EOF
+
+
 fi
 
 #-------------------------------------------------------------------------------
 # TMPOUT
+
+if [ -e  "${OUTDIR}/vbc/Him8_vbca_${STIME}.dat" ]; then
+  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${OUTDIR}/vbc/Him8_vbca_${STIME}.dat|${$TMPOUT}/vbc/Him8_vbca_${STIME}.dat
+EOF
+fi
 
 # empty directories
 #-------------------
@@ -528,6 +536,13 @@ while ((time <= ETIME)); do
   #-------------------
   # stage-out
   #-------------------
+
+  # Himawari-8 bias correction coefficient
+  #-------------------
+  if ((loop == 1)); then
+    path="vbc/"
+    echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+  fi
 
   # anal
   #-------------------

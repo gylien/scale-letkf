@@ -27,7 +27,9 @@ module common_mpi_scale
 #ifdef PNETCDF
   use scale_stdio, only: IO_AGGREGATE
 #endif
-
+#ifdef H08
+  use common_mtx
+#endif
   implicit none
   public
 
@@ -1370,12 +1372,19 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   integer :: i, ip, ierr
 
 #ifdef H08
-  integer :: nobs_H08(nch)
-  integer :: nobs_H08_g(nch)
-  real(r_size) :: bias_H08(nch)
-  real(r_size) :: bias_H08_g(nch)
-  real(r_size) :: rmse_H08(nch)
-  real(r_size) :: rmse_H08_g(nch)
+  integer :: nobs_H08(NIRB_HIM8)
+  integer :: nobs_H08_g(NIRB_HIM8)
+  real(r_size) :: bias_H08(NIRB_HIM8)
+  real(r_size) :: bias_H08_g(NIRB_HIM8)
+  real(r_size) :: rmse_H08(NIRB_HIM8)
+  real(r_size) :: rmse_H08_g(NIRB_HIM8)
+  ! bias correction
+  real(r_size) :: aH08(H08_NPRED,H08_NPRED,NIRB_HIM8)
+  real(r_size) :: aH08inv(H08_NPRED,H08_NPRED)
+  real(r_size) :: bH08(H08_NPRED,NIRB_HIM8)
+  real(r_size) :: vbcaH08(H08_NPRED,NIRB_HIM8)
+  real(r_size) :: vbcfH08(H08_NPRED,NIRB_HIM8)
+  integer :: ich
 #endif
 
 #ifdef TCV
@@ -1393,8 +1402,13 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   ! 
   if (myrank_e == mmean_rank_e) then
 #ifdef H08
+    if (H08_VBC_USE)then
+      call read_vbc_Him8(vbcfH08)
+    else
+      vbcfH08 = 0.0d0
+    endif
     call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true.,&
-                   nobs_H08, bias_H08, rmse_H08, monit_step)
+                   nobs_H08, bias_H08, rmse_H08, monit_step, aH08, bH08,vbcfH08)
 #else
     call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true., monit_step)
 #endif
@@ -1461,7 +1475,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
     end do
 
 #ifdef H08
-    do i = 1, nch
+    do i = 1, NIRB_HIM8
       nobs_H08_g(i) = nobs_H08(i)
       if (nobs_H08_g(i) == 0) then
         bias_H08_g(i) = 0.0d0
@@ -1478,9 +1492,29 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       call MPI_ALLREDUCE(MPI_IN_PLACE, bias_g, nid_obs, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_g, nid_obs, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
 #ifdef H08
-      call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_H08_g, nch, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
-      call MPI_ALLREDUCE(MPI_IN_PLACE, bias_H08_g, nch, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
-      call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_H08_g, nch, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_H08_g, NIRB_HIM8, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, bias_H08_g, NIRB_HIM8, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_H08_g, NIRB_HIM8, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+      if(monit_step == 2 .and. H08_VBC_USE)then
+        call MPI_ALLREDUCE(MPI_IN_PLACE, aH08, NIRB_HIM8*H08_NPRED*H08_NPRED, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+        call MPI_ALLREDUCE(MPI_IN_PLACE, bH08, NIRB_HIM8*H08_NPRED, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+      endif
+
+      if (myrank_d == 0 .and. monit_step == 2 .and. H08_VBC_USE) then 
+        vbcaH08 = 0.0d0
+        do ich = 1, NIRB_HIM8
+          if (H08_BAND_USE(ich) == 1)then
+            call mtx_inv(H08_NPRED,aH08(:,:,ich),aH08inv)
+
+            vbcaH08(1:H08_NPRED,ich) = vbcfH08(1:H08_NPRED,ich)
+            do ip = 1, H08_NPRED
+              vbcaH08(1:H08_NPRED,ich) = vbcaH08(1:H08_NPRED,ich) - aH08inv(1:H08_NPRED,ip) * bH08(ip,ich)
+            enddo
+          else
+            vbcaH08(1:H08_NPRED,ich) = vbcfH08(1:H08_NPRED,ich)
+          endif
+        enddo
+      endif ! [myrank == 0 & monit_step == 2]
 #endif
 
 #ifdef TCV
@@ -1505,7 +1539,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
     end do
 
 #ifdef H08
-    do i = 1, nch
+    do i = 1, NIRB_HIM8
       if (nobs_H08_g(i) == 0) then
         bias_H08_g(i) = undef
         rmse_H08_g(i) = undef
@@ -1564,12 +1598,20 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
     call MPI_BCAST(monit_type, nid_obs, MPI_LOGICAL, mmean_rank_e, MPI_COMM_e, ierr)
 
 #ifdef H08
-    call MPI_BCAST(nobs_H08,   nch, MPI_INTEGER, mmean_rank_e, MPI_COMM_e, ierr)
-    call MPI_BCAST(bias_H08,   nch, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
-    call MPI_BCAST(rmse_H08,   nch, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
-    call MPI_BCAST(nobs_H08_g,   nch, MPI_INTEGER, mmean_rank_e, MPI_COMM_e, ierr)
-    call MPI_BCAST(bias_H08_g,   nch, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
-    call MPI_BCAST(rmse_H08_g,   nch, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(nobs_H08,   NIRB_HIM8, MPI_INTEGER, mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(bias_H08,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(rmse_H08,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(nobs_H08_g,   NIRB_HIM8, MPI_INTEGER, mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(bias_H08_g,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(rmse_H08_g,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+
+    if(monit_step == 2 .and. H08_VBC_USE) then
+      call MPI_BCAST(vbcaH08,   H08_NPRED*NIRB_HIM8, MPI_r_size, mmean_rank_e, MPI_COMM_e, ierr)
+      if (myrank_a == 0) then
+        call write_vbc_Him8(vbcaH08)
+      endif
+    endif
+
 #endif
 
     call mpi_timer('monit_obs_mpi:mpi_allreduce(ens):', 2)
@@ -1784,7 +1826,7 @@ subroutine get_nobs_da_mpi(nobs)
     call file_member_replace(1, OBSDA_IN_BASENAME, obsdafile)
     write (obsda_suffix(2:7), '(I6.6)') myrank_d
 #ifdef H08
-    call get_nobs(trim(obsdafile) // obsda_suffix, 7, nobs) ! Him8
+    call get_nobs(trim(obsdafile) // obsda_suffix, 10, nobs) ! Him8
 #else
     call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs)
 #endif
@@ -1885,6 +1927,35 @@ subroutine mpi_timer(sect_name, level, barrier)
 
   return
 end subroutine mpi_timer
+
+#ifdef H08
+! get bias cofficient
+subroutine get_vbc_Him8_mpi(vbc)
+  implicit none
+
+  real(r_size), intent(out) :: vbc(H08_NPRED,NIRB_HIM8)
+  integer :: ierr
+
+  call mpi_timer('', 2)
+
+  if (myrank_a == 0) then
+    call read_vbc_Him8(vbc)
+
+    call mpi_timer('read_vbc_mpi:read_vbc_Him8:', 2)
+  end if
+
+  call MPI_BCAST(vbc, H08_NPRED*NIRB_HIM8, MPI_r_size, 0, MPI_COMM_a, ierr)
+
+  if (myrank_a /= 0 .and. myrank_e == mmean_rank_e) then
+    call write_vbc_Him8(vbc)
+  end if
+
+  call mpi_timer('read_vbc_mpi:mpi_bcast:', 2)
+
+  return
+end subroutine get_vbc_Him8_mpi
+#endif 
+
 
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)
 !SUBROUTINE read_obs2_mpi(obsfile,nn,nbv,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,hdxf,iqc)

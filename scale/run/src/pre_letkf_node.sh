@@ -175,6 +175,7 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
         -e "/!--H08_NOWDATE--/a H08_NOWDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--H08_RTTOV_COEF_PATH--/a H08_RTTOV_COEF_PATH = \"${TMPDIR}\"," \
+        -e "/!--H08_VBC_PATH--/a H08_VBC_PATH = \"${TMPOUT}/vbc\"," \
     > $TMPDIR/letkf.conf
 
 # Most of these parameters are not important for letkf

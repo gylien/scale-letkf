@@ -65,9 +65,9 @@
 /
 
 &PARAM_LETKF_H08
-&PARAM_LETKF_H08
 !--H08_NOWDATE--!
 !--H08_RTTOV_COEF_PATH--!
+ H08_OBS_STD = .true.,
  H08_RTTOV_CLD = .true.,
  H08_RTTOV_MINQ_CTOP = 0.10d0,
  H08_RTTOV_CFRAC_CNST = 0.1d0,
@@ -76,9 +76,12 @@
  H08_RTTOV_KADD = 10,
  H08_RTTOV_PROF_SHIFT = .true.,
  H08_RTTOV_RLX_HGT = 15.0d3,
- H08_CH_USE = 0,0,1,0,0,0,0,0,0,0,
+ H08_BAND_USE = 0,0,1,0,0,0,0,0,0,0,
+ H08_NPRED = 2,
  H08_AOEI = .true.,
  H08_AOEI_QC = 1, ! standard method
+!--H08_VBC_PATH--!
+ H08_VBC_USE = .true.,
 /
 
 
