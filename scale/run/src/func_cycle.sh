@@ -265,10 +265,9 @@ fi
 #-------------------------------------------------------------------------------
 # TMPOUT
 
-if [ -e  "${OUTDIR}/vbc/Him8_vbca_${STIME}.dat" ]; then
-  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${OUTDIR}/vbc/Him8_vbca_${STIME}.dat|${$TMPOUT}/vbc/Him8_vbca_${STIME}.dat
-EOF
+if [ -e  "${INDIR}/vbc/Him8_vbca_${STIME}.dat" ]; then
+  path="vbc/Him8_vbca_${STIME}.dat"
+  echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
 fi
 
 # empty directories

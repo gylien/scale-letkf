@@ -1378,6 +1378,11 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   real(r_size) :: bias_H08_g(NIRB_HIM8)
   real(r_size) :: rmse_H08(NIRB_HIM8)
   real(r_size) :: rmse_H08_g(NIRB_HIM8)
+  real(r_size) :: bias_H08_bc(NIRB_HIM8)
+  real(r_size) :: bias_H08_bc_g(NIRB_HIM8)
+  real(r_size) :: rmse_H08_bc(NIRB_HIM8)
+  real(r_size) :: rmse_H08_bc_g(NIRB_HIM8)
+
   ! bias correction
   real(r_size) :: aH08(H08_NPRED,H08_NPRED,NIRB_HIM8)
   real(r_size) :: aH08inv(H08_NPRED,H08_NPRED)
@@ -1408,7 +1413,8 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       vbcfH08 = 0.0d0
     endif
     call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true.,&
-                   nobs_H08, bias_H08, rmse_H08, monit_step, aH08, bH08,vbcfH08)
+                   nobs_H08, bias_H08, rmse_H08, bias_H08_bc, rmse_H08_bc,&
+                   aH08, bH08, vbcfH08, monit_step)
 #else
     call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true., monit_step)
 #endif
@@ -1480,9 +1486,13 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       if (nobs_H08_g(i) == 0) then
         bias_H08_g(i) = 0.0d0
         rmse_H08_g(i) = 0.0d0
+        bias_H08_bc_g(i) = 0.0d0
+        rmse_H08_bc_g(i) = 0.0d0
       else
         bias_H08_g(i) = bias_H08(i) * real(nobs_H08(i), r_size)
         rmse_H08_g(i) = rmse_H08(i) * rmse_H08(i) * real(nobs_H08(i), r_size)
+        bias_H08_bc_g(i) = bias_H08_bc(i) * real(nobs_H08(i), r_size)
+        rmse_H08_bc_g(i) = rmse_H08_bc(i) * rmse_H08_bc(i) * real(nobs_H08(i), r_size)
       end if
     end do
 #endif
@@ -1495,6 +1505,11 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_H08_g, NIRB_HIM8, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE, bias_H08_g, NIRB_HIM8, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_H08_g, NIRB_HIM8, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+      if(H08_VBC_USE)then
+        call MPI_ALLREDUCE(MPI_IN_PLACE, bias_H08_bc_g, NIRB_HIM8, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+        call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_H08_bc_g, NIRB_HIM8, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+      endif
+
       if(monit_step == 2 .and. H08_VBC_USE)then
         call MPI_ALLREDUCE(MPI_IN_PLACE, aH08, NIRB_HIM8*H08_NPRED*H08_NPRED, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
         call MPI_ALLREDUCE(MPI_IN_PLACE, bH08, NIRB_HIM8*H08_NPRED, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
@@ -1503,7 +1518,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       if (myrank_d == 0 .and. monit_step == 2 .and. H08_VBC_USE) then 
         vbcaH08 = 0.0d0
         do ich = 1, NIRB_HIM8
-          if (H08_BAND_USE(ich) == 1)then
+          if (H08_BAND_USE(ich) == 1 .and. nobs_H08_g(ich) > 0)then
             call mtx_inv(H08_NPRED,aH08(:,:,ich),aH08inv)
 
             vbcaH08(1:H08_NPRED,ich) = vbcfH08(1:H08_NPRED,ich)
@@ -1543,9 +1558,15 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       if (nobs_H08_g(i) == 0) then
         bias_H08_g(i) = undef
         rmse_H08_g(i) = undef
+        bias_H08_bc_g(i) = undef
+        rmse_H08_bc_g(i) = undef
       else
         bias_H08_g(i) = bias_H08_g(i) / REAL(nobs_H08_g(i),r_size)
         rmse_H08_g(i) = sqrt(rmse_H08_g(i) / REAL(nobs_H08_g(i),r_size))
+        if(H08_VBC_USE)then
+          bias_H08_bc_g(i) = bias_H08_bc_g(i) / REAL(nobs_H08_g(i),r_size)
+          rmse_H08_bc_g(i) = sqrt(rmse_H08_bc_g(i) / REAL(nobs_H08_g(i),r_size))
+        endif
       end if
     end do
 #endif
@@ -1604,11 +1625,17 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
     call MPI_BCAST(nobs_H08_g,   NIRB_HIM8, MPI_INTEGER, mmean_rank_e, MPI_COMM_e, ierr)
     call MPI_BCAST(bias_H08_g,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
     call MPI_BCAST(rmse_H08_g,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    if(H08_VBC_USE)then
+      call MPI_BCAST(bias_H08_bc,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+      call MPI_BCAST(rmse_H08_bc,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+      call MPI_BCAST(bias_H08_bc_g,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+      call MPI_BCAST(rmse_H08_bc_g,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    endif
 
     if(monit_step == 2 .and. H08_VBC_USE) then
       call MPI_BCAST(vbcaH08,   H08_NPRED*NIRB_HIM8, MPI_r_size, mmean_rank_e, MPI_COMM_e, ierr)
       if (myrank_a == 0) then
-        call write_vbc_Him8(vbcaH08)
+        call write_vbc_Him8(vbcaH08,.true.)
       endif
     endif
 
@@ -1626,6 +1653,10 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
     call monit_print(nobs, bias, rmse, monit_type)
 #ifdef H08
     call monit_print_H08(nobs_H08, bias_H08, rmse_H08)
+    if(H08_VBC_USE)then
+      write(6,'(A)') 'BIAS CORRECTED:'
+      call monit_print_H08(nobs_H08, bias_H08_bc, rmse_H08_bc)
+    endif
 #endif
 
     if (monit_step == 1) then
@@ -1636,6 +1667,10 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
     call monit_print(nobs_g, bias_g, rmse_g, monit_type)
 #ifdef H08
     call monit_print_H08(nobs_H08_g, bias_H08_g, rmse_H08_g)
+    if(H08_VBC_USE)then
+      write(6,'(A)') 'BIAS CORRECTED:'
+      call monit_print_H08(nobs_H08_g, bias_H08_bc_g, rmse_H08_bc_g)
+    endif
 #endif
 
     call mpi_timer('monit_obs_mpi:monit_print:', 2)
@@ -1946,8 +1981,9 @@ subroutine get_vbc_Him8_mpi(vbc)
 
   call MPI_BCAST(vbc, H08_NPRED*NIRB_HIM8, MPI_r_size, 0, MPI_COMM_a, ierr)
 
-  if (myrank_a /= 0 .and. myrank_e == mmean_rank_e) then
-    call write_vbc_Him8(vbc)
+  !if (myrank_a /= 0 .and. myrank_e == mmean_rank_e) then
+  if (myrank_a /= 0) then
+    call write_vbc_Him8(vbc,.false.)
   end if
 
   call mpi_timer('read_vbc_mpi:mpi_bcast:', 2)

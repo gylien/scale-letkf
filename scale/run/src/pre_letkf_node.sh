@@ -188,6 +188,13 @@ cat $TMPDAT/conf/config.nml.scale | \
         -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${TMPDAT_CONSTDB}/rad/MIPAS\"," \
     >> $TMPDIR/letkf.conf
 
+
+if [ -f "${TMPOUT}/vbc/Him8_vbca_${STIME}.dat" ] ; then
+  cp ${TMPOUT}/vbc/Him8_vbca_${STIME}.dat ${TMPOUT}/vbc/Him8_vbcf.dat
+elif [ ! -d "${TMPOUT}/vbc" ] ; then
+  mkdir "${TMPOUT}/vbc"
+fi
+
 #===============================================================================
 
 exit 0

@@ -1335,7 +1335,8 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 #ifdef H08
 subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,&
-                     nobs_H08,bias_H08,rmse_H08,step,aH08,bH08,vbcf)
+                     nobs_H08,bias_H08,rmse_H08,bias_H08_bc,rmse_H08_bc,&
+                     aH08,bH08,vbcf,step)
 #else
 subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 #endif
@@ -1372,11 +1373,14 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   INTEGER,INTENT(OUT) :: nobs_H08(NIRB_HIM8)
   REAL(r_size),INTENT(OUT) :: bias_H08(NIRB_HIM8)
   REAL(r_size),INTENT(OUT) :: rmse_H08(NIRB_HIM8)
+  REAL(r_size),INTENT(OUT) :: bias_H08_bc(NIRB_HIM8)
+  REAL(r_size),INTENT(OUT) :: rmse_H08_bc(NIRB_HIM8)
 
   real(r_size), allocatable :: ri_H08(:),rj_H08(:)
   real(r_size), allocatable :: lon_H08(:),lat_H08(:)
   integer :: nprof ! num of Him8 profile
-  real(r_size), allocatable :: yobs_H08(:,:),plev_obs_H08(:,:)
+  real(r_size), allocatable :: yobs_H08(:,:), yobs_H08_bc(:,:)
+  real(r_size), allocatable :: plev_obs_H08(:,:)
   real(r_size), allocatable :: yobs_H08_clr(:,:)
   real(r_size), allocatable :: zangle_H08(:) ! zenith angle
   integer, allocatable :: qc_H08(:,:)
@@ -1613,6 +1617,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   if(nprof >= 1) then
 
     allocate(yobs_H08(NIRB_HIM8,nprof))
+    allocate(yobs_H08_bc(NIRB_HIM8,nprof))
     allocate(yobs_H08_clr(NIRB_HIM8,nprof))
     allocate(plev_obs_H08(NIRB_HIM8,nprof))
     allocate(qc_H08(NIRB_HIM8,nprof))
@@ -1623,6 +1628,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
                         yobs_H08,yobs_H08_clr,&
                         plev_obs_H08,qc_H08,&
                         zangle_H08)
+
+    yobs_H08_bc = yobs_H08
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ch,pbeta,npr,predt)
     do n = 1, nnobs
@@ -1655,9 +1662,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
       do npr = 1, H08_NPRED
         if(npr == 1) predt = zangle_H08(n2prof(n))
         if(npr == 2) predt = yobs_H08(ch,n2prof(n))
-        pbeta = predt * vbcf(npr,ch)
+        pbeta = pbeta + predt * vbcf(npr,ch)
       enddo
-     ohx(n) = ohx(n) - pbeta
+      ohx(n) = ohx(n) - pbeta
  
 
       !!! simple bias correction here !!!
@@ -1702,6 +1709,18 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     do np = 1, nprof
       do ch = 1, NIRB_HIM8
         yobs_H08(ch,np) = obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08(ch,np)
+  
+        pbeta = 0.0d0
+        if(H08_VBC_USE)then
+          do npr = 1, H08_NPRED
+            if(npr == 1) predt = zangle_H08(np)
+            if(npr == 2) predt = yobs_H08_bc(ch,np)
+            pbeta = pbeta + predt * vbcf(npr,ch)
+          enddo
+        endif
+
+        yobs_H08_bc(ch,np) = obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08_bc(ch,np) - pbeta
+
         !if(H08_BIAS_SIMPLE)then
         !  CA = (abs(yobs_H08(ch,np) - yobs_H08_clr(ch,np)) & !CM
         !       + abs(obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08_clr(ch,np))) * 0.5d0 !CO
@@ -1765,13 +1784,13 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   aH08 = 0.0d0
   bH08 = 0.0d0
   if(nprof >=1)then
-    call monit_dep_H08(nprof,yobs_H08,qc_H08,nobs_H08,bias_H08,rmse_H08)
+    call monit_dep_H08(nprof,yobs_H08,yobs_H08_bc,qc_H08,nobs_H08,bias_H08,rmse_H08,bias_H08_bc,rmse_H08_bc)
 
     ! bias correction
-    if(step == 2) then
+    aH08 = 0.0d0
+    bH08 = 0.0d0
 
-      aH08 = 0.0d0
-      bH08 = 0.0d0
+    if(step == 2 .and. H08_VBC_USE) then
 
       do ch = 1, NIRB_HIM8
         if(H08_BAND_USE(ch) /= 1) cycle
@@ -1849,6 +1868,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     nobs_H08 = 0
     bias_H08 = 0.0d0
     rmse_H08 = 0.0d0
+    bias_H08_bc = 0.0d0
+    rmse_H08_bc = 0.0d0
   endif ! [nprof >= 1]
   
 #endif
@@ -1999,19 +2020,24 @@ END SUBROUTINE monit_print
 !
 ! monitor for Himawari-8 IR observations --
 #ifdef H08
-SUBROUTINE monit_dep_H08(np,dep,qc,nobs,bias,rmse)
+SUBROUTINE monit_dep_H08(np,dep,dep_bc,qc,nobs,bias,rmse,bias_bc,rmse_bc)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: np ! Num of profiles
   REAL(r_size),INTENT(IN) :: dep(NIRB_HIM8,np)
+  REAL(r_size),INTENT(IN) :: dep_bc(NIRB_HIM8,np)
   INTEGER,INTENT(IN) :: qc(NIRB_HIM8,np)
   INTEGER,INTENT(OUT) :: nobs(NIRB_HIM8)
   REAL(r_size),INTENT(OUT) :: bias(NIRB_HIM8)
   REAL(r_size),INTENT(OUT) :: rmse(NIRB_HIM8)
+  REAL(r_size),INTENT(OUT) :: bias_bc(NIRB_HIM8)
+  REAL(r_size),INTENT(OUT) :: rmse_bc(NIRB_HIM8)
   INTEGER :: n,ch
   
   nobs = 0
   rmse = 0.0d0
   bias = 0.0d0
+  rmse_bc = 0.0d0
+  bias_bc = 0.0d0
     
   DO n = 1 , np ! profile
   DO ch = 1 , NIRB_HIM8 ! band
@@ -2019,6 +2045,8 @@ SUBROUTINE monit_dep_H08(np,dep,qc,nobs,bias,rmse)
     nobs(ch) = nobs(ch) + 1
     bias(ch) = bias(ch) + dep(ch,n)
     rmse(ch) = rmse(ch) + dep(ch,n)**2
+    bias_bc(ch) = bias_bc(ch) + dep_bc(ch,n)
+    rmse_bc(ch) = rmse_bc(ch) + dep_bc(ch,n)**2
   END DO
   END DO
 
@@ -2026,9 +2054,13 @@ SUBROUTINE monit_dep_H08(np,dep,qc,nobs,bias,rmse)
     IF(nobs(ch) == 0) THEN
       bias(ch) = undef
       rmse(ch) = undef
+      bias_bc(ch) = undef
+      rmse_bc(ch) = undef
     ELSE
       bias(ch) = bias(ch) / REAL(nobs(ch),r_size)
       rmse(ch) = SQRT(rmse(ch) / REAL(nobs(ch),r_size))
+      bias_bc(ch) = bias_bc(ch) / REAL(nobs(ch),r_size)
+      rmse_bc(ch) = SQRT(rmse_bc(ch) / REAL(nobs(ch),r_size))
     END IF
   END DO
 
@@ -3142,9 +3174,10 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
     yobs(ch,np) = btall_out(ch,np)
     qc(ch,np) = iqc_good
 
-    if (H08_BAND_USE(ch) /= 1) then
-      qc(ch,np) = iqc_obs_bad
-    end if
+    ! Band QC will be done in lekt_obs
+    !if (H08_BAND_USE(ch) /= 1) then
+    !  qc(ch,np) = iqc_obs_bad
+    !end if
 
     if(H08_VLOCAL_CTOP)then
       if((ctop_out(np) > 0.0d0) .and. (ctop_out(np) < mwgt_plev(ch,np)) .and. &
@@ -3170,18 +3203,31 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
   return
 END SUBROUTINE Trans_XtoY_H08
 
-SUBROUTINE write_vbc_Him8(vbca)
+SUBROUTINE write_vbc_Him8(vbca,ANAL)
   implicit none
 
   real(r_size), intent(in) :: vbca(H08_NPRED,NIRB_HIM8)
+  logical :: ANAL
   integer :: npr, ich
+  character(255) :: OUTFILE
   integer,parameter :: iunit = 99
 
-  open(iunit,file=trim(H08_VBC_PATH)//'/Him8_vbca.dat',status='unknown',access='direct',&
+  if(ANAL) then
+    OUTFILE = trim(H08_VBC_PATH)//'/Him8_vbca.dat'
+  else
+    OUTFILE = trim(H08_VBC_PATH)//'/Him8_vbcf.dat'
+  endif
+
+
+  open(iunit,file=trim(OUTFILE),status='unknown',access='direct',&
        form='unformatted',recl=NIRB_HIM8*8)
- 
+
   do npr = 1, H08_NPRED    
     write(iunit,rec=npr)(vbca(npr,ich),ich=1,NIRB_HIM8)
+  enddo
+
+  do npr = 1, H08_NPRED    
+    write(6,'(a,f15.10)')"DEBUG VBCA",vbca(npr,3)
   enddo
 
   close(iunit)
@@ -3190,10 +3236,10 @@ SUBROUTINE write_vbc_Him8(vbca)
 END SUBROUTINE write_vbc_Him8
 
 
-SUBROUTINE read_vbc_Him8(vbca)
+SUBROUTINE read_vbc_Him8(vbc)
   implicit none
 
-  real(r_size), intent(out) :: vbca(H08_NPRED,NIRB_HIM8)
+  real(r_size), intent(out) :: vbc(H08_NPRED,NIRB_HIM8)
   integer :: npr, ich
   integer,parameter :: iunit = 99
   logical :: ex
@@ -3203,13 +3249,14 @@ SUBROUTINE read_vbc_Him8(vbca)
   if(ex)then
     open(iunit,file=trim(H08_VBC_PATH)//'/Him8_vbcf.dat',status='unknown',access='direct',&
          form='unformatted',recl=NIRB_HIM8*8)
+
     do npr = 1, H08_NPRED
-      read(iunit,rec=npr)(vbca(npr,ich),ich=1,NIRB_HIM8)
+      read(iunit,rec=npr)(vbc(npr,ich),ich=1,NIRB_HIM8)
     enddo
     close(iunit)
   else
-    write(6,'(a)')' xxx Failed to open vbca_Him8'
-    vbca = 0.0d0
+    write(6,'(a)')' xxx Failed to open vbc_Him8'
+    vbc = 0.0d0
   endif
 
   return

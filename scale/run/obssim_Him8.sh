@@ -6,10 +6,6 @@ USER=honda
 
 EXP=debug
 
-# Reference
-#EXP_HIM8=TC201513_D2_PREP_0519
-# !! [!--IO_LOG_BASENAME--] should no be specified !!
-#
 
 #
 SWDIR="/scratch/$(id -ng)/${USER}/obssim"

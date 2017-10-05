@@ -108,16 +108,6 @@ else
 fi
 
 
-if [ -f "${TMPOUT}/vbc//Him8_vbca_${STIME}.dat" ] ; then
-  cp "${TMPOUT}/vbc//Him8_vbca_${ATIME}.dat" "${TMPDIR}/Him8_vbcf.dat"
-elif [ ! -d "${TMPOUT}/vbc" ] ; then
-  mkdir "${TMPOUT}/vbc"
-fi
-
-#if [ -e "${TMPDAT}/Him8_vbca_${STIME}.dat"  ] ; then
-#  mv "${TMPDAT}/Him8_vbca_${ATIME}.dat" "${TMPDIR}/vbcf.dat"
-#fi
-
 #===============================================================================
 
 exit 0

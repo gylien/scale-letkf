@@ -484,9 +484,8 @@ SUBROUTINE set_letkf_obs
       if(H08_OBS_STD .and. abs(std13) > H08_HOMO_QC)then
         obsda%qc(n) = iqc_obs_bad
         cycle
-      else
-        obs(iof)%err(iidx) = abs(obs(iof)%err(iidx))
       endif
+      obs(iof)%err(iidx) = abs(obs(iof)%err(iidx))
 
       if (H08_BAND_USE(ch_num) /= 1) then
         obsda%qc(n) = iqc_obs_bad
@@ -574,7 +573,10 @@ SUBROUTINE set_letkf_obs
       END IF
 #ifdef H08
     case (id_H08IR_obs)
-      IF(H08_AOEI .and. H08_AOEI_QC == 1)THEN
+      !IF(H08_AOEI .and. H08_AOEI_QC == 0)THEN ! No gross-error QC
+      IF(H08_AOEI .and. H08_AOEI_QC == 0)THEN
+        ! No Gross-error QC
+      ELSEIF(H08_AOEI .and. H08_AOEI_QC == 1)THEN
         IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
           obsda%qc(n) = iqc_gross_err
         END IF
