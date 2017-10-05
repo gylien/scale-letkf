@@ -97,9 +97,16 @@ SUBROUTINE set_letkf_obs
   real(r_size) :: target_grdspc
 
 #ifdef H08
-  REAL(r_size):: ch_num ! H08
-!  REAL(r_size),allocatable :: hx_sprd(:) ! H08
+  integer :: ch_num ! H08
+  real(r_size) :: sig_b ! sigma_b for AOEI
+  real(r_size) :: sig_o ! sigma_o derived from  AOEI
+  integer :: npr
+
+  real(r_size) :: vbcH08(H08_NPRED,NIRB_HIM8)
+  real(r_size) :: pred, pbeta
+  real(r_size) :: std13
 #endif
+
   integer :: iproc,jproc
   integer :: iproc2,jproc2
 
@@ -145,6 +152,8 @@ SUBROUTINE set_letkf_obs
   type(obs_da_value) :: obsda_ext
 
   logical :: ctype_use(nid_obs,nobtype)
+
+  character(len=timer_name_width) :: timer_str
 
   call mpi_timer('', 2)
 
@@ -216,6 +225,9 @@ SUBROUTINE set_letkf_obs
           obsda%qc(n1:n2) = obsda_ext%qc
 #ifdef H08
           obsda%lev(n1:n2) = obsda_ext%lev
+          obsda%val2(n1:n2) = obsda_ext%val2 
+          obsda%pred1(n1:n2) = obsda_ext%pred1
+          obsda%pred2(n1:n2) = obsda_ext%pred2 
 #endif
         else
 #ifdef DEBUG
@@ -240,6 +252,9 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
           if (im <= MEMBER) then ! only consider lev from members, not from the means
             obsda%lev(n1:n2) = obsda%lev(n1:n2) + obsda_ext%lev
+            obsda%val2(n1:n2) = obsda%val2(n1:n2) + obsda_ext%val2 ! empty
+            obsda%pred1(n1:n2) = obsda%pred1(n1:n2) + obsda_ext%pred1
+            obsda%pred2(n1:n2) = obsda%pred2(n1:n2) + obsda_ext%pred2 
           end if
 #endif
         end if
@@ -275,8 +290,15 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
     if (nprocs_e > 1) then
       call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) ! empty
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%pred1(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) 
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%pred2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) 
     end if
     obsda%lev(n1:n2) = obsda%lev(n1:n2) / REAL(MEMBER,r_size)
+    obsda%val2(n1:n2) = obsda%val2(n1:n2) / REAL(MEMBER,r_size) ! empty
+    obsda%pred1(n1:n2) = obsda%pred1(n1:n2) / REAL(MEMBER,r_size) 
+    obsda%pred2(n1:n2) = obsda%pred2(n1:n2) / REAL(MEMBER,r_size) 
+
 #endif
 
     call mpi_timer('set_letkf_obs:read_external_obs_allreduce:', 2)
@@ -366,6 +388,14 @@ SUBROUTINE set_letkf_obs
 
   call mpi_timer('set_letkf_obs:preprocess_data:', 2)
 
+#ifdef H08
+  if(H08_VBC_USE)then
+    call get_vbc_Him8_mpi(vbcH08)
+  else
+    vbcH08 = 0.0d0
+  endif
+#endif
+
   ! Compute perturbation and departure
   !  -- gross error check
   !  -- QC based on background (radar reflectivity)
@@ -375,7 +405,7 @@ SUBROUTINE set_letkf_obs
   allocate(tmpelm(obsda%nobs))
 
 #ifdef H08
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,ch_num)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,ch_num,sig_b,sig_o,pred,pbeta,std13)
 #else
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref)
 #endif
@@ -448,8 +478,16 @@ SUBROUTINE set_letkf_obs
 !!!###### Himawari-8 assimilation ###### ! H08
     if (obs(iof)%elm(iidx) == id_H08IR_obs) then
       ch_num = nint(obs(iof)%lev(iidx)) - 6
+      std13 = obs(iof)%err(iidx) ! negative err corresponds to std13
 
-      if (H08_CH_USE(ch_num) /= 1) then
+      ! homogeneity QC
+      if(H08_OBS_STD .and. abs(std13) > H08_HOMO_QC)then
+        obsda%qc(n) = iqc_obs_bad
+        cycle
+      endif
+      obs(iof)%err(iidx) = abs(obs(iof)%err(iidx))
+
+      if (H08_BAND_USE(ch_num) /= 1) then
         obsda%qc(n) = iqc_obs_bad
         cycle
       end if
@@ -484,13 +522,37 @@ SUBROUTINE set_letkf_obs
       obsda%ensval(mmdetobs,n) = obs(iof)%dat(iidx) - obsda%ensval(mmdetobs,n) ! y-Hx for deterministic run
     end if
 
-!   compute sprd in obs space ! H08
+#ifdef H08
+!   Bias correction
+    if (obs(iof)%elm(iidx) == id_H08IR_obs) then
+      ch_num = nint(obs(iof)%lev(iidx)) - 6
+      pbeta = 0.0d0
 
-!    hx_sprd(n) = 0.0d0 !H08
-!    DO i=1,MEMBER
-!      hx_sprd(n) = hx_sprd(n) + obsda%ensval(i,n) * obsda%ensval(i,n)
-!    ENDDO
-!    hx_sprd(n) = dsqrt(hx_sprd(n) / REAL(MEMBER,r_size))
+      if(H08_VBC_USE)then      
+        do npr = 1, H08_NPRED
+          if(npr == 1) pred = obsda%pred1(n)
+          if(npr == 2) pred = obsda%pred2(n)
+ 
+          pbeta = pbeta + pred * vbcH08(npr,ch_num) 
+        enddo
+      endif
+
+      obsda%val(n) = obsda%val(n) - pbeta
+      if (DET_RUN) then
+        obsda%ensval(mmdetobs,n) = obsda%ensval(mmdetobs,n) - pbeta
+      endif
+    endif
+
+!   AOEI: compute sprd in obs space (sigma_b for AOEI) ! H08
+!   sig_o will be used in letkf_tools.f90
+    sig_b = 0.0d0 !H08
+    DO i=1,MEMBER
+      sig_b = sig_b + obsda%ensval(i,n) * obsda%ensval(i,n)
+    ENDDO
+    sig_b = dsqrt(sig_b / REAL(MEMBER-1,r_size))
+    sig_o = dsqrt(max(obs(iof)%err(iidx)**2,obsda%val(n)**2 - obsda%val2(n)**2))
+    obsda%val2(n) = sig_o
+#endif
 
     select case (obs(iof)%elm(iidx)) !gross error
     case (id_rain_obs)
@@ -509,13 +571,27 @@ SUBROUTINE set_letkf_obs
       IF(ABS(obsda%val(n)) > GROSS_ERROR_RADAR_PRH * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
+#ifdef H08
     case (id_H08IR_obs)
-      IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
-        obsda%qc(n) = iqc_gross_err
-      END IF
+      !IF(H08_AOEI .and. H08_AOEI_QC == 0)THEN ! No gross-error QC
+      IF(H08_AOEI .and. H08_AOEI_QC == 0)THEN
+        ! No Gross-error QC
+      ELSEIF(H08_AOEI .and. H08_AOEI_QC == 1)THEN
+        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+          obsda%qc(n) = iqc_gross_err
+        END IF
+!      ELSEIF(H08_AOEI .and. H08_AOEI_QC == 2)THEN !not yet
+!
+!      ENDIF
+      ELSE
+        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+          obsda%qc(n) = iqc_gross_err
+        END IF
+      ENDIF
       IF(obs(iof)%dat(iidx) < H08_BT_MIN)THEN
         obsda%qc(n) = iqc_gross_err
       ENDIF
+#endif
     case (id_tclon_obs, id_tclat_obs)
       IF(ABS(obsda%val(n)) > GROSS_ERROR_TCXY * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
@@ -530,24 +606,6 @@ SUBROUTINE set_letkf_obs
       END IF
     end select
 
-
-#ifdef H08
-!    IF(obs(iof)%elm(iidx) == id_H08IR_obs)THEN
-!      ch_num = obs(iof)%lev(iidx)
-!
-!      write(6, '(a,2I6,2F8.2,4F12.4,I3)') "Him8 obs:", &
-!            obs(iof)%elm(iidx), & ! id
-!            nint(ch_num), & ! band num
-!            obs(iof)%lon(iidx), &
-!            obs(iof)%lat(iidx), &
-!            obsda%lev(n), & ! sensitive height
-!            obs(iof)%dat(iidx), &
-!            obs(iof)%err(iidx), &
-!            obsda%val(n), &
-!            obsda%qc(n)
-!    ENDIF
-#endif
-
 #ifdef DEBUG
     write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
                                        obs(iof)%typ(iidx), &
@@ -555,7 +613,11 @@ SUBROUTINE set_letkf_obs
                                        obs(iof)%lat(iidx), &
                                        obs(iof)%lev(iidx), &
                                        obs(iof)%dat(iidx), &
+#ifdef H08
+                                       sig_o, &
+#else
                                        obs(iof)%err(iidx), &
+#endif
                                        obsda%val(n), &
                                        obsda%qc(n)
 #endif
@@ -739,18 +801,6 @@ SUBROUTINE set_letkf_obs
       obsda%key(obsgrd(ictype)%next(i,j)) = n
     end if
   end do
-
-
-!#ifdef H08
-! -- H08
-!  if((obs(3)%nobs >= 1) .and. OBS_IN_NUM >= 3)then
-!    CALL MPI_BARRIER(MPI_COMM_d,ierr)
-!    if (nprocs_d > 1) then
-!      CALL MPI_ALLREDUCE(MPI_IN_PLACE,obs(3)%lev,obs(3)%nobs,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
-!    end if
-!  endif
-! -- H08
-!#endif
 
   call mpi_timer('set_letkf_obs:bucket_sort_second_scan:', 2, barrier=MPI_COMM_d)
 
@@ -938,6 +988,8 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
         obsda_sort%lev(nn_ext) = obsda%lev(obsda%key(nn_sub)) ! H08
         obsda_sort%val2(nn_ext) = obsda%val2(obsda%key(nn_sub)) ! H08
+        obsda_sort%pred1(nn_ext) = obsda%pred1(obsda%key(nn_sub)) ! H08
+        obsda_sort%pred2(nn_ext) = obsda%pred2(obsda%key(nn_sub)) ! H08
 #endif
       end do
     end do
@@ -952,7 +1004,7 @@ SUBROUTINE set_letkf_obs
 
   obsda_sort%nobs_in_key = nk
 
-  call mpi_timer('set_letkf_obs:ext_subdomain_gatherv_prepare:', 2, barrier=MPI_COMM_d)
+  call mpi_timer('set_letkf_obs:ext_subdomain_gatherv_prepare:', 2)
 
   ! 2) Communicate observations within the extended (localization) subdomains
   !-----------------------------------------------------------------------------
@@ -960,21 +1012,23 @@ SUBROUTINE set_letkf_obs
   call obs_da_value_allocate(obsbufs, nensobs)
   allocate (obsidx(nobs_sub(2)))
 
+  call mpi_timer('', 3)
+
   do ip = 0, MEM_NP-1
 
     ! a) Make send buffer with sorted order
     !---------------------------------------------------------------------------
-    cnts = 0
     cntr = 0
-    dspr = 0
+    call rank_1d_2d(ip, iproc, jproc)
 
+!$OMP PARALLEL PRIVATE(ictype,imin1,imax1,jmin1,jmax1)
     do ictype = 1, nctype
-      call rank_1d_2d(ip, iproc, jproc)
       imin1 = iproc*obsgrd(ictype)%ngrd_i+1 - obsgrd(ictype)%ngrdsch_i
       imax1 = (iproc+1)*obsgrd(ictype)%ngrd_i + obsgrd(ictype)%ngrdsch_i
       jmin1 = jproc*obsgrd(ictype)%ngrd_j+1 - obsgrd(ictype)%ngrdsch_j
       jmax1 = (jproc+1)*obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j
 
+!$OMP DO SCHEDULE(STATIC) PRIVATE(ip2,iproc2,jproc2,imin2,imax2,jmin2,jmax2)
       do ip2 = 0, MEM_NP-1
         if (ip2 /= ip) then
           call rank_1d_2d(ip2, iproc2, jproc2)
@@ -991,14 +1045,16 @@ SUBROUTINE set_letkf_obs
           end if
         end if ! [ ip2 /= ip ]
       end do ! [ ip2 = 0, MEM_NP-1 ]
+!$OMP END DO
     end do ! [ ictype = 1, nctype ]
 
-    do ip2 = 1, MEM_NP-1
-      dspr(ip2+1) = dspr(ip2) + cntr(ip2)
-    end do ! [ ip2 = 1, MEM_NP-1 ]
+!$OMP MASTER
+    write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_obschoose (ip=', ip, '):'
+    call mpi_timer(trim(timer_str), 3)
+!$OMP END MASTER
 
-    cnts = cntr(myrank_d+1)  ! When myrank_d == ip, this should be 0.
-    do n = 1, cnts
+!$OMP DO SCHEDULE(STATIC) PRIVATE(n)
+    do n = 1, cntr(myrank_d+1)
       obsbufs%set(n) = obsda%set(obsda%key(obsidx(n)))
       obsbufs%idx(n) = obsda%idx(obsda%key(obsidx(n)))
       obsbufs%val(n) = obsda%val(obsda%key(obsidx(n)))
@@ -1009,12 +1065,29 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
       obsbufs%lev(n) = obsda%lev(obsda%key(obsidx(n))) ! H08
       obsbufs%val2(n) = obsda%val2(obsda%key(obsidx(n))) ! H08
+      obsbufs%pred1(n) = obsda%pred1(obsda%key(obsidx(n))) ! H08
+      obsbufs%pred2(n) = obsda%pred2(obsda%key(obsidx(n))) ! H08
 #endif
     end do
+!$OMP END DO
+!$OMP END PARALLEL
+
+    cnts = cntr(myrank_d+1)  ! When myrank_d == ip, this should be 0.
+    dspr(1) = 0
+    do ip2 = 1, MEM_NP-1
+      dspr(ip2+1) = dspr(ip2) + cntr(ip2)
+    end do ! [ ip2 = 1, MEM_NP-1 ]
+
+    write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_obsbufsend(ip=', ip, '):'
+    call mpi_timer(trim(timer_str), 3, barrier=MPI_COMM_d)
 
     ! b) GATHERV observation data
     !---------------------------------------------------------------------------
-    if (dspr(MEM_NP) + cntr(MEM_NP) <= 0) cycle
+    if (dspr(MEM_NP) + cntr(MEM_NP) <= 0) then
+      write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_noobs     (ip=', ip, '):'
+      call mpi_timer(trim(timer_str), 3)
+      cycle
+    end if
 
     obsbufr%nobs = dspr(MEM_NP) + cntr(MEM_NP)
     call obs_da_value_allocate(obsbufr, nensobs)
@@ -1029,34 +1102,41 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
     call MPI_GATHERV(obsbufs%lev, cnts, MPI_r_size, obsbufr%lev, cntr, dspr, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
     call MPI_GATHERV(obsbufs%val2, cnts, MPI_r_size, obsbufr%val2, cntr, dspr, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
+    call MPI_GATHERV(obsbufs%pred1, cnts, MPI_r_size, obsbufr%pred1, cntr, dspr, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
+    call MPI_GATHERV(obsbufs%pred2, cnts, MPI_r_size, obsbufr%pred2, cntr, dspr, MPI_r_size, ip, MPI_COMM_d, ierr) ! H08
 #endif
+
+    write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_gatherv   (ip=', ip, '):'
+    call mpi_timer(trim(timer_str), 3)
 
     ! c) In the domain receiving data, copy the receive buffer to obsda_sort
     !---------------------------------------------------------------------------
     if (myrank_d == ip) then
 
-      ne_bufr = 0
+!      ne_bufr = 0
 
+!$OMP PARALLEL DO SCHEDULE(STATIC) PRIVATE(ip2,iproc2,jproc2,ictype,imin1,imax1,jmin1,jmax1,imin2,imax2,jmin2,jmax2,ishift,jshift,j,ns_ext,ne_ext,ns_bufr,ne_bufr)
       do ip2 = 0, MEM_NP-1
         if (ip2 /= ip) then
 
-#ifdef DEBUG
-          if (ne_bufr /= dspr(ip2+1)) then
-            write (6, '(A)') '[Error] Error in copying receive buffer !!!'
-            write (6, *) ip, ip2, ne_bufr, dspr(ip2+1)
-            write (6, *) dspr(:)
-            stop 99
-          end if 
-#endif
+!#ifdef DEBUG
+!          if (ne_bufr /= dspr(ip2+1)) then
+!            write (6, '(A)') '[Error] Error in copying receive buffer !!!'
+!            write (6, *) ip, ip2, ne_bufr, dspr(ip2+1)
+!            write (6, *) dspr(:)
+!            stop 99
+!          end if 
+!#endif
+
+          ne_bufr = dspr(ip2+1)
+          call rank_1d_2d(ip2, iproc2, jproc2)
 
           do ictype = 1, nctype
-            call rank_1d_2d(ip, iproc, jproc)
             imin1 = iproc*obsgrd(ictype)%ngrd_i+1 - obsgrd(ictype)%ngrdsch_i
             imax1 = (iproc+1)*obsgrd(ictype)%ngrd_i + obsgrd(ictype)%ngrdsch_i
             jmin1 = jproc*obsgrd(ictype)%ngrd_j+1 - obsgrd(ictype)%ngrdsch_j
             jmax1 = (jproc+1)*obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j
 
-            call rank_1d_2d(ip2, iproc2, jproc2)
             imin2 = max(1, imin1 - iproc2*obsgrd(ictype)%ngrd_i)
             imax2 = min(obsgrd(ictype)%ngrd_i, imax1 - iproc2*obsgrd(ictype)%ngrd_i)
             jmin2 = max(1, jmin1 - jproc2*obsgrd(ictype)%ngrd_j)
@@ -1093,12 +1173,18 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
               obsda_sort%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr) ! H08
               obsda_sort%val2(ns_ext:ne_ext) = obsbufr%val2(ns_bufr:ne_bufr) ! H08
+              obsda_sort%pred1(ns_ext:ne_ext) = obsbufr%pred1(ns_bufr:ne_bufr) ! H08
+              obsda_sort%pred2(ns_ext:ne_ext) = obsbufr%pred2(ns_bufr:ne_bufr) ! H08
 #endif
             end do
           end do ! [ ictype = 1, nctype ]
 
         end if ! [ ip2 /= ip ]
       end do ! [ ip2 = 0, MEM_NP-1 ]
+!$OMP END PARALLEL DO
+
+      write (timer_str, '(A40,I5,A2)') 'set_letkf_obs:ext_gatherv_obsbufrecv(ip=', ip, '):'
+      call mpi_timer(trim(timer_str), 3)
 
     end if ! [ myrank_d == ip ]
 

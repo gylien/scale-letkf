@@ -37,6 +37,13 @@ if ((LOG_OPT <= 4 && MYRANK == 0)); then
   fi
 fi
 
+
+if [ -f "${TMPOUT}/vbc/Him8_vbca.dat" ] && [ ${MYRANK} -eq 0 ] ; then
+  mv ${TMPOUT}/vbc/Him8_vbca.dat ${TMPOUT}/vbc/Him8_vbca_${ATIME}.dat
+#if [ -f "${TMPDIR}/letkf/Him8_vbca.dat" ] && [ ${MYRANK} -eq 0 ] ; then
+#  mv ${TMPDIR}/letkf/Him8_vbca.dat ${TMPOUT}/vbc/Him8_vbca_${ATIME}.dat
+fi
+
 #===============================================================================
 
 exit 0

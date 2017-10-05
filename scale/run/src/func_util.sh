@@ -595,10 +595,10 @@ USE_RANKDIR="${1:-0}"
 #-------------------------------------------------------------------------------
 
 if [ -s "${STAGING_DIR}/${STGINLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_SHARE}" ]; then
-  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_SHARE} $USE_RANKDIR share 1>> $jobscrp || exit $?
+  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_SHARE} $USE_RANKDIR share $TMPS 1>> $jobscrp || exit $?
 fi
 if [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}" ]; then
-  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $USE_RANKDIR local 1>> $jobscrp || exit $?
+  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $USE_RANKDIR local $TMPS 1>> $jobscrp || exit $?
 fi
 if [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}" ]; then
   bash $SCRP_DIR/src/stage_out_K.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_SHARE} $USE_RANKDIR share 1>> $jobscrp || exit $?
@@ -681,7 +681,7 @@ bdy_start_time=$bdy_start_time_prev
 local ntsteps_total=$(((FCSTLEN-1)/PARENT_FOUT+2 + ntsteps_skip))
 
 if ((bdy_start_time != TIME)); then
-  if (($(datetime $bdy_start_time $(((ntsteps_total-1)*PARENT_FOUT)) s) < $(datetime $TIME $FCSTLEN s))); then
+  if (($(datetime $bdy_start_time $(((ntsteps_total-ntsteps_skip-1)*PARENT_FOUT)) s) < $(datetime $TIME $FCSTLEN s))); then
     ntsteps_total=$((ntsteps_total+1))
   fi
 fi
@@ -852,7 +852,7 @@ local JOBID="$1"
 local res=0
 local tmp
 while true; do
-  tmp=$(pjstat --choose ST,EC,REASON ${JOBID} | tail -n 1)
+  tmp=$(pjstat -H day=1 --choose ST,EC,REASON ${JOBID} | tail -n 1)
   if [ -z "$tmp" ]; then
     echo "[Error] $FUNCNAME: Cannot find PJM job ${JOBID}." >&2
     return 99

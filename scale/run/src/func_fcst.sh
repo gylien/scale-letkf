@@ -207,18 +207,12 @@ staging_list () {
 # TMPDAT
 
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${ENSMODEL_DIR}/scale-rm_pp_ens|${DAT_SUBDIR}/exec/scale-rm_pp_ens
-${ENSMODEL_DIR}/scale-rm_init_ens|${DAT_SUBDIR}/exec/scale-rm_init_ens
-${ENSMODEL_DIR}/scale-rm_ens|${DAT_SUBDIR}/exec/scale-rm_ens
 ${COMMON_DIR}/pdbash|${DAT_SUBDIR}/exec/pdbash
 ${SCRP_DIR}/config.nml.scale_pp|${DAT_SUBDIR}/conf/config.nml.scale_pp
 ${SCRP_DIR}/config.nml.scale_init|${DAT_SUBDIR}/conf/config.nml.scale_init
 ${SCRP_DIR}/config.nml.scale|${DAT_SUBDIR}/conf/config.nml.scale
 ${SCRP_DIR}/config.nml.ensmodel|${DAT_SUBDIR}/conf/config.nml.ensmodel
 EOF
-#${SCALEDIR}/bin/scale-rm_pp|${DAT_SUBDIR}/exec/scale-rm_pp
-#${SCALEDIR}/bin/scale-rm_init|${DAT_SUBDIR}/exec/scale-rm_init
-#${SCALEDIR}/bin/scale-rm|${DAT_SUBDIR}/exec/scale-rm
 
 cat >> ${STAGING_DIR}/${STGINLIST_CONSTDB} << EOF
 ${SCALEDIR}/scale-rm/test/data/rad/cira.nc|${DAT_SUBDIR}/rad/cira.nc
@@ -249,7 +243,29 @@ if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
 fi
 
 #-------------------------------------------------------------------------------
+# TMPRUN
+
+cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${ENSMODEL_DIR}/scale-rm_pp_ens|${RUN_SUBDIR}/scale_pp/scale-rm_pp_ens
+${ENSMODEL_DIR}/scale-rm_init_ens|${RUN_SUBDIR}/scale_init/scale-rm_init_ens
+${ENSMODEL_DIR}/scale-rm_ens|${RUN_SUBDIR}/scale/scale-rm_ens
+EOF
+
+#-------------------------------------------------------------------------------
 # TMPOUT
+
+# empty directories
+#-------------------
+
+echo "|${OUT_SUBDIR}/const/log/" >> ${STAGING_DIR}/${STGINLIST}
+if ((PNETCDF != 1)); then
+  echo "|${OUT_SUBDIR}/const/topo/" >> ${STAGING_DIR}/${STGINLIST}
+  if ((LANDUSE_UPDATE != 1)); then
+    echo "|${OUT_SUBDIR}/const/landuse/" >> ${STAGING_DIR}/${STGINLIST}
+  fi
+fi
+
+#-------------------
 
 lcycles=$((LCYCLE * CYCLE_SKIP))
 time=$STIME
@@ -260,6 +276,20 @@ while ((time <= ETIME)); do
   for c in $(seq $CYCLE); do
     time2=$(datetime $time $((lcycles * (c-1))) s)
     if ((time2 <= ETIME)); then
+
+      # empty directories
+      #-------------------
+
+      if ((PNETCDF != 1)); then
+        if ((LANDUSE_UPDATE == 1)); then
+          echo "|${OUT_SUBDIR}/${time2}/landuse/" >> ${STAGING_DIR}/${STGINLIST}
+        fi
+      fi
+
+      echo "|${OUT_SUBDIR}/${time2}/log/fcst_scale_pp/" >> ${STAGING_DIR}/${STGINLIST}
+      echo "|${OUT_SUBDIR}/${time2}/log/fcst_scale_init/" >> ${STAGING_DIR}/${STGINLIST}
+      echo "|${OUT_SUBDIR}/${time2}/log/fcst_scale/" >> ${STAGING_DIR}/${STGINLIST}
+
       #-------------------
       # stage-in
       #-------------------
@@ -417,11 +447,21 @@ while ((time <= ETIME)); do
                 pathin="${DATA_BDY_SCALE_PREP}/${time2}/bdy/${BDY_MEAN}.boundary.nc"
                 path="${time2}/bdy/mean.boundary.nc"
                 echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+1))]}
+                if ((USE_INIT_FROM_BDY == 1)); then
+                  pathin="${DATA_BDY_SCALE_PREP}/${time2}/bdy/${BDY_MEAN}.init_bdy.nc"
+                  path="${time2}/bdy/mean.init_bdy.nc"
+                  echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+1))]}
+                fi
               else
                 for q in $(seq $mem_np); do
                   pathin="${DATA_BDY_SCALE_PREP}/${time2}/bdy/${BDY_MEAN}/boundary$(printf $SCALE_SFX $((q-1)))"
                   path="${time2}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
                   echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
+                  if ((USE_INIT_FROM_BDY == 1)); then
+                    pathin="${DATA_BDY_SCALE_PREP}/${time2}/bdy/${BDY_MEAN}/init_bdy$(printf $SCALE_SFX $((q-1)))"
+                    path="${time2}/bdy/mean/init_bdy$(printf $SCALE_SFX $((q-1)))"
+                    echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
+                  fi
                 done
               fi
             done
@@ -430,11 +470,21 @@ while ((time <= ETIME)); do
               pathin="${DATA_BDY_SCALE_PREP}/${time2}/bdy/${BDY_MEAN}.boundary.nc"
               path="${time2}/bdy/mean.boundary.nc"
               echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+              if ((USE_INIT_FROM_BDY == 1)); then
+                pathin="${DATA_BDY_SCALE_PREP}/${time2}/bdy/${BDY_MEAN}.init_bdy.nc"
+                path="${time2}/bdy/mean.init_bdy.nc"
+                echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+              fi
             else
               for q in $(seq $mem_np); do
                 pathin="${DATA_BDY_SCALE_PREP}/${time2}/bdy/${BDY_MEAN}/boundary$(printf $SCALE_SFX $((q-1)))"
                 path="${time2}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
                 echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+                if ((USE_INIT_FROM_BDY == 1)); then
+                  pathin="${DATA_BDY_SCALE_PREP}/${time2}/bdy/${BDY_MEAN}/init_bdy$(printf $SCALE_SFX $((q-1)))"
+                  path="${time2}/bdy/mean/init_bdy$(printf $SCALE_SFX $((q-1)))"
+                  echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+                fi
               done
             fi
           fi
@@ -444,10 +494,18 @@ while ((time <= ETIME)); do
             if ((PNETCDF == 1)); then
               path="${time2}/bdy/${name_m[$m]}.boundary.nc"
               echo "${DATA_BDY_SCALE_PREP}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+1))]}
+              if ((USE_INIT_FROM_BDY == 1)); then
+                path="${time2}/bdy/${name_m[$m]}.init_bdy.nc"
+                echo "${DATA_BDY_SCALE_PREP}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+1))]}
+              fi
             else
               for q in $(seq $mem_np); do
                 path="${time2}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
                 echo "${DATA_BDY_SCALE_PREP}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
+                if ((USE_INIT_FROM_BDY == 1)); then
+                  path="${time2}/bdy/${name_m[$m]}/init_bdy$(printf $SCALE_SFX $((q-1)))"
+                  echo "${DATA_BDY_SCALE_PREP}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
+                fi
               done
             fi
           done
@@ -510,6 +568,11 @@ while ((time <= ETIME)); do
             path="${time2}/bdy/mean.boundary.nc"
 #            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
             echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
+            if ((USE_INIT_FROM_BDY == 1)); then
+              path="${time2}/bdy/mean.init_bdy.nc"
+#              echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+              echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
+            fi
           else
             path="${time2}/bdy/mean/"
             echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
@@ -1086,9 +1149,9 @@ for it in $(seq $its $ite); do
             fi
           elif ((OCEAN_FORMAT == 99 && mkinit != 1)); then
             if ((PNETCDF == 1)); then
-              ocean_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}.init_bdy"
+              ocean_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}.init_bdy"
             else
-              ocean_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}/init_bdy"
+              ocean_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}/init_bdy"
             fi
           fi
         fi
@@ -1103,9 +1166,9 @@ for it in $(seq $its $ite); do
             fi
           elif ((LAND_FORMAT == 99 && mkinit != 1)); then
             if ((PNETCDF == 1)); then
-              land_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}.init_bdy"
+              land_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}.init_bdy"
             else
-              land_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}/init_bdy"
+              land_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}/init_bdy"
             fi
           fi
         fi

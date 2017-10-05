@@ -5,21 +5,27 @@
 #
 #===============================================================================
 
-STIME='20130701000000'
-ETIME='20130701060000'
-MEMBERS='mean 1 5'
+STIME='20170709000000'
+ETIME='20170709000000'
+#MEMBERS='mean mdet'
+#MEMBERS='mean'
+MEMBERS='mean '`seq 1 50`
 CYCLE=
 CYCLE_SKIP=1
 ISTEP=
 FSTEP=
-TIME_LIMIT='00:30:00'
+#TIME_LIMIT='00:20:00'
+TIME_LIMIT='01:30:00'
 
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=21600       # SCALE forecast length in the forecast mode (second)
-#FCSTOUT=$LCYCLE    # SCALE forecast output interval in the forecast mode (second)
-FCSTOUT=3600
+#FCSTLEN=432000      # SCALE forecast length in the forecast mode (second)
+#FCSTLEN=3600      # SCALE forecast length in the forecast mode (second)
+#FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
+FCSTLEN=86400      # SCALE forecast length in the forecast mode (second)
+FCSTOUT=21600      # SCALE forecast length in the forecast mode (second)
+#FCSTOUT=3600
 
 #===============================================================================
 
@@ -44,7 +50,7 @@ LANDUSEOUT_OPT=1 # 1:   o
 
                  #      bdy
                  #      mean members
-BDYOUT_OPT=1     # 1:   o    o
+BDYOUT_OPT=3     # 1:   o    o
                  # 2:   o
                  # 3:   (none)
 
@@ -55,7 +61,7 @@ LOG_OPT=2        # 1:   o    o       o   o              o
                  # 3:                                   o
                  # 4:   (none)
 
-LOG_TYPE=2       # 1:   Only save the log file from the head process
+LOG_TYPE=4       # 1:   Only save the log file from the head process
                  # 2:   Save all log files
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file

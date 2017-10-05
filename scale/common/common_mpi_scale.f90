@@ -27,7 +27,9 @@ module common_mpi_scale
 #ifdef PNETCDF
   use scale_stdio, only: IO_AGGREGATE
 #endif
-
+#ifdef H08
+  use common_mtx
+#endif
   implicit none
   public
 
@@ -180,7 +182,7 @@ subroutine set_common_mpi_scale
         do i = 1, nlon
           ri = real(i + IHALO, r_size)
           rj = real(j + JHALO, r_size)
-          call MPRJ_xy2lonlat((ri-1.0d0) * DX + GRID_CX(1), (rj-1.0d0) * DY + GRID_CY(1), lon2d(i,j), lat2d(i,j))
+          call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1), lon2d(i,j), lat2d(i,j))
           lon2d(i,j) = lon2d(i,j) * rad2deg
           lat2d(i,j) = lat2d(i,j) * rad2deg
         end do
@@ -547,6 +549,12 @@ subroutine set_scalelib
 !    USER_config
 !  use mod_admin_time, only: &
 !    ADMIN_TIME_setup
+#ifdef H08
+  use scale_atmos_phy_rd_profile, only: &
+    ATMOS_PHY_RD_PROFILE_setup
+!  use mod_admin_time, only: &
+!    ADMIN_TIME_setup
+#endif
   use scale_mapproj, only: &
     MPRJ_setup
   implicit none
@@ -703,6 +711,13 @@ subroutine set_scalelib
 !    end if
 !  call ATMOS_driver_config
 !  call USER_config
+
+#ifdef H08
+  ! setup climatological profile for radiation
+  call ATMOS_PHY_RD_PROFILE_setup
+  !! setup current time
+  !call ADMIN_TIME_setup(.false.)
+#endif
 
   ! setup file I/O
   call FILEIO_setup
@@ -1064,21 +1079,20 @@ end subroutine read_ens_mpi_addiinfl
 !-------------------------------------------------------------------------------
 ! Write ensemble analysis data after collecting from processes
 !-------------------------------------------------------------------------------
-subroutine write_ens_mpi(v3d, v2d, monit, caption)
+subroutine write_ens_mpi(v3d, v2d, monit_step)
   implicit none
   real(r_size), intent(in) :: v3d(nij1,nlev,nens,nv3d)
   real(r_size), intent(in) :: v2d(nij1,nens,nv2d)
-  logical, intent(in), optional :: monit
-  character(len=*), intent(in), optional :: caption
+  integer, intent(in), optional :: monit_step
   real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP) :: v2dg(nlon,nlat,nv2d)
   character(len=filelenmax) :: filename
   integer :: it, im, mstart, mend
-  logical :: monit_
+  integer :: monit_step_
 
-  monit_ = .false.
-  if (present(monit) .and. present(caption)) then
-    monit_ = monit
+  monit_step_ = 0
+  if (present(monit_step)) then
+    monit_step_ = monit_step
   end if
 
   do it = 1, nitmax
@@ -1094,8 +1108,8 @@ subroutine write_ens_mpi(v3d, v2d, monit, caption)
 
     call mpi_timer('write_ens_mpi:gather_grd_mpi_alltoall:', 2)
 
-    if (monit_ .and. mstart <= mmean .and. mmean <= mend) then
-      call monit_obs_mpi(v3dg, v2dg, caption)
+    if (monit_step_ > 0 .and. mstart <= mmean .and. mmean <= mend) then
+      call monit_obs_mpi(v3dg, v2dg, monit_step_)
 
       call mpi_timer('write_ens_mpi:monit_obs_mpi:', 2)
     end if
@@ -1338,11 +1352,11 @@ END SUBROUTINE buf_to_grd
 !-------------------------------------------------------------------------------
 ! MPI driver for monitoring observation departure statistics
 !-------------------------------------------------------------------------------
-subroutine monit_obs_mpi(v3dg, v2dg, caption)
+subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   implicit none
   real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP), intent(in) :: v2dg(nlon,nlat,nv2d)
-  character(len=*), intent(in) :: caption
+  integer, intent(in) :: monit_step
 
   integer :: nobs(nid_obs)
   integer :: nobs_g(nid_obs)
@@ -1351,15 +1365,31 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
   real(r_size) :: rmse(nid_obs)
   real(r_size) :: rmse_g(nid_obs)
   logical :: monit_type(nid_obs)
-  integer :: i, ierr
+  type(obs_da_value) :: obsdep_g
+  integer :: cnts
+  integer :: cntr(MEM_NP)
+  integer :: dspr(MEM_NP)
+  integer :: i, ip, ierr
 
 #ifdef H08
-  integer :: nobs_H08(nch)
-  integer :: nobs_H08_g(nch)
-  real(r_size) :: bias_H08(nch)
-  real(r_size) :: bias_H08_g(nch)
-  real(r_size) :: rmse_H08(nch)
-  real(r_size) :: rmse_H08_g(nch)
+  integer :: nobs_H08(NIRB_HIM8)
+  integer :: nobs_H08_g(NIRB_HIM8)
+  real(r_size) :: bias_H08(NIRB_HIM8)
+  real(r_size) :: bias_H08_g(NIRB_HIM8)
+  real(r_size) :: rmse_H08(NIRB_HIM8)
+  real(r_size) :: rmse_H08_g(NIRB_HIM8)
+  real(r_size) :: bias_H08_bc(NIRB_HIM8)
+  real(r_size) :: bias_H08_bc_g(NIRB_HIM8)
+  real(r_size) :: rmse_H08_bc(NIRB_HIM8)
+  real(r_size) :: rmse_H08_bc_g(NIRB_HIM8)
+
+  ! bias correction
+  real(r_size) :: aH08(H08_NPRED,H08_NPRED,NIRB_HIM8)
+  real(r_size) :: aH08inv(H08_NPRED,H08_NPRED)
+  real(r_size) :: bH08(H08_NPRED,NIRB_HIM8)
+  real(r_size) :: vbcaH08(H08_NPRED,NIRB_HIM8)
+  real(r_size) :: vbcfH08(H08_NPRED,NIRB_HIM8)
+  integer :: ich
 #endif
 
 #ifdef TCV
@@ -1377,10 +1407,16 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
   ! 
   if (myrank_e == mmean_rank_e) then
 #ifdef H08
+    if (H08_VBC_USE)then
+      call read_vbc_Him8(vbcfH08)
+    else
+      vbcfH08 = 0.0d0
+    endif
     call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true.,&
-                   nobs_H08, bias_H08, rmse_H08)
+                   nobs_H08, bias_H08, rmse_H08, bias_H08_bc, rmse_H08_bc,&
+                   aH08, bH08, vbcfH08, monit_step)
 #else
-    call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true.)
+    call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true., monit_step)
 #endif
 
     call mpi_timer('monit_obs_mpi:monit_obs:', 2)
@@ -1445,14 +1481,18 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
     end do
 
 #ifdef H08
-    do i = 1, nch
+    do i = 1, NIRB_HIM8
       nobs_H08_g(i) = nobs_H08(i)
       if (nobs_H08_g(i) == 0) then
         bias_H08_g(i) = 0.0d0
         rmse_H08_g(i) = 0.0d0
+        bias_H08_bc_g(i) = 0.0d0
+        rmse_H08_bc_g(i) = 0.0d0
       else
         bias_H08_g(i) = bias_H08(i) * real(nobs_H08(i), r_size)
         rmse_H08_g(i) = rmse_H08(i) * rmse_H08(i) * real(nobs_H08(i), r_size)
+        bias_H08_bc_g(i) = bias_H08_bc(i) * real(nobs_H08(i), r_size)
+        rmse_H08_bc_g(i) = rmse_H08_bc(i) * rmse_H08_bc(i) * real(nobs_H08(i), r_size)
       end if
     end do
 #endif
@@ -1462,9 +1502,34 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
       call MPI_ALLREDUCE(MPI_IN_PLACE, bias_g, nid_obs, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_g, nid_obs, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
 #ifdef H08
-      call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_H08_g, nch, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
-      call MPI_ALLREDUCE(MPI_IN_PLACE, bias_H08_g, nch, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
-      call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_H08_g, nch, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_H08_g, NIRB_HIM8, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, bias_H08_g, NIRB_HIM8, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_H08_g, NIRB_HIM8, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+      if(H08_VBC_USE)then
+        call MPI_ALLREDUCE(MPI_IN_PLACE, bias_H08_bc_g, NIRB_HIM8, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+        call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_H08_bc_g, NIRB_HIM8, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
+      endif
+
+      if(monit_step == 2 .and. H08_VBC_USE)then
+        call MPI_ALLREDUCE(MPI_IN_PLACE, aH08, NIRB_HIM8*H08_NPRED*H08_NPRED, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+        call MPI_ALLREDUCE(MPI_IN_PLACE, bH08, NIRB_HIM8*H08_NPRED, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+      endif
+
+      if (myrank_d == 0 .and. monit_step == 2 .and. H08_VBC_USE) then 
+        vbcaH08 = 0.0d0
+        do ich = 1, NIRB_HIM8
+          if (H08_BAND_USE(ich) == 1 .and. nobs_H08_g(ich) > 0)then
+            call mtx_inv(H08_NPRED,aH08(:,:,ich),aH08inv)
+
+            vbcaH08(1:H08_NPRED,ich) = vbcfH08(1:H08_NPRED,ich)
+            do ip = 1, H08_NPRED
+              vbcaH08(1:H08_NPRED,ich) = vbcaH08(1:H08_NPRED,ich) - aH08inv(1:H08_NPRED,ip) * bH08(ip,ich)
+            enddo
+          else
+            vbcaH08(1:H08_NPRED,ich) = vbcfH08(1:H08_NPRED,ich)
+          endif
+        enddo
+      endif ! [myrank == 0 & monit_step == 2]
 #endif
 
 #ifdef TCV
@@ -1489,19 +1554,58 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
     end do
 
 #ifdef H08
-    do i = 1, nch
+    do i = 1, NIRB_HIM8
       if (nobs_H08_g(i) == 0) then
         bias_H08_g(i) = undef
         rmse_H08_g(i) = undef
+        bias_H08_bc_g(i) = undef
+        rmse_H08_bc_g(i) = undef
       else
         bias_H08_g(i) = bias_H08_g(i) / REAL(nobs_H08_g(i),r_size)
         rmse_H08_g(i) = sqrt(rmse_H08_g(i) / REAL(nobs_H08_g(i),r_size))
+        if(H08_VBC_USE)then
+          bias_H08_bc_g(i) = bias_H08_bc_g(i) / REAL(nobs_H08_g(i),r_size)
+          rmse_H08_bc_g(i) = sqrt(rmse_H08_bc_g(i) / REAL(nobs_H08_g(i),r_size))
+        endif
       end if
     end do
 #endif
 
-    call mpi_timer('monit_obs_mpi:mpi_allreduce(domain):', 2)
-  end if
+    call mpi_timer('monit_obs_mpi:stat:mpi_allreduce(domain):', 2)
+
+    if (OBSDEP_OUT .and. monit_step == 2) then
+      cnts = obsdep%nobs
+      cntr = 0
+      cntr(myrank_d+1) = cnts
+      call MPI_ALLREDUCE(MPI_IN_PLACE, cntr, MEM_NP, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+      dspr = 0
+      do ip = 1, MEM_NP-1
+        dspr(ip+1) = dspr(ip) + cntr(ip)
+      end do
+
+      obsdep_g%nobs = dspr(MEM_NP) + cntr(MEM_NP)
+      call obs_da_value_allocate(obsdep_g, 0)
+
+      if (obsdep_g%nobs > 0) then
+        call MPI_GATHERV(obsdep%set, cnts, MPI_INTEGER, obsdep_g%set, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep%idx, cnts, MPI_INTEGER, obsdep_g%idx, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep%val, cnts, MPI_r_size,  obsdep_g%val, cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep%qc,  cnts, MPI_INTEGER, obsdep_g%qc,  cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep%ri,  cnts, MPI_r_size,  obsdep_g%ri,  cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep%rj,  cnts, MPI_r_size,  obsdep_g%rj,  cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
+      end if
+
+      if (myrank_d == 0) then
+        write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is writing an obsda file ', trim(OBSDEP_OUT_BASENAME)//'.dat'
+        call write_obs_da(trim(OBSDEP_OUT_BASENAME)//'.dat', obsdep_g, 0)
+      end if
+      call obs_da_value_deallocate(obsdep_g)
+      call obs_da_value_deallocate(obsdep)
+
+      call mpi_timer('monit_obs_mpi:obsdep:mpi_allreduce(domain):', 2)
+    end if ! [ OBSDEP_OUT .and. monit_step == 2 ]
+  end if ! [ myrank_e == mmean_rank_e ]
+
 
   if (DEPARTURE_STAT_ALL_PROCESSES) then
     call mpi_timer('', 2, barrier=MPI_COMM_e)
@@ -1515,28 +1619,58 @@ subroutine monit_obs_mpi(v3dg, v2dg, caption)
     call MPI_BCAST(monit_type, nid_obs, MPI_LOGICAL, mmean_rank_e, MPI_COMM_e, ierr)
 
 #ifdef H08
-    call MPI_BCAST(nobs_H08,   nch, MPI_INTEGER, mmean_rank_e, MPI_COMM_e, ierr)
-    call MPI_BCAST(bias_H08,   nch, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
-    call MPI_BCAST(rmse_H08,   nch, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
-    call MPI_BCAST(nobs_H08_g,   nch, MPI_INTEGER, mmean_rank_e, MPI_COMM_e, ierr)
-    call MPI_BCAST(bias_H08_g,   nch, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
-    call MPI_BCAST(rmse_H08_g,   nch, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(nobs_H08,   NIRB_HIM8, MPI_INTEGER, mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(bias_H08,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(rmse_H08,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(nobs_H08_g,   NIRB_HIM8, MPI_INTEGER, mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(bias_H08_g,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    call MPI_BCAST(rmse_H08_g,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    if(H08_VBC_USE)then
+      call MPI_BCAST(bias_H08_bc,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+      call MPI_BCAST(rmse_H08_bc,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+      call MPI_BCAST(bias_H08_bc_g,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+      call MPI_BCAST(rmse_H08_bc_g,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
+    endif
+
+    if(monit_step == 2 .and. H08_VBC_USE) then
+      call MPI_BCAST(vbcaH08,   H08_NPRED*NIRB_HIM8, MPI_r_size, mmean_rank_e, MPI_COMM_e, ierr)
+      if (myrank_a == 0) then
+        call write_vbc_Him8(vbcaH08,.true.)
+      endif
+    endif
+
 #endif
 
     call mpi_timer('monit_obs_mpi:mpi_allreduce(ens):', 2)
   end if
 
   if (DEPARTURE_STAT_ALL_PROCESSES .or. myrank_e == mmean_rank_e) then
-    write(6,'(2A)') trim(caption), ' (IN THIS SUBDOMAIN):'
+    if (monit_step == 1) then
+      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (IN THIS SUBDOMAIN):'
+    else if (monit_step == 2) then
+      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (IN THIS SUBDOMAIN):'
+    end if
     call monit_print(nobs, bias, rmse, monit_type)
-    write(6,'(2A)') trim(caption), ' (GLOBAL):'
-    call monit_print(nobs_g, bias_g, rmse_g, monit_type)
-
 #ifdef H08
-    write(6,'(2A)') trim(caption), ' (IN THIS SUBDOMAIN):'
     call monit_print_H08(nobs_H08, bias_H08, rmse_H08)
-    write(6,'(2A)') trim(caption), ' (GLOBAL):'
+    if(H08_VBC_USE)then
+      write(6,'(A)') 'BIAS CORRECTED:'
+      call monit_print_H08(nobs_H08, bias_H08_bc, rmse_H08_bc)
+    endif
+#endif
+
+    if (monit_step == 1) then
+      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (GLOBAL):'
+    else if (monit_step == 2) then
+      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (GLOBAL):'
+    end if
+    call monit_print(nobs_g, bias_g, rmse_g, monit_type)
+#ifdef H08
     call monit_print_H08(nobs_H08_g, bias_H08_g, rmse_H08_g)
+    if(H08_VBC_USE)then
+      write(6,'(A)') 'BIAS CORRECTED:'
+      call monit_print_H08(nobs_H08_g, bias_H08_bc_g, rmse_H08_bc_g)
+    endif
 #endif
 
     call mpi_timer('monit_obs_mpi:monit_print:', 2)
@@ -1548,18 +1682,18 @@ end subroutine monit_obs_mpi
 !-------------------------------------------------------------------------------
 ! Gather ensemble mean to {mmean_rank_e} and write SCALE restart files
 !-------------------------------------------------------------------------------
-subroutine write_ensmean(filename, v3d, v2d, calced, monit, caption)
+subroutine write_ensmean(filename, v3d, v2d, calced, monit_step)
   implicit none
   character(len=*), intent(in) :: filename
   real(r_size), intent(inout) :: v3d(nij1,nlev,nens,nv3d)
   real(r_size), intent(inout) :: v2d(nij1,nens,nv2d)
   logical, intent(in), optional :: calced
-  logical, intent(in), optional :: monit
-  character(len=*), intent(in), optional :: caption
+  integer, intent(in), optional :: monit_step
 
   real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP) :: v2dg(nlon,nlat,nv2d)
-  logical :: calced_, monit_
+  logical :: calced_
+  integer :: monit_step_
 
   call mpi_timer('', 2)
 
@@ -1567,9 +1701,9 @@ subroutine write_ensmean(filename, v3d, v2d, calced, monit, caption)
   if (present(calced)) then
     calced_ = calced
   end if
-  monit_ = .false.
-  if (present(monit) .and. present(caption)) then
-    monit_ = monit
+  monit_step_ = 0
+  if (present(monit_step)) then
+    monit_step_ = monit_step
   end if
 
   if (.not. calced) then
@@ -1584,8 +1718,8 @@ subroutine write_ensmean(filename, v3d, v2d, calced, monit, caption)
 
   call mpi_timer('write_ensmean:gather_grd_mpi:', 2)
 
-  if (monit_) then
-    call monit_obs_mpi(v3dg, v2dg, caption)
+  if (monit_step_ > 0) then
+    call monit_obs_mpi(v3dg, v2dg, monit_step_)
 
     call mpi_timer('write_ensmean:monit_obs_mpi:', 2)
   end if
@@ -1727,7 +1861,7 @@ subroutine get_nobs_da_mpi(nobs)
     call file_member_replace(1, OBSDA_IN_BASENAME, obsdafile)
     write (obsda_suffix(2:7), '(I6.6)') myrank_d
 #ifdef H08
-    call get_nobs(trim(obsdafile) // obsda_suffix, 7, nobs) ! Him8
+    call get_nobs(trim(obsdafile) // obsda_suffix, 10, nobs) ! Him8
 #else
     call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs)
 #endif
@@ -1828,6 +1962,36 @@ subroutine mpi_timer(sect_name, level, barrier)
 
   return
 end subroutine mpi_timer
+
+#ifdef H08
+! get bias cofficient
+subroutine get_vbc_Him8_mpi(vbc)
+  implicit none
+
+  real(r_size), intent(out) :: vbc(H08_NPRED,NIRB_HIM8)
+  integer :: ierr
+
+  call mpi_timer('', 2)
+
+  if (myrank_a == 0) then
+    call read_vbc_Him8(vbc)
+
+    call mpi_timer('read_vbc_mpi:read_vbc_Him8:', 2)
+  end if
+
+  call MPI_BCAST(vbc, H08_NPRED*NIRB_HIM8, MPI_r_size, 0, MPI_COMM_a, ierr)
+
+  !if (myrank_a /= 0 .and. myrank_e == mmean_rank_e) then
+  if (myrank_a /= 0) then
+    call write_vbc_Him8(vbc,.false.)
+  end if
+
+  call mpi_timer('read_vbc_mpi:mpi_bcast:', 2)
+
+  return
+end subroutine get_vbc_Him8_mpi
+#endif 
+
 
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)
 !SUBROUTINE read_obs2_mpi(obsfile,nn,nbv,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,hdxf,iqc)

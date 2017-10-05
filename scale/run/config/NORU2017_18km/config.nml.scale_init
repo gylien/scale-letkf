@@ -1,6 +1,7 @@
 &PARAM_IO
 !--IO_LOG_BASENAME--
  IO_LOG_ALLNODE  = .false.,
+!--IO_AGGREGATE--
 /
 
 &PARAM_TIME
@@ -44,13 +45,17 @@
 !--BOUNDARY_UPDATE_DT--
 /
 
+&PARAM_NEST
+!--OFFLINE_PARENT_BASENAME--
+! OFFLINE_PARENT_PRC_NUM_X  = 3,
+! OFFLINE_PARENT_PRC_NUM_Y  = 3,
+!--LATLON_CATALOGUE_FNAME--
+! NEST_INTERP_LEVEL = 12,
+/
+
 &PARAM_MKINIT_REAL_WRFARW
  WRF_FILE_TYPE       = .true.,
 /
-
-!&PARAM_INPUT_ATOM_WRF
-! use_buildrho_real = .true.,
-!/
 
 #################################################
 #
@@ -59,8 +64,8 @@
 #################################################
 
 &PARAM_PRC
- PRC_NUM_X      = 2,
- PRC_NUM_Y      = 2,
+ PRC_NUM_X      = 8,
+ PRC_NUM_Y      = 6,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -73,8 +78,8 @@
 
 &PARAM_INDEX
  KMAX = 36,
- IMAX = 45,
- JMAX = 45,
+ IMAX = 40,
+ JMAX = 40,
 /
 
 &PARAM_LAND_INDEX
@@ -94,8 +99,8 @@
 /
 
 &PARAM_GRID
- DX = 45000.D0,
- DY = 45000.D0,
+ DX = 18000.D0,
+ DY = 18000.D0,
  FZ(:) =    161.6830D0,   335.9580D0,   523.8060D0,   726.2850D0,   944.5340D0,
            1179.7810D0,  1433.3490D0,  1706.6670D0,  2001.2720D0,  2318.8220D0,
            2661.1040D0,  3030.0450D0,  3427.7200D0,  3856.3680D0,  4318.4000D0,
@@ -105,16 +110,16 @@
           19154.0100D0, 20807.4900D0, 22589.7400D0, 24510.8100D0, 26581.5000D0,
           28800.0000D0,
  BUFFER_DZ = 5000.D0,
- BUFFER_DX = 450000.D0,
- BUFFER_DY = 450000.D0,
+ BUFFER_DX = 180000.D0,
+ BUFFER_DY = 180000.D0,
 /
 
 &PARAM_MAPPROJ
- MPRJ_basepoint_lon = 135.0D0,
- MPRJ_basepoint_lat =  35.0D0,
+ MPRJ_basepoint_lon = 145.0D0,
+ MPRJ_basepoint_lat =  31.0D0,
  MPRJ_type          = 'LC',
- MPRJ_LC_lat1       =  30.00D0,
- MPRJ_LC_lat2       =  40.00D0,
+ MPRJ_LC_lat1       =  26.00D0,
+ MPRJ_LC_lat2       =  36.00D0,
 /
 
 #################################################
@@ -130,6 +135,7 @@
 &PARAM_ATMOS
  ATMOS_DYN_TYPE    = "HEVI",
  ATMOS_PHY_MP_TYPE = "TOMITA08",
+ ATMOS_PHY_CP_TYPE = "KF",
  ATMOS_PHY_RD_TYPE = "MSTRNX",
  ATMOS_PHY_SF_TYPE = "COUPLE",
  ATMOS_PHY_TB_TYPE = "MYNN",

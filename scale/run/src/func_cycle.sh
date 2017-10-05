@@ -189,21 +189,13 @@ staging_list () {
 # TMPDAT
 
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${ENSMODEL_DIR}/scale-rm_pp_ens|${DAT_SUBDIR}/exec/scale-rm_pp_ens
-${ENSMODEL_DIR}/scale-rm_init_ens|${DAT_SUBDIR}/exec/scale-rm_init_ens
-${ENSMODEL_DIR}/scale-rm_ens|${DAT_SUBDIR}/exec/scale-rm_ens
 ${COMMON_DIR}/pdbash|${DAT_SUBDIR}/exec/pdbash
-${OBSUTIL_DIR}/obsope|${DAT_SUBDIR}/exec/obsope
-${LETKF_DIR}/letkf|${DAT_SUBDIR}/exec/letkf
 ${SCRP_DIR}/config.nml.scale_pp|${DAT_SUBDIR}/conf/config.nml.scale_pp
 ${SCRP_DIR}/config.nml.scale_init|${DAT_SUBDIR}/conf/config.nml.scale_init
 ${SCRP_DIR}/config.nml.scale|${DAT_SUBDIR}/conf/config.nml.scale
 ${SCRP_DIR}/config.nml.ensmodel|${DAT_SUBDIR}/conf/config.nml.ensmodel
 ${SCRP_DIR}/config.nml.letkf|${DAT_SUBDIR}/conf/config.nml.letkf
 EOF
-#${SCALEDIR}/bin/scale-rm_pp|${DAT_SUBDIR}/exec/scale-rm_pp
-#${SCALEDIR}/bin/scale-rm_init|${DAT_SUBDIR}/exec/scale-rm_init
-#${SCALEDIR}/bin/scale-rm|${DAT_SUBDIR}/exec/scale-rm
 
 cat >> ${STAGING_DIR}/${STGINLIST_CONSTDB} << EOF
 ${SCALEDIR}/scale-rm/test/data/rad/cira.nc|${DAT_SUBDIR}/rad/cira.nc
@@ -223,15 +215,6 @@ if [ -e "${SCRP_DIR}/config.nml.obsope" ]; then
 fi
 if [ -e "${SCRP_DIR}/config.nml.grads_boundary" ]; then
   echo "${SCRP_DIR}/config.nml.grads_boundary|${DAT_SUBDIR}/conf/config.nml.grads_boundary" >> ${STAGING_DIR}/${STGINLIST}
-fi
-
-# H08
-if [ -e "${RTTOV_COEFB}" ] && [ -e "${RTTOV_SCCOEFB}" ]; then
-  cat >> ${STAGING_DIR}/${STGINLIST_CONSTDB} << EOF
-    cat >> $STAGING_DIR/stagein.dat << EOF
-${RTTOV_COEFB}|${DAT_SUBDIR}/rttov/rtcoef_himawari_8_ahi.bin
-${RTTOV_SCCOEFB}|${DAT_SUBDIR}/rttov/sccldcoef_himawari_8_ahi.bin
-EOF
 fi
 
 if [ "$TOPO_FORMAT" != 'prep' ]; then
@@ -256,13 +239,80 @@ if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
 fi
 
 #-------------------------------------------------------------------------------
+# TMPRUN
+
+cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${ENSMODEL_DIR}/scale-rm_pp_ens|${RUN_SUBDIR}/scale_pp/scale-rm_pp_ens
+${ENSMODEL_DIR}/scale-rm_init_ens|${RUN_SUBDIR}/scale_init/scale-rm_init_ens
+${ENSMODEL_DIR}/scale-rm_ens|${RUN_SUBDIR}/scale/scale-rm_ens
+${OBSUTIL_DIR}/obsope|${RUN_SUBDIR}/obsope/obsope
+${LETKF_DIR}/letkf|${RUN_SUBDIR}/letkf/letkf
+EOF
+
+# H08
+#-------------------
+if [ -e "${RTTOV_COEF}" ] && [ -e "${RTTOV_SCCOEF}" ]; then
+  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${RTTOV_COEF}|${RUN_SUBDIR}/obsope/rtcoef_himawari_8_ahi.dat
+${RTTOV_COEF}|${RUN_SUBDIR}/letkf/rtcoef_himawari_8_ahi.dat
+${RTTOV_SCCOEF}|${RUN_SUBDIR}/obsope/sccldcoef_himawari_8_ahi.dat
+${RTTOV_SCCOEF}|${RUN_SUBDIR}/letkf/sccldcoef_himawari_8_ahi.dat
+EOF
+
+# H08
+if [ -e "${RTTOV_COEFB}" ] && [ -e "${RTTOV_SCCOEFB}" ]; then
+  cat >> ${STAGING_DIR}/${STGINLIST_CONSTDB} << EOF
+    cat >> $STAGING_DIR/stagein.dat << EOF
+${RTTOV_COEFB}|${DAT_SUBDIR}/rttov/rtcoef_himawari_8_ahi.bin
+${RTTOV_SCCOEFB}|${DAT_SUBDIR}/rttov/sccldcoef_himawari_8_ahi.bin
+EOF
+fi
+
+
+fi
+
+#-------------------------------------------------------------------------------
 # TMPOUT
+
+if [ -e  "${INDIR}/vbc/Him8_vbca_${STIME}.dat" ]; then
+  path="vbc/Him8_vbca_${STIME}.dat"
+  echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+fi
+
+# empty directories
+#-------------------
+
+echo "|${OUT_SUBDIR}/const/log/" >> ${STAGING_DIR}/${STGINLIST}
+if ((PNETCDF != 1)); then
+  echo "|${OUT_SUBDIR}/const/topo/" >> ${STAGING_DIR}/${STGINLIST}
+  if ((LANDUSE_UPDATE != 1)); then
+    echo "|${OUT_SUBDIR}/const/landuse/" >> ${STAGING_DIR}/${STGINLIST}
+  fi
+fi
+
+#-------------------
 
 time=$STIME
 atime=$(datetime $time $LCYCLE s)
 loop=0
 while ((time <= ETIME)); do
   loop=$((loop+1))
+
+  # empty directories
+  #-------------------
+
+  if ((PNETCDF != 1)); then
+    if ((LANDUSE_UPDATE == 1)); then
+      echo "|${OUT_SUBDIR}/${time}/landuse/" >> ${STAGING_DIR}/${STGINLIST}
+    fi
+  fi
+
+  echo "|${OUT_SUBDIR}/${time}/log/scale_pp/" >> ${STAGING_DIR}/${STGINLIST}
+  echo "|${OUT_SUBDIR}/${time}/log/scale_init/" >> ${STAGING_DIR}/${STGINLIST}
+  echo "|${OUT_SUBDIR}/${time}/log/scale/" >> ${STAGING_DIR}/${STGINLIST}
+  echo "|${OUT_SUBDIR}/${atime}/log/obsope/" >> ${STAGING_DIR}/${STGINLIST}
+  echo "|${OUT_SUBDIR}/${atime}/log/letkf/" >> ${STAGING_DIR}/${STGINLIST}
+  echo "|${OUT_SUBDIR}/${atime}/obs/" >> ${STAGING_DIR}/${STGINLIST}
 
   #-------------------
   # stage-in
@@ -411,11 +461,21 @@ while ((time <= ETIME)); do
             pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}.boundary.nc"
             path="${time}/bdy/mean.boundary.nc"
             echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+            if ((USE_INIT_FROM_BDY == 1)); then
+              pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}.init_bdy.nc"
+              path="${time}/bdy/mean.init_bdy.nc"
+              echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+            fi
           else
             for q in $(seq $mem_np); do
               pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}/boundary$(printf $SCALE_SFX $((q-1)))"
               path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
               echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+              if ((USE_INIT_FROM_BDY == 1)); then
+                pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}/init_bdy$(printf $SCALE_SFX $((q-1)))"
+                path="${time}/bdy/mean/init_bdy$(printf $SCALE_SFX $((q-1)))"
+                echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+              fi
             done
           fi
         done
@@ -424,11 +484,21 @@ while ((time <= ETIME)); do
           pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}.boundary.nc"
           path="${time}/bdy/mean.boundary.nc"
           echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+          if ((USE_INIT_FROM_BDY == 1)); then
+            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}.init_bdy.nc"
+            path="${time}/bdy/mean.init_bdy.nc"
+            echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+          fi
         else
           for q in $(seq $mem_np); do
             pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}/boundary$(printf $SCALE_SFX $((q-1)))"
             path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
             echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+            if ((USE_INIT_FROM_BDY == 1)); then
+              pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}/init_bdy$(printf $SCALE_SFX $((q-1)))"
+              path="${time}/bdy/mean/init_bdy$(printf $SCALE_SFX $((q-1)))"
+              echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+            fi
           done
         fi
       fi
@@ -437,10 +507,18 @@ while ((time <= ETIME)); do
         if ((PNETCDF == 1)); then
           path="${time}/bdy/${name_m[$m]}.boundary.nc"
           echo "${DATA_BDY_SCALE_PREP}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+          if ((USE_INIT_FROM_BDY == 1)); then
+            path="${time}/bdy/${name_m[$m]}.init_bdy.nc"
+            echo "${DATA_BDY_SCALE_PREP}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+          fi
         else
           for q in $(seq $mem_np); do
             path="${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
             echo "${DATA_BDY_SCALE_PREP}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+            if ((USE_INIT_FROM_BDY == 1)); then
+              path="${time}/bdy/${name_m[$m]}/init_bdy$(printf $SCALE_SFX $((q-1)))"
+              echo "${DATA_BDY_SCALE_PREP}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+            fi
           done
         fi
       done
@@ -466,6 +544,13 @@ while ((time <= ETIME)); do
   #-------------------
   # stage-out
   #-------------------
+
+  # Himawari-8 bias correction coefficient
+  #-------------------
+  if ((loop == 1)); then
+    path="vbc/"
+    echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+  fi
 
   # anal
   #-------------------
@@ -519,6 +604,11 @@ while ((time <= ETIME)); do
         path="${time}/bdy/mean.boundary.nc"
 #        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
+        if ((USE_INIT_FROM_BDY == 1)); then
+          path="${time}/bdy/mean.init_bdy.nc"
+#          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
+        fi
       else
         path="${time}/bdy/mean/"
         echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
@@ -653,10 +743,10 @@ while ((time <= ETIME)); do
     fi
   fi
 
-  # obsgues
+  # obs
   #-------------------
-  if ((OBSOUT_OPT <= 2)); then
-    path="${atime}/obsgues/"
+  if ((OBSOUT_OPT <= 3)); then
+    path="${atime}/obs/"
     echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
   fi
 
@@ -1218,9 +1308,9 @@ for it in $(seq $its $ite); do
           fi
         elif ((OCEAN_FORMAT == 99 && mkinit != 1)); then
           if ((PNETCDF == 1)); then
-            ocean_base="$TMPOUT/${time}/anal/${mem_bdy}.init_bdy"
+            ocean_base="$TMPOUT/${time}/bdy/${mem_bdy}.init_bdy"
           else
-            ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
+            ocean_base="$TMPOUT/${time}/bdy/${mem_bdy}/init_bdy"
           fi
         fi
       fi
@@ -1235,9 +1325,9 @@ for it in $(seq $its $ite); do
           fi
         elif ((LAND_FORMAT == 99 && mkinit != 1)); then
           if ((PNETCDF == 1)); then
-            land_base="$TMPOUT/${time}/anal/${mem_bdy}.init_bdy"
+            land_base="$TMPOUT/${time}/bdy/${mem_bdy}.init_bdy"
           else
-            land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
+            land_base="$TMPOUT/${time}/bdy/${mem_bdy}/init_bdy"
           fi
         fi
       fi
@@ -1439,7 +1529,7 @@ for it in $(seq $nitmax); do
     m=$(((it-1)*parallel_mems+g))
     if ((m >= 1 && m <= mtot)); then
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
-           $atime ${name_m[$m]} $OUT_OPT $OBSOUT_OPT \
+           $atime ${name_m[$m]} $OUT_OPT \
            $ADAPTINFL $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
     fi
   fi

@@ -37,7 +37,6 @@ MODULE common_obs_scale
   USE common
   USE common_nml
   USE common_scale
-
   IMPLICIT NONE
   PUBLIC
 
@@ -121,7 +120,9 @@ MODULE common_obs_scale
     ! 
 #ifdef H08
     REAL(r_size),ALLOCATABLE :: lev(:) ! Him8
-    REAL(r_size),ALLOCATABLE :: val2(:) ! Him8 CA
+    REAL(r_size),ALLOCATABLE :: val2(:) ! Him8 sigma_o for AOEI (not CA)
+    REAL(r_size),ALLOCATABLE :: pred1(:) ! Him8 bias correction predictor 1 (nobs)
+    REAL(r_size),ALLOCATABLE :: pred2(:) ! Him8 bias correction predictor 1 (nobs)
 #endif
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
@@ -150,6 +151,7 @@ MODULE common_obs_scale
 
   type(obs_info),allocatable,save :: obs(:) ! observation information
   type(obs_da_value),save :: obsda_sort     ! sorted obsda
+  type(obs_da_value),save :: obsdep         ! obsdep information
 
   REAL(r_size),SAVE :: MIN_RADAR_REF
   REAL(r_size),SAVE :: RADAR_REF_THRES
@@ -276,8 +278,8 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
   SELECT CASE (elm)
   CASE(id_u_obs,id_v_obs)  ! U,V
     if (stggrd_ == 1) then
-      CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5,rj,u)  !###### should modity itpl_3d to prevent '1.0' problem....??
-      CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5,v)  !######
+      CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,u)  !###### should modity itpl_3d to prevent '1.0' problem....??
+      CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,v)  !######
     else
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
@@ -356,9 +358,9 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   qc = iqc_good
 
   if (stggrd_ == 1) then
-    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5d0,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
-    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5d0,vr)  !######
-    CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk-0.5d0,ri,rj,wr)  !######
+    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
+    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,vr)  !######
+    CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk-0.5_r_size,ri,rj,wr)  !######
   else
     CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,ur)
     CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,vr)
@@ -778,20 +780,33 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
     d=0.25d0
     Cd=0.6d0
 
-    lr= ( pi * ror * nor / ( ro * qr ) ) ** 0.25
-    ls= ( pi * ros * nos / ( ro * qs ) ) ** 0.25
-    lg= ( pi * rog * nog / ( ro * qg ) ) ** 0.25
-
     rofactor= ( roo / ro  ) ** 0.25
-    CALL com_gamma( 4.0_r_size + b , tmp_factor )
-    wr= a * tmp_factor / ( 6.0d0 * ( lr ** b ) )
-    wr= 1.0d-2*wr * rofactor
-    CALL com_gamma( 4.0_r_size + d , tmp_factor )
-    ws= c * tmp_factor / ( 6.0d0 * ( ls ** d ) )
-    ws= 1.0d-2*ws * rofactor
-    CALL com_gamma( 4.5_r_size , tmp_factor )
-    wg= tmp_factor * ( ( ( 4.0d0 * gg * 100.0d0 * rog )/( 3.0d0 * Cd * ro ) ) ** 0.5 )
-    wg= 1.0d-2*wg / ( 6.0d0 * ( lg ** 0.5 ) )
+    if(qr > 0.0d0)then
+      CALL com_gamma( 4.0_r_size + b , tmp_factor )
+      lr= ( pi * ror * nor / ( ro * qr ) ) ** 0.25
+      wr= a * tmp_factor / ( 6.0d0 * ( lr ** b ) )
+      wr= 1.0d-2*wr * rofactor
+    else
+      wr = 0.0d0
+    endif
+
+    if(qs > 0.0d0)then
+      CALL com_gamma( 4.0_r_size + d , tmp_factor )
+      ls= ( pi * ros * nos / ( ro * qs ) ) ** 0.25
+      ws= c * tmp_factor / ( 6.0d0 * ( ls ** d ) )
+      ws= 1.0d-2*ws * rofactor
+    else
+      ws = 0.0d0
+    endif
+ 
+    if(qg > 0.0d0)then
+      CALL com_gamma( 4.5_r_size , tmp_factor )
+      lg= ( pi * rog * nog / ( ro * qg ) ) ** 0.25
+      wg= tmp_factor * ( ( ( 4.0d0 * gg * 100.0d0 * rog )/( 3.0d0 * Cd * ro ) ) ** 0.5 )
+      wg= 1.0d-2*wg / ( 6.0d0 * ( lg ** 0.5 ) )
+    else
+      wg = 0.0d0
+    endif
 
     !Reflectivity weighted terminal velocity. 
     wt = ( wr * zr + ws * zs + wg * zg )/ ( zr + zs + zg )
@@ -1320,9 +1335,10 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 #ifdef H08
 subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,&
-                     nobs_H08,bias_H08,rmse_H08)
+                     nobs_H08,bias_H08,rmse_H08,bias_H08_bc,rmse_H08_bc,&
+                     aH08,bH08,vbcf,step)
 #else
-subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
+subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 #endif
   use scale_process, only: &
       PRC_myrank
@@ -1337,6 +1353,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
   REAL(r_size),INTENT(OUT) :: rmse(nid_obs)
   LOGICAL,INTENT(OUT) :: monit_type(nid_obs)
   logical,intent(in) :: use_key
+  integer,intent(in) :: step
 
   REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
@@ -1353,21 +1370,37 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 !  INTEGER :: ierr
 
 #ifdef H08
-  INTEGER,INTENT(OUT) :: nobs_H08(nch)
-  REAL(r_size),INTENT(OUT) :: bias_H08(nch)
-  REAL(r_size),INTENT(OUT) :: rmse_H08(nch)
+  INTEGER,INTENT(OUT) :: nobs_H08(NIRB_HIM8)
+  REAL(r_size),INTENT(OUT) :: bias_H08(NIRB_HIM8)
+  REAL(r_size),INTENT(OUT) :: rmse_H08(NIRB_HIM8)
+  REAL(r_size),INTENT(OUT) :: bias_H08_bc(NIRB_HIM8)
+  REAL(r_size),INTENT(OUT) :: rmse_H08_bc(NIRB_HIM8)
 
   real(r_size), allocatable :: ri_H08(:),rj_H08(:)
   real(r_size), allocatable :: lon_H08(:),lat_H08(:)
   integer :: nprof ! num of Him8 profile
-  real(r_size), allocatable :: yobs_H08(:,:),plev_obs_H08(:,:)
+  real(r_size), allocatable :: yobs_H08(:,:), yobs_H08_bc(:,:)
+  real(r_size), allocatable :: plev_obs_H08(:,:)
   real(r_size), allocatable :: yobs_H08_clr(:,:)
+  real(r_size), allocatable :: zangle_H08(:) ! zenith angle
   integer, allocatable :: qc_H08(:,:)
   integer, allocatable :: n2prof(:) ! Him8 prof num
-  integer, allocatable :: prof2B07(:) ! index of Him8 band 7
+  integer, allocatable :: prof2B07(:) ! obs index of Him8 band 7
+  integer, allocatable :: prof2nda(:) ! obsda index of Him8 band 7
   integer :: ch, np
   integer :: iset_H08
-  real(r_size) :: CA ! (Okamoto et al., 2014QJRMS)
+  !real(r_size) :: CA ! (Okamoto et al., 2014QJRMS)
+
+  ! bias correction
+  integer,parameter :: nmin = 400 ! parameter from Miyoshi et al. (2010) & Sato (2007)
+  integer :: nobs_b
+  integer :: i, j, didx, npr 
+  real(r_size), intent(in) :: vbcf(H08_NPRED,NIRB_HIM8)
+  real(r_size), intent(out) :: aH08(H08_NPRED,H08_NPRED,NIRB_HIM8)
+  real(r_size), intent(out) :: bH08(H08_NPRED,NIRB_HIM8) ! bias correction
+  real(r_size), allocatable :: pred(:,:)
+  real(r_size) :: tmp
+  real(r_size) :: pbeta, predt
 
 #endif
 
@@ -1391,6 +1424,17 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
   allocate (ohx(nnobs))
   allocate (oqc(nnobs))
 
+#ifdef DEBUG
+  if (step < 0 .or. step > 2) then
+    write (6, *) '[Error] monit_obs: step should be 0, 1, or 2.'
+    stop
+  end if
+#endif
+  if (step == 1) then
+    obsdep%nobs = nnobs
+    call obs_da_value_allocate(obsdep, 0)
+  end if
+
   oqc = -1
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ri,rj,rk)
@@ -1402,11 +1446,29 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
       nn = n
     end if
 
-!print *, n, nn
-
-
     iset = obsda_sort%set(nn)
     iidx = obsda_sort%idx(nn)
+
+    if (step == 1) then
+      obsdep%set(n) = iset
+      obsdep%idx(n) = iidx
+      obsdep%val(n) = obs(iset)%dat(iidx)
+#ifdef DEBUG
+    else if (step == 2) then
+      if (obsdep%set(n) /= iset) then
+        write (6, *) "[Error] 'set' for y_b and y_a are inconsistent!"
+        stop
+      end if
+      if (obsdep%idx(n) /= iidx) then
+        write (6, *) "[Error] 'idx' for y_b and y_a are inconsistent!"
+        stop
+      end if
+      if (obsdep%val(n) /= obs(iset)%dat(iidx)) then
+        write (6, *) "[Error] 'val' for y_b and y_a are inconsistent!"
+        stop
+      end if
+#endif
+    end if
 
     if (obsda_sort%qc(nn) /= iqc_good) write(6, *) '############', obsda_sort%qc(nn)
 
@@ -1474,6 +1536,18 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
       if (oqc(n) == iqc_good) then
         ohx(n) = obs(iset)%dat(iidx) - ohx(n)
+      else
+        ohx(n) = undef
+      end if
+
+      if (step == 1) then
+        obsdep%qc(n) = oqc(n)
+        obsdep%ri(n) = ohx(n)
+      else if (step == 2) then
+        if (obsdep%qc(n) == iqc_good) then ! Use the QC value of y_a only if the QC of y_b is good
+          obsdep%qc(n) = oqc(n)            !
+        end if                             !
+        obsdep%rj(n) = ohx(n)
       end if
 !write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iset)%elm(iidx), obs(iset)%typ(iidx), obs(iset)%lon(iidx), obs(iset)%lat(iidx), obs(iset)%lev(iidx), obs(iset)%dat(iidx), obs(iset)%err(iidx), ohx(n), oqc(n)
 
@@ -1491,6 +1565,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
   allocate(n2prof(nnobs))
   allocate(prof2B07(nnobs))
+  allocate(prof2nda(nnobs))
   allocate(ri_H08(0:nnobs))
   allocate(rj_H08(0:nnobs))
   allocate(lon_H08(nnobs))
@@ -1532,6 +1607,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
       ch = nint(obs(iset)%lev(iidx)) - 6 ! 
       prof2B07(nprof) = iidx - ch + 1
+      prof2nda(nprof) = n
     endif
 
     if(nprof >= 1) n2prof(n) = nprof
@@ -1540,20 +1616,22 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
   if(nprof >= 1) then
 
-    allocate(yobs_H08(nch,nprof))
-    allocate(yobs_H08_clr(nch,nprof))
-    allocate(plev_obs_H08(nch,nprof))
-    allocate(qc_H08(nch,nprof))
+    allocate(yobs_H08(NIRB_HIM8,nprof))
+    allocate(yobs_H08_bc(NIRB_HIM8,nprof))
+    allocate(yobs_H08_clr(NIRB_HIM8,nprof))
+    allocate(plev_obs_H08(NIRB_HIM8,nprof))
+    allocate(qc_H08(NIRB_HIM8,nprof))
+    allocate(zangle_H08(nprof))
 
     call Trans_XtoY_H08(nprof,ri_H08(1:nprof),rj_H08(1:nprof),&
                         lon_H08(1:nprof),lat_H08(1:nprof),v3dgh,v2dgh,&
                         yobs_H08,yobs_H08_clr,&
-                        plev_obs_H08,qc_H08)
+                        plev_obs_H08,qc_H08,&
+                        zangle_H08)
 
-! !!"DEBUG mode" compile enables to get O-B statistics!!
-#ifndef DEBUG
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ch,CA)
-#endif
+    yobs_H08_bc = yobs_H08
+
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ch,pbeta,npr,predt)
     do n = 1, nnobs
       if (use_key) then
         nn = obsda_sort%key(n)
@@ -1563,36 +1641,64 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
       iset = obsda_sort%set(nn)
       iidx = obsda_sort%idx(nn)
 
+
+      if (step == 1) then
+        obsdep%set(n) = iset
+        obsdep%idx(n) = iidx
+        obsdep%val(n) = obs(iset)%dat(iidx)
+      end if
+
       oelm(n) = obs(iset)%elm(iidx)
       if(oelm(n) /= id_H08IR_obs)cycle
 
       ch = nint(obs(iset)%lev(iidx)) - 6 ! 
 
-      CA = (abs(yobs_H08(ch,n2prof(n)) - yobs_H08_clr(ch,n2prof(n))) & !CM
-            + abs(obs(iset)%dat(iidx) - yobs_H08_clr(ch,n2prof(n))) ) * 0.5d0 !CO
+      !CA = (abs(yobs_H08(ch,n2prof(n)) - yobs_H08_clr(ch,n2prof(n))) & !CM
+      !      + abs(obs(iset)%dat(iidx) - yobs_H08_clr(ch,n2prof(n))) ) * 0.5d0 !CO
 
       ohx(n) = obs(iset)%dat(iidx) - yobs_H08(ch,n2prof(n)) ! Obs - B/A
+
+      pbeta = 0.0d0
+      do npr = 1, H08_NPRED
+        if(npr == 1) predt = zangle_H08(n2prof(n))
+        if(npr == 2) predt = yobs_H08(ch,n2prof(n))
+        pbeta = pbeta + predt * vbcf(npr,ch)
+      enddo
+      ohx(n) = ohx(n) - pbeta
+ 
+
       !!! simple bias correction here !!!
-      if(H08_BIAS_SIMPLE)then
-        if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
-          ohx(n) = ohx(n) - H08_BIAS_CLOUD(ch)
-        else
-          ohx(n) = ohx(n) - H08_BIAS_CLEAR(ch)
-        endif
-      endif
+      !if(H08_BIAS_SIMPLE)then
+      !  if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
+      !    ohx(n) = ohx(n) - H08_BIAS_CLOUD(ch)
+      !  else
+      !    ohx(n) = ohx(n) - H08_BIAS_CLEAR(ch)
+      !  endif
+      !endif
       oqc(n) = qc_H08(ch,n2prof(n))
 
+
+      if (step == 1) then
+        obsdep%qc(n) = oqc(n)
+        obsdep%ri(n) = ohx(n)
+      else if (step == 2) then
+        if (obsdep%qc(n) == iqc_good) then ! Use the QC value of y_a only if the QC of y_b is good
+          obsdep%qc(n) = oqc(n)            !
+        end if                             !
+        obsdep%rj(n) = ohx(n)
+      end if
+
 #ifdef DEBUG
-      write(6,'(a10,i4,a1,f8.2,a1,f8.2,a1,f8.2,a1,f8.2,a1,f8.2,a1,i7)')"Him8-STAT,",&
-                    ch+6,",",obs(iset)%lon(iidx),",",obs(iset)%lat(iidx),",",&
-                    obs(iset)%dat(iidx),",",ohx(n),",",yobs_H08_clr(ch,n2prof(n)),",",&
-                    oqc(n)
+!      write(6,'(a10,i4,a1,f8.2,a1,f8.2,a1,f8.2,a1,f8.2,a1,f8.2,a1,i7)')"Him8-STAT,",&
+!                    ch+6,",",obs(iset)%lon(iidx),",",obs(iset)%lat(iidx),",",&
+!                    obs(iset)%dat(iidx),",",ohx(n),",",yobs_H08_clr(ch,n2prof(n)),",",&
+!                    oqc(n)
 #endif
 
     end do ! [ n = 1, nnobs ]
-#ifndef DEBUG
 !$OMP END PARALLEL DO
-#endif
+
+
 
     deallocate(ri_H08, rj_H08)
     deallocate(lon_H08, lat_H08)
@@ -1601,20 +1707,32 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
     ! get [Obs - B/A] for Him8 monitor
 !!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(np,ch,CA)
     do np = 1, nprof
-      do ch = 1, nch
+      do ch = 1, NIRB_HIM8
         yobs_H08(ch,np) = obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08(ch,np)
-        if(H08_BIAS_SIMPLE)then
-          CA = (abs(yobs_H08(ch,np) - yobs_H08_clr(ch,np)) & !CM
-               + abs(obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08_clr(ch,np))) * 0.5d0 !CO
-          if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
-            yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLOUD(ch)
-          else
-            yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLEAR(ch)
-          endif
+  
+        pbeta = 0.0d0
+        if(H08_VBC_USE)then
+          do npr = 1, H08_NPRED
+            if(npr == 1) predt = zangle_H08(np)
+            if(npr == 2) predt = yobs_H08_bc(ch,np)
+            pbeta = pbeta + predt * vbcf(npr,ch)
+          enddo
         endif
 
-      enddo
-    enddo
+        yobs_H08_bc(ch,np) = obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08_bc(ch,np) - pbeta
+
+        !if(H08_BIAS_SIMPLE)then
+        !  CA = (abs(yobs_H08(ch,np) - yobs_H08_clr(ch,np)) & !CM
+        !       + abs(obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08_clr(ch,np))) * 0.5d0 !CO
+        !  if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
+        !    yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLOUD(ch)
+        !  else
+        !    yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLEAR(ch)
+        !  endif
+        !endif
+
+      enddo ! ch
+    enddo ! np
 !!$OMP END PARALLEL DO
 
     deallocate(yobs_H08_clr)
@@ -1661,14 +1779,97 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key)
 
 
   call monit_dep(nnobs,oelm,ohx,oqc,nobs,bias,rmse)
+
 #ifdef H08
+  aH08 = 0.0d0
+  bH08 = 0.0d0
   if(nprof >=1)then
-    call monit_dep_H08(nprof,yobs_H08,qc_H08,nobs_H08,bias_H08,rmse_H08)
-    deallocate(yobs_H08, qc_H08)
+    call monit_dep_H08(nprof,yobs_H08,yobs_H08_bc,qc_H08,nobs_H08,bias_H08,rmse_H08,bias_H08_bc,rmse_H08_bc)
+
+    ! bias correction
+    aH08 = 0.0d0
+    bH08 = 0.0d0
+
+    if(step == 2 .and. H08_VBC_USE) then
+
+      do ch = 1, NIRB_HIM8
+        if(H08_BAND_USE(ch) /= 1) cycle
+        nobs_b = nobs_H08(ch)
+
+        if(nobs_b > 0)then
+
+          if(allocated(pred)) deallocate(pred)
+          allocate(pred(H08_NPRED,nobs_b)) ! pr 
+
+          do np = 1, nprof ! profile/obs loop
+            if(qc_H08(ch,np) /= iqc_good) cycle
+            n = prof2nda(np)
+            if (use_key) then
+              nn = obsda_sort%key(n)
+            else
+              nn = n
+            end if
+            iset = obsda_sort%set(nn)
+            iidx = obsda_sort%idx(nn)
+
+            didx = (prof2B07(np) + ch - 1) - iidx
+
+            if(didx /= 0)then
+              nn = nn + didx
+              iset = obsda_sort%set(nn)
+              iidx = obsda_sort%idx(nn)
+            endif
+     
+            !
+            ! p R^-1 p^T
+            !
+            do j = 1, H08_NPRED
+              if(j == 1) pred(j,np) = zangle_H08(np)
+              if(j == 2) pred(j,np) = obs(iset)%dat(iidx)
+
+              do i = 1, H08_NPRED
+                if(i == 1) pred(i,np) = zangle_H08(np)
+                if(i == 2) pred(i,np) = obs(iset)%dat(iidx)
+
+                aH08(i,j,ch) = aH08(i,j,ch) + pred(i,np) * pred(j,np) / (obsda_sort%val2(nn)**2)
+              enddo ! i
+            enddo ! j
+            !
+            ! Add B_beta^-1
+            !
+            ! Sato (2007)
+            if(nobs_b < nmin)then
+              tmp = real(nmin, kind=r_size) / (obsda_sort%val2(nn)**2)
+            else
+              tmp = real(nobs_b, kind=r_size) / dlog10(real(nobs_b,kind=r_size)/real(nmin,kind=r_size)) &
+                      / (obsda_sort%val2(nn)**2)
+            endif
+            do i = 1, H08_NPRED
+              aH08(i,i,ch) = aH08(i,i,ch) + tmp
+            enddo
+            !
+            ! p R^-1 d
+            !
+            do i = 1, H08_NPRED
+              bH08(i,ch) = bH08(i,ch) + pred(i,np)  / (obsda_sort%val2(nn)**2) &
+                             & * yobs_H08(ch,np)
+            enddo 
+          enddo ! np
+        endif ! [nobs_b > 0]
+
+        deallocate(pred)
+
+      enddo ! ch
+
+    endif ! [step == 2]
+
+    !deallocate(yobs_H08, qc_H08)
   else 
     nobs_H08 = 0
     bias_H08 = 0.0d0
     rmse_H08 = 0.0d0
+    bias_H08_bc = 0.0d0
+    rmse_H08_bc = 0.0d0
   endif ! [nprof >= 1]
   
 #endif
@@ -1819,36 +2020,47 @@ END SUBROUTINE monit_print
 !
 ! monitor for Himawari-8 IR observations --
 #ifdef H08
-SUBROUTINE monit_dep_H08(np,dep,qc,nobs,bias,rmse)
+SUBROUTINE monit_dep_H08(np,dep,dep_bc,qc,nobs,bias,rmse,bias_bc,rmse_bc)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: np ! Num of profiles
-  REAL(r_size),INTENT(IN) :: dep(nch,np)
-  INTEGER,INTENT(IN) :: qc(nch,np)
-  INTEGER,INTENT(OUT) :: nobs(nch)
-  REAL(r_size),INTENT(OUT) :: bias(nch)
-  REAL(r_size),INTENT(OUT) :: rmse(nch)
+  REAL(r_size),INTENT(IN) :: dep(NIRB_HIM8,np)
+  REAL(r_size),INTENT(IN) :: dep_bc(NIRB_HIM8,np)
+  INTEGER,INTENT(IN) :: qc(NIRB_HIM8,np)
+  INTEGER,INTENT(OUT) :: nobs(NIRB_HIM8)
+  REAL(r_size),INTENT(OUT) :: bias(NIRB_HIM8)
+  REAL(r_size),INTENT(OUT) :: rmse(NIRB_HIM8)
+  REAL(r_size),INTENT(OUT) :: bias_bc(NIRB_HIM8)
+  REAL(r_size),INTENT(OUT) :: rmse_bc(NIRB_HIM8)
   INTEGER :: n,ch
   
   nobs = 0
   rmse = 0.0d0
   bias = 0.0d0
+  rmse_bc = 0.0d0
+  bias_bc = 0.0d0
     
   DO n = 1 , np ! profile
-  DO ch = 1 , nch ! band
+  DO ch = 1 , NIRB_HIM8 ! band
     IF(qc(ch,n) /= iqc_good) CYCLE
     nobs(ch) = nobs(ch) + 1
     bias(ch) = bias(ch) + dep(ch,n)
     rmse(ch) = rmse(ch) + dep(ch,n)**2
+    bias_bc(ch) = bias_bc(ch) + dep_bc(ch,n)
+    rmse_bc(ch) = rmse_bc(ch) + dep_bc(ch,n)**2
   END DO
   END DO
 
-  DO ch = 1, nch
+  DO ch = 1, NIRB_HIM8
     IF(nobs(ch) == 0) THEN
       bias(ch) = undef
       rmse(ch) = undef
+      bias_bc(ch) = undef
+      rmse_bc(ch) = undef
     ELSE
       bias(ch) = bias(ch) / REAL(nobs(ch),r_size)
       rmse(ch) = SQRT(rmse(ch) / REAL(nobs(ch),r_size))
+      bias_bc(ch) = bias_bc(ch) / REAL(nobs(ch),r_size)
+      rmse_bc(ch) = SQRT(rmse_bc(ch) / REAL(nobs(ch),r_size))
     END IF
   END DO
 
@@ -1857,36 +2069,36 @@ END SUBROUTINE monit_dep_H08
 !
 SUBROUTINE monit_print_H08(nobs,bias,rmse,monit_type)
   IMPLICIT NONE
-  INTEGER,INTENT(IN) :: nobs(nch)
-  REAL(r_size),INTENT(IN) :: bias(nch)
-  REAL(r_size),INTENT(IN) :: rmse(nch)
-  LOGICAL,INTENT(IN),OPTIONAL :: monit_type(nch)
+  INTEGER,INTENT(IN) :: nobs(NIRB_HIM8)
+  REAL(r_size),INTENT(IN) :: bias(NIRB_HIM8)
+  REAL(r_size),INTENT(IN) :: rmse(NIRB_HIM8)
+  LOGICAL,INTENT(IN),OPTIONAL :: monit_type(NIRB_HIM8)
   
-  character(12) :: var_show(nch)
-  character(12) :: nobs_show(nch)
-  character(12) :: bias_show(nch)
-  character(12) :: rmse_show(nch)
-  character(12) :: flag_show(nch)
+  character(12) :: var_show(NIRB_HIM8)
+  character(12) :: nobs_show(NIRB_HIM8)
+  character(12) :: bias_show(NIRB_HIM8)
+  character(12) :: rmse_show(NIRB_HIM8)
+  character(12) :: flag_show(NIRB_HIM8)
 
-  integer :: i, itv, n
+  integer :: i, n
   character(4) :: nstr
-  character(12) :: tmpstr(nch)
-  character(12) :: tmpstr2(nch)
+  character(12) :: tmpstr(NIRB_HIM8)
+  character(12) :: tmpstr2(NIRB_HIM8)
 
-  character(3) :: B3(nch)
+  character(3) :: B3(NIRB_HIM8)
 
-  logical :: monit_type_(nch)
+  logical :: monit_type_(NIRB_HIM8)
 
   monit_type_ = .true.
   if (present(monit_type)) monit_type_ = monit_type
 
   n = 0
-  do i = 1, nch
+  do i = 1, NIRB_HIM8
     n = n + 1
 
     B3(i) = ch2BB_Him8(i)
 
-    if(H08_CH_USE(i) == 1)then
+    if(H08_BAND_USE(i) == 1)then
       write(flag_show(n),'(A12)') "YES"
     else
       write(flag_show(n),'(A12)') " NO"
@@ -1981,6 +2193,8 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
 #ifdef H08
   ALLOCATE( obsda%lev (obsda%nobs) ) ! Him8
   ALLOCATE( obsda%val2 (obsda%nobs) ) ! Him8
+  ALLOCATE( obsda%pred1 (obsda%nobs) ) ! Him8
+  ALLOCATE( obsda%pred2 (obsda%nobs) ) ! Him8
 #endif
   ALLOCATE( obsda%qc  (obsda%nobs) )
   ALLOCATE( obsda%ri  (obsda%nobs) )
@@ -1993,6 +2207,8 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
 #ifdef H08
   obsda%lev = 0.0d0 ! Him8
   obsda%val2 = 0.0d0 ! Him8
+  obsda%pred1 = 0.0d0 ! Him8
+  obsda%pred2 = 0.0d0 ! Him8
 #endif
   obsda%qc = 0
   obsda%ri = 0.0d0
@@ -2021,6 +2237,8 @@ SUBROUTINE obs_da_value_deallocate(obsda)
 #ifdef H08
   IF(ALLOCATED(obsda%lev   )) DEALLOCATE(obsda%lev   ) ! Him8
   IF(ALLOCATED(obsda%val2   )) DEALLOCATE(obsda%val2   ) ! Him8
+  IF(ALLOCATED(obsda%pred1   )) DEALLOCATE(obsda%pred1   ) ! Him8
+  IF(ALLOCATED(obsda%pred2   )) DEALLOCATE(obsda%pred2   ) ! Him8
 #endif
   IF(ALLOCATED(obsda%ensval)) DEALLOCATE(obsda%ensval)
   IF(ALLOCATED(obsda%qc    )) DEALLOCATE(obsda%qc    )
@@ -2244,8 +2462,7 @@ SUBROUTINE read_obs_da(cfile,obsda,im)
   TYPE(obs_da_value),INTENT(INOUT) :: obsda
   INTEGER,INTENT(IN) :: im
 #ifdef H08
-!  REAL(r_sngl) :: wk(7) ! H08
-  REAL(r_sngl) :: wk(8) ! H08
+  REAL(r_sngl) :: wk(10) ! H08
 #else
   REAL(r_sngl) :: wk(6) ! H08
 #endif
@@ -2270,6 +2487,8 @@ SUBROUTINE read_obs_da(cfile,obsda,im)
 #ifdef H08
     obsda%lev(n) = REAL(wk(7),r_size) ! Him8
     obsda%val2(n) = REAL(wk(8),r_size) ! Him8
+    obsda%pred1(n) = REAL(wk(9),r_size) ! Him8
+    obsda%pred2(n) = REAL(wk(10),r_size) ! Him8
 #endif
   END DO
   CLOSE(iunit)
@@ -2285,8 +2504,7 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
   LOGICAL,INTENT(IN),OPTIONAL :: append
   LOGICAL :: append_
 #ifdef H08
-!  REAL(r_sngl) :: wk(7) ! H08
-  REAL(r_sngl) :: wk(8) ! H08
+  REAL(r_sngl) :: wk(10) ! H08
 #else
   REAL(r_sngl) :: wk(6) 
 #endif
@@ -2315,6 +2533,8 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
 #ifdef H08
     wk(7) = REAL(obsda%lev(n),r_sngl) ! Him8
     wk(8) = REAL(obsda%val2(n),r_sngl) ! Him8
+    wk(9) = REAL(obsda%pred1(n),r_sngl) ! Him8
+    wk(10) = REAL(obsda%pred2(n),r_sngl) ! Him8
 #endif
     WRITE(iunit) wk
   END DO
@@ -2327,7 +2547,9 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(OUT) :: nn
-  REAL(r_sngl) :: wk(7),tmp
+!  REAL(r_sngl) :: wk(8)
+  INTEGER :: nrec
+  REAL(r_sngl) :: tmp
   INTEGER :: ios
 !  INTEGER :: ir,iv
   INTEGER :: iunit
@@ -2335,6 +2557,11 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
   INTEGER :: sz
   REAL(r_size),INTENT(OUT) :: radarlon,radarlat,radarz
 
+  IF(RADAR_OBS_4D) THEN
+    nrec = 8
+  ELSE
+    nrec = 7
+  END IF
   nn = 0
 !  iv = 0
 !  ir = 0
@@ -2369,7 +2596,7 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
 ! get file size by reading through the entire file... too slow for big files
 !-----------------------------
 !    DO
-!      READ(iunit,IOSTAT=ios) wk
+!      READ(iunit,IOSTAT=ios) wk(1:nrec)
 !      IF(ios /= 0) EXIT
 !!      SELECT CASE(NINT(wk(1)))
 !!      CASE(id_radar_ref_obs,id_radar_ref_zero_obs)
@@ -2385,11 +2612,11 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
 !-----------------------------
     INQUIRE(UNIT=iunit, SIZE=sz)
     sz = sz - r_sngl * (1+2) * 3 ! substract the radar data header
-    IF (MOD(sz, r_sngl * (7+2)) /= 0) THEN
+    IF (MOD(sz, r_sngl * (nrec+2)) /= 0) THEN
       WRITE(6,'(2A)') cfile,': Reading error -- skipped'
       RETURN
     END IF
-    nn = sz / (r_sngl * (7+2))
+    nn = sz / (r_sngl * (nrec+2))
 !-----------------------------
 
     WRITE(6,*)' RADAR FILE ', cfile
@@ -2411,12 +2638,18 @@ SUBROUTINE read_obs_radar(cfile,obs)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(INOUT) :: obs
-  REAL(r_sngl) :: wk(7)
+  REAL(r_sngl) :: wk(8)
+  INTEGER :: nrec
   REAL(r_sngl) :: tmp
   INTEGER :: n,iunit,ios
 
 !  call obs_info_allocate(obs)
 
+  IF(RADAR_OBS_4D) THEN
+    nrec = 8
+  ELSE
+    nrec = 7
+  END IF
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   READ(iunit, iostat=ios)tmp
@@ -2426,7 +2659,7 @@ SUBROUTINE read_obs_radar(cfile,obs)
   READ(iunit, iostat=ios)tmp
   IF(ios /= 0) RETURN
   DO n=1,obs%nobs
-    READ(iunit) wk
+    READ(iunit) wk(1:nrec)
     obs%elm(n) = NINT(wk(1))
     obs%lon(n) = REAL(wk(2),r_size)
     obs%lat(n) = REAL(wk(3),r_size)
@@ -2435,7 +2668,11 @@ SUBROUTINE read_obs_radar(cfile,obs)
     obs%err(n) = REAL(wk(6),r_size)
 !    obs%typ(n) = NINT(wk(7))
     obs%typ(n) = 22
-    obs%dif(n) = 0.0d0
+    IF(RADAR_OBS_4D) THEN
+      obs%dif(n) = REAL(wk(8),r_size)
+    ELSE
+      obs%dif(n) = 0.0d0
+    END IF
   END DO
   CLOSE(iunit)
 
@@ -2450,9 +2687,15 @@ SUBROUTINE write_obs_radar(cfile,obs,append,missing)
   LOGICAL,INTENT(IN),OPTIONAL :: missing
   LOGICAL :: append_
   LOGICAL :: missing_
-  REAL(r_sngl) :: wk(7)
+  REAL(r_sngl) :: wk(8)
+  INTEGER :: nrec
   INTEGER :: n,iunit
 
+  IF(RADAR_OBS_4D) THEN
+    nrec = 8
+  ELSE
+    nrec = 7
+  END IF
   iunit=92
   append_ = .false.
   IF(present(append)) append_ = append
@@ -2476,7 +2719,10 @@ SUBROUTINE write_obs_radar(cfile,obs,append,missing)
       wk(5) = REAL(obs%dat(n),r_sngl)
       wk(6) = REAL(obs%err(n),r_sngl)
       wk(7) = REAL(obs%typ(n),r_sngl)
-      WRITE(iunit) wk
+      IF(RADAR_OBS_4D) THEN
+        wk(8) = REAL(obs%dif(n),r_sngl)
+      END IF
+      WRITE(iunit) wk(1:nrec)
     end if
   END DO
   CLOSE(iunit)
@@ -2666,15 +2912,27 @@ END SUBROUTINE wgt_ave2d
 #ifdef H08
 ! --
 !
-SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,stggrd)
+SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc,zenith1d,stggrd)
   use scale_mapproj, only: &
       MPRJ_rotcoef
   use scale_H08_fwd12
   use scale_grid_index, only: &
-    KHALO
+      KHALO, KMAX, &
+      JHALO, IHALO
+  use scale_const, only: &
+      CONST_D2R
+  use scale_atmos_phy_rd_profile, only: &
+      ATMOS_PHY_RD_PROFILE_read, &
+      ATMOS_PHY_RD_PROFILE_setup_zgrid
+  use scale_atmos_hydrometeor, only: &
+      N_HYD
+  use scale_atmos_aerosol, only: &
+      N_AE
 
   IMPLICIT NONE
-  INTEGER :: np, k, ch
+  INTEGER :: np, ch
+  REAL(r_size),PARAMETER :: HIM8_LON = 140.7d0
+
   INTEGER,INTENT(IN) :: nprof ! Num of Brightness Temp "Loc" observed by Himawari-8
                               ! NOTE: multiple channels (obs) on each grid point !!
   REAL(r_size),INTENT(IN) :: ri(nprof),rj(nprof)
@@ -2702,30 +2960,124 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,
   REAL(r_size) :: lat1d(nprof)
   REAL(r_size) :: topo1d(nprof)
   REAL(r_size) :: lsmask1d(nprof)
-!  REAL(r_size) :: ztop1d(nprof)
+  REAL(r_size),INTENT(OUT) :: zenith1d(nprof) ! predictor for bias correction
 
 ! -- brightness temp from RTTOV
-  REAL(r_size) :: btall_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
-  REAL(r_size) :: btclr_out(nch,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
-! -- transmittance from RTTOV
-  REAL(r_size) :: trans_out(nlev,nch,nprof)
+  REAL(r_size) :: btall_out(NIRB_HIM8,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
+  REAL(r_size) :: btclr_out(NIRB_HIM8,nprof) ! NOTE: RTTOV always calculates all (10) channels!!
 ! -- cloud top height
   REAL(r_size) :: ctop_out(nprof) 
 
-  REAL(r_size) :: max_weight(nch,nprof)
-  REAL(r_size) :: tmp_weight
+  REAL(r_size),INTENT(OUT) :: yobs(NIRB_HIM8,nprof)
+  REAL(r_size),INTENT(OUT) :: yobs_clr(NIRB_HIM8,nprof)
+  INTEGER,INTENT(OUT) :: qc(NIRB_HIM8,nprof)
+  REAL(r_size),INTENT(OUT) :: mwgt_plev(NIRB_HIM8,nprof)
 
-  REAL(r_size),INTENT(OUT) :: yobs(nch,nprof)
-  REAL(r_size),INTENT(OUT) :: yobs_clr(nch,nprof)
-  INTEGER,INTENT(OUT) :: qc(nch,nprof)
-  REAL(r_size),INTENT(OUT) :: plev_obs(nch,nprof)
-
-  REAL(r_size) :: rdp ! delta p
   INTEGER :: slev, elev
 
   REAL(r_size) :: utmp, vtmp ! U10m & V10m tmp for rotation
   REAL(r_size),PARAMETER :: btmax = 400.0d0
   REAL(r_size),PARAMETER :: btmin = 100.0d0
+
+  real(r_size) :: blon, blat ! lat/lon at the domain center
+  integer :: k, kidx_rlx
+
+  real(RP), parameter:: RD_TOA  = 100.0_RP !< top of atmosphere [km]
+  integer, parameter :: RD_KADD = 10     !< RD_KMAX = KMAX + RD_KADD
+  integer :: RD_KMAX ! # of computational cells: z for radiation scheme
+
+  integer, parameter :: MSTRN_ngas     =  7 !< # of gas species ! MSTRNX
+  integer, parameter :: MSTRN_ncfc     = 28 !< # of CFC species ! MSTRNX
+
+  integer, parameter :: ngas = MSTRN_ngas
+  integer, parameter :: ncfc = MSTRN_ncfc
+  integer, parameter :: RD_naero      = N_HYD + N_AE ! # of cloud/aerosol species
+
+  real(RP), allocatable :: RD_zh          (:)   ! altitude    at the interface [km]
+  real(RP), allocatable :: RD_z           (:)   ! altitude    at the center [km]
+  real(RP), allocatable :: RD_rhodz       (:)   ! density * delta z [kg/m2]
+  real(RP), allocatable :: RD_pres        (:)   ! pressure    at the center [hPa]
+  real(RP), allocatable :: RD_presh       (:)   ! pressure    at the interface [hPa]
+  real(RP), allocatable :: RD_temp        (:)   ! temperature at the center [K]
+  real(RP), allocatable :: RD_temph       (:)   ! temperature at the interface [K]
+  real(RP), allocatable :: RD_gas         (:,:) ! gas species   volume mixing ratio [ppmv]
+  real(RP), allocatable :: RD_cfc         (:,:) ! CFCs          volume mixing ratio [ppmv]
+  real(RP), allocatable :: RD_aerosol_conc(:,:) ! cloud/aerosol volume mixing ratio [ppmv]
+  real(RP), allocatable :: RD_aerosol_radi(:,:) ! cloud/aerosol effective radius [cm]
+  real(RP), allocatable :: RD_cldfrac     (:)   ! cloud fraction (0-1)
+
+
+  !
+  ! Extrapolate input profiles by using climatology (MIPAS)
+  ! Based on "scalelib/src/atmos-physics/scale_atmos_phy_rd_mstrnx.F90"
+  !
+
+  ! Get basepoint lat/lon
+  call ij2phys(real(nlong/2+IHALO, kind=r_size),&
+               real(nlatg/2+JHALO, kind=r_size),&
+               blon, blat)
+
+  ! --- setup MSTRN parameter
+  !call RD_MSTRN_setup( ngas, & ! [OUT]
+  !                     ncfc  ) ! [OUT]
+
+  !--- setup climatological profile
+  !    Done from common_mpi_scale
+
+  !--- setup climatological profile
+  !    Done from common_mpi_scale
+
+  RD_KMAX      = KMAX + RD_KADD
+
+  !--- allocate arrays
+  ! input
+  allocate( RD_zh   (RD_KMAX+1) )
+  allocate( RD_z    (RD_KMAX  ) )
+
+  allocate( RD_rhodz(RD_KMAX  ) )
+  allocate( RD_pres (RD_KMAX  ) )
+  allocate( RD_presh(RD_KMAX+1) )
+  allocate( RD_temp (RD_KMAX  ) )
+  allocate( RD_temph(RD_KMAX+1) )
+
+  allocate( RD_gas         (RD_KMAX,ngas    ) )
+  allocate( RD_cfc         (RD_KMAX,ncfc    ) )
+  allocate( RD_aerosol_conc(RD_KMAX,RD_naero) )
+  allocate( RD_aerosol_radi(RD_KMAX,RD_naero) )
+  allocate( RD_cldfrac     (RD_KMAX         ) )
+
+  !--- setup vartical grid for radiation (larger TOA than Model domain)
+  call ATMOS_PHY_RD_PROFILE_setup_zgrid( RD_TOA, RD_KMAX, RD_KADD, & ! [IN]
+                                         RD_zh(:), RD_z(:)         ) ! [INOUT]
+
+  !--- read climatological profile
+  call ATMOS_PHY_RD_PROFILE_read( RD_KMAX,                & ! [IN]
+                                  ngas,                   & ! [IN]
+                                  ncfc,                   & ! [IN]
+                                  RD_naero,               & ! [IN]
+                                  blat*CONST_D2R,         & ! [IN]
+                                  H08_NOWDATE    (:),     & ! [IN]
+                                  RD_zh          (:),     & ! [IN]
+                                  RD_z           (:),     & ! [IN]
+                                  RD_rhodz       (:),     & ! [OUT]
+                                  RD_pres        (:),     & ! [OUT]
+                                  RD_presh       (:),     & ! [OUT]
+                                  RD_temp        (:),     & ! [OUT]
+                                  RD_temph       (:),     & ! [OUT]
+                                  RD_gas         (:,:),   & ! [OUT]
+                                  RD_cfc         (:,:),   & ! [OUT]
+                                  RD_aerosol_conc(:,:),   & ! [OUT]
+                                  RD_aerosol_radi(:,:),   & ! [OUT]
+                                  RD_cldfrac     (:)      ) ! [OUT]
+
+  kidx_rlx = 1
+  do k = 1, RD_KMAX + 1
+    if(RD_zh(k)*1.0d3 < H08_RTTOV_RLX_HGT)then
+      kidx_rlx = k - RD_KADD
+      exit
+    endif
+  enddo
+
 
   if (present(stggrd)) stggrd_ = stggrd
 
@@ -2739,14 +3091,13 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,
     lat1d(np) = lat(np)
 
 
+    CALL zenith_geosat(HIM8_LON,lon(np),lat(np),zenith1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_skint),ri(np),rj(np),tsfc1d(np)) ! T2 is better??
 !    CALL itpl_2d(v2d(:,:,iv2dd_t2m),ri(np),rj(np),tsfc1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_q2m),ri(np),rj(np),qsfc1d(np))
-!    CALL itpl_2d(v2d(:,:,iv2dd_topo),ri(np),rj(np),topo1d(np))
-    CALL itpl_2d(v3d(KHALO+1,:,:,iv3dd_hgt),ri(np),rj(np),topo1d(np)) ! topo is not filled in halo!
+    CALL itpl_2d(v3d(KHALO+1,:,:,iv3dd_hgt),ri(np),rj(np),topo1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_lsmask),ri(np),rj(np),lsmask1d(np))
     CALL itpl_2d(v2d(:,:,iv2dd_ps),ri(np),rj(np),psfc1d(np))
-!    CALL itpl_2d(v3d(elev,:,:,iv3dd_hgt),ri(np),rj(np),ztop1d(np)) ! height at the column top
 
 !    call prsadj(yobs,rk-topo,t,q)
 !    if (abs(rk-topo) > PS_ADJUST_THRES) then
@@ -2783,7 +3134,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,
 !        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using (lon,lat).
 !
 
-  CALL SCALE_RTTOV12_fwd(nlev,& ! num of levels
+  CALL SCALE_RTTOV12_fwd(NIRB_HIM8, & ! num of channels
+                         nlev,& ! num of levels
                          nprof,& ! num of profs
                          prs2d(elev:slev:-1,1:nprof),& ! (Pa)
                          tk2d(elev:slev:-1,1:nprof),& ! (K)
@@ -2799,47 +3151,72 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,
                          lon1d(1:nprof),& ! (deg)
                          lat1d(1:nprof),& ! (deg)
                          lsmask1d(1:nprof),& ! (0-1)
-                         !ztop1d(1:nprof), & ! (m)
-                         btall_out(1:nch,1:nprof),& ! (K)
-                         btclr_out(1:nch,1:nprof),& ! (K)
-                         trans_out(nlev:1:-1,1:nch,1:nprof), &
-                         ctop_out(1:nprof))
+                         zenith1d(1:nprof), & ! (deg) 
+                        kidx_rlx, & ! ()
+                        RD_KADD,  & ! ()
+                        RD_presh(1:RD_KMAX+1), & ! (hPa) 
+                        RD_temph(1:RD_KMAX+1), & ! (K) 
+                        btall_out(1:NIRB_HIM8,1:nprof),& ! (K)
+                        btclr_out(1:NIRB_HIM8,1:nprof),& ! (K)
+                        mwgt_plev(1:NIRB_HIM8,1:nprof),& ! (Pa)
+                        ctop_out(1:nprof))
+
+!  CALL SCALE_RTTOV_fwd(NIRB_HIM8, & ! num of channels
+!                       nlev,& ! num of levels
+!                       nprof,& ! num of profs
+!                       prs2d(elev:slev:-1,1:nprof),& ! (Pa)
+!                       tk2d(elev:slev:-1,1:nprof),& ! (K)
+!                       qv2d(elev:slev:-1,1:nprof),& ! (kg/kg)
+!                       qliq2d(elev:slev:-1,1:nprof),& ! (kg/kg)
+!                       qice2d(elev:slev:-1,1:nprof),& ! (kg/kg)
+!                       tsfc1d(1:nprof),& ! (K)
+!                       qsfc1d(1:nprof),& ! (kg/kg)
+!                       psfc1d(1:nprof),& ! (Pa)
+!                       usfc1d(1:nprof),& ! (m/s)
+!                       vsfc1d(1:nprof),& ! (m/s)
+!                       topo1d(1:nprof),& ! (m)
+!                       lon1d(1:nprof),& ! (deg)
+!                       lat1d(1:nprof),& ! (deg)
+!                       lsmask1d(1:nprof),& ! (0-1)
+!                       zenith1d(1:nprof), & ! (deg) 
+!                       kidx_rlx, & ! ()
+!                       RD_KADD,  & ! ()
+!                       RD_presh(1:RD_KMAX+1), & ! (hPa) 
+!                       RD_temph(1:RD_KMAX+1), & ! (K) 
+!                       btall_out(1:NIRB_HIM8,1:nprof),& ! (K)
+!                       btclr_out(1:NIRB_HIM8,1:nprof),& ! (K)
+!                       mwgt_plev(1:NIRB_HIM8,1:nprof),& ! (Pa)
+!                       ctop_out(1:nprof))
+
+
+  deallocate(RD_zh,RD_z,RD_rhodz,RD_pres,RD_presh)
+  deallocate(RD_temp,RD_temph,RD_gas,RD_cfc,RD_cldfrac)
+  deallocate(RD_aerosol_conc,RD_aerosol_radi)
+
 !
-! -- Compute max weight level using trans_out 
-! -- (Transmittance from each user pressure level to Top Of the Atmosphere)
 ! -- btall_out is substituted into yobs
-
-  DO np = 1, nprof
-  DO ch = 1, nch
-
-    rdp = 1.0d0 / (prs2d(slev+1,np) - prs2d(slev,np))
-    max_weight(ch,np) = abs((trans_out(2,ch,np) - trans_out(1,ch,np)) * rdp )
-
-    plev_obs(ch,np) = (prs2d(slev+1,np) + prs2d(slev,np)) * 0.5d0 ! (Pa)
-
-    DO k = 2, nlev-1
-
-      rdp = 1.0d0 / abs(prs2d(slev+k,np) - prs2d(slev+k-1,np))
-      tmp_weight = (trans_out(k+1,ch,np) - trans_out(k,ch,np)) * rdp 
-      if(tmp_weight > max_weight(ch,np))then
-        max_weight(ch,np) = tmp_weight
-        plev_obs(ch,np) = (prs2d(slev+k,np) + prs2d(slev+k-1,np)) * 0.5d0 ! (Pa)
-      endif
-    ENDDO
+!
+  do np = 1, nprof
+  do ch = 1, NIRB_HIM8
 
     yobs(ch,np) = btall_out(ch,np)
     qc(ch,np) = iqc_good
 
+    ! Band QC will be done in lekt_obs
+    !if (H08_BAND_USE(ch) /= 1) then
+    !  qc(ch,np) = iqc_obs_bad
+    !end if
+
     if(H08_VLOCAL_CTOP)then
-      if((ctop_out(np) > 0.0d0) .and. (ctop_out(np) < plev_obs(ch,np)) .and. &
-         (plev_obs(ch,np)>H08_LIMIT_LEV)) then
-        plev_obs(ch,np) = (ctop_out(np)+plev_obs(ch,np))*0.5d0
+      if((ctop_out(np) > 0.0d0) .and. (ctop_out(np) < mwgt_plev(ch,np)) .and. &
+         (mwgt_plev(ch,np)>H08_LIMIT_LEV)) then
+        mwgt_plev(ch,np) = (ctop_out(np) + mwgt_plev(ch,np))*0.5d0
       endif
     endif
 
-    IF(H08_REJECT_LAND .and. (lsmask1d(np) > 0.5d0))THEN
+    if(H08_REJECT_LAND .and. (lsmask1d(np) > 0.5d0))then
       qc(ch,np) = iqc_obs_bad
-    ENDIF
+    endif
 
     ! QC
     if(yobs(ch,np) > btmax .or. yobs(ch,np) < btmin .or. yobs(ch,np) /= yobs(ch,np))then
@@ -2848,19 +3225,140 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,plev_obs,qc,
 
     yobs_clr(ch,np) = btclr_out(ch,np)
 
-  ENDDO ! ch
-  ENDDO ! np
+  enddo ! ch
+  enddo ! np
+
+  return
+END SUBROUTINE Trans_XtoY_H08
+
+SUBROUTINE write_vbc_Him8(vbca,ANAL)
+  implicit none
+
+  real(r_size), intent(in) :: vbca(H08_NPRED,NIRB_HIM8)
+  logical :: ANAL
+  integer :: npr, ich
+  character(255) :: OUTFILE
+  integer,parameter :: iunit = 99
+
+  if(ANAL) then
+    OUTFILE = trim(H08_VBC_PATH)//'/Him8_vbca.dat'
+  else
+    OUTFILE = trim(H08_VBC_PATH)//'/Him8_vbcf.dat'
+  endif
+
+
+  open(iunit,file=trim(OUTFILE),status='unknown',access='direct',&
+       form='unformatted',recl=NIRB_HIM8*8)
+
+  do npr = 1, H08_NPRED    
+    write(iunit,rec=npr)(vbca(npr,ich),ich=1,NIRB_HIM8)
+  enddo
+
+  do npr = 1, H08_NPRED    
+    write(6,'(a,f15.10)')"DEBUG VBCA",vbca(npr,3)
+  enddo
+
+  close(iunit)
+
+  return
+END SUBROUTINE write_vbc_Him8
+
+
+SUBROUTINE read_vbc_Him8(vbc)
+  implicit none
+
+  real(r_size), intent(out) :: vbc(H08_NPRED,NIRB_HIM8)
+  integer :: npr, ich
+  integer,parameter :: iunit = 99
+  logical :: ex
+
+  inquire(file=trim(H08_VBC_PATH)//'/Him8_vbcf.dat', exist=ex)
+
+  if(ex)then
+    open(iunit,file=trim(H08_VBC_PATH)//'/Him8_vbcf.dat',status='unknown',access='direct',&
+         form='unformatted',recl=NIRB_HIM8*8)
+
+    do npr = 1, H08_NPRED
+      read(iunit,rec=npr)(vbc(npr,ich),ich=1,NIRB_HIM8)
+    enddo
+    close(iunit)
+  else
+    write(6,'(a)')' xxx Failed to open vbc_Him8'
+    vbc = 0.0d0
+  endif
+
+  return
+END SUBROUTINE read_vbc_Him8
+
+#endif
+
+
+SUBROUTINE zenith_geosat(sat_lon,lon,lat,z_angle)
+! 
+! Compute geostatinoary-satelitte zenith angle from lat/lon information
+!
+! -- Note: Computation of the zenith angle in each obs point (P) is based on the
+! formula in
+!          LRIT/HRIT Global Specification.
+!          http://www.cgms-info.org/index_.php/cgms/page?cat=publications&page=technical+publications
+! 
+  USE scale_const, ONLY: &
+      Deg2Rad => CONST_D2R
+
+  IMPLICIT NONE 
+
+  REAL(r_size),INTENT(IN) :: sat_lon ! longitude of Himawari-8 satellite
+  REAL(r_size),INTENT(IN) :: lon, lat ! (degree)
+  REAL(r_size),INTENT(OUT) :: z_angle ! zenith angle
+
+  REAL(r_size),PARAMETER :: Rpol = 6356.7523d3 ! a polar radius of Earth (m) 
+  REAL(r_size) :: Rl ! a local radius of Earth
+  REAL(r_size) :: rlon, rlat ! (Radian)
+!
+!
+! Vector components for a satellite coordinate frame
+!
+!
+  REAL(r_size) :: rnps, rnep, c_lat ! auxiliary variables
+  REAL(r_size) :: r1, r2, r3       ! components of location vector for point P 
+  REAL(r_size) :: r1ps, r2ps, r3ps ! components of the vector from P to the satellite 
+  REAL(r_size) :: r1ep, r2ep, r3ep  ! components of the vector from the center of Earth to P
+
+! sattelite zenith angle 
+
+  rlat = lat * Deg2Rad
+  rlon = lon * Deg2Rad
+
+  c_lat = datan(0.993305616d0 * dtan(rlat))
+  Rl = Rpol / dsqrt(1.0d0 - 0.00669438444d0 * dcos(c_lat)*dcos(c_lat))
+  r1 = 42164.0d3 - Rl * dcos(c_lat) * dcos(rlon - sat_lon*Deg2Rad)
+  r2 = -Rl * dcos(c_lat) * dsin(rlon - sat_lon*Deg2Rad)
+  r3 = Rl * dsin(c_lat)
+  rnps = dsqrt(r1*r1+r2*r2+r3*r3)
+
+  r1ps = r1 * (-1.0d0)
+  r2ps = r2 * (-1.0d0)
+  r3ps = r3 * (-1.0d0)
+
+  r1ep = r1 - 42164.0d3
+  r2ep = r2
+  r3ep = r3
+
+  rnep = dsqrt(r1ep*r1ep+r2ep*r2ep+r3ep*r3ep)
+
+  z_angle = r1ps * r1ep + r2ps * r2ep + r3ps * r3ep ! internal product 
+  z_angle = dacos(z_angle/(rnps*rnep))/Deg2Rad
+
 
   RETURN
-END SUBROUTINE Trans_XtoY_H08
-#endif
+END SUBROUTINE zenith_geosat
 
 SUBROUTINE get_nobs_H08(cfile,nn)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(OUT) :: nn ! num of all H08 obs
-  REAL(r_sngl) :: wk(4+nch)
-  INTEGER :: ios 
+!  REAL(r_sngl) :: wk(4+NIRB_HIM8)
+!  INTEGER :: ios 
   INTEGER :: iprof
   INTEGER :: iunit
   LOGICAL :: ex
@@ -2887,19 +3385,19 @@ SUBROUTINE get_nobs_H08(cfile,nn)
 !      READ(iunit,IOSTAT=ios) wk
 !      IF(ios /= 0) EXIT
 !      iprof = iprof + 1
-!      nn = nn + nch
+!      nn = nn + NIRB_HIM8
 !    END DO
 !-----------------------------
 
 ! get file size by INQUIRE statement... may not work for some older fortran compilers
 !-----------------------------
     INQUIRE(UNIT=iunit, SIZE=sz)
-    IF (MOD(sz, r_sngl * (4+nch+2)) /= 0) THEN
+    IF (MOD(sz, r_sngl * (H08_OBS_RECL+2)) /= 0) THEN
       WRITE(6,'(2A)') cfile,': Reading error -- skipped'
       RETURN
     END IF
-    iprof = sz / (r_sngl * (4+nch+2))
-    nn = iprof * nch
+    iprof = sz / (r_sngl * (H08_OBS_RECL+2))
+    nn = iprof * NIRB_HIM8
 !-----------------------------
 
     WRITE(6,*)' H08 FILE ', cfile
@@ -2917,13 +3415,12 @@ SUBROUTINE read_obs_H08(cfile,obs)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(INOUT) :: obs
-  REAL(r_sngl) :: wk(4+nch)
-!  REAL(r_sngl) :: tmp
+  REAL(r_sngl) :: wk(H08_OBS_RECL)
   INTEGER :: n,iunit
 
   INTEGER :: nprof, np, ch
 
-  nprof = obs%nobs / nch
+  nprof = obs%nobs / NIRB_HIM8
 !  call obs_info_allocate(obs)
 
   iunit=91
@@ -2933,7 +3430,7 @@ SUBROUTINE read_obs_H08(cfile,obs)
   DO np=1,nprof
     READ(iunit) wk
 
-    DO ch = 1, nch
+    DO ch = 1, NIRB_HIM8
       n = n + 1
 
       obs%elm(n) = NINT(wk(1))
@@ -2943,7 +3440,12 @@ SUBROUTINE read_obs_H08(cfile,obs)
       obs%dat(n) = REAL(wk(4+ch),r_size)
       obs%dif(n) = 0.0d0
       obs%lev(n) = ch + 6.0 ! substitute channnel number instead of the obs level
-      obs%err(n) = REAL(OBSERR_H08(ch),r_size)
+      !obs%err(n) = REAL(OBSERR_H08(ch),r_size)
+      if(H08_OBS_STD)then
+        obs%err(n) = -REAL(wk(H08_OBS_RECL),r_size)
+      else
+        obs%err(n) = REAL(OBSERR_H08(ch),r_size)
+      endif
     END DO
   END DO
   CLOSE(iunit)
@@ -2959,7 +3461,7 @@ SUBROUTINE write_obs_H08(cfile,obs,append,missing)
   LOGICAL,INTENT(IN),OPTIONAL :: missing
   LOGICAL :: append_
   LOGICAL :: missing_
-  REAL(r_sngl) :: wk(4+nch)
+  REAL(r_sngl) :: wk(4+NIRB_HIM8)
   INTEGER :: n,iunit
   INTEGER :: iprof, ns, ne
 
@@ -2969,7 +3471,7 @@ SUBROUTINE write_obs_H08(cfile,obs,append,missing)
   missing_ = .true.
   IF(present(missing)) missing_ = missing
 
-  iprof = obs%nobs / nch
+  iprof = obs%nobs / NIRB_HIM8
 
 
   IF(append_) THEN
@@ -2979,14 +3481,14 @@ SUBROUTINE write_obs_H08(cfile,obs,append,missing)
   END IF
 
   DO n=1,iprof
-    ns = (n-1)*nch + 1
-    ne = n*nch
+    ns = (n-1)*NIRB_HIM8 + 1
+    ne = n*NIRB_HIM8
 
     wk(1) = REAL(obs%elm(ns),r_sngl)
     wk(2) = REAL(obs%typ(ns),r_sngl)
     wk(3) = REAL(obs%lon(ns),r_sngl)
     wk(4) = REAL(obs%lat(ns),r_sngl)
-    wk(5:5+nch-1) = REAL(obs%dat(ns:ne),r_size)
+    wk(5:5+NIRB_HIM8-1) = REAL(obs%dat(ns:ne),r_size)
     WRITE(iunit) wk
 
   ENDDO

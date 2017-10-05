@@ -19,7 +19,7 @@ MODULE common_nml
   integer, parameter :: nv2d = 0     ! number of 2D state variables (in SCALE restart files)
   integer, parameter :: nid_obs = 16 ! number of variable types
   integer, parameter :: nobtype = 24 ! number of observation report types
-  integer, parameter :: nch = 10     ! H08 Num of Himawari-8 (IR) channels
+  integer, parameter :: NIRB_HIM8 = 10     ! H08 Num of Himawari-8 (IR) bands
 
   integer, parameter :: nobsfilemax = 10
   integer, parameter :: filelenmax = 256
@@ -52,7 +52,7 @@ MODULE common_nml
   character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
   integer               :: OBS_IN_FORMAT(nobsfilemax) = 1
   logical               :: OBSDA_RUN(nobsfilemax) = .true.
-  logical               :: OBSDA_OUT = .true.
+  logical               :: OBSDA_OUT = .false.
   character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
   character(filelenmax) :: OBSDA_MEAN_OUT_BASENAME = ''
   character(filelenmax) :: OBSDA_MDET_OUT_BASENAME = ''
@@ -220,10 +220,12 @@ MODULE common_nml
   logical :: DEPARTURE_STAT_ALL_PROCESSES = .true. ! print the departure statistics by all processes?
                                                    ! if set to .false., the statistics are only printed by the ensemble mean group, which may save time
 
-  LOGICAL :: OMB_OUTPUT = .true.
-  LOGICAL :: OMA_OUTPUT = .true.
-  LOGICAL :: OBSGUES_OUTPUT = .false.
-  LOGICAL :: OBSANAL_OUTPUT = .false.
+  LOGICAL               :: OBSDEP_OUT = .true.
+  character(filelenmax) :: OBSDEP_OUT_BASENAME = 'obsdep'
+  LOGICAL               :: OBSGUES_OUT = .false.                  !XXX not implemented yet...
+  character(filelenmax) :: OBSGUES_OUT_BASENAME = 'obsgues.@@@@'  !XXX not implemented yet...
+  LOGICAL               :: OBSANAL_OUT = .false.                  !XXX not implemented yet...
+  character(filelenmax) :: OBSANAL_OUT_BASENAME = 'obsanal.@@@@'  !XXX not implemented yet...
 
   !--- PARAM_LETKF_RADAR
   logical :: USE_RADAR_REF       = .true.
@@ -232,6 +234,8 @@ MODULE common_nml
 
   logical :: USE_OBSERR_RADAR_REF = .false.
   logical :: USE_OBSERR_RADAR_VR = .false.
+
+  logical :: RADAR_OBS_4D = .false.
 
   REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
   INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than RADAR_REF_THRES_DBZ
@@ -254,39 +258,57 @@ MODULE common_nml
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
   !---PARAM_LETKF_H08
+  character(filelenmax) :: H08_RTTOV_COEF_PATH = '.'
+  character(filelenmax) :: H08_VBC_PATH = '.'
+  logical :: H08_OBS_STD = .true.
+  integer :: H08_OBS_RECL = 4 + NIRB_HIM8 ! obstype, obsid, lon, lat, + dat(NIRB_HIM8)
+  real(r_size) :: H08_HOMO_QC = 2.0d0 ! (K) threshold of the standard deviation (band 13) for the homogeneity QC
+  integer :: H08_NOWDATE(6) = (/0,1,1,0,0,0/)
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
-  real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
-                                          ! Negative values indicate DISCRETE (0/1) cloud fraction 
   real(r_size) :: H08_LIMIT_LEV = 20000.0d0 ! (Pa) Upper limit level of the sensitive height for Himawari-8 IR
   real(r_size) :: H08_RTTOV_CFRAC_CNST = 0.10d0 ! Denominator constant for diagnosing SEQUENTIAL(0-1) cloud fraction (g m-3)
   real(r_size) :: H08_RTTOV_MINQ_CTOP = 0.10d0 ! Threshold of water/ice contents for diagnosing the cloud top (g m-3)
   real(r_size) :: H08_BT_MIN = 0.0d0 ! Lower limit of the BT for Himawari-8 IR
                                            ! Negative values: turn off
+  logical :: H08_RTTOV_PROF_SHIFT = .false. ! true: shift the climatological profile above the model top 
+                                            !       (equivalent to extrapolate by using the climatological
+                                            !       lapse rate)
+                                            ! false: relax the original (model)
+                                            ! profiles above [H08_RTTOV_RLX_HGT] m back to the climatological profile 
+  logical :: H08_VBC_USE = .false. ! Turn on adaptive bias correction for Him8?
+  integer :: H08_RTTOV_KADD = 0
+  real(r_size) :: H08_RTTOV_RLX_HGT = 20.0d3 ! (m) Lowest hight for relaxing profiles to climatology
 
-  logical :: H08_RTTOV_EXTRA_US76 = .false.
   logical :: H08_VLOCAL_CTOP = .true.
+  logical :: H08_AOEI = .false. ! Use AOEI (Zhang et al. 2016; Minamide and Zhang 2017)?
+  integer :: H08_AOEI_QC = 0 !  0: AOEI w/o any QC
+                             !  1: AOEI w/ a standard QC based on the ratio btw O-B and obs err
+                             !  Not yet 2: AOEI w/ a QC method based on the ratio defind by O-B, obs err, and variances (Aksoy et al. 2017AMS annual meeting)
 
-  logical :: H08_BIAS_SIMPLE = .false. ! Simple bias correction (just subtract prescribed constant (clear/cloudy))
-  logical :: H08_BIAS_SIMPLE_CLR = .false. ! Simple bias correction (just subtract prescribed constant (only clear sky value))
-  logical :: H08_CLDERR_SIMPLE = .false. ! Simple cloud dependent obs 
-  ! Sky condition is diagnosed by CA (Okamoto et al. 2014 for each band)
-  ! CA > H08_CA_THRES: Cloudy
-  ! CA <= H08_CA_THRES: Clear
-  !
+  integer :: H08_NPRED = 1 ! number of predirctors for Him8
+
+
+  !logical :: H08_BIAS_SIMPLE = .false. ! Simple bias correction (just subtract prescribed constant (clear/cloudy))
+  !logical :: H08_BIAS_SIMPLE_CLR = .false. ! Simple bias correction (just subtract prescribed constant (only clear sky value))
+  !logical :: H08_CLDERR_SIMPLE = .false. ! Simple cloud dependent obs 
+  !! Sky condition is diagnosed by CA (Okamoto et al. 2014 for each band)
+  !! CA > H08_CA_THRES: Cloudy
+  !! CA <= H08_CA_THRES: Clear
+  !!
   ! Constant values for band 9 are based on Honda et al. (2017 submitted to MWR)
-  real(r_size) :: H08_CA_THRES = 1.0d0 ! Threshhold of CA
-  real(r_size) :: H08_BIAS_CLEAR(nch) =  (/0.0d0, 0.0d0, 0.171d0, 0.0d0, 0.0d0, &
-                                           0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0/) ! Constant bias for clear sky conditions
-  real(r_size) :: H08_BIAS_CLOUD(nch) = (/0.0d0, 0.0d0, -3.482d0, 0.0d0, 0.0d0, &
-                                          0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0/) ! Constant bias for cloudy sky conditions
+  !real(r_size) :: H08_CA_THRES = 1.0d0 ! Threshhold of CA
+  !real(r_size) :: H08_BIAS_CLEAR(NIRB_HIM8) =  (/0.0d0, 0.0d0, 0.171d0, 0.0d0, 0.0d0, &
+  !                                         0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0/) ! Constant bias for clear sky conditions
+  !real(r_size) :: H08_BIAS_CLOUD(NIRB_HIM8) = (/0.0d0, 0.0d0, -3.482d0, 0.0d0, 0.0d0, &
+  !                                        0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0/) ! Constant bias for cloudy sky conditions
   !
-  real(r_size) :: H08_CLDERR_CLEAR(nch) =  (/3.0d0, 3.0d0, 0.954d0, 3.0d0, 3.0d0, &
-                                           3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0/) ! Constant obs err for clear sky conditions
-  real(r_size) :: H08_CLDERR_CLOUD(nch) = (/3.0d0, 3.0d0, 6.311d0, 3.0d0, 3.0d0, &
-                                          3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0/) ! Constant obs err for cloudy sky conditions
+  !real(r_size) :: H08_CLDERR_CLEAR(NIRB_HIM8) =  (/3.0d0, 3.0d0, 0.954d0, 3.0d0, 3.0d0, &
+  !                                         3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0/) ! Constant obs err for clear sky conditions
+  !real(r_size) :: H08_CLDERR_CLOUD(NIRB_HIM8) = (/3.0d0, 3.0d0, 6.311d0, 3.0d0, 3.0d0, &
+  !                                        3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0/) ! Constant obs err for cloudy sky conditions
 
-  integer :: H08_CH_USE(nch) = (/0,0,1,0,0,0,0,0,0,0/)
+  integer :: H08_BAND_USE(NIRB_HIM8) = (/0,0,1,0,0,0,0,0,0,0/)
                         !! ch = (1,2,3,4,5,6,7,8,9,10)
                         !! (B07,B08,B09,B10,B11,B12,B13,B14,B15,B16)
                         !! ==1: Assimilate
@@ -305,7 +327,7 @@ MODULE common_nml
   real(r_size) :: OBSERR_RADAR_VR = 3.0d0
   real(r_size) :: OBSERR_TCXY = 30.0d3 ! (m)
   real(r_size) :: OBSERR_TCP = 3.0d2 ! (Pa)
-  real(r_size) :: OBSERR_H08(nch) = (/3.0d0,3.0d0,3.0d0,3.0d0,3.0d0,&
+  real(r_size) :: OBSERR_H08(NIRB_HIM8) = (/3.0d0,3.0d0,3.0d0,3.0d0,3.0d0,&
                                       3.0d0,3.0d0,3.0d0,3.0d0,3.0d0/) ! H08
 
   !--- PARAM_OBSSIM
@@ -762,10 +784,12 @@ subroutine read_nml_letkf_monitor
     DEPARTURE_STAT_H08, &
     DEPARTURE_STAT_T_RANGE, &
     DEPARTURE_STAT_ALL_PROCESSES, &
-    OMB_OUTPUT, &
-    OMA_OUTPUT, &
-    OBSGUES_OUTPUT, &
-    OBSANAL_OUTPUT
+    OBSDEP_OUT, &
+    OBSDEP_OUT_BASENAME, &
+    OBSGUES_OUT, &
+    OBSGUES_OUT_BASENAME, &
+    OBSANAL_OUT, &
+    OBSANAL_OUT_BASENAME
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_MONITOR,iostat=ierr)
@@ -795,6 +819,7 @@ subroutine read_nml_letkf_radar
     USE_RADAR_PSEUDO_RH, &
     USE_OBSERR_RADAR_REF, &
     USE_OBSERR_RADAR_VR, &
+    RADAR_OBS_4D, &
     RADAR_REF_THRES_DBZ, &
     MIN_RADAR_REF_MEMBER, &
     MIN_RADAR_REF_MEMBER_OBSREF, &
@@ -834,24 +859,35 @@ subroutine read_nml_letkf_h08
   integer :: ierr
 
   namelist /PARAM_LETKF_H08/ &
+    H08_NOWDATE, &
     H08_REJECT_LAND, &
+    H08_OBS_STD, &
+    H08_OBS_RECL, &
+    H08_HOMO_QC, &
     H08_RTTOV_CLD, &
-    H08_RTTOV_MINQ, &
     H08_RTTOV_MINQ_CTOP, &
     H08_LIMIT_LEV, &
     H08_RTTOV_CFRAC_CNST, &
-    H08_RTTOV_EXTRA_US76, &
+    H08_RTTOV_PROF_SHIFT, &
+    H08_RTTOV_KADD,       &
+    H08_RTTOV_RLX_HGT,    &
     H08_VLOCAL_CTOP, &
     H08_BT_MIN, &
-    H08_CH_USE, &
-    H08_BIAS_SIMPLE, &
-    H08_BIAS_SIMPLE_CLR, &
-    H08_CLDERR_SIMPLE, &
-    H08_CA_THRES, &
-    H08_BIAS_CLEAR, &
-    H08_BIAS_CLOUD, &
-    H08_CLDERR_CLEAR, &
-    H08_CLDERR_CLOUD
+    H08_BAND_USE, &
+    H08_AOEI, &
+    H08_AOEI_QC,&
+    H08_NPRED,&
+    !H08_BIAS_SIMPLE, &
+    !H08_BIAS_SIMPLE_CLR, &
+    !H08_CLDERR_SIMPLE, &
+    !H08_CA_THRES, &
+    !H08_BIAS_CLEAR, &
+    !H08_BIAS_CLOUD, &
+    !H08_CLDERR_CLEAR, &
+    !H08_CLDERR_CLOUD, &
+    H08_RTTOV_COEF_PATH, &
+    H08_VBC_PATH,&
+    H08_VBC_USE
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_H08,iostat=ierr)
@@ -863,6 +899,10 @@ subroutine read_nml_letkf_h08
     stop
   endif
 
+  if(H08_OBS_STD)then
+    H08_OBS_RECL = 4 + NIRB_HIM8 + 1 ! standard deviation of Band 13
+  endif
+ 
   write(6, nml=PARAM_LETKF_H08)
 
   return

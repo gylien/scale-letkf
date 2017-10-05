@@ -84,9 +84,9 @@ OBSDA_IN='.false.'
 if ((OBSOPE_RUN == 1)); then
   OBSDA_IN='.true.'
 fi
-OBSDA_OUT='.false.'
-if ((OBSOUT_OPT <= 2)); then
-  OBSDA_OUT='.true.'
+OBSDEP_OUT_TF='.false.'
+if ((OBSOUT_OPT <= 3)); then
+  OBSDEP_OUT_TF='.true.'
 fi
 SPRD_OUT_TF='.true.'
 if ((SPRD_OUT == 0)); then
@@ -129,6 +129,13 @@ else
   NOBS_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/nobs/init"
 fi
 
+S_YYYY=${STIME:0:4}
+S_MM=${STIME:4:2}
+S_DD=${STIME:6:2}
+S_HH=${STIME:8:2}
+S_II=${STIME:10:2}
+S_SS=${STIME:12:2}
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.letkf | \
@@ -137,8 +144,6 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
-        -e "/!--OBSDA_OUT--/a OBSDA_OUT = $OBSDA_OUT" \
-        -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda\"," \
         -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = \"${HISTORY_IN_BASENAME}\"," \
         -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \
         -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
@@ -165,13 +170,30 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
+        -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = ${OBSDEP_OUT_TF}," \
+        -e "/!--OBSDEP_OUT_BASENAME--/a OBSDEP_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obs/obsdep\"," \
         -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+        -e "/!--H08_NOWDATE--/a H08_NOWDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
+        -e "/!--H08_RTTOV_COEF_PATH--/a H08_RTTOV_COEF_PATH = \"${TMPDIR}\"," \
+        -e "/!--H08_VBC_PATH--/a H08_VBC_PATH = \"${TMPOUT}/vbc\"," \
     > $TMPDIR/letkf.conf
 
 # Most of these parameters are not important for letkf
 cat $TMPDAT/conf/config.nml.scale | \
     sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+        -e "/!--ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME = \"${TMPDAT_CONSTDB}/rad/PARAG.29\"," \
+        -e "/!--ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME = \"${TMPDAT_CONSTDB}/rad/PARAPC.29\"," \
+        -e "/!--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = \"${TMPDAT_CONSTDB}/rad/VARDATA.RM29\"," \
+        -e "/!--ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME--/a ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME = \"${TMPDAT_CONSTDB}/rad/cira.nc\"," \
+        -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${TMPDAT_CONSTDB}/rad/MIPAS\"," \
     >> $TMPDIR/letkf.conf
+
+
+if [ -f "${TMPOUT}/vbc/Him8_vbca_${STIME}.dat" ] ; then
+  cp ${TMPOUT}/vbc/Him8_vbca_${STIME}.dat ${TMPOUT}/vbc/Him8_vbcf.dat
+elif [ ! -d "${TMPOUT}/vbc" ] ; then
+  mkdir "${TMPOUT}/vbc"
+fi
 
 #===============================================================================
 
