@@ -466,6 +466,8 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         write (6, '(A,I10)') ' -- # obs in the slot = ', slot_nobsg
         write (6, '(A,I6,A,I6,A,I10)') ' -- # obs in the slot and processed by rank ', myrank, ' (subdomain #', myrank_d, ') = ', bsn(islot, myrank_d)
 
+        call mpi_timer('', 2)
+
         call read_ens_history_iter(it, islot, v3dg, v2dg)
 
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:read_ens_history(t=', it, ', slot=', islot, '):'

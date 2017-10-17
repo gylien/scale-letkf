@@ -931,8 +931,15 @@ subroutine read_history(filename,step,v3dg,v2dg)
     call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
   end do
 
+  do iv2d = 1, nv2dd
+    call COMM_vars8( v2dg(:,:,iv2d), iv2d )
+  end do
+  do iv2d = 1, nv2dd
+    call COMM_wait ( v2dg(:,:,iv2d), iv2d )
+  end do
+
+!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
   do iv3d = 1, nv3dd
-!!!!!!!$OMP PARALLEL DO PRIVATE(i,j) OMP_SCHEDULE_ COLLAPSE(2)
     do j = JS, JE
       do i = IS, IE
         v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
@@ -940,13 +947,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
       end do
     end do
   end do
-
-  do iv2d = 1, nv2dd
-    call COMM_vars8( v2dg(:,:,iv2d), iv2d )
-  end do
-  do iv2d = 1, nv2dd
-    call COMM_wait ( v2dg(:,:,iv2d), iv2d )
-  end do
+!$OMP END PARALLEL DO
 
   ! Save topo for later use
   !-------------
@@ -1086,18 +1087,40 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
 
+  ! Copy data buffer
+  !-------------
+!$OMP PARALLEL PRIVATE(i,j,k,iv3d,iv2d)
+!$OMP DO SCHEDULE(STATIC)
+  do iv3d = 1, nv3dd
+    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = real(var3D(i,j,k,iv3d), r_size) ! use FORALL to change order of dimensions
+  end do
+!$OMP END DO NOWAIT
+
+!$OMP DO SCHEDULE(STATIC)
+  do iv2d = 1, nv2dd
+    v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = real(var2D(:,:,iv2d), r_size)
+  end do
+!$OMP END DO
+!$OMP END PARALLEL
+
   ! Communicate halo
   !-------------
   do iv3d = 1, nv3dd
-    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = real(var3D(i,j,k,iv3d), r_size) ! use FORALL to change order of dimensions
     call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
   end do
   do iv3d = 1, nv3dd
     call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
   end do
 
+  do iv2d = 1, nv2dd
+    call COMM_vars8( v2dg(:,:,iv2d), iv2d )
+  end do
+  do iv2d = 1, nv2dd
+    call COMM_wait ( v2dg(:,:,iv2d), iv2d )
+  end do
+
+!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
   do iv3d = 1, nv3dd
-!!!!!!!$OMP PARALLEL DO PRIVATE(i,j) OMP_SCHEDULE_ COLLAPSE(2)
     do j = JS, JE
       do i = IS, IE
         v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
@@ -1105,14 +1128,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
       end do
     end do
   end do
-
-  do iv2d = 1, nv2dd
-    v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = real(var2D(:,:,iv2d), r_size)
-    call COMM_vars8( v2dg(:,:,iv2d), iv2d )
-  end do
-  do iv2d = 1, nv2dd
-    call COMM_wait ( v2dg(:,:,iv2d), iv2d )
-  end do
+!$OMP END PARALLEL DO
 
   ! Save topo for later use
   !-------------
