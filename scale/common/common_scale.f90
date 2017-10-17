@@ -894,10 +894,8 @@ subroutine read_history(filename,step,v3dg,v2dg)
   real(r_size),intent(out) :: v2dg(nlonh,nlath,nv2dd)
   integer :: i,j,k,iv3d,iv2d
   character(len=12) :: filesuffix = '.pe000000.nc'
-  real(RP) :: var3d(nlon,nlat,nlev)
-  real(RP) :: var2d(nlon,nlat)
-!  real(RP) :: v3dgtmp(nlevh,nlonh,nlath,nv3dd) !!! to handle data type conversion
-!  real(RP) :: v2dgtmp(nlonh,nlath,nv2dd)       !
+  real(RP) :: var3D(nlon,nlat,nlev)
+  real(RP) :: var2D(nlon,nlat)
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
@@ -911,27 +909,6 @@ subroutine read_history(filename,step,v3dg,v2dg)
                      trim(v3dd_name(iv3d)), & ! [IN]
                      step                   ) ! [IN]
     forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
-!    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dgtmp(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
-  end do
-
-  do iv3d = 1, nv3dd
-    call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
-!    call COMM_vars8( v3dgtmp(:,:,:,iv3d), iv3d )
-  end do
-  do iv3d = 1, nv3dd
-    call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
-!    call COMM_wait ( v3dgtmp(:,:,:,iv3d), iv3d )
-  end do
-!  v3dg = real(v3dgtmp, r_size)
-
-  do iv3d = 1, nv3dd
-!!!!!!!$OMP PARALLEL DO PRIVATE(i,j) OMP_SCHEDULE_ COLLAPSE(2)
-    do j = JS, JE
-      do i = IS, IE
-        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
-        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
-      end do
-    end do
   end do
 
   ! 2D variables
@@ -943,18 +920,33 @@ subroutine read_history(filename,step,v3dg,v2dg)
                      trim(v2dd_name(iv2d)), & ! [IN]
                      step                   ) ! [IN]
     v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
-!    v2dgtmp(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
+  end do
+
+  ! Communicate halo
+  !-------------
+  do iv3d = 1, nv3dd
+    call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
+  end do
+  do iv3d = 1, nv3dd
+    call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
+  end do
+
+  do iv3d = 1, nv3dd
+!!!!!!!$OMP PARALLEL DO PRIVATE(i,j) OMP_SCHEDULE_ COLLAPSE(2)
+    do j = JS, JE
+      do i = IS, IE
+        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
+        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
+      end do
+    end do
   end do
 
   do iv2d = 1, nv2dd
     call COMM_vars8( v2dg(:,:,iv2d), iv2d )
-!    call COMM_vars8( v2dgtmp(:,:,iv2d), iv2d )
   end do
   do iv2d = 1, nv2dd
     call COMM_wait ( v2dg(:,:,iv2d), iv2d )
-!    call COMM_wait ( v2dgtmp(:,:,iv2d), iv2d )
   end do
-!  v2dg = real(v2dgtmp, r_size)
 
   ! Save topo for later use
   !-------------
@@ -996,8 +988,8 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   real(r_size),intent(out) :: v2dg(nlonh,nlath,nv2dd)
   integer,intent(in) :: comm
   integer :: i,j,k,iv3d,iv2d
-  real(SP) :: var3D(nlon,nlat,nlev)
-  real(SP) :: var2D(nlon,nlat)
+  real(SP) :: var3D(nlon,nlat,nlev,nv3dd)
+  real(SP) :: var2D(nlon,nlat,nv2dd)
 
 !  integer :: fid
   integer :: ncid
@@ -1032,28 +1024,72 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
     write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
 
 !--- neither of these work now ---
-!    call FILEIO_read( var3D,         & ! [OUT]
-!                      fid, trim(v3dd_name(iv3d)),  'XYZ', step=step ) ! [IN]  !!! 'XYZ' is not supported.
-!    call HistoryGet( var3D,                 & ! [OUT]                         !!! 'HistoryGet' does not support PNETCDF
+!    call FILEIO_read( var3D(:,:,:,iv3d),    & ! [OUT]
+!                      fid, trim(v3dd_name(iv3d)), 'XYZ', step=step ) ! [IN]   !!! 'XYZ' is not supported.
+!    call HistoryGet( var3D(:,:,:,iv3d),     & ! [OUT]                         !!! 'HistoryGet' does not support PNETCDF
 !                     filename,              & ! [IN]
 !                     trim(v3dd_name(iv3d)), & ! [IN]
 !                     step                   ) ! [IN]
     err = nfmpi_inq_varid(ncid, trim(v3dd_name(iv3d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-    err = nfmpi_iget_vara_real(ncid, varid, start, count, var3D, req)
+    err = nfmpi_iget_vara_real(ncid, varid, start, count, var3D(:,:,:,iv3d), req)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
 
-!    call FILEIO_flush( fid )
-    err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-    if ( err .NE. NF_NOERR ) &
-       write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+!!    call FILEIO_flush( fid )
+!    err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
+!    if ( err .NE. NF_NOERR ) &
+!       write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
 
-    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = real(var3D(i,j,k), r_size) ! use FORALL to change order of dimensions
+!    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = real(var3D(i,j,k,iv3d), r_size) ! use FORALL to change order of dimensions
   end do
 
+  start(3) = step
+  count(3) = 1
+
+  ! 2D variables
+  !-------------
+  do iv2d = 1, nv2dd
+    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
+
+!--- neither of these work now ---
+!    call FILEIO_read( var2D(:,:,iv2d),      & ! [OUT]
+!                      fid, trim(v2dd_name(iv2d)), 'XY', step=step ) ! [IN]
+!    call HistoryGet( var2D(:,:,iv2d),       & ! [OUT]                        !!! 'HistoryGet' does not support PNETCDF
+!                     filename,              & ! [IN]
+!                     trim(v2dd_name(iv2d)), & ! [IN]
+!                     step                   ) ! [IN]
+
+    err = nfmpi_inq_varid(ncid, trim(v2dd_name(iv2d)), varid)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
+    err = nfmpi_iget_vara_real(ncid, varid, start(1:3), count(1:3), var2D(:,:,iv2d), req)
+    if ( err .NE. NF_NOERR ) &
+       write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
+
+!!    call FILEIO_flush( fid )
+!    err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
+!    if ( err .NE. NF_NOERR ) &
+!       write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+
+!    v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = real(var2D(:,:,iv2d), r_size)
+  end do
+
+!  call FILEIO_flush( fid )
+  err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+
+!  call FILEIO_close( fid )
+  err = nfmpi_close(ncid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
+
+  ! Communicate halo
+  !-------------
   do iv3d = 1, nv3dd
+    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = real(var3D(i,j,k,iv3d), r_size) ! use FORALL to change order of dimensions
     call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
   end do
   do iv3d = 1, nv3dd
@@ -1070,48 +1106,13 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
     end do
   end do
 
-  start(3) = step
-  count(3) = 1
-
-  ! 2D variables
-  !-------------
   do iv2d = 1, nv2dd
-    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
-
-!--- neither of these work now ---
-!    call FILEIO_read( var2D,         & ! [OUT]
-!                      fid, trim(v2dd_name(iv2d)),  'XY', step=step ) ! [IN]
-!    call HistoryGet( var2D,                 & ! [OUT]                        !!! 'HistoryGet' does not support PNETCDF
-!                     filename,              & ! [IN]
-!                     trim(v2dd_name(iv2d)), & ! [IN]
-!                     step                   ) ! [IN]
-
-    err = nfmpi_inq_varid(ncid, trim(v2dd_name(iv2d)), varid)
-    if ( err .NE. NF_NOERR ) &
-       write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-    err = nfmpi_iget_vara_real(ncid, varid, start(1:3), count(1:3), var2D, req)
-    if ( err .NE. NF_NOERR ) &
-       write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
-
-!    call FILEIO_flush( fid )
-    err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
-    if ( err .NE. NF_NOERR ) &
-       write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-
-    v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = real(var2D(:,:), r_size)
-  end do
-
-  do iv2d = 1, nv2dd
+    v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = real(var2D(:,:,iv2d), r_size)
     call COMM_vars8( v2dg(:,:,iv2d), iv2d )
   end do
   do iv2d = 1, nv2dd
     call COMM_wait ( v2dg(:,:,iv2d), iv2d )
   end do
-
-!  call FILEIO_close( fid )
-  err = nfmpi_close(ncid)
-  if ( err .NE. NF_NOERR ) &
-     write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
 
   ! Save topo for later use
   !-------------
