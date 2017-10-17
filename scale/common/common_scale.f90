@@ -847,8 +847,8 @@ SUBROUTINE read_topo_par(filename,topo,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
-  write(6,'(1x,A,A15)') '*** Read 2D var: ', 'TOPO'
-  err = nfmpi_inq_varid(ncid, 'TOPO', varid)
+  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(topo2d_name)
+  err = nfmpi_inq_varid(ncid, trim(topo2d_name), varid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
 #ifdef SINGLE
@@ -1112,6 +1112,13 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   err = nfmpi_close(ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
+
+  ! Save topo for later use
+  !-------------
+  if (.not. allocated(topo2d)) then
+    allocate (topo2d(nlon,nlat))
+    topo2d = v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo)
+  end if
 
   return
 end subroutine read_history_par
