@@ -13,7 +13,7 @@ if (($# < 12)); then
 
 [pre_scale_init.sh] Prepare a temporary directory for SCALE model run.
 
-Usage: $0 MYRANK TOPO LANDUSE BDYORG STIME MKINIT MEM MEM_BDY TMPDIR BDY_TIME_LIST NUMBER_OF_TSTEPS NUMBER_OF_SKIP_TSTEPS [SCPCALL]
+Usage: $0 MYRANK TOPO LANDUSE BDYORG STIME MKINIT MEM MEM_BDY TMPDIR BDY_TIME_LIST NUMBER_OF_TSTEPS NUMBER_OF_SKIP_TSTEPS [BDY_OCEAN_ONETIME SCPCALL]
 
   MYRANK   My rank number (not used)
   TOPO     Basename of SCALE topography files
@@ -31,6 +31,7 @@ Usage: $0 MYRANK TOPO LANDUSE BDYORG STIME MKINIT MEM MEM_BDY TMPDIR BDY_TIME_LI
   BDY_TIME_LIST
   NUMBER_OF_TSTEPS
   NUMBER_OF_SKIP_TSTEPS
+  BDY_OCEAN_ONETIME
   SCPCALL
 
 EOF
@@ -49,6 +50,7 @@ TMPDIR="$1"; shift
 BDY_TIME_LIST="$1"; shift
 NUMBER_OF_TSTEPS="$1"; shift
 NUMBER_OF_SKIP_TSTEPS="$1"; shift
+BDY_OCEAN_ONETIME="${1:-0}"; shift
 SCPCALL="${1:-cycle}"
 
 S_YYYY=${STIME:0:4}
@@ -116,11 +118,11 @@ fi
 
 i=0
 for time_bdy in $BDY_TIME_LIST; do
-  if ((NUMBER_OF_FILES <= 1)); then
-    file_number=''
-  else
+#  if ((NUMBER_OF_FILES <= 1)); then
+#    file_number=''
+#  else
     file_number="_$(printf %05d $i)"
-  fi
+#  fi
   if ((BDY_ROTATING == 1)); then
     bdyorg_path="$(cd "${BDYORG}/${STIME}" && pwd)"
   else
@@ -130,6 +132,9 @@ for time_bdy in $BDY_TIME_LIST; do
     if ((PNETCDF_BDY_SCALE == 1)); then
       if [ -s "${bdyorg_path}/${time_bdy}/${MEM_BDY}.history.nc" ]; then
         ln -fs "${bdyorg_path}/${time_bdy}/${MEM_BDY}.history.nc" $TMPDIR/bdydata${file_number}.nc ############ need to check !!!!
+        if ((i == 0)); then
+          ln -fs "${bdyorg_path}/${time_bdy}/${MEM_BDY}.history.nc" $TMPDIR/bdydata.nc ############ need to check !!!!
+        fi
       else
         echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${time_bdy}/${MEM_BDY}.history.nc'."
         exit 1
@@ -138,6 +143,9 @@ for time_bdy in $BDY_TIME_LIST; do
       if [ -s "${bdyorg_path}/${time_bdy}/${MEM_BDY}/history.pe000000.nc" ]; then
         for ifile in $(cd ${bdyorg_path}/${time_bdy}/${MEM_BDY} ; ls history*.nc 2> /dev/null); do
           ln -fs "${bdyorg_path}/${time_bdy}/${MEM_BDY}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
+          if ((i == 0)); then
+            ln -fs "${bdyorg_path}/${time_bdy}/${MEM_BDY}/${ifile}" $TMPDIR/bdydata${ifile:$historybaselen}
+          fi
         done
       else
         echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${time_bdy}/${MEM_BDY}/history.*.nc'."
@@ -147,6 +155,9 @@ for time_bdy in $BDY_TIME_LIST; do
   elif ((BDY_FORMAT == 2)); then
     if [ -s "${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}" ]; then
       ln -fs "${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
+      if ((i == 0)); then
+        ln -fs "${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}" $TMPDIR/bdydata
+      fi
     else
       echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}'."
       exit 1
@@ -154,18 +165,27 @@ for time_bdy in $BDY_TIME_LIST; do
   elif ((BDY_FORMAT == 4)); then
     if [ -s "${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd" ]; then
       ln -fs "${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd" $TMPDIR/bdyatm${file_number}.grd
+      if ((i == 0)); then
+        ln -fs "${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd" $TMPDIR/bdyatm.grd
+      fi
     else
       echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd'."
       exit 1
     fi
     if [ -s "${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd" ]; then
       ln -fs "${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd" $TMPDIR/bdysfc${file_number}.grd
+      if ((i == 0)); then
+        ln -fs "${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd" $TMPDIR/bdysfc.grd
+      fi
     else
       echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd'."
       exit 1
     fi
     if [ -s "${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd" ]; then
       ln -fs "${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd" $TMPDIR/bdyland${file_number}.grd
+      if ((i == 0)); then
+        ln -fs "${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd" $TMPDIR/bdyland.grd
+      fi
     else
       echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd'."
       exit 1
@@ -173,6 +193,14 @@ for time_bdy in $BDY_TIME_LIST; do
   fi
   i=$((i+1))
 done
+
+NUMBER_OF_FILES_OCEAN=$NUMBER_OF_FILES
+NUMBER_OF_TSTEPS_OCEAN=$NUMBER_OF_TSTEPS
+NUMBER_OF_SKIP_TSTEPS_OCEAN=$NUMBER_OF_SKIP_TSTEPS
+if ((BDY_OCEAN_ONETIME == 1)); then
+  NUMBER_OF_FILES_OCEAN=1
+  NUMBER_OF_TSTEPS_OCEAN=$((NUMBER_OF_SKIP_TSTEPS+1))
+fi
 
 if [ "$SCPCALL" = 'cycle' ]; then
   IO_LOG_DIR='scale_init'
@@ -202,6 +230,9 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = ${NUMBER_OF_FILES}," \
         -e "/!--NUMBER_OF_TSTEPS--/a NUMBER_OF_TSTEPS = ${NUMBER_OF_TSTEPS}," \
         -e "/!--NUMBER_OF_SKIP_TSTEPS--/a NUMBER_OF_SKIP_TSTEPS = ${NUMBER_OF_SKIP_TSTEPS}," \
+        -e "/!--NUMBER_OF_FILES_OCEAN--/a NUMBER_OF_FILES = ${NUMBER_OF_FILES_OCEAN}," \
+        -e "/!--NUMBER_OF_TSTEPS_OCEAN--/a NUMBER_OF_TSTEPS = ${NUMBER_OF_TSTEPS_OCEAN}," \
+        -e "/!--NUMBER_OF_SKIP_TSTEPS_OCEAN--/a NUMBER_OF_SKIP_TSTEPS = ${NUMBER_OF_SKIP_TSTEPS_OCEAN}," \
         -e "/!--BOUNDARY_UPDATE_DT--/a BOUNDARY_UPDATE_DT = $BDYINT.D0," \
         -e "/!--LATLON_CATALOGUE_FNAME--/a LATLON_CATALOGUE_FNAME = \"${LATLON_CATALOGUE_FNAME}\"," \
         -e "/!--OFFLINE_PARENT_BASENAME--/a OFFLINE_PARENT_BASENAME = \"${OFFLINE_PARENT_BASENAME}\"," \

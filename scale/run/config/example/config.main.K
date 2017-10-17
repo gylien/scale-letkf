@@ -72,6 +72,8 @@ BDY_ENS=0               # 0: Fixed boundary files for all memebers
 BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial time
                         # 1: Use different series of boundary files for different initial time
 
+BDY_OCEAN_ONETIME=0
+
 BDYINT=21600
 BDYCYCLE_INT=
 
