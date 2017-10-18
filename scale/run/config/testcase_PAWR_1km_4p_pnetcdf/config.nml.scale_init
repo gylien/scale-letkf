@@ -50,15 +50,10 @@
  OFFLINE_PARENT_PRC_NUM_X  = 3,
  OFFLINE_PARENT_PRC_NUM_Y  = 3,
 !--LATLON_CATALOGUE_FNAME--
-! NEST_INTERP_LEVEL = 12,
 /
 
 &PARAM_MKINIT_REAL_WRFARW
  WRF_FILE_TYPE       = .true.,
-/
-
-&PARAM_INPUT_ATOM_WRF
- use_buildrho_real = .true.,
 /
 
 #################################################

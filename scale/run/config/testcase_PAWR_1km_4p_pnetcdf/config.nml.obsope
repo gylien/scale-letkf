@@ -1,6 +1,7 @@
 &PARAM_ENSEMBLE
 !--MEMBER--
 !--DET_RUN--
+ DET_RUN_CYCLED = .true.,
 /
 
 &PARAM_OBSOPE
