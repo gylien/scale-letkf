@@ -178,7 +178,7 @@ elif [ "$MPI_TYPE" = 'openmpi' ]; then
   $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $progdir ./$progbase $CONF $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $$MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} -wdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
@@ -190,7 +190,7 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
   $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} -gwdir $progdir ./$progbase $CONF $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $$MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} -gwdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} -gwdir $progdir ./$progbase $CONF $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi

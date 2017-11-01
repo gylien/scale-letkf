@@ -90,10 +90,16 @@ set_mem2node () {
 #-------------------------------------------------------------------------------
 # Set up the relation from members to nodes and processes
 #
-# Usage: set_mem2node [MEM]
+# Usage: set_mem2node [MEM USE_CACHE SAVE_CACHE]
 #
-#   MEM  Number of members
-#        (default: $MEMBER)
+#   MEM         Number of members
+#               (default: $MEMBER)
+#   USE_CACHE   Use 'distr' file cache?
+#               0: No (default)
+#               1: Yes
+#   SAVE_CACHE  Save 'distr' file cache?
+#               0: No
+#               1: Yes (default)
 #
 # Input variables:
 #   $MEMBER             Ensemble size (if $MEM is not given)
@@ -103,8 +109,6 @@ set_mem2node () {
 #   $mem_np             Number of processes for a member
 #   $node[1...$NNODES]  Name of nodes
 #   $NODEFILEDIR
-#   $DISTR_FILE         Location of the 'distr' file
-#                       '-': The first-time run; output 'distr' file in $NODEFILEDIR
 #
 # Return variables:
 #   $n_mem                         Number of members that use one round of nodes
@@ -121,6 +125,8 @@ set_mem2node () {
 #-------------------------------------------------------------------------------
 
 local MEM=${1:-$MEMBER}; shift
+local USE_CACHE=${1:-0}; shift
+local SAVE_CACHE=${1:-1}
 
 #-------------------------------------------------------------------------------
 
@@ -128,15 +134,17 @@ local ns=0
 local n
 local p
 
-if [ "$DISTR_FILE" = '-' ]; then
+if ((USE_CACHE == 0)); then
   for n in $(seq $NNODES); do
     for p in $(seq $((ns+1)) $((ns+PPN))); do
       proc2node[$p]=$n
-      echo "proc2node[$p]=$n" >> $NODEFILEDIR/distr
+      if ((SAVE_CACHE == 1)); then
+        echo "proc2node[$p]=$n" >> $NODEFILEDIR/distr
+      fi
     done
     ns=$((ns+PPN))
   done
-fi # [ "$DISTR_FILE" = '-' ]
+fi # ((USE_CACHE == 0))
 
 if ((mem_nodes > 1)); then
   n_mem=$((NNODES / mem_nodes))
@@ -156,7 +164,7 @@ local nn
 local q
 local qs
 
-if [ "$DISTR_FILE" = '-' ]; then
+if ((USE_CACHE == 0)); then
   m=1
   for it in $(seq $nitmax); do
     for i in $(seq 0 $((n_mempn-1))); do
@@ -175,14 +183,18 @@ if [ "$DISTR_FILE" = '-' ]; then
             ip=$(((n+nn)*PPN + i*mem_np + q))
             if ((m <= MEM)); then
               mem2node[$(((m-1)*mem_np+qs+1))]=$((n+nn+1))
-              echo "mem2node[$(((m-1)*mem_np+qs+1))]=$((n+nn+1))" >> $NODEFILEDIR/distr
               mem2proc[$(((m-1)*mem_np+qs+1))]=$((ip+1))
-              echo "mem2proc[$(((m-1)*mem_np+qs+1))]=$((ip+1))" >> $NODEFILEDIR/distr
+              if ((SAVE_CACHE == 1)); then
+                echo "mem2node[$(((m-1)*mem_np+qs+1))]=$((n+nn+1))" >> $NODEFILEDIR/distr
+                echo "mem2proc[$(((m-1)*mem_np+qs+1))]=$((ip+1))" >> $NODEFILEDIR/distr
+              fi
               if ((it == 1)); then
                 proc2group[$((ip+1))]=$m
-                echo "proc2group[$((ip+1))]=$m" >> $NODEFILEDIR/distr
                 proc2grpproc[$((ip+1))]=$((qs+1))
-                echo "proc2grpproc[$((ip+1))]=$((qs+1))" >> $NODEFILEDIR/distr
+                if ((SAVE_CACHE == 1)); then
+                  echo "proc2group[$((ip+1))]=$m" >> $NODEFILEDIR/distr
+                  echo "proc2grpproc[$((ip+1))]=$((qs+1))" >> $NODEFILEDIR/distr
+                fi
               fi
             fi
             qs=$((qs+1))
@@ -192,18 +204,36 @@ if [ "$DISTR_FILE" = '-' ]; then
         ###### SHORT node list description
         if ((mem_nodes == 1)); then
           node_m[$m]="${node[$((n+1))]}*$tppn"
+          if ((SAVE_CACHE == 1)); then
+            node_m_out[$m]="\${node[$((n+1))]}*$tppn"
+          fi
         elif ((tmod == 0)); then
           node_m[$m]="[${node[$((n+1))]}-${node[$((n+mem_nodes))]}]*$tppn"
+          if ((SAVE_CACHE == 1)); then
+            node_m_out[$m]="[\${node[$((n+1))]}-\${node[$((n+mem_nodes))]}]*$tppn"
+          fi
         else
           if ((tmod == 1)); then
             node_m[$m]="${node[$((n+1))]}*$((tppn+1))"
+            if ((SAVE_CACHE == 1)); then
+              node_m_out[$m]="\${node[$((n+1))]}*$((tppn+1))"
+            fi
           else
             node_m[$m]="[${node[$((n+1))]}-${node[$((n+tmod))]}]*$((tppn+1))"
+            if ((SAVE_CACHE == 1)); then
+              node_m_out[$m]="[\${node[$((n+1))]}-\${node[$((n+tmod))]}]*$((tppn+1))"
+            fi
           fi
           if (($((mem_nodes - tmod)) == 1)); then
             node_m[$m]="${node_m[$m]} ${node[$((n+mem_nodes))]}*$tppn"
+            if ((SAVE_CACHE == 1)); then
+              node_m_out[$m]="${node_m_out[$m]} \${node[$((n+mem_nodes))]}*$tppn"
+            fi
           else
             node_m[$m]="${node_m[$m]} [${node[$((n+tmod+1))]}-${node[$((n+mem_nodes))]}]*$tppn"
+            if ((SAVE_CACHE == 1)); then
+              node_m_out[$m]="${node_m_out[$m]} [\${node[$((n+tmod+1))]}-\${node[$((n+mem_nodes))]}]*$tppn"
+            fi
           fi
         fi
         ######
@@ -216,10 +246,12 @@ if [ "$DISTR_FILE" = '-' ]; then
     if ((m > MEM && it > 1)); then break; fi
   done
 
-  for m in $(seq $MEM); do
-    echo "node_m[$m]=\"${node_m[$m]}\"" >> $NODEFILEDIR/distr
-  done
-fi # [ "$DISTR_FILE" = '-' ]
+  if ((SAVE_CACHE == 1)); then
+    for m in $(seq $MEM); do
+      echo "node_m[$m]=\"${node_m_out[$m]}\"" >> $NODEFILEDIR/distr
+    done
+  fi
+fi # ((USE_CACHE == 0))
 
 
 #-------------------------------------------------------------------------------
@@ -231,13 +263,17 @@ distribute_da_cycle () {
 #-------------------------------------------------------------------------------
 # Distribute members on nodes for DA cycling run.
 #
-# Usage: distribute_da_cycle [NODEFILE NODEFILEDIR DISTR_FILE MEMBERS]
+# Usage: distribute_da_cycle [NODELIST NODEFILEDIR SAVE_CACHE MEMBERS]
 #
-#   NODEFILE     The pre-determined nodefile
+#   NODELIST     List of node names
+#                '-':    The node names has not been determined yet (default)
+#                '(0)':  Ordered sequence '(*)' starting from 0
+#                (other) A given nodelist file
 #   NODEFILEDIR  Directory to output nodefiles
 #                '-': No output (default)
-#   DISTR_FILE   Location of the 'distr' file
-#                '-': The first-time run; output 'distr' file in $NODEFILEDIR
+#   SAVE_CACHE   Save 'distr' file cache?
+#                0: No
+#                1: Yes (default)
 #   MEMBERS      List of forecast members
 #                'all': All sequential numbers (default)
 #
@@ -248,7 +284,6 @@ distribute_da_cycle () {
 #   $PPN         Number of processes per node
 #   $MEMBER_FMT
 #   $SCALE_NP
-#   $NODELIST_TYPE
 #   
 # Return variables:
 #   $node[1...$nnodes]                    Name of nodes
@@ -277,38 +312,58 @@ distribute_da_cycle () {
 # Output files:
 #   [$TMP/node/proc]       All processes
 #   [$TMP/node/node]       One process per node
+#   [$TMP/node/distr]      File cache for shell array variables
 #-------------------------------------------------------------------------------
 
-local NODEFILE=${1:-machinefile}; shift
+local NODELIST=${1:--}; shift
 local NODEFILEDIR=${1:--}; shift
-local DISTR_FILE=${1:--}; shift
+local SAVE_CACHE=${1:-1}; shift
 local MEMBERS="${1:-all}"
 
-if [ "$DISTR_FILE" != '-' ]; then
-  if [ -z "$DISTR_FILE" ]; then
-    echo "[Error] Cannot find \$DISTR_FILE: '$DISTR_FILE'." >&2
-    exit 1
-  fi
-  . $DISTR_FILE
+if [ "$NODEFILEDIR" != '-' ] && [ ! -d "$NODEFILEDIR" ]; then
+  echo "[Error] $FUNCNAME: \$NODEFILEDIR is given but is not an existing directory: '$NODEFILEDIR'" >&2
+  exit 1
+fi
+
+if [ "$NODEFILEDIR" = '-' ]; then
+  SAVE_CACHE=0
+fi
+
+local use_cache=0
+if [ -s "${NODEFILEDIR}/distr" ]; then
+  use_cache=1
+  SAVE_CACHE=0
+fi
+
+if ((SAVE_CACHE == 1)); then
+#  echo "[INFO] $FUNCNAME: Save 'distr' file cache." >&2
+  rm -f $NODEFILEDIR/distr
 fi
 
 #-------------------------------------------------------------------------------
-# Set up node names and member names
+# Set up node names
 
-if [ "$NODELIST_TYPE" = 'nodefile' ]; then
-  read_nodefile_pbs "$NODEFILE"
-elif [ "$NODELIST_TYPE" = 'K' ]; then
+if [ "$NODELIST" = '-' ]; then
+  : # do nothing
+elif [ "$NODELIST" = '(0)' ]; then
   local n
   local p
-  if [ "$DISTR_FILE" = '-' ]; then
+  if ((use_cache == 0)); then
     for n in $(seq $NNODES_real); do
       for p in $(seq $PPN_real); do
         node[$(((n-1)*PPN_real+p))]="($((n-1)))"
-        echo "node[$(((n-1)*PPN_real+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
+        if ((SAVE_CACHE == 1)); then
+          echo "node[$(((n-1)*PPN_real+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
+        fi
       done
     done
-  fi # [ "$DISTR_FILE" = '-' ]
+  fi # ((use_cache == 0))
+else
+  read_nodefile_pbs "$NODELIST"
 fi
+
+#-------------------------------------------------------------------------------
+# Set up member names
 
 if [ "$MEMBERS" = 'all' ]; then
   local m
@@ -341,13 +396,21 @@ fi
 
 set_mem_np $mtot $SCALE_NP $SCALE_NP
 
-set_mem2node $mtot
-#set_mem2node $mtot "$DISTR_FILE"
+set_mem2node $mtot $use_cache $SAVE_CACHE
+
+if ((use_cache == 1)); then
+#  echo "[INFO] $FUNCNAME: Use 'distr' file cache." >&2
+  . ${NODEFILEDIR}/distr
+fi
 
 #-------------------------------------------------------------------------------
 # Create nodefiles
 
-if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
+if [ "$NODELIST" != '-' ] && [ "$NODEFILEDIR" != '-' ]; then
+#  echo "[INFO] $FUNCNAME: Save 'proc', 'node' files." >&2
+  rm -f $NODEFILEDIR/proc
+  rm -f $NODEFILEDIR/node
+
   local p
   for p in $(seq $totalnp); do  
     echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc
@@ -371,13 +434,17 @@ distribute_da_cycle_set () {
 #-------------------------------------------------------------------------------
 # Distribute members on nodes for DA cycling run.
 #
-# Usage: distribute_da_cycle [NODEFILE NODEFILEDIR DISTR_FILE]
+# Usage: distribute_da_cycle_set [NODELIST NODEFILEDIR SAVE_CACHE]
 #
-#   NODEFILE     The pre-determined nodefile
+#   NODELIST     List of node names
+#                '-':    The node names has not been determined yet (default)
+#                '(0)':  Ordered sequence '(*)' starting from 0
+#                (other) A given nodelist file
 #   NODEFILEDIR  Directory to output nodefiles
 #                '-': No output (default)
-#   DISTR_FILE   Location of the 'distr' file
-#                '-': The first-time run; output 'distr' file in $NODEFILEDIR
+#   SAVE_CACHE   Save 'distr' file cache?
+#                0: No
+#                1: Yes (default)
 #
 # Other input variables:
 #   $MEMBER      Ensemble size
@@ -386,7 +453,6 @@ distribute_da_cycle_set () {
 #   $PPN         Number of processes per node
 #   $MEMBER_FMT
 #   $SCALE_NP
-#   $NODELIST_TYPE
 #   
 # Return variables:
 #   $node[1...$nnodes]                    Name of nodes
@@ -415,46 +481,66 @@ distribute_da_cycle_set () {
 # Output files:
 #   [$TMP/node/proc]       All processes
 #   [$TMP/node/node]       One process per node
+#   [$TMP/node/distr]      File cache for shell array variables
 #-------------------------------------------------------------------------------
 
-local NODEFILE=${1:-machinefile}; shift
+local NODELIST=${1:--}; shift
 local NODEFILEDIR=${1:--}; shift
-local DISTR_FILE=${1:--}
+local SAVE_CACHE=${1:-1}
 
-if [ "$DISTR_FILE" != '-' ]; then
-  if [ -z "$DISTR_FILE" ]; then
-    echo "[Error] Cannot find \$DISTR_FILE: '$DISTR_FILE'." >&2
-    exit 1
-  fi
-  . $DISTR_FILE
+if [ "$NODEFILEDIR" != '-' ] && [ ! -d "$NODEFILEDIR" ]; then
+  echo "[Error] $FUNCNAME: \$NODEFILEDIR is given but is not an existing directory: '$NODEFILEDIR'" >&2
+  exit 1
+fi
+
+if [ "$NODEFILEDIR" = '-' ]; then
+  SAVE_CACHE=0
+fi
+
+local use_cache=0
+if [ -s "${NODEFILEDIR}/distr" ]; then
+  use_cache=1
+  SAVE_CACHE=0
+fi
+
+if ((SAVE_CACHE == 1)); then
+#  echo "[INFO] $FUNCNAME: Save 'distr' file cache." >&2
+  rm -f $NODEFILEDIR/distr
 fi
 
 #-------------------------------------------------------------------------------
-# Set up node names and member names
+# Set up node names
 
-if [ "$NODELIST_TYPE" = 'nodefile' ]; then
-  read_nodefile_pbs "$NODEFILE"
-elif [ "$NODELIST_TYPE" = 'K' ]; then
+if [ "$NODELIST" = '-' ]; then
+  : # do nothing
+elif [ "$NODELIST" = '(0)' ]; then
   local n
   local p
 ######
   local s
   for s in $(seq 3); do
 ######
-  if [ "$DISTR_FILE" = '-' ]; then
+  if ((use_cache == 0)); then
     for n in $(seq $NNODES_real); do
       for p in $(seq $PPN_real); do
 #        node[$(((n-1)*PPN_real+p))]="($((n-1)))"
-#        echo "node[$(((n-1)*PPN_real+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
         node[$(((s-1)*NNODES_real*PPN_real+(n-1)*PPN_real+p))]="($(((s-1)*NNODES_real+n-1)))"
-        echo "node[$(((s-1)*NNODES_real*PPN_real+(n-1)*PPN_real+p))]=\"($(((s-1)*NNODES_real+n-1)))\"" >> $NODEFILEDIR/distr
+        if ((SAVE_CACHE == 1)); then
+#          echo "node[$(((n-1)*PPN_real+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
+          echo "node[$(((s-1)*NNODES_real*PPN_real+(n-1)*PPN_real+p))]=\"($(((s-1)*NNODES_real+n-1)))\"" >> $NODEFILEDIR/distr
+        fi
       done
     done
-  fi # [ "$DISTR_FILE" = '-' ]
+  fi # ((use_cache == 0))
 ######
   done
 ######
+else
+  read_nodefile_pbs "$NODELIST"
 fi
+
+#-------------------------------------------------------------------------------
+# Set up member names
 
 local m
 for m in $(seq $MEMBER); do
@@ -475,7 +561,12 @@ fi
 
 set_mem_np $mtot $SCALE_NP $SCALE_NP
 
-set_mem2node $mtot "$DISTR_FILE"
+set_mem2node $mtot $use_cache $SAVE_CACHE
+
+if ((use_cache == 1)); then
+#  echo "[INFO] $FUNCNAME: Use 'distr' file cache." >&2
+  . ${NODEFILEDIR}/distr
+fi
 
 #-------------------------------------------------------------------------------
 # Create nodefiles
@@ -483,7 +574,11 @@ set_mem2node $mtot "$DISTR_FILE"
 ######
 for s in $(seq 3); do
 ######
-if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
+if [ "$NODELIST" != '-' ] && [ "$NODEFILEDIR" != '-' ]; then
+#  echo "[INFO] $FUNCNAME: Save 'proc', 'node' files." >&2
+  rm -f $NODEFILEDIR/proc
+  rm -f $NODEFILEDIR/node
+
   local p
   for p in $(seq $totalnp); do  
     if ((s == 1)); then ###
@@ -516,14 +611,20 @@ distribute_fcst () {
 #-------------------------------------------------------------------------------
 # Distribute members on nodes for ensemble forecasts.
 #
-# Usage: distribute_fcst MEMBERS [CYCLE NODEFILE NODEFILEDIR]
+# Usage: distribute_fcst MEMBERS [CYCLE NODELIST NODEFILEDIR SAVE_CACHE]
 #
 #   MEMBERS      List of forecast members
 #   CYCLE        Number of forecast cycles run in parallel
 #                (default: 1)
-#   NODEFILE     The pre-determined nodefile
+#   NODELIST     List of node names
+#                '-':    The node names has not been determined yet (default)
+#                '(0)':  Ordered sequence '(*)' starting from 0
+#                (other) A given nodelist file
 #   NODEFILEDIR  Directory to output nodefiles
 #                '-': No output (default)
+#   SAVE_CACHE   Save 'distr' file cache?
+#                0: No
+#                1: Yes (default)
 #
 # Other input variables:
 #   $NNODES        Number of total nodes
@@ -531,7 +632,6 @@ distribute_fcst () {
 #   $NNODES_real   XXXXXX
 #   $PPN_real      XXXXXX
 #   $SCALE_NP
-#   $NODELIST_TYPE
 #   
 # Return variables:
 #   $node[1...$nnodes]                    Name of nodes
@@ -561,6 +661,7 @@ distribute_fcst () {
 # Output files:
 #   [$TMP/node/proc]            All processes
 #   [$TMP/node/node]            One process per node
+#   [$TMP/node/distr]           File cache for shell array variables
 #-------------------------------------------------------------------------------
 
 if (($# < 1)); then
@@ -570,45 +671,54 @@ fi
 
 local MEMBERS="$1"; shift
 local CYCLE=${1:-0}; shift
-local NODEFILE=${1:-machinefile}; shift
+local NODELIST=${1:--}; shift
 local NODEFILEDIR=${1:--}; shift
-local DISTR_FILE=${1:--}
+local SAVE_CACHE=${1:-1}
 
-if [ "$DISTR_FILE" != '-' ]; then
-  if [ -z "$DISTR_FILE" ]; then
-    echo "[Error] Cannot find \$DISTR_FILE: '$DISTR_FILE'." >&2
-    exit 1
-  fi
-  . $DISTR_FILE
+if [ "$NODEFILEDIR" != '-' ] && [ ! -d "$NODEFILEDIR" ]; then
+  echo "[Error] $FUNCNAME: \$NODEFILEDIR is given but is not an existing directory: '$NODEFILEDIR'" >&2
+  exit 1
 fi
-#-------------------------------------------------------------------------------
-# Set up node names and member names, and also get the number of members
 
-if [ "$NODELIST_TYPE" = 'nodefile' ]; then
-  read_nodefile_pbs "$NODEFILE"
-#elif [ "$NODELIST_TYPE" = '???' ]; then
-#  local n
-#  local p
-#  if [ "$DISTR_FILE" = '-' ]; then
-#    for n in $(seq $NNODES); do
-#      for p in $(seq $PPN); do
-#        node[$(((n-1)*PPN+p))]="($((n-1)))"
-#        echo "node[$(((n-1)*PPN+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
-#      done
-#    done
-#  fi # [ "$DISTR_FILE" = '-' ]
-elif [ "$NODELIST_TYPE" = 'K' ]; then
+if [ "$NODEFILEDIR" = '-' ]; then
+  SAVE_CACHE=0
+fi
+
+local use_cache=0
+if [ -s "${NODEFILEDIR}/distr" ]; then
+  use_cache=1
+  SAVE_CACHE=0
+fi
+
+if ((SAVE_CACHE == 1)); then
+#  echo "[INFO] $FUNCNAME: Save 'distr' file cache." >&2
+  rm -f $NODEFILEDIR/distr
+fi
+
+#-------------------------------------------------------------------------------
+# Set up node names
+
+if [ "$NODELIST" = '-' ]; then
+  : # do nothing
+elif [ "$NODELIST" = '(0)' ]; then
   local n
   local p
-  if [ "$DISTR_FILE" = '-' ]; then
+  if ((use_cache == 0)); then
     for n in $(seq $NNODES_real); do
       for p in $(seq $PPN_real); do
         node[$(((n-1)*PPN_real+p))]="($((n-1)))"
-        echo "node[$(((n-1)*PPN_real+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
+        if ((SAVE_CACHE == 1)); then
+          echo "node[$(((n-1)*PPN_real+p))]=\"($((n-1)))\"" >> $NODEFILEDIR/distr
+        fi
       done
     done
-  fi # [ "$DISTR_FILE" = '-' ]
+  fi # ((use_cache == 0))
+else
+  read_nodefile_pbs "$NODELIST"
 fi
+
+#-------------------------------------------------------------------------------
+# Set up member names and also get the number of members
 
 fmember=0
 for iname in $MEMBERS; do
@@ -618,7 +728,7 @@ done
 
 if ((CYCLE == 0)); then
   set_mem_np $fmember $SCALE_NP $SCALE_NP
-  set_mem2node $fmember
+  set_mem2node $fmember 0 0
   CYCLE=$((parallel_mems / fmember))
   if ((CYCLE < 1)); then
     CYCLE=1
@@ -639,12 +749,21 @@ fmembertot=$((fmember * CYCLE))
 
 set_mem_np $fmembertot $SCALE_NP $SCALE_NP
 
-set_mem2node $fmembertot
+set_mem2node $fmembertot $use_cache $SAVE_CACHE
+
+if ((use_cache == 1)); then
+#  echo "[INFO] $FUNCNAME: Use 'distr' file cache." >&2
+  . ${NODEFILEDIR}/distr
+fi
 
 #-------------------------------------------------------------------------------
 # Create nodefiles
 
-if [ "$NODEFILEDIR" != '-' ] && [ -d "$NODEFILEDIR" ]; then
+if [ "$NODELIST" != '-' ] && [ "$NODEFILEDIR" != '-' ]; then
+#  echo "[INFO] $FUNCNAME: Save 'proc', 'node' files." >&2
+  rm -f $NODEFILEDIR/proc
+  rm -f $NODEFILEDIR/node
+
   local p
   for p in $(seq $totalnp); do
     echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc

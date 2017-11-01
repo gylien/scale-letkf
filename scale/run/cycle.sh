@@ -98,10 +98,8 @@ declare -a proc2grpproc
 #if [ "$STG_TYPE" = 'builtin' ] && ((ISTEP == 1)); then
 if [ "$STG_TYPE" = 'builtin' ]; then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
-  distribute_da_cycle machinefile $NODEFILE_DIR || exit $?
-else
-  distribute_da_cycle - - $NODEFILE_DIR/distr || exit $?
 fi
+distribute_da_cycle "$NODELIST_TYPE" $NODEFILE_DIR || exit $?
 
 echo "[$(datetime_now)] ### 4" >&2
 

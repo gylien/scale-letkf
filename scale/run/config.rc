@@ -19,7 +19,7 @@ SCALE_LOG_SFX='.pe000000'
 #new variables:
 # STG_TYPE: 'K', 'K_rankdir', 'builtin', (other: no stageing)
 # DISK_ALL_LOCAL: 1, (other)
-# NODELIST_TYPE: 'nodefile', 'K'
+# NODELIST_TYPE: 'machinefile', '(0)'
 # MPI_TYPE: 'K', 'sgimpt', 'openmpi'
 
 if [ "$PRESET" = 'K' ]; then
@@ -32,7 +32,7 @@ if [ "$PRESET" = 'K' ]; then
 #  DISK_MODE_DATA_LANDUSE=2
 #  DISK_MODE_DATA_BDYPREP=2
   ONLINE_STGOUT=0
-  NODELIST_TYPE='K'
+  NODELIST_TYPE='(0)'
   MPI_TYPE='K'
 elif [ "$PRESET" = 'K_rankdir' ]; then
   STG_TYPE='K_rankdir'
@@ -45,7 +45,7 @@ elif [ "$PRESET" = 'K_rankdir' ]; then
   DISK_MODE_DATA_LANDUSE=${DISK_MODE_DATA_LANDUSE:-2}
   DISK_MODE_DATA_BDYPREP=${DISK_MODE_DATA_BDYPREP:-2}
   ONLINE_STGOUT=0
-  NODELIST_TYPE='K'
+  NODELIST_TYPE='(0)'
   MPI_TYPE='K'
 elif [ "$PRESET" = 'K_micro' ]; then
   STG_TYPE=
@@ -56,7 +56,7 @@ elif [ "$PRESET" = 'K_micro' ]; then
 #  DISK_MODE_DATA_TOPO=2
 #  DISK_MODE_DATA_LANDUSE=2
 #  DISK_MODE_DATA_BDYPREP=2
-  NODELIST_TYPE='K'
+  NODELIST_TYPE='(0)'
   MPI_TYPE='K'
 #  if ((ENABLE_SET == 1)); then
 #    NNODES_all=$((NNODES*3))
@@ -70,20 +70,20 @@ elif [ "$PRESET" = 'K_micro' ]; then
 ##  DISK_MODE_DATA_TOPO=2
 ##  DISK_MODE_DATA_LANDUSE=2
 ##  DISK_MODE_DATA_BDYPREP=2
-#  NODELIST_TYPE='K'
+#  NODELIST_TYPE='(0)'
 #  MPI_TYPE='K'
 elif [ "$PRESET" = 'OFP' ]; then
   STG_TYPE='builtin'
   TMPDAT_MODE=2
   TMPRUN_MODE=2
-  NODELIST_TYPE='nodefile'
+  NODELIST_TYPE='machinefile'
   MPI_TYPE='impi'
 elif [ "$PRESET" = 'Linux' ]; then
   STG_TYPE='builtin'
-  NODELIST_TYPE='nodefile'
+  NODELIST_TYPE='machinefile'
 elif [ "$PRESET" = 'Linux_torque' ]; then
   STG_TYPE='builtin'
-  NODELIST_TYPE='nodefile'
+  NODELIST_TYPE='machinefile'
 else
   echo "[Error] Preset '$PRESET' not found" 1>&2
   exit 1

@@ -69,7 +69,7 @@ declare -a proc2node
 declare -a proc2group
 declare -a proc2grpproc
 
-distribute_fcst "$MEMBERS" $CYCLE machinefile - $NODEFILE_DIR/distr
+distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR
 
 if ((CYCLE == 0)); then
   CYCLE=$parallel_mems

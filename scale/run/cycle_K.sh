@@ -79,11 +79,11 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $TMPS/node
-if ((ENABLE_SET == 1)); then            ##
-  distribute_da_cycle_set - $TMPS/node  ##
-else                                    ##
-  distribute_da_cycle - $TMPS/node
-fi                                      ##
+if ((ENABLE_SET == 1)); then                           ##
+  distribute_da_cycle_set "$NODELIST_TYPE" $TMPS/node  ##
+else                                                   ##
+  distribute_da_cycle "$NODELIST_TYPE" $TMPS/node
+fi                                                     ##
 
 #===============================================================================
 # Determine the staging list

@@ -74,7 +74,7 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $TMPS/node
-distribute_fcst "$MEMBERS" $CYCLE - $TMPS/node
+distribute_fcst "$MEMBERS" $CYCLE "$NODELIST_TYPE" $TMPS/node
 
 if ((CYCLE == 0)); then
   CYCLE=$cycle_auto
