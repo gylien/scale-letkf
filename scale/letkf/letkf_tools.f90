@@ -1853,13 +1853,21 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   nrdiag = obs(obset)%err(obidx) * obs(obset)%err(obidx) / nrloc
 
 #ifdef H08
-  if (obtyp == 23 .and. H08_AOEI) then ! obtypelist(obtyp) == 'H08IRB'
+  if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'
+    if(H08_AOEI) then 
     ! obs%err: sigma_ot/true (not inflated) obs error 
     ! obsda%val: O–B (innovation)
-    !! obsda%val2: sigma_b/background variance (in obs space)
     ! obsda%val2: sigma_o (inflated obs error)
-    !nrdiag = max(obs(obset)%err(obidx)**2, obsda_sort%val(iob)**2 - obsda_sort%val2(iob)**2)**2 / nrloc 
-    nrdiag = obsda_sort%val2(iob)**2 / nrloc 
+    ! nrdiag = max(obs(obset)%err(obidx)**2, obsda_sort%val(iob)**2 - obsda_sort%val2(iob)**2)**2 / nrloc 
+      nrdiag = obsda_sort%val2(iob)**2 / nrloc 
+
+    else ! simple cloud-dependent obs err (Honda et al. 2017MWR)
+      if(obsda_sort%val2(iob) > H08_CA_THRES)then
+        nrdiag = H08_CLDERR_CLOUD(obs(obset)%lev(obidx)) * H08_CLDERR_CLOUD(obs(obset)%lev(obidx)) / nrloc
+      else 
+        nrdiag = H08_CLDERR_CLEAR(obs(obset)%lev(obidx)) * H08_CLDERR_CLEAR(obs(obset)%lev(obidx)) / nrloc
+      endif
+    endif
   endif
 #endif
 

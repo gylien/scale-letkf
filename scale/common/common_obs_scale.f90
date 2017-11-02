@@ -1596,6 +1596,12 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     end if
 #endif
 
+    if (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
+        abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE) then
+    else
+      cycle
+    endif
+
     if((nprof == 0) .or. ((ri /= ri_H08(nprof)) .or. (rj /= rj_H08(nprof))))then
       nprof = nprof + 1
 
@@ -3391,6 +3397,15 @@ SUBROUTINE read_obs_H08(cfile,obs)
   INTEGER :: n,iunit
 
   INTEGER :: nprof, np, ch
+  INTEGER :: istd, idif
+
+  if(H08_OBS_STD)then
+    istd = 4 + NIRB_HIM8 + 1
+    idif = 4 + NIRB_HIM8 + 2
+  else
+    idif = 4 + NIRB_HIM8 + 1
+  endif
+
 
   nprof = obs%nobs / NIRB_HIM8
 !  call obs_info_allocate(obs)
@@ -3410,13 +3425,19 @@ SUBROUTINE read_obs_H08(cfile,obs)
       obs%lon(n) = REAL(wk(3),r_size)
       obs%lat(n) = REAL(wk(4),r_size)
       obs%dat(n) = REAL(wk(4+ch),r_size)
-      obs%dif(n) = 0.0d0
       obs%lev(n) = ch + 6.0 ! substitute channnel number instead of the obs level
       !obs%err(n) = REAL(OBSERR_H08(ch),r_size)
+
       if(H08_OBS_STD)then
-        obs%err(n) = -REAL(wk(H08_OBS_RECL),r_size)
+        obs%err(n) = -REAL(wk(istd),r_size)
       else
         obs%err(n) = REAL(OBSERR_H08(ch),r_size)
+      endif
+
+      if(H08_OBS_4D)then
+        obs%dif(n) = -REAL(wk(idif),r_size)
+      else
+        obs%dif(n) = 0.0d0
       endif
     END DO
   END DO

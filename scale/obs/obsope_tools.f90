@@ -79,7 +79,8 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   integer, allocatable :: qc_p(:)
 #ifdef H08
   real(r_size), allocatable :: lev_p(:)
-  real(r_size), allocatable :: val2_p(:)
+  real(r_size), allocatable :: val_p(:)
+  real(r_size), allocatable :: val2_p(:) ! either AOEI or CA
   real(r_size), allocatable :: pred1_p(:)
   real(r_size), allocatable :: pred2_p(:)
 #endif
@@ -608,24 +609,25 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
                   !print *,"DEBUG Him8",yobs_H08(ch,nn),obs(iof)%dat(n),ch+6
 
-                  !obsda%val2(nnB07(nn)+ch-1) = yobs_H08_clr(ch,nn) 
-                  ! Get CA (Okamoto et al. 2014)
-                  !
-                  !iof = obsda%set(nnB07(nn)+ch-1)
-                  !n = obsda%idx(nnB07(nn)+ch-1)
-                  ! 
-                  !obsda%val2(nnB07(nn)+ch-1) = (abs(yobs_H08(ch,nn) - yobs_H08_clr(ch,nn)) &
-                  !                              + abs(obs(iof)%dat(n) - yobs_H08_clr(ch,nn))) * 0.5d0
-                  !
-                  ! Simple bias correction depending on the sky condition
-                  ! (diagnosed by CA)
-                  !if(H08_BIAS_SIMPLE)then
-                  !  if((obsda%val2(nnB07(nn)+ch-1) > H08_CA_THRES) .and. ( .not. H08_BIAS_SIMPLE_CLR) )then
-                  !    obsda%val(nnB07(nn)+ch-1) = obsda%val(nnB07(nn)+ch-1) - H08_BIAS_CLOUD(ch)
-                  !  else
-                  !    obsda%val(nnB07(nn)+ch-1) = obsda%val(nnB07(nn)+ch-1) - H08_BIAS_CLEAR(ch)
-                  !  endif
-                  !endif
+                  if(.not. H08_AOEI)then ! get CA (Okamoto 2017QJRMS)
+                    ! Get CA (Okamoto et al. 2014)
+                    !
+                    iof = obsda%set(nnB07(nn)+ch-1)
+                    n = obsda%idx(nnB07(nn)+ch-1)
+                     
+                    obsda%val2(nnB07(nn)+ch-1) = (abs(yobs_H08(ch,nn) - yobs_H08_clr(ch,nn)) &
+                                                  + abs(obs(iof)%dat(n) - yobs_H08_clr(ch,nn))) * 0.5d0
+                    !
+                    ! Simple bias correction depending on the sky condition
+                    ! (diagnosed by CA)
+                    if(H08_BIAS_SIMPLE)then
+                      if((obsda%val2(nnB07(nn)+ch-1) > H08_CA_THRES) .and. ( .not. H08_BIAS_SIMPLE_CLR) )then
+                        obsda%val(nnB07(nn)+ch-1) = obsda%val(nnB07(nn)+ch-1) - H08_BIAS_CLOUD(ch)
+                      else
+                        obsda%val(nnB07(nn)+ch-1) = obsda%val(nnB07(nn)+ch-1) - H08_BIAS_CLEAR(ch)
+                      endif
+                    endif
+                  endif
                 enddo
               enddo
 !$OMP END PARALLEL DO

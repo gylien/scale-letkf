@@ -18,11 +18,6 @@ SCALE_CONF=${LETKF_RUN}/config.nml.scale
 #TOPO=${OUTDIR}/${EXP_HIM8}/const/topo
 TOPO=${OUTDIR}/const/topo
 
-# -- RTTOV_DIR --
-DIR_RTTOV=/data/share005/honda/RTTOV
-RTTOV_COEF=${DIR_RTTOV}/rtcoef_rttov11/rttov7pred54L/rtcoef_himawari_8_ahi.dat
-RTTOV_SCCOEF=${DIR_RTTOV}/rtcoef_rttov11/cldaer/sccldcoef_himawari_8_ahi.dat
-
 
 
 tstart='2017-07-11 1:00:00'

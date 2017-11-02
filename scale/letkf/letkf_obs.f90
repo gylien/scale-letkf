@@ -252,7 +252,7 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
           if (im <= MEMBER) then ! only consider lev from members, not from the means
             obsda%lev(n1:n2) = obsda%lev(n1:n2) + obsda_ext%lev
-            obsda%val2(n1:n2) = obsda%val2(n1:n2) + obsda_ext%val2 ! empty
+            obsda%val2(n1:n2) = obsda%val2(n1:n2) + obsda_ext%val2 
             obsda%pred1(n1:n2) = obsda%pred1(n1:n2) + obsda_ext%pred1
             obsda%pred2(n1:n2) = obsda%pred2(n1:n2) + obsda_ext%pred2 
           end if
@@ -290,12 +290,12 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
     if (nprocs_e > 1) then
       call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) ! empty
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) 
       call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%pred1(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) 
       call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%pred2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) 
     end if
     obsda%lev(n1:n2) = obsda%lev(n1:n2) / REAL(MEMBER,r_size)
-    obsda%val2(n1:n2) = obsda%val2(n1:n2) / REAL(MEMBER,r_size) ! empty
+    obsda%val2(n1:n2) = obsda%val2(n1:n2) / REAL(MEMBER,r_size) ! empty(AOEI)/CA (Okamoto 2017QJRMS)
     obsda%pred1(n1:n2) = obsda%pred1(n1:n2) / REAL(MEMBER,r_size) 
     obsda%pred2(n1:n2) = obsda%pred2(n1:n2) / REAL(MEMBER,r_size) 
 
@@ -543,15 +543,22 @@ SUBROUTINE set_letkf_obs
       endif
     endif
 
+ 
 !   AOEI: compute sprd in obs space (sigma_b for AOEI) ! H08
 !   sig_o will be used in letkf_tools.f90
-    sig_b = 0.0d0 !H08
-    DO i=1,MEMBER
-      sig_b = sig_b + obsda%ensval(i,n) * obsda%ensval(i,n)
-    ENDDO
-    sig_b = dsqrt(sig_b / REAL(MEMBER-1,r_size))
-    sig_o = dsqrt(max(obs(iof)%err(iidx)**2,obsda%val(n)**2 - obsda%val2(n)**2))
-    obsda%val2(n) = sig_o
+    if(H08_AOEI)then
+      sig_b = 0.0d0 !H08
+      DO i=1,MEMBER
+        sig_b = sig_b + obsda%ensval(i,n) * obsda%ensval(i,n)
+      ENDDO
+      sig_b = dsqrt(sig_b / REAL(MEMBER-1,r_size))
+      sig_o = dsqrt(max(obs(iof)%err(iidx)**2,obsda%val(n)**2 - obsda%val2(n)**2))
+      obsda%val2(n) = sig_o
+    else
+      sig_o = obsda%val(n)
+      ! if AOEI is not used,
+      ! obsda%val2 stores the ensemble mean of CA (Okamoto 2017QJRMS)
+    endif
 #endif
 
     select case (obs(iof)%elm(iidx)) !gross error
