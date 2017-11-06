@@ -829,7 +829,7 @@ local n=0
 for inode in $nodelist; do
   n=$((n+1))
   node[$n]=$inode
-  ippn=`cat $NODEFILE | grep $inode | wc -l`
+  ippn=`cat $NODEFILE | grep -Fx $inode | wc -l`
   if ((ippn != PPN_APPAR)); then
     echo "[Error] $FUNCNAME: Number of processes per node in \$NODEFILE" >&2
     echo "          is not consistent to the setting in 'config.main'" >&2
