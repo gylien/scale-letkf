@@ -485,13 +485,13 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_obs_bad
         cycle
       endif
-      obs(iof)%err(iidx) = abs(obs(iof)%err(iidx))
+      !obs(iof)%err(iidx) = abs(obs(iof)%err(iidx))
+      obs(iof)%err(iidx) = OBSERR_H08(ch_num)
 
       if (H08_BAND_USE(ch_num) /= 1) then
         obsda%qc(n) = iqc_obs_bad
         cycle
       end if
-
       if (obs(iof)%dat(iidx) == undef) then
         obsda%qc(n) = iqc_obs_bad
         cycle
@@ -502,6 +502,11 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_obs_bad
         cycle
       endif
+
+#ifdef DEBUG
+      write(6,'(a,f6.2)')"DEBUG HIM8-VAL,",obsda%val(n) 
+
+#endif
 
     endif
 !!!###### end Himawari-8 assimilation ###### ! H08

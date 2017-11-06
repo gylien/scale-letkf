@@ -670,8 +670,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
   if(debug) write(6,*)"Enter direct"
 
-!  CALL rttov_parallel_direct(                &
-  CALL rttov_direct(                &
+  CALL rttov_parallel_direct(                &
+!  CALL rttov_direct(                &
         & errorstatus,              &! out   error flag
         & chanprof,                 &! in    channel and profile index structure
         & opts,                     &! in    options structure
@@ -682,8 +682,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
         & calcemis    = calcemis,   &! in    flag for internal emissivity calcs
         & emissivity  = emissivity, &! inout input/output emissivities per channel
         & calcrefl    = calcrefl,   &! in    flag for internal BRDF calcs
-        & reflectance = reflectance) !,& ! inout input/output BRDFs per channel
-!        & nthreads    = 8) ! Assume K computer
+        & reflectance = reflectance ,& ! inout input/output BRDFs per channel
+        & nthreads    = 8) ! Assume K computer
   IF (errorstatus /= errorstatus_success) THEN
     WRITE (6,*) 'rttov_direct error'
     CALL rttov_exit(errorstatus)
