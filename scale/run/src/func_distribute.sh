@@ -325,6 +325,11 @@ if [ "$NODEFILEDIR" != '-' ] && [ ! -d "$NODEFILEDIR" ]; then
   exit 1
 fi
 
+if [ -s "${NODEFILEDIR}/proc" ] && [ -s "${NODEFILEDIR}/node" ]; then
+#  echo "[INFO] $FUNCNAME: Skip creating 'proc' and 'node' files because they already exist." >&2
+  NODELIST='-'
+fi
+
 if [ "$NODEFILEDIR" = '-' ]; then
   SAVE_CACHE=0
 fi
@@ -335,10 +340,9 @@ if [ -s "${NODEFILEDIR}/distr" ]; then
   SAVE_CACHE=0
 fi
 
-if ((SAVE_CACHE == 1)); then
+#if ((SAVE_CACHE == 1)); then
 #  echo "[INFO] $FUNCNAME: Save 'distr' file cache." >&2
-  rm -f $NODEFILEDIR/distr
-fi
+#fi
 
 #-------------------------------------------------------------------------------
 # Set up node names
@@ -408,9 +412,6 @@ fi
 
 if [ "$NODELIST" != '-' ] && [ "$NODEFILEDIR" != '-' ]; then
 #  echo "[INFO] $FUNCNAME: Save 'proc', 'node' files." >&2
-  rm -f $NODEFILEDIR/proc
-  rm -f $NODEFILEDIR/node
-
   local p
   for p in $(seq $totalnp); do  
     echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc
@@ -493,6 +494,11 @@ if [ "$NODEFILEDIR" != '-' ] && [ ! -d "$NODEFILEDIR" ]; then
   exit 1
 fi
 
+if [ -s "${NODEFILEDIR}/proc" ] && [ -s "${NODEFILEDIR}/node" ]; then
+#  echo "[INFO] $FUNCNAME: Skip creating 'proc' and 'node' files because they already exist." >&2
+  NODELIST='-'
+fi
+
 if [ "$NODEFILEDIR" = '-' ]; then
   SAVE_CACHE=0
 fi
@@ -503,10 +509,9 @@ if [ -s "${NODEFILEDIR}/distr" ]; then
   SAVE_CACHE=0
 fi
 
-if ((SAVE_CACHE == 1)); then
+#if ((SAVE_CACHE == 1)); then
 #  echo "[INFO] $FUNCNAME: Save 'distr' file cache." >&2
-  rm -f $NODEFILEDIR/distr
-fi
+#fi
 
 #-------------------------------------------------------------------------------
 # Set up node names
@@ -576,9 +581,6 @@ for s in $(seq 3); do
 ######
 if [ "$NODELIST" != '-' ] && [ "$NODEFILEDIR" != '-' ]; then
 #  echo "[INFO] $FUNCNAME: Save 'proc', 'node' files." >&2
-  rm -f $NODEFILEDIR/proc
-  rm -f $NODEFILEDIR/node
-
   local p
   for p in $(seq $totalnp); do  
     if ((s == 1)); then ###
@@ -680,6 +682,11 @@ if [ "$NODEFILEDIR" != '-' ] && [ ! -d "$NODEFILEDIR" ]; then
   exit 1
 fi
 
+if [ -s "${NODEFILEDIR}/proc" ] && [ -s "${NODEFILEDIR}/node" ]; then
+#  echo "[INFO] $FUNCNAME: Skip creating 'proc' and 'node' files because they already exist." >&2
+  NODELIST='-'
+fi
+
 if [ "$NODEFILEDIR" = '-' ]; then
   SAVE_CACHE=0
 fi
@@ -690,10 +697,9 @@ if [ -s "${NODEFILEDIR}/distr" ]; then
   SAVE_CACHE=0
 fi
 
-if ((SAVE_CACHE == 1)); then
+#if ((SAVE_CACHE == 1)); then
 #  echo "[INFO] $FUNCNAME: Save 'distr' file cache." >&2
-  rm -f $NODEFILEDIR/distr
-fi
+#fi
 
 #-------------------------------------------------------------------------------
 # Set up node names
@@ -761,9 +767,6 @@ fi
 
 if [ "$NODELIST" != '-' ] && [ "$NODEFILEDIR" != '-' ]; then
 #  echo "[INFO] $FUNCNAME: Save 'proc', 'node' files." >&2
-  rm -f $NODEFILEDIR/proc
-  rm -f $NODEFILEDIR/node
-
   local p
   for p in $(seq $totalnp); do
     echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc

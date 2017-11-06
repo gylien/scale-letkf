@@ -82,11 +82,11 @@ declare -a name_m
 declare -a node_m
 
 safe_init_tmpdir $NODEFILE_DIR
-if ((ENABLE_SET == 1)); then               ##
-  distribute_da_cycle_set - $NODEFILE_DIR  ##
-else                                       ##
-  distribute_da_cycle - $NODEFILE_DIR
-fi                                         ##
+if ((ENABLE_SET == 1)); then                              ##
+  distribute_da_cycle_set "$NODELIST_TYPE" $NODEFILE_DIR  ##
+else                                                      ##
+  distribute_da_cycle "$NODELIST_TYPE" $NODEFILE_DIR
+fi                                                        ##
 
 #===============================================================================
 # Determine the staging list
