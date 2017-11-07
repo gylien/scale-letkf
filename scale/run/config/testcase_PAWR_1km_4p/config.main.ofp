@@ -25,7 +25,7 @@ DATA_TOPO="$DDIR/exp/testcase_PAWR_1km_4p_data"                      # Directory
 DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
 DATA_LANDUSE="$DDIR/exp/testcase_PAWR_1km_4p_data"                   # Directory of the prepared landuse files
 DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
+DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_PAWR_1km_4p_data"            # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
@@ -35,11 +35,11 @@ OBSNCEP=
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='DEM50M'    # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='LU100M' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -97,9 +97,10 @@ ENABLE_SET=0       ######
 #===============================================================================
 # Temporary directories to store runtime files
 
-DISK_MODE_CONSTDB=2         # Disk type used for the temporary directory of static database
-DISK_MODE_BDYDATA=2         # Disk type used for the temporary directory of raw boundary data 
-DISK_MODE_OBS=2             # Disk type used for the temporary directory of observation data
+DISK_MODE=1
+DISK_MODE_CONSTDB=1         # Disk type used for the temporary directory of static database
+DISK_MODE_BDYDATA=1         # Disk type used for the temporary directory of raw boundary data 
+DISK_MODE_OBS=1             # Disk type used for the temporary directory of observation data
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
@@ -126,8 +127,6 @@ fi
 
 SCP='cp -L'
 SCP_HOSTPREFIX=''
-#SCP='rsync -Lq'
-#SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 
