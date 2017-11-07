@@ -177,7 +177,7 @@ elif [ "$MPI_TYPE" = 'openmpi' ]; then
   $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $$MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
@@ -189,7 +189,7 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
   $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $$MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
@@ -466,6 +466,16 @@ local RUN_ON="${1:-node}"
 
 #-------------------------------------------------------------------------------
 
+if ((DISK_MODE == 1)); then
+  if [ -s "${STAGING_DIR}/${STGOUTLIST_LINK}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_LINK}" ]; then
+    local errmsg=$(bash $SCRP_DIR/src/stage_out_ln.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_LINK} $TMP 2>&1) # code same for both server and computing-node sides
+    if [ -n "$errmsg" ]; then
+      echo "$errmsg" >&2
+      return 1
+    fi
+  fi
+fi
+
 if [ -s "${STAGING_DIR}/${STGINLIST_LINK}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_LINK}" ]; then
 #  safe_init_tmpdir $TMP || return $?
   local errmsg=$(bash $SCRP_DIR/src/stage_in_ln.sh $NNODES ${STAGING_DIR}/${STGINLIST_LINK} $TMP 2>&1) # code same for both server and computing-node sides
@@ -492,16 +502,6 @@ if [ "$RUN_ON" = 'node' ]; then # stage-in to local directories can only be done
   if [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}" ]; then
     pdbash node all $SCRP_DIR/src/stage_in_init_stgdir_node.sh $TMPL local || return $?
     local errmsg=$(pdbash node all $SCRP_DIR/src/stage_in_cp_node.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $TMPL local $STAGE_THREAD 2>&1)
-    if [ -n "$errmsg" ]; then
-      echo "$errmsg" >&2
-      return 1
-    fi
-  fi
-fi
-
-if ((DISK_MODE == 1)); then
-  if [ -s "${STAGING_DIR}/${STGOUTLIST_LINK}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_LINK}" ]; then
-    local errmsg=$(bash $SCRP_DIR/src/stage_out_ln.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_LINK} $TMP 2>&1) # code same for both server and computing-node sides
     if [ -n "$errmsg" ]; then
       echo "$errmsg" >&2
       return 1
