@@ -45,7 +45,7 @@ res=$? && ((res != 0)) && exit $res
 . src/func_cycle.sh
 
 ######
-echo "[$(datetime_now)] cycle_step: $@: start"
+#echo "[$(datetime_now)] cycle_step: $@: start"
 ######
 
 #-------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ declare -a proc2node
 declare -a proc2group
 declare -a proc2grpproc
 
-distribute_da_cycle machinefile - $NODEFILE_DIR/distr
+distribute_da_cycle - $NODEFILE_DIR
 
 #===============================================================================
 # Run one step
@@ -102,7 +102,7 @@ res=$? && ((res != 0)) && exit $res
 #===============================================================================
 
 ######
-echo "[$(datetime_now)] cycle_step: end"
+#echo "[$(datetime_now)] cycle_step: end"
 ######
 
 exit 0

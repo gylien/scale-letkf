@@ -17,40 +17,39 @@ SCALE_LOG_SFX='.pe000000'
 # Preset
 
 #new variables:
-# NODELIST_TYPE: 'nodefile', 'K'
+# NODELIST_TYPE: 'machinefile', '(0)'
 # MPI_TYPE: 'K', 'sgimpt', 'openmpi'
 
 if [ "$PRESET" = 'K' ]; then
   TMP='.'
   DISK_MODE=2
   ONLINE_STGOUT=0
-  NODELIST_TYPE='K'
+  NODELIST_TYPE='(0)'
   MPI_TYPE='K'
 elif [ "$PRESET" = 'K_rankdir' ]; then
   TMP='..'
   TMPL='.'
   DISK_ALL_RANK_LOCAL=1
   DISK_MODE=3
-  DISK_MODE_CONSTDB=2
-  DISK_MODE_BDYDATA=2
-#  DISK_MODE_OBS=2
+  DISK_MODE_CONSTDB=${DISK_MODE_CONSTDB:-2}
+  DISK_MODE_BDYDATA=${DISK_MODE_BDYDATA:-2}
+#  DISK_MODE_OBS=${DISK_MODE_OBS:-2}
   ONLINE_STGOUT=0
-  NODELIST_TYPE='K'
+  NODELIST_TYPE='(0)'
   MPI_TYPE='K'
 elif [ "$PRESET" = 'K_micro' ]; then
   DISK_MODE=2
-  NODELIST_TYPE='K'
+  NODELIST_TYPE='(0)'
   MPI_TYPE='K'
 #elif [ "$PRESET" = 'K_interact' ]; then
 #  ...
 elif [ "$PRESET" = 'OFP' ]; then
-  DISK_MODE=2
-  NODELIST_TYPE='nodefile'
+  NODELIST_TYPE='machinefile'
   MPI_TYPE='impi'
 elif [ "$PRESET" = 'Linux' ]; then
-  NODELIST_TYPE='nodefile'
+  NODELIST_TYPE='machinefile'
 elif [ "$PRESET" = 'Linux_torque' ]; then
-  NODELIST_TYPE='nodefile'
+  NODELIST_TYPE='machinefile'
 else
   echo "[Error] Preset '$PRESET' not found" 1>&2
   exit 1
