@@ -86,7 +86,9 @@ fi
 
 echo "[$(datetime_now)] Determine the staging list"
 
-cp -L $SCRP_DIR/config.main $TMP/config.main
+cat $SCRP_DIR/config.main | \
+    sed -e "/\(^DIR=\| DIR=\)/c DIR=\"$DIR\"" \
+    > $TMP/config.main
 
 echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMP/config.main
 echo "RUN_LEVEL=4" >> $TMP/config.main
