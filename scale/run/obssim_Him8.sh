@@ -1,11 +1,10 @@
 #!/bin/bash
 
-. config.main
 
 USER=honda
 
-EXP=debug
-
+EXP=KYUSHU2017_D2_NoHim8_2.5min
+. config/${EXP}/config.main
 
 #
 SWDIR="/scratch/$(id -ng)/${USER}/obssim"
@@ -13,9 +12,7 @@ LETKF_RUN="$(pwd)"
 OBSSIM_BIN="${LETKF_RUN}/../obs/obssim"
 RUNSH=$SWDIR/OBSSIM.sh
 RUNCONF_COMMON=$SWDIR/obssim.conf_common
-#SCALE_CONF=${OUTDIR}/${EXP_HIM8}/run.conf
 SCALE_CONF=${LETKF_RUN}/config.nml.scale
-#TOPO=${OUTDIR}/${EXP_HIM8}/const/topo
 TOPO=${OUTDIR}/const/topo
 
 
@@ -54,7 +51,7 @@ MMh=$(date -ud "$ctime" '+%m')
 DDh=$(date -ud "$ctime" '+%d')
 HHh=$(date -ud "$ctime" '+%H')
 MNh=$(date -ud "$ctime" '+%M')
-SEh=00
+SEh=$(date -ud "$ctime" '+%S')
 
 rm -f $RUNCONF_COMMON
 cat << EOF >> $RUNCONF_COMMON
@@ -114,7 +111,7 @@ TE=$(expr `date -ud "$tend" '+%s'` - `date -ud "$tint" '+%s'` )
 TS=$(expr $TS / $tint + 1 )
 TE=$(expr $TE / $tint + 1 )
 TLEV=$(($TE - TS + 1))
-echo $TS" "$TE" "$TLEV
+echo $TLEV
 #exit
 TNODE=`expr ${MEM_NP} \* $TLEV`
 
@@ -150,15 +147,13 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
   DDh=$(date -ud "$ctime" '+%d')
   HHh=$(date -ud "$ctime" '+%H')
   MNh=$(date -ud "$ctime" '+%M')
-  SEh=00
+  SEh=$(date -ud "$ctime" '+%S')
 
-  HTIME=${YYYYh}${MMh}${DDh}${HHh}${MNh}00
+  HTIME=${YYYYh}${MMh}${DDh}${HHh}${MNh}${SEh}
 
   for MEM in $MEM_L # MEM
   do
 
-
-  
 
   if [ $MEM == 0 ] ; then
      MEM=mean
@@ -251,7 +246,7 @@ EOF
 
   done # -- MEM
 
-  ctime=$(date -ud "${ctint} second $ctime" '+%Y-%m-%d %H%M')
+  ctime=$(date -ud "${ctint} second $ctime" '+%Y-%m-%d %H:%M:%S')
 done # -- time
 echo "wait" >> $RUNSH
 

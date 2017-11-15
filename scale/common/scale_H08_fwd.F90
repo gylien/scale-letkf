@@ -1,10 +1,20 @@
 module scale_H08_fwd
 !$USE OMP_LIB
-implicit none
+
+  USE common, ONLY : r_size
+  USE scale_const, ONLY: &
+        Rdry    => CONST_Rdry,  &
+        Rvap    => CONST_Rvap,  &
+        Deg2Rad => CONST_D2R,   &
+        temp00  => CONST_TEM00, & 
+        pres00  => CONST_PRE00, &
+        Q_EPS   => CONST_EPS,   &
+        CONST_GRAV
+  implicit none
 
 contains
 
-SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
+subroutine SCALE_RTTOV_fwd(nchannels,&
                            nlevs,&
                            nprof,&
                            tmp_p,&
@@ -108,21 +118,15 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
        & rttov_emissivity,    &
        & rttov_reflectance
 
+  USE rttov_unix_env, ONLY : rttov_exit
   ! jpim, jprb and jplm are the RTTOV integer, real and logical KINDs
   USE parkind1, ONLY : jpim, jprb, jplm
-
-  USE rttov_unix_env, ONLY : rttov_exit
-  USE common, ONLY : r_size
-  USE scale_const, ONLY: &
-        Rdry    => CONST_Rdry, &
-        Rvap    => CONST_Rvap, &
-        Deg2Rad => CONST_D2R,  &
-        CONST_GRAV
   USE common_nml, ONLY: &
         H08_RTTOV_CFRAC_CNST, &
         H08_RTTOV_MINQ_CTOP,  &
         H08_RTTOV_COEF_PATH,  &
         H08_RTTOV_PROF_SHIFT, &
+        H08_RTTOV_CFRAC,      &
         H08_RTTOV_KADD
   use scale_grid, only: &
       GRID_FZ
@@ -221,7 +225,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   REAL(Kind=r_size),INTENT(OUT) :: btall_out(nchannels,nprof)
   REAL(Kind=r_size),INTENT(OUT) :: btclr_out(nchannels,nprof)
   REAL(Kind=r_size),INTENT(OUT) :: ctop_out(nprof)
-  REAL(Kind=r_size) :: ptmp
+  REAL(Kind=r_size) :: ptmp, tktmp, qvtmp
 
   REAL(Kind=r_size) :: rdp, max_wgt, tmp_wgt
   REAL(Kind=r_size),INTENT(OUT) :: mwgt_plev(nchannels,nprof) ! Max weight level (Pa)
@@ -229,11 +233,8 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   logical :: debug = .false.
 !  logical :: debug = .true.
 
-  real(kind=jprb) :: Rd 
-  real(kind=jprb) :: Rv 
   real(kind=jprb) :: grav
 
-  real(kind=jprb) :: epsb 
   real(kind=jprb) :: repsb 
 
   integer :: rdk, orgk
@@ -249,12 +250,9 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   kadd = min(kadd_org,H08_RTTOV_KADD)
 
 ! -- set thermodynamic constants
-  Rd = real(Rdry,kind=jprb)
-  Rv = real(Rvap,kind=jprb)
-  epsb = Rd / Rv 
-  repsb = 1.0_jprb / epsb
 
   grav = real(CONST_GRAV,kind=jprb)
+  repsb = real(Rvap / Rdry, kind=jprb)
 
   !
   ! The usual steps to take when running RTTOV are as follows:
@@ -461,7 +459,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   ! Note: Profiles are from top to surface.
   rdz = 1.0d3 / (GRID_FZ(nlevs+KHALO) - GRID_FZ(nlevs+KHALO-kidx_rlx))
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(iprof,ilev,rat,rdk,orgk,ptmp,tv,kgkg2gm3,icec1,icec2,liqc1,liqc2,dz,tmp_dif)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(iprof,ilev,rat,rdk,orgk,ptmp,tktmp,qvtmp,tv,kgkg2gm3,icec1,icec2,liqc1,liqc2,dz,tmp_dif)
   DO iprof = 1, nprof ! iprof
 
     if(H08_RTTOV_PROF_SHIFT)then
@@ -591,7 +589,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
         tv = real(tmp_t(orgk,iprof) * (1.0d0+tmp_qv(orgk,iprof)) * repsb &
                    / (1.0d0 + tmp_qv(orgk,iprof)), kind=jprb)
 
-        kgkg2gm3 = real(tmp_p(orgk,iprof),kind=jprb) / (Rd * tv) * 1000.0_jprb 
+        kgkg2gm3 = real(tmp_p(orgk,iprof),kind=jprb) / (Rdry * tv) * 1000.0_jprb 
 
         liqc1 = real(max(tmp_qc(orgk,iprof),0.0_r_size),kind=jprb) * kgkg2gm3
         icec1 = real(max(tmp_qice(orgk,iprof),0.0_r_size),kind=jprb) * kgkg2gm3
@@ -600,7 +598,7 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
         tv = real(tmp_t(orgk+1,iprof) * (1.0d0+tmp_qv(orgk+1,iprof)) * repsb &
                    / (1.0d0 + tmp_qv(orgk+1,iprof)), kind=jprb)
 
-        kgkg2gm3 = real(tmp_p(orgk+1,iprof),kind=jprb) / (Rd * tv) * 1000.0_jprb 
+        kgkg2gm3 = real(tmp_p(orgk+1,iprof),kind=jprb) / (Rdry * tv) * 1000.0_jprb 
 
         liqc2 = real(max(tmp_qc(orgk+1,iprof),0.0_r_size),kind=jprb) * kgkg2gm3
         icec2 = real(max(tmp_qice(orgk+1,iprof),0.0_r_size),kind=jprb) * kgkg2gm3
@@ -609,13 +607,35 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
                    (liqc1 + liqc2) * 0.5_jprb
         profiles(iprof) % cloud(6,ilev) = & 
                    (icec1 + icec2) * 0.5_jprb
-!
-! cloud fraction & cloud top diagnosis
-        ptmp = (tmp_p(orgk+1,iprof) + tmp_p(orgk,iprof))*0.5_jprb
 
-        profiles(iprof) % cfrac(ilev) = min((profiles(iprof) % cloud(2,ilev) + &
-                                             profiles(iprof) % cloud(6,ilev)) / H08_RTTOV_CFRAC_CNST, &
-                                             1.0_jprb)
+        ptmp = (tmp_p(orgk+1,iprof) + tmp_p(orgk,iprof))*0.5_jprb    ! (Pa)
+        tktmp = (tmp_t(orgk+1,iprof) + tmp_t(orgk,iprof))*0.5_jprb ! (K)
+        qvtmp = max((tmp_qv(orgk+1,iprof) + tmp_qv(orgk,iprof)) * 0.5_jprb, 0.0_r_size) ! (kgkg-1)
+
+        !
+        ! cloud fraction & cloud top diagnosis
+        !
+        select case (H08_RTTOV_CFRAC)
+        case (0) ! use H08_RTTOV_MINQ_CTOP as in Honda et al. (2017a,b)
+                 !
+          profiles(iprof) % cfrac(ilev) = min((profiles(iprof) % cloud(2,ilev) + &
+                                               profiles(iprof) % cloud(6,ilev)) / H08_RTTOV_CFRAC_CNST, &
+                                               1.0_jprb)
+
+        case (1) ! SCALE microphysics method with a minor modification
+                 ! e.g., scalelib/src/atmos-physics/microphysics/scale_atmos_phy_mp_tomita08.F90 
+                 !                                 /radiation/scale_atmos_phy_rd_mstrnx.F90
+                 ! "subroutine ATMOS_PHY_MP_tomita08_CloudFraction"
+                 ! 
+          profiles(iprof) % cfrac(ilev) = 0.5_jprb + sign(0.5_jprb, profiles(iprof) % cloud(2,ilev) + &
+                                                                    profiles(iprof) % cloud(6,ilev) - Q_EPS)
+
+        case (2) ! Tompkins and Janiskova (2004QJRMS) method (as in Okamoto 2017QJRMS)
+                 !
+          profiles(iprof) % cfrac(ilev) = cldfrac_TJ04(ptmp,tktmp,qvtmp) ! Pa, K, kgkg-1
+
+        end select
+
         ! Need to modify? if openmp
         if(profiles(iprof) % cloud(2,ilev) + &
            profiles(iprof) % cloud(6,ilev) >= H08_RTTOV_MINQ_CTOP)then
@@ -807,7 +827,62 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   if(debug) write(*,*)'Successfully finished!!'
 
 return
-END SUBROUTINE SCALE_RTTOV_fwd
+end subroutine SCALE_RTTOV_fwd
+
+function cldfrac_TJ04(pres,temp,qv)
+  implicit none
+
+  real(r_size), intent(in) :: pres ! (Pa)
+  real(r_size), intent(in) :: temp ! (K)
+  real(r_size), intent(in) :: qv   ! (kgkg-1)
+
+  real(r_size) :: rh, rh_c
+  real(r_size) :: sigma
+  real(r_size) :: kappa
+
+  real(r_size) :: cldfrac_TJ04
+
+  !
+  ! cloud fraction diagnosis based on 
+  !  Tompkins and Janiskova (2004QJRMS):
+  !  A cloud scheme for data assimilation: Description and initial tests
+  !  
+
+  rh = get_RH(pres,temp,qv)
+
+  sigma = pres / pres00 ! non-dimensinoal level
+
+  kappa = max(0.0d0, 0.9d0 * (sigma - 0.2) ** 0.2) ! eq. (6) in TJ04
+  rh_c = 0.86d0 - 0.7d0 * sigma * (1.0d0 - sigma) * (1.85d0 + 0.95d0 * (sigma - 0.5d0)) ! eq. (7) in TJ04
+
+  cldfrac_TJ04 = 1.0d0 - dsqrt((1.0d0 - rh)/(1.0d0 - rh_c - kappa * (rh - rh_c)))
+
+  return
+end function cldfrac_TJ04
+
+function get_RH(pres,temp,qv)
+  implicit none
+
+  real(r_size), intent(in) :: pres ! (Pa)
+  real(r_size), intent(in) :: temp ! (K)
+  real(r_size), intent(in) :: qv   ! (kgkg-1)
+
+  real(r_size) :: get_RH ! (out)
+
+  real(r_size) :: es_tmp
+  real(r_size) :: e_tmp
+
+  ! saturation vapor pressure
+  !  Tetens' formula
+  es_tmp = 6.112d0 * dexp(17.67d0 * (temp - temp00)/(temp - temp00 + 243.5d0)) * 100.0d0 ! (Pa)
+
+  ! vapor pressure
+  e_tmp = qv * pres / (qv + Rdry / Rvap)
+
+  get_RH = e_tmp / es_tmp
+
+  return
+end function get_RH
 
 end module scale_H08_fwd
 
