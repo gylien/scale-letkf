@@ -1861,12 +1861,14 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
     ! nrdiag = max(obs(obset)%err(obidx)**2, obsda_sort%val(iob)**2 - obsda_sort%val2(iob)**2)**2 / nrloc 
       nrdiag = obsda_sort%val2(iob)**2 / nrloc 
 
-    else ! simple cloud-dependent obs err (Honda et al. 2017MWR)
+    elseif(H08_CLDERR_SIMPLE)then ! simple cloud-dependent obs err (Honda et al. 2017MWR)
       if(obsda_sort%val2(iob) > H08_CA_THRES)then
         nrdiag = H08_CLDERR_CLOUD(obs(obset)%lev(obidx)) * H08_CLDERR_CLOUD(obs(obset)%lev(obidx)) / nrloc
       else 
         nrdiag = H08_CLDERR_CLEAR(obs(obset)%lev(obidx)) * H08_CLDERR_CLEAR(obs(obset)%lev(obidx)) / nrloc
       endif
+    else
+      nrdiag = obs(obset)%err(obidx) * obs(obset)%err(obidx) / nrloc ! constant everywhere
     endif
   endif
 #endif

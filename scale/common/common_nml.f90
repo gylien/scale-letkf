@@ -303,14 +303,14 @@ MODULE common_nml
   !!
   ! Constant values for band 9 are based on Honda et al. (2017 submitted to MWR)
   real(r_size) :: H08_CA_THRES = 1.0d0 ! Threshhold of CA
-  real(r_size) :: H08_BIAS_CLEAR(NIRB_HIM8) =  (/0.0d0, 0.0d0, 0.171d0, 0.0d0, 0.0d0, &
+  real(r_size) :: H08_BIAS_CLEAR(NIRB_HIM8) =  (/0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, &
                                            0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0/) ! Constant bias for clear sky conditions
-  real(r_size) :: H08_BIAS_CLOUD(NIRB_HIM8) = (/0.0d0, 0.0d0, -3.482d0, 0.0d0, 0.0d0, &
+  real(r_size) :: H08_BIAS_CLOUD(NIRB_HIM8) = (/0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0, &
                                           0.0d0, 0.0d0, 0.0d0, 0.0d0, 0.0d0/) ! Constant bias for cloudy sky conditions
   
-  real(r_size) :: H08_CLDERR_CLEAR(NIRB_HIM8) =  (/3.0d0, 3.0d0, 0.954d0, 3.0d0, 3.0d0, &
+  real(r_size) :: H08_CLDERR_CLEAR(NIRB_HIM8) =  (/3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0, &
                                            3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0/) ! Constant obs err for clear sky conditions
-  real(r_size) :: H08_CLDERR_CLOUD(NIRB_HIM8) = (/3.0d0, 3.0d0, 6.311d0, 3.0d0, 3.0d0, &
+  real(r_size) :: H08_CLDERR_CLOUD(NIRB_HIM8) = (/3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0, &
                                           3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0/) ! Constant obs err for cloudy sky conditions
 
   integer :: H08_BAND_USE(NIRB_HIM8) = (/0,0,1,0,0,0,0,0,0,0/)
