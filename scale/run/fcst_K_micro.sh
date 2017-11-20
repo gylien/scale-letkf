@@ -75,7 +75,7 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR || exit $?
-distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR || exit $?
+distribute_fcst "$MEMBERS" $CYCLE "$NODELIST_TYPE" $NODEFILE_DIR || exit $?
 
 if ((CYCLE == 0)); then
   CYCLE=$cycle_auto
@@ -86,7 +86,9 @@ fi
 
 echo "[$(datetime_now)] Determine the staging list"
 
-cp -L $SCRP_DIR/config.main $TMP/config.main
+cat $SCRP_DIR/config.main | \
+    sed -e "/\(^DIR=\| DIR=\)/c DIR=\"$DIR\"" \
+    > $TMP/config.main
 
 echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMP/config.main
 echo "RUN_LEVEL=4" >> $TMP/config.main

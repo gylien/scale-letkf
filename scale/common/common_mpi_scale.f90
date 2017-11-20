@@ -512,12 +512,16 @@ subroutine set_scalelib
   use scale_grid_index
 !  use scale_grid_nest, only: &
 !    NEST_setup
-!  use scale_land_grid_index, only: &
-!    LAND_GRID_INDEX_setup
+#ifdef PNETCDF
+  use scale_land_grid_index, only: &
+    LAND_GRID_INDEX_setup
+#endif
 !  use scale_land_grid, only: &
 !    LAND_GRID_setup
-!  use scale_urban_grid_index, only: &
-!    URBAN_GRID_INDEX_setup
+#ifdef PNETCDF
+  use scale_urban_grid_index, only: &
+    URBAN_GRID_INDEX_setup
+#endif
 !  use scale_urban_grid, only: &
 !    URBAN_GRID_setup
   use scale_fileio, only: &
@@ -698,9 +702,13 @@ subroutine set_scalelib
   ! setup horizontal/vertical grid coordinates
   call GRID_INDEX_setup
   call GRID_setup
-!  call LAND_GRID_INDEX_setup
+#ifdef PNETCDF
+  call LAND_GRID_INDEX_setup
+#endif
 !  call LAND_GRID_setup
-!  call URBAN_GRID_INDEX_setup
+#ifdef PNETCDF
+  call URBAN_GRID_INDEX_setup
+#endif
 !  call URBAN_GRID_setup
 
   ! setup tracer index
