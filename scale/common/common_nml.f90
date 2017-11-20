@@ -280,7 +280,7 @@ MODULE common_nml
   logical :: H08_VBC_USE = .false. ! Turn on adaptive bias correction for Him8?
   integer :: H08_RTTOV_KADD = 0
   real(r_size) :: H08_RTTOV_RLX_HGT = 20.0d3 ! (m) Lowest hight for relaxing profiles to climatology
-  integer :: H08_RTTOV_CFRAC =  0 ! cloud fraction diagnosis 
+  integer :: H08_RTTOV_CFRAC =  1 ! cloud fraction diagnosis 
                                   ! 0: using H08_RTTOV_CFRAC_CNST following Honda et al. (2017a,b)
                                   ! 1: SCALE method as of 11/15/2017 with a minor modification (excluding qr)
                                   ! 2: Tompkins and Janiskova (2004QJRMS) method (as in Okamoto 2017QJRMS)

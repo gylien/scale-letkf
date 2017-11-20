@@ -17,14 +17,16 @@ TOPO=${OUTDIR}/const/topo
 
 
 
-tstart='2017-07-11 1:00:00'
-tend='2017-07-11 1:00:00'
+tstart='2017-07-04 12:00:00'
+tend='2017-07-04 12:00:00'
 
 
 #ctint=21600 # obssim interval 
 #ctint=10800 # obssim interval 
 ctint=600 # obssim interval 
 tint=600 # analysis interval (Do not modify!)
+ctint=150 # obssim interval 
+tint=150 # analysis interval (Do not modify!)
 
 # -- SCALE setting --
 MEM_NP=${SCALE_NP}
@@ -73,6 +75,7 @@ cat << EOF >> $RUNCONF_COMMON
  H08_RTTOV_CLD = .true.,
  H08_RTTOV_MINQ_CTOP = 0.10d0,
  H08_RTTOV_CFRAC_CNST = 0.1d0,
+ H08_RTTOV_CFRAC = 1, ! scale method for cldfrac
  H08_LIMIT_LEV = 200.0d2,
  H08_VLOCAL_CTOP = .true.,
  H08_RTTOV_KADD = 10,
