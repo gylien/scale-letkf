@@ -54,8 +54,8 @@ Usage: $myname [STIME ETIME ISTEP FSTEP TIME_LIMIT]
 "
 
 #if [ "$1" == '-h' ] || [ "$1" == '--help' ]; then
-#  echo "$USAGE"
-#  exit 0
+#  echo "$USAGE" >&2
+#  exit 1
 #fi
 
 #-------------------------------------------------------------------------------
@@ -67,6 +67,12 @@ ISTEP=${1:-$ISTEP}; shift
 FSTEP=${1:-$FSTEP}; shift
 TIME_LIMIT="${1:-$TIME_LIMIT}"
 
+#if [ -z "$STIME" ]; then
+#  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
+#  echo "$USAGE" >&2
+#  exit 1
+#fi
+
 #-------------------------------------------------------------------------------
 # assign default values to and standardize the parameters
 
@@ -75,14 +81,6 @@ ETIME=$(datetime ${ETIME:-$STIME})
 ISTEP=${ISTEP:-1}
 FSTEP=${FSTEP:-$nsteps}
 TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
-
-#-------------------------------------------------------------------------------
-# if some necessary parameters are not given, print the usage help and exit
-
-#if [ -z "$STIME" ]; then
-#  echo "$USAGE" >&2
-#  exit 1
-#fi
 
 #-------------------------------------------------------------------------------
 # error detection
