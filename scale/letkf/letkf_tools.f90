@@ -1755,6 +1755,10 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   real(r_size) :: rdx, rdy
   real(r_size) :: nd_h, nd_v ! normalized horizontal/vertical distances
 
+#ifdef H08
+  integer :: ch_num
+#endif
+
   nrloc = 0.0d0
   nrdiag = -1.0d0
   ndist = -1.0d0
@@ -1854,6 +1858,7 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
 
 #ifdef H08
   if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'
+    ch_num = nint(obs(obset)%lev(obidx)) - 6
     if(H08_AOEI) then 
     ! obs%err: sigma_ot/true (not inflated) obs error 
     ! obsda%val: O–B (innovation)
@@ -1863,12 +1868,12 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
 
     elseif(H08_CLDERR_SIMPLE)then ! simple cloud-dependent obs err (Honda et al. 2017MWR)
       if(obsda_sort%val2(iob) > H08_CA_THRES)then
-        nrdiag = H08_CLDERR_CLOUD(obs(obset)%lev(obidx)) * H08_CLDERR_CLOUD(obs(obset)%lev(obidx)) / nrloc
-      else 
-        nrdiag = H08_CLDERR_CLEAR(obs(obset)%lev(obidx)) * H08_CLDERR_CLEAR(obs(obset)%lev(obidx)) / nrloc
+        nrdiag = H08_CLDERR_CLOUD(ch_num) * H08_CLDERR_CLOUD(ch_num) / nrloc
+      else
+        nrdiag = H08_CLDERR_CLEAR(ch_num) * H08_CLDERR_CLEAR(ch_num) / nrloc
       endif
     else
-      nrdiag = obs(obset)%err(obidx) * obs(obset)%err(obidx) / nrloc ! constant everywhere
+      nrdiag = OBSERR_H08(ch_num) * OBSERR_H08(ch_num) / nrloc ! constant everywhere
     endif
   endif
 #endif

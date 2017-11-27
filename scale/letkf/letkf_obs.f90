@@ -98,14 +98,14 @@ SUBROUTINE set_letkf_obs
 
 #ifdef H08
   integer :: ch_num ! H08
-  real(r_size) :: sig_b ! sigma_b for AOEI
-  real(r_size) :: sig_o ! sigma_o derived from  AOEI
   integer :: npr
 
   real(r_size) :: vbcH08(H08_NPRED,NIRB_HIM8)
   real(r_size) :: pred, pbeta
   real(r_size) :: std13
 #endif
+  real(r_size) :: sig_b ! sigma_b for AOEI
+  real(r_size) :: sig_o ! sigma_o derived from  AOEI
 
   integer :: iproc,jproc
   integer :: iproc2,jproc2
@@ -485,7 +485,8 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_obs_bad
         cycle
       endif
-      !obs(iof)%err(iidx) = abs(obs(iof)%err(iidx))
+
+      ! This tentative assignment is valid only within this subroutine
       obs(iof)%err(iidx) = OBSERR_H08(ch_num)
 
       if (H08_BAND_USE(ch_num) /= 1) then
@@ -547,17 +548,23 @@ SUBROUTINE set_letkf_obs
         obsda%ensval(mmdetobs,n) = obsda%ensval(mmdetobs,n) - pbeta
       endif
     endif
+#endif
 
  
 !   AOEI: compute sprd in obs space (sigma_b for AOEI) ! H08
 !   sig_o will be used in letkf_tools.f90
+
+    sig_b = 0.0d0 !H08
+    DO i=1,MEMBER
+      sig_b = sig_b + obsda%ensval(i,n) * obsda%ensval(i,n)
+    ENDDO
+    sig_b = dsqrt(sig_b / REAL(MEMBER-1,r_size))
+
+    ! AOEI
+    sig_o = dsqrt(max(obs(iof)%err(iidx)**2,obsda%val(n)**2 - obsda%val2(n)**2))
+
+#ifdef H08
     if(H08_AOEI)then
-      sig_b = 0.0d0 !H08
-      DO i=1,MEMBER
-        sig_b = sig_b + obsda%ensval(i,n) * obsda%ensval(i,n)
-      ENDDO
-      sig_b = dsqrt(sig_b / REAL(MEMBER-1,r_size))
-      sig_o = dsqrt(max(obs(iof)%err(iidx)**2,obsda%val(n)**2 - obsda%val2(n)**2))
       obsda%val2(n) = sig_o
     else
       sig_o = obsda%val(n)
@@ -585,18 +592,17 @@ SUBROUTINE set_letkf_obs
       END IF
 #ifdef H08
     case (id_H08IR_obs)
-      !IF(H08_AOEI .and. H08_AOEI_QC == 0)THEN ! No gross-error QC
       IF(H08_AOEI .and. H08_AOEI_QC == 0)THEN
         ! No Gross-error QC
       ELSEIF(H08_AOEI .and. H08_AOEI_QC == 1)THEN
-        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * OBSERR_H08(ch_num)) THEN
           obsda%qc(n) = iqc_gross_err
         END IF
 !      ELSEIF(H08_AOEI .and. H08_AOEI_QC == 2)THEN !not yet
 !
 !      ENDIF
       ELSE
-        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * obs(iof)%err(iidx)) THEN
+        IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * OBSERR_H08(ch_num)) THEN
           obsda%qc(n) = iqc_gross_err
         END IF
       ENDIF
@@ -625,15 +631,26 @@ SUBROUTINE set_letkf_obs
                                        obs(iof)%lat(iidx), &
                                        obs(iof)%lev(iidx), &
                                        obs(iof)%dat(iidx), &
-#ifdef H08
-                                       sig_o, &
-#else
                                        obs(iof)%err(iidx), &
-#endif
                                        obsda%val(n), &
                                        obsda%qc(n)
 #endif
-
+#if defined(H08) && defined(DEBUG)
+    if(obs(iof)%elm(iidx) == id_H08IR_obs)then 
+      write (6, '(A,2F8.2,I3,2F12.4,I3,5F12.4)') 'Him8_letkf_obs',&
+                                              obs(iof)%lon(iidx), &
+                                              obs(iof)%lat(iidx), &
+                                              obs(iof)%lev(iidx), &
+                                              obs(iof)%dat(iidx), &
+                                              obs(iof)%err(iidx), &
+                                              obsda%qc(n), &
+                                              obsda%lev(n), &
+                                              obsda%val(n), &
+                                              obsda%val2(n), &
+                                              sig_b, &
+                                              sig_o 
+    endif
+#endif
 
   END DO ! [ n = 1, obsda%nobs ]
 !$OMP END PARALLEL DO
