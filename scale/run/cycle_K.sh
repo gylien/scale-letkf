@@ -157,7 +157,7 @@ bash $SCRP_DIR/src/stage_K.sh $STAGING_DIR $myname1 >> $jobscrp
 cat >> $jobscrp << EOF
 
 . /work/system/Env_base_1.2.0-20-1
-export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:\$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
