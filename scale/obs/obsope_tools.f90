@@ -35,12 +35,19 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Observation operator calculation
 !-----------------------------------------------------------------------
-SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
+SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern, v3d, v2d)
   IMPLICIT NONE
 
   type(obs_da_value), intent(out) :: obsda
   logical, intent(in) :: obsda_return
   integer, optional, intent(in) :: nobs_extern
+  real(r_size), optional, intent(out) :: v3d(nij1,nlev,nens,nv3d)
+  real(r_size), optional, intent(out) :: v2d(nij1,nens,nv2d)
+
+  real(RP), allocatable :: v3dg_rst(:,:,:,:)
+  real(RP), allocatable :: v2dg_rst(:,:,:)
+  character(len=filelenmax) :: filename
+  integer :: mstart, mend
 
   integer :: it, im, iof, islot, ierr
   integer :: n, nn, nn_0, nsub, nmod, n1, n2
@@ -418,6 +425,11 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
   allocate ( v2dg (nlonh,nlath,nv2dd) )
 
+  if (present(v3d) .and. present(v2d)) then
+    allocate ( v3dg_rst(nlev,nlon,nlat,nv3d) )
+    allocate ( v2dg_rst(nlon,nlat,nv2d) )
+  end if
+
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
@@ -458,10 +470,10 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         n2 = bsna(islot,   myrank_d) - bsna(SLOT_START-1, myrank_d)
         slot_nobsg = sum(bsn(islot, :))
 
-        if (slot_nobsg <= 0) then
-          write (6, '(A)') ' -- no observations found in this time slot... do not need to read model data'
-          cycle
-        end if
+!        if (slot_nobsg <= 0) then
+!          write (6, '(A)') ' -- no observations found in this time slot... do not need to read model data'
+!          cycle
+!        end if
 
         write (6, '(A,I10)') ' -- # obs in the slot = ', slot_nobsg
         write (6, '(A,I6,A,I6,A,I10)') ' -- # obs in the slot and processed by rank ', myrank, ' (subdomain #', myrank_d, ') = ', bsn(islot, myrank_d)
@@ -472,6 +484,34 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:read_ens_history(t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
+
+        if (present(v3d) .and. present(v2d) .and. islot == SLOT_END) then
+          if (im <= MEMBER) then
+            call file_member_replace(im, GUES_IN_BASENAME, filename)
+          else if (im == mmean) then
+            filename = GUES_MEAN_INOUT_BASENAME
+          else if (im == mmdet) then
+            filename = GUES_MDET_IN_BASENAME
+          end if
+
+!          write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file
+!          ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+#ifdef PNETCDF
+          if (IO_AGGREGATE) then
+            call read_restart_par(filename, v3dg_rst, v2dg_rst, MPI_COMM_d)
+          else
+#endif
+            call read_restart(filename, v3dg_rst, v2dg_rst)
+#ifdef PNETCDF
+          end if
+#endif
+
+          call mpi_timer('read_ens_mpi:read_restart:', 2)
+
+          call state_trans(v3dg_rst)
+
+          call mpi_timer('read_ens_mpi:state_trans:', 2)
+        end if
 
 #ifdef H08
           ELSEIF( OBS_IN_FORMAT(iof) == 3) THEN ! for H08 obs (OBS_IN_FORMAT(iof) = 3) ! H08
@@ -789,10 +829,26 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
       end if ! [ obsda_return .and. nobs > 0 ]
 
     end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
+
+    if (present(v3d) .and. present(v2d)) then
+      call mpi_timer('', 2, barrier=MPI_COMM_e)
+
+      mstart = 1 + (it-1)*nprocs_e
+      mend = min(it*nprocs_e, nens)
+      if (mstart <= mend) then
+        call scatter_grd_mpi_alltoall(mstart, mend, v3dg_rst, v2dg_rst, v3d, v2d)
+      end if
+
+      call mpi_timer('read_ens_mpi:scatter_grd_mpi_alltoall:', 2)
+    end if
   end do ! [ it = 1, nitmax ]
 
   deallocate ( v3dg, v2dg )
   deallocate ( bsn, bsna )
+
+  if (present(v3d) .and. present(v2d)) then
+    deallocate ( v3dg_rst, v2dg_rst )
+  end if
 
 !-------------------------------------------------------------------------------
 ! If obsda_return = .true., allreduce the obsda data among ensemble members
