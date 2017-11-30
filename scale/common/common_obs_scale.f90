@@ -357,22 +357,22 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   qc = iqc_good
 
   if (stggrd_ == 1) then
-    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
-    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,vr)  !######
-    CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk-0.5_r_size,ri,rj,wr)  !######
+    CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
+    CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,vr)  !######
+    CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_w),rk-0.5_r_size,ri,rj,wr)  !######
   else
-    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,ur)
-    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,vr)
-    CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk,ri,rj,wr)
+    CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_u),rk,ri,rj,ur)
+    CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_v),rk,ri,rj,vr)
+    CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_w),rk,ri,rj,wr)
   end if
-  CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,tr)
-  CALL itpl_3d(v3d(:,:,:,iv3dd_p),rk,ri,rj,pr)
-  CALL itpl_3d(v3d(:,:,:,iv3dd_q),rk,ri,rj,qvr)
-  CALL itpl_3d(v3d(:,:,:,iv3dd_qc),rk,ri,rj,qcr)
-  CALL itpl_3d(v3d(:,:,:,iv3dd_qr),rk,ri,rj,qrr)
-  CALL itpl_3d(v3d(:,:,:,iv3dd_qi),rk,ri,rj,qir)
-  CALL itpl_3d(v3d(:,:,:,iv3dd_qs),rk,ri,rj,qsr)
-  CALL itpl_3d(v3d(:,:,:,iv3dd_qg),rk,ri,rj,qgr)
+  CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_t),rk,ri,rj,tr)
+  CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_p),rk,ri,rj,pr)
+  CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_q),rk,ri,rj,qvr)
+  CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_qc),rk,ri,rj,qcr)
+  CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_qr),rk,ri,rj,qrr)
+  CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_qi),rk,ri,rj,qir)
+  CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_qs),rk,ri,rj,qsr)
+  CALL itpl_3d_ave9(v3d(:,:,:,iv3dd_qg),rk,ri,rj,qgr)
 
 
 !  rrtimer = MPI_WTIME()
@@ -1279,6 +1279,41 @@ SUBROUTINE itpl_2d(var,ri,rj,var5)
   RETURN
 END SUBROUTINE itpl_2d
 
+SUBROUTINE itpl_2d_ave9(var,ri,rj,var5)
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: var(nlonh,nlath)
+  REAL(r_size),INTENT(IN) :: ri
+  REAL(r_size),INTENT(IN) :: rj
+  REAL(r_size),INTENT(OUT) :: var5
+  REAL(r_size) :: ai,aj
+  INTEGER :: i,j
+
+  i = CEILING(ri)
+  ai = ri - REAL(i-1,r_size)
+  j = CEILING(rj)
+  aj = rj - REAL(j-1,r_size)
+
+  var5 = (1.0d0/9.0d0) * &
+     &  (var(i-2,j-2) * (1-ai) * (1-aj) &
+     & + var(i-1,j-2)          * (1-aj) &
+     & + var(i  ,j-2)          * (1-aj) &
+     & + var(i+1,j-2) *    ai  * (1-aj) &
+     & + var(i-2,j-1) * (1-ai)          &
+     & + var(i-1,j-1)                   &
+     & + var(i  ,j-1)                   &
+     & + var(i+1,j-1) *    ai           &
+     & + var(i-2,j  ) * (1-ai)          &
+     & + var(i-1,j  )                   &
+     & + var(i  ,j  )                   &
+     & + var(i+1,j  ) *    ai           &
+     & + var(i-2,j+1) * (1-ai) *    aj  &
+     & + var(i-1,j+1)          *    aj  &
+     & + var(i  ,j+1)          *    aj  &
+     & + var(i+1,j+1) *    ai  *    aj)
+
+  RETURN
+END SUBROUTINE itpl_2d_ave9
+
 SUBROUTINE itpl_2d_column(var,ri,rj,var5)
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: var(nlevh,nlonh,nlath)
@@ -1329,6 +1364,60 @@ SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
 
   RETURN
 END SUBROUTINE itpl_3d
+
+SUBROUTINE itpl_3d_ave9(var,ri,rj,rk,var5)
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: var(nlevh,nlonh,nlath)
+  REAL(r_size),INTENT(IN) :: ri
+  REAL(r_size),INTENT(IN) :: rj
+  REAL(r_size),INTENT(IN) :: rk
+  REAL(r_size),INTENT(OUT) :: var5
+  REAL(r_size) :: ai,aj,ak
+  INTEGER :: i,j,k
+
+  i = CEILING(ri)
+  ai = ri - REAL(i-1,r_size)
+  j = CEILING(rj)
+  aj = rj - REAL(j-1,r_size)
+  k = CEILING(rk)
+  ak = rk - REAL(k-1,r_size)
+
+  var5 = (1.0d0/9.0d0) * &
+     &  (var(i-2,j-2,k-1) * (1-ai) * (1-aj) * (1-ak) &
+     & + var(i-1,j-2,k-1)          * (1-aj) * (1-ak) &
+     & + var(i  ,j-2,k-1)          * (1-aj) * (1-ak) &
+     & + var(i+1,j-2,k-1) *    ai  * (1-aj) * (1-ak) &
+     & + var(i-2,j-1,k-1) * (1-ai)          * (1-ak) &
+     & + var(i-1,j-1,k-1)                   * (1-ak) &
+     & + var(i  ,j-1,k-1)                   * (1-ak) &
+     & + var(i+1,j-1,k-1) *    ai           * (1-ak) &
+     & + var(i-2,j  ,k-1) * (1-ai)          * (1-ak) &
+     & + var(i-1,j  ,k-1)                   * (1-ak) &
+     & + var(i  ,j  ,k-1)                   * (1-ak) &
+     & + var(i+1,j  ,k-1) *    ai           * (1-ak) &
+     & + var(i-2,j+1,k-1) * (1-ai) *    aj  * (1-ak) &
+     & + var(i-1,j+1,k-1)          *    aj  * (1-ak) &
+     & + var(i  ,j+1,k-1)          *    aj  * (1-ak) &
+     & + var(i+1,j+1,k-1) *    ai  *    aj  * (1-ak) &
+     & + var(i-2,j-2,k  ) * (1-ai) * (1-aj) *    ak  &
+     & + var(i-1,j-2,k  )          * (1-aj) *    ak  &
+     & + var(i  ,j-2,k  )          * (1-aj) *    ak  &
+     & + var(i+1,j-2,k  ) *    ai  * (1-aj) *    ak  &
+     & + var(i-2,j-1,k  ) * (1-ai)          *    ak  &
+     & + var(i-1,j-1,k  )                   *    ak  &
+     & + var(i  ,j-1,k  )                   *    ak  &
+     & + var(i+1,j-1,k  ) *    ai           *    ak  &
+     & + var(i-2,j  ,k  ) * (1-ai)          *    ak  &
+     & + var(i-1,j  ,k  )                   *    ak  &
+     & + var(i  ,j  ,k  )                   *    ak  &
+     & + var(i+1,j  ,k  ) *    ai           *    ak  &
+     & + var(i-2,j+1,k  ) * (1-ai) *    aj  *    ak  &
+     & + var(i-1,j+1,k  )          *    aj  *    ak  &
+     & + var(i  ,j+1,k  )          *    aj  *    ak  &
+     & + var(i+1,j+1,k  ) *    ai  *    aj  *    ak)
+
+  RETURN
+END SUBROUTINE itpl_3d_ave9
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
