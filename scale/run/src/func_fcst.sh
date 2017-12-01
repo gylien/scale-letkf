@@ -69,8 +69,8 @@ Usage: $myname [STIME ETIME MEMBERS CYCLE CYCLE_SKIP IF_VERF IF_EFSO ISTEP FSTEP
 "
 
 #if [ "$1" == '-h' ] || [ "$1" == '--help' ]; then
-#  echo "$USAGE"
-#  exit 0
+#  echo "$USAGE" >&2
+#  exit 1
 #fi
 
 #-------------------------------------------------------------------------------
@@ -88,34 +88,11 @@ FSTEP=${1:-$FSTEP}; shift
 CONF_MODE=${1:-$CONF_MODE}; shift
 TIME_LIMIT="${1:-$TIME_LIMIT}"
 
-#-------------------------------------------------------------------------------
-# if some necessary parameters are not given, print the usage help and exit
-
 #if [ -z "$STIME" ]; then
+#  echo "[Error] $FUNCNAME: Insufficient arguments." >&2
 #  echo "$USAGE" >&2
 #  exit 1
 #fi
-
-#-------------------------------------------------------------------------------
-# error detection
-
-#if ((MACHINE_TYPE == 10 && ONLINE_STGOUT != 0)); then
-#  echo "[Error] $myname: When \$MACHINE_TYPE = 10, \$ONLINE_STGOUT needs to be 0." >&2
-#  exit 1
-#fi
-
-if ((RUN_LEVEL == 0)); then
-  if ((ENABLE_PARAM_USER == 1)) && [ ! -e "$SCRP_DIR/config.nml.scale_user" ]; then
-    echo "[Error] $myname: When \$ENABLE_PARAM_USER = 1, 'config.nml.scale_user' file is required." >&2
-    exit 1
-  fi
-  if ((BDY_FORMAT == 4)) && [ ! -e "$SCRP_DIR/config.nml.grads_boundary" ]; then
-    echo "[Error] $myname: When \$BDY_FORMAT = 4, 'config.nml.grads_boundary' file is required." >&2
-    exit 1
-  fi
-fi
-
-#... more detections...
 
 #-------------------------------------------------------------------------------
 # assign default values to and standardize the parameters
@@ -146,6 +123,37 @@ ISTEP=${ISTEP:-1}
 FSTEP=${FSTEP:-$nsteps}
 CONF_MODE=${CONF_MODE:-"dynamic"}
 TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
+
+#-------------------------------------------------------------------------------
+# error detection
+
+#if ((MACHINE_TYPE == 10 && ONLINE_STGOUT != 0)); then
+#  echo "[Error] $myname: When \$MACHINE_TYPE = 10, \$ONLINE_STGOUT needs to be 0." >&2
+#  exit 1
+#fi
+
+if ((RUN_LEVEL == 0)); then
+  if ((ENABLE_PARAM_USER == 1)) && [ ! -e "$SCRP_DIR/config.nml.scale_user" ]; then
+    echo "[Error] $myname: When \$ENABLE_PARAM_USER = 1, 'config.nml.scale_user' file is required." >&2
+    exit 1
+  fi
+  if ((BDY_FORMAT == 4)) && [ ! -e "$SCRP_DIR/config.nml.grads_boundary" ]; then
+    echo "[Error] $myname: When \$BDY_FORMAT = 4, 'config.nml.grads_boundary' file is required." >&2
+    exit 1
+  fi
+
+  if ((MAKEINIT == 1)); then
+    if [ -d "${OUTDIR}/${STIME}/anal" ]; then
+      if [ -n "$(ls ${OUTDIR}/${STIME}/anal 2> /dev/null)" ]; then
+        echo "[Error] $myname: Initial ensemble is to be generated (\$MAKEINIT = 1) at \"${OUTDIR}/${STIME}/anal/\", but existing data are found there;" >&2
+        echo "        Set \$MAKEINIT = 0 or remove \"${OUTDIR}/${STIME}/anal/*\" before running this job." >&2
+        exit 1
+      fi
+    fi
+  fi
+fi
+
+#... more detections...
 
 #-------------------------------------------------------------------------------
 # common variables

@@ -86,7 +86,9 @@ fi
 
 echo "[$(datetime_now)] Determine the staging list"
 
-cp -L $SCRP_DIR/config.main $TMP/config.main
+cat $SCRP_DIR/config.main | \
+    sed -e "/\(^DIR=\| DIR=\)/c DIR=\"$DIR\"" \
+    > $TMP/config.main
 
 echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMP/config.main
 echo "RUN_LEVEL=4" >> $TMP/config.main
@@ -143,6 +145,7 @@ cat > $jobscrp << EOF
 #PJM --mpi assign-online-node
 
 . /work/system/Env_base_1.2.0-22
+export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:\$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
