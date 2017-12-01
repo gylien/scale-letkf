@@ -1293,6 +1293,12 @@ SUBROUTINE itpl_2d_ave9(var,ri,rj,var5)
   j = CEILING(rj)
   aj = rj - REAL(j-1,r_size)
 
+  if (i-2 < 1 .or. i+1 > nlonh .or. j-2 < 1 .or. j+1 > nlath) then
+    write (6, '(A)') '[Warning] Halo space is not enough for 9-point smoothing; use original interpolation'
+    call itpl_2d(var,ri,rj,var5)
+    return
+  end if
+
   var5 = (1.0d0/9.0d0) * &
      &  (var(i-2,j-2) * (1-ai) * (1-aj) &
      & + var(i-1,j-2)          * (1-aj) &
@@ -1381,6 +1387,12 @@ SUBROUTINE itpl_3d_ave9(var,ri,rj,rk,var5)
   aj = rj - REAL(j-1,r_size)
   k = CEILING(rk)
   ak = rk - REAL(k-1,r_size)
+
+  if (i-2 < 1 .or. i+1 > nlonh .or. j-2 < 1 .or. j+1 > nlath) then
+    write (6, '(A)') '[Warning] Halo space is not enough for 9-point smoothing; use original interpolation'
+    call itpl_3d(var,ri,rj,rk,var5)
+    return
+  end if
 
   var5 = (1.0d0/9.0d0) * &
      &  (var(i-2,j-2,k-1) * (1-ai) * (1-aj) * (1-ak) &
