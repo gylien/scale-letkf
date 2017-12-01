@@ -640,7 +640,7 @@ SUBROUTINE set_letkf_obs
       write (6, '(A,2F8.2,I3,2F12.4,I3,5F12.4)') 'Him8_letkf_obs',&
                                               obs(iof)%lon(iidx), &
                                               obs(iof)%lat(iidx), &
-                                              obs(iof)%lev(iidx), &
+                                              nint(obs(iof)%lev(iidx)), &
                                               obs(iof)%dat(iidx), &
                                               obs(iof)%err(iidx), &
                                               obsda%qc(n), &
