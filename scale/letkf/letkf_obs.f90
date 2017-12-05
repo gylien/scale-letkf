@@ -480,25 +480,32 @@ SUBROUTINE set_letkf_obs
       ch_num = nint(obs(iof)%lev(iidx)) - 6
       std13 = obs(iof)%err(iidx) ! negative err corresponds to std13
 
-      ! homogeneity QC
-      if(H08_OBS_STD .and. abs(std13) > H08_HOMO_QC)then
-        obsda%qc(n) = iqc_obs_bad
-        cycle
-      endif
-
       ! This tentative assignment is valid only within this subroutine
       obs(iof)%err(iidx) = OBSERR_H08(ch_num)
 
-      if (H08_BAND_USE(ch_num) /= 1) then
+      ! -- Detect NaN in the original Himawari-8 observations
+      if (obs(iof)%dat(iidx) /= obs(iof)%dat(iidx)) then
         obsda%qc(n) = iqc_obs_bad
         cycle
       end if
+
       if (obs(iof)%dat(iidx) == undef) then
         obsda%qc(n) = iqc_obs_bad
         cycle
       end if
 
-! -- reject Himawari-8 obs sensitivie above H08_LIMIT_LEV (Pa) ! H08 --
+      if (H08_BAND_USE(ch_num) /= 1) then
+        obsda%qc(n) = iqc_obs_bad
+        cycle
+      end if
+
+      ! --  Homogeneity QC
+      if(H08_OBS_STD .and. abs(std13) > H08_HOMO_QC)then
+        obsda%qc(n) = iqc_obs_bad
+        cycle
+      endif
+
+      ! -- Reject Himawari-8 obs sensitivie above H08_LIMIT_LEV (Pa) ! H08 --
       if (obsda%lev(n) < H08_LIMIT_LEV) then
         obsda%qc(n) = iqc_obs_bad
         cycle

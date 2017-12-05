@@ -556,6 +556,12 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
               if (obs(iof)%elm(n) /= id_H08IR_obs) cycle
 
+              ! Deject NaN in the original Himawari-8 observation
+              if (obs(iof)%elm(n) == id_H08IR_obs .and. obs(iof)%dat(n) /= obs(iof)%dat(n)) then
+                obsda%qc(nn) = iqc_obs_bad
+                cycle
+              endif
+
               ! Reject Him8 obs over the buffre regions
               if ((obs(iof)%elm(n) == id_H08IR_obs) .and. ((obsda%ri(nn) <= bris) .or. (obsda%ri(nn) >= brie) .or. &
                   (obsda%rj(nn) <= brjs) .or. (obsda%rj(nn) >= brje))) then

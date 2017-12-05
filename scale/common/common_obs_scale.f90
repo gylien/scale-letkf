@@ -2048,6 +2048,7 @@ SUBROUTINE monit_dep_H08(np,dep,dep_bc,qc,nobs,bias,rmse,bias_bc,rmse_bc)
   DO n = 1 , np ! profile
   DO ch = 1 , NIRB_HIM8 ! band
     IF(qc(ch,n) /= iqc_good) CYCLE
+    IF(dep(ch,n) /= dep(ch,n)) CYCLE ! NaN QC
     nobs(ch) = nobs(ch) + 1
     bias(ch) = bias(ch) + dep(ch,n)
     rmse(ch) = rmse(ch) + dep(ch,n)**2
