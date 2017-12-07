@@ -642,8 +642,12 @@ SUBROUTINE set_letkf_obs
                                        obsda%val(n), &
                                        obsda%qc(n)
 #endif
+
 #if defined(H08) && defined(DEBUG)
-    if(obs(iof)%elm(iidx) == id_H08IR_obs)then 
+    if(obs(iof)%elm(iidx) == id_H08IR_obs)then
+#else
+    if(obs(iof)%elm(iidx) == id_H08IR_obs .and. myrank_a <= nprocs_d)then
+#endif
       write (6, '(A,2F8.2,I3,2F12.4,I3,5F12.4)') 'Him8_letkf_obs',&
                                               obs(iof)%lon(iidx), &
                                               obs(iof)%lat(iidx), &
@@ -655,7 +659,7 @@ SUBROUTINE set_letkf_obs
                                               obsda%val(n), &
                                               obsda%val2(n), &
                                               sig_b, &
-                                              sig_o 
+                                              sig_o
     endif
 #endif
 
