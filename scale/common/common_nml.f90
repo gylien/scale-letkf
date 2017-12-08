@@ -30,7 +30,7 @@ MODULE common_nml
   character(len=memflen), parameter :: memf_mdet = 'mdet'
   character(len=memflen), parameter :: memf_sprd = 'sprd'
 
-  !--- PARAM_ENSEMBLE
+  !--- &PARAM_ENSEMBLE
   integer :: MEMBER = 3      ! ensemble size
   integer :: MEMBER_RUN = 1  !
   integer :: MEMBER_ITER = 0 !
@@ -40,14 +40,14 @@ MODULE common_nml
   logical :: DET_RUN = .false.
   logical :: DET_RUN_CYCLED = .true.
 
-  !--- PARAM_MODEL
+  !--- &PARAM_MODEL
   character(len=10) :: MODEL = 'scale-rm'
   logical :: VERIFY_COORD = .false.
 
-!  !--- PARAM_IO
+!  !--- &PARAM_IO
 !  integer :: IO_AGGREGATE = .false.
 
-  !--- PARAM_OBSOPE
+  !--- &PARAM_OBSOPE
   integer               :: OBS_IN_NUM = 1
   character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
   integer               :: OBS_IN_FORMAT(nobsfilemax) = 1
@@ -66,7 +66,8 @@ MODULE common_nml
   integer               :: SLOT_BASE = 1
   real(r_size)          :: SLOT_TINTERVAL = 3600.0d0
 
-  !--- PARAM_LETKF
+  !--- &PARAM_LETKF
+  ! testXXX
   logical               :: OBSDA_IN = .false.
   character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@'
   character(filelenmax) :: OBSDA_MEAN_IN_BASENAME = ''
@@ -133,7 +134,7 @@ MODULE common_nml
   logical :: ADAPTIVE_INFL_INIT = .false.
   real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0
 
-  !--- PARAM_LETKF_PRC
+  !--- &PARAM_LETKF_PRC
   integer :: NNODES = 1
   integer :: PPN = 1
   integer :: MEM_NODES = 1
@@ -141,7 +142,7 @@ MODULE common_nml
 !  integer :: PRC_NUM_X_LETKF = 1
 !  integer :: PRC_NUM_Y_LETKF = 1
 
-  !--- PARAM_LETKF_OBS
+  !--- &PARAM_LETKF_OBS
   logical :: USE_OBS(nobtype) = .true.
 
   ! >0: localization length scale (m)
@@ -202,7 +203,7 @@ MODULE common_nml
       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
 
-  !--- PARAM_LETKF_VAR_LOCAL
+  !--- &PARAM_LETKF_VAR_LOCAL
   real(r_size) :: VAR_LOCAL_UV(nv3d+nv2d)        = 1.0d0
   real(r_size) :: VAR_LOCAL_T(nv3d+nv2d)         = 1.0d0
   real(r_size) :: VAR_LOCAL_Q(nv3d+nv2d)         = 1.0d0
@@ -213,7 +214,7 @@ MODULE common_nml
   real(r_size) :: VAR_LOCAL_RADAR_VR(nv3d+nv2d)  = 1.0d0
   real(r_size) :: VAR_LOCAL_H08(nv3d+nv2d)       = 1.0d0 ! H08
 
-  !--- PARAM_LETKF_MONITOR
+  !--- &PARAM_LETKF_MONITOR
   logical :: DEPARTURE_STAT = .true.
   logical :: DEPARTURE_STAT_RADAR = .false.
   logical :: DEPARTURE_STAT_H08 = .false.
@@ -229,7 +230,7 @@ MODULE common_nml
   LOGICAL               :: OBSANAL_OUT = .false.                  !XXX not implemented yet...
   character(filelenmax) :: OBSANAL_OUT_BASENAME = 'obsanal.@@@@'  !XXX not implemented yet...
 
-  !--- PARAM_LETKF_RADAR
+  !--- &PARAM_LETKF_RADAR
   logical :: USE_RADAR_REF       = .true.
   logical :: USE_RADAR_VR        = .true.
   logical :: USE_RADAR_PSEUDO_RH = .false.
@@ -259,7 +260,7 @@ MODULE common_nml
   ! PARAMETERS FOR RADAR DATA ASSIMILATION
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
-  !---PARAM_LETKF_H08
+  !--- &PARAM_LETKF_H08
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
   real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
@@ -279,7 +280,7 @@ MODULE common_nml
                         !! It is better to reject B11(ch=5) & B12(ch=6) obs because these bands are 
                         !! sensitive to chemicals.
 
-  !--- PARAM_OBS_ERROR
+  !--- &PARAM_OBS_ERROR
   real(r_size) :: OBSERR_U = 1.0d0
   real(r_size) :: OBSERR_V = 1.0d0
   real(r_size) :: OBSERR_T = 1.0d0
@@ -294,7 +295,7 @@ MODULE common_nml
   real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
                                       5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
 
-  !--- PARAM_OBSSIM
+  !--- &PARAM_OBSSIM
   character(filelenmax) :: OBSSIM_IN_TYPE = 'history'
   character(filelenmax) :: OBSSIM_RESTART_IN_BASENAME = 'restart'
   character(filelenmax) :: OBSSIM_HISTORY_IN_BASENAME = 'history'
@@ -309,6 +310,8 @@ MODULE common_nml
   real(r_size)          :: OBSSIM_RADAR_LON = 0.0d0
   real(r_size)          :: OBSSIM_RADAR_LAT = 0.0d0
   real(r_size)          :: OBSSIM_RADAR_Z = 0.0d0
+
+  !--- &
 
 contains
 !-------------------------------------------------------------------------------
