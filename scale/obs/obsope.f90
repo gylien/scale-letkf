@@ -18,8 +18,6 @@ PROGRAM obsope
   USE obsope_tools
   IMPLICIT NONE
 
-  type(obs_da_value) :: obsda ! only used for calling obsope_cal subroutine, no use in this main program
-
   character(len=7) :: stdoutf='-000000'
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
@@ -104,7 +102,7 @@ PROGRAM obsope
 ! Observation operator
 !-----------------------------------------------------------------------
 
-    call obsope_cal(obsda, .false.)
+    call obsope_cal()
 
     call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
 

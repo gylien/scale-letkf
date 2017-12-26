@@ -47,6 +47,7 @@ module common_mpi_scale
   integer,allocatable,save :: rank_to_mem(:,:)
   integer,allocatable,save :: rank_to_pe(:)
   integer,allocatable,save :: rank_to_mempe(:,:,:) ! Deprecated except for the use in PRC_MPIsplit_letkf
+  integer,allocatable,save :: ranke_to_mem(:,:)
   integer,allocatable,save :: myrank_to_mem(:)
   integer,private,save :: myrank_to_pe
   logical,save :: myrank_use = .false.
@@ -360,7 +361,7 @@ SUBROUTINE set_mem_node_proc(mem)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: mem
   INTEGER :: tppn,tppnt,tmod
-  INTEGER :: n,nn,m,q,qs,i,j,it,ip
+  INTEGER :: n,nn,m,q,qs,i,j,it,ip,ie
 
   call mpi_timer('', 2)
 
@@ -380,13 +381,16 @@ SUBROUTINE set_mem_node_proc(mem)
   ALLOCATE(rank_to_mem(nitmax,nprocs))
   ALLOCATE(rank_to_pe(nprocs))
   ALLOCATE(rank_to_mempe(2,nitmax,nprocs))
+  ALLOCATE(ranke_to_mem(nitmax,n_mem*n_mempn))
   ALLOCATE(myrank_to_mem(nitmax))
 
   rank_to_mem = -1
   rank_to_pe = -1
   rank_to_mempe = -1
+  ranke_to_mem = -1
   m = 1
 mem_loop: DO it = 1, nitmax
+    ie = 1
     DO i = 0, n_mempn-1
       n = 0
       DO j = 0, n_mem-1
@@ -413,6 +417,10 @@ mem_loop: DO it = 1, nitmax
             qs = qs + 1
           END DO
         END DO
+        if (m <= mem) then
+          ranke_to_mem(it,ie) = m
+        end if
+        ie = ie + 1
         m = m + 1
         n = n + MEM_NODES
       END DO
@@ -1694,6 +1702,144 @@ subroutine get_nobs_da_mpi(nobs)
 
   return
 end subroutine get_nobs_da_mpi
+
+!-------------------------------------------------------------------------------
+! Partially reduce observations processed in the same processes in the iteration
+!-------------------------------------------------------------------------------
+#ifdef H08
+subroutine obs_da_value_partial_reduce_iter(obsda, iter, nstart, nobs, ensval, qc, lev, val2)
+#else
+subroutine obs_da_value_partial_reduce_iter(obsda, iter, nstart, nobs, ensval, qc)
+#endif
+  implicit none
+  type(obs_da_value), intent(inout) :: obsda
+  integer, intent(in)      :: iter
+  integer, intent(in)      :: nstart
+  integer, intent(in)      :: nobs
+  real(r_size), intent(in) :: ensval(nobs)
+  integer, intent(in)      :: qc(nobs)
+#ifdef H08
+  real(r_size), intent(in) :: lev(nobs)
+  real(r_size), intent(in) :: val2(nobs)
+#endif
+  integer :: nend
+  integer :: im
+
+  if (nobs <= 0) then
+    return
+  end if
+  nend = nstart + nobs - 1
+  im = myrank_to_mem(iter)
+  if (.not. ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin)) then
+    return
+  end if
+
+  ! variables with an ensemble dimension
+  obsda%ensval(iter,nstart:nend) = ensval
+
+  ! variables without an ensemble dimension
+  obsda%qc(nstart:nend) = max(obsda%qc(nstart:nend), qc)
+#ifdef H08
+  if (im <= MEMBER) then ! only consider lev, val2 from members, not from the means
+    obsda%lev(nstart:nend) = obsda%lev(nstart:nend) + lev
+    obsda%val2(nstart:nend) = obsda%val2(nstart:nend) + val2
+  end if
+#endif
+
+  return
+end subroutine obs_da_value_partial_reduce_iter
+
+!-------------------------------------------------------------------------------
+! Allreduce observations to obtain complete ensemble values
+!-------------------------------------------------------------------------------
+subroutine obs_da_value_allreduce(obsda)
+  implicit none
+  type(obs_da_value), intent(inout) :: obsda
+  real(r_size), allocatable :: ensval_bufs(:,:)
+  real(r_size), allocatable :: ensval_bufr(:,:)
+  integer :: cnts
+  integer :: cntr(nprocs_e)
+  integer :: dspr(nprocs_e)
+  integer :: current_shape(2)
+  integer :: ie, it, im, imb, ierr
+
+  if (obsda%nobs <= 0) then
+    return
+  end if
+
+  call mpi_timer('', 3)
+
+  ! variables with an ensemble dimension
+  cntr(:) = 0
+  do ie = 1, nprocs_e
+    do it = 1, nitmax
+      im = ranke_to_mem(it, ie)
+      if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
+        cntr(ie) = cntr(ie) + 1
+      end if
+    end do
+  end do
+  allocate (ensval_bufs(obsda%nobs, cntr(myrank_e+1)))
+  allocate (ensval_bufr(obsda%nobs, nensobs))
+
+  do im = 1, cntr(myrank_e+1)
+    ensval_bufs(:,im) = obsda%ensval(im,:)
+  end do
+
+  cntr(:) = cntr(:) * obsda%nobs
+  cnts = cntr(myrank_e+1)
+  dspr(1) = 0
+  do ie = 2, nprocs_e
+    dspr(ie) = dspr(ie-1) + cntr(ie-1)
+  end do
+
+  call mpi_timer('obs_da_value_allreduce:copy_bufs:', 3, barrier=MPI_COMM_e)
+
+  call MPI_ALLGATHERV(ensval_bufs, cnts, MPI_r_size, ensval_bufr, cntr, dspr, MPI_r_size, MPI_COMM_e, ierr)
+
+  call mpi_timer('obs_da_value_allreduce:mpi_allgatherv:', 3)
+
+  current_shape = shape(obsda%ensval)
+  if (current_shape(1) < nensobs) then
+    deallocate (obsda%ensval)
+    allocate (obsda%ensval(nensobs, obsda%nobs))
+  end if
+
+  imb = 0
+  do ie = 1, nprocs_e
+    do it = 1, nitmax
+      im = ranke_to_mem(it, ie)
+      if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
+        imb = imb + 1
+        if (im == mmdetin) then
+          obsda%ensval(mmdetobs,:) = ensval_bufr(:,imb)
+        else
+          obsda%ensval(im,:) = ensval_bufr(:,imb)
+        end if
+      end if
+    end do
+  end do
+  deallocate(ensval_bufs, ensval_bufr)
+
+  call mpi_timer('obs_da_value_allreduce:copy_bufr:', 3, barrier=MPI_COMM_e)
+
+  ! variables without an ensemble dimension
+  if (nprocs_e > 1) then
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(:), obsda%nobs, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)
+  end if
+#ifdef H08
+  if (nprocs_e > 1) then
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(:), obsda%nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(:), obsda%nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+  end if
+  obsda%lev(:) = obsda%lev(:) / real(MEMBER, r_size)
+  obsda%val2(:) = obsda%val2(:) / real(MEMBER, r_size)
+#endif
+
+  call mpi_timer('obs_da_value_allreduce:mpi_allreduce:', 3)
+
+  return
+end subroutine obs_da_value_allreduce
 
 !-------------------------------------------------------------------------------
 ! MPI timer

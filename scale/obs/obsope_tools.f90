@@ -35,12 +35,13 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Observation operator calculation
 !-----------------------------------------------------------------------
-SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
+SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   IMPLICIT NONE
 
-  type(obs_da_value), intent(out) :: obsda
-  logical, intent(in) :: obsda_return
+  type(obs_da_value), optional, intent(out) :: obsda_return
   integer, optional, intent(in) :: nobs_extern
+
+  type(obs_da_value) :: obsda
 
   integer :: it, im, iof, islot, ierr
   integer :: n, nn, nn_0, nsub, nmod, n1, n2
@@ -359,16 +360,17 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   !-----------------------------------------------------------------------------
 
   nobs = bsna(SLOT_END+2, myrank_d) - bsna(SLOT_START-1, myrank_d)
-  if (present(nobs_extern)) then
-    obsda%nobs = nobs + nobs_extern
-  else
-    obsda%nobs = nobs
-  end if
 
-  if (obsda_return) then
-    call obs_da_value_allocate(obsda, nensobs)
-  else
-    call obs_da_value_allocate(obsda, 0)
+  obsda%nobs = nobs
+  call obs_da_value_allocate(obsda, 0)
+
+  if (present(obsda_return)) then
+    if (present(nobs_extern)) then
+      obsda_return%nobs = nobs + nobs_extern
+    else
+      obsda_return%nobs = nobs
+    end if
+    call obs_da_value_allocate(obsda_return, nitmax)
   end if
 
   if (myrank_e == 0) then
@@ -401,19 +403,18 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   call MPI_BCAST(obsda%ri,  nobs, MPI_r_size,  0, MPI_COMM_e, ierr)
   call MPI_BCAST(obsda%rj,  nobs, MPI_r_size,  0, MPI_COMM_e, ierr)
 
+  if (present(obsda_return)) then
+    obsda_return%set(1:nobs) = obsda%set
+    obsda_return%idx(1:nobs) = obsda%idx
+    obsda_return%ri(1:nobs) = obsda%ri
+    obsda_return%rj(1:nobs) = obsda%rj
+  end if
+
   call mpi_timer('obsope_cal:mpi_broadcast:', 2)
 
 !-------------------------------------------------------------------------------
 ! Second scan of observation data in own subdomain: Compute H(x), QC, ... etc.
 !-------------------------------------------------------------------------------
-
-  if (obsda_return .and. nitmax > 1 .and. nobs > 0) then
-    allocate (qc_p(nobs))
-#ifdef H08
-    allocate (lev_p(nobs))
-    allocate (val2_p(nobs))
-#endif
-  end if
 
   allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
   allocate ( v2dg (nlonh,nlath,nv2dd) )
@@ -758,84 +759,25 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         call mpi_timer(trim(timer_str), 2)
       end if
 
-      ! Prepare variables that will need to be communicated if obsda_return = .true.
+      ! Prepare variables that will need to be communicated if obsda_return is given
       ! 
-      if (obsda_return .and. nobs > 0) then
-        ! variables with an ensemble dimension
-        if (im == mmdetin) then
-          obsda%ensval(mmdetobs, 1:nobs) = obsda%val(1:nobs)
-        else
-          obsda%ensval(im, 1:nobs) = obsda%val(1:nobs)
-        end if
+      if (present(obsda_return)) then
+#ifdef H08
+        call obs_da_value_partial_reduce_iter(obsda_return, it, 1, nobs, obsda%val, obsda%qc, obsda%lev, obsda%val2)
+#else
+        call obs_da_value_partial_reduce_iter(obsda_return, it, 1, nobs, obsda%val, obsda%qc)
+#endif
 
-        ! variables without an ensemble dimension: merge them with the previous iterations
-        if (nitmax > 1 .and. nobs > 0) then
-          if (it == 1) then
-            qc_p(:) = obsda%qc(1:nobs)
-#ifdef H08
-            lev_p(:) = obsda%lev(1:nobs)
-            val2_p(:) = obsda%val2(1:nobs)
-#endif
-          else
-            qc_p(:) = max(qc_p(:), obsda%qc(1:nobs))
-#ifdef H08
-            if (im <= MEMBER) then ! only consider lev, val2 from members, not from the means
-              lev_p(:) = lev_p(:) + obsda%lev(1:nobs)
-              val2_p(:) = val2_p(:) + obsda%val2(1:nobs)
-            end if
-#endif
-          end if
-        end if
-      end if ! [ obsda_return .and. nobs > 0 ]
+        write (timer_str, '(A30,I4,A2)') 'obsope_cal:partial_reduce  (t=', it, '):'
+        call mpi_timer(trim(timer_str), 2)
+      end if ! [ present(obsda_return) ]
 
     end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
   end do ! [ it = 1, nitmax ]
 
   deallocate ( v3dg, v2dg )
   deallocate ( bsn, bsna )
-
-!-------------------------------------------------------------------------------
-! If obsda_return = .true., allreduce the obsda data among ensemble members
-!-------------------------------------------------------------------------------
-
-  call mpi_timer('', 2, barrier=MPI_COMM_e)
-
-  if (obsda_return .and. nobs > 0) then
-    ! variables with an ensemble dimension
-    if (nprocs_e > 1) then
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%ensval(:,1:nobs), nensobs*nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
-    end if
-
-    ! variables without an ensemble dimension
-    if (nitmax > 1) then
-      obsda%qc(1:nobs) = qc_p(:)
-      deallocate (qc_p)
-#ifdef H08
-      obsda%lev(1:nobs) = lev_p(:)
-      obsda%val2(1:nobs) = val2_p(:)
-      deallocate (lev_p)
-      deallocate (val2_p)
-#endif
-    end if
-
-    if (nprocs_e > 1) then
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(1:nobs), nobs, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)  ! maximum value of qc
-    end if
-#ifdef H08
-    if (nprocs_e > 1) then
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%lev
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) ! ensemble mean of obsda%val2 (clear sky BT)
-    end if
-    obsda%lev(1:nobs) = obsda%lev(1:nobs) / REAL(MEMBER, r_size)                                                    !
-    obsda%val2(1:nobs) = obsda%val2(1:nobs) / REAL(MEMBER, r_size)                                                  !
-#endif
-
-    call mpi_timer('obsope_cal:mpi_allreduce:', 2)
-  end if ! [ obsda_return .and. nobs > 0 ]
-
-  if (.not. obsda_return) then
-    call obs_da_value_deallocate(obsda)
-  end if
+  call obs_da_value_deallocate(obsda)
 
   return
 end subroutine obsope_cal

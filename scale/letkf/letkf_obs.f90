@@ -158,7 +158,7 @@ SUBROUTINE set_letkf_obs
   WRITE(6,'(A,I10)') 'Total                observations: ', obsda%nobs
 
 !-------------------------------------------------------------------------------
-! Read and communicate externally processed observations
+! Read externally processed observations
 !-------------------------------------------------------------------------------
 
   if (OBSDA_IN .and. nobs_extern > 0) then
@@ -169,11 +169,12 @@ SUBROUTINE set_letkf_obs
     n1 = nobs_intern + 1
     n2 = obsda%nobs
 
+    obsda_ext%nobs = nobs_extern
+    call obs_da_value_allocate(obsda_ext,0)
+
     do it = 1, nitmax
       im = myrank_to_mem(it)
       if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
-        obsda_ext%nobs = nobs_extern
-        call obs_da_value_allocate(obsda_ext,0)
 !        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is reading externally processed observations for member ', &
 !              im, ', subdomain id #', myrank_d
         if (im <= MEMBER) then
@@ -202,26 +203,14 @@ SUBROUTINE set_letkf_obs
           call write_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0,append=.true.)
         end if
 
-        ! variables with an ensemble dimension
-        if (im == mmdetin) then
-          obsda%ensval(mmdetobs,n1:n2) = obsda_ext%val
-        else
-          obsda%ensval(im,n1:n2) = obsda_ext%val
-        end if
-
         ! variables without an ensemble dimension
         if (it == 1) then
           obsda%set(n1:n2) = obsda_ext%set
           obsda%idx(n1:n2) = obsda_ext%idx
           obsda%ri(n1:n2) = obsda_ext%ri
           obsda%rj(n1:n2) = obsda_ext%rj
-          obsda%qc(n1:n2) = obsda_ext%qc
-#ifdef H08
-          obsda%lev(n1:n2) = obsda_ext%lev
-          obsda%val2(n1:n2) = obsda_ext%val2
-#endif
-        else
 #ifdef DEBUG
+        else
           if (maxval(abs(obsda%set(n1:n2) - obsda_ext%set)) > 0) then
             write (6,'(A)') 'error: obsda%set are inconsistent among the ensemble'
             stop 99
@@ -239,20 +228,20 @@ SUBROUTINE set_letkf_obs
             stop 99
           end if
 #endif
-          obsda%qc(n1:n2) = max(obsda%qc(n1:n2), obsda_ext%qc)
-#ifdef H08
-          if (im <= MEMBER) then ! only consider lev, val2 from members, not from the means
-            obsda%lev(n1:n2) = obsda%lev(n1:n2) + obsda_ext%lev
-            obsda%val2(n1:n2) = obsda%val2(n1:n2) + obsda_ext%val2
-          end if
-#endif
         end if
 
-        call obs_da_value_deallocate(obsda_ext)
+#ifdef H08
+        call obs_da_value_partial_reduce_iter(obsda, it, n1, n2, obsda_ext%val, obsda_ext%qc, obsda_ext%lev, obsda_ext%val2)
+#else
+        call obs_da_value_partial_reduce_iter(obsda, it, n1, n2, obsda_ext%val, obsda_ext%qc)
+#endif
+
       end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
     end do ! [ it = 1, nitmax ]
 
-    call mpi_timer('', 2, barrier=MPI_COMM_e)
+    call obs_da_value_deallocate(obsda_ext)
+
+    call mpi_timer('set_letkf_obs:read_external_obs:', 2, barrier=MPI_COMM_e)
 
     ! Broadcast the observation information shared by members (e.g., grid numbers)
     !---------------------------------------------------------------------------
@@ -264,29 +253,15 @@ SUBROUTINE set_letkf_obs
       call MPI_BCAST(obsda%rj(n1:n2),  nobs_extern, MPI_r_size,  0, MPI_COMM_e, ierr)
     end if
 
-    ! Allreduce externally processed observations
-    !---------------------------------------------------------------------------
-
-    ! variables with an ensemble dimension
-    if (nprocs_e > 1) then
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%ensval(:,n1:n2), nensobs*nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
-    end if
-
-    ! variables without an ensemble dimension
-    if (nprocs_e > 1) then
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(n1:n2), nobs_extern, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)
-    end if
-#ifdef H08
-    if (nprocs_e > 1) then
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(n1:n2), nobs_extern, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
-    end if
-    obsda%lev(n1:n2) = obsda%lev(n1:n2) / REAL(MEMBER,r_size)
-    obsda%val2(n1:n2) = obsda%val2(n1:n2) / REAL(MEMBER,r_size)
-#endif
-
-    call mpi_timer('set_letkf_obs:read_external_obs_allreduce:', 2)
+    call mpi_timer('set_letkf_obs:external_obs_broadcast:', 2, barrier=MPI_COMM_e)
   end if ! [ OBSDA_IN .and. nobs_extern > 0 ]
+
+  ! Allreduce externally processed observations
+  !---------------------------------------------------------------------------
+
+  call obs_da_value_allreduce(obsda)
+
+  call mpi_timer('set_letkf_obs:obs_allreduce:', 2)
 
 !-------------------------------------------------------------------------------
 ! Process observations and quality control (QC)
