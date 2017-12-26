@@ -419,11 +419,11 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   allocate ( v2dg (nlonh,nlath,nv2dd) )
 
   do it = 1, nitmax
-    im = proc2mem(1,it,myrank+1)
+    im = myrank_to_mem(it)
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
 
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
-            im, ', subdomain id #', proc2mem(2,it,myrank+1)
+            im, ', subdomain id #', myrank_d
 
       if (nobs > 0) then
         obsda%qc(1:nobs) = iqc_undef
@@ -742,7 +742,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
       ! 
       if (OBSDA_OUT) then
 !        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is writing observations for member ', &
-!              im, ', subdomain id #', proc2mem(2,it,myrank+1)
+!              im, ', subdomain id #', myrank_d
         if (im <= MEMBER) then
           call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
         else if (im == mmean) then
@@ -750,7 +750,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         else if (im == mmdet) then
           obsdafile = OBSDA_MDET_OUT_BASENAME
         end if
-        write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
+        write (obsda_suffix(2:7),'(I6.6)') myrank_d
         write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is writing an obsda file ', trim(obsdafile)//obsda_suffix
         call write_obs_da(trim(obsdafile)//obsda_suffix,obsda,0)
 

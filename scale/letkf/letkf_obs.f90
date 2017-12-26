@@ -170,12 +170,12 @@ SUBROUTINE set_letkf_obs
     n2 = obsda%nobs
 
     do it = 1, nitmax
-      im = proc2mem(1,it,myrank+1)
+      im = myrank_to_mem(it)
       if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
         obsda_ext%nobs = nobs_extern
         call obs_da_value_allocate(obsda_ext,0)
 !        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is reading externally processed observations for member ', &
-!              im, ', subdomain id #', proc2mem(2,it,myrank+1)
+!              im, ', subdomain id #', myrank_d
         if (im <= MEMBER) then
           call file_member_replace(im, OBSDA_IN_BASENAME, obsdafile)
         else if (im == mmean) then
@@ -183,13 +183,13 @@ SUBROUTINE set_letkf_obs
         else if (im == mmdet) then
           obsdafile = OBSDA_MDET_IN_BASENAME
         end if
-        write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
+        write (obsda_suffix(2:7),'(I6.6)') myrank_d
         write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is reading an externally processed obsda file ', trim(obsdafile)//obsda_suffix
         call read_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0)
 
         if (OBSDA_OUT) then
 !          write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is appending observations for member ', &
-!                im, ', subdomain id #', proc2mem(2,it,myrank+1)
+!                im, ', subdomain id #', myrank_d
           if (im <= MEMBER) then
             call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
           else if (im == mmean) then
@@ -197,7 +197,7 @@ SUBROUTINE set_letkf_obs
           else if (im == mmdet) then
             obsdafile = OBSDA_MDET_OUT_BASENAME
           end if
-!          write (obsda_suffix(2:7),'(I6.6)') proc2mem(2,it,myrank+1)
+!          write (obsda_suffix(2:7),'(I6.6)') myrank_d
           write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is writing (appending) an obsda file ', trim(obsdafile)//obsda_suffix
           call write_obs_da(trim(obsdafile)//obsda_suffix,obsda_ext,0,append=.true.)
         end if
@@ -1499,7 +1499,7 @@ end subroutine obs_choose_ext
 
 !      WRITE(filename(1:4),'(A4)') file
 !      WRITE(filename(6:9),'(I4.4)') im
-!!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+!!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
 !      call read_restart(filename,v3dg,v2dg)
 
 

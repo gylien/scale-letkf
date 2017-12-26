@@ -38,16 +38,17 @@ module common_mpi_scale
   real(r_size),allocatable,save :: topo1(:)
   real(r_size),allocatable,save :: hgt1(:,:)
 
-  integer,save :: nitmax ! maximum number of model files processed by a process
-  integer,allocatable,save :: procs(:)
-  integer,allocatable,save :: mem2node(:,:)
-  integer,allocatable,save :: mem2proc(:,:)
-  integer,allocatable,save :: proc2mem(:,:,:)
   integer,save :: n_mem
   integer,save :: n_mempn
+  integer,save :: nitmax ! maximum number of model files processed by a process
 
-  integer,save, private :: ens_mygroup = -1
-  integer,save, private :: ens_myrank = -1
+  integer,allocatable,save :: mempe_to_node(:,:)   ! No use in the LETKF code
+  integer,allocatable,save :: mempe_to_rank(:,:)
+  integer,allocatable,save :: rank_to_mem(:,:)
+  integer,allocatable,save :: rank_to_pe(:)
+  integer,allocatable,save :: rank_to_mempe(:,:,:) ! Deprecated except for the use in PRC_MPIsplit_letkf
+  integer,allocatable,save :: myrank_to_mem(:)
+  integer,private,save :: myrank_to_pe
   logical,save :: myrank_use = .false.
 
   integer,save :: nens = -1
@@ -147,13 +148,20 @@ subroutine set_common_mpi_scale
   ! Communicator for 1-iteration ensemble member groups
   !-----------------------------------------------------------------------------
 
-  color = ens_myrank
-  key   = ens_mygroup - 1
+  color = myrank_to_pe
+  key = myrank_to_mem(1) - 1
 
   call MPI_COMM_SPLIT(MPI_COMM_a, color, key, MPI_COMM_e, ierr)
 
   call MPI_COMM_SIZE(MPI_COMM_e, nprocs_e, ierr)
   call MPI_COMM_RANK(MPI_COMM_e, myrank_e, ierr)
+
+#ifdef DEBUG
+  if (nprocs_e /= n_mem*n_mempn) then
+    write (6, '(A)'), '[Error] XXXXXX wrong!!'
+    stop
+  end if
+#endif
 
   call mpi_timer('set_common_mpi_scale:mpi_comm_split_e:', 2)
 
@@ -187,7 +195,7 @@ subroutine set_common_mpi_scale
       end do
 !$OMP END PARALLEL DO
 
-      call file_member_replace(proc2mem(1,1,myrank+1), GUES_IN_BASENAME, filename)
+      call file_member_replace(myrank_to_mem(1), GUES_IN_BASENAME, filename)
       call read_restart_coor(filename, lon2dtmp, lat2dtmp, height3dtmp)
 
       if (maxval(abs(lon2dtmp - lon2d)) > 1.0d-6 .or. maxval(abs(lat2dtmp - lat2d)) > 1.0d-6) then
@@ -352,16 +360,9 @@ SUBROUTINE set_mem_node_proc(mem)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: mem
   INTEGER :: tppn,tppnt,tmod
-  INTEGER :: n,ns,nn,m,q,qs,i,j,it,ip
+  INTEGER :: n,nn,m,q,qs,i,j,it,ip
 
   call mpi_timer('', 2)
-
-  ALLOCATE(procs(nprocs))
-  ns = 0
-  DO n = 1, NNODES
-    procs(ns+1:ns+PPN) = n
-    ns = ns + PPN
-  END DO
 
   IF(MEM_NODES > 1) THEN
     n_mem = NNODES / MEM_NODES
@@ -374,10 +375,16 @@ SUBROUTINE set_mem_node_proc(mem)
   tppn = MEM_NP / MEM_NODES
   tmod = MOD(MEM_NP, MEM_NODES)
 
-  ALLOCATE(mem2node(MEM_NP,mem))
-  ALLOCATE(mem2proc(MEM_NP,mem))
-  ALLOCATE(proc2mem(2,nitmax,nprocs))
-  proc2mem = -1
+  ALLOCATE(mempe_to_node(MEM_NP,mem))
+  ALLOCATE(mempe_to_rank(MEM_NP,mem))
+  ALLOCATE(rank_to_mem(nitmax,nprocs))
+  ALLOCATE(rank_to_pe(nprocs))
+  ALLOCATE(rank_to_mempe(2,nitmax,nprocs))
+  ALLOCATE(myrank_to_mem(nitmax))
+
+  rank_to_mem = -1
+  rank_to_pe = -1
+  rank_to_mempe = -1
   m = 1
 mem_loop: DO it = 1, nitmax
     DO i = 0, n_mempn-1
@@ -394,11 +401,15 @@ mem_loop: DO it = 1, nitmax
           DO q = 0, tppnt-1
             ip = (n+nn)*PPN + i*MEM_NP + q
             if (m <= mem) then
-              mem2node(qs+1,m) = n+nn
-              mem2proc(qs+1,m) = ip
+              mempe_to_node(qs+1,m) = n+nn
+              mempe_to_rank(qs+1,m) = ip
             end if
-            proc2mem(1,it,ip+1) = m    ! These lines are outside of (m <= mem) condition
-            proc2mem(2,it,ip+1) = qs   ! in order to cover over the entire first iteration
+            rank_to_mem(it,ip+1) = m      ! These lines are outside of (m <= mem) condition
+            if (it == 1) then             ! in order to cover over the entire first iteration
+              rank_to_pe(ip+1) = qs       ! 
+            end if                        ! 
+            rank_to_mempe(1,it,ip+1) = m  ! 
+            rank_to_mempe(2,it,ip+1) = qs ! 
             qs = qs + 1
           END DO
         END DO
@@ -408,9 +419,12 @@ mem_loop: DO it = 1, nitmax
     END DO
   END DO mem_loop
 
-  ens_mygroup = proc2mem(1,1,myrank+1)
-  ens_myrank = proc2mem(2,1,myrank+1)
-  if (ens_mygroup >= 1) then
+  DO it = 1, nitmax
+    myrank_to_mem(it) = rank_to_mem(it,myrank+1)
+  END DO
+  myrank_to_pe = rank_to_pe(myrank+1)
+
+  if (myrank_to_mem(1) >= 1) then
     myrank_use = .true.
   end if
 
@@ -422,7 +436,7 @@ mem_loop: DO it = 1, nitmax
 
     mmean_rank_e = mod(mmean-1, n_mem*n_mempn)
 #ifdef DEBUG
-    if (mmean_rank_e /= proc2mem(1,1,mem2proc(1,mmean)+1)-1) then
+    if (mmean_rank_e /= rank_to_mem(1,mempe_to_rank(1,mmean)+1)-1) then
       write (6, '(A)'), '[Error] XXXXXX wrong!!'
       stop
     end if
@@ -450,7 +464,7 @@ mem_loop: DO it = 1, nitmax
 
     mmdet_rank_e = mod(mmdet-1, n_mem*n_mempn)
 #ifdef DEBUG
-    if (mmdet_rank_e /= proc2mem(1,1,mem2proc(1,mmdet)+1)-1) then
+    if (mmdet_rank_e /= rank_to_mem(1,mempe_to_rank(1,mmdet)+1)-1) then
       write (6, '(A)'), '[Error] XXXXXX wrong!!'
       stop
     end if
@@ -583,7 +597,7 @@ subroutine set_scalelib
 
   if (myrank_use) then
     color = 0
-    key   = (ens_mygroup - 1) * MEM_NP + ens_myrank
+    key   = (myrank_to_mem(1) - 1) * MEM_NP + myrank_to_pe
 !    key   = myrank
   else
     color = MPI_UNDEFINED
@@ -622,9 +636,9 @@ subroutine set_scalelib
 !                            universal_master  ) ! [OUT]
 
   ! split MPI communicator for LETKF
-  call PRC_MPIsplit_letkf( MPI_COMM_a,                       & ! [IN]
-                           MEM_NP, nitmax, nprocs, proc2mem, & ! [IN]
-                           global_comm                       ) ! [OUT]
+  call PRC_MPIsplit_letkf( MPI_COMM_a,                            & ! [IN]
+                           MEM_NP, nitmax, nprocs, rank_to_mempe, & ! [IN]
+                           global_comm                            ) ! [OUT]
 
   call PRC_GLOBAL_setup( .false.,    & ! [IN]
                          global_comm ) ! [IN]
@@ -654,6 +668,12 @@ subroutine set_scalelib
 !  call MPI_COMM_RANK(MPI_COMM_d, myrank_d, ierr)
 !  myrank_d = PRC_myrank
   myrank_d = local_myrank
+#ifdef DEBUG
+  if (myrank_d /= myrank_to_pe) then
+    write (6, '(A)'), '[Error] XXXXXX wrong!!'
+    stop
+  end if
+#endif
 
   call mpi_timer('set_scalelib:mpi_comm_split_d_local:', 2)
 
@@ -942,7 +962,7 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
   character(filelenmax) :: filename
   integer :: im
 
-  im = proc2mem(1,iter,myrank+1)
+  im = myrank_to_mem(iter)
   if (im >= 1 .and. im <= nens) then
     if (im <= MEMBER) then
       call file_member_replace(im, HISTORY_IN_BASENAME, filename)
@@ -981,7 +1001,7 @@ subroutine read_ens_mpi(v3d, v2d)
   call mpi_timer('', 2)
 
   do it = 1, nitmax
-    im = proc2mem(1,it,myrank+1)
+    im = myrank_to_mem(it)
 
     ! Note: read all members + mdetin
     ! 
@@ -994,7 +1014,7 @@ subroutine read_ens_mpi(v3d, v2d)
         filename = GUES_MDET_IN_BASENAME
       end if
 
-!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
       if (IO_AGGREGATE) then
         call read_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
@@ -1039,14 +1059,14 @@ subroutine read_ens_mpi_addiinfl(v3d, v2d)
   integer :: it, im, mstart, mend
 
   do it = 1, nitmax
-    im = proc2mem(1,it,myrank+1)
+    im = myrank_to_mem(it)
 
     ! Note: read all members
     ! 
     if (im >= 1 .and. im <= MEMBER) then
       call file_member_replace(im, INFL_ADD_IN_BASENAME, filename)
 
-!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
       if (IO_AGGREGATE) then
         call read_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
@@ -1091,7 +1111,7 @@ subroutine write_ens_mpi(v3d, v2d, monit_step)
   do it = 1, nitmax
     call mpi_timer('', 2, barrier=MPI_COMM_e)
 
-    im = proc2mem(1,it,myrank+1)
+    im = myrank_to_mem(it)
 
     mstart = 1 + (it-1)*nprocs_e
     mend = min(it*nprocs_e, nens)
@@ -1118,7 +1138,7 @@ subroutine write_ens_mpi(v3d, v2d, monit_step)
         filename = ANAL_MDET_OUT_BASENAME
       end if
 
-!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',myrank_d,'.nc'
       call state_trans_inv(v3dg)
 
       call mpi_timer('write_ens_mpi:state_trans_inv:', 2)
@@ -1638,13 +1658,13 @@ subroutine get_nobs_da_mpi(nobs)
 
 ! read from all available data by every processes
 !-----------------------------
-!  if ((ens_mygroup >= 1 .and. ens_mygroup <= MEMBER) .or. &
-!      ens_mygroup == mmdetin) then
-!    if (ens_mygroup <= MEMBER) then
-!      call file_member_replace(ens_mygroup, OBSDA_IN_BASENAME, obsdafile)
-!    else if (ens_mygroup == mmean) then
+!  if ((myrank_to_mem(1) >= 1 .and. myrank_to_mem(1) <= MEMBER) .or. &
+!      myrank_to_mem(1) == mmdetin) then
+!    if (myrank_to_mem(1) <= MEMBER) then
+!      call file_member_replace(myrank_to_mem(1), OBSDA_IN_BASENAME, obsdafile)
+!    else if (myrank_to_mem(1) == mmean) then
 !      obsdafile = OBSDA_MEAN_IN_BASENAME
-!    else if (ens_mygroup == mmdet) then
+!    else if (myrank_to_mem(1) == mmdet) then
 !      obsdafile = OBSDA_MDET_IN_BASENAME
 !    end if
 !    write (obsda_suffix(2:7), '(I6.6)') myrank_d
