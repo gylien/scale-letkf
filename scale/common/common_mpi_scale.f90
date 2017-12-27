@@ -1030,6 +1030,9 @@ subroutine read_ens_mpi(v3d, v2d)
       call state_trans(v3dg)
 
       call mpi_timer('read_ens_mpi:state_trans:', 2)
+    else if (im <= nens) then ! This is to avoid the undefined value problem;
+      v3dg = undef            ! it has no impact to the results
+      v2dg = undef            ! 
     end if
 
     call mpi_timer('', 2, barrier=MPI_COMM_e)

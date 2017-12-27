@@ -924,6 +924,17 @@ subroutine read_history(filename,step,v3dg,v2dg)
 
   ! Communicate halo
   !-------------
+!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
+  do iv3d = 1, nv3dd
+    do j = JS, JE
+      do i = IS, IE
+        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
+        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
+      end do
+    end do
+  end do
+!$OMP END PARALLEL DO
+
   do iv3d = 1, nv3dd
     call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
   end do
@@ -937,17 +948,6 @@ subroutine read_history(filename,step,v3dg,v2dg)
   do iv2d = 1, nv2dd
     call COMM_wait ( v2dg(:,:,iv2d), iv2d )
   end do
-
-!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
-  do iv3d = 1, nv3dd
-    do j = JS, JE
-      do i = IS, IE
-        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
-        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
-      end do
-    end do
-  end do
-!$OMP END PARALLEL DO
 
   ! Save topo for later use
   !-------------
@@ -1105,6 +1105,17 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 
   ! Communicate halo
   !-------------
+!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
+  do iv3d = 1, nv3dd
+    do j = JS, JE
+      do i = IS, IE
+        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
+        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
+      end do
+    end do
+  end do
+!$OMP END PARALLEL DO
+
   do iv3d = 1, nv3dd
     call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
   end do
@@ -1118,17 +1129,6 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   do iv2d = 1, nv2dd
     call COMM_wait ( v2dg(:,:,iv2d), iv2d )
   end do
-
-!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
-  do iv3d = 1, nv3dd
-    do j = JS, JE
-      do i = IS, IE
-        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
-        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
-      end do
-    end do
-  end do
-!$OMP END PARALLEL DO
 
   ! Save topo for later use
   !-------------
@@ -1334,6 +1334,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   ! Pad the upper and lower halo areas
   !---------------------------------------------------------
 
+!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
   do iv3d = 1, nv3dd
     do j  = JS, JE
       do i  = IS, IE
@@ -1342,6 +1343,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
       end do
     end do
   end do
+!$OMP END PARALLEL DO
 
   ! Communicate the lateral halo areas
   !---------------------------------------------------------
