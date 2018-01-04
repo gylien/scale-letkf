@@ -54,10 +54,10 @@ module common_mpi_scale
   integer,save :: nens = -1
   integer,save :: nensobs = -1
 
-  integer,save :: mmean = -1
-  integer,save :: mmdet = -1
-  integer,save :: mmdetin = -1
-  integer,save :: mmdetobs = -1
+  integer,save :: mmean = -99    ! use a value different from -1 to avoid equivalence to (my)rank_to_mem
+  integer,save :: mmdet = -99    ! when no member is corresponded to a rank/iteration
+  integer,save :: mmdetin = -99  ! 
+  integer,save :: mmdetobs = -99 ! 
 
   integer,save :: mmean_rank_e = -1
   integer,save :: mmdet_rank_e = -1
