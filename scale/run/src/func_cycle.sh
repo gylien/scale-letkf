@@ -353,15 +353,15 @@ while ((time <= ETIME)); do
   if ((loop == 1)) && [ "$TOPO_FORMAT" = 'prep' ]; then
     if ((DISK_MODE == 3)); then
       for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
-        if ((PNETCDF == 1)); then
-          path="const/topo.nc"
-          echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-        else
+#        if ((PNETCDF == 1)); then
+#          path="const/topo.nc"
+#          echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+#        else
           for q in $(seq $mem_np); do
             path="const/topo/topo$(printf $SCALE_SFX $((q-1)))"
             echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
           done
-        fi
+#        fi
       done
     else
       if ((PNETCDF == 1)); then
@@ -394,14 +394,14 @@ while ((time <= ETIME)); do
   if ((loop == 1 || LANDUSE_UPDATE == 1)) && [ "$LANDUSE_FORMAT" = 'prep' ]; then
     if ((DISK_MODE == 3)); then
       for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
-        if ((PNETCDF == 1)); then
-          if ((LANDUSE_UPDATE == 1)); then
-            path="${time}/landuse.nc"
-          else
-            path="const/landuse.nc"
-          fi
-          echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-        else
+#        if ((PNETCDF == 1)); then
+#          if ((LANDUSE_UPDATE == 1)); then
+#            path="${time}/landuse.nc"
+#          else
+#            path="const/landuse.nc"
+#          fi
+#          echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+#        else
           for q in $(seq $mem_np); do
             if ((LANDUSE_UPDATE == 1)); then
               path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
@@ -410,7 +410,7 @@ while ((time <= ETIME)); do
             fi
             echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
           done
-        fi
+#        fi
       done
     else
       if ((PNETCDF == 1)); then
@@ -439,16 +439,16 @@ while ((time <= ETIME)); do
     if ((BDY_ENS == 0)); then
       if ((DISK_MODE == 3)); then
         for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
-          if ((PNETCDF == 1)); then
-            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}.boundary.nc"
-            path="${time}/bdy/mean.boundary.nc"
-            echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-            if ((USE_INIT_FROM_BDY == 1)); then
-              pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}.init_bdy.nc"
-              path="${time}/bdy/mean.init_bdy.nc"
-              echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-            fi
-          else
+#          if ((PNETCDF == 1)); then
+#            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}.boundary.nc"
+#            path="${time}/bdy/mean.boundary.nc"
+#            echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+#            if ((USE_INIT_FROM_BDY == 1)); then
+#              pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}.init_bdy.nc"
+#              path="${time}/bdy/mean.init_bdy.nc"
+#              echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+#            fi
+#          else
             for q in $(seq $mem_np); do
               pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}/boundary$(printf $SCALE_SFX $((q-1)))"
               path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
@@ -459,7 +459,7 @@ while ((time <= ETIME)); do
                 echo "${pathin}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
               fi
             done
-          fi
+#          fi
         done
       else
         if ((PNETCDF == 1)); then
@@ -527,7 +527,7 @@ while ((time <= ETIME)); do
   # stage-out
   #-------------------
 
-  # anal
+  # anal (initial time)
   #-------------------
   if ((loop == 1 && MAKEINIT == 1)); then
     path="${time}/anal/"
