@@ -396,9 +396,17 @@ while ((time <= ETIME)); do
       echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+1))]}
     done
     for p in $plist; do
-      path="log/scale-rm_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
-      pathout="${OUTDIR}/${time}/log/scale/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
-      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+      if ((nitmax == 1)); then
+        path="log/scale-rm_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
+        pathout="${OUTDIR}/${time}/log/scale/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
+        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+      else
+        for it in $(seq $nitmax); do
+          path="log/scale-rm_ens.NOUT_${time}_${it}$(printf -- "${log_nfmt}" $((p-1)))"
+          pathout="${OUTDIR}/${time}/log/scale/NOUT-${it}$(printf -- "${log_nfmt}" $((p-1)))"
+          echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+        done
+      fi
     done
   fi
 
@@ -506,21 +514,32 @@ while ((time <= ETIME)); do
   # scale (launcher)
   #-----------------------------------------------------------------------------
 
-  conf_file="scale-rm_ens_${time}.conf"
-  echo "  $conf_file"
-  cat $SCRP_DIR/config.nml.ensmodel | \
-      sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
-          -e "/!--MEMBER_RUN--/a MEMBER_RUN = $mtot," \
-          -e "/!--CONF_FILES--/a CONF_FILES = \"@@@@/run_${time}.conf\"," \
-          -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
-          -e "/!--PPN--/a PPN = $PPN_APPAR," \
-          -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
-          -e "/!--MEM_NP--/a MEM_NP = $mem_np," \
-      > $CONFIG_DIR/${conf_file}
-  if ((stage_config == 1)); then
-    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
-  fi
-  echo "${OUTDIR}/${time}/log/scale/scale-rm_ens.conf|${conf_file}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
+  for it in $(seq $nitmax); do
+    if ((nitmax == 1)); then
+      conf_file="scale-rm_ens_${time}.conf"
+    else
+      conf_file="scale-rm_ens_${time}_${it}.conf"
+    fi
+    echo "  $conf_file"
+    cat $SCRP_DIR/config.nml.ensmodel | \
+        sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
+            -e "/!--MEMBER_RUN--/a MEMBER_RUN = $mtot," \
+            -e "/!--MEMBER_ITER--/a MEMBER_ITER = $it," \
+            -e "/!--CONF_FILES--/a CONF_FILES = \"@@@@/run_${time}.conf\"," \
+            -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
+            -e "/!--PPN--/a PPN = $PPN_APPAR," \
+            -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
+            -e "/!--MEM_NP--/a MEM_NP = $mem_np," \
+        > $CONFIG_DIR/${conf_file}
+    if ((stage_config == 1)); then
+      echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
+    fi
+    if ((nitmax == 1)); then
+      echo "${OUTDIR}/${time}/log/scale/scale-rm_ens.conf|${conf_file}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
+    else
+      echo "${OUTDIR}/${time}/log/scale/scale-rm_ens_${it}.conf|${conf_file}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
+    fi
+  done
 
   #-----------------------------------------------------------------------------
   # scale (each member)
