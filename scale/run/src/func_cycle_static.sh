@@ -15,6 +15,21 @@ staging_list_static () {
 #   $STAGING_DIR
 #   ...
 #-------------------------------------------------------------------------------
+# common variables
+
+if ((PNETCDF == 1)); then
+  local mem_np_=1
+  local connector='.'
+  local connector_topo=''
+  local connector_landuse=''
+else
+  local mem_np_=$mem_np
+  local connector='/'
+  local connector_topo='topo/'
+  local connector_landuse='landuse/'
+fi
+
+#-------------------------------------------------------------------------------
 # executable files
 
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
@@ -108,18 +123,32 @@ while ((time <= ETIME)); do
   #-------------------
   if ((loop == 1 && MAKEINIT != 1)); then
     for m in $(seq $mtot); do
-      pathin="${INDIR}/${time}/anal/${name_m[$m]}.init.nc"
-      path="${name_m[$m]}/anal.d01_$(datetime_scale $time).nc"
-      echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+      for q in $(seq $mem_np_); do
+        pathin="${INDIR}/${time}/anal/${name_m[$m]}${connector}init$(scale_filename_sfx $((q-1)))"
+        path="${name_m[$m]}/anal.d01_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+        echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+      done
     done
   fi
 
   # topo
   #-------------------
   if ((loop == 1)) && [ "$TOPO_FORMAT" = 'prep' ]; then
-    pathin="${DATA_TOPO}/const/topo.nc"
-    path="topo.d01.nc"
-    echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+    if ((DISK_MODE == 3)); then
+      for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
+        for q in $(seq $mem_np_); do
+          pathin="${DATA_TOPO}/const/${connector_topo}topo$(scale_filename_sfx $((q-1)))"
+          path="topo.d01$(scale_filename_sfx $((q-1)))"
+          echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      done
+    else
+      for q in $(seq $mem_np_); do
+        pathin="${DATA_TOPO}/const/${connector_topo}topo$(scale_filename_sfx $((q-1)))"
+        path="topo.d01$(scale_filename_sfx $((q-1)))"
+        echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+      done
+    fi
   fi
 
 #    # topo (bdy_scale)
@@ -133,23 +162,64 @@ while ((time <= ETIME)); do
   # landuse
   #-------------------
   if ((loop == 1)) && [ "$LANDUSE_FORMAT" = 'prep' ]; then
-    pathin="${DATA_LANDUSE}/const/landuse.nc"
-    path="landuse.d01.nc"
-    echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+    if ((DISK_MODE == 3)); then
+      for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
+        for q in $(seq $mem_np_); do
+          pathin="${DATA_LANDUSE}/const/${connector_landuse}landuse$(scale_filename_sfx $((q-1)))"
+          path="landuse.d01$(scale_filename_sfx $((q-1)))"
+          echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      done
+    else
+      for q in $(seq $mem_np_); do
+        pathin="${DATA_LANDUSE}/const/${connector_landuse}landuse$(scale_filename_sfx $((q-1)))"
+        path="landuse.d01$(scale_filename_sfx $((q-1)))"
+        echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+      done
+    fi
   fi
 
   # bdy (prepared)
   #-------------------
   if ((BDY_FORMAT == 0)); then
     if ((BDY_ENS == 0)); then
-      pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}.boundary.nc"
-      path="mean/bdy_$(datetime_scale $time).nc"
-      echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+      if ((DISK_MODE == 3)); then
+        for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
+          for q in $(seq $mem_np_); do
+            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}${connector}boundary$(scale_filename_sfx $((q-1)))"
+            path="mean/bdy_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+            echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+#            if ((USE_INIT_FROM_BDY == 1)); then
+#              pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}${connector}init_bdy$(scale_filename_sfx $((q-1)))"
+#              path="mean/analbdy.d01_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+#              echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+#            fi
+          done
+        done
+      else
+        for q in $(seq $mem_np_); do
+          pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}${connector}boundary$(scale_filename_sfx $((q-1)))"
+          path="mean/bdy_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+          echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+#          if ((USE_INIT_FROM_BDY == 1)); then
+#            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${BDY_MEAN}${connector}init_bdy$(scale_filename_sfx $((q-1)))"
+#            path="mean/analbdy.d01_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+#            echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}
+#          fi
+        done
+      fi
     elif ((BDY_ENS == 1)); then
       for m in $(seq $mtot); do
-        pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${name_m[$m]}.boundary.nc"
-        path="${name_m[$m]}/bdy_$(datetime_scale $time).nc"
-        echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+        for q in $(seq $mem_np_); do
+          pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${name_m[$m]}${connector}boundary$(scale_filename_sfx $((q-1)))"
+          path="${name_m[$m]}/bdy_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+          echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+#          if ((USE_INIT_FROM_BDY == 1)); then
+#            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${name_m[$m]}${connector}init_bdy$(scale_filename_sfx $((q-1)))"
+#            path="${name_m[$m]}/analbdy.d01_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+#            echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+#          fi
+        done
       done
     fi
   fi
@@ -198,10 +268,12 @@ while ((time <= ETIME)); do
   #-------------------
   if ((loop == 1 && MAKEINIT == 1)); then
     for m in $(seq $mtot); do
-      path="${name_m[$m]}/anal.d01_$(datetime_scale $time).nc"
-      pathout="${OUTDIR}/${time}/anal/${name_m[$m]}.init.nc"
-#      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
+      for q in $(seq $mem_np_); do
+        path="${name_m[$m]}/anal.d01_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+        pathout="${OUTDIR}/${time}/anal/${name_m[$m]}${connector}init$(scale_filename_sfx $((q-1)))"
+#        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+q))]}
+      done
     done
   fi
 
@@ -216,16 +288,18 @@ while ((time <= ETIME)); do
     fi
   fi
   for m in $mlist; do
-    path="${name_m[$m]}/anal.d01_$(datetime_scale $atime).nc"
-    pathout="${OUTDIR}/${atime}/anal/${name_m[$m]}.init.nc"
-#    echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-    echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
-    if ((m == mmean && SPRD_OUT == 1)); then
-      path="sprd/anal.d01_$(datetime_scale $atime).nc"
-      pathout="${OUTDIR}/${atime}/anal/sprd.init.nc"
-#      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
-    fi
+    for q in $(seq $mem_np_); do
+      path="${name_m[$m]}/anal.d01_$(datetime_scale $atime)$(scale_filename_sfx $((q-1)))"
+      pathout="${OUTDIR}/${atime}/anal/${name_m[$m]}${connector}init$(scale_filename_sfx $((q-1)))"
+#      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+q))]}
+      if ((m == mmean && SPRD_OUT == 1)); then
+        path="sprd/anal.d01_$(datetime_scale $atime)$(scale_filename_sfx $((q-1)))"
+        pathout="${OUTDIR}/${atime}/anal/sprd${connector}init$(scale_filename_sfx $((q-1)))"
+#        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+q))]}
+      fi
+    done
   done
 
   # gues
@@ -239,16 +313,18 @@ while ((time <= ETIME)); do
     fi
   fi
   for m in $mlist; do
-    path="${name_m[$m]}/gues.d01_$(datetime_scale $atime).nc"
-    pathout="${OUTDIR}/${atime}/gues/${name_m[$m]}.init.nc"
-#    echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-    echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
-    if ((m == mmean && SPRD_OUT == 1)); then
-      path="sprd/gues.d01_$(datetime_scale $atime).nc"
-      pathout="${OUTDIR}/${atime}/gues/sprd.init.nc"
-#      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
-    fi
+    for q in $(seq $mem_np_); do
+      path="${name_m[$m]}/gues.d01_$(datetime_scale $atime)$(scale_filename_sfx $((q-1)))"
+      pathout="${OUTDIR}/${atime}/gues/${name_m[$m]}${connector}init$(scale_filename_sfx $((q-1)))"
+#      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+q))]}
+      if ((m == mmean && SPRD_OUT == 1)); then
+        path="sprd/gues.d01_$(datetime_scale $atime)$(scale_filename_sfx $((q-1)))"
+        pathout="${OUTDIR}/${atime}/gues/sprd${connector}init$(scale_filename_sfx $((q-1)))"
+#        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+q))]}
+      fi
+    done
   done
 
   # hist
@@ -262,10 +338,12 @@ while ((time <= ETIME)); do
     fi
   fi
   for m in $mlist; do
-    path="${name_m[$m]}/hist.d01_$(datetime_scale $time).nc"
-    pathout="${OUTDIR}/${time}/hist/${name_m[$m]}.history.nc"
-#    echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-    echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
+    for q in $(seq $mem_np_); do
+      path="${name_m[$m]}/hist.d01_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+      pathout="${OUTDIR}/${time}/hist/${name_m[$m]}${connector}history$(scale_filename_sfx $((q-1)))"
+#      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+q))]}
+    done
   done
 
 #    # diag
@@ -372,10 +450,23 @@ fi
 
 #-------------------------------------------------------------------------------
 
+if ((PNETCDF == 1)); then
+  local mem_np_=1
+else
+  local mem_np_=$mem_np
+fi
+
+#-------------------------------------------------------------------------------
+
 echo
 echo "Generate configration files..."
 
 mkdir -p $CONFIG_DIR
+
+IO_AGGREGATE=".false"
+if ((PNETCDF == 1)); then
+  IO_AGGREGATE=".true."
+fi
 
 time=$STIME
 atime=$(datetime $time $LCYCLE s)
@@ -477,7 +568,7 @@ while ((time <= ETIME)); do
     mkdir -p $CONFIG_DIR/${name_m[$m]}
     cat $SCRP_DIR/config.nml.scale | \
         sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale.${name_m[$m]}.LOG_${time}\"," \
-            -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = .true.," \
+            -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
             -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
             -e "/!--TIME_DURATION--/a TIME_DURATION = ${CYCLEFLEN}.D0," \
             -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${LCYCLE}.D0," \
@@ -512,7 +603,13 @@ while ((time <= ETIME)); do
 #        sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"XXXXXX\"," \
 #        >> $CONFIG_DIR/${conf_file}
     if ((stage_config == 1)); then
-      echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+      if ((DISK_MODE == 3)); then
+        for q in $(seq $mem_np_); do
+          echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      else
+        echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
+      fi
     fi
     echo "${OUTDIR}/${time}/log/scale/${name_m[$m]}_run.conf|${conf_file}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
   done
@@ -589,11 +686,11 @@ while ((time <= ETIME)); do
           -e "/!--PPN--/a PPN = $PPN_APPAR," \
           -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
           -e "/!--MEM_NP--/a MEM_NP = $mem_np," \
-          -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = .true.," \
+          -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
       > $CONFIG_DIR/${conf_file}
   # Most of these parameters are not important for letkf
   cat $SCRP_DIR/config.nml.scale | \
-      sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = .true.," \
+      sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
       >> $CONFIG_DIR/${conf_file}
   if ((stage_config == 1)); then
     echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
