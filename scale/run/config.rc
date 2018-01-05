@@ -98,6 +98,7 @@ BDY_MEAN="${BDY_MEAN:-mean}"
 BDYINT=${BDYINT:-$LCYCLE}
 BDYCYCLE_INT=${BDYCYCLE_INT:-$BDYINT}
 
+PNETCDF=${PNETCDF:-0}
 PNETCDF_BDY_SCALE=${PNETCDF_BDY_SCALE:-$PNETCDF}
 
 #-------------------------------------------------------------------------------
@@ -155,6 +156,18 @@ if ((DISK_MODE <= 2)); then
   PROC_OPT='one'
 else
   PROC_OPT='alln'
+fi
+
+#-------------------------------------------------------------------------------
+
+if ((PNETCDF == 1)); then
+  CONNECTOR='.'
+  CONNECTOR_TOPO=''
+  CONNECTOR_LANDUSE=''
+else
+  CONNECTOR='/'
+  CONNECTOR_TOPO='topo/'
+  CONNECTOR_LANDUSE='landuse/'
 fi
 
 #===============================================================================
@@ -253,10 +266,10 @@ TMPDAT_OBS="${TMPROOT_OBS}/${DAT_SUBDIR}"
 
 #-------------------------------------------------------------------------------
 
-#if ((PNETCDF == 1 && USE_TMPL == 1)); then
-#  echo "[Error] When PNETCDF is enabled, local disks cannot be used." 1>&2
-#  exit 1
-#fi
+if ((PNETCDF == 1 && USE_TMPL == 1)); then
+  echo "[Error] When PNETCDF is enabled, local disks cannot be used." 1>&2
+  exit 1
+fi
 
 #-------------------------------------------------------------------------------
 
