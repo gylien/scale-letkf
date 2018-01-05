@@ -167,7 +167,7 @@ if ((BDY_FORMAT >= 1)); then
   if [ -z "$PARENT_REF_TIME" ]; then
     PARENT_REF_TIME=$STIME
     for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
-      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/${BDY_MEAN}/history.pe000000.nc" ]; then
+      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/${BDY_MEAN}/history${SCALE_SFX_0}" ]; then
         break
       elif ((BDY_FORMAT == 2 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_WRF/${PARENT_REF_TIME}/${BDY_MEAN}/wrfout_${PARENT_REF_TIME}" ]; then
         break
@@ -535,7 +535,7 @@ while ((time <= ETIME)); do
       if [ "$MPI_TYPE" = 'K' ]; then
         log_zeros='0'
       else
-        log_zeros='000000'
+        log_zeros="$PROCESS_FMT_0"
       fi
 
       if ((loop == 1 && c == 1 && LOG_OPT <= 3)); then
@@ -548,7 +548,7 @@ while ((time <= ETIME)); do
           if ((c == 1)); then
             path="${time2}/log/fcst_scale_pp/${name_m[1]}_pp.conf"
             echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-            path="${time2}/log/fcst_scale_pp/${name_m[1]}_LOG.pe000000"
+            path="${time2}/log/fcst_scale_pp/${name_m[1]}_LOG${SCALE_SFX_NONC_0}"
             echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
             path="${time2}/log/fcst_scale_pp/NOUT.${log_zeros}"
             echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
@@ -556,7 +556,7 @@ while ((time <= ETIME)); do
             echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
             path="${time2}/log/fcst_scale_init/${name_m[1]}_gradsbdy.conf"
             echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-            path="${time2}/log/fcst_scale_init/${name_m[1]}_LOG.pe000000"
+            path="${time2}/log/fcst_scale_init/${name_m[1]}_LOG${SCALE_SFX_NONC_0}"
             echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
             if ((BDY_ENS == 1)); then
               path="${time2}/log/fcst_scale_init/NOUT-1.${log_zeros}"
@@ -577,7 +577,7 @@ while ((time <= ETIME)); do
           if ((c == 1)); then
             path="${time2}/log/fcst_scale/${name_m[1]}_run.conf"
             echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-            path="${time2}/log/fcst_scale/${name_m[1]}_LOG.pe000000"
+            path="${time2}/log/fcst_scale/${name_m[1]}_LOG${SCALE_SFX_NONC_0}"
             echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
             path="${time2}/log/fcst_scale/NOUT-1.${log_zeros}"
             echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1

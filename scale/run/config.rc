@@ -8,10 +8,12 @@
 
 PROCESS_FMT='%06d'
 MEMBER_FMT='%04d'
-CYCLE_FMT='%04d'
 
+PROCESS_FMT_0="$(printf $PROCESS_FMT 0)"
 SCALE_SFX=".pe${PROCESS_FMT}.nc"
-SCALE_LOG_SFX='.pe000000'
+SCALE_SFX_0=".pe${PROCESS_FMT_0}.nc"
+SCALE_SFX_NONC=".pe${PROCESS_FMT}"
+SCALE_SFX_NONC_0=".pe${PROCESS_FMT_0}"
 
 #===============================================================================
 # Preset

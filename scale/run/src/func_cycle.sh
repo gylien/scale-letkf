@@ -140,7 +140,7 @@ if ((BDY_FORMAT >= 1)); then
   if [ -z "$PARENT_REF_TIME" ]; then
     PARENT_REF_TIME=$STIME
     for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
-      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/${BDY_MEAN}/history.pe000000.nc" ]; then
+      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/${BDY_MEAN}/history${SCALE_SFX_0}" ]; then
         break
       elif ((BDY_FORMAT == 2 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_WRF/${PARENT_REF_TIME}/${BDY_MEAN}/wrfout_${PARENT_REF_TIME}" ]; then
         break
@@ -660,7 +660,7 @@ while ((time <= ETIME)); do
   if [ "$MPI_TYPE" = 'K' ]; then
     log_zeros='0'
   else
-    log_zeros="$(printf $PROCESS_FMT 0)"
+    log_zeros="$PROCESS_FMT_0"
   fi
 
   if ((loop == 1 && LOG_OPT <= 3)); then
@@ -672,7 +672,7 @@ while ((time <= ETIME)); do
     if ((LOG_TYPE == 1)); then
       path="${time}/log/scale_pp/0001_pp.conf"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${time}/log/scale_pp/0001_LOG.pe000000"
+      path="${time}/log/scale_pp/0001_LOG${SCALE_SFX_NONC_0}"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       path="${time}/log/scale_pp/NOUT.${log_zeros}"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
@@ -680,7 +680,7 @@ while ((time <= ETIME)); do
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       path="${time}/log/scale_init/0001_gradsbdy.conf"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${time}/log/scale_init/0001_LOG.pe000000"
+      path="${time}/log/scale_init/0001_LOG${SCALE_SFX_NONC_0}"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       if ((BDY_ENS == 1)); then
         path="${time}/log/scale_init/NOUT-1.${log_zeros}"
@@ -699,7 +699,7 @@ while ((time <= ETIME)); do
     if ((LOG_TYPE == 1)); then
       path="${time}/log/scale/0001_run.conf"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${time}/log/scale/0001_LOG.pe000000"
+      path="${time}/log/scale/0001_LOG${SCALE_SFX_NONC_0}"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       path="${time}/log/scale/NOUT-1.${log_zeros}"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
@@ -1144,7 +1144,7 @@ bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SI
 #  fi
 #  time_bdy=$(datetime $time $BDYCYCLE_INT s)
 #  for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
-#    if [ -s "$bdyorgf/${time_bdy}/mean/history.pe000000.nc" ]; then
+#    if [ -s "$bdyorgf/${time_bdy}/mean/history${SCALE_SFX_0}" ]; then
 #      break
 #    elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
 #      echo "[Error] Cannot find boundary files from the SCALE history files." >&2
@@ -1216,7 +1216,7 @@ for it in $(seq $its $ite); do
       bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}${CONNECTOR}boundary"
 
       bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
-           $TMPOUT/${time}/anal/${name_m[$m]}/init $ocean_base $land_base $bdy_base \
+           $TMPOUT/${time}/anal/${name_m[$m]}${CONNECTOR}init $ocean_base $land_base $bdy_base \
            $TMPOUT/const/${CONNECTOR_TOPO}topo $TMPOUT/${time_l}/${CONNECTOR_LANDUSE}landuse \
            $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $OUT_OPT \
            cycle $bdy_start_time $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT

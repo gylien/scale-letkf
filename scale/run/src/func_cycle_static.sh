@@ -370,7 +370,7 @@ while ((time <= ETIME)); do
   if [ "$MPI_TYPE" = 'K' ]; then
     log_nfmt='.%d'
   else
-    log_nfmt='-%06d'
+    log_nfmt="-${PROCESS_FMT}"
   fi
 
   if ((LOG_OPT <= 3)); then
@@ -382,11 +382,11 @@ while ((time <= ETIME)); do
       plist=$(seq $totalnp)
     fi
     for m in $mlist; do
-      path="log/scale.${name_m[$m]}.LOG_${time}.pe000000"
-      pathout="${OUTDIR}/${time}/log/scale/${name_m[$m]}_LOG.pe000000"
+      path="log/scale.${name_m[$m]}.LOG_${time}${SCALE_SFX_NONC_0}"
+      pathout="${OUTDIR}/${time}/log/scale/${name_m[$m]}_LOG${SCALE_SFX_NONC_0}"
       echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-      path="log/scale.${name_m[$m]}.monitor_${time}.pe000000"
-      pathout="${OUTDIR}/${time}/log/scale/${name_m[$m]}_monitor.pe000000"
+      path="log/scale.${name_m[$m]}.monitor_${time}${SCALE_SFX_NONC_0}"
+      pathout="${OUTDIR}/${time}/log/scale/${name_m[$m]}_monitor${SCALE_SFX_NONC_0}"
       echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+1))]}
     done
     for p in $plist; do
