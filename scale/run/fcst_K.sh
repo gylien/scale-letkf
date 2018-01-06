@@ -195,6 +195,10 @@ echo
 
 backup_exp_setting $job $SCRP_DIR $jobid ${job}_${SYSNAME} 'o e i s' i
 
+###if [ "$CONF_MODE" = 'static' ]; then
+###  config_file_save $TMPS/config || exit $?
+###fi
+
 archive_log
 
 if ((CLEAR_TMP == 1)); then
