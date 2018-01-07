@@ -528,11 +528,6 @@ while ((time <= ETIME)); do
     if ((stage_config == 1)); then
       echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
     fi
-    if ((nitmax == 1)); then
-      echo "${OUTDIR}/${time}/log/scale/scale-rm_ens.conf|${conf_file}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
-    else
-      echo "${OUTDIR}/${time}/log/scale/scale-rm_ens_${it}.conf|${conf_file}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
-    fi
   done
 
   #-----------------------------------------------------------------------------
@@ -624,7 +619,6 @@ while ((time <= ETIME)); do
         echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
       fi
     fi
-    echo "${OUTDIR}/${time}/log/scale/${name_m[$m]}_run.conf|${conf_file}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+1))]}
   done
 
   #-----------------------------------------------------------------------------
@@ -708,7 +702,6 @@ while ((time <= ETIME)); do
   if ((stage_config == 1)); then
     echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
   fi
-  echo "${OUTDIR}/${atime}/log/letkf/letkf.conf|${conf_file}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
 
   #-------------------
   time=$(datetime $time $LCYCLE s)
@@ -716,6 +709,78 @@ while ((time <= ETIME)); do
 done
 
 echo
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+config_file_save () {
+#-------------------------------------------------------------------------------
+# Save the runtime configuration files in $OUTDIR
+#
+# Usage: config_file_save [CONFIG_DIR]
+#
+#   CONFIG_DIR  Temporary directory of configuration files
+#               '-': Use $TMPROOT
+#
+# Other input variables:
+#   $TMPROOT
+#-------------------------------------------------------------------------------
+
+local CONFIG_DIR="${1:--}"
+
+if [ "$CONFIG_DIR" = '-' ]; then
+  CONFIG_DIR="$TMPROOT"
+fi
+
+#-------------------------------------------------------------------------------
+
+if ((CLEAR_TMP == 1)); then
+  local save_cmd='mv -f'
+else
+  local save_cmd='cp -f'
+fi
+
+#-------------------------------------------------------------------------------
+
+time=$STIME
+atime=$(datetime $time $LCYCLE s)
+loop=0
+while ((time <= ETIME)); do
+  loop=$((loop+1))
+
+  #-----------------------------------------------------------------------------
+  # scale
+  #-----------------------------------------------------------------------------
+
+  if [ -d "${OUTDIR}/${time}/log/scale" ]; then
+    # launcher
+    for it in $(seq $nitmax); do
+      if ((nitmax == 1)); then
+        $save_cmd $CONFIG_DIR/scale-rm_ens_${time}.conf ${OUTDIR}/${time}/log/scale/scale-rm_ens.conf
+      else
+        $save_cmd $CONFIG_DIR/scale-rm_ens_${time}_${it}.conf ${OUTDIR}/${time}/log/scale/scale-rm_ens_${it}.conf
+      fi
+    done
+
+    # each member
+    for m in $(seq $mtot); do
+      $save_cmd $CONFIG_DIR/${name_m[$m]}/run_${time}.conf ${OUTDIR}/${time}/log/scale/${name_m[$m]}_run.conf
+    done
+  fi
+
+  #-----------------------------------------------------------------------------
+  # letkf
+  #-----------------------------------------------------------------------------
+
+  if [ -d "${OUTDIR}/${atime}/log/letkf" ]; then
+    $save_cmd $CONFIG_DIR/letkf_${atime}.conf ${OUTDIR}/${atime}/log/letkf/letkf.conf
+  fi
+
+  #-------------------
+  time=$(datetime $time $LCYCLE s)
+  atime=$(datetime $time $LCYCLE s)
+done
 
 #-------------------------------------------------------------------------------
 }
