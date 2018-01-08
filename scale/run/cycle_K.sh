@@ -129,6 +129,37 @@ if ((IO_ARB == 1)); then                                              ##
 fi                                                                    ##
 
 #===============================================================================
+# Prepare rankdir stage-in
+
+echo "[$(datetime_now)] Prepare rankdir stage-in: Create symbolic links"
+
+TMP_ORIG="$TMP"
+TMP="$TMPS"
+
+stage_in server_rankdir || exit $?
+
+echo "[$(datetime_now)] Prepare rankdir stage-in: Tar files"
+
+for n in $(seq 0 $((NNODES-1))); do
+  if [ -d "$TMP/${n}" ]; then
+    if ((TAR_THREAD > 1)); then
+      while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+        sleep 0.1s
+      done
+      ( cd $TMP/${n} && tar chf input.tar * ) &
+    else
+      ( cd $TMP/${n} && tar chf input.tar * )
+    fi
+  fi
+done
+
+if ((TAR_THREAD > 1)); then
+  wait
+fi
+
+TMP="$TMP_ORIG"
+
+#===============================================================================
 # Creat a job script
 
 jobscrp="${job}_job.sh"
@@ -170,6 +201,16 @@ cat >> $jobscrp << EOF
 export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:\$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
+
+echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ### Start unarchive tar files" >&2
+
+mpiexec /work/system/bin/msh "/bin/tar -xf ./input.tar"
+
+echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ### Delete tar files" >&2
+
+mpiexec /work/system/bin/msh "/bin/rm -f ./input.tar"
+
+echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ### Complete process tar files" >&2
 
 ./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF

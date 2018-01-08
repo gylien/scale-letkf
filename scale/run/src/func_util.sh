@@ -466,6 +466,25 @@ local RUN_ON="${1:-node}"
 
 #-------------------------------------------------------------------------------
 
+if [ "$RUN_ON" = 'server_rankdir' ]; then
+#  if [ -s "${STAGING_DIR}/${STGINLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_SHARE}" ]; then
+##    safe_init_tmpdir $TMP || return $?
+#    local errmsg=$(bash $SCRP_DIR/src/stage_in_ln.sh $NNODES ${STAGING_DIR}/${STGINLIST_SHARE} $TMP 2>&1)
+#    if [ -n "$errmsg" ]; then
+#      echo "$errmsg" >&2
+#      return 1
+#    fi
+#  fi
+  if [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}" ]; then
+    local errmsg=$(bash $SCRP_DIR/src/stage_in_ln.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $TMP local_rankdir 2>&1)
+    if [ -n "$errmsg" ]; then
+      echo "$errmsg" >&2
+      return 1
+    fi
+  fi
+  return 0
+fi
+
 if ((DISK_MODE == 1)); then
   if [ -s "${STAGING_DIR}/${STGOUTLIST_LINK}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_LINK}" ]; then
     local errmsg=$(bash $SCRP_DIR/src/stage_out_ln.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_LINK} $TMP 2>&1) # code same for both server and computing-node sides
@@ -598,7 +617,8 @@ if [ -s "${STAGING_DIR}/${STGINLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGINL
   bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_SHARE} $USE_RANKDIR share $TMPS 1>> $jobscrp || exit $?
 fi
 if [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}.1" ] || [ -s "${STAGING_DIR}/${STGINLIST_LOCAL}" ]; then
-  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $USE_RANKDIR local $TMPS 1>> $jobscrp || exit $?
+#  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $USE_RANKDIR local $TMPS 1>> $jobscrp || exit $?
+  bash $SCRP_DIR/src/stage_in_K.sh $NNODES ${STAGING_DIR}/${STGINLIST_LOCAL} $USE_RANKDIR local_rankdir $TMPS 1>> $jobscrp || exit $?
 fi
 if [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}.1" ] || [ -s "${STAGING_DIR}/${STGOUTLIST_SHARE}" ]; then
   bash $SCRP_DIR/src/stage_out_K.sh $NNODES ${STAGING_DIR}/${STGOUTLIST_SHARE} $USE_RANKDIR share 1>> $jobscrp || exit $?

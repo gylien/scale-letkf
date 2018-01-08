@@ -19,6 +19,7 @@ Usage: $MYNAME NRANKS STGLIST [USE_RANKDIR TYPE TMPS]
                 1: Yes
    TYPE         'share': Stage-in to a shared directory (default)
                 'local': Stage-in to local directories
+                'local_rankdir': Stage-in to shared directory, but under rank directories
    TMPS         Temporary directory for '.empty' file
 
 EOF
@@ -59,7 +60,7 @@ function stage_in_K_sub () {
     elif [[ "$source" != */ && "$destin" != */ ]]; then # files
       if ((USE_RANKDIR == 1)) && [[ "$TYPE" == 'share' ]]; then
         echo "#PJM --stgin \"rank=$((i % NRANKS)) $source $((i % NRANKS)):../${destin}\""
-      elif ((USE_RANKDIR == 1)) && [[ "$TYPE" == 'local' ]]; then
+      elif ((USE_RANKDIR == 1)) && [[ "$TYPE" == 'local' || "$TYPE" == 'local_rankdir' ]]; then
         if ((n == 0)); then
           echo "#PJM --stgin \"rank=* $source %r:./${destin}\""
         else
@@ -71,7 +72,7 @@ function stage_in_K_sub () {
     elif [[ "$source" == */ && "$destin" == */ ]]; then # directories
       if ((USE_RANKDIR == 1)) && [[ "$TYPE" == 'share' ]]; then
         echo "#PJM --stgin-dir \"rank=$((i % NRANKS)) ${source%/} $((i % NRANKS)):../${destin%/} recursive=${max_depth}\"" # remove trailing slashes
-      elif ((USE_RANKDIR == 1)) && [[ "$TYPE" == 'local' ]]; then
+      elif ((USE_RANKDIR == 1)) && [[ "$TYPE" == 'local' || "$TYPE" == 'local_rankdir' ]]; then
         if ((n == 0)); then
           echo "#PJM --stgin-dir \"rank=* ${source%/} %r:./${destin%/} recursive=${max_depth}\""
         else
@@ -102,6 +103,10 @@ if [[ -s "$STGLIST" ]]; then
   done < "$STGLIST" # | sort | uniq
 fi
 
+if [[ "$TYPE" == 'local_rankdir' ]]; then
+  echo "#PJM --stgin \"rank=* $TMPS/%r/input.tar %r:./input.tar\""
+else
+
 for n in $(seq $NRANKS); do
   if [[ -s "$STGLIST.$n" ]]; then
     i=$((n-1))
@@ -110,6 +115,8 @@ for n in $(seq $NRANKS); do
     done < "$STGLIST.$n" # | sort | uniq
   fi
 done
+
+fi
 
 #===============================================================================
 

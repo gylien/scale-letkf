@@ -10,11 +10,13 @@ MYNAME=$(basename $0)
 if (($# < 3)); then
   cat >&2 << EOF
 
-Usage: $MYNAME NRANKS STGLIST STGDIR
+Usage: $MYNAME NRANKS STGLIST STGDIR [TYPE]
 
    NRANKS   Total number of nodes
    STGLIST  File of the stage-in list
    STGDIR   Directory where the files are staged into
+   TYPE     ''
+            'local_rankdir': Stage-in to shared directory, but under rank directories
 
 EOF
   exit 1
@@ -22,14 +24,23 @@ fi
 
 NRANKS="$1"; shift
 STGLIST="$1"; shift
-STGDIR="$1"
+STGDIR="$1"; shift
+TYPE="$1"
 
 #-------------------------------------------------------------------------------
 
 function stage_in_ln_sub () {
   local source="$(echo $line | cut -d '|' -s -f1)"
   local destin="$(echo $line | cut -d '|' -s -f2)"
-  local destinstg="${STGDIR}/${destin}"
+  if [[ "$TYPE" == 'local_rankdir' ]]; then
+#    if ((n == 0)); then
+#      local destinstg="${STGDIR}/all/${destin}"
+#    else
+      local destinstg="${STGDIR}/$((n-1))/${destin}"
+#    fi
+  else
+    local destinstg="${STGDIR}/${destin}"
+  fi
   if [[ -z "$destin" ]]; then
     : # do nothing
   elif [[ -z "$source" ]]; then
@@ -72,10 +83,13 @@ fi
 #-------------------------------------------------------------------------------
 # Stage-in
 
+#n=0
+if [[ "$TYPE" != 'local_rankdir' ]]; then
 if [[ -s "$STGLIST" ]]; then
   while read line; do
     stage_in_ln_sub
   done < "$STGLIST" # | sort | uniq
+fi
 fi
 
 for n in $(seq $NRANKS); do
