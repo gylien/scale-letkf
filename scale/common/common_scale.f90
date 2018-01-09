@@ -1682,6 +1682,69 @@ subroutine rij_l2g(proc, il, jl, ig, jg)
 end subroutine rij_l2g
 
 !-------------------------------------------------------------------------------
+! Given <real> global grid coordinates (i,j), return the 1D rank of process 
+! * HALO grids are used
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   ig, jg : global grid coordinates
+! [OUTPUT]
+!   rank   : the 1D rank of process where the grid resides;
+!            * return -1 if the grid is outside of the global domain
+!-------------------------------------------------------------------------------
+subroutine rij_rank(ig, jg, rank)
+  use scale_rm_process, only: &
+      PRC_NUM_X, PRC_NUM_Y
+#ifdef DEBUG
+  use scale_grid_index, only: &
+      IHALO, JHALO, &
+      IA, JA
+  use scale_process, only: &
+      PRC_myrank
+  use scale_grid, only: &
+      GRID_CX, &
+      GRID_CY, &
+      GRID_CXG, &
+      GRID_CYG, &
+      DX, &
+      DY
+#else
+  use scale_grid_index, only: &
+      IHALO, JHALO
+#endif
+  implicit none
+  real(r_size), intent(in) :: ig
+  real(r_size), intent(in) :: jg
+  integer, intent(out) :: rank
+  integer :: rank_i, rank_j
+
+  if (ig < real(1+IHALO,r_size) .or. ig > real(nlon*PRC_NUM_X+IHALO,r_size) .or. &
+      jg < real(1+JHALO,r_size) .or. jg > real(nlat*PRC_NUM_Y+JHALO,r_size)) then
+    rank = -1
+    return
+  end if
+
+  rank_i = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(nlon,r_size)) - 1
+  rank_j = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
+  call rank_2d_1d(rank_i, rank_j, rank)
+
+#ifdef DEBUG
+  if (PRC_myrank == rank) then
+    if (ig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &
+        ig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &
+        jg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &
+        jg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then
+      write (6,'(A)') '[Error] Process assignment fails!'
+      write (6,'(3F10.2)') ig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0
+      write (6,'(3F10.2)') jg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0
+      stop
+    end if
+  end if
+#endif
+
+  return
+end subroutine rij_rank
+
+!-------------------------------------------------------------------------------
 ! Convert <real> global grid coordinates (i,j) to local where the grid resides
 ! * HALO grids are used
 !-------------------------------------------------------------------------------

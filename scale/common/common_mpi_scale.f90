@@ -1389,7 +1389,12 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   real(r_size) :: rmse(nid_obs)
   real(r_size) :: rmse_g(nid_obs)
   logical :: monit_type(nid_obs)
-  type(obs_da_value) :: obsdep_g
+  integer :: obsdep_g_nobs
+  integer, allocatable :: obsdep_g_set(:)
+  integer, allocatable :: obsdep_g_idx(:)
+  integer, allocatable :: obsdep_g_qc(:)
+  real(r_size), allocatable :: obsdep_g_omb(:)
+  real(r_size), allocatable :: obsdep_g_oma(:)
   integer :: cnts
   integer :: cntr(MEM_NP)
   integer :: dspr(MEM_NP)
@@ -1443,7 +1448,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
     call mpi_timer('monit_obs_mpi:stat:mpi_allreduce(domain):', 2)
 
     if (OBSDEP_OUT .and. monit_step == 2) then
-      cnts = obsdep%nobs
+      cnts = obsdep_nobs
       cntr = 0
       cntr(myrank_d+1) = cnts
       call MPI_ALLREDUCE(MPI_IN_PLACE, cntr, MEM_NP, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
@@ -1452,27 +1457,42 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
         dspr(ip+1) = dspr(ip) + cntr(ip)
       end do
 
-      obsdep_g%nobs = dspr(MEM_NP) + cntr(MEM_NP)
-      call obs_da_value_allocate(obsdep_g, 0)
+      obsdep_g_nobs = dspr(MEM_NP) + cntr(MEM_NP)
+      allocate (obsdep_g_set(obsdep_g_nobs))
+      allocate (obsdep_g_idx(obsdep_g_nobs))
+      allocate (obsdep_g_qc (obsdep_g_nobs))
+      allocate (obsdep_g_omb(obsdep_g_nobs))
+      allocate (obsdep_g_oma(obsdep_g_nobs))
 
-      if (obsdep_g%nobs > 0) then
-        call MPI_GATHERV(obsdep%set, cnts, MPI_INTEGER, obsdep_g%set, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
-        call MPI_GATHERV(obsdep%idx, cnts, MPI_INTEGER, obsdep_g%idx, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
-        call MPI_GATHERV(obsdep%val, cnts, MPI_r_size,  obsdep_g%val, cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
-        call MPI_GATHERV(obsdep%qc,  cnts, MPI_INTEGER, obsdep_g%qc,  cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
-        call MPI_GATHERV(obsdep%ri,  cnts, MPI_r_size,  obsdep_g%ri,  cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
-        call MPI_GATHERV(obsdep%rj,  cnts, MPI_r_size,  obsdep_g%rj,  cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
+      if (obsdep_g_nobs > 0) then
+        call MPI_GATHERV(obsdep_set, cnts, MPI_INTEGER, obsdep_g_set, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep_idx, cnts, MPI_INTEGER, obsdep_g_idx, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep_qc,  cnts, MPI_INTEGER, obsdep_g_qc,  cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep_omb, cnts, MPI_r_size,  obsdep_g_omb, cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep_oma, cnts, MPI_r_size,  obsdep_g_oma, cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
       end if
 
       if (myrank_d == 0) then
         write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is writing an obsda file ', trim(OBSDEP_OUT_BASENAME)//'.dat'
-        call write_obs_da(trim(OBSDEP_OUT_BASENAME)//'.dat', obsdep_g, 0)
+        call write_obs_dep(trim(OBSDEP_OUT_BASENAME)//'.dat', &
+                           obsdep_g_nobs, obsdep_g_set, obsdep_g_idx, obsdep_g_qc, obsdep_g_omb, obsdep_g_oma)
       end if
-      call obs_da_value_deallocate(obsdep_g)
-      call obs_da_value_deallocate(obsdep)
+      deallocate (obsdep_g_set)
+      deallocate (obsdep_g_idx)
+      deallocate (obsdep_g_qc )
+      deallocate (obsdep_g_omb)
+      deallocate (obsdep_g_oma)
 
       call mpi_timer('monit_obs_mpi:obsdep:mpi_allreduce(domain):', 2)
     end if ! [ OBSDEP_OUT .and. monit_step == 2 ]
+
+    if (monit_step == 2) then
+      deallocate (obsdep_set)
+      deallocate (obsdep_idx)
+      deallocate (obsdep_qc )
+      deallocate (obsdep_omb)
+      deallocate (obsdep_oma)
+    end if
   end if ! [ myrank_e == mmean_rank_e ]
 
   if (DEPARTURE_STAT_ALL_PROCESSES) then
@@ -1638,7 +1658,7 @@ subroutine read_obs_all_mpi(obs)
   do iof = 1, OBS_IN_NUM
     call MPI_BCAST(obs(iof)%nobs, 1, MPI_INTEGER, 0, MPI_COMM_a, ierr)
     if (myrank_a /= 0) then
-      call obs_info_allocate(obs(iof))
+      call obs_info_allocate(obs(iof), extended=.true.)
     end if
 
     call MPI_BCAST(obs(iof)%elm, obs(iof)%nobs, MPI_INTEGER, 0, MPI_COMM_a, ierr)
@@ -1680,9 +1700,9 @@ subroutine get_nobs_da_mpi(nobs)
 !    end if
 !    write (obsda_suffix(2:7), '(I6.6)') myrank_d
 !#ifdef H08
-!    call get_nobs(trim(obsdafile) // obsda_suffix, 8, nobs) ! H08
+!    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs) ! H08
 !#else
-!    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs)
+!    call get_nobs(trim(obsdafile) // obsda_suffix, 4, nobs)
 !#endif
 !  end if
 
@@ -1692,9 +1712,9 @@ subroutine get_nobs_da_mpi(nobs)
     call file_member_replace(1, OBSDA_IN_BASENAME, obsdafile)
     write (obsda_suffix(2:7), '(I6.6)') myrank_d
 #ifdef H08
-    call get_nobs(trim(obsdafile) // obsda_suffix, 8, nobs) ! H08
+    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs) ! H08
 #else
-    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs)
+    call get_nobs(trim(obsdafile) // obsda_suffix, 4, nobs)
 #endif
   end if
   call MPI_BCAST(nobs, 1, MPI_INTEGER, 0, MPI_COMM_e, ierr)

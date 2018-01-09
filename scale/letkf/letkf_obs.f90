@@ -206,8 +206,6 @@ SUBROUTINE set_letkf_obs
         if (it == 1) then
           obsda%set(n1:n2) = obsda_ext%set
           obsda%idx(n1:n2) = obsda_ext%idx
-          obsda%ri(n1:n2) = obsda_ext%ri
-          obsda%rj(n1:n2) = obsda_ext%rj
 #ifdef DEBUG
         else
           if (maxval(abs(obsda%set(n1:n2) - obsda_ext%set)) > 0) then
@@ -216,14 +214,6 @@ SUBROUTINE set_letkf_obs
           end if
           if (maxval(abs(obsda%idx(n1:n2) - obsda_ext%idx)) > 0) then
             write (6,'(A)') 'error: obsda%idx are inconsistent among the ensemble'
-            stop 99
-          end if
-          if (maxval(abs(obsda%ri(n1:n2) - obsda_ext%ri)) > 1.e-6) then
-            write (6,'(A)') 'error: obsda%ri are inconsistent among the ensemble'
-            stop 99
-          end if
-          if (maxval(abs(obsda%rj(n1:n2) - obsda_ext%rj)) > 1.e-6) then
-            write (6,'(A)') 'error: obsda%rj are inconsistent among the ensemble'
             stop 99
           end if
 #endif
@@ -248,8 +238,6 @@ SUBROUTINE set_letkf_obs
     if (nprocs_e > MEMBER) then
       call MPI_BCAST(obsda%set(n1:n2), nobs_extern, MPI_INTEGER, 0, MPI_COMM_e, ierr)
       call MPI_BCAST(obsda%idx(n1:n2), nobs_extern, MPI_INTEGER, 0, MPI_COMM_e, ierr)
-      call MPI_BCAST(obsda%ri(n1:n2),  nobs_extern, MPI_r_size,  0, MPI_COMM_e, ierr)
-      call MPI_BCAST(obsda%rj(n1:n2),  nobs_extern, MPI_r_size,  0, MPI_COMM_e, ierr)
     end if
 
     call mpi_timer('set_letkf_obs:external_obs_broadcast:', 2, barrier=MPI_COMM_e)
@@ -733,12 +721,12 @@ SUBROUTINE set_letkf_obs
   !-----------------------------------------------------------------------------
 
   do n = 1, obsda%nobs
-    ielm_u = uid_obs(obs(obsda%set(n))%elm(obsda%idx(n)))
-    ityp = obs(obsda%set(n))%typ(obsda%idx(n))
-    ictype = ctype_elmtyp(ielm_u,ityp)
+    iof = obsda%set(n)
+    iidx = obsda%idx(n)
+    ictype = ctype_elmtyp(uid_obs(obs(iof)%elm(iidx)), obs(iof)%typ(iidx))
 
     if (obsda%qc(n) == iqc_good) then
-      call ij_obsgrd(ictype, obsda%ri(n), obsda%rj(n), i, j)
+      call ij_obsgrd(ictype, obs(iof)%ri(iidx), obs(iof)%rj(iidx), i, j)
       if (i < 1) i = 1                                          ! Assume the process assignment was correct,
       if (i > obsgrd(ictype)%ngrd_i) i = obsgrd(ictype)%ngrd_i  ! so this correction is only to remedy the round-off problem.
       if (j < 1) j = 1                                          !
@@ -777,11 +765,11 @@ SUBROUTINE set_letkf_obs
 
   do n = 1, obsda%nobs
     if (obsda%qc(n) == iqc_good) then
-      ielm_u = uid_obs(obs(obsda%set(n))%elm(obsda%idx(n)))
-      ityp = obs(obsda%set(n))%typ(obsda%idx(n))
-      ictype = ctype_elmtyp(ielm_u,ityp)
+      iof = obsda%set(n)
+      iidx = obsda%idx(n)
+      ictype = ctype_elmtyp(uid_obs(obs(iof)%elm(iidx)), obs(iof)%typ(iidx))
 
-      call ij_obsgrd(ictype, obsda%ri(n), obsda%rj(n), i, j)
+      call ij_obsgrd(ictype, obs(iof)%ri(iidx), obs(iof)%rj(iidx), i, j)
       if (i < 1) i = 1                                         ! Assume the process assignment was correct,
       if (i > obsgrd(ictype)%ngrd_i) i = obsgrd(ictype)%ngrd_i ! so this correction is only to remedy the round-off problem.
       if (j < 1) j = 1                                         !
@@ -996,8 +984,6 @@ SUBROUTINE set_letkf_obs
     obsbufs%val(n) = obsda%val(obsda%key(n))
     obsbufs%ensval(1:nensobs_part,n) = obsda%ensval(im_obs_1:im_obs_2,obsda%key(n))
     obsbufs%qc(n) = obsda%qc(obsda%key(n))
-    obsbufs%ri(n) = obsda%ri(obsda%key(n))
-    obsbufs%rj(n) = obsda%rj(obsda%key(n))
 #ifdef H08
     obsbufs%lev(n) = obsda%lev(obsda%key(n))   ! H08
     obsbufs%val2(n) = obsda%val2(obsda%key(n)) ! H08
@@ -1020,8 +1006,6 @@ SUBROUTINE set_letkf_obs
   call MPI_ALLGATHERV(obsbufs%val, cnts, MPI_r_size, obsbufr%val, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
   call MPI_ALLGATHERV(obsbufs%ensval, cnts*nensobs_part, MPI_r_size, obsbufr%ensval, cntr*nensobs_part, dspr*nensobs_part, MPI_r_size, MPI_COMM_d, ierr)
   call MPI_ALLGATHERV(obsbufs%qc, cnts, MPI_INTEGER, obsbufr%qc, cntr, dspr, MPI_INTEGER, MPI_COMM_d, ierr)
-  call MPI_ALLGATHERV(obsbufs%ri, cnts, MPI_r_size, obsbufr%ri, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
-  call MPI_ALLGATHERV(obsbufs%rj, cnts, MPI_r_size, obsbufr%rj, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
 #ifdef H08
   call MPI_ALLGATHERV(obsbufs%lev, cnts, MPI_r_size, obsbufr%lev, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
   call MPI_ALLGATHERV(obsbufs%val2, cnts, MPI_r_size, obsbufr%val2, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
@@ -1078,8 +1062,6 @@ SUBROUTINE set_letkf_obs
         obsda_sort%val(ns_ext:ne_ext) = obsbufr%val(ns_bufr:ne_bufr)
         obsda_sort%ensval(im_obs_1:im_obs_2,ns_ext:ne_ext) = obsbufr%ensval(1:nensobs_part,ns_bufr:ne_bufr)
         obsda_sort%qc(ns_ext:ne_ext) = obsbufr%qc(ns_bufr:ne_bufr)
-        obsda_sort%ri(ns_ext:ne_ext) = obsbufr%ri(ns_bufr:ne_bufr)
-        obsda_sort%rj(ns_ext:ne_ext) = obsbufr%rj(ns_bufr:ne_bufr)
 #ifdef H08
         obsda_sort%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr)   ! H08
         obsda_sort%val2(ns_ext:ne_ext) = obsbufr%val2(ns_bufr:ne_bufr) ! H08
@@ -1119,18 +1101,19 @@ SUBROUTINE set_letkf_obs
 
 #ifdef DEBUG
   do n = 1, nobstotal
-    write (6, '(I9,2I6,2F8.2,4F12.4,I3,2F10.4)') n, &
-                                                 obs(obsda_sort%set(n))%elm(obsda_sort%idx(n)), &
-                                                 obs(obsda_sort%set(n))%typ(obsda_sort%idx(n)), &
-                                                 obs(obsda_sort%set(n))%lon(obsda_sort%idx(n)), &
-                                                 obs(obsda_sort%set(n))%lat(obsda_sort%idx(n)), &
-                                                 obs(obsda_sort%set(n))%lev(obsda_sort%idx(n)), &
-                                                 obs(obsda_sort%set(n))%dat(obsda_sort%idx(n)), &
-                                                 obs(obsda_sort%set(n))%err(obsda_sort%idx(n)), &
-                                                 obsda_sort%val(n), &
-                                                 obsda_sort%qc(n), &
-                                                 obsda_sort%ri(n), &
-                                                 obsda_sort%rj(n)
+    write (6, '(I9,2I6,2F8.2,3F12.4,2F10.4,I6,F12.4,I3)') n, &
+          obs(obsda_sort%set(n))%elm(obsda_sort%idx(n)), &
+          obs(obsda_sort%set(n))%typ(obsda_sort%idx(n)), &
+          obs(obsda_sort%set(n))%lon(obsda_sort%idx(n)), &
+          obs(obsda_sort%set(n))%lat(obsda_sort%idx(n)), &
+          obs(obsda_sort%set(n))%lev(obsda_sort%idx(n)), &
+          obs(obsda_sort%set(n))%dat(obsda_sort%idx(n)), &
+          obs(obsda_sort%set(n))%err(obsda_sort%idx(n)), &
+          obs(obsda_sort%set(n))%ri(obsda_sort%idx(n)), &
+          obs(obsda_sort%set(n))%rj(obsda_sort%idx(n)), &
+          obs(obsda_sort%set(n))%rank(obsda_sort%idx(n)), &
+          obsda_sort%val(n), &
+          obsda_sort%qc(n)
   end do
 #endif
 

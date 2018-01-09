@@ -44,7 +44,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   type(obs_da_value) :: obsda
 
   integer :: it, im, iof, islot, ierr
-  integer :: n, nn, nn_0, nsub, nmod, n1, n2
+  integer :: n, nn, nsub, nmod, n1, n2
 
   integer :: nobs     ! observation number processed in this subroutine
   integer :: nobs_all
@@ -58,17 +58,12 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   integer, allocatable :: bsn(:,:), bsna(:,:), bsnext(:,:)
   integer :: islot_time_out, islot_domain_out
 
-  integer, allocatable :: obrank(:)
-  real(r_size), allocatable :: obri(:)
-  real(r_size), allocatable :: obrj(:)
   integer, allocatable :: obrank_bufs(:)
   real(r_size), allocatable :: ri_bufs(:)
   real(r_size), allocatable :: rj_bufs(:)
 
   integer, allocatable :: obset_bufs(:)
   integer, allocatable :: obidx_bufs(:)
-  real(r_size), allocatable :: ri_bufs2(:)
-  real(r_size), allocatable :: rj_bufs2(:)
 
   integer :: slot_id(SLOT_START:SLOT_END)
   real(r_size) :: slot_lb(SLOT_START:SLOT_END)
@@ -148,11 +143,11 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   nobs_all = 0
   nobs_max_per_file = 0
   do iof = 1, OBS_IN_NUM
+    if (obs(iof)%nobs > nobs_max_per_file) then
+      nobs_max_per_file = obs(iof)%nobs
+    end if
     if (OBSDA_RUN(iof)) then
       nobs_all = nobs_all + obs(iof)%nobs
-      if (obs(iof)%nobs > nobs_max_per_file) then
-        nobs_max_per_file = obs(iof)%nobs
-      end if
     end if
   end do
 
@@ -162,10 +157,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !  obs_idx_TCX = -1
 !  obs_idx_TCY = -1
 !  obs_idx_TCP = -1
-
-  allocate (obrank(nobs_all))
-  allocate (obri(nobs_all))
-  allocate (obrj(nobs_all))
 
   nobs_max_per_file_sub = (nobs_max_per_file - 1) / nprocs_a + 1
   allocate (obrank_bufs(nobs_max_per_file_sub))
@@ -179,9 +170,9 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   ! (locations in model grids and the subdomains they belong to)
   !-----------------------------------------------------------------------------
 
-  nn_0 = 0
   do iof = 1, OBS_IN_NUM
-    if (OBSDA_RUN(iof) .and. obs(iof)%nobs > 0) then
+    if (obs(iof)%nobs > 0) then ! Process basic obsevration information for all observations since this information is not saved in obsda files
+                                ! when using separate observation operators; ignore the 'OBSDA_RUN' setting for this section
       nsub = obs(iof)%nobs / nprocs_a
       nmod = mod(obs(iof)%nobs, nprocs_a)
       do ip = 1, nmod
@@ -190,19 +181,14 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       do ip = nmod+1, nprocs_a
         cntr(ip) = nsub
       end do
-      dspr(1) = nn_0
+      dspr(1) = 0
       do ip = 2, nprocs_a
         dspr(ip) = dspr(ip-1) + cntr(ip-1)
       end do
 
-      n1 = dspr(myrank_a+1) - nn_0 + 1
-      n2 = dspr(myrank_a+1) - nn_0 + cntr(myrank_a+1)
-
       obrank_bufs(:) = -1
-
-      ibufs = 0
-      do n = n1, n2
-        ibufs = ibufs + 1
+      do ibufs = 1, cntr(myrank_a+1)
+        n = dspr(myrank_a+1) + ibufs
 !        select case (obs(iof)%elm(n))
 !        case (id_tclon_obs)
 !          obs_set_TCX = iof
@@ -219,19 +205,17 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !        end select
 
         call phys2ij(obs(iof)%lon(n), obs(iof)%lat(n), ri_bufs(ibufs), rj_bufs(ibufs))
-        call rij_g2l_auto(obrank_bufs(ibufs), ri_bufs(ibufs), rj_bufs(ibufs), ril, rjl) ! rij, rjl discarded here; re-computed later
-      end do ! [ n = n1, n2 ]
+        call rij_rank(ri_bufs(ibufs), rj_bufs(ibufs), obrank_bufs(ibufs))
+      end do ! [ ibufs = 1, cntr(myrank_a+1) ]
 
       call mpi_timer('obsope_cal:first_scan_cal:', 2, barrier=MPI_COMM_a)
 
-      call MPI_GATHERV(obrank_bufs, cntr(myrank_a+1), MPI_INTEGER, obrank, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_a, ierr)
-      call MPI_GATHERV(ri_bufs,     cntr(myrank_a+1), MPI_r_size , obri,   cntr, dspr, MPI_r_size,  0, MPI_COMM_a, ierr)
-      call MPI_GATHERV(rj_bufs,     cntr(myrank_a+1), MPI_r_size , obrj,   cntr, dspr, MPI_r_size,  0, MPI_COMM_a, ierr)
+      call MPI_ALLGATHERV(obrank_bufs, cntr(myrank_a+1), MPI_INTEGER, obs(iof)%rank, cntr, dspr, MPI_INTEGER, MPI_COMM_a, ierr)
+      call MPI_ALLGATHERV(ri_bufs,     cntr(myrank_a+1), MPI_r_size,  obs(iof)%ri,   cntr, dspr, MPI_r_size,  MPI_COMM_a, ierr)
+      call MPI_ALLGATHERV(rj_bufs,     cntr(myrank_a+1), MPI_r_size,  obs(iof)%rj,   cntr, dspr, MPI_r_size,  MPI_COMM_a, ierr)
 
       call mpi_timer('obsope_cal:first_scan_reduce:', 2)
-
-      nn_0 = nn_0 + obs(iof)%nobs
-    end if ! [ OBSDA_RUN(iof) .and. obs(iof)%nobs > 0 ]
+    end if ! [ obs(iof)%nobs > 0 ]
   end do ! [ do iof = 1, OBS_IN_NUM ]
 
   deallocate (cntr, dspr)
@@ -249,8 +233,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   if (myrank_e == 0) then
     allocate ( obset_bufs(nobs_all) )
     allocate ( obidx_bufs(nobs_all) )
-    allocate ( ri_bufs2(nobs_all) )
-    allocate ( rj_bufs2(nobs_all) )
   end if
 
   if (myrank_a == 0) then
@@ -259,12 +241,10 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
     bsna(:,:) = 0
     bsnext(:,:) = 0
 
-    nn = 0
     do iof = 1, OBS_IN_NUM
       if (OBSDA_RUN(iof) .and. obs(iof)%nobs > 0) then
         do n = 1, obs(iof)%nobs
-          nn = nn + 1
-          if (obrank(nn) == -1) then
+          if (obs(iof)%rank(n) == -1) then
             ! process the observations outside of the model domain in process rank 0
             bsn(islot_domain_out, 0) = bsn(islot_domain_out, 0) + 1
           else
@@ -272,7 +252,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
             if (islot < SLOT_START .or. islot > SLOT_END) then
               islot = islot_time_out
             end if
-            bsn(islot, obrank(nn)) = bsn(islot, obrank(nn)) + 1
+            bsn(islot, obs(iof)%rank(n)) = bsn(islot, obs(iof)%rank(n)) + 1
           end if
         end do ! [ n = 1, obs(iof)%nobs ]
       end if ! [ OBSDA_RUN(iof) .and. obs(iof)%nobs > 0 ]
@@ -288,28 +268,22 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       bsnext(SLOT_START:SLOT_END+2, ip) = bsna(SLOT_START-1:SLOT_END+1, ip)
     end do
 
-    nn = 0
     do iof = 1, OBS_IN_NUM
       if (OBSDA_RUN(iof) .and. obs(iof)%nobs > 0) then
         do n = 1, obs(iof)%nobs
-          nn = nn + 1
-          if (obrank(nn) == -1) then
+          if (obs(iof)%rank(n) == -1) then
             ! process the observations outside of the model domain in process rank 0
             bsnext(islot_domain_out, 0) = bsnext(islot_domain_out, 0) + 1
             obset_bufs(bsnext(islot_domain_out, 0)) = iof
             obidx_bufs(bsnext(islot_domain_out, 0)) = n
-            ri_bufs2(bsnext(islot_domain_out, 0)) = obri(nn)
-            rj_bufs2(bsnext(islot_domain_out, 0)) = obrj(nn)
           else
             islot = ceiling(obs(iof)%dif(n) / SLOT_TINTERVAL - 0.5d0) + SLOT_BASE
             if (islot < SLOT_START .or. islot > SLOT_END) then
               islot = islot_time_out
             end if
-            bsnext(islot, obrank(nn)) = bsnext(islot, obrank(nn)) + 1
-            obset_bufs(bsnext(islot, obrank(nn))) = iof
-            obidx_bufs(bsnext(islot, obrank(nn))) = n
-            ri_bufs2(bsnext(islot, obrank(nn))) = obri(nn)
-            rj_bufs2(bsnext(islot, obrank(nn))) = obrj(nn)
+            bsnext(islot, obs(iof)%rank(n)) = bsnext(islot, obs(iof)%rank(n)) + 1
+            obset_bufs(bsnext(islot, obs(iof)%rank(n))) = iof
+            obidx_bufs(bsnext(islot, obs(iof)%rank(n))) = n
           end if
         end do ! [ n = 1, obs(iof)%nobs ]
       end if ! [ OBSDA_RUN(iof) .and. obs(iof)%nobs > 0 ]
@@ -319,8 +293,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
     call mpi_timer('obsope_cal:bucket_sort:', 2)
   end if ! [ myrank_a == 0 ]
-
-  deallocate ( obrank, obri, obrj )
 
   ! Broadcast the bucket-sort observation numbers to all processes and print
   !-----------------------------------------------------------------------------
@@ -383,13 +355,11 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
     call MPI_SCATTERV(obset_bufs, cnts, dsps, MPI_INTEGER, obsda%set, cnts(myrank_d+1), MPI_INTEGER, 0, MPI_COMM_d, ierr)
     call MPI_SCATTERV(obidx_bufs, cnts, dsps, MPI_INTEGER, obsda%idx, cnts(myrank_d+1), MPI_INTEGER, 0, MPI_COMM_d, ierr)
-    call MPI_SCATTERV(ri_bufs2,   cnts, dsps, MPI_r_size,  obsda%ri,  cnts(myrank_d+1), MPI_r_size,  0, MPI_COMM_d, ierr)
-    call MPI_SCATTERV(rj_bufs2,   cnts, dsps, MPI_r_size,  obsda%rj,  cnts(myrank_d+1), MPI_r_size,  0, MPI_COMM_d, ierr)
 
     call mpi_timer('obsope_cal:mpi_scatterv:', 2)
 
     deallocate (cnts, dsps)
-    deallocate (obset_bufs, obidx_bufs, ri_bufs2, rj_bufs2)
+    deallocate (obset_bufs, obidx_bufs)
   end if ! [ myrank_e == 0 ]
 
   ! Broadcast the basic obsevration information
@@ -400,14 +370,10 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
   call MPI_BCAST(obsda%set, nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
   call MPI_BCAST(obsda%idx, nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
-  call MPI_BCAST(obsda%ri,  nobs, MPI_r_size,  0, MPI_COMM_e, ierr)
-  call MPI_BCAST(obsda%rj,  nobs, MPI_r_size,  0, MPI_COMM_e, ierr)
 
   if (present(obsda_return)) then
     obsda_return%set(1:nobs) = obsda%set
     obsda_return%idx(1:nobs) = obsda%idx
-    obsda_return%ri(1:nobs) = obsda%ri
-    obsda_return%rj(1:nobs) = obsda%rj
   end if
 
   call mpi_timer('obsope_cal:mpi_broadcast:', 2)
@@ -503,8 +469,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !                  nobs = nobs + nch
 !                  nobs_slot = nobs_slot + 1
                   obsda%set(nobs-nch+1:nobs) = iof
-                  obsda%ri(nobs-nch+1:nobs) = rig
-                  obsda%rj(nobs-nch+1:nobs) = rjg
+!!!!!!                  obsda%ri(nobs-nch+1:nobs) = rig
+!!!!!!                  obsda%rj(nobs-nch+1:nobs) = rjg
                   ri(nobs-nch+1:nobs) = ritmp
                   rj(nobs-nch+1:nobs) = rjtmp
                   do ch = 1, nch
@@ -541,7 +507,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
 !              IF(OBS_IN_FORMAT(iof) /= 3)THEN ! H08 ????????????
 
-              call rij_g2l(myrank_d, obsda%ri(nn), obsda%rj(nn), ril, rjl)
+              call rij_g2l(myrank_d, obs(iof)%ri(n), obs(iof)%rj(n), ril, rjl)
 
               if (.not. USE_OBS(obs(iof)%typ(n))) then
                 obsda%qc(nn) = iqc_otype
@@ -549,7 +515,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
               end if
 
 !              if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_ref_zero_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
-              if (obs(iof)%typ(n) == 22) then
+              if (obs(iof)%typ(n) == 22) then !!!!!! Use [ iof == iof_radar ] !!!!!!
                 if (obs(iof)%lev(n) > RADAR_ZMAX) then
                   obsda%qc(nn) = iqc_radar_vhi
 #ifdef DEBUG
@@ -618,8 +584,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
               obsda%qc(nn) = qc_H08(ns)
 
               if(obsda%qc(nn) == iqc_good)then
-                rig = obsda%ri(nn)
-                rjg = obsda%rj(nn)
+!!!!!!                rig = obsda%ri(nn)
+!!!!!!                rjg = obsda%rj(nn)
 
 ! -- tentative treatment around the TC center --
 !                dist_MSLP_TC = sqrt(((rig - MSLP_TC_rig) * DX)**2&
@@ -716,8 +682,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !                  if(n==1) obsda%idx(nobs) = obs_idx_TCX
 !                  if(n==2) obsda%idx(nobs) = obs_idx_TCY
 !                  if(n==3) obsda%idx(nobs) = obs_idx_TCP
-!                  obsda%ri(nobs) = rig
-!                  obsda%rj(nobs) = rjg
+!!!!!!                  obsda%ri(nobs) = rig
+!!!!!!                  obsda%rj(nobs) = rjg
 !                  ri(nobs) = ril
 !                  rj(nobs) = rjl
 
