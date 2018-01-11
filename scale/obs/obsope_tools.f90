@@ -457,7 +457,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
               if (obs(iof)%dif(ns) > slot_lb(islot) .and. obs(iof)%dif(ns) <= slot_ub(islot)) then
 !                nslot = nslot + 1
                 call phys2ij(obs(iof)%lon(ns),obs(iof)%lat(ns),rig,rjg)
-                call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
+                call rij_rank_g2l(rig,rjg,proc,ritmp,rjtmp)
 
                 if (myrank_d == proc) then
                   nprof_H08 = nprof_H08 + 1 ! num of prof in myrank node
@@ -656,7 +656,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !              !       subroutine read_obs in common_obs_scale.f90.
 !              !
 !              call phys2ij(obs(iof)%lon(obs_idx_TCX),obs(iof)%lat(obs_idx_TCX),rig,rjg) 
-!              call rij_g2l_auto(proc,rig,rjg,ril,rjl)  
+!              call rij_rank_g2l(rig,rjg,proc,ril,rjl)
 !              call search_tc_subdom(rig,rjg,v2dg,bTC(1,myrank_d),bTC(2,myrank_d),bTC(3,myrank_d))
 !  
 !!              CALL MPI_BARRIER(MPI_COMM_d,ierr)
@@ -813,7 +813,7 @@ SUBROUTINE obsmake_cal(obs)
             nslot = nslot + 1
 
             call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
-            call rij_g2l_auto(proc,rig,rjg,ri,rj)
+            call rij_rank_g2l(rig,rjg,proc,ri,rj)
 
   !          if (myrank_d == 0) then
   !            print *, proc, rig, rjg, ri, rj
@@ -892,7 +892,7 @@ SUBROUTINE obsmake_cal(obs)
             nslot = nslot + 1
 
             call phys2ij(obs(iof)%lon(ns),obs(iof)%lat(ns),rig,rjg)
-            call rij_g2l_auto(proc,rig,rjg,ri,rj)
+            call rij_rank_g2l(rig,rjg,proc,ri,rj)
 
 
             if (proc < 0 .and. myrank_d == 0) then ! if outside of the global domain, processed by myrank_d == 0

@@ -1483,7 +1483,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
                  obs(obsda_sort%set(nn))%ri(obsda_sort%idx(nn)), &
                  obs(obsda_sort%set(nn))%rj(obsda_sort%idx(nn)), &
                  ri, rj)
-!!!    call rij_g2l_auto(proc,obsda_sort%ri(nn),obsda_sort%rj(nn),ri,rj)
+!!!    call rij_rank_g2l(obsda_sort%ri(nn),obsda_sort%rj(nn),proc,ri,rj)
 #ifdef DEBUG
     if (PRC_myrank /= obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn)) .or. obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn)) == -1) then
       write(6, *) '############ Error!', PRC_myrank,obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn)),obs(obsda_sort%set(nn))%ri(obsda_sort%idx(nn)),obs(obsda_sort%set(nn))%rj(obsda_sort%idx(nn)),ri,rj
@@ -1580,7 +1580,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
                    obs(obsda_sort%set(nn))%ri(obsda_sort%idx(nn)), &
                    obs(obsda_sort%set(nn))%rj(obsda_sort%idx(nn)), &
                    ri, rj)
-!!!      call rij_g2l_auto(proc,obsda_sort%ri(nn),obsda_sort%rj(nn),ri,rj)
+!!!      call rij_rank_g2l(obsda_sort%ri(nn),obsda_sort%rj(nn),proc,ri,rj)
       if (PRC_myrank /= obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn)) .or. obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn)) == -1) then
         write(6, *) '############ Error from H08 monitor!', PRC_myrank,obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn))
         cycle
