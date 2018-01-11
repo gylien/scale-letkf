@@ -40,6 +40,10 @@ MODULE letkf_obs
   real(r_size),allocatable,save :: hori_loc_ctype(:) ! array of horizontal localization length for each combined obs type
   real(r_size),allocatable,save :: vert_loc_ctype(:) ! array of vertical localization length for each combined obs type
 
+  integer, parameter :: n_qc_steps = 2
+  integer, parameter :: i_before_qc = 1
+  integer, parameter :: i_after_qc = 2
+
   type obs_grid_type
     integer :: ngrd_i
     integer :: ngrd_j
@@ -55,8 +59,8 @@ MODULE letkf_obs
     integer, allocatable :: n_ext(:,:)
     integer, allocatable :: ac_ext(:,:)
     integer :: tot_ext
-    integer :: tot_sub(2)             ! only for diagnostic print; 1: before QC; 2: after QC
-    integer :: tot_g(2)               ! only for diagnostic print
+    integer :: tot_sub(n_qc_steps)    ! only for diagnostic print; 1: before QC; 2: after QC
+    integer :: tot_g(n_qc_steps)      ! only for diagnostic print
     integer, allocatable :: next(:,:) ! temporary array
   end type obs_grid_type
 
@@ -103,7 +107,7 @@ SUBROUTINE set_letkf_obs
   integer :: myp_i,myp_j
   integer :: ip_i,ip_j
 
-  integer :: nobs_sub(2),nobs_g(2) ! 1: before QC; 2: after QC
+  integer :: nobs_sub(n_qc_steps),nobs_g(n_qc_steps)
 
   integer :: nobs_elms(nid_obs)
   integer :: nobs_elms_sum(nid_obs)
@@ -733,10 +737,10 @@ SUBROUTINE set_letkf_obs
       if (j > obsgrd(ictype)%ngrd_j) j = obsgrd(ictype)%ngrd_j  !
 
       obsgrd(ictype)%n(i,j,myrank_d) = obsgrd(ictype)%n(i,j,myrank_d) + 1
-      obsgrd(ictype)%tot_sub(2) = obsgrd(ictype)%tot_sub(2) + 1 ! only used for diagnostic print (obs number after qc)
+      obsgrd(ictype)%tot_sub(i_after_qc) = obsgrd(ictype)%tot_sub(i_after_qc) + 1 ! only used for diagnostic print (obs number after qc)
     end if
 
-    obsgrd(ictype)%tot_sub(1) = obsgrd(ictype)%tot_sub(1) + 1   ! only used for diagnostic print (obs number prior to qc)
+    obsgrd(ictype)%tot_sub(i_before_qc) = obsgrd(ictype)%tot_sub(i_before_qc) + 1 ! only used for diagnostic print (obs number before qc)
   end do
 
   ! Compute the accumulated numbers in each mesh
@@ -806,7 +810,7 @@ SUBROUTINE set_letkf_obs
       call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i,:,:), (obsgrd(ictype)%ngrd_i+1)*obsgrd(ictype)%ngrd_j*MEM_NP, &
                          MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
     end if
-    call MPI_ALLREDUCE(obsgrd(ictype)%tot_sub, obsgrd(ictype)%tot_g, 2, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+    call MPI_ALLREDUCE(obsgrd(ictype)%tot_sub, obsgrd(ictype)%tot_g, n_qc_steps, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
 
     if (ictype == 1) then
       obsgrd(ictype)%tot(:) = obsgrd(ictype)%ac(obsgrd(ictype)%ngrd_i,obsgrd(ictype)%ngrd_j,:)
@@ -815,7 +819,7 @@ SUBROUTINE set_letkf_obs
                             - obsgrd(ictype-1)%ac(obsgrd(ictype-1)%ngrd_i,obsgrd(ictype-1)%ngrd_j,:)
     end if
 #ifdef DEBUG
-    if (obsgrd(ictype)%tot(myrank_d) /= obsgrd(ictype)%tot_sub(2)) then
+    if (obsgrd(ictype)%tot(myrank_d) /= obsgrd(ictype)%tot_sub(i_after_qc)) then
       write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
       stop 99
     end if
@@ -831,17 +835,17 @@ SUBROUTINE set_letkf_obs
 
 #ifdef DEBUG
   if (nctype > 0) then
-    if (obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,myrank_d) /= nobs_sub(2)) then
+    if (obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,myrank_d) /= nobs_sub(i_after_qc)) then
       write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
       stop 99
     end if
-    if (sum(obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,:)) /= nobs_g(2)) then
+    if (sum(obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,:)) /= nobs_g(i_after_qc)) then
       write (6, '(A)') '[Error] Observation counts are inconsistent !!!'
       stop 99
     end if
   end if
 #endif
-  nobstotalg = nobs_g(2) ! total obs number in the global domain (all types)
+  nobstotalg = nobs_g(i_after_qc) ! total obs number in the global domain (all types)
 
   ! Print observation counts for each types
   !-----------------------------------------------------------------------------
@@ -857,14 +861,14 @@ SUBROUTINE set_letkf_obs
     nobs_elms(:) = 0
     do ielm_u = 1, nid_obs
       if (ctype_elmtyp(ielm_u,ityp) > 0) then
-        nobs_elms(ielm_u) = obsgrd(ctype_elmtyp(ielm_u,ityp))%tot_g(1)
+        nobs_elms(ielm_u) = obsgrd(ctype_elmtyp(ielm_u,ityp))%tot_g(i_before_qc)
       end if
     end do
     nobs_elms_sum = nobs_elms_sum + nobs_elms
     write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(ityp), nobs_elms(:), sum(nobs_elms(:))
   end do
   write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
-  write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', nobs_elms_sum(:), nobs_g(1)
+  write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', nobs_elms_sum(:), nobs_g(i_before_qc)
   write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
 
   write (6, *)
@@ -877,14 +881,14 @@ SUBROUTINE set_letkf_obs
     nobs_elms(:) = 0
     do ielm_u = 1, nid_obs
       if (ctype_elmtyp(ielm_u,ityp) > 0) then
-        nobs_elms(ielm_u) = obsgrd(ctype_elmtyp(ielm_u,ityp))%tot_g(2)
+        nobs_elms(ielm_u) = obsgrd(ctype_elmtyp(ielm_u,ityp))%tot_g(i_after_qc)
       end if
     end do
     nobs_elms_sum = nobs_elms_sum + nobs_elms
     write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(ityp), nobs_elms(:), sum(nobs_elms(:))
   end do
   write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
-  write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', nobs_elms_sum(:), nobs_g(2)
+  write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', nobs_elms_sum(:), nobs_g(i_after_qc)
   write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
 
   call mpi_timer('set_letkf_obs:obs_count_print_types:', 2)
@@ -975,10 +979,10 @@ SUBROUTINE set_letkf_obs
 
   ! 1) Copy the observation data in own subdomains to send buffer (obsbufs) with sorted order
   !-----------------------------------------------------------------------------
-  obsbufs%nobs = nobs_sub(2)
+  obsbufs%nobs = nobs_sub(i_after_qc)
   call obs_da_value_allocate(obsbufs, nensobs_part)
 
-  do n = 1, nobs_sub(2)
+  do n = 1, nobs_sub(i_after_qc)
     obsbufs%set(n) = obsda%set(obsda%key(n))
     obsbufs%idx(n) = obsda%idx(obsda%key(n))
     obsbufs%val(n) = obsda%val(obsda%key(n))
@@ -988,7 +992,7 @@ SUBROUTINE set_letkf_obs
     obsbufs%lev(n) = obsda%lev(obsda%key(n))   ! H08
     obsbufs%val2(n) = obsda%val2(obsda%key(n)) ! H08
 #endif
-  end do ! [ n = 1, nobs_sub(2) ]
+  end do ! [ n = 1, nobs_sub(i_after_qc) ]
 
   call obs_da_value_deallocate(obsda)
 
@@ -998,7 +1002,7 @@ SUBROUTINE set_letkf_obs
   !    for variables with an ensemble dimension (ensval),
   !    only obtain data from partial members (nensobs_part) to save memory usage
   !-----------------------------------------------------------------------------
-  obsbufr%nobs = nobs_g(2)
+  obsbufr%nobs = nobs_g(i_after_qc)
   call obs_da_value_allocate(obsbufr, nensobs_part)
 
   call MPI_ALLGATHERV(obsbufs%set, cnts, MPI_INTEGER, obsbufr%set, cntr, dspr, MPI_INTEGER, MPI_COMM_d, ierr)
@@ -1129,11 +1133,11 @@ SUBROUTINE set_letkf_obs
   do ictype = 1, nctype
     ityp = typ_ctype(ictype)
     ielm_u = elm_u_ctype(ictype)
-    write (6, '(A6,1x,A3,1x,4I11,I14)') obtypelist(ityp), obelmlist(ielm_u), obsgrd(ictype)%tot_g(1), obsgrd(ictype)%tot_g(2), &
-              obsgrd(ictype)%tot_sub(1), obsgrd(ictype)%tot_sub(2), obsgrd(ictype)%tot_ext
+    write (6, '(A6,1x,A3,1x,4I11,I14)') obtypelist(ityp), obelmlist(ielm_u), obsgrd(ictype)%tot_g(i_before_qc), obsgrd(ictype)%tot_g(i_after_qc), &
+              obsgrd(ictype)%tot_sub(i_before_qc), obsgrd(ictype)%tot_sub(i_after_qc), obsgrd(ictype)%tot_ext
   end do
   write (6, '(A)') '---------------------------------------------------------------------'
-    write (6, '(A6,5x,4I11,I14)') 'TOTAL ', nobs_g(1), nobs_g(2), nobs_sub(1), nobs_sub(2), nobstotal
+    write (6, '(A6,5x,4I11,I14)') 'TOTAL ', nobs_g(i_before_qc), nobs_g(i_after_qc), nobs_sub(i_before_qc), nobs_sub(i_after_qc), nobstotal
   write (6, '(A)') '====================================================================='
 
   call mpi_timer('set_letkf_obs:obs_count_print_qc_extdomain:', 2)
