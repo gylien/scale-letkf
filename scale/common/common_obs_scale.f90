@@ -349,7 +349,7 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   INTEGER,INTENT(IN),OPTIONAL :: stggrd
   INTEGER :: stggrd_ = 0
 
-  REAL(r_size) :: qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr,rhr
+  REAL(r_size) :: qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr !,rhr
   REAL(r_size) :: dist , dlon , dlat , az , elev , radar_ref,radar_rv
 
 !  integer :: ierr
@@ -1358,9 +1358,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
   integer :: nnobs
-  integer :: n,nn,proc
+  integer :: n,nn
   integer :: iset,iidx
-  real(r_size) :: ri,rj,rk
+  real(r_size) :: ril,rjl,rk
 
   real(r_size),allocatable :: oelm(:)
   real(r_size),allocatable :: ohx(:)
@@ -1372,9 +1372,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 #ifdef H08
 ! -- for Himawari-8 obs --
   INTEGER :: nprof_H08 ! num of H08 obs
-  REAL(r_size),ALLOCATABLE :: ri_H08(:),rj_H08(:)
+  REAL(r_size),ALLOCATABLE :: ril_H08(:),rjl_H08(:)
   REAL(r_size),ALLOCATABLE :: lon_H08(:),lat_H08(:)
-  REAL(r_size),ALLOCATABLE :: tmp_ri_H08(:),tmp_rj_H08(:)
+  REAL(r_size),ALLOCATABLE :: tmp_ril_H08(:),tmp_rjl_H08(:)
   REAL(r_size),ALLOCATABLE :: tmp_lon_H08(:),tmp_lat_H08(:)
   INTEGER,ALLOCATABLE :: n2prof(:) ! obs num 2 prof num
 
@@ -1431,7 +1431,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  obs_idx_TCY = -1
 !  obs_idx_TCP = -1
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ri,rj,rk)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ril,rjl,rk)
   do n = 1, nnobs
 
     if (use_key) then
@@ -1459,7 +1459,14 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 #endif
     end if
 
-    if (obsda_sort%qc(nn) /= iqc_good) write(6, *) '############', obsda_sort%qc(nn)
+#ifdef DEBUG
+    if (obsda_sort%qc(nn) /= iqc_good) then
+      write (6, *) "[Warning] The QC value of this observation provided for monitoring is not good: ", &
+                   obsda_sort%qc(nn)
+!      cycle
+!      stop
+    end if
+#endif
 
     oelm(n) = obs(iset)%elm(iidx)
 
@@ -1479,14 +1486,11 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     if(int(oelm(n)) == id_H08IR_obs)cycle
 #endif
 
-    call rij_g2l(obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn)), &
-                 obs(obsda_sort%set(nn))%ri(obsda_sort%idx(nn)), &
-                 obs(obsda_sort%set(nn))%rj(obsda_sort%idx(nn)), &
-                 ri, rj)
-!!!    call rij_rank_g2l(obsda_sort%ri(nn),obsda_sort%rj(nn),proc,ri,rj)
+    call rij_g2l(PRC_myrank, obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl)
 #ifdef DEBUG
-    if (PRC_myrank /= obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn)) .or. obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn)) == -1) then
-      write(6, *) '############ Error!', PRC_myrank,obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn)),obs(obsda_sort%set(nn))%ri(obsda_sort%idx(nn)),obs(obsda_sort%set(nn))%rj(obsda_sort%idx(nn)),ri,rj
+    if (PRC_myrank /= obs(iset)%rank(iidx) .or. obs(iset)%rank(iidx) == -1) then
+      write (6, *) "[Warning] This observation provided for monitoring does not reside in my rank: ", &
+                   PRC_myrank, obs(iset)%rank(iidx), obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl
       cycle
 !      stop
     end if
@@ -1500,19 +1504,19 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
       select case (obs(iset)%elm(iidx))
       case(id_u_obs,id_v_obs,id_t_obs,id_tv_obs,id_q_obs,id_ps_obs) !,id_rh_obs)
         call phys2ijk(v3dgh(:,:,:,iv3dd_p),obs(iset)%elm(iidx), &
-                      ri,rj,obs(iset)%lev(iidx),rk,oqc(n))
+                      ril,rjl,obs(iset)%lev(iidx),rk,oqc(n))
         if (oqc(n) == iqc_good) then
-          call Trans_XtoY(obs(iset)%elm(iidx),ri,rj,rk, &
+          call Trans_XtoY(obs(iset)%elm(iidx),ril,rjl,rk, &
                           obs(iset)%lon(iidx),obs(iset)%lat(iidx), &
                           v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
         end if
 
       case(id_radar_ref_obs,id_radar_ref_zero_obs,id_radar_vr_obs,id_radar_prh_obs)
         if (DEPARTURE_STAT_RADAR) then
-          call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ri,rj,obs(iset)%lev(iidx),rk,oqc(n))
+          call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ril,rjl,obs(iset)%lev(iidx),rk,oqc(n))
           if (oqc(n) == iqc_good) then
             call Trans_XtoY_radar(obs(iset)%elm(iidx),obs(iset)%meta(1), &
-                                  obs(iset)%meta(2),obs(iset)%meta(3),ri,rj,rk, &
+                                  obs(iset)%meta(2),obs(iset)%meta(3),ril,rjl,rk, &
                                   obs(iset)%lon(iidx),obs(iset)%lat(iidx), &
                                   obs(iset)%lev(iidx),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
             if (oqc(n) == iqc_ref_low) oqc(n) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
@@ -1535,7 +1539,19 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
         end if                             !
         obsdep_oma(n) = ohx(n)
       end if
-!write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iset)%elm(iidx), obs(iset)%typ(iidx), obs(iset)%lon(iidx), obs(iset)%lat(iidx), obs(iset)%lev(iidx), obs(iset)%dat(iidx), obs(iset)%err(iidx), ohx(n), oqc(n)
+
+#ifdef DEBUG
+      write (6, '(2I6,2F8.2,4F12.4,I3)') &
+            obs(iset)%elm(iidx), &
+            obs(iset)%typ(iidx), &
+            obs(iset)%lon(iidx), &
+            obs(iset)%lat(iidx), &
+            obs(iset)%lev(iidx), &
+            obs(iset)%dat(iidx), &
+            obs(iset)%err(iidx), &
+            ohx(n), &
+            oqc(n)
+#endif
 
     end if
 
@@ -1551,8 +1567,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 
   if (DEPARTURE_STAT_H08) then !-- [DEPARTURE_STAT_H08]
 
-    ALLOCATE(tmp_ri_H08(nnobs))
-    ALLOCATE(tmp_rj_H08(nnobs))
+    ALLOCATE(tmp_ril_H08(nnobs))
+    ALLOCATE(tmp_rjl_H08(nnobs))
     ALLOCATE(tmp_lon_H08(nnobs))
     ALLOCATE(tmp_lat_H08(nnobs))
     ALLOCATE(n2prof(nnobs))
@@ -1576,32 +1592,32 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
       oelm(n) = obs(iset)%elm(iidx)
       if(oelm(n) /= id_H08IR_obs)cycle
 
-      call rij_g2l(obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn)), &
-                   obs(obsda_sort%set(nn))%ri(obsda_sort%idx(nn)), &
-                   obs(obsda_sort%set(nn))%rj(obsda_sort%idx(nn)), &
-                   ri, rj)
-!!!      call rij_rank_g2l(obsda_sort%ri(nn),obsda_sort%rj(nn),proc,ri,rj)
-      if (PRC_myrank /= obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn)) .or. obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn)) == -1) then
-        write(6, *) '############ Error from H08 monitor!', PRC_myrank,obs(obsda_sort%set(nn))%rank(obsda_sort%idx(nn))
+      call rij_g2l(PRC_myrank, obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl)
+#ifdef DEBUG
+      if (PRC_myrank /= obs(iset)%rank(iidx) .or. obs(iset)%rank(iidx) == -1) then
+        write (6, *) "[Warning] This observation provided for monitoring does not reside in my rank: ", &
+                     PRC_myrank, obs(iset)%rank(iidx), obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl
         cycle
+!        stop
       end if
+#endif
 
       if(nprof_H08 > 1)then
-        if((tmp_ri_H08(nprof_H08)==ri) .and. (tmp_ri_H08(nprof_H08)==ri))then
+        if((tmp_ril_H08(nprof_H08)==ril) .and. (tmp_rjl_H08(nprof_H08)==rjl))then
           n2prof(n) = nprof_H08
           cycle
         else
           nprof_H08 = nprof_H08 + 1
-          tmp_ri_H08(nprof_H08) = ri
-          tmp_rj_H08(nprof_H08) = rj
+          tmp_ril_H08(nprof_H08) = ril
+          tmp_rjl_H08(nprof_H08) = rjl
           tmp_lon_H08(nprof_H08) = obs(iset)%lon(iidx)
           tmp_lat_H08(nprof_H08) = obs(iset)%lat(iidx)
           n2prof(n) = nprof_H08
         endif
       else ! nprof_H08 <= 1
         nprof_H08 = nprof_H08 + 1
-        tmp_ri_H08(nprof_H08) = ri
-        tmp_rj_H08(nprof_H08) = rj
+        tmp_ril_H08(nprof_H08) = ril
+        tmp_rjl_H08(nprof_H08) = rjl
         tmp_lon_H08(nprof_H08) = obs(iset)%lon(iidx)
         tmp_lat_H08(nprof_H08) = obs(iset)%lat(iidx)
         n2prof(n) = nprof_H08
@@ -1609,17 +1625,17 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     end do ! [ n = 1, nnobs ]
 
     IF(nprof_H08 >=1)THEN ! [nprof_H08 >=1]
-      ALLOCATE(ri_H08(nprof_H08))
-      ALLOCATE(rj_H08(nprof_H08))
+      ALLOCATE(ril_H08(nprof_H08))
+      ALLOCATE(rjl_H08(nprof_H08))
       ALLOCATE(lon_H08(nprof_H08))
       ALLOCATE(lat_H08(nprof_H08))
 
-      ri_H08 = tmp_ri_H08(1:nprof_H08)
-      rj_H08 = tmp_rj_H08(1:nprof_H08)
+      ril_H08 = tmp_ril_H08(1:nprof_H08)
+      rjl_H08 = tmp_rjl_H08(1:nprof_H08)
       lon_H08 = tmp_lon_H08(1:nprof_H08)
       lat_H08 = tmp_lat_H08(1:nprof_H08)
 
-      DEALLOCATE(tmp_ri_H08, tmp_rj_H08)
+      DEALLOCATE(tmp_ril_H08, tmp_rjl_H08)
       DEALLOCATE(tmp_lon_H08, tmp_lat_H08)
 
       ALLOCATE(yobs_H08(nprof_H08*nch))
@@ -1629,7 +1645,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
       ALLOCATE(qc_H08(nprof_H08*nch))
 
 
-      CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
+      CALL Trans_XtoY_H08(nprof_H08,ril_H08,rjl_H08,&
                           lon_H08,lat_H08,v3dgh,v2dgh,&
                           yobs_H08,plev_obs_H08,&
                           qc_H08,stggrd=1,yobs_H08_clr=yobs_H08_clr)
@@ -1700,8 +1716,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     ENDIF ! [nprof_H08 >=1]
 
     IF(ALLOCATED(n2prof)) DEALLOCATE(n2prof)
-    IF(ALLOCATED(tmp_ri_H08)) DEALLOCATE(tmp_ri_H08)
-    IF(ALLOCATED(tmp_rj_H08)) DEALLOCATE(tmp_rj_H08)
+    IF(ALLOCATED(tmp_ril_H08)) DEALLOCATE(tmp_ril_H08)
+    IF(ALLOCATED(tmp_rjl_H08)) DEALLOCATE(tmp_rjl_H08)
     IF(ALLOCATED(tmp_lon_H08)) DEALLOCATE(tmp_lon_H08)
     IF(ALLOCATED(tmp_lat_H08)) DEALLOCATE(tmp_lat_H08)
   endif !-- [DEPARTURE_STAT_H08]
@@ -1779,18 +1795,11 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     monit_type(uid_obs(id_H08IR_obs)) = .true.
   end if
 
-
   deallocate (oelm)
   deallocate (ohx)
   deallocate (oqc)
 
-
-!CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!CALL CPU_TIME(timer)
-!if (myrank == 0) print *, '######', timer
-
-
-
+  return
 end subroutine monit_obs
 !-----------------------------------------------------------------------
 ! Monitor departure
@@ -2024,7 +2033,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
   INTEGER,INTENT(IN) :: nrec
   INTEGER,INTENT(OUT) :: nn
   REAL(r_sngl),ALLOCATABLE :: wk(:)
-  INTEGER :: ios
+!  INTEGER :: ios
 !  INTEGER :: iu,iv,it,iq,irh,ips,itc
   INTEGER :: iunit
   LOGICAL :: ex
@@ -2923,8 +2932,8 @@ SUBROUTINE get_nobs_H08(cfile,nn)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(OUT) :: nn ! num of all H08 obs
-  REAL(r_sngl) :: wk(4+nch)
-  INTEGER :: ios 
+!  REAL(r_sngl) :: wk(4+nch)
+!  INTEGER :: ios 
   INTEGER :: iprof
   INTEGER :: iunit
   LOGICAL :: ex
