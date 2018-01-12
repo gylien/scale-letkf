@@ -78,7 +78,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   real(r_size), allocatable :: val2_p(:)
 #endif
 
-  real(r_size) :: ril, rjl, rk
+  real(r_size) :: ril, rjl, rk, rkz
 
   character(filelenmax) :: obsdafile
   character(len=11) :: obsda_suffix = '.000000.dat'
@@ -440,6 +440,65 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:read_ens_history(t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
 
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk,rkz)
+        do nn = n1, n2
+          iof = obsda%set(nn)
+          n = obsda%idx(nn)
+
+          call rij_g2l(myrank_d, obs(iof)%ri(n), obs(iof)%rj(n), ril, rjl)
+
+          if (.not. USE_OBS(obs(iof)%typ(n))) then
+            obsda%qc(nn) = iqc_otype
+            cycle
+          end if
+
+          select case (OBS_IN_FORMAT(iof))
+          !=====================================================================
+          case (obsfmt_prepbufr)
+          !---------------------------------------------------------------------
+            call phys2ijk(v3dg(:,:,:,iv3dd_p), obs(iof)%elm(n), ril, rjl, obs(iof)%lev(n), rk, obsda%qc(nn))
+            if (obsda%qc(nn) == iqc_good) then
+              call Trans_XtoY(obs(iof)%elm(n), ril, rjl, rk, &
+                              obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
+            end if
+          !=====================================================================
+          case (obsfmt_radar)
+          !---------------------------------------------------------------------
+            if (obs(iof)%lev(n) > RADAR_ZMAX) then
+              obsda%qc(nn) = iqc_radar_vhi
+#ifdef DEBUG
+              write(6,'(A,F8.1,A,I5)') 'warning: radar observation is too high: lev=', obs(iof)%lev(n), ', elem=', obs(iof)%elm(n)
+#endif
+            else
+              call phys2ijkz(v3dg(:,:,:,iv3dd_hgt), ril, rjl, obs(iof)%lev(n), rkz, obsda%qc(nn))
+            end if
+            if (obsda%qc(nn) == iqc_good) then
+              call Trans_XtoY_radar(obs(iof)%elm(n), obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3), ril, rjl, rkz, &
+                                    obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%lev(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
+              if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
+
+              !!!!!! may not need to do this at this stage !!!!!!
+              !if (obs(iof)%elm(n) == id_radar_ref_obs) then
+              !  obsda%val(nn) = 10.0d0 * log10(obsda%val(nn))
+              !end if
+              !!!!!!
+            end if
+#ifdef H08
+          !=====================================================================
+!          case (obsfmt_h08)
+          !---------------------------------------------------------------------
+
+#endif
+          !=====================================================================
+          end select
+
+!              ENDIF ! H08 ????????????
+
+        end do ! [ nn = n1, n2 ]
+!$OMP END PARALLEL DO
+
+
+
 #ifdef H08
           ELSEIF(OBS_IN_FORMAT(iof) == obsfmt_h08) THEN ! H08
 
@@ -498,58 +557,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
             DEALLOCATE(tmp_lon_H08,tmp_lat_H08)
 
 #endif
-
-
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk)
-            do nn = n1, n2
-              iof = obsda%set(nn)
-              n = obsda%idx(nn)
-
-!              IF(OBS_IN_FORMAT(iof) /= obsfmt_h08)THEN ! H08 ????????????
-
-              call rij_g2l(myrank_d, obs(iof)%ri(n), obs(iof)%rj(n), ril, rjl)
-
-              if (.not. USE_OBS(obs(iof)%typ(n))) then
-                obsda%qc(nn) = iqc_otype
-                cycle
-              end if
-
-!              if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_ref_zero_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
-              if (obs(iof)%typ(n) == 22) then !!!!!! Use [ iof == iof_radar ] !!!!!!
-                if (obs(iof)%lev(n) > RADAR_ZMAX) then
-                  obsda%qc(nn) = iqc_radar_vhi
-#ifdef DEBUG
-                  write(6,'(A,F8.1,A,I5)') 'warning: radar observation is too high: lev=', obs(iof)%lev(n), ', elem=', obs(iof)%elm(n)
-#endif
-                else
-                  call phys2ijkz(v3dg(:,:,:,iv3dd_hgt), ril, rjl, obs(iof)%lev(n), rk, obsda%qc(nn))
-                end if
-              else
-                call phys2ijk(v3dg(:,:,:,iv3dd_p), obs(iof)%elm(n), ril, rjl, obs(iof)%lev(n), rk, obsda%qc(nn))
-              end if
-
-              if (obsda%qc(nn) == iqc_good) then
-                select case (OBS_IN_FORMAT(iof))
-                case (obsfmt_prepbufr)
-                  call Trans_XtoY(obs(iof)%elm(n), ril, rjl, rk, &
-                                  obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
-                case (obsfmt_radar)
-                  call Trans_XtoY_radar(obs(iof)%elm(n), obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3), ril, rjl, rk, &
-                                        obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%lev(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
-                  if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
-
-                  !!!!!! may not need to do this at this stage !!!!!!
-                  !if (obs(iof)%elm(n) == id_radar_ref_obs) then
-                  !  obsda%val(nn) = 10.0d0 * log10(obsda%val(nn))
-                  !end if
-                  !!!!!!
-                end select
-              end if
-
-!              ENDIF ! H08 ????????????
-
-            end do ! [ nn = n1, n2 ]
-!$OMP END PARALLEL DO
 
 #ifdef H08
           ELSEIF((OBS_IN_FORMAT(iof) == obsfmt_h08).and.(nprof_H08 >=1 ))THEN ! H08
@@ -630,12 +637,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !!!          ENDIF ! H08
 
 
-
-        write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:obsope_step_2   (t=', it, ', slot=', islot, '):'
-        call mpi_timer(trim(timer_str), 2)
-
-
-
 ! ###  -- TC vital assimilation -- ###
 !          if (obs_idx_TCX > 0 .and. obs_idx_TCY > 0 .and. obs_idx_TCP > 0) then
 !          if (obs(iof)%dif(obs_idx_TCX) == obs(iof)%dif(obs_idx_TCY) .and. &
@@ -700,7 +701,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
 
  
-
+        write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:obsope_step_2   (t=', it, ', slot=', islot, '):'
+        call mpi_timer(trim(timer_str), 2)
       end do ! [ islot = SLOT_START, SLOT_END ]
 
       call mpi_timer('', 2)
@@ -761,7 +763,7 @@ SUBROUTINE obsmake_cal(obs)
   integer :: islot,proc
   integer :: n,nslot,nobs,nobs_slot,ierr,iqc,iof
   integer :: nobsmax,nobsall
-  real(r_size) :: rig,rjg,ri,rj,rk
+  real(r_size) :: rig,rjg,ril,rjl,rk,rkz
   real(r_size) :: slot_lb,slot_ub
   real(r_size),allocatable :: bufr(:)
   real(r_size),allocatable :: error(:)
@@ -773,9 +775,9 @@ SUBROUTINE obsmake_cal(obs)
 ! -- for Himawari-8 obs --
   INTEGER :: nallprof ! H08: Num of all profiles (entire domain) required by RTTOV
   INTEGER :: nprof_H08 ! num of H08 obs
-  REAL(r_size),ALLOCATABLE :: ri_H08(:),rj_H08(:)
+  REAL(r_size),ALLOCATABLE :: ril_H08(:),rjl_H08(:)
   REAL(r_size),ALLOCATABLE :: lon_H08(:),lat_H08(:)
-  REAL(r_size),ALLOCATABLE :: tmp_ri_H08(:),tmp_rj_H08(:)
+  REAL(r_size),ALLOCATABLE :: tmp_ril_H08(:),tmp_rjl_H08(:)
   REAL(r_size),ALLOCATABLE :: tmp_lon_H08(:),tmp_lat_H08(:)
 
   REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
@@ -813,10 +815,10 @@ SUBROUTINE obsmake_cal(obs)
             nslot = nslot + 1
 
             call phys2ij(obs(iof)%lon(n),obs(iof)%lat(n),rig,rjg)
-            call rij_rank_g2l(rig,rjg,proc,ri,rj)
+            call rij_rank_g2l(rig,rjg,proc,ril,rjl)
 
   !          if (myrank_d == 0) then
-  !            print *, proc, rig, rjg, ri, rj
+  !            print *, proc, rig, rjg, ril, rjl
   !          end if
 
             if (proc < 0 .and. myrank_d == 0) then ! if outside of the global domain, processed by myrank_d == 0
@@ -828,7 +830,7 @@ SUBROUTINE obsmake_cal(obs)
               nobs_slot = nobs_slot + 1
 
   !IF(NINT(elem(n)) == id_ps_obs) THEN
-  !  CALL itpl_2d(v2d(:,:,iv2d_orog),ri,rj,dz)
+  !  CALL itpl_2d(v2d(:,:,iv2d_orog),ril,rjl,dz)
   !  rk = rlev(n) - dz
   !  IF(ABS(rk) > threshold_dz) THEN ! pressure adjustment threshold
   !    ! WRITE(6,'(A)') '* PS obs vertical adjustment beyond threshold'
@@ -838,31 +840,36 @@ SUBROUTINE obsmake_cal(obs)
   !  END IF
   !END IF
 
-!              if (obs(iof)%elm(n) == id_radar_ref_obs .or. obs(iof)%elm(n) == id_radar_ref_zero_obs .or. obs(iof)%elm(n) == id_radar_vr_obs) then
-              if (obs(iof)%typ(n) == 22) then
-                call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri,rj,obs(iof)%lev(n),rk,iqc)
-              else
-                call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ri,rj,obs(iof)%lev(n),rk,iqc)
-              end if
+              select case (OBS_IN_FORMAT(iof))
+              !=================================================================
+              case (obsfmt_prepbufr)
+              !-----------------------------------------------------------------
+                call phys2ijk(v3dg(:,:,:,iv3dd_p),obs(iof)%elm(n),ril,rjl,obs(iof)%lev(n),rk,iqc)
+                if (iqc == iqc_good) then
+                  call Trans_XtoY(obs(iof)%elm(n),ril,rjl,rk, &
+                                  obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
+                end if
+              !=================================================================
+              case (obsfmt_radar)
+              !-----------------------------------------------------------------
+                call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ril,rjl,obs(iof)%lev(n),rkz,iqc)
+                if (iqc == iqc_good) then
+                  call Trans_XtoY_radar(obs(iof)%elm(n),obs(iof)%meta(1),obs(iof)%meta(2),obs(iof)%meta(3),ril,rjl,rkz, &
+                                        obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
+ !!! For radar observation, when reflectivity value is too low, do not generate ref/vr observations
+ !!! No consideration of the terrain blocking effects.....
+                end if
+#ifdef H08
+              !=================================================================
+!              case (obsfmt_h08)
+              !-----------------------------------------------------------------
+
+#endif
+              !=================================================================
+              end select
 
               if (iqc /= iqc_good) then
                 obs(iof)%dat(n) = undef
-              else
-                select case (OBS_IN_FORMAT(iof))
-                case (obsfmt_prepbufr)
-                  call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk, &
-                                  obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
-                case (obsfmt_radar)
-                  call Trans_XtoY_radar(obs(iof)%elm(n),obs(iof)%meta(1),obs(iof)%meta(2),obs(iof)%meta(3),ri,rj,rk, &
-                                        obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
-                end select
-
- !!! For radar observation, when reflectivity value is too low, do not generate ref/vr observations
- !!! No consideration of the terrain blocking effects.....
-
-                if (iqc /= iqc_good) then
-                  obs(iof)%dat(n) = undef
-                end if
               end if
 
             end if ! [ myrank_d == proc ]
@@ -880,8 +887,8 @@ SUBROUTINE obsmake_cal(obs)
 
         nallprof = obs(iof)%nobs/nch
 
-        ALLOCATE(tmp_ri_H08(nallprof))
-        ALLOCATE(tmp_rj_H08(nallprof))
+        ALLOCATE(tmp_ril_H08(nallprof))
+        ALLOCATE(tmp_rjl_H08(nallprof))
         ALLOCATE(tmp_lon_H08(nallprof))
         ALLOCATE(tmp_lat_H08(nallprof))
         ALLOCATE(idx_H08(nallprof))
@@ -892,7 +899,7 @@ SUBROUTINE obsmake_cal(obs)
             nslot = nslot + 1
 
             call phys2ij(obs(iof)%lon(ns),obs(iof)%lat(ns),rig,rjg)
-            call rij_rank_g2l(rig,rjg,proc,ri,rj)
+            call rij_rank_g2l(rig,rjg,proc,ril,rjl)
 
 
             if (proc < 0 .and. myrank_d == 0) then ! if outside of the global domain, processed by myrank_d == 0
@@ -902,8 +909,8 @@ SUBROUTINE obsmake_cal(obs)
             if (myrank_d == proc) then
               nprof_H08 = nprof_H08 + 1 ! num of prof in myrank node
               idx_H08(nprof_H08) = ns ! idx of prof in myrank node
-              tmp_ri_H08(nprof_H08) = ri
-              tmp_rj_H08(nprof_H08) = rj
+              tmp_ril_H08(nprof_H08) = ril
+              tmp_rjl_H08(nprof_H08) = rjl
               tmp_lon_H08(nprof_H08) = obs(iof)%lon(ns)
               tmp_lat_H08(nprof_H08) = obs(iof)%lat(ns)
 
@@ -917,13 +924,13 @@ SUBROUTINE obsmake_cal(obs)
         end do ! [ n = 1, nallprof ]
 
         IF(nprof_H08 >=1)THEN
-          ALLOCATE(ri_H08(nprof_H08))
-          ALLOCATE(rj_H08(nprof_H08))
+          ALLOCATE(ril_H08(nprof_H08))
+          ALLOCATE(rjl_H08(nprof_H08))
           ALLOCATE(lon_H08(nprof_H08))
           ALLOCATE(lat_H08(nprof_H08))
 
-          ri_H08 = tmp_ri_H08(1:nprof_H08)
-          rj_H08 = tmp_rj_H08(1:nprof_H08)
+          ril_H08 = tmp_ril_H08(1:nprof_H08)
+          rjl_H08 = tmp_rjl_H08(1:nprof_H08)
           lon_H08 = tmp_lon_H08(1:nprof_H08)
           lat_H08 = tmp_lat_H08(1:nprof_H08)
 
@@ -931,7 +938,7 @@ SUBROUTINE obsmake_cal(obs)
           ALLOCATE(plev_obs_H08(nprof_H08*nch))
           ALLOCATE(qc_H08(nprof_H08*nch))
 
-          CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
+          CALL Trans_XtoY_H08(nprof_H08,ril_H08,rjl_H08,&
                               lon_H08,lat_H08,v3dg,v2dg,&
                               yobs_H08,plev_obs_H08,&
                               qc_H08)
@@ -953,7 +960,7 @@ SUBROUTINE obsmake_cal(obs)
 
         ENDIF
 
-        DEALLOCATE(tmp_ri_H08,tmp_rj_H08)
+        DEALLOCATE(tmp_ril_H08,tmp_rjl_H08)
         DEALLOCATE(tmp_lon_H08,tmp_lat_H08)
 
 

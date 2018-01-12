@@ -1361,7 +1361,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   integer :: nnobs
   integer :: n,nn
   integer :: iset,iidx
-  real(r_size) :: ril,rjl,rk
+  real(r_size) :: ril,rjl,rk,rkz
 
   real(r_size),allocatable :: oelm(:)
   real(r_size),allocatable :: ohx(:)
@@ -1432,7 +1432,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  obs_idx_TCY = -1
 !  obs_idx_TCP = -1
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ril,rjl,rk)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz)
   do n = 1, nnobs
 
     if (use_key) then
@@ -1483,9 +1483,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !      cycle
 !    end select
 
-#ifdef H08
-    if(int(oelm(n)) == id_H08IR_obs)cycle
-#endif
+!!!!!!#ifdef H08
+!!!!!!    if(int(oelm(n)) == id_H08IR_obs)cycle
+!!!!!!#endif
 
     call rij_g2l(PRC_myrank, obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl)
 #ifdef DEBUG
@@ -1502,8 +1502,10 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 
       oqc(n) = iqc_otype
 
-      select case (obs(iset)%elm(iidx))
-      case(id_u_obs,id_v_obs,id_t_obs,id_tv_obs,id_q_obs,id_ps_obs) !,id_rh_obs)
+      select case (OBS_IN_FORMAT(iset))
+      !=========================================================================
+      case (obsfmt_prepbufr)
+      !-------------------------------------------------------------------------
         call phys2ijk(v3dgh(:,:,:,iv3dd_p),obs(iset)%elm(iidx), &
                       ril,rjl,obs(iset)%lev(iidx),rk,oqc(n))
         if (oqc(n) == iqc_good) then
@@ -1511,18 +1513,26 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
                           obs(iset)%lon(iidx),obs(iset)%lat(iidx), &
                           v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
         end if
-
-      case(id_radar_ref_obs,id_radar_ref_zero_obs,id_radar_vr_obs,id_radar_prh_obs)
+      !=========================================================================
+      case (obsfmt_radar)
+      !-------------------------------------------------------------------------
         if (DEPARTURE_STAT_RADAR) then
-          call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ril,rjl,obs(iset)%lev(iidx),rk,oqc(n))
+          call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ril,rjl,obs(iset)%lev(iidx),rkz,oqc(n))
           if (oqc(n) == iqc_good) then
             call Trans_XtoY_radar(obs(iset)%elm(iidx),obs(iset)%meta(1), &
-                                  obs(iset)%meta(2),obs(iset)%meta(3),ril,rjl,rk, &
+                                  obs(iset)%meta(2),obs(iset)%meta(3),ril,rjl,rkz, &
                                   obs(iset)%lon(iidx),obs(iset)%lat(iidx), &
                                   obs(iset)%lev(iidx),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
             if (oqc(n) == iqc_ref_low) oqc(n) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
           end if
         end if
+#ifdef H08
+      !=========================================================================
+!      case (obsfmt_h08)
+      !-------------------------------------------------------------------------
+
+#endif
+      !=========================================================================
       end select
 
       if (oqc(n) == iqc_good) then
@@ -1554,7 +1564,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
             oqc(n)
 #endif
 
-    end if
+    end if ! [ DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
+           !   abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE ]
 
   end do ! [ n = 1, nnobs ]
 !$OMP END PARALLEL DO
