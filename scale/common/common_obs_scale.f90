@@ -109,7 +109,6 @@ MODULE common_obs_scale
     INTEGER,ALLOCATABLE :: rank(:)
   END TYPE obs_info
 
-  !!!!!!
   TYPE obs_da_value
     INTEGER :: nobs = 0
     INTEGER :: nobs_in_key = 0
@@ -129,11 +128,13 @@ MODULE common_obs_scale
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
   END TYPE obs_da_value
-  !!!!!! need to add %err and %dat for obsda2 if they can be determined in letkf_obs.f90 !!!!!!
 
-  INTEGER,PARAMETER :: nobsformats=3 ! H08
-  CHARACTER(30),PARAMETER :: obsformat_name(nobsformats) = &
-    (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR'/)
+  character(obsformatlenmax), parameter :: obsfmt_prepbufr = 'PREPBUFR'
+  character(obsformatlenmax), parameter :: obsfmt_radar    = 'RADAR'
+  character(obsformatlenmax), parameter :: obsfmt_h08      = 'HIMAWARI8'
+!  integer, parameter :: nobsformats = 3
+!  character(obsformatlenmax), parameter :: obsformat(nobsformats) = &
+!    (/obsfmt_prepbufr, obsfmt_radar, obsfmt_h08/)
 
   INTEGER,PARAMETER :: iqc_good=0
   INTEGER,PARAMETER :: iqc_gross_err=5
@@ -2573,11 +2574,11 @@ subroutine read_obs_all(obs)
     end if
 
     select case (OBS_IN_FORMAT(iof))
-    case (1)
+    case (obsfmt_prepbufr)
       call get_nobs(trim(OBS_IN_NAME(iof)),8,obs(iof)%nobs)
-    case (2)
+    case (obsfmt_radar)
       call get_nobs_radar(trim(OBS_IN_NAME(iof)), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
-    case (3) !H08 
+    case (obsfmt_h08)
       call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
     case default
       write(6,*) 'Error: Unsupported observation file format!'
@@ -2585,17 +2586,17 @@ subroutine read_obs_all(obs)
     end select
 
     write(6,'(5A,I9,A)') 'OBS FILE [', trim(OBS_IN_NAME(iof)), '] (FORMAT ', &
-                         trim(obsformat_name(OBS_IN_FORMAT(iof))), '): TOTAL ', &
+                         trim(OBS_IN_FORMAT(iof)), '): TOTAL ', &
                          obs(iof)%nobs, ' OBSERVATIONS'
 
     call obs_info_allocate(obs(iof), extended=.true.)
 
     select case (OBS_IN_FORMAT(iof))
-    case (1)
+    case (obsfmt_prepbufr)
       call read_obs(trim(OBS_IN_NAME(iof)),obs(iof))
-    case (2)
+    case (obsfmt_radar)
       call read_obs_radar(trim(OBS_IN_NAME(iof)),obs(iof))
-    case (3) ! H08 
+    case (obsfmt_h08)
       call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
@@ -2626,11 +2627,11 @@ subroutine write_obs_all(obs, missing, file_suffix)
       filestr = OBS_IN_NAME(iof)
     end if
     select case (OBS_IN_FORMAT(iof))
-    case (1)
+    case (obsfmt_prepbufr)
       call write_obs(trim(filestr),obs(iof),missing=missing_)
-    case (2)
+    case (obsfmt_radar)
       call write_obs_radar(trim(filestr),obs(iof),missing=missing_)
-    case (3) ! H08 
+    case (obsfmt_h08)
       call write_obs_H08(trim(filestr),obs(iof),missing=missing_) ! H08
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]

@@ -441,7 +441,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
         call mpi_timer(trim(timer_str), 2)
 
 #ifdef H08
-          ELSEIF( OBS_IN_FORMAT(iof) == 3) THEN ! for H08 obs (OBS_IN_FORMAT(iof) = 3) ! H08
+          ELSEIF(OBS_IN_FORMAT(iof) == obsfmt_h08) THEN ! H08
 
             nprof_H08 = 0
 !            nobs_0 = nobs
@@ -505,7 +505,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
               iof = obsda%set(nn)
               n = obsda%idx(nn)
 
-!              IF(OBS_IN_FORMAT(iof) /= 3)THEN ! H08 ????????????
+!              IF(OBS_IN_FORMAT(iof) /= obsfmt_h08)THEN ! H08 ????????????
 
               call rij_g2l(myrank_d, obs(iof)%ri(n), obs(iof)%rj(n), ril, rjl)
 
@@ -530,10 +530,10 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
               if (obsda%qc(nn) == iqc_good) then
                 select case (OBS_IN_FORMAT(iof))
-                case (1)
+                case (obsfmt_prepbufr)
                   call Trans_XtoY(obs(iof)%elm(n), ril, rjl, rk, &
                                   obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
-                case (2)
+                case (obsfmt_radar)
                   call Trans_XtoY_radar(obs(iof)%elm(n), obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3), ril, rjl, rk, &
                                         obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%lev(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
                   if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
@@ -552,7 +552,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !$OMP END PARALLEL DO
 
 #ifdef H08
-          ELSEIF((OBS_IN_FORMAT(iof) == 3).and.(nprof_H08 >=1 ))THEN ! H08
+          ELSEIF((OBS_IN_FORMAT(iof) == obsfmt_h08).and.(nprof_H08 >=1 ))THEN ! H08
 ! -- Note: Trans_XtoY_H08 is called without OpenMP but it can use a parallel (with OpenMP) RTTOV routine
 !
             !------
@@ -804,7 +804,7 @@ SUBROUTINE obsmake_cal(obs)
     call read_ens_history_iter(1,islot,v3dg,v2dg)
 
     do iof = 1, OBS_IN_NUM
-      IF(OBS_IN_FORMAT(iof) /= 3)THEN ! except H08 obs
+      IF(OBS_IN_FORMAT(iof) /= obsfmt_h08)THEN ! except H08 obs
         nslot = 0
         nobs_slot = 0
         do n = 1, obs(iof)%nobs
@@ -849,10 +849,10 @@ SUBROUTINE obsmake_cal(obs)
                 obs(iof)%dat(n) = undef
               else
                 select case (OBS_IN_FORMAT(iof))
-                case (1)
+                case (obsfmt_prepbufr)
                   call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk, &
                                   obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
-                case (2)
+                case (obsfmt_radar)
                   call Trans_XtoY_radar(obs(iof)%elm(n),obs(iof)%meta(1),obs(iof)%meta(2),obs(iof)%meta(3),ri,rj,rk, &
                                         obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
                 end select
@@ -873,7 +873,7 @@ SUBROUTINE obsmake_cal(obs)
 
 #ifdef H08
 ! -- H08 part --
-      ELSEIF(OBS_IN_FORMAT(iof) == 3)THEN ! H08
+      ELSEIF(OBS_IN_FORMAT(iof) == obsfmt_h08)THEN ! H08
         nslot = 0
         nobs_slot = 0
         nprof_H08 = 0

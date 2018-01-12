@@ -22,6 +22,7 @@ MODULE common_nml
   integer, parameter :: nch = 10     ! H08 Num of Himawari-8 (IR) channels
 
   integer, parameter :: nobsfilemax = 10
+  integer, parameter :: obsformatlenmax = 10
   integer, parameter :: filelenmax = 256
 
   integer, parameter :: memflen = 4                           ! Length of formatted member strings
@@ -50,7 +51,7 @@ MODULE common_nml
   !--- PARAM_OBSOPE
   integer               :: OBS_IN_NUM = 1
   character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
-  integer               :: OBS_IN_FORMAT(nobsfilemax) = 1
+  character(obsformatlenmax) :: OBS_IN_FORMAT(nobsfilemax) = 'PREPBUFR'
   logical               :: OBSDA_RUN(nobsfilemax) = .true.
   logical               :: OBSDA_OUT = .false.
   character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
