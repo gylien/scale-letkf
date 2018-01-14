@@ -1685,8 +1685,8 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
 
 #ifdef DEBUG
   if (nobsl > nobstotal) then
-    write (6,'(A,I5,A,I5)') 'FATAL ERROR, NOBSL=', nobsl, ' > NOBSTOTAL=', nobstotal
-    write (6,*) 'RI,RJ,LEV,NOBSL,NOBSTOTAL=', ri, rj, rlev, rz, nobsl, nobstotal
+    write (6,'(A,I5,A,I5)') '[Error] nobsl=', nobsl, ' > nobstotal=', nobstotal
+    write (6,*) 'ri,rj,lev,rz=', ri, rj, rlev, rz
     stop 99
   end if
 #endif

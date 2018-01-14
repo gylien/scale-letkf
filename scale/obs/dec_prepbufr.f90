@@ -143,7 +143,7 @@ SUBROUTINE output(id)
   INTEGER :: iqm, iseq
 
   IF(ilev /= nilev) THEN
-    PRINT *,'FATAL ERROR, nilev /= ilev',nilev,ilev
+    PRINT *,'[Error] nilev /= ilev',nilev,ilev
     STOP
   END IF
   wk(1) = id

@@ -304,7 +304,7 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
     CALL itpl_2d(v2d(:,:,iv2dd_ps),ri,rj,yobs)
     call prsadj(yobs,rk-topo,t,q)
     if (abs(rk-topo) > PS_ADJUST_THRES) then
-      write (6,'(A,F6.1)') 'warning: PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
+      write (6,'(A,F6.1)') '[Warning] PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
       qc = iqc_ps_ter
     end if
 !  CASE(id_rain_obs) ! RAIN                        ############# (not finished)
@@ -942,7 +942,7 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
 
   else  !IF OVER DIFFERENT OPTIONS
 
-    WRITE(6,*)'ERROR: Not recognized method for radar reflectivity and wind computation'
+    WRITE(6,*)'[Error] Not recognized method for radar reflectivity and wind computation'
     STOP
 
   end if ! [METHOD_REF_CALC == ?]
@@ -997,7 +997,7 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
 ! rlev -> rk
 !
   if (ri < 1.0d0 .or. ri > nlonh .or. rj < 1.0d0 .or. rj > nlath) then
-    write (6,'(A)') 'warning: observation is outside of the horizontal domain'
+    write (6,'(A)') '[Warning] observation is outside of the horizontal domain'
     rk = undef
     qc = iqc_out_h
     return
@@ -1049,7 +1049,7 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
     !
     IF(rk < plev(nlev+KHALO)) THEN
       call itpl_2d(p_full(nlev+KHALO,:,:),ri,rj,ptmp)
-      write(6,'(A,F8.1,A,F8.1,A,I5)') 'warning: observation is too high: ptop=', ptmp, ', lev=', rlev, ', elem=', elem
+      write(6,'(A,F8.1,A,F8.1,A,I5)') '[Warning] observation is too high: ptop=', ptmp, ', lev=', rlev, ', elem=', elem
       rk = undef
       qc = iqc_out_vhi
       RETURN
@@ -1057,7 +1057,7 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
     IF(rk > plev(ks)) THEN
       call itpl_2d(p_full(ks,:,:),ri,rj,ptmp)
 !print *, ks, rk, plev(ks)
-      write(6,'(A,F8.1,A,F8.1,A,I5)') 'warning: observation is too low: pbottom=', ptmp, ', lev=', rlev, ', elem=', elem
+      write(6,'(A,F8.1,A,F8.1,A,I5)') '[Warning] observation is too low: pbottom=', ptmp, ', lev=', rlev, ', elem=', elem
       rk = undef
       qc = iqc_out_vlo
 
@@ -1111,7 +1111,7 @@ SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
 ! rlev -> rk
 !
   if (ri < 1.0d0 .or. ri > nlonh .or. rj < 1.0d0 .or. rj > nlath) then
-    write (6,'(A)') 'warning: observation is outside of the horizontal domain'
+    write (6,'(A)') '[Warning] observation is outside of the horizontal domain'
     rk = undef
     qc = iqc_out_h
     return
@@ -1164,14 +1164,14 @@ SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
   !
   IF(rlev > zlev(nlev+KHALO)) THEN
     call itpl_2d(z_full(nlev+KHALO,:,:),ri,rj,ztmp)
-    write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too high: ztop=', ztmp, ', lev=', rlev
+    write(6,'(A,F8.1,A,F8.1)') '[Warning] observation is too high: ztop=', ztmp, ', lev=', rlev
     rk = undef
     qc = iqc_out_vhi
     RETURN
   END IF
   IF(rlev < zlev(ks)) THEN
     call itpl_2d(z_full(ks,:,:),ri,rj,ztmp)
-    write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too low: zbottom=', ztmp, ', lev=', rlev
+    write(6,'(A,F8.1,A,F8.1)') '[Warning] observation is too low: zbottom=', ztmp, ', lev=', rlev
     rk = undef
     qc = iqc_out_vlo
     RETURN
@@ -1476,7 +1476,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     call rij_g2l_auto(proc,obsda_sort%ri(nn),obsda_sort%rj(nn),ri,rj)
 #ifdef DEBUG
     if (PRC_myrank /= proc) then
-      write(6, *) '############ Error!', PRC_myrank,proc,obsda_sort%ri(nn),obsda_sort%rj(nn),ri,rj
+      write(6, *) '[Error]', PRC_myrank,proc,obsda_sort%ri(nn),obsda_sort%rj(nn),ri,rj
       cycle
 !      stop
     end if
@@ -1569,7 +1569,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 
       call rij_g2l_auto(proc,obsda_sort%ri(nn),obsda_sort%rj(nn),ri,rj)
       if (PRC_myrank /= proc) then
-        write(6, *) '############ Error from H08 monitor!', PRC_myrank,proc
+        write(6, *) '[Error] from H08 monitor!', PRC_myrank,proc
         cycle
       end if
 
@@ -2052,7 +2052,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
 !-----------------------------
     INQUIRE(UNIT=iunit, SIZE=sz)
     IF (MOD(sz, r_sngl * (nrec+2)) /= 0) THEN
-      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
       RETURN
     END IF
     nn = sz / (r_sngl * (nrec+2))
@@ -2322,19 +2322,19 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
     READ(iunit,IOSTAT=ios)tmp
     IF(ios /= 0) THEN
-      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
       RETURN
     END IF
     radarlon=REAL(tmp,r_size)
     READ(iunit,IOSTAT=ios)tmp
     IF(ios /= 0) THEN
-      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
       RETURN
     END IF
     radarlat=REAL(tmp,r_size)
     READ(iunit,IOSTAT=ios)tmp
     IF(ios /= 0) THEN
-      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
       RETURN
     END IF
     radarz=REAL(tmp,r_size)
@@ -2359,7 +2359,7 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
     INQUIRE(UNIT=iunit, SIZE=sz)
     sz = sz - r_sngl * (1+2) * 3 ! substract the radar data header
     IF (MOD(sz, r_sngl * (nrec+2)) /= 0) THEN
-      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
       RETURN
     END IF
     nn = sz / (r_sngl * (nrec+2))
@@ -2486,7 +2486,7 @@ subroutine read_obs_all(obs)
   do iof = 1, OBS_IN_NUM
     inquire (file=trim(OBS_IN_NAME(iof)), exist=ex)
     if (.not. ex) then
-      write(6,*) 'WARNING: FILE ',trim(OBS_IN_NAME(iof)),' NOT FOUND'
+      write(6,*) '[Warning] FILE ',trim(OBS_IN_NAME(iof)),' NOT FOUND'
 
 
       obs(iof)%nobs = 0
@@ -2504,7 +2504,7 @@ subroutine read_obs_all(obs)
     case (3) !H08 
       call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
     case default
-      write(6,*) 'Error: Unsupported observation file format!'
+      write(6,*) '[Error] Unsupported observation file format!'
       stop
     end select
 
@@ -2732,7 +2732,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
     CALL itpl_2d(v2d(:,:,iv2dd_ps),ri(np),rj(np),psfc1d(np))
 !    call prsadj(yobs,rk-topo,t,q)
 !    if (abs(rk-topo) > PS_ADJUST_THRES) then
-!      write (6,'(A,F6.1)') 'warning: PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
+!      write (6,'(A,F6.1)') '[Warning] PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
 !      qc = iqc_ps_ter
 !    end if
 
@@ -2874,7 +2874,7 @@ SUBROUTINE get_nobs_H08(cfile,nn)
     
 !    READ(iunit,IOSTAT=ios)wk
 !    IF(ios /= 0) THEN 
-!      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+!      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
 !      RETURN
 !    END IF
     
@@ -2892,7 +2892,7 @@ SUBROUTINE get_nobs_H08(cfile,nn)
 !-----------------------------
     INQUIRE(UNIT=iunit, SIZE=sz)
     IF (MOD(sz, r_sngl * (4+nch+2)) /= 0) THEN
-      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
       RETURN
     END IF
     iprof = sz / (r_sngl * (4+nch+2))

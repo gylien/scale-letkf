@@ -223,19 +223,19 @@ SUBROUTINE set_letkf_obs
         else
 #ifdef DEBUG
           if (maxval(abs(obsda%set(n1:n2) - obsda_ext%set)) > 0) then
-            write (6,'(A)') 'error: obsda%set are inconsistent among the ensemble'
+            write (6,'(A)') '[Error] obsda%set are inconsistent among the ensemble'
             stop 99
           end if
           if (maxval(abs(obsda%idx(n1:n2) - obsda_ext%idx)) > 0) then
-            write (6,'(A)') 'error: obsda%idx are inconsistent among the ensemble'
+            write (6,'(A)') '[Error] obsda%idx are inconsistent among the ensemble'
             stop 99
           end if
           if (maxval(abs(obsda%ri(n1:n2) - obsda_ext%ri)) > 1.e-6) then
-            write (6,'(A)') 'error: obsda%ri are inconsistent among the ensemble'
+            write (6,'(A)') '[Error] obsda%ri are inconsistent among the ensemble'
             stop 99
           end if
           if (maxval(abs(obsda%rj(n1:n2) - obsda_ext%rj)) > 1.e-6) then
-            write (6,'(A)') 'error: obsda%rj are inconsistent among the ensemble'
+            write (6,'(A)') '[Error] obsda%rj are inconsistent among the ensemble'
             stop 99
           end if
 #endif

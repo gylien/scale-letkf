@@ -552,7 +552,7 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
                 if (obs(iof)%lev(n) > RADAR_ZMAX) then
                   obsda%qc(nn) = iqc_radar_vhi
 #ifdef DEBUG
-                  write(6,'(A,F8.1,A,I5)') 'warning: radar observation is too high: lev=', obs(iof)%lev(n), ', elem=', obs(iof)%elm(n)
+                  write(6,'(A,F8.1,A,I5)') '[Warning] radar observation is too high: lev=', obs(iof)%lev(n), ', elem=', obs(iof)%elm(n)
 #endif
                 else
                   call phys2ijkz(v3dg(:,:,:,iv3dd_hgt), ril, rjl, obs(iof)%lev(n), rk, obsda%qc(nn))
@@ -1107,7 +1107,7 @@ SUBROUTINE obsmake_cal(obs)
 !        case(id_H08IR_obs) ! H08
 !          obs(iof)%err(n) = OBSERR_H08(ch) !H08
 !        case default
-          write(6,'(A)') 'warning: skip assigning observation error (unsupported observation type)' 
+          write(6,'(A)') '[Warning] skip assigning observation error (unsupported observation type)'
         end select
 
         if (obs(iof)%dat(n) /= undef .and. obs(iof)%err(n) /= undef) then

@@ -330,10 +330,10 @@ subroutine read_nml_ensemble
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Error: /PARAM_ENSEMBLE/ is not found in namelist. Check!'
+    write(6,*) '[Error] /PARAM_ENSEMBLE/ is not found in namelist. Check!'
     stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_ENSEMBLE. Check!'
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_ENSEMBLE. Check!'
     stop
   endif
 
@@ -356,10 +356,10 @@ subroutine read_nml_model
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_MODEL,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_MODEL/ is not found in namelist.'
+    write(6,*) '[Warning] /PARAM_MODEL/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_MODEL. Check!'
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_MODEL. Check!'
     stop
   endif
 
@@ -381,10 +381,10 @@ end subroutine read_nml_model
 !  rewind(IO_FID_CONF)
 !  read(IO_FID_CONF,nml=PARAM_IO,iostat=ierr)
 !  if (ierr < 0) then !--- missing
-!    write(6,*) 'Warning: /PARAM_IO/ is not found in namelist.'
+!    write(6,*) '[Warning] /PARAM_IO/ is not found in namelist.'
 !!    stop
 !  elseif (ierr > 0) then !--- fatal error
-!    write(6,*) 'xxx Not appropriate names in namelist PARAM_IO. Check!'
+!    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_IO. Check!'
 !    stop
 !  endif
 
@@ -420,10 +420,10 @@ subroutine read_nml_obsope
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBSOPE,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Error: /PARAM_OBSOPE/ is not found in namelist. Check!'
+    write(6,*) '[Error] /PARAM_OBSOPE/ is not found in namelist. Check!'
     stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_OBSOPE. Check!'
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_OBSOPE. Check!'
     stop
   endif
 
@@ -511,10 +511,10 @@ subroutine read_nml_letkf
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Error: /PARAM_LETKF/ is not found in namelist. Check!'
+    write(6,*) '[Error] /PARAM_LETKF/ is not found in namelist. Check!'
     stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF. Check!'
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_LETKF. Check!'
     stop
   endif
 
@@ -619,10 +619,10 @@ subroutine read_nml_letkf_prc
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_PRC,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_LETKF_PRC/ is not found in namelist.'
+    write(6,*) '[Warning] /PARAM_LETKF_PRC/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_PRC. Check!'
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_LETKF_PRC. Check!'
     stop
   endif
 
@@ -656,10 +656,10 @@ subroutine read_nml_letkf_obs
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_OBS,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_LETKF_OBS/ is not found in namelist.'
+    write(6,*) '[Warning] /PARAM_LETKF_OBS/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_OBS. Check!'
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_LETKF_OBS. Check!'
     stop
   endif
 
@@ -727,10 +727,10 @@ subroutine read_nml_letkf_var_local
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_VAR_LOCAL,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_LETKF_VAR_LOCAL/ is not found in namelist.'
+    write(6,*) '[Warning] /PARAM_LETKF_VAR_LOCAL/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_VAR_LOCAL. Check!'
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_LETKF_VAR_LOCAL. Check!'
     stop
   endif
 
@@ -762,10 +762,10 @@ subroutine read_nml_letkf_monitor
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_MONITOR,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_LETKF_MONITOR/ is not found in namelist.'
+    write(6,*) '[Warning] /PARAM_LETKF_MONITOR/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_MONITOR. Check!'
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_LETKF_MONITOR. Check!'
     stop
   endif
 
@@ -803,10 +803,10 @@ subroutine read_nml_letkf_radar
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_RADAR,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_LETKF_RADAR/ is not found in namelist.'
+    write(6,*) '[Warning] /PARAM_LETKF_RADAR/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_RADAR. Check!'
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_LETKF_RADAR. Check!'
     stop
   endif
 
@@ -840,10 +840,10 @@ subroutine read_nml_letkf_h08
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_H08,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_LETKF_H08/ is not found in namelist.'
+    write(6,*) '[Warning] /PARAM_LETKF_H08/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_H08. Check!'
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_LETKF_H08. Check!'
     stop
   endif
 
@@ -876,10 +876,10 @@ subroutine read_nml_obs_error
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBS_ERROR,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_OBS_ERROR/ is not found in namelist.'
+    write(6,*) '[Warning] /PARAM_OBS_ERROR/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_OBS_ERROR. Check!'
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_OBS_ERROR. Check!'
     stop
   endif
 
@@ -914,10 +914,10 @@ subroutine read_nml_obssim
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBSSIM,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) 'Warning: /PARAM_OBSSIM/ is not found in namelist.'
+    write(6,*) '[Warning] /PARAM_OBSSIM/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) 'xxx Not appropriate names in namelist PARAM_OBSSIM. Check!'
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_OBSSIM. Check!'
     stop
   endif
 
