@@ -1022,7 +1022,7 @@ SUBROUTINE obsmake_cal(obs)
 !        case(id_H08IR_obs) ! H08
 !          obs(iof)%err(n) = OBSERR_H08(ch) !H08
 !        case default
-          write(6,'(A)') 'warning: skip assigning observation error (unsupported observation type)' 
+          write(6,'(A)') '[Warning] skip assigning observation error (unsupported observation type)'
         end select
 
         if (obs(iof)%dat(n) /= undef .and. obs(iof)%err(n) /= undef) then

@@ -8,10 +8,12 @@
 
 PROCESS_FMT='%06d'
 MEMBER_FMT='%04d'
-CYCLE_FMT='%04d'
 
+PROCESS_FMT_0="$(printf $PROCESS_FMT 0)"
 SCALE_SFX=".pe${PROCESS_FMT}.nc"
-SCALE_LOG_SFX='.pe000000'
+SCALE_SFX_0=".pe${PROCESS_FMT_0}.nc"
+SCALE_SFX_NONC=".pe${PROCESS_FMT}"
+SCALE_SFX_NONC_0=".pe${PROCESS_FMT_0}"
 
 #===============================================================================
 # Preset
@@ -98,6 +100,7 @@ BDY_MEAN="${BDY_MEAN:-mean}"
 BDYINT=${BDYINT:-$LCYCLE}
 BDYCYCLE_INT=${BDYCYCLE_INT:-$BDYINT}
 
+PNETCDF=${PNETCDF:-0}
 PNETCDF_BDY_SCALE=${PNETCDF_BDY_SCALE:-$PNETCDF}
 
 #-------------------------------------------------------------------------------
@@ -155,6 +158,18 @@ if ((DISK_MODE <= 2)); then
   PROC_OPT='one'
 else
   PROC_OPT='alln'
+fi
+
+#-------------------------------------------------------------------------------
+
+if ((PNETCDF == 1)); then
+  CONNECTOR='.'
+  CONNECTOR_TOPO=''
+  CONNECTOR_LANDUSE=''
+else
+  CONNECTOR='/'
+  CONNECTOR_TOPO='topo/'
+  CONNECTOR_LANDUSE='landuse/'
 fi
 
 #===============================================================================
@@ -253,10 +268,10 @@ TMPDAT_OBS="${TMPROOT_OBS}/${DAT_SUBDIR}"
 
 #-------------------------------------------------------------------------------
 
-#if ((PNETCDF == 1 && USE_TMPL == 1)); then
-#  echo "[Error] When PNETCDF is enabled, local disks cannot be used." 1>&2
-#  exit 1
-#fi
+if ((PNETCDF == 1 && USE_TMPL == 1)); then
+  echo "[Error] When PNETCDF is enabled, local disks cannot be used." 1>&2
+  exit 1
+fi
 
 #-------------------------------------------------------------------------------
 
