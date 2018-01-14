@@ -187,6 +187,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       end do
 
       obrank_bufs(:) = -1
+!$OMP PARALLEL DO PRIVATE(ibufs,n) SCHEDULE(STATIC)
       do ibufs = 1, cntr(myrank_a+1)
         n = dspr(myrank_a+1) + ibufs
 !        select case (obs(iof)%elm(n))
@@ -207,6 +208,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
         call phys2ij(obs(iof)%lon(n), obs(iof)%lat(n), ri_bufs(ibufs), rj_bufs(ibufs))
         call rij_rank(ri_bufs(ibufs), rj_bufs(ibufs), obrank_bufs(ibufs))
       end do ! [ ibufs = 1, cntr(myrank_a+1) ]
+!$OMP END PARALLEL DO
 
       call mpi_timer('obsope_cal:first_scan_cal:', 2, barrier=MPI_COMM_a)
 
@@ -241,22 +243,28 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
     bsna(:,:) = 0
     bsnext(:,:) = 0
 
+!$OMP PARALLEL PRIVATE(iof,n,islot)
     do iof = 1, OBS_IN_NUM
       if (OBSDA_RUN(iof) .and. obs(iof)%nobs > 0) then
+!$OMP DO SCHEDULE(STATIC)
         do n = 1, obs(iof)%nobs
           if (obs(iof)%rank(n) == -1) then
             ! process the observations outside of the model domain in process rank 0
+!$OMP ATOMIC
             bsn(islot_domain_out, 0) = bsn(islot_domain_out, 0) + 1
           else
             islot = ceiling(obs(iof)%dif(n) / SLOT_TINTERVAL - 0.5d0) + SLOT_BASE
             if (islot < SLOT_START .or. islot > SLOT_END) then
               islot = islot_time_out
             end if
+!$OMP ATOMIC
             bsn(islot, obs(iof)%rank(n)) = bsn(islot, obs(iof)%rank(n)) + 1
           end if
         end do ! [ n = 1, obs(iof)%nobs ]
+!$OMP END DO
       end if ! [ OBSDA_RUN(iof) .and. obs(iof)%nobs > 0 ]
     end do ! [ do iof = 1, OBS_IN_NUM ]
+!$OMP END PARALLEL
 
     do ip = 0, nprocs_d-1
       if (ip > 0) then
@@ -440,7 +448,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:read_ens_history(t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk,rkz)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC,5) PRIVATE(nn,n,iof,ril,rjl,rk,rkz)
         do nn = n1, n2
           iof = obsda%set(nn)
           n = obsda%idx(nn)

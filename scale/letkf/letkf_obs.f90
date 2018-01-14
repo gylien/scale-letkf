@@ -262,10 +262,12 @@ SUBROUTINE set_letkf_obs
   !-----------------------------------------------------------------------------
 
   ctype_use(:,:) = .false.
-  nctype = 0
+!$OMP PARALLEL PRIVATE(iof,n) REDUCTION(.or.:ctype_use)
   do iof = 1, OBS_IN_NUM
+!$OMP DO SCHEDULE(DYNAMIC,10)
     do n = 1, obs(iof)%nobs
-      if (obs(iof)%elm(n) == id_radar_ref_obs) then
+      select case (obs(iof)%elm(n))
+      case (id_radar_ref_obs)
         if (obs(iof)%dat(n) >= 0.0d0 .and. obs(iof)%dat(n) < 1.0d10) then
           if (obs(iof)%dat(n) < MIN_RADAR_REF) then
             obs(iof)%elm(n) = id_radar_ref_zero_obs
@@ -279,28 +281,26 @@ SUBROUTINE set_letkf_obs
         if (USE_OBSERR_RADAR_REF) then
           obs(iof)%err(n) = OBSERR_RADAR_REF
         end if
-      end if
-
-      if (obs(iof)%elm(n) == id_radar_ref_zero_obs) then
+      case (id_radar_ref_zero_obs)
         obs(iof)%dat(n) = MIN_RADAR_REF_DBZ + LOW_REF_SHIFT
         if (USE_OBSERR_RADAR_REF) then
           obs(iof)%err(n) = OBSERR_RADAR_REF
         end if
-      end if
+      case (id_radar_vr_obs)
+        if (USE_OBSERR_RADAR_VR) then
+          obs(iof)%err(n) = OBSERR_RADAR_VR
+        end if
+      end select
 
-      if (USE_OBSERR_RADAR_VR .AND. obs(iof)%elm(n) == id_radar_vr_obs) then
-        obs(iof)%err(n) = OBSERR_RADAR_VR
-      end if
-
-      ! find (elm, typ) combinations for which observations exist
-      if (.not. ctype_use(uid_obs(obs(iof)%elm(n)), obs(iof)%typ(n))) then
-        ctype_use(uid_obs(obs(iof)%elm(n)), obs(iof)%typ(n)) = .true.
-        nctype = nctype + 1
-      end if
+      ! mark (elm, typ) combinations for which observations exist
+      ctype_use(uid_obs(obs(iof)%elm(n)), obs(iof)%typ(n)) = .true.
     end do ! [ n = 1, obs(iof)%nobs ]
+!$OMP END DO
   end do ! [ iof = 1, OBS_IN_NUM ]
+!$OMP END PARALLEL
 
   ! do this outside of the above obs loop, so these (ctype) arrays can be in ascending order
+  nctype = count(ctype_use)
   allocate (elm_ctype     (nctype))
   allocate (elm_u_ctype   (nctype))
   allocate (typ_ctype     (nctype))
@@ -347,9 +347,9 @@ SUBROUTINE set_letkf_obs
   allocate(tmpelm(obsda%nobs))
 
 #ifdef H08
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,ch_num)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC,10) PRIVATE(n,i,iof,iidx,mem_ref,ch_num)
 #else
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC,10) PRIVATE(n,i,iof,iidx,mem_ref)
 #endif
   do n = 1, obsda%nobs
     IF(obsda%qc(n) > 0) CYCLE
