@@ -88,7 +88,7 @@ MODULE common_nml
                                              ! <= 0: use 3D inflation field from 'INFL_MUL_IN_BASENAME' file
   real(r_size) :: INFL_MUL_MIN = -1.0d0      ! minimum inlfation factor (<= 0: not used)
   logical :: INFL_MUL_ADAPTIVE = .false.     ! if true, outout adaptively estimated 3D inlfation field to 'INFL_MUL_OUT_BASENAME' file
-  character(filelenmax) :: INFL_MUL_IN_BASENAME = 'infl'
+  character(filelenmax) :: INFL_MUL_IN_BASENAME = ''
   character(filelenmax) :: INFL_MUL_OUT_BASENAME = 'infl'
 
   real(r_size) :: INFL_ADD = 0.0d0           ! additive inflation

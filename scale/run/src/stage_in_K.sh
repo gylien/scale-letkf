@@ -42,6 +42,9 @@ max_depth=10 # maximum depth for directory stage-in
 function stage_in_K_sub () {
   local source="$(echo $line | cut -d '|' -s -f1)"
   local destin="$(echo $line | cut -d '|' -s -f2)"
+  local range="$(echo $line | cut -d '|' -s -f3)"
+  local rank_s
+  local rank_e
   if [[ -z "$destin" ]]; then
     : # do nothing
   else
@@ -62,6 +65,12 @@ function stage_in_K_sub () {
       elif ((USE_RANKDIR == 1)) && [[ "$TYPE" == 'local' ]]; then
         if ((n == 0)); then
           echo "#PJM --stgin \"rank=* $source %r:./${destin}\""
+        elif [[ -n "$range" ]]; then
+          if [[ "$range" =~ ^[0-9]+-[0-9]+$ ]]; then
+            rank_s="$(echo $range | cut -d '-' -s -f1)"
+            rank_e="$(echo $range | cut -d '-' -s -f2)"
+            echo "#PJM --stgin \"rank=$((rank_s-1))-$((rank_e-1)) $source %r:./${destin}\""
+          fi
         else
           echo "#PJM --stgin \"rank=${i} $source ${i}:./${destin}\""
         fi
@@ -74,6 +83,12 @@ function stage_in_K_sub () {
       elif ((USE_RANKDIR == 1)) && [[ "$TYPE" == 'local' ]]; then
         if ((n == 0)); then
           echo "#PJM --stgin-dir \"rank=* ${source%/} %r:./${destin%/} recursive=${max_depth}\""
+        elif [[ -n "$range" ]]; then
+          if [[ "$range" =~ ^[0-9]+-[0-9]+$ ]]; then
+            rank_s="$(echo $range | cut -d '-' -s -f1)"
+            rank_e="$(echo $range | cut -d '-' -s -f2)"
+            echo "#PJM --stgin-dir \"rank=$((rank_s-1))-$((rank_e-1)) ${source%/} ${i}:./${destin%/} recursive=${max_depth}\""
+          fi
         else
           echo "#PJM --stgin-dir \"rank=${i} ${source%/} ${i}:./${destin%/} recursive=${max_depth}\""
         fi
