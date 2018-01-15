@@ -1579,14 +1579,14 @@ end subroutine enssprd_grd
 !-------------------------------------------------------------------------------
 ! Convert 1D rank of process to 2D rank
 !-------------------------------------------------------------------------------
-subroutine rank_1d_2d(proc, iproc, jproc)
+subroutine rank_1d_2d(rank, rank_i, rank_j)
   use scale_rm_process, only: PRC_2Drank
   implicit none
-  integer, intent(in) :: proc
-  integer, intent(out) :: iproc, jproc
+  integer, intent(in) :: rank
+  integer, intent(out) :: rank_i, rank_j
 
-  iproc = PRC_2Drank(proc,1)
-  jproc = PRC_2Drank(proc,2)
+  rank_i = PRC_2Drank(rank,1)
+  rank_j = PRC_2Drank(rank,2)
 
   return  
 end subroutine rank_1d_2d
@@ -1594,13 +1594,13 @@ end subroutine rank_1d_2d
 !-------------------------------------------------------------------------------
 ! Convert 2D rank of process to 1D rank
 !-------------------------------------------------------------------------------
-subroutine rank_2d_1d(iproc, jproc, proc)
+subroutine rank_2d_1d(rank_i, rank_j, rank)
   use scale_rm_process, only: PRC_NUM_X
   implicit none
-  integer, intent(in) :: iproc, jproc
-  integer, intent(out) :: proc
+  integer, intent(in) :: rank_i, rank_j
+  integer, intent(out) :: rank
 
-  proc = jproc * PRC_NUM_X + iproc
+  rank = rank_j * PRC_NUM_X + rank_i
 
   return  
 end subroutine rank_2d_1d
@@ -1608,18 +1608,18 @@ end subroutine rank_2d_1d
 !-------------------------------------------------------------------------------
 ! Convert <integer> global grid coordinates (i,j) to local given the 1D rank of process
 !-------------------------------------------------------------------------------
-subroutine ij_g2l(proc, ig, jg, il, jl)
+subroutine ij_g2l(rank, ig, jg, il, jl)
   implicit none
-  integer, intent(in) :: proc
+  integer, intent(in) :: rank
   integer, intent(in) :: ig
   integer, intent(in) :: jg
   integer, intent(out) :: il
   integer, intent(out) :: jl
-  integer :: iproc, jproc
+  integer :: rank_i, rank_j
 
-  call rank_1d_2d(proc, iproc, jproc)
-  il = ig - iproc * nlon
-  jl = jg - jproc * nlat
+  call rank_1d_2d(rank, rank_i, rank_j)
+  il = ig - rank_i * nlon
+  jl = jg - rank_j * nlat
 
   return  
 end subroutine ij_g2l
@@ -1627,18 +1627,18 @@ end subroutine ij_g2l
 !-------------------------------------------------------------------------------
 ! Convert <integer> local grid coordinates (i,j) to global given the 1D rank of process
 !-------------------------------------------------------------------------------
-subroutine ij_l2g(proc, il, jl, ig, jg)
+subroutine ij_l2g(rank, il, jl, ig, jg)
   implicit none
-  integer, intent(in) :: proc
+  integer, intent(in) :: rank
   integer, intent(in) :: il
   integer, intent(in) :: jl
   integer, intent(out) :: ig
   integer, intent(out) :: jg
-  integer :: iproc, jproc
+  integer :: rank_i, rank_j
 
-  call rank_1d_2d(proc, iproc, jproc)
-  ig = il + iproc * nlon
-  jg = jl + jproc * nlat
+  call rank_1d_2d(rank, rank_i, rank_j)
+  ig = il + rank_i * nlon
+  jg = jl + rank_j * nlat
 
   return  
 end subroutine ij_l2g
@@ -1646,18 +1646,18 @@ end subroutine ij_l2g
 !-------------------------------------------------------------------------------
 ! Convert <real> global grid coordinates (i,j) to local given the 1D rank of process
 !-------------------------------------------------------------------------------
-subroutine rij_g2l(proc, ig, jg, il, jl)
+subroutine rij_g2l(rank, ig, jg, il, jl)
   implicit none
-  integer, intent(in) :: proc
+  integer, intent(in) :: rank
   real(r_size), intent(in) :: ig
   real(r_size), intent(in) :: jg
   real(r_size), intent(out) :: il
   real(r_size), intent(out) :: jl
-  integer :: iproc, jproc
+  integer :: rank_i, rank_j
 
-  call rank_1d_2d(proc, iproc, jproc)
-  il = ig - real(iproc * nlon,r_size)
-  jl = jg - real(jproc * nlat,r_size)
+  call rank_1d_2d(rank, rank_i, rank_j)
+  il = ig - real(rank_i * nlon, r_size)
+  jl = jg - real(rank_j * nlat, r_size)
 
   return  
 end subroutine rij_g2l
@@ -1665,34 +1665,33 @@ end subroutine rij_g2l
 !-------------------------------------------------------------------------------
 ! Convert <real> local grid coordinates (i,j) to global given the 1D rank of process
 !-------------------------------------------------------------------------------
-subroutine rij_l2g(proc, il, jl, ig, jg)
+subroutine rij_l2g(rank, il, jl, ig, jg)
   implicit none
-  integer, intent(in) :: proc
+  integer, intent(in) :: rank
   real(r_size), intent(in) :: il
   real(r_size), intent(in) :: jl
   real(r_size), intent(out) :: ig
   real(r_size), intent(out) :: jg
-  integer :: iproc, jproc
+  integer :: rank_i, rank_j
 
-  call rank_1d_2d(proc, iproc, jproc)
-  ig = il + real(iproc * nlon,r_size)
-  jg = jl + real(jproc * nlat,r_size)
+  call rank_1d_2d(rank, rank_i, rank_j)
+  ig = il + real(rank_i * nlon, r_size)
+  jg = jl + real(rank_j * nlat, r_size)
 
   return  
 end subroutine rij_l2g
 
 !-------------------------------------------------------------------------------
-! Convert <real> global grid coordinates (i,j) to local where the grid resides
+! Given <real> global grid coordinates (i,j), return the 1D rank of process 
 ! * HALO grids are used
 !-------------------------------------------------------------------------------
 ! [INPUT]
 !   ig, jg : global grid coordinates
 ! [OUTPUT]
-!   proc   : the 1D rank of process where the grid resides;
+!   rank   : the 1D rank of process where the grid resides;
 !            * return -1 if the grid is outside of the global domain
-!   il, jl : local grid coordinates
 !-------------------------------------------------------------------------------
-subroutine rij_g2l_auto(proc,ig,jg,il,jl)
+subroutine rij_rank(ig, jg, rank)
   use scale_rm_process, only: &
       PRC_NUM_X, PRC_NUM_Y
 #ifdef DEBUG
@@ -1713,29 +1712,23 @@ subroutine rij_g2l_auto(proc,ig,jg,il,jl)
       IHALO, JHALO
 #endif
   implicit none
-  integer, intent(out) :: proc
   real(r_size), intent(in) :: ig
   real(r_size), intent(in) :: jg
-  real(r_size), intent(out) :: il
-  real(r_size), intent(out) :: jl
-  integer :: iproc, jproc
+  integer, intent(out) :: rank
+  integer :: rank_i, rank_j
 
   if (ig < real(1+IHALO,r_size) .or. ig > real(nlon*PRC_NUM_X+IHALO,r_size) .or. &
       jg < real(1+JHALO,r_size) .or. jg > real(nlat*PRC_NUM_Y+JHALO,r_size)) then
-    il = -1.0d0
-    jl = -1.0d0
-    proc = -1
+    rank = -1
     return
   end if
 
-  iproc = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(nlon,r_size)) - 1
-  jproc = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
-  il = ig - real(iproc * nlon,r_size)
-  jl = jg - real(jproc * nlat,r_size)
-  call rank_2d_1d(iproc,jproc,proc)
+  rank_i = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(nlon,r_size)) - 1
+  rank_j = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
+  call rank_2d_1d(rank_i, rank_j, rank)
 
 #ifdef DEBUG
-  if (PRC_myrank == proc) then
+  if (PRC_myrank == rank) then
     if (ig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &
         ig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &
         jg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &
@@ -1749,7 +1742,77 @@ subroutine rij_g2l_auto(proc,ig,jg,il,jl)
 #endif
 
   return
-end subroutine rij_g2l_auto
+end subroutine rij_rank
+
+!-------------------------------------------------------------------------------
+! Convert <real> global grid coordinates (i,j) to local where the grid resides
+! * HALO grids are used
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   ig, jg : global grid coordinates
+! [OUTPUT]
+!   rank   : the 1D rank of process where the grid resides;
+!            * return -1 if the grid is outside of the global domain
+!   il, jl : local grid coordinates
+!-------------------------------------------------------------------------------
+subroutine rij_rank_g2l(ig, jg, rank, il, jl)
+  use scale_rm_process, only: &
+      PRC_NUM_X, PRC_NUM_Y
+#ifdef DEBUG
+  use scale_grid_index, only: &
+      IHALO, JHALO, &
+      IA, JA
+  use scale_process, only: &
+      PRC_myrank
+  use scale_grid, only: &
+      GRID_CX, &
+      GRID_CY, &
+      GRID_CXG, &
+      GRID_CYG, &
+      DX, &
+      DY
+#else
+  use scale_grid_index, only: &
+      IHALO, JHALO
+#endif
+  implicit none
+  real(r_size), intent(in) :: ig
+  real(r_size), intent(in) :: jg
+  integer, intent(out) :: rank
+  real(r_size), intent(out) :: il
+  real(r_size), intent(out) :: jl
+  integer :: rank_i, rank_j
+
+  if (ig < real(1+IHALO,r_size) .or. ig > real(nlon*PRC_NUM_X+IHALO,r_size) .or. &
+      jg < real(1+JHALO,r_size) .or. jg > real(nlat*PRC_NUM_Y+JHALO,r_size)) then
+    il = -1.0d0
+    jl = -1.0d0
+    rank = -1
+    return
+  end if
+
+  rank_i = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(nlon,r_size)) - 1
+  rank_j = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
+  il = ig - real(rank_i * nlon, r_size)
+  jl = jg - real(rank_j * nlat, r_size)
+  call rank_2d_1d(rank_i, rank_j, rank)
+
+#ifdef DEBUG
+  if (PRC_myrank == rank) then
+    if (ig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &
+        ig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &
+        jg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &
+        jg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then
+      write (6,'(A)') '[Error] Process assignment fails!'
+      write (6,'(3F10.2)') ig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0
+      write (6,'(3F10.2)') jg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0
+      stop
+    end if
+  end if
+#endif
+
+  return
+end subroutine rij_rank_g2l
 
 !===============================================================================
 END MODULE common_scale

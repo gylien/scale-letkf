@@ -47,6 +47,7 @@ module common_mpi_scale
   integer,allocatable,save :: rank_to_mem(:,:)
   integer,allocatable,save :: rank_to_pe(:)
   integer,allocatable,save :: rank_to_mempe(:,:,:) ! Deprecated except for the use in PRC_MPIsplit_letkf
+  integer,allocatable,save :: ranke_to_mem(:,:)
   integer,allocatable,save :: myrank_to_mem(:)
   integer,private,save :: myrank_to_pe
   logical,save :: myrank_use = .false.
@@ -360,7 +361,7 @@ SUBROUTINE set_mem_node_proc(mem)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: mem
   INTEGER :: tppn,tppnt,tmod
-  INTEGER :: n,nn,m,q,qs,i,j,it,ip
+  INTEGER :: n,nn,m,q,qs,i,j,it,ip,ie
 
   call mpi_timer('', 2)
 
@@ -380,13 +381,16 @@ SUBROUTINE set_mem_node_proc(mem)
   ALLOCATE(rank_to_mem(nitmax,nprocs))
   ALLOCATE(rank_to_pe(nprocs))
   ALLOCATE(rank_to_mempe(2,nitmax,nprocs))
+  ALLOCATE(ranke_to_mem(nitmax,n_mem*n_mempn))
   ALLOCATE(myrank_to_mem(nitmax))
 
   rank_to_mem = -1
   rank_to_pe = -1
   rank_to_mempe = -1
+  ranke_to_mem = -1
   m = 1
 mem_loop: DO it = 1, nitmax
+    ie = 1
     DO i = 0, n_mempn-1
       n = 0
       DO j = 0, n_mem-1
@@ -413,6 +417,10 @@ mem_loop: DO it = 1, nitmax
             qs = qs + 1
           END DO
         END DO
+        if (m <= mem) then
+          ranke_to_mem(it,ie) = m
+        end if
+        ie = ie + 1
         m = m + 1
         n = n + MEM_NODES
       END DO
@@ -1381,7 +1389,12 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   real(r_size) :: rmse(nid_obs)
   real(r_size) :: rmse_g(nid_obs)
   logical :: monit_type(nid_obs)
-  type(obs_da_value) :: obsdep_g
+  integer :: obsdep_g_nobs
+  integer, allocatable :: obsdep_g_set(:)
+  integer, allocatable :: obsdep_g_idx(:)
+  integer, allocatable :: obsdep_g_qc(:)
+  real(r_size), allocatable :: obsdep_g_omb(:)
+  real(r_size), allocatable :: obsdep_g_oma(:)
   integer :: cnts
   integer :: cntr(MEM_NP)
   integer :: dspr(MEM_NP)
@@ -1435,7 +1448,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
     call mpi_timer('monit_obs_mpi:stat:mpi_allreduce(domain):', 2)
 
     if (OBSDEP_OUT .and. monit_step == 2) then
-      cnts = obsdep%nobs
+      cnts = obsdep_nobs
       cntr = 0
       cntr(myrank_d+1) = cnts
       call MPI_ALLREDUCE(MPI_IN_PLACE, cntr, MEM_NP, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
@@ -1444,27 +1457,42 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
         dspr(ip+1) = dspr(ip) + cntr(ip)
       end do
 
-      obsdep_g%nobs = dspr(MEM_NP) + cntr(MEM_NP)
-      call obs_da_value_allocate(obsdep_g, 0)
+      obsdep_g_nobs = dspr(MEM_NP) + cntr(MEM_NP)
+      allocate (obsdep_g_set(obsdep_g_nobs))
+      allocate (obsdep_g_idx(obsdep_g_nobs))
+      allocate (obsdep_g_qc (obsdep_g_nobs))
+      allocate (obsdep_g_omb(obsdep_g_nobs))
+      allocate (obsdep_g_oma(obsdep_g_nobs))
 
-      if (obsdep_g%nobs > 0) then
-        call MPI_GATHERV(obsdep%set, cnts, MPI_INTEGER, obsdep_g%set, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
-        call MPI_GATHERV(obsdep%idx, cnts, MPI_INTEGER, obsdep_g%idx, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
-        call MPI_GATHERV(obsdep%val, cnts, MPI_r_size,  obsdep_g%val, cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
-        call MPI_GATHERV(obsdep%qc,  cnts, MPI_INTEGER, obsdep_g%qc,  cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
-        call MPI_GATHERV(obsdep%ri,  cnts, MPI_r_size,  obsdep_g%ri,  cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
-        call MPI_GATHERV(obsdep%rj,  cnts, MPI_r_size,  obsdep_g%rj,  cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
+      if (obsdep_g_nobs > 0) then
+        call MPI_GATHERV(obsdep_set, cnts, MPI_INTEGER, obsdep_g_set, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep_idx, cnts, MPI_INTEGER, obsdep_g_idx, cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep_qc,  cnts, MPI_INTEGER, obsdep_g_qc,  cntr, dspr, MPI_INTEGER, 0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep_omb, cnts, MPI_r_size,  obsdep_g_omb, cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
+        call MPI_GATHERV(obsdep_oma, cnts, MPI_r_size,  obsdep_g_oma, cntr, dspr, MPI_r_size,  0, MPI_COMM_d, ierr)
       end if
 
       if (myrank_d == 0) then
         write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is writing an obsda file ', trim(OBSDEP_OUT_BASENAME)//'.dat'
-        call write_obs_da(trim(OBSDEP_OUT_BASENAME)//'.dat', obsdep_g, 0)
+        call write_obs_dep(trim(OBSDEP_OUT_BASENAME)//'.dat', &
+                           obsdep_g_nobs, obsdep_g_set, obsdep_g_idx, obsdep_g_qc, obsdep_g_omb, obsdep_g_oma)
       end if
-      call obs_da_value_deallocate(obsdep_g)
-      call obs_da_value_deallocate(obsdep)
+      deallocate (obsdep_g_set)
+      deallocate (obsdep_g_idx)
+      deallocate (obsdep_g_qc )
+      deallocate (obsdep_g_omb)
+      deallocate (obsdep_g_oma)
 
       call mpi_timer('monit_obs_mpi:obsdep:mpi_allreduce(domain):', 2)
     end if ! [ OBSDEP_OUT .and. monit_step == 2 ]
+
+    if (monit_step == 2) then
+      deallocate (obsdep_set)
+      deallocate (obsdep_idx)
+      deallocate (obsdep_qc )
+      deallocate (obsdep_omb)
+      deallocate (obsdep_oma)
+    end if
   end if ! [ myrank_e == mmean_rank_e ]
 
   if (DEPARTURE_STAT_ALL_PROCESSES) then
@@ -1630,7 +1658,7 @@ subroutine read_obs_all_mpi(obs)
   do iof = 1, OBS_IN_NUM
     call MPI_BCAST(obs(iof)%nobs, 1, MPI_INTEGER, 0, MPI_COMM_a, ierr)
     if (myrank_a /= 0) then
-      call obs_info_allocate(obs(iof))
+      call obs_info_allocate(obs(iof), extended=.true.)
     end if
 
     call MPI_BCAST(obs(iof)%elm, obs(iof)%nobs, MPI_INTEGER, 0, MPI_COMM_a, ierr)
@@ -1672,9 +1700,9 @@ subroutine get_nobs_da_mpi(nobs)
 !    end if
 !    write (obsda_suffix(2:7), '(I6.6)') myrank_d
 !#ifdef H08
-!    call get_nobs(trim(obsdafile) // obsda_suffix, 8, nobs) ! H08
+!    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs) ! H08
 !#else
-!    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs)
+!    call get_nobs(trim(obsdafile) // obsda_suffix, 4, nobs)
 !#endif
 !  end if
 
@@ -1684,9 +1712,9 @@ subroutine get_nobs_da_mpi(nobs)
     call file_member_replace(1, OBSDA_IN_BASENAME, obsdafile)
     write (obsda_suffix(2:7), '(I6.6)') myrank_d
 #ifdef H08
-    call get_nobs(trim(obsdafile) // obsda_suffix, 8, nobs) ! H08
+    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs) ! H08
 #else
-    call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs)
+    call get_nobs(trim(obsdafile) // obsda_suffix, 4, nobs)
 #endif
   end if
   call MPI_BCAST(nobs, 1, MPI_INTEGER, 0, MPI_COMM_e, ierr)
@@ -1694,6 +1722,144 @@ subroutine get_nobs_da_mpi(nobs)
 
   return
 end subroutine get_nobs_da_mpi
+
+!-------------------------------------------------------------------------------
+! Partially reduce observations processed in the same processes in the iteration
+!-------------------------------------------------------------------------------
+#ifdef H08
+subroutine obs_da_value_partial_reduce_iter(obsda, iter, nstart, nobs, ensval, qc, lev, val2)
+#else
+subroutine obs_da_value_partial_reduce_iter(obsda, iter, nstart, nobs, ensval, qc)
+#endif
+  implicit none
+  type(obs_da_value), intent(inout) :: obsda
+  integer, intent(in)      :: iter
+  integer, intent(in)      :: nstart
+  integer, intent(in)      :: nobs
+  real(r_size), intent(in) :: ensval(nobs)
+  integer, intent(in)      :: qc(nobs)
+#ifdef H08
+  real(r_size), intent(in) :: lev(nobs)
+  real(r_size), intent(in) :: val2(nobs)
+#endif
+  integer :: nend
+  integer :: im
+
+  if (nobs <= 0) then
+    return
+  end if
+  nend = nstart + nobs - 1
+  im = myrank_to_mem(iter)
+  if (.not. ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin)) then
+    return
+  end if
+
+  ! variables with an ensemble dimension
+  obsda%ensval(iter,nstart:nend) = ensval
+
+  ! variables without an ensemble dimension
+  obsda%qc(nstart:nend) = max(obsda%qc(nstart:nend), qc)
+#ifdef H08
+  if (im <= MEMBER) then ! only consider lev, val2 from members, not from the means
+    obsda%lev(nstart:nend) = obsda%lev(nstart:nend) + lev
+    obsda%val2(nstart:nend) = obsda%val2(nstart:nend) + val2
+  end if
+#endif
+
+  return
+end subroutine obs_da_value_partial_reduce_iter
+
+!-------------------------------------------------------------------------------
+! Allreduce observations to obtain complete ensemble values
+!-------------------------------------------------------------------------------
+subroutine obs_da_value_allreduce(obsda)
+  implicit none
+  type(obs_da_value), intent(inout) :: obsda
+  real(r_size), allocatable :: ensval_bufs(:,:)
+  real(r_size), allocatable :: ensval_bufr(:,:)
+  integer :: cnts
+  integer :: cntr(nprocs_e)
+  integer :: dspr(nprocs_e)
+  integer :: current_shape(2)
+  integer :: ie, it, im, imb, ierr
+
+  if (obsda%nobs <= 0) then
+    return
+  end if
+
+  call mpi_timer('', 3)
+
+  ! variables with an ensemble dimension
+  cntr(:) = 0
+  do ie = 1, nprocs_e
+    do it = 1, nitmax
+      im = ranke_to_mem(it, ie)
+      if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
+        cntr(ie) = cntr(ie) + 1
+      end if
+    end do
+  end do
+  allocate (ensval_bufs(obsda%nobs, cntr(myrank_e+1)))
+  allocate (ensval_bufr(obsda%nobs, nensobs))
+
+  do im = 1, cntr(myrank_e+1)
+    ensval_bufs(:,im) = obsda%ensval(im,:)
+  end do
+
+  cntr(:) = cntr(:) * obsda%nobs
+  cnts = cntr(myrank_e+1)
+  dspr(1) = 0
+  do ie = 2, nprocs_e
+    dspr(ie) = dspr(ie-1) + cntr(ie-1)
+  end do
+
+  call mpi_timer('obs_da_value_allreduce:copy_bufs:', 3, barrier=MPI_COMM_e)
+
+  call MPI_ALLGATHERV(ensval_bufs, cnts, MPI_r_size, ensval_bufr, cntr, dspr, MPI_r_size, MPI_COMM_e, ierr)
+
+  call mpi_timer('obs_da_value_allreduce:mpi_allgatherv:', 3)
+
+  current_shape = shape(obsda%ensval)
+  if (current_shape(1) < nensobs) then
+    deallocate (obsda%ensval)
+    allocate (obsda%ensval(nensobs, obsda%nobs))
+  end if
+
+  imb = 0
+  do ie = 1, nprocs_e
+    do it = 1, nitmax
+      im = ranke_to_mem(it, ie)
+      if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
+        imb = imb + 1
+        if (im == mmdetin) then
+          obsda%ensval(mmdetobs,:) = ensval_bufr(:,imb)
+        else
+          obsda%ensval(im,:) = ensval_bufr(:,imb)
+        end if
+      end if
+    end do
+  end do
+  deallocate(ensval_bufs, ensval_bufr)
+
+  call mpi_timer('obs_da_value_allreduce:copy_bufr:', 3, barrier=MPI_COMM_e)
+
+  ! variables without an ensemble dimension
+  if (nprocs_e > 1) then
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(:), obsda%nobs, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)
+  end if
+#ifdef H08
+  if (nprocs_e > 1) then
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(:), obsda%nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(:), obsda%nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+  end if
+  obsda%lev(:) = obsda%lev(:) / real(MEMBER, r_size)
+  obsda%val2(:) = obsda%val2(:) / real(MEMBER, r_size)
+#endif
+
+  call mpi_timer('obs_da_value_allreduce:mpi_allreduce:', 3)
+
+  return
+end subroutine obs_da_value_allreduce
 
 !-------------------------------------------------------------------------------
 ! MPI timer
