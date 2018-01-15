@@ -804,9 +804,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       if (ic > 0) then
         do ij = 1, nij1
           ref_min_dist = 1.0d33
+          !!!!!! save this (ref_min_dist) information when doing DA
           do iob = obsgrd(ic)%ac_ext(0, 1), obsgrd(ic)%ac_ext(obsgrd(ic)%ngrdext_i, obsgrd(ic)%ngrdext_j)
-            rdx = (rig1(ij) - obsda_sort%ri(iob)) * DX
-            rdy = (rjg1(ij) - obsda_sort%rj(iob)) * DY
+            rdx = (rig1(ij) - obs(obsda_sort%set(iob))%ri(obsda_sort%idx(iob))) * DX
+            rdy = (rjg1(ij) - obs(obsda_sort%set(iob))%rj(obsda_sort%idx(iob))) * DY
             rdxy = rdx*rdx + rdy*rdy
             if (rdxy < ref_min_dist) then
               ref_min_dist = rdxy
@@ -1686,8 +1687,8 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
 
 #ifdef DEBUG
   if (nobsl > nobstotal) then
-    write (6,'(A,I5,A,I5)') 'FATAL ERROR, NOBSL=', nobsl, ' > NOBSTOTAL=', nobstotal
-    write (6,*) 'RI,RJ,LEV,NOBSL,NOBSTOTAL=', ri, rj, rlev, rz, nobsl, nobstotal
+    write (6,'(A,I5,A,I5)') '[Error] nobsl=', nobsl, ' > nobstotal=', nobstotal
+    write (6,*) 'ri,rj,lev,rz=', ri, rj, rlev, rz
     stop 99
   end if
 #endif
@@ -1820,8 +1821,8 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   !
   ! Calculate normalized horizontal distances
   !
-  rdx = (ri - obsda_sort%ri(iob)) * DX
-  rdy = (rj - obsda_sort%rj(iob)) * DY
+  rdx = (ri - obs(obset)%ri(obidx)) * DX
+  rdy = (rj - obs(obset)%rj(obidx)) * DY
   nd_h = sqrt(rdx*rdx + rdy*rdy) / hori_loc_ctype(ic)
 
   !--- reject obs by normalized horizontal distance
