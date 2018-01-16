@@ -318,22 +318,24 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
     slot_ub(islot) = (real(islot - SLOT_BASE, r_size) + 0.5d0) * SLOT_TINTERVAL
   end do
 
-  write (nstr, '(I4)') SLOT_END - SLOT_START + 1
-  write (6, *)
-  write (6, '(A,I6,A)') 'OBSERVATION COUNTS BEFORE QC (FROM OBSOPE):'
-  write (6, '(A,'//nstr//"('=========='),A)") '====================', '===================='
-  write (6, '(A,'//nstr//'I10.4)') '            SLOT #  ', slot_id(:)
-  write (6, '(A,'//nstr//'F10.1)') '            FROM (s)', slot_lb(:)
-  write (6, '(A,'//nstr//'F10.1,A)') 'SUBDOMAIN #   TO (s)', slot_ub(:), '  OUT_TIME     TOTAL'
-  write (6, '(A,'//nstr//"('----------'),A)") '--------------------', '--------------------'
-  do ip = 0, nprocs_d-1
-    write (6, '(I11.6,9x,'//nstr//'I10,2I10)') ip, bsn(SLOT_START:SLOT_END, ip), bsn(islot_time_out, ip), bsna(SLOT_END+1, ip) - bsna(SLOT_START-1, ip)
-  end do
-  write (6, '(A,'//nstr//"('----------'),A)") '--------------------', '--------------------'
-  write (6, '(A,'//nstr//'(10x),10x,I10)') ' OUT_DOMAIN         ', bsn(islot_domain_out, 0)
-  write (6, '(A,'//nstr//"('----------'),A)") '--------------------', '--------------------'
-  write (6, '(A,'//nstr//'I10,2I10)') '      TOTAL         ', sum(bsn(SLOT_START:SLOT_END, :), dim=2), sum(bsn(islot_time_out, :)), bsna(SLOT_END+2, nprocs_d-1)
-  write (6, '(A,'//nstr//"('=========='),A)") '====================', '===================='
+  if (LOG_LEVEL >= 2) then
+    write (nstr, '(I4)') SLOT_END - SLOT_START + 1
+    write (6, *)
+    write (6, '(A,I6,A)') 'OBSERVATION COUNTS BEFORE QC (FROM OBSOPE):'
+    write (6, '(A,'//nstr//"('=========='),A)") '====================', '===================='
+    write (6, '(A,'//nstr//'I10.4)') '            SLOT #  ', slot_id(:)
+    write (6, '(A,'//nstr//'F10.1)') '            FROM (s)', slot_lb(:)
+    write (6, '(A,'//nstr//'F10.1,A)') 'SUBDOMAIN #   TO (s)', slot_ub(:), '  OUT_TIME     TOTAL'
+    write (6, '(A,'//nstr//"('----------'),A)") '--------------------', '--------------------'
+    do ip = 0, nprocs_d-1
+      write (6, '(I11.6,9x,'//nstr//'I10,2I10)') ip, bsn(SLOT_START:SLOT_END, ip), bsn(islot_time_out, ip), bsna(SLOT_END+1, ip) - bsna(SLOT_START-1, ip)
+    end do
+    write (6, '(A,'//nstr//"('----------'),A)") '--------------------', '--------------------'
+    write (6, '(A,'//nstr//'(10x),10x,I10)') ' OUT_DOMAIN         ', bsn(islot_domain_out, 0)
+    write (6, '(A,'//nstr//"('----------'),A)") '--------------------', '--------------------'
+    write (6, '(A,'//nstr//'I10,2I10)') '      TOTAL         ', sum(bsn(SLOT_START:SLOT_END, :), dim=2), sum(bsn(islot_time_out, :)), bsna(SLOT_END+2, nprocs_d-1)
+    write (6, '(A,'//nstr//"('=========='),A)") '====================', '===================='
+  end if
 
   ! Scatter the basic obsevration information to processes group {myrank_e = 0},
   ! each of which only gets the data in its own subdomain
@@ -474,9 +476,9 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
           !---------------------------------------------------------------------
             if (obs(iof)%lev(n) > RADAR_ZMAX) then
               obsda%qc(nn) = iqc_radar_vhi
-#ifdef DEBUG
-              write(6,'(A,F8.1,A,I5)') 'warning: radar observation is too high: lev=', obs(iof)%lev(n), ', elem=', obs(iof)%elm(n)
-#endif
+              if (LOG_LEVEL >= 3) then
+                write(6,'(A,F8.1,A,I5)') '[Warning] radar observation is too high: lev=', obs(iof)%lev(n), ', elem=', obs(iof)%elm(n)
+              end if
             else
               call phys2ijkz(v3dg(:,:,:,iv3dd_hgt), ril, rjl, obs(iof)%lev(n), rkz, obsda%qc(nn))
             end if

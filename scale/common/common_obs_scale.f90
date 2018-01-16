@@ -312,7 +312,9 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
     CALL itpl_2d(v2d(:,:,iv2dd_ps),ri,rj,yobs)
     call prsadj(yobs,rk-topo,t,q)
     if (abs(rk-topo) > PS_ADJUST_THRES) then
-      write (6,'(A,F6.1)') '[Warning] PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
+      if (LOG_LEVEL >= 2) then
+        write (6,'(A,F6.1)') '[Warning] PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
+      end if
       qc = iqc_ps_ter
     end if
 !  CASE(id_rain_obs) ! RAIN                        ############# (not finished)
@@ -1005,7 +1007,9 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
 ! rlev -> rk
 !
   if (ri < 1.0d0 .or. ri > nlonh .or. rj < 1.0d0 .or. rj > nlath) then
-    write (6,'(A)') '[Warning] observation is outside of the horizontal domain'
+    if (LOG_LEVEL >= 1) then
+      write (6,'(A)') '[Warning] observation is outside of the horizontal domain'
+    end if
     rk = undef
     qc = iqc_out_h
     return
@@ -1057,7 +1061,9 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
     !
     IF(rk < plev(nlev+KHALO)) THEN
       call itpl_2d(p_full(nlev+KHALO,:,:),ri,rj,ptmp)
-      write(6,'(A,F8.1,A,F8.1,A,I5)') '[Warning] observation is too high: ptop=', ptmp, ', lev=', rlev, ', elem=', elem
+      if (LOG_LEVEL >= 2) then
+        write(6,'(A,F8.1,A,F8.1,A,I5)') '[Warning] observation is too high: ptop=', ptmp, ', lev=', rlev, ', elem=', elem
+      end if
       rk = undef
       qc = iqc_out_vhi
       RETURN
@@ -1065,7 +1071,9 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
     IF(rk > plev(ks)) THEN
       call itpl_2d(p_full(ks,:,:),ri,rj,ptmp)
 !print *, ks, rk, plev(ks)
-      write(6,'(A,F8.1,A,F8.1,A,I5)') '[Warning] observation is too low: pbottom=', ptmp, ', lev=', rlev, ', elem=', elem
+      if (LOG_LEVEL >= 2) then
+        write(6,'(A,F8.1,A,F8.1,A,I5)') '[Warning] observation is too low: pbottom=', ptmp, ', lev=', rlev, ', elem=', elem
+      end if
       rk = undef
       qc = iqc_out_vlo
 
@@ -1119,7 +1127,9 @@ SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
 ! rlev -> rk
 !
   if (ri < 1.0d0 .or. ri > nlonh .or. rj < 1.0d0 .or. rj > nlath) then
-    write (6,'(A)') '[Warning] observation is outside of the horizontal domain'
+    if (LOG_LEVEL >= 1) then
+      write (6,'(A)') '[Warning] observation is outside of the horizontal domain'
+    end if
     rk = undef
     qc = iqc_out_h
     return
@@ -1172,14 +1182,18 @@ SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
   !
   IF(rlev > zlev(nlev+KHALO)) THEN
     call itpl_2d(z_full(nlev+KHALO,:,:),ri,rj,ztmp)
-    write(6,'(A,F8.1,A,F8.1)') '[Warning] observation is too high: ztop=', ztmp, ', lev=', rlev
+    if (LOG_LEVEL >= 2) then
+      write(6,'(A,F8.1,A,F8.1)') '[Warning] observation is too high: ztop=', ztmp, ', lev=', rlev
+    end if
     rk = undef
     qc = iqc_out_vhi
     RETURN
   END IF
   IF(rlev < zlev(ks)) THEN
     call itpl_2d(z_full(ks,:,:),ri,rj,ztmp)
-    write(6,'(A,F8.1,A,F8.1)') '[Warning] observation is too low: zbottom=', ztmp, ', lev=', rlev
+    if (LOG_LEVEL >= 2) then
+      write(6,'(A,F8.1,A,F8.1)') '[Warning] observation is too low: zbottom=', ztmp, ', lev=', rlev
+    end if
     rk = undef
     qc = iqc_out_vlo
     RETURN
@@ -1462,10 +1476,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 
 #ifdef DEBUG
     if (obsda_sort%qc(nn) /= iqc_good) then
-      write (6, *) "[Warning] The QC value of this observation provided for monitoring is not good: ", &
+      write (6, *) "[Error] The QC value of this observation provided for monitoring is not good: ", &
                    obsda_sort%qc(nn)
-!      cycle
-!      stop
+      stop
     end if
 #endif
 
@@ -1490,10 +1503,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     call rij_g2l(PRC_myrank, obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl)
 #ifdef DEBUG
     if (PRC_myrank /= obs(iset)%rank(iidx) .or. obs(iset)%rank(iidx) == -1) then
-      write (6, *) "[Warning] This observation provided for monitoring does not reside in my rank: ", &
+      write (6, *) "[Error] This observation provided for monitoring does not reside in my rank: ", &
                    PRC_myrank, obs(iset)%rank(iidx), obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl
-      cycle
-!      stop
+      stop
     end if
 #endif
 
@@ -1551,18 +1563,18 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
         obsdep_oma(n) = ohx(n)
       end if
 
-#ifdef DEBUG
-      write (6, '(2I6,2F8.2,4F12.4,I3)') &
-            obs(iset)%elm(iidx), &
-            obs(iset)%typ(iidx), &
-            obs(iset)%lon(iidx), &
-            obs(iset)%lat(iidx), &
-            obs(iset)%lev(iidx), &
-            obs(iset)%dat(iidx), &
-            obs(iset)%err(iidx), &
-            ohx(n), &
-            oqc(n)
-#endif
+      if (LOG_LEVEL >= 3) then
+        write (6, '(2I6,2F8.2,4F12.4,I3)') &
+              obs(iset)%elm(iidx), &
+              obs(iset)%typ(iidx), &
+              obs(iset)%lon(iidx), &
+              obs(iset)%lat(iidx), &
+              obs(iset)%lev(iidx), &
+              obs(iset)%dat(iidx), &
+              obs(iset)%err(iidx), &
+              ohx(n), &
+              oqc(n)
+      end if
 
     end if ! [ DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
            !   abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE ]
@@ -1607,10 +1619,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
       call rij_g2l(PRC_myrank, obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl)
 #ifdef DEBUG
       if (PRC_myrank /= obs(iset)%rank(iidx) .or. obs(iset)%rank(iidx) == -1) then
-        write (6, *) "[Warning] This observation provided for monitoring does not reside in my rank: ", &
+        write (6, *) "[Error] This observation provided for monitoring does not reside in my rank: ", &
                      PRC_myrank, obs(iset)%rank(iidx), obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl
-        cycle
-!        stop
+        stop
       end if
 #endif
 

@@ -383,19 +383,23 @@ SUBROUTINE set_letkf_obs
       if (obs(iof)%dat(iidx) > RADAR_REF_THRES_DBZ+1.0d-6) then
         if (mem_ref < MIN_RADAR_REF_MEMBER_OBSREF) then
           obsda%qc(n) = iqc_ref_mem
-!          write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
-!          write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
-!                '*  (lon,lat)=(',obs(iof)%lon(iidx),',',obs(iof)%lat(iidx),'), mem_ref=', &
-!                mem_ref,', ref_obs=', obs(iof)%dat(iidx)
+          if (LOG_LEVEL >= 3) then
+            write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
+            write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
+                  '*  (lon,lat)=(',obs(iof)%lon(iidx),',',obs(iof)%lat(iidx),'), mem_ref=', &
+                  mem_ref,', ref_obs=', obs(iof)%dat(iidx)
+          end if
           cycle
         end if
       else
         if (mem_ref < MIN_RADAR_REF_MEMBER) then
           obsda%qc(n) = iqc_ref_mem
-!          write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
-!          write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
-!                '*  (lon,lat)=(',obs(iof)%lon(iidx),',',obs(iof)%lat(iidx),'), mem_ref=', &
-!                mem_ref,', ref_obs=', obs(iof)%dat(iidx)
+          if (LOG_LEVEL >= 3) then
+            write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
+            write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
+                  '*  (lon,lat)=(',obs(iof)%lon(iidx),',',obs(iof)%lat(iidx),'), mem_ref=', &
+                  mem_ref,', ref_obs=', obs(iof)%dat(iidx)
+          end if
           cycle
         end if
       end if
@@ -549,9 +553,8 @@ SUBROUTINE set_letkf_obs
       END IF
     end select
 
-    IF(obs(iof)%elm(iidx) == id_H08IR_obs)THEN
-
 #ifdef H08
+    IF(obs(iof)%elm(iidx) == id_H08IR_obs)THEN
 !
 ! Derived H08 obs height (based on the weighting function output from RTTOV fwd
 ! model) is substituted into obs%lev.
@@ -587,9 +590,10 @@ SUBROUTINE set_letkf_obs
              obsda%val(n), &
              obsda%qc(n)
       ENDIF !  [.not. DEPARTURE_STAT_H08]
-#endif
     ELSE
-#ifdef DEBUG
+#endif
+
+    if (LOG_LEVEL >= 3) then
       write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
                                          obs(iof)%typ(iidx), &
                                          obs(iof)%lon(iidx), &
@@ -599,8 +603,11 @@ SUBROUTINE set_letkf_obs
                                          obs(iof)%err(iidx), &
                                          obsda%val(n), &
                                          obsda%qc(n)
-#endif
+    end if
+
+#ifdef H08
     ENDIF
+#endif
 
 
   END DO ! [ n = 1, obsda%nobs ]
@@ -621,14 +628,17 @@ SUBROUTINE set_letkf_obs
   ! Print departure statistics
   !-------------------------------------------------------------------------------
 
-  write (6, *)  
-  write (6,'(A,I6,A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN #', myrank_d, '):'
+  if (LOG_LEVEL >= 1) then
+    write (6, *)
+    write (6,'(A,I6,A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN #', myrank_d, '):'
 
-  call monit_dep(obsda%nobs, tmpelm, obsda%val, obsda%qc, monit_nobs, bias, rmse)
-  call monit_print(monit_nobs, bias, rmse)
+    call monit_dep(obsda%nobs, tmpelm, obsda%val, obsda%qc, monit_nobs, bias, rmse)
+    call monit_print(monit_nobs, bias, rmse)
+
+    call mpi_timer('set_letkf_obs:departure_print:', 2)
+  end if
+
   deallocate(tmpelm)
-
-  call mpi_timer('set_letkf_obs:departure_print:', 2)
 
 !-------------------------------------------------------------------------------
 ! "Bucket sort" of observations of each combined type (with different sorting meshes)
@@ -681,45 +691,47 @@ SUBROUTINE set_letkf_obs
   ! Print observation usage settings
   !-----------------------------------------------------------------------------
 
-  write (6, *)
-  write (6, '(A)') 'OBSERVATION USAGE SETTINGS (LIST ONLY EXISTING TYPE-VAR):'
-  write (6, '(A)') '=================================================================================='
-  write (6, '(A)') 'TYPE   VAR  USE HORI_LOC   VERT_LOC TIME_LOC MAX_NOBS MIN_SPAC SORT_MESH_X _MESH_Y'
-  write (6, '(A)') '                    (km) (lnP or m)      (s)              (km)        (km)    (km)'
-  write (6, '(A)') '----------------------------------------------------------------------------------'
-  do ictype = 1, nctype
-    ityp = typ_ctype(ictype)
-    ielm = elm_ctype(ictype)
-    ielm_u = elm_u_ctype(ictype)
+  if (LOG_LEVEL >= 2) then
+    write (6, *)
+    write (6, '(A)') 'OBSERVATION USAGE SETTINGS (LIST ONLY EXISTING TYPE-VAR):'
+    write (6, '(A)') '=================================================================================='
+    write (6, '(A)') 'TYPE   VAR  USE HORI_LOC   VERT_LOC TIME_LOC MAX_NOBS MIN_SPAC SORT_MESH_X _MESH_Y'
+    write (6, '(A)') '                    (km) (lnP or m)      (s)              (km)        (km)    (km)'
+    write (6, '(A)') '----------------------------------------------------------------------------------'
+    do ictype = 1, nctype
+      ityp = typ_ctype(ictype)
+      ielm = elm_ctype(ictype)
+      ielm_u = elm_u_ctype(ictype)
 
-    if (USE_OBS(ityp)) then
-      if ((ielm == id_radar_ref_obs .or. ielm == id_radar_ref_zero_obs) .and. (.not. USE_RADAR_REF)) then
-        use_obs_print = ' No'
-      else if (ielm == id_radar_vr_obs .and. (.not. USE_RADAR_VR)) then
-        use_obs_print = ' No'
-      else if (ielm == id_radar_prh_obs .and. (.not. USE_RADAR_PSEUDO_RH)) then
-        use_obs_print = ' No'
+      if (USE_OBS(ityp)) then
+        if ((ielm == id_radar_ref_obs .or. ielm == id_radar_ref_zero_obs) .and. (.not. USE_RADAR_REF)) then
+          use_obs_print = ' No'
+        else if (ielm == id_radar_vr_obs .and. (.not. USE_RADAR_VR)) then
+          use_obs_print = ' No'
+        else if (ielm == id_radar_prh_obs .and. (.not. USE_RADAR_PSEUDO_RH)) then
+          use_obs_print = ' No'
+        else
+          use_obs_print = 'Yes'
+        end if
       else
-        use_obs_print = 'Yes'
+        use_obs_print = ' No'
       end if
-    else
-      use_obs_print = ' No'
-    end if
 
-    select case (ityp)
-    case (22) ! vertical localization in Z
-      write (6, '(A6,1x,A3,2x,A3,F9.2,F7.2,A4,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
-                vert_loc_ctype(ictype)/1000.0d0, '[km]', TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
-                OBS_MIN_SPACING(ityp)/1000.0d0, obsgrd(ictype)%grdspc_i/1000.0d0, obsgrd(ictype)%grdspc_j/1000.0d0
-    case default ! vertical localization in ln(p)
-      write (6, '(A6,1x,A3,2x,A3,F9.2,F11.2,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
-                vert_loc_ctype(ictype), TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
-                OBS_MIN_SPACING(ityp)/1000.0d0, obsgrd(ictype)%grdspc_i/1000.0d0, obsgrd(ictype)%grdspc_j/1000.0d0
-    end select
-  end do
-  write (6, '(A)') '=================================================================================='
+      select case (ityp)
+      case (22) ! vertical localization in Z
+        write (6, '(A6,1x,A3,2x,A3,F9.2,F7.2,A4,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
+                  vert_loc_ctype(ictype)/1000.0d0, '[km]', TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
+                  OBS_MIN_SPACING(ityp)/1000.0d0, obsgrd(ictype)%grdspc_i/1000.0d0, obsgrd(ictype)%grdspc_j/1000.0d0
+      case default ! vertical localization in ln(p)
+        write (6, '(A6,1x,A3,2x,A3,F9.2,F11.2,F9.2,I9,F9.2,F12.2,F8.2)') obtypelist(ityp), obelmlist(ielm_u), use_obs_print, hori_loc_ctype(ictype)/1000.0d0, &
+                  vert_loc_ctype(ictype), TIME_LOCAL(ityp)/1000.0d0, MAX_NOBS_PER_GRID(ityp), &
+                  OBS_MIN_SPACING(ityp)/1000.0d0, obsgrd(ictype)%grdspc_i/1000.0d0, obsgrd(ictype)%grdspc_j/1000.0d0
+      end select
+    end do
+    write (6, '(A)') '=================================================================================='
 
-  call mpi_timer('set_letkf_obs:obs_setting_print:', 2)
+    call mpi_timer('set_letkf_obs:obs_setting_print:', 2)
+  end if
 
   ! First scan: count the observation numbers in each mesh (in each subdomian)
   !-----------------------------------------------------------------------------
@@ -850,48 +862,50 @@ SUBROUTINE set_letkf_obs
   ! Print observation counts for each types
   !-----------------------------------------------------------------------------
 
-  write (nstr, '(I4)') nid_obs
-  write (6, *)
-  write (6, '(A)') 'OBSERVATION COUNTS BEFORE QC (GLOABL):'
-  write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
-  write (6, '(A6,1x,'//nstr//'A8,A10)') 'TYPE  ', obelmlist(:), '     TOTAL'
-  write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
-  nobs_elms_sum(:) = 0
-  do ityp = 1, nobtype
-    nobs_elms(:) = 0
-    do ielm_u = 1, nid_obs
-      if (ctype_elmtyp(ielm_u,ityp) > 0) then
-        nobs_elms(ielm_u) = obsgrd(ctype_elmtyp(ielm_u,ityp))%tot_g(i_before_qc)
-      end if
+  if (LOG_LEVEL >= 2) then
+    write (nstr, '(I4)') nid_obs
+    write (6, *)
+    write (6, '(A)') 'OBSERVATION COUNTS BEFORE QC (GLOABL):'
+    write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
+    write (6, '(A6,1x,'//nstr//'A8,A10)') 'TYPE  ', obelmlist(:), '     TOTAL'
+    write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
+    nobs_elms_sum(:) = 0
+    do ityp = 1, nobtype
+      nobs_elms(:) = 0
+      do ielm_u = 1, nid_obs
+        if (ctype_elmtyp(ielm_u,ityp) > 0) then
+          nobs_elms(ielm_u) = obsgrd(ctype_elmtyp(ielm_u,ityp))%tot_g(i_before_qc)
+        end if
+      end do
+      nobs_elms_sum = nobs_elms_sum + nobs_elms
+      write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(ityp), nobs_elms(:), sum(nobs_elms(:))
     end do
-    nobs_elms_sum = nobs_elms_sum + nobs_elms
-    write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(ityp), nobs_elms(:), sum(nobs_elms(:))
-  end do
-  write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
-  write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', nobs_elms_sum(:), nobs_g(i_before_qc)
-  write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
+    write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
+    write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', nobs_elms_sum(:), nobs_g(i_before_qc)
+    write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
 
-  write (6, *)
-  write (6, '(A)') 'OBSERVATION COUNTS AFTER QC (GLOABL):'
-  write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
-  write (6, '(A6,1x,'//nstr//'A8,A10)') 'TYPE  ', obelmlist(:), '     TOTAL'
-  write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
-  nobs_elms_sum(:) = 0
-  do ityp = 1, nobtype
-    nobs_elms(:) = 0
-    do ielm_u = 1, nid_obs
-      if (ctype_elmtyp(ielm_u,ityp) > 0) then
-        nobs_elms(ielm_u) = obsgrd(ctype_elmtyp(ielm_u,ityp))%tot_g(i_after_qc)
-      end if
+    write (6, *)
+    write (6, '(A)') 'OBSERVATION COUNTS AFTER QC (GLOABL):'
+    write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
+    write (6, '(A6,1x,'//nstr//'A8,A10)') 'TYPE  ', obelmlist(:), '     TOTAL'
+    write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
+    nobs_elms_sum(:) = 0
+    do ityp = 1, nobtype
+      nobs_elms(:) = 0
+      do ielm_u = 1, nid_obs
+        if (ctype_elmtyp(ielm_u,ityp) > 0) then
+          nobs_elms(ielm_u) = obsgrd(ctype_elmtyp(ielm_u,ityp))%tot_g(i_after_qc)
+        end if
+      end do
+      nobs_elms_sum = nobs_elms_sum + nobs_elms
+      write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(ityp), nobs_elms(:), sum(nobs_elms(:))
     end do
-    nobs_elms_sum = nobs_elms_sum + nobs_elms
-    write (6, '(A6,1x,'//nstr//'I8,I10)') obtypelist(ityp), nobs_elms(:), sum(nobs_elms(:))
-  end do
-  write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
-  write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', nobs_elms_sum(:), nobs_g(i_after_qc)
-  write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
+    write (6, '(A7,'//nstr//"('--------'),A)") '-------', '----------'
+    write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', nobs_elms_sum(:), nobs_g(i_after_qc)
+    write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
 
-  call mpi_timer('set_letkf_obs:obs_count_print_types:', 2)
+    call mpi_timer('set_letkf_obs:obs_count_print_types:', 2)
+  end if
 
   ! Calculate observation numbers in the extended (localization) subdomain,
   ! in preparation for communicating obsetvations in the extended subdomain
@@ -1103,44 +1117,46 @@ SUBROUTINE set_letkf_obs
 
   call mpi_timer('set_letkf_obs:extdomain_allreduce:', 2)
 
-#ifdef DEBUG
-  do n = 1, nobstotal
-    write (6, '(I9,2I6,2F8.2,3F12.4,2F10.4,I6,F12.4,I3)') n, &
-          obs(obsda_sort%set(n))%elm(obsda_sort%idx(n)), &
-          obs(obsda_sort%set(n))%typ(obsda_sort%idx(n)), &
-          obs(obsda_sort%set(n))%lon(obsda_sort%idx(n)), &
-          obs(obsda_sort%set(n))%lat(obsda_sort%idx(n)), &
-          obs(obsda_sort%set(n))%lev(obsda_sort%idx(n)), &
-          obs(obsda_sort%set(n))%dat(obsda_sort%idx(n)), &
-          obs(obsda_sort%set(n))%err(obsda_sort%idx(n)), &
-          obs(obsda_sort%set(n))%ri(obsda_sort%idx(n)), &
-          obs(obsda_sort%set(n))%rj(obsda_sort%idx(n)), &
-          obs(obsda_sort%set(n))%rank(obsda_sort%idx(n)), &
-          obsda_sort%val(n), &
-          obsda_sort%qc(n)
-  end do
-#endif
+  if (LOG_LEVEL >= 3) then
+    do n = 1, nobstotal
+      write (6, '(I9,2I6,2F8.2,3F12.4,2F10.4,I6,F12.4,I3)') n, &
+            obs(obsda_sort%set(n))%elm(obsda_sort%idx(n)), &
+            obs(obsda_sort%set(n))%typ(obsda_sort%idx(n)), &
+            obs(obsda_sort%set(n))%lon(obsda_sort%idx(n)), &
+            obs(obsda_sort%set(n))%lat(obsda_sort%idx(n)), &
+            obs(obsda_sort%set(n))%lev(obsda_sort%idx(n)), &
+            obs(obsda_sort%set(n))%dat(obsda_sort%idx(n)), &
+            obs(obsda_sort%set(n))%err(obsda_sort%idx(n)), &
+            obs(obsda_sort%set(n))%ri(obsda_sort%idx(n)), &
+            obs(obsda_sort%set(n))%rj(obsda_sort%idx(n)), &
+            obs(obsda_sort%set(n))%rank(obsda_sort%idx(n)), &
+            obsda_sort%val(n), &
+            obsda_sort%qc(n)
+    end do
+  end if
 
   ! Print observation counts
   !-----------------------------------------------------------------------------
 
-  write (6, *)
-  write (6, '(A,I6,A)') 'OBSERVATION COUNTS (GLOABL AND IN THIS SUBDOMAIN #', myrank_d, '):'
-  write (6, '(A)') '====================================================================='
-  write (6, '(A)') 'TYPE   VAR      GLOBAL     GLOBAL  SUBDOMAIN  SUBDOMAIN EXT_SUBDOMAIN'
-  write (6, '(A)') '             before QC   after QC  before QC   after QC      after QC'
-  write (6, '(A)') '---------------------------------------------------------------------'
-  do ictype = 1, nctype
-    ityp = typ_ctype(ictype)
-    ielm_u = elm_u_ctype(ictype)
-    write (6, '(A6,1x,A3,1x,4I11,I14)') obtypelist(ityp), obelmlist(ielm_u), obsgrd(ictype)%tot_g(i_before_qc), obsgrd(ictype)%tot_g(i_after_qc), &
-              obsgrd(ictype)%tot_sub(i_before_qc), obsgrd(ictype)%tot_sub(i_after_qc), obsgrd(ictype)%tot_ext
-  end do
-  write (6, '(A)') '---------------------------------------------------------------------'
-    write (6, '(A6,5x,4I11,I14)') 'TOTAL ', nobs_g(i_before_qc), nobs_g(i_after_qc), nobs_sub(i_before_qc), nobs_sub(i_after_qc), nobstotal
-  write (6, '(A)') '====================================================================='
+  if (LOG_LEVEL >= 1) then
+    write (6, *)
+    write (6, '(A,I6,A)') 'OBSERVATION COUNTS (GLOABL AND IN THIS SUBDOMAIN #', myrank_d, '):'
+    write (6, '(A)') '====================================================================='
+    write (6, '(A)') 'TYPE   VAR      GLOBAL     GLOBAL  SUBDOMAIN  SUBDOMAIN EXT_SUBDOMAIN'
+    write (6, '(A)') '             before QC   after QC  before QC   after QC      after QC'
+    write (6, '(A)') '---------------------------------------------------------------------'
+    do ictype = 1, nctype
+      ityp = typ_ctype(ictype)
+      ielm_u = elm_u_ctype(ictype)
+      write (6, '(A6,1x,A3,1x,4I11,I14)') obtypelist(ityp), obelmlist(ielm_u), obsgrd(ictype)%tot_g(i_before_qc), obsgrd(ictype)%tot_g(i_after_qc), &
+                obsgrd(ictype)%tot_sub(i_before_qc), obsgrd(ictype)%tot_sub(i_after_qc), obsgrd(ictype)%tot_ext
+    end do
+    write (6, '(A)') '---------------------------------------------------------------------'
+      write (6, '(A6,5x,4I11,I14)') 'TOTAL ', nobs_g(i_before_qc), nobs_g(i_after_qc), nobs_sub(i_before_qc), nobs_sub(i_after_qc), nobstotal
+    write (6, '(A)') '====================================================================='
 
-  call mpi_timer('set_letkf_obs:obs_count_print_qc_extdomain:', 2)
+    call mpi_timer('set_letkf_obs:obs_count_print_qc_extdomain:', 2)
+  end if
 
   RETURN
 END SUBROUTINE set_letkf_obs

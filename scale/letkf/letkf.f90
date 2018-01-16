@@ -93,7 +93,6 @@ PROGRAM letkf
 
   call set_common_conf(nprocs)
 
-  call read_nml_model
   call read_nml_obs_error
   call read_nml_obsope
   call read_nml_letkf
@@ -184,7 +183,7 @@ PROGRAM letkf
     !
     ! WRITE ENS MEAN and SPRD
     !
-    if (DEPARTURE_STAT) then
+    if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
       call write_ensmean(GUES_MEAN_INOUT_BASENAME, gues3d, gues2d, calced=.false., monit_step=1)
     else
       call write_ensmean(GUES_MEAN_INOUT_BASENAME, gues3d, gues2d, calced=.false.)
@@ -226,7 +225,7 @@ PROGRAM letkf
     !
     ! WRITE ANAL and ENS MEAN
     !
-    if (DEPARTURE_STAT) then
+    if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
       call write_ens_mpi(anal3d, anal2d, monit_step=2)
     else
       call write_ens_mpi(anal3d, anal2d)

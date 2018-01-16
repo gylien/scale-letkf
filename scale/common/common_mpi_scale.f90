@@ -1881,7 +1881,7 @@ subroutine mpi_timer(sect_name, level, barrier)
   timer_before_barrier = MPI_WTIME()
   timer_after_barrier = timer_before_barrier
 
-  if (present(barrier)) then
+  if (USE_MPI_BARRIER .and. present(barrier)) then
     if (barrier /= MPI_COMM_NULL) then
       call MPI_BARRIER(barrier, ierr)
       timer_after_barrier = MPI_WTIME()

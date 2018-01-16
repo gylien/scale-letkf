@@ -48,6 +48,14 @@ MODULE common_nml
 !  !--- PARAM_IO
 !  integer :: IO_AGGREGATE = .false.
 
+  !--- PARAM_LOG
+  integer :: LOG_LEVEL = 2                        ! Log message output level:
+                                                  !  0: Minimum log output
+                                                  !  1: Reduced log output
+                                                  !  2: Normal  log output
+                                                  !  3: Verbose log output
+  logical :: USE_MPI_BARRIER = .true.             ! Whether enabling some MPI_Barrier for better timing measurement?
+
   !--- PARAM_OBSOPE
   integer               :: OBS_IN_NUM = 1
   character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
@@ -338,7 +346,9 @@ subroutine read_nml_ensemble
     stop
   endif
 
-  write(6, nml=PARAM_ENSEMBLE)
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_ENSEMBLE)
+  end if
 
   return
 end subroutine read_nml_ensemble
@@ -364,7 +374,9 @@ subroutine read_nml_model
     stop
   endif
 
-  write(6, nml=PARAM_MODEL)
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_MODEL)
+  end if
 
   return
 end subroutine read_nml_model
@@ -389,10 +401,40 @@ end subroutine read_nml_model
 !    stop
 !  endif
 
-!  write(6, nml=PARAM_IO)
+!  if (LOG_LEVEL >= 2) then
+!    write(6, nml=PARAM_IO)
+!  end if
 
 !  return
 !end subroutine read_nml_io
+
+!-------------------------------------------------------------------------------
+! PARAM_LOG
+!-------------------------------------------------------------------------------
+subroutine read_nml_log
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_LOG/ &
+    LOG_LEVEL, &
+    USE_MPI_BARRIER
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_LOG,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) '[Warning] /PARAM_LOG/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_LOG. Check!'
+    stop
+  endif
+
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_LOG)
+  end if
+
+  return
+end subroutine read_nml_log
 
 !-------------------------------------------------------------------------------
 ! PARAM_OBSOPE
@@ -442,7 +484,9 @@ subroutine read_nml_obsope
     call file_member_replace(0, HISTORY_IN_BASENAME, HISTORY_MDET_IN_BASENAME, memf_mdet)
   end if
 
-  write(6, nml=PARAM_OBSOPE)
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_OBSOPE)
+  end if
 
   return
 end subroutine read_nml_obsope
@@ -597,7 +641,9 @@ subroutine read_nml_letkf
     BOUNDARY_BUFFER_WIDTH = BOUNDARY_TAPER_WIDTH
   end if
 
-  write(6, nml=PARAM_LETKF)
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_LETKF)
+  end if
 
   return
 end subroutine read_nml_letkf
@@ -627,7 +673,9 @@ subroutine read_nml_letkf_prc
     stop
   endif
 
-  write(6, nml=PARAM_LETKF_PRC)
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_LETKF_PRC)
+  end if
 
   return
 end subroutine read_nml_letkf_prc
@@ -702,7 +750,9 @@ subroutine read_nml_letkf_obs
     VERT_LOCAL_RADAR_VR = VERT_LOCAL(22) !PHARAD
   end if
 
-  write(6, nml=PARAM_LETKF_OBS)
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_LETKF_OBS)
+  end if
 
   return
 end subroutine read_nml_letkf_obs
@@ -735,7 +785,9 @@ subroutine read_nml_letkf_var_local
     stop
   endif
 
-  write(6, nml=PARAM_LETKF_VAR_LOCAL)
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_LETKF_VAR_LOCAL)
+  end if
 
   return
 end subroutine read_nml_letkf_var_local
@@ -770,7 +822,9 @@ subroutine read_nml_letkf_monitor
     stop
   endif
 
-  write(6, nml=PARAM_LETKF_MONITOR)
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_LETKF_MONITOR)
+  end if
 
   return
 end subroutine read_nml_letkf_monitor
@@ -815,7 +869,9 @@ subroutine read_nml_letkf_radar
     RADAR_REF_THRES_DBZ = MIN_RADAR_REF_DBZ
   end if
 
-  write(6, nml=PARAM_LETKF_RADAR)
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_LETKF_RADAR)
+  end if
 
   return
 end subroutine read_nml_letkf_radar
@@ -848,7 +904,9 @@ subroutine read_nml_letkf_h08
     stop
   endif
 
-  write(6, nml=PARAM_LETKF_H08)
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_LETKF_H08)
+  end if
 
   return
 end subroutine read_nml_letkf_h08
@@ -884,7 +942,9 @@ subroutine read_nml_obs_error
     stop
   endif
 
-  write(6, nml=PARAM_OBS_ERROR)
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_OBS_ERROR)
+  end if
 
   return
 end subroutine read_nml_obs_error
@@ -930,7 +990,9 @@ subroutine read_nml_obssim
     end if
   end if
 
-  write(6, nml=PARAM_OBSSIM)
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_OBSSIM)
+  end if
 
   return
 end subroutine read_nml_obssim
