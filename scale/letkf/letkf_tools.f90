@@ -103,6 +103,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   integer,allocatable :: search_q0(:,:,:)
 
+  integer :: OMP_GET_NUM_THREADS, omp_chunk
+
   character(len=timer_name_width) :: timer_str
 
   call mpi_timer('', 2)
@@ -283,6 +285,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   call mpi_timer('das_letkf:allocation_shared_vars:', 2)
 
 !$OMP PARALLEL PRIVATE(ilev,ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,n2n,n2nc,trans,transm,transmd,transrlx,pa,trans_done,tmpinfl,q_mean,q_sprd,q_anal,timer_str)
+  omp_chunk = min(4, max(1, (nij1-1) / OMP_GET_NUM_THREADS() + 1))
+
   allocate (hdxf (nobstotal,MEMBER))
   allocate (rdiag(nobstotal))
   allocate (rloc (nobstotal))
@@ -298,6 +302,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !$OMP MASTER
   call mpi_timer('das_letkf:allocation_private_vars:', 2)
   call mpi_timer('', 3)
+
+  write (6, '(A,I3)') 'OpenMP chunk for dynamic schedule =', omp_chunk
 !$OMP END MASTER
   !
   ! MAIN ASSIMILATION LOOP
@@ -308,7 +314,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       call mpi_timer('', 4)
     end if
 
-!$OMP DO SCHEDULE(GUIDED)
+!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
     DO ij=1,nij1
 
       trans_done(:) = .false.                                                          !GYL
@@ -652,7 +658,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       END IF ! [ ilev == 1 ]
 
     END DO ! [ ij=1,nij1 ]
-!$OMP END DO NOWAIT
+!$OMP END DO
 
 !$OMP MASTER
     if (LOG_LEVEL >= 3) then

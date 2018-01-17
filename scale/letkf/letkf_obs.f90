@@ -149,6 +149,8 @@ SUBROUTINE set_letkf_obs
 
   logical :: ctype_use(nid_obs,nobtype)
 
+  integer :: OMP_GET_NUM_THREADS, omp_chunk
+
 !  character(len=timer_name_width) :: timer_str
 
   call mpi_timer('', 2)
@@ -264,7 +266,8 @@ SUBROUTINE set_letkf_obs
   ctype_use(:,:) = .false.
 !$OMP PARALLEL PRIVATE(iof,n) REDUCTION(.or.:ctype_use)
   do iof = 1, OBS_IN_NUM
-!$OMP DO SCHEDULE(DYNAMIC,10)
+    omp_chunk = min(10, max(1, (obs(iof)%nobs-1) / OMP_GET_NUM_THREADS() + 1))
+!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
     do n = 1, obs(iof)%nobs
       select case (obs(iof)%elm(n))
       case (id_radar_ref_obs)
@@ -347,10 +350,12 @@ SUBROUTINE set_letkf_obs
   allocate(tmpelm(obsda%nobs))
 
 #ifdef H08
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC,10) PRIVATE(n,i,iof,iidx,mem_ref,ch_num)
+!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref,ch_num)
 #else
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC,10) PRIVATE(n,i,iof,iidx,mem_ref)
+!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref)
 #endif
+  omp_chunk = min(10, max(1, (obsda%nobs-1) / OMP_GET_NUM_THREADS() + 1))
+!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
   do n = 1, obsda%nobs
     IF(obsda%qc(n) > 0) CYCLE
 
@@ -611,7 +616,8 @@ SUBROUTINE set_letkf_obs
 
 
   END DO ! [ n = 1, obsda%nobs ]
-!$OMP END PARALLEL DO
+!$OMP END DO
+!$OMP END PARALLEL
 
   call mpi_timer('set_letkf_obs:departure_cal_qc:', 2)
 

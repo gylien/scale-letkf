@@ -1381,6 +1381,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   real(r_size),allocatable :: ohx(:)
   integer,allocatable :: oqc(:)
 
+  integer :: OMP_GET_NUM_THREADS, omp_chunk
+
 !  REAL(r_size) :: timer
 !  INTEGER :: ierr
 
@@ -1446,7 +1448,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  obs_idx_TCY = -1
 !  obs_idx_TCP = -1
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC,5) PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz)
+!$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz)
+  omp_chunk = min(4, max(1, (nnobs-1) / OMP_GET_NUM_THREADS() + 1))
+!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
   do n = 1, nnobs
 
     if (use_key) then
@@ -1580,7 +1584,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
            !   abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE ]
 
   end do ! [ n = 1, nnobs ]
-!$OMP END PARALLEL DO
+!$OMP END DO
+!$OMP END PARALLEL
 
 
 #ifdef H08
