@@ -38,6 +38,7 @@ MODULE letkf_tools
   integer,save :: ctype_merge(nid_obs,nobtype)
   integer,allocatable,save :: n_merge(:)
   integer,allocatable,save :: ic_merge(:,:)
+  integer,save :: n_merge_max
   logical,save :: radar_only
 
   integer,parameter :: n_search_incr = 8
@@ -188,6 +189,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       end if ! [ ctype_merge(elm_u_ctype(ic),typ_ctype(ic)) > 0 ]
     end if ! [ n_merge(ic) > 0 ]
   end do ! [ ic = 1, nctype ]
+  n_merge_max = maxval(n_merge)
 
   allocate (search_q0(nctype,nv3d+1,nij1))
   search_q0(:,:,:) = 1
@@ -1359,16 +1361,16 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
 
   integer :: q
   logical :: loop
-  integer :: nn_steps(nctype+1)
+  integer :: nn_steps(n_merge_max+1)
   logical :: reach_cutoff
-  integer :: imin_cutoff(nid_obs*nobtype), imax_cutoff(nid_obs*nobtype)
-  integer :: jmin_cutoff(nid_obs*nobtype), jmax_cutoff(nid_obs*nobtype)
-  real(r_size) :: search_incr(nid_obs*nobtype)
-  real(r_size) :: search_incr_i(nid_obs*nobtype), search_incr_j(nid_obs*nobtype)
+  integer :: imin_cutoff(n_merge_max), imax_cutoff(n_merge_max)
+  integer :: jmin_cutoff(n_merge_max), jmax_cutoff(n_merge_max)
+  real(r_size) :: search_incr(n_merge_max)
+  real(r_size) :: search_incr_i(n_merge_max), search_incr_j(n_merge_max)
   real(r_size) :: dist_cutoff_fac, dist_cutoff_fac_square
 
   real(r_size) :: cutd
-  integer :: nobsl_cm(nid_obs*nobtype)
+  integer :: nobsl_cm(n_merge_max)
 
   !-----------------------------------------------------------------------------
   ! Initialize
@@ -1615,7 +1617,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
       end if
 
       if (LOG_LEVEL >= 3) then
-        nobsl_cm(1:n_merge(ic)) = 0
+        nobsl_cm(:) = 0
       end if
 
       do n = 1, nobsl_incr
