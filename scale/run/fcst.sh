@@ -101,17 +101,6 @@ if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
 fi
 
 #===============================================================================
-# Run initialization scripts on all nodes
-
-if [ "$CONF_MODE" != 'static' ]; then
-  if ((DISK_MODE <= 2)); then
-    pdbash node one $SCRP_DIR/src/init_all_node.sh $job || exit $?
-  else
-    pdbash node all $SCRP_DIR/src/init_all_node.sh $job || exit $?
-  fi
-fi
-
-#===============================================================================
 # Run cycles of forecasts
 
 function online_stgout_bgjob () {

@@ -22,7 +22,7 @@ if [ "$ETIME" = '-' ]; then
   ETIME="$STIME"
 fi
 
-CONFIG='realtime_v160804_d1'
+CONFIG='realtime_r0043_d1'
 PRESET='K_rankdir'
 
 #-------------------------------------------------------------------------------

@@ -34,9 +34,11 @@ MODULE letkf_tools
   PUBLIC :: das_letkf !, das_efso
 
   real(r_size),save :: var_local(nv3d+nv2d,nid_obs_varlocal)
-  integer,save :: var_local_n2n(nv3d+nv2d)
 
   integer,save :: ctype_merge(nid_obs,nobtype)
+  integer,allocatable,save :: n_merge(:)
+  integer,allocatable,save :: ic_merge(:,:)
+  logical,save :: radar_only
 
   integer,parameter :: n_search_incr = 8
 
@@ -71,12 +73,19 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size),ALLOCATABLE :: dep(:)
   REAL(r_size),ALLOCATABLE :: depd(:)            !GYL
 
-  REAL(r_size) :: parm
-  REAL(r_size) :: trans(MEMBER,MEMBER,nv3d+nv2d)
-  REAL(r_size) :: transm(MEMBER,nv3d+nv2d)       !GYL
-  REAL(r_size) :: transmd(MEMBER,nv3d+nv2d)      !GYL
-  REAL(r_size) :: transrlx(MEMBER,MEMBER)        !GYL
-  REAL(r_size) :: pa(MEMBER,MEMBER,nv3d+nv2d)    !GYL
+  integer :: var_local_n2nc_max
+  integer :: var_local_n2nc(nv3d+nv2d)
+  integer :: var_local_n2n(nv3d+nv2d)
+  logical :: var_local_n2n_found
+  integer :: n2n, n2nc
+
+  real(r_size) :: parm
+  real(r_size),allocatable :: trans(:,:,:)
+  real(r_size),allocatable :: transm(:,:)
+  real(r_size),allocatable :: transmd(:,:)
+  real(r_size),allocatable :: pa(:,:,:)
+  real(r_size) :: transrlx(MEMBER,MEMBER)
+  logical :: trans_done(nv3d+nv2d)
 
   INTEGER :: ij,ilev,n,m,i,k,nobsl
   INTEGER :: nobsl_t(nid_obs,nobtype)            !GYL
@@ -90,7 +99,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   INTEGER :: ishuf(MEMBER)                       !GYL
   real(r_size), allocatable :: addinfl_weight(:) !GYL
   real(r_size) :: rdx,rdy,rdxy,ref_min_dist      !GYL
-  integer :: ic,iob                              !GYL
+  integer :: ic,ic2,iob                          !GYL
+
+  integer,allocatable :: search_q0(:,:,:)
 
   character(len=timer_name_width) :: timer_str
 
@@ -122,44 +133,95 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   var_local(:,7) = VAR_LOCAL_RADAR_REF(:)
   var_local(:,8) = VAR_LOCAL_RADAR_VR(:)
   var_local(:,9) = VAR_LOCAL_H08(:) ! H08
+  var_local_n2nc_max = 1
+  var_local_n2nc(1) = 1
   var_local_n2n(1) = 1
-  DO n=2,nv3d+nv2d
-    DO i=1,n
-      var_local_n2n(n) = i
-      IF(MAXVAL(ABS(var_local(i,:)-var_local(n,:))) < TINY(var_local)) EXIT
-    END DO
-  END DO
+  do n = 2, nv3d+nv2d
+    var_local_n2n_found = .false.
+    do i = 1, var_local_n2nc_max
+      if (maxval(abs(var_local(var_local_n2nc(i),:) - var_local(n,:))) < tiny(var_local)) then
+        var_local_n2nc(n) = var_local_n2nc(i)
+        var_local_n2n(n) = var_local_n2n(var_local_n2nc(n))
+        var_local_n2n_found = .true.
+        exit
+      end if
+    end do
+    if (.not. var_local_n2n_found) then
+      var_local_n2nc_max = var_local_n2nc_max + 1
+      var_local_n2nc(n) = var_local_n2nc_max
+      var_local_n2n(n) = n
+    end if
+  end do
+  write (6, '(A,I3)') '[INFO] var_local_n2nc_max=', var_local_n2nc_max
+  do n = 1, nv3d+nv2d
+    write (6, '(A,I3,A,I3,A,I3,A,I3)') '[INFO] var_local_n2n(', n, ')=', var_local_n2n(n), '; var_local_n2nc(', n, ')=', var_local_n2nc(n)
+  end do
   !
   ! Observation number limit (*to be moved to namelist*)
   !
   ctype_merge(:,:) = 0
   ctype_merge(uid_obs(id_radar_ref_obs),22) = 1
   ctype_merge(uid_obs(id_radar_ref_zero_obs),22) = 1
+
+  allocate (n_merge(nctype))
+  allocate (ic_merge(nid_obs*nobtype,nctype))
+  n_merge(:) = 1
+  do ic = 1, nctype
+    if (n_merge(ic) > 0) then
+      ic_merge(1,ic) = ic
+      if (ctype_merge(elm_u_ctype(ic),typ_ctype(ic)) > 0) then
+        do ic2 = ic+1, nctype
+          if (ctype_merge(elm_u_ctype(ic2),typ_ctype(ic2)) == ctype_merge(elm_u_ctype(ic),typ_ctype(ic))) then
+            n_merge(ic) = n_merge(ic) + 1
+            ic_merge(n_merge(ic),ic) = ic2
+            n_merge(ic2) = 0
+#ifdef DEBUG
+            write(6, '(9A)') '[Info] Observation number limit: Consider obs types (', obtypelist(typ_ctype(ic)), ', ', obelmlist(elm_u_ctype(ic)), &
+                             ') and (', obtypelist(typ_ctype(ic2)), ', ', obelmlist(elm_u_ctype(ic2)), ') together'
+#endif
+          end if
+        end do
+      end if ! [ ctype_merge(elm_u_ctype(ic),typ_ctype(ic)) > 0 ]
+    end if ! [ n_merge(ic) > 0 ]
+  end do ! [ ic = 1, nctype ]
+
+  allocate (search_q0(nctype,nv3d+1,nij1))
+  search_q0(:,:,:) = 1
+  !
+  radar_only = .true.
+  do ic = 1, nctype
+    if (obtypelist(typ_ctype(ic)) /= 'PHARAD') then
+      radar_only = .false.
+      exit
+    end if
+  end do
   !
   ! FCST PERTURBATIONS
   !
 !  .... this has been done by write_ensmean in letkf.f90
 !  CALL ensmean_grd(MEMBER,nens,nij1,gues3d,gues2d,mean3d,mean2d)
+!$OMP PARALLEL PRIVATE(n,m,k,i)
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
   DO n=1,nv3d
     DO m=1,MEMBER
-!$OMP PARALLEL DO PRIVATE(i,k)
       DO k=1,nlev
         DO i=1,nij1
           gues3d(i,k,m,n) = gues3d(i,k,m,n) - gues3d(i,k,mmean,n)
         END DO
       END DO
-!$OMP END PARALLEL DO
     END DO
   END DO
+!$OMP END DO NOWAIT
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
   DO n=1,nv2d
     DO m=1,MEMBER
-!$OMP PARALLEL DO PRIVATE(i)
       DO i=1,nij1
         gues2d(i,m,n) = gues2d(i,m,n) - gues2d(i,mmean,n)
       END DO
-!$OMP END PARALLEL DO
     END DO
   END DO
+!$OMP END DO
+!$OMP END PARALLEL
 
   call mpi_timer('das_letkf:fcst_perturbation:', 2)
 
@@ -215,79 +277,154 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     work3dn = 0.0d0
     work2dn = 0.0d0
   END IF
+
+  call mpi_timer('das_letkf:allocation_shared_vars:', 2)
+
+!$OMP PARALLEL PRIVATE(ilev,ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,n2n,n2nc,trans,transm,transmd,transrlx,pa,trans_done,tmpinfl,q_mean,q_sprd,q_anal,timer_str)
+  allocate (hdxf (nobstotal,MEMBER))
+  allocate (rdiag(nobstotal))
+  allocate (rloc (nobstotal))
+  allocate (dep  (nobstotal))
+  if (DET_RUN) then
+    allocate (depd (nobstotal))
+  end if
+  allocate (trans  (MEMBER,MEMBER,var_local_n2nc_max))
+  allocate (transm (MEMBER,       var_local_n2nc_max))
+  allocate (transmd(MEMBER,       var_local_n2nc_max))
+  allocate (pa     (MEMBER,MEMBER,var_local_n2nc_max))
+
+!$OMP MASTER
+  call mpi_timer('das_letkf:allocation_private_vars:', 2)
+  call mpi_timer('', 3)
+!$OMP END MASTER
   !
   ! MAIN ASSIMILATION LOOP
   !
-  ALLOCATE(hdxf (nobstotal,MEMBER))
-  ALLOCATE(rdiag(nobstotal))
-  ALLOCATE(rloc (nobstotal))
-  ALLOCATE(dep  (nobstotal))
-  if (DET_RUN) then            !GYL
-    ALLOCATE(depd (nobstotal)) !GYL
-  end if                       !GYL
-
-  call mpi_timer('das_letkf:other_allocation:', 2)
-  call mpi_timer('', 3)
-
   DO ilev=1,nlev
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,trans,transm,transmd,transrlx,pa,tmpinfl,q_mean,q_sprd,q_anal)
+#ifdef DEBUG
+    call mpi_timer('', 4)
+#endif
+
+!$OMP DO SCHEDULE(GUIDED)
     DO ij=1,nij1
-!      WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
+
+      trans_done(:) = .false.                                                          !GYL
+
+      ! weight parameter based on grid locations (not for covariance inflation purpose)
+      ! if the weight is zero, no analysis update is needed
+      call relax_beta(rig1(ij),rjg1(ij),hgt1(ij,ilev),beta)
+
+#ifdef DEBUG
+      write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:relax_beta(lev=', ilev, ',ij=', ij, '):'
+      call mpi_timer(trim(timer_str), 4)
+#endif
+
+      if (beta == 0.0d0) then
+        do n = 1, nv3d
+          do m = 1, MEMBER
+            anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n) + gues3d(ij,ilev,m,n)
+          end do
+          if (DET_RUN) then
+            anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n)
+          end if
+        end do
+        if (ilev == 1) then
+          do n = 1, nv2d
+            do m = 1, MEMBER
+              anal2d(ij,m,n) = gues2d(ij,mmean,n) + gues2d(ij,m,n)
+            end do
+            if (DET_RUN) then
+              anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n)
+            end if
+          end do
+        end if
+
+#ifdef DEBUG
+        write (timer_str, '(A30,I4,A4,I4,A7)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',allv):'
+        call mpi_timer(trim(timer_str), 4)
+#endif
+        cycle
+      end if
+
+#ifdef DEBUG
+      call mpi_timer('', 5)
+#endif
 
       ! update 3D variables
       DO n=1,nv3d
 
-        ! calculate mean and perturbation weights
-        IF(var_local_n2n(n) < n) THEN
-          ! if weights already computed for other variables can be re-used(no variable localization), copy from there 
-          trans(:,:,n) = trans(:,:,var_local_n2n(n))
-          transm(:,n) = transm(:,var_local_n2n(n))                                     !GYL
+        n2nc = var_local_n2nc(n)
+        n2n = var_local_n2n(n)
+
+        if (gues3d(ij,ilev,mmean,iv3d_p) < Q_UPDATE_TOP .and. n >= iv3d_q .and. n <= iv3d_qg) then !GYL - Upper bound of Q update levels
+          do m = 1, MEMBER                                                             !GYL
+            anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n) + gues3d(ij,ilev,m,n)        !GYL
+          end do                                                                       !GYL
           if (DET_RUN) then                                                            !GYL
-            transmd(:,n) = transmd(:,var_local_n2n(n))                                 !GYL
+            anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n)                          !GYL
           end if                                                                       !GYL
-          IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
-            pa(:,:,n) = pa(:,:,var_local_n2n(n))                                       !GYL
-          END IF                                                                       !GYL
-          work3d(ij,ilev,n) = work3d(ij,ilev,var_local_n2n(n))
-          IF(NOBS_OUT) THEN                                                            !GYL
-            work3dn(:,ij,ilev,n) = work3dn(:,ij,ilev,var_local_n2n(n))                 !GYL
-          END IF                                                                       !GYL
+
+#ifdef DEBUG
+          write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+          call mpi_timer(trim(timer_str), 5)
+#endif
+          cycle                                                                        !GYL
+        end if                                                                         !GYL
+
+        if (RELAX_TO_INFLATED_PRIOR) then
+          parm = work3d(ij,ilev,n)
+        else
+          parm = 1.0d0
+        end if
+
+        ! calculate mean and perturbation weights
+        if (trans_done(n2nc)) then
+          ! if weights already computed for other variables can be re-used(no variable localization), do not need to compute again
+          if (INFL_MUL_ADAPTIVE) then
+            work3d(ij,ilev,n) = work3d(ij,ilev,n2n)
+          end if
+          if (NOBS_OUT) then
+            work3dn(:,ij,ilev,n) = work3dn(:,ij,ilev,n2n)
+          end if
+
+#ifdef DEBUG
+          write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_copy(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+          call mpi_timer(trim(timer_str), 5)
+#endif
         ELSE
           ! compute weights with localized observations
           if (DET_RUN) then                                                            !GYL
-            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t) !GYL
+            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n, & !GYL
+                           hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t,srch_q0=search_q0(:,n,ij)) !GYL
           else                                                                         !GYL
-            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,cutd_t=cutd_t) !GYL
+            CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n, & !GYL
+                           hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,cutd_t=cutd_t,srch_q0=search_q0(:,n,ij)) !GYL
           end if                                                                       !GYL
-          IF(RELAX_TO_INFLATED_PRIOR) THEN                                             !GYL
-            parm = work3d(ij,ilev,n)                                                   !GYL
-          ELSE                                                                         !GYL
-            parm = 1.0d0                                                               !GYL
-          END IF                                                                       !GYL
           IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
             if (DET_RUN) then                                                          !GYL
               CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
-                              trans(:,:,n),transm=transm(:,n),pao=pa(:,:,n),   &       !GYL
+                              trans(:,:,n2nc),transm=transm(:,n2nc),pao=pa(:,:,n2nc), & !GYL
                               rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &       !GYL
-                              depd=depd,transmd=transmd(:,n))                          !GYL
+                              depd=depd,transmd=transmd(:,n2nc))                       !GYL
             else                                                                       !GYL
               CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
-                              trans(:,:,n),transm=transm(:,n),pao=pa(:,:,n),   &       !GYL
+                              trans(:,:,n2nc),transm=transm(:,n2nc),pao=pa(:,:,n2nc), & !GYL
                               rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)         !GYL
             end if                                                                     !GYL
           ELSE                                                                         !GYL
             if (DET_RUN) then                                                          !GYL
               CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
-                              trans(:,:,n),transm=transm(:,n),                 &       !GYL
+                              trans(:,:,n2nc),transm=transm(:,n2nc),           &       !GYL
                               rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &       !GYL
-                              depd=depd,transmd=transmd(:,n))                          !GYL
+                              depd=depd,transmd=transmd(:,n2nc))                       !GYL
             else                                                                       !GYL
               CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
-                              trans(:,:,n),transm=transm(:,n),                 &       !GYL
+                              trans(:,:,n2nc),transm=transm(:,n2nc),           &       !GYL
                               rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)         !GYL
             end if                                                                     !GYL
           END IF                                                                       !GYL
+          trans_done(n2nc) = .true.                                                    !GYL
           IF(NOBS_OUT) THEN                                                            !GYL
             work3dn(:,ij,ilev,n) = real(sum(nobsl_t, dim=1),r_size)                    !GYL !!! NOBS: sum over all variables for each report type
             work3dn(nobtype+1,ij,ilev,n) = real(nobsl_t(9,22),r_size)                  !GYL !!! NOBS: ref
@@ -297,63 +434,55 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             work3dn(nobtype+5,ij,ilev,n) = real(cutd_t(10,22),r_size)                  !GYL !!! CUTOFF_DIST: re0
             work3dn(nobtype+6,ij,ilev,n) = real(cutd_t(11,22),r_size)                  !GYL !!! CUTOFF_DIST: vr
           END IF                                                                       !GYL
+
+#ifdef DEBUG
+          write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+          call mpi_timer(trim(timer_str), 5)
+#endif
         END IF
 
-        ! weight parameter based on grid locations (not for cov inflation purpose)     !GYL
-        CALL relax_beta(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),n,beta)         !GYL
-
-        IF(beta == 0.0d0) THEN                                                         !GYL
-          ! no analysis update needed
-          DO m=1,MEMBER                                                                !GYL
-            anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n) + gues3d(ij,ilev,m,n)        !GYL
-          END DO                                                                       !GYL
-          if (DET_RUN) then                                                            !GYL
-            anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n)                          !GYL
-          end if                                                                       !GYL
-        ELSE                                                                           !GYL
-          ! relaxation via LETKF weight
-          IF(RELAX_ALPHA /= 0.0d0) THEN                                                !GYL - RTPP method (Zhang et al. 2004)
-            CALL weight_RTPP(trans(:,:,n),parm,transrlx)                               !GYL
-          ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                    !GYL - RTPS method (Whitaker and Hamill 2012)
-            IF(RELAX_SPREAD_OUT) THEN                                                  !GYL
-              CALL weight_RTPS(trans(:,:,n),pa(:,:,n),gues3d(ij,ilev,:,n), &           !GYL
-                               parm,transrlx,work3da(ij,ilev,n))                       !GYL
-            ELSE                                                                       !GYL
-              CALL weight_RTPS(trans(:,:,n),pa(:,:,n),gues3d(ij,ilev,:,n), &           !GYL
-                               parm,transrlx,tmpinfl)                                  !GYL
-            END IF                                                                     !GYL
+        ! relaxation via LETKF weight
+        IF(RELAX_ALPHA /= 0.0d0) THEN                                                  !GYL - RTPP method (Zhang et al. 2004)
+          CALL weight_RTPP(trans(:,:,n2nc),parm,transrlx)                              !GYL
+        ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                      !GYL - RTPS method (Whitaker and Hamill 2012)
+          IF(RELAX_SPREAD_OUT) THEN                                                    !GYL
+            CALL weight_RTPS(trans(:,:,n2nc),pa(:,:,n2nc),gues3d(ij,ilev,:,n), &       !GYL
+                             parm,transrlx,work3da(ij,ilev,n))                         !GYL
           ELSE                                                                         !GYL
-            transrlx = trans(:,:,n)                                                    !GYL - No relaxation
+            CALL weight_RTPS(trans(:,:,n2nc),pa(:,:,n2nc),gues3d(ij,ilev,:,n), &       !GYL
+                             parm,transrlx,tmpinfl)                                    !GYL
           END IF                                                                       !GYL
+        ELSE                                                                           !GYL
+          transrlx = trans(:,:,n2nc)                                                   !GYL - No relaxation
+        END IF                                                                         !GYL
 
-          ! total weight matrix
-          DO m=1,MEMBER                                                                !GYL
-            DO k=1,MEMBER                                                              !GYL
-              transrlx(k,m) = (transrlx(k,m) + transm(k,n)) * beta                     !GYL
-            END DO                                                                     !GYL
-            transrlx(m,m) = transrlx(m,m) + (1.0d0-beta)                               !GYL
+        ! total weight matrix
+        DO m=1,MEMBER                                                                  !GYL
+          DO k=1,MEMBER                                                                !GYL
+            transrlx(k,m) = (transrlx(k,m) + transm(k,n2nc)) * beta                    !GYL
           END DO                                                                       !GYL
+          transrlx(m,m) = transrlx(m,m) + (1.0d0-beta)                                 !GYL
+        END DO                                                                         !GYL
 
-          ! analysis update of members
-          DO m=1,MEMBER
-            anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n)                              !GYL
-            DO k=1,MEMBER
-              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &                              !GYL
-                                  + gues3d(ij,ilev,k,n) * transrlx(k,m)                !GYL
-            END DO  
-          END DO
+        ! analysis update of members
+        DO m=1,MEMBER
+          anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n)                                !GYL
+          DO k=1,MEMBER
+            anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &                                !GYL
+                                + gues3d(ij,ilev,k,n) * transrlx(k,m)                  !GYL
+          END DO  
+        END DO
 
-          ! analysis update of deterministic run
-          if (DET_RUN) then                                                            !GYL
-            anal3d(ij,ilev,mmdet,n) = 0.0d0                                            !GYL
-            DO k=1,MEMBER                                                              !GYL
-              anal3d(ij,ilev,mmdet,n) = anal3d(ij,ilev,mmdet,n) &                      !GYL
-                                      + gues3d(ij,ilev,k,n) * transmd(k,n)             !GYL
-            END DO                                                                     !GYL
-            anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n) &                        !GYL
-                                    + anal3d(ij,ilev,mmdet,n) * beta                   !GYL
-          end if                                                                       !GYL
-        END IF ! [ beta == 0.0d0 ]                                                     !GYL
+        ! analysis update of deterministic run
+        if (DET_RUN) then                                                              !GYL
+          anal3d(ij,ilev,mmdet,n) = 0.0d0                                              !GYL
+          DO k=1,MEMBER                                                                !GYL
+            anal3d(ij,ilev,mmdet,n) = anal3d(ij,ilev,mmdet,n) &                        !GYL
+                                    + gues3d(ij,ilev,k,n) * transmd(k,n2nc)            !GYL
+          END DO                                                                       !GYL
+          anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n) &                          !GYL
+                                  + anal3d(ij,ilev,mmdet,n) * beta                     !GYL
+        end if                                                                         !GYL
 
         ! limit q spread
         IF(Q_SPRD_MAX > 0.0d0 .and. n == iv3d_q) THEN                                  !GYL
@@ -371,147 +500,188 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           END IF                                                                       !GYL
         END IF                                                                         !GYL
 
+#ifdef DEBUG
+        write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+        call mpi_timer(trim(timer_str), 5)
+#endif
+
       END DO ! [ n=1,nv3d ]
+
+#ifdef DEBUG
+      write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, ',ij=', ij, '):'
+      call mpi_timer(trim(timer_str), 4)
+#endif
 
       ! update 2D variables at ilev = 1
       IF(ilev == 1) THEN 
+
         DO n=1,nv2d
 
+          n2nc = var_local_n2nc(nv3d+n)
+          n2n = var_local_n2n(nv3d+n)
+
+          if (RELAX_TO_INFLATED_PRIOR) then
+            parm = work2d(ij,n)
+          else
+            parm = 1.0d0
+          end if
+
           ! calculate mean and perturbation weights
-          IF(var_local_n2n(nv3d+n) < nv3d+n) THEN
-            ! if weights already computed for other variables can be re-used(no variable localization), copy from there 
-            trans(:,:,nv3d+n) = trans(:,:,var_local_n2n(nv3d+n))
-            transm(:,nv3d+n) = transm(:,var_local_n2n(nv3d+n))                         !GYL
-            if (DET_RUN) then                                                          !GYL
-              transmd(:,nv3d+n) = transmd(:,var_local_n2n(nv3d+n))                     !GYL
-            end if                                                                     !GYL
-            IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
-              pa(:,:,nv3d+n) = pa(:,:,var_local_n2n(nv3d+n))                           !GYL
-            END IF                                                                     !GYL
-            IF(var_local_n2n(nv3d+n) <= nv3d) THEN                                     !GYL - correct the bug of the 2d variable update
-              work2d(ij,n) = work3d(ij,ilev,var_local_n2n(nv3d+n))                     !GYL
-              IF(NOBS_OUT) THEN                                                        !GYL
-                work2dn(:,ij,n) = work3dn(:,ij,ilev,var_local_n2n(nv3d+n))             !GYL
-              END IF                                                                   !GYL
-            ELSE                                                                       !GYL
-              work2d(ij,n) = work2d(ij,var_local_n2n(nv3d+n)-nv3d)                     !GYL
-              IF(NOBS_OUT) THEN                                                        !GYL
-                work2dn(:,ij,n) = work2dn(:,ij,var_local_n2n(nv3d+n)-nv3d)             !GYL
-              END IF                                                                   !GYL
-            END IF                                                                     !GYL
+          if (trans_done(n2nc)) then
+            ! if weights already computed for other variables can be re-used(no variable localization), do not need to compute again
+            IF(n2n <= nv3d) then
+              if (INFL_MUL_ADAPTIVE) then
+                work2d(ij,n) = work3d(ij,ilev,n2n)
+              end if
+              if (NOBS_OUT) then
+                work2dn(:,ij,n) = work3dn(:,ij,ilev,n2n)
+              end if
+            else
+              if (INFL_MUL_ADAPTIVE) then
+                work2d(ij,n) = work2d(ij,n2n-nv3d)
+              end if
+              if (NOBS_OUT) then
+                work2dn(:,ij,n) = work2dn(:,ij,n2n-nv3d)
+              end if
+            end if
+
+#ifdef DEBUG
+            write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_copy(2d,ij=', ij, ',n=', n, '):'
+            call mpi_timer(trim(timer_str), 5)
+#endif
           ELSE
             ! compute weights with localized observations
             if (DET_RUN) then                                                          !GYL
-              CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t)
+              CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t,srch_q0=search_q0(:,nv3d+1,ij))
             else                                                                       !GYL
-              CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,cutd_t=cutd_t)
+              CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,cutd_t=cutd_t,srch_q0=search_q0(:,nv3d+1,ij))
             end if                                                                     !GYL
-            IF(RELAX_TO_INFLATED_PRIOR) THEN                                           !GYL
-              parm = work2d(ij,n)                                                      !GYL
-            ELSE                                                                       !GYL
-              parm = 1.0d0                                                             !GYL
-            END IF                                                                     !GYL
             IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
               if (DET_RUN) then                                                        !GYL
                 CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
-                                trans(:,:,nv3d+n),transm=transm(:,nv3d+n),pao=pa(:,:,nv3d+n), & !GYL
+                                trans(:,:,n2nc),transm=transm(:,n2nc),pao=pa(:,:,n2nc), & !GYL
                                 rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &     !GYL
-                                depd=depd,transmd=transmd(:,nv3d+n))                   !GYL
+                                depd=depd,transmd=transmd(:,n2nc))                     !GYL
               else                                                                     !GYL
                 CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
-                                trans(:,:,nv3d+n),transm=transm(:,nv3d+n),pao=pa(:,:,nv3d+n), & !GYL
+                                trans(:,:,n2nc),transm=transm(:,n2nc),pao=pa(:,:,n2nc), & !GYL
                                 rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)       !GYL
               end if                                                                   !GYL
             ELSE                                                                       !GYL
               if (DET_RUN) then                                                        !GYL
                 CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
-                                trans(:,:,nv3d+n),transm=transm(:,nv3d+n),       &     !GYL
+                                trans(:,:,n2nc),transm=transm(:,n2nc),           &     !GYL
                                 rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &     !GYL
-                                depd=depd,transmd=transmd(:,nv3d+n))                   !GYL
+                                depd=depd,transmd=transmd(:,n2nc))                     !GYL
               else                                                                     !GYL
                 CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
-                                trans(:,:,nv3d+n),transm=transm(:,nv3d+n),       &     !GYL
+                                trans(:,:,n2nc),transm=transm(:,n2nc),           &     !GYL
                                 rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)       !GYL
               end if                                                                   !GYL
             END IF                                                                     !GYL
+            trans_done(n2nc) = .true.                                                  !GYL
             IF(NOBS_OUT) THEN                                                          !GYL
               work2dn(:,ij,n) = real(sum(nobsl_t,dim=1),r_size)                        !GYL !!! NOBS: sum over all variables for each report type
             END IF                                                                     !GYL
+
+#ifdef DEBUG
+            write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(2d,ij=', ij, ',n=', n, '):'
+            call mpi_timer(trim(timer_str), 5)
+#endif
           END IF
 
-          ! weight parameter based on grid locations (not for cov inflation purpose)   !GYL
-          CALL relax_beta(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),nv3d+n,beta)  !GYL
+          ! relaxation via LETKF weight
+          IF(RELAX_ALPHA /= 0.0d0) THEN                                              !GYL - RTPP method (Zhang et al. 2004)
+            CALL weight_RTPP(trans(:,:,n2nc),parm,transrlx)                          !GYL
+          ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                  !GYL - RTPS method (Whitaker and Hamill 2012)
+            IF(RELAX_SPREAD_OUT) THEN                                                !GYL
+              CALL weight_RTPS(trans(:,:,n2nc),pa(:,:,n2nc),gues2d(ij,:,n), &        !GYL
+                               parm,transrlx,work2da(ij,n))                          !GYL
+            ELSE                                                                     !GYL
+              CALL weight_RTPS(trans(:,:,n2nc),pa(:,:,n2nc),gues2d(ij,:,n), &        !GYL
+                               parm,transrlx,tmpinfl)                                !GYL
+            END IF                                                                   !GYL
+          ELSE                                                                       !GYL
+            transrlx = trans(:,:,n2nc)                                               !GYL - No relaxation
+          END IF                                                                     !GYL
 
-          IF(beta == 0.0d0) THEN                                                       !GYL
-            ! no analysis update needed
-            DO m=1,MEMBER                                                              !GYL
-              anal2d(ij,m,n) = gues2d(ij,mmean,n) + gues2d(ij,m,n)                     !GYL
-            END DO                                                                     !GYL
-            if (DET_RUN) then                                                          !GYL
-              anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n)                                  !GYL
-            end if                                                                     !GYL
-          ELSE                                                                         !GYL
-            ! relaxation via LETKF weight
-            IF(RELAX_ALPHA /= 0.0d0) THEN                                              !GYL - RTPP method (Zhang et al. 2004)
-              CALL weight_RTPP(trans(:,:,nv3d+n),parm,transrlx)                        !GYL
-            ELSE IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                  !GYL - RTPS method (Whitaker and Hamill 2012)
-              IF(RELAX_SPREAD_OUT) THEN                                                !GYL
-                CALL weight_RTPS(trans(:,:,nv3d+n),pa(:,:,nv3d+n),gues2d(ij,:,n), &    !GYL
-                                 parm,transrlx,work2da(ij,n))                          !GYL
-              ELSE                                                                     !GYL
-                CALL weight_RTPS(trans(:,:,nv3d+n),pa(:,:,nv3d+n),gues2d(ij,:,n), &    !GYL
-                                 parm,transrlx,tmpinfl)                                !GYL
-              END IF                                                                   !GYL
-            ELSE                                                                       !GYL
-              transrlx = trans(:,:,nv3d+n)                                             !GYL - No relaxation
-            END IF                                                                     !GYL
+          ! total weight matrix
+          DO m=1,MEMBER                                                              !GYL
+            DO k=1,MEMBER                                                            !GYL
+              transrlx(k,m) = (transrlx(k,m) + transm(k,n2nc)) * beta                !GYL
+            END DO                                                                   !GYL
+            transrlx(m,m) = transrlx(m,m) + (1.0d0-beta)                             !GYL
+          END DO                                                                     !GYL
 
-            ! total weight matrix
-            DO m=1,MEMBER                                                              !GYL
-              DO k=1,MEMBER                                                            !GYL
-                transrlx(k,m) = (transrlx(k,m) + transm(k,nv3d+n)) * beta              !GYL
-              END DO                                                                   !GYL
-              transrlx(m,m) = transrlx(m,m) + (1.0d0-beta)                             !GYL
-            END DO                                                                     !GYL
-
-            ! analysis update of members
-            DO m=1,MEMBER
-              anal2d(ij,m,n) = gues2d(ij,mmean,n)                                      !GYL
-              DO k=1,MEMBER
-                anal2d(ij,m,n) = anal2d(ij,m,n) &                                      !GYL
-                               + gues2d(ij,k,n) * transrlx(k,m)                        !GYL
-              END DO
+          ! analysis update of members
+          DO m=1,MEMBER
+            anal2d(ij,m,n) = gues2d(ij,mmean,n)                                      !GYL
+            DO k=1,MEMBER
+              anal2d(ij,m,n) = anal2d(ij,m,n) &                                      !GYL
+                             + gues2d(ij,k,n) * transrlx(k,m)                        !GYL
             END DO
+          END DO
 
-            ! analysis update of deterministic run
-            if (DET_RUN) then                                                          !GYL
-              anal2d(ij,mmdet,n) = 0.0d0                                               !GYL
-              DO k=1,MEMBER                                                            !GYL
-                anal2d(ij,mmdet,n) = anal2d(ij,mmdet,n) &                              !GYL
-                                   + gues2d(ij,k,n) * transmd(k,nv3d+n)                !GYL
-              END DO                                                                   !GYL
-              anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n) &                                !GYL
-                                 + anal2d(ij,mmdet,n) * beta                           !GYL
-            end if                                                                     !GYL
+          ! analysis update of deterministic run
+          if (DET_RUN) then                                                          !GYL
+            anal2d(ij,mmdet,n) = 0.0d0                                               !GYL
+            DO k=1,MEMBER                                                            !GYL
+              anal2d(ij,mmdet,n) = anal2d(ij,mmdet,n) &                              !GYL
+                                 + gues2d(ij,k,n) * transmd(k,n2nc)                  !GYL
+            END DO                                                                   !GYL
+            anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n) &                                !GYL
+                               + anal2d(ij,mmdet,n) * beta                           !GYL
+          end if                                                                     !GYL
 
-          END IF ! [ beta == 0.0d0 ]                                                   !GYL
+#ifdef DEBUG
+          write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(2d,ij=', ij, ',n=', n, '):'
+          call mpi_timer(trim(timer_str), 5)
+#endif
 
         END DO ! [ n=1,nv2d ]
+
+#ifdef DEBUG
+        write (timer_str, '(A27,I4,A2)') 'das_letkf:letkf_core(2d,ij=', ij, '):'
+        call mpi_timer(trim(timer_str), 4)
+#endif
+
       END IF ! [ ilev == 1 ]
 
     END DO ! [ ij=1,nij1 ]
-!$OMP END PARALLEL DO
+!$OMP END DO NOWAIT
+
+!$OMP MASTER
+#ifdef DEBUG
+    do ic = 1, nctype
+      write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
+      write (6, *) search_q0(ic,1,:)
+    end do
+    if (ilev == 1) then
+      write (6, '(A)') 'For 2d variables:'
+      do ic = 1, nctype
+        write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
+        write (6, *) search_q0(ic,nv3d+1,:)
+      end do
+    end if
+#endif
 
     write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
     call mpi_timer(trim(timer_str), 3)
+!$OMP END MASTER
+
   END DO ! [ ilev=1,nlev ]
+
+  deallocate (hdxf,rdiag,rloc,dep)
+  if (DET_RUN) then
+    deallocate (depd)
+  end if
+  deallocate (trans,transm,transmd,pa)
+!$OMP END PARALLEL
 
   call mpi_timer('das_letkf:letkf_core:', 2)
 
-  DEALLOCATE(hdxf,rdiag,rloc,dep)
-  if (DET_RUN) then
-    deallocate(depd)
-  end if
+  deallocate (n_merge,ic_merge)
+  deallocate (search_q0)
   !
   ! Compute analyses of observations (Y^a)
   !
@@ -662,29 +832,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
     call mpi_timer('das_letkf:additive_infl_ensmean_grd:', 2)
 
-    DO n=1,nv3d
-      DO m=1,MEMBER
-!$OMP PARALLEL DO PRIVATE(i,k)
-        DO k=1,nlev
-          DO i=1,nij1
-            gues3d(i,k,m,n) = gues3d(i,k,m,n) - gues3d(i,k,mmean,n) !GYL
-          END DO
-        END DO
-!$OMP END PARALLEL DO
-      END DO
-    END DO
-    DO n=1,nv2d
-      DO m=1,MEMBER
-!$OMP PARALLEL DO PRIVATE(i)
-        DO i=1,nij1
-          gues2d(i,m,n) = gues2d(i,m,n) - gues2d(i,mmean,n) !GYL
-        END DO
-!$OMP END PARALLEL DO
-      END DO
-    END DO
-
-    WRITE(6,'(A)') '===== Additive covariance inflation ====='
-    WRITE(6,'(A,F10.4)') '  parameter:',INFL_ADD
+    write (6, '(A)') '===== Additive covariance inflation ====='
+    write (6, '(A,F10.4)') '  parameter:', INFL_ADD
     if (INFL_ADD_SHUFFLE) then
       if (myrank_a == 0) then
         call Knuth_Shuffle(MEMBER, ishuf)
@@ -693,53 +842,71 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       write (6, '(A)') '  suffle members: on'
       write (6, *) ' suffle sequence: ', ishuf
     end if
-    WRITE(6,'(A)') '========================================='
-!    parm = 0.7d0
-!    DO ilev=1,nlev
-!      parm_infl_damp(ilev) = 1.0d0 + parm &
-!        & + parm * REAL(1-ilev,r_size)/REAL(nlev_dampinfl,r_size)
-!      parm_infl_damp(ilev) = MAX(parm_infl_damp(ilev),1.0d0)
-!    END DO
+    write (6,'(A)') '========================================='
+
+!$OMP PARALLEL PRIVATE(n,m,k,i,mshuf)
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
     DO n=1,nv3d
       DO m=1,MEMBER
-        mshuf = m
-        if (INFL_ADD_SHUFFLE) then
-          mshuf = ishuf(m)
-        end if
-        if (n == iv3d_q .or. n == iv3d_qc .or. n == iv3d_qr .or. n == iv3d_qi .or. n == iv3d_qs .or. n == iv3d_qg) then
-!$OMP PARALLEL DO PRIVATE(ij,ilev)
-          DO ilev=1,nlev
-            DO ij=1,nij1
-              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD * addinfl_weight(ij) * work3d(ij,ilev,n)
-            END DO
+        DO k=1,nlev
+          DO i=1,nij1
+            gues3d(i,k,m,n) = gues3d(i,k,m,n) - gues3d(i,k,mmean,n)
           END DO
-!$OMP END PARALLEL DO
-        else
-!$OMP PARALLEL DO PRIVATE(ij,ilev)
-          DO ilev=1,nlev
-            DO ij=1,nij1
-              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
-                & + gues3d(ij,ilev,mshuf,n) * INFL_ADD * addinfl_weight(ij)
-            END DO
-          END DO
-!$OMP END PARALLEL DO
-        end if
+        END DO
       END DO
     END DO
+!$OMP END DO NOWAIT
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
     DO n=1,nv2d
       DO m=1,MEMBER
-        mshuf = m
-        if (INFL_ADD_SHUFFLE) then
-          mshuf = ishuf(m)
-        end if
-!$OMP PARALLEL DO PRIVATE(ij)
-        DO ij=1,nij1
-          anal2d(ij,m,n) = anal2d(ij,m,n) + gues2d(ij,mshuf,n) * INFL_ADD * addinfl_weight(ij)
+        DO i=1,nij1
+          gues2d(i,m,n) = gues2d(i,m,n) - gues2d(i,mmean,n)
         END DO
-!$OMP END PARALLEL DO
       END DO
     END DO
+!$OMP END DO
+
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
+    DO n=1,nv3d
+      DO m=1,MEMBER
+        if (INFL_ADD_SHUFFLE) then
+          mshuf = ishuf(m)
+        else
+          mshuf = m
+        end if
+        if (n == iv3d_q .or. n == iv3d_qc .or. n == iv3d_qr .or. n == iv3d_qi .or. n == iv3d_qs .or. n == iv3d_qg) then
+          DO k=1,nlev
+            DO i=1,nij1
+              anal3d(i,k,m,n) = anal3d(i,k,m,n) &
+                & + gues3d(i,k,mshuf,n) * INFL_ADD * addinfl_weight(i) * work3d(i,k,n)
+            END DO
+          END DO
+        else
+          DO k=1,nlev
+            DO i=1,nij1
+              anal3d(i,k,m,n) = anal3d(i,k,m,n) &
+                & + gues3d(i,k,mshuf,n) * INFL_ADD * addinfl_weight(i)
+            END DO
+          END DO
+        end if
+      END DO
+    END DO
+!$OMP END DO NOWAIT
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+    DO n=1,nv2d
+      DO m=1,MEMBER
+        if (INFL_ADD_SHUFFLE) then
+          mshuf = ishuf(m)
+        else
+          mshuf = m
+        end if
+        DO i=1,nij1
+          anal2d(i,m,n) = anal2d(i,m,n) + gues2d(i,mshuf,n) * INFL_ADD * addinfl_weight(i)
+        END DO
+      END DO
+    END DO
+!$OMP END DO
+!$OMP END PARALLEL
 
     deallocate (addinfl_weight)
 
@@ -1128,6 +1295,7 @@ END SUBROUTINE das_letkf
 !   rlev    : vertical pressure of the targeted grid
 !   rz      : vertical height   of the targeted grid
 !   nvar    : variable index of the targeted grid
+!   srch_q0 : (optional) first guess of the multiplier of incremental search distances
 ! [OUT]
 !   hdxf    : fcstast ensemble perturbations in the observation space
 !   rdiag   : localization-weighted observation error variances
@@ -1137,8 +1305,9 @@ END SUBROUTINE das_letkf
 !   depd    : (optional) observation departure for the deterministic run
 !   nobsl_t : (optional) number of assimilated observations wrt. observation variables/types
 !   cutd_t  : (optional) cutoff distance of assimilated observations wrt. observation variables/types
+!   srch_q0 : (optional) revised first guess of the multiplier of incremental search distances for the next call
 !-------------------------------------------------------------------------------
-subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd, nobsl_t, cutd_t)
+subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd, nobsl_t, cutd_t, srch_q0)
   use common_sort
   use scale_grid, only: &
     DX, DY
@@ -1157,6 +1326,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
   real(r_size), intent(out), optional :: depd(nobstotal)
   integer, intent(out), optional :: nobsl_t(nid_obs,nobtype)
   real(r_size), intent(out), optional :: cutd_t(nid_obs,nobtype)
+  integer, intent(inout), optional :: srch_q0(nctype)
 
   integer, allocatable :: nobs_use(:)
   integer, allocatable :: nobs_use2(:)
@@ -1173,10 +1343,6 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
   integer :: nobsl_prev, nobsl_incr
   integer :: nobsl_max_master
   integer :: ielm_u_master, ityp_master
-
-  logical :: ctype_skip(nctype)
-  integer :: ic_merge(nid_obs*nobtype)
-  integer :: n_merge
 
   integer :: q
   logical :: loop
@@ -1243,30 +1409,12 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
   ! do precise data search by normalized 3D distance and variable localization.
   !-----------------------------------------------------------------------------
 
-  ctype_skip(:) = .false.
-
   do ic = 1, nctype
-    if (ctype_skip(ic)) then
+    if (n_merge(ic) == 0) then
       if (present(cutd_t)) then
         cutd_t(elm_u_ctype(ic),typ_ctype(ic)) = 0.0d0
       end if
       cycle
-    end if
-
-    n_merge = 1
-    ic_merge(1) = ic
-    if (ctype_merge(elm_u_ctype(ic),typ_ctype(ic)) > 0) then
-      do ic2 = ic+1, nctype
-        if (ctype_merge(elm_u_ctype(ic2),typ_ctype(ic2)) == ctype_merge(elm_u_ctype(ic),typ_ctype(ic))) then
-          n_merge = n_merge + 1
-          ic_merge(n_merge) = ic2
-          ctype_skip(ic2) = .true.
-#ifdef DEBUG
-          write(6, '(9A)') '[Info] Observation number limit: Consider obs types (', obtypelist(typ_ctype(ic)), ', ', obelmlist(elm_u_ctype(ic)), &
-                           ') and (', obtypelist(typ_ctype(ic2)), ', ', obelmlist(elm_u_ctype(ic2)), ') together'
-#endif
-        end if
-      end do
     end if
 
     nobsl_max_master = MAX_NOBS_PER_GRID(typ_ctype(ic)) ! Use the number limit setting of the "master" obs type for all group of obs types
@@ -1281,8 +1429,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
 
       nobsl_prev = nobsl
 
-      do icm = 1, n_merge
-        ic2 = ic_merge(icm)
+      do icm = 1, n_merge(ic)
+        ic2 = ic_merge(icm,ic)
         ielm = elm_ctype(ic2)
         ityp = typ_ctype(ic2)
 
@@ -1311,7 +1459,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
         if (present(nobsl_t)) then
           nobsl_t(elm_u_ctype(ic2),ityp) = nobsl - nobsl_prev
         end if
-      end do ! [ do icm = 1, n_merge ]
+      end do ! [ do icm = 1, n_merge(ic) ]
 
     !---------------------------------------------------------------------------
     else if (MAX_NOBS_PER_GRID_CRITERION == 1) then
@@ -1322,14 +1470,14 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
     !---------------------------------------------------------------------------
 
       nn = 0
-      do icm = 1, n_merge
-        ic2 = ic_merge(icm)
+      do icm = 1, n_merge(ic)
+        ic2 = ic_merge(icm,ic)
 
         if (obsgrd(ic2)%tot_ext > 0) then
           call obs_local_range(ic2, ri, rj, imin, imax, jmin, jmax)
           call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
         end if ! [ obsgrd(ic2)%tot_ext > 0 ]
-      end do ! [ do icm = 1, n_merge ]
+      end do ! [ do icm = 1, n_merge(ic) ]
 #ifdef DEBUG
 write (6, '(A,14x,I8)') '--- ALL      : ', nn
 #endif
@@ -1341,8 +1489,8 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
       search_incr(1) = hori_loc_ctype(ic) * dist_zero_fac / real(n_search_incr, r_size)  ! (unit: m)
       search_incr(1) = max(search_incr(1), obsgrd(ic)%grdspc_i, obsgrd(ic)%grdspc_j)     ! (unit: m)
 
-      do icm = 1, n_merge
-        ic2 = ic_merge(icm)
+      do icm = 1, n_merge(ic)
+        ic2 = ic_merge(icm,ic)
         ! Determine the search_incr of the other obs ctypes based on its horizontal localization scale
         ! relative to that of the master obs ctype
         if (icm > 1) then
@@ -1354,7 +1502,11 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
       end do
 
       nobsl_incr = 0
-      q = 0
+      if (present(srch_q0)) then
+        q = srch_q0(ic) - 1
+      else
+        q = 0
+      end if
       loop = .true.
 
       do while (loop)
@@ -1362,8 +1514,8 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
         nn = 0
         reach_cutoff = .true.
 
-        do icm = 1, n_merge
-          ic2 = ic_merge(icm)
+        do icm = 1, n_merge(ic)
+          ic2 = ic_merge(icm,ic)
           nn_steps(icm) = nn
 
           if (obsgrd(ic2)%tot_ext > 0) then
@@ -1382,11 +1534,11 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
 
             call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
           end if ! [ obsgrd(ic2)%tot_ext > 0 ]
-        end do ! [ do icm = 1, n_merge ]
+        end do ! [ do icm = 1, n_merge(ic) ]
 
-        nn_steps(n_merge+1) = nn
+        nn_steps(n_merge(ic)+1) = nn
 #ifdef DEBUG
-write (6, '(A,I4,A,F12.3,L2,I8,8x,10F12.3)') '--- TRY #', q, ': ', search_incr(1)*q, reach_cutoff, nn, search_incr(2:n_merge)*q
+write (6, '(A,I4,A,F12.3,L2,I8,8x,10F12.3)') '--- TRY #', q, ': ', search_incr(1)*q, reach_cutoff, nn, search_incr(2:n_merge(ic))*q
 #endif
 
         if ((.not. reach_cutoff) .and. nn < nobsl_max_master) cycle
@@ -1402,8 +1554,8 @@ write (6, '(A,I4,A,F12.3,L2,I8,8x,10F12.3)') '--- TRY #', q, ': ', search_incr(1
         dist_cutoff_fac = search_incr(1) * q / hori_loc_ctype(ic)
         dist_cutoff_fac_square = dist_cutoff_fac * dist_cutoff_fac
 
-        do icm = 1, n_merge
-          ic2 = ic_merge(icm)
+        do icm = 1, n_merge(ic)
+          ic2 = ic_merge(icm,ic)
 
           if (nn_steps(icm+1) > nn_steps(icm)) then
             do n = nn_steps(icm)+1, nn_steps(icm+1)
@@ -1424,13 +1576,21 @@ write (6, '(A,I4,A,F12.3,L2,I8,8x,10F12.3)') '--- TRY #', q, ': ', search_incr(1
               nobs_use2(nobsl_incr) = iob
             end do
           end if ! [ nn_steps(icm+1) > nn_steps(icm) ]
-        end do ! [ do icm = 1, n_merge ]
+        end do ! [ do icm = 1, n_merge(ic) ]
 #ifdef DEBUG
-write (6, '(A,I4,A,F12.3,L2,2I8,10F12.3)') '--- TRY #', q, ': ', search_incr(1)*q, reach_cutoff, nn, nobsl_incr, search_incr(2:n_merge)*q
+write (6, '(A,I4,A,F12.3,L2,2I8,10F12.3)') '--- TRY #', q, ': ', search_incr(1)*q, reach_cutoff, nn, nobsl_incr, search_incr(2:n_merge(ic))*q
 #endif
 
         if (nobsl_incr >= nobsl_max_master) loop = .false.
       end do ! [ loop ]
+
+      if (present(srch_q0)) then
+        if (q == srch_q0(ic) .and. nobsl_incr > nobsl_max_master * 3) then ! when (nobsl_incr >= nobsl_max_master) too soon, decrease srch_q0
+          srch_q0(ic) = q - 1
+        else if (q > srch_q0(ic)) then ! when (nobsl_incr >= nobsl_max_master) too late, increase srch_q0
+          srch_q0(ic) = q
+        end if
+      end if
 
       if (nobsl_incr == 0) cycle
 
@@ -1440,7 +1600,7 @@ write (6, '(A,I4,A,F12.3,L2,2I8,10F12.3)') '--- TRY #', q, ': ', search_incr(1)*
       end if
 
 #ifdef DEBUG
-nobsl_cm(1:n_merge) = 0
+nobsl_cm(1:n_merge(ic)) = 0
 #endif
       do n = 1, nobsl_incr
         nobsl = nobsl + 1
@@ -1454,8 +1614,8 @@ nobsl_cm(1:n_merge) = 0
         end if
 #ifdef DEBUG
         ic2 = ctype_elmtyp(uid_obs(obs(obsda_sort%set(iob))%elm(obsda_sort%idx(iob))), obs(obsda_sort%set(iob))%typ(obsda_sort%idx(iob)))
-        do icm = 1, n_merge
-          if (ic2 == ic_merge(icm)) then
+        do icm = 1, n_merge(ic)
+          if (ic2 == ic_merge(icm,ic)) then
             nobsl_cm(icm) = nobsl_cm(icm) + 1
           end if
         end do
@@ -1468,7 +1628,7 @@ if (nobsl_incr == nobsl_max_master) then
 else
   cutd = hori_loc_ctype(ic) * dist_zero_fac
 end if
-write (6, '(A,F12.3,L2,8x,I8,10I8)') '--- FNL      : ', cutd, reach_cutoff, nobsl_incr, nobsl_cm(1:n_merge)
+write (6, '(A,F12.3,L2,8x,I8,10I8)') '--- FNL      : ', cutd, reach_cutoff, nobsl_incr, nobsl_cm(1:n_merge(ic))
 #endif
 
       if (present(nobsl_t)) then
@@ -1490,8 +1650,8 @@ write (6, '(A,F12.3,L2,8x,I8,10I8)') '--- FNL      : ', cutd, reach_cutoff, nobs
       nn = 0
       nobsl_incr = 0
 
-      do icm = 1, n_merge
-        ic2 = ic_merge(icm)
+      do icm = 1, n_merge(ic)
+        ic2 = ic_merge(icm,ic)
 
         if (obsgrd(ic2)%tot_ext > 0) then
           nn_prev = nn
@@ -1508,7 +1668,7 @@ write (6, '(A,F12.3,L2,8x,I8,10I8)') '--- FNL      : ', cutd, reach_cutoff, nobs
             nobs_use2(nobsl_incr) = iob
           end do
         end if ! [ obsgrd(ic2)%tot_ext > 0 ]
-      end do ! [ do icm = 1, n_merge ]
+      end do ! [ do icm = 1, n_merge(ic) ]
 
       if (nobsl_incr == 0) cycle
 
@@ -1729,26 +1889,23 @@ end subroutine obs_local_cal
 !-------------------------------------------------------------------------------
 ! Relaxation parameter based on grid locations (not for covariance inflation purpose)
 !-------------------------------------------------------------------------------
-subroutine relax_beta(ri, rj, rlev, nvar, beta)
+subroutine relax_beta(ri, rj, rz, beta)
   use scale_grid, only: &
     DX, DY
   use scale_grid_index, only: &
     IHALO, JHALO
   implicit none
-  real(r_size), intent(in) :: ri, rj, rlev
-  integer, intent(in) :: nvar
+  real(r_size), intent(in) :: ri, rj, rz
   real(r_size), intent(out) :: beta
   real(r_size) :: dist_bdy
 
   beta = 1.0d0
   !
-  ! Upper-limit of Q update levels
+  ! Upper bound of updates when RADAR_ZMAX is set and only radar observations are assimilated
   !
-  if (rlev < Q_UPDATE_TOP) then
-    if (nvar >= iv3d_q .and. nvar <= iv3d_qg) then
-      beta = 0.0d0
-      return
-    end if
+  if (radar_only .and. rz > RADAR_ZMAX + max(VERT_LOCAL(22), VERT_LOCAL_RADAR_VR) * dist_zero_fac) then
+    beta = 0.0d0
+    return
   end if
   !
   ! Boundary buffer

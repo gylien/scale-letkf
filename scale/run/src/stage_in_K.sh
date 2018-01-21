@@ -10,7 +10,7 @@ MYNAME=$(basename $0)
 if (($# < 2)); then
   cat >&2 << EOF
 
-Usage: $MYNAME NRANKS STGLIST [USE_RANKDIR TYPE]
+Usage: $MYNAME NRANKS STGLIST [USE_RANKDIR TYPE TMPS]
 
    NRANKS       Total number of nodes
    STGLIST      File of the stage-in list
@@ -19,6 +19,7 @@ Usage: $MYNAME NRANKS STGLIST [USE_RANKDIR TYPE]
                 1: Yes
    TYPE         'share': Stage-in to a shared directory (default)
                 'local': Stage-in to local directories
+   TMPS         Temporary directory for '.empty' file
 
 EOF
   exit 1
@@ -27,7 +28,8 @@ fi
 NRANKS="$1"; shift
 STGLIST="$1"; shift
 USE_RANKDIR="${1:-0}"; shift
-TYPE="${1:-share}"
+TYPE="${1:-share}"; shift
+TMPS="${1:-$(dirname $STGLIST)}"
 
 if ((USE_RANKDIR == 0)) && [[ "$TYPE" = 'local' ]]; then
   echo "[Error] $MYNAME: When the rank-directory is not enabled (\$USE_RANKDIR = 0), \$TYPE cannot be 'local'" >&2
@@ -88,7 +90,7 @@ function stage_in_K_sub () {
 #-------------------------------------------------------------------------------
 # Stage-in
 
-emptyfile="$(dirname $STGLIST)/.empty"
+emptyfile="$TMPS/.empty"
 touch $emptyfile
 
 if [[ -s "$STGLIST" ]]; then
