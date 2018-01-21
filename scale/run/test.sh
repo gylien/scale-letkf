@@ -181,14 +181,14 @@ for i in $(seq $NTEST); do
     logdir="$OUTDIR/exp/${jobid}_${SCPNAME[$i]}_${STIME}"
     stdout="$logdir/job.o"
     stderr="$logdir/job.e"
-    letkflogname="NOUT-000000"
+    letkflogname="NOUT-${PROCESS_FMT_0}"
   elif [ "${PRESET[$i]}" = 'Linux_torque' ]; then
     jobname="${SCPNAME[$i]}_job.sh"
     jobid=$(grep 'qsub Job' test.log | cut -d ' ' -f3)
     logdir="$OUTDIR/exp/${jobid}_${SCPNAME[$i]}_${STIME}"
     stdout="$logdir/job.o"
     stderr="$logdir/job.e"
-    letkflogname="NOUT-000000"
+    letkflogname="NOUT-${PROCESS_FMT_0}"
 #  elif [ "${PRESET[$i]}" = 'Linux' ]; then
 #    ...
 #    Rtime[$i]=$(grep 'real' test.time | cut -d ' ' -f2)

@@ -252,16 +252,30 @@ while ((time <= ETIME)); do
 
       if [ "$CONF_MODE" = 'static' ]; then
 
-        if ((IO_ARB == 1)); then ##
-          if ((s == 5)); then ##
-            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} \
-                    "$SCRP_DIR/sleep.sh" || exit $? &
+        if ((enable_iter == 1 && nitmax > 1)); then
+          for it in $(seq $nitmax); do
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+
+            if ((IO_ARB == 1)); then ##
+              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $? &
+            else ##
+              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $?
+            fi ##
+
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
+          done
+        else
+          if ((IO_ARB == 1)); then ##
+            if ((s == 5)); then ##
+              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} \
+                      "$SCRP_DIR/sleep.sh" || exit $? &
+            else ##
+              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
+            fi ##
           else ##
-            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
+            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
           fi ##
-        else ##
-          mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
-        fi ##
+        fi
 
       else
 
@@ -337,6 +351,16 @@ if ((RUN_LEVEL <= 3)); then
 
   if ((CLEAR_TMP == 1 && USE_TMPL == 1)); then
     pdbash node all $SCRP_DIR/src/stage_out_rm_stgdir_node.sh $TMPL local # || exit $?
+  fi
+fi
+
+if ((RUN_LEVEL <= 1)); then
+  if [ "$CONF_MODE" = 'static' ]; then
+    if ((DISK_MODE == 3)); then
+      config_file_save $TMP/config || exit $?
+    else
+      config_file_save || exit $?
+    fi
   fi
 fi
 
