@@ -662,16 +662,18 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 !$OMP MASTER
     if (LOG_LEVEL >= 3) then
-      do ic = 1, nctype
-        write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
-        write (6, *) search_q0(ic,1,:)
-      end do
-      if (ilev == 1) then
-        write (6, '(A)') 'For 2d variables:'
+      if (maxval(MAX_NOBS_PER_GRID(:)) > 0 .and. MAX_NOBS_PER_GRID_CRITERION == 1) then
         do ic = 1, nctype
           write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
-          write (6, *) search_q0(ic,nv3d+1,:)
+          write (6, *) search_q0(ic,1,:)
         end do
+        if (ilev == 1) then
+          write (6, '(A)') 'For 2d variables:'
+          do ic = 1, nctype
+            write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
+            write (6, *) search_q0(ic,nv3d+1,:)
+          end do
+        end if
       end if
     end if
 
