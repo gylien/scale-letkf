@@ -70,10 +70,8 @@ declare -a proc2grpproc
 #if ((RUN_LEVEL <= 2)) && ((ISTEP == 1)); then
 if ((RUN_LEVEL <= 2)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
-  distribute_fcst "$MEMBERS" $CYCLE machinefile $NODEFILE_DIR || exit $?
-else
-  distribute_fcst "$MEMBERS" $CYCLE - - $NODEFILE_DIR/distr || exit $?
 fi
+distribute_fcst "$MEMBERS" $CYCLE "$NODELIST_TYPE" $NODEFILE_DIR || exit $?
 
 if ((CYCLE == 0)); then
   CYCLE=$cycle_auto
