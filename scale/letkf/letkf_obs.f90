@@ -661,7 +661,6 @@ SUBROUTINE set_letkf_obs
                                               sig_b, &
                                               sig_o
     endif
-#endif
 
   END DO ! [ n = 1, obsda%nobs ]
 !$OMP END PARALLEL DO
