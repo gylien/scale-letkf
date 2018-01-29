@@ -9,23 +9,23 @@
  TIME_STARTMS               = 0.D0,
 !--TIME_DURATION--
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 60.0D0,
+ TIME_DT                    = 75.0D0,
  TIME_DT_UNIT               = "SEC",
- TIME_NSTEP_ATMOS_DYN = 3,
+ TIME_DT_ATMOS_DYN          = 15.0D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = 60.0D0,
+ TIME_DT_ATMOS_PHY_MP       = 75.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_RD       = 600.D0,
+ TIME_DT_ATMOS_PHY_RD       = 1800.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_SF       = 60.0D0,
+ TIME_DT_ATMOS_PHY_SF       = 75.0D0,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_TB       = 60.0D0,
+ TIME_DT_ATMOS_PHY_TB       = 75.0D0,
  TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",
- TIME_DT_OCEAN              = 600.D0,
+ TIME_DT_OCEAN              = 1800.D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
- TIME_DT_LAND               = 600.D0,
+ TIME_DT_LAND               = 1800.D0,
  TIME_DT_LAND_UNIT          = "SEC",
- TIME_DT_URBAN              = 600.D0,
+ TIME_DT_URBAN              = 1800.D0,
  TIME_DT_URBAN_UNIT         = "SEC",
 !--TIME_DT_ATMOS_RESTART--
  TIME_DT_ATMOS_RESTART_UNIT = "SEC",
@@ -54,12 +54,10 @@
 
 &PARAM_TOPO
 !--TOPO_IN_BASENAME--
- TOPO_IN_CHECK_COORDINATES = .false.,
 /
 
 &PARAM_LANDUSE
 !--LANDUSE_IN_BASENAME--
- LANDUSE_IN_CHECK_COORDINATES = .false.,
 /
 
 &PARAM_LAND_PROPERTY
@@ -78,8 +76,8 @@
 #################################################
 
 &PARAM_PRC
- PRC_NUM_X      = 8,
- PRC_NUM_Y      = 6,
+ PRC_NUM_X      = 2,
+ PRC_NUM_Y      = 2,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -92,8 +90,8 @@
 
 &PARAM_INDEX
  KMAX = 36,
- IMAX = 40,
- JMAX = 40,
+ IMAX = 45,
+ JMAX = 45,
 /
 
 &PARAM_LAND_INDEX
@@ -113,8 +111,8 @@
 /
 
 &PARAM_GRID
- DX = 18000.D0,
- DY = 18000.D0,
+ DX = 45000.D0,
+ DY = 45000.D0,
  FZ(:) =    161.6830D0,   335.9580D0,   523.8060D0,   726.2850D0,   944.5340D0,
            1179.7810D0,  1433.3490D0,  1706.6670D0,  2001.2720D0,  2318.8220D0,
            2661.1040D0,  3030.0450D0,  3427.7200D0,  3856.3680D0,  4318.4000D0,
@@ -124,16 +122,16 @@
           19154.0100D0, 20807.4900D0, 22589.7400D0, 24510.8100D0, 26581.5000D0,
           28800.0000D0,
  BUFFER_DZ = 5000.D0,
- BUFFER_DX = 180000.D0,
- BUFFER_DY = 180000.D0,
+ BUFFER_DX = 450000.D0,
+ BUFFER_DY = 450000.D0,
 /
 
 &PARAM_MAPPROJ
- MPRJ_basepoint_lon = 145.0D0,
- MPRJ_basepoint_lat =  31.0D0,
+ MPRJ_basepoint_lon = 135.0D0,
+ MPRJ_basepoint_lat =  35.0D0,
  MPRJ_type          = 'LC',
- MPRJ_LC_lat1       =  26.00D0,
- MPRJ_LC_lat2       =  36.00D0,
+ MPRJ_LC_lat1       =  30.00D0,
+ MPRJ_LC_lat2       =  40.00D0,
 /
 
 #################################################
@@ -153,7 +151,6 @@
 &PARAM_ATMOS
  ATMOS_DYN_TYPE    = "HEVI",
  ATMOS_PHY_MP_TYPE = "TOMITA08",
- ATMOS_PHY_CP_TYPE = "KF",
  ATMOS_PHY_RD_TYPE = "MSTRNX",
  ATMOS_PHY_SF_TYPE = "COUPLE",
  ATMOS_PHY_TB_TYPE = "MYNN",
@@ -179,7 +176,6 @@
 
 &PARAM_ATMOS_VARS
  ATMOS_VARS_CHECKRANGE = .true.,
- ATMOS_RESTART_IN_CHECK_COORDINATES = .false.,
 /
 
 &PARAM_ATMOS_REFSTATE
@@ -195,27 +191,20 @@
  ATMOS_BOUNDARY_USE_DENS    = .true.,
  ATMOS_BOUNDARY_USE_QHYD    = .false.,
 !--ATMOS_BOUNDARY_UPDATE_DT--
-! ATMOS_BOUNDARY_ALPHAFACT_DENS = 0.25D0,
  ATMOS_BOUNDARY_LINEAR_H    = .false.,
  ATMOS_BOUNDARY_EXP_H       = 2.d0,
- ATMOS_BOUNDARY_IN_CHECK_COORDINATES = .false.,
 /
 
 &PARAM_ATMOS_DYN
- ATMOS_DYN_TINTEG_LARGE_TYPE          = "EULER",
  ATMOS_DYN_TINTEG_SHORT_TYPE          = "RK4",
  ATMOS_DYN_TINTEG_TRACER_TYPE         = "RK3WS2002",
- ATMOS_DYN_FVM_FLUX_TYPE              = "UD3",
+ ATMOS_DYN_FVM_FLUX_TYPE              = "CD4",
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
- ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.0,
- ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.0,
- ATMOS_DYN_enable_coriolis            = .true.,
  ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF        = 9.D-2,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0,
+ ATMOS_DYN_enable_coriolis            = .true.,
  ATMOS_DYN_WDAMP_HEIGHT               = 15.D3,
-/
-
-&PARAM_ATMOS_PHY_TB_SMG
- ATMOS_PHY_TB_SMG_horizontal = .true.,
 /
 
 &PARAM_ATMOS_PHY_RD_MSTRN
@@ -232,16 +221,6 @@
 !--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--
 /
 
-&PARAM_ATMOS_PHY_MP_TOMITA08
- enable_kk2000 = .false.,
- Cr = 130.D0,
- Cs = 0.9D0,
- drag_g = 0.6D0,
- beta_saut = 6D-3,
- gamma_saut = 6D-2,
- gamma_sacr = 2D-2,
-/
-
 #################################################
 #
 # model configuration: ocean
@@ -250,10 +229,10 @@
 
 &PARAM_OCEAN_VARS
  OCEAN_VARS_CHECKRANGE = .true.,
- OCEAN_RESTART_IN_CHECK_COORDINATES = .false.,
+!--OCEAN_RESTART_IN_BASENAME--
 /
 
-&PARAM_OCEAN_PHY_SLAB
+&PARAM_OCEAN_SLAB
  OCEAN_PHY_SLAB_DEPTH = 10.D0,
 /
 
@@ -269,10 +248,10 @@
 
 &PARAM_LAND_VARS
  LAND_VARS_CHECKRANGE = .false.,
- LAND_RESTART_IN_CHECK_COORDINATES = .false.,
+!--LAND_RESTART_IN_BASENAME--
 /
 
-&PARAM_LAND_PHY_SLAB
+&PARAM_LAND_BUCKET
  LAND_PHY_UPDATE_BOTTOM_TEMP  = .false.,
  LAND_PHY_UPDATE_BOTTOM_WATER = .true.,
 /
@@ -285,7 +264,6 @@
 
 &PARAM_URBAN_VARS
  URBAN_VARS_CHECKRANGE = .false.,
- URBAN_RESTART_IN_CHECK_COORDINATES = .false.,
 /
 
 #################################################
@@ -356,19 +334,19 @@
 &HISTITEM item='QS'   /
 &HISTITEM item='QG'   /
 &HISTITEM item='QHYD' /
-!&HISTITEM item='QLIQ' /
-!&HISTITEM item='QICE' /
+&HISTITEM item='QLIQ' /
+&HISTITEM item='QICE' /
 
 &HISTITEM item='T'    /
 &HISTITEM item='PRES' /
 &HISTITEM item='U'    /
 &HISTITEM item='V'    /
 &HISTITEM item='W'    /
-!&HISTITEM item="Uabs" /
+&HISTITEM item="Uabs" /
 &HISTITEM item='PT'   /
 &HISTITEM item='RH'   /
-!&HISTITEM item='RHL'  /
-!&HISTITEM item='RHI'  /
+&HISTITEM item='RHL'  /
+&HISTITEM item='RHI'  /
 
 &HISTITEM item='PREC', taverage=.true. /
 &HISTITEM item='RAIN', taverage=.true. /
@@ -382,7 +360,7 @@
 
 &HISTITEM item='U10' /
 &HISTITEM item='V10' /
-!&HISTITEM item="Uabs10" /
+&HISTITEM item="Uabs10" /
 &HISTITEM item='T2'  /
 &HISTITEM item='Q2'  /
 &HISTITEM item="MSLP" /

@@ -5,30 +5,28 @@
 #
 #===============================================================================
 
-STIME='20170704160000'
-ETIME='20170704170000'
-MEMBERS='mean mdet '
+STIME='20170704120000'
+ETIME='20170704120000'
 #MEMBERS='mean'
-#CYCLE=1
-#CYCLE_SKIP=1
-CYCLE=2
+MEMBERS='mean mdet '`seq 1 50`
+
+
+CYCLE=1
 CYCLE_SKIP=24
 ISTEP=
 FSTEP=
-#TIME_LIMIT='1:30:00'
-TIME_LIMIT='0:20:00'
+TIME_LIMIT='1:00:00'
+#TIME_LIMIT='0:15:00' # 6hr
 
 #===============================================================================
 # Forecast settings
 
-#FCSTLEN=21600 # ~17 min # SCALE forecast length in the forecast mode (second)
-#FCSTLEN=172800      # SCALE forecast length in the forecast mode (second)
-FCSTLEN=86400      # SCALE forecast length in the forecast mode (second)
+FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
 FCSTOUT=3600
 
 #===============================================================================
 
-MAKEINIT=0       # 0: No
+MAKEINIT=1       # 0: No
                  # 1: Yes
 
 #===============================================================================
@@ -36,15 +34,15 @@ MAKEINIT=0       # 0: No
 
                  #      fcst
                  #      history restart
-OUT_OPT=2        # 1:   o       o
+OUT_OPT=1        # 1:   o       o
                  # 2:   o
 
                  #      topo
-TOPOOUT_OPT=2    # 1:   o
+TOPOOUT_OPT=1    # 1:   o
                  # 2:   (none)
 
                  #      landuse
-LANDUSEOUT_OPT=2 # 1:   o
+LANDUSEOUT_OPT=1 # 1:   o
                  # 2:   (none)
 
                  #      bdy

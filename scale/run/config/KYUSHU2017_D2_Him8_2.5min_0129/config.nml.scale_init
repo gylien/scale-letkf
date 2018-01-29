@@ -14,56 +14,39 @@
  STATISTICS_use_globalcomm = .true.,
 /
 
+&PARAM_RESTART
+!--RESTART_OUTPUT--
+!--RESTART_OUT_BASENAME--
+/
+
 &PARAM_TOPO
-!--TOPO_OUT_BASENAME--
+!--TOPO_IN_BASENAME--
 /
 
 &PARAM_LANDUSE
-!--LANDUSE_OUT_BASENAME--
+!--LANDUSE_IN_BASENAME--
 /
 
-&PARAM_CONVERT
-!--CONVERT_TOPO--
-!--CONVERT_LANDUSE--
+&PARAM_LAND_PROPERTY
+!--LAND_PROPERTY_IN_FILENAME--
 /
 
-&PARAM_CNVTOPO
-!--CNVTOPO_name--
-! CNVTOPO_SMOOTH_MAXSLOPE = 4.00D0,
- CNVTOPO_smooth_maxslope_ratio = 1.0,
- CNVTOPO_SMOOTH_local    = .true.,
- CNVTOPO_SMOOTH_itelim   = 10000,
- CNVTOPO_copy_parent     = .true.,
+&PARAM_MKINIT
+ MKINIT_initname = "REAL",
 /
 
-&PARAM_COPYTOPO
-!--COPYTOPO_IN_BASENAME--
- COPYTOPO_ENTIRE_REGION = .false.,
- COPYTOPO_LINEAR_H      = .true.,
+&PARAM_MKINIT_REAL_WRFARW
+ WRF_FILE_TYPE = .true.,
 /
 
-&PARAM_CNVTOPO_GTOPO30
- GTOPO30_IN_CATALOGUE = "GTOPO30_catalogue.txt",
-!--GTOPO30_IN_DIR--
-/
-
-&PARAM_CNVTOPO_DEM50M
- DEM50M_IN_CATALOGUE = "DEM50M_catalogue.txt",
-!--DEM50M_IN_DIR--
-/
-
-&PARAM_CNVLANDUSE
-!--CNVLANDUSE_name--
-/
-
-&PARAM_CNVLANDUSE_GLCCv2
- GLCCv2_IN_CATALOGUE = "GLCCv2_catalogue.txt",
-!--GLCCv2_IN_DIR--
-/
-
-&PARAM_CNVLANDUSE_LU100M
- LU100M_IN_CATALOGUE = "LU100M_catalogue.txt",
-!--LU100M_IN_DIR--
+&PARAM_MKINIT_REAL_ATMOS
+!--BASENAME_BOUNDARY--
+!--BASENAME_ORG--
+!--FILETYPE_ORG--
+!--NUMBER_OF_FILES--
+!--NUMBER_OF_TSTEPS--
+!--NUMBER_OF_SKIP_TSTEPS--
+!--BOUNDARY_UPDATE_DT--
 /
 
 &PARAM_NEST
@@ -73,6 +56,10 @@
 !--LATLON_CATALOGUE_FNAME--
 /
 
+&PARAM_MKINIT_REAL_WRFARW
+ WRF_FILE_TYPE       = .true.,
+/
+
 #################################################
 #
 # model configuration: process
@@ -80,7 +67,7 @@
 #################################################
 
 &PARAM_PRC
- PRC_NUM_X      = 9,
+ PRC_NUM_X      = 12,
  PRC_NUM_Y      = 8,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
@@ -95,7 +82,7 @@
 &PARAM_INDEX
  KMAX = 56,
  IMAX = 36,
- JMAX = 40,
+ JMAX = 44,
 /
 
 &PARAM_LAND_INDEX
@@ -115,8 +102,8 @@
 /
 
 &PARAM_GRID
- DX = 2000.D0,
- DY = 2000.D0,
+ DX = 3000.D0,
+ DY = 3000.D0,
  FZ(:) =    110.0000D0,   220.0000D0,   330.0000D0,   440.0000D0,   550.0000D0,
             667.1500D0,   791.9148D0,   924.7892D0,  1066.3005D0,  1217.0100D0,
            1377.5156D0,  1548.4541D0,  1730.5035D0,  1924.3862D0,  2130.8713D0,
@@ -130,12 +117,12 @@
           23148.8145D0, 23928.8145D0, 24708.8145D0, 25488.8145D0, 26268.8145D0,
           27048.8145D0,
  BUFFER_DZ = 5000.D0,
- BUFFER_DX = 40.D3,
- BUFFER_DY = 40.D3,
+ BUFFER_DX = 60.D3,
+ BUFFER_DY = 60.D3,
 /
 
 &PARAM_MAPPROJ
- MPRJ_basepoint_lon = 130.0D0,
+ MPRJ_basepoint_lon = 128.0D0,
  MPRJ_basepoint_lat =  32.75D0,
  MPRJ_type          = 'LC',
  MPRJ_LC_lat1       =  30.00D0,

@@ -5,25 +5,25 @@
 #
 #===============================================================================
 
-PRESET='K_rankdir'                          # 'K' or 'K_rankdir' or 'K_micro'
-#PRESET='K_micro'                          # 'K' or 'K_rankdir' or 'K_micro'
+PRESET='<PRESET>'       # 'K' or 'K_rankdir' or 'K_micro'
 
 #===============================================================================
 
 # -- H08 --
 # -- RTTOV_DIR --
-DIR_RTTOV=/data/share005/honda/RTTOV
+DIR_RTTOV=/data/share025/honda/RTTOV
 RTTOV_COEF=${DIR_RTTOV}/rtcoef_rttov11/rttov7pred54L/rtcoef_himawari_8_ahi.dat
 RTTOV_SCCOEF=${DIR_RTTOV}/rtcoef_rttov11/cldaer/sccldcoef_himawari_8_ahi.dat
 
+#===============================================================================
 
-EXP="NORU2017_18km_d2_30min"
 
-PEXP="NORU2017_18km"
+EXP="testcase_Him8_45km"
+
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
+DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
-DDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-5.2.1"
 OUTDIR="${DDIR}/OUTPUT/${EXP}" # Directory for SCALE-LETKF output
 
 #===============================================================================
@@ -32,108 +32,100 @@ OUTDIR="${DDIR}/OUTPUT/${EXP}" # Directory for SCALE-LETKF output
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"        # Directory of the SCALE database
 
-DATA_TOPO=                                                           # Directory of the prepared topo files
-DATA_TOPO_BDY_SCALE="${DDIR}/OUTPUT/${PEXP}/const/topo"
-DATA_LANDUSE=                                                        # Directory of the prepared landuse files
-DATA_BDY_SCALE="${DDIR}/OUTPUT/${PEXP}"                              # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PREP=                             # Directory of the prepared SCALE boundary files
-#DATA_BDY_WRF="/volume63/data/hp150019/gylien/model/ncepfnl/wrfout_mean_2017" # Directory of the boundary data in WRF format
-DATA_BDY_WRF="${OUTDIR}/wrfbdy"
-DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
-DATA_BDY_GRADS=                                                      # Directory of the boundary data in GrADS format
 
-OBS="${DDIR}/obs/${EXP}"            # Directory of observation data in LETKF obs format
-OBSNCEP=                                                             # Directory of observation data in NCEP BUFR format
+SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
+DATADIR="/volume63/data/hp150019/gylien/database"                    # Directory of the SCALE database
+
+DATA_TOPO="/volume63/data/hp150019/gylien/scale-letkf-test-suite/exp/testcase_45km_4p_l36_data"       # Directory of the prepared topo files
+DATA_TOPO_BDY_SCALE=
+DATA_LANDUSE="/volume63/data/hp150019/gylien/scale-letkf-test-suite/exp/testcase_45km_4p_l36_data"     # Directory of the prepared landuse files
+DATA_BDY_SCALE="/volume63/data/hp150019/honda/SCALE-LETKF/scale-5.2.2/OUTPUT/KYUSHU2017_D1"                                                      # Directory of the boundary data in SCALE history format (parent domain)
+DATA_BDY_SCALE_PREP="/volume63/data/hp150019/gylien/scale-letkf-test-suite/exp/testcase_45km_4p_l36_data"  # Directory of the prepared SCALE boundary files
+#DATA_BDY_WRF="/volume63/data/hp150019/gylien/scale-letkf-test-suite/ncepfnl/wrfout"              # Directory of the boundary data in WRF format
+DATA_BDY_WRF="/volume63/data/hp150019/honda/SCALE-LETKF/scale-5.2.2/OUTPUT/testcase_Him8_45km/wrfbdy"
+DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
+DATA_BDY_GRADS="/volume63/data/hp150019/gylien/scale-letkf-test-suite/ncepfnl_grads"             # Directory of the boundary data in GrADS format
+
+
+OBS="/volume63/data/hp150019/honda/SCALE-LETKF/scale-5.2.2/OUTPUT/testcase_Him8_45km/obs"
+OBSNCEP=                               # Directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # model/data file options
 
-PNETCDF=0               # 0: Do not use PnetCDF
-                        # 1: Use PnetCDF
-
-PNETCDF_BDY_SCALE=0     # Use PNETCDF I/O for the parent domain SCALE data? (default: $PNETCDF)
-                        # 0: Do not use PnetCDF
-                        # 1: Use PnetCDF
-
-DET_RUN=1               # 0: Disable the deterministic run
-DET_RUN=0               # 0: Disable the deterministic run
-                        # 1: Enable  the deterministic run
-
-TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
-#TOPO_FORMAT='GTOPO30'      # 'prep': Use prepared topo files in $DATA_TOPO
+#TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'   # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
-#LANDUSE_FORMAT='GLCCv2'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+#LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep' # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
                         # 4: GrADS         (requires compatible 'config.nml.scale_init')
+
+
 BDY_SINGLE_FILE=0       # 0: Length of a boundary file = $BDYCYCLE_INT (e.g., files made by data assimilation cycles)
                         # 1: Length of a boundary file is long enough so that only a single boundary file is used for each forecast
+
+
 BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
+
+
 
 BDY_ENS=1               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial time
                         # 1: Use different series of boundary files for different initial time
 
-BDYINT=3600
+BDYINT=21600
 BDYCYCLE_INT=21600
+
 
 PARENT_REF_TIME=
 
-ENABLE_PARAM_USER=0     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
-                        # 1: Enable the 'PARAM_USER' section of the SCALE namelist (require 'config.nml.scale_user' and customized version of SCALE)
 
-OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
+OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
-LAND_INPUT=1            # 0: No land input (use cycling land variables)
+LAND_INPUT=0            # 0: No land input (use cycling land variables)
                         # 1: Update the land variables every cycle
 LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
-OBSNUM=3
-OBSNAME[1]=obs                
-OBSNAME[2]=radar                
-OBSNAME[3]=H08
+OBSNUM=1
+OBSNAME[1]=H08                                    
 
 OBSOPE_SEPARATE[1]=0
-OBSOPE_SEPARATE[2]=0
-OBSOPE_SEPARATE[3]=0
 
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=600     # SCALE forecast time when the assimilation window starts (second)
-WINDOW_E=600     # SCALE forecast time when the assimilation window ends (second)
-LCYCLE=600       # Length of a DA cycle (second)
-LTIMESLOT=600     # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=21600     # SCALE forecast time when the assimilation window starts (second)
+WINDOW_E=21600     # SCALE forecast time when the assimilation window ends (second)
+LCYCLE=21600       # Length of a DA cycle (second)
+LTIMESLOT=21600     # Timeslot interval for 4D-LETKF (second)
 
 #===============================================================================
 # Parallelization settings
 
-#MEMBER=50          # Ensemble size
-MEMBER=8          # Ensemble size
+MEMBER=3          # Ensemble size
 
-#NNODES=1248        # Number of nodes
-NNODES=480        # Number of nodes
-NNODES=432        # Number of nodes
-#NNODES=48        # Number of nodes
+NNODES=16        # Number of nodes
+
 PPN=1              # Number of processes per node
-
 THREADS=8          # Number of threads per process
 
-SCALE_NP=48        # Number of processes to run SCALE
+SCALE_NP=4        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -150,6 +142,7 @@ TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs i
 TMP="/scratch/$(id -ng)/honda/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
+#TMPL="/tmp/honda/$TMPSUBDIR"
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
                             #  0: No
@@ -158,10 +151,8 @@ CLEAR_TMP=0                 # Clear temporary directories after the completion o
 #===============================================================================
 # Environmental settings
 
-MPIRUN="mpiexec"
-if (which $MPIRUN > /dev/null 2>&1); then
-  MPIRUN=$(which $MPIRUN)
-fi
+MPIBIN=$(dirname $(which mpiexec))
+MPIRUN="$MPIBIN/mpiexec"
 
 SCP='cp -L'
 SCP_HOSTPREFIX=''
