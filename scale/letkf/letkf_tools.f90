@@ -38,6 +38,7 @@ MODULE letkf_tools
   integer,save :: ctype_merge(nid_obs,nobtype)
   integer,allocatable,save :: n_merge(:)
   integer,allocatable,save :: ic_merge(:,:)
+  integer,save :: n_merge_max
   logical,save :: radar_only
 
   integer,parameter :: n_search_incr = 8
@@ -188,6 +189,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       end if ! [ ctype_merge(elm_u_ctype(ic),typ_ctype(ic)) > 0 ]
     end if ! [ n_merge(ic) > 0 ]
   end do ! [ ic = 1, nctype ]
+  n_merge_max = maxval(n_merge)
 
   allocate (search_q0(nctype,nv3d+1,nij1))
   search_q0(:,:,:) = 1
@@ -662,16 +664,18 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
 !$OMP MASTER
     if (LOG_LEVEL >= 3) then
-      do ic = 1, nctype
-        write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
-        write (6, *) search_q0(ic,1,:)
-      end do
-      if (ilev == 1) then
-        write (6, '(A)') 'For 2d variables:'
+      if (maxval(MAX_NOBS_PER_GRID(:)) > 0 .and. MAX_NOBS_PER_GRID_CRITERION == 1) then
         do ic = 1, nctype
           write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
-          write (6, *) search_q0(ic,nv3d+1,:)
+          write (6, *) search_q0(ic,1,:)
         end do
+        if (ilev == 1) then
+          write (6, '(A)') 'For 2d variables:'
+          do ic = 1, nctype
+            write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
+            write (6, *) search_q0(ic,nv3d+1,:)
+          end do
+        end if
       end if
     end if
 
@@ -1357,12 +1361,16 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
 
   integer :: q
   logical :: loop
-  integer :: nn_steps(nctype+1)
+  integer :: nn_steps(n_merge_max+1)
   logical :: reach_cutoff
-  integer :: imin_cutoff(nid_obs*nobtype), imax_cutoff(nid_obs*nobtype)
-  integer :: jmin_cutoff(nid_obs*nobtype), jmax_cutoff(nid_obs*nobtype)
-  real(r_size) :: search_incr, search_incr_i, search_incr_j
-  real(r_size) :: dist_zero_fac_cutoff
+  integer :: imin_cutoff(n_merge_max), imax_cutoff(n_merge_max)
+  integer :: jmin_cutoff(n_merge_max), jmax_cutoff(n_merge_max)
+  real(r_size) :: search_incr(n_merge_max)
+  real(r_size) :: search_incr_i(n_merge_max), search_incr_j(n_merge_max)
+  real(r_size) :: dist_cutoff_fac, dist_cutoff_fac_square
+
+  real(r_size) :: cutd
+  integer :: nobsl_cm(n_merge_max)
 
   !-----------------------------------------------------------------------------
   ! Initialize
@@ -1491,16 +1499,22 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
 
       if (nn == 0) cycle
 
+      ! Determine the search_incr based on the master obs ctype:
+      ! (zero-weight distance) / (# of search increment), but not smaller than the sorting mesh size
+      search_incr(1) = hori_loc_ctype(ic) * dist_zero_fac / real(n_search_incr, r_size)  ! (unit: m)
+      search_incr(1) = max(search_incr(1), obsgrd(ic)%grdspc_i, obsgrd(ic)%grdspc_j)     ! (unit: m)
+
       do icm = 1, n_merge(ic)
         ic2 = ic_merge(icm,ic)
+        ! Determine the search_incr of the other obs ctypes based on its horizontal localization scale
+        ! relative to that of the master obs ctype
+        if (icm > 1) then
+          search_incr(icm) = search_incr(1) / hori_loc_ctype(ic) * hori_loc_ctype(ic2)
+        end if
+        search_incr_i(icm) = search_incr(icm) / DX  ! (unit: x-grid)
+        search_incr_j(icm) = search_incr(icm) / DY  ! (unit: y-grid)
         call obs_local_range(ic2, ri, rj, imin_cutoff(icm), imax_cutoff(icm), jmin_cutoff(icm), jmax_cutoff(icm))
       end do
-
-      search_incr = max(obsgrd(ic)%grdspc_i, obsgrd(ic)%grdspc_j)
-      ! use integer times of sorting mesh size for search_incr
-      search_incr = search_incr * ceiling(hori_loc_ctype(ic) * dist_zero_fac / search_incr / real(n_search_incr, r_size))
-      search_incr_i = search_incr / DX
-      search_incr_j = search_incr / DY
 
       nobsl_incr = 0
       if (present(srch_q0)) then
@@ -1520,11 +1534,11 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
           nn_steps(icm) = nn
 
           if (obsgrd(ic2)%tot_ext > 0) then
-            call ij_obsgrd_ext(ic2, ri-search_incr_i*q, rj-search_incr_j*q, imin, jmin)
-            call ij_obsgrd_ext(ic2, ri+search_incr_i*q, rj+search_incr_j*q, imax, jmax)
+            call ij_obsgrd_ext(ic2, ri-search_incr_i(icm)*q, rj-search_incr_j(icm)*q, imin, jmin)
+            call ij_obsgrd_ext(ic2, ri+search_incr_i(icm)*q, rj+search_incr_j(icm)*q, imax, jmax)
 
-            if (imin < imin_cutoff(icm) .or. imax > imax_cutoff(icm) .or. &
-                jmin < jmin_cutoff(icm) .or. jmax > jmax_cutoff(icm)) then
+            if (imin <= imin_cutoff(icm) .and. imax >= imax_cutoff(icm) .and. &
+                jmin <= jmin_cutoff(icm) .and. jmax >= jmax_cutoff(icm)) then
               imin = imin_cutoff(icm)
               imax = imax_cutoff(icm)
               jmin = jmin_cutoff(icm)
@@ -1540,7 +1554,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
         nn_steps(n_merge(ic)+1) = nn
 
         if (LOG_LEVEL >= 3) then
-          write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cutoff, nn
+          write (6, '(A,I4,A,F12.3,L2,I8,8x,10F12.3)') '--- TRY #', q, ': ', search_incr(1)*q, reach_cutoff, nn, search_incr(2:n_merge(ic))*q
         end if
 
         if ((.not. reach_cutoff) .and. nn < nobsl_max_master) cycle
@@ -1550,6 +1564,11 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
         end if
 
         nobsl_incr = 0
+
+        ! Determine the cutoff fraction in this incremental search,
+        ! which should be the same for all obs ctypes based on its definition
+        dist_cutoff_fac = search_incr(1) * q / hori_loc_ctype(ic)
+        dist_cutoff_fac_square = dist_cutoff_fac * dist_cutoff_fac
 
         do icm = 1, n_merge(ic)
           ic2 = ic_merge(icm,ic)
@@ -1566,8 +1585,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
               end if
 
               if (.not. reach_cutoff) then
-                dist_zero_fac_cutoff = search_incr * q / hori_loc_ctype(ic2)
-                if (dist_tmp(iob) > dist_zero_fac_cutoff * dist_zero_fac_cutoff) cycle
+                if (dist_tmp(iob) > dist_cutoff_fac_square) cycle
               end if
 
               nobsl_incr = nobsl_incr + 1
@@ -1577,7 +1595,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
         end do ! [ do icm = 1, n_merge(ic) ]
 
         if (LOG_LEVEL >= 3) then
-          write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cutoff, nn, nobsl_incr
+          write (6, '(A,I4,A,F12.3,L2,2I8,10F12.3)') '--- TRY #', q, ': ', search_incr(1)*q, reach_cutoff, nn, nobsl_incr, search_incr(2:n_merge(ic))*q
         end if
 
         if (nobsl_incr >= nobsl_max_master) loop = .false.
@@ -1598,6 +1616,10 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
         nobsl_incr = nobsl_max_master
       end if
 
+      if (LOG_LEVEL >= 3) then
+        nobsl_cm(:) = 0
+      end if
+
       do n = 1, nobsl_incr
         nobsl = nobsl + 1
         iob = nobs_use2(n)
@@ -1608,7 +1630,25 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
         if (present(depd)) then
           depd(nobsl) = obsda_sort%ensval(mmdetobs,iob)
         end if
+
+        if (LOG_LEVEL >= 3) then
+          ic2 = ctype_elmtyp(uid_obs(obs(obsda_sort%set(iob))%elm(obsda_sort%idx(iob))), obs(obsda_sort%set(iob))%typ(obsda_sort%idx(iob)))
+          do icm = 1, n_merge(ic)
+            if (ic2 == ic_merge(icm,ic)) then
+              nobsl_cm(icm) = nobsl_cm(icm) + 1
+            end if
+          end do
+        end if
       end do
+
+      if (LOG_LEVEL >= 3) then
+        if (nobsl_incr == nobsl_max_master) then
+          cutd = hori_loc_ctype(ic) * sqrt(dist_tmp(nobs_use2(nobsl_incr)))
+        else
+          cutd = hori_loc_ctype(ic) * dist_zero_fac
+        end if
+        write (6, '(A,F12.3,L2,8x,I8,10I8)') '--- FNL      : ', cutd, reach_cutoff, nobsl_incr, nobsl_cm(1:n_merge(ic))
+      end if
 
       if (present(nobsl_t)) then
         nobsl_t(ielm_u_master,ityp_master) = nobsl_incr
