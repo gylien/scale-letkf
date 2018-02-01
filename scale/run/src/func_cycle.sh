@@ -1357,12 +1357,6 @@ letkf_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((IO_ARB == 1)); then     ##
-  if ((MYRANK == 0)); then   ##
-    echo "[$(datetime_now)] ${time}: ${stepname[5]}: Wait for 360 seconds" >&2 ##
-  fi                         ##
-  sleep 360s                 ##
-fi                           ##
 
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script start" >&2

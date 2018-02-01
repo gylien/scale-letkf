@@ -18,6 +18,10 @@ MODULE common_scale
   use scale_precision, only: RP, SP
   use scale_prof
 
+  external dtf_transfer
+  external dtf_time_start
+  external dtf_time_end
+  
   IMPLICIT NONE
   PUBLIC
 !-------------------------------------------------------------------------------
@@ -439,7 +443,9 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
   err = nfmpi_open(comm, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
-
+  
+  call dtf_time_start
+  
   do iv3d = 1, nv3d
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
@@ -475,7 +481,9 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
   err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-
+  
+  call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
+  call dtf_time_end
   err = nfmpi_close(ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
@@ -1063,6 +1071,8 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
+  call dtf_time_start()
+
   ! 3D variables
   !-------------
   do iv3d = 1, nv3dd
@@ -1129,6 +1139,10 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+
+  call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
+
+  call dtf_time_end()
 
 !  call FILEIO_close( fid )
   err = nfmpi_close(ncid)

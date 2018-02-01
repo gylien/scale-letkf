@@ -31,12 +31,18 @@ PROGRAM letkf
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
   integer :: iarg
+  
+  !DTF          
+  integer :: ierr
+  external dtf_init
+  external dtf_finalize
 
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
 
   call initialize_mpi_scale
+  call dtf_init('../../dtf.ini'//CHAR(0), 'letkf'//CHAR(0),ierr)
   call mpi_timer('', 1)
 
   if (command_argument_count() >= 3) then
@@ -215,10 +221,11 @@ PROGRAM letkf
     !
     call ensmean_grd(MEMBER, nens, nij1, anal3d, anal2d)
     ! write analysis mean later in write_ens_mpi
-
-    if (ANAL_SPRD_OUT) then
-      call write_enssprd(ANAL_SPRD_OUT_BASENAME, anal3d, anal2d)
-    end if
+    
+!DTF disable overwriting files
+!    if (ANAL_SPRD_OUT) then
+!      call write_enssprd(ANAL_SPRD_OUT_BASENAME, anal3d, anal2d)
+!    end if
 
     call mpi_timer('ANAL_MEAN', 1, barrier=MPI_COMM_a)
 
@@ -263,7 +270,7 @@ PROGRAM letkf
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
-
+  call dtf_finalize(ierr)
   call finalize_mpi_scale
 
   STOP

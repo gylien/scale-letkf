@@ -29,6 +29,7 @@ job='cycle'
 
 STAGING_DIR="$TMPSL/staging"
 NODEFILE_DIR="$TMPS/node"
+LIBDTF_PATH= #set path the DTF
 
 #-------------------------------------------------------------------------------
 
@@ -112,6 +113,8 @@ ${TMPS}/config.main|config.main
 ${SCRP_DIR}/config.rc|config.rc
 ${SCRP_DIR}/config.${job}|config.${job}
 ${SCRP_DIR}/${job}.sh|${job}.sh
+${LIBDTF_PATH}/libdtf.so|libdtf.so
+${SCRP_DIR}/dtf.ini|dtf.ini 
 ${SCRP_DIR}/src/|src/
 ${NODEFILE_DIR}/|node/
 EOF
@@ -171,6 +174,15 @@ export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:\$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
+#DTF
+export DTF_VERBOSE_LEVEL=0         
+#export DTF_IGNORE_ITER=    #set if necessary                                                                                
+export DTF_SCALE=1                                                                                                                                                         
+export DTF_INI_FILE=./dtf.ini  
+export MAX_WORKGROUP_SIZE=  #set                                                                                           
+export SCALE_ENSEMBLE_SZ=   #set                                                                                                                                    
+export LD_LIBRARY_PATH=./:$LD_LIBRARY_PATH                                                                                                         
+export DTF_GLOBAL_PATH=./ 
 ./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
 
