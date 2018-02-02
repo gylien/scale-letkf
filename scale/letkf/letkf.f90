@@ -32,9 +32,10 @@ PROGRAM letkf
   character(len=10) :: myranks
   integer :: iarg
 
+  integer :: DA_DATE(6)  ! date information (yyyy,mm,dd,hh,nn,ss)
   integer :: it ! main cycle loop iteration
-  integer,parameter :: itmin = 1
-  integer,parameter :: itmax = 3
+  integer :: itmin = 1
+  integer :: itmax = 3
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -113,15 +114,17 @@ PROGRAM letkf
   end if
   call set_scalelib
 
+  call get_itmax(itmax)
+
   main_cycle: do it = itmin, itmax
 
-    call anal_date(DA_NOWDATE)
+    call it2date(it, da_date)
     print *,""
     print *,""
     print *,""
     print *,""
     print *,""
-    print *, "TEST,cycle=",it,"TIME:",DA_NOWDATE(4),":",DA_NOWDATE(5),":",DA_NOWDATE(6)," ",DA_NOWDATE(1),"/",DA_NOWDATE(2),"/",DA_NOWDATE(3)
+    print *, "TEST,cycle=",it,"/",itmax,"TIME:",da_date(4),":",da_date(5),":",da_date(6)," ",da_date(1),"/",da_date(2),"/",da_date(3)
     print *,""
 
 
@@ -182,10 +185,10 @@ PROGRAM letkf
         call set_common_mpi_grid
       endif
 
-      allocate (gues3d(nij1,nlev,nens,nv3d))
-      allocate (gues2d(nij1,nens,nv2d))
-      allocate (anal3d(nij1,nlev,nens,nv3d))
-      allocate (anal2d(nij1,nens,nv2d))
+      if (.not. allocated(gues3d)) allocate (gues3d(nij1,nlev,nens,nv3d))
+      if (.not. allocated(gues2d)) allocate (gues2d(nij1,nens,nv2d))
+      if (.not. allocated(anal3d)) allocate (anal3d(nij1,nlev,nens,nv3d))
+      if (.not. allocated(anal2d)) allocate (anal2d(nij1,nens,nv2d))
 
       call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
 
@@ -260,7 +263,7 @@ PROGRAM letkf
 
       deallocate (obs)
 
-      deallocate (gues3d, gues2d, anal3d, anal2d)
+      !deallocate (gues3d, gues2d, anal3d, anal2d)
 
       if (it == itmax) then
         call unset_common_mpi_scale

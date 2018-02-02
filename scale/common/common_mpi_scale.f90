@@ -523,8 +523,6 @@ subroutine set_scalelib
 !  use scale_time, only: &
 !    TIME_setup
   use scale_time, only: &
-    !TIME_gettimelabel,  &
-    !TIME_NOWDATE,       &     
     TIME_DTSEC,         &
     TIME_STARTDAYSEC
   use scale_grid, only: &

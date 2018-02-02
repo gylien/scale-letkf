@@ -1865,25 +1865,47 @@ end subroutine rij_rank_g2l
 !-------------------------------------------------------------------------------
 !  Compute analysis date by adding the analysis window length (DA_DSEC) 
 !-------------------------------------------------------------------------------
-subroutine anal_date(date)
+subroutine it2date(it,date)
   use scale_calendar, only: &
     CALENDAR_date2daysec, &
     CALENDAR_daysec2date
   implicit none
+  integer, intent(in) :: it
   integer, intent(inout) :: date(6)
 
   integer :: absday
   real(r_dble) :: abssec
   real(r_dble) :: subsec ! dummy
 
-  call CALENDAR_date2daysec(absday, abssec, date, 0.0d0, 0) 
+  call CALENDAR_date2daysec(absday, abssec, STIME, 0.0d0, 0) 
 
-  abssec = abssec + DA_DSEC
+  abssec = abssec + DA_DSEC * real(it, kind=r_size)
 
   call CALENDAR_daysec2date(date, subsec, absday, abssec, 0)
 
   return  
-end subroutine anal_date
+end subroutine it2date
+
+!-------------------------------------------------------------------------------
+!  Compute the number of DA cycles based on STIME & ETIME
+!-------------------------------------------------------------------------------
+subroutine get_itmax(itmax)
+  use scale_calendar, only: &
+    CALENDAR_date2daysec, &
+    CALENDAR_daysec2date
+  implicit none
+  integer, intent(out) :: itmax
+
+  integer :: absday
+  real(r_dble) :: s_abssec, e_abssec
+
+  call CALENDAR_date2daysec(absday, s_abssec, STIME, 0.0d0, 0) 
+  call CALENDAR_date2daysec(absday, e_abssec, ETIME, 0.0d0, 0) 
+
+  itmax = nint((e_abssec - s_abssec) / DA_DSEC) 
+
+  return  
+end subroutine get_itmax
 
 
 !===============================================================================
