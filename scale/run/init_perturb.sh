@@ -58,8 +58,8 @@ S_PATH="$2"
 
 #-------------------------------------------------------------------------------
 
-if [ ! -s "$S_PATH$(printf $SCALE_SFX 0)" ]; then
-  echo "[Error] $0: Cannot find scale file '$S_PATH$(printf $SCALE_SFX 0)'" >&2
+if [ ! -s "$S_PATH${SCALE_SFX_0}" ]; then
+  echo "[Error] $0: Cannot find scale file '$S_PATH${SCALE_SFX_0}'" >&2
   exit 1
 fi
 

@@ -103,6 +103,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   integer,allocatable :: search_q0(:,:,:)
 
+  integer :: OMP_GET_NUM_THREADS, omp_chunk
+
   character(len=timer_name_width) :: timer_str
 
   call mpi_timer('', 2)
@@ -152,10 +154,12 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       var_local_n2n(n) = n
     end if
   end do
-  write (6, '(A,I3)') '[INFO] var_local_n2nc_max=', var_local_n2nc_max
-  do n = 1, nv3d+nv2d
-    write (6, '(A,I3,A,I3,A,I3,A,I3)') '[INFO] var_local_n2n(', n, ')=', var_local_n2n(n), '; var_local_n2nc(', n, ')=', var_local_n2nc(n)
-  end do
+  if (LOG_LEVEL >= 2) then
+    write (6, '(A,I3)') '[Info] var_local_n2nc_max=', var_local_n2nc_max
+    do n = 1, nv3d+nv2d
+      write (6, '(A,I3,A,I3,A,I3,A,I3)') '[Info] var_local_n2n(', n, ')=', var_local_n2n(n), '; var_local_n2nc(', n, ')=', var_local_n2nc(n)
+    end do
+  end if
   !
   ! Observation number limit (*to be moved to namelist*)
   !
@@ -175,10 +179,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             n_merge(ic) = n_merge(ic) + 1
             ic_merge(n_merge(ic),ic) = ic2
             n_merge(ic2) = 0
-#ifdef DEBUG
-            write(6, '(9A)') '[Info] Observation number limit: Consider obs types (', obtypelist(typ_ctype(ic)), ', ', obelmlist(elm_u_ctype(ic)), &
-                             ') and (', obtypelist(typ_ctype(ic2)), ', ', obelmlist(elm_u_ctype(ic2)), ') together'
-#endif
+            if (LOG_LEVEL >= 2) then
+              write(6, '(9A)') '[Info] Observation number limit: Consider obs types (', obtypelist(typ_ctype(ic)), ', ', obelmlist(elm_u_ctype(ic)), &
+                               ') and (', obtypelist(typ_ctype(ic2)), ', ', obelmlist(elm_u_ctype(ic2)), ') together'
+            end if
           end if
         end do
       end if ! [ ctype_merge(elm_u_ctype(ic),typ_ctype(ic)) > 0 ]
@@ -281,6 +285,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   call mpi_timer('das_letkf:allocation_shared_vars:', 2)
 
 !$OMP PARALLEL PRIVATE(ilev,ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,n2n,n2nc,trans,transm,transmd,transrlx,pa,trans_done,tmpinfl,q_mean,q_sprd,q_anal,timer_str)
+  omp_chunk = min(4, max(1, (nij1-1) / OMP_GET_NUM_THREADS() + 1))
+
   allocate (hdxf (nobstotal,MEMBER))
   allocate (rdiag(nobstotal))
   allocate (rloc (nobstotal))
@@ -296,17 +302,19 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !$OMP MASTER
   call mpi_timer('das_letkf:allocation_private_vars:', 2)
   call mpi_timer('', 3)
+
+  write (6, '(A,I3)') 'OpenMP chunk for dynamic schedule =', omp_chunk
 !$OMP END MASTER
   !
   ! MAIN ASSIMILATION LOOP
   !
   DO ilev=1,nlev
 
-#ifdef DEBUG
-    call mpi_timer('', 4)
-#endif
+    if (LOG_LEVEL >= 3) then
+      call mpi_timer('', 4)
+    end if
 
-!$OMP DO SCHEDULE(GUIDED)
+!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
     DO ij=1,nij1
 
       trans_done(:) = .false.                                                          !GYL
@@ -315,10 +323,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       ! if the weight is zero, no analysis update is needed
       call relax_beta(rig1(ij),rjg1(ij),hgt1(ij,ilev),beta)
 
-#ifdef DEBUG
-      write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:relax_beta(lev=', ilev, ',ij=', ij, '):'
-      call mpi_timer(trim(timer_str), 4)
-#endif
+      if (LOG_LEVEL >= 3) then
+        write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:relax_beta(lev=', ilev, ',ij=', ij, '):'
+        call mpi_timer(trim(timer_str), 4)
+      end if
 
       if (beta == 0.0d0) then
         do n = 1, nv3d
@@ -340,16 +348,17 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           end do
         end if
 
-#ifdef DEBUG
-        write (timer_str, '(A30,I4,A4,I4,A7)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',allv):'
-        call mpi_timer(trim(timer_str), 4)
-#endif
+        if (LOG_LEVEL >= 3) then
+          write (timer_str, '(A30,I4,A4,I4,A7)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',allv):'
+          call mpi_timer(trim(timer_str), 4)
+        end if
+
         cycle
       end if
 
-#ifdef DEBUG
-      call mpi_timer('', 5)
-#endif
+      if (LOG_LEVEL >= 3) then
+        call mpi_timer('', 5)
+      end if
 
       ! update 3D variables
       DO n=1,nv3d
@@ -365,10 +374,11 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n)                          !GYL
           end if                                                                       !GYL
 
-#ifdef DEBUG
-          write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',n=', n, '):'
-          call mpi_timer(trim(timer_str), 5)
-#endif
+          if (LOG_LEVEL >= 3) then
+            write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+            call mpi_timer(trim(timer_str), 5)
+          end if
+
           cycle                                                                        !GYL
         end if                                                                         !GYL
 
@@ -388,10 +398,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             work3dn(:,ij,ilev,n) = work3dn(:,ij,ilev,n2n)
           end if
 
-#ifdef DEBUG
-          write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_copy(lev=', ilev, ',ij=', ij, ',n=', n, '):'
-          call mpi_timer(trim(timer_str), 5)
-#endif
+          if (LOG_LEVEL >= 3) then
+            write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_copy(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+            call mpi_timer(trim(timer_str), 5)
+          end if
         ELSE
           ! compute weights with localized observations
           if (DET_RUN) then                                                            !GYL
@@ -435,10 +445,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             work3dn(nobtype+6,ij,ilev,n) = real(cutd_t(11,22),r_size)                  !GYL !!! CUTOFF_DIST: vr
           END IF                                                                       !GYL
 
-#ifdef DEBUG
-          write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(lev=', ilev, ',ij=', ij, ',n=', n, '):'
-          call mpi_timer(trim(timer_str), 5)
-#endif
+          if (LOG_LEVEL >= 3) then
+            write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+            call mpi_timer(trim(timer_str), 5)
+          end if
         END IF
 
         ! relaxation via LETKF weight
@@ -500,17 +510,17 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           END IF                                                                       !GYL
         END IF                                                                         !GYL
 
-#ifdef DEBUG
-        write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(lev=', ilev, ',ij=', ij, ',n=', n, '):'
-        call mpi_timer(trim(timer_str), 5)
-#endif
+        if (LOG_LEVEL >= 3) then
+          write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+          call mpi_timer(trim(timer_str), 5)
+        end if
 
       END DO ! [ n=1,nv3d ]
 
-#ifdef DEBUG
-      write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, ',ij=', ij, '):'
-      call mpi_timer(trim(timer_str), 4)
-#endif
+      if (LOG_LEVEL >= 3) then
+        write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, ',ij=', ij, '):'
+        call mpi_timer(trim(timer_str), 4)
+      end if
 
       ! update 2D variables at ilev = 1
       IF(ilev == 1) THEN 
@@ -545,10 +555,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
               end if
             end if
 
-#ifdef DEBUG
-            write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_copy(2d,ij=', ij, ',n=', n, '):'
-            call mpi_timer(trim(timer_str), 5)
-#endif
+            if (LOG_LEVEL >= 3) then
+              write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_copy(2d,ij=', ij, ',n=', n, '):'
+              call mpi_timer(trim(timer_str), 5)
+            end if
           ELSE
             ! compute weights with localized observations
             if (DET_RUN) then                                                          !GYL
@@ -584,10 +594,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
               work2dn(:,ij,n) = real(sum(nobsl_t,dim=1),r_size)                        !GYL !!! NOBS: sum over all variables for each report type
             END IF                                                                     !GYL
 
-#ifdef DEBUG
-            write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(2d,ij=', ij, ',n=', n, '):'
-            call mpi_timer(trim(timer_str), 5)
-#endif
+            if (LOG_LEVEL >= 3) then
+              write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(2d,ij=', ij, ',n=', n, '):'
+              call mpi_timer(trim(timer_str), 5)
+            end if
           END IF
 
           ! relaxation via LETKF weight
@@ -633,37 +643,37 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                                + anal2d(ij,mmdet,n) * beta                           !GYL
           end if                                                                     !GYL
 
-#ifdef DEBUG
-          write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(2d,ij=', ij, ',n=', n, '):'
-          call mpi_timer(trim(timer_str), 5)
-#endif
+          if (LOG_LEVEL >= 3) then
+            write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(2d,ij=', ij, ',n=', n, '):'
+            call mpi_timer(trim(timer_str), 5)
+          end if
 
         END DO ! [ n=1,nv2d ]
 
-#ifdef DEBUG
-        write (timer_str, '(A27,I4,A2)') 'das_letkf:letkf_core(2d,ij=', ij, '):'
-        call mpi_timer(trim(timer_str), 4)
-#endif
+        if (LOG_LEVEL >= 3) then
+          write (timer_str, '(A27,I4,A2)') 'das_letkf:letkf_core(2d,ij=', ij, '):'
+          call mpi_timer(trim(timer_str), 4)
+        end if
 
       END IF ! [ ilev == 1 ]
 
     END DO ! [ ij=1,nij1 ]
-!$OMP END DO NOWAIT
+!$OMP END DO
 
 !$OMP MASTER
-#ifdef DEBUG
-    do ic = 1, nctype
-      write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
-      write (6, *) search_q0(ic,1,:)
-    end do
-    if (ilev == 1) then
-      write (6, '(A)') 'For 2d variables:'
+    if (LOG_LEVEL >= 3) then
       do ic = 1, nctype
         write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
-        write (6, *) search_q0(ic,nv3d+1,:)
+        write (6, *) search_q0(ic,1,:)
       end do
+      if (ilev == 1) then
+        write (6, '(A)') 'For 2d variables:'
+        do ic = 1, nctype
+          write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
+          write (6, *) search_q0(ic,nv3d+1,:)
+        end do
+      end if
     end if
-#endif
 
     write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
     call mpi_timer(trim(timer_str), 3)
@@ -803,9 +813,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       if (ic > 0) then
         do ij = 1, nij1
           ref_min_dist = 1.0d33
+          !!!!!! save this (ref_min_dist) information when doing DA
           do iob = obsgrd(ic)%ac_ext(0, 1), obsgrd(ic)%ac_ext(obsgrd(ic)%ngrdext_i, obsgrd(ic)%ngrdext_j)
-            rdx = (rig1(ij) - obsda_sort%ri(iob)) * DX
-            rdy = (rjg1(ij) - obsda_sort%rj(iob)) * DY
+            rdx = (rig1(ij) - obs(obsda_sort%set(iob))%ri(obsda_sort%idx(iob))) * DX
+            rdy = (rjg1(ij) - obs(obsda_sort%set(iob))%rj(obsda_sort%idx(iob))) * DY
             rdxy = rdx*rdx + rdy*rdy
             if (rdxy < ref_min_dist) then
               ref_min_dist = rdxy
@@ -1473,9 +1484,10 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
           call obs_choose_ext(ic2, imin, imax, jmin, jmax, nn, nobs_use)
         end if ! [ obsgrd(ic2)%tot_ext > 0 ]
       end do ! [ do icm = 1, n_merge(ic) ]
-#ifdef DEBUG
-write (6, '(A,14x,I8)') '--- ALL      : ', nn
-#endif
+
+      if (LOG_LEVEL >= 3) then
+        write (6, '(A,14x,I8)') '--- ALL      : ', nn
+      end if
 
       if (nn == 0) cycle
 
@@ -1526,9 +1538,10 @@ write (6, '(A,14x,I8)') '--- ALL      : ', nn
         end do ! [ do icm = 1, n_merge(ic) ]
 
         nn_steps(n_merge(ic)+1) = nn
-#ifdef DEBUG
-write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cutoff, nn
-#endif
+
+        if (LOG_LEVEL >= 3) then
+          write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cutoff, nn
+        end if
 
         if ((.not. reach_cutoff) .and. nn < nobsl_max_master) cycle
         if (reach_cutoff) then
@@ -1562,9 +1575,10 @@ write (6, '(A,I4,A,F12.3,L2,I8)') '--- Try #', q, ': ', search_incr*q, reach_cut
             end do
           end if ! [ nn_steps(icm+1) > nn_steps(icm) ]
         end do ! [ do icm = 1, n_merge(ic) ]
-#ifdef DEBUG
-write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cutoff, nn, nobsl_incr
-#endif
+
+        if (LOG_LEVEL >= 3) then
+          write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cutoff, nn, nobsl_incr
+        end if
 
         if (nobsl_incr >= nobsl_max_master) loop = .false.
       end do ! [ loop ]
@@ -1685,8 +1699,8 @@ write (6, '(A,I4,A,F12.3,L2,2I8)') '--- Try #', q, ': ', search_incr*q, reach_cu
 
 #ifdef DEBUG
   if (nobsl > nobstotal) then
-    write (6,'(A,I5,A,I5)') 'FATAL ERROR, NOBSL=', nobsl, ' > NOBSTOTAL=', nobstotal
-    write (6,*) 'RI,RJ,LEV,NOBSL,NOBSTOTAL=', ri, rj, rlev, rz, nobsl, nobstotal
+    write (6,'(A,I5,A,I5)') '[Error] nobsl=', nobsl, ' > nobstotal=', nobstotal
+    write (6,*) 'ri,rj,lev,rz=', ri, rj, rlev, rz
     stop 99
   end if
 #endif
@@ -1827,8 +1841,8 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   !
   ! Calculate normalized horizontal distances
   !
-  rdx = (ri - obsda_sort%ri(iob)) * DX
-  rdy = (rj - obsda_sort%rj(iob)) * DY
+  rdx = (ri - obs(obset)%ri(obidx)) * DX
+  rdy = (rj - obs(obset)%rj(obidx)) * DY
   nd_h = sqrt(rdx*rdx + rdy*rdy) / hori_loc_ctype(ic)
 
   !--- reject obs by normalized horizontal distance
