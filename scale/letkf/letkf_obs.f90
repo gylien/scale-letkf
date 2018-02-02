@@ -304,6 +304,13 @@ SUBROUTINE set_letkf_obs
 
   ! do this outside of the above obs loop, so these (ctype) arrays can be in ascending order
   nctype = count(ctype_use)
+
+  if(allocated(elm_ctype))deallocate(elm_ctype)
+  if(allocated(elm_u_ctype))deallocate(elm_u_ctype)
+  if(allocated(typ_ctype))deallocate(typ_ctype)
+  if(allocated(hori_loc_ctype))deallocate(hori_loc_ctype)
+  if(allocated(vert_loc_ctype))deallocate(vert_loc_ctype)
+
   allocate (elm_ctype     (nctype))
   allocate (elm_u_ctype   (nctype))
   allocate (typ_ctype     (nctype))
@@ -650,6 +657,7 @@ SUBROUTINE set_letkf_obs
 ! "Bucket sort" of observations of each combined type (with different sorting meshes)
 !-------------------------------------------------------------------------------
 
+  if(allocated(obsgrd)) deallocate(obsgrd)
   allocate (obsgrd(nctype))
 
   ! Determine mesh size for bucket sort

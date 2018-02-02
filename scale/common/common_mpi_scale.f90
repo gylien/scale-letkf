@@ -523,7 +523,9 @@ subroutine set_scalelib
 !  use scale_time, only: &
 !    TIME_setup
   use scale_time, only: &
-    TIME_DTSEC,       &
+    !TIME_gettimelabel,  &
+    !TIME_NOWDATE,       &     
+    TIME_DTSEC,         &
     TIME_STARTDAYSEC
   use scale_grid, only: &
     GRID_setup, &
@@ -817,6 +819,9 @@ subroutine set_scalelib
 !  call LAND_vars_setup
 !  call URBAN_vars_setup
 !  call CPL_vars_setup
+
+  ! setup calendar
+  call CALENDAR_setup
 
   call mpi_timer('set_scalelib:other_setup:', 2)
 

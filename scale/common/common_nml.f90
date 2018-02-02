@@ -76,6 +76,8 @@ MODULE common_nml
   real(r_size)          :: SLOT_TINTERVAL = 3600.0d0
 
   !--- PARAM_LETKF
+  integer               :: DA_NOWDATE(6) = (/2018,2,2,14,0,0/) ! DA time
+  real(r_size)          :: DA_DSEC = 30.0d0 ! DA window length (sec)
   logical               :: OBSDA_IN = .false.
   character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@'
   character(filelenmax) :: OBSDA_MEAN_IN_BASENAME = ''
@@ -499,6 +501,8 @@ subroutine read_nml_letkf
   integer :: ierr
   
   namelist /PARAM_LETKF/ &
+    DA_NOWDATE, &
+    DA_DSEC,    &
     OBSDA_IN, &
     OBSDA_IN_BASENAME, &
     OBSDA_MEAN_IN_BASENAME, &
