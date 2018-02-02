@@ -59,9 +59,8 @@ OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
-OBSNUM=2
-OBSNAME[1]=obs                                    
-OBSNAME[2]=radar
+OBSNUM=1
+OBSNAME[1]=radar
 
 #===============================================================================
 # Cycling settings
