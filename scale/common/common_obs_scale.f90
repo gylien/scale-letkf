@@ -1584,12 +1584,14 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 
           prof2B07(nprof) = iidx - ch + 1
           prof2nda(nprof) = n
-          n2prof(n) = nprof
 
           iidx_H08B07 = iidx - ch + 1
         endif
 
+        n2prof(n) = nprof ! Note: This line should be outside of the above if block, because 
+                          !       we need n2prof information on the whole obsda samples.
         iset_H08 = iset
+
         cycle
 
 #endif
@@ -1645,7 +1647,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     allocate(zangle_H08(nprof))
 
     call Trans_XtoY_H08(nprof,ri_H08(1:nprof),rj_H08(1:nprof),&
-                        lon_H08(1:nprof),lat_H08(1:nprof),v3dg,v2dg,&
+                        lon_H08(1:nprof),lat_H08(1:nprof),v3dgh,v2dgh,&
                         yobs_H08(1:NIRB_HIM8,1:nprof),yobs_H08_clr(1:NIRB_HIM8,1:nprof),&
                         plev_obs_H08(1:NIRB_HIM8,1:nprof),qc_H08(1:NIRB_HIM8,1:nprof),&
                         zangle_H08(1:nprof),stggrd=1)
@@ -1653,51 +1655,43 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     yobs_H08_bc = yobs_H08
 
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ch,pbeta,npr,predt)
     do n = 1, nnobs
+
       if (use_key) then
         nn = obsda_sort%key(n)
       else
         nn = n
       end if
+
       iset = obsda_sort%set(nn)
       iidx = obsda_sort%idx(nn)
 
-
-      if (step == 1) then
-        obsdep_set(n) = iset
-        obsdep_idx(n) = iidx
-      end if
-
       oelm(n) = obs(iset)%elm(iidx)
-      if(oelm(n) /= id_H08IR_obs)cycle
+      if (int(oelm(n)) /= id_H08IR_obs) cycle
 
+      np = n2prof(n)
       ch = nint(obs(iset)%lev(iidx)) - 6 ! 
 
-      !CA = (abs(yobs_H08(ch,n2prof(n)) - yobs_H08_clr(ch,n2prof(n))) & !CM
-      !      + abs(obs(iset)%dat(iidx) - yobs_H08_clr(ch,n2prof(n))) ) * 0.5d0 !CO
+      ohx(n) = obs(iset)%dat(iidx) - yobs_H08(ch,np) ! Obs - B/A
+      oqc(n) = qc_H08(ch,np)
 
-      ohx(n) = obs(iset)%dat(iidx) - yobs_H08(ch,n2prof(n)) ! Obs - B/A
+      if (oqc(n) /= iqc_good) then
+        ohx(n) = undef
+      end if
 
-      pbeta = 0.0d0
-      do npr = 1, H08_NPRED
-        if(npr == 1) predt = zangle_H08(n2prof(n))
-        if(npr == 2) predt = yobs_H08(ch,n2prof(n))
-        pbeta = pbeta + predt * vbcf(npr,ch)
-      enddo
-      ohx(n) = ohx(n) - pbeta
- 
-
-      !!! simple bias correction here !!!
-      !if(H08_BIAS_SIMPLE)then
-      !  if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
-      !    ohx(n) = ohx(n) - H08_BIAS_CLOUD(ch)
-      !  else
-      !    ohx(n) = ohx(n) - H08_BIAS_CLEAR(ch)
-      !  endif
-      !endif
-      oqc(n) = qc_H08(ch,n2prof(n))
-
+      if(H08_VBC_USE)then
+        pbeta = 0.0d0
+        do npr = 1, H08_NPRED
+          if(npr == 1) predt = zangle_H08(np)
+          if(npr == 2) predt = yobs_H08_bc(ch,np)
+          pbeta = pbeta + predt * vbcf(npr,ch)
+        enddo
+        yobs_H08_bc(ch,np) = yobs_H08_bc(ch,np) - pbeta
+       
+        if (ch == nint(obs(iset)%dat(iidx))) then
+          ohx(n) = ohx(n) - pbeta
+        endif
+      endif
 
       if (step == 1) then
         obsdep_qc(n) = oqc(n)
@@ -1709,39 +1703,14 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
         obsdep_oma(n) = ohx(n)
       end if
 
-
     end do ! [ n = 1, nnobs ]
-!$OMP END PARALLEL DO
 
-
-    ! get [Obs - B/A] for Him8 monitor
     do np = 1, nprof
       do ch = 1, NIRB_HIM8
-        yobs_H08(ch,np) = obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08(ch,np)
-  
-        pbeta = 0.0d0
-        if(H08_VBC_USE)then
-          do npr = 1, H08_NPRED
-            if(npr == 1) predt = zangle_H08(np)
-            if(npr == 2) predt = yobs_H08_bc(ch,np)
-            pbeta = pbeta + predt * vbcf(npr,ch)
-          enddo
-        endif
-
-        yobs_H08_bc(ch,np) = obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08_bc(ch,np) - pbeta
-
-        !if(H08_BIAS_SIMPLE)then
-        !  CA = (abs(yobs_H08(ch,np) - yobs_H08_clr(ch,np)) & !CM
-        !       + abs(obs(iset_H08)%dat(prof2B07(np)+ch-1) - yobs_H08_clr(ch,np))) * 0.5d0 !CO
-        !  if((CA > H08_CA_THRES) .and. (.not.H08_BIAS_SIMPLE_CLR))then
-        !    yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLOUD(ch)
-        !  else
-        !    yobs_H08(ch,np) = yobs_H08(ch,np) - H08_BIAS_CLEAR(ch)
-        !  endif
-        !endif
-
-      enddo ! ch
-    enddo ! np
+        yobs_H08(ch,np) = obs(iset)%dat(prof2B07(np)+ch-1) - yobs_H08(ch,np)
+        yobs_H08_bc(ch,np) = obs(iset)%dat(prof2B07(np)+ch-1) - yobs_H08_bc(ch,np)
+      enddo ! [ch = 1, NIRB_HIM8]
+    enddo ! [np = 1, nprof]
 
     deallocate(yobs_H08_clr)
 

@@ -581,7 +581,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
               n = obsda%idx(nnB07(nn)+ch-1)
 
               if (obs(iof)%elm(n) /= id_H08IR_obs) cycle
-              if (qc_H08(ch,nn) /= iqc_good) cycle
 
               obsda%val(nnB07(nn)+ch-1) = yobs_H08(ch,nn) 
               obsda%qc(nnB07(nn)+ch-1) = qc_H08(ch,nn) 

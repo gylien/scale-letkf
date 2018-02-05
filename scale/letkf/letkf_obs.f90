@@ -514,11 +514,12 @@ SUBROUTINE set_letkf_obs
  
           pbeta = pbeta + pred * vbcH08(npr,ch_num) 
         enddo
-      endif
 
-      obsda%val(n) = obsda%val(n) - pbeta
-      if (DET_RUN) then
-        obsda%ensval(mmdetobs,n) = obsda%ensval(mmdetobs,n) - pbeta
+        obsda%val(n) = obsda%val(n) - pbeta
+        if (DET_RUN) then
+          obsda%ensval(mmdetobs,n) = obsda%ensval(mmdetobs,n) - pbeta
+        endif
+
       endif
     endif
 #endif
