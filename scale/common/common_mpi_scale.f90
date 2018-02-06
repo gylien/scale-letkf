@@ -25,7 +25,7 @@ module common_mpi_scale
   use scale_precision, only: RP
   use scale_comm, only: COMM_datatype
 #ifdef PNETCDF
-  use scale_stdio, only: IO_AGGREGATE
+  use scale_file, only: FILE_AGGREGATE
 #endif
 
   implicit none
@@ -306,7 +306,7 @@ subroutine set_common_mpi_grid
       write (6, '(1x,A,A15,A)') '*** Read 2D var: ', trim(topo2d_name), ' -- skipped because it was read previously'
 #ifdef DEBUG
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call read_topo_par(LETKF_TOPO_IN_BASENAME, topo2dtmp, MPI_COMM_d)
       else
 #endif
@@ -322,7 +322,7 @@ subroutine set_common_mpi_grid
     else
       allocate (topo2d(nlon,nlat))
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call read_topo_par(LETKF_TOPO_IN_BASENAME, topo2d, MPI_COMM_d)
       else
 #endif
@@ -488,15 +488,8 @@ END SUBROUTINE
 ! Start using SCALE library
 !-------------------------------------------------------------------------------
 subroutine set_scalelib
-  use gtool_history, only: &
-    HistoryInit
-  use dc_log, only: &
-    LogInit
   use scale_stdio, only: &
     IO_LOG_setup, &
-    IO_FID_CONF, &
-    IO_FID_LOG, &
-    IO_L, &
     H_LONG
   use scale_process, only: &
     PRC_mpi_alive, &
@@ -509,29 +502,26 @@ subroutine set_scalelib
     PRC_UNIVERSAL_IsMaster, &
     PRC_nprocs, &
     PRC_myrank, &
-    PRC_masterrank, &
     PRC_DOMAIN_nlim
   use scale_rm_process, only: &
-    PRC_setup, &
-    PRC_2Drank
+    PRC_setup
+!  use scale_prof
   use scale_const, only: &
     CONST_setup
-  use scale_calendar, only: &
-    CALENDAR_setup
-  use scale_random, only: &
-    RANDOM_setup
-!  use scale_time, only: &
-!    TIME_setup
-  use scale_time, only: &
-    TIME_DTSEC,       &
-    TIME_STARTDAYSEC
+!  use scale_calendar, only: &
+!    CALENDAR_setup
+!  use scale_random, only: &
+!    RANDOM_setup
+  use scale_grid_index, only: &
+    GRID_INDEX_setup
   use scale_grid, only: &
     GRID_setup, &
     GRID_DOMAIN_CENTER_X, &
     GRID_DOMAIN_CENTER_Y
-  use scale_grid_index
-!  use scale_grid_nest, only: &
-!    NEST_setup
+!  use scale_ocean_grid_index, only: &
+!    OCEAN_GRID_INDEX_setup
+!  use scale_ocean_grid, only: &
+!    OCEAN_GRID_setup
 #ifdef PNETCDF
   use scale_land_grid_index, only: &
     LAND_GRID_INDEX_setup
@@ -544,8 +534,36 @@ subroutine set_scalelib
 #endif
 !  use scale_urban_grid, only: &
 !    URBAN_GRID_setup
-  use scale_fileio, only: &
-    FILEIO_setup
+  use scale_atmos_hydrometeor, only: &
+    ATMOS_HYDROMETEOR_setup, &
+    ATMOS_HYDROMETEOR_regist
+!    I_QC, &
+!    I_QR, &
+!    I_QI, &
+!    I_QS, &
+!    I_QG
+!  use scale_atmos_phy_mp, only: &
+!    ATMOS_PHY_MP_config
+  use scale_atmos_phy_mp_tomita08, only: &
+!    ATMOS_PHY_MP_TOMITA08_ntracers,            &
+    ATMOS_PHY_MP_TOMITA08_nwaters,             &
+    ATMOS_PHY_MP_TOMITA08_nices,               &
+    ATMOS_PHY_MP_TOMITA08_tracer_names,        &
+    ATMOS_PHY_MP_TOMITA08_tracer_descriptions, &
+    ATMOS_PHY_MP_TOMITA08_tracer_units
+!!  use mod_atmos_phy_mp_driver, only: &
+!!    ATMOS_PHY_MP_driver_tracer_setup
+!!  use mod_atmos_admin, only: &
+!!    ATMOS_PHY_MP_TYPE, &
+!!    ATMOS_sw_phy_mp
+!!  use mod_atmos_phy_mp_vars, only: &
+!!!    QA_MP, &
+!!    QS_MP, &
+!!!    QE_MP
+!  use scale_file_cartesC, only: &
+!    FILE_CARTESC_setup
+  use scale_file, only: &
+    FILE_setup
   use scale_comm, only: &
     COMM_setup
 !  use scale_topography, only: &
@@ -554,27 +572,68 @@ subroutine set_scalelib
 !    LANDUSE_setup
 !  use scale_grid_real, only: &
 !    REAL_setup
+  use scale_mapproj, only: &
+    MPRJ_setup
 !  use scale_gridtrans, only: &
 !    GTRANS_setup
+!  use scale_interpolation, only: &
+!    INTERP_setup
+!  use mod_admin_restart, only: &
+!    ADMIN_restart_setup
+!  use mod_admin_time, only: &
+!    ADMIN_TIME_setup
+!  use scale_rm_statistics, only: &
+!    STAT_setup
+!  use scale_file_history_cartesC, only: &
+!    FILE_HISTORY_CARTESC_setup
+!  use scale_monitor, only: &
+!    MONIT_setup
+!  use scale_external_input, only: &
+!    EXTIN_setup
+!  use scale_grid_nest, only: &
+!    NEST_setup
 !  use scale_atmos_hydrostatic, only: &
 !    ATMOS_HYDROSTATIC_setup
 !  use scale_atmos_thermodyn, only: &
 !    ATMOS_THERMODYN_setup
-  use scale_atmos_hydrometeor, only: &
-    ATMOS_HYDROMETEOR_setup
-!  use mod_atmos_driver, only: &
-!    ATMOS_driver_config
-  use scale_atmos_phy_mp, only: &
-    ATMOS_PHY_MP_config
+!  use scale_atmos_saturation, only: &
+!    ATMOS_SATURATION_setup
+!  use scale_bulkflux, only: &
+!    BULKFLUX_setup
+!  use scale_roughness, only: &
+!    ROUGHNESS_setup
 !  use mod_atmos_admin, only: &
-!    ATMOS_PHY_MP_TYPE, &
-!    ATMOS_sw_phy_mp
+!    ATMOS_admin_setup
+!  use mod_atmos_vars, only: &
+!    ATMOS_vars_setup
+!  use mod_atmos_driver, only: &
+!    ATMOS_driver_setup, &
+!    ATMOS_driver_config
+!  use mod_ocean_admin, only: &
+!    OCEAN_admin_setup
+!  use mod_ocean_vars, only: &
+!    OCEAN_vars_setup
+!  use mod_ocean_driver, only: &
+!    OCEAN_driver_setup
+!  use mod_land_admin, only: &
+!    LAND_admin_setup
+!  use mod_land_vars, only: &
+!    LAND_vars_setup
+!  use mod_land_driver, only: &
+!    LAND_driver_setup
+!  use mod_urban_admin, only: &
+!    URBAN_admin_setup
+!  use mod_urban_vars, only: &
+!    URBAN_vars_setup
+!  use mod_urban_driver, only: &
+!    URBAN_driver_setup
+!  use mod_cpl_admin, only: &
+!    CPL_admin_setup
+!  use mod_cpl_vars, only: &
+!    CPL_vars_setup
 !  use mod_user, only: &
-!    USER_config
-!  use mod_admin_time, only: &
-!    ADMIN_TIME_setup
-  use scale_mapproj, only: &
-    MPRJ_setup
+!    USER_config, &
+!    USER_setup
   implicit none
 
   integer :: NUM_DOMAIN
@@ -591,12 +650,9 @@ subroutine set_scalelib
   integer :: intercomm_parent
   integer :: intercomm_child
   character(len=H_LONG) :: confname_dummy
+  integer :: qs_mp_dummy
 
   integer :: color, key, ierr
-  integer :: rankidx(2)
-
-  integer :: HIST_item_limit    ! dummy
-  integer :: HIST_variant_limit ! dummy
 
   call mpi_timer('', 2, barrier=MPI_COMM_WORLD)
 
@@ -690,7 +746,6 @@ subroutine set_scalelib
 
   ! setup Log
   call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
-  call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
   call mpi_timer('set_scalelib:log_setup_init:', 2, barrier=MPI_COMM_a)
 
@@ -716,32 +771,62 @@ subroutine set_scalelib
   ! setup random number
 !  call RANDOM_setup
 
-  ! setup time
-!  call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
-
   ! setup horizontal/vertical grid coordinates
   call GRID_INDEX_setup
   call GRID_setup
+
+!  call OCEAN_GRID_INDEX_setup
+!  call OCEAN_GRID_setup
+
 #ifdef PNETCDF
   call LAND_GRID_INDEX_setup
 #endif
 !  call LAND_GRID_setup
+
 #ifdef PNETCDF
   call URBAN_GRID_INDEX_setup
 #endif
 !  call URBAN_GRID_setup
 
+  ! setup submodel administrator
+!  call ATMOS_admin_setup
+!  call OCEAN_admin_setup
+!  call LAND_admin_setup
+!  call URBAN_admin_setup
+!  call CPL_admin_setup
+
   ! setup tracer index
   call ATMOS_HYDROMETEOR_setup
-    call ATMOS_PHY_MP_config('TOMITA08') !!!!!!!!!!!!!!! tentative
-!    if ( ATMOS_sw_phy_mp ) then
-!       call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
-!    end if
 !  call ATMOS_driver_config
+!    call ATMOS_PHY_MP_driver_tracer_setup
+!      if ( ATMOS_sw_phy_mp ) then
+!        select case ( ATMOS_PHY_MP_TYPE )
+!        case ( 'TOMITA08' )
+          call ATMOS_HYDROMETEOR_regist( &
+!               QS_MP,                                        & ! [OUT]
+               qs_mp_dummy,                                  & ! [OUT]
+               ATMOS_PHY_MP_TOMITA08_nwaters,                & ! [IN]
+               ATMOS_PHY_MP_TOMITA08_nices,                  & ! [IN]
+               ATMOS_PHY_MP_TOMITA08_tracer_names(:),        & ! [IN]
+               ATMOS_PHY_MP_TOMITA08_tracer_descriptions(:), & ! [IN]
+               ATMOS_PHY_MP_TOMITA08_tracer_units(:)         ) ! [IN]
+!          QA_MP = ATMOS_PHY_MP_TOMITA08_ntracers
+!          I_QC = QS_MP+1
+!          I_QR = QS_MP+2
+!          I_QI = QS_MP+3
+!          I_QS = QS_MP+4
+!          I_QG = QS_MP+5
+!        case default
+!          call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
+!        end select
+!      end if
+!      QE_MP = QS_MP + QA_MP - 1
+
 !  call USER_config
 
   ! setup file I/O
-  call FILEIO_setup
+!  call FILE_CARTESC_setup
+    call FILE_setup( PRC_myrank )
 
   ! setup mpi communication
   call COMM_setup
@@ -766,33 +851,20 @@ subroutine set_scalelib
   ! setup restart
 !  call ADMIN_restart_setup
 
+  ! setup time
+!  call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
+
   ! setup statistics
 !  call STAT_setup
 
   ! setup history I/O
-!  call HIST_setup
-    ! setup history file I/O [[ in HIST_setup ]]
-    rankidx(1) = PRC_2Drank(PRC_myrank, 1)
-    rankidx(2) = PRC_2Drank(PRC_myrank, 2)
-
-    call HistoryInit( HIST_item_limit,                  & ! [OUT]
-                      HIST_variant_limit,               & ! [OUT]
-                      IMAX, JMAX, KMAX,                 & ! [IN]
-                      PRC_masterrank,                   & ! [IN]
-                      PRC_myrank,                       & ! [IN]
-                      rankidx,                          & ! [IN]
-                      '',                               & ! [IN]
-                      '',                               & ! [IN]
-                      '',                               & ! [IN]
-                      0.0d0,                            & ! [IN]
-                      1.0d0,                            & ! [IN]
-                      default_basename='history',       & ! [IN]
-                      default_zcoord = 'model',         & ! [IN]
-                      default_tinterval = 1.0d0,        & ! [IN]
-                      namelist_fid=IO_FID_CONF          ) ! [IN]
+!  call FILE_HISTORY_CARTESC_setup
 
   ! setup monitor I/O
 !  call MONIT_setup
+
+  ! setup external in
+!  call EXTIN_setup( 'RM' )
 
   ! setup nesting grid
 !  call NEST_setup ( intercomm_parent, intercomm_child )
@@ -801,15 +873,9 @@ subroutine set_scalelib
 !  call ATMOS_HYDROSTATIC_setup
 !  call ATMOS_THERMODYN_setup
 !  call ATMOS_SATURATION_setup
+
 !  call BULKFLUX_setup
 !  call ROUGHNESS_setup
-
-  ! setup submodel administrator
-!  call ATMOS_admin_setup
-!  call OCEAN_admin_setup
-!  call LAND_admin_setup
-!  call URBAN_admin_setup
-!  call CPL_admin_setup
 
   ! setup variable container
 !  call ATMOS_vars_setup
@@ -817,6 +883,14 @@ subroutine set_scalelib
 !  call LAND_vars_setup
 !  call URBAN_vars_setup
 !  call CPL_vars_setup
+
+  ! setup submodel driver
+!  call ATMOS_driver_setup
+!  call OCEAN_driver_setup
+!  call LAND_driver_setup
+!  call URBAN_driver_setup
+
+!  call USER_setup
 
   call mpi_timer('set_scalelib:other_setup:', 2)
 
@@ -827,29 +901,45 @@ end subroutine set_scalelib
 ! Finish using SCALE library
 !-------------------------------------------------------------------------------
 subroutine unset_scalelib
-  use gtool_file, only: &
-    FileCloseAll
+  use scale_file, only: &
+    FILE_Close_All
   use scale_stdio, only: &
     IO_FID_CONF, &
     IO_FID_LOG, &
     IO_L, &
     IO_FID_STDOUT
+!  use scale_file_cartesC, only: &
+!    FILE_CARTESC_cleanup
+!  use scale_comm, only: &
+!    COMM_cleanup
+!  use scale_file_history, only: &
+!    FILE_HISTORY_finalize
+!  use scale_monitor, only: &
+!    MONIT_finalize
   implicit none
   integer :: ierr
 
   if (myrank_use) then
-!    call MONIT_finalize
-    call FileCloseAll
-
-    ! Close logfile, configfile
-    if ( IO_L ) then
-      if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
-    endif
-    close(IO_FID_CONF)
-
     call MPI_COMM_FREE(MPI_COMM_d, ierr)
     call MPI_COMM_FREE(MPI_COMM_a, ierr)
   end if
+
+!  call MONIT_finalize
+
+!  call FILE_HISTORY_finalize
+
+  ! clean up resource allocated for I/O
+!  call FILE_CARTESC_cleanup
+
+!  call COMM_cleanup
+
+  call FILE_Close_All
+
+  ! Close logfile, configfile
+  if ( IO_L ) then
+    if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+  endif
+  close(IO_FID_CONF)
 
   return
 end subroutine unset_scalelib
@@ -981,7 +1071,7 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
     end if
 
 #ifdef PNETCDF
-    if (IO_AGGREGATE) then
+    if (FILE_AGGREGATE) then
       call read_history_par(trim(filename), step, v3dg, v2dg, MPI_COMM_d)
     else
 #endif
@@ -1024,7 +1114,7 @@ subroutine read_ens_mpi(v3d, v2d)
 
 !      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call read_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
       else
 #endif
@@ -1079,7 +1169,7 @@ subroutine read_ens_mpi_addiinfl(v3d, v2d)
 
 !      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call read_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
       else
 #endif
@@ -1155,7 +1245,7 @@ subroutine write_ens_mpi(v3d, v2d, monit_step)
       call mpi_timer('write_ens_mpi:state_trans_inv:', 2)
 
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
       else
 #endif
@@ -1581,7 +1671,7 @@ subroutine write_ensmean(filename, v3d, v2d, calced, monit_step)
     call mpi_timer('write_ensmean:state_trans_inv:', 2)
 
 #ifdef PNETCDF
-    if (IO_AGGREGATE) then
+    if (FILE_AGGREGATE) then
       call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
     else
 #endif
@@ -1622,7 +1712,7 @@ subroutine write_enssprd(filename, v3d, v2d)
   if (myrank_e == msprd_rank_e) then
 !    call state_trans_inv(v3dg)              !! do not transform the spread output
 #ifdef PNETCDF
-    if (IO_AGGREGATE) then
+    if (FILE_AGGREGATE) then
       call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
     else
 #endif
