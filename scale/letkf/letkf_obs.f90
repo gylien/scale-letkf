@@ -981,70 +981,75 @@ SUBROUTINE set_letkf_obs
   ! Construct sorted obsda_sort: 
   !-----------------------------------------------------------------------------
 
-  cntr(:) = obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,:)
-  cnts = cntr(myrank_d+1)
-  dspr(1) = 0
-  do ip = 2, MEM_NP
-    dspr(ip) = dspr(ip-1) + cntr(ip-1)
-  end do
-
-  nensobs_mod = mod(nensobs, nprocs_e)
-  nensobs_div = (nensobs - nensobs_mod) / nprocs_e
-  if (myrank_e < nensobs_mod) then
-    im_obs_1 = (nensobs_div+1) * myrank_e + 1
-    im_obs_2 = (nensobs_div+1) * (myrank_e+1)
-    nensobs_part = nensobs_div + 1
-  else
-    im_obs_1 = (nensobs_div+1) * nensobs_mod + nensobs_div * (myrank_e-nensobs_mod) + 1
-    im_obs_2 = (nensobs_div+1) * nensobs_mod + nensobs_div * (myrank_e-nensobs_mod+1)
-    nensobs_part = nensobs_div
-  end if
-
-  ! 1) Copy the observation data in own subdomains to send buffer (obsbufs) with sorted order
+  ! 1) Copy the observation data in own subdomains to send buffer (obsbufs) with
+  ! sorted order
   !-----------------------------------------------------------------------------
-  obsbufs%nobs = nobs_sub(i_after_qc)
-  call obs_da_value_allocate(obsbufs, nensobs_part)
+  if (nctype > 0) then
+    cntr(:) = obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,:)
+    cnts = cntr(myrank_d+1)
+    dspr(1) = 0
+    do ip = 2, MEM_NP
+      dspr(ip) = dspr(ip-1) + cntr(ip-1)
+    end do
 
-  do n = 1, nobs_sub(i_after_qc)
-    obsbufs%set(n) = obsda%set(obsda%key(n))
-    obsbufs%idx(n) = obsda%idx(obsda%key(n))
-    obsbufs%val(n) = obsda%val(obsda%key(n))
-    obsbufs%ensval(1:nensobs_part,n) = obsda%ensval(im_obs_1:im_obs_2,obsda%key(n))
-    obsbufs%qc(n) = obsda%qc(obsda%key(n))
+    nensobs_mod = mod(nensobs, nprocs_e)
+    nensobs_div = (nensobs - nensobs_mod) / nprocs_e
+    if (myrank_e < nensobs_mod) then
+      im_obs_1 = (nensobs_div+1) * myrank_e + 1
+      im_obs_2 = (nensobs_div+1) * (myrank_e+1)
+      nensobs_part = nensobs_div + 1
+    else
+      im_obs_1 = (nensobs_div+1) * nensobs_mod + nensobs_div * (myrank_e-nensobs_mod) + 1
+      im_obs_2 = (nensobs_div+1) * nensobs_mod + nensobs_div * (myrank_e-nensobs_mod+1)
+      nensobs_part = nensobs_div
+    end if
+
+    obsbufs%nobs = nobs_sub(i_after_qc)
+    call obs_da_value_allocate(obsbufs, nensobs_part)
+
+    do n = 1, nobs_sub(i_after_qc)
+      obsbufs%set(n) = obsda%set(obsda%key(n))
+      obsbufs%idx(n) = obsda%idx(obsda%key(n))
+      obsbufs%val(n) = obsda%val(obsda%key(n))
+      obsbufs%ensval(1:nensobs_part,n) = obsda%ensval(im_obs_1:im_obs_2,obsda%key(n))
+      obsbufs%qc(n) = obsda%qc(obsda%key(n))
 #ifdef H08
-    obsbufs%lev(n) = obsda%lev(obsda%key(n))   ! H08
-    obsbufs%val2(n) = obsda%val2(obsda%key(n)) ! H08
-    obsbufs%pred1(n) = obsda%pred1(obsda%key(n)) ! H08
-    obsbufs%pred2(n) = obsda%pred2(obsda%key(n)) ! H08
+      obsbufs%lev(n) = obsda%lev(obsda%key(n))   ! H08
+      obsbufs%val2(n) = obsda%val2(obsda%key(n)) ! H08
+      obsbufs%pred1(n) = obsda%pred1(obsda%key(n)) ! H08
+      obsbufs%pred2(n) = obsda%pred2(obsda%key(n)) ! H08
 #endif
-  end do ! [ n = 1, nobs_sub(i_after_qc) ]
+    end do ! [ n = 1, nobs_sub(i_after_qc) ]
+
+    call mpi_timer('set_letkf_obs:copy_bufs:', 2, barrier=MPI_COMM_d)
+  end if ! [ nctype > 0 ]
 
   call obs_da_value_deallocate(obsda)
-
-  call mpi_timer('set_letkf_obs:copy_bufs:', 2, barrier=MPI_COMM_d)
 
   ! 2) Communicate to get global observations;
   !    for variables with an ensemble dimension (ensval),
   !    only obtain data from partial members (nensobs_part) to save memory usage
   !-----------------------------------------------------------------------------
-  obsbufr%nobs = nobs_g(i_after_qc)
-  call obs_da_value_allocate(obsbufr, nensobs_part)
+  if (nctype > 0) then
+    obsbufr%nobs = nobs_g(i_after_qc)
+    call obs_da_value_allocate(obsbufr, nensobs_part)
 
-  call MPI_ALLGATHERV(obsbufs%set, cnts, MPI_INTEGER, obsbufr%set, cntr, dspr, MPI_INTEGER, MPI_COMM_d, ierr)
-  call MPI_ALLGATHERV(obsbufs%idx, cnts, MPI_INTEGER, obsbufr%idx, cntr, dspr, MPI_INTEGER, MPI_COMM_d, ierr)
-  call MPI_ALLGATHERV(obsbufs%val, cnts, MPI_r_size, obsbufr%val, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
-  call MPI_ALLGATHERV(obsbufs%ensval, cnts*nensobs_part, MPI_r_size, obsbufr%ensval, cntr*nensobs_part, dspr*nensobs_part, MPI_r_size, MPI_COMM_d, ierr)
-  call MPI_ALLGATHERV(obsbufs%qc, cnts, MPI_INTEGER, obsbufr%qc, cntr, dspr, MPI_INTEGER, MPI_COMM_d, ierr)
+    call MPI_ALLGATHERV(obsbufs%set, cnts, MPI_INTEGER, obsbufr%set, cntr, dspr, MPI_INTEGER, MPI_COMM_d, ierr)
+    call MPI_ALLGATHERV(obsbufs%idx, cnts, MPI_INTEGER, obsbufr%idx, cntr, dspr, MPI_INTEGER, MPI_COMM_d, ierr)
+    call MPI_ALLGATHERV(obsbufs%val, cnts, MPI_r_size, obsbufr%val, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
+    call MPI_ALLGATHERV(obsbufs%ensval, cnts*nensobs_part, MPI_r_size, obsbufr%ensval, cntr*nensobs_part, dspr*nensobs_part, MPI_r_size, MPI_COMM_d, ierr)
+    call MPI_ALLGATHERV(obsbufs%qc, cnts, MPI_INTEGER, obsbufr%qc, cntr, dspr, MPI_INTEGER, MPI_COMM_d, ierr)
 #ifdef H08
-  call MPI_ALLGATHERV(obsbufs%lev, cnts, MPI_r_size, obsbufr%lev, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
-  call MPI_ALLGATHERV(obsbufs%val2, cnts, MPI_r_size, obsbufr%val2, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
-  call MPI_ALLGATHERV(obsbufs%pred1, cnts, MPI_r_size, obsbufr%pred1, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
-  call MPI_ALLGATHERV(obsbufs%pred2, cnts, MPI_r_size, obsbufr%pred2, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
+    call MPI_ALLGATHERV(obsbufs%lev, cnts, MPI_r_size, obsbufr%lev, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
+    call MPI_ALLGATHERV(obsbufs%val2, cnts, MPI_r_size, obsbufr%val2, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
+    call MPI_ALLGATHERV(obsbufs%pred1, cnts, MPI_r_size, obsbufr%pred1, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
+    call MPI_ALLGATHERV(obsbufs%pred2, cnts, MPI_r_size, obsbufr%pred2, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
 #endif
 
-  call obs_da_value_deallocate(obsbufs)
+    call obs_da_value_deallocate(obsbufs)
 
-  call mpi_timer('set_letkf_obs:mpi_allgatherv:', 2)
+    call mpi_timer('set_letkf_obs:mpi_allgatherv:', 2)
+  end if ! [ nctype > 0 ]
 
   ! 3) Copy observation data within the extended (localization) subdomains
   !    from receive buffer (obsbufr) to obsda_sort; rearrange with sorted order
@@ -1112,25 +1117,26 @@ SUBROUTINE set_letkf_obs
     jmin1 = obsgrd(ictype)%ngrdsch_j + 1
     jmax1 = obsgrd(ictype)%ngrdsch_j + obsgrd(ictype)%ngrd_j
     call obs_choose_ext(ictype, imin1, imax1, jmin1, jmax1, obsda_sort%nobs_in_key, obsda_sort%key)
-  end do
 
-  call obs_da_value_deallocate(obsbufr)
-  do ictype = 1, nctype
     deallocate (obsgrd(ictype)%n)
     deallocate (obsgrd(ictype)%ac)
     deallocate (obsgrd(ictype)%n_ext)
-  end do
+  end do ! [ ictype = 1, nctype ]
 
-  call mpi_timer('set_letkf_obs:extdomain_copy_bufr:', 2, barrier=MPI_COMM_e)
+  if (nctype > 0) then
+    call obs_da_value_deallocate(obsbufr)
+
+    call mpi_timer('set_letkf_obs:extdomain_copy_bufr:', 2, barrier=MPI_COMM_e)
+  end if ! [ nctype > 0 ]
 
   ! 4) For variables with an ensemble dimension (ensval),
   !    ALLREDUCE among the ensemble dimension to obtain data of all members
   !-----------------------------------------------------------------------------
   if (nprocs_e > 1) then
     call MPI_ALLREDUCE(MPI_IN_PLACE, obsda_sort%ensval, nensobs*nobstotal, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
-  end if
 
-  call mpi_timer('set_letkf_obs:extdomain_allreduce:', 2)
+    call mpi_timer('set_letkf_obs:extdomain_allreduce:', 2)
+  end if
 
   if (LOG_LEVEL >= 3) then
     do n = 1, nobstotal
