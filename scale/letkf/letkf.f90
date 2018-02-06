@@ -36,6 +36,7 @@ PROGRAM letkf
   integer :: it ! main cycle loop iteration
   integer :: itmin = 1
   integer :: itmax = 3
+  character(len=14) :: timelabel ! YYYYMMDDHHNNSS
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -119,12 +120,13 @@ PROGRAM letkf
   main_cycle: do it = itmin, itmax
 
     call it2date(it, da_date)
+    call da_gettimelabel(da_date,timelabel)
     print *,""
     print *,""
     print *,""
     print *,""
     print *,""
-    print *, "TEST,cycle=",it,"/",itmax,"TIME:",da_date(4),":",da_date(5),":",da_date(6)," ",da_date(1),"/",da_date(2),"/",da_date(3)
+    print *, "TEST,cycle=",it,"/",itmax,"ATIME:",timelabel
     print *,""
 
 

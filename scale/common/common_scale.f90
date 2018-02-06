@@ -1907,6 +1907,16 @@ subroutine get_itmax(itmax)
   return  
 end subroutine get_itmax
 
+!-------------------------------------------------------------------------------
+subroutine DA_gettimelabel(date,timelabel)
+  implicit none
 
+  character(len=14), intent(out) :: timelabel ! YYYYMMDDHHNNSS
+  integer, intent(in) :: date(6)
+
+  write(timelabel,'(I4.4,I2.2,I2.2,I2.2,I2.2,I2.2)') date(1:3), date(4:6) 
+
+  return
+end subroutine DA_gettimelabel
 !===============================================================================
 END MODULE common_scale
