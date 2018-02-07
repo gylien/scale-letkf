@@ -723,7 +723,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is writing observations for member ', &
 !              im, ', subdomain id #', myrank_d
         if (im <= MEMBER) then
-          call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
+          obsdafile = OBSDA_OUT_BASENAME
+          call filename_replace_mem(obsdafile, im)
         else if (im == mmean) then
           obsdafile = OBSDA_MEAN_OUT_BASENAME
         else if (im == mmdet) then

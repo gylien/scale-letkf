@@ -196,7 +196,8 @@ subroutine set_common_mpi_scale
       end do
 !$OMP END PARALLEL DO
 
-      call file_member_replace(myrank_to_mem(1), GUES_IN_BASENAME, filename)
+      filename = GUES_IN_BASENAME
+      call filename_replace_mem(filename, myrank_to_mem(1))
       call read_restart_coor(filename, lon2dtmp, lat2dtmp, height3dtmp)
 
       if (maxval(abs(lon2dtmp - lon2d)) > 1.0d-6 .or. maxval(abs(lat2dtmp - lat2d)) > 1.0d-6) then
@@ -973,7 +974,8 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
   im = myrank_to_mem(iter)
   if (im >= 1 .and. im <= nens) then
     if (im <= MEMBER) then
-      call file_member_replace(im, HISTORY_IN_BASENAME, filename)
+      filename = HISTORY_IN_BASENAME
+      call filename_replace_mem(filename, im)
     else if (im == mmean) then
       filename = HISTORY_MEAN_IN_BASENAME
     else if (im == mmdet) then
@@ -1015,7 +1017,8 @@ subroutine read_ens_mpi(v3d, v2d)
     ! 
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
       if (im <= MEMBER) then
-        call file_member_replace(im, GUES_IN_BASENAME, filename)
+        filename = GUES_IN_BASENAME
+        call filename_replace_mem(filename, im)
       else if (im == mmean) then
         filename = GUES_MEAN_INOUT_BASENAME
       else if (im == mmdet) then
@@ -1075,7 +1078,8 @@ subroutine read_ens_mpi_addiinfl(v3d, v2d)
     ! Note: read all members
     ! 
     if (im >= 1 .and. im <= MEMBER) then
-      call file_member_replace(im, INFL_ADD_IN_BASENAME, filename)
+      filename = INFL_ADD_IN_BASENAME
+      call filename_replace_mem(filename, im)
 
 !      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
@@ -1142,7 +1146,8 @@ subroutine write_ens_mpi(v3d, v2d, monit_step)
     ! 
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmean .or. im == mmdet) then
       if (im <= MEMBER) then
-        call file_member_replace(im, ANAL_OUT_BASENAME, filename)
+        filename = ANAL_OUT_BASENAME
+        call filename_replace_mem(filename, im)
       else if (im == mmean) then
         filename = ANAL_MEAN_OUT_BASENAME
       else if (im == mmdet) then
@@ -1692,7 +1697,8 @@ subroutine get_nobs_da_mpi(nobs)
 !  if ((myrank_to_mem(1) >= 1 .and. myrank_to_mem(1) <= MEMBER) .or. &
 !      myrank_to_mem(1) == mmdetin) then
 !    if (myrank_to_mem(1) <= MEMBER) then
-!      call file_member_replace(myrank_to_mem(1), OBSDA_IN_BASENAME, obsdafile)
+!      obsdafile = OBSDA_IN_BASENAME
+!      call filename_replace_mem(obsdafile, myrank_to_mem(1))
 !    else if (myrank_to_mem(1) == mmean) then
 !      obsdafile = OBSDA_MEAN_IN_BASENAME
 !    else if (myrank_to_mem(1) == mmdet) then
@@ -1709,7 +1715,8 @@ subroutine get_nobs_da_mpi(nobs)
 ! read by process 0 and broadcast
 !-----------------------------
   if (myrank_e == 0) then
-    call file_member_replace(1, OBSDA_IN_BASENAME, obsdafile)
+    obsdafile = OBSDA_IN_BASENAME
+    call filename_replace_mem(obsdafile, 1)
     write (obsda_suffix(2:7), '(I6.6)') myrank_d
 #ifdef H08
     call get_nobs(trim(obsdafile) // obsda_suffix, 6, nobs) ! H08

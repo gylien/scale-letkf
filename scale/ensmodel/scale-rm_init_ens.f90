@@ -161,15 +161,16 @@ program scaleles_init_ens
     do it = its, ite
       im = rank_to_mem(it,universal_myrank+1)
       if (im >= 1 .and. im <= MEMBER_RUN) then
+        confname = CONF_FILES
         if (CONF_FILES_SEQNUM) then
-          call file_member_replace(im, CONF_FILES, confname)
+          call filename_replace_mem(confname, im)
         else
           if (im <= MEMBER) then
-            call file_member_replace(im, CONF_FILES, confname)
+            call filename_replace_mem(confname, im)
           else if (im == MEMBER+1) then
-            call file_member_replace(0, CONF_FILES, confname, memf_mean)
+            call filename_replace_mem(confname, memf_mean)
           else if (im == MEMBER+2) then
-            call file_member_replace(0, CONF_FILES, confname, memf_mdet)
+            call filename_replace_mem(confname, memf_mdet)
           end if
         end if
         WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', trim(confname)
