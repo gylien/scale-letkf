@@ -8,23 +8,25 @@
 
 PROCESS_FMT='%06d'
 MEMBER_FMT='%04d'
-CYCLE_FMT='%04d'
 
+PROCESS_FMT_0="$(printf $PROCESS_FMT 0)"
 SCALE_SFX=".pe${PROCESS_FMT}.nc"
-SCALE_LOG_SFX='.pe000000'
+SCALE_SFX_0=".pe${PROCESS_FMT_0}.nc"
+SCALE_SFX_NONC=".pe${PROCESS_FMT}"
+SCALE_SFX_NONC_0=".pe${PROCESS_FMT_0}"
 
 #===============================================================================
 # Preset
 
 #new variables:
-# NODELIST_TYPE: 'nodefile', 'K'
+# NODELIST_TYPE: 'machinefile', '(0)'
 # MPI_TYPE: 'K', 'sgimpt', 'openmpi'
 
 if [ "$PRESET" = 'K' ]; then
   TMP='.'
   DISK_MODE=2
   ONLINE_STGOUT=0
-  NODELIST_TYPE='K'
+  NODELIST_TYPE='(0)'
   MPI_TYPE='K'
 elif [ "$PRESET" = 'K_rankdir' ]; then
   TMP='..'
@@ -35,22 +37,21 @@ elif [ "$PRESET" = 'K_rankdir' ]; then
   DISK_MODE_BDYDATA=${DISK_MODE_BDYDATA:-2}
 #  DISK_MODE_OBS=${DISK_MODE_OBS:-2}
   ONLINE_STGOUT=0
-  NODELIST_TYPE='K'
+  NODELIST_TYPE='(0)'
   MPI_TYPE='K'
 elif [ "$PRESET" = 'K_micro' ]; then
   DISK_MODE=2
-  NODELIST_TYPE='K'
+  NODELIST_TYPE='(0)'
   MPI_TYPE='K'
 #elif [ "$PRESET" = 'K_interact' ]; then
 #  ...
 elif [ "$PRESET" = 'OFP' ]; then
-  DISK_MODE=2
-  NODELIST_TYPE='nodefile'
+  NODELIST_TYPE='machinefile'
   MPI_TYPE='impi'
 elif [ "$PRESET" = 'Linux' ]; then
-  NODELIST_TYPE='nodefile'
+  NODELIST_TYPE='machinefile'
 elif [ "$PRESET" = 'Linux_torque' ]; then
-  NODELIST_TYPE='nodefile'
+  NODELIST_TYPE='machinefile'
 else
   echo "[Error] Preset '$PRESET' not found" 1>&2
   exit 1
@@ -99,6 +100,7 @@ BDY_MEAN="${BDY_MEAN:-mean}"
 BDYINT=${BDYINT:-$LCYCLE}
 BDYCYCLE_INT=${BDYCYCLE_INT:-$BDYINT}
 
+PNETCDF=${PNETCDF:-0}
 PNETCDF_BDY_SCALE=${PNETCDF_BDY_SCALE:-$PNETCDF}
 
 #-------------------------------------------------------------------------------
@@ -156,6 +158,18 @@ if ((DISK_MODE <= 2)); then
   PROC_OPT='one'
 else
   PROC_OPT='alln'
+fi
+
+#-------------------------------------------------------------------------------
+
+if ((PNETCDF == 1)); then
+  CONNECTOR='.'
+  CONNECTOR_TOPO=''
+  CONNECTOR_LANDUSE=''
+else
+  CONNECTOR='/'
+  CONNECTOR_TOPO='topo/'
+  CONNECTOR_LANDUSE='landuse/'
 fi
 
 #===============================================================================
@@ -254,10 +268,10 @@ TMPDAT_OBS="${TMPROOT_OBS}/${DAT_SUBDIR}"
 
 #-------------------------------------------------------------------------------
 
-#if ((PNETCDF == 1 && USE_TMPL == 1)); then
-#  echo "[Error] When PNETCDF is enabled, local disks cannot be used." 1>&2
-#  exit 1
-#fi
+if ((PNETCDF == 1 && USE_TMPL == 1)); then
+  echo "[Error] When PNETCDF is enabled, local disks cannot be used." 1>&2
+  exit 1
+fi
 
 #-------------------------------------------------------------------------------
 

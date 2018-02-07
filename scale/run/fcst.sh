@@ -70,10 +70,8 @@ declare -a proc2grpproc
 #if ((RUN_LEVEL <= 2)) && ((ISTEP == 1)); then
 if ((RUN_LEVEL <= 2)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
-  distribute_fcst "$MEMBERS" $CYCLE machinefile $NODEFILE_DIR || exit $?
-else
-  distribute_fcst "$MEMBERS" $CYCLE - - $NODEFILE_DIR/distr || exit $?
 fi
+distribute_fcst "$MEMBERS" $CYCLE "$NODELIST_TYPE" $NODEFILE_DIR || exit $?
 
 if ((CYCLE == 0)); then
   CYCLE=$cycle_auto
@@ -303,6 +301,16 @@ if ((RUN_LEVEL <= 3)); then
     pdbash node all $SCRP_DIR/src/stage_out_rm_stgdir_node.sh $TMPL local # || exit $?
   fi
 fi
+
+###if ((RUN_LEVEL <= 1)); then
+###  if [ "$CONF_MODE" = 'static' ]; then
+###    if ((DISK_MODE == 3)); then
+###      config_file_save $TMP/config || exit $?
+###    else
+###      config_file_save || exit $?
+###    fi
+###  fi
+###fi
 
 #===============================================================================
 # Remove temporary directories

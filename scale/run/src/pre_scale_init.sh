@@ -135,7 +135,7 @@ for time_bdy in $BDY_TIME_LIST; do
         exit 1
       fi
     else
-      if [ -s "${bdyorg_path}/${time_bdy}/${MEM_BDY}/history.pe000000.nc" ]; then
+      if [ -s "${bdyorg_path}/${time_bdy}/${MEM_BDY}/history${SCALE_SFX_0}" ]; then
         for ifile in $(cd ${bdyorg_path}/${time_bdy}/${MEM_BDY} ; ls history*.nc 2> /dev/null); do
           ln -fs "${bdyorg_path}/${time_bdy}/${MEM_BDY}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
         done
