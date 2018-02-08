@@ -1383,7 +1383,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 !$OMP PARALLEL DO PRIVATE(j,i)
   do j = 1, nlath
     do i = 1, nlonh
-      v2dgh(i,j,iv2dd_lsmask) = min(max(topo(i,j) - 10.0d0, 0.0d0), 1.0d0)
+      v2dgh(i,j,iv2dd_lsmask) = min(max(v3dgh(KHALO,i,j,iv3dd_hgt) - 10.0d0, 0.0d0), 1.0d0)
     enddo
   enddo
 !$OMP END PARALLEL DO
