@@ -10,6 +10,7 @@ MODULE common_nml
 !===============================================================================
   use common, only: r_size
   use scale_stdio, only: IO_FID_CONF
+  use scale_process, only: PRC_DOMAIN_nlim
 
   implicit none
   public
@@ -48,6 +49,17 @@ MODULE common_nml
   !--- PARAM_MODEL
   character(len=10) :: MODEL = 'scale-rm'
   logical :: VERIFY_COORD = .false.
+
+  !--- PARAM_LAUNCHER
+!  logical               :: EXECUTE_PREPROCESS = .false.      ! execute preprocess tools?
+!  logical               :: EXECUTE_MODEL = .true.            ! execute main model?
+!  integer               :: NUM_BULKJOB = 1                   ! number of bulk jobs
+  integer               :: NUM_DOMAIN = 1                    ! number of domains
+  integer               :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0  ! number of total process in each domain
+!  character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim) = "" ! name of configulation files
+!  logical               :: ABORT_ALL_JOBS = .false.          ! abort all jobs or not?
+!  logical               :: LOG_SPLIT = .false.               ! log-output for mpi splitting?
+  logical               :: COLOR_REORDER = .false.           ! coloring reorder for mpi splitting?
 
 !  !--- PARAM_IO
 !  integer :: IO_AGGREGATE = .false.
@@ -394,6 +406,41 @@ subroutine read_nml_model
 
   return
 end subroutine read_nml_model
+
+!-------------------------------------------------------------------------------
+! PARAM_LAUNCHER
+!-------------------------------------------------------------------------------
+subroutine read_nml_launcher
+  implicit none
+  integer :: ierr
+
+  namelist / PARAM_LAUNCHER / &
+!    EXECUTE_PREPROCESS, &
+!    EXECUTE_MODEL,      &
+!    NUM_BULKJOB,        &
+    NUM_DOMAIN,         &
+    PRC_DOMAINS,        &
+!    CONF_FILES,         &
+!    ABORT_ALL_JOBS,     &
+!    LOG_SPLIT,          &
+    COLOR_REORDER
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_LAUNCHER,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) '[Warning] /PARAM_LAUNCHER/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_LAUNCHER. Check!'
+    stop
+  endif
+
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_LAUNCHER)
+  end if
+
+  return
+end subroutine read_nml_launcher
 
 !-------------------------------------------------------------------------------
 ! PARAM_IO
@@ -1065,7 +1112,7 @@ subroutine filename_replace_mem_str(filename, mem)
   if (pos == 0) then
     call str_replace(filename, memf_notation_2, mem, pos)
     if (pos == 0) then
-      write (6, '(7A)') "[Warning] Keyword '", memf_notation, "' or '", memf_notation_2, "' is not found in '", filename, "'."
+      write (6, '(7A)') "[Warning] Keyword '", memf_notation, "' or '", memf_notation_2, "' is not found in '", trim(filename), "'."
     end if
   end if
 
@@ -1112,7 +1159,7 @@ subroutine filename_replace_dom_str(filename, dom)
 
   call str_replace(filename, domf_notation, dom, pos)
   if (pos == 0) then
-    write (6, '(5A)') "[Warning] Keyword '", domf_notation, "' is not found in '", filename, "'."
+    write (6, '(5A)') "[Warning] Keyword '", domf_notation, "' is not found in '", trim(filename), "'."
   end if
 
   return

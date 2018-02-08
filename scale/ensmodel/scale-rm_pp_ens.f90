@@ -36,11 +36,8 @@ program scaleles_pp_ens
 
   implicit none
 
-  integer :: it, its, ite, im, ierr
+  integer :: it, its, ite, im, idom, ierr
   character(7) :: stdoutf='-000000'
-
-  character(len=H_LONG) :: confname
-  character(len=H_LONG) :: confname_dummy
 
   integer :: universal_comm
   integer :: universal_nprocs
@@ -51,9 +48,9 @@ program scaleles_pp_ens
   integer :: intercomm_parent
   integer :: intercomm_child
 
-  integer :: NUM_DOMAIN
-  integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
-  character(len=H_LONG) :: confname_dummy2(PRC_DOMAIN_nlim)
+  character(len=H_LONG) :: confname_domains(PRC_DOMAIN_nlim)
+  character(len=H_LONG) :: confname_mydom
+  character(len=H_LONG) :: confname
 
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
@@ -62,10 +59,6 @@ program scaleles_pp_ens
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
-
-  NUM_DOMAIN = 1
-  PRC_DOMAINS = 0
-  confname_dummy2 = ""
 
   ! start MPI
   call PRC_MPIstart( universal_comm ) ! [OUT]
@@ -136,19 +129,24 @@ program scaleles_pp_ens
     call PRC_GLOBAL_setup( .false.,    & ! [IN]
                            global_comm ) ! [IN]
 
+    do idom = 1, NUM_DOMAIN
+      confname_domains(idom) = trim(CONF_FILES)
+      call filename_replace_dom(confname_domains(idom), idom)
+    end do
+
     !--- split for nesting
     ! communicator split for nesting domains
     call PRC_MPIsplit( global_comm,      & ! [IN]
                        NUM_DOMAIN,       & ! [IN]
                        PRC_DOMAINS(:),   & ! [IN]
-                       confname_dummy2(:), & ! [IN]
+                       confname_domains(:), & ! [IN]
                        .false.,          & ! [IN]
                        .false.,          & ! [IN] flag bulk_split
-                       .false.,          & ! [IN] no reordering
+                       COLOR_REORDER,    & ! [IN]
                        local_comm,       & ! [OUT]
                        intercomm_parent, & ! [OUT]
                        intercomm_child,  & ! [OUT]
-                       confname_dummy    ) ! [OUT]
+                       confname_mydom    ) ! [OUT]
 
     if (MEMBER_ITER == 0) then
       its = 1
@@ -161,7 +159,7 @@ program scaleles_pp_ens
     do it = its, ite
       im = rank_to_mem(it,universal_myrank+1)
       if (im >= 1 .and. im <= MEMBER_RUN) then
-        confname = CONF_FILES
+        confname = confname_mydom
         if (CONF_FILES_SEQNUM) then
           call filename_replace_mem(confname, im)
         else

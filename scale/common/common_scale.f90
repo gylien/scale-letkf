@@ -167,6 +167,7 @@ subroutine set_common_conf(nprocs)
   call read_nml_log
   call read_nml_model
   call read_nml_ensemble
+  call read_nml_launcher
   call read_nml_letkf_prc
 
   if (nprocs /= NNODES * PPN) then
