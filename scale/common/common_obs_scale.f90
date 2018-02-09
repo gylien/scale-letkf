@@ -2163,7 +2163,7 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
 #endif
   obsda%qc = 0
 
-  if (member > 0) then
+  if (member >= 0) then
     ALLOCATE( obsda%ensval (member,obsda%nobs) )
     obsda%ensval = 0.0d0
   end if
