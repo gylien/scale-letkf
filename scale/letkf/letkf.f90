@@ -26,6 +26,9 @@ PROGRAM letkf
   REAL(r_size),ALLOCATABLE :: gues2d(:,:,:)
   REAL(r_size),ALLOCATABLE :: anal3d(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: anal2d(:,:,:)
+  ! PEST: global constant parameters
+  REAL(r_size),ALLOCATABLE :: gues0d(:,:) ! PEST (nens,PEST_PMAX)
+  REAL(r_size),ALLOCATABLE :: anal0d(:,:) ! PEST
 
   character(len=7) :: stdoutf='-000000'
   character(len=6400) :: cmd1, cmd2, icmd
@@ -101,6 +104,7 @@ PROGRAM letkf
   call read_nml_letkf_monitor
   call read_nml_letkf_radar
   call read_nml_letkf_h08
+  call read_nml_pest
 
   if (DET_RUN) then
     call set_mem_node_proc(MEMBER+2)
@@ -166,6 +170,9 @@ PROGRAM letkf
     allocate (anal3d(nij1,nlev,nens,nv3d))
     allocate (anal2d(nij1,nens,nv2d))
 
+    allocate (gues0d(nens,PEST_PMAX)) ! PEST
+    allocate (anal0d(nens,PEST_PMAX)) ! PEST
+
     call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
 
     !
@@ -179,6 +186,13 @@ PROGRAM letkf
     end if
 
     call mpi_timer('READ_GUES', 1, barrier=MPI_COMM_a)
+
+    ! 
+    ! READ GUES (PEST)
+    !
+    call read_pest0d_all_mpi(gues0d)
+
+    call mpi_timer('READ_GUES(PEST)', 1, barrier=MPI_COMM_a)
 
     !
     ! WRITE ENS MEAN and SPRD
@@ -239,6 +253,8 @@ PROGRAM letkf
 
     deallocate (obs)
     deallocate (gues3d, gues2d, anal3d, anal2d)
+
+    deallocate (gues0d, anal0d) ! PEST
 
     call unset_common_mpi_scale
 

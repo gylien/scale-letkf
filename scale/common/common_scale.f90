@@ -1862,5 +1862,82 @@ subroutine rij_rank_g2l(ig, jg, rank, il, jl)
   return
 end subroutine rij_rank_g2l
 
+!-------------------------------------------------------------------------------
+subroutine read_PEST_LIST(PEST_FILE) !(pnum,fullname)
+  implicit none
+
+  !character(len=H_MID) :: fullname ! parameter full name
+  !integer, intent(in) :: pnum ! parameter number
+  integer, parameter :: iunit = 99
+!  integer :: m
+!  real(r_size) :: pval
+!  character(len=20) :: wk(2)
+  integer :: ip
+  character(len=filelenmax) :: PEST_FILE(PEST_PMAX)
+
+  open(iunit, file = trim(PEST_PATH)//'/PARAM_LIST.txt', form = 'formatted')
+
+  do ip = 1, PEST_PMAX
+    read(iunit,*)PEST_FILE(ip)
+    print *,"TEST ",trim(PEST_FILE(ip))
+  enddo
+!  do m = 1, MEMBER + 1
+!    read(iunit,*) wk(1),wk(2),pval
+!    print *,pval
+!  enddo
+
+  close(iunit)
+
+  return
+end subroutine read_PEST_LIST
+
+!-------------------------------------------------------------------------------
+subroutine read_PEST_PVALS(nens,gues0d)!(nens)
+  implicit none
+
+  integer, intent(in) :: nens
+  real(r_size) :: gues0d(nens,PEST_PMAX)
+  character(len=filelenmax) :: PEST_FILE(PEST_PMAX)
+  character(len=filelenmax) :: infile
+  integer :: ip, im
+  integer, parameter :: iunit = 99
+
+  character(len=100) :: pname
+  character(len=10) :: cmem
+  integer :: mem
+  real(r_size) :: pval
+
+  call read_PEST_LIST(PEST_FILE)
+
+  do ip = 1, PEST_PMAX
+    infile = trim(PEST_PATH)//'/'//trim(PEST_FILE(ip))//'_'//trim(PEST_STIME)//'.txt'
+    print *,"PEST FILE: ",trim(infile)
+
+    open(iunit,file=trim(infile),form='formatted')
+
+    do im = 1, MEMBER
+      read(iunit,*) pname,mem,pval
+      print *,"INPUT PEST PARAM, ",trim(pname),mem,pval
+      gues0d(im,ip) = pval
+    enddo ! [im = 1, MEMBER]
+
+    ! mean
+    read(iunit,*) pname, cmem, pval ! skip mean
+    print *,"INPUT PEST PARAM, ",trim(pname)," ",trim(cmem),pval
+
+    ! mdet
+    if (DET_RUN) then
+      read(iunit,*) pname,cmem,pval
+      print *,"INPUT PEST PARAM, ",trim(pname),trim(cmem),pval
+      gues0d(nens,ip) = pval
+    endif
+
+    close(iunit)
+
+  enddo ! [ip = 1, PEST_PMAX]
+
+  return
+end subroutine read_PEST_PVALS
+
 !===============================================================================
 END MODULE common_scale

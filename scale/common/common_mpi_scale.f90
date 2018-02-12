@@ -1956,5 +1956,33 @@ end subroutine mpi_timer
 !SUBROUTINE read_obs2_mpi(obsfile,nn,nbv,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,hdxf,iqc)
 !SUBROUTINE allreduce_obs_mpi(n,nbv,hdxf,iqc)
 
+!-------------------------------------------------------------------------------
+! Read all parameters to be estimated from text files
+!-------------------------------------------------------------------------------
+subroutine read_pest0d_all_mpi(gues0d)
+  implicit none
+  real(r_size), intent(out) :: gues0d(nens,PEST_PMAX)
+  integer :: iof, ierr
+
+  call mpi_timer('', 2)
+
+  if (myrank_a == 0) then
+     call read_PEST_PVALS(nens,gues0d)
+
+    call mpi_timer('read_pest0d_all_mpi:read_obs_all:', 2)
+  end if
+
+  call mpi_timer('', 2, barrier=MPI_COMM_a)
+
+  call MPI_BCAST(gues0d, nens*PEST_PMAX, MPI_r_size, 0, MPI_COMM_a, ierr)
+
+  call mpi_timer('read_pest0d_all_mpi:mpi_bcast:', 2)
+
+  print *,"DEBUG",myrank_a,gues0d(1,1)
+
+  return
+end subroutine read_pest0d_all_mpi
+
+
 !===============================================================================
 END MODULE common_mpi_scale

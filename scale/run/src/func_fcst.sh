@@ -271,6 +271,27 @@ EOF
 #-------------------------------------------------------------------------------
 # TMPOUT
 
+# files for parameter estimation #PEST
+#-------------------
+
+PARAM_LIST="${INDIR}/param/PARAM_LIST.txt"
+if [ -e "${PARAM_LIST}" ] ; then
+  rm -f ${PARAM_LIST}
+fi
+touch ${PARAM_LIST}
+for idx in `seq 1 ${PEST_PMAX}`
+do
+  echo ${PEST_NAME[$idx]} >> ${PARAM_LIST}
+done
+
+if [ -e  "${INDIR}/param" ]; then
+  path="param/"
+  echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+else
+  echo "Waring! No parameter input from ${INDIR}/param.txt"
+fi
+
+
 # empty directories
 #-------------------
 
@@ -1107,6 +1128,12 @@ for it in $(seq $its $ite); do
              $TMPOUT/const/${CONNECTOR_TOPO}topo $TMPOUT/${time_l}/${CONNECTOR_LANDUSE}landuse \
              ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf $MEMBER_FMT $m) $OUT_OPT \
              fcst $bdy_start_time
+
+        bash $SCRP_DIR/src/pre_scale_param.sh $MYRANK ${name_m[$m]} \
+             ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf $MEMBER_FMT $m) $OUT_OPT \
+             fcst
+
+
       fi
     fi
   fi

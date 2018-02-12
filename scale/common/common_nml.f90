@@ -319,6 +319,12 @@ MODULE common_nml
   real(r_size)          :: OBSSIM_RADAR_LAT = 0.0d0
   real(r_size)          :: OBSSIM_RADAR_Z = 0.0d0
 
+  !--- PARAM_PEST
+  character(filelenmax) :: PEST_PATH = ''
+  integer               :: PEST_PMAX = 2
+  character(14) :: PEST_STIME = '20180101000000' ! file footer
+  character(14) :: PEST_ATIME = '20180101000000' ! file footer
+
 contains
 !-------------------------------------------------------------------------------
 ! PARAM_ENSEMBLE
@@ -998,6 +1004,35 @@ subroutine read_nml_obssim
 end subroutine read_nml_obssim
 
 !-------------------------------------------------------------------------------
+! PARAM_PEST
+!-------------------------------------------------------------------------------
+subroutine read_nml_pest
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_PEST/ &
+    PEST_PATH, &
+    PEST_PMAX, &
+    PEST_STIME, &
+    PEST_ATIME
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_PEST,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) '[Warning] /PARAM_PEST/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_PEST. Check!'
+    stop
+  endif
+
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_PEST)
+  end if
+
+  return
+end subroutine read_nml_pest
+
 ! Replace the member notation by the formatted member string
 ! * will be wrong if memflen /= 4
 !-------------------------------------------------------------------------------

@@ -129,6 +129,13 @@ else
   NOBS_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/nobs/init"
 fi
 
+#PEST_FILES=""
+#for idx in `seq 1 ${PEST_PMAX}`
+#do
+#  PEST_FILES=${PEST_FILES}", ""${PEST_NAME[$idx]}"", "
+#done
+#        -e "/!--PEST_FILES--/a PEST_FILES = \"${PEST_FILES}\"," \
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.letkf | \
@@ -165,6 +172,10 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
         -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = ${OBSDEP_OUT_TF}," \
         -e "/!--OBSDEP_OUT_BASENAME--/a OBSDEP_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obs/obsdep\"," \
+        -e "/!--PEST_PATH--/a PEST_PATH = \"${TMPOUT}/param\"," \
+        -e "/!--PEST_PMAX--/a PEST_PMAX = ${PEST_PMAX}," \
+        -e "/!--PEST_STIME--/a PEST_STIME = ${STIME}," \
+        -e "/!--PEST_ATIME--/a PEST_ATIME = ${ATIME}," \
         -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
     > $TMPDIR/letkf.conf
 
