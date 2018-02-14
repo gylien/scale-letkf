@@ -167,14 +167,21 @@ fi
 print_setting () {
 #-------------------------------------------------------------------------------
 
-for vname in DIR INDIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BDY_SCALE \
+for vname in DIR DOMAIN @INDIR @OUTDIR @DATA_TOPO DATA_TOPO_BDY_SCALE @DATA_LANDUSE DATA_BDY_SCALE \
              DATA_BDY_SCALE_PREP DATA_BDY_WRF DATA_BDY_NICAM OBS OBSNCEP DET_RUN TOPO_FORMAT \
              LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT PARENT_REF_TIME \
              ENABLE_PARAM_USER OCEAN_INPUT OCEAN_FORMAT LAND_INPUT LAND_FORMAT OBSNUM WINDOW_S WINDOW_E \
-             LCYCLE LTIMESLOT MEMBER NNODES NNODES_APPAR PPN PPN_APPAR THREADS SCALE_NP \
+             LCYCLE LTIMESLOT MEMBER NNODES NNODES_APPAR PPN PPN_APPAR THREADS @SCALE_NP \
              STIME ETIME ISTEP FSTEP CONF_MODE FCSTOUT MAKEINIT OUT_OPT TOPOOUT_OPT \
              LANDUSEOUT_OPT BDYOUT_OPT OBSOUT_OPT LOG_OPT LOG_TYPE; do
-  printf '  %-20s = %s\n' $vname "${!vname}"
+  if [ "${vname:0:1}" = '@' ]; then
+    for d in $(seq $DOMNUM); do
+      vname_d="${vname:1}[$d]"
+      printf '  %-20s = %s\n' "$vname_d" "${!vname_d}"
+    done
+  else
+    printf '  %-20s = %s\n' $vname "${!vname}"
+  fi
 done
 
 #-------------------------------------------------------------------------------
