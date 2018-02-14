@@ -1130,10 +1130,10 @@ else
                 for ifile in $(seq $filenum); do
                   if ((BDY_ROTATING == 1)); then
                     pathin="$data_bdy_i/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-                    path="bdyorg/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
+                    path="bdyorg/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                   else
-                    pathin="$data_bdy_i/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
-                    path="bdyorg/const/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
+                    pathin="$data_bdy_i/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+                    path="bdyorg/const/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                   fi
                   if ((DISK_MODE_DATA_BDY == 2)); then
                     echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
