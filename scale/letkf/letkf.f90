@@ -93,21 +93,12 @@ PROGRAM letkf
 
   call set_common_conf(nprocs)
 
-  call read_nml_obs_error
-  call read_nml_obsope
-  call read_nml_letkf
-  call read_nml_letkf_obs
-  call read_nml_letkf_var_local
-  call read_nml_letkf_monitor
-  call read_nml_letkf_radar
-  call read_nml_letkf_h08
-
   if (DET_RUN) then
     call set_mem_node_proc(MEMBER+2)
   else
     call set_mem_node_proc(MEMBER+1)
   end if
-  call set_scalelib
+  call set_scalelib('LETKF')
 
   if (myrank_use) then
 

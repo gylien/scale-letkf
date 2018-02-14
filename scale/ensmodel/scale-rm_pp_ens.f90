@@ -9,8 +9,8 @@ program scaleles_pp_ens
   use common_scale, only: &
      set_common_conf
   use common_mpi_scale, only: &
-     rank_to_mem, &
-     rank_to_mempe, &
+     myrank_to_mem, &
+     myrank_to_pe, &
      nitmax, &
      set_mem_node_proc, &
      mpi_timer
@@ -27,7 +27,6 @@ program scaleles_pp_ens
      PRC_GLOBAL_setup, &
      PRC_MPIfinish, &
      PRC_MPIsplit, &
-     PRC_MPIsplit_letkf, &
      PRC_UNIVERSAL_myrank, &
      PRC_DOMAIN_nlim, &
      PRC_GLOBAL_COMM_WORLD, &
@@ -36,7 +35,7 @@ program scaleles_pp_ens
 
   implicit none
 
-  integer :: it, its, ite, im, idom, ierr
+  integer :: it, its, ite, im, idom, color, key, ierr
   character(7) :: stdoutf='-000000'
 
   integer :: universal_comm
@@ -119,10 +118,16 @@ program scaleles_pp_ens
 ! Run SCALE-RM_pp
 !-----------------------------------------------------------------------
 
-  ! split MPI communicator for LETKF
-  call PRC_MPIsplit_letkf( universal_comm,                   & ! [IN]
-                           MEM_NP, nitmax, universal_nprocs, rank_to_mempe, & ! [IN]
-                           global_comm                       ) ! [OUT]
+  ! split MPI communicator for single members
+  if (myrank_to_mem(1) >= 1) then
+    color = myrank_to_mem(1) - 1
+    key   = myrank_to_pe
+  else
+    color = MPI_UNDEFINED
+    key   = MPI_UNDEFINED
+  endif
+
+  call MPI_COMM_SPLIT(universal_comm, color, key, global_comm, ierr)
 
   if (global_comm /= MPI_COMM_NULL) then
 
@@ -157,7 +162,7 @@ program scaleles_pp_ens
     end if
 
     do it = its, ite
-      im = rank_to_mem(it,universal_myrank+1)
+      im = myrank_to_mem(it)
       if (im >= 1 .and. im <= MEMBER_RUN) then
         confname = confname_mydom
         if (CONF_FILES_SEQNUM) then

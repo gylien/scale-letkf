@@ -50,13 +50,11 @@ MODULE common_nml
   character(len=10) :: MODEL = 'scale-rm'
   logical :: VERIFY_COORD = .false.
 
-  !--- PARAM_LAUNCHER
-!  logical               :: EXECUTE_PREPROCESS = .false.      ! execute preprocess tools?
-!  logical               :: EXECUTE_MODEL = .true.            ! execute main model?
-!  integer               :: NUM_BULKJOB = 1                   ! number of bulk jobs
+  !--- PARAM_PROCESS
+  integer               :: PPN = 1                           ! Number of processes per node
+  integer               :: MEM_NODES = 0                     ! Number of nodes used for one member (0: automatically determined)
   integer               :: NUM_DOMAIN = 1                    ! number of domains
   integer               :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0  ! number of total process in each domain
-!  character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim) = "" ! name of configulation files
 !  logical               :: ABORT_ALL_JOBS = .false.          ! abort all jobs or not?
 !  logical               :: LOG_SPLIT = .false.               ! log-output for mpi splitting?
   logical               :: COLOR_REORDER = .false.           ! coloring reorder for mpi splitting?
@@ -157,14 +155,6 @@ MODULE common_nml
   real(r_size) :: MIN_INFL_MUL = 0.0d0
   logical :: ADAPTIVE_INFL_INIT = .false.
   real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0
-
-  !--- PARAM_LETKF_PRC
-  integer :: NNODES = 1
-  integer :: PPN = 1
-  integer :: MEM_NODES = 1
-  integer :: MEM_NP = 1
-!  integer :: PRC_NUM_X_LETKF = 1
-!  integer :: PRC_NUM_Y_LETKF = 1
 
   !--- PARAM_LETKF_OBS
   logical :: USE_OBS(nobtype) = .true.
@@ -408,39 +398,37 @@ subroutine read_nml_model
 end subroutine read_nml_model
 
 !-------------------------------------------------------------------------------
-! PARAM_LAUNCHER
+! PARAM_PROCESS
 !-------------------------------------------------------------------------------
-subroutine read_nml_launcher
+subroutine read_nml_process
   implicit none
   integer :: ierr
 
-  namelist / PARAM_LAUNCHER / &
-!    EXECUTE_PREPROCESS, &
-!    EXECUTE_MODEL,      &
-!    NUM_BULKJOB,        &
+  namelist / PARAM_PROCESS / &
+    PPN,                &
+    MEM_NODES,          &
     NUM_DOMAIN,         &
     PRC_DOMAINS,        &
-!    CONF_FILES,         &
 !    ABORT_ALL_JOBS,     &
 !    LOG_SPLIT,          &
     COLOR_REORDER
 
   rewind(IO_FID_CONF)
-  read(IO_FID_CONF,nml=PARAM_LAUNCHER,iostat=ierr)
+  read(IO_FID_CONF,nml=PARAM_PROCESS,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) '[Warning] /PARAM_LAUNCHER/ is not found in namelist.'
+    write(6,*) '[Warning] /PARAM_PROCESS/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
-    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_LAUNCHER. Check!'
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_PROCESS. Check!'
     stop
   endif
 
   if (LOG_LEVEL >= 2) then
-    write(6, nml=PARAM_LAUNCHER)
+    write(6, nml=PARAM_PROCESS)
   end if
 
   return
-end subroutine read_nml_launcher
+end subroutine read_nml_process
 
 !-------------------------------------------------------------------------------
 ! PARAM_IO
@@ -720,38 +708,6 @@ subroutine read_nml_letkf
 
   return
 end subroutine read_nml_letkf
-
-!-------------------------------------------------------------------------------
-! PARAM_LETKF_PRC
-!-------------------------------------------------------------------------------
-subroutine read_nml_letkf_prc
-  implicit none
-  integer :: ierr
-  
-  namelist /PARAM_LETKF_PRC/ &
-    NNODES, &
-    PPN, &
-    MEM_NODES, &
-    MEM_NP
-!    PRC_NUM_X_LETKF, &
-!    PRC_NUM_Y_LETKF
-
-  rewind(IO_FID_CONF)
-  read(IO_FID_CONF,nml=PARAM_LETKF_PRC,iostat=ierr)
-  if (ierr < 0) then !--- missing
-    write(6,*) '[Warning] /PARAM_LETKF_PRC/ is not found in namelist.'
-!    stop
-  elseif (ierr > 0) then !--- fatal error
-    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_LETKF_PRC. Check!'
-    stop
-  endif
-
-  if (LOG_LEVEL >= 2) then
-    write(6, nml=PARAM_LETKF_PRC)
-  end if
-
-  return
-end subroutine read_nml_letkf_prc
 
 !-------------------------------------------------------------------------------
 ! PARAM_LETKF_OBS
