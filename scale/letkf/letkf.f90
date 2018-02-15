@@ -220,6 +220,13 @@ PROGRAM letkf
 
     call mpi_timer('DAS_LETKF', 1, barrier=MPI_COMM_a)
 
+    if (myrank_a == 0) then
+      call das_pest_etkf(gues0d,anal0d)
+    endif
+    call mpi_timer('DAS_PEST_ETKF', 1, barrier=MPI_COMM_a)
+
+    call write_pest0d_all_mpi(anal0d)
+
 !-----------------------------------------------------------------------
 ! Analysis ensemble
 !-----------------------------------------------------------------------

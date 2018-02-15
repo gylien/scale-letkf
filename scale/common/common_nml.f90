@@ -321,7 +321,7 @@ MODULE common_nml
 
   !--- PARAM_PEST
   character(filelenmax) :: PEST_PATH = ''
-  integer               :: PEST_PMAX = 2
+  integer               :: PEST_PMAX = 0
   character(14) :: PEST_STIME = '20180101000000' ! file footer
   character(14) :: PEST_ATIME = '20180101000000' ! file footer
 

@@ -1967,22 +1967,43 @@ subroutine read_pest0d_all_mpi(gues0d)
   call mpi_timer('', 2)
 
   if (myrank_a == 0) then
-     call read_PEST_PVALS(nens,gues0d)
+    ! Only the head node [myrank_a==0] stores and analyze parameters
+    call read_PEST_PVALS(nens,gues0d)
 
     call mpi_timer('read_pest0d_all_mpi:read_obs_all:', 2)
+  else
+    gues0d = 0.0d0 
   end if
 
-  call mpi_timer('', 2, barrier=MPI_COMM_a)
-
-  call MPI_BCAST(gues0d, nens*PEST_PMAX, MPI_r_size, 0, MPI_COMM_a, ierr)
+!  call mpi_timer('', 2, barrier=MPI_COMM_a)
+!
+!  call MPI_BCAST(gues0d, nens*PEST_PMAX, MPI_r_size, 0, MPI_COMM_a, ierr)
 
   call mpi_timer('read_pest0d_all_mpi:mpi_bcast:', 2)
-
-  print *,"DEBUG",myrank_a,gues0d(1,1)
 
   return
 end subroutine read_pest0d_all_mpi
 
+!-------------------------------------------------------------------------------
+! write all estimated parameters into text files
+!-------------------------------------------------------------------------------
+subroutine write_pest0d_all_mpi(anal0d)
+  implicit none
+  real(r_size), intent(in) :: anal0d(nens,PEST_PMAX)
+  integer :: iof, ierr
+
+  call mpi_timer('write_pest0d_all_mpi:read_obs_all:', 2)
+
+  call mpi_timer('', 2, barrier=MPI_COMM_a)
+
+  call MPI_BCAST(anal0d, nens*PEST_PMAX, MPI_r_size, 0, MPI_COMM_a, ierr)
+  call write_PEST_PVALS(nens,anal0d)
+
+  call mpi_timer('write_pest0d_all_mpi:mpi_bcast:', 2)
+
+
+  return
+end subroutine write_pest0d_all_mpi
 
 !===============================================================================
 END MODULE common_mpi_scale

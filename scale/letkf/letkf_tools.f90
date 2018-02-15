@@ -32,6 +32,7 @@ MODULE letkf_tools
 
   PRIVATE
   PUBLIC :: das_letkf !, das_efso
+  PUBLIC :: das_pest_etkf ! parameter estimation
 
   real(r_size),save :: var_local(nv3d+nv2d,nid_obs_varlocal)
 
@@ -2000,5 +2001,298 @@ subroutine weight_RTPS(w, pa, xb, infl, wrlx, infl_out)
 
   return
 end subroutine weight_RTPS
+
+
+
+
+!-----------------------------------------------------------------------
+! Data Assimilation (Parameter estmation for global constant parameters)
+!-----------------------------------------------------------------------
+SUBROUTINE das_pest_etkf(gues0d,anal0d)
+  use scale_grid, only: &
+    DX, DY
+  use common_rand
+  IMPLICIT NONE
+  REAL(r_size),INTENT(INOUT) :: gues0d(nens,PEST_PMAX)      !  output: destroyed
+  REAL(r_size),INTENT(OUT) :: anal0d(nens,PEST_PMAX)
+
+  REAL(r_size) :: work0d(PEST_PMAX)
+
+  REAL(r_size),ALLOCATABLE :: hdxf(:,:)
+  REAL(r_size),ALLOCATABLE :: rdiag(:)
+  REAL(r_size),ALLOCATABLE :: rloc(:)
+  REAL(r_size),ALLOCATABLE :: dep(:)
+  REAL(r_size),ALLOCATABLE :: depd(:)            !GYL
+
+  real(r_size) :: parm
+  real(r_size),allocatable :: trans(:,:)
+  real(r_size),allocatable :: transm(:)
+  real(r_size),allocatable :: transmd(:)
+  real(r_size),allocatable :: pa(:,:)
+  real(r_size) :: transrlx(MEMBER,MEMBER)
+
+  INTEGER :: n,m,k,nobsl
+  REAL(r_size) :: beta                           !GYL
+  REAL(r_size) :: tmpinfl                        !GYL
+
+  integer :: OMP_GET_NUM_THREADS, omp_chunk
+
+  character(len=timer_name_width) :: timer_str
+
+  call mpi_timer('', 2)
+
+  WRITE(6,'(A)') 'Hello from das_pest_etkf'
+
+  WRITE(6,'(A,I8)') 'Target observation numbers (global) :NOBS=',nobstotalg
+
+  !
+  ! No variable localization
+  !
+
+  !
+  ! FCST PERTURBATIONS
+  !
+!$OMP PARALLEL PRIVATE(n,m)
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+  DO n=1,PEST_PMAX
+    DO m=1,MEMBER
+      gues0d(m,n) = gues0d(m,n) - gues0d(mmean,n)
+    END DO
+  END DO
+!$OMP END DO NOWAIT
+!$OMP END PARALLEL
+
+  call mpi_timer('das_letkf:fcst_perturbation:', 2)
+
+!!$OMP PARALLEL PRIVATE(ilev,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,parm,beta,trans,transm,transmd,transrlx,pa,timer_str)
+!  omp_chunk = min(4, max(1, (PEST_PMAX-1) / OMP_GET_NUM_THREADS() + 1))
+
+  allocate (hdxf (nobstotal,MEMBER))
+  allocate (rdiag(nobstotal))
+  allocate (rloc (nobstotal))
+  allocate (dep  (nobstotal))
+  if (DET_RUN) then
+    allocate (depd (nobstotal))
+  end if
+  allocate (trans  (MEMBER,MEMBER))
+  allocate (transm (MEMBER))
+  allocate (transmd(MEMBER))
+  allocate (pa     (MEMBER,MEMBER))
+
+!!!!$OMP MASTER
+  call mpi_timer('das_pest_etkf:allocation_private_vars:', 2)
+  call mpi_timer('', 3)
+
+!!!  write (6, '(A,I3)') 'OpenMP chunk for dynamic schedule =', omp_chunk
+!!!!!$OMP END MASTER
+  !
+  ! MAIN ASSIMILATION LOOP
+  !
+
+!!!!!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
+  parm = 1.0d0
+  beta = 1.0d0
+ 
+  work0d = 1.0d0
+
+  DO n=1,PEST_PMAX
+
+    if (LOG_LEVEL >= 3) then
+      call mpi_timer('', 4)
+    end if
+
+    ! calculate mean and perturbation weights
+    ! compute weights with localized observations
+    if (DET_RUN) then                                                          !GYL
+      CALL obs_pest_etkf(hdxf, rdiag, rloc, dep, nobsl, depd=depd)
+    else                                                                       !GYL
+      CALL obs_pest_etkf(hdxf, rdiag, rloc, dep, nobsl)
+    end if                                                                     !GYL
+
+
+    if (DET_RUN) then                                                        !GYL
+      CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work0d(n), & !GYL
+                      trans(:,:),transm=transm(:),pao=pa(:,:), & !GYL
+                      rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &     !GYL
+                      depd=depd,transmd=transmd(:))                     !GYL
+    else                                                                     !GYL
+      CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work0d(n), & !GYL
+                      trans(:,:),transm=transm(:),pao=pa(:,:), & !GYL
+                      rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)       !GYL
+    end if                                                                   !GYL
+
+
+    ! relaxation via LETKF weight
+    CALL weight_RTPS_const(trans(:,:),pa(:,:),gues0d(:,n), &        !GYL
+                     parm,transrlx,tmpinfl)                                !GYL
+
+    ! total weight matrix
+    DO m=1,MEMBER                                                              !GYL
+      DO k=1,MEMBER                                                            !GYL
+        transrlx(k,m) = (transrlx(k,m) + transm(k)) * beta                !GYL
+      END DO                                                                   !GYL
+      transrlx(m,m) = transrlx(m,m) + (1.0d0-beta)                             !GYL
+    END DO                                                                     !GYL
+
+    ! analysis update of members
+    DO m=1,MEMBER
+      anal0d(m,n) = gues0d(mmean,n)                                      !GYL
+      DO k=1,MEMBER
+        anal0d(m,n) = anal0d(m,n) &                                      !GYL
+                       + gues0d(k,n) * transrlx(k,m)                        !GYL
+      END DO
+    END DO
+
+    ! analysis update of deterministic run
+    if (DET_RUN) then                                                          !GYL
+      anal0d(mmdet,n) = 0.0d0                                               !GYL
+      DO k=1,MEMBER                                                            !GYL
+        anal0d(mmdet,n) = anal0d(mmdet,n) &                              !GYL
+                          + gues0d(k,n) * transmd(k)                  !GYL
+      END DO                                                                   !GYL
+      anal0d(mmdet,n) = gues0d(mmdet,n) &                                !GYL
+                       + anal0d(mmdet,n) * beta                           !GYL
+    end if                                                                     !GYL
+ 
+
+    write (timer_str, '(A26,I4,A2)') 'das_pest_etkf:etkf_core(n=', n, '):'
+    call mpi_timer(trim(timer_str), 3)
+
+  ENDDO ! [ n = 1,PEST_PMAX] 
+
+  deallocate (hdxf,rdiag,rloc,dep)
+  if (DET_RUN) then
+    deallocate (depd)
+  end if
+  deallocate (trans,transm,transmd,pa)
+!!!!!$OMP END PARALLEL
+
+  call mpi_timer('das_pest_etkf:etkf_core:', 2)
+
+
+  RETURN
+END SUBROUTINE das_pest_etkf
+
+
+!-------------------------------------------------------------------------------
+! Find local observations to be used for a targeted grid
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   srch_q0 : (optional) first guess of the multiplier of incremental search distances
+! [OUT]
+!   hdxf    : fcstast ensemble perturbations in the observation space
+!   rdiag   : localization-weighted observation error variances
+!   rloc    : localization weights
+!   dep     : observation departure
+!   nobsl   : number of valid observations (in hdxf, rdiag, rloc, dep)
+!   depd    : (optional) observation departure for the deterministic run
+!-------------------------------------------------------------------------------
+subroutine obs_pest_etkf(hdxf, rdiag, rloc, dep, nobsl, depd)
+  use common_sort
+  implicit none
+
+  real(r_size), intent(out) :: hdxf(nobstotalg,MEMBER)
+  real(r_size), intent(out) :: rdiag(nobstotalg)
+  real(r_size), intent(out) :: rloc(nobstotalg)
+  real(r_size), intent(out) :: dep(nobstotalg)
+  integer, intent(out) :: nobsl
+  real(r_size), intent(out), optional :: depd(nobstotalg)
+
+  integer :: obset
+  integer :: obidx
+
+  real(r_size) :: nrloc, nrdiag
+  integer :: iob
+  integer :: n, nn
+
+
+  !-----------------------------------------------------------------------------
+  ! Initialize
+  !-----------------------------------------------------------------------------
+
+#ifdef DEBUG
+  if (present(depd)) then
+    if (.not. DET_RUN) then
+      write (6, '(A)') "[Error] If 'depd' optional input is given, 'DET_RUN' needs to be enabled."
+      stop 99
+    end if
+  end if
+#endif
+
+  if (nobstotal == 0) then
+    return
+  end if
+
+  !-----------------------------------------------------------------------------
+  ! For each observation type,
+  ! do rough data search by a rectangle using the sorting mesh, and then
+  ! do precise data search by normalized 3D distance and variable localization.
+  !-----------------------------------------------------------------------------
+
+  nobsl = 0
+  nrloc = 1.0d0 ! ETKF ! No localization
+  nn = obsda_sort%nobs
+
+  do n = 1, nn
+    iob = n
+    obset = obsda_sort%set(n)
+    obidx = obsda_sort%idx(n)
+    nrdiag = obs(obset)%err(obidx) * obs(obset)%err(obidx) / nrloc
+    if (nrloc == 0.0d0) cycle
+
+    nobsl = nobsl + 1
+    hdxf(nobsl,:) = obsda_sort%ensval(1:MEMBER,iob)
+    rdiag(nobsl) = nrdiag
+    rloc(nobsl) = nrloc
+    dep(nobsl) = obsda_sort%val(iob)
+    if (present(depd)) then
+      depd(nobsl) = obsda_sort%ensval(mmdetobs,iob)
+    end if
+  end do ! [ n = 1, nn ]
+
+  !-----------------------------------------------------------------------------
+  ! Finalize
+  !-----------------------------------------------------------------------------
+
+  return
+end subroutine obs_pest_etkf
+
+
+!-------------------------------------------------------------------------------
+! Relaxation via LETKF weight - RTPS method for parameter estimation (alpha = 1.0)
+!-------------------------------------------------------------------------------
+subroutine weight_RTPS_const(w, pa, xb, infl, wrlx, infl_out)
+  implicit none
+  real(r_size), intent(in) :: w(MEMBER,MEMBER)
+  real(r_size), intent(in) :: pa(MEMBER,MEMBER)
+  real(r_size), intent(in) :: xb(MEMBER)
+  real(r_size), intent(in) :: infl
+  real(r_size), intent(out) :: wrlx(MEMBER,MEMBER)
+  real(r_size), intent(out) :: infl_out
+  real(r_size) :: var_g, var_a
+  integer :: m, k
+
+  real(r_size), parameter :: RTPS_const = 1.0d0
+
+  var_g = 0.0d0
+  var_a = 0.0d0
+  do m = 1, MEMBER
+    var_g = var_g + xb(m) * xb(m)
+    do k = 1, MEMBER
+      var_a = var_a + xb(k) * pa(k,m) * xb(m)
+    end do
+  end do
+  if (var_g > 0.0d0 .and. var_a > 0.0d0) then
+    infl_out = RTPS_const * sqrt(var_g * infl / (var_a * real(MEMBER-1,r_size))) &  ! Whitaker and Hamill 2012
+             - RTPS_const + 1.0d0                                                   !
+    wrlx = w * infl_out
+  else
+    wrlx = w
+    infl_out = 1.0d0
+  end if
+
+  return
+end subroutine weight_RTPS_const
+
 
 END MODULE letkf_tools

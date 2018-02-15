@@ -1879,12 +1879,8 @@ subroutine read_PEST_LIST(PEST_FILE) !(pnum,fullname)
 
   do ip = 1, PEST_PMAX
     read(iunit,*)PEST_FILE(ip)
-    print *,"TEST ",trim(PEST_FILE(ip))
+!    print *,"TEST ",trim(PEST_FILE(ip))
   enddo
-!  do m = 1, MEMBER + 1
-!    read(iunit,*) wk(1),wk(2),pval
-!    print *,pval
-!  enddo
 
   close(iunit)
 
@@ -1892,7 +1888,7 @@ subroutine read_PEST_LIST(PEST_FILE) !(pnum,fullname)
 end subroutine read_PEST_LIST
 
 !-------------------------------------------------------------------------------
-subroutine read_PEST_PVALS(nens,gues0d)!(nens)
+subroutine read_PEST_PVALS(nens,gues0d)
   implicit none
 
   integer, intent(in) :: nens
@@ -1903,7 +1899,7 @@ subroutine read_PEST_PVALS(nens,gues0d)!(nens)
   integer, parameter :: iunit = 99
 
   character(len=100) :: pname
-  character(len=10) :: cmem
+  character(len=4) :: cmem
   integer :: mem
   real(r_size) :: pval
 
@@ -1911,7 +1907,7 @@ subroutine read_PEST_PVALS(nens,gues0d)!(nens)
 
   do ip = 1, PEST_PMAX
     infile = trim(PEST_PATH)//'/'//trim(PEST_FILE(ip))//'_'//trim(PEST_STIME)//'.txt'
-    print *,"PEST FILE: ",trim(infile)
+    print *,"PEST READ: ",trim(infile)
 
     open(iunit,file=trim(infile),form='formatted')
 
@@ -1922,14 +1918,15 @@ subroutine read_PEST_PVALS(nens,gues0d)!(nens)
     enddo ! [im = 1, MEMBER]
 
     ! mean
-    read(iunit,*) pname, cmem, pval ! skip mean
+    read(iunit,*) pname, cmem, pval 
     print *,"INPUT PEST PARAM, ",trim(pname)," ",trim(cmem),pval
+    gues0d(MEMBER+1,ip) = pval
 
     ! mdet
     if (DET_RUN) then
       read(iunit,*) pname,cmem,pval
       print *,"INPUT PEST PARAM, ",trim(pname),trim(cmem),pval
-      gues0d(nens,ip) = pval
+      gues0d(MEMBER+2,ip) = pval
     endif
 
     close(iunit)
@@ -1938,6 +1935,61 @@ subroutine read_PEST_PVALS(nens,gues0d)!(nens)
 
   return
 end subroutine read_PEST_PVALS
+
+!-------------------------------------------------------------------------------
+subroutine write_PEST_PVALS(nens,anal0d)
+  implicit none
+
+  integer, intent(in) :: nens
+  real(r_size) :: anal0d(nens,PEST_PMAX)
+  character(len=filelenmax) :: PEST_FILE(PEST_PMAX)
+  character(len=filelenmax) :: outfile
+  character(len=filelenmax) :: infile
+  integer :: ip, im
+  integer, parameter :: iunit = 99
+  integer, parameter :: ounit = 98
+
+  character(len=100) :: pname
+  integer :: mem
+  real(r_size) :: pval
+
+  call read_PEST_LIST(PEST_FILE)
+
+  do ip = 1, PEST_PMAX
+    outfile = trim(PEST_PATH)//'/'//trim(PEST_FILE(ip))//'_'//trim(PEST_ATIME)//'.txt'
+    infile = trim(PEST_PATH)//'/'//trim(PEST_FILE(ip))//'_'//trim(PEST_STIME)//'.txt'
+    print *,"PEST WRITE: ",trim(outfile)
+
+    ! get parameter name
+    open(iunit,file=trim(infile),form='formatted')
+    read(iunit,*) pname,mem,pval
+    close(iunit)
+
+    open(ounit,file=trim(outfile),form='formatted')
+
+    do im = 1, MEMBER
+      write(ounit,*) trim(pname),",",im,",",anal0d(im,ip)
+      print *,"OUTPUT PEST PARAM, ",trim(pname),",",im,",",anal0d(im,ip)
+    enddo ! [im = 1, MEMBER]
+
+    ! mean
+    anal0d(MEMBER+1,ip) = sum(anal0d(1:MEMBER,ip)) / real(MEMBER,kind=r_size)
+    write(ounit,*) trim(pname),", mean,", anal0d(MEMBER+1,ip) 
+    print *,"OUTPUT PEST PARAM, ",trim(pname),"mean,",anal0d(MEMBER+1,ip)
+
+    ! mdet
+    if (DET_RUN) then
+      write(ounit,*) trim(pname),", mdet,", anal0d(MEMBER+2,ip) 
+      print *,"OUTPUT PEST PARAM, ",trim(pname),"mdet,",anal0d(MEMBER+2,ip)
+    endif
+
+    close(ounit)
+
+  enddo ! [ip = 1, PEST_PMAX]
+
+  return
+end subroutine write_PEST_PVALS
+
 
 !===============================================================================
 END MODULE common_scale
