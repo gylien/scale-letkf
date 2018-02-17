@@ -670,8 +670,8 @@ SUBROUTINE set_letkf_obs
     obsgrd(ictype)%grdspc_i = DX * real(nlon,r_size) / real(obsgrd(ictype)%ngrd_i,r_size)
     obsgrd(ictype)%grdspc_j = DY * real(nlat,r_size) / real(obsgrd(ictype)%ngrd_j,r_size)
     if (PEST_PMAX > 0) then ! Gather all obs to analyze global constant parameters via ETKF (as in Kotsuki et al.)
-      obsgrd(ictype)%ngrdsch_i = ceiling(hori_loc_ctype(ictype) * dist_zero_fac / obsgrd(ictype)%grdspc_i * (nlong - 1))  
-      obsgrd(ictype)%ngrdsch_j = ceiling(hori_loc_ctype(ictype) * dist_zero_fac / obsgrd(ictype)%grdspc_j * (nlatg - 1))  
+      obsgrd(ictype)%ngrdsch_i = ceiling(DX * nlong / obsgrd(ictype)%grdspc_i)  
+      obsgrd(ictype)%ngrdsch_j = ceiling(DY * nlatg / obsgrd(ictype)%grdspc_j)  
     else ! default
       obsgrd(ictype)%ngrdsch_i = ceiling(hori_loc_ctype(ictype) * dist_zero_fac / obsgrd(ictype)%grdspc_i)
       obsgrd(ictype)%ngrdsch_j = ceiling(hori_loc_ctype(ictype) * dist_zero_fac / obsgrd(ictype)%grdspc_j)
@@ -807,17 +807,6 @@ SUBROUTINE set_letkf_obs
     end if
   end do
 
-
-!#ifdef H08
-! -- H08
-!  if((obs(3)%nobs >= 1) .and. OBS_IN_NUM >= 3)then
-!    CALL MPI_BARRIER(MPI_COMM_d,ierr)
-!    if (nprocs_d > 1) then
-!      CALL MPI_ALLREDUCE(MPI_IN_PLACE,obs(3)%lev,obs(3)%nobs,MPI_r_size,MPI_MAX,MPI_COMM_d,ierr)
-!    end if
-!  endif
-! -- H08
-!#endif
 
   call mpi_timer('set_letkf_obs:bucket_sort_second_scan:', 2, barrier=MPI_COMM_d)
 
