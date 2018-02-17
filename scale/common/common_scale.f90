@@ -88,13 +88,21 @@ MODULE common_scale
   CHARACTER(vname_max),PARAMETER :: v3dd_name(nv3dd) = &
      (/'U', 'V', 'W', 'T', 'PRES', &
        'QV', 'QC', 'QR', 'QI', 'QS', 'QG', 'RH', 'height'/)
+  LOGICAL,PARAMETER :: v3dd_hastime(nv3dd) = &
+     (/.true., .true., .true., .true., .true., &
+       .true., .true., .true., .true., .true., .true., .true., .false./)
 #ifdef H08
   CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &       ! H08
      (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2', & ! H08
        'lsmask', 'SFC_TEMP'/)                                  ! H08
+  LOGICAL,PARAMETER :: v2dd_hastime(nv2dd) = &                    ! H08
+     (/.false., .true., .true., .true., .true., .true., .true., & ! H08
+       .false., .true./)                                          ! H08
 #else
   CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &
      (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2'/)
+  LOGICAL,PARAMETER :: v2dd_hastime(nv2dd) = &
+     (/.false., .true., .true., .true., .true., .true., .true./)
 #endif
 
   ! 
@@ -162,7 +170,7 @@ subroutine set_common_conf(nprocs)
   character(len=H_MID), parameter :: MODELNAME = "SCALE-LETKF"
 
   ! setup standard I/O
-  call IO_setup( MODELNAME, .false.)
+  call IO_setup( MODELNAME )
 
   call read_nml_log
   call read_nml_model
@@ -920,8 +928,9 @@ subroutine read_history(filename,step,v3dg,v2dg)
   use scale_grid_index, only: &
       IHALO, JHALO, KHALO, &
       IS, IE, JS, JE, KS, KE, KA
-  use gtool_history, only: &
-      HistoryGet
+  use scale_file, only: &
+!      FILE_open, &
+      FILE_read
   use scale_comm, only: &
       COMM_vars8, &
       COMM_wait
@@ -940,16 +949,30 @@ subroutine read_history(filename,step,v3dg,v2dg)
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
 
+!  comm = MPI_COMM_NULL
+!  if ( FILE_AGGREGATE ) then
+!    comm = PRC_LOCAL_COMM_WORLD
+!  end if
+!  call FILE_open( basename,           & ! [IN]
+!                  fid,                ) ! [OUT]
+!!                  mpi_comm = comm,    ) ! [IN]
+
   ! 3D variables
   !-------------
   do iv3d = 1, nv3dd
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
     end if
-    call HistoryGet( var3D,                 & ! [OUT]
-                     filename,              & ! [IN]
-                     trim(v3dd_name(iv3d)), & ! [IN]
-                     step                   ) ! [IN]
+    if (v3dd_hastime(iv3d)) then
+      call FILE_read( filename,              & ! [IN]
+                      trim(v3dd_name(iv3d)), & ! [IN]
+                      var3D,                 & ! [OUT]
+                      step=step              ) ! [IN]
+    else
+      call FILE_read( filename,              & ! [IN]
+                      trim(v3dd_name(iv3d)), & ! [IN]
+                      var3D                  ) ! [OUT]
+    end if
     forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
   end do
 
@@ -959,10 +982,16 @@ subroutine read_history(filename,step,v3dg,v2dg)
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
     end if
-    call HistoryGet( var2D,                 & ! [OUT]
-                     filename,              & ! [IN]
-                     trim(v2dd_name(iv2d)), & ! [IN]
-                     step                   ) ! [IN]
+    if (v2dd_hastime(iv2d)) then
+      call FILE_read( filename,              & ! [IN]
+                      trim(v2dd_name(iv2d)), & ! [IN]
+                      var2D,                 & ! [OUT]
+                      step=step              ) ! [IN]
+    else
+      call FILE_read( filename,              & ! [IN]
+                      trim(v2dd_name(iv2d)), & ! [IN]
+                      var2D                  ) ! [OUT]
+    end if
     v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
   end do
 
@@ -1080,7 +1109,11 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
     err = nfmpi_inq_varid(ncid, trim(v3dd_name(iv3d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-    err = nfmpi_iget_vara_real(ncid, varid, start, count, var3D(:,:,:,iv3d), req)
+    if (v3dd_hastime(iv3d)) then
+      err = nfmpi_iget_vara_real(ncid, varid, start, count, var3D(:,:,:,iv3d), req)
+    else
+      err = nfmpi_iget_vara_real(ncid, varid, start(1:3), count(1:3), var3D(:,:,:,iv3d), req)
+    end if
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
 
@@ -1113,7 +1146,11 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
     err = nfmpi_inq_varid(ncid, trim(v2dd_name(iv2d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
-    err = nfmpi_iget_vara_real(ncid, varid, start(1:3), count(1:3), var2D(:,:,iv2d), req)
+    if (v2dd_hastime(iv2d)) then
+      err = nfmpi_iget_vara_real(ncid, varid, start(1:3), count(1:3), var2D(:,:,iv2d), req)
+    else
+      err = nfmpi_iget_vara_real(ncid, varid, start(1:2), count(1:2), var2D(:,:,iv2d), req)
+    end if
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iget_vara_real '//' '//nfmpi_strerror(err)
 
@@ -1195,9 +1232,9 @@ end subroutine read_history_par
 subroutine state_trans(v3dg)
   use scale_tracer, only: TRACER_CV
     use scale_const, only: &
-       Rdry   => CONST_Rdry, &
-       Rvap   => CONST_Rvap, &
-       CVdry  => CONST_CVdry, &
+       Rdry  => CONST_Rdry, &
+       Rvap  => CONST_Rvap, &
+       CVdry => CONST_CVdry, &
        PRE00 => CONST_PRE00
   implicit none
 
@@ -1243,9 +1280,9 @@ end subroutine state_trans
 subroutine state_trans_inv(v3dg)
   use scale_tracer, only: TRACER_CV
     use scale_const, only: &
-       Rdry   => CONST_Rdry, &
-       Rvap   => CONST_Rvap, &
-       CVdry  => CONST_CVdry, &
+       Rdry  => CONST_Rdry, &
+       Rvap  => CONST_Rvap, &
+       CVdry => CONST_CVdry, &
        PRE00 => CONST_PRE00
   implicit none
 
