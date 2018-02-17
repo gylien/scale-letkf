@@ -1898,10 +1898,11 @@ subroutine read_PEST_PVALS(nens,gues0d)
   integer :: ip, im
   integer, parameter :: iunit = 99
 
-  character(len=100) :: pname
+  character(len=20) :: pname
   character(len=4) :: cmem
   integer :: mem
   real(r_size) :: pval
+  integer :: pidx
 
   call read_PEST_LIST(PEST_FILE)
 
@@ -1914,18 +1915,39 @@ subroutine read_PEST_PVALS(nens,gues0d)
     do im = 1, MEMBER
       read(iunit,*) pname,mem,pval
       print *,"INPUT PEST PARAM, ",trim(pname),mem,pval
+
+      if (PEST_TRANS) then
+        if (im == 1) then
+          call get_PEST_PIDX(pname,pidx)
+        endif
+
+        pval = phys2func(pidx, pval)    
+        print *,"INPUT PEST PARAM2, ",trim(pname),mem,pval
+
+      endif
+
       gues0d(im,ip) = pval
     enddo ! [im = 1, MEMBER]
 
     ! mean
     read(iunit,*) pname, cmem, pval 
     print *,"INPUT PEST PARAM, ",trim(pname)," ",trim(cmem),pval
+
+    if (PEST_TRANS) then
+      pval = phys2func(pidx, pval)    
+    endif
+
     gues0d(MEMBER+1,ip) = pval
 
     ! mdet
     if (DET_RUN) then
       read(iunit,*) pname,cmem,pval
-      print *,"INPUT PEST PARAM, ",trim(pname),trim(cmem),pval
+      print *,"INPUT PEST PARAM, ",trim(pname)," ",trim(cmem),pval
+
+      if (PEST_TRANS) then
+        pval = phys2func(pidx, pval)    
+      endif
+
       gues0d(MEMBER+2,ip) = pval
     endif
 
@@ -1949,9 +1971,10 @@ subroutine write_PEST_PVALS(nens,anal0d)
   integer, parameter :: iunit = 99
   integer, parameter :: ounit = 98
 
-  character(len=100) :: pname
+  character(len=20) :: pname
   integer :: mem
   real(r_size) :: pval
+  integer :: pidx
 
   call read_PEST_LIST(PEST_FILE)
 
@@ -1968,19 +1991,31 @@ subroutine write_PEST_PVALS(nens,anal0d)
     open(ounit,file=trim(outfile),form='formatted')
 
     do im = 1, MEMBER
+      if (im == 1) then
+        call get_PEST_PIDX(pname,pidx)
+      endif
+
+      if (PEST_TRANS) then
+        anal0d(im,ip) = func2phys(pidx, anal0d(im,ip))    
+      endif
       write(ounit,*) trim(pname),",",im,",",anal0d(im,ip)
       print *,"OUTPUT PEST PARAM, ",trim(pname),",",im,",",anal0d(im,ip)
     enddo ! [im = 1, MEMBER]
 
     ! mean
     anal0d(MEMBER+1,ip) = sum(anal0d(1:MEMBER,ip)) / real(MEMBER,kind=r_size)
-    write(ounit,*) trim(pname),", mean,", anal0d(MEMBER+1,ip) 
-    print *,"OUTPUT PEST PARAM, ",trim(pname),"mean,",anal0d(MEMBER+1,ip)
+
+    write(ounit,*) trim(pname),", mean,", anal0d(MEMBER+1,ip)
+    print *,"OUTPUT PEST PARAM, ",trim(pname),", mean,",anal0d(MEMBER+1,ip)
 
     ! mdet
     if (DET_RUN) then
-      write(ounit,*) trim(pname),", mdet,", anal0d(MEMBER+2,ip) 
-      print *,"OUTPUT PEST PARAM, ",trim(pname),"mdet,",anal0d(MEMBER+2,ip)
+      if (PEST_TRANS) then
+        anal0d(MEMBER+2,ip) = func2phys(pidx, anal0d(MEMBER+2,ip))    
+      endif
+
+      write(ounit,*) trim(pname),", mdet,", anal0d(MEMBER+2,ip)
+      print *,"OUTPUT PEST PARAM, ",trim(pname),", mdet,",anal0d(MEMBER+2,ip)
     endif
 
     close(ounit)
@@ -1990,6 +2025,79 @@ subroutine write_PEST_PVALS(nens,anal0d)
   return
 end subroutine write_PEST_PVALS
 
+subroutine get_PEST_PIDX(pname,pidx)
+  implicit none
+
+  character(20),intent(in) :: pname 
+  integer, intent(out) :: pidx
+  integer :: ip
+
+  pidx = -1
+  do ip = 1, PEST_PMAX_CONST
+    if (trim(PEST_PNAMES(ip)) == trim(pname)) then
+      pidx = ip
+      exit
+    endif
+  enddo
+
+  if (pidx <= 0 )then
+    print *,trim(pname)," A parameter cannot be transformed!"
+    stop
+  else
+    print *,trim(pname)," pidx= ",pidx
+  endif 
+
+  return
+end subroutine get_PEST_PIDX
+
+!---------------------------------------------------------------------
+!  Based on the NICAM-LETKF parameter estimation code 
+!  created by by Shunji Kotsuki, RIKEN AICS (Dec 2015)
+!---------------------------------------------------------------------
+function func2phys ( pidx, xvar ) ! func --> phys
+  implicit none
+
+  real(r_size) :: func2phys
+  integer, intent(in) :: pidx
+  real(r_size), intent(in) :: xvar
+  real(r_size) :: pmax, pmin
+
+  pmax = PEST_ULIMIT(pidx)
+  pmin = PEST_LLIMIT(pidx)
+
+  if (pmax < xvar .or. pmin > xvar) then
+    print *,"!!Waring!! PEST parameter value is outside of the limit"
+    print *,pmin,pmax,xvar
+  endif
+
+  func2phys = 0.5d0 * ( ( pmax + pmin ) + dtanh(xvar)*( pmax - pmin ) )
+
+end function func2phys
+
+function phys2func ( pidx, yvar ) ! phys --> func
+  implicit none
+
+  real(r_size) :: phys2func
+  integer, intent(in) :: pidx
+  real(r_size), intent(in) :: yvar
+  real(r_size) :: pmax, pmin
+
+  pmax = PEST_ULIMIT(pidx)
+  pmin = PEST_LLIMIT(pidx)
+
+  phys2func = fnc_datanh( ( 2.0d0*yvar - ( pmax + pmin ) ) / ( pmax - pmin ) )
+
+end function phys2func
+
+function fnc_datanh( xvar )
+  implicit none
+
+  real(r_size) :: fnc_datanh
+  real(r_size), intent(in) :: xvar
+
+  fnc_datanh = 0.5d0 * ( dlog(1.0d0+xvar) - dlog(1.0d0-xvar) )
+
+end function fnc_datanh
 
 !===============================================================================
 END MODULE common_scale

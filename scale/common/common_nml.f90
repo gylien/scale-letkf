@@ -321,9 +321,19 @@ MODULE common_nml
 
   !--- PARAM_PEST
   character(filelenmax) :: PEST_PATH = ''
-  integer               :: PEST_PMAX = 0
+  integer               :: PEST_PMAX = 0 ! Number of estmating parameters
   character(14) :: PEST_STIME = '20180101000000' ! file footer
   character(14) :: PEST_ATIME = '20180101000000' ! file footer
+  integer,parameter :: PEST_PMAX_CONST = 6
+
+  character(20) :: PEST_PNAMES(PEST_PMAX_CONST)= &
+     (/'Cr', 'Cs', 'drag_g', &
+       'beta_saut', 'gamma_saut', 'gamma_sacr'/) ! parameter names
+  logical :: PEST_TRANS = .true. ! Flag for transforming parameters into an arc-tangent function space
+  real(r_size) :: PEST_ULIMIT(PEST_PMAX_CONST) = (/180.0d0, 8.0d0, 5.0d0,&
+                                                    10.0d-3, 7.0d-2, 7.0d-2/) ! parameter upper limit
+  real(r_size) :: PEST_LLIMIT(PEST_PMAX_CONST) = (/ 10.0d0, 0.1d0, 0.1d0,& 
+                                                     0.1d-3, 1.0d-3, 0.1d-3/) ! parameter lower limit
 
 contains
 !-------------------------------------------------------------------------------
@@ -1014,7 +1024,10 @@ subroutine read_nml_pest
     PEST_PATH, &
     PEST_PMAX, &
     PEST_STIME, &
-    PEST_ATIME
+    PEST_ATIME, &
+    PEST_TRANS, &
+    PEST_ULIMIT, &
+    PEST_LLIMIT
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_PEST,iostat=ierr)

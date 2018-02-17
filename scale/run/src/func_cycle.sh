@@ -273,21 +273,25 @@ fi
 # files for parameter estimation #PEST
 #-------------------
 
-PARAM_LIST="${INDIR}/param/PARAM_LIST.txt"
-if [ -e "${PARAM_LIST}" ] ; then
-  rm -f ${PARAM_LIST}
-fi
-touch ${PARAM_LIST}
-for idx in `seq 1 ${PEST_PMAX}`
-do
-  echo ${PEST_NAME[$idx]} >> ${PARAM_LIST}
-done
+if (( PEST_PMAX > 0 )) ; then
 
-if [ -e  "${INDIR}/param" ]; then
-  path="param/"
-  echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
-else
-  echo "Waring! No parameter input from ${INDIR}/param.txt"
+  PARAM_LIST="${INDIR}/param/PARAM_LIST.txt"
+  if [ -e "${PARAM_LIST}" ] ; then
+    rm -f ${PARAM_LIST}
+  fi
+  touch ${PARAM_LIST}
+  for idx in `seq 1 ${PEST_PMAX}`
+  do
+    echo ${PEST_NAME[$idx]} >> ${PARAM_LIST}
+  done
+
+  if [ -e  "${INDIR}/param" ]; then
+    path="param/"
+    echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+  else
+    echo "Waring! No parameter input from ${INDIR}/param.txt"
+    exit 1
+  fi
 fi
 
 # empty directories
