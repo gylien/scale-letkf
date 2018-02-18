@@ -468,6 +468,9 @@ while ((time <= ETIME)); do
     fi
     for m in $mlist; do
       for d in $(seq $DOMNUM); do
+        path="log/scale_init.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).LOG_${time}${SCALE_SFX_NONC_0}"
+        pathout="${OUTDIR[$d]}/${time}/log/scale_init/${name_m[$m]}_LOG${SCALE_SFX_NONC_0}"
+        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+1))]}
         path="log/scale.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).LOG_${time}${SCALE_SFX_NONC_0}"
         pathout="${OUTDIR[$d]}/${time}/log/scale/${name_m[$m]}_LOG${SCALE_SFX_NONC_0}"
         echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+1))]}
@@ -478,11 +481,17 @@ while ((time <= ETIME)); do
     done
     for p in $plist; do
       if ((nitmax == 1)); then
+        path="log/scale-rm_init_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
+        pathout="${OUTDIR[1]}/${time}/log/scale_init/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
+        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
         path="log/scale-rm_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
         pathout="${OUTDIR[1]}/${time}/log/scale/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
         echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
       else
         for it in $(seq $nitmax); do
+          path="log/scale-rm_init_ens.NOUT_${time}_${it}$(printf -- "${log_nfmt}" $((p-1)))"
+          pathout="${OUTDIR[1]}/${time}/log/scale_init/NOUT-${it}$(printf -- "${log_nfmt}" $((p-1)))"
+          echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
           path="log/scale-rm_ens.NOUT_${time}_${it}$(printf -- "${log_nfmt}" $((p-1)))"
           pathout="${OUTDIR[1]}/${time}/log/scale/NOUT-${it}$(printf -- "${log_nfmt}" $((p-1)))"
           echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
@@ -1179,60 +1188,9 @@ fi
 
 #-------------------------------------------------------------------------------
 
-if ((CLEAR_TMP == 1)); then
-  local save_cmd='mv -f'
-else
-  local save_cmd='cp -f'
-fi
+mkdir -p ${OUTDIR[1]}/config
 
-#-------------------------------------------------------------------------------
-
-time=$STIME
-atime=$(datetime $time $LCYCLE s)
-loop=0
-while ((time <= ETIME)); do
-  loop=$((loop+1))
-
-  #-----------------------------------------------------------------------------
-  # scale
-  #-----------------------------------------------------------------------------
-
-  if [ -d "${OUTDIR[1]}/${time}/log/scale" ]; then
-    # launcher
-    for it in $(seq $nitmax); do
-      if ((nitmax == 1)); then
-        $save_cmd $CONFIG_DIR/scale-rm_ens_${time}.conf ${OUTDIR[1]}/${time}/log/scale/scale-rm_ens.conf
-      else
-        $save_cmd $CONFIG_DIR/scale-rm_ens_${time}_${it}.conf ${OUTDIR[1]}/${time}/log/scale/scale-rm_ens_${it}.conf
-      fi
-    done
-
-    # each member
-    for m in $(seq $mtot); do
-      for d in $(seq $DOMNUM); do
-        $save_cmd $CONFIG_DIR/${name_m[$m]}/run.d$(printf $DOMAIN_FMT $d)_${time}.conf ${OUTDIR[$d]}/${time}/log/scale/${name_m[$m]}_run.conf
-      done
-    done
-  fi
-
-  #-----------------------------------------------------------------------------
-  # letkf
-  #-----------------------------------------------------------------------------
-
-  if [ -d "${OUTDIR[1]}/${atime}/log/letkf" ]; then
-    for d in $(seq $DOMNUM); do
-      if ((d == 1)); then
-        $save_cmd $CONFIG_DIR/letkf_${atime}.conf ${OUTDIR[$d]}/${atime}/log/letkf/letkf.conf
-      else
-        $save_cmd $CONFIG_DIR/letkf.d$(printf $DOMAIN_FMT $d)_${atime}.conf ${OUTDIR[$d]}/${atime}/log/letkf/letkf.conf
-      fi
-    done
-  fi
-
-  #-------------------
-  time=$(datetime $time $LCYCLE s)
-  atime=$(datetime $time $LCYCLE s)
-done
+cp -fr $CONFIG_DIR/* ${OUTDIR[1]}/config
 
 #-------------------------------------------------------------------------------
 }
