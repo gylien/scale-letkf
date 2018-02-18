@@ -1026,24 +1026,40 @@ while ((time <= ETIME)); do
                 -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${bdy_start_time:0:4}, ${bdy_start_time:4:2}, ${bdy_start_time:6:2}, ${bdy_start_time:8:2}, ${bdy_start_time:10:2}, ${bdy_start_time:12:2}," \
                 -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0,")"
       fi
+      if [ ! -e "$SCRP_DIR/config.nml.scale_user" ]; then
+        if ((OCEAN_INPUT == 1)); then
+          if ((OCEAN_FORMAT == 99)); then
+            conf="$(echo "$conf" | \
+                sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${name_m[$m]}/init.d${dfmt}\",")"
+          fi
+        fi
+        if ((LAND_INPUT == 1)); then
+          if ((LAND_FORMAT == 99)); then
+            conf="$(echo "$conf" | \
+                sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${name_m[$m]}/init.d${dfmt}\",")"
+          fi
+        fi
+      fi
       conf_file="${name_m[$m]}/run.d${dfmt}_${time}.conf"
       echo "  $conf_file"
       echo "$conf" > $CONFIG_DIR/${conf_file}
 
-      conf="$(cat $SCRP_DIR/config.nml.scale_user)"
-      if ((OCEAN_INPUT == 1)); then
-        if ((OCEAN_FORMAT == 99)); then
-          conf="$(echo "$conf" | \
-              sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${name_m[$m]}/init.d${dfmt}\",")"
+      if [ -e "$SCRP_DIR/config.nml.scale_user" ]; then
+        conf="$(cat $SCRP_DIR/config.nml.scale_user)"
+        if ((OCEAN_INPUT == 1)); then
+          if ((OCEAN_FORMAT == 99)); then
+            conf="$(echo "$conf" | \
+                sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${name_m[$m]}/init.d${dfmt}\",")"
+          fi
         fi
-      fi
-      if ((LAND_INPUT == 1)); then
-        if ((LAND_FORMAT == 99)); then
-          conf="$(echo "$conf" | \
-              sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${name_m[$m]}/init.d${dfmt}\",")"
+        if ((LAND_INPUT == 1)); then
+          if ((LAND_FORMAT == 99)); then
+            conf="$(echo "$conf" | \
+                sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${name_m[$m]}/init.d${dfmt}\",")"
+          fi
         fi
+        echo "$conf" >> $CONFIG_DIR/${conf_file}
       fi
-      echo "$conf" >> $CONFIG_DIR/${conf_file}
 
       if ((stage_config == 1)); then
         if ((DISK_MODE == 3)); then
