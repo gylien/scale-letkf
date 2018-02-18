@@ -352,6 +352,7 @@ while ((time <= ETIME)); do
 
   # anal
   #-------------------
+  mlist=
   if ((OUT_OPT <= 4 || (OUT_OPT <= 5 && loop % OUT_CYCLE_SKIP == 0) || atime > ETIME)); then
     mlist=$(seq $mtot)
   elif ((OUT_OPT <= 7)); then
@@ -379,6 +380,7 @@ while ((time <= ETIME)); do
 
   # gues
   #-------------------
+  mlist=
   if ((OUT_OPT <= 3)); then
     mlist=$(seq $mtot)
   elif ((OUT_OPT <= 6)); then
@@ -406,6 +408,7 @@ while ((time <= ETIME)); do
 
   # hist
   #-------------------
+  mlist=
   if ((OUT_OPT <= 1)); then
     mlist=$(seq $mtot)
   elif ((OUT_OPT <= 2)); then
