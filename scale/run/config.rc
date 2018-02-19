@@ -99,6 +99,12 @@ for d in $(seq $DOMNUM); do
   DATA_ADDINFL[$d]="${DATA_ADDINFL[$d]:-${INDIR[$d]}}"
 done
 
+INDIR="${INDIR[1]}"                             # for backward compatibility
+DATA_TOPO="${DATA_TOPO[1]}"                     #
+DATA_LANDUSE="${DATA_LANDUSE[1]}"               #
+DATA_BDY_SCALE_PREP="${DATA_BDY_SCALE_PREP[1]}" #
+DATA_ADDINFL="${DATA_ADDINFL[1]}"               #
+
 DET_RUN="${DET_RUN:-0}"
 
 BDY_SINGLE_FILE="${BDY_SINGLE_FILE:-0}"
@@ -133,6 +139,7 @@ for d in $(seq $DOMNUM); do
   SCALE_NP_S[$d]=$SCALE_NP_TOT
   SCALE_NP_TOT=$((${SCALE_NP_TOT}+${SCALE_NP[$d]}))
 done
+SCALE_NP="${SCALE_NP[1]}"  # for backward compatibility
 
 #-------------------------------------------------------------------------------
 
