@@ -263,6 +263,20 @@ while ((time <= ETIME)); do
     fi
   fi
 
+  # additive inflation
+  #-------------------
+  if ((loop == 1 && ADDINFL == 1)); then
+    for m in $(seq $MEMBER); do
+      for d in $(seq $DOMNUM); do
+        for q in $(seq ${mem_np_[$d]}); do
+          pathin="${DATA_ADDINFL[$d]}/const/addi/${name_m[$m]}${CONNECTOR}init$(scale_filename_sfx $((q-1)))"
+          path="${name_m[$m]}/addi.d$(printf $DOMAIN_FMT $d)$(scale_filename_sfx $((q-1)))"
+          echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
+        done
+      done
+    done
+  fi
+
   #-------------------
   # stage-out
   #-------------------
@@ -1159,6 +1173,7 @@ while ((time <= ETIME)); do
             -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"<member>/anal.d${dfmt}_$(datetime_scale $atime)\"," \
             -e "/!--ANAL_SPRD_OUT--/a ANAL_SPRD_OUT = ${SPRD_OUT_TF}," \
             -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"topo.d${dfmt}\"," \
+            -e "/!--INFL_ADD_IN_BASENAME--/a INFL_ADD_IN_BASENAME = \"<member>/addi.d${dfmt}\"," \
             -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RTPS_INFL_OUT_TF}," \
             -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"rtpsinfl.d${dfmt}_$(datetime_scale $atime).nc\"," \
             -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
