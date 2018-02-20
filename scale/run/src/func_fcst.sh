@@ -1110,7 +1110,7 @@ for it in $(seq $its $ite); do
         fi
 
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
-             $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}/init $ocean_base $land_base $bdy_base \
+             $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}${CONNECTOR}init $ocean_base $land_base $bdy_base \
              $TMPOUT/const/${CONNECTOR_TOPO}topo $TMPOUT/${time_l}/${CONNECTOR_LANDUSE}landuse \
              ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf $MEMBER_FMT $m) $OUT_OPT \
              fcst $bdy_start_time
