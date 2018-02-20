@@ -949,7 +949,7 @@ for it in $(seq $its $ite); do
              $TMPOUT/const/${CONNECTOR_TOPO}topo $TMPOUT/${time_l}/${CONNECTOR_LANDUSE}landuse \
              ${bdyorgf} ${stimes[$c]} $mkinit ${name_m[$m]} $mem_bdy \
              $TMPRUN/scale_init/$(printf $MEMBER_FMT $m) \
-             "$bdy_time_list" $ntsteps $ntsteps_skip fcst
+             "$bdy_time_list" $ntsteps $ntsteps_skip $BDY_OCEAN_ONETIME fcst
       fi
     fi
   fi

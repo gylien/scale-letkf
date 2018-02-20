@@ -1054,7 +1054,7 @@ for it in $(seq $its $ite); do
            $TMPOUT/const/${CONNECTOR_TOPO}topo $TMPOUT/${time_l}/${CONNECTOR_LANDUSE}landuse \
            ${bdyorgf} $time $mkinit ${name_m[$m]} $mem_bdy \
            $TMPRUN/scale_init/${name_m[$m]} \
-           "$bdy_time_list" $ntsteps $ntsteps_skip cycle
+           "$bdy_time_list" $ntsteps $ntsteps_skip $BDY_OCEAN_ONETIME cycle
     fi
   fi
 
