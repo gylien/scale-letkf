@@ -768,7 +768,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       if (ic > 0) then
         do ij = 1, nij1
           ref_min_dist = 1.0d33
-          do iob = obsgrd(ic)%ac_ext(0, 1), obsgrd(ic)%ac_ext(obsgrd(ic)%ngrdext_i, obsgrd(ic)%ngrdext_j)
+          do iob = obsgrd(ic)%ac_ext(0, 1) + 1, obsgrd(ic)%ac_ext(obsgrd(ic)%ngrdext_i, obsgrd(ic)%ngrdext_j)
             rdx = (rig1(ij) - obsda_sort%ri(iob)) * DX
             rdy = (rjg1(ij) - obsda_sort%rj(iob)) * DY
             rdxy = rdx*rdx + rdy*rdy
