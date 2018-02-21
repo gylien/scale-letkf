@@ -74,18 +74,14 @@ do
     PMEM=$2
     PVAL=$3
 
-    if ((MEM == PMEM)); then
+    PMEM=`echo ${PMEM}`
+
+    if ((MEM == PMEM)) || [ "${PMEM}" = 'mean' ] || [ "${PMEM}" = 'mdet' ]; then
       sed -i "/!--${FULL_NAME}--/a ${PNAME} = ${PVAL}," $TMPDIR/run.conf
+      break
     fi
 
   done < ${TMPOUT}/param/${ifile}
-
-  ## prepare temporal file for LETKF 
-  #if [ -e "${FULL_NAME}.txt" ] ; then
-  #  rm -f ${FULL_NAME}.txt
-  #fi
-
-  #cp ${TMPOUT}/param/${ifile} ${TMPOUT}/param/${FULL_NAME}.txt
 
 done < ${TMPOUT}/param/PARAM_LIST.txt # Parameter loop
 

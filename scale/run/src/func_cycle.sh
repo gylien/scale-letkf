@@ -484,7 +484,7 @@ while ((time <= ETIME)); do
   # parameter files
   #-------------------
   if ((loop == 1)); then
-    path="vbc/"
+    path="param/"
     echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
   fi
 

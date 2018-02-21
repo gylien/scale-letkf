@@ -190,7 +190,9 @@ PROGRAM letkf
     ! 
     ! READ GUES (PEST)
     !
-    call read_pest0d_all_mpi(gues0d)
+    if (PEST_PMAX > 0) then
+      call read_pest0d_all_mpi(gues0d)
+    endif
 
     call mpi_timer('READ_GUES(PEST)', 1, barrier=MPI_COMM_a)
 
@@ -220,12 +222,14 @@ PROGRAM letkf
 
     call mpi_timer('DAS_LETKF', 1, barrier=MPI_COMM_a)
 
-    if (myrank_a == 0) then
+    if (myrank_a == 0 .and. PEST_PMAX > 0) then
       call das_pest_etkf(gues0d,anal0d)
     endif
     call mpi_timer('DAS_PEST_ETKF', 1, barrier=MPI_COMM_a)
 
-    call write_pest0d_all_mpi(anal0d)
+    if (PEST_PMAX > 0) then
+      call write_pest0d_all_mpi(anal0d)
+    endif
 
 !-----------------------------------------------------------------------
 ! Analysis ensemble
