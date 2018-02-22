@@ -77,8 +77,8 @@ MODULE common_nml
 
   !--- PARAM_LETKF
   integer               :: STIME(6) = (/2018,2,2,14,0,0/) ! DA start time
-  integer               :: ETIME(6) = (/2018,2,2,14,2,0/) ! DA end time
-  real(r_size)          :: DA_DSEC = 30.0d0 ! DA window length (sec)
+  integer               :: ETIME(6) = (/2018,2,2,14,0,0/) ! DA end time
+  real(r_size)          :: LCYCLE = 30.0d0 ! DA window length (sec)
   logical               :: OBSDA_IN = .false.
   character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@'
   character(filelenmax) :: OBSDA_MEAN_IN_BASENAME = ''
@@ -504,7 +504,7 @@ subroutine read_nml_letkf
   namelist /PARAM_LETKF/ &
     STIME, &
     ETIME, &
-    DA_DSEC,    &
+    LCYCLE,  &
     OBSDA_IN, &
     OBSDA_IN_BASENAME, &
     OBSDA_MEAN_IN_BASENAME, &

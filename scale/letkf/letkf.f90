@@ -32,11 +32,13 @@ PROGRAM letkf
   character(len=10) :: myranks
   integer :: iarg
 
-  integer :: DA_DATE(6)  ! date information (yyyy,mm,dd,hh,nn,ss)
+  integer :: adate(6)  ! analysis date (yyyy,mm,dd,hh,nn,ss)
+  integer :: gdate(6)  ! guess date (yyyy,mm,dd,hh,nn,ss)
   integer :: it ! main cycle loop iteration
   integer :: itmin = 1
   integer :: itmax = 3
-  character(len=14) :: timelabel ! YYYYMMDDHHNNSS
+  character(len=14) :: atimelabel ! YYYYMMDDHHNNSS ! analysis
+  character(len=14) :: gtimelabel ! YYYYMMDDHHNNSS ! guess
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -119,14 +121,14 @@ PROGRAM letkf
 
   main_cycle: do it = itmin, itmax
 
-    call it2date(it, da_date)
-    call da_gettimelabel(da_date,timelabel)
+    call it2date(it - 1, gdate)
+    call gettimelabel(gdate,gtimelabel)
+
+    call it2date(it, adate)
+    call gettimelabel(adate,atimelabel)
+
     print *,""
-    print *,""
-    print *,""
-    print *,""
-    print *,""
-    print *, "TEST,cycle=",it,"/",itmax,"ATIME:",timelabel
+    print *, "Multicycle LETKF,cycle=",it,"/",itmax,"ATIME:",atimelabel," GTIME:",gtimelabel
     print *,""
 
 

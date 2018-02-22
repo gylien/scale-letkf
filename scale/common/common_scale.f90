@@ -1900,7 +1900,7 @@ subroutine rij_rank_g2l(ig, jg, rank, il, jl)
 end subroutine rij_rank_g2l
 
 !-------------------------------------------------------------------------------
-!  Compute analysis date by adding the analysis window length (DA_DSEC) 
+!  Compute analysis date by adding the analysis window length (LCYCLE) 
 !-------------------------------------------------------------------------------
 subroutine it2date(it,date)
   use scale_calendar, only: &
@@ -1916,7 +1916,7 @@ subroutine it2date(it,date)
 
   call CALENDAR_date2daysec(absday, abssec, STIME, 0.0d0, 0) 
 
-  abssec = abssec + DA_DSEC * real(it, kind=r_size)
+  abssec = abssec + LCYCLE * real(it, kind=r_size)
 
   call CALENDAR_daysec2date(date, subsec, absday, abssec, 0)
 
@@ -1939,13 +1939,13 @@ subroutine get_itmax(itmax)
   call CALENDAR_date2daysec(absday, s_abssec, STIME, 0.0d0, 0) 
   call CALENDAR_date2daysec(absday, e_abssec, ETIME, 0.0d0, 0) 
 
-  itmax = nint((e_abssec - s_abssec) / DA_DSEC) 
+  itmax = nint((e_abssec - s_abssec) / LCYCLE) + 1
 
   return  
 end subroutine get_itmax
 
 !-------------------------------------------------------------------------------
-subroutine DA_gettimelabel(date,timelabel)
+subroutine gettimelabel(date,timelabel)
   implicit none
 
   character(len=14), intent(out) :: timelabel ! YYYYMMDDHHNNSS
@@ -1954,6 +1954,7 @@ subroutine DA_gettimelabel(date,timelabel)
   write(timelabel,'(I4.4,I2.2,I2.2,I2.2,I2.2,I2.2)') date(1:3), date(4:6) 
 
   return
-end subroutine DA_gettimelabel
+end subroutine gettimelabel
 !===============================================================================
+
 END MODULE common_scale

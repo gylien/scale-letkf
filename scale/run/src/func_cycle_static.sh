@@ -694,6 +694,9 @@ while ((time <= ETIME)); do
           -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
           -e "/!--MEM_NP--/a MEM_NP = $mem_np," \
           -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
+          -e "/!--STIME--/a STIME = ${STIME:0:4}, ${STIME:4:2}, ${STIME:6:2}, ${STIME:8:2}, ${STIME:10:2}, ${STIME:12:2}, " \
+          -e "/!--ETIME--/a ETIME = ${ETIME:0:4}, ${ETIME:4:2}, ${ETIME:6:2}, ${ETIME:8:2}, ${ETIME:10:2}, ${ETIME:12:2}, " \
+          -e "/!--LCYCLE--/a LCYCLE = ${LCYCLE}.D0, " \
       > $CONFIG_DIR/${conf_file}
   # Most of these parameters are not important for letkf
   cat $SCRP_DIR/config.nml.scale | \

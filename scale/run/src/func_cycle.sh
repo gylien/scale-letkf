@@ -1370,10 +1370,10 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
-       $time $atime $TMPRUN/letkf ${TMPDAT_OBS}/obs \
+       $time ${ETIME} $atime $TMPRUN/letkf ${TMPDAT_OBS}/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/${CONNECTOR_TOPO}topo $OBSOUT_OPT \
        $ADAPTINFL $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT \
-       $MEMBER
+       $MEMBER 
 fi
 
 if ((MYRANK == 0)); then

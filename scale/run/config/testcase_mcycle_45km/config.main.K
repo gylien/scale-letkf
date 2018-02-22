@@ -5,7 +5,8 @@
 #
 #===============================================================================
 
-PRESET='<PRESET>'       # 'K' or 'K_rankdir' or 'K_micro'
+#PRESET='<PRESET>'       # 'K' or 'K_rankdir' or 'K_micro'
+PRESET='K_micro'       # 'K' or 'K_rankdir' or 'K_micro'
 
 #===============================================================================
 
@@ -24,7 +25,9 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
-OUTDIR="${DDIR}/OUTPUT/${EXP}" # Directory for SCALE-LETKF output
+#INDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-5.2.2/OUTPUT/${EXP}"
+INDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-LETKF/OUTPUT/${EXP}"
+OUTDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-LETKF/OUTPUT/${EXP}" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -36,12 +39,12 @@ DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"                   
 DATA_TOPO=
 DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE=
-DATA_BDY_SCALE="/volume63/data/hp150019/honda/SCALE-LETKF/scale-5.2.2/OUTPUT/KYUSHU2017_D1"                                                      # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PREP="/volume63/data/hp150019/honda/SCALE-LETKF/scale-5.2.2/OUTPUT/testcase_mcycle_45km"
+DATA_BDY_SCALE=
+DATA_BDY_SCALE_PREP="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-LETKF/OUTPUT/testcase_mcycle_45km"
 #DATA_BDY_WRF="/volume63/data/hp150019/gylien/scale-letkf-test-suite/ncepfnl/wrfout"              # Directory of the boundary data in WRF format
 DATA_BDY_WRF="/volume63/data/hp150019/honda/SCALE-LETKF/scale-5.2.2/OUTPUT/testcase_Him8_45km/wrfbdy"
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
-DATA_BDY_GRADS="/volume63/data/hp150019/gylien/scale-letkf-test-suite/ncepfnl_grads"             # Directory of the boundary data in GrADS format
+DATA_BDY_GRADS=
 
 
 OBS="/volume63/data/hp150019/honda/SCALE-LETKF/scale-5.2.2/OUTPUT/testcase_Him8_45km/obs"
@@ -49,6 +52,16 @@ OBSNCEP=                               # Directory of observation data in NCEP B
 
 #===============================================================================
 # model/data file options
+
+PNETCDF=1               # 0: Do not use PnetCDF
+                        # 1: Use PnetCDF
+
+PNETCDF_BDY_SCALE=1      # Use PNETCDF I/O for the parent domain SCALE data? (default: $PNETCDF)
+                        # 0: Do not use PnetCDF
+                        # 1: Use PnetCDF
+
+DET_RUN=0               # 0: Disable the deterministic run
+                        # 1: Enable  the deterministic run
 
 #TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
 TOPO_FORMAT='prep'   # 'prep': Use prepared topo files in $DATA_TOPO
@@ -62,7 +75,7 @@ LANDUSE_FORMAT='prep' # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=0            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
 
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
@@ -89,6 +102,8 @@ BDYCYCLE_INT=21600
 
 PARENT_REF_TIME=
 
+ENABLE_PARAM_USER=0     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
+                        # 1: Enable the 'PARAM_USER' section of the SCALE namelist (require 'config.nml.scale_user' and customized version of SCALE)
 
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
@@ -137,6 +152,10 @@ BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
+
+IO_ARB=0                    # Use I/O arbitrator?
+                            # 0: No
+                            # 1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
