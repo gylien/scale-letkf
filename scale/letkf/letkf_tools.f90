@@ -48,7 +48,7 @@ CONTAINS
 ! Data Assimilation
 !-----------------------------------------------------------------------
 SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
     DX, DY
   use common_rand
   IMPLICIT NONE
@@ -1324,7 +1324,7 @@ END SUBROUTINE das_letkf
 !-------------------------------------------------------------------------------
 subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd, nobsl_t, cutd_t, srch_q0)
   use common_sort
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
     DX, DY
   use scale_rm_process, only: &
     PRC_NUM_X, &
@@ -1763,7 +1763,7 @@ end subroutine obs_local
 ! cut-off length in the extended subdomain, given the observation type
 !-------------------------------------------------------------------------------
 subroutine obs_local_range(ctype, ri, rj, imin, imax, jmin, jmax)
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
     DX, DY
   implicit none
   integer, intent(in) :: ctype
@@ -1791,7 +1791,7 @@ end subroutine obs_local_range
 ! Subroutine for main calculation of obs_local
 !-------------------------------------------------------------------------------
 subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
     DX, DY
   implicit none
   real(r_size), intent(in) :: ri, rj, rlev, rz ! coordinate of the targeted model grid
@@ -1909,9 +1909,9 @@ end subroutine obs_local_cal
 ! Relaxation parameter based on grid locations (not for covariance inflation purpose)
 !-------------------------------------------------------------------------------
 subroutine relax_beta(ri, rj, rz, beta)
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
     DX, DY
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO
   implicit none
   real(r_size), intent(in) :: ri, rj, rz

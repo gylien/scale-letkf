@@ -76,10 +76,10 @@ CONTAINS
 ! Initialize
 !-----------------------------------------------------------------------
 SUBROUTINE set_letkf_obs
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
     DX, &
     DY
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO,JHALO
 !  use scale_process, only: &
 !    MPI_COMM_d => LOCAL_COMM_WORLD, &
@@ -1183,7 +1183,7 @@ END SUBROUTINE set_letkf_obs
 ! Convert grid (i,j) values to obsgrid (ogi, ogj) sorting mesh
 !-----------------------------------------------------------------------
 subroutine ij_obsgrd(ctype, ri, rj, ogi, ogj)
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO,JHALO
 !  use scale_process, only: &
 !    PRC_myrank
@@ -1205,7 +1205,7 @@ end subroutine ij_obsgrd
 ! in the extended subdomain
 !-----------------------------------------------------------------------
 subroutine ij_obsgrd_ext(ctype, ri, rj, ogi, ogj)
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO,JHALO
 !  use scale_process, only: &
 !    PRC_myrank
