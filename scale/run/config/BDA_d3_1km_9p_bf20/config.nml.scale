@@ -93,29 +93,29 @@
 #
 #################################################
 
-&PARAM_INDEX
+&PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 59,
  IMAX = 60,
  JMAX = 60,
 /
 
-&PARAM_LAND_INDEX
+&PARAM_LAND_GRID_CARTESC_INDEX
  LKMAX = 5,
 /
 
-&PARAM_URBAN_INDEX
+&PARAM_URBAN_GRID_CARTESC_INDEX
  UKMAX = 5,
 /
 
-&PARAM_LAND_GRID
+&PARAM_LAND_GRID_CARTESC
  LDZ = 0.05D0, 0.15D0, 0.30D0, 0.50D0, 1.00D0,
 /
 
-&PARAM_URBAN_GRID
+&PARAM_URBAN_GRID_CARTESC
  UDZ = 0.01D0, 0.01D0, 0.03D0, 0.05D0, 0.10D0,
 /
 
-&PARAM_GRID
+&PARAM_ATMOS_GRID_CARTESC
  DX = 1000.D0,
  DY = 1000.D0,
  FZ(:) =    140.0000D0,   280.0000D0,   420.0000D0,   560.0000D0,   700.0000D0,
@@ -135,14 +135,14 @@
  BUFFER_DY = 20000.D0,
 /
 
-&PARAM_MAPPROJ
- MPRJ_basepoint_lon = 135.523D0,
- MPRJ_basepoint_lat =  34.823D0,
- MPRJ_basepoint_x   = 90000.0D0,
- MPRJ_basepoint_y   = 90000.0D0,
- MPRJ_type          = 'LC',
- MPRJ_LC_lat1       =  32.5D0,
- MPRJ_LC_lat2       =  37.5D0,
+&PARAM_MAPPROJECTION
+ MAPPROJECTION_basepoint_lon = 135.523D0,
+ MAPPROJECTION_basepoint_lat =  34.823D0,
+ MAPPROJECTION_basepoint_x   = 90000.0D0,
+ MAPPROJECTION_basepoint_y   = 90000.0D0,
+ MAPPROJECTION_type          = 'LC',
+ MAPPROJECTION_LC_lat1       =  32.5D0,
+ MAPPROJECTION_LC_lat2       =  37.5D0,
 /
 
 #################################################
