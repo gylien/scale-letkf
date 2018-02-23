@@ -1,7 +1,7 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Steps of 'cycle.sh'
+#  Functions for 'cycle' jobs
 #
 #===============================================================================
 
@@ -10,118 +10,12 @@ staging_list_static () {
 # Prepare all the staging list files
 #
 # Usage: staging_list_static
-#
-# Other input variables:
-#   $STAGING_DIR
-#   ...
 #-------------------------------------------------------------------------------
-# common variables
+# common section
 
 declare -a mem_np_
-for d in $(seq $DOMNUM); do
-  if ((PNETCDF == 1)); then
-    mem_np_[$d]=1
-  else
-    mem_np_[$d]=${SCALE_NP[$d]}
-  fi
-done
 
-#-------------------------------------------------------------------------------
-# executable files
-
-cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${ENSMODEL_DIR}/scale-rm_pp_ens|scale-rm_pp_ens
-${ENSMODEL_DIR}/scale-rm_init_ens|scale-rm_init_ens
-${ENSMODEL_DIR}/scale-rm_ens|scale-rm_ens
-${OBSUTIL_DIR}/obsope|obsope
-${LETKF_DIR}/letkf|letkf
-${COMMON_DIR}/pdbash|pdbash
-${COMMON_DIR}/datetime|datetime
-EOF
-
-#-------------------------------------------------------------------------------
-# database
-
-cat >> ${STAGING_DIR}/${STGINLIST_CONSTDB} << EOF
-${SCALEDIR}/scale-rm/test/data/rad/cira.nc|dat/rad/cira.nc
-${SCALEDIR}/scale-rm/test/data/rad/PARAG.29|dat/rad/PARAG.29
-${SCALEDIR}/scale-rm/test/data/rad/PARAPC.29|dat/rad/PARAPC.29
-${SCALEDIR}/scale-rm/test/data/rad/rad_o3_profs.txt|dat/rad/rad_o3_profs.txt
-${SCALEDIR}/scale-rm/test/data/rad/VARDATA.RM29|dat/rad/VARDATA.RM29
-${SCALEDIR}/scale-rm/test/data/rad/MIPAS/|dat/rad/MIPAS/
-${SCALEDIR}/scale-rm/test/data/land/|dat/land/
-EOF
-
-## H08
-#  if [ -e "${RTTOV_COEF}" ] && [ -e "${RTTOV_SCCOEF}" ]; then
-#    cat >> ${STAGING_DIR}/${STGINLIST_CONSTDB} << EOF
-#${RTTOV_COEF}|dat/rttov/rtcoef_himawari_8_ahi.dat
-#${RTTOV_SCCOEF}|dat/rttov/sccldcoef_himawari_8_ahi.dat
-#EOF
-#  fi
-
-if [ "$TOPO_FORMAT" != 'prep' ]; then
-  echo "${DATADIR}/topo/${TOPO_FORMAT}/Products/|dat/topo/${TOPO_FORMAT}/Products/" >> ${STAGING_DIR}/${STGINLIST_CONSTDB}
-fi
-if [ "$LANDUSE_FORMAT" != 'prep' ]; then
-  echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products/|dat/landuse/${LANDUSE_FORMAT}/Products/" >> ${STAGING_DIR}/${STGINLIST_CONSTDB}
-fi
-
-#-------------------------------------------------------------------------------
-# observations
-
-time=$(datetime $STIME $LCYCLE s)
-while ((time <= $(datetime $ETIME $LCYCLE s))); do
-  for iobs in $(seq $OBSNUM); do
-    if [ "${OBSNAME[$iobs]}" != '' ] && [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
-      echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time}.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
-    fi
-  done
-  time=$(datetime $time $LCYCLE s)
-done
-
-#-------------------------------------------------------------------------------
-# create empty directories
-
-cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-|sprd/
-|log/
-EOF
-
-#-------------------------------------------------------------------------------
-# time-invariant outputs
-
-#-------------------
-# stage-in
-#-------------------
-
-# domain catalogue
-#-------------------
-if ((BDY_FORMAT == 1)); then
-  if [ -s "$DATA_BDY_SCALE/const/log/latlon_domain_catalogue.txt" ]; then
-    pathin="$DATA_BDY_SCALE/const/log/latlon_domain_catalogue.txt"
-    path="latlon_domain_catalogue.bdy.txt"
-    echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
-  else
-    echo "[Error] Cannot find a lat/lon domain catalogue file at" >&2
-    echo "        '$DATA_BDY_SCALE/const/log/latlon_domain_catalogue.txt'" >&2
-    exit 1
-  fi
-fi
-
-#-------------------
-# stage-out
-#-------------------
-
-# domain catalogue
-#-------------------
-if ((LOG_OPT <= 3)); then
-  for d in $(seq $DOMNUM); do
-    path="latlon_domain_catalogue.d$(printf $DOMAIN_FMT $d).txt"
-    pathout="${OUTDIR[$d]}/const/log/latlon_domain_catalogue.txt"
-    echo "${pathout}|${path}|1" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$((${SCALE_NP_S[$d]}+1))]}
-  done
-fi
+staging_list_common_static cycle
 
 #-------------------------------------------------------------------------------
 # time-variant outputs
@@ -246,7 +140,7 @@ while ((time <= ETIME)); do
     elif ((BDY_ENS == 1)); then
       for m in $(seq $mtot); do
         for q in $(seq ${mem_np_[1]}); do
-          pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${name_m[$m]}${CONNECTOR}boundary$(scale_filename_sfx $((q-1)))"
+          pathin="${DATA_BDY_SCALE_PREP[1]}/${time}/bdy/${name_m[$m]}${CONNECTOR}boundary$(scale_filename_sfx $((q-1)))"
           path="${name_m[$m]}/bdy_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
           echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
         done
@@ -347,7 +241,7 @@ while ((time <= ETIME)); do
     elif ((BDYOUT_OPT <= 2)); then
       for q in $(seq ${mem_np_[1]}); do
         path="mean/bdy_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
-        pathout="${OUTDIR[1]}/${time}/bdy/${BDY_MEAN}${CONNECTOR}boundary$(scale_filename_sfx $((q-1)))"
+        pathout="${OUTDIR[1]}/${time}/bdy/mean${CONNECTOR}boundary$(scale_filename_sfx $((q-1)))"
 #        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$q]}
         echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((mmean-1)*mem_np+q))]}
       done
@@ -355,7 +249,7 @@ while ((time <= ETIME)); do
         for d in $(seq $DOMNUM); do
           for q in $(seq ${mem_np_[$d]}); do
             path="mean/init.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
-            pathout="${OUTDIR[$d]}/${time}/bdy/${BDY_MEAN}${CONNECTOR}init_bdy$(scale_filename_sfx $((q-1)))"
+            pathout="${OUTDIR[$d]}/${time}/bdy/mean${CONNECTOR}init_bdy$(scale_filename_sfx $((q-1)))"
 #            echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((mmean-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
             echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((mmean-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
           done
@@ -474,20 +368,39 @@ while ((time <= ETIME)); do
   else
     log_nfmt="-${PROCESS_FMT}"
   fi
+  if ((LOG_TYPE == 1)); then
+    mlist='1'
+    plist='1'
+  else
+    mlist=$(seq $mtot)
+    plist=$(seq $totalnp)
+  fi
 
-  if ((LOG_OPT <= 3)); then
-    if ((LOG_TYPE == 1)); then
-      mlist='1'
-      plist='1'
-    else
-      mlist=$(seq $mtot)
-      plist=$(seq $totalnp)
-    fi
+  if ((LOG_OPT <= 2)); then
     for m in $mlist; do
       for d in $(seq $DOMNUM); do
         path="log/scale_init.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).LOG_${time}${SCALE_SFX_NONC_0}"
         pathout="${OUTDIR[$d]}/${time}/log/scale_init/${name_m[$m]}_LOG${SCALE_SFX_NONC_0}"
         echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+1))]}
+      done
+    done
+    for p in $plist; do
+      if ((nitmax == 1)); then
+        path="log/scale-rm_init_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
+        pathout="${OUTDIR[1]}/${time}/log/scale_init/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
+        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+      else
+        for it in $(seq $nitmax); do
+          path="log/scale-rm_init_ens.NOUT_${time}_${it}$(printf -- "${log_nfmt}" $((p-1)))"
+          pathout="${OUTDIR[1]}/${time}/log/scale_init/NOUT-${it}$(printf -- "${log_nfmt}" $((p-1)))"
+          echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+        done
+      fi
+    done
+  fi
+  if ((LOG_OPT <= 3)); then
+    for m in $mlist; do
+      for d in $(seq $DOMNUM); do
         path="log/scale.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).LOG_${time}${SCALE_SFX_NONC_0}"
         pathout="${OUTDIR[$d]}/${time}/log/scale/${name_m[$m]}_LOG${SCALE_SFX_NONC_0}"
         echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+1))]}
@@ -498,17 +411,11 @@ while ((time <= ETIME)); do
     done
     for p in $plist; do
       if ((nitmax == 1)); then
-        path="log/scale-rm_init_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
-        pathout="${OUTDIR[1]}/${time}/log/scale_init/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
-        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
         path="log/scale-rm_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
         pathout="${OUTDIR[1]}/${time}/log/scale/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
         echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
       else
         for it in $(seq $nitmax); do
-          path="log/scale-rm_init_ens.NOUT_${time}_${it}$(printf -- "${log_nfmt}" $((p-1)))"
-          pathout="${OUTDIR[1]}/${time}/log/scale_init/NOUT-${it}$(printf -- "${log_nfmt}" $((p-1)))"
-          echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
           path="log/scale-rm_ens.NOUT_${time}_${it}$(printf -- "${log_nfmt}" $((p-1)))"
           pathout="${OUTDIR[1]}/${time}/log/scale/NOUT-${it}$(printf -- "${log_nfmt}" $((p-1)))"
           echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
@@ -516,13 +423,7 @@ while ((time <= ETIME)); do
       fi
     done
   fi
-
   if ((LOG_OPT <= 4)); then
-    if ((LOG_TYPE == 1)); then
-      plist='1'
-    else
-      plist=$(seq $totalnp)
-    fi
     for p in $plist; do
       path="log/letkf.NOUT_${atime}$(printf -- "${log_nfmt}" $((p-1)))"
       pathout="${OUTDIR[1]}/${atime}/log/letkf/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
@@ -533,66 +434,7 @@ while ((time <= ETIME)); do
   #-------------------
   time=$(datetime $time $LCYCLE s)
   atime=$(datetime $time $LCYCLE s)
-done
-
-#-------------------------------------------------------------------------------
-}
-
-#===============================================================================
-
-config_file_scale_launcher () {
-#-------------------------------------------------------------------------------
-# Generate the launcher configuration files for scale_pp/scale_init/scale
-#
-# Usage: config_file_scale_launcher MODEL_NAME CONF_NAME
-#
-#   MODEL_NAME  (scale-rm_pp/scale-rm_init/scale-rm)
-#   CONF_NAME   (pp/init/run)
-#   MEMBER_RUN  Number of members needed to run
-#
-# Other input variables:
-#   $nitmax
-#   $time
-#   $SCRP_DIR
-#   $MEMBER
-#   $mtot
-#   $PPN_APPAR
-#   $mem_nodes
-#   $DOMNUM
-#   $PRC_DOMAINS_LIST
-#   $STAGING_DIR
-#-------------------------------------------------------------------------------
-
-local MODEL_NAME="$1"; shift
-local CONF_NAME="$1"; shift
-local MEMBER_RUN="$1"
-
-#-------------------------------------------------------------------------------
-
-local it
-local conf_file
-
-for it in $(seq $nitmax); do
-  if ((nitmax == 1)); then
-    conf_file="${MODEL_NAME}_ens_${time}.conf"
-  else
-    conf_file="${MODEL_NAME}_ens_${time}_${it}.conf"
-  fi
-  echo "  $conf_file"
-  cat $SCRP_DIR/config.nml.ensmodel | \
-      sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
-          -e "/!--MEMBER_RUN--/a MEMBER_RUN = $MEMBER_RUN," \
-          -e "/!--MEMBER_ITER--/a MEMBER_ITER = $it," \
-          -e "/!--CONF_FILES--/a CONF_FILES = \"<member>/${CONF_NAME}.d<domain>_${time}.conf\"," \
-          -e "/!--PPN--/a PPN = $PPN_APPAR," \
-          -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
-          -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \
-          -e "/!--PRC_DOMAINS--/a PRC_DOMAINS = $PRC_DOMAINS_LIST" \
-      > $CONFIG_DIR/${conf_file}
-  if ((stage_config == 1)); then
-    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
-  fi
-done
+done # [ ((time <= ETIME)) ]
 
 #-------------------------------------------------------------------------------
 }
@@ -696,11 +538,11 @@ while ((time <= ETIME)); do
     #---------------------------------------------------------------------------
 
     if ((BDY_ENS == 1)); then
-      config_file_scale_launcher scale-rm_init init $mtot
+      config_file_scale_launcher cycle scale-rm_init_ens "<member>/init" $mtot
     elif ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
-      config_file_scale_launcher scale-rm_init init 1
+      config_file_scale_launcher cycle scale-rm_init_ens "<member>/init" 1
     else # local run directory: run multiple members as needed
-      config_file_scale_launcher scale-rm_init init $((repeat_mems <= mtot ? repeat_mems : mtot))
+      config_file_scale_launcher cycle scale-rm_init_ens "<member>/init" $((repeat_mems <= mtot ? repeat_mems : mtot))
     fi
 
     #---------------------------------------------------------------------------
@@ -868,12 +710,11 @@ while ((time <= ETIME)); do
         else
           conf_file_src=$SCRP_DIR/config.nml.scale_init.d$d
         fi
-        mkdir -p $CONFIG_DIR/${name_m[$m]}
         conf="$(cat $conf_file_src | \
             sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale_init.${name_m[$m]}.d${dfmt}.LOG_${time}\"," \
                 -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
                 -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
-                -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = $RESTART_OUTPUT," \
+                -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = ${RESTART_OUTPUT}," \
                 -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${name_m[$m]}/init.d${dfmt}\"," \
                 -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo.d${dfmt}\"," \
                 -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse.d${dfmt}\"," \
@@ -907,6 +748,7 @@ while ((time <= ETIME)); do
           #  sed -e "/!--MAKE_BOUNDARY--/a MAKE_BOUNDARY = .false.,")"
           #------
         fi
+        mkdir -p $CONFIG_DIR/${name_m[$m]}
         conf_file="${name_m[$m]}/init.d${dfmt}_${time}.conf"
         echo "  $conf_file"
         echo "$conf" > $CONFIG_DIR/${conf_file}
@@ -940,7 +782,7 @@ while ((time <= ETIME)); do
   # scale (launcher)
   #-----------------------------------------------------------------------------
 
-  config_file_scale_launcher scale-rm run $mtot
+  config_file_scale_launcher cycle scale-rm_ens "<member>/run" $mtot
 
   #-----------------------------------------------------------------------------
   # scale (each member)
@@ -1000,7 +842,6 @@ while ((time <= ETIME)); do
       else
         conf_file_src=$SCRP_DIR/config.nml.scale.d$d
       fi
-      mkdir -p $CONFIG_DIR/${name_m[$m]}
       conf="$(cat $conf_file_src | \
           sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale.${name_m[$m]}.d${dfmt}.LOG_${time}\"," \
               -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
@@ -1015,6 +856,7 @@ while ((time <= ETIME)); do
               -e "/!--ONLINE_IAM_DAUGHTER--/a ONLINE_IAM_DAUGHTER = ${ONLINE_IAM_DAUGHTER}," \
               -e "/!--RESTART_IN_BASENAME--/a RESTART_IN_BASENAME = \"${RESTART_IN_BASENAME}\"," \
               -e "/!--RESTART_IN_POSTFIX_TIMELABEL--/a RESTART_IN_POSTFIX_TIMELABEL = .true.," \
+              -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = .true.," \
               -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${name_m[$m]}/anal.d${dfmt}\"," \
               -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo.d${dfmt}\"," \
               -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse.d${dfmt}\"," \
@@ -1057,6 +899,7 @@ while ((time <= ETIME)); do
           fi
         fi
       fi
+      mkdir -p $CONFIG_DIR/${name_m[$m]}
       conf_file="${name_m[$m]}/run.d${dfmt}_${time}.conf"
       echo "  $conf_file"
       echo "$conf" > $CONFIG_DIR/${conf_file}
@@ -1196,35 +1039,6 @@ while ((time <= ETIME)); do
 done
 
 echo
-
-#-------------------------------------------------------------------------------
-}
-
-#===============================================================================
-config_file_save () {
-#-------------------------------------------------------------------------------
-# Save the runtime configuration files in $OUTDIR
-#
-# Usage: config_file_save [CONFIG_DIR]
-#
-#   CONFIG_DIR  Temporary directory of configuration files
-#               '-': Use $TMPROOT
-#
-# Other input variables:
-#   $TMPROOT
-#-------------------------------------------------------------------------------
-
-local CONFIG_DIR="${1:--}"
-
-if [ "$CONFIG_DIR" = '-' ]; then
-  CONFIG_DIR="$TMPROOT"
-fi
-
-#-------------------------------------------------------------------------------
-
-mkdir -p ${OUTDIR[1]}/config
-
-cp -fr $CONFIG_DIR/* ${OUTDIR[1]}/config
 
 #-------------------------------------------------------------------------------
 }

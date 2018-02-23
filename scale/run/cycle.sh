@@ -47,6 +47,7 @@ echo "[$(datetime_now)] Start $myname $@" >&2
 setting "$@" || exit $?
 
 if [ "$CONF_MODE" = 'static' ]; then
+  . src/func_common_static.sh || exit $?
   . src/func_${job}_static.sh || exit $?
 fi
 

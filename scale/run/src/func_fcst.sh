@@ -132,6 +132,11 @@ TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 #  exit 1
 #fi
 
+if [ "$CONF_MODE" != 'static' ] && ((DOMNUM > 1)); then
+  echo "[Error] Online nesting with multiple domains is only allowed when the static-config mode is used (\$CONF_MODE = 'static')." 1>&2
+  exit 1
+fi
+
 if ((RUN_LEVEL == 0)); then
   if ((ENABLE_PARAM_USER == 1)) && [ ! -e "$SCRP_DIR/config.nml.scale_user" ]; then
     echo "[Error] $myname: When \$ENABLE_PARAM_USER = 1, 'config.nml.scale_user' file is required." >&2
@@ -195,7 +200,7 @@ print_setting () {
 #-------------------------------------------------------------------------------
 
 for vname in DIR DOMAIN @INDIR @OUTDIR @DATA_TOPO DATA_TOPO_BDY_SCALE @DATA_LANDUSE DATA_BDY_SCALE \
-             DATA_BDY_SCALE_PREP DATA_BDY_WRF DATA_BDY_NICAM OBS OBSNCEP TOPO_FORMAT \
+             DATA_BDY_SCALE_PREP DATA_BDY_WRF DATA_BDY_NICAM OBS OBSNCEP DET_RUN TOPO_FORMAT \
              LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT PARENT_REF_TIME \
              ENABLE_PARAM_USER OCEAN_INPUT OCEAN_FORMAT LAND_INPUT LAND_FORMAT OBSNUM WINDOW_S WINDOW_E \
              LCYCLE LTIMESLOT MEMBER NNODES NNODES_APPAR PPN PPN_APPAR THREADS @SCALE_NP \
@@ -905,10 +910,7 @@ else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= fmember ? $((repeat_mems*rcycle)) : $((fmember*rcycle))))
 fi
 
-mkinit=0
-if ((loop == 1)); then
-  mkinit=$MAKEINIT
-fi
+mkinit=$MAKEINIT
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_init_node.sh $MYRANK \
@@ -990,10 +992,7 @@ else # local run directory: run multiple members as needed
   MEMBER_RUN=$((repeat_mems <= fmember ? $((repeat_mems*rcycle)) : $((fmember*rcycle))))
 fi
 
-mkinit=0
-if ((loop == 1)); then
-  mkinit=$MAKEINIT
-fi
+mkinit=$MAKEINIT
 
 for it in $(seq $its $ite); do
   if ((MYRANK == 0)); then
@@ -1050,10 +1049,7 @@ if (pdrun all $PROC_OPT); then
        $mem_nodes $mem_np $TMPRUN/scale $MEMBER_RUN $iter fcst
 fi
 
-mkinit=0
-if ((loop == 1)); then
-  mkinit=$MAKEINIT
-fi
+mkinit=$MAKEINIT
 
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script end" >&2

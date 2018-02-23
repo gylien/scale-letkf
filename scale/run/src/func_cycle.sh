@@ -83,6 +83,7 @@ STIME=$(datetime $STIME)
 ETIME=$(datetime ${ETIME:-$STIME})
 ISTEP=${ISTEP:-1}
 FSTEP=${FSTEP:-$nsteps}
+CONF_MODE=${CONF_MODE:-"dynamic"}
 TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 
 #-------------------------------------------------------------------------------
@@ -904,7 +905,7 @@ elif ((BDY_FORMAT == 0)); then
   exit 1
 elif ((LANDUSE_UPDATE != 1 && loop > 1)); then
   echo "  ... skip this step (already done in the first cycle)"
-  exit 1 
+  exit 1
 fi
 
 if ((BDY_FORMAT == 1)); then
