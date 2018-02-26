@@ -50,9 +50,9 @@ mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
 
 if ((PNETCDF == 1)); then
-  IO_AGGREGATE=".true."
+  FILE_AGGREGATE=".true."
 else
-  IO_AGGREGATE=".false"
+  FILE_AGGREGATE=".false"
 fi
 
 if ((PNETCDF == 1)); then
@@ -98,7 +98,7 @@ fi
 
 cat $TMPDAT/conf/config.nml.scale_pp | \
     sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
-        -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+        -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
         -e "/!--TOPO_OUT_BASENAME--/a TOPO_OUT_BASENAME = \"${TOPO_OUT_BASENAME}\"," \
         -e "/!--LANDUSE_OUT_BASENAME--/a LANDUSE_OUT_BASENAME = \"${LANDUSE_OUT_BASENAME}\"," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
