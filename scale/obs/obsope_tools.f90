@@ -18,10 +18,10 @@ MODULE obsope_tools
 !  use scale_process, only: &
 !    PRC_myrank
 !    MPI_COMM_d => LOCAL_COMM_WORLD
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     KHALO, IHALO, JHALO
 #ifdef H08
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
     DX, DY,    &
     BUFFER_DX, &
     BUFFER_DY
@@ -471,10 +471,9 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
             filename = GUES_MDET_IN_BASENAME
           end if
 
-!          write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file
-!          ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+!          write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
 #ifdef PNETCDF
-          if (IO_AGGREGATE) then
+          if (FILE_AGGREGATE) then
             call read_restart_par(filename, v3dg_rst, v2dg_rst, MPI_COMM_d)
           else
 #endif
@@ -1116,13 +1115,13 @@ end subroutine obsmake_cal
 ! Model-to-observation simulator calculation
 !-------------------------------------------------------------------------------
 subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
-  use scale_grid, only: &
-      GRID_CX, GRID_CY, &
+  use scale_atmos_grid_cartesC, only: &
+      ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_CY, &
       DX, DY
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO
-  use scale_mapproj, only: &
-      MPRJ_xy2lonlat
+  use scale_mapprojection, only: &
+      MAPPROJECTION_xy2lonlat
 
   implicit none
 
@@ -1147,7 +1146,8 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
     do i = 1, nlon
       ri = real(i + IHALO, r_size)
-      call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1), lon, lat)
+      call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + ATMOS_GRID_CARTESC_CX(1), &
+                                   (rj-1.0_r_size) * DY + ATMOS_GRID_CARTESC_CY(1), lon, lat)
       lon = lon * rad2deg
       lat = lat * rad2deg
 

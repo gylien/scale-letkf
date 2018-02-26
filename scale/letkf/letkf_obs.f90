@@ -76,10 +76,10 @@ CONTAINS
 ! Initialize
 !-----------------------------------------------------------------------
 SUBROUTINE set_letkf_obs
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
     DX, &
     DY
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO,JHALO
 !  use scale_process, only: &
 !    MPI_COMM_d => LOCAL_COMM_WORLD, &
@@ -1008,7 +1008,9 @@ SUBROUTINE set_letkf_obs
       obsbufs%set(n) = obsda%set(obsda%key(n))
       obsbufs%idx(n) = obsda%idx(obsda%key(n))
       obsbufs%val(n) = obsda%val(obsda%key(n))
-      obsbufs%ensval(1:nensobs_part,n) = obsda%ensval(im_obs_1:im_obs_2,obsda%key(n))
+      if (nensobs_part > 0) then
+        obsbufs%ensval(1:nensobs_part,n) = obsda%ensval(im_obs_1:im_obs_2,obsda%key(n))
+      end if
       obsbufs%qc(n) = obsda%qc(obsda%key(n))
 #ifdef H08
       obsbufs%lev(n) = obsda%lev(obsda%key(n))   ! H08
@@ -1032,7 +1034,9 @@ SUBROUTINE set_letkf_obs
     call MPI_ALLGATHERV(obsbufs%set, cnts, MPI_INTEGER, obsbufr%set, cntr, dspr, MPI_INTEGER, MPI_COMM_d, ierr)
     call MPI_ALLGATHERV(obsbufs%idx, cnts, MPI_INTEGER, obsbufr%idx, cntr, dspr, MPI_INTEGER, MPI_COMM_d, ierr)
     call MPI_ALLGATHERV(obsbufs%val, cnts, MPI_r_size, obsbufr%val, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
-    call MPI_ALLGATHERV(obsbufs%ensval, cnts*nensobs_part, MPI_r_size, obsbufr%ensval, cntr*nensobs_part, dspr*nensobs_part, MPI_r_size, MPI_COMM_d, ierr)
+    if (nensobs_part > 0) then
+      call MPI_ALLGATHERV(obsbufs%ensval, cnts*nensobs_part, MPI_r_size, obsbufr%ensval, cntr*nensobs_part, dspr*nensobs_part, MPI_r_size, MPI_COMM_d, ierr)
+    end if
     call MPI_ALLGATHERV(obsbufs%qc, cnts, MPI_INTEGER, obsbufr%qc, cntr, dspr, MPI_INTEGER, MPI_COMM_d, ierr)
 #ifdef H08
     call MPI_ALLGATHERV(obsbufs%lev, cnts, MPI_r_size, obsbufr%lev, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
@@ -1089,7 +1093,9 @@ SUBROUTINE set_letkf_obs
         obsda_sort%set(ns_ext:ne_ext) = obsbufr%set(ns_bufr:ne_bufr)
         obsda_sort%idx(ns_ext:ne_ext) = obsbufr%idx(ns_bufr:ne_bufr)
         obsda_sort%val(ns_ext:ne_ext) = obsbufr%val(ns_bufr:ne_bufr)
-        obsda_sort%ensval(im_obs_1:im_obs_2,ns_ext:ne_ext) = obsbufr%ensval(1:nensobs_part,ns_bufr:ne_bufr)
+        if (nensobs_part > 0) then
+          obsda_sort%ensval(im_obs_1:im_obs_2,ns_ext:ne_ext) = obsbufr%ensval(1:nensobs_part,ns_bufr:ne_bufr)
+        end if
         obsda_sort%qc(ns_ext:ne_ext) = obsbufr%qc(ns_bufr:ne_bufr)
 #ifdef H08
         obsda_sort%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr)   ! H08
@@ -1177,7 +1183,7 @@ END SUBROUTINE set_letkf_obs
 ! Convert grid (i,j) values to obsgrid (ogi, ogj) sorting mesh
 !-----------------------------------------------------------------------
 subroutine ij_obsgrd(ctype, ri, rj, ogi, ogj)
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO,JHALO
 !  use scale_process, only: &
 !    PRC_myrank
@@ -1199,7 +1205,7 @@ end subroutine ij_obsgrd
 ! in the extended subdomain
 !-----------------------------------------------------------------------
 subroutine ij_obsgrd_ext(ctype, ri, rj, ogi, ogj)
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO,JHALO
 !  use scale_process, only: &
 !    PRC_myrank

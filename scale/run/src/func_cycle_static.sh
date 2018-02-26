@@ -465,9 +465,9 @@ echo "Generate configration files..."
 
 mkdir -p $CONFIG_DIR
 
-IO_AGGREGATE=".false"
+FILE_AGGREGATE=".false"
 if ((PNETCDF == 1)); then
-  IO_AGGREGATE=".true."
+  FILE_AGGREGATE=".true."
 fi
 
 time=$STIME
@@ -576,7 +576,7 @@ while ((time <= ETIME)); do
     mkdir -p $CONFIG_DIR/${name_m[$m]}
     cat $SCRP_DIR/config.nml.scale | \
         sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale.${name_m[$m]}.LOG_${time}\"," \
-            -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+            -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
             -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
             -e "/!--TIME_DURATION--/a TIME_DURATION = ${CYCLEFLEN}.D0," \
             -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${LCYCLE}.D0," \
@@ -591,8 +591,8 @@ while ((time <= ETIME)); do
             -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${mem_bdy}/bdy_$(datetime_scale $time)\"," \
             -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
             -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0," \
-            -e "/!--HISTORY_DEFAULT_BASENAME--/a HISTORY_DEFAULT_BASENAME = \"${name_m[$m]}/hist.d01_$(datetime_scale $time)\"," \
-            -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
+            -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${name_m[$m]}/hist.d01_$(datetime_scale $time)\"," \
+            -e "/!--FILE_HISTORY_DEFAULT_TINTERVAL--/a FILE_HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
             -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"log/scale.${name_m[$m]}.monitor_${time}\"," \
             -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\"," \
             -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"latlon_domain_catalogue.txt\"," \
@@ -693,11 +693,11 @@ while ((time <= ETIME)); do
           -e "/!--PPN--/a PPN = $PPN_APPAR," \
           -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
           -e "/!--MEM_NP--/a MEM_NP = $mem_np," \
-          -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+          -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
       > $CONFIG_DIR/${conf_file}
   # Most of these parameters are not important for letkf
   cat $SCRP_DIR/config.nml.scale | \
-      sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+      sed -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
       >> $CONFIG_DIR/${conf_file}
   if ((stage_config == 1)); then
     echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
