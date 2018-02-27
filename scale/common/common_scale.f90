@@ -195,7 +195,7 @@ SUBROUTINE set_common_scale
   use scale_rm_process, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IMAX, &
     JMAX, &
     KMAX, &
@@ -343,7 +343,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   use scale_rm_process, only: &
     PRC_HAS_W,  &
     PRC_HAS_S
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use common_mpi, only: myrank
@@ -413,7 +413,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 !    PRC_HAS_E,  &
 !    PRC_HAS_S,  &
 !    PRC_HAS_N
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
@@ -584,7 +584,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   use scale_rm_process, only: &
     PRC_HAS_W,  &
     PRC_HAS_S
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use common_mpi, only: myrank
@@ -654,7 +654,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 !    PRC_HAS_E,  &
 !    PRC_HAS_S,  &
 !    PRC_HAS_N
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
@@ -743,7 +743,7 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
   use scale_rm_process, only: &
     PRC_HAS_W,  &
     PRC_HAS_S
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use common_mpi, only: myrank
@@ -811,7 +811,7 @@ SUBROUTINE read_topo(filename,topo)
   use scale_rm_process, only: &
     PRC_HAS_W,  &
     PRC_HAS_S
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX
   use common_mpi, only: myrank
@@ -860,7 +860,7 @@ SUBROUTINE read_topo_par(filename,topo,comm)
   use scale_rm_process, only: &
     PRC_2Drank
 !    PRC_PERIODIC_X, PRC_PERIODIC_Y
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX
   use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
@@ -925,7 +925,7 @@ END SUBROUTINE read_topo_par
 subroutine read_history(filename,step,v3dg,v2dg)
   use scale_process, only: &
       PRC_myrank
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO, &
       IS, IE, JS, JE, KS, KE, KA
   use scale_file, only: &
@@ -1042,7 +1042,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   use scale_rm_process, only: &
     PRC_2Drank
 !    PRC_PERIODIC_X, PRC_PERIODIC_Y
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO, &
       IS, IE, JS, JE, KS, KE, KA, &
       IMAX, JMAX, KMAX
@@ -1341,12 +1341,9 @@ end subroutine state_trans_inv
 !   v3dgh, v2dgh : 3D, 2D SCALE history variables
 !-------------------------------------------------------------------------------
 subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO, &
       IS, IE, JS, JE, KS, KE, KA
-  use scale_grid, only: &
-      GRID_CZ, &
-      GRID_FZ
   use scale_comm, only: &
       COMM_vars8, &
       COMM_wait
@@ -1483,10 +1480,10 @@ end subroutine state_to_history
 !   z(nij,nlev) : 3D height coordinate (on scattered grids)
 !-------------------------------------------------------------------------------
 subroutine scale_calc_z(topo, z)
-  use scale_grid, only: &
-     GRID_CZ, &
-     GRID_FZ
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC, only: &
+     ATMOS_GRID_CARTESC_CZ, &
+     ATMOS_GRID_CARTESC_FZ
+  use scale_atmos_grid_cartesC_index, only: &
      KHALO, KS, KE
   implicit none
 
@@ -1495,12 +1492,12 @@ subroutine scale_calc_z(topo, z)
   real(r_size) :: ztop
   integer :: i, j, k
 
-  ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
+  ztop = ATMOS_GRID_CARTESC_FZ(KE) - ATMOS_GRID_CARTESC_FZ(KS-1)
 !$OMP PARALLEL DO PRIVATE(j,i,k) COLLAPSE(2)
   do j = 1, nlat
     do i = 1, nlon
       do k = 1, nlev
-        z(k, i, j) = (ztop - topo(i,j)) / ztop * GRID_CZ(k+KHALO) + topo(i,j)
+        z(k, i, j) = (ztop - topo(i,j)) / ztop * ATMOS_GRID_CARTESC_CZ(k+KHALO) + topo(i,j)
       end do
     enddo
   enddo
@@ -1519,10 +1516,10 @@ end subroutine scale_calc_z
 !   z(nij,nlev) : 3D height coordinate (on scattered grids)
 !-------------------------------------------------------------------------------
 subroutine scale_calc_z_grd(nij, topo, z)
-  use scale_grid, only: &
-     GRID_CZ, &
-     GRID_FZ
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC, only: &
+     ATMOS_GRID_CARTESC_CZ, &
+     ATMOS_GRID_CARTESC_FZ
+  use scale_atmos_grid_cartesC_index, only: &
      KHALO, KS, KE
   implicit none
 
@@ -1532,11 +1529,11 @@ subroutine scale_calc_z_grd(nij, topo, z)
   real(r_size) :: ztop
   integer :: k, i
 
-  ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
+  ztop = ATMOS_GRID_CARTESC_FZ(KE) - ATMOS_GRID_CARTESC_FZ(KS-1)
 !$OMP PARALLEL DO PRIVATE(i,k)
   do k = 1, nlev
     do i = 1, nij
-      z(i,k) = (ztop - topo(i)) / ztop * GRID_CZ(k+KHALO) + topo(i)
+      z(i,k) = (ztop - topo(i)) / ztop * ATMOS_GRID_CARTESC_CZ(k+KHALO) + topo(i)
     end do
   end do
 !$OMP END PARALLEL DO
@@ -1780,12 +1777,12 @@ subroutine rij_rank(ig, jg, rank)
   use scale_rm_process, only: &
       PRC_NUM_X, PRC_NUM_Y
 #ifdef DEBUG
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, &
       IA, JA
   use scale_process, only: &
       PRC_myrank
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
       GRID_CX, &
       GRID_CY, &
       GRID_CXG, &
@@ -1793,7 +1790,7 @@ subroutine rij_rank(ig, jg, rank)
       DX, &
       DY
 #else
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
 #endif
   implicit none
@@ -1844,12 +1841,12 @@ subroutine rij_rank_g2l(ig, jg, rank, il, jl)
   use scale_rm_process, only: &
       PRC_NUM_X, PRC_NUM_Y
 #ifdef DEBUG
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, &
       IA, JA
   use scale_process, only: &
       PRC_myrank
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
       GRID_CX, &
       GRID_CY, &
       GRID_CXG, &
@@ -1857,7 +1854,7 @@ subroutine rij_rank_g2l(ig, jg, rank, il, jl)
       DX, &
       DY
 #else
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
 #endif
   implicit none

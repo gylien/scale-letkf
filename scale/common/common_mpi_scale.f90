@@ -127,13 +127,13 @@ end subroutine finalize_mpi_scale
 ! set_common_mpi_scale
 !-------------------------------------------------------------------------------
 subroutine set_common_mpi_scale
-  use scale_grid, only: &
-      GRID_CX, GRID_CY, &
+  use scale_atmos_grid_cartesC, only: &
+      ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_CY, &
       DX, DY
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
-  use scale_mapproj, only: &
-      MPRJ_xy2lonlat
+  use scale_mapprojection, only: &
+      MAPPROJECTION_xy2lonlat
   implicit none
   integer :: color, key
   integer :: ierr
@@ -189,7 +189,8 @@ subroutine set_common_mpi_scale
         do i = 1, nlon
           ri = real(i + IHALO, r_size)
           rj = real(j + JHALO, r_size)
-          call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1), lon2d(i,j), lat2d(i,j))
+          call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + ATMOS_GRID_CARTESC_CX(1), &
+                                       (rj-1.0_r_size) * DY + ATMOS_GRID_CARTESC_CY(1), lon2d(i,j), lat2d(i,j))
           lon2d(i,j) = lon2d(i,j) * rad2deg
           lat2d(i,j) = lat2d(i,j) * rad2deg
         end do
@@ -235,7 +236,7 @@ end subroutine unset_common_mpi_scale
 ! set_common_mpi_grid
 !-------------------------------------------------------------------------------
 subroutine set_common_mpi_grid
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, &
     JHALO
   use scale_process, only: &
@@ -512,31 +513,31 @@ subroutine set_scalelib
     CALENDAR_setup
 !  use scale_random, only: &
 !    RANDOM_setup
-  use scale_grid_index, only: &
-    GRID_INDEX_setup
+  use scale_atmos_grid_cartesC_index, only: &
+    ATMOS_GRID_CARTESC_INDEX_setup
+  use scale_atmos_grid_cartesC, only: &
+    ATMOS_GRID_CARTESC_setup, &
+    ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, &
+    ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y
+!  use scale_ocean_grid_cartesC_index, only: &
+!    OCEAN_GRID_CARTESC_INDEX_setup
+!  use scale_ocean_grid_cartesC, only: &
+!    OCEAN_GRID_CARTESC_setup
   use scale_time, only: &
     TIME_DTSEC,         &
     TIME_STARTDAYSEC
-  use scale_grid, only: &
-    GRID_setup, &
-    GRID_DOMAIN_CENTER_X, &
-    GRID_DOMAIN_CENTER_Y
-!  use scale_ocean_grid_index, only: &
-!    OCEAN_GRID_INDEX_setup
-!  use scale_ocean_grid, only: &
-!    OCEAN_GRID_setup
 #ifdef PNETCDF
-  use scale_land_grid_index, only: &
-    LAND_GRID_INDEX_setup
+  use scale_land_grid_cartesC_index, only: &
+    LAND_GRID_CARTESC_INDEX_setup
 #endif
-!  use scale_land_grid, only: &
-!    LAND_GRID_setup
+!  use scale_land_grid_cartesC, only: &
+!    LAND_GRID_CARTESC_setup
 #ifdef PNETCDF
-  use scale_urban_grid_index, only: &
-    URBAN_GRID_INDEX_setup
+  use scale_urban_grid_cartesC_index, only: &
+    URBAN_GRID_CARTESC_INDEX_setup
 #endif
-!  use scale_urban_grid, only: &
-!    URBAN_GRID_setup
+!  use scale_urban_grid_cartesC, only: &
+!    URBAN_GRID_CARTESC_setup
   use scale_atmos_hydrometeor, only: &
     ATMOS_HYDROMETEOR_setup, &
     ATMOS_HYDROMETEOR_regist
@@ -573,12 +574,12 @@ subroutine set_scalelib
 !    TOPO_setup
 !  use scale_landuse, only: &
 !    LANDUSE_setup
-!  use scale_grid_real, only: &
-!    REAL_setup
-  use scale_mapproj, only: &
-    MPRJ_setup
-!  use scale_gridtrans, only: &
-!    GTRANS_setup
+!  use scale_atmos_grid_cartesC_real, only: &
+!    ATMOS_GRID_CARTESC_REAL_setup
+  use scale_mapprojection, only: &
+    MAPPROJECTION_setup
+!  use scale_atmos_grid_cartesC_metric, only: &
+!    ATMOS_GRID_CARTESC_METRIC_setup
 !  use scale_interpolation, only: &
 !    INTERP_setup
 !  use mod_admin_restart, only: &
@@ -593,8 +594,8 @@ subroutine set_scalelib
 !    MONIT_setup
 !  use scale_external_input, only: &
 !    EXTIN_setup
-!  use scale_grid_nest, only: &
-!    NEST_setup
+!  use scale_comm_cartesC_nest, only: &
+!    COMM_CARTESC_NEST_setup
 !  use scale_atmos_hydrostatic, only: &
 !    ATMOS_HYDROSTATIC_setup
 !  use scale_atmos_thermodyn, only: &
@@ -775,21 +776,21 @@ subroutine set_scalelib
 !  call RANDOM_setup
 
   ! setup horizontal/vertical grid coordinates
-  call GRID_INDEX_setup
-  call GRID_setup
+  call ATMOS_GRID_CARTESC_INDEX_setup
+  call ATMOS_GRID_CARTESC_setup
 
-!  call OCEAN_GRID_INDEX_setup
-!  call OCEAN_GRID_setup
-
-#ifdef PNETCDF
-  call LAND_GRID_INDEX_setup
-#endif
-!  call LAND_GRID_setup
+!  call OCEAN_GRID_CARTESC_INDEX_setup
+!  call OCEAN_GRID_CARTESC_setup
 
 #ifdef PNETCDF
-  call URBAN_GRID_INDEX_setup
+  call LAND_GRID_CARTESC_INDEX_setup
 #endif
-!  call URBAN_GRID_setup
+!  call LAND_GRID_CARTESC_setup
+
+#ifdef PNETCDF
+  call URBAN_GRID_CARTESC_INDEX_setup
+#endif
+!  call URBAN_GRID_CARTESC_setup
 
   ! setup submodel administrator
 !  call ATMOS_admin_setup
@@ -841,12 +842,12 @@ subroutine set_scalelib
 !  call LANDUSE_setup
 
   ! setup grid coordinates (real world)
-!  call REAL_setup
-    ! setup map projection [[ in REAL_setup ]]
-    call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
+!  call ATMOS_GRID_CARTESC_REAL_setup
+    ! setup map projection [[ in ATMOS_GRID_CARTESC_REAL_setup ]]
+    call MAPPROJECTION_setup( ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y )
 
   ! setup grid transfer metrics (uses in ATMOS_dynamics)
-!  call GTRANS_setup
+!  call ATMOS_GRID_CARTESC_METRIC_setup
 
   ! setup Z-ZS interpolation factor (uses in History)
 !  call INTERP_setup
@@ -870,7 +871,7 @@ subroutine set_scalelib
 !  call EXTIN_setup( 'RM' )
 
   ! setup nesting grid
-!  call NEST_setup ( intercomm_parent, intercomm_child )
+!  call COMM_CARTESC_NEST_setup ( intercomm_parent, intercomm_child )
 
   ! setup common tools
 !  call ATMOS_HYDROSTATIC_setup
