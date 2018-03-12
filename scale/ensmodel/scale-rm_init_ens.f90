@@ -9,7 +9,8 @@ program scaleles_init_ens
   use common_scale, only: &
      set_common_conf
   use common_mpi_scale, only: &
-     proc2mem, &
+     rank_to_mem, &
+     rank_to_mempe, &
      nitmax, &
      set_mem_node_proc, &
      mpi_timer
@@ -127,7 +128,7 @@ program scaleles_init_ens
 
   ! split MPI communicator for LETKF
   call PRC_MPIsplit_letkf( universal_comm,                   & ! [IN]
-                           MEM_NP, nitmax, universal_nprocs, proc2mem, & ! [IN]
+                           MEM_NP, nitmax, universal_nprocs, rank_to_mempe, & ! [IN]
                            global_comm                       ) ! [OUT]
 
   if (global_comm /= MPI_COMM_NULL) then
@@ -158,7 +159,7 @@ program scaleles_init_ens
     end if
 
     do it = its, ite
-      im = proc2mem(1,it,universal_myrank+1)
+      im = rank_to_mem(it,universal_myrank+1)
       if (im >= 1 .and. im <= MEMBER_RUN) then
         if (CONF_FILES_SEQNUM) then
           call file_member_replace(im, CONF_FILES, confname)

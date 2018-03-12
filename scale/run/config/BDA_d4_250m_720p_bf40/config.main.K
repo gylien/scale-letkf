@@ -85,9 +85,8 @@ LAND_INPUT=0            # 0: No land input (use cycling land variables)
 LAND_FORMAT=0           # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
-OBSNUM=2
-OBSNAME[1]=obs                                    
-OBSNAME[2]=radar
+OBSNUM=1
+OBSNAME[1]=radar
 
 #===============================================================================
 # Cycling settings

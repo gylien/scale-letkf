@@ -164,6 +164,8 @@ subroutine set_common_conf(nprocs)
   ! setup standard I/O
   call IO_setup( MODELNAME, .false.)
 
+  call read_nml_log
+  call read_nml_model
   call read_nml_ensemble
   call read_nml_letkf_prc
 
@@ -308,12 +310,16 @@ END SUBROUTINE set_common_scale
 !  WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
 
 !  do iv3d = 1, nv3d
-!    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+!    if (LOG_LEVEL >= 1) then
+!      write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+!    end if
 !    call FileRead(v3dg(:,:,:,iv3d), filename, trim(v3d_name(iv3d)), 1, PRC_myrank)
 !  end do
 
 !  do iv2d = 1, nv2d
-!    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
+!    if (LOG_LEVEL >= 1) then
+!      write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
+!    end if
 !    call FileRead(v2dg(:,:,iv2d), filename, trim(v2d_name(iv2d)), 1, PRC_myrank)
 !  end do
 
@@ -359,7 +365,9 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
   do iv3d = 1, nv3d
-    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+    end if
     call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
     call ncio_check(nf90_get_var(ncid, varid, v3dg(:,:,:,iv3d), &
                                  start = (/ 1, is, js, 1 /),    &
@@ -367,7 +375,9 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   end do
 
   do iv2d = 1, nv2d
-    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
+    end if
     call ncio_check(nf90_inq_varid(ncid, trim(v2d_name(iv2d)), varid))
     call ncio_check(nf90_get_var(ncid, varid, v2dg(:,:,iv2d), &
                                  start = (/ is, js, 1 /),     &
@@ -431,7 +441,9 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
   do iv3d = 1, nv3d
-    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+    end if
     err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
@@ -445,7 +457,9 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
   end do
 
   do iv2d = 1, nv2d
-    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
+    end if
     err = nfmpi_inq_varid(ncid, trim(v2d_name(iv2d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
@@ -507,21 +521,27 @@ END SUBROUTINE read_restart_par
 !!print *, '######### ncid:', ncid
 
 !  DO iv3d = 1, nv3d
-!    write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+!    if (LOG_LEVEL >= 1) then
+!      write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+!    end if
 !    call ncio_write(ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, v3dg(:,:,:,iv3d))
 !    call ncio_read (ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, v3dgtmp)
 !    call ncio_write(ncid, trim(v3d_name(iv3d)), nlev, nlon, nlat, 1, v3dgtmp)
 !  END DO
 
 !  DO iv2d = 1, nv2d
-!    write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+!    if (LOG_LEVEL >= 1) then
+!      write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+!    end if
 !    call ncio_write(ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, v2dg(:,:,iv2d))
 !    call ncio_read (ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, v2dgtmp)
 !    call ncio_write(ncid, trim(v2d_name(iv2d)), nlon, nlat, 1, v2dgtmp)
 !  END DO
 
 !!  DO iv3d = 1, nv3d
-!!    write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+!!    if (LOG_LEVEL >= 1) then
+!!      write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+!!    end if
 !!    call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), vid))
 
 !!!print *, '######### vid:', myrank, vid
@@ -532,7 +552,9 @@ END SUBROUTINE read_restart_par
 !!  END DO
 
 !!  DO iv2d = 1, nv2d
-!!    write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+!!    if (LOG_LEVEL >= 1) then
+!!      write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+!!    end if
 !!    call ncio_check(nf90_inq_varid(ncid, trim(v2d_name(iv2d)), vid))
 !!!    call FileWrite(vid, v2dg(:,:,iv2d), 1.0d0, 1.0d0)
 !!    call file_write_data( vid, v2dg(:,:,iv2d), -1.0d0, -1.0d0, RP, & ! (in)
@@ -584,7 +606,9 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   call ncio_open(trim(filename) // filesuffix, NF90_WRITE, ncid)
 
   do iv3d = 1, nv3d
-    write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+    end if
     call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
     call ncio_check(nf90_put_var(ncid, varid, v3dg(:,:,:,iv3d), &
                                  start = (/ 1, is, js, 1 /),    &
@@ -592,7 +616,9 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   end do
 
   do iv2d = 1, nv2d
-    write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+    end if
     call ncio_check(nf90_inq_varid(ncid, trim(v2d_name(iv2d)), varid))
     call ncio_check(nf90_put_var(ncid, varid, v2dg(:,:,iv2d), &
                                  start = (/ is, js, 1 /),     &
@@ -656,7 +682,9 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
   do iv3d = 1, nv3d
-    write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+    end if
     err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
@@ -670,7 +698,9 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
   end do
 
   do iv2d = 1, nv2d
-    write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+    end if
     err = nfmpi_inq_varid(ncid, trim(v2d_name(iv2d)), varid)
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
@@ -734,19 +764,25 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
 !!! restart files do not contain 3D height variable before SCALE v5.1
-!  write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(height3d_name)
+!  if (LOG_LEVEL >= 1) then
+!    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(height3d_name)
+!  end if
 !  call ncio_check(nf90_inq_varid(ncid, trim(height3d_name), varid))
 !  call ncio_check(nf90_get_var(ncid, varid, height,        &
 !                               start = (/ 1, is, js, 1 /), &
 !                               count = (/ KMAX, IMAX, JMAX, 1 /)))
 
-  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lon2d_name)
+  if (LOG_LEVEL >= 1) then
+    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lon2d_name)
+  end if
   call ncio_check(nf90_inq_varid(ncid, trim(lon2d_name), varid))
   call ncio_check(nf90_get_var(ncid, varid, lon,        &
                                start = (/ is, js, 1 /), &
                                count = (/ IMAX, JMAX, 1 /)))
 
-  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lat2d_name)
+  if (LOG_LEVEL >= 1) then
+    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lat2d_name)
+  end if
   call ncio_check(nf90_inq_varid(ncid, trim(lat2d_name), varid))
   call ncio_check(nf90_get_var(ncid, varid, lat,        &
                                start = (/ is, js, 1 /), &
@@ -793,7 +829,9 @@ SUBROUTINE read_topo(filename,topo)
   write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
-  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(topo2d_name)
+  if (LOG_LEVEL >= 1) then
+    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(topo2d_name)
+  end if
   call ncio_check(nf90_inq_varid(ncid, trim(topo2d_name), varid))
   call ncio_check(nf90_get_var(ncid, varid, topo,       &
                                start = (/ is, js, 1 /), &
@@ -847,7 +885,9 @@ SUBROUTINE read_topo_par(filename,topo,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
-  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(topo2d_name)
+  if (LOG_LEVEL >= 1) then
+    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(topo2d_name)
+  end if
   err = nfmpi_inq_varid(ncid, trim(topo2d_name), varid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_inq_varid '//' '//nfmpi_strerror(err)
@@ -903,7 +943,9 @@ subroutine read_history(filename,step,v3dg,v2dg)
   ! 3D variables
   !-------------
   do iv3d = 1, nv3dd
-    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
+    end if
     call HistoryGet( var3D,                 & ! [OUT]
                      filename,              & ! [IN]
                      trim(v3dd_name(iv3d)), & ! [IN]
@@ -914,7 +956,9 @@ subroutine read_history(filename,step,v3dg,v2dg)
   ! 2D variables
   !-------------
   do iv2d = 1, nv2dd
-    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
+    end if
     call HistoryGet( var2D,                 & ! [OUT]
                      filename,              & ! [IN]
                      trim(v2dd_name(iv2d)), & ! [IN]
@@ -924,6 +968,17 @@ subroutine read_history(filename,step,v3dg,v2dg)
 
   ! Communicate halo
   !-------------
+!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
+  do iv3d = 1, nv3dd
+    do j = JS, JE
+      do i = IS, IE
+        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
+        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
+      end do
+    end do
+  end do
+!$OMP END PARALLEL DO
+
   do iv3d = 1, nv3dd
     call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
   end do
@@ -937,17 +992,6 @@ subroutine read_history(filename,step,v3dg,v2dg)
   do iv2d = 1, nv2dd
     call COMM_wait ( v2dg(:,:,iv2d), iv2d )
   end do
-
-!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
-  do iv3d = 1, nv3dd
-    do j = JS, JE
-      do i = IS, IE
-        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
-        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
-      end do
-    end do
-  end do
-!$OMP END PARALLEL DO
 
   ! Save topo for later use
   !-------------
@@ -1022,7 +1066,9 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   ! 3D variables
   !-------------
   do iv3d = 1, nv3dd
-    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
+    end if
 
 !--- neither of these work now ---
 !    call FILEIO_read( var3D(:,:,:,iv3d),    & ! [OUT]
@@ -1052,7 +1098,9 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   ! 2D variables
   !-------------
   do iv2d = 1, nv2dd
-    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
+    end if
 
 !--- neither of these work now ---
 !    call FILEIO_read( var2D(:,:,iv2d),      & ! [OUT]
@@ -1105,6 +1153,17 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 
   ! Communicate halo
   !-------------
+!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
+  do iv3d = 1, nv3dd
+    do j = JS, JE
+      do i = IS, IE
+        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
+        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
+      end do
+    end do
+  end do
+!$OMP END PARALLEL DO
+
   do iv3d = 1, nv3dd
     call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
   end do
@@ -1118,17 +1177,6 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   do iv2d = 1, nv2dd
     call COMM_wait ( v2dg(:,:,iv2d), iv2d )
   end do
-
-!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
-  do iv3d = 1, nv3dd
-    do j = JS, JE
-      do i = IS, IE
-        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
-        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
-      end do
-    end do
-  end do
-!$OMP END PARALLEL DO
 
   ! Save topo for later use
   !-------------
@@ -1334,6 +1382,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   ! Pad the upper and lower halo areas
   !---------------------------------------------------------
 
+!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
   do iv3d = 1, nv3dd
     do j  = JS, JE
       do i  = IS, IE
@@ -1342,6 +1391,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
       end do
     end do
   end do
+!$OMP END PARALLEL DO
 
   ! Communicate the lateral halo areas
   !---------------------------------------------------------
@@ -1577,14 +1627,14 @@ end subroutine enssprd_grd
 !-------------------------------------------------------------------------------
 ! Convert 1D rank of process to 2D rank
 !-------------------------------------------------------------------------------
-subroutine rank_1d_2d(proc, iproc, jproc)
+subroutine rank_1d_2d(rank, rank_i, rank_j)
   use scale_rm_process, only: PRC_2Drank
   implicit none
-  integer, intent(in) :: proc
-  integer, intent(out) :: iproc, jproc
+  integer, intent(in) :: rank
+  integer, intent(out) :: rank_i, rank_j
 
-  iproc = PRC_2Drank(proc,1)
-  jproc = PRC_2Drank(proc,2)
+  rank_i = PRC_2Drank(rank,1)
+  rank_j = PRC_2Drank(rank,2)
 
   return  
 end subroutine rank_1d_2d
@@ -1592,13 +1642,13 @@ end subroutine rank_1d_2d
 !-------------------------------------------------------------------------------
 ! Convert 2D rank of process to 1D rank
 !-------------------------------------------------------------------------------
-subroutine rank_2d_1d(iproc, jproc, proc)
+subroutine rank_2d_1d(rank_i, rank_j, rank)
   use scale_rm_process, only: PRC_NUM_X
   implicit none
-  integer, intent(in) :: iproc, jproc
-  integer, intent(out) :: proc
+  integer, intent(in) :: rank_i, rank_j
+  integer, intent(out) :: rank
 
-  proc = jproc * PRC_NUM_X + iproc
+  rank = rank_j * PRC_NUM_X + rank_i
 
   return  
 end subroutine rank_2d_1d
@@ -1606,18 +1656,18 @@ end subroutine rank_2d_1d
 !-------------------------------------------------------------------------------
 ! Convert <integer> global grid coordinates (i,j) to local given the 1D rank of process
 !-------------------------------------------------------------------------------
-subroutine ij_g2l(proc, ig, jg, il, jl)
+subroutine ij_g2l(rank, ig, jg, il, jl)
   implicit none
-  integer, intent(in) :: proc
+  integer, intent(in) :: rank
   integer, intent(in) :: ig
   integer, intent(in) :: jg
   integer, intent(out) :: il
   integer, intent(out) :: jl
-  integer :: iproc, jproc
+  integer :: rank_i, rank_j
 
-  call rank_1d_2d(proc, iproc, jproc)
-  il = ig - iproc * nlon
-  jl = jg - jproc * nlat
+  call rank_1d_2d(rank, rank_i, rank_j)
+  il = ig - rank_i * nlon
+  jl = jg - rank_j * nlat
 
   return  
 end subroutine ij_g2l
@@ -1625,18 +1675,18 @@ end subroutine ij_g2l
 !-------------------------------------------------------------------------------
 ! Convert <integer> local grid coordinates (i,j) to global given the 1D rank of process
 !-------------------------------------------------------------------------------
-subroutine ij_l2g(proc, il, jl, ig, jg)
+subroutine ij_l2g(rank, il, jl, ig, jg)
   implicit none
-  integer, intent(in) :: proc
+  integer, intent(in) :: rank
   integer, intent(in) :: il
   integer, intent(in) :: jl
   integer, intent(out) :: ig
   integer, intent(out) :: jg
-  integer :: iproc, jproc
+  integer :: rank_i, rank_j
 
-  call rank_1d_2d(proc, iproc, jproc)
-  ig = il + iproc * nlon
-  jg = jl + jproc * nlat
+  call rank_1d_2d(rank, rank_i, rank_j)
+  ig = il + rank_i * nlon
+  jg = jl + rank_j * nlat
 
   return  
 end subroutine ij_l2g
@@ -1644,18 +1694,18 @@ end subroutine ij_l2g
 !-------------------------------------------------------------------------------
 ! Convert <real> global grid coordinates (i,j) to local given the 1D rank of process
 !-------------------------------------------------------------------------------
-subroutine rij_g2l(proc, ig, jg, il, jl)
+subroutine rij_g2l(rank, ig, jg, il, jl)
   implicit none
-  integer, intent(in) :: proc
+  integer, intent(in) :: rank
   real(r_size), intent(in) :: ig
   real(r_size), intent(in) :: jg
   real(r_size), intent(out) :: il
   real(r_size), intent(out) :: jl
-  integer :: iproc, jproc
+  integer :: rank_i, rank_j
 
-  call rank_1d_2d(proc, iproc, jproc)
-  il = ig - real(iproc * nlon,r_size)
-  jl = jg - real(jproc * nlat,r_size)
+  call rank_1d_2d(rank, rank_i, rank_j)
+  il = ig - real(rank_i * nlon, r_size)
+  jl = jg - real(rank_j * nlat, r_size)
 
   return  
 end subroutine rij_g2l
@@ -1663,34 +1713,33 @@ end subroutine rij_g2l
 !-------------------------------------------------------------------------------
 ! Convert <real> local grid coordinates (i,j) to global given the 1D rank of process
 !-------------------------------------------------------------------------------
-subroutine rij_l2g(proc, il, jl, ig, jg)
+subroutine rij_l2g(rank, il, jl, ig, jg)
   implicit none
-  integer, intent(in) :: proc
+  integer, intent(in) :: rank
   real(r_size), intent(in) :: il
   real(r_size), intent(in) :: jl
   real(r_size), intent(out) :: ig
   real(r_size), intent(out) :: jg
-  integer :: iproc, jproc
+  integer :: rank_i, rank_j
 
-  call rank_1d_2d(proc, iproc, jproc)
-  ig = il + real(iproc * nlon,r_size)
-  jg = jl + real(jproc * nlat,r_size)
+  call rank_1d_2d(rank, rank_i, rank_j)
+  ig = il + real(rank_i * nlon, r_size)
+  jg = jl + real(rank_j * nlat, r_size)
 
   return  
 end subroutine rij_l2g
 
 !-------------------------------------------------------------------------------
-! Convert <real> global grid coordinates (i,j) to local where the grid resides
+! Given <real> global grid coordinates (i,j), return the 1D rank of process 
 ! * HALO grids are used
 !-------------------------------------------------------------------------------
 ! [INPUT]
 !   ig, jg : global grid coordinates
 ! [OUTPUT]
-!   proc   : the 1D rank of process where the grid resides;
+!   rank   : the 1D rank of process where the grid resides;
 !            * return -1 if the grid is outside of the global domain
-!   il, jl : local grid coordinates
 !-------------------------------------------------------------------------------
-subroutine rij_g2l_auto(proc,ig,jg,il,jl)
+subroutine rij_rank(ig, jg, rank)
   use scale_rm_process, only: &
       PRC_NUM_X, PRC_NUM_Y
 #ifdef DEBUG
@@ -1711,29 +1760,23 @@ subroutine rij_g2l_auto(proc,ig,jg,il,jl)
       IHALO, JHALO
 #endif
   implicit none
-  integer, intent(out) :: proc
   real(r_size), intent(in) :: ig
   real(r_size), intent(in) :: jg
-  real(r_size), intent(out) :: il
-  real(r_size), intent(out) :: jl
-  integer :: iproc, jproc
+  integer, intent(out) :: rank
+  integer :: rank_i, rank_j
 
   if (ig < real(1+IHALO,r_size) .or. ig > real(nlon*PRC_NUM_X+IHALO,r_size) .or. &
       jg < real(1+JHALO,r_size) .or. jg > real(nlat*PRC_NUM_Y+JHALO,r_size)) then
-    il = -1.0d0
-    jl = -1.0d0
-    proc = -1
+    rank = -1
     return
   end if
 
-  iproc = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(nlon,r_size)) - 1
-  jproc = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
-  il = ig - real(iproc * nlon,r_size)
-  jl = jg - real(jproc * nlat,r_size)
-  call rank_2d_1d(iproc,jproc,proc)
+  rank_i = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(nlon,r_size)) - 1
+  rank_j = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
+  call rank_2d_1d(rank_i, rank_j, rank)
 
 #ifdef DEBUG
-  if (PRC_myrank == proc) then
+  if (PRC_myrank == rank) then
     if (ig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &
         ig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &
         jg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &
@@ -1747,7 +1790,77 @@ subroutine rij_g2l_auto(proc,ig,jg,il,jl)
 #endif
 
   return
-end subroutine rij_g2l_auto
+end subroutine rij_rank
+
+!-------------------------------------------------------------------------------
+! Convert <real> global grid coordinates (i,j) to local where the grid resides
+! * HALO grids are used
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   ig, jg : global grid coordinates
+! [OUTPUT]
+!   rank   : the 1D rank of process where the grid resides;
+!            * return -1 if the grid is outside of the global domain
+!   il, jl : local grid coordinates
+!-------------------------------------------------------------------------------
+subroutine rij_rank_g2l(ig, jg, rank, il, jl)
+  use scale_rm_process, only: &
+      PRC_NUM_X, PRC_NUM_Y
+#ifdef DEBUG
+  use scale_grid_index, only: &
+      IHALO, JHALO, &
+      IA, JA
+  use scale_process, only: &
+      PRC_myrank
+  use scale_grid, only: &
+      GRID_CX, &
+      GRID_CY, &
+      GRID_CXG, &
+      GRID_CYG, &
+      DX, &
+      DY
+#else
+  use scale_grid_index, only: &
+      IHALO, JHALO
+#endif
+  implicit none
+  real(r_size), intent(in) :: ig
+  real(r_size), intent(in) :: jg
+  integer, intent(out) :: rank
+  real(r_size), intent(out) :: il
+  real(r_size), intent(out) :: jl
+  integer :: rank_i, rank_j
+
+  if (ig < real(1+IHALO,r_size) .or. ig > real(nlon*PRC_NUM_X+IHALO,r_size) .or. &
+      jg < real(1+JHALO,r_size) .or. jg > real(nlat*PRC_NUM_Y+JHALO,r_size)) then
+    il = -1.0d0
+    jl = -1.0d0
+    rank = -1
+    return
+  end if
+
+  rank_i = ceiling((ig-real(IHALO,r_size)-0.5d0) / real(nlon,r_size)) - 1
+  rank_j = ceiling((jg-real(JHALO,r_size)-0.5d0) / real(nlat,r_size)) - 1
+  il = ig - real(rank_i * nlon, r_size)
+  jl = jg - real(rank_j * nlat, r_size)
+  call rank_2d_1d(rank_i, rank_j, rank)
+
+#ifdef DEBUG
+  if (PRC_myrank == rank) then
+    if (ig < (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0 .or. &
+        ig > (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0 .or. &
+        jg < (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0 .or. &
+        jg > (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0) then
+      write (6,'(A)') '[Error] Process assignment fails!'
+      write (6,'(3F10.2)') ig, (GRID_CX(1) - GRID_CXG(1)) / DX + 1.0d0, (GRID_CX(IA) - GRID_CXG(1)) / DX + 1.0d0
+      write (6,'(3F10.2)') jg, (GRID_CY(1) - GRID_CYG(1)) / DY + 1.0d0, (GRID_CY(JA) - GRID_CYG(1)) / DY + 1.0d0
+      stop
+    end if
+  end if
+#endif
+
+  return
+end subroutine rij_rank_g2l
 
 !===============================================================================
 END MODULE common_scale

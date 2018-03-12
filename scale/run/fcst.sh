@@ -302,6 +302,16 @@ if ((RUN_LEVEL <= 3)); then
   fi
 fi
 
+###if ((RUN_LEVEL <= 1)); then
+###  if [ "$CONF_MODE" = 'static' ]; then
+###    if ((DISK_MODE == 3)); then
+###      config_file_save $TMP/config || exit $?
+###    else
+###      config_file_save || exit $?
+###    fi
+###  fi
+###fi
+
 #===============================================================================
 # Remove temporary directories
 

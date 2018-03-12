@@ -153,6 +153,7 @@ cat > $jobscrp << EOF
 #PJM --mpi assign-online-node
 
 . /work/system/Env_base_1.2.0-22
+export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:\$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
@@ -185,6 +186,10 @@ echo "[$(datetime_now)] Finalization"
 echo
 
 backup_exp_setting $job $TMP $jobid ${job}_${SYSNAME} 'o e i' i
+
+if [ "$CONF_MODE" = 'static' ]; then
+  config_file_save $TMPS/config || exit $?
+fi
 
 archive_log
 
