@@ -250,11 +250,12 @@ local PROC_OPT="$1"; shift
 local SCRIPT="$1"; shift
 local ARGS="$@"
 
-if [ -x "$TMPDAT/exec/pdbash" ]; then
-  pdbash_exec="$TMPDAT/exec/pdbash"
-elif [ -x "$COMMON_DIR/pdbash" ]; then
+if ((RUN_LEVEL <= 2)); then
   pdbash_exec="$COMMON_DIR/pdbash"
 else
+  pdbash_exec="$TMPDAT/exec/pdbash"
+fi
+if [ ! -x "$pdbash_exec" ]; then
   echo "[Error] $FUNCNAME: Cannot find 'pdbash' program." >&2
   exit 1
 fi
@@ -852,7 +853,7 @@ local JOBID="$1"
 local res=0
 local tmp
 while true; do
-  tmp=$(pjstat -H day=1 --choose ST,EC,REASON ${JOBID} | tail -n 1)
+  tmp=$(pjstat -H day=5 --choose ST,EC,REASON ${JOBID} | tail -n 1)
   if [ -z "$tmp" ]; then
     echo "[Error] $FUNCNAME: Cannot find PJM job ${JOBID}." >&2
     return 99
