@@ -250,11 +250,12 @@ local PROC_OPT="$1"; shift
 local SCRIPT="$1"; shift
 local ARGS="$@"
 
-if [ -x "$TMPDAT/exec/pdbash" ]; then
-  pdbash_exec="$TMPDAT/exec/pdbash"
-elif [ -x "$COMMON_DIR/pdbash" ]; then
+if ((RUN_LEVEL <= 2)); then
   pdbash_exec="$COMMON_DIR/pdbash"
 else
+  pdbash_exec="$TMPDAT/exec/pdbash"
+fi
+if [ ! -x "$pdbash_exec" ]; then
   echo "[Error] $FUNCNAME: Cannot find 'pdbash' program." >&2
   exit 1
 fi
