@@ -376,7 +376,7 @@ while ((time <= ETIME)); do
     plist=$(seq $totalnp)
   fi
 
-  if ((LOG_OPT <= 2)); then
+  if ((BDY_FORMAT != 0 && LOG_OPT <= 2)); then
     for m in $mlist; do
       for d in $(seq $DOMNUM); do
         path="log/scale_init.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).LOG_${time}${SCALE_SFX_NONC_0}"
@@ -789,6 +789,11 @@ while ((time <= ETIME)); do
   #-----------------------------------------------------------------------------
 
   for m in $(seq $mtot); do
+    if ((BDY_ENS == 1)); then
+      mem_bdy=${name_m[$m]}
+    else
+      mem_bdy='mean'
+    fi
     DOMAIN_CATALOGUE_OUTPUT=".false."
     if ((m == 1)); then
       DOMAIN_CATALOGUE_OUTPUT=".true."
@@ -875,11 +880,6 @@ while ((time <= ETIME)); do
               -e "/!--RESTART_OUT_ADDITIONAL_COPIES--/a RESTART_OUT_ADDITIONAL_COPIES = ${RESTART_OUT_ADDITIONAL_COPIES}," \
               -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}")"
       if ((d == 1)); then
-        if ((BDY_ENS == 1)); then
-          mem_bdy=${name_m[$m]}
-        else
-          mem_bdy='mean'
-        fi
         conf="$(echo "$conf" | \
             sed -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${mem_bdy}/bdy_$(datetime_scale $time)\"," \
                 -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${bdy_start_time:0:4}, ${bdy_start_time:4:2}, ${bdy_start_time:6:2}, ${bdy_start_time:8:2}, ${bdy_start_time:10:2}, ${bdy_start_time:12:2}," \
@@ -889,13 +889,13 @@ while ((time <= ETIME)); do
         if ((OCEAN_INPUT == 1)); then
           if ((OCEAN_FORMAT == 99)); then
             conf="$(echo "$conf" | \
-                sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${name_m[$m]}/init.d${dfmt}\",")"
+                sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
           fi
         fi
         if ((LAND_INPUT == 1)); then
           if ((LAND_FORMAT == 99)); then
             conf="$(echo "$conf" | \
-                sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${name_m[$m]}/init.d${dfmt}\",")"
+                sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
           fi
         fi
       fi
@@ -909,13 +909,13 @@ while ((time <= ETIME)); do
         if ((OCEAN_INPUT == 1)); then
           if ((OCEAN_FORMAT == 99)); then
             conf="$(echo "$conf" | \
-                sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${name_m[$m]}/init.d${dfmt}\",")"
+                sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
           fi
         fi
         if ((LAND_INPUT == 1)); then
           if ((LAND_FORMAT == 99)); then
             conf="$(echo "$conf" | \
-                sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${name_m[$m]}/init.d${dfmt}\",")"
+                sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
           fi
         fi
         echo "$conf" >> $CONFIG_DIR/${conf_file}
