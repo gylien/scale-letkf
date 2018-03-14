@@ -712,7 +712,7 @@ local JOBID="$1"
 local res=0
 local tmp
 while true; do
-  tmp=$(pjstat -H day=1 --choose ST,EC,REASON ${JOBID} | tail -n 1)
+  tmp=$(pjstat -H day=5 --choose ST,EC,REASON ${JOBID} | tail -n 1)
   if [ -z "$tmp" ]; then
     echo "[Error] $FUNCNAME: Cannot find PJM job ${JOBID}." >&2
     return 99
