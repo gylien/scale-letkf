@@ -1776,16 +1776,19 @@ local TIME="$1"
 
 local otime=$(datetime $TIME)               # HISTORY_OUTPUT_STEP0 = .true.,
 #local otime=$(datetime $TIME $LTIMESLOT s)  # HISTORY_OUTPUT_STEP0 = .false.,
+local otime_s=$(datetime $TIME $WINDOW_S s)
+local otime_e=$(datetime $TIME $WINDOW_E s)
+local otime_a=$(datetime $TIME $LCYCLE s)
 local is=0
 slot_s=0
-while ((otime <= $(datetime $TIME $WINDOW_E s))); do
+while ((otime <= otime_e)); do
   is=$((is+1))
   time_sl[$is]=$otime
   timefmt_sl[$is]="$(datetime_fmt ${otime})"
-  if ((slot_s == 0 && otime >= $(datetime $TIME $WINDOW_S s))); then
+  if ((slot_s == 0 && otime >= otime_s)); then
     slot_s=$is
   fi
-  if ((otime == $(datetime $TIME $LCYCLE s))); then # $(datetime $TIME $LCYCLE,$WINDOW_S,$WINDOW_E,... s) as a variable
+  if ((otime == otime_a)); then
     slot_b=$is
   fi
 otime=$(datetime $otime $LTIMESLOT s)
