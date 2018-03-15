@@ -9,6 +9,7 @@ STIME='20130701000000'
 ETIME='20130701060000'
 ISTEP=
 FSTEP=
+#CONF_MODE='<CONF_MODE>'
 TIME_LIMIT='<WTIME_L>'
 
 #===============================================================================
@@ -49,7 +50,7 @@ LANDUSEOUT_OPT=1 # 1:   o
 
                  #      bdy
                  #      mean members
-BDYOUT_OPT=3     # 1:   o    o
+BDYOUT_OPT=1     # 1:   o    o
                  # 2:   o
                  # 3:   (none)
 

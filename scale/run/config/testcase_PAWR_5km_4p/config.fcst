@@ -14,6 +14,7 @@ IF_VERF=0
 IF_EFSO=0
 ISTEP=
 FSTEP=
+#CONF_MODE='static'
 TIME_LIMIT='01:00:00'
 
 #===============================================================================
@@ -46,7 +47,7 @@ PERTURB_BDY=0    # 0: No
 
                  #      fcst
                  #      history restart
-OUT_OPT=2        # 1:   o       o
+OUT_OPT=1        # 1:   o       o
                  # 2:   o
 
                  #      topo

@@ -5,9 +5,7 @@
 #
 #===============================================================================
 
-PRESET='<PRESET>'
-
-MPI_TYPE='<MPI_TYPE>'
+PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
 
 #===============================================================================
 
@@ -15,10 +13,7 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
-#DOMNUM=<DOMNUM>
-
-OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # Directory for SCALE-LETKF output
-OUTDIR[2]="$DDIR/exp/testcase_d2_30km_4p"
+OUTDIR="$DDIR/exp/testcase_d2_30km_4p"      # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -26,16 +21,16 @@ OUTDIR[2]="$DDIR/exp/testcase_d2_30km_4p"
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
-DATA_TOPO="$DDIR/exp/testcase_45km_4p_l36_data"                      # Directory of the prepared topo files
-DATA_TOPO[2]="$DDIR/exp/testcase_d2_30km_4p_data"
-DATA_TOPO_BDY_SCALE=
-DATA_LANDUSE="$DDIR/exp/testcase_45km_4p_l36_data"                   # Directory of the prepared landuse files
-DATA_LANDUSE[2]="$DDIR/exp/testcase_d2_30km_4p_data"
-DATA_BDY_SCALE=                                                      # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_45km_4p_l36_data"            # Directory of the prepared SCALE boundary files
-DATA_BDY_WRF="$DDIR/ncepfnl/wrfout"                                  # Directory of the boundary data in WRF format
+DATA_TOPO=                                                           # Directory of the prepared topo files
+DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_45km_4p_l36/const/topo"
+DATA_LANDUSE=                                                        # Directory of the prepared landuse files
+DATA_BDY_SCALE="$DDIR/exp/testcase_45km_4p_l36"                      # Directory of the boundary data in SCALE history format (parent domain)
+DATA_BDY_SCALE_PRC_NUM_X=2
+DATA_BDY_SCALE_PRC_NUM_Y=2
+DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
+DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
-DATA_BDY_GRADS="$DDIR/ncepfnl/grads"
+DATA_BDY_GRADS=
 
 OBS="$DDIR/obs/prepbufr_obs_eastasia"                                # Observation data in LETKF observation format
 OBSNCEP=
@@ -56,22 +51,22 @@ LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
                         # 4: GrADS         (requires compatible 'config.nml.scale_init')
 BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
 
-BDY_ENS=0               # 0: Fixed boundary files for all memebers
+BDY_ENS=1               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial time
                         # 1: Use different series of boundary files for different initial time
 
-BDYINT=21600
-BDYCYCLE_INT=
+BDYINT=3600
+BDYCYCLE_INT=21600
 
-PARENT_REF_TIME=
+PARENT_REF_TIME=20130701000000
 
 ENABLE_PARAM_USER=0     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
                         # 1: Enable the 'PARAM_USER' section of the SCALE namelist (require 'config.nml.scale_user' and customized version of SCALE)
@@ -87,7 +82,6 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
 
 OBSNUM=1
 OBSNAME[1]=obs
-OBSOPE_SEPARATE[1]=1
 
 #===============================================================================
 # Cycling settings
@@ -100,28 +94,19 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=8           # Ensemble size
+MEMBER=10          # Ensemble size
 
-NNODES=2           # Number of nodes
-PPN=20             # Number of processes per node
+NNODES=48          # Number of nodes
+PPN=1              # Number of processes per node
 
-THREADS=1          # Number of threads per process
+THREADS=8          # Number of threads per process
 
 SCALE_NP=4         # Number of processes to run SCALE
-SCALE_NP[2]=4
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
 #===============================================================================
 # Temporary directories to store runtime files
-
-DISK_MODE=3                 # Disk type used for the main temporary directory
-                            #  1: share (link to TMP)
-                            #  2: share (staging to TMP)
-                            #  3: local (staging to TMPL)
-DISK_MODE_CONSTDB=2         # Disk type used for the temporary directory of static database
-DISK_MODE_BDYDATA=2         # Disk type used for the temporary directory of raw boundary data 
-DISK_MODE_OBS=2             # Disk type used for the temporary directory of observation data
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
@@ -130,9 +115,9 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
-TMP="$DIR/tmp/$TMPSUBDIR"   # Temporary directory shared among all nodes
-TMPS="/dev/shm/$TMPSUBDIR"  # Temporary directory only on the server node
-TMPL="/dev/shm/$TMPSUBDIR"  # Local temporary directory on computing nodes
+TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
+TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
+#TMPL=
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
                             #  0: No
@@ -141,7 +126,7 @@ CLEAR_TMP=0                 # Clear temporary directories after the completion o
 #===============================================================================
 # Environmental settings
 
-MPIRUN="mpirun"
+MPIRUN="mpiexec"
 if (which $MPIRUN > /dev/null 2>&1); then
   MPIRUN=$(which $MPIRUN)
 fi
@@ -151,12 +136,12 @@ SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 
-STAGE_THREAD=1
-TAR_THREAD=1
+STAGE_THREAD=8
+TAR_THREAD=8
 
-PYTHON="python3"
+PYTHON="python"
 
-BUFRBIN="/data/opt/bufrlib/10.1.0_intel/bin"
+#BUFRBIN=
 
 #===============================================================================
 # Machine-independent source file

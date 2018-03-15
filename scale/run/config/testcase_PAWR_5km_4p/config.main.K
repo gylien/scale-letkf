@@ -13,7 +13,10 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
+#DOMNUM=<DOMNUM>
+
 OUTDIR="$DDIR/exp/testcase_PAWR_5km_4p"     # Directory for SCALE-LETKF output
+OUTDIR[2]="$DDIR/exp/testcase_PAWR_d2_3km_6p"
 
 #===============================================================================
 # Location of model/data files
@@ -22,14 +25,19 @@ SCALEDIR="$DIR/../.."                                                # Directory
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
 DATA_TOPO="$DDIR/exp/testcase_PAWR_5km_4p_data"                      # Directory of the prepared topo files
+DATA_TOPO[2]="$DDIR/exp/testcase_PAWR_d2_3km_6p_data"
 DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
 DATA_LANDUSE="$DDIR/exp/testcase_PAWR_5km_4p_data"                   # Directory of the prepared landuse files
+DATA_LANDUSE[2]="$DDIR/exp/testcase_PAWR_d2_3km_6p_data"
 DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
+DATA_BDY_SCALE_PRC_NUM_X=3
+DATA_BDY_SCALE_PRC_NUM_Y=3
+DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_PAWR_5km_4p_data"            # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
 OBS="$DDIR/obs/QCED_1KM_v4_v500M_attn0.01"                           # Observation data in LETKF observation format
+OBS[2]="$DDIR/obs/QCED_500M_v4_v500M_attn0.01"
 OBSNCEP=
 
 #===============================================================================
@@ -99,10 +107,9 @@ PPN=1              # Number of processes per node
 THREADS=8          # Number of threads per process
 
 SCALE_NP=4         # Number of processes to run SCALE
+SCALE_NP[2]=6
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
-
-ENABLE_SET=0       ######
 
 #===============================================================================
 # Temporary directories to store runtime files
