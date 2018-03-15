@@ -4,6 +4,10 @@
 !--IO_AGGREGATE--
 /
 
+&PARAM_FILEIO
+ FILEIO_datacheck_criteria = 1.0D-10,
+/
+
 &PARAM_TIME
 !--TIME_STARTDATE--
  TIME_STARTMS               = 0.D0,

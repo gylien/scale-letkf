@@ -6,7 +6,7 @@
 #===============================================================================
 
 STIME='20130713060000'
-ETIME='20130713060030'
+ETIME='20130713060100'
 MEMBERS='mean 1'
 CYCLE=
 CYCLE_SKIP=1
@@ -14,7 +14,7 @@ IF_VERF=0
 IF_EFSO=0
 ISTEP=
 FSTEP=
-#CONF_MODE='static'
+CONF_MODE='static'
 TIME_LIMIT='01:00:00'
 
 #===============================================================================
@@ -51,11 +51,11 @@ OUT_OPT=1        # 1:   o       o
                  # 2:   o
 
                  #      topo
-TOPOOUT_OPT=2    # 1:   o
+TOPOOUT_OPT=1    # 1:   o
                  # 2:   (none)
 
                  #      landuse
-LANDUSEOUT_OPT=2 # 1:   o
+LANDUSEOUT_OPT=1 # 1:   o
                  # 2:   (none)
 
                  #      bdy

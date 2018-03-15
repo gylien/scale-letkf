@@ -5,9 +5,9 @@
 #
 #===============================================================================
 
-PRESET='<PRESET>'
+PRESET='Linux_torque'
 
-MPI_TYPE='<MPI_TYPE>'
+MPI_TYPE='sgimpt'
 
 #===============================================================================
 
@@ -15,7 +15,7 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
-#DOMNUM=<DOMNUM>
+DOMNUM=2
 
 OUTDIR="$DDIR/exp/testcase_PAWR_5km_4p"     # Directory for SCALE-LETKF output
 OUTDIR[2]="$DDIR/exp/testcase_PAWR_d2_3km_6p"
@@ -45,7 +45,7 @@ OBSNCEP=
 #===============================================================================
 # model/data file options
 
-DET_RUN=0               # 0: Disable the deterministic run
+DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
 
 TOPO_FORMAT='DEM50M'    # 'prep': Use prepared topo files in $DATA_TOPO
@@ -101,10 +101,10 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=8           # Ensemble size
+MEMBER=2 #8           # Ensemble size
 
-NNODES=2           # Number of nodes
-PPN=20             # Number of processes per node
+NNODES=1 #2           # Number of nodes
+PPN=40 #20             # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
@@ -120,9 +120,9 @@ DISK_MODE=3                 # Disk type used for the main temporary directory
                             #  1: share (link to TMP)
                             #  2: share (staging to TMP)
                             #  3: local (staging to TMPL)
-DISK_MODE_CONSTDB=2         # Disk type used for the temporary directory of static database
-DISK_MODE_BDYDATA=2         # Disk type used for the temporary directory of raw boundary data 
-DISK_MODE_OBS=2             # Disk type used for the temporary directory of observation data
+DISK_MODE_CONSTDB=3         # Disk type used for the temporary directory of static database
+DISK_MODE_BDYDATA=3         # Disk type used for the temporary directory of raw boundary data 
+DISK_MODE_OBS=3             # Disk type used for the temporary directory of observation data
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No

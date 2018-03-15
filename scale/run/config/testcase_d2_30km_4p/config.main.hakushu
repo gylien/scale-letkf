@@ -5,9 +5,9 @@
 #
 #===============================================================================
 
-PRESET='<PRESET>'
+PRESET='Linux_torque'
 
-MPI_TYPE='<MPI_TYPE>'
+MPI_TYPE='sgimpt'
 
 #===============================================================================
 
@@ -114,9 +114,9 @@ DISK_MODE=3                 # Disk type used for the main temporary directory
                             #  1: share (link to TMP)
                             #  2: share (staging to TMP)
                             #  3: local (staging to TMPL)
-DISK_MODE_CONSTDB=2         # Disk type used for the temporary directory of static database
-DISK_MODE_BDYDATA=2         # Disk type used for the temporary directory of raw boundary data 
-DISK_MODE_OBS=2             # Disk type used for the temporary directory of observation data
+DISK_MODE_CONSTDB=3         # Disk type used for the temporary directory of static database
+DISK_MODE_BDYDATA=3         # Disk type used for the temporary directory of raw boundary data 
+DISK_MODE_OBS=3             # Disk type used for the temporary directory of observation data
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
