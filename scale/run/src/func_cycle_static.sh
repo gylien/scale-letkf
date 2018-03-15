@@ -373,11 +373,18 @@ while ((time <= ETIME)); do
     plist='1'
   else
     mlist=$(seq $mtot)
+    if ((BDY_ENS == 1)); then
+      mlist_init=$(seq $mtot)
+    elif ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
+      mlist_init='1'
+    else # local run directory: run multiple members as needed
+      mlist_init=$(seq $((repeat_mems <= mtot ? repeat_mems : mtot)))
+    fi
     plist=$(seq $totalnp)
   fi
 
   if ((BDY_FORMAT != 0 && LOG_OPT <= 2)); then
-    for m in $mlist; do
+    for m in $mlist_init; do
       for d in $(seq $DOMNUM); do
         path="log/scale_init.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).LOG_${time}${SCALE_SFX_NONC_0}"
         pathout="${OUTDIR[$d]}/${time}/log/scale_init/${name_m[$m]}_LOG${SCALE_SFX_NONC_0}"
@@ -568,7 +575,7 @@ while ((time <= ETIME)); do
       for ibdy in $(seq $((nbdy_max+1)) $nbdy); do
         time_bdy=${bdy_times[$ibdy]}
 
-#        if ((BDY_FORMAT == 1)); then
+        if ((BDY_FORMAT == 1)); then
 
           if ((BDY_ENS == 1)); then
             for m in $(seq $mtot); do
@@ -591,86 +598,62 @@ while ((time <= ETIME)); do
             done
           fi
 
-#        elif ((BDY_FORMAT == 2 || BDY_FORMAT == 4)); then
+        elif ((BDY_FORMAT == 2 || BDY_FORMAT == 4)); then
 
-#          if ((BDY_FORMAT == 2)); then
-#            data_bdy_i=$DATA_BDY_WRF
-#            filenum=1
-#            filename_prefix[1]='wrfout_'
-#            filename_suffix[1]=''
-#          elif ((BDY_FORMAT == 4)); then
-#            data_bdy_i=$DATA_BDY_GRADS
-#            filenum=3
-#            filename_prefix[1]='atm_'
-#            filename_suffix[1]='.grd'
-#            filename_prefix[2]='sfc_'
-#            filename_suffix[2]='.grd'
-#            filename_prefix[3]='land_'
-#            filename_suffix[3]='.grd'
-#          fi
+          if ((BDY_FORMAT == 2)); then
+            data_bdy_i="$DATA_BDY_WRF"
+            filenum=1
+            filename_prefix[1]='wrfout_'
+            filename_suffix[1]=''
+            filenamein_prefix[1]=''
+            filenamein_suffix[1]=''
+          elif ((BDY_FORMAT == 4)); then
+            data_bdy_i="$DATA_BDY_GRADS"
+            filenum=3
+            filename_prefix[1]='atm_'
+            filename_suffix[1]='.grd'
+            filenamein_prefix[1]='atm_'
+            filenamein_suffix[1]='.grd'
+            filename_prefix[2]='sfc_'
+            filename_suffix[2]='.grd'
+            filenamein_prefix[2]='sfc_'
+            filenamein_suffix[2]='.grd'
+            filename_prefix[3]='land_'
+            filename_suffix[3]='.grd'
+            filenamein_prefix[3]='lnd_'
+            filenamein_suffix[3]='.grd'
+          fi
 
-#          if ((BDY_ENS == 1)); then
-#            for m in $(seq $mtot); do
-#              for ifile in $(seq $filenum); do
-#                if ((BDY_ROTATING == 1)); then
-#                  pathin="$data_bdy_i/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-#                  path="bdyorg/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
-#                else
-#                  pathin="$data_bdy_i/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
-#                  path="bdyorg/const/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
-#                fi
-#                echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
-#              done
-#            done
-#          else
-#            for ifile in $(seq $filenum); do
-#              if ((BDY_ROTATING == 1)); then
-#                pathin="$data_bdy_i/${time}/${BDY_MEAN}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-#                path="bdyorg/${time}/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-#              else
-#                pathin="$data_bdy_i/${BDY_MEAN}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-#                path="bdyorg/const/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-#              fi
-#              echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
-#            done
-#          fi
+          if ((BDY_ENS == 1)); then
+            for m in $(seq $mtot); do
+              if ((m == mmean)); then
+                mem_bdy="$BDY_MEAN"
+              else
+                mem_bdy="${name_m[$m]}"
+              fi
+              for ifile in $(seq $filenum); do
+                if ((BDY_ROTATING == 1)); then
+                  pathin="${data_bdy_i}/${time}/${mem_bdy}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+                else
+                  pathin="${data_bdy_i}/${mem_bdy}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+                fi
+                path="${name_m[$m]}/bdyorg_${filenamein_prefix[$ifile]}$(datetime_scale $time_bdy_start_prev)_$(printf %05d $((ibdy-1)))${filenamein_suffix[$ifile]}"
+                echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+              done
+            done
+          else
+            for ifile in $(seq $filenum); do
+              if ((BDY_ROTATING == 1)); then
+                pathin="${data_bdy_i}/${time}/${BDY_MEAN}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+              else
+                pathin="${data_bdy_i}/${BDY_MEAN}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+              fi
+              path="mean/bdyorg_${filenamein_prefix[$ifile]}$(datetime_scale $time_bdy_start_prev)_$(printf %05d $((ibdy-1)))${filenamein_suffix[$ifile]}"
+              echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+            done
+          fi
 
-#        fi
-
-  #      if ((BDY_ROTATING == 1)); then
-  #        bdyorg_path="$(cd "${BDYORG}/${STIME}" && pwd)"
-  #      else
-  #        bdyorg_path="$(cd "${BDYORG}/const" && pwd)"
-  #      fi
-  #      if ((BDY_FORMAT == 2)); then
-  #        if [ -s "${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}" ]; then
-  #          ln -fs "${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
-  #        else
-  #          echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}'."
-  #          exit 1
-  #        fi
-  #      elif ((BDY_FORMAT == 4)); then
-  #        if [ -s "${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd" ]; then
-  #          ln -fs "${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd" $TMPDIR/bdyatm${file_number}.grd
-  #        else
-  #          echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd'."
-  #          exit 1
-  #        fi
-  #        if [ -s "${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd" ]; then
-  #          ln -fs "${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd" $TMPDIR/bdysfc${file_number}.grd
-  #        else
-  #          echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd'."
-  #          exit 1
-  #        fi
-  #        if [ -s "${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd" ]; then
-  #          ln -fs "${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd" $TMPDIR/bdyland${file_number}.grd
-  #        else
-  #          echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd'."
-  #          exit 1
-  #        fi
-  #      fi
-  #      i=$((i+1))
-
+        fi # [ BDY_FORMAT == 2 || BDY_FORMAT == 4 ]
       done # [ ibdy in $(seq $((nbdy_max+1)) $nbdy) ]
       nbdy_max=$nbdy
     fi
@@ -684,10 +667,13 @@ while ((time <= ETIME)); do
 
       if ((BDY_FORMAT == 1)); then
         FILETYPE_ORG='SCALE-RM'
+        LATLON_CATALOGUE_FNAME="${TMPROOT_BDYDATA}/latlon_domain_catalogue.bdy.txt"
       elif ((BDY_FORMAT == 2)); then
         FILETYPE_ORG='WRF-ARW'
+        LATLON_CATALOGUE_FNAME=
       elif ((BDY_FORMAT == 4)); then
         FILETYPE_ORG='GrADS'
+        LATLON_CATALOGUE_FNAME=
       else
         echo "[Error] $0: Unsupport boundary file types." >&2
         exit 1
@@ -696,10 +682,11 @@ while ((time <= ETIME)); do
         BASENAME_ORG="${TMPROOT_BDYDATA}/${mem_bdy}/gradsbdy.conf"
       else
         if ((nbdy <= 1)); then
-          BASENAME_ORG="${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_$(datetime_scale $time_bdy_start_prev)_$(printf %05d 0)"
+          bdy_no_suffix="_$(printf %05d 0)"
         else
-          BASENAME_ORG="${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_$(datetime_scale $time_bdy_start_prev)"
+          bdy_no_suffix=
         fi
+        BASENAME_ORG="${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}"
       fi
 
       for d in $(seq $DOMNUM); do
@@ -715,7 +702,7 @@ while ((time <= ETIME)); do
                 -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
                 -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
                 -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = ${RESTART_OUTPUT}," \
-                -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${name_m[$m]}/init.d${dfmt}\"," \
+                -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${mem_bdy}/init.d${dfmt}\"," \
                 -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo.d${dfmt}\"," \
                 -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse.d${dfmt}\"," \
                 -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\",")"
@@ -724,7 +711,7 @@ while ((time <= ETIME)); do
               sed -e "/!--OFFLINE_PARENT_BASENAME--/a OFFLINE_PARENT_BASENAME = \"${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_$(datetime_scale $time_bdy_start_prev)_$(printf %05d 0)\"," \
                   -e "/!--OFFLINE_PARENT_PRC_NUM_X--/a OFFLINE_PARENT_PRC_NUM_X = ${DATA_BDY_SCALE_PRC_NUM_X}," \
                   -e "/!--OFFLINE_PARENT_PRC_NUM_Y--/a OFFLINE_PARENT_PRC_NUM_Y = ${DATA_BDY_SCALE_PRC_NUM_Y}," \
-                  -e "/!--LATLON_CATALOGUE_FNAME--/a LATLON_CATALOGUE_FNAME = \"${TMPROOT_BDYDATA}/latlon_domain_catalogue.bdy.txt\",")"
+                  -e "/!--LATLON_CATALOGUE_FNAME--/a LATLON_CATALOGUE_FNAME = \"${LATLON_CATALOGUE_FNAME}\",")"
         fi
         conf="$(echo "$conf" | \
           sed -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${BASENAME_ORG}\"," \
@@ -762,18 +749,27 @@ while ((time <= ETIME)); do
             echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
           fi
         fi
-
-#        if ((BDY_FORMAT == 4)); then
-#          conf_file="${mem_bdy}/gradsbdy.conf"
-#          cat $SCRP_DIR/config.nml.grads_boundary | \
-#              sed -e "s#--DIR--#${TMPROOT_BDYDATA}/${mem_bdy}/......#g" \
-#              > $CONFIG_DIR/${conf_file}
-
-#          if ((stage_config == 1)); then
-#            echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
-#          fi
-#        fi
       done # [ d in $(seq $DOMNUM) ]
+
+      if ((BDY_FORMAT == 4 && (BDY_ENS == 0 || m == 1))); then
+        mkdir -p $CONFIG_DIR/${mem_bdy}
+        conf_file="${mem_bdy}/gradsbdy.conf"
+        echo "  $conf_file"
+        if ((nbdy <= 1)); then
+          bdy_no_suffix="_$(printf %05d 0)"
+        else
+          bdy_no_suffix=
+        fi
+        cat $SCRP_DIR/config.nml.grads_boundary | \
+            sed -e "s#--FNAME_ATMOS--#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_atm_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
+                -e "s#--FNAME_SFC--#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_sfc_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
+                -e "s#--FNAME_LAND--#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_lnd_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
+            > $CONFIG_DIR/${conf_file}
+
+        if ((stage_config == 1)); then
+          echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+        fi
+      fi # [ BDY_FORMAT == 4 && (BDY_ENS == 0 || m == 1) ]
     done # [ m in $(seq $mtot) ]
 
   fi # [ BDY_FORMAT != 0 ]
