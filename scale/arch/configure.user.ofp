@@ -1,8 +1,6 @@
 TOPDIR    = ../../..
-SCALE_INC = -I$(TOPDIR)/dc_utils \
-            -I$(TOPDIR)/gtool    \
-            -I$(TOPDIR)/include
-SCALE_LIB = -L$(TOPDIR)/lib -lscale -lgtool -ldcutils
+SCALE_INC = -I$(TOPDIR)/include
+SCALE_LIB = -L$(TOPDIR)/lib -lscale
 SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
 
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
