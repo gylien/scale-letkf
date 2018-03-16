@@ -56,6 +56,13 @@
 !--LU100M_IN_DIR--
 /
 
+&PARAM_NEST
+!--OFFLINE_PARENT_BASENAME--
+!--OFFLINE_PARENT_PRC_NUM_X--
+!--OFFLINE_PARENT_PRC_NUM_Y--
+!--LATLON_CATALOGUE_FNAME--
+/
+
 #################################################
 #
 # model configuration: process
