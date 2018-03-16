@@ -97,6 +97,7 @@ fi
 # create empty directories
 
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+|mean/
 |log/
 EOF
 

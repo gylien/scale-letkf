@@ -13,6 +13,8 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
+DOMNUM=<DOMNUM>
+
 OUTDIR="$DDIR/exp/testcase_45km_4p_l36_bdyprep" # Directory for SCALE-LETKF output
 
 #===============================================================================

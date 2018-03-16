@@ -5,9 +5,7 @@
 #
 #===============================================================================
 
-PRESET='<PRESET>'
-
-MPI_TYPE='<MPI_TYPE>'
+PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
 
 #===============================================================================
 
@@ -46,11 +44,11 @@ OBSNCEP=
 DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
 
-TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -87,7 +85,6 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
 
 OBSNUM=1
 OBSNAME[1]=obs
-OBSOPE_SEPARATE[1]=1
 
 #===============================================================================
 # Cycling settings
@@ -100,12 +97,12 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=8           # Ensemble size
+MEMBER=10          # Ensemble size
 
-NNODES=2           # Number of nodes
-PPN=20             # Number of processes per node
+NNODES=96          # Number of nodes
+PPN=1              # Number of processes per node
 
-THREADS=1          # Number of threads per process
+THREADS=8          # Number of threads per process
 
 SCALE_NP=4         # Number of processes to run SCALE
 SCALE_NP[2]=4
@@ -115,14 +112,6 @@ BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 #===============================================================================
 # Temporary directories to store runtime files
 
-DISK_MODE=3                 # Disk type used for the main temporary directory
-                            #  1: share (link to TMP)
-                            #  2: share (staging to TMP)
-                            #  3: local (staging to TMPL)
-DISK_MODE_CONSTDB=2         # Disk type used for the temporary directory of static database
-DISK_MODE_BDYDATA=2         # Disk type used for the temporary directory of raw boundary data 
-DISK_MODE_OBS=2             # Disk type used for the temporary directory of observation data
-
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
@@ -130,9 +119,9 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
-TMP="$DIR/tmp/$TMPSUBDIR"   # Temporary directory shared among all nodes
-TMPS="/dev/shm/$TMPSUBDIR"  # Temporary directory only on the server node
-TMPL="/dev/shm/$TMPSUBDIR"  # Local temporary directory on computing nodes
+TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
+TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
+#TMPL=
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
                             #  0: No
@@ -141,7 +130,7 @@ CLEAR_TMP=0                 # Clear temporary directories after the completion o
 #===============================================================================
 # Environmental settings
 
-MPIRUN="mpirun"
+MPIRUN="mpiexec"
 if (which $MPIRUN > /dev/null 2>&1); then
   MPIRUN=$(which $MPIRUN)
 fi
@@ -151,12 +140,12 @@ SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 
-STAGE_THREAD=1
-TAR_THREAD=1
+STAGE_THREAD=8
+TAR_THREAD=8
 
-PYTHON="python3"
+PYTHON="python"
 
-BUFRBIN="/data/opt/bufrlib/10.1.0_intel/bin"
+#BUFRBIN=
 
 #===============================================================================
 # Machine-independent source file

@@ -230,10 +230,15 @@ while ((time <= ETIME)); do
       echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2
 
       enable_iter=0
-      if ((s == 2 && BDY_ENS == 1)); then
+      nit=1
+      if ((s == 2)); then
         enable_iter=1
+        if ((BDY_ENS == 1)); then
+          nit=$nitmax
+        fi
       elif ((s == 3)); then
         enable_iter=1
+        nit=$nitmax
       fi
 
       nodestr=proc
@@ -254,7 +259,7 @@ while ((time <= ETIME)); do
       if [ "$CONF_MODE" = 'static' ]; then
 
         if ((enable_iter == 1 && nitmax > 1)); then
-          for it in $(seq $nitmax); do
+          for it in $(seq $nit); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
             if ((IO_ARB == 1)); then ##
@@ -283,7 +288,7 @@ while ((time <= ETIME)); do
         execpath="${stepexecdir[$s]}/${stepexecname[$s]}"
         stdout_dir="$TMPOUT/${conf_time}/log/$(basename ${stepexecdir[$s]})"
         if ((enable_iter == 1)); then
-          for it in $(seq $nitmax); do
+          for it in $(seq $nit); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
             if ((IO_ARB == 1)); then ##

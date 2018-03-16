@@ -46,11 +46,11 @@ OBSNCEP=
 DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
 
-TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -87,7 +87,6 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
 
 OBSNUM=1
 OBSNAME[1]=obs
-OBSOPE_SEPARATE[1]=1
 
 #===============================================================================
 # Cycling settings
@@ -103,7 +102,7 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 MEMBER=8           # Ensemble size
 
 NNODES=2           # Number of nodes
-PPN=20             # Number of processes per node
+PPN=40             # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
