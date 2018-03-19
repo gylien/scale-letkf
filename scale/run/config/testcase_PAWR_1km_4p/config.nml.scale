@@ -16,17 +16,17 @@
  TIME_STARTMS               = 0.D0,
 !--TIME_DURATION--
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 2.D0,
+ TIME_DT                    = 5.0D0,
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = 0.4D0,
+ TIME_DT_ATMOS_DYN          = 1.0D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = 2.D0,
+ TIME_DT_ATMOS_PHY_MP       = 5.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_RD       = 30.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_SF       = 2.D0,
+ TIME_DT_ATMOS_PHY_SF       = 30.D0,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_TB       = 2.D0,
+ TIME_DT_ATMOS_PHY_TB       = 5.0D0,
  TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_BL       = 2.D0,
  TIME_DT_ATMOS_PHY_BL_UNIT  = "SEC",
@@ -205,7 +205,7 @@
 &PARAM_ATMOS_REFSTATE
  ATMOS_REFSTATE_TYPE = "INIT",
  ATMOS_REFSTATE_UPDATE_FLAG = .true.,
- ATMOS_REFSTATE_UPDATE_DT   = 30.D0,
+ ATMOS_REFSTATE_UPDATE_DT   = 10800.D0,
 /
 
 &PARAM_ATMOS_BOUNDARY
@@ -255,9 +255,9 @@
 
 &PARAM_ATMOS_PHY_MP_TOMITA08
  enable_kk2000 = .false.,
- Cr = 58.D0,
+ Cr = 130.D0,
  Cs = 0.9D0,
- drag_g = 2.5D0,
+ drag_g = 0.6D0,
  beta_saut = 6D-3,
  gamma_saut = 6D-2,
  gamma_sacr = 2D-2,

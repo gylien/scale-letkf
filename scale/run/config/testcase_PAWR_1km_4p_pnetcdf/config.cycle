@@ -15,19 +15,6 @@ TIME_LIMIT='<WTIME_L>'
 
 FCSTOUT=30
 
-#OBSOPE_OPT=1       # Observation operator options:
-#                   #  1: use LETKF built-in obsope
-#                   #  2: use GSI
-
-#THIN_OPT=2         # Superobing/thinning options:
-#                   # -- Options below (1-2) is for OBSOPE_OPT=1
-#                   #  1: No superobing/thinning
-#                   #  2: Use superobed/thinned observations
-#                   #     Superobed/thinned observations store in $OUTDIR/obs/superob
-#                   # -- Options below (3-4) are for OBSOPE_OPT=2
-#                   #  3: use thinned observations for satellite radiance observations only
-#                   #  4: use thinned observations for both conventional and satellite radiance observations
-
 ADAPTINFL=0         # Adaptive inflation
                     #  0: OFF
                     #  1: ON, using inflation parameter 1 cycle  ago as prior
@@ -37,12 +24,6 @@ ADAPTINFL=0         # Adaptive inflation
 
 MAKEINIT=1       # 0: No
                  # 1: Yes
-PERTURB_BDY=0    # 0: No
-                 # 1: Yes
-THINNING=0       # 0: No
-                 # 1: Yes
-OBSOPE=0         # 0: No    ! obsope options: not finished yet!!
-                 # 1: Yes   !
 
 #===============================================================================
 # Diagnostic output settings
@@ -55,6 +36,7 @@ OUT_OPT=3        # 1:   o         o       o         o       o    o
                  # 4:   o         o       o
                  # 5:   o         *       o                               * = every $OUT_CYCLE_SKIP cycles and the last cycle
                  # 6:   o         **      o                               ** = only the last cycle
+                 # 7:   o         **
 
 OUT_CYCLE_SKIP=1
 
@@ -68,7 +50,7 @@ LANDUSEOUT_OPT=1 # 1:   o
 
                  #      bdy
                  #      mean members
-BDYOUT_OPT=3     # 1:   o    o
+BDYOUT_OPT=1     # 1:   o    o
                  # 2:   o
                  # 3:   (none)
 
@@ -91,6 +73,8 @@ LOG_TYPE=2       # 1:   Only save the log file from the head process
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file
 
+SPRD_OUT=1       # 0: No
+                 # 1: Yes
 RTPS_INFL_OUT=0  # 0: No
                  # 1: Yes
 NOBS_OUT=0       # 0: No

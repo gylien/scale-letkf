@@ -143,10 +143,20 @@ PROGRAM letkf
     end if
 
     !
+    ! LETKF GRID setup
+    !
+    call set_common_mpi_grid
+
+    allocate (gues3d(nij1,nlev,nens,nv3d))
+    allocate (gues2d(nij1,nens,nv2d))
+
+    call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
+
+    !
     ! Compute observation operator, return the results in obsda
     ! with additional space for externally processed observations
     !
-    call obsope_cal(obsda_return=obsda, nobs_extern=nobs_extern)
+    call obsope_cal(obsda_return=obsda, nobs_extern=nobs_extern, v3d=gues3d, v2d=gues2d)
 
     call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
 
@@ -162,22 +172,13 @@ PROGRAM letkf
 ! First guess ensemble
 !-----------------------------------------------------------------------
 
-    !
-    ! LETKF GRID setup
-    !
-    call set_common_mpi_grid
-
-    allocate (gues3d(nij1,nlev,nens,nv3d))
-    allocate (gues2d(nij1,nens,nv2d))
     allocate (anal3d(nij1,nlev,nens,nv3d))
     allocate (anal2d(nij1,nens,nv2d))
-
-    call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
 
     !
     ! READ GUES
     !
-    call read_ens_mpi(gues3d, gues2d)
+!    call read_ens_mpi(gues3d, gues2d)
 
     if (DET_RUN .and. mmdetin /= mmdet) then
       gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
