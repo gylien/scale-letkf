@@ -1761,8 +1761,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !    (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
 !    abs(obs(obsda_sort%set(obs_idx_TCX))%dif(obsda_sort%idx(obs_idx_TCX))) <= DEPARTURE_STAT_T_RANGE))then
 !
-!    allocate(bTC(3,0:MEM_NP-1))
-!    allocate(bufr(3,0:MEM_NP-1))
+!    allocate(bTC(3,0:nprocs_d-1))
+!    allocate(bufr(3,0:nproces_d-1))
 !
 !    bTC = 9.99d33
 !    bufr = 9.99d33
@@ -1770,7 +1770,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !!!!!!    call search_tc_subdom(obsda_sort%ri(obs_idx_TCX),obsda_sort%rj(obs_idx_TCX),v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
 !
 !    CALL MPI_BARRIER(MPI_COMM_d,ierr)
-!    CALL MPI_ALLREDUCE(bTC,bufr,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
+!    CALL MPI_ALLREDUCE(bTC,bufr,3*nprocs_d,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
 !    bTC = bufr
 !
 !    deallocate(bufr)
@@ -1778,13 +1778,13 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !
 !    ! Assume MSLP of background TC is lower than 1100 (hPa). 
 !    bTC_mslp = 1100.0d2
-!    do n = 0, MEM_NP - 1
+!    do n = 0, nprocs_d - 1
 !      write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
 !      if (bTC(3,n) < bTC_mslp ) then
 !        bTC_mslp = bTC(3,n)
 !        bTC_proc = n
 !      endif
-!    enddo ! [ n = 0, MEM_NP - 1]
+!    enddo ! [ n = 0, nprocs_d - 1]
 !
 !    do n = 1, 3
 !      if(n==1) i = obs_idx_TCX

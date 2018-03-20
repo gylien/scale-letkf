@@ -3,12 +3,6 @@
  VERIFY_COORD = .false.,
 /
 
-&PARAM_ENSEMBLE
-!--MEMBER--
-!--DET_RUN--
- DET_RUN_CYCLED = .true.,
-/
-
 &PARAM_OBSOPE
 !--OBS_IN_NUM--
 !--OBS_IN_NAME--
@@ -57,13 +51,6 @@
  POSITIVE_DEFINITE_QHYD = .true.,
 !--NOBS_OUT--
 !--NOBS_OUT_BASENAME--
-/
-
-&PARAM_LETKF_PRC
-!--NNODES--
-!--PPN--
-!--MEM_NODES--
-!--MEM_NP--
 /
 
 &PARAM_LETKF_OBS

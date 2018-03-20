@@ -658,7 +658,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
 !              !!! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
 !              ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp
-!              allocate(bTC(3,0:MEM_NP-1))
+!              allocate(bTC(3,0:nprocs_d-1))
 
 !              bTC = 9.99d33
 
@@ -672,18 +672,18 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !  
 !!              CALL MPI_BARRIER(MPI_COMM_d,ierr)
 !              if (nprocs_d > 1) then
-!                CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
+!                CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*nprocs_d,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
 !              end if
 
 !              ! Assume MSLP of background TC is lower than 1100 (hPa). 
 !              bTC_mslp = 1100.0d2
-!              do n = 0, MEM_NP - 1
+!              do n = 0, nprocs_d - 1
 !                write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
 !                if (bTC(3,n) < bTC_mslp ) then
 !                  bTC_mslp = bTC(3,n)
 !                  bTC_proc = n
 !                endif
-!              enddo ! [ n = 0, MEM_NP - 1]
+!              enddo ! [ n = 0, nprocs_d - 1]
 
 !              if (myrank_d == proc) then
 !                do n = 1, 3
@@ -723,7 +723,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is writing observations for member ', &
 !              im, ', subdomain id #', myrank_d
         if (im <= MEMBER) then
-          call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
+          obsdafile = OBSDA_OUT_BASENAME
+          call filename_replace_mem(obsdafile, im)
         else if (im == mmean) then
           obsdafile = OBSDA_MEAN_OUT_BASENAME
         else if (im == mmdet) then

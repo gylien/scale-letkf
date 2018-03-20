@@ -40,7 +40,6 @@ for i in $list; do
 #    sed -i "/ATMOS_PHY_TB_TYPE/c \ ATMOS_PHY_TB_TYPE = \"SMAGORINSKY\",\n\ ATMOS_PHY_BL_TYPE = \"MYNN\"," $i
 
     sed -i "/ATMOS_DYN_enable_coriolis/c \ ATMOS_DYN_coriolis_type              = \"SPHERE\"," $i
-    sed -i "s/HISTORY_OUTPUT_STEP0/FILE_HISTORY_OUTPUT_STEP0/" $i
     sed -i "/&PARAM_HISTORY/c &PARAM_FILE_HISTORY" $i
     sed -i "s/HISTORY_DEFAULT_BASENAME/FILE_HISTORY_DEFAULT_BASENAME/" $i
     sed -i "s/HISTORY_DEFAULT_TINTERVAL/FILE_HISTORY_DEFAULT_TINTERVAL/" $i

@@ -41,7 +41,7 @@
 /
 
 &PARAM_CNVTOPO_DEM50M
- DEM50M_IN_CATALOGUE = "DEM50m_catalogue.txt",
+ DEM50M_IN_CATALOGUE = "DEM50M_catalogue.txt",
 !--DEM50M_IN_DIR--
 /
 
@@ -55,8 +55,15 @@
 /
 
 &PARAM_CNVLANDUSE_LU100M
- LU100M_IN_CATALOGUE = "LU100m_catalogue.txt",
+ LU100M_IN_CATALOGUE = "LU100M_catalogue.txt",
 !--LU100M_IN_DIR--
+/
+
+&PARAM_COMM_CARTESC_NEST
+!--OFFLINE_PARENT_BASENAME--
+!--OFFLINE_PARENT_PRC_NUM_X--
+!--OFFLINE_PARENT_PRC_NUM_Y--
+!--LATLON_CATALOGUE_FNAME--
 /
 
 #################################################

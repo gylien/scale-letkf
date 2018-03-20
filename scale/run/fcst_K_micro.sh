@@ -40,9 +40,10 @@ echo "[$(datetime_now)] Start $myname $@"
 
 setting "$@" || exit $?
 
-#if [ "$CONF_MODE" = 'static' ]; then
-#  . src/func_${job}_static.sh || exit $?
-#fi
+if [ "$CONF_MODE" = 'static' ]; then
+  . src/func_common_static.sh || exit $?
+  . src/func_${job}_static.sh || exit $?
+fi
 
 echo
 print_setting || exit $?
