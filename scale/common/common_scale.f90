@@ -1942,7 +1942,7 @@ subroutine get_itmax(itmax)
 end subroutine get_itmax
 
 !-------------------------------------------------------------------------------
-subroutine gettimelabel(date,timelabel)
+subroutine date2tlab_LETKF(date,timelabel)
   implicit none
 
   character(len=14), intent(out) :: timelabel ! YYYYMMDDHHNNSS
@@ -1951,7 +1951,22 @@ subroutine gettimelabel(date,timelabel)
   write(timelabel,'(I4.4,I2.2,I2.2,I2.2,I2.2,I2.2)') date(1:3), date(4:6) 
 
   return
-end subroutine gettimelabel
+end subroutine date2tlab_LETKF
+
+!-------------------------------------------------------------------------------
+subroutine date2tlab_SCALE(date,timelabel)
+  use scale_time, only: &
+    TIME_time2label
+  implicit none
+
+  character(len=19), intent(out) :: timelabel  ! YYYYMMDD-hhmmss.sss
+  integer, intent(in) :: date(6)
+
+  call TIME_time2label(date,0.0d0,timelabel)
+
+  return
+end subroutine date2tlab_SCALE
+
 !===============================================================================
 
 END MODULE common_scale

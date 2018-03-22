@@ -27,6 +27,7 @@ module common_mpi_scale
 #ifdef PNETCDF
   use scale_file, only: FILE_AGGREGATE
 #endif
+  use scale_time, only: TIME_time2label
 
   implicit none
   public
@@ -524,8 +525,9 @@ subroutine set_scalelib
 !  use scale_ocean_grid_cartesC, only: &
 !    OCEAN_GRID_CARTESC_setup
   use scale_time, only: &
-    TIME_DTSEC,         &
-    TIME_STARTDAYSEC
+    TIME_time2label!,    &
+!    TIME_DTSEC,         &
+!    TIME_STARTDAYSEC
 #ifdef PNETCDF
   use scale_land_grid_cartesC_index, only: &
     LAND_GRID_CARTESC_INDEX_setup
@@ -1067,14 +1069,18 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
   character(filelenmax) :: filename
   integer :: im
 
+  character(len=19) :: timelabel ! YYYYMMDD-hhmmss.sss
+
+  call date2tlab_SCALE(sdate, timelabel)
+
   im = myrank_to_mem(iter)
   if (im >= 1 .and. im <= nens) then
     if (im <= MEMBER) then
-      call file_member_replace(im, HISTORY_IN_BASENAME, filename)
+      call file_member_replace(im, trim(HISTORY_IN_BASENAME)//timelabel, filename)
     else if (im == mmean) then
-      filename = HISTORY_MEAN_IN_BASENAME
+      filename = trim(HISTORY_MEAN_IN_BASENAME)//timelabel
     else if (im == mmdet) then
-      filename = HISTORY_MDET_IN_BASENAME
+      filename = trim(HISTORY_MDET_IN_BASENAME)//timelabel
     end if
 
 #ifdef PNETCDF
@@ -1103,7 +1109,11 @@ subroutine read_ens_mpi(v3d, v2d)
   character(len=filelenmax) :: filename
   integer :: it, im, mstart, mend
 
+  character(len=19) :: timelabel ! YYYYMMDD-hhmmss.sss
+
   call mpi_timer('', 2)
+
+  call date2tlab_SCALE(adate, timelabel)
 
   do it = 1, nitmax
     im = myrank_to_mem(it)
@@ -1112,14 +1122,14 @@ subroutine read_ens_mpi(v3d, v2d)
     ! 
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
       if (im <= MEMBER) then
-        call file_member_replace(im, GUES_IN_BASENAME, filename)
+        call file_member_replace(im, trim(GUES_IN_BASENAME)//timelabel, filename)
       else if (im == mmean) then
-        filename = GUES_MEAN_INOUT_BASENAME
+        filename = trim(GUES_MEAN_INOUT_BASENAME)//timelabel
       else if (im == mmdet) then
-        filename = GUES_MDET_IN_BASENAME
+        filename = trim(GUES_MDET_IN_BASENAME)//timelabel
       end if
 
-!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
+      !write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
       if (FILE_AGGREGATE) then
         call read_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
@@ -1211,10 +1221,14 @@ subroutine write_ens_mpi(v3d, v2d, monit_step)
   integer :: it, im, mstart, mend
   integer :: monit_step_
 
+  character(len=19) :: timelabel ! YYYYMMDD-hhmmss.sss
+
   monit_step_ = 0
   if (present(monit_step)) then
     monit_step_ = monit_step
   end if
+
+  call date2tlab_SCALE(adate, timelabel)
 
   do it = 1, nitmax
     call mpi_timer('', 2, barrier=MPI_COMM_e)
@@ -1239,11 +1253,11 @@ subroutine write_ens_mpi(v3d, v2d, monit_step)
     ! 
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmean .or. im == mmdet) then
       if (im <= MEMBER) then
-        call file_member_replace(im, ANAL_OUT_BASENAME, filename)
+        call file_member_replace(im, trim(ANAL_OUT_BASENAME)//timelabel, filename)
       else if (im == mmean) then
-        filename = ANAL_MEAN_OUT_BASENAME
+        filename = trim(ANAL_MEAN_OUT_BASENAME)//timelabel
       else if (im == mmdet) then
-        filename = ANAL_MDET_OUT_BASENAME
+        filename = trim(ANAL_MDET_OUT_BASENAME)//timelabel
       end if
 
 !      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',myrank_d,'.nc'

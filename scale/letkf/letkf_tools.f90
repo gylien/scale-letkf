@@ -108,7 +108,11 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   character(len=timer_name_width) :: timer_str
 
+  character(len=14) :: timelabel ! YYYYMMDDHHNNSS ! analysis time label
+
   call mpi_timer('', 2)
+
+  call date2tlab_LETKF(adate,timelabel)
 
   WRITE(6,'(A)') 'Hello from das_letkf'
   WRITE(6,'(A,F15.2)') '  INFL_MUL = ',INFL_MUL
@@ -745,10 +749,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',RELAX_SPREAD_OUT_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
       if (FILE_AGGREGATE) then
-        call write_restart_par(RELAX_SPREAD_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
+        call write_restart_par(trim(RELAX_SPREAD_OUT_BASENAME)//timelabel,work3dg,work2dg,MPI_COMM_d)
       else
 #endif
-        call write_restart(RELAX_SPREAD_OUT_BASENAME,work3dg,work2dg)
+        call write_restart(trim(RELAX_SPREAD_OUT_BASENAME)//timelabel,work3dg,work2dg)
 #ifdef PNETCDF
       end if
 #endif

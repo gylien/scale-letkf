@@ -31,6 +31,9 @@ MODULE common_nml
   character(len=memflen), parameter :: memf_mdet = 'mdet'
   character(len=memflen), parameter :: memf_sprd = 'sprd'
 
+  integer :: sdate(6) ! start date of a DA cycle    ! (yyyy,mm,dd,hh,nn,ss)
+  integer :: adate(6) ! analysis date of a DA cycle ! (yyyy,mm,dd,hh,nn,ss)
+
   !--- PARAM_ENSEMBLE
   integer :: MEMBER = 3      ! ensemble size
   integer :: MEMBER_RUN = 1  !
@@ -76,8 +79,8 @@ MODULE common_nml
   real(r_size)          :: SLOT_TINTERVAL = 3600.0d0
 
   !--- PARAM_LETKF
-  integer               :: STIME(6) = (/2018,2,2,14,0,0/) ! DA start time
-  integer               :: ETIME(6) = (/2018,2,2,14,0,0/) ! DA end time
+  integer               :: STIME(6) = (/2018,2,2,14,0,0/) ! DA cycle start time specified by config.cycle 
+  integer               :: ETIME(6) = (/2018,2,2,14,0,0/) ! DA cycle end time specified by config.cycle
   real(r_size)          :: LCYCLE = 30.0d0 ! DA window length (sec)
   logical               :: OBSDA_IN = .false.
   character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@'

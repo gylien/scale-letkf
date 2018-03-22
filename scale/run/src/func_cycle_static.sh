@@ -504,22 +504,29 @@ while ((time <= ETIME)); do
 
   obstime $time
 
+
+  time=$(datetime $time $LCYCLE s)
+  atime=$(datetime $time $LCYCLE s)
+done
+
   #-----------------------------------------------------------------------------
   # scale (launcher)
   #-----------------------------------------------------------------------------
 
   for it in $(seq $nitmax); do
     if ((nitmax == 1)); then
-      conf_file="scale-rm_ens_${time}.conf"
+      #conf_file="scale-rm_ens_${time}.conf"
+      conf_file="scale-rm_ens.conf"
     else
-      conf_file="scale-rm_ens_${time}_${it}.conf"
+      #conf_file="scale-rm_ens_${time}_${it}.conf"
+      conf_file="scale-rm_ens_${it}.conf"
     fi
     echo "  $conf_file"
     cat $SCRP_DIR/config.nml.ensmodel | \
         sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
             -e "/!--MEMBER_RUN--/a MEMBER_RUN = $mtot," \
             -e "/!--MEMBER_ITER--/a MEMBER_ITER = $it," \
-            -e "/!--CONF_FILES--/a CONF_FILES = \"@@@@/run_${time}.conf\"," \
+            -e "/!--CONF_FILES--/a CONF_FILES = \"@@@@/run.conf\"," \
             -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
             -e "/!--PPN--/a PPN = $PPN_APPAR," \
             -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
@@ -571,13 +578,14 @@ while ((time <= ETIME)); do
       DOMAIN_CATALOGUE_OUTPUT=".true."
     fi
 
-    conf_file="${name_m[$m]}/run_${time}.conf"
+    #conf_file="${name_m[$m]}/run_${time}.conf"
+    conf_file="${name_m[$m]}/run.conf"
     echo "  $conf_file"
     mkdir -p $CONFIG_DIR/${name_m[$m]}
     cat $SCRP_DIR/config.nml.scale | \
-        sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale.${name_m[$m]}.LOG_${time}\"," \
+        sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale.${name_m[$m]}.LOG_${STIME}\"," \
             -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
-            -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
+            -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${STIME:0:4}, ${STIME:4:2}, ${STIME:6:2}, ${STIME:8:2}, ${STIME:10:2}, ${STIME:12:2}," \
             -e "/!--TIME_DURATION--/a TIME_DURATION = ${CYCLEFLEN}.D0," \
             -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_OCEAN_RESTART--/a TIME_DT_OCEAN_RESTART = ${LCYCLE}.D0," \
@@ -588,12 +596,12 @@ while ((time <= ETIME)); do
             -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${name_m[$m]}/anal.d01\"," \
             -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo.d01\"," \
             -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse.d01\"," \
-            -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${mem_bdy}/bdy_$(datetime_scale $time)\"," \
-            -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
+            -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${mem_bdy}/bdy_$(datetime_scale $STIME)\"," \
+            -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${STIME:0:4}, ${STIME:4:2}, ${STIME:6:2}, ${STIME:8:2}, ${STIME:10:2}, ${STIME:12:2}," \
             -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0," \
-            -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${name_m[$m]}/hist.d01_$(datetime_scale $time)\"," \
+            -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${name_m[$m]}/hist.d01_$(datetime_scale $STIME)\"," \
             -e "/!--FILE_HISTORY_DEFAULT_TINTERVAL--/a FILE_HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
-            -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"log/scale.${name_m[$m]}.monitor_${time}\"," \
+            -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"log/scale.${name_m[$m]}.monitor_${STIME}\"," \
             -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\"," \
             -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"latlon_domain_catalogue.txt\"," \
             -e "/!--DOMAIN_CATALOGUE_OUTPUT--/a DOMAIN_CATALOGUE_OUTPUT = ${DOMAIN_CATALOGUE_OUTPUT}," \
@@ -628,7 +636,8 @@ while ((time <= ETIME)); do
   OBS_IN_NAME_LIST=
   for iobs in $(seq $OBSNUM); do
     if [ "${OBSNAME[$iobs]}" != '' ]; then
-      OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}.dat', "
+      #OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}.dat', "
+      OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_', "
     fi
   done
 
@@ -662,7 +671,8 @@ while ((time <= ETIME)); do
     NOBS_OUT_TF='.true.'
   fi
 
-  conf_file="letkf_${atime}.conf"
+  #conf_file="letkf_${atime}.conf"
+  conf_file="letkf.conf"
   echo "  $conf_file"
   cat $SCRP_DIR/config.nml.letkf | \
       sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
@@ -671,24 +681,24 @@ while ((time <= ETIME)); do
           -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
           -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
           -e "/!--OBSDA_OUT--/a OBSDA_OUT = $OBSDA_OUT" \
-          -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"@@@@/obsgues.d01_${atime}\"," \
-          -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = \"@@@@/hist.d01_$(datetime_scale $time)\"," \
+          -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"@@@@/obsgues.d01_\"," \
+          -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = \"@@@@/hist.d01_\"," \
           -e "/!--SLOT_START--/a SLOT_START = $slot_s," \
           -e "/!--SLOT_END--/a SLOT_END = $slot_e," \
           -e "/!--SLOT_BASE--/a SLOT_BASE = $slot_b," \
           -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = ${LTIMESLOT}.D0," \
           -e "/!--OBSDA_IN--/a OBSDA_IN = .false.," \
-          -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"@@@@/anal.d01_$(datetime_scale $atime)\"," \
-          -e "/!--GUES_MEAN_INOUT_BASENAME--/a GUES_MEAN_INOUT_BASENAME = \"mean/gues.d01_$(datetime_scale $atime)\"," \
-          -e "/!--GUES_SPRD_OUT_BASENAME--/a GUES_SPRD_OUT_BASENAME = \"sprd/gues.d01_$(datetime_scale $atime)\"," \
+          -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"@@@@/anal.d01_\"," \
+          -e "/!--GUES_MEAN_INOUT_BASENAME--/a GUES_MEAN_INOUT_BASENAME = \"mean/gues.d01_\"," \
+          -e "/!--GUES_SPRD_OUT_BASENAME--/a GUES_SPRD_OUT_BASENAME = \"sprd/gues.d01_\"," \
           -e "/!--GUES_SPRD_OUT--/a GUES_SPRD_OUT = ${SPRD_OUT_TF}," \
-          -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"@@@@/anal.d01_$(datetime_scale $atime)\"," \
+          -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"@@@@/anal.d01_\"," \
           -e "/!--ANAL_SPRD_OUT--/a ANAL_SPRD_OUT = ${SPRD_OUT_TF}," \
           -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"topo.d01\"," \
           -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RTPS_INFL_OUT_TF}," \
-          -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"rtpsinfl.d01_$(datetime_scale $atime).nc\"," \
+          -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"rtpsinfl.d01.nc\"," \
           -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
-          -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"nobs.d01_$(datetime_scale $atime).nc\"," \
+          -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"nobs.d01.nc\"," \
           -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
           -e "/!--PPN--/a PPN = $PPN_APPAR," \
           -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
@@ -707,9 +717,9 @@ while ((time <= ETIME)); do
   fi
 
   #-------------------
-  time=$(datetime $time $LCYCLE s)
-  atime=$(datetime $time $LCYCLE s)
-done
+#  time=$(datetime $time $LCYCLE s)
+#  atime=$(datetime $time $LCYCLE s)
+#done
 
 echo
 
@@ -777,7 +787,8 @@ while ((time <= ETIME)); do
   #-----------------------------------------------------------------------------
 
   if [ -d "${OUTDIR}/${atime}/log/letkf" ]; then
-    $save_cmd $CONFIG_DIR/letkf_${atime}.conf ${OUTDIR}/${atime}/log/letkf/letkf.conf
+    #$save_cmd $CONFIG_DIR/letkf_${atime}.conf ${OUTDIR}/${atime}/log/letkf/letkf.conf
+    $save_cmd $CONFIG_DIR/letkf.conf ${OUTDIR}/${atime}/log/letkf/letkf.conf
   fi
 
   #-------------------

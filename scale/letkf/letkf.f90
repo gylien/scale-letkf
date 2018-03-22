@@ -32,13 +32,14 @@ PROGRAM letkf
   character(len=10) :: myranks
   integer :: iarg
 
-  integer :: adate(6)  ! analysis date (yyyy,mm,dd,hh,nn,ss)
-  integer :: gdate(6)  ! guess date (yyyy,mm,dd,hh,nn,ss)
+!  integer :: adate(6)  ! analysis date (yyyy,mm,dd,hh,nn,ss) ! common_nml.f90
+!  integer :: sdate(6)  ! start date (yyyy,mm,dd,hh,nn,ss)    ! common_nml.f90
   integer :: it ! main cycle loop iteration
   integer :: itmin = 1
-  integer :: itmax = 3
-  character(len=14) :: atimelabel ! YYYYMMDDHHNNSS ! analysis
-  character(len=14) :: gtimelabel ! YYYYMMDDHHNNSS ! guess
+  integer :: itmax = 1 
+  character(len=14) :: atlab ! YYYYMMDDHHNNSS ! analysis time label
+  character(len=14) :: stlab ! YYYYMMDDHHNNSS ! start time label (previous analysis time)
+  character(len=19) :: atlab_scale ! YYYYMMDD-hhmmss.sss
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -121,14 +122,15 @@ PROGRAM letkf
 
   main_cycle: do it = itmin, itmax
 
-    call it2date(it - 1, gdate)
-    call gettimelabel(gdate,gtimelabel)
+    call it2date(it - 1, sdate)
+    call date2tlab_LETKF(sdate,stlab)
 
     call it2date(it, adate)
-    call gettimelabel(adate,atimelabel)
+    call date2tlab_LETKF(adate,atlab)
+    call date2tlab_SCALE(adate,atlab_scale)
 
     print *,""
-    print *, "Multicycle LETKF,cycle=",it,"/",itmax,"ATIME:",atimelabel," GTIME:",gtimelabel
+    print *, "Multicycle LETKF,cycle=",it,"/",itmax,"ATIME:",atlab," STIME:",stlab
     print *,""
 
 
@@ -187,12 +189,12 @@ PROGRAM letkf
       !
       if (it == itmin) then
         call set_common_mpi_grid
-      endif
 
-      if (.not. allocated(gues3d)) allocate (gues3d(nij1,nlev,nens,nv3d))
-      if (.not. allocated(gues2d)) allocate (gues2d(nij1,nens,nv2d))
-      if (.not. allocated(anal3d)) allocate (anal3d(nij1,nlev,nens,nv3d))
-      if (.not. allocated(anal2d)) allocate (anal2d(nij1,nens,nv2d))
+        allocate (gues3d(nij1,nlev,nens,nv3d))
+        allocate (gues2d(nij1,nens,nv2d))
+        allocate (anal3d(nij1,nlev,nens,nv3d))
+        allocate (anal2d(nij1,nens,nv2d))
+      endif
 
       call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
 
@@ -212,13 +214,13 @@ PROGRAM letkf
       ! WRITE ENS MEAN and SPRD
       !
       if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-        call write_ensmean(GUES_MEAN_INOUT_BASENAME, gues3d, gues2d, calced=.false., monit_step=1)
+        call write_ensmean(GUES_MEAN_INOUT_BASENAME//atlab_SCALE, gues3d, gues2d, calced=.false., monit_step=1)
       else
-        call write_ensmean(GUES_MEAN_INOUT_BASENAME, gues3d, gues2d, calced=.false.)
+        call write_ensmean(GUES_MEAN_INOUT_BASENAME//atlab_SCALE, gues3d, gues2d, calced=.false.)
       end if
 
       if (GUES_SPRD_OUT) then
-        call write_enssprd(GUES_SPRD_OUT_BASENAME, gues3d, gues2d)
+        call write_enssprd(GUES_SPRD_OUT_BASENAME//atlab_SCALE, gues3d, gues2d)
       end if
 
       call mpi_timer('GUES_MEAN', 1, barrier=MPI_COMM_a)
@@ -245,7 +247,7 @@ PROGRAM letkf
       ! write analysis mean later in write_ens_mpi
 
       if (ANAL_SPRD_OUT) then
-        call write_enssprd(ANAL_SPRD_OUT_BASENAME, anal3d, anal2d)
+        call write_enssprd(ANAL_SPRD_OUT_BASENAME//atlab_SCALE, anal3d, anal2d)
       end if
 
       call mpi_timer('ANAL_MEAN', 1, barrier=MPI_COMM_a)

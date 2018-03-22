@@ -2584,13 +2584,19 @@ subroutine read_obs_all(obs)
   implicit none
 
   type(obs_info), intent(out) :: obs(OBS_IN_NUM)
+  character(14) :: timelabel
   integer :: iof
   logical :: ex
 
+  character(filelenmax) :: obsfile
+
+  call date2tlab_LETKF(adate,timelabel)
+
   do iof = 1, OBS_IN_NUM
-    inquire (file=trim(OBS_IN_NAME(iof)), exist=ex)
+    obsfile = trim(OBS_IN_NAME(iof))//timelabel//'.dat'
+    inquire (file=trim(obsfile), exist=ex)
     if (.not. ex) then
-      write(6,*) '[Warning] FILE ',trim(OBS_IN_NAME(iof)),' NOT FOUND'
+      write(6,*) '[Warning] FILE ',trim(obsfile),' NOT FOUND'
 
 
       obs(iof)%nobs = 0
@@ -2602,17 +2608,17 @@ subroutine read_obs_all(obs)
 
     select case (OBS_IN_FORMAT(iof))
     case (obsfmt_prepbufr)
-      call get_nobs(trim(OBS_IN_NAME(iof)),8,obs(iof)%nobs)
+      call get_nobs(trim(obsfile),8,obs(iof)%nobs)
     case (obsfmt_radar)
-      call get_nobs_radar(trim(OBS_IN_NAME(iof)), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
+      call get_nobs_radar(trim(obsfile), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
     case (obsfmt_h08)
-      call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
+      call get_nobs_H08(trim(obsfile),obs(iof)%nobs) ! H08
     case default
       write(6,*) '[Error] Unsupported observation file format!'
       stop
     end select
 
-    write(6,'(5A,I9,A)') 'OBS FILE [', trim(OBS_IN_NAME(iof)), '] (FORMAT ', &
+    write(6,'(5A,I9,A)') 'OBS FILE [', trim(obsfile), '] (FORMAT ', &
                          trim(OBS_IN_FORMAT(iof)), '): TOTAL ', &
                          obs(iof)%nobs, ' OBSERVATIONS'
 
@@ -2620,11 +2626,11 @@ subroutine read_obs_all(obs)
 
     select case (OBS_IN_FORMAT(iof))
     case (obsfmt_prepbufr)
-      call read_obs(trim(OBS_IN_NAME(iof)),obs(iof))
+      call read_obs(trim(obsfile),obs(iof))
     case (obsfmt_radar)
-      call read_obs_radar(trim(OBS_IN_NAME(iof)),obs(iof))
+      call read_obs_radar(trim(obsfile),obs(iof))
     case (obsfmt_h08)
-      call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
+      call read_obs_H08(trim(obsfile),obs(iof)) ! H08
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
 
