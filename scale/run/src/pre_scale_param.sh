@@ -74,9 +74,9 @@ do
     PMEM=$2
     PVAL=$3
 
-    PMEM=`echo ${PMEM}`
+    PMEM=$(printf '%04d' $PMEM)
 
-    if ((MEM == PMEM)) || [ "${PMEM}" = 'mean' ] || [ "${PMEM}" = 'mdet' ]; then
+    if [ $MEM == $PMEM ] || [ "${PMEM}" = 'mean' ] || [ "${PMEM}" = 'mdet' ]; then
       sed -i "/!--${FULL_NAME}--/a ${PNAME} = ${PVAL}," $TMPDIR/run.conf
       break
     fi
