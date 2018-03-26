@@ -1468,8 +1468,8 @@ local TIME="$1"
 
 #-------------------------------------------------------------------------------
 
-local otime=$(datetime $TIME)               # HISTORY_OUTPUT_STEP0 = .true.,
-#local otime=$(datetime $TIME $LTIMESLOT s)  # HISTORY_OUTPUT_STEP0 = .false.,
+#local otime=$(datetime $TIME)               # HISTORY_OUTPUT_STEP0 = .true.,
+local otime=$(datetime $TIME $LTIMESLOT s)  # HISTORY_OUTPUT_STEP0 = .false.,
 local otime_s=$(datetime $TIME $WINDOW_S s)
 local otime_e=$(datetime $TIME $WINDOW_E s)
 local otime_a=$(datetime $TIME $LCYCLE s)

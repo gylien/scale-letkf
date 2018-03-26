@@ -1071,7 +1071,7 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
 
   character(len=19) :: timelabel ! YYYYMMDD-hhmmss.sss
 
-  call date2tlab_SCALE(sdate, timelabel)
+  call date2tlab_SCALE(adate, timelabel)
 
   im = myrank_to_mem(iter)
   if (im >= 1 .and. im <= nens) then

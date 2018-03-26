@@ -15,6 +15,18 @@ DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
 OUTDIR="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_bdyprep" # Directory for SCALE-LETKF output
 
+USERNAME=gylien
+
+### -- Honda setting
+PRESET='K_micro'
+#EXP="testcase_PAWR_1km_4p_pnetcdf_ioarb"
+DDIR="/volume63/data/hp150019/gylien/scale-letkf-test-suite-pnetcdf"
+INDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/testcase_PAWR_1km_4p_pnetcdf_ioarb"
+OUTDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/testcase_PAWR_1km_4p_pnetcdf_ioarb"
+INDIR=$OUTDIR
+USERNAME=honda
+### --
+
 #===============================================================================
 # Location of model/data files
 
@@ -119,7 +131,7 @@ IO_ARB=1                    # Use I/O arbitrator?
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
-TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
+TMP="/scratch/$(id -ng)/${USERNAME}/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
 

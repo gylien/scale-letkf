@@ -333,7 +333,8 @@ while ((time <= ETIME)); do
   fi
   for m in $mlist; do
     for q in $(seq $mem_np_); do
-      path="${name_m[$m]}/hist.d01_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+      #path="${name_m[$m]}/hist.d01_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+      path="${name_m[$m]}/hist.d01_$(datetime_scale $atime)$(scale_filename_sfx $((q-1)))"
       pathout="${OUTDIR}/${time}/hist/${name_m[$m]}${CONNECTOR}history$(scale_filename_sfx $((q-1)))"
 #      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+q))]}
       echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+q))]}
@@ -509,6 +510,13 @@ while ((time <= ETIME)); do
   atime=$(datetime $time $LCYCLE s)
 done
 
+# compute total scale fcst length
+EDATE=$(datetime_fmt $atime)
+SDATE=$(datetime_fmt $STIME)
+ESEC=$(date -d "$EDATE" "+%s")
+SSEC=$(date -d "$SDATE" "+%s")
+TOTAL_FCSTLEN=$((ESEC - SSEC))
+
   #-----------------------------------------------------------------------------
   # scale (launcher)
   #-----------------------------------------------------------------------------
@@ -586,7 +594,7 @@ done
         sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale.${name_m[$m]}.LOG_${STIME}\"," \
             -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
             -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${STIME:0:4}, ${STIME:4:2}, ${STIME:6:2}, ${STIME:8:2}, ${STIME:10:2}, ${STIME:12:2}," \
-            -e "/!--TIME_DURATION--/a TIME_DURATION = ${CYCLEFLEN}.D0," \
+            -e "/!--TIME_DURATION--/a TIME_DURATION = ${TOTAL_FCSTLEN}.D0," \
             -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_OCEAN_RESTART--/a TIME_DT_OCEAN_RESTART = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_LAND_RESTART--/a TIME_DT_LAND_RESTART = ${LCYCLE}.D0," \
@@ -599,7 +607,7 @@ done
             -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${mem_bdy}/bdy_$(datetime_scale $STIME)\"," \
             -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${STIME:0:4}, ${STIME:4:2}, ${STIME:6:2}, ${STIME:8:2}, ${STIME:10:2}, ${STIME:12:2}," \
             -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0," \
-            -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${name_m[$m]}/hist.d01_$(datetime_scale $STIME)\"," \
+            -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${name_m[$m]}/hist.d01\"," \
             -e "/!--FILE_HISTORY_DEFAULT_TINTERVAL--/a FILE_HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
             -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"log/scale.${name_m[$m]}.monitor_${STIME}\"," \
             -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\"," \
@@ -613,6 +621,7 @@ done
             -e "/!--TIME_END_RESTART_OUT--/a TIME_END_RESTART_OUT = .false.," \
             -e "/!--RESTART_OUT_ADDITIONAL_COPIES--/a RESTART_OUT_ADDITIONAL_COPIES = ${RESTART_OUT_ADDITIONAL_COPIES}," \
             -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}" \
+            -e "/!--FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL--/a FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL = ${LCYCLE}.D0," \
         > $CONFIG_DIR/${conf_file}
 #    cat $SCRP_DIR/config.nml.scale_user | \
 #        sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"XXXXXX\"," \
@@ -770,15 +779,18 @@ while ((time <= ETIME)); do
     # launcher
     for it in $(seq $nitmax); do
       if ((nitmax == 1)); then
-        $save_cmd $CONFIG_DIR/scale-rm_ens_${time}.conf ${OUTDIR}/${time}/log/scale/scale-rm_ens.conf
+        #$save_cmd $CONFIG_DIR/scale-rm_ens_${time}.conf ${OUTDIR}/${time}/log/scale/scale-rm_ens.conf
+        $save_cmd $CONFIG_DIR/scale-rm_ens.conf ${OUTDIR}/${time}/log/scale/scale-rm_ens.conf
       else
-        $save_cmd $CONFIG_DIR/scale-rm_ens_${time}_${it}.conf ${OUTDIR}/${time}/log/scale/scale-rm_ens_${it}.conf
+        #$save_cmd $CONFIG_DIR/scale-rm_ens_${time}_${it}.conf ${OUTDIR}/${time}/log/scale/scale-rm_ens_${it}.conf
+        $save_cmd $CONFIG_DIR/scale-rm_ens.conf ${OUTDIR}/${time}/log/scale/scale-rm_ens_${it}.conf
       fi
     done
 
     # each member
     for m in $(seq $mtot); do
-      $save_cmd $CONFIG_DIR/${name_m[$m]}/run_${time}.conf ${OUTDIR}/${time}/log/scale/${name_m[$m]}_run.conf
+      #$save_cmd $CONFIG_DIR/${name_m[$m]}/run_${time}.conf ${OUTDIR}/${time}/log/scale/${name_m[$m]}_run.conf
+      $save_cmd $CONFIG_DIR/${name_m[$m]}/run.conf ${OUTDIR}/${time}/log/scale/${name_m[$m]}_run.conf
     done
   fi
 

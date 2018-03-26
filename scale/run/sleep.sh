@@ -5,7 +5,8 @@ STEPFUNC="${1}"; shift
 MYRANK="${1}"
 
 if [ "$STEPFUNC" = 'letkf_1' ]; then
-  sleep 360s
+#  sleep 360s
+  sleep 90s # debug
 fi
 
 #===============================================================================
