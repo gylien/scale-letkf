@@ -28,6 +28,7 @@
 /scale/obs/obsope
 /scale/obs/obssim
 /scale/obs/dec_prepbufr
+/scale/dacycle/dacycle
 /scale/ensmodel/scale-rm_pp_ens
 /scale/ensmodel/scale-rm_init_ens
 /scale/ensmodel/scale-rm_ens

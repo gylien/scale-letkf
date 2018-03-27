@@ -43,9 +43,9 @@ common_obs_scale.o:	../common/common_obs_scale.f90 common.o common_nml.o common_
 endif
 common_mpi_scale.o:	../common/common_mpi_scale.f90 common.o common_nml.o common_mpi.o \
 	common_scale.o common_obs_scale.o
-	$(FC) $(FOPTS_SCALE) -c $< $(NETCDF_INC) $(SCALE_INC)
+	$(FC) $(FOPTS_SCALE) -c $< $(NETCDF_INC) $(SCALE_INC) -I$(SCALE_RM_OBJDIR)
 common_nml.o:	../common/common_nml.f90 common.o
-	$(FC) $(FOPTS_SCALE) -c $< $(INCS) $(SCALE_INC)
+	$(FC) $(FOPTS_SCALE) -c $< $(SCALE_INC)
 
 clean:
 	rm -f *.o *.mod *.lst

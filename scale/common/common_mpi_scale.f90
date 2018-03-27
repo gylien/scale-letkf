@@ -520,11 +520,18 @@ subroutine set_scalelib(execname)
     IO_setup, &
     IO_LOG_setup, &
     H_LONG
+  use scale_prof, only: &
+    PROF_setup, &
+    PROF_setprefx, &
+    PROF_rapstart, &
+    PROF_rapend
+!  use scale_file, only: &
+!    FILE_Close_All
   use scale_process, only: &
     PRC_mpi_alive, &
 !    PRC_MPIstart, &
 !    PRC_UNIVERSAL_setup, &
-    PRC_MPIsplit_letkf, &
+!    PRC_MPIsplit_letkf, &
     PRC_MPIsplit, &
     PRC_GLOBAL_setup, &
     PRC_LOCAL_setup, &
@@ -534,35 +541,74 @@ subroutine set_scalelib(execname)
     PRC_DOMAIN_nlim
   use scale_rm_process, only: &
     PRC_setup
-!  use scale_prof
   use scale_const, only: &
     CONST_setup
-!  use scale_calendar, only: &
-!    CALENDAR_setup
-!  use scale_random, only: &
-!    RANDOM_setup
+  use scale_calendar, only: &
+    CALENDAR_setup
+  use scale_random, only: &
+    RANDOM_setup
   use scale_atmos_grid_cartesC_index, only: &
     ATMOS_GRID_CARTESC_INDEX_setup
   use scale_atmos_grid_cartesC, only: &
     ATMOS_GRID_CARTESC_setup, &
     ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, &
-    ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y
-!  use scale_ocean_grid_cartesC_index, only: &
-!    OCEAN_GRID_CARTESC_INDEX_setup
-!  use scale_ocean_grid_cartesC, only: &
-!    OCEAN_GRID_CARTESC_setup
-#ifdef PNETCDF
+    ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
+    DX, &
+    DY
+  use scale_comm_cartesC_nest, only: &
+    COMM_CARTESC_NEST_setup
+  use scale_ocean_grid_cartesC_index, only: &
+    OCEAN_GRID_CARTESC_INDEX_setup
+  use scale_ocean_grid_cartesC, only: &
+    OCEAN_GRID_CARTESC_setup
   use scale_land_grid_cartesC_index, only: &
     LAND_GRID_CARTESC_INDEX_setup
-#endif
-!  use scale_land_grid_cartesC, only: &
-!    LAND_GRID_CARTESC_setup
-#ifdef PNETCDF
+  use scale_land_grid_cartesC, only: &
+    LAND_GRID_CARTESC_setup
   use scale_urban_grid_cartesC_index, only: &
     URBAN_GRID_CARTESC_INDEX_setup
-#endif
-!  use scale_urban_grid_cartesC, only: &
-!    URBAN_GRID_CARTESC_setup
+  use scale_urban_grid_cartesC, only: &
+    URBAN_GRID_CARTESC_setup
+  use scale_file_cartesC, only: &
+    FILE_CARTESC_setup
+!    FILE_CARTESC_cleanup
+  use scale_file, only: &
+    FILE_setup
+  use scale_comm, only: &
+    COMM_setup
+!    COMM_cleanup
+  use scale_topography, only: &
+    TOPO_setup
+  use scale_landuse, only: &
+    LANDUSE_setup
+  use scale_atmos_grid_cartesC_real, only: &
+    ATMOS_GRID_CARTESC_REAL_setup
+  use scale_mapprojection, only: &
+    MAPPROJECTION_setup
+  use scale_atmos_grid_cartesC_metric, only: &
+    ATMOS_GRID_CARTESC_METRIC_setup
+  use scale_rm_statistics, only: &
+    STAT_setup
+!  use scale_time, only: &
+!    TIME_NOWDATE, &
+!    TIME_NOWMS, &
+!    TIME_NOWSTEP
+!  use scale_file_history, only: &
+!    FILE_HISTORY_write, &
+!    FILE_HISTORY_set_nowdate, &
+!    FILE_HISTORY_finalize
+  use scale_file_history_cartesC, only: &
+    FILE_HISTORY_CARTESC_setup
+  use scale_monitor, only: &
+    MONIT_setup
+!    MONIT_write, &
+!    MONIT_finalize
+  use scale_file_external_input_cartesC, only: &
+    FILE_EXTERNAL_INPUT_CARTESC_setup
+  use scale_atmos_hydrostatic, only: &
+    ATMOS_HYDROSTATIC_setup
+  use scale_atmos_thermodyn, only: &
+    ATMOS_THERMODYN_setup
   use scale_atmos_hydrometeor, only: &
     ATMOS_HYDROMETEOR_setup, &
     ATMOS_HYDROMETEOR_regist
@@ -574,10 +620,10 @@ subroutine set_scalelib(execname)
 !  use scale_atmos_phy_mp, only: &
 !    ATMOS_PHY_MP_config
   use scale_atmos_phy_mp_tomita08, only: &
-!    ATMOS_PHY_MP_TOMITA08_ntracers,            &
-    ATMOS_PHY_MP_TOMITA08_nwaters,             &
-    ATMOS_PHY_MP_TOMITA08_nices,               &
-    ATMOS_PHY_MP_TOMITA08_tracer_names,        &
+!    ATMOS_PHY_MP_TOMITA08_ntracers, &
+    ATMOS_PHY_MP_TOMITA08_nwaters, &
+    ATMOS_PHY_MP_TOMITA08_nices, &
+    ATMOS_PHY_MP_TOMITA08_tracer_names, &
     ATMOS_PHY_MP_TOMITA08_tracer_descriptions, &
     ATMOS_PHY_MP_TOMITA08_tracer_units
 !!  use mod_atmos_phy_mp_driver, only: &
@@ -589,80 +635,70 @@ subroutine set_scalelib(execname)
 !!!    QA_MP, &
 !!    QS_MP, &
 !!!    QE_MP
-!  use scale_file_cartesC, only: &
-!    FILE_CARTESC_setup
-  use scale_file, only: &
-    FILE_setup
-  use scale_comm, only: &
-    COMM_setup
-!  use scale_topography, only: &
-!    TOPO_setup
-!  use scale_landuse, only: &
-!    LANDUSE_setup
-!  use scale_atmos_grid_cartesC_real, only: &
-!    ATMOS_GRID_CARTESC_REAL_setup
-  use scale_mapprojection, only: &
-    MAPPROJECTION_setup
-!  use scale_atmos_grid_cartesC_metric, only: &
-!    ATMOS_GRID_CARTESC_METRIC_setup
-!  use scale_interpolation, only: &
-!    INTERP_setup
-!  use mod_admin_restart, only: &
-!    ADMIN_restart_setup
-!  use mod_admin_time, only: &
-!    ADMIN_TIME_setup
-!  use scale_rm_statistics, only: &
-!    STAT_setup
-!  use scale_file_history_cartesC, only: &
-!    FILE_HISTORY_CARTESC_setup
-!  use scale_monitor, only: &
-!    MONIT_setup
-!  use scale_external_input, only: &
-!    EXTIN_setup
-!  use scale_comm_cartesC_nest, only: &
-!    COMM_CARTESC_NEST_setup
-!  use scale_atmos_hydrostatic, only: &
-!    ATMOS_HYDROSTATIC_setup
-!  use scale_atmos_thermodyn, only: &
-!    ATMOS_THERMODYN_setup
-!  use scale_atmos_saturation, only: &
-!    ATMOS_SATURATION_setup
-!  use scale_bulkflux, only: &
-!    BULKFLUX_setup
-!  use scale_roughness, only: &
-!    ROUGHNESS_setup
-!  use mod_atmos_admin, only: &
-!    ATMOS_admin_setup
-!  use mod_atmos_vars, only: &
-!    ATMOS_vars_setup
-!  use mod_atmos_driver, only: &
-!    ATMOS_driver_setup, &
-!    ATMOS_driver_config
-!  use mod_ocean_admin, only: &
-!    OCEAN_admin_setup
-!  use mod_ocean_vars, only: &
-!    OCEAN_vars_setup
-!  use mod_ocean_driver, only: &
-!    OCEAN_driver_setup
-!  use mod_land_admin, only: &
-!    LAND_admin_setup
-!  use mod_land_vars, only: &
-!    LAND_vars_setup
-!  use mod_land_driver, only: &
-!    LAND_driver_setup
-!  use mod_urban_admin, only: &
-!    URBAN_admin_setup
-!  use mod_urban_vars, only: &
-!    URBAN_vars_setup
-!  use mod_urban_driver, only: &
-!    URBAN_driver_setup
-!  use mod_cpl_admin, only: &
-!    CPL_admin_setup
-!  use mod_cpl_vars, only: &
-!    CPL_vars_setup
-!  use mod_user, only: &
-!    USER_config, &
-!    USER_setup
+  use scale_atmos_saturation, only: &
+    ATMOS_SATURATION_setup
+  use scale_bulkflux, only: &
+    BULKFLUX_setup
+  use scale_roughness, only: &
+    ROUGHNESS_setup
+  use mod_atmos_driver, only: &
+    ATMOS_driver_config
+  use mod_admin_restart, only: &
+    ADMIN_restart_setup
+!    ADMIN_restart_write
+  use mod_admin_time, only: &
+    ADMIN_TIME_setup
+!    ADMIN_TIME_checkstate, &
+!    ADMIN_TIME_advance, &
+!    TIME_DOATMOS_step, &
+!    TIME_DOLAND_step, &
+!    TIME_DOURBAN_step, &
+!    TIME_DOOCEAN_step, &
+!    TIME_DOresume, &
+!    TIME_DOend
+  use mod_atmos_admin, only: &
+    ATMOS_admin_setup
+!    ATMOS_do
+  use mod_atmos_vars, only: &
+    ATMOS_vars_setup
+!    ATMOS_sw_check => ATMOS_RESTART_CHECK, &
+!    ATMOS_vars_restart_check
+  use mod_atmos_driver, only: &
+    ATMOS_driver_setup
+!    ATMOS_driver, &
+!    ATMOS_driver_finalize
+  use mod_ocean_admin, only: &
+    OCEAN_admin_setup
+!    OCEAN_do
+  use mod_ocean_vars, only: &
+    OCEAN_vars_setup
+  use mod_ocean_driver, only: &
+    OCEAN_driver_setup
+!    OCEAN_driver
+  use mod_land_admin, only: &
+    LAND_admin_setup
+!    LAND_do
+  use mod_land_vars, only: &
+    LAND_vars_setup
+  use mod_land_driver, only: &
+    LAND_driver_setup
+!    LAND_driver
+  use mod_urban_admin, only: &
+    URBAN_admin_setup
+!    URBAN_do
+  use mod_urban_vars, only: &
+    URBAN_vars_setup
+  use mod_urban_driver, only: &
+    URBAN_driver_setup
+!    URBAN_driver
+  use mod_cpl_admin, only: &
+    CPL_admin_setup
+  use mod_cpl_vars, only: &
+    CPL_vars_setup
+  use mod_user, only: &
+    USER_config, &
+    USER_setup
+!    USER_step
   implicit none
 
   character(len=*), intent(in), optional :: execname
@@ -678,11 +714,12 @@ subroutine set_scalelib(execname)
   integer :: intercomm_child
   character(len=H_LONG) :: confname_domains(PRC_DOMAIN_nlim)
   character(len=H_LONG) :: confname_mydom
+  character(len=H_LONG) :: confname
   integer :: qs_mp_dummy
 
-  integer :: color, key, idom, ierr
+  integer :: color, key, im, idom, ierr
 
-  character(len=7) :: execname_ = ''
+  character(len=7) :: execname_ = 'LETKF  '
 
   if (present(execname)) execname_ = execname
 
@@ -756,7 +793,7 @@ subroutine set_scalelib(execname)
                      confname_domains(:), & ! [IN]
                      .false.,          & ! [IN]
                      .false.,          & ! [IN] flag bulk_split
-                     .false.,          & ! [IN] no reordering
+                     COLOR_REORDER,    & ! [IN]
                      local_comm,       & ! [OUT]
                      intercomm_parent, & ! [OUT]
                      intercomm_child,  & ! [OUT]
@@ -773,34 +810,15 @@ subroutine set_scalelib(execname)
 
 #ifdef DEBUG
   if (mydom <= 0) then
-    write(6, '(A)'), '[Error] Cannot determine my domain ID.'
+    write (6, '(A)'), '[Error] Cannot determine my domain ID.'
     stop
   end if
 #endif
 
+  ! Setup standard I/O and read LETKF namelists
   !-----------------------------------------------------------------------------
 
-  if (mydom >= 2) then ! In d01, keep using the original launcher config file; skip re-opening config files here
-    call IO_setup( modelname, confname_mydom )
-
-!    call read_nml_log
-!    call read_nml_model
-!    call read_nml_ensemble
-!    call read_nml_process
-  end if
-
-  call PRC_LOCAL_setup( local_comm, local_myrank, local_ismaster )
-
-!  call MPI_COMM_SIZE(MPI_COMM_d, nprocs_d, ierr)
-  nprocs_d = PRC_nprocs
-!  call MPI_COMM_RANK(MPI_COMM_d, myrank_d, ierr)
-!  myrank_d = PRC_myrank
-  myrank_d = local_myrank
-
-  call mpi_timer('set_scalelib:mpi_comm_split_d_local:', 2)
-
-  select case (execname_)
-  case ('LETKF  ')
+  if (execname_ == 'DACYCLE') then
     call read_nml_obs_error
     call read_nml_obsope
     call read_nml_letkf
@@ -809,16 +827,75 @@ subroutine set_scalelib(execname)
     call read_nml_letkf_monitor
     call read_nml_letkf_radar
     call read_nml_letkf_h08
-  case ('OBSOPE ', 'OBSMAKE')
-    call read_nml_obs_error
-    call read_nml_obsope
-    call read_nml_letkf_radar
-    call read_nml_letkf_h08
-  case ('OBSSIM ')
-    call read_nml_obssim
-    call read_nml_letkf_radar
-    call read_nml_letkf_h08
-  end select
+
+    im = myrank_to_mem(1)
+    if (im < 1 .or. im > MEMBER_RUN) then
+      write (6, '(A)'), '[Error] Invalid member number.'
+      stop
+    end if
+    confname = confname_mydom
+    if (CONF_FILES_SEQNUM) then
+      call filename_replace_mem(confname, im)
+    else
+      if (im <= MEMBER) then
+        call filename_replace_mem(confname, im)
+      else if (im == MEMBER+1) then
+        call filename_replace_mem(confname, memf_mean)
+      else if (im == MEMBER+2) then
+        call filename_replace_mem(confname, memf_mdet)
+      end if
+    end if
+    write (6,'(A,I6.6,2A)') 'MYRANK ', myrank, ' is running a model with configuration file: ', trim(confname)
+
+    ! setup standard I/O
+    call IO_setup( modelname, trim(confname) )
+  else
+    if (mydom >= 2) then ! In d01, keep using the original launcher config file; skip re-opening config files here
+      ! setup standard I/O (for inner domains)
+      call IO_setup( modelname, confname_mydom )
+
+!      call read_nml_log
+!      call read_nml_model
+!      call read_nml_ensemble
+!      call read_nml_process
+    end if
+
+    select case (execname_)
+    case ('LETKF  ')
+      call read_nml_obs_error
+      call read_nml_obsope
+      call read_nml_letkf
+      call read_nml_letkf_obs
+      call read_nml_letkf_var_local
+      call read_nml_letkf_monitor
+      call read_nml_letkf_radar
+      call read_nml_letkf_h08
+    case ('OBSOPE ', 'OBSMAKE')
+      call read_nml_obs_error
+      call read_nml_obsope
+      call read_nml_letkf_radar
+      call read_nml_letkf_h08
+    case ('OBSSIM ')
+      call read_nml_obssim
+      call read_nml_letkf_radar
+      call read_nml_letkf_h08
+    end select
+  end if
+
+  !-----------------------------------------------------------------------------
+
+  ! setup MPI
+  call PRC_LOCAL_setup( local_comm,    & ! [IN]
+                        local_myrank,  & ! [OUT]
+                        local_ismaster ) ! [OUT]
+
+!  call MPI_COMM_SIZE(MPI_COMM_d, nprocs_d, ierr)
+  nprocs_d = PRC_nprocs
+!  call MPI_COMM_RANK(MPI_COMM_d, myrank_d, ierr)
+!  myrank_d = PRC_myrank
+  myrank_d = local_myrank
+
+  call mpi_timer('set_scalelib:mpi_comm_split_d_local:', 2)
 
   ! Communicator for all processes for single domains
   !-----------------------------------------------------------------------------
@@ -843,152 +920,193 @@ subroutine set_scalelib(execname)
   !-----------------------------------------------------------------------------
 
   ! setup Log
-  call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
+  if (execname_ == 'DACYCLE') then
+    call IO_LOG_setup( local_myrank, local_ismaster )
+  else
+    call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
+  end if
 
   call mpi_timer('set_scalelib:log_setup_init:', 2)
 
-  ! Other minimal scalelib setups for LETKF
+  ! Other scalelib setups
   !-----------------------------------------------------------------------------
 
   ! setup process
   call PRC_setup
 
-  ! setup PROF
-!  call PROF_setup
+  if (execname_ == 'DACYCLE') then
+    ! setup PROF
+    call PROF_setup
 
-  ! profiler start
-!  call PROF_setprefx('INIT')
-!  call PROF_rapstart('Initialize', 0)
+    ! profiler start
+    call PROF_setprefx('INIT')
+    call PROF_rapstart('Initialize', 0)
+  end if
 
   ! setup constants
   call CONST_setup
 
-  ! setup calendar
-!  call CALENDAR_setup
+  if (execname_ == 'DACYCLE') then
+    ! setup calendar
+    call CALENDAR_setup
 
-  ! setup random number
-!  call RANDOM_setup
+    ! setup random number
+    call RANDOM_setup
+  end if
 
-  ! setup horizontal/vertical grid coordinates
+  ! setup horizontal/vertical grid coordinates (cartesian,idealized)
   call ATMOS_GRID_CARTESC_INDEX_setup
   call ATMOS_GRID_CARTESC_setup
 
-!  call OCEAN_GRID_CARTESC_INDEX_setup
-!  call OCEAN_GRID_CARTESC_setup
+  if (execname_ == 'DACYCLE') then
+    call OCEAN_GRID_CARTESC_INDEX_setup
+    call OCEAN_GRID_CARTESC_setup
+  end if
 
 #ifdef PNETCDF
   call LAND_GRID_CARTESC_INDEX_setup
-#endif
-!  call LAND_GRID_CARTESC_setup
+  if (execname_ == 'DACYCLE') then
+    call LAND_GRID_CARTESC_setup
+  end if
 
-#ifdef PNETCDF
   call URBAN_GRID_CARTESC_INDEX_setup
-#endif
-!  call URBAN_GRID_CARTESC_setup
+  if (execname_ == 'DACYCLE') then
+    call URBAN_GRID_CARTESC_setup
+  end if
+#else
+  if (execname_ == 'DACYCLE') then
+    call LAND_GRID_CARTESC_INDEX_setup
+    call LAND_GRID_CARTESC_setup
 
-  ! setup submodel administrator
-!  call ATMOS_admin_setup
-!  call OCEAN_admin_setup
-!  call LAND_admin_setup
-!  call URBAN_admin_setup
-!  call CPL_admin_setup
+    call URBAN_GRID_CARTESC_INDEX_setup
+    call URBAN_GRID_CARTESC_setup
+  end if
+#endif
+
+  if (execname_ == 'DACYCLE') then
+    ! setup submodel administrator
+    call ATMOS_admin_setup
+    call OCEAN_admin_setup
+    call LAND_admin_setup
+    call URBAN_admin_setup
+    call CPL_admin_setup
+  end if
 
   ! setup tracer index
   call ATMOS_HYDROMETEOR_setup
-!  call ATMOS_driver_config
-!    call ATMOS_PHY_MP_driver_tracer_setup
-!      if ( ATMOS_sw_phy_mp ) then
-!        select case ( ATMOS_PHY_MP_TYPE )
-!        case ( 'TOMITA08' )
-          call ATMOS_HYDROMETEOR_regist( &
-!               QS_MP,                                        & ! [OUT]
-               qs_mp_dummy,                                  & ! [OUT]
-               ATMOS_PHY_MP_TOMITA08_nwaters,                & ! [IN]
-               ATMOS_PHY_MP_TOMITA08_nices,                  & ! [IN]
-               ATMOS_PHY_MP_TOMITA08_tracer_names(:),        & ! [IN]
-               ATMOS_PHY_MP_TOMITA08_tracer_descriptions(:), & ! [IN]
-               ATMOS_PHY_MP_TOMITA08_tracer_units(:)         ) ! [IN]
-!          QA_MP = ATMOS_PHY_MP_TOMITA08_ntracers
-!          I_QC = QS_MP+1
-!          I_QR = QS_MP+2
-!          I_QI = QS_MP+3
-!          I_QS = QS_MP+4
-!          I_QG = QS_MP+5
-!        case default
-!          call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
-!        end select
-!      end if
-!      QE_MP = QS_MP + QA_MP - 1
 
-!  call USER_config
+  if (execname_ == 'DACYCLE') then
+    call ATMOS_driver_config
+    call USER_config
+  else
+!   call ATMOS_driver_config -->
+!     call ATMOS_PHY_MP_driver_tracer_setup -->
+!        if ( ATMOS_sw_phy_mp ) then
+!          select case ( ATMOS_PHY_MP_TYPE )
+!          case ( 'TOMITA08' )
+            call ATMOS_HYDROMETEOR_regist( &
+!                 QS_MP,                                        & ! [OUT]
+                 qs_mp_dummy,                                  & ! [OUT]
+                 ATMOS_PHY_MP_TOMITA08_nwaters,                & ! [IN]
+                 ATMOS_PHY_MP_TOMITA08_nices,                  & ! [IN]
+                 ATMOS_PHY_MP_TOMITA08_tracer_names(:),        & ! [IN]
+                 ATMOS_PHY_MP_TOMITA08_tracer_descriptions(:), & ! [IN]
+                 ATMOS_PHY_MP_TOMITA08_tracer_units(:)         ) ! [IN]
+!            QA_MP = ATMOS_PHY_MP_TOMITA08_ntracers
+!            I_QC = QS_MP+1
+!            I_QR = QS_MP+2
+!            I_QI = QS_MP+3
+!            I_QS = QS_MP+4
+!            I_QG = QS_MP+5
+!          case default
+!            call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
+!          end select
+!        end if
+!        QE_MP = QS_MP + QA_MP - 1
+!     <-- ATMOS_PHY_MP_driver_tracer_setup
+!   <-- ATMOS_driver_config
+  end if
 
   ! setup file I/O
-!  call FILE_CARTESC_setup
-    call FILE_setup( PRC_myrank )
+  if (execname_ == 'DACYCLE') then
+    call FILE_CARTESC_setup
+  else
+!   call FILE_CARTESC_setup -->
+      call FILE_setup( PRC_myrank )
+!   <-- FILE_CARTESC_setup
+  end if
 
   ! setup mpi communication
   call COMM_setup
 
-  ! setup topography
-!  call TOPO_setup
+  if (execname_ == 'DACYCLE') then
+    ! setup topography
+    call TOPO_setup
 
-  ! setup land use category index/fraction
-!  call LANDUSE_setup
+    ! setup land use category index/fraction
+    call LANDUSE_setup
+  end if
 
   ! setup grid coordinates (real world)
-!  call ATMOS_GRID_CARTESC_REAL_setup
-    ! setup map projection [[ in ATMOS_GRID_CARTESC_REAL_setup ]]
-    call MAPPROJECTION_setup( ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y )
+  if (execname_ == 'DACYCLE') then
+    call ATMOS_GRID_CARTESC_REAL_setup
+  else
+!   call ATMOS_GRID_CARTESC_REAL_setup -->
+      ! setup map projection
+      call MAPPROJECTION_setup( ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y )
+!   <-- ATMOS_GRID_CARTESC_REAL_setup
+  end if
 
-  ! setup grid transfer metrics (uses in ATMOS_dynamics)
-!  call ATMOS_GRID_CARTESC_METRIC_setup
+  if (execname_ == 'DACYCLE') then
+    ! setup grid transfer metrics (uses in ATMOS_dynamics)
+    call ATMOS_GRID_CARTESC_METRIC_setup
 
-  ! setup Z-ZS interpolation factor (uses in History)
-!  call INTERP_setup
+    ! setup restart
+    call ADMIN_restart_setup
 
-  ! setup restart
-!  call ADMIN_restart_setup
+    ! setup time
+    call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
 
-  ! setup time
-!  call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
+    ! setup statistics
+    call STAT_setup
 
-  ! setup statistics
-!  call STAT_setup
+    ! setup history I/O
+    call FILE_HISTORY_CARTESC_setup
 
-  ! setup history I/O
-!  call FILE_HISTORY_CARTESC_setup
+    ! setup monitor I/O
+    call MONIT_setup
 
-  ! setup monitor I/O
-!  call MONIT_setup
+    ! setup external in
+    call FILE_EXTERNAL_INPUT_CARTESC_setup
 
-  ! setup external in
-!  call EXTIN_setup( 'RM' )
+    ! setup nesting grid
+    call COMM_CARTESC_NEST_setup ( intercomm_parent, intercomm_child )
 
-  ! setup nesting grid
-!  call COMM_CARTESC_NEST_setup ( intercomm_parent, intercomm_child )
+    ! setup common tools
+    call ATMOS_HYDROSTATIC_setup
+    call ATMOS_THERMODYN_setup
+    call ATMOS_SATURATION_setup
 
-  ! setup common tools
-!  call ATMOS_HYDROSTATIC_setup
-!  call ATMOS_THERMODYN_setup
-!  call ATMOS_SATURATION_setup
+    call BULKFLUX_setup( sqrt(DX**2+DY**2) )
+    call ROUGHNESS_setup
 
-!  call BULKFLUX_setup
-!  call ROUGHNESS_setup
+    ! setup variable container
+    call ATMOS_vars_setup
+    call OCEAN_vars_setup
+    call LAND_vars_setup
+    call URBAN_vars_setup
+    call CPL_vars_setup
 
-  ! setup variable container
-!  call ATMOS_vars_setup
-!  call OCEAN_vars_setup
-!  call LAND_vars_setup
-!  call URBAN_vars_setup
-!  call CPL_vars_setup
+    ! setup submodel driver
+    call ATMOS_driver_setup
+    call OCEAN_driver_setup
+    call LAND_driver_setup
+    call URBAN_driver_setup
 
-  ! setup submodel driver
-!  call ATMOS_driver_setup
-!  call OCEAN_driver_setup
-!  call LAND_driver_setup
-!  call URBAN_driver_setup
+    call USER_setup
 
-!  call USER_setup
+    call PROF_rapend('Initialize', 0)
+  end if
 
   call mpi_timer('set_scalelib:other_setup:', 2)
 
@@ -998,47 +1116,82 @@ end subroutine set_scalelib
 !-------------------------------------------------------------------------------
 ! Finish using SCALE library
 !-------------------------------------------------------------------------------
-subroutine unset_scalelib
+subroutine unset_scalelib(execname)
+!  use scale_stdio, only: &
+!    IO_FID_CONF, &
+!    IO_FID_LOG, &
+!    IO_L, &
+!    IO_FID_STDOUT
+  use scale_prof, only: &
+    PROF_setprefx, &
+    PROF_rapstart, &
+    PROF_rapend, &
+    PROF_rapreport
+  use scale_process, only: &
+    PRC_MPIfinish
+  use scale_file_cartesC, only: &
+    FILE_CARTESC_cleanup
   use scale_file, only: &
     FILE_Close_All
-  use scale_stdio, only: &
-    IO_FID_CONF, &
-    IO_FID_LOG, &
-    IO_L, &
-    IO_FID_STDOUT
-!  use scale_file_cartesC, only: &
-!    FILE_CARTESC_cleanup
-!  use scale_comm, only: &
-!    COMM_cleanup
-!  use scale_file_history, only: &
-!    FILE_HISTORY_finalize
-!  use scale_monitor, only: &
-!    MONIT_finalize
+  use scale_comm, only: &
+    COMM_cleanup
+  use scale_file_history, only: &
+    FILE_HISTORY_finalize
+  use scale_monitor, only: &
+    MONIT_finalize
+  use mod_atmos_vars, only: &
+    ATMOS_sw_check => ATMOS_RESTART_CHECK, &
+    ATMOS_vars_restart_check
   implicit none
+
+  character(len=*), intent(in), optional :: execname
+  character(len=7) :: execname_ = 'LETKF  '
   integer :: ierr
 
+  if (present(execname)) execname_ = execname
+
   if (myrank_use) then
+    if (execname_ == 'DACYCLE') then
+      ! check data
+      if( ATMOS_sw_check ) call ATMOS_vars_restart_check
+
+      call PROF_rapstart('Monit', 2)
+      call MONIT_finalize
+      call PROF_rapend  ('Monit', 2)
+
+      call PROF_rapstart('File', 2)
+      call FILE_HISTORY_finalize
+      ! clean up resource allocated for I/O
+      call FILE_CARTESC_cleanup
+
+      call COMM_cleanup
+    end if
+
     call MPI_COMM_FREE(MPI_COMM_d, ierr)
     call MPI_COMM_FREE(MPI_COMM_a, ierr)
     call MPI_COMM_FREE(MPI_COMM_u, ierr)
   end if
 
-!  call MONIT_finalize
-
-!  call FILE_HISTORY_finalize
-
-  ! clean up resource allocated for I/O
-!  call FILE_CARTESC_cleanup
-
-!  call COMM_cleanup
-
   call FILE_Close_All
 
-  ! Close logfile, configfile
-  if ( IO_L ) then
-    if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
-  endif
-  close(IO_FID_CONF)
+  if (execname_ == 'DACYCLE') then
+    call PROF_rapend  ('File', 2)
+
+    call PROF_rapend  ('All', 1)
+
+    call PROF_rapreport
+  end if
+
+  ! stop MPI
+  call PRC_MPIfinish
+
+!  ! Close logfile, configfile
+!  if ( IO_L ) then
+!    if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+!  endif
+!  close(IO_FID_CONF)
+
+!  if( universal_master ) write(*,*) '*** End   Launch System for SCALE-RM'
 
   return
 end subroutine unset_scalelib

@@ -1,8 +1,8 @@
 include ../configure.user
 
-PROGS   = letkf
+PROGS   = dacycle
 
-OBJS    = letkf_obs.o letkf_tools.o
+OBJS    = 
 
 COMMON_DIR = ../common
 
@@ -20,13 +20,17 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common_mpi_scale.o \
               $(COMMON_DIR)/common_nml.o
 
-INCS    = $(SCALE_INC) $(NETCDF_INC)
+INCS    = $(SCALE_INC) $(NETCDF_INC) -I$(SCALE_RM_OBJDIR)
 
 LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
 
 OBS_DIR = ../obs
 
 OBS_OBJS = $(OBS_DIR)/obsope_tools.o
+
+LETKF_DIR = ../letkf
+
+LETKF_OBJS = $(LETKF_DIR)/letkf_obs.o $(LETKF_DIR)/letkf_tools.o
 
 SCALE_RM_OBJS = $(shell ls $(SCALE_RM_OBJDIR)/*.o | grep -v "scale-rm.o\|scale-rm_pp.o\|scale-rm_init.o")
 
@@ -39,17 +43,12 @@ endif
 
 all:	$(PROGS)
 
-letkf:	letkf.o $(OBJS) $(COMMON_DIR) $(OBS_DIR)
-	$(FC) $(FOPTS) $(FMCMODEL) -o letkf letkf.o \
-	$(COMMON_OBJS) $(OBJS) $(OBS_OBJS) $(SCALE_RM_OBJS) $(LIBS)
+dacycle:	dacycle.o $(OBJS) $(COMMON_DIR) $(OBS_DIR) $(LETKF_DIR)
+	$(FC) $(FOPTS_DACYCLE) $(FMCMODEL) -o dacycle dacycle.o \
+	$(COMMON_OBJS) $(OBJS) $(OBS_OBJS) $(LETKF_OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
-letkf.o:	letkf.f90 $(OBJS) $(COMMON_DIR) $(OBS_DIR)
-	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) -I$(OBS_DIR) $(INCS)
-
-letkf_obs.o:	letkf_obs.f90 $(COMMON_DIR)
-	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
-letkf_tools.o:	letkf_tools.f90 letkf_obs.o $(COMMON_DIR)
-	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
+dacycle.o:	dacycle.f90 $(OBJS) $(COMMON_DIR) $(OBS_DIR) $(LETKF_DIR)
+	$(FC) $(FOPTS_DACYCLE) -c $< -I$(COMMON_DIR) -I$(OBS_DIR) -I$(LETKF_DIR) $(INCS)
 
 $(COMMON_DIR):	FORCE
 	$(MAKE) -C $@
@@ -57,7 +56,10 @@ $(COMMON_DIR):	FORCE
 $(OBS_DIR):	FORCE
 	$(MAKE) -C $@ obsope_tools.o
 
+$(LETKF_DIR):	FORCE
+	$(MAKE) -C $@ letkf_obs.o letkf_tools.o
+
 clean:
-	rm -f *.o *.mod *.lst $(PROGS) letkf
+	rm -f *.o *.mod *.lst $(PROGS) dacycle
 
 FORCE:

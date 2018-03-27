@@ -30,6 +30,10 @@ FOPTS     = $(FOPTS_SCALE) \
             -Knoparallel,noeval,nopreex \
             -Kopenmp
 
+FOPTS_DACYCLE = $(FOPTS_SCALE) \
+              -Knoeval,nopreex \
+              -Kopenmp
+
 FMCMODEL  =
 FBYTESWAP = 
 FFREE     = -Free

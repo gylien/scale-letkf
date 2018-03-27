@@ -26,6 +26,8 @@ FOPTS_SCALE = $(FFLAGS) -g -traceback -check bounds,pointers
 #FOPTS     = -convert big_endian -O3 -ip -fp-model precise -shared-intel -g -traceback -fpp
 FOPTS     = $(FOPTS_SCALE) -fpe0 # -DDEBUG
 
+FOPTS_DACYCLE = $(FOPTS)
+
 FMCMODEL  = -mcmodel=medium
 FBYTESWAP = -convert little_endian
 FFREE     = -free

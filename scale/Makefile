@@ -6,6 +6,7 @@ all:
 	$(MAKE) -C ensmodel
 	$(MAKE) -C obs
 	$(MAKE) -C letkf
+	$(MAKE) -C dacycle
 
 clean:
 	$(MAKE) -C common            clean
@@ -13,3 +14,4 @@ clean:
 	$(MAKE) -C ensmodel          clean
 	$(MAKE) -C obs               clean
 	$(MAKE) -C letkf             clean
+	$(MAKE) -C dacycle           clean

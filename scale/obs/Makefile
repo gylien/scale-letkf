@@ -22,6 +22,8 @@ INCS    = $(SCALE_INC) $(NETCDF_INC)
 
 LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
 
+SCALE_RM_OBJS = $(shell ls $(SCALE_RM_OBJDIR)/*.o | grep -v "scale-rm.o\|scale-rm_pp.o\|scale-rm_init.o")
+
 ifeq ($(H08),T)
 COMMON_OBJS += $(COMMON_DIR)/scale_H08_fwd.o
 LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)
@@ -33,13 +35,13 @@ all:	$(PROGS)
 
 obsope:	obsope.o $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS) $(FMCMODEL) -o obsope obsope.o \
-	$(COMMON_OBJS) $(OBJS) $(LIBS)
+	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 obsmake:	obsmake.o $(OBS) $(COMMON_DIR)
 	$(FC) $(FOPTS) $(FMCMODEL) -o obsmake obsmake.o \
-	$(COMMON_OBJS) $(OBJS) $(LIBS)
+	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 obssim:	obssim.o $(OBS) $(COMMON_DIR)
 	$(FC) $(FOPTS) $(FMCMODEL) -o obssim obssim.o \
-	$(COMMON_OBJS) $(OBJS) $(LIBS)
+	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 dec_prepbufr:	dec_prepbufr.o $(COMMON_DIR)
 	$(FC) $(FOPTS) -o dec_prepbufr dec_prepbufr.o $(COMMON_OBJS) \
 	$(LIBS) $(BUFR_LIB)
