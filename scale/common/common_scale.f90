@@ -692,7 +692,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 !  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
 
   write (6,'(A,I6.6,3A,6I6)') 'MYRANK ',myrank,' is writing a file ',trim(filename)//'.nc', ' >> PnetCDF start(3), count(3) =', start, count
-
+  call dtf_time_start
   err = nfmpi_open(comm, trim(filename)//".nc", NF_WRITE, MPI_INFO_NULL, ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
@@ -732,8 +732,9 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
   err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-
+  call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
   err = nfmpi_close(ncid)
+  call dtf_time_end
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
 
