@@ -2,7 +2,6 @@
 ncomp=2
 comp_name="scale"
 comp_name="letkf"   
-buffered_req_match=1
 
 [FILE]
 filename="0%/anal.d01%"
