@@ -511,7 +511,8 @@ while ((time <= ETIME)); do
 done
 
 # compute total scale fcst length
-EDATE=$(datetime_fmt $atime)
+etime=$(datetime $atime -$LCYCLE s)
+EDATE=$(datetime_fmt $etime)
 SDATE=$(datetime_fmt $STIME)
 ESEC=$(date -d "$EDATE" "+%s")
 SSEC=$(date -d "$SDATE" "+%s")
@@ -595,6 +596,7 @@ TOTAL_FCSTLEN=$((ESEC - SSEC))
             -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
             -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${STIME:0:4}, ${STIME:4:2}, ${STIME:6:2}, ${STIME:8:2}, ${STIME:10:2}, ${STIME:12:2}," \
             -e "/!--TIME_DURATION--/a TIME_DURATION = ${TOTAL_FCSTLEN}.D0," \
+            -e "/!--TIME_DT_RESUME--/a TIME_DT_RESUME = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_OCEAN_RESTART--/a TIME_DT_OCEAN_RESTART = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_LAND_RESTART--/a TIME_DT_LAND_RESTART = ${LCYCLE}.D0," \
