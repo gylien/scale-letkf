@@ -220,13 +220,13 @@ PROGRAM letkf
       ! WRITE ENS MEAN and SPRD
       !
       if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-        call write_ensmean(GUES_MEAN_INOUT_BASENAME//atlab_SCALE, gues3d, gues2d, calced=.false., monit_step=1)
+        call write_ensmean(trim(GUES_MEAN_INOUT_BASENAME)//atlab_SCALE, gues3d, gues2d, calced=.false., monit_step=1)
       else
-        call write_ensmean(GUES_MEAN_INOUT_BASENAME//atlab_SCALE, gues3d, gues2d, calced=.false.)
+        call write_ensmean(trim(GUES_MEAN_INOUT_BASENAME)//atlab_SCALE, gues3d, gues2d, calced=.false.)
       end if
 
       if (GUES_SPRD_OUT) then
-        call write_enssprd(GUES_SPRD_OUT_BASENAME//atlab_SCALE, gues3d, gues2d)
+        call write_enssprd(trim(GUES_SPRD_OUT_BASENAME)//atlab_SCALE, gues3d, gues2d)
       end if
 
       call mpi_timer('GUES_MEAN', 1, barrier=MPI_COMM_a)

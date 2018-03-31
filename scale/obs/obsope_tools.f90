@@ -131,6 +131,12 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
   REAL(r_size),ALLOCATABLE :: bTC(:,:)
   REAL(r_size) :: bTC_mslp
 
+
+
+  character(len=19) :: timelabel ! YYYYMMDD-hhmmss.sss
+
+  call date2tlab_SCALE(adate, timelabel)
+
 !-------------------------------------------------------------------------------
 
   call mpi_timer('', 2)
@@ -464,20 +470,20 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
 
         if (present(v3d) .and. present(v2d) .and. islot == SLOT_END) then
           if (im <= MEMBER) then
-            call file_member_replace(im, GUES_IN_BASENAME, filename)
+            call file_member_replace(im, trim(GUES_IN_BASENAME)//timelabel, filename)
           else if (im == mmean) then
-            filename = GUES_MEAN_INOUT_BASENAME
+            filename = trim(GUES_MEAN_INOUT_BASENAME)//timelabel
           else if (im == mmdet) then
-            filename = GUES_MDET_IN_BASENAME
+            filename = trim(GUES_MDET_IN_BASENAME)//timelabel
           end if
 
 !          write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
 #ifdef PNETCDF
           if (FILE_AGGREGATE) then
-            call read_restart_par(filename, v3dg_rst, v2dg_rst, MPI_COMM_d)
+            call read_restart_par(trim(filename), v3dg_rst, v2dg_rst, MPI_COMM_d)
           else
 #endif
-            call read_restart(filename, v3dg_rst, v2dg_rst)
+            call read_restart(trim(filename), v3dg_rst, v2dg_rst)
 #ifdef PNETCDF
           end if
 #endif
