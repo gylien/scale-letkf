@@ -74,6 +74,7 @@ MODULE common_nml
   integer               :: OBS_IN_NUM = 1
   character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
   character(obsformatlenmax) :: OBS_IN_FORMAT(nobsfilemax) = 'PREPBUFR'
+  logical               :: OBS_POSTFIX_TIMELABEL = .false.
   logical               :: OBSDA_RUN(nobsfilemax) = .true.
   logical               :: OBSDA_OUT = .false.
   character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
@@ -83,6 +84,7 @@ MODULE common_nml
   character(filelenmax) :: HISTORY_IN_BASENAME = 'hist.@@@@'
   character(filelenmax) :: HISTORY_MEAN_IN_BASENAME = ''
   character(filelenmax) :: HISTORY_MDET_IN_BASENAME = ''
+  logical               :: HISTORY_POSTFIX_TIMELABEL = .false.
 
   integer               :: SLOT_START = 1
   integer               :: SLOT_END = 1
@@ -104,6 +106,7 @@ MODULE common_nml
   character(filelenmax) :: ANAL_MDET_OUT_BASENAME = ''
   logical               :: ANAL_SPRD_OUT = .true.
   character(filelenmax) :: ANAL_SPRD_OUT_BASENAME = ''
+  logical               :: GUES_ANAL_POSTFIX_TIMELABEL = .false.
   character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
 
   real(r_size) :: INFL_MUL = 1.0d0           ! >  0: globally constant covariance inflation
@@ -496,6 +499,7 @@ subroutine read_nml_obsope
     OBS_IN_NUM, &
     OBS_IN_NAME, &
     OBS_IN_FORMAT, &
+    OBS_POSTFIX_TIMELABEL, &
     OBSDA_RUN, &
     OBSDA_OUT, &
     OBSDA_OUT_BASENAME, &
@@ -504,6 +508,7 @@ subroutine read_nml_obsope
     HISTORY_IN_BASENAME, &
     HISTORY_MEAN_IN_BASENAME, &
     HISTORY_MDET_IN_BASENAME, &
+    HISTORY_POSTFIX_TIMELABEL, &
     SLOT_START, &
     SLOT_END, &
     SLOT_BASE, &
@@ -566,6 +571,7 @@ subroutine read_nml_letkf
     ANAL_MDET_OUT_BASENAME, &
     ANAL_SPRD_OUT, &
     ANAL_SPRD_OUT_BASENAME, &
+    GUES_ANAL_POSTFIX_TIMELABEL, &
     LETKF_TOPO_IN_BASENAME, &
     INFL_MUL, &
     INFL_MUL_MIN, &

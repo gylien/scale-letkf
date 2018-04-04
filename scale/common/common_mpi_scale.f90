@@ -203,9 +203,9 @@ subroutine set_common_mpi_scale
       end do
 !$OMP END PARALLEL DO
 
-      filename = GUES_IN_BASENAME
+      filename = trim(GUES_IN_BASENAME) // trim(timelabel_anal)
       call filename_replace_mem(filename, myrank_to_mem(1))
-      call read_restart_coor(filename, lon2dtmp, lat2dtmp, height3dtmp)
+      call read_restart_coor(trim(filename), lon2dtmp, lat2dtmp, height3dtmp)
 
       if (maxval(abs(lon2dtmp - lon2d)) > 1.0d-6 .or. maxval(abs(lat2dtmp - lat2d)) > 1.0d-6) then
         write (6, '(A,F15.7,A,F15.7)') '[Error] Map projection settings are incorrect! -- maxdiff(lon) = ', &
@@ -1315,12 +1315,12 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
   im = myrank_to_mem(iter)
   if (im >= 1 .and. im <= nens) then
     if (im <= MEMBER) then
-      filename = HISTORY_IN_BASENAME
+      filename = trim(HISTORY_IN_BASENAME) // trim(timelabel_hist)
       call filename_replace_mem(filename, im)
     else if (im == mmean) then
-      filename = HISTORY_MEAN_IN_BASENAME
+      filename = trim(HISTORY_MEAN_IN_BASENAME) // trim(timelabel_hist)
     else if (im == mmdet) then
-      filename = HISTORY_MDET_IN_BASENAME
+      filename = trim(HISTORY_MDET_IN_BASENAME) // trim(timelabel_hist)
     end if
 
 #ifdef PNETCDF
@@ -1358,21 +1358,21 @@ subroutine read_ens_mpi(v3d, v2d)
     ! 
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
       if (im <= MEMBER) then
-        filename = GUES_IN_BASENAME
+        filename = trim(GUES_IN_BASENAME) // trim(timelabel_anal)
         call filename_replace_mem(filename, im)
       else if (im == mmean) then
-        filename = GUES_MEAN_INOUT_BASENAME
+        filename = trim(GUES_MEAN_INOUT_BASENAME) // trim(timelabel_anal)
       else if (im == mmdet) then
-        filename = GUES_MDET_IN_BASENAME
+        filename = trim(GUES_MDET_IN_BASENAME) // trim(timelabel_anal)
       end if
 
-!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
+!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',trim(filename),'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
       if (FILE_AGGREGATE) then
-        call read_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
+        call read_restart_par(trim(filename), v3dg, v2dg, MPI_COMM_d)
       else
 #endif
-        call read_restart(filename, v3dg, v2dg)
+        call read_restart(trim(filename), v3dg, v2dg)
 #ifdef PNETCDF
       end if
 #endif
@@ -1459,6 +1459,8 @@ subroutine write_ens_mpi(v3d, v2d, monit_step)
   integer :: it, im, mstart, mend
   integer :: monit_step_
 
+  call mpi_timer('', 2)
+
   monit_step_ = 0
   if (present(monit_step)) then
     monit_step_ = monit_step
@@ -1487,25 +1489,25 @@ subroutine write_ens_mpi(v3d, v2d, monit_step)
     ! 
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmean .or. im == mmdet) then
       if (im <= MEMBER) then
-        filename = ANAL_OUT_BASENAME
+        filename = trim(ANAL_OUT_BASENAME) // trim(timelabel_anal)
         call filename_replace_mem(filename, im)
       else if (im == mmean) then
-        filename = ANAL_MEAN_OUT_BASENAME
+        filename = trim(ANAL_MEAN_OUT_BASENAME) // trim(timelabel_anal)
       else if (im == mmdet) then
-        filename = ANAL_MDET_OUT_BASENAME
+        filename = trim(ANAL_MDET_OUT_BASENAME) // trim(timelabel_anal)
       end if
 
-!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',myrank_d,'.nc'
+!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',trim(filename),'.pe',myrank_d,'.nc'
       call state_trans_inv(v3dg)
 
       call mpi_timer('write_ens_mpi:state_trans_inv:', 2)
 
 #ifdef PNETCDF
       if (FILE_AGGREGATE) then
-        call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
+        call write_restart_par(trim(filename), v3dg, v2dg, MPI_COMM_d)
       else
 #endif
-        call write_restart(filename, v3dg, v2dg)
+        call write_restart(trim(filename), v3dg, v2dg)
 #ifdef PNETCDF
       end if
 #endif

@@ -15,7 +15,7 @@ MODULE common_scale
   USE common
   use common_nml
 
-  use scale_precision, only: RP, SP
+  use scale_precision, only: RP, SP, DP
   use scale_stdio, only: H_MID
   use scale_prof
 
@@ -158,6 +158,13 @@ MODULE common_scale
 !!  REAL(r_size),SAVE :: dy2(nlatsub)
 !  REAL(r_size),SAVE :: fcori(nlatsub)
 !!  REAL(r_size),SAVE :: wg(nlonsub,nlatsub)
+
+  ! 
+  !--- time labels for files
+  ! 
+  character(len=24), save :: timelabel_obs
+  character(len=20), save :: timelabel_hist
+  character(len=20), save :: timelabel_anal
 
 CONTAINS
 
@@ -1881,6 +1888,68 @@ subroutine rij_rank_g2l(ig, jg, rank, il, jl)
 
   return
 end subroutine rij_rank_g2l
+
+!-------------------------------------------------------------------------------
+! Compute the current time labels for various files
+!-------------------------------------------------------------------------------
+subroutine timelabel_update(lcycle)
+  use scale_time, only: &
+    TIME_gettimelabel, &
+    TIME_time2label, &
+    TIME_NOWDATE, &
+    TIME_NOWMS
+  use scale_calendar, only: &
+    CALENDAR_date2daysec, &
+    CALENDAR_daysec2date
+  implicit none
+  real(DP), intent(in) :: lcycle
+  integer :: absday, hist_date(6)
+  real(DP) :: abssec, hist_subsec
+
+  if (OBS_POSTFIX_TIMELABEL) then
+    timelabel_obs = '_???????????????????.dat'
+    call TIME_gettimelabel(timelabel_obs(2:20))
+  else
+    timelabel_obs = ''
+  end if
+  if (LOG_LEVEL >= 1) then
+    write (6, '(2A)') 'Timelabel for observation files: ', timelabel_obs
+  end if
+
+  if (GUES_ANAL_POSTFIX_TIMELABEL) then
+    timelabel_anal = '_???????????????????'
+    call TIME_gettimelabel(timelabel_anal(2:20))
+  else
+    timelabel_anal = ''
+  end if
+  if (LOG_LEVEL >= 1) then
+    write (6, '(2A)') 'Timelabel for guess/analysis files: ', timelabel_anal
+  end if
+
+  if (HISTORY_POSTFIX_TIMELABEL) then
+    timelabel_hist = '_???????????????????'
+    call CALENDAR_date2daysec( absday,       & ! [OUT]
+                               abssec,       & ! [OUT]
+                               TIME_NOWDATE, & ! [IN]
+                               TIME_NOWMS,   & ! [IN]
+                               0             ) ! [IN]
+    abssec = abssec - lcycle
+    call CALENDAR_daysec2date( hist_date,   & ! [OUT]
+                               hist_subsec, & ! [OUT]
+                               absday,      & ! [IN]
+                               abssec,      & ! [IN]
+                               0            ) ! [IN]
+    call TIME_time2label( hist_date,           & ! [IN]
+                          hist_subsec,         & ! [IN]
+                          timelabel_hist(2:20) ) ! [OUT]
+  else
+    timelabel_hist = ''
+  end if
+  if (LOG_LEVEL >= 1) then
+    write (6, '(2A)') 'Timelabel for history files: ', timelabel_hist
+  end if
+
+end subroutine timelabel_update
 
 !===============================================================================
 END MODULE common_scale

@@ -2588,9 +2588,9 @@ subroutine read_obs_all(obs)
   logical :: ex
 
   do iof = 1, OBS_IN_NUM
-    inquire (file=trim(OBS_IN_NAME(iof)), exist=ex)
+    inquire (file=trim(OBS_IN_NAME(iof))//trim(timelabel_obs), exist=ex)
     if (.not. ex) then
-      write(6,*) '[Warning] FILE ',trim(OBS_IN_NAME(iof)),' NOT FOUND'
+      write(6,*) '[Warning] FILE ',trim(OBS_IN_NAME(iof))//trim(timelabel_obs),' NOT FOUND'
 
 
       obs(iof)%nobs = 0
@@ -2602,17 +2602,17 @@ subroutine read_obs_all(obs)
 
     select case (OBS_IN_FORMAT(iof))
     case (obsfmt_prepbufr)
-      call get_nobs(trim(OBS_IN_NAME(iof)),8,obs(iof)%nobs)
+      call get_nobs(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),8,obs(iof)%nobs)
     case (obsfmt_radar)
-      call get_nobs_radar(trim(OBS_IN_NAME(iof)), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
+      call get_nobs_radar(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
     case (obsfmt_h08)
-      call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
+      call get_nobs_H08(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof)%nobs) ! H08
     case default
       write(6,*) '[Error] Unsupported observation file format!'
       stop
     end select
 
-    write(6,'(5A,I9,A)') 'OBS FILE [', trim(OBS_IN_NAME(iof)), '] (FORMAT ', &
+    write(6,'(5A,I9,A)') 'OBS FILE [', trim(OBS_IN_NAME(iof))//trim(timelabel_obs), '] (FORMAT ', &
                          trim(OBS_IN_FORMAT(iof)), '): TOTAL ', &
                          obs(iof)%nobs, ' OBSERVATIONS'
 
@@ -2620,11 +2620,11 @@ subroutine read_obs_all(obs)
 
     select case (OBS_IN_FORMAT(iof))
     case (obsfmt_prepbufr)
-      call read_obs(trim(OBS_IN_NAME(iof)),obs(iof))
+      call read_obs(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof))
     case (obsfmt_radar)
-      call read_obs_radar(trim(OBS_IN_NAME(iof)),obs(iof))
+      call read_obs_radar(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof))
     case (obsfmt_h08)
-      call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
+      call read_obs_H08(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof)) ! H08
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
 
@@ -2639,19 +2639,19 @@ subroutine write_obs_all(obs, missing, file_suffix)
   character(len=*), intent(in), optional :: file_suffix
   logical :: missing_
   integer :: iof, strlen1, strlen2
-  character(200) :: filestr
+  character(len=200) :: filestr
 
   missing_ = .true.
   IF(present(missing)) missing_ = missing
 
   do iof = 1, OBS_IN_NUM
     if (present(file_suffix)) then
-      strlen1 = len(trim(OBS_IN_NAME(iof)))
+      strlen1 = len(trim(OBS_IN_NAME(iof))//trim(timelabel_obs))
       strlen2 = len(trim(file_suffix))
-      write (filestr(1:strlen1),'(A)') trim(OBS_IN_NAME(iof))
+      write (filestr(1:strlen1),'(A)') trim(OBS_IN_NAME(iof))//trim(timelabel_obs)
       write (filestr(strlen1+1:strlen1+strlen2),'(A)') trim(file_suffix)
     else
-      filestr = OBS_IN_NAME(iof)
+      filestr = trim(OBS_IN_NAME(iof))//trim(timelabel_obs)
     end if
     select case (OBS_IN_FORMAT(iof))
     case (obsfmt_prepbufr)
