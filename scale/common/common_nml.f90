@@ -59,9 +59,6 @@ MODULE common_nml
 !  logical               :: LOG_SPLIT = .false.               ! log-output for mpi splitting?
   logical               :: COLOR_REORDER = .false.           ! coloring reorder for mpi splitting?
 
-!  !--- PARAM_IO
-!  integer :: IO_AGGREGATE = .false.
-
   !--- PARAM_LOG
   integer :: LOG_LEVEL = 2                        ! Log message output level:
                                                   !  0: Minimum log output
@@ -69,6 +66,9 @@ MODULE common_nml
                                                   !  2: Normal  log output
                                                   !  3: Verbose log output
   logical :: USE_MPI_BARRIER = .true.             ! Whether enabling some MPI_Barrier for better timing measurement?
+
+  !--- PARAM_DACYCLE
+  logical :: DIRECT_TRANSFER = .false.
 
   !--- PARAM_OBSOPE
   integer               :: OBS_IN_NUM = 1
@@ -97,14 +97,23 @@ MODULE common_nml
   character(filelenmax) :: OBSDA_MEAN_IN_BASENAME = ''
   character(filelenmax) :: OBSDA_MDET_IN_BASENAME = ''
   character(filelenmax) :: GUES_IN_BASENAME = 'gues.@@@@'
-  character(filelenmax) :: GUES_MEAN_INOUT_BASENAME = ''
+  character(filelenmax) :: GUES_MEAN_INOUT_BASENAME = ''    ! Deprecated (use GUES_MEAN_IN_BASENAME and GUES_MEAN_OUT_BASENAME)
+  character(filelenmax) :: GUES_MEAN_IN_BASENAME = ''
   character(filelenmax) :: GUES_MDET_IN_BASENAME = ''
-  logical               :: GUES_SPRD_OUT = .true.
+  character(filelenmax) :: GUES_OUT_BASENAME = ''           ! This filename template is only used by GUES_MEAN and GUES_SPRD outputs
+  integer               :: GUES_MEAN_OUT_FREQ = 1
+  character(filelenmax) :: GUES_MEAN_OUT_BASENAME = ''
+  logical               :: GUES_SPRD_OUT = .true.           ! Deprecated (use GUES_SPRD_OUT_FREQ)
+  integer               :: GUES_SPRD_OUT_FREQ = 1
   character(filelenmax) :: GUES_SPRD_OUT_BASENAME = ''
+  integer               :: ANAL_OUT_FREQ = 1
   character(filelenmax) :: ANAL_OUT_BASENAME = 'anal.@@@@'
+  integer               :: ANAL_MEAN_OUT_FREQ = 1
   character(filelenmax) :: ANAL_MEAN_OUT_BASENAME = ''
+  integer               :: ANAL_MDET_OUT_FREQ = 1
   character(filelenmax) :: ANAL_MDET_OUT_BASENAME = ''
-  logical               :: ANAL_SPRD_OUT = .true.
+  logical               :: ANAL_SPRD_OUT = .true.           ! Deprecated (use ANAL_SPRD_OUT_FREQ)
+  integer               :: ANAL_SPRD_OUT_FREQ = 1
   character(filelenmax) :: ANAL_SPRD_OUT_BASENAME = ''
   logical               :: GUES_ANAL_POSTFIX_TIMELABEL = .false.
   character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
@@ -153,11 +162,10 @@ MODULE common_nml
   logical :: NOBS_OUT = .false.
   character(filelenmax) :: NOBS_OUT_BASENAME = 'nobs'
 
-  !*** for backward compatibility ***
-  real(r_size) :: COV_INFL_MUL = 1.0d0
-  real(r_size) :: MIN_INFL_MUL = 0.0d0
-  logical :: ADAPTIVE_INFL_INIT = .false.
-  real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0
+  real(r_size) :: COV_INFL_MUL = 1.0d0         ! Deprecated (use INFL_MUL)
+  real(r_size) :: MIN_INFL_MUL = 0.0d0         ! Deprecated (use INFL_MUL_MIN)
+  logical :: ADAPTIVE_INFL_INIT = .false.      ! Deprecated (use INFL_MUL_ADAPTIVE)
+  real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0 ! Deprecated (use BOUNDARY_BUFFER_WIDTH)
 
   !--- PARAM_LETKF_OBS
   logical :: USE_OBS(nobtype) = .true.
@@ -434,33 +442,6 @@ subroutine read_nml_process
 end subroutine read_nml_process
 
 !-------------------------------------------------------------------------------
-! PARAM_IO
-!-------------------------------------------------------------------------------
-!subroutine read_nml_io
-!  implicit none
-!  integer :: ierr
-
-!  namelist /PARAM_IO/ &
-!    IO_AGGREGATE
-
-!  rewind(IO_FID_CONF)
-!  read(IO_FID_CONF,nml=PARAM_IO,iostat=ierr)
-!  if (ierr < 0) then !--- missing
-!    write(6,*) '[Warning] /PARAM_IO/ is not found in namelist.'
-!!    stop
-!  elseif (ierr > 0) then !--- fatal error
-!    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_IO. Check!'
-!    stop
-!  endif
-
-!  if (LOG_LEVEL >= 2) then
-!    write(6, nml=PARAM_IO)
-!  end if
-
-!  return
-!end subroutine read_nml_io
-
-!-------------------------------------------------------------------------------
 ! PARAM_LOG
 !-------------------------------------------------------------------------------
 subroutine read_nml_log
@@ -487,6 +468,33 @@ subroutine read_nml_log
 
   return
 end subroutine read_nml_log
+
+!-------------------------------------------------------------------------------
+! PARAM_DACYCLE
+!-------------------------------------------------------------------------------
+subroutine read_nml_dacycle
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_DACYCLE/ &
+    DIRECT_TRANSFER
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_DACYCLE,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) '[Warning] /PARAM_DACYCLE/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_DACYCLE. Check!'
+    stop
+  endif
+
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_DACYCLE)
+  end if
+
+  return
+end subroutine read_nml_dacycle
 
 !-------------------------------------------------------------------------------
 ! PARAM_OBSOPE
@@ -562,14 +570,23 @@ subroutine read_nml_letkf
     OBSDA_MEAN_IN_BASENAME, &
     OBSDA_MDET_IN_BASENAME, &
     GUES_IN_BASENAME, &
-    GUES_MEAN_INOUT_BASENAME, &
+    GUES_MEAN_INOUT_BASENAME, & !*** for backward compatibility ***
+    GUES_MEAN_IN_BASENAME, &
     GUES_MDET_IN_BASENAME, &
-    GUES_SPRD_OUT, &
+    GUES_OUT_BASENAME, &
+    GUES_MEAN_OUT_FREQ, &
+    GUES_MEAN_OUT_BASENAME, &
+    GUES_SPRD_OUT, &            !*** for backward compatibility ***
+    GUES_SPRD_OUT_FREQ, &
     GUES_SPRD_OUT_BASENAME, &
+    ANAL_OUT_FREQ, &
     ANAL_OUT_BASENAME, &
+    ANAL_MEAN_OUT_FREQ, &
     ANAL_MEAN_OUT_BASENAME, &
+    ANAL_MDET_OUT_FREQ, &
     ANAL_MDET_OUT_BASENAME, &
-    ANAL_SPRD_OUT, &
+    ANAL_SPRD_OUT, &            !*** for backward compatibility ***
+    ANAL_SPRD_OUT_FREQ, &
     ANAL_SPRD_OUT_BASENAME, &
     GUES_ANAL_POSTFIX_TIMELABEL, &
     LETKF_TOPO_IN_BASENAME, &
@@ -606,11 +623,10 @@ subroutine read_nml_letkf
     PS_ADJUST_THRES, &
     NOBS_OUT, &
     NOBS_OUT_BASENAME, &
-    !*** for backward compatibility ***
-    COV_INFL_MUL, &
-    MIN_INFL_MUL, &
-    ADAPTIVE_INFL_INIT, &
-    BOUNDARY_TAPER_WIDTH
+    COV_INFL_MUL, &       !*** for backward compatibility ***
+    MIN_INFL_MUL, &       !*** for backward compatibility ***
+    ADAPTIVE_INFL_INIT, & !*** for backward compatibility ***
+    BOUNDARY_TAPER_WIDTH  !*** for backward compatibility ***
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF,iostat=ierr)
@@ -656,18 +672,38 @@ subroutine read_nml_letkf
     call filename_replace_mem(OBSDA_MDET_IN_BASENAME, memf_mdet)
   end if
 
-  if (trim(GUES_MEAN_INOUT_BASENAME) == '') then
-    GUES_MEAN_INOUT_BASENAME = GUES_IN_BASENAME
-    call filename_replace_mem(GUES_MEAN_INOUT_BASENAME, memf_mean)
+  if (trim(GUES_MEAN_INOUT_BASENAME) /= '') then !*** for backward compatibility ***
+    GUES_MEAN_IN_BASENAME  = GUES_MEAN_INOUT_BASENAME
+    GUES_MEAN_OUT_BASENAME = GUES_MEAN_INOUT_BASENAME
+  end if
+  if (trim(GUES_MEAN_IN_BASENAME) == '') then
+    GUES_MEAN_IN_BASENAME = GUES_IN_BASENAME
+    call filename_replace_mem(GUES_MEAN_IN_BASENAME, memf_mean)
   end if
   if (trim(GUES_MDET_IN_BASENAME) == '') then
     GUES_MDET_IN_BASENAME = GUES_IN_BASENAME
     call filename_replace_mem(GUES_MDET_IN_BASENAME, memf_mdet)
   end if
+
+  if (trim(GUES_OUT_BASENAME) == '') then
+    GUES_OUT_BASENAME = GUES_IN_BASENAME
+  end if
+  if (trim(GUES_MEAN_OUT_BASENAME) == '') then
+    GUES_MEAN_OUT_BASENAME = GUES_OUT_BASENAME
+    call filename_replace_mem(GUES_MEAN_OUT_BASENAME, memf_mean)
+  end if
+  if (GUES_SPRD_OUT) then !*** for backward compatibility ***
+    if (GUES_SPRD_OUT_FREQ <= 0) then
+      GUES_SPRD_OUT_FREQ = 1
+    end if
+  else
+    GUES_SPRD_OUT_FREQ = 0
+  end if
   if (trim(GUES_SPRD_OUT_BASENAME) == '') then
-    GUES_SPRD_OUT_BASENAME = GUES_IN_BASENAME
+    GUES_SPRD_OUT_BASENAME = GUES_OUT_BASENAME
     call filename_replace_mem(GUES_SPRD_OUT_BASENAME, memf_sprd)
   end if
+
   if (trim(ANAL_MEAN_OUT_BASENAME) == '') then
     ANAL_MEAN_OUT_BASENAME = ANAL_OUT_BASENAME
     call filename_replace_mem(ANAL_MEAN_OUT_BASENAME, memf_mean)
@@ -675,6 +711,13 @@ subroutine read_nml_letkf
   if (trim(ANAL_MDET_OUT_BASENAME) == '') then
     ANAL_MDET_OUT_BASENAME = ANAL_OUT_BASENAME
     call filename_replace_mem(ANAL_MDET_OUT_BASENAME, memf_mdet)
+  end if
+  if (ANAL_SPRD_OUT) then !*** for backward compatibility ***
+    if (ANAL_SPRD_OUT_FREQ <= 0) then
+      ANAL_SPRD_OUT_FREQ = 1
+    end if
+  else
+    ANAL_SPRD_OUT_FREQ = 0
   end if
   if (trim(ANAL_SPRD_OUT_BASENAME) == '') then
     ANAL_SPRD_OUT_BASENAME = ANAL_OUT_BASENAME

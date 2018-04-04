@@ -22,14 +22,17 @@ program dacycle
   use scale_time, only: &
     TIME_NOWDATE, &
     TIME_NOWMS, &
-    TIME_NOWSTEP
+    TIME_NOWSTEP, &
+    TIME_DTSEC, &
+    TIME_NSTEP
   use scale_file_history, only: &
     FILE_HISTORY_write, &
     FILE_HISTORY_set_nowdate
   use scale_monitor, only: &
     MONIT_write
   use mod_admin_restart, only: &
-    ADMIN_restart_write
+    ADMIN_restart_write, &
+    ADMIN_restart_write_additional
   use mod_admin_time, only: &
     ADMIN_TIME_checkstate, &
     ADMIN_TIME_advance, &
@@ -70,7 +73,12 @@ program dacycle
   character(len=7) :: stdoutf='-000000'
   character(len=6400) :: icmd
 
-  integer :: icycle
+  logical :: anal_mem_out_now
+  logical :: anal_mean_out_now
+  logical :: anal_mdet_out_now
+  logical :: gues_mean_out_now
+  logical :: gues_sprd_out_now
+  logical :: anal_sprd_out_now
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -123,6 +131,9 @@ program dacycle
   if (myrank_use) then
 
     icycle = 0
+    lastcycle = int((TIME_DTSEC * TIME_NSTEP + 1.0d-6) / TIME_DTSEC_ATMOS_RESTART)
+
+    write (6, '(A,I7)') 'Total cycle numbers:', lastcycle
 
 !-----------------------------------------------------------------------
 ! Main loop
@@ -135,16 +146,30 @@ program dacycle
 
     do
 
+      anal_mem_out_now = .false.
+      anal_mean_out_now = .false.
+      anal_mdet_out_now = .false.
+      gues_mean_out_now = .false.
+      gues_sprd_out_now = .false.
+      anal_sprd_out_now = .false.
+
       ! report current time
       call ADMIN_TIME_checkstate
 
       if ( TIME_DOresume ) then
-         ! resume state from restart files
-         call resume_state
+        ! resume state from restart files
+        if (DIRECT_TRANSFER .and. icycle >= 1) then
+          if (LOG_LEVEL >= 1) then
+            write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip reading restart files'
+          end if
+          call resume_state(.false.)
+        else
+          call resume_state(.true.)
+        end if
 
-         ! history&monitor file output
-         call MONIT_write('MAIN')
-         call FILE_HISTORY_write ! if needed
+        ! history&monitor file output
+        call MONIT_write('MAIN')
+        call FILE_HISTORY_write ! if needed
       end if
 
       ! time advance
@@ -164,8 +189,15 @@ program dacycle
       call MONIT_write('MAIN')
       call FILE_HISTORY_write
 
-      ! restart output
-      call ADMIN_restart_write
+      ! restart output before LETKF
+      if (DIRECT_TRANSFER) then
+        if (LOG_LEVEL >= 1 .and. TIME_DOATMOS_restart) then
+          write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip writing restart files before LETKF'
+        end if
+      else
+        call ADMIN_restart_write
+      end if
+      call ADMIN_restart_write_additional !!!!!! To do: control additional restart outputs for gues_mean, gues_sprd, and anal_sprd
 
       !-------------------------------------------------------------------------
       ! LETKF section start
@@ -175,6 +207,26 @@ program dacycle
         call mpi_timer('SCALE', 1, barrier=MPI_COMM_a)
 
         icycle = icycle + 1
+
+        if (ANAL_OUT_FREQ >= 1 .and. (mod(icycle, ANAL_OUT_FREQ) == 0 .or. icycle == lastcycle)) then
+          anal_mem_out_now = .true.
+        end if
+        if (ANAL_MEAN_OUT_FREQ >= 1 .and. (mod(icycle, ANAL_MEAN_OUT_FREQ) == 0 .or. icycle == lastcycle)) then
+          anal_mean_out_now = .true.
+        end if
+        if (ANAL_MDET_OUT_FREQ >= 1 .and. (mod(icycle, ANAL_MDET_OUT_FREQ) == 0 .or. icycle == lastcycle)) then
+          anal_mdet_out_now = .true.
+        end if
+
+        if (GUES_MEAN_OUT_FREQ >= 1 .and. (mod(icycle, GUES_MEAN_OUT_FREQ) == 0 .or. icycle == lastcycle)) then
+          gues_mean_out_now = .true.
+        end if
+        if (GUES_SPRD_OUT_FREQ >= 1 .and. (mod(icycle, GUES_SPRD_OUT_FREQ) == 0 .or. icycle == lastcycle)) then
+          gues_sprd_out_now = .true.
+        end if
+        if (ANAL_SPRD_OUT_FREQ >= 1 .and. (mod(icycle, ANAL_SPRD_OUT_FREQ) == 0 .or. icycle == lastcycle)) then
+          anal_sprd_out_now = .true.
+        end if
 
         !-----------------------------------------------------------------------
         ! LETKF setups
@@ -260,12 +312,14 @@ program dacycle
         ! WRITE ENS MEAN and SPRD
         !
         if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-          call write_ensmean(trim(GUES_MEAN_INOUT_BASENAME) // trim(timelabel_anal), gues3d, gues2d, calced=.false., monit_step=1)
+          call write_ensmean(trim(GUES_MEAN_OUT_BASENAME) // trim(timelabel_anal), gues3d, gues2d, &
+                             calced=.false., mean_out=gues_mean_out_now, monit_step=1)
         else
-          call write_ensmean(trim(GUES_MEAN_INOUT_BASENAME) // trim(timelabel_anal), gues3d, gues2d, calced=.false.)
+          call write_ensmean(trim(GUES_MEAN_OUT_BASENAME) // trim(timelabel_anal), gues3d, gues2d, &
+                             calced=.false., mean_out=gues_mean_out_now)
         end if
 
-        if (GUES_SPRD_OUT) then
+        if (gues_sprd_out_now) then
           call write_enssprd(trim(GUES_SPRD_OUT_BASENAME) // trim(timelabel_anal), gues3d, gues2d)
         end if
 
@@ -292,7 +346,7 @@ program dacycle
         call ensmean_grd(MEMBER, nens, nij1, anal3d, anal2d)
         ! write analysis mean later in write_ens_mpi
 
-        if (ANAL_SPRD_OUT) then
+        if (anal_sprd_out_now) then
           call write_enssprd(trim(ANAL_SPRD_OUT_BASENAME) // trim(timelabel_anal), anal3d, anal2d)
         end if
 
@@ -315,6 +369,15 @@ program dacycle
       !-------------------------------------------------------------------------
       ! LETKF section end
       !-------------------------------------------------------------------------
+
+      ! restart output after LETKF
+      if (DIRECT_TRANSFER .and. (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now)) then
+        !!!!!! To do: control restart outputs separately for members, mean, and mdet
+        if (LOG_LEVEL >= 1 .and. TIME_DOATMOS_restart) then
+          write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; writing restart (analysis) files after LETKF'
+        end if
+        call ADMIN_restart_write
+      end if
 
       if( TIME_DOend ) exit
 
@@ -360,7 +423,7 @@ end program dacycle
 
 
 
-  subroutine resume_state
+  subroutine resume_state(do_restart_read)
     use mod_atmos_driver, only: &
        ATMOS_driver_resume1, &
        ATMOS_driver_resume2, &
@@ -398,10 +461,13 @@ end program dacycle
     use mod_admin_restart, only: &
        ADMIN_restart_read
     implicit none
+    logical, intent(in) :: do_restart_read
     !---------------------------------------------------------------------------
 
     ! read restart data
-    call ADMIN_restart_read
+    if (do_restart_read) then
+      call ADMIN_restart_read
+    end if
 
     ! setup user-defined procedure before setup of other components
     call USER_resume0

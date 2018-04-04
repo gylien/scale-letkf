@@ -486,6 +486,74 @@ END SUBROUTINE read_restart_par
 #endif
 
 !-------------------------------------------------------------------------------
+! [Direct transfer] Read SCALE restart files
+!-------------------------------------------------------------------------------
+subroutine read_restart_direct(v3dg,v2dg)
+  use mod_atmos_vars, only: &
+    DENS, &
+    MOMX, &
+    MOMY, &
+    MOMZ, &
+    RHOT, &
+    QTRC
+  use scale_atmos_hydrometeor, only: &
+    I_QV, I_QC, I_QR, I_QI, I_QS, I_QG
+  use scale_atmos_grid_cartesC_index, only: &
+    IS, IE, JS, JE, KS, KE
+  implicit none
+
+  real(RP), intent(out) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(RP), intent(out) :: v2dg(nlon,nlat,nv2d)
+  integer :: iv3d, iv2d
+
+  do iv3d = 1, nv3d
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Read 3D var [direct transfer]: ', trim(v3d_name(iv3d))
+    end if
+    select case (iv3d)
+    case (iv3d_rho)
+      v3dg(:,:,:,iv3d) = DENS(KS:KE,IS:IE,JS:JE)
+    case (iv3d_rhou)
+      v3dg(:,:,:,iv3d) = MOMX(KS:KE,IS:IE,JS:JE)
+    case (iv3d_rhov)
+      v3dg(:,:,:,iv3d) = MOMY(KS:KE,IS:IE,JS:JE)
+    case (iv3d_rhow)
+      v3dg(:,:,:,iv3d) = MOMZ(KS:KE,IS:IE,JS:JE)
+    case (iv3d_rhot)
+      v3dg(:,:,:,iv3d) = RHOT(KS:KE,IS:IE,JS:JE)
+    case (iv3d_q)
+      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_QV)
+    case (iv3d_qc)
+      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_QC)
+    case (iv3d_qr)
+      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_QR)
+    case (iv3d_qi)
+      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_QI)
+    case (iv3d_qs)
+      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_QS)
+    case (iv3d_qg)
+      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_QG)
+    case default
+      write (6, '(3A)') "[Error] Variable '", trim(v3d_name(iv3d)), "' is not recognized."
+      stop
+    end select
+  end do
+
+  do iv2d = 1, nv2d
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Read 2D var [direct transfer]: ', trim(v2d_name(iv2d))
+    end if
+!    select case (iv2d)
+!    case default
+!      write (6, '(3A)') "[Error] Variable '", trim(v2d_name(iv2d)), "' is not recognized."
+!      stop
+!    end select
+  end do
+
+  return
+end subroutine read_restart_direct
+
+!-------------------------------------------------------------------------------
 ! [File I/O] Write SCALE restart files
 !-------------------------------------------------------------------------------
 !SUBROUTINE write_restart(filename,v3dg,v2dg)
@@ -727,6 +795,74 @@ END SUBROUTINE write_restart_par
 #endif
 
 !-------------------------------------------------------------------------------
+! [Direct transfer] Write SCALE restart files
+!-------------------------------------------------------------------------------
+subroutine write_restart_direct(v3dg,v2dg)
+  use mod_atmos_vars, only: &
+    DENS, &
+    MOMX, &
+    MOMY, &
+    MOMZ, &
+    RHOT, &
+    QTRC
+  use scale_atmos_hydrometeor, only: &
+    I_QV, I_QC, I_QR, I_QI, I_QS, I_QG
+  use scale_atmos_grid_cartesC_index, only: &
+    IS, IE, JS, JE, KS, KE
+  implicit none
+
+  real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(RP), intent(in) :: v2dg(nlon,nlat,nv2d)
+  integer :: iv3d, iv2d
+
+  do iv3d = 1, nv3d
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Write 3D var [direct transfer]: ', trim(v3d_name(iv3d))
+    end if
+    select case (iv3d)
+    case (iv3d_rho)
+      DENS(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
+    case (iv3d_rhou)
+      MOMX(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
+    case (iv3d_rhov)
+      MOMY(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
+    case (iv3d_rhow)
+      MOMZ(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
+    case (iv3d_rhot)
+      RHOT(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
+    case (iv3d_q)
+      QTRC(KS:KE,IS:IE,JS:JE,I_QV) = v3dg(:,:,:,iv3d)
+    case (iv3d_qc)
+      QTRC(KS:KE,IS:IE,JS:JE,I_QC) = v3dg(:,:,:,iv3d)
+    case (iv3d_qr)
+      QTRC(KS:KE,IS:IE,JS:JE,I_QR) = v3dg(:,:,:,iv3d)
+    case (iv3d_qi)
+      QTRC(KS:KE,IS:IE,JS:JE,I_QI) = v3dg(:,:,:,iv3d)
+    case (iv3d_qs)
+      QTRC(KS:KE,IS:IE,JS:JE,I_QS) = v3dg(:,:,:,iv3d)
+    case (iv3d_qg)
+      QTRC(KS:KE,IS:IE,JS:JE,I_QG) = v3dg(:,:,:,iv3d)
+    case default
+      write (6, '(3A)') "[Error] Variable '", trim(v3d_name(iv3d)), "' is not recognized."
+      stop
+    end select
+  end do
+
+  do iv2d = 1, nv2d
+    if (LOG_LEVEL >= 1) then
+      write(6,'(1x,A,A15)') '*** Write 2D var [direct transfer]: ', trim(v2d_name(iv2d))
+    end if
+!    select case (iv2d)
+!    case default
+!      write (6, '(3A)') "[Error] Variable '", trim(v2d_name(iv2d)), "' is not recognized."
+!      stop
+!    end select
+  end do
+
+  return
+end subroutine write_restart_direct
+
+!-------------------------------------------------------------------------------
 ! [File I/O] Read SCALE restart files for model coordinates
 !-------------------------------------------------------------------------------
 SUBROUTINE read_restart_coor(filename,lon,lat,height)
@@ -911,6 +1047,26 @@ SUBROUTINE read_topo_par(filename,topo,comm)
   RETURN
 END SUBROUTINE read_topo_par
 #endif
+
+!-------------------------------------------------------------------------------
+! [Direct transfer] Read SCALE topography files
+!-------------------------------------------------------------------------------
+subroutine read_topo_direct(topo)
+  use scale_topography, only: &
+    TOPO_Zsfc
+  use scale_atmos_grid_cartesC_index, only: &
+    IS, IE, JS, JE
+  implicit none
+
+  real(RP), intent(out) :: topo(nlon,nlat)
+
+  if (LOG_LEVEL >= 1) then
+    write(6,'(1x,A,A15)') '*** Read 2D var [direct transfer]: ', trim(topo2d_name)
+  end if
+  topo(:,:) = TOPO_Zsfc(IS:IE,JS:JE)
+
+  return
+end subroutine read_topo_direct
 
 !-------------------------------------------------------------------------------
 ! [File I/O] Read SCALE history files

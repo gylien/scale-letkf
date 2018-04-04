@@ -175,12 +175,12 @@ PROGRAM letkf
     ! WRITE ENS MEAN and SPRD
     !
     if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-      call write_ensmean(GUES_MEAN_INOUT_BASENAME, gues3d, gues2d, calced=.false., monit_step=1)
+      call write_ensmean(GUES_MEAN_OUT_BASENAME, gues3d, gues2d, calced=.false., monit_step=1)
     else
-      call write_ensmean(GUES_MEAN_INOUT_BASENAME, gues3d, gues2d, calced=.false.)
+      call write_ensmean(GUES_MEAN_OUT_BASENAME, gues3d, gues2d, calced=.false.)
     end if
 
-    if (GUES_SPRD_OUT) then
+    if (GUES_SPRD_OUT_FREQ >= 1) then
       call write_enssprd(GUES_SPRD_OUT_BASENAME, gues3d, gues2d)
     end if
 
@@ -207,7 +207,7 @@ PROGRAM letkf
     call ensmean_grd(MEMBER, nens, nij1, anal3d, anal2d)
     ! write analysis mean later in write_ens_mpi
 
-    if (ANAL_SPRD_OUT) then
+    if (ANAL_SPRD_OUT_FREQ >= 1) then
       call write_enssprd(ANAL_SPRD_OUT_BASENAME, anal3d, anal2d)
     end if
 

@@ -33,6 +33,8 @@ MODULE letkf_tools
   PRIVATE
   PUBLIC :: das_letkf !, das_efso
 
+  integer,public,save :: icycle, lastcycle
+
   real(r_size),save :: var_local(nv3d+nv2d,nid_obs_varlocal)
 
   integer,save :: ctype_merge(nid_obs,nobtype)

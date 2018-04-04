@@ -175,7 +175,7 @@ subroutine set_common_mpi_scale
   ! Read/calculate model coordinates
   !-----------------------------------------------------------------------------
 
-  if (VERIFY_COORD) then
+  if (VERIFY_COORD .and. (.not. DIRECT_TRANSFER)) then
     if (myrank_e == 0) then
 !      allocate (height3d(nlev,nlon,nlat))
       allocate (lon2d(nlon,nlat))
@@ -186,7 +186,15 @@ subroutine set_common_mpi_scale
 
       if (.not. allocated(topo2d)) then
         allocate (topo2d(nlon,nlat))
-        call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
+#ifdef PNETCDF
+        if (FILE_AGGREGATE) then
+          call read_topo_par(LETKF_TOPO_IN_BASENAME, topo2d, MPI_COMM_d)
+        else
+#endif
+          call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
+#ifdef PNETCDF
+        end if
+#endif
       end if
 !      call scale_calc_z(topo2d, height3d)
 
@@ -313,31 +321,43 @@ subroutine set_common_mpi_grid
     if (allocated(topo2d)) then
       write (6, '(1x,A,A15,A)') '*** Read 2D var: ', trim(topo2d_name), ' -- skipped because it was read previously'
 #ifdef DEBUG
+      if (.not. DIRECT_TRANSFER) then
 #ifdef PNETCDF
-      if (FILE_AGGREGATE) then
-        call read_topo_par(LETKF_TOPO_IN_BASENAME, topo2dtmp, MPI_COMM_d)
-      else
+        if (FILE_AGGREGATE) then
+          call read_topo_par(LETKF_TOPO_IN_BASENAME, topo2dtmp, MPI_COMM_d)
+        else
 #endif
-        call read_topo(LETKF_TOPO_IN_BASENAME, topo2dtmp)
+          call read_topo(LETKF_TOPO_IN_BASENAME, topo2dtmp)
 #ifdef PNETCDF
-      end if
+        end if
 #endif
-      if (maxval(abs(topo2dtmp - topo2d)) > 1.0d-6) then
-        write (6, '(A,F15.7)') '[Error] topo height in history files and restart files are inconsistent; maxdiff = ', maxval(abs(topo2dtmp - topo2d))
-        stop
+        if (maxval(abs(topo2dtmp - topo2d)) > 1.0d-6) then
+          write (6, '(A,F15.7)') '[Error] topo height in history files and restart files are inconsistent; maxdiff = ', maxval(abs(topo2dtmp - topo2d))
+          stop
+        end if
       end if
 #endif
     else
       allocate (topo2d(nlon,nlat))
-#ifdef PNETCDF
-      if (FILE_AGGREGATE) then
-        call read_topo_par(LETKF_TOPO_IN_BASENAME, topo2d, MPI_COMM_d)
+      if (DIRECT_TRANSFER) then
+!        if (trim(LETKF_TOPO_IN_BASENAME) /= trim(TOPO_IN_BASENAME)) then
+!          write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
+!          write (6, '(3A)') "        Filename in SCALE = '", trim(TOPO_IN_BASENAME), "'"
+!          write (6, '(3A)') "        Filename in LETKF = '", trim(LETKF_TOPO_IN_BASENAME), "'"
+!          stop
+!        end if
+        call read_topo_direct(topo2d)
       else
-#endif
-        call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
 #ifdef PNETCDF
-      end if
+        if (FILE_AGGREGATE) then
+          call read_topo_par(LETKF_TOPO_IN_BASENAME, topo2d, MPI_COMM_d)
+        else
 #endif
+          call read_topo(LETKF_TOPO_IN_BASENAME, topo2d)
+#ifdef PNETCDF
+        end if
+#endif
+      end if
     end if
 
     v3dg(1,:,:,3) = topo2d
@@ -819,6 +839,7 @@ subroutine set_scalelib(execname)
   !-----------------------------------------------------------------------------
 
   if (execname_ == 'DACYCLE') then
+    call read_nml_dacycle
     call read_nml_obs_error
     call read_nml_obsope
     call read_nml_letkf
@@ -1341,6 +1362,9 @@ end subroutine read_ens_history_iter
 ! Read ensemble first guess data and distribute to processes
 !-------------------------------------------------------------------------------
 subroutine read_ens_mpi(v3d, v2d)
+  use mod_atmos_vars, only: &
+    ATMOS_RESTART_OUT_BASENAME, &
+    ATMOS_RESTART_OUT_POSTFIX_TIMELABEL
   implicit none
   real(r_size), intent(out) :: v3d(nij1,nlev,nens,nv3d)
   real(r_size), intent(out) :: v2d(nij1,nens,nv2d)
@@ -1361,21 +1385,40 @@ subroutine read_ens_mpi(v3d, v2d)
         filename = trim(GUES_IN_BASENAME) // trim(timelabel_anal)
         call filename_replace_mem(filename, im)
       else if (im == mmean) then
-        filename = trim(GUES_MEAN_INOUT_BASENAME) // trim(timelabel_anal)
+        filename = trim(GUES_MEAN_IN_BASENAME) // trim(timelabel_anal)
       else if (im == mmdet) then
         filename = trim(GUES_MDET_IN_BASENAME) // trim(timelabel_anal)
       end if
 
-!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',trim(filename),'.pe',myrank_d,'.nc'
-#ifdef PNETCDF
-      if (FILE_AGGREGATE) then
-        call read_restart_par(trim(filename), v3dg, v2dg, MPI_COMM_d)
+      if (DIRECT_TRANSFER) then
+        if (ATMOS_RESTART_OUT_POSTFIX_TIMELABEL) then
+          if (trim(filename) /= trim(ATMOS_RESTART_OUT_BASENAME)//trim(timelabel_anal)) then
+            write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
+            write (6, '(3A)') "        Output filename in SCALE = '", trim(ATMOS_RESTART_OUT_BASENAME)//trim(timelabel_anal), "'"
+            write (6, '(3A)') "        Input  filename in LETKF = '", trim(filename), "'"
+            stop
+          end if
+        else
+          if (trim(filename) /= trim(ATMOS_RESTART_OUT_BASENAME)) then
+            write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
+            write (6, '(3A)') "        Output filename in SCALE = '", trim(ATMOS_RESTART_OUT_BASENAME), "'"
+            write (6, '(3A)') "        Input  filename in LETKF = '", trim(filename), "'"
+            stop
+          end if
+        end if
+        call read_restart_direct(v3dg, v2dg)
       else
-#endif
-        call read_restart(trim(filename), v3dg, v2dg)
+!        write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',trim(filename),'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      end if
+        if (FILE_AGGREGATE) then
+          call read_restart_par(trim(filename), v3dg, v2dg, MPI_COMM_d)
+        else
 #endif
+          call read_restart(trim(filename), v3dg, v2dg)
+#ifdef PNETCDF
+        end if
+#endif
+      end if
 
       call mpi_timer('read_ens_mpi:read_restart:', 2)
 
@@ -1449,6 +1492,9 @@ end subroutine read_ens_mpi_addiinfl
 ! Write ensemble analysis data after collecting from processes
 !-------------------------------------------------------------------------------
 subroutine write_ens_mpi(v3d, v2d, monit_step)
+  use mod_atmos_vars, only: &
+    ATMOS_RESTART_IN_BASENAME, &
+    ATMOS_RESTART_IN_POSTFIX_TIMELABEL
   implicit none
   real(r_size), intent(in) :: v3d(nij1,nlev,nens,nv3d)
   real(r_size), intent(in) :: v2d(nij1,nens,nv2d)
@@ -1497,20 +1543,39 @@ subroutine write_ens_mpi(v3d, v2d, monit_step)
         filename = trim(ANAL_MDET_OUT_BASENAME) // trim(timelabel_anal)
       end if
 
-!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',trim(filename),'.pe',myrank_d,'.nc'
       call state_trans_inv(v3dg)
 
       call mpi_timer('write_ens_mpi:state_trans_inv:', 2)
 
-#ifdef PNETCDF
-      if (FILE_AGGREGATE) then
-        call write_restart_par(trim(filename), v3dg, v2dg, MPI_COMM_d)
+      if (DIRECT_TRANSFER) then
+        if (ATMOS_RESTART_IN_POSTFIX_TIMELABEL) then
+          if (trim(filename) /= trim(ATMOS_RESTART_IN_BASENAME)//trim(timelabel_anal)) then
+            write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
+            write (6, '(3A)') "        Output filename in LETKF = '", trim(filename), "'"
+            write (6, '(3A)') "        Input  filename in SCALE = '", trim(ATMOS_RESTART_IN_BASENAME)//trim(timelabel_anal), "'"
+            stop
+          end if
+        else
+          if (trim(filename) /= trim(ATMOS_RESTART_IN_BASENAME)) then
+            write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
+            write (6, '(3A)') "        Output filename in LETKF = '", trim(filename), "'"
+            write (6, '(3A)') "        Input  filename in SCALE = '", trim(ATMOS_RESTART_IN_BASENAME), "'"
+            stop
+          end if
+        end if
+        call write_restart_direct(v3dg, v2dg)
       else
-#endif
-        call write_restart(trim(filename), v3dg, v2dg)
+!        write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',trim(filename),'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      end if
+        if (FILE_AGGREGATE) then
+          call write_restart_par(trim(filename), v3dg, v2dg, MPI_COMM_d)
+        else
 #endif
+          call write_restart(trim(filename), v3dg, v2dg)
+#ifdef PNETCDF
+        end if
+#endif
+      end if
 
       call mpi_timer('write_ens_mpi:write_restart:', 2)
     end if
@@ -1881,17 +1946,19 @@ end subroutine monit_obs_mpi
 !-------------------------------------------------------------------------------
 ! Gather ensemble mean to {mmean_rank_e} and write SCALE restart files
 !-------------------------------------------------------------------------------
-subroutine write_ensmean(filename, v3d, v2d, calced, monit_step)
+subroutine write_ensmean(filename, v3d, v2d, calced, mean_out, monit_step)
   implicit none
   character(len=*), intent(in) :: filename
   real(r_size), intent(inout) :: v3d(nij1,nlev,nens,nv3d)
   real(r_size), intent(inout) :: v2d(nij1,nens,nv2d)
   logical, intent(in), optional :: calced
+  logical, intent(in), optional :: mean_out
   integer, intent(in), optional :: monit_step
 
   real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP) :: v2dg(nlon,nlat,nv2d)
   logical :: calced_
+  logical :: mean_out_
   integer :: monit_step_
 
   call mpi_timer('', 2)
@@ -1899,6 +1966,10 @@ subroutine write_ensmean(filename, v3d, v2d, calced, monit_step)
   calced_ = .false.
   if (present(calced)) then
     calced_ = calced
+  end if
+  mean_out_ = .true.
+  if (present(mean_out)) then
+    mean_out_ = mean_out
   end if
   monit_step_ = 0
   if (present(monit_step)) then
@@ -1928,15 +1999,17 @@ subroutine write_ensmean(filename, v3d, v2d, calced, monit_step)
 
     call mpi_timer('write_ensmean:state_trans_inv:', 2)
 
+    if (mean_out_) then
 #ifdef PNETCDF
-    if (FILE_AGGREGATE) then
-      call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
-    else
+      if (FILE_AGGREGATE) then
+        call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
+      else
 #endif
-      call write_restart(filename, v3dg, v2dg)
+        call write_restart(filename, v3dg, v2dg)
 #ifdef PNETCDF
+      end if
+#endif
     end if
-#endif
 
     call mpi_timer('write_ensmean:write_restart:', 2)
   end if
