@@ -1344,15 +1344,32 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
       filename = trim(HISTORY_MDET_IN_BASENAME) // trim(timelabel_hist)
     end if
 
-#ifdef PNETCDF
-    if (FILE_AGGREGATE) then
-      call read_history_par(trim(filename), step, v3dg, v2dg, MPI_COMM_d)
+    if (DIRECT_TRANSFER) then
+!      !!!!!! Unable to check filename consistency here because FILE_HISTORY_DEFAULT_BASENAME and 
+!      !!!!!! FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL are not public variables
+!      if (trim(filename) /= trim(FILE_HISTORY_DEFAULT_BASENAME)//trim(timelabel_hist)) then
+!        write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
+!        write (6, '(3A)') "        Output filename in SCALE = '", trim(FILE_HISTORY_DEFAULT_BASENAME)//trim(timelabel_hist), "'"
+!        write (6, '(3A)') "        Input  filename in LETKF = '", trim(filename), "'"
+!        stop
+!      end if
+      if (step /= 1) then
+        write (6, '(A)') '[Error] Direct transfer of history data can only be done with 3D-LETKF (step = 1)'
+        write (6, '(A,I5)') '        step =', step
+        stop
+      end if
+      call read_history_direct(v3dg, v2dg)
     else
-#endif
-      call read_history(trim(filename), step, v3dg, v2dg)
 #ifdef PNETCDF
-    end if
+      if (FILE_AGGREGATE) then
+        call read_history_par(trim(filename), step, v3dg, v2dg, MPI_COMM_d)
+      else
 #endif
+        call read_history(trim(filename), step, v3dg, v2dg)
+#ifdef PNETCDF
+      end if
+#endif
+    end if
   end if
 
   return
