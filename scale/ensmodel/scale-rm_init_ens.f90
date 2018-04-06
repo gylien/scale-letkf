@@ -119,7 +119,11 @@ program scaleles_init_ens
 !-----------------------------------------------------------------------
 
   call set_common_conf(universal_nprocs)
-  call set_mem_node_proc(MEMBER+2)
+  if (DET_RUN) then
+    call set_mem_node_proc(MEMBER+2)
+  else
+    call set_mem_node_proc(MEMBER+1)
+  end if
 
   call mpi_timer('INITIALIZE', 1, barrier=universal_comm)
 
