@@ -368,54 +368,58 @@ while ((time <= ETIME)); do
 
   # log
   #-------------------
-  if [ "$MPI_TYPE" = 'K' ]; then
-    log_nfmt='.%d'
-  else
-    log_nfmt="-${PROCESS_FMT}"
-  fi
 
-  if ((LOG_OPT <= 3)); then
-    if ((LOG_TYPE == 1)); then
-      mlist='1'
-      plist='1'
-    else
-      mlist=$(seq $mtot)
-      plist=$(seq $totalnp)
-    fi
-    for m in $mlist; do
-      path="log/scale.${name_m[$m]}.LOG_${time}${SCALE_SFX_NONC_0}"
-      pathout="${OUTDIR}/${time}/log/scale/${name_m[$m]}_LOG${SCALE_SFX_NONC_0}"
-      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-      path="log/scale.${name_m[$m]}.monitor_${time}${SCALE_SFX_NONC_0}"
-      pathout="${OUTDIR}/${time}/log/scale/${name_m[$m]}_monitor${SCALE_SFX_NONC_0}"
-      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+1))]}
-    done
-    for p in $plist; do
-      if ((nitmax == 1)); then
-        path="log/scale-rm_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
-        pathout="${OUTDIR}/${time}/log/scale/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
-        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+  if (( time == STIME )) ; then
+
+	  if [ "$MPI_TYPE" = 'K' ]; then
+	    log_nfmt='.%d'
+	  else
+	    log_nfmt="-${PROCESS_FMT}"
+	  fi
+
+	  if ((LOG_OPT <= 3)); then
+	    if ((LOG_TYPE == 1)); then
+	      mlist='1'
+	      plist='1'
+	    else
+	      mlist=$(seq $mtot)
+	      plist=$(seq $totalnp)
+	    fi
+	    for m in $mlist; do
+	      path="log/scale.${name_m[$m]}.LOG_${time}${SCALE_SFX_NONC_0}"
+	      pathout="${OUTDIR}/${time}/log/scale/${name_m[$m]}_LOG${SCALE_SFX_NONC_0}"
+	      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+	      path="log/scale.${name_m[$m]}.monitor_${time}${SCALE_SFX_NONC_0}"
+	      pathout="${OUTDIR}/${time}/log/scale/${name_m[$m]}_monitor${SCALE_SFX_NONC_0}"
+	      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+1))]}
+	    done
+	    for p in $plist; do
+	      if ((nitmax == 1)); then
+		path="log/scale-rm_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
+		pathout="${OUTDIR}/${time}/log/scale/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
+		echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+	      else
+		for it in $(seq $nitmax); do
+		  path="log/scale-rm_ens.NOUT_${time}_${it}$(printf -- "${log_nfmt}" $((p-1)))"
+		  pathout="${OUTDIR}/${time}/log/scale/NOUT-${it}$(printf -- "${log_nfmt}" $((p-1)))"
+		  echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+		done
+	      fi
+	    done
+	  fi
+
+    if ((LOG_OPT <= 4)); then
+      if ((LOG_TYPE == 1)); then
+        plist='1'
       else
-        for it in $(seq $nitmax); do
-          path="log/scale-rm_ens.NOUT_${time}_${it}$(printf -- "${log_nfmt}" $((p-1)))"
-          pathout="${OUTDIR}/${time}/log/scale/NOUT-${it}$(printf -- "${log_nfmt}" $((p-1)))"
-          echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
-        done
+        plist=$(seq $totalnp)
       fi
-    done
-  fi
-
-  if ((LOG_OPT <= 4)); then
-    if ((LOG_TYPE == 1)); then
-      plist='1'
-    else
-      plist=$(seq $totalnp)
+      for p in $plist; do
+        path="log/letkf.NOUT_${atime}$(printf -- "${log_nfmt}" $((p-1)))"
+        pathout="${OUTDIR}/${atime}/log/letkf/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
+        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+      done
     fi
-    for p in $plist; do
-      path="log/letkf.NOUT_${atime}$(printf -- "${log_nfmt}" $((p-1)))"
-      pathout="${OUTDIR}/${atime}/log/letkf/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
-      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
-    done
   fi
 
   #-------------------

@@ -137,7 +137,13 @@ atime=$(datetime $time $LCYCLE s)
 loop=0
 
 #-------------------------------------------------------------------------------
-while ((time <= ETIME)); do
+if ((IO_ARB == 1)); then
+  ENDTIME=$STIME
+else
+  ENDTIME=$ETIME
+fi
+
+while ((time <= ENDTIME)); do
 #-------------------------------------------------------------------------------
 
   timefmt="$(datetime_fmt ${time})"
@@ -258,7 +264,7 @@ while ((time <= ETIME)); do
 
             if ((IO_ARB == 1)); then ##
               #mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $? &
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $? &
+              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${it}.conf log/${stepexecname[$s]}.NOUT_${it} || exit $? &
             else ##
               #mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $?
               mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $?
@@ -268,14 +274,8 @@ while ((time <= ETIME)); do
           done
         else
           if ((IO_ARB == 1)); then ##
-            if ((s == 5)); then ##
-              #mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} \
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}.conf log/${stepexecname[$s]}.NOUT_${conf_time} \
-                      "$SCRP_DIR/sleep.sh" || exit $? &
-            else ##
-              #mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
-            fi ##
+            #mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
+            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
           else ##
             #mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
             mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
