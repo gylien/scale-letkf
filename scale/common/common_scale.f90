@@ -16,6 +16,7 @@ MODULE common_scale
   use common_nml
 
   use scale_precision, only: RP, SP
+  use scale_stdio, only: H_MID
   use scale_prof
 
   IMPLICIT NONE
@@ -24,6 +25,7 @@ MODULE common_scale
 ! General parameters
 !-------------------------------------------------------------------------------
 
+  character(len=H_MID), parameter :: modelname = "SCALE-LETKF"
   INTEGER,PARAMETER :: vname_max = 10
 
   ! 
@@ -155,27 +157,19 @@ CONTAINS
 ! Initialize standard I/O and read common namelist of SCALE-LETKF
 !-------------------------------------------------------------------------------
 subroutine set_common_conf(nprocs)
-  use scale_stdio
+  use scale_stdio, only: &
+    IO_setup
 
   implicit none
   integer, intent(in) :: nprocs
-  character(len=H_MID), parameter :: MODELNAME = "SCALE-LETKF"
 
   ! setup standard I/O
-  call IO_setup( MODELNAME, .false.)
+  call IO_setup( modelname, .false. )
 
   call read_nml_log
   call read_nml_model
   call read_nml_ensemble
-  call read_nml_letkf_prc
-
-  if (nprocs /= NNODES * PPN) then
-    write(6,'(A,I10)') 'Number of MPI processes = ', nprocs
-    write(6,'(A,I10)') 'NNODES = ', NNODES
-    write(6,'(A,I10)') 'PPN    = ', PPN
-    write(6,'(A)') 'Number of MPI processes should be equal to NNODES * PPN.'
-    stop
-  end if
+  call read_nml_process
 
   return
 end subroutine set_common_conf
@@ -205,14 +199,6 @@ SUBROUTINE set_common_scale
   !
   ! Set up node and process distribution
   !
-  if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
-    write(6,'(A,I10)') 'MEM_NP    = ', MEM_NP
-    write(6,'(A,I10)') 'PRC_NUM_X = ', PRC_NUM_X
-    write(6,'(A,I10)') 'PRC_NUM_Y = ', PRC_NUM_Y
-    write(6,'(A)') 'MEM_NP should be equal to PRC_NUM_X * PRC_NUM_Y.'
-    stop
-  end if
-
   nlon = IMAX
   nlat = JMAX
   nlev = KMAX
