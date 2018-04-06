@@ -24,12 +24,11 @@ BUFR_LIB  =
 
 FOPTS_SCALE = $(FFLAGS)
 
-#FOPTS     = -Kfast,ocl,openmp,noeval -V -Qa,d,i,p,t,x -Koptmsg=2 \
-#            -x-    \
-#            -Ksimd \
-#            -Kauto,threadsafe
 FOPTS     = $(FOPTS_SCALE) \
             -Knoparallel,noeval,nopreex \
+            -Kopenmp
+
+FOPTS_EXE = $(FOPTS_SCALE) \
             -Kopenmp
 
 FMCMODEL  =

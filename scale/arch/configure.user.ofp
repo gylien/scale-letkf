@@ -33,6 +33,8 @@ FOPTS     = $(FOPTS_SCALE) \
 #            -qopenmp \
 ##            -g -traceback -check bounds,pointers -fpe0 -DDEBUG
 
+FOPTS_EXE = $(FOPTS)
+
 FMCMODEL  = -mcmodel=medium -shared-intel
 FBYTESWAP = -convert little_endian
 FFREE     = -free

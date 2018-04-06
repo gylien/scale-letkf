@@ -1,55 +1,79 @@
-program scaleles_ens
-  !-----------------------------------------------------------------------------
-
-  use mpi
+program scale_rm_ens
+!=======================================================================
+!
+! [PURPOSE:] Ensemble forecasts with SCALE-RM
+!
+!=======================================================================
+!!$USE OMP_LIB
+!  use mpi
+!  use common
   use common_mpi, only: &
-     nprocs, &
-     myrank
+    nprocs, &
+    myrank
   use common_nml
   use common_scale, only: &
-     set_common_conf
+    set_common_conf
+  use common_scalerm
   use common_mpi_scale, only: &
-     myrank_to_mem, &
-     myrank_to_pe, &
-     nitmax, &
-     set_mem_node_proc, &
-     mpi_timer
+    mpi_timer, &
+    myrank_use, &
+    set_mem_node_proc
 
   use scale_stdio, only: &
-     H_LONG, &
-     IO_L, &
-     IO_FID_CONF, &
-     IO_FID_LOG, &
-     IO_FID_STDOUT
+    IO_L, &
+    IO_FID_LOG
+  use scale_prof, only: &
+    PROF_setprefx, &
+    PROF_rapstart, &
+    PROF_rapend
   use scale_process, only: &
-     PRC_MPIstart, &
-     PRC_UNIVERSAL_setup, &
-     PRC_GLOBAL_setup, &
-     PRC_MPIfinish, &
-     PRC_MPIsplit, &
-     PRC_UNIVERSAL_myrank, &
-     PRC_DOMAIN_nlim, &
-     PRC_GLOBAL_COMM_WORLD, &
-     PRC_LOCAL_COMM_WORLD
-  use mod_rm_driver
-
+    PRC_MPIstart, &
+    PRC_mpi_alive, &
+    PRC_UNIVERSAL_setup, &
+    PRC_MPIfinish, &
+    PRC_UNIVERSAL_myrank
+  use scale_history, only: &
+    HIST_write
+  use scale_monitor, only: &
+    MONIT_write
+  use mod_admin_restart, only: &
+    ADMIN_restart_write
+  use mod_admin_time, only: &
+    ADMIN_TIME_checkstate, &
+    ADMIN_TIME_advance, &
+    TIME_DOATMOS_step, &
+    TIME_DOLAND_step, &
+    TIME_DOURBAN_step, &
+    TIME_DOOCEAN_step, &
+    TIME_DOresume, &
+    TIME_DOend
+  use mod_atmos_admin, only: &
+    ATMOS_do
+  use mod_atmos_driver, only: &
+    ATMOS_driver, &
+    ATMOS_driver_finalize
+  use mod_ocean_admin, only: &
+    OCEAN_do
+  use mod_ocean_driver, only: &
+    OCEAN_driver
+  use mod_land_admin, only: &
+    LAND_do
+  use mod_land_driver, only: &
+    LAND_driver
+  use mod_urban_admin, only: &
+    URBAN_do
+  use mod_urban_driver, only: &
+    URBAN_driver
+  use mod_user, only: &
+    USER_step
   implicit none
 
-  integer :: it, its, ite, im, idom, color, key, ierr
   character(7) :: stdoutf='-000000'
 
   integer :: universal_comm
   integer :: universal_nprocs
   logical :: universal_master
   integer :: universal_myrank
-  integer :: global_comm
-  integer :: local_comm
-  integer :: intercomm_parent
-  integer :: intercomm_child
-
-  character(len=H_LONG) :: confname_domains(PRC_DOMAIN_nlim)
-  character(len=H_LONG) :: confname_mydom
-  character(len=H_LONG) :: confname
 
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
@@ -61,6 +85,8 @@ program scaleles_ens
 
   ! start MPI
   call PRC_MPIstart( universal_comm ) ! [OUT]
+
+  PRC_mpi_alive = .true.
 
   call mpi_timer('', 1)
 
@@ -108,100 +134,90 @@ program scaleles_ens
   call mpi_timer('PRE_SCRIPT', 1, barrier=universal_comm)
 
 !-----------------------------------------------------------------------
+! Initialize
+!-----------------------------------------------------------------------
 
   call set_common_conf(universal_nprocs)
+
   if (DET_RUN) then
     call set_mem_node_proc(MEMBER+2)
   else
     call set_mem_node_proc(MEMBER+1)
   end if
+  call scalerm_setup('SCALERM')
 
   call mpi_timer('INITIALIZE', 1, barrier=universal_comm)
 
+  if (myrank_use) then
+
 !-----------------------------------------------------------------------
-! Run SCALE-RM
+! Main loop
 !-----------------------------------------------------------------------
 
-  ! split MPI communicator for single members
-  if (myrank_to_mem(1) >= 1) then
-    color = myrank_to_mem(1) - 1
-    key   = myrank_to_pe
-  else
-    color = MPI_UNDEFINED
-    key   = MPI_UNDEFINED
-  endif
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
+    call PROF_setprefx('MAIN')
+    call PROF_rapstart('Main_Loop', 0)
 
-  call MPI_COMM_SPLIT(universal_comm, color, key, global_comm, ierr)
+    do
 
-  if (global_comm /= MPI_COMM_NULL) then
+      ! report current time
+      call ADMIN_TIME_checkstate
 
-    call PRC_GLOBAL_setup( .false.,    & ! [IN]
-                           global_comm ) ! [IN]
+      if ( TIME_DOresume ) then
+        ! resume state from restart files
+        call resume_state
 
-    do idom = 1, NUM_DOMAIN
-      confname_domains(idom) = trim(CONF_FILES)
-      call filename_replace_dom(confname_domains(idom), idom)
+        ! history&monitor file output
+        call MONIT_write('MAIN')
+        call HIST_write ! if needed
+      end if
+
+      ! time advance
+      call ADMIN_TIME_advance
+
+      ! user-defined procedure
+      call USER_step
+
+      ! change to next state
+      if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver
+      if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver
+      if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver
+      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver
+
+      ! history&monitor file output
+      call MONIT_write('MAIN')
+      call HIST_write
+
+      ! restart output
+      call ADMIN_restart_write
+
+      if( TIME_DOend ) exit
+
+      if( IO_L ) call flush(IO_FID_LOG)
+
     end do
 
-    !--- split for nesting
-    ! communicator split for nesting domains
-    call PRC_MPIsplit( global_comm,      & ! [IN]
-                       NUM_DOMAIN,       & ! [IN]
-                       PRC_DOMAINS(:),   & ! [IN]
-                       confname_domains(:), & ! [IN]
-                       .false.,          & ! [IN]
-                       .false.,          & ! [IN] flag bulk_split
-                       COLOR_REORDER,    & ! [IN]
-                       local_comm,       & ! [OUT]
-                       intercomm_parent, & ! [OUT]
-                       intercomm_child,  & ! [OUT]
-                       confname_mydom    ) ! [OUT]
+!-----------------------------------------------------------------------
+! Finalize
+!-----------------------------------------------------------------------
 
-    if (MEMBER_ITER == 0) then
-      its = 1
-      ite = nitmax
-    else
-      its = MEMBER_ITER
-      ite = MEMBER_ITER
-    end if
+    call PROF_rapend('Main_Loop', 0)
 
-    do it = its, ite
-      im = myrank_to_mem(it)
-      if (im >= 1 .and. im <= MEMBER_RUN) then
-        confname = confname_mydom
-        if (CONF_FILES_SEQNUM) then
-          call filename_replace_mem(confname, im)
-        else
-          if (im <= MEMBER) then
-            call filename_replace_mem(confname, im)
-          else if (im == MEMBER+1) then
-            call filename_replace_mem(confname, memf_mean)
-          else if (im == MEMBER+2) then
-            call filename_replace_mem(confname, memf_mdet)
-          end if
-        end if
-        WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', trim(confname)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
+    if( IO_L ) write(IO_FID_LOG,*)
 
-        call scalerm ( local_comm, &
-                       intercomm_parent, &
-                       intercomm_child, &
-                       trim(confname) )
-      end if
-    end do ! [ it = its, ite ]
+    call PROF_setprefx('FIN')
 
-  else ! [ global_comm /= MPI_COMM_NULL ]
+    call PROF_rapstart('All', 1)
 
-    write (6, '(A,I6.6,A)') 'MYRANK=',universal_myrank,': This process is not used!'
+    if( ATMOS_do ) call ATMOS_driver_finalize
 
-  end if ! [ global_comm /= MPI_COMM_NULL ]
+  end if ! [ myrank_use ]
 
-  ! Close logfile, configfile
-  if ( IO_L ) then
-    if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
-  endif
-  close(IO_FID_CONF)
+  call scalerm_finalize('SCALERM')
 
-  call mpi_timer('SCALE_RM', 1, barrier=universal_comm)
+  call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 
 !-----------------------------------------------------------------------
 ! Post-processing scripts
@@ -216,12 +232,9 @@ program scaleles_ens
   call mpi_timer('POST_SCRIPT', 1, barrier=universal_comm)
 
 !-----------------------------------------------------------------------
-! Finalize
-!-----------------------------------------------------------------------
 
-!  call PRC_MPIfinish
-
-  call MPI_Finalize(ierr)
+  call PRC_MPIfinish
 
   stop
-end program scaleles_ens
+!=======================================================================
+end program scale_rm_ens

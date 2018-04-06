@@ -27,6 +27,8 @@ FOPTS_SCALE = $(FFLAGS) -std=gnu
 
 FOPTS     = $(FOPTS_SCALE) -fopenmp
 
+FOPTS_EXE = $(FOPTS)
+
 FMCMODEL  =
 FBYTESWAP = 
 FFREE     = -Free
