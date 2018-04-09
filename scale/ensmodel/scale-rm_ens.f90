@@ -37,7 +37,8 @@ program scale_rm_ens
   use scale_monitor, only: &
     MONIT_write
   use mod_admin_restart, only: &
-    ADMIN_restart_write
+    ADMIN_restart_write, &
+    ADMIN_restart_write_additional
   use mod_admin_time, only: &
     ADMIN_TIME_checkstate, &
     ADMIN_TIME_advance, &
@@ -148,7 +149,7 @@ program scale_rm_ens
 
   call mpi_timer('INITIALIZE', 1, barrier=universal_comm)
 
-  if (myrank_use) then
+  if (myrank_use .and. scalerm_run) then
 
 !-----------------------------------------------------------------------
 ! Main loop
@@ -191,6 +192,7 @@ program scale_rm_ens
 
       ! restart output
       call ADMIN_restart_write
+      call ADMIN_restart_write_additional
 
       if( TIME_DOend ) exit
 

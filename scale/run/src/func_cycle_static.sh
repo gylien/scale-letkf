@@ -784,15 +784,11 @@ while ((time <= ETIME)); do
   # scale (each member)
   #-----------------------------------------------------------------------------
 
-  for m in $(seq $mtot); do
+###  for m in $(seq $mtot); do
     if ((BDY_ENS == 1)); then
-      mem_bdy=${name_m[$m]}
+      mem_bdy='<member>'
     else
       mem_bdy='mean'
-    fi
-    DOMAIN_CATALOGUE_OUTPUT=".false."
-    if ((m == 1)); then
-      DOMAIN_CATALOGUE_OUTPUT=".true."
     fi
 
     for d in $(seq $DOMNUM); do
@@ -807,44 +803,59 @@ while ((time <= ETIME)); do
         ONLINE_IAM_DAUGHTER=".true."
       fi
       if ((loop == 1 && MAKEINIT == 1)); then
-        RESTART_IN_BASENAME="${name_m[$m]}/init.d${dfmt}"
+        RESTART_IN_BASENAME="<member>/init.d${dfmt}"
       else
-        RESTART_IN_BASENAME="${name_m[$m]}/anal.d${dfmt}"
+        RESTART_IN_BASENAME="<member>/anal.d${dfmt}"
       fi
-      if [ "${name_m[$m]}" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
-        RESTART_OUT_ADDITIONAL_COPIES=1
-        RESTART_OUT_ADDITIONAL_BASENAME="\"mean/gues.d$dfmt\", "
-        if ((SPRD_OUT == 1)); then
-          RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
-          RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"sprd/anal.d$dfmt\", "
-          RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"sprd/gues.d$dfmt\", "
-        fi
-#        if ((RTPS_INFL_OUT == 1)); then
-#          RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
-#          RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"rtpsinfl.d$dfmt\", "
-#        fi
-#        if ((NOBS_OUT == 1)); then
-#          RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
-#          RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"nobs.d$dfmt\", "
-#        fi
-      elif [ "${name_m[$m]}" = 'mdet' ]; then
-        RESTART_OUT_ADDITIONAL_COPIES=1
-        RESTART_OUT_ADDITIONAL_BASENAME="\"mdet/gues.d$dfmt\", "
-      elif ((OUT_OPT <= 3)); then
-        RESTART_OUT_ADDITIONAL_COPIES=1
-        RESTART_OUT_ADDITIONAL_BASENAME="\"${name_m[$m]}/gues.d$dfmt\", "
+      RESTART_OUT_ADDITIONAL_COPIES=0
+      RESTART_OUT_ADDITIONAL_BASENAME=
+      RESTART_OUT_ADDITIONAL_EFF_MEMBER=
+      if ((OUT_OPT <= 3)); then
+        RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
+        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"<member>/gues.d${dfmt}\", "
+        RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}0, "
       else
-        RESTART_OUT_ADDITIONAL_COPIES=0
-        RESTART_OUT_ADDITIONAL_BASENAME=
+#      elif ((OUT_OPT <= 6)); then
+        RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
+        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"mean/gues.d${dfmt}\", "
+        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"mdet/gues.d${dfmt}\", "
+        RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, ${mmdet}, "
       fi
+      if ((SPRD_OUT == 1)); then
+        RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
+        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"sprd/anal.d${dfmt}\", "
+        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"sprd/gues.d${dfmt}\", "
+        RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, ${mmean}, "
+      fi
+#      if ((RTPS_INFL_OUT == 1)); then
+#        RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
+#        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"rtpsinfl.d${dfmt}\", "
+#        RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, "
+#      fi
+#      if ((NOBS_OUT == 1)); then
+#        RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
+#        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"nobs.d${dfmt}\", "
+#        RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, "
+#      fi
 
       if ((d == 1)); then
         conf_file_src=$SCRP_DIR/config.nml.scale
+        if ((nitmax == 1)); then
+          conf_file="scale-rm_ens_${time}.conf"
+        else
+          conf_file="scale-rm_ens_${time}_${it}.conf"
+        fi
       else
         conf_file_src=$SCRP_DIR/config.nml.scale.d$d
+        if ((nitmax == 1)); then
+          conf_file="scale-rm_ens.d${dfmt}_${time}.conf"
+        else
+          conf_file="scale-rm_ens.d${dfmt}_${time}_${it}.conf"
+        fi
       fi
+
       conf="$(cat $conf_file_src | \
-          sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale.${name_m[$m]}.d${dfmt}.LOG_${time}\"," \
+          sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale.<member>.d${dfmt}.LOG_${time}\"," \
               -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
               -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
               -e "/!--TIME_DURATION--/a TIME_DURATION = ${CYCLEFLEN}.D0," \
@@ -858,15 +869,15 @@ while ((time <= ETIME)); do
               -e "/!--RESTART_IN_BASENAME--/a RESTART_IN_BASENAME = \"${RESTART_IN_BASENAME}\"," \
               -e "/!--RESTART_IN_POSTFIX_TIMELABEL--/a RESTART_IN_POSTFIX_TIMELABEL = .true.," \
               -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = .true.," \
-              -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${name_m[$m]}/anal.d${dfmt}\"," \
+              -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"<member>/anal.d${dfmt}\"," \
               -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo.d${dfmt}\"," \
               -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse.d${dfmt}\"," \
-              -e "/!--HISTORY_DEFAULT_BASENAME--/a HISTORY_DEFAULT_BASENAME = \"${name_m[$m]}/hist.d${dfmt}_$(datetime_scale $time)\"," \
+              -e "/!--HISTORY_DEFAULT_BASENAME--/a HISTORY_DEFAULT_BASENAME = \"<member>/hist.d${dfmt}_$(datetime_scale $time)\"," \
               -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
-              -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"log/scale.${name_m[$m]}.d${dfmt}.monitor_${time}\"," \
+              -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"log/scale.<member>.d${dfmt}.monitor_${time}\"," \
               -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\"," \
               -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"latlon_domain_catalogue.d${dfmt}.txt\"," \
-              -e "/!--DOMAIN_CATALOGUE_OUTPUT--/a DOMAIN_CATALOGUE_OUTPUT = ${DOMAIN_CATALOGUE_OUTPUT}," \
+              -e "/!--DOMAIN_CATALOGUE_OUTPUT--/a DOMAIN_CATALOGUE_OUTPUT = .true.," \
               -e "/!--ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/PARAG.29\"," \
               -e "/!--ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/PARAPC.29\"," \
               -e "/!--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/VARDATA.RM29\"," \
@@ -874,7 +885,8 @@ while ((time <= ETIME)); do
               -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${TMPROOT_CONSTDB}/dat/rad/MIPAS\"," \
               -e "/!--TIME_END_RESTART_OUT--/a TIME_END_RESTART_OUT = .false.," \
               -e "/!--RESTART_OUT_ADDITIONAL_COPIES--/a RESTART_OUT_ADDITIONAL_COPIES = ${RESTART_OUT_ADDITIONAL_COPIES}," \
-              -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}")"
+              -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}" \
+              -e "/!--RESTART_OUT_ADDITIONAL_EFF_MEMBER--/a RESTART_OUT_ADDITIONAL_EFF_MEMBER = ${RESTART_OUT_ADDITIONAL_EFF_MEMBER}")"
       if ((d == 1)); then
         conf="$(echo "$conf" | \
             sed -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${mem_bdy}/bdy_$(datetime_scale $time)\"," \
@@ -895,10 +907,8 @@ while ((time <= ETIME)); do
           fi
         fi
       fi
-      mkdir -p $CONFIG_DIR/${name_m[$m]}
-      conf_file="${name_m[$m]}/run.d${dfmt}_${time}.conf"
       echo "  $conf_file"
-      echo "$conf" > $CONFIG_DIR/${conf_file}
+      echo "$conf" >> $CONFIG_DIR/${conf_file}
 
       if [ -e "$SCRP_DIR/config.nml.scale_user" ]; then
         conf="$(cat $SCRP_DIR/config.nml.scale_user)"
@@ -927,7 +937,7 @@ while ((time <= ETIME)); do
         fi
       fi
     done # [ d in $(seq $DOMNUM) ]
-  done # [ m in $(seq $mtot) ]
+###  done # [ m in $(seq $mtot) ]
 
   #-----------------------------------------------------------------------------
   # letkf

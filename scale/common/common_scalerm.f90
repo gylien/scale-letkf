@@ -25,6 +25,10 @@ module common_scalerm
   implicit none
   public
 
+  integer, save                :: scalerm_mem = -1
+  character(len=memflen), save :: scalerm_memf = '????'
+  logical, save                :: scalerm_run = .false.
+
 contains
 
 !-------------------------------------------------------------------------------
@@ -39,7 +43,9 @@ subroutine scalerm_setup(execname)
     IO_FID_CONF, &
     IO_FID_LOG, &
     IO_L, &
-    H_LONG
+    H_LONG, &
+    IO_ARG_getfname, &
+    IO_filename_replace_setup
   use scale_prof, only: &
     PROF_setup, &
     PROF_setprefx, &
@@ -207,9 +213,9 @@ subroutine scalerm_setup(execname)
   integer :: intercomm_child
   character(len=H_LONG) :: confname_domains(PRC_DOMAIN_nlim)
   character(len=H_LONG) :: confname_mydom
-  character(len=H_LONG) :: confname
 
-  integer :: color, key, it, its, ite, im, idom, ierr
+  integer :: color, key, idom, ierr
+  character(len=2) :: fmttmp
 
   integer :: rankidx(2)
   integer :: HIST_item_limit    ! dummy
@@ -277,8 +283,12 @@ subroutine scalerm_setup(execname)
   !-----------------------------------------------------------------------------
 
   do idom = 1, NUM_DOMAIN
-    confname_domains(idom) = trim(CONF_FILES)
-    call filename_replace_dom(confname_domains(idom), idom)
+    if (idom == 1) then
+      confname_domains(idom) = IO_ARG_getfname( is_master=.true. )
+    else
+      confname_domains(idom) = trim(CONF_FILES)
+      call filename_replace_dom(confname_domains(idom), idom)
+    end if
   end do
 
   !--- split for nesting
@@ -311,72 +321,73 @@ subroutine scalerm_setup(execname)
   end if
 #endif
 
-  ! Setup standard I/O and read LETKF namelists
+  ! Setup standard I/O
   !-----------------------------------------------------------------------------
 
   if (execname_ == 'SCALERM') then
-
     if (MEMBER_ITER == 0) then
-      its = 1
-      ite = nitmax
-    else
-      its = MEMBER_ITER
-      ite = MEMBER_ITER
+      write (6, '(A)') '[Warning] Currently this code can only run a single member iteration; reset MEMBER_ITER to 1!'
+      MEMBER_ITER = 1
     end if
 
-    do it = its, ite
-      im = myrank_to_mem(it)
-      if (im >= 1 .and. im <= MEMBER_RUN) then
-        confname = confname_mydom
-        if (CONF_FILES_SEQNUM) then
-          call filename_replace_mem(confname, im)
-        else
-          if (im <= MEMBER) then
-            call filename_replace_mem(confname, im)
-          else if (im == MEMBER+1) then
-            call filename_replace_mem(confname, memf_mean)
-          else if (im == MEMBER+2) then
-            call filename_replace_mem(confname, memf_mdet)
-          end if
+    if (myrank_to_mem(MEMBER_ITER) >= 1 .and. myrank_to_mem(MEMBER_ITER) <= MEMBER_RUN) then
+      scalerm_mem = myrank_to_mem(MEMBER_ITER)
+      scalerm_run = .true.
+      if (CONF_FILES_SEQNUM) then
+        write (fmttmp, '(I2)') memflen
+        write (scalerm_memf, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') scalerm_mem
+      else
+        if (scalerm_mem <= MEMBER) then
+          write (fmttmp, '(I2)') memflen
+          write (scalerm_memf, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') scalerm_mem
+        else if (scalerm_mem == MEMBER+1) then
+          scalerm_memf = memf_mean
+        else if (scalerm_mem == MEMBER+2) then
+          scalerm_memf = memf_mdet
         end if
-        write (6,'(A,I6.6,2A)') 'MYRANK ', myrank, ' is running a model with configuration file: ', trim(confname)
       end if
-    end do ! [ it = its, ite ]
-
-    ! setup standard I/O
-    call IO_setup( modelname, .true., trim(confname) )
-  else
-    if (mydom >= 2) then ! In d01, keep using the original launcher config file; skip re-opening config files here
-      ! setup standard I/O (for inner domains)
-      call IO_setup( modelname, .true., confname_mydom )
-
-!      call read_nml_log
-!      call read_nml_model
-!      call read_nml_ensemble
-!      call read_nml_process
+      call IO_filename_replace_setup(memf_notation, scalerm_memf)
+    else
+      return
     end if
+  end if ! [ execname_ == 'SCALERM' ]
 
-    select case (execname_)
-    case ('LETKF  ')
-      call read_nml_obs_error
-      call read_nml_obsope
-      call read_nml_letkf
-      call read_nml_letkf_obs
-      call read_nml_letkf_var_local
-      call read_nml_letkf_monitor
-      call read_nml_letkf_radar
-      call read_nml_letkf_h08
-    case ('OBSOPE ', 'OBSMAKE')
-      call read_nml_obs_error
-      call read_nml_obsope
-      call read_nml_letkf_radar
-      call read_nml_letkf_h08
-    case ('OBSSIM ')
-      call read_nml_obssim
-      call read_nml_letkf_radar
-      call read_nml_letkf_h08
-    end select
+  ! Re-open config files to use new IO_LOG_BASENAME
+  ! setup standard I/O
+  call IO_setup( modelname, .true., confname_mydom )
+
+!  call read_nml_log
+!  call read_nml_model
+!  call read_nml_ensemble
+!  call read_nml_process
+
+  if (execname_ == 'SCALERM') then
+    write (6,'(A,I6.6,2A)') 'MYRANK ', myrank, ' is running a model with configuration file: ', trim(confname_mydom)
   end if
+
+  ! Read LETKF namelists
+  !-----------------------------------------------------------------------------
+
+  select case (execname_)
+  case ('LETKF  ')
+    call read_nml_obs_error
+    call read_nml_obsope
+    call read_nml_letkf
+    call read_nml_letkf_obs
+    call read_nml_letkf_var_local
+    call read_nml_letkf_monitor
+    call read_nml_letkf_radar
+    call read_nml_letkf_h08
+  case ('OBSOPE ', 'OBSMAKE')
+    call read_nml_obs_error
+    call read_nml_obsope
+    call read_nml_letkf_radar
+    call read_nml_letkf_h08
+  case ('OBSSIM ')
+    call read_nml_obssim
+    call read_nml_letkf_radar
+    call read_nml_letkf_h08
+  end select
 
   !-----------------------------------------------------------------------------
 
@@ -516,7 +527,7 @@ subroutine scalerm_setup(execname)
 
   ! setup grid coordinates (real world)
   if (execname_ == 'SCALERM') then
-    call REAL_setup
+    call REAL_setup( catalogue_output = PRC_UNIVERSAL_IsMaster )
   else
 !   call REAL_setup -->
       ! setup map projection
@@ -532,7 +543,7 @@ subroutine scalerm_setup(execname)
     call INTERP_setup
 
     ! setup restart
-    call ADMIN_restart_setup
+    call ADMIN_restart_setup( member = scalerm_mem )
 
     ! setup time
     call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
