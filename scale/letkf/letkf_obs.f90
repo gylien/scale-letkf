@@ -488,7 +488,7 @@ SUBROUTINE set_letkf_obs
       obsda%ensval(i,n) = obsda%ensval(i,n) - obsda%val(n) ! Hdx
     END DO
     obsda%val(n) = obs(iof)%dat(iidx) - obsda%val(n) ! y-Hx
-    if (DET_RUN) then
+    if (ENS_WITH_MDET) then
       obsda%ensval(mmdetobs,n) = obs(iof)%dat(iidx) - obsda%ensval(mmdetobs,n) ! y-Hx for deterministic run
     end if
 

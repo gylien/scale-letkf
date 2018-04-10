@@ -94,7 +94,7 @@ PROGRAM letkf
 
   call set_common_conf(nprocs)
 
-  if (DET_RUN) then
+  if (ENS_WITH_MDET) then
     call set_mem_node_proc(MEMBER+2)
   else
     call set_mem_node_proc(MEMBER+1)
@@ -165,7 +165,7 @@ PROGRAM letkf
     !
     call read_ens_mpi(gues3d, gues2d)
 
-    if (DET_RUN .and. mmdetin /= mmdet) then
+    if (ENS_WITH_MDET .and. mmdetin /= mmdet) then
       gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
       gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
     end if

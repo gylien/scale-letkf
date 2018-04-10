@@ -10,7 +10,8 @@ module common_scalerm
   use common_mpi
   use common_nml
   use common_scale, only: &
-    modelname
+    modelname, &
+    confname
   use common_mpi_scale, only: &
     mpi_timer, &
     nprocs_m, &
@@ -213,6 +214,8 @@ subroutine scalerm_setup(execname)
   integer :: intercomm_child
   character(len=H_LONG) :: confname_domains(PRC_DOMAIN_nlim)
   character(len=H_LONG) :: confname_mydom
+  character(len=H_LONG) :: confname_new
+  character(len=H_LONG) :: confname_new2
 
   integer :: color, key, idom, ierr
   character(len=2) :: fmttmp
@@ -282,13 +285,11 @@ subroutine scalerm_setup(execname)
   ! Communicator for one domain
   !-----------------------------------------------------------------------------
 
+  ! Input fake confname, unique for each domains, to PRC_MPIsplit,
+  ! to easily determine 'my domain' later
+  confname_domains(1:NUM_DOMAIN) = domf_notation
   do idom = 1, NUM_DOMAIN
-    if (idom == 1) then
-      confname_domains(idom) = IO_ARG_getfname( is_master=.true. )
-    else
-      confname_domains(idom) = trim(CONF_FILES)
-      call filename_replace_dom(confname_domains(idom), idom)
-    end if
+    call filename_replace_dom(confname_domains(idom), idom)
   end do
 
   !--- split for nesting
@@ -307,6 +308,7 @@ subroutine scalerm_setup(execname)
 
   MPI_COMM_d = local_comm
 
+  ! Determine my domain
   do idom = 1, NUM_DOMAIN
     if (trim(confname_mydom) == trim(confname_domains(idom))) then
       mydom = idom
@@ -321,6 +323,14 @@ subroutine scalerm_setup(execname)
   end if
 #endif
 
+  confname_new = confname
+
+  ! Set real confname for my domain
+  if (trim(CONF_FILES) /= '') then
+    confname_new = trim(CONF_FILES)
+    call filename_replace_dom(confname_new, mydom)
+  end if
+
   ! Setup standard I/O
   !-----------------------------------------------------------------------------
 
@@ -331,39 +341,55 @@ subroutine scalerm_setup(execname)
     end if
 
     if (myrank_to_mem(MEMBER_ITER) >= 1 .and. myrank_to_mem(MEMBER_ITER) <= MEMBER_RUN) then
-      scalerm_mem = myrank_to_mem(MEMBER_ITER)
       scalerm_run = .true.
-      if (CONF_FILES_SEQNUM) then
+      if (MEMBER_SEQ(1) == -1) then
+        scalerm_mem = myrank_to_mem(MEMBER_ITER)
+      else
+        scalerm_mem = MEMBER_SEQ(myrank_to_mem(MEMBER_ITER))
+      end if
+
+      if (scalerm_mem >= 1 .and. scalerm_mem <= MEMBER) then
         write (fmttmp, '(I2)') memflen
         write (scalerm_memf, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') scalerm_mem
+      else if (scalerm_mem == MEMBER+1 .and. ENS_WITH_MEAN) then
+        scalerm_memf = memf_mean
+      else if (scalerm_mem == MEMBER+2 .and. ENS_WITH_MDET) then
+        scalerm_memf = memf_mdet
       else
-        if (scalerm_mem <= MEMBER) then
-          write (fmttmp, '(I2)') memflen
-          write (scalerm_memf, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') scalerm_mem
-        else if (scalerm_mem == MEMBER+1) then
-          scalerm_memf = memf_mean
-        else if (scalerm_mem == MEMBER+2) then
-          scalerm_memf = memf_mdet
+        write (6, '(A,I7)') '[Error] Invalid member number for this rank:', scalerm_mem
+        write (6, '(A,I7)') '        MEMBER =', MEMBER
+        stop 1
+      end if
+
+      call IO_filename_replace_setup(memf_notation, scalerm_memf)
+
+      if (trim(CONF_FILES) /= '') then
+        confname_new2 = confname_new
+        call filename_replace_mem(confname_new2, scalerm_memf)
+        if (mydom == 1) then
+          if (trim(confname_new2) /= trim(confname_new)) then ! In domain #1, reset config file only when
+            confname_new = confname_new2                      ! <member> keyword exists in CONF_FILES
+          else
+            confname_new = confname
+          end if
+        else
+          confname_new = confname_new2 ! In other domains, always reset config file as long as CONF_FILES is set
         end if
       end if
-      call IO_filename_replace_setup(memf_notation, scalerm_memf)
     else
       return
     end if
   end if ! [ execname_ == 'SCALERM' ]
 
-  ! Re-open config files to use new IO_LOG_BASENAME
-  ! setup standard I/O
-  call IO_setup( modelname, .true., confname_mydom )
+  ! setup standard I/O: Re-open the new config file; change of IO_LOG_BASENAME is effective in this step
+  confname = confname_new
+  call IO_setup( modelname, .true., confname )
+  write (6, '(A,I6.6,2A)') '[Info] MYRANK = ', myrank, ' is using configuration file: ', trim(confname)
 
 !  call read_nml_log
 !  call read_nml_model
 !  call read_nml_ensemble
 !  call read_nml_process
-
-  if (execname_ == 'SCALERM') then
-    write (6,'(A,I6.6,2A)') 'MYRANK ', myrank, ' is running a model with configuration file: ', trim(confname_mydom)
-  end if
 
   ! Read LETKF namelists
   !-----------------------------------------------------------------------------
@@ -683,7 +709,9 @@ subroutine scalerm_finalize(execname)
   end if
 
   if (myrank_use) then
-    call MPI_COMM_FREE(MPI_COMM_d, ierr)
+    if (NUM_DOMAIN <= 1) then ! When NUM_DOMAIN >= 2, 'PRC_MPIfinish' in SCALE library will free the communicator
+      call MPI_COMM_FREE(MPI_COMM_d, ierr)
+    end if
     call MPI_COMM_FREE(MPI_COMM_a, ierr)
     call MPI_COMM_FREE(MPI_COMM_u, ierr)
   end if

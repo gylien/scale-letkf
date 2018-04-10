@@ -140,7 +140,7 @@ program scale_rm_ens
 
   call set_common_conf(universal_nprocs)
 
-  if (DET_RUN) then
+  if (ENS_WITH_MDET) then
     call set_mem_node_proc(MEMBER+2)
   else
     call set_mem_node_proc(MEMBER+1)
@@ -215,7 +215,7 @@ program scale_rm_ens
 
     if( ATMOS_do ) call ATMOS_driver_finalize
 
-  end if ! [ myrank_use ]
+  end if ! [ myrank_use .and. scalerm_run ]
 
   call scalerm_finalize('SCALERM')
 

@@ -479,7 +479,7 @@ mem_loop: DO it = 1, nitmax
 
     msprd_rank_e = mmean_rank_e
 
-    if (DET_RUN) then
+    if (ENS_WITH_MDET) then
       nensobs = MEMBER+1
       mmdetobs = MEMBER+1
     else
@@ -489,9 +489,9 @@ mem_loop: DO it = 1, nitmax
 
   ! settings related to mdet (only valid when mem >= MEMBER+2)
   !----------------------------------------------------------------
-  if (mem >= MEMBER+2 .and. DET_RUN) then
+  if (mem >= MEMBER+2 .and. ENS_WITH_MDET) then
     mmdet = MEMBER+2
-    if (DET_RUN_CYCLED) then
+    if (MDET_CYCLED) then
       mmdetin = mmdet
     else
       mmdetin = mmean

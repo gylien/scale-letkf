@@ -775,58 +775,55 @@ while ((time <= ETIME)); do
   fi # [ BDY_FORMAT != 0 ]
 
   #-----------------------------------------------------------------------------
-  # scale (launcher)
+  # scale
   #-----------------------------------------------------------------------------
 
-  config_file_scale_launcher cycle scale-rm_ens "<member>/run" $mtot
+  config_file_scale_launcher cycle scale-rm_ens "scale-rm_ens" $mtot
 
   #-----------------------------------------------------------------------------
-  # scale (each member)
-  #-----------------------------------------------------------------------------
 
-###  for m in $(seq $mtot); do
-    if ((BDY_ENS == 1)); then
-      mem_bdy='<member>'
-    else
-      mem_bdy='mean'
+  if ((BDY_ENS == 1)); then
+    mem_bdy='<member>'
+  else
+    mem_bdy='mean'
+  fi
+
+  for d in $(seq $DOMNUM); do
+    dfmt=$(printf $DOMAIN_FMT $d)
+
+    ONLINE_IAM_PARENT=".false."
+    if ((d < DOMNUM)); then
+      ONLINE_IAM_PARENT=".true."
     fi
-
-    for d in $(seq $DOMNUM); do
-      dfmt=$(printf $DOMAIN_FMT $d)
-
-      ONLINE_IAM_PARENT=".false."
-      if ((d < DOMNUM)); then
-        ONLINE_IAM_PARENT=".true."
-      fi
-      ONLINE_IAM_DAUGHTER=".false."
-      if ((d > 1)); then
-        ONLINE_IAM_DAUGHTER=".true."
-      fi
-      if ((loop == 1 && MAKEINIT == 1)); then
-        RESTART_IN_BASENAME="<member>/init.d${dfmt}"
-      else
-        RESTART_IN_BASENAME="<member>/anal.d${dfmt}"
-      fi
-      RESTART_OUT_ADDITIONAL_COPIES=0
-      RESTART_OUT_ADDITIONAL_BASENAME=
-      RESTART_OUT_ADDITIONAL_EFF_MEMBER=
-      if ((OUT_OPT <= 3)); then
-        RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
-        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"<member>/gues.d${dfmt}\", "
-        RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}0, "
-      else
+    ONLINE_IAM_DAUGHTER=".false."
+    if ((d > 1)); then
+      ONLINE_IAM_DAUGHTER=".true."
+    fi
+    if ((loop == 1 && MAKEINIT == 1)); then
+      RESTART_IN_BASENAME="<member>/init.d${dfmt}"
+    else
+      RESTART_IN_BASENAME="<member>/anal.d${dfmt}"
+    fi
+    RESTART_OUT_ADDITIONAL_COPIES=0
+    RESTART_OUT_ADDITIONAL_BASENAME=
+    RESTART_OUT_ADDITIONAL_EFF_MEMBER=
+    if ((OUT_OPT <= 3)); then
+      RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"<member>/gues.d${dfmt}\", "
+      RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}0, "
+    else
 #      elif ((OUT_OPT <= 6)); then
-        RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
-        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"mean/gues.d${dfmt}\", "
-        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"mdet/gues.d${dfmt}\", "
-        RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, ${mmdet}, "
-      fi
-      if ((SPRD_OUT == 1)); then
-        RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
-        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"sprd/anal.d${dfmt}\", "
-        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"sprd/gues.d${dfmt}\", "
-        RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, ${mmean}, "
-      fi
+      RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"mean/gues.d${dfmt}\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"mdet/gues.d${dfmt}\", "
+      RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, ${mmdet}, "
+    fi
+    if ((SPRD_OUT == 1)); then
+      RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"sprd/anal.d${dfmt}\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"sprd/gues.d${dfmt}\", "
+      RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, ${mmean}, "
+    fi
 #      if ((RTPS_INFL_OUT == 1)); then
 #        RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
 #        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"rtpsinfl.d${dfmt}\", "
@@ -838,106 +835,105 @@ while ((time <= ETIME)); do
 #        RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, "
 #      fi
 
-      if ((d == 1)); then
-        conf_file_src=$SCRP_DIR/config.nml.scale
-        if ((nitmax == 1)); then
-          conf_file="scale-rm_ens_${time}.conf"
-        else
-          conf_file="scale-rm_ens_${time}_${it}.conf"
-        fi
+    if ((d == 1)); then
+      conf_file_src=$SCRP_DIR/config.nml.scale
+      if ((nitmax == 1)); then
+        conf_file="scale-rm_ens_${time}.conf"
       else
-        conf_file_src=$SCRP_DIR/config.nml.scale.d$d
-        if ((nitmax == 1)); then
-          conf_file="scale-rm_ens.d${dfmt}_${time}.conf"
-        else
-          conf_file="scale-rm_ens.d${dfmt}_${time}_${it}.conf"
-        fi
+        conf_file="scale-rm_ens_${time}_${it}.conf"
       fi
+    else
+      conf_file_src=$SCRP_DIR/config.nml.scale.d$d
+      if ((nitmax == 1)); then
+        conf_file="scale-rm_ens.d${dfmt}_${time}.conf"
+      else
+        conf_file="scale-rm_ens.d${dfmt}_${time}_${it}.conf"
+      fi
+    fi
 
-      conf="$(cat $conf_file_src | \
-          sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale.<member>.d${dfmt}.LOG_${time}\"," \
-              -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
-              -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
-              -e "/!--TIME_DURATION--/a TIME_DURATION = ${CYCLEFLEN}.D0," \
-              -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${LCYCLE}.D0," \
-              -e "/!--TIME_DT_OCEAN_RESTART--/a TIME_DT_OCEAN_RESTART = ${LCYCLE}.D0," \
-              -e "/!--TIME_DT_LAND_RESTART--/a TIME_DT_LAND_RESTART = ${LCYCLE}.D0," \
-              -e "/!--TIME_DT_URBAN_RESTART--/a TIME_DT_URBAN_RESTART = ${LCYCLE}.D0," \
-              -e "/!--ONLINE_DOMAIN_NUM--/a ONLINE_DOMAIN_NUM = ${d}," \
-              -e "/!--ONLINE_IAM_PARENT--/a ONLINE_IAM_PARENT = ${ONLINE_IAM_PARENT}," \
-              -e "/!--ONLINE_IAM_DAUGHTER--/a ONLINE_IAM_DAUGHTER = ${ONLINE_IAM_DAUGHTER}," \
-              -e "/!--RESTART_IN_BASENAME--/a RESTART_IN_BASENAME = \"${RESTART_IN_BASENAME}\"," \
-              -e "/!--RESTART_IN_POSTFIX_TIMELABEL--/a RESTART_IN_POSTFIX_TIMELABEL = .true.," \
-              -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = .true.," \
-              -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"<member>/anal.d${dfmt}\"," \
-              -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo.d${dfmt}\"," \
-              -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse.d${dfmt}\"," \
-              -e "/!--HISTORY_DEFAULT_BASENAME--/a HISTORY_DEFAULT_BASENAME = \"<member>/hist.d${dfmt}_$(datetime_scale $time)\"," \
-              -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
-              -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"log/scale.<member>.d${dfmt}.monitor_${time}\"," \
-              -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\"," \
-              -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"latlon_domain_catalogue.d${dfmt}.txt\"," \
-              -e "/!--DOMAIN_CATALOGUE_OUTPUT--/a DOMAIN_CATALOGUE_OUTPUT = .true.," \
-              -e "/!--ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/PARAG.29\"," \
-              -e "/!--ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/PARAPC.29\"," \
-              -e "/!--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/VARDATA.RM29\"," \
-              -e "/!--ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME--/a ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/cira.nc\"," \
-              -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${TMPROOT_CONSTDB}/dat/rad/MIPAS\"," \
-              -e "/!--TIME_END_RESTART_OUT--/a TIME_END_RESTART_OUT = .false.," \
-              -e "/!--RESTART_OUT_ADDITIONAL_COPIES--/a RESTART_OUT_ADDITIONAL_COPIES = ${RESTART_OUT_ADDITIONAL_COPIES}," \
-              -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}" \
-              -e "/!--RESTART_OUT_ADDITIONAL_EFF_MEMBER--/a RESTART_OUT_ADDITIONAL_EFF_MEMBER = ${RESTART_OUT_ADDITIONAL_EFF_MEMBER}")"
-      if ((d == 1)); then
-        conf="$(echo "$conf" | \
-            sed -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${mem_bdy}/bdy_$(datetime_scale $time)\"," \
-                -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${bdy_start_time:0:4}, ${bdy_start_time:4:2}, ${bdy_start_time:6:2}, ${bdy_start_time:8:2}, ${bdy_start_time:10:2}, ${bdy_start_time:12:2}," \
-                -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0,")"
-      fi
-      if [ ! -e "$SCRP_DIR/config.nml.scale_user" ]; then
-        if ((OCEAN_INPUT == 1)); then
-          if ((OCEAN_FORMAT == 99)); then
-            conf="$(echo "$conf" | \
-                sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
-          fi
-        fi
-        if ((LAND_INPUT == 1)); then
-          if ((LAND_FORMAT == 99)); then
-            conf="$(echo "$conf" | \
-                sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
-          fi
+    conf="$(cat $conf_file_src | \
+        sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale.<member>.d${dfmt}.LOG_${time}\"," \
+            -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+            -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
+            -e "/!--TIME_DURATION--/a TIME_DURATION = ${CYCLEFLEN}.D0," \
+            -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${LCYCLE}.D0," \
+            -e "/!--TIME_DT_OCEAN_RESTART--/a TIME_DT_OCEAN_RESTART = ${LCYCLE}.D0," \
+            -e "/!--TIME_DT_LAND_RESTART--/a TIME_DT_LAND_RESTART = ${LCYCLE}.D0," \
+            -e "/!--TIME_DT_URBAN_RESTART--/a TIME_DT_URBAN_RESTART = ${LCYCLE}.D0," \
+            -e "/!--ONLINE_DOMAIN_NUM--/a ONLINE_DOMAIN_NUM = ${d}," \
+            -e "/!--ONLINE_IAM_PARENT--/a ONLINE_IAM_PARENT = ${ONLINE_IAM_PARENT}," \
+            -e "/!--ONLINE_IAM_DAUGHTER--/a ONLINE_IAM_DAUGHTER = ${ONLINE_IAM_DAUGHTER}," \
+            -e "/!--RESTART_IN_BASENAME--/a RESTART_IN_BASENAME = \"${RESTART_IN_BASENAME}\"," \
+            -e "/!--RESTART_IN_POSTFIX_TIMELABEL--/a RESTART_IN_POSTFIX_TIMELABEL = .true.," \
+            -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = .true.," \
+            -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"<member>/anal.d${dfmt}\"," \
+            -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo.d${dfmt}\"," \
+            -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse.d${dfmt}\"," \
+            -e "/!--HISTORY_DEFAULT_BASENAME--/a HISTORY_DEFAULT_BASENAME = \"<member>/hist.d${dfmt}_$(datetime_scale $time)\"," \
+            -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
+            -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"log/scale.<member>.d${dfmt}.monitor_${time}\"," \
+            -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\"," \
+            -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"latlon_domain_catalogue.d${dfmt}.txt\"," \
+            -e "/!--DOMAIN_CATALOGUE_OUTPUT--/a DOMAIN_CATALOGUE_OUTPUT = .true.," \
+            -e "/!--ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/PARAG.29\"," \
+            -e "/!--ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/PARAPC.29\"," \
+            -e "/!--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/VARDATA.RM29\"," \
+            -e "/!--ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME--/a ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/rad/cira.nc\"," \
+            -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${TMPROOT_CONSTDB}/dat/rad/MIPAS\"," \
+            -e "/!--TIME_END_RESTART_OUT--/a TIME_END_RESTART_OUT = .false.," \
+            -e "/!--RESTART_OUT_ADDITIONAL_COPIES--/a RESTART_OUT_ADDITIONAL_COPIES = ${RESTART_OUT_ADDITIONAL_COPIES}," \
+            -e "/!--RESTART_OUT_ADDITIONAL_BASENAME--/a RESTART_OUT_ADDITIONAL_BASENAME = ${RESTART_OUT_ADDITIONAL_BASENAME}" \
+            -e "/!--RESTART_OUT_ADDITIONAL_EFF_MEMBER--/a RESTART_OUT_ADDITIONAL_EFF_MEMBER = ${RESTART_OUT_ADDITIONAL_EFF_MEMBER}")"
+    if ((d == 1)); then
+      conf="$(echo "$conf" | \
+          sed -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${mem_bdy}/bdy_$(datetime_scale $time)\"," \
+              -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${bdy_start_time:0:4}, ${bdy_start_time:4:2}, ${bdy_start_time:6:2}, ${bdy_start_time:8:2}, ${bdy_start_time:10:2}, ${bdy_start_time:12:2}," \
+              -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0,")"
+    fi
+    if [ ! -e "$SCRP_DIR/config.nml.scale_user" ]; then
+      if ((OCEAN_INPUT == 1)); then
+        if ((OCEAN_FORMAT == 99)); then
+          conf="$(echo "$conf" | \
+              sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
         fi
       fi
-      echo "  $conf_file"
+      if ((LAND_INPUT == 1)); then
+        if ((LAND_FORMAT == 99)); then
+          conf="$(echo "$conf" | \
+              sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
+        fi
+      fi
+    fi
+    echo "  $conf_file"
+    echo "$conf" >> $CONFIG_DIR/${conf_file}
+
+    if [ -e "$SCRP_DIR/config.nml.scale_user" ]; then
+      conf="$(cat $SCRP_DIR/config.nml.scale_user)"
+      if ((OCEAN_INPUT == 1)); then
+        if ((OCEAN_FORMAT == 99)); then
+          conf="$(echo "$conf" | \
+              sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
+        fi
+      fi
+      if ((LAND_INPUT == 1)); then
+        if ((LAND_FORMAT == 99)); then
+          conf="$(echo "$conf" | \
+              sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
+        fi
+      fi
       echo "$conf" >> $CONFIG_DIR/${conf_file}
+    fi
 
-      if [ -e "$SCRP_DIR/config.nml.scale_user" ]; then
-        conf="$(cat $SCRP_DIR/config.nml.scale_user)"
-        if ((OCEAN_INPUT == 1)); then
-          if ((OCEAN_FORMAT == 99)); then
-            conf="$(echo "$conf" | \
-                sed -e "/!--OCEAN_RESTART_IN_BASENAME--/a OCEAN_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
-          fi
-        fi
-        if ((LAND_INPUT == 1)); then
-          if ((LAND_FORMAT == 99)); then
-            conf="$(echo "$conf" | \
-                sed -e "/!--LAND_RESTART_IN_BASENAME--/a LAND_RESTART_IN_BASENAME = \"${mem_bdy}/init.d${dfmt}_$(datetime_scale $time)\",")"
-          fi
-        fi
-        echo "$conf" >> $CONFIG_DIR/${conf_file}
+    if ((stage_config == 1)); then
+      if ((DISK_MODE == 3)); then
+        for q in $(seq $mem_np_); do
+          echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      else
+        echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
       fi
-
-      if ((stage_config == 1)); then
-        if ((DISK_MODE == 3)); then
-          for q in $(seq $mem_np_); do
-            echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-          done
-        else
-          echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
-        fi
-      fi
-    done # [ d in $(seq $DOMNUM) ]
-###  done # [ m in $(seq $mtot) ]
+    fi
+  done # [ d in $(seq $DOMNUM) ]
 
   #-----------------------------------------------------------------------------
   # letkf

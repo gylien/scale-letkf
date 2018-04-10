@@ -110,7 +110,7 @@ program scaleles_init_ens
 !-----------------------------------------------------------------------
 
   call set_common_conf(universal_nprocs)
-  if (DET_RUN) then
+  if (ENS_WITH_MDET) then
     call set_mem_node_proc(MEMBER+2)
   else
     call set_mem_node_proc(MEMBER+1)
@@ -169,16 +169,12 @@ program scaleles_init_ens
       im = myrank_to_mem(it)
       if (im >= 1 .and. im <= MEMBER_RUN) then
         confname = confname_mydom
-        if (CONF_FILES_SEQNUM) then
+        if (im <= MEMBER) then
           call filename_replace_mem(confname, im)
-        else
-          if (im <= MEMBER) then
-            call filename_replace_mem(confname, im)
-          else if (im == MEMBER+1) then
-            call filename_replace_mem(confname, memf_mean)
-          else if (im == MEMBER+2) then
-            call filename_replace_mem(confname, memf_mdet)
-          end if
+        else if (im == MEMBER+1) then
+          call filename_replace_mem(confname, memf_mean)
+        else if (im == MEMBER+2) then
+          call filename_replace_mem(confname, memf_mdet)
         end if
         WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', trim(confname)
 

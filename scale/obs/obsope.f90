@@ -69,7 +69,7 @@ PROGRAM obsope
 
   call set_common_conf(nprocs)
 
-  if (DET_RUN) then
+  if (ENS_WITH_MDET) then
     call set_mem_node_proc(MEMBER+2)
   else
     call set_mem_node_proc(MEMBER+1)
