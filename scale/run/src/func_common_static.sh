@@ -182,9 +182,14 @@ local it
 local conf_file
 
 if [ "$JOBTYPE" = 'cycle' ]; then
-  CONF_FILES_SEQNUM='.false.'
+  ENS_WITH_MEAN_TF='.true.'
+  ENS_WITH_MDET_TF='.false.'
+  if ((DET_RUN == 1)); then
+    ENS_WITH_MDET_TF='.true.'
+  fi
 else
-  CONF_FILES_SEQNUM='.true.'
+  ENS_WITH_MEAN_TF='.false.'
+  ENS_WITH_MDET_TF='.false.'
 fi
 
 for it in $(seq $nitmax); do
@@ -196,10 +201,12 @@ for it in $(seq $nitmax); do
   echo "  $conf_file"
   cat $SCRP_DIR/config.nml.ensmodel | \
       sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
+          -e "/!--ENS_WITH_MEAN--/a ENS_WITH_MEAN = $ENS_WITH_MEAN_TF," \
+          -e "/!--ENS_WITH_MDET--/a ENS_WITH_MDET = $ENS_WITH_MDET_TF," \
+          -e "/!--DET_RUN--/a DET_RUN = $ENS_WITH_MDET_TF," \
           -e "/!--MEMBER_RUN--/a MEMBER_RUN = $MEMBER_RUN," \
           -e "/!--MEMBER_ITER--/a MEMBER_ITER = $it," \
           -e "/!--CONF_FILES--/a CONF_FILES = \"${CONF_NAME}.d<domain>_${time}.conf\"," \
-          -e "/!--CONF_FILES_SEQNUM--/a CONF_FILES_SEQNUM = $CONF_FILES_SEQNUM," \
           -e "/!--PPN--/a PPN = $PPN_APPAR," \
           -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
           -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \

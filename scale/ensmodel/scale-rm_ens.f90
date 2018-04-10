@@ -140,11 +140,8 @@ program scale_rm_ens
 
   call set_common_conf(universal_nprocs)
 
-  if (ENS_WITH_MDET) then
-    call set_mem_node_proc(MEMBER+2)
-  else
-    call set_mem_node_proc(MEMBER+1)
-  end if
+  call set_mem_node_proc(MEMBER_RUN)
+
   call scalerm_setup('SCALERM')
 
   call mpi_timer('INITIALIZE', 1, barrier=universal_comm)
@@ -200,11 +197,11 @@ program scale_rm_ens
 
     end do
 
+    call PROF_rapend('Main_Loop', 0)
+
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
-
-    call PROF_rapend('Main_Loop', 0)
 
     if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
     if( IO_L ) write(IO_FID_LOG,*)

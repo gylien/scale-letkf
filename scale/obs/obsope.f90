@@ -69,11 +69,8 @@ PROGRAM obsope
 
   call set_common_conf(nprocs)
 
-  if (ENS_WITH_MDET) then
-    call set_mem_node_proc(MEMBER+2)
-  else
-    call set_mem_node_proc(MEMBER+1)
-  end if
+  call set_mem_node_proc(MEMBER_RUN)
+
   call scalerm_setup('OBSOPE')
 
   if (myrank_use) then

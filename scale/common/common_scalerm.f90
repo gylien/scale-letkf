@@ -199,6 +199,15 @@ subroutine scalerm_setup(execname)
     USER_config, &
     USER_setup
 !    USER_step
+  use mod_convert, only: &
+    CONVERT_setup
+!    CONVERT
+  use mod_mktopo, only: &
+    MKTOPO_setup
+!    MKTOPO
+  use mod_mkinit, only: &
+    MKINIT_setup
+!    MKINIT
   implicit none
 
   character(len=*), intent(in), optional :: execname
@@ -327,14 +336,16 @@ subroutine scalerm_setup(execname)
 
   ! Set real confname for my domain
   if (trim(CONF_FILES) /= '') then
-    confname_new = trim(CONF_FILES)
-    call filename_replace_dom(confname_new, mydom)
+    if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP' .or. mydom >= 2) then
+      confname_new = trim(CONF_FILES)
+      call filename_replace_dom(confname_new, mydom)
+    end if
   end if
 
   ! Setup standard I/O
   !-----------------------------------------------------------------------------
 
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     if (MEMBER_ITER == 0) then
       write (6, '(A)') '[Warning] Currently this code can only run a single member iteration; reset MEMBER_ITER to 1!'
       MEMBER_ITER = 1
@@ -379,7 +390,7 @@ subroutine scalerm_setup(execname)
     else
       return
     end if
-  end if ! [ execname_ == 'SCALERM' ]
+  end if ! [ execname_ == 'SCALERM' .or. execname_ == 'RMPREP' ]
 
   ! setup standard I/O: Re-open the new config file; change of IO_LOG_BASENAME is effective in this step
   confname = confname_new
@@ -453,7 +464,7 @@ subroutine scalerm_setup(execname)
   !-----------------------------------------------------------------------------
 
   ! setup Log
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     call IO_LOG_setup( local_myrank, local_ismaster )
   else
     call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
@@ -468,7 +479,7 @@ subroutine scalerm_setup(execname)
   ! setup process
   call PRC_setup
 
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     ! setup PROF
     call PROF_setup
 
@@ -480,7 +491,7 @@ subroutine scalerm_setup(execname)
   ! setup constants
   call CONST_setup
 
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     ! setup calendar
     call CALENDAR_setup
 
@@ -494,16 +505,16 @@ subroutine scalerm_setup(execname)
 
 #ifdef PNETCDF
   call LAND_GRID_INDEX_setup
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     call LAND_GRID_setup
   end if
 
   call URBAN_GRID_INDEX_setup
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     call URBAN_GRID_setup
   end if
 #else
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     call LAND_GRID_INDEX_setup
     call LAND_GRID_setup
 
@@ -512,7 +523,7 @@ subroutine scalerm_setup(execname)
   end if
 #endif
 
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     ! setup submodel administrator
     call ATMOS_admin_setup
     call OCEAN_admin_setup
@@ -524,7 +535,7 @@ subroutine scalerm_setup(execname)
   ! setup tracer index
   call ATMOS_HYDROMETEOR_setup
 
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     call ATMOS_driver_config
     call USER_config
   else
@@ -543,7 +554,7 @@ subroutine scalerm_setup(execname)
   ! setup mpi communication
   call COMM_setup
 
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     ! setup topography
     call TOPO_setup
 
@@ -552,8 +563,8 @@ subroutine scalerm_setup(execname)
   end if
 
   ! setup grid coordinates (real world)
-  if (execname_ == 'SCALERM') then
-    call REAL_setup( catalogue_output = PRC_UNIVERSAL_IsMaster )
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+    call REAL_setup( catalogue_output = (myrank_to_mem(1) == 1) ) ! Only output catalogue file in the first member of this execution
   else
 !   call REAL_setup -->
       ! setup map projection
@@ -561,7 +572,7 @@ subroutine scalerm_setup(execname)
 !   <-- REAL_setup
   end if
 
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     ! setup grid transfer metrics (uses in ATMOS_dynamics)
     call GTRANS_setup
 
@@ -570,16 +581,22 @@ subroutine scalerm_setup(execname)
 
     ! setup restart
     call ADMIN_restart_setup( member = scalerm_mem )
+  end if
 
-    ! setup time
+  ! setup time
+  if (execname_ == 'SCALERM') then
     call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
+  else if (execname_ == 'RMPREP') then
+    call ADMIN_TIME_setup( setup_TimeIntegration = .false. )
+  end if
 
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     ! setup statistics
     call STAT_setup
   end if
 
   ! setup history I/O
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     call HIST_setup
   else
 !   call HIST_setup -->
@@ -611,7 +628,9 @@ subroutine scalerm_setup(execname)
 
     ! setup external in
     call EXTIN_setup( 'RM' )
+  end if
 
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     ! setup nesting grid
     call NEST_setup ( intercomm_parent, intercomm_child )
 
@@ -619,17 +638,23 @@ subroutine scalerm_setup(execname)
     call ATMOS_HYDROSTATIC_setup
     call ATMOS_THERMODYN_setup
     call ATMOS_SATURATION_setup
+  end if
 
+  if (execname_ == 'SCALERM') then
     call BULKFLUX_setup( sqrt(DX**2+DY**2) )
     call ROUGHNESS_setup
+  end if
 
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     ! setup variable container
     call ATMOS_vars_setup
     call OCEAN_vars_setup
     call LAND_vars_setup
     call URBAN_vars_setup
     call CPL_vars_setup
+  end if
 
+  if (execname_ == 'SCALERM') then
     ! setup submodel driver
     call ATMOS_driver_setup
     call OCEAN_driver_setup
@@ -637,7 +662,18 @@ subroutine scalerm_setup(execname)
     call URBAN_driver_setup
 
     call USER_setup
+  else if (execname_ == 'RMPREP') then
+    ! setup preprocess converter
+    call CONVERT_setup
 
+    ! setup mktopo
+    call MKTOPO_setup
+
+    ! setup mkinit
+    call MKINIT_setup
+  end if
+
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     call PROF_rapend('Initialize', 0)
   end if
 
@@ -691,9 +727,14 @@ subroutine scalerm_finalize(execname)
       call PROF_rapend  ('Monit', 2)
 
       call PROF_rapstart('File', 2)
+    end if
+
+    if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
       ! clean up resource allocated for I/O
       call FILEIO_cleanup
+    end if
 
+    if (execname_ == 'SCALERM') then
       call COMM_cleanup
     end if
   end if
@@ -704,7 +745,9 @@ subroutine scalerm_finalize(execname)
     call PROF_rapend  ('File', 2)
 
     call PROF_rapend  ('All', 1)
+  end if
 
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
     call PROF_rapreport
   end if
 

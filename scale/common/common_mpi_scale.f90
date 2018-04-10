@@ -463,12 +463,10 @@ mem_loop: DO it = 1, nitmax
     myrank_use = .true.
   end if
 
-  ! settings related to mean (only valid when mem >= MEMBER+1)
+  ! settings related to mean/mdet (only valid when ENS_WITH_MEAN/ENS_WITH_MDET = .true.)
   !----------------------------------------------------------------
-  if (mem >= MEMBER+1) then
-    nens = mem
+  if (ENS_WITH_MEAN) then
     mmean = MEMBER+1
-
     mmean_rank_e = mod(mmean-1, n_mem*n_mempn)
 #ifdef DEBUG
     if (mmean_rank_e /= rank_to_mem(1,mempe_to_rank(1,mmean)+1)-1) then
@@ -476,35 +474,32 @@ mem_loop: DO it = 1, nitmax
       stop
     end if
 #endif
-
     msprd_rank_e = mmean_rank_e
 
     if (ENS_WITH_MDET) then
+      nens = MEMBER+2
       nensobs = MEMBER+1
+
+      mmdet = MEMBER+2
+      mmdet_rank_e = mod(mmdet-1, n_mem*n_mempn)
+#ifdef DEBUG
+      if (mmdet_rank_e /= rank_to_mem(1,mempe_to_rank(1,mmdet)+1)-1) then
+        write (6, '(A)'), '[Error] XXXXXX wrong!!'
+        stop
+      end if
+#endif
+
       mmdetobs = MEMBER+1
+      if (MDET_CYCLED) then
+        mmdetin = mmdet
+      else
+        mmdetin = mmean
+      end if
     else
+      nens = MEMBER+1
       nensobs = MEMBER
     end if
-  end if
-
-  ! settings related to mdet (only valid when mem >= MEMBER+2)
-  !----------------------------------------------------------------
-  if (mem >= MEMBER+2 .and. ENS_WITH_MDET) then
-    mmdet = MEMBER+2
-    if (MDET_CYCLED) then
-      mmdetin = mmdet
-    else
-      mmdetin = mmean
-    end if
-
-    mmdet_rank_e = mod(mmdet-1, n_mem*n_mempn)
-#ifdef DEBUG
-    if (mmdet_rank_e /= rank_to_mem(1,mempe_to_rank(1,mmdet)+1)-1) then
-      write (6, '(A)'), '[Error] XXXXXX wrong!!'
-      stop
-    end if
-#endif
-  end if
+  end if ! [ ENS_WITH_MEAN ]
 
   call mpi_timer('set_mem_node_proc:', 2)
 
