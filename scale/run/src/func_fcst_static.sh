@@ -448,7 +448,7 @@ while ((time_s <= ETIME)); do
     #---------------------------------------------------------------------------
 
     time=$time_s
-    config_file_scale_launcher fcst fcst_scale-rm_init_ens "f<member>/init" $((m_run_onecycle*rcycle))
+    config_file_scale_launcher fcst "fcst_scale-rm_init_ens_${time}" "f<member>/init.d<domain>_${time}.conf" $((m_run_onecycle*rcycle))
 
     #---------------------------------------------------------------------------
     # scale_init (each member)
@@ -687,7 +687,7 @@ while ((time_s <= ETIME)); do
   #-----------------------------------------------------------------------------
 
   time=$time_s
-  config_file_scale_launcher fcst fcst_scale-rm_ens "f<member>/run" $((fmember*rcycle))
+  config_file_scale_launcher fcst "fcst_scale-rm_ens_${time}" "f<member>/run.d<domain>_${time}.conf" $((fmember*rcycle))
 
   #-----------------------------------------------------------------------------
   # scale (each member)

@@ -105,6 +105,13 @@ if [ "$JOBTYPE" = 'cycle' ]; then
   cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 |sprd/
 EOF
+
+  if ((MAKEINIT == 1)); then
+    echo "|mdet/" >> ${STAGING_DIR}/${STGINLIST}
+    for m in $(seq $MEMBER); do
+      echo "|${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+    done
+  fi
 fi
 
 #-------------------------------------------------------------------------------
@@ -149,37 +156,33 @@ fi
 
 config_file_scale_launcher () {
 #-------------------------------------------------------------------------------
-# Generate the launcher configuration files for scale_pp/scale_init/scale
+# Generate the launcher configuration files
 #
-# Usage: config_file_scale_launcher MODEL_NAME CONF_NAME
+# Usage: config_file_scale_launcher JOBTYPE CONF_NAME CONF_FILES MEMBER_RUN
 #
 #   JOBTYPE     Job type (cycle/fcst)
-#   MODEL_NAME  (scale-rm_pp/scale-rm_init/scale-rm)
-#   CONF_NAME   (pp/init/run)
+#   CONF_NAME   Name of this configuration file
+#   CONF_FILES  Name pattern of configuration files for each member/domain
 #   MEMBER_RUN  Number of members needed to run
 #
 # Other input variables:
 #   $nitmax
-#   $time
 #   $SCRP_DIR
 #   $MEMBER
-#   $mtot
 #   $PPN_APPAR
 #   $mem_nodes
 #   $DOMNUM
 #   $PRC_DOMAINS_LIST
-#   $STAGING_DIR
 #-------------------------------------------------------------------------------
 
 local JOBTYPE="$1"; shift
-local MODEL_NAME="$1"; shift
 local CONF_NAME="$1"; shift
+local CONF_FILES="$1"; shift
 local MEMBER_RUN="$1"
 
 #-------------------------------------------------------------------------------
 
 local it
-local conf_file
 
 if [ "$JOBTYPE" = 'cycle' ]; then
   ENS_WITH_MEAN_TF='.true.'
@@ -194,9 +197,9 @@ fi
 
 for it in $(seq $nitmax); do
   if ((nitmax == 1)); then
-    conf_file="${MODEL_NAME}_${time}.conf"
+    conf_file="${CONF_NAME}.conf"
   else
-    conf_file="${MODEL_NAME}_${time}_${it}.conf"
+    conf_file="${CONF_NAME}_${it}.conf"
   fi
   echo "  $conf_file"
   cat $SCRP_DIR/config.nml.ensmodel | \
@@ -206,7 +209,7 @@ for it in $(seq $nitmax); do
           -e "/!--DET_RUN--/a DET_RUN = $ENS_WITH_MDET_TF," \
           -e "/!--MEMBER_RUN--/a MEMBER_RUN = $MEMBER_RUN," \
           -e "/!--MEMBER_ITER--/a MEMBER_ITER = $it," \
-          -e "/!--CONF_FILES--/a CONF_FILES = \"${CONF_NAME}.d<domain>_${time}.conf\"," \
+          -e "/!--CONF_FILES--/a CONF_FILES = \"${CONF_FILES}\"," \
           -e "/!--PPN--/a PPN = $PPN_APPAR," \
           -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
           -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \

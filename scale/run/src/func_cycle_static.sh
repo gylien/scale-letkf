@@ -541,20 +541,11 @@ while ((time <= ETIME)); do
   if ((BDY_FORMAT != 0)); then
 
     #---------------------------------------------------------------------------
-    # scale_init (launcher)
+    # scale_init
     #---------------------------------------------------------------------------
 
-    if ((BDY_ENS == 1)); then
-      config_file_scale_launcher cycle scale-rm_init_ens "<member>/init" $mtot
-    elif ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
-      config_file_scale_launcher cycle scale-rm_init_ens "<member>/init" 1
-    else # local run directory: run multiple members as needed
-      config_file_scale_launcher cycle scale-rm_init_ens "<member>/init" $((repeat_mems <= mtot ? repeat_mems : mtot))
-    fi
-
-    #---------------------------------------------------------------------------
-    # scale_init (each member)
-    #---------------------------------------------------------------------------
+    # Additional staging list
+    #---------------------------
 
     if (((loop == 1 && MAKEINIT == 1) || USE_INIT_FROM_BDY == 1)); then
       RESTART_OUTPUT='.true.'
@@ -658,9 +649,12 @@ while ((time <= ETIME)); do
       nbdy_max=$nbdy
     fi
 
-    for m in $(seq $mtot); do
+    # Configuration files
+    #---------------------------
+
+######    for m in $(seq $mtot); do
       if ((BDY_ENS == 1)); then
-        mem_bdy=${name_m[$m]}
+        mem_bdy='<member>'
       else
         mem_bdy='mean'
       fi
@@ -679,7 +673,7 @@ while ((time <= ETIME)); do
         exit 1
       fi
       if ((BDY_FORMAT == 4)); then
-        BASENAME_ORG="${TMPROOT_BDYDATA}/${mem_bdy}/gradsbdy.conf"
+        BASENAME_ORG="${TMPROOT_BDYDATA}/gradsbdy.conf"
       else
         if ((nbdy <= 1)); then
           bdy_no_suffix="_$(printf %05d 0)"
@@ -694,11 +688,30 @@ while ((time <= ETIME)); do
 
         if ((d == 1)); then
           conf_file_src=$SCRP_DIR/config.nml.scale_init
+          if ((nitmax == 1)); then
+            conf_file="scale-rm_init_ens_${time}.conf"
+          else
+            conf_file="scale-rm_init_ens_${time}_${it}.conf"
+          fi
+
+          if ((BDY_ENS == 1)); then
+            config_file_scale_launcher cycle "scale-rm_init_ens_${time}" "scale-rm_init_ens.d<domain>_${time}.conf" $mtot
+          elif ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
+            config_file_scale_launcher cycle "scale-rm_init_ens_${time}" "scale-rm_init_ens.d<domain>_${time}.conf" 1
+          else # local run directory: run multiple members as needed
+            config_file_scale_launcher cycle "scale-rm_init_ens_${time}" "scale-rm_init_ens.d<domain>_${time}.conf" $((repeat_mems <= mtot ? repeat_mems : mtot))
+          fi
         else
           conf_file_src=$SCRP_DIR/config.nml.scale_init.d$d
+          if ((nitmax == 1)); then
+            conf_file="scale-rm_init_ens.d${dfmt}_${time}.conf"
+          else
+            conf_file="scale-rm_init_ens.d${dfmt}_${time}_${it}.conf"
+          fi
         fi
+
         conf="$(cat $conf_file_src | \
-            sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale_init.${name_m[$m]}.d${dfmt}.LOG_${time}\"," \
+            sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale_init.<member>.d${dfmt}.LOG_${time}\"," \
                 -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
                 -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
                 -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = ${RESTART_OUTPUT}," \
@@ -735,25 +748,16 @@ while ((time <= ETIME)); do
           #  sed -e "/!--MAKE_BOUNDARY--/a MAKE_BOUNDARY = .false.,")"
           #------
         fi
-        mkdir -p $CONFIG_DIR/${name_m[$m]}
-        conf_file="${name_m[$m]}/init.d${dfmt}_${time}.conf"
         echo "  $conf_file"
-        echo "$conf" > $CONFIG_DIR/${conf_file}
+        echo "$conf" >> $CONFIG_DIR/${conf_file}
 
         if ((stage_config == 1)); then
-          if ((DISK_MODE == 3)); then
-            for q in $(seq $mem_np_); do
-              echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-            done
-          else
-            echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
-          fi
+          echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
         fi
       done # [ d in $(seq $DOMNUM) ]
 
-      if ((BDY_FORMAT == 4 && (BDY_ENS == 0 || m == 1))); then
-        mkdir -p $CONFIG_DIR/${mem_bdy}
-        conf_file="${mem_bdy}/gradsbdy.conf"
+      if ((BDY_FORMAT == 4)); then
+        conf_file="gradsbdy.conf"
         echo "  $conf_file"
         if ((nbdy <= 1)); then
           bdy_no_suffix="_$(printf %05d 0)"
@@ -770,16 +774,12 @@ while ((time <= ETIME)); do
           echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
         fi
       fi # [ BDY_FORMAT == 4 && (BDY_ENS == 0 || m == 1) ]
-    done # [ m in $(seq $mtot) ]
+######    done # [ m in $(seq $mtot) ]
 
   fi # [ BDY_FORMAT != 0 ]
 
   #-----------------------------------------------------------------------------
   # scale
-  #-----------------------------------------------------------------------------
-
-  config_file_scale_launcher cycle scale-rm_ens "scale-rm_ens" $mtot
-
   #-----------------------------------------------------------------------------
 
   if ((BDY_ENS == 1)); then
@@ -842,6 +842,8 @@ while ((time <= ETIME)); do
       else
         conf_file="scale-rm_ens_${time}_${it}.conf"
       fi
+
+      config_file_scale_launcher cycle "scale-rm_ens_${time}" "scale-rm_ens.d<domain>_${time}.conf" $mtot
     else
       conf_file_src=$SCRP_DIR/config.nml.scale.d$d
       if ((nitmax == 1)); then
@@ -925,13 +927,7 @@ while ((time <= ETIME)); do
     fi
 
     if ((stage_config == 1)); then
-      if ((DISK_MODE == 3)); then
-        for q in $(seq $mem_np_); do
-          echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-        done
-      else
-        echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
-      fi
+      echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
     fi
   done # [ d in $(seq $DOMNUM) ]
 
