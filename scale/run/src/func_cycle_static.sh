@@ -933,10 +933,6 @@ while ((time <= ETIME)); do
     fi
   done
 
-  DET_RUN_TF='.false.'
-  if ((DET_RUN == 1)); then
-    DET_RUN_TF='.true.'
-  fi
   OBSDA_OUT='.false.'
   if ((OBSOUT_OPT <= 2)); then
     OBSDA_OUT='.true.'

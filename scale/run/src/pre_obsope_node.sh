@@ -64,9 +64,9 @@ for iobs in $(seq $OBSNUM); do
   fi
 done
 
-DET_RUN_TF='.false.'
+ENS_WITH_MDET_TF='.false.'
 if ((DET_RUN == 1)); then
-  DET_RUN_TF='.true.'
+  ENS_WITH_MDET_TF='.true.'
 fi
 MDET_CYCLED_TF='.false.'
 if ((DET_RUN_CYCLED == 1)); then
@@ -83,7 +83,8 @@ fi
 
 cat $TMPDAT/conf/config.nml.ensmodel | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
-        -e "/!--DET_RUN--/a DET_RUN = ${DET_RUN_TF}," \
+        -e "/!--ENS_WITH_MEAN--/a ENS_WITH_MEAN = .true.," \
+        -e "/!--ENS_WITH_MDET--/a ENS_WITH_MDET = $ENS_WITH_MDET_TF," \
         -e "/!--MDET_CYCLED--/a MDET_CYCLED = ${MDET_CYCLED_TF}," \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
