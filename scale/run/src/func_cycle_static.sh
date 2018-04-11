@@ -652,129 +652,127 @@ while ((time <= ETIME)); do
     # Configuration files
     #---------------------------
 
-######    for m in $(seq $mtot); do
-      if ((BDY_ENS == 1)); then
-        mem_bdy='<member>'
+    if ((BDY_ENS == 1)); then
+      mem_bdy='<member>'
+    else
+      mem_bdy='mean'
+    fi
+
+    if ((BDY_FORMAT == 1)); then
+      FILETYPE_ORG='SCALE-RM'
+      LATLON_CATALOGUE_FNAME="${TMPROOT_BDYDATA}/latlon_domain_catalogue.bdy.txt"
+    elif ((BDY_FORMAT == 2)); then
+      FILETYPE_ORG='WRF-ARW'
+      LATLON_CATALOGUE_FNAME=
+    elif ((BDY_FORMAT == 4)); then
+      FILETYPE_ORG='GrADS'
+      LATLON_CATALOGUE_FNAME=
+    else
+      echo "[Error] $0: Unsupport boundary file types." >&2
+      exit 1
+    fi
+    if ((BDY_FORMAT == 4)); then
+      BASENAME_ORG="${TMPROOT_BDYDATA}/gradsbdy.conf"
+    else
+      if ((nbdy <= 1)); then
+        bdy_no_suffix="_$(printf %05d 0)"
       else
-        mem_bdy='mean'
+        bdy_no_suffix=
+      fi
+      BASENAME_ORG="${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}"
+    fi
+
+    for d in $(seq $DOMNUM); do
+      dfmt=$(printf $DOMAIN_FMT $d)
+
+      if ((d == 1)); then
+        conf_file_src=$SCRP_DIR/config.nml.scale_init
+        if ((nitmax == 1)); then
+          conf_file="scale-rm_init_ens_${time}.conf"
+        else
+          conf_file="scale-rm_init_ens_${time}_${it}.conf"
+        fi
+
+        if ((BDY_ENS == 1)); then
+          config_file_scale_launcher cycle "scale-rm_init_ens_${time}" "scale-rm_init_ens.d<domain>_${time}.conf" $mtot
+        elif ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
+          config_file_scale_launcher cycle "scale-rm_init_ens_${time}" "scale-rm_init_ens.d<domain>_${time}.conf" 1
+        else # local run directory: run multiple members as needed
+          config_file_scale_launcher cycle "scale-rm_init_ens_${time}" "scale-rm_init_ens.d<domain>_${time}.conf" $((repeat_mems <= mtot ? repeat_mems : mtot))
+        fi
+      else
+        conf_file_src=$SCRP_DIR/config.nml.scale_init.d$d
+        if ((nitmax == 1)); then
+          conf_file="scale-rm_init_ens.d${dfmt}_${time}.conf"
+        else
+          conf_file="scale-rm_init_ens.d${dfmt}_${time}_${it}.conf"
+        fi
       fi
 
+      conf="$(cat $conf_file_src | \
+          sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale_init.<member>.d${dfmt}.LOG_${time}\"," \
+              -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+              -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
+              -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = ${RESTART_OUTPUT}," \
+              -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${mem_bdy}/init.d${dfmt}\"," \
+              -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo.d${dfmt}\"," \
+              -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse.d${dfmt}\"," \
+              -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\",")"
       if ((BDY_FORMAT == 1)); then
-        FILETYPE_ORG='SCALE-RM'
-        LATLON_CATALOGUE_FNAME="${TMPROOT_BDYDATA}/latlon_domain_catalogue.bdy.txt"
-      elif ((BDY_FORMAT == 2)); then
-        FILETYPE_ORG='WRF-ARW'
-        LATLON_CATALOGUE_FNAME=
-      elif ((BDY_FORMAT == 4)); then
-        FILETYPE_ORG='GrADS'
-        LATLON_CATALOGUE_FNAME=
-      else
-        echo "[Error] $0: Unsupport boundary file types." >&2
-        exit 1
-      fi
-      if ((BDY_FORMAT == 4)); then
-        BASENAME_ORG="${TMPROOT_BDYDATA}/gradsbdy.conf"
-      else
-        if ((nbdy <= 1)); then
-          bdy_no_suffix="_$(printf %05d 0)"
-        else
-          bdy_no_suffix=
-        fi
-        BASENAME_ORG="${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}"
-      fi
-
-      for d in $(seq $DOMNUM); do
-        dfmt=$(printf $DOMAIN_FMT $d)
-
-        if ((d == 1)); then
-          conf_file_src=$SCRP_DIR/config.nml.scale_init
-          if ((nitmax == 1)); then
-            conf_file="scale-rm_init_ens_${time}.conf"
-          else
-            conf_file="scale-rm_init_ens_${time}_${it}.conf"
-          fi
-
-          if ((BDY_ENS == 1)); then
-            config_file_scale_launcher cycle "scale-rm_init_ens_${time}" "scale-rm_init_ens.d<domain>_${time}.conf" $mtot
-          elif ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
-            config_file_scale_launcher cycle "scale-rm_init_ens_${time}" "scale-rm_init_ens.d<domain>_${time}.conf" 1
-          else # local run directory: run multiple members as needed
-            config_file_scale_launcher cycle "scale-rm_init_ens_${time}" "scale-rm_init_ens.d<domain>_${time}.conf" $((repeat_mems <= mtot ? repeat_mems : mtot))
-          fi
-        else
-          conf_file_src=$SCRP_DIR/config.nml.scale_init.d$d
-          if ((nitmax == 1)); then
-            conf_file="scale-rm_init_ens.d${dfmt}_${time}.conf"
-          else
-            conf_file="scale-rm_init_ens.d${dfmt}_${time}_${it}.conf"
-          fi
-        fi
-
-        conf="$(cat $conf_file_src | \
-            sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale_init.<member>.d${dfmt}.LOG_${time}\"," \
-                -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
-                -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
-                -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = ${RESTART_OUTPUT}," \
-                -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${mem_bdy}/init.d${dfmt}\"," \
-                -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo.d${dfmt}\"," \
-                -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse.d${dfmt}\"," \
-                -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\",")"
-        if ((BDY_FORMAT == 1)); then
-          conf="$(echo "$conf" | \
-              sed -e "/!--OFFLINE_PARENT_BASENAME--/a OFFLINE_PARENT_BASENAME = \"${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_$(datetime_scale $time_bdy_start_prev)_$(printf %05d 0)\"," \
-                  -e "/!--OFFLINE_PARENT_PRC_NUM_X--/a OFFLINE_PARENT_PRC_NUM_X = ${DATA_BDY_SCALE_PRC_NUM_X}," \
-                  -e "/!--OFFLINE_PARENT_PRC_NUM_Y--/a OFFLINE_PARENT_PRC_NUM_Y = ${DATA_BDY_SCALE_PRC_NUM_Y}," \
-                  -e "/!--LATLON_CATALOGUE_FNAME--/a LATLON_CATALOGUE_FNAME = \"${LATLON_CATALOGUE_FNAME}\",")"
-        fi
         conf="$(echo "$conf" | \
-          sed -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${BASENAME_ORG}\"," \
-              -e "/!--FILETYPE_ORG--/a FILETYPE_ORG = \"${FILETYPE_ORG}\"," \
-              -e "/!--BOUNDARY_UPDATE_DT--/a BOUNDARY_UPDATE_DT = ${BDYINT}.D0,")"
-        if ((d == 1)); then
-          conf="$(echo "$conf" | \
-            sed -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"${mem_bdy}/bdy_$(datetime_scale $time)\"," \
-                -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = ${nbdy}," \
-                -e "/!--NUMBER_OF_TSTEPS--/a NUMBER_OF_TSTEPS = ${ntsteps}," \
-                -e "/!--NUMBER_OF_SKIP_TSTEPS--/a NUMBER_OF_SKIP_TSTEPS = ${ntsteps_skip},")"
-        else
-          #------ before SCALE 5.2
-          conf="$(echo "$conf" | \
-            sed -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"${mem_bdy}/bdy.d${dfmt}_$(datetime_scale $time)\"," \
-                -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = ${nbdy}," \
-                -e "/!--NUMBER_OF_TSTEPS--/a NUMBER_OF_TSTEPS = ${ntsteps}," \
-                -e "/!--NUMBER_OF_SKIP_TSTEPS--/a NUMBER_OF_SKIP_TSTEPS = ${ntsteps_skip},")"
-          #------ after SCALE 5.3
-          #conf="$(echo "$conf" | \
-          #  sed -e "/!--MAKE_BOUNDARY--/a MAKE_BOUNDARY = .false.,")"
-          #------
-        fi
-        echo "  $conf_file"
-        echo "$conf" >> $CONFIG_DIR/${conf_file}
+            sed -e "/!--OFFLINE_PARENT_BASENAME--/a OFFLINE_PARENT_BASENAME = \"${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_$(datetime_scale $time_bdy_start_prev)_$(printf %05d 0)\"," \
+                -e "/!--OFFLINE_PARENT_PRC_NUM_X--/a OFFLINE_PARENT_PRC_NUM_X = ${DATA_BDY_SCALE_PRC_NUM_X}," \
+                -e "/!--OFFLINE_PARENT_PRC_NUM_Y--/a OFFLINE_PARENT_PRC_NUM_Y = ${DATA_BDY_SCALE_PRC_NUM_Y}," \
+                -e "/!--LATLON_CATALOGUE_FNAME--/a LATLON_CATALOGUE_FNAME = \"${LATLON_CATALOGUE_FNAME}\",")"
+      fi
+      conf="$(echo "$conf" | \
+        sed -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${BASENAME_ORG}\"," \
+            -e "/!--FILETYPE_ORG--/a FILETYPE_ORG = \"${FILETYPE_ORG}\"," \
+            -e "/!--BOUNDARY_UPDATE_DT--/a BOUNDARY_UPDATE_DT = ${BDYINT}.D0,")"
+      if ((d == 1)); then
+        conf="$(echo "$conf" | \
+          sed -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"${mem_bdy}/bdy_$(datetime_scale $time)\"," \
+              -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = ${nbdy}," \
+              -e "/!--NUMBER_OF_TSTEPS--/a NUMBER_OF_TSTEPS = ${ntsteps}," \
+              -e "/!--NUMBER_OF_SKIP_TSTEPS--/a NUMBER_OF_SKIP_TSTEPS = ${ntsteps_skip},")"
+      else
+        #------ before SCALE 5.2
+        conf="$(echo "$conf" | \
+          sed -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"${mem_bdy}/bdy.d${dfmt}_$(datetime_scale $time)\"," \
+              -e "/!--NUMBER_OF_FILES--/a NUMBER_OF_FILES = ${nbdy}," \
+              -e "/!--NUMBER_OF_TSTEPS--/a NUMBER_OF_TSTEPS = ${ntsteps}," \
+              -e "/!--NUMBER_OF_SKIP_TSTEPS--/a NUMBER_OF_SKIP_TSTEPS = ${ntsteps_skip},")"
+        #------ after SCALE 5.3
+        #conf="$(echo "$conf" | \
+        #  sed -e "/!--MAKE_BOUNDARY--/a MAKE_BOUNDARY = .false.,")"
+        #------
+      fi
+      echo "  $conf_file"
+      echo "$conf" >> $CONFIG_DIR/${conf_file}
 
-        if ((stage_config == 1)); then
-          echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
-        fi
-      done # [ d in $(seq $DOMNUM) ]
+      if ((stage_config == 1)); then
+        echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
+      fi
+    done # [ d in $(seq $DOMNUM) ]
 
-      if ((BDY_FORMAT == 4)); then
-        conf_file="gradsbdy.conf"
-        echo "  $conf_file"
-        if ((nbdy <= 1)); then
-          bdy_no_suffix="_$(printf %05d 0)"
-        else
-          bdy_no_suffix=
-        fi
-        cat $SCRP_DIR/config.nml.grads_boundary | \
-            sed -e "s#--FNAME_ATMOS--#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_atm_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
-                -e "s#--FNAME_SFC--#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_sfc_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
-                -e "s#--FNAME_LAND--#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_lnd_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
-            > $CONFIG_DIR/${conf_file}
+    if ((BDY_FORMAT == 4)); then
+      conf_file="gradsbdy.conf"
+      echo "  $conf_file"
+      if ((nbdy <= 1)); then
+        bdy_no_suffix="_$(printf %05d 0)"
+      else
+        bdy_no_suffix=
+      fi
+      cat $SCRP_DIR/config.nml.grads_boundary | \
+          sed -e "s#--FNAME_ATMOS--#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_atm_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
+              -e "s#--FNAME_SFC--#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_sfc_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
+              -e "s#--FNAME_LAND--#${TMPROOT_BDYDATA}/${mem_bdy}/bdyorg_lnd_$(datetime_scale $time_bdy_start_prev)${bdy_no_suffix}#g" \
+          > $CONFIG_DIR/${conf_file}
 
-        if ((stage_config == 1)); then
-          echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
-        fi
-      fi # [ BDY_FORMAT == 4 && (BDY_ENS == 0 || m == 1) ]
-######    done # [ m in $(seq $mtot) ]
+      if ((stage_config == 1)); then
+        echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+      fi
+    fi # [ BDY_FORMAT == 4 && (BDY_ENS == 0 || m == 1) ]
 
   fi # [ BDY_FORMAT != 0 ]
 
