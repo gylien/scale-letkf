@@ -2052,6 +2052,7 @@ SUBROUTINE das_pest_etkf(gues0d,anal0d)
   !
   ! FCST PERTURBATIONS
   !
+
 !$OMP PARALLEL PRIVATE(n,m)
 !$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
   DO n=1,PEST_PMAX
@@ -2113,18 +2114,18 @@ SUBROUTINE das_pest_etkf(gues0d,anal0d)
     if (DET_RUN) then                                                        !GYL
       CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work0d(n), & !GYL
                       trans(:,:),transm=transm(:),pao=pa(:,:), & !GYL
-                      rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &     !GYL
+                      rdiag_wloc=.true.,& !infl_update=INFL_MUL_ADAPTIVE, &     !GYL
                       depd=depd,transmd=transmd(:))                     !GYL
     else                                                                     !GYL
       CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work0d(n), & !GYL
                       trans(:,:),transm=transm(:),pao=pa(:,:), & !GYL
-                      rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)       !GYL
+                      rdiag_wloc=.true.) !infl_update=INFL_MUL_ADAPTIVE)       !GYL
     end if                                                                   !GYL
 
 
     ! relaxation via LETKF weight
     CALL weight_RTPS_const(trans(:,:),pa(:,:),gues0d(:,n), &        !GYL
-                     parm,transrlx,tmpinfl)                                !GYL
+                     transrlx,tmpinfl)                                !GYL
 
     ! total weight matrix
     DO m=1,MEMBER                                                              !GYL
@@ -2261,12 +2262,11 @@ end subroutine obs_pest_etkf
 !-------------------------------------------------------------------------------
 ! Relaxation via LETKF weight - RTPS method for parameter estimation (alpha = 1.0)
 !-------------------------------------------------------------------------------
-subroutine weight_RTPS_const(w, pa, xb, infl, wrlx, infl_out)
+subroutine weight_RTPS_const(w, pa, xb, wrlx, infl_out)
   implicit none
   real(r_size), intent(in) :: w(MEMBER,MEMBER)
   real(r_size), intent(in) :: pa(MEMBER,MEMBER)
   real(r_size), intent(in) :: xb(MEMBER)
-  real(r_size), intent(in) :: infl
   real(r_size), intent(out) :: wrlx(MEMBER,MEMBER)
   real(r_size), intent(out) :: infl_out
   real(r_size) :: var_g, var_a
@@ -2283,7 +2283,7 @@ subroutine weight_RTPS_const(w, pa, xb, infl, wrlx, infl_out)
     end do
   end do
   if (var_g > 0.0d0 .and. var_a > 0.0d0) then
-    infl_out = RTPS_const * sqrt(var_g * infl / (var_a * real(MEMBER-1,r_size))) &  ! Whitaker and Hamill 2012
+    infl_out = RTPS_const * sqrt(var_g * 1.0d0 / (var_a * real(MEMBER-1,r_size))) &  ! Whitaker and Hamill 2012
              - RTPS_const + 1.0d0                                                   !
     wrlx = w * infl_out
   else

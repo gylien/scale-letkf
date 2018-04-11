@@ -49,8 +49,6 @@ S_SS=${STIME:12:2}
 
 # file list
 
-#files=`ls ${TMPOUT}/param/*_${STIME}.txt`
-#echo "files param: "${files}
 
 echo ""
 echo  ${TMPOUT}/param/PARAM_LIST.txt
@@ -74,9 +72,19 @@ do
     PMEM=$2
     PVAL=$3
 
-    PMEM=$(printf '%04d' $PMEM)
+    if [ "${MEM}" = 'mean' ] || [ "${MEM}" = 'mdet' ] ; then
+      PMEM=`echo $PMEM | tr -d " "`
+    else
+      PMEM=$(printf '%04d' $((PMEM)))
+    fi
 
-    if [ $MEM == $PMEM ] || [ "${PMEM}" = 'mean' ] || [ "${PMEM}" = 'mdet' ]; then
+    if [ "$MEM" = 'mean' ] && [ "${PMEM}" = 'mean' ] ; then
+      sed -i "/!--${FULL_NAME}--/a ${PNAME} = ${PVAL}," $TMPDIR/run.conf
+      break
+    elif [ "$MEM" = 'mdet' ] && [ "${PMEM}" = 'mdet' ] ; then
+      sed -i "/!--${FULL_NAME}--/a ${PNAME} = ${PVAL}," $TMPDIR/run.conf
+      break
+    elif [ $MEM == $PMEM ] ; then
       sed -i "/!--${FULL_NAME}--/a ${PNAME} = ${PVAL}," $TMPDIR/run.conf
       break
     fi
