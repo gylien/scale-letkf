@@ -166,7 +166,6 @@ config_file_scale_launcher () {
 #   MEMBER_RUN  Number of members needed to run
 #
 # Other input variables:
-#   $nitmax
 #   $SCRP_DIR
 #   $MEMBER
 #   $PPN_APPAR
@@ -182,7 +181,9 @@ local MEMBER_RUN="$1"
 
 #-------------------------------------------------------------------------------
 
-local it
+local member_tot=$MEMBER
+local ENS_WITH_MEAN_TF
+local ENS_WITH_MDET_TF
 
 if [ "$JOBTYPE" = 'cycle' ]; then
   ENS_WITH_MEAN_TF='.true.'
@@ -190,35 +191,27 @@ if [ "$JOBTYPE" = 'cycle' ]; then
   if ((DET_RUN == 1)); then
     ENS_WITH_MDET_TF='.true.'
   fi
-else
+elif [ "$JOBTYPE" = 'fcst' ]; then
+  if ((DET_RUN == 1)); then
+    member_tot=$((member_tot+2))
+  else
+    member_tot=$((member_tot+1))
+  fi
   ENS_WITH_MEAN_TF='.false.'
   ENS_WITH_MDET_TF='.false.'
 fi
 
-for it in $(seq $nitmax); do
-  if ((nitmax == 1)); then
-    conf_file="${CONF_NAME}.conf"
-  else
-    conf_file="${CONF_NAME}_${it}.conf"
-  fi
-  echo "  $conf_file"
-  cat $SCRP_DIR/config.nml.ensmodel | \
-      sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
-          -e "/!--ENS_WITH_MEAN--/a ENS_WITH_MEAN = $ENS_WITH_MEAN_TF," \
-          -e "/!--ENS_WITH_MDET--/a ENS_WITH_MDET = $ENS_WITH_MDET_TF," \
-          -e "/!--DET_RUN--/a DET_RUN = $ENS_WITH_MDET_TF," \
-          -e "/!--MEMBER_RUN--/a MEMBER_RUN = $MEMBER_RUN," \
-          -e "/!--MEMBER_ITER--/a MEMBER_ITER = $it," \
-          -e "/!--CONF_FILES--/a CONF_FILES = \"${CONF_FILES}\"," \
-          -e "/!--PPN--/a PPN = $PPN_APPAR," \
-          -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
-          -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \
-          -e "/!--PRC_DOMAINS--/a PRC_DOMAINS = $PRC_DOMAINS_LIST" \
-      > $CONFIG_DIR/${conf_file}
-  if ((stage_config == 1)); then
-    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
-  fi
-done
+cat $SCRP_DIR/config.nml.ensmodel | \
+    sed -e "/!--MEMBER--/a MEMBER = $member_tot," \
+        -e "/!--ENS_WITH_MEAN--/a ENS_WITH_MEAN = $ENS_WITH_MEAN_TF," \
+        -e "/!--ENS_WITH_MDET--/a ENS_WITH_MDET = $ENS_WITH_MDET_TF," \
+        -e "/!--MEMBER_RUN--/a MEMBER_RUN = $MEMBER_RUN," \
+        -e "/!--CONF_FILES--/a CONF_FILES = \"${CONF_FILES}\"," \
+        -e "/!--PPN--/a PPN = $PPN_APPAR," \
+        -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
+        -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \
+        -e "/!--PRC_DOMAINS--/a PRC_DOMAINS = $PRC_DOMAINS_LIST" \
+    > $CONFIG_DIR/${CONF_NAME}
 
 #-------------------------------------------------------------------------------
 }

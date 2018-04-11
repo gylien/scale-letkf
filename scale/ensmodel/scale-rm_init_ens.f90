@@ -38,7 +38,8 @@ program scale_rm_init_ens
     MKINIT
   implicit none
 
-  character(7) :: stdoutf='-000000'
+  character(7) :: stdoutf = '-000000'
+  integer :: member_iter_cmd = -1
 
   integer :: universal_comm
   integer :: universal_nprocs
@@ -69,21 +70,16 @@ program scale_rm_init_ens
 
   WRITE(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ',universal_myrank,'/',universal_nprocs-1
 
-  if (command_argument_count() >= 3) then
-    write (myranks, '(I10)') universal_myrank
-    call get_command_argument(3, icmd)
-    cmd1 = 'bash ' // trim(icmd) // ' ensinit_1' // ' ' // trim(myranks)
-    cmd2 = 'bash ' // trim(icmd) // ' ensinit_2' // ' ' // trim(myranks)
-    do iarg = 4, command_argument_count()
-      call get_command_argument(iarg, icmd)
-      cmd1 = trim(cmd1) // ' ' // trim(icmd)
-      cmd2 = trim(cmd2) // ' ' // trim(icmd)
-    end do
-  end if
-
   if (command_argument_count() >= 2) then
     call get_command_argument(2, icmd)
-    if (trim(icmd) /= '') then
+    if (trim(icmd) /= '' .and. trim(icmd) /= '-') then
+      read (icmd, '(I)') member_iter_cmd
+    end if
+  end if
+
+  if (command_argument_count() >= 3) then
+    call get_command_argument(3, icmd)
+    if (trim(icmd) /= '' .and. trim(icmd) /= '-') then
       WRITE(stdoutf(2:7), '(I6.6)') universal_myrank
 !      WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',trim(icmd)//stdoutf,' for MYRANK ', universal_myrank
       OPEN(6,FILE=trim(icmd)//stdoutf)
@@ -91,11 +87,23 @@ program scale_rm_init_ens
     end if
   end if
 
+  if (command_argument_count() >= 4) then
+    write (myranks, '(I10)') universal_myrank
+    call get_command_argument(4, icmd)
+    cmd1 = 'bash ' // trim(icmd) // ' ensinit_1' // ' ' // trim(myranks)
+    cmd2 = 'bash ' // trim(icmd) // ' ensinit_2' // ' ' // trim(myranks)
+    do iarg = 5, command_argument_count()
+      call get_command_argument(iarg, icmd)
+      cmd1 = trim(cmd1) // ' ' // trim(icmd)
+      cmd2 = trim(cmd2) // ' ' // trim(icmd)
+    end do
+  end if
+
 !-----------------------------------------------------------------------
 ! Pre-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 3) then
+  if (command_argument_count() >= 4) then
     write (6,'(A)') 'Run pre-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd1), ']'
     call system(trim(cmd1))
@@ -108,6 +116,11 @@ program scale_rm_init_ens
 !-----------------------------------------------------------------------
 
   call set_common_conf(universal_nprocs)
+
+  if (member_iter_cmd >= 0) then
+    MEMBER_ITER = member_iter_cmd
+    write (6, '(A,I4,A)') '[Info] Reset MEMBER_ITER = ', MEMBER_ITER, ' based on the commannd line input'
+  end if
 
   call set_mem_node_proc(MEMBER_RUN)
 
@@ -157,7 +170,7 @@ program scale_rm_init_ens
 ! Post-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 3) then
+  if (command_argument_count() >= 4) then
     write (6,'(A)') 'Run post-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd2), ']'
     call system(trim(cmd2))

@@ -237,18 +237,24 @@ while ((time <= ETIME)); do
 
       nodestr=proc
 
+      if ((enable_iter == 1)); then
+        noit=1
+      else
+        noit='-'
+      fi
+
       if [ "$CONF_MODE" = 'static' ]; then
 
         if ((enable_iter == 1 && nitmax > 1)); then
           for it in $(seq $nitmax); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}_${it}.conf log/${stepexecname[$s]}.NOUT_${stimes[1]}_${it} || exit $?
+            mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}.conf $it log/${stepexecname[$s]}.NOUT_${stimes[1]}_${it} || exit $?
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           done
         else
-          mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}.conf log/${stepexecname[$s]}.NOUT_${stimes[1]} || exit $?
+          mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}.conf $noit log/${stepexecname[$s]}.NOUT_${stimes[1]} || exit $?
         fi
 
       else
@@ -259,12 +265,12 @@ while ((time <= ETIME)); do
           for it in $(seq $nitmax); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            mpirunf proc $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/fcst_step.sh" $loop $it || exit $?
+            mpirunf proc $execpath ${execpath}.conf $it "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/fcst_step.sh" $loop $it || exit $?
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           done
         else
-          mpirunf proc $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/fcst_step.sh" $loop || exit $?
+          mpirunf proc $execpath ${execpath}.conf $noit "${stdout_dir}/NOUT" "$SCRP_DIR/fcst_step.sh" $loop || exit $?
         fi
 
       fi

@@ -448,7 +448,13 @@ while ((time_s <= ETIME)); do
     #---------------------------------------------------------------------------
 
     time=$time_s
-    config_file_scale_launcher fcst "fcst_scale-rm_init_ens_${time}" "f<member>/init.d<domain>_${time}.conf" $((m_run_onecycle*rcycle))
+    conf_file="fcst_scale-rm_init_ens_${time}.conf"
+    config_file_scale_launcher fcst "$conf_file" "f<member>/init.d<domain>_${time}.conf" $((m_run_onecycle*rcycle))
+
+    echo "  $conf_file"
+    if ((stage_config == 1)); then
+      echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
+    fi
 
     #---------------------------------------------------------------------------
     # scale_init (each member)
@@ -687,7 +693,13 @@ while ((time_s <= ETIME)); do
   #-----------------------------------------------------------------------------
 
   time=$time_s
-  config_file_scale_launcher fcst "fcst_scale-rm_ens_${time}" "f<member>/run.d<domain>_${time}.conf" $((fmember*rcycle))
+  conf_file="fcst_scale-rm_ens_${time}.conf"
+  config_file_scale_launcher fcst "$conf_file" "f<member>/run.d<domain>_${time}.conf" $((fmember*rcycle))
+
+  echo "  $conf_file"
+  if ((stage_config == 1)); then
+    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
+  fi
 
   #-----------------------------------------------------------------------------
   # scale (each member)

@@ -256,6 +256,12 @@ while ((time <= ETIME)); do
         conf_time=$atime
       fi
 
+      if ((enable_iter == 1)); then
+        noit=1
+      else
+        noit='-'
+      fi
+
       if [ "$CONF_MODE" = 'static' ]; then
 
         if ((enable_iter == 1 && nitmax > 1)); then
@@ -263,9 +269,9 @@ while ((time <= ETIME)); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
             if ((IO_ARB == 1)); then ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $? &
+              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $it log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $? &
             else ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $?
+              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $it log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $?
             fi ##
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
@@ -273,13 +279,13 @@ while ((time <= ETIME)); do
         else
           if ((IO_ARB == 1)); then ##
             if ((s == 5)); then ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} \
+              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} \
                       "$SCRP_DIR/sleep.sh" || exit $? &
             else ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
+              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
             fi ##
           else ##
-            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
+            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
           fi ##
         fi
 
@@ -292,18 +298,18 @@ while ((time <= ETIME)); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
             if ((IO_ARB == 1)); then ##
-              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $? &
+              mpirunf $nodestr $execpath ${execpath}.conf $it "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $? &
             else ##
-              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
+              mpirunf $nodestr $execpath ${execpath}.conf $it "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
             fi ##
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           done
         else
           if ((IO_ARB == 1)); then ##                                 
-            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $? &
+            mpirunf $nodestr $execpath ${execpath}.conf $noit "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $? &
           else ##
-            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
+            mpirunf $nodestr $execpath ${execpath}.conf $noit "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
           fi ##
         fi
 

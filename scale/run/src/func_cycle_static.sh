@@ -687,26 +687,18 @@ while ((time <= ETIME)); do
 
       if ((d == 1)); then
         conf_file_src=$SCRP_DIR/config.nml.scale_init
-        if ((nitmax == 1)); then
-          conf_file="scale-rm_init_ens_${time}.conf"
-        else
-          conf_file="scale-rm_init_ens_${time}_${it}.conf"
-        fi
+        conf_file="scale-rm_init_ens_${time}.conf"
 
         if ((BDY_ENS == 1)); then
-          config_file_scale_launcher cycle "scale-rm_init_ens_${time}" "scale-rm_init_ens.d<domain>_${time}.conf" $mtot
+          config_file_scale_launcher cycle "$conf_file" "scale-rm_init_ens.d<domain>_${time}.conf" $mtot
         elif ((DISK_MODE <= 2)); then # shared run directory: only run one member per cycle
-          config_file_scale_launcher cycle "scale-rm_init_ens_${time}" "scale-rm_init_ens.d<domain>_${time}.conf" 1
+          config_file_scale_launcher cycle "$conf_file" "scale-rm_init_ens.d<domain>_${time}.conf" 1
         else # local run directory: run multiple members as needed
-          config_file_scale_launcher cycle "scale-rm_init_ens_${time}" "scale-rm_init_ens.d<domain>_${time}.conf" $((repeat_mems <= mtot ? repeat_mems : mtot))
+          config_file_scale_launcher cycle "$conf_file" "scale-rm_init_ens.d<domain>_${time}.conf" $((repeat_mems <= mtot ? repeat_mems : mtot))
         fi
       else
         conf_file_src=$SCRP_DIR/config.nml.scale_init.d$d
-        if ((nitmax == 1)); then
-          conf_file="scale-rm_init_ens.d${dfmt}_${time}.conf"
-        else
-          conf_file="scale-rm_init_ens.d${dfmt}_${time}_${it}.conf"
-        fi
+        conf_file="scale-rm_init_ens.d${dfmt}_${time}.conf"
       fi
 
       conf="$(cat $conf_file_src | \
@@ -835,20 +827,12 @@ while ((time <= ETIME)); do
 
     if ((d == 1)); then
       conf_file_src=$SCRP_DIR/config.nml.scale
-      if ((nitmax == 1)); then
-        conf_file="scale-rm_ens_${time}.conf"
-      else
-        conf_file="scale-rm_ens_${time}_${it}.conf"
-      fi
+      conf_file="scale-rm_ens_${time}.conf"
 
-      config_file_scale_launcher cycle "scale-rm_ens_${time}" "scale-rm_ens.d<domain>_${time}.conf" $mtot
+      config_file_scale_launcher cycle "$conf_file" "scale-rm_ens.d<domain>_${time}.conf" $mtot
     else
       conf_file_src=$SCRP_DIR/config.nml.scale.d$d
-      if ((nitmax == 1)); then
-        conf_file="scale-rm_ens.d${dfmt}_${time}.conf"
-      else
-        conf_file="scale-rm_ens.d${dfmt}_${time}_${it}.conf"
-      fi
+      conf_file="scale-rm_ens.d${dfmt}_${time}.conf"
     fi
 
     conf="$(cat $conf_file_src | \

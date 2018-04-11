@@ -38,7 +38,7 @@ program scale_rm_pp_ens
     MKINIT
   implicit none
 
-  character(7) :: stdoutf='-000000'
+  character(7) :: stdoutf = '-000000'
 
   integer :: universal_comm
   integer :: universal_nprocs
@@ -69,6 +69,16 @@ program scale_rm_pp_ens
 
   WRITE(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ',universal_myrank,'/',universal_nprocs-1
 
+  if (command_argument_count() >= 2) then
+    call get_command_argument(2, icmd)
+    if (trim(icmd) /= '') then
+      WRITE(stdoutf(2:7), '(I6.6)') universal_myrank
+!      WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',trim(icmd)//stdoutf,' for MYRANK ', universal_myrank
+      OPEN(6,FILE=trim(icmd)//stdoutf)
+      WRITE(6,'(A,I6.6,2A)') 'MYRANK=',universal_myrank,', STDOUTF=',trim(icmd)//stdoutf
+    end if
+  end if
+
   if (command_argument_count() >= 3) then
     write (myranks, '(I10)') universal_myrank
     call get_command_argument(3, icmd)
@@ -79,16 +89,6 @@ program scale_rm_pp_ens
       cmd1 = trim(cmd1) // ' ' // trim(icmd)
       cmd2 = trim(cmd2) // ' ' // trim(icmd)
     end do
-  end if
-
-  if (command_argument_count() >= 2) then
-    call get_command_argument(2, icmd)
-    if (trim(icmd) /= '') then
-      WRITE(stdoutf(2:7), '(I6.6)') universal_myrank
-!      WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',trim(icmd)//stdoutf,' for MYRANK ', universal_myrank
-      OPEN(6,FILE=trim(icmd)//stdoutf)
-      WRITE(6,'(A,I6.6,2A)') 'MYRANK=',universal_myrank,', STDOUTF=',trim(icmd)//stdoutf
-    end if
   end if
 
 !-----------------------------------------------------------------------
