@@ -1,4 +1,4 @@
-include ../configure.user
+include ../configure
 
 PROGS   = letkf
 

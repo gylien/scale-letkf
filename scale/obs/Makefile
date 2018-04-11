@@ -1,4 +1,4 @@
-include ../configure.user
+include ../configure
 
 PROGS   = obsope obsmake obssim #dec_prepbufr
 
