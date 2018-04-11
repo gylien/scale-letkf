@@ -68,6 +68,10 @@ DET_RUN_TF='.false.'
 if ((DET_RUN == 1)); then
   DET_RUN_TF='.true.'
 fi
+MDET_CYCLED_TF='.false.'
+if ((DET_RUN_CYCLED == 1)); then
+  MDET_CYCLED_TF='.true.'
+fi
 
 if ((PNETCDF == 1)); then
   HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@.history"
@@ -80,6 +84,7 @@ fi
 cat $TMPDAT/conf/config.nml.ensmodel | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
         -e "/!--DET_RUN--/a DET_RUN = ${DET_RUN_TF}," \
+        -e "/!--MDET_CYCLED--/a MDET_CYCLED = ${MDET_CYCLED_TF}," \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
         -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = 1," \

@@ -181,31 +181,39 @@ local MEMBER_RUN="$1"
 
 #-------------------------------------------------------------------------------
 
-local member_tot=$MEMBER
+local MEMBER_TOT
 local ENS_WITH_MEAN_TF
 local ENS_WITH_MDET_TF
+local MDET_CYCLED_TF
 
-if [ "$JOBTYPE" = 'cycle' ]; then
+if [ "$JOBTYPE" = 'cycle' ] || [ "$JOBTYPE" = 'letkf' ]; then
+  MEMBER_TOT=$MEMBER
   ENS_WITH_MEAN_TF='.true.'
   ENS_WITH_MDET_TF='.false.'
   if ((DET_RUN == 1)); then
     ENS_WITH_MDET_TF='.true.'
   fi
 elif [ "$JOBTYPE" = 'fcst' ]; then
+  MEMBER_TOT=$((MEMBER+1))
   if ((DET_RUN == 1)); then
-    member_tot=$((member_tot+2))
-  else
-    member_tot=$((member_tot+1))
+    MEMBER_TOT=$((MEMBER+2))
   fi
   ENS_WITH_MEAN_TF='.false.'
   ENS_WITH_MDET_TF='.false.'
 fi
 
+if ((DET_RUN_CYCLED == 1)); then
+  MDET_CYCLED_TF='.true.'
+else
+  MDET_CYCLED_TF='.false.'
+fi
+
 cat $SCRP_DIR/config.nml.ensmodel | \
-    sed -e "/!--MEMBER--/a MEMBER = $member_tot," \
+    sed -e "/!--MEMBER--/a MEMBER = $MEMBER_TOT," \
         -e "/!--ENS_WITH_MEAN--/a ENS_WITH_MEAN = $ENS_WITH_MEAN_TF," \
         -e "/!--ENS_WITH_MDET--/a ENS_WITH_MDET = $ENS_WITH_MDET_TF," \
         -e "/!--MEMBER_RUN--/a MEMBER_RUN = $MEMBER_RUN," \
+        -e "/!--MDET_CYCLED--/a MDET_CYCLED = ${MDET_CYCLED_TF}," \
         -e "/!--CONF_FILES--/a CONF_FILES = \"${CONF_FILES}\"," \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \

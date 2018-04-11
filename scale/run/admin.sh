@@ -50,7 +50,10 @@ fi
 
 rm -f config.main
 rm -f config.${SCPNAME}
-rm -f config.nml.*
+rm -f config.nml.letkf
+rm -f config.nml.obsope
+rm -f config.nml.scale*
+rm -f config.nml.grads_boundary
 
 cat config/${CONFIG}/config.main.${config_suffix} | \
     sed -e "s/<PRESET>/${PRESET}/g" | \
@@ -70,7 +73,6 @@ cat config/${CONFIG}/config.nml.scale | \
     sed -e "s/<TIME_DT_DYN>/${TIME_DT_DYN}/g" \
     > config.nml.scale
 
-ln -fs config/${CONFIG}/config.nml.ensmodel .
 ln -fs config/${CONFIG}/config.nml.letkf .
 ln -fs config/${CONFIG}/config.nml.scale_pp .
 ln -fs config/${CONFIG}/config.nml.scale_init .

@@ -967,15 +967,8 @@ while ((time <= ETIME)); do
       conf_file="letkf.d${dfmt}_${atime}.conf"
     fi
     echo "  $conf_file"
-    cat $SCRP_DIR/config.nml.ensmodel | \
-        sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
-            -e "/!--CONF_FILES--/a CONF_FILES = \"letkf.d<domain>_${atime}.conf\"," \
-            -e "/!--DET_RUN--/a DET_RUN = ${DET_RUN_TF}," \
-            -e "/!--PPN--/a PPN = $PPN_APPAR," \
-            -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
-            -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \
-            -e "/!--PRC_DOMAINS--/a PRC_DOMAINS = $PRC_DOMAINS_LIST" \
-        > $CONFIG_DIR/${conf_file}
+
+    config_file_scale_launcher letkf "$conf_file" "letkf.d<domain>_${atime}.conf" $mtot
 
     cat $conf_file_src | \
         sed -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \

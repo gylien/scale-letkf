@@ -44,6 +44,7 @@ OBSNCEP=
 
 PNETCDF=1               # 0: Do not use PnetCDF
                         # 1: Use PnetCDF
+DET_RUN_CYCLED=1
 
 PNETCDF_BDY_SCALE=      # Use PNETCDF I/O for the parent domain SCALE data? (default: $PNETCDF)
                         # 0: Do not use PnetCDF
