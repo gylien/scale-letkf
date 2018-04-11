@@ -383,6 +383,13 @@ subroutine read_nml_ensemble
     stop
   end if
 
+  if (DET_RUN .and. (.not. ENS_WITH_MDET)) then !*** for backward compatibility ***
+    ENS_WITH_MDET = DET_RUN
+  end if
+  if ((.not. DET_RUN_CYCLED) .and. MDET_CYCLED) then !*** for backward compatibility ***
+    MDET_CYCLED = DET_RUN_CYCLED
+  end if
+
   if (MEMBER_RUN == -1) then
     MEMBER_RUN = MEMBER
     if (ENS_WITH_MEAN) then
@@ -391,13 +398,6 @@ subroutine read_nml_ensemble
     if (ENS_WITH_MDET) then
       MEMBER_RUN = MEMBER_RUN + 1
     end if
-  end if
-
-  if (DET_RUN .and. (.not. ENS_WITH_MDET)) then !*** for backward compatibility ***
-    ENS_WITH_MDET = DET_RUN
-  end if
-  if ((.not. DET_RUN_CYCLED) .and. MDET_CYCLED) then !*** for backward compatibility ***
-    MDET_CYCLED = DET_RUN_CYCLED
   end if
 
   return

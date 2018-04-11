@@ -233,9 +233,16 @@ subroutine scalerm_setup(execname)
   integer :: HIST_item_limit    ! dummy
   integer :: HIST_variant_limit ! dummy
 
+  logical :: exec_modelonly
+
   character(len=7) :: execname_ = 'LETKF  '
 
   if (present(execname)) execname_ = execname
+
+  exec_modelonly = .false.
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP ') then
+    exec_modelonly = .true.
+  end if
 
   call mpi_timer('', 2, barrier=MPI_COMM_WORLD)
 
@@ -336,7 +343,7 @@ subroutine scalerm_setup(execname)
 
   ! Set real confname for my domain
   if (trim(CONF_FILES) /= '') then
-    if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP' .or. mydom >= 2) then
+    if (exec_modelonly .or. mydom >= 2) then
       confname_new = trim(CONF_FILES)
       call filename_replace_dom(confname_new, mydom)
     end if
@@ -345,7 +352,7 @@ subroutine scalerm_setup(execname)
   ! Setup standard I/O
   !-----------------------------------------------------------------------------
 
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly) then
     if (MEMBER_ITER == 0) then
       write (6, '(A)') '[Warning] Currently this code can only run a single member iteration; reset MEMBER_ITER to 1!'
       MEMBER_ITER = 1
@@ -387,20 +394,27 @@ subroutine scalerm_setup(execname)
           confname_new = confname_new2 ! In other domains, always reset config file as long as CONF_FILES is set
         end if
       end if
-    else
-      return
     end if
-  end if ! [ execname_ == 'SCALERM' .or. execname_ == 'RMPREP' ]
+  end if ! [ exec_modelonly ]
 
-  ! setup standard I/O: Re-open the new config file; change of IO_LOG_BASENAME is effective in this step
-  confname = confname_new
-  call IO_setup( modelname, .true., confname )
-  write (6, '(A,I6.6,2A)') '[Info] MYRANK = ', myrank, ' is using configuration file: ', trim(confname)
+  if ((.not. exec_modelonly) .or. scalerm_run) then
+    ! setup standard I/O: Re-open the new config file; change of IO_LOG_BASENAME is effective in this step
+    confname = confname_new
+    call IO_setup( modelname, .true., confname )
 
-!  call read_nml_log
-!  call read_nml_model
-!  call read_nml_ensemble
-!  call read_nml_process
+  !  call read_nml_log
+  !  call read_nml_model
+  !  call read_nml_ensemble
+  !  call read_nml_process
+
+    if (scalerm_run) then
+      write (6, '(A,I6.6,2A)') '[Info] MYRANK = ', myrank, ' is running SCALE using configuration file: ', trim(confname)
+    else
+      write (6, '(A,I6.6,2A)') '[Info] MYRANK = ', myrank, ' is using configuration file: ', trim(confname)
+    end if
+  else
+    write (6, '(A,I6.6,A)') '[Info] MYRANK = ', myrank, ' is not used for SCALE!'
+  end if
 
   ! Read LETKF namelists
   !-----------------------------------------------------------------------------
@@ -460,11 +474,15 @@ subroutine scalerm_setup(execname)
 
   call mpi_timer('scalerm_setup:mpi_comm_split_a:', 2)
 
+  if (exec_modelonly .and. (.not. scalerm_run)) then
+    return
+  end if
+
   ! Setup scalelib LOG output (only for the universal master rank)
   !-----------------------------------------------------------------------------
 
   ! setup Log
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly) then
     call IO_LOG_setup( local_myrank, local_ismaster )
   else
     call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
@@ -479,7 +497,7 @@ subroutine scalerm_setup(execname)
   ! setup process
   call PRC_setup
 
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly .and. scalerm_run) then
     ! setup PROF
     call PROF_setup
 
@@ -491,7 +509,7 @@ subroutine scalerm_setup(execname)
   ! setup constants
   call CONST_setup
 
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly .and. scalerm_run) then
     ! setup calendar
     call CALENDAR_setup
 
@@ -505,16 +523,16 @@ subroutine scalerm_setup(execname)
 
 #ifdef PNETCDF
   call LAND_GRID_INDEX_setup
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly .and. scalerm_run) then
     call LAND_GRID_setup
   end if
 
   call URBAN_GRID_INDEX_setup
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly .and. scalerm_run) then
     call URBAN_GRID_setup
   end if
 #else
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly .and. scalerm_run) then
     call LAND_GRID_INDEX_setup
     call LAND_GRID_setup
 
@@ -523,7 +541,7 @@ subroutine scalerm_setup(execname)
   end if
 #endif
 
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly .and. scalerm_run) then
     ! setup submodel administrator
     call ATMOS_admin_setup
     call OCEAN_admin_setup
@@ -535,9 +553,11 @@ subroutine scalerm_setup(execname)
   ! setup tracer index
   call ATMOS_HYDROMETEOR_setup
 
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
-    call ATMOS_driver_config
-    call USER_config
+  if (exec_modelonly) then
+    if (scalerm_run) then
+      call ATMOS_driver_config
+      call USER_config
+    end if
   else
 !   call ATMOS_driver_config -->
 !     call ATMOS_PHY_MP_driver_config -->
@@ -554,7 +574,7 @@ subroutine scalerm_setup(execname)
   ! setup mpi communication
   call COMM_setup
 
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly .and. scalerm_run) then
     ! setup topography
     call TOPO_setup
 
@@ -563,8 +583,10 @@ subroutine scalerm_setup(execname)
   end if
 
   ! setup grid coordinates (real world)
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
-    call REAL_setup( catalogue_output = (myrank_to_mem(1) == 1) ) ! Only output catalogue file in the first member of this execution
+  if (exec_modelonly) then
+    if (scalerm_run) then
+      call REAL_setup( catalogue_output = (myrank_to_mem(1) == 1) ) ! Only output catalogue file in the first member of this execution
+    end if
   else
 !   call REAL_setup -->
       ! setup map projection
@@ -572,7 +594,7 @@ subroutine scalerm_setup(execname)
 !   <-- REAL_setup
   end if
 
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly .and. scalerm_run) then
     ! setup grid transfer metrics (uses in ATMOS_dynamics)
     call GTRANS_setup
 
@@ -584,20 +606,24 @@ subroutine scalerm_setup(execname)
   end if
 
   ! setup time
-  if (execname_ == 'SCALERM') then
-    call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
-  else if (execname_ == 'RMPREP') then
-    call ADMIN_TIME_setup( setup_TimeIntegration = .false. )
+  if (scalerm_run) then
+    if (execname_ == 'SCALERM') then
+      call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
+    else if (execname_ == 'RMPREP ') then
+      call ADMIN_TIME_setup( setup_TimeIntegration = .false. )
+    end if
   end if
 
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly .and. scalerm_run) then
     ! setup statistics
     call STAT_setup
   end if
 
   ! setup history I/O
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
-    call HIST_setup
+  if (exec_modelonly) then
+    if (scalerm_run) then
+      call HIST_setup
+    end if
   else
 !   call HIST_setup -->
       ! setup history file I/O
@@ -622,7 +648,7 @@ subroutine scalerm_setup(execname)
 !   <-- HIST_setup
   end if
 
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .and. scalerm_run) then
     ! setup monitor I/O
     call MONIT_setup
 
@@ -630,7 +656,7 @@ subroutine scalerm_setup(execname)
     call EXTIN_setup( 'RM' )
   end if
 
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly .and. scalerm_run) then
     ! setup nesting grid
     call NEST_setup ( intercomm_parent, intercomm_child )
 
@@ -640,12 +666,12 @@ subroutine scalerm_setup(execname)
     call ATMOS_SATURATION_setup
   end if
 
-  if (execname_ == 'SCALERM') then
+  if (execname_ == 'SCALERM' .and. scalerm_run) then
     call BULKFLUX_setup( sqrt(DX**2+DY**2) )
     call ROUGHNESS_setup
   end if
 
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly .and. scalerm_run) then
     ! setup variable container
     call ATMOS_vars_setup
     call OCEAN_vars_setup
@@ -654,26 +680,28 @@ subroutine scalerm_setup(execname)
     call CPL_vars_setup
   end if
 
-  if (execname_ == 'SCALERM') then
-    ! setup submodel driver
-    call ATMOS_driver_setup
-    call OCEAN_driver_setup
-    call LAND_driver_setup
-    call URBAN_driver_setup
+  if (scalerm_run) then
+    if (execname_ == 'SCALERM') then
+      ! setup submodel driver
+      call ATMOS_driver_setup
+      call OCEAN_driver_setup
+      call LAND_driver_setup
+      call URBAN_driver_setup
 
-    call USER_setup
-  else if (execname_ == 'RMPREP') then
-    ! setup preprocess converter
-    call CONVERT_setup
+      call USER_setup
+    else if (execname_ == 'RMPREP ') then
+      ! setup preprocess converter
+      call CONVERT_setup
 
-    ! setup mktopo
-    call MKTOPO_setup
+      ! setup mktopo
+      call MKTOPO_setup
 
-    ! setup mkinit
-    call MKINIT_setup
+      ! setup mkinit
+      call MKINIT_setup
+    end if
   end if
 
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+  if (exec_modelonly .and. scalerm_run) then
     call PROF_rapend('Initialize', 0)
   end if
 
@@ -712,12 +740,18 @@ subroutine scalerm_finalize(execname)
   implicit none
 
   character(len=*), intent(in), optional :: execname
-  character(len=7) :: execname_ = 'LETKF  '
   integer :: ierr
+  logical :: exec_modelonly
+
+  character(len=7) :: execname_ = 'LETKF  '
 
   if (present(execname)) execname_ = execname
+  exec_modelonly = .false.
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP ') then
+    exec_modelonly = .true.
+  end if
 
-  if (myrank_use) then
+  if (myrank_use .and. scalerm_run) then
     if (execname_ == 'SCALERM') then
       ! check data
       if( ATMOS_sw_check ) call ATMOS_vars_restart_check
@@ -729,7 +763,7 @@ subroutine scalerm_finalize(execname)
       call PROF_rapstart('File', 2)
     end if
 
-    if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
+    if (exec_modelonly) then
       ! clean up resource allocated for I/O
       call FILEIO_cleanup
     end if
@@ -741,14 +775,16 @@ subroutine scalerm_finalize(execname)
 
   call FileCloseAll
 
-  if (execname_ == 'SCALERM') then
-    call PROF_rapend  ('File', 2)
+  if (myrank_use .and. scalerm_run) then
+    if (execname_ == 'SCALERM') then
+      call PROF_rapend  ('File', 2)
 
-    call PROF_rapend  ('All', 1)
-  end if
+      call PROF_rapend  ('All', 1)
+    end if
 
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP') then
-    call PROF_rapreport
+    if (exec_modelonly) then
+      call PROF_rapreport
+    end if
   end if
 
   if (myrank_use) then
