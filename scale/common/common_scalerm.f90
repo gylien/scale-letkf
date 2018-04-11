@@ -45,8 +45,12 @@ subroutine scalerm_setup(execname)
     IO_FID_LOG, &
     IO_L, &
     H_LONG, &
+#ifdef SCALEUV
     IO_ARG_getfname, &
     IO_filename_replace_setup
+#else
+    IO_ARG_getfname
+#endif
   use scale_prof, only: &
     PROF_setup, &
     PROF_setprefx, &
@@ -379,7 +383,9 @@ subroutine scalerm_setup(execname)
         stop 1
       end if
 
+#ifdef SCALEUV
       call IO_filename_replace_setup(memf_notation, scalerm_memf)
+#endif
 
       if (trim(CONF_FILES) /= '') then
         confname_new2 = confname_new
@@ -585,7 +591,11 @@ subroutine scalerm_setup(execname)
   ! setup grid coordinates (real world)
   if (exec_modelonly) then
     if (scalerm_run) then
+#ifdef SCALEUV
       call REAL_setup( catalogue_output = (myrank_to_mem(1) == 1) ) ! Only output catalogue file in the first member of this execution
+#else
+      call REAL_setup
+#endif
     end if
   else
 !   call REAL_setup -->
@@ -602,7 +612,11 @@ subroutine scalerm_setup(execname)
     call INTERP_setup
 
     ! setup restart
+#ifdef SCALEUV
     call ADMIN_restart_setup( member = scalerm_mem )
+#else
+    call ADMIN_restart_setup
+#endif
   end if
 
   ! setup time
