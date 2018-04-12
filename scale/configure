@@ -1,0 +1,23 @@
+TOPDIR    = ../../..
+SCALE_INC = -I$(TOPDIR)/include
+SCALE_LIB = -L$(TOPDIR)/lib -lscale
+SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
+
+include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
+
+#------
+
+include ../configure.user
+
+#------
+
+ifeq ($(SCALE_USER_VER),T)
+FOPTS     += -DSCALEUV
+FOPTS_SCALE += -DSCALEUV
+endif
+
+ifeq ($(H08),T)
+FOPTS     += -DH08
+FOPTS_SCALE += -DH08
+endif

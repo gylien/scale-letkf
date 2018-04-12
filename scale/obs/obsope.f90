@@ -12,6 +12,7 @@ PROGRAM obsope
   USE common
   USE common_mpi
   USE common_scale
+  USE common_scalerm
   USE common_mpi_scale
   USE common_obs_scale
   USE common_nml
@@ -68,12 +69,9 @@ PROGRAM obsope
 
   call set_common_conf(nprocs)
 
-  if (DET_RUN) then
-    call set_mem_node_proc(MEMBER+2)
-  else
-    call set_mem_node_proc(MEMBER+1)
-  end if
-  call set_scalelib('OBSOPE')
+  call set_mem_node_proc(MEMBER_RUN)
+
+  call scalerm_setup('OBSOPE')
 
   if (myrank_use) then
 
@@ -106,7 +104,7 @@ PROGRAM obsope
 
   end if ! [ myrank_use ]
 
-  call unset_scalelib
+  call scalerm_finalize('OBSOPE')
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 

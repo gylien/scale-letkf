@@ -1,31 +1,33 @@
-TOPDIR    = ../../..
-SCALE_INC = -I$(TOPDIR)/include
-SCALE_LIB = -L$(TOPDIR)/lib -lscale
-SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
+# On-off settings
+#-----------------
 
-include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
-include $(TOPDIR)/Mkinclude
+SCALE_USER_VER = T
+
+# Libraries
+#-----------------
 
 #NETCDF_INC = -I/opt/aics/netcdf/k-serial-noszip/include
 #NETCDF_LIB = -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
 NETCDF_INC = $(SCALE_NETCDF_INCLUDE)
 NETCDF_LIB = $(SCALE_NETCDF_LIBS)
 
-#LAPACK_LIB = -SSL2BLAMP
 LAPACK_LIB = -L/usr/lib/lapack -llapack -L/usr/lib/libblas -lblas
 
-BUFR_LIB  =
+BUFR_LIB   =
 
-#######
+# Compiler flags
+#-----------------
 
-#SFC       = frtpx
-#FC        = mpifrtpx
+#SFC        = frtpx
+#FC         = mpifrtpx
 
 FOPTS_SCALE = $(FFLAGS) -std=gnu
 
-FOPTS     = $(FOPTS_SCALE) -fopenmp
+FOPTS      = $(FOPTS_SCALE) -fopenmp
 
-FMCMODEL  =
-FBYTESWAP = 
-FFREE     = -Free
-FFIXED    = -Fixed
+FOPTS_EXE  = $(FOPTS)
+
+FMCMODEL   =
+FBYTESWAP  = 
+FFREE      = -Free
+FFIXED     = -Fixed

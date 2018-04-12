@@ -16,7 +16,7 @@ MODULE common_scale
   use common_nml
 
   use scale_precision, only: RP, SP
-  use scale_stdio, only: H_MID
+  use scale_stdio, only: H_MID, H_LONG
   use scale_prof
 
   IMPLICIT NONE
@@ -27,6 +27,8 @@ MODULE common_scale
 
   character(len=H_MID), parameter :: modelname = "SCALE-LETKF"
   INTEGER,PARAMETER :: vname_max = 10
+
+  character(len=H_LONG), save :: confname
 
   ! 
   !--- 3D, 2D state variables (in SCALE restart files)
@@ -166,13 +168,15 @@ CONTAINS
 !-------------------------------------------------------------------------------
 subroutine set_common_conf(nprocs)
   use scale_stdio, only: &
-    IO_setup
+    IO_setup, &
+    IO_ARG_getfname
 
   implicit none
   integer, intent(in) :: nprocs
 
   ! setup standard I/O
   call IO_setup( modelname )
+  confname = IO_ARG_getfname( is_master=.true. )
 
   call read_nml_log
   call read_nml_model

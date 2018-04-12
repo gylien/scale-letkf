@@ -13,6 +13,7 @@ PROGRAM letkf
   USE common
   USE common_mpi
   USE common_scale
+  USE common_scalerm
   USE common_mpi_scale
   USE common_obs_scale
   USE common_nml
@@ -93,12 +94,9 @@ PROGRAM letkf
 
   call set_common_conf(nprocs)
 
-  if (DET_RUN) then
-    call set_mem_node_proc(MEMBER+2)
-  else
-    call set_mem_node_proc(MEMBER+1)
-  end if
-  call set_scalelib('LETKF')
+  call set_mem_node_proc(MEMBER_RUN)
+
+  call scalerm_setup('LETKF')
 
   if (myrank_use) then
 
@@ -164,7 +162,7 @@ PROGRAM letkf
     !
     call read_ens_mpi(gues3d, gues2d)
 
-    if (DET_RUN .and. mmdetin /= mmdet) then
+    if (ENS_WITH_MDET .and. mmdetin /= mmdet) then
       gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
       gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
     end if
@@ -235,7 +233,7 @@ PROGRAM letkf
 
   end if ! [ myrank_use ]
 
-  call unset_scalelib
+  call scalerm_finalize('LETKF')
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 

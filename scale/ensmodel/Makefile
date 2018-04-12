@@ -1,16 +1,17 @@
-include ../configure.user
+include ../configure
 
 PROGS   = scale-rm_pp_ens scale-rm_init_ens scale-rm_ens
 
 OBJS    =
 
-COMMON_DIR = ../.common_for_scale
+COMMON_DIR = ../common
 
 COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common.o         \
               $(COMMON_DIR)/common_mpi.o     \
               $(COMMON_DIR)/common_ncio.o    \
               $(COMMON_DIR)/common_scale.o     \
+              $(COMMON_DIR)/common_scalerm.o   \
               $(COMMON_DIR)/common_obs_scale.o \
               $(COMMON_DIR)/common_mpi_scale.o \
               $(COMMON_DIR)/common_nml.o     
@@ -31,21 +32,21 @@ endif
 all:	$(PROGS)
 
 scale-rm_pp_ens:	scale-rm_pp_ens.o $(OBJS) $(COMMON_DIR)
-	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_pp_ens scale-rm_pp_ens.o \
+	$(FC) $(FOPTS_EXE) $(FMCMODEL) -o scale-rm_pp_ens scale-rm_pp_ens.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
 scale-rm_pp_ens.o:	scale-rm_pp_ens.f90 $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS_SCALE) -c $< -I$(COMMON_DIR) $(INCS)
 
 scale-rm_init_ens:	scale-rm_init_ens.o $(OBJS) $(COMMON_DIR)
-	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_init_ens scale-rm_init_ens.o \
+	$(FC) $(FOPTS_EXE) $(FMCMODEL) -o scale-rm_init_ens scale-rm_init_ens.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
 scale-rm_init_ens.o:	scale-rm_init_ens.f90 $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS_SCALE) -c $< -I$(COMMON_DIR) $(INCS)
 
 scale-rm_ens:	scale-rm_ens.o $(OBJS) $(COMMON_DIR)
-	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_ens scale-rm_ens.o \
+	$(FC) $(FOPTS_EXE) $(FMCMODEL) -o scale-rm_ens scale-rm_ens.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
 scale-rm_ens.o:	scale-rm_ens.f90 $(OBJS) $(COMMON_DIR)

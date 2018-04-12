@@ -105,6 +105,13 @@ if [ "$JOBTYPE" = 'cycle' ]; then
   cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 |sprd/
 EOF
+
+  if ((MAKEINIT == 1)); then
+    echo "|mdet/" >> ${STAGING_DIR}/${STGINLIST}
+    for m in $(seq $MEMBER); do
+      echo "|${name_m[$m]}/" >> ${STAGING_DIR}/${STGINLIST}
+    done
+  fi
 fi
 
 #-------------------------------------------------------------------------------
@@ -149,66 +156,70 @@ fi
 
 config_file_scale_launcher () {
 #-------------------------------------------------------------------------------
-# Generate the launcher configuration files for scale_pp/scale_init/scale
+# Generate the launcher configuration files
 #
-# Usage: config_file_scale_launcher MODEL_NAME CONF_NAME
+# Usage: config_file_scale_launcher JOBTYPE CONF_NAME CONF_FILES MEMBER_RUN
 #
 #   JOBTYPE     Job type (cycle/fcst)
-#   MODEL_NAME  (scale-rm_pp/scale-rm_init/scale-rm)
-#   CONF_NAME   (pp/init/run)
+#   CONF_NAME   Name of this configuration file
+#   CONF_FILES  Name pattern of configuration files for each member/domain
 #   MEMBER_RUN  Number of members needed to run
 #
 # Other input variables:
-#   $nitmax
-#   $time
 #   $SCRP_DIR
 #   $MEMBER
-#   $mtot
 #   $PPN_APPAR
 #   $mem_nodes
 #   $DOMNUM
 #   $PRC_DOMAINS_LIST
-#   $STAGING_DIR
 #-------------------------------------------------------------------------------
 
 local JOBTYPE="$1"; shift
-local MODEL_NAME="$1"; shift
 local CONF_NAME="$1"; shift
+local CONF_FILES="$1"; shift
 local MEMBER_RUN="$1"
 
 #-------------------------------------------------------------------------------
 
-local it
-local conf_file
+local MEMBER_TOT
+local ENS_WITH_MEAN_TF
+local ENS_WITH_MDET_TF
+local MDET_CYCLED_TF
 
-if [ "$JOBTYPE" = 'cycle' ]; then
-  CONF_FILES_SEQNUM='.false.'
-else
-  CONF_FILES_SEQNUM='.true.'
+if [ "$JOBTYPE" = 'cycle' ] || [ "$JOBTYPE" = 'letkf' ]; then
+  MEMBER_TOT=$MEMBER
+  ENS_WITH_MEAN_TF='.true.'
+  ENS_WITH_MDET_TF='.false.'
+  if ((DET_RUN == 1)); then
+    ENS_WITH_MDET_TF='.true.'
+  fi
+elif [ "$JOBTYPE" = 'fcst' ]; then
+  MEMBER_TOT=$((MEMBER+1))
+  if ((DET_RUN == 1)); then
+    MEMBER_TOT=$((MEMBER+2))
+  fi
+  ENS_WITH_MEAN_TF='.false.'
+  ENS_WITH_MDET_TF='.false.'
 fi
 
-for it in $(seq $nitmax); do
-  if ((nitmax == 1)); then
-    conf_file="${MODEL_NAME}_${time}.conf"
-  else
-    conf_file="${MODEL_NAME}_${time}_${it}.conf"
-  fi
-  echo "  $conf_file"
-  cat $SCRP_DIR/config.nml.ensmodel | \
-      sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
-          -e "/!--MEMBER_RUN--/a MEMBER_RUN = $MEMBER_RUN," \
-          -e "/!--MEMBER_ITER--/a MEMBER_ITER = $it," \
-          -e "/!--CONF_FILES--/a CONF_FILES = \"${CONF_NAME}.d<domain>_${time}.conf\"," \
-          -e "/!--CONF_FILES_SEQNUM--/a CONF_FILES_SEQNUM = $CONF_FILES_SEQNUM," \
-          -e "/!--PPN--/a PPN = $PPN_APPAR," \
-          -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
-          -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \
-          -e "/!--PRC_DOMAINS--/a PRC_DOMAINS = $PRC_DOMAINS_LIST" \
-      > $CONFIG_DIR/${conf_file}
-  if ((stage_config == 1)); then
-    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
-  fi
-done
+if ((DET_RUN_CYCLED == 1)); then
+  MDET_CYCLED_TF='.true.'
+else
+  MDET_CYCLED_TF='.false.'
+fi
+
+cat $SCRP_DIR/config.nml.ensmodel | \
+    sed -e "/!--MEMBER--/a MEMBER = $MEMBER_TOT," \
+        -e "/!--ENS_WITH_MEAN--/a ENS_WITH_MEAN = $ENS_WITH_MEAN_TF," \
+        -e "/!--ENS_WITH_MDET--/a ENS_WITH_MDET = $ENS_WITH_MDET_TF," \
+        -e "/!--MEMBER_RUN--/a MEMBER_RUN = $MEMBER_RUN," \
+        -e "/!--MDET_CYCLED--/a MDET_CYCLED = ${MDET_CYCLED_TF}," \
+        -e "/!--CONF_FILES--/a CONF_FILES = \"${CONF_FILES}\"," \
+        -e "/!--PPN--/a PPN = $PPN_APPAR," \
+        -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
+        -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \
+        -e "/!--PRC_DOMAINS--/a PRC_DOMAINS = $PRC_DOMAINS_LIST" \
+    > $CONFIG_DIR/${CONF_NAME}
 
 #-------------------------------------------------------------------------------
 }
