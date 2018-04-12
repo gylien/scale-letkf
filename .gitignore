@@ -11,7 +11,6 @@
 /scale/run/config.main
 /scale/run/config.cycle
 /scale/run/config.fcst
-/scale/run/config.nml.ensmodel
 /scale/run/config.nml.scale_pp*
 /scale/run/config.nml.scale_init*
 /scale/run/config.nml.grads_boundary

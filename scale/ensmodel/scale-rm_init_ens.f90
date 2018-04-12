@@ -1,55 +1,51 @@
-program scaleles_init_ens
-  !-----------------------------------------------------------------------------
-
-  use mpi
+program scale_rm_init_ens
+!=======================================================================
+!
+! [PURPOSE:] Ensemble forecasts with SCALE-RM
+!
+!=======================================================================
+!!$USE OMP_LIB
+!  use mpi
+!  use common
   use common_mpi, only: &
-     nprocs, &
-     myrank
+    nprocs, &
+    myrank
   use common_nml
   use common_scale, only: &
-     set_common_conf
+    set_common_conf
+  use common_scalerm
   use common_mpi_scale, only: &
-     myrank_to_mem, &
-     myrank_to_pe, &
-     nitmax, &
-     set_mem_node_proc, &
-     mpi_timer
+    mpi_timer, &
+    myrank_use, &
+    set_mem_node_proc
 
-  use scale_stdio, only: &
-     H_LONG, &
-     IO_L, &
-     IO_FID_CONF, &
-     IO_FID_LOG, &
-     IO_FID_STDOUT
+  use scale_prof, only: &
+    PROF_setprefx, &
+    PROF_rapstart, &
+    PROF_rapend
   use scale_process, only: &
-     PRC_MPIstart, &
-     PRC_UNIVERSAL_setup, &
-     PRC_GLOBAL_setup, &
-     PRC_MPIfinish, &
-     PRC_MPIsplit, &
-     PRC_UNIVERSAL_myrank, &
-     PRC_DOMAIN_nlim, &
-     PRC_GLOBAL_COMM_WORLD, &
-     PRC_LOCAL_COMM_WORLD
-  use mod_rm_prep
-
+    PRC_MPIstart, &
+    PRC_mpi_alive, &
+    PRC_UNIVERSAL_setup, &
+    PRC_MPIfinish, &
+    PRC_UNIVERSAL_myrank
+  use scale_atmos_grid_cartesC_real, only: &
+    ATMOS_GRID_CARTESC_REAL_update_Z
+  use mod_convert, only: &
+    CONVERT
+  use mod_mktopo, only: &
+    MKTOPO
+  use mod_mkinit, only: &
+    MKINIT
   implicit none
 
-  integer :: it, its, ite, im, idom, color, key, ierr
-  character(7) :: stdoutf='-000000'
+  character(7) :: stdoutf = '-000000'
+  integer :: member_iter_cmd = -1
 
   integer :: universal_comm
   integer :: universal_nprocs
   logical :: universal_master
   integer :: universal_myrank
-  integer :: global_comm
-  integer :: local_comm
-  integer :: intercomm_parent
-  integer :: intercomm_child
-
-  character(len=H_LONG) :: confname_domains(PRC_DOMAIN_nlim)
-  character(len=H_LONG) :: confname_mydom
-  character(len=H_LONG) :: confname
 
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
@@ -62,6 +58,8 @@ program scaleles_init_ens
   ! start MPI
   call PRC_MPIstart( universal_comm ) ! [OUT]
 
+  PRC_mpi_alive = .true.
+
   call mpi_timer('', 1)
 
   call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
@@ -73,21 +71,16 @@ program scaleles_init_ens
 
   WRITE(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ',universal_myrank,'/',universal_nprocs-1
 
-  if (command_argument_count() >= 3) then
-    write (myranks, '(I10)') universal_myrank
-    call get_command_argument(3, icmd)
-    cmd1 = 'bash ' // trim(icmd) // ' ensinit_1' // ' ' // trim(myranks)
-    cmd2 = 'bash ' // trim(icmd) // ' ensinit_2' // ' ' // trim(myranks)
-    do iarg = 4, command_argument_count()
-      call get_command_argument(iarg, icmd)
-      cmd1 = trim(cmd1) // ' ' // trim(icmd)
-      cmd2 = trim(cmd2) // ' ' // trim(icmd)
-    end do
-  end if
-
   if (command_argument_count() >= 2) then
     call get_command_argument(2, icmd)
-    if (trim(icmd) /= '') then
+    if (trim(icmd) /= '' .and. trim(icmd) /= '-') then
+      read (icmd, '(I)') member_iter_cmd
+    end if
+  end if
+
+  if (command_argument_count() >= 3) then
+    call get_command_argument(3, icmd)
+    if (trim(icmd) /= '' .and. trim(icmd) /= '-') then
       WRITE(stdoutf(2:7), '(I6.6)') universal_myrank
 !      WRITE(6,'(3A,I6.6)') 'STDOUT goes to ',trim(icmd)//stdoutf,' for MYRANK ', universal_myrank
       OPEN(6,FILE=trim(icmd)//stdoutf)
@@ -95,11 +88,23 @@ program scaleles_init_ens
     end if
   end if
 
+  if (command_argument_count() >= 4) then
+    write (myranks, '(I10)') universal_myrank
+    call get_command_argument(4, icmd)
+    cmd1 = 'bash ' // trim(icmd) // ' ensinit_1' // ' ' // trim(myranks)
+    cmd2 = 'bash ' // trim(icmd) // ' ensinit_2' // ' ' // trim(myranks)
+    do iarg = 5, command_argument_count()
+      call get_command_argument(iarg, icmd)
+      cmd1 = trim(cmd1) // ' ' // trim(icmd)
+      cmd2 = trim(cmd2) // ' ' // trim(icmd)
+    end do
+  end if
+
 !-----------------------------------------------------------------------
 ! Pre-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 3) then
+  if (command_argument_count() >= 4) then
     write (6,'(A)') 'Run pre-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd1), ']'
     call system(trim(cmd1))
@@ -108,102 +113,66 @@ program scaleles_init_ens
   call mpi_timer('PRE_SCRIPT', 1, barrier=universal_comm)
 
 !-----------------------------------------------------------------------
+! Initialize
+!-----------------------------------------------------------------------
 
   call set_common_conf(universal_nprocs)
-  call set_mem_node_proc(MEMBER+2)
+
+  if (member_iter_cmd >= 0) then
+    MEMBER_ITER = member_iter_cmd
+    write (6, '(A,I4,A)') '[Info] Reset MEMBER_ITER = ', MEMBER_ITER, ' based on the commannd line input'
+  end if
+
+  call set_mem_node_proc(MEMBER_RUN)
+
+  call scalerm_setup('RMPREP')
 
   call mpi_timer('INITIALIZE', 1, barrier=universal_comm)
 
+  if (myrank_use .and. scalerm_run) then
+
 !-----------------------------------------------------------------------
-! Run SCALE-RM_init
+! Main
 !-----------------------------------------------------------------------
 
-  ! split MPI communicator for single members
-  if (myrank_to_mem(1) >= 1) then
-    color = myrank_to_mem(1) - 1
-    key   = myrank_to_pe
-  else
-    color = MPI_UNDEFINED
-    key   = MPI_UNDEFINED
-  endif
+    call PROF_setprefx('MAIN')
+    call PROF_rapstart('Main_prep', 0)
 
-  call MPI_COMM_SPLIT(universal_comm, color, key, global_comm, ierr)
+    ! execute preprocess
+    call PROF_rapstart('Convert', 1)
+    call CONVERT
+    call PROF_rapend  ('Convert', 1)
 
-  if (global_comm /= MPI_COMM_NULL) then
+    ! execute mktopo
+    call PROF_rapstart('MkTopo', 1)
+    call MKTOPO
+    call PROF_rapend  ('MkTopo', 1)
 
-    call PRC_GLOBAL_setup( .false.,    & ! [IN]
-                           global_comm ) ! [IN]
+    ! re-setup
+    call ATMOS_GRID_CARTESC_REAL_update_Z
 
-    do idom = 1, NUM_DOMAIN
-      confname_domains(idom) = trim(CONF_FILES)
-      call filename_replace_dom(confname_domains(idom), idom)
-    end do
+    ! execute mkinit
+    call PROF_rapstart('MkInit', 1)
+    call MKINIT
+    call PROF_rapend  ('MkInit', 1)
 
-    !--- split for nesting
-    ! communicator split for nesting domains
-    call PRC_MPIsplit( global_comm,      & ! [IN]
-                       NUM_DOMAIN,       & ! [IN]
-                       PRC_DOMAINS(:),   & ! [IN]
-                       confname_domains(:), & ! [IN]
-                       .false.,          & ! [IN]
-                       .false.,          & ! [IN] flag bulk_split
-                       COLOR_REORDER,    & ! [IN]
-                       local_comm,       & ! [OUT]
-                       intercomm_parent, & ! [OUT]
-                       intercomm_child,  & ! [OUT]
-                       confname_mydom    ) ! [OUT]
+    call PROF_rapend('Main_prep', 0)
 
-    if (MEMBER_ITER == 0) then
-      its = 1
-      ite = nitmax
-    else
-      its = MEMBER_ITER
-      ite = MEMBER_ITER
-    end if
+!-----------------------------------------------------------------------
+! Finalize
+!-----------------------------------------------------------------------
 
-    do it = its, ite
-      im = myrank_to_mem(it)
-      if (im >= 1 .and. im <= MEMBER_RUN) then
-        confname = confname_mydom
-        if (CONF_FILES_SEQNUM) then
-          call filename_replace_mem(confname, im)
-        else
-          if (im <= MEMBER) then
-            call filename_replace_mem(confname, im)
-          else if (im == MEMBER+1) then
-            call filename_replace_mem(confname, memf_mean)
-          else if (im == MEMBER+2) then
-            call filename_replace_mem(confname, memf_mdet)
-          end if
-        end if
-        WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', trim(confname)
+  end if ! [ myrank_use .and. scalerm_run ]
 
-        call scalerm_prep ( local_comm, &
-                            intercomm_parent, &
-                            intercomm_child, &
-                            trim(confname) )
-      end if
-    end do ! [ it = its, ite ]
+  call scalerm_finalize('RMPREP')
 
-  else ! [ global_comm /= MPI_COMM_NULL ]
-
-    write (6, '(A,I6.6,A)') 'MYRANK=',universal_myrank,': This process is not used!'
-
-  end if ! [ global_comm /= MPI_COMM_NULL ]
-
-  ! Close logfile, configfile
-  if ( IO_L ) then
-    if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
-  endif
-  close(IO_FID_CONF)
-
-  call mpi_timer('SCALE_RM', 1, barrier=universal_comm)
+  call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 
 !-----------------------------------------------------------------------
 ! Post-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 3) then
+  if (command_argument_count() >= 4) then
     write (6,'(A)') 'Run post-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd2), ']'
     call system(trim(cmd2))
@@ -212,12 +181,9 @@ program scaleles_init_ens
   call mpi_timer('POST_SCRIPT', 1, barrier=universal_comm)
 
 !-----------------------------------------------------------------------
-! Finalize
-!-----------------------------------------------------------------------
 
-!  call PRC_MPIfinish
-
-  call MPI_Finalize(ierr)
+  call PRC_MPIfinish
 
   stop
-end program scaleles_init_ens
+!=======================================================================
+end program scale_rm_init_ens

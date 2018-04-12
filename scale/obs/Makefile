@@ -1,4 +1,4 @@
-include ../configure.user
+include ../configure
 
 PROGS   = obsope obsmake obssim #dec_prepbufr
 
@@ -14,6 +14,7 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common_letkf.o   \
               $(COMMON_DIR)/common_ncio.o    \
               $(COMMON_DIR)/common_scale.o     \
+              $(COMMON_DIR)/common_scalerm.o   \
               $(COMMON_DIR)/common_obs_scale.o \
               $(COMMON_DIR)/common_mpi_scale.o \
               $(COMMON_DIR)/common_nml.o
@@ -34,13 +35,13 @@ endif
 all:	$(PROGS)
 
 obsope:	obsope.o $(OBJS) $(COMMON_DIR)
-	$(FC) $(FOPTS) $(FMCMODEL) -o obsope obsope.o \
+	$(FC) $(FOPTS_EXE) $(FMCMODEL) -o obsope obsope.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 obsmake:	obsmake.o $(OBS) $(COMMON_DIR)
-	$(FC) $(FOPTS) $(FMCMODEL) -o obsmake obsmake.o \
+	$(FC) $(FOPTS_EXE) $(FMCMODEL) -o obsmake obsmake.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 obssim:	obssim.o $(OBS) $(COMMON_DIR)
-	$(FC) $(FOPTS) $(FMCMODEL) -o obssim obssim.o \
+	$(FC) $(FOPTS_EXE) $(FMCMODEL) -o obssim obssim.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 dec_prepbufr:	dec_prepbufr.o $(COMMON_DIR)
 	$(FC) $(FOPTS) -o dec_prepbufr dec_prepbufr.o $(COMMON_OBJS) \

@@ -7,10 +7,11 @@ program dacycle
 !$USE OMP_LIB
   use common
   use common_mpi
+  use common_nml
   use common_scale
+  use common_scalerm
   use common_mpi_scale
   use common_obs_scale
-  use common_nml
   use letkf_obs
   use letkf_tools
   use obsope_tools, only: &
@@ -31,8 +32,12 @@ program dacycle
   use scale_monitor, only: &
     MONIT_write
   use mod_admin_restart, only: &
+#ifdef SCALEUV
     ADMIN_restart_write, &
     ADMIN_restart_write_additional
+#else
+    ADMIN_restart_write
+#endif
   use mod_admin_time, only: &
     ADMIN_TIME_checkstate, &
     ADMIN_TIME_advance, &
@@ -119,12 +124,9 @@ program dacycle
 
   call set_common_conf(nprocs)
 
-  if (DET_RUN) then
-    call set_mem_node_proc(MEMBER+2)
-  else
-    call set_mem_node_proc(MEMBER+1)
-  end if
-  call set_scalelib('DACYCLE')
+  call set_mem_node_proc(MEMBER_RUN)
+
+  call scalerm_setup('DACYCLE')
 
   call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_WORLD)
 
@@ -162,9 +164,9 @@ program dacycle
           if (LOG_LEVEL >= 1) then
             write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip reading restart files'
           end if
-          call resume_state(.false.)
+          call resume_state(do_restart_read=.false.)
         else
-          call resume_state(.true.)
+          call resume_state(do_restart_read=.true.)
         end if
 
         ! history&monitor file output
@@ -301,7 +303,7 @@ program dacycle
         !
         call read_ens_mpi(gues3d, gues2d)
 
-        if (DET_RUN .and. mmdetin /= mmdet) then
+        if (ENS_WITH_MDET .and. mmdetin /= mmdet) then
           gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
           gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
         end if
@@ -385,6 +387,8 @@ program dacycle
 
     end do
 
+    call PROF_rapend('Main_Loop', 0)
+
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
@@ -395,11 +399,9 @@ program dacycle
     deallocate (obs)
     deallocate (gues3d, gues2d, anal3d, anal2d)
 
-!    call unset_common_mpi_scale !!!!!! cause unknown MPI error in 'PROF_rapreport' in 'unset_scalelib' if enabled
+    call unset_common_mpi_scale
 
     !-------------------------------------------------------------------
-
-    call PROF_rapend('Main_Loop', 0)
 
     if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
     if( IO_L ) write(IO_FID_LOG,*)
@@ -412,7 +414,7 @@ program dacycle
 
   end if ! [ myrank_use ]
 
-  call unset_scalelib('DACYCLE')
+  call scalerm_finalize('DACYCLE')
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 
@@ -420,79 +422,3 @@ program dacycle
 
   stop
 end program dacycle
-
-
-
-  subroutine resume_state(do_restart_read)
-    use mod_atmos_driver, only: &
-       ATMOS_driver_resume1, &
-       ATMOS_driver_resume2, &
-       ATMOS_SURFACE_SET
-    use mod_ocean_driver, only: &
-       OCEAN_driver_resume, &
-       OCEAN_SURFACE_SET
-    use mod_land_driver, only: &
-       LAND_driver_resume, &
-       LAND_SURFACE_SET
-    use mod_urban_driver, only: &
-       URBAN_driver_resume, &
-       URBAN_SURFACE_SET
-    use mod_atmos_vars, only: &
-       ATMOS_vars_calc_diagnostics, &
-       ATMOS_vars_history_setpres, &
-       ATMOS_vars_restart_read
-    use mod_ocean_vars, only: &
-       OCEAN_vars_restart_read
-    use mod_land_vars, only: &
-       LAND_vars_restart_read
-    use mod_urban_vars, only: &
-       URBAN_vars_restart_read
-    use mod_user, only: &
-       USER_resume0, &
-       USER_resume
-    use mod_atmos_admin, only: &
-       ATMOS_do
-    use mod_ocean_admin, only: &
-       OCEAN_do
-    use mod_land_admin, only: &
-       LAND_do
-    use mod_urban_admin, only: &
-       URBAN_do
-    use mod_admin_restart, only: &
-       ADMIN_restart_read
-    implicit none
-    logical, intent(in) :: do_restart_read
-    !---------------------------------------------------------------------------
-
-    ! read restart data
-    if (do_restart_read) then
-      call ADMIN_restart_read
-    end if
-
-    ! setup user-defined procedure before setup of other components
-    call USER_resume0
-
-    if ( ATMOS_do ) then
-       ! calc diagnostics
-       call ATMOS_vars_calc_diagnostics
-       call ATMOS_vars_history_setpres
-    endif
-
-    ! setup surface condition
-    if( ATMOS_do ) call ATMOS_SURFACE_SET( countup=.false. )
-    if( OCEAN_do ) call OCEAN_SURFACE_SET( countup=.false. )
-    if( LAND_do  ) call LAND_SURFACE_SET ( countup=.false. )
-    if( URBAN_do ) call URBAN_SURFACE_SET( countup=.false. )
-
-    ! setup submodel driver
-    if( ATMOS_do ) call ATMOS_driver_resume1
-    if( OCEAN_do ) call OCEAN_driver_resume
-    if( LAND_do  ) call LAND_driver_resume
-    if( URBAN_do ) call URBAN_driver_resume
-    if( ATMOS_do ) call ATMOS_driver_resume2
-
-    ! setup user-defined procedure
-    call USER_resume
-
-    return
-  end subroutine resume_state

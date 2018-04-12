@@ -12,6 +12,7 @@ PROGRAM obsmake
   USE common
   USE common_mpi
   USE common_scale
+  USE common_scalerm
   USE common_mpi_scale
   USE common_obs_scale
   USE common_nml
@@ -43,7 +44,7 @@ PROGRAM obsmake
   call set_common_conf(nprocs)
 
   call set_mem_node_proc(1)
-  call set_scalelib('OBSMAKE')
+  call scalerm_setup('OBSMAKE')
 
   if (myrank_use) then
 
@@ -76,7 +77,7 @@ PROGRAM obsmake
 
   end if ! [ myrank_use ]
 
-  call unset_scalelib
+  call scalerm_finalize('OBSMAKE')
 
 !-----------------------------------------------------------------------
 ! Finalize

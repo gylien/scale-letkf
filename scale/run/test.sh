@@ -4,7 +4,6 @@
 function print_summary () {
 #  rm -f config.main
 #  rm -f config.${SCPNAME[$i]}
-#  rm -f config.nml.ensmodel
 #  rm -f config.nml.letkf
 #  rm -f config.nml.obsope
 #  rm -f config.nml.scale
@@ -152,7 +151,10 @@ for i in $(seq $NTEST); do
 
   rm -f config.main
   rm -f config.${SCPNAME[$i]}
-  rm -f config.nml.*
+  rm -f config.nml.letkf
+  rm -f config.nml.obsope
+  rm -f config.nml.scale*
+  rm -f config.nml.grads_boundary
 
   cat config/${CONFIG_D[1]}/config.main.${config_suffix} | \
       sed -e "s/<DOMNUM>/${DOMNUM[$i]}/g" \
@@ -165,7 +167,6 @@ for i in $(seq $NTEST); do
           -e "s/<CONF_MODE>/${CONF_MODE[$i]}/g" \
       > config.${SCPNAME[$i]}
 
-  ln -fs config/${CONFIG_D[1]}/config.nml.ensmodel .
   ln -fs config/${CONFIG_D[1]}/config.nml.letkf .
   ln -fs config/${CONFIG_D[1]}/config.nml.scale .
   ln -fs config/${CONFIG_D[1]}/config.nml.scale_pp .

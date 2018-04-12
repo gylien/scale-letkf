@@ -1,4 +1,4 @@
-include ../configure.user
+include ../configure
 
 PROGS   = dacycle
 
@@ -15,7 +15,8 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common_rand.o    \
               $(COMMON_DIR)/common_letkf.o   \
               $(COMMON_DIR)/common_ncio.o    \
-              $(COMMON_DIR)/common_scale.o     \
+              $(COMMON_DIR)/common_scale.o   \
+              $(COMMON_DIR)/common_scalerm.o \
               $(COMMON_DIR)/common_obs_scale.o \
               $(COMMON_DIR)/common_mpi_scale.o \
               $(COMMON_DIR)/common_nml.o
@@ -44,11 +45,11 @@ endif
 all:	$(PROGS)
 
 dacycle:	dacycle.o $(OBJS) $(COMMON_DIR) $(OBS_DIR) $(LETKF_DIR)
-	$(FC) $(FOPTS_DACYCLE) $(FMCMODEL) -o dacycle dacycle.o \
+	$(FC) $(FOPTS_EXE) $(FMCMODEL) -o dacycle dacycle.o \
 	$(COMMON_OBJS) $(OBJS) $(OBS_OBJS) $(LETKF_OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
 dacycle.o:	dacycle.f90 $(OBJS) $(COMMON_DIR) $(OBS_DIR) $(LETKF_DIR)
-	$(FC) $(FOPTS_DACYCLE) -c $< -I$(COMMON_DIR) -I$(OBS_DIR) -I$(LETKF_DIR) $(INCS)
+	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) -I$(OBS_DIR) -I$(LETKF_DIR) $(INCS)
 
 $(COMMON_DIR):	FORCE
 	$(MAKE) -C $@

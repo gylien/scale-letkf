@@ -110,6 +110,7 @@ DATA_ADDINFL="${DATA_ADDINFL[1]}"               #
 OBS="${OBS[1]}"                                 #
 
 DET_RUN="${DET_RUN:-0}"
+DET_RUN_CYCLED="${DET_RUN_CYCLED:-1}"
 
 BDY_SINGLE_FILE="${BDY_SINGLE_FILE:-0}"
 if ((BDY_SINGLE_FILE == 1 && BDY_ROTATING != 1)); then

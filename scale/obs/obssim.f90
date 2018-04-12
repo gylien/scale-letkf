@@ -8,6 +8,7 @@ program obssim
   use common, only: r_size
   use common_mpi
   use common_scale
+  use common_scalerm
   use common_mpi_scale
   use common_obs_scale
   use common_nml
@@ -51,7 +52,7 @@ program obssim
   call set_common_conf(nprocs)
 
   call set_mem_node_proc(1)
-  call set_scalelib('OBSSIM')
+  call scalerm_setup('OBSSIM')
 
   if (myrank_use) then
 
@@ -112,7 +113,7 @@ program obssim
 
   end if ! [ myrank_use ]
 
-  call unset_scalelib
+  call scalerm_finalize('OBSSIM')
 
 !-----------------------------------------------------------------------
 ! Finalize

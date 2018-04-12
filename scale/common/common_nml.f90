@@ -25,6 +25,7 @@ MODULE common_nml
   integer, parameter :: nobsfilemax = 10
   integer, parameter :: obsformatlenmax = 10
   integer, parameter :: filelenmax = 256
+  integer, parameter :: membermax = 10000
 
   integer, parameter :: memflen = 4                           ! Length of formatted member strings
   character(len=8), parameter :: memf_notation = '<member>'   ! Notation of the member string
@@ -37,14 +38,22 @@ MODULE common_nml
   character(len=8), parameter :: domf_notation = '<domain>'   ! Notation of the domain string
 
   !--- PARAM_ENSEMBLE
-  integer :: MEMBER = 3      ! ensemble size
-  integer :: MEMBER_RUN = 1  !
-  integer :: MEMBER_ITER = 0 !
-  character(filelenmax) :: CONF_FILES = 'run.@@@@.conf'
-  logical :: CONF_FILES_SEQNUM = .false.
+  integer :: MEMBER = 3                    ! Total ensemble size
+  logical :: ENS_WITH_MEAN = .true.        ! Run additional member of 'mean'?
+  logical :: ENS_WITH_MDET = .false.       ! Run additional member of 'mdet'?
+  integer :: MEMBER_RUN = -1               ! Actual number of ensemble members used
+  integer :: MEMBER_SEQ(membermax) = -1    ! Sequence of ensemble members used
+  integer :: MEMBER_ITER = 0               ! Current iteration number (one iteration runs only part of ensemble members
+                                           ! that can be done in parallel when the number of nodes is not enough)
+  logical :: MDET_CYCLED = .true.          ! In LETKF, cycle the 'mdet' member?
+                                           !  .true. : use 'mdet' as first guess for 'mdet' analysis
+                                           !  .false.: use 'mean' as first guess for 'mdet' analysis
 
-  logical :: DET_RUN = .false.
-  logical :: DET_RUN_CYCLED = .true.
+  character(filelenmax) :: CONF_FILES = '' ! Namelist file for each member
+                                           !  (empty): use the current namelist file (with filename replacement) 
+
+  logical :: DET_RUN = .false.             ! Deprecated (= ENS_WITH_MDET)
+  logical :: DET_RUN_CYCLED = .true.       ! Deprecated (= MDET_CYCLED)
 
   !--- PARAM_MODEL
   character(len=10) :: MODEL = 'scale-rm'
@@ -77,11 +86,11 @@ MODULE common_nml
   logical               :: OBS_POSTFIX_TIMELABEL = .false.
   logical               :: OBSDA_RUN(nobsfilemax) = .true.
   logical               :: OBSDA_OUT = .false.
-  character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
+  character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.<member>'
   character(filelenmax) :: OBSDA_MEAN_OUT_BASENAME = ''
   character(filelenmax) :: OBSDA_MDET_OUT_BASENAME = ''
 
-  character(filelenmax) :: HISTORY_IN_BASENAME = 'hist.@@@@'
+  character(filelenmax) :: HISTORY_IN_BASENAME = 'hist.<member>'
   character(filelenmax) :: HISTORY_MEAN_IN_BASENAME = ''
   character(filelenmax) :: HISTORY_MDET_IN_BASENAME = ''
   logical               :: HISTORY_POSTFIX_TIMELABEL = .false.
@@ -93,10 +102,10 @@ MODULE common_nml
 
   !--- PARAM_LETKF
   logical               :: OBSDA_IN = .false.
-  character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@'
+  character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.<member>'
   character(filelenmax) :: OBSDA_MEAN_IN_BASENAME = ''
   character(filelenmax) :: OBSDA_MDET_IN_BASENAME = ''
-  character(filelenmax) :: GUES_IN_BASENAME = 'gues.@@@@'
+  character(filelenmax) :: GUES_IN_BASENAME = 'gues.<member>'
   character(filelenmax) :: GUES_MEAN_INOUT_BASENAME = ''    ! Deprecated (use GUES_MEAN_IN_BASENAME and GUES_MEAN_OUT_BASENAME)
   character(filelenmax) :: GUES_MEAN_IN_BASENAME = ''
   character(filelenmax) :: GUES_MDET_IN_BASENAME = ''
@@ -107,7 +116,7 @@ MODULE common_nml
   integer               :: GUES_SPRD_OUT_FREQ = 1
   character(filelenmax) :: GUES_SPRD_OUT_BASENAME = ''
   integer               :: ANAL_OUT_FREQ = 1
-  character(filelenmax) :: ANAL_OUT_BASENAME = 'anal.@@@@'
+  character(filelenmax) :: ANAL_OUT_BASENAME = 'anal.<member>'
   integer               :: ANAL_MEAN_OUT_FREQ = 1
   character(filelenmax) :: ANAL_MEAN_OUT_BASENAME = ''
   integer               :: ANAL_MDET_OUT_FREQ = 1
@@ -126,7 +135,7 @@ MODULE common_nml
   character(filelenmax) :: INFL_MUL_OUT_BASENAME = 'infl'
 
   real(r_size) :: INFL_ADD = 0.0d0           ! additive inflation
-  character(filelenmax) :: INFL_ADD_IN_BASENAME = 'addi.@@@@'
+  character(filelenmax) :: INFL_ADD_IN_BASENAME = 'addi.<member>'
   logical :: INFL_ADD_SHUFFLE = .false.      ! shuffle the additive inflation members?
   logical :: INFL_ADD_Q_RATIO = .false.
   logical :: INFL_ADD_REF_ONLY = .false.
@@ -250,10 +259,10 @@ MODULE common_nml
 
   LOGICAL               :: OBSDEP_OUT = .true.
   character(filelenmax) :: OBSDEP_OUT_BASENAME = 'obsdep'
-  LOGICAL               :: OBSGUES_OUT = .false.                  !XXX not implemented yet...
-  character(filelenmax) :: OBSGUES_OUT_BASENAME = 'obsgues.@@@@'  !XXX not implemented yet...
-  LOGICAL               :: OBSANAL_OUT = .false.                  !XXX not implemented yet...
-  character(filelenmax) :: OBSANAL_OUT_BASENAME = 'obsanal.@@@@'  !XXX not implemented yet...
+  LOGICAL               :: OBSGUES_OUT = .false.                      !XXX not implemented yet...
+  character(filelenmax) :: OBSGUES_OUT_BASENAME = 'obsgues.<member>'  !XXX not implemented yet...
+  LOGICAL               :: OBSANAL_OUT = .false.                      !XXX not implemented yet...
+  character(filelenmax) :: OBSANAL_OUT_BASENAME = 'obsanal.<member>'  !XXX not implemented yet...
 
   !--- PARAM_LETKF_RADAR
   logical :: USE_RADAR_REF       = .true.
@@ -356,12 +365,15 @@ subroutine read_nml_ensemble
   
   namelist /PARAM_ENSEMBLE/ &
     MEMBER, &
+    ENS_WITH_MEAN, &
+    ENS_WITH_MDET, &
     MEMBER_RUN, &
+    MEMBER_SEQ, &
     MEMBER_ITER, &
+    MDET_CYCLED, &
     CONF_FILES, &
-    CONF_FILES_SEQNUM, &
-    DET_RUN, &
-    DET_RUN_CYCLED
+    DET_RUN, &           !*** for backward compatibility ***
+    DET_RUN_CYCLED       !*** for backward compatibility ***
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)
@@ -375,6 +387,28 @@ subroutine read_nml_ensemble
 
   if (LOG_LEVEL >= 2) then
     write(6, nml=PARAM_ENSEMBLE)
+  end if
+
+  if (ENS_WITH_MDET .and. (.not. ENS_WITH_MEAN)) then
+    write (6, '(A)') "[Error] When 'ENS_WITH_MDET' = .true., 'ENS_WITH_MEAN' also needs to be .true."
+    stop
+  end if
+
+  if (DET_RUN .and. (.not. ENS_WITH_MDET)) then !*** for backward compatibility ***
+    ENS_WITH_MDET = DET_RUN
+  end if
+  if ((.not. DET_RUN_CYCLED) .and. MDET_CYCLED) then !*** for backward compatibility ***
+    MDET_CYCLED = DET_RUN_CYCLED
+  end if
+
+  if (MEMBER_RUN == -1) then
+    MEMBER_RUN = MEMBER
+    if (ENS_WITH_MEAN) then
+      MEMBER_RUN = MEMBER_RUN + 1
+    end if
+    if (ENS_WITH_MDET) then
+      MEMBER_RUN = MEMBER_RUN + 1
+    end if
   end if
 
   return

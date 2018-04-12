@@ -1,4 +1,4 @@
-include ../configure.user
+include ../configure
 
 PROGS   = letkf
 
@@ -16,6 +16,7 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common_letkf.o   \
               $(COMMON_DIR)/common_ncio.o    \
               $(COMMON_DIR)/common_scale.o     \
+              $(COMMON_DIR)/common_scalerm.o   \
               $(COMMON_DIR)/common_obs_scale.o \
               $(COMMON_DIR)/common_mpi_scale.o \
               $(COMMON_DIR)/common_nml.o
@@ -40,7 +41,7 @@ endif
 all:	$(PROGS)
 
 letkf:	letkf.o $(OBJS) $(COMMON_DIR) $(OBS_DIR)
-	$(FC) $(FOPTS) $(FMCMODEL) -o letkf letkf.o \
+	$(FC) $(FOPTS_EXE) $(FMCMODEL) -o letkf letkf.o \
 	$(COMMON_OBJS) $(OBJS) $(OBS_OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
 letkf.o:	letkf.f90 $(OBJS) $(COMMON_DIR) $(OBS_DIR)
