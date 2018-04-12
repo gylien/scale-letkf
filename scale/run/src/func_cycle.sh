@@ -10,22 +10,32 @@ setting () {
 #-------------------------------------------------------------------------------
 # define steps
 
-nsteps=5
+if ((DACYCLE == 1)); then
+  nsteps=3
+else
+  nsteps=5
+fi
 stepname[1]='Run SCALE pp'
 stepexecdir[1]="$TMPRUN/scale_pp"
 stepexecname[1]="scale-rm_pp_ens"
 stepname[2]='Run SCALE init'
 stepexecdir[2]="$TMPRUN/scale_init"
 stepexecname[2]="scale-rm_init_ens"
-stepname[3]='Run ensemble forecasts'
-stepexecdir[3]="$TMPRUN/scale"
-stepexecname[3]="scale-rm_ens"
-stepname[4]='Run observation operator'
-stepexecdir[4]="$TMPRUN/obsope"
-stepexecname[4]="obsope"
-stepname[5]='Run LETKF'
-stepexecdir[5]="$TMPRUN/letkf"
-stepexecname[5]="letkf"
+if ((DACYCLE == 1)); then
+  stepname[3]='Run DA cycle'
+  stepexecdir[3]="$TMPRUN/dacycle"
+  stepexecname[3]="dacycle"
+else
+  stepname[3]='Run ensemble forecasts'
+  stepexecdir[3]="$TMPRUN/scale"
+  stepexecname[3]="scale-rm_ens"
+  stepname[4]='Run observation operator'
+  stepexecdir[4]="$TMPRUN/obsope"
+  stepexecname[4]="obsope"
+  stepname[5]='Run LETKF'
+  stepexecdir[5]="$TMPRUN/letkf"
+  stepexecname[5]="letkf"
+fi
 
 #-------------------------------------------------------------------------------
 # usage help string
@@ -1486,7 +1496,11 @@ local otime=$(datetime $TIME)               # FILE_HISTORY_OUTPUT_STEP0 = .true.
 local otime_s=$(datetime $TIME $WINDOW_S s)
 local otime_e=$(datetime $TIME $WINDOW_E s)
 local otime_a=$(datetime $TIME $LCYCLE s)
-local is=0
+if ((DACYCLE == 1)); then
+  local is=-1
+else
+  local is=0
+fi
 slot_s=0
 while ((otime <= otime_e)); do
   is=$((is+1))

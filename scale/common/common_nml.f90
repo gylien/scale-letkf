@@ -726,12 +726,10 @@ subroutine read_nml_letkf
     GUES_MEAN_OUT_BASENAME = GUES_OUT_BASENAME
     call filename_replace_mem(GUES_MEAN_OUT_BASENAME, memf_mean)
   end if
-  if (GUES_SPRD_OUT) then !*** for backward compatibility ***
-    if (GUES_SPRD_OUT_FREQ <= 0) then
-      GUES_SPRD_OUT_FREQ = 1
+  if (.not. GUES_SPRD_OUT) then !*** for backward compatibility ***
+    if (GUES_SPRD_OUT_FREQ > 0) then
+      GUES_SPRD_OUT_FREQ = 0
     end if
-  else
-    GUES_SPRD_OUT_FREQ = 0
   end if
   if (trim(GUES_SPRD_OUT_BASENAME) == '') then
     GUES_SPRD_OUT_BASENAME = GUES_OUT_BASENAME
@@ -746,12 +744,10 @@ subroutine read_nml_letkf
     ANAL_MDET_OUT_BASENAME = ANAL_OUT_BASENAME
     call filename_replace_mem(ANAL_MDET_OUT_BASENAME, memf_mdet)
   end if
-  if (ANAL_SPRD_OUT) then !*** for backward compatibility ***
-    if (ANAL_SPRD_OUT_FREQ <= 0) then
-      ANAL_SPRD_OUT_FREQ = 1
+  if (.not. ANAL_SPRD_OUT) then !*** for backward compatibility ***
+    if (ANAL_SPRD_OUT_FREQ > 0) then
+      ANAL_SPRD_OUT_FREQ = 0
     end if
-  else
-    ANAL_SPRD_OUT_FREQ = 0
   end if
   if (trim(ANAL_SPRD_OUT_BASENAME) == '') then
     ANAL_SPRD_OUT_BASENAME = ANAL_OUT_BASENAME

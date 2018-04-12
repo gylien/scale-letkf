@@ -256,12 +256,17 @@ subroutine scalerm_setup(execname)
   integer :: color, key, idom, ierr
   character(len=2) :: fmttmp
 
+  logical :: exec_model
   logical :: exec_modelonly
 
   character(len=7) :: execname_ = 'LETKF  '
 
   if (present(execname)) execname_ = execname
 
+  exec_model = .false.
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP ' .or. execname_ == 'DACYCLE') then
+    exec_model = .true.
+  end if
   exec_modelonly = .false.
   if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP ') then
     exec_modelonly = .true.
@@ -366,7 +371,7 @@ subroutine scalerm_setup(execname)
 
   ! Set real confname for my domain
   if (trim(CONF_FILES) /= '') then
-    if (exec_modelonly .or. mydom >= 2) then
+    if (exec_model .or. mydom >= 2) then
       confname_new = trim(CONF_FILES)
       call filename_replace_dom(confname_new, mydom)
     end if
@@ -375,7 +380,7 @@ subroutine scalerm_setup(execname)
   ! Setup standard I/O
   !-----------------------------------------------------------------------------
 
-  if (exec_modelonly) then
+  if (exec_model) then
     if (MEMBER_ITER == 0) then
       write (6, '(A)') '[Warning] Currently this code can only run a single member iteration; reset MEMBER_ITER to 1!'
       MEMBER_ITER = 1
@@ -420,9 +425,9 @@ subroutine scalerm_setup(execname)
         end if
       end if
     end if
-  end if ! [ exec_modelonly ]
+  end if ! [ exec_model ]
 
-  if ((.not. exec_modelonly) .or. scalerm_run) then
+  if ((.not. exec_model) .or. scalerm_run) then
     ! setup standard I/O: Re-open the new config file; change of IO_LOG_BASENAME is effective in this step
     confname = confname_new
     call IO_setup( modelname, trim(confname) )
@@ -445,6 +450,16 @@ subroutine scalerm_setup(execname)
   !-----------------------------------------------------------------------------
 
   select case (execname_)
+  case ('DACYCLE')
+    call read_nml_dacycle
+    call read_nml_obs_error
+    call read_nml_obsope
+    call read_nml_letkf
+    call read_nml_letkf_obs
+    call read_nml_letkf_var_local
+    call read_nml_letkf_monitor
+    call read_nml_letkf_radar
+    call read_nml_letkf_h08
   case ('LETKF  ')
     call read_nml_obs_error
     call read_nml_obsope
@@ -507,7 +522,7 @@ subroutine scalerm_setup(execname)
   !-----------------------------------------------------------------------------
 
   ! setup Log
-  if (exec_modelonly) then
+  if (exec_model) then
     call IO_LOG_setup( local_myrank, local_ismaster )
   else
     call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
@@ -521,7 +536,7 @@ subroutine scalerm_setup(execname)
   ! setup process
   call PRC_setup
 
-  if (exec_modelonly .and. scalerm_run) then
+  if (exec_model .and. scalerm_run) then
     ! setup PROF
     call PROF_setup
 
@@ -533,7 +548,7 @@ subroutine scalerm_setup(execname)
   ! setup constants
   call CONST_setup
 
-  if (exec_modelonly .and. scalerm_run) then
+  if (exec_model .and. scalerm_run) then
     ! setup calendar
     call CALENDAR_setup
 
@@ -545,23 +560,23 @@ subroutine scalerm_setup(execname)
   call ATMOS_GRID_CARTESC_INDEX_setup
   call ATMOS_GRID_CARTESC_setup
 
-  if (exec_modelonly .and. scalerm_run) then
+  if (exec_model .and. scalerm_run) then
     call OCEAN_GRID_CARTESC_INDEX_setup
     call OCEAN_GRID_CARTESC_setup
   end if
 
 #ifdef PNETCDF
   call LAND_GRID_CARTESC_INDEX_setup
-  if (exec_modelonly .and. scalerm_run) then
+  if (exec_model .and. scalerm_run) then
     call LAND_GRID_CARTESC_setup
   end if
 
   call URBAN_GRID_CARTESC_INDEX_setup
-  if (exec_modelonly .and. scalerm_run) then
+  if (exec_model .and. scalerm_run) then
     call URBAN_GRID_CARTESC_setup
   end if
 #else
-  if (exec_modelonly .and. scalerm_run) then
+  if (exec_model .and. scalerm_run) then
     call LAND_GRID_CARTESC_INDEX_setup
     call LAND_GRID_CARTESC_setup
 
@@ -570,7 +585,7 @@ subroutine scalerm_setup(execname)
   end if
 #endif
 
-  if (exec_modelonly .and. scalerm_run) then
+  if (exec_model .and. scalerm_run) then
     ! setup submodel administrator
     call ATMOS_admin_setup
     call OCEAN_admin_setup
@@ -582,7 +597,7 @@ subroutine scalerm_setup(execname)
   ! setup tracer index
   call ATMOS_HYDROMETEOR_setup
 
-  if (exec_modelonly) then
+  if (exec_model) then
     if (scalerm_run) then
       call ATMOS_driver_config
       call USER_config
@@ -617,7 +632,7 @@ subroutine scalerm_setup(execname)
   end if
 
   ! setup file I/O
-  if (exec_modelonly) then
+  if (exec_model) then
     if (scalerm_run) then
       call FILE_CARTESC_setup
     end if
@@ -630,7 +645,7 @@ subroutine scalerm_setup(execname)
   ! setup mpi communication
   call COMM_setup
 
-  if (exec_modelonly .and. scalerm_run) then
+  if (exec_model .and. scalerm_run) then
     ! setup topography
     call TOPO_setup
 
@@ -639,7 +654,7 @@ subroutine scalerm_setup(execname)
   end if
 
   ! setup grid coordinates (real world)
-  if (exec_modelonly) then
+  if (exec_model) then
     if (scalerm_run) then
 #ifdef SCALEUV
       call ATMOS_GRID_CARTESC_REAL_setup( catalogue_output = (myrank_to_mem(1) == 1) ) ! Only output catalogue file in the first member of this execution
@@ -654,7 +669,7 @@ subroutine scalerm_setup(execname)
 !   <-- ATMOS_GRID_CARTESC_REAL_setup
   end if
 
-  if (exec_modelonly .and. scalerm_run) then
+  if (exec_model .and. scalerm_run) then
     ! setup grid transfer metrics (uses in ATMOS_dynamics)
     call ATMOS_GRID_CARTESC_METRIC_setup
 
@@ -668,19 +683,19 @@ subroutine scalerm_setup(execname)
 
   ! setup time
   if (scalerm_run) then
-    if (execname_ == 'SCALERM') then
+    if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
       call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
     else if (execname_ == 'RMPREP ') then
       call ADMIN_TIME_setup( setup_TimeIntegration = .false. )
     end if
   end if
 
-  if (exec_modelonly .and. scalerm_run) then
+  if (exec_model .and. scalerm_run) then
     ! setup statistics
     call STAT_setup
   end if
 
-  if (execname_ == 'SCALERM' .and. scalerm_run) then
+  if ((execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') .and. scalerm_run) then
     ! setup history I/O
     call FILE_HISTORY_CARTESC_setup
 
@@ -691,7 +706,7 @@ subroutine scalerm_setup(execname)
     call FILE_EXTERNAL_INPUT_CARTESC_setup
   end if
 
-  if (exec_modelonly .and. scalerm_run) then
+  if (exec_model .and. scalerm_run) then
     ! setup nesting grid
     call COMM_CARTESC_NEST_setup ( intercomm_parent, intercomm_child )
 
@@ -701,12 +716,12 @@ subroutine scalerm_setup(execname)
     call ATMOS_SATURATION_setup
   end if
 
-  if (execname_ == 'SCALERM' .and. scalerm_run) then
+  if ((execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') .and. scalerm_run) then
     call BULKFLUX_setup( sqrt(DX**2+DY**2) )
     call ROUGHNESS_setup
   end if
 
-  if (exec_modelonly .and. scalerm_run) then
+  if (exec_model .and. scalerm_run) then
     ! setup variable container
     call ATMOS_vars_setup
     call OCEAN_vars_setup
@@ -716,7 +731,7 @@ subroutine scalerm_setup(execname)
   end if
 
   if (scalerm_run) then
-    if (execname_ == 'SCALERM') then
+    if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
       ! setup submodel driver
       call ATMOS_driver_setup
       call OCEAN_driver_setup
@@ -736,7 +751,7 @@ subroutine scalerm_setup(execname)
     end if
   end if
 
-  if (exec_modelonly .and. scalerm_run) then
+  if (exec_model .and. scalerm_run) then
     call PROF_rapend('Initialize', 0)
   end if
 
@@ -778,18 +793,18 @@ subroutine scalerm_finalize(execname)
 
   character(len=*), intent(in), optional :: execname
   integer :: ierr
-  logical :: exec_modelonly
+  logical :: exec_model
 
   character(len=7) :: execname_ = 'LETKF  '
 
   if (present(execname)) execname_ = execname
-  exec_modelonly = .false.
-  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP ') then
-    exec_modelonly = .true.
+  exec_model = .false.
+  if (execname_ == 'SCALERM' .or. execname_ == 'RMPREP ' .or. execname_ == 'DACYCLE') then
+    exec_model = .true.
   end if
 
   if (myrank_use .and. scalerm_run) then
-    if (execname_ == 'SCALERM') then
+    if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
       ! check data
       if( ATMOS_sw_check ) call ATMOS_vars_restart_check
 
@@ -802,12 +817,12 @@ subroutine scalerm_finalize(execname)
       call FILE_HISTORY_finalize
     end if
 
-    if (exec_modelonly) then
+    if (exec_model) then
       ! clean up resource allocated for I/O
       call FILE_CARTESC_cleanup
     end if
 
-    if (execname_ == 'SCALERM') then
+    if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
       call COMM_cleanup
     end if
   end if
@@ -815,13 +830,13 @@ subroutine scalerm_finalize(execname)
   call FILE_Close_All
 
   if (myrank_use .and. scalerm_run) then
-    if (execname_ == 'SCALERM') then
+    if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
       call PROF_rapend  ('File', 2)
 
       call PROF_rapend  ('All', 1)
     end if
 
-    if (exec_modelonly) then
+    if (exec_model) then
       call PROF_rapreport
     end if
   end if

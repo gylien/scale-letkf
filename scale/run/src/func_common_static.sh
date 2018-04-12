@@ -42,6 +42,11 @@ ${ENSMODEL_DIR}/scale-rm_ens|scale-rm_ens
 EOF
 
 if [ "$JOBTYPE" = 'cycle' ]; then
+  if ((DACYCLE == 1)); then
+    cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${ENSMODEL_DIR}/../dacycle/dacycle|dacycle
+EOF
+  fi
   cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 ${OBSUTIL_DIR}/obsope|obsope
 ${LETKF_DIR}/letkf|letkf
@@ -86,7 +91,11 @@ if [ "$JOBTYPE" = 'cycle' ]; then
   while ((time <= $(datetime $ETIME $LCYCLE s))); do
     for iobs in $(seq $OBSNUM); do
       if [ "${OBSNAME[$iobs]}" != '' ] && [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
-        echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time}.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+        if ((DACYCLE == 1)); then
+          echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+        else
+          echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time}.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+        fi
       fi
     done
     time=$(datetime $time $LCYCLE s)

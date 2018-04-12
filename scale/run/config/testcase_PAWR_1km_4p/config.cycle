@@ -9,6 +9,9 @@ STIME='20130713060000'
 ETIME='20130713060030'
 ISTEP=
 FSTEP=
+CONF_MODE='<CONF_MODE>'
+DACYCLE=1
+DIRECT_TRANSFER=0
 TIME_LIMIT='<WTIME_L>'
 
 #===============================================================================

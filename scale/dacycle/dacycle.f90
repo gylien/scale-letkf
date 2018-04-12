@@ -220,7 +220,7 @@ program dacycle
           anal_mdet_out_now = .true.
         end if
 
-        if (GUES_MEAN_OUT_FREQ >= 1 .and. (mod(icycle, GUES_MEAN_OUT_FREQ) == 0 .or. icycle == lastcycle)) then
+        if (GUES_MEAN_OUT_FREQ >= 1 .and. mod(icycle, GUES_MEAN_OUT_FREQ) == 0) then
           gues_mean_out_now = .true.
         end if
         if (GUES_SPRD_OUT_FREQ >= 1 .and. (mod(icycle, GUES_SPRD_OUT_FREQ) == 0 .or. icycle == lastcycle)) then

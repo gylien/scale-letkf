@@ -219,7 +219,7 @@ while ((time <= ETIME)); do
           continue
         fi
       fi
-      if ((s == 4)); then
+      if ((DACYCLE != 1 && s == 4)); then
         if ((OBSOPE_RUN == 0)); then
           echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (only use integrated observation operators)" >&2
           continue
@@ -236,7 +236,7 @@ while ((time <= ETIME)); do
         if ((BDY_ENS == 1)); then
           nit=$nitmax
         fi
-      elif ((s == 3)); then
+      elif ((DACYCLE != 1 && s == 3)); then
         enable_iter=1
         nit=$nitmax
       fi
@@ -338,6 +338,12 @@ while ((time <= ETIME)); do
   echo " |               SCALE-LETKF successfully completed               |"
   echo " +----------------------------------------------------------------+"
   echo
+
+#-------------------------------------------------------------------------------
+
+  if ((DACYCLE == 1)); then
+    break
+  fi
 
 #-------------------------------------------------------------------------------
 

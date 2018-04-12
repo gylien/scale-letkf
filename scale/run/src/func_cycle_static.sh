@@ -102,7 +102,7 @@ while ((time <= ETIME)); do
 
   # bdy (prepared)
   #-------------------
-  if ((BDY_FORMAT == 0)); then
+  if ((BDY_FORMAT == 0 && (DACYCLE != 1 || loop == 1))); then
     if ((BDY_ENS == 0)); then
       if ((DISK_MODE == 3)); then
         for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
@@ -178,10 +178,15 @@ while ((time <= ETIME)); do
   # anal (initial time)
   #-------------------
   if ((loop == 1 && MAKEINIT == 1)); then
+    if ((DACYCLE == 1)); then
+      initname=anal
+    else
+      initname=init
+    fi
     for m in $(seq $mtot); do
       for d in $(seq $DOMNUM); do
         for q in $(seq ${mem_np_[$d]}); do
-          path="${name_m[$m]}/init.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+          path="${name_m[$m]}/${initname}.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
           pathout="${OUTDIR[$d]}/${time}/anal/${name_m[$m]}${CONNECTOR}init$(scale_filename_sfx $((q-1)))"
 #          echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
           echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
@@ -218,7 +223,7 @@ while ((time <= ETIME)); do
 
   # bdy
   #-------------------
-  if ((BDY_FORMAT != 0)); then
+  if ((BDY_FORMAT != 0 && (DACYCLE != 1 || loop == 1))); then
     if ((BDY_ENS == 1 && BDYOUT_OPT <= 1)); then
       for m in $(seq $mtot); do
         for q in $(seq ${mem_np_[1]}); do
@@ -383,7 +388,7 @@ while ((time <= ETIME)); do
     plist=$(seq $totalnp)
   fi
 
-  if ((BDY_FORMAT != 0 && LOG_OPT <= 2)); then
+  if ((BDY_FORMAT != 0 && LOG_OPT <= 2 && (DACYCLE != 1 || loop == 1))); then
     for m in $mlist_init; do
       for d in $(seq $DOMNUM); do
         path="log/scale_init.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).LOG_${time}${SCALE_SFX_NONC_0}"
@@ -405,7 +410,7 @@ while ((time <= ETIME)); do
       fi
     done
   fi
-  if ((LOG_OPT <= 3)); then
+  if ((LOG_OPT <= 3 && (DACYCLE != 1 || loop == 1))); then
     for m in $mlist; do
       for d in $(seq $DOMNUM); do
         path="log/scale.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).LOG_${time}${SCALE_SFX_NONC_0}"
@@ -416,6 +421,8 @@ while ((time <= ETIME)); do
         echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+1))]}
       done
     done
+  fi
+  if ((LOG_OPT <= 3 && DACYCLE != 1)); then
     for p in $plist; do
       if ((nitmax == 1)); then
         path="log/scale-rm_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
@@ -431,11 +438,19 @@ while ((time <= ETIME)); do
     done
   fi
   if ((LOG_OPT <= 4)); then
-    for p in $plist; do
-      path="log/letkf.NOUT_${atime}$(printf -- "${log_nfmt}" $((p-1)))"
-      pathout="${OUTDIR[1]}/${atime}/log/letkf/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
-      echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
-    done
+    if ((DACYCLE != 1)); then
+      for p in $plist; do
+        path="log/letkf.NOUT_${atime}$(printf -- "${log_nfmt}" $((p-1)))"
+        pathout="${OUTDIR[1]}/${atime}/log/letkf/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
+        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+      done
+    elif ((loop == 1)); then
+      for p in $plist; do
+        path="log/dacycle.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
+        pathout="${OUTDIR[1]}/${time}/log/dacycle/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
+        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+      done
+    fi
   fi
 
   #-------------------
@@ -500,6 +515,15 @@ PRC_DOMAINS_LIST=
 for d in $(seq $DOMNUM); do
   PRC_DOMAINS_LIST="$PRC_DOMAINS_LIST${SCALE_NP[$d]}, "
 done
+
+if ((DACYCLE == 1)); then
+  time=$STIME
+  n_cycles=0
+  while ((time <= ETIME)); do
+    n_cycles=$((n_cycles+1))
+    time=$(datetime $time $LCYCLE s)
+  done
+fi
 
 time=$STIME
 atime=$(datetime $time $LCYCLE s)
@@ -685,6 +709,12 @@ while ((time <= ETIME)); do
     for d in $(seq $DOMNUM); do
       dfmt=$(printf $DOMAIN_FMT $d)
 
+      if ((DACYCLE == 1)); then
+        RESTART_OUT_BASENAME="${mem_bdy}/anal.d${dfmt}"
+      else
+        RESTART_OUT_BASENAME="${mem_bdy}/init.d${dfmt}"
+      fi
+
       if ((d == 1)); then
         conf_file_src=$SCRP_DIR/config.nml.scale_init
         conf_file="scale-rm_init_ens_${time}.conf"
@@ -706,7 +736,7 @@ while ((time <= ETIME)); do
               -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
               -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
               -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = ${RESTART_OUTPUT}," \
-              -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${mem_bdy}/init.d${dfmt}\"," \
+              -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${RESTART_OUT_BASENAME}\"," \
               -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo.d${dfmt}\"," \
               -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse.d${dfmt}\"," \
               -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\",")"
@@ -772,6 +802,10 @@ while ((time <= ETIME)); do
   # scale
   #-----------------------------------------------------------------------------
 
+  ######
+  if ((DACYCLE != 1 || loop == 1)); then
+  ######
+
   if ((BDY_ENS == 1)); then
     mem_bdy='<member>'
   else
@@ -781,6 +815,20 @@ while ((time <= ETIME)); do
   for d in $(seq $DOMNUM); do
     dfmt=$(printf $DOMAIN_FMT $d)
 
+    if ((DACYCLE == 1)); then
+      TIME_DURATION="$((CYCLEFLEN * n_cycles)).D0"
+      if ((DIRECT_TRANSFER == 1 && OUT_OPT >= 3)); then
+        FILE_HISTORY_DEFAULT_BASENAME=""
+      else
+        FILE_HISTORY_DEFAULT_BASENAME="<member>/hist.d${dfmt}"
+      fi
+      FILE_HISTORY_OUTPUT_STEP0=".false."
+    else
+      TIME_DURATION="${CYCLEFLEN}.D0"
+      FILE_HISTORY_DEFAULT_BASENAME="<member>/hist.d${dfmt}_$(datetime_scale $time)"
+      FILE_HISTORY_OUTPUT_STEP0=".true."
+    fi
+
     ONLINE_IAM_PARENT=".false."
     if ((d < DOMNUM)); then
       ONLINE_IAM_PARENT=".true."
@@ -789,7 +837,7 @@ while ((time <= ETIME)); do
     if ((d > 1)); then
       ONLINE_IAM_DAUGHTER=".true."
     fi
-    if ((loop == 1 && MAKEINIT == 1)); then
+    if ((loop == 1 && MAKEINIT == 1 && DACYCLE != 1)); then
       RESTART_IN_BASENAME="<member>/init.d${dfmt}"
     else
       RESTART_IN_BASENAME="<member>/anal.d${dfmt}"
@@ -801,8 +849,7 @@ while ((time <= ETIME)); do
       RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
       RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"<member>/gues.d${dfmt}\", "
       RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}0, "
-    else
-#      elif ((OUT_OPT <= 6)); then
+    elif ((OUT_OPT <= 6)); then
       RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
       RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"mean/gues.d${dfmt}\", "
       RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, "
@@ -810,6 +857,9 @@ while ((time <= ETIME)); do
         RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"mdet/gues.d${dfmt}\", "
         RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmdet}, "
       fi
+    else
+      RESTART_OUT_ADDITIONAL_BASENAME="\"\","
+      RESTART_OUT_ADDITIONAL_EFF_MEMBER="0,"
     fi
     if ((SPRD_OUT == 1)); then
       RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
@@ -830,23 +880,50 @@ while ((time <= ETIME)); do
 
     if ((d == 1)); then
       conf_file_src=$SCRP_DIR/config.nml.scale
-      conf_file="scale-rm_ens_${time}.conf"
-
-      config_file_scale_launcher cycle "$conf_file" "scale-rm_ens.d<domain>_${time}.conf" $mtot
+      if ((DACYCLE == 1)); then
+        conf_file="dacycle_${time}.conf"
+        config_file_scale_launcher cycle "$conf_file" "dacycle.d<domain>_${time}.conf" $mtot
+      else
+        conf_file="scale-rm_ens_${time}.conf"
+        config_file_scale_launcher cycle "$conf_file" "scale-rm_ens.d<domain>_${time}.conf" $mtot
+      fi
     else
       conf_file_src=$SCRP_DIR/config.nml.scale.d$d
-      conf_file="scale-rm_ens.d${dfmt}_${time}.conf"
+      if ((DACYCLE == 1)); then
+        conf_file="dacycle.d${dfmt}_${time}.conf"
+      else
+        conf_file="scale-rm_ens.d${dfmt}_${time}.conf"
+      fi
+    fi
+
+    if ((DACYCLE == 1)); then
+      if ((DIRECT_TRANSFER == 1)); then
+        cat >> $CONFIG_DIR/${conf_file} << EOF
+&PARAM_DACYCLE
+ DIRECT_TRANSFER = .true.,
+/
+
+EOF
+      else
+        cat >> $CONFIG_DIR/${conf_file} << EOF
+&PARAM_DACYCLE
+ DIRECT_TRANSFER = .false.,
+/
+
+EOF
+      fi
     fi
 
     conf="$(cat $conf_file_src | \
         sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"log/scale.<member>.d${dfmt}.LOG_${time}\"," \
             -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
             -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
-            -e "/!--TIME_DURATION--/a TIME_DURATION = ${CYCLEFLEN}.D0," \
+            -e "/!--TIME_DURATION--/a TIME_DURATION = ${TIME_DURATION}," \
             -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_OCEAN_RESTART--/a TIME_DT_OCEAN_RESTART = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_LAND_RESTART--/a TIME_DT_LAND_RESTART = ${LCYCLE}.D0," \
             -e "/!--TIME_DT_URBAN_RESTART--/a TIME_DT_URBAN_RESTART = ${LCYCLE}.D0," \
+            -e "/!--TIME_DT_RESUME--/a TIME_DT_RESUME = ${LCYCLE}.D0," \
             -e "/!--ONLINE_DOMAIN_NUM--/a ONLINE_DOMAIN_NUM = ${d}," \
             -e "/!--ONLINE_IAM_PARENT--/a ONLINE_IAM_PARENT = ${ONLINE_IAM_PARENT}," \
             -e "/!--ONLINE_IAM_DAUGHTER--/a ONLINE_IAM_DAUGHTER = ${ONLINE_IAM_DAUGHTER}," \
@@ -856,8 +933,10 @@ while ((time <= ETIME)); do
             -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"<member>/anal.d${dfmt}\"," \
             -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"topo.d${dfmt}\"," \
             -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"landuse.d${dfmt}\"," \
-            -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"<member>/hist.d${dfmt}_$(datetime_scale $time)\"," \
+            -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${FILE_HISTORY_DEFAULT_BASENAME}\"," \
             -e "/!--FILE_HISTORY_DEFAULT_TINTERVAL--/a FILE_HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
+            -e "/!--FILE_HISTORY_OUTPUT_STEP0--/a FILE_HISTORY_OUTPUT_STEP0 = ${FILE_HISTORY_OUTPUT_STEP0}," \
+            -e "/!--FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL--/a FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL = ${LCYCLE}.D0," \
             -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"log/scale.<member>.d${dfmt}.monitor_${time}\"," \
             -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPROOT_CONSTDB}/dat/land/param.bucket.conf\"," \
             -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"latlon_domain_catalogue.d${dfmt}.txt\"," \
@@ -920,10 +999,24 @@ while ((time <= ETIME)); do
   # letkf
   #-----------------------------------------------------------------------------
 
+  if ((DACYCLE == 1)); then
+    OBS_POSTFIX_TIMELABEL_TF=".true."
+    HISTORY_POSTFIX_TIMELABEL_TF=".true."
+    GUES_ANAL_POSTFIX_TIMELABEL_TF=".true."
+  else
+    OBS_POSTFIX_TIMELABEL_TF=".false."
+    HISTORY_POSTFIX_TIMELABEL_TF=".false."
+    GUES_ANAL_POSTFIX_TIMELABEL_TF=".false."
+  fi
+
   OBS_IN_NAME_LIST=
   for iobs in $(seq $OBSNUM); do
     if [ "${OBSNAME[$iobs]}" != '' ]; then
-      OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}.dat', "
+      if ((DACYCLE == 1)); then
+        OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}', "
+      else
+        OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}.dat', "
+      fi
     fi
   done
 
@@ -940,9 +1033,12 @@ while ((time <= ETIME)); do
   if ((OBSOUT_OPT <= 2)); then
     OBSDA_OUT='.true.'
   fi
-  SPRD_OUT_TF='.true.'
   if ((SPRD_OUT == 0)); then
-    SPRD_OUT_TF='.false.'
+    GUES_SPRD_OUT_FREQ=0
+    ANAL_SPRD_OUT_FREQ=0
+  else
+    GUES_SPRD_OUT_FREQ=100000
+    ANAL_SPRD_OUT_FREQ=100000
   fi
   RTPS_INFL_OUT_TF='.false.'
   if ((RTPS_INFL_OUT == 1)); then
@@ -956,54 +1052,91 @@ while ((time <= ETIME)); do
   for d in $(seq $DOMNUM); do
     dfmt=$(printf $DOMAIN_FMT $d)
 
+    if ((DACYCLE == 1)); then
+      HISTORY_IN_BASENAME="<member>/hist.d${dfmt}"
+      GUES_IN_BASENAME="<member>/anal.d${dfmt}"
+      GUES_OUT_BASENAME="<member>/gues.d${dfmt}"
+      ANAL_OUT_BASENAME="<member>/anal.d${dfmt}"
+      RELAX_SPREAD_OUT_BASENAME="rtpsinfl.d${dfmt}"
+      NOBS_OUT_BASENAME="nobs.d${dfmt}"
+    else
+      HISTORY_IN_BASENAME="<member>/hist.d${dfmt}_$(datetime_scale $time)"
+      GUES_IN_BASENAME="<member>/anal.d${dfmt}_$(datetime_scale $atime)"
+      GUES_OUT_BASENAME="<member>/gues.d${dfmt}_$(datetime_scale $atime)"
+      ANAL_OUT_BASENAME="<member>/anal.d${dfmt}_$(datetime_scale $atime)"
+      RELAX_SPREAD_OUT_BASENAME="rtpsinfl.d${dfmt}_$(datetime_scale $atime).nc"
+      NOBS_OUT_BASENAME="nobs.d${dfmt}_$(datetime_scale $atime).nc"
+    fi
+
     if ((d == 1)); then
       conf_file_src=$SCRP_DIR/config.nml.letkf
       conf_file_src2=$SCRP_DIR/config.nml.scale
-      conf_file="letkf_${atime}.conf"
+      if ((DACYCLE == 1)); then
+        conf_file="dacycle_${time}.conf"
+      else
+        conf_file="letkf_${atime}.conf"
+      fi
     else
       conf_file_src=$SCRP_DIR/config.nml.letkf.d$d
       conf_file_src2=$SCRP_DIR/config.nml.scale.d$d
-      conf_file="letkf.d${dfmt}_${atime}.conf"
+      if ((DACYCLE == 1)); then
+        conf_file="dacycle.d${dfmt}_${time}.conf"
+      else
+        conf_file="letkf.d${dfmt}_${atime}.conf"
+      fi
     fi
-    echo "  $conf_file"
-
-    config_file_scale_launcher letkf "$conf_file" "letkf.d<domain>_${atime}.conf" $mtot
+    if ((DACYCLE != 1)); then
+      echo "  $conf_file"
+      config_file_scale_launcher letkf "$conf_file" "letkf.d<domain>_${atime}.conf" $mtot
+    fi
 
     cat $conf_file_src | \
         sed -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
             -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
+            -e "/!--OBS_POSTFIX_TIMELABEL--/a OBS_POSTFIX_TIMELABEL = ${OBS_POSTFIX_TIMELABEL_TF}," \
             -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
             -e "/!--OBSDA_OUT--/a OBSDA_OUT = $OBSDA_OUT" \
             -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"<member>/obsgues.d${dfmt}_${atime}\"," \
-            -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = \"<member>/hist.d${dfmt}_$(datetime_scale $time)\"," \
+            -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = \"${HISTORY_IN_BASENAME}\"," \
+            -e "/!--HISTORY_POSTFIX_TIMELABEL--/a HISTORY_POSTFIX_TIMELABEL = ${HISTORY_POSTFIX_TIMELABEL_TF}," \
             -e "/!--SLOT_START--/a SLOT_START = $slot_s," \
             -e "/!--SLOT_END--/a SLOT_END = $slot_e," \
             -e "/!--SLOT_BASE--/a SLOT_BASE = $slot_b," \
             -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = ${LTIMESLOT}.D0," \
             -e "/!--OBSDA_IN--/a OBSDA_IN = .false.," \
-            -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"<member>/anal.d${dfmt}_$(datetime_scale $atime)\"," \
-            -e "/!--GUES_MEAN_INOUT_BASENAME--/a GUES_MEAN_INOUT_BASENAME = \"mean/gues.d${dfmt}_$(datetime_scale $atime)\"," \
-            -e "/!--GUES_SPRD_OUT_BASENAME--/a GUES_SPRD_OUT_BASENAME = \"sprd/gues.d${dfmt}_$(datetime_scale $atime)\"," \
-            -e "/!--GUES_SPRD_OUT--/a GUES_SPRD_OUT = ${SPRD_OUT_TF}," \
-            -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"<member>/anal.d${dfmt}_$(datetime_scale $atime)\"," \
-            -e "/!--ANAL_SPRD_OUT--/a ANAL_SPRD_OUT = ${SPRD_OUT_TF}," \
+            -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${GUES_IN_BASENAME}\"," \
+            -e "/!--GUES_OUT_BASENAME--/a GUES_OUT_BASENAME = \"${GUES_OUT_BASENAME}\"," \
+            -e "/!--GUES_MEAN_OUT_FREQ--/a GUES_MEAN_OUT_FREQ = 100000," \
+            -e "/!--GUES_SPRD_OUT_FREQ--/a GUES_SPRD_OUT_FREQ = ${GUES_SPRD_OUT_FREQ}," \
+            -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${ANAL_OUT_BASENAME}\"," \
+            -e "/!--ANAL_OUT_FREQ--/a ANAL_OUT_FREQ = 100000," \
+            -e "/!--ANAL_MEAN_OUT_FREQ--/a ANAL_MEAN_OUT_FREQ = 100000," \
+            -e "/!--ANAL_MDET_OUT_FREQ--/a ANAL_MDET_OUT_FREQ = 100000," \
+            -e "/!--ANAL_SPRD_OUT_FREQ--/a ANAL_SPRD_OUT_FREQ = ${ANAL_SPRD_OUT_FREQ}," \
+            -e "/!--GUES_ANAL_POSTFIX_TIMELABEL--/a GUES_ANAL_POSTFIX_TIMELABEL = ${GUES_ANAL_POSTFIX_TIMELABEL_TF}," \
             -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"topo.d${dfmt}\"," \
             -e "/!--INFL_ADD_IN_BASENAME--/a INFL_ADD_IN_BASENAME = \"<member>/addi.d${dfmt}\"," \
             -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RTPS_INFL_OUT_TF}," \
-            -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"rtpsinfl.d${dfmt}_$(datetime_scale $atime).nc\"," \
+            -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${RELAX_SPREAD_OUT_BASENAME}\"," \
             -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
-            -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"nobs.d${dfmt}_$(datetime_scale $atime).nc\"," \
+            -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${NOBS_OUT_BASENAME}\"," \
         >> $CONFIG_DIR/${conf_file}
 
-    # Most of these parameters are not important for letkf
-    cat $conf_file_src2 | \
-        sed -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
-        >> $CONFIG_DIR/${conf_file}
+    if ((DACYCLE != 1)); then
+      # Most of these parameters are not important for letkf
+      cat $conf_file_src2 | \
+          sed -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
+          >> $CONFIG_DIR/${conf_file}
+    fi
 
     if ((stage_config == 1)); then
       echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
     fi
   done # [ d in $(seq $DOMNUM) ]
+
+  ######
+  fi # ((DACYCLE != 1 || loop == 1))
+  ######
 
   #-------------------
   time=$(datetime $time $LCYCLE s)
