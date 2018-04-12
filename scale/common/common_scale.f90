@@ -164,9 +164,9 @@ MODULE common_scale
   ! 
   !--- time labels for files
   ! 
-  character(len=24), save :: timelabel_obs
-  character(len=20), save :: timelabel_hist
-  character(len=20), save :: timelabel_anal
+  character(len=24), save :: timelabel_obs  = ''
+  character(len=20), save :: timelabel_hist = ''
+  character(len=20), save :: timelabel_anal = ''
 
 CONTAINS
 
