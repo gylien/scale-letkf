@@ -20,10 +20,26 @@ comp2="letkf"
 mode="file" 
 
 [FILE]
-filename="mean"
+filename="mean/anal"
+exclude_name="060000"
+comp1="scale"
+comp2="letkf"
+mode="file"
+
+[FILE]
+filename="mean/gues"
 exclude_name="060000"
 comp1="scale"
 comp2="letkf"
 mode="file"
 write_only=1
+
+[FILE]
+filename="sprd/gues"
+exclude_name="060000"
+comp1="scale"
+comp2="letkf"
+mode="file"
+write_only=1
+
 

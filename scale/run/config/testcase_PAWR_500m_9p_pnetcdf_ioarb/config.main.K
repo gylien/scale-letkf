@@ -11,9 +11,19 @@ PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
-DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
+### -- Honda setting
+#PRESET='K_micro'
+#EXP="testcase_PAWR_500m_9p_pnetcdf_ioarb_10mem"
+EXP="testcase_PAWR_500m_9p_pnetcdf_ioarb_3mem"
+REF_EXP="testcase_PAWR_500m_9p_pnetcdf_10mem"
 
-OUTDIR="$DDIR/exp/testcase_PAWR_500m_9p_pnetcdf_bdyprep" # Directory for SCALE-LETKF output
+DDIR="/volume63/data/hp150019/gylien/scale-letkf-test-suite-pnetcdf"
+INDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/${REF_EXP}"
+#
+OUTDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/${EXP}" # Need modification?
+#USERNAME=honda
+USERNAME=tatiana
+
 
 #===============================================================================
 # Location of model/data files
@@ -21,13 +31,18 @@ OUTDIR="$DDIR/exp/testcase_PAWR_500m_9p_pnetcdf_bdyprep" # Directory for SCALE-L
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
-DATA_TOPO="$DDIR/exp/testcase_PAWR_500m_9p_pnetcdf_data"             # Directory of the prepared topo files
+#DATA_TOPO="$DDIR/exp/testcase_PAWR_500m_9p_pnetcdf_data"             # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
-DATA_LANDUSE="$DDIR/exp/testcase_PAWR_500m_9p_pnetcdf_data"          # Directory of the prepared landuse files
-DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_PAWR_500m_9p_pnetcdf_data"   # Directory of the prepared SCALE boundary files
-DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
-DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
+#DATA_LANDUSE="$DDIR/exp/testcase_PAWR_500m_9p_pnetcdf_data"          # Directory of the prepared landuse files
+#DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
+#DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_PAWR_500m_9p_pnetcdf_data"   # Directory of the prepared SCALE boundary files
+#DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
+#DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
+
+DATA_TOPO=$INDIR
+DATA_LANDUSE=$INDIR
+DATA_BDY_SCALE_PREP=$INDIR
+
 
 OBS="$DDIR/obs/QCED_500M_v4_v500M_attn0.01"                          # Observation data in LETKF observation format
 OBSNCEP=
@@ -94,9 +109,12 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=10          # Ensemble size
+#MEMBER=10          # Ensemble size
+#NNODES=99          # Number of nodes
 
-NNODES=99          # Number of nodes
+MEMBER=3          # Ensemble size
+NNODES=36          # Number of nodes
+
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -119,7 +137,7 @@ IO_ARB=1                    # Use I/O arbitrator?
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
-TMP="/scratch/$(id -ng)/tatiana/$TMPSUBDIR" # Temporary directory shared among all nodes
+TMP="/scratch/$(id -ng)/${USERNAME}/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
 
