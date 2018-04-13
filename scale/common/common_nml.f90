@@ -385,10 +385,6 @@ subroutine read_nml_ensemble
     stop
   endif
 
-  if (LOG_LEVEL >= 2) then
-    write(6, nml=PARAM_ENSEMBLE)
-  end if
-
   if (ENS_WITH_MDET .and. (.not. ENS_WITH_MEAN)) then
     write (6, '(A)') "[Error] When 'ENS_WITH_MDET' = .true., 'ENS_WITH_MEAN' also needs to be .true."
     stop
@@ -409,6 +405,10 @@ subroutine read_nml_ensemble
     if (ENS_WITH_MDET) then
       MEMBER_RUN = MEMBER_RUN + 1
     end if
+  end if
+
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_ENSEMBLE)
   end if
 
   return
