@@ -25,6 +25,8 @@ DATA_TOPO="$DDIR/exp/testcase_PAWR_1km_4p_data"                      # Directory
 DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
 DATA_LANDUSE="$DDIR/exp/testcase_PAWR_1km_4p_data"                   # Directory of the prepared landuse files
 DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
+DATA_BDY_SCALE_PRC_NUM_X=3
+DATA_BDY_SCALE_PRC_NUM_Y=3
 DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
@@ -35,11 +37,11 @@ OBSNCEP=
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='DEM50M'    # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='LU100M' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -61,14 +63,20 @@ BDYCYCLE_INT=300
 
 PARENT_REF_TIME=20130713060000
 
+ENABLE_PARAM_USER=0     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
+                        # 1: Enable the 'PARAM_USER' section of the SCALE namelist (require 'config.nml.scale_user' and customized version of SCALE)
+
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
+LAND_INPUT=0            # 0: No land input (use cycling land variables)
+                        # 1: Update the land variables every cycle
+LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+                        # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
-OBSNUM=2
-OBSNAME[1]=obs                                    
-OBSNAME[2]=radar
+OBSNUM=1
+OBSNAME[1]=radar
 
 #===============================================================================
 # Cycling settings
@@ -120,8 +128,6 @@ fi
 
 SCP='cp -L'
 SCP_HOSTPREFIX=''
-#SCP='rsync -Lq'
-#SCP_HOSTPREFIX=''
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 

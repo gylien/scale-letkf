@@ -13,6 +13,8 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
+DOMNUM=<DOMNUM>
+
 OUTDIR="$DDIR/exp/testcase_45km_4p_l36_bdyprep" # Directory for SCALE-LETKF output
 
 #===============================================================================
@@ -74,8 +76,7 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
-OBSNAME[1]=obs                                    
-OBSNAME[2]=radar
+OBSNAME[1]=obs
 
 #===============================================================================
 # Cycling settings

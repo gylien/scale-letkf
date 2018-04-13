@@ -40,6 +40,7 @@ PNETCDF=1               # 0: Do not use PnetCDF
 
 DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
+DET_RUN_CYCLED=1
 
 TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
@@ -80,10 +81,8 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
-OBSNAME[1]=obs                                    
-OBSNAME[2]=radar
+OBSNAME[1]=obs
 OBSOPE_SEPARATE[1]=1
-OBSOPE_SEPARATE[2]=1
 
 #===============================================================================
 # Cycling settings

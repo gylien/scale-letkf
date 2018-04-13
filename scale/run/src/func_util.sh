@@ -130,10 +130,13 @@ mpirunf () {
 #-------------------------------------------------------------------------------
 # Submit a MPI job according to nodefile
 #
-# Usage: mpirunf NODEFILE PROG [ARGS]
+# Usage: mpirunf NODEFILE PROG [CONF ITER STDOUT ARGS]
 #
 #   NODEFILE  Name of nodefile (omit the directory $NODEFILE_DIR)
 #   PROG      Program
+#   CONF
+#   ITER
+#   STDOUT
 #   ARGS      Arguments passed into the program
 #
 # Other input variables:
@@ -148,11 +151,15 @@ fi
 local NODEFILE="$1"; shift
 local PROG="$1"; shift
 local CONF="$1"; shift
-local STDOUT="$1"; shift
+local ITER="${1:-0}"; shift
+local STDOUT="${1:-NOUT}"; shift
 local ARGS="$@"
 
-progbase=$(basename $PROG)
-progdir=$(dirname $PROG)
+if [ "$ITER" = '-' ]; then
+  local iters=
+else
+  local iters="$ITER"
+fi
 
 #-------------------------------------------------------------------------------
 
@@ -161,11 +168,11 @@ if [ "$MPI_TYPE" = 'sgimpt' ]; then
   local HOSTLIST=$(cat ${NODEFILE_DIR}/${NODEFILE})
   HOSTLIST=$(echo $HOSTLIST | sed 's/  */,/g')
 
-  $MPIRUN $HOSTLIST 1 $PROG $CONF $STDOUT $ARGS
-#  $MPIRUN $HOSTLIST 1 omplace -nt ${THREADS} $PROG $CONF $STDOUT $ARGS
+  $MPIRUN $HOSTLIST 1 $PROG $CONF $iters $STDOUT $ARGS
+#  $MPIRUN $HOSTLIST 1 omplace -nt ${THREADS} $PROG $CONF $iters $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $MPIRUN $HOSTLIST 1 $PROG $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $MPIRUN $HOSTLIST 1 $PROG $CONF $iters $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
@@ -174,10 +181,10 @@ elif [ "$MPI_TYPE" = 'openmpi' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS
+  $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $iters $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $MPIRUN -np $NNP -hostfile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $iters $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
@@ -186,10 +193,10 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS
+  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $iters $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS" >&2
+    echo "[Error] $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $iters $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
@@ -199,18 +206,18 @@ elif [ "$MPI_TYPE" = 'K' ]; then
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
   if [ "$PRESET" = 'K_rankdir' ]; then
-    mpiexec -n $NNP -of-proc $STDOUT $PROG $CONF '' $ARGS
+    mpiexec -n $NNP -of-proc $STDOUT $PROG $CONF $iters '' $ARGS
     res=$?
     if ((res != 0)); then
-      echo "[Error] mpiexec -n $NNP -of-proc $STDOUT $PROG $CONF '' $ARGS" >&2
+      echo "[Error] mpiexec -n $NNP -of-proc $STDOUT $PROG $CONF $iters '' $ARGS" >&2
       echo "        Exit code: $res" >&2
       exit $res
     fi
   else
-    mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${NODEFILE}" -of-proc $STDOUT $PROG $CONF '' $ARGS
+    mpiexec -n $NNP -vcoordfile "${NODEFILE_DIR}/${NODEFILE}" -of-proc $STDOUT $PROG $CONF $iters '' $ARGS
     res=$?
     if ((res != 0)); then 
-      echo "[Error] mpiexec -n $NNP -vcoordfile \"${NODEFILE_DIR}/${NODEFILE}\" -of-proc $STDOUT $PROG $CONF '' $ARGS" >&2
+      echo "[Error] mpiexec -n $NNP -vcoordfile \"${NODEFILE_DIR}/${NODEFILE}\" -of-proc $STDOUT $PROG $CONF $iters '' $ARGS" >&2
       echo "        Exit code: $res" >&2
       exit $res
     fi
@@ -250,11 +257,12 @@ local PROC_OPT="$1"; shift
 local SCRIPT="$1"; shift
 local ARGS="$@"
 
-if [ -x "$TMPDAT/exec/pdbash" ]; then
-  pdbash_exec="$TMPDAT/exec/pdbash"
-elif [ -x "$COMMON_DIR/pdbash" ]; then
+if ((RUN_LEVEL <= 2)); then
   pdbash_exec="$COMMON_DIR/pdbash"
 else
+  pdbash_exec="$TMPDAT/exec/pdbash"
+fi
+if [ ! -x "$pdbash_exec" ]; then
   echo "[Error] $FUNCNAME: Cannot find 'pdbash' program." >&2
   exit 1
 fi
@@ -872,7 +880,7 @@ local JOBID="$1"
 local res=0
 local tmp
 while true; do
-  tmp=$(pjstat -H day=1 --choose ST,EC,REASON ${JOBID} | tail -n 1)
+  tmp=$(pjstat -H day=5 --choose ST,EC,REASON ${JOBID} | tail -n 1)
   if [ -z "$tmp" ]; then
     echo "[Error] $FUNCNAME: Cannot find PJM job ${JOBID}." >&2
     return 99
@@ -1068,6 +1076,34 @@ local PE="${1:-0}"
 #-------------------------------------------------------------------------------
 
 if ((PNETCDF == 1)); then
+  echo '.nc'
+else
+  printf $SCALE_SFX $PE
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+scale_filename_bdy_sfx () {
+#-------------------------------------------------------------------------------
+# Return the suffix of SCALE boundary file names (offline nesting) 
+# for either split-file NetCDF or PnetCDF formats
+#
+# Usage: scale_filename_bdy_sfx [PE]
+#
+#   PE  Process number
+#
+# Other input variables:
+#   $PNETCDF_BDY_SCALE
+#-------------------------------------------------------------------------------
+
+local PE="${1:-0}"
+
+#-------------------------------------------------------------------------------
+
+if ((PNETCDF_BDY_SCALE == 1)); then
   echo '.nc'
 else
   printf $SCALE_SFX $PE

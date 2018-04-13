@@ -1,8 +1,3 @@
-&PARAM_ENSEMBLE
-!--MEMBER--
-!--DET_RUN--
-/
-
 &PARAM_OBSOPE
 !--HISTORY_IN_BASENAME--
  OBSDA_OUT = .true.,
@@ -12,18 +7,11 @@
 &PARAM_LETKF
 !--OBS_IN_NUM--
 !--OBS_IN_NAME--
- OBS_IN_FORMAT = 1, 2, 3,
+ OBS_IN_FORMAT = 'PREPBUFR',
 !--SLOT_START--
 !--SLOT_END--
 !--SLOT_BASE--
 !--SLOT_TINTERVAL--
-/
-
-&PARAM_LETKF_PRC
-!--NNODES--
-!--PPN--
-!--MEM_NODES--
-!--MEM_NP--
 /
 
 !*** Attach SCALE configuration below ***

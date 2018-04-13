@@ -26,6 +26,8 @@ DATA_TOPO=
 DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE=
 DATA_BDY_SCALE=
+DATA_BDY_SCALE_PRC_NUM_X=
+DATA_BDY_SCALE_PRC_NUM_Y=
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF="/volume63/data/hp150019/gylien/realtime/${EXPNAME}/<DATA_BDY_WRF>"
 DATA_BDY_NICAM=
@@ -72,8 +74,7 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
-OBSNAME[1]=obs                                    
-OBSNAME[2]=radar
+OBSNAME[1]=obs
 
 #===============================================================================
 # Cycling settings

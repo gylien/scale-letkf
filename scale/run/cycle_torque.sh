@@ -34,6 +34,7 @@ echo
 setting "$@" || exit $?
 
 if [ "$CONF_MODE" = 'static' ]; then
+  . src/func_common_static.sh || exit $?
   . src/func_${job}_static.sh || exit $?
 fi
 
@@ -61,6 +62,7 @@ ulimit -s unlimited
 HOSTLIST=\$(cat \$PBS_NODEFILE | sort | uniq)
 HOSTLIST=\$(echo \$HOSTLIST | sed 's/  */,/g')
 export MPI_UNIVERSE="\$HOSTLIST $((PPN*THREADS))"
+export MPI_XPMEM_ENABLED=disabled
 
 export OMP_NUM_THREADS=${THREADS}
 #export PARALLEL=${THREADS}

@@ -104,9 +104,11 @@ MODULE common_obs_scale
     INTEGER,ALLOCATABLE :: typ(:)
     REAL(r_size),ALLOCATABLE :: dif(:)
     REAL(r_size) :: meta(max_obs_info_meta) = undef
+    REAL(r_size),ALLOCATABLE :: ri(:)
+    REAL(r_size),ALLOCATABLE :: rj(:)
+    INTEGER,ALLOCATABLE :: rank(:)
   END TYPE obs_info
 
-  !!!!!!
   TYPE obs_da_value
     INTEGER :: nobs = 0
     INTEGER :: nobs_in_key = 0
@@ -125,14 +127,14 @@ MODULE common_obs_scale
 #endif
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
-    REAL(r_size),ALLOCATABLE :: ri(:)
-    REAL(r_size),ALLOCATABLE :: rj(:)
   END TYPE obs_da_value
-  !!!!!! need to add %err and %dat for obsda2 if they can be determined in letkf_obs.f90 !!!!!!
 
-  INTEGER,PARAMETER :: nobsformats=3 ! H08
-  CHARACTER(30),PARAMETER :: obsformat_name(nobsformats) = &
-    (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR'/)
+  character(obsformatlenmax), parameter :: obsfmt_prepbufr = 'PREPBUFR'
+  character(obsformatlenmax), parameter :: obsfmt_radar    = 'RADAR'
+  character(obsformatlenmax), parameter :: obsfmt_h08      = 'HIMAWARI8'
+!  integer, parameter :: nobsformats = 3
+!  character(obsformatlenmax), parameter :: obsformat(nobsformats) = &
+!    (/obsfmt_prepbufr, obsfmt_radar, obsfmt_h08/)
 
   INTEGER,PARAMETER :: iqc_good=0
   INTEGER,PARAMETER :: iqc_gross_err=5
@@ -150,7 +152,13 @@ MODULE common_obs_scale
 
   type(obs_info),allocatable,save :: obs(:) ! observation information
   type(obs_da_value),save :: obsda_sort     ! sorted obsda
-  type(obs_da_value),save :: obsdep         ! obsdep information
+
+  integer, save :: obsdep_nobs                     ! obsdep information
+  integer, allocatable, save :: obsdep_set(:)      ! 
+  integer, allocatable, save :: obsdep_idx(:)      ! 
+  integer, allocatable, save :: obsdep_qc(:)       ! 
+  real(r_size), allocatable, save :: obsdep_omb(:) ! 
+  real(r_size), allocatable, save :: obsdep_oma(:) ! 
 
   REAL(r_size),SAVE :: MIN_RADAR_REF
   REAL(r_size),SAVE :: RADAR_REF_THRES
@@ -254,8 +262,8 @@ end subroutine set_common_obs_scale
 !  1: staggered grid
 !-----------------------------------------------------------------------
 SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
-  use scale_mapproj, only: &
-      MPRJ_rotcoef
+  use scale_mapprojection, only: &
+      MAPPROJECTION_rotcoef
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk
@@ -283,7 +291,7 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
     end if
-    call MPRJ_rotcoef(rotc,lon*deg2rad,lat*deg2rad)
+    call MAPPROJECTION_rotcoef(rotc,lon*deg2rad,lat*deg2rad)
     if (elm == id_u_obs) then
       yobs = u * rotc(1) - v * rotc(2)
     else
@@ -304,7 +312,9 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
     CALL itpl_2d(v2d(:,:,iv2dd_ps),ri,rj,yobs)
     call prsadj(yobs,rk-topo,t,q)
     if (abs(rk-topo) > PS_ADJUST_THRES) then
-      write (6,'(A,F6.1)') 'warning: PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
+      if (LOG_LEVEL >= 2) then
+        write (6,'(A,F6.1)') '[Warning] PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
+      end if
       qc = iqc_ps_ter
     end if
 !  CASE(id_rain_obs) ! RAIN                        ############# (not finished)
@@ -342,7 +352,7 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   INTEGER,INTENT(IN),OPTIONAL :: stggrd
   INTEGER :: stggrd_ = 0
 
-  REAL(r_size) :: qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr,rhr
+  REAL(r_size) :: qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr !,rhr
   REAL(r_size) :: dist , dlon , dlat , az , elev , radar_ref,radar_rv
 
 !  integer :: ierr
@@ -942,7 +952,7 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
 
   else  !IF OVER DIFFERENT OPTIONS
 
-    WRITE(6,*)'ERROR: Not recognized method for radar reflectivity and wind computation'
+    WRITE(6,*)'[Error] Not recognized method for radar reflectivity and wind computation'
     STOP
 
   end if ! [METHOD_REF_CALC == ?]
@@ -974,7 +984,7 @@ END SUBROUTINE calc_ref_vr
 ! rk = 0.0d0  : surface observation
 !-----------------------------------------------------------------------
 SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       KHALO
   IMPLICIT NONE
 
@@ -997,7 +1007,9 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
 ! rlev -> rk
 !
   if (ri < 1.0d0 .or. ri > nlonh .or. rj < 1.0d0 .or. rj > nlath) then
-    write (6,'(A)') 'warning: observation is outside of the horizontal domain'
+    if (LOG_LEVEL >= 1) then
+      write (6,'(A)') '[Warning] observation is outside of the horizontal domain'
+    end if
     rk = undef
     qc = iqc_out_h
     return
@@ -1049,7 +1061,9 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
     !
     IF(rk < plev(nlev+KHALO)) THEN
       call itpl_2d(p_full(nlev+KHALO,:,:),ri,rj,ptmp)
-      write(6,'(A,F8.1,A,F8.1,A,I5)') 'warning: observation is too high: ptop=', ptmp, ', lev=', rlev, ', elem=', elem
+      if (LOG_LEVEL >= 2) then
+        write(6,'(A,F8.1,A,F8.1,A,I5)') '[Warning] observation is too high: ptop=', ptmp, ', lev=', rlev, ', elem=', elem
+      end if
       rk = undef
       qc = iqc_out_vhi
       RETURN
@@ -1057,7 +1071,9 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
     IF(rk > plev(ks)) THEN
       call itpl_2d(p_full(ks,:,:),ri,rj,ptmp)
 !print *, ks, rk, plev(ks)
-      write(6,'(A,F8.1,A,F8.1,A,I5)') 'warning: observation is too low: pbottom=', ptmp, ', lev=', rlev, ', elem=', elem
+      if (LOG_LEVEL >= 2) then
+        write(6,'(A,F8.1,A,F8.1,A,I5)') '[Warning] observation is too low: pbottom=', ptmp, ', lev=', rlev, ', elem=', elem
+      end if
       rk = undef
       qc = iqc_out_vlo
 
@@ -1085,7 +1101,7 @@ END SUBROUTINE phys2ijk
 ! rk = 0.0d0  : surface observation
 !-----------------------------------------------------------------------
 SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       KHALO
 !  use common_mpi
   IMPLICIT NONE
@@ -1111,7 +1127,9 @@ SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
 ! rlev -> rk
 !
   if (ri < 1.0d0 .or. ri > nlonh .or. rj < 1.0d0 .or. rj > nlath) then
-    write (6,'(A)') 'warning: observation is outside of the horizontal domain'
+    if (LOG_LEVEL >= 1) then
+      write (6,'(A)') '[Warning] observation is outside of the horizontal domain'
+    end if
     rk = undef
     qc = iqc_out_h
     return
@@ -1164,14 +1182,18 @@ SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
   !
   IF(rlev > zlev(nlev+KHALO)) THEN
     call itpl_2d(z_full(nlev+KHALO,:,:),ri,rj,ztmp)
-    write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too high: ztop=', ztmp, ', lev=', rlev
+    if (LOG_LEVEL >= 2) then
+      write(6,'(A,F8.1,A,F8.1)') '[Warning] observation is too high: ztop=', ztmp, ', lev=', rlev
+    end if
     rk = undef
     qc = iqc_out_vhi
     RETURN
   END IF
   IF(rlev < zlev(ks)) THEN
     call itpl_2d(z_full(ks,:,:),ri,rj,ztmp)
-    write(6,'(A,F8.1,A,F8.1)') 'warning: observation is too low: zbottom=', ztmp, ', lev=', rlev
+    if (LOG_LEVEL >= 2) then
+      write(6,'(A,F8.1,A,F8.1)') '[Warning] observation is too low: zbottom=', ztmp, ', lev=', rlev
+    end if
     rk = undef
     qc = iqc_out_vlo
     RETURN
@@ -1204,13 +1226,13 @@ END SUBROUTINE phys2ijkz
 ! Coordinate conversion
 !-----------------------------------------------------------------------
 SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
-  use scale_grid, only: &
-      GRID_CXG, &
-      GRID_CYG, &
+  use scale_atmos_grid_cartesC, only: &
+      ATMOS_GRID_CARTESC_CXG, &
+      ATMOS_GRID_CARTESC_CYG, &
       DX, &
       DY
-  use scale_mapproj, only: &
-      MPRJ_lonlat2xy
+  use scale_mapprojection, only: &
+      MAPPROJECTION_lonlat2xy
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: rlon
   REAL(r_size),INTENT(IN) :: rlat
@@ -1219,21 +1241,21 @@ SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
 !
 ! rlon,rlat -> ri,rj
 !
-  call MPRJ_lonlat2xy(rlon*pi/180.0_r_size,rlat*pi/180.0_r_size,rig,rjg)
-  rig = (rig - GRID_CXG(1)) / DX + 1.0d0
-  rjg = (rjg - GRID_CYG(1)) / DY + 1.0d0
+  call MAPPROJECTION_lonlat2xy(rlon*pi/180.0_r_size,rlat*pi/180.0_r_size,rig,rjg)
+  rig = (rig - ATMOS_GRID_CARTESC_CXG(1)) / DX + 1.0d0
+  rjg = (rjg - ATMOS_GRID_CARTESC_CYG(1)) / DY + 1.0d0
 
   RETURN
 END SUBROUTINE phys2ij
 
 SUBROUTINE ij2phys(rig,rjg,rlon,rlat)
-  use scale_grid, only: &
-      GRID_CXG, &
-      GRID_CYG, &
+  use scale_atmos_grid_cartesC, only: &
+      ATMOS_GRID_CARTESC_CXG, &
+      ATMOS_GRID_CARTESC_CYG, &
       DX, &
       DY
-  use scale_mapproj, only: &
-      MPRJ_xy2lonlat
+  use scale_mapprojection, only: &
+      MAPPROJECTION_xy2lonlat
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: rig
   REAL(r_size),INTENT(IN) :: rjg
@@ -1243,10 +1265,10 @@ SUBROUTINE ij2phys(rig,rjg,rlon,rlat)
 !
 ! ri,rj -> rlon,rlat
 !
-  x = (rig - 1.0d0) * DX + GRID_CXG(1) 
-  y = (rjg - 1.0d0) * DY + GRID_CYG(1) 
+  x = (rig - 1.0d0) * DX + ATMOS_GRID_CARTESC_CXG(1) 
+  y = (rjg - 1.0d0) * DY + ATMOS_GRID_CARTESC_CYG(1) 
 
-  call MPRJ_xy2lonlat(x,y,rlon,rlat)
+  call MAPPROJECTION_xy2lonlat(x,y,rlon,rlat)
 
   rlon = rlon * rad2deg
   rlat = rlat * rad2deg
@@ -1351,13 +1373,15 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
   integer :: nnobs
-  integer :: n,nn,proc
+  integer :: n,nn
   integer :: iset,iidx
-  real(r_size) :: ri,rj,rk
+  real(r_size) :: ril,rjl,rk,rkz
 
   real(r_size),allocatable :: oelm(:)
   real(r_size),allocatable :: ohx(:)
   integer,allocatable :: oqc(:)
+
+  integer :: OMP_GET_NUM_THREADS, omp_chunk
 
 !  REAL(r_size) :: timer
 !  INTEGER :: ierr
@@ -1365,9 +1389,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 #ifdef H08
 ! -- for Himawari-8 obs --
   INTEGER :: nprof_H08 ! num of H08 obs
-  REAL(r_size),ALLOCATABLE :: ri_H08(:),rj_H08(:)
+  REAL(r_size),ALLOCATABLE :: ril_H08(:),rjl_H08(:)
   REAL(r_size),ALLOCATABLE :: lon_H08(:),lat_H08(:)
-  REAL(r_size),ALLOCATABLE :: tmp_ri_H08(:),tmp_rj_H08(:)
+  REAL(r_size),ALLOCATABLE :: tmp_ril_H08(:),tmp_rjl_H08(:)
   REAL(r_size),ALLOCATABLE :: tmp_lon_H08(:),tmp_lat_H08(:)
   INTEGER,ALLOCATABLE :: n2prof(:) ! obs num 2 prof num
 
@@ -1410,8 +1434,12 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   end if
 #endif
   if (step == 1) then
-    obsdep%nobs = nnobs
-    call obs_da_value_allocate(obsdep, 0)
+    obsdep_nobs = nnobs
+    allocate (obsdep_set(obsdep_nobs))
+    allocate (obsdep_idx(obsdep_nobs))
+    allocate (obsdep_qc (obsdep_nobs))
+    allocate (obsdep_omb(obsdep_nobs))
+    allocate (obsdep_oma(obsdep_nobs))
   end if
 
   oqc = -1
@@ -1420,7 +1448,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  obs_idx_TCY = -1
 !  obs_idx_TCP = -1
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ri,rj,rk)
+!$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz)
+  omp_chunk = min(4, max(1, (nnobs-1) / OMP_GET_NUM_THREADS() + 1))
+!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
   do n = 1, nnobs
 
     if (use_key) then
@@ -1433,27 +1463,28 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     iidx = obsda_sort%idx(nn)
 
     if (step == 1) then
-      obsdep%set(n) = iset
-      obsdep%idx(n) = iidx
-      obsdep%val(n) = obs(iset)%dat(iidx)
+      obsdep_set(n) = iset
+      obsdep_idx(n) = iidx
 #ifdef DEBUG
     else if (step == 2) then
-      if (obsdep%set(n) /= iset) then
+      if (obsdep_set(n) /= iset) then
         write (6, *) "[Error] 'set' for y_b and y_a are inconsistent!"
         stop
       end if
-      if (obsdep%idx(n) /= iidx) then
+      if (obsdep_idx(n) /= iidx) then
         write (6, *) "[Error] 'idx' for y_b and y_a are inconsistent!"
-        stop
-      end if
-      if (obsdep%val(n) /= obs(iset)%dat(iidx)) then
-        write (6, *) "[Error] 'val' for y_b and y_a are inconsistent!"
         stop
       end if
 #endif
     end if
 
-    if (obsda_sort%qc(nn) /= iqc_good) write(6, *) '############', obsda_sort%qc(nn)
+#ifdef DEBUG
+    if (obsda_sort%qc(nn) /= iqc_good) then
+      write (6, *) "[Error] The QC value of this observation provided for monitoring is not good: ", &
+                   obsda_sort%qc(nn)
+      stop
+    end if
+#endif
 
     oelm(n) = obs(iset)%elm(iidx)
 
@@ -1469,16 +1500,16 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !      cycle
 !    end select
 
-#ifdef H08
-    if(int(oelm(n)) == id_H08IR_obs)cycle
-#endif
+!!!!!!#ifdef H08
+!!!!!!    if(int(oelm(n)) == id_H08IR_obs)cycle
+!!!!!!#endif
 
-    call rij_g2l_auto(proc,obsda_sort%ri(nn),obsda_sort%rj(nn),ri,rj)
+    call rij_g2l(PRC_myrank, obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl)
 #ifdef DEBUG
-    if (PRC_myrank /= proc) then
-      write(6, *) '############ Error!', PRC_myrank,proc,obsda_sort%ri(nn),obsda_sort%rj(nn),ri,rj
-      cycle
-!      stop
+    if (PRC_myrank /= obs(iset)%rank(iidx) .or. obs(iset)%rank(iidx) == -1) then
+      write (6, *) "[Error] This observation provided for monitoring does not reside in my rank: ", &
+                   PRC_myrank, obs(iset)%rank(iidx), obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl
+      stop
     end if
 #endif
 
@@ -1487,27 +1518,37 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 
       oqc(n) = iqc_otype
 
-      select case (obs(iset)%elm(iidx))
-      case(id_u_obs,id_v_obs,id_t_obs,id_tv_obs,id_q_obs,id_ps_obs) !,id_rh_obs)
+      select case (OBS_IN_FORMAT(iset))
+      !=========================================================================
+      case (obsfmt_prepbufr)
+      !-------------------------------------------------------------------------
         call phys2ijk(v3dgh(:,:,:,iv3dd_p),obs(iset)%elm(iidx), &
-                      ri,rj,obs(iset)%lev(iidx),rk,oqc(n))
+                      ril,rjl,obs(iset)%lev(iidx),rk,oqc(n))
         if (oqc(n) == iqc_good) then
-          call Trans_XtoY(obs(iset)%elm(iidx),ri,rj,rk, &
+          call Trans_XtoY(obs(iset)%elm(iidx),ril,rjl,rk, &
                           obs(iset)%lon(iidx),obs(iset)%lat(iidx), &
                           v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
         end if
-
-      case(id_radar_ref_obs,id_radar_ref_zero_obs,id_radar_vr_obs,id_radar_prh_obs)
+      !=========================================================================
+      case (obsfmt_radar)
+      !-------------------------------------------------------------------------
         if (DEPARTURE_STAT_RADAR) then
-          call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ri,rj,obs(iset)%lev(iidx),rk,oqc(n))
+          call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ril,rjl,obs(iset)%lev(iidx),rkz,oqc(n))
           if (oqc(n) == iqc_good) then
             call Trans_XtoY_radar(obs(iset)%elm(iidx),obs(iset)%meta(1), &
-                                  obs(iset)%meta(2),obs(iset)%meta(3),ri,rj,rk, &
+                                  obs(iset)%meta(2),obs(iset)%meta(3),ril,rjl,rkz, &
                                   obs(iset)%lon(iidx),obs(iset)%lat(iidx), &
                                   obs(iset)%lev(iidx),v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
             if (oqc(n) == iqc_ref_low) oqc(n) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
           end if
         end if
+#ifdef H08
+      !=========================================================================
+!      case (obsfmt_h08)
+      !-------------------------------------------------------------------------
+
+#endif
+      !=========================================================================
       end select
 
       if (oqc(n) == iqc_good) then
@@ -1517,20 +1558,34 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
       end if
 
       if (step == 1) then
-        obsdep%qc(n) = oqc(n)
-        obsdep%ri(n) = ohx(n)
+        obsdep_qc(n) = oqc(n)
+        obsdep_omb(n) = ohx(n)
       else if (step == 2) then
-        if (obsdep%qc(n) == iqc_good) then ! Use the QC value of y_a only if the QC of y_b is good
-          obsdep%qc(n) = oqc(n)            !
+        if (obsdep_qc(n) == iqc_good) then ! Use the QC value of y_a only if the QC of y_b is good
+          obsdep_qc(n) = oqc(n)            !
         end if                             !
-        obsdep%rj(n) = ohx(n)
+        obsdep_oma(n) = ohx(n)
       end if
-!write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iset)%elm(iidx), obs(iset)%typ(iidx), obs(iset)%lon(iidx), obs(iset)%lat(iidx), obs(iset)%lev(iidx), obs(iset)%dat(iidx), obs(iset)%err(iidx), ohx(n), oqc(n)
 
-    end if
+      if (LOG_LEVEL >= 3) then
+        write (6, '(2I6,2F8.2,4F12.4,I3)') &
+              obs(iset)%elm(iidx), &
+              obs(iset)%typ(iidx), &
+              obs(iset)%lon(iidx), &
+              obs(iset)%lat(iidx), &
+              obs(iset)%lev(iidx), &
+              obs(iset)%dat(iidx), &
+              obs(iset)%err(iidx), &
+              ohx(n), &
+              oqc(n)
+      end if
+
+    end if ! [ DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
+           !   abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE ]
 
   end do ! [ n = 1, nnobs ]
-!$OMP END PARALLEL DO
+!$OMP END DO
+!$OMP END PARALLEL
 
 
 #ifdef H08
@@ -1541,8 +1596,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 
   if (DEPARTURE_STAT_H08) then !-- [DEPARTURE_STAT_H08]
 
-    ALLOCATE(tmp_ri_H08(nnobs))
-    ALLOCATE(tmp_rj_H08(nnobs))
+    ALLOCATE(tmp_ril_H08(nnobs))
+    ALLOCATE(tmp_rjl_H08(nnobs))
     ALLOCATE(tmp_lon_H08(nnobs))
     ALLOCATE(tmp_lat_H08(nnobs))
     ALLOCATE(n2prof(nnobs))
@@ -1559,36 +1614,38 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
       iidx = obsda_sort%idx(nn)
 
       if (step == 1) then
-        obsdep%set(n) = iset
-        obsdep%idx(n) = iidx
-        obsdep%val(n) = obs(iset)%dat(iidx)
+        obsdep_set(n) = iset
+        obsdep_idx(n) = iidx
       end if
 
       oelm(n) = obs(iset)%elm(iidx)
       if(oelm(n) /= id_H08IR_obs)cycle
 
-      call rij_g2l_auto(proc,obsda_sort%ri(nn),obsda_sort%rj(nn),ri,rj)
-      if (PRC_myrank /= proc) then
-        write(6, *) '############ Error from H08 monitor!', PRC_myrank,proc
-        cycle
+      call rij_g2l(PRC_myrank, obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl)
+#ifdef DEBUG
+      if (PRC_myrank /= obs(iset)%rank(iidx) .or. obs(iset)%rank(iidx) == -1) then
+        write (6, *) "[Error] This observation provided for monitoring does not reside in my rank: ", &
+                     PRC_myrank, obs(iset)%rank(iidx), obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl
+        stop
       end if
+#endif
 
       if(nprof_H08 > 1)then
-        if((tmp_ri_H08(nprof_H08)==ri) .and. (tmp_ri_H08(nprof_H08)==ri))then
+        if((tmp_ril_H08(nprof_H08)==ril) .and. (tmp_rjl_H08(nprof_H08)==rjl))then
           n2prof(n) = nprof_H08
           cycle
         else
           nprof_H08 = nprof_H08 + 1
-          tmp_ri_H08(nprof_H08) = ri
-          tmp_rj_H08(nprof_H08) = rj
+          tmp_ril_H08(nprof_H08) = ril
+          tmp_rjl_H08(nprof_H08) = rjl
           tmp_lon_H08(nprof_H08) = obs(iset)%lon(iidx)
           tmp_lat_H08(nprof_H08) = obs(iset)%lat(iidx)
           n2prof(n) = nprof_H08
         endif
       else ! nprof_H08 <= 1
         nprof_H08 = nprof_H08 + 1
-        tmp_ri_H08(nprof_H08) = ri
-        tmp_rj_H08(nprof_H08) = rj
+        tmp_ril_H08(nprof_H08) = ril
+        tmp_rjl_H08(nprof_H08) = rjl
         tmp_lon_H08(nprof_H08) = obs(iset)%lon(iidx)
         tmp_lat_H08(nprof_H08) = obs(iset)%lat(iidx)
         n2prof(n) = nprof_H08
@@ -1596,17 +1653,17 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     end do ! [ n = 1, nnobs ]
 
     IF(nprof_H08 >=1)THEN ! [nprof_H08 >=1]
-      ALLOCATE(ri_H08(nprof_H08))
-      ALLOCATE(rj_H08(nprof_H08))
+      ALLOCATE(ril_H08(nprof_H08))
+      ALLOCATE(rjl_H08(nprof_H08))
       ALLOCATE(lon_H08(nprof_H08))
       ALLOCATE(lat_H08(nprof_H08))
 
-      ri_H08 = tmp_ri_H08(1:nprof_H08)
-      rj_H08 = tmp_rj_H08(1:nprof_H08)
+      ril_H08 = tmp_ril_H08(1:nprof_H08)
+      rjl_H08 = tmp_rjl_H08(1:nprof_H08)
       lon_H08 = tmp_lon_H08(1:nprof_H08)
       lat_H08 = tmp_lat_H08(1:nprof_H08)
 
-      DEALLOCATE(tmp_ri_H08, tmp_rj_H08)
+      DEALLOCATE(tmp_ril_H08, tmp_rjl_H08)
       DEALLOCATE(tmp_lon_H08, tmp_lat_H08)
 
       ALLOCATE(yobs_H08(nprof_H08*nch))
@@ -1616,7 +1673,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
       ALLOCATE(qc_H08(nprof_H08*nch))
 
 
-      CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
+      CALL Trans_XtoY_H08(nprof_H08,ril_H08,rjl_H08,&
                           lon_H08,lat_H08,v3dgh,v2dgh,&
                           yobs_H08,plev_obs_H08,&
                           qc_H08,stggrd=1,yobs_H08_clr=yobs_H08_clr)
@@ -1626,7 +1683,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 
       write (6, '(A)')"MEAN-HIMAWARI-8-STATISTICS"
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,nn,iset,iidx,ns)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC,5) PRIVATE(n,nn,iset,iidx,ns)
       do n = 1, nnobs
         if (use_key) then
           nn = obsda_sort%key(n)
@@ -1654,13 +1711,13 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
                    &) * 0.5d0 
 
           if (step == 1) then
-            obsdep%qc(n) = oqc(n)
-            obsdep%ri(n) = ohx(n)
+            obsdep_qc(n) = oqc(n)
+            obsdep_omb(n) = ohx(n)
           else if (step == 2) then
-            if (obsdep%qc(n) == iqc_good) then ! Use the QC value of y_a only if the QC of y_b is good
-              obsdep%qc(n) = oqc(n)            !
+            if (obsdep_qc(n) == iqc_good) then ! Use the QC value of y_a only if the QC of y_b is good
+              obsdep_qc(n) = oqc(n)            !
             end if                             !
-            obsdep%rj(n) = ohx(n)
+            obsdep_oma(n) = ohx(n)
           end if
                    
           if(oqc(n) == iqc_good) then
@@ -1687,8 +1744,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     ENDIF ! [nprof_H08 >=1]
 
     IF(ALLOCATED(n2prof)) DEALLOCATE(n2prof)
-    IF(ALLOCATED(tmp_ri_H08)) DEALLOCATE(tmp_ri_H08)
-    IF(ALLOCATED(tmp_rj_H08)) DEALLOCATE(tmp_rj_H08)
+    IF(ALLOCATED(tmp_ril_H08)) DEALLOCATE(tmp_ril_H08)
+    IF(ALLOCATED(tmp_rjl_H08)) DEALLOCATE(tmp_rjl_H08)
     IF(ALLOCATED(tmp_lon_H08)) DEALLOCATE(tmp_lon_H08)
     IF(ALLOCATED(tmp_lat_H08)) DEALLOCATE(tmp_lat_H08)
   endif !-- [DEPARTURE_STAT_H08]
@@ -1704,16 +1761,16 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !    (DEPARTURE_STAT_T_RANGE <= 0.0d0 .or. &
 !    abs(obs(obsda_sort%set(obs_idx_TCX))%dif(obsda_sort%idx(obs_idx_TCX))) <= DEPARTURE_STAT_T_RANGE))then
 !
-!    allocate(bTC(3,0:MEM_NP-1))
-!    allocate(bufr(3,0:MEM_NP-1))
+!    allocate(bTC(3,0:nprocs_d-1))
+!    allocate(bufr(3,0:nproces_d-1))
 !
 !    bTC = 9.99d33
 !    bufr = 9.99d33
 !
-!    call search_tc_subdom(obsda_sort%ri(obs_idx_TCX),obsda_sort%rj(obs_idx_TCX),v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
+!!!!!!    call search_tc_subdom(obsda_sort%ri(obs_idx_TCX),obsda_sort%rj(obs_idx_TCX),v2dg,bTC(1,PRC_myrank),bTC(2,PRC_myrank),bTC(3,PRC_myrank))
 !
 !    CALL MPI_BARRIER(MPI_COMM_d,ierr)
-!    CALL MPI_ALLREDUCE(bTC,bufr,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
+!    CALL MPI_ALLREDUCE(bTC,bufr,3*nprocs_d,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
 !    bTC = bufr
 !
 !    deallocate(bufr)
@@ -1721,13 +1778,13 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !
 !    ! Assume MSLP of background TC is lower than 1100 (hPa). 
 !    bTC_mslp = 1100.0d2
-!    do n = 0, MEM_NP - 1
+!    do n = 0, nprocs_d - 1
 !      write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
 !      if (bTC(3,n) < bTC_mslp ) then
 !        bTC_mslp = bTC(3,n)
 !        bTC_proc = n
 !      endif
-!    enddo ! [ n = 0, MEM_NP - 1]
+!    enddo ! [ n = 0, nprocs_d - 1]
 !
 !    do n = 1, 3
 !      if(n==1) i = obs_idx_TCX
@@ -1766,18 +1823,11 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     monit_type(uid_obs(id_H08IR_obs)) = .true.
   end if
 
-
   deallocate (oelm)
   deallocate (ohx)
   deallocate (oqc)
 
-
-!CALL MPI_BARRIER(MPI_COMM_a,ierr)
-!CALL CPU_TIME(timer)
-!if (myrank == 0) print *, '######', timer
-
-
-
+  return
 end subroutine monit_obs
 !-----------------------------------------------------------------------
 ! Monitor departure
@@ -1886,9 +1936,10 @@ END SUBROUTINE monit_print
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
-SUBROUTINE obs_info_allocate(obs)
+SUBROUTINE obs_info_allocate(obs, extended)
   IMPLICIT NONE
   TYPE(obs_info),INTENT(INOUT) :: obs
+  logical, optional, intent(in) :: extended
 
   call obs_info_deallocate(obs)
 
@@ -1909,6 +1960,18 @@ SUBROUTINE obs_info_allocate(obs)
   obs%err = 0.0d0
   obs%typ = 0
   obs%dif = 0.0d0
+
+  if (present(extended)) then
+    if (extended) then
+      allocate( obs%ri (obs%nobs) )
+      allocate( obs%rj (obs%nobs) )
+      allocate( obs%rank (obs%nobs) )
+
+      obs%ri = 0.0d0
+      obs%rj = 0.0d0
+      obs%rank = -1
+    end if
+  end if
 
   RETURN
 END SUBROUTINE obs_info_allocate
@@ -1949,8 +2012,6 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
   ALLOCATE( obsda%val2(obsda%nobs) ) ! H08
 #endif
   ALLOCATE( obsda%qc  (obsda%nobs) )
-  ALLOCATE( obsda%ri  (obsda%nobs) )
-  ALLOCATE( obsda%rj  (obsda%nobs) )
 
   obsda%nobs_in_key = 0
   obsda%idx = 0
@@ -1961,8 +2022,6 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
   obsda%val2 = 0.0d0 ! H08
 #endif
   obsda%qc = 0
-  obsda%ri = 0.0d0
-  obsda%rj = 0.0d0
 
   if (member > 0) then
     ALLOCATE( obsda%ensval (member,obsda%nobs) )
@@ -1990,8 +2049,6 @@ SUBROUTINE obs_da_value_deallocate(obsda)
 #endif
   IF(ALLOCATED(obsda%ensval)) DEALLOCATE(obsda%ensval)
   IF(ALLOCATED(obsda%qc    )) DEALLOCATE(obsda%qc    )
-  IF(ALLOCATED(obsda%ri    )) DEALLOCATE(obsda%ri    )
-  IF(ALLOCATED(obsda%rj    )) DEALLOCATE(obsda%rj    )
 
   RETURN
 END SUBROUTINE obs_da_value_deallocate
@@ -2004,7 +2061,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
   INTEGER,INTENT(IN) :: nrec
   INTEGER,INTENT(OUT) :: nn
   REAL(r_sngl),ALLOCATABLE :: wk(:)
-  INTEGER :: ios
+!  INTEGER :: ios
 !  INTEGER :: iu,iv,it,iq,irh,ips,itc
   INTEGER :: iunit
   LOGICAL :: ex
@@ -2052,7 +2109,7 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
 !-----------------------------
     INQUIRE(UNIT=iunit, SIZE=sz)
     IF (MOD(sz, r_sngl * (nrec+2)) /= 0) THEN
-      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
       RETURN
     END IF
     nn = sz / (r_sngl * (nrec+2))
@@ -2076,16 +2133,14 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
 END SUBROUTINE get_nobs
 
 SUBROUTINE read_obs(cfile,obs)
-  use scale_mapproj, only: &
-      MPRJ_lonlat2xy
+  use scale_mapprojection, only: &
+      MAPPROJECTION_lonlat2xy
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(INOUT) :: obs
   REAL(r_sngl) :: wk(8)
   REAL(r_size) :: x, y
   INTEGER :: n,iunit
-
-!  call obs_info_allocate(obs)
 
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
@@ -2114,16 +2169,16 @@ SUBROUTINE read_obs(cfile,obs)
       wk(5) = wk(5) * 100.0 ! hPa -> Pa
       wk(6) = real(OBSERR_TCP,kind=r_sngl)
     CASE(id_tclon_obs)
-      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
-                          REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
-                          x,y)
+      call MAPPROJECTION_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
+                                   REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
+                                   x,y)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = real(x,kind=r_sngl)
       wk(6) = real(OBSERR_TCX,kind=r_sngl)
     CASE(id_tclat_obs)
-      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
-                          REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
-                          x,y)
+      call MAPPROJECTION_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
+                                   REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
+                                   x,y)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = real(y,kind=r_sngl)
       wk(6) = real(OBSERR_TCY,kind=r_sngl)
@@ -2210,10 +2265,9 @@ SUBROUTINE read_obs_da(cfile,obsda,im)
   TYPE(obs_da_value),INTENT(INOUT) :: obsda
   INTEGER,INTENT(IN) :: im
 #ifdef H08
-!  REAL(r_sngl) :: wk(7) ! H08
-  REAL(r_sngl) :: wk(8) ! H08
-#else
   REAL(r_sngl) :: wk(6) ! H08
+#else
+  REAL(r_sngl) :: wk(4) ! H08
 #endif
   INTEGER :: n,iunit
 
@@ -2231,11 +2285,9 @@ SUBROUTINE read_obs_da(cfile,obsda,im)
       obsda%ensval(im,n) = REAL(wk(3),r_size)
     end if
     obsda%qc(n) = NINT(wk(4))
-    obsda%ri(n) = REAL(wk(5),r_size)
-    obsda%rj(n) = REAL(wk(6),r_size)
 #ifdef H08
-    obsda%lev(n) = REAL(wk(7),r_size) ! H08
-    obsda%val2(n) = REAL(wk(8),r_size) ! H08
+    obsda%lev(n) = REAL(wk(5),r_size) ! H08
+    obsda%val2(n) = REAL(wk(6),r_size) ! H08
 #endif
   END DO
   CLOSE(iunit)
@@ -2251,10 +2303,9 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
   LOGICAL,INTENT(IN),OPTIONAL :: append
   LOGICAL :: append_
 #ifdef H08
-!  REAL(r_sngl) :: wk(7) ! H08
-  REAL(r_sngl) :: wk(8) ! H08
+  REAL(r_sngl) :: wk(6) ! H08
 #else
-  REAL(r_sngl) :: wk(6) 
+  REAL(r_sngl) :: wk(4) 
 #endif
   INTEGER :: n,iunit
 
@@ -2276,11 +2327,9 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
       wk(3) = REAL(obsda%ensval(im,n),r_sngl)
     end if
     wk(4) = REAL(obsda%qc(n),r_sngl)
-    wk(5) = REAL(obsda%ri(n),r_sngl)
-    wk(6) = REAL(obsda%rj(n),r_sngl)
 #ifdef H08
-    wk(7) = REAL(obsda%lev(n),r_sngl) ! H08
-    wk(8) = REAL(obsda%val2(n),r_sngl) ! H08
+    wk(5) = REAL(obsda%lev(n),r_sngl) ! H08
+    wk(6) = REAL(obsda%val2(n),r_sngl) ! H08
 #endif
     WRITE(iunit) wk
   END DO
@@ -2288,6 +2337,63 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
 
   RETURN
 END SUBROUTINE write_obs_da
+
+subroutine write_obs_dep(cfile, nobs, set, idx, qc, omb, oma)
+  implicit none
+  character(*), intent(in) :: cfile
+  integer, intent(in) :: nobs
+  integer, intent(in) :: set(nobs)
+  integer, intent(in) :: idx(nobs)
+  integer, intent(in) :: qc(nobs)
+  real(r_size), intent(in) :: omb(nobs)
+  real(r_size), intent(in) :: oma(nobs)
+
+  real(r_sngl) :: wk(11)
+  integer :: n, iunit
+
+  iunit=92
+
+  open (iunit, file=cfile, form='unformatted', access='sequential')
+  do n = 1, nobs
+    wk(1) = real(obs(set(n))%elm(idx(n)), r_sngl)
+    wk(2) = real(obs(set(n))%lon(idx(n)), r_sngl)
+    wk(3) = real(obs(set(n))%lat(idx(n)), r_sngl)
+    wk(4) = real(obs(set(n))%lev(idx(n)), r_sngl)
+    wk(5) = real(obs(set(n))%dat(idx(n)), r_sngl)
+    wk(6) = real(obs(set(n))%err(idx(n)), r_sngl)
+    wk(7) = real(obs(set(n))%typ(idx(n)), r_sngl)
+    wk(8) = real(obs(set(n))%dif(idx(n)), r_sngl)
+    wk(9) = real(qc(n), r_sngl)
+    wk(10) = real(omb(n), r_sngl)
+    wk(11) = real(oma(n), r_sngl)
+    select case (nint(wk(1)))
+    case (id_u_obs)
+      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+    case (id_v_obs)
+      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+    case (id_t_obs)
+      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+    case (id_tv_obs)
+      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+    case (id_q_obs)
+      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+    case (id_ps_obs)
+      wk(5) = wk(5) * 0.01 ! Pa -> hPa
+      wk(6) = wk(6) * 0.01 ! Pa -> hPa
+    case (id_rh_obs)
+      wk(4) = wk(4) * 0.01 ! Pa -> hPa
+      wk(5) = wk(5) * 100.0 ! percent output
+      wk(6) = wk(6) * 100.0 ! percent output
+    case (id_tcmip_obs)
+      wk(5) = wk(5) * 0.01 ! Pa -> hPa
+      wk(6) = wk(6) * 0.01 ! Pa -> hPa
+    end select
+    write (iunit) wk
+  end do
+  close (iunit)
+
+  return
+end subroutine write_obs_dep
 
 SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
   IMPLICIT NONE
@@ -2322,19 +2428,19 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
     OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
     READ(iunit,IOSTAT=ios)tmp
     IF(ios /= 0) THEN
-      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
       RETURN
     END IF
     radarlon=REAL(tmp,r_size)
     READ(iunit,IOSTAT=ios)tmp
     IF(ios /= 0) THEN
-      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
       RETURN
     END IF
     radarlat=REAL(tmp,r_size)
     READ(iunit,IOSTAT=ios)tmp
     IF(ios /= 0) THEN
-      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
       RETURN
     END IF
     radarz=REAL(tmp,r_size)
@@ -2359,7 +2465,7 @@ SUBROUTINE get_nobs_radar(cfile,nn,radarlon,radarlat,radarz)
     INQUIRE(UNIT=iunit, SIZE=sz)
     sz = sz - r_sngl * (1+2) * 3 ! substract the radar data header
     IF (MOD(sz, r_sngl * (nrec+2)) /= 0) THEN
-      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
       RETURN
     END IF
     nn = sz / (r_sngl * (nrec+2))
@@ -2388,8 +2494,6 @@ SUBROUTINE read_obs_radar(cfile,obs)
   INTEGER :: nrec
   REAL(r_sngl) :: tmp
   INTEGER :: n,iunit,ios
-
-!  call obs_info_allocate(obs)
 
   IF(RADAR_OBS_4D) THEN
     nrec = 8
@@ -2484,43 +2588,43 @@ subroutine read_obs_all(obs)
   logical :: ex
 
   do iof = 1, OBS_IN_NUM
-    inquire (file=trim(OBS_IN_NAME(iof)), exist=ex)
+    inquire (file=trim(OBS_IN_NAME(iof))//trim(timelabel_obs), exist=ex)
     if (.not. ex) then
-      write(6,*) 'WARNING: FILE ',trim(OBS_IN_NAME(iof)),' NOT FOUND'
+      write(6,*) '[Warning] FILE ',trim(OBS_IN_NAME(iof))//trim(timelabel_obs),' NOT FOUND'
 
 
       obs(iof)%nobs = 0
-      call obs_info_allocate(obs(iof))
+      call obs_info_allocate(obs(iof), extended=.true.) !!! check why this is necessary !!!
 
 
       cycle
     end if
 
     select case (OBS_IN_FORMAT(iof))
-    case (1)
-      call get_nobs(trim(OBS_IN_NAME(iof)),8,obs(iof)%nobs)
-    case (2)
-      call get_nobs_radar(trim(OBS_IN_NAME(iof)), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
-    case (3) !H08 
-      call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
+    case (obsfmt_prepbufr)
+      call get_nobs(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),8,obs(iof)%nobs)
+    case (obsfmt_radar)
+      call get_nobs_radar(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
+    case (obsfmt_h08)
+      call get_nobs_H08(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof)%nobs) ! H08
     case default
-      write(6,*) 'Error: Unsupported observation file format!'
+      write(6,*) '[Error] Unsupported observation file format!'
       stop
     end select
 
-    write(6,'(5A,I9,A)') 'OBS FILE [', trim(OBS_IN_NAME(iof)), '] (FORMAT ', &
-                         trim(obsformat_name(OBS_IN_FORMAT(iof))), '): TOTAL ', &
+    write(6,'(5A,I9,A)') 'OBS FILE [', trim(OBS_IN_NAME(iof))//trim(timelabel_obs), '] (FORMAT ', &
+                         trim(OBS_IN_FORMAT(iof)), '): TOTAL ', &
                          obs(iof)%nobs, ' OBSERVATIONS'
 
-    call obs_info_allocate(obs(iof))
+    call obs_info_allocate(obs(iof), extended=.true.)
 
     select case (OBS_IN_FORMAT(iof))
-    case (1)
-      call read_obs(trim(OBS_IN_NAME(iof)),obs(iof))
-    case (2)
-      call read_obs_radar(trim(OBS_IN_NAME(iof)),obs(iof))
-    case (3) ! H08 
-      call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
+    case (obsfmt_prepbufr)
+      call read_obs(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof))
+    case (obsfmt_radar)
+      call read_obs_radar(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof))
+    case (obsfmt_h08)
+      call read_obs_H08(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof)) ! H08
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
 
@@ -2535,26 +2639,26 @@ subroutine write_obs_all(obs, missing, file_suffix)
   character(len=*), intent(in), optional :: file_suffix
   logical :: missing_
   integer :: iof, strlen1, strlen2
-  character(200) :: filestr
+  character(len=200) :: filestr
 
   missing_ = .true.
   IF(present(missing)) missing_ = missing
 
   do iof = 1, OBS_IN_NUM
     if (present(file_suffix)) then
-      strlen1 = len(trim(OBS_IN_NAME(iof)))
+      strlen1 = len(trim(OBS_IN_NAME(iof))//trim(timelabel_obs))
       strlen2 = len(trim(file_suffix))
-      write (filestr(1:strlen1),'(A)') trim(OBS_IN_NAME(iof))
+      write (filestr(1:strlen1),'(A)') trim(OBS_IN_NAME(iof))//trim(timelabel_obs)
       write (filestr(strlen1+1:strlen1+strlen2),'(A)') trim(file_suffix)
     else
-      filestr = OBS_IN_NAME(iof)
+      filestr = trim(OBS_IN_NAME(iof))//trim(timelabel_obs)
     end if
     select case (OBS_IN_FORMAT(iof))
-    case (1)
+    case (obsfmt_prepbufr)
       call write_obs(trim(filestr),obs(iof),missing=missing_)
-    case (2)
+    case (obsfmt_radar)
       call write_obs_radar(trim(filestr),obs(iof),missing=missing_)
-    case (3) ! H08 
+    case (obsfmt_h08)
       call write_obs_H08(trim(filestr),obs(iof),missing=missing_) ! H08
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
@@ -2567,12 +2671,12 @@ end subroutine write_obs_all
 !-----------------------------------------------------------------------
 !
 SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
-  use scale_grid, only: &
-      GRID_CXG, &
-      GRID_CYG, &
+  use scale_atmos_grid_cartesC, only: &
+      ATMOS_GRID_CARTESC_CXG, &
+      ATMOS_GRID_CARTESC_CYG, &
       DX, &
       DY
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
   use scale_process, only: &
       PRC_myrank
@@ -2620,8 +2724,8 @@ SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
 
     if(var5 < yobs_mslp)then
       yobs_mslp = var5
-      yobs_tcx = (real(ig,kind=r_size) - 1.0d0) * DX + GRID_CXG(1)
-      yobs_tcy = (real(jg,kind=r_size) - 1.0d0) * DY + GRID_CYG(1)
+      yobs_tcx = (real(ig,kind=r_size) - 1.0d0) * DX + ATMOS_GRID_CARTESC_CXG(1)
+      yobs_tcy = (real(jg,kind=r_size) - 1.0d0) * DY + ATMOS_GRID_CARTESC_CYG(1)
     endif
   ENDDO
   ENDDO
@@ -2658,10 +2762,10 @@ END SUBROUTINE wgt_ave2d
 #ifdef H08
 !
 SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yobs_H08_clr)
-  use scale_mapproj, only: &
-      MPRJ_rotcoef
+  use scale_mapprojection, only: &
+      MAPPROJECTION_rotcoef
   use scale_H08_fwd
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     KHALO
 
   IMPLICIT NONE
@@ -2732,7 +2836,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
     CALL itpl_2d(v2d(:,:,iv2dd_ps),ri(np),rj(np),psfc1d(np))
 !    call prsadj(yobs,rk-topo,t,q)
 !    if (abs(rk-topo) > PS_ADJUST_THRES) then
-!      write (6,'(A,F6.1)') 'warning: PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
+!      write (6,'(A,F6.1)') '[Warning] PS observation height adjustment exceeds the threshold. dz=', abs(rk-topo)
 !      qc = iqc_ps_ter
 !    end if
 
@@ -2743,7 +2847,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
       CALL itpl_2d(v2d(:,:,iv2dd_u10m),ri(np),rj(np),utmp)
       CALL itpl_2d(v2d(:,:,iv2dd_v10m),ri(np),rj(np),vtmp)
     end if
-    call MPRJ_rotcoef(rotc,lon(np)*deg2rad,lat(np)*deg2rad)
+    call MAPPROJECTION_rotcoef(rotc,lon(np)*deg2rad,lat(np)*deg2rad)
     usfc1d(np) = utmp * rotc(1) - vtmp * rotc(2)
     vsfc1d(np) = utmp * rotc(2) + vtmp * rotc(1)
 
@@ -2856,8 +2960,8 @@ SUBROUTINE get_nobs_H08(cfile,nn)
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   INTEGER,INTENT(OUT) :: nn ! num of all H08 obs
-  REAL(r_sngl) :: wk(4+nch)
-  INTEGER :: ios 
+!  REAL(r_sngl) :: wk(4+nch)
+!  INTEGER :: ios 
   INTEGER :: iprof
   INTEGER :: iunit
   LOGICAL :: ex
@@ -2874,7 +2978,7 @@ SUBROUTINE get_nobs_H08(cfile,nn)
     
 !    READ(iunit,IOSTAT=ios)wk
 !    IF(ios /= 0) THEN 
-!      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+!      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
 !      RETURN
 !    END IF
     
@@ -2892,7 +2996,7 @@ SUBROUTINE get_nobs_H08(cfile,nn)
 !-----------------------------
     INQUIRE(UNIT=iunit, SIZE=sz)
     IF (MOD(sz, r_sngl * (4+nch+2)) /= 0) THEN
-      WRITE(6,'(2A)') cfile,': Reading error -- skipped'
+      WRITE(6,'(3A)') '[Warning]',cfile,': Reading error -- skipped'
       RETURN
     END IF
     iprof = sz / (r_sngl * (4+nch+2))
@@ -2921,7 +3025,6 @@ SUBROUTINE read_obs_H08(cfile,obs)
   INTEGER :: nprof, np, ch
 
   nprof = obs%nobs / nch
-!  call obs_info_allocate(obs)
 
   iunit=91
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')

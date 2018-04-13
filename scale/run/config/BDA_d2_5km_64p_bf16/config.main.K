@@ -23,6 +23,8 @@ DATA_TOPO=
 DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d1_15km_1104/const/topo"
 DATA_LANDUSE=
 DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d1_15km_1104"
+DATA_BDY_SCALE_PRC_NUM_X=8
+DATA_BDY_SCALE_PRC_NUM_Y=6
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
@@ -35,6 +37,7 @@ OBSNCEP=                                                 # directory of observat
 
 DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
+DET_RUN_CYCLED=1
 
 TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
@@ -78,8 +81,7 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
-OBSNAME[1]=obs                                    
-OBSNAME[2]=radar
+OBSNAME[1]=obs
 
 #===============================================================================
 # Cycling settings

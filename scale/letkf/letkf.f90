@@ -13,6 +13,7 @@ PROGRAM letkf
   USE common
   USE common_mpi
   USE common_scale
+  USE common_scalerm
   USE common_mpi_scale
   USE common_obs_scale
   USE common_nml
@@ -93,22 +94,9 @@ PROGRAM letkf
 
   call set_common_conf(nprocs)
 
-  call read_nml_model
-  call read_nml_obs_error
-  call read_nml_obsope
-  call read_nml_letkf
-  call read_nml_letkf_obs
-  call read_nml_letkf_var_local
-  call read_nml_letkf_monitor
-  call read_nml_letkf_radar
-  call read_nml_letkf_h08
+  call set_mem_node_proc(MEMBER_RUN)
 
-  if (DET_RUN) then
-    call set_mem_node_proc(MEMBER+2)
-  else
-    call set_mem_node_proc(MEMBER+1)
-  end if
-  call set_scalelib
+  call scalerm_setup('LETKF')
 
   if (myrank_use) then
 
@@ -141,7 +129,7 @@ PROGRAM letkf
     ! Compute observation operator, return the results in obsda
     ! with additional space for externally processed observations
     !
-    call obsope_cal(obsda, .true., nobs_extern=nobs_extern)
+    call obsope_cal(obsda_return=obsda, nobs_extern=nobs_extern)
 
     call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
 
@@ -174,7 +162,7 @@ PROGRAM letkf
     !
     call read_ens_mpi(gues3d, gues2d)
 
-    if (DET_RUN .and. mmdetin /= mmdet) then
+    if (ENS_WITH_MDET .and. mmdetin /= mmdet) then
       gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
       gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
     end if
@@ -184,13 +172,13 @@ PROGRAM letkf
     !
     ! WRITE ENS MEAN and SPRD
     !
-    if (DEPARTURE_STAT) then
-      call write_ensmean(GUES_MEAN_INOUT_BASENAME, gues3d, gues2d, calced=.false., monit_step=1)
+    if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
+      call write_ensmean(GUES_MEAN_OUT_BASENAME, gues3d, gues2d, calced=.false., monit_step=1)
     else
-      call write_ensmean(GUES_MEAN_INOUT_BASENAME, gues3d, gues2d, calced=.false.)
+      call write_ensmean(GUES_MEAN_OUT_BASENAME, gues3d, gues2d, calced=.false.)
     end if
 
-    if (GUES_SPRD_OUT) then
+    if (GUES_SPRD_OUT_FREQ >= 1) then
       call write_enssprd(GUES_SPRD_OUT_BASENAME, gues3d, gues2d)
     end if
 
@@ -217,7 +205,7 @@ PROGRAM letkf
     call ensmean_grd(MEMBER, nens, nij1, anal3d, anal2d)
     ! write analysis mean later in write_ens_mpi
 
-    if (ANAL_SPRD_OUT) then
+    if (ANAL_SPRD_OUT_FREQ >= 1) then
       call write_enssprd(ANAL_SPRD_OUT_BASENAME, anal3d, anal2d)
     end if
 
@@ -226,7 +214,7 @@ PROGRAM letkf
     !
     ! WRITE ANAL and ENS MEAN
     !
-    if (DEPARTURE_STAT) then
+    if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
       call write_ens_mpi(anal3d, anal2d, monit_step=2)
     else
       call write_ens_mpi(anal3d, anal2d)
@@ -245,7 +233,7 @@ PROGRAM letkf
 
   end if ! [ myrank_use ]
 
-  call unset_scalelib
+  call scalerm_finalize('LETKF')
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 

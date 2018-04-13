@@ -79,15 +79,16 @@ BS_SS=${BDY_STIME:12:2}
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
 
-IO_AGGREGATE=".false"
+FILE_AGGREGATE=".false"
 if ((PNETCDF == 1)); then
-  IO_AGGREGATE=".true."
+  FILE_AGGREGATE=".true."
 fi
 
 RESTART_OUT_ADDITIONAL_COPIES=0
 RESTART_OUT_ADDITIONAL_BASENAME=
 if [ "$SCPCALL" = 'cycle' ]; then
   IO_LOG_DIR='scale'
+  RESTART_OUTPUT='.true.'
   if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
     RESTART_OUT_ADDITIONAL_COPIES=1
     RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPDIR}\/restart_2\", "
@@ -118,6 +119,11 @@ if [ "$SCPCALL" = 'cycle' ]; then
   fi
 else
   IO_LOG_DIR="${SCPCALL}_scale"
+  if ((OUT_OPT <= 1)); then
+    RESTART_OUTPUT='.true.'
+  else
+    RESTART_OUTPUT='.false.'
+  fi
 fi
 
 DOMAIN_CATALOGUE_OUTPUT=".false."
@@ -129,7 +135,7 @@ fi
 
 conf="$(cat $TMPDAT/conf/config.nml.scale | \
         sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
-            -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+            -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
             -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
             -e "/!--TIME_DURATION--/a TIME_DURATION = ${FCSTLEN}.D0," \
             -e "/!--TIME_DT_ATMOS_RESTART--/a TIME_DT_ATMOS_RESTART = ${FCSTINT}.D0," \
@@ -137,14 +143,15 @@ conf="$(cat $TMPDAT/conf/config.nml.scale | \
             -e "/!--TIME_DT_LAND_RESTART--/a TIME_DT_LAND_RESTART = ${FCSTINT}.D0," \
             -e "/!--TIME_DT_URBAN_RESTART--/a TIME_DT_URBAN_RESTART = ${FCSTINT}.D0," \
             -e "/!--RESTART_IN_BASENAME--/a RESTART_IN_BASENAME = \"${INIT}\"," \
+            -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = ${RESTART_OUTPUT}," \
             -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPDIR}\/restart\"," \
             -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
             -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
             -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${BDY}\"," \
             -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = $BS_YYYY, $BS_MM, $BS_DD, $BS_HH, $BS_II, $BS_SS," \
             -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0," \
-            -e "/!--HISTORY_DEFAULT_BASENAME--/a HISTORY_DEFAULT_BASENAME = \"${TMPDIR}\/history\"," \
-            -e "/!--HISTORY_DEFAULT_TINTERVAL--/a HISTORY_DEFAULT_TINTERVAL = ${HISTINT}.D0," \
+            -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${TMPDIR}\/history\"," \
+            -e "/!--FILE_HISTORY_DEFAULT_TINTERVAL--/a FILE_HISTORY_DEFAULT_TINTERVAL = ${HISTINT}.D0," \
             -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_monitor\"," \
             -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT_CONSTDB}/land/param.bucket.conf\"," \
             -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"$TMPOUT/const/log/latlon_domain_catalogue.txt\"," \

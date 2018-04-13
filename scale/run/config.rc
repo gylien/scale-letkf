@@ -8,12 +8,14 @@
 
 PROCESS_FMT='%06d'
 MEMBER_FMT='%04d'
+DOMAIN_FMT='%02d'
 
 PROCESS_FMT_0="$(printf $PROCESS_FMT 0)"
 SCALE_SFX=".pe${PROCESS_FMT}.nc"
 SCALE_SFX_0=".pe${PROCESS_FMT_0}.nc"
 SCALE_SFX_NONC=".pe${PROCESS_FMT}"
 SCALE_SFX_NONC_0=".pe${PROCESS_FMT_0}"
+DOMAIN_FMT_0="$(printf $DOMAIN_FMT 0)"
 
 #===============================================================================
 # Preset
@@ -75,18 +77,40 @@ TMPSL="${TMPSL:-$TMPS}"
 
 #-------------------------------------------------------------------------------
 
-INDIR="${INDIR:-$OUTDIR}"
-
 if [ -z "$SCALEDIR" ] && [ -n "$MODELDIR" ]; then # for backward compatibility
   SCALEDIR="${MODELDIR}/.."                       #
 fi                                                #
 
-DATA_TOPO="${DATA_TOPO:-$INDIR}"
-DATA_LANDUSE="${DATA_LANDUSE:-$INDIR}"
-DATA_BDY_SCALE_PREP="${DATA_BDY_SCALE_PREP:-$INDIR}"
-DATA_ADDINFL="${DATA_ADDINFL:-$INDIR}"
+DOMNUM="${DOMNUM:-1}"
+
+INDIR[1]="${INDIR[1]:-$INDIR}"
+OUTDIR[1]="${OUTDIR[1]:-$OUTDIR}"
+
+DATA_TOPO[1]="${DATA_TOPO[1]:-$DATA_TOPO}"
+DATA_LANDUSE[1]="${DATA_LANDUSE[1]:-$DATA_LANDUSE}"
+DATA_BDY_SCALE_PREP[1]="${DATA_BDY_SCALE_PREP[1]:-$DATA_BDY_SCALE_PREP}"
+DATA_ADDINFL[1]="${DATA_ADDINFL[1]:-$DATA_ADDINFL}"
+
+OBS[1]="${OBS[1]:-$OBS}"
+
+for d in $(seq $DOMNUM); do
+  INDIR[$d]="${INDIR[$d]:-${OUTDIR[$d]}}"
+  DATA_TOPO[$d]="${DATA_TOPO[$d]:-${INDIR[$d]}}"
+  DATA_LANDUSE[$d]="${DATA_LANDUSE[$d]:-${INDIR[$d]}}"
+  DATA_BDY_SCALE_PREP[$d]="${DATA_BDY_SCALE_PREP[$d]:-${INDIR[$d]}}"
+  DATA_ADDINFL[$d]="${DATA_ADDINFL[$d]:-${INDIR[$d]}}"
+  OBS[$d]="${OBS[$d]:-${OBS[1]}}"
+done
+
+INDIR="${INDIR[1]}"                             # for backward compatibility
+DATA_TOPO="${DATA_TOPO[1]}"                     #
+DATA_LANDUSE="${DATA_LANDUSE[1]}"               #
+DATA_BDY_SCALE_PREP="${DATA_BDY_SCALE_PREP[1]}" #
+DATA_ADDINFL="${DATA_ADDINFL[1]}"               #
+OBS="${OBS[1]}"                                 #
 
 DET_RUN="${DET_RUN:-0}"
+DET_RUN_CYCLED="${DET_RUN_CYCLED:-1}"
 
 BDY_SINGLE_FILE="${BDY_SINGLE_FILE:-0}"
 if ((BDY_SINGLE_FILE == 1 && BDY_ROTATING != 1)); then
@@ -111,6 +135,16 @@ OCEAN_INPUT=${OCEAN_INPUT:-0}
 OCEAN_FORMAT=${OCEAN_FORMAT:-99}
 LAND_INPUT=${LAND_INPUT:-0}
 LAND_FORMAT=${LAND_FORMAT:-99}
+
+#-------------------------------------------------------------------------------
+
+SCALE_NP[1]="${SCALE_NP[1]:-$SCALE_NP}"
+SCALE_NP_TOT=0
+for d in $(seq $DOMNUM); do
+  SCALE_NP_S[$d]=$SCALE_NP_TOT
+  SCALE_NP_TOT=$((${SCALE_NP_TOT}+${SCALE_NP[$d]}))
+done
+SCALE_NP="${SCALE_NP[1]}"  # for backward compatibility
 
 #-------------------------------------------------------------------------------
 

@@ -24,6 +24,8 @@ DATA_TOPO=
 DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE=
 DATA_BDY_SCALE=
+DATA_BDY_SCALE_PRC_NUM_X=
+DATA_BDY_SCALE_PRC_NUM_Y=
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF="XXXXXX (link to random dates for generating initial ensemble)"
 DATA_BDY_NICAM=
@@ -37,6 +39,7 @@ OBSNCEP=                                                 # directory of observat
 
 DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
+DET_RUN_CYCLED=1
 
 TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
@@ -80,8 +83,7 @@ LAND_FORMAT=0           # 0: SCALE init files (with exactly same domain settings
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
-OBSNAME[1]=obs                                    
-OBSNAME[2]=radar
+OBSNAME[1]=obs
 
 #===============================================================================
 # Cycling settings

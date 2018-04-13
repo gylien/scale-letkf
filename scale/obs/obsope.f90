@@ -12,13 +12,12 @@ PROGRAM obsope
   USE common
   USE common_mpi
   USE common_scale
+  USE common_scalerm
   USE common_mpi_scale
   USE common_obs_scale
   USE common_nml
   USE obsope_tools
   IMPLICIT NONE
-
-  type(obs_da_value) :: obsda ! only used for calling obsope_cal subroutine, no use in this main program
 
   character(len=7) :: stdoutf='-000000'
   character(len=6400) :: cmd1, cmd2, icmd
@@ -70,18 +69,9 @@ PROGRAM obsope
 
   call set_common_conf(nprocs)
 
-!  call read_nml_model
-  call read_nml_obs_error
-  call read_nml_obsope
-  call read_nml_letkf_radar
-  call read_nml_letkf_h08
+  call set_mem_node_proc(MEMBER_RUN)
 
-  if (DET_RUN) then
-    call set_mem_node_proc(MEMBER+2)
-  else
-    call set_mem_node_proc(MEMBER+1)
-  end if
-  call set_scalelib
+  call scalerm_setup('OBSOPE')
 
   if (myrank_use) then
 
@@ -104,7 +94,7 @@ PROGRAM obsope
 ! Observation operator
 !-----------------------------------------------------------------------
 
-    call obsope_cal(obsda, .false.)
+    call obsope_cal()
 
     call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
 
@@ -114,7 +104,7 @@ PROGRAM obsope
 
   end if ! [ myrank_use ]
 
-  call unset_scalelib
+  call scalerm_finalize('OBSOPE')
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 

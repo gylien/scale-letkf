@@ -22,6 +22,8 @@ DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"
 DATA_TOPO="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_100m_100mem_noda_256p/20130713060000/topo"
 DATA_LANDUSE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_100m_100mem_noda_256p/20130713060000/landuse"
 DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d2_1km_100mem"
+DATA_BDY_SCALE_PRC_NUM_X=7
+DATA_BDY_SCALE_PRC_NUM_Y=6
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
@@ -58,9 +60,8 @@ OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
 OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
-OBSNUM=2
-OBSNAME[1]=obs                                    
-OBSNAME[2]=radar
+OBSNUM=1
+OBSNAME[1]=radar
 
 #===============================================================================
 # Cycling settings

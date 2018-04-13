@@ -13,7 +13,10 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
+DOMNUM=<DOMNUM>
+
 OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # Directory for SCALE-LETKF output
+OUTDIR[2]="$DDIR/exp/testcase_d2_30km_4p"
 
 #===============================================================================
 # Location of model/data files
@@ -22,12 +25,15 @@ SCALEDIR="$DIR/../.."                                                # Directory
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
 DATA_TOPO="$DDIR/exp/testcase_45km_4p_l36_data"                      # Directory of the prepared topo files
+DATA_TOPO[2]="$DDIR/exp/testcase_d2_30km_4p_data"
 DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE="$DDIR/exp/testcase_45km_4p_l36_data"                   # Directory of the prepared landuse files
+DATA_LANDUSE[2]="$DDIR/exp/testcase_d2_30km_4p_data"
 DATA_BDY_SCALE=                                                      # Directory of the boundary data in SCALE history format (parent domain)
 DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_45km_4p_l36_data"            # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF="$DDIR/ncepfnl/wrfout"                                  # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
+DATA_BDY_GRADS="$DDIR/ncepfnl/grads"
 
 OBS="$DDIR/obs/prepbufr_obs_eastasia"                                # Observation data in LETKF observation format
 OBSNCEP=
@@ -37,6 +43,7 @@ OBSNCEP=
 
 DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
+DET_RUN_CYCLED=0
 
 TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
@@ -52,6 +59,7 @@ BDY_FORMAT=2            # 0: SCALE boundary files (with exactly same domain sett
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
+                        # 4: GrADS         (requires compatible 'config.nml.scale_init')
 BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
 
 BDY_ENS=0               # 0: Fixed boundary files for all memebers
@@ -77,10 +85,8 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
-OBSNAME[1]=obs                                    
-OBSNAME[2]=radar
+OBSNAME[1]=obs
 OBSOPE_SEPARATE[1]=1
-OBSOPE_SEPARATE[2]=1
 
 #===============================================================================
 # Cycling settings
@@ -101,6 +107,7 @@ PPN=1              # Number of processes per node
 THREADS=8          # Number of threads per process
 
 SCALE_NP=4         # Number of processes to run SCALE
+SCALE_NP[2]=4
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 

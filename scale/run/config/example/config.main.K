@@ -13,6 +13,8 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
+DOMNUM=
+
 INDIR=                                      # Directory for SCALE-LETKF input (default: $OUTDIR)
 OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # Directory for SCALE-LETKF output
 
@@ -26,6 +28,8 @@ DATA_TOPO=                                                           # Directory
 DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE=                                                        # Directory of the prepared landuse files
 DATA_BDY_SCALE=                                                      # Directory of the boundary data in SCALE history format (parent domain)
+DATA_BDY_SCALE_PRC_NUM_X=
+DATA_BDY_SCALE_PRC_NUM_Y=
 DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF="$DDIR/ncepfnl/wrfout"                                  # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
@@ -40,6 +44,7 @@ OBSNCEP=
 
 PNETCDF=1               # 0: Do not use PnetCDF
                         # 1: Use PnetCDF
+DET_RUN_CYCLED=1
 
 PNETCDF_BDY_SCALE=      # Use PNETCDF I/O for the parent domain SCALE data? (default: $PNETCDF)
                         # 0: Do not use PnetCDF
