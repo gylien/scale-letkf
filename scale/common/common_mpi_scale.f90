@@ -144,9 +144,11 @@ subroutine set_common_mpi_scale
   integer :: color, key
   integer :: ierr
   character(len=filelenmax) :: filename
-  real(r_size), allocatable :: height3dtmp(:,:,:)
-  real(r_size), allocatable :: lon2dtmp(:,:)
-  real(r_size), allocatable :: lat2dtmp(:,:)
+  real(RP), allocatable :: height3dtmp(:,:,:)
+  real(RP), allocatable :: lon2dtmp(:,:)
+  real(RP), allocatable :: lat2dtmp(:,:)
+  real(RP) :: lon2d_RP(nlon,nlat)
+  real(RP) :: lat2d_RP(nlon,nlat)
   integer :: i, j
   real(r_size) :: ri, rj
 
@@ -203,10 +205,10 @@ subroutine set_common_mpi_scale
         do i = 1, nlon
           ri = real(i + IHALO, r_size)
           rj = real(j + JHALO, r_size)
-          call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + ATMOS_GRID_CARTESC_CX(1), &
-                                       (rj-1.0_r_size) * DY + ATMOS_GRID_CARTESC_CY(1), lon2d(i,j), lat2d(i,j))
-          lon2d(i,j) = lon2d(i,j) * rad2deg
-          lat2d(i,j) = lat2d(i,j) * rad2deg
+          call MAPPROJECTION_xy2lonlat(real((ri-1.0_r_size) * DX + ATMOS_GRID_CARTESC_CX(1),RP), &
+                                       real((rj-1.0_r_size) * DY + ATMOS_GRID_CARTESC_CY(1),RP), lon2d_RP(i,j), lat2d_RP(i,j))
+          lon2d(i,j) = lon2d_RP(i,j) * rad2deg
+          lat2d(i,j) = lat2d_RP(i,j) * rad2deg
         end do
       end do
 !$OMP END PARALLEL DO
