@@ -276,7 +276,7 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
   INTEGER,INTENT(IN),OPTIONAL :: stggrd
   REAL(r_size) :: u,v,t,q,topo
   REAL(RP) :: rotc(1,1,2)
-  real(r_size) :: lon_tmp(1,1),lat_tmp(1,1)
+  real(RP) :: lon_tmp(1,1),lat_tmp(1,1)
 
   INTEGER :: stggrd_ = 0
   if (present(stggrd)) stggrd_ = stggrd
@@ -293,8 +293,8 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
     end if
-    lon_tmp(1,1) = lon*deg2rad
-    lat_tmp(1,1) = lat*deg2rad
+    lon_tmp(1,1) = real(lon*deg2rad,RP)
+    lat_tmp(1,1) = real(lat*deg2rad,RP)
     call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
                                lon_tmp(1,1),lat_tmp(1,1),rotc)
     if (elm == id_u_obs) then
@@ -1243,12 +1243,13 @@ SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
   REAL(r_size),INTENT(IN) :: rlat
   REAL(r_size),INTENT(OUT) :: rig
   REAL(r_size),INTENT(OUT) :: rjg
+  real(RP) :: rig_RP, rjg_RP
 !
 ! rlon,rlat -> ri,rj
 !
-  call MAPPROJECTION_lonlat2xy(rlon*pi/180.0_r_size,rlat*pi/180.0_r_size,rig,rjg)
-  rig = (rig - ATMOS_GRID_CARTESC_CXG(1)) / DX + 1.0d0
-  rjg = (rjg - ATMOS_GRID_CARTESC_CYG(1)) / DY + 1.0d0
+  call MAPPROJECTION_lonlat2xy(real(rlon*pi/180.0_r_size,RP),real(rlat*pi/180.0_r_size,RP),rig_RP,rjg_RP)
+  rig = (real(rig_RP,r_size) - ATMOS_GRID_CARTESC_CXG(1)) / DX + 1.0d0
+  rjg = (real(rjg_RP,r_size) - ATMOS_GRID_CARTESC_CYG(1)) / DY + 1.0d0
 
   RETURN
 END SUBROUTINE phys2ij
@@ -1267,16 +1268,17 @@ SUBROUTINE ij2phys(rig,rjg,rlon,rlat)
   REAL(r_size),INTENT(OUT) :: rlon ! (deg)
   REAL(r_size),INTENT(OUT) :: rlat ! (deg)
   REAL(r_size) :: x, y ! (m)
+  real(RP) :: rlon_RP, rlat_RP
 !
 ! ri,rj -> rlon,rlat
 !
   x = (rig - 1.0d0) * DX + ATMOS_GRID_CARTESC_CXG(1) 
   y = (rjg - 1.0d0) * DY + ATMOS_GRID_CARTESC_CYG(1) 
 
-  call MAPPROJECTION_xy2lonlat(x,y,rlon,rlat)
+  call MAPPROJECTION_xy2lonlat(real(x,RP),real(y,RP),rlon_RP,rlat_RP)
 
-  rlon = rlon * rad2deg
-  rlat = rlat * rad2deg
+  rlon = real(rlon_RP,r_size) * rad2deg
+  rlat = real(rlat_RP,r_size) * rad2deg
 
   RETURN
 END SUBROUTINE ij2phys
@@ -2151,7 +2153,7 @@ SUBROUTINE read_obs(cfile,obs)
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(INOUT) :: obs
   REAL(r_sngl) :: wk(8)
-  REAL(r_size) :: x, y
+  REAL(RP) :: x, y
   INTEGER :: n,iunit
 
   iunit=91
@@ -2181,15 +2183,15 @@ SUBROUTINE read_obs(cfile,obs)
       wk(5) = wk(5) * 100.0 ! hPa -> Pa
       wk(6) = real(OBSERR_TCP,kind=r_sngl)
     CASE(id_tclon_obs)
-      call MAPPROJECTION_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
-                                   REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
+      call MAPPROJECTION_lonlat2xy(real(wk(2)*pi/180.0_r_size,RP),&
+                                   real(wk(3)*pi/180.0_r_size,RP),&
                                    x,y)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = real(x,kind=r_sngl)
       wk(6) = real(OBSERR_TCX,kind=r_sngl)
     CASE(id_tclat_obs)
-      call MAPPROJECTION_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
-                                   REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
+      call MAPPROJECTION_lonlat2xy(real(wk(2)*pi/180.0_r_size,RP),&
+                                   real(wk(3)*pi/180.0_r_size,RP),&
                                    x,y)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = real(y,kind=r_sngl)
@@ -2781,7 +2783,7 @@ END SUBROUTINE wgt_ave2d
 !
 SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yobs_H08_clr)
   use scale_mapproj, only: &
-      MPRJ_rotcoef
+      MAPPROJECTION_rotcoef
   use scale_H08_fwd
   use scale_atmos_grid_cartesC_index, only: &
     KHALO
@@ -2835,7 +2837,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
 
   REAL(r_size) :: utmp, vtmp ! U10m & V10m tmp for rotation
   REAL(RP) :: rotc(1,1,2)
-  real(r_size) :: lon_tmp(1,1),lat_tmp(1,1)
+  real(RP) :: lon_tmp(1,1),lat_tmp(1,1)
 
   if (present(stggrd)) stggrd_ = stggrd
 
@@ -2868,8 +2870,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
       CALL itpl_2d(v2d(:,:,iv2dd_v10m),ri(np),rj(np),vtmp)
     end if
 
-    lon_tmp(1,1) = lon(np)*deg2rad
-    lat_tmp(1,1) = lat(np)*deg2rad
+    lon_tmp(1,1) = real(lon(np)*deg2rad,RP)
+    lat_tmp(1,1) = real(lat(np)*deg2rad,RP)
     call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
                                lon_tmp(1,1),lat_tmp(1,1),rotc)
     usfc1d(np) = utmp * rotc(1,1,1) - vtmp * rotc(1,1,2)

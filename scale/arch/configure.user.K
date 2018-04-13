@@ -7,6 +7,17 @@ SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
 
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
+SCALE_USER_VER = T
+
+LETKF_SINGLE_FP = F
+
+# -- for Himawari-8 assimilatin on the K computer (T.Honda)
+# -- If you want to compile without RTTOV (Himawari assimilation),
+# -- you should set "H08 = F".
+H08        = F
+
+# Libraries
+#-----------------
 
 #NETCDF_INC = -I/opt/aics/netcdf/k-serial-noszip/include
 #NETCDF_LIB = -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm

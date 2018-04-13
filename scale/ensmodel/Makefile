@@ -1,10 +1,5 @@
 include ../configure.user
 
-ifeq ($(SCALE_USE_SINGLEFP),T)
-  SUFFIX=_single
-else
-  SUFFIX=
-endif
 
 PROGS   = scale-rm_pp_ens scale-rm_init_ens scale-rm_ens
 

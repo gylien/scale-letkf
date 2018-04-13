@@ -17,7 +17,7 @@ program obssim
 
   real(RP), allocatable :: v3dg(:,:,:,:)
   real(RP), allocatable :: v2dg(:,:,:)
-  real(RP), allocatable :: topog(:,:)
+  real(r_size), allocatable :: topog(:,:)
   real(r_size), allocatable :: v3dgh(:,:,:,:)
   real(r_size), allocatable :: v2dgh(:,:,:)
 

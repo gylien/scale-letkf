@@ -1,15 +1,8 @@
 TOPDIR    = ../../..
 
-ifeq ($(SCALE_USE_SINGLEFP),T)
-  SCALE_INC = -I$(TOPDIR)/include_single
-  SCALE_LIB = -L$(TOPDIR)/lib_single -lscale 
-  SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs_single
-else
-  SCALE_INC = -I$(TOPDIR)/include
-  SCALE_LIB = -L$(TOPDIR)/lib -lscale 
-  SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
-endif
-
+SCALE_INC = -I$(TOPDIR)/include
+SCALE_LIB = -L$(TOPDIR)/lib -lscale 
+SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
 
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
@@ -21,12 +14,26 @@ LAPACK_LIB = -mkl=sequential
 
 BUFR_LIB  = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
 
+
+LETKF_SINGLE_FP = F
+SCALE_SINGLE_FP = T
+
+
 ######
 
 SFC       = ifort
 FC        = mpiifort
 
 FOPTS_SCALE = $(FFLAGS)
+
+ifeq ($(SCALE_SINGLE_FP),T)
+FOPTS_SCALE += -DSINGLE 
+endif
+
+ifeq ($(LETKF_SINGLE_FP),T)
+FOPTS_SCALE += -DSINGLELETKF 
+endif
+
 
 FOPTS     = $(FOPTS_SCALE) 
 #FOPTS     = $(FOPTS_SCALE) \
