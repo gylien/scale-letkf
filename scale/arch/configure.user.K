@@ -3,6 +3,8 @@
 
 SCALE_USER_VER = T
 
+LETKF_SINGLE_FP = F
+
 # -- for Himawari-8 assimilatin on the K computer (T.Honda)
 # -- If you want to compile without RTTOV (Himawari assimilation),
 # -- you should set "H08 = F".
