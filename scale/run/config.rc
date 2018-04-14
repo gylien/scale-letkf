@@ -205,6 +205,11 @@ else
   CONNECTOR_TOPO='topo/'
   CONNECTOR_LANDUSE='landuse/'
 fi
+if ((PNETCDF_BDY_SCALE == 1)); then
+  CONNECTOR_BDY='.'
+else
+  CONNECTOR_BDY='/'
+fi
 
 #===============================================================================
 # Error detection
