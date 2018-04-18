@@ -1129,7 +1129,7 @@ EOF
           >> $CONFIG_DIR/${conf_file}
     fi
 
-    if ((stage_config == 1)); then
+    if ((stage_config == 1 && DACYCLE != 1)); then
       echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
     fi
   done # [ d in $(seq $DOMNUM) ]
