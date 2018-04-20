@@ -1254,6 +1254,123 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d)
   return
 end subroutine write_grd_mpi
 
+!-------------------------------------------------------------------------------
+! Calculate fractions used for Fraction Skill Score (FSS)
+!-------------------------------------------------------------------------------
+subroutine calc_fraction(sub_obsi2d,sub_fcsti2d,fss)
+  implicit none
+
+  real(r_sngl), intent(in) :: sub_obsi2d(nlon,nlat)  ! indices derived from obs (in each subdomain)
+  real(r_sngl), intent(in) :: sub_fcsti2d(nlon,nlat) ! indices derived from fcst (in each subdomain)
+
+  real(r_size) :: fss
+
+  real(r_sngl) :: bufs4(nlong,nlatg)
+  real(r_sngl) :: obsi2dg(nlong,nlatg)
+  real(r_sngl) :: fcsti2dg(nlong,nlatg)
+  
+  !real(r_size) :: bufs8(nlong,nlatg)
+  !real(r_size) :: obs2dg(nlong,nlatg)
+  !real(r_size) :: fcst2dg(nlong,nlatg)
+ 
+  ! Eqs. (2) and (3) in Roberts and Lean (2008)
+  real(r_size) :: o2d(nlon,nlat) ! Eq. 2
+  real(r_size) :: m2d(nlon,nlat) ! Eq. 3
+
+  real(r_size) :: mse ! MSE Eq. 5
+  real(r_size) :: mse_ref ! Reference MSE Eq. 7
+  real(r_size) :: sqdif ! squared differece
+  real(r_size) :: sq_o ! squared obs fraction
+  real(r_size) :: sq_m ! squared model (fcst) fraction
+
+  integer :: ierr
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+  integer :: i, j, k, l
+  integer :: ig, jg, cnt
+  integer :: nh ! (n-1)/2 in Eqs. (2) and (3) in Roberts and Lean (2008)
+
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  ! Gather obs/fcst indices (0/1 flags) within the whole domain
+  bufs4(:,:) = 0.0
+  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = sub_obsi2d(:,:)
+  call MPI_REDUCE(bufs4, obsi2dg, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+
+  bufs4(:,:) = 0.0
+  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = sub_fcsti2d(:,:)
+  call MPI_REDUCE(bufs4, fcsti2dg, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+
+  nh = int((JMA_RADAR_FSS_NG - 1) / 2)
+
+  o2d(:,:) = 0.0d0
+  m2d(:,:) = 0.0d0
+  sqdif = 0.0d0
+  sq_o = 0.0d0
+  sq_m = 0.0d0
+
+  do j = 1, nlat
+  do i = 1, nlon
+  
+    cnt = 0
+
+    do l = 1, JMA_RADAR_FSS_NG
+    do k = 1, JMA_RADAR_FSS_NG
+      ig = i+ishift+k-1-nh
+      jg = j+jshift+l-1-nh
+
+      if(ig < 1 .or. ig > nlong .or. jg < 1 .or. jg > nlatg) cycle
+
+      o2d(i,j) = o2d(i,j) + real(obsi2dg(ig,jg), kind=r_size)
+      m2d(i,j) = m2d(i,j) + real(fcsti2dg(ig,jg), kind=r_size)
+      cnt = cnt + 1
+    enddo
+    enddo
+
+    o2d(i,j) = o2d(i,j) / max(real(cnt,kind=r_size), 1.0d0)
+    m2d(i,j) = m2d(i,j) / max(real(cnt,kind=r_size), 1.0d0)
+    sqdif = sqdif + (o2d(i,j) - m2d(i,j))**2
+
+    sq_o = sq_o + o2d(i,j)**2
+    sq_m = sq_m + m2d(i,j)**2
+   
+  enddo
+  enddo
+
+  call MPI_ALLREDUCE(MPI_IN_PLACE, sqdif, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+  mse = sqdif / real(nlong*nlatg,kind=r_size)
+
+  call MPI_ALLREDUCE(MPI_IN_PLACE, sq_o, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, sq_m, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+  mse_ref = (sq_o + sq_m) / real(nlong*nlatg,kind=r_size)
+
+  fss = 1.0d0 - mse / mse_ref
+
+  ! Gather obs/fcst fractions (0-1) within the whole domain
+  !bufs8(:,:) = 0.0d0
+  !bufs8(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = o2d(:,:)
+  !call MPI_REDUCE(bufs4, obs2dg, nlong*nlatg, MPI_r_size, MPI_SUM, 0, MPI_COMM_d, ierr)
+  
+  !bufs8(:,:) = 0.0d0
+  !bufs8(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = m2d(:,:)
+  !call MPI_REDUCE(bufs4, fcst2dg, nlong*nlatg, MPI_r_size, MPI_SUM, 0, MPI_COMM_d, ierr)
+
+  return
+end subroutine calc_fraction
+
+!=======================================================================
+
+
+
+
+
+
+
+
+
+
 !=======================================================================
 
 END MODULE obsope_tools

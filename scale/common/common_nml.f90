@@ -330,6 +330,20 @@ MODULE common_nml
                         !! It is better to reject B11(ch=5) & B12(ch=6) obs because these bands are 
                         !! sensitive to chemicals.
 
+  !--- PARAM_OBS_JMA_RADAR
+  ! JMA composite radar observation (uniform 1-km mesh)
+  character(filelenmax) :: JMA_RADAR_FILE = 'jmaradar_'
+  real(r_size) :: JMA_RADAR_DXY = 1000.0d0 ! radar horizontal resolution
+  integer               :: JMA_RADAR_XDIM = 2560
+  integer               :: JMA_RADAR_YDIM = 3360
+  real(r_size) :: JMA_RADAR_LONS = 118.006250d0
+  real(r_size) :: JMA_RADAR_LATS = 20.004167d0
+  real(r_size) :: JMA_RADAR_DLON = 0.012500d0
+  real(r_size) :: JMA_RADAR_DLAT = 0.008333d0
+  real(r_size) :: JMA_RADAR_FSS_RAIN = 1.0d0 ! (mm/s)
+  real(r_size) :: JMA_RADAR_TINT = 600.0d0 ! (every 600 s)
+  integer :: JMA_RADAR_FSS_NG = 3 ! (# of neighbor grids to be used for FSS)
+
   !--- PARAM_OBS_ERROR
   real(r_size) :: OBSERR_U = 1.0d0
   real(r_size) :: OBSERR_V = 1.0d0
@@ -1062,6 +1076,44 @@ subroutine read_nml_obssim
 
   return
 end subroutine read_nml_obssim
+
+!-------------------------------------------------------------------------------
+! PARAM_OBS_JMA_RADAR
+!-------------------------------------------------------------------------------
+subroutine read_nml_obs_jmaradar
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_OBS_JMA_RADAR/ &
+    JMA_RADAR_FILE, &
+    JMA_RADAR_DXY, &
+    JMA_RADAR_XDIM, &
+    JMA_RADAR_YDIM, &
+    JMA_RADAR_LONS, &
+    JMA_RADAR_LATS, &
+    JMA_RADAR_DLON, &
+    JMA_RADAR_DLAT, &
+    JMA_RADAR_FSS_RAIN, &
+    JMA_RADAR_TINT, &
+    JMA_RADAR_FSS_NG
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_OBS_JMA_RADAR,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) '[Warning] /PARAM_OBS_JMA_RADAR/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_OBS_JMA_RADAR. Check!'
+    stop
+  endif
+
+
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_OBS_JMA_RADAR)
+  end if
+
+  return
+end subroutine read_nml_obs_jmaradar
 
 !-------------------------------------------------------------------------------
 ! Replace the member notation by the formatted member string

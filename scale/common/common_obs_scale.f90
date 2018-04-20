@@ -70,6 +70,11 @@ MODULE common_obs_scale
 !
   INTEGER,PARAMETER :: id_H08IR_obs=8800
 
+!
+! JMA radar observation (Fraction Skill Score)
+!
+  INTEGER,PARAMETER :: id_jmaradar_fss_obs=5001 ! tentative
+
   INTEGER,PARAMETER :: elem_uid(nid_obs)= &
      (/id_u_obs, id_v_obs, id_t_obs, id_tv_obs, id_q_obs, id_rh_obs, &
        id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_ref_zero_obs, id_radar_vr_obs, id_radar_prh_obs, &
@@ -1276,6 +1281,30 @@ SUBROUTINE ij2phys(rig,rjg,rlon,rlat)
 
   RETURN
 END SUBROUTINE ij2phys
+
+SUBROUTINE phys2ij_jmaradar(rlon,rlat,ig,jg)
+  IMPLICIT NONE
+  REAL(r_size),INTENT(IN) :: rlon
+  REAL(r_size),INTENT(IN) :: rlat
+  INTEGER,INTENT(OUT) :: ig
+  INTEGER,INTENT(OUT) :: jg
+!
+! rlon,rlat -> ri,rj in JMA radar composite 1-km mesh domain
+!
+
+  ig = nint((rlon - JMA_RADAR_LONS) / JMA_RADAR_DLON) + 1
+  jg = nint((rlat - JMA_RADAR_LATS) / JMA_RADAR_DLAT) + 1
+
+  IF(ig > JMA_RADAR_XDIM .OR. ig < 1)THEN
+    ig = -1
+  ENDIF
+  IF(jg > JMA_RADAR_YDIM .OR. jg < 1)THEN
+    jg = -1
+  ENDIF
+
+  RETURN
+END SUBROUTINE phys2ij_jmaradar
+
 !
 !-----------------------------------------------------------------------
 ! Interpolation
@@ -3480,5 +3509,97 @@ SUBROUTINE write_obs_H08(cfile,obs,append,missing)
 
   RETURN
 END SUBROUTINE write_obs_H08
+
+! Read JMA radar composite uniform 1-km mesh data
+SUBROUTINE read_jmaradar_comp_bin(jmaradar2d)
+  use scale_grid, only: &
+      DX, &
+      DY
+  IMPLICIT NONE
+
+  LOGICAL :: ex
+  INTEGER :: iunit
+
+  REAL(r_size) :: full2d(JMA_RADAR_XDIM,JMA_RADAR_YDIM)
+  REAL(r_size),INTENT(OUT) :: jmaradar2d(nlon,nlat)
+  
+  INTEGER :: i, j, ii, jj
+  INTEGER :: is, ie, js, je
+  INTEGER :: i_jma, j_jma
+  INTEGER :: dix, diy, cnt
+
+  iunit=92
+
+  INQUIRE(FILE=trim(JMA_RADAR_FILE),EXIST=ex)
+  IF(.not. ex) THEN
+    WRITE(6,'(2A)') trim(JMA_RADAR_FILE),' does not exist. Check!'
+  ENDIF
+
+  OPEN(iunit,file=trim(JMA_RADAR_FILE),access='direct',form='unformatted',&
+       convert='little_endian',recl=JMA_RADAR_XDIM*JMA_RADAR_YDIM*4)
+
+  READ(iunit)full2d
+
+  CLOSE(iunit)
+
+
+  dix = int(DX * 0.5d0 / JMA_RADAR_DXY)
+  diy = int(DY * 0.5d0 / JMA_RADAR_DXY)
+
+  DO j = 1, nlat
+  DO i = 1, nlon
+    jmaradar2d(i,j) = 0.0d0
+    call phys2ij_jmaradar(lon2d(i,j),lat2d(i,j),i_jma,j_jma)
+
+    if(i_jma < 0 .or. j_jma < 0) cycle
+
+    is = max(i_jma - dix,1)
+    ie = max(i_jma + dix,1)
+
+    js = max(j_jma - diy,1)
+    je = max(j_jma + diy,1)
+
+    cnt = 0
+    DO jj = js, je
+    DO ii = is, ie
+      cnt = cnt + 1
+      jmaradar2d(i,j) = jmaradar2d(i,j) + full2d(ii,jj)
+    ENDDO
+    ENDDO
+   
+    jmaradar2d(i,j) = jmaradar2d(i,j) / real(cnt,kind=r_size)
+ 
+  ENDDO
+  ENDDO
+
+  RETURN
+END SUBROUTINE read_jmaradar_comp_bin
+
+! Get flags for FSS computation by using JMA radar composite
+SUBROUTINE get_rain_flag(jmaradar2d,rain2d,obs_flag2d,fcst_flag2d)
+  IMPLICIT NONE
+
+  REAL(r_size),INTENT(IN) :: jmaradar2d(nlon,nlat)
+  REAL(r_size),INTENT(IN) :: rain2d(nlon,nlat)
+  REAL(r_sngl),INTENT(OUT) ::  obs_flag2d(nlon,nlat)
+  REAL(r_sngl),INTENT(OUT) :: fcst_flag2d(nlon,nlat)
+
+  INTEGER :: i, j
+
+  obs_flag2d = 0.0
+  fcst_flag2d = 0.0
+  DO j = 1, nlat
+  DO i = 1, nlon
+    IF((jmaradar2d(i,j) / JMA_RADAR_TINT) >= JMA_RADAR_FSS_RAIN)THEN
+      obs_flag2d(i,j) = 1.0
+    ENDIF
+    IF(rain2d(i,j) >= JMA_RADAR_FSS_RAIN)THEN ! Assume rain from history is averaged in time (mm/s)
+      fcst_flag2d(i,j) = 1.0
+    ENDIF
+  ENDDO
+  ENDDO
+
+  RETURN
+END SUBROUTINE get_rain_flag
 
 END MODULE common_obs_scale
