@@ -1287,7 +1287,7 @@ subroutine calc_fraction(sub_obsi2d,sub_fcsti2d,fss)
   integer :: proc_i, proc_j
   integer :: ishift, jshift
   integer :: i, j, k, l
-  integer :: ig, jg, cnt
+  integer :: ig, jg, cnt, cnt_total
   integer :: nh ! (n-1)/2 in Eqs. (2) and (3) in Roberts and Lean (2008)
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
@@ -1310,6 +1310,7 @@ subroutine calc_fraction(sub_obsi2d,sub_fcsti2d,fss)
   sqdif = 0.0d0
   sq_o = 0.0d0
   sq_m = 0.0d0
+  cnt_total = 0
 
   do j = 1, nlat
   do i = 1, nlon
@@ -1322,6 +1323,7 @@ subroutine calc_fraction(sub_obsi2d,sub_fcsti2d,fss)
       jg = j+jshift+l-1-nh
 
       if(ig < 1 .or. ig > nlong .or. jg < 1 .or. jg > nlatg) cycle
+      if(fcsti2dg(ig,jg) < 0.0) cycle ! missing obs
 
       o2d(i,j) = o2d(i,j) + real(obsi2dg(ig,jg), kind=r_size)
       m2d(i,j) = m2d(i,j) + real(fcsti2dg(ig,jg), kind=r_size)
@@ -1329,22 +1331,26 @@ subroutine calc_fraction(sub_obsi2d,sub_fcsti2d,fss)
     enddo
     enddo
 
-    o2d(i,j) = o2d(i,j) / max(real(cnt,kind=r_size), 1.0d0)
-    m2d(i,j) = m2d(i,j) / max(real(cnt,kind=r_size), 1.0d0)
-    sqdif = sqdif + (o2d(i,j) - m2d(i,j))**2
+    if (cnt >= int(JMA_RADAR_FSS_NG**2*0.5)) then
+      o2d(i,j) = o2d(i,j) / max(real(cnt,kind=r_size), 1.0d0)
+      m2d(i,j) = m2d(i,j) / max(real(cnt,kind=r_size), 1.0d0)
+      sqdif = sqdif + (o2d(i,j) - m2d(i,j))**2
 
-    sq_o = sq_o + o2d(i,j)**2
-    sq_m = sq_m + m2d(i,j)**2
+      sq_o = sq_o + o2d(i,j)**2
+      sq_m = sq_m + m2d(i,j)**2
+      cnt_total = cnt_total + 1
+    endif
    
   enddo
   enddo
 
   call MPI_ALLREDUCE(MPI_IN_PLACE, sqdif, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-  mse = sqdif / real(nlong*nlatg,kind=r_size)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, cnt_total, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+  mse = sqdif / real(cnt_total,kind=r_size)
 
   call MPI_ALLREDUCE(MPI_IN_PLACE, sq_o, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
   call MPI_ALLREDUCE(MPI_IN_PLACE, sq_m, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-  mse_ref = (sq_o + sq_m) / real(nlong*nlatg,kind=r_size)
+  mse_ref = (sq_o + sq_m) / real(cnt_total,kind=r_size)
 
   fss = 1.0d0 - mse / mse_ref
 
@@ -1359,17 +1365,6 @@ subroutine calc_fraction(sub_obsi2d,sub_fcsti2d,fss)
 
   return
 end subroutine calc_fraction
-
-!=======================================================================
-
-
-
-
-
-
-
-
-
 
 !=======================================================================
 

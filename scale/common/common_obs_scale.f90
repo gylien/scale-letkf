@@ -3548,7 +3548,7 @@ SUBROUTINE read_jmaradar_comp_bin(jmaradar2d)
 
   DO j = 1, nlat
   DO i = 1, nlon
-    jmaradar2d(i,j) = 0.0d0
+    jmaradar2d(i,j) = -1.0d0
     call phys2ij_jmaradar(lon2d(i,j),lat2d(i,j),i_jma,j_jma)
 
     if(i_jma < 0 .or. j_jma < 0) cycle
@@ -3567,8 +3567,11 @@ SUBROUTINE read_jmaradar_comp_bin(jmaradar2d)
     ENDDO
     ENDDO
    
-    jmaradar2d(i,j) = jmaradar2d(i,j) / real(cnt,kind=r_size)
- 
+    IF(cnt >= dix*diy)THEN
+      jmaradar2d(i,j) = jmaradar2d(i,j) / real(cnt,kind=r_size)
+    ELSE
+      jmaradar2d(i,j) = -1.0
+    ENDIF
   ENDDO
   ENDDO
 
@@ -3595,6 +3598,8 @@ SUBROUTINE get_rain_flag(jmaradar2d,rain2d,obs_flag2d,fcst_flag2d)
     ENDIF
     IF(rain2d(i,j) >= JMA_RADAR_FSS_RAIN)THEN ! Assume rain from history is averaged in time (mm/s)
       fcst_flag2d(i,j) = 1.0
+    ELSEIF(rain2d(i,j) < 0.0)THEN ! Missing value 
+      fcst_flag2d(i,j) = -1.0
     ENDIF
   ENDDO
   ENDDO
