@@ -3,6 +3,8 @@
 
 SCALE_USER_VER = T
 
+LETKF_SINGLE_FP = F
+
 # Libraries
 #-----------------
 
