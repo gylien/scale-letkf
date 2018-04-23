@@ -6,13 +6,13 @@
 #===============================================================================
 
 STIME='20130713060000'
-ETIME='20130713060030'
+ETIME='20130713060101010101010101010100'
 ISTEP=
 FSTEP=
-CONF_MODE='<CONF_MODE>'
+CONF_MODE='static'
 DACYCLE=1
 DIRECT_TRANSFER=0
-TIME_LIMIT='<WTIME_L>'
+TIME_LIMIT='0:10:00'
 
 #===============================================================================
 
@@ -25,7 +25,7 @@ ADAPTINFL=0         # Adaptive inflation
 
 #===============================================================================
 
-MAKEINIT=1       # 0: No
+MAKEINIT=0       # 0: No
                  # 1: Yes
 
 #===============================================================================
@@ -33,7 +33,7 @@ MAKEINIT=1       # 0: No
 
                  #      anal              gues              history
                  #      mean/sprd members mean/sprd members mean members
-OUT_OPT=3        # 1:   o         o       o         o       o    o
+OUT_OPT=7 #3        # 1:   o         o       o         o       o    o
                  # 2:   o         o       o         o       o
                  # 3:   o         o       o         o
                  # 4:   o         o       o
@@ -76,7 +76,7 @@ LOG_TYPE=2       # 1:   Only save the log file from the head process
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file
 
-SPRD_OUT=1       # 0: No
+SPRD_OUT=0 #1       # 0: No
                  # 1: Yes
 RTPS_INFL_OUT=0  # 0: No
                  # 1: Yes
