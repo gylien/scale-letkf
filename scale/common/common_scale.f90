@@ -18,6 +18,7 @@ MODULE common_scale
   use scale_precision, only: RP, SP
   use scale_prof
 
+  external dtf_transfer_multiple
   external dtf_transfer
   external dtf_time_start
   external dtf_time_end
@@ -732,7 +733,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
   err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-  call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
+  call dtf_transfer_multiple(trim(filename)//".nc"//CHAR(0), ncid)
   err = nfmpi_close(ncid)
   call dtf_time_end
   if ( err .NE. NF_NOERR ) &
