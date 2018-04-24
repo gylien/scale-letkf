@@ -340,7 +340,7 @@ MODULE common_nml
   real(r_size) :: JMA_RADAR_LATS = 20.004167d0
   real(r_size) :: JMA_RADAR_DLON = 0.012500d0
   real(r_size) :: JMA_RADAR_DLAT = 0.008333d0
-  real(r_size) :: JMA_RADAR_FSS_RAIN = 1.0d0 ! (mm/s)
+  real(r_size) :: JMA_RADAR_FSS_RAIN = 1.0d0 ! (mm/JMA_RADAR_TINT)
   real(r_size) :: JMA_RADAR_TINT = 600.0d0 ! (every 600 s)
   integer :: JMA_RADAR_FSS_NG = 3 ! (# of neighbor grids to be used for FSS)
 

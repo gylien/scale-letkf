@@ -1037,7 +1037,7 @@ end subroutine obsmake_cal
 !-------------------------------------------------------------------------------
 ! Model-to-observation simulator calculation
 !-------------------------------------------------------------------------------
-subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
+subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, ft, stggrd)
   use scale_grid, only: &
       GRID_CX, GRID_CY, &
       DX, DY
@@ -1052,6 +1052,7 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   real(r_size), intent(in) :: v2dgh(nlonh,nlath,nv2dd)
   real(r_size), intent(out) :: v3dgsim(nlev,nlon,nlat,OBSSIM_NUM_3D_VARS)
   real(r_size), intent(out) :: v2dgsim(nlon,nlat,OBSSIM_NUM_2D_VARS)
+  integer, intent(in),optional :: ft
   integer, intent(in), optional :: stggrd
 
   integer :: i, j, k, iv3dsim, iv2dsim
@@ -1059,6 +1060,9 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   real(r_size) :: lon, lat, lev
   real(r_size) :: tmpobs
   integer :: tmpqc
+
+  logical :: GET_JMAFSS = .false.
+  real (r_size) :: fss
 
 #ifdef H08
 ! -- for Himawari-8 obs --
@@ -1128,6 +1132,9 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
             select case (OBSSIM_2D_VARS_LIST(iv2dsim))
             case (id_H08IR_obs)   
               cycle
+            case (id_jmaradar_fss_obs)
+              GET_JMAFSS = .true.
+              cycle
 !            case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)
 !              call ...
             case default
@@ -1186,6 +1193,13 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
   end do ! [ j = 1, nlat ]
 
+  if(GET_JMAFSS .and. present(ft))then
+    call calc_fraction(ft,v2dgh(IHALO+1:nlonh-IHALO,JHALO+1:nlath-JHALO,iv2dd_rain),&
+                       fss,v2dgsim(:,:,1),v2dgsim(:,:,2))
+    if (myrank_d == 0) then
+      print *,"Fraction Skill Score (FSS): ",fss," FT=",ft-1
+    endif
+  endif
 
 #endif
 
@@ -1257,26 +1271,25 @@ end subroutine write_grd_mpi
 !-------------------------------------------------------------------------------
 ! Calculate fractions used for Fraction Skill Score (FSS)
 !-------------------------------------------------------------------------------
-subroutine calc_fraction(sub_obsi2d,sub_fcsti2d,fss)
+subroutine calc_fraction(it,rain2d,fss,o2d,m2d)
   implicit none
 
-  real(r_sngl), intent(in) :: sub_obsi2d(nlon,nlat)  ! indices derived from obs (in each subdomain)
-  real(r_sngl), intent(in) :: sub_fcsti2d(nlon,nlat) ! indices derived from fcst (in each subdomain)
+  integer, intent(in) :: it
+  real(r_size), intent(in) :: rain2d(nlon,nlat) ! forecast rainfall
 
-  real(r_size) :: fss
+  real(r_size), intent(out) :: fss
+  ! Eqs. (2) and (3) in Roberts and Lean (2008)
+  real(r_size),intent(out) :: o2d(nlon,nlat) ! Eq. 2
+  real(r_size),intent(out) :: m2d(nlon,nlat) ! Eq. 3
+
+  real(r_sngl) :: sub_obsi2d(nlon,nlat)  ! indices derived from obs (in each subdomain)
+  real(r_sngl) :: sub_fcsti2d(nlon,nlat) ! indices derived from fcst (in each subdomain)
+
 
   real(r_sngl) :: bufs4(nlong,nlatg)
   real(r_sngl) :: obsi2dg(nlong,nlatg)
   real(r_sngl) :: fcsti2dg(nlong,nlatg)
   
-  !real(r_size) :: bufs8(nlong,nlatg)
-  !real(r_size) :: obs2dg(nlong,nlatg)
-  !real(r_size) :: fcst2dg(nlong,nlatg)
- 
-  ! Eqs. (2) and (3) in Roberts and Lean (2008)
-  real(r_size) :: o2d(nlon,nlat) ! Eq. 2
-  real(r_size) :: m2d(nlon,nlat) ! Eq. 3
-
   real(r_size) :: mse ! MSE Eq. 5
   real(r_size) :: mse_ref ! Reference MSE Eq. 7
   real(r_size) :: sqdif ! squared differece
@@ -1290,6 +1303,8 @@ subroutine calc_fraction(sub_obsi2d,sub_fcsti2d,fss)
   integer :: ig, jg, cnt, cnt_total
   integer :: nh ! (n-1)/2 in Eqs. (2) and (3) in Roberts and Lean (2008)
 
+  call get_rain_flag(it,rain2d,sub_obsi2d,sub_fcsti2d)
+
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
   jshift = proc_j * nlat
@@ -1297,11 +1312,13 @@ subroutine calc_fraction(sub_obsi2d,sub_fcsti2d,fss)
   ! Gather obs/fcst indices (0/1 flags) within the whole domain
   bufs4(:,:) = 0.0
   bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = sub_obsi2d(:,:)
-  call MPI_REDUCE(bufs4, obsi2dg, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, bufs4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+  obsi2dg = bufs4
 
   bufs4(:,:) = 0.0
   bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = sub_fcsti2d(:,:)
-  call MPI_REDUCE(bufs4, fcsti2dg, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, bufs4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+  fcsti2dg = bufs4
 
   nh = int((JMA_RADAR_FSS_NG - 1) / 2)
 
@@ -1339,6 +1356,9 @@ subroutine calc_fraction(sub_obsi2d,sub_fcsti2d,fss)
       sq_o = sq_o + o2d(i,j)**2
       sq_m = sq_m + m2d(i,j)**2
       cnt_total = cnt_total + 1
+    else
+      o2d(i,j) = -1.0d0
+      m2d(i,j) = -1.0d0
     endif
    
   enddo
@@ -1353,15 +1373,6 @@ subroutine calc_fraction(sub_obsi2d,sub_fcsti2d,fss)
   mse_ref = (sq_o + sq_m) / real(cnt_total,kind=r_size)
 
   fss = 1.0d0 - mse / mse_ref
-
-  ! Gather obs/fcst fractions (0-1) within the whole domain
-  !bufs8(:,:) = 0.0d0
-  !bufs8(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = o2d(:,:)
-  !call MPI_REDUCE(bufs4, obs2dg, nlong*nlatg, MPI_r_size, MPI_SUM, 0, MPI_COMM_d, ierr)
-  
-  !bufs8(:,:) = 0.0d0
-  !bufs8(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = m2d(:,:)
-  !call MPI_REDUCE(bufs4, fcst2dg, nlong*nlatg, MPI_r_size, MPI_SUM, 0, MPI_COMM_d, ierr)
 
   return
 end subroutine calc_fraction

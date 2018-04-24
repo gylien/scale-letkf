@@ -3511,47 +3511,89 @@ SUBROUTINE write_obs_H08(cfile,obs,append,missing)
 END SUBROUTINE write_obs_H08
 
 ! Read JMA radar composite uniform 1-km mesh data
-SUBROUTINE read_jmaradar_comp_bin(jmaradar2d)
+SUBROUTINE read_jmaradar_comp_bin(it,jmaradar2d)
   use scale_grid, only: &
-      DX, &
-      DY
+      GRID_CX, GRID_CY, &
+      DX, DY
+  use scale_grid_index, only: &
+      IHALO, JHALO
+  use scale_mapproj, only: &
+      MPRJ_xy2lonlat
   IMPLICIT NONE
 
   LOGICAL :: ex
   INTEGER :: iunit
 
-  REAL(r_size) :: full2d(JMA_RADAR_XDIM,JMA_RADAR_YDIM)
+  INTEGER,INTENT(IN) :: it
+  REAL(r_sngl) :: full2d(JMA_RADAR_XDIM,JMA_RADAR_YDIM)
   REAL(r_size),INTENT(OUT) :: jmaradar2d(nlon,nlat)
-  
+  REAL(r_size) :: ri, rj  
+
   INTEGER :: i, j, ii, jj
   INTEGER :: is, ie, js, je
   INTEGER :: i_jma, j_jma
   INTEGER :: dix, diy, cnt
 
+  CHARACTER(filelenmax) :: infile
+  CHARACTER(3) :: FT3
+  CHARACTER(2) :: FT2
+  CHARACTER(1) :: FT1
+
   iunit=92
 
-  INQUIRE(FILE=trim(JMA_RADAR_FILE),EXIST=ex)
+  IF(it < 10)THEN
+    WRITE(FT1,'(i1)')it
+    FT3 = "00"//FT1
+  ELSEIF(it < 100)THEN
+    WRITE(FT2,'(i2)')it
+    FT3 = "0"//FT2
+  ELSE
+    WRITE(FT3,'(i3)')it
+  ENDIF
+ 
+  infile = trim(JMA_RADAR_FILE)//"_FT"//FT3//".grd"
+  INQUIRE(FILE=trim(infile),EXIST=ex)
   IF(.not. ex) THEN
-    WRITE(6,'(2A)') trim(JMA_RADAR_FILE),' does not exist. Check!'
+    WRITE(6,'(2A)') trim(infile),' does not exist. Check!'
+
+    jmaradar2d = -1.0d0
+    RETURN
   ENDIF
 
-  OPEN(iunit,file=trim(JMA_RADAR_FILE),access='direct',form='unformatted',&
-       convert='little_endian',recl=JMA_RADAR_XDIM*JMA_RADAR_YDIM*4)
-
-  READ(iunit)full2d
+  OPEN(iunit,file=trim(infile),access='direct',form='unformatted',&
+       convert='little_endian',status='unknown',recl=JMA_RADAR_XDIM*JMA_RADAR_YDIM*4)
+ 
+  READ(iunit,rec=1)full2d
 
   CLOSE(iunit)
-
 
   dix = int(DX * 0.5d0 / JMA_RADAR_DXY)
   diy = int(DY * 0.5d0 / JMA_RADAR_DXY)
 
+  if (.not. allocated(lon2d) .and. .not. allocated(lat2d))then
+    allocate (lon2d(nlon,nlat))
+    allocate (lat2d(nlon,nlat))
+  endif
+
   DO j = 1, nlat
   DO i = 1, nlon
-    jmaradar2d(i,j) = -1.0d0
+
+    ri = real(i + IHALO, r_size)
+    rj = real(j + JHALO, r_size)
+    call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1),&
+                        lon2d(i,j), lat2d(i,j))
+    lon2d(i,j) = lon2d(i,j) * rad2deg
+    lat2d(i,j) = lat2d(i,j) * rad2deg
+
+
     call phys2ij_jmaradar(lon2d(i,j),lat2d(i,j),i_jma,j_jma)
 
-    if(i_jma < 0 .or. j_jma < 0) cycle
+    if(i_jma < 0 .or. j_jma < 0) then
+      jmaradar2d(i,j) = -1.0d0
+      cycle
+    else
+      jmaradar2d(i,j) = -0.0d0
+    endif
 
     is = max(i_jma - dix,1)
     ie = max(i_jma + dix,1)
@@ -3562,15 +3604,16 @@ SUBROUTINE read_jmaradar_comp_bin(jmaradar2d)
     cnt = 0
     DO jj = js, je
     DO ii = is, ie
+      if(full2d(ii,jj) < 0.0) cycle ! undef
       cnt = cnt + 1
-      jmaradar2d(i,j) = jmaradar2d(i,j) + full2d(ii,jj)
+      jmaradar2d(i,j) = jmaradar2d(i,j) + real(full2d(ii,jj),kind=r_size)
     ENDDO
     ENDDO
    
     IF(cnt >= dix*diy)THEN
       jmaradar2d(i,j) = jmaradar2d(i,j) / real(cnt,kind=r_size)
     ELSE
-      jmaradar2d(i,j) = -1.0
+      jmaradar2d(i,j) = -1.0d0
     ENDIF
   ENDDO
   ENDDO
@@ -3579,24 +3622,28 @@ SUBROUTINE read_jmaradar_comp_bin(jmaradar2d)
 END SUBROUTINE read_jmaradar_comp_bin
 
 ! Get flags for FSS computation by using JMA radar composite
-SUBROUTINE get_rain_flag(jmaradar2d,rain2d,obs_flag2d,fcst_flag2d)
+SUBROUTINE get_rain_flag(it,rain2d,obs_flag2d,fcst_flag2d)
   IMPLICIT NONE
 
-  REAL(r_size),INTENT(IN) :: jmaradar2d(nlon,nlat)
+  INTEGER,INTENT(IN) :: it
   REAL(r_size),INTENT(IN) :: rain2d(nlon,nlat)
   REAL(r_sngl),INTENT(OUT) ::  obs_flag2d(nlon,nlat)
   REAL(r_sngl),INTENT(OUT) :: fcst_flag2d(nlon,nlat)
 
+  REAL(r_size) :: jmaradar2d(nlon,nlat)
+
   INTEGER :: i, j
+
+  call read_jmaradar_comp_bin(it,jmaradar2d)
 
   obs_flag2d = 0.0
   fcst_flag2d = 0.0
   DO j = 1, nlat
   DO i = 1, nlon
-    IF((jmaradar2d(i,j) / JMA_RADAR_TINT) >= JMA_RADAR_FSS_RAIN)THEN
+    IF((jmaradar2d(i,j) / JMA_RADAR_TINT) >= JMA_RADAR_FSS_RAIN / JMA_RADAR_TINT)THEN
       obs_flag2d(i,j) = 1.0
     ENDIF
-    IF(rain2d(i,j) >= JMA_RADAR_FSS_RAIN)THEN ! Assume rain from history is averaged in time (mm/s)
+    IF(rain2d(i,j) >= JMA_RADAR_FSS_RAIN / JMA_RADAR_TINT)THEN ! Assume rain from history is averaged in time (mm/s)
       fcst_flag2d(i,j) = 1.0
     ELSEIF(rain2d(i,j) < 0.0)THEN ! Missing value 
       fcst_flag2d(i,j) = -1.0

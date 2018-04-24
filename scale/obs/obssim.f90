@@ -98,7 +98,7 @@ program obssim
       do it = OBSSIM_TIME_START, OBSSIM_TIME_END
         call read_history(OBSSIM_HISTORY_IN_BASENAME, it, v3dgh, v2dgh)
 
-        call obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim)
+        call obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, ft=it)
 
         call write_grd_mpi(OBSSIM_GRADS_OUT_NAME, OBSSIM_NUM_3D_VARS, OBSSIM_NUM_2D_VARS, &
                            it, v3dgsim, v2dgsim)

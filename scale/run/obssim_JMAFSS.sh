@@ -3,23 +3,33 @@
 
 USER=honda
 
-EXP=KYUSHU2017_D2_NoHim8_2.5min
+EXP=TEPCO_6km_Him8_LOC90km_TCV_RTPP
 . config/${EXP}/config.main
 
 #
+
+#RADAR_FHEAD="hourly_jmaradar"
+RADAR_FHEAD="jmaradar"
+
 SWDIR="/scratch/$(id -ng)/${USER}/obssim"
 LETKF_RUN="$(pwd)"
 OBSSIM_BIN="${LETKF_RUN}/../obs/obssim"
 RUNSH=$SWDIR/OBSSIM.sh
 RUNCONF_COMMON=$SWDIR/obssim.conf_common
-SCALE_CONF=${LETKF_RUN}/config.nml.scale
+#SCALE_CONF=${LETKF_RUN}/config.nml.scale
+SCALE_CONF=config/${EXP}/config.nml.scale
 TOPO=${OUTDIR}/const/topo
 
-OBSDIR=$OBS
+#JMAOBSDIR=$OBS
+JMAOBSDIR=/volume64/data/ra001011/honda/SCALE-LETKF/scale-5.2.2/obs/tmp_JMA
 
-tstart='2017-07-04 12:00:00'
-tend='2017-07-04 12:00:00'
+tstart='2016-09-19 18:00:00'
+tend='2016-09-19 18:00:00'
 
+# Hourly interval is assumed!
+# Foracst times
+FT_S=1
+FT_E=5
 
 #ctint=21600 # obssim interval 
 #ctint=10800 # obssim interval 
@@ -32,6 +42,7 @@ tint=150 # analysis interval (Do not modify!)
 MEM_NP=${SCALE_NP}
 MEM=mean
 TYPE=anal
+TYPE=fcst
 #TYPE=gues
 
 SMEM=0 # 
@@ -46,6 +57,7 @@ if [ ! -e ${SWDIR} ] ; then
    mkdir -p $SWDIR
 fi
 
+rm -f ${SWDIR}/*.o[0-9]*
 
 ctime="$tstart"
 YYYYh=$(date -ud "$ctime" '+%Y')
@@ -58,6 +70,10 @@ SEh=$(date -ud "$ctime" '+%S')
 rm -f $RUNCONF_COMMON
 cat << EOF >> $RUNCONF_COMMON
 
+&PARAM_LOG
+ LOG_LEVEL = 0,
+/
+
 &PARAM_ENSEMBLE
 ! MEMBER = 100,
 /
@@ -67,6 +83,26 @@ cat << EOF >> $RUNCONF_COMMON
  PPN = 1,
  MEM_NODES = ${MEM_NP},
  MEM_NP = ${MEM_NP},
+/
+
+&PARAM_LETKF_H08
+!--H08_NOWDATE--!
+!--H08_RTTOV_COEF_PATH--!
+ H08_RTTOV_CLD = .true.,
+ H08_RTTOV_MINQ_CTOP = 0.10d0,
+ H08_RTTOV_CFRAC_CNST = 0.1d0,
+ H08_RTTOV_CFRAC = 1, ! scale method for cldfrac
+ H08_LIMIT_LEV = 200.0d2,
+ H08_VLOCAL_CTOP = .true.,
+ H08_RTTOV_KADD = 10,
+ H08_RTTOV_PROF_SHIFT = .true.,
+ H08_RTTOV_RLX_HGT = 15.0d3,
+ H08_BAND_USE = 0,0,1,0,0,0,0,0,0,0,
+ H08_NPRED = 1,
+ H08_AOEI = .true.,
+ H08_AOEI_QC = 1, ! standard method
+!--H08_VBC_PATH--!
+ H08_VBC_USE = .false.
 /
 
 
@@ -146,6 +182,9 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
   fi
   ONAME=${SWDIR}/out/${EXP}/${TYPE}/JMAFSS_${HTIME}_${MEM}.dat
 
+  SCOREFILE=${SWDIR}/FSS_${EXP}_${MEM}_${HTIME}.txt
+  rm -f ${SCOREFILE}
+
   #-- copy bin & RTTOV coef files
 
   ORG_DIR=${OUTDIR}/${HTIME}/${TYPE}/${MEM}
@@ -155,6 +194,8 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
 
   if [ ! -e ${SWDIR}/${OBSSIM_BIN} ] ; then 
     cp ${OBSSIM_BIN} ${SWDIR}/
+    cp ${RTTOV_SCCOEF} ${DAT_DIR}/
+    cp ${RTTOV_COEF} ${DAT_DIR}/
   fi
 
   if [ ! -e ${SWDIR}/out/${EXP}/${TYPE}/${MEM} ] ; then
@@ -171,16 +212,16 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
   cp ${ORG_DIR}/history.pe*[8,9].nc ${DAT_DIR}/ &
   wait
 
-  cp ${OBSDIR}/jmaradar_${HTIME}.dat ${DAT_DIR}/ &
-
+  cp ${JMAOBSDIR}/jmaradar_${HTIME}_FT*.grd ${SWDIR}/dat/
 
   # copy common parts of obssim.conf 
   RUNCONF=${SWDIR}/obssim_$(printf %03d $VCODE_CNT).conf
   rm -f $RUNCONF
-#  cat ${RUNCONF_COMMON} | \
-#     sed -e "/!--H08_NOWDATE--/a H08_NOWDATE = $YYYYh, $MMh, $DDh, $HHh, $MNh, $SSh," \
-#         -e "/!--H08_RTTOV_COEF_PATH--/a H08_RTTOV_COEF_PATH = \"${DAT_DIR}\"," \
-#    >> ${RUNCONF}
+  cat ${RUNCONF_COMMON} | \
+     sed -e "/!--H08_NOWDATE--/a H08_NOWDATE = $YYYYh, $MMh, $DDh, $HHh, $MNh, $SSh," \
+         -e "/!--H08_RTTOV_COEF_PATH--/a H08_RTTOV_COEF_PATH = \"${DAT_DIR}\"," \
+    >> ${RUNCONF}
+
 
 cat << EOF >> $RUNCONF
 &PARAM_OBSSIM
@@ -188,29 +229,29 @@ cat << EOF >> $RUNCONF
 ! OBSSIM_RESTART_IN_BASENAME = "${DAT_DIR}/init",
  OBSSIM_HISTORY_IN_BASENAME = "${DAT_DIR}/history",
  OBSSIM_TOPO_IN_BASENAME = "${SWDIR}/dat/topo/topo",
- OBSSIM_TIME_START = 1,
- OBSSIM_TIME_END = 1,
+ OBSSIM_TIME_START = $((FT_S + 1)),
+ OBSSIM_TIME_END = $((FT_E + 1)),
  OBSSIM_GRADS_OUT_NAME = "${ONAME}",
- OBSSIM_NUM_2D_VARS = 1,
- OBSSIM_2D_VARS_LIST = 5001,
+ OBSSIM_NUM_2D_VARS = 2,
+ OBSSIM_2D_VARS_LIST = 5001,5001,
 /
 
-&PARAM_OBS_RADAR_JMA
- JMA_RADAR_FILE = "jmaradar_${HTIME}.dat"
+&PARAM_OBS_JMA_RADAR
+ JMA_RADAR_FILE = "${SWDIR}/dat/${RADAR_FHEAD}_${HTIME}"
 /
 
 EOF
 
 
   # Add SCALE config
-#  cat $SCALE_CONF |\
-#     sed -e "/!--H08_NOWDATE--/a H08_NOWDATE = $YYYYh, $MMh, $DDh, $HHh, $MNh, $SSh," \
-#         -e "/!--ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME = \"${RAD_DAT}/PARAG.29\"," \
-#         -e "/!--ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME = \"${RAD_DAT}/PARAPC.29\"," \
-#         -e "/!--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = \"${RAD_DAT}/VARDATA.RM29\"," \
-#         -e "/!--ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME--/a ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME = \"${RAD_DAT}/cira.nc\"," \
-#         -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${RAD_DAT}/MIPAS\"," \
-#     >> $RUNCONF
+  cat $SCALE_CONF |\
+     sed -e "/!--H08_NOWDATE--/a H08_NOWDATE = $YYYYh, $MMh, $DDh, $HHh, $MNh, $SSh," \
+         -e "/!--ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME = \"${RAD_DAT}/PARAG.29\"," \
+         -e "/!--ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME = \"${RAD_DAT}/PARAPC.29\"," \
+         -e "/!--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = \"${RAD_DAT}/VARDATA.RM29\"," \
+         -e "/!--ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME--/a ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME = \"${RAD_DAT}/cira.nc\"," \
+         -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${RAD_DAT}/MIPAS\"," \
+     >> $RUNCONF
 
 #${SWDIR}/dat
 
@@ -238,6 +279,7 @@ EOF
 done # -- time
 echo "wait" >> $RUNSH
 
+echo "grep Fraction ${SWDIR}/*.o[0-9]* > ${SCOREFILE} " >> $RUNSH
 
 sed -i -e  's/<TNODE_CNT>/'${TNODE_CNT}'/g' $RUNSH
 
