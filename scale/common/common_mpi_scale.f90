@@ -180,7 +180,7 @@ subroutine set_common_mpi_scale
         do i = 1, nlon
           ri = real(i + IHALO, r_size)
           rj = real(j + JHALO, r_size)
-          call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1), lon2d(i,j), lat2d(i,j))
+          call MPRJ_xy2lonlat((ri-1.0_r_size-IHALO_add) * DX + GRID_CX(1), (rj-1.0_r_size-JHALO_add) * DY + GRID_CY(1), lon2d(i,j), lat2d(i,j))
           lon2d(i,j) = lon2d(i,j) * rad2deg
           lat2d(i,j) = lat2d(i,j) * rad2deg
         end do
@@ -506,7 +506,9 @@ subroutine set_scalelib
   use scale_grid, only: &
     GRID_setup, &
     GRID_DOMAIN_CENTER_X, &
-    GRID_DOMAIN_CENTER_Y
+    GRID_DOMAIN_CENTER_Y, &
+    DX, &
+    DY
   use scale_grid_index
 !  use scale_grid_nest, only: &
 !    NEST_setup
@@ -694,6 +696,18 @@ subroutine set_scalelib
   ! setup horizontal/vertical grid coordinates
   call GRID_INDEX_setup
   call GRID_setup
+
+  bg_smooth_ri(:) = BG_SMOOTH_HORI_SCALE(:) / DX
+  bg_smooth_rj(:) = BG_SMOOTH_HORI_SCALE(:) / DY
+
+  IHALO_letkf_comm = ceiling(maxval(bg_smooth_ri(:))) + 1
+  JHALO_letkf_comm = ceiling(maxval(bg_smooth_rj(:))) + 1
+
+  write (6, '(A,I5)') '[Info] IHALO_letkf_comm =', IHALO_letkf_comm
+  write (6, '(A,I5)') '[Info] JHALO_letkf_comm =', JHALO_letkf_comm
+
+  call GRID_INDEX_for_scale_comm
+
 #ifdef PNETCDF
   call LAND_GRID_INDEX_setup
 #endif

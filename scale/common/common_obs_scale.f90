@@ -1220,8 +1220,8 @@ SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
 ! rlon,rlat -> ri,rj
 !
   call MPRJ_lonlat2xy(rlon*pi/180.0_r_size,rlat*pi/180.0_r_size,rig,rjg)
-  rig = (rig - GRID_CXG(1)) / DX + 1.0d0
-  rjg = (rjg - GRID_CYG(1)) / DY + 1.0d0
+  rig = (rig - GRID_CXG(1)) / DX + 1.0d0 + IHALO_add
+  rjg = (rjg - GRID_CYG(1)) / DY + 1.0d0 + JHALO_add
 
   RETURN
 END SUBROUTINE phys2ij
@@ -1243,8 +1243,8 @@ SUBROUTINE ij2phys(rig,rjg,rlon,rlat)
 !
 ! ri,rj -> rlon,rlat
 !
-  x = (rig - 1.0d0) * DX + GRID_CXG(1) 
-  y = (rjg - 1.0d0) * DY + GRID_CYG(1) 
+  x = (rig - 1.0d0) * DX + GRID_CXG(1) + IHALO_add
+  y = (rjg - 1.0d0) * DY + GRID_CYG(1) + JHALO_add
 
   call MPRJ_xy2lonlat(x,y,rlon,rlat)
 
@@ -2620,8 +2620,8 @@ SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
 
     if(var5 < yobs_mslp)then
       yobs_mslp = var5
-      yobs_tcx = (real(ig,kind=r_size) - 1.0d0) * DX + GRID_CXG(1)
-      yobs_tcy = (real(jg,kind=r_size) - 1.0d0) * DY + GRID_CYG(1)
+      yobs_tcx = (real(ig,kind=r_size) - 1.0d0 - IHALO_add) * DX + GRID_CXG(1)
+      yobs_tcy = (real(jg,kind=r_size) - 1.0d0 - JHALO_add) * DY + GRID_CYG(1)
     endif
   ENDDO
   ENDDO

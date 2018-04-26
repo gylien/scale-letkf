@@ -149,6 +149,15 @@ MODULE common_scale
 !  REAL(r_size),SAVE :: fcori(nlatsub)
 !!  REAL(r_size),SAVE :: wg(nlonsub,nlatsub)
 
+  integer, save :: IHALO_letkf_comm
+  integer, save :: JHALO_letkf_comm
+  integer, save :: IHALO_orig
+  integer, save :: JHALO_orig
+  integer, save :: IHALO_add = 0
+  integer, save :: JHALO_add = 0
+  real(r_size), save :: bg_smooth_ri(nobtype)
+  real(r_size), save :: bg_smooth_rj(nobtype)
+
 CONTAINS
 
 !-------------------------------------------------------------------------------
@@ -330,7 +339,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     PRC_HAS_W,  &
     PRC_HAS_S
   use scale_grid_index, only: &
-    IHALO, JHALO, &
+!    IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use common_mpi, only: myrank
   use common_ncio
@@ -346,10 +355,10 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   is = 1
   js = 1
   if (.not. PRC_HAS_W) then
-    is = is + IHALO
+    is = is + IHALO_orig
   end if
   if (.not. PRC_HAS_S) then
-    js = js + JHALO
+    js = js + JHALO_orig
   end if
 
 !  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
@@ -396,7 +405,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 !    PRC_HAS_S,  &
 !    PRC_HAS_N
   use scale_grid_index, only: &
-    IHALO, JHALO, &
+!    IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
   use common_mpi, only: myrank
@@ -419,10 +428,10 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
   count(1) = KMAX
   count(2) = IMAX
   count(3) = JMAX
-  start(2) = start(2) + IHALO
-  start(3) = start(3) + JHALO
-!  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
-!  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
+  start(2) = start(2) + IHALO_orig
+  start(3) = start(3) + JHALO_orig
+!  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO_orig
+!  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO_orig
 
   write (6,'(A,I6.6,3A,6I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(3), count(3) =', start, count
 
@@ -555,7 +564,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     PRC_HAS_W,  &
     PRC_HAS_S
   use scale_grid_index, only: &
-    IHALO, JHALO, &
+!    IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use common_mpi, only: myrank
   use common_ncio
@@ -571,10 +580,10 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   is = 1
   js = 1
   if (.not. PRC_HAS_W) then
-    is = is + IHALO
+    is = is + IHALO_orig
   end if
   if (.not. PRC_HAS_S) then
-    js = js + JHALO
+    js = js + JHALO_orig
   end if
 
 !  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',filename,'.pe',PRC_myrank,'.nc'
@@ -621,7 +630,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 !    PRC_HAS_S,  &
 !    PRC_HAS_N
   use scale_grid_index, only: &
-    IHALO, JHALO, &
+!    IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
   use common_mpi, only: myrank
@@ -644,10 +653,10 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
   count(1) = KMAX
   count(2) = IMAX
   count(3) = JMAX
-  start(2) = start(2) + IHALO
-  start(3) = start(3) + JHALO
-!  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
-!  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
+  start(2) = start(2) + IHALO_orig
+  start(3) = start(3) + JHALO_orig
+!  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO_orig
+!  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO_orig
 
   write (6,'(A,I6.6,3A,6I6)') 'MYRANK ',myrank,' is writing a file ',trim(filename)//'.nc', ' >> PnetCDF start(3), count(3) =', start, count
 
@@ -706,7 +715,7 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
     PRC_HAS_W,  &
     PRC_HAS_S
   use scale_grid_index, only: &
-    IHALO, JHALO, &
+!    IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use common_mpi, only: myrank
   use common_ncio
@@ -723,10 +732,10 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
   is = 1
   js = 1
   if (.not. PRC_HAS_W) then
-    is = is + IHALO
+    is = is + IHALO_orig
   end if
   if (.not. PRC_HAS_S) then
-    js = js + JHALO
+    js = js + JHALO_orig
   end if
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
@@ -768,7 +777,7 @@ SUBROUTINE read_topo(filename,topo)
     PRC_HAS_W,  &
     PRC_HAS_S
   use scale_grid_index, only: &
-    IHALO, JHALO, &
+!    IHALO, JHALO, &
     IMAX, JMAX
   use common_mpi, only: myrank
   use common_ncio
@@ -783,10 +792,10 @@ SUBROUTINE read_topo(filename,topo)
   is = 1
   js = 1
   if (.not. PRC_HAS_W) then
-    is = is + IHALO
+    is = is + IHALO_orig
   end if
   if (.not. PRC_HAS_S) then
-    js = js + JHALO
+    js = js + JHALO_orig
   end if
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
@@ -815,7 +824,7 @@ SUBROUTINE read_topo_par(filename,topo,comm)
     PRC_2Drank
 !    PRC_PERIODIC_X, PRC_PERIODIC_Y
   use scale_grid_index, only: &
-    IHALO, JHALO, &
+!    IHALO, JHALO, &
     IMAX, JMAX
   use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
   use common_mpi, only: myrank
@@ -836,10 +845,10 @@ SUBROUTINE read_topo_par(filename,topo,comm)
   start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1
   count(1) = IMAX
   count(2) = JMAX
-  start(1) = start(1) + IHALO
-  start(2) = start(2) + JHALO
-!  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
-!  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
+  start(1) = start(1) + IHALO_orig
+  start(2) = start(2) + JHALO_orig
+!  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO_orig
+!  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO_orig
 
   write (6,'(A,I6.6,3A,4I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(2), count(2) =', start, count
 
@@ -1007,10 +1016,10 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   count(2) = JMAX
   count(3) = KMAX
   count(4) = 1
-!  start(1) = start(1) + IHALO   ! History files always have no halo
-!  start(2) = start(2) + JHALO   !
-!  if (.NOT. PRC_PERIODIC_X) start(1) = start(1) + IHALO
-!  if (.NOT. PRC_PERIODIC_Y) start(2) = start(2) + JHALO
+!  start(1) = start(1) + IHALO_orig   ! History files always have no halo
+!  start(2) = start(2) + JHALO_orig   !
+!  if (.NOT. PRC_PERIODIC_X) start(1) = start(1) + IHALO_orig
+!  if (.NOT. PRC_PERIODIC_Y) start(2) = start(2) + JHALO_orig
 
   write (6,'(A,I6.6,3A,8I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(4), count(4) =', start, count
 
@@ -1748,6 +1757,97 @@ subroutine rij_g2l_auto(proc,ig,jg,il,jl)
 
   return
 end subroutine rij_g2l_auto
+
+!-------------------------------------------------------------------------------
+subroutine GRID_INDEX_for_scale_comm
+  use scale_grid_index, only: &
+    IA, JA, &
+    IS, JS, &
+    IE, JE, &
+    IHALO, JHALO, &
+    IMAX, JMAX, &
+    IAG, JAG, &
+    IMAXG, JMAXG
+  implicit none
+
+  IHALO_orig = IHALO
+  JHALO_orig = JHALO
+
+  IHALO = max(IHALO, IHALO_letkf_comm)
+  JHALO = max(JHALO, JHALO_letkf_comm)
+
+  IHALO_add = IHALO - IHALO_orig
+  JHALO_add = JHALO - JHALO_orig
+
+  IA = IMAX + IHALO * 2
+  JA = JMAX + JHALO * 2
+
+  IS = 1    + IHALO
+  IE = IMAX + IHALO
+  JS = 1    + JHALO
+  JE = JMAX + JHALO
+
+  ! array size (global domain)
+  IAG   = IMAXG + IHALO * 2
+  JAG   = JMAXG + JHALO * 2
+
+  write (6, '(A,I5)') '[Info] Reset IHALO =', IHALO
+  write (6, '(A,I5)') '[Info] Reset IA =', IA
+  write (6, '(A,I5)') '[Info] Reset IS =', IS
+  write (6, '(A,I5)') '[Info] Reset IE =', IE
+  write (6, '(A,I5)') '[Info] Reset IAG =', IAG
+  write (6, '(A,I5)') '[Info] Reset JHALO =', JHALO
+  write (6, '(A,I5)') '[Info] Reset JA =', JA
+  write (6, '(A,I5)') '[Info] Reset JS =', JS
+  write (6, '(A,I5)') '[Info] Reset JE =', JE
+  write (6, '(A,I5)') '[Info] Reset JAG =', JAG
+
+  return
+end subroutine GRID_INDEX_for_scale_comm
+
+!-------------------------------------------------------------------------------
+subroutine GRID_INDEX_reset
+  use scale_grid_index, only: &
+    IA, JA, &
+    IS, JS, &
+    IE, JE, &
+    IHALO, JHALO, &
+    IMAX, JMAX, &
+    IAG, JAG, &
+    IMAXG, JMAXG
+  implicit none
+
+  IHALO = IHALO_orig
+  JHALO = JHALO_orig
+
+  IHALO_add = 0
+  JHALO_add = 0
+
+  IA = IMAX + IHALO * 2
+  JA = JMAX + JHALO * 2
+
+  IS = 1    + IHALO
+  IE = IMAX + IHALO
+  JS = 1    + JHALO
+  JE = JMAX + JHALO
+
+  ! array size (global domain)
+  IAG   = IMAXG + IHALO * 2
+  JAG   = JMAXG + JHALO * 2
+
+  write (6, '(A,I5)') '[Info] Reset IHALO =', IHALO
+  write (6, '(A,I5)') '[Info] Reset IA =', IA
+  write (6, '(A,I5)') '[Info] Reset IS =', IS
+  write (6, '(A,I5)') '[Info] Reset IE =', IE
+  write (6, '(A,I5)') '[Info] Reset IAG =', IAG
+  write (6, '(A,I5)') '[Info] Reset JHALO =', JHALO
+  write (6, '(A,I5)') '[Info] Reset JA =', JA
+  write (6, '(A,I5)') '[Info] Reset JS =', JS
+  write (6, '(A,I5)') '[Info] Reset JE =', JE
+  write (6, '(A,I5)') '[Info] Reset JAG =', JAG
+
+  return
+end subroutine GRID_INDEX_reset
 
 !===============================================================================
 END MODULE common_scale

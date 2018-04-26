@@ -202,6 +202,18 @@ MODULE common_nml
       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
 
+  ! >0: Background field smoothing scale
+  !  0: No background field smoothing
+  ! <0: same as {BG_SMOOTH_HORI_SCALE,BG_SMOOTH_VERT_SCALE}(1)
+  real(r_size) :: BG_SMOOTH_HORI_SCALE(nobtype) = &
+    (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+  real(r_size) :: BG_SMOOTH_VERT_SCALE(nobtype) = &
+    (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+
   !--- PARAM_LETKF_VAR_LOCAL
   real(r_size) :: VAR_LOCAL_UV(nv3d+nv2d)        = 1.0d0
   real(r_size) :: VAR_LOCAL_T(nv3d+nv2d)         = 1.0d0
@@ -651,7 +663,9 @@ subroutine read_nml_letkf_obs
     MAX_NOBS_PER_GRID, &
     MAX_NOBS_PER_GRID_CRITERION, &
     OBS_MIN_SPACING, &
-    OBS_SORT_GRID_SPACING
+    OBS_SORT_GRID_SPACING, &
+    BG_SMOOTH_HORI_SCALE, &
+    BG_SMOOTH_VERT_SCALE
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_OBS,iostat=ierr)
@@ -688,6 +702,12 @@ subroutine read_nml_letkf_obs
     end if
     if (OBS_SORT_GRID_SPACING(itype) < 0.0d0) then
       OBS_SORT_GRID_SPACING(itype) = OBS_SORT_GRID_SPACING(1)
+    end if
+    if (BG_SMOOTH_HORI_SCALE(itype) < 0.0d0) then
+      BG_SMOOTH_HORI_SCALE(itype) = BG_SMOOTH_HORI_SCALE(1)
+    end if
+    if (BG_SMOOTH_VERT_SCALE(itype) < 0.0d0) then
+      BG_SMOOTH_VERT_SCALE(itype) = BG_SMOOTH_VERT_SCALE(1)
     end if
   end do
 
