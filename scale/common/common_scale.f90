@@ -1849,5 +1849,59 @@ subroutine GRID_INDEX_reset
   return
 end subroutine GRID_INDEX_reset
 
+!-------------------------------------------------------------------------------
+subroutine smooth_3d_z(v3dg, hori_scale, vert_scale, z_full, v3dg_smth)
+  use scale_grid, only: &
+    DX, DY
+  implicit none
+  real(r_size), intent(in) :: v3dg(nlevh,nlonh,nlath)
+  real(r_size), intent(in) :: hori_scale
+  real(r_size), intent(in) :: vert_scale
+  real(r_size), intent(in) :: z_full(nlevh,nlonh,nlath)
+  real(r_size), intent(out) :: v3dg_smth(nlevh,nlonh,nlath)
+
+  integer :: i, j, k, ii, jj, kk
+  integer :: i_range, j_range
+  real(r_size) :: wt_tot, hdist, dist
+
+  v3dg_smth(:,:,:) = 0.0d0
+  i_range = ceiling(hori_scale / DX)
+  j_range = ceiling(hori_scale / DY)
+
+!$OMP PARALLEL DO PRIVATE(i,j,k,ii,jj,kk,wt_tot,hdist,dist) SCHEDULE(STATIC)
+  do j = 1+JHALO_add, nlath-JHALO_add
+    do i = 1+IHALO_add, nlonh-IHALO_add
+      do k = 1, nlevh
+
+        wt_tot = 0.0d0
+        do jj = max(j-j_range, 1), min(j+j_range, nlath)
+          do ii = max(i-i_range, 1), min(i+i_range, nlonh)
+            hdist = (real(ii-i,r_size)*DX/hori_scale) ** 2 + ((real(jj-j,r_size))*DY/hori_scale) ** 2
+            if (hdist <= 1.0d0) then
+              if (vert_scale <= 0.0d0) then
+                wt_tot = wt_tot + 1.0d0
+                v3dg_smth(k,i,j) = v3dg_smth(k,i,j) + v3dg(k,ii,jj)
+              else
+                do kk = 1, nlevh
+                  dist = hdist + ((z_full(kk,ii,jj)-z_full(k,i,j))/vert_scale) ** 2
+                  if (dist <= 1.0d0) then
+                    wt_tot = wt_tot + 1.0d0
+                    v3dg_smth(k,i,j) = v3dg_smth(k,i,j) + v3dg(kk,ii,jj)
+                  end if
+                end do
+              end if
+            end if
+          end do
+        end do
+        v3dg_smth(k,i,j) = v3dg_smth(k,i,j) / wt_tot
+
+      end do
+    end do
+  end do
+!$OMP END PARALLEL DO
+
+  return
+end subroutine smooth_3d_z
+
 !===============================================================================
 END MODULE common_scale

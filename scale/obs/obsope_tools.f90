@@ -76,6 +76,14 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   real(r_size), allocatable :: v3dg(:,:,:,:)
   real(r_size), allocatable :: v2dg(:,:,:)
 
+  real(r_size), allocatable :: v3dg_smth(:,:,:,:,:)
+  real(r_size), allocatable :: v2dg_smth(:,:,:,:)
+  real(r_size) :: bg_smooth_hori_indp(nobtype)
+  real(r_size) :: bg_smooth_vert_indp(nobtype)
+  integer :: bg_smooth_idx(nobtype)
+  integer :: bg_smooth_n
+  integer :: iv3d, iv2d
+
   integer, allocatable :: qc_p(:)
 #ifdef H08
   real(r_size), allocatable :: lev_p(:)
@@ -418,6 +426,35 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
   allocate ( v2dg (nlonh,nlath,nv2dd) )
 
+  bg_smooth_idx(:) = 0
+  bg_smooth_n = 0
+  do n = 1, nobtype
+    if (BG_SMOOTH_HORI_SCALE(n) > 0.0d0 .or. BG_SMOOTH_VERT_SCALE(n) > 0.0d0) then
+      do nn = 1, bg_smooth_n
+        if (BG_SMOOTH_HORI_SCALE(n) == bg_smooth_hori_indp(nn) .and. &
+            BG_SMOOTH_VERT_SCALE(n) == bg_smooth_vert_indp(nn)) then
+          bg_smooth_idx(n) = nn
+          exit
+        end if
+      end do
+      if (bg_smooth_idx(n) == 0) then
+        bg_smooth_n = bg_smooth_n + 1
+        bg_smooth_idx(n) = bg_smooth_n
+        bg_smooth_hori_indp(bg_smooth_n) = BG_SMOOTH_HORI_SCALE(n)
+        bg_smooth_vert_indp(bg_smooth_n) = BG_SMOOTH_VERT_SCALE(n)
+      end if
+    end if
+  end do
+
+  do n = 1, bg_smooth_n
+    write (6, '(A,I4,A,F10.3,A,F10.3)') '[Info] Background smooth index', n, ': BG_SMOOTH_HORI_SCALE =', bg_smooth_hori_indp(n), &
+                                                                             '; BG_SMOOTH_VERT_SCALE =', bg_smooth_vert_indp(n)
+  end do
+  if (bg_smooth_n > 0) then
+    allocate ( v3dg_smth (nlevh,nlonh,nlath,nv3dd,bg_smooth_n) )
+    allocate ( v2dg_smth (nlonh,nlath,nv2dd,bg_smooth_n) )
+  end if
+
   do it = 1, nitmax
     im = proc2mem(1,it,myrank+1)
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
@@ -471,6 +508,18 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         call read_ens_history_iter(it, islot, v3dg, v2dg)
 
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:read_ens_history(t=', it, ', slot=', islot, '):'
+        call mpi_timer(trim(timer_str), 2)
+
+        do n = 1, bg_smooth_n
+          do iv3d = 1, nv3dd
+            call smooth_3d_z(v3dg(:,:,:,iv3d), bg_smooth_hori_indp(n), bg_smooth_vert_indp(n), v3dg(:,:,:,iv3dd_hgt), v3dg_smth(:,:,:,iv3d,n))
+          end do
+!          do iv2d = 1, nv2dd
+!            call smooth_2d(v2dg(:,:,iv2d), bg_smooth_hori_indp(n), v2dg_smth(:,:,iv2d,n))
+!          end do
+        end do
+
+        write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:smoothing       (t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
 
 #ifdef H08
@@ -567,8 +616,17 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
                   call Trans_XtoY(obs(iof)%elm(n), ril, rjl, rk, &
                                   obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
                 case (2)
-                  call Trans_XtoY_radar(obs(iof)%elm(n), obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3), ril, rjl, rk, &
-                                        obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%lev(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
+                  if (bg_smooth_idx(obs(iof)%typ(n)) == 0) then
+                    call Trans_XtoY_radar(obs(iof)%elm(n), obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3), ril, rjl, rk, &
+                                          obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%lev(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
+                  else
+!                    call Trans_XtoY_radar(obs(iof)%elm(n), obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3), ril, rjl, rk, &
+!                                          obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%lev(n), &
+!                                          v3dg_smth(:,:,:,:,bg_smooth_idx(obs(iof)%typ(n))), v2dg_smth(:,:,:,bg_smooth_idx(obs(iof)%typ(n))), obsda%val(nn), obsda%qc(nn))
+                    call Trans_XtoY_radar(obs(iof)%elm(n), obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3), ril, rjl, rk, &
+                                          obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%lev(n), &
+                                          v3dg_smth(:,:,:,:,bg_smooth_idx(obs(iof)%typ(n))), v2dg, obsda%val(nn), obsda%qc(nn))
+                  end if
                   if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
 
                   !!!!!! may not need to do this at this stage !!!!!!
@@ -792,6 +850,9 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   end do ! [ it = 1, nitmax ]
 
   deallocate ( v3dg, v2dg )
+  if (bg_smooth_n > 0) then
+    deallocate ( v3dg_smth, v2dg_smth )
+  end if
   deallocate ( bsn, bsna )
 
 !-------------------------------------------------------------------------------
