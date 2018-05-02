@@ -26,7 +26,6 @@ job='cycle'
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
 . src/func_${job}.sh || exit $?
-LIBDTF_PATH=/volume63/data/hp150019/gylien/dtf/src/libdtf #set path to DTF
 #-------------------------------------------------------------------------------
 
 if ((USE_TMP_LINK == 1 || USE_TMPL == 1)); then

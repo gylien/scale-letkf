@@ -29,7 +29,6 @@ job='cycle'
 
 STAGING_DIR="$TMPSL/staging"
 NODEFILE_DIR="$TMPS/node"
-LIBDTF_PATH="/volume63/data/hp150019/gylien/dtf/src/libdtf" #set path the DTF
 
 #-------------------------------------------------------------------------------
 
