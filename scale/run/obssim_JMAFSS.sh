@@ -8,6 +8,10 @@ EXP=TEPCO_6km_Him8_LOC90km_TCV_RTPP
 
 #
 
+# default
+JMA_RADAR_FSS_NG=3
+JMA_RADAR_FSS_RAIN="1.0"
+
 #RADAR_FHEAD="hourly_jmaradar"
 RADAR_FHEAD="jmaradar"
 
@@ -180,9 +184,9 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
   else
      MEM=$(printf '%04d' $MEM)
   fi
-  ONAME=${SWDIR}/out/${EXP}/${TYPE}/JMAFSS_${HTIME}_${MEM}.dat
+  ONAME=${SWDIR}/out/${EXP}/${TYPE}/JMAFSS_NG${JMA_RADAR_FSS_NG}_THRS${JMA_RADAR_FSS_RAIN}_${MEM}_${HTIME}.dat
 
-  SCOREFILE=${SWDIR}/FSS_${EXP}_${MEM}_${HTIME}.txt
+  SCOREFILE=${SWDIR}/FSS_${EXP}_NG${JMA_RADAR_FSS_NG}_THRS${JMA_RADAR_FSS_RAIN}_${MEM}_${HTIME}.txt
   rm -f ${SCOREFILE}
 
   #-- copy bin & RTTOV coef files
@@ -237,7 +241,9 @@ cat << EOF >> $RUNCONF
 /
 
 &PARAM_OBS_JMA_RADAR
- JMA_RADAR_FILE = "${SWDIR}/dat/${RADAR_FHEAD}_${HTIME}"
+ JMA_RADAR_FILE = "${SWDIR}/dat/${RADAR_FHEAD}_${HTIME}",
+ JMA_RADAR_FSS_NG = ${JMA_RADAR_FSS_NG},
+ JMA_RADAR_FSS_RAIN = ${JMA_RADAR_FSS_RAIN}D0,
 /
 
 EOF
