@@ -983,14 +983,28 @@ end subroutine read_ens_history_iter
 !-------------------------------------------------------------------------------
 ! Read ensemble first guess data and distribute to processes
 !-------------------------------------------------------------------------------
-subroutine read_ens_mpi(v3d, v2d)
+subroutine read_ens_mpi(v3d, v2d, v3d_smth, v2d_smth)
+  use scale_comm, only: &
+      COMM_vars8, &
+      COMM_wait
+  use scale_grid_index, only: &
+    IS, IE, JS, JE, KS, KE, KA
   implicit none
   real(r_size), intent(out) :: v3d(nij1,nlev,nens,nv3d)
   real(r_size), intent(out) :: v2d(nij1,nens,nv2d)
+  real(r_size), intent(out), optional :: v3d_smth(nij1,nlev,nens,nv3d)
+  real(r_size), intent(out), optional :: v2d_smth(nij1,nens,nv3d)
+
   real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP) :: v2dg(nlon,nlat,nv2d)
+  real(RP) :: v3dgh(nlevh,nlonh,nlath,nv3d)      !! floating-point variable precision issue exists!
+  real(RP) :: v2dgh(nlonh,nlath,nv2d)            !!
+  real(RP) :: v3dgh_smth(nlevh,nlonh,nlath,nv3d) !!
+  real(RP) :: v2dgh_smth(nlonh,nlath,nv2d)       !!
+
   character(len=filelenmax) :: filename
   integer :: it, im, mstart, mend
+  integer :: iv3d, iv2d, i, j
 
   call mpi_timer('', 2)
 
@@ -1024,6 +1038,58 @@ subroutine read_ens_mpi(v3d, v2d)
       call state_trans(v3dg)
 
       call mpi_timer('read_ens_mpi:state_trans:', 2)
+
+      if (present(v3d_smth) .and. present(v2d_smth)) then
+        do iv3d = 1, nv3d
+          v3dgh(KS:KE,IS:IE,JS:JE,iv3d) = v3dg(:,:,:,iv3d)
+        end do
+
+        do iv2d = 1, nv2d
+          v2dgh(IS:IE,JS:JE,iv2d) = v2dg(:,:,iv2d)
+        end do
+
+!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
+        do iv3d = 1, nv3d
+          do j = JS, JE
+            do i = IS, IE
+              v3dgh(   1:KS-1,i,j,iv3d) = v3dgh(KS,i,j,iv3d)
+              v3dgh(KE+1:KA,  i,j,iv3d) = v3dgh(KE,i,j,iv3d)
+            end do
+          end do
+        end do
+!$OMP END PARALLEL DO
+
+        do iv3d = 1, nv3d
+          call COMM_vars8( v3dgh(:,:,:,iv3d), iv3d )
+        end do
+        do iv3d = 1, nv3d
+          call COMM_wait ( v3dgh(:,:,:,iv3d), iv3d )
+        end do
+
+        do iv2d = 1, nv2d
+          call COMM_vars8( v2dgh(:,:,iv2d), iv2d )
+        end do
+        do iv2d = 1, nv2d
+          call COMM_wait ( v2dgh(:,:,iv2d), iv2d )
+        end do
+
+        call mpi_timer('read_ens_mpi:comm_halo:', 2)
+
+!$OMP PARALLEL PRIVATE(iv3d,iv2d)
+!$OMP DO SCHEDULE(STATIC)
+        do iv3d = 1, nv3d
+          call smooth_3d(v3dgh(:,:,:,iv3d), BG_SMOOTH_HORI_SCALE(22), 0.0d0, v3dgh_smth(:,:,:,iv3d))
+        end do
+!$OMP END DO NOWAIT
+!$OMP DO SCHEDULE(STATIC)
+        do iv2d = 1, nv2d
+          call smooth_2d(v2dgh(:,:,iv2d), BG_SMOOTH_HORI_SCALE(22), v2dgh_smth(:,:,iv2d))
+        end do
+!$OMP END DO
+!$OMP END PARALLEL
+
+        call mpi_timer('read_ens_mpi:smoothing:', 2)
+      end if ! [ present(v3d_smth) .and. present(v2d_smth) ]
     end if
 
     call mpi_timer('', 2, barrier=MPI_COMM_e)
@@ -1032,6 +1098,9 @@ subroutine read_ens_mpi(v3d, v2d)
     mend = min(it*nprocs_e, nens)
     if (mstart <= mend) then
       call scatter_grd_mpi_alltoall(mstart, mend, v3dg, v2dg, v3d, v2d)
+      if (present(v3d_smth) .and. present(v2d_smth)) then
+        call scatter_grd_mpi_alltoall(mstart, mend, v3dgh_smth(KS:KE,IS:IE,JS:JE,:), v2dgh_smth(IS:IE,JS:JE,:), v3d_smth, v2d_smth)
+      end if
     end if
 
     call mpi_timer('read_ens_mpi:scatter_grd_mpi_alltoall:', 2)

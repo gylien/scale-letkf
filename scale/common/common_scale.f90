@@ -1850,25 +1850,36 @@ subroutine GRID_INDEX_reset
 end subroutine GRID_INDEX_reset
 
 !-------------------------------------------------------------------------------
-subroutine smooth_3d_z(v3dg, hori_scale, vert_scale, z_full, v3dg_smth)
+subroutine smooth_3d(v3dg, hori_scale, vert_scale, v3dg_smth, k_coor, k_coor_log)
   use scale_grid, only: &
     DX, DY
   implicit none
   real(r_size), intent(in) :: v3dg(nlevh,nlonh,nlath)
   real(r_size), intent(in) :: hori_scale
   real(r_size), intent(in) :: vert_scale
-  real(r_size), intent(in) :: z_full(nlevh,nlonh,nlath)
   real(r_size), intent(out) :: v3dg_smth(nlevh,nlonh,nlath)
+  real(r_size), intent(in), optional :: k_coor(nlevh,nlonh,nlath)
+  logical, intent(in), optional :: k_coor_log
 
   integer :: i, j, k, ii, jj, kk
   integer :: i_range, j_range
   real(r_size) :: wt_tot, hdist, dist
+  logical :: k_coor_log_
+
+  if (vert_scale > 0.0d0 .and. (.not. present(k_coor))) then
+    write (6, '(A)') '[Error] When vert_scale > 0, k_coor needs to be present.'
+    stop
+  end if
+  k_coor_log_ = .false.
+  if (present(k_coor_log)) then
+    k_coor_log_ = k_coor_log
+  end if
 
   v3dg_smth(:,:,:) = 0.0d0
   i_range = ceiling(hori_scale / DX)
   j_range = ceiling(hori_scale / DY)
 
-!$OMP PARALLEL DO PRIVATE(i,j,k,ii,jj,kk,wt_tot,hdist,dist) SCHEDULE(STATIC)
+!!$OMP PARALLEL DO PRIVATE(i,j,k,ii,jj,kk,wt_tot,hdist,dist) SCHEDULE(STATIC)
   do j = 1+JHALO_add, nlath-JHALO_add
     do i = 1+IHALO_add, nlonh-IHALO_add
       do k = 1, nlevh
@@ -1883,7 +1894,11 @@ subroutine smooth_3d_z(v3dg, hori_scale, vert_scale, z_full, v3dg_smth)
                 v3dg_smth(k,i,j) = v3dg_smth(k,i,j) + v3dg(k,ii,jj)
               else
                 do kk = 1, nlevh
-                  dist = hdist + ((z_full(kk,ii,jj)-z_full(k,i,j))/vert_scale) ** 2
+                  if (k_coor_log_) then
+                    dist = hdist + ((log(k_coor(kk,ii,jj))-log(k_coor(k,i,j)))/vert_scale) ** 2
+                  else
+                    dist = hdist + ((k_coor(kk,ii,jj)-k_coor(k,i,j))/vert_scale) ** 2
+                  end if
                   if (dist <= 1.0d0) then
                     wt_tot = wt_tot + 1.0d0
                     v3dg_smth(k,i,j) = v3dg_smth(k,i,j) + v3dg(kk,ii,jj)
@@ -1898,10 +1913,50 @@ subroutine smooth_3d_z(v3dg, hori_scale, vert_scale, z_full, v3dg_smth)
       end do
     end do
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
   return
-end subroutine smooth_3d_z
+end subroutine smooth_3d
+
+!-------------------------------------------------------------------------------
+subroutine smooth_2d(v2dg, hori_scale, v2dg_smth)
+  use scale_grid, only: &
+    DX, DY
+  implicit none
+  real(r_size), intent(in) :: v2dg(nlonh,nlath)
+  real(r_size), intent(in) :: hori_scale
+  real(r_size), intent(out) :: v2dg_smth(nlonh,nlath)
+
+  integer :: i, j, ii, jj
+  integer :: i_range, j_range
+  real(r_size) :: wt_tot, dist
+
+  v2dg_smth(:,:) = 0.0d0
+  i_range = ceiling(hori_scale / DX)
+  j_range = ceiling(hori_scale / DY)
+
+!!$OMP PARALLEL DO PRIVATE(i,j,ii,jj,wt_tot,dist) SCHEDULE(STATIC)
+  do j = 1+JHALO_add, nlath-JHALO_add
+    do i = 1+IHALO_add, nlonh-IHALO_add
+
+      wt_tot = 0.0d0
+      do jj = max(j-j_range, 1), min(j+j_range, nlath)
+        do ii = max(i-i_range, 1), min(i+i_range, nlonh)
+          dist = (real(ii-i,r_size)*DX/hori_scale) ** 2 + ((real(jj-j,r_size))*DY/hori_scale) ** 2
+          if (dist <= 1.0d0) then
+            wt_tot = wt_tot + 1.0d0
+            v2dg_smth(i,j) = v2dg_smth(i,j) + v2dg(ii,jj)
+          end if
+        end do
+      end do
+      v2dg_smth(i,j) = v2dg_smth(i,j) / wt_tot
+
+    end do
+  end do
+!!$OMP END PARALLEL DO
+
+  return
+end subroutine smooth_2d
 
 !===============================================================================
 END MODULE common_scale

@@ -510,14 +510,21 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:read_ens_history(t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
 
+!$OMP PARALLEL PRIVATE(n,iv3d,iv2d)
         do n = 1, bg_smooth_n
+!$OMP DO SCHEDULE(STATIC)
           do iv3d = 1, nv3dd
-            call smooth_3d_z(v3dg(:,:,:,iv3d), bg_smooth_hori_indp(n), bg_smooth_vert_indp(n), v3dg(:,:,:,iv3dd_hgt), v3dg_smth(:,:,:,iv3d,n))
+            call smooth_3d(v3dg(:,:,:,iv3d), bg_smooth_hori_indp(n), bg_smooth_vert_indp(n), v3dg_smth(:,:,:,iv3d,n), &
+                           k_coor=v3dg(:,:,:,iv3dd_hgt))
           end do
-!          do iv2d = 1, nv2dd
-!            call smooth_2d(v2dg(:,:,iv2d), bg_smooth_hori_indp(n), v2dg_smth(:,:,iv2d,n))
-!          end do
+!$OMP END DO NOWAIT
+!$OMP DO SCHEDULE(STATIC)
+          do iv2d = 1, nv2dd
+            call smooth_2d(v2dg(:,:,iv2d), bg_smooth_hori_indp(n), v2dg_smth(:,:,iv2d,n))
+          end do
+!$OMP END DO NOWAIT
         end do
+!$OMP END PARALLEL
 
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:smoothing       (t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)

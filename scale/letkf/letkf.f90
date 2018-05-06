@@ -24,6 +24,8 @@ PROGRAM letkf
 
   REAL(r_size),ALLOCATABLE :: gues3d(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: gues2d(:,:,:)
+  REAL(r_size),ALLOCATABLE :: gues3d_smth(:,:,:,:)
+  REAL(r_size),ALLOCATABLE :: gues2d_smth(:,:,:)
   REAL(r_size),ALLOCATABLE :: anal3d(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: anal2d(:,:,:)
 
@@ -164,6 +166,10 @@ PROGRAM letkf
 
     allocate (gues3d(nij1,nlev,nens,nv3d))
     allocate (gues2d(nij1,nens,nv2d))
+    if (BG_SMOOTH_HORI_SCALE(22) > 0.0d0) then
+      allocate (gues3d_smth(nij1,nlev,nens,nv3d))
+      allocate (gues2d_smth(nij1,nens,nv2d))
+    end if
     allocate (anal3d(nij1,nlev,nens,nv3d))
     allocate (anal2d(nij1,nens,nv2d))
 
@@ -172,11 +178,20 @@ PROGRAM letkf
     !
     ! READ GUES
     !
-    call read_ens_mpi(gues3d, gues2d)
+    if (BG_SMOOTH_HORI_SCALE(22) > 0.0d0) then
+      call read_ens_mpi(gues3d, gues2d, v3d_smth=gues3d_smth, v2d_smth=gues2d_smth)
+      call ensmean_grd(MEMBER, nens, nij1, gues3d_smth, gues2d_smth)
+    else
+      call read_ens_mpi(gues3d, gues2d)
+    end if
 
     if (DET_RUN .and. mmdetin /= mmdet) then
       gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
       gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
+      if (BG_SMOOTH_HORI_SCALE(22) > 0.0d0) then
+        gues3d_smth(:,:,mmdet,:) = gues3d_smth(:,:,mmdetin,:)
+        gues2d_smth(:,mmdet,:) = gues2d_smth(:,mmdetin,:)
+      end if
     end if
 
     call mpi_timer('READ_GUES', 1, barrier=MPI_COMM_a)
@@ -203,7 +218,11 @@ PROGRAM letkf
     !
     ! LETKF
     !
-    call das_letkf(gues3d,gues2d,anal3d,anal2d)
+    if (BG_SMOOTH_HORI_SCALE(22) > 0.0d0) then
+      call das_letkf(gues3d,gues2d,anal3d,anal2d,gues3d_smth=gues3d_smth,gues2d_smth=gues2d_smth)
+    else
+      call das_letkf(gues3d,gues2d,anal3d,anal2d)
+    end if
 
     call mpi_timer('DAS_LETKF', 1, barrier=MPI_COMM_a)
 
@@ -240,6 +259,9 @@ PROGRAM letkf
 
     deallocate (obs)
     deallocate (gues3d, gues2d, anal3d, anal2d)
+    if (BG_SMOOTH_HORI_SCALE(22) > 0.0d0) then
+      deallocate (gues3d_smth, gues2d_smth)
+    end if
 
     call unset_common_mpi_scale
 

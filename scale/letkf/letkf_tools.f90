@@ -46,7 +46,7 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Data Assimilation
 !-----------------------------------------------------------------------
-SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
+SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,gues3d_smth,gues2d_smth)
   use scale_grid, only: &
     DX, DY
   use common_rand
@@ -55,6 +55,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size),INTENT(INOUT) :: gues2d(nij1,nens,nv2d)      !  output: destroyed
   REAL(r_size),INTENT(OUT) :: anal3d(nij1,nlev,nens,nv3d)   ! analysis ensemble
   REAL(r_size),INTENT(OUT) :: anal2d(nij1,nens,nv2d)
+  REAL(r_size),INTENT(INOUT),OPTIONAL :: gues3d_smth(nij1,nlev,nens,nv3d)
+  REAL(r_size),INTENT(INOUT),OPTIONAL :: gues2d_smth(nij1,nens,nv2d)
 
 !  REAL(r_size) :: mean3d(nij1,nlev,nv3d)
 !  REAL(r_size) :: mean2d(nij1,nv2d)
@@ -224,6 +226,33 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !$OMP END PARALLEL
 
   call mpi_timer('das_letkf:fcst_perturbation:', 2)
+
+  if (present(gues3d_smth) .and. present(gues2d_smth)) then
+!$OMP PARALLEL PRIVATE(n,m,k,i)
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+    DO n=1,nv3d
+      DO m=1,MEMBER
+        DO k=1,nlev
+          DO i=1,nij1
+            gues3d_smth(i,k,m,n) = gues3d_smth(i,k,m,n) - gues3d_smth(i,k,mmean,n)
+          END DO
+        END DO
+      END DO
+    END DO
+!$OMP END DO NOWAIT
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+    DO n=1,nv2d
+      DO m=1,MEMBER
+        DO i=1,nij1
+          gues2d_smth(i,m,n) = gues2d_smth(i,m,n) - gues2d_smth(i,mmean,n)
+        END DO
+      END DO
+    END DO
+!$OMP END DO
+!$OMP END PARALLEL
+
+    call mpi_timer('das_letkf:fcst_perturbation_smth:', 2)
+  end if
 
   !
   ! multiplicative inflation
@@ -456,33 +485,58 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           transrlx = trans(:,:,n2nc)                                                   !GYL - No relaxation
         END IF                                                                         !GYL
 
-        ! total weight matrix
-        DO m=1,MEMBER                                                                  !GYL
-          DO k=1,MEMBER                                                                !GYL
-            transrlx(k,m) = (transrlx(k,m) + transm(k,n2nc)) * beta                    !GYL
-          END DO                                                                       !GYL
-          transrlx(m,m) = transrlx(m,m) + (1.0d0-beta)                                 !GYL
-        END DO                                                                         !GYL
+        if (present(gues3d_smth) .and. present(gues2d_smth)) then
+          ! analysis update of members
+          DO m=1,MEMBER
+            anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n)
+            DO k=1,MEMBER
+              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
+                                  + (gues3d_smth(ij,ilev,k,n) * transm(k,n2nc) &
+                                   + gues3d(ij,ilev,k,n) * transrlx(k,m)) * beta
+            END DO
+            anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &
+                                + gues3d(ij,ilev,m,n) * (1.0d0-beta)
+          END DO
 
-        ! analysis update of members
-        DO m=1,MEMBER
-          anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n)                                !GYL
-          DO k=1,MEMBER
-            anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &                                !GYL
-                                + gues3d(ij,ilev,k,n) * transrlx(k,m)                  !GYL
-          END DO  
-        END DO
-
-        ! analysis update of deterministic run
-        if (DET_RUN) then                                                              !GYL
-          anal3d(ij,ilev,mmdet,n) = 0.0d0                                              !GYL
-          DO k=1,MEMBER                                                                !GYL
-            anal3d(ij,ilev,mmdet,n) = anal3d(ij,ilev,mmdet,n) &                        !GYL
-                                    + gues3d(ij,ilev,k,n) * transmd(k,n2nc)            !GYL
+          ! analysis update of deterministic run
+          if (DET_RUN) then
+            anal3d(ij,ilev,mmdet,n) = 0.0d0
+            DO k=1,MEMBER
+              anal3d(ij,ilev,mmdet,n) = anal3d(ij,ilev,mmdet,n) &
+                                      + gues3d_smth(ij,ilev,k,n) * transmd(k,n2nc)
+            END DO
+            anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n) &
+                                    + anal3d(ij,ilev,mmdet,n) * beta
+          end if
+        else
+          ! total weight matrix
+          DO m=1,MEMBER                                                                !GYL
+            DO k=1,MEMBER                                                              !GYL
+              transrlx(k,m) = (transrlx(k,m) + transm(k,n2nc)) * beta                  !GYL
+            END DO                                                                     !GYL
+            transrlx(m,m) = transrlx(m,m) + (1.0d0-beta)                               !GYL
           END DO                                                                       !GYL
-          anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n) &                          !GYL
-                                  + anal3d(ij,ilev,mmdet,n) * beta                     !GYL
-        end if                                                                         !GYL
+
+          ! analysis update of members
+          DO m=1,MEMBER
+            anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n)                              !GYL
+            DO k=1,MEMBER
+              anal3d(ij,ilev,m,n) = anal3d(ij,ilev,m,n) &                              !GYL
+                                  + gues3d(ij,ilev,k,n) * transrlx(k,m)                !GYL
+            END DO
+          END DO
+
+          ! analysis update of deterministic run
+          if (DET_RUN) then                                                            !GYL
+            anal3d(ij,ilev,mmdet,n) = 0.0d0                                            !GYL
+            DO k=1,MEMBER                                                              !GYL
+              anal3d(ij,ilev,mmdet,n) = anal3d(ij,ilev,mmdet,n) &                      !GYL
+                                      + gues3d(ij,ilev,k,n) * transmd(k,n2nc)          !GYL
+            END DO                                                                     !GYL
+            anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n) &                        !GYL
+                                    + anal3d(ij,ilev,mmdet,n) * beta                   !GYL
+          end if                                                                       !GYL
+        end if
 
         ! limit q spread
         IF(Q_SPRD_MAX > 0.0d0 .and. n == iv3d_q) THEN                                  !GYL
@@ -605,33 +659,58 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             transrlx = trans(:,:,n2nc)                                               !GYL - No relaxation
           END IF                                                                     !GYL
 
-          ! total weight matrix
-          DO m=1,MEMBER                                                              !GYL
-            DO k=1,MEMBER                                                            !GYL
-              transrlx(k,m) = (transrlx(k,m) + transm(k,n2nc)) * beta                !GYL
-            END DO                                                                   !GYL
-            transrlx(m,m) = transrlx(m,m) + (1.0d0-beta)                             !GYL
-          END DO                                                                     !GYL
-
-          ! analysis update of members
-          DO m=1,MEMBER
-            anal2d(ij,m,n) = gues2d(ij,mmean,n)                                      !GYL
-            DO k=1,MEMBER
-              anal2d(ij,m,n) = anal2d(ij,m,n) &                                      !GYL
-                             + gues2d(ij,k,n) * transrlx(k,m)                        !GYL
+          if (present(gues3d_smth) .and. present(gues2d_smth)) then
+            ! analysis update of members
+            DO m=1,MEMBER
+              anal2d(ij,m,n) = gues2d(ij,mmean,n)
+              DO k=1,MEMBER
+                anal2d(ij,m,n) = anal2d(ij,m,n) &
+                               + (gues2d_smth(ij,k,n) * transm(k,n2nc) &
+                                + gues2d(ij,k,n) * transrlx(k,m)) * beta
+              END DO
+              anal2d(ij,m,n) = anal2d(ij,m,n) &
+                             + gues2d(ij,m,n) * (1.0d0-beta)
             END DO
-          END DO
 
-          ! analysis update of deterministic run
-          if (DET_RUN) then                                                          !GYL
-            anal2d(ij,mmdet,n) = 0.0d0                                               !GYL
-            DO k=1,MEMBER                                                            !GYL
-              anal2d(ij,mmdet,n) = anal2d(ij,mmdet,n) &                              !GYL
-                                 + gues2d(ij,k,n) * transmd(k,n2nc)                  !GYL
+            ! analysis update of deterministic run
+            if (DET_RUN) then
+              anal2d(ij,mmdet,n) = 0.0d0
+              DO k=1,MEMBER
+                anal2d(ij,mmdet,n) = anal2d(ij,mmdet,n) &
+                                   + gues2d_smth(ij,k,n) * transmd(k,n2nc)
+              END DO
+              anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n) &
+                                 + anal2d(ij,mmdet,n) * beta
+            end if
+          else
+            ! total weight matrix
+            DO m=1,MEMBER                                                            !GYL
+              DO k=1,MEMBER                                                          !GYL
+                transrlx(k,m) = (transrlx(k,m) + transm(k,n2nc)) * beta              !GYL
+              END DO                                                                 !GYL
+              transrlx(m,m) = transrlx(m,m) + (1.0d0-beta)                           !GYL
             END DO                                                                   !GYL
-            anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n) &                                !GYL
-                               + anal2d(ij,mmdet,n) * beta                           !GYL
-          end if                                                                     !GYL
+
+            ! analysis update of members
+            DO m=1,MEMBER
+              anal2d(ij,m,n) = gues2d(ij,mmean,n)                                    !GYL
+              DO k=1,MEMBER
+                anal2d(ij,m,n) = anal2d(ij,m,n) &                                    !GYL
+                               + gues2d(ij,k,n) * transrlx(k,m)                      !GYL
+              END DO
+            END DO
+
+            ! analysis update of deterministic run
+            if (DET_RUN) then                                                        !GYL
+              anal2d(ij,mmdet,n) = 0.0d0                                             !GYL
+              DO k=1,MEMBER                                                          !GYL
+                anal2d(ij,mmdet,n) = anal2d(ij,mmdet,n) &                            !GYL
+                                   + gues2d(ij,k,n) * transmd(k,n2nc)                !GYL
+              END DO                                                                 !GYL
+              anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n) &                              !GYL
+                                 + anal2d(ij,mmdet,n) * beta                         !GYL
+            end if                                                                   !GYL
+          end if
 
 #ifdef DEBUG
           write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(2d,ij=', ij, ',n=', n, '):'
