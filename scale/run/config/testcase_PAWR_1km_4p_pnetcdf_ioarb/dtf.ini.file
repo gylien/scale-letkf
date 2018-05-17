@@ -1,7 +1,8 @@
 [INFO]
 ncomp=2
 comp_name="scale"
-comp_name="letkf"   
+comp_name="letkf"
+buffer_data=1
 
 [FILE]
 filename="0%/anal.d01%"
@@ -17,10 +18,25 @@ filename="0%/hist.d01%"
 exclude_name="mean"
 comp1="scale"
 comp2="letkf"
-mode="file" 
+mode="file"
 
 [FILE]
-filename="mean/gues.d01%"
+filename="mean/anal"
+exclude_name="060000"
+comp1="scale"
+comp2="letkf"
+mode="file"
+
+[FILE]
+filename="mean/gues"
+exclude_name="060000"
+comp1="scale"
+comp2="letkf"
+mode="file"
+write_only=1
+
+[FILE]
+filename="sprd/gues"
 exclude_name="060000"
 comp1="scale"
 comp2="letkf"

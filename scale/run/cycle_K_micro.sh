@@ -166,7 +166,7 @@ export DTF_SCALE=1
 export DTF_INI_FILE=$TMP/dtf.ini                                                                                                                                                           
 #export MAX_WORKGROUP_SIZE=99
 #export SCALE_ENSEMBLE_SZ=10
-export MAX_WORKGROUP_SIZE=1
+export MAX_WORKGROUP_SIZE=$((MEMBER+1+DET_RUN))
 
 export DTF_VERBOSE_LEVEL=2
 
