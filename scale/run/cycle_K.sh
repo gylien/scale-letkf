@@ -118,6 +118,11 @@ ${SCRP_DIR}/src/|src/
 ${NODEFILE_DIR}/|node/
 EOF
 
+if [ -e  ${SCRP_DIR}/dtf.ini ] ; then
+  echo "dtf.ini is not specified!"
+  exit
+fi
+
 if [ "$CONF_MODE" != 'static' ]; then
   echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
 fi
@@ -174,15 +179,13 @@ export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
 #DTF
-export DTF_VERBOSE_LEVEL=0         
-#export DTF_IGNORE_ITER=    #set if necessary                                                                                
-export DTF_SCALE=1                                                                                                                                                         
-export DTF_INI_FILE=./dtf.ini  
-#export MAX_WORKGROUP_SIZE=99
-#export SCALE_ENSEMBLE_SZ=10
+#export DTF_VERBOSE_LEVEL=2 # DEBUG
+export DTF_VERBOSE_LEVEL=0
+export DTF_SCALE=1
+export DTF_INI_FILE=$TMP/dtf.ini                                                       
+export SCALE_ENSEMBLE_SZ=$((MEMBER+1+DET_RUN))
+#export DTF_IGNORE_ITER=    #set if necessary
 export MAX_WORKGROUP_SIZE=$((MEMBER+1+DET_RUN))
-
-export DTF_VERBOSE_LEVEL=2
 
 export LD_LIBRARY_PATH=./:$LD_LIBRARY_PATH                                                                                                         
 export DTF_GLOBAL_PATH=./ 

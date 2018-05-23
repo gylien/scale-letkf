@@ -11,13 +11,23 @@ exclude_name="sprd"
 exclude_name="mean"
 comp1="scale"
 comp2="letkf"
+#mode="transfer"
 mode="file"
+num_sessions=2
 
 [FILE]
 filename="0%/hist.d01%"
 exclude_name="mean"
 comp1="scale"
 comp2="letkf"
+#mode="transfer"
+mode="file"
+
+[FILE]
+filename="mdet/hist.d01%"
+comp1="scale"
+comp2="letkf"
+#mode="transfer"
 mode="file"
 
 [FILE]
@@ -26,6 +36,7 @@ exclude_name="060000"
 comp1="scale"
 comp2="letkf"
 mode="file"
+num_sessions=2
 
 [FILE]
 filename="mean/gues"
@@ -42,3 +53,4 @@ comp1="scale"
 comp2="letkf"
 mode="file"
 write_only=1
+

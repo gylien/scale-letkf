@@ -38,7 +38,8 @@ DATA_TOPO="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"              # Directory
 DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
 DATA_LANDUSE="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"           # Directory of the prepared landuse files
 DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"    # Directory of the prepared SCALE boundary files
+#DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"    # Directory of the prepared SCALE boundary files
+DATA_BDY_SCALE_PREP="$INDIR"    # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
@@ -50,6 +51,9 @@ OBSNCEP=
 
 PNETCDF=1               # 0: Do not use PnetCDF
                         # 1: Use PnetCDF
+
+DET_RUN=1               # 0: Disable the deterministic run
+                        # 1: Enable  the deterministic run
 
 PNETCDF_BDY_SCALE=0     # Use PNETCDF I/O for the parent domain SCALE data? (default: $PNETCDF)
                         # 0: Do not use PnetCDF
@@ -110,8 +114,8 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #MEMBER=10          # Ensemble size
 MEMBER=3          # Ensemble size
 
-#NNODES=44          # Number of nodes
-NNODES=16          # Number of nodes
+#NNODES=48          # Number of nodes
+NNODES=20          # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
