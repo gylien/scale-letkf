@@ -742,7 +742,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   integer, parameter :: n_type = 3
   character(len=9), parameter :: file_type_sfx(n_type) = &
     (/'.10000000', '.20000000', '_pawr_qcf'/)
-  character*1024 :: input_fname(n_type)
+  logical, parameter :: input_is_dbz = .true.
 
   type(c_pawr_header) :: hd(n_type)
   real(kind=c_float) :: az(AZDIM, ELDIM, n_type)
@@ -750,17 +750,6 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   real(kind=c_float) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
   integer j, ierr
 !  character(len=3) :: fname
-
-  real(r_size) :: dx = 1000.0d0
-  real(r_size) :: dy = 500.0d0
-  real(r_size) :: dz = 500.0d0
-  real(r_size) :: maxrange = 60000.0d0
-  real(r_size) :: maxz = 20000.0d0
-  logical :: input_is_dbz = .true.
-  real(r_size) :: error_ze = 5.0d0
-  real(r_size) :: error_vr = 3.0d0
-  real(r_size) :: max_vr = huge(1.0d0) ! default: no limit
-  namelist /params/ input_fname, dx, dy, dz, maxrange, maxz, input_is_dbz, error_ze, error_vr, max_vr
 
   real(r_size), allocatable :: ze(:, :, :), vr(:, :, :), qcflag(:, :, :), attenuation(:, :, :), rrange(:)
   real(r_size), allocatable :: radlon(:, :, :), radlat(:, :, :), radz(:, :, :)
@@ -770,6 +759,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   real(r_size), allocatable :: grid_lon_ze(:), grid_lat_ze(:), grid_z_ze(:)
   real(r_size), allocatable :: grid_lon_vr(:),  grid_lat_vr(:),  grid_z_vr(:)
 
+  character(len=1024) :: input_fname(n_type)
   integer na, nr, ne, ia, ir, ie
   real(r_size) :: lon0, lat0, z0
   real(r_size) :: dlon, dlat
@@ -802,9 +792,9 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   write(*, *) "file2 = ", trim(input_fname(2))
   write(*, *) "file3 = ", trim(input_fname(3))
   write(*, *) RDIM, AZDIM, ELDIM
-  write(*, *) "dx = ", dx
-  write(*, *) "dy = ", dy
-  write(*, *) "dz = ", dz
+  write(*, *) "dx = ", RADAR_SO_SIZE_HORI
+  write(*, *) "dy = ", RADAR_SO_SIZE_HORI
+  write(*, *) "dz = ", RADAR_SO_SIZE_VERT
 
   do j = 1, n_type
     ierr = read_toshiba(input_fname(j), hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
@@ -847,7 +837,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
            else
               qcflag(ia, ir, ie) = 1000.0d0 !invalid
            end if
-           if(vr(ia, ir, ie) > max_vr .or. vr(ia, ir, ie) < -max_vr) vr(ia, ir, ie) = missing
+           if(vr(ia, ir, ie) > RADAR_MAX_ABS_VR .or. vr(ia, ir, ie) < -RADAR_MAX_ABS_VR) vr(ia, ir, ie) = missing
            attenuation(ia, ir, ie) = 1.0d0 !not implemented yet
         end do
      end do
@@ -867,12 +857,12 @@ subroutine read_obs_radar_toshiba(cfile, obs)
        &                  real(az(:, 1, 1), r_size), rrange, real(el(1, :, 1), r_size), & ! input (assume ordinary scan strategy)
        &                  radlon, radlat, radz)                                           ! output
   write(*, *) "call define_grid"
-  call define_grid(lon0, lat0, nr, rrange, rrange(nr), maxz, dx, dy, dz, & ! input
+  call define_grid(lon0, lat0, nr, rrange, rrange(nr), RADAR_ZMAX, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_VERT, & ! input
        &           dlon, dlat, nlon, nlat, nlev, lon, lat, z)              ! output
   write(*, *) "call radar_superobing"
   call radar_superobing(na, nr, ne, radlon, radlat, radz, ze, vr, &                    ! input spherical
        &                qcflag, attenuation, &                                         ! input spherical
-       &                nlon, nlat, nlev, lon, lat, z, dlon, dlat, dz, &               ! input cartesian
+       &                nlon, nlat, nlev, lon, lat, z, dlon, dlat, RADAR_SO_SIZE_VERT, & ! input cartesian
        &                missing, input_is_dbz, &                                       ! input param
        &                lon0, lat0, &
        &                nobs_sp, grid_index, &                                         ! output array info
@@ -914,7 +904,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
       obs%lat(n) = grid_lat_ze(idx)
       obs%lev(n) = grid_z_ze(idx)
       obs%dat(n) = grid_ze(idx)
-      obs%err(n) = error_ze
+      obs%err(n) = OBSERR_RADAR_REF
       obs%typ(n) = 22
       obs%dif(n) = 0.0d0
       nobs_ze = nobs_ze + 1
@@ -929,7 +919,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
       obs%lat(n) = grid_lat_ze(idx)
       obs%lev(n) = grid_z_ze(idx)
       obs%dat(n) = grid_vr(idx)
-      obs%err(n) = error_vr
+      obs%err(n) = OBSERR_RADAR_VR
       obs%typ(n) = 22
       obs%dif(n) = 0.0d0
       nobs_vr = nobs_vr + 1
@@ -950,7 +940,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 !  call output_letkf_obs(lon0, lat0, z0, 1, nobs_sp, &
 !       &                grid_ze, grid_lon_ze, grid_lat_ze, grid_z_ze, grid_count_ze, &
 !       &                grid_vr, grid_count_vr, &
-!       &                error_ze, error_vr)
+!       &                OBSERR_RADAR_REF, OBSERR_RADAR_VR)
 !  write(*, *) "done"
 
 !  !!! OUTPUT CARTESIAN COORDINATE DATE FOR DEBUG !!!

@@ -274,6 +274,10 @@ MODULE common_nml
   ! PARAMETERS FOR RADAR DATA ASSIMILATION
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
+  real(r_size) :: RADAR_SO_SIZE_HORI = 1000.0d0
+  real(r_size) :: RADAR_SO_SIZE_VERT = 1000.0d0
+  real(r_size) :: RADAR_MAX_ABS_VR = 100.0d0
+
   !---PARAM_LETKF_H08
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
@@ -882,7 +886,10 @@ subroutine read_nml_letkf_radar
     INTERPOLATION_TECHNIQUE, &
     METHOD_REF_CALC, &
     USE_TERMINAL_VELOCITY, &
-    NRADARTYPE
+    NRADARTYPE, &
+    RADAR_SO_SIZE_HORI, &
+    RADAR_SO_SIZE_VERT, &
+    RADAR_MAX_ABS_VR
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_RADAR,iostat=ierr)
