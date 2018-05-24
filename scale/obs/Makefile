@@ -3,7 +3,7 @@ include ../configure.user
 PROGS   = obsope obsmake obssim #dec_prepbufr
 
 OBJS    = obs_tools.o obsope_tools.o \
-          radar_obs.o
+          radar_obs.o radar_tools.o read_toshiba.o read_toshiba_f.o
 
 COMMON_DIR = ../common
 
@@ -61,8 +61,15 @@ obs_tools.o:	obs_tools.f90 radar_obs.o $(COMMON_DIR)
 obsope_tools.o:	obsope_tools.f90 obs_tools.o $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 
-radar_obs.o:	radar/radar_obs.f90 $(COMMON_DIR)
+radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
+radar_tools.o:	radar/radar_tools.f90
+	$(SFC) $(FOPTS) -c $<
+
+read_toshiba.o:	radar/read_toshiba.c
+	$(CC) $(COPTS) -c $<
+read_toshiba_f.o:	radar/read_toshiba_f.f90 read_toshiba.o
+	$(FC) $(FOPTS) -c $<
 
 $(COMMON_DIR):	FORCE
 	$(MAKE) -C $@

@@ -129,12 +129,13 @@ MODULE common_obs_scale
     INTEGER,ALLOCATABLE :: qc(:)
   END TYPE obs_da_value
 
-  character(obsformatlenmax), parameter :: obsfmt_prepbufr = 'PREPBUFR'
-  character(obsformatlenmax), parameter :: obsfmt_radar    = 'RADAR'
-  character(obsformatlenmax), parameter :: obsfmt_h08      = 'HIMAWARI8'
-!  integer, parameter :: nobsformats = 3
+  character(obsformatlenmax), parameter :: obsfmt_prepbufr     = 'PREPBUFR'
+  character(obsformatlenmax), parameter :: obsfmt_radar        = 'RADAR'
+  character(obsformatlenmax), parameter :: obsfmt_pawr_toshiba = 'PAWR_TOSHIBA'
+  character(obsformatlenmax), parameter :: obsfmt_h08          = 'HIMAWARI8'
+!  integer, parameter :: nobsformats = 4
 !  character(obsformatlenmax), parameter :: obsformat(nobsformats) = &
-!    (/obsfmt_prepbufr, obsfmt_radar, obsfmt_h08/)
+!    (/obsfmt_prepbufr, obsfmt_radar, obsfmt_pawr_toshiba, obsfmt_h08/)
 
   INTEGER,PARAMETER :: iqc_good=0
   INTEGER,PARAMETER :: iqc_gross_err=5

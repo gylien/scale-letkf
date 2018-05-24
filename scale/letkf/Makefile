@@ -24,7 +24,10 @@ OBS_DIR = ../obs
 
 OBS_OBJS = $(OBS_DIR)/obs_tools.o \
            $(OBS_DIR)/obsope_tools.o \
-           $(OBS_DIR)/radar_obs.o
+           $(OBS_DIR)/radar_obs.o \
+           $(OBS_DIR)/radar_tools.o \
+           $(OBS_DIR)/read_toshiba.o \
+           $(OBS_DIR)/read_toshiba_f.o
 
 INCS    = $(SCALE_INC) $(NETCDF_INC)
 

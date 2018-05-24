@@ -723,5 +723,267 @@ SUBROUTINE write_obs_radar(cfile,obs,append,missing)
   RETURN
 END SUBROUTINE write_obs_radar
 
+!-----------------------------------------------------------------------
+! 
+!-----------------------------------------------------------------------
+subroutine read_obs_radar_toshiba(cfile, obs)
+  use iso_c_binding
+  use read_toshiba_f
+  use radar_tools
+  implicit none
+
+  character(len=*), intent(in) :: cfile
+  type(obs_info), intent(out) :: obs
+!  REAL(r_sngl) :: wk(8)
+!  INTEGER :: nrec
+!  REAL(r_sngl) :: tmp
+!  INTEGER :: n,iunit,ios
+
+  integer, parameter :: n_type = 3
+  character(len=9), parameter :: file_type_sfx(n_type) = &
+    (/'.10000000', '.20000000', '_pawr_qcf'/)
+  character*1024 :: input_fname(n_type)
+
+  type(c_pawr_header) :: hd(n_type)
+  real(kind=c_float) :: az(AZDIM, ELDIM, n_type)
+  real(kind=c_float) :: el(AZDIM, ELDIM, n_type)
+  real(kind=c_float) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
+  integer j, ierr
+!  character(len=3) :: fname
+
+  real(r_size) :: dx = 1000.0d0
+  real(r_size) :: dy = 500.0d0
+  real(r_size) :: dz = 500.0d0
+  real(r_size) :: maxrange = 60000.0d0
+  real(r_size) :: maxz = 20000.0d0
+  logical :: input_is_dbz = .true.
+  real(r_size) :: error_ze = 5.0d0
+  real(r_size) :: error_vr = 3.0d0
+  real(r_size) :: max_vr = huge(1.0d0) ! default: no limit
+  namelist /params/ input_fname, dx, dy, dz, maxrange, maxz, input_is_dbz, error_ze, error_vr, max_vr
+
+  real(r_size), allocatable :: ze(:, :, :), vr(:, :, :), qcflag(:, :, :), attenuation(:, :, :), rrange(:)
+  real(r_size), allocatable :: radlon(:, :, :), radlat(:, :, :), radz(:, :, :)
+  real(r_size), allocatable :: lon(:), lat(:), z(:)
+  integer(8), allocatable :: grid_index(:), grid_count_ze(:), grid_count_vr(:)
+  real(r_size), allocatable :: grid_ze(:), grid_vr(:)
+  real(r_size), allocatable :: grid_lon_ze(:), grid_lat_ze(:), grid_z_ze(:)
+  real(r_size), allocatable :: grid_lon_vr(:),  grid_lat_vr(:),  grid_z_vr(:)
+
+  integer na, nr, ne, ia, ir, ie
+  real(r_size) :: lon0, lat0, z0
+  real(r_size) :: dlon, dlat
+  real(r_size) :: missing
+  integer :: nlon , nlat , nlev
+  integer(8) nobs_sp
+
+
+  real(r_size) :: max_obs_ze , min_obs_ze , max_obs_vr , min_obs_vr 
+  integer :: nobs_ze, nobs_vr
+  integer(8) :: idx, n
+  integer :: pos
+
+
+!  open(1, file = "input.namelist", form = "formatted")
+!  read(1, nml = params)
+!  close(1)
+
+
+  do j = 1, n_type
+    input_fname(j) = trim(cfile)
+    call str_replace(input_fname(j), '<type>', file_type_sfx(j), pos)
+    if (pos == 0) then
+      write (6, '(5A)') "[Error] Keyword '<type>' is not found in '", trim(cfile), "'."
+      stop 1
+    end if
+  end do
+
+  write(*, *) "file1 = ", trim(input_fname(1))
+  write(*, *) "file2 = ", trim(input_fname(2))
+  write(*, *) "file3 = ", trim(input_fname(3))
+  write(*, *) RDIM, AZDIM, ELDIM
+  write(*, *) "dx = ", dx
+  write(*, *) "dy = ", dy
+  write(*, *) "dz = ", dz
+
+  do j = 1, n_type
+    ierr = read_toshiba(input_fname(j), hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
+    write(*, *) "return code = ", ierr
+  end do
+
+  lon0 = hd(1)%longitude
+  lat0 = hd(1)%latitude
+  z0   = hd(1)%altitude
+  missing = real(hd(1)%mesh_offset, r_size) ! MISSING VALUE (EXACT)
+
+  write(*, '(I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2, &
+       &     " -> ", I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2)') &
+       & hd(1)%s_yr, hd(1)%s_mn, hd(1)%s_dy, hd(1)%s_hr, hd(1)%s_mi, hd(1)%s_sc, &
+       & hd(1)%e_yr, hd(1)%e_mn, hd(1)%e_dy, hd(1)%e_hr, hd(1)%e_mi, hd(1)%e_sc
+  write(*, *) lon0, lat0, z0
+  write(*, *) hd(1)%range_num, hd(1)%sector_num, hd(1)%el_num
+  write(*, *) "missing = ", missing
+
+!  i = 1
+!  !!! OUTPUT SPHERICAL COORDINATE DATA FOR DEBUG !!!
+!  write(fname, '(I03.3)') i
+!  open(1, file = trim(fname) // ".bin", access = "stream", form = "unformatted")
+!  write(1) rtdat(1:hd(1)%range_num, 1:hd(1)%sector_num, 1:hd(1)%el_num, :)
+!  close(1)
+
+  nr = hd(1)%range_num
+  na = hd(1)%sector_num
+  ne = hd(1)%el_num
+  allocate(ze(na, nr, ne), vr(na, nr, ne), qcflag(na, nr, ne), attenuation(na, nr, ne))
+
+!$omp parallel do private(ia, ir, ie)
+  do ie = 1, ne
+     do ir = 1, nr
+        do ia = 1, na
+           ze(ia, ir, ie) = rtdat(ir, ia, ie, 1)
+           vr(ia, ir, ie) = rtdat(ir, ia, ie, 2)
+           if(rtdat(ir, ia, ie, 3) <= 1.1d0) then
+              qcflag(ia, ir, ie) = 0.0d0 !valid
+           else
+              qcflag(ia, ir, ie) = 1000.0d0 !invalid
+           end if
+           if(vr(ia, ir, ie) > max_vr .or. vr(ia, ir, ie) < -max_vr) vr(ia, ir, ie) = missing
+           attenuation(ia, ir, ie) = 1.0d0 !not implemented yet
+        end do
+     end do
+  end do
+!$omp end parallel do
+
+  allocate(rrange(nr))
+!$omp parallel do private(ir)
+  do ir = 1, nr
+     rrange(ir) = (dble(ir) - 0.5d0) * hd(1)%range_res
+  end do
+!$omp end parallel do
+
+  allocate(radlon(na, nr, ne), radlat(na, nr, ne), radz(na, nr, ne))
+  write(*, *) "call radar_georeference"
+  call radar_georeference(lon0, lat0, z0, na, nr, ne, &                                   ! input
+       &                  real(az(:, 1, 1), r_size), rrange, real(el(1, :, 1), r_size), & ! input (assume ordinary scan strategy)
+       &                  radlon, radlat, radz)                                           ! output
+  write(*, *) "call define_grid"
+  call define_grid(lon0, lat0, nr, rrange, rrange(nr), maxz, dx, dy, dz, & ! input
+       &           dlon, dlat, nlon, nlat, nlev, lon, lat, z)              ! output
+  write(*, *) "call radar_superobing"
+  call radar_superobing(na, nr, ne, radlon, radlat, radz, ze, vr, &                    ! input spherical
+       &                qcflag, attenuation, &                                         ! input spherical
+       &                nlon, nlat, nlev, lon, lat, z, dlon, dlat, dz, &               ! input cartesian
+       &                missing, input_is_dbz, &                                       ! input param
+       &                lon0, lat0, &
+       &                nobs_sp, grid_index, &                                         ! output array info
+       &                grid_ze, grid_lon_ze, grid_lat_ze, grid_z_ze, grid_count_ze, & ! output ze
+       &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr)   ! output vr
+  write(*, *) "done"
+
+
+
+
+
+  obs%meta(1) = lon0
+  obs%meta(2) = lat0
+  obs%meta(3) = z0
+
+  obs%nobs = 0
+  do idx = 1, nobs_sp
+    if (grid_count_ze(idx) > 0) then
+      obs%nobs = obs%nobs + 1
+    end if
+    if (grid_count_vr(idx) > 0) then
+      obs%nobs = obs%nobs + 1
+    end if
+  end do
+  call obs_info_allocate(obs, extended=.true.)
+
+  n = 0
+  nobs_ze = 0
+  nobs_vr = 0
+  min_obs_ze = huge(1.0d0)
+  max_obs_ze = -huge(1.0d0)
+  min_obs_vr = huge(1.0d0)
+  max_obs_vr = -huge(1.0d0)
+  do idx = 1, nobs_sp
+    if (grid_count_ze(idx) > 0) then
+      n = n + 1
+      obs%elm(n) = id_radar_ref_obs
+      obs%lon(n) = grid_lon_ze(idx)
+      obs%lat(n) = grid_lat_ze(idx)
+      obs%lev(n) = grid_z_ze(idx)
+      obs%dat(n) = grid_ze(idx)
+      obs%err(n) = error_ze
+      obs%typ(n) = 22
+      obs%dif(n) = 0.0d0
+      nobs_ze = nobs_ze + 1
+      if (grid_ze(idx) > max_obs_ze) max_obs_ze = grid_ze(idx)
+      if (grid_ze(idx) < min_obs_ze) min_obs_ze = grid_ze(idx)
+    end if
+
+    if (grid_count_vr(idx) > 0) then
+      n = n + 1
+      obs%elm(n) = id_radar_vr_obs
+      obs%lon(n) = grid_lon_ze(idx)
+      obs%lat(n) = grid_lat_ze(idx)
+      obs%lev(n) = grid_z_ze(idx)
+      obs%dat(n) = grid_vr(idx)
+      obs%err(n) = error_vr
+      obs%typ(n) = 22
+      obs%dif(n) = 0.0d0
+      nobs_vr = nobs_vr + 1
+      if (grid_vr(idx) > max_obs_vr) max_obs_vr = grid_vr(idx)
+      if (grid_vr(idx) < min_obs_vr) min_obs_vr = grid_vr(idx)
+    end if
+  end do
+
+  write (6, *) "Reflectivity obs. range = ", min_obs_ze, " to ", max_obs_ze
+  write (6, *) "Radial vel. obs. range  = ", min_obs_vr, " to ", max_obs_vr
+  write (6, *) "ze: ", nobs_ze, ", vr: ", nobs_vr
+
+
+
+
+
+!  write(*, *) "writing LETKF data ..."
+!  call output_letkf_obs(lon0, lat0, z0, 1, nobs_sp, &
+!       &                grid_ze, grid_lon_ze, grid_lat_ze, grid_z_ze, grid_count_ze, &
+!       &                grid_vr, grid_count_vr, &
+!       &                error_ze, error_vr)
+!  write(*, *) "done"
+
+!  !!! OUTPUT CARTESIAN COORDINATE DATE FOR DEBUG !!!
+!  write(*, *) "writing cartesian data ..."
+!  write(fname, '(I03.3)') i
+!  call output_grads_obs("super_" // fname // ".grd", nlon, nlat, nlev, nobs_sp, grid_index, &
+!       &                grid_ze, grid_lon_ze, grid_lat_ze, grid_z_ze, grid_count_ze, &
+!       &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr, missing)
+!  write(*, *) "done"
+
+  if(allocated(ze)) deallocate(ze)
+  if(allocated(vr)) deallocate(vr)
+  if(allocated(qcflag)) deallocate(qcflag)
+  if(allocated(attenuation)) deallocate(attenuation)
+  if(allocated(rrange)) deallocate(rrange)
+  if(allocated(radlon)) deallocate(radlon)
+  if(allocated(radlat)) deallocate(radlat)
+  if(allocated(radz)) deallocate(radz)
+
+  if(allocated(grid_index)) deallocate(grid_index)
+  if(allocated(grid_ze)) deallocate(grid_ze)
+  if(allocated(grid_lon_ze)) deallocate(grid_lon_ze)
+  if(allocated(grid_lat_ze)) deallocate(grid_lat_ze)
+  if(allocated(grid_z_ze)) deallocate(grid_z_ze)
+  if(allocated(grid_count_ze)) deallocate(grid_count_ze)
+  if(allocated(grid_vr)) deallocate(grid_vr)
+  if(allocated(grid_lon_vr)) deallocate(grid_lon_vr)
+  if(allocated(grid_lat_vr)) deallocate(grid_lat_vr)
+  if(allocated(grid_z_vr)) deallocate(grid_z_vr)
+  if(allocated(grid_count_vr)) deallocate(grid_count_vr)
+
+  return
+end subroutine read_obs_radar_toshiba
+
 !=======================================================================
 end module radar_obs

@@ -21,8 +21,10 @@ BUFR_LIB  =
 
 #SFC       = frtpx
 #FC        = mpifrtpx
+#CC        = mpifccpx
 
 FOPTS_SCALE = $(FFLAGS)
+COPTS_SCALE = $(CFLAGS)
 
 #FOPTS     = -Kfast,ocl,openmp,noeval -V -Qa,d,i,p,t,x -Koptmsg=2 \
 #            -x-    \
@@ -31,6 +33,8 @@ FOPTS_SCALE = $(FFLAGS)
 FOPTS     = $(FOPTS_SCALE) \
             -Knoparallel,noeval,nopreex \
             -Kopenmp
+COPTS     = $(COPTS_SCALE) \
+            -Knoparallel,noeval,nopreex
 
 FMCMODEL  =
 FBYTESWAP = 

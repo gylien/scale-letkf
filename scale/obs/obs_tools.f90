@@ -360,7 +360,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
                           v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
         end if
       !=========================================================================
-      case (obsfmt_radar)
+      case (obsfmt_radar, obsfmt_pawr_toshiba)
       !-------------------------------------------------------------------------
         if (DEPARTURE_STAT_RADAR) then
           call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ril,rjl,obs(iset)%lev(iidx),rkz,oqc(n))
@@ -671,16 +671,18 @@ subroutine read_obs_all(obs)
   logical :: ex
 
   do iof = 1, OBS_IN_NUM
-    inquire (file=trim(OBS_IN_NAME(iof)), exist=ex)
-    if (.not. ex) then
-      write(6,*) '[Warning] FILE ',trim(OBS_IN_NAME(iof)),' NOT FOUND'
+    if (OBS_IN_FORMAT(iof) /= obsfmt_pawr_toshiba) then
+      inquire (file=trim(OBS_IN_NAME(iof)), exist=ex)
+      if (.not. ex) then
+        write(6,*) '[Warning] FILE ',trim(OBS_IN_NAME(iof)),' NOT FOUND'
 
 
-      obs(iof)%nobs = 0
-      call obs_info_allocate(obs(iof), extended=.true.) !!! check why this is necessary !!!
+        obs(iof)%nobs = 0
+        call obs_info_allocate(obs(iof), extended=.true.) !!! check why this is necessary !!!
 
 
-      cycle
+        cycle
+      end if
     end if
 
     select case (OBS_IN_FORMAT(iof))
@@ -688,6 +690,8 @@ subroutine read_obs_all(obs)
       call get_nobs(trim(OBS_IN_NAME(iof)),8,obs(iof)%nobs)
     case (obsfmt_radar)
       call get_nobs_radar(trim(OBS_IN_NAME(iof)), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
+    case (obsfmt_pawr_toshiba)
+      call read_obs_radar_toshiba(trim(OBS_IN_NAME(iof)), obs(iof))
     case (obsfmt_h08)
       call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
     case default
@@ -699,14 +703,17 @@ subroutine read_obs_all(obs)
                          trim(OBS_IN_FORMAT(iof)), '): TOTAL ', &
                          obs(iof)%nobs, ' OBSERVATIONS'
 
-    call obs_info_allocate(obs(iof), extended=.true.)
-
     select case (OBS_IN_FORMAT(iof))
     case (obsfmt_prepbufr)
+      call obs_info_allocate(obs(iof), extended=.true.)
       call read_obs(trim(OBS_IN_NAME(iof)),obs(iof))
     case (obsfmt_radar)
+      call obs_info_allocate(obs(iof), extended=.true.)
       call read_obs_radar(trim(OBS_IN_NAME(iof)),obs(iof))
+    !case (obsfmt_pawr_tochiba)
+    !  data already read by 'read_obs_radar_toshiba' above
     case (obsfmt_h08)
+      call obs_info_allocate(obs(iof), extended=.true.)
       call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
