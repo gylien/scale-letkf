@@ -247,8 +247,20 @@ fi
 time=$(datetime $STIME $LCYCLE s)
 while ((time <= $(datetime $ETIME $LCYCLE s))); do
   for iobs in $(seq $OBSNUM); do
-    if [ "${OBSNAME[$iobs]}" != '' ] && [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
-      echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|${DAT_SUBDIR}/obs/${OBSNAME[$iobs]}_${time}.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+    if [ "${OBSNAME[$iobs]}" != '' ]; then
+      if [ "${OBS_FORMAT[$iobs]}" = 'PAWR_TOSHIBA' ]; then
+        if [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.10000000.dat ] && \
+           [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.20000000.dat ] && \
+           [ -e ${OBS}/${OBSNAME[$iobs]}_${time}_pawr_qcf.dat ]; then
+          echo "${OBS}/${OBSNAME[$iobs]}_${time}.10000000.dat|${DAT_SUBDIR}/obs/${OBSNAME[$iobs]}_${time}.10000000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+          echo "${OBS}/${OBSNAME[$iobs]}_${time}.20000000.dat|${DAT_SUBDIR}/obs/${OBSNAME[$iobs]}_${time}.20000000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+          echo "${OBS}/${OBSNAME[$iobs]}_${time}_pawr_qcf.dat|${DAT_SUBDIR}/obs/${OBSNAME[$iobs]}_${time}_pawr_qcf.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+        fi
+      else
+        if [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
+          echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|${DAT_SUBDIR}/obs/${OBSNAME[$iobs]}_${time}.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+        fi
+      fi
     fi
   done
   time=$(datetime $time $LCYCLE s)

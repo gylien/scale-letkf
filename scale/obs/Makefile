@@ -66,7 +66,7 @@ radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o $(COMMON_DIR)
 radar_tools.o:	radar/radar_tools.f90
 	$(SFC) $(FOPTS) -c $<
 
-read_toshiba.o:	radar/read_toshiba.c
+read_toshiba.o:	radar/read_toshiba.c radar/read_toshiba.h
 	$(CC) $(COPTS) -c $<
 read_toshiba_f.o:	radar/read_toshiba_f.f90 read_toshiba.o
 	$(FC) $(FOPTS) -c $<

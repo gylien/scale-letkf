@@ -710,7 +710,7 @@ subroutine read_obs_all(obs)
     case (obsfmt_radar)
       call obs_info_allocate(obs(iof), extended=.true.)
       call read_obs_radar(trim(OBS_IN_NAME(iof)),obs(iof))
-    !case (obsfmt_pawr_tochiba)
+    !case (obsfmt_pawr_toshiba)
     !  data already read by 'read_obs_radar_toshiba' above
     case (obsfmt_h08)
       call obs_info_allocate(obs(iof), extended=.true.)
