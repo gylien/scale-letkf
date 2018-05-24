@@ -15,6 +15,7 @@ PROGRAM obsope
   USE common_mpi_scale
   USE common_obs_scale
   USE common_nml
+  USE obs_tools
   USE obsope_tools
   IMPLICIT NONE
 

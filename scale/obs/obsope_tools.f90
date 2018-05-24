@@ -10,11 +10,14 @@ MODULE obsope_tools
 !=======================================================================
 !$USE OMP_LIB
   USE common
-  USE common_mpi
+!  USE common_mpi
+  use common_nml
   USE common_scale
   USE common_mpi_scale
   USE common_obs_scale
-  use common_nml
+  use obs_tools
+  use radar_obs
+
 !  use scale_process, only: &
 !    PRC_myrank
 !    MPI_COMM_d => LOCAL_COMM_WORLD
@@ -765,6 +768,7 @@ end subroutine obsope_cal
 ! Observation generator calculation
 !-----------------------------------------------------------------------
 SUBROUTINE obsmake_cal(obs)
+  use obs_tools, only: write_obs_all
   IMPLICIT NONE
 
   TYPE(obs_info),INTENT(INOUT) :: obs(OBS_IN_NUM)
