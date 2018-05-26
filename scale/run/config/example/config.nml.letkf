@@ -15,6 +15,7 @@
 !--SLOT_END--
 !--SLOT_BASE--
 !--SLOT_TINTERVAL--
+ OBS_USE_JITDT = .false.,
 /
 
 &PARAM_LETKF

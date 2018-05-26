@@ -8,6 +8,8 @@ SCALE_USER_VER = T
 # -- you should set "H08 = F".
 H08        = F
 
+ENABLE_JITDT = T
+
 # Libraries
 #-----------------
 
@@ -25,6 +27,10 @@ DIR_RTTOV  = /data/share005/honda/RTTOV
 RT_LDFLAGS = -L$(DIR_RTTOV)/lib -lrttov11.2.0_test -lrttov11.2.0_other \
              -lrttov11.2.0_coef_io -lrttov11.2.0_parallel -lrttov11.2.0_main
 RT_INCLUDE = -I$(DIR_RTTOV)/mod -I$(DIR_RTTOV)/include
+
+# JIT-DT
+JITDT_INC  = -I/home/hp150019/k01977/opt/nowcast/include
+JITDT_LIB  = -L/home/hp150019/k01977/opt/nowcast/lib -lk-jitdt-pk
 
 # Compiler flags
 #-----------------

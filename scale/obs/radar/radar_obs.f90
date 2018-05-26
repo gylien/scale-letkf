@@ -731,6 +731,9 @@ END SUBROUTINE write_obs_radar
 subroutine read_obs_radar_toshiba(cfile, obs)
   use iso_c_binding
   use read_toshiba_f
+#ifdef JITDT
+  use jitdt_read_toshiba_f
+#endif
   use radar_tools
   implicit none
 
@@ -742,6 +745,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 !  INTEGER :: n,iunit,ios
 
   integer, parameter :: n_type = 3
+  character(len=1024) :: jitdt_place
   character(len=9), parameter :: file_type_sfx(n_type) = &
     (/'.10000000', '.20000000', '_pawr_qcf'/)
   logical, parameter :: input_is_dbz = .true.
@@ -783,25 +787,38 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   write(*, *) "dy = ", RADAR_SO_SIZE_HORI
   write(*, *) "dz = ", RADAR_SO_SIZE_VERT
 
-  do j = 1, n_type
-    input_fname(j) = trim(cfile)
-    call str_replace(input_fname(j), '<type>', file_type_sfx(j), pos)
-    if (pos == 0) then
-      write (6, '(5A)') "[Error] Keyword '<type>' is not found in '", trim(cfile), "'."
-      stop 1
-    end if
-  end do
+#ifdef JITDT
+  if (OBS_USE_JITDT) then
+    jitdt_place = "/scratch/hp150019/gylien/pawr_data/"
+    write(*, *) "jitdt_place = ", trim(jitdt_place)
 
-  write(*, *) "file1 = ", trim(input_fname(1))
-  write(*, *) "file2 = ", trim(input_fname(2))
-  write(*, *) "file3 = ", trim(input_fname(3))
+    ierr = jitdt_read_toshiba(n_type, jitdt_place, hd, az, el, rtdat)
 
-  do j = 1, n_type
-    ierr = read_toshiba(input_fname(j), hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
-    write(*, *) "return code = ", ierr
-  end do
+    call mpi_timer('read_obs_radar_toshiba:jitdt_read_toshiba:', 3)
+  else
+#endif
+    do j = 1, n_type
+      input_fname(j) = trim(cfile)
+      call str_replace(input_fname(j), '<type>', file_type_sfx(j), pos)
+      if (pos == 0) then
+        write (6, '(5A)') "[Error] Keyword '<type>' is not found in '", trim(cfile), "'."
+        stop 1
+      end if
+    end do
 
-  call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 3)
+    write(*, *) "file1 = ", trim(input_fname(1))
+    write(*, *) "file2 = ", trim(input_fname(2))
+    write(*, *) "file3 = ", trim(input_fname(3))
+
+    do j = 1, n_type
+      ierr = read_toshiba(input_fname(j), hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
+      write(*, *) "return code = ", ierr
+    end do
+
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 3)
+#ifdef JITDT
+  end if
+#endif
 
   lon0 = hd(1)%longitude
   lat0 = hd(1)%latitude

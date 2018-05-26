@@ -691,7 +691,9 @@ subroutine read_obs_all(obs)
     case (obsfmt_radar)
       call get_nobs_radar(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
     case (obsfmt_pawr_toshiba)
-      call read_obs_radar_toshiba(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof))
+      if (.not. OBS_USE_JITDT) then
+        call read_obs_radar_toshiba(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof))
+      end if
     case (obsfmt_h08)
       call get_nobs_H08(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof)%nobs) ! H08
     case default
@@ -710,7 +712,7 @@ subroutine read_obs_all(obs)
     case (obsfmt_radar)
       call obs_info_allocate(obs(iof), extended=.true.)
       call read_obs_radar(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof))
-    !case (obsfmt_pawr_tochiba)
+    !case (obsfmt_pawr_toshiba)
     !  data already read by 'read_obs_radar_toshiba' above
     case (obsfmt_h08)
       call obs_info_allocate(obs(iof), extended=.true.)
@@ -778,6 +780,10 @@ subroutine read_obs_all_mpi(obs)
   call mpi_timer('', 2, barrier=MPI_COMM_a)
 
   do iof = 1, OBS_IN_NUM
+    if (OBS_IN_FORMAT(iof) == obsfmt_pawr_toshiba .and. OBS_USE_JITDT) then
+      cycle
+    end if
+
     call MPI_BCAST(obs(iof)%nobs, 1, MPI_INTEGER, 0, MPI_COMM_a, ierr)
     if (myrank_a /= 0) then
       call obs_info_allocate(obs(iof), extended=.true.)
@@ -795,6 +801,19 @@ subroutine read_obs_all_mpi(obs)
   end do ! [ iof = 1, OBS_IN_NUM ]
 
   call mpi_timer('read_obs_all_mpi:mpi_bcast:', 2)
+
+  do iof = 1, OBS_IN_NUM
+    select case (OBS_IN_FORMAT(iof))
+    case (obsfmt_pawr_toshiba)
+      if (OBS_USE_JITDT) then
+        call read_obs_radar_toshiba(trim(OBS_IN_NAME(iof)), obs(iof))
+      end if
+    end select
+  end do ! [ iof = 1, OBS_IN_NUM ]
+
+  if (OBS_USE_JITDT) then
+    call mpi_timer('read_obs_all_mpi:read_obs_jitdt:', 2)
+  end if
 
   return
 end subroutine read_obs_all_mpi

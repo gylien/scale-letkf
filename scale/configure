@@ -21,3 +21,8 @@ ifeq ($(H08),T)
 FOPTS     += -DH08
 FOPTS_SCALE += -DH08
 endif
+
+ifeq ($(ENABLE_JITDT),T)
+FOPTS     += -DJITDT
+FOPTS_SCALE += -DJITDT
+endif

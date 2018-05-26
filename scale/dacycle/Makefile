@@ -45,6 +45,13 @@ COMMON_OBJS += $(COMMON_DIR)/scale_H08_fwd.o
 LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)
 endif
 
+ifeq ($(ENABLE_JITDT),T)
+OBS_OBJS += $(OBS_DIR)/jitdt_read_toshiba.o \
+            $(OBS_DIR)/jitdt_read_toshiba_f.o
+INCS    += $(JITDT_INC)
+LIBS    += $(JITDT_LIB)
+endif
+
 .PHONY:	all clean FORCE
 
 all:	$(PROGS)

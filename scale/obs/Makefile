@@ -31,6 +31,12 @@ COMMON_OBJS += $(COMMON_DIR)/scale_H08_fwd.o
 LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)
 endif
 
+ifeq ($(ENABLE_JITDT),T)
+OBJS    += jitdt_read_toshiba.o jitdt_read_toshiba_f.o
+INCS    += $(JITDT_INC)
+LIBS    += $(JITDT_LIB)
+endif
+
 .PHONY:	all clean FORCE
 
 all:	$(PROGS)
@@ -64,7 +70,11 @@ obs_tools.o:	obs_tools.f90 radar_obs.o $(COMMON_DIR)
 obsope_tools.o:	obsope_tools.f90 obs_tools.o $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 
+ifeq ($(ENABLE_JITDT),T)
+radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o jitdt_read_toshiba_f.o $(COMMON_DIR)
+else
 radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o $(COMMON_DIR)
+endif
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 radar_tools.o:	radar/radar_tools.f90
 	$(SFC) $(FOPTS) -c $<
@@ -72,6 +82,10 @@ radar_tools.o:	radar/radar_tools.f90
 read_toshiba.o:	radar/read_toshiba.c radar/read_toshiba.h
 	$(CC) $(COPTS) -c $<
 read_toshiba_f.o:	radar/read_toshiba_f.f90 read_toshiba.o
+	$(FC) $(FOPTS) -c $<
+jitdt_read_toshiba.o:	radar/jitdt_read_toshiba.c radar/jitdt_read_toshiba.h
+	$(CC) $(COPTS) -c $< $(JITDT_INC)
+jitdt_read_toshiba_f.o:	radar/jitdt_read_toshiba_f.f90 jitdt_read_toshiba.o read_toshiba_f.o
 	$(FC) $(FOPTS) -c $<
 
 $(COMMON_DIR):	FORCE

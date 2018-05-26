@@ -100,6 +100,8 @@ MODULE common_nml
   integer               :: SLOT_BASE = 1
   real(r_size)          :: SLOT_TINTERVAL = 3600.0d0
 
+  logical               :: OBS_USE_JITDT = .false.
+
   !--- PARAM_LETKF
   logical               :: OBSDA_IN = .false.
   character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.<member>'
@@ -558,7 +560,8 @@ subroutine read_nml_obsope
     SLOT_START, &
     SLOT_END, &
     SLOT_BASE, &
-    SLOT_TINTERVAL
+    SLOT_TINTERVAL, &
+    OBS_USE_JITDT
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBSOPE,iostat=ierr)
