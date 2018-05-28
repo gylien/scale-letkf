@@ -249,6 +249,15 @@ program dacycle
 
           allocate (obs(OBS_IN_NUM))
 
+#ifdef JITDT
+          if (OBS_USE_JITDT) then
+            if (myrank_a == 0) then
+              open(80, file=trim(OBS_JITDT_DATADIR) // '/job.running')
+              close(80)
+            end if
+          end if
+#endif
+
           call mpi_timer('INIT_LETKF', 1, barrier=MPI_COMM_a)
         end if
 

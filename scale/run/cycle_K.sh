@@ -193,6 +193,11 @@ echo
 job_submit_PJM $jobscrp
 echo
 
+if ((OBS_USE_JITDT == 1)); then
+  rm -f ${SCRP_DIR}/jitdt_send_testdata_on_start.log
+  ${SCRP_DIR}/misc/jitdt_send_testdata_on_start.sh > ${SCRP_DIR}/jitdt_send_testdata_on_start.log 2>&1 &
+fi
+
 job_end_check_PJM_K $jobid
 res=$?
 

@@ -101,6 +101,7 @@ MODULE common_nml
   real(r_size)          :: SLOT_TINTERVAL = 3600.0d0
 
   logical               :: OBS_USE_JITDT = .false.
+  character(filelenmax) :: OBS_JITDT_DATADIR = 'jit-data'
 
   !--- PARAM_LETKF
   logical               :: OBSDA_IN = .false.
@@ -561,7 +562,8 @@ subroutine read_nml_obsope
     SLOT_END, &
     SLOT_BASE, &
     SLOT_TINTERVAL, &
-    OBS_USE_JITDT
+    OBS_USE_JITDT, &
+    OBS_JITDT_DATADIR
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBSOPE,iostat=ierr)

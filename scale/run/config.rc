@@ -229,6 +229,13 @@ if ((IO_ARB == 1)); then
   fi
 fi
 
+if ((OBS_USE_JITDT == 1)); then
+  if [ -z "$TMP_JITDATA" ]; then
+    echo "[Error] When \$OBS_USE_JITDT = 1, \$TMP_JITDATA needs to be set." 1>&2
+    exit 1
+  fi
+fi
+
 #===============================================================================
 # Definition of sub-directories
 

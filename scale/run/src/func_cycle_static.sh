@@ -1039,6 +1039,11 @@ EOF
     fi
   done
 
+  OBS_USE_JITDT_TF='.false.'
+  if ((OBS_USE_JITDT == 1)); then
+    OBS_USE_JITDT_TF='.true.'
+  fi
+
   OBSDA_OUT='.false.'
   if ((OBSOUT_OPT <= 2)); then
     OBSDA_OUT='.true.'
@@ -1105,6 +1110,8 @@ EOF
             -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
             -e "/!--OBS_IN_FORMAT--/a OBS_IN_FORMAT = $OBS_IN_FORMAT_LIST" \
             -e "/!--OBS_POSTFIX_TIMELABEL--/a OBS_POSTFIX_TIMELABEL = ${OBS_POSTFIX_TIMELABEL_TF}," \
+            -e "/!--OBS_USE_JITDT--/a OBS_USE_JITDT = ${OBS_USE_JITDT_TF}," \
+            -e "/!--OBS_JITDT_DATADIR--/a OBS_JITDT_DATADIR = \"${TMP_JITDATA}\"," \
             -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
             -e "/!--OBSDA_OUT--/a OBSDA_OUT = $OBSDA_OUT" \
             -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"<member>/obsgues.d${dfmt}_${atime}\"," \

@@ -789,7 +789,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
 #ifdef JITDT
   if (OBS_USE_JITDT) then
-    jitdt_place = "/scratch/hp150019/gylien/pawr_data/"
+    jitdt_place = trim(OBS_JITDT_DATADIR) // '/'
     write(*, *) "jitdt_place = ", trim(jitdt_place)
 
     ierr = jitdt_read_toshiba(n_type, jitdt_place, hd, az, el, rtdat)

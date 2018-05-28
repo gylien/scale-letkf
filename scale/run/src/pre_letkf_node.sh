@@ -82,6 +82,11 @@ for iobs in $(seq $OBSNUM); do
   fi
 done
 
+OBS_USE_JITDT_TF='.false.'
+if ((OBS_USE_JITDT == 1)); then
+  OBS_USE_JITDT_TF='.true.'
+fi
+
 ENS_WITH_MDET_TF='.false.'
 if ((DET_RUN == 1)); then
   ENS_WITH_MDET_TF='.true.'
@@ -156,6 +161,8 @@ cat $TMPDAT/conf/config.nml.letkf | \
     sed -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBS_IN_FORMAT--/a OBS_IN_FORMAT = $OBS_IN_FORMAT_LIST" \
+        -e "/!--OBS_USE_JITDT--/a OBS_USE_JITDT = ${OBS_USE_JITDT_TF}," \
+        -e "/!--OBS_JITDT_DATADIR--/a OBS_JITDT_DATADIR = \"${TMP_JITDATA}\"," \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
         -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = \"${HISTORY_IN_BASENAME}\"," \
         -e "/!--SLOT_START--/a SLOT_START = $SLOT_START," \
