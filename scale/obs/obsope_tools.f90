@@ -567,15 +567,20 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
                   call Trans_XtoY(obs(iof)%elm(n), ril, rjl, rk, &
                                   obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
                 case (2)
-                  call Trans_XtoY_radar(obs(iof)%elm(n), obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3), ril, rjl, rk, &
-                                        obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%lev(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
-                  if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
+                  if (obs(iof)%elm(n) == id_u_obs .or. obs(iof)%elm(n) == id_v_obs) then
+                    call Trans_XtoY(obs(iof)%elm(n), ril, rjl, rk, &
+                                    obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
+                  else
+                    call Trans_XtoY_radar(obs(iof)%elm(n), obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3), ril, rjl, rk, &
+                                          obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%lev(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
+                    if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
 
-                  !!!!!! may not need to do this at this stage !!!!!!
-                  !if (obs(iof)%elm(n) == id_radar_ref_obs) then
-                  !  obsda%val(nn) = 10.0d0 * log10(obsda%val(nn))
-                  !end if
-                  !!!!!!
+                    !!!!!! may not need to do this at this stage !!!!!!
+                    !if (obs(iof)%elm(n) == id_radar_ref_obs) then
+                    !  obsda%val(nn) = 10.0d0 * log10(obsda%val(nn))
+                    !end if
+                    !!!!!!
+                  end if
                 end select
               end if
 
