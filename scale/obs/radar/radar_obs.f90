@@ -9,6 +9,8 @@ module radar_obs
   use common_nml
   use common_scale
   use common_obs_scale
+  use common_mpi_scale, only: &
+    mpi_timer
 
   implicit none
   public
@@ -774,10 +776,12 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   integer :: pos
 
 
-!  open(1, file = "input.namelist", form = "formatted")
-!  read(1, nml = params)
-!  close(1)
+  call mpi_timer('', 3)
 
+  write(*, *) RDIM, AZDIM, ELDIM
+  write(*, *) "dx = ", RADAR_SO_SIZE_HORI
+  write(*, *) "dy = ", RADAR_SO_SIZE_HORI
+  write(*, *) "dz = ", RADAR_SO_SIZE_VERT
 
   do j = 1, n_type
     input_fname(j) = trim(cfile)
@@ -791,15 +795,13 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   write(*, *) "file1 = ", trim(input_fname(1))
   write(*, *) "file2 = ", trim(input_fname(2))
   write(*, *) "file3 = ", trim(input_fname(3))
-  write(*, *) RDIM, AZDIM, ELDIM
-  write(*, *) "dx = ", RADAR_SO_SIZE_HORI
-  write(*, *) "dy = ", RADAR_SO_SIZE_HORI
-  write(*, *) "dz = ", RADAR_SO_SIZE_VERT
 
   do j = 1, n_type
     ierr = read_toshiba(input_fname(j), hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
     write(*, *) "return code = ", ierr
   end do
+
+  call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 3)
 
   lon0 = hd(1)%longitude
   lat0 = hd(1)%latitude
@@ -844,6 +846,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   end do
 !$omp end parallel do
 
+  call mpi_timer('read_obs_radar_toshiba:preliminary_qc:', 3)
+
   allocate(rrange(nr))
 !$omp parallel do private(ir)
   do ir = 1, nr
@@ -856,9 +860,15 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   call radar_georeference(lon0, lat0, z0, na, nr, ne, &                                   ! input
        &                  real(az(:, 1, 1), r_size), rrange, real(el(1, :, 1), r_size), & ! input (assume ordinary scan strategy)
        &                  radlon, radlat, radz)                                           ! output
+
+  call mpi_timer('read_obs_radar_toshiba:radar_georeference:', 3)
+
   write(*, *) "call define_grid"
   call define_grid(lon0, lat0, nr, rrange, rrange(nr), RADAR_ZMAX, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_VERT, & ! input
        &           dlon, dlat, nlon, nlat, nlev, lon, lat, z)              ! output
+
+  call mpi_timer('read_obs_radar_toshiba:define_grid:', 3)
+
   write(*, *) "call radar_superobing"
   call radar_superobing(na, nr, ne, radlon, radlat, radz, ze, vr, &                    ! input spherical
        &                qcflag, attenuation, &                                         ! input spherical
@@ -870,6 +880,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
        &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr)   ! output vr
   write(*, *) "done"
 
+  call mpi_timer('read_obs_radar_toshiba:radar_superobing:', 3)
 
 
 
@@ -932,6 +943,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   write (6, *) "Radial vel. obs. range  = ", min_obs_vr, " to ", max_obs_vr
   write (6, *) "ze: ", nobs_ze, ", vr: ", nobs_vr
 
+  call mpi_timer('read_obs_radar_toshiba:save_obs_info:', 3)
 
 
 
@@ -971,6 +983,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   if(allocated(grid_lat_vr)) deallocate(grid_lat_vr)
   if(allocated(grid_z_vr)) deallocate(grid_z_vr)
   if(allocated(grid_count_vr)) deallocate(grid_count_vr)
+
+  call mpi_timer('read_obs_radar_toshiba:deallocate_vars:', 3)
 
   return
 end subroutine read_obs_radar_toshiba
