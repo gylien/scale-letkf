@@ -10,6 +10,8 @@ LETKF_SINGLE_FP = F
 # -- you should set "H08 = F".
 H08        = F
 
+ENABLE_JITDT = T
+
 # Libraries
 #-----------------
 
@@ -28,17 +30,25 @@ RT_LDFLAGS = -L$(DIR_RTTOV)/lib -lrttov11.2.0_test -lrttov11.2.0_other \
              -lrttov11.2.0_coef_io -lrttov11.2.0_parallel -lrttov11.2.0_main
 RT_INCLUDE = -I$(DIR_RTTOV)/mod -I$(DIR_RTTOV)/include
 
+# JIT-DT
+JITDT_INC  = -I/home/hp150019/k01977/opt/nowcast/include
+JITDT_LIB  = -L/home/hp150019/k01977/opt/nowcast/lib -lk-jitdt-pk
+
 # Compiler flags
 #-----------------
 
 #SFC        = frtpx
 #FC         = mpifrtpx
+#CC         = mpifccpx
 
 FOPTS_SCALE = $(FFLAGS)
+COPTS_SCALE = $(CFLAGS)
 
 FOPTS      = $(FOPTS_SCALE) \
              -Knoparallel,noeval,nopreex \
              -Kopenmp
+COPTS      = $(COPTS_SCALE) \
+             -Knoparallel,noeval,nopreex
 
 FOPTS_EXE  = $(FOPTS_SCALE) \
              -Kopenmp

@@ -205,6 +205,11 @@ else
   CONNECTOR_TOPO='topo/'
   CONNECTOR_LANDUSE='landuse/'
 fi
+if ((PNETCDF_BDY_SCALE == 1)); then
+  CONNECTOR_BDY='.'
+else
+  CONNECTOR_BDY='/'
+fi
 
 #===============================================================================
 # Error detection
@@ -220,6 +225,13 @@ if ((IO_ARB == 1)); then
   fi
   if ((BDY_FORMAT != 0)); then
     echo "[Error] When \$IO_ARB = 1, boundary files need to be prepared (\$BDY_FORMAT = 0)." 1>&2
+    exit 1
+  fi
+fi
+
+if ((OBS_USE_JITDT == 1)); then
+  if [ -z "$TMP_JITDATA" ]; then
+    echo "[Error] When \$OBS_USE_JITDT = 1, \$TMP_JITDATA needs to be set." 1>&2
     exit 1
   fi
 fi

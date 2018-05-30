@@ -27,7 +27,12 @@ LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
 
 OBS_DIR = ../obs
 
-OBS_OBJS = $(OBS_DIR)/obsope_tools.o
+OBS_OBJS = $(OBS_DIR)/obs_tools.o \
+           $(OBS_DIR)/obsope_tools.o \
+           $(OBS_DIR)/radar_obs.o \
+           $(OBS_DIR)/radar_tools.o \
+           $(OBS_DIR)/read_toshiba.o \
+           $(OBS_DIR)/read_toshiba_f.o
 
 LETKF_DIR = ../letkf
 
@@ -38,6 +43,13 @@ SCALE_RM_OBJS = $(shell ls $(SCALE_RM_OBJDIR)/*.o | grep -v "scale-rm.o\|scale-r
 ifeq ($(H08),T)
 COMMON_OBJS += $(COMMON_DIR)/scale_H08_fwd.o
 LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)
+endif
+
+ifeq ($(ENABLE_JITDT),T)
+OBS_OBJS += $(OBS_DIR)/jitdt_read_toshiba.o \
+            $(OBS_DIR)/jitdt_read_toshiba_f.o
+INCS    += $(JITDT_INC)
+LIBS    += $(JITDT_LIB)
 endif
 
 .PHONY:	all clean FORCE
@@ -55,7 +67,7 @@ $(COMMON_DIR):	FORCE
 	$(MAKE) -C $@
 
 $(OBS_DIR):	FORCE
-	$(MAKE) -C $@ obsope_tools.o
+	$(MAKE) -C $@ obj
 
 $(LETKF_DIR):	FORCE
 	$(MAKE) -C $@ letkf_obs.o letkf_tools.o

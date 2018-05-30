@@ -20,6 +20,9 @@ MODULE letkf_obs
   USE common_obs_scale
   USE common_mpi_scale
   USE common_letkf
+  use obs_tools, only: &
+    obs_da_value_partial_reduce_iter, &
+    obs_da_value_allreduce
 
   IMPLICIT NONE
   PUBLIC

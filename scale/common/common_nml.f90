@@ -23,7 +23,7 @@ MODULE common_nml
   integer, parameter :: nch = 10     ! H08 Num of Himawari-8 (IR) channels
 
   integer, parameter :: nobsfilemax = 10
-  integer, parameter :: obsformatlenmax = 10
+  integer, parameter :: obsformatlenmax = 12
   integer, parameter :: filelenmax = 256
   integer, parameter :: membermax = 10000
 
@@ -99,6 +99,9 @@ MODULE common_nml
   integer               :: SLOT_END = 1
   integer               :: SLOT_BASE = 1
   real(r_size)          :: SLOT_TINTERVAL = 3600.0d0
+
+  logical               :: OBS_USE_JITDT = .false.
+  character(filelenmax) :: OBS_JITDT_DATADIR = 'jit-data'
 
   !--- PARAM_LETKF
   logical               :: OBSDA_IN = .false.
@@ -293,6 +296,10 @@ MODULE common_nml
 
   ! PARAMETERS FOR RADAR DATA ASSIMILATION
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
+
+  real(r_size) :: RADAR_SO_SIZE_HORI = 1000.0d0
+  real(r_size) :: RADAR_SO_SIZE_VERT = 1000.0d0
+  real(r_size) :: RADAR_MAX_ABS_VR = 100.0d0
 
   !---PARAM_LETKF_H08
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
@@ -554,7 +561,9 @@ subroutine read_nml_obsope
     SLOT_START, &
     SLOT_END, &
     SLOT_BASE, &
-    SLOT_TINTERVAL
+    SLOT_TINTERVAL, &
+    OBS_USE_JITDT, &
+    OBS_JITDT_DATADIR
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBSOPE,iostat=ierr)
@@ -961,7 +970,10 @@ subroutine read_nml_letkf_radar
     INTERPOLATION_TECHNIQUE, &
     METHOD_REF_CALC, &
     USE_TERMINAL_VELOCITY, &
-    NRADARTYPE
+    NRADARTYPE, &
+    RADAR_SO_SIZE_HORI, &
+    RADAR_SO_SIZE_VERT, &
+    RADAR_MAX_ABS_VR
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_RADAR,iostat=ierr)

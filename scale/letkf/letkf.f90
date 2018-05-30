@@ -19,6 +19,10 @@ PROGRAM letkf
   USE common_nml
   USE letkf_obs
   USE letkf_tools
+  use obs_tools, only: &
+    read_obs_all_mpi, &
+    get_nobs_da_mpi, &
+    monit_obs_mpi
   use obsope_tools, only: &
     obsope_cal
   IMPLICIT NONE
@@ -27,6 +31,8 @@ PROGRAM letkf
   REAL(r_size),ALLOCATABLE :: gues2d(:,:,:)
   REAL(r_size),ALLOCATABLE :: anal3d(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: anal2d(:,:,:)
+  real(RP),allocatable :: mean3d(:,:,:,:)
+  real(RP),allocatable :: mean2d(:,:,:)
 
   character(len=7) :: stdoutf='-000000'
   character(len=6400) :: cmd1, cmd2, icmd
@@ -154,6 +160,10 @@ PROGRAM letkf
     allocate (gues2d(nij1,nens,nv2d))
     allocate (anal3d(nij1,nlev,nens,nv3d))
     allocate (anal2d(nij1,nens,nv2d))
+    if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
+      allocate (mean3d(nlev,nlon,nlat,nv3d))
+      allocate (mean2d(nlon,nlat,nv3d))
+    end if
 
     call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
 
@@ -173,7 +183,8 @@ PROGRAM letkf
     ! WRITE ENS MEAN and SPRD
     !
     if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-      call write_ensmean(GUES_MEAN_OUT_BASENAME, gues3d, gues2d, calced=.false., monit_step=1)
+      call write_ensmean(GUES_MEAN_OUT_BASENAME, gues3d, gues2d, calced=.false., mean3d=mean3d, mean2d=mean2d)
+      call monit_obs_mpi(mean3d, mean2d, monit_step=1)
     else
       call write_ensmean(GUES_MEAN_OUT_BASENAME, gues3d, gues2d, calced=.false.)
     end if
@@ -215,7 +226,8 @@ PROGRAM letkf
     ! WRITE ANAL and ENS MEAN
     !
     if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-      call write_ens_mpi(anal3d, anal2d, monit_step=2)
+      call write_ens_mpi(anal3d, anal2d, mean3d=mean3d, mean2d=mean2d)
+      call monit_obs_mpi(mean3d, mean2d, monit_step=2)
     else
       call write_ens_mpi(anal3d, anal2d)
     end if
@@ -228,6 +240,9 @@ PROGRAM letkf
 
     deallocate (obs)
     deallocate (gues3d, gues2d, anal3d, anal2d)
+    if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
+      deallocate (mean3d, mean2d)
+    end if
 
     call unset_common_mpi_scale
 

@@ -49,8 +49,7 @@ else
 common_obs_scale.o:	common_obs_scale.f90 common.o common_nml.o common_scale.o
 	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC)
 endif
-common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o \
-	common_scale.o common_obs_scale.o
+common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o common_scale.o
 	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC) -I$(SCALE_RM_OBJDIR)
 #common_precip.o:	common_precip.f90 common.o common_scale.o common_letkf.o
 #	$(SFC) $(FOPTS) -c $<

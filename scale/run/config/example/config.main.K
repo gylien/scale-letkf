@@ -38,6 +38,7 @@ DATA_ADDINFL=                                                        # Directory
 
 OBS="$DDIR/obs/prepbufr_obs_eastasia"                                # Observation data in LETKF observation format
 OBSNCEP=
+OBS_USE_JITDT=0
 
 #===============================================================================
 # model/data file options
@@ -140,6 +141,7 @@ TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among al
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPSL="/tmp/gylien/$TMPSUBDIR" # Temporary directory only on the server node and on a local file system
 #TMPL=
+#TMP_JITDATA=
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
                             #  0: No

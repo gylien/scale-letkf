@@ -600,14 +600,14 @@ while ((time <= ETIME)); do
                 mem_bdy="${name_m[$m]}"
               fi
               for q in $(seq $mem_np_bdy_); do
-                pathin="${DATA_BDY_SCALE}/${time_bdy}/${BDY_SCALE_DIR}/${mem_bdy}${CONNECTOR}history$(scale_filename_bdy_sfx $((q-1)))"
+                pathin="${DATA_BDY_SCALE}/${time_bdy}/${BDY_SCALE_DIR}/${mem_bdy}${CONNECTOR_BDY}history$(scale_filename_bdy_sfx $((q-1)))"
                 path="${name_m[$m]}/bdyorg_$(datetime_scale $time_bdy_start_prev)_$(printf %05d $((ibdy-1)))$(scale_filename_bdy_sfx $((q-1)))"
                 echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
               done
             done
           else
             for q in $(seq $mem_np_bdy_); do
-              pathin="${DATA_BDY_SCALE}/${time_bdy}/${BDY_SCALE_DIR}/${BDY_MEAN}${CONNECTOR}history$(scale_filename_bdy_sfx $((q-1)))"
+              pathin="${DATA_BDY_SCALE}/${time_bdy}/${BDY_SCALE_DIR}/${BDY_MEAN}${CONNECTOR_BDY}history$(scale_filename_bdy_sfx $((q-1)))"
               path="mean/bdyorg_$(datetime_scale $time_bdy_start_prev)_$(printf %05d $((ibdy-1)))$(scale_filename_bdy_sfx $((q-1)))"
               echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
             done
@@ -1010,13 +1010,23 @@ EOF
   fi
 
   OBS_IN_NAME_LIST=
+  OBS_IN_FORMAT_LIST=
   for iobs in $(seq $OBSNUM); do
     if [ "${OBSNAME[$iobs]}" != '' ]; then
-      if ((DACYCLE == 1)); then
-        OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}', "
+      if [ "${OBS_FORMAT[$iobs]}" = 'PAWR_TOSHIBA' ]; then
+        if ((DACYCLE == 1)); then
+          OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}<type>', "
+        else
+          OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}<type>.dat', "
+        fi
       else
-        OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}.dat', "
+        if ((DACYCLE == 1)); then
+          OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}', "
+        else
+          OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}.dat', "
+        fi
       fi
+      OBS_IN_FORMAT_LIST="${OBS_IN_FORMAT_LIST}'${OBS_FORMAT[$iobs]}', "
     fi
   done
 
@@ -1028,6 +1038,11 @@ EOF
       OBSDA_RUN_LIST="${OBSDA_RUN_LIST}.true., "
     fi
   done
+
+  OBS_USE_JITDT_TF='.false.'
+  if ((OBS_USE_JITDT == 1)); then
+    OBS_USE_JITDT_TF='.true.'
+  fi
 
   OBSDA_OUT='.false.'
   if ((OBSOUT_OPT <= 2)); then
@@ -1093,7 +1108,10 @@ EOF
     cat $conf_file_src | \
         sed -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
             -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
+            -e "/!--OBS_IN_FORMAT--/a OBS_IN_FORMAT = $OBS_IN_FORMAT_LIST" \
             -e "/!--OBS_POSTFIX_TIMELABEL--/a OBS_POSTFIX_TIMELABEL = ${OBS_POSTFIX_TIMELABEL_TF}," \
+            -e "/!--OBS_USE_JITDT--/a OBS_USE_JITDT = ${OBS_USE_JITDT_TF}," \
+            -e "/!--OBS_JITDT_DATADIR--/a OBS_JITDT_DATADIR = \"${TMP_JITDATA}\"," \
             -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
             -e "/!--OBSDA_OUT--/a OBSDA_OUT = $OBSDA_OUT" \
             -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"<member>/obsgues.d${dfmt}_${atime}\"," \
@@ -1129,7 +1147,7 @@ EOF
           >> $CONFIG_DIR/${conf_file}
     fi
 
-    if ((stage_config == 1)); then
+    if ((stage_config == 1 && DACYCLE != 1)); then
       echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
     fi
   done # [ d in $(seq $DOMNUM) ]
