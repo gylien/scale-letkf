@@ -49,9 +49,15 @@ if ((PNETCDF == 1)); then
 fi
 
 OBS_IN_NAME_LIST=
+OBS_IN_FORMAT_LIST=
 for iobs in $(seq $OBSNUM); do
   if [ "${OBSNAME[$iobs]}" != '' ]; then
-    OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat', "
+    if [ "${OBS_FORMAT[$iobs]}" = 'PAWR_TOSHIBA' ]; then
+      OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}<type>.dat', "
+    else
+      OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat', "
+    fi
+    OBS_IN_FORMAT_LIST="${OBS_IN_FORMAT_LIST}'${OBS_FORMAT[$iobs]}', "
   fi
 done
 
@@ -95,6 +101,7 @@ cat $TMPDAT/conf/config.nml.ensmodel | \
 cat $TMPDAT/conf/config.nml.obsope | \
     sed -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
+        -e "/!--OBS_IN_FORMAT--/a OBS_IN_FORMAT = $OBS_IN_FORMAT_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
         -e "/!--OBSDA_OUT--/a OBSDA_OUT = .true." \
         -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext\"," \

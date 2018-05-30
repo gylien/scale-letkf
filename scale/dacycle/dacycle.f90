@@ -14,6 +14,10 @@ program dacycle
   use common_obs_scale
   use letkf_obs
   use letkf_tools
+  use obs_tools, only: &
+    read_obs_all_mpi, &
+    get_nobs_da_mpi, &
+    monit_obs_mpi
   use obsope_tools, only: &
     obsope_cal
 
@@ -72,8 +76,10 @@ program dacycle
 
   real(r_size), allocatable :: gues3d(:,:,:,:)
   real(r_size), allocatable :: gues2d(:,:,:)
-  real(r_size), allocatable:: anal3d(:,:,:,:)
+  real(r_size), allocatable :: anal3d(:,:,:,:)
   real(r_size), allocatable :: anal2d(:,:,:)
+  real(RP), allocatable :: mean3d(:,:,:,:)
+  real(RP), allocatable :: mean2d(:,:,:)
 
   character(len=7) :: stdoutf='-000000'
   character(len=6400) :: icmd
@@ -294,6 +300,10 @@ program dacycle
           allocate (gues2d(nij1,nens,nv2d))
           allocate (anal3d(nij1,nlev,nens,nv3d))
           allocate (anal2d(nij1,nens,nv2d))
+          if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
+            allocate (mean3d(nlev,nlon,nlat,nv3d))
+            allocate (mean2d(nlon,nlat,nv3d))
+          end if
 
           call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
         end if
@@ -315,7 +325,8 @@ program dacycle
         !
         if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
           call write_ensmean(trim(GUES_MEAN_OUT_BASENAME) // trim(timelabel_anal), gues3d, gues2d, &
-                             calced=.false., mean_out=gues_mean_out_now, monit_step=1)
+                             calced=.false., mean_out=gues_mean_out_now, mean3d=mean3d, mean2d=mean2d)
+          call monit_obs_mpi(mean3d, mean2d, monit_step=1)
         else
           call write_ensmean(trim(GUES_MEAN_OUT_BASENAME) // trim(timelabel_anal), gues3d, gues2d, &
                              calced=.false., mean_out=gues_mean_out_now)
@@ -358,7 +369,8 @@ program dacycle
         ! WRITE ANAL and ENS MEAN
         !
         if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-          call write_ens_mpi(anal3d, anal2d, monit_step=2)
+          call write_ens_mpi(anal3d, anal2d, mean3d=mean3d, mean2d=mean2d)
+          call monit_obs_mpi(mean3d, mean2d, monit_step=2)
         else
           call write_ens_mpi(anal3d, anal2d)
         end if
@@ -398,6 +410,9 @@ program dacycle
 
     deallocate (obs)
     deallocate (gues3d, gues2d, anal3d, anal2d)
+    if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
+      deallocate (mean3d, mean2d)
+    end if
 
     call unset_common_mpi_scale
 

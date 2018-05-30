@@ -90,11 +90,29 @@ if [ "$JOBTYPE" = 'cycle' ]; then
   time=$(datetime $STIME $LCYCLE s)
   while ((time <= $(datetime $ETIME $LCYCLE s))); do
     for iobs in $(seq $OBSNUM); do
-      if [ "${OBSNAME[$iobs]}" != '' ] && [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
-        if ((DACYCLE == 1)); then
-          echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+      if [ "${OBSNAME[$iobs]}" != '' ]; then
+        if [ "${OBS_FORMAT[$iobs]}" = 'PAWR_TOSHIBA' ]; then
+          if [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.10000000.dat ] && \
+             [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.20000000.dat ] && \
+             [ -e ${OBS}/${OBSNAME[$iobs]}_${time}_pawr_qcf.dat ]; then
+            if ((DACYCLE == 1)); then
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.10000000.dat|obs.${OBSNAME[$iobs]}.10000000_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.20000000.dat|obs.${OBSNAME[$iobs]}.20000000_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}_pawr_qcf.dat|obs.${OBSNAME[$iobs]}_pawr_qcf_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+            else
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.10000000.dat|obs.${OBSNAME[$iobs]}_${time}.10000000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.20000000.dat|obs.${OBSNAME[$iobs]}_${time}.20000000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}_pawr_qcf.dat|obs.${OBSNAME[$iobs]}_${time}_pawr_qcf.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+            fi
+          fi
         else
-          echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time}.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+          if [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
+            if ((DACYCLE == 1)); then
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+            else
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time}.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+            fi
+          fi
         fi
       fi
     done

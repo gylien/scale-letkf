@@ -2,7 +2,8 @@ include ../configure
 
 PROGS   = obsope obsmake obssim #dec_prepbufr
 
-OBJS    = obsope_tools.o
+OBJS    = obs_tools.o obsope_tools.o \
+          radar_obs.o radar_tools.o read_toshiba.o read_toshiba_f.o
 
 COMMON_DIR = ../common
 
@@ -37,10 +38,10 @@ all:	$(PROGS)
 obsope:	obsope.o $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS_EXE) $(FMCMODEL) -o obsope obsope.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
-obsmake:	obsmake.o $(OBS) $(COMMON_DIR)
+obsmake:	obsmake.o $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS_EXE) $(FMCMODEL) -o obsmake obsmake.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
-obssim:	obssim.o $(OBS) $(COMMON_DIR)
+obssim:	obssim.o $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS_EXE) $(FMCMODEL) -o obssim obssim.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 dec_prepbufr:	dec_prepbufr.o $(COMMON_DIR)
@@ -56,13 +57,27 @@ obssim.o:	obssim.f90 $(OBJS) $(COMMON_DIR)
 dec_prepbufr.o:	dec_prepbufr.f90 $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 
-obsope_tools.o:	obsope_tools.f90 $(COMMON_DIR)
+obj:	$(OBJS)
+
+obs_tools.o:	obs_tools.f90 radar_obs.o $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
+obsope_tools.o:	obsope_tools.f90 obs_tools.o $(COMMON_DIR)
+	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
+
+radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o $(COMMON_DIR)
+	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
+radar_tools.o:	radar/radar_tools.f90
+	$(SFC) $(FOPTS) -c $<
+
+read_toshiba.o:	radar/read_toshiba.c radar/read_toshiba.h
+	$(CC) $(COPTS) -c $<
+read_toshiba_f.o:	radar/read_toshiba_f.f90 read_toshiba.o
+	$(FC) $(FOPTS) -c $<
 
 $(COMMON_DIR):	FORCE
 	$(MAKE) -C $@
 
 clean:
-	rm -f *.o *.mod *.lst $(PROGS) obsope
+	rm -f *.o *.mod *.lst $(PROGS)
 
 FORCE:

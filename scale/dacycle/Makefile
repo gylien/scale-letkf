@@ -27,7 +27,12 @@ LIBS    = $(SCALE_LIB) $(NETCDF_LIB) $(LAPACK_LIB)
 
 OBS_DIR = ../obs
 
-OBS_OBJS = $(OBS_DIR)/obsope_tools.o
+OBS_OBJS = $(OBS_DIR)/obs_tools.o \
+           $(OBS_DIR)/obsope_tools.o \
+           $(OBS_DIR)/radar_obs.o \
+           $(OBS_DIR)/radar_tools.o \
+           $(OBS_DIR)/read_toshiba.o \
+           $(OBS_DIR)/read_toshiba_f.o
 
 LETKF_DIR = ../letkf
 
@@ -55,7 +60,7 @@ $(COMMON_DIR):	FORCE
 	$(MAKE) -C $@
 
 $(OBS_DIR):	FORCE
-	$(MAKE) -C $@ obsope_tools.o
+	$(MAKE) -C $@ obj
 
 $(LETKF_DIR):	FORCE
 	$(MAKE) -C $@ letkf_obs.o letkf_tools.o
