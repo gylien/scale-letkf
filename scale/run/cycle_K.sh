@@ -118,7 +118,7 @@ ${SCRP_DIR}/src/|src/
 ${NODEFILE_DIR}/|node/
 EOF
 
-if [ -e  ${SCRP_DIR}/dtf.ini ] ; then
+if [ ! -e  ${SCRP_DIR}/dtf.ini ] ; then
   echo "dtf.ini is not specified!"
   exit
 fi

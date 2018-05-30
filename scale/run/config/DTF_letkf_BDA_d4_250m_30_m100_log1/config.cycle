@@ -7,7 +7,7 @@
 
 STIME='20130713060000'
 ETIME='20130713060000'
-ETIME='20130713060100'
+ETIME='20130713060030'
 ISTEP=
 FSTEP=
 CONF_MODE='static'
@@ -76,7 +76,7 @@ LOG_TYPE=2       # 1:   Only save the log file from the head process
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file
 
-SPRD_OUT=1       # 0: No
+#SPRD_OUT=1       # 0: No
 SPRD_OUT=0       # 0: No
                  # 1: Yes
 RTPS_INFL_OUT=0  # 0: No

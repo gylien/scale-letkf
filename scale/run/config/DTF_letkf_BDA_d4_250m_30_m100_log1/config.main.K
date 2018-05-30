@@ -5,46 +5,41 @@
 #
 #===============================================================================
 
-PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
+PRESET='K_micro'
+PRESET='K'
 
 #===============================================================================
+
+USERNAME=honda
+LIBDTF_PATH=/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/DTF/libdtf
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
-OUTDIR="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_bdyprep" # Directory for SCALE-LETKF output
+INDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/benchmark/d4_250m_initbdy_v180305"
+OUTDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/benchmark/d4_250m_initbdy_v180305"
 
-USERNAME=gylien
-
-### -- Honda setting
-PRESET='K_micro'
-#PRESET='K'
-#EXP="testcase_PAWR_1km_4p_pnetcdf_ioarb"
-DDIR="/volume63/data/hp150019/gylien/scale-letkf-test-suite-pnetcdf"
-INDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/testcase_PAWR_1km_4p_pnetcdf_ioarb"
-OUTDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/testcase_PAWR_1km_4p_pnetcdf_ioarb"
-INDIR=$OUTDIR
-LIBDTF_PATH=/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/DTF/libdtf
-USERNAME=honda
 ### --
 
 #===============================================================================
 # Location of model/data files
 
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
-DATADIR="$DDIR/database"                                             # Directory of the SCALE database
+DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"        # Directory of the SCALE database
 
-DATA_TOPO="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"              # Directory of the prepared topo files
-DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
-DATA_LANDUSE="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"           # Directory of the prepared landuse files
-DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
-#DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"    # Directory of the prepared SCALE boundary files
-DATA_BDY_SCALE_PREP="$INDIR"    # Directory of the prepared SCALE boundary files
-DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
-DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
+DATA_TOPO=
+DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_312/const/topo"
+DATA_LANDUSE=
+DATA_BDY_SCALE=
 
-OBS="$DDIR/obs/QCED_1KM_v4_v500M_attn0.01"                           # Observation data in LETKF observation format
+
+DATA_BDY_SCALE_PREP="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/benchmark/d4_250m_initbdy_v180305" # Directory of the prepared SCALE boundary files
+DATA_BDY_WRF=                                    # Directory of the boundary data in WRF format
+DATA_BDY_NICAM=                                  # Directory of the boundary data in NICAM format (not finished)
+
+
+OBS="/volume63/data/hp150019/gylien/obs/QCED_250M_v4_v250M_attn0.01" # directory of observation data in LETKF obs format
 OBSNCEP=
 
 #===============================================================================
@@ -112,18 +107,19 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-#MEMBER=10          # Ensemble size
-MEMBER=3          # Ensemble size
-#MEMBER=100          # Ensemble size
 
-#NNODES=48          # Number of nodes
-NNODES=20          # Number of nodes
-#NNODES=408          # Number of nodes
+#MEMBER=100         # Ensemble size
+MEMBER=3         # Ensemble size
+
+#NNODES=73440       # Number of nodes
+NNODES=3600       # Number of nodes
+
+
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
-SCALE_NP=4         # Number of processes to run SCALE
+SCALE_NP=720       # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
