@@ -31,12 +31,16 @@ RT_INCLUDE = -I$(DIR_RTTOV)/mod -I$(DIR_RTTOV)/include
 
 #SFC        = frtpx
 #FC         = mpifrtpx
+#CC         = mpifccpx
 
 FOPTS_SCALE = $(FFLAGS)
+COPTS_SCALE = $(CFLAGS)
 
 FOPTS      = $(FOPTS_SCALE) \
              -Knoparallel,noeval,nopreex \
              -Kopenmp
+COPTS      = $(COPTS_SCALE) \
+             -Knoparallel,noeval,nopreex
 
 FOPTS_EXE  = $(FOPTS_SCALE) \
              -Kopenmp

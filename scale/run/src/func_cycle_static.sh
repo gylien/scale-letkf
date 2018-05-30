@@ -921,9 +921,15 @@ while ((time <= ETIME)); do
   #-----------------------------------------------------------------------------
 
   OBS_IN_NAME_LIST=
+  OBS_IN_FORMAT_LIST=
   for iobs in $(seq $OBSNUM); do
     if [ "${OBSNAME[$iobs]}" != '' ]; then
-      OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}.dat', "
+      if [ "${OBS_FORMAT[$iobs]}" = 'PAWR_TOSHIBA' ]; then
+        OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}<type>.dat', "
+      else
+        OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}.dat', "
+      fi
+      OBS_IN_FORMAT_LIST="${OBS_IN_FORMAT_LIST}'${OBS_FORMAT[$iobs]}', "
     fi
   done
 
@@ -972,6 +978,7 @@ while ((time <= ETIME)); do
     cat $conf_file_src | \
         sed -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
             -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
+            -e "/!--OBS_IN_FORMAT--/a OBS_IN_FORMAT = $OBS_IN_FORMAT_LIST" \
             -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
             -e "/!--OBSDA_OUT--/a OBSDA_OUT = $OBSDA_OUT" \
             -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"<member>/obsgues.d${dfmt}_${atime}\"," \
