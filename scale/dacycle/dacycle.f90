@@ -83,6 +83,7 @@ program dacycle
 
   character(len=7) :: stdoutf='-000000'
   character(len=6400) :: icmd
+  integer :: iof
 
   logical :: anal_mem_out_now
   logical :: anal_mean_out_now
@@ -385,6 +386,10 @@ program dacycle
         end if
 
         call mpi_timer('WRITE_ANAL', 1, barrier=MPI_COMM_a)
+
+        do iof = 1, OBS_IN_NUM
+          call obs_info_deallocate(obs(iof))
+        end do
 
         !-----------------------------------------------------------------------
 
