@@ -13,11 +13,10 @@ if (($# < 12)); then
 
 [pre_letkf_node.sh]
 
-Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO OBSOUT_OPT [ADAPTINFL SPRD_OUT RTPS_INFL_OUT NOBS_OUT ETIME]
+Usage: $0 MYRANK STIME ATIME TMPDIR OBSDIR MEM_NODES MEM_NP SLOT_START SLOT_END SLOT_BASE TOPO OBSOUT_OPT [ADAPTINFL SPRD_OUT RTPS_INFL_OUT NOBS_OUT]
 
   MYRANK      My rank number (not used)
   STIME
-  ETIME
   ATIME       Analysis time (format: YYYYMMDDHHMMSS)
   TMPDIR      Temporary directory to run the program
   OBSDIR      Directory of SCALE data files
@@ -39,7 +38,6 @@ fi
 
 MYRANK="$1"; shift
 STIME="$1"; shift
-ETIME="$1"; shift
 ATIME="$1"; shift
 TMPDIR="$1"; shift
 OBSDIR="$1"; shift
@@ -53,24 +51,9 @@ OBSOUT_OPT="$1"; shift
 ADAPTINFL="${1:-0}"; shift
 SPRD_OUT="${1:-1}"; shift
 RTPS_INFL_OUT="${1:-0}"; shift
-NOBS_OUT="${1:-0}"; shift
+NOBS_OUT="${1:-0}"
 
 #===============================================================================
-
-S_YYYY=${STIME:0:4}
-S_MM=${STIME:4:2}
-S_DD=${STIME:6:2}
-S_HH=${STIME:8:2}
-S_II=${STIME:10:2}
-S_SS=${STIME:12:2}
-
-E_YYYY=${ETIME:0:4}
-E_MM=${ETIME:4:2}
-E_DD=${ETIME:6:2}
-E_HH=${ETIME:8:2}
-E_II=${ETIME:10:2}
-E_SS=${ETIME:12:2}
-
 
 FILE_AGGREGATE=".false"
 if ((PNETCDF == 1)); then
@@ -206,9 +189,6 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = ${OBSDEP_OUT_TF}," \
         -e "/!--OBSDEP_OUT_BASENAME--/a OBSDEP_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obs/obsdep\"," \
         -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
-        -e "/!--STIME--/a STIME = ${S_YYYY},${S_MM},${S_DD},${S_HH},${S_II},${S_SS}, " \
-        -e "/!--ETIME--/a ETIME = ${E_YYYY},${E_MM},${E_DD},${E_HH},${E_II},${E_SS}, " \
-        -e "/!--LCYCLE--/a LCYCLE = ${LCYCLE}.D0, " \
     >> $TMPDIR/letkf.conf
 
 # Most of these parameters are not important for letkf

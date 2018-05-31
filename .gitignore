@@ -22,6 +22,7 @@
 /scale/run/fcst_job.sh
 /scale/run/machinefile
 /scale/run/mpd.hosts
+/scale/run/dtf.ini
 /scale/letkf/letkf
 /scale/obs/obsmake
 /scale/obs/obsope

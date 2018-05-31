@@ -337,8 +337,7 @@ while ((time <= ETIME)); do
   for m in $mlist; do
     for d in $(seq $DOMNUM); do
       for q in $(seq ${mem_np_[$d]}); do
-        #path="${name_m[$m]}/hist.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
-        path="${name_m[$m]}/hist.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $atime)$(scale_filename_sfx $((q-1)))"
+        path="${name_m[$m]}/hist.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
         pathout="${OUTDIR[$d]}/${time}/hist/${name_m[$m]}${CONNECTOR}history$(scale_filename_sfx $((q-1)))"
 #        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
         echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
@@ -373,9 +372,6 @@ while ((time <= ETIME)); do
 
   # log
   #-------------------
-
-  if (( time == STIME )) ; then
-
   if [ "$MPI_TYPE" = 'K' ]; then
     log_nfmt='.%d'
   else
@@ -460,8 +456,6 @@ while ((time <= ETIME)); do
       done
     fi
   fi
-
-  fi # (( time == STIME ))
 
   #-------------------
   time=$(datetime $time $LCYCLE s)
@@ -808,19 +802,6 @@ while ((time <= ETIME)); do
 
   fi # [ BDY_FORMAT != 0 ]
 
-
-  time=$(datetime $time $LCYCLE s)
-  atime=$(datetime $time $LCYCLE s)
-done
-
-# compute total scale fcst length
-etime=$(datetime $atime -$LCYCLE s)
-EDATE=$(datetime_fmt $etime)
-SDATE=$(datetime_fmt $STIME)
-ESEC=$(date -d "$EDATE" "+%s")
-SSEC=$(date -d "$SDATE" "+%s")
-TOTAL_FCSTLEN=$((ESEC - SSEC))
-
   #-----------------------------------------------------------------------------
   # scale
   #-----------------------------------------------------------------------------
@@ -919,22 +900,18 @@ TOTAL_FCSTLEN=$((ESEC - SSEC))
       fi
     fi
 
-    if ((DACYCLE == 1)); then
-      if ((DIRECT_TRANSFER == 1)); then
-        cat >> $CONFIG_DIR/${conf_file} << EOF
-&PARAM_DACYCLE
- DIRECT_TRANSFER = .true.,
-/
-
-EOF
-      else
-        cat >> $CONFIG_DIR/${conf_file} << EOF
-&PARAM_DACYCLE
- DIRECT_TRANSFER = .false.,
-/
-
-EOF
+    if ((DACYCLE == 1 || DTF_MODE >= 1)); then
+      echo "&PARAM_DACYCLE" >> $CONFIG_DIR/${conf_file}
+      if ((DTF_MODE >= 1)); then
+        echo " DTF_MODE = ${DTF_MODE}," >> $CONFIG_DIR/${conf_file}
       fi
+      if ((DIRECT_TRANSFER == 1)); then
+        echo " DIRECT_TRANSFER = .true.," >> $CONFIG_DIR/${conf_file}
+      else
+        echo " DIRECT_TRANSFER = .false.," >> $CONFIG_DIR/${conf_file}
+      fi
+      echo "/" >> $CONFIG_DIR/${conf_file}
+      echo >> $CONFIG_DIR/${conf_file}
     fi
 
     conf="$(cat $conf_file_src | \
@@ -1180,9 +1157,9 @@ EOF
   ######
 
   #-------------------
-#  time=$(datetime $time $LCYCLE s)
-#  atime=$(datetime $time $LCYCLE s)
-#done
+  time=$(datetime $time $LCYCLE s)
+  atime=$(datetime $time $LCYCLE s)
+done
 
 echo
 

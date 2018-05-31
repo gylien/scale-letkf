@@ -111,7 +111,6 @@ fi
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 ${TMPS}/config.main|config.main
 ${SCRP_DIR}/config.rc|config.rc
-${LIBDTF_PATH}/libdtf.so|libdtf.so
 ${SCRP_DIR}/config.${job}|config.${job}
 ${SCRP_DIR}/${job}.sh|${job}.sh
 ${SCRP_DIR}/src/|src/
