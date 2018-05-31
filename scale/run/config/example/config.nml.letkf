@@ -3,16 +3,10 @@
  VERIFY_COORD = .false.,
 /
 
-&PARAM_ENSEMBLE
-!--MEMBER--
-!--DET_RUN--
- DET_RUN_CYCLED = .true.,
-/
-
 &PARAM_OBSOPE
 !--OBS_IN_NUM--
 !--OBS_IN_NAME--
- OBS_IN_FORMAT = 'PREPBUFR', 'RADAR',
+!--OBS_IN_FORMAT--
 !--OBSDA_RUN--
 !--HISTORY_IN_BASENAME--
 !--SLOT_START--
@@ -59,13 +53,6 @@
 !--NOBS_OUT_BASENAME--
 /
 
-&PARAM_LETKF_PRC
-!--NNODES--
-!--PPN--
-!--MEM_NODES--
-!--MEM_NP--
-/
-
 &PARAM_LETKF_OBS
  HORI_LOCAL = 400.0D3,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
@@ -95,6 +82,9 @@
  MIN_RADAR_REF_DBZ = 10.0D0,
  LOW_REF_SHIFT = -5.0D0,
  RADAR_ZMAX = 11.0D3,
+ RADAR_SO_SIZE_HORI = 1000.0D0,
+ RADAR_SO_SIZE_VERT = 500.0D0,
+ RADAR_MAX_ABS_VR = 50.0D0,
 /
 
 &PARAM_OBS_ERROR

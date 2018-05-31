@@ -10,6 +10,7 @@ MODULE common_nml
 !===============================================================================
   use common, only: r_size
   use scale_stdio, only: IO_FID_CONF
+  use scale_process, only: PRC_DOMAIN_nlim
 
   implicit none
   public
@@ -22,31 +23,53 @@ MODULE common_nml
   integer, parameter :: nch = 10     ! H08 Num of Himawari-8 (IR) channels
 
   integer, parameter :: nobsfilemax = 10
-  integer, parameter :: obsformatlenmax = 10
+  integer, parameter :: obsformatlenmax = 12
   integer, parameter :: filelenmax = 256
+  integer, parameter :: membermax = 10000
 
   integer, parameter :: memflen = 4                           ! Length of formatted member strings
-  character(len=memflen), parameter :: memf_notation = '@@@@' ! Notation of the member string
+  character(len=8), parameter :: memf_notation = '<member>'   ! Notation of the member string
+  character(len=memflen), parameter :: memf_notation_2 = '@@@@' ! Another notation of the member string (for backward-compatibility)
   character(len=memflen), parameter :: memf_mean = 'mean'
   character(len=memflen), parameter :: memf_mdet = 'mdet'
   character(len=memflen), parameter :: memf_sprd = 'sprd'
+
+  integer, parameter :: domflen = 2                           ! Length of formatted domain strings
+  character(len=8), parameter :: domf_notation = '<domain>'   ! Notation of the domain string
 
   integer :: sdate(6) ! start date of a DA cycle    ! (yyyy,mm,dd,hh,nn,ss)
   integer :: adate(6) ! analysis date of a DA cycle ! (yyyy,mm,dd,hh,nn,ss)
 
   !--- PARAM_ENSEMBLE
-  integer :: MEMBER = 3      ! ensemble size
-  integer :: MEMBER_RUN = 1  !
-  integer :: MEMBER_ITER = 0 !
-  character(filelenmax) :: CONF_FILES = 'run.@@@@.conf'
-  logical :: CONF_FILES_SEQNUM = .false.
+  integer :: MEMBER = 3                    ! Total ensemble size
+  logical :: ENS_WITH_MEAN = .true.        ! Run additional member of 'mean'?
+  logical :: ENS_WITH_MDET = .false.       ! Run additional member of 'mdet'?
+  integer :: MEMBER_RUN = -1               ! Actual number of ensemble members used
+  integer :: MEMBER_SEQ(membermax) = -1    ! Sequence of ensemble members used
+  integer :: MEMBER_ITER = 0               ! Current iteration number (one iteration runs only part of ensemble members
+                                           ! that can be done in parallel when the number of nodes is not enough)
+  logical :: MDET_CYCLED = .true.          ! In LETKF, cycle the 'mdet' member?
+                                           !  .true. : use 'mdet' as first guess for 'mdet' analysis
+                                           !  .false.: use 'mean' as first guess for 'mdet' analysis
 
-  logical :: DET_RUN = .false.
-  logical :: DET_RUN_CYCLED = .true.
+  character(filelenmax) :: CONF_FILES = '' ! Namelist file for each member
+                                           !  (empty): use the current namelist file (with filename replacement) 
+
+  logical :: DET_RUN = .false.             ! Deprecated (= ENS_WITH_MDET)
+  logical :: DET_RUN_CYCLED = .true.       ! Deprecated (= MDET_CYCLED)
 
   !--- PARAM_MODEL
   character(len=10) :: MODEL = 'scale-rm'
   logical :: VERIFY_COORD = .false.
+
+  !--- PARAM_PROCESS
+  integer               :: PPN = 1                           ! Number of processes per node
+  integer               :: MEM_NODES = 0                     ! Number of nodes used for one member (0: automatically determined)
+  integer               :: NUM_DOMAIN = 1                    ! number of domains
+  integer               :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0  ! number of total process in each domain
+!  logical               :: ABORT_ALL_JOBS = .false.          ! abort all jobs or not?
+!  logical               :: LOG_SPLIT = .false.               ! log-output for mpi splitting?
+  logical               :: COLOR_REORDER = .false.           ! coloring reorder for mpi splitting?
 
 !  !--- PARAM_IO
 !  integer :: IO_AGGREGATE = .false.
@@ -65,11 +88,11 @@ MODULE common_nml
   character(obsformatlenmax) :: OBS_IN_FORMAT(nobsfilemax) = 'PREPBUFR'
   logical               :: OBSDA_RUN(nobsfilemax) = .true.
   logical               :: OBSDA_OUT = .false.
-  character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
+  character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.<member>'
   character(filelenmax) :: OBSDA_MEAN_OUT_BASENAME = ''
   character(filelenmax) :: OBSDA_MDET_OUT_BASENAME = ''
 
-  character(filelenmax) :: HISTORY_IN_BASENAME = 'hist.@@@@'
+  character(filelenmax) :: HISTORY_IN_BASENAME = 'hist.<member>'
   character(filelenmax) :: HISTORY_MEAN_IN_BASENAME = ''
   character(filelenmax) :: HISTORY_MDET_IN_BASENAME = ''
 
@@ -83,15 +106,15 @@ MODULE common_nml
   integer               :: ETIME(6) = (/2018,2,2,14,0,0/) ! DA cycle end time specified by config.cycle
   real(r_size)          :: LCYCLE = 30.0d0 ! DA window length (sec)
   logical               :: OBSDA_IN = .false.
-  character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@'
+  character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.<member>'
   character(filelenmax) :: OBSDA_MEAN_IN_BASENAME = ''
   character(filelenmax) :: OBSDA_MDET_IN_BASENAME = ''
-  character(filelenmax) :: GUES_IN_BASENAME = 'gues.@@@@'
+  character(filelenmax) :: GUES_IN_BASENAME = 'gues.<member>'
   character(filelenmax) :: GUES_MEAN_INOUT_BASENAME = ''
   character(filelenmax) :: GUES_MDET_IN_BASENAME = ''
   logical               :: GUES_SPRD_OUT = .true.
   character(filelenmax) :: GUES_SPRD_OUT_BASENAME = ''
-  character(filelenmax) :: ANAL_OUT_BASENAME = 'anal.@@@@'
+  character(filelenmax) :: ANAL_OUT_BASENAME = 'anal.<member>'
   character(filelenmax) :: ANAL_MEAN_OUT_BASENAME = ''
   character(filelenmax) :: ANAL_MDET_OUT_BASENAME = ''
   logical               :: ANAL_SPRD_OUT = .true.
@@ -106,7 +129,7 @@ MODULE common_nml
   character(filelenmax) :: INFL_MUL_OUT_BASENAME = 'infl'
 
   real(r_size) :: INFL_ADD = 0.0d0           ! additive inflation
-  character(filelenmax) :: INFL_ADD_IN_BASENAME = 'addi.@@@@'
+  character(filelenmax) :: INFL_ADD_IN_BASENAME = 'addi.<member>'
   logical :: INFL_ADD_SHUFFLE = .false.      ! shuffle the additive inflation members?
   logical :: INFL_ADD_Q_RATIO = .false.
   logical :: INFL_ADD_REF_ONLY = .false.
@@ -147,14 +170,6 @@ MODULE common_nml
   real(r_size) :: MIN_INFL_MUL = 0.0d0
   logical :: ADAPTIVE_INFL_INIT = .false.
   real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0
-
-  !--- PARAM_LETKF_PRC
-  integer :: NNODES = 1
-  integer :: PPN = 1
-  integer :: MEM_NODES = 1
-  integer :: MEM_NP = 1
-!  integer :: PRC_NUM_X_LETKF = 1
-!  integer :: PRC_NUM_Y_LETKF = 1
 
   !--- PARAM_LETKF_OBS
   logical :: USE_OBS(nobtype) = .true.
@@ -239,10 +254,10 @@ MODULE common_nml
 
   LOGICAL               :: OBSDEP_OUT = .true.
   character(filelenmax) :: OBSDEP_OUT_BASENAME = 'obsdep'
-  LOGICAL               :: OBSGUES_OUT = .false.                  !XXX not implemented yet...
-  character(filelenmax) :: OBSGUES_OUT_BASENAME = 'obsgues.@@@@'  !XXX not implemented yet...
-  LOGICAL               :: OBSANAL_OUT = .false.                  !XXX not implemented yet...
-  character(filelenmax) :: OBSANAL_OUT_BASENAME = 'obsanal.@@@@'  !XXX not implemented yet...
+  LOGICAL               :: OBSGUES_OUT = .false.                      !XXX not implemented yet...
+  character(filelenmax) :: OBSGUES_OUT_BASENAME = 'obsgues.<member>'  !XXX not implemented yet...
+  LOGICAL               :: OBSANAL_OUT = .false.                      !XXX not implemented yet...
+  character(filelenmax) :: OBSANAL_OUT_BASENAME = 'obsanal.<member>'  !XXX not implemented yet...
 
   !--- PARAM_LETKF_RADAR
   logical :: USE_RADAR_REF       = .true.
@@ -273,6 +288,10 @@ MODULE common_nml
 
   ! PARAMETERS FOR RADAR DATA ASSIMILATION
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
+
+  real(r_size) :: RADAR_SO_SIZE_HORI = 1000.0d0
+  real(r_size) :: RADAR_SO_SIZE_VERT = 1000.0d0
+  real(r_size) :: RADAR_MAX_ABS_VR = 100.0d0
 
   !---PARAM_LETKF_H08
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
@@ -325,6 +344,16 @@ MODULE common_nml
   real(r_size)          :: OBSSIM_RADAR_LAT = 0.0d0
   real(r_size)          :: OBSSIM_RADAR_Z = 0.0d0
 
+  interface filename_replace_mem
+    module procedure filename_replace_mem_int
+    module procedure filename_replace_mem_str
+  end interface filename_replace_mem
+
+  interface filename_replace_dom
+    module procedure filename_replace_dom_int
+    module procedure filename_replace_dom_str
+  end interface filename_replace_dom
+
 contains
 !-------------------------------------------------------------------------------
 ! PARAM_ENSEMBLE
@@ -335,12 +364,15 @@ subroutine read_nml_ensemble
   
   namelist /PARAM_ENSEMBLE/ &
     MEMBER, &
+    ENS_WITH_MEAN, &
+    ENS_WITH_MDET, &
     MEMBER_RUN, &
+    MEMBER_SEQ, &
     MEMBER_ITER, &
+    MDET_CYCLED, &
     CONF_FILES, &
-    CONF_FILES_SEQNUM, &
-    DET_RUN, &
-    DET_RUN_CYCLED
+    DET_RUN, &           !*** for backward compatibility ***
+    DET_RUN_CYCLED       !*** for backward compatibility ***
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)
@@ -351,6 +383,28 @@ subroutine read_nml_ensemble
     write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_ENSEMBLE. Check!'
     stop
   endif
+
+  if (ENS_WITH_MDET .and. (.not. ENS_WITH_MEAN)) then
+    write (6, '(A)') "[Error] When 'ENS_WITH_MDET' = .true., 'ENS_WITH_MEAN' also needs to be .true."
+    stop
+  end if
+
+  if (DET_RUN .and. (.not. ENS_WITH_MDET)) then !*** for backward compatibility ***
+    ENS_WITH_MDET = DET_RUN
+  end if
+  if ((.not. DET_RUN_CYCLED) .and. MDET_CYCLED) then !*** for backward compatibility ***
+    MDET_CYCLED = DET_RUN_CYCLED
+  end if
+
+  if (MEMBER_RUN == -1) then
+    MEMBER_RUN = MEMBER
+    if (ENS_WITH_MEAN) then
+      MEMBER_RUN = MEMBER_RUN + 1
+    end if
+    if (ENS_WITH_MDET) then
+      MEMBER_RUN = MEMBER_RUN + 1
+    end if
+  end if
 
   if (LOG_LEVEL >= 2) then
     write(6, nml=PARAM_ENSEMBLE)
@@ -386,6 +440,39 @@ subroutine read_nml_model
 
   return
 end subroutine read_nml_model
+
+!-------------------------------------------------------------------------------
+! PARAM_PROCESS
+!-------------------------------------------------------------------------------
+subroutine read_nml_process
+  implicit none
+  integer :: ierr
+
+  namelist / PARAM_PROCESS / &
+    PPN,                &
+    MEM_NODES,          &
+    NUM_DOMAIN,         &
+    PRC_DOMAINS,        &
+!    ABORT_ALL_JOBS,     &
+!    LOG_SPLIT,          &
+    COLOR_REORDER
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_PROCESS,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) '[Warning] /PARAM_PROCESS/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_PROCESS. Check!'
+    stop
+  endif
+
+  if (LOG_LEVEL >= 2) then
+    write(6, nml=PARAM_PROCESS)
+  end if
+
+  return
+end subroutine read_nml_process
 
 !-------------------------------------------------------------------------------
 ! PARAM_IO
@@ -477,17 +564,21 @@ subroutine read_nml_obsope
   endif
 
   if (trim(OBSDA_MEAN_OUT_BASENAME) == '') then
-    call file_member_replace(0, OBSDA_OUT_BASENAME, OBSDA_MEAN_OUT_BASENAME, memf_mean)
+    OBSDA_MEAN_OUT_BASENAME = OBSDA_OUT_BASENAME
+    call filename_replace_mem(OBSDA_MEAN_OUT_BASENAME, memf_mean)
   end if
   if (trim(OBSDA_MDET_OUT_BASENAME) == '') then
-    call file_member_replace(0, OBSDA_OUT_BASENAME, OBSDA_MDET_OUT_BASENAME, memf_mdet)
+    OBSDA_MDET_OUT_BASENAME = OBSDA_OUT_BASENAME
+    call filename_replace_mem(OBSDA_MDET_OUT_BASENAME, memf_mdet)
   end if
 
   if (trim(HISTORY_MEAN_IN_BASENAME) == '') then
-    call file_member_replace(0, HISTORY_IN_BASENAME, HISTORY_MEAN_IN_BASENAME, memf_mean)
+    HISTORY_MEAN_IN_BASENAME = HISTORY_IN_BASENAME
+    call filename_replace_mem(HISTORY_MEAN_IN_BASENAME, memf_mean)
   end if
   if (trim(HISTORY_MDET_IN_BASENAME) == '') then
-    call file_member_replace(0, HISTORY_IN_BASENAME, HISTORY_MDET_IN_BASENAME, memf_mdet)
+    HISTORY_MDET_IN_BASENAME = HISTORY_IN_BASENAME
+    call filename_replace_mem(HISTORY_MDET_IN_BASENAME, memf_mdet)
   end if
 
   if (LOG_LEVEL >= 2) then
@@ -598,29 +689,37 @@ subroutine read_nml_letkf
   end if
 
   if (trim(OBSDA_MEAN_IN_BASENAME) == '') then
-    call file_member_replace(0, OBSDA_IN_BASENAME, OBSDA_MEAN_IN_BASENAME, memf_mean)
+    OBSDA_MEAN_IN_BASENAME = OBSDA_IN_BASENAME
+    call filename_replace_mem(OBSDA_MEAN_IN_BASENAME, memf_mean)
   end if
   if (trim(OBSDA_MDET_IN_BASENAME) == '') then
-    call file_member_replace(0, OBSDA_IN_BASENAME, OBSDA_MDET_IN_BASENAME, memf_mdet)
+    OBSDA_MDET_IN_BASENAME = OBSDA_IN_BASENAME
+    call filename_replace_mem(OBSDA_MDET_IN_BASENAME, memf_mdet)
   end if
 
   if (trim(GUES_MEAN_INOUT_BASENAME) == '') then
-    call file_member_replace(0, GUES_IN_BASENAME, GUES_MEAN_INOUT_BASENAME, memf_mean)
+    GUES_MEAN_INOUT_BASENAME = GUES_IN_BASENAME
+    call filename_replace_mem(GUES_MEAN_INOUT_BASENAME, memf_mean)
   end if
   if (trim(GUES_MDET_IN_BASENAME) == '') then
-    call file_member_replace(0, GUES_IN_BASENAME, GUES_MDET_IN_BASENAME, memf_mdet)
+    GUES_MDET_IN_BASENAME = GUES_IN_BASENAME
+    call filename_replace_mem(GUES_MDET_IN_BASENAME, memf_mdet)
   end if
   if (trim(GUES_SPRD_OUT_BASENAME) == '') then
-    call file_member_replace(0, GUES_IN_BASENAME, GUES_SPRD_OUT_BASENAME, memf_sprd)
+    GUES_SPRD_OUT_BASENAME = GUES_IN_BASENAME
+    call filename_replace_mem(GUES_SPRD_OUT_BASENAME, memf_sprd)
   end if
   if (trim(ANAL_MEAN_OUT_BASENAME) == '') then
-    call file_member_replace(0, ANAL_OUT_BASENAME, ANAL_MEAN_OUT_BASENAME, memf_mean)
+    ANAL_MEAN_OUT_BASENAME = ANAL_OUT_BASENAME
+    call filename_replace_mem(ANAL_MEAN_OUT_BASENAME, memf_mean)
   end if
   if (trim(ANAL_MDET_OUT_BASENAME) == '') then
-    call file_member_replace(0, ANAL_OUT_BASENAME, ANAL_MDET_OUT_BASENAME, memf_mdet)
+    ANAL_MDET_OUT_BASENAME = ANAL_OUT_BASENAME
+    call filename_replace_mem(ANAL_MDET_OUT_BASENAME, memf_mdet)
   end if
   if (trim(ANAL_SPRD_OUT_BASENAME) == '') then
-    call file_member_replace(0, ANAL_OUT_BASENAME, ANAL_SPRD_OUT_BASENAME, memf_sprd)
+    ANAL_SPRD_OUT_BASENAME = ANAL_OUT_BASENAME
+    call filename_replace_mem(ANAL_SPRD_OUT_BASENAME, memf_sprd)
   end if
 
   if (trim(INFL_MUL_OUT_BASENAME) == '') then
@@ -656,38 +755,6 @@ subroutine read_nml_letkf
 
   return
 end subroutine read_nml_letkf
-
-!-------------------------------------------------------------------------------
-! PARAM_LETKF_PRC
-!-------------------------------------------------------------------------------
-subroutine read_nml_letkf_prc
-  implicit none
-  integer :: ierr
-  
-  namelist /PARAM_LETKF_PRC/ &
-    NNODES, &
-    PPN, &
-    MEM_NODES, &
-    MEM_NP
-!    PRC_NUM_X_LETKF, &
-!    PRC_NUM_Y_LETKF
-
-  rewind(IO_FID_CONF)
-  read(IO_FID_CONF,nml=PARAM_LETKF_PRC,iostat=ierr)
-  if (ierr < 0) then !--- missing
-    write(6,*) '[Warning] /PARAM_LETKF_PRC/ is not found in namelist.'
-!    stop
-  elseif (ierr > 0) then !--- fatal error
-    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_LETKF_PRC. Check!'
-    stop
-  endif
-
-  if (LOG_LEVEL >= 2) then
-    write(6, nml=PARAM_LETKF_PRC)
-  end if
-
-  return
-end subroutine read_nml_letkf_prc
 
 !-------------------------------------------------------------------------------
 ! PARAM_LETKF_OBS
@@ -862,7 +929,10 @@ subroutine read_nml_letkf_radar
     INTERPOLATION_TECHNIQUE, &
     METHOD_REF_CALC, &
     USE_TERMINAL_VELOCITY, &
-    NRADARTYPE
+    NRADARTYPE, &
+    RADAR_SO_SIZE_HORI, &
+    RADAR_SO_SIZE_VERT, &
+    RADAR_MAX_ABS_VR
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_RADAR,iostat=ierr)
@@ -1007,45 +1077,143 @@ subroutine read_nml_obssim
 end subroutine read_nml_obssim
 
 !-------------------------------------------------------------------------------
-! Replace the member notation by the formatted member string
-! * will be wrong if memflen /= 4
+! Replace the member notation in 'filename' with 'mem' (as an integer)
 !-------------------------------------------------------------------------------
 ! [INPUT]
-!   mem          : member number
-!   filename     : input filename string
-!   str          : (optional) use this formatted member string if mem <= 0
+!   filename : input filename string
+!   mem      : member integer
 ! [OUTPUT]
-!   filename_out : output filename string with the member notation replaced
+!   filename : output filename string with the member notation replaced with 'mem'
 !-------------------------------------------------------------------------------
-subroutine file_member_replace(mem, filename, filename_out, memfstr)
+subroutine filename_replace_mem_int(filename, mem)
   implicit none
+  character(len=*), intent(inout) :: filename
   integer, intent(in) :: mem
-  character(len=*), intent(in) :: filename
-  character(len=*), intent(out) :: filename_out
-  character(len=memflen), intent(in), optional :: memfstr
-  integer :: s, is
+  character(len=memflen) :: mem_str
+  character(len=2) :: fmttmp
 
-  s = 0
-  filename_out = filename
-  do is = 1, len(filename)-memflen+1
-    if (filename(is:is+memflen-1) == memf_notation) then
-      if (mem >= 1) then
-        write (filename_out(is:is+memflen-1), '(I4.4)') mem
-      else if (present(memfstr)) then
-        write (filename_out(is:is+memflen-1), '(A4)') memfstr
-      end if
-      s = is
-      exit
+  write (fmttmp, '(I2)') memflen
+  write (mem_str, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') mem
+  call filename_replace_mem_str(filename, mem_str)
+
+  return
+end subroutine filename_replace_mem_int
+
+!-------------------------------------------------------------------------------
+! Replace the member notation in 'filename' with 'mem' (as a string)
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   filename : input filename string
+!   mem      : member string
+! [OUTPUT]
+!   filename : output filename string with the member notation replaced with 'mem'
+!-------------------------------------------------------------------------------
+subroutine filename_replace_mem_str(filename, mem)
+  implicit none
+  character(len=*), intent(inout) :: filename
+  character(len=memflen), intent(in) :: mem
+  integer :: pos
+
+  call str_replace(filename, memf_notation, mem, pos)
+  if (pos == 0) then
+    call str_replace(filename, memf_notation_2, mem, pos)
+    if (pos == 0) then
+      write (6, '(7A)') "[Warning] Keyword '", memf_notation, "' or '", memf_notation_2, "' is not found in '", trim(filename), "'."
     end if
-  end do
-
-  if (s == 0) then
-    write (6, '(3A)') "[Warning] Keyword '@@@@' not found in '", filename, "'"
-    stop 99
   end if
 
   return
-end subroutine file_member_replace
+end subroutine filename_replace_mem_str
+
+!-------------------------------------------------------------------------------
+! Replace the domain notation in 'filename' with 'dom' (as an integer)
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   filename : input filename string
+!   dom      : domain integer
+! [OUTPUT]
+!   filename : output filename string with the domain notation replaced with 'dom'
+!-------------------------------------------------------------------------------
+subroutine filename_replace_dom_int(filename, dom)
+  implicit none
+  character(len=*), intent(inout) :: filename
+  integer, intent(in) :: dom
+  character(len=domflen) :: dom_str
+  character(len=2) :: fmttmp
+
+  write (fmttmp, '(I2)') domflen
+  write (dom_str, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') dom
+  call filename_replace_dom_str(filename, dom_str)
+
+  return
+end subroutine filename_replace_dom_int
+
+!-------------------------------------------------------------------------------
+! Replace the domain notation in 'filename' with 'dom' (as a string)
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   filename : input filename string
+!   dom      : domain string
+! [OUTPUT]
+!   filename : output filename string with the domain notation replaced with 'dom'
+!-------------------------------------------------------------------------------
+subroutine filename_replace_dom_str(filename, dom)
+  implicit none
+  character(len=*), intent(inout) :: filename
+  character(len=domflen), intent(in) :: dom
+  integer :: pos
+
+  call str_replace(filename, domf_notation, dom, pos)
+  if (pos == 0) then
+    write (6, '(5A)') "[Warning] Keyword '", domf_notation, "' is not found in '", trim(filename), "'."
+  end if
+
+  return
+end subroutine filename_replace_dom_str
+
+!-------------------------------------------------------------------------------
+! Replace the first occurrence of 'oldsub' in 'str' with 'newsub';
+! note that 'str' will be left-adjusted no matter whether 'oldsub' is found
+!-------------------------------------------------------------------------------
+! [INPUT]
+!   str    : input string
+!   oldsub : old substring to be replaced
+!   newsub : new substring
+! [OUTPUT]
+!   str    : output string with substring replaced
+!   pos    : the start position of the replaced substring; if not found, return 0
+!-------------------------------------------------------------------------------
+subroutine str_replace(str, oldsub, newsub, pos)
+  implicit none
+  character(len=*), intent(inout) :: str
+  character(len=*), intent(in) :: oldsub
+  character(len=*), intent(in) :: newsub
+  integer, intent(out) :: pos
+  integer :: str_lent, oldsub_len, newsub_len, shift
+
+  str = adjustl(str)
+  str_lent = len_trim(str)
+  oldsub_len = len(oldsub)
+  newsub_len = len(newsub)
+
+  pos = index(str, oldsub)
+  if (pos >= 1) then
+    shift = newsub_len - oldsub_len
+    if (shift > 0) then
+      if (str_lent+shift > len(str)) then
+        write (6, '(A)') "[Error] The length of 'str' string is not enough for substitution."
+        stop 99
+      end if
+      str(pos+oldsub_len:str_lent+shift) = adjustr(str(pos+oldsub_len:str_lent+shift))
+    else if (shift < 0) then
+      str(pos+newsub_len:pos+oldsub_len-1) = repeat(' ', 0-shift)
+      str(pos+newsub_len:str_lent) = adjustl(str(pos+newsub_len:str_lent))
+    end if
+    str(pos:pos+newsub_len-1) = newsub
+  end if
+
+  return
+end subroutine str_replace
 
 !===============================================================================
 end module common_nml

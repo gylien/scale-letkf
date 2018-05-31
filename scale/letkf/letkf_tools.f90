@@ -297,7 +297,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   allocate (rdiag(nobstotal))
   allocate (rloc (nobstotal))
   allocate (dep  (nobstotal))
-  if (DET_RUN) then
+  if (ENS_WITH_MDET) then
     allocate (depd (nobstotal))
   end if
   allocate (trans  (MEMBER,MEMBER,var_local_n2nc_max))
@@ -339,7 +339,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           do m = 1, MEMBER
             anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n) + gues3d(ij,ilev,m,n)
           end do
-          if (DET_RUN) then
+          if (ENS_WITH_MDET) then
             anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n)
           end if
         end do
@@ -348,7 +348,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             do m = 1, MEMBER
               anal2d(ij,m,n) = gues2d(ij,mmean,n) + gues2d(ij,m,n)
             end do
-            if (DET_RUN) then
+            if (ENS_WITH_MDET) then
               anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n)
             end if
           end do
@@ -376,7 +376,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           do m = 1, MEMBER                                                             !GYL
             anal3d(ij,ilev,m,n) = gues3d(ij,ilev,mmean,n) + gues3d(ij,ilev,m,n)        !GYL
           end do                                                                       !GYL
-          if (DET_RUN) then                                                            !GYL
+          if (ENS_WITH_MDET) then                                                      !GYL
             anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n)                          !GYL
           end if                                                                       !GYL
 
@@ -410,7 +410,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           end if
         ELSE
           ! compute weights with localized observations
-          if (DET_RUN) then                                                            !GYL
+          if (ENS_WITH_MDET) then                                                      !GYL
             CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),n, & !GYL
                            hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t,srch_q0=search_q0(:,n,ij)) !GYL
           else                                                                         !GYL
@@ -418,7 +418,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                            hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,cutd_t=cutd_t,srch_q0=search_q0(:,n,ij)) !GYL
           end if                                                                       !GYL
           IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                         !GYL
-            if (DET_RUN) then                                                          !GYL
+            if (ENS_WITH_MDET) then                                                    !GYL
               CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
                               trans(:,:,n2nc),transm=transm(:,n2nc),pao=pa(:,:,n2nc), & !GYL
                               rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &       !GYL
@@ -429,7 +429,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                               rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)         !GYL
             end if                                                                     !GYL
           ELSE                                                                         !GYL
-            if (DET_RUN) then                                                          !GYL
+            if (ENS_WITH_MDET) then                                                    !GYL
               CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work3d(ij,ilev,n), & !GYL
                               trans(:,:,n2nc),transm=transm(:,n2nc),           &       !GYL
                               rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &       !GYL
@@ -490,7 +490,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         END DO
 
         ! analysis update of deterministic run
-        if (DET_RUN) then                                                              !GYL
+        if (ENS_WITH_MDET) then                                                        !GYL
           anal3d(ij,ilev,mmdet,n) = 0.0d0                                              !GYL
           DO k=1,MEMBER                                                                !GYL
             anal3d(ij,ilev,mmdet,n) = anal3d(ij,ilev,mmdet,n) &                        !GYL
@@ -567,13 +567,13 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
             end if
           ELSE
             ! compute weights with localized observations
-            if (DET_RUN) then                                                          !GYL
+            if (ENS_WITH_MDET) then                                                    !GYL
               CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,depd=depd,nobsl_t=nobsl_t,cutd_t=cutd_t,srch_q0=search_q0(:,nv3d+1,ij))
             else                                                                       !GYL
               CALL obs_local(rig1(ij),rjg1(ij),gues3d(ij,ilev,mmean,iv3d_p),hgt1(ij,ilev),nv3d+n,hdxf,rdiag,rloc,dep,nobsl,nobsl_t=nobsl_t,cutd_t=cutd_t,srch_q0=search_q0(:,nv3d+1,ij))
             end if                                                                     !GYL
             IF(RELAX_ALPHA_SPREAD /= 0.0d0) THEN                                       !GYL
-              if (DET_RUN) then                                                        !GYL
+              if (ENS_WITH_MDET) then                                                  !GYL
                 CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
                                 trans(:,:,n2nc),transm=transm(:,n2nc),pao=pa(:,:,n2nc), & !GYL
                                 rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &     !GYL
@@ -584,7 +584,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
                                 rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE)       !GYL
               end if                                                                   !GYL
             ELSE                                                                       !GYL
-              if (DET_RUN) then                                                        !GYL
+              if (ENS_WITH_MDET) then                                                  !GYL
                 CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,work2d(ij,n), & !GYL
                                 trans(:,:,n2nc),transm=transm(:,n2nc),           &     !GYL
                                 rdiag_wloc=.true.,infl_update=INFL_MUL_ADAPTIVE, &     !GYL
@@ -639,7 +639,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           END DO
 
           ! analysis update of deterministic run
-          if (DET_RUN) then                                                          !GYL
+          if (ENS_WITH_MDET) then                                                    !GYL
             anal2d(ij,mmdet,n) = 0.0d0                                               !GYL
             DO k=1,MEMBER                                                            !GYL
               anal2d(ij,mmdet,n) = anal2d(ij,mmdet,n) &                              !GYL
@@ -690,7 +690,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   END DO ! [ ilev=1,nlev ]
 
   deallocate (hdxf,rdiag,rloc,dep)
-  if (DET_RUN) then
+  if (ENS_WITH_MDET) then
     deallocate (depd)
   end if
   deallocate (trans,transm,transmd,pa)
@@ -1395,8 +1395,8 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
 
 #ifdef DEBUG
   if (present(depd)) then
-    if (.not. DET_RUN) then
-      write (6, '(A)') "[Error] If 'depd' optional input is given, 'DET_RUN' needs to be enabled."
+    if (.not. ENS_WITH_MDET) then
+      write (6, '(A)') "[Error] If 'depd' optional input is given, 'ENS_WITH_MDET' needs to be enabled."
       stop 99
     end if
   end if

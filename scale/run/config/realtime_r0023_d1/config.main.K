@@ -26,6 +26,8 @@ DATA_TOPO=
 DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE=
 DATA_BDY_SCALE=
+DATA_BDY_SCALE_PRC_NUM_X=
+DATA_BDY_SCALE_PRC_NUM_Y=
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=
@@ -39,6 +41,7 @@ OBSNCEP=                                                 # directory of observat
 
 DET_RUN=0               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
+DET_RUN_CYCLED=1
 
 TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')

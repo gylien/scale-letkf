@@ -13,11 +13,16 @@ PROGRAM letkf
   USE common
   USE common_mpi
   USE common_scale
+  USE common_scalerm
   USE common_mpi_scale
   USE common_obs_scale
   USE common_nml
   USE letkf_obs
   USE letkf_tools
+  use obs_tools, only: &
+    read_obs_all_mpi, &
+    get_nobs_da_mpi, &
+    monit_obs_mpi
   use obsope_tools, only: &
     obsope_cal
   IMPLICIT NONE
@@ -26,11 +31,13 @@ PROGRAM letkf
   REAL(r_size),ALLOCATABLE :: gues2d(:,:,:)
   REAL(r_size),ALLOCATABLE :: anal3d(:,:,:,:)
   REAL(r_size),ALLOCATABLE :: anal2d(:,:,:)
+  real(RP),allocatable :: mean3d(:,:,:,:)
+  real(RP),allocatable :: mean2d(:,:,:)
 
   character(len=7) :: stdoutf='-000000'
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
-  integer :: iarg
+  integer :: iarg, iof
   
   !DTF          
   integer :: ierr
@@ -108,21 +115,9 @@ PROGRAM letkf
 
   call set_common_conf(nprocs)
 
-  call read_nml_obs_error
-  call read_nml_obsope
-  call read_nml_letkf
-  call read_nml_letkf_obs
-  call read_nml_letkf_var_local
-  call read_nml_letkf_monitor
-  call read_nml_letkf_radar
-  call read_nml_letkf_h08
+  call set_mem_node_proc(MEMBER_RUN)
 
-  if (DET_RUN) then
-    call set_mem_node_proc(MEMBER+2)
-  else
-    call set_mem_node_proc(MEMBER+1)
-  end if
-  call set_scalelib
+  call scalerm_setup('LETKF')
 
   call get_itmax(itmax)
 
@@ -200,6 +195,10 @@ PROGRAM letkf
         allocate (gues2d(nij1,nens,nv2d))
         allocate (anal3d(nij1,nlev,nens,nv3d))
         allocate (anal2d(nij1,nens,nv2d))
+        if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
+          allocate (mean3d(nlev,nlon,nlat,nv3d))
+          allocate (mean2d(nlon,nlat,nv3d))
+        end if
       endif
 
       call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
@@ -209,7 +208,7 @@ PROGRAM letkf
       !
       call read_ens_mpi(gues3d, gues2d)
 
-      if (DET_RUN .and. mmdetin /= mmdet) then
+      if (ENS_WITH_MDET .and. mmdetin /= mmdet) then
         gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
         gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
       end if
@@ -220,7 +219,8 @@ PROGRAM letkf
       ! WRITE ENS MEAN and SPRD
       !
       if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-        call write_ensmean(trim(GUES_MEAN_INOUT_BASENAME)//atlab_SCALE, gues3d, gues2d, calced=.false., monit_step=1)
+        call write_ensmean(trim(GUES_MEAN_INOUT_BASENAME)//atlab_SCALE, gues3d, gues2d, calced=.false., mean3d=mean3d, mean2d=mean2d)
+        call monit_obs_mpi(mean3d, mean2d, monit_step=1)
       else
         call write_ensmean(trim(GUES_MEAN_INOUT_BASENAME)//atlab_SCALE, gues3d, gues2d, calced=.false.)
       end if
@@ -263,7 +263,8 @@ PROGRAM letkf
       ! WRITE ANAL and ENS MEAN
       !
       if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-        call write_ens_mpi(anal3d, anal2d, monit_step=2)
+        call write_ens_mpi(anal3d, anal2d, mean3d=mean3d, mean2d=mean2d)
+        call monit_obs_mpi(mean3d, mean2d, monit_step=2)
       else
         call write_ens_mpi(anal3d, anal2d)
       end if
@@ -274,9 +275,15 @@ PROGRAM letkf
 !! Monitor
 !!-----------------------------------------------------------------------
 
+      do iof = 1, OBS_IN_NUM
+        call obs_info_deallocate(obs(iof))
+      end do
       deallocate (obs)
 
       !deallocate (gues3d, gues2d, anal3d, anal2d)
+      !if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
+      !  deallocate (mean3d, mean2d)
+      !end if
 
       if (it == itmax) then
         call unset_common_mpi_scale
@@ -287,7 +294,7 @@ PROGRAM letkf
 
   enddo main_cycle ! [it = itmin, itmax] 
 
-  call unset_scalelib
+  call scalerm_finalize('LETKF')
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 

@@ -1,8 +1,3 @@
-&PARAM_ENSEMBLE
-!--MEMBER--
-!--DET_RUN--
-/
-
 &PARAM_OBSOPE
 !--OBS_IN_NUM--
 !--OBS_IN_NAME--
@@ -15,13 +10,6 @@
 !--SLOT_END--
 !--SLOT_BASE--
 !--SLOT_TINTERVAL--
-/
-
-&PARAM_LETKF_PRC
-!--NNODES--
-!--PPN--
-!--MEM_NODES--
-!--MEM_NP--
 /
 
 &PARAM_LETKF_RADAR

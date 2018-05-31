@@ -42,9 +42,10 @@ echo "[$(datetime_now)] Start $myname $@" >&2
 
 setting "$@" || exit $?
 
-###if [ "$CONF_MODE" = 'static' ]; then
-###  . src/func_${job}_static.sh || exit $?
-###fi
+if [ "$CONF_MODE" = 'static' ]; then
+  . src/func_common_static.sh || exit $?
+  . src/func_${job}_static.sh || exit $?
+fi
 
 echo
 print_setting || exit $?
@@ -84,16 +85,16 @@ if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR || exit $?
-###  if [ "$CONF_MODE" = 'static' ]; then
-###    staging_list_static || exit $?
-###    if ((DISK_MODE == 3)); then
-###      config_file_list $TMP/config || exit $?
-###    else
-###      config_file_list || exit $?
-###    fi
-###  else
+  if [ "$CONF_MODE" = 'static' ]; then
+    staging_list_static || exit $?
+    if ((DISK_MODE == 3)); then
+      config_file_list $TMP/config || exit $?
+    else
+      config_file_list || exit $?
+    fi
+  else
     staging_list || exit $?
-###  fi
+  fi
 
   stage_in node || exit $?
 fi
@@ -234,11 +235,29 @@ while ((time <= ETIME)); do
         enable_iter=1
       fi
 
-###      if [ "$CONF_MODE" = 'static' ]; then
+      nodestr=proc
 
-###        mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
+      if ((enable_iter == 1)); then
+        noit=1
+      else
+        noit='-'
+      fi
 
-###      else
+      if [ "$CONF_MODE" = 'static' ]; then
+
+        if ((enable_iter == 1 && nitmax > 1)); then
+          for it in $(seq $nitmax); do
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+
+            mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}.conf $it log/${stepexecname[$s]}.NOUT_${stimes[1]}_${it} || exit $?
+
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
+          done
+        else
+          mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}.conf $noit log/${stepexecname[$s]}.NOUT_${stimes[1]} || exit $?
+        fi
+
+      else
 
         execpath="${stepexecdir[$s]}/${stepexecname[$s]}"
         stdout_dir="$TMPOUT/${stimes[1]}/log/fcst_$(basename ${stepexecdir[$s]})"
@@ -246,15 +265,15 @@ while ((time <= ETIME)); do
           for it in $(seq $nitmax); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            mpirunf proc $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/fcst_step.sh" $loop $it || exit $?
+            mpirunf proc $execpath ${execpath}.conf $it "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/fcst_step.sh" $loop $it || exit $?
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           done
         else
-          mpirunf proc $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/fcst_step.sh" $loop || exit $?
+          mpirunf proc $execpath ${execpath}.conf $noit "${stdout_dir}/NOUT" "$SCRP_DIR/fcst_step.sh" $loop || exit $?
         fi
 
-###      fi
+      fi
 
     fi
   done
@@ -302,15 +321,15 @@ if ((RUN_LEVEL <= 3)); then
   fi
 fi
 
-###if ((RUN_LEVEL <= 1)); then
-###  if [ "$CONF_MODE" = 'static' ]; then
-###    if ((DISK_MODE == 3)); then
-###      config_file_save $TMP/config || exit $?
-###    else
-###      config_file_save || exit $?
-###    fi
-###  fi
-###fi
+if ((RUN_LEVEL <= 1)); then
+  if [ "$CONF_MODE" = 'static' ]; then
+    if ((DISK_MODE == 3)); then
+      config_file_save $TMP/config || exit $?
+    else
+      config_file_save || exit $?
+    fi
+  fi
+fi
 
 #===============================================================================
 # Remove temporary directories

@@ -38,23 +38,34 @@ SCPCALL="${1:-cycle}"
 #===============================================================================
 
 if [ "$SCPCALL" = 'cycle' ]; then
-  CONF_FILES_SEQNUM='.false.'
+  MEMBER_TOT=$MEMBER
+  ENS_WITH_MEAN_TF='.true.'
+  ENS_WITH_MDET_TF='.false.'
+  if ((DET_RUN == 1)); then
+    ENS_WITH_MDET_TF='.true.'
+  fi
 else
-  CONF_FILES_SEQNUM='.true.'
+  MEMBER_TOT=$((MEMBER+1))
+  if ((DET_RUN == 1)); then
+    MEMBER_TOT=$((MEMBER+2))
+  fi
+  ENS_WITH_MEAN_TF='.false.'
+  ENS_WITH_MDET_TF='.false.'
 fi
 
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.ensmodel | \
-    sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
+    sed -e "/!--MEMBER--/a MEMBER = $MEMBER_TOT," \
+        -e "/!--ENS_WITH_MEAN--/a ENS_WITH_MEAN = $ENS_WITH_MEAN_TF," \
+        -e "/!--ENS_WITH_MDET--/a ENS_WITH_MDET = $ENS_WITH_MDET_TF," \
         -e "/!--MEMBER_RUN--/a MEMBER_RUN = $MEMBER_RUN," \
         -e "/!--MEMBER_ITER--/a MEMBER_ITER = $MEMBER_ITER," \
         -e "/!--CONF_FILES--/a CONF_FILES = \"${TMPDIR}/@@@@/run.conf\"," \
-        -e "/!--CONF_FILES_SEQNUM--/a CONF_FILES_SEQNUM = $CONF_FILES_SEQNUM," \
-        -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
-        -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
+        -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = 1," \
+        -e "/!--PRC_DOMAINS--/a PRC_DOMAINS = $MEM_NP," \
     > $TMPDIR/scale-rm_ens.conf
 
 #===============================================================================

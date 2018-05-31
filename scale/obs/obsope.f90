@@ -12,9 +12,11 @@ PROGRAM obsope
   USE common
   USE common_mpi
   USE common_scale
+  USE common_scalerm
   USE common_mpi_scale
   USE common_obs_scale
   USE common_nml
+  USE obs_tools
   USE obsope_tools
   IMPLICIT NONE
 
@@ -68,17 +70,9 @@ PROGRAM obsope
 
   call set_common_conf(nprocs)
 
-  call read_nml_obs_error
-  call read_nml_obsope
-  call read_nml_letkf_radar
-  call read_nml_letkf_h08
+  call set_mem_node_proc(MEMBER_RUN)
 
-  if (DET_RUN) then
-    call set_mem_node_proc(MEMBER+2)
-  else
-    call set_mem_node_proc(MEMBER+1)
-  end if
-  call set_scalelib
+  call scalerm_setup('OBSOPE')
 
   if (myrank_use) then
 
@@ -111,7 +105,7 @@ PROGRAM obsope
 
   end if ! [ myrank_use ]
 
-  call unset_scalelib
+  call scalerm_finalize('OBSOPE')
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 

@@ -1,8 +1,3 @@
-&PARAM_ENSEMBLE
-!--MEMBER--
-!--DET_RUN--
- DET_RUN_CYCLED = .true.,
-/
 
 &PARAM_OBSOPE
 !--OBS_IN_NUM--
@@ -59,12 +54,6 @@
 !
 /
 
-&PARAM_LETKF_PRC
-!--NNODES--
-!--PPN--
-!--MEM_NODES--
-!--MEM_NP--
-/
 
 &PARAM_LETKF_OBS
  HORI_LOCAL = 4.0D3,

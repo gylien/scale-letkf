@@ -25,6 +25,8 @@ DATA_TOPO="$DDIR/exp/testcase_PAWR_5km_4p_pnetcdf_data"              # Directory
 DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
 DATA_LANDUSE="$DDIR/exp/testcase_PAWR_5km_4p_pnetcdf_data"           # Directory of the prepared landuse files
 DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
+DATA_BDY_SCALE_PRC_NUM_X=3
+DATA_BDY_SCALE_PRC_NUM_Y=3
 DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_PAWR_5km_4p_pnetcdf_data"    # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
@@ -44,6 +46,7 @@ PNETCDF_BDY_SCALE=0     # Use PNETCDF I/O for the parent domain SCALE data? (def
 
 DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
+DET_RUN_CYCLED=0
 
 TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')

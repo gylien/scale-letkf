@@ -20,6 +20,9 @@ MODULE letkf_obs
   USE common_obs_scale
   USE common_mpi_scale
   USE common_letkf
+  use obs_tools, only: &
+    obs_da_value_partial_reduce_iter, &
+    obs_da_value_allreduce
 
   IMPLICIT NONE
   PUBLIC
@@ -122,8 +125,8 @@ SUBROUTINE set_letkf_obs
 
 !---
   integer :: cnts
-  integer :: cntr(MEM_NP)
-  integer :: dspr(MEM_NP)
+  integer :: cntr(nprocs_d)
+  integer :: dspr(nprocs_d)
   integer :: nensobs_div, nensobs_mod
   integer :: im_obs_1, im_obs_2, nensobs_part
 
@@ -187,7 +190,8 @@ SUBROUTINE set_letkf_obs
 !        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is reading externally processed observations for member ', &
 !              im, ', subdomain id #', myrank_d
         if (im <= MEMBER) then
-          call file_member_replace(im, OBSDA_IN_BASENAME, obsdafile)
+          obsdafile = OBSDA_IN_BASENAME
+          call filename_replace_mem(obsdafile, im)
         else if (im == mmean) then
           obsdafile = OBSDA_MEAN_IN_BASENAME
         else if (im == mmdet) then
@@ -201,7 +205,8 @@ SUBROUTINE set_letkf_obs
 !          write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is appending observations for member ', &
 !                im, ', subdomain id #', myrank_d
           if (im <= MEMBER) then
-            call file_member_replace(im, trim(OBSDA_OUT_BASENAME)//timelabel, obsdafile)
+            obsdafile = trim(OBSDA_OUT_BASENAME)//timelabel
+            call filename_replace_mem(obsdafile, im)
           else if (im == mmean) then
             obsdafile = trim(OBSDA_MEAN_OUT_BASENAME)//timelabel
           else if (im == mmdet) then
@@ -497,7 +502,7 @@ SUBROUTINE set_letkf_obs
       obsda%ensval(i,n) = obsda%ensval(i,n) - obsda%val(n) ! Hdx
     END DO
     obsda%val(n) = obs(iof)%dat(iidx) - obsda%val(n) ! y-Hx
-    if (DET_RUN) then
+    if (ENS_WITH_MDET) then
       obsda%ensval(mmdetobs,n) = obs(iof)%dat(iidx) - obsda%ensval(mmdetobs,n) ! y-Hx for deterministic run
     end if
 
@@ -686,9 +691,9 @@ SUBROUTINE set_letkf_obs
     obsgrd(ictype)%ngrdext_i = obsgrd(ictype)%ngrd_i + obsgrd(ictype)%ngrdsch_i * 2
     obsgrd(ictype)%ngrdext_j = obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j * 2
 
-    allocate (obsgrd(ictype)%n (  obsgrd(ictype)%ngrd_i, obsgrd(ictype)%ngrd_j, 0:MEM_NP-1))
-    allocate (obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i, obsgrd(ictype)%ngrd_j, 0:MEM_NP-1))
-    allocate (obsgrd(ictype)%tot(0:MEM_NP-1))
+    allocate (obsgrd(ictype)%n (  obsgrd(ictype)%ngrd_i, obsgrd(ictype)%ngrd_j, 0:nprocs_d-1))
+    allocate (obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i, obsgrd(ictype)%ngrd_j, 0:nprocs_d-1))
+    allocate (obsgrd(ictype)%tot(0:nprocs_d-1))
     allocate (obsgrd(ictype)%n_ext (  obsgrd(ictype)%ngrdext_i, obsgrd(ictype)%ngrdext_j))
     allocate (obsgrd(ictype)%ac_ext(0:obsgrd(ictype)%ngrdext_i, obsgrd(ictype)%ngrdext_j))
 
@@ -835,9 +840,9 @@ SUBROUTINE set_letkf_obs
   nobs_g(:) = 0
   do ictype = 1, nctype
     if (nprocs_d > 1) then
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%n, obsgrd(ictype)%ngrd_i*obsgrd(ictype)%ngrd_j*MEM_NP, &
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%n, obsgrd(ictype)%ngrd_i*obsgrd(ictype)%ngrd_j*nprocs_d, &
                          MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i,:,:), (obsgrd(ictype)%ngrd_i+1)*obsgrd(ictype)%ngrd_j*MEM_NP, &
+      call MPI_ALLREDUCE(MPI_IN_PLACE, obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i,:,:), (obsgrd(ictype)%ngrd_i+1)*obsgrd(ictype)%ngrd_j*nprocs_d, &
                          MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
     end if
     call MPI_ALLREDUCE(obsgrd(ictype)%tot_sub, obsgrd(ictype)%tot_g, n_qc_steps, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
@@ -937,7 +942,7 @@ SUBROUTINE set_letkf_obs
     jmin1 = myp_j*obsgrd(ictype)%ngrd_j+1 - obsgrd(ictype)%ngrdsch_j
     jmax1 = (myp_j+1)*obsgrd(ictype)%ngrd_j + obsgrd(ictype)%ngrdsch_j
 
-    do ip = 0, MEM_NP-1
+    do ip = 0, nprocs_d-1
       call rank_1d_2d(ip, ip_i, ip_j)
       imin2 = max(1, imin1 - ip_i*obsgrd(ictype)%ngrd_i)
       imax2 = min(obsgrd(ictype)%ngrd_i, imax1 - ip_i*obsgrd(ictype)%ngrd_i)
@@ -997,7 +1002,7 @@ SUBROUTINE set_letkf_obs
     cntr(:) = obsgrd(nctype)%ac(obsgrd(nctype)%ngrd_i,obsgrd(nctype)%ngrd_j,:)
     cnts = cntr(myrank_d+1)
     dspr(1) = 0
-    do ip = 2, MEM_NP
+    do ip = 2, nprocs_d
       dspr(ip) = dspr(ip-1) + cntr(ip-1)
     end do
 
@@ -1067,7 +1072,7 @@ SUBROUTINE set_letkf_obs
   call obs_da_value_allocate(obsda_sort, nensobs)
 
 !$OMP PARALLEL DO SCHEDULE(STATIC) PRIVATE(ip,ip_i,ip_j,ictype,imin1,imax1,jmin1,jmax1,imin2,imax2,jmin2,jmax2,ishift,jshift,j,ns_ext,ne_ext,ns_bufr,ne_bufr)
-  do ip = 0, MEM_NP-1
+  do ip = 0, nprocs_d-1
     call rank_1d_2d(ip, ip_i, ip_j)
 
     do ictype = 1, nctype
@@ -1115,7 +1120,7 @@ SUBROUTINE set_letkf_obs
 #endif
       end do
     end do ! [ ictype = 1, nctype ]
-  end do ! [ ip = 0, MEM_NP-1 ]
+  end do ! [ ip = 0, nprocs_d-1 ]
 !$OMP END PARALLEL DO
 
   ! Save the keys of observations within the subdomain (excluding the localization buffer area)

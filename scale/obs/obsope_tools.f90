@@ -10,11 +10,14 @@ MODULE obsope_tools
 !=======================================================================
 !$USE OMP_LIB
   USE common
-  USE common_mpi
+!  USE common_mpi
+  use common_nml
   USE common_scale
   USE common_mpi_scale
   USE common_obs_scale
-  use common_nml
+  use obs_tools
+  use radar_obs
+
 !  use scale_process, only: &
 !    PRC_myrank
 !    MPI_COMM_d => LOCAL_COMM_WORLD
@@ -470,7 +473,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
 
         if (present(v3d) .and. present(v2d) .and. islot == SLOT_END) then
           if (im <= MEMBER) then
-            call file_member_replace(im, trim(GUES_IN_BASENAME)//timelabel, filename)
+            filename = trim(GUES_IN_BASENAME)//timelabel
+            call filename_replace_mem(filename, im)
           else if (im == mmean) then
             filename = trim(GUES_MEAN_INOUT_BASENAME)//timelabel
           else if (im == mmdet) then
@@ -517,7 +521,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
                               obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
             end if
           !=====================================================================
-          case (obsfmt_radar)
+          case (obsfmt_radar, obsfmt_pawr_toshiba)
           !---------------------------------------------------------------------
             if (obs(iof)%lev(n) > RADAR_ZMAX) then
               obsda%qc(nn) = iqc_radar_vhi
@@ -703,7 +707,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
 
 !              !!! bTC(1,:) : lon, bTC(2,:): lat, bTC(3,:): mslp
 !              ! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp
-!              allocate(bTC(3,0:MEM_NP-1))
+!              allocate(bTC(3,0:nprocs_d-1))
 
 !              bTC = 9.99d33
 
@@ -717,18 +721,18 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
 !  
 !!              CALL MPI_BARRIER(MPI_COMM_d,ierr)
 !              if (nprocs_d > 1) then
-!                CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*MEM_NP,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
+!                CALL MPI_ALLREDUCE(MPI_IN_PLACE,bTC,3*nprocs_d,MPI_r_size,MPI_MIN,MPI_COMM_d,ierr)
 !              end if
 
 !              ! Assume MSLP of background TC is lower than 1100 (hPa). 
 !              bTC_mslp = 1100.0d2
-!              do n = 0, MEM_NP - 1
+!              do n = 0, nprocs_d - 1
 !                write(6,'(3e20.5)')bTC(1,n),bTC(2,n),bTC(3,n) ! debug
 !                if (bTC(3,n) < bTC_mslp ) then
 !                  bTC_mslp = bTC(3,n)
 !                  bTC_proc = n
 !                endif
-!              enddo ! [ n = 0, MEM_NP - 1]
+!              enddo ! [ n = 0, nprocs_d - 1]
 
 !              if (myrank_d == proc) then
 !                do n = 1, 3
@@ -768,7 +772,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
 !        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is writing observations for member ', &
 !              im, ', subdomain id #', myrank_d
         if (im <= MEMBER) then
-          call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
+          obsdafile = OBSDA_OUT_BASENAME
+          call filename_replace_mem(obsdafile, im)
         else if (im == mmean) then
           obsdafile = OBSDA_MEAN_OUT_BASENAME
         else if (im == mmdet) then
@@ -825,6 +830,7 @@ end subroutine obsope_cal
 ! Observation generator calculation
 !-----------------------------------------------------------------------
 SUBROUTINE obsmake_cal(obs)
+  use obs_tools, only: write_obs_all
   IMPLICIT NONE
 
   TYPE(obs_info),INTENT(INOUT) :: obs(OBS_IN_NUM)
@@ -921,7 +927,7 @@ SUBROUTINE obsmake_cal(obs)
                                   obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
                 end if
               !=================================================================
-              case (obsfmt_radar)
+              case (obsfmt_radar, obsfmt_pawr_toshiba)
               !-----------------------------------------------------------------
                 call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ril,rjl,obs(iof)%lev(n),rkz,iqc)
                 if (iqc == iqc_good) then

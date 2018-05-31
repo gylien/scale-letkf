@@ -49,9 +49,15 @@ if ((PNETCDF == 1)); then
 fi
 
 OBS_IN_NAME_LIST=
+OBS_IN_FORMAT_LIST=
 for iobs in $(seq $OBSNUM); do
   if [ "${OBSNAME[$iobs]}" != '' ]; then
-    OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat', "
+    if [ "${OBS_FORMAT[$iobs]}" = 'PAWR_TOSHIBA' ]; then
+      OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}<type>.dat', "
+    else
+      OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat', "
+    fi
+    OBS_IN_FORMAT_LIST="${OBS_IN_FORMAT_LIST}'${OBS_FORMAT[$iobs]}', "
   fi
 done
 
@@ -64,9 +70,13 @@ for iobs in $(seq $OBSNUM); do
   fi
 done
 
-DET_RUN_TF='.false.'
+ENS_WITH_MDET_TF='.false.'
 if ((DET_RUN == 1)); then
-  DET_RUN_TF='.true.'
+  ENS_WITH_MDET_TF='.true.'
+fi
+MDET_CYCLED_TF='.false.'
+if ((DET_RUN_CYCLED == 1)); then
+  MDET_CYCLED_TF='.true.'
 fi
 
 if ((PNETCDF == 1)); then
@@ -77,11 +87,21 @@ fi
 
 #===============================================================================
 
-cat $TMPDAT/conf/config.nml.obsope | \
+cat $TMPDAT/conf/config.nml.ensmodel | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
-        -e "/!--DET_RUN--/a DET_RUN = ${DET_RUN_TF}," \
-        -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
+        -e "/!--ENS_WITH_MEAN--/a ENS_WITH_MEAN = .true.," \
+        -e "/!--ENS_WITH_MDET--/a ENS_WITH_MDET = $ENS_WITH_MDET_TF," \
+        -e "/!--MDET_CYCLED--/a MDET_CYCLED = ${MDET_CYCLED_TF}," \
+        -e "/!--PPN--/a PPN = $PPN_APPAR," \
+        -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
+        -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = 1," \
+        -e "/!--PRC_DOMAINS--/a PRC_DOMAINS = $MEM_NP," \
+    > $TMPDIR/obsope.conf
+
+cat $TMPDAT/conf/config.nml.obsope | \
+    sed -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
+        -e "/!--OBS_IN_FORMAT--/a OBS_IN_FORMAT = $OBS_IN_FORMAT_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
         -e "/!--OBSDA_OUT--/a OBSDA_OUT = .true." \
         -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obsgues/@@@@/obsda.ext\"," \
@@ -90,12 +110,8 @@ cat $TMPDAT/conf/config.nml.obsope | \
         -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
         -e "/!--SLOT_BASE--/a SLOT_BASE = $SLOT_BASE," \
         -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = $LTIMESLOT.D0," \
-        -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
-        -e "/!--PPN--/a PPN = $PPN_APPAR," \
-        -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
-        -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
         -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
-    > $TMPDIR/obsope.conf
+    >> $TMPDIR/obsope.conf
 
 # Most of these parameters are not important for obsope
 cat $TMPDAT/conf/config.nml.scale | \
