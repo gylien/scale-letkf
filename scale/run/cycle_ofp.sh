@@ -111,7 +111,6 @@ fi
 #===============================================================================
 
 if ((IO_ARB == 1)); then                                              ##
-  echo "${SCRP_DIR}/sleep.sh|sleep.sh" >> ${STAGING_DIR}/${STGINLIST} ##
   NNODES=$((NNODES*2))                                                ##
   NNODES_APPAR=$((NNODES_APPAR*2))                                    ##
 fi                                                                    ##

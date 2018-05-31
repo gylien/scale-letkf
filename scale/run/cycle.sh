@@ -278,12 +278,7 @@ while ((time <= ETIME)); do
           done
         else
           if ((IO_ARB == 1)); then ##
-            if ((s == 5)); then ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} \
-                      "$SCRP_DIR/sleep.sh" || exit $? &
-            else ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
-            fi ##
+            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
           else ##
             mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
           fi ##
