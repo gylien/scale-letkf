@@ -242,7 +242,7 @@ while ((time <= ETIME)); do
       fi
 
       nodestr=proc
-      if ((IO_ARB == 1)); then
+      if ((DTF_MODE >= 1)); then
         if ((s == 3)); then
           nodestr='set1.proc'
         elif ((s == 5)); then
@@ -268,20 +268,20 @@ while ((time <= ETIME)); do
           for it in $(seq $nit); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            if ((IO_ARB == 1)); then ##
+            if ((DTF_MODE >= 1)); then
               mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $it log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $? &
-            else ##
+            else
               mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $it log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $?
-            fi ##
+            fi
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           done
         else
-          if ((IO_ARB == 1)); then ##
+          if ((DTF_MODE >= 1)); then
             mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
-          else ##
+          else
             mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
-          fi ##
+          fi
         fi
 
       else
@@ -292,20 +292,12 @@ while ((time <= ETIME)); do
           for it in $(seq $nit); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            if ((IO_ARB == 1)); then ##
-              mpirunf $nodestr $execpath ${execpath}.conf $it "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $? &
-            else ##
-              mpirunf $nodestr $execpath ${execpath}.conf $it "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
-            fi ##
+            mpirunf $nodestr $execpath ${execpath}.conf $it "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           done
         else
-          if ((IO_ARB == 1)); then ##                                 
-            mpirunf $nodestr $execpath ${execpath}.conf $noit "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $? &
-          else ##
-            mpirunf $nodestr $execpath ${execpath}.conf $noit "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
-          fi ##
+          mpirunf $nodestr $execpath ${execpath}.conf $noit "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
         fi
 
       fi
@@ -313,9 +305,9 @@ while ((time <= ETIME)); do
     fi
   done
 
-  if ((IO_ARB == 1)); then ##                                 
-    wait                   ##
-  fi                       ##
+  if ((DTF_MODE >= 1)); then
+    wait
+  fi
 
 #-------------------------------------------------------------------------------
 # Online stage out

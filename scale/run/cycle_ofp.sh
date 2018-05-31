@@ -66,7 +66,7 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR || exit $?
-if ((IO_ARB == 1)); then                              ##
+if ((DTF_MODE >= 1)); then                            ##
   distribute_da_cycle_set - $NODEFILE_DIR || exit $?  ##
 else                                                  ##
   distribute_da_cycle - $NODEFILE_DIR || exit $?
@@ -110,7 +110,7 @@ fi
 
 #===============================================================================
 
-if ((IO_ARB == 1)); then                                              ##
+if ((DTF_MODE >= 1)); then                                            ##
   NNODES=$((NNODES*2))                                                ##
   NNODES_APPAR=$((NNODES_APPAR*2))                                    ##
 fi                                                                    ##

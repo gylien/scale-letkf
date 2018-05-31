@@ -214,17 +214,17 @@ fi
 #===============================================================================
 # Error detection
 
-if ((IO_ARB == 1)); then
+if ((DTF_MODE >= 1)); then
   if ((DISK_MODE == 3)); then
-    echo "[Error] When \$IO_ARB = 1, local disks cannot be used." 1>&2
+    echo "[Error] When \$DTF_MODE >= 1, local disks cannot be used." 1>&2
     exit 1
   fi
   if ((OBSOPE_RUN != 0)); then
-    echo "[Error] When \$IO_ARB = 1, a separate observation operator (obsope) is not allowed." 1>&2
+    echo "[Error] When \$DTF_MODE >= 1, a separate observation operator (obsope) is not allowed." 1>&2
     exit 1
   fi
   if ((BDY_FORMAT != 0)); then
-    echo "[Error] When \$IO_ARB = 1, boundary files need to be prepared (\$BDY_FORMAT = 0)." 1>&2
+    echo "[Error] When \$DTF_MODE >= 1, boundary files need to be prepared (\$BDY_FORMAT = 0)." 1>&2
     exit 1
   fi
 fi
