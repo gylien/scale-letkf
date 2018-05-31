@@ -266,12 +266,14 @@ while ((time <= ETIME)); do
   # anal
   #-------------------
   mlist=
-  if ((OUT_OPT <= 4 || (OUT_OPT <= 5 && loop % OUT_CYCLE_SKIP == 0) || atime > ETIME)); then
-    mlist=$(seq $mtot)
-  elif ((OUT_OPT <= 7)); then
-    mlist="$mmean"
-    if ((DET_RUN == 1)); then
-      mlist="$mlist $mmdet"
+  if ((DIRECT_TRANSFER != 1 || atime > ETIME)); then
+    if ((OUT_OPT <= 4 || (OUT_OPT <= 5 && loop % OUT_CYCLE_SKIP == 0) || atime > ETIME)); then
+      mlist=$(seq $mtot)
+    elif ((OUT_OPT <= 7)); then
+      mlist="$mmean"
+      if ((DET_RUN == 1)); then
+        mlist="$mlist $mmdet"
+      fi
     fi
   fi
   for m in $mlist; do
@@ -294,12 +296,14 @@ while ((time <= ETIME)); do
   # gues
   #-------------------
   mlist=
-  if ((OUT_OPT <= 3)); then
-    mlist=$(seq $mtot)
-  elif ((OUT_OPT <= 6)); then
-    mlist="$mmean"
-    if ((DET_RUN == 1)); then
-      mlist="$mlist $mmdet"
+  if ((DIRECT_TRANSFER != 1 || atime > ETIME)); then
+    if ((OUT_OPT <= 3)); then
+      mlist=$(seq $mtot)
+    elif ((OUT_OPT <= 6)); then
+      mlist="$mmean"
+      if ((DET_RUN == 1)); then
+        mlist="$mlist $mmdet"
+      fi
     fi
   fi
   for m in $mlist; do
