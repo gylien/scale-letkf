@@ -105,12 +105,6 @@ program dacycle
   call initialize_mpi_scale
   call mpi_timer('', 1)
 
-#ifdef DTF
-  if (DTF_MODE >= 1) then
-    call dtf_init('../../dtf.ini'//CHAR(0), 'letkf'//CHAR(0), ierr)
-  end if
-#endif
-
   if (command_argument_count() >= 2) then
     call get_command_argument(2, icmd)
     if (trim(icmd) /= '') then
@@ -147,6 +141,12 @@ program dacycle
 
   call scalerm_setup('DACYCLE')
 
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_init('../../dtf.ini'//CHAR(0), 'letkf'//CHAR(0), ierr)
+  end if
+#endif
+
   call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_WORLD)
 
   if (myrank_use) then
@@ -177,48 +177,54 @@ program dacycle
       ! report current time
       call ADMIN_TIME_checkstate
 
-      if ( TIME_DOresume ) then
-        ! resume state from restart files
-        if (DIRECT_TRANSFER .and. icycle >= 1) then
-          if (LOG_LEVEL >= 1) then
-            write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip reading restart files'
+      if ( DTF_MODE == 0 ) then
+        if ( TIME_DOresume ) then
+          ! resume state from restart files
+          if (DIRECT_TRANSFER .and. icycle >= 1) then
+            if (LOG_LEVEL >= 1) then
+              write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip reading restart files'
+            end if
+            call resume_state(do_restart_read=.false.)
+          else
+            call resume_state(do_restart_read=.true.)
           end if
-          call resume_state(do_restart_read=.false.)
-        else
-          call resume_state(do_restart_read=.true.)
-        end if
 
-        ! history&monitor file output
-        call MONIT_write('MAIN')
-        call FILE_HISTORY_write ! if needed
-      end if
+          ! history&monitor file output
+          call MONIT_write('MAIN')
+          call FILE_HISTORY_write ! if needed
+        end if
+      end if ! ( DTF_MODE == 0 )
 
       ! time advance
       call ADMIN_TIME_advance
       call FILE_HISTORY_set_nowdate( TIME_NOWDATE, TIME_NOWMS, TIME_NOWSTEP )
 
-      ! user-defined procedure
-      call USER_step
+      if ( DTF_MODE == 0 ) then
+        ! user-defined procedure
+        call USER_step
 
-      ! change to next state
-      if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver
-      if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver
-      if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver
-      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver
+        ! change to next state
+        if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver
+        if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver
+        if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver
+        if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver
 
-      ! history&monitor file output
-      call MONIT_write('MAIN')
-      call FILE_HISTORY_write
+        ! history&monitor file output
+        call MONIT_write('MAIN')
+        call FILE_HISTORY_write
 
-      ! restart output before LETKF
-      if (DIRECT_TRANSFER) then
-        if (LOG_LEVEL >= 1 .and. TIME_DOATMOS_restart) then
-          write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip writing restart files before LETKF'
+        ! restart output before LETKF
+        if (DIRECT_TRANSFER) then
+          if (LOG_LEVEL >= 1 .and. TIME_DOATMOS_restart) then
+            write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip writing restart files before LETKF'
+          end if
+        else
+          call ADMIN_restart_write
         end if
-      else
-        call ADMIN_restart_write
-      end if
-      call ADMIN_restart_write_additional !!!!!! To do: control additional restart outputs for gues_mean, gues_sprd, and anal_sprd
+#ifdef SCALEUV
+        call ADMIN_restart_write_additional !!!!!! To do: control additional restart outputs for gues_mean, gues_sprd, and anal_sprd
+#endif
+      end if ! ( DTF_MODE == 0 )
 
       !-------------------------------------------------------------------------
       ! LETKF section start
@@ -409,14 +415,16 @@ program dacycle
       ! LETKF section end
       !-------------------------------------------------------------------------
 
-      ! restart output after LETKF
-      if (DIRECT_TRANSFER .and. (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now)) then
-        !!!!!! To do: control restart outputs separately for members, mean, and mdet
-        if (LOG_LEVEL >= 1 .and. TIME_DOATMOS_restart) then
-          write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; writing restart (analysis) files after LETKF'
+      if ( DTF_MODE == 0 ) then
+        ! restart output after LETKF
+        if (DIRECT_TRANSFER .and. (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now)) then
+          !!!!!! To do: control restart outputs separately for members, mean, and mdet
+          if (LOG_LEVEL >= 1 .and. TIME_DOATMOS_restart) then
+            write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; writing restart (analysis) files after LETKF'
+          end if
+          call ADMIN_restart_write
         end if
-        call ADMIN_restart_write
-      end if
+      end if ! ( DTF_MODE == 0 )
 
       if( TIME_DOend ) exit
 

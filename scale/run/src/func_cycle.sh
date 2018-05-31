@@ -1502,7 +1502,7 @@ local otime=$(datetime $TIME)               # FILE_HISTORY_OUTPUT_STEP0 = .true.
 local otime_s=$(datetime $TIME $WINDOW_S s)
 local otime_e=$(datetime $TIME $WINDOW_E s)
 local otime_a=$(datetime $TIME $LCYCLE s)
-if ((DACYCLE == 1)); then
+if ((DACYCLE == 1 || DTF_MODE >= 1)); then
   local is=-1
 else
   local is=0

@@ -5,7 +5,8 @@
 #
 #===============================================================================
 
-PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
+#PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
+PRESET='K_micro'
 
 #===============================================================================
 
@@ -13,21 +14,12 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
+INDIR="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"
 OUTDIR="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_bdyprep" # Directory for SCALE-LETKF output
 
 USERNAME=gylien
 
-### -- Honda setting
-PRESET='K_micro'
-#PRESET='K'
-#EXP="testcase_PAWR_1km_4p_pnetcdf_ioarb"
-DDIR="/volume63/data/hp150019/gylien/scale-letkf-test-suite-pnetcdf"
-INDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/testcase_PAWR_1km_4p_pnetcdf_ioarb"
-OUTDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/testcase_PAWR_1km_4p_pnetcdf_ioarb"
-INDIR=$OUTDIR
 LIBDTF_PATH=/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/DTF/libdtf
-USERNAME=honda
-### --
 
 #===============================================================================
 # Location of model/data files
@@ -35,19 +27,19 @@ USERNAME=honda
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
-DATA_TOPO="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"              # Directory of the prepared topo files
+DATA_TOPO=                                                           # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
-DATA_LANDUSE="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"           # Directory of the prepared landuse files
+DATA_LANDUSE=                                                        # Directory of the prepared landuse files
 DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
 DATA_BDY_SCALE_PRC_NUM_X=3
 DATA_BDY_SCALE_PRC_NUM_Y=3
-#DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"    # Directory of the prepared SCALE boundary files
-DATA_BDY_SCALE_PREP="$INDIR"    # Directory of the prepared SCALE boundary files
+DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
 OBS="$DDIR/obs/QCED_1KM_v4_v500M_attn0.01"                           # Observation data in LETKF observation format
 OBSNCEP=
+OBS_USE_JITDT=0
 
 #===============================================================================
 # model/data file options
@@ -55,12 +47,12 @@ OBSNCEP=
 PNETCDF=1               # 0: Do not use PnetCDF
                         # 1: Use PnetCDF
 
-DET_RUN=1               # 0: Disable the deterministic run
-                        # 1: Enable  the deterministic run
-
 PNETCDF_BDY_SCALE=0     # Use PNETCDF I/O for the parent domain SCALE data? (default: $PNETCDF)
                         # 0: Do not use PnetCDF
                         # 1: Use PnetCDF
+
+DET_RUN=1               # 0: Disable the deterministic run
+                        # 1: Enable  the deterministic run
 
 TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
@@ -76,6 +68,9 @@ BDY_FORMAT=0            # 0: SCALE boundary files (with exactly same domain sett
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
+                        # 4: GrADS         (requires compatible 'config.nml.scale_init')
+BDY_SINGLE_FILE=0       # 0: Length of a boundary file = $BDYCYCLE_INT (e.g., files made by data assimilation cycles)
+                        # 1: Length of a boundary file is long enough so that only a single boundary file is used for each forecast
 BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
 
 BDY_ENS=1               # 0: Fixed boundary files for all memebers
@@ -88,7 +83,7 @@ BDYCYCLE_INT=300
 
 PARENT_REF_TIME=20130713060000
 
-ENABLE_PARAM_USER=0     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
+ENABLE_PARAM_USER=1     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
                         # 1: Enable the 'PARAM_USER' section of the SCALE namelist (require 'config.nml.scale_user' and customized version of SCALE)
 
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
@@ -102,6 +97,7 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
 
 OBSNUM=1
 OBSNAME[1]=radar
+OBS_FORMAT[1]=RADAR
 
 #===============================================================================
 # Cycling settings
@@ -142,6 +138,7 @@ TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs i
 TMP="/scratch/$(id -ng)/${USERNAME}/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
+TMP_JITDATA="$TMP/jit-data"
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
                             #  0: No

@@ -328,7 +328,7 @@ while ((time <= ETIME)); do
 
 #-------------------------------------------------------------------------------
 
-  if ((DACYCLE == 1)); then
+  if ((DACYCLE == 1 || DTF_MODE >= 1)); then
     break
   fi
 

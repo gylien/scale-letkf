@@ -42,15 +42,15 @@ ${ENSMODEL_DIR}/scale-rm_ens|scale-rm_ens
 EOF
 
 if [ "$JOBTYPE" = 'cycle' ]; then
-  if ((DACYCLE == 1)); then
-    cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${ENSMODEL_DIR}/../dacycle/dacycle|dacycle
-EOF
+  if ((DTF_MODE == 0)); then
+    if ((DACYCLE == 1)); then
+      echo "${ENSMODEL_DIR}/../dacycle/dacycle|dacycle" >> ${STAGING_DIR}/${STGINLIST}
+    fi
+    echo "${OBSUTIL_DIR}/obsope|obsope" >> ${STAGING_DIR}/${STGINLIST}
+    echo "${LETKF_DIR}/letkf|letkf" >> ${STAGING_DIR}/${STGINLIST}
+  else
+    echo "${ENSMODEL_DIR}/../dacycle/dacycle|letkf" >> ${STAGING_DIR}/${STGINLIST}
   fi
-  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${OBSUTIL_DIR}/obsope|obsope
-${LETKF_DIR}/letkf|letkf
-EOF
 fi
 
 #-------------------------------------------------------------------------------
@@ -95,7 +95,7 @@ if [ "$JOBTYPE" = 'cycle' ] && ((OBS_USE_JITDT != 1)); then
           if [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.10000000.dat ] && \
              [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.20000000.dat ] && \
              [ -e ${OBS}/${OBSNAME[$iobs]}_${time}_pawr_qcf.dat ]; then
-            if ((DACYCLE == 1)); then
+            if ((DACYCLE == 1 || DTF_MODE >= 1)); then
               echo "${OBS}/${OBSNAME[$iobs]}_${time}.10000000.dat|obs.${OBSNAME[$iobs]}.10000000_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
               echo "${OBS}/${OBSNAME[$iobs]}_${time}.20000000.dat|obs.${OBSNAME[$iobs]}.20000000_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
               echo "${OBS}/${OBSNAME[$iobs]}_${time}_pawr_qcf.dat|obs.${OBSNAME[$iobs]}_pawr_qcf_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
@@ -107,7 +107,7 @@ if [ "$JOBTYPE" = 'cycle' ] && ((OBS_USE_JITDT != 1)); then
           fi
         else
           if [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
-            if ((DACYCLE == 1)); then
+            if ((DACYCLE == 1 || DTF_MODE >= 1)); then
               echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
             else
               echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time}.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}

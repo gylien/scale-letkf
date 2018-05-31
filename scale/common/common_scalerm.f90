@@ -450,6 +450,10 @@ subroutine scalerm_setup(execname)
   !-----------------------------------------------------------------------------
 
   select case (execname_)
+#ifdef DTF
+  case ('SCALERM')
+    call read_nml_dacycle
+#endif
   case ('DACYCLE')
     call read_nml_dacycle
     call read_nml_obs_error

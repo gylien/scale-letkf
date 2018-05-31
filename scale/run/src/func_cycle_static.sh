@@ -102,7 +102,7 @@ while ((time <= ETIME)); do
 
   # bdy (prepared)
   #-------------------
-  if ((BDY_FORMAT == 0 && (DACYCLE != 1 || loop == 1))); then
+  if ((BDY_FORMAT == 0 && ((DACYCLE != 1 && DTF_MODE == 0) || loop == 1))); then
     if ((BDY_ENS == 0)); then
       if ((DISK_MODE == 3)); then
         for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
@@ -178,7 +178,7 @@ while ((time <= ETIME)); do
   # anal (initial time)
   #-------------------
   if ((loop == 1 && MAKEINIT == 1)); then
-    if ((DACYCLE == 1)); then
+    if ((DACYCLE == 1 || DTF_MODE >= 1)); then
       initname=anal
     else
       initname=init
@@ -223,7 +223,7 @@ while ((time <= ETIME)); do
 
   # bdy
   #-------------------
-  if ((BDY_FORMAT != 0 && (DACYCLE != 1 || loop == 1))); then
+  if ((BDY_FORMAT != 0 && ((DACYCLE != 1 && DTF_MODE == 0) || loop == 1))); then
     if ((BDY_ENS == 1 && BDYOUT_OPT <= 1)); then
       for m in $(seq $mtot); do
         for q in $(seq ${mem_np_[1]}); do
@@ -337,7 +337,8 @@ while ((time <= ETIME)); do
   for m in $mlist; do
     for d in $(seq $DOMNUM); do
       for q in $(seq ${mem_np_[$d]}); do
-        path="${name_m[$m]}/hist.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+#        path="${name_m[$m]}/hist.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+        path="${name_m[$m]}/hist.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $atime)$(scale_filename_sfx $((q-1)))"
         pathout="${OUTDIR[$d]}/${time}/hist/${name_m[$m]}${CONNECTOR}history$(scale_filename_sfx $((q-1)))"
 #        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
         echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
@@ -392,7 +393,7 @@ while ((time <= ETIME)); do
     plist=$(seq $totalnp)
   fi
 
-  if ((BDY_FORMAT != 0 && LOG_OPT <= 2 && (DACYCLE != 1 || loop == 1))); then
+  if ((BDY_FORMAT != 0 && LOG_OPT <= 2 && ((DACYCLE != 1 && DTF_MODE == 0) || loop == 1))); then
     for m in $mlist_init; do
       for d in $(seq $DOMNUM); do
         path="log/scale_init.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).LOG_${time}${SCALE_SFX_NONC_0}"
@@ -414,7 +415,7 @@ while ((time <= ETIME)); do
       fi
     done
   fi
-  if ((LOG_OPT <= 3 && (DACYCLE != 1 || loop == 1))); then
+  if ((LOG_OPT <= 3 && ((DACYCLE != 1 && DTF_MODE == 0) || loop == 1))); then
     for m in $mlist; do
       for d in $(seq $DOMNUM); do
         path="log/scale.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).LOG_${time}${SCALE_SFX_NONC_0}"
@@ -426,7 +427,7 @@ while ((time <= ETIME)); do
       done
     done
   fi
-  if ((LOG_OPT <= 3 && DACYCLE != 1)); then
+  if ((LOG_OPT <= 3 && DACYCLE != 1 && (DTF_MODE == 0 || loop == 1))); then
     for p in $plist; do
       if ((nitmax == 1)); then
         path="log/scale-rm_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
@@ -442,7 +443,7 @@ while ((time <= ETIME)); do
     done
   fi
   if ((LOG_OPT <= 4)); then
-    if ((DACYCLE != 1)); then
+    if ((DACYCLE != 1 && (DTF_MODE == 0 || loop == 1))); then
       for p in $plist; do
         path="log/letkf.NOUT_${atime}$(printf -- "${log_nfmt}" $((p-1)))"
         pathout="${OUTDIR[1]}/${atime}/log/letkf/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
@@ -520,7 +521,7 @@ for d in $(seq $DOMNUM); do
   PRC_DOMAINS_LIST="$PRC_DOMAINS_LIST${SCALE_NP[$d]}, "
 done
 
-if ((DACYCLE == 1)); then
+if ((DACYCLE == 1 || DTF_MODE >= 1)); then
   time=$STIME
   n_cycles=0
   while ((time <= ETIME)); do
@@ -713,7 +714,7 @@ while ((time <= ETIME)); do
     for d in $(seq $DOMNUM); do
       dfmt=$(printf $DOMAIN_FMT $d)
 
-      if ((DACYCLE == 1)); then
+      if ((DACYCLE == 1 || DTF_MODE >= 1)); then
         RESTART_OUT_BASENAME="${mem_bdy}/anal.d${dfmt}"
       else
         RESTART_OUT_BASENAME="${mem_bdy}/init.d${dfmt}"
@@ -807,7 +808,7 @@ while ((time <= ETIME)); do
   #-----------------------------------------------------------------------------
 
   ######
-  if ((DACYCLE != 1 || loop == 1)); then
+  if (((DACYCLE != 1 && DTF_MODE == 0) || loop == 1)); then
   ######
 
   if ((BDY_ENS == 1)); then
@@ -819,9 +820,9 @@ while ((time <= ETIME)); do
   for d in $(seq $DOMNUM); do
     dfmt=$(printf $DOMAIN_FMT $d)
 
-    if ((DACYCLE == 1)); then
+    if ((DACYCLE == 1 || DTF_MODE >= 1)); then
       TIME_DURATION="$((CYCLEFLEN * n_cycles)).D0"
-      if ((DIRECT_TRANSFER == 1 && OUT_OPT >= 3)); then
+      if ((DACYCLE == 1 && DIRECT_TRANSFER == 1 && OUT_OPT >= 3)); then
         FILE_HISTORY_DEFAULT_BASENAME=""
       else
         FILE_HISTORY_DEFAULT_BASENAME="<member>/hist.d${dfmt}"
@@ -841,7 +842,7 @@ while ((time <= ETIME)); do
     if ((d > 1)); then
       ONLINE_IAM_DAUGHTER=".true."
     fi
-    if ((loop == 1 && MAKEINIT == 1 && DACYCLE != 1)); then
+    if ((loop == 1 && MAKEINIT == 1 && (DACYCLE != 1 && DTF_MODE == 0))); then
       RESTART_IN_BASENAME="<member>/init.d${dfmt}"
     else
       RESTART_IN_BASENAME="<member>/anal.d${dfmt}"
@@ -890,6 +891,9 @@ while ((time <= ETIME)); do
       else
         conf_file="scale-rm_ens_${time}.conf"
         config_file_scale_launcher cycle "$conf_file" "scale-rm_ens.d<domain>_${time}.conf" $mtot
+        if ((DTF_MODE >= 1)); then
+          conf_file_copy="letkf_${atime}.conf"
+        fi
       fi
     else
       conf_file_src=$SCRP_DIR/config.nml.scale.d$d
@@ -897,6 +901,9 @@ while ((time <= ETIME)); do
         conf_file="dacycle.d${dfmt}_${time}.conf"
       else
         conf_file="scale-rm_ens.d${dfmt}_${time}.conf"
+        if ((DTF_MODE >= 1)); then
+          conf_file_copy="letkf.d${dfmt}_${atime}.conf"
+        fi
       fi
     fi
 
@@ -904,11 +911,9 @@ while ((time <= ETIME)); do
       echo "&PARAM_DACYCLE" >> $CONFIG_DIR/${conf_file}
       if ((DTF_MODE >= 1)); then
         echo " DTF_MODE = ${DTF_MODE}," >> $CONFIG_DIR/${conf_file}
-      fi
-      if ((DIRECT_TRANSFER == 1)); then
-        echo " DIRECT_TRANSFER = .true.," >> $CONFIG_DIR/${conf_file}
-      else
         echo " DIRECT_TRANSFER = .false.," >> $CONFIG_DIR/${conf_file}
+      elif ((DIRECT_TRANSFER == 1)); then
+        echo " DIRECT_TRANSFER = .true.," >> $CONFIG_DIR/${conf_file}
       fi
       echo "/" >> $CONFIG_DIR/${conf_file}
       echo >> $CONFIG_DIR/${conf_file}
@@ -993,13 +998,23 @@ while ((time <= ETIME)); do
     if ((stage_config == 1)); then
       echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
     fi
+
+    if ((DTF_MODE >= 1)); then
+      echo "  $conf_file_copy"
+      cat $CONFIG_DIR/${conf_file} | \
+          sed -e "/IO_LOG_BASENAME =/c IO_LOG_BASENAME = \"log/letkf.<member>.d${dfmt}.LOG_${time}\"," \
+          > $CONFIG_DIR/${conf_file_copy}
+      if ((stage_config == 1)); then
+        echo "$CONFIG_DIR/${conf_file_copy}|${conf_file_copy}" >> ${STAGING_DIR}/${STGINLIST}
+      fi
+    fi
   done # [ d in $(seq $DOMNUM) ]
 
   #-----------------------------------------------------------------------------
   # letkf
   #-----------------------------------------------------------------------------
 
-  if ((DACYCLE == 1)); then
+  if ((DACYCLE == 1 || DTF_MODE >= 1)); then
     OBS_POSTFIX_TIMELABEL_TF=".true."
     HISTORY_POSTFIX_TIMELABEL_TF=".true."
     GUES_ANAL_POSTFIX_TIMELABEL_TF=".true."
@@ -1014,13 +1029,13 @@ while ((time <= ETIME)); do
   for iobs in $(seq $OBSNUM); do
     if [ "${OBSNAME[$iobs]}" != '' ]; then
       if [ "${OBS_FORMAT[$iobs]}" = 'PAWR_TOSHIBA' ]; then
-        if ((DACYCLE == 1)); then
+        if ((DACYCLE == 1 || DTF_MODE >= 1)); then
           OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}<type>', "
         else
           OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}<type>.dat', "
         fi
       else
-        if ((DACYCLE == 1)); then
+        if ((DACYCLE == 1 || DTF_MODE >= 1)); then
           OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}', "
         else
           OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}.dat', "
@@ -1067,7 +1082,7 @@ while ((time <= ETIME)); do
   for d in $(seq $DOMNUM); do
     dfmt=$(printf $DOMAIN_FMT $d)
 
-    if ((DACYCLE == 1)); then
+    if ((DACYCLE == 1 || DTF_MODE >= 1)); then
       HISTORY_IN_BASENAME="<member>/hist.d${dfmt}"
       GUES_IN_BASENAME="<member>/anal.d${dfmt}"
       GUES_OUT_BASENAME="<member>/gues.d${dfmt}"
@@ -1100,7 +1115,7 @@ while ((time <= ETIME)); do
         conf_file="letkf.d${dfmt}_${atime}.conf"
       fi
     fi
-    if ((DACYCLE != 1)); then
+    if ((DACYCLE != 1 && DTF_MODE == 0)); then
       echo "  $conf_file"
       config_file_scale_launcher letkf "$conf_file" "letkf.d<domain>_${atime}.conf" $mtot
     fi
@@ -1140,7 +1155,7 @@ while ((time <= ETIME)); do
             -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${NOBS_OUT_BASENAME}\"," \
         >> $CONFIG_DIR/${conf_file}
 
-    if ((DACYCLE != 1)); then
+    if ((DACYCLE != 1 && DTF_MODE == 0)); then
       # Most of these parameters are not important for letkf
       cat $conf_file_src2 | \
           sed -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \

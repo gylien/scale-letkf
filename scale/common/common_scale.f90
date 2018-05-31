@@ -2263,6 +2263,9 @@ subroutine timelabel_update(lcycle)
   real(DP) :: abssec, hist_subsec
 
   call TIME_gettimelabel(timelabel)
+  if (LOG_LEVEL >= 1) then
+    write (6, '(2A)') 'Current time: ', timelabel
+  end if
 
   if (OBS_POSTFIX_TIMELABEL) then
     timelabel_obs = '_???????????????????.dat'
@@ -2286,20 +2289,24 @@ subroutine timelabel_update(lcycle)
 
   if (HISTORY_POSTFIX_TIMELABEL) then
     timelabel_hist = '_???????????????????'
-    call CALENDAR_date2daysec( absday,       & ! [OUT]
-                               abssec,       & ! [OUT]
-                               TIME_NOWDATE, & ! [IN]
-                               TIME_NOWMS,   & ! [IN]
-                               0             ) ! [IN]
-    abssec = abssec - lcycle
-    call CALENDAR_daysec2date( hist_date,   & ! [OUT]
-                               hist_subsec, & ! [OUT]
-                               absday,      & ! [IN]
-                               abssec,      & ! [IN]
-                               0            ) ! [IN]
-    call TIME_time2label( hist_date,           & ! [IN]
-                          hist_subsec,         & ! [IN]
-                          timelabel_hist(2:20) ) ! [OUT]
+    if (DTF_MODE == 0) then
+      call CALENDAR_date2daysec( absday,       & ! [OUT]
+                                 abssec,       & ! [OUT]
+                                 TIME_NOWDATE, & ! [IN]
+                                 TIME_NOWMS,   & ! [IN]
+                                 0             ) ! [IN]
+      abssec = abssec - lcycle
+      call CALENDAR_daysec2date( hist_date,   & ! [OUT]
+                                 hist_subsec, & ! [OUT]
+                                 absday,      & ! [IN]
+                                 abssec,      & ! [IN]
+                                 0            ) ! [IN]
+      call TIME_time2label( hist_date,           & ! [IN]
+                            hist_subsec,         & ! [IN]
+                            timelabel_hist(2:20) ) ! [OUT]
+    else
+      call TIME_gettimelabel(timelabel_hist(2:20))
+    end if
   else
     timelabel_hist = ''
   end if

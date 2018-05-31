@@ -90,6 +90,12 @@ program scale_rm_ens
   character(len=10) :: myranks
   integer :: iarg
 
+#ifdef DTF
+  external dtf_init
+  external dtf_finalize
+  integer :: ierr
+#endif
+
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
@@ -166,6 +172,12 @@ program scale_rm_ens
 
   call scalerm_setup('SCALERM')
 
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_init('../../dtf.ini'//CHAR(0), 'scale'//CHAR(0), ierr)
+  end if
+#endif
+
   call mpi_timer('INITIALIZE', 1, barrier=universal_comm)
 
   if (myrank_use .and. scalerm_run) then
@@ -187,6 +199,17 @@ program scale_rm_ens
       if ( TIME_DOresume ) then
         ! resume state from restart files
         call resume_state
+
+!!!        ! restart output after DTF transfer
+!!!        if (DTF_MODE >= 1 .and. icycle >= 1) then
+!!!          if (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now) then
+!!!            !!!!!! To do: control restart outputs separately for members, mean, and mdet
+!!!            if (LOG_LEVEL >= 1 .and. TIME_DOATMOS_restart) then
+!!!              write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use DTF; writing restart (analysis) files after DTF transfer'
+!!!            end if
+!!!            call ADMIN_restart_write
+!!!          end if
+!!!        end if
 
         ! history&monitor file output
         call MONIT_write('MAIN')
@@ -240,6 +263,12 @@ program scale_rm_ens
   end if ! [ myrank_use .and. scalerm_run ]
 
   call scalerm_finalize('SCALERM')
+
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_finalize(ierr)
+  end if
+#endif
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 

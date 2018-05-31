@@ -177,6 +177,7 @@ export MAX_WORKGROUP_SIZE=$((MEMBER+1+DET_RUN))
 export LD_LIBRARY_PATH=$TMP:$LD_LIBRARY_PATH
 export DTF_GLOBAL_PATH=$TMP
 EOF
+fi
 
 cat >> $jobscrp << EOF
 
