@@ -37,7 +37,7 @@ PROGRAM letkf
   character(len=7) :: stdoutf='-000000'
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
-  integer :: iarg
+  integer :: iarg, iof
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -238,6 +238,9 @@ PROGRAM letkf
 !! Monitor
 !!-----------------------------------------------------------------------
 
+    do iof = 1, OBS_IN_NUM
+      call obs_info_deallocate(obs(iof))
+    end do
     deallocate (obs)
     deallocate (gues3d, gues2d, anal3d, anal2d)
     if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
