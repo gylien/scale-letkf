@@ -26,7 +26,6 @@ job='cycle'
 . src/func_datetime.sh || exit $?
 . src/func_util.sh || exit $?
 . src/func_${job}.sh || exit $?
-
 #-------------------------------------------------------------------------------
 
 if ((USE_TMP_LINK == 1 || USE_TMPL == 1)); then
@@ -90,6 +89,9 @@ echo "[$(datetime_now)] Determine the staging list"
 cat $SCRP_DIR/config.main | \
     sed -e "/\(^DIR=\| DIR=\)/c DIR=\"$DIR\"" \
     > $TMP/config.main
+
+cp -L $LIBDTF_PATH/libdtf.so $TMP/libdtf.so
+cp -L $SCRP_DIR/dtf.ini $TMP/dtf.ini
 
 echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMP/config.main
 echo "RUN_LEVEL=4" >> $TMP/config.main
@@ -158,6 +160,17 @@ export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:\$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
+#DTF
+#export DTF_VERBOSE_LEVEL=2 # DEBUG
+export DTF_VERBOSE_LEVEL=0 
+export DTF_SCALE=1
+export DTF_INI_FILE=$TMP/dtf.ini                                                       
+export SCALE_ENSEMBLE_SZ=$((MEMBER+1+DET_RUN))
+#export DTF_IGNORE_ITER=    #set if necessary
+export MAX_WORKGROUP_SIZE=$((MEMBER+1+DET_RUN))
+
+export LD_LIBRARY_PATH=$TMP:$LD_LIBRARY_PATH                                                                                                                                           
+export DTF_GLOBAL_PATH=$TMP 
 ./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
 

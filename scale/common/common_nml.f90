@@ -37,6 +37,9 @@ MODULE common_nml
   integer, parameter :: domflen = 2                           ! Length of formatted domain strings
   character(len=8), parameter :: domf_notation = '<domain>'   ! Notation of the domain string
 
+  integer :: sdate(6) ! start date of a DA cycle    ! (yyyy,mm,dd,hh,nn,ss)
+  integer :: adate(6) ! analysis date of a DA cycle ! (yyyy,mm,dd,hh,nn,ss)
+
   !--- PARAM_ENSEMBLE
   integer :: MEMBER = 3                    ! Total ensemble size
   logical :: ENS_WITH_MEAN = .true.        ! Run additional member of 'mean'?
@@ -104,6 +107,9 @@ MODULE common_nml
   character(filelenmax) :: OBS_JITDT_DATADIR = 'jit-data'
 
   !--- PARAM_LETKF
+  integer               :: STIME(6) = (/2018,2,2,14,0,0/) ! DA cycle start time specified by config.cycle 
+  integer               :: ETIME(6) = (/2018,2,2,14,0,0/) ! DA cycle end time specified by config.cycle
+  real(r_size)          :: LCYCLE = 30.0d0 ! DA window length (sec)
   logical               :: OBSDA_IN = .false.
   character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.<member>'
   character(filelenmax) :: OBSDA_MEAN_IN_BASENAME = ''
@@ -608,6 +614,9 @@ subroutine read_nml_letkf
   integer :: ierr
   
   namelist /PARAM_LETKF/ &
+    STIME, &
+    ETIME, &
+    LCYCLE,  &
     OBSDA_IN, &
     OBSDA_IN_BASENAME, &
     OBSDA_MEAN_IN_BASENAME, &

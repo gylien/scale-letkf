@@ -1392,12 +1392,6 @@ letkf_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((IO_ARB == 1)); then     ##
-  if ((MYRANK == 0)); then   ##
-    echo "[$(datetime_now)] ${time}: ${stepname[5]}: Wait for 360 seconds" >&2 ##
-  fi                         ##
-  sleep 360s                 ##
-fi                           ##
 
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script start" >&2
@@ -1405,10 +1399,10 @@ fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
-       $time $atime $TMPRUN/letkf ${TMPDAT_OBS}/obs \
+       $time ${ETIME} $atime $TMPRUN/letkf ${TMPDAT_OBS}/obs \
        $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/${CONNECTOR_TOPO}topo $OBSOUT_OPT \
        $ADAPTINFL $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT \
-       $MEMBER
+       $MEMBER 
 fi
 
 if ((MYRANK == 0)); then
@@ -1503,8 +1497,8 @@ local TIME="$1"
 
 #-------------------------------------------------------------------------------
 
-local otime=$(datetime $TIME)               # FILE_HISTORY_OUTPUT_STEP0 = .true.,
-#local otime=$(datetime $TIME $LTIMESLOT s)  # FILE_HISTORY_OUTPUT_STEP0 = .false.,
+#local otime=$(datetime $TIME)               # FILE_HISTORY_OUTPUT_STEP0 = .true.,
+local otime=$(datetime $TIME $LTIMESLOT s)  # FILE_HISTORY_OUTPUT_STEP0 = .false.,
 local otime_s=$(datetime $TIME $WINDOW_S s)
 local otime_e=$(datetime $TIME $WINDOW_E s)
 local otime_a=$(datetime $TIME $LCYCLE s)

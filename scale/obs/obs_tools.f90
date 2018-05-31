@@ -51,6 +51,10 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   integer :: dspr(nprocs_d)
   integer :: i, ip, ierr
 
+  character(len=14) :: timelabel ! YYYYMMDDHHNNSS
+
+  call date2tlab_LETKF(adate, timelabel)
+
   call mpi_timer('', 2)
 
   ! NOTE: need to use 'mmean_rank_e' processes to run this calculation
@@ -162,16 +166,16 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
 
   if (DEPARTURE_STAT_ALL_PROCESSES .or. myrank_e == mmean_rank_e) then
     if (monit_step == 1) then
-      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (IN THIS SUBDOMAIN):'
+      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (IN THIS SUBDOMAIN): ',timelabel
     else if (monit_step == 2) then
-      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (IN THIS SUBDOMAIN):'
+      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (IN THIS SUBDOMAIN): ',timelabel
     end if
     call monit_print(nobs, bias, rmse, monit_type)
 
     if (monit_step == 1) then
-      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (GLOBAL):'
+      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (GLOBAL): ',timelabel
     else if (monit_step == 2) then
-      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (GLOBAL):'
+      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (GLOBAL): ',timelabel
     end if
     call monit_print(nobs_g, bias_g, rmse_g, monit_type)
 
@@ -667,8 +671,13 @@ subroutine read_obs_all(obs)
   implicit none
 
   type(obs_info), intent(out) :: obs(OBS_IN_NUM)
+  character(14) :: timelabel
   integer :: iof
   logical :: ex
+
+  character(filelenmax) :: obsfile
+
+  call date2tlab_LETKF(adate,timelabel)
 
   do iof = 1, OBS_IN_NUM
     if (OBS_IN_FORMAT(iof) /= obsfmt_pawr_toshiba) then

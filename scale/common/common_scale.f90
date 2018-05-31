@@ -19,6 +19,11 @@ MODULE common_scale
   use scale_stdio, only: H_MID, H_LONG
   use scale_prof
 
+  external dtf_transfer_multiple
+  external dtf_transfer
+  external dtf_time_start
+  external dtf_time_end
+  
   IMPLICIT NONE
   PUBLIC
 !-------------------------------------------------------------------------------
@@ -444,7 +449,9 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
   err = nfmpi_open(comm, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
-
+  
+  call dtf_time_start
+  
   do iv3d = 1, nv3d
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
@@ -480,7 +487,9 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
   err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-
+  
+  call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
+  call dtf_time_end
   err = nfmpi_close(ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
@@ -749,7 +758,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 !  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
 
   write (6,'(A,I6.6,3A,6I6)') 'MYRANK ',myrank,' is writing a file ',trim(filename)//'.nc', ' >> PnetCDF start(3), count(3) =', start, count
-
+  call dtf_time_start
   err = nfmpi_open(comm, trim(filename)//".nc", NF_WRITE, MPI_INFO_NULL, ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
@@ -789,8 +798,9 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
   err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
-
+  call dtf_transfer_multiple(trim(filename)//".nc"//CHAR(0), ncid)
   err = nfmpi_close(ncid)
+  call dtf_time_end
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
 
@@ -1245,6 +1255,8 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
+  call dtf_time_start()
+
   ! 3D variables
   !-------------
   do iv3d = 1, nv3dd
@@ -1319,6 +1331,10 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
+
+  call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
+
+  call dtf_time_end()
 
 !  call FILEIO_close( fid )
   err = nfmpi_close(ncid)
@@ -2253,5 +2269,77 @@ subroutine timelabel_update(lcycle)
 
 end subroutine timelabel_update
 
+!-------------------------------------------------------------------------------
+!  Compute analysis date by adding the analysis window length (LCYCLE) 
+!-------------------------------------------------------------------------------
+subroutine it2date(it,date)
+  use scale_calendar, only: &
+    CALENDAR_date2daysec, &
+    CALENDAR_daysec2date
+  implicit none
+  integer, intent(in) :: it
+  integer, intent(inout) :: date(6)
+
+  integer :: absday
+  real(r_dble) :: abssec
+  real(r_dble) :: subsec ! dummy
+
+  call CALENDAR_date2daysec(absday, abssec, STIME, 0.0d0, 0) 
+
+  abssec = abssec + LCYCLE * real(it, kind=r_size)
+
+  call CALENDAR_daysec2date(date, subsec, absday, abssec, 0)
+
+  return  
+end subroutine it2date
+
+!-------------------------------------------------------------------------------
+!  Compute the number of DA cycles based on STIME & ETIME
+!-------------------------------------------------------------------------------
+subroutine get_itmax(itmax)
+  use scale_calendar, only: &
+    CALENDAR_date2daysec, &
+    CALENDAR_daysec2date
+  implicit none
+  integer, intent(out) :: itmax
+
+  integer :: absday
+  real(r_dble) :: s_abssec, e_abssec
+
+  call CALENDAR_date2daysec(absday, s_abssec, STIME, 0.0d0, 0) 
+  call CALENDAR_date2daysec(absday, e_abssec, ETIME, 0.0d0, 0) 
+
+  itmax = nint((e_abssec - s_abssec) / LCYCLE) + 1
+
+  return  
+end subroutine get_itmax
+
+!-------------------------------------------------------------------------------
+subroutine date2tlab_LETKF(date,timelabel)
+  implicit none
+
+  character(len=14), intent(out) :: timelabel ! YYYYMMDDHHNNSS
+  integer, intent(in) :: date(6)
+
+  write(timelabel,'(I4.4,I2.2,I2.2,I2.2,I2.2,I2.2)') date(1:3), date(4:6) 
+
+  return
+end subroutine date2tlab_LETKF
+
+!-------------------------------------------------------------------------------
+subroutine date2tlab_SCALE(date,timelabel)
+  use scale_time, only: &
+    TIME_time2label
+  implicit none
+
+  character(len=19), intent(out) :: timelabel  ! YYYYMMDD-hhmmss.sss
+  integer, intent(in) :: date(6)
+
+  call TIME_time2label(date,0.0d0,timelabel)
+
+  return
+end subroutine date2tlab_SCALE
+
 !===============================================================================
+
 END MODULE common_scale

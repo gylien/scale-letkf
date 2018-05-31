@@ -5,18 +5,18 @@
 #
 #===============================================================================
 
-STIME='20130713060000'
-ETIME='20130713060000'
-ETIME='20130713060100'
+STIME='20170704120000'
+ETIME='20170704123000'
 ISTEP=
 FSTEP=
 CONF_MODE='static'
+CONF_MODE=
 #TIME_LIMIT='<WTIME_L>'
 TIME_LIMIT='00:10:00'
 
 #===============================================================================
 
-FCSTOUT=30
+FCSTOUT=
 
 ADAPTINFL=0         # Adaptive inflation
                     #  0: OFF
@@ -33,13 +33,12 @@ MAKEINIT=0       # 0: No
 
                  #      anal              gues              history
                  #      mean/sprd members mean/sprd members mean members
-OUT_OPT=3        # 1:   o         o       o         o       o    o
+OUT_OPT=1        # 1:   o         o       o         o       o    o
                  # 2:   o         o       o         o       o
                  # 3:   o         o       o         o
                  # 4:   o         o       o
                  # 5:   o         *       o                               * = every $OUT_CYCLE_SKIP cycles and the last cycle
                  # 6:   o         **      o                               ** = only the last cycle
-                 # 7:   o         **
 
 OUT_CYCLE_SKIP=1
 
@@ -58,7 +57,7 @@ BDYOUT_OPT=3     # 1:   o    o
                  # 3:   (none)
 
                  #      obsgues obsanal obsdep
-OBSOUT_OPT=4     # 1:   o       o       o
+OBSOUT_OPT=1     # 1:   o       o       o
                  # 2:   o               o
                  # 3:                   o
                  # 4:   (none)
@@ -76,9 +75,6 @@ LOG_TYPE=2       # 1:   Only save the log file from the head process
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file
 
-SPRD_OUT=1       # 0: No
-SPRD_OUT=0       # 0: No
-                 # 1: Yes
 RTPS_INFL_OUT=0  # 0: No
                  # 1: Yes
 NOBS_OUT=0       # 0: No

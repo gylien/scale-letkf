@@ -337,7 +337,8 @@ while ((time <= ETIME)); do
   for m in $mlist; do
     for d in $(seq $DOMNUM); do
       for q in $(seq ${mem_np_[$d]}); do
-        path="${name_m[$m]}/hist.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+        #path="${name_m[$m]}/hist.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $time)$(scale_filename_sfx $((q-1)))"
+        path="${name_m[$m]}/hist.d$(printf $DOMAIN_FMT $d)_$(datetime_scale $atime)$(scale_filename_sfx $((q-1)))"
         pathout="${OUTDIR[$d]}/${time}/hist/${name_m[$m]}${CONNECTOR}history$(scale_filename_sfx $((q-1)))"
 #        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
         echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+q))]}
@@ -372,6 +373,9 @@ while ((time <= ETIME)); do
 
   # log
   #-------------------
+
+  if (( time == STIME )) ; then
+
   if [ "$MPI_TYPE" = 'K' ]; then
     log_nfmt='.%d'
   else
@@ -456,6 +460,8 @@ while ((time <= ETIME)); do
       done
     fi
   fi
+
+  fi # (( time == STIME ))
 
   #-------------------
   time=$(datetime $time $LCYCLE s)
@@ -801,6 +807,19 @@ while ((time <= ETIME)); do
     fi # [ BDY_FORMAT == 4 && (BDY_ENS == 0 || m == 1) ]
 
   fi # [ BDY_FORMAT != 0 ]
+
+
+  time=$(datetime $time $LCYCLE s)
+  atime=$(datetime $time $LCYCLE s)
+done
+
+# compute total scale fcst length
+etime=$(datetime $atime -$LCYCLE s)
+EDATE=$(datetime_fmt $etime)
+SDATE=$(datetime_fmt $STIME)
+ESEC=$(date -d "$EDATE" "+%s")
+SSEC=$(date -d "$SDATE" "+%s")
+TOTAL_FCSTLEN=$((ESEC - SSEC))
 
   #-----------------------------------------------------------------------------
   # scale
@@ -1161,9 +1180,9 @@ EOF
   ######
 
   #-------------------
-  time=$(datetime $time $LCYCLE s)
-  atime=$(datetime $time $LCYCLE s)
-done
+#  time=$(datetime $time $LCYCLE s)
+#  atime=$(datetime $time $LCYCLE s)
+#done
 
 echo
 

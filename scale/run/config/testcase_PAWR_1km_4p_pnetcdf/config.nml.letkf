@@ -41,6 +41,12 @@
  POSITIVE_DEFINITE_QHYD = .true.,
 !--NOBS_OUT--
 !--NOBS_OUT_BASENAME--
+!
+! ## multicycle LETKF
+!--STIME--
+!--ETIME--
+!--LCYCLE--
+!
 /
 
 &PARAM_LETKF_OBS

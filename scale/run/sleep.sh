@@ -4,9 +4,9 @@
 STEPFUNC="${1}"; shift
 MYRANK="${1}"
 
-if [ "$STEPFUNC" = 'letkf_1' ]; then
-  sleep 360s
-fi
+#if [ "$STEPFUNC" = 'letkf_1' ]; then
+#  sleep 360s
+#fi
 
 #===============================================================================
 
