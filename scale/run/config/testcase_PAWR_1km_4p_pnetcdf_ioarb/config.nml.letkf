@@ -11,10 +11,6 @@
 !--SLOT_TINTERVAL--
 /
 
-&PARAM_LOG
- LOG_LEVEL = 1,
-/
-
 &PARAM_LETKF
 !--OBSDA_IN--
 !--OBSDA_IN_BASENAME--
@@ -46,12 +42,6 @@
  POSITIVE_DEFINITE_QHYD = .true.,
 !--NOBS_OUT--
 !--NOBS_OUT_BASENAME--
-!
-! ## multicycle LETKF
-!--STIME--
-!--ETIME--
-!--LCYCLE--
-!
 /
 
 

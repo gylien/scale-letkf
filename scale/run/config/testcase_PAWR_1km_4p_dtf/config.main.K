@@ -15,6 +15,20 @@ DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
 OUTDIR="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_bdyprep" # Directory for SCALE-LETKF output
 
+USERNAME=gylien
+
+### -- Honda setting
+PRESET='K_micro'
+#PRESET='K'
+#EXP="testcase_PAWR_1km_4p_pnetcdf_ioarb"
+DDIR="/volume63/data/hp150019/gylien/scale-letkf-test-suite-pnetcdf"
+INDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/testcase_PAWR_1km_4p_pnetcdf_ioarb"
+OUTDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/testcase_PAWR_1km_4p_pnetcdf_ioarb"
+INDIR=$OUTDIR
+LIBDTF_PATH=/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/DTF/libdtf
+USERNAME=honda
+### --
+
 #===============================================================================
 # Location of model/data files
 
@@ -27,7 +41,8 @@ DATA_LANDUSE="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"           # Directory
 DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
 DATA_BDY_SCALE_PRC_NUM_X=3
 DATA_BDY_SCALE_PRC_NUM_Y=3
-DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"    # Directory of the prepared SCALE boundary files
+#DATA_BDY_SCALE_PREP="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"    # Directory of the prepared SCALE boundary files
+DATA_BDY_SCALE_PREP="$INDIR"    # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
@@ -39,6 +54,9 @@ OBSNCEP=
 
 PNETCDF=1               # 0: Do not use PnetCDF
                         # 1: Use PnetCDF
+
+DET_RUN=1               # 0: Disable the deterministic run
+                        # 1: Enable  the deterministic run
 
 PNETCDF_BDY_SCALE=0     # Use PNETCDF I/O for the parent domain SCALE data? (default: $PNETCDF)
                         # 0: Do not use PnetCDF
@@ -96,9 +114,13 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=10          # Ensemble size
+#MEMBER=10          # Ensemble size
+MEMBER=3          # Ensemble size
+#MEMBER=100          # Ensemble size
 
-NNODES=44          # Number of nodes
+#NNODES=48          # Number of nodes
+NNODES=20          # Number of nodes
+#NNODES=408          # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -121,7 +143,7 @@ IO_ARB=1                    # Use I/O arbitrator?
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
-TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
+TMP="/scratch/$(id -ng)/${USERNAME}/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
 

@@ -1,3 +1,4 @@
+
 &PARAM_OBSOPE
 !--OBS_IN_NUM--
 !--OBS_IN_NAME--
@@ -8,6 +9,10 @@
 !--SLOT_END--
 !--SLOT_BASE--
 !--SLOT_TINTERVAL--
+/
+
+&PARAM_LOG
+ LOG_LEVEL = 1,
 /
 
 &PARAM_LETKF
@@ -41,7 +46,14 @@
  POSITIVE_DEFINITE_QHYD = .true.,
 !--NOBS_OUT--
 !--NOBS_OUT_BASENAME--
+!
+! ## multicycle LETKF
+!--STIME--
+!--ETIME--
+!--LCYCLE--
+!
 /
+
 
 &PARAM_LETKF_OBS
  HORI_LOCAL = 4.0D3,
