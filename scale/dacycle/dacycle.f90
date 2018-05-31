@@ -92,10 +92,11 @@ program dacycle
   logical :: gues_sprd_out_now
   logical :: anal_sprd_out_now
 
-  !DTF
-  integer :: ierr
+#ifdef DTF
   external dtf_init
   external dtf_finalize
+  integer :: ierr
+#endif
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -104,7 +105,11 @@ program dacycle
   call initialize_mpi_scale
   call mpi_timer('', 1)
 
-  call dtf_init('../../dtf.ini'//CHAR(0), 'letkf'//CHAR(0), ierr)
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_init('../../dtf.ini'//CHAR(0), 'letkf'//CHAR(0), ierr)
+  end if
+#endif
 
   if (command_argument_count() >= 2) then
     call get_command_argument(2, icmd)
@@ -451,7 +456,11 @@ program dacycle
 
   call scalerm_finalize('DACYCLE')
 
-  call dtf_finalize(ierr)
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_finalize(ierr)
+  end if
+#endif
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 

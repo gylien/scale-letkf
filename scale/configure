@@ -26,3 +26,8 @@ ifeq ($(ENABLE_JITDT),T)
 FOPTS     += -DJITDT
 FOPTS_SCALE += -DJITDT
 endif
+
+ifeq ($(ENABLE_DTF),T)
+FOPTS     += -DDTF
+FOPTS_SCALE += -DDTF
+endif

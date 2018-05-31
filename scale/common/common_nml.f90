@@ -77,6 +77,7 @@ MODULE common_nml
   logical :: USE_MPI_BARRIER = .true.             ! Whether enabling some MPI_Barrier for better timing measurement?
 
   !--- PARAM_DACYCLE
+  logical :: DTF_MODE = 0
   logical :: DIRECT_TRANSFER = .false.
 
   !--- PARAM_OBSOPE
@@ -518,6 +519,7 @@ subroutine read_nml_dacycle
   integer :: ierr
 
   namelist /PARAM_DACYCLE/ &
+    DTF_MODE, &
     DIRECT_TRANSFER
 
   rewind(IO_FID_CONF)

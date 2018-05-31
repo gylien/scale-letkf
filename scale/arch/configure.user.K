@@ -10,6 +10,8 @@ H08        = F
 
 ENABLE_JITDT = T
 
+ENABLE_DTF = T
+
 # Libraries
 #-----------------
 

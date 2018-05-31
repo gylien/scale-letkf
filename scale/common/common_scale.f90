@@ -25,10 +25,12 @@ MODULE common_scale
 ! General parameters
 !-------------------------------------------------------------------------------
 
+#ifdef DTF
   external dtf_transfer_multiple
   external dtf_transfer
   external dtf_time_start
   external dtf_time_end
+#endif
 
   character(len=H_MID), parameter :: modelname = "SCALE-LETKF"
   INTEGER,PARAMETER :: vname_max = 10
@@ -451,7 +453,11 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
-  call dtf_time_start
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_time_start
+  end if
+#endif
 
   do iv3d = 1, nv3d
     if (LOG_LEVEL >= 1) then
@@ -489,8 +495,13 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
 
-  call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
-  call dtf_time_end
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
+
+    call dtf_time_end
+  end if
+#endif
 
   err = nfmpi_close(ncid)
   if ( err .NE. NF_NOERR ) &
@@ -761,7 +772,11 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 
   write (6,'(A,I6.6,3A,6I6)') 'MYRANK ',myrank,' is writing a file ',trim(filename)//'.nc', ' >> PnetCDF start(3), count(3) =', start, count
 
-  call dtf_time_start
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_time_start
+  end if
+#endif
 
   err = nfmpi_open(comm, trim(filename)//".nc", NF_WRITE, MPI_INFO_NULL, ncid)
   if ( err .NE. NF_NOERR ) &
@@ -803,13 +818,21 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
 
-  call dtf_transfer_multiple(trim(filename)//".nc"//CHAR(0), ncid)
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_transfer_multiple(trim(filename)//".nc"//CHAR(0), ncid)
+  end if
+#endif
 
   err = nfmpi_close(ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
 
-  call dtf_time_end
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_time_end
+  end if
+#endif
 
   RETURN
 END SUBROUTINE write_restart_par
@@ -1262,7 +1285,11 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
-  call dtf_time_start
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_time_start
+  end if
+#endif
 
   ! 3D variables
   !-------------
@@ -1339,9 +1366,13 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
 
-  call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
 
-  call dtf_time_end
+    call dtf_time_end
+  end if
+#endif
 
 !  call FILEIO_close( fid )
   err = nfmpi_close(ncid)
