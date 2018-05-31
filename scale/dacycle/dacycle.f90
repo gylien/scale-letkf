@@ -92,12 +92,19 @@ program dacycle
   logical :: gues_sprd_out_now
   logical :: anal_sprd_out_now
 
+  !DTF
+  integer :: ierr
+  external dtf_init
+  external dtf_finalize
+
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
 
   call initialize_mpi_scale
   call mpi_timer('', 1)
+
+  call dtf_init('../../dtf.ini'//CHAR(0), 'letkf'//CHAR(0), ierr)
 
   if (command_argument_count() >= 2) then
     call get_command_argument(2, icmd)
@@ -260,6 +267,22 @@ program dacycle
 #endif
 
           call mpi_timer('INIT_LETKF', 1, barrier=MPI_COMM_a)
+
+          !
+          ! LETKF GRID setup
+          !
+          call set_common_mpi_grid
+
+          allocate (gues3d(nij1,nlev,nens,nv3d))
+          allocate (gues2d(nij1,nens,nv2d))
+          allocate (anal3d(nij1,nlev,nens,nv3d))
+          allocate (anal2d(nij1,nens,nv2d))
+          if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
+            allocate (mean3d(nlev,nlon,nlat,nv3d))
+            allocate (mean2d(nlon,nlat,nv3d))
+          end if
+
+          call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
         end if
 
         !-----------------------------------------------------------------------
@@ -285,6 +308,7 @@ program dacycle
         ! with additional space for externally processed observations
         !
         call obsope_cal(obsda_return=obsda, nobs_extern=nobs_extern)
+!        call obsope_cal(obsda_return=obsda, nobs_extern=nobs_extern, v3d=gues3d, v2d=gues2d)
 
         call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
 
@@ -299,24 +323,6 @@ program dacycle
         !-----------------------------------------------------------------------
         ! First guess ensemble
         !-----------------------------------------------------------------------
-
-        !
-        ! LETKF GRID setup
-        !
-        if (icycle == 1) then
-          call set_common_mpi_grid
-
-          allocate (gues3d(nij1,nlev,nens,nv3d))
-          allocate (gues2d(nij1,nens,nv2d))
-          allocate (anal3d(nij1,nlev,nens,nv3d))
-          allocate (anal2d(nij1,nens,nv2d))
-          if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-            allocate (mean3d(nlev,nlon,nlat,nv3d))
-            allocate (mean2d(nlon,nlat,nv3d))
-          end if
-
-          call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
-        end if
 
         !
         ! READ GUES
@@ -444,6 +450,8 @@ program dacycle
   end if ! [ myrank_use ]
 
   call scalerm_finalize('DACYCLE')
+
+  call dtf_finalize(ierr)
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 

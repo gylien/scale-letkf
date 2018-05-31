@@ -156,8 +156,6 @@ SUBROUTINE set_letkf_obs
 
 !  character(len=timer_name_width) :: timer_str
 
-  character(len=14) :: timelabel ! YYYYMMDDHHNNSS ! analysis time label
-
   call mpi_timer('', 2)
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
@@ -166,8 +164,6 @@ SUBROUTINE set_letkf_obs
   WRITE(6,'(A,I10)') 'Internally processed observations: ', nobs_intern
   WRITE(6,'(A,I10)') 'Externally processed observations: ', nobs_extern
   WRITE(6,'(A,I10)') 'Total                observations: ', obsda%nobs
-
-  call date2tlab_LETKF(adate,timelabel)
 
 !-------------------------------------------------------------------------------
 ! Read externally processed observations
@@ -205,12 +201,12 @@ SUBROUTINE set_letkf_obs
 !          write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is appending observations for member ', &
 !                im, ', subdomain id #', myrank_d
           if (im <= MEMBER) then
-            obsdafile = trim(OBSDA_OUT_BASENAME)//timelabel
+            obsdafile = OBSDA_OUT_BASENAME
             call filename_replace_mem(obsdafile, im)
           else if (im == mmean) then
-            obsdafile = trim(OBSDA_MEAN_OUT_BASENAME)//timelabel
+            obsdafile = OBSDA_MEAN_OUT_BASENAME
           else if (im == mmdet) then
-            obsdafile = trim(OBSDA_MDET_OUT_BASENAME)//timelabel
+            obsdafile = OBSDA_MDET_OUT_BASENAME
           end if
 !          write (obsda_suffix(2:7),'(I6.6)') myrank_d
           write (6,'(A,I6.6,2A)') 'MYRANK ', myrank,' is writing (appending) an obsda file ', trim(obsdafile)//obsda_suffix

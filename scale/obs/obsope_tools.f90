@@ -134,12 +134,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
   REAL(r_size),ALLOCATABLE :: bTC(:,:)
   REAL(r_size) :: bTC_mslp
 
-
-
-  character(len=19) :: timelabel ! YYYYMMDD-hhmmss.sss
-
-  call date2tlab_SCALE(adate, timelabel)
-
 !-------------------------------------------------------------------------------
 
   call mpi_timer('', 2)
@@ -473,12 +467,12 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
 
         if (present(v3d) .and. present(v2d) .and. islot == SLOT_END) then
           if (im <= MEMBER) then
-            filename = trim(GUES_IN_BASENAME)//timelabel
+            filename = trim(GUES_IN_BASENAME) // trim(timelabel_anal)
             call filename_replace_mem(filename, im)
           else if (im == mmean) then
-            filename = trim(GUES_MEAN_INOUT_BASENAME)//timelabel
+            filename = trim(GUES_MEAN_IN_BASENAME) // trim(timelabel_anal)
           else if (im == mmdet) then
-            filename = trim(GUES_MDET_IN_BASENAME)//timelabel
+            filename = trim(GUES_MDET_IN_BASENAME) // trim(timelabel_anal)
           end if
 
 !          write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'

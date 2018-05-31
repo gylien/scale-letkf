@@ -38,27 +38,12 @@ PROGRAM letkf
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
   integer :: iarg, iof
-  
-  !DTF          
-  integer :: ierr
-  external dtf_init
-  external dtf_finalize
-
-!  integer :: adate(6)  ! analysis date (yyyy,mm,dd,hh,nn,ss) ! common_nml.f90
-!  integer :: sdate(6)  ! start date (yyyy,mm,dd,hh,nn,ss)    ! common_nml.f90
-  integer :: it ! main cycle loop iteration
-  integer :: itmin = 1
-  integer :: itmax = 1 
-  character(len=14) :: atlab ! YYYYMMDDHHNNSS ! analysis time label
-  character(len=14) :: stlab ! YYYYMMDDHHNNSS ! start time label (previous analysis time)
-  character(len=19) :: atlab_scale ! YYYYMMDD-hhmmss.sss
 
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
 
   call initialize_mpi_scale
-  call dtf_init('../../dtf.ini'//CHAR(0), 'letkf'//CHAR(0),ierr)
   call mpi_timer('', 1)
 
   if (command_argument_count() >= 3) then
@@ -119,180 +104,152 @@ PROGRAM letkf
 
   call scalerm_setup('LETKF')
 
-  call get_itmax(itmax)
+  if (myrank_use) then
 
-  main_cycle: do it = itmin, itmax
+    call set_common_scale
+    call set_common_mpi_scale
+    call set_common_obs_scale
 
-    call it2date(it - 1, sdate)
-    call date2tlab_LETKF(sdate,stlab)
-
-    call it2date(it, adate)
-    call date2tlab_LETKF(adate,atlab)
-    call date2tlab_SCALE(adate,atlab_scale)
-
-    print *,""
-    print *, "Multicycle LETKF,cycle=",it,"/",itmax,"ATIME:",atlab," STIME:",stlab
-    print *,""
-
-
-    if (myrank_use) then
-
-      if (it == itmin) then
-        call set_common_scale
-        call set_common_mpi_scale
-        call set_common_obs_scale
-      endif
-
-      call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_a)
+    call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Read observations
 !-----------------------------------------------------------------------
 
-      allocate (obs(OBS_IN_NUM))
-      call read_obs_all_mpi(obs)
+    allocate (obs(OBS_IN_NUM))
+    call read_obs_all_mpi(obs)
 
-      call mpi_timer('READ_OBS', 1, barrier=MPI_COMM_a)
+    call mpi_timer('READ_OBS', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Observation operator
 !-----------------------------------------------------------------------
 
-      if (OBSDA_IN) then
-        call get_nobs_da_mpi(nobs_extern)
-      else
-        nobs_extern = 0
-      end if
+    if (OBSDA_IN) then
+      call get_nobs_da_mpi(nobs_extern)
+    else
+      nobs_extern = 0
+    end if
 
-      !
-      ! Compute observation operator, return the results in obsda
-      ! with additional space for externally processed observations
-      !
-      call obsope_cal(obsda_return=obsda, nobs_extern=nobs_extern)
+    !
+    ! Compute observation operator, return the results in obsda
+    ! with additional space for externally processed observations
+    !
+    call obsope_cal(obsda_return=obsda, nobs_extern=nobs_extern)
 
-      call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
+    call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Process observation data
 !-----------------------------------------------------------------------
 
-      call set_letkf_obs
+    call set_letkf_obs
 
-      call mpi_timer('PROCESS_OBS', 1, barrier=MPI_COMM_a)
+    call mpi_timer('PROCESS_OBS', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! First guess ensemble
 !-----------------------------------------------------------------------
 
+    !
+    ! LETKF GRID setup
+    !
+    call set_common_mpi_grid
 
-      !
-      ! LETKF GRID setup
-      !
-      if (it == itmin) then
-        call set_common_mpi_grid
+    allocate (gues3d(nij1,nlev,nens,nv3d))
+    allocate (gues2d(nij1,nens,nv2d))
+    allocate (anal3d(nij1,nlev,nens,nv3d))
+    allocate (anal2d(nij1,nens,nv2d))
+    if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
+      allocate (mean3d(nlev,nlon,nlat,nv3d))
+      allocate (mean2d(nlon,nlat,nv3d))
+    end if
 
-        allocate (gues3d(nij1,nlev,nens,nv3d))
-        allocate (gues2d(nij1,nens,nv2d))
-        allocate (anal3d(nij1,nlev,nens,nv3d))
-        allocate (anal2d(nij1,nens,nv2d))
-        if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-          allocate (mean3d(nlev,nlon,nlat,nv3d))
-          allocate (mean2d(nlon,nlat,nv3d))
-        end if
-      endif
+    call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
 
-      call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
+    !
+    ! READ GUES
+    !
+    call read_ens_mpi(gues3d, gues2d)
 
-      !
-      ! READ GUES
-      !
-      call read_ens_mpi(gues3d, gues2d)
+    if (ENS_WITH_MDET .and. mmdetin /= mmdet) then
+      gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
+      gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
+    end if
 
-      if (ENS_WITH_MDET .and. mmdetin /= mmdet) then
-        gues3d(:,:,mmdet,:) = gues3d(:,:,mmdetin,:)
-        gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
-      end if
+    call mpi_timer('READ_GUES', 1, barrier=MPI_COMM_a)
 
-      call mpi_timer('READ_GUES', 1, barrier=MPI_COMM_a)
+    !
+    ! WRITE ENS MEAN and SPRD
+    !
+    if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
+      call write_ensmean(GUES_MEAN_OUT_BASENAME, gues3d, gues2d, calced=.false., mean3d=mean3d, mean2d=mean2d)
+      call monit_obs_mpi(mean3d, mean2d, monit_step=1)
+    else
+      call write_ensmean(GUES_MEAN_OUT_BASENAME, gues3d, gues2d, calced=.false.)
+    end if
 
-      !
-      ! WRITE ENS MEAN and SPRD
-      !
-      if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-        call write_ensmean(trim(GUES_MEAN_INOUT_BASENAME)//atlab_SCALE, gues3d, gues2d, calced=.false., mean3d=mean3d, mean2d=mean2d)
-        call monit_obs_mpi(mean3d, mean2d, monit_step=1)
-      else
-        call write_ensmean(trim(GUES_MEAN_INOUT_BASENAME)//atlab_SCALE, gues3d, gues2d, calced=.false.)
-      end if
+    if (GUES_SPRD_OUT_FREQ >= 1) then
+      call write_enssprd(GUES_SPRD_OUT_BASENAME, gues3d, gues2d)
+    end if
 
-      if (GUES_SPRD_OUT) then
-        call write_enssprd(trim(GUES_SPRD_OUT_BASENAME)//atlab_SCALE, gues3d, gues2d)
-      end if
-
-      call mpi_timer('GUES_MEAN', 1, barrier=MPI_COMM_a)
+    call mpi_timer('GUES_MEAN', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Data Assimilation
 !-----------------------------------------------------------------------
 
-      !
-      ! LETKF
-      !
-      call das_letkf(gues3d,gues2d,anal3d,anal2d)
+    !
+    ! LETKF
+    !
+    call das_letkf(gues3d,gues2d,anal3d,anal2d)
 
-      call mpi_timer('DAS_LETKF', 1, barrier=MPI_COMM_a)
+    call mpi_timer('DAS_LETKF', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Analysis ensemble
 !-----------------------------------------------------------------------
 
-      !
-      ! COMPUTE ENS MEAN and SPRD
-      !
-      call ensmean_grd(MEMBER, nens, nij1, anal3d, anal2d)
-      ! write analysis mean later in write_ens_mpi
+    !
+    ! COMPUTE ENS MEAN and SPRD
+    !
+    call ensmean_grd(MEMBER, nens, nij1, anal3d, anal2d)
+    ! write analysis mean later in write_ens_mpi
 
-      !DTF disable overwriting files
-      !if (ANAL_SPRD_OUT) then
-      !  call write_enssprd(ANAL_SPRD_OUT_BASENAME//atlab_SCALE, anal3d, anal2d)
-      !end if
+    if (ANAL_SPRD_OUT_FREQ >= 1) then
+      call write_enssprd(ANAL_SPRD_OUT_BASENAME, anal3d, anal2d)
+    end if
 
-      call mpi_timer('ANAL_MEAN', 1, barrier=MPI_COMM_a)
+    call mpi_timer('ANAL_MEAN', 1, barrier=MPI_COMM_a)
 
-      !
-      ! WRITE ANAL and ENS MEAN
-      !
-      if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-        call write_ens_mpi(anal3d, anal2d, mean3d=mean3d, mean2d=mean2d)
-        call monit_obs_mpi(mean3d, mean2d, monit_step=2)
-      else
-        call write_ens_mpi(anal3d, anal2d)
-      end if
+    !
+    ! WRITE ANAL and ENS MEAN
+    !
+    if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
+      call write_ens_mpi(anal3d, anal2d, mean3d=mean3d, mean2d=mean2d)
+      call monit_obs_mpi(mean3d, mean2d, monit_step=2)
+    else
+      call write_ens_mpi(anal3d, anal2d)
+    end if
 
-      call mpi_timer('WRITE_ANAL', 1, barrier=MPI_COMM_a)
+    call mpi_timer('WRITE_ANAL', 1, barrier=MPI_COMM_a)
 
 !!-----------------------------------------------------------------------
 !! Monitor
 !!-----------------------------------------------------------------------
 
-      do iof = 1, OBS_IN_NUM
-        call obs_info_deallocate(obs(iof))
-      end do
-      deallocate (obs)
+    do iof = 1, OBS_IN_NUM
+      call obs_info_deallocate(obs(iof))
+    end do
+    deallocate (obs)
+    deallocate (gues3d, gues2d, anal3d, anal2d)
+    if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
+      deallocate (mean3d, mean2d)
+    end if
 
-      !deallocate (gues3d, gues2d, anal3d, anal2d)
-      !if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-      !  deallocate (mean3d, mean2d)
-      !end if
+    call unset_common_mpi_scale
 
-      if (it == itmax) then
-        call unset_common_mpi_scale
-      endif
-
-    end if ! [ myrank_use ]
-
-
-  enddo main_cycle ! [it = itmin, itmax] 
+  end if ! [ myrank_use ]
 
   call scalerm_finalize('LETKF')
 
@@ -313,7 +270,7 @@ PROGRAM letkf
 !-----------------------------------------------------------------------
 ! Finalize
 !-----------------------------------------------------------------------
-  call dtf_finalize(ierr)
+
   call finalize_mpi_scale
 
   STOP

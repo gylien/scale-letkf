@@ -26,7 +26,6 @@ module common_mpi_scale
 #ifdef PNETCDF
   use scale_file, only: FILE_AGGREGATE
 #endif
-  use scale_time, only: TIME_time2label
 
   implicit none
   public
@@ -643,10 +642,6 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
   character(filelenmax) :: filename
   integer :: im
 
-  character(len=19) :: timelabel ! YYYYMMDD-hhmmss.sss
-
-  call date2tlab_SCALE(adate, timelabel)
-
   im = myrank_to_mem(iter)
   if (im >= 1 .and. im <= nens) then
     if (im <= MEMBER) then
@@ -704,11 +699,7 @@ subroutine read_ens_mpi(v3d, v2d)
   character(len=filelenmax) :: filename
   integer :: it, im, mstart, mend
 
-  character(len=19) :: timelabel ! YYYYMMDD-hhmmss.sss
-
   call mpi_timer('', 2)
-
-  call date2tlab_SCALE(adate, timelabel)
 
   do it = 1, nitmax
     im = myrank_to_mem(it)
