@@ -86,7 +86,7 @@ fi
 #-------------------------------------------------------------------------------
 # observations
 
-if [ "$JOBTYPE" = 'cycle' ]; then
+if [ "$JOBTYPE" = 'cycle' ] && ((OBS_USE_JITDT != 1)); then
   time=$(datetime $STIME $LCYCLE s)
   while ((time <= $(datetime $ETIME $LCYCLE s))); do
     for iobs in $(seq $OBSNUM); do
