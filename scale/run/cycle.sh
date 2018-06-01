@@ -250,7 +250,7 @@ while ((time <= ETIME)); do
         fi
       fi
 
-      if ((s <= 3)); then
+      if ((s <= 3 || DTF_MODE >= 1)); then
         conf_time=$time
       else
         conf_time=$atime

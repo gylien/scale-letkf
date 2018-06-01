@@ -443,12 +443,20 @@ while ((time <= ETIME)); do
     done
   fi
   if ((LOG_OPT <= 4)); then
-    if ((DACYCLE != 1 && (DTF_MODE == 0 || loop == 1))); then
-      for p in $plist; do
-        path="log/letkf.NOUT_${atime}$(printf -- "${log_nfmt}" $((p-1)))"
-        pathout="${OUTDIR[1]}/${atime}/log/letkf/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
-        echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
-      done
+    if ((DACYCLE != 1)); then
+      if ((DTF_MODE == 0)); then
+        for p in $plist; do
+          path="log/letkf.NOUT_${atime}$(printf -- "${log_nfmt}" $((p-1)))"
+          pathout="${OUTDIR[1]}/${atime}/log/letkf/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
+          echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+        done
+      elif ((loop == 1)); then
+        for p in $plist; do
+          path="log/letkf.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
+          pathout="${OUTDIR[1]}/${time}/log/letkf/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
+          echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+        done
+      fi
     elif ((loop == 1)); then
       for p in $plist; do
         path="log/dacycle.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
@@ -892,7 +900,7 @@ while ((time <= ETIME)); do
         conf_file="scale-rm_ens_${time}.conf"
         config_file_scale_launcher cycle "$conf_file" "scale-rm_ens.d<domain>_${time}.conf" $mtot
         if ((DTF_MODE >= 1)); then
-          conf_file_copy="letkf_${atime}.conf"
+          conf_file_copy="letkf_${time}.conf"
         fi
       fi
     else
@@ -902,7 +910,7 @@ while ((time <= ETIME)); do
       else
         conf_file="scale-rm_ens.d${dfmt}_${time}.conf"
         if ((DTF_MODE >= 1)); then
-          conf_file_copy="letkf.d${dfmt}_${atime}.conf"
+          conf_file_copy="letkf.d${dfmt}_${time}.conf"
         fi
       fi
     fi
@@ -1103,6 +1111,8 @@ while ((time <= ETIME)); do
       conf_file_src2=$SCRP_DIR/config.nml.scale
       if ((DACYCLE == 1)); then
         conf_file="dacycle_${time}.conf"
+      elif ((DTF_MODE >= 1)); then
+        conf_file="letkf_${time}.conf"
       else
         conf_file="letkf_${atime}.conf"
       fi
@@ -1111,6 +1121,8 @@ while ((time <= ETIME)); do
       conf_file_src2=$SCRP_DIR/config.nml.scale.d$d
       if ((DACYCLE == 1)); then
         conf_file="dacycle.d${dfmt}_${time}.conf"
+      elif ((DTF_MODE >= 1)); then
+        conf_file="letkf.d${dfmt}_${time}.conf"
       else
         conf_file="letkf.d${dfmt}_${atime}.conf"
       fi

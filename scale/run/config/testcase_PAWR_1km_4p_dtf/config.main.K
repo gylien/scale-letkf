@@ -6,7 +6,7 @@
 #===============================================================================
 
 #PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
-PRESET='K_micro'
+PRESET='K'
 
 #===============================================================================
 
@@ -15,7 +15,7 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
 INDIR="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"
-OUTDIR="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_bdyprep" # Directory for SCALE-LETKF output
+OUTDIR="$DDIR/exp/testcase_PAWR_1km_4p_dtf" # Directory for SCALE-LETKF output
 
 USERNAME=gylien
 
