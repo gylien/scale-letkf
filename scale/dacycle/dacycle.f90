@@ -78,6 +78,8 @@ program dacycle
   real(r_size), allocatable :: gues2d(:,:,:)
   real(r_size), allocatable :: anal3d(:,:,:,:)
   real(r_size), allocatable :: anal2d(:,:,:)
+  real(r_size), allocatable :: addi3d(:,:,:,:)
+  real(r_size), allocatable :: addi2d(:,:,:)
   real(RP), allocatable :: mean3d(:,:,:,:)
   real(RP), allocatable :: mean2d(:,:,:)
 
@@ -288,12 +290,22 @@ program dacycle
           allocate (gues2d(nij1,nens,nv2d))
           allocate (anal3d(nij1,nlev,nens,nv3d))
           allocate (anal2d(nij1,nens,nv2d))
+          if (INFL_ADD > 0.0d0) then
+            allocate (addi3d(nij1,nlev,nens,nv3d))
+            allocate (addi2d(nij1,nens,nv2d))
+          end if
           if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
             allocate (mean3d(nlev,nlon,nlat,nv3d))
             allocate (mean2d(nlon,nlat,nv3d))
           end if
 
           call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
+
+          if (INFL_ADD > 0.0d0) then
+            call addinfl_setup(addi3d, addi2d)
+
+            call mpi_timer('ADDINFL_PREP', 1, barrier=MPI_COMM_a)
+          end if
         end if
 
         !-----------------------------------------------------------------------
@@ -372,7 +384,11 @@ program dacycle
         !
         ! LETKF
         !
-        call das_letkf(gues3d, gues2d, anal3d, anal2d)
+        if (INFL_ADD > 0.0d0) then
+          call das_letkf(gues3d, gues2d, anal3d, anal2d, addi3d=addi3d, addi2d=addi2d)
+        else
+          call das_letkf(gues3d, gues2d, anal3d, anal2d)
+        end if
 
         call mpi_timer('DAS_LETKF', 1, barrier=MPI_COMM_a)
 
@@ -443,6 +459,9 @@ program dacycle
 
     deallocate (obs)
     deallocate (gues3d, gues2d, anal3d, anal2d)
+    if (INFL_ADD > 0.0d0) then
+      deallocate (addi3d, addi2d)
+    end if
     if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
       deallocate (mean3d, mean2d)
     end if

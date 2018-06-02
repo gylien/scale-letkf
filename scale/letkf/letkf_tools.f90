@@ -31,7 +31,7 @@ MODULE letkf_tools
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: das_letkf !, das_efso
+  PUBLIC :: das_letkf, addinfl_setup !, das_efso
 
   integer,public,save :: icycle, lastcycle
 
@@ -49,7 +49,7 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Data Assimilation
 !-----------------------------------------------------------------------
-SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
+SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
   use scale_atmos_grid_cartesC, only: &
     DX, DY
   use common_rand
@@ -58,6 +58,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size),INTENT(INOUT) :: gues2d(nij1,nens,nv2d)      !  output: destroyed
   REAL(r_size),INTENT(OUT) :: anal3d(nij1,nlev,nens,nv3d)   ! analysis ensemble
   REAL(r_size),INTENT(OUT) :: anal2d(nij1,nens,nv2d)
+  real(r_size),intent(out),optional :: addi3d(nij1,nlev,nens,nv3d)
+  real(r_size),intent(out),optional :: addi2d(nij1,nens,nv2d)
 
 !  REAL(r_size) :: mean3d(nij1,nlev,nv3d)
 !  REAL(r_size) :: mean2d(nij1,nv2d)
@@ -803,7 +805,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !
   ! Additive inflation
   !
-  IF(INFL_ADD > 0.0d0) THEN
+  IF(INFL_ADD > 0.0d0 .and. present(addi3d) .and. present(addi2d)) THEN
     call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     if (INFL_ADD_Q_RATIO) then
@@ -841,14 +843,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
     call mpi_timer('das_letkf:additive_infl_addinfl_weight:', 2)
 
-    CALL read_ens_mpi_addiinfl(gues3d,gues2d)
-
-    call mpi_timer('das_letkf:additive_infl_read_ens_mpi:', 2)
-
-    CALL ensmean_grd(MEMBER,nens,nij1,gues3d,gues2d)
-
-    call mpi_timer('das_letkf:additive_infl_ensmean_grd:', 2)
-
     write (6, '(A)') '===== Additive covariance inflation ====='
     write (6, '(A,F10.4)') '  parameter:', INFL_ADD
     if (INFL_ADD_SHUFFLE) then
@@ -865,27 +859,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 !$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
     DO n=1,nv3d
       DO m=1,MEMBER
-        DO k=1,nlev
-          DO i=1,nij1
-            gues3d(i,k,m,n) = gues3d(i,k,m,n) - gues3d(i,k,mmean,n)
-          END DO
-        END DO
-      END DO
-    END DO
-!$OMP END DO NOWAIT
-!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-    DO n=1,nv2d
-      DO m=1,MEMBER
-        DO i=1,nij1
-          gues2d(i,m,n) = gues2d(i,m,n) - gues2d(i,mmean,n)
-        END DO
-      END DO
-    END DO
-!$OMP END DO
-
-!$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
-    DO n=1,nv3d
-      DO m=1,MEMBER
         if (INFL_ADD_SHUFFLE) then
           mshuf = ishuf(m)
         else
@@ -895,14 +868,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           DO k=1,nlev
             DO i=1,nij1
               anal3d(i,k,m,n) = anal3d(i,k,m,n) &
-                & + gues3d(i,k,mshuf,n) * INFL_ADD * addinfl_weight(i) * work3d(i,k,n)
+                & + addi3d(i,k,mshuf,n) * INFL_ADD * addinfl_weight(i) * work3d(i,k,n)
             END DO
           END DO
         else
           DO k=1,nlev
             DO i=1,nij1
               anal3d(i,k,m,n) = anal3d(i,k,m,n) &
-                & + gues3d(i,k,mshuf,n) * INFL_ADD * addinfl_weight(i)
+                & + addi3d(i,k,mshuf,n) * INFL_ADD * addinfl_weight(i)
             END DO
           END DO
         end if
@@ -918,7 +891,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           mshuf = m
         end if
         DO i=1,nij1
-          anal2d(i,m,n) = anal2d(i,m,n) + gues2d(i,mshuf,n) * INFL_ADD * addinfl_weight(i)
+          anal2d(i,m,n) = anal2d(i,m,n) + addi2d(i,mshuf,n) * INFL_ADD * addinfl_weight(i)
         END DO
       END DO
     END DO
@@ -928,10 +901,56 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     deallocate (addinfl_weight)
 
     call mpi_timer('das_letkf:additive_infl_cal:', 2)
-  END IF ! [ INFL_ADD > 0.0d0 ]
+  END IF ! [ INFL_ADD > 0.0d0 .and. present(addi3d) .and. present(addi2d) ]
 
   RETURN
 END SUBROUTINE das_letkf
+!-----------------------------------------------------------------------
+! Setup of additive inflation
+!-----------------------------------------------------------------------
+subroutine addinfl_setup(addi3d, addi2d)
+  implicit none
+  real(r_size), intent(out) :: addi3d(nij1,nlev,nens,nv3d)
+  real(r_size), intent(out) :: addi2d(nij1,nens,nv2d)
+  integer :: i, k, m, n
+
+  call mpi_timer('', 2, barrier=MPI_COMM_e)
+
+  call read_ens_mpi_addiinfl(addi3d, addi2d)
+
+  call mpi_timer('addinfl_setup:read_ens_mpi_addiinfl:', 2)
+
+  call ensmean_grd(MEMBER, nens, nij1, addi3d, addi2d)
+
+  call mpi_timer('addinfl_setup:ensmean_grd:', 2)
+
+!$OMP PARALLEL PRIVATE(n,m,k,i)
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
+  do n = 1, nv3d
+    do m = 1, MEMBER
+      do k = 1, nlev
+        do i = 1, nij1
+          addi3d(i,k,m,n) = addi3d(i,k,m,n) - addi3d(i,k,mmean,n)
+        end do
+      end do
+    end do
+  end do
+!$OMP END DO NOWAIT
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+  do n = 1, nv2d
+    do m = 1, MEMBER
+      do i = 1, nij1
+        addi2d(i,m,n) = addi2d(i,m,n) - addi2d(i,mmean,n)
+      end do
+    end do
+  end do
+!$OMP END DO
+!$OMP END PARALLEL
+
+  call mpi_timer('addinfl_setup:calc_perturbation:', 2)
+
+  return
+end subroutine addinfl_setup
 !!-----------------------------------------------------------------------
 !! Data assimilation for observations: Compute analyses of observations (Y^a)
 !! * currently only support multiplicative and adaptive inflation
