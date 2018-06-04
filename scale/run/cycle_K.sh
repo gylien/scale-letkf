@@ -177,10 +177,13 @@ fi
 
 cat >> $jobscrp << EOF
 
-. /work/system/Env_base_1.2.0-22
+. /work/system/Env_base_1.2.0-23
 export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:\$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
+
+export FLIB_FASTOMP=FALSE
+export FLIB_CNTL_BARRIER_ERR=FALSE
 EOF
 
 if ((DTF_MODE >= 1)); then
