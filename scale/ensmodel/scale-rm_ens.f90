@@ -88,6 +88,8 @@ program scale_rm_ens
 
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
+  character(len=8) :: date
+  character(len=10) :: time
   integer :: iarg
 
 #ifdef DTF
@@ -100,12 +102,18 @@ program scale_rm_ens
 ! Initial settings
 !-----------------------------------------------------------------------
 
+  call date_and_time(date=date, time=time)
+  write (6, '(2A,1x,A)') '[Info] Current wall time: ', date, time
+
   ! start MPI
   call PRC_MPIstart( universal_comm ) ! [OUT]
 
   PRC_mpi_alive = .true.
 
   call mpi_timer('', 1)
+
+  call date_and_time(date=date, time=time)
+  write (6, '(2A,1x,A)') '[Info] Current wall time: ', date, time
 
   call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
                             universal_nprocs, & ! [OUT]
@@ -174,6 +182,9 @@ program scale_rm_ens
 
 #ifdef DTF
   if (DTF_MODE >= 1) then
+    call date_and_time(date=date, time=time)
+    write (6, '(2A,1x,A)') '[Info] Current wall time: ', date, time
+
     call dtf_init('../../dtf.ini'//CHAR(0), 'scale'//CHAR(0), ierr)
   end if
 #endif
@@ -266,6 +277,9 @@ program scale_rm_ens
 
 #ifdef DTF
   if (DTF_MODE >= 1) then
+    call date_and_time(date=date, time=time)
+    write (6, '(2A,1x,A)') '[Info] Current wall time: ', date, time
+
     call dtf_finalize(ierr)
   end if
 #endif
@@ -284,9 +298,15 @@ program scale_rm_ens
 
   call mpi_timer('POST_SCRIPT', 1, barrier=universal_comm)
 
+  call date_and_time(date=date, time=time)
+  write (6, '(2A,1x,A)') '[Info] Current wall time: ', date, time
+
 !-----------------------------------------------------------------------
 
   call PRC_MPIfinish
+
+  call date_and_time(date=date, time=time)
+  write (6, '(2A,1x,A)') '[Info] Current wall time: ', date, time
 
   stop
 !=======================================================================

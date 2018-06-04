@@ -266,7 +266,7 @@ while ((time <= ETIME)); do
   # anal
   #-------------------
   mlist=
-  if ((DIRECT_TRANSFER != 1 || atime > ETIME)); then
+  if ((DIRECT_TRANSFER != 1 || DTF_MODE >= 1 || atime > ETIME)); then
     if ((OUT_OPT <= 4 || (OUT_OPT <= 5 && loop % OUT_CYCLE_SKIP == 0) || atime > ETIME)); then
       mlist=$(seq $mtot)
     elif ((OUT_OPT <= 7)); then

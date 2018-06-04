@@ -85,6 +85,8 @@ program dacycle
 
   character(len=7) :: stdoutf='-000000'
   character(len=6400) :: icmd
+  character(len=8) :: date
+  character(len=10) :: time
   integer :: iof
 
   logical :: anal_mem_out_now
@@ -104,8 +106,14 @@ program dacycle
 ! Initial settings
 !-----------------------------------------------------------------------
 
+  call date_and_time(date=date, time=time)
+  write (6, '(2A,1x,A)') '[Info] Current wall time: ', date, time
+
   call initialize_mpi_scale
   call mpi_timer('', 1)
+
+  call date_and_time(date=date, time=time)
+  write (6, '(2A,1x,A)') '[Info] Current wall time: ', date, time
 
   if (command_argument_count() >= 2) then
     call get_command_argument(2, icmd)
@@ -145,6 +153,9 @@ program dacycle
 
 #ifdef DTF
   if (DTF_MODE >= 1) then
+    call date_and_time(date=date, time=time)
+    write (6, '(2A,1x,A)') '[Info] Current wall time: ', date, time
+
     call dtf_init('../../dtf.ini'//CHAR(0), 'letkf'//CHAR(0), ierr)
   end if
 #endif
@@ -485,13 +496,22 @@ program dacycle
 
 #ifdef DTF
   if (DTF_MODE >= 1) then
+    call date_and_time(date=date, time=time)
+    write (6, '(2A,1x,A)') '[Info] Current wall time: ', date, time
+
     call dtf_finalize(ierr)
   end if
 #endif
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 
+  call date_and_time(date=date, time=time)
+  write (6, '(2A,1x,A)') '[Info] Current wall time: ', date, time
+
   call finalize_mpi_scale
+
+  call date_and_time(date=date, time=time)
+  write (6, '(2A,1x,A)') '[Info] Current wall time: ', date, time
 
   stop
 end program dacycle
