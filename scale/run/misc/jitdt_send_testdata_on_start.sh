@@ -8,10 +8,10 @@
 . config.main
 
 TEST_DIR='/volume63/data/hp150019/gylien/obs/20130713'
-TEST_TARFILE='osaka_20130713060030-060500.tar'
-TEST_LOG='osaka_20130713060030-060500.log'
+TEST_TARFILE='osaka_20130713060030-070000.tar'
+TEST_LOG='osaka_20130713060030-070000.log'
 TEST_INTERVAL=30
-TEST_ITERATION=1
+TEST_ITERATION=120
 
 echo
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] Restart daemon..."
