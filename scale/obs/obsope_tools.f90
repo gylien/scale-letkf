@@ -412,7 +412,9 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
 
   do it = 1, nitmax
     im = myrank_to_mem(it)
-    if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
+!!!!!!!!!!!!
+!    if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
+!!!!!!!!!!!!
 
       write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
             im, ', subdomain id #', myrank_d
@@ -464,6 +466,12 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
 
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:read_ens_history(t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
+
+
+        !!!!!!!!!!!!
+        if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
+        !!!!!!!!!!!!
+
 
         if (present(v3d) .and. present(v2d) .and. islot == SLOT_END) then
           if (im <= MEMBER) then
@@ -756,7 +764,20 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
  
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:obsope_step_2   (t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
+
+
+        !!!!!!!!!!!!
+        end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
+        !!!!!!!!!!!!
+
+
       end do ! [ islot = SLOT_START, SLOT_END ]
+
+
+    !!!!!!!!!!!!
+    if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
+    !!!!!!!!!!!!
+
 
       call mpi_timer('', 2)
 

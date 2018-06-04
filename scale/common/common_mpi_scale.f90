@@ -714,7 +714,7 @@ subroutine read_ens_mpi(v3d, v2d)
 
     ! Note: read all members + mdetin
     ! 
-    if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
+    if ((im >= 1 .and. im <= MEMBER) .or. im == mmean .or. im == mmdet) then
       if (im <= MEMBER) then
         filename = trim(GUES_IN_BASENAME) // trim(timelabel_anal)
         call filename_replace_mem(filename, im)
