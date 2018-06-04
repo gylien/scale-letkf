@@ -12,10 +12,8 @@ PRESET='K'
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
-DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
-
-INDIR="$DDIR/exp/testcase_PAWR_1km_4p_pnetcdf_data"
-OUTDIR="$DDIR/exp/testcase_PAWR_1km_4p_dtf" # Directory for SCALE-LETKF output
+INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_1km_initbdy_v180531"
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_1km_1001_m100_dtf_SP_log1" # Directory for SCALE-LETKF output
 
 USERNAME=gylien
 
@@ -25,19 +23,19 @@ LIBDTF_PATH=/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222
 # Location of model/data files
 
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
-DATADIR="$DDIR/database"                                             # Directory of the SCALE database
+DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"        # Directory of the SCALE database
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
-DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
+#DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_312/const/topo"
 DATA_LANDUSE=                                                        # Directory of the prepared landuse files
-DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
+#DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_312"
 DATA_BDY_SCALE_PRC_NUM_X=3
 DATA_BDY_SCALE_PRC_NUM_Y=3
 DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-OBS="$DDIR/obs/QCED_1KM_v4_v500M_attn0.01"                           # Observation data in LETKF observation format
+OBS="/volume63/data/hp150019/gylien/obs/20130713/raw_v2"             # Observation data in LETKF observation format
 OBSNCEP=
 OBS_USE_JITDT=0
 
@@ -53,6 +51,7 @@ PNETCDF_BDY_SCALE=0     # Use PNETCDF I/O for the parent domain SCALE data? (def
 
 DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
+DET_RUN_CYCLED=1
 
 TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
@@ -88,16 +87,16 @@ ENABLE_PARAM_USER=1     # 0: Do not enable the 'PARAM_USER' section of the SCALE
 
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
-OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+OCEAN_FORMAT=0          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 LAND_INPUT=0            # 0: No land input (use cycling land variables)
                         # 1: Update the land variables every cycle
-LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+LAND_FORMAT=0           # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
-OBSNAME[1]=radar
-OBS_FORMAT[1]=RADAR
+OBSNAME[1]=pawr
+OBS_FORMAT[1]=PAWR_TOSHIBA
 
 #===============================================================================
 # Cycling settings
@@ -110,13 +109,9 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-#MEMBER=10          # Ensemble size
-MEMBER=3          # Ensemble size
-#MEMBER=100          # Ensemble size
+MEMBER=100         # Ensemble size
 
-#NNODES=48          # Number of nodes
-NNODES=20          # Number of nodes
-#NNODES=408          # Number of nodes
+NNODES=408         # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -138,6 +133,7 @@ TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs i
 TMP="/scratch/$(id -ng)/${USERNAME}/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
+#TMPSL="/tmp/gylien/$TMPSUBDIR"  # Temporary directory only on the server node and on a local file system
 TMP_JITDATA="$TMP/jit-data"
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
