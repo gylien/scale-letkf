@@ -642,7 +642,10 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
   real(r_size), intent(out) :: v3dg(nlevh,nlonh,nlath,nv3dd)
   real(r_size), intent(out) :: v2dg(nlonh,nlath,nv2dd)
   character(filelenmax) :: filename
+  character(len=timer_name_width) :: timer_str
   integer :: im
+
+  call mpi_timer('', 3)
 
   im = myrank_to_mem(iter)
   if (im >= 1 .and. im <= nens) then
@@ -681,6 +684,9 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
       end if
 #endif
     end if
+
+    write (timer_str, '(A40,I4,A2)') 'read_ens_history_iter:read_history(iter=', iter, '):'
+    call mpi_timer(trim(timer_str), 3)
   end if
 
   return
