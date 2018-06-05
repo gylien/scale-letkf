@@ -93,7 +93,7 @@ cat $SCRP_DIR/config.main | \
 
 if ((DTF_MODE >= 1)); then
   cp -L $LIBDTF_PATH/libdtf.so $TMP/libdtf.so
-  cp -L $SCRP_DIR/dtf.ini $TMP/dtf.ini
+#  cp -L $SCRP_DIR/dtf.ini $TMP/dtf.ini
 fi
 
 echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMP/config.main

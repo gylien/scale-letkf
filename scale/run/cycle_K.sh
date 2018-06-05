@@ -118,14 +118,14 @@ ${NODEFILE_DIR}/|node/
 EOF
 
 if ((DTF_MODE >= 1)); then
-  if [ ! -e "${SCRP_DIR}/dtf.ini" ] ; then
-    echo "dtf.ini is not specified!"
-    exit 1
-  fi
+#  if [ ! -e "${SCRP_DIR}/dtf.ini" ] ; then
+#    echo "dtf.ini is not specified!"
+#    exit 1
+#  fi
   cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 ${LIBDTF_PATH}/libdtf.so|libdtf.so
-${SCRP_DIR}/dtf.ini|dtf.ini
 EOF
+#${SCRP_DIR}/dtf.ini|dtf.ini
 fi
 
 if [ "$CONF_MODE" != 'static' ]; then
