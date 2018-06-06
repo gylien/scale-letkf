@@ -1188,23 +1188,23 @@ while ((time <= ETIME)); do
   atime=$(datetime $time $LCYCLE s)
 done
 
-  #-----------------------------------------------------------------------------
-  # DTF 
-  #-----------------------------------------------------------------------------
-  if ((DACYCLE != 1 && DTF_MODE == 1)); then
-    eatime=$(datetime $ETIME $LCYCLE s)
-    conf_file_src=$SCRP_DIR/config.nml.dtf
-    conf_file="dtf.ini"
-    rm -f $CONFIG_DIR/${conf_file}
-    cat $conf_file_src | \
-        sed -e "/!--EXCLUDE_NAME_STIME--/a exclude_name=\"${STIME:8:6}\"" \
-            -e "/!--EXCLUDE_NAME_ATIME--/a exclude_name=\"${eatime:8:6}\"" \
-        >> $CONFIG_DIR/${conf_file}
-    if ((stage_config == 1)); then
-      echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
-    fi
-  fi
+#-----------------------------------------------------------------------------
+# DTF
+#-----------------------------------------------------------------------------
 
+if ((DTF_MODE >= 1)); then
+  eatime=$(datetime $ETIME $LCYCLE s)
+  conf_file_src=$SCRP_DIR/config.nml.dtf
+  conf_file="dtf.ini"
+  rm -f $CONFIG_DIR/${conf_file}
+  cat $conf_file_src | \
+      sed -e "/!--EXCLUDE_NAME_STIME--/a exclude_name=\"${STIME:8:6}\"" \
+          -e "/!--EXCLUDE_NAME_ATIME--/a exclude_name=\"${eatime:8:6}\"" \
+      >> $CONFIG_DIR/${conf_file}
+  if ((stage_config == 1)); then
+    echo "$CONFIG_DIR/${conf_file}|${conf_file}" >> ${STAGING_DIR}/${STGINLIST}
+  fi
+fi
 
 echo
 

@@ -118,6 +118,10 @@ if ((RUN_LEVEL == 0)); then
     echo "[Error] $myname: When \$BDY_FORMAT = 4, 'config.nml.grads_boundary' file is required." >&2
     exit 1
   fi
+  if ((DTF_MODE >= 1)) && [ ! -e "$SCRP_DIR/config.nml.dtf" ]; then
+    echo "[Error] $myname: When \$DTF_MODE >= 1, 'config.nml.dtf' file is required." >&2
+    exit 1
+  fi
 
   if ((MAKEINIT == 1)); then
     if [ -d "${OUTDIR}/${STIME}/anal" ]; then
