@@ -907,19 +907,21 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   obs%meta(3) = z0
 
   obs%nobs = 0
+  nobs_ze = 0
+  nobs_vr = 0
   do idx = 1, nobs_sp
     if (grid_count_ze(idx) > 0) then
       obs%nobs = obs%nobs + 1
+      nobs_ze = nobs_ze + 1
     end if
     if (grid_count_vr(idx) > 0) then
       obs%nobs = obs%nobs + 1
+      nobs_vr = nobs_vr + 1
     end if
   end do
   call obs_info_allocate(obs, extended=.true.)
 
   n = 0
-  nobs_ze = 0
-  nobs_vr = 0
   min_obs_ze = huge(1.0d0)
   max_obs_ze = -huge(1.0d0)
   min_obs_vr = huge(1.0d0)
@@ -935,7 +937,6 @@ subroutine read_obs_radar_toshiba(cfile, obs)
       obs%err(n) = OBSERR_RADAR_REF
       obs%typ(n) = 22
       obs%dif(n) = 0.0d0
-      nobs_ze = nobs_ze + 1
       if (grid_ze(idx) > max_obs_ze) max_obs_ze = grid_ze(idx)
       if (grid_ze(idx) < min_obs_ze) min_obs_ze = grid_ze(idx)
     end if
@@ -950,7 +951,6 @@ subroutine read_obs_radar_toshiba(cfile, obs)
       obs%err(n) = OBSERR_RADAR_VR
       obs%typ(n) = 22
       obs%dif(n) = 0.0d0
-      nobs_vr = nobs_vr + 1
       if (grid_vr(idx) > max_obs_vr) max_obs_vr = grid_vr(idx)
       if (grid_vr(idx) < min_obs_vr) min_obs_vr = grid_vr(idx)
     end if
