@@ -18,6 +18,7 @@
 /scale/run/config.nml.scale_user
 /scale/run/config.nml.obsope
 /scale/run/config.nml.letkf*
+/scale/run/config.nml.dtf
 /scale/run/cycle_job.sh
 /scale/run/fcst_job.sh
 /scale/run/machinefile
