@@ -306,7 +306,22 @@ while ((time <= ETIME)); do
   done
 
   if ((DTF_MODE >= 1)); then
-    wait
+#    wait
+    jobids=$(jobs -p)
+    while [ -n "$jobids" ]; do
+      for job in $jobids; do
+        if ! (kill -0 $job 2> /dev/null); then
+          rcode=0
+          wait $job || rcode=$?
+          if ((rcode != 0)); then
+            echo "[$(datetime_now)] ${time}: One of the background programs crashed..." >&2
+            exit $rcode
+          fi
+        fi
+      done
+      jobids=$(jobs -p)
+      sleep 1s
+    done
   fi
 
 #-------------------------------------------------------------------------------
