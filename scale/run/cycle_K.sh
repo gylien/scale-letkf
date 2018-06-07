@@ -198,10 +198,12 @@ fi
 
 cat >> $jobscrp << EOF
 
-. /work/system/Env_base_1.2.0-22
+. /work/system/Env_base_1.2.0-23
 export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:\$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
+export FLIB_FASTOMP=FALSE
+export FLIB_CNTL_BARRIER_ERR=FALSE
 
 echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ### Start unarchive tar files" >&2
 
@@ -210,6 +212,7 @@ mpiexec /work/system/bin/msh "/bin/tar -xf ./input.tar"
 echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ### Delete tar files" >&2
 
 mpiexec /work/system/bin/msh "/bin/rm -f ./input.tar"
+
 
 echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ### Complete process tar files" >&2
 
