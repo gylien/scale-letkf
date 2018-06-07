@@ -2091,6 +2091,7 @@ SUBROUTINE read_obs(cfile,obs)
   OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
   DO n=1,obs%nobs
     READ(iunit) wk
+    IF(NINT(wk(7)) /= 22) THEN !!!!!! No unit conversion for radar retrieval data !!!!!!
     SELECT CASE(NINT(wk(1)))
     CASE(id_u_obs)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
@@ -2128,6 +2129,7 @@ SUBROUTINE read_obs(cfile,obs)
       wk(5) = real(y,kind=r_sngl)
       wk(6) = real(OBSERR_TCY,kind=r_sngl)
     END SELECT
+    END IF
     obs%elm(n) = NINT(wk(1))
     obs%lon(n) = REAL(wk(2),r_size)
     obs%lat(n) = REAL(wk(3),r_size)
@@ -2174,6 +2176,7 @@ SUBROUTINE write_obs(cfile,obs,append,missing)
       wk(6) = REAL(obs%err(n),r_sngl)
       wk(7) = REAL(obs%typ(n),r_sngl)
       wk(8) = REAL(obs%dif(n),r_sngl)
+      IF(NINT(wk(7)) /= 22) THEN !!!!!! No unit conversion for radar retrieval data !!!!!!
       SELECT CASE(NINT(wk(1)))
       CASE(id_u_obs)
         wk(4) = wk(4) * 0.01 ! Pa -> hPa
@@ -2196,6 +2199,7 @@ SUBROUTINE write_obs(cfile,obs,append,missing)
         wk(5) = wk(5) * 0.01 ! Pa -> hPa
         wk(6) = wk(6) * 0.01 ! Pa -> hPa
       END SELECT
+      END IF
       WRITE(iunit) wk
     end if
   END DO
