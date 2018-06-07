@@ -74,7 +74,7 @@ BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial
                         # 1: Use different series of boundary files for different initial time
 
 BDYINT=300
-BDYCYCLE_INT=300
+BDYCYCLE_INT=3600
 
 PARENT_REF_TIME=20130713060000
 
@@ -129,7 +129,7 @@ TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs i
 TMP="/scratch/$(id -ng)/${USERNAME}/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
-TMPSL="/tmp/gylien/$TMPSUBDIR"  # Temporary directory only on the server node and on a local file system
+#TMPSL="/tmp/gylien/$TMPSUBDIR"  # Temporary directory only on the server node and on a local file system
 TMP_JITDATA="$TMP/jit-data"
 
 CLEAR_TMP=1                 # Clear temporary directories after the completion of job?
