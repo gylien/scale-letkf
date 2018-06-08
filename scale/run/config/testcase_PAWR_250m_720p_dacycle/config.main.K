@@ -12,10 +12,10 @@ PRESET='K_rankdir'
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
-INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_250m_initbdy_720p_v180531"
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/huge1806-MRGD250m-NOJIT"     ###### CHANGE TO YOUR DIRECTORY
-
 USERNAME=gylien                                                                               ###### CHANGE TO YOUR ID
+
+INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_250m_initbdy_720p_v180531"
+OUTDIR="/volume63/data/hp150019/${USERNAME}/exp/scale-letkf/benchmark/huge1806-MRGD250m-NOJIT"     ###### CHANGE TO YOUR DIRECTORY
 
 #===============================================================================
 # Location of model/data files
