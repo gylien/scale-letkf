@@ -13,9 +13,9 @@ PRESET='K_rankdir'
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_250m_initbdy_720p_v180531"
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_250m_34_dacycle_SP_log1" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/huge1806-MRGD250m-NOJIT"     ###### CHANGE TO YOUR DIRECTORY
 
-USERNAME=gylien
+USERNAME=gylien                                                                               ###### CHANGE TO YOUR ID
 
 #===============================================================================
 # Location of model/data files
@@ -74,7 +74,7 @@ BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial
                         # 1: Use different series of boundary files for different initial time
 
 BDYINT=300
-BDYCYCLE_INT=300
+BDYCYCLE_INT=3600
 
 PARENT_REF_TIME=20130713060000
 
@@ -129,10 +129,10 @@ TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs i
 TMP="/scratch/$(id -ng)/${USERNAME}/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
-TMPSL="/tmp/gylien/$TMPSUBDIR"  # Temporary directory only on the server node and on a local file system
+TMPSL="/tmp/${USERNAME}/$TMPSUBDIR"  # Temporary directory only on the server node and on a local file system
 TMP_JITDATA="$TMP/jit-data"
 
-CLEAR_TMP=1                 # Clear temporary directories after the completion of job?
+CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
                             #  0: No
                             #  1: Yes
 

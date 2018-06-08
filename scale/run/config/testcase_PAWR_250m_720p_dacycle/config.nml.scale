@@ -8,7 +8,7 @@
 /
 
 &PARAM_FILE_CARTESC
- FILE_CARTESC_datacheck_criteria = 1.0D-4,
+ FILE_CARTESC_datacheck_criteria = 1.0D-3,
 /
 
 !&PARAM_PROF
@@ -20,25 +20,25 @@
  TIME_STARTMS               = 0.D0,
 !--TIME_DURATION--
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 2.0D0,
+ TIME_DT                    = 1.5D0,
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = 0.5D0,
+ TIME_DT_ATMOS_DYN          = 0.3D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = 10.D0,
+ TIME_DT_ATMOS_PHY_MP       = 7.5D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_RD       = 30.D0,
+ TIME_DT_ATMOS_PHY_RD       = 300.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_SF       = 30.D0,
+ TIME_DT_ATMOS_PHY_SF       = 1.5D0,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_TB       = 2.0D0,
+ TIME_DT_ATMOS_PHY_TB       = 1.5D0,
  TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_BL       = 2.0D0,
+ TIME_DT_ATMOS_PHY_BL       = 1.5D0,
  TIME_DT_ATMOS_PHY_BL_UNIT  = "SEC",
- TIME_DT_OCEAN              = 30.D0,
+ TIME_DT_OCEAN              = 7.5D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
- TIME_DT_LAND               = 30.D0,
+ TIME_DT_LAND               = 7.5D0,
  TIME_DT_LAND_UNIT          = "SEC",
- TIME_DT_URBAN              = 30.D0,
+ TIME_DT_URBAN              = 7.5D0,
  TIME_DT_URBAN_UNIT         = "SEC",
 !--TIME_DT_ATMOS_RESTART--
  TIME_DT_ATMOS_RESTART_UNIT = "SEC",
