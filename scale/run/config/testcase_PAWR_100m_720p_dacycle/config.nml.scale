@@ -208,6 +208,10 @@
  URBAN_TYPE = "SLC",
 /
 
+&PARAM_BULKFLUX
+ BULKFLUX_type = "U95",
+/
+
 #################################################
 #
 # model configuration: atmosphere

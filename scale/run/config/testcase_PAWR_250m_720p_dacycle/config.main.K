@@ -10,6 +10,8 @@ PRESET='K_rankdir'
 
 #===============================================================================
 
+DISK_MODE_OBS=2
+
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 USERNAME=gylien                                                                               ###### CHANGE TO YOUR ID
