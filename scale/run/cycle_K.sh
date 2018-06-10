@@ -193,9 +193,9 @@ if ((DTF_MODE >= 1)); then
 export DTF_VERBOSE_LEVEL=0
 export DTF_SCALE=1
 export DTF_INI_FILE=./dtf.ini
-export SCALE_ENSEMBLE_SZ=$((MEMBER+1+DET_RUN))
+export SCALE_ENSEMBLE_SZ=$((SCALE_NP))
 #export DTF_IGNORE_ITER=    #set if necessary
-export MAX_WORKGROUP_SIZE=$((MEMBER+1+DET_RUN))
+export MAX_WORKGROUP_SIZE=$((SCALE_NP / 8))
 
 export LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH
 export DTF_GLOBAL_PATH=.

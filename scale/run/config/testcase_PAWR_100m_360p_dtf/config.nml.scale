@@ -8,7 +8,7 @@
 /
 
 &PARAM_FILE_CARTESC
- FILE_CARTESC_datacheck_criteria = 1.0D-4,
+ FILE_CARTESC_datacheck_criteria = 1.0D-3,
 /
 
 !&PARAM_PROF
@@ -20,25 +20,25 @@
  TIME_STARTMS               = 0.D0,
 !--TIME_DURATION--
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 1.0D0,
+ TIME_DT                    = 0.6D0,
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = 0.25D0,
+ TIME_DT_ATMOS_DYN          = 0.12D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = 10.D0,
+ TIME_DT_ATMOS_PHY_MP       = 6.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_RD       = 30.D0,
+ TIME_DT_ATMOS_PHY_RD       = 300.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_SF       = 30.D0,
+ TIME_DT_ATMOS_PHY_SF       = 0.6D0,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_TB       = 1.0D0,
+ TIME_DT_ATMOS_PHY_TB       = 0.6D0,
  TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_BL       = 1.0D0,
+ TIME_DT_ATMOS_PHY_BL       = 0.6D0,
  TIME_DT_ATMOS_PHY_BL_UNIT  = "SEC",
- TIME_DT_OCEAN              = 30.D0,
+ TIME_DT_OCEAN              = 6.0D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
- TIME_DT_LAND               = 30.D0,
+ TIME_DT_LAND               = 6.0D0,
  TIME_DT_LAND_UNIT          = "SEC",
- TIME_DT_URBAN              = 30.D0,
+ TIME_DT_URBAN              = 6.0D0,
  TIME_DT_URBAN_UNIT         = "SEC",
 !--TIME_DT_ATMOS_RESTART--
  TIME_DT_ATMOS_RESTART_UNIT = "SEC",
@@ -101,8 +101,8 @@
 #################################################
 
 &PARAM_PRC
- PRC_NUM_X      = 15,
- PRC_NUM_Y      = 24,
+ PRC_NUM_X      = 24,
+ PRC_NUM_Y      = 30,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -115,8 +115,8 @@
 
 &PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 98,
- IMAX = 80,
- JMAX = 50,
+ IMAX = 50,
+ JMAX = 40,
 /
 
 &PARAM_LAND_GRID_CARTESC_INDEX
@@ -206,6 +206,10 @@
 
 &PARAM_URBAN
  URBAN_TYPE = "SLC",
+/
+
+&PARAM_BULKFLUX
+ BULKFLUX_type = "U95",
 /
 
 #################################################
