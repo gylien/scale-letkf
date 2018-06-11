@@ -219,7 +219,7 @@
 #################################################
 
 &PARAM_ATMOS_VARS
- ATMOS_VARS_CHECKRANGE = .true.,
+ ATMOS_VARS_CHECKRANGE = .false.,
 /
 
 &PARAM_ATMOS_REFSTATE
@@ -290,7 +290,7 @@
 #################################################
 
 &PARAM_OCEAN_VARS
- OCEAN_VARS_CHECKRANGE = .true.,
+ OCEAN_VARS_CHECKRANGE = .false.,
 !--OCEAN_RESTART_IN_BASENAME--
 /
 
