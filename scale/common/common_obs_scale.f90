@@ -40,7 +40,7 @@ MODULE common_obs_scale
   IMPLICIT NONE
   PUBLIC
 
-  INTEGER,PARAMETER :: nid_obs_varlocal=9 !H08
+  INTEGER,PARAMETER :: nid_obs_varlocal=10
 !
 ! conventional observations
 !
@@ -73,19 +73,19 @@ MODULE common_obs_scale
 !
 ! JMA radar observation (Fraction Skill Score)
 !
-  INTEGER,PARAMETER :: id_jmaradar_fss_obs=5001 ! tentative
+  INTEGER,PARAMETER :: id_jmarfrac_obs=5001 ! tentative
 
   INTEGER,PARAMETER :: elem_uid(nid_obs)= &
      (/id_u_obs, id_v_obs, id_t_obs, id_tv_obs, id_q_obs, id_rh_obs, &
        id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_ref_zero_obs, id_radar_vr_obs, id_radar_prh_obs, &
-       id_H08IR_obs, id_tclon_obs, id_tclat_obs, id_tcmip_obs/)
+       id_H08IR_obs, id_tclon_obs, id_tclat_obs, id_tcmip_obs, id_jmarfrac_obs/)
 
   CHARACTER(3),PARAMETER :: obelmlist(nid_obs)= &
      (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', 'RE0', ' Vr', 'PRH',&
-       'H08', 'TCX', 'TCY', 'TCP'/)
+       'H08', 'TCX', 'TCY', 'TCP', 'JRF'/)
 
   CHARACTER(3),PARAMETER :: obelmlist_varlocal(nid_obs_varlocal)= &
-     (/'WND', '  T', 'MOI', ' PS', 'PRC', 'TCV', 'REF', ' Vr', 'H08'/)
+     (/'WND', '  T', 'MOI', ' PS', 'PRC', 'TCV', 'REF', ' Vr', 'H08', 'JRF'/)
 
   ! Parameter 'nobtype' is set in common_nml.f90
   CHARACTER(6),PARAMETER :: obtypelist(nobtype)= &
@@ -93,7 +93,7 @@ MODULE common_obs_scale
        'VADWND', 'SATEMP', 'ADPSFC', 'SFCSHP', 'SFCBOG', &
        'SPSSMI', 'SYNDAT', 'ERS1DA', 'GOESND', 'QKSWND', &
        'MSONET', 'GPSIPW', 'RASSDA', 'WDSATR', 'ASCATW', &
-       'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL'/) ! H08
+       'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL', 'JMARFR'/) ! H08
 
   INTEGER,PARAMETER :: max_obs_info_meta = 3 ! maximum array size for type(obs_info)%meta
 
@@ -138,6 +138,7 @@ MODULE common_obs_scale
   character(obsformatlenmax), parameter :: obsfmt_prepbufr = 'PREPBUFR'
   character(obsformatlenmax), parameter :: obsfmt_radar    = 'RADAR'
   character(obsformatlenmax), parameter :: obsfmt_h08      = 'HIMAWARI8'
+  character(obsformatlenmax), parameter :: obsfmt_jmarfrac    = 'JMARFRAC'
 !  integer, parameter :: nobsformats = 3
 !  character(obsformatlenmax), parameter :: obsformat(nobsformats) = &
 !    (/obsfmt_prepbufr, obsfmt_radar, obsfmt_h08/)
@@ -204,14 +205,16 @@ function uid_obs(id_obs)
     uid_obs = 11
   case(id_radar_prh_obs)
     uid_obs = 12
-  case(id_h08ir_obs) ! H08
-    uid_obs = 13     ! H08
+  case(id_H08IR_obs) 
+    uid_obs = 13    
   case(id_tclon_obs)
     uid_obs = 14
   case(id_tclat_obs)
     uid_obs = 15
   case(id_tcmip_obs)
     uid_obs = 16
+  case(id_jmarfrac_obs)
+    uid_obs = 17
   case default
     uid_obs = -1     ! error
   end select
@@ -241,8 +244,10 @@ function uid_obs_varlocal(id_obs)
     uid_obs_varlocal = 7
   case(id_radar_vr_obs)
     uid_obs_varlocal = 8
-  case(id_h08ir_obs)      ! H08
-    uid_obs_varlocal = 9  ! H08
+  case(id_h08ir_obs)      
+    uid_obs_varlocal = 9  
+  case(id_jmarfrac_obs)      
+    uid_obs_varlocal = 10
   case default
     uid_obs_varlocal = -1 ! error
   end select
@@ -1387,12 +1392,14 @@ END SUBROUTINE itpl_3d
 #ifdef H08
 subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,&
                      nobs_H08,bias_H08,rmse_H08,bias_H08_bc,rmse_H08_bc,&
-                     aH08,bH08,vbcf,step)
+                     aH08,bH08,vbcf,step,m2d)
 #else
-subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
+subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step,m2d)
 #endif
   use scale_process, only: &
       PRC_myrank
+  use scale_grid_index, only: &
+      IHALO, JHALO
 
   implicit none
 
@@ -1405,6 +1412,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   LOGICAL,INTENT(OUT) :: monit_type(nid_obs)
   logical,intent(in) :: use_key
   integer,intent(in) :: step
+  real(r_size),intent(in),optional :: m2d(nlon,nlat)
 
   REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
@@ -1624,6 +1632,16 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
         cycle
 
 #endif
+      !=========================================================================
+      case (obsfmt_jmarfrac) ! JMA radar fraction obs
+      !-------------------------------------------------------------------------
+        if (.not.present(m2d)) then
+          write(6,'(a)')'No fraction input into monit_obs! Check!'
+          cycle
+        endif
+        ohx(n) = m2d(nint(ril-IHALO),nint(rjl-JHALO))
+        oqc(n) = iqc_good
+
       !=========================================================================
       end select
 
@@ -1866,6 +1884,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 #ifdef H08
   if (DEPARTURE_STAT_H08) then
     monit_type(uid_obs(id_H08IR_obs)) = .true.
+  end if
+  if (DEPARTURE_STAT_JMARFRAC) then
+    monit_type(uid_obs(id_jmarfrac_obs)) = .true.
   end if
 #endif
 
@@ -2781,8 +2802,10 @@ subroutine read_obs_all(obs)
     case (obsfmt_radar)
       call get_nobs_radar(trim(OBS_IN_NAME(iof)), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
     case (obsfmt_h08)
-      call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
-    case default
+      call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) 
+    case (obsfmt_jmarfrac)
+      obs(iof)%nobs = nlong * nlatg ! fraction obs will be located all model grid points
+    case default 
       write(6,*) '[Error] Unsupported observation file format!'
       stop
     end select
@@ -2799,7 +2822,10 @@ subroutine read_obs_all(obs)
     case (obsfmt_radar)
       call read_obs_radar(trim(OBS_IN_NAME(iof)),obs(iof))
     case (obsfmt_h08)
-      call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
+      call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof))
+    case (obsfmt_jmarfrac)
+      ! JMA radar fraction obs will be read from obsope_tools.f90
+      cycle
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
 
@@ -2840,6 +2866,7 @@ subroutine write_obs_all(obs, missing, file_suffix)
 
   return
 end subroutine write_obs_all
+
 !
 !-----------------------------------------------------------------------
 !   TC vital obs subroutines by T. Honda (03/28/2016)
@@ -3511,7 +3538,7 @@ SUBROUTINE write_obs_H08(cfile,obs,append,missing)
 END SUBROUTINE write_obs_H08
 
 ! Read JMA radar composite uniform 1-km mesh data
-SUBROUTINE read_jmaradar_comp_bin(it,jmaradar2d)
+subroutine read_jmaradar_comp_bin(jmaradar2d,it,iof)
   use scale_grid, only: &
       GRID_CX, GRID_CY, &
       DX, DY
@@ -3519,64 +3546,88 @@ SUBROUTINE read_jmaradar_comp_bin(it,jmaradar2d)
       IHALO, JHALO
   use scale_mapproj, only: &
       MPRJ_xy2lonlat
-  IMPLICIT NONE
+  implicit none
 
-  LOGICAL :: ex
-  INTEGER :: iunit
+  logical :: ex
+  integer :: iunit
 
-  INTEGER,INTENT(IN) :: it
-  REAL(r_sngl) :: full2d(JMA_RADAR_XDIM,JMA_RADAR_YDIM)
-  REAL(r_size),INTENT(OUT) :: jmaradar2d(nlon,nlat)
-  REAL(r_size) :: ri, rj  
+  integer,optional,intent(in) :: it
+  integer,optional,intent(in) :: iof 
+  real(r_sngl) :: full2d(JMA_RADAR_XDIM,JMA_RADAR_YDIM)
+  real(r_size),intent(out) :: jmaradar2d(nlon,nlat)
+  real(r_size) :: ri, rj  
 
-  INTEGER :: i, j, ii, jj
-  INTEGER :: is, ie, js, je
-  INTEGER :: i_jma, j_jma
-  INTEGER :: dix, diy, cnt
+  integer :: i, j, ii, jj
+  integer :: is, ie, js, je
+  integer :: i_jma, j_jma
+  integer :: dix, diy, cnt
 
-  CHARACTER(filelenmax) :: infile
-  CHARACTER(3) :: FT3
-  CHARACTER(2) :: FT2
-  CHARACTER(1) :: FT1
+  integer :: fsec 
+  character(filelenmax) :: infile
+  character(7) :: FT7
+  character(6) :: FT6
+  character(5) :: FT5
+  character(4) :: FT4
+  character(3) :: FT3
+  character(2) :: FT2
+  character(1) :: FT1
 
   iunit=92
 
-  IF(it < 10)THEN
-    WRITE(FT1,'(i1)')it
-    FT3 = "00"//FT1
-  ELSEIF(it < 100)THEN
-    WRITE(FT2,'(i2)')it
-    FT3 = "0"//FT2
-  ELSE
-    WRITE(FT3,'(i3)')it
-  ENDIF
- 
-  infile = trim(JMA_RADAR_FILE)//"_FT"//FT3//".grd"
-  INQUIRE(FILE=trim(infile),EXIST=ex)
-  IF(.not. ex) THEN
-    WRITE(6,'(2A)') trim(infile),' does not exist. Check!'
+  if(present(it))then ! obssim
+    fsec = it * JMA_RADAR_TINT
+
+    if(fsec < 10)then
+      write(FT1,'(i1)')fsec
+      FT7 = "000000"//FT1
+    elseif(fsec < 100)then
+      write(FT2,'(i2)')fsec
+      FT7 = "00000"//FT2
+    elseif(fsec < 1000)then
+      write(FT3,'(i3)')fsec
+      FT7 = "0000"//FT3
+    elseif(fsec < 10000)then
+      write(FT4,'(i4)')fsec
+      FT7 = "000"//FT4
+    elseif(fsec < 100000)then
+      write(FT5,'(i5)')fsec
+      FT7 = "00"//FT5
+    elseif(fsec < 1000000)then
+      write(FT6,'(i6)')fsec
+      FT7 = "0"//FT6
+    else
+      write(FT7,'(i7)')fsec
+    endif
+    infile = trim(JMA_RADAR_FILE)//"_FT"//FT7//"s.grd"
+  else
+    infile = trim(OBS_IN_NAME(iof))
+  endif
+
+  inquire(file=trim(infile),exist=ex)
+  if(.not. ex) then
+    write(6,'(2A)') trim(infile),' does not exist. Check!'
 
     jmaradar2d = -1.0d0
-    RETURN
-  ENDIF
+    return
+  endif
 
-  OPEN(iunit,file=trim(infile),access='direct',form='unformatted',&
+  open(iunit,file=trim(infile),access='direct',form='unformatted',&
        convert='little_endian',status='unknown',recl=JMA_RADAR_XDIM*JMA_RADAR_YDIM*4)
  
-  READ(iunit,rec=1)full2d
+  read(iunit,rec=1)full2d
 
-  CLOSE(iunit)
+  close(iunit)
 
-  dix = int(DX * 0.5d0 / JMA_RADAR_DXY)
-  diy = int(DY * 0.5d0 / JMA_RADAR_DXY)
+  dix = max(int(DX * 0.5d0 / JMA_RADAR_DXY),1)
+  diy = max(int(DY * 0.5d0 / JMA_RADAR_DXY),1)
 
   if (.not. allocated(lon2d) .and. .not. allocated(lat2d))then
     allocate (lon2d(nlon,nlat))
     allocate (lat2d(nlon,nlat))
   endif
 
-  DO j = 1, nlat
-  DO i = 1, nlon
+  do j = 1, nlat
+  do i = 1, nlon
 
     ri = real(i + IHALO, r_size)
     rj = real(j + JHALO, r_size)
@@ -3592,7 +3643,7 @@ SUBROUTINE read_jmaradar_comp_bin(it,jmaradar2d)
       jmaradar2d(i,j) = -1.0d0
       cycle
     else
-      jmaradar2d(i,j) = -0.0d0
+      jmaradar2d(i,j) = 0.0d0
     endif
 
     is = max(i_jma - dix,1)
@@ -3602,56 +3653,64 @@ SUBROUTINE read_jmaradar_comp_bin(it,jmaradar2d)
     je = max(j_jma + diy,1)
 
     cnt = 0
-    DO jj = js, je
-    DO ii = is, ie
+    do jj = js, je
+    do ii = is, ie
       if(full2d(ii,jj) < 0.0) cycle ! undef
       cnt = cnt + 1
       jmaradar2d(i,j) = jmaradar2d(i,j) + real(full2d(ii,jj),kind=r_size)
-    ENDDO
-    ENDDO
+    enddo
+    enddo
    
-    IF(cnt >= dix*diy)THEN
+    if(cnt >= dix*diy)then
       jmaradar2d(i,j) = jmaradar2d(i,j) / real(cnt,kind=r_size)
-    ELSE
+    else
       jmaradar2d(i,j) = -1.0d0
-    ENDIF
-  ENDDO
-  ENDDO
+    endif
+  enddo
+  enddo
 
-  RETURN
-END SUBROUTINE read_jmaradar_comp_bin
+  return
+end subroutine read_jmaradar_comp_bin
 
 ! Get flags for FSS computation by using JMA radar composite
-SUBROUTINE get_rain_flag(it,rain2d,obs_flag2d,fcst_flag2d)
-  IMPLICIT NONE
+! Assume rain from history is averaged in time (mm/s)
+subroutine get_rain_flag(flag2d,it,iof,frain2d)
+  implicit none
 
-  INTEGER,INTENT(IN) :: it
-  REAL(r_size),INTENT(IN) :: rain2d(nlon,nlat)
-  REAL(r_sngl),INTENT(OUT) ::  obs_flag2d(nlon,nlat)
-  REAL(r_sngl),INTENT(OUT) :: fcst_flag2d(nlon,nlat)
+  integer,optional,intent(in) :: it
+  integer,optional,intent(in) :: iof
+  real(r_size),optional,intent(in) :: frain2d(nlon,nlat)
+  real(r_size),intent(out) :: flag2d(nlon,nlat)
 
-  REAL(r_size) :: jmaradar2d(nlon,nlat)
+  real(r_size) :: rain2d(nlon,nlat)
+  real(r_size) :: jmaradar2d(nlon,nlat)
 
-  INTEGER :: i, j
+  integer :: i, j
 
-  call read_jmaradar_comp_bin(it,jmaradar2d)
+  if(.not. present(frain2d)) then ! True  => obs / False => fcst
+    if(present(it) ) then 
+      call read_jmaradar_comp_bin(jmaradar2d,it=it)      
+    else
+      call read_jmaradar_comp_bin(jmaradar2d,iof=iof)      
+    endif
+    rain2d = jmaradar2d / JMA_RADAR_TINT ! mm/s
+  else
+    rain2d = frain2d
+  endif
 
-  obs_flag2d = 0.0
-  fcst_flag2d = 0.0
-  DO j = 1, nlat
-  DO i = 1, nlon
-    IF((jmaradar2d(i,j) / JMA_RADAR_TINT) >= JMA_RADAR_FSS_RAIN / JMA_RADAR_TINT)THEN
-      obs_flag2d(i,j) = 1.0
-    ENDIF
-    IF(rain2d(i,j) >= JMA_RADAR_FSS_RAIN / JMA_RADAR_TINT)THEN ! Assume rain from history is averaged in time (mm/s)
-      fcst_flag2d(i,j) = 1.0
-    ELSEIF(rain2d(i,j) < 0.0)THEN ! Missing value 
-      fcst_flag2d(i,j) = -1.0
-    ENDIF
-  ENDDO
-  ENDDO
+  flag2d = 0.0d0
+  do j = 1, nlat
+  do i = 1, nlon
+    if(rain2d(i,j) >= JMA_RADAR_FSS_RAIN / JMA_RADAR_TINT)THEN  ! mm/s
+      flag2d(i,j) = 1.0d0
+    elseif(rain2d(i,j) < 0.0d0)then ! Missing value 
+      flag2d(i,j) = -1.0d0
+    endif
+  enddo
+  enddo
 
-  RETURN
-END SUBROUTINE get_rain_flag
+  return
+end subroutine get_rain_flag
+
 
 END MODULE common_obs_scale

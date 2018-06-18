@@ -101,6 +101,7 @@ PROGRAM letkf
   call read_nml_letkf_monitor
   call read_nml_letkf_radar
   call read_nml_letkf_h08
+  call read_nml_obs_jmaradar
 
   if (DET_RUN) then
     call set_mem_node_proc(MEMBER+2)

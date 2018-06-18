@@ -380,7 +380,6 @@ SUBROUTINE set_letkf_obs
     tmpelm(n) = obs(iof)%elm(iidx)
 
 
-
 !!!###### RADAR assimilation ######
     if (obs(iof)%elm(iidx) == id_radar_ref_obs .or. obs(iof)%elm(iidx) == id_radar_ref_zero_obs) then
       if (.not. USE_RADAR_REF) then
@@ -525,10 +524,10 @@ SUBROUTINE set_letkf_obs
 #endif
 
  
-!   AOEI: compute sprd in obs space (sigma_b for AOEI) ! H08
+!   AOEI: compute sprd in obs space (sigma_b for AOEI) 
 !   sig_o will be used in letkf_tools.f90
 
-    sig_b = 0.0d0 !H08
+    sig_b = 0.0d0 
     DO i=1,MEMBER
       sig_b = sig_b + obsda%ensval(i,n) * obsda%ensval(i,n)
     ENDDO
@@ -592,6 +591,13 @@ SUBROUTINE set_letkf_obs
       IF(ABS(obsda%val(n)) > GROSS_ERROR_TCP * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
+    case (id_jmarfrac_obs)
+      IF(ABS(obsda%val(n)) > GROSS_ERROR_JMARFRAC * obs(iof)%err(iidx)) THEN
+        obsda%qc(n) = iqc_gross_err
+      END IF
+      if(sig_b < JMA_MIN_OSPRD)then
+        obsda%qc(n) = iqc_gross_err
+      endif
     case default
       IF(ABS(obsda%val(n)) > GROSS_ERROR * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
@@ -805,6 +811,7 @@ SUBROUTINE set_letkf_obs
       iof = obsda%set(n)
       iidx = obsda%idx(n)
       ictype = ctype_elmtyp(uid_obs(obs(iof)%elm(iidx)), obs(iof)%typ(iidx))
+  print *,"DEBUG223,",obsda%qc(n),obs(iof)%elm(iidx),obs(iof)%lon(iidx),obs(iof)%lat(iidx),obs(iof)%ri(iidx),obs(iof)%rj(iidx)
 
       call ij_obsgrd(ictype, obs(iof)%ri(iidx), obs(iof)%rj(iidx), i, j)
       if (i < 1) i = 1                                         ! Assume the process assignment was correct,

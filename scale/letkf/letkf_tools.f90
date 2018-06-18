@@ -135,7 +135,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   var_local(:,6) = VAR_LOCAL_TC(:)
   var_local(:,7) = VAR_LOCAL_RADAR_REF(:)
   var_local(:,8) = VAR_LOCAL_RADAR_VR(:)
-  var_local(:,9) = VAR_LOCAL_H08(:) ! H08
+  var_local(:,9) = VAR_LOCAL_H08(:) 
+  var_local(:,10) = VAR_LOCAL_JMA_RFRAC(:) 
   var_local_n2nc_max = 1
   var_local_n2nc(1) = 1
   var_local_n2n(1) = 1
@@ -1868,6 +1869,8 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   else if (obtyp == 24) then ! obtypelist(obtyp) == 'TCVITL'                ! for TCVITL, vertical localization is NOT applied 
     nd_v = 0.0d0 
 #endif
+  else if (obelm == id_jmarfrac_obs) then
+    nd_v = ABS(LOG(VERT_LOCAL_JMA_RFRAC_BASE) - LOG(rlev)) / vert_loc_ctype(ic)  ! for JMA radar fraction, use VERT_LOCAL_JMA_RFRAC_BASE for the base of vertical localization
   else
     nd_v = ABS(LOG(obs(obset)%lev(obidx)) - LOG(rlev)) / vert_loc_ctype(ic)
   end if

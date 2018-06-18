@@ -4,13 +4,17 @@
 USER=honda
 
 EXP=TEPCO_6km_Him8_LOC90km_TCV_RTPP
-. config/${EXP}/config.main
+CONFIG_TOP=/volume64/data/ra001011/stakino/SCALE-LETKF/scale-5.2.2/letkf/scale/run/config
+. ${CONFIG_TOP}/${EXP}/config.main
+#. config/${EXP}/config.main
 
 #
 
 # default
 JMA_RADAR_FSS_NG=3
 JMA_RADAR_FSS_RAIN="1.0"
+
+FCSTOUT_INT=3600 # (s)
 
 #RADAR_FHEAD="hourly_jmaradar"
 RADAR_FHEAD="jmaradar"
@@ -21,7 +25,7 @@ OBSSIM_BIN="${LETKF_RUN}/../obs/obssim"
 RUNSH=$SWDIR/OBSSIM.sh
 RUNCONF_COMMON=$SWDIR/obssim.conf_common
 #SCALE_CONF=${LETKF_RUN}/config.nml.scale
-SCALE_CONF=config/${EXP}/config.nml.scale
+SCALE_CONF=${CONFIG_TOP}/config/${EXP}/config.nml.scale
 TOPO=${OUTDIR}/const/topo
 
 #JMAOBSDIR=$OBS
@@ -244,6 +248,7 @@ cat << EOF >> $RUNCONF
  JMA_RADAR_FILE = "${SWDIR}/dat/${RADAR_FHEAD}_${HTIME}",
  JMA_RADAR_FSS_NG = ${JMA_RADAR_FSS_NG},
  JMA_RADAR_FSS_RAIN = ${JMA_RADAR_FSS_RAIN}D0,
+ JMA_RADAR_TINT = ${FCSTOUT_INT}D0,
 /
 
 EOF

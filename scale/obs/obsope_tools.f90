@@ -80,6 +80,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   character(len=4) :: nstr
   character(len=timer_name_width) :: timer_str
 
+  real(r_size) :: m2d(nlon,nlat)
+
 #ifdef H08
 ! -- for Himawari-8 obs --
   integer :: nallprof ! Maximum number of Him8 profiles required for RTTOV
@@ -161,6 +163,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   ! (locations in model grids and the subdomains they belong to)
   !-----------------------------------------------------------------------------
 
+  USE_JMARFRAC = .false. ! initialize
+
   do iof = 1, OBS_IN_NUM
     if (obs(iof)%nobs > 0) then ! Process basic obsevration information for all observations since this information is not saved in obsda files
                                 ! when using separate observation operators; ignore the 'OBSDA_RUN' setting for this section
@@ -179,9 +183,25 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
       obrank_bufs(:) = -1
 
+      if((OBS_IN_FORMAT(iof) == obsfmt_jmarfrac ) .and. (.not. USE_JMARFRAC))then
+        ! JMA radar fraction obs
+        ! Supoorts only 3D-LETKF, so that it = 1,
+ 
+        call calc_jmarfrac_obs_mpi(obs(iof),iof)
+        USE_JMARFRAC = .true.
+      endif
+
 !$OMP PARALLEL DO PRIVATE(ibufs,n) SCHEDULE(STATIC)
       do ibufs = 1, cntr(myrank_a+1)
         n = dspr(myrank_a+1) + ibufs
+
+        if(OBS_IN_FORMAT(iof) == obsfmt_jmarfrac)then
+          ! JMA radar fraction obs contains rig/rjg/obrank instead of lon/lat/lev
+          ri_bufs(ibufs) = obs(iof)%lon(n)
+          rj_bufs(ibufs) = obs(iof)%lat(n)
+          obrank_bufs(ibufs) = obs(iof)%lev(n)
+          cycle
+        endif
 
         call phys2ij(obs(iof)%lon(n), obs(iof)%lat(n), ri_bufs(ibufs), rj_bufs(ibufs))
         call rij_rank(ri_bufs(ibufs), rj_bufs(ibufs), obrank_bufs(ibufs))
@@ -443,6 +463,10 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:read_ens_history(t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
 
+        if (USE_JMARFRAC) then
+          call calc_fraction(m2d=m2d,rain2d=v2dg(IHALO+1:nlon+IHALO,JHALO+1:JHALO+nlat,iv2dd_rain))
+        endif
+ 
 #ifdef TCV
         obs_nn_TCP = -1
 #endif
@@ -547,6 +571,18 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
             endif
 #endif
           !=====================================================================
+          case (obsfmt_jmarfrac)
+          !---------------------------------------------------------------------
+            obsda%val(nn) = m2d(nint(ril-IHALO),nint(rjl)-JHALO)
+            obsda%qc(nn) = iqc_good
+            if(m2d(nint(ril-IHALO),nint(rjl-JHALO)) /= m2d(nint(ril-IHALO),nint(rjl-IHALO)))then
+              print *,"DEBUG111,NaN obsope,",nint(ril-IHALO),nint(rjl-JHALO),obs(iof)%ri(n),obs(iof)%rj(n)
+            endif 
+
+            if(m2d(nint(ril-IHALO),nint(rjl-JHALO)) < 0.0d0)then
+              obsda%qc(nn) = iqc_obs_bad
+              cycle
+            endif
           end select
 
 
@@ -1132,7 +1168,7 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, ft, stggrd)
             select case (OBSSIM_2D_VARS_LIST(iv2dsim))
             case (id_H08IR_obs)   
               cycle
-            case (id_jmaradar_fss_obs)
+            case (id_jmarfrac_obs)
               GET_JMAFSS = .true.
               cycle
 !            case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)
@@ -1194,8 +1230,10 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, ft, stggrd)
   end do ! [ j = 1, nlat ]
 
   if(GET_JMAFSS .and. present(ft))then
-    call calc_fraction(ft,v2dgh(IHALO+1:nlonh-IHALO,JHALO+1:nlath-JHALO,iv2dd_rain),&
-                       fss,v2dgsim(:,:,1),v2dgsim(:,:,2))
+    call calc_fraction(o2d=v2dgsim(:,:,1),m2d=v2dgsim(:,:,2), &
+                       it=ft,&
+                       rain2d=v2dgh(IHALO+1:nlonh-IHALO,JHALO+1:nlath-JHALO,iv2dd_rain),&
+                       fss=fss)
     if (myrank_d == 0) then
       print *,"Fraction Skill Score (FSS): ",fss," FT=",ft-1
     endif
@@ -1268,114 +1306,6 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d)
   return
 end subroutine write_grd_mpi
 
-!-------------------------------------------------------------------------------
-! Calculate fractions used for Fraction Skill Score (FSS)
-!-------------------------------------------------------------------------------
-subroutine calc_fraction(it,rain2d,fss,o2d,m2d)
-  implicit none
-
-  integer, intent(in) :: it
-  real(r_size), intent(in) :: rain2d(nlon,nlat) ! forecast rainfall
-
-  real(r_size), intent(out) :: fss
-  ! Eqs. (2) and (3) in Roberts and Lean (2008)
-  real(r_size),intent(out) :: o2d(nlon,nlat) ! Eq. 2
-  real(r_size),intent(out) :: m2d(nlon,nlat) ! Eq. 3
-
-  real(r_sngl) :: sub_obsi2d(nlon,nlat)  ! indices derived from obs (in each subdomain)
-  real(r_sngl) :: sub_fcsti2d(nlon,nlat) ! indices derived from fcst (in each subdomain)
-
-
-  real(r_sngl) :: bufs4(nlong,nlatg)
-  real(r_sngl) :: obsi2dg(nlong,nlatg)
-  real(r_sngl) :: fcsti2dg(nlong,nlatg)
-  
-  real(r_size) :: mse ! MSE Eq. 5
-  real(r_size) :: mse_ref ! Reference MSE Eq. 7
-  real(r_size) :: sqdif ! squared differece
-  real(r_size) :: sq_o ! squared obs fraction
-  real(r_size) :: sq_m ! squared model (fcst) fraction
-
-  integer :: ierr
-  integer :: proc_i, proc_j
-  integer :: ishift, jshift
-  integer :: i, j, k, l
-  integer :: ig, jg, cnt, cnt_total
-  integer :: nh ! (n-1)/2 in Eqs. (2) and (3) in Roberts and Lean (2008)
-
-  call get_rain_flag(it,rain2d,sub_obsi2d,sub_fcsti2d)
-
-  call rank_1d_2d(myrank_d, proc_i, proc_j)
-  ishift = proc_i * nlon
-  jshift = proc_j * nlat
-
-  ! Gather obs/fcst indices (0/1 flags) within the whole domain
-  bufs4(:,:) = 0.0
-  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = sub_obsi2d(:,:)
-  call MPI_ALLREDUCE(MPI_IN_PLACE, bufs4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-  obsi2dg = bufs4
-
-  bufs4(:,:) = 0.0
-  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = sub_fcsti2d(:,:)
-  call MPI_ALLREDUCE(MPI_IN_PLACE, bufs4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-  fcsti2dg = bufs4
-
-  nh = int((JMA_RADAR_FSS_NG - 1) / 2)
-
-  o2d(:,:) = 0.0d0
-  m2d(:,:) = 0.0d0
-  sqdif = 0.0d0
-  sq_o = 0.0d0
-  sq_m = 0.0d0
-  cnt_total = 0
-
-  do j = 1, nlat
-  do i = 1, nlon
-  
-    cnt = 0
-
-    do l = 1, JMA_RADAR_FSS_NG
-    do k = 1, JMA_RADAR_FSS_NG
-      ig = i+ishift+k-1-nh
-      jg = j+jshift+l-1-nh
-
-      if(ig < 1 .or. ig > nlong .or. jg < 1 .or. jg > nlatg) cycle
-      if(fcsti2dg(ig,jg) < 0.0) cycle ! missing obs
-
-      o2d(i,j) = o2d(i,j) + real(obsi2dg(ig,jg), kind=r_size)
-      m2d(i,j) = m2d(i,j) + real(fcsti2dg(ig,jg), kind=r_size)
-      cnt = cnt + 1
-    enddo
-    enddo
-
-    if (cnt >= int(JMA_RADAR_FSS_NG**2*0.5)) then
-      o2d(i,j) = o2d(i,j) / max(real(cnt,kind=r_size), 1.0d0)
-      m2d(i,j) = m2d(i,j) / max(real(cnt,kind=r_size), 1.0d0)
-      sqdif = sqdif + (o2d(i,j) - m2d(i,j))**2
-
-      sq_o = sq_o + o2d(i,j)**2
-      sq_m = sq_m + m2d(i,j)**2
-      cnt_total = cnt_total + 1
-    else
-      o2d(i,j) = -1.0d0
-      m2d(i,j) = -1.0d0
-    endif
-   
-  enddo
-  enddo
-
-  call MPI_ALLREDUCE(MPI_IN_PLACE, sqdif, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-  call MPI_ALLREDUCE(MPI_IN_PLACE, cnt_total, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-  mse = sqdif / real(cnt_total,kind=r_size)
-
-  call MPI_ALLREDUCE(MPI_IN_PLACE, sq_o, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-  call MPI_ALLREDUCE(MPI_IN_PLACE, sq_m, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-  mse_ref = (sq_o + sq_m) / real(cnt_total,kind=r_size)
-
-  fss = 1.0d0 - mse / mse_ref
-
-  return
-end subroutine calc_fraction
 
 !=======================================================================
 

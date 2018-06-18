@@ -1392,6 +1392,8 @@ END SUBROUTINE buf_to_grd
 ! MPI driver for monitoring observation departure statistics
 !-------------------------------------------------------------------------------
 subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
+  use scale_grid_index, only: &
+      IHALO, JHALO
   implicit none
   real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP), intent(in) :: v2dg(nlon,nlat,nv2d)
@@ -1436,6 +1438,8 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   integer :: ich
 #endif
 
+  real(r_size) :: m2d(nlon,nlat)
+
 #ifdef TCV
 !  real(r_size) :: bTC(3,0:MEM_NP-1) 
 !  real(r_size) :: eTC(3,0:MEM_NP-1)
@@ -1450,6 +1454,13 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   !       because only these processes have read topo files in 'topo2d'
   ! 
   if (myrank_e == mmean_rank_e) then
+
+    if(USE_JMARFRAC)then
+      !call calc_fraction(m2d=m2d,rain2d=v2dg(IHALO+1:nlon+IHALO,JHALO+1:JHALO+nlat,iv2dd_rain))
+    else
+      m2d = -1.0d0
+    endif
+
 #ifdef H08
     if (H08_VBC_USE)then
       call read_vbc_Him8(vbcfH08)
@@ -1458,7 +1469,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
     endif
     call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true.,&
                    nobs_H08, bias_H08, rmse_H08, bias_H08_bc, rmse_H08_bc,&
-                   aH08, bH08, vbcfH08, monit_step)
+                   aH08, bH08, vbcfH08, monit_step, m2d)
 #else
     call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true., monit_step)
 #endif
@@ -2192,6 +2203,208 @@ subroutine get_vbc_Him8_mpi(vbc)
   return
 end subroutine get_vbc_Him8_mpi
 #endif 
+
+!-------------------------------------------------------------------------------
+! Calculate fractions used for Fraction Skill Score (FSS)
+!-------------------------------------------------------------------------------
+subroutine calc_fraction(o2d,m2d,it,iof,rain2d,fss)
+  implicit none
+
+  real(r_size), optional, intent(inout) :: fss
+  ! Eqs. (2) and (3) in Roberts and Lean (2008)
+  real(r_size),optional,intent(out) :: o2d(nlon,nlat) ! Eq. 2
+  real(r_size),optional,intent(out) :: m2d(nlon,nlat) ! Eq. 3
+
+  integer, optional, intent(in) :: it
+  integer, optional, intent(in) :: iof
+  real(r_size), optional, intent(in) :: rain2d(nlon,nlat) ! forecast rainfall
+
+  logical :: OBS_FRAC = .false.
+  logical :: FCST_FRAC = .false.
+
+  real(r_size) :: sub_obsi2d(nlon,nlat)  ! indices derived from obs (in each subdomain)
+  real(r_size) :: sub_fcsti2d(nlon,nlat) ! indices derived from fcst (in each subdomain)
+
+
+  real(r_size) :: bufs4(nlong,nlatg)
+  real(r_size) :: obsi2dg(nlong,nlatg)
+  real(r_size) :: fcsti2dg(nlong,nlatg)
+  
+  real(r_size) :: mse ! MSE Eq. 5
+  real(r_size) :: mse_ref ! Reference MSE Eq. 7
+  real(r_size) :: sqdif ! squared differece
+  real(r_size) :: sq_o ! squared obs fraction
+  real(r_size) :: sq_m ! squared model (fcst) fraction
+
+  integer :: ierr
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+  integer :: i, j, k, l
+  integer :: ig, jg, cnt, cnt_total
+  integer :: nh ! (n-1)/2 in Eqs. (2) and (3) in Roberts and Lean (2008)
+
+  if(present(fss))then
+    OBS_FRAC = .true.
+    FCST_FRAC = .true.
+    fss = 0.0
+  elseif(.not. present(rain2d))then
+    OBS_FRAC = .true.
+    FCST_FRAC = .false.
+  elseif( present(rain2d))then
+    OBS_FRAC = .false.
+    FCST_FRAC = .true.
+  endif
+
+  if (OBS_FRAC) then
+    call get_rain_flag(sub_obsi2d,iof=iof)
+  endif
+  if (FCST_FRAC) then
+    call get_rain_flag(sub_fcsti2d,frain2d=rain2d)
+  endif
+
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  if (OBS_FRAC) then
+    ! Gather obs/fcst indices (0/1 flags) within the whole domain
+    o2d(:,:) = 0.0d0
+    sq_o = 0.0d0
+
+    bufs4(:,:) = 0.0d0
+    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = sub_obsi2d(:,:)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, bufs4, nlong*nlatg, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+    obsi2dg = bufs4
+  endif
+
+  if (FCST_FRAC) then 
+    m2d(:,:) = 0.0d0
+    sq_m = 0.0d0
+
+    bufs4(:,:) = 0.0d0
+    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = sub_fcsti2d(:,:)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, bufs4, nlong*nlatg, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+    fcsti2dg = bufs4
+  endif
+
+  nh = int((JMA_RADAR_FSS_NG - 1) / 2)
+
+  sqdif = 0.0d0
+  cnt_total = 0
+
+  do j = 1, nlat
+  do i = 1, nlon
+  
+    cnt = 0
+
+    do l = 1, JMA_RADAR_FSS_NG
+    do k = 1, JMA_RADAR_FSS_NG
+      ig = i+ishift+k-1-nh
+      jg = j+jshift+l-1-nh
+
+      if(ig < 1 .or. ig > nlong .or. jg < 1 .or. jg > nlatg) cycle
+      if(fcsti2dg(ig,jg) < 0.0) cycle ! missing obs
+
+      if (FCST_FRAC) then 
+        m2d(i,j) = m2d(i,j) + real(fcsti2dg(ig,jg), kind=r_size)
+      endif
+      if (OBS_FRAC) then 
+        o2d(i,j) = o2d(i,j) + real(obsi2dg(ig,jg), kind=r_size)
+      endif
+
+      cnt = cnt + 1
+    enddo
+    enddo
+
+    if (cnt >= int(JMA_RADAR_FSS_NG**2)) then
+      if (FCST_FRAC) then 
+        m2d(i,j) = m2d(i,j) / max(real(cnt,kind=r_size), 1.0d0)
+      endif
+      if (OBS_FRAC) then 
+        o2d(i,j) = o2d(i,j) / max(real(cnt,kind=r_size), 1.0d0)
+      endif
+
+      if (FCST_FRAC .and. OBS_FRAC) then 
+        sqdif = sqdif + (o2d(i,j) - m2d(i,j))**2
+
+        sq_o = sq_o + o2d(i,j)**2
+        sq_m = sq_m + m2d(i,j)**2
+        cnt_total = cnt_total + 1
+      endif
+    else
+      if(FCST_FRAC)m2d(i,j) = -1.0d0
+      if(OBS_FRAC)o2d(i,j) = -1.0d0
+    endif
+   
+  enddo
+  enddo
+
+  if (OBS_FRAC .and. FCST_FRAC) then 
+    call MPI_ALLREDUCE(MPI_IN_PLACE, sqdif, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, cnt_total, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+    mse = sqdif / real(cnt_total,kind=r_size)
+
+    call MPI_ALLREDUCE(MPI_IN_PLACE, sq_o, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, sq_m, 1, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+    mse_ref = (sq_o + sq_m) / real(cnt_total,kind=r_size)
+
+    fss = 1.0d0 - mse / mse_ref
+  endif
+
+  return
+end subroutine calc_fraction
+
+!########################################
+subroutine calc_jmarfrac_obs_mpi(obs,iof)
+  use scale_grid_index, only: &
+      IHALO, JHALO
+  implicit none
+
+  type(obs_info),intent(inout) :: obs
+  integer,intent(in) :: iof
+
+  real(r_size) :: o2d(nlon,nlat)
+  integer :: iproc, jproc
+  integer :: i, j
+  integer :: n
+
+  integer:: ierr
+
+  if(myrank_a < MEM_NP)then
+    call calc_fraction(o2d=o2d,iof=iof)
+ 
+    call rank_1d_2d(myrank_d, iproc, jproc)
+    n = myrank_d * (nlon * nlat)
+
+    do j = 1, nlat
+    do i = 1, nlon
+      n = n + 1
+      obs%elm(n) = id_jmarfrac_obs
+      obs%lon(n) = real(i + iproc * nlon + IHALO, RP) ! rig
+      obs%lat(n) = real(j + jproc * nlat + JHALO, RP) ! rij
+      obs%lev(n) = myrank_d
+      obs%dat(n) = o2d(i,j)
+      obs%err(n) = OBSERR_JMA_RFRAC
+      obs%typ(n) = 25 
+      obs%dif(n) = 0.0d0 ! supports only 3D-LETKF
+
+    enddo
+    enddo
+  endif ! myrank_a < MEM_NP
+
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%elm(:), nlong*nlatg, MPI_INTEGER, MPI_MAX, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%lon(:), nlong*nlatg, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%lat(:), nlong*nlatg, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%lev(:), nlong*nlatg, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%dat(:), nlong*nlatg, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%err(:), nlong*nlatg, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%typ(:), nlong*nlatg, MPI_INTEGER, MPI_MAX, MPI_COMM_a, ierr)
+  !call MPI_ALLREDUCE(MPI_IN_PLACE, obs%dif(:), nlong*nlatg, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)
+
+
+  return
+end subroutine calc_jmarfrac_obs_mpi
+
 
 
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)

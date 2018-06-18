@@ -17,8 +17,8 @@ MODULE common_nml
   !----
   integer, parameter :: nv3d = 11    ! number of 3D state variables (in SCALE restart files)
   integer, parameter :: nv2d = 0     ! number of 2D state variables (in SCALE restart files)
-  integer, parameter :: nid_obs = 16 ! number of variable types
-  integer, parameter :: nobtype = 24 ! number of observation report types
+  integer, parameter :: nid_obs = 17 ! number of variable types
+  integer, parameter :: nobtype = 25 ! number of observation report types
   integer, parameter :: NIRB_HIM8 = 10     ! H08 Num of Himawari-8 (IR) bands
 
   integer, parameter :: nobsfilemax = 10
@@ -120,6 +120,7 @@ MODULE common_nml
   real(r_size) :: GROSS_ERROR_H08 = -1.0d0      ! < 0: same as GROSS_ERROR
   real(r_size) :: GROSS_ERROR_TCXY = -1.0d0 ! debug ! < 0: same as GROSS_ERROR 
   real(r_size) :: GROSS_ERROR_TCP = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_JMARFRAC = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
 
   real(r_size) :: Q_UPDATE_TOP = 0.0d0     ! water vapor and hydrometeors are updated only below this pressure level (Pa)
   real(r_size) :: Q_SPRD_MAX = -1.0D0      ! maximum q (ensemble spread)/(ensemble mean) (only effective when > 0)
@@ -158,7 +159,7 @@ MODULE common_nml
   real(r_size) :: HORI_LOCAL(nobtype) = &
     (/500.0d3, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
        -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-       -1.0d0, -1.0d0, 20.0d3, 200.0d3/)
+       -1.0d0, -1.0d0, 20.0d3, 200.0d3, -1.0d0/)
 
   ! >0: localization length scale [ln(p) or m depends on obstype]
   !  0: no localization
@@ -166,7 +167,7 @@ MODULE common_nml
   real(r_size) :: VERT_LOCAL(nobtype) = &
     (/ 0.4d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0, 1000.0d0,  0.5d0,  0.0d0/)
+      -1.0d0, 1000.0d0,  0.5d0,  0.0d0, -1.0d0/)
 
   ! >0: localization length scale (sec) XXX not implemented yet XXX
   !  0: no localization
@@ -174,12 +175,13 @@ MODULE common_nml
   real(r_size) :: TIME_LOCAL(nobtype) = &
     (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
 
   real(r_size) :: HORI_LOCAL_RADAR_OBSNOREF = -1.0d0 ! <0: same as HORI_LOCAL(22=PHARAD)
   real(r_size) :: HORI_LOCAL_RADAR_VR = -1.0d0       ! <0: same as HORI_LOCAL(22=PHARAD)
   real(r_size) :: VERT_LOCAL_RADAR_VR = -1.0d0       ! <0: same as VERT_LOCAL(22=PHARAD)
   real(r_size) :: VERT_LOCAL_RAIN_BASE = 85000.0d0
+  real(r_size) :: VERT_LOCAL_JMA_RFRAC_BASE = 85000.0d0
 
   ! >0: observation number limit
   !  0: do not limit observation numbers
@@ -187,7 +189,7 @@ MODULE common_nml
   integer :: MAX_NOBS_PER_GRID(nobtype) = &
     (/ 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
-      -1, -1, -1, -1/)
+      -1, -1, -1, -1, -1/)
 
   integer :: MAX_NOBS_PER_GRID_CRITERION = 1 ! 1: normalized 3D distance (from closest)
                                              ! 2: localization weight (from largest)
@@ -199,7 +201,7 @@ MODULE common_nml
   real(r_size) :: OBS_MIN_SPACING(nobtype) = &
     (/300.0d3, 100.0d3, 100.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 100.0d3, 150.0d3, 150.0d3, &
       150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 150.0d3, &
-      150.0d3,   1.0d3,  15.0d3,1000.0d3/)
+      150.0d3,   1.0d3,  15.0d3,1000.0d3,   5.0d3/)
 
   ! >0: optimal grid spacing for bucket sorting of observations
   !  0: automatically determined based on HORI_LOCAL, MAX_NOBS_PER_GRID, and OBS_MIN_SPACING
@@ -207,7 +209,7 @@ MODULE common_nml
   real(r_size) :: OBS_SORT_GRID_SPACING(nobtype) = &
     (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
 
   !--- PARAM_LETKF_VAR_LOCAL
   real(r_size) :: VAR_LOCAL_UV(nv3d+nv2d)        = 1.0d0
@@ -218,12 +220,14 @@ MODULE common_nml
   real(r_size) :: VAR_LOCAL_TC(nv3d+nv2d)        = 1.0d0
   real(r_size) :: VAR_LOCAL_RADAR_REF(nv3d+nv2d) = 1.0d0
   real(r_size) :: VAR_LOCAL_RADAR_VR(nv3d+nv2d)  = 1.0d0
-  real(r_size) :: VAR_LOCAL_H08(nv3d+nv2d)       = 1.0d0 ! H08
+  real(r_size) :: VAR_LOCAL_H08(nv3d+nv2d)       = 1.0d0 
+  real(r_size) :: VAR_LOCAL_JMA_RFRAC(nv3d+nv2d)  = 1.0d0
 
   !--- PARAM_LETKF_MONITOR
   logical :: DEPARTURE_STAT = .true.
   logical :: DEPARTURE_STAT_RADAR = .false.
   logical :: DEPARTURE_STAT_H08 = .false.
+  logical :: DEPARTURE_STAT_JMARFRAC = .false.
   real(r_size) :: DEPARTURE_STAT_T_RANGE = 0.0d0   ! time range within which observations are considered in the departure statistics.
                                                    ! 0: no limit
   logical :: DEPARTURE_STAT_ALL_PROCESSES = .true. ! print the departure statistics by all processes?
@@ -332,7 +336,7 @@ MODULE common_nml
 
   !--- PARAM_OBS_JMA_RADAR
   ! JMA composite radar observation (uniform 1-km mesh)
-  character(filelenmax) :: JMA_RADAR_FILE = 'jmaradar_'
+  character(filelenmax) :: JMA_RADAR_FILE = 'jmaradar2d_'
   real(r_size) :: JMA_RADAR_DXY = 1000.0d0 ! radar horizontal resolution
   integer               :: JMA_RADAR_XDIM = 2560
   integer               :: JMA_RADAR_YDIM = 3360
@@ -342,7 +346,9 @@ MODULE common_nml
   real(r_size) :: JMA_RADAR_DLAT = 0.008333d0
   real(r_size) :: JMA_RADAR_FSS_RAIN = 1.0d0 ! (mm/JMA_RADAR_TINT)
   real(r_size) :: JMA_RADAR_TINT = 600.0d0 ! (every 600 s)
+  real(r_size) :: JMA_MIN_OSPRD = 0.01d0 ! minimum spread in obs space
   integer :: JMA_RADAR_FSS_NG = 3 ! (# of neighbor grids to be used for FSS)
+  logical :: USE_JMARFRAC = .false.
 
   !--- PARAM_OBS_ERROR
   real(r_size) :: OBSERR_U = 1.0d0
@@ -357,6 +363,7 @@ MODULE common_nml
   real(r_size) :: OBSERR_TCP = 3.0d2 ! (Pa)
   real(r_size) :: OBSERR_H08(NIRB_HIM8) = (/3.0d0,3.0d0,3.0d0,3.0d0,3.0d0,&
                                       3.0d0,3.0d0,3.0d0,3.0d0,3.0d0/) ! H08
+  real(r_size) :: OBSERR_JMA_RFRAC = 0.5d0 ! JMA radar fraction obs ! tentative
 
   !--- PARAM_OBSSIM
   character(filelenmax) :: OBSSIM_IN_TYPE = 'history'
@@ -592,6 +599,7 @@ subroutine read_nml_letkf
     GROSS_ERROR_H08, &
     GROSS_ERROR_TCXY, &
     GROSS_ERROR_TCP, &
+    GROSS_ERROR_JMARFRAC, &
     Q_UPDATE_TOP, &
     Q_SPRD_MAX, &
     BOUNDARY_BUFFER_WIDTH, &
@@ -637,6 +645,9 @@ subroutine read_nml_letkf
   end if
   if (GROSS_ERROR_TCP < 0.0d0) then
     GROSS_ERROR_TCP = GROSS_ERROR
+  end if
+  if (GROSS_ERROR_JMARFRAC < 0.0d0) then
+    GROSS_ERROR_JMARFRAC = GROSS_ERROR
   end if
 
   if (trim(OBSDA_MEAN_IN_BASENAME) == '') then
@@ -748,6 +759,7 @@ subroutine read_nml_letkf_obs
     HORI_LOCAL_RADAR_VR, &
     VERT_LOCAL_RADAR_VR, &
     VERT_LOCAL_RAIN_BASE, &
+    VERT_LOCAL_JMA_RFRAC_BASE, &
     MAX_NOBS_PER_GRID, &
     MAX_NOBS_PER_GRID_CRITERION, &
     OBS_MIN_SPACING, &
@@ -854,6 +866,7 @@ subroutine read_nml_letkf_monitor
     DEPARTURE_STAT, &
     DEPARTURE_STAT_RADAR, &
     DEPARTURE_STAT_H08, &
+    DEPARTURE_STAT_JMARFRAC , &
     DEPARTURE_STAT_T_RANGE, &
     DEPARTURE_STAT_ALL_PROCESSES, &
     OBSDEP_OUT, &
@@ -1010,7 +1023,8 @@ subroutine read_nml_obs_error
     OBSERR_RADAR_VR, &
     OBSERR_TCXY, &
     OBSERR_TCP, &
-    OBSERR_H08    ! H08
+    OBSERR_H08, &
+    OBSERR_JMA_RFRAC
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBS_ERROR,iostat=ierr)
@@ -1095,7 +1109,9 @@ subroutine read_nml_obs_jmaradar
     JMA_RADAR_DLAT, &
     JMA_RADAR_FSS_RAIN, &
     JMA_RADAR_TINT, &
-    JMA_RADAR_FSS_NG
+    JMA_RADAR_FSS_NG,&
+    JMA_MIN_OSPRD,   &
+    USE_JMARFRAC
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBS_JMA_RADAR,iostat=ierr)
