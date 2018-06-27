@@ -92,6 +92,11 @@ def parse_NOUT_file(file):
 #                tt = float(line[84:98])
                 dict_add_value(logtime, id, tt)
                 dtf_time_found = False
+            elif "......jit" in line or "......_jit" in line:
+                id = line[6:-15].strip()
+                tt = float(line[-15:])
+                dict_add_value(logtime, id, tt)
+                dtf_time_found = False
             elif ": dtf_time transfer" in line and "hist" in line:
                 tt_dtf = float(line.split(':')[2])
                 dtf_time_found = True
@@ -257,9 +262,10 @@ if __name__ == '__main__':
 
     print "{0:30s} {1:10.2f}".format('SCALE', letkf_log_m1['SCALE'])
 
-    print "{0:30s} {1:10.2f}".format('READ_OBS(read)', letkf_log_m1['read_obs_radar_toshiba:read_toshiba:'])
-    print "{0:30s} {1:10.2f}".format('READ_OBS(bcast)', letkf_log_m1['read_obs_all_mpi:mpi_bcast:'])
-    print "{0:30s} {1:10.2f}".format('READ_OBS(cal)', letkf_log_m1['READ_OBS'] - letkf_log_m1['read_obs_radar_toshiba:read_toshiba:'] - letkf_log_m1['read_obs_all_mpi:mpi_bcast:'])
+    print "{0:30s} {1:10.2f}".format('READ_OBS(wait)', letkf_log_m1['_jitget:locked_lock:'])
+    print "{0:30s} {1:10.2f}".format('READ_OBS(read)', letkf_log_m1['jitget:_jitget:'] - letkf_log_m1['_jitget:locked_lock:'])
+    print "{0:30s} {1:10.2f}".format('READ_OBS(bcast)', letkf_log_m1['jitget:mpi_bcast:'])
+    print "{0:30s} {1:10.2f}".format('READ_OBS(cal)', letkf_log_m1['READ_OBS'] - letkf_log_m1['jitget:_jitget:'] - letkf_log_m1['jitget:mpi_bcast:'])
 
 #    print "{0:30s} {1:10.2f}".format('OBS_OPERATOR(read_hist)', letkf_log_m1['obsope_cal:read_ens_history'])
     print "{0:30s} {1:10.2f}".format('OBS_OPERATOR(read_hist)', letkf_log_m1['read_ens_history_iter:read_history'])
