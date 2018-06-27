@@ -12,10 +12,10 @@ PRESET='K'
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
+USERNAME=gylien
+
 INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_1km_initbdy_v180531"
 OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_1km_1001_m100_dtf_SP_log1" # Directory for SCALE-LETKF output
-
-USERNAME=gylien
 
 LIBDTF_PATH=/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/DTF/libdtf
 
@@ -123,6 +123,8 @@ BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 #===============================================================================
 # Temporary directories to store runtime files
 
+DISK_MODE_OBS=2
+
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
                             #  1: Yes
@@ -133,7 +135,7 @@ TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs i
 TMP="/scratch/$(id -ng)/${USERNAME}/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
-#TMPSL="/tmp/gylien/$TMPSUBDIR"  # Temporary directory only on the server node and on a local file system
+#TMPSL="/tmp/${USERNAME}/$TMPSUBDIR"  # Temporary directory only on the server node and on a local file system
 TMP_JITDATA="$TMP/jit-data"
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?

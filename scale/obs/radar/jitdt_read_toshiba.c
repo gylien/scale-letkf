@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <sys/time.h>
 #include <jitclient.h>
 #include "read_toshiba.h"
 #include "jitdt_read_toshiba.h"
@@ -19,6 +20,9 @@ int jitdt_read_toshiba(int n_type, char *jitdt_place, pawr_header hd[n_type],
   int bsize[n_type];
   unsigned char *buf;
   char fname[(PATH_MAX + 1) * n_type - 1];
+  struct timeval t0, t;
+
+  gettimeofday(&t0, NULL);
 
   buf = malloc(n_type * bufsize);
   if(buf == NULL){
@@ -29,7 +33,16 @@ int jitdt_read_toshiba(int n_type, char *jitdt_place, pawr_header hd[n_type],
   for(i_type = 0; i_type < n_type; i_type++){
     bsize[i_type] = bufsize;
   }
+
+  gettimeofday(&t, NULL);
+  printf("......jitdt_read_toshiba:allocate_buffer:%15.6f\n", (float)(t.tv_sec-t0.tv_sec) + (float)(t.tv_usec-t0.tv_usec)/1000000.0);
+  t0 = t;
+
   ierr = jitget(jitdt_place, fname, buf, bsize, n_type);
+
+  gettimeofday(&t, NULL);
+  printf("......jitdt_read_toshiba:jitget:%15.6f\n", (float)(t.tv_sec-t0.tv_sec) + (float)(t.tv_usec-t0.tv_usec)/1000000.0);
+  t0 = t;
 
 //  if(fname[0] == 0){
   if(ierr != 0) {
@@ -43,7 +56,15 @@ int jitdt_read_toshiba(int n_type, char *jitdt_place, pawr_header hd[n_type],
     if(ierr != 0) return ierr;
   }
 
+  gettimeofday(&t, NULL);
+  printf("......jitdt_read_toshiba:decode_toshiba:%15.6f\n", (float)(t.tv_sec-t0.tv_sec) + (float)(t.tv_usec-t0.tv_usec)/1000000.0);
+  t0 = t;
+
   free(buf);
+
+  gettimeofday(&t, NULL);
+  printf("......jitdt_read_toshiba:deallocate_buffer:%15.6f\n", (float)(t.tv_sec-t0.tv_sec) + (float)(t.tv_usec-t0.tv_usec)/1000000.0);
+  t0 = t;
 
   return 0;
 }

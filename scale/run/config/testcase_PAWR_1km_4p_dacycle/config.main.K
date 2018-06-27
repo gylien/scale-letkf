@@ -14,8 +14,8 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 USERNAME=gylien
 
-INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_100m_initbdy_720p_v180531"
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_100m_260_dacycle_SP_log1" # Directory for SCALE-LETKF output
+INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_1km_initbdy_4p_v180531"
+OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_1km_1004_m100_dacycle_SP" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -23,13 +23,13 @@ OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_100m_260_dac
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"        # Directory of the SCALE database
 
-DATA_TOPO=
+DATA_TOPO=                                                           # Directory of the prepared topo files
 #DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_312/const/topo"
-DATA_LANDUSE=
+DATA_LANDUSE=                                                        # Directory of the prepared landuse files
 #DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_312"
 DATA_BDY_SCALE_PRC_NUM_X=3
 DATA_BDY_SCALE_PRC_NUM_Y=3
-DATA_BDY_SCALE_PREP=
+DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
@@ -66,6 +66,8 @@ BDY_FORMAT=0            # 0: SCALE boundary files (with exactly same domain sett
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
                         # 4: GrADS         (requires compatible 'config.nml.scale_init')
+BDY_SINGLE_FILE=0       # 0: Length of a boundary file = $BDYCYCLE_INT (e.g., files made by data assimilation cycles)
+                        # 1: Length of a boundary file is long enough so that only a single boundary file is used for each forecast
 BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
 
 BDY_ENS=1               # 0: Fixed boundary files for all memebers
@@ -74,7 +76,7 @@ BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial
                         # 1: Use different series of boundary files for different initial time
 
 BDYINT=300
-BDYCYCLE_INT=3600
+BDYCYCLE_INT=300
 
 PARENT_REF_TIME=20130713060000
 
@@ -107,17 +109,19 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=100         # Ensemble size
 
-NNODES=73440       # Number of nodes
+NNODES=408         # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
-SCALE_NP=720       # Number of processes to run SCALE
+SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
 #===============================================================================
 # Temporary directories to store runtime files
+
+DISK_MODE_OBS=2
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
@@ -129,7 +133,7 @@ TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs i
 TMP="/scratch/$(id -ng)/${USERNAME}/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
-TMPSL="/tmp/${USERNAME}/$TMPSUBDIR"  # Temporary directory only on the server node and on a local file system
+#TMPSL="/tmp/${USERNAME}/$TMPSUBDIR"  # Temporary directory only on the server node and on a local file system
 TMP_JITDATA="$TMP/jit-data"
 
 CLEAR_TMP=1                 # Clear temporary directories after the completion of job?
