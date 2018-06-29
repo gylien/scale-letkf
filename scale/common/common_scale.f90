@@ -26,7 +26,6 @@ MODULE common_scale
 !-------------------------------------------------------------------------------
 
 #ifdef DTF
-  external dtf_transfer_multiple
   external dtf_transfer
   external dtf_time_start
   external dtf_time_end
@@ -820,7 +819,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 
 #ifdef DTF
   if (DTF_MODE >= 1) then
-    call dtf_transfer_multiple(trim(filename)//".nc"//CHAR(0), ncid)
+    call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
   end if
 #endif
 
