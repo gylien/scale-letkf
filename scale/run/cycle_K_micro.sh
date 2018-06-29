@@ -146,6 +146,13 @@ echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
 rscgrp="micro"
 
+if ((SCALE_NP >= 8)); then
+  MAX_WORKGROUP_SIZE=$((SCALE_NP / 8))
+else
+  MAX_WORKGROUP_SIZE=1
+fi
+
+
 cat > $jobscrp << EOF
 #!/bin/sh
 #PJM -N ${job}_${SYSNAME}
@@ -175,7 +182,7 @@ export DTF_SCALE=1
 export DTF_INI_FILE=$TMP/dtf.ini
 export SCALE_ENSEMBLE_SZ=$((SCALE_NP))
 #export DTF_IGNORE_ITER=    #set if necessary
-export MAX_WORKGROUP_SIZE=$((SCALE_NP / 8))
+export MAX_WORKGROUP_SIZE=$MAX_WORKGROUP_SIZE
 
 export LD_LIBRARY_PATH=$TMP:$LD_LIBRARY_PATH
 export DTF_GLOBAL_PATH=$TMP

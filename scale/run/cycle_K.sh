@@ -187,6 +187,12 @@ export FLIB_CNTL_BARRIER_ERR=FALSE
 EOF
 
 if ((DTF_MODE >= 1)); then
+  if ((SCALE_NP >= 8)); then
+    MAX_WORKGROUP_SIZE=$((SCALE_NP / 8))
+  else
+    MAX_WORKGROUP_SIZE=1
+  fi
+
   cat >> $jobscrp << EOF
 
 #export DTF_VERBOSE_LEVEL=2 # DEBUG
@@ -195,7 +201,7 @@ export DTF_SCALE=1
 export DTF_INI_FILE=./dtf.ini
 export SCALE_ENSEMBLE_SZ=$((SCALE_NP))
 #export DTF_IGNORE_ITER=    #set if necessary
-export MAX_WORKGROUP_SIZE=$((SCALE_NP / 8))
+export MAX_WORKGROUP_SIZE=$MAX_WORKGROUP_SIZE
 
 export LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH
 export DTF_GLOBAL_PATH=.

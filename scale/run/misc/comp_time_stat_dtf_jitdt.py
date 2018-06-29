@@ -3,7 +3,14 @@ import os
 
 member = 100
 group = member + 2
-nnodes = 720
+nnodes = 360
+
+
+def dict_add_value(dict_var, key, value):
+    if key in dict_var:
+        dict_var[key] += value
+    else:
+        dict_var[key] = value
 
 
 def parse_log_file(file):
@@ -46,33 +53,53 @@ def scale_log_stat(logtime):
 def parse_NOUT_file(file):
 
     logtime = {}
+    dtf_time_found = False
+    print "     SCALE       DTF"
     with open(file) as f:
         for line in f:
             if "##### TIMER" in line:
                 id = line[14:64].strip()
                 tt = float(line[78:92])
-                if id in logtime:
-                    logtime[id] += tt
-                else:
-                    logtime[id] = tt
+                dict_add_value(logtime, id, tt)
+                dtf_time_found = False
             elif "#### TIMER" in line:
                 id = line[17:67].strip()
                 if (id.startswith('obsope_cal:read_ens_history')):
                     id = 'obsope_cal:read_ens_history'
+#                    tt_move_to_scale = float(line[84:98]) - tt_dtf
+#                    dict_add_value(logtime, 'SCALE', tt_move_to_scale)
+#                    dict_add_value(logtime, 'OBS_OPERATOR', -tt_move_to_scale)
+#                    print "{0:10.2f}{1:10.2f}".format(tt_move_to_scale, tt_dtf)
+#                    tt = tt_dtf
+#                else:
+#                    tt = float(line[81:95])
                 tt = float(line[81:95])
-                if id in logtime:
-                    logtime[id] += tt
-                else:
-                    logtime[id] = tt
+                dict_add_value(logtime, id, tt)
+                dtf_time_found = False
             elif "### TIMER" in line:
                 id = line[20:70].strip()
+                if (id.startswith('read_ens_history_iter:read_history')):
+                    id = 'read_ens_history_iter:read_history'
+                    tt_move_to_scale = float(line[84:98]) - tt_dtf
+                    dict_add_value(logtime, 'SCALE', tt_move_to_scale)
+                    dict_add_value(logtime, 'OBS_OPERATOR', -tt_move_to_scale)
+                    print "{0:10.2f}{1:10.2f}".format(tt_move_to_scale, tt_dtf)
+                    tt = tt_dtf
+                else:
+                    tt = float(line[84:98])
                 if (id.startswith('write_restart_')):
                     continue
-                tt = float(line[84:98])
-                if id in logtime:
-                    logtime[id] += tt
-                else:
-                    logtime[id] = tt
+#                tt = float(line[84:98])
+                dict_add_value(logtime, id, tt)
+                dtf_time_found = False
+            elif "......jit" in line or "......_jit" in line:
+                id = line[6:-15].strip()
+                tt = float(line[-15:])
+                dict_add_value(logtime, id, tt)
+                dtf_time_found = False
+            elif ": dtf_time transfer" in line and "hist" in line:
+                tt_dtf = float(line.split(':')[2])
+                dtf_time_found = True
 
     return logtime
 
@@ -177,7 +204,7 @@ if __name__ == '__main__':
 
     print ''
 #    logpath = "20130713060030/log_{0:s}/letkf".format(no)
-    logpath = "20130713060000/log/dacycle"
+    logpath = "20130713060000/log/letkf"
 
     g = 0
     gm = 0
@@ -235,12 +262,15 @@ if __name__ == '__main__':
 
     print "{0:30s} {1:10.2f}".format('SCALE', letkf_log_m1['SCALE'])
 
-    print "{0:30s} {1:10.2f}".format('READ_OBS(read)', letkf_log_m1['read_obs_radar_toshiba:read_toshiba:'])
-    print "{0:30s} {1:10.2f}".format('READ_OBS(bcast)', letkf_log_m1['read_obs_all_mpi:mpi_bcast:'])
-    print "{0:30s} {1:10.2f}".format('READ_OBS(cal)', letkf_log_m1['READ_OBS'] - letkf_log_m1['read_obs_radar_toshiba:read_toshiba:'] - letkf_log_m1['read_obs_all_mpi:mpi_bcast:'])
+    print "{0:30s} {1:10.2f}".format('READ_OBS(wait)', letkf_log_m1['_jitget:locked_lock:'])
+    print "{0:30s} {1:10.2f}".format('READ_OBS(read)', letkf_log_m1['jitget:_jitget:'] - letkf_log_m1['_jitget:locked_lock:'])
+    print "{0:30s} {1:10.2f}".format('READ_OBS(bcast)', letkf_log_m1['jitget:mpi_bcast:'])
+    print "{0:30s} {1:10.2f}".format('READ_OBS(cal)', letkf_log_m1['READ_OBS'] - letkf_log_m1['jitget:_jitget:'] - letkf_log_m1['jitget:mpi_bcast:'])
 
-    print "{0:30s} {1:10.2f}".format('OBS_OPERATOR(read_hist)', letkf_log_m1['obsope_cal:read_ens_history'])
-    print "{0:30s} {1:10.2f}".format('OBS_OPERATOR(cal)', letkf_log_m1['OBS_OPERATOR'] - letkf_log_m1['obsope_cal:read_ens_history'])
+#    print "{0:30s} {1:10.2f}".format('OBS_OPERATOR(read_hist)', letkf_log_m1['obsope_cal:read_ens_history'])
+    print "{0:30s} {1:10.2f}".format('OBS_OPERATOR(read_hist)', letkf_log_m1['read_ens_history_iter:read_history'])
+#    print "{0:30s} {1:10.2f}".format('OBS_OPERATOR(cal)', letkf_log_m1['OBS_OPERATOR'] - letkf_log_m1['obsope_cal:read_ens_history'])
+    print "{0:30s} {1:10.2f}".format('OBS_OPERATOR(cal)', letkf_log_m1['OBS_OPERATOR'] - letkf_log_m1['read_ens_history_iter:read_history'])
 
     print "{0:30s} {1:10.2f}".format('PROCESS_OBS', letkf_log_m1['PROCESS_OBS'])
 
