@@ -13,7 +13,7 @@ CONF_MODE='static'
 DACYCLE=1
 DIRECT_TRANSFER=1
 #TIME_LIMIT='<WTIME_L>'
-TIME_LIMIT='03:00:00'
+TIME_LIMIT='03:30:00'
 
 #===============================================================================
 

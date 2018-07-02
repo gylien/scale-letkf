@@ -10,14 +10,12 @@ PRESET='K_rankdir'
 
 #===============================================================================
 
-DISK_MODE_OBS=2
-
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 USERNAME=gylien                                                                               ###### CHANGE TO YOUR ID
 
 INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_100m_initbdy_720p_v180531"
-OUTDIR="/volume63/data/hp150019/${USERNAME}/exp/scale-letkf/benchmark/huge1806-MRGD100m-NOJIT"     ###### CHANGE TO YOUR DIRECTORY
+OUTDIR="/volume63/data/hp150019/${USERNAME}/exp/scale-letkf/benchmark/huge1807-MRGD100m-NOJIT"     ###### CHANGE TO YOUR DIRECTORY
 
 #===============================================================================
 # Location of model/data files
@@ -120,6 +118,8 @@ BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
 #===============================================================================
 # Temporary directories to store runtime files
+
+DISK_MODE_OBS=2
 
 ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
                             #  0: No
