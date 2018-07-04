@@ -108,7 +108,12 @@ fi
 #-------------------------------------------------------------------------------
 # Add shell scripts and node distribution files into the staging list
 
-cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+if [ "$CONF_MODE" = 'static' ] && ((DTF_MODE >= 1)); then
+  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${NODEFILE_DIR}/|node/
+EOF
+else
+  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 ${TMPS}/config.main|config.main
 ${SCRP_DIR}/config.rc|config.rc
 ${SCRP_DIR}/config.${job}|config.${job}
@@ -116,6 +121,7 @@ ${SCRP_DIR}/${job}.sh|${job}.sh
 ${SCRP_DIR}/src/|src/
 ${NODEFILE_DIR}/|node/
 EOF
+fi
 
 if ((DTF_MODE >= 1)); then
 #  if [ ! -e "${SCRP_DIR}/dtf.ini" ] ; then
@@ -135,6 +141,7 @@ fi
 #===============================================================================
 
 if ((DTF_MODE >= 1)); then                                            ##
+  NNODES_ORIG=$NNODES                                                 ##
   NNODES=$((NNODES*2))                                                ##
   NNODES_APPAR=$((NNODES_APPAR*2))                                    ##
 fi                                                                    ##
@@ -209,10 +216,45 @@ export DTF_GLOBAL_PATH=.
 EOF
 fi
 
-cat >> $jobscrp << EOF
+if [ "$CONF_MODE" = 'static' ] && ((DTF_MODE >= 1)); then
+  cat >> $jobscrp << EOF
+
+echo "[\$(date +'%Y-%m-%d %H:%M:%S')] Start $STIME $ETIME" >&2
+
+mpiexec -n $((NNODES_ORIG*PPN)) -vcoordfile ${TMPROOT}/node/set1.proc -of-proc log/scale-rm_ens.NOUT_${STIME} ./scale-rm_ens scale-rm_ens_${STIME}.conf &
+
+echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ${STIME}: Submitted to background: ensemble forecasts" >&2
+
+mpiexec -n $((NNODES_ORIG*PPN)) -vcoordfile ${TMPROOT}/node/set2.proc -of-proc log/letkf.NOUT_${STIME} ./letkf letkf_${STIME}.conf &
+
+echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ${STIME}: Submitted to background: LETKF" >&2
+
+jobids=\$(jobs -p)
+while [ -n "\$jobids" ]; do
+  for job in \$jobids; do
+    if ! (kill -0 \$job 2> /dev/null); then
+      rcode=0
+      wait \$job || rcode=\$?
+      if ((rcode != 0)); then
+        echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ${STIME}: One of the background programs crashed..." >&2
+        exit \$rcode
+      fi
+    fi
+  done
+  jobids=\$(jobs -p)
+  sleep 1s
+done
+
+echo "[\$(date +'%Y-%m-%d %H:%M:%S')] Finish $STIME $ETIME" >&2
+
+exit 0
+EOF
+else
+  cat >> $jobscrp << EOF
 
 ./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
+fi
 
 #===============================================================================
 # Check the staging list

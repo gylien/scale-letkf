@@ -79,6 +79,8 @@ def parse_NOUT_file(file):
             elif "### TIMER" in line:
                 id = line[20:70].strip()
                 if (id.startswith('read_ens_history_iter:read_history')):
+                    if not dtf_time_found:
+                        raise ValueError("dtf_time transfer not found!")
                     id = 'read_ens_history_iter:read_history'
                     tt_move_to_scale = float(line[84:98]) - tt_dtf
                     dict_add_value(logtime, 'SCALE', tt_move_to_scale)
