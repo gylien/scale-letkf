@@ -108,7 +108,8 @@ fi
 #-------------------------------------------------------------------------------
 # Add shell scripts and node distribution files into the staging list
 
-cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+if [ "$CONF_MODE" != 'static' ] || ((DACYCLE != 1)); then
+  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 ${TMPS}/config.main|config.main
 ${SCRP_DIR}/config.rc|config.rc
 ${SCRP_DIR}/config.${job}|config.${job}
@@ -116,6 +117,7 @@ ${SCRP_DIR}/${job}.sh|${job}.sh
 ${SCRP_DIR}/src/|src/
 ${NODEFILE_DIR}/|node/
 EOF
+fi
 
 if [ "$CONF_MODE" != 'static' ]; then
   echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
@@ -202,22 +204,40 @@ cat >> $jobscrp << EOF
 export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:\$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
+
 export FLIB_FASTOMP=FALSE
 export FLIB_CNTL_BARRIER_ERR=FALSE
 
 echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ### Start unarchive tar files" >&2
 
-mpiexec /work/system/bin/msh "/bin/tar -xf ./input.tar"
+mpiexec -of-proc NOUT /work/system/bin/msh "/bin/tar -xf ./input.tar"
 
 echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ### Delete tar files" >&2
 
-mpiexec /work/system/bin/msh "/bin/rm -f ./input.tar"
-
+mpiexec -of-proc NOUT /work/system/bin/msh "/bin/rm -f ./input.tar"
 
 echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ### Complete process tar files" >&2
+EOF
+
+if [ "$CONF_MODE" = 'static' ] && ((DACYCLE == 1)); then
+  cat >> $jobscrp << EOF
+
+echo "[\$(date +'%Y-%m-%d %H:%M:%S')] Start $STIME $ETIME" >&2
+
+echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ${STIME}: Run DA cycle" >&2
+
+mpiexec -of-proc log/dacycle.NOUT_${STIME} ./dacycle dacycle_${STIME}.conf || exit $?
+
+echo "[\$(date +'%Y-%m-%d %H:%M:%S')] Finish $STIME $ETIME" >&2
+
+exit 0
+EOF
+else
+  cat >> $jobscrp << EOF
 
 ./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
+fi
 
 #===============================================================================
 # Check the staging list
