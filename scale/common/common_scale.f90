@@ -420,7 +420,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
   use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
-  use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
+  use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL, MPI_WTIME
   use common_mpi, only: myrank
   use pnetcdf
   IMPLICIT NONE
@@ -433,6 +433,11 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 
   integer :: err, varid, req, reqs(1), sts(1)
   integer(KIND=MPI_OFFSET_KIND) :: start(3), count(3)
+
+  real(r_dble) :: timer_0, timer
+  character(len=50) :: timer_str
+
+  timer_0 = MPI_WTIME()
 
   ! calculate subarray's start() and count() to the global variables
   start(1) = 1
@@ -452,9 +457,19 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
+  timer = MPI_WTIME()
+  timer_str = 'read_restart_par:nfmpi_open:'
+  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+  timer_0 = timer
+
 #ifdef DTF
   if (DTF_MODE >= 1) then
     call dtf_time_start
+
+    timer = MPI_WTIME()
+    timer_str = 'read_restart_par:dtf_time_start:'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end if
 #endif
 
@@ -472,6 +487,11 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 #endif
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_get_vara_double_all '//' '//nfmpi_strerror(err)
+
+    timer = MPI_WTIME()
+    write (timer_str, '(A39,I4,A2)') 'read_restart_par:nfmpi_iget_vara(iv3d=:', iv3d, '):'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end do
 
   do iv2d = 1, nv2d
@@ -488,23 +508,48 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 #endif
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_get_vara_double_all '//' '//nfmpi_strerror(err)
+
+    timer = MPI_WTIME()
+    write (timer_str, '(A39,I4,A2)') 'read_restart_par:nfmpi_iget_vara(iv2d=:', iv2d, '):'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end do
 
   err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
 
+  timer = MPI_WTIME()
+  timer_str = 'read_restart_par:nfmpi_wait_all:'
+  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+  timer_0 = timer
+
 #ifdef DTF
   if (DTF_MODE >= 1) then
     call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
 
+    timer = MPI_WTIME()
+    timer_str = 'read_restart_par:dtf_transfer:'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
+
     call dtf_time_end
+
+    timer = MPI_WTIME()
+    timer_str = 'read_restart_par:dtf_time_end:'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end if
 #endif
 
   err = nfmpi_close(ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
+
+  timer = MPI_WTIME()
+  timer_str = 'read_restart_par:nfmpi_close:'
+  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+  timer_0 = timer
 
   RETURN
 END SUBROUTINE read_restart_par
@@ -743,7 +788,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
   use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
-  use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
+  use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL, MPI_WTIME
   use common_mpi, only: myrank
   use pnetcdf
   implicit none
@@ -756,6 +801,11 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 
   integer :: err, varid, req, reqs(1), sts(1)
   integer(KIND=MPI_OFFSET_KIND) :: start(3), count(3)
+
+  real(r_dble) :: timer_0, timer
+  character(len=50) :: timer_str
+
+  timer_0 = MPI_WTIME()
 
   ! calculate subarray's start() and count() to the global variables
   start(1) = 1
@@ -774,12 +824,22 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 #ifdef DTF
   if (DTF_MODE >= 1) then
     call dtf_time_start
+
+    timer = MPI_WTIME()
+    timer_str = 'write_restart_par:dtf_time_start:'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end if
 #endif
 
   err = nfmpi_open(comm, trim(filename)//".nc", NF_WRITE, MPI_INFO_NULL, ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
+
+  timer = MPI_WTIME()
+  timer_str = 'write_restart_par:nfmpi_open:'
+  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+  timer_0 = timer
 
   do iv3d = 1, nv3d
     if (LOG_LEVEL >= 1) then
@@ -795,6 +855,11 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 #endif
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iput_vara_double '//' '//nfmpi_strerror(err)
+
+    timer = MPI_WTIME()
+    write (timer_str, '(A40,I4,A2)') 'write_restart_par:nfmpi_iput_vara(iv3d=:', iv3d, '):'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end do
 
   do iv2d = 1, nv2d
@@ -811,15 +876,30 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 #endif
     if ( err .NE. NF_NOERR ) &
        write (6,'(A)') 'failed nfmpi_iput_vara_double '//' '//nfmpi_strerror(err)
+
+    timer = MPI_WTIME()
+    write (timer_str, '(A40,I4,A2)') 'write_restart_par:nfmpi_iput_vara(iv2d=:', iv2d, '):'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end do
 
   err = nfmpi_wait_all(ncid, NF_REQ_ALL, reqs, sts)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
 
+  timer = MPI_WTIME()
+  timer_str = 'write_restart_par:nfmpi_wait_all:'
+  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+  timer_0 = timer
+
 #ifdef DTF
   if (DTF_MODE >= 1) then
     call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
+
+    timer = MPI_WTIME()
+    timer_str = 'write_restart_par:dtf_transfer:'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end if
 #endif
 
@@ -827,9 +907,19 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
 
+  timer = MPI_WTIME()
+  timer_str = 'write_restart_par:nfmpi_close:'
+  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+  timer_0 = timer
+
 #ifdef DTF
   if (DTF_MODE >= 1) then
     call dtf_time_end
+
+    timer = MPI_WTIME()
+    timer_str = 'write_restart_par:dtf_time_end:'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end if
 #endif
 
@@ -1251,7 +1341,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   use scale_comm, only: &
       COMM_vars8, &
       COMM_wait
-  use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
+  use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL, MPI_WTIME
   use common_mpi, only: myrank
   use pnetcdf
   implicit none
@@ -1272,6 +1362,11 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 
   integer :: err, varid, req, reqs(1), sts(1)
   integer(KIND=MPI_OFFSET_KIND) :: start(4), count(4)
+
+  real(r_dble) :: timer_0, timer
+  character(len=50) :: timer_str
+
+  timer_0 = MPI_WTIME()
 
   ! calculate subarray's start() and count() to the global variables
   start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1
@@ -1294,9 +1389,19 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
+  timer = MPI_WTIME()
+  timer_str = 'read_history_par:nfmpi_open:'
+  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+  timer_0 = timer
+
 #ifdef DTF
   if (DTF_MODE >= 1) then
     call dtf_time_start
+
+    timer = MPI_WTIME()
+    timer_str = 'read_history_par:dtf_time_start:'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end if
 #endif
 
@@ -1331,6 +1436,11 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 !       write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
 
 !    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg_RP(k+KHALO,i+IHALO,j+JHALO,iv3d) = real(var3D(i,j,k,iv3d), r_size) ! use FORALL to change order of dimensions
+
+    timer = MPI_WTIME()
+    write (timer_str, '(A39,I4,A2)') 'read_history_par:nfmpi_iget_vara(iv3d=:', iv3d, '):'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end do
 
   start(3) = step
@@ -1368,6 +1478,11 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 !       write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
 
 !    v2dg_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = real(var2D(:,:,iv2d), r_size)
+
+    timer = MPI_WTIME()
+    write (timer_str, '(A39,I4,A2)') 'read_history_par:nfmpi_iget_vara(iv2d=:', iv2d, '):'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end do
 
 !  call FILEIO_flush( fid )
@@ -1375,11 +1490,26 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_wait_all '//' '//nfmpi_strerror(err)
 
+  timer = MPI_WTIME()
+  timer_str = 'read_history_par:nfmpi_wait_all:'
+  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+  timer_0 = timer
+
 #ifdef DTF
   if (DTF_MODE >= 1) then
     call dtf_transfer(trim(filename)//".nc"//CHAR(0), ncid, err)
 
+    timer = MPI_WTIME()
+    timer_str = 'read_history_par:dtf_transfer:'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
+
     call dtf_time_end
+
+    timer = MPI_WTIME()
+    timer_str = 'read_history_par:dtf_time_end:'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end if
 #endif
 
@@ -1387,6 +1517,11 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   err = nfmpi_close(ncid)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_close '//' '//nfmpi_strerror(err)
+
+  timer = MPI_WTIME()
+  timer_str = 'read_history_par:nfmpi_close:'
+  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+  timer_0 = timer
 
   ! Copy data buffer
   !-------------
@@ -1434,11 +1569,21 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   v3dg = real(v3dg_RP, kind=r_size)
   v2dg = real(v2dg_RP, kind=r_size)
 
+  timer = MPI_WTIME()
+  timer_str = 'read_history_par:communicate_halo:'
+  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+  timer_0 = timer
+
   ! Save topo for later use
   !-------------
   if (.not. allocated(topo2d)) then
     allocate (topo2d(nlon,nlat))
     topo2d = v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo)
+
+    timer = MPI_WTIME()
+    timer_str = 'read_history_par:save_topo:'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
   end if
 
   return
