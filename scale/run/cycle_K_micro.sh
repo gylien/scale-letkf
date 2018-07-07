@@ -164,6 +164,9 @@ cat > $jobscrp << EOF
 #PJM --mpi "proc=${totalnp}"
 #PJM --mpi assign-online-node
 
+# clean up LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=
+
 . /work/system/Env_base_1.2.0-23
 #export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:\$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=${THREADS}
@@ -185,7 +188,8 @@ export SCALE_ENSEMBLE_SZ=$((SCALE_NP))
 export MAX_WORKGROUP_SIZE=$MAX_WORKGROUP_SIZE
 
 #export LD_LIBRARY_PATH=$TMP:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$TMP:/opt/klocal/zlib-1.2.11-gnu/lib:/opt/aics/netcdf/k-serial-noszip/lib:/opt/FJSVtclang/GM-1.2.0-23/lib64
+#export LD_LIBRARY_PATH=$TMP:/opt/klocal/zlib-1.2.11-gnu/lib:/opt/aics/netcdf/k-serial-noszip/lib:/opt/FJSVtclang/GM-1.2.0-23/lib64
+export LD_LIBRARY_PATH=$TMP:/opt/FJSVtclang/GM-1.2.0-23/lib64
 export DTF_GLOBAL_PATH=$TMP
 EOF
 fi

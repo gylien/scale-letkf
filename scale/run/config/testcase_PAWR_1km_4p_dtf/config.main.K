@@ -15,7 +15,7 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 USERNAME=gylien
 
 INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_1km_initbdy_v180531"
-OUTDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_1km_1001_m100_dtf_SP_log1" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/${USERNAME}/exp/scale-letkf/benchmark/d4_1km_1001_m100_dtf_SP_log1" # Directory for SCALE-LETKF output
 
 LIBDTF_PATH=/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/DTF/libdtf
 
@@ -35,7 +35,7 @@ DATA_BDY_SCALE_PREP=                                                 # Directory
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-OBS="/volume63/data/hp150019/gylien/obs/20130713/raw_v2"             # Observation data in LETKF observation format
+OBS="/volume63/data/hp150019/gylien/obs/20130713/raw_v2a"             # Observation data in LETKF observation format
 OBSNCEP=
 OBS_USE_JITDT=0
 
