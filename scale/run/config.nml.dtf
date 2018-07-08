@@ -24,8 +24,8 @@ mode="transfer"
 
 #[FILE]
 #filename="mean/anal.d01%"
-#!--EXCLUDE_NAME_STIME--
-#!--EXCLUDE_NAME_ATIME--
+#!##--EXCLUDE_NAME_STIME--
+#!##--EXCLUDE_NAME_ATIME--
 #comp1="scale"
 #comp2="letkf"
 #mode="transfer"
@@ -33,8 +33,8 @@ mode="transfer"
 
 #[FILE]
 #filename="mdet/anal.d01%"
-#!--EXCLUDE_NAME_STIME--
-#!--EXCLUDE_NAME_ATIME--
+#!##--EXCLUDE_NAME_STIME--
+#!##--EXCLUDE_NAME_ATIME--
 #comp1="scale"
 #comp2="letkf"
 #mode="transfer"
