@@ -33,7 +33,7 @@ DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-OBS="/volume63/data/hp150019/gylien/obs/20130713/raw_v2"             # Observation data in LETKF observation format
+OBS="/volume63/data/hp150019/gylien/obs/20130713/raw_v2a"             # Observation data in LETKF observation format
 OBSNCEP=
 OBS_USE_JITDT=0
 
