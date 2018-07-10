@@ -532,13 +532,6 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
     timer_str = 'read_restart_par:dtf_transfer:'
     write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
-
-    call dtf_time_end
-
-    timer = MPI_WTIME()
-    timer_str = 'read_restart_par:dtf_time_end:'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
-    timer_0 = timer
   end if
 #endif
 
@@ -550,6 +543,17 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
   timer_str = 'read_restart_par:nfmpi_close:'
   write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
   timer_0 = timer
+
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_time_end
+
+    timer = MPI_WTIME()
+    timer_str = 'read_restart_par:dtf_time_end:'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
+  end if
+#endif
 
   RETURN
 END SUBROUTINE read_restart_par
@@ -821,6 +825,10 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 
   write (6,'(A,I6.6,3A,6I6)') 'MYRANK ',myrank,' is writing a file ',trim(filename)//'.nc', ' >> PnetCDF start(3), count(3) =', start, count
 
+  err = nfmpi_open(comm, trim(filename)//".nc", NF_WRITE, MPI_INFO_NULL, ncid)
+  if ( err .NE. NF_NOERR ) &
+     write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
+
 #ifdef DTF
   if (DTF_MODE >= 1) then
     call dtf_time_start
@@ -831,10 +839,6 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
     timer_0 = timer
   end if
 #endif
-
-  err = nfmpi_open(comm, trim(filename)//".nc", NF_WRITE, MPI_INFO_NULL, ncid)
-  if ( err .NE. NF_NOERR ) &
-     write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
   timer = MPI_WTIME()
   timer_str = 'write_restart_par:nfmpi_open:'
@@ -1504,12 +1508,6 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
     write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
 
-    call dtf_time_end
-
-    timer = MPI_WTIME()
-    timer_str = 'read_history_par:dtf_time_end:'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
-    timer_0 = timer
   end if
 #endif
 
@@ -1522,6 +1520,17 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   timer_str = 'read_history_par:nfmpi_close:'
   write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
   timer_0 = timer
+
+#ifdef DTF
+  if (DTF_MODE >= 1) then
+    call dtf_time_end
+
+    timer = MPI_WTIME()
+    timer_str = 'read_history_par:dtf_time_end:'
+    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+    timer_0 = timer
+  end if
+#endif
 
   ! Copy data buffer
   !-------------
