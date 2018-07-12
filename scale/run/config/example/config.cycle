@@ -4,84 +4,105 @@
 #  Settings for cycle.sh
 #
 #===============================================================================
+# Computing job settings
 
-STIME='20130713060000'
-ETIME='20130713060930'
-ISTEP=
-FSTEP=
-CONF_MODE=
-TIME_LIMIT='01:45:00'
-
-#===============================================================================
-
-FCSTOUT=30
-
-ADAPTINFL=0      # Adaptive inflation
-                 #  0: OFF
-                 #  1: ON, using inflation parameter 1 cycle  ago as prior
-                 #  2: ON, using inflation parameter 2 cycles ago as prior
-ADDINFL=0        # Additive inflation
-                 #  0: OFF
-                 #  1: ON
+STIME='20130713060000'  # Forecast start time of the first cycle in the job (format: YYYYMMDDhhmmss)
+ETIME='20130713060930'  # Forecast start time of the last cycle in the job (format: YYYYMMDDhhmmss)
+                        #  (final analysis time: $ETIME + $LCYCLE)
+ISTEP=                  ## [NOT TESTED]
+FSTEP=                  ## [NOT TESTED]
+CONF_MODE=              # Method to generate namelist files for each model/DA program
+                        # - 'dynamic':  Dynamically (and parallelly) generate the namelist files during the job runtime
+                        # - 'static':  Generate all static namelist files on the head node before submitting the computing job. Note that the support to various functions is limited using this mode.
+                        #  (default: 'dynamic')
+TIME_LIMIT='01:45:00'   # The requested "walltime" limit of the computing job
 
 #===============================================================================
+# General settings
 
-MAKEINIT=0       # 0: No
-                 # 1: Yes
+MAKEINIT=0       # Generate (ensemble) initial conditions as well from the boundary data?
+                 # - 0:  No - Use the existing initial condition data in $INDIR
+                 # - 1:  Yes - The boundary data in the $DATA_BDY_* directory are not only used for generating boundary conditions, but the same data are also used for generating initial conditions. The results will be then saved (overwritten) to $OUTDIR after the completion of the job.
+
+FCSTOUT=30       # Output time interval of the history files (second).
+                 # Note that the actual time interval in the history files is min{$LTIMESLOT (in config.main), $FCSTOUT}.
+
+ADAPTINFL=0      # [NOT WELL TESTED] Enable adaptive multiplicative inflation (Miyoshi 2011 MWR)?
+                 # - 0:  No
+                 # - 1:  Yes
+ADDINFL=0        # Enable additive inflation?
+                 #  (require input additive inflation data in $DATA_ADDINFL)
+                 # - 0:  No
+                 # - 1:  Yes
 
 #===============================================================================
-# Diagnostic output settings
+# Completeness of output files
 
-                 #      anal              gues              history
-                 #      mean/sprd members mean/sprd members mean members
-OUT_OPT=3        # 1:   o         o       o         o       o    o
-                 # 2:   o         o       o         o       o
-                 # 3:   o         o       o         o
-                 # 4:   o         o       o
-                 # 5:   o         *       o                               * = every $OUT_CYCLE_SKIP cycles and the last cycle
-                 # 6:   o         **      o                               ** = only the last cycle
-                 # 7:   o         **
+OUT_OPT=3        # Level of completeness of guess/analysis/history files
+                 # <pre>     anal          gues          hist
+                 # --   mean/ members mean/ members mean members
+                 # --   sprd          sprd
+                 # 1:   o     o       o     o       o    o
+                 # 2:   o     o       o     o       o
+                 # 3:   o     o       o     o
+                 # 4:   o     o       o
+                 # 5:   o     #       o
+                 # 6:   o     ##      o
+                 # 7:   o     ##
+                 # # = every $OUT_CYCLE_SKIP cycles and the 
+                 #     last cycle
+                 # ## = only the last cycle</pre>
 
-OUT_CYCLE_SKIP=5
+OUT_CYCLE_SKIP=5 # Interval of cycles when the analysis ensemble members are output
+                 #  (effective only when $OUT_OPT = 5)
 
-                 #      topo
-TOPOOUT_OPT=2    # 1:   o
-                 # 2:   (none)
+TOPOOUT_OPT=2    # Level of completeness of topography files
+                 # <pre>--   topo
+                 # 1:   o
+                 # 2:   (none)</pre>
 
-                 #      landuse
-LANDUSEOUT_OPT=2 # 1:   o
-                 # 2:   (none)
+LANDUSEOUT_OPT=2 # Level of completeness of land-use files
+                 # <pre>--   landuse
+                 # 1:   o
+                 # 2:   (none)</pre>
 
-                 #      bdy
-                 #      mean members
-BDYOUT_OPT=3     # 1:   o    o
+BDYOUT_OPT=3     # Level of completeness of SCALE boundary files
+                 # <pre>     bdy
+                 # --   mean members
+                 # 1:   o    o
                  # 2:   o
-                 # 3:   (none)
+                 # 3:   (none)</pre>
 
-                 #      obsgues obsanal obsdep
-OBSOUT_OPT=3     # 1:   o       o       o      (not implemented yet)
-                 # 2:   o               o      (not implemented yet)
-                 # 3:                   o
+OBSOUT_OPT=3     # Level of completeness of observation-space dagnostic files
+                 # <pre>--   obsgues# obsanal# obsdep
+                 # 1:   o        o        o
+                 # 2:   o                 o
+                 # 3:                     o
                  # 4:   (none)
+                 # # = [NOT IMPLEMENTED]</pre>
 
-                 #      topo landuse bdy perturb        scale obsope letkf
-                 #      log  log     log (not finished) log   log    log
-LOG_OPT=2        # 1:   o    o       o   o              o     o      o
-                 # 2:   o    o       o                  o     o      o
-                 # 3:                                   o     o      o
-                 # 4:                                         o      o
-                 # 5:   (none)
+LOG_OPT=2        # Level of completeness of log files of each program
+                 # <pre>     topo landuse bdy scale obsope letkf
+                 # --   log  log     log log   log    log
+                 # 1-2: o    o       o   o     o      o
+                 # 3:                    o     o      o
+                 # 4:                          o      o
+                 # 5:   (none)</pre>
 
-LOG_TYPE=4       # 1:   Only save the log file from the head process
-                 # 2:   Save all log files
-                 # 3:   Save all log files in an archive file
-                 # 4:   Save all log files in a compressed archive file
+LOG_TYPE=4       # Completeness of log file output and the way of saving them
+                 # - 1:  Only save the log file from the head computing process
+                 # - 2:  Save all log files from all MPI processes
+                 # - 3:  Save all log files from all MPI processes in an archive file (\*.tar)
+                 # - 4:  Save all log files from all MPI processes in a compressed archive file (\*.tar.gz)
 
-SPRD_OUT=1       # 0: No
-                 # 1: Yes
-RTPS_INFL_OUT=0  # 0: No
-                 # 1: Yes
-NOBS_OUT=0       # 0: No
-                 # 1: Yes
+SPRD_OUT=1       # Output the ensemble spread file?
+                 # - 0:  No
+                 # - 1:  Yes
+RTPS_INFL_OUT=0  # Output the equivalent multiplicative inflation field when using RTPS inflation?
+                 # - 0:  No
+                 # - 1:  Yes
+NOBS_OUT=0       # Output the observation number field when using observation number limit?
+                 # - 0:  No
+                 # - 1:  Yes
 
 #===============================================================================

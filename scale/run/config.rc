@@ -58,13 +58,6 @@ fi
 #===============================================================================
 # Default values
 
-# RUN_LEVEL:
-#   0: Run everything (default)
-#   1: Run everything but skipping detecting errors
-#   2: Staging list files are ready; skip generating them (not implemented yet...)
-#   3: Staging-in has been done; skip staging
-#   4: Staging-in/out is done outside this script; skiping staging
-
 RUN_LEVEL=${RUN_LEVEL:-0}
 
 #-------------------------------------------------------------------------------
@@ -86,7 +79,11 @@ DATA_ADDINFL="${DATA_ADDINFL:-$INDIR}"
 
 DET_RUN="${DET_RUN:-0}"
 
+LANDUSE_UPDATE="${LANDUSE_UPDATE:-0}"
+
 BDY_SINGLE_FILE="${BDY_SINGLE_FILE:-0}"
+BDY_ENS="${BDY_ENS:-0}"
+BDY_ROTATING="${BDY_ROTATING:-0}"
 if ((BDY_SINGLE_FILE == 1 && BDY_ROTATING != 1)); then
   echo "[Warning] When \$BDY_SINGLE_FILE = 1, \$BDY_ROTATING needs to be enabled: \$BDY_ROTATING reset to 1" 1>&2
   BDY_ROTATING=1
@@ -98,6 +95,7 @@ BDY_MEAN="${BDY_MEAN:-mean}"
 BDYINT=${BDYINT:-$LCYCLE}
 BDYCYCLE_INT=${BDYCYCLE_INT:-$BDYINT}
 
+PNETCDF=${PNETCDF:-0}
 PNETCDF_BDY_SCALE=${PNETCDF_BDY_SCALE:-$PNETCDF}
 
 #-------------------------------------------------------------------------------

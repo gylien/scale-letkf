@@ -4,59 +4,68 @@
 #  Settings for fcst.sh
 #
 #===============================================================================
+# Computing job settings
 
-STIME='20130713061000'
-ETIME='20130713061000'
-MEMBERS='mean 1'
-CYCLE=1
-CYCLE_SKIP=1
-ISTEP=
-FSTEP=
-TIME_LIMIT='01:15:00'
-
-#===============================================================================
-# Forecast settings
-
-FCSTLEN=2700        # SCALE forecast length in the forecast mode (second)
-FCSTOUT=30
+STIME='20130713061000'  # Forecast initial time of the first cycle in the job (format: YYYYMMDDhhmmss)
+ETIME='20130713061000'  # Forecast initial time of the last cycle in the job (format: YYYYMMDDhhmmss)
+MEMBERS='mean 1'        # List of members to run the ensemble forecasts, separated by space; e.g., 'mean mdet 1 5', or "$(seq 11 20)"
+CYCLE=1                 # [OPTIONAL] Number of cycles to be run in parallel (if possible).
+                        # This value can be left blank and the program will decide the optimal setting automatically.
+CYCLE_SKIP=1            # Interval of cycles at every which the (ensemble) forecasts are conducted
+                        #  ($CYCLE_SKIP = 1: run forecasts from every cycle)
+                        #  (default: 1)
+ISTEP=                  ## [NOT TESTED]
+FSTEP=                  ## [NOT TESTED]
+TIME_LIMIT='01:15:00'   # The requested "walltime" limit of the computing job
 
 #===============================================================================
+# General settings
 
-MAKEINIT=0       # 0: No
-                 # 1: Yes
+MAKEINIT=0       # Generate (ensemble) initial conditions as well from the boundary data?
+                 # - 0:  No - Use the existing initial condition data in $INDIR
+                 # - 1:  Yes - The boundary data in the $DATA_BDY_* directory are not only used for generating boundary conditions, but the same data are also used for generating initial conditions. The results will be then saved (overwritten) to $OUTDIR after the completion of the job.
+
+FCSTLEN=2700     # Forecast length (second)
+FCSTOUT=30       # Output time interval of the forecasts (second)
 
 #===============================================================================
-# Diagnostic output settings
+# Completeness of output files
 
-                 #      fcst
-                 #      history restart
-OUT_OPT=2        # 1:   o       o
+OUT_OPT=3        # Level of completeness of forecast files
+                 # <pre>     fcst
+                 # --   history restart#
+                 # 1:   o       o
                  # 2:   o
+                 # # = restart file in the end of the forecast</pre>
 
-                 #      topo
-TOPOOUT_OPT=2    # 1:   o
-                 # 2:   (none)
+TOPOOUT_OPT=2    # Level of completeness of topography files
+                 # <pre>--   topo
+                 # 1:   o
+                 # 2:   (none)</pre>
 
-                 #      landuse
-LANDUSEOUT_OPT=2 # 1:   o
-                 # 2:   (none)
+LANDUSEOUT_OPT=2 # Level of completeness of land-use files
+                 # <pre>--   landuse
+                 # 1:   o
+                 # 2:   (none)</pre>
 
-                 #      bdy
-                 #      mean members
-BDYOUT_OPT=3     # 1:   o    o
+BDYOUT_OPT=3     # Level of completeness of SCALE boundary files
+                 # <pre>     bdy
+                 # --   mean members
+                 # 1:   o    o
                  # 2:   o
-                 # 3:   (none)
+                 # 3:   (none)</pre>
 
-                 #      topo landuse bdy perturb        scale
-                 #      log  log     log (not finished) log
-LOG_OPT=2        # 1:   o    o       o   o              o
-                 # 2:   o    o       o                  o
-                 # 3:                                   o
-                 # 4:   (none)
+LOG_OPT=2        # Level of completeness of log files of each program
+                 # <pre>     topo landuse bdy scale
+                 # --   log  log     log log
+                 # 1-2: o    o       o   o
+                 # 3:                    o
+                 # 4:   (none)</pre>
 
-LOG_TYPE=4       # 1:   Only save the log file from the head process
-                 # 2:   Save all log files
-                 # 3:   Save all log files in an archive file
-                 # 4:   Save all log files in a compressed archive file
+LOG_TYPE=4       # Completeness of log file output and the way of saving them
+                 # - 1:  Only save the log file from the head computing process
+                 # - 2:  Save all log files from all MPI processes
+                 # - 3:  Save all log files from all MPI processes in an archive file (\*.tar)
+                 # - 4:  Save all log files from all MPI processes in a compressed archive file (\*.tar.gz)
 
 #===============================================================================

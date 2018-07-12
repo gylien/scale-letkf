@@ -11,32 +11,48 @@ srcfile_letkf = 'config/example/config.nml.letkf'
 
 srcfile_common_nml = '../common/common_nml.f90'
 
-outfile_main = '../../../letkf.wiki/List-of-variables-in-config.main.md'
-outfile_cycle = '../../../letkf.wiki/List-of-variables-in-config.cycle.md'
-outfile_fcst = '../../../letkf.wiki/List-of-variables-in-config.fcst.md'
-outfile_scale = '../../../letkf.wiki/Use-of-namelist-files-of-the-SCALE-model.md'
-outfile_obsope = '../../../letkf.wiki/List-of-variables-in-config.nml.obsope.md'
-outfile_letkf = '../../../letkf.wiki/List-of-variables-in-config.nml.letkf.md'
+outfile_version = 'dad4dbf-(2017.11.27)'
+
+outfile_main = '../../../letkf.wiki/List-of-variables-in-config.main-[{:s}].md'.format(outfile_version)
+outfile_cycle = '../../../letkf.wiki/List-of-variables-in-config.cycle-[{:s}].md'.format(outfile_version)
+outfile_fcst = '../../../letkf.wiki/List-of-variables-in-config.fcst-[{:s}].md'.format(outfile_version)
+outfile_scale = '../../../letkf.wiki/Use-of-namelist-files-of-the-SCALE-model-[{:s}].md'.format(outfile_version)
+outfile_obsope = '../../../letkf.wiki/List-of-variables-in-config.nml.obsope-[{:s}].md'.format(outfile_version)
+outfile_letkf = '../../../letkf.wiki/List-of-variables-in-config.nml.letkf-[{:s}].md'.format(outfile_version)
 
 
 def get_multiline_comments(txt, startline=0, startpos=0, commentor='#'):
     i = startline
     j = startpos
     res = ''
+    ul = False
     try:
         if txt[i].find(commentor, j) >= 0:
             j = txt[i].find(commentor, j)
         while txt[i][j:].lstrip().startswith(commentor):
-            ires = txt[i][j:].lstrip().lstrip(commentor).strip()
+            if txt[i][j:].lstrip()[len(commentor):].startswith(commentor):
+                ires = ''
+            else:
+                ires = txt[i][j:].lstrip()[len(commentor):].strip()
             if ires.startswith('======'):
                 return i+1, ''
             elif ires != '':
-                if res == '':
-                    res = ires
+                if ires.startswith('- '):
+                    if not ul:
+                        res += '<ul>'
+                        ul = True
+                    res += '<li>' + ires[2:].lstrip().replace('  ', ' &nbsp;') + '</li>'
+                elif ul:
+                    res += '</ul>' + ires.replace('  ', ' &nbsp;') 
+                    ul = False
+                elif res != '':
+                    res += '<br>' + ires.replace('  ', ' &nbsp;') 
                 else:
-                    res += '<br>' + ires
+                    res = ires.replace('  ', ' &nbsp;') 
             i += 1
             j = 0
+        if ul:
+            res += '</ul>'
         if i == startline:
             i += 1
     except IndexError:
@@ -374,7 +390,7 @@ if __name__ == '__main__':
     nml_to_md(nml, nml_letkf, outfile_letkf, prefix)
 
     prefix = """
-The configuration files `config.nml.scale_pp`, `config.nml.scale_init`, and `config.nml.scale` are the same as the namelist files for **scale-rm_pp**, **scale-rm_init**, and **scale-rm** programs, respectively. Check the [SCALE-RM model documentation](http://scale.aics.riken.jp/doc/) for the explanation of the namelist variables.
+The configuration files `config.nml.scale_pp`, `config.nml.scale_init`, and `config.nml.scale` are the same as the namelist files for **scale-rm_pp**, **scale-rm_init**, and **scale-rm** programs, respectively. Check the [SCALE-RM model documentation](http://r-ccs-climate.riken.jp/scale/doc/) for the explanation of the namelist variables.
 
 However, in the **SCALE-LETKF**, some SCALE namelist variables are to be automatically determined by the job scripts. They should have no assigned values and should be written in `config.nml.scale*` as:
 ```
