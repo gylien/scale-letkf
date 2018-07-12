@@ -193,10 +193,10 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $iters $STDOUT $ARGS
+  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} numactl --preferred=1 $PROG $CONF $iters $STDOUT $ARGS
   res=$?
   if ((res != 0)); then
-    echo "[Error] $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $iters $STDOUT $ARGS" >&2
+    echo "[Error] $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} numactl --preferred=1 $PROG $CONF $iters $STDOUT $ARGS" >&2
     echo "        Exit code: $res" >&2
     exit $res
   fi
