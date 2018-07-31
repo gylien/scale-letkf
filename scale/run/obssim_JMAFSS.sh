@@ -3,8 +3,10 @@
 
 USER=honda
 
-EXP=TEPCO_6km_Him8_LOC90km_TCV_RTPP
-CONFIG_TOP=/volume64/data/ra001011/stakino/SCALE-LETKF/scale-5.2.2/letkf/scale/run/config
+#EXP=TEPCO_6km_Him8_LOC90km_TCV_RTPP
+EXP=TEPCO_6km_Him8_LOC60km_TCV_FRAC
+PWD=`pwd`
+CONFIG_TOP=${PWD}/config
 . ${CONFIG_TOP}/${EXP}/config.main
 #. config/${EXP}/config.main
 
@@ -14,7 +16,14 @@ CONFIG_TOP=/volume64/data/ra001011/stakino/SCALE-LETKF/scale-5.2.2/letkf/scale/r
 JMA_RADAR_FSS_NG=3
 JMA_RADAR_FSS_RAIN="1.0"
 
-FCSTOUT_INT=3600 # (s)
+#FCSTOUT_INT=3600 # (s)
+FCSTOUT_INT=600 # (s)
+
+## jmaradar_20160919120000_FT0000600s.grd 
+JMA_RADAR_MTINT=-1 # JMA radar averaged interval (s) ! [< 0] snap shot 
+
+## jmaradar_20160919120000_FT0000600s_MT0000600s.grd 
+#JMA_RADAR_MTINT=600 # JMA radar averaged interval (s) ! [< 0] snap shot 
 
 #RADAR_FHEAD="hourly_jmaradar"
 RADAR_FHEAD="jmaradar"
@@ -25,26 +34,23 @@ OBSSIM_BIN="${LETKF_RUN}/../obs/obssim"
 RUNSH=$SWDIR/OBSSIM.sh
 RUNCONF_COMMON=$SWDIR/obssim.conf_common
 #SCALE_CONF=${LETKF_RUN}/config.nml.scale
-SCALE_CONF=${CONFIG_TOP}/config/${EXP}/config.nml.scale
+SCALE_CONF=${CONFIG_TOP}/${EXP}/config.nml.scale
 TOPO=${OUTDIR}/const/topo
 
 #JMAOBSDIR=$OBS
 JMAOBSDIR=/volume64/data/ra001011/honda/SCALE-LETKF/scale-5.2.2/obs/tmp_JMA
 
-tstart='2016-09-19 18:00:00'
-tend='2016-09-19 18:00:00'
+tstart='2016-09-19 12:00:00'
+tend='2016-09-19 12:00:00'
 
-# Hourly interval is assumed!
 # Foracst times
 FT_S=1
-FT_E=5
+FT_E=1
 
 #ctint=21600 # obssim interval 
 #ctint=10800 # obssim interval 
 ctint=600 # obssim interval 
 tint=600 # analysis interval (Do not modify!)
-ctint=150 # obssim interval 
-tint=150 # analysis interval (Do not modify!)
 
 # -- SCALE setting --
 MEM_NP=${SCALE_NP}
@@ -220,7 +226,8 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
   cp ${ORG_DIR}/history.pe*[8,9].nc ${DAT_DIR}/ &
   wait
 
-  cp ${JMAOBSDIR}/jmaradar_${HTIME}_FT*.grd ${SWDIR}/dat/
+  #cp ${JMAOBSDIR}/jmaradar_${HTIME}_FT*.grd ${SWDIR}/dat/
+  cp ${JMAOBSDIR}/jmaradar_${HTIME}_FT???????s*.grd ${SWDIR}/dat/
 
   # copy common parts of obssim.conf 
   RUNCONF=${SWDIR}/obssim_$(printf %03d $VCODE_CNT).conf
@@ -249,6 +256,7 @@ cat << EOF >> $RUNCONF
  JMA_RADAR_FSS_NG = ${JMA_RADAR_FSS_NG},
  JMA_RADAR_FSS_RAIN = ${JMA_RADAR_FSS_RAIN}D0,
  JMA_RADAR_TINT = ${FCSTOUT_INT}D0,
+ JMA_RADAR_MTINT = ${JMA_RADAR_MTINT}D0,
 /
 
 EOF

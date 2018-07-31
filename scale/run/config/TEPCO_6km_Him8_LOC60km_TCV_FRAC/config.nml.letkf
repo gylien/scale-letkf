@@ -67,6 +67,7 @@
 ! reference for the standard gross-error QC
  OBSERR_H08 = 3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0,
               3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0,
+ OBSERR_JMA_RFRAC = 0.1d0,
 /
 
 &PARAM_LETKF_OBS
@@ -76,6 +77,13 @@
  VERT_LOCAL =   0.3D0,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                   -1., 2.0D3,  0.5d0,  0.0d0, -1.,
+/
+
+&PARAM_OBS_JMA_RADAR
+ JMA_RADAR_FSS_RAIN = 1.0d0, ! (mm/h)
+ JMA_MIN_OSPRD = 0.01d0,
+ JMA_RADAR_FSS_NG = 3,
+ JMA_RADAR_FSS_NG_THNG = 2,
 /
 
 &PARAM_LETKF_H08

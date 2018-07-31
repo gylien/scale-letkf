@@ -379,8 +379,12 @@
 !&HISTITEM item='RHL'  /
 !&HISTITEM item='RHI'  /
 
-&HISTITEM item='PREC', taverage=.true. /
-&HISTITEM item='RAIN', taverage=.true. /
+! consistent with SFLX_rain in restart file
+&HISTITEM item='PREC', taverage=.false. /
+&HISTITEM item='RAIN', taverage=.false. / 
+
+!&HISTITEM item='RAIN', taverage=.true. /
+!&HISTITEM item='PREC', taverage=.true. /
 &HISTITEM item='SNOW', taverage=.true. /
 
 &HISTITEM item='SFC_PRES'   /

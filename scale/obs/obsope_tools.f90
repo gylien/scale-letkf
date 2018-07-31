@@ -583,6 +583,12 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
               obsda%qc(nn) = iqc_obs_bad
               cycle
             endif
+
+            if(m2d(nint(ril-IHALO),nint(rjl-JHALO)) < 0.0001d0)then ! DEBUG
+              obsda%qc(nn) = iqc_obs_bad
+              cycle
+            endif
+
           end select
 
 
@@ -1112,6 +1118,7 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, ft, stggrd)
   integer :: ch, it
   integer :: dp, sp, ep
   integer, parameter :: itmax = 2
+  logical :: GET_HIM8 = .false.
 
   np = 0
 
@@ -1167,6 +1174,7 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, ft, stggrd)
           do iv2dsim = 1, OBSSIM_NUM_2D_VARS
             select case (OBSSIM_2D_VARS_LIST(iv2dsim))
             case (id_H08IR_obs)   
+              GET_HIM8 = .true.
               cycle
             case (id_jmarfrac_obs)
               GET_JMAFSS = .true.
@@ -1195,39 +1203,42 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, ft, stggrd)
 
 #ifdef H08
 
-  dp = int(np / itmax)
+  if (GET_HIM8) then
 
-  do it = 1, itmax
-    sp = 1 + dp * (it - 1)
-    ep = dp * it
-    if(it == itmax)ep = np
+    dp = int(np / itmax)
 
-    call Trans_XtoY_H08(ep-sp+1,ri_H08(sp:ep),rj_H08(sp:ep),&
-                        lon_H08(sp:ep),lat_H08(sp:ep),v3dgh,v2dgh,&
-                        yobs_H08(1:NIRB_HIM8,sp:ep),yobs_H08_clr(1:NIRB_HIM8,sp:ep),&
-                        plev_obs_H08(1:NIRB_HIM8,sp:ep),qc_H08(1:NIRB_HIM8,sp:ep),&
-                        zangle_H08(sp:ep))
+    do it = 1, itmax
+      sp = 1 + dp * (it - 1)
+      ep = dp * it
+      if(it == itmax)ep = np
 
-  enddo ! [it = 1, itmax]
+      call Trans_XtoY_H08(ep-sp+1,ri_H08(sp:ep),rj_H08(sp:ep),&
+                          lon_H08(sp:ep),lat_H08(sp:ep),v3dgh,v2dgh,&
+                          yobs_H08(1:NIRB_HIM8,sp:ep),yobs_H08_clr(1:NIRB_HIM8,sp:ep),&
+                          plev_obs_H08(1:NIRB_HIM8,sp:ep),qc_H08(1:NIRB_HIM8,sp:ep),&
+                          zangle_H08(sp:ep))
 
-  np = 0
-  do j = 1, nlat
+    enddo ! [it = 1, itmax]
 
-    do i = 1, nlon
+    np = 0
+    do j = 1, nlat
 
-      np = np + 1
-      ch = 0
+      do i = 1, nlon
 
-      do iv2dsim = 1, OBSSIM_NUM_2D_VARS
-        if(OBSSIM_2D_VARS_LIST(iv2dsim) /= id_H08IR_obs .or. ch > NIRB_HIM8)cycle
+        np = np + 1
+        ch = 0
 
-        ch = ch + 1
-        v2dgsim(i,j,iv2dsim) = real(yobs_H08(ch,np), r_sngl)
-      enddo ! [iv2dsim = 1, OBSSIM_NUM_2D_VARS]
+        do iv2dsim = 1, OBSSIM_NUM_2D_VARS
+          if(OBSSIM_2D_VARS_LIST(iv2dsim) /= id_H08IR_obs .or. ch > NIRB_HIM8)cycle
 
-    end do ! [ i = 1, nlon ]
+          ch = ch + 1
+          v2dgsim(i,j,iv2dsim) = real(yobs_H08(ch,np), r_sngl)
+        enddo ! [iv2dsim = 1, OBSSIM_NUM_2D_VARS]
 
-  end do ! [ j = 1, nlat ]
+      end do ! [ i = 1, nlon ]
+
+    end do ! [ j = 1, nlat ]
+  endif ! GET_HIM8
 
   if(GET_JMAFSS .and. present(ft))then
     call calc_fraction(o2d=v2dgsim(:,:,1),m2d=v2dgsim(:,:,2), &

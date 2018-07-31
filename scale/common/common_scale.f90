@@ -47,10 +47,12 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv3d_qi=9   !
   INTEGER,PARAMETER :: iv3d_qs=10  !
   INTEGER,PARAMETER :: iv3d_qg=11  !
+  INTEGER,PARAMETER :: iv2d_rain=1  !
   CHARACTER(vname_max),PARAMETER :: v3d_name(nv3d) = &
      (/'DENS', 'MOMX', 'MOMY', 'MOMZ', 'RHOT', &
        'QV', 'QC', 'QR', 'QI', 'QS', 'QG'/)
-  CHARACTER(vname_max) :: v2d_name(nv2d)
+  CHARACTER(vname_max) :: v2d_name(nv2d) = &
+     (/'SFLX_rain'/)
 
   ! 
   !--- 3D, 2D diagnostic variables (in SCALE history files)
@@ -1339,6 +1341,8 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
 
+  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) = v2dg(:,:,iv2d_rain)
+
   ! RH
   !---------------------------------------------------------
 
@@ -1885,6 +1889,44 @@ function ch2BB_Him8(ch)
 
 end function ch2BB_Him8
 #endif
+
+function int2str7(inum)
+  implicit none
+
+  character(7) :: int2str7
+  integer,intent(in) :: inum
+
+  character(6) :: ch6
+  character(5) :: ch5
+  character(4) :: ch4
+  character(3) :: ch3
+  character(2) :: ch2
+  character(1) :: ch1
+
+
+  if(inum < 10)then
+    write(ch1,'(i1)')inum
+    int2str7 = "000000"//ch1
+  elseif(inum < 100)then
+    write(ch2,'(i2)')inum
+    int2str7 = "00000"//ch2
+  elseif(inum < 1000)then
+    write(ch3,'(i3)')inum
+    int2str7 = "0000"//ch3
+  elseif(inum < 10000)then
+    write(ch4,'(i4)')inum
+    int2str7 = "000"//ch4
+  elseif(inum < 100000)then
+    write(ch5,'(i5)')inum
+    int2str7 = "00"//ch5
+  elseif(inum < 1000000)then
+    write(ch6,'(i6)')inum
+    int2str7 = "0"//ch6
+  else
+    write(int2str7,'(i7)')inum
+  endif
+
+end function int2str7
 
 !===============================================================================
 END MODULE common_scale

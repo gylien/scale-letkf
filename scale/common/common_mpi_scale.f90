@@ -1456,7 +1456,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   if (myrank_e == mmean_rank_e) then
 
     if(USE_JMARFRAC)then
-      !call calc_fraction(m2d=m2d,rain2d=v2dg(IHALO+1:nlon+IHALO,JHALO+1:JHALO+nlat,iv2dd_rain))
+      call calc_fraction(m2d=m2d,rain2d=v2dg(1:nlon,1:nlat,iv2dd_rain))
     else
       m2d = -1.0d0
     endif
@@ -2256,7 +2256,11 @@ subroutine calc_fraction(o2d,m2d,it,iof,rain2d,fss)
   endif
 
   if (OBS_FRAC) then
-    call get_rain_flag(sub_obsi2d,iof=iof)
+    if (present(it)) then
+      call get_rain_flag(sub_obsi2d,it=it)    ! obssim
+    else
+      call get_rain_flag(sub_obsi2d,iof=iof)  ! obsope
+    endif
   endif
   if (FCST_FRAC) then
     call get_rain_flag(sub_fcsti2d,frain2d=rain2d)
@@ -2303,7 +2307,7 @@ subroutine calc_fraction(o2d,m2d,it,iof,rain2d,fss)
       jg = j+jshift+l-1-nh
 
       if(ig < 1 .or. ig > nlong .or. jg < 1 .or. jg > nlatg) cycle
-      if(fcsti2dg(ig,jg) < 0.0) cycle ! missing obs
+      if(obsi2dg(ig,jg) < 0.0) cycle ! missing obs
 
       if (FCST_FRAC) then 
         m2d(i,j) = m2d(i,j) + real(fcsti2dg(ig,jg), kind=r_size)
@@ -2316,7 +2320,10 @@ subroutine calc_fraction(o2d,m2d,it,iof,rain2d,fss)
     enddo
     enddo
 
-    if (cnt >= int(JMA_RADAR_FSS_NG**2)) then
+    ! conuting valid (not undef grids) and thinning
+    if ((cnt >= int(JMA_RADAR_FSS_NG**2)) .and. &
+       ((mod(i+ishift,JMA_RADAR_FSS_NG_THNG) /= 0) .and. &
+        (mod(j+jshift,JMA_RADAR_FSS_NG_THNG) /= 0) .or. present(it))) then
       if (FCST_FRAC) then 
         m2d(i,j) = m2d(i,j) / max(real(cnt,kind=r_size), 1.0d0)
       endif
@@ -2392,14 +2399,14 @@ subroutine calc_jmarfrac_obs_mpi(obs,iof)
     enddo
   endif ! myrank_a < MEM_NP
 
-  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%elm(:), nlong*nlatg, MPI_INTEGER, MPI_MAX, MPI_COMM_a, ierr)
-  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%lon(:), nlong*nlatg, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)
-  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%lat(:), nlong*nlatg, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)
-  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%lev(:), nlong*nlatg, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)
-  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%dat(:), nlong*nlatg, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)
-  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%err(:), nlong*nlatg, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)
-  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%typ(:), nlong*nlatg, MPI_INTEGER, MPI_MAX, MPI_COMM_a, ierr)
-  !call MPI_ALLREDUCE(MPI_IN_PLACE, obs%dif(:), nlong*nlatg, MPI_r_size, MPI_MAX, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%elm(:), nlong*nlatg, MPI_INTEGER, MPI_SUM, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%lon(:), nlong*nlatg, MPI_r_size, MPI_SUM, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%lat(:), nlong*nlatg, MPI_r_size, MPI_SUM, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%lev(:), nlong*nlatg, MPI_r_size, MPI_SUM, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%dat(:), nlong*nlatg, MPI_r_size, MPI_SUM, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%err(:), nlong*nlatg, MPI_r_size, MPI_SUM, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%typ(:), nlong*nlatg, MPI_INTEGER, MPI_SUM, MPI_COMM_a, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%dif(:), nlong*nlatg, MPI_r_size, MPI_SUM, MPI_COMM_a, ierr)
 
 
   return

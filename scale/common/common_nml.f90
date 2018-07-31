@@ -16,7 +16,7 @@ MODULE common_nml
 
   !----
   integer, parameter :: nv3d = 11    ! number of 3D state variables (in SCALE restart files)
-  integer, parameter :: nv2d = 0     ! number of 2D state variables (in SCALE restart files)
+  integer, parameter :: nv2d = 1     ! number of 2D state variables (in SCALE restart files)
   integer, parameter :: nid_obs = 17 ! number of variable types
   integer, parameter :: nobtype = 25 ! number of observation report types
   integer, parameter :: NIRB_HIM8 = 10     ! H08 Num of Himawari-8 (IR) bands
@@ -344,11 +344,14 @@ MODULE common_nml
   real(r_size) :: JMA_RADAR_LATS = 20.004167d0
   real(r_size) :: JMA_RADAR_DLON = 0.012500d0
   real(r_size) :: JMA_RADAR_DLAT = 0.008333d0
-  real(r_size) :: JMA_RADAR_FSS_RAIN = 1.0d0 ! (mm/JMA_RADAR_TINT)
+  real(r_size) :: JMA_RADAR_FSS_RAIN = 1.0d0 ! (mm/h)
   real(r_size) :: JMA_RADAR_TINT = 600.0d0 ! (every 600 s)
   real(r_size) :: JMA_MIN_OSPRD = 0.01d0 ! minimum spread in obs space
+  real(r_size) :: JMA_RADAR_MTINT = -1.0d0 ! > 0 ! JMA data is temporally averaged by JMA_RADAR_MTINT (sec)
+                                           ! < 0 ! JMA data is snapshot
   integer :: JMA_RADAR_FSS_NG = 3 ! (# of neighbor grids to be used for FSS)
-  logical :: USE_JMARFRAC = .false.
+  integer :: JMA_RADAR_FSS_NG_THNG = 1 ! (# of grids to be used for thinning)
+  logical :: USE_JMARFRAC = .false. ! will be overwritten from obsope_tools.f90
 
   !--- PARAM_OBS_ERROR
   real(r_size) :: OBSERR_U = 1.0d0
@@ -1109,9 +1112,10 @@ subroutine read_nml_obs_jmaradar
     JMA_RADAR_DLAT, &
     JMA_RADAR_FSS_RAIN, &
     JMA_RADAR_TINT, &
+    JMA_RADAR_MTINT, &
     JMA_RADAR_FSS_NG,&
-    JMA_MIN_OSPRD,   &
-    USE_JMARFRAC
+    JMA_RADAR_FSS_NG_THNG, &
+    JMA_MIN_OSPRD
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBS_JMA_RADAR,iostat=ierr)

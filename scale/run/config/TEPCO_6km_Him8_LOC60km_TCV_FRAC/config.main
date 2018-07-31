@@ -51,7 +51,8 @@ DATA_BDY_GRADS=                                                      # Directory
 #OBS="${DDIR}/obs/${EXP}"            # Directory of observation data in LETKF obs format
 
 #OBS="/volume64/data/ra001011/honda/SCALE-LETKF/scale-5.2.2/obs/TEPCO_6km_Him8_TG04"
-OBS="/home/ra001011/a03465/SCALE-LETKF/scale-5.2.2/scale-5.2.2_20171102/scale-letkf.git/scale/run"
+#OBS="/home/ra001011/a03465/SCALE-LETKF/scale-5.2.2/scale-5.2.2_20171102/scale-letkf.git/scale/run"
+OBS="/volume64/data/ra001011/honda/SCALE-LETKF/scale-5.2.2/obs/tmp_JMA"
 
 #"/volume64/data/ra001011/honda/SCALE-LETKF/scale-5.2.1/obs/TEPCO_4km_Him8_TG06"
 OBSNCEP=                                                             # Directory of observation data in NCEP BUFR format
@@ -128,7 +129,7 @@ OBSNAME[2]=H08
 OBSNAME[3]=vital
 
 OBSNUM=1
-OBSNAME[1]=jmarfrac2d
+OBSNAME[1]=jmarader
 
 OBSOPE_SEPARATE[1]=0
 OBSOPE_SEPARATE[2]=0
@@ -147,12 +148,14 @@ LTIMESLOT=600
 # Parallelization settings
 
 #MEMBER=50          # Ensemble size
-MEMBER=3          # Ensemble size
+MEMBER=6         # Ensemble size
 
 #NNODES=1560        # Number of nodes
 #NNODES=600        # Number of nodes
-NNODES=300        # Number of nodes
-#NNODES=420        # Number of nodes
+#NNODES=300        # Number of nodes
+NNODES=480        # Number of nodes
+
+#NNODES=60        # Number of nodes
 
 PPN=1              # Number of processes per node
 

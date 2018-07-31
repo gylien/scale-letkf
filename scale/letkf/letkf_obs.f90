@@ -605,7 +605,7 @@ SUBROUTINE set_letkf_obs
     end select
 
     if (LOG_LEVEL >= 3) then
-      write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
+      write (6, '(2I6,2F8.2,4F12.4,I3,F8.2)') obs(iof)%elm(iidx), &
                                          obs(iof)%typ(iidx), &
                                          obs(iof)%lon(iidx), &
                                          obs(iof)%lat(iidx), &
@@ -613,7 +613,8 @@ SUBROUTINE set_letkf_obs
                                          obs(iof)%dat(iidx), &
                                          obs(iof)%err(iidx), &
                                          obsda%val(n), &
-                                         obsda%qc(n)
+                                         obsda%qc(n), &
+                                         sig_b
     end if
 
 
@@ -811,7 +812,6 @@ SUBROUTINE set_letkf_obs
       iof = obsda%set(n)
       iidx = obsda%idx(n)
       ictype = ctype_elmtyp(uid_obs(obs(iof)%elm(iidx)), obs(iof)%typ(iidx))
-  print *,"DEBUG223,",obsda%qc(n),obs(iof)%elm(iidx),obs(iof)%lon(iidx),obs(iof)%lat(iidx),obs(iof)%ri(iidx),obs(iof)%rj(iidx)
 
       call ij_obsgrd(ictype, obs(iof)%ri(iidx), obs(iof)%rj(iidx), i, j)
       if (i < 1) i = 1                                         ! Assume the process assignment was correct,

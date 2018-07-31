@@ -1640,7 +1640,13 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step,m2d)
           cycle
         endif
         ohx(n) = m2d(nint(ril-IHALO),nint(rjl-JHALO))
-        oqc(n) = iqc_good
+        if (ohx(n)  >= 0.0d0)then
+          obsdep_qc(n) = iqc_good 
+          oqc(n) = iqc_good 
+        else
+          obsdep_qc(n) = iqc_obs_bad
+          oqc(n) = iqc_obs_bad
+        endif
 
       !=========================================================================
       end select
@@ -3562,43 +3568,25 @@ subroutine read_jmaradar_comp_bin(jmaradar2d,it,iof)
   integer :: i_jma, j_jma
   integer :: dix, diy, cnt
 
-  integer :: fsec 
   character(filelenmax) :: infile
-  character(7) :: FT7
-  character(6) :: FT6
-  character(5) :: FT5
-  character(4) :: FT4
-  character(3) :: FT3
-  character(2) :: FT2
-  character(1) :: FT1
+  character(7) :: FT7 ! sec
+  character(9) :: MT9 ! sec
 
   iunit=92
 
   if(present(it))then ! obssim
-    fsec = it * JMA_RADAR_TINT
+    ! JMA_RADAR_TINT will be history output interval in obssim cases
+    !
+    ! Assume that a history contains FT=0 output
+    FT7 = int2str7((it-1)*nint(JMA_RADAR_TINT))
 
-    if(fsec < 10)then
-      write(FT1,'(i1)')fsec
-      FT7 = "000000"//FT1
-    elseif(fsec < 100)then
-      write(FT2,'(i2)')fsec
-      FT7 = "00000"//FT2
-    elseif(fsec < 1000)then
-      write(FT3,'(i3)')fsec
-      FT7 = "0000"//FT3
-    elseif(fsec < 10000)then
-      write(FT4,'(i4)')fsec
-      FT7 = "000"//FT4
-    elseif(fsec < 100000)then
-      write(FT5,'(i5)')fsec
-      FT7 = "00"//FT5
-    elseif(fsec < 1000000)then
-      write(FT6,'(i6)')fsec
-      FT7 = "0"//FT6
+    if (JMA_RADAR_MTINT > 0) then
+      MT9 = "_"//int2str7(nint(JMA_RADAR_MTINT))//"s"
     else
-      write(FT7,'(i7)')fsec
+      MT9 = ''
     endif
-    infile = trim(JMA_RADAR_FILE)//"_FT"//FT7//"s.grd"
+
+    infile = trim(JMA_RADAR_FILE)//"_FT"//FT7//"s"//trim(MT9)//".grd"
   else
     infile = trim(OBS_IN_NAME(iof))
   endif
@@ -3606,9 +3594,10 @@ subroutine read_jmaradar_comp_bin(jmaradar2d,it,iof)
   inquire(file=trim(infile),exist=ex)
   if(.not. ex) then
     write(6,'(2A)') trim(infile),' does not exist. Check!'
-
-    jmaradar2d = -1.0d0
-    return
+    stop
+ 
+    !jmaradar2d = -1.0d0
+    !return
   endif
 
   open(iunit,file=trim(infile),access='direct',form='unformatted',&
@@ -3693,15 +3682,18 @@ subroutine get_rain_flag(flag2d,it,iof,frain2d)
     else
       call read_jmaradar_comp_bin(jmaradar2d,iof=iof)      
     endif
-    rain2d = jmaradar2d / JMA_RADAR_TINT ! mm/s
+    ! JMA radar obs
+    rain2d = jmaradar2d / 3600.0d0 ! / JMA_RADAR_TINT ! mm/s
   else
+    ! Model forecast rainfall intensity
     rain2d = frain2d
   endif
 
   flag2d = 0.0d0
   do j = 1, nlat
   do i = 1, nlon
-    if(rain2d(i,j) >= JMA_RADAR_FSS_RAIN / JMA_RADAR_TINT)THEN  ! mm/s
+    !if(rain2d(i,j) >= JMA_RADAR_FSS_RAIN / JMA_RADAR_TINT)THEN  ! mm/s
+    if(rain2d(i,j) >= JMA_RADAR_FSS_RAIN / 3600.0d0)THEN  ! mm/s
       flag2d(i,j) = 1.0d0
     elseif(rain2d(i,j) < 0.0d0)then ! Missing value 
       flag2d(i,j) = -1.0d0
