@@ -839,7 +839,8 @@ subroutine read_nml_letkf_var_local
     VAR_LOCAL_TC, &
     VAR_LOCAL_RADAR_REF, &
     VAR_LOCAL_RADAR_VR, &
-    VAR_LOCAL_H08 ! H08
+    VAR_LOCAL_H08, &
+    VAR_LOCAL_JMA_RFRAC
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_VAR_LOCAL,iostat=ierr)

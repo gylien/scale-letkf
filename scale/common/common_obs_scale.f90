@@ -1640,7 +1640,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step,m2d)
           cycle
         endif
         ohx(n) = m2d(nint(ril-IHALO),nint(rjl-JHALO))
-        if (ohx(n)  >= 0.0d0)then
+        if ((ohx(n)  >= 0.0d0) .and. (obs(iset)%dat(iidx) >= 0.0d0))then
           obsdep_qc(n) = iqc_good 
           oqc(n) = iqc_good 
         else

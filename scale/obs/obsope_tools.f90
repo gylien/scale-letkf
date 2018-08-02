@@ -574,27 +574,18 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
           case (obsfmt_jmarfrac)
           !---------------------------------------------------------------------
             obsda%val(nn) = m2d(nint(ril-IHALO),nint(rjl)-JHALO)
+            if ((obsda%val(nn) < 0.0d0) .or. (obs(iof)%dat(n)) < 0.0d0)then
+              obsda%qc(nn) = iqc_obs_bad
+              cycle
+            endif
             obsda%qc(nn) = iqc_good
-            if(m2d(nint(ril-IHALO),nint(rjl-JHALO)) /= m2d(nint(ril-IHALO),nint(rjl-IHALO)))then
-              print *,"DEBUG111,NaN obsope,",nint(ril-IHALO),nint(rjl-JHALO),obs(iof)%ri(n),obs(iof)%rj(n)
-            endif 
-
-            if(m2d(nint(ril-IHALO),nint(rjl-JHALO)) < 0.0d0)then
-              obsda%qc(nn) = iqc_obs_bad
-              cycle
-            endif
-
-            if(m2d(nint(ril-IHALO),nint(rjl-JHALO)) < 0.0001d0)then ! DEBUG
-              obsda%qc(nn) = iqc_obs_bad
-              cycle
-            endif
 
           end select
 
 
         end do ! [ nn = n1, n2 ]
 #ifndef H08
-!$OMP END PARALLEL DO
+
 #endif
 
 

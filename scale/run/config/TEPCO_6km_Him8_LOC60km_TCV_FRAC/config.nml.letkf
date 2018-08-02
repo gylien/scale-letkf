@@ -73,17 +73,18 @@
 &PARAM_LETKF_OBS
  HORI_LOCAL =  50.0D3,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
-                  -1., 4.0D3,  60.0d3, 200.0d3, -1.,
+                  -1., 4.0D3,  60.0d3, 200.0d3, 20.0d3,
  VERT_LOCAL =   0.3D0,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
-                  -1., 2.0D3,  0.5d0,  0.0d0, -1.,
+                  -1., 2.0D3,  0.5d0,  0.0d0, 0.3D0,
 /
 
 &PARAM_OBS_JMA_RADAR
+ JMA_RADAR_FILE = 'jmaradar_',
  JMA_RADAR_FSS_RAIN = 1.0d0, ! (mm/h)
- JMA_MIN_OSPRD = 0.01d0,
+ JMA_MIN_OSPRD = -9.99d5, ! minimum spread in obs space
  JMA_RADAR_FSS_NG = 3,
- JMA_RADAR_FSS_NG_THNG = 2,
+ JMA_RADAR_FSS_NG_THNG = 4, ! thinning
 /
 
 &PARAM_LETKF_H08

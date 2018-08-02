@@ -2320,10 +2320,10 @@ subroutine calc_fraction(o2d,m2d,it,iof,rain2d,fss)
     enddo
     enddo
 
-    ! conuting valid (not undef grids) and thinning
+    ! counting valid (not undef grids) and thinning
     if ((cnt >= int(JMA_RADAR_FSS_NG**2)) .and. &
-       ((mod(i+ishift,JMA_RADAR_FSS_NG_THNG) /= 0) .and. &
-        (mod(j+jshift,JMA_RADAR_FSS_NG_THNG) /= 0) .or. present(it))) then
+       ((mod(i+ishift,JMA_RADAR_FSS_NG_THNG) == 0) .and. &
+        (mod(j+jshift,JMA_RADAR_FSS_NG_THNG) == 0) .or. present(it))) then
       if (FCST_FRAC) then 
         m2d(i,j) = m2d(i,j) / max(real(cnt,kind=r_size), 1.0d0)
       endif
