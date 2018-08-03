@@ -26,9 +26,12 @@
 /
 
 &PARAM_LETKF_RADAR
+! RADAR_OBS_4D = .false.,
  MIN_RADAR_REF_DBZ = 10.0D0,
  LOW_REF_SHIFT = -5.0D0,
  RADAR_ZMAX = 11.0D3,
+! METHOD_REF_CALC = 3,
+! USE_TERMINAL_VELOCITY = .false.,
 /
 
 !*** Attach SCALE configuration below ***

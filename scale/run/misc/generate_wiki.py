@@ -156,7 +156,8 @@ def namelist_parse(srcfile):
                 del txt[i+1]
             find_pos = txt[i].find('=')
             if find_pos >= 0:
-                varname = txt[i][0:find_pos].strip()
+#                varname = txt[i][0:find_pos].strip()
+                varname = txt[i][0:find_pos].lstrip('!').strip()
                 if varname.find(' ') == -1:
                     ivar += 1
                     parsed[isec]['vars'].append({})
@@ -256,7 +257,7 @@ def nml_to_md(nml, nml_config, outfile, prefix='', suffix=''):
         md += "\n#### &" + sect['title'] + "\n\n"
         if nml_sect['comment'] != '':
             md += nml_sect['comment'] + "\n\n"
-        md += "| <sub>Variable</sub> | <sub>Default value</sub> | <sub>Explanation</sub> |\n| --- | --- | --- |\n"
+        md += "| Variable | Default value | Explanation |\n| --- | --- | --- |\n"
         nml_var_names = [var['name'] for var in nml_sect['vars']]
         for var in sect['vars']:
             if var['name'] not in nml_var_names:
@@ -266,11 +267,13 @@ def nml_to_md(nml, nml_config, outfile, prefix='', suffix=''):
             nml_var = nml_sect['vars'][nml_var_idx]
 
             varname_display = var['name']
-            if var['value'] is None:
-                varname_display = '__***__ ' + varname_display
             if nml_var['dim'] is not None:
                 varname_display += "<br>&nbsp;&nbsp;&nbsp;(" + nml_var['dim'] + ")"
-            md += "| <sub>" + varname_display + "</sub> | <sub>" + nml_var['default'] + "</sub> | <sub>" + nml_var['comment'] + "</sub> |\n"
+            if var['value'] is None:
+                varname_display = '__!__*' + varname_display + '*'
+            else:
+                varname_display = '__' + varname_display + '__'
+            md += "| <sub>" + varname_display + "</sub> | " + nml_var['default'] + " | " + nml_var['comment'] + " |\n"
         md += "\n***\n"
 
     md += suffix
@@ -370,20 +373,26 @@ if __name__ == '__main__':
     nml_letkf = namelist_parse(srcfile_letkf)
 
     prefix = """
-**Note:** Variables that have three asterisks (__***__) in front of their names in the following tables are those to be automatically determined by the job scripts. They should have no assigned values and should be written in `config.nml.obsope` as:
+__Note:__ Variables that are in italic and also have an exclamation mark (__!__) in front in the following tables are those to be automatically determined by the job scripts. Their values __should not be assigned by users__ and they should be written in `config.nml.obsope` as:
 ```
 !--VARIABLE--
 ```
+
+#### __Special notations__ that can be used in some namelist variables for filename patterns:
+- Special notation for member strings: '@@@@'
 
 ***
 """
     nml_to_md(nml, nml_obsope, outfile_obsope, prefix)
 
     prefix = """
-**Note:** Variables that have three asterisks (__***__) in front of their names in the following tables are those to be automatically determined by the job scripts. They should have no assigned values and should be written in `config.nml.letkf` as:
+__Note:__ Variables that are in italic and also have an exclamation mark (__!__) in front in the following tables are those to be automatically determined by the job scripts. Their values __should not be assigned by users__ and they should be written in `config.nml.letkf` as:
 ```
 !--VARIABLE--
 ```
+
+#### __Special notations__ that can be used in some namelist variables for filename patterns:
+- Special notation for member strings: '@@@@'
 
 ***
 """
@@ -392,7 +401,7 @@ if __name__ == '__main__':
     prefix = """
 The configuration files `config.nml.scale_pp`, `config.nml.scale_init`, and `config.nml.scale` are the same as the namelist files for **scale-rm_pp**, **scale-rm_init**, and **scale-rm** programs, respectively. Check the [SCALE-RM model documentation](http://r-ccs-climate.riken.jp/scale/doc/) for the explanation of the namelist variables.
 
-However, in the **SCALE-LETKF**, some SCALE namelist variables are to be automatically determined by the job scripts. They should have no assigned values and should be written in `config.nml.scale*` as:
+However, in the **SCALE-LETKF**, some SCALE namelist variables are to be automatically determined by the job scripts. Their values __should not be assigned by users__ and they should be written in `config.nml.scale*` as:
 ```
 !--VARIABLE--
 ```

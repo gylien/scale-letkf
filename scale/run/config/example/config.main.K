@@ -129,7 +129,7 @@ BDYCYCLE_INT=           # Time interval (second) of each boundary data file (reg
                         # In the offline-nesting run, this should be equal to $LCYCLE in the parent domain's experiment.
                         #  (default: $BDYINT)
 
-PARENT_REF_TIME=        # Any time (format: YYYYMMDDhhmmss) at which a boundary data file exists (for boundary data with multiple time frames in a file, use the start time in a file).
+PARENT_REF_TIME=        # [OPTIONAL] Any time (format: YYYYMMDDhhmmss) at which a boundary data file exists (for boundary data with multiple time frames in a file, use the start time in a file).
                         # This is used as a reference time to search the boundary data files; the program will search available boundary data files by plus/minus increments of $BDYCYCLE_INT based on this reference time.
                         # This setting is only important when $LCYCLE < $BDYCYCLE_INT, likely in a offline-nesing run. In the case that $LCYCLE >= $BDYCYCLE_INT, this setting can be left blank.
 
@@ -199,7 +199,7 @@ DISK_ALL_RANK_LOCAL=0       # [USUALLY SET BY PRESET] Local disks for each MPI p
                             # - 1:  Yes - Choose this when using the rank-directory on the K computer
                             #  (default: 0)
 
-DISK_MODE=3                 # Type of disk and the way of using the disk for general files (except for the database, boundary, and observation files) in runtime
+DISK_MODE=3                 # Type of disk and the way of using the disk for general input/output files (except for the database, boundary, and observation files) in runtime
                             # - 1:  Use a shared disk; only create symbolic links of the input/output files to $TMP directory for computation
                             # - 2:  Use a shared disk; copy the input files to $TMP directory for computation and copy the output files back (staging)
                             # - 3:  Use local disks; copy the input files to $TMPL directory for computation and copy the output files back (staging)
@@ -222,7 +222,7 @@ IO_ARB=0                    ## [NOT COMPLETE] Use I/O arbitrator?
                             ## - 0:  No
                             ## - 1:  Yes
 
-SYSNAME="$(basename $OUTDIR)"      # A string to be used in a part of the temporary directory name
+SYSNAME="$(basename $OUTDIR)"      # A string to be used as a part of the temporary directory name
 TMPSUBDIR="scale-letkf_${SYSNAME}" # A part of the temporary directory name (should be unique in the machine to avoid any potential conflict when running multiple jobs at the same time)
 
 TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary runtime directory path on a shared disk (available on both the head node and all computing nodes)
@@ -254,6 +254,7 @@ fi
 
 SCP='cp -L'                 # Command (on computing nodes) used for built-in file staging (to copy runtime files from input/to output directories)
 SCP_HOSTPREFIX=''           # [OPTIONAL] When using scp-like commands for built-in file staging, the prefix for the hostname of the head node
+
 #SCP="scp -q"
 #SCP_HOSTPREFIX="XXXX:"
 

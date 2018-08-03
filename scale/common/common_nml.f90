@@ -15,252 +15,334 @@ MODULE common_nml
   public
 
   !----
-  integer, parameter :: nv3d = 11    ! number of 3D state variables (in SCALE restart files)
-  integer, parameter :: nv2d = 0     ! number of 2D state variables (in SCALE restart files)
-  integer, parameter :: nid_obs = 16 ! number of variable types
-  integer, parameter :: nobtype = 24 ! number of observation report types
-  integer, parameter :: nch = 10     ! H08 Num of Himawari-8 (IR) channels
+  integer, parameter :: nv3d = 11                 ! Number of 3D state variables (in SCALE restart files)
+  integer, parameter :: nv2d = 0                  ! Number of 2D state variables (in SCALE restart files)
+  integer, parameter :: nid_obs = 16              ! Number of variable types
+  integer, parameter :: nobtype = 24              ! Number of observation report types
+  integer, parameter :: nch = 10                  ! H08 Num of Himawari-8 (IR) channels
 
   integer, parameter :: nobsfilemax = 10
   integer, parameter :: filelenmax = 256
 
-  integer, parameter :: memflen = 4                           ! Length of formatted member strings
-  character(len=memflen), parameter :: memf_notation = '@@@@' ! Notation of the member string
-  character(len=memflen), parameter :: memf_mean = 'mean'
-  character(len=memflen), parameter :: memf_mdet = 'mdet'
-  character(len=memflen), parameter :: memf_sprd = 'sprd'
+  integer, parameter :: memflen = 4               ! Length of a member string
+  character(len=memflen), parameter :: memf_notation = '@@@@' ! Special notation to be replaced with a member string
+  character(len=memflen), parameter :: memf_mean = 'mean' ! Member string for the ensemble mean
+  character(len=memflen), parameter :: memf_mdet = 'mdet' ! Member string for the deterministic run
+  character(len=memflen), parameter :: memf_sprd = 'sprd' ! Member string for the ensemble spread
 
   !--- &PARAM_ENSEMBLE
-  integer :: MEMBER = 3      ! ensemble size
-  integer :: MEMBER_RUN = 1  !
-  integer :: MEMBER_ITER = 0 !
-  character(filelenmax) :: CONF_FILES = 'run.@@@@.conf'
-  logical :: CONF_FILES_SEQNUM = .false.
+  ! Ensemble settings
+  integer :: MEMBER = 3                           ! Ensemble size
+  integer :: MEMBER_RUN = 1                       ! Actual number of members to be run
+  integer :: MEMBER_ITER = 0                      ! Iteration number determining the range of ensemble members to be run
+                                                  ! - 0:  Run all iteration for all members
+  character(filelenmax) :: CONF_FILES = 'run.@@@@.conf' ! Filename pattern of the configuration files ([special notation](#special-notations-that-can-be-used-in-some-namelist-variables-for-filename-patterns) can be used)
+  logical :: CONF_FILES_SEQNUM = .false.          ! [DEPRECATED]
 
-  logical :: DET_RUN = .false.
-  logical :: DET_RUN_CYCLED = .true.
+  logical :: DET_RUN = .false.                    ! Enable the deterministic run (Schraff et al. 2016 QJRMS)?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  logical :: DET_RUN_CYCLED = .true.              ! Cycle the deterministic run?
+                                                  ! - .false.:  No - Use the forecast from the analysis ensemble mean (in the previous cycle) as the first guess for the deterministic analysis
+                                                  ! - .true.:  Yes - Use the forecast from the deterministic analysis (in the previous cycle) as the first guess for the deterministic analysis
 
   !--- &PARAM_MODEL
-  character(len=10) :: MODEL = 'scale-rm'
-  logical :: VERIFY_COORD = .false.
+  ! Model-related settings
+  character(len=10) :: MODEL = 'scale-rm'         ! Model name (always set to 'scale-rm')
+  logical :: VERIFY_COORD = .false.               ! Verify the vertical coordinate settings with the vertical coordinate values in the input file?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
 
 !  !--- &PARAM_IO
+!  ! IO settings
 !  integer :: IO_AGGREGATE = .false.
 
   !--- &PARAM_OBSOPE
-  integer               :: OBS_IN_NUM = 1
-  character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat'
-  integer               :: OBS_IN_FORMAT(nobsfilemax) = 1
-  logical               :: OBSDA_RUN(nobsfilemax) = .true.
-  logical               :: OBSDA_OUT = .false.
-  character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@'
-  character(filelenmax) :: OBSDA_MEAN_OUT_BASENAME = ''
-  character(filelenmax) :: OBSDA_MDET_OUT_BASENAME = ''
+  ! Observation operator settings
+  integer               :: OBS_IN_NUM = 1         ! Number of input observation data files
+  character(filelenmax) :: OBS_IN_NAME(nobsfilemax) = 'obs.dat' ! Array of filenames of each observation file
+  integer               :: OBS_IN_FORMAT(nobsfilemax) = 1 ! Array of data format of each observation file
+                                                          ! - 1:  Conventional data in LETKF format
+                                                          ! - 2:  Radar data in LETKF format
+                                                          ! - 3:  Himawari-8 data in LETKF format
+  logical               :: OBSDA_RUN(nobsfilemax) = .true. ! Array setting whether to run observation operator for each observation file
+                                                           ! - .false.:  No
+                                                           ! - .true.:  Yes
+  logical               :: OBSDA_OUT = .false.    ! Output observation operator results [i.e., H(x^b)] to files?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes - Can be used as a separate observation operator program
+  character(filelenmax) :: OBSDA_OUT_BASENAME = 'obsda.@@@@' ! Base filename pattern of observation operator result outputs ([special notation](#special-notations-that-can-be-used-in-some-namelist-variables-for-filename-patterns) can be used)
+  character(filelenmax) :: OBSDA_MEAN_OUT_BASENAME = '' ! Base filename of observation operator result outputs for the ensemble mean
+  character(filelenmax) :: OBSDA_MDET_OUT_BASENAME = '' ! Base filename of observation operator result outputs for the deterministic run
 
-  character(filelenmax) :: HISTORY_IN_BASENAME = 'hist.@@@@'
-  character(filelenmax) :: HISTORY_MEAN_IN_BASENAME = ''
-  character(filelenmax) :: HISTORY_MDET_IN_BASENAME = ''
+  character(filelenmax) :: HISTORY_IN_BASENAME = 'hist.@@@@' ! Base filename pattern of input history files for observation operator calculation ([special notation](#special-notations-that-can-be-used-in-some-namelist-variables-for-filename-patterns) can be used)
+  character(filelenmax) :: HISTORY_MEAN_IN_BASENAME = '' ! Base filename of input history files for the ensemble mean for observation operator calculation
+  character(filelenmax) :: HISTORY_MDET_IN_BASENAME = '' ! Base filename of input history files for the deterministic run for observation operator calculation
 
-  integer               :: SLOT_START = 1
-  integer               :: SLOT_END = 1
-  integer               :: SLOT_BASE = 1
-  real(r_size)          :: SLOT_TINTERVAL = 3600.0d0
+  integer               :: SLOT_START = 1         ! Start time-slot number for 4D-LETKF
+  integer               :: SLOT_END = 1           ! End time-slot number for 4D-LETKF
+  integer               :: SLOT_BASE = 1          ! Base time-slot number for 4D-LETKF
+  real(r_size)          :: SLOT_TINTERVAL = 3600.0d0 ! Time-slot interval for 4D-LETKF
 
   !--- &PARAM_LETKF
-  ! testXXX
-  logical               :: OBSDA_IN = .false.
-  character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@'
-  character(filelenmax) :: OBSDA_MEAN_IN_BASENAME = ''
-  character(filelenmax) :: OBSDA_MDET_IN_BASENAME = ''
-  character(filelenmax) :: GUES_IN_BASENAME = 'gues.@@@@'
-  character(filelenmax) :: GUES_MEAN_INOUT_BASENAME = ''
-  character(filelenmax) :: GUES_MDET_IN_BASENAME = ''
-  logical               :: GUES_SPRD_OUT = .true.
-  character(filelenmax) :: GUES_SPRD_OUT_BASENAME = ''
-  character(filelenmax) :: ANAL_OUT_BASENAME = 'anal.@@@@'
-  character(filelenmax) :: ANAL_MEAN_OUT_BASENAME = ''
-  character(filelenmax) :: ANAL_MDET_OUT_BASENAME = ''
-  logical               :: ANAL_SPRD_OUT = .true.
-  character(filelenmax) :: ANAL_SPRD_OUT_BASENAME = ''
-  character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo'  !!!!!! -- directly use the SCALE namelist --???? !!!!!!
+  ! General LETKF settings
+  logical               :: OBSDA_IN = .false.     ! Input observation operator results [i.e., H(x^b)] from a separate observation operator program
+  character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@' ! Base filename pattern of input observation operator results from a separate observation operator program ([special notation](#special-notations-that-can-be-used-in-some-namelist-variables-for-filename-patterns) can be used)
+  character(filelenmax) :: OBSDA_MEAN_IN_BASENAME = '' ! Base filename of input observation operator results for the ensemble mean
+  character(filelenmax) :: OBSDA_MDET_IN_BASENAME = '' ! Base filename of input observation operator results for the deterministic run
+  character(filelenmax) :: GUES_IN_BASENAME = 'gues.@@@@' ! Base filename pattern of input first-guess files ([special notation](#special-notations-that-can-be-used-in-some-namelist-variables-for-filename-patterns) can be used)
+  character(filelenmax) :: GUES_MEAN_INOUT_BASENAME = '' ! Base filename of first-guess files for the ensemble mean (may be used as both input and output)
+  character(filelenmax) :: GUES_MDET_IN_BASENAME = '' ! Base filename of first-guess files for the deterministic run
+  logical               :: GUES_SPRD_OUT = .true. ! Output first-guess ensemble spread?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  character(filelenmax) :: GUES_SPRD_OUT_BASENAME = '' ! Base filename of output first-guess ensemble spread
+  character(filelenmax) :: ANAL_OUT_BASENAME = 'anal.@@@@' ! Base filename pattern of output analysis files ([special notation](#special-notations-that-can-be-used-in-some-namelist-variables-for-filename-patterns) can be used)
+  character(filelenmax) :: ANAL_MEAN_OUT_BASENAME = '' ! Base filename of output analysis files for the ensemble mean
+  character(filelenmax) :: ANAL_MDET_OUT_BASENAME = '' ! Base filename of output analysis files for the deterministic run
+  logical               :: ANAL_SPRD_OUT = .true. ! Output analysis ensemble spread?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  character(filelenmax) :: ANAL_SPRD_OUT_BASENAME = '' ! Base filename of output analysis spread
+  character(filelenmax) :: LETKF_TOPO_IN_BASENAME = 'topo' ! Base filename of the input topographic file
+                                                           !!!!!!! directly use the SCALE namelist ?? !!!!!!
 
-  real(r_size) :: INFL_MUL = 1.0d0           ! >  0: globally constant covariance inflation
-                                             ! <= 0: use 3D inflation field from 'INFL_MUL_IN_BASENAME' file
-  real(r_size) :: INFL_MUL_MIN = -1.0d0      ! minimum inlfation factor (<= 0: not used)
-  logical :: INFL_MUL_ADAPTIVE = .false.     ! if true, outout adaptively estimated 3D inlfation field to 'INFL_MUL_OUT_BASENAME' file
-  character(filelenmax) :: INFL_MUL_IN_BASENAME = 'infl'
-  character(filelenmax) :: INFL_MUL_OUT_BASENAME = 'infl'
+  real(r_size) :: INFL_MUL = 1.0d0                ! Multiplicative covariance inflation parameter
+                                                  ! - 1:  Disable the multiplicative inflation
+                                                  ! - > 0:  Use a global constant inflation parameter
+                                                  ! - <= 0:  Use a 3D inflation field from INFL_MUL_IN_BASENAME file
+  real(r_size) :: INFL_MUL_MIN = -1.0d0           ! Minimum multiplicative inlfation parameter
+                                                  ! - <= 0:  No minimum setting
+  logical :: INFL_MUL_ADAPTIVE = .false.          ! Output adaptively estimated 3D inflation field to INFL_MUL_OUT_BASENAME file?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  character(filelenmax) :: INFL_MUL_IN_BASENAME = 'infl' ! Base filename of input 3D inflation field
+  character(filelenmax) :: INFL_MUL_OUT_BASENAME = 'infl' ! Base filename of output (adaptively estimated) 3D inflation field
 
-  real(r_size) :: INFL_ADD = 0.0d0           ! additive inflation
-  character(filelenmax) :: INFL_ADD_IN_BASENAME = 'addi.@@@@'
-  logical :: INFL_ADD_SHUFFLE = .false.      ! shuffle the additive inflation members?
-  logical :: INFL_ADD_Q_RATIO = .false.
-  logical :: INFL_ADD_REF_ONLY = .false.
+  real(r_size) :: INFL_ADD = 0.0d0                ! Additive covariance inflation parameter; this value will be multiplied to the input additive inflation field when using additive inflation
+                                                  ! - < 0:  Disable the additive inflation
+  character(filelenmax) :: INFL_ADD_IN_BASENAME = 'addi.@@@@' ! Base filename pattern of the input additive inflation field ([special notation](#special-notations-that-can-be-used-in-some-namelist-variables-for-filename-patterns) can be used)
+  logical :: INFL_ADD_SHUFFLE = .false.           ! Shuffle the ensemble members for additive inflation field?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  logical :: INFL_ADD_Q_RATIO = .false.           ! For moisture field, further multiply the additive inflation field by the first-guess ensemble mean values (i.e., use the additive inflation field as ratio)?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  logical :: INFL_ADD_REF_ONLY = .false.          ! Apply the additive inflation only around where raining reflectivity (> RADAR_REF_THRES_DBZ) observations exist?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
 
-  real(r_size) :: RELAX_ALPHA = 0.0d0        ! RTPP relaxation parameter
-  real(r_size) :: RELAX_ALPHA_SPREAD = 0.0d0 ! RTPS relaxation parameter
-  logical :: RELAX_TO_INFLATED_PRIOR = .false. ! .true. : relaxation to multiplicatively inflated prior
-                                               ! .false.: relaxation to original prior
-  logical :: RELAX_SPREAD_OUT = .false.
-  character(filelenmax) :: RELAX_SPREAD_OUT_BASENAME = 'rtps'
+  real(r_size) :: RELAX_ALPHA = 0.0d0             ! Relaxation-to-prior-perturbation (RTPP) parameter (Zhang et al. 2004 MWR)
+  real(r_size) :: RELAX_ALPHA_SPREAD = 0.0d0      ! Relaxation-to-prior-spread (RTPS) parameter (Whitaker and Hamill 2012 MWR)
+  logical :: RELAX_TO_INFLATED_PRIOR = .false.    ! Choice of using covariance relaxation and multiplicative inflation together
+                                                  ! - .true.:  Relaxation to the prior after the multiplicative inflation
+                                                  ! - .false.:  Relaxation to the original prior before the multiplicative inflation
+  logical :: RELAX_SPREAD_OUT = .false.           ! Output the equivalent multiplicative inflation field when using RTPS?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  character(filelenmax) :: RELAX_SPREAD_OUT_BASENAME = 'rtps' ! Base filename of equivalent multiplicative inflation field output (when using RTPS)
 
-  real(r_size) :: GROSS_ERROR = 5.0d0
-  real(r_size) :: GROSS_ERROR_RAIN = -1.0d0      ! < 0: same as GROSS_ERROR
-  real(r_size) :: GROSS_ERROR_RADAR_REF = -1.0d0 ! < 0: same as GROSS_ERROR
-  real(r_size) :: GROSS_ERROR_RADAR_VR = -1.0d0  ! < 0: same as GROSS_ERROR
-  real(r_size) :: GROSS_ERROR_RADAR_PRH = -1.0d0 ! < 0: same as GROSS_ERROR
-  real(r_size) :: GROSS_ERROR_H08 = -1.0d0      ! < 0: same as GROSS_ERROR
-  real(r_size) :: GROSS_ERROR_TCX = -1.0d0 ! debug ! < 0: same as GROSS_ERROR 
-  real(r_size) :: GROSS_ERROR_TCY = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
-  real(r_size) :: GROSS_ERROR_TCP = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR = 5.0d0             ! Threshold of gross error check (times of observation errors)
+  real(r_size) :: GROSS_ERROR_RAIN = -1.0d0       ! Threshold of gross error check for precipitation data
+                                                  ! - 0:  Same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_RADAR_REF = -1.0d0  ! Threshold of gross error check for radar reflectivity data
+                                                  ! - 0:  Same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_RADAR_VR = -1.0d0   ! Threshold of gross error check for radar radial velocity data
+                                                  ! - 0:  Same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_RADAR_PRH = -1.0d0  ! [NOT IMPLEMENTED] Threshold of gross error check for radar pseudo-RH data
+                                                  ! - 0:  Same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_H08 = -1.0d0        ! Threshold of gross error check for Himawari-8 radiance data
+                                                  ! - 0:  Same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_TCX = -1.0d0        ! [TENTATIVE]
+  real(r_size) :: GROSS_ERROR_TCY = -1.0d0        ! [TENTATIVE]
+  real(r_size) :: GROSS_ERROR_TCP = -1.0d0        ! [TENTATIVE]
+  real(r_size) :: Q_UPDATE_TOP = 0.0d0            ! Pressure level (Pa) only below which water vapor and hydrometeors are updated
+  real(r_size) :: Q_SPRD_MAX = -1.0D0             ! Maximum ratio of ensemble spread to ensemble mean for mositure in the analysis; if the analysis ensemble spread is greater than this ratio, scale the ensemble perturbations to reduce the spread to this ratio 
+                                                  ! - <= 0:  Disabled
 
-  real(r_size) :: Q_UPDATE_TOP = 0.0d0     ! water vapor and hydrometeors are updated only below this pressure level (Pa)
-  real(r_size) :: Q_SPRD_MAX = -1.0D0      ! maximum q (ensemble spread)/(ensemble mean) (only effective when > 0)
+  real(r_size) :: BOUNDARY_BUFFER_WIDTH = 0.0d0   ! Width (m) of the buffer area along the lateral boundary where the analysis increment is gradually reduced to zero
 
-  real(r_size) :: BOUNDARY_BUFFER_WIDTH = 0.0d0
+  logical :: POSITIVE_DEFINITE_Q = .false.        ! Force setting the negative values in the analysis water vapor field to zero?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  logical :: POSITIVE_DEFINITE_QHYD = .false.     ! Force setting the negative values in the analysis hydrometeor fields to zero?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  real(r_size) :: TC_SEARCH_DIS = 200.0d3         ! [TENTATIVE] (m)
 
-  logical :: POSITIVE_DEFINITE_Q = .false.
-  logical :: POSITIVE_DEFINITE_QHYD = .false.
-  real(r_size) :: TC_SEARCH_DIS = 200.0d3 ! (m) ! tentative! Should be modify !!
+  real(r_size) :: PS_ADJUST_THRES = 100.d0        ! Threshold of elevation difference (m) between the station report and the model topography
+                                                  ! Within the threshold surface pressure observations are assimilated (height adjustment will be performed to compensate this difference); beyond this threshold the surface pressure observations are discarded
 
-  real(r_size) :: PS_ADJUST_THRES = 100.d0
+  logical :: NOBS_OUT = .false.                   ! Output the field of actual observation numbers assimilated in each grid when the observation number limit (Hamrud et al. 2015 MWR) is enabled?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  character(filelenmax) :: NOBS_OUT_BASENAME = 'nobs' ! Base filename of the field of actual observation numbers assimilated in each grid when the observation number limit is enabled
 
-  logical :: NOBS_OUT = .false.
-  character(filelenmax) :: NOBS_OUT_BASENAME = 'nobs'
-
-  !*** for backward compatibility ***
-  real(r_size) :: COV_INFL_MUL = 1.0d0
-  real(r_size) :: MIN_INFL_MUL = 0.0d0
-  logical :: ADAPTIVE_INFL_INIT = .false.
-  real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0
+  real(r_size) :: COV_INFL_MUL = 1.0d0            ! [FOR BACKWARD COMPATIBILITY] = INFL_MUL
+  real(r_size) :: MIN_INFL_MUL = 0.0d0            ! [FOR BACKWARD COMPATIBILITY] = INFL_MUL_MIN
+  logical :: ADAPTIVE_INFL_INIT = .false.         ! [FOR BACKWARD COMPATIBILITY] = INFL_MUL_ADAPTIVE
+  real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0    ! [FOR BACKWARD COMPATIBILITY] = BOUNDARY_BUFFER_WIDTH
 
   !--- &PARAM_LETKF_PRC
-  integer :: NNODES = 1
-  integer :: PPN = 1
-  integer :: MEM_NODES = 1
-  integer :: MEM_NP = 1
+  ! Parallelization settings for LETKF
+  integer :: NNODES = 1                           ! Total number of nodes used for the LETKF 
+  integer :: PPN = 1                              ! Number of MPI processes used per nodes for the LETKF
+  integer :: MEM_NODES = 1                        ! Number of nodes used for one ensemble member in the LETKF
+  integer :: MEM_NP = 1                           ! Number of MPI processes used for one ensemble member in the LETKF
+
 !  integer :: PRC_NUM_X_LETKF = 1
 !  integer :: PRC_NUM_Y_LETKF = 1
 
   !--- &PARAM_LETKF_OBS
-  logical :: USE_OBS(nobtype) = .true.
+  ! Observation-specific settings
+  logical :: USE_OBS(nobtype) = .true.            ! Array setting whether each observation report type is used?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
 
-  ! >0: localization length scale (m)
-  !  0: no localization XXX not implemented yet XXX
-  ! <0: same as HORI_LOCAL(1)
   real(r_size) :: HORI_LOCAL(nobtype) = &
     (/500.0d3, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
        -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-       -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+       -1.0d0, -1.0d0, -1.0d0, -1.0d0/)           ! Array of horizontal covariance localization length scale for each observation report type
+                                                  ! - > 0:  Horizontal localization length scale (m)
+                                                  ! - 0:  [NOT IMPLEMENTED] No horizontal localization
+                                                  ! - < 0:  Same setting as HORI_LOCAL(1)
 
-  ! >0: localization length scale [ln(p) or m depends on obstype]
-  !  0: no localization
-  ! <0: same as VERT_LOCAL(1)
   real(r_size) :: VERT_LOCAL(nobtype) = &
     (/ 0.4d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0, 1000.0d0, -1.0d0, -1.0d0/)
-!      -1.0d0, 1000.0d0, -1.0d0,  0.0d0/)
+      -1.0d0, 1000.0d0, -1.0d0, -1.0d0/)          ! Array of vertical covariance localization length scale for each observation report type
+                                                  ! - > 0:  Vertical localization length scale [ln(p) or m depending on the report type]
+                                                  ! - 0:  No vertical localization
+                                                  ! - < 0:  Same setting as VERT_LOCAL(1)
 
-  ! >0: localization length scale (sec) XXX not implemented yet XXX
-  !  0: no localization
-  ! <0: same as TIME_LOCAL(1)
   real(r_size) :: TIME_LOCAL(nobtype) = &
     (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0/)            ! [NOT IMPLEMENTED] Array of temporal covariabce localization interval for each observation report type
+                                                  ! - > 0:  [NOT IMPLEMENTED] Temporal localization interval (sec)
+                                                  ! - 0:  No temporal localization
+                                                  ! - < 0:  Same setting as TIME_LOCAL(1)
 
-  real(r_size) :: HORI_LOCAL_RADAR_OBSNOREF = -1.0d0 ! <0: same as HORI_LOCAL(22=PHARAD)
-  real(r_size) :: HORI_LOCAL_RADAR_VR = -1.0d0       ! <0: same as HORI_LOCAL(22=PHARAD)
-  real(r_size) :: VERT_LOCAL_RADAR_VR = -1.0d0       ! <0: same as VERT_LOCAL(22=PHARAD)
-  real(r_size) :: VERT_LOCAL_RAIN_BASE = 85000.0d0
+  real(r_size) :: HORI_LOCAL_RADAR_OBSNOREF = -1.0d0 ! Horizontal covariance localization length scale (m) for clear-sky radar reflectivity data (<= RADAR_REF_THRES_DBZ)
+                                                     ! - < 0:  Same setting as HORI_LOCAL(22) for all radar data
+  real(r_size) :: HORI_LOCAL_RADAR_VR = -1.0d0    ! Horizontal covariance localization length scale (m) for radar radial velocity data
+                                                  ! - < 0:  Same setting as HORI_LOCAL(22) for all radar data
+  real(r_size) :: VERT_LOCAL_RADAR_VR = -1.0d0    ! Vertical covariance localization length scale (m) for radar radial velocity data
+                                                  ! - < 0:  Same setting as HORI_LOCAL(22) for all radar data
+  real(r_size) :: VERT_LOCAL_RAIN_BASE = 85000.0d0 ! [NOT IMPLEMENTED] Base level (Pa) for the vertical covariance localization for rain data
 
-  ! >0: observation number limit
-  !  0: do not limit observation numbers
-  ! <0: same as MAX_NOBS_PER_GRID(1)
   integer :: MAX_NOBS_PER_GRID(nobtype) = &
     (/ 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
-      -1, -1, -1, -1/)
+      -1, -1, -1, -1/)                            ! Observation number limit: maximum number of observations for each observation report type and each variable assimilated in a grid (Hamrud et al. 2015 MWR)
+                                                  ! - > 0:  Enable the observation number limit
+                                                  ! - 0:  No observation number limit
+                                                  ! - < 0:  Same setting as MAX_NOBS_PER_GRID(1)
 
-  integer :: MAX_NOBS_PER_GRID_CRITERION = 1 ! 1: normalized 3D distance (from closest)
-                                             ! 2: localization weight (from largest)
-                                             ! 3: weighted observation error variance (from smallest)
+  integer :: MAX_NOBS_PER_GRID_CRITERION = 1      ! Criterion to select observations for the observation number limit
+                                                  ! - 1:  Normalized 3D distance (from closest)
+                                                  ! - 2:  Covariance localization weight (from largest)
+                                                  ! - 3:  Weighted observation error variance (from smallest)
 
-  ! >0: typical minimum spacing of the obsetvation types in the densest observed area (not tuned carefully yet)
-  !     *this is only used for automatically determine OBS_SORT_GRID_SPACING. if using pre-set OBS_SORT_GRID_SPACING, this has no effect.
-  ! <=0: same as OBS_MIN_SPACING(1)
   real(r_size) :: OBS_MIN_SPACING(nobtype) = &
     (/300.0d3, 100.0d3, 100.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 100.0d3, 150.0d3, 150.0d3, &
       150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 150.0d3, &
-      150.0d3,   1.0d3,  15.0d3,1000.0d3/)
+      150.0d3,   1.0d3,  15.0d3,1000.0d3/)        ! Array of estimates of a typical minimum horizontal observation spacing (m) (in the densest observed area) for each obsetvation report type.
+                                                  ! * This setting only affects the computational speed but not the analysis results
+                                                  ! * This setting is used to automatically determine OBS_SORT_GRID_SPACING, effective only when OBS_SORT_GRID_SPACING = 0
+                                                  ! - <= 0:  Same setting as OBS_MIN_SPACING(1)
 
-  ! >0: optimal grid spacing for bucket sorting of observations
-  !  0: automatically determined based on HORI_LOCAL, MAX_NOBS_PER_GRID, and OBS_MIN_SPACING
-  ! <0: same as OBS_SORT_GRID_SPACING(1)
   real(r_size) :: OBS_SORT_GRID_SPACING(nobtype) = &
     (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0/)            ! Array of optimal grid spacing (m) for observation bucket sorting for each observation report type
+                                                  ! * This setting only affects the computational speed but not the analysis results
+                                                  ! - 0:  Automatically determined based on HORI_LOCAL, MAX_NOBS_PER_GRID, and OBS_MIN_SPACING
+                                                  ! - < 0:  Same setting as OBS_SORT_GRID_SPACING(1)
 
   !--- &PARAM_LETKF_VAR_LOCAL
-  real(r_size) :: VAR_LOCAL_UV(nv3d+nv2d)        = 1.0d0
-  real(r_size) :: VAR_LOCAL_T(nv3d+nv2d)         = 1.0d0
-  real(r_size) :: VAR_LOCAL_Q(nv3d+nv2d)         = 1.0d0
-  real(r_size) :: VAR_LOCAL_PS(nv3d+nv2d)        = 1.0d0
-  real(r_size) :: VAR_LOCAL_RAIN(nv3d+nv2d)      = 1.0d0
-  real(r_size) :: VAR_LOCAL_TC(nv3d+nv2d)        = 1.0d0
-  real(r_size) :: VAR_LOCAL_RADAR_REF(nv3d+nv2d) = 1.0d0
-  real(r_size) :: VAR_LOCAL_RADAR_VR(nv3d+nv2d)  = 1.0d0
-  real(r_size) :: VAR_LOCAL_H08(nv3d+nv2d)       = 1.0d0 ! H08
+  ! Variable localization settings
+  real(r_size) :: VAR_LOCAL_UV(nv3d+nv2d)        = 1.0d0 ! Array of variable covariance localization factors between u- and v-wind observations and each state variable
+                                                         ! - 1:  No variable localization
+  real(r_size) :: VAR_LOCAL_T(nv3d+nv2d)         = 1.0d0 ! Same as above, but for temperature observations
+  real(r_size) :: VAR_LOCAL_Q(nv3d+nv2d)         = 1.0d0 ! Same as above, but for water vapor observations
+  real(r_size) :: VAR_LOCAL_PS(nv3d+nv2d)        = 1.0d0 ! Same as above, but for surface pressure observations
+  real(r_size) :: VAR_LOCAL_RAIN(nv3d+nv2d)      = 1.0d0 ! [NOT IMPLEMENTED] Same as above, but for rain observations
+  real(r_size) :: VAR_LOCAL_TC(nv3d+nv2d)        = 1.0d0 ! [NOT IMPLEMENTED] Same as above, but for TC vital observations
+  real(r_size) :: VAR_LOCAL_RADAR_REF(nv3d+nv2d) = 1.0d0 ! Same as above, but for radar reflectivity observations
+  real(r_size) :: VAR_LOCAL_RADAR_VR(nv3d+nv2d)  = 1.0d0 ! Same as above, but for radar radial velocity observations
+  real(r_size) :: VAR_LOCAL_H08(nv3d+nv2d)       = 1.0d0 ! [TENTATIVE] Same as above, but for Himawari-8 observations
 
   !--- &PARAM_LETKF_MONITOR
-  logical :: DEPARTURE_STAT = .true.
-  logical :: DEPARTURE_STAT_RADAR = .false.
-  logical :: DEPARTURE_STAT_H08 = .false.
-  real(r_size) :: DEPARTURE_STAT_T_RANGE = 0.0d0   ! time range within which observations are considered in the departure statistics.
-                                                   ! 0: no limit
-  logical :: DEPARTURE_STAT_ALL_PROCESSES = .true. ! print the departure statistics by all processes?
-                                                   ! if set to .false., the statistics are only printed by the ensemble mean group, which may save time
+  ! Observation diagnostic settings
+  logical :: DEPARTURE_STAT = .true.              ! Output observation departure statistics (O-B and O-A) for conventional observations?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  logical :: DEPARTURE_STAT_RADAR = .false.       ! Output observation departure statistics (O-B and O-A) for radar observations?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  logical :: DEPARTURE_STAT_H08 = .false.         ! Output observation departure statistics (O-B and O-A) for Himawari-8 observations?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  real(r_size) :: DEPARTURE_STAT_T_RANGE = 0.0d0  ! Range of time difference to the analysis time, within which observations are considered in the departure statistics
+                                                  ! - 0:  No time range restriction
+  logical :: DEPARTURE_STAT_ALL_PROCESSES = .true. ! Print the departure statistics by all processes?
+                                                   ! - .false.:  No - The statistics are only printed by the ensemble mean group, which may save computational time
+                                                   ! - .true.:  Yes - The same statistics are printed by all processes
 
-  LOGICAL               :: OBSDEP_OUT = .true.
-  character(filelenmax) :: OBSDEP_OUT_BASENAME = 'obsdep'
-  LOGICAL               :: OBSGUES_OUT = .false.                  !XXX not implemented yet...
-  character(filelenmax) :: OBSGUES_OUT_BASENAME = 'obsgues.@@@@'  !XXX not implemented yet...
-  LOGICAL               :: OBSANAL_OUT = .false.                  !XXX not implemented yet...
-  character(filelenmax) :: OBSANAL_OUT_BASENAME = 'obsanal.@@@@'  !XXX not implemented yet...
+  LOGICAL               :: OBSDEP_OUT = .true.    ! Output observation departure (innovation) data for all observations into a binary file?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  character(filelenmax) :: OBSDEP_OUT_BASENAME = 'obsdep' ! Filename of observation departure (innovation) data output
+  LOGICAL               :: OBSGUES_OUT = .false.                 ! [NOT IMPLEMENTED]
+  character(filelenmax) :: OBSGUES_OUT_BASENAME = 'obsgues.@@@@' ! [NOT IMPLEMENTED]
+  LOGICAL               :: OBSANAL_OUT = .false.                 ! [NOT IMPLEMENTED]
+  character(filelenmax) :: OBSANAL_OUT_BASENAME = 'obsanal.@@@@' ! [NOT IMPLEMENTED]
 
   !--- &PARAM_LETKF_RADAR
-  logical :: USE_RADAR_REF       = .true.
-  logical :: USE_RADAR_VR        = .true.
-  logical :: USE_RADAR_PSEUDO_RH = .false.
+  ! Settings for radar data
+  logical :: USE_RADAR_REF       = .true.         ! Assimilate radar reflectivity observations?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  logical :: USE_RADAR_VR        = .true.         ! Assimilate radar radial velocity observations?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
+  logical :: USE_RADAR_PSEUDO_RH = .false.        ! [NOT IMPLEMENTED] Assimilate pseudo-relative himidity observations?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
 
-  logical :: USE_OBSERR_RADAR_REF = .false.
-  logical :: USE_OBSERR_RADAR_VR = .false.
+  logical :: USE_OBSERR_RADAR_REF = .false.       ! Use OBSERR_RADAR_REF for the observation error of radar reflectivity observations instead of that provided in the observation files
+  logical :: USE_OBSERR_RADAR_VR = .false.        ! Use OBSERR_RADAR_VR for the observation error of radar radial velocity observations instead of that provided in the observation files
 
-  logical :: RADAR_OBS_4D = .false.
+  logical :: RADAR_OBS_4D = .false.               ! Radar observation data file is in a new format with the "time difference to the analysis time" column, allowing for 4D LETKF?
+                                                  ! - .false.:  No - Old-format file (without the "time difference to the analysis time" column)
+                                                  ! - .true.:  Yes - New-format file (with the "time difference to the analysis time" column)
 
-  REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
-  INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than RADAR_REF_THRES_DBZ
-  INTEGER :: MIN_RADAR_REF_MEMBER_OBSREF = 1   !Ensemble members with
+  REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0    ! Threshold of raining and clear-sky radar reflectivity observations (dBZ)
+  INTEGER :: MIN_RADAR_REF_MEMBER = 1             ! Threshold of number of first-guess ensemble members with raining reflectivity to assimilate the *__clear-sky__* radar reflectivity data
+                                                  ! * The observation data are assimilated only when the number of raining (> RADAR_REF_THRES_DBZ) members is above this threshold. 
+  INTEGER :: MIN_RADAR_REF_MEMBER_OBSREF = 1      ! Same as above, but the threshold to assimilate the *__raining__* reflectivity observations
 
-  REAL(r_size) :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
-  REAL(r_size) :: LOW_REF_SHIFT = 0.0d0
+  REAL(r_size) :: MIN_RADAR_REF_DBZ = 0.0d0       ! Minimum useful radar reflectivity value (dBZ); all reflectivity data below this value are re-assigned to a constant depending on LOW_REF_SHIFT
+  REAL(r_size) :: LOW_REF_SHIFT = 0.0d0           ! Shift of the constant refelectivity value for those data smaller than MIN_RADAR_REF_DBZ (dBZ); all reflectivity data below MIN_RADAR_REF_DBZ are set to (MIN_RADAR_REF_DBZ + LOW_REF_SHIFT)
+                                                  ! * This setting should be zero or negative
 
-  real(r_size) :: RADAR_ZMAX = 99.0d3          !Height limit of radar data to be used
+  real(r_size) :: RADAR_ZMAX = 99.0d3             ! Maximum height level (m) of radar data to be assimilated
 
-  REAL(r_size) :: RADAR_PRH_ERROR = 0.1d0      !Obserational error for pseudo RH observations.
+  REAL(r_size) :: RADAR_PRH_ERROR = 0.1d0         ! [NOT IMPLEMENTED]
 
   !These 2 flags affects the computation of model reflectivity and radial velocity. 
-  INTEGER :: INTERPOLATION_TECHNIQUE = 1
-  INTEGER :: METHOD_REF_CALC = 3
+  INTEGER :: INTERPOLATION_TECHNIQUE = 1          ! [TENTATIVE]
+  INTEGER :: METHOD_REF_CALC = 3                  ! Method to compute the radar reflectivity in the radar observation operator
 
-  LOGICAL :: USE_TERMINAL_VELOCITY = .false.
+  LOGICAL :: USE_TERMINAL_VELOCITY = .false.      ! Consider the terminal velocity of the hydrometeors in the radar observation operator?
+                                                  ! - .false.:  No
+                                                  ! - .true.:  Yes
 
-  ! PARAMETERS FOR RADAR DATA ASSIMILATION
-  INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
+  INTEGER :: NRADARTYPE = 1                       ! [NOT IMPLEMENTED]
 
   !--- &PARAM_LETKF_H08
+  ! Settings for Himawari-8 data
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
   real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
@@ -281,21 +363,24 @@ MODULE common_nml
                         !! sensitive to chemicals.
 
   !--- &PARAM_OBS_ERROR
-  real(r_size) :: OBSERR_U = 1.0d0
-  real(r_size) :: OBSERR_V = 1.0d0
-  real(r_size) :: OBSERR_T = 1.0d0
-  real(r_size) :: OBSERR_Q = 0.001d0
-  real(r_size) :: OBSERR_RH = 10.0d0
-  real(r_size) :: OBSERR_PS = 100.0d0
-  real(r_size) :: OBSERR_RADAR_REF = 5.0d0
-  real(r_size) :: OBSERR_RADAR_VR = 3.0d0
-  real(r_size) :: OBSERR_TCX = 50.0d3 ! (m)
-  real(r_size) :: OBSERR_TCY = 50.0d3 ! (m)
-  real(r_size) :: OBSERR_TCP = 5.0d2 ! (Pa)
+  ! Observation error settings
+  ! __* Ususally the observation errors provided in the observation data files, instead of the values here, are used in the assimilation, unless some special options are enabled__
+  real(r_size) :: OBSERR_U = 1.0d0                ! Observaiton error of u-wind observations (m/s)
+  real(r_size) :: OBSERR_V = 1.0d0                ! Observation error of v-wind observations (m/s)
+  real(r_size) :: OBSERR_T = 1.0d0                ! Observation error of temperature observations (K)
+  real(r_size) :: OBSERR_Q = 0.001d0              ! Observation error of water vapor observations (kg/kg)
+  real(r_size) :: OBSERR_RH = 10.0d0              ! Observation error of relative humidity observations (%)
+  real(r_size) :: OBSERR_PS = 100.0d0             ! Observation error of surface pressure observations (Pa)
+  real(r_size) :: OBSERR_RADAR_REF = 5.0d0        ! Observation error of radar reflectivity observations (dBZ)
+  real(r_size) :: OBSERR_RADAR_VR = 3.0d0         ! Observation error of radar radial velocity observations (m/s)
+  real(r_size) :: OBSERR_TCX = 50.0d3             ! [TENTATIVE] Observation error of TC x-center-position observations (m)
+  real(r_size) :: OBSERR_TCY = 50.0d3             ! [TENTATIVE] Observation error of TC y-center-position observations (m)
+  real(r_size) :: OBSERR_TCP = 5.0d2              ! [TENTATIVE] Observation error of TC minimum sea level pressure observations (Pa)
   real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
-                                      5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
+                                      5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! [TENTATIVE] Observation error of Himawari-8 observations
 
   !--- &PARAM_OBSSIM
+  ! Settings for the "observation simulator" (obssim) program
   character(filelenmax) :: OBSSIM_IN_TYPE = 'history'
   character(filelenmax) :: OBSSIM_RESTART_IN_BASENAME = 'restart'
   character(filelenmax) :: OBSSIM_HISTORY_IN_BASENAME = 'history'
