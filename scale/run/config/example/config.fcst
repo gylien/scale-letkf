@@ -41,19 +41,19 @@ OUT_OPT=3        # Level of completeness of forecast files
 TOPOOUT_OPT=2    # Level of completeness of topography files
                  # <pre>--   topo
                  # 1:   o
-                 # 2:   (none)</pre>
+                 # 2:   (none)</pre> * The topography file output can be used in a later run with the same domain settings.
 
 LANDUSEOUT_OPT=2 # Level of completeness of land-use files
                  # <pre>--   landuse
                  # 1:   o
-                 # 2:   (none)</pre>
+                 # 2:   (none)</pre> * The land-use file output can be used in a later run with the same domain settings.
 
 BDYOUT_OPT=3     # Level of completeness of SCALE boundary files
                  # <pre>     bdy
                  # --   mean members
                  # 1:   o    o
                  # 2:   o
-                 # 3:   (none)</pre>
+                 # 3:   (none)</pre> * The SCALE boundary file output can be used in a later run with the same domain and forecast settings.
 
 LOG_OPT=2        # Level of completeness of log files of each program
                  # <pre>     topo landuse bdy scale

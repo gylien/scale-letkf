@@ -29,10 +29,10 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF 
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    ## Root directory of the test suite
 
-INDIR=                                      # SCALE-LETKF experiment directory for input data
+INDIR=                                      # [[SCALE-LETKF experiment directory]] for input data
                                             #  (The initial condition data need to exist in this directory unless $MAKEINIT = 1 in config.cycle or config.fcst)
                                             #  (default: $OUTDIR)
-OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # SCALE-LETKF experiment directory for output data
+OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # [[SCALE-LETKF experiment directory]] for output data
 
 #===============================================================================
 # Location of model/data files
@@ -40,16 +40,16 @@ OUTDIR="$DDIR/exp/testcase_45km_4p_l36"     # SCALE-LETKF experiment directory f
 SCALEDIR="$DIR/../.."                       # Directory of the SCALE model source code
 DATADIR="$DDIR/database"                    # Directory of the SCALE database
 
-DATA_TOPO=                                  # SCALE-LETKF experiment directory under which prepared topo files exist
+DATA_TOPO=                                  # [[SCALE-LETKF experiment directory]] under which prepared topo files exist
                                             #  (effective only when $TOPO_FORMAT = 'prep') (default: $INDIR)
-DATA_LANDUSE=                               # SCALE-LETKF experiment directory under which prepared landuse files exist
+DATA_LANDUSE=                               # [[SCALE-LETKF experiment directory]] under which prepared landuse files exist
                                             #  (effective only when $LANDUSE_FORMAT = 'prep') (default: $INDIR)
-DATA_BDY_SCALE_PREP=                        # SCALE-LETKF experiment directory under which prepared SCALE boundary files exist
+DATA_BDY_SCALE_PREP=                        # [[SCALE-LETKF experiment directory]] under which prepared SCALE boundary files exist
                                             #  (effective only when $BDY_FORMAT = 0) (default: $INDIR)
-DATA_BDY_SCALE=                             # Parent domain's SCALE-LETKF experiment directory for boundary data
-                                            #  (effective only when $BDY_FORMAT = 1: offline-nesting run)
+DATA_BDY_SCALE=                             # Parent domain's [[SCALE-LETKF experiment directory]] for boundary data
+                                            #  (effective only when $BDY_FORMAT = 1: [[offline-nesting run\|Offline nesting experiments]])
 DATA_TOPO_BDY_SCALE=                        # Directory of the parent domain's topo files
-                                            #  (effective only when $BDY_FORMAT = 1: offline-nesting run)
+                                            #  (effective only when $BDY_FORMAT = 1: [[offline-nesting run\|Offline nesting experiments]])
 DATA_BDY_WRF="$DDIR/ncepfnl/wrfout"         # Directory of boundary data in WRF format; see [[File naming convention of data directories]]
                                             #  (effective only when $BDY_FORMAT = 2)
 DATA_BDY_NICAM=                             ## [NOT IMPLEMENTED] Directory of boundary data in NICAM format; see [[File naming convention of data directories]]
@@ -71,7 +71,7 @@ PNETCDF=1               # Use PnetCDF for single-file I/O?
                         #  (default: 0)
 
 PNETCDF_BDY_SCALE=      # Used PnetCDF I/O in the parent domain's SCALE-LETKF experiment?
-                        #  (effective only when $BDY_FORMAT = 1: offline-nesting run)
+                        #  (effective only when $BDY_FORMAT = 1: [[offline-nesting run\|Offline nesting experiments]])
                         # - 0:  No
                         # - 1:  Yes
                         #  (default: $PNETCDF)
@@ -82,12 +82,12 @@ DET_RUN=0               # Enable the deterministic run (Schraff et al. 2016 QJRM
                         #  (default: 0)
 
 TOPO_FORMAT='GTOPO30'   # Topography data file format
-                        # - 'prep':  Use prepared topo files in $DATA_TOPO
+                        # - 'prep':  Use prepared topo files in $DATA_TOPO; this option can be used to save computaitonal time after completing a previous run with the same domain settings and with $TOPOOUT_OPT = 1 in 'config.cycle' or 'config.fcst'
                         # - 'GTOPO30':  Use 'GTOPO30' dataset (requires compatible 'config.nml.scale_pp')
                         # - 'DEM50M':  Use 'DEM50M' dataset (requires compatible 'config.nml.scale_pp')
 
 LANDUSE_FORMAT='GLCCv2' # Land-use data file format
-                        # - 'prep':  Use prepared landuse files in $DATA_LANDUSE
+                        # - 'prep':  Use prepared landuse files in $DATA_LANDUSE; this option can be used to save computaitonal time after completing a previous run with the same domain settings and with $LANDUSEOUT_OPT = 1 in 'config.cycle' or 'config.fcst'
                         # - 'GLCCv2':  Use 'GLCCv2' dataset (requires compatible 'config.nml.scale_pp')
                         # - 'LU100M':  Use 'LU100M' dataset (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # Use time-variant landuse files
@@ -96,8 +96,8 @@ LANDUSE_UPDATE=0        # Use time-variant landuse files
                         #  (default: 0)
 
 BDY_FORMAT=2            # Boundary data format
-                        # - 0:  Use prepared SCALE boundary files with exactly the same domain settings; no additional pre-processing is required ('scale_init' step will be skipped)
-                        # - 1:  SCALE history file: offline-nesting run (requires compatible 'config.nml.scale_init')
+                        # - 0:  Use prepared SCALE boundary files with exactly the same domain settings; no additional pre-processing is required ('scale_init' step will be skipped); this option can be used to save computaitonal time after completing a previous run with the same domain and cycling/forecast settings and with $BDYOUT_OPT = 1 in 'config.cycle' or 'config.fcst'
+                        # - 1:  SCALE history file: [[offline-nesting run\|Offline nesting experiments]] (requires compatible 'config.nml.scale_init')
                         # - 2:  WRF (requires compatible 'config.nml.scale_init')
                         ## - 3:  [NOT IMPLEMENTED] NICAM (requires compatible 'config.nml.scale_init')
                         # - 4:  GrADS (requires compatible 'config.nml.scale_init')
@@ -105,8 +105,8 @@ BDY_SINGLE_FILE=0       # Boundary data for each cycle are contained in a single
                         # - 0:  No - Assume the length of a single boundary file = $BDYCYCLE_INT which may be shorter than the required forecast length; more than one boundary files may be used for each cycle (e.g., files made by data assimilation cycles)
                         # - 1:  Yes - Assume the length of a single boundary file >= the required forecast length (i.e., $WINDOW_E for 'cycle' job; $FCSTLEN for 'fcst' job); always only one single boundary file is used for each cycle
                         #  (default: 0)
-BDY_SCALE_DIR='hist'    # Sub-directory name of the SCALE history files in the parent domain's SCALE-LETKF experiment directory
-                        #  (effective only when $BDY_FORMAT = 1: offline-nesting run)
+BDY_SCALE_DIR='hist'    # Sub-directory name of the SCALE history files in the parent domain's [[SCALE-LETKF experiment directory]]
+                        #  (effective only when $BDY_FORMAT = 1: [[offline-nesting run\|Offline nesting experiments]])
                         #  (default: 'hist')
 
 BDY_MEAN='mean'         # Sub-directory name representing the ensemble mean in the boundary data directory
@@ -118,20 +118,21 @@ BDY_ENS=0               # Use ensemble boundary conditions?
 BDY_ROTATING=0          # Use different series of boundary data for different cycles?
                         # - 0:  No - Use the same series of boundary data files for all cycles
                         # - 1:  Yes - Use different series of boundary data files (which can overlap in time) for different cycles
-                        # Note that this setting affects the file naming convention in the $DATA_BDY_* boundary data directory; see [[File naming convention of data directories]]
+                        # See [[explanation on "BDY_ROTATING"]] for more details.
+                        # Note that this setting affects the file naming convention in the $DATA_BDY_* boundary data directory; see [[File naming convention of data directories]].
                         #  (default: 0)
 
 BDYINT=21600            # Time interval (second) of each time frame in the boundary data with multiple time frames in a file.
                         # If there is only a single time frame in the boundary data files, set this value to be equal to $BDYCYCLE_INT, the time interval of each boundary data file.
-                        # In the offline-nesting run, this should be equal to the time interval of the history files in the parent domain's experiment.
+                        # In the [[offline-nesting run\|Offline nesting experiments]], this should be equal to the time interval of the history files in the parent domain's experiment.
                         #  (default: $LCYCLE)
 BDYCYCLE_INT=           # Time interval (second) of each boundary data file (regardless of the multiple time frames in a file).
-                        # In the offline-nesting run, this should be equal to $LCYCLE in the parent domain's experiment.
+                        # In the [[offline-nesting run\|Offline nesting experiments]], this should be equal to $LCYCLE in the parent domain's experiment.
                         #  (default: $BDYINT)
 
 PARENT_REF_TIME=        # [OPTIONAL] Any time (format: YYYYMMDDhhmmss) at which a boundary data file exists (for boundary data with multiple time frames in a file, use the start time in a file).
                         # This is used as a reference time to search the boundary data files; the program will search available boundary data files by plus/minus increments of $BDYCYCLE_INT based on this reference time.
-                        # This setting is only important when $LCYCLE < $BDYCYCLE_INT, likely in a offline-nesing run. In the case that $LCYCLE >= $BDYCYCLE_INT, this setting can be left blank.
+                        # This setting is only important when $LCYCLE < $BDYCYCLE_INT, likely in a [[offline-nesing run\|Offline nesting experiments]]. In the case that $LCYCLE >= $BDYCYCLE_INT, this setting can be left blank.
 
 ENABLE_PARAM_USER=0     # Use '&PARAM_USER' namelist section in the 'config.nml.scale_user' configuration file?
                         # - 0:  No

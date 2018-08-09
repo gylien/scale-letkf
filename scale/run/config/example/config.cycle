@@ -51,7 +51,7 @@ OUT_OPT=3        # Level of completeness of guess/analysis/history files
                  # 7:   o     ##
                  # # = every $OUT_CYCLE_SKIP cycles and the 
                  #     last cycle
-                 # ## = only the last cycle</pre>
+                 # ## = only the last cycle</pre> * The history file output can be used to drive a child domain for [[offline nesting\|Offline nesting experiments]].
 
 OUT_CYCLE_SKIP=5 # Interval of cycles when the analysis ensemble members are output
                  #  (effective only when $OUT_OPT = 5)
@@ -59,19 +59,19 @@ OUT_CYCLE_SKIP=5 # Interval of cycles when the analysis ensemble members are out
 TOPOOUT_OPT=2    # Level of completeness of topography files
                  # <pre>--   topo
                  # 1:   o
-                 # 2:   (none)</pre>
+                 # 2:   (none)</pre> * The topography file output can be used in a later run with the same domain settings.
 
 LANDUSEOUT_OPT=2 # Level of completeness of land-use files
                  # <pre>--   landuse
                  # 1:   o
-                 # 2:   (none)</pre>
+                 # 2:   (none)</pre> * The land-use file output can be used in a later run with the same domain settings.
 
 BDYOUT_OPT=3     # Level of completeness of SCALE boundary files
                  # <pre>     bdy
                  # --   mean members
                  # 1:   o    o
                  # 2:   o
-                 # 3:   (none)</pre>
+                 # 3:   (none)</pre> * The SCALE boundary file output can be used in a later run with the same domain and cycling settings.
 
 OBSOUT_OPT=3     # Level of completeness of observation-space dagnostic files
                  # <pre>--   obsgues# obsanal# obsdep
