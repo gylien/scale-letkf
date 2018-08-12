@@ -178,6 +178,10 @@ program dacycle
     call PROF_setprefx('MAIN')
     call PROF_rapstart('Main_Loop', 0)
 
+    call MPI_BARRIER(MPI_COMM_a, ierr)
+    call date_and_time(date=date, time=time)
+    write (6, '(2A,1x,A)') '[Info] MAIN Current wall time: ', date, time
+
     do
 
       anal_mem_out_now = .false.
@@ -434,6 +438,10 @@ program dacycle
         do iof = 1, OBS_IN_NUM
           call obs_info_deallocate(obs(iof))
         end do
+        call MPI_BARRIER(MPI_COMM_a, ierr)
+        call date_and_time(date=date, time=time)
+        write (6, '(2A,1x,A,i6)') '[Info] MAIN_loop_end Current wall time: ', date, time,icycle
+
 
         !-----------------------------------------------------------------------
 
@@ -441,6 +449,7 @@ program dacycle
       !-------------------------------------------------------------------------
       ! LETKF section end
       !-------------------------------------------------------------------------
+
 
       if ( DTF_MODE == 0 ) then
         ! restart output after LETKF
@@ -458,6 +467,10 @@ program dacycle
       if( IO_L ) call flush(IO_FID_LOG)
 
     end do
+
+    call MPI_BARRIER(MPI_COMM_a, ierr)
+    call date_and_time(date=date, time=time)
+    write (6, '(2A,1x,A)') '[Info] MAIN Current wall time: ', date, time
 
     call PROF_rapend('Main_Loop', 0)
 

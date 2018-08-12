@@ -123,16 +123,16 @@ ${NODEFILE_DIR}/|node/
 EOF
 fi
 
-if ((DTF_MODE >= 1)); then
-#  if [ ! -e "${SCRP_DIR}/dtf.ini" ] ; then
-#    echo "dtf.ini is not specified!"
-#    exit 1
-#  fi
-  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${LIBDTF_PATH}/libdtf.so|libdtf.so
-EOF
-#${SCRP_DIR}/dtf.ini|dtf.ini
-fi
+#if ((DTF_MODE >= 1)); then
+##  if [ ! -e "${SCRP_DIR}/dtf.ini" ] ; then
+##    echo "dtf.ini is not specified!"
+##    exit 1
+##  fi
+#  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+#${LIBDTF_PATH}/libdtf.so|libdtf.so
+#EOF
+##${SCRP_DIR}/dtf.ini|dtf.ini
+#fi
 
 if [ "$CONF_MODE" != 'static' ]; then
   echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
@@ -221,11 +221,22 @@ if [ "$CONF_MODE" = 'static' ] && ((DTF_MODE >= 1)); then
 
 echo "[\$(date +'%Y-%m-%d %H:%M:%S')] Start $STIME $ETIME" >&2
 
-mpiexec -n $((NNODES_ORIG*PPN)) -vcoordfile ${TMPROOT}/node/set1.proc -of-proc log/scale-rm_ens.NOUT_${STIME} ./scale-rm_ens scale-rm_ens_${STIME}.conf &
+# CREATE OF-PROC FILE
+mkdir log_1 log_2
+lfs setstripe -c 1 log_1
+lfs setstripe -c 1 log_2
+for i in \`seq 0 $((NNODES_ORIG*PPN-1))\`
+do
+     touch  log_1/scale-rm_ens.NOUT_${STIME}.${i}
+     touch  log_2/letkf.NOUT_${STIME}.${i}
+done
+
+
+mpiexec -n $((NNODES_ORIG*PPN)) -vcoordfile ${TMPROOT}/node/set1.proc -of-proc log_1/scale-rm_ens.NOUT_${STIME} ./scale-rm_ens scale-rm_ens_${STIME}.conf &
 
 echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ${STIME}: Submitted to background: ensemble forecasts" >&2
 
-mpiexec -n $((NNODES_ORIG*PPN)) -vcoordfile ${TMPROOT}/node/set2.proc -of-proc log/letkf.NOUT_${STIME} ./letkf letkf_${STIME}.conf &
+mpiexec -n $((NNODES_ORIG*PPN)) -vcoordfile ${TMPROOT}/node/set2.proc -of-proc log_2/letkf.NOUT_${STIME} ./letkf letkf_${STIME}.conf &
 
 echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ${STIME}: Submitted to background: LETKF" >&2
 

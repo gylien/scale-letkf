@@ -418,10 +418,10 @@ while ((time <= ETIME)); do
   if ((LOG_OPT <= 3 && ((DACYCLE != 1 && DTF_MODE == 0) || loop == 1))); then
     for m in $mlist; do
       for d in $(seq $DOMNUM); do
-        path="log/scale.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).LOG_${time}${SCALE_SFX_NONC_0}"
+        path="log_1/scale.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).LOG_${time}${SCALE_SFX_NONC_0}"
         pathout="${OUTDIR[$d]}/${time}/log/scale/${name_m[$m]}_LOG${SCALE_SFX_NONC_0}"
         echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+1))]}
-        path="log/scale.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).monitor_${time}${SCALE_SFX_NONC_0}"
+        path="log_1/scale.${name_m[$m]}.d$(printf $DOMAIN_FMT $d).monitor_${time}${SCALE_SFX_NONC_0}"
         pathout="${OUTDIR[$d]}/${time}/log/scale/${name_m[$m]}_monitor${SCALE_SFX_NONC_0}"
         echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$(((m-1)*mem_np+${SCALE_NP_S[$d]}+1))]}
       done
@@ -430,12 +430,12 @@ while ((time <= ETIME)); do
   if ((LOG_OPT <= 3 && DACYCLE != 1 && (DTF_MODE == 0 || loop == 1))); then
     for p in $plist; do
       if ((nitmax == 1)); then
-        path="log/scale-rm_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
+        path="log_1/scale-rm_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
         pathout="${OUTDIR[1]}/${time}/log/scale/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
         echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
       else
         for it in $(seq $nitmax); do
-          path="log/scale-rm_ens.NOUT_${time}_${it}$(printf -- "${log_nfmt}" $((p-1)))"
+          path="log_1/scale-rm_ens.NOUT_${time}_${it}$(printf -- "${log_nfmt}" $((p-1)))"
           pathout="${OUTDIR[1]}/${time}/log/scale/NOUT-${it}$(printf -- "${log_nfmt}" $((p-1)))"
           echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
         done
@@ -452,7 +452,7 @@ while ((time <= ETIME)); do
         done
       elif ((loop == 1)); then
         for p in $plist; do
-          path="log/letkf.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
+          path="log_2/letkf.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
           pathout="${OUTDIR[1]}/${time}/log/letkf/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
           echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
         done

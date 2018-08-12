@@ -91,10 +91,10 @@ cat $SCRP_DIR/config.main | \
     sed -e "/\(^DIR=\| DIR=\)/c DIR=\"$DIR\"" \
     > $TMP/config.main
 
-if ((DTF_MODE >= 1)); then
-  cp -L $LIBDTF_PATH/libdtf.so $TMP/libdtf.so
-#  cp -L $SCRP_DIR/dtf.ini $TMP/dtf.ini
-fi
+#if ((DTF_MODE >= 1)); then
+#  cp -L $LIBDTF_PATH/libdtf.so $TMP/libdtf.so
+##  cp -L $SCRP_DIR/dtf.ini $TMP/dtf.ini
+#fi
 
 echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMP/config.main
 echo "RUN_LEVEL=4" >> $TMP/config.main
