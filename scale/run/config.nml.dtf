@@ -14,12 +14,14 @@ comp1="scale"
 comp2="letkf"
 mode="transfer"
 num_sessions=2
+replay_io=1
 
 [FILE]
 filename="hist.d01%"
 comp1="scale"
 comp2="letkf"
 mode="transfer"
+replay_io=1
 
 
 #[FILE]
