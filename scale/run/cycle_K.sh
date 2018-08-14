@@ -225,11 +225,15 @@ echo "[\$(date +'%Y-%m-%d %H:%M:%S')] Start $STIME $ETIME" >&2
 mkdir log_1 log_2
 lfs setstripe -c 1 log_1
 lfs setstripe -c 1 log_2
-for i in \`seq 0 $((NNODES_ORIG*PPN-1))\`
-do
-     touch  log_1/scale-rm_ens.NOUT_${STIME}.${i}
-     touch  log_2/letkf.NOUT_${STIME}.${i}
-done
+
+for i in \`seq 0 $((NNODES_ORIG*PPN-1))\`; do echo log_1/scale-rm_ens.NOUT_${STIME}.\${i} ; done | xargs -n 200 -P 8 touch
+for i in \`seq 0 $((NNODES_ORIG*PPN-1))\`; do echo log_2/letkf.NOUT_${STIME}.\${i} ; done | xargs -n 200 -P 8 touch
+
+#for i in \`seq 0 $((NNODES_ORIG*PPN-1))\`
+#do
+#     touch  log_1/scale-rm_ens.NOUT_${STIME}.${i}
+#     touch  log_2/letkf.NOUT_${STIME}.${i}
+#done
 
 
 mpiexec -n $((NNODES_ORIG*PPN)) -vcoordfile ${TMPROOT}/node/set1.proc -of-proc log_1/scale-rm_ens.NOUT_${STIME} ./scale-rm_ens scale-rm_ens_${STIME}.conf &
