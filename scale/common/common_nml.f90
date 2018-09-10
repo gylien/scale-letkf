@@ -269,6 +269,7 @@ MODULE common_nml
   !---PARAM_LETKF_H08
   character(filelenmax) :: H08_RTTOV_COEF_PATH = '.'
   character(filelenmax) :: H08_VBC_PATH = '.'
+  logical :: H08_FORMAT_NC = .false.
   logical :: H08_OBS_STD = .true.
   logical :: H08_OBS_4D = .false.
   integer :: H08_OBS_RECL = 4 + NIRB_HIM8 ! obstype, obsid, lon, lat, + dat(NIRB_HIM8)
@@ -287,7 +288,7 @@ MODULE common_nml
                                             ! false: relax the original (model)
                                             ! profiles above [H08_RTTOV_RLX_HGT] m back to the climatological profile 
   logical :: H08_VBC_USE = .false. ! Turn on adaptive bias correction for Him8?
-  integer :: H08_RTTOV_KADD = 0
+  integer :: H08_RTTOV_KADD = 5
   real(r_size) :: H08_RTTOV_RLX_HGT = 20.0d3 ! (m) Lowest hight for relaxing profiles to climatology
   integer :: H08_RTTOV_CFRAC =  1 ! cloud fraction diagnosis 
                                   ! 0: using H08_RTTOV_CFRAC_CNST following Honda et al. (2017a,b)
@@ -329,6 +330,11 @@ MODULE common_nml
                         !! ==0: NOT assimilate (rejected by QC in trans_XtoY_H08)
                         !! It is better to reject B11(ch=5) & B12(ch=6) obs because these bands are 
                         !! sensitive to chemicals.
+ 
+  ! How to prepare Himawari-8 obs using that "superobs"ed into the model grid
+  integer :: H08_OBS_METHOD = 1 ! simple thinning
+  integer :: H08_OBS_THIN_LEV = 1 ! thinning level (1: no thinning)
+  logical :: USE_HIM8 = .false. ! will be overwritten from obsope_tools.f90
 
   !--- PARAM_OBS_ERROR
   real(r_size) :: OBSERR_U = 1.0d0
@@ -921,6 +927,7 @@ subroutine read_nml_letkf_h08
   integer :: ierr
 
   namelist /PARAM_LETKF_H08/ &
+    H08_FORMAT_NC, &
     H08_NOWDATE, &
     H08_REJECT_LAND, &
     H08_OBS_STD, &
@@ -951,7 +958,9 @@ subroutine read_nml_letkf_h08
     H08_CLDERR_CLOUD, &
     H08_RTTOV_COEF_PATH, &
     H08_VBC_PATH,&
-    H08_VBC_USE
+    H08_VBC_USE,&
+    H08_OBS_METHOD,&
+    H08_OBS_THIN_LEV
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_H08,iostat=ierr)

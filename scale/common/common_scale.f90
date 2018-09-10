@@ -56,11 +56,7 @@ MODULE common_scale
   !--- 3D, 2D diagnostic variables (in SCALE history files)
   ! 
   INTEGER,PARAMETER :: nv3dd=13
-#ifdef H08
-  INTEGER,PARAMETER :: nv2dd=9  ! H08
-#else
-  INTEGER,PARAMETER :: nv2dd=7
-#endif
+  INTEGER,PARAMETER :: nv2dd=9 ! Him8
   INTEGER,PARAMETER :: iv3dd_u=1
   INTEGER,PARAMETER :: iv3dd_v=2
   INTEGER,PARAMETER :: iv3dd_w=3
@@ -81,21 +77,14 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv2dd_v10m=5
   INTEGER,PARAMETER :: iv2dd_t2m=6
   INTEGER,PARAMETER :: iv2dd_q2m=7
-#ifdef H08
-  INTEGER,PARAMETER :: iv2dd_lsmask=8 ! H08
-  INTEGER,PARAMETER :: iv2dd_skint=9 ! H08
-#endif
+  INTEGER,PARAMETER :: iv2dd_lsmask=8 ! Him8
+  INTEGER,PARAMETER :: iv2dd_skint=9 ! Him8
   CHARACTER(vname_max),PARAMETER :: v3dd_name(nv3dd) = &
      (/'U', 'V', 'W', 'T', 'PRES', &
        'QV', 'QC', 'QR', 'QI', 'QS', 'QG', 'RH', 'height'/)
-#ifdef H08
-  CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &       ! H08
-     (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2', & ! H08
-       'lsmask', 'SFC_TEMP'/)                                  ! H08
-#else
-  CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &
-     (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2'/)
-#endif
+  CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &       ! Him8
+     (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2', & ! Him8
+       'lsmask', 'SFC_TEMP'/)                                  ! Him8
 
   ! 
   !--- Variables for model coordinates
@@ -1884,6 +1873,7 @@ function ch2BB_Him8(ch)
   endif
 
 end function ch2BB_Him8
+
 #endif
 
 !===============================================================================

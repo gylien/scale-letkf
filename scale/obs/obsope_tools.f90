@@ -80,34 +80,37 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   character(len=4) :: nstr
   character(len=timer_name_width) :: timer_str
 
-#ifdef H08
 ! -- for Himawari-8 obs --
   integer :: nallprof ! Maximum number of Him8 profiles required for RTTOV
-  real(r_size), allocatable :: ri_H08(:),rj_H08(:)
-  real(r_size), allocatable :: lon_H08(:),lat_H08(:)
-  integer, allocatable :: nnB07(:) ! index of Him8 band 7
-  integer :: nprof ! num of Him8 profile
-  real(r_size), allocatable :: yobs_H08(:,:),plev_obs_H08(:,:)
-  real(r_size), allocatable :: yobs_H08_clr(:,:)
-  integer, allocatable :: qc_H08(:,:)
-  real(r_size), allocatable :: zangle_H08(:)
+!  real(r_size), allocatable :: yobs_H08(:,:,:),plev_obs_H08(:,:,:)
+!  real(r_size), allocatable :: yobs_H08_clr(:,:,:)
+!  integer, allocatable :: qc_H08(:,:,:)
+!  real(r_size), allocatable :: zangle_H08(:,:)
+  real(r_size) :: yobs_H08(nlon,nlat,NIRB_HIM8),plev_obs_H08(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: yobs_H08_clr(nlon,nlat,NIRB_HIM8)
+  integer :: qc_H08(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: zangle_H08(nlon,nlat)
   integer :: ch
+  integer :: nn_Him8, lnobs
+  real(r_size),allocatable :: obsdat_Him8(:)
+  integer :: i8, j8, ch8
 
-! -- Rejecting Him8 obs over the buffer regions --
-!
-! bris: "ri" at the wetern end of the domain excluding buffer regions
-! brie: "ri" at the eastern end of the domain excluding buffer regions
-! bris: "rj" at the southern end of the domain excluding buffer regions
-! bris: "rj" at the northern end of the domain excluding buffer regions
-!
-! e.g.,   ri:    ...bris...........brie...
-!             buffer |  NOT buffer  | buffer
-!
 
-  REAL(r_size) :: bris, brie
-  REAL(r_size) :: brjs, brje
+#ifdef TCV
+! -- for TC vital assimilation --
+! bTC: background TC in each subdomain
+! bTC(1,:) : tcx (m), bTC(2,:): tcy (m), bTC(3,:): mslp (Pa)
+  real(r_size),allocatable :: bTC(:,:)
+  real(r_size) :: bTC_mslp
 
+! Multiple TCs are not considered (04/14/2017)
+  real(r_size) :: TC_rij(2) = -1.0d0
+  integer :: bTC_rank_d ! the process where the background TC is located.
+  integer :: obs_nn_TCP ! TCP
 #endif
+
+!-------------------------------------------------------------------------------
+
 
 #ifdef TCV
 ! -- for TC vital assimilation --
@@ -125,13 +128,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !-------------------------------------------------------------------------------
 
   call mpi_timer('', 2)
-
-#ifdef H08
-  bris = real(BUFFER_DX/DX,r_size) + real(IHALO,r_size)
-  brjs = real(BUFFER_DY/DY,r_size) + real(JHALO,r_size)
-  brie = (real(nlong+2*IHALO,r_size) - bris)
-  brje = (real(nlatg+2*JHALO,r_size) - brjs)
-#endif
 
 !-------------------------------------------------------------------------------
 ! First scan of all observation data: Compute their horizontal location and time
@@ -161,6 +157,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   ! (locations in model grids and the subdomains they belong to)
   !-----------------------------------------------------------------------------
 
+  USE_HIM8 = .false. ! initialize
+
   do iof = 1, OBS_IN_NUM
     if (obs(iof)%nobs > 0) then ! Process basic obsevration information for all observations since this information is not saved in obsda files
                                 ! when using separate observation operators; ignore the 'OBSDA_RUN' setting for this section
@@ -178,6 +176,12 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       end do
 
       obrank_bufs(:) = -1
+
+      if((OBS_IN_FORMAT(iof) == obsfmt_h08 ) .and. (.not. USE_HIM8))then
+        ! Himawari-8 radiance obs
+
+        USE_HIM8 = .true.
+      endif
 
 !$OMP PARALLEL DO PRIVATE(ibufs,n) SCHEDULE(STATIC)
       do ibufs = 1, cntr(myrank_a+1)
@@ -447,21 +451,16 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
         obs_nn_TCP = -1
 #endif
 
-#ifdef H08
-        ! Himawari-8 DA cannot use OpenMP to construct a set of input arrays for RTM
+        ! Him8 observation: Apply radiative transfer model (RTTOV) 
+        if (USE_HIM8) then
+          call Trans_XtoY_H08_allg(v3dg,v2dg,yobs_H08,yobs_H08_clr,&
+                                   plev_obs_H08,qc_H08,zangle_H08)
+        endif
 
-        nallprof = max(int((n2 - n1 + 1) / NIRB_HIM8), NIRB_HIM8)
-        allocate(nnB07(nallprof))
-        allocate(ri_H08(nallprof))
-        allocate(rj_H08(nallprof))
-        allocate(lon_H08(nallprof))
-        allocate(lat_H08(nallprof))
+  
+        !call gHim82obs_local(myrank_d,yobs_H08,obsdat_Him8,lnobs)
 
-        nprof = 0
-
-#else
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC,5) PRIVATE(nn,n,iof,ril,rjl,rk,rkz)
-#endif
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC,5) PRIVATE(nn,n,iof,ril,rjl,rk,rkz,i8,j8,ch8) 
         do nn = n1, n2
           iof = obsda%set(nn)
           n = obsda%idx(nn)
@@ -512,121 +511,38 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
               !end if
               !!!!!!
             end if
-#ifdef H08
           !=====================================================================
           case (obsfmt_h08)
           !---------------------------------------------------------------------
+            i8 = nint(ril-IHALO)
+            j8 = nint(rjl-JHALO)
+            ch8 = int(obs(iof)%lev(n))
+            obsda%val(nn) = yobs_H08(i8,j8,ch8-6)
+            obsda%qc(nn) = qc_H08(i8,j8,ch8)
+            obsda%pred1(nn) = zangle_H08(i8,j8)  ! predictor (1)
+            obsda%pred2(nn) = yobs_H08(i8,j8,ch8) ! predictor (2)
 
-            ! Note: The following Himawari-8 section cannot be executed with OpenMP
+            obsda%val2(nn) = (abs(yobs_H08(i8,j8,ch8) - yobs_H08_clr(i8,j8,ch8) )  &
+                              + abs(obs(iof)%dat(n) - yobs_H08_clr(i8,j8,ch8)) ) * 0.5d0
             !
-
-            ! Reject Him8 obs over the buffre regions
-            if ((obs(iof)%ri(n) <= bris) .or. (obs(iof)%ri(n) >= brie) .or. &
-                (obs(iof)%rj(n) <= brjs) .or. (obs(iof)%rj(n) >= brje)) then
-               obsda%qc(nn) = iqc_obs_bad
-               cycle
+            ! Simple bias correction depending on the sky condition
+            ! (diagnosed by CA)
+            if(H08_BIAS_SIMPLE)then
+              if((obsda%val2(nn) > H08_CA_THRES) .and. ( .not. H08_BIAS_SIMPLE_CLR) )then
+                obsda%val(nn) = obsda%val(nn) - H08_BIAS_CLOUD(ch8-6)
+              else
+                obsda%val(nn) = obsda%val(nn) - H08_BIAS_CLEAR(ch8-6)
+              endif
             endif
 
-
-            ! Detect NaN in the original Himawari-8 observation
-            ! This can be the case when we use a regional scan (e.g., near Japan every 2.5 min)
-            if (obs(iof)%dat(n) /= obs(iof)%dat(n)) then
-              obsda%qc(nn) = iqc_obs_bad
-              cycle
-            endif
-
-            ! Prepare a set of input "profiles" for RTM
-            if (nint(obs(iof)%lev(n)) == 7) then
-              nprof = nprof + 1
-              nnB07(nprof) = nn
-
-              ri_H08(nprof) = ril
-              rj_H08(nprof) = rjl
-              lon_H08(nprof) = obs(iof)%lon(n)
-              lat_H08(nprof) = obs(iof)%lat(n)
-            endif
-#endif
           !=====================================================================
           end select
 
-
         end do ! [ nn = n1, n2 ]
-#ifndef H08
-!$OMP END PARALLEL DO
-#endif
-
-
-#ifdef H08
-        ! Him8 observation: Apply radiative transfer model (RTTOV) 
-        !             Note: OpenMP will be used within SCALE_H08_fwd
-        !                    
-
-        if(nprof >=1) then
-          allocate(yobs_H08(NIRB_HIM8,nprof))
-          allocate(yobs_H08_clr(NIRB_HIM8,nprof))
-          allocate(plev_obs_H08(NIRB_HIM8,nprof))
-          allocate(qc_H08(NIRB_HIM8,nprof))
-          allocate(zangle_H08(nprof))
-
-          call Trans_XtoY_H08(nprof,ri_H08(1:nprof),rj_H08(1:nprof),&
-                              lon_H08(1:nprof),lat_H08(1:nprof),v3dg,v2dg,&
-                              yobs_H08,yobs_H08_clr,&
-                              plev_obs_H08,qc_H08,&
-                              zangle_H08)
-
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,ch,iof,n)
-          do nn = 1, nprof
-            do ch = 1, NIRB_HIM8
-              iof = obsda%set(nnB07(nn)+ch-1)
-              n = obsda%idx(nnB07(nn)+ch-1)
-
-              if (obs(iof)%elm(n) /= id_H08IR_obs) cycle
-
-              obsda%val(nnB07(nn)+ch-1) = yobs_H08(ch,nn) 
-              obsda%qc(nnB07(nn)+ch-1) = qc_H08(ch,nn) 
-              obsda%lev(nnB07(nn)+ch-1) = plev_obs_H08(ch,nn) 
-              obsda%pred1(nnB07(nn)+ch-1) = zangle_H08(nn)  ! predictor (1)
-              obsda%pred2(nnB07(nn)+ch-1) = yobs_H08(ch,nn)  ! predictor (2)
-
-              !print *,"DEBUG Him8",yobs_H08(ch,nn),obs(iof)%dat(n),ch+6
-
-              if(.not. H08_AOEI)then ! get CA (Okamoto 2017QJRMS)
-                ! Get CA (Okamoto et al. 2014)
-                !
-                iof = obsda%set(nnB07(nn)+ch-1)
-                n = obsda%idx(nnB07(nn)+ch-1)
-                 
-                obsda%val2(nnB07(nn)+ch-1) = (abs(yobs_H08(ch,nn) - yobs_H08_clr(ch,nn)) &
-                                              + abs(obs(iof)%dat(n) - yobs_H08_clr(ch,nn))) * 0.5d0
-                !
-                ! Simple bias correction depending on the sky condition
-                ! (diagnosed by CA)
-                if(H08_BIAS_SIMPLE)then
-                  if((obsda%val2(nnB07(nn)+ch-1) > H08_CA_THRES) .and. ( .not. H08_BIAS_SIMPLE_CLR) )then
-                    obsda%val(nnB07(nn)+ch-1) = obsda%val(nnB07(nn)+ch-1) - H08_BIAS_CLOUD(ch)
-                  else
-                    obsda%val(nnB07(nn)+ch-1) = obsda%val(nnB07(nn)+ch-1) - H08_BIAS_CLEAR(ch)
-                  endif
-                endif
-              endif
-            enddo ! [ch = 1, NIRB_HIM8]
-          enddo ! [nn = 1, nprof]
 !$OMP END PARALLEL DO
 
-          deallocate(yobs_H08, plev_obs_H08)
-          deallocate(yobs_H08_clr)
-          deallocate(qc_H08)
-          deallocate(zangle_H08)
-
-        endif ! [nprof >= 1]
-        if(allocated(nnB07))deallocate(nnB07)
-        if(allocated(ri_H08))deallocate(ri_H08)
-        if(allocated(rj_H08))deallocate(rj_H08)
-        if(allocated(lon_H08))deallocate(lon_H08)
-        if(allocated(lat_H08))deallocate(lat_H08)
 
 !    -- End of Him8 DA part --
-#endif
 
 
 !   -- TC vital DA -- 

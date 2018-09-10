@@ -17,24 +17,23 @@ contains
 subroutine SCALE_RTTOV_fwd(nchannels,&
                            nlevs,&
                            nprof,&
-                           tmp_p,&
-                           tmp_t,&
-                           tmp_qv,&
-                           tmp_qc,&
-                           tmp_qice,&
-                           tmp_t2m,&
-                           tmp_q2m,&
-                           tmp_p2m,&
-                           tmp_u2m,&
-                           tmp_v2m,&
+                           prs,&
+                           tk,&
+                           qv,&
+                           qc,&
+                           qice,&
+                           tk2m,&
+                           q2m,&
+                           prs2m,&
+                           u2m,&
+                           v2m,&
 !                     & tmp_soze, tmp_soaz, tmp_saze, tmp_saaz,       &
-                           tmp_elev,&
-                           tmp_lon,&
-                           tmp_lat,&
-                           tmp_land,&
-                           tmp_zenith,&
-                           kidx_rlx, &
-                           kadd_org, &
+                           elev,&
+                           lon,&
+                           lat,&
+                           land,&
+                           zenith,&
+!                           kidx_rlx, &
                            RD_presh, &
                            RD_temph, &
                            btall_out,& 
@@ -151,25 +150,25 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
   integer(kind=jpim):: icecld_ish=4, icecld_idg=0  !improved Baran, new in rttov11.2 recommended in  Rttov11
 ! ###
 
-  Real(r_size),INTENT(IN) :: tmp_p(nlevs, nprof)
-  Real(r_size),INTENT(IN) :: tmp_t(nlevs, nprof)
-  Real(r_size),INTENT(IN) :: tmp_qv(nlevs, nprof)
-  Real(r_size),INTENT(IN) :: tmp_qc(nlevs, nprof)
-  Real(r_size),INTENT(IN) :: tmp_qice(nlevs, nprof)
-  Real(r_size),INTENT(IN) :: tmp_t2m(nprof)
-  Real(r_size),INTENT(IN) :: tmp_q2m(nprof)
-  Real(r_size),INTENT(IN) :: tmp_p2m(nprof)
-  Real(r_size),INTENT(IN) :: tmp_u2m(nprof)
-  Real(r_size),INTENT(IN) :: tmp_v2m(nprof)
+  Real(r_size),INTENT(IN) :: prs(nlevs, nprof)
+  Real(r_size),INTENT(IN) :: tk(nlevs, nprof)
+  Real(r_size),INTENT(IN) :: qv(nlevs, nprof)
+  Real(r_size),INTENT(IN) :: qc(nlevs, nprof)
+  Real(r_size),INTENT(IN) :: qice(nlevs, nprof)
+  Real(r_size),INTENT(IN) :: tk2m(nprof)
+  Real(r_size),INTENT(IN) :: q2m(nprof)
+  Real(r_size),INTENT(IN) :: prs2m(nprof)
+  Real(r_size),INTENT(IN) :: u2m(nprof)
+  Real(r_size),INTENT(IN) :: v2m(nprof)
 !  Real(r_size),INTENT(IN) :: tmp_soze(nprof)
 !  Real(r_size),INTENT(IN) :: tmp_soaz(nprof)
 !  Real(r_size),INTENT(IN) :: tmp_saze(nprof)
 !  Real(r_size),INTENT(IN) :: tmp_saaz(nprof)
-  Real(r_size),INTENT(IN) :: tmp_elev(nprof)
-  Real(r_size),INTENT(IN) :: tmp_lon(nprof)
-  Real(r_size),INTENT(IN) :: tmp_lat(nprof)
-  Real(r_size),INTENT(IN) :: tmp_land(nprof)
-  Real(r_size),INTENT(IN) :: tmp_zenith(nprof)
+  Real(r_size),INTENT(IN) :: elev(nprof)
+  Real(r_size),INTENT(IN) :: lon(nprof)
+  Real(r_size),INTENT(IN) :: lat(nprof)
+  Real(r_size),INTENT(IN) :: land(nprof)
+  Real(r_size),INTENT(IN) :: zenith(nprof)
 
 
   Real(Kind=jprb) :: kgkg2gm3 ! convert parameter [kg/kg] => [gm^-3]
@@ -237,17 +236,15 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
 
   real(kind=jprb) :: repsb 
 
-  integer :: rdk, orgk
+  integer :: orgk
 
-  integer(kind=jpim),intent(in) :: kidx_rlx, kadd_org
-  real(kind=r_size),intent(in)  :: RD_presh(nlevs+kadd_org+1)
-  real(kind=r_size),intent(in)  :: RD_temph(nlevs+kadd_org+1)
-  integer(kind=jpim) :: kadd
-  real(kind=jprb) :: rat, rdz, dz, tmp_dif
+!  integer(kind=jpim),intent(in) :: kidx_rlx
+  real(kind=r_size),intent(in)  :: RD_presh(nlevs+H08_RTTOV_KADD+1)
+  real(kind=r_size),intent(in)  :: RD_temph(nlevs+H08_RTTOV_KADD+1)
+  real(kind=jprb) :: tmp_dif
   
   if(debug) write(6,'(1x,a)')"hello from RTTOV"
 
-  kadd = min(kadd_org,H08_RTTOV_KADD)
 
 ! -- set thermodynamic constants
 
@@ -274,8 +271,8 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
   do ich = 1, nchannels
     input_chan(ich)=ich
   end do
-  input_ems(:)=0.0
-  input_brdf(:)=0.0
+  input_ems(:) = 0.0_jprb
+  input_brdf(:) = 0.0_jprb
 
   if(debug) write(6,'(1x,a)')"hello from RTTOV2"
 
@@ -289,7 +286,7 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
 
   opts % rt_all % addrefrac         = .FALSE.  ! Include refraction in path calc
   opts % rt_ir % addclouds          = .TRUE. ! Include cloud effects
-  opts % rt_ir % user_cld_opt_param   = .FALSE. ! include cloud effects
+  opts % rt_ir % user_cld_opt_param   = .FALSE. 
   opts % rt_ir % addaerosl          = .FALSE. ! Don't include aerosol effects
 
   opts % rt_ir % ozone_data         = .FALSE.  ! We have an ozone profile
@@ -324,9 +321,9 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
   ENDIF
 
   ! Ensure input number of channels is not higher than number stored in coefficient file
-  IF (nchannels > coefs % coef % fmv_chn) THEN
+!  IF (nchannels > coefs % coef % fmv_chn) THEN
 !    nchannels = coefs % coef % fmv_chn
-  ENDIF
+!  ENDIF
 
 
   ! Ensure the options and coefficients are consistent
@@ -384,7 +381,7 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
       & errorstatus,             &
       & nprof,                   &
       & profiles,                &
-      & nlevs+kadd,    &
+      & nlevs+H08_RTTOV_KADD,    &
       & opts,                    &
       & asw,                     &
       & coefs=coefs,             &
@@ -399,7 +396,7 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
       & errorstatus,    &
       & nchanprof,      &
       & radiance,       &
-      & nlevs+kadd-1_jpim, &
+      & nlevs+H08_RTTOV_KADD-1_jpim, &
       & asw)
   IF (errorstatus /= errorstatus_success) THEN
     WRITE(6,*) 'allocation error for radiance arrays'
@@ -410,7 +407,7 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
   CALL rttov_alloc_transmission( &
       & errorstatus,             &
       & transmission,            &
-      & nlevs+kadd-1_jpim,  &
+      & nlevs+H08_RTTOV_KADD-1_jpim,  &
       & nchanprof,               &
       & asw,                     &
       & init=.TRUE._jplm)
@@ -441,14 +438,14 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
   ! --------------------------------------------------------------------------
   if(debug) then
     WRITE(6,*) 'debug information'
-    WRITE(6,*) 'max p, max t',maxval(tmp_p),maxval(tmp_t)
-    WRITE(6,*) 'min p, min t',minval(tmp_p),minval(tmp_t)
-    WRITE(6,*) 'max p2, max t2',maxval(tmp_p2m),maxval(tmp_t2m)
-    WRITE(6,*) 'min p2, min t2',minval(tmp_p2m),minval(tmp_t2m)
+    WRITE(6,*) 'max p, max t',maxval(prs),maxval(tk)
+    WRITE(6,*) 'min p, min t',minval(prs),minval(tk)
+    WRITE(6,*) 'max p2, max t2',maxval(prs2m),maxval(tk2m)
+    WRITE(6,*) 'min p2, min t2',minval(prs2m),minval(tk2m)
 
-    WRITE(6,*) 'max qv, min qv',maxval(tmp_qv),minval(tmp_qv)
+    WRITE(6,*) 'max qv, min qv',maxval(qv),minval(qv)
     WRITE(6,*) '-- t prof --'
-    WRITE(6,*) 'size t:',size(tmp_t(:,1)),size(tmp_p(:,1))
+    WRITE(6,*) 'size t:',size(tk(:,1)),size(prs(:,1))
 
   endif
 
@@ -457,81 +454,47 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
   if(debug) WRITE(6,*) 'START SUBSTITUTE PROFILE'
 
   ! Note: Profiles are from top to surface.
-  rdz = 1.0d3 / (GRID_FZ(nlevs+KHALO) - GRID_FZ(nlevs+KHALO-kidx_rlx))
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(iprof,ilev,rat,rdk,orgk,ptmp,tktmp,qvtmp,tv,kgkg2gm3,icec1,icec2,liqc1,liqc2,dz,tmp_dif)
+!### $OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(iprof,ilev,rat,rdk,orgk,ptmp,tktmp,qvtmp,tv,kgkg2gm3,icec1,icec2,liqc1,liqc2,dz,tmp_dif)
   DO iprof = 1, nprof ! iprof
 
     if(H08_RTTOV_PROF_SHIFT)then
-      tmp_dif = RD_temph(kadd+1) - tmp_t(1,iprof)
+      tmp_dif = RD_temph(H08_RTTOV_KADD+1) - tk(1,iprof)
     else
-      tmp_dif = 0.0d0
+      tmp_dif = 0.0_jprb
     endif ! H08_RTTOV_PROF_SHIFT
+   
+    ! Above the model top (p < RD_presh(H08_RTTOV_KADD+1))
+    do ilev = 1, H08_RTTOV_KADD
+      profiles(iprof)%p(ilev) = real(RD_presh(ilev),kind=jprb) ! (hPa)
+      profiles(iprof)%t(ilev) = max(RD_temph(ilev) - tmp_dif,tmin * 1.01_jprb) ! (K)
 
-    do ilev = 1, kadd
-      !rdk = (kadd_org + 1 + ilev) - kadd
-      rdk = (kadd_org + ilev) - kadd
-      if(debug .and. iprof == 1) print *,"ilev,rdk",ilev,rdk
-      profiles(iprof)%p(ilev) = RD_presh(rdk) ! (hPa)
-      profiles(iprof)%t(ilev) = max(RD_temph(rdk) - tmp_dif,tmin + tmin * 0.01_jprb) ! (K)
-
-      profiles(iprof)%q(ilev) = qmin + qmin * 0.01_jprb
+      profiles(iprof)%q(ilev) = qmin * 1.01_jprb
 
     enddo
 
-    ! model grid values (> about [H08_RTTOV_RLX_HGT] m) are relaxed to climatology 
-    do ilev = kadd + 1, kadd + kidx_rlx
-      orgk = ilev - kadd ! k index for original profile
-      rdk = (kadd_org + orgk) ! k index for rd (climatological) profile
+    do ilev = H08_RTTOV_KADD + 1, H08_RTTOV_KADD + nlevs
 
-      ! distance from the model top [GRID_FZ(nlevs+KHALO)]
-      dz = abs(GRID_FZ(nlevs+KHALO) - GRID_FZ(nlevs+KHALO-orgk+1)) * 1.d-3 ! (km)
+      profiles(iprof)%p(ilev) = real(prs(ilev-H08_RTTOV_KADD,iprof),kind=jprb) * 0.01_jprb ! (hPa)
+      profiles(iprof)%t(ilev) = real(tk(ilev-H08_RTTOV_KADD,iprof),kind=jprb) ! (K) 
 
-      if(kadd == 0 .or. H08_RTTOV_PROF_SHIFT)then
-        rat = 1.0d0
-      else
-        rat = dz * rdz
-      endif
-
-      !if(debug .and. iprof == 1) print *,"CLIM:",tmp_p(orgk,iprof)*1.d-2,&
-      !                                           tmp_t(orgk,iprof),&
-      !                                           RD_presh(rdk),&
-      !                                           RD_temph(rdk)
-
-      profiles(iprof)%p(ilev) = real(tmp_p(orgk,iprof),kind=jprb) * 0.01_jprb ! (hPa)
-      profiles(iprof)%t(ilev) = max(rat * real(tmp_t(orgk,iprof),kind=jprb) &
-                                    + (1.0d0 - rat) * RD_temph(rdk), &
-                                    tmin + tmin * 0.01_jprb) ! (K)
-
-      profiles(iprof)%q(ilev) = qmin + qmin * 0.01_jprb
+      profiles(iprof)%q(ilev) = max(qv(ilev-H08_RTTOV_KADD,iprof) * q_mixratio_to_ppmv, qmin * 1.01_jprb) ! (ppmv)
 
     enddo
 
-    do ilev = kadd + kidx_rlx + 1, nlevs + kadd
-      orgk = ilev - kadd ! k index for original profile
-      rdk = (kadd_org + orgk) ! k index for rd (climatological) profile
-
-      profiles(iprof)%p(ilev) = real(tmp_p(orgk,iprof),kind=jprb) * 0.01_jprb  ! (hpa)
-      profiles(iprof)%t(ilev) = max(real(tmp_t(orgk,iprof),kind=jprb), &
-                                    tmin + tmin * 0.01_jprb) ! (K)
-      profiles(iprof)%q(ilev) = max(real(tmp_qv(orgk,iprof),kind=jprb) * q_mixratio_to_ppmv, &
-                                    qmin + qmin * 0.01_jprb) ! (ppmv)
-
-    enddo
-
-    profiles(iprof)%s2m%t = real(tmp_t2m(iprof),kind=jprb)
-    profiles(iprof)%s2m%q = real(tmp_q2m(iprof),kind=jprb) * q_mixratio_to_ppmv ! (ppmv)
+    profiles(iprof)%s2m%t = real(tk2m(iprof),kind=jprb)
+    profiles(iprof)%s2m%q = real(q2m(iprof),kind=jprb) * q_mixratio_to_ppmv ! (ppmv)
 
     if(profiles(iprof)%s2m%t < tmin) profiles(iprof)%s2m%t = tmin + tmin * 0.01_jprb
     if(profiles(iprof)%s2m%q < qmin) profiles(iprof)%s2m%q = qmin + qmin * 0.01_jprb
 
 
-    profiles(iprof)%s2m%p = real(tmp_p2m(iprof),kind=jprb) * 0.01_jprb ! (hPa)
-    profiles(iprof)%s2m%u = real(tmp_u2m(iprof),kind=jprb)
-    profiles(iprof)%s2m%v = real(tmp_v2m(iprof),kind=jprb)
+    profiles(iprof)%s2m%p = real(prs2m(iprof),kind=jprb) * 0.01_jprb ! (hPa)
+    profiles(iprof)%s2m%u = real(u2m(iprof),kind=jprb)
+    profiles(iprof)%s2m%v = real(v2m(iprof),kind=jprb)
     profiles(iprof)%s2m%wfetc = 100000.0_jprb
 
-    profiles(iprof) % skin % t = max(real(tmp_t2m(iprof),kind=jprb), tmin + tmin * 0.01_jprb)
+    profiles(iprof) % skin % t = max(real(tk2m(iprof),kind=jprb), tmin + tmin * 0.01_jprb)
 
 !
 !   fastem is used for MW
@@ -542,19 +505,18 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
 !    profiles(iprof) % skin % fastem(5) = 0.3 ! comment out (11/18/2015)
 !
 
-    profiles(iprof) % skin % surftype = int(tmp_land(iprof))
+    profiles(iprof) % skin % surftype = int(land(iprof))
     profiles(iprof) % skin % watertype = 1 ! tentative (11/18/2015)
 
-    profiles(iprof) % elevation = real(tmp_elev(iprof),kind=jprb) * 0.001_jprb ! (km)
-    profiles(iprof) % latitude  = real(tmp_lat(iprof),kind=jprb)
-    profiles(iprof) % longitude = real(tmp_lon(iprof),kind=jprb)
+    profiles(iprof) % elevation = real(elev(iprof),kind=jprb) * 0.001_jprb ! (km)
+    profiles(iprof) % latitude  = real(lat(iprof),kind=jprb)
+    profiles(iprof) % longitude = real(lon(iprof),kind=jprb)
 
 
-    profiles(iprof)% zenangle = real(tmp_zenith(iprof),kind=jprb) ! (11/18/2015)
+    profiles(iprof)% zenangle = real(zenith(iprof),kind=jprb) ! (11/18/2015)
     if(mod(iprof,1000) == 0 .and. debug)write(6,'(a,f15.10)'),'zenangle ',profiles(iprof)% zenangle
-    if(mod(iprof,1000) == 0 .and. debug)write(6,'(a,2f10.5)'),' ',tmp_lon(iprof),tmp_lat(iprof)
+    if(mod(iprof,1000) == 0 .and. debug)write(6,'(a,2f10.5)'),' ',lon(iprof),lat(iprof)
 
-!    profiles(iprof)% zenangle = 30.0_jprb ! tentative
 !    profiles(iprof)%azangle=0.0_jprb     ! Not required for [opts % rt_ir % addsolar = .FALSE.] 
 !    profiles(iprof)%sunzenangle=0.0_jprb ! Not required for [opts % rt_ir % addsolar = .FALSE.] 
 !    profiles(iprof)%sunazangle=0.0_jprb  ! Not required for [opts % rt_ir % addsolar = .FALSE.]
@@ -582,35 +544,35 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
  
       ctop_out(iprof) = -1.0d0 
 
-      do ilev = kadd + 1, kadd + nlevs - 1
-        orgk = ilev - kadd ! k index for original profile
+      do ilev = H08_RTTOV_KADD + 1, H08_RTTOV_KADD + nlevs - 1
+        orgk = ilev - H08_RTTOV_KADD ! k index for original profile
 
         ! ilev
-        tv = real(tmp_t(orgk,iprof) * (1.0d0+tmp_qv(orgk,iprof)) * repsb &
-                   / (1.0d0 + tmp_qv(orgk,iprof)), kind=jprb)
+        tv = real(tk(orgk,iprof) * (1.0d0+qv(orgk,iprof)) * repsb &
+                   / (1.0d0 + qv(orgk,iprof)), kind=jprb)
 
-        kgkg2gm3 = real(tmp_p(orgk,iprof),kind=jprb) / (Rdry * tv) * 1000.0_jprb 
+        kgkg2gm3 = real(prs(orgk,iprof),kind=jprb) / (Rdry * tv) * 1000.0_jprb 
 
-        liqc1 = real(max(tmp_qc(orgk,iprof),0.0_r_size),kind=jprb) * kgkg2gm3
-        icec1 = real(max(tmp_qice(orgk,iprof),0.0_r_size),kind=jprb) * kgkg2gm3
+        liqc1 = real(max(qc(orgk,iprof),0.0_r_size),kind=jprb) * kgkg2gm3
+        icec1 = real(max(qice(orgk,iprof),0.0_r_size),kind=jprb) * kgkg2gm3
 
         ! ilev + 1
-        tv = real(tmp_t(orgk+1,iprof) * (1.0d0+tmp_qv(orgk+1,iprof)) * repsb &
-                   / (1.0d0 + tmp_qv(orgk+1,iprof)), kind=jprb)
+        tv = real(tk(orgk+1,iprof) * (1.0d0+qv(orgk+1,iprof)) * repsb &
+                   / (1.0d0 + qv(orgk+1,iprof)), kind=jprb)
 
-        kgkg2gm3 = real(tmp_p(orgk+1,iprof),kind=jprb) / (Rdry * tv) * 1000.0_jprb 
+        kgkg2gm3 = real(prs(orgk+1,iprof),kind=jprb) / (Rdry * tv) * 1000.0_jprb 
 
-        liqc2 = real(max(tmp_qc(orgk+1,iprof),0.0_r_size),kind=jprb) * kgkg2gm3
-        icec2 = real(max(tmp_qice(orgk+1,iprof),0.0_r_size),kind=jprb) * kgkg2gm3
+        liqc2 = real(max(qc(orgk+1,iprof),0.0_r_size),kind=jprb) * kgkg2gm3
+        icec2 = real(max(qice(orgk+1,iprof),0.0_r_size),kind=jprb) * kgkg2gm3
 
         profiles(iprof) % cloud(2,ilev) = & !stratus maritime (default)
                    (liqc1 + liqc2) * 0.5_jprb
         profiles(iprof) % cloud(6,ilev) = & 
                    (icec1 + icec2) * 0.5_jprb
 
-        ptmp = (tmp_p(orgk+1,iprof) + tmp_p(orgk,iprof))*0.5_jprb    ! (Pa)
-        tktmp = (tmp_t(orgk+1,iprof) + tmp_t(orgk,iprof))*0.5_jprb ! (K)
-        qvtmp = max((tmp_qv(orgk+1,iprof) + tmp_qv(orgk,iprof)) * 0.5_jprb, 0.0_r_size) ! (kgkg-1)
+        ptmp = (prs(orgk+1,iprof) + prs(orgk,iprof))*0.5_jprb    ! (Pa)
+        tktmp = (tk(orgk+1,iprof) + tk(orgk,iprof))*0.5_jprb ! (K)
+        qvtmp = max((qv(orgk+1,iprof) + qv(orgk,iprof)) * 0.5_jprb, 0.0_r_size) ! (kgkg-1)
 
         !
         ! cloud fraction & cloud top diagnosis
@@ -647,21 +609,38 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
       end do ! ilev
     endif ! addclouds
 
-    if(debug .and. mod(iprof,200)==0)then
-      do ilev = 1, nlevs + kadd - 1
+    if(debug .and. mod(iprof,20)==0)then
+      do ilev = 1, nlevs + H08_RTTOV_KADD - 1
         write(6,'(a,i5,4f11.4)')"DEBUG PROF",ilev,profiles(iprof) % t(ilev),&
                                                   profiles(iprof) % q(ilev),&
                                                   profiles(iprof) % p(ilev),&
                                                   profiles(iprof) % cloud(6,ilev)
       end do ! ilev
+      print *,""
     endif
   enddo ! prof
-!OMP END PARALLEL DO
+!### OMP END PARALLEL DO
 
+
+!   do ilev = 1, H08_RTTOV_KADD + nlevs - 1
+!     print *,"DEBUG RD RTTOV",ilev,profiles(iprof) % p(ilev)
+!   enddo
 
   if(debug) write(6,*)"ch2",nprof,nlevs
 
   if(debug) WRITE(6,*) 'END SUBSTITUTE PROFILE'
+
+! DEBUG
+  print *,"proile 1 is debug"
+  profiles(1) % t(:) = RD_temph
+  profiles(1) % p(:) = RD_presh
+  profiles(1) % q(:) = qmin * 1.01_jprb
+  do ilev = 1, H08_RTTOV_KADD + nlevs
+    print *,ilev,profiles(1) % t(ilev), profiles(1) % p(ilev)," 1"
+  enddo
+  do ilev = 1, H08_RTTOV_KADD + nlevs
+    print *,ilev,profiles(2) % t(ilev), profiles(2) % p(ilev)," 2"
+  enddo
 
   ! --------------------------------------------------------------------------
   ! 6. Specify surface emissivity and reflectance
@@ -725,6 +704,9 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
     btall_out(1:nchannels,iprof) = real(radiance%bt(1+joff:nchannels+joff), kind = r_size)
     btclr_out(1:nchannels,iprof) = real(radiance%bt_clear(1+joff:nchannels+joff), kind=r_size)
 
+    if(debug .and. iprof<=2) print *,"DEBUG HIM8 SCALE_RTTOV:",btall_out(3,iprof),btclr_out(3,iprof),iprof
+    if(debug .and. mod(iprof,100)==0) print *,"DEBUG HIM8 SCALE_RTTOV:",btall_out(3,iprof),btclr_out(3,iprof)
+
     do ich = 1, nchannels
       rdp = 1.0d0 / (abs(profiles(iprof)%p(1) - profiles(iprof)%p(2)) * 1.0d2) ! Pa
       max_wgt = abs(transmission % tau_levels(1,joff+ich) & 
@@ -741,7 +723,7 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
       endif
 
       ! TOA to the ground
-      do ilev = 2, nlevs - 1 + kadd
+      do ilev = 2, nlevs - 1 + H08_RTTOV_KADD - 1
         rdp = 1.0d0 / (abs(profiles(iprof)%p(ilev) - profiles(iprof)%p(ilev+1)) * 1.0d2) ! Pa
         tmp_wgt = abs(transmission % tau_levels(ilev,joff+ich) &
                     - transmission % tau_levels(ilev+1,joff+ich)) * rdp
@@ -783,6 +765,7 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
   DEALLOCATE (reflectance, stat=alloc_status(7))
   DEALLOCATE (calcrefl,    stat=alloc_status(8))
 
+
   IF (ANY(alloc_status /= 0)) THEN
     WRITE(*,*) 'mem dellocation error'
   ENDIF
@@ -792,21 +775,21 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
   asw = 0 ! Switch for deallocation passed into RTTOV subroutines
 
   ! Deallocate radiance arrays
-  CALL rttov_alloc_rad(errorstatus, nchannels, radiance, nlevs-1_jpim+kadd, asw)
+  CALL rttov_alloc_rad(errorstatus, nchannels, radiance, nlevs-1_jpim+H08_RTTOV_KADD, asw)
   IF(errorstatus /= errorstatus_success) THEN
     WRITE(*,*) 'radiance deallocation error'
   ENDIF
 
   if(debug) write(6,'(a)') 'CHK101'
   ! Deallocate transmission arrays
-  CALL rttov_alloc_transmission(errorstatus, transmission, nlevs-1_jpim+kadd, nchannels, asw)
+  CALL rttov_alloc_transmission(errorstatus, transmission, nlevs-1_jpim+H08_RTTOV_KADD, nchannels, asw)
   IF (errorstatus /= errorstatus_success) THEN
     WRITE(*,*) 'transmission deallocation error'
   ENDIF
 
   if(debug) write(6,'(a)') 'CHK102'
   ! Deallocate profile arrays
-  CALL rttov_alloc_prof(errorstatus, nprof, profiles, nlevs+kadd, opts, asw)
+  CALL rttov_alloc_prof(errorstatus, nprof, profiles, nlevs+H08_RTTOV_KADD, opts, asw)
   if(debug) write(6,'(a)') 'CHK102.1'
   IF (errorstatus /= errorstatus_success .or. alloc_status(1) /= 0) THEN
     WRITE(*,*) 'profile deallocation error'

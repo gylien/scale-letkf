@@ -63,7 +63,7 @@ fi
 OBS_IN_NAME_LIST=
 for iobs in $(seq $OBSNUM); do
   if [ "${OBSNAME[$iobs]}" != '' ]; then
-    OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}.dat', "
+    OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}.${OBSFOOT[$iobs]}', "
   fi
 done
 
