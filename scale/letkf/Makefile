@@ -1,6 +1,6 @@
 include ../configure.user
 
-PROGS   = letkf
+PROGS   = letkf makeEns
 
 OBJS    = letkf_obs.o letkf_tools.o
 
@@ -39,6 +39,9 @@ all:	$(PROGS)
 letkf:	letkf.o $(OBJS) $(COMMON_DIR) $(OBS_DIR)
 	$(FC) $(FOPTS) $(FMCMODEL) -o letkf letkf.o \
 	$(COMMON_OBJS) $(OBS_OBJS) $(OBJS) $(LIBS)
+makeEns:	makeEns.o $(OBS) $(COMMON_DIR)
+	$(FC) $(FOPTS) $(FMCMODEL) -o makeEns makeEns.o \
+	$(COMMON_OBJS) $(OBJS) $(LIBS)
 
 letkf.o:	letkf.f90 $(OBJS) $(COMMON_DIR) $(OBS_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) -I$(OBS_DIR) $(INCS)
@@ -46,6 +49,8 @@ letkf.o:	letkf.f90 $(OBJS) $(COMMON_DIR) $(OBS_DIR)
 letkf_obs.o:	letkf_obs.f90 $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 letkf_tools.o:	letkf_tools.f90 letkf_obs.o $(COMMON_DIR)
+	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
+makeEns.o:	makeEns.f90 $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 
 $(COMMON_DIR):	FORCE

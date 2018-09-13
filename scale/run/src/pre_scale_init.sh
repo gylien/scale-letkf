@@ -72,81 +72,81 @@ if ((MKINIT == 1 || USE_INIT_FROM_BDY == 1)); then
   RESTART_OUTPUT='.true.'
 fi
 
-if ((BDY_FORMAT == 1)); then
-  BASENAME_ORG="${TMPSUBDIR}/bdydata"
-  FILETYPE_ORG='SCALE-RM'
-  USE_NESTING='.true.'
-  LATLON_CATALOGUE_FNAME="$BDYORG/latlon_domain_catalogue.txt"
-elif ((BDY_FORMAT == 2)); then
-  BASENAME_ORG="${TMPSUBDIR}/bdydata"
-  FILETYPE_ORG='WRF-ARW'
-  USE_NESTING='.false.'
-  LATLON_CATALOGUE_FNAME=
-elif ((BDY_FORMAT == 4)); then
-  BASENAME_ORG="${TMPSUBDIR}/gradsbdy.conf"
-  FILETYPE_ORG='GrADS'
-  USE_NESTING='.false.'
-  LATLON_CATALOGUE_FNAME=
-else
-  echo "[Error] $0: Unsupport boundary file types" >&2
-  exit 1
-fi
-
-NUMBER_OF_FILES=0
-for time_bdy in $BDY_TIME_LIST; do
-  NUMBER_OF_FILES=$((NUMBER_OF_FILES+1))
-done
-
-i=0
-for time_bdy in $BDY_TIME_LIST; do
-  if ((NUMBER_OF_FILES <= 1)); then
-    file_number=''
-  else
-    file_number="_$(printf %05d $i)"
-  fi
-  if ((BDY_ROTATING == 1)); then
-    bdyorg_path="${BDYORG}/${STIME}/${MEM_BDY}"
-  else
-    bdyorg_path="${BDYORG}/const/${MEM_BDY}"
-  fi
-  if ((BDY_FORMAT == 1)); then
-    if [ -s "${bdyorg_path}/${time_bdy}/history.pe000000.nc" ]; then
-      for ifile in $(cd ${bdyorg_path}/${time_bdy} ; ls history*.nc 2> /dev/null); do
-        ln -fs "${bdyorg_path}/${time_bdy}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
-      done
-    else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${time_bdy}/history.*.nc'."
-      exit 1
-    fi
-  elif ((BDY_FORMAT == 2)); then
-    if [ -s "${bdyorg_path}/wrfout_${time_bdy}" ]; then
-      ln -fs "${bdyorg_path}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
-    else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/wrfout_${time_bdy}'."
-      exit 1
-    fi
-  elif ((BDY_FORMAT == 4)); then
-    if [ -s "${bdyorg_path}/atm_${time_bdy}.grd" ]; then
-      ln -fs "${bdyorg_path}/atm_${time_bdy}.grd" $TMPDIR/bdyatm${file_number}.grd
-    else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/atm_${time_bdy}.grd'."
-      exit 1
-    fi
-    if [ -s "${bdyorg_path}/sfc_${time_bdy}.grd" ]; then
-      ln -fs "${bdyorg_path}/sfc_${time_bdy}.grd" $TMPDIR/bdysfc${file_number}.grd
-    else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/sfc_${time_bdy}.grd'."
-      exit 1
-    fi
-    if [ -s "${bdyorg_path}/land_${time_bdy}.grd" ]; then
-      ln -fs "${bdyorg_path}/land_${time_bdy}.grd" $TMPDIR/bdyland${file_number}.grd
-    else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/land_${time_bdy}.grd'."
-      exit 1
-    fi
-  fi
-  i=$((i+1))
-done
+#if ((BDY_FORMAT == 1)); then
+#  BASENAME_ORG="${TMPSUBDIR}/bdydata"
+#  FILETYPE_ORG='SCALE-RM'
+#  USE_NESTING='.true.'
+#  LATLON_CATALOGUE_FNAME="$BDYORG/latlon_domain_catalogue.txt"
+#elif ((BDY_FORMAT == 2)); then
+#  BASENAME_ORG="${TMPSUBDIR}/bdydata"
+#  FILETYPE_ORG='WRF-ARW'
+#  USE_NESTING='.false.'
+#  LATLON_CATALOGUE_FNAME=
+#elif ((BDY_FORMAT == 4)); then
+#  BASENAME_ORG="${TMPSUBDIR}/gradsbdy.conf"
+#  FILETYPE_ORG='GrADS'
+#  USE_NESTING='.false.'
+#  LATLON_CATALOGUE_FNAME=
+#else
+#  echo "[Error] $0: Unsupport boundary file types" >&2
+#  exit 1
+#fi
+#
+#NUMBER_OF_FILES=0
+#for time_bdy in $BDY_TIME_LIST; do
+#  NUMBER_OF_FILES=$((NUMBER_OF_FILES+1))
+#done
+#
+#i=0
+#for time_bdy in $BDY_TIME_LIST; do
+#  if ((NUMBER_OF_FILES <= 1)); then
+#    file_number=''
+#  else
+#    file_number="_$(printf %05d $i)"
+#  fi
+#  if ((BDY_ROTATING == 1)); then
+#    bdyorg_path="${BDYORG}/${STIME}/${MEM_BDY}"
+#  else
+#    bdyorg_path="${BDYORG}/const/${MEM_BDY}"
+#  fi
+#  if ((BDY_FORMAT == 1)); then
+#    if [ -s "${bdyorg_path}/${time_bdy}/history.pe000000.nc" ]; then
+#      for ifile in $(cd ${bdyorg_path}/${time_bdy} ; ls history*.nc 2> /dev/null); do
+#        ln -fs "${bdyorg_path}/${time_bdy}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
+#      done
+#    else
+#      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${time_bdy}/history.*.nc'."
+#      exit 1
+#    fi
+#  elif ((BDY_FORMAT == 2)); then
+#    if [ -s "${bdyorg_path}/wrfout_${time_bdy}" ]; then
+#      ln -fs "${bdyorg_path}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
+#    else
+#      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/wrfout_${time_bdy}'."
+#      exit 1
+#    fi
+#  elif ((BDY_FORMAT == 4)); then
+#    if [ -s "${bdyorg_path}/atm_${time_bdy}.grd" ]; then
+#      ln -fs "${bdyorg_path}/atm_${time_bdy}.grd" $TMPDIR/bdyatm${file_number}.grd
+#    else
+#      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/atm_${time_bdy}.grd'."
+#      exit 1
+#    fi
+#    if [ -s "${bdyorg_path}/sfc_${time_bdy}.grd" ]; then
+#      ln -fs "${bdyorg_path}/sfc_${time_bdy}.grd" $TMPDIR/bdysfc${file_number}.grd
+#    else
+#      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/sfc_${time_bdy}.grd'."
+#      exit 1
+#    fi
+#    if [ -s "${bdyorg_path}/land_${time_bdy}.grd" ]; then
+#      ln -fs "${bdyorg_path}/land_${time_bdy}.grd" $TMPDIR/bdyland${file_number}.grd
+#    else
+#      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/land_${time_bdy}.grd'."
+#      exit 1
+#    fi
+#  fi
+#  i=$((i+1))
+#done
 
 if [ "$SCPCALL" = 'cycle' ]; then
   IO_LOG_DIR='scale_init'
@@ -178,11 +178,11 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--OFFLINE--/a OFFLINE = .true.," \
     > $TMPDIR/init.conf
 
-if [ -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
-  cat $TMPDAT/conf/config.nml.grads_boundary | \
-      sed -e "s#--DIR--#${TMPSUBDIR}#g" \
-      > $TMPDIR/gradsbdy.conf
-fi
+#if [ -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
+#  cat $TMPDAT/conf/config.nml.grads_boundary | \
+#      sed -e "s#--DIR--#${TMPSUBDIR}#g" \
+#      > $TMPDIR/gradsbdy.conf
+#fi
 
 #===============================================================================
 

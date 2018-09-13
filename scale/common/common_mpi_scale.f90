@@ -1604,4 +1604,98 @@ end subroutine read_obs_all_mpi
 !  RETURN
 !END SUBROUTINE allreduce_obs_mpi
 
+
+!-----------------------------------------------------------------------
+! Read nature run data and create initial ensemble by adding random noise
+!-----------------------------------------------------------------------
+subroutine create_ens_mpi(file,file_n)
+  use scale_grid, only: &
+      GRID_CXG,&
+      GRID_CYG,&
+      DX, &
+      DY
+  use scale_random, only: &
+      RANDOM_get1d
+
+  implicit none
+  CHARACTER(*),INTENT(IN) :: file
+  CHARACTER(*),INTENT(IN) :: file_n ! nature run file name
+  REAL(RP) :: v3dg(MEMBER,nlev,nlon,nlat,nv3d)
+  REAL(RP) :: v2dg(MEMBER,nlon,nlat,nv2d)
+  REAL(RP) :: v3dg_n(nlev,nlon,nlat,nv3d) ! nature run
+  REAL(RP) :: v2dg_n(nlon,nlat,nv2d)      ! nature run
+  character(filelenmax) :: filename
+  integer :: it,im,mstart,mend
+
+  integer :: i, j, k
+  integer :: m, n
+  integer :: ig_n, jg_n ! center of the detected first echo in nature run
+  integer :: ig, jg ! center of the detected first echo in nature run
+  integer :: iproc, jproc
+  real(r_size) :: dist
+
+  real(RP) :: rndm(MEMBER) ! random number
+
+  integer :: ierr
+  REAL(r_dble) :: rrtimer00,rrtimer
+
+  CALL MPI_BARRIER(MPI_COMM_a,ierr)
+  rrtimer00 = MPI_WTIME()
+
+  if (myrank <= MEM_NODES) then
+
+    ! read nature run data
+
+    im = proc2mem(1,1,myrank+1)
+    call file_member_replace(im, file_n, filename)
+    call read_restart(filename,v3dg_n,v2dg_n)
+    call state_trans(v3dg_n)
+
+    !!! detect the first echo location (ig,jg) in nature run here ??? ig_n & jg_n
+    !
+    ! Give the first echo location from namelist
+    ig_n = (SC_FECHO_X - GRID_CXG(1)) / DX + 1
+    jg_n = (SC_FECHO_Y - GRID_CYG(1)) / DY + 1
+    ! 
+
+    do j = 1, nlat
+      do i = 1, nlon
+
+        call ij_l2g(myrank_d, i, j, ig, jg)
+        dist = sqrt(abs((ig-ig_n)*DX)**2 + abs((jg-jg_n)*DY)**2)
+
+        if (dist > SC_DIST_ECHO) then
+          do m = 1, MEMBER
+            v3dg(m,1:nlev,i,j,1:nv3d) = v3dg_n(1:nlev,i,j,1:nv3d)
+          enddo
+          cycle ! not perturb 
+
+        else
+          do n = 1, nv3d
+            do k = 1, nlev
+              call RANDOM_get1d(rndm)
+              do m = 1, MEMBER
+                v3dg(m,i,j,k,n) = v3dg_n(i,j,k,n) * (1.0d0 + rndm(m) * SC_PERT_COEF)
+              enddo ! m
+            enddo ! k
+          enddo ! n
+
+        endif
+
+      enddo ! i
+    enddo ! j
+
+    ! write initial ensemble here
+    do m = 1, MEMBER
+      call state_trans_inv(v3dg(m,:,:,:,:))
+
+      call write_restart(filename,v3dg(m,:,:,:,:),v2dg_n)
+
+    enddo ! m
+
+  endif ![myrank <= MEM_NODES]
+
+  return
+end subroutine create_ens_mpi
+
 END MODULE common_mpi_scale

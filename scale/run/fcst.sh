@@ -209,23 +209,24 @@ while ((time <= ETIME)); do
 
       ######
       if ((s == 1)); then
-        if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
-          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared topo and landuse files)" >&2
-          continue
-        elif ((BDY_FORMAT == 0)); then
-          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
-          continue
-        elif ((LANDUSE_UPDATE != 1 && loop > 1)); then
-          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (already done in the first cycle)" >&2
-          continue
-        fi
+        continue
+#        if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
+#          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared topo and landuse files)" >&2
+#          continue
+#        elif ((BDY_FORMAT == 0)); then
+#          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
+#          continue
+#        elif ((LANDUSE_UPDATE != 1 && loop > 1)); then
+#          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (already done in the first cycle)" >&2
+#          continue
+#        fi
       fi
-      if ((s == 2)); then
-        if ((BDY_FORMAT == 0)); then
-          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
-          continue
-        fi
-      fi
+#      if ((s == 2)); then
+#        if ((BDY_FORMAT == 0)); then
+#          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
+#          continue
+#        fi
+#      fi
       ######
 
       echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2

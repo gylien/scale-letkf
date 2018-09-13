@@ -273,6 +273,15 @@ MODULE common_nml
   real(r_size)          :: OBSSIM_RADAR_LAT = 0.0d0
   real(r_size)          :: OBSSIM_RADAR_Z = 0.0d0
 
+  !--- PARAM_SC
+  ! inital perturbation will be added within a SC_DIST_ECHO [m] circle centered at the first echo in nature run
+  real(r_size) :: SC_DIST_ECHO = 20.0d3 ! [m] 
+  real(r_size) :: SC_PERT_COEF = 1.0d0 ! coefficient for perturbation
+  real(r_size) :: SC_FECHO_X = 40.0d3 ! [m]  ! first echo location
+  real(r_size) :: SC_FECHO_Y = 40.0d3 ! [m]  ! first echo location
+  character(filelenmax) :: SC_NATURE_IN_BASENAME = ''
+  character(filelenmax) :: SC_OUT_BASENAME = ''
+
 contains
 !-----------------------------------------------------------------------
 ! PARAM_ENSEMBLE
@@ -784,6 +793,42 @@ subroutine read_nml_obssim
 
   return
 end subroutine read_nml_obssim
+
+!-----------------------------------------------------------------------
+! PARAM_SC
+!-----------------------------------------------------------------------
+subroutine read_nml_sc
+  implicit none
+  integer :: ierr
+
+  real(r_size) :: SC_DIST_ECHO = 20.0d3 ! [m] 
+  real(r_size) :: SC_PERT_COEF = 1.0d0 ! coefficient for perturbation
+  real(r_size) :: SC_FECHO_X = 40.0d3 ! [m]  ! first echo location
+  real(r_size) :: SC_FECHO_Y = 40.0d3 ! [m]  ! first echo location
+  character(filelenmax) :: SC_NATURE_IN_BASENAME = ''
+  character(filelenmax) :: SC_OUT_BASENAME = ''
+  namelist /PARAM_SC/ &
+    SC_DIST_ECHO, &
+    SC_PERT_COEF, &
+    SC_FECHO_X, &
+    SC_FECHO_Y, &
+    SC_NATURE_IN_BASENAME, &
+    SC_OUT_BASENAME
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_SC,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_SC/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_SC. Check!'
+    stop
+  endif
+
+  write(6, nml=PARAM_SC)
+
+  return
+end subroutine read_nml_sc
 
 !-----------------------------------------------------------------------
 ! file_member_replace
