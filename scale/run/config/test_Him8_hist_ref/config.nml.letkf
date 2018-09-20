@@ -77,8 +77,10 @@
 
 &PARAM_LETKF_H08
  H08_FORMAT_NC = .true.,
+ H08_SIM_ALLG = .true.,
 !--H08_NOWDATE--!
 !--H08_RTTOV_COEF_PATH--!
+!--H08_OUTFILE_BASENAME--!
  H08_OBS_STD = .true.,
  H08_OBS_4D = .false.,
  H08_HOMO_QC = 2.0d6, ! off ! No SOBS

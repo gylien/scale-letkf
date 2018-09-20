@@ -102,10 +102,10 @@ SUBROUTINE set_letkf_obs
 
 #ifdef H08
   integer :: ch_num ! H08
-  integer :: npr
+!  integer :: npr
 
-  real(r_size) :: vbcH08(H08_NPRED,NIRB_HIM8)
-  real(r_size) :: pred, pbeta
+!  real(r_size) :: vbcH08(H08_NPRED,NIRB_HIM8)
+!  real(r_size) :: pred, pbeta
   real(r_size) :: std13
 #endif
   real(r_size) :: sig_b ! sigma_b for AOEI
@@ -233,7 +233,7 @@ SUBROUTINE set_letkf_obs
         end if
 
 #ifdef H08
-        call obs_da_value_partial_reduce_iter(obsda, it, n1, n2, obsda_ext%val, obsda_ext%qc, obsda_ext%lev, obsda_ext%val2, obsda_ext%pred1, obsda_ext%pred2)
+        call obs_da_value_partial_reduce_iter(obsda, it, n1, n2, obsda_ext%val, obsda_ext%qc, obsda_ext%lev, obsda_ext%val2)!, obsda_ext%pred1, obsda_ext%pred2)
 #else
         call obs_da_value_partial_reduce_iter(obsda, it, n1, n2, obsda_ext%val, obsda_ext%qc)
 #endif
@@ -349,11 +349,11 @@ SUBROUTINE set_letkf_obs
   call mpi_timer('set_letkf_obs:preprocess_data:', 2)
 
 #ifdef H08
-  if(H08_VBC_USE)then
-    call get_vbc_Him8_mpi(vbcH08)
-  else
-    vbcH08 = 0.0d0
-  endif
+!  if(H08_VBC_USE)then
+!    call get_vbc_Him8_mpi(vbcH08)
+!  else
+!    vbcH08 = 0.0d0
+!  endif
 #endif
 
   ! Compute perturbation and departure
@@ -365,7 +365,7 @@ SUBROUTINE set_letkf_obs
   allocate(tmpelm(obsda%nobs))
 
 #ifdef H08
-!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref,ch_num,sig_b,sig_o,pred,pbeta,std13)
+!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref,ch_num,sig_b,sig_o,std13)
 #else
 !$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref)
 #endif
@@ -477,11 +477,6 @@ SUBROUTINE set_letkf_obs
         cycle
       endif
 
-#ifdef DEBUG
-      write(6,'(a,f6.2)')"DEBUG HIM8-VAL,",obsda%val(n) 
-
-#endif
-
     endif
 !!!###### end Himawari-8 assimilation ###### ! H08
 #endif
@@ -501,28 +496,28 @@ SUBROUTINE set_letkf_obs
       obsda%ensval(mmdetobs,n) = obs(iof)%dat(iidx) - obsda%ensval(mmdetobs,n) ! y-Hx for deterministic run
     end if
 
-#ifdef H08
-!   Bias correction
-    if (obs(iof)%elm(iidx) == id_H08IR_obs) then
-      ch_num = nint(obs(iof)%lev(iidx)) - 6
-      pbeta = 0.0d0
-
-      if(H08_VBC_USE)then      
-        do npr = 1, H08_NPRED
-          if(npr == 1) pred = obsda%pred1(n)
-          if(npr == 2) pred = obsda%pred2(n)
- 
-          pbeta = pbeta + pred * vbcH08(npr,ch_num) 
-        enddo
-
-        obsda%val(n) = obsda%val(n) - pbeta
-        if (DET_RUN) then
-          obsda%ensval(mmdetobs,n) = obsda%ensval(mmdetobs,n) - pbeta
-        endif
-
-      endif
-    endif
-#endif
+!#ifdef H08
+!!   Bias correction
+!    if (obs(iof)%elm(iidx) == id_H08IR_obs) then
+!      ch_num = nint(obs(iof)%lev(iidx)) - 6
+!      pbeta = 0.0d0
+!
+!      if(H08_VBC_USE)then      
+!        do npr = 1, H08_NPRED
+!          if(npr == 1) pred = obsda%pred1(n)
+!          if(npr == 2) pred = obsda%pred2(n)
+! 
+!          pbeta = pbeta + pred * vbcH08(npr,ch_num) 
+!        enddo
+!
+!        obsda%val(n) = obsda%val(n) - pbeta
+!        if (DET_RUN) then
+!          obsda%ensval(mmdetobs,n) = obsda%ensval(mmdetobs,n) - pbeta
+!        endif
+!
+!      endif
+!    endif
+!#endif
 
  
 !   AOEI: compute sprd in obs space (sigma_b for AOEI) ! H08
@@ -1018,8 +1013,8 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
       obsbufs%lev(n) = obsda%lev(obsda%key(n))   ! H08
       obsbufs%val2(n) = obsda%val2(obsda%key(n)) ! H08
-      obsbufs%pred1(n) = obsda%pred1(obsda%key(n)) ! H08
-      obsbufs%pred2(n) = obsda%pred2(obsda%key(n)) ! H08
+!      obsbufs%pred1(n) = obsda%pred1(obsda%key(n)) ! H08
+!      obsbufs%pred2(n) = obsda%pred2(obsda%key(n)) ! H08
 #endif
     end do ! [ n = 1, nobs_sub(i_after_qc) ]
 
@@ -1046,8 +1041,8 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
     call MPI_ALLGATHERV(obsbufs%lev, cnts, MPI_r_size, obsbufr%lev, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
     call MPI_ALLGATHERV(obsbufs%val2, cnts, MPI_r_size, obsbufr%val2, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
-    call MPI_ALLGATHERV(obsbufs%pred1, cnts, MPI_r_size, obsbufr%pred1, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
-    call MPI_ALLGATHERV(obsbufs%pred2, cnts, MPI_r_size, obsbufr%pred2, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
+!    call MPI_ALLGATHERV(obsbufs%pred1, cnts, MPI_r_size, obsbufr%pred1, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
+!    call MPI_ALLGATHERV(obsbufs%pred2, cnts, MPI_r_size, obsbufr%pred2, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
 #endif
 
     call obs_da_value_deallocate(obsbufs)
@@ -1107,8 +1102,8 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
         obsda_sort%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr)   ! H08
         obsda_sort%val2(ns_ext:ne_ext) = obsbufr%val2(ns_bufr:ne_bufr) ! H08
-        obsda_sort%pred1(ns_ext:ne_ext) = obsbufr%pred1(ns_bufr:ne_bufr) ! H08
-        obsda_sort%pred2(ns_ext:ne_ext) = obsbufr%pred2(ns_bufr:ne_bufr) ! H08
+!        obsda_sort%pred1(ns_ext:ne_ext) = obsbufr%pred1(ns_bufr:ne_bufr) ! H08
+!        obsda_sort%pred2(ns_ext:ne_ext) = obsbufr%pred2(ns_bufr:ne_bufr) ! H08
 #endif
       end do
     end do ! [ ictype = 1, nctype ]

@@ -269,7 +269,9 @@ MODULE common_nml
   !---PARAM_LETKF_H08
   character(filelenmax) :: H08_RTTOV_COEF_PATH = '.'
   character(filelenmax) :: H08_VBC_PATH = '.'
+  character(filelenmax) :: H08_OUTFILE_BASENAME = 'him8'
   logical :: H08_FORMAT_NC = .false.
+  logical :: H08_SIM_ALLG = .true. ! Him8 sim by using ensemble mean
   logical :: H08_OBS_STD = .true.
   logical :: H08_OBS_4D = .false.
   integer :: H08_OBS_RECL = 4 + NIRB_HIM8 ! obstype, obsid, lon, lat, + dat(NIRB_HIM8)
@@ -928,8 +930,10 @@ subroutine read_nml_letkf_h08
 
   namelist /PARAM_LETKF_H08/ &
     H08_FORMAT_NC, &
+    H08_SIM_ALLG, &
     H08_NOWDATE, &
     H08_REJECT_LAND, &
+    H08_OUTFILE_BASENAME,&
     H08_OBS_STD, &
     H08_OBS_4D, &
     H08_OBS_RECL, &

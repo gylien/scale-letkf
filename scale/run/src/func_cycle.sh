@@ -272,10 +272,10 @@ fi
 #-------------------------------------------------------------------------------
 # TMPOUT
 
-if [ -e  "${INDIR}/vbc/Him8_vbca_${STIME}.dat" ]; then
-  path="vbc/Him8_vbca_${STIME}.dat"
-  echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
-fi
+#if [ -e  "${INDIR}/vbc/Him8_vbca_${STIME}.dat" ]; then
+#  path="vbc/Him8_vbca_${STIME}.dat"
+#  echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+#fi
 
 # empty directories
 #-------------------
@@ -464,10 +464,17 @@ while ((time <= ETIME)); do
   # stage-out
   #-------------------
 
-  # Himawari-8 bias correction coefficient
+#  # Himawari-8 bias correction coefficient
+#  #-------------------
+#  if ((loop == 1)); then
+#    path="vbc/"
+#    echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#  fi
+
+  # Himawari-8 gues/anal
   #-------------------
   if ((loop == 1)); then
-    path="vbc/"
+    path="Him8/"
     echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
   fi
 

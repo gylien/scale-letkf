@@ -630,17 +630,6 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
 
   if(debug) WRITE(6,*) 'END SUBSTITUTE PROFILE'
 
-! DEBUG
-  print *,"proile 1 is debug"
-  profiles(1) % t(:) = RD_temph
-  profiles(1) % p(:) = RD_presh
-  profiles(1) % q(:) = qmin * 1.01_jprb
-  do ilev = 1, H08_RTTOV_KADD + nlevs
-    print *,ilev,profiles(1) % t(ilev), profiles(1) % p(ilev)," 1"
-  enddo
-  do ilev = 1, H08_RTTOV_KADD + nlevs
-    print *,ilev,profiles(2) % t(ilev), profiles(2) % p(ilev)," 2"
-  enddo
 
   ! --------------------------------------------------------------------------
   ! 6. Specify surface emissivity and reflectance

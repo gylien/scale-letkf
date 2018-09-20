@@ -40,7 +40,7 @@ MODULE common_obs_scale
   IMPLICIT NONE
   PUBLIC
 
-  INTEGER,PARAMETER :: nid_obs_varlocal=9 !H08
+  INTEGER,PARAMETER :: nid_obs_varlocal=9 !Him8
 !
 ! conventional observations
 !
@@ -88,7 +88,7 @@ MODULE common_obs_scale
        'VADWND', 'SATEMP', 'ADPSFC', 'SFCSHP', 'SFCBOG', &
        'SPSSMI', 'SYNDAT', 'ERS1DA', 'GOESND', 'QKSWND', &
        'MSONET', 'GPSIPW', 'RASSDA', 'WDSATR', 'ASCATW', &
-       'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL'/) ! H08
+       'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL'/) ! Him8
 
   INTEGER,PARAMETER :: max_obs_info_meta = 3 ! maximum array size for type(obs_info)%meta
 
@@ -123,8 +123,8 @@ MODULE common_obs_scale
 #ifdef H08
     REAL(r_size),ALLOCATABLE :: lev(:) ! Him8
     REAL(r_size),ALLOCATABLE :: val2(:) ! Him8 sigma_o for AOEI (not CA)
-    REAL(r_size),ALLOCATABLE :: pred1(:) ! Him8 bias correction predictor 1 (nobs)
-    REAL(r_size),ALLOCATABLE :: pred2(:) ! Him8 bias correction predictor 1 (nobs)
+!    REAL(r_size),ALLOCATABLE :: pred1(:) ! Him8 bias correction predictor 1 (nobs)
+!    REAL(r_size),ALLOCATABLE :: pred2(:) ! Him8 bias correction predictor 1 (nobs)
 #endif
     REAL(r_size),ALLOCATABLE :: ensval(:,:)
     INTEGER,ALLOCATABLE :: qc(:)
@@ -1357,13 +1357,15 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 #ifdef H08
 subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,&
-                     nobs_H08,bias_H08,rmse_H08,bias_H08_bc,rmse_H08_bc,&
-                     aH08,bH08,vbcf,step)
+                     nobs_H08,bias_H08,rmse_H08,yobs_H08,step)!,bias_H08_bc,rmse_H08_bc,&
+                     !aH08,bH08,vbcf,step)
 #else
 subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 #endif
   use scale_process, only: &
       PRC_myrank
+  use scale_grid_index, only: &
+      IHALO, JHALO
 
   implicit none
 
@@ -1397,35 +1399,29 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   INTEGER,INTENT(OUT) :: nobs_H08(NIRB_HIM8)
   REAL(r_size),INTENT(OUT) :: bias_H08(NIRB_HIM8)
   REAL(r_size),INTENT(OUT) :: rmse_H08(NIRB_HIM8)
-  REAL(r_size),INTENT(OUT) :: bias_H08_bc(NIRB_HIM8)
-  REAL(r_size),INTENT(OUT) :: rmse_H08_bc(NIRB_HIM8)
+!  REAL(r_size),INTENT(OUT) :: bias_H08_bc(NIRB_HIM8)
+!  REAL(r_size),INTENT(OUT) :: rmse_H08_bc(NIRB_HIM8)
 
-  integer :: nallprof 
-  integer :: nprof ! num of Him8 profile
-  real(r_size), allocatable :: ri_H08(:),rj_H08(:)
-  real(r_size), allocatable :: lon_H08(:),lat_H08(:)
-  real(r_size), allocatable :: yobs_H08(:,:), yobs_H08_bc(:,:)
-  real(r_size), allocatable :: plev_obs_H08(:,:)
-  real(r_size), allocatable :: yobs_H08_clr(:,:)
-  real(r_size), allocatable :: zangle_H08(:) ! zenith angle
-  integer, allocatable :: qc_H08(:,:)
-  integer, allocatable :: n2prof(:) ! Him8 prof num
-  integer, allocatable :: prof2B07(:) ! obs index of Him8 band 7
-  integer, allocatable :: prof2nda(:) ! obsda index of Him8 band 7
-  integer :: ch, np
-  integer :: iset_H08, iidx_H08B07
-  !real(r_size) :: CA ! (Okamoto et al., 2014QJRMS)
+  real(r_size),intent(out) :: yobs_H08(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: plev_obs_H08(nlon,nlat,NIRB_HIM8)
+!  real(r_size) :: yobs_H08_bc(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: yobs_H08_clr(nlon,nlat,NIRB_HIM8)
+  integer :: qc_H08(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: zangle_H08(nlon,nlat)
 
-  ! bias correction
-  integer,parameter :: nmin = 400 ! parameter from Miyoshi et al. (2010) & Sato (2007)
-  integer :: nobs_b
-  integer :: i, j, didx, npr 
-  real(r_size), intent(in) :: vbcf(H08_NPRED,NIRB_HIM8)
-  real(r_size), intent(out) :: aH08(H08_NPRED,H08_NPRED,NIRB_HIM8)
-  real(r_size), intent(out) :: bH08(H08_NPRED,NIRB_HIM8) ! bias correction
-  real(r_size), allocatable :: pred(:,:)
-  real(r_size) :: tmp
-  real(r_size) :: pbeta, predt
+  integer :: i8, j8, b8
+  integer :: ch
+
+!  ! bias correction
+!  integer,parameter :: nmin = 400 ! parameter from Miyoshi et al. (2010) & Sato (2007)
+!  integer :: nobs_b
+!  integer :: i, j, didx, npr 
+!  real(r_size), intent(in) :: vbcf(H08_NPRED,NIRB_HIM8)
+!  real(r_size), intent(out) :: aH08(H08_NPRED,H08_NPRED,NIRB_HIM8)
+!  real(r_size), intent(out) :: bH08(H08_NPRED,NIRB_HIM8) ! bias correction
+!  real(r_size), allocatable :: pred(:,:)
+!  real(r_size) :: tmp
+!  real(r_size) :: pbeta, predt
 #endif
 
 #ifdef TCV
@@ -1470,26 +1466,20 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  obs_idx_TCP = -1
 
 #ifdef H08
+  yobs_H08 = undef
+  if (USE_HIM8) then
+    call Trans_XtoY_H08_allg(v3dgh,v2dgh,yobs_H08,yobs_H08_clr,&
+                             plev_obs_H08,qc_H08,zangle_H08)
+    !
+    ! Initialize qc flag (set iqc is "bad")
+    ! This will be overwritten by obsda_sort%qc
+    qc_H08 = iqc_obs_bad
+  endif
+#endif
 
-  ! Not assimilated bands are not included in obsda
-  !
-  nallprof = nnobs
-  allocate(n2prof(nnobs))
-  allocate(prof2B07(nnobs))
-  allocate(prof2nda(nnobs))
-  allocate(ri_H08(nallprof))
-  allocate(rj_H08(nallprof))
-  allocate(lon_H08(nallprof))
-  allocate(lat_H08(nallprof))
-
-  nprof = 0
-  iidx_H08B07 = 0
-
-#else
-!$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz)
+!$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz,i8,j8,b8,ch)
   omp_chunk = min(4, max(1, (nnobs-1) / OMP_GET_NUM_THREADS() + 1))
 !$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
-#endif
   do n = 1, nnobs
 
     if (use_key) then
@@ -1566,35 +1556,52 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
             if (oqc(n) == iqc_ref_low) oqc(n) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
           end if
         end if
-#ifdef H08
       !=========================================================================
       case (obsfmt_h08)
       !-------------------------------------------------------------------------
+#ifdef H08
+        i8 = nint(ril-IHALO)
+        j8 = nint(rjl-JHALO)
+        b8 = nint(obs(iset)%lev(iidx))
 
-        ! Note: The following Himawari-8 section cannot be executed with OpenMP
-        !
-        ch = nint(obs(iset)%lev(iidx)) - 6 ! 
-        if (iidx_H08B07 /= (iidx - ch + 1)) then
-          nprof = nprof + 1
+        ohx(n) = yobs_H08(i8,j8,b8-6) ! Obs - B/A
+        oqc(n) = obsda_sort%qc(nn) !qc_H08(i8,j8,b8-6) ! QC
 
-          ri_H08(nprof) = ril
-          rj_H08(nprof) = rjl
-          lon_H08(nprof) = obs(iset)%lon(iidx)
-          lat_H08(nprof) = obs(iset)%lat(iidx)
+        yobs_H08(i8,j8,b8-6) = obs(iset)%dat(iidx) - yobs_H08(i8,j8,b8-6) 
+        qc_H08(i8,j8,b8-6) = obsda_sort%qc(nn)
 
-          prof2B07(nprof) = iidx - ch + 1
-          prof2nda(nprof) = n
-
-          iidx_H08B07 = iidx - ch + 1
+        if(sum(H08_BAND_USE) /= NIRB_HIM8)then
+          do ch = 1, NIRB_HIM8            
+            if (H08_BAND_USE(ch) /= 1) then
+              yobs_H08(i8,j8,ch) = obs(iset)%dat(iidx-(b8-6)+ch) - yobs_H08(i8,j8,ch) 
+              qc_H08(i8,j8,ch) = oqc(n)
+            endif
+          enddo
         endif
 
-        n2prof(n) = nprof ! Note: This line should be outside of the above if block, because 
-                          !       we need n2prof information on the whole obsda samples.
-        iset_H08 = iset
-
-        cycle
+!      if(H08_VBC_USE)then
+!        pbeta = 0.0d0
+!        do npr = 1, H08_NPRED
+!          if(npr == 1) predt = zangle_H08(np)
+!          if(npr == 2) predt = yobs_H08_bc(ch,np)
+!          pbeta = pbeta + predt * vbcf(npr,ch)
+!        enddo
+!        yobs_H08_bc(ch,np) = yobs_H08_bc(ch,np) - pbeta
+!       
+!        if (ch == nint(obs(iset)%dat(iidx))) then
+!          ohx(n) = ohx(n) - pbeta
+!        endif
+!      endif
+!
+!    do np = 1, nprof
+!      do ch = 1, NIRB_HIM8
+!        yobs_H08(ch,np) = obs(iset)%dat(prof2B07(np)+ch-1) - yobs_H08(ch,np)
+!        yobs_H08_bc(ch,np) = obs(iset)%dat(prof2B07(np)+ch-1) - yobs_H08_bc(ch,np)
+!      enddo ! [ch = 1, NIRB_HIM8]
+!    enddo ! [np = 1, nprof]
 
 #endif
+
       !=========================================================================
       end select
 
@@ -1631,93 +1638,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
            !   abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE ]
 
   end do ! [ n = 1, nnobs ]
-#ifndef H08
 !$OMP END DO
 !$OMP END PARALLEL
-#endif
-
-
-#ifdef H08
-  if(nprof >= 1) then
-    allocate(yobs_H08(NIRB_HIM8,nprof))
-    allocate(yobs_H08_bc(NIRB_HIM8,nprof))
-    allocate(yobs_H08_clr(NIRB_HIM8,nprof))
-    allocate(plev_obs_H08(NIRB_HIM8,nprof))
-    allocate(qc_H08(NIRB_HIM8,nprof))
-    allocate(zangle_H08(nprof))
-
-    call Trans_XtoY_H08(nprof,ri_H08(1:nprof),rj_H08(1:nprof),&
-                        lon_H08(1:nprof),lat_H08(1:nprof),v3dgh,v2dgh,&
-                        yobs_H08(1:NIRB_HIM8,1:nprof),yobs_H08_clr(1:NIRB_HIM8,1:nprof),&
-                        plev_obs_H08(1:NIRB_HIM8,1:nprof),qc_H08(1:NIRB_HIM8,1:nprof),&
-                        zangle_H08(1:nprof),stggrd=1)
-
-    yobs_H08_bc = yobs_H08
-
-
-    do n = 1, nnobs
-
-      if (use_key) then
-        nn = obsda_sort%key(n)
-      else
-        nn = n
-      end if
-
-      iset = obsda_sort%set(nn)
-      iidx = obsda_sort%idx(nn)
-
-      oelm(n) = obs(iset)%elm(iidx)
-      if (int(oelm(n)) /= id_H08IR_obs) cycle
-
-      np = n2prof(n)
-      ch = nint(obs(iset)%lev(iidx)) - 6 ! 
-
-      ohx(n) = obs(iset)%dat(iidx) - yobs_H08(ch,np) ! Obs - B/A
-      oqc(n) = qc_H08(ch,np)
-
-      if (oqc(n) /= iqc_good) then
-        ohx(n) = undef
-      end if
-
-      if(H08_VBC_USE)then
-        pbeta = 0.0d0
-        do npr = 1, H08_NPRED
-          if(npr == 1) predt = zangle_H08(np)
-          if(npr == 2) predt = yobs_H08_bc(ch,np)
-          pbeta = pbeta + predt * vbcf(npr,ch)
-        enddo
-        yobs_H08_bc(ch,np) = yobs_H08_bc(ch,np) - pbeta
-       
-        if (ch == nint(obs(iset)%dat(iidx))) then
-          ohx(n) = ohx(n) - pbeta
-        endif
-      endif
-
-      if (step == 1) then
-        obsdep_qc(n) = oqc(n)
-        obsdep_omb(n) = ohx(n)
-      else if (step == 2) then
-        if (obsdep_qc(n) == iqc_good) then ! Use the QC value of y_a only if the QC of y_b is good
-          obsdep_qc(n) = oqc(n)            !
-        end if                             !
-        obsdep_oma(n) = ohx(n)
-      end if
-
-    end do ! [ n = 1, nnobs ]
-
-    do np = 1, nprof
-      do ch = 1, NIRB_HIM8
-        yobs_H08(ch,np) = obs(iset)%dat(prof2B07(np)+ch-1) - yobs_H08(ch,np)
-        yobs_H08_bc(ch,np) = obs(iset)%dat(prof2B07(np)+ch-1) - yobs_H08_bc(ch,np)
-      enddo ! [ch = 1, NIRB_HIM8]
-    enddo ! [np = 1, nprof]
-
-    deallocate(yobs_H08_clr)
-
-  endif ! [nprof >= 1]
-
-#endif
-!    -- End of Him8 DA part --
 
 !   -- TC vital DA -- 
 !   -- End of TC vital DA -- 
@@ -1726,99 +1648,99 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   call monit_dep(nnobs,oelm,ohx,oqc,nobs,bias,rmse)
 
 #ifdef H08
-  aH08 = 0.0d0
-  bH08 = 0.0d0
-  if(nprof >=1)then
-    call monit_dep_H08(nprof,yobs_H08,yobs_H08_bc,qc_H08,nobs_H08,bias_H08,rmse_H08,bias_H08_bc,rmse_H08_bc)
-
-    ! bias correction
-    aH08 = 0.0d0
-    bH08 = 0.0d0
-
-    if(step == 2 .and. H08_VBC_USE) then
-
-      do ch = 1, NIRB_HIM8
-        if(H08_BAND_USE(ch) /= 1) cycle
-        nobs_b = nobs_H08(ch)
-
-        if(nobs_b > 0)then
-
-          if(allocated(pred)) deallocate(pred)
-          allocate(pred(H08_NPRED,nobs_b)) ! pr 
-
-          do np = 1, nprof ! profile/obs loop
-            if(qc_H08(ch,np) /= iqc_good) cycle
-            n = prof2nda(np)
-            if (use_key) then
-              nn = obsda_sort%key(n)
-            else
-              nn = n
-            end if
-            iset = obsda_sort%set(nn)
-            iidx = obsda_sort%idx(nn)
-
-            didx = (prof2B07(np) + ch - 1) - iidx
-
-            if(didx /= 0)then
-              nn = nn + didx
-              iset = obsda_sort%set(nn)
-              iidx = obsda_sort%idx(nn)
-            endif
-     
-            !
-            ! p R^-1 p^T
-            !
-            do j = 1, H08_NPRED
-              if(j == 1) pred(j,np) = zangle_H08(np)
-              if(j == 2) pred(j,np) = obs(iset)%dat(iidx)
-
-              do i = 1, H08_NPRED
-                if(i == 1) pred(i,np) = zangle_H08(np)
-                if(i == 2) pred(i,np) = obs(iset)%dat(iidx)
-
-                aH08(i,j,ch) = aH08(i,j,ch) + pred(i,np) * pred(j,np) / (obsda_sort%val2(nn)**2)
-              enddo ! i
-            enddo ! j
-            !
-            ! Add B_beta^-1
-            !
-            ! Sato (2007)
-            if(nobs_b < nmin)then
-              tmp = real(nmin, kind=r_size) / (obsda_sort%val2(nn)**2)
-            else
-              tmp = real(nobs_b, kind=r_size) / dlog10(real(nobs_b,kind=r_size)/real(nmin,kind=r_size)) &
-                      / (obsda_sort%val2(nn)**2)
-            endif
-            do i = 1, H08_NPRED
-              aH08(i,i,ch) = aH08(i,i,ch) + tmp
-            enddo
-            !
-            ! p R^-1 d
-            !
-            do i = 1, H08_NPRED
-              bH08(i,ch) = bH08(i,ch) + pred(i,np)  / (obsda_sort%val2(nn)**2) &
-                             & * yobs_H08(ch,np)
-            enddo 
-          enddo ! np
-        endif ! [nobs_b > 0]
-
-        deallocate(pred)
-
-      enddo ! ch
-
-    endif ! [step == 2]
-
-    !deallocate(yobs_H08, qc_H08)
+!  aH08 = 0.0d0
+!  bH08 = 0.0d0
+  if (USE_HIM8) then
+!    call monit_dep_H08(yobs_H08,yobs_H08_bc,qc_H08,nobs_H08,bias_H08,rmse_H08)!,bias_H08_bc,rmse_H08_bc)
+    call monit_dep_H08(yobs_H08,qc_H08,nobs_H08,bias_H08,rmse_H08)
+!
+!    ! bias correction
+!    aH08 = 0.0d0
+!    bH08 = 0.0d0
+!
+!    if(step == 2 .and. H08_VBC_USE) then
+!
+!      do ch = 1, NIRB_HIM8
+!        if(H08_BAND_USE(ch) /= 1) cycle
+!        nobs_b = nobs_H08(ch)
+!
+!        if(nobs_b > 0)then
+!
+!          if(allocated(pred)) deallocate(pred)
+!          allocate(pred(H08_NPRED,nobs_b)) ! pr 
+!
+!          do np = 1, nprof ! profile/obs loop
+!            if(qc_H08(ch,np) /= iqc_good) cycle
+!            n = prof2nda(np)
+!            if (use_key) then
+!              nn = obsda_sort%key(n)
+!            else
+!              nn = n
+!            end if
+!            iset = obsda_sort%set(nn)
+!            iidx = obsda_sort%idx(nn)
+!
+!            didx = (prof2B07(np) + ch - 1) - iidx
+!
+!            if(didx /= 0)then
+!              nn = nn + didx
+!              iset = obsda_sort%set(nn)
+!              iidx = obsda_sort%idx(nn)
+!            endif
+!     
+!            !
+!            ! p R^-1 p^T
+!            !
+!            do j = 1, H08_NPRED
+!              if(j == 1) pred(j,np) = zangle_H08(np)
+!              if(j == 2) pred(j,np) = obs(iset)%dat(iidx)
+!
+!              do i = 1, H08_NPRED
+!                if(i == 1) pred(i,np) = zangle_H08(np)
+!                if(i == 2) pred(i,np) = obs(iset)%dat(iidx)
+!
+!                aH08(i,j,ch) = aH08(i,j,ch) + pred(i,np) * pred(j,np) / (obsda_sort%val2(nn)**2)
+!              enddo ! i
+!            enddo ! j
+!            !
+!            ! Add B_beta^-1
+!            !
+!            ! Sato (2007)
+!            if(nobs_b < nmin)then
+!              tmp = real(nmin, kind=r_size) / (obsda_sort%val2(nn)**2)
+!            else
+!              tmp = real(nobs_b, kind=r_size) / dlog10(real(nobs_b,kind=r_size)/real(nmin,kind=r_size)) &
+!                      / (obsda_sort%val2(nn)**2)
+!            endif
+!            do i = 1, H08_NPRED
+!              aH08(i,i,ch) = aH08(i,i,ch) + tmp
+!            enddo
+!            !
+!            ! p R^-1 d
+!            !
+!            do i = 1, H08_NPRED
+!              bH08(i,ch) = bH08(i,ch) + pred(i,np)  / (obsda_sort%val2(nn)**2) &
+!                             & * yobs_H08(ch,np)
+!            enddo 
+!          enddo ! np
+!        endif ! [nobs_b > 0]
+!
+!        deallocate(pred)
+!
+!      enddo ! ch
+!
+!    endif ! [step == 2]
+!
+!    !deallocate(yobs_H08, qc_H08)
   else 
     nobs_H08 = 0
     bias_H08 = 0.0d0
     rmse_H08 = 0.0d0
-    bias_H08_bc = 0.0d0
-    rmse_H08_bc = 0.0d0
-  endif ! [nprof >= 1]
-  
+!    bias_H08_bc = 0.0d0
+!    rmse_H08_bc = 0.0d0
+  endif ! [USE_HIM8]
 #endif
-
+  
 
   monit_type = .false.
   monit_type(uid_obs(id_u_obs)) = .true.
@@ -1959,48 +1881,54 @@ END SUBROUTINE monit_print
 !
 ! monitor for Himawari-8 IR observations --
 #ifdef H08
-SUBROUTINE monit_dep_H08(np,dep,dep_bc,qc,nobs,bias,rmse,bias_bc,rmse_bc)
+!SUBROUTINE monit_dep_H08(dep,dep_bc,qc,nobs,bias,rmse)!,bias_bc,rmse_bc)
+SUBROUTINE monit_dep_H08(dep,qc,nobs,bias,rmse)!,bias_bc,rmse_bc)
   IMPLICIT NONE
-  INTEGER,INTENT(IN) :: np ! Num of profiles
-  REAL(r_size),INTENT(IN) :: dep(NIRB_HIM8,np)
-  REAL(r_size),INTENT(IN) :: dep_bc(NIRB_HIM8,np)
-  INTEGER,INTENT(IN) :: qc(NIRB_HIM8,np)
+  REAL(r_size),INTENT(IN) :: dep(nlon,nlat,NIRB_HIM8)
+!  REAL(r_size),INTENT(IN) :: dep_bc(nlon,nlat,NIRB_HIM8)
+  INTEGER,INTENT(IN) :: qc(nlon,nlat,NIRB_HIM8)
   INTEGER,INTENT(OUT) :: nobs(NIRB_HIM8)
   REAL(r_size),INTENT(OUT) :: bias(NIRB_HIM8)
   REAL(r_size),INTENT(OUT) :: rmse(NIRB_HIM8)
-  REAL(r_size),INTENT(OUT) :: bias_bc(NIRB_HIM8)
-  REAL(r_size),INTENT(OUT) :: rmse_bc(NIRB_HIM8)
-  INTEGER :: n,ch
-  
+!  REAL(r_size),INTENT(OUT) :: bias_bc(NIRB_HIM8)
+!  REAL(r_size),INTENT(OUT) :: rmse_bc(NIRB_HIM8)
+!  INTEGER :: n
+  integer i, j, ch  
+
   nobs = 0
   rmse = 0.0d0
   bias = 0.0d0
-  rmse_bc = 0.0d0
-  bias_bc = 0.0d0
+!  rmse_bc = 0.0d0
+!  bias_bc = 0.0d0
     
-  DO n = 1 , np ! profile
-  DO ch = 1 , NIRB_HIM8 ! band
-    IF(qc(ch,n) /= iqc_good) CYCLE
-    IF(dep(ch,n) /= dep(ch,n)) CYCLE ! NaN QC
-    nobs(ch) = nobs(ch) + 1
-    bias(ch) = bias(ch) + dep(ch,n)
-    rmse(ch) = rmse(ch) + dep(ch,n)**2
-    bias_bc(ch) = bias_bc(ch) + dep_bc(ch,n)
-    rmse_bc(ch) = rmse_bc(ch) + dep_bc(ch,n)**2
-  END DO
-  END DO
+  do ch = 1, NIRB_HIM8
+    do j = 1, nlat
+    do i = 1, nlon
+
+      if(qc(i,j,ch) /= iqc_good) cycle
+      if(dep(i,j,ch) /= dep(i,j,ch)) cycle ! NaN QC
+
+      nobs(ch) = nobs(ch) + 1
+      bias(ch) = bias(ch) + dep(i,j,ch)
+      rmse(ch) = rmse(ch) + dep(i,j,ch)**2
+!      bias_bc(ch) = bias_bc(ch) + dep_bc(i,j,ch)
+!      rmse_bc(ch) = rmse_bc(ch) + dep_bc(i,j,ch)**2
+
+    enddo
+    enddo
+  enddo
 
   DO ch = 1, NIRB_HIM8
     IF(nobs(ch) == 0) THEN
       bias(ch) = undef
       rmse(ch) = undef
-      bias_bc(ch) = undef
-      rmse_bc(ch) = undef
+!      bias_bc(ch) = undef
+!      rmse_bc(ch) = undef
     ELSE
       bias(ch) = bias(ch) / REAL(nobs(ch),r_size)
       rmse(ch) = SQRT(rmse(ch) / REAL(nobs(ch),r_size))
-      bias_bc(ch) = bias_bc(ch) / REAL(nobs(ch),r_size)
-      rmse_bc(ch) = SQRT(rmse_bc(ch) / REAL(nobs(ch),r_size))
+!      bias_bc(ch) = bias_bc(ch) / REAL(nobs(ch),r_size)
+!      rmse_bc(ch) = SQRT(rmse_bc(ch) / REAL(nobs(ch),r_size))
     END IF
   END DO
 
@@ -2146,8 +2074,8 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
 #ifdef H08
   ALLOCATE( obsda%lev (obsda%nobs) ) ! Him8
   ALLOCATE( obsda%val2 (obsda%nobs) ) ! Him8
-  ALLOCATE( obsda%pred1 (obsda%nobs) ) ! Him8
-  ALLOCATE( obsda%pred2 (obsda%nobs) ) ! Him8
+!  ALLOCATE( obsda%pred1 (obsda%nobs) ) ! Him8
+!  ALLOCATE( obsda%pred2 (obsda%nobs) ) ! Him8
 #endif
   ALLOCATE( obsda%qc  (obsda%nobs) )
 
@@ -2158,8 +2086,8 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
 #ifdef H08
   obsda%lev = 0.0d0 ! Him8
   obsda%val2 = 0.0d0 ! Him8
-  obsda%pred1 = 0.0d0 ! Him8
-  obsda%pred2 = 0.0d0 ! Him8
+!  obsda%pred1 = 0.0d0 ! Him8
+!  obsda%pred2 = 0.0d0 ! Him8
 #endif
   obsda%qc = 0
 
@@ -2186,8 +2114,8 @@ SUBROUTINE obs_da_value_deallocate(obsda)
 #ifdef H08
   IF(ALLOCATED(obsda%lev   )) DEALLOCATE(obsda%lev   ) ! Him8
   IF(ALLOCATED(obsda%val2   )) DEALLOCATE(obsda%val2   ) ! Him8
-  IF(ALLOCATED(obsda%pred1   )) DEALLOCATE(obsda%pred1   ) ! Him8
-  IF(ALLOCATED(obsda%pred2   )) DEALLOCATE(obsda%pred2   ) ! Him8
+!  IF(ALLOCATED(obsda%pred1   )) DEALLOCATE(obsda%pred1   ) ! Him8
+!  IF(ALLOCATED(obsda%pred2   )) DEALLOCATE(obsda%pred2   ) ! Him8
 #endif
   IF(ALLOCATED(obsda%ensval)) DEALLOCATE(obsda%ensval)
   IF(ALLOCATED(obsda%qc    )) DEALLOCATE(obsda%qc    )
@@ -2430,8 +2358,8 @@ SUBROUTINE read_obs_da(cfile,obsda,im)
 #ifdef H08
     obsda%lev(n) = REAL(wk(5),r_size) ! Him8
     obsda%val2(n) = REAL(wk(6),r_size) ! Him8
-    obsda%pred1(n) = REAL(wk(7),r_size) ! Him8
-    obsda%pred2(n) = REAL(wk(8),r_size) ! Him8
+!    obsda%pred1(n) = REAL(wk(7),r_size) ! Him8
+!    obsda%pred2(n) = REAL(wk(8),r_size) ! Him8
 #endif
   END DO
   CLOSE(iunit)
@@ -2447,7 +2375,8 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
   LOGICAL,INTENT(IN),OPTIONAL :: append
   LOGICAL :: append_
 #ifdef H08
-  REAL(r_sngl) :: wk(8) ! H08
+!  REAL(r_sngl) :: wk(8) ! H08
+  REAL(r_sngl) :: wk(6) ! H08
 #else
   REAL(r_sngl) :: wk(4) 
 #endif
@@ -2474,8 +2403,8 @@ SUBROUTINE write_obs_da(cfile,obsda,im,append)
 #ifdef H08
     wk(5) = REAL(obsda%lev(n),r_sngl) ! Him8
     wk(6) = REAL(obsda%val2(n),r_sngl) ! Him8
-    wk(7) = REAL(obsda%pred1(n),r_sngl) ! Him8
-    wk(8) = REAL(obsda%pred2(n),r_sngl) ! Him8
+!    wk(7) = REAL(obsda%pred1(n),r_sngl) ! Him8
+!    wk(8) = REAL(obsda%pred2(n),r_sngl) ! Him8
 #endif
     WRITE(iunit) wk
   END DO
@@ -2981,7 +2910,6 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
   REAL(r_size),PARAMETER :: btmin = 100.0d0
 
   real(r_size) :: blon, blat ! lat/lon at the domain center
-  integer :: k
 
   real(RP), parameter:: RD_TOA  = 100.0_RP !< top of atmosphere [km]
   integer :: RD_KMAX ! # of computational cells: z for radiation scheme
@@ -3210,6 +3138,11 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   use scale_grid_index, only: &
       KHALO, KMAX, &
       JHALO, IHALO
+  use scale_grid, only: &
+      GRID_CX, GRID_CY, &
+      DX, DY
+  use scale_mapproj, only: &
+      MPRJ_xy2lonlat
   use scale_const, only: &
       CONST_D2R
   use scale_atmos_phy_rd_profile, only: &
@@ -3291,6 +3224,8 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   real(RP) :: RD_cldfrac     (KMAX + H08_RTTOV_KADD)   ! cloud fraction (0-1)
 
   integer :: i, j
+  real(r_size) :: ri, rj
+  real(r_size) :: lon2d(nlon,nlat), lat2d(nlon,nlat)
 
   !
   ! Extrapolate input profiles by using climatology (MIPAS)
@@ -3335,8 +3270,13 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   do i = 1, nlon
     np = (j - 1) * nlon + i
 
-    lon1d(np) = lon2d(i,j)
-    lat1d(np) = lat2d(i,j)
+    ri = real(i + IHALO, r_size)
+    rj = real(j + JHALO, r_size)
+    call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1),&
+                        lon2d(i,j), lat2d(i,j))
+
+    lon1d(np) = lon2d(i,j) * rad2deg
+    lat1d(np) = lat2d(i,j) * rad2deg
 
     CALL zenith_geosat(HIM8_LON,lon1d(np),lat1d(np),zenith1d(np))
     tsfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_skint)
@@ -3809,6 +3749,7 @@ subroutine sobs_Him8(imax_him8,jmax_him8,lon_him8,lat_him8,tbb_org,tbb_sobs)
   real(r_size) :: ri, rj  
   real(r_size) :: ri_tmp(2), rj_tmp(2)  
   real(r_size) :: rlon_tmp(2), rlat_tmp(2)
+  real(r_size) :: lon2d(nlon,nlat), lat2d(nlon,nlat)
 
   integer :: i, j, k, ii, jj
   integer :: is, ie, js, je
@@ -3827,13 +3768,8 @@ subroutine sobs_Him8(imax_him8,jmax_him8,lon_him8,lat_him8,tbb_org,tbb_sobs)
     rlat_tmp(i) = rlat_tmp(i) * rad2deg
   enddo
 
-  dix = max(int(abs(rlon_tmp(2) - rlon_tmp(1)) * 0.5d0 / abs(lon_him8(2)-lon_him8(1))),1)
-  diy = max(int(abs(rlat_tmp(2) - rlat_tmp(1)) * 0.5d0 / abs(lat_him8(2)-lat_him8(1))),1)
-
-  if (.not. allocated(lon2d) .and. .not. allocated(lat2d))then
-    allocate (lon2d(nlon,nlat))
-    allocate (lat2d(nlon,nlat))
-  endif
+  dix = max(nint(abs(rlon_tmp(2) - rlon_tmp(1)) * 0.5d0 / abs(lon_him8(2)-lon_him8(1))),1)
+  diy = max(nint(abs(rlat_tmp(2) - rlat_tmp(1)) * 0.5d0 / abs(lat_him8(2)-lat_him8(1))),1)
 
   tbb_sobs = 0.0d0
 
@@ -3953,7 +3889,7 @@ subroutine allgHim82obs(nobs,tbb_allg,obsdat,obslon,obslat,obslev,obserr)
   real(r_size),intent(out),optional :: obslev(nobs)
   real(r_size),intent(out),optional :: obserr(nobs)
 
-  real(r_size) :: rig, rjg
+  real(r_size) :: ril, rjl
   real(r_size) :: lon, lat
 
   integer :: i, j
@@ -3979,13 +3915,13 @@ subroutine allgHim82obs(nobs,tbb_allg,obsdat,obslon,obslat,obslev,obserr)
       do ch = 1, NIRB_HIM8
         !n = ((j - 1) * nlong + i - 1) * NIRB_HIM8 + ch
 
-        n = ( int((j - 1) / H08_OBS_THIN_LEV) * num_Him8_x + int((i - 1) / H08_OBS_THIN_LEV) ) * NIRB_HIM8 + ch
+        n = ( int(j / H08_OBS_THIN_LEV - 1.0)  * num_Him8_x + int(i / H08_OBS_THIN_LEV - 1.0) ) * NIRB_HIM8 + ch
 
         if (present(obslon) .and. present(obslat) .and. present(obslev) .and. present(obserr)) then
-          rig = real(i+IHALO,kind=r_size)
-          rjg = real(j+JHALO,kind=r_size)
+          ril = real(i+IHALO,kind=r_size)
+          rjl = real(j+JHALO,kind=r_size)
 
-          call MPRJ_xy2lonlat((rig - 1.0_r_size) * DX + GRID_CXG(1), (rjg - 1.0_r_size) * DY + GRID_CYG(1), lon, lat)
+          call MPRJ_xy2lonlat((ril - 1.0_r_size) * DX + GRID_CXG(1), (rjl - 1.0_r_size) * DY + GRID_CYG(1), lon, lat)
           obslon(n) = lon * rad2deg
           obslat(n) = lat * rad2deg
           obslev(n) = ch + 6.0

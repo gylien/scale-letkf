@@ -81,19 +81,12 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   character(len=timer_name_width) :: timer_str
 
 ! -- for Himawari-8 obs --
-  integer :: nallprof ! Maximum number of Him8 profiles required for RTTOV
-!  real(r_size), allocatable :: yobs_H08(:,:,:),plev_obs_H08(:,:,:)
-!  real(r_size), allocatable :: yobs_H08_clr(:,:,:)
-!  integer, allocatable :: qc_H08(:,:,:)
-!  real(r_size), allocatable :: zangle_H08(:,:)
   real(r_size) :: yobs_H08(nlon,nlat,NIRB_HIM8),plev_obs_H08(nlon,nlat,NIRB_HIM8)
   real(r_size) :: yobs_H08_clr(nlon,nlat,NIRB_HIM8)
   integer :: qc_H08(nlon,nlat,NIRB_HIM8)
   real(r_size) :: zangle_H08(nlon,nlat)
   integer :: ch
-  integer :: nn_Him8, lnobs
-  real(r_size),allocatable :: obsdat_Him8(:)
-  integer :: i8, j8, ch8
+  integer :: i8, j8, b8
 
 
 #ifdef TCV
@@ -402,8 +395,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 #ifdef H08
         obsda%lev(1:nobs) = 0.0d0
         obsda%val2(1:nobs) = 0.0d0
-        obsda%pred1(1:nobs) = 0.0d0
-        obsda%pred2(1:nobs) = 0.0d0
+!        obsda%pred1(1:nobs) = 0.0d0
+!        obsda%pred2(1:nobs) = 0.0d0
 #endif
       end if
 
@@ -460,7 +453,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   
         !call gHim82obs_local(myrank_d,yobs_H08,obsdat_Him8,lnobs)
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC,5) PRIVATE(nn,n,iof,ril,rjl,rk,rkz,i8,j8,ch8) 
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC,5) PRIVATE(nn,n,iof,ril,rjl,rk,rkz,i8,j8,b8) 
         do nn = n1, n2
           iof = obsda%set(nn)
           n = obsda%idx(nn)
@@ -516,25 +509,27 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
           !---------------------------------------------------------------------
             i8 = nint(ril-IHALO)
             j8 = nint(rjl-JHALO)
-            ch8 = int(obs(iof)%lev(n))
-            obsda%val(nn) = yobs_H08(i8,j8,ch8-6)
-            obsda%qc(nn) = qc_H08(i8,j8,ch8)
-            obsda%pred1(nn) = zangle_H08(i8,j8)  ! predictor (1)
-            obsda%pred2(nn) = yobs_H08(i8,j8,ch8) ! predictor (2)
+            b8 = nint(obs(iof)%lev(n))
+            obsda%val(nn) = yobs_H08(i8,j8,b8-6)
+            obsda%lev(nn) = plev_obs_H08(i8,j8,b8-6)
+            obsda%qc(nn) = qc_H08(i8,j8,b8-6)
+            obsda%val2(nn) = (abs(yobs_H08(i8,j8,b8-6) - yobs_H08_clr(i8,j8,b8-6) )  &
+                              + abs(obs(iof)%dat(n) - yobs_H08_clr(i8,j8,b8-6)) ) * 0.5d0
 
-            obsda%val2(nn) = (abs(yobs_H08(i8,j8,ch8) - yobs_H08_clr(i8,j8,ch8) )  &
-                              + abs(obs(iof)%dat(n) - yobs_H08_clr(i8,j8,ch8)) ) * 0.5d0
-            !
-            ! Simple bias correction depending on the sky condition
-            ! (diagnosed by CA)
-            if(H08_BIAS_SIMPLE)then
-              if((obsda%val2(nn) > H08_CA_THRES) .and. ( .not. H08_BIAS_SIMPLE_CLR) )then
-                obsda%val(nn) = obsda%val(nn) - H08_BIAS_CLOUD(ch8-6)
-              else
-                obsda%val(nn) = obsda%val(nn) - H08_BIAS_CLEAR(ch8-6)
-              endif
-            endif
-
+!            obsda%pred1(nn) = zangle_H08(i8,j8)  ! predictor (1)
+!            obsda%pred2(nn) = yobs_H08(i8,j8,b8-6) ! predictor (2)
+!
+!            !
+!            ! Simple bias correction depending on the sky condition
+!            ! (diagnosed by CA)
+!            if(H08_BIAS_SIMPLE)then
+!              if((obsda%val2(nn) > H08_CA_THRES) .and. ( .not. H08_BIAS_SIMPLE_CLR) )then
+!                obsda%val(nn) = obsda%val(nn) - H08_BIAS_CLOUD(b8-6)
+!              else
+!                obsda%val(nn) = obsda%val(nn) - H08_BIAS_CLEAR(b8-6)
+!              endif
+!            endif
+!
           !=====================================================================
           end select
 
@@ -630,7 +625,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       ! 
       if (present(obsda_return)) then
 #ifdef H08
-        call obs_da_value_partial_reduce_iter(obsda_return, it, 1, nobs, obsda%val, obsda%qc, obsda%lev, obsda%val2, obsda%pred1, obsda%pred2)
+        call obs_da_value_partial_reduce_iter(obsda_return, it, 1, nobs, obsda%val, obsda%qc, obsda%lev, obsda%val2)!, obsda%pred1, obsda%pred2)
 #else
         call obs_da_value_partial_reduce_iter(obsda_return, it, 1, nobs, obsda%val, obsda%qc)
 #endif
@@ -672,7 +667,7 @@ SUBROUTINE obsmake_cal(obs)
 #ifdef H08
 ! obsmake for H08 is not available !! (03/17/2016) T.Honda
 ! -- for Himawari-8 obs --
-  INTEGER :: nallprof ! H08: Num of all profiles (entire domain) required by RTTOV
+  integer :: nallprof
   INTEGER :: nprof_H08 ! num of H08 obs
   REAL(r_size),ALLOCATABLE :: ril_H08(:),rjl_H08(:)
   REAL(r_size),ALLOCATABLE :: lon_H08(:),lat_H08(:)

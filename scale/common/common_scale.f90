@@ -1855,6 +1855,7 @@ subroutine rij_rank_g2l(ig, jg, rank, il, jl)
 end subroutine rij_rank_g2l
 
 #ifdef H08
+
 function ch2BB_Him8(ch)
   implicit none
 
