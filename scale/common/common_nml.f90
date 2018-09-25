@@ -16,7 +16,7 @@ MODULE common_nml
 
   !----
   integer, parameter :: nv3d = 11    ! number of 3D state variables (in SCALE restart files)
-  integer, parameter :: nv2d = 1     ! number of 2D state variables (in SCALE restart files)
+  integer, parameter :: nv2d = 0     ! number of 2D state variables (in SCALE restart files)
   integer, parameter :: nid_obs = 17 ! number of variable types
   integer, parameter :: nobtype = 25 ! number of observation report types
   integer, parameter :: NIRB_HIM8 = 10     ! H08 Num of Himawari-8 (IR) bands
@@ -870,7 +870,7 @@ subroutine read_nml_letkf_monitor
     DEPARTURE_STAT, &
     DEPARTURE_STAT_RADAR, &
     DEPARTURE_STAT_H08, &
-    DEPARTURE_STAT_JMARFRAC , &
+!    DEPARTURE_STAT_JMARFRAC , &
     DEPARTURE_STAT_T_RANGE, &
     DEPARTURE_STAT_ALL_PROCESSES, &
     OBSDEP_OUT, &

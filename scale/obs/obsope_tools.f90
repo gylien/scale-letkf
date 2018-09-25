@@ -195,13 +195,13 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       do ibufs = 1, cntr(myrank_a+1)
         n = dspr(myrank_a+1) + ibufs
 
-        if(OBS_IN_FORMAT(iof) == obsfmt_jmarfrac)then
-          ! JMA radar fraction obs contains rig/rjg/obrank instead of lon/lat/lev
-          ri_bufs(ibufs) = obs(iof)%lon(n)
-          rj_bufs(ibufs) = obs(iof)%lat(n)
-          obrank_bufs(ibufs) = obs(iof)%lev(n)
-          cycle
-        endif
+!        if(OBS_IN_FORMAT(iof) == obsfmt_jmarfrac)then
+!          ! JMA radar fraction obs contains rig/rjg/obrank instead of lon/lat/lev
+!          ri_bufs(ibufs) = obs(iof)%lon(n)
+!          rj_bufs(ibufs) = obs(iof)%lat(n)
+!          obrank_bufs(ibufs) = nint(obs(iof)%lev(n))
+!          cycle
+!        endif
 
         call phys2ij(obs(iof)%lon(n), obs(iof)%lat(n), ri_bufs(ibufs), rj_bufs(ibufs))
         call rij_rank(ri_bufs(ibufs), rj_bufs(ibufs), obrank_bufs(ibufs))
@@ -574,7 +574,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
           case (obsfmt_jmarfrac)
           !---------------------------------------------------------------------
             obsda%val(nn) = m2d(nint(ril-IHALO),nint(rjl)-JHALO)
-            if ((obsda%val(nn) < 0.0d0) .or. (obs(iof)%dat(n)) < 0.0d0)then
+            if ((obsda%val(nn) < 0.0d0) .or. (obs(iof)%dat(n) < 0.0d0))then
               obsda%qc(nn) = iqc_obs_bad
               cycle
             endif

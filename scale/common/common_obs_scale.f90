@@ -1392,9 +1392,9 @@ END SUBROUTINE itpl_3d
 #ifdef H08
 subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,&
                      nobs_H08,bias_H08,rmse_H08,bias_H08_bc,rmse_H08_bc,&
-                     aH08,bH08,vbcf,step,m2d)
+                     aH08,bH08,vbcf,step)!,m2d)
 #else
-subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step,m2d)
+subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)!,m2d)
 #endif
   use scale_process, only: &
       PRC_myrank
@@ -1412,7 +1412,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step,m2d)
   LOGICAL,INTENT(OUT) :: monit_type(nid_obs)
   logical,intent(in) :: use_key
   integer,intent(in) :: step
-  real(r_size),intent(in),optional :: m2d(nlon,nlat)
+!  real(r_size),intent(in),optional :: m2d(nlon,nlat)
 
   REAL(r_size) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size) :: v2dgh(nlonh,nlath,nv2dd)
@@ -1635,18 +1635,19 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step,m2d)
       !=========================================================================
       case (obsfmt_jmarfrac) ! JMA radar fraction obs
       !-------------------------------------------------------------------------
-        if (.not.present(m2d)) then
-          write(6,'(a)')'No fraction input into monit_obs! Check!'
-          cycle
-        endif
-        ohx(n) = m2d(nint(ril-IHALO),nint(rjl-JHALO))
-        if ((ohx(n)  >= 0.0d0) .and. (obs(iset)%dat(iidx) >= 0.0d0))then
-          obsdep_qc(n) = iqc_good 
-          oqc(n) = iqc_good 
-        else
-          obsdep_qc(n) = iqc_obs_bad
-          oqc(n) = iqc_obs_bad
-        endif
+        cycle
+!        if (.not.present(m2d)) then
+!          write(6,'(a)')'No fraction input into monit_obs! Check!'
+!          cycle
+!        endif
+!        ohx(n) = m2d(nint(ril-IHALO),nint(rjl-JHALO))
+!        if ((ohx(n)  >= 0.0d0) .and. (obs(iset)%dat(iidx) >= 0.0d0))then
+!          obsdep_qc(n) = iqc_good 
+!          oqc(n) = iqc_good 
+!        else
+!          obsdep_qc(n) = iqc_obs_bad
+!          oqc(n) = iqc_obs_bad
+!        endif
 
       !=========================================================================
       end select
@@ -1891,9 +1892,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step,m2d)
   if (DEPARTURE_STAT_H08) then
     monit_type(uid_obs(id_H08IR_obs)) = .true.
   end if
-  if (DEPARTURE_STAT_JMARFRAC) then
-    monit_type(uid_obs(id_jmarfrac_obs)) = .true.
-  end if
+!  if (DEPARTURE_STAT_JMARFRAC) then
+!    monit_type(uid_obs(id_jmarfrac_obs)) = .true.
+!  end if
 #endif
 
 #ifdef TCV
@@ -3695,7 +3696,7 @@ subroutine get_rain_flag(flag2d,it,iof,frain2d)
     !if(rain2d(i,j) >= JMA_RADAR_FSS_RAIN / JMA_RADAR_TINT)THEN  ! mm/s
     if(rain2d(i,j) >= JMA_RADAR_FSS_RAIN / 3600.0d0)THEN  ! mm/s
       flag2d(i,j) = 1.0d0
-    elseif(rain2d(i,j) < 0.0d0)then ! Missing value 
+    elseif((rain2d(i,j) < 0.0d0) .and. (.not. present(frain2d)))then ! Missing Obs value 
       flag2d(i,j) = -1.0d0
     endif
   enddo

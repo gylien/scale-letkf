@@ -1438,7 +1438,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   integer :: ich
 #endif
 
-  real(r_size) :: m2d(nlon,nlat)
+!  real(r_size) :: m2d(nlon,nlat)
 
 #ifdef TCV
 !  real(r_size) :: bTC(3,0:MEM_NP-1) 
@@ -1455,11 +1455,11 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   ! 
   if (myrank_e == mmean_rank_e) then
 
-    if(USE_JMARFRAC)then
-      call calc_fraction(m2d=m2d,rain2d=v2dg(1:nlon,1:nlat,iv2dd_rain))
-    else
-      m2d = -1.0d0
-    endif
+!    if(USE_JMARFRAC)then
+!      call calc_fraction(m2d=m2d,rain2d=v2dg(1:nlon,1:nlat,iv2dd_rain))
+!    else
+!      m2d = -1.0d0
+!    endif
 
 #ifdef H08
     if (H08_VBC_USE)then
@@ -1469,7 +1469,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
     endif
     call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true.,&
                    nobs_H08, bias_H08, rmse_H08, bias_H08_bc, rmse_H08_bc,&
-                   aH08, bH08, vbcfH08, monit_step, m2d)
+                   aH08, bH08, vbcfH08, monit_step)!, m2d)
 #else
     call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true., monit_step)
 #endif
@@ -2307,12 +2307,12 @@ subroutine calc_fraction(o2d,m2d,it,iof,rain2d,fss)
       jg = j+jshift+l-1-nh
 
       if(ig < 1 .or. ig > nlong .or. jg < 1 .or. jg > nlatg) cycle
-      if(obsi2dg(ig,jg) < 0.0) cycle ! missing obs
 
       if (FCST_FRAC) then 
         m2d(i,j) = m2d(i,j) + real(fcsti2dg(ig,jg), kind=r_size)
       endif
       if (OBS_FRAC) then 
+        if(obsi2dg(ig,jg) < 0.0) cycle ! missing obs
         o2d(i,j) = o2d(i,j) + real(obsi2dg(ig,jg), kind=r_size)
       endif
 
@@ -2339,7 +2339,6 @@ subroutine calc_fraction(o2d,m2d,it,iof,rain2d,fss)
         cnt_total = cnt_total + 1
       endif
     else
-      if(FCST_FRAC)m2d(i,j) = -1.0d0
       if(OBS_FRAC)o2d(i,j) = -1.0d0
     endif
    
@@ -2365,12 +2364,19 @@ end subroutine calc_fraction
 subroutine calc_jmarfrac_obs_mpi(obs,iof)
   use scale_grid_index, only: &
       IHALO, JHALO
+  use scale_grid, only: &
+      GRID_CX, GRID_CY, &
+      DX, DY
+  use scale_mapproj, only: &
+      MPRJ_xy2lonlat
   implicit none
 
   type(obs_info),intent(inout) :: obs
   integer,intent(in) :: iof
 
   real(r_size) :: o2d(nlon,nlat)
+  real(r_size) :: ri, rj
+  real(r_size) :: lon, lat
   integer :: iproc, jproc
   integer :: i, j
   integer :: n
@@ -2387,8 +2393,14 @@ subroutine calc_jmarfrac_obs_mpi(obs,iof)
     do i = 1, nlon
       n = n + 1
       obs%elm(n) = id_jmarfrac_obs
-      obs%lon(n) = real(i + iproc * nlon + IHALO, RP) ! rig
-      obs%lat(n) = real(j + jproc * nlat + JHALO, RP) ! rij
+
+      ri = real(i + IHALO, r_size)
+      rj = real(j + JHALO, r_size)
+      call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size)* DY + GRID_CY(1), lon, lat)
+      obs%lon(n) = lon * rad2deg
+      obs%lat(n) = lat * rad2deg
+!      obs%lon(n) = real(i + iproc * nlon + IHALO, RP) ! rig
+!      obs%lat(n) = real(j + jproc * nlat + JHALO, RP) ! rij
       obs%lev(n) = myrank_d
       obs%dat(n) = o2d(i,j)
       obs%err(n) = OBSERR_JMA_RFRAC

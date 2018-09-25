@@ -530,21 +530,21 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
         DO n=1,nv2d
 
-          !! Do not analyze precipitation !!
-          !! Precipitation input (SFLX_rain) from restart files is used only for monit_obs
-          !! in guess (JMA radar fraction)
-          if (n == iv2d_rain) then
-
-            do m = 1, MEMBER
-              anal2d(ij,m,n) = gues2d(ij,mmean,n) + gues2d(ij,m,n)
-            end do
-            if (DET_RUN) then
-              anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n)
-            end if
-
-            cycle
-
-          endif
+!          !! Do not analyze precipitation !!
+!          !! Precipitation input (SFLX_rain) from restart files is used only for monit_obs
+!          !! in guess (JMA radar fraction)
+!          if (n == iv2d_rain) then
+!
+!            do m = 1, MEMBER
+!              anal2d(ij,m,n) = gues2d(ij,mmean,n) + gues2d(ij,m,n)
+!            end do
+!            if (DET_RUN) then
+!              anal2d(ij,mmdet,n) = gues2d(ij,mmdet,n)
+!            end if
+!
+!            cycle
+!
+!          endif
  
           n2nc = var_local_n2nc(nv3d+n)
           n2n = var_local_n2n(nv3d+n)

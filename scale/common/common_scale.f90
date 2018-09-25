@@ -47,12 +47,10 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv3d_qi=9   !
   INTEGER,PARAMETER :: iv3d_qs=10  !
   INTEGER,PARAMETER :: iv3d_qg=11  !
-  INTEGER,PARAMETER :: iv2d_rain=1  !
   CHARACTER(vname_max),PARAMETER :: v3d_name(nv3d) = &
      (/'DENS', 'MOMX', 'MOMY', 'MOMZ', 'RHOT', &
        'QV', 'QC', 'QR', 'QI', 'QS', 'QG'/)
-  CHARACTER(vname_max) :: v2d_name(nv2d) = &
-     (/'SFLX_rain'/)
+  CHARACTER(vname_max) :: v2d_name(nv2d) 
 
   ! 
   !--- 3D, 2D diagnostic variables (in SCALE history files)
@@ -1341,7 +1339,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
 
-  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) = v2dg(:,:,iv2d_rain)
+!  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) = v2dg(:,:,iv2d_rain)
 
   ! RH
   !---------------------------------------------------------

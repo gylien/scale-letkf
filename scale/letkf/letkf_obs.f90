@@ -592,7 +592,6 @@ SUBROUTINE set_letkf_obs
         obsda%qc(n) = iqc_gross_err
       END IF
     case (id_jmarfrac_obs)
-      print *,"DEBUG999 ",obsda%val(n),obs(iof)%dat(iidx)
       IF(ABS(obsda%val(n)) > GROSS_ERROR_JMARFRAC * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
