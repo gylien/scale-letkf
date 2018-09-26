@@ -264,6 +264,9 @@ ${RTTOV_COEF}|${RUN_SUBDIR}/obsope/rtcoef_himawari_8_ahi.dat
 ${RTTOV_COEF}|${RUN_SUBDIR}/letkf/rtcoef_himawari_8_ahi.dat
 ${RTTOV_SCCOEF}|${RUN_SUBDIR}/obsope/sccldcoef_himawari_8_ahi.dat
 ${RTTOV_SCCOEF}|${RUN_SUBDIR}/letkf/sccldcoef_himawari_8_ahi.dat
+else
+  echo "Check RTTOV coefficient paths in config.main! [e.g., RTTOV_SCCOEF]"
+  exit 1
 EOF
 
 
@@ -473,10 +476,8 @@ while ((time <= ETIME)); do
 
   # Himawari-8 gues/anal
   #-------------------
-  if ((loop == 1)); then
-    path="Him8/"
-    echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-  fi
+  path="${atime}/Him8/"
+  echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
 
   # anal (initial time)
   #-------------------

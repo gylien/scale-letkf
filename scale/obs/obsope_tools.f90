@@ -83,9 +83,11 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 ! -- for Himawari-8 obs --
   real(r_size) :: yobs_H08(nlon,nlat,NIRB_HIM8),plev_obs_H08(nlon,nlat,NIRB_HIM8)
   real(r_size) :: yobs_H08_clr(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: yobs_H08_prep(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: yobs_H08_clr_prep(nlon,nlat,NIRB_HIM8)
   integer :: qc_H08(nlon,nlat,NIRB_HIM8)
+  integer :: qc_H08_prep(nlon,nlat,NIRB_HIM8)
   real(r_size) :: zangle_H08(nlon,nlat)
-  integer :: ch
   integer :: i8, j8, b8
 
 
@@ -448,11 +450,13 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
         if (USE_HIM8) then
           call Trans_XtoY_H08_allg(v3dg,v2dg,yobs_H08,yobs_H08_clr,&
                                    plev_obs_H08,qc_H08,zangle_H08)
+
+          ! Him8 preprocess
+          call prep_Him8_mpi(yobs_H08,    tbb_lprep=yobs_H08_prep,qc_lprep=qc_H08_prep)
+          call prep_Him8_mpi(yobs_H08_clr,tbb_lprep=yobs_H08_clr_prep)
         endif
 
   
-        !call gHim82obs_local(myrank_d,yobs_H08,obsdat_Him8,lnobs)
-
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC,5) PRIVATE(nn,n,iof,ril,rjl,rk,rkz,i8,j8,b8) 
         do nn = n1, n2
           iof = obsda%set(nn)
@@ -510,11 +514,16 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
             i8 = nint(ril-IHALO)
             j8 = nint(rjl-JHALO)
             b8 = nint(obs(iof)%lev(n))
-            obsda%val(nn) = yobs_H08(i8,j8,b8-6)
+            obsda%val(nn) = yobs_H08_prep(i8,j8,b8-6)
             obsda%lev(nn) = plev_obs_H08(i8,j8,b8-6)
-            obsda%qc(nn) = qc_H08(i8,j8,b8-6)
-            obsda%val2(nn) = (abs(yobs_H08(i8,j8,b8-6) - yobs_H08_clr(i8,j8,b8-6) )  &
-                              + abs(obs(iof)%dat(n) - yobs_H08_clr(i8,j8,b8-6)) ) * 0.5d0
+            obsda%qc(nn) = qc_H08_prep(i8,j8,b8-6)
+ 
+            if (obs(iof)%dat(n) == undef) then
+              obsda%qc(nn) = iqc_obs_bad
+            endif
+
+            obsda%val2(nn) = (abs(yobs_H08_prep(i8,j8,b8-6) - yobs_H08_clr_prep(i8,j8,b8-6) )  &
+                              + abs(obs(iof)%dat(n) - yobs_H08_clr_prep(i8,j8,b8-6)) ) * 0.5d0
 
 !            obsda%pred1(nn) = zangle_H08(i8,j8)  ! predictor (1)
 !            obsda%pred2(nn) = yobs_H08(i8,j8,b8-6) ! predictor (2)
@@ -973,18 +982,13 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
 #ifdef H08
 ! -- for Himawari-8 obs --
-  real(r_size) :: ri_H08(nlon*nlat),rj_H08(nlon*nlat)
-  real(r_size) :: lon_H08(nlon*nlat),lat_H08(nlon*nlat)
-  integer :: np ! num of Him8 profile
-  real(r_size) :: yobs_H08(NIRB_HIM8,nlon*nlat),yobs_H08_clr(NIRB_HIM8,nlon*nlat)
-  real(r_size) :: plev_obs_H08(NIRB_HIM8,nlon*nlat)
-  integer :: qc_H08(NIRB_HIM8,nlon*nlat)
-  real(r_size) :: zangle_H08(nlon*nlat)
-  integer :: ch, it
-  integer :: dp, sp, ep
-  integer, parameter :: itmax = 2
+  real(r_size) :: yobs_H08(nlon,nlat,NIRB_HIM8),yobs_H08_clr(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: plev_obs_H08(nlon,nlat,NIRB_HIM8)
+  integer :: qc_H08(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: zangle_H08(nlon,nlat)
+  integer :: ch
 
-  np = 0
+  USE_HIM8 = .false. ! initialize
 
 #endif
 
@@ -1001,15 +1005,6 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
       call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1), lon, lat)
       lon = lon * rad2deg
       lat = lat * rad2deg
-
-#ifdef H08
-      np = np + 1
-
-      ri_H08(np) = ri
-      rj_H08(np) = rj
-      lon_H08(np) = lon
-      lat_H08(np) = lat
-#endif
 
       do k = 1, nlev
         rk = real(k + KHALO, r_size)
@@ -1063,41 +1058,21 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
 #ifdef H08
 
-  dp = int(np / itmax)
+  if (USE_HIM8) then
+    call Trans_XtoY_H08_allg(v3dgh,v2dgh,yobs_H08,yobs_H08_clr,&
+                             plev_obs_H08,qc_H08,zangle_H08)
 
-  do it = 1, itmax
-    sp = 1 + dp * (it - 1)
-    ep = dp * it
-    if(it == itmax)ep = np
+    ! call allgHim82obs(tbb_allg,tbb_allg_thg)
 
-    call Trans_XtoY_H08(ep-sp+1,ri_H08(sp:ep),rj_H08(sp:ep),&
-                        lon_H08(sp:ep),lat_H08(sp:ep),v3dgh,v2dgh,&
-                        yobs_H08(1:NIRB_HIM8,sp:ep),yobs_H08_clr(1:NIRB_HIM8,sp:ep),&
-                        plev_obs_H08(1:NIRB_HIM8,sp:ep),qc_H08(1:NIRB_HIM8,sp:ep),&
-                        zangle_H08(sp:ep))
+    ch = 0
+    do iv2dsim = 1, OBSSIM_NUM_2D_VARS
+      if(OBSSIM_2D_VARS_LIST(iv2dsim) /= id_H08IR_obs .or. ch > NIRB_HIM8)cycle
 
-  enddo ! [it = 1, itmax]
+      ch = ch + 1
+      v2dgsim(:,:,iv2dsim) = real(yobs_H08(ch,:,:), r_sngl)
+    enddo ! [iv2dsim = 1, OBSSIM_NUM_2D_VARS]
 
-  np = 0
-  do j = 1, nlat
-
-    do i = 1, nlon
-
-      np = np + 1
-      ch = 0
-
-      do iv2dsim = 1, OBSSIM_NUM_2D_VARS
-        if(OBSSIM_2D_VARS_LIST(iv2dsim) /= id_H08IR_obs .or. ch > NIRB_HIM8)cycle
-
-        ch = ch + 1
-        v2dgsim(i,j,iv2dsim) = real(yobs_H08(ch,np), r_sngl)
-      enddo ! [iv2dsim = 1, OBSSIM_NUM_2D_VARS]
-
-    end do ! [ i = 1, nlon ]
-
-  end do ! [ j = 1, nlat ]
-
-
+  endif ! [USE_HIM8]
 #endif
 
 !-------------------------------------------------------------------------------

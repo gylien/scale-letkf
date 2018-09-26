@@ -1879,7 +1879,7 @@ subroutine read_obs_all_mpi(obs)
     end if
 
     if((OBS_IN_FORMAT(iof) == obsfmt_h08) .and. H08_FORMAT_NC) then
-      call read_him8_mpi(OBS_IN_NAME(iof),obs(iof),obs(iof)%nobs)
+      call read_Him8_mpi(OBS_IN_NAME(iof),obs(iof))
     else
       cycle
     endif
@@ -2207,19 +2207,56 @@ end subroutine mpi_timer
 !  return
 !end subroutine get_vbc_Him8_mpi
 
-subroutine read_him8_mpi(filename,obs,nobs)
-  use scale_grid, only: &
-      GRID_CX, GRID_CY, &
-      DX, DY
-  use scale_grid_index, only: &
-      IHALO, JHALO
-  use scale_mapproj, only: &
-      MPRJ_xy2lonlat
+subroutine prep_Him8_mpi(tbb_l,tbb_lprep,qc_lprep)
+  implicit none
+
+  real(r_size),intent(in) :: tbb_l(nlon,nlat,NIRB_HIM8) ! superobs tbb (local)
+  real(r_size),intent(out),optional :: tbb_lprep(nlon,nlat,NIRB_HIM8) ! superobs tbb (local) after preprocess
+  integer,intent(out),optional :: qc_lprep(nlon,nlat,NIRB_HIM8) ! QC flag (local) after preprocess
+
+  integer :: qc_gprep(nlong,nlatg,NIRB_HIM8) ! QC flag (local) after preprocess
+
+  real(r_size) :: tbb_g(nlong,nlatg,NIRB_HIM8) ! superobs tbb (global)
+  real(r_size) :: tbb_gprep(nlong,nlatg,NIRB_HIM8) ! superobs tbb (global) after preprocess
+
+  integer ierr
+
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+
+  real(r_size) :: bufs8(nlong,nlatg,NIRB_HIM8)
+
+
+  ! Gatther Him8 obs simulated in each subdomain
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  bufs8(:,:,:) = 0.0d0
+  bufs8(1+ishift:nlon+ishift, 1+jshift:nlat+jshift,1:NIRB_HIM8) = tbb_l(:,:,:)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, bufs8, nlong*nlatg*NIRB_HIM8, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+  tbb_g = bufs8
+
+
+  if (present(qc_lprep)) then
+    call allgHim82obs(tbb_g,tbb_gprep,qc_allg_prep=qc_gprep)
+    qc_lprep = qc_gprep(1+ishift:nlon+ishift,1+jshift:nlat+jshift,1:NIRB_HIM8)
+  else
+    call allgHim82obs(tbb_g,tbb_gprep)
+  endif
+
+  if (present(tbb_lprep)) then
+    tbb_lprep = tbb_gprep(1+ishift:nlon+ishift,1+jshift:nlat+jshift,1:NIRB_HIM8)
+  endif
+
+  return
+end subroutine prep_Him8_mpi
+
+subroutine read_Him8_mpi(filename,obs)
   implicit none
 
   character(*),intent(in) :: filename
   type(obs_info),intent(inout) :: obs
-  integer,intent(in) :: nobs
 
   integer :: imax_him8, jmax_him8
 
@@ -2227,6 +2264,7 @@ subroutine read_him8_mpi(filename,obs,nobs)
   real(r_sngl),allocatable :: lon_him8(:), lat_him8(:)
   real(r_size) :: tbb_sobs_l(nlon,nlat,NIRB_HIM8) ! superobs tbb (local)
   real(r_size) :: tbb_sobs(nlong,nlatg,NIRB_HIM8) ! superobs tbb (global)
+  real(r_size) :: tbb_sobs_prep(nlong,nlatg,NIRB_HIM8) ! superobs tbb (global) after preprocess
 
   integer ierr
   integer :: iunit, irec
@@ -2281,7 +2319,7 @@ subroutine read_him8_mpi(filename,obs,nobs)
   if (myrank_a == 0) then
     ! it would be better to enable multiple processes in the following subroutine
 
-    call allgHim82obs(nobs,tbb_sobs,obs%dat,obslon=obs%lon,obslat=obs%lat,obslev=obs%lev,obserr=obs%err)
+    call allgHim82obs(tbb_sobs,tbb_sobs_prep,obsdat=obs%dat,obslon=obs%lon,obslat=obs%lat,obslev=obs%lev,obserr=obs%err)
     obs%elm(:) = id_H08IR_obs
     obs%typ(:) = 23
     obs%dif(:) = 0.0d0 ! Assume 3D-LETKF for Himawari-8
@@ -2294,37 +2332,31 @@ subroutine read_him8_mpi(filename,obs,nobs)
     do ch = 1, NIRB_HIM8
       irec = irec + 1
       write(iunit,rec=irec) real(tbb_sobs(:,:,ch),kind=r_sngl)
+      irec = irec + 1
+      write(iunit,rec=irec) real(tbb_sobs_prep(:,:,ch),kind=r_sngl)
     enddo
 
     close(unit=iunit)    
 
   endif
 
-
-!  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%elm(:), nobs, MPI_INTEGER, MPI_SUM, MPI_COMM_a, ierr)
-!  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%lon(:), nobs, MPI_r_size, MPI_SUM, MPI_COMM_a, ierr)
-!  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%lat(:), nobs, MPI_r_size, MPI_SUM, MPI_COMM_a, ierr)
-!  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%lev(:), nobs, MPI_r_size, MPI_SUM, MPI_COMM_a, ierr)
-!  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%dat(:), nobs, MPI_r_size, MPI_SUM, MPI_COMM_a, ierr)
-!  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%err(:), nobs, MPI_r_size, MPI_SUM, MPI_COMM_a, ierr)
-!  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%typ(:), nobs, MPI_INTEGER, MPI_SUM, MPI_COMM_a, ierr)
-!  call MPI_ALLREDUCE(MPI_IN_PLACE, obs%dif(:), nobs, MPI_r_size, MPI_SUM, MPI_COMM_a, ierr)
-
   deallocate(tbb_org)
   deallocate(lon_him8,lat_him8)
 
   return
-end subroutine read_him8_mpi
+end subroutine read_Him8_mpi
 
-subroutine write_Him8_mpi(yobs_H08_l,step)
+subroutine write_Him8_mpi(tbb_l,step)
   implicit none
 
-  real(r_size),intent(in) :: yobs_H08_l(nlon,nlat,NIRB_HIM8)
+  real(r_size),intent(in) :: tbb_l(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: tbb_lprep(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: tbb_gprep(nlong,nlatg,NIRB_HIM8)
   integer,intent(in) :: step
 
   character(filelenmax) :: filename
 
-  real(r_size) :: yobs_H08_g(nlong,nlatg,NIRB_HIM8)
+  real(r_size) :: tbb_g(nlong,nlatg,NIRB_HIM8)
   real(r_size) :: bufs4(nlong,nlatg,NIRB_HIM8)
 
   integer :: proc_i, proc_j
@@ -2334,14 +2366,21 @@ subroutine write_Him8_mpi(yobs_H08_l,step)
   integer :: iunit, irec
   integer :: ch
  
+  call prep_Him8_mpi(tbb_l,tbb_lprep=tbb_lprep)
+
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
   jshift = proc_j * nlat
 
   bufs4(:,:,:) = 0.0d0
-  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift,:) = yobs_H08_l(:,:,:)
+  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift,:) = tbb_l(:,:,:)
   call MPI_ALLREDUCE(MPI_IN_PLACE, bufs4, nlong*nlatg*NIRB_HIM8, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-  yobs_H08_g = bufs4
+  tbb_g = bufs4
+
+  bufs4(:,:,:) = 0.0d0
+  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift,:) = tbb_lprep(:,:,:)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, bufs4, nlong*nlatg*NIRB_HIM8, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+  tbb_gprep = bufs4
 
   if (myrank_d == 0) then
     iunit = 65
@@ -2357,7 +2396,9 @@ subroutine write_Him8_mpi(yobs_H08_l,step)
          status='unknown', recl=nlong*nlatg*4)
     do ch = 1, NIRB_HIM8
       irec = irec + 1
-      write(iunit,rec=irec) real(yobs_H08_g(:,:,ch),kind=r_sngl)
+      write(iunit,rec=irec) real(tbb_gprep(:,:,ch),kind=r_sngl)
+      irec = irec + 1
+      write(iunit,rec=irec) real(tbb_g(:,:,ch),kind=r_sngl)
     enddo
 
     close(unit=iunit)

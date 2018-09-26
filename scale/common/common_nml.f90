@@ -334,7 +334,9 @@ MODULE common_nml
                         !! sensitive to chemicals.
  
   ! How to prepare Himawari-8 obs using that "superobs"ed into the model grid
-  integer :: H08_OBS_METHOD = 1 ! simple thinning
+  integer :: H08_OBS_METHOD = 1 ! 1: simple thinning, 2: averaging adjacent grids
+  integer :: H08_OBS_AVE_NG = 0 ! # of grids for averaging adjacent grids (H08_OBS_METHOD=2)
+  logical :: H08_OBS_AVE_OVERLAP = .false.
   integer :: H08_OBS_THIN_LEV = 1 ! thinning level (1: no thinning)
   logical :: USE_HIM8 = .false. ! will be overwritten from obsope_tools.f90
 
@@ -964,6 +966,8 @@ subroutine read_nml_letkf_h08
     H08_VBC_PATH,&
     H08_VBC_USE,&
     H08_OBS_METHOD,&
+    H08_OBS_AVE_NG,&
+    H08_OBS_AVE_OVERLAP, &
     H08_OBS_THIN_LEV
 
   rewind(IO_FID_CONF)
@@ -982,6 +986,18 @@ subroutine read_nml_letkf_h08
  
   if(H08_OBS_4D)then
     H08_OBS_RECL = H08_OBS_RECL + 1 ! obs%dif for 4D LETKF
+  endif
+
+  if(H08_OBS_THIN_LEV < 1) then
+    H08_OBS_THIN_LEV = 1
+  endif
+
+  if(H08_OBS_AVE_NG < 0) then
+    H08_OBS_AVE_NG = 0
+  endif
+
+  if ((.not. H08_OBS_AVE_OVERLAP) .and. (H08_OBS_METHOD == 2)) then
+    H08_OBS_THIN_LEV = max(H08_OBS_THIN_LEV, 2*H08_OBS_AVE_NG)
   endif
 
   if (LOG_LEVEL >= 2) then

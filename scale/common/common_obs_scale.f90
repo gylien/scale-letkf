@@ -3183,8 +3183,8 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   REAL(r_size),INTENT(OUT) :: zenith1d(nlon*nlat) ! predictor for bias correction
 
 ! -- brightness temp from RTTOV
-  REAL(r_size) :: btall_out(nlon*nlat,NIRB_HIM8) ! NOTE: RTTOV always calculates all (10) channels!!
-  REAL(r_size) :: btclr_out(nlon*nlat,NIRB_HIM8) ! NOTE: RTTOV always calculates all (10) channels!!
+  REAL(r_size) :: btall_out(NIRB_HIM8,nlon*nlat) ! NOTE: RTTOV always calculates all (10) channels!!
+  REAL(r_size) :: btclr_out(NIRB_HIM8,nlon*nlat) ! NOTE: RTTOV always calculates all (10) channels!!
 ! -- cloud top height
   REAL(r_size) :: ctop_out1d(nlon*nlat) 
 
@@ -3225,7 +3225,6 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
 
   integer :: i, j
   real(r_size) :: ri, rj
-  real(r_size) :: lon2d(nlon,nlat), lat2d(nlon,nlat)
 
   !
   ! Extrapolate input profiles by using climatology (MIPAS)
@@ -3273,10 +3272,10 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
     ri = real(i + IHALO, r_size)
     rj = real(j + JHALO, r_size)
     call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1),&
-                        lon2d(i,j), lat2d(i,j))
+                        lon1d(np), lat1d(np))
 
-    lon1d(np) = lon2d(i,j) * rad2deg
-    lat1d(np) = lat2d(i,j) * rad2deg
+    lon1d(np) = lon1d(np) * rad2deg
+    lat1d(np) = lat1d(np) * rad2deg
 
     CALL zenith_geosat(HIM8_LON,lon1d(np),lat1d(np),zenith1d(np))
     tsfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_skint)
@@ -3288,7 +3287,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
     ! assume not staggerd grid
     utmp = v2d(i+IHALO,j+JHALO,iv2dd_u10m)
     vtmp = v2d(i+IHALO,j+JHALO,iv2dd_v10m)
-    call MPRJ_rotcoef(rotc,lon2d(i,j)*deg2rad,lat2d(i,j)*deg2rad)
+    call MPRJ_rotcoef(rotc,lon1d(np)*deg2rad,lat1d(np)*deg2rad)
     usfc1d(np) = utmp * rotc(1) - vtmp * rotc(2)
     vsfc1d(np) = utmp * rotc(2) + vtmp * rotc(1)
 
@@ -3376,23 +3375,6 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
 
   return
 END SUBROUTINE Trans_XtoY_H08_allg
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 SUBROUTINE write_vbc_Him8(vbca,ANAL)
   implicit none
@@ -3855,22 +3837,13 @@ subroutine get_nobs_allgHim8(nobs)
   implicit none
 
   integer, intent(out) :: nobs
-  integer :: num_Him8_x
-  integer :: num_Him8_y
 
-  select case(H08_OBS_METHOD)
-  case(1) ! simple thinning
-
-    num_Him8_x = int(nlong/H08_OBS_THIN_LEV)
-    num_Him8_y = int(nlatg/H08_OBS_THIN_LEV)
-
-    nobs = num_Him8_x * num_Him8_y * NIRB_HIM8
-  end select
+  nobs = nlong * nlatg * NIRB_HIM8
 
   return
 end subroutine get_nobs_allgHim8
 
-subroutine allgHim82obs(nobs,tbb_allg,obsdat,obslon,obslat,obslev,obserr)
+subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat,obslev,obserr)
   use scale_grid, only: &
       GRID_CXG, GRID_CYG, &
       DX, DY
@@ -3880,14 +3853,16 @@ subroutine allgHim82obs(nobs,tbb_allg,obsdat,obslon,obslat,obslev,obserr)
       MPRJ_xy2lonlat
   implicit none
 
-  integer,intent(in) :: nobs
   real(r_size),intent(in) :: tbb_allg(nlong,nlatg,NIRB_HIM8)
+  real(r_size),intent(out) :: tbb_allg_prep(nlong,nlatg,NIRB_HIM8)
 
-  real(r_size),intent(out) :: obsdat(nobs)
-  real(r_size),intent(out),optional :: obslon(nobs)
-  real(r_size),intent(out),optional :: obslat(nobs)
-  real(r_size),intent(out),optional :: obslev(nobs)
-  real(r_size),intent(out),optional :: obserr(nobs)
+  real(r_size),intent(out),optional :: obsdat(nlong*nlatg*NIRB_HIM8)
+  real(r_size),intent(out),optional :: obslon(nlong*nlatg*NIRB_HIM8)
+  real(r_size),intent(out),optional :: obslat(nlong*nlatg*NIRB_HIM8)
+  real(r_size),intent(out),optional :: obslev(nlong*nlatg*NIRB_HIM8)
+  real(r_size),intent(out),optional :: obserr(nlong*nlatg*NIRB_HIM8)
+
+  integer,intent(out),optional :: qc_allg_prep(nlong,nlatg,NIRB_HIM8)
 
   real(r_size) :: ril, rjl
   real(r_size) :: lon, lat
@@ -3895,98 +3870,78 @@ subroutine allgHim82obs(nobs,tbb_allg,obsdat,obslon,obslat,obslev,obserr)
   integer :: i, j
   integer :: ch
   integer :: n
+  integer :: is, ie, js, je
+  integer :: ii, jj
+  integer :: ave_ng
 
-  integer :: num_Him8_x
-  integer :: num_Him8_y
+  if (present(obsdat) .and. present(obslon) .and. present(obslat) .and. present(obslev) .and. present(obserr)) then
+    obsdat(:) = undef
+    obslon(:) = 0.0
+    obslat(:) = 0.0
+    obslev(:) = undef
+    obserr(:) = undef
+  endif
 
-  select case(H08_OBS_METHOD)
-  case(1) ! simple thinning
+  tbb_allg_prep(:,:,:) = undef
 
-    num_Him8_x = int(nlong/H08_OBS_THIN_LEV)
-    num_Him8_y = int(nlatg/H08_OBS_THIN_LEV)
+  if (present(qc_allg_prep)) then
+    qc_allg_prep = iqc_obs_bad
+  endif
 
-    if (num_Him8_x * num_Him8_y * NIRB_HIM8 /= nobs) then
-      print *,"[CHECK] nobs is not consistent!"
-      stop
-    endif
+  ave_ng = 2 * H08_OBS_AVE_NG + 1
 
-    do j = 1, nlatg, H08_OBS_THIN_LEV
-    do i = 1, nlong, H08_OBS_THIN_LEV
-      do ch = 1, NIRB_HIM8
-        !n = ((j - 1) * nlong + i - 1) * NIRB_HIM8 + ch
+  do j = 1, nlatg, H08_OBS_THIN_LEV
+  do i = 1, nlong, H08_OBS_THIN_LEV
+    do ch = 1, NIRB_HIM8
+      n = ((j - 1) * nlong + i - 1) * NIRB_HIM8 + ch
 
-        n = ( int(j / H08_OBS_THIN_LEV - 1.0)  * num_Him8_x + int(i / H08_OBS_THIN_LEV - 1.0) ) * NIRB_HIM8 + ch
+      if (present(obslon) .and. present(obslat) .and. present(obslev) .and. present(obserr)) then
+        ril = real(i+IHALO,kind=r_size)
+        rjl = real(j+JHALO,kind=r_size)
 
-        if (present(obslon) .and. present(obslat) .and. present(obslev) .and. present(obserr)) then
-          ril = real(i+IHALO,kind=r_size)
-          rjl = real(j+JHALO,kind=r_size)
+        call MPRJ_xy2lonlat((ril - 1.0_r_size) * DX + GRID_CXG(1), (rjl - 1.0_r_size) * DY + GRID_CYG(1), lon, lat)
+        obslon(n) = lon * rad2deg
+        obslat(n) = lat * rad2deg
+        obslev(n) = ch + 6.0
+        obserr(n) = REAL(OBSERR_H08(ch),r_size)
+      endif
 
-          call MPRJ_xy2lonlat((ril - 1.0_r_size) * DX + GRID_CXG(1), (rjl - 1.0_r_size) * DY + GRID_CYG(1), lon, lat)
-          obslon(n) = lon * rad2deg
-          obslat(n) = lat * rad2deg
-          obslev(n) = ch + 6.0
-          obserr(n) = REAL(OBSERR_H08(ch),r_size)
-        endif
+      select case(H08_OBS_METHOD)
+      case(1) ! simple thinning
+        tbb_allg_prep(i,j,ch) = tbb_allg(i,j,ch)
 
-        obsdat(n) = tbb_allg(i,j,ch)
+      case(2) ! averaging adjacent grids
+        if (i <= H08_OBS_AVE_NG .or. (nlong - i) <= H08_OBS_AVE_NG .or.&
+            j <= H08_OBS_AVE_NG .or. (nlatg - j) <= H08_OBS_AVE_NG) cycle
 
-      enddo ! ch
-    enddo ! i
-    enddo ! j
+        is = i - H08_OBS_AVE_NG       
+        ie = i + H08_OBS_AVE_NG       
+        js = j - H08_OBS_AVE_NG       
+        je = j + H08_OBS_AVE_NG       
+   
+        tbb_allg_prep(i,j,:) = 0.0d0
+        do jj = js, je
+        do ii = is, ie
+          tbb_allg_prep(i,j,:) = tbb_allg_prep(i,j,:) + tbb_allg(ii,jj,:)
+        enddo ! ii
+        enddo ! jj
+        tbb_allg_prep(i,j,:) = tbb_allg_prep(i,j,:) / (ave_ng**2)
 
-  end select
+      end select
+
+      if (present(obsdat)) then
+        obsdat(n) = tbb_allg_prep(i,j,ch)
+      endif
+
+      if (present(qc_allg_prep)) then
+        qc_allg_prep(i,j,ch) = iqc_good
+      endif
+
+    enddo ! ch
+  enddo ! i
+  enddo ! j
 
   return
 end subroutine allgHim82obs
-
-!subroutine gHim82obs_local(myrank,tbb,obsdat,lnobs)
-!  ! Convert Himawari-8 obs on model grid (local) in actual obs in a "local" subdomain
-!  implicit none
-!
-!  integer,intent(in) :: myrank
-!  real(r_size),intent(in) :: tbb(nlon,nlat,NIRB_HIM8)
-!
-!  real(r_size),intent(out) :: obsdat(nlon*nlat*NIRB_HIM8)
-!  integer,intent(out) :: lnobs
-!
-!  integer :: i, j
-!  integer :: ch
-!  integer :: n
-!
-!  integer :: nl ! local obs count
-!  integer :: ishift, jshift
-!  integer :: proc_i, proc_j
-!
-!  call rank_1d_2d(myrank, proc_i, proc_j)
-!  ishift = proc_i * nlon
-!  jshift = proc_j * nlat
-!
-!  obsdat = 0.0d0
-!
-!  select case(H08_OBS_METHOD)
-!  case(1) ! simple thinning
-!
-!    nl = 0
-!    do j = 1+jshift, nlat+jshift, H08_OBS_THIN_LEV
-!      if(mod(j-1,H08_OBS_THIN_LEV)/=0) cycle
-!      do i = 1+ishift, nlon+ishift, H08_OBS_THIN_LEV
-!        if(mod(i-1,H08_OBS_THIN_LEV)/=0) cycle
-!
-!        do ch = 1, NIRB_HIM8
-!          lnobs = lnobs + 1
-!          obsdat(lnobs) = tbb(i-ishift,j-jshift,ch)
-!      
-!        enddo ! ch
-!      enddo ! i
-!    enddo ! j
-!
-!  end select
-!
-!  return
-!end subroutine gHim82obs_local
-
-
-
-
 
 END MODULE common_obs_scale

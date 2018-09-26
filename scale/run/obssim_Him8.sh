@@ -3,7 +3,7 @@
 
 USER=honda
 
-EXP=KYUSHU2017_D2_NoHim8_2.5min
+EXP=test_Him8_hist_ref
 . config/${EXP}/config.main
 
 #
@@ -17,12 +17,11 @@ TOPO=${OUTDIR}/const/topo
 
 
 
-tstart='2017-07-04 12:00:00'
-tend='2017-07-04 12:00:00'
+tstart='2018-06-24 0:10:00'
+tend='2018-06-24 0:10:00'
 
 
 #ctint=21600 # obssim interval 
-#ctint=10800 # obssim interval 
 ctint=600 # obssim interval 
 tint=600 # analysis interval (Do not modify!)
 ctint=150 # obssim interval 
@@ -70,6 +69,9 @@ cat << EOF >> $RUNCONF_COMMON
 /
 
 &PARAM_LETKF_H08
+ H08_FORMAT_NC = .true.,
+ H08_SIM_ALLG = .true.,
+ H08_OBS_THIN_LEV = 2,
 !--H08_NOWDATE--!
 !--H08_RTTOV_COEF_PATH--!
  H08_RTTOV_CLD = .true.,
@@ -78,15 +80,8 @@ cat << EOF >> $RUNCONF_COMMON
  H08_RTTOV_CFRAC = 1, ! scale method for cldfrac
  H08_LIMIT_LEV = 200.0d2,
  H08_VLOCAL_CTOP = .true.,
- H08_RTTOV_KADD = 10,
+ H08_RTTOV_KADD = 5,
  H08_RTTOV_PROF_SHIFT = .true.,
- H08_RTTOV_RLX_HGT = 15.0d3,
- H08_BAND_USE = 0,0,1,0,0,0,0,0,0,0,
- H08_NPRED = 1,
- H08_AOEI = .true.,
- H08_AOEI_QC = 1, ! standard method
-!--H08_VBC_PATH--!
- H08_VBC_USE = .false.
 /
 
 EOF
