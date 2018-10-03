@@ -76,6 +76,13 @@ declare -a proc2node
 declare -a proc2group
 declare -a proc2grpproc
 
+#===============================================================================
+if ((DTF_MODE >= 1)); then                                            ##
+  NNODES=$((NNODES*2))                                                ##
+  NNODES_APPAR=$((NNODES_APPAR*2))                                    ##
+fi                                                                    ##
+#===============================================================================
+
 #if ((RUN_LEVEL <= 2)) && ((ISTEP == 1)); then
 if ((RUN_LEVEL <= 2)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?

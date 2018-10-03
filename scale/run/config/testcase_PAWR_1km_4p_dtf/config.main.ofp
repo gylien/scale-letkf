@@ -9,13 +9,14 @@ PRESET='OFP'
 
 #===============================================================================
 
-USERID=f22013 # Your OFP ID
+LIBDTF_PATH=/work/hp150019/share/honda/SCALE-LETKF/CREST-REALTIME/DTF/libdtf
+USERID=$(id -nu) # Your OFP ID
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 EXP=testcase_PAWR_1km_4p_4mem_3n_opemp32_ppn8
 
-INDIR="/work/hp150019/share/honda/SCALE-LETKF/CREST-REALTIME/prep_data/d4_1km_initbdy_4p_v180531"
+INDIR="/work/hp150019/share/honda/SCALE-LETKF/CREST-REALTIME/prep_data/d4_1km_initbdy_v180531"
 OUTDIR="/work/hp150019/${USERID}/SCALE-LETKF/CREST-REALTIME/OUTPUT/benchmark/${EXP}"      # Directory for SCALE-LETKF output
 
 #===============================================================================
@@ -24,9 +25,9 @@ OUTDIR="/work/hp150019/${USERID}/SCALE-LETKF/CREST-REALTIME/OUTPUT/benchmark/${E
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="$DDIR/database"                                             # Directory of the SCALE database
 
-DATA_TOPO= #"$DDIR/exp/testcase_PAWR_1km_4p_data"                      # Directory of the prepared topo files
-DATA_TOPO_BDY_SCALE="${INDIR}/d4_1km_initbdy_4p_v180531/const/topo"
-DATA_LANDUSE= #"$DDIR/exp/testcase_PAWR_1km_4p_data"                   # Directory of the prepared landuse files
+DATA_TOPO="${INDIR}"      # Directory of the prepared topo files
+DATA_TOPO_BDY_SCALE=
+DATA_LANDUSE="${INDIR}"  # Directory of the prepared landuse files
 DATA_BDY_SCALE="${INDIR}"                         # Directory of the boundary data in SCALE history format (parent domain)
 DATA_BDY_SCALE_PRC_NUM_X=3
 DATA_BDY_SCALE_PRC_NUM_Y=3
@@ -34,13 +35,23 @@ DATA_BDY_SCALE_PREP=                                                 # Directory
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-OBS= # XXX                         # Observation data in LETKF observation format
+OBS="/work/hp150019/share/honda/SCALE-LETKF/CREST-REALTIME/prep_data/obs_20130713/raw_v2a"   # Observation data in LETKF observation format
 OBSNCEP=
+OBS_USE_JITDT=0 # JITDT has not been tested yet (07/10/2018)
 
 #===============================================================================
 # model/data file options
 
-DET_RUN=1
+PNETCDF=1               # 0: Do not use PnetCDF
+                        # 1: Use PnetCDF
+
+PNETCDF_BDY_SCALE=0     # Use PNETCDF I/O for the parent domain SCALE data? (default: $PNETCDF)
+                        # 0: Do not use PnetCDF
+                        # 1: Use PnetCDF
+
+DET_RUN=1               # 0: Disable the deterministic run
+                        # 1: Enable  the deterministic run
+
 DET_RUN_CYCLED=1
 
 TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
@@ -53,7 +64,7 @@ LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=0            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
@@ -69,13 +80,22 @@ BDYCYCLE_INT=300
 
 PARENT_REF_TIME=20130713060000
 
+ENABLE_PARAM_USER=1     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
+                        # 1: Enable the 'PARAM_USER' section of the SCALE namelist (require 'config.nml.scale_user' and customized version of SCALE)
+
 OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
-OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+OCEAN_FORMAT=0          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+                        # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
+LAND_INPUT=0            # 0: No land input (use cycling land variables)
+                        # 1: Update the land variables every cycle
+LAND_FORMAT=0           # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
+
 OBSNUM=1
-OBSNAME[1]=radar
+OBSNAME[1]=pawr
+OBS_FORMAT[1]=PAWR_TOSHIBA
 
 #===============================================================================
 # Cycling settings
@@ -99,11 +119,15 @@ SCALE_NP=4         # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
-ENABLE_SET=0       ######
+#ENABLE_SET=0       ######
 
 #===============================================================================
 # Temporary directories to store runtime files
 
+DISK_MODE=2                 # Disk type used for the main temporary directory
+                            #  1: share (link to TMP)
+                            #  2: share (staging to TMP)
+                            #  3: local (staging to TMPL)
 DISK_MODE_CONSTDB=2         # Disk type used for the temporary directory of static database
 DISK_MODE_BDYDATA=2         # Disk type used for the temporary directory of raw boundary data 
 DISK_MODE_OBS=2             # Disk type used for the temporary directory of observation data
@@ -112,6 +136,10 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
+IO_ARB=0                    # Use I/O arbitrator?
+                            # 0: No
+                            # 1: Yes
+
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
@@ -119,7 +147,7 @@ TMP="$DIR/tmp/$TMPSUBDIR"   # Temporary directory shared among all nodes
 TMPS="$TMP"                 # Temporary directory only on the server node
 TMPL="$TMP"                 # Local temporary directory on computing nodes
 
-CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
+CLEAR_TMP=1                 # Clear temporary directories after the completion of job?
                             #  0: No
                             #  1: Yes
 

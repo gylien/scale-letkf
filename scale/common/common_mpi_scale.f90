@@ -863,10 +863,10 @@ subroutine write_ens_mpi(v3d, v2d, mean3d, mean2d)
         call filename_replace_mem(filename, im)
       else if (im == mmean) then
         filename = trim(ANAL_MEAN_OUT_BASENAME) // trim(timelabel_anal)
-        if (present(mean3d)) then
+        if (present(mean3d) .and. nv3d > 0) then
           mean3d = v3dg
         end if
-        if (present(mean2d)) then
+        if (present(mean2d) .and. nv2d > 0) then
           mean2d = v2dg
         end if
       else if (im == mmdet) then
@@ -1158,10 +1158,10 @@ subroutine write_ensmean(filename, v3d, v2d, calced, mean_out, mean3d, mean2d)
   call mpi_timer('write_ensmean:gather_grd_mpi:', 2)
 
   if (myrank_e == mmean_rank_e) then
-    if (present(mean3d)) then
+    if (present(mean3d) .and. nv3d > 0) then
       mean3d = v3dg
     end if
-    if (present(mean2d)) then
+    if (present(mean2d) .and. nv2d > 0) then
       mean2d = v2dg
     end if
 

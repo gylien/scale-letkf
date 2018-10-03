@@ -24,7 +24,7 @@
  TIME_DT_UNIT               = "SEC",
  TIME_DT_ATMOS_DYN          = 1.0D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = 5.0D0,
+ TIME_DT_ATMOS_PHY_MP       = 10.D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_RD       = 30.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
@@ -101,8 +101,8 @@
 #################################################
 
 &PARAM_PRC
- PRC_NUM_X      = 2,
- PRC_NUM_Y      = 2,
+ PRC_NUM_X      = 4,
+ PRC_NUM_Y      = 4,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -115,8 +115,8 @@
 
 &PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 98,
- IMAX = 60,
- JMAX = 60,
+ IMAX = 30,
+ JMAX = 30,
 /
 
 &PARAM_LAND_GRID_CARTESC_INDEX
@@ -242,7 +242,7 @@
  ATMOS_DYN_TINTEG_LARGE_TYPE          = "EULER",
  ATMOS_DYN_TINTEG_SHORT_TYPE          = "RK4",
  ATMOS_DYN_TINTEG_TRACER_TYPE         = "RK3WS2002",
- ATMOS_DYN_FVM_FLUX_TYPE              = "CD4",
+ ATMOS_DYN_FVM_FLUX_TYPE              = "UD3",
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
  ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
  ATMOS_DYN_NUMERICAL_DIFF_COEF        = 2.5D-3,

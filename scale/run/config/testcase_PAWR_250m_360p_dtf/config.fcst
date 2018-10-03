@@ -19,7 +19,7 @@ TIME_LIMIT='01:00:00'
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=1800        # SCALE forecast length in the forecast mode (second)
+FCSTLEN=90 #1800        # SCALE forecast length in the forecast mode (second)
 FCSTOUT=30
 
 #===============================================================================

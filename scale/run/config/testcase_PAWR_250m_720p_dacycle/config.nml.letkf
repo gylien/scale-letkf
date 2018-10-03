@@ -3,11 +3,20 @@
  USE_MPI_BARRIER = .true.,
 /
 
+&PARAM_LOG
+ LOG_LEVEL = 1,
+ USE_MPI_BARRIER = .true.,
+/
+
 &PARAM_OBSOPE
 !--OBS_IN_NUM--
 !--OBS_IN_NAME--
 !--OBS_POSTFIX_TIMELABEL--
+<<<<<<< HEAD:scale/run/config/testcase_PAWR_250m_720p_dacycle/config.nml.letkf
 !--OBS_IN_FORMAT--
+=======
+ OBS_IN_FORMAT = 'RADAR',
+>>>>>>> ofp_tmp:scale/run/config/testcase_PAWR_250m_720p_pnetcdf_ioarb/config.nml.letkf
 !--OBSDA_RUN--
 !--HISTORY_IN_BASENAME--
 !--HISTORY_POSTFIX_TIMELABEL--

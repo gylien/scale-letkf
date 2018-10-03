@@ -3,6 +3,12 @@
 
 SCALE_USER_VER = T
 
+LETKF_SINGLE_FP = F
+
+#ENABLE_JITDT = T
+
+ENABLE_DTF = T
+
 # Libraries
 #-----------------
 
@@ -33,7 +39,7 @@ FOPTS      = $(FOPTS_SCALE) \
 
 FOPTS_EXE  = $(FOPTS)
 
-FMCMODEL   = -mcmodel=medium -shared-intel
-FBYTESWAP  = -convert little_endian
-FFREE      = -free
-FFIXED     = -fixed
+FMCMODEL   = #-mcmodel=medium -shared-intel
+FBYTESWAP  = #-convert little_endian
+FFREE      = #-free
+FFIXED     = #-fixed

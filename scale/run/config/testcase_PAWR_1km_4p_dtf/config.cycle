@@ -6,7 +6,8 @@
 #===============================================================================
 
 STIME='20130713060000'
-ETIME='20130713060430'
+#ETIME='20130713060430'
+ETIME='20130713060000'
 ISTEP=
 FSTEP=
 CONF_MODE='static'
@@ -23,7 +24,7 @@ FCSTOUT=30
 ADAPTINFL=0      # Adaptive inflation
                  #  0: OFF
                  #  1: ON
-ADDINFL=1        # Additive inflation
+ADDINFL=0        # Additive inflation
                  #  0: OFF
                  #  1: ON
 

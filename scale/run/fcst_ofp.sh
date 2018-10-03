@@ -1,18 +1,18 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Wrap cycle.sh in an OFP job script and run it.
+#  Wrap fcst.sh in a OFP job script and run it.
 #
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_ofp.sh [..]
+#    fcst_ofp.sh [..]
 #
 #===============================================================================
 
 cd "$(dirname "$0")"
 myname="$(basename "$0")"
-job='cycle'
+job='fcst'
 
 #===============================================================================
 # Configuration
@@ -44,20 +44,13 @@ echo
 # Create and clean the temporary directory
 
 echo "[$(datetime_now)] Create and clean the temporary directory"
-
+ 
 #if [ -e "${TMP}" ]; then
 #  echo "[Error] $0: \$TMP will be completely removed." >&2
 #  echo "        \$TMP = '$TMP'" >&2
 #  exit 1
 #fi
 safe_init_tmpdir $TMP || exit $?
-
-
-#===============================================================================
-if ((DTF_MODE >= 1)); then                                            ##
-  NNODES=$((NNODES*2))                                                ##
-  NNODES_APPAR=$((NNODES_APPAR*2))                                    ##
-fi                                                                    ##
 
 #===============================================================================
 # Determine the distibution schemes
@@ -73,11 +66,11 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR || exit $?
-if ((DTF_MODE >= 1)); then                            ##
-  distribute_da_cycle_set - $NODEFILE_DIR || exit $?  ##
-else                                                  ##
-  distribute_da_cycle - $NODEFILE_DIR || exit $?
-fi                                                    ##
+distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR || exit $?
+
+if ((CYCLE == 0)); then
+  CYCLE=$cycle_auto
+fi
 
 #===============================================================================
 # Determine the staging list
@@ -115,12 +108,6 @@ if [ "$CONF_MODE" != 'static' ]; then
   echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
 fi
 
-if ((DTF_MODE >= 1)); then
-  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${LIBDTF_PATH}/libdtf.so|libdtf.so
-EOF
-fi
-
 #===============================================================================
 # Stage in
 
@@ -135,12 +122,6 @@ jobscrp="$TMP/${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
-if ((SCALE_NP >= 8)); then
-  MAX_WORKGROUP_SIZE=$((SCALE_NP / 8))
-else
-  MAX_WORKGROUP_SIZE=1
-fi
-
 cat > $jobscrp << EOF
 #!/bin/sh
 #PJM -L rscgrp=regular-flat
@@ -148,9 +129,8 @@ cat > $jobscrp << EOF
 #PJM -L elapse=${TIME_LIMIT}
 #PJM --mpi proc=$((NNODES*PPN))
 ##PJM --mpi proc=${totalnp}
-##PJM --omp thread=${THREADS}
-#PJM --omp thread=1
-#PJM -g hp150019
+#PJM --omp thread=${THREADS}
+#PJM -g gg10
 ##PJM -j
 
 rm -f machinefile
@@ -160,39 +140,14 @@ for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
   done
 done
 
-module load hdf5_szip
-module load hdf5
-module load netcdf
-module load netcdf-fortran
-
-export LD_LIBRARY_PATH=\${LD_LIBRARY_PATH}:${TMP}
-
-export FORT_FMT_RECL=400
-
-export HFI_NO_CPUAFFINITY=1
-export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
-export I_MPI_HBW_POLICY=hbw_preferred,,
-export I_MPI_FABRICS_LIST=tmi
-unset KMP_AFFINITY
-#export KMP_AFFINITY=verbose
-#export I_MPI_DEBUG=5
-
-export OMP_NUM_THREADS=1
-#export I_MPI_PIN_DOMAIN=${NPIN}
-#export I_MPI_PERHOST=${NPROC}
-export KMP_HW_SUBSET=1t
+module load hdf5/1.8.17
+module load netcdf/4.4.1
+module load netcdf-fortran/4.4.3
 
 ulimit -s unlimited
-#export OMP_STACKSIZE=128m
+export OMP_STACKSIZE=128m
 
-export DTF_VERBOSE_LEVEL=2
-export DTF_SCALE=1
-export DTF_INI_FILE=./dtf.ini
-export SCALE_ENSEMBLE_SZ=$((SCALE_NP))
-export MAX_WORKGROUP_SIZE=$MAX_WORKGROUP_SIZE
-export DTF_GLOBAL_PATH=${TMP}
-
-./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
+./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
 
 #===============================================================================
@@ -222,9 +177,9 @@ echo
 
 backup_exp_setting $job $TMP $jobid ${job}_job.sh 'o e'
 
-if [ "$CONF_MODE" = 'static' ]; then
-  config_file_save $TMPS/config || exit $?
-fi
+###if [ "$CONF_MODE" = 'static' ]; then
+###  config_file_save $TMPS/config || exit $?
+###fi
 
 archive_log
 

@@ -415,15 +415,41 @@ fi
 
 if [ "$NODELIST" != '-' ] && [ "$NODEFILEDIR" != '-' ]; then
 #  echo "[INFO] $FUNCNAME: Save 'proc', 'node' files." >&2
-  local p
-  for p in $(seq $totalnp); do  
-    echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc
-  done
-  for n in $(seq $NNODES_APPAR); do
-    echo ${node[$n]} >> $NODEFILEDIR/node
-  done
-fi
 
+  if ((DTF_MODE >= 1)); then
+    ######
+    for s in $(seq 2); do
+    ######
+    #  echo "[INFO] $FUNCNAME: Save 'proc', 'node' files." >&2
+      local p
+      for p in $(seq $((totalnp / 2 ))); do  
+        #if ((s == 1)); then ###
+        #  echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc
+        #fi
+        #echo ${node[$(((s-1)*NNODES+${proc2node[$p]}))]} >> $NODEFILEDIR/set${s}.proc
+        echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/set${s}.proc
+      done
+      for n in $(seq $NNODES_APPAR); do
+        if ((s == 1)); then ###
+          echo ${node[$n]} >> $NODEFILEDIR/node
+        fi
+        echo ${node[$(((s-1)*NNODES+$n))]} >> $NODEFILEDIR/set${s}.node
+      done
+    ######
+    done
+    ######
+
+  else # DTF_MODE
+
+    local p
+    for p in $(seq $totalnp); do  
+      echo ${node[${proc2node[$p]}]} >> $NODEFILEDIR/proc
+    done
+    for n in $(seq $NNODES_APPAR); do
+      echo ${node[$n]} >> $NODEFILEDIR/node
+    done
+  fi
+fi
 #-------------------------------------------------------------------------------
 }
 

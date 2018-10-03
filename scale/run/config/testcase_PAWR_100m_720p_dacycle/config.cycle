@@ -6,14 +6,22 @@
 #===============================================================================
 
 STIME='20130713060000'
+<<<<<<< HEAD:scale/run/config/testcase_PAWR_100m_720p_dacycle/config.cycle
 ETIME='20130713060430'
+=======
+ETIME='20130713060130'
+>>>>>>> ofp_tmp:scale/run/config/testcase_PAWR_250m_720p_pnetcdf_ioarb/config.cycle
 ISTEP=
 FSTEP=
 CONF_MODE='static'
 DACYCLE=1
 DIRECT_TRANSFER=1
+<<<<<<< HEAD:scale/run/config/testcase_PAWR_100m_720p_dacycle/config.cycle
 #TIME_LIMIT='<WTIME_L>'
 TIME_LIMIT='00:30:00'
+=======
+TIME_LIMIT='00:10:00'
+>>>>>>> ofp_tmp:scale/run/config/testcase_PAWR_250m_720p_pnetcdf_ioarb/config.cycle
 
 #===============================================================================
 
