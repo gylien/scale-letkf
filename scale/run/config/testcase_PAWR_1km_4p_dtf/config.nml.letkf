@@ -1,6 +1,5 @@
 &PARAM_LOG
  LOG_LEVEL = 1,
- USE_MPI_BARRIER = .true.,
 /
 
 &PARAM_OBSOPE

@@ -185,7 +185,8 @@ export KMP_HW_SUBSET=1t
 ulimit -s unlimited
 #export OMP_STACKSIZE=128m
 
-export DTF_VERBOSE_LEVEL=2
+#export DTF_VERBOSE_LEVEL=2
+export DTF_VERBOSE_LEVEL=0
 export DTF_SCALE=1
 export DTF_INI_FILE=./dtf.ini
 export SCALE_ENSEMBLE_SZ=$((SCALE_NP))

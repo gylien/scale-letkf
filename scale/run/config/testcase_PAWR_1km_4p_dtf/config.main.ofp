@@ -17,7 +17,7 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 EXP=testcase_PAWR_1km_4p_4mem_3n_opemp32_ppn8
 
 INDIR="/work/hp150019/share/honda/SCALE-LETKF/CREST-REALTIME/prep_data/d4_1km_initbdy_v180531"
-OUTDIR="/work/hp150019/${USERID}/SCALE-LETKF/CREST-REALTIME/OUTPUT/benchmark/${EXP}"      # Directory for SCALE-LETKF output
+OUTDIR="/work/hp150019/share/honda/SCALE-LETKF/CREST-REALTIME/TEST/${EXP}"      # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files

@@ -949,6 +949,7 @@ while ((time <= ETIME)); do
             -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${FILE_HISTORY_DEFAULT_BASENAME}\"," \
             -e "/!--FILE_HISTORY_DEFAULT_TINTERVAL--/a FILE_HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
             -e "/!--FILE_HISTORY_OUTPUT_STEP0--/a FILE_HISTORY_OUTPUT_STEP0 = ${FILE_HISTORY_OUTPUT_STEP0}," \
+            -e "/!--FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL--/a FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL = ${LCYCLE}.D0," \
             -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"log/scale.<member>.d${dfmt}.monitor_${time}\"," \
             -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"dat/land/param.bucket.conf\"," \
             -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"latlon_domain_catalogue.d${dfmt}.txt\"," \
@@ -967,10 +968,6 @@ while ((time <= ETIME)); do
           sed -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${mem_bdy}/bdy_$(datetime_scale $time)\"," \
               -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${bdy_start_time:0:4}, ${bdy_start_time:4:2}, ${bdy_start_time:6:2}, ${bdy_start_time:8:2}, ${bdy_start_time:10:2}, ${bdy_start_time:12:2}," \
               -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0,")"
-    fi
-    if ((DACYCLE == 1)); then
-      conf="$(echo "$conf" | \
-          sed -e "/!--FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL--/a FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL = ${LCYCLE}.D0,")"
     fi
     if [ ! -e "$SCRP_DIR/config.nml.scale_user" ]; then
       if ((OCEAN_INPUT == 1)); then
@@ -1168,7 +1165,6 @@ while ((time <= ETIME)); do
             -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${RELAX_SPREAD_OUT_BASENAME}\"," \
             -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
             -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${NOBS_OUT_BASENAME}\"," \
-            -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = .false.," \
         >> $CONFIG_DIR/${conf_file}
 
     if ((DACYCLE != 1 && DTF_MODE == 0)); then
