@@ -1,1 +1,1 @@
-config/testcase_PAWR_250m_360p_dtf/config.main.K
+config/testcase_PAWR_1km_4p_dtf/config.main.K

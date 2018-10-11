@@ -49,6 +49,26 @@ if [ "$JOBTYPE" = 'cycle' ]; then
     echo "${OBSUTIL_DIR}/obsope|obsope" >> ${STAGING_DIR}/${STGINLIST}
     echo "${LETKF_DIR}/letkf|letkf" >> ${STAGING_DIR}/${STGINLIST}
   else
+    # Check the way of linking DTF library (static or dynamic)
+    #
+    # LETKF
+    grep "libdtf.so" ${ENSMODEL_DIR}/../dacycle/dacycle > /dev/null
+    CHECK=$?
+    if (( CHECK == 0)); then
+      echo "[Warning!] DTF seems to be dynamically linked to LETKF!"
+    else
+      echo "DTF seems to be statically linked to LETKF"
+    fi
+
+    # SCALE
+    grep "libdtf.so" ${ENSMODEL_DIR}/scale-rm_ens > /dev/null
+    CHECK=$?
+    if (( CHECK == 0)); then
+      echo "[Warning!] DTF seems to be dynamically linked to SCALE!"
+    else 
+      echo "DTF seems to be statically linked to SCALE"
+    fi
+
     echo "${ENSMODEL_DIR}/../dacycle/dacycle|letkf" >> ${STAGING_DIR}/${STGINLIST}
   fi
 fi

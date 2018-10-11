@@ -13,11 +13,13 @@ PRESET='K'
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 USERNAME=gylien
+USERNAME=honda
 
 INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_1km_initbdy_v180531"
 OUTDIR="/volume63/data/hp150019/${USERNAME}/exp/scale-letkf/benchmark/d4_1km_1001_m100_dtf_SP_log1" # Directory for SCALE-LETKF output
 
-LIBDTF_PATH=/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/DTF/libdtf
+LIBDTF_PATH=
+#/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/DTF/libdtf
 
 #===============================================================================
 # Location of model/data files
