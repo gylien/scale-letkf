@@ -1608,7 +1608,7 @@ end subroutine read_obs_all_mpi
 !-----------------------------------------------------------------------
 ! Read nature run data and create initial ensemble by adding random noise
 !-----------------------------------------------------------------------
-subroutine create_ens_mpi(file,file_n)
+subroutine create_ens_mpi()
   use scale_grid, only: &
       GRID_CXG,&
       GRID_CYG,&
@@ -1618,8 +1618,8 @@ subroutine create_ens_mpi(file,file_n)
       RANDOM_get1d
 
   implicit none
-  CHARACTER(*),INTENT(IN) :: file
-  CHARACTER(*),INTENT(IN) :: file_n ! nature run file name
+!  REAL(RP) :: v3dg_sm(nlev,nlon,nlat,nv3d)
+!  REAL(RP) :: v2dg_sm(nlon,nlat,nv2d)
   REAL(RP) :: v3dg(MEMBER,nlev,nlon,nlat,nv3d)
   REAL(RP) :: v2dg(MEMBER,nlon,nlat,nv2d)
   REAL(RP) :: v3dg_n(nlev,nlon,nlat,nv3d) ! nature run
@@ -1642,58 +1642,93 @@ subroutine create_ens_mpi(file,file_n)
   CALL MPI_BARRIER(MPI_COMM_a,ierr)
   rrtimer00 = MPI_WTIME()
 
-  if (myrank <= MEM_NODES) then
-
-    ! read nature run data
-
-    im = proc2mem(1,1,myrank+1)
-    call file_member_replace(im, file_n, filename)
+  v3dg_n = 0.0d0
+  v2dg_n = 0.0d0
+  if (myrank_e == lastmem_rank_e) then
+    ! nature run filename
+    filename = SC_NATURE_IN_BASENAME
     call read_restart(filename,v3dg_n,v2dg_n)
     call state_trans(v3dg_n)
 
     !!! detect the first echo location (ig,jg) in nature run here ??? ig_n & jg_n
     !
-    ! Give the first echo location from namelist
-    ig_n = (SC_FECHO_X - GRID_CXG(1)) / DX + 1
-    jg_n = (SC_FECHO_Y - GRID_CYG(1)) / DY + 1
-    ! 
 
+  endif
+  call MPI_ALLREDUCE(MPI_IN_PLACE, v3dg_n, nlon*nlat*nlev*nv3d, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, v2dg_n, nlon*nlat*nv2d, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+
+  ! Give the first echo location from namelist
+  ig_n = (SC_FECHO_X - GRID_CXG(1)) / DX + 1
+  jg_n = (SC_FECHO_Y - GRID_CYG(1)) / DY + 1
+  ! 
+
+!  v3dg = 0.0d0
+!  v2dg = 0.0d0
+!  do it = 1, nitmax
+!    im = proc2mem(1,it,myrank+1)
+!    if (im >= 1 .and. im <= MEMBER) then
+!      call file_member_replace(im, GUES_IN_BASENAME, filename)
+!!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+!      call read_restart(filename,v3dg_sm,v2dg_sm)
+!
+!      call state_trans(v3dg_sm)
+!
+!      v3dg(im,:,:,:,:) = v3dg_sm
+!      v2dg(im,:,:,:) = v2dg_sm
+!
+!    end if ! im
+!
+!  end do ! [ it = 1, nitmax ]
+!
+!  call MPI_ALLREDUCE(MPI_IN_PLACE, v3dg, nlon*nlat*nlev*nv3d, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+!  call MPI_ALLREDUCE(MPI_IN_PLACE, v2dg, nlon*nlat*nv2d, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+
+  ! Add random perturbation in [myrank_e == lastmem_rank_e]
+  if (myrank_e == lastmem_rank_e) then
     do j = 1, nlat
       do i = 1, nlon
 
         call ij_l2g(myrank_d, i, j, ig, jg)
         dist = sqrt(abs((ig-ig_n)*DX)**2 + abs((jg-jg_n)*DY)**2)
 
-        if (dist > SC_DIST_ECHO) then
-          do m = 1, MEMBER
-            v3dg(m,1:nlev,i,j,1:nv3d) = v3dg_n(1:nlev,i,j,1:nv3d)
-          enddo
-          cycle ! not perturb 
-
-        else
+        if (dist <= SC_DIST_ECHO) then
           do n = 1, nv3d
             do k = 1, nlev
               call RANDOM_get1d(rndm)
               do m = 1, MEMBER
-                v3dg(m,i,j,k,n) = v3dg_n(i,j,k,n) * (1.0d0 + rndm(m) * SC_PERT_COEF)
+                v3dg(m,k,i,j,n) = v3dg_n(k,i,j,n) * (1.0d0 + rndm(m) * SC_PERT_COEF)
               enddo ! m
             enddo ! k
           enddo ! n
-
-        endif
-
+!          do n = 1, nv2d
+!          enddo
+        else
+          v3dg(m,k,i,j,n) = v3dg_n(k,i,j,n)
+          cycle
+        endif ! dist
       enddo ! i
-    enddo ! j
+    enddo   ! j
+  else
+    v3dg = 0.0d0
+!    v2dg = 0.0d0
+  endif ! myrank_e
 
-    ! write initial ensemble here
-    do m = 1, MEMBER
-      call state_trans_inv(v3dg(m,:,:,:,:))
+  call MPI_ALLREDUCE(MPI_IN_PLACE, v3dg, nlon*nlat*nlev*nv3d, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+!  call MPI_ALLREDUCE(MPI_IN_PLACE, v2dg, nlon*nlat*nv2d, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
 
-      call write_restart(filename,v3dg(m,:,:,:,:),v2dg_n)
 
-    enddo ! m
+  do it = 1, nitmax
+    im = proc2mem(1,it,myrank+1)
+    if (im >= 1 .and. im <= MEMBER) then
+      call file_member_replace(im, GUES_IN_BASENAME, filename)
+!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',proc2mem(2,it,myrank+1),'.nc'
+      call state_trans_inv(v3dg(im,:,:,:,:))
 
-  endif ![myrank <= MEM_NODES]
+      call write_restart(filename,v3dg(im,:,:,:,:),v2dg_n(:,:,:))
+
+    endif ! im
+  enddo ! it
+
 
   return
 end subroutine create_ens_mpi

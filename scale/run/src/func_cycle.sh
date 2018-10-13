@@ -232,20 +232,25 @@ if ((TMPDAT_MODE == 1)); then
 else
 #-------------------
   cat >> $STAGING_DIR/stagein.dat << EOF
-${ENSMODEL_DIR}/scale-rm_pp_ens|exec/scale-rm_pp_ens
 ${ENSMODEL_DIR}/scale-rm_init_ens|exec/scale-rm_init_ens
 ${ENSMODEL_DIR}/scale-rm_ens|exec/scale-rm_ens
 ${COMMON_DIR}/pdbash|exec/pdbash
 ${OBSUTIL_DIR}/obsope|exec/obsope
 ${LETKF_DIR}/letkf|exec/letkf
-${SCRP_DIR}/config.nml.scale_pp|conf/config.nml.scale_pp
 ${SCRP_DIR}/config.nml.scale_init|conf/config.nml.scale_init
 ${SCRP_DIR}/config.nml.scale|conf/config.nml.scale
 ${SCRP_DIR}/config.nml.ensmodel|conf/config.nml.ensmodel
 ${SCRP_DIR}/config.nml.letkf|conf/config.nml.letkf
-${DATADIR}/rad|rad
-${DATADIR}/land|land
+${SCRP_DIR}/../../../scale-rm/test/data/rad|rad
+${SCRP_DIR}/../../../scale-rm/test/data/land|land
 EOF
+
+#${DATADIR}/rad|rad
+#${DATADIR}/land|land
+
+#${SCRP_DIR}/config.nml.scale_pp|conf/config.nml.scale_pp
+#${ENSMODEL_DIR}/scale-rm_pp_ens|exec/scale-rm_pp_ens
+
 #${MODELDIR}/scale-rm_pp|exec/scale-rm_pp
 #${MODELDIR}/scale-rm_init|exec/scale-rm_init
 #${MODELDIR}/scale-rm|exec/scale-rm
@@ -268,20 +273,20 @@ ${RTTOV_SCCOEF}|rttov/sccldcoef_himawari_8_ahi.dat
 EOF
   fi
 
-  if [ "$TOPO_FORMAT" != 'prep' ]; then
-    if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
-      echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat
-    else
-      echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
-    fi
-  fi
-  if [ "$LANDUSE_FORMAT" != 'prep' ]; then
-    if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
-      echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat
-    else
-      echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
-    fi
-  fi
+#  if [ "$TOPO_FORMAT" != 'prep' ]; then
+#    if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
+#      echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat
+#    else
+#      echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
+#    fi
+#  fi
+#  if [ "$LANDUSE_FORMAT" != 'prep' ]; then
+#    if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
+#      echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat
+#    else
+#      echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
+#    fi
+#  fi
 
   time=$(datetime $STIME $LCYCLE s)
   while ((time <= $(datetime $ETIME $LCYCLE s))); do
@@ -429,141 +434,141 @@ else
       done
     fi
 
-    # anal_ocean
-    #-------------------
-    if ((OCEAN_INPUT == 1)) && ((OCEAN_FORMAT == 0)); then
-      for m in $(seq $mmean); do
-        for q in $(seq $mem_np); do
-          path="${time}/anal/${name_m[$m]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
-          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
-        done
-      done
-    fi
-
-    # anal_land
-    #-------------------
-    if ((LAND_INPUT == 1)) && ((LAND_FORMAT == 0)); then
-      for m in $(seq $mmean); do
-        for q in $(seq $mem_np); do
-          path="${time}/anal/${name_m[$m]}/init_land$(printf $SCALE_SFX $((q-1)))"
-          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
-        done
-      done
-    fi
-
-    # topo
-    #-------------------
-    if ((loop == 1)); then
-      if [ "$TOPO_FORMAT" = 'prep' ]; then
-        if [ "$TOPO_TARGZ" = 'T' ]; then
-          if [ ! -e ${DATA_TOPO}/topo.tar.gz ] ; then
-            cd ${DATA_TOPO}
-            tar czvfh topo.tar.gz topo*.nc >/dev/null
-            cd -
-          fi
-          pathin=${DATA_TOPO}/topo.tar.gz
-          path=const/topo/topo.tar.gz
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
-        else
-          for m in $(seq $((repeat_mems <= mmean ? repeat_mems : mmean))); do
-            for q in $(seq $mem_np); do
-              pathin="${DATA_TOPO}/const/topo/topo$(printf $SCALE_SFX $((q-1)))"
-              path="const/topo/topo$(printf $SCALE_SFX $((q-1)))"
-              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
-            done
-          done
-        fi
-      elif [ "$TOPO_TARGZ" = 'T' ] ; then
-        echo "[Error] TOPO_TARGZ = T option requires TOPO_FORMAT = prep" >&2
-        exit 1
-      fi
-    fi
-
-    # topo (bdy_scale)
-    #-------------------
-    if ((loop == 1 && BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
-#      for ifile in $(ls ${DATA_TOPO_BDY_SCALE}/topo.*.nc 2> /dev/null); do
-#        pathin="$ifile"
-#        path="bdytopo/const/$(basename $ifile)"
-#        if ((DISK_MODE_DATA_BDY == 2)); then
-#          echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-#        else
-#          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-#        fi
+#    # anal_ocean
+#    #-------------------
+#    if ((OCEAN_INPUT == 1)) && ((OCEAN_FORMAT == 0)); then
+#      for m in $(seq $mmean); do
+#        for q in $(seq $mem_np); do
+#          path="${time}/anal/${name_m[$m]}/init_ocean$(printf $SCALE_SFX $((q-1)))"
+#          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+#        done
 #      done
-      pathin="${DATA_TOPO_BDY_SCALE}"
-      path="bdytopo/const"
-      if ((DISK_MODE_DATA_BDY == 2)); then
-        echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-      else
-        echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-      fi
-    fi
-
-    # landuse
-    #-------------------
-    if ((loop == 1 || LANDUSE_UPDATE == 1)); then
-      if [ "$LANDUSE_FORMAT" = 'prep' ]; then
-        if [ "$LANDUSE_TARGZ" = 'T' ]; then
-          if ((LANDUSE_UPDATE == 1)); then
-            if [ ! -e ${DATA_LANDUSE}/${time}/landuse.tar.gz ] ; then
-              cd ${DATA_LANDUSE}/${time}
-              tar czvfh landuse.tar.gz landuse*.nc > /dev/null
-              cd -
-            fi
-            pathin=${DATA_LANDUSE}/${time}/landuse.tar.gz
-            path=${time}/landuse/landuse.tar.gz
-          else
-            if [ ! -e ${DATA_LANDUSE}/landuse.tar.gz ] ; then
-              cd ${DATA_LANDUSE}
-              tar czvfh landuse.tar.gz landuse*.nc >/dev/null
-              cd -
-            fi
-            pathin=${DATA_LANDUSE}/landuse.tar.gz
-            path=const/landuse/landuse.tar.gz
-          fi
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
-        else
-          for m in $(seq $((repeat_mems <= mmean ? repeat_mems : mmean))); do
-            for q in $(seq $mem_np); do
-              if ((LANDUSE_UPDATE == 1)); then
-                pathin="${DATA_LANDUSE}/${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
-                path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
-              else
-                pathin="${DATA_LANDUSE}/const/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
-                path="const/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
-              fi
-              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
-            done
-          done
-        fi
-      elif [ "$LANDUSE_TARGZ" = 'T' ] ; then
-        echo "[Error] LANDUSE_TARGZ = T option requires LANDUSE_FORMAT = prep" >&2
-        exit 1
-      fi
-    fi
-
-    # bdy (prepared)
-    #-------------------
-    if ((BDY_FORMAT == 0)); then
-      if ((BDY_ENS == 0)); then
-        for m in $(seq $((repeat_mems <= mmean ? repeat_mems : mmean))); do
-          for q in $(seq $mem_np); do
-            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
-            path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
-            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
-          done
-        done
-      elif ((BDY_ENS == 1)); then
-        for m in $(seq $mmean); do
-          for q in $(seq $mem_np); do
-            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
-            path="${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
-            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
-          done
-        done
-      fi
-    fi
+#    fi
+#
+#    # anal_land
+#    #-------------------
+#    if ((LAND_INPUT == 1)) && ((LAND_FORMAT == 0)); then
+#      for m in $(seq $mmean); do
+#        for q in $(seq $mem_np); do
+#          path="${time}/anal/${name_m[$m]}/init_land$(printf $SCALE_SFX $((q-1)))"
+#          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+#        done
+#      done
+#    fi
+#
+#    # topo
+#    #-------------------
+#    if ((loop == 1)); then
+#      if [ "$TOPO_FORMAT" = 'prep' ]; then
+#        if [ "$TOPO_TARGZ" = 'T' ]; then
+#          if [ ! -e ${DATA_TOPO}/topo.tar.gz ] ; then
+#            cd ${DATA_TOPO}
+#            tar czvfh topo.tar.gz topo*.nc >/dev/null
+#            cd -
+#          fi
+#          pathin=${DATA_TOPO}/topo.tar.gz
+#          path=const/topo/topo.tar.gz
+#          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+#        else
+#          for m in $(seq $((repeat_mems <= mmean ? repeat_mems : mmean))); do
+#            for q in $(seq $mem_np); do
+#              pathin="${DATA_TOPO}/const/topo/topo$(printf $SCALE_SFX $((q-1)))"
+#              path="const/topo/topo$(printf $SCALE_SFX $((q-1)))"
+#              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+#            done
+#          done
+#        fi
+#      elif [ "$TOPO_TARGZ" = 'T' ] ; then
+#        echo "[Error] TOPO_TARGZ = T option requires TOPO_FORMAT = prep" >&2
+#        exit 1
+#      fi
+#    fi
+#
+#    # topo (bdy_scale)
+#    #-------------------
+#    if ((loop == 1 && BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
+##      for ifile in $(ls ${DATA_TOPO_BDY_SCALE}/topo.*.nc 2> /dev/null); do
+##        pathin="$ifile"
+##        path="bdytopo/const/$(basename $ifile)"
+##        if ((DISK_MODE_DATA_BDY == 2)); then
+##          echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+##        else
+##          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+##        fi
+##      done
+#      pathin="${DATA_TOPO_BDY_SCALE}"
+#      path="bdytopo/const"
+#      if ((DISK_MODE_DATA_BDY == 2)); then
+#        echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+#      else
+#        echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#      fi
+#    fi
+#
+#    # landuse
+#    #-------------------
+#    if ((loop == 1 || LANDUSE_UPDATE == 1)); then
+#      if [ "$LANDUSE_FORMAT" = 'prep' ]; then
+#        if [ "$LANDUSE_TARGZ" = 'T' ]; then
+#          if ((LANDUSE_UPDATE == 1)); then
+#            if [ ! -e ${DATA_LANDUSE}/${time}/landuse.tar.gz ] ; then
+#              cd ${DATA_LANDUSE}/${time}
+#              tar czvfh landuse.tar.gz landuse*.nc > /dev/null
+#              cd -
+#            fi
+#            pathin=${DATA_LANDUSE}/${time}/landuse.tar.gz
+#            path=${time}/landuse/landuse.tar.gz
+#          else
+#            if [ ! -e ${DATA_LANDUSE}/landuse.tar.gz ] ; then
+#              cd ${DATA_LANDUSE}
+#              tar czvfh landuse.tar.gz landuse*.nc >/dev/null
+#              cd -
+#            fi
+#            pathin=${DATA_LANDUSE}/landuse.tar.gz
+#            path=const/landuse/landuse.tar.gz
+#          fi
+#          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out
+#        else
+#          for m in $(seq $((repeat_mems <= mmean ? repeat_mems : mmean))); do
+#            for q in $(seq $mem_np); do
+#              if ((LANDUSE_UPDATE == 1)); then
+#                pathin="${DATA_LANDUSE}/${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+#                path="${time}/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+#              else
+#                pathin="${DATA_LANDUSE}/const/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+#                path="const/landuse/landuse$(printf $SCALE_SFX $((q-1)))"
+#              fi
+#              echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+#            done
+#          done
+#        fi
+#      elif [ "$LANDUSE_TARGZ" = 'T' ] ; then
+#        echo "[Error] LANDUSE_TARGZ = T option requires LANDUSE_FORMAT = prep" >&2
+#        exit 1
+#      fi
+#    fi
+#
+#    # bdy (prepared)
+#    #-------------------
+#    if ((BDY_FORMAT == 0)); then
+#      if ((BDY_ENS == 0)); then
+#        for m in $(seq $((repeat_mems <= mmean ? repeat_mems : mmean))); do
+#          for q in $(seq $mem_np); do
+#            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+#            path="${time}/bdy/mean/boundary$(printf $SCALE_SFX $((q-1)))"
+#            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+#          done
+#        done
+#      elif ((BDY_ENS == 1)); then
+#        for m in $(seq $mmean); do
+#          for q in $(seq $mem_np); do
+#            pathin="${DATA_BDY_SCALE_PREP}/${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
+#            path="${time}/bdy/${name_m[$m]}/boundary$(printf $SCALE_SFX $((q-1)))"
+#            echo "${pathin}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+#          done
+#        done
+#      fi
+#    fi
 
     #-------------------
     # stage-out
@@ -580,39 +585,39 @@ else
         echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
       fi
 
-      # topo
-      #-------------------
-      if ((loop == 1 && TOPOOUT_OPT <= 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
-        path="const/topo"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      fi
-
-      # landuse
-      #-------------------
-      if ((loop == 1 || LANDUSE_UPDATE == 1)) && ((LANDUSEOUT_OPT <= 1)) && [ "$LANDUSE_FORMAT" != 'prep' ]; then
-        if ((LANDUSE_UPDATE == 1)); then
-          path="${time}/landuse"
-        else
-          path="const/landuse"
-        fi
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      fi
-
-      # bdy
-      #-------------------
-      if ((BDY_FORMAT != 0)); then
-        if ((BDY_ENS == 1 && BDYOUT_OPT <= 1)); then
-#          for m in $(seq $mmean); do
-#            path="${time}/bdy/${name_m[$m]}"
-#            echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-#          done
-          path="${time}/bdy"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        elif ((BDYOUT_OPT <= 2)); then
-          path="${time}/bdy/mean"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        fi
-      fi
+#      # topo
+#      #-------------------
+#      if ((loop == 1 && TOPOOUT_OPT <= 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
+#        path="const/topo"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#      fi
+#
+#      # landuse
+#      #-------------------
+#      if ((loop == 1 || LANDUSE_UPDATE == 1)) && ((LANDUSEOUT_OPT <= 1)) && [ "$LANDUSE_FORMAT" != 'prep' ]; then
+#        if ((LANDUSE_UPDATE == 1)); then
+#          path="${time}/landuse"
+#        else
+#          path="const/landuse"
+#        fi
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#      fi
+#
+#      # bdy
+#      #-------------------
+#      if ((BDY_FORMAT != 0)); then
+#        if ((BDY_ENS == 1 && BDYOUT_OPT <= 1)); then
+##          for m in $(seq $mmean); do
+##            path="${time}/bdy/${name_m[$m]}"
+##            echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+##          done
+#          path="${time}/bdy"
+#          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        elif ((BDYOUT_OPT <= 2)); then
+#          path="${time}/bdy/mean"
+#          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        fi
+#      fi
 
       # hist
       #-------------------
@@ -704,12 +709,12 @@ else
 
       if ((LOG_OPT <= 2)); then
         if ((LOG_TYPE == 1)); then
-          path="${time}/log/scale_pp/0001_pp.conf"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          path="${time}/log/scale_pp/0001_LOG.pe000000"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          path="${time}/log/scale_pp/NOUT.${log_zeros}"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#          path="${time}/log/scale_pp/0001_pp.conf"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#          path="${time}/log/scale_pp/0001_LOG.pe000000"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#          path="${time}/log/scale_pp/NOUT.${log_zeros}"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
           path="${time}/log/scale_init/0001_init.conf"
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
           path="${time}/log/scale_init/0001_gradsbdy.conf"
@@ -723,8 +728,8 @@ else
           fi
           echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
         else
-          path="${time}/log/scale_pp"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#          path="${time}/log/scale_pp"
+#          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
           path="${time}/log/scale_init"
           echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
         fi
@@ -985,87 +990,73 @@ else
   # stage-in
   #-------------------
 
-  # bdy
-  #-------------------
-  if ((BDY_FORMAT >= 1)); then
-    if ((BDY_FORMAT == 1)); then
-      if [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt" ]; then
-        pathin="$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt"
-        path="bdyorg/latlon_domain_catalogue.txt"
-        if ((DISK_MODE_DATA_BDY == 2)); then
-          echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-        else
-          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-        fi
-      else
-        echo "[Error] Cannot find a lat/lon domain catalogue file at" >&2
-        echo "        '$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt'" >&2
-        exit 1
-      fi
-    fi
-
-    nbdy_all=0
-    time=$STIME
-    while ((time <= ETIME)); do
-      bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
-
-      for ibdy in $(seq $nbdy); do
-        time_bdy=${bdy_times[$ibdy]}
-
-        bdy_processed=0
-        for ibdy2 in $(seq $nbdy_all); do
-          if ((${bdy_times_all[$ibdy2]} == $time_bdy)); then
-            bdy_processed=1
-            break
-          fi
-        done
-
-        if ((bdy_processed == 0)); then
-          nbdy_all=$((nbdy_all+1))
-          bdy_times_all[${nbdy_all}]=$time_bdy
-        fi
-
-        if ((bdy_processed == 0 || BDY_ROTATING == 1)); then
-          if ((BDY_FORMAT == 1)); then
-
-            if ((BDY_ENS == 1)); then
-              for m in $(seq $mmean); do
-                mem=${name_m[$m]}
-                if [ "$BDY_SCALE_DIR" = 'hist' ] && [ "$mem" = 'mean' ]; then
-                  mem='meanf'
-                fi
-#                for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}/history.*.nc 2> /dev/null); do
-#                  pathin="$ifile"
-#                  if ((BDY_ROTATING == 1)); then
-#                    path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
-#                  else
-#                    path="bdyorg/const/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
-#                  fi
-#                  if ((DISK_MODE_DATA_BDY == 2)); then
-#                    echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-#                  else
-#                    echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-#                  fi
-#                done
-                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}"
-                if ((BDY_ROTATING == 1)); then
-                  path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}"
-                else
-                  path="bdyorg/const/${name_m[$m]}/${time_bdy}"
-                fi
-                if ((DISK_MODE_DATA_BDY == 2)); then
-                  echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-                else
-                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-                fi
-              done
-            else
-#              for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf/history.*.nc 2> /dev/null); do
-#                pathin="$ifile"
+#  # bdy
+#  #-------------------
+#  if ((BDY_FORMAT >= 1)); then
+#    if ((BDY_FORMAT == 1)); then
+#      if [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt" ]; then
+#        pathin="$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt"
+#        path="bdyorg/latlon_domain_catalogue.txt"
+#        if ((DISK_MODE_DATA_BDY == 2)); then
+#          echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+#        else
+#          echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#        fi
+#      else
+#        echo "[Error] Cannot find a lat/lon domain catalogue file at" >&2
+#        echo "        '$DATA_BDY_SCALE/${PARENT_REF_TIME}/log/scale/latlon_domain_catalogue.txt'" >&2
+#        exit 1
+#      fi
+#    fi
+#
+#    nbdy_all=0
+#    time=$STIME
+#    while ((time <= ETIME)); do
+#      bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
+#
+#      for ibdy in $(seq $nbdy); do
+#        time_bdy=${bdy_times[$ibdy]}
+#
+#        bdy_processed=0
+#        for ibdy2 in $(seq $nbdy_all); do
+#          if ((${bdy_times_all[$ibdy2]} == $time_bdy)); then
+#            bdy_processed=1
+#            break
+#          fi
+#        done
+#
+#        if ((bdy_processed == 0)); then
+#          nbdy_all=$((nbdy_all+1))
+#          bdy_times_all[${nbdy_all}]=$time_bdy
+#        fi
+#
+#        if ((bdy_processed == 0 || BDY_ROTATING == 1)); then
+#          if ((BDY_FORMAT == 1)); then
+#
+#            if ((BDY_ENS == 1)); then
+#              for m in $(seq $mmean); do
+#                mem=${name_m[$m]}
+#                if [ "$BDY_SCALE_DIR" = 'hist' ] && [ "$mem" = 'mean' ]; then
+#                  mem='meanf'
+#                fi
+##                for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}/history.*.nc 2> /dev/null); do
+##                  pathin="$ifile"
+##                  if ((BDY_ROTATING == 1)); then
+##                    path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
+##                  else
+##                    path="bdyorg/const/${name_m[$m]}/${time_bdy}/$(basename $ifile)"
+##                  fi
+##                  if ((DISK_MODE_DATA_BDY == 2)); then
+##                    echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+##                  else
+##                    echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+##                  fi
+##                done
+#                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}"
 #                if ((BDY_ROTATING == 1)); then
-#                  path="bdyorg/${time_bdy}/mean/${time_bdy}/$(basename $ifile)"
+#                  path="bdyorg/${time_bdy}/${name_m[$m]}/${time_bdy}"
 #                else
-#                  path="bdyorg/const/mean/${time_bdy}/$(basename $ifile)"
+#                  path="bdyorg/const/${name_m[$m]}/${time_bdy}"
 #                fi
 #                if ((DISK_MODE_DATA_BDY == 2)); then
 #                  echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
@@ -1073,82 +1064,96 @@ else
 #                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
 #                fi
 #              done
-              if [ "$BDY_SCALE_DIR" = 'hist' ]; then
-                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf"
-              else
-                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/mean"
-              fi
-              if ((BDY_ROTATING == 1)); then
-                path="bdyorg/${time_bdy}/mean/${time_bdy}"
-              else
-                path="bdyorg/const/mean/${time_bdy}"
-              fi
-              if ((DISK_MODE_DATA_BDY == 2)); then
-                echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-              else
-                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-              fi
-            fi
-
-          elif ((BDY_FORMAT == 2 || BDY_FORMAT == 4)); then
-
-            if ((BDY_FORMAT == 2)); then
-              data_bdy_i=$DATA_BDY_WRF
-              filenum=1
-              filename_prefix[1]='wrfout_'
-              filename_suffix[1]=''
-            elif ((BDY_FORMAT == 4)); then
-              data_bdy_i=$DATA_BDY_GRADS
-              filenum=3
-              filename_prefix[1]='atm_'
-              filename_suffix[1]='.grd'
-              filename_prefix[2]='sfc_'
-              filename_suffix[2]='.grd'
-              filename_prefix[3]='land_'
-              filename_suffix[3]='.grd'
-            fi
-
-            if ((BDY_ENS == 1)); then
-              for m in $(seq $mmean); do
-                for ifile in $(seq $filenum); do
-                  if ((BDY_ROTATING == 1)); then
-                    pathin="$data_bdy_i/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-                    path="bdyorg/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
-                  else
-                    pathin="$data_bdy_i/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
-                    path="bdyorg/const/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
-                  fi
-                  if ((DISK_MODE_DATA_BDY == 2)); then
-                    echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-                  else
-                    echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-                  fi
-                done
-              done
-            else
-              for ifile in $(seq $filenum); do
-                if ((BDY_ROTATING == 1)); then
-                  pathin="$data_bdy_i/${time}/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-                  path="bdyorg/${time}/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-                else
-                  pathin="$data_bdy_i/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-                  path="bdyorg/const/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-                fi
-                if ((DISK_MODE_DATA_BDY == 2)); then
-                  echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
-                else
-                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
-                fi
-              done
-            fi
-
-          fi
-        fi # ((bdy_processed == 0 || BDY_ROTATING == 1))
-      done
-
-      time=$(datetime $time $LCYCLE s)
-    done
-  fi # ((BDY_FORMAT >= 1))
+#            else
+##              for ifile in $(ls $DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf/history.*.nc 2> /dev/null); do
+##                pathin="$ifile"
+##                if ((BDY_ROTATING == 1)); then
+##                  path="bdyorg/${time_bdy}/mean/${time_bdy}/$(basename $ifile)"
+##                else
+##                  path="bdyorg/const/mean/${time_bdy}/$(basename $ifile)"
+##                fi
+##                if ((DISK_MODE_DATA_BDY == 2)); then
+##                  echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+##                else
+##                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+##                fi
+##              done
+#              if [ "$BDY_SCALE_DIR" = 'hist' ]; then
+#                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/meanf"
+#              else
+#                pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/mean"
+#              fi
+#              if ((BDY_ROTATING == 1)); then
+#                path="bdyorg/${time_bdy}/mean/${time_bdy}"
+#              else
+#                path="bdyorg/const/mean/${time_bdy}"
+#              fi
+#              if ((DISK_MODE_DATA_BDY == 2)); then
+#                echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+#              else
+#                echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#              fi
+#            fi
+#
+#          elif ((BDY_FORMAT == 2 || BDY_FORMAT == 4)); then
+#
+#            if ((BDY_FORMAT == 2)); then
+#              data_bdy_i=$DATA_BDY_WRF
+#              filenum=1
+#              filename_prefix[1]='wrfout_'
+#              filename_suffix[1]=''
+#            elif ((BDY_FORMAT == 4)); then
+#              data_bdy_i=$DATA_BDY_GRADS
+#              filenum=3
+#              filename_prefix[1]='atm_'
+#              filename_suffix[1]='.grd'
+#              filename_prefix[2]='sfc_'
+#              filename_suffix[2]='.grd'
+#              filename_prefix[3]='land_'
+#              filename_suffix[3]='.grd'
+#            fi
+#
+#            if ((BDY_ENS == 1)); then
+#              for m in $(seq $mmean); do
+#                for ifile in $(seq $filenum); do
+#                  if ((BDY_ROTATING == 1)); then
+#                    pathin="$data_bdy_i/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+#                    path="bdyorg/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
+#                  else
+#                    pathin="$data_bdy_i/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
+#                    path="bdyorg/const/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
+#                  fi
+#                  if ((DISK_MODE_DATA_BDY == 2)); then
+#                    echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+#                  else
+#                    echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#                  fi
+#                done
+#              done
+#            else
+#              for ifile in $(seq $filenum); do
+#                if ((BDY_ROTATING == 1)); then
+#                  pathin="$data_bdy_i/${time}/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+#                  path="bdyorg/${time}/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+#                else
+#                  pathin="$data_bdy_i/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+#                  path="bdyorg/const/mean/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+#                fi
+#                if ((DISK_MODE_DATA_BDY == 2)); then
+#                  echo "${pathin}|${path}|s" >> $STAGING_DIR/stagein.dat
+#                else
+#                  echo "${pathin}|${path}" >> $STAGING_DIR/stagein.dat
+#                fi
+#              done
+#            fi
+#
+#          fi
+#        fi # ((bdy_processed == 0 || BDY_ROTATING == 1))
+#      done
+#
+#      time=$(datetime $time $LCYCLE s)
+#    done
+#  fi # ((BDY_FORMAT >= 1))
 
   #-------------------
 

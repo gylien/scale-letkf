@@ -205,7 +205,7 @@ while ((time <= ETIME)); do
     if (((s_flag == 0 || s >= ISTEP) && (e_flag == 0 || s <= FSTEP))); then
 
       ######
-      if ((s <= 4)); then
+      if ((s <= 2)); then
         echo "SKIP"
         continue
       fi
@@ -227,12 +227,12 @@ while ((time <= ETIME)); do
 #          continue
 #        fi
 #      fi
-#      if ((s == 4)); then
-#        if ((OBSOPE_RUN == 0)); then
-#          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (only use integrated observation operators)" >&2
-#          continue
-#        fi
-#      fi
+      if ((s == 4)); then
+        if ((OBSOPE_RUN == 0)); then
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (only use integrated observation operators)" >&2
+          continue
+        fi
+      fi
       ######
 
       echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2

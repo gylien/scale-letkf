@@ -15,7 +15,7 @@ MPI_TYPE='sgimpt'
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
-DDIR=/data10/honda/SCALE-LETKF/scale_lt_devel_20180731
+DDIR=/data6/honda/SCALE-LETKF/scale_lt_devel_20180731
 
 INDIR=                                      # Directory for SCALE-LETKF input (default: $OUTDIR)
 OUTDIR="$DDIR/OUTPUT/8km_sc"     # Directory for SCALE-LETKF output

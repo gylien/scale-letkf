@@ -1,7 +1,7 @@
-program obssim
+program makeEns
 !=======================================================================
 !
-! [PURPOSE:] Main program for creating the initial ensemble of an idealized OSE
+! [PURPOSE:] Main program for creating the initial ensemble for an idealized OSSE
 !
 !=======================================================================
 !$use OMP_LIB
@@ -75,7 +75,7 @@ program obssim
 ! Read restart/history input data and run the model-to-obs simulator
 !-----------------------------------------------------------------------
 
-    call  create_ens_mpi(SC_OUT_BASENAME,SC_NATURE_IN_BASENAME)
+    call  create_ens_mpi()
 
     call MPI_BARRIER(MPI_COMM_a, ierr)
     rtimer = MPI_WTIME()
@@ -104,4 +104,4 @@ program obssim
   call finalize_mpi_scale
 
   stop
-end program obssim
+end program makeEns

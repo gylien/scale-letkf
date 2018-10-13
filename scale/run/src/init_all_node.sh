@@ -39,8 +39,8 @@ fi
 
 #===============================================================================
 
-mkdir -p $TMPRUN/scale_pp
-cp -f $TMPDAT/exec/scale-rm_pp_ens $TMPRUN/scale_pp
+#mkdir -p $TMPRUN/scale_pp
+#cp -f $TMPDAT/exec/scale-rm_pp_ens $TMPRUN/scale_pp
 
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ### 5-2" >&2
