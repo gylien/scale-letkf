@@ -1403,6 +1403,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  REAL(r_size),INTENT(OUT) :: rmse_H08_bc(NIRB_HIM8)
 
   real(r_size),intent(out) :: yobs_H08(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: yobs_H08_monit(nlon,nlat,NIRB_HIM8)
   real(r_size) :: plev_obs_H08(nlon,nlat,NIRB_HIM8)
 !  real(r_size) :: yobs_H08_bc(nlon,nlat,NIRB_HIM8)
   real(r_size) :: yobs_H08_clr(nlon,nlat,NIRB_HIM8)
@@ -1466,15 +1467,20 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  obs_idx_TCP = -1
 
 #ifdef H08
-  yobs_H08 = undef
-  if (USE_HIM8) then
-    call Trans_XtoY_H08_allg(v3dgh,v2dgh,yobs_H08,yobs_H08_clr,&
-                             plev_obs_H08,qc_H08,zangle_H08)
-    !
-    ! Initialize qc flag (set iqc is "bad")
-    ! This will be overwritten by obsda_sort%qc
-    qc_H08 = iqc_obs_bad
-  endif
+!  yobs_H08 = -1.0d0
+!  yobs_H08_monit = -1.0d0
+!!  if (USE_HIM8) then 
+! Always calculate Him8 radiances
+
+  call Trans_XtoY_H08_allg(v3dgh,v2dgh,yobs_H08,yobs_H08_clr,&
+                           plev_obs_H08,qc_H08,zangle_H08)
+  !
+  ! Initialize qc flag (set iqc is "bad")
+  ! This will be overwritten by obsda_sort%qc
+  qc_H08 = iqc_obs_bad
+  yobs_H08_monit = yobs_H08
+
+!  endif
 #endif
 
 !$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz,i8,j8,b8,ch)
@@ -1567,13 +1573,13 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
         ohx(n) = yobs_H08(i8,j8,b8-6) ! Obs - B/A
         oqc(n) = obsda_sort%qc(nn) !qc_H08(i8,j8,b8-6) ! QC
 
-        yobs_H08(i8,j8,b8-6) = obs(iset)%dat(iidx) - yobs_H08(i8,j8,b8-6) 
+        yobs_H08_monit(i8,j8,b8-6) = obs(iset)%dat(iidx) - yobs_H08(i8,j8,b8-6) 
         qc_H08(i8,j8,b8-6) = obsda_sort%qc(nn)
 
         if(sum(H08_BAND_USE) /= NIRB_HIM8)then
           do ch = 1, NIRB_HIM8            
             if (H08_BAND_USE(ch) /= 1) then
-              yobs_H08(i8,j8,ch) = obs(iset)%dat(iidx-(b8-6)+ch) - yobs_H08(i8,j8,ch) 
+              yobs_H08_monit(i8,j8,ch) = obs(iset)%dat(iidx-(b8-6)+ch) - yobs_H08(i8,j8,ch) 
               qc_H08(i8,j8,ch) = oqc(n)
             endif
           enddo
@@ -1652,7 +1658,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  bH08 = 0.0d0
   if (USE_HIM8) then
 !    call monit_dep_H08(yobs_H08,yobs_H08_bc,qc_H08,nobs_H08,bias_H08,rmse_H08)!,bias_H08_bc,rmse_H08_bc)
-    call monit_dep_H08(yobs_H08,qc_H08,nobs_H08,bias_H08,rmse_H08)
+    call monit_dep_H08(yobs_H08_monit,qc_H08,nobs_H08,bias_H08,rmse_H08)
 !
 !    ! bias correction
 !    aH08 = 0.0d0
@@ -3856,13 +3862,13 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
   real(r_size),intent(in) :: tbb_allg(nlong,nlatg,NIRB_HIM8)
   real(r_size),intent(out) :: tbb_allg_prep(nlong,nlatg,NIRB_HIM8)
 
+  integer,intent(out),optional :: qc_allg_prep(nlong,nlatg,NIRB_HIM8)
+
   real(r_size),intent(out),optional :: obsdat(nlong*nlatg*NIRB_HIM8)
   real(r_size),intent(out),optional :: obslon(nlong*nlatg*NIRB_HIM8)
   real(r_size),intent(out),optional :: obslat(nlong*nlatg*NIRB_HIM8)
   real(r_size),intent(out),optional :: obslev(nlong*nlatg*NIRB_HIM8)
   real(r_size),intent(out),optional :: obserr(nlong*nlatg*NIRB_HIM8)
-
-  integer,intent(out),optional :: qc_allg_prep(nlong,nlatg,NIRB_HIM8)
 
   real(r_size) :: ril, rjl
   real(r_size) :: lon, lat
@@ -3882,7 +3888,6 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
     obserr(:) = undef
   endif
 
-  tbb_allg_prep(:,:,:) = undef
 
   if (present(qc_allg_prep)) then
     qc_allg_prep = iqc_obs_bad
@@ -3890,16 +3895,19 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
 
   ave_ng = 2 * H08_OBS_AVE_NG + 1
 
-  do j = 1, nlatg, H08_OBS_THIN_LEV
-  do i = 1, nlong, H08_OBS_THIN_LEV
+  do j = 1, nlatg
+  do i = 1, nlong
+    if (present(obslon) .and. present(obslat) .and. present(obslev) .and. present(obserr)) then
+      ril = real(i+IHALO,kind=r_size)
+      rjl = real(j+JHALO,kind=r_size)
+
+      call MPRJ_xy2lonlat((ril - 1.0_r_size) * DX + GRID_CXG(1), (rjl - 1.0_r_size) * DY + GRID_CYG(1), lon, lat)
+    endif
+
     do ch = 1, NIRB_HIM8
       n = ((j - 1) * nlong + i - 1) * NIRB_HIM8 + ch
 
       if (present(obslon) .and. present(obslat) .and. present(obslev) .and. present(obserr)) then
-        ril = real(i+IHALO,kind=r_size)
-        rjl = real(j+JHALO,kind=r_size)
-
-        call MPRJ_xy2lonlat((ril - 1.0_r_size) * DX + GRID_CXG(1), (rjl - 1.0_r_size) * DY + GRID_CYG(1), lon, lat)
         obslon(n) = lon * rad2deg
         obslat(n) = lat * rad2deg
         obslev(n) = ch + 6.0
@@ -3919,15 +3927,22 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
         js = j - H08_OBS_AVE_NG       
         je = j + H08_OBS_AVE_NG       
    
-        tbb_allg_prep(i,j,:) = 0.0d0
+        tbb_allg_prep(i,j,ch) = 0.0d0
         do jj = js, je
         do ii = is, ie
-          tbb_allg_prep(i,j,:) = tbb_allg_prep(i,j,:) + tbb_allg(ii,jj,:)
+          tbb_allg_prep(i,j,ch) = tbb_allg_prep(i,j,ch) + tbb_allg(ii,jj,ch)
         enddo ! ii
         enddo ! jj
-        tbb_allg_prep(i,j,:) = tbb_allg_prep(i,j,:) / (ave_ng**2)
+        tbb_allg_prep(i,j,ch) = tbb_allg_prep(i,j,ch) / (ave_ng**2)
 
       end select
+
+      if (H08_OBS_THIN_LEV > 1) then
+        if ((mod(i, H08_OBS_THIN_LEV) /= 0) .or. (mod(j, H08_OBS_THIN_LEV) /= 0)) then
+          tbb_allg_prep(i,j,ch) = abs(tbb_allg_prep(i,j,ch)) * (-1.0d0) 
+        endif
+      endif
+
 
       if (present(obsdat)) then
         obsdat(n) = tbb_allg_prep(i,j,ch)
@@ -3935,7 +3950,11 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
 
       if (present(qc_allg_prep)) then
         qc_allg_prep(i,j,ch) = iqc_good
+        if (tbb_allg_prep(i,j,ch) < 0.0d0) then
+          qc_allg_prep(i,j,ch) = iqc_obs_bad
+        endif
       endif
+
 
     enddo ! ch
   enddo ! i

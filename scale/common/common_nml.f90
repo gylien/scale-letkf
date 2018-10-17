@@ -199,7 +199,7 @@ MODULE common_nml
   real(r_size) :: OBS_MIN_SPACING(nobtype) = &
     (/300.0d3, 100.0d3, 100.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 100.0d3, 150.0d3, 150.0d3, &
       150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 150.0d3, &
-      150.0d3,   1.0d3,  15.0d3,1000.0d3/)
+      150.0d3,   1.0d3,  2.0d3,1000.0d3/)
 
   ! >0: optimal grid spacing for bucket sorting of observations
   !  0: automatically determined based on HORI_LOCAL, MAX_NOBS_PER_GRID, and OBS_MIN_SPACING

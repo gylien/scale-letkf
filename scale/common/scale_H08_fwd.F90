@@ -229,8 +229,8 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
   REAL(Kind=r_size) :: rdp, max_wgt, tmp_wgt
   REAL(Kind=r_size),INTENT(OUT) :: mwgt_plev(nchannels,nprof) ! Max weight level (Pa)
 
-!  logical :: debug = .false.
-  logical :: debug = .true.
+  logical :: debug = .false.
+!  logical :: debug = .true.
 
   real(kind=jprb) :: grav
 

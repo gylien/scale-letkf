@@ -1879,9 +1879,9 @@ subroutine read_obs_all_mpi(obs)
     end if
 
     if((OBS_IN_FORMAT(iof) == obsfmt_h08) .and. H08_FORMAT_NC) then
-      call read_Him8_mpi(OBS_IN_NAME(iof),obs(iof))
-    else
-      cycle
+      if (myrank_e == 0) then ! this should include myrank_a=0
+        call read_Him8_mpi(OBS_IN_NAME(iof),obs(iof))
+      endif
     endif
 
     call MPI_BCAST(obs(iof)%elm, obs(iof)%nobs, MPI_INTEGER, 0, MPI_COMM_a, ierr)
@@ -2211,7 +2211,7 @@ subroutine prep_Him8_mpi(tbb_l,tbb_lprep,qc_lprep)
   implicit none
 
   real(r_size),intent(in) :: tbb_l(nlon,nlat,NIRB_HIM8) ! superobs tbb (local)
-  real(r_size),intent(out),optional :: tbb_lprep(nlon,nlat,NIRB_HIM8) ! superobs tbb (local) after preprocess
+  real(r_size),intent(out) :: tbb_lprep(nlon,nlat,NIRB_HIM8) ! superobs tbb (local) after preprocess
   integer,intent(out),optional :: qc_lprep(nlon,nlat,NIRB_HIM8) ! QC flag (local) after preprocess
 
   integer :: qc_gprep(nlong,nlatg,NIRB_HIM8) ! QC flag (local) after preprocess
@@ -2235,19 +2235,15 @@ subroutine prep_Him8_mpi(tbb_l,tbb_lprep,qc_lprep)
   bufs8(:,:,:) = 0.0d0
   bufs8(1+ishift:nlon+ishift, 1+jshift:nlat+jshift,1:NIRB_HIM8) = tbb_l(:,:,:)
   call MPI_ALLREDUCE(MPI_IN_PLACE, bufs8, nlong*nlatg*NIRB_HIM8, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-  tbb_g = bufs8
+  tbb_g(:,:,:) = bufs8(:,:,:)
 
 
+  call allgHim82obs(tbb_g,tbb_gprep,qc_allg_prep=qc_gprep)
   if (present(qc_lprep)) then
-    call allgHim82obs(tbb_g,tbb_gprep,qc_allg_prep=qc_gprep)
     qc_lprep = qc_gprep(1+ishift:nlon+ishift,1+jshift:nlat+jshift,1:NIRB_HIM8)
-  else
-    call allgHim82obs(tbb_g,tbb_gprep)
   endif
 
-  if (present(tbb_lprep)) then
-    tbb_lprep = tbb_gprep(1+ishift:nlon+ishift,1+jshift:nlat+jshift,1:NIRB_HIM8)
-  endif
+  tbb_lprep(1:nlon,1:nlat,1:NIRB_HIM8) = tbb_gprep(1+ishift:nlon+ishift,1+jshift:nlat+jshift,1:NIRB_HIM8)
 
   return
 end subroutine prep_Him8_mpi
@@ -2279,8 +2275,8 @@ subroutine read_Him8_mpi(filename,obs)
     call get_dim_Him8_nc(filename,imax_him8,jmax_him8)
   endif
 
-  call MPI_BCAST(imax_him8, 1, MPI_INTEGER, 0, MPI_COMM_a, ierr)
-  call MPI_BCAST(jmax_him8, 1, MPI_INTEGER, 0, MPI_COMM_a, ierr)
+  call MPI_BCAST(imax_him8, 1, MPI_INTEGER, 0, MPI_COMM_d, ierr)
+  call MPI_BCAST(jmax_him8, 1, MPI_INTEGER, 0, MPI_COMM_d, ierr)
 
   allocate(tbb_org(imax_him8,jmax_him8,NIRB_HIM8))
   allocate(lon_him8(imax_him8))
@@ -2290,33 +2286,28 @@ subroutine read_Him8_mpi(filename,obs)
   lon_him8 = 0.0
   lat_him8 = 0.0
 
-  if (myrank_a == 0) then
+  if (myrank_d == 0) then
     call read_Him8_nc(filename,imax_him8,jmax_him8,lon_him8,lat_him8,tbb_org)
   endif
 
-!  call MPI_ALLREDUCE(MPI_IN_PLACE, tbb_org, imax_him8*jmax_him8*NIRB_HIM8, MPI_REAL, MPI_SUM, MPI_COMM_a, ierr)
-!  call MPI_ALLREDUCE(MPI_IN_PLACE, lon_him8, imax_him8, MPI_REAL, MPI_SUM, MPI_COMM_a, ierr)
-!  call MPI_ALLREDUCE(MPI_IN_PLACE, lat_him8, jmax_him8, MPI_REAL, MPI_SUM, MPI_COMM_a, ierr)
-  call MPI_BCAST(tbb_org, imax_him8*jmax_him8*NIRB_HIM8, MPI_REAL, 0, MPI_COMM_a, ierr)
-  call MPI_BCAST(lon_him8, imax_him8, MPI_REAL, 0, MPI_COMM_a, ierr)
-  call MPI_BCAST(lat_him8, jmax_him8, MPI_REAL, 0, MPI_COMM_a, ierr)
+  call MPI_BCAST(tbb_org, imax_him8*jmax_him8*NIRB_HIM8, MPI_REAL, 0, MPI_COMM_d, ierr)
+  call MPI_BCAST(lon_him8, imax_him8, MPI_REAL, 0, MPI_COMM_d, ierr)
+  call MPI_BCAST(lat_him8, jmax_him8, MPI_REAL, 0, MPI_COMM_d, ierr)
 
-  if (myrank_a < MEM_NP) then
-    bufs8(:,:,:) = 0.0d0
+  bufs8(:,:,:) = 0.0d0
 
-    ! Superobing
-    call sobs_Him8(imax_him8,jmax_him8,lon_him8,lat_him8,tbb_org,tbb_sobs_l)
+  ! Superobing
+  call sobs_Him8(imax_him8,jmax_him8,lon_him8,lat_him8,tbb_org,tbb_sobs_l)
 
-    call rank_1d_2d(myrank_d, proc_i, proc_j)
-    ishift = proc_i * nlon
-    jshift = proc_j * nlat
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
 
-    bufs8(1+ishift:nlon+ishift, 1+jshift:nlat+jshift,1:NIRB_HIM8) = tbb_sobs_l(:,:,:)
-    call MPI_ALLREDUCE(MPI_IN_PLACE, bufs8, nlong*nlatg*NIRB_HIM8, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-    tbb_sobs = bufs8
-  endif
+  bufs8(1+ishift:nlon+ishift, 1+jshift:nlat+jshift,1:NIRB_HIM8) = tbb_sobs_l(:,:,:)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, bufs8, nlong*nlatg*NIRB_HIM8, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
+  tbb_sobs = bufs8
 
-  if (myrank_a == 0) then
+  if (myrank_d == 0) then
     ! it would be better to enable multiple processes in the following subroutine
 
     call allgHim82obs(tbb_sobs,tbb_sobs_prep,obsdat=obs%dat,obslon=obs%lon,obslat=obs%lat,obslev=obs%lev,obserr=obs%err)
@@ -2332,6 +2323,8 @@ subroutine read_Him8_mpi(filename,obs)
     do ch = 1, NIRB_HIM8
       irec = irec + 1
       write(iunit,rec=irec) real(tbb_sobs(:,:,ch),kind=r_sngl)
+    enddo
+    do ch = 1, NIRB_HIM8
       irec = irec + 1
       write(iunit,rec=irec) real(tbb_sobs_prep(:,:,ch),kind=r_sngl)
     enddo
@@ -2366,7 +2359,7 @@ subroutine write_Him8_mpi(tbb_l,step)
   integer :: iunit, irec
   integer :: ch
  
-  call prep_Him8_mpi(tbb_l,tbb_lprep=tbb_lprep)
+  call prep_Him8_mpi(tbb_l,tbb_lprep)
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
@@ -2397,6 +2390,8 @@ subroutine write_Him8_mpi(tbb_l,step)
     do ch = 1, NIRB_HIM8
       irec = irec + 1
       write(iunit,rec=irec) real(tbb_gprep(:,:,ch),kind=r_sngl)
+    enddo
+    do ch = 1, NIRB_HIM8
       irec = irec + 1
       write(iunit,rec=irec) real(tbb_g(:,:,ch),kind=r_sngl)
     enddo

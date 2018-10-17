@@ -447,14 +447,15 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 #endif
 
         ! Him8 observation: Apply radiative transfer model (RTTOV) 
-        if (USE_HIM8) then
+        ! Only 3D-LETKF is avairable
+!        if (USE_HIM8 .and. islot == SLOT_BASE) then
           call Trans_XtoY_H08_allg(v3dg,v2dg,yobs_H08,yobs_H08_clr,&
                                    plev_obs_H08,qc_H08,zangle_H08)
 
           ! Him8 preprocess
-          call prep_Him8_mpi(yobs_H08,    tbb_lprep=yobs_H08_prep,qc_lprep=qc_H08_prep)
-          call prep_Him8_mpi(yobs_H08_clr,tbb_lprep=yobs_H08_clr_prep)
-        endif
+          call prep_Him8_mpi(yobs_H08,    yobs_H08_prep,    qc_lprep=qc_H08_prep)
+          call prep_Him8_mpi(yobs_H08_clr,yobs_H08_clr_prep)
+!        endif
 
   
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC,5) PRIVATE(nn,n,iof,ril,rjl,rk,rkz,i8,j8,b8) 
