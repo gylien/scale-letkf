@@ -64,6 +64,7 @@ export OMP_NUM_THREADS=${THREADS}
 #export PARALLEL=${THREADS}
 
 export FORT_FMT_RECL=400
+export export MPI_XPMEM_ENABLED=disabled
 
 cd \$PBS_O_WORKDIR
 

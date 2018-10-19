@@ -317,8 +317,8 @@ subroutine set_common_mpi_grid
   end do
 
   if (myrank_e == lastmem_rank_e) then
-    call read_topo(LETKF_TOPO_IN_BASENAME, topo)
-    v3dg(1,:,:,3) = topo
+!    call read_topo(LETKF_TOPO_IN_BASENAME, topo)
+    v3dg(1,:,:,3) = 0.0d0 ! No terrain
   end if
 
   CALL scatter_grd_mpi(lastmem_rank_e,v3dg,v2dg,v3d,v2d)

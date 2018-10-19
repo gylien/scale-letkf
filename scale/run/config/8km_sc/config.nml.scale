@@ -55,8 +55,8 @@
 #################################################
 
 &PARAM_PRC
- PRC_NUM_X      = 2,
- PRC_NUM_Y      = 2,
+ PRC_NUM_X      = 1,
+ PRC_NUM_Y      = 1,
  PRC_PERIODIC_X = .true.,
  PRC_PERIODIC_Y = .true.,
 /
@@ -69,8 +69,8 @@
 
 &PARAM_INDEX
  KMAX = 40,
- IMAX = 12,
- JMAX = 12,
+ IMAX = 24,
+ JMAX = 24,
 /
 
 
@@ -92,16 +92,25 @@
 /
 
 &PARAM_TRACER
-! TRACER_TYPE = "TOMITA08",
- TRACER_TYPE = "SN14",
+ TRACER_TYPE = "TOMITA08",
+! TRACER_TYPE = "SN14",
+! LIGHTNING_TYPE = 'TK78',
 /
+
+!&PARAM_ATMOS_PHY_TL
+! ATMOS_PHY_TL_LUT_FILENAME = '/home/honda/scale_lt_devel_20180731/scale-rm/test/data/thunderlightning/LUT_TK1978_v.txt',
+!! ITMAX = 500,
+! EPSILON = 1.d-10
+! NUTL_ITMAX = 100
+! NUTR_TYPE = 'MG2001',
+!/
 
 &PARAM_ATMOS
  ATMOS_DYN_TYPE    = "HEVI",
-! ATMOS_PHY_MP_TYPE = "TOMITA08",
- ATMOS_PHY_MP_TYPE = "SN14",
-! ATMOS_PHY_TB_TYPE = "MYNN",
- ATMOS_PHY_TB_TYPE = "D1980",
+ ATMOS_PHY_MP_TYPE = "TOMITA08",
+! ATMOS_PHY_MP_TYPE = "SN14",
+ ATMOS_PHY_TB_TYPE = "MYNN",
+! ATMOS_PHY_TB_TYPE = "D1980",
 /
 
 #################################################

@@ -1,6 +1,6 @@
 include ../configure.user
 
-PROGS   = letkf makeEns
+PROGS   = letkf #makeEns
 
 OBJS    = letkf_obs.o letkf_tools.o
 
