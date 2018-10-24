@@ -162,6 +162,16 @@
 &HISTITEM item='MOMY' /
 &HISTITEM item='RHOT' /
 
+!&HISTITEM item='QLIQ' /
+!&HISTITEM item='QICE' /
+
+&HISTITEM item='U'    /
+&HISTITEM item='V'    /
+&HISTITEM item='W'    /
+&HISTITEM item='T'    /
+&HISTITEM item='PRES' /
+!&HISTITEM item='PT'   /
+
 &HISTITEM item='QV'   /
 &HISTITEM item='QC'   /
 &HISTITEM item='QR'   /
@@ -169,28 +179,21 @@
 &HISTITEM item='QS'   /
 &HISTITEM item='QG'   /
 &HISTITEM item='QHYD' /
-&HISTITEM item='QLIQ' /
-&HISTITEM item='QICE' /
-
-&HISTITEM item='T'    /
-&HISTITEM item='PRES' /
-&HISTITEM item='U'    /
-&HISTITEM item='V'    /
-&HISTITEM item='W'    /
-&HISTITEM item='PT'   /
 &HISTITEM item='RH'   /
 
 &HISTITEM item='PREC', taverage=.true. /
 &HISTITEM item='RAIN', taverage=.true. /
 
-&HISTITEM item='SFC_PRES'   /
-&HISTITEM item='SFC_TEMP'   /
 
-&HISTITEM item='U10' /
-&HISTITEM item='V10' /
-&HISTITEM item='T2'  /
-&HISTITEM item='Q2'  /
-&HISTITEM item="MSLP" /
+! No data because this is idealized exp.
+!&HISTITEM item='SFC_PRES'   /
+!&HISTITEM item='SFC_TEMP'   /
+
+!&HISTITEM item='U10' /
+!&HISTITEM item='V10' /
+!&HISTITEM item='T2'  /
+!&HISTITEM item='Q2'  /
+!&HISTITEM item="MSLP" /
 
 #################################################
 #

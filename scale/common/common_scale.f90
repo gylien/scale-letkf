@@ -780,20 +780,20 @@ subroutine read_history(filename,step,v3dg,v2dg)
   ! 2D variables
   !-------------
   do iv2d = 1, nv2dd
-    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
-    call HistoryGet( var2D,                 & ! [OUT]
-                     filename,              & ! [IN]
-                     trim(v2dd_name(iv2d)), & ! [IN]
-                     step                   ) ! [IN]
-    v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
+    write(6,'(1x,A,A15)') '*** NOT Read 2D var: ', trim(v2dd_name(iv2d))
+!    call HistoryGet( var2D,                 & ! [OUT]
+!                     filename,              & ! [IN]
+!                     trim(v2dd_name(iv2d)), & ! [IN]
+!                     step                   ) ! [IN]
+!    v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
   end do
 
-  do iv2d = 1, nv2dd
-    call COMM_vars8( v2dg(:,:,iv2d), iv2d )
-  end do
-  do iv2d = 1, nv2dd
-    call COMM_wait ( v2dg(:,:,iv2d), iv2d )
-  end do
+!  do iv2d = 1, nv2dd
+!    call COMM_vars8( v2dg(:,:,iv2d), iv2d )
+!  end do
+!  do iv2d = 1, nv2dd
+!    call COMM_wait ( v2dg(:,:,iv2d), iv2d )
+!  end do
 
   return
 end subroutine read_history

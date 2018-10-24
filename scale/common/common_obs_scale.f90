@@ -1206,9 +1206,13 @@ SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
 !
 ! rlon,rlat -> ri,rj
 !
-  call MPRJ_lonlat2xy(rlon*pi/180.0_r_size,rlat*pi/180.0_r_size,rig,rjg)
-  rig = (rig - GRID_CXG(1)) / DX + 1.0d0
-  rjg = (rjg - GRID_CYG(1)) / DY + 1.0d0
+!  call MPRJ_lonlat2xy(rlon*pi/180.0_r_size,rlat*pi/180.0_r_size,rig,rjg)
+!  rig = (rig - GRID_CXG(1)) / DX + 1.0d0
+!  rjg = (rjg - GRID_CYG(1)) / DY + 1.0d0
+
+! This is an idealized experiment without map projections
+  rig = (rlon - GRID_CXG(1)) / DX + 1.0d0
+  rjg = (rlat - GRID_CYG(1)) / DY + 1.0d0
 
   RETURN
 END SUBROUTINE phys2ij
@@ -1233,10 +1237,14 @@ SUBROUTINE ij2phys(rig,rjg,rlon,rlat)
   x = (rig - 1.0d0) * DX + GRID_CXG(1) 
   y = (rjg - 1.0d0) * DY + GRID_CYG(1) 
 
-  call MPRJ_xy2lonlat(x,y,rlon,rlat)
+!  call MPRJ_xy2lonlat(x,y,rlon,rlat)
+!
+!  rlon = rlon * rad2deg
+!  rlat = rlat * rad2deg
 
-  rlon = rlon * rad2deg
-  rlat = rlat * rad2deg
+! This is an idealized experiment without map projections
+  rlon = x
+  rlat = y
 
   RETURN
 END SUBROUTINE ij2phys
