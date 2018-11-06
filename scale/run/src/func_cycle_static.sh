@@ -429,6 +429,10 @@ while ((time <= ETIME)); do
   fi
   if ((LOG_OPT <= 3 && DACYCLE != 1 && (DTF_MODE == 0 || loop == 1))); then
     for p in $plist; do
+      if ((DTF_MPMD >= 1)); then
+        break # DEBUG
+      fi
+
       if ((nitmax == 1)); then
         path="log_1/scale-rm_ens.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
         pathout="${OUTDIR[1]}/${time}/log/scale/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
@@ -451,11 +455,18 @@ while ((time <= ETIME)); do
           echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
         done
       elif ((loop == 1)); then
+if ((DTF_MPMD >= 1)); then
+   # DEBUG
+   path="log/"
+   pathout="${OUTDIR[1]}/${time}/log/"
+   echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
+else
         for p in $plist; do
           path="log_2/letkf.NOUT_${time}$(printf -- "${log_nfmt}" $((p-1)))"
           pathout="${OUTDIR[1]}/${time}/log/letkf/NOUT$(printf -- "${log_nfmt}" $((p-1)))"
           echo "${pathout}|${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.${proc2node[$p]}
         done
+fi
       fi
     elif ((loop == 1)); then
       for p in $plist; do

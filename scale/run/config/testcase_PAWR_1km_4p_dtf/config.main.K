@@ -16,10 +16,13 @@ USERNAME=gylien
 USERNAME=honda
 
 INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_1km_initbdy_v180531"
-OUTDIR="/volume63/data/hp150019/${USERNAME}/exp/scale-letkf/benchmark/d4_1km_1001_m100_dtf_SP_log1" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/${USERNAME}/exp/scale-letkf/benchmark/testcase_PAWR_1km_4p_dtf" # Directory for SCALE-LETKF output
 
-LIBDTF_PATH=
-#/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/DTF/libdtf
+LIBDTF_PATH="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/DTF20181023_stat/libdtf"
+
+DTF_MPMD=1 # 1: MPMD launch mode (e.g., mpiexec -n ./scale-rm_ens: -n XX ./letkf)
+           # 0: Launch two background jobs (e.g., mpiexec -n XX ./scale-rm_ens& mpiexec -n XX ./letkf&)
+SPLIT_WRAP="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/scale-productrun-crest-7f2c3dbd_20181023_stat/split_world_wrap/libsplitworld.so"
 
 #===============================================================================
 # Location of model/data files
@@ -111,9 +114,12 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=100         # Ensemble size
+#MEMBER=100         # Ensemble size
+#
+#NNODES=408         # Number of nodes
+MEMBER=50         # Ensemble size
 
-NNODES=408         # Number of nodes
+NNODES=208         # Number of nodes
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process

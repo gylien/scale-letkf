@@ -123,16 +123,16 @@ ${NODEFILE_DIR}/|node/
 EOF
 fi
 
-#if ((DTF_MODE >= 1)); then
-##  if [ ! -e "${SCRP_DIR}/dtf.ini" ] ; then
-##    echo "dtf.ini is not specified!"
-##    exit 1
-##  fi
-#  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-#${LIBDTF_PATH}/libdtf.so|libdtf.so
-#EOF
-##${SCRP_DIR}/dtf.ini|dtf.ini
-#fi
+if ((DTF_MODE >= 1)); then
+  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${LIBDTF_PATH}/libdtf.so|libdtf.so
+EOF
+  if ((DTF_MPMD >= 1)); then
+    cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${SPLIT_WRAP}|libsplitworld.so 
+EOF
+  fi
+fi
 
 if [ "$CONF_MODE" != 'static' ]; then
   echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
@@ -161,6 +161,13 @@ else
   rscgrp="small"
 fi
 
+
+if ((DTF_MPMD >= 1)); then
+  TOTAL_PROC=$((NNODES / PPN))
+else
+  TOTAL_PROC=${totalnp}
+fi
+
 cat > $jobscrp << EOF
 #!/bin/sh
 #PJM -N ${job}_${SYSNAME}
@@ -170,7 +177,7 @@ cat > $jobscrp << EOF
 #PJM --rsc-list "rscgrp=${rscgrp}"
 ##PJM --rsc-list "node-quota=29G"
 ##PJM --mpi "shape=${NNODES}"
-#PJM --mpi "proc=${totalnp}"
+#PJM --mpi "proc=${TOTAL_PROC}"
 #PJM --mpi assign-online-node
 #PJM --stg-transfiles all
 EOF
@@ -216,7 +223,50 @@ export DTF_GLOBAL_PATH=.
 EOF
 fi
 
-if [ "$CONF_MODE" = 'static' ] && ((DTF_MODE >= 1)); then
+if  [ "$CONF_MODE" = 'static' ] && ((DTF_MODE >= 1)) && ((DTF_MPMD >= 1)); then
+  cat >> $jobscrp << EOF
+export LD_PRELOAD=./libsplitworld.so
+
+# CREATE OF-PROC FILE
+mkdir log_1 log_2
+lfs setstripe -c 1 log_1
+lfs setstripe -c 1 log_2
+lfs setstripe -c 1 log
+
+#for i in \`seq 0 $((NNODES_ORIG*PPN-1))\`; do echo log_1/scale-rm_ens.NOUT_${STIME}.\${i} ; done | xargs -n 200 -P 8 touch
+#for i in \`seq 0 $((NNODES_ORIG*PPN-1))\`; do echo log_2/letkf.NOUT_${STIME}.\${i} ; done | xargs -n 200 -P 8 touch
+for i in \`seq 0 $((NNODES*PPN-1))\`; do echo log/NOUT.\${i} ; done | xargs -n 200 -P 8 touch
+
+echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ${STIME}: Submitted to background: ensemble forecasts & LETKF by using MPMD" >&2
+mpiexec -of-proc log/NOUT \\
+    -n $((NNODES_ORIG*PPN)) -x DTF_COMP=0 ./scale-rm_ens scale-rm_ens_${STIME}.conf :\\
+    -n $((NNODES_ORIG*PPN)) -x DTF_COMP=1 ./letkf letkf_${STIME}.conf
+#    -n $((NNODES_ORIG*PPN)) -of-proc log_1/scale-rm_ens.NOUT_${STIME} -x DTF_COMP=0 ./scale-rm_ens scale-rm_ens_${STIME}.conf :\\
+#    -n $((NNODES_ORIG*PPN)) -of-proc log_2/letkf.NOUT_${STIME} -x DTF_COMP=1 ./letkf letkf_${STIME}.conf
+#    -n $((NNODES_ORIG*PPN)) -vcoordfile ${TMPROOT}/node/set1.proc -of-proc log_1/scale-rm_ens.NOUT_${STIME} -x DTF_COMP=0 ./scale-rm_ens scale-rm_ens_${STIME}.conf :\\
+#    -n $((NNODES_ORIG*PPN)) -vcoordfile ${TMPROOT}/node/set2.proc -of-proc log_2/letkf.NOUT_${STIME} -x DTF_COMP=1 ./letkf letkf_${STIME}.conf
+
+jobids=\$(jobs -p)
+while [ -n "\$jobids" ]; do
+  for job in \$jobids; do
+    if ! (kill -0 \$job 2> /dev/null); then
+      rcode=0
+      wait \$job || rcode=\$?
+      if ((rcode != 0)); then
+        echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ${STIME}: One of the background programs crashed..." >&2
+        exit \$rcode
+      fi
+    fi
+  done
+  jobids=\$(jobs -p)
+  sleep 1s
+done
+
+echo "[\$(date +'%Y-%m-%d %H:%M:%S')] Finish $STIME $ETIME" >&2
+EOF
+fi
+
+if [ "$CONF_MODE" = 'static' ] && ((DTF_MODE >= 1)) && ((DTF_MPMD < 1)); then
   cat >> $jobscrp << EOF
 
 echo "[\$(date +'%Y-%m-%d %H:%M:%S')] Start $STIME $ETIME" >&2
@@ -228,12 +278,6 @@ lfs setstripe -c 1 log_2
 
 for i in \`seq 0 $((NNODES_ORIG*PPN-1))\`; do echo log_1/scale-rm_ens.NOUT_${STIME}.\${i} ; done | xargs -n 200 -P 8 touch
 for i in \`seq 0 $((NNODES_ORIG*PPN-1))\`; do echo log_2/letkf.NOUT_${STIME}.\${i} ; done | xargs -n 200 -P 8 touch
-
-#for i in \`seq 0 $((NNODES_ORIG*PPN-1))\`
-#do
-#     touch  log_1/scale-rm_ens.NOUT_${STIME}.${i}
-#     touch  log_2/letkf.NOUT_${STIME}.${i}
-#done
 
 
 mpiexec -n $((NNODES_ORIG*PPN)) -vcoordfile ${TMPROOT}/node/set1.proc -of-proc log_1/scale-rm_ens.NOUT_${STIME} ./scale-rm_ens scale-rm_ens_${STIME}.conf &
@@ -264,11 +308,11 @@ echo "[\$(date +'%Y-%m-%d %H:%M:%S')] Finish $STIME $ETIME" >&2
 
 exit 0
 EOF
-else
-  cat >> $jobscrp << EOF
-
-./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
-EOF
+#else
+#  cat >> $jobscrp << EOF
+#
+#./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
+#EOF
 fi
 
 #===============================================================================
