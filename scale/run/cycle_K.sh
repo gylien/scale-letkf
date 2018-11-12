@@ -239,8 +239,8 @@ for i in \`seq 0 $((NNODES*PPN-1))\`; do echo log/NOUT.\${i} ; done | xargs -n 2
 
 echo "[\$(date +'%Y-%m-%d %H:%M:%S')] ${STIME}: Submitted to background: ensemble forecasts & LETKF by using MPMD" >&2
 mpiexec -of-proc log/NOUT \\
-    -n $((NNODES_ORIG*PPN)) -x DTF_COMP=0 ./scale-rm_ens scale-rm_ens_${STIME}.conf :\\
-    -n $((NNODES_ORIG*PPN)) -x DTF_COMP=1 ./letkf letkf_${STIME}.conf
+    -n $((NNODES_ORIG*PPN)) -x MPMD_COMP=0 ./scale-rm_ens scale-rm_ens_${STIME}.conf :\\
+    -n $((NNODES_ORIG*PPN)) -x MPMD_COMP=1 ./letkf letkf_${STIME}.conf
 #    -n $((NNODES_ORIG*PPN)) -of-proc log_1/scale-rm_ens.NOUT_${STIME} -x DTF_COMP=0 ./scale-rm_ens scale-rm_ens_${STIME}.conf :\\
 #    -n $((NNODES_ORIG*PPN)) -of-proc log_2/letkf.NOUT_${STIME} -x DTF_COMP=1 ./letkf letkf_${STIME}.conf
 #    -n $((NNODES_ORIG*PPN)) -vcoordfile ${TMPROOT}/node/set1.proc -of-proc log_1/scale-rm_ens.NOUT_${STIME} -x DTF_COMP=0 ./scale-rm_ens scale-rm_ens_${STIME}.conf :\\

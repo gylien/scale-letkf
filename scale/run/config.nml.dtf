@@ -15,6 +15,7 @@ comp2="letkf"
 mode="transfer"
 num_sessions=2
 replay_io=1
+mirror_io_root=1
 
 [FILE]
 filename="hist.d01%"
@@ -22,23 +23,8 @@ comp1="scale"
 comp2="letkf"
 mode="transfer"
 replay_io=1
+mirror_io_root=1
 
 
-#[FILE]
-#filename="mean/anal.d01%"
-#!##--EXCLUDE_NAME_STIME--
-#!##--EXCLUDE_NAME_ATIME--
-#comp1="scale"
-#comp2="letkf"
-#mode="transfer"
-#num_sessions=2
 
-#[FILE]
-#filename="mdet/anal.d01%"
-#!##--EXCLUDE_NAME_STIME--
-#!##--EXCLUDE_NAME_ATIME--
-#comp1="scale"
-#comp2="letkf"
-#mode="transfer"
-#num_sessions=2
 
