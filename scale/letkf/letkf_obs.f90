@@ -638,9 +638,9 @@ SUBROUTINE set_letkf_obs
 #ifdef DEBUG
       write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
                                          obs(iof)%typ(iidx), &
-                                         obs(iof)%lon(iidx), &
-                                         obs(iof)%lat(iidx), &
-                                         obs(iof)%lev(iidx), &
+                                         obs(iof)%lon(iidx)*0.01, &
+                                         obs(iof)%lat(iidx)*0.01, &
+                                         obs(iof)%lev(iidx)*0.01, &
                                          obs(iof)%dat(iidx), &
                                          obs(iof)%err(iidx), &
                                          obsda%val(n), &

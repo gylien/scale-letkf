@@ -1456,7 +1456,7 @@ subroutine monit_obs(v3dg,v2dg,obs,obsda,topo,nobs,bias,rmse,monit_type,use_key)
 
       select case (obs(iset)%elm(iidx))
       case(id_u_obs,id_v_obs,id_t_obs,id_tv_obs,id_q_obs,id_ps_obs) !,id_rh_obs)
-        call phys2ijk(v3dgh(:,:,:,iv3dd_p),obs(iset)%elm(iidx), &
+        call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt), & ! z level 10/24/2018 by TH
                       ri,rj,obs(iset)%lev(iidx),rk,oqc(n))
         if (oqc(n) == iqc_good) then
           call Trans_XtoY(obs(iset)%elm(iidx),ri,rj,rk, &
@@ -2037,41 +2037,42 @@ SUBROUTINE read_obs(cfile,obs)
   DO n=1,obs%nobs
     READ(iunit) wk
     SELECT CASE(NINT(wk(1)))
-    CASE(id_u_obs)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-    CASE(id_v_obs)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-    CASE(id_t_obs)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-    CASE(id_tv_obs)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-    CASE(id_q_obs)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+! wk(4) should be z level
+!    CASE(id_u_obs)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!    CASE(id_v_obs)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!    CASE(id_t_obs)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!    CASE(id_tv_obs)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!    CASE(id_q_obs)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
     CASE(id_ps_obs)
       wk(5) = wk(5) * 100.0 ! hPa -> Pa
       wk(6) = wk(6) * 100.0 ! hPa -> Pa
     CASE(id_rh_obs)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = wk(5) * 0.01 ! percent input
       wk(6) = wk(6) * 0.01 ! percent input
     CASE(id_tcmip_obs)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = wk(5) * 100.0 ! hPa -> Pa
       wk(6) = real(OBSERR_TCP,kind=r_sngl)
-    CASE(id_tclon_obs)
-      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
-                          REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
-                          x,y)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-      wk(5) = real(x,kind=r_sngl)
-      wk(6) = real(OBSERR_TCX,kind=r_sngl)
-    CASE(id_tclat_obs)
-      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
-                          REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
-                          x,y)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-      wk(5) = real(y,kind=r_sngl)
-      wk(6) = real(OBSERR_TCY,kind=r_sngl)
+!    CASE(id_tclon_obs)
+!      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
+!                          REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
+!                          x,y)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!      wk(5) = real(x,kind=r_sngl)
+!      wk(6) = real(OBSERR_TCX,kind=r_sngl)
+!    CASE(id_tclat_obs)
+!      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
+!                          REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
+!                          x,y)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!      wk(5) = real(y,kind=r_sngl)
+!      wk(6) = real(OBSERR_TCY,kind=r_sngl)
     END SELECT
     obs%elm(n) = NINT(wk(1))
     obs%lon(n) = REAL(wk(2),r_size)

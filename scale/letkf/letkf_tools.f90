@@ -1332,18 +1332,18 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   !
   if (vert_loc_ctype(ic) == 0.0d0) then
     nd_v = 0.0d0                                                            ! no vertical localization
-  else if (obelm == id_ps_obs) then
-    nd_v = ABS(LOG(obs(obset)%dat(obidx)) - LOG(rlev)) / vert_loc_ctype(ic) ! for ps, use observed ps value for the base of vertical localization
-  else if (obelm == id_rain_obs) then
-    nd_v = ABS(LOG(VERT_LOCAL_RAIN_BASE) - LOG(rlev)) / vert_loc_ctype(ic)  ! for rain, use VERT_LOCAL_RAIN_BASE for the base of vertical localization
+!  else if (obelm == id_ps_obs) then
+!    nd_v = ABS(LOG(obs(obset)%dat(obidx)) - LOG(rlev)) / vert_loc_ctype(ic) ! for ps, use observed ps value for the base of vertical localization
+!  else if (obelm == id_rain_obs) then
+!    nd_v = ABS(LOG(VERT_LOCAL_RAIN_BASE) - LOG(rlev)) / vert_loc_ctype(ic)  ! for rain, use VERT_LOCAL_RAIN_BASE for the base of vertical localization
   else if (obtyp == 22) then ! obtypelist(obtyp) == 'PHARAD'
     nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)             ! for PHARAD, use z-coordinate for vertical localization
-#ifdef H08
-  else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'                ! H08
-    nd_v = ABS(LOG(obsda2%lev(iob)) - LOG(rlev)) / vert_loc_ctype(ic)       ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
-#endif
+!#ifdef H08
+!  else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'                ! H08
+!    nd_v = ABS(LOG(obsda2%lev(iob)) - LOG(rlev)) / vert_loc_ctype(ic)       ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
+!#endif
   else
-    nd_v = ABS(LOG(obs(obset)%lev(obidx)) - LOG(rlev)) / vert_loc_ctype(ic)
+    nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)    ! z level only 10/24/2018 by TH
   end if
 
   !--- reject obs by normalized vertical distance
