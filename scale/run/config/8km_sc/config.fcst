@@ -7,7 +7,8 @@
 
 STIME='20000101000000'
 ETIME='20000101000000'
-MEMBERS='mean 1 2 3'
+#MEMBERS='mean 1 2 3'
+MEMBERS='mean'
 CYCLE=1
 CYCLE_SKIP=1
 ISTEP=
@@ -17,7 +18,7 @@ TIME_LIMIT='00:05:00'
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=600        # SCALE forecast length in the forecast mode (second)
+FCSTLEN=3600        # SCALE forecast length in the forecast mode (second)
 FCSTOUT=600
 
 #===============================================================================

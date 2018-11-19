@@ -952,6 +952,7 @@ end subroutine obsmake_cal
 subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   use scale_grid, only: &
       GRID_CX, GRID_CY, &
+      GRID_CZ, &
       DX, DY
   use scale_grid_index, only: &
       IHALO, JHALO, KHALO
@@ -972,6 +973,8 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   real(r_size) :: tmpobs
   integer :: tmpqc
 
+  integer :: ig, jg
+
 !-------------------------------------------------------------------------------
 
   write (6,'(A,I6.6,A,I6.6)') 'MYRANK ', myrank, ' is processing subdomain id #', proc2mem(2,1,myrank+1)
@@ -980,10 +983,17 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
     rj = real(j + JHALO, r_size)
 
     do i = 1, nlon
-      ri = real(i + IHALO, r_size)
-      call MPRJ_xy2lonlat((ri-1.0d0) * DX + GRID_CX(1), (rj-1.0d0) * DY + GRID_CY(1), lon, lat)
-      lon = lon * rad2deg
-      lat = lat * rad2deg
+      ri = real(i  + IHALO, r_size)
+
+      call ij_l2g(myrank_d, i, j, ig, jg)
+
+! This is an idealized experiment without map projections
+!      call MPRJ_xy2lonlat((ri-1.0d0) * DX + GRID_CX(1), (rj-1.0d0) * DY + GRID_CY(1), lon, lat)
+!      lon = ri ! lon * rad2deg
+!      lat = rj ! lat * rad2deg
+
+      lon = real(ig, kind=r_size)
+      lat = real(jg, kind=r_size)
 
       do k = 1, nlev
         rk = real(k + KHALO, r_size)
@@ -991,7 +1001,9 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
         do iv3dsim = 1, OBSSIM_NUM_3D_VARS
           select case (OBSSIM_3D_VARS_LIST(iv3dsim))
           case (id_radar_ref_obs, id_radar_ref_zero_obs, id_radar_vr_obs, id_radar_prh_obs)
-            lev = v3dgh(k+KHALO, i+IHALO, j+JHALO, iv3dd_hgt)
+!            lev = v3dgh(k+KHALO, i+IHALO, j+JHALO, iv3dd_hgt)
+! This is an idealized experiment without map projections
+            lev = GRID_CZ(k+KHALO)
             call Trans_XtoY_radar(OBSSIM_3D_VARS_LIST(iv3dsim), OBSSIM_RADAR_LON, OBSSIM_RADAR_LAT, OBSSIM_RADAR_Z, ri, rj, rk, &
                                   lon, lat, lev, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
             if (tmpqc == iqc_ref_low) tmpqc = iqc_good ! when process the observation operator, we don't care if reflectivity is too small

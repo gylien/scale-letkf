@@ -386,12 +386,18 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   !Azimuth
   dlon=lon-radar_lon
   dlat=lat-radar_lat
+
   IF ( dlon == 0.0d0 .and. dlat == 0.0d0  )THEN
 !      WRITE(6,*)'OOPS',dlon,dlat,lon,lat,radar_lon,radar_lat
     qc = iqc_out_h
     RETURN
   ELSE
-    az = rad2deg*atan2(dlon*cos(radar_lat*deg2rad),dlat)
+    if (RADAR_IDEAL) then
+      ! idealized experiment (no map projection)
+      az = rad2deg*atan2(dlon,dlat)
+    else
+      az = rad2deg*atan2(dlon*cos(radar_lat*deg2rad),dlat)
+    endif
   ENDIF
   !WRITE(6,*)dlon,dlat,lon,lat,radar_lon(ityp),radar_lat(ityp),dlon*cos(radar_lat(ityp))
   !IF( abs(dlon) > maxdlon )maxdlon=abs(dlon)
@@ -399,7 +405,11 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   !WRITE(6,*)maxdlon,maxdlat
   IF( az < 0) az = 360.0d0 + az
   !elevation
-  CALL com_distll_1(lon,lat,radar_lon,radar_lat,dist)
+  if (RADAR_IDEAL) then
+    dist = dsqrt(dlon**2 + dlat**2)
+  else
+    CALL com_distll_1(lon,lat,radar_lon,radar_lat,dist)
+  endif
   elev=rad2deg*atan2(lev-radar_z,dist)
 
 
@@ -2912,5 +2922,69 @@ SUBROUTINE write_obs_H08(cfile,obs,append,missing)
 
   RETURN
 END SUBROUTINE write_obs_H08
+
+!SUBROUTINE write_obs_radar3d(cfile,obs4d)
+!  use scale_grid, only: &
+!      GRID_CZ
+!  use scale_grid_index, only: &
+!      KHALO
+!
+!  IMPLICIT NONE
+!  CHARACTER(*),INTENT(IN) :: cfile
+!  real(r_sngl),INTENT(IN) :: obs4d(OBSSIM_NUM_3D_VARS,nlev,nlong,nlatg)
+!  REAL(r_sngl) :: wk(7)
+!  INTEGER :: iunit
+!
+!  integer :: i, j, k, n
+!
+!  real(r_size) :: rlon, rlat, rlev
+!
+!  iunit=92
+!
+!  OPEN(iunit,FILE=cfile,FORM='unformatted',ACCESS='sequential')
+!
+!  WRITE(iunit) REAL(OBSSIM_RADAR_LON,r_sngl)
+!  WRITE(iunit) REAL(OBSSIM_RADAR_LAT,r_sngl)
+!  WRITE(iunit) REAL(OBSSIM_RADAR_Z,r_sngl)
+!
+!  do n = 1, OBSSIM_NUM_3D_VARS
+!
+!    wk(1) = REAL(OBSSIM_3D_VARS_LIST(n),r_sngl)
+!    select case (OBSSIM_3D_VARS_LIST(n))
+!    case (id_radar_ref_obs,id_radar_ref_zero_obs)
+!      wk(6) = REAL(OBSERR_RADAR_REF,r_sngl)
+!    case (id_radar_vr_obs, id_radar_prh_obs)
+!      wk(6) = REAL(OBSERR_RADAR_VR,r_sngl)
+!    end select
+!
+!    do k = 1, nlev
+!      rlev = GRID_CZ(k+KHALO)
+!      do j = 1, nlatg
+!      do i = 1, nlong
+!        if (obs4d(n,k,i,j) == undef) then
+!          call ij2phys(real(i,kind=r_size),real(j,kind=r_size),&
+!                       rlon,rlat)
+!
+!          wk(2) = REAL(rlon,r_sngl)
+!          wk(3) = REAL(rlat,r_sngl)
+!          wk(4) = REAL(rlev,r_sngl)
+!          wk(5) = REAL(obs4d(n,k,i,j),r_sngl)
+!
+!
+!          wk(7) = REAL(22.0d0,r_sngl)
+!          WRITE(iunit) wk
+!        else
+!          cycle
+!        endif
+!      enddo ! i
+!      enddo ! j
+!    enddo ! k
+!  enddo ! n 
+!
+!  close(iunit)
+!
+!  RETURN
+!
+!END SUBROUTINE write_obs_radar3d
 
 END MODULE common_obs_scale

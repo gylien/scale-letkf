@@ -90,5 +90,11 @@
  OBSERR_RADAR_VR = 3.0D0,
 /
 
+&PARAM_OBSSIM
+ OBSSIM_RADAR_LON = 0.0d0,
+ OBSSIM_RADAR_LAT = 0.0d0,
+ OBSSIM_RADAR_Z = 0.0d0,
+/
+
 !*** Attach SCALE configuration below ***
 

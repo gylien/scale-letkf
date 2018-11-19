@@ -218,6 +218,7 @@ MODULE common_nml
   INTEGER :: METHOD_REF_CALC = 3
 
   LOGICAL :: USE_TERMINAL_VELOCITY = .false.
+  logical :: RADAR_IDEAL = .true.
 
   ! PARAMETERS FOR RADAR DATA ASSIMILATION
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
@@ -658,6 +659,7 @@ subroutine read_nml_letkf_radar
     INTERPOLATION_TECHNIQUE, &
     METHOD_REF_CALC, &
     USE_TERMINAL_VELOCITY, &
+    RADAR_IDEAL, &
     NRADARTYPE
 
   rewind(IO_FID_CONF)
