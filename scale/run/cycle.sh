@@ -46,10 +46,6 @@ echo "[$(datetime_now)] Start $myname $@" >&2
 
 setting "$@" || exit $?
 
-if [ "$CONF_MODE" = 'static' ]; then
-  . src/func_${job}_static.sh || exit $?
-fi
-
 echo
 print_setting || exit $?
 
@@ -90,16 +86,7 @@ if ((RUN_LEVEL <= 1)) && ((ISTEP == 1)); then
   echo "[$(datetime_now)] Initialization (stage in)" >&2
 
   safe_init_tmpdir $STAGING_DIR || exit $?
-  if [ "$CONF_MODE" = 'static' ]; then
-    staging_list_static || exit $?
-    if ((DISK_MODE == 3)); then
-      config_file_list $TMP/config || exit $?
-    else
-      config_file_list || exit $?
-    fi
-  else
-    staging_list || exit $?
-  fi
+  staging_list || exit $?
 
   stage_in node || exit $?
 fi
@@ -133,6 +120,7 @@ cd $TMPROOT
 s_flag=1
 e_flag=0
 time=$STIME
+btime=$STIME
 atime=$(datetime $time $LCYCLE s)
 loop=0
 
@@ -217,6 +205,12 @@ while ((time <= ETIME)); do
           echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use prepared boundary files)" >&2
           continue
         fi
+        if ((SKIP_BDYINIT == 1 && $(datetime $time -$BDYINT s) < btime && time != btime)); then
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (use boundary files produced in a previous cycle)" >&2
+          continue
+        else
+          btime=$(datetime $btime $BDYINT s)
+        fi
       fi
       if ((s == 4)); then
         if ((OBSOPE_RUN == 0)); then
@@ -236,13 +230,6 @@ while ((time <= ETIME)); do
       fi
 
       nodestr=proc
-      if ((IO_ARB == 1)); then
-        if ((s == 3)); then
-          nodestr='set1.proc'
-        elif ((s == 5)); then
-          nodestr='set2.proc'
-        fi
-      fi
 
       if ((s <= 3)); then
         conf_time=$time
@@ -250,65 +237,24 @@ while ((time <= ETIME)); do
         conf_time=$atime
       fi
 
-      if [ "$CONF_MODE" = 'static' ]; then
 
-        if ((enable_iter == 1 && nitmax > 1)); then
-          for it in $(seq $nitmax); do
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+      execpath="${stepexecdir[$s]}/${stepexecname[$s]}"
+      stdout_dir="$TMPOUT/${conf_time}/log/$(basename ${stepexecdir[$s]})"
+      if ((enable_iter == 1)); then
+        for it in $(seq $nitmax); do
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            if ((IO_ARB == 1)); then ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $? &
-            else ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}_${it}.conf log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $?
-            fi ##
+          mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
 
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          done
-        else
-          if ((IO_ARB == 1)); then ##
-            if ((s == 5)); then ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} \
-                      "$SCRP_DIR/sleep.sh" || exit $? &
-            else ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
-            fi ##
-          else ##
-            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
-          fi ##
-        fi
-
+          echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
+        done
       else
-
-        execpath="${stepexecdir[$s]}/${stepexecname[$s]}"
-        stdout_dir="$TMPOUT/${conf_time}/log/$(basename ${stepexecdir[$s]})"
-        if ((enable_iter == 1)); then
-          for it in $(seq $nitmax); do
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
-
-            if ((IO_ARB == 1)); then ##
-              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $? &
-            else ##
-              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
-            fi ##
-
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          done
-        else
-          if ((IO_ARB == 1)); then ##                                 
-            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $? &
-          else ##
-            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
-          fi ##
-        fi
-
+        mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
       fi
 
     fi
   done
 
-  if ((IO_ARB == 1)); then ##                                 
-    wait                   ##
-  fi                       ##
 
 #-------------------------------------------------------------------------------
 # Online stage out

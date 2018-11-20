@@ -1157,6 +1157,7 @@ fi
 
 bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 
+echo "DEBUG XXX "$time" "$CYCLEFLEN" "$BDYCYCLE_INT" "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE>&2
 ############
 #if ((BDY_FORMAT == 1)); then
 #  if ((DATA_BDY_TMPLOC == 1)); then
@@ -1235,7 +1236,11 @@ for it in $(seq $its $ite); do
         fi
       fi
 
-      bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}${CONNECTOR}boundary"
+      if ((SKIP_BDYINIT == 1)); then
+        bdy_base="$TMPOUT/${bdy_start_time}/bdy/${mem_bdy}${CONNECTOR}boundary"
+      else
+        bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}${CONNECTOR}boundary"
+      fi
 
       bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
            $TMPOUT/${time}/anal/${name_m[$m]}${CONNECTOR}init $ocean_base $land_base $bdy_base \
@@ -1378,13 +1383,6 @@ letkf_1 () {
 #echo
 #echo "* Pre-processing scripts"
 #echo
-
-if ((IO_ARB == 1)); then     ##
-  if ((MYRANK == 0)); then   ##
-    echo "[$(datetime_now)] ${time}: ${stepname[5]}: Wait for 360 seconds" >&2 ##
-  fi                         ##
-  sleep 360s                 ##
-fi                           ##
 
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script start" >&2
