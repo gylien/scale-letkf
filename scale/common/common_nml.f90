@@ -9,8 +9,8 @@ MODULE common_nml
 !
 !===============================================================================
   use common, only: r_size
-  use scale_stdio, only: IO_FID_CONF
-  use scale_process, only: PRC_DOMAIN_nlim
+  use scale_io, only: IO_FID_CONF
+  use scale_prc, only: PRC_DOMAIN_nlim
 
   implicit none
   public
