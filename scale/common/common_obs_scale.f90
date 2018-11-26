@@ -3880,6 +3880,8 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
   integer :: ii, jj
   integer :: ave_ng
 
+  tbb_allg_prep(:,:,:) = undef
+
   if (present(obsdat) .and. present(obslon) .and. present(obslat) .and. present(obslev) .and. present(obserr)) then
     obsdat(:) = undef
     obslon(:) = 0.0

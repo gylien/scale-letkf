@@ -6,10 +6,9 @@
 #===============================================================================
 
 PRESET='K_rankdir'                           # 'K' or 'K_rankdir' or 'K_micro'
+#PRESET='K_micro'
 
 EXP=BAIU2018_D2_HIM8_NG2
-EXP=BAIU2018_D2_HIM8_test
-#EXP=BAIU2018_D2_HIM8_ref
 PEXP="/volume64/data/ra001011/honda/realtime/r0050/exp_d1_5.2.6"
 
 USERNAME=honda
@@ -50,18 +49,17 @@ OBSNCEP=                                                             # Directory
 DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
 
-TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'   # 'prep': Use prepared topo files in $DATA_TOPO
+#TOPO_FORMAT='GTOPO30'   # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+#LANDUSE_FORMAT='GLCCv2' # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
-
-SKIP_BDYINIT=1 # 1: Skip unnecessary scale_init process
-               # 0: Run scale_init every cycle
 
 BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
@@ -78,6 +76,9 @@ BDY_ROTATING=0 # ANALYSIS          # 0: Use a same series of boundary files for 
                         # 1: Use different series of boundary files for different initial time
 
 BDY_OCEAN_ONETIME=1
+
+SKIP_BDYINIT=1 # 1: Skip unnecessary scale_init process
+               # 0: Run scale_init every cycle
 
 BDYINT=3600
 BDYCYCLE_INT=21600
@@ -114,20 +115,16 @@ LTIMESLOT=600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
+
 MEMBER=50         # Ensemble size
-NNODES=1092    # Number of nodes
+NNODES=1560    # Number of nodes
 
-#MEMBER=8         # Ensemble size
-#NNODES=840    # Number of nodes
-
-MEMBER=3         # Ensemble size
-NNODES=420    # Number of nodes
 
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
-SCALE_NP=84        # Number of processes to run SCALE
+SCALE_NP=120        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 

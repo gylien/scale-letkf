@@ -9,19 +9,19 @@
  TIME_STARTMS               = 0.D0,
 !--TIME_DURATION--
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 20.0D0,
+ TIME_DT                    = 15.0D0,
  TIME_DT_UNIT               = "SEC",
  TIME_DT_ATMOS_DYN          = 5.0D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = 20.0D0,
+ TIME_DT_ATMOS_PHY_MP       = 15.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_CP       = 20.0D0,
+ TIME_DT_ATMOS_PHY_CP       = 15.0D0,
  TIME_DT_ATMOS_PHY_CP_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_RD       = 600.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_SF       = 20.0D0,
+ TIME_DT_ATMOS_PHY_SF       = 15.0D0,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_TB       = 20.0D0,
+ TIME_DT_ATMOS_PHY_TB       = 15.0D0,
  TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",
  TIME_DT_OCEAN              = 600.D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
@@ -79,7 +79,7 @@
 
 &PARAM_PRC
  PRC_NUM_X      = 12,
- PRC_NUM_Y      = 7,
+ PRC_NUM_Y      = 10,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -92,7 +92,7 @@
 
 &PARAM_INDEX
  KMAX = 56,
- IMAX = 32,
+ IMAX = 48,
  JMAX = 56,
 /
 
@@ -113,8 +113,8 @@
 /
 
 &PARAM_GRID
- DX = 7500.D0,
- DY = 7500.D0,
+ DX = 6000.D0,
+ DY = 6000.D0,
  FZ(:) =    110.0000D0,   220.0000D0,   330.0000D0,   440.0000D0,   550.0000D0,
             667.1500D0,   791.9148D0,   924.7892D0,  1066.3005D0,  1217.0100D0,
            1377.5156D0,  1548.4541D0,  1730.5035D0,  1924.3862D0,  2130.8713D0,
@@ -128,12 +128,12 @@
           23148.8145D0, 23928.8145D0, 24708.8145D0, 25488.8145D0, 26268.8145D0,
           27048.8145D0,
  BUFFER_DZ = 5000.D0,
- BUFFER_DX = 150000.D0,
- BUFFER_DY = 150000.D0,
+ BUFFER_DX = 120000.D0,
+ BUFFER_DY = 120000.D0,
 /
 
 &PARAM_MAPPROJ
- MPRJ_basepoint_lon = 134.0D0,
+ MPRJ_basepoint_lon = 133.0D0,
  MPRJ_basepoint_lat =  34.0D0,
  MPRJ_type          = 'LC',
  MPRJ_LC_lat1       =  30.00D0,
