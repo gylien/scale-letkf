@@ -42,7 +42,7 @@ DATA_BDY_NICAM=                                                      # Directory
 #DATA_BDY_GRADS="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/ncepgfs_grads_da" # Directory of the boundary data in GrADS format # DA
 DATA_BDY_GRADS="/volume63/data/hp150019/${USERNAME}/realtime/r0050_TH/ncepgfs_grads" # Directory of the boundary data in GrADS format # Fcst
 
-OBS="/volume63/data/hp150019/gylien/realtime/${EXPNAME}/ncepobs"     # Directory of observation data in LETKF obs format
+OBS="/volume63/data/hp150019/${USERNAME}/realtime/r0050_TH/ncepobs"     # Directory of observation data in LETKF obs format
 OBSNCEP=                                                             # Directory of observation data in NCEP BUFR format
 
 #===============================================================================
@@ -105,6 +105,7 @@ WINDOW_E=32400     # SCALE forecast time when the assimilation window ends (seco
 LCYCLE=21600       # Length of a DA cycle (second)
 LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
+
 #===============================================================================
 # Parallelization settings
 
@@ -113,7 +114,7 @@ MEMBER=50          # Ensemble size
 #NNODES=<NNODES>    # Number of nodes
 
 MEMBER=3          # Ensemble size
-NNODES=48    # Number of nodes
+NNODES=240    # Number of nodes
 
 PPN=1              # Number of processes per node
 

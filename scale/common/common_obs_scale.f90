@@ -292,6 +292,8 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
     end if
+    lon_tmp(1,1) = lon*deg2rad
+    lat_tmp(1,1) = lat*deg2rad
     call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
                                lon_tmp(1,1),lat_tmp(1,1),rotc)
     if (elm == id_u_obs) then
@@ -1450,7 +1452,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  obs_idx_TCY = -1
 !  obs_idx_TCP = -1
 
-!$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz)
+!$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz,omp_chunk)
   omp_chunk = min(4, max(1, (nnobs-1) / OMP_GET_NUM_THREADS() + 1))
 !$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
   do n = 1, nnobs
@@ -2818,6 +2820,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
   INTEGER :: slev, elev
 
   REAL(r_size) :: utmp, vtmp ! U10m & V10m tmp for rotation
+  REAL(RP) :: rotc(1,1,2)
+  real(r_size) :: lon_tmp(1,1),lat_tmp(1,1)
 
   if (present(stggrd)) stggrd_ = stggrd
 
@@ -2849,9 +2853,13 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
       CALL itpl_2d(v2d(:,:,iv2dd_u10m),ri(np),rj(np),utmp)
       CALL itpl_2d(v2d(:,:,iv2dd_v10m),ri(np),rj(np),vtmp)
     end if
-    call MPRJ_rotcoef(rotc,lon(np)*deg2rad,lat(np)*deg2rad)
-    usfc1d(np) = utmp * rotc(1) - vtmp * rotc(2)
-    vsfc1d(np) = utmp * rotc(2) + vtmp * rotc(1)
+
+    lon_tmp(1,1) = lon(np)*deg2rad
+    lat_tmp(1,1) = lat(np)*deg2rad
+    call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
+                               lon_tmp(1,1),lat_tmp(1,1),rotc)
+    usfc1d(np) = utmp * rotc(1,1,1) - vtmp * rotc(1,1,2)
+    vsfc1d(np) = utmp * rotc(1,1,2) + vtmp * rotc(1,1,1)
 
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_p),ri(np),rj(np),prs2d(:,np))
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_t),ri(np),rj(np),tk2d(:,np))

@@ -1,3 +1,7 @@
+&PARAM_LOG
+ LOG_LEVEL = 3, ! debug
+/
+
 &PARAM_OBSOPE
 !--OBS_IN_NUM--
 !--OBS_IN_NAME--

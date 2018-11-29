@@ -6,6 +6,7 @@
 #################################################
 
 &PARAM_USER
+ USER_resume_do = .true.,
 !--LAND_RESTART_IN_BASENAME--
  READ_LAND_TEMP       = .false.,
  READ_LAND_WATER      = .true.,

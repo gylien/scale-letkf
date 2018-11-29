@@ -301,6 +301,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   allocate (transmd(MEMBER,       var_local_n2nc_max))
   allocate (pa     (MEMBER,MEMBER,var_local_n2nc_max))
 
+
 !$OMP MASTER
   call mpi_timer('das_letkf:allocation_private_vars:', 2)
   call mpi_timer('', 3)
@@ -311,7 +312,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! MAIN ASSIMILATION LOOP
   !
   DO ilev=1,nlev
-
     if (LOG_LEVEL >= 3) then
       call mpi_timer('', 4)
     end if
