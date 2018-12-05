@@ -1878,7 +1878,7 @@ subroutine read_obs_all_mpi(obs)
       call obs_info_allocate(obs(iof), extended=.true.)
     end if
 
-    if((OBS_IN_FORMAT(iof) == obsfmt_h08) .and. H08_FORMAT_NC) then
+    if((OBS_IN_FORMAT(iof) == obsfmt_h08) .and. H08_FORMAT_NC .and. obs(iof)%nobs > 0) then
       if (myrank_e == 0) then ! this should include myrank_a=0
         call read_Him8_mpi(OBS_IN_NAME(iof),obs(iof))
       endif
@@ -2322,11 +2322,11 @@ subroutine read_Him8_mpi(filename,obs)
          status='unknown', recl=nlong*nlatg*4)
     do ch = 1, NIRB_HIM8
       irec = irec + 1
-      write(iunit,rec=irec) real(tbb_sobs(:,:,ch),kind=r_sngl)
+      write(iunit,rec=irec) real(tbb_sobs_prep(:,:,ch),kind=r_sngl)
     enddo
     do ch = 1, NIRB_HIM8
       irec = irec + 1
-      write(iunit,rec=irec) real(tbb_sobs_prep(:,:,ch),kind=r_sngl)
+      write(iunit,rec=irec) real(tbb_sobs(:,:,ch),kind=r_sngl)
     enddo
 
     close(unit=iunit)    

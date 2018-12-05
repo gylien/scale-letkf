@@ -4,11 +4,14 @@
 *.pyc
 *.lst
 *.log
+log*
 *~
+/scale/tmp
 /scale/configure.user
 /scale/common/datetime
 /scale/common/pdbash
 /scale/run/config.main
+/scale/run/config.main.K
 /scale/run/config.cycle
 /scale/run/config.fcst
 /scale/run/config.nml.ensmodel
@@ -21,6 +24,8 @@
 /scale/run/config.nml.letkf
 /scale/run/cycle_job.sh
 /scale/run/fcst_job.sh
+/scale/run/cycle_*.[e,i,o,s]*
+/scale/run/fcst_*.[e,i,o,s]*
 /scale/run/machinefile
 /scale/run/mpd.hosts
 /scale/letkf/letkf
