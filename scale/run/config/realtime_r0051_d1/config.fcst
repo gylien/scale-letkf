@@ -5,15 +5,10 @@
 #
 #===============================================================================
 
-#STIME='<STIME>'
-#ETIME='<ETIME>'
-#MEMBERS='mdet'
-#TIME_LIMIT='<WTIME_L>'
-STIME='20181003000000'
-ETIME='20181003000000'
-TIME_LIMIT='00:30:00'
-MEMBERS='mean'
+STIME='<STIME>'
+ETIME='<ETIME>'
 MEMBERS='mdet'
+TIME_LIMIT='<WTIME_L>'
 CYCLE=
 CYCLE_SKIP=1
 ISTEP=
@@ -25,8 +20,8 @@ FSTEP=
 FCSTLEN=432000      # SCALE forecast length in the forecast mode (second)
 FCSTOUT=3600
 
-FCSTLEN=600      # SCALE forecast length in the forecast mode (second)
-FCSTOUT=600
+FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
+FCSTOUT=21600
 
 #===============================================================================
 

@@ -5,9 +5,9 @@
 #
 #===============================================================================
 
-#PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
-PRESET='K_rankdir' 
-PRESET='K_micro' 
+PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
+#PRESET='K_rankdir' 
+#PRESET='K_micro' 
 
 EXPNAME=r0051
 EXPDOMAIN=1
@@ -38,11 +38,10 @@ DATA_BDY_SCALE_PRC_NUM_Y=
 DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
-#DATA_BDY_GRADS="/volume63/data/hp150019/gylien/realtime/${EXPNAME}/<DATA_BDY_GRADS>" # Directory of the boundary data in GrADS format
-#DATA_BDY_GRADS="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/ncepgfs_grads_da" # Directory of the boundary data in GrADS format # DA
-DATA_BDY_GRADS="/volume63/data/hp150019/${USERNAME}/realtime/r0050_TH/ncepgfs_grads" # Directory of the boundary data in GrADS format # Fcst
 
-OBS="/volume63/data/hp150019/${USERNAME}/realtime/r0050_TH/ncepobs"     # Directory of observation data in LETKF obs format
+DATA_BDY_GRADS="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/<DATA_BDY_GRADS>" # Directory of the boundary data in GrADS format 
+
+OBS="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/ncepobs"     # Directory of observation data in LETKF obs format
 OBSNCEP=                                                             # Directory of observation data in NCEP BUFR format
 
 #===============================================================================
@@ -52,12 +51,10 @@ DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
 
 TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
-#TOPO_FORMAT='GTOPO30'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
 LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
-#LANDUSE_FORMAT='GLCCv2'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -110,11 +107,7 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 # Parallelization settings
 
 MEMBER=50          # Ensemble size
-
-#NNODES=<NNODES>    # Number of nodes
-
-MEMBER=3          # Ensemble size
-NNODES=240    # Number of nodes
+NNODES=<NNODES>    # Number of nodes
 
 PPN=1              # Number of processes per node
 

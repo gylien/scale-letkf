@@ -341,7 +341,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   REAL(RP),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d, iv2d, ncid, varid
-  integer :: is, js
+  integer :: is, js, ks
 
   is = 1
   js = 1
@@ -362,9 +362,16 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
     end if
+
+    if (iv3d == iv3d_rhow) then
+      ks = 2 ! ignore zh=1 (the surface where MOMZ = 0.0)
+    else
+      ks = 1
+    endif
+
     call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
     call ncio_check(nf90_get_var(ncid, varid, v3dg(:,:,:,iv3d), &
-                                 start = (/ 1, is, js, 1 /),    &
+                                 start = (/ ks, is, js, 1 /),    &
                                  count = (/ KMAX, IMAX, JMAX, 1 /)))
   end do
 
@@ -582,7 +589,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d, iv2d, ncid, varid
-  integer :: is, js
+  integer :: is, js, ks
 
   is = 1
   js = 1
@@ -603,9 +610,16 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
     end if
+
+    if (iv3d == iv3d_rhow) then
+      ks = 2 ! ignore zh=1 (the surface where MOMZ = 0.0)
+    else
+      ks = 1
+    endif
+
     call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
     call ncio_check(nf90_put_var(ncid, varid, v3dg(:,:,:,iv3d), &
-                                 start = (/ 1, is, js, 1 /),    &
+                                 start = (/ ks, is, js, 1 /),    &
                                  count = (/ KMAX, IMAX, JMAX, 1 /)))
   end do
 
