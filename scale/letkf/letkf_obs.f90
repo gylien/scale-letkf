@@ -156,7 +156,7 @@ SUBROUTINE set_letkf_obs
 
 !  character(len=timer_name_width) :: timer_str
 
-  call mpi_timer('', 2)
+!  call mpi_timer('', 2)
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
@@ -241,7 +241,7 @@ SUBROUTINE set_letkf_obs
 
     call obs_da_value_deallocate(obsda_ext)
 
-    call mpi_timer('set_letkf_obs:read_external_obs:', 2, barrier=MPI_COMM_e)
+!    call mpi_timer('set_letkf_obs:read_external_obs:', 2, barrier=MPI_COMM_e)
 
     ! Broadcast the observation information shared by members (e.g., grid numbers)
     !---------------------------------------------------------------------------
@@ -251,7 +251,7 @@ SUBROUTINE set_letkf_obs
       call MPI_BCAST(obsda%idx(n1:n2), nobs_extern, MPI_INTEGER, 0, MPI_COMM_e, ierr)
     end if
 
-    call mpi_timer('set_letkf_obs:external_obs_broadcast:', 2, barrier=MPI_COMM_e)
+!    call mpi_timer('set_letkf_obs:external_obs_broadcast:', 2, barrier=MPI_COMM_e)
   end if ! [ OBSDA_IN .and. nobs_extern > 0 ]
 
   ! Allreduce externally processed observations
@@ -259,7 +259,7 @@ SUBROUTINE set_letkf_obs
 
   call obs_da_value_allreduce(obsda)
 
-  call mpi_timer('set_letkf_obs:obs_allreduce:', 2)
+!  call mpi_timer('set_letkf_obs:obs_allreduce:', 2)
 
 !-------------------------------------------------------------------------------
 ! Process observations and quality control (QC)
@@ -349,7 +349,7 @@ SUBROUTINE set_letkf_obs
     end do ! [ ielm_u = 1, nid_obs ]
   end do ! [ ityp = 1, nobtype ]
 
-  call mpi_timer('set_letkf_obs:preprocess_data:', 2)
+!  call mpi_timer('set_letkf_obs:preprocess_data:', 2)
 
   ! Compute perturbation and departure
   !  -- gross error check
@@ -629,7 +629,7 @@ SUBROUTINE set_letkf_obs
 !$OMP END DO
 !$OMP END PARALLEL
 
-  call mpi_timer('set_letkf_obs:departure_cal_qc:', 2)
+!  call mpi_timer('set_letkf_obs:departure_cal_qc:', 2)
 
   ! Temporal observation localization !!!!!! not implemented yet !!!!!!
   !-----------------------------------------------------------------------------
@@ -651,7 +651,7 @@ SUBROUTINE set_letkf_obs
     call monit_dep(obsda%nobs, tmpelm, obsda%val, obsda%qc, monit_nobs, bias, rmse)
     call monit_print(monit_nobs, bias, rmse)
 
-    call mpi_timer('set_letkf_obs:departure_print:', 2)
+!    call mpi_timer('set_letkf_obs:departure_print:', 2)
   end if
 
   deallocate(tmpelm)
@@ -703,7 +703,7 @@ SUBROUTINE set_letkf_obs
     allocate (obsgrd(ictype)%next(obsgrd(ictype)%ngrd_i, obsgrd(ictype)%ngrd_j))
   end do
 
-  call mpi_timer('set_letkf_obs:bucket_sort_prepare:', 2)
+!  call mpi_timer('set_letkf_obs:bucket_sort_prepare:', 2)
 
   ! Print observation usage settings
   !-----------------------------------------------------------------------------
@@ -747,7 +747,7 @@ SUBROUTINE set_letkf_obs
     end do
     write (6, '(A)') '=================================================================================='
 
-    call mpi_timer('set_letkf_obs:obs_setting_print:', 2)
+!    call mpi_timer('set_letkf_obs:obs_setting_print:', 2)
   end if
 
   ! First scan: count the observation numbers in each mesh (in each subdomian)
@@ -791,7 +791,7 @@ SUBROUTINE set_letkf_obs
     obsgrd(ictype)%next(1:obsgrd(ictype)%ngrd_i,:) = obsgrd(ictype)%ac(0:obsgrd(ictype)%ngrd_i-1,:,myrank_d)
   end do
 
-  call mpi_timer('set_letkf_obs:bucket_sort_first_scan:', 2)
+!  call mpi_timer('set_letkf_obs:bucket_sort_first_scan:', 2)
 
   ! Second scan: save the indices of bucket-sorted observations in obsda%keys(:)
   !-----------------------------------------------------------------------------
@@ -825,7 +825,7 @@ SUBROUTINE set_letkf_obs
 ! -- H08
 !#endif
 
-  call mpi_timer('set_letkf_obs:bucket_sort_second_scan:', 2, barrier=MPI_COMM_d)
+!  call mpi_timer('set_letkf_obs:bucket_sort_second_scan:', 2, barrier=MPI_COMM_d)
 
   ! ALLREDUCE observation number information from subdomains, and compute total numbers
   !-----------------------------------------------------------------------------
@@ -860,7 +860,7 @@ SUBROUTINE set_letkf_obs
     deallocate (obsgrd(ictype)%next)
   end do
 
-  call mpi_timer('set_letkf_obs:bucket_sort_info_allreduce:', 2)
+!  call mpi_timer('set_letkf_obs:bucket_sort_info_allreduce:', 2)
 
 #ifdef DEBUG
   if (nctype > 0) then
@@ -921,7 +921,7 @@ SUBROUTINE set_letkf_obs
     write (6, '(A6,1x,'//nstr//'I8,I10)') 'TOTAL ', nobs_elms_sum(:), nobs_g(i_after_qc)
     write (6, '(A7,'//nstr//"('========'),A)") '=======', '=========='
 
-    call mpi_timer('set_letkf_obs:obs_count_print_types:', 2)
+!    call mpi_timer('set_letkf_obs:obs_count_print_types:', 2)
   end if
 
   ! Calculate observation numbers in the extended (localization) subdomain,
@@ -984,7 +984,7 @@ SUBROUTINE set_letkf_obs
     maxnobs_per_ctype = 0
   end if
 
-  call mpi_timer('set_letkf_obs:extdomain_obs_count_cal:', 2)
+!  call mpi_timer('set_letkf_obs:extdomain_obs_count_cal:', 2)
 
   ! Construct sorted obsda_sort: 
   !-----------------------------------------------------------------------------
@@ -1029,7 +1029,7 @@ SUBROUTINE set_letkf_obs
 #endif
     end do ! [ n = 1, nobs_sub(i_after_qc) ]
 
-    call mpi_timer('set_letkf_obs:copy_bufs:', 2, barrier=MPI_COMM_d)
+!    call mpi_timer('set_letkf_obs:copy_bufs:', 2, barrier=MPI_COMM_d)
   end if ! [ nctype > 0 ]
 
   call obs_da_value_deallocate(obsda)
@@ -1056,7 +1056,7 @@ SUBROUTINE set_letkf_obs
 
     call obs_da_value_deallocate(obsbufs)
 
-    call mpi_timer('set_letkf_obs:mpi_allgatherv:', 2)
+!    call mpi_timer('set_letkf_obs:mpi_allgatherv:', 2)
   end if ! [ nctype > 0 ]
 
   ! 3) Copy observation data within the extended (localization) subdomains
@@ -1134,7 +1134,7 @@ SUBROUTINE set_letkf_obs
   if (nctype > 0) then
     call obs_da_value_deallocate(obsbufr)
 
-    call mpi_timer('set_letkf_obs:extdomain_copy_bufr:', 2, barrier=MPI_COMM_e)
+!    call mpi_timer('set_letkf_obs:extdomain_copy_bufr:', 2, barrier=MPI_COMM_e)
   end if ! [ nctype > 0 ]
 
   ! 4) For variables with an ensemble dimension (ensval),
@@ -1143,7 +1143,7 @@ SUBROUTINE set_letkf_obs
   if (nprocs_e > 1) then
     call MPI_ALLREDUCE(MPI_IN_PLACE, obsda_sort%ensval, nensobs*nobstotal, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
 
-    call mpi_timer('set_letkf_obs:extdomain_allreduce:', 2)
+!    call mpi_timer('set_letkf_obs:extdomain_allreduce:', 2)
   end if
 
   if (LOG_LEVEL >= 3) then
@@ -1184,7 +1184,7 @@ SUBROUTINE set_letkf_obs
       write (6, '(A6,5x,4I11,I14)') 'TOTAL ', nobs_g(i_before_qc), nobs_g(i_after_qc), nobs_sub(i_before_qc), nobs_sub(i_after_qc), nobstotal
     write (6, '(A)') '====================================================================='
 
-    call mpi_timer('set_letkf_obs:obs_count_print_qc_extdomain:', 2)
+!    call mpi_timer('set_letkf_obs:obs_count_print_qc_extdomain:', 2)
   end if
 
   RETURN

@@ -15,11 +15,20 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 #USERNAME=gylien
 USERNAME=honda
 
+#EXP=huge1807-DTF250m-NOJIT
+EXP=TEST1203_DTF250m_2mem
+EXP=TEST1203_DTF250m_15mem
+
 INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_250m_initbdy_pnetcdf_v180531"
-OUTDIR="/volume63/data/hp150019/${USERNAME}/exp/scale-letkf/benchmark/huge1807-DTF250m-NOJIT" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/${USERNAME}/exp/scale-letkf/benchmark/$EXP" # Directory for SCALE-LETKF output
 
 
-LIBDTF_PATH=/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/DTF/libdtf
+#LIBDTF_PATH=/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/DTF/libdtf
+
+LIBDTF_PATH=
+
+DTF_MPMD=1 # 1: MPMD launch mode (e.g., mpiexec -n ./scale-rm_ens: -n XX ./letkf)
+           # 0: Launch two background jobs (e.g., mpiexec -n XX ./scale-rm_ens& mpiexec -n XX ./letkf&)
 
 #===============================================================================
 # Location of model/data files
@@ -112,8 +121,14 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 # Parallelization settings
 
 MEMBER=100         # Ensemble size
-
 NNODES=36720       # Number of nodes
+
+MEMBER=2         # Ensemble size
+NNODES=1440       # Number of nodes
+
+MEMBER=15         # Ensemble size
+NNODES=6120       # Number of nodes
+
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process

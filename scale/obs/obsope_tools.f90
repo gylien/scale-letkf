@@ -136,7 +136,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
 
 !-------------------------------------------------------------------------------
 
-  call mpi_timer('', 2)
+!  call mpi_timer('', 2)
 
 #ifdef H08
 !  call phys2ij(MSLP_TC_LON,MSLP_TC_LAT,MSLP_TC_rig,MSLP_TC_rjg)
@@ -220,13 +220,13 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
       end do ! [ ibufs = 1, cntr(myrank_a+1) ]
 !$OMP END PARALLEL DO
 
-      call mpi_timer('obsope_cal:first_scan_cal:', 2, barrier=MPI_COMM_a)
+!      call mpi_timer('obsope_cal:first_scan_cal:', 2, barrier=MPI_COMM_a)
 
       call MPI_ALLGATHERV(obrank_bufs, cntr(myrank_a+1), MPI_INTEGER, obs(iof)%rank, cntr, dspr, MPI_INTEGER, MPI_COMM_a, ierr)
       call MPI_ALLGATHERV(ri_bufs,     cntr(myrank_a+1), MPI_r_size,  obs(iof)%ri,   cntr, dspr, MPI_r_size,  MPI_COMM_a, ierr)
       call MPI_ALLGATHERV(rj_bufs,     cntr(myrank_a+1), MPI_r_size,  obs(iof)%rj,   cntr, dspr, MPI_r_size,  MPI_COMM_a, ierr)
 
-      call mpi_timer('obsope_cal:first_scan_reduce:', 2)
+!      call mpi_timer('obsope_cal:first_scan_reduce:', 2)
     end if ! [ obs(iof)%nobs > 0 ]
   end do ! [ do iof = 1, OBS_IN_NUM ]
 
@@ -309,18 +309,18 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
 
     deallocate (bsnext)
 
-    call mpi_timer('obsope_cal:bucket_sort:', 2)
+!    call mpi_timer('obsope_cal:bucket_sort:', 2)
   end if ! [ myrank_a == 0 ]
 
   ! Broadcast the bucket-sort observation numbers to all processes and print
   !-----------------------------------------------------------------------------
 
-  call mpi_timer('', 2, barrier=MPI_COMM_a)
+!  call mpi_timer('', 2, barrier=MPI_COMM_a)
 
   call MPI_BCAST(bsn,  (SLOT_END-SLOT_START+3)*nprocs_d, MPI_INTEGER, 0, MPI_COMM_a, ierr)
   call MPI_BCAST(bsna, (SLOT_END-SLOT_START+4)*nprocs_d, MPI_INTEGER, 0, MPI_COMM_a, ierr)
 
-  call mpi_timer('obsope_cal:sort_info_bcast:', 2)
+!  call mpi_timer('obsope_cal:sort_info_bcast:', 2)
 
   do islot = SLOT_START, SLOT_END
     slot_id(islot) = islot - SLOT_START + 1
@@ -376,7 +376,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
     call MPI_SCATTERV(obset_bufs, cnts, dsps, MPI_INTEGER, obsda%set, cnts(myrank_d+1), MPI_INTEGER, 0, MPI_COMM_d, ierr)
     call MPI_SCATTERV(obidx_bufs, cnts, dsps, MPI_INTEGER, obsda%idx, cnts(myrank_d+1), MPI_INTEGER, 0, MPI_COMM_d, ierr)
 
-    call mpi_timer('obsope_cal:mpi_scatterv:', 2)
+!    call mpi_timer('obsope_cal:mpi_scatterv:', 2)
 
     deallocate (cnts, dsps)
     deallocate (obset_bufs, obidx_bufs)
@@ -386,7 +386,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
   ! from processes group {myrank_e = 0} to all processes
   !-----------------------------------------------------------------------------
 
-  call mpi_timer('', 2, barrier=MPI_COMM_e)
+!  call mpi_timer('', 2, barrier=MPI_COMM_e)
 
   call MPI_BCAST(obsda%set, nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
   call MPI_BCAST(obsda%idx, nobs, MPI_INTEGER, 0, MPI_COMM_e, ierr)
@@ -396,7 +396,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
     obsda_return%idx(1:nobs) = obsda%idx
   end if
 
-  call mpi_timer('obsope_cal:mpi_broadcast:', 2)
+!  call mpi_timer('obsope_cal:mpi_broadcast:', 2)
 
 !-------------------------------------------------------------------------------
 ! Second scan of observation data in own subdomain: Compute H(x), QC, ... etc.
@@ -460,12 +460,12 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
         write (6, '(A,I10)') ' -- # obs in the slot = ', slot_nobsg
         write (6, '(A,I6,A,I6,A,I10)') ' -- # obs in the slot and processed by rank ', myrank, ' (subdomain #', myrank_d, ') = ', bsn(islot, myrank_d)
 
-        call mpi_timer('', 2)
+!        call mpi_timer('', 2)
 
         call read_ens_history_iter(it, islot, v3dg, v2dg)
 
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:read_ens_history(t=', it, ', slot=', islot, '):'
-        call mpi_timer(trim(timer_str), 2)
+!        call mpi_timer(trim(timer_str), 2)
 
 
         !!!!!!!!!!!!
@@ -494,11 +494,11 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
           end if
 #endif
 
-          call mpi_timer('read_ens_mpi:read_restart:', 2)
+!          call mpi_timer('read_ens_mpi:read_restart:', 2)
 
           call state_trans(v3dg_rst)
 
-          call mpi_timer('read_ens_mpi:state_trans:', 2)
+!          call mpi_timer('read_ens_mpi:state_trans:', 2)
         end if
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC,5) PRIVATE(nn,n,iof,ril,rjl,rk,rkz)
@@ -763,7 +763,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
 
  
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:obsope_step_2   (t=', it, ', slot=', islot, '):'
-        call mpi_timer(trim(timer_str), 2)
+!        call mpi_timer(trim(timer_str), 2)
 
 
         !!!!!!!!!!!!
@@ -779,7 +779,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
     !!!!!!!!!!!!
 
 
-      call mpi_timer('', 2)
+!      call mpi_timer('', 2)
 
       ! Write obsda data to files if OBSDA_OUT = .true.
       ! 
@@ -799,7 +799,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
         call write_obs_da(trim(obsdafile)//obsda_suffix,obsda,0)
 
         write (timer_str, '(A30,I4,A2)') 'obsope_cal:write_obs_da    (t=', it, '):'
-        call mpi_timer(trim(timer_str), 2)
+!        call mpi_timer(trim(timer_str), 2)
       end if
 
       ! Prepare variables that will need to be communicated if obsda_return is given
@@ -812,13 +812,13 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
 #endif
 
         write (timer_str, '(A30,I4,A2)') 'obsope_cal:partial_reduce  (t=', it, '):'
-        call mpi_timer(trim(timer_str), 2)
+!        call mpi_timer(trim(timer_str), 2)
       end if ! [ present(obsda_return) ]
 
     end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
 
     if (present(v3d) .and. present(v2d)) then
-      call mpi_timer('', 2, barrier=MPI_COMM_e)
+!      call mpi_timer('', 2, barrier=MPI_COMM_e)
 
       mstart = 1 + (it-1)*nprocs_e
       mend = min(it*nprocs_e, nens)
@@ -826,7 +826,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern, v3d, v2d)
         call scatter_grd_mpi_alltoall(mstart, mend, v3dg_rst, v2dg_rst, v3d, v2d)
       end if
 
-      call mpi_timer('read_ens_mpi:scatter_grd_mpi_alltoall:', 2)
+!      call mpi_timer('read_ens_mpi:scatter_grd_mpi_alltoall:', 2)
     end if
   end do ! [ it = 1, nitmax ]
 

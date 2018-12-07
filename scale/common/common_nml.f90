@@ -69,7 +69,7 @@ MODULE common_nml
   logical               :: COLOR_REORDER = .false.           ! coloring reorder for mpi splitting?
 
   !--- PARAM_LOG
-  integer :: LOG_LEVEL = 2                        ! Log message output level:
+  integer :: LOG_LEVEL = 1                        ! Log message output level:
                                                   !  0: Minimum log output
                                                   !  1: Reduced log output
                                                   !  2: Normal  log output
@@ -504,9 +504,9 @@ subroutine read_nml_log
     stop
   endif
 
-  if (LOG_LEVEL >= 2) then
+!  if (LOG_LEVEL >= 2) then
     write(6, nml=PARAM_LOG)
-  end if
+!  end if
 
   return
 end subroutine read_nml_log

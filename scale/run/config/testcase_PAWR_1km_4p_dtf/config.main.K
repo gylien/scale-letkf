@@ -18,7 +18,7 @@ USERNAME=honda
 INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_1km_initbdy_v180531"
 OUTDIR="/volume63/data/hp150019/${USERNAME}/exp/scale-letkf/benchmark/testcase_PAWR_1km_4p_dtf" # Directory for SCALE-LETKF output
 
-LIBDTF_PATH="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/DTF20181023_stat/libdtf"
+LIBDTF_PATH=
 
 DTF_MPMD=1 # 1: MPMD launch mode (e.g., mpiexec -n ./scale-rm_ens: -n XX ./letkf)
            # 0: Launch two background jobs (e.g., mpiexec -n XX ./scale-rm_ens& mpiexec -n XX ./letkf&)

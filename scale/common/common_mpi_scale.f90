@@ -151,7 +151,7 @@ subroutine set_common_mpi_scale
   integer :: i, j
   real(r_size) :: ri, rj
 
-  call mpi_timer('', 2)
+!  call mpi_timer('', 2)
 
   ! Communicator for 1-iteration ensemble member groups
   !-----------------------------------------------------------------------------
@@ -171,7 +171,7 @@ subroutine set_common_mpi_scale
   end if
 #endif
 
-  call mpi_timer('set_common_mpi_scale:mpi_comm_split_e:', 2)
+!  call mpi_timer('set_common_mpi_scale:mpi_comm_split_e:', 2)
 
   ! Read/calculate model coordinates
   !-----------------------------------------------------------------------------
@@ -229,7 +229,7 @@ subroutine set_common_mpi_scale
 
       write (6, '(A)') 'VERIFY_COORD: Model coordinate calculation is good.'
 
-      call mpi_timer('set_common_mpi_scale:verify_coord:', 2)
+!      call mpi_timer('set_common_mpi_scale:verify_coord:', 2)
     end if
   end if
 
@@ -269,7 +269,7 @@ subroutine set_common_mpi_grid
   real(r_size) :: topo2dtmp(nlon,nlat)
 #endif
 
-  call mpi_timer('', 2)
+!  call mpi_timer('', 2)
 
   ! Compute nij1, nij1max, nij1node
   !-----------------------------------------------------------------------------
@@ -301,7 +301,7 @@ subroutine set_common_mpi_grid
   ALLOCATE(v3d(nij1,nlev,nv3d))
   ALLOCATE(v2d(nij1,nv2d))
 
-  call mpi_timer('set_common_mpi_grid:nij1_cal:', 2)
+!  call mpi_timer('set_common_mpi_grid:nij1_cal:', 2)
 
 !!!!!! ----- need to be replaced by more native communication !!!!!!
 
@@ -317,7 +317,7 @@ subroutine set_common_mpi_grid
       end do
     end do
 
-    call mpi_timer('set_common_mpi_grid:rij_cal:', 2)
+!    call mpi_timer('set_common_mpi_grid:rij_cal:', 2)
 
     if (allocated(topo2d)) then
       write (6, '(1x,A,A15,A)') '*** Read 2D var: ', trim(topo2d_name), ' -- skipped because it was read previously'
@@ -363,10 +363,10 @@ subroutine set_common_mpi_grid
 
     v3dg(1,:,:,3) = topo2d
 
-    call mpi_timer('set_common_mpi_grid:read_topo:', 2)
+!    call mpi_timer('set_common_mpi_grid:read_topo:', 2)
   end if
 
-  call mpi_timer('', 2, barrier=MPI_COMM_e)
+!  call mpi_timer('', 2, barrier=MPI_COMM_e)
 
   call scatter_grd_mpi(mmean_rank_e,v3dg,v2dg,v3d,v2d)
 
@@ -374,11 +374,11 @@ subroutine set_common_mpi_grid
   rjg1   = v3d(:,1,2)
   topo1  = v3d(:,1,3)
 
-  call mpi_timer('set_common_mpi_grid:scatter:', 2)
+!  call mpi_timer('set_common_mpi_grid:scatter:', 2)
 
   call scale_calc_z_grd(nij1, topo1, hgt1)
 
-  call mpi_timer('set_common_mpi_grid:scale_calc_z:', 2)
+!  call mpi_timer('set_common_mpi_grid:scale_calc_z:', 2)
 
   return
 end subroutine set_common_mpi_grid
@@ -392,7 +392,7 @@ SUBROUTINE set_mem_node_proc(mem)
   INTEGER :: tppn,tppnt,tmod
   INTEGER :: n,nn,m,q,qs,i,j,it,ip,ie
 
-  call mpi_timer('', 2)
+!  call mpi_timer('', 2)
 
   if (mod(nprocs, PPN) /= 0) then
     write(6,'(A,I10)') '[Info] Total number of MPI processes      = ', nprocs
@@ -523,7 +523,7 @@ mem_loop: DO it = 1, nitmax
     end if
   end if ! [ ENS_WITH_MEAN ]
 
-  call mpi_timer('set_mem_node_proc:', 2)
+!  call mpi_timer('set_mem_node_proc:', 2)
 
   RETURN
 END SUBROUTINE
@@ -645,7 +645,7 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
   character(len=timer_name_width) :: timer_str
   integer :: im
 
-  call mpi_timer('', 3)
+!  call mpi_timer('', 3)
 
   im = myrank_to_mem(iter)
   if (im >= 1 .and. im <= nens) then
@@ -685,8 +685,8 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
 #endif
     end if
 
-    write (timer_str, '(A40,I4,A2)') 'read_ens_history_iter:read_history(iter=', iter, '):'
-    call mpi_timer(trim(timer_str), 3)
+!    write (timer_str, '(A40,I4,A2)') 'read_ens_history_iter:read_history(iter=', iter, '):'
+!    call mpi_timer(trim(timer_str), 3)
   end if
 
   return
@@ -707,7 +707,7 @@ subroutine read_ens_mpi(v3d, v2d)
   character(len=filelenmax) :: filename
   integer :: it, im, mstart, mend
 
-  call mpi_timer('', 2)
+!  call mpi_timer('', 2)
 
   do it = 1, nitmax
     im = myrank_to_mem(it)
@@ -754,17 +754,17 @@ subroutine read_ens_mpi(v3d, v2d)
 #endif
       end if
 
-      call mpi_timer('read_ens_mpi:read_restart:', 2)
+!      call mpi_timer('read_ens_mpi:read_restart:', 2)
 
       call state_trans(v3dg)
 
-      call mpi_timer('read_ens_mpi:state_trans:', 2)
+!      call mpi_timer('read_ens_mpi:state_trans:', 2)
     else if (im <= nens) then ! This is to avoid the undefined value problem;
       v3dg = undef            ! it has no impact to the results
       v2dg = undef            ! 
     end if
 
-    call mpi_timer('', 2, barrier=MPI_COMM_e)
+!    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     mstart = 1 + (it-1)*nprocs_e
     mend = min(it*nprocs_e, nens)
@@ -772,7 +772,7 @@ subroutine read_ens_mpi(v3d, v2d)
       call scatter_grd_mpi_alltoall(mstart, mend, v3dg, v2dg, v3d, v2d)
     end if
 
-    call mpi_timer('read_ens_mpi:scatter_grd_mpi_alltoall:', 2)
+!    call mpi_timer('read_ens_mpi:scatter_grd_mpi_alltoall:', 2)
   end do ! [ it = 1, nitmax ]
 
   return
@@ -840,10 +840,10 @@ subroutine write_ens_mpi(v3d, v2d, mean3d, mean2d)
   character(len=filelenmax) :: filename
   integer :: it, im, mstart, mend
 
-  call mpi_timer('', 2)
+!  call mpi_timer('', 2)
 
   do it = 1, nitmax
-    call mpi_timer('', 2, barrier=MPI_COMM_e)
+!    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     im = myrank_to_mem(it)
 
@@ -853,7 +853,7 @@ subroutine write_ens_mpi(v3d, v2d, mean3d, mean2d)
       call gather_grd_mpi_alltoall(mstart, mend, v3d, v2d, v3dg, v2dg)
     end if
 
-    call mpi_timer('write_ens_mpi:gather_grd_mpi_alltoall:', 2)
+!    call mpi_timer('write_ens_mpi:gather_grd_mpi_alltoall:', 2)
 
     ! Note: write all members + mean + mdet
     ! 
@@ -875,7 +875,7 @@ subroutine write_ens_mpi(v3d, v2d, mean3d, mean2d)
 
       call state_trans_inv(v3dg)
 
-      call mpi_timer('write_ens_mpi:state_trans_inv:', 2)
+!      call mpi_timer('write_ens_mpi:state_trans_inv:', 2)
 
       if (DIRECT_TRANSFER) then
         if (ATMOS_RESTART_IN_POSTFIX_TIMELABEL) then
@@ -907,7 +907,7 @@ subroutine write_ens_mpi(v3d, v2d, mean3d, mean2d)
 #endif
       end if
 
-      call mpi_timer('write_ens_mpi:write_restart:', 2)
+!      call mpi_timer('write_ens_mpi:write_restart:', 2)
     end if
   end do ! [ it = 1, nitmax ]
 
@@ -1134,7 +1134,7 @@ subroutine write_ensmean(filename, v3d, v2d, calced, mean_out, mean3d, mean2d)
   logical :: calced_
   logical :: mean_out_
 
-  call mpi_timer('', 2)
+!  call mpi_timer('', 2)
 
   calced_ = .false.
   if (present(calced)) then
@@ -1148,14 +1148,14 @@ subroutine write_ensmean(filename, v3d, v2d, calced, mean_out, mean3d, mean2d)
   if (.not. calced) then
     call ensmean_grd(MEMBER, nens, nij1, v3d, v2d)
 
-    call mpi_timer('write_ensmean:ensmean_grd:', 2)
+!    call mpi_timer('write_ensmean:ensmean_grd:', 2)
   end if
 
-  call mpi_timer('', 2, barrier=MPI_COMM_e)
+!  call mpi_timer('', 2, barrier=MPI_COMM_e)
 
   call gather_grd_mpi(mmean_rank_e, v3d(:,:,mmean,:), v2d(:,mmean,:), v3dg, v2dg)
 
-  call mpi_timer('write_ensmean:gather_grd_mpi:', 2)
+!  call mpi_timer('write_ensmean:gather_grd_mpi:', 2)
 
   if (myrank_e == mmean_rank_e) then
     if (present(mean3d)) then
@@ -1167,7 +1167,7 @@ subroutine write_ensmean(filename, v3d, v2d, calced, mean_out, mean3d, mean2d)
 
     call state_trans_inv(v3dg)
 
-    call mpi_timer('write_ensmean:state_trans_inv:', 2)
+!    call mpi_timer('write_ensmean:state_trans_inv:', 2)
 
     if (mean_out_) then
 #ifdef PNETCDF
@@ -1181,7 +1181,7 @@ subroutine write_ensmean(filename, v3d, v2d, calced, mean_out, mean3d, mean2d)
 #endif
     end if
 
-    call mpi_timer('write_ensmean:write_restart:', 2)
+!    call mpi_timer('write_ensmean:write_restart:', 2)
   end if
 
   return
@@ -1200,15 +1200,15 @@ subroutine write_enssprd(filename, v3d, v2d)
   real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP) :: v2dg(nlon,nlat,nv2d)
 
-  call mpi_timer('', 2)
+!  call mpi_timer('', 2)
 
   call enssprd_grd(MEMBER, nens, nij1, v3d, v2d, v3ds, v2ds)
 
-  call mpi_timer('write_enssprd:enssprd_grd:', 2, barrier=MPI_COMM_e)
+!  call mpi_timer('write_enssprd:enssprd_grd:', 2, barrier=MPI_COMM_e)
 
   call gather_grd_mpi(msprd_rank_e, v3ds, v2ds, v3dg, v2dg)
 
-  call mpi_timer('write_enssprd:gather_grd_mpi:', 2)
+!  call mpi_timer('write_enssprd:gather_grd_mpi:', 2)
 
   if (myrank_e == msprd_rank_e) then
 !    call state_trans_inv(v3dg)              !! do not transform the spread output
@@ -1222,7 +1222,7 @@ subroutine write_enssprd(filename, v3d, v2d)
     end if
 #endif
 
-    call mpi_timer('write_enssprd:write_restart:', 2)
+!    call mpi_timer('write_enssprd:write_restart:', 2)
   end if
 
   return

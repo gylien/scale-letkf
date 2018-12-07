@@ -123,16 +123,16 @@ ${NODEFILE_DIR}/|node/
 EOF
 fi
 
-if ((DTF_MODE >= 1)); then
-  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${LIBDTF_PATH}/libdtf.so|libdtf.so
-EOF
-  if ((DTF_MPMD >= 1)); then
-    cat >> ${STAGING_DIR}/${STGINLIST} << EOF
-${SPLIT_WRAP}|libsplitworld.so 
-EOF
-  fi
-fi
+#if ((DTF_MODE >= 1)); then
+#  cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+#${LIBDTF_PATH}/libdtf.so|libdtf.so
+#EOF
+#  if ((DTF_MPMD >= 1)); then
+#    cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+#${SPLIT_WRAP}|libsplitworld.so 
+#EOF
+#  fi
+#fi
 
 if [ "$CONF_MODE" != 'static' ]; then
   echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
@@ -194,7 +194,8 @@ cat >> $jobscrp << EOF
 # clean up LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=.
 
-. /work/system/Env_base_1.2.0-23
+#. /work/system/Env_base_1.2.0-23
+. /work/system/Env_base
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}
 
@@ -225,7 +226,7 @@ fi
 
 if  [ "$CONF_MODE" = 'static' ] && ((DTF_MODE >= 1)) && ((DTF_MPMD >= 1)); then
   cat >> $jobscrp << EOF
-export LD_PRELOAD=./libsplitworld.so
+#export LD_PRELOAD=./libsplitworld.so
 
 # CREATE OF-PROC FILE
 mkdir log_1 log_2

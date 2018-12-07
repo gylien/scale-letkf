@@ -112,7 +112,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
 
   character(len=timer_name_width) :: timer_str
 
-  call mpi_timer('', 2)
+!  call mpi_timer('', 2)
 
   WRITE(6,'(A)') 'Hello from das_letkf'
   WRITE(6,'(A,F15.2)') '  INFL_MUL = ',INFL_MUL
@@ -233,7 +233,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
 !$OMP END DO
 !$OMP END PARALLEL
 
-  call mpi_timer('das_letkf:fcst_perturbation:', 2)
+!  call mpi_timer('das_letkf:fcst_perturbation:', 2)
 
   !
   ! multiplicative inflation
@@ -256,14 +256,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       end if
 #endif
 
-      call mpi_timer('das_letkf:adaptive_infl_read_restart:', 2)
+!      call mpi_timer('das_letkf:adaptive_infl_read_restart:', 2)
     END IF
 
-    call mpi_timer('', 2, barrier=MPI_COMM_e)
+!    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     CALL scatter_grd_mpi(mmean_rank_e,work3dg,work2dg,work3d,work2d)
 
-    call mpi_timer('das_letkf:adaptive_infl_scatter:', 2)
+!    call mpi_timer('das_letkf:adaptive_infl_scatter:', 2)
   END IF
   IF(INFL_MUL_MIN > 0.0d0) THEN
     work3d = max(work3d, INFL_MUL_MIN)
@@ -288,7 +288,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
     work2dn = 0.0d0
   END IF
 
-  call mpi_timer('das_letkf:allocation_shared_vars:', 2)
+!  call mpi_timer('das_letkf:allocation_shared_vars:', 2)
 
 !$OMP PARALLEL PRIVATE(ilev,ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,n2n,n2nc,trans,transm,transmd,transrlx,pa,trans_done,tmpinfl,q_mean,q_sprd,q_anal,timer_str)
   omp_chunk = min(4, max(1, (nij1-1) / OMP_GET_NUM_THREADS() + 1))
@@ -306,8 +306,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
   allocate (pa     (MEMBER,MEMBER,var_local_n2nc_max))
 
 !$OMP MASTER
-  call mpi_timer('das_letkf:allocation_private_vars:', 2)
-  call mpi_timer('', 3)
+!  call mpi_timer('das_letkf:allocation_private_vars:', 2)
+!  call mpi_timer('', 3)
 
   write (6, '(A,I3)') 'OpenMP chunk for dynamic schedule =', omp_chunk
 !$OMP END MASTER
@@ -317,7 +317,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
   DO ilev=1,nlev
 
     if (LOG_LEVEL >= 3) then
-      call mpi_timer('', 4)
+!      call mpi_timer('', 4)
     end if
 
 !$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
@@ -330,8 +330,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       call relax_beta(rig1(ij),rjg1(ij),hgt1(ij,ilev),beta)
 
       if (LOG_LEVEL >= 3) then
-        write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:relax_beta(lev=', ilev, ',ij=', ij, '):'
-        call mpi_timer(trim(timer_str), 4)
+!        write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:relax_beta(lev=', ilev, ',ij=', ij, '):'
+!        call mpi_timer(trim(timer_str), 4)
       end if
 
       if (beta == 0.0d0) then
@@ -355,15 +355,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
         end if
 
         if (LOG_LEVEL >= 3) then
-          write (timer_str, '(A30,I4,A4,I4,A7)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',allv):'
-          call mpi_timer(trim(timer_str), 4)
+!          write (timer_str, '(A30,I4,A4,I4,A7)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',allv):'
+!          call mpi_timer(trim(timer_str), 4)
         end if
 
         cycle
       end if
 
       if (LOG_LEVEL >= 3) then
-        call mpi_timer('', 5)
+!        call mpi_timer('', 5)
       end if
 
       ! update 3D variables
@@ -381,8 +381,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
           end if                                                                       !GYL
 
           if (LOG_LEVEL >= 3) then
-            write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',n=', n, '):'
-            call mpi_timer(trim(timer_str), 5)
+!            write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+!            call mpi_timer(trim(timer_str), 5)
           end if
 
           cycle                                                                        !GYL
@@ -405,8 +405,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
           end if
 
           if (LOG_LEVEL >= 3) then
-            write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_copy(lev=', ilev, ',ij=', ij, ',n=', n, '):'
-            call mpi_timer(trim(timer_str), 5)
+!            write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_copy(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+!            call mpi_timer(trim(timer_str), 5)
           end if
         ELSE
           ! compute weights with localized observations
@@ -452,8 +452,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
           END IF                                                                       !GYL
 
           if (LOG_LEVEL >= 3) then
-            write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(lev=', ilev, ',ij=', ij, ',n=', n, '):'
-            call mpi_timer(trim(timer_str), 5)
+!            write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+!            call mpi_timer(trim(timer_str), 5)
           end if
         END IF
 
@@ -517,15 +517,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
         END IF                                                                         !GYL
 
         if (LOG_LEVEL >= 3) then
-          write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(lev=', ilev, ',ij=', ij, ',n=', n, '):'
-          call mpi_timer(trim(timer_str), 5)
+!          write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(lev=', ilev, ',ij=', ij, ',n=', n, '):'
+!          call mpi_timer(trim(timer_str), 5)
         end if
 
       END DO ! [ n=1,nv3d ]
 
       if (LOG_LEVEL >= 3) then
-        write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, ',ij=', ij, '):'
-        call mpi_timer(trim(timer_str), 4)
+!        write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, ',ij=', ij, '):'
+!        call mpi_timer(trim(timer_str), 4)
       end if
 
       ! update 2D variables at ilev = 1
@@ -562,8 +562,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
             end if
 
             if (LOG_LEVEL >= 3) then
-              write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_copy(2d,ij=', ij, ',n=', n, '):'
-              call mpi_timer(trim(timer_str), 5)
+!              write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_copy(2d,ij=', ij, ',n=', n, '):'
+!              call mpi_timer(trim(timer_str), 5)
             end if
           ELSE
             ! compute weights with localized observations
@@ -601,8 +601,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
             END IF                                                                     !GYL
 
             if (LOG_LEVEL >= 3) then
-              write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(2d,ij=', ij, ',n=', n, '):'
-              call mpi_timer(trim(timer_str), 5)
+!              write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(2d,ij=', ij, ',n=', n, '):'
+!              call mpi_timer(trim(timer_str), 5)
             end if
           END IF
 
@@ -650,15 +650,15 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
           end if                                                                     !GYL
 
           if (LOG_LEVEL >= 3) then
-            write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(2d,ij=', ij, ',n=', n, '):'
-            call mpi_timer(trim(timer_str), 5)
+!            write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(2d,ij=', ij, ',n=', n, '):'
+!            call mpi_timer(trim(timer_str), 5)
           end if
 
         END DO ! [ n=1,nv2d ]
 
         if (LOG_LEVEL >= 3) then
-          write (timer_str, '(A27,I4,A2)') 'das_letkf:letkf_core(2d,ij=', ij, '):'
-          call mpi_timer(trim(timer_str), 4)
+!          write (timer_str, '(A27,I4,A2)') 'das_letkf:letkf_core(2d,ij=', ij, '):'
+!          call mpi_timer(trim(timer_str), 4)
         end if
 
       END IF ! [ ilev == 1 ]
@@ -683,8 +683,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       end if
     end if
 
-    write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
-    call mpi_timer(trim(timer_str), 3)
+!    write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
+!    call mpi_timer(trim(timer_str), 3)
 !$OMP END MASTER
 
   END DO ! [ ilev=1,nlev ]
@@ -696,7 +696,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
   deallocate (trans,transm,transmd,pa)
 !$OMP END PARALLEL
 
-  call mpi_timer('das_letkf:letkf_core:', 2)
+!  call mpi_timer('das_letkf:letkf_core:', 2)
 
   deallocate (n_merge,ic_merge)
   deallocate (search_q0)
@@ -710,13 +710,13 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
   ! Write updated inflation parameters
   !
   IF(INFL_MUL_ADAPTIVE) THEN
-    call mpi_timer('', 2, barrier=MPI_COMM_e)
+!    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
     if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
     CALL gather_grd_mpi(mmean_rank_e,work3d,work2d,work3dg,work2dg)
 
-    call mpi_timer('das_letkf:adaptive_infl_gather:', 2)
+!    call mpi_timer('das_letkf:adaptive_infl_gather:', 2)
 
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',INFL_MUL_OUT_BASENAME,'.pe',myrank_d,'.nc'
@@ -730,20 +730,20 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       end if
 #endif
 
-      call mpi_timer('das_letkf:adaptive_infl_write_restart:', 2)
+!      call mpi_timer('das_letkf:adaptive_infl_write_restart:', 2)
     END IF
   END IF
   !
   ! Write inflation parameter (in analysis) corresponding to the RTPS method
   !
   IF(RELAX_SPREAD_OUT) THEN
-    call mpi_timer('', 2, barrier=MPI_COMM_e)
+!    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
     if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
     CALL gather_grd_mpi(mmean_rank_e,work3da,work2da,work3dg,work2dg)
 
-    call mpi_timer('das_letkf:relax_spread_out_gather:', 2)
+!    call mpi_timer('das_letkf:relax_spread_out_gather:', 2)
 
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',RELAX_SPREAD_OUT_BASENAME,'.pe',myrank_d,'.nc'
@@ -757,7 +757,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       end if
 #endif
 
-      call mpi_timer('das_letkf:relax_spread_out_write_restart:', 2)
+!      call mpi_timer('das_letkf:relax_spread_out_write_restart:', 2)
     END IF
     DEALLOCATE(work3da,work2da)
   END IF
@@ -765,7 +765,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
   ! Write observation numbers
   !
   IF(NOBS_OUT) THEN
-    call mpi_timer('', 2, barrier=MPI_COMM_e)
+!    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     if (.not. allocated(work3dg)) allocate (work3dg(nlon,nlat,nlev,nv3d))
     if (.not. allocated(work2dg)) allocate (work2dg(nlon,nlat,nv2d))
@@ -782,7 +782,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
     work3d(:,:,11) = work3dn(nobtype+6,:,:,iv3d_t)
     CALL gather_grd_mpi(mmean_rank_e,work3d,work2d,work3dg,work2dg)
 
-    call mpi_timer('das_letkf:nobs_out_gather:', 2)
+!    call mpi_timer('das_letkf:nobs_out_gather:', 2)
 
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',NOBS_OUT_BASENAME,'.pe',myrank_d,'.nc'
@@ -796,7 +796,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       end if
 #endif
 
-      call mpi_timer('das_letkf:nobs_out_write_restart:', 2)
+!      call mpi_timer('das_letkf:nobs_out_write_restart:', 2)
     END IF
     DEALLOCATE(work3dn,work2dn)
   END IF
@@ -806,7 +806,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
   ! Additive inflation
   !
   IF(INFL_ADD > 0.0d0 .and. present(addi3d) .and. present(addi2d)) THEN
-    call mpi_timer('', 2, barrier=MPI_COMM_e)
+!    call mpi_timer('', 2, barrier=MPI_COMM_e)
 
     if (INFL_ADD_Q_RATIO) then
       work3d(:,:,:) = gues3d(:,:,mmean,:)
@@ -841,7 +841,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       addinfl_weight(:) = 1.0d0
     end if
 
-    call mpi_timer('das_letkf:additive_infl_addinfl_weight:', 2)
+!    call mpi_timer('das_letkf:additive_infl_addinfl_weight:', 2)
 
     write (6, '(A)') '===== Additive covariance inflation ====='
     write (6, '(A,F10.4)') '  parameter:', INFL_ADD
@@ -900,7 +900,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
 
     deallocate (addinfl_weight)
 
-    call mpi_timer('das_letkf:additive_infl_cal:', 2)
+!    call mpi_timer('das_letkf:additive_infl_cal:', 2)
   END IF ! [ INFL_ADD > 0.0d0 .and. present(addi3d) .and. present(addi2d) ]
 
   RETURN
@@ -914,15 +914,15 @@ subroutine addinfl_setup(addi3d, addi2d)
   real(r_size), intent(out) :: addi2d(nij1,nens,nv2d)
   integer :: i, k, m, n
 
-  call mpi_timer('', 2, barrier=MPI_COMM_e)
+!  call mpi_timer('', 2, barrier=MPI_COMM_e)
 
   call read_ens_mpi_addiinfl(addi3d, addi2d)
 
-  call mpi_timer('addinfl_setup:read_ens_mpi_addiinfl:', 2)
+!  call mpi_timer('addinfl_setup:read_ens_mpi_addiinfl:', 2)
 
   call ensmean_grd(MEMBER, nens, nij1, addi3d, addi2d)
 
-  call mpi_timer('addinfl_setup:ensmean_grd:', 2)
+!  call mpi_timer('addinfl_setup:ensmean_grd:', 2)
 
 !$OMP PARALLEL PRIVATE(n,m,k,i)
 !$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
@@ -947,7 +947,7 @@ subroutine addinfl_setup(addi3d, addi2d)
 !$OMP END DO
 !$OMP END PARALLEL
 
-  call mpi_timer('addinfl_setup:calc_perturbation:', 2)
+!  call mpi_timer('addinfl_setup:calc_perturbation:', 2)
 
   return
 end subroutine addinfl_setup

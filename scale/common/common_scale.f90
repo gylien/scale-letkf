@@ -378,7 +378,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
 
   do iv3d = 1, nv3d
     if (LOG_LEVEL >= 1) then
-      write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+!      write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
     end if
     call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
     call ncio_check(nf90_get_var(ncid, varid, v3dg(:,:,:,iv3d), &
@@ -459,7 +459,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 
   timer = MPI_WTIME()
   timer_str = 'read_restart_par:nfmpi_open:'
-  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
   timer_0 = timer
 
 #ifdef DTF
@@ -468,14 +468,14 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 
     timer = MPI_WTIME()
     timer_str = 'read_restart_par:dtf_time_start:'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end if
 #endif
 
   do iv3d = 1, nv3d
     if (LOG_LEVEL >= 1) then
-      write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+!      write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
     end if
     err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
     if ( err .NE. NF_NOERR ) &
@@ -489,8 +489,8 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
        write (6,'(A)') 'failed nfmpi_get_vara_double_all '//' '//nfmpi_strerror(err)
 
     timer = MPI_WTIME()
-    write (timer_str, '(A39,I4,A2)') 'read_restart_par:nfmpi_iget_vara(iv3d=:', iv3d, '):'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (timer_str, '(A39,I4,A2)') 'read_restart_par:nfmpi_iget_vara(iv3d=:', iv3d, '):'
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end do
 
@@ -510,8 +510,8 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
        write (6,'(A)') 'failed nfmpi_get_vara_double_all '//' '//nfmpi_strerror(err)
 
     timer = MPI_WTIME()
-    write (timer_str, '(A39,I4,A2)') 'read_restart_par:nfmpi_iget_vara(iv2d=:', iv2d, '):'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (timer_str, '(A39,I4,A2)') 'read_restart_par:nfmpi_iget_vara(iv2d=:', iv2d, '):'
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end do
 
@@ -521,7 +521,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 
   timer = MPI_WTIME()
   timer_str = 'read_restart_par:nfmpi_wait_all:'
-  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
   timer_0 = timer
 
 #ifdef DTF
@@ -530,7 +530,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 
     timer = MPI_WTIME()
     timer_str = 'read_restart_par:dtf_transfer:'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end if
 #endif
@@ -541,7 +541,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 
   timer = MPI_WTIME()
   timer_str = 'read_restart_par:nfmpi_close:'
-  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
   timer_0 = timer
 
 #ifdef DTF
@@ -550,7 +550,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 
     timer = MPI_WTIME()
     timer_str = 'read_restart_par:dtf_time_end:'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end if
 #endif
@@ -835,19 +835,19 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 
     timer = MPI_WTIME()
     timer_str = 'write_restart_par:dtf_time_start:'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end if
 #endif
 
   timer = MPI_WTIME()
   timer_str = 'write_restart_par:nfmpi_open:'
-  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
   timer_0 = timer
 
   do iv3d = 1, nv3d
     if (LOG_LEVEL >= 1) then
-      write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+!      write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
     end if
     err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
     if ( err .NE. NF_NOERR ) &
@@ -861,8 +861,8 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
        write (6,'(A)') 'failed nfmpi_iput_vara_double '//' '//nfmpi_strerror(err)
 
     timer = MPI_WTIME()
-    write (timer_str, '(A40,I4,A2)') 'write_restart_par:nfmpi_iput_vara(iv3d=:', iv3d, '):'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (timer_str, '(A40,I4,A2)') 'write_restart_par:nfmpi_iput_vara(iv3d=:', iv3d, '):'
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end do
 
@@ -882,8 +882,8 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
        write (6,'(A)') 'failed nfmpi_iput_vara_double '//' '//nfmpi_strerror(err)
 
     timer = MPI_WTIME()
-    write (timer_str, '(A40,I4,A2)') 'write_restart_par:nfmpi_iput_vara(iv2d=:', iv2d, '):'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (timer_str, '(A40,I4,A2)') 'write_restart_par:nfmpi_iput_vara(iv2d=:', iv2d, '):'
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end do
 
@@ -893,7 +893,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 
   timer = MPI_WTIME()
   timer_str = 'write_restart_par:nfmpi_wait_all:'
-  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
   timer_0 = timer
 
 #ifdef DTF
@@ -902,7 +902,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 
     timer = MPI_WTIME()
     timer_str = 'write_restart_par:dtf_transfer:'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end if
 #endif
@@ -913,7 +913,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 
   timer = MPI_WTIME()
   timer_str = 'write_restart_par:nfmpi_close:'
-  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
   timer_0 = timer
 
 #ifdef DTF
@@ -922,7 +922,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 
     timer = MPI_WTIME()
     timer_str = 'write_restart_par:dtf_time_end:'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end if
 #endif
@@ -1252,7 +1252,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
   !-------------
   do iv3d = 1, nv3dd
     if (LOG_LEVEL >= 1) then
-      write(6,'(1x,A,A15)') '*** Read 3D hist var: ', trim(v3dd_name(iv3d))
+!      write(6,'(1x,A,A15)') '*** Read 3D hist var: ', trim(v3dd_name(iv3d))
     end if
     if (v3dd_hastime(iv3d)) then
       call FILE_read( filename,              & ! [IN]
@@ -1395,7 +1395,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 
   timer = MPI_WTIME()
   timer_str = 'read_history_par:nfmpi_open:'
-  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
   timer_0 = timer
 
 #ifdef DTF
@@ -1404,7 +1404,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 
     timer = MPI_WTIME()
     timer_str = 'read_history_par:dtf_time_start:'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end if
 #endif
@@ -1413,7 +1413,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   !-------------
   do iv3d = 1, nv3dd
     if (LOG_LEVEL >= 1) then
-      write(6,'(1x,A,A15)') '*** Read 3D hist var: ', trim(v3dd_name(iv3d))
+!      write(6,'(1x,A,A15)') '*** Read 3D hist var: ', trim(v3dd_name(iv3d))
     end if
 
 !--- neither of these work now ---
@@ -1442,8 +1442,8 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 !    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg_RP(k+KHALO,i+IHALO,j+JHALO,iv3d) = real(var3D(i,j,k,iv3d), r_size) ! use FORALL to change order of dimensions
 
     timer = MPI_WTIME()
-    write (timer_str, '(A39,I4,A2)') 'read_history_par:nfmpi_iget_vara(iv3d=:', iv3d, '):'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (timer_str, '(A39,I4,A2)') 'read_history_par:nfmpi_iget_vara(iv3d=:', iv3d, '):'
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end do
 
@@ -1453,9 +1453,9 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   ! 2D variables
   !-------------
   do iv2d = 1, nv2dd
-    if (LOG_LEVEL >= 1) then
-      write(6,'(1x,A,A15)') '*** Read 2D hist var: ', trim(v2dd_name(iv2d))
-    end if
+!    if (LOG_LEVEL >= 1) then
+!      write(6,'(1x,A,A15)') '*** Read 2D hist var: ', trim(v2dd_name(iv2d))
+!    end if
 
 !--- neither of these work now ---
 !    call FILEIO_read( var2D(:,:,iv2d),      & ! [OUT]
@@ -1484,8 +1484,8 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 !    v2dg_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = real(var2D(:,:,iv2d), r_size)
 
     timer = MPI_WTIME()
-    write (timer_str, '(A39,I4,A2)') 'read_history_par:nfmpi_iget_vara(iv2d=:', iv2d, '):'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (timer_str, '(A39,I4,A2)') 'read_history_par:nfmpi_iget_vara(iv2d=:', iv2d, '):'
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end do
 
@@ -1496,7 +1496,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 
   timer = MPI_WTIME()
   timer_str = 'read_history_par:nfmpi_wait_all:'
-  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
   timer_0 = timer
 
 #ifdef DTF
@@ -1505,7 +1505,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 
     timer = MPI_WTIME()
     timer_str = 'read_history_par:dtf_transfer:'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
 
   end if
@@ -1518,7 +1518,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 
   timer = MPI_WTIME()
   timer_str = 'read_history_par:nfmpi_close:'
-  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
   timer_0 = timer
 
 #ifdef DTF
@@ -1527,7 +1527,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 
     timer = MPI_WTIME()
     timer_str = 'read_history_par:dtf_time_end:'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end if
 #endif
@@ -1580,7 +1580,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 
   timer = MPI_WTIME()
   timer_str = 'read_history_par:communicate_halo:'
-  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!  write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
   timer_0 = timer
 
   ! Save topo for later use
@@ -1591,7 +1591,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 
     timer = MPI_WTIME()
     timer_str = 'read_history_par:save_topo:'
-    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
+!    write (6,'(2A,2F14.6)') '  ### TIMER # ......', timer_str, timer - timer_0, timer - timer_0
     timer_0 = timer
   end if
 
@@ -1646,7 +1646,7 @@ subroutine read_history_direct(v3dg, v2dg)
   !-------------
   do iv3d = 1, nv3dd
     if (LOG_LEVEL >= 1) then
-      write(6,'(1x,A,A15)') '*** Read 3D hist var [direct transfer]: ', trim(v3dd_name(iv3d))
+!      write(6,'(1x,A,A15)') '*** Read 3D hist var [direct transfer]: ', trim(v3dd_name(iv3d))
     end if
     select case (iv3d)
     case (iv3dd_u, iv3dd_v, iv3dd_w, iv3dd_t, iv3dd_rh)
