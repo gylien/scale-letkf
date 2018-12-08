@@ -48,11 +48,12 @@ echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
 cat > $jobscrp << EOF
 #!/bin/sh
-##PBS -N ${myname1}_${SYSNAME}
+#PBS -q s
+#PBS -N ${myname1}_${SYSNAME}
 #PBS -l nodes=${NNODES}:ppn=${PPN}
-##PBS -l walltime=${TIME_LIMIT}
+#PBS -l walltime=${TIME_LIMIT}
 #PBS -W umask=027
-##PBS -k oe
+#PBS -k oe
 
 ulimit -s unlimited
 

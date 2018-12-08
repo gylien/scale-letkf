@@ -8,13 +8,22 @@ import os
 
 OVERW = True
 
+#exp = "8km_sc"
+exp = "2km_CZ2003"
+
+top = "/data6/honda/SCALE-LETKF/scale_lt_devel_20181002/OUTPUT"
+top = "/home/honda/work/OUTPUT"
+
 ### pertub only below Z < ZMAX
 ##ZMAX = 30
 
 # ensemble size
-MEMBER = 9
+MEMBER = 20
 
-SCALE_NP = 1
+#SCALE_NP = 1
+NPX = 4
+NPY = 4
+SCALE_NP = NPX * NPY
 
 # variable list
 # MOMX/Y/Z needs a consideration for a staggered grid system (2018/10/13)
@@ -22,7 +31,7 @@ VAR_LIST = ["RHOT","MOMX","MOMY","MOMZ"]
 
 # Horizontal buffer size (grids) where no perturbations are added
 HBUF = 2
-## Horizontal buffer size (grids) where no perturbations are added
+# Vertical buffer size (grids) where no perturbations are added
 VTBUF = 1 # top
 VBBUF = 1 # bottom
 
@@ -42,8 +51,6 @@ def nc_name(top,exp,time,typ,m,p):
 
 def main():
 
-  top = "/data6/honda/SCALE-LETKF/scale_lt_devel_20181002/OUTPUT"
-  exp = "8km_sc"
   time = datetime(2000,1,1,0,0)
   typ = "anal"
   m = 1
@@ -55,20 +62,50 @@ def main():
   #for p in range(1): DEBUG
      print(p)
      fn_nat = nc_name(top,exp,time,typ,0,p) # nature run (m=0)
-     nc_nat = Dataset(fn_nat, "r", format="NETCDF4")
+
+     try:
+       nc_nat = Dataset(fn_nat, "r", format="NETCDF4")
+     except:
+       print("Failed to read: ",fn_nat)
+
+     rank_idxs = nc_nat.rankidx
+     rank_i = rank_idxs[0]
+     rank_j = rank_idxs[1]
 
      dens3d = nc_nat.variables["DENS"][:,:,:]
 
 
-     imin = HBUF 
-     imax = dens3d.shape[0] - HBUF
-     jmin = HBUF 
-     jmax = dens3d.shape[1] - HBUF
+     if rank_i == 0:
+       imin = HBUF 
+     else:
+       imin = 1
+ 
+     if rank_i == (NPX - 1):
+       imax = dens3d.shape[0] - HBUF
+     else:
+       imax = dens3d.shape[0]
+
+     if rank_j == 0:
+       jmin = HBUF 
+     else:
+       jmin = 1
+ 
+     if rank_j == (NPY - 1):
+       jmax = dens3d.shape[1] - HBUF
+     else:
+       jmax = dens3d.shape[1]
+
+
      kmin = VBBUF 
      kmax = dens3d.shape[2] - VTBUF
     
-     #rsize = (MEMBER,dens3d.shape[0],dens3d.shape[1],dens3d.shape[2]) # random numer array size
-     rsize = (MEMBER,dens3d.shape[0]-2*HBUF,dens3d.shape[1]-2*HBUF,dens3d.shape[2]-VTBUF-VBBUF) # random numer array size
+     ISIZE = imax - imin 
+     JSIZE = jmax - jmin 
+     KSIZE = kmax - kmin
+
+#     #rsize = (MEMBER,dens3d.shape[0],dens3d.shape[1],dens3d.shape[2]) # random numer array size
+#     rsize = (MEMBER,dens3d.shape[0]-2*HBUF,dens3d.shape[1]-2*HBUF,dens3d.shape[2]-VTBUF-VBBUF) # random numer array size
+     rsize = (MEMBER,ISIZE,JSIZE,KSIZE) # random numer array size
 
      var3d_nat = nc_nat.variables[VAR_LIST[0]][imin:imax,jmin:jmax,kmin:kmax] # reference data from nature run
      #nc_nat.close()

@@ -3,8 +3,10 @@
 
 USER=honda
 
-EXP=8km_sc
-. config/${EXP}/config.main.hakushu
+#EXP=8km_sc
+#. config/${EXP}/config.main.hakushu
+EXP=2km_CZ2003
+. config/${EXP}/config.main.hibuna
 
 #
 LETKF_RUN="$(pwd)"
@@ -24,8 +26,11 @@ tstart='2000-01-01 0:00:00'
 tend='2000-01-01 0:00:00'
 
 
-ctint=600 # obssim interval 
-tint=600 # analysis interval (Do not modify!)
+#ctint=600 # obssim interval 
+#tint=600 # analysis interval (Do not modify!)
+
+ctint=300 # obssim interval 
+tint=300 # analysis interval (Do not modify!)
 
 # -- SCALE setting --
 MEM_NP=${SCALE_NP}
@@ -110,9 +115,12 @@ echo $RUNSH
 rm -f $RUNSH
 cat > $RUNSH << EOF
 #!/bin/sh
+
+#PBS -q s
 #PBS -l nodes=1:ppn=${SCALE_NP}
+#PBS -N OBSSIM_${SYSNAME}
 #PBS -W umask=027
-##PBS -k oe
+#PBS -k oe
 
 ulimit -s unlimited
 
@@ -204,14 +212,14 @@ cat << EOF >> $RUNCONF
  OBSSIM_HISTORY_IN_BASENAME = "${ORG_DIR}/history",
  OBSSIM_TOPO_IN_BASENAME = "${SWDIR}/dat/topo/topo",
  OBSSIM_TIME_START = 1,
- OBSSIM_TIME_END = 7,
+ OBSSIM_TIME_END = 25,
  OBSSIM_GRADS_OUT_NAME = "${ONAME}",
  OBSSIM_NUM_3D_VARS = 2,
  OBSSIM_3D_VARS_LIST = 4001, 4002, !2819, 2820,
 ! OBSSIM_NUM_2D_VARS = 10,
 ! OBSSIM_2D_VARS_LIST = 8800,8800,8800,8800,8800,8800,8800,8800,8800,8800,
- OBSSIM_RADAR_LON = 0.0d0,
- OBSSIM_RADAR_LAT = 0.0d0,
+ OBSSIM_RADAR_LON = 100.0d3,
+ OBSSIM_RADAR_LAT = 100.0d3,
  OBSSIM_RADAR_Z = 0.0d0,
 
 /

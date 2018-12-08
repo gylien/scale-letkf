@@ -13,13 +13,14 @@ CYCLE=1
 CYCLE_SKIP=1
 ISTEP=
 FSTEP=
-TIME_LIMIT='00:05:00'
+TIME_LIMIT='00:55:00'
 
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=3600        # SCALE forecast length in the forecast mode (second)
-FCSTOUT=600
+
+FCSTLEN=7200        # SCALE forecast length in the forecast mode (second)
+FCSTOUT=300
 
 #===============================================================================
 

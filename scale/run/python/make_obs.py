@@ -13,6 +13,7 @@ OVERW = True
 
 
 SCALE_NP = 1
+SCALE_NP = 16
 KHALO = 2
 
 # variable list
@@ -26,8 +27,8 @@ VTBUF = 1 # top
 VBBUF = 1 # bottom
 
 
-RADAR_X = 10000.0 # radar location X [m]
-RADAR_Y = 0.0 # radar location Y [m]
+RADAR_X = 100.d3 # radar location X [m]
+RADAR_Y = 100.d3 # radar location Y [m]
 RADAR_Z = 0.0 # radar location Z [m]
 
 def nc_name(top,exp,time,typ,m,p):
@@ -46,6 +47,7 @@ def nc_name(top,exp,time,typ,m,p):
 def write_VR_obs(fn,data,xs,ys,zs):
 
    ID_VR = 4002
+   ID_Z = 4001
   
    ERR = 1.0 # CHECK 
    TYP = 22

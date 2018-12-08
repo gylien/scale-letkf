@@ -4,6 +4,7 @@
 *.pyc
 *.lst
 *.log
+log*
 *~
 /scale/configure.user
 /scale/common/datetime
@@ -23,6 +24,9 @@
 /scale/run/fcst_job.sh
 /scale/run/machinefile
 /scale/run/mpd.hosts
+/scale/run/cycle_*.[e,i,s,o]*
+/scale/run/fcst_*.[e,i,s,o]*
+/scale/tmp
 /scale/letkf/letkf
 /scale/obs/obsmake
 /scale/obs/obsope
