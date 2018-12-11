@@ -104,7 +104,7 @@
 /
 
 &PARAM_LAND_GRID_CARTESC_INDEX
- LKMAX = 5,
+ LKMAX = 7,
 /
 
 &PARAM_URBAN_GRID_CARTESC_INDEX
@@ -112,11 +112,15 @@
 /
 
 &PARAM_LAND_GRID_CARTESC
- LDZ = 0.05D0, 0.15D0, 0.30D0, 0.50D0, 1.00D0,
+ LDZ = 0.05D0, 0.15D0, 0.30D0, 0.50D0, 1.0D0, 1.0D0, 1.0D0,
 /
 
 &PARAM_URBAN_GRID_CARTESC
  UDZ = 0.01D0, 0.01D0, 0.03D0, 0.05D0, 0.10D0,
+/
+
+&PARAM_OCEAN_GRID_CARTESC_INDEX
+ OKMAX = 1,
 /
 
 &PARAM_ATMOS_GRID_CARTESC
@@ -166,10 +170,6 @@
 &PARAM_OCEAN
  OCEAN_DYN_TYPE = "INIT",
  OCEAN_SFC_TYPE = "FIXED-TEMP",
-/
-
-&PARAM_OCEAN_GRID_CARTESC_INDEX
- OKMAX = 1,
 /
 
 &PARAM_LAND
@@ -232,7 +232,6 @@
  ATMOS_DYN_TINTEG_LARGE_TYPE          = "EULER",
  ATMOS_DYN_TINTEG_SHORT_TYPE          = "RK4",
  ATMOS_DYN_TINTEG_TRACER_TYPE         = "RK3WS2002",
-! ATMOS_DYN_FVM_FLUX_TYPE              = "CD4",
  ATMOS_DYN_FVM_FLUX_TYPE              = "UD3", ! r0051
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
  ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
@@ -260,14 +259,12 @@
 !--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--
 /
 
+&PARAM_ATMOS_PHY_MP
+ MP_ntmax_sedimentation = 6,
+/
+
 !&PARAM_ATMOS_PHY_MP_TOMITA08
-! enable_kk2000 = .false.,
-! Cr = 130.D0,
-! Cs = 0.9D0,
-! drag_g = 0.6D0,
-! beta_saut = 6D-3,
-! gamma_saut = 6D-2,
-! gamma_sacr = 2D-2,
+! Default Tomita (2008) parameters are used
 !/
 
 #################################################
@@ -320,32 +317,10 @@
 #################################################
 
 &PARAM_URBAN_DYN_KUSAKA01
- ZR         = 15.0D0,
- roof_width = 7.5D0,
- road_width = 22.5D0,
- AH         = 0.0D0,
- ALH        = 0.0D0,
-! STRGR      = 0.24D0,
-! STRGB      = 0.009D0,
-! STRGG      = 0.24D0,
- STRGR      = 0.0D0,
- STRGB      = 0.0D0,
- STRGG      = 0.0D0,
- AKSR       = 2.28D0,
- AKSB       = 2.28D0,
- AKSG       = 2.28D0,
- ALBR       = 0.20D0,
- ALBB       = 0.20D0,
- ALBG       = 0.20D0,
- EPSR       = 0.97D0,
- EPSB       = 0.97D0,
- EPSG       = 0.97D0,
- Z0R        = 0.005D0,
- Z0B        = 0.005D0,
- Z0G        = 0.005D0,
- CAPR       = 2.01D6,
- CAPB       = 2.01D6,
- CAPG       = 2.01D6,
+! Many other parameters, which are different from the previous real-time system, are set in default.
+ STRGR      = 0.24D0,  ! r0051
+ STRGB      = 0.009D0, ! r0051
+ STRGG      = 0.24D0,  ! r0051
 /
 
 #################################################

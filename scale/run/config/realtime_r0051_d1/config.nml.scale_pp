@@ -56,6 +56,7 @@
 
 &PARAM_CNVLANDUSE
 !--CNVLANDUSE_name--
+ CNVLANDUSE_limit_urban_fraction = 0.3D0, ! r0051
 /
 
 &PARAM_CNVLANDUSE_GLCCv2
@@ -100,22 +101,6 @@
  JMAX = 40,
 /
 
-&PARAM_LAND_GRID_CARTESC_INDEX
- LKMAX = 5,
-/
-
-&PARAM_URBAN_GRID_CARTESC_INDEX
- UKMAX = 5,
-/
-
-&PARAM_LAND_GRID_CARTESC
- LDZ = 0.05D0, 0.15D0, 0.30D0, 0.50D0, 1.00D0,
-/
-
-&PARAM_URBAN_GRID_CARTESC
- UDZ = 0.01D0, 0.01D0, 0.03D0, 0.05D0, 0.10D0,
-/
-
 &PARAM_ATMOS_GRID_CARTESC
  DX = 18000.D0,
  DY = 18000.D0,
@@ -140,36 +125,3 @@
  MAPPROJECTION_LC_lat2       =  40.0D0,
 /
 
-#################################################
-#
-# model configuration: administrator
-#
-#################################################
-
-
-&PARAM_ATMOS
- ATMOS_DYN_TYPE    = "HEVI",
- ATMOS_PHY_MP_TYPE = "TOMITA08",
- ATMOS_PHY_CP_TYPE = "KF",
- ATMOS_PHY_RD_TYPE = "MSTRNX",
- ATMOS_PHY_SF_TYPE = "COUPLE",
- ATMOS_PHY_BL_TYPE = "MYNN",
-/
-
-&PARAM_OCEAN
- OCEAN_DYN_TYPE = "INIT",
- OCEAN_SFC_TYPE = "FIXED-TEMP",
-/
-
-&PARAM_OCEAN_GRID_CARTESC_INDEX
- OKMAX = 1,
-/
-
-&PARAM_LAND
- LAND_DYN_TYPE = "BUCKET",
- LAND_SFC_TYPE = "SKIN",
-/
-
-&PARAM_URBAN
- URBAN_DYN_TYPE = "KUSAKA01",
-/

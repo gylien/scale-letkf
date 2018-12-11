@@ -7,8 +7,8 @@
 
 STIME='<STIME>'
 ETIME='<ETIME>'
-MEMBERS='mdet'
 TIME_LIMIT='<WTIME_L>'
+MEMBERS='mdet'
 CYCLE=
 CYCLE_SKIP=1
 ISTEP=
@@ -20,8 +20,6 @@ FSTEP=
 FCSTLEN=432000      # SCALE forecast length in the forecast mode (second)
 FCSTOUT=3600
 
-FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
-FCSTOUT=21600
 
 #===============================================================================
 
