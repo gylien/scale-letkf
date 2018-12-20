@@ -751,7 +751,11 @@ local scrpname=$(basename $JOBSCRP)
 
 #-------------------------------------------------------------------------------
 
-res=$(cd $rundir && pjsub $scrpname 2>&1)
+if [ "$PRESET" = 'K_micro' ] ; then 
+  res=$(cd $rundir && pjsub $scrpname -g $(id -ng)s 2>&1)
+else
+  res=$(cd $rundir && pjsub $scrpname 2>&1)
+fi
 echo $res
 
 if [ -z "$(echo $res | grep 'ERR')" ]; then

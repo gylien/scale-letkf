@@ -2322,11 +2322,11 @@ subroutine read_Him8_mpi(filename,obs)
          status='unknown', recl=nlong*nlatg*4)
     do ch = 1, NIRB_HIM8
       irec = irec + 1
-      write(iunit,rec=irec) real(tbb_sobs_prep(:,:,ch),kind=r_sngl)
+      write(iunit,rec=irec) real(tbb_sobs(:,:,ch),kind=r_sngl)
     enddo
     do ch = 1, NIRB_HIM8
       irec = irec + 1
-      write(iunit,rec=irec) real(tbb_sobs(:,:,ch),kind=r_sngl)
+      write(iunit,rec=irec) real(tbb_sobs_prep(:,:,ch),kind=r_sngl)
     enddo
 
     close(unit=iunit)    
@@ -2389,11 +2389,11 @@ subroutine write_Him8_mpi(tbb_l,step)
          status='unknown', recl=nlong*nlatg*4)
     do ch = 1, NIRB_HIM8
       irec = irec + 1
-      write(iunit,rec=irec) real(tbb_gprep(:,:,ch),kind=r_sngl)
+      write(iunit,rec=irec) real(tbb_g(:,:,ch),kind=r_sngl)
     enddo
     do ch = 1, NIRB_HIM8
       irec = irec + 1
-      write(iunit,rec=irec) real(tbb_g(:,:,ch),kind=r_sngl)
+      write(iunit,rec=irec) real(tbb_gprep(:,:,ch),kind=r_sngl)
     enddo
 
     close(unit=iunit)
