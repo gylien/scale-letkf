@@ -2,24 +2,24 @@
 
 
 USER=honda
+SYS=ofp
 
 #EXP=8km_sc
 #. config/${EXP}/config.main.hakushu
 EXP=2km_CZ2003
-. config/${EXP}/config.main.hibuna
+. config/${EXP}/config.main.$SYS
 
 #
 LETKF_RUN="$(pwd)"
 
-#SWDIR="/scratch/$(id -ng)/${USER}/obssim"
-#SWDIR=${TMPL}
-SWDIR=${LETKF_RUN}
+#WDIR="/scratch/$(id -ng)/${USER}/obssim"
+#WDIR=${TMPL}
+WDIR=${LETKF_RUN}/../tmp_obssim
 OBSSIM_BIN="${LETKF_RUN}/../obs/obssim"
-RUNSH=$SWDIR/OBSSIM.sh
-RUNCONF_COMMON=$SWDIR/OBSSIM.conf_common
+RUNSH=$WDIR/OBSSIM.sh
+RUNCONF_COMMON=$WDIR/OBSSIM.conf_common
 SCALE_CONF=${LETKF_RUN}/config.nml.scale
 TOPO=${OUTDIR}/const/topo
-
 
 
 tstart='2000-01-01 0:00:00'
@@ -43,11 +43,13 @@ MEM_L=`seq ${SMEM} ${EMEM}`
 
 
 
-# -- Him8 DA (RTTOV) setting --
 
-if [ ! -e ${SWDIR} ] ; then
-   mkdir -p $SWDIR
-fi
+#if [ ! -e ${WDIR} ] ; then
+#fi
+
+# clean up
+rm -rf $WDIR
+mkdir -p $WDIR
 
 
 ctime="$tstart"
@@ -66,10 +68,10 @@ cat << EOF >> $RUNCONF_COMMON
 /
 
 &PARAM_LETKF_PRC
- NNODES = ${MEM_NP},
+ NNODES = $((SCALE_NP / PPN )),
  PPN = ${PPN},
- MEM_NODES = ${MEM_NP},
- MEM_NP = ${MEM_NP},
+ MEM_NODES = $((SCALE_NP / PPN)),
+ MEM_NP = ${SCALE_NP},
 /
 
 
@@ -91,7 +93,7 @@ cat << EOF >> $RUNCONF_COMMON
 
 EOF
 
-#RAD_DAT=${SWDIR}/dat/rad
+#RAD_DAT=${WDIR}/dat/rad
 #rm -rf $RAD_DAT
 #cp -r ${SCALEDIR}/scale-rm/test/data/rad ${RAD_DAT}
 
@@ -116,31 +118,30 @@ rm -f $RUNSH
 cat > $RUNSH << EOF
 #!/bin/sh
 
-#PBS -q s
-#PBS -l nodes=1:ppn=${SCALE_NP}
-#PBS -N OBSSIM_${SYSNAME}
-#PBS -W umask=027
-#PBS -k oe
+#PJM -N OBSSIM
+#PJM -L rscgrp=regular-flat
+#PJM -L node=$((SCALE_NP/PPN))
+#PJM -L elapse=00:15:00
+#PJM --mpi proc=${SCALE_NP}
+#PJM --omp thread=${THREADS}
+#PJM -g hp150019
 
 ulimit -s unlimited
 
-HOSTLIST=\$(cat \$PBS_NODEFILE | sort | uniq)
-HOSTLIST=\$(echo \$HOSTLIST | sed 's/  */,/g')
-export MPI_XPMEM_ENABLED=disabled
-export MPI_UNIVERSE="\$HOSTLIST $((PPN*THREADS))"
-export MPI_XPMEM_ENABLED=disabled
-
-export OMP_NUM_THREADS=${THREADS}
-#export PARALLEL=${THREADS}
-
 export FORT_FMT_RECL=400
 
-cd \$PBS_O_WORKDIR
-
 rm -f machinefile
-cp -f \$PBS_NODEFILE machinefile
+for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
+  for ippn in \$(seq $PPN); do
+    echo "\$inode" >> machinefile
+  done
+done
 
-export RUN_LEVEL=1
+module load hdf5/1.8.17
+module load netcdf/4.4.1
+module load netcdf-fortran/4.4.3
+ulimit -s unlimited
+export OMP_STACKSIZE=128m
 
 EOF
 
@@ -174,16 +175,16 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
 
   #-- copy bin & RTTOV coef files
 
-#  DAT_DIR=${SWDIR}/dat/${EXP}/${HTIME}/${TYPE}/${MEM}
+#  DAT_DIR=${WDIR}/dat/${EXP}/${HTIME}/${TYPE}/${MEM}
 #  mkdir -p $DAT_DIR
 #  echo $HTIME
 #
-#  if [ ! -e ${SWDIR}/${OBSSIM_BIN} ] ; then 
-#    cp ${OBSSIM_BIN} ${SWDIR}/
+#  if [ ! -e ${WDIR}/${OBSSIM_BIN} ] ; then 
+#    cp ${OBSSIM_BIN} ${WDIR}/
 #  fi
 #
-#  if [ ! -e ${SWDIR}/out/${EXP}/${TYPE}/${MEM} ] ; then
-#    mkdir -p ${SWDIR}/out/${EXP}/${TYPE}
+#  if [ ! -e ${WDIR}/out/${EXP}/${TYPE}/${MEM} ] ; then
+#    mkdir -p ${WDIR}/out/${EXP}/${TYPE}
 #  fi
 #  if [ ! -e ${DAT_DIR} ] ; then
 #    mkdir -p ${DAT_DIR}
@@ -199,7 +200,7 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
 #  wait
 
   # copy common parts of obssim.conf 
-  RUNCONF=${SWDIR}/OBSSIM_$(printf %03d $VCODE_CNT).conf
+  RUNCONF=${WDIR}/OBSSIM_$(printf %03d $VCODE_CNT).conf
   rm -f $RUNCONF
 
 cat ${RUNCONF_COMMON} > ${RUNCONF}
@@ -210,7 +211,7 @@ cat << EOF >> $RUNCONF
  OBSSIM_IN_TYPE = "history",
 ! OBSSIM_RESTART_IN_BASENAME = "${DAT_DIR}/init",
  OBSSIM_HISTORY_IN_BASENAME = "${ORG_DIR}/history",
- OBSSIM_TOPO_IN_BASENAME = "${SWDIR}/dat/topo/topo",
+ OBSSIM_TOPO_IN_BASENAME = "${WDIR}/dat/topo/topo",
  OBSSIM_TIME_START = 1,
  OBSSIM_TIME_END = 25,
  OBSSIM_GRADS_OUT_NAME = "${ONAME}",
@@ -230,8 +231,8 @@ EOF
 
 
 
-#  echo "mpirun -n ${MEM_NP} ${SWDIR}/obssim ${RUNCONF} &" >> $RUNSH
-  echo "mpirun -n ${MEM_NP} ${LETKF_RUN}/../obs/obssim ${RUNCONF} &" >> $RUNSH
+#  echo "mpirun -n ${MEM_NP} ${WDIR}/obssim ${RUNCONF} &" >> $RUNSH
+  echo "mpiexec -n ${SCALE_NP} ${LETKF_RUN}/../obs/obssim ${RUNCONF} ${WDIR}/NOUT &" >> $RUNSH
 
   TNODE_CNT=$(expr ${TNODE_CNT} + ${MEM_NP})   
   VCODE_CNT=$(expr ${VCODE_CNT} + 1)   
@@ -246,9 +247,11 @@ echo "wait" >> $RUNSH
 
 #sed -i -e  's/<TNODE_CNT>/'${TNODE_CNT}'/g' $RUNSH
 #
-#echo ${SWDIR}
+#echo ${WDIR}
 
-qsub $RUNSH
+cd $WDIR
+pjsub $RUNSH
+cd -
 
 exit
 

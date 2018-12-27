@@ -201,71 +201,49 @@ staging_list () {
 #-------------------------------------------------------------------------------
 # TMPDAT
 
-if ((TMPDAT_MODE == 1)); then
-#-------------------
-  echo "[Error] \$TMPDAT_MODE == 1 not available in this version!" >&2
-  exit 1
-#  safe_init_tmpdir $TMPDAT
-#  safe_init_tmpdir $TMPDAT/exec
-##  ln -fs $MODELDIR/scale-rm_pp $TMPDAT/exec
-##  ln -fs $MODELDIR/scale-rm_init $TMPDAT/exec
-##  ln -fs $MODELDIR/scale-rm $TMPDAT/exec
-#  ln -fs $ENSMODEL_DIR/scale-rm_pp_ens $TMPDAT/exec
-#  ln -fs $ENSMODEL_DIR/scale-rm_init_ens $TMPDAT/exec
-#  ln -fs $ENSMODEL_DIR/scale-rm_ens $TMPDAT/exec
-#  ln -fs $COMMON_DIR/pdbash $TMPDAT/exec
-#  ln -fs $DATADIR/rad $TMPDAT/rad
-#  ln -fs $DATADIR/land $TMPDAT/land
-#  ln -fs $DATADIR/topo $TMPDAT
-#  ln -fs $DATADIR/landuse $TMPDAT
-
-#  if ((DATA_BDY_TMPLOC == 1)); then
-#    if ((BDY_FORMAT == 2)); then
-#      ln -fs $DATA_BDY_WRF $TMPDAT/bdyorg
-#    fi
-#  fi
-
-#  safe_init_tmpdir $TMPDAT/conf
-#  ln -fs $SCRP_DIR/config.* $TMPDAT/conf
-#-------------------
-else
-#-------------------
-  cat >> $STAGING_DIR/stagein.dat << EOF
-${ENSMODEL_DIR}/scale-rm_init_ens|exec/scale-rm_init_ens
-${ENSMODEL_DIR}/scale-rm_ens|exec/scale-rm_ens
-${COMMON_DIR}/pdbash|exec/pdbash
-${SCRP_DIR}/config.nml.scale_init|conf/config.nml.scale_init
-${SCRP_DIR}/config.nml.scale|conf/config.nml.scale
-${SCRP_DIR}/config.nml.ensmodel|conf/config.nml.ensmodel
+cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${COMMON_DIR}/pdbash|${DAT_SUBDIR}/exec/pdbash
+${SCRP_DIR}/config.nml.scale_init|${DAT_SUBDIR}/conf/config.nml.scale_init
+${SCRP_DIR}/config.nml.scale|${DAT_SUBDIR}/conf/config.nml.scale
+${SCRP_DIR}/config.nml.ensmodel|${DAT_SUBDIR}/conf/config.nml.ensmodel
 EOF
+#${SCRP_DIR}/config.nml.scale_pp|${DAT_SUBDIR}/conf/config.nml.scale_pp
 
-#  if [ -e "${SCRP_DIR}/config.nml.scale_user" ]; then
-#    echo "${SCRP_DIR}/config.nml.scale_user|conf/config.nml.scale_user" >> $STAGING_DIR/stagein.dat
-#  fi
-#  if [ -e "${SCRP_DIR}/config.nml.grads_boundary" ]; then
-#    echo "${SCRP_DIR}/config.nml.grads_boundary|conf/config.nml.grads_boundary" >> $STAGING_DIR/stagein.dat
-#  fi
+#cat >> ${STAGING_DIR}/${STGINLIST_CONSTDB} << EOF
+#${SCALEDIR}/scale-rm/test/data/rad/cira.nc|${DAT_SUBDIR}/rad/cira.nc
+#${SCALEDIR}/scale-rm/test/data/rad/PARAG.29|${DAT_SUBDIR}/rad/PARAG.29
+#${SCALEDIR}/scale-rm/test/data/rad/PARAPC.29|${DAT_SUBDIR}/rad/PARAPC.29
+#${SCALEDIR}/scale-rm/test/data/rad/rad_o3_profs.txt|${DAT_SUBDIR}/rad/rad_o3_profs.txt
+#${SCALEDIR}/scale-rm/test/data/rad/VARDATA.RM29|${DAT_SUBDIR}/rad/VARDATA.RM29
+#${SCALEDIR}/scale-rm/test/data/rad/MIPAS/|${DAT_SUBDIR}/rad/MIPAS/
+#${SCALEDIR}/scale-rm/test/data/land/|${DAT_SUBDIR}/land/
+#EOF
 
-#  if [ "$TOPO_FORMAT" != 'prep' ]; then
-#    if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
-#      echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat
-#    else
-#      echo "${DATADIR}/topo/${TOPO_FORMAT}/Products|topo/${TOPO_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
-#    fi
-#  fi
-#  if [ "$LANDUSE_FORMAT" != 'prep' ]; then
-#    if ((DISK_MODE_TOPO_LANDUSE_DB == 2)); then
-#      echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products|s" >> $STAGING_DIR/stagein.dat
-#    else
-#      echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products|landuse/${LANDUSE_FORMAT}/Products" >> $STAGING_DIR/stagein.dat
-#    fi
-#  fi
-#
-#  if [ "$STG_TYPE" = 'K' ] || [ "$STG_TYPE" = 'K_rankdir' ]; then
-#    echo "${COMMON_DIR}/datetime|exec/datetime" >> $STAGING_DIR/stagein.dat
-#  fi
-#-------------------
+if [ -e "${SCRP_DIR}/config.nml.scale_user" ]; then
+  echo "${SCRP_DIR}/config.nml.scale_user|${DAT_SUBDIR}/conf/config.nml.scale_user" >> ${STAGING_DIR}/${STGINLIST}
 fi
+if [ -e "${SCRP_DIR}/config.nml.grads_boundary" ]; then
+  echo "${SCRP_DIR}/config.nml.grads_boundary|${DAT_SUBDIR}/conf/config.nml.grads_boundary" >> ${STAGING_DIR}/${STGINLIST}
+fi
+
+if [ "$TOPO_FORMAT" != 'prep' ]; then
+  echo "${DATADIR}/topo/${TOPO_FORMAT}/Products/|${DAT_SUBDIR}/topo/${TOPO_FORMAT}/Products/" >> ${STAGING_DIR}/${STGINLIST_CONSTDB}
+fi
+if [ "$LANDUSE_FORMAT" != 'prep' ]; then
+  echo "${DATADIR}/landuse/${LANDUSE_FORMAT}/Products/|${DAT_SUBDIR}/landuse/${LANDUSE_FORMAT}/Products/" >> ${STAGING_DIR}/${STGINLIST_CONSTDB}
+fi
+
+if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
+  echo "${COMMON_DIR}/datetime|${DAT_SUBDIR}/exec/datetime" >> ${STAGING_DIR}/${STGINLIST}
+fi
+
+#-------------------------------------------------------------------------------
+# TMPRUN
+
+cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${ENSMODEL_DIR}/scale-rm_init_ens|${DAT_SUBDIR}/exec/scale-rm_init_ens
+${ENSMODEL_DIR}/scale-rm_ens|${DAT_SUBDIR}/exec/scale-rm_ens
+EOF
 
 #-------------------------------------------------------------------------------
 # TMPOUT

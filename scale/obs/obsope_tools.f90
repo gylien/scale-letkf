@@ -1070,6 +1070,8 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d)
   integer :: proc_i, proc_j
   integer :: ishift, jshift
 
+  integer :: iunit2
+
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
   jshift = proc_j * nlat

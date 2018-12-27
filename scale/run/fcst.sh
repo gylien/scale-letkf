@@ -240,6 +240,8 @@ while ((time <= ETIME)); do
 
       stdout_dir="$TMPOUT/${stimes[1]}/log/fcst_$(basename ${stepexecdir[$s]})"
 
+      cd ${stepexecdir[$s]}
+
       if ((enable_iter == 1)); then
         for it in $(seq $nitmax); do
           if [ "$STG_TYPE" = 'K_rankdir' ]; then
@@ -252,7 +254,7 @@ while ((time <= ETIME)); do
           else
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
+            mpirunf proc ${stepexecdir[$s]}/${stepexecname[$s]} ${stepexecdir[$s]}/${stepexecname[$s]}.conf "${stdout_dir}/NOUT-${it}" . \
                     "$SCRP_DIR/fcst_step.sh" $loop $it || exit $?
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2

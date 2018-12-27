@@ -8,7 +8,7 @@
 . config.fcst
 
 # CHECK
-FCSTLEN=0
+FCSTLEN=2100 # 35min
 
 ATIME=$(datetime $STIME ${FCSTLEN} s)
 

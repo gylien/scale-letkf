@@ -60,7 +60,6 @@ program obssim
   call read_nml_letkf_h08
 
   call set_mem_node_proc(1, NNODES, PPN, MEM_NODES, MEM_NP)
-
   call set_scalelib
 
   if (myrank_use) then

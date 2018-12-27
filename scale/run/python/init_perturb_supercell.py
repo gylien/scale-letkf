@@ -11,8 +11,10 @@ OVERW = True
 #exp = "8km_sc"
 exp = "2km_CZ2003"
 
-top = "/data6/honda/SCALE-LETKF/scale_lt_devel_20181002/OUTPUT"
-top = "/home/honda/work/OUTPUT"
+#top = "/data6/honda/SCALE-LETKF/scale_lt_devel_20181002/OUTPUT"
+#top = "/home/honda/work/OUTPUT"
+
+top = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT"
 
 ### pertub only below Z < ZMAX
 ##ZMAX = 30
@@ -21,8 +23,8 @@ top = "/home/honda/work/OUTPUT"
 MEMBER = 20
 
 #SCALE_NP = 1
-NPX = 4
-NPY = 4
+NPX = 16
+NPY = 8
 SCALE_NP = NPX * NPY
 
 # variable list
@@ -49,9 +51,8 @@ def nc_name(top,exp,time,typ,m,p):
    return(os.path.join(top,exp,time.strftime('%Y%m%d%H%M%S'),typ,mem,fh + str(p).zfill(6) + ".nc"))
  
 
-def main():
+def main(time):
 
-  time = datetime(2000,1,1,0,0)
   typ = "anal"
   m = 1
   p = 0
@@ -163,5 +164,6 @@ def main():
 
 #########
 
-main()
+time = datetime(2000,1,1,0,35,0)
+main(time)
 
