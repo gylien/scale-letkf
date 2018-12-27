@@ -6,26 +6,13 @@
 #===============================================================================
 
 
-STIME='20180701010000'
+STIME='20180701000000'
 ETIME='20180701035000'
-TIME_LIMIT='02:30:00'
-
-STIME='20180701020000'
-ETIME='20180701045000'
-TIME_LIMIT='03:30:00'
-
-STIME='20180701030000'
-ETIME='20180701055000'
 TIME_LIMIT='03:30:00'
 
 STIME='20180701040000'
-ETIME='20180701042000'
-TIME_LIMIT='00:30:00'
-
-
-STIME='20180701040000'
-ETIME='20180701065000'
-TIME_LIMIT='03:00:00'
+ETIME='20180701075000'
+TIME_LIMIT='03:30:00'
 
 
 ISTEP=
@@ -88,7 +75,7 @@ LOG_OPT=2        # 1:   o    o       o   o              o     o      o
                  # 4:                                         o      o
                  # 5:   (none)
 
-LOG_TYPE=4       # 1:   Only save the log file from the head process
+LOG_TYPE=1       # 1:   Only save the log file from the head process
                  # 2:   Save all log files
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file

@@ -89,7 +89,7 @@
  H08_SIM_ALLG = .true.,
  H08_OBS_THIN_LEV = 6,
  H08_OBS_METHOD = 2,
- H08_OBS_AVE_NG = 0,
+ H08_OBS_AVE_NG = 0, ! check
  H08_OBS_AVE_OVERLAP = .false.,
 !--H08_NOWDATE--!
 !--H08_RTTOV_COEF_PATH--!

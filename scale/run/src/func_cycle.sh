@@ -1442,7 +1442,7 @@ for it in $(seq $nitmax); do
     m=$(((it-1)*parallel_mems+g))
     if ((m >= 1 && m <= mtot)); then
       bash $SCRP_DIR/src/post_letkf.sh $MYRANK \
-           ${atime} $TMPRUN/letkf $LOG_OPT
+           ${time} ${atime} $TMPRUN/letkf $LOG_OPT ${OUT_OPT}
     fi
   fi
 
