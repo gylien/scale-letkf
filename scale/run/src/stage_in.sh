@@ -66,7 +66,6 @@ elif ((TMPOUT_MODE >= 2)); then
   filelist="$filelist $(ls $STAGING_DIR/stagein.out.$((MYRANK+1)) 2> /dev/null)"
 fi
 
-echo " XXX DEBUG "$filelist
 for ifile in $filelist; do
   while read line; do
     source="$(echo $line | cut -d '|' -s -f1)"

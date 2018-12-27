@@ -113,6 +113,7 @@ fi
 
 echo "[$(datetime_now)] Initialization (stage in)"
 
+bash $SCRP_DIR/src/stage_in.sh a
 stage_in server || exit $?
 
 #===============================================================================
