@@ -1,18 +1,18 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Wrap cycle.sh in an OFP job script and run it.
+#  Wrap fcst.sh in a OFP job script and run it.
 #
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_ofp.sh [..]
+#    fcst_ofp.sh [..]
 #
 #===============================================================================
 
 cd "$(dirname "$0")"
 myname="$(basename "$0")"
-job='cycle'
+job='fcst'
 
 #===============================================================================
 # Configuration
@@ -44,7 +44,7 @@ echo
 # Create and clean the temporary directory
 
 echo "[$(datetime_now)] Create and clean the temporary directory"
-
+ 
 #if [ -e "${TMP}" ]; then
 #  echo "[Error] $0: \$TMP will be completely removed." >&2
 #  echo "        \$TMP = '$TMP'" >&2
@@ -66,11 +66,11 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR || exit $?
-if ((IO_ARB == 1)); then                              ##
-  distribute_da_cycle_set - $NODEFILE_DIR || exit $?  ##
-else                                                  ##
-  distribute_da_cycle - $NODEFILE_DIR || exit $?
-fi                                                    ##
+distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR || exit $?
+
+if ((CYCLE == 0)); then
+  CYCLE=$cycle_auto
+fi
 
 #===============================================================================
 # Determine the staging list
@@ -109,14 +109,6 @@ if [ "$CONF_MODE" != 'static' ]; then
 fi
 
 #===============================================================================
-
-if ((IO_ARB == 1)); then                                              ##
-  echo "${SCRP_DIR}/sleep.sh|sleep.sh" >> ${STAGING_DIR}/${STGINLIST} ##
-  NNODES=$((NNODES*2))                                                ##
-  NNODES_APPAR=$((NNODES_APPAR*2))                                    ##
-fi                                                                    ##
-
-#===============================================================================
 # Stage in
 
 echo "[$(datetime_now)] Initialization (stage in)"
@@ -141,14 +133,12 @@ cat > $jobscrp << EOF
 #PJM --omp thread=${THREADS}
 #PJM -g $(echo $(id -ng))
 ##PJM -j
-
 rm -f machinefile
 for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
   for ippn in \$(seq $PPN); do
     echo "\$inode" >> machinefile
   done
 done
-
 module load hdf5/1.8.17
 module load netcdf/4.4.1
 module load netcdf-fortran/4.4.3
@@ -172,8 +162,7 @@ export KMP_HW_SUBSET=1t
 #export OMP_STACKSIZE=128m
 ulimit -s unlimited
 
-
-./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
+./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
 
 #===============================================================================
@@ -203,9 +192,9 @@ echo
 
 backup_exp_setting $job $TMP $jobid ${job}_job.sh 'o e'
 
-if [ "$CONF_MODE" = 'static' ]; then
-  config_file_save $TMPS/config || exit $?
-fi
+###if [ "$CONF_MODE" = 'static' ]; then
+###  config_file_save $TMPS/config || exit $?
+###fi
 
 archive_log
 
