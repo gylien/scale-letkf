@@ -119,7 +119,7 @@ subroutine initialize_mpi_scale
   nprocs = universal_nprocs
   myrank = PRC_UNIVERSAL_myrank
 
-  write(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ', myrank, '/', nprocs-1
+!  write(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ', myrank, '/', nprocs-1
   if (r_size == r_dble) then
     MPI_r_size = MPI_DOUBLE_PRECISION
   else if (r_size == r_sngl) then

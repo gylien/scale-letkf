@@ -92,10 +92,10 @@ if ((ENABLE_PARAM_USER == 1)) && [ ! -e "$SCRP_DIR/config.nml.scale_user" ] && [
   echo "[Error] $myname: When \$ENABLE_PARAM_USER = 1, 'config.nml.scale_user' file is required." >&2
   exit 1
 fi
-if ((BDY_FORMAT == 4)) && [ ! -e "$SCRP_DIR/config.nml.grads_boundary" ] && [ ! -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
-  echo "[Error] $myname: When \$BDY_FORMAT = 4, 'config.nml.grads_boundary' file is required." >&2
-  exit 1
-fi
+#if ((BDY_FORMAT == 4)) && [ ! -e "$SCRP_DIR/config.nml.grads_boundary" ] && [ ! -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
+#  echo "[Error] $myname: When \$BDY_FORMAT = 4, 'config.nml.grads_boundary' file is required." >&2
+#  exit 1
+#fi
 
 #... more detections...
 
@@ -134,33 +134,33 @@ else
   exit 1
 fi
 
-if ((BDY_FORMAT >= 1)); then
-  if ((BDYCYCLE_INT % BDYINT != 0)); then
-    echo "[Error] \$BDYCYCLE_INT needs to be an exact multiple of \$BDYINT" >&2
-    exit 1
-  fi
-  BDY_STARTFRAME_MAX=$((BDYCYCLE_INT / BDYINT))
-  if [ -z "$PARENT_REF_TIME" ]; then
-    PARENT_REF_TIME=$STIME
-    for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
-      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/meanf/history.pe000000.nc" ]; then
-        break
-      elif ((BDY_FORMAT == 2 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_WRF/${PARENT_REF_TIME}/mean/wrfout_${PARENT_REF_TIME}" ]; then
-        break
-      elif ((BDY_FORMAT == 2 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_WRF/mean/wrfout_${PARENT_REF_TIME}" ]; then
-        break
-      elif ((BDY_FORMAT == 4 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_GRADS/${PARENT_REF_TIME}/mean/atm_${PARENT_REF_TIME}.grd" ]; then
-        break
-      elif ((BDY_FORMAT == 4 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_GRADS/mean/atm_${PARENT_REF_TIME}.grd" ]; then
-        break
-      elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
-        echo "[Error] Cannot find boundary files." >&2
-        exit 1
-      fi
-      PARENT_REF_TIME=$(datetime $PARENT_REF_TIME -${BDYINT} s)
-    done
-  fi
-fi
+#if ((BDY_FORMAT >= 1)); then
+#  if ((BDYCYCLE_INT % BDYINT != 0)); then
+#    echo "[Error] \$BDYCYCLE_INT needs to be an exact multiple of \$BDYINT" >&2
+#    exit 1
+#  fi
+#  BDY_STARTFRAME_MAX=$((BDYCYCLE_INT / BDYINT))
+#  if [ -z "$PARENT_REF_TIME" ]; then
+#    PARENT_REF_TIME=$STIME
+#    for bdy_startframe in $(seq $BDY_STARTFRAME_MAX); do
+#      if ((BDY_FORMAT == 1)) && [ -s "$DATA_BDY_SCALE/${PARENT_REF_TIME}/hist/meanf/history.pe000000.nc" ]; then
+#        break
+#      elif ((BDY_FORMAT == 2 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_WRF/${PARENT_REF_TIME}/mean/wrfout_${PARENT_REF_TIME}" ]; then
+#        break
+#      elif ((BDY_FORMAT == 2 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_WRF/mean/wrfout_${PARENT_REF_TIME}" ]; then
+#        break
+#      elif ((BDY_FORMAT == 4 && BDY_ROTATING == 1)) && [ -s "$DATA_BDY_GRADS/${PARENT_REF_TIME}/mean/atm_${PARENT_REF_TIME}.grd" ]; then
+#        break
+#      elif ((BDY_FORMAT == 4 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_GRADS/mean/atm_${PARENT_REF_TIME}.grd" ]; then
+#        break
+#      elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
+#        echo "[Error] Cannot find boundary files." >&2
+#        exit 1
+#      fi
+#      PARENT_REF_TIME=$(datetime $PARENT_REF_TIME -${BDYINT} s)
+#    done
+#  fi
+#fi
 
 OUT_CYCLE_SKIP=${OUT_CYCLE_SKIP:-1}
 
@@ -1172,65 +1172,65 @@ enspp_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script start" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script start" >&2
+#fi
 
-if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
-  echo "  ... skip this step (use prepared topo and landuse files)"
-  exit 1
-elif ((BDY_FORMAT == 0)); then
-  echo "  ... skip this step (use prepared boundaries)"
-  exit 1
-elif ((LANDUSE_UPDATE != 1 && loop > 1)); then
-  echo "  ... skip this step (already done in the first cycle)"
-  exit 1 
-fi
-
-if ((BDY_FORMAT == 1)); then
-  if ((DISK_MODE_DATA_BDY == 2)); then
-    bdycatalogue=${TMPDAT_S}/bdyorg/latlon_domain_catalogue.txt
-    bdytopo=${TMPDAT_S}/bdytopo/const/topo
-  else
-    bdycatalogue=${TMPDAT_L}/bdyorg/latlon_domain_catalogue.txt
-    bdytopo=${TMPDAT_L}/bdytopo/const/topo
-  fi
-fi
-
-if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
-  MEMBER_RUN=1
-else # local run directory: run multiple members as needed
-  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
-fi
-
-if (pdrun all $PROC_OPT); then
-  bash $SCRP_DIR/src/pre_scale_pp_node.sh $MYRANK \
-       $mem_nodes $mem_np $TMPRUN/scale_pp $MEMBER_RUN $iter
-fi
-
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script end" >&2
-fi
-
-for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) start" >&2
-  fi
-
-  g=${proc2group[$((MYRANK+1))]}
-  if (pdrun $g $PROC_OPT); then
-    m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= MEMBER_RUN)); then
-      bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK $time ${name_m[$m]} \
-           $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT \
-           cycle ${bdytopo} ${bdycatalogue}
-    fi
-  fi
-
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) end" >&2
-  fi
-done
+#if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
+#  echo "  ... skip this step (use prepared topo and landuse files)"
+#  exit 1
+#elif ((BDY_FORMAT == 0)); then
+#  echo "  ... skip this step (use prepared boundaries)"
+#  exit 1
+#elif ((LANDUSE_UPDATE != 1 && loop > 1)); then
+#  echo "  ... skip this step (already done in the first cycle)"
+#  exit 1 
+#fi
+#
+#if ((BDY_FORMAT == 1)); then
+#  if ((DISK_MODE_DATA_BDY == 2)); then
+#    bdycatalogue=${TMPDAT_S}/bdyorg/latlon_domain_catalogue.txt
+#    bdytopo=${TMPDAT_S}/bdytopo/const/topo
+#  else
+#    bdycatalogue=${TMPDAT_L}/bdyorg/latlon_domain_catalogue.txt
+#    bdytopo=${TMPDAT_L}/bdytopo/const/topo
+#  fi
+#fi
+#
+#if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+#  MEMBER_RUN=1
+#else # local run directory: run multiple members as needed
+#  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
+#fi
+#
+#if (pdrun all $PROC_OPT); then
+#  bash $SCRP_DIR/src/pre_scale_pp_node.sh $MYRANK \
+#       $mem_nodes $mem_np $TMPRUN/scale_pp $MEMBER_RUN $iter
+#fi
+#
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script end" >&2
+#fi
+#
+#for it in $(seq $its $ite); do
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) start" >&2
+#  fi
+#
+#  g=${proc2group[$((MYRANK+1))]}
+#  if (pdrun $g $PROC_OPT); then
+#    m=$(((it-1)*parallel_mems+g))
+#    if ((m >= 1 && m <= MEMBER_RUN)); then
+#      bash $SCRP_DIR/src/pre_scale_pp.sh $MYRANK $time ${name_m[$m]} \
+#           $TMPRUN/scale_pp/$(printf '%04d' $m) $TMPDAT \
+#           cycle ${bdytopo} ${bdycatalogue}
+#    fi
+#  fi
+#
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) end" >&2
+#  fi
+#done
 
 #-------------------------------------------------------------------------------
 }
@@ -1244,36 +1244,38 @@ enspp_2 () {
 #echo "* Post-processing scripts"
 #echo
 
-if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
-  return 1
-elif ((BDY_FORMAT == 0)); then
-  return 1
-fi
+return 1
 
-if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
-  MEMBER_RUN=1
-else # local run directory: run multiple members as needed
-  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
-fi
-
-for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) start" >&2
-  fi
-
-  g=${proc2group[$((MYRANK+1))]}
-  if (pdrun $g $PROC_OPT); then
-    m=$(((it-1)*parallel_mems+g))
-    if ((m >= 1 && m <= MEMBER_RUN)); then
-      bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $time \
-           ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT
-    fi
-  fi
-
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) end" >&2
-  fi
-done
+#if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
+#  return 1
+#elif ((BDY_FORMAT == 0)); then
+#  return 1
+#fi
+#
+#if ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+#  MEMBER_RUN=1
+#else # local run directory: run multiple members as needed
+#  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
+#fi
+#
+#for it in $(seq $its $ite); do
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) start" >&2
+#  fi
+#
+#  g=${proc2group[$((MYRANK+1))]}
+#  if (pdrun $g $PROC_OPT); then
+#    m=$(((it-1)*parallel_mems+g))
+#    if ((m >= 1 && m <= MEMBER_RUN)); then
+#      bash $SCRP_DIR/src/post_scale_pp.sh $MYRANK $time \
+#           ${name_m[$m]} $TMPRUN/scale_pp/$(printf '%04d' $m) $LOG_OPT
+#    fi
+#  fi
+#
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) end" >&2
+#  fi
+#done
 
 #-------------------------------------------------------------------------------
 }
@@ -1287,14 +1289,14 @@ ensinit_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script start" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script start" >&2
+#fi
 
-if ((BDY_FORMAT == 0)); then
-  echo "  ... skip this step (use prepared boundaries)"
-  exit 1
-fi
+#if ((BDY_FORMAT == 0)); then
+#  echo "  ... skip this step (use prepared boundaries)"
+#  exit 1
+#fi
 
 bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 bdy_time_list=''
@@ -1308,48 +1310,50 @@ else
   bdyorgf=${TMPDAT_L}/bdyorg
 fi
 
-if ((BDY_ENS == 1)); then
-  MEMBER_RUN=$mmean
-elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
-  MEMBER_RUN=1
-else # local run directory: run multiple members as needed
-  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
-fi
+MEMBER_RUN=1
+#if ((BDY_ENS == 1)); then
+#  MEMBER_RUN=$mmean
+#elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+#  MEMBER_RUN=1
+#else # local run directory: run multiple members as needed
+#  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
+#fi
 
 mkinit=0
 if ((loop == 1)); then
   mkinit=$MAKEINIT
 fi
 
-if ((LANDUSE_UPDATE == 1)); then
-  time_l=${time}
-else
-  time_l='const'
-fi
+#if ((LANDUSE_UPDATE == 1)); then
+#  time_l=${time}
+#else
+#  time_l='const'
+#fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_scale_init_node.sh $MYRANK \
        $mem_nodes $mem_np $TMPRUN/scale_init $MEMBER_RUN $iter
 fi
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script end" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script end" >&2
+#fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
     if ((m >= 1 && m <= MEMBER_RUN)); then
-      if ((BDY_ENS == 1)); then
-        mem_bdy=${name_m[$m]}
-      else
-        mem_bdy='mean'
-      fi
+#      if ((BDY_ENS == 1)); then
+#        mem_bdy=${name_m[$m]}
+#      else
+#        mem_bdy='mean'
+#      fi
+      mem_bdy='mean'
 
       bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
            $TMPOUT/const/topo/topo $TMPOUT/${time_l}/landuse/landuse \
@@ -1359,9 +1363,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1376,17 +1380,18 @@ ensinit_2 () {
 #echo "* Post-processing scripts"
 #echo
 
-if ((BDY_FORMAT == 0)); then
-  return 1
-fi
+#if ((BDY_FORMAT == 0)); then
+#  return 1
+#fi
 
-if ((BDY_ENS == 1)); then
-  MEMBER_RUN=$mmean
-elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
-  MEMBER_RUN=1
-else # local run directory: run multiple members as needed
-  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
-fi
+MEMBER_RUN=1
+#if ((BDY_ENS == 1)); then
+#  MEMBER_RUN=$mmean
+#elif ((TMPRUN_MODE <= 2)); then # shared run directory: only run one member per cycle
+#  MEMBER_RUN=1
+#else # local run directory: run multiple members as needed
+#  MEMBER_RUN=$((repeat_mems <= mmean ? repeat_mems : mmean))
+#fi
 
 mkinit=0
 if ((loop == 1)); then
@@ -1394,28 +1399,29 @@ if ((loop == 1)); then
 fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
     m=$(((it-1)*parallel_mems+g))
     if ((m >= 1 && m <= MEMBER_RUN)); then
-      if ((BDY_ENS == 1)); then
-        mem_bdy=${name_m[$m]}
-      else
-        mem_bdy='mean'
-      fi
+      mem_bdy='mean'
+#      if ((BDY_ENS == 1)); then
+#        mem_bdy=${name_m[$m]}
+#      else
+#        mem_bdy='mean'
+#      fi
 
       bash $SCRP_DIR/src/post_scale_init.sh $MYRANK $time \
            $mkinit $mem_bdy $TMPRUN/scale_init/$(printf '%04d' $m) $LOG_OPT
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1430,9 +1436,9 @@ ensfcst_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script start" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script start" >&2
+#fi
 
 bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 
@@ -1473,14 +1479,14 @@ else
   time_l='const'
 fi
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script end" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script end" >&2
+#fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1490,29 +1496,30 @@ for it in $(seq $its $ite); do
 #        ...
 #      fi
 
-      if ((BDY_ENS == 1)); then
-        mem_bdy=${name_m[$m]}
-      else
-        mem_bdy='mean'
-      fi
+      mem_bdy='mean'
+#      if ((BDY_ENS == 1)); then
+#        mem_bdy=${name_m[$m]}
+#      else
+#        mem_bdy='mean'
+#      fi
 
       ocean_base='-'
-      if ((OCEAN_INPUT == 1)); then
-        if ((OCEAN_FORMAT == 0)); then
-          ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_ocean"
-        elif ((OCEAN_FORMAT == 99 && mkinit != 1)); then
-          ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
-        fi
-      fi
+#      if ((OCEAN_INPUT == 1)); then
+#        if ((OCEAN_FORMAT == 0)); then
+#          ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_ocean"
+#        elif ((OCEAN_FORMAT == 99 && mkinit != 1)); then
+#          ocean_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
+#        fi
+#      fi
 
       land_base='-'
-      if ((LAND_INPUT == 1)); then
-        if ((LAND_FORMAT == 0)); then
-          land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_land"
-        elif ((LAND_FORMAT == 99 && mkinit != 1)); then
-          land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
-        fi
-      fi
+#      if ((LAND_INPUT == 1)); then
+#        if ((LAND_FORMAT == 0)); then
+#          land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_land"
+#        elif ((LAND_FORMAT == 99 && mkinit != 1)); then
+#          land_base="$TMPOUT/${time}/anal/${mem_bdy}/init_bdy"
+#        fi
+#      fi
 
       bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}/boundary"
 
@@ -1524,9 +1531,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1547,9 +1554,9 @@ if ((OUT_OPT >= 5 && (loop % OUT_CYCLE_SKIP != 1))); then
 fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1564,9 +1571,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1581,9 +1588,9 @@ obsope_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[4]}: Pre-processing script start" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[4]}: Pre-processing script start" >&2
+#fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_obsope_node.sh $MYRANK \
@@ -1591,14 +1598,14 @@ if (pdrun all $PROC_OPT); then
        $mem_nodes $mem_np $slot_s $slot_e $slot_b $MEMBER
 fi
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[4]}: Pre-processing script end" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[4]}: Pre-processing script end" >&2
+#fi
 
 for it in $(seq $nitmax); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1609,9 +1616,9 @@ for it in $(seq $nitmax); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1627,9 +1634,9 @@ obsope_2 () {
 #echo
 
 for it in $(seq $nitmax); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1640,9 +1647,9 @@ for it in $(seq $nitmax); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Post-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Post-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1657,9 +1664,9 @@ letkf_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script start" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script start" >&2
+#fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
@@ -1669,14 +1676,14 @@ if (pdrun all $PROC_OPT); then
        $MEMBER
 fi
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script end" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script end" >&2
+#fi
 
 for it in $(seq $nitmax); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1688,9 +1695,9 @@ for it in $(seq $nitmax); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1706,9 +1713,9 @@ letkf_2 () {
 #echo
 
 for it in $(seq $nitmax); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1719,9 +1726,9 @@ for it in $(seq $nitmax); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Post-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Post-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------

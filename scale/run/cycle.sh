@@ -265,6 +265,8 @@ while ((time <= ETIME)); do
 #echo ${stepexecdir[$s]} >&2
 #echo $(rev_path ${stepexecdir[$s]}) >&2
 
+      cd ${stepexecdir[$s]}
+
       if ((enable_iter == 1)); then
         for it in $(seq $nitmax); do
           if [ "$STG_TYPE" = 'K_rankdir' ]; then

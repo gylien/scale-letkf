@@ -79,7 +79,7 @@ program scaleles_ens
   nprocs = universal_nprocs
   myrank = universal_myrank
 
-  WRITE(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ',universal_myrank,'/',universal_nprocs-1
+!  WRITE(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ',universal_myrank,'/',universal_nprocs-1
 
   if (command_argument_count() >= 4) then
     call get_command_argument(3, icmd)
