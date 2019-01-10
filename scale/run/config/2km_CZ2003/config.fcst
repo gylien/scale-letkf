@@ -7,8 +7,8 @@
 
 STIME='20000101000000'
 ETIME='20000101000000'
-#STIME='20000101003500'
-#ETIME='20000101003500'
+STIME='20000101003500'
+ETIME='20000101003500'
 #MEMBERS=`seq 1 20`
 MEMBERS='mean'
 CYCLE=1
@@ -25,8 +25,8 @@ TIME_LIMIT='00:25:00'
 FCSTLEN=2100        # SCALE forecast length in the forecast mode (second)
 FCSTOUT=2100 
 
-#FCSTLEN=3300 # 55min (until 90min)       # SCALE forecast length in the forecast mode (second)
-#FCSTOUT=300 
+FCSTLEN=3300 # 55min (until 90min)       # SCALE forecast length in the forecast mode (second)
+FCSTOUT=300 
 
 #===============================================================================
 

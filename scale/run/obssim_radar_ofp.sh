@@ -8,6 +8,7 @@ SYS=ofp
 #. config/${EXP}/config.main.hakushu
 EXP=2km_CZ2003
 . config/${EXP}/config.main.$SYS
+. config/${EXP}/config.fcst
 
 #
 LETKF_RUN="$(pwd)"
@@ -22,15 +23,12 @@ SCALE_CONF=${LETKF_RUN}/config.nml.scale
 TOPO=${OUTDIR}/const/topo
 
 
-tstart='2000-01-01 0:00:00'
-tend='2000-01-01 0:00:00'
+tstart='2000-01-01 0:35:00'
+#tend='2000-01-01 0:35:00'
+tend=$(date -ud "${FCSTLEN} second $tstart" '+%Y-%m-%d %H:%M:%S')
 
-
-#ctint=600 # obssim interval 
-#tint=600 # analysis interval (Do not modify!)
-
-ctint=300 # obssim interval 
-tint=300 # analysis interval (Do not modify!)
+ctint=$(( FCSTLEN * 2 )) # obssim interval  # initial time loop
+tint=$FCSTOUT # analysis interval (Do not modify!)
 
 # -- SCALE setting --
 MEM_NP=${SCALE_NP}
@@ -106,8 +104,7 @@ TE=$(expr `date -ud "$tend" '+%s'` - `date -ud "$tint" '+%s'` )
 TS=$(expr $TS / $tint + 1 )
 TE=$(expr $TE / $tint + 1 )
 TLEV=$(($TE - TS + 1))
-echo $TLEV
-#exit
+echo "TLEV:" $TLEV
 TNODE=`expr ${MEM_NP} \* $TLEV`
 
 TNODE_CNT=0
@@ -213,7 +210,7 @@ cat << EOF >> $RUNCONF
  OBSSIM_HISTORY_IN_BASENAME = "${ORG_DIR}/history",
  OBSSIM_TOPO_IN_BASENAME = "${WDIR}/dat/topo/topo",
  OBSSIM_TIME_START = 1,
- OBSSIM_TIME_END = 25,
+ OBSSIM_TIME_END = ${TLEV},
  OBSSIM_GRADS_OUT_NAME = "${ONAME}",
  OBSSIM_NUM_3D_VARS = 2,
  OBSSIM_3D_VARS_LIST = 4001, 4002, !2819, 2820,

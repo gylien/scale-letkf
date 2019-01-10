@@ -31,7 +31,7 @@
 !--INFL_MUL_ADAPTIVE--
 !--INFL_MUL_IN_BASENAME--
 !--INFL_MUL_OUT_BASENAME--
- RELAX_ALPHA = 0.5D0,
+ RELAX_ALPHA = 0.5D0, ! Similar to Zhang et al. 2004
 ! RELAX_ALPHA_SPREAD = 0.95D0,
 !--RELAX_SPREAD_OUT--
 !--RELAX_SPREAD_OUT_BASENAME--
@@ -59,10 +59,10 @@
 &PARAM_LETKF_OBS
  HORI_LOCAL = 400.0D3,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
-                  -1., 4.0D3,   -1.,   -1.,
+                  -1., 1.0D3,   -1.,   -1., ! similar to Zhang et al. 2004 (ROI=3km)
  VERT_LOCAL =   2.0D3,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
-                  -1., 2.0D3,   -1.,   -1.,
+                  -1., 1.0D3,   -1.,   -1., ! similar to Zhang et al. 2004 (ROI=3km)
 ! TIME_LOCAL = 3.0D0,
  HORI_LOCAL_RADAR_OBSNOREF = 2.0D3,
 ! MAX_NOBS_PER_GRID = 100,
@@ -75,6 +75,8 @@
 /
 
 &PARAM_LETKF_RADAR
+ USE_RADAR_REF = .false.,
+ USE_RADAR_VR = .true.,
  USE_OBSERR_RADAR_REF = .false.
  USE_OBSERR_RADAR_VR = .true.
  RADAR_REF_THRES_DBZ = 10.0D0,

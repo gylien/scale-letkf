@@ -1168,9 +1168,9 @@ fi
 enspp_1 () {
 #-------------------------------------------------------------------------------
 
-#echo
-#echo "* Pre-processing scripts"
-#echo
+echo
+echo "* Pre-processing scripts"
+echo
 
 #if ((MYRANK == 0)); then
 #  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script start" >&2

@@ -10,6 +10,7 @@ log*
 /scale/common/datetime
 /scale/common/pdbash
 /scale/run/config.main
+/scale/run/config.main.*
 /scale/run/config.cycle
 /scale/run/config.fcst
 /scale/run/config.nml.ensmodel
@@ -24,7 +25,7 @@ log*
 /scale/run/fcst_job.sh
 /scale/run/machinefile
 /scale/run/mpd.hosts
-/scale/run/cycle_*.[e,i,s,o]*
+/scale/run/cycle_*.[e,i,s,o][0-9]*
 /scale/run/fcst_*.[e,i,s,o][0-9]*
 /scale/tmp
 /scale/tmp_obssim
