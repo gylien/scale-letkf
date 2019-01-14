@@ -8,7 +8,7 @@
 
 PRESET='OFP'
 
-EXP=2km_CZ2003
+EXP=2km_CZ2003_LT
 
 #===============================================================================
 
@@ -89,8 +89,8 @@ LTIMESLOT=300      # Timeslot interval for 4D-LETKF (second)
 MEMBER=20           # Ensemble size
 #MEMBER=3           # Ensemble size
 
-#NNODES=8           # Number of nodes # single
-NNODES=42           # Number of nodes # single
+#NNODES=42           # Number of nodes # single
+NNODES=2           # Number of nodes # single
 PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process

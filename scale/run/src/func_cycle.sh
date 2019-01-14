@@ -255,15 +255,15 @@ EOF
 #${MODELDIR}/scale-rm_init|exec/scale-rm_init
 #${MODELDIR}/scale-rm|exec/scale-rm
 
-  if [ -e "${SCRP_DIR}/config.nml.scale_user" ]; then
-    echo "${SCRP_DIR}/config.nml.scale_user|conf/config.nml.scale_user" >> $STAGING_DIR/stagein.dat
-  fi
+#  if [ -e "${SCRP_DIR}/config.nml.scale_user" ]; then
+#    echo "${SCRP_DIR}/config.nml.scale_user|conf/config.nml.scale_user" >> $STAGING_DIR/stagein.dat
+#  fi
   if [ -e "${SCRP_DIR}/config.nml.obsope" ]; then
     echo "${SCRP_DIR}/config.nml.obsope|conf/config.nml.obsope" >> $STAGING_DIR/stagein.dat
   fi
-  if [ -e "${SCRP_DIR}/config.nml.grads_boundary" ]; then
-    echo "${SCRP_DIR}/config.nml.grads_boundary|conf/config.nml.grads_boundary" >> $STAGING_DIR/stagein.dat
-  fi
+#  if [ -e "${SCRP_DIR}/config.nml.grads_boundary" ]; then
+#    echo "${SCRP_DIR}/config.nml.grads_boundary|conf/config.nml.grads_boundary" >> $STAGING_DIR/stagein.dat
+#  fi
 
 # H08
   if [ -e "${RTTOV_COEF}" ] && [ -e "${RTTOV_SCCOEF}" ]; then
@@ -412,27 +412,27 @@ else
   time=$STIME
   atime=$(datetime $time $LCYCLE s)
   loop=0
-  while ((time <= ETIME)); do
-    loop=$((loop+1))
-    if ((ONLINE_STGOUT == 1)); then
-      stgoutstep="stageout.loop.${loop}"
-    else
-      stgoutstep='stageout.out'
-    fi
+#  while ((time <= ETIME)); do
+#    loop=$((loop+1))
+#    if ((ONLINE_STGOUT == 1)); then
+#      stgoutstep="stageout.loop.${loop}"
+#    else
+#      stgoutstep='stageout.out'
+#    fi
     #-------------------
     # stage-in
     #-------------------
 
-    # anal
-    #-------------------
-    if ((loop == 1 && MAKEINIT != 1)); then
-      for m in $(seq $mmean); do
-        for q in $(seq $mem_np); do
-          path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
-          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
-        done
-      done
-    fi
+#    # anal
+#    #-------------------
+#    if ((loop == 1 && MAKEINIT != 1)); then
+#      for m in $(seq $mmean); do
+#        for q in $(seq $mem_np); do
+#          path="${time}/anal/${name_m[$m]}/init$(printf $SCALE_SFX $((q-1)))"
+#          echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((m-1)*mem_np+q))]}
+#        done
+#      done
+#    fi
 
 #    # anal_ocean
 #    #-------------------
@@ -569,22 +569,22 @@ else
 #        done
 #      fi
 #    fi
-
-    #-------------------
-    # stage-out
-    #-------------------
-
-#    #++++++
-#    if ((SIMPLE_STGOUT == 1)); then
-#    #++++++
-
-      # anal
-      #-------------------
-      if ((loop == 1 && MAKEINIT == 1)); then
-        path="${time}/anal"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      fi
-
+#
+#    #-------------------
+#    # stage-out
+#    #-------------------
+#
+##    #++++++
+##    if ((SIMPLE_STGOUT == 1)); then
+##    #++++++
+#
+#      # anal
+#      #-------------------
+#      if ((loop == 1 && MAKEINIT == 1)); then
+#        path="${time}/anal"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#      fi
+#
 #      # topo
 #      #-------------------
 #      if ((loop == 1 && TOPOOUT_OPT <= 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
@@ -621,155 +621,155 @@ else
 
       # hist
       #-------------------
-      if ((OUT_OPT <= 1)); then
+#      if ((OUT_OPT <= 1)); then
 #        for m in $(seq $mmean); do
 #          mem=${name_m[$m]}
 #          [ "$mem" = 'mean' ] && mem='meanf'
 #          path="${time}/hist/${mem}"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #        done
-        path="${time}/hist"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      elif ((OUT_OPT <= 2)); then
-        path="${time}/hist/meanf"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      fi
+#        path="${time}/hist"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#      elif ((OUT_OPT <= 2)); then
+#        path="${time}/hist/meanf"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#      fi
 
       # gues
       #-------------------
-      if ((OUT_OPT <= 3)); then
+#      if ((OUT_OPT <= 3)); then
 #        for m in $(seq $msprd); do
 #          path="${atime}/gues/${name_m[$m]}"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #        done
-        path="${atime}/gues"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      elif ((OUT_OPT <= 5)); then
-        path="${atime}/gues/mean"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        path="${atime}/gues/sprd"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-#        path="${atime}/gues/0001"
+#        path="${atime}/gues"
 #        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      fi
+#      elif ((OUT_OPT <= 5)); then
+#        path="${atime}/gues/mean"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        path="${atime}/gues/sprd"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+##        path="${atime}/gues/0001"
+##        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#      fi
 
-      # anal
-      #-------------------
-      if ((OUT_OPT <= 4 || (OUT_OPT <= 5 && loop % OUT_CYCLE_SKIP == 0) || atime > ETIME)); then
-#        for m in $(seq $msprd); do
-#          path="${atime}/anal/${name_m[$m]}"
-#          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-#        done
-        path="${atime}/anal"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      elif ((OUT_OPT <= 6)); then
-        path="${atime}/anal/mean"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        path="${atime}/anal/sprd"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-#        path="${atime}/anal/0001"
+#      # anal
+#      #-------------------
+#      if ((OUT_OPT <= 4 || (OUT_OPT <= 5 && loop % OUT_CYCLE_SKIP == 0) || atime > ETIME)); then
+##        for m in $(seq $msprd); do
+##          path="${atime}/anal/${name_m[$m]}"
+##          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+##        done
+#        path="${atime}/anal"
 #        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      fi
+#      elif ((OUT_OPT <= 6)); then
+#        path="${atime}/anal/mean"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        path="${atime}/anal/sprd"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+##        path="${atime}/anal/0001"
+##        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#      fi
 
       ### anal_ocean [mean]
 
-      # diag
-      #-------------------
-      if ((ADAPTINFL == 1)); then
-        path="${atime}/diag/infl"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      fi
-      if ((RTPS_INFL_OUT == 1)); then
-        path="${atime}/diag/rtps"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      fi
-      if ((NOBS_OUT == 1)); then
-        path="${atime}/diag/nobs"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      fi
-
-      # obsgues
-      #-------------------
-      if ((OBSOUT_OPT <= 2)); then
-#        for m in $(seq $MEMBER); do
-#          path="${atime}/obsgues/${name_m[$m]}"
+#      # diag
+#      #-------------------
+#      if ((ADAPTINFL == 1)); then
+#        path="${atime}/diag/infl"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#      fi
+#      if ((RTPS_INFL_OUT == 1)); then
+#        path="${atime}/diag/rtps"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#      fi
+#      if ((NOBS_OUT == 1)); then
+#        path="${atime}/diag/nobs"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#      fi
+#
+#      # obsgues
+#      #-------------------
+#      if ((OBSOUT_OPT <= 2)); then
+##        for m in $(seq $MEMBER); do
+##          path="${atime}/obsgues/${name_m[$m]}"
+##          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+##        done
+#        path="${atime}/obsgues"
+#        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#      fi
+#
+#      # log
+#      #-------------------
+#      if [ "$MPI_TYPE" = 'K' ]; then
+#        log_zeros='0'
+#      else
+#        log_zeros='000000'
+#      fi
+#
+#      if ((LOG_OPT <= 2)); then
+#        if ((LOG_TYPE == 1)); then
+##          path="${time}/log/scale_pp/0001_pp.conf"
+##          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+##          path="${time}/log/scale_pp/0001_LOG.pe000000"
+##          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+##          path="${time}/log/scale_pp/NOUT.${log_zeros}"
+##          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#          path="${time}/log/scale_init/0001_init.conf"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#          path="${time}/log/scale_init/0001_gradsbdy.conf"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#          path="${time}/log/scale_init/0001_LOG.pe000000"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#          if ((BDY_ENS == 1)); then
+#            path="${time}/log/scale_init/NOUT-1.${log_zeros}"
+#          else
+#            path="${time}/log/scale_init/NOUT.${log_zeros}"
+#          fi
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#        else
+##          path="${time}/log/scale_pp"
+##          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#          path="${time}/log/scale_init"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-#        done
-        path="${atime}/obsgues"
-        echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-      fi
-
-      # log
-      #-------------------
-      if [ "$MPI_TYPE" = 'K' ]; then
-        log_zeros='0'
-      else
-        log_zeros='000000'
-      fi
-
-      if ((LOG_OPT <= 2)); then
-        if ((LOG_TYPE == 1)); then
-#          path="${time}/log/scale_pp/0001_pp.conf"
+#        fi
+#      fi
+#      if ((LOG_OPT <= 3)); then
+#        if ((LOG_TYPE == 1)); then
+#          path="${time}/log/scale/0001_run.conf"
 #          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-#          path="${time}/log/scale_pp/0001_LOG.pe000000"
+#          path="${time}/log/scale/0001_LOG.pe000000"
 #          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-#          path="${time}/log/scale_pp/NOUT.${log_zeros}"
+#          path="${time}/log/scale/NOUT-1.${log_zeros}"
 #          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          path="${time}/log/scale_init/0001_init.conf"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          path="${time}/log/scale_init/0001_gradsbdy.conf"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          path="${time}/log/scale_init/0001_LOG.pe000000"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          if ((BDY_ENS == 1)); then
-            path="${time}/log/scale_init/NOUT-1.${log_zeros}"
-          else
-            path="${time}/log/scale_init/NOUT.${log_zeros}"
-          fi
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-        else
-#          path="${time}/log/scale_pp"
+#          path="${time}/log/scale/latlon_domain_catalogue.txt"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#        else
+#          path="${time}/log/scale"
 #          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-          path="${time}/log/scale_init"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        fi
-      fi
-      if ((LOG_OPT <= 3)); then
-        if ((LOG_TYPE == 1)); then
-          path="${time}/log/scale/0001_run.conf"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          path="${time}/log/scale/0001_LOG.pe000000"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          path="${time}/log/scale/NOUT-1.${log_zeros}"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          path="${time}/log/scale/latlon_domain_catalogue.txt"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-        else
-          path="${time}/log/scale"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        fi
-      fi
-      if ((LOG_OPT <= 4)); then
-        if ((LOG_TYPE == 1)); then
-          path="${atime}/log/obsope/obsope.conf"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          path="${atime}/log/obsope/LOG.pe000000"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          path="${atime}/log/obsope/NOUT.${log_zeros}"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          path="${atime}/log/letkf/letkf.conf"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          path="${atime}/log/letkf/LOG.pe000000"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-          path="${atime}/log/letkf/NOUT.${log_zeros}"
-          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-        else
-          path="${atime}/log/obsope"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-          path="${atime}/log/letkf"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-        fi
-      fi
+#        fi
+#      fi
+#      if ((LOG_OPT <= 4)); then
+#        if ((LOG_TYPE == 1)); then
+#          path="${atime}/log/obsope/obsope.conf"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#          path="${atime}/log/obsope/LOG.pe000000"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#          path="${atime}/log/obsope/NOUT.${log_zeros}"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#          path="${atime}/log/letkf/letkf.conf"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#          path="${atime}/log/letkf/LOG.pe000000"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#          path="${atime}/log/letkf/NOUT.${log_zeros}"
+#          echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#        else
+#          path="${atime}/log/obsope"
+#          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#          path="${atime}/log/letkf"
+#          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#        fi
+#      fi
 
 #    #++++++
 #    else
@@ -980,11 +980,11 @@ else
 #    #++++++
 #    fi # ((SIMPLE_STGOUT == 1))
 #    #++++++
-
-    #-------------------
-    time=$(datetime $time $LCYCLE s)
-    atime=$(datetime $time $LCYCLE s)
-  done
+#
+#    #-------------------
+#    time=$(datetime $time $LCYCLE s)
+#    atime=$(datetime $time $LCYCLE s)
+#  done
 
   #-------------------
   # stage-in

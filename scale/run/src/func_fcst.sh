@@ -248,42 +248,42 @@ EOF
 #-------------------------------------------------------------------------------
 # TMPOUT
 
-if ((TMPOUT_MODE == 1)); then
-#-------------------
-  echo "[Error] \$TMPOUT_MODE == 1 not available in this version!" >&2
-  exit 1
-#-------------------
-else
-#-------------------
-  lcycles=$((LCYCLE * CYCLE_SKIP))
-  time=$STIME
-  loop=0
-  while ((time <= ETIME)); do
-    loop=$((loop+1))
-    if ((ONLINE_STGOUT == 1)); then
-      stgoutstep="stageout.loop.${loop}"
-    else
-      stgoutstep='stageout.out'
-    fi
+#if ((TMPOUT_MODE == 1)); then
+##-------------------
+#  echo "[Error] \$TMPOUT_MODE == 1 not available in this version!" >&2
+#  exit 1
+##-------------------
+#else
+##-------------------
+#  lcycles=$((LCYCLE * CYCLE_SKIP))
+#  time=$STIME
+#  loop=0
+#  while ((time <= ETIME)); do
+#    loop=$((loop+1))
+#    if ((ONLINE_STGOUT == 1)); then
+#      stgoutstep="stageout.loop.${loop}"
+#    else
+#      stgoutstep='stageout.out'
+#    fi
+#
+#    for c in $(seq $CYCLE); do
+#      time2=$(datetime $time $((lcycles * (c-1))) s)
+#      if ((time2 <= ETIME)); then
+#        #-------------------
+#        # stage-in
+#        #-------------------
 
-    for c in $(seq $CYCLE); do
-      time2=$(datetime $time $((lcycles * (c-1))) s)
-      if ((time2 <= ETIME)); then
-        #-------------------
-        # stage-in
-        #-------------------
-
-        # anal
-        #-------------------
-        if ((MAKEINIT != 1)); then
-          for m in $(seq $fmember); do
-            mm=$(((c-1) * fmember + m))
-            for q in $(seq $mem_np); do
-              path="${time2}/anal/${name_m[$mm]}/init$(printf $SCALE_SFX $((q-1)))"
-              echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
-            done
-          done
-        fi
+#        # anal
+#        #-------------------
+#        if ((MAKEINIT != 1)); then
+#          for m in $(seq $fmember); do
+#            mm=$(((c-1) * fmember + m))
+#            for q in $(seq $mem_np); do
+#              path="${time2}/anal/${name_m[$mm]}/init$(printf $SCALE_SFX $((q-1)))"
+#              echo "${INDIR}/${path}|${path}" >> $STAGING_DIR/stagein.out.${mem2node[$(((mm-1)*mem_np+q))]}
+#            done
+#          done
+#        fi
 
 #        # anal_ocean
 #        #-------------------
@@ -393,12 +393,12 @@ else
 #        if ((SIMPLE_STGOUT == 1)); then
 #        #++++++
 
-          # anal
-          #-------------------
-          if ((MAKEINIT == 1)); then
-            path="${time2}/anal"
-            echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-          fi
+#          # anal
+#          #-------------------
+#          if ((MAKEINIT == 1)); then
+#            path="${time2}/anal"
+#            echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#          fi
 
 #          # topo
 #          #-------------------
@@ -442,76 +442,76 @@ else
 #            path="${time2}/fcst/${name_m[$m]}"
 #            echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
 #          done
-          path="${time2}/fcst"
-          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-
+#          path="${time2}/fcst"
+#          echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#
           ### anal_ocean [mean]
 
-          # log
-          #-------------------
-          if [ "$MPI_TYPE" = 'K' ]; then
-            log_zeros='0'
-          else
-            log_zeros='000000'
-          fi
-
-          if ((LOG_OPT <= 2)); then
-            if ((LOG_TYPE == 1)); then
-              if ((c == 1)); then
+#          # log
+#          #-------------------
+#          if [ "$MPI_TYPE" = 'K' ]; then
+#            log_zeros='0'
+#          else
+#            log_zeros='000000'
+#          fi
+#
+#          if ((LOG_OPT <= 2)); then
+#            if ((LOG_TYPE == 1)); then
+#              if ((c == 1)); then
 #                path="${time2}/log/fcst_scale_pp/${name_m[1]}_pp.conf"
 #                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
 #                path="${time2}/log/fcst_scale_pp/${name_m[1]}_LOG.pe000000"
 #                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
 #                path="${time2}/log/fcst_scale_pp/NOUT.${log_zeros}"
 #                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-                path="${time2}/log/fcst_scale_init/${name_m[1]}_init.conf"
-                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-                path="${time2}/log/fcst_scale_init/${name_m[1]}_gradsbdy.conf"
-                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-                path="${time2}/log/fcst_scale_init/${name_m[1]}_LOG.pe000000"
-                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-                if ((BDY_ENS == 1)); then
-                  path="${time2}/log/fcst_scale_init/NOUT-1.${log_zeros}"
-                else
-                  path="${time2}/log/fcst_scale_init/NOUT.${log_zeros}"
-                fi
-                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-              fi
-            else
+#                path="${time2}/log/fcst_scale_init/${name_m[1]}_init.conf"
+#                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#                path="${time2}/log/fcst_scale_init/${name_m[1]}_gradsbdy.conf"
+#                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#                path="${time2}/log/fcst_scale_init/${name_m[1]}_LOG.pe000000"
+#                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#                if ((BDY_ENS == 1)); then
+#                  path="${time2}/log/fcst_scale_init/NOUT-1.${log_zeros}"
+#                else
+#                  path="${time2}/log/fcst_scale_init/NOUT.${log_zeros}"
+#                fi
+#                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#              fi
+#            else
 #              path="${time2}/log/fcst_scale_pp"
 #              echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-              path="${time2}/log/fcst_scale_init"
-              echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-            fi
-          fi
-          if ((LOG_OPT <= 3)); then
-            if ((LOG_TYPE == 1)); then
-              if ((c == 1)); then
-                path="${time2}/log/fcst_scale/${name_m[1]}_run.conf"
-                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-                path="${time2}/log/fcst_scale/${name_m[1]}_LOG.pe000000"
-                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-                path="${time2}/log/fcst_scale/NOUT-1.${log_zeros}"
-                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-#                path="${time2}/log/fcst_scale/latlon_domain_catalogue.txt"
+#              path="${time2}/log/fcst_scale_init"
+#              echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#            fi
+#          fi
+#          if ((LOG_OPT <= 3)); then
+#            if ((LOG_TYPE == 1)); then
+#              if ((c == 1)); then
+#                path="${time2}/log/fcst_scale/${name_m[1]}_run.conf"
 #                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
-              fi
-            else
-              path="${time2}/log/fcst_scale"
-              echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
-            fi
-          fi
+#                path="${time2}/log/fcst_scale/${name_m[1]}_LOG.pe000000"
+#                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#                path="${time2}/log/fcst_scale/NOUT-1.${log_zeros}"
+#                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+##                path="${time2}/log/fcst_scale/latlon_domain_catalogue.txt"
+##                echo "${OUTDIR}/${path}|${path}" >> $STAGING_DIR/${stgoutstep}.1
+#              fi
+#            else
+#              path="${time2}/log/fcst_scale"
+#              echo "${OUTDIR}/${path}|${path}|d" >> $STAGING_DIR/${stgoutstep}
+#            fi
+#          fi
 
 #        #++++++
 #        fi # ((SIMPLE_STGOUT == 1))
 #        #++++++
-
-        #-------------------
-      fi
-    done
-
-    time=$(datetime $time $((lcycles * CYCLE)) s)
-  done
+#
+#        #-------------------
+#      fi
+#    done
+#
+#    time=$(datetime $time $((lcycles * CYCLE)) s)
+#  done
 
   #-------------------
   # stage-in
@@ -687,11 +687,11 @@ else
 #      time=$(datetime $time $((lcycles * CYCLE)) s)
 #    done
 #  fi # ((BDY_FORMAT >= 1))
-
-  #-------------------
-
-#-------------------
-fi
+#
+#  #-------------------
+#
+##-------------------
+#fi
 
 ### EFSO outputs...
 
@@ -749,9 +749,9 @@ if ((MYRANK == 0)); then
 fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -771,9 +771,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -801,9 +801,9 @@ else # local run directory: run multiple members as needed
 fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -822,9 +822,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -877,9 +877,9 @@ if ((MYRANK == 0)); then
 fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -918,9 +918,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -953,9 +953,9 @@ if ((loop == 1)); then
 fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -979,9 +979,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1017,9 +1017,9 @@ if ((MYRANK == 0)); then
 fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1075,9 +1075,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-     echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#     echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1093,9 +1093,9 @@ ensfcst_2 () {
 #echo
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1114,9 +1114,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------

@@ -317,6 +317,11 @@ TMPDAT_CONSTDB="${TMPROOT_CONSTDB}/${DAT_SUBDIR}"
 TMPDAT_BDYDATA="${TMPROOT_BDYDATA}/${DAT_SUBDIR}"
 TMPDAT_OBS="${TMPROOT_OBS}/${DAT_SUBDIR}"
 
+#-------
+if [ "$PRESET" = 'OFP' ]; then
+  TMPOUT=$OUTDIR
+fi
+
 #-------------------------------------------------------------------------------
 
 if ((PNETCDF == 1 && USE_TMPL == 1)); then

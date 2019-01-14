@@ -200,15 +200,17 @@ while [ ! -s "${jobscrp}.o${jobid}" ] && ((n < nmax)); do
   sleep 5s
 done
 
-mkdir -p $OUTDIR/exp/${jobid}_${job}_${STIME}
-cp -f $SCRP_DIR/config.main $OUTDIR/exp/${jobid}_${job}_${STIME}
-cp -f $SCRP_DIR/config.${job} $OUTDIR/exp/${jobid}_${job}_${STIME}
-cp -f $SCRP_DIR/config.nml.* $OUTDIR/exp/${jobid}_${job}_${STIME}
-cp -f $SCRP_DIR/${job}_job.sh $OUTDIR/exp/${jobid}_${job}_${STIME}
-cp -f ${jobscrp}.o${jobid} $OUTDIR/exp/${jobid}_${job}_${STIME}/job.o
-cp -f ${jobscrp}.e${jobid} $OUTDIR/exp/${jobid}_${job}_${STIME}/job.e
-( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${job}_${STIME}/version )
-( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${job}_${STIME}/version )
+backup_exp_setting $job $TMP $jobid ${job}_job.sh 'o e'
+
+#mkdir -p $OUTDIR/exp/${jobid}_${job}_${STIME}
+#cp -f $TMP/config.main $OUTDIR/exp/${jobid}_${job}_${STIME}
+#cp -f $TMP/config.${job} $OUTDIR/exp/${jobid}_${job}_${STIME}
+#cp -f $TMPDAT/conf//config.nml.* $OUTDIR/exp/${jobid}_${job}_${STIME}
+#cp -f $TMP/${job}_job.sh $OUTDIR/exp/${jobid}_${job}_${STIME}
+#cp -f ${jobscrp}.o${jobid} $OUTDIR/exp/${jobid}_${job}_${STIME}/job.o
+#cp -f ${jobscrp}.e${jobid} $OUTDIR/exp/${jobid}_${job}_${STIME}/job.e
+#( cd $SCRP_DIR ; git log -1 --format="SCALE-LETKF version %h (%ai)" > $OUTDIR/exp/${jobid}_${job}_${STIME}/version )
+#( cd $MODELDIR ; git log -1 --format="SCALE       version %h (%ai)" >> $OUTDIR/exp/${jobid}_${job}_${STIME}/version )
 
 if ((CLEAR_TMP == 1)); then
   safe_rm_tmpdir $TMPS
