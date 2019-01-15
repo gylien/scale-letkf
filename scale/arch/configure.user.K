@@ -38,7 +38,7 @@ FFREE     = -Free
 FFIXED    = -Fixed
 
 # TC vital DA
-TCV       = F
+TCV       = T
 
 # -- for Himawari-8 assimilatin on the K computer (T.Honda)
 # -- If you want to compile without RTTOV (Himawari assimilation),
