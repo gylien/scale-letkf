@@ -19,7 +19,11 @@ USERNAME=honda
 EXP=TEST1203_DTF250m_2mem
 EXP=TEST1203_DTF250m_15mem
 
-INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_250m_initbdy_pnetcdf_v180531"
+EXP=TEST1208_DTF250m_060mem
+EXP=TEST1208_DTF250m_100mem
+
+INDIR="/volume63/data/hp150019/honda/SCALE-LETKF/scale-productrun-CREST0222/OUTPUT/benchmark/d4_250m_initbdy_v180305"
+#INDIR="/volume63/data/hp150019/gylien/exp/scale-letkf/benchmark/d4_250m_initbdy_pnetcdf_v180531" # this path is a sybolic link to Honda's directory
 OUTDIR="/volume63/data/hp150019/${USERNAME}/exp/scale-letkf/benchmark/$EXP" # Directory for SCALE-LETKF output
 
 
@@ -123,11 +127,14 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 MEMBER=100         # Ensemble size
 NNODES=36720       # Number of nodes
 
-MEMBER=2         # Ensemble size
-NNODES=1440       # Number of nodes
+#MEMBER=2         # Ensemble size
+#NNODES=1440       # Number of nodes
 
-MEMBER=15         # Ensemble size
-NNODES=6120       # Number of nodes
+#MEMBER=15         # Ensemble size
+#NNODES=6120       # Number of nodes
+
+#MEMBER=60         # Ensemble size
+#NNODES=22320       # Number of nodes
 
 PPN=1              # Number of processes per node
 
