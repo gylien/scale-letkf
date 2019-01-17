@@ -94,17 +94,21 @@
 &PARAM_TRACER
  TRACER_TYPE = "TOMITA08",
 !! TRACER_TYPE = "SN14",
-! LIGHTNING_TYPE = 'TK78',
+ LIGHTNING_TYPE = 'TK78',
 /
 
-!&PARAM_ATMOS_PHY_TL
-!! ATMOS_PHY_TL_LUT_FILENAME = '/home/honda/scale_lt_devel_20180731/scale-rm/test/data/thunderlightning/LUT_TK1978_v.txt',
-! ATMOS_PHY_TL_LUT_FILENAME = ' /work/hp150019/f22013/SCALE-LETKF/scale-LT/scale_lt_devel_20181002/scale-rm/test/data/thunderlightning/LUT_TK1978_v.txt',
-! ITMAX = 500,
-! EPSILON = 1.d-10
-! NUTL_ITMAX = 100
+&PARAM_ATMOS_PHY_TL
+! ATMOS_PHY_TL_LUT_FILENAME = '/home/honda/scale_lt_devel_20180731/scale-rm/test/data/thunderlightning/LUT_TK1978_v.txt',
+ ATMOS_PHY_TL_LUT_FILENAME = ' /work/hp150019/f22013/SCALE-LETKF/scale-LT/scale_lt_devel_20181002/scale-rm/test/data/thunderlightning/LUT_TK1978_v.txt',
+ ITMAX = 500,
+ EPSILON = 1.d-10
+ NUTL_ITMAX = 100
 ! NUTR_TYPE = 'MG2001',
-!/
+!
+ NUTR_TYPE = 'F2013',
+ Eint = 120.d3,
+ R_neut = 8000.d0,
+/
 
 &PARAM_ATMOS
  ATMOS_DYN_TYPE    = "HEVI",

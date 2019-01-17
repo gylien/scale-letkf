@@ -6,9 +6,9 @@ SYS=ofp
 
 #EXP=8km_sc
 #. config/${EXP}/config.main.hakushu
-EXP=2km_CZ2003
-. config/${EXP}/config.main.$SYS
-. config/${EXP}/config.fcst
+CEXP=2km_CZ2003
+. config/${CEXP}/config.main.$SYS
+. config/${CEXP}/config.fcst
 
 #
 LETKF_RUN="$(pwd)"

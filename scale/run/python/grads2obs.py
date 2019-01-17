@@ -12,8 +12,7 @@ import struct
 #top = "/data6/honda/SCALE-LETKF/scale_lt_devel_20181002/OUTPUT"
 #exp = "8km_sc"
 
-exp = "2km_CZ2003"
-#top = "/home/honda/work/OUTPUT"
+exp = "2km_CZ2003_LT"
 top = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT" 
 
 MIN_RADAR_REF = 15.0
@@ -23,11 +22,11 @@ OVERW = True
 #OVERW = False
 
 # file specification
-XMAX = 144
-YMAX = 144
+XMAX = 160
+YMAX = 160
 ZMAX = 40
-TMAX = 25
-OTMAX = 25 # DEBUG
+TMAX = 13
+OTMAX = 12 # DEBUG
 NVAR = 2 # Z & VR
 
 DX = 2000.0
@@ -192,7 +191,7 @@ def write_VR_obs(fn,z3d,vr3d,idxs):
 
 #########
 
-time = datetime(2000,1,1,0,0)
+time = datetime(2000, 1, 1, 0, 35, 0)
 main(time)
 
 

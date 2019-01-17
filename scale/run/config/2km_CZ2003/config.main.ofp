@@ -32,7 +32,7 @@ DATA_BDY_WRF=
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 DATA_BDY_GRADS=
 
-OBS="/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/2km_CZ2003/obs"
+OBS="/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/${EXP}/obs"
 OBSNCEP=
 
 #===============================================================================
@@ -89,8 +89,8 @@ LTIMESLOT=300      # Timeslot interval for 4D-LETKF (second)
 MEMBER=20           # Ensemble size
 #MEMBER=3           # Ensemble size
 
-#NNODES=42           # Number of nodes # single
-NNODES=2           # Number of nodes # single
+NNODES=42           # Number of nodes # single
+#NNODES=2           # Number of nodes # single
 PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process

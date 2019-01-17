@@ -5,10 +5,10 @@
 #
 #===============================================================================
 
-STIME='20000101000000'
-ETIME='20000101000000'
-#STIME='20000101003500'
-#ETIME='20000101003500'
+#STIME='20000101000000'
+#ETIME='20000101000000'
+STIME='20000101003500'
+ETIME='20000101003500'
 #MEMBERS=`seq 1 20`
 MEMBERS='mean'
 CYCLE=1
@@ -16,21 +16,22 @@ CYCLE_SKIP=1
 ISTEP=
 FSTEP=
 TIME_LIMIT='02:00:00'
+TIME_LIMIT='00:30:00'
 
 #===============================================================================
 # Forecast settings
 
 
 
-FCSTLEN=2100        # SCALE forecast length in the forecast mode (second)
-FCSTOUT=2100 
+#FCSTLEN=2100        # SCALE forecast length in the forecast mode (second)
+#FCSTOUT=2100 
 
-#FCSTLEN=3300 # 55min (until 90min)       # SCALE forecast length in the forecast mode (second)
-#FCSTOUT=300 
+FCSTLEN=3300 # 55min (until 90min)       # SCALE forecast length in the forecast mode (second)
+FCSTOUT=300 
 
 #===============================================================================
 
-MAKEINIT=1       # 0: No
+MAKEINIT=0       # 0: No
                  # 1: Yes
 
 #===============================================================================
