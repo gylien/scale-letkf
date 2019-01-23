@@ -10,6 +10,7 @@ OVERW = True
 
 #exp = "8km_sc"
 exp = "2km_CZ2003"
+exp = "500m_CZ2003_LT"
 
 #top = "/data6/honda/SCALE-LETKF/scale_lt_devel_20181002/OUTPUT"
 #top = "/home/honda/work/OUTPUT"
@@ -20,22 +21,23 @@ top = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT"
 ##ZMAX = 30
 
 # ensemble size
-MEMBER = 20
+MEMBER = 40
 
 #SCALE_NP = 1
-NPX = 16
-NPY = 8
+NPX = 32
+NPY = 32
 SCALE_NP = NPX * NPY
 
 # variable list
 # MOMX/Y/Z needs a consideration for a staggered grid system (2018/10/13)
-VAR_LIST = ["RHOT","MOMX","MOMY","MOMZ"]
+#VAR_LIST = ["RHOT","MOMX","MOMY","MOMZ"]
+VAR_LIST = ["RHOT"]
 
 # Horizontal buffer size (grids) where no perturbations are added
 HBUF = 2
 # Vertical buffer size (grids) where no perturbations are added
-VTBUF = 1 # top
-VBBUF = 1 # bottom
+VTBUF = 38 # top
+VBBUF = 0 # bottom
 
 def nc_name(top,exp,time,typ,m,p):
    if m == 0:
@@ -54,7 +56,6 @@ def nc_name(top,exp,time,typ,m,p):
 def main(time):
 
   typ = "anal"
-  m = 1
   p = 0
 
 
@@ -131,8 +132,8 @@ def main(time):
  
      
         #if varname == "RHOT":
-        sigma = 3.0 # (K) or (m/s)
-        #sigma = 0.5 # (K) or (m/s)
+        #sigma = 3.0 # (K) or (m/s)
+        sigma = 0.1 # (K) or (m/s) # for ensemble-based correlation analysis
         #sigma = 0.0 # (K) or (m/s)
         rand3d = np.random.normal(loc=0.0,scale=sigma,size=rsize)
 
@@ -165,5 +166,6 @@ def main(time):
 #########
 
 time = datetime(2000,1,1,0,35,0)
+time = datetime(2000,1,1,0,0,0)
 main(time)
 
