@@ -1338,6 +1338,8 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 
   call scale_calc_z(topo, height)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = height
+  v3dgh(KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = topo(:,:) ! TH
+  v3dgh(1,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = 0.0d0 ! TH
 
   ! Communicate the lateral halo areas
   !---------------------------------------------------------
@@ -1370,9 +1372,9 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   !---------------------------------------------------------
 
 !$OMP PARALLEL DO PRIVATE(j,i)
-  do j = 1, nlath
-    do i = 1, nlonh
-      v2dgh(i,j,iv2dd_lsmask) = min(max(v3dgh(KHALO,i,j,iv3dd_hgt) - 10.0d0, 0.0d0), 1.0d0)
+  do j = 1, nlat
+    do i = 1, nlon
+      v2dgh(i+IHALO,j+JHALO,iv2dd_lsmask) = min(max(topo(i,j) - 10.0d0, 0.0d0), 1.0d0)
     enddo
   enddo
 !$OMP END PARALLEL DO
@@ -1395,6 +1397,10 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 !
 ! Most 2D diagnostic variables (except for iv2dd_rain) have already been prepared with lateral halo areas.
 !
+
+  call COMM_vars8( v2dgh(:,:,iv2dd_lsmask), iv2dd_lsmask )
+  call COMM_wait ( v2dgh(:,:,iv2dd_lsmask), iv2dd_lsmask )
+
 !  do iv2d = 1, nv2dd
 !    call COMM_vars8( v2dgh(:,:,iv2d), iv2d )
 !  end do

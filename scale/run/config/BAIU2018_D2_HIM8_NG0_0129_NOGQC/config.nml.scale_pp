@@ -80,7 +80,7 @@ OFFLINE_PARENT_PRC_NUM_Y = 6
 
 &PARAM_PRC
  PRC_NUM_X      = 12,
- PRC_NUM_Y      = 11,
+ PRC_NUM_Y      = 12,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -94,7 +94,7 @@ OFFLINE_PARENT_PRC_NUM_Y = 6
 &PARAM_INDEX
  KMAX = 56,
  IMAX = 48,
- JMAX = 56,
+ JMAX = 48,
 /
 
 &PARAM_LAND_INDEX

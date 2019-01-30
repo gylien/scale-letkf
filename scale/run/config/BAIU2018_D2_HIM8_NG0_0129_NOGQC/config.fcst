@@ -5,11 +5,20 @@
 #
 #===============================================================================
 
-STIME='20180630120000'
-ETIME='20180630120000'
+STIME='20180630000000'
+ETIME='20180630000000'
 TIME_LIMIT='0:20:00'
 #MEMBERS='mean mdet '`seq 1 11`
 MEMBERS="mean"
+
+STIME='20180702000000'
+ETIME='20180702000000'
+STIME='20180701120000'
+ETIME='20180701120000'
+TIME_LIMIT='5:00:00'
+#MEMBERS=`seq 4 3`
+MEMBERS='mean mdet '`seq 1 3`
+
 CYCLE=1
 CYCLE_SKIP=1
 ISTEP=
@@ -18,12 +27,12 @@ FSTEP=
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=3600        # SCALE forecast length in the forecast mode (second)
-FCSTOUT=3600
+FCSTLEN=432000        # SCALE forecast length in the forecast mode (second)
+FCSTOUT=21600
 
 #===============================================================================
 
-MAKEINIT=1      # 0: No
+MAKEINIT=0      # 0: No
                  # 1: Yes
 
 #===============================================================================
@@ -39,7 +48,7 @@ TOPOOUT_OPT=1    # 1:   o
                  # 2:   (none)
 
                  #      landuse
-LANDUSEOUT_OPT=1 # 1:   o
+LANDUSEOUT_OPT=2 # 1:   o
                  # 2:   (none)
 
                  #      bdy

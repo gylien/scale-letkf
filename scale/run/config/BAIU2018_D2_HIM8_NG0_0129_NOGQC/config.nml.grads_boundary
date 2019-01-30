@@ -15,9 +15,9 @@
 &grdvar  item='lat',     dtype='linear',  swpoint=-90.0d0, dd=0.5d0 /
 &grdvar  item='plev',    dtype='levels',  lnum=31, lvars=100000,97500,95000,92500,90000,85000,80000,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,20000,15000,10000,7000,5000,3000,2000,1000,700,500,300,200,100, /
 &grdvar  item='MSLP',    dtype='map',     fname='--DIR--/bdysfc', startrec=1,  totalrec=7   /
-&grdvar  item='PSFC',    dtype='map',     fname='--DIR--/bdysfc', startrec=2,  totalrec=7   /
+rgrdvar  item='PSFC',    dtype='map',     fname='--DIR--/bdysfc', startrec=2,  totalrec=7   /
 &grdvar  item='U10',     dtype='map',     fname='--DIR--/bdysfc', startrec=3,  totalrec=7   /
-&grdvar  item='V10',     dtype='map',     fname='--DIR--/bdysfc', startrec=4,  totalrec=7   /
+rgrdvar  item='V10',     dtype='map',     fname='--DIR--/bdysfc', startrec=4,  totalrec=7   /
 &grdvar  item='T2',      dtype='map',     fname='--DIR--/bdysfc', startrec=5,  totalrec=7   /
 &grdvar  item='RH2',     dtype='map',     fname='--DIR--/bdysfc', startrec=6,  totalrec=7   /
 &grdvar  item='TOPO',    dtype='map',     fname='--DIR--/bdysfc', startrec=7,  totalrec=7   /
