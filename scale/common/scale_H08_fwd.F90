@@ -86,16 +86,15 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
        & errorstatus_fatal,   &
        & platform_name,       &
        & inst_name,           &
-       & q_mixratio_to_ppmv,  &
        & qmin ! H08
 
   ! rttov_types contains definitions of all RTTOV data types
   USE rttov_types, ONLY :     &
        & rttov_options,       &
        & rttov_coefs,         &
-       & profile_type,        &
-       & transmission_type,   &
-       & radiance_type,       &
+       & rttov_profile,       &
+       & rttov_transmission,  &
+       & rttov_radiance,      &
        & rttov_chanprof,      &
        & rttov_emissivity,    &
        & rttov_reflectance
@@ -155,7 +154,6 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
 
   INTEGER, INTENT(IN) :: nprof
   INTEGER, INTENT(IN) :: nlevels
-  integer(kind=jpim):: icecld_ish=4, icecld_idg=0  !improved Baran, new in rttov11.2 recommended in  Rttov11
 ! ###
 
   Real(r_size),INTENT(IN) :: tmp_p(nlevels, nprof)
@@ -194,13 +192,13 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   TYPE(rttov_options)                  :: opts           ! Options structure
   TYPE(rttov_coefs)                    :: coefs          ! Coefficients structure
   TYPE(rttov_chanprof),    ALLOCATABLE :: chanprof(:)    ! Input channel/profile list
-  TYPE(profile_type),      ALLOCATABLE :: profiles(:)    ! Input profiles
+  TYPE(rttov_profile),      ALLOCATABLE :: profiles(:)    ! Input profiles
   LOGICAL(KIND=jplm),      ALLOCATABLE :: calcemis(:)    ! Flag to indicate calculation of emissivity within RTTOV
   TYPE(rttov_emissivity),  ALLOCATABLE :: emissivity(:)  ! Input/output surface emissivity
   LOGICAL(KIND=jplm),      ALLOCATABLE :: calcrefl(:)    ! Flag to indicate calculation of BRDF within RTTOV
   TYPE(rttov_reflectance), ALLOCATABLE :: reflectance(:) ! Input/output surface BRDF
-  TYPE(transmission_type)              :: transmission   ! Output transmittances
-  TYPE(radiance_type)                  :: radiance       ! Output radiances
+  TYPE(rttov_transmission)             :: transmission   ! Output transmittances
+  TYPE(rttov_radiance)                 :: radiance       ! Output radiances
 
   INTEGER(KIND=jpim)                   :: errorstatus    ! Return error status of RTTOV subroutine calls
 
@@ -516,16 +514,19 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
   !========== READ profiles == start =============
   if(debug) WRITE(6,*) 'START SUBSTITUTE PROFILE'
   DO iprof = 1, nprof
+
+    profiles(iprof) % gas_units = 1 ! kg/kg
+
     profiles(iprof)%p(:)=real(tmp_p(:,iprof),kind=jprb) * 0.01_jprb  ! (hpa)
     profiles(iprof)%t(:)=real(tmp_t(:,iprof),kind=jprb)
-    profiles(iprof)%q(:)=real(tmp_qv(:,iprof),kind=jprb) * q_mixratio_to_ppmv ! (ppmv)
+    profiles(iprof)%q(:)=real(tmp_qv(:,iprof),kind=jprb) ! (kg/kg)
     profiles(iprof)%s2m%t=real(tmp_t2m(iprof),kind=jprb)
-    profiles(iprof)%s2m%q=real(tmp_q2m(iprof),kind=jprb) * q_mixratio_to_ppmv ! (ppmv)
+    profiles(iprof)%s2m%q=real(tmp_q2m(iprof),kind=jprb) ! (kg/kg)
 
-    if(profiles(iprof)%s2m%q < qmin) profiles(iprof)%s2m%q = qmin + qmin * 0.01_jprb
-    do ilev=1,nlevels
-      if(profiles(iprof)%q(ilev) < qmin) profiles(iprof)%q(ilev) = qmin + qmin * 0.01_jprb
-    enddo
+!    if(profiles(iprof)%s2m%q < qmin) profiles(iprof)%s2m%q = qmin + qmin * 0.01_jprb
+!    do ilev=1,nlevels
+!      if(profiles(iprof)%q(ilev) < qmin) profiles(iprof)%q(ilev) = qmin + qmin * 0.01_jprb
+!    enddo
 
     profiles(iprof)%s2m%p=real(tmp_p2m(iprof),kind=jprb) * 0.01_jprb ! (hPa)
     profiles(iprof)%s2m%u=real(tmp_u2m(iprof),kind=jprb)
@@ -591,9 +592,10 @@ SUBROUTINE SCALE_RTTOV_fwd(nchannels,&
     if( opts % rt_ir % addclouds ) then
       ! Cloud variables for cloud scattering scheme 
 
-      profiles(iprof) % ish = icecld_ish  !ice water shape
-      profiles(iprof) % idg = icecld_idg  !ice water effective diameter 
-      profiles(iprof) % icede(:)= 0._jprb !ice effective diameter, set non-zero if you give by yourself
+!      profiles(iprof) % ish = icecld_ish  !ice water shape
+!      profiles(iprof) % idg = icecld_idg  !ice water effective diameter 
+!      profiles(iprof) % icede(:)= 0._jprb !ice effective diameter, not used in Baran scheme
+      profiles(iprof) % ice_scheme = 2 ! Baran scheme
 
       profiles(iprof) % cloud(:,:) = 0._jprb
       profiles(iprof) % cfrac(:)   = 0._jprb

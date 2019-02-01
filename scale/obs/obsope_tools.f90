@@ -20,12 +20,12 @@ MODULE obsope_tools
 !    MPI_COMM_d => LOCAL_COMM_WORLD
   use scale_grid_index, only: &
     KHALO, IHALO, JHALO
-#ifdef H08
-  use scale_grid, only: &
-    DX, DY,    &
-    BUFFER_DX, &
-    BUFFER_DY
-#endif
+!#ifdef H08
+!  use scale_grid, only: &
+!    DX, DY,    &
+!    BUFFER_DX, &
+!    BUFFER_DY
+!#endif
 
   IMPLICIT NONE
   PUBLIC
@@ -89,35 +89,35 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
   character(len=4) :: nstr
   character(len=timer_name_width) :: timer_str
 
-#ifdef H08
-! -- for Himawari-8 obs --
-  INTEGER :: nallprof ! H08: Num of all profiles (entire domain) required by RTTOV
-  INTEGER :: ns ! H08 obs count
-  INTEGER :: nprof_H08 ! num of H08 obs
-  REAL(r_size),ALLOCATABLE :: ri_H08(:),rj_H08(:)
-  REAL(r_size),ALLOCATABLE :: lon_H08(:),lat_H08(:)
-  REAL(r_size),ALLOCATABLE :: tmp_ri_H08(:),tmp_rj_H08(:)
-  REAL(r_size),ALLOCATABLE :: tmp_lon_H08(:),tmp_lat_H08(:)
-
-  REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
-  REAL(r_size),ALLOCATABLE :: yobs_H08_clr(:)
-  INTEGER :: ch
-  INTEGER,ALLOCATABLE :: qc_H08(:)
-
-! -- Rejecting obs over the buffer regions. --
+!#ifdef H08
+!! -- for Himawari-8 obs --
+!  INTEGER :: nallprof ! H08: Num of all profiles (entire domain) required by RTTOV
+!  INTEGER :: ns ! H08 obs count
+!  INTEGER :: nprof_H08 ! num of H08 obs
+!  REAL(r_size),ALLOCATABLE :: ri_H08(:),rj_H08(:)
+!  REAL(r_size),ALLOCATABLE :: lon_H08(:),lat_H08(:)
+!  REAL(r_size),ALLOCATABLE :: tmp_ri_H08(:),tmp_rj_H08(:)
+!  REAL(r_size),ALLOCATABLE :: tmp_lon_H08(:),tmp_lat_H08(:)
 !
-! bris: "ri" at the wetern end of the domain excluding buffer regions
-! brie: "ri" at the eastern end of the domain excluding buffer regions
-! bris: "rj" at the southern end of the domain excluding buffer regions
-! bris: "rj" at the northern end of the domain excluding buffer regions
+!  REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
+!  REAL(r_size),ALLOCATABLE :: yobs_H08_clr(:)
+!  INTEGER :: ch
+!  INTEGER,ALLOCATABLE :: qc_H08(:)
 !
-! e.g.,   ri:    ...bris...........brie...
-!             buffer |  NOT buffer  | buffer
-!
-!
-  REAL(r_size) :: bris, brie
-  REAL(r_size) :: brjs, brje
-#endif
+!! -- Rejecting obs over the buffer regions. --
+!!
+!! bris: "ri" at the wetern end of the domain excluding buffer regions
+!! brie: "ri" at the eastern end of the domain excluding buffer regions
+!! bris: "rj" at the southern end of the domain excluding buffer regions
+!! bris: "rj" at the northern end of the domain excluding buffer regions
+!!
+!! e.g.,   ri:    ...bris...........brie...
+!!             buffer |  NOT buffer  | buffer
+!!
+!!
+!  REAL(r_size) :: bris, brie
+!  REAL(r_size) :: brjs, brje
+!#endif
 
 ! -- for TC vital assimilation --
 !  INTEGER :: obs_set_TCX, obs_set_TCY, obs_set_TCP ! obs set
@@ -132,13 +132,13 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
   call mpi_timer('', 2)
 
-#ifdef H08
-!  call phys2ij(MSLP_TC_LON,MSLP_TC_LAT,MSLP_TC_rig,MSLP_TC_rjg)
-  bris = real(BUFFER_DX/DX,r_size) + real(IHALO,r_size) 
-  brjs = real(BUFFER_DY/DY,r_size) + real(JHALO,r_size)
-  brie = (real(nlong+2*IHALO,r_size) - bris)
-  brje = (real(nlatg+2*JHALO,r_size) - brjs)
-#endif
+!#ifdef H08
+!!  call phys2ij(MSLP_TC_LON,MSLP_TC_LAT,MSLP_TC_rig,MSLP_TC_rjg)
+!  bris = real(BUFFER_DX/DX,r_size) + real(IHALO,r_size) 
+!  brjs = real(BUFFER_DY/DY,r_size) + real(JHALO,r_size)
+!  brie = (real(nlong+2*IHALO,r_size) - bris)
+!  brje = (real(nlatg+2*JHALO,r_size) - brjs)
+!#endif
 
 !-------------------------------------------------------------------------------
 ! First scan of all observation data: Compute their horizontal location and time
@@ -409,10 +409,10 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
   if (obsda_return .and. nitmax > 1 .and. nobs > 0) then
     allocate (qc_p(nobs))
-#ifdef H08
-    allocate (lev_p(nobs))
-    allocate (val2_p(nobs))
-#endif
+!#ifdef H08
+!    allocate (lev_p(nobs))
+!    allocate (val2_p(nobs))
+!#endif
   end if
 
   allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
@@ -427,10 +427,10 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
 
       if (nobs > 0) then
         obsda%qc(1:nobs) = iqc_undef
-#ifdef H08
-!        obsda%lev(1:nobs) = 0.0d0
-!        obsda%val2(1:nobs) = 0.0d0
-#endif
+!#ifdef H08
+!!        obsda%lev(1:nobs) = 0.0d0
+!!        obsda%val2(1:nobs) = 0.0d0
+!#endif
       end if
 
       ! Observations not in the assimilation time window
@@ -471,64 +471,64 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:read_ens_history(t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
 
-#ifdef H08
-          ELSEIF( OBS_IN_FORMAT(iof) == 3) THEN ! for H08 obs (OBS_IN_FORMAT(iof) = 3) ! H08
-
-            nprof_H08 = 0
-!            nobs_0 = nobs
-            nallprof = obs(iof)%nobs/nch
-
-            ALLOCATE(tmp_ri_H08(nallprof))
-            ALLOCATE(tmp_rj_H08(nallprof))
-            ALLOCATE(tmp_lon_H08(nallprof))
-            ALLOCATE(tmp_lat_H08(nallprof))
-
-            do n = 1, nallprof
-              ns = (n - 1) * nch + 1
-              if (obs(iof)%dif(ns) > slot_lb(islot) .and. obs(iof)%dif(ns) <= slot_ub(islot)) then
-!                nslot = nslot + 1
-                call phys2ij(obs(iof)%lon(ns),obs(iof)%lat(ns),rig,rjg)
-                call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
-
-                if (myrank_d == proc) then
-                  nprof_H08 = nprof_H08 + 1 ! num of prof in myrank node
-                  tmp_ri_H08(nprof_H08) = ritmp
-                  tmp_rj_H08(nprof_H08) = rjtmp
-                  tmp_lon_H08(nprof_H08) = obs(iof)%lon(ns)
-                  tmp_lat_H08(nprof_H08) = obs(iof)%lat(ns)
-
-!                  nobs = nobs + nch
-!                  nobs_slot = nobs_slot + 1
-                  obsda%set(nobs-nch+1:nobs) = iof
-                  obsda%ri(nobs-nch+1:nobs) = rig
-                  obsda%rj(nobs-nch+1:nobs) = rjg
-                  ri(nobs-nch+1:nobs) = ritmp
-                  rj(nobs-nch+1:nobs) = rjtmp
-                  do ch = 1, nch
-                    obsda%idx(nobs-nch+ch) = ns + ch - 1
-                  enddo
-
-                end if ! [ myrank_d == proc ]
-              end if ! [ obs(iof)%dif(n) > slot_lb(islot) .and. obs(iof)%dif(n) <= slot_ub(islot) ]
-            end do ! [ n = 1, nallprof ]
-
-            IF(nprof_H08 >=1)THEN
-              ALLOCATE(ri_H08(nprof_H08))
-              ALLOCATE(rj_H08(nprof_H08))
-              ALLOCATE(lon_H08(nprof_H08))
-              ALLOCATE(lat_H08(nprof_H08))
-
-              ri_H08 = tmp_ri_H08(1:nprof_H08)
-              rj_H08 = tmp_rj_H08(1:nprof_H08)
-              lon_H08 = tmp_lon_H08(1:nprof_H08)
-              lat_H08 = tmp_lat_H08(1:nprof_H08)
-
-            ENDIF
-
-            DEALLOCATE(tmp_ri_H08,tmp_rj_H08)
-            DEALLOCATE(tmp_lon_H08,tmp_lat_H08)
-
-#endif
+!#ifdef H08
+!          ELSEIF( OBS_IN_FORMAT(iof) == 3) THEN ! for H08 obs (OBS_IN_FORMAT(iof) = 3) ! H08
+!
+!            nprof_H08 = 0
+!!            nobs_0 = nobs
+!            nallprof = obs(iof)%nobs/nch
+!
+!            ALLOCATE(tmp_ri_H08(nallprof))
+!            ALLOCATE(tmp_rj_H08(nallprof))
+!            ALLOCATE(tmp_lon_H08(nallprof))
+!            ALLOCATE(tmp_lat_H08(nallprof))
+!
+!            do n = 1, nallprof
+!              ns = (n - 1) * nch + 1
+!              if (obs(iof)%dif(ns) > slot_lb(islot) .and. obs(iof)%dif(ns) <= slot_ub(islot)) then
+!!                nslot = nslot + 1
+!                call phys2ij(obs(iof)%lon(ns),obs(iof)%lat(ns),rig,rjg)
+!                call rij_g2l_auto(proc,rig,rjg,ritmp,rjtmp)
+!
+!                if (myrank_d == proc) then
+!                  nprof_H08 = nprof_H08 + 1 ! num of prof in myrank node
+!                  tmp_ri_H08(nprof_H08) = ritmp
+!                  tmp_rj_H08(nprof_H08) = rjtmp
+!                  tmp_lon_H08(nprof_H08) = obs(iof)%lon(ns)
+!                  tmp_lat_H08(nprof_H08) = obs(iof)%lat(ns)
+!
+!!                  nobs = nobs + nch
+!!                  nobs_slot = nobs_slot + 1
+!                  obsda%set(nobs-nch+1:nobs) = iof
+!                  obsda%ri(nobs-nch+1:nobs) = rig
+!                  obsda%rj(nobs-nch+1:nobs) = rjg
+!                  ri(nobs-nch+1:nobs) = ritmp
+!                  rj(nobs-nch+1:nobs) = rjtmp
+!                  do ch = 1, nch
+!                    obsda%idx(nobs-nch+ch) = ns + ch - 1
+!                  enddo
+!
+!                end if ! [ myrank_d == proc ]
+!              end if ! [ obs(iof)%dif(n) > slot_lb(islot) .and. obs(iof)%dif(n) <= slot_ub(islot) ]
+!            end do ! [ n = 1, nallprof ]
+!
+!            IF(nprof_H08 >=1)THEN
+!              ALLOCATE(ri_H08(nprof_H08))
+!              ALLOCATE(rj_H08(nprof_H08))
+!              ALLOCATE(lon_H08(nprof_H08))
+!              ALLOCATE(lat_H08(nprof_H08))
+!
+!              ri_H08 = tmp_ri_H08(1:nprof_H08)
+!              rj_H08 = tmp_rj_H08(1:nprof_H08)
+!              lon_H08 = tmp_lon_H08(1:nprof_H08)
+!              lat_H08 = tmp_lat_H08(1:nprof_H08)
+!
+!            ENDIF
+!
+!            DEALLOCATE(tmp_ri_H08,tmp_rj_H08)
+!            DEALLOCATE(tmp_lon_H08,tmp_lat_H08)
+!
+!#endif
 
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(nn,n,iof,ril,rjl,rk)
@@ -582,83 +582,83 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
             end do ! [ nn = n1, n2 ]
 !$OMP END PARALLEL DO
 
-#ifdef H08
-          ELSEIF((OBS_IN_FORMAT(iof) == 3).and.(nprof_H08 >=1 ))THEN ! H08
-! -- Note: Trans_XtoY_H08 is called without OpenMP but it can use a parallel (with OpenMP) RTTOV routine
+!#ifdef H08
+!          ELSEIF((OBS_IN_FORMAT(iof) == 3).and.(nprof_H08 >=1 ))THEN ! H08
+!! -- Note: Trans_XtoY_H08 is called without OpenMP but it can use a parallel (with OpenMP) RTTOV routine
+!!
+!            !------
+!            if (.not. USE_OBS(23)) then
+!              obsda%qc(nobs_0+1:nobs) = iqc_otype
+!            else
+!            !------
 !
-            !------
-            if (.not. USE_OBS(23)) then
-              obsda%qc(nobs_0+1:nobs) = iqc_otype
-            else
-            !------
-
-            ALLOCATE(yobs_H08(nprof_H08*nch))
-            ALLOCATE(yobs_H08_clr(nprof_H08*nch))
-            ALLOCATE(plev_obs_H08(nprof_H08*nch))
-            ALLOCATE(qc_H08(nprof_H08*nch))
-
-            CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
-                                lon_H08,lat_H08,v3dg,v2dg,&
-                                yobs_H08,plev_obs_H08,&
-                                qc_H08,yobs_H08_clr=yobs_H08_clr)
-
-! Clear sky yobs(>0)
-! Cloudy sky yobs(<0)
-
-            obsda%qc(nobs_0+1:nobs) = iqc_obs_bad
-
-            ns = 0
-            DO nn = nobs_0 + 1, nobs
-              ns = ns + 1
-
-              obsda%val(nn) = yobs_H08(ns)
-              obsda%qc(nn) = qc_H08(ns)
-
-              if(obsda%qc(nn) == iqc_good)then
-                rig = obsda%ri(nn)
-                rjg = obsda%rj(nn)
-
-! -- tentative treatment around the TC center --
-!                dist_MSLP_TC = sqrt(((rig - MSLP_TC_rig) * DX)**2&
-!                                   +((rjg - MSLP_TC_rjg) * DY)**2)
-
-!                if(dist_MSLP_TC <= dist_MSLP_TC_MIN)then
+!            ALLOCATE(yobs_H08(nprof_H08*nch))
+!            ALLOCATE(yobs_H08_clr(nprof_H08*nch))
+!            ALLOCATE(plev_obs_H08(nprof_H08*nch))
+!            ALLOCATE(qc_H08(nprof_H08*nch))
+!
+!            CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
+!                                lon_H08,lat_H08,v3dg,v2dg,&
+!                                yobs_H08,plev_obs_H08,&
+!                                qc_H08,yobs_H08_clr=yobs_H08_clr)
+!
+!! Clear sky yobs(>0)
+!! Cloudy sky yobs(<0)
+!
+!            obsda%qc(nobs_0+1:nobs) = iqc_obs_bad
+!
+!            ns = 0
+!            DO nn = nobs_0 + 1, nobs
+!              ns = ns + 1
+!
+!              obsda%val(nn) = yobs_H08(ns)
+!              obsda%qc(nn) = qc_H08(ns)
+!
+!              if(obsda%qc(nn) == iqc_good)then
+!                rig = obsda%ri(nn)
+!                rjg = obsda%rj(nn)
+!
+!! -- tentative treatment around the TC center --
+!!                dist_MSLP_TC = sqrt(((rig - MSLP_TC_rig) * DX)**2&
+!!                                   +((rjg - MSLP_TC_rjg) * DY)**2)
+!
+!!                if(dist_MSLP_TC <= dist_MSLP_TC_MIN)then
+!!                  obsda%qc(nn) = iqc_obs_bad
+!!                endif
+!
+!! -- Rejecting Himawari-8 obs over the buffer regions. --
+!                if((rig <= bris) .or. (rig >= brie) .or.&
+!                   (rjg <= brjs) .or. (rjg >= brje))then
 !                  obsda%qc(nn) = iqc_obs_bad
 !                endif
-
-! -- Rejecting Himawari-8 obs over the buffer regions. --
-                if((rig <= bris) .or. (rig >= brie) .or.&
-                   (rjg <= brjs) .or. (rjg >= brje))then
-                  obsda%qc(nn) = iqc_obs_bad
-                endif
-              endif
-
+!              endif
 !
-!  NOTE: T.Honda (10/16/2015)
-!  The original H08 obs does not inlcude the level information.
-!  However, we have the level information derived by RTTOV (plev_obs_H08) here, 
-!  so that we substitute the level information into obsda%lev.  
-!  The substituted level information is used in letkf_tools.f90
+!!
+!!  NOTE: T.Honda (10/16/2015)
+!!  The original H08 obs does not inlcude the level information.
+!!  However, we have the level information derived by RTTOV (plev_obs_H08) here, 
+!!  so that we substitute the level information into obsda%lev.  
+!!  The substituted level information is used in letkf_tools.f90
+!!
+!              obsda%lev(nn) = plev_obs_H08(ns)
+!              obsda%val2(nn) = yobs_H08_clr(ns)
 !
-              obsda%lev(nn) = plev_obs_H08(ns)
-              obsda%val2(nn) = yobs_H08_clr(ns)
-
-!              write(6,'(a,f12.1,i9)')'H08 debug_plev',obsda%lev(nn),nn
-
-            END DO ! [ nn = nobs_0 + 1, nobs ]
-
-            DEALLOCATE(ri_H08, rj_H08)
-            DEALLOCATE(lon_H08, lat_H08)
-            DEALLOCATE(yobs_H08, plev_obs_H08)
-            DEALLOCATE(yobs_H08_clr)
-            DEALLOCATE(qc_H08)
-
-            !------
-            end if ! [.not. USE_OBS(23)]
-            !------
-
-#endif
-!!!          ENDIF ! H08
+!!              write(6,'(a,f12.1,i9)')'H08 debug_plev',obsda%lev(nn),nn
+!
+!            END DO ! [ nn = nobs_0 + 1, nobs ]
+!
+!            DEALLOCATE(ri_H08, rj_H08)
+!            DEALLOCATE(lon_H08, lat_H08)
+!            DEALLOCATE(yobs_H08, plev_obs_H08)
+!            DEALLOCATE(yobs_H08_clr)
+!            DEALLOCATE(qc_H08)
+!
+!            !------
+!            end if ! [.not. USE_OBS(23)]
+!            !------
+!
+!#endif
+!!!!          ENDIF ! H08
 
 
 
@@ -770,18 +770,18 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
         if (nitmax > 1 .and. nobs > 0) then
           if (it == 1) then
             qc_p(:) = obsda%qc(1:nobs)
-#ifdef H08
-            lev_p(:) = obsda%lev(1:nobs)
-            val2_p(:) = obsda%val2(1:nobs)
-#endif
+!#ifdef H08
+!            lev_p(:) = obsda%lev(1:nobs)
+!            val2_p(:) = obsda%val2(1:nobs)
+!#endif
           else
             qc_p(:) = max(qc_p(:), obsda%qc(1:nobs))
-#ifdef H08
-            if (im <= MEMBER) then ! only consider lev, val2 from members, not from the means
-              lev_p(:) = lev_p(:) + obsda%lev(1:nobs)
-              val2_p(:) = val2_p(:) + obsda%val2(1:nobs)
-            end if
-#endif
+!#ifdef H08
+!            if (im <= MEMBER) then ! only consider lev, val2 from members, not from the means
+!              lev_p(:) = lev_p(:) + obsda%lev(1:nobs)
+!              val2_p(:) = val2_p(:) + obsda%val2(1:nobs)
+!            end if
+!#endif
           end if
         end if
       end if ! [ obsda_return .and. nobs > 0 ]
@@ -808,25 +808,25 @@ SUBROUTINE obsope_cal(obsda, obsda_return, nobs_extern)
     if (nitmax > 1) then
       obsda%qc(1:nobs) = qc_p(:)
       deallocate (qc_p)
-#ifdef H08
-      obsda%lev(1:nobs) = lev_p(:)
-      obsda%val2(1:nobs) = val2_p(:)
-      deallocate (lev_p)
-      deallocate (val2_p)
-#endif
+!#ifdef H08
+!      obsda%lev(1:nobs) = lev_p(:)
+!      obsda%val2(1:nobs) = val2_p(:)
+!      deallocate (lev_p)
+!      deallocate (val2_p)
+!#endif
     end if
 
     if (nprocs_e > 1) then
       call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%qc(1:nobs), nobs, MPI_INTEGER, MPI_MAX, MPI_COMM_e, ierr)  ! maximum value of qc
     end if
-#ifdef H08
-    if (nprocs_e > 1) then
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%lev
-      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) ! ensemble mean of obsda%val2 (clear sky BT)
-    end if
-    obsda%lev(1:nobs) = obsda%lev(1:nobs) / REAL(MEMBER, r_size)                                                    !
-    obsda%val2(1:nobs) = obsda%val2(1:nobs) / REAL(MEMBER, r_size)                                                  !
-#endif
+!#ifdef H08
+!    if (nprocs_e > 1) then
+!      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%lev(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)  ! ensemble mean of obsda%lev
+!      call MPI_ALLREDUCE(MPI_IN_PLACE, obsda%val2(1:nobs), nobs, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr) ! ensemble mean of obsda%val2 (clear sky BT)
+!    end if
+!    obsda%lev(1:nobs) = obsda%lev(1:nobs) / REAL(MEMBER, r_size)                                                    !
+!    obsda%val2(1:nobs) = obsda%val2(1:nobs) / REAL(MEMBER, r_size)                                                  !
+!#endif
 
     call mpi_timer('obsope_cal:mpi_allreduce:', 2)
   end if ! [ obsda_return .and. nobs > 0 ]
@@ -858,21 +858,21 @@ SUBROUTINE obsmake_cal(obs)
 
   CHARACTER(10) :: obsoutfile = 'obsout.dat'
   INTEGER :: ns 
-#ifdef H08
-! obsmake for H08 is not available !! (03/17/2016) T.Honda
-! -- for Himawari-8 obs --
-  INTEGER :: nallprof ! H08: Num of all profiles (entire domain) required by RTTOV
-  INTEGER :: nprof_H08 ! num of H08 obs
-  REAL(r_size),ALLOCATABLE :: ri_H08(:),rj_H08(:)
-  REAL(r_size),ALLOCATABLE :: lon_H08(:),lat_H08(:)
-  REAL(r_size),ALLOCATABLE :: tmp_ri_H08(:),tmp_rj_H08(:)
-  REAL(r_size),ALLOCATABLE :: tmp_lon_H08(:),tmp_lat_H08(:)
-
-  REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
-  INTEGER,ALLOCATABLE :: qc_H08(:)
-  INTEGER,ALLOCATABLE :: idx_H08(:) ! index array
-  INTEGER :: ich
-#endif
+!#ifdef H08
+!! obsmake for H08 is not available !! (03/17/2016) T.Honda
+!! -- for Himawari-8 obs --
+!  INTEGER :: nallprof ! H08: Num of all profiles (entire domain) required by RTTOV
+!  INTEGER :: nprof_H08 ! num of H08 obs
+!  REAL(r_size),ALLOCATABLE :: ri_H08(:),rj_H08(:)
+!  REAL(r_size),ALLOCATABLE :: lon_H08(:),lat_H08(:)
+!  REAL(r_size),ALLOCATABLE :: tmp_ri_H08(:),tmp_rj_H08(:)
+!  REAL(r_size),ALLOCATABLE :: tmp_lon_H08(:),tmp_lat_H08(:)
+!
+!  REAL(r_size),ALLOCATABLE :: yobs_H08(:),plev_obs_H08(:)
+!  INTEGER,ALLOCATABLE :: qc_H08(:)
+!  INTEGER,ALLOCATABLE :: idx_H08(:) ! index array
+!  INTEGER :: ich
+!#endif
 
 !-----------------------------------------------------------------------
 
@@ -961,94 +961,94 @@ SUBROUTINE obsmake_cal(obs)
 
         end do ! [ n = 1, obs%nobs ]
 
-#ifdef H08
-! -- H08 part --
-      ELSEIF(OBS_IN_FORMAT(iof) == 3)THEN ! H08
-        nslot = 0
-        nobs_slot = 0
-        nprof_H08 = 0
-
-        nallprof = obs(iof)%nobs/nch
-
-        ALLOCATE(tmp_ri_H08(nallprof))
-        ALLOCATE(tmp_rj_H08(nallprof))
-        ALLOCATE(tmp_lon_H08(nallprof))
-        ALLOCATE(tmp_lat_H08(nallprof))
-        ALLOCATE(idx_H08(nallprof))
-
-        do n = 1, nallprof
-          ns = (n - 1) * nch + 1
-          if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
-            nslot = nslot + 1
-
-            call phys2ij(obs(iof)%lon(ns),obs(iof)%lat(ns),rig,rjg)
-            call rij_g2l_auto(proc,rig,rjg,ri,rj)
-
-
-            if (proc < 0 .and. myrank_d == 0) then ! if outside of the global domain, processed by myrank_d == 0
-              obs(iof)%dat(ns:ns+nch-1) = undef
-            end if
-
-            if (myrank_d == proc) then
-              nprof_H08 = nprof_H08 + 1 ! num of prof in myrank node
-              idx_H08(nprof_H08) = ns ! idx of prof in myrank node
-              tmp_ri_H08(nprof_H08) = ri
-              tmp_rj_H08(nprof_H08) = rj
-              tmp_lon_H08(nprof_H08) = obs(iof)%lon(ns)
-              tmp_lat_H08(nprof_H08) = obs(iof)%lat(ns)
-
-              nobs = nobs + nch
-              nobs_slot = nobs_slot + nch
-
-            end if ! [ myrank_d == proc ]
-
-          end if ! [ obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub ]
-
-        end do ! [ n = 1, nallprof ]
-
-        IF(nprof_H08 >=1)THEN
-          ALLOCATE(ri_H08(nprof_H08))
-          ALLOCATE(rj_H08(nprof_H08))
-          ALLOCATE(lon_H08(nprof_H08))
-          ALLOCATE(lat_H08(nprof_H08))
-
-          ri_H08 = tmp_ri_H08(1:nprof_H08)
-          rj_H08 = tmp_rj_H08(1:nprof_H08)
-          lon_H08 = tmp_lon_H08(1:nprof_H08)
-          lat_H08 = tmp_lat_H08(1:nprof_H08)
-
-          ALLOCATE(yobs_H08(nprof_H08*nch))
-          ALLOCATE(plev_obs_H08(nprof_H08*nch))
-          ALLOCATE(qc_H08(nprof_H08*nch))
-
-          CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
-                              lon_H08,lat_H08,v3dg,v2dg,&
-                              yobs_H08,plev_obs_H08,&
-                              qc_H08)
-
-          DO n = 1, nprof_H08
-            ns = idx_H08(n)
-
-            obs(iof)%lon(ns:ns+nch-1)=lon_H08(n:n+nch-1)
-            obs(iof)%lat(ns:ns+nch-1)=lat_H08(n:n+nch-1)
-
-            DO ich = 1, nch-1
-              IF(qc_H08(n+ich-1) == iqc_good)THEN
-                obs(iof)%dat(ns+ich-1)=undef
-              ELSE
-                obs(iof)%dat(ns+ich-1)=yobs_H08(n+ich-1)
-              ENDIF
-            ENDDO
-          ENDDO
-
-        ENDIF
-
-        DEALLOCATE(tmp_ri_H08,tmp_rj_H08)
-        DEALLOCATE(tmp_lon_H08,tmp_lat_H08)
-
-
-! -- end of H08 part --
-#endif
+!#ifdef H08
+!! -- H08 part --
+!      ELSEIF(OBS_IN_FORMAT(iof) == 3)THEN ! H08
+!        nslot = 0
+!        nobs_slot = 0
+!        nprof_H08 = 0
+!
+!        nallprof = obs(iof)%nobs/nch
+!
+!        ALLOCATE(tmp_ri_H08(nallprof))
+!        ALLOCATE(tmp_rj_H08(nallprof))
+!        ALLOCATE(tmp_lon_H08(nallprof))
+!        ALLOCATE(tmp_lat_H08(nallprof))
+!        ALLOCATE(idx_H08(nallprof))
+!
+!        do n = 1, nallprof
+!          ns = (n - 1) * nch + 1
+!          if (obs(iof)%dif(n) > slot_lb .and. obs(iof)%dif(n) <= slot_ub) then
+!            nslot = nslot + 1
+!
+!            call phys2ij(obs(iof)%lon(ns),obs(iof)%lat(ns),rig,rjg)
+!            call rij_g2l_auto(proc,rig,rjg,ri,rj)
+!
+!
+!            if (proc < 0 .and. myrank_d == 0) then ! if outside of the global domain, processed by myrank_d == 0
+!              obs(iof)%dat(ns:ns+nch-1) = undef
+!            end if
+!
+!            if (myrank_d == proc) then
+!              nprof_H08 = nprof_H08 + 1 ! num of prof in myrank node
+!              idx_H08(nprof_H08) = ns ! idx of prof in myrank node
+!              tmp_ri_H08(nprof_H08) = ri
+!              tmp_rj_H08(nprof_H08) = rj
+!              tmp_lon_H08(nprof_H08) = obs(iof)%lon(ns)
+!              tmp_lat_H08(nprof_H08) = obs(iof)%lat(ns)
+!
+!              nobs = nobs + nch
+!              nobs_slot = nobs_slot + nch
+!
+!            end if ! [ myrank_d == proc ]
+!
+!          end if ! [ obs%dif(n) > slot_lb .and. obs%dif(n) <= slot_ub ]
+!
+!        end do ! [ n = 1, nallprof ]
+!
+!        IF(nprof_H08 >=1)THEN
+!          ALLOCATE(ri_H08(nprof_H08))
+!          ALLOCATE(rj_H08(nprof_H08))
+!          ALLOCATE(lon_H08(nprof_H08))
+!          ALLOCATE(lat_H08(nprof_H08))
+!
+!          ri_H08 = tmp_ri_H08(1:nprof_H08)
+!          rj_H08 = tmp_rj_H08(1:nprof_H08)
+!          lon_H08 = tmp_lon_H08(1:nprof_H08)
+!          lat_H08 = tmp_lat_H08(1:nprof_H08)
+!
+!          ALLOCATE(yobs_H08(nprof_H08*nch))
+!          ALLOCATE(plev_obs_H08(nprof_H08*nch))
+!          ALLOCATE(qc_H08(nprof_H08*nch))
+!
+!          CALL Trans_XtoY_H08(nprof_H08,ri_H08,rj_H08,&
+!                              lon_H08,lat_H08,v3dg,v2dg,&
+!                              yobs_H08,plev_obs_H08,&
+!                              qc_H08)
+!
+!          DO n = 1, nprof_H08
+!            ns = idx_H08(n)
+!
+!            obs(iof)%lon(ns:ns+nch-1)=lon_H08(n:n+nch-1)
+!            obs(iof)%lat(ns:ns+nch-1)=lat_H08(n:n+nch-1)
+!
+!            DO ich = 1, nch-1
+!              IF(qc_H08(n+ich-1) == iqc_good)THEN
+!                obs(iof)%dat(ns+ich-1)=undef
+!              ELSE
+!                obs(iof)%dat(ns+ich-1)=yobs_H08(n+ich-1)
+!              ENDIF
+!            ENDDO
+!          ENDDO
+!
+!        ENDIF
+!
+!        DEALLOCATE(tmp_ri_H08,tmp_rj_H08)
+!        DEALLOCATE(tmp_lon_H08,tmp_lat_H08)
+!
+!
+!! -- end of H08 part --
+!#endif
       ENDIF
 
     end do ! [ iof = 1, OBS_IN_NUM ]
