@@ -9,6 +9,8 @@ PRESET='K_rankdir'                          # 'K' or 'K_rankdir' or 'K_micro'
 
 #===============================================================================
 
+USERNAME=gylien
+
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
@@ -135,7 +137,7 @@ IO_ARB=0                    # Use I/O arbitrator?
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
-TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
+TMP="/scratch/$(echo $(id -ng)|cut -c 1-8)/${USERNAME}/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPSL="/tmp/gylien/$TMPSUBDIR" # Temporary directory only on the server node and on a local file system
 #TMPL=
