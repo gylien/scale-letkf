@@ -8,7 +8,7 @@
 PRESET='K_rankdir'                           # 'K' or 'K_rankdir' or 'K_micro'
 #PRESET='K_micro'
 
-EXP=BAIU2018_D2_HIM8_NG0_0129_NOGQC
+EXP=BAIU2018_D2_HIM8_0131_NG0
 #PEXP="/volume64/data/ra001011/honda/realtime/r0050/exp_d1_5.2.6"
 PEXP="/data/share025/honda/scale-5.2.6/OUTPUT/exp_d1_5.2.6"
 

@@ -74,7 +74,7 @@
                   -1., 4.0D3,  60.0d3, 200.0d3,
  VERT_LOCAL =   0.3D0,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
-                  -1., 2.0D3,  0.5d0,  0.0d0,
+                  -1., 2.0D3,  0.0d0,  0.0d0,
 ! MAX_NOBS_PER_GRID = 50,
 ! MAX_NOBS_PER_GRID_CRITERION = 1,
 /
@@ -89,7 +89,8 @@
  H08_FORMAT_NC = .true.,
  H08_SIM_ALLG = .true.,
  H08_OBS_THIN_LEV = 6,
- H08_OBS_METHOD = 2,
+ H08_OBS_METHOD = 3, ! DIF
+ H08_OBS_SWD_B = 10,
  H08_OBS_AVE_NG = 0, ! check
  H08_OBS_AVE_OVERLAP = .false.,
 !--H08_NOWDATE--!
@@ -107,15 +108,15 @@
  H08_RTTOV_KADD = 5,
  H08_RTTOV_PROF_SHIFT = .true.,
 ! H08_RTTOV_RLX_HGT = 15.0d3,
- H08_BAND_USE = 0,0,1,0,0,0,0,0,0,0,
+ H08_BAND_USE = 0,1,0,0,0,0,0,0,0,0, ! CHECK
  H08_NPRED = 2,
  H08_AOEI = .false.,
  H08_BIAS_SIMPLE = .false.,
  H08_CLDERR_SIMPLE = .true.,
  H08_CLDERR_CLEAR = 3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0,
                     3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0,
- H08_CLDERR_CLOUD = 6.0d0, 6.0d0, 6.0d0, 6.0d0, 6.0d0,
-                    6.0d0, 6.0d0, 6.0d0, 6.0d0, 6.0d0,
+ H08_CLDERR_CLOUD = 3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0, ! CHECK
+                    3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0,
  H08_BIAS_CLEAR = 0.0d0, 0.0d0, 0.0d0, 0.0d0,0.0d0,
                   0.0d0, 0.0d0, 0.0d0, 0.0d0,0.0d0,
  H08_BIAS_CLOUD = 0.0d0, 0.0d0, 0.0d0, 0.0d0,0.0d0,

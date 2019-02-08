@@ -7,11 +7,17 @@
 
 
 STIME='20180701000000'
-ETIME='20180701025000'
+ETIME='20180701035000'
 TIME_LIMIT='03:20:00'
 
-STIME='20180701030000'
+
+STIME='20180701040000'
 ETIME='20180701055000'
+TIME_LIMIT='01:30:00'
+
+
+STIME='20180701040000'
+ETIME='20180701075000'
 TIME_LIMIT='03:20:00'
 
 
@@ -45,7 +51,7 @@ OUT_OPT=5        # 1:   o         o       o         o       o    o
                  # 6:   o         **      o                               ** = only the last cycle
                  # 7:   o         **
 
-OUT_CYCLE_SKIP=18
+OUT_CYCLE_SKIP=12
 
                  #      topo
 TOPOOUT_OPT=2    # 1:   o

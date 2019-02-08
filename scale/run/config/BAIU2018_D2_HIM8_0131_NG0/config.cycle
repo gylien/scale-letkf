@@ -6,11 +6,21 @@
 #===============================================================================
 
 
-STIME='20180702000000'
-ETIME='20180702000000'
-TIME_LIMIT='00:50:00'
-TIME_LIMIT='00:15:00'
+STIME='20180701060000'
+ETIME='20180701085000'
+TIME_LIMIT='03:00:00'
 
+STIME='20180701080000'
+ETIME='20180701115000'
+TIME_LIMIT='04:00:00'
+
+STIME='20180701080000'
+ETIME='20180701095000'
+TIME_LIMIT='01:30:00'
+
+STIME='20180701100000'
+ETIME='20180701125000'
+TIME_LIMIT='02:30:00'
 
 
 ISTEP=
@@ -43,7 +53,7 @@ OUT_OPT=5        # 1:   o         o       o         o       o    o
                  # 6:   o         **      o                               ** = only the last cycle
                  # 7:   o         **
 
-OUT_CYCLE_SKIP=4
+OUT_CYCLE_SKIP=12
 
                  #      topo
 TOPOOUT_OPT=2    # 1:   o
@@ -73,7 +83,7 @@ LOG_OPT=2        # 1:   o    o       o   o              o     o      o
                  # 4:                                         o      o
                  # 5:   (none)
 
-LOG_TYPE=2       # 1:   Only save the log file from the head process
+LOG_TYPE=4       # 1:   Only save the log file from the head process
                  # 2:   Save all log files
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file

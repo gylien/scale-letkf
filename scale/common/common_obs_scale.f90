@@ -3173,7 +3173,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
 ! -- 2D (nlevh,nbtobs) or 1D (nbtobs) profiles for RTTOV --  
   REAL(r_size) :: prs2d(nlev,nlon*nlat)
   REAL(r_size) :: tk2d(nlev,nlon*nlat)
-  REAL(r_size) :: qv2d(nlev,nlat*nlat)
+  REAL(r_size) :: qv2d(nlev,nlon*nlat)
   REAL(r_size) :: qliq2d(nlev,nlon*nlat)
   REAL(r_size) :: qice2d(nlev,nlon*nlat)
 
@@ -3937,11 +3937,13 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
         enddo ! jj
         tbb_allg_prep(i,j,ch) = tbb_allg_prep(i,j,ch) / (ave_ng**2)
 
+      case(3) ! take a difference btw two bands
+        tbb_allg_prep(i,j,ch) = tbb_allg(i,j,ch) -  tbb_allg(i,j,H08_OBS_SWD_B-6) 
       end select
 
       if (H08_OBS_THIN_LEV > 1) then
         if ((mod(i, H08_OBS_THIN_LEV) /= 0) .or. (mod(j, H08_OBS_THIN_LEV) /= 0)) then
-          tbb_allg_prep(i,j,ch) = abs(tbb_allg_prep(i,j,ch)) * (-1.0d0) 
+          tbb_allg_prep(i,j,ch) = abs(tbb_allg_prep(i,j,ch)) * (-1.0d10) 
         endif
       endif
 
@@ -3952,7 +3954,10 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
 
       if (present(qc_allg_prep)) then
         qc_allg_prep(i,j,ch) = iqc_good
-        if (tbb_allg_prep(i,j,ch) < 0.0d0) then
+
+        ! tbb_allg_prep can be negative when [H08_OBS_METHOD == 3]:
+        ! take a difference btw two bands
+        if (tbb_allg_prep(i,j,ch) < -200.0d0) then
           qc_allg_prep(i,j,ch) = iqc_obs_bad
         endif
       endif

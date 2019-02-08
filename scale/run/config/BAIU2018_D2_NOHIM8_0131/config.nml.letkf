@@ -11,7 +11,7 @@
 &PARAM_OBSOPE
 !--OBS_IN_NUM--
 !--OBS_IN_NAME--
- OBS_IN_FORMAT = 'PREPBUFR','HIMAWARI8'
+ OBS_IN_FORMAT = 'PREPBUFR', 'HIMAWARI8',
 !--OBSDA_RUN--
 !--HISTORY_IN_BASENAME--
 !--SLOT_START--
@@ -30,23 +30,24 @@
 !--ANAL_OUT_BASENAME--
 !--ANAL_SPRD_OUT--
 !--LETKF_TOPO_IN_BASENAME--
- INFL_MUL = 1.25D0,
+ INFL_MUL = 1.00D0,
 ! INFL_MUL_MIN = 0.0D0,
 !--INFL_MUL_ADAPTIVE--
 !--INFL_MUL_IN_BASENAME--
 !--INFL_MUL_OUT_BASENAME--
- RELAX_ALPHA = 0.8D0,
+ RELAX_ALPHA = 0.85D0, ! Honda et al. 2018MWR
 ! RELAX_ALPHA_SPREAD = 0.0D0,
 !--RELAX_SPREAD_OUT--
 !--RELAX_SPREAD_OUT_BASENAME--
  RELAX_TO_INFLATED_PRIOR = .true.,
  GROSS_ERROR = 5.0D0,
+ GROSS_ERROR_H08 = 10.0d10,
 ! Q_UPDATE_TOP = 300.0D2,
  Q_UPDATE_TOP = 100.0D2,
  Q_SPRD_MAX = 0.5D0,
-! BOUNDARY_BUFFER_WIDTH = 180.0D3,
-! POSITIVE_DEFINITE_Q = .false.,
-! POSITIVE_DEFINITE_QHYD = .true.,
+ BOUNDARY_BUFFER_WIDTH = 120.0D3,
+ POSITIVE_DEFINITE_Q = .false.,
+ POSITIVE_DEFINITE_QHYD = .true.,
 !--NOBS_OUT--
 !--NOBS_OUT_BASENAME--
 /
@@ -58,24 +59,19 @@
 !--MEM_NP--
 /
 
-!&PARAM_LETKF_OBS
-! HORI_LOCAL = 400.0D3,
-! VERT_LOCAL =   0.3D0,
-!! TIME_LOCAL = 3.0D0,
-!! MAX_NOBS_PER_GRID = 100,
-!/
-
 &PARAM_LETKF_MONITOR
  DEPARTURE_STAT = .true.
+ DEPARTURE_STAT_H08 = .true.
 ! DEPARTURE_STAT_T_RANGE = 0.0d0
 !--OBSDEP_OUT--
 !--OBSDEP_OUT_BASENAME--
 /
 
 &PARAM_LETKF_OBS
- HORI_LOCAL =  400.0D3,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
+! Honda et al. 2018JGRA
+ HORI_LOCAL =  120.0D3,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
-                  -1., 4.0D3,  200.0d3, 200.0d3,
+                  -1., 4.0D3,  60.0d3, 200.0d3,
  VERT_LOCAL =   0.3D0,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
                   -1., 2.0D3,  0.5d0,  0.0d0,
@@ -92,10 +88,10 @@
 &PARAM_LETKF_H08
  H08_FORMAT_NC = .true.,
  H08_SIM_ALLG = .true.,
-! H08_OBS_THIN_LEV = 2,
- H08_OBS_THIN_LEV = 3, ! debug
- H08_OBS_METHOD = 1,
- H08_OBS_AVE_NG = 0,
+ H08_OBS_THIN_LEV = 6,
+ H08_OBS_METHOD = 2,
+ H08_OBS_AVE_NG = 0, ! check
+ H08_OBS_AVE_OVERLAP = .false.,
 !--H08_NOWDATE--!
 !--H08_RTTOV_COEF_PATH--!
 !--H08_OUTFILE_BASENAME--!

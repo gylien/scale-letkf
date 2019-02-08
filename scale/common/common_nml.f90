@@ -335,6 +335,8 @@ MODULE common_nml
  
   ! How to prepare Himawari-8 obs using that "superobs"ed into the model grid
   integer :: H08_OBS_METHOD = 1 ! 1: simple thinning, 2: averaging adjacent grids
+                                ! 3: take a difference btw two bands (B1 - B2)
+  integer :: H08_OBS_SWD_B= 8
   integer :: H08_OBS_AVE_NG = 0 ! # of grids for averaging adjacent grids (H08_OBS_METHOD=2)
   logical :: H08_OBS_AVE_OVERLAP = .false.
   integer :: H08_OBS_THIN_LEV = 1 ! thinning level (1: no thinning)
@@ -966,6 +968,7 @@ subroutine read_nml_letkf_h08
     H08_VBC_PATH,&
     H08_VBC_USE,&
     H08_OBS_METHOD,&
+    H08_OBS_SWD_B,&
     H08_OBS_AVE_NG,&
     H08_OBS_AVE_OVERLAP, &
     H08_OBS_THIN_LEV
