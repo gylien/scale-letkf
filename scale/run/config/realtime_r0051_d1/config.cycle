@@ -5,12 +5,12 @@
 #
 #===============================================================================
 
-STIME='20181210000000'
-ETIME='20181210000000'
+STIME='<STIME>'
+ETIME='<ETIME>'
 ISTEP=
 FSTEP=
 CONF_MODE=
-TIME_LIMIT='00:30:00'
+TIME_LIMIT='<WTIME_L>'
 
 #===============================================================================
 
@@ -68,7 +68,7 @@ LOG_OPT=2        # 1:   o    o       o   o              o     o      o
                  # 4:                                         o      o
                  # 5:   (none)
 
-LOG_TYPE=2       # 1:   Only save the log file from the head process
+LOG_TYPE=1       # 1:   Only save the log file from the head process
                  # 2:   Save all log files
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file

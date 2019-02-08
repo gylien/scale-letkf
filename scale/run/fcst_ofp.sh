@@ -82,6 +82,7 @@ cat $SCRP_DIR/config.main | \
     > $TMP/config.main
 
 echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMP/config.main
+echo "NODEFILE_DIR=\"\$TMPROOT/node\"" >> $TMPS/config.main
 echo "RUN_LEVEL=4" >> $TMP/config.main
 
 echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMP/config.main
@@ -102,6 +103,7 @@ ${SCRP_DIR}/config.rc|config.rc
 ${SCRP_DIR}/config.${job}|config.${job}
 ${SCRP_DIR}/${job}.sh|${job}.sh
 ${SCRP_DIR}/src/|src/
+${NODEFILE_DIR}/|node/
 EOF
 
 if [ "$CONF_MODE" != 'static' ]; then

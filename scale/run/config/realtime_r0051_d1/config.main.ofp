@@ -11,20 +11,15 @@ PRESET='OFP'
 EXPNAME=r0051
 EXPDOMAIN=1
 
-USERNAME=honda
+GROUPNAME=$(id -ng)
+USERNAME=$(id -nu)
 
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
-#OUTDIR="/volume63/data/hp150019/gylien/realtime/${EXPNAME}/exp_d${EXPDOMAIN}" # Directory for SCALE-LETKF output
-
-OUTDIR="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/exp_d${EXPDOMAIN}" # Directory for SCALE-LETKF output
+OUTDIR="/work/${GROUPNAME}/${USERNAME}/realtime/${EXPNAME}/exp_d${EXPDOMAIN}" # Directory for SCALE-LETKF output
 INDIR=$OUTDIR
-
-
-OUTDIR="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/r0051"
-INDIR="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/r0051"
 
 #===============================================================================
 # Location of model/data files
@@ -42,9 +37,9 @@ DATA_BDY_SCALE_PREP=                                                 # Directory
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-DATA_BDY_GRADS="${OUTDIR}/grads" # Directory of the boundary data in GrADS format 
+DATA_BDY_GRADS="/work/${GROUPNAME}/${USERNAME}/realtime/${EXPNAME}/<DATA_BDY_GRADS>" # Directory of the boundary data in GrADS format
 
-OBS="${OUTDIR}/obs"     # Directory of observation data in LETKF obs format
+OBS="/work/${GROUPNAME}/${USERNAME}/realtime/${EXPNAME}/ncepobs"     # Directory of observation data in LETKF obs format
 OBSNCEP=                                                             # Directory of observation data in NCEP BUFR format
 
 #===============================================================================
@@ -53,11 +48,13 @@ OBSNCEP=                                                             # Directory
 DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
 
-TOPO_FORMAT='GTOPO30'      # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
+#TOPO_FORMAT='GTOPO30'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='GLCCv2'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+#LANDUSE_FORMAT='GLCCv2'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -109,8 +106,9 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=8          # Ensemble size
-NNODES=30    # Number of nodes
+MEMBER=50          # Ensemble size
+
+NNODES=<NNODES>    # Number of nodes
 
 PPN=64              # Number of processes per node
 
@@ -131,7 +129,8 @@ SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
 TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
-TMPS="$TMP"  # Temporary directory only on the server node
+TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
+#TMPS="$TMP"  # Temporary directory only on the server node
 TMPL="$TMP"
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
@@ -141,7 +140,7 @@ CLEAR_TMP=0                 # Clear temporary directories after the completion o
 #===============================================================================
 # Environmental settings
 
-MPIRUN="mpiexec"
+MPIRUN="mpiexec.hydra"
 if (which $MPIRUN > /dev/null 2>&1); then
   MPIRUN=$(which $MPIRUN)
 fi

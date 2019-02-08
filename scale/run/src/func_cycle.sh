@@ -683,20 +683,23 @@ while ((time <= ETIME)); do
 
   if ((LOG_OPT <= 2)); then
     if ((LOG_TYPE == 1)); then
-      path="${time}/log/scale_pp/0001_pp.conf"
+#      path="${time}/log/scale_pp/0001_pp.conf"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#      path="${time}/log/scale_pp/0001_LOG${SCALE_SFX_NONC_0}"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#      path="${time}/log/scale_pp/NOUT.${log_zeros}"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#      path="${time}/log/scale_init/0001_init.conf"
+      path="${time}/log/scale_init/mean_init.conf"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${time}/log/scale_pp/0001_LOG${SCALE_SFX_NONC_0}"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${time}/log/scale_pp/NOUT.${log_zeros}"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${time}/log/scale_init/0001_init.conf"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${time}/log/scale_init/0001_gradsbdy.conf"
+#      path="${time}/log/scale_init/0001_gradsbdy.conf"
+      path="${time}/log/scale_init/mean_gradsbdy.conf"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       path="${time}/log/scale_init/0001_LOG${SCALE_SFX_NONC_0}"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       if ((BDY_ENS == 1)); then
-        path="${time}/log/scale_init/NOUT-1.${log_zeros}"
+#          path="${time}/log/scale_init/NOUT-1.${log_zeros}"
+	  path="${time}/log/scale_init/NOUT-1-${log_zeros}"
       else
         path="${time}/log/scale_init/NOUT.${log_zeros}"
       fi
@@ -714,7 +717,8 @@ while ((time <= ETIME)); do
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       path="${time}/log/scale/0001_LOG${SCALE_SFX_NONC_0}"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${time}/log/scale/NOUT-1.${log_zeros}"
+#      path="${time}/log/scale/NOUT-1.${log_zeros}"
+      path="${time}/log/scale/NOUT-1-${log_zeros}"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
     else
       path="${time}/log/scale/"
@@ -723,17 +727,18 @@ while ((time <= ETIME)); do
   fi
   if ((LOG_OPT <= 4)); then
     if ((LOG_TYPE == 1)); then
-      path="${atime}/log/obsope/obsope.conf"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${atime}/log/obsope/NOUT.${log_zeros}"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#      path="${atime}/log/obsope/obsope.conf"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#      path="${atime}/log/obsope/NOUT.${log_zeros}"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       path="${atime}/log/letkf/letkf.conf"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${atime}/log/letkf/NOUT.${log_zeros}"
+#      path="${atime}/log/letkf/NOUT.${log_zeros}"
+      path="${atime}/log/letkf/NOUT-${log_zeros}"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
     else
-      path="${atime}/log/obsope/"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#      path="${atime}/log/obsope/"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
       path="${atime}/log/letkf/"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
     fi
