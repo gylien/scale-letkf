@@ -8,7 +8,8 @@
 
 PRESET='OFP'
 
-EXP=500m_CZ2003_LT
+EXP=500m_CZ2003_LT_0130
+#EXP=500m_CZ2003_LT
 #EXP=500m_CZ2003
 
 #===============================================================================
@@ -87,12 +88,14 @@ LTIMESLOT=300      # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=40           # Ensemble size
+MEMBER=80           # Ensemble size
 #MEMBER=20           # Ensemble size
 #MEMBER=1          # Ensemble size
 
 #NNODES=42           # Number of nodes # single
 NNODES=320           # Number of nodes # single
+
+#NNODES=16           # Number of nodes # single
 PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process

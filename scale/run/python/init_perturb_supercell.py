@@ -10,7 +10,7 @@ OVERW = True
 
 #exp = "8km_sc"
 exp = "2km_CZ2003"
-exp = "500m_CZ2003_LT"
+exp = "500m_CZ2003_LT_0130"
 
 #top = "/data6/honda/SCALE-LETKF/scale_lt_devel_20181002/OUTPUT"
 #top = "/home/honda/work/OUTPUT"
@@ -21,12 +21,14 @@ top = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT"
 ##ZMAX = 30
 
 # ensemble size
-MEMBER = 40
+MEMBER = 80
 
 #SCALE_NP = 1
 NPX = 32
 NPY = 32
 SCALE_NP = NPX * NPY
+
+NOPT_PRC=2
 
 # variable list
 # MOMX/Y/Z needs a consideration for a staggered grid system (2018/10/13)
@@ -73,6 +75,14 @@ def main(time):
      rank_idxs = nc_nat.rankidx
      rank_i = rank_idxs[0]
      rank_j = rank_idxs[1]
+
+     # No perturbation for the processes near the edge
+     if rank_i < NOPT_PRC or rank_j < NOPT_PRC:
+        continue
+
+     if rank_i > (NPX - NOPT_PRC - 1) or rank_j > (NPY - NOPT_PRC - 1):
+        continue
+
 
      dens3d = nc_nat.variables["DENS"][:,:,:]
 
@@ -150,22 +160,22 @@ def main(time):
 
            if vname == "RHOT":
              nc_mem.variables[vname][imin:imax,jmin:jmax,kmin:kmax] =(var3d[:,:,:] / dens3d[imin:imax,jmin:jmax,kmin:kmax] + rand3d[m-1,:,:,:]) * dens3d[imin:imax,jmin:jmax,kmin:kmax]
-           if vname == "MOMX":
-             dens3d_tmp = (dens3d[imin:imax,jmin:jmax,kmin:kmax] + dens3d[imin-1:imax-1,jmin:jmax,kmin:kmax] ) * 0.5
-             nc_mem.variables[vname][imin:imax,jmin:jmax,kmin:kmax] =(var3d[:,:,:] / dens3d_tmp + rand3d[m-1,:,:,:]) * dens3d_tmp
-           if vname == "MOMY":
-             dens3d_tmp = (dens3d[imin:imax,jmin:jmax,kmin:kmax] + dens3d[imin:imax,jmin-1:jmax-1,kmin:kmax] ) * 0.5
-             nc_mem.variables[vname][imin:imax,jmin:jmax,kmin:kmax] =(var3d[:,:,:] / dens3d_tmp + rand3d[m-1,:,:,:]) * dens3d_tmp
-           if vname == "MOMZ":
-             dens3d_tmp = (dens3d[imin:imax,jmin:jmax,kmin:kmax] + dens3d[imin:imax,jmin:jmax,kmin-1:kmax-1] ) * 0.5
-             nc_mem.variables[vname][imin:imax,jmin:jmax,kmin:kmax] =(var3d[:,:,:] / dens3d_tmp + rand3d[m-1,:,:,:]) * dens3d_tmp
+#           if vname == "MOMX":
+#             dens3d_tmp = (dens3d[imin:imax,jmin:jmax,kmin:kmax] + dens3d[imin-1:imax-1,jmin:jmax,kmin:kmax] ) * 0.5
+#             nc_mem.variables[vname][imin:imax,jmin:jmax,kmin:kmax] =(var3d[:,:,:] / dens3d_tmp + rand3d[m-1,:,:,:]) * dens3d_tmp
+#           if vname == "MOMY":
+#             dens3d_tmp = (dens3d[imin:imax,jmin:jmax,kmin:kmax] + dens3d[imin:imax,jmin-1:jmax-1,kmin:kmax] ) * 0.5
+#             nc_mem.variables[vname][imin:imax,jmin:jmax,kmin:kmax] =(var3d[:,:,:] / dens3d_tmp + rand3d[m-1,:,:,:]) * dens3d_tmp
+#           if vname == "MOMZ":
+#             dens3d_tmp = (dens3d[imin:imax,jmin:jmax,kmin:kmax] + dens3d[imin:imax,jmin:jmax,kmin-1:kmax-1] ) * 0.5
+#             nc_mem.variables[vname][imin:imax,jmin:jmax,kmin:kmax] =(var3d[:,:,:] / dens3d_tmp + rand3d[m-1,:,:,:]) * dens3d_tmp
 
            nc_mem.close()
 
 
 #########
 
-time = datetime(2000,1,1,0,35,0)
-time = datetime(2000,1,1,0,0,0)
+#time = datetime(2000,1,1,0,35,0)
+time = datetime(2000,1,1,0,30,0)
 main(time)
 
