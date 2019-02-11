@@ -98,6 +98,7 @@ NNODES=320           # Number of nodes # single
 #NNODES=16           # Number of nodes # single
 PPN=64              # Number of processes per node
 
+
 THREADS=1          # Number of threads per process
 
 SCALE_NP=1024         # Number of processes to run SCALE

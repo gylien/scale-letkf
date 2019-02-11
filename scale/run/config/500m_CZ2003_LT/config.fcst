@@ -10,10 +10,14 @@ ETIME='20000101000000'
 
 STIME='20000101003000'
 ETIME='20000101003000'
+
+STIME='20000101010000'
+ETIME='20000101010000'
+
 #MEMBERS=`seq 21 40`
 #MEMBERS='mean'
 
-MEMBERS=`seq 1 80`
+#MEMBERS=`seq 1 80`
 MEMBERS=`seq 61 80`
 
 CYCLE=1
@@ -21,13 +25,11 @@ CYCLE_SKIP=1
 ISTEP=
 FSTEP=
 TIME_LIMIT='01:00:00'
-#TIME_LIMIT='5:00:00' # 160 nodes 
 TIME_LIMIT='2:30:00' # 320 nodes
 
-TIME_LIMIT='5:00:00' # 320 nodes
 
+#TIME_LIMIT='5:00:00' # 320 nodes
 
-TIME_LIMIT='3:00:00' # 320 nodes
 
 
 #===============================================================================
@@ -48,6 +50,7 @@ FCSTOUT=1800
 
 FCSTLEN=1800 # 30min 
 FCSTOUT=300 
+
 
 #===============================================================================
 
