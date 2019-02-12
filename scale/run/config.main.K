@@ -1,1 +1,1 @@
-config/500m_CZ2003_LT/config.main.K
+config/5000m_InSnd_LT/config.main.K

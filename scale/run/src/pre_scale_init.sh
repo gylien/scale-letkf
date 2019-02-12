@@ -175,6 +175,7 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--BOUNDARY_UPDATE_DT--/a BOUNDARY_UPDATE_DT = $BDYINT.D0," \
         -e "/!--LATLON_CATALOGUE_FNAME--/a LATLON_CATALOGUE_FNAME = \"${LATLON_CATALOGUE_FNAME}\"," \
         -e "/!--USE_NESTING--/a USE_NESTING = $USE_NESTING," \
+        -e "/!--ENV_IN_SOUNDING_file--/a ENV_IN_SOUNDING_file = \"$TMPOUT/input/${MEM}_sounding.txt\"," \
         -e "/!--OFFLINE--/a OFFLINE = .true.," \
     > $TMPDIR/init.conf
 
