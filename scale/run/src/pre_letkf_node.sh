@@ -65,6 +65,9 @@ for iobs in $(seq $OBSNUM); do
   if [ "${OBSNAME[$iobs]}" != '' ]; then
     OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'$OBSDIR/${OBSNAME[$iobs]}_${ATIME}.${OBSFOOT[$iobs]}', "
   fi
+
+  rm -f $OBSDIR/${OBSNAME[$iobs]}_${STIME}.${OBSFOOT[$iobs]}
+
 done
 
 OBSDA_RUN_LIST=

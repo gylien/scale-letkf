@@ -43,8 +43,10 @@ fi
 
 if ((OUT_OPT >= 3 )); then
   rm -rf ${TMPOUT}/${STIME}/hist
-  rm -rf ${TMPOUT}/${STIME}/gues/0???
+  rm -rf ${TMPOUT}/${ATIME}/gues/0???
 fi
+
+rm -f $TMPDAT_OBS/*_${ATIME}.*
 
 #if [ -f "${TMPOUT}/vbc/Him8_vbca.dat" ] && [ ${MYRANK} -eq 0 ] ; then
 #  mv ${TMPOUT}/vbc/Him8_vbca.dat ${TMPOUT}/vbc/Him8_vbca_${ATIME}.dat

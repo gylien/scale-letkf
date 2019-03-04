@@ -235,7 +235,7 @@ time=$(datetime $STIME $LCYCLE s)
 while ((time <= $(datetime $ETIME $LCYCLE s))); do
   for iobs in $(seq $OBSNUM); do
     if [ "${OBSNAME[$iobs]}" != '' ] && [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.${OBSFOOT[$iobs]} ]; then
-      echo "${OBS}/${OBSNAME[$iobs]}_${time}.${OBSFOOT[$iobs]}|${DAT_SUBDIR}/obs/${OBSNAME[$iobs]}_${time}.${OBSFOOT[$iobs]}" >> ${STAGING_DIR}/${STGINLIST_OBS}
+      echo "${OBS}/${OBSNAME[$iobs]}_${time}.${OBSFOOT[$iobs]}|${DAT_SUBDIR}/obs/${OBSNAME[$iobs]}_${time}.${OBSFOOT[$iobs]}" >> ${STAGING_DIR}/${STGINLIST}.1
     fi
   done
   time=$(datetime $time $LCYCLE s)

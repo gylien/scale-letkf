@@ -2280,7 +2280,7 @@ subroutine read_Him8_mpi(filename,obs)
 
   allocate(tbb_org(imax_him8,jmax_him8,NIRB_HIM8))
   allocate(lon_him8(imax_him8))
-  allocate(lat_him8(imax_him8))
+  allocate(lat_him8(jmax_him8))
 
   tbb_org = 0.0
   lon_him8 = 0.0
