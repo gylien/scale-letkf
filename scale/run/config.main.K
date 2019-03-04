@@ -1,1 +1,1 @@
-config/5000m_InSnd_LT/config.main.K
+config/1000m_InSnd_LT/config.main.K

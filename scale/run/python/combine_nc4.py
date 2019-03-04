@@ -7,13 +7,17 @@ import sys
 
 #TOP = "/Users/takumihonda/Documents/python/OFP_TEST"
 TOP = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT"
-EXP = "500m_CZ2003_LT_0130"
-time = datetime(2001,1,1,0,0,0)
+EXP = "1000m_InSnd_LT"
+time = datetime(2000,1,1,0,0,0)
 ftyp = "fcst"
-NPX = 6 # Number of processes in X direction
-NPY = 6 # Number of processes in Y direction
-NPBX = 1 # Number of processes (X) that will NOT be combined # Total: NPX - "2" * NPBX
-NPBY = 1 # Number of processes (Y) that will NOT be combined # Total: NPY - "2" * NPBY
+# Number of processes in X direction
+NPX = 16
+# Number of processes in Y direction
+NPY = 12
+# Number of processes (X) that will NOT be combined # Total: NPX - "2" * NPBX
+NPBX = 3 
+# Number of processes (Y) that will NOT be combined # Total: NPY - "2" * NPBY
+NPBY = 3 
 
 ZMAX = 30 # Largest index number in Z direction
 
@@ -22,7 +26,12 @@ HALO = 2
 
 INFO = {"TOP":TOP, "EXP":EXP, "time": time, "ftyp":ftyp, "NPX":NPX, "NPY":NPY, "mem":mem, "HALO":HALO, "ZMAX":ZMAX, "NPBX":NPBX, "NPBY":NPBY}
 
-var4d_names = ["U","V","W","QV"]
+var4d_names = ["U", "V", "W", "T", "PRES",\
+#               "QV","QHYD",
+               "QV", "QC", "QR", "QI", "QS", "QG", \
+               "QCRG_C", "QCRG_R", "QCRG_I", "QCRG_S", "QCRG_G",\
+#               "QCRG_TOT", \
+               "Ex", "Ey", "Ez", "Epot", "PosFLASH", "NegFLASH", "LTpath"]
 
 
 def combine(INFO):
@@ -37,7 +46,7 @@ def combine(INFO):
    # get information from the head file & define root (combined) NetCDF
    fn = fh + str(0).zfill(6) + ".nc"
    nc_r, DIMS = new_netcdf(fn, INFO)
-
+   
 
    # define variables
    VARS = var_def(nc_r)
@@ -54,7 +63,8 @@ def combine(INFO):
       if p % 10 == 0:
          print("mem:",INFO["mem"],"process:",p)
 
-      if xrank < INFO["NPBX"] or xrank == (INFO["NPX"] - 1) or yrank < INFO["NPBY"] or yrank == (INFO["NPY"] - 1):
+      if xrank < INFO["NPBX"] or xrank > (INFO["NPX"] - 1 - INFO["NPBX"]) or \
+         yrank < INFO["NPBY"] or yrank > (INFO["NPY"] - 1 - INFO["NPBY"]):
          continue
 
       imin = DIMS["xdim"] * (xrank - INFO["NPBX"])
@@ -64,7 +74,8 @@ def combine(INFO):
       for nvar in var4d_names:
         var_local = nc.variables[nvar][:,:,:,:] # t,z,y,x 
 
-        VARS[nvar][:,:,jmin:jmin+DIMS["ydim"],imin:imin+DIMS["xdim"]] = var_local[:,:INFO["ZMAX"],:,:]
+        VARS[nvar][:,:,jmin:jmin+DIMS["ydim"],imin:imin+DIMS["xdim"]] = \
+        var_local[:,:INFO["ZMAX"],:,:]
  
         # attribute
         if xrank == INFO["NPBX"] and yrank == INFO["NPBY"]:
@@ -83,7 +94,7 @@ def var_def(nc):
        print("define:", nvar)
 
        VARS.setdefault(nvar, nc.createVariable(nvar, np.dtype('double').char, 
-                       ('time','z','x','y')))
+                       ('time','z','y','x')))
 
     return(VARS)
 
@@ -110,6 +121,9 @@ def new_netcdf(fn, INFO):
    if INFO["ftyp"] == "fcst":
       fn_r =  os.path.join(INFO["TOP"], INFO["EXP"], INFO["time"].strftime('%Y%m%d%H%M%S'),
                            INFO["ftyp"], "history_")
+
+   print("New file:",fn_r + INFO["mem"] + '.nc')
+
    nc_r = netCDF4.Dataset(fn_r + INFO["mem"] + '.nc', 'w', format='NETCDF4')
    nc_r.createDimension('x', len(cxg) - 2 * INFO["HALO"] - 2 * NX * INFO["NPBX"])  
    nc_r.createDimension('y', len(cyg) - 2 * INFO["HALO"] - 2 * NY * INFO["NPBY"])
@@ -140,15 +154,18 @@ def new_netcdf(fn, INFO):
    zdim.units = 'm'
    zdim[:] = zlevs[:INFO["ZMAX"]]
 
-   DIMS = {"tdim":len(tdim), "zdim":len(zdim), "gydim":len(ydim), "gxdim":len(xdim),
+   DIMS = {"tdim":len(tdim), "zdim":len(zdim), 
+           "gydim":len(ydim), "gxdim":len(xdim),
            "xdim":NX, "ydim":NY}
 
    return(nc_r, DIMS)
 
 
+MEMBER = 80
 MEMBER = 1
 mem_list = [str(x).zfill(4) for x in range(1,MEMBER+1)] 
-mem_list.append("mean")
+#mem_list.append("mean")
+#mem_list = ["0002"]
 print(mem_list)
 for mem in mem_list:
   INFO["mem"] = mem
