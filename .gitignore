@@ -26,8 +26,8 @@ log*
 /scale/run/fcst_job.sh
 /scale/run/machinefile
 /scale/run/mpd.hosts
-/scale/run/cycle_*.[e,i,s,o]*
-/scale/run/fcst_*.[e,i,s,o]*
+/scale/run/cycle_*.[e,i,s,o][1-9]*
+/scale/run/fcst_*.[e,i,s,o][1-9]*
 /scale/run/exp
 /scale/letkf/letkf
 /scale/obs/obsmake

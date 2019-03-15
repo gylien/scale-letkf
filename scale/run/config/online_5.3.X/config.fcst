@@ -5,19 +5,21 @@
 #
 #===============================================================================
 
-STIME='<STIME>'
-ETIME='<ETIME>'
-TIME_LIMIT='<WTIME_L>'
-MEMBERS='mdet'
+STIME='20190130000000'
+ETIME='20190130000000'
+TIME_LIMIT='00:10:00'
+MEMBERS='mean'
 CYCLE=
 CYCLE_SKIP=1
 ISTEP=
 FSTEP=
 
+CONF_MODE='static'
+
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=432000      # SCALE forecast length in the forecast mode (second)
+FCSTLEN=3600      # SCALE forecast length in the forecast mode (second)
 FCSTOUT=3600
 
 
@@ -35,11 +37,11 @@ OUT_OPT=2        # 1:   o       o
                  # 2:   o
 
                  #      topo
-TOPOOUT_OPT=2    # 1:   o
+TOPOOUT_OPT=1    # 1:   o
                  # 2:   (none)
 
                  #      landuse
-LANDUSEOUT_OPT=2 # 1:   o
+LANDUSEOUT_OPT=1 # 1:   o
                  # 2:   (none)
 
                  #      bdy

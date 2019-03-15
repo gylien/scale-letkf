@@ -11,18 +11,20 @@ PRESET='K'
 PRESET='K_micro' 
 
 EXPNAME=r0051
-EXPDOMAIN=1
+EXPDOMAIN=2
 
 USERNAME=honda
+
+DOMNUM=2
 
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
-#OUTDIR="/volume63/data/hp150019/gylien/realtime/${EXPNAME}/exp_d${EXPDOMAIN}" # Directory for SCALE-LETKF output
 
-OUTDIR="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/TEST_exp_d${EXPDOMAIN}" # Directory for SCALE-LETKF output
-OUTDIR="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/TEST_exp_d${EXPDOMAIN}" # Directory for SCALE-LETKF output
+OUTDIR="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/TEST_exp_d1" # Directory for SCALE-LETKF output
+OUTDIR[2]="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/TEST_exp_d2" # Directory for SCALE-LETKF output
+#OUTDIR[2]="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/TEST_exp_d2" # Directory for SCALE-LETKF output
 INDIR=$OUTDIR
 
 #===============================================================================
@@ -30,13 +32,16 @@ INDIR=$OUTDIR
 
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"        # Directory of the SCALE database
+DATADIR="/data/share005/data/scale_database"
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
+DATA_TOPO[2]=
 DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE=                                                        # Directory of the prepared landuse files
+DATA_LANDUSE[2]=
 DATA_BDY_SCALE=                                                      # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PRC_NUM_X=
-DATA_BDY_SCALE_PRC_NUM_Y=
+DATA_BDY_SCALE_PRC_NUM_X=8 # D1
+DATA_BDY_SCALE_PRC_NUM_Y=6 # D1
 DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
@@ -109,7 +114,8 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 # Parallelization settings
 
 MEMBER=2          # Ensemble size
-NNODES=192    # Number of nodes
+NNODES=208    # Number of nodes
+NNODES=52    # Number of nodes
 
 
 PPN=1              # Number of processes per node
@@ -117,6 +123,7 @@ PPN=1              # Number of processes per node
 THREADS=8          # Number of threads per process
 
 SCALE_NP=48        # Number of processes to run SCALE
+SCALE_NP[2]=4        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 

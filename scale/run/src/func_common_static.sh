@@ -116,17 +116,17 @@ fi
 
 # domain catalogue
 #-------------------
-if ((BDY_FORMAT == 1)); then
-  if [ -s "$DATA_BDY_SCALE/const/log/latlon_domain_catalogue.txt" ]; then
-    pathin="$DATA_BDY_SCALE/const/log/latlon_domain_catalogue.txt"
+#if ((BDY_FORMAT == 1)); then
+  if [ -s "$DATA_BDY_SCALE_PREP/const/log/latlon_domain_catalogue.txt" ]; then
+    pathin="$DATA_BDY_SCALE_PREP/const/log/latlon_domain_catalogue.txt"
     path="latlon_domain_catalogue.bdy.txt"
     echo "${pathin}|${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
   else
     echo "[Error] Cannot find a lat/lon domain catalogue file at" >&2
-    echo "        '$DATA_BDY_SCALE/const/log/latlon_domain_catalogue.txt'" >&2
+    echo "        '$DATA_BDY_SCALE_PREP/const/log/latlon_domain_catalogue.txt'" >&2
     exit 1
   fi
-fi
+#fi
 
 #-------------------
 # stage-out
