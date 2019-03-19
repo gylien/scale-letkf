@@ -181,6 +181,11 @@ local MEMBER_RUN="$1"
 local it
 local conf_file
 
+DET_RUN_TF='.false.'
+if ((DET_RUN == 1)); then
+  DET_RUN_TF='.true.'
+fi
+
 if [ "$JOBTYPE" = 'cycle' ]; then
   CONF_FILES_SEQNUM='.false.'
 else
@@ -200,6 +205,7 @@ for it in $(seq $nitmax); do
           -e "/!--MEMBER_ITER--/a MEMBER_ITER = $it," \
           -e "/!--CONF_FILES--/a CONF_FILES = \"${CONF_NAME}.d<domain>_${time}.conf\"," \
           -e "/!--CONF_FILES_SEQNUM--/a CONF_FILES_SEQNUM = $CONF_FILES_SEQNUM," \
+          -e "/!--DET_RUN--/a DET_RUN = ${DET_RUN_TF}," \
           -e "/!--PPN--/a PPN = $PPN_APPAR," \
           -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
           -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \

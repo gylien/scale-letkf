@@ -178,9 +178,9 @@ while ((time <= ETIME)); do
   echo
   echo "  Nodes used:               $NNODES_APPAR"
 #  if ((MTYPE == 1)); then
-    for n in $(seq $NNODES_APPAR); do
-      echo "    ${node[$n]}"
-    done
+#    for n in $(seq $NNODES_APPAR); do
+#      echo "    ${node[$n]}"
+#    done
 #  fi
   echo
   echo "  Processes per node:       $PPN_APPAR"
@@ -229,7 +229,8 @@ while ((time <= ETIME)); do
       echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2
 
       enable_iter=0
-      if ((s == 2 && BDY_ENS == 1)); then
+      #if ((s == 2 && BDY_ENS == 1)); then
+      if ((s == 2)); then # To nest under D1 of NRT  
         enable_iter=1
       elif ((s == 3)); then
         enable_iter=1

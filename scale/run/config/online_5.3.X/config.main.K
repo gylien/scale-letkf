@@ -11,11 +11,10 @@ PRESET='K'
 PRESET='K_micro' 
 
 EXPNAME=r0051
-EXPDOMAIN=2
 
 USERNAME=honda
 
-DOMNUM=2
+DOMNUM=3
 
 #===============================================================================
 
@@ -24,7 +23,7 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 OUTDIR="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/TEST_exp_d1" # Directory for SCALE-LETKF output
 OUTDIR[2]="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/TEST_exp_d2" # Directory for SCALE-LETKF output
-#OUTDIR[2]="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/TEST_exp_d2" # Directory for SCALE-LETKF output
+OUTDIR[3]="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/TEST_exp_d3" # Directory for SCALE-LETKF output
 INDIR=$OUTDIR
 
 #===============================================================================
@@ -36,9 +35,11 @@ DATADIR="/data/share005/data/scale_database"
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
 DATA_TOPO[2]=
+DATA_TOPO[3]=
 DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE=                                                        # Directory of the prepared landuse files
 DATA_LANDUSE[2]=
+DATA_LANDUSE[3]=
 DATA_BDY_SCALE=                                                      # Directory of the boundary data in SCALE history format (parent domain)
 DATA_BDY_SCALE_PRC_NUM_X=8 # D1
 DATA_BDY_SCALE_PRC_NUM_Y=6 # D1
@@ -58,10 +59,12 @@ DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
 
 TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
+#TOPO_FORMAT='GTOPO30'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
 LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+#LANDUSE_FORMAT='GLCCv2'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -113,17 +116,23 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=2          # Ensemble size
-NNODES=208    # Number of nodes
-NNODES=52    # Number of nodes
+#MEMBER=2      # Ensemble size [2+2] 
+#MEMBER=6      # Ensemble size [2+2] 
+#NNODES=208    # Number of nodes # DOMNUM=2
 
+MEMBER=6      # Ensemble size [2+2] 
+NNODES=212    # Number of nodes
 
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
+# D1
 SCALE_NP=48        # Number of processes to run SCALE
+# D2
 SCALE_NP[2]=4        # Number of processes to run SCALE
+# D3
+SCALE_NP[3]=1        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
