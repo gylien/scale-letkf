@@ -8,7 +8,7 @@
 #PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
 #PRESET='K_rankdir' 
 PRESET='K' 
-PRESET='K_micro' 
+#PRESET='K_micro' 
 
 EXPNAME=r0051
 
@@ -119,9 +119,10 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #MEMBER=2      # Ensemble size [2+2] 
 #MEMBER=6      # Ensemble size [2+2] 
 #NNODES=208    # Number of nodes # DOMNUM=2
+#NNODES=212    # Number of nodes # DOMNUM=3
 
-MEMBER=6      # Ensemble size [2+2] 
-NNODES=212    # Number of nodes
+MEMBER=14      # Ensemble size [2+2] 
+NNODES=424    # Number of nodes
 
 PPN=1              # Number of processes per node
 
