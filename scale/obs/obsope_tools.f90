@@ -81,15 +81,19 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   character(len=timer_name_width) :: timer_str
 
 ! -- for Himawari-8 obs --
-  real(r_size) :: yobs_H08(nlon,nlat,NIRB_HIM8),plev_obs_H08(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: yobs_H08(nlon,nlat,NIRB_HIM8), plev_obs_H08(nlon,nlat,NIRB_HIM8)
   real(r_size) :: yobs_H08_clr(nlon,nlat,NIRB_HIM8)
   real(r_size) :: yobs_H08_prep(nlon,nlat,NIRB_HIM8)
   real(r_size) :: yobs_H08_clr_prep(nlon,nlat,NIRB_HIM8)
+
   integer :: qc_H08(nlon,nlat,NIRB_HIM8)
   integer :: qc_H08_prep(nlon,nlat,NIRB_HIM8)
   real(r_size) :: zangle_H08(nlon,nlat)
   integer :: i8, j8, b8
+  integer :: i, j, ch
 
+  real(r_size) :: yobs_H08_ens(nens,nlon,nlat,NIRB_HIM8)
+  real(r_size) :: yobs_H08_esprd(nlon,nlat,NIRB_HIM8)
 
 #ifdef TCV
 ! -- for TC vital assimilation --
@@ -385,6 +389,11 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
   allocate ( v2dg (nlonh,nlath,nv2dd) )
 
+#ifdef H08
+  yobs_H08_ens(:,:,:,:) = 0.0d0
+  yobs_H08_esprd(:,:,:) = 0.0d0
+#endif
+
   do it = 1, nitmax
     im = myrank_to_mem(it)
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
@@ -451,6 +460,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !        if (USE_HIM8 .and. islot == SLOT_BASE) then
           call Trans_XtoY_H08_allg(v3dg,v2dg,yobs_H08,yobs_H08_clr,&
                                    plev_obs_H08,qc_H08,zangle_H08)
+
+          yobs_H08_ens(im,:,:,:) = yobs_H08(:,:,:)
 
           ! Him8 preprocess
           call prep_Him8_mpi(yobs_H08,    yobs_H08_prep,    qc_lprep=qc_H08_prep)
@@ -646,6 +657,45 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
     end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
   end do ! [ it = 1, nitmax ]
+
+#ifdef H08
+  call MPI_ALLREDUCE(MPI_IN_PLACE, yobs_H08_ens, nlon*nlat*NIRB_HIM8*nens, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+
+  
+!  print *,"DEBUG HIM8"
+!  print *,myrank,myrank_d,myrank_e
+  if (myrank_e == mmean_rank_e) then
+
+  yobs_H08_ens(mmean,:,:,:) = yobs_H08_ens(1,:,:,:)
+  do ch = 1, NIRB_HIM8
+    do j = 1, nlat
+      do i = 1, nlon
+        yobs_H08_ens(mmean,i,j,ch) = yobs_H08_ens(1,i,j,ch)
+        do im = 2, MEMBER
+           yobs_H08_ens(mmean,i,j,ch) = yobs_H08_ens(mmean,i,j,ch) + yobs_H08_ens(im,i,j,ch)
+        enddo ! m
+      enddo ! i
+    enddo ! j
+  enddo ! ch
+  yobs_H08_ens(mmean,:,:,:) = yobs_H08_ens(mmean,:,:,:) / real(MEMBER, kind=r_size)
+
+  do ch = 1, NIRB_HIM8
+    do j = 1, nlat
+      do i = 1, nlon
+        yobs_H08_esprd(i,j,ch) = (yobs_H08_ens(1,i,j,ch) - yobs_H08_ens(mmean,i,j,ch))**2
+        do im = 2, MEMBER
+          yobs_H08_esprd(i,j,ch) = yobs_H08_esprd(i,j,ch) + (yobs_H08_ens(im,i,j,ch) - yobs_H08_ens(mmean,i,j,ch))**2
+        enddo ! im
+        yobs_H08_esprd(i,j,ch) = sqrt(yobs_H08_esprd(i,j,ch) / real(MEMBER, kind=r_size))
+      enddo ! i
+    enddo ! j
+  enddo ! ch
+
+  call write_Him8_mpi(yobs_H08_esprd, -1, tbb_lm=yobs_H08_ens(mmean,:,:,:))
+
+  endif ! myrank_e == mmean_rank_e
+
+#endif
 
   deallocate ( v3dg, v2dg )
   deallocate ( bsn, bsna )

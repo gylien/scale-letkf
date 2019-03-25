@@ -2339,10 +2339,11 @@ subroutine read_Him8_mpi(filename,obs)
   return
 end subroutine read_Him8_mpi
 
-subroutine write_Him8_mpi(tbb_l,step)
+subroutine write_Him8_mpi(tbb_l,step,tbb_lm)
   implicit none
 
   real(r_size),intent(in) :: tbb_l(nlon,nlat,NIRB_HIM8)
+  real(r_size),optional,intent(in) :: tbb_lm(nlon,nlat,NIRB_HIM8)
   real(r_size) :: tbb_lprep(nlon,nlat,NIRB_HIM8)
   real(r_size) :: tbb_gprep(nlong,nlatg,NIRB_HIM8)
   integer,intent(in) :: step
@@ -2359,7 +2360,11 @@ subroutine write_Him8_mpi(tbb_l,step)
   integer :: iunit, irec
   integer :: ch
  
-  call prep_Him8_mpi(tbb_l,tbb_lprep)
+  if (step == -1 .and. present(tbb_lm)) then ! called from obsope
+    tbb_lprep = tbb_lm
+  else
+    call prep_Him8_mpi(tbb_l,tbb_lprep)
+  endif
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
@@ -2383,6 +2388,8 @@ subroutine write_Him8_mpi(tbb_l,step)
       filename = trim(H08_OUTFILE_BASENAME)//"_b.dat"
     elseif (step == 2) then
       filename = trim(H08_OUTFILE_BASENAME)//"_a.dat"
+    elseif (step == -1) then
+      filename = trim(H08_OUTFILE_BASENAME)//"_sprd.dat"
     endif
 
     open(unit=iunit,file=trim(filename),form='unformatted',access='direct', &

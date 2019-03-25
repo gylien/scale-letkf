@@ -132,6 +132,9 @@ LTIMESLOT=600     # Timeslot interval for 4D-LETKF (second)
 MEMBER=50         # Ensemble size
 NNODES=1872   # Number of nodes
 
+#
+#MEMBER=6         # Ensemble size
+#NNODES=576   # Number of nodes
 
 PPN=1              # Number of processes per node
 
