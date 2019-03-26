@@ -126,6 +126,7 @@ stage_in server || exit $?
 #===============================================================================
 # Creat a job script
 
+NPIN=`expr 255 / \( $PPN \) + 1`
 jobscrp="$TMP/${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
@@ -138,7 +139,7 @@ cat > $jobscrp << EOF
 #PJM --mpi proc=$((NNODES*PPN))
 ##PJM --mpi proc=${totalnp}
 #PJM --omp thread=${THREADS}
-#PJM -g gg10
+#PJM -g $(echo $(id -ng))
 ##PJM -j
 
 rm -f machinefile
@@ -152,8 +153,25 @@ module load hdf5/1.8.17
 module load netcdf/4.4.1
 module load netcdf-fortran/4.4.3
 
+export FORT_FMT_RECL=400
+
+export HFI_NO_CPUAFFINITY=1
+export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
+export I_MPI_HBW_POLICY=hbw_preferred,,
+export I_MPI_FABRICS_LIST=tmi
+unset KMP_AFFINITY
+#export KMP_AFFINITY=verbose
+#export I_MPI_DEBUG=5
+
+export OMP_NUM_THREADS=1
+export I_MPI_PIN_DOMAIN=${NPIN}
+export I_MPI_PERHOST=${PPN}
+export KMP_HW_SUBSET=1t
+
+
+#export OMP_STACKSIZE=128m
 ulimit -s unlimited
-export OMP_STACKSIZE=128m
+
 
 ./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF

@@ -1,1 +1,18 @@
-../testcase_PAWR_5km_4p/config.nml.ensmodel
+&PARAM_ENSEMBLE
+!--MEMBER--
+!--MEMBER_RUN--
+!--MEMBER_ITER--
+!--CONF_FILES--
+!--CONF_FILES_SEQNUM--
+!--DET_RUN--
+ DET_RUN_CYCLED = .false.,
+/
+
+&PARAM_PROCESS
+!--PPN--
+!--MEM_NODES--
+!--NUM_DOMAIN--
+!--PRC_DOMAINS--
+! COLOR_REORDER = .true.,
+/
+
