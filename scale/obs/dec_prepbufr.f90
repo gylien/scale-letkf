@@ -11,13 +11,15 @@ PROGRAM dec_prepbufr
   USE common_obs_scale, ONLY : obtypelist, &
                                id_q_obs, &
                                id_t_obs, &
+                               id_tv_obs,&
                                id_u_obs, &
                                id_v_obs, &
                                id_ps_obs
 
   IMPLICIT NONE
 
-  REAL,PARAMETER :: minlon=90.0
+!  REAL,PARAMETER :: minlon=90.0
+  REAL,PARAMETER :: minlon=80.0
   REAL,PARAMETER :: maxlon=180.0
   REAL,PARAMETER :: minlat=-10.0
   REAL,PARAMETER :: maxlat=60.0
@@ -40,13 +42,13 @@ PROGRAM dec_prepbufr
 !  CHARACTER(6) :: obtypelist(nobtype)
   REAL(r_dble) :: station(5)
   CHARACTER(8) :: cs
-  REAL(r_dble) :: prs(4,maxlev,maxevn)
-  REAL(r_dble) :: obs(4,maxlev,maxevn)
+  REAL(r_dble) :: prs(5,maxlev,maxevn)
+  REAL(r_dble) :: obs(5,maxlev,maxevn)
   REAL(r_sngl) :: wk(8)
 
 
-!!!  real(r_sngl) :: vtcd
-!!!  integer :: vtcdi
+  real(r_sngl) :: vtcd
+  integer :: vtcdi
 
   INTEGER :: iunit = 90
   !
@@ -56,8 +58,8 @@ PROGRAM dec_prepbufr
   CALL OPENBF(11,'IN',11)
   CALL DATELEN(10)
 
-!!!  call UFBQCD(11,'VIRTMP',vtcd)
-!!!  vtcdi = nint(vtcd)
+  call UFBQCD(11,'VIRTMP',vtcd)
+  vtcdi = nint(vtcd)
 
   !
   ! Main loop
@@ -100,20 +102,19 @@ PROGRAM dec_prepbufr
     !
     ! obs
     !
-    CALL UFBEVN(11,prs,4,maxlev,maxevn,nilev,'POB POE PQM PPC')
+    CALL UFBEVN(11,prs,5,maxlev,maxevn,nilev,'POB POE PQM PPC PRC')
     IF(obtype == 'ADPSFC' .OR.&
      & obtype == 'SFCSHP' .OR.&
      & obtype == 'SFCBOG') CALL output_ps ! surface pressure report
-    IF(nilev > 0) THEN
-      CALL UFBEVN(11,obs,4,maxlev,maxevn,ilev,'QOB QOE QQM QPC')
-      CALL output(id_q_obs)
-      CALL UFBEVN(11,obs,4,maxlev,maxevn,ilev,'TOB TOE TQM TPC')
-      CALL output(id_t_obs)
-      CALL UFBEVN(11,obs,4,maxlev,maxevn,ilev,'UOB WOE WQM WPC')
-      CALL output(id_u_obs)
-      CALL UFBEVN(11,obs,4,maxlev,maxevn,ilev,'VOB WOE WQM WPC')
-      CALL output(id_v_obs)
-    END IF
+    CALL UFBEVN(11,obs,5,maxlev,maxevn,ilev,'QOB QOE QQM QPC QRC')
+    CALL output(id_q_obs)
+    CALL UFBEVN(11,obs,5,maxlev,maxevn,ilev,'TOB TOE TQM TPC TRC')
+    CALL output(id_t_obs)
+    CALL UFBEVN(11,obs,5,maxlev,maxevn,ilev,'UOB WOE WQM WPC WRC')
+    CALL output(id_u_obs)
+    CALL UFBEVN(11,obs,5,maxlev,maxevn,ilev,'VOB WOE WQM WPC WRC')
+    CALL output(id_v_obs)
+
   END DO
 
   PRINT '(A)','================================================================================'
@@ -164,18 +165,19 @@ SUBROUTINE output(id)
     END IF
     IF(id == id_t_obs) then
       wk(5) = wk(5) + t0c
-!!!      do iseq = 1,maxevn-1
-!!!        if (obs(4,ilev,iseq) > 9.e10) exit
-!!!        if (nint(obs(4,ilev,iseq)) == vtcdi) then
-!!!          iqm = NINT(obs(3,ilev,iseq+1))
-!!!          wk(5) = obs(1,ilev,iseq+1) + t0c
-!!!          exit
-!!!        end if
-!!!      end do
+      IF( obs(4,ilev,1) == vtcd .and. obs(5,ilev,1) /= 3 ) THEN
+        wk(1) = id_tv_obs
+      ENDIF
+!      do iseq = 1,maxevn-1
+!        if (obs(4,ilev,iseq) > 9.e10) exit
+!        if (nint(obs(4,ilev,iseq)) == vtcdi .and. obs(5,ilev,iseq) /= 3) then
+!          wk(1) = id_tv_obs
+!          exit
+!        end if
+!      end do
     END IF
     IF(iqm < 0 .OR. 2 < iqm) CYCLE
     IF(wk(6) > 1.E10) CYCLE
-!write (*, '(A,I6,6F14.5)') obtype, ilev, wk(1:6)
     WRITE(iunit) wk
     iobs_out(n) = iobs_out(n) + 1
   END DO

@@ -41,8 +41,11 @@ DATA_BDY_NICAM=                                                      # Directory
 DATA_BDY_GRADS="$DDIR/ncepfnl_grads"                                 # Directory of the boundary data in GrADS format
 DATA_ADDINFL=                                                        # Directory of the additive inflation files
 
-OBS="$DDIR/obs/prepbufr_obs_eastasia"                                # Observation data in LETKF observation format
-OBSNCEP=
+OBS="/data9/honda/SCALE-LETKF/scale-5-2.6/ncepobs_gdas_letkf_tv_SCY"
+OBS="/data9/honda/SCALE-LETKF/scale-5-2.6/ncepobs_gdas_letkf_tv_TEPCO"
+OBSNCEP="/data9/honda/SCALE-LETKF/scale-5-2.6/ncepobs_gdas"
+OBSNCEP="/data9/honda/SCALE-LETKF/scale-5-2.6/ncepobs_gdas_TEST0327"
+OBS="/data9/honda/SCALE-LETKF/scale-5-2.6/ncepobs_gdas_letkf_tv_TEST0327"
 
 #===============================================================================
 # model/data file options
