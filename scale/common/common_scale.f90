@@ -1187,6 +1187,7 @@ subroutine state_trans(v3dg)
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
        CVdry  => CONST_CVdry, &
+       T00   => CONST_TEM00, &
        PRE00 => CONST_PRE00
   implicit none
 
@@ -1194,6 +1195,11 @@ subroutine state_trans(v3dg)
   real(RP) :: rho,pres,temp
   real(RP) :: qdry,CVtot,Rtot,CPovCV
   integer :: i,j,k,iv3d
+
+  real(RP) :: ep ! vapor pressure
+  real(RP) :: eps ! epsilon (Rdry/Rvap)
+  
+  eps = Rdry / Rvap
 
 !$OMP PARALLEL DO PRIVATE(i,j,k,iv3d,qdry,CVtot,Rtot,CPovCV,rho,pres,temp) COLLAPSE(2)
   do j = 1, nlat
@@ -1218,10 +1224,26 @@ subroutine state_trans(v3dg)
        v3dg(k,i,j,iv3d_w) = v3dg(k,i,j,iv3d_rhow) / rho !!!!!!
        v3dg(k,i,j,iv3d_t) = temp
        v3dg(k,i,j,iv3d_p) = pres
+
       enddo
     enddo
   enddo
 !$OMP END PARALLEL DO
+
+  if (Q_ANAL_TD) then
+!$OMP PARALLEL DO PRIVATE(i,j,k,ep) COLLAPSE(2)
+    do j = 1, nlat
+      do i = 1, nlon
+        do k = 1, Q_ANAL_TD_TOP_MLEV 
+          ep = max(v3dg(k,i,j,iv3d_q), 0.0_RP) * v3dg(k,i,j,iv3d_p) / &
+               (eps + max(v3dg(k,i,j,iv3d_q), 0.0_RP)) * 0.01_RP ! (hPa)
+          v3dg(k,i,j,iv3d_q) = 243.5_RP / (17.67_RP / log(ep / 6.112_RP) - 1.0_RP) + T00 ! (K)
+        enddo
+      enddo
+    enddo
+!$OMP END PARALLEL DO
+
+  endif
 
   return
 end subroutine state_trans
@@ -1235,6 +1257,7 @@ subroutine state_trans_inv(v3dg)
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
        CVdry  => CONST_CVdry, &
+       T00   => CONST_TEM00, &
        PRE00 => CONST_PRE00
   implicit none
 
@@ -1242,6 +1265,12 @@ subroutine state_trans_inv(v3dg)
   real(RP) :: rho,rhot
   real(RP) :: qdry,CVtot,Rtot,CVovCP
   integer :: i,j,k,iv3d
+
+  real(RP) :: ep ! vapor pressure
+  real(RP) :: eps ! epsilon (Rdry/Rvap)
+  real(RP) :: td
+
+  eps = Rdry / Rvap
 
   do iv3d = 1, nv3d
     if (POSITIVE_DEFINITE_Q .and. iv3d == iv3d_q) then
@@ -1252,7 +1281,28 @@ subroutine state_trans_inv(v3dg)
     end if
   end do
 
-!$OMP PARALLEL DO PRIVATE(i,j,k,iv3d,qdry,CVtot,Rtot,CVovCP,rho,rhot) COLLAPSE(2)
+  if (Q_ANAL_TD) then
+  ! Note: This computation should be done before substituting RHO*T into
+  ! v3dg(:,:,:,iv3d_rhot), because iv3d_rhot and iv3d_p share the same memory
+  ! space
+!$OMP PARALLEL DO PRIVATE(i,j,k,ep,td) COLLAPSE(2)
+    do j = 1, nlat
+      do i = 1, nlon
+        do k = 1, Q_ANAL_TD_TOP_MLEV 
+          ! v3dg(k,i,j,iv3d_q) stores Td (K), not qv
+          td = min(v3dg(k,i,j,iv3d_q), v3dg(k,i,j,iv3d_t)) - T00 !Avoid super saturation
+
+          ep = 611.2_RP * exp(17.67_RP * td / (td + 243.5_RP)) ! Pa
+          v3dg(k,i,j,iv3d_q) = eps * ep / (v3dg(k,i,j,iv3d_p) - ep)
+
+        enddo
+      enddo
+    enddo
+!$OMP END PARALLEL DO
+
+  endif
+
+!$OMP PARALLEL DO PRIVATE(i,j,k,iv3d,qdry,CVtot,Rtot,CVovCP,rho,rhot,ep) COLLAPSE(2)
   do j = 1, nlat
     do i = 1, nlon
       do k = 1, nlev
@@ -1313,6 +1363,8 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   real(r_size) :: height(nlev,nlon,nlat)
   integer :: i, j, k, iv3d, iv2d
 
+  real(RP) :: qv3dg(nlev,nlon,nlat)
+
   ! Variables that can be directly copied
   !---------------------------------------------------------
 
@@ -1327,6 +1379,12 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
   v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
+
+  if (Q_ANAL_TD) then
+    qv3dg = v3dg(:,:,:,iv3d_q)
+    call td2qv(qv3dg(:,:,:), v3dg(:,:,:,iv3d_p), v3dg(:,:,:,iv3d_t))
+    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q) = qv3dg(:,:,:)
+  endif
 
   ! RH
   !---------------------------------------------------------
@@ -1881,7 +1939,75 @@ function ch2BB_Him8(ch)
 
 end function ch2BB_Him8
 
+
 #endif
+
+! convert qv to Td only
+subroutine qv2td(qv3dg, prs3dg)
+  use scale_tracer, only: TRACER_CV
+    use scale_const, only: &
+       Rdry   => CONST_Rdry, &
+       Rvap   => CONST_Rvap, &
+       T00   => CONST_TEM00
+  implicit none
+
+  real(RP), intent(inout) :: qv3dg(nlev,nlon,nlat)
+  real(RP), intent(in) :: prs3dg(nlev,nlon,nlat)
+  integer :: i,j,k
+
+  real(RP) :: ep ! vapor pressure
+  real(RP) :: eps ! epsilon (Rdry/Rvap)
+  
+  eps = Rdry / Rvap
+
+!$OMP PARALLEL DO PRIVATE(i,j,k,ep) COLLAPSE(2)
+  do j = 1, nlat
+    do i = 1, nlon
+      do k = 1, Q_ANAL_TD_TOP_MLEV 
+        ep = max(qv3dg(k,i,j), 0.0_RP) * prs3dg(k,i,j) / (eps + max(qv3dg(k,i,j), 0.0_RP)) * 0.01_RP ! (hPa)
+        qv3dg(k,i,j) = 243.5_RP / (17.67_RP / log(ep / 6.112_RP) - 1.0_RP) + T00 ! (K)
+      enddo
+    enddo
+  enddo
+!$OMP END PARALLEL DO
+
+  return
+end subroutine qv2td
+
+subroutine td2qv(qv3dg, prs3dg, tk3dg)
+  use scale_tracer, only: TRACER_CV
+    use scale_const, only: &
+       Rdry   => CONST_Rdry, &
+       Rvap   => CONST_Rvap, &
+       T00   => CONST_TEM00
+  implicit none
+
+  real(RP), intent(inout) :: qv3dg(nlev,nlon,nlat)
+  real(RP), intent(in) :: prs3dg(nlev,nlon,nlat)
+  real(RP), intent(in) :: tk3dg(nlev,nlon,nlat)
+  integer :: i,j,k
+
+  real(RP) :: ep ! vapor pressure
+  real(RP) :: eps ! epsilon (Rdry/Rvap)
+  real(RP) :: td
+
+  eps = Rdry / Rvap
+
+!$OMP PARALLEL DO PRIVATE(i,j,k,ep,td) COLLAPSE(2)
+  do j = 1, nlat
+    do i = 1, nlon
+      do k = 1, Q_ANAL_TD_TOP_MLEV 
+        td = min(qv3dg(k,i,j), tk3dg(k,i,j)) - T00 ! Avoid super saturation
+        ep = 611.2_RP * exp(17.67_RP * td / (td + 243.5_RP)) ! Pa
+        qv3dg(k,i,j) = eps * ep / (prs3dg(k,i,j) - ep)
+
+      enddo
+    enddo
+  enddo
+!$OMP END PARALLEL DO
+
+  return
+end subroutine td2qv
 
 !===============================================================================
 END MODULE common_scale

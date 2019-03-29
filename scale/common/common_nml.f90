@@ -121,6 +121,10 @@ MODULE common_nml
   real(r_size) :: GROSS_ERROR_TCXY = -1.0d0 ! debug ! < 0: same as GROSS_ERROR 
   real(r_size) :: GROSS_ERROR_TCP = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
 
+  logical :: Q_ANAL_TD = .false.
+  integer :: Q_ANAL_TD_TOP_MLEV = 10 ! Qv => Td conversion is applied only 
+                                     ! k < Q_ANAL_TD_TOP_MLEV (k is model
+                                     ! vertical grid number, not physical height)
   real(r_size) :: Q_UPDATE_TOP = 0.0d0     ! water vapor and hydrometeors are updated only below this pressure level (Pa)
   real(r_size) :: Q_SPRD_MAX = -1.0D0      ! maximum q (ensemble spread)/(ensemble mean) (only effective when > 0)
 
@@ -590,6 +594,8 @@ subroutine read_nml_letkf
     GROSS_ERROR_H08, &
     GROSS_ERROR_TCXY, &
     GROSS_ERROR_TCP, &
+    Q_ANAL_TD, &
+    Q_ANAL_TD_TOP_MLEV, &
     Q_UPDATE_TOP, &
     Q_SPRD_MAX, &
     BOUNDARY_BUFFER_WIDTH, &

@@ -1452,6 +1452,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   !       because only these processes have read topo files in 'topo2d'
   ! 
   if (myrank_e == mmean_rank_e) then
+
 #ifdef H08
 !    if (H08_VBC_USE)then
 !      call read_vbc_Him8(vbcfH08)
@@ -2360,7 +2361,7 @@ subroutine write_Him8_mpi(tbb_l,step,tbb_lm)
   integer :: iunit, irec
   integer :: ch
  
-  if (step == -1 .and. present(tbb_lm)) then ! called from obsope
+  if (step <= 0 .and. present(tbb_lm)) then ! called from obsope
     tbb_lprep = tbb_lm
   else
     call prep_Him8_mpi(tbb_l,tbb_lprep)
@@ -2390,6 +2391,8 @@ subroutine write_Him8_mpi(tbb_l,step,tbb_lm)
       filename = trim(H08_OUTFILE_BASENAME)//"_a.dat"
     elseif (step == -1) then
       filename = trim(H08_OUTFILE_BASENAME)//"_sprd.dat"
+    elseif (step == -2) then
+      filename = trim(H08_OUTFILE_BASENAME)//"_sprdc.dat"
     endif
 
     open(unit=iunit,file=trim(filename),form='unformatted',access='direct', &

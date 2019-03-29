@@ -21,6 +21,10 @@
 /
 
 &PARAM_LETKF
+! DEBUG
+ Q_ANAL_TD = .true.,
+ Q_ANAL_TD_TOP_MLEV = 56, ! model level
+!
 !--OBSDA_IN--
 !--OBSDA_IN_BASENAME--
 !--GUES_IN_BASENAME--

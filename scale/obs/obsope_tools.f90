@@ -95,6 +95,9 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   real(r_size) :: yobs_H08_ens(nens,nlon,nlat,NIRB_HIM8)
   real(r_size) :: yobs_H08_esprd(nlon,nlat,NIRB_HIM8)
 
+  real(r_size) :: yobs_H08_ens_clr(nens,nlon,nlat,NIRB_HIM8)
+  real(r_size) :: yobs_H08_esprd_clr(nlon,nlat,NIRB_HIM8)
+
 #ifdef TCV
 ! -- for TC vital assimilation --
 ! bTC: background TC in each subdomain
@@ -392,6 +395,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 #ifdef H08
   yobs_H08_ens(:,:,:,:) = 0.0d0
   yobs_H08_esprd(:,:,:) = 0.0d0
+  yobs_H08_ens_clr(:,:,:,:) = 0.0d0
+  yobs_H08_esprd_clr(:,:,:) = 0.0d0
 #endif
 
   do it = 1, nitmax
@@ -462,6 +467,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
                                    plev_obs_H08,qc_H08,zangle_H08)
 
           yobs_H08_ens(im,:,:,:) = yobs_H08(:,:,:)
+          yobs_H08_ens_clr(im,:,:,:) = yobs_H08_clr(:,:,:)
 
           ! Him8 preprocess
           call prep_Him8_mpi(yobs_H08,    yobs_H08_prep,    qc_lprep=qc_H08_prep)
@@ -660,38 +666,46 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
 #ifdef H08
   call MPI_ALLREDUCE(MPI_IN_PLACE, yobs_H08_ens, nlon*nlat*NIRB_HIM8*nens, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, yobs_H08_ens_clr, nlon*nlat*NIRB_HIM8*nens, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
 
-  
-!  print *,"DEBUG HIM8"
-!  print *,myrank,myrank_d,myrank_e
   if (myrank_e == mmean_rank_e) then
-
-  yobs_H08_ens(mmean,:,:,:) = yobs_H08_ens(1,:,:,:)
-  do ch = 1, NIRB_HIM8
-    do j = 1, nlat
-      do i = 1, nlon
-        yobs_H08_ens(mmean,i,j,ch) = yobs_H08_ens(1,i,j,ch)
-        do im = 2, MEMBER
-           yobs_H08_ens(mmean,i,j,ch) = yobs_H08_ens(mmean,i,j,ch) + yobs_H08_ens(im,i,j,ch)
-        enddo ! m
-      enddo ! i
-    enddo ! j
-  enddo ! ch
-  yobs_H08_ens(mmean,:,:,:) = yobs_H08_ens(mmean,:,:,:) / real(MEMBER, kind=r_size)
-
-  do ch = 1, NIRB_HIM8
-    do j = 1, nlat
-      do i = 1, nlon
-        yobs_H08_esprd(i,j,ch) = (yobs_H08_ens(1,i,j,ch) - yobs_H08_ens(mmean,i,j,ch))**2
-        do im = 2, MEMBER
-          yobs_H08_esprd(i,j,ch) = yobs_H08_esprd(i,j,ch) + (yobs_H08_ens(im,i,j,ch) - yobs_H08_ens(mmean,i,j,ch))**2
-        enddo ! im
-        yobs_H08_esprd(i,j,ch) = sqrt(yobs_H08_esprd(i,j,ch) / real(MEMBER, kind=r_size))
-      enddo ! i
-    enddo ! j
-  enddo ! ch
-
-  call write_Him8_mpi(yobs_H08_esprd, -1, tbb_lm=yobs_H08_ens(mmean,:,:,:))
+  
+    yobs_H08_ens(mmean,:,:,:) = yobs_H08_ens(1,:,:,:)
+    yobs_H08_ens_clr(mmean,:,:,:) = yobs_H08_ens_clr(1,:,:,:)
+    do ch = 1, NIRB_HIM8
+      do j = 1, nlat
+        do i = 1, nlon
+          yobs_H08_ens(mmean,i,j,ch) = yobs_H08_ens(1,i,j,ch)
+          yobs_H08_ens_clr(mmean,i,j,ch) = yobs_H08_ens_clr(1,i,j,ch)
+          do im = 2, MEMBER
+             yobs_H08_ens(mmean,i,j,ch) = yobs_H08_ens(mmean,i,j,ch) + yobs_H08_ens(im,i,j,ch)
+             yobs_H08_ens_clr(mmean,i,j,ch) = yobs_H08_ens_clr(mmean,i,j,ch) + yobs_H08_ens_clr(im,i,j,ch)
+          enddo ! m
+        enddo ! i
+      enddo ! j
+    enddo ! ch
+    yobs_H08_ens(mmean,:,:,:) = yobs_H08_ens(mmean,:,:,:) / real(MEMBER, kind=r_size)
+    yobs_H08_ens_clr(mmean,:,:,:) = yobs_H08_ens_clr(mmean,:,:,:) / real(MEMBER, kind=r_size)
+  
+    do ch = 1, NIRB_HIM8
+      do j = 1, nlat
+        do i = 1, nlon
+          yobs_H08_esprd(i,j,ch) = (yobs_H08_ens(1,i,j,ch) - yobs_H08_ens(mmean,i,j,ch))**2
+          yobs_H08_esprd_clr(i,j,ch) = (yobs_H08_ens_clr(1,i,j,ch) - yobs_H08_ens_clr(mmean,i,j,ch))**2
+          do im = 2, MEMBER
+            yobs_H08_esprd(i,j,ch) = yobs_H08_esprd(i,j,ch) + &
+                                     (yobs_H08_ens(im,i,j,ch) - yobs_H08_ens(mmean,i,j,ch))**2
+            yobs_H08_esprd_clr(i,j,ch) = yobs_H08_esprd_clr(i,j,ch) + &
+                                     (yobs_H08_ens_clr(im,i,j,ch) - yobs_H08_ens_clr(mmean,i,j,ch))**2
+          enddo ! im
+          yobs_H08_esprd(i,j,ch) = sqrt(yobs_H08_esprd(i,j,ch) / real(MEMBER, kind=r_size))
+          yobs_H08_esprd_clr(i,j,ch) = sqrt(yobs_H08_esprd_clr(i,j,ch) / real(MEMBER, kind=r_size))
+        enddo ! i
+      enddo ! j
+    enddo ! ch
+  
+    call write_Him8_mpi(yobs_H08_esprd, -1, tbb_lm=yobs_H08_ens(mmean,:,:,:))
+    call write_Him8_mpi(yobs_H08_esprd_clr, -2, tbb_lm=yobs_H08_ens(mmean,:,:,:))
 
   endif ! myrank_e == mmean_rank_e
 

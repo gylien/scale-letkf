@@ -1157,7 +1157,6 @@ fi
 
 bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 
-echo "DEBUG XXX "$time" "$CYCLEFLEN" "$BDYCYCLE_INT" "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE>&2
 ############
 #if ((BDY_FORMAT == 1)); then
 #  if ((DATA_BDY_TMPLOC == 1)); then
