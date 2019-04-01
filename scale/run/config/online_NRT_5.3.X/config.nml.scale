@@ -1,7 +1,14 @@
 &PARAM_IO
 !--IO_LOG_BASENAME--
  IO_LOG_ALLNODE = .false.,
-!--IO_AGGREGATE--
+/
+
+&PARAM_FILE
+!--FILE_AGGREGATE--
+/
+
+&PARAM_FILE_CARTESC
+ FILE_CARTESC_datacheck_criteria = 1.0D-4,
 /
 
 &PARAM_TIME
@@ -9,18 +16,20 @@
  TIME_STARTMS               = 0.D0,
 !--TIME_DURATION--
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = 30.0D0,
+ TIME_DT                    = 40.0D0,
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = 6.0D0,
+ TIME_DT_ATMOS_DYN          = 8.0D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = 30.0D0,
+ TIME_DT_ATMOS_PHY_MP       = 40.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
+ TIME_DT_ATMOS_PHY_CP       = 40.0D0,
+ TIME_DT_ATMOS_PHY_CP_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_RD       = 600.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_SF       = 30.0D0,
+ TIME_DT_ATMOS_PHY_SF       = 40.0D0,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_TB       = 30.0D0,
- TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",
+ TIME_DT_ATMOS_PHY_BL       = 40.0D0,
+ TIME_DT_ATMOS_PHY_BL_UNIT  = "SEC",
  TIME_DT_OCEAN              = 600.D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
  TIME_DT_LAND               = 600.D0,
@@ -38,7 +47,7 @@
 !--TIME_END_RESTART_OUT--
 /
 
-&PARAM_NEST
+&PARAM_COMM_CARTESC_NEST
 !--ONLINE_DOMAIN_NUM--
 !--ONLINE_IAM_PARENT--
 !--ONLINE_IAM_DAUGHTER--
@@ -84,9 +93,9 @@
 #
 #################################################
 
-&PARAM_PRC
- PRC_NUM_X      = 8,
- PRC_NUM_Y      = 6,
+&PARAM_PRC_CARTESC
+ PRC_NUM_X      = 16,
+ PRC_NUM_Y      = 12,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -97,31 +106,35 @@
 #
 #################################################
 
-&PARAM_INDEX
+&PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 36,
- IMAX = 48,
- JMAX = 48,
+ IMAX = 20,
+ JMAX = 20,
 /
 
-&PARAM_LAND_INDEX
- LKMAX = 5,
+&PARAM_LAND_GRID_CARTESC_INDEX
+ LKMAX = 7,
 /
 
-&PARAM_URBAN_INDEX
+&PARAM_URBAN_GRID_CARTESC_INDEX
  UKMAX = 5,
 /
 
-&PARAM_LAND_GRID
- LDZ = 0.05D0, 0.15D0, 0.30D0, 0.50D0, 1.00D0,
+&PARAM_LAND_GRID_CARTESC
+ LDZ = 0.05D0, 0.15D0, 0.30D0, 0.50D0, 1.0D0, 1.0D0, 1.0D0,
 /
 
-&PARAM_URBAN_GRID
+&PARAM_URBAN_GRID_CARTESC
  UDZ = 0.01D0, 0.01D0, 0.03D0, 0.05D0, 0.10D0,
 /
 
-&PARAM_GRID
- DX = 15000.D0,
- DY = 15000.D0,
+&PARAM_OCEAN_GRID_CARTESC_INDEX
+ OKMAX = 1,
+/
+
+&PARAM_ATMOS_GRID_CARTESC
+ DX = 18000.D0,
+ DY = 18000.D0,
  FZ(:) =    161.6830D0,   335.9580D0,   523.8060D0,   726.2850D0,   944.5340D0,
            1179.7810D0,  1433.3490D0,  1706.6670D0,  2001.2720D0,  2318.8220D0,
            2661.1040D0,  3030.0450D0,  3427.7200D0,  3856.3680D0,  4318.4000D0,
@@ -131,16 +144,16 @@
           19154.0100D0, 20807.4900D0, 22589.7400D0, 24510.8100D0, 26581.5000D0,
           28800.0000D0,
  BUFFER_DZ = 5000.D0,
- BUFFER_DX = 150000.D0,
- BUFFER_DY = 150000.D0,
+ BUFFER_DX = 180000.D0,
+ BUFFER_DY = 180000.D0,
 /
 
-&PARAM_MAPPROJ
- MPRJ_basepoint_lon = 135.0D0,
- MPRJ_basepoint_lat =  35.0D0,
- MPRJ_type          = 'LC',
- MPRJ_LC_lat1       =  30.00D0,
- MPRJ_LC_lat2       =  40.00D0,
+&PARAM_MAPPROJECTION
+ MAPPROJECTION_basepoint_lon = 135.0D0,
+ MAPPROJECTION_basepoint_lat =  35.0D0,
+ MAPPROJECTION_type          = 'LC',
+ MAPPROJECTION_LC_lat1       =  30.00D0,
+ MAPPROJECTION_LC_lat2       =  40.00D0,
 /
 
 #################################################
@@ -153,28 +166,46 @@
  CONST_THERMODYN_TYPE = "SIMPLE",
 /
 
-&PARAM_TRACER
- TRACER_TYPE = "TOMITA08",
-/
-
 &PARAM_ATMOS
  ATMOS_DYN_TYPE    = "HEVI",
  ATMOS_PHY_MP_TYPE = "TOMITA08",
+ ATMOS_PHY_CP_TYPE = "KF",
  ATMOS_PHY_RD_TYPE = "MSTRNX",
  ATMOS_PHY_SF_TYPE = "COUPLE",
- ATMOS_PHY_TB_TYPE = "MYNN",
+ ATMOS_PHY_TB_TYPE = "SMAGORINSKY",
+ ATMOS_PHY_BL_TYPE = "MYNN",
 /
 
 &PARAM_OCEAN
- OCEAN_TYPE = "CONST",
+ OCEAN_DYN_TYPE = "INIT",
+ OCEAN_SFC_TYPE = "FIXED-TEMP",
 /
 
 &PARAM_LAND
- LAND_TYPE = "SLAB",
+ LAND_DYN_TYPE = "BUCKET",
+ LAND_SFC_TYPE = "SKIN",
+/
+
+! r0051
+&PARAM_LAND_DYN_BUCKET
+ LAND_DYN_BUCKET_UPDATE_BOTTOM_TEMP  = .false.,
+ LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER = .true.,
+/
+
+! r0051
+&PARAM_URBAN_DYN_KUSAKA01
+ STRGR = 0.24D0,
+ STRGB = 0.009D0,
+ STRGG = 0.24D0,
+/
+
+! r0051
+&PARAM_BULKFLUX
+ BULKFLUX_type = "B91W01",
 /
 
 &PARAM_URBAN
- URBAN_TYPE = "SLC",
+ URBAN_DYN_TYPE = "KUSAKA01",
 /
 
 #################################################
@@ -184,12 +215,11 @@
 #################################################
 
 &PARAM_ATMOS_VARS
- ATMOS_VARS_CHECKRANGE = .false.,
+ ATMOS_VARS_CHECKRANGE = .true.,
 /
 
 &PARAM_ATMOS_REFSTATE
  ATMOS_REFSTATE_TYPE = "INIT",
- ATMOS_REFSTATE_UPDATE_FLAG = .true.,
  ATMOS_REFSTATE_UPDATE_DT   = 10800.D0,
 /
 
@@ -200,25 +230,33 @@
  ATMOS_BOUNDARY_USE_DENS    = .true.,
  ATMOS_BOUNDARY_USE_QHYD    = .false.,
 !--ATMOS_BOUNDARY_UPDATE_DT--
+! ATMOS_BOUNDARY_ALPHAFACT_DENS = 0.25D0,
+! ATMOS_BOUNDARY_TAUX        = 20.0D0,
+! ATMOS_BOUNDARY_TAUY        = 20.0D0,
  ATMOS_BOUNDARY_LINEAR_H    = .false.,
  ATMOS_BOUNDARY_EXP_H       = 2.d0,
 /
 
 &PARAM_ATMOS_DYN
+ ATMOS_DYN_TINTEG_LARGE_TYPE          = "EULER",
  ATMOS_DYN_TINTEG_SHORT_TYPE          = "RK4",
  ATMOS_DYN_TINTEG_TRACER_TYPE         = "RK3WS2002",
- ATMOS_DYN_FVM_FLUX_TYPE              = "CD4",
+ ATMOS_DYN_FVM_FLUX_TYPE              = "UD3",          ! r0051
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
  ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
- ATMOS_DYN_NUMERICAL_DIFF_COEF        = 9.D-2,
- ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0,
- ATMOS_DYN_enable_coriolis            = .true.,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-4,
+ ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.0D0,
+ ATMOS_DYN_CORIOLIS_TYPE = "SPHERE",
  ATMOS_DYN_WDAMP_HEIGHT               = 15.D3,
 /
 
+&PARAM_ATMOS_PHY_TB_SMG
+ ATMOS_PHY_TB_SMG_horizontal = .true.,
+/
+
 &PARAM_ATMOS_PHY_RD_MSTRN
- ATMOS_PHY_RD_MSTRN_KADD                  = 30,
  ATMOS_PHY_RD_MSTRN_TOA                   = 100.D0,
+ ATMOS_PHY_RD_MSTRN_KADD                  = 30,
 !--ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME--
 !--ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME--
 !--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--
@@ -230,6 +268,14 @@
 !--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--
 /
 
+&PARAM_ATMOS_PHY_MP
+ MP_ntmax_sedimentation = 6,
+/
+
+!&PARAM_ATMOS_PHY_MP_TOMITA08
+! Default Tomita (2008) parameters are used
+!/
+
 #################################################
 #
 # model configuration: ocean
@@ -238,11 +284,10 @@
 
 &PARAM_OCEAN_VARS
  OCEAN_VARS_CHECKRANGE = .true.,
-!--OCEAN_RESTART_IN_BASENAME--
 /
 
-&PARAM_OCEAN_SLAB
- OCEAN_PHY_SLAB_DEPTH = 10.D0,
+&PARAM_OCEAN_DYN_SLAB
+ OCEAN_DYN_SLAB_DEPTH = 10.D0,
 /
 
 &PARAM_OCEAN_ROUGHNESS
@@ -257,12 +302,11 @@
 
 &PARAM_LAND_VARS
  LAND_VARS_CHECKRANGE = .false.,
-!--LAND_RESTART_IN_BASENAME--
 /
 
-&PARAM_LAND_BUCKET
- LAND_PHY_UPDATE_BOTTOM_TEMP  = .false.,
- LAND_PHY_UPDATE_BOTTOM_WATER = .true.,
+&PARAM_LAND_DYN_BUCKET
+ LAND_DYN_BUCKET_UPDATE_BOTTOM_TEMP  = .false.,
+ LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER = .true.,
 /
 
 #################################################
@@ -281,7 +325,7 @@
 #
 #################################################
 
-&PARAM_URBAN_PHY_SLC
+&PARAM_URBAN_DYN_KUSAKA01
  ZR         = 15.0D0,
  roof_width = 7.5D0,
  road_width = 22.5D0,
@@ -316,97 +360,83 @@
 #
 #################################################
 
-&PARAM_HISTORY
-!--HISTORY_DEFAULT_BASENAME--
-!--HISTORY_DEFAULT_TINTERVAL--
- HISTORY_DEFAULT_TUNIT     = "SEC",
- HISTORY_DEFAULT_TAVERAGE  = .false.,
- HISTORY_DEFAULT_DATATYPE  = "REAL4",
- History_DEFAULT_ZCOORD    = "model",
- HISTORY_OUTPUT_STEP0      = .true.,
+&PARAM_FILE_HISTORY
+!--FILE_HISTORY_DEFAULT_BASENAME--
+!--FILE_HISTORY_DEFAULT_TINTERVAL--
+ FILE_HISTORY_DEFAULT_TUNIT     = "SEC",
+ FILE_HISTORY_DEFAULT_TAVERAGE  = .false.,
+ FILE_HISTORY_DEFAULT_DATATYPE  = "REAL4",
+ FILE_HISTORY_DEFAULT_ZCOORD    = "model",
+ FILE_HISTORY_OUTPUT_STEP0      = .true.,
 /
 
-&PARAM_HIST
- HIST_BND = .false.,
+&PARAM_FILE_HISTORY_CARTESC
+ FILE_HISTORY_CARTESC_BOUNDARY = .false.,
 /
 
-&HISTITEM item='DENS' /
-&HISTITEM item='MOMZ' /
-&HISTITEM item='MOMX' /
-&HISTITEM item='MOMY' /
-&HISTITEM item='RHOT' /
+&HISTORY_ITEM name='DENS' / ! Nesting
+&HISTORY_ITEM name='MOMZ' / ! Nesting
+&HISTORY_ITEM name='MOMX' / ! Nesting
+&HISTORY_ITEM name='MOMY' / ! Nesting
+&HISTORY_ITEM name='RHOT' / ! Nesting
 
-&HISTITEM item='QV'   /
-&HISTITEM item='QC'   /
-&HISTITEM item='QR'   /
-&HISTITEM item='QI'   /
-&HISTITEM item='QS'   /
-&HISTITEM item='QG'   /
-&HISTITEM item='QHYD' /
-&HISTITEM item='QLIQ' /
-&HISTITEM item='QICE' /
+&HISTORY_ITEM name='QV'   / ! Nesting/LETKF
+&HISTORY_ITEM name='QC'   / ! Nesting/LETKF
+&HISTORY_ITEM name='QR'   / ! Nesting/LETKF
+&HISTORY_ITEM name='QI'   / ! Nesting/LETKF
+&HISTORY_ITEM name='QS'   / ! Nesting/LETKF
+&HISTORY_ITEM name='QG'   / ! Nesting/LETKF
+&HISTORY_ITEM name='QHYD' /
 
-&HISTITEM item='T'    /
-&HISTITEM item='PRES' /
-&HISTITEM item='U'    /
-&HISTITEM item='V'    /
-&HISTITEM item='W'    /
-&HISTITEM item="Uabs" /
-&HISTITEM item='PT'   /
-&HISTITEM item='RH'   /
-&HISTITEM item='RHL'  /
-&HISTITEM item='RHI'  /
+&HISTORY_ITEM name='T'    / ! LETKF
+&HISTORY_ITEM name='PRES' / ! LETKF
+&HISTORY_ITEM name='U'    / ! LETKF
+&HISTORY_ITEM name='V'    / ! LETKF
+&HISTORY_ITEM name='W'    / ! LETKF
+&HISTORY_ITEM name='RH'   / ! LETKF (not analyzed)
 
-&HISTITEM item='PREC', taverage=.true. /
-&HISTITEM item='RAIN', taverage=.true. /
-&HISTITEM item='SNOW', taverage=.true. /
+&HISTORY_ITEM name='PREC', taverage=.true. /
+&HISTORY_ITEM name='RAIN', taverage=.true. /
+&HISTORY_ITEM name='SNOW', taverage=.true. /
 
-&HISTITEM item='SFC_PRES'   /
-&HISTITEM item='SFC_TEMP'   /
-&HISTITEM item='SFC_ALB_SW' /
-&HISTITEM item='SFC_ALB_LW' /
-&HISTITEM item='SFC_Z0M'     /
+&HISTORY_ITEM name='SFC_PRES'   / ! LETKF (not analyzed)
+&HISTORY_ITEM name='SFC_TEMP'   / ! LETKF (not analyzed)
 
-&HISTITEM item='U10' /
-&HISTITEM item='V10' /
-&HISTITEM item="Uabs10" /
-&HISTITEM item='T2'  /
-&HISTITEM item='Q2'  /
-&HISTITEM item="MSLP" /
+&HISTORY_ITEM name='U10' / ! LETKF (not analyzed)
+&HISTORY_ITEM name='V10' / ! LETKF (not analyzed)
+&HISTORY_ITEM name='T2'  / ! Nesting/LETKF (not analyzed)
+&HISTORY_ITEM name='Q2'  / ! LETKF (not analyzed)
+&HISTORY_ITEM name="MSLP" / ! Nesting
 
-&HISTITEM item="LHFLX" /
-&HISTITEM item="SHFLX" /
-&HISTITEM item="GHFLX" /
 
-&HISTITEM item="SFLX_LW_up"   /
-&HISTITEM item="SFLX_LW_dn"   /
-&HISTITEM item="SFLX_SW_up"   /
-&HISTITEM item="SFLX_SW_dn"   /
+&HISTORY_ITEM name='OSR' /
+&HISTORY_ITEM name='OLR' /
+&HISTORY_ITEM name='SLR' /
+&HISTORY_ITEM name='SSR' /
 
-&HISTITEM item='OSR' /
-&HISTITEM item='OLR' /
-&HISTITEM item='SLR' /
-&HISTITEM item='SSR' /
 
-&HISTITEM item="RADFLUX_SWUP" /
-&HISTITEM item="RADFLUX_SWDN" /
+&HISTORY_ITEM name="OCEAN_TEMP"     / ! Nesting
+&HISTORY_ITEM name="OCEAN_SFC_TEMP" / ! Nesting
+&HISTORY_ITEM name="OCEAN_SFC_ALB_IR_dir"   / ! Nesting
+&HISTORY_ITEM name="OCEAN_SFC_ALB_IR_dif"   / ! Nesting
+&HISTORY_ITEM name="OCEAN_SFC_ALB_NIR_dir"   / ! Nesting
+&HISTORY_ITEM name="OCEAN_SFC_ALB_NIR_dif"   / ! Nesting
+&HISTORY_ITEM name="OCEAN_SFC_ALB_VIS_dir"   / ! Nesting
+&HISTORY_ITEM name="OCEAN_SFC_ALB_VIS_dif"   / ! Nesting
+&HISTORY_ITEM name="OCEAN_SFC_Z0M"  / ! Nesting
 
-&HISTITEM item="OCEAN_TEMP"     /
-&HISTITEM item="OCEAN_SFC_TEMP" /
-&HISTITEM item="OCEAN_ALB_SW"   /
-&HISTITEM item="OCEAN_ALB_LW"   /
-&HISTITEM item="OCEAN_SFC_Z0M"  /
-&HISTITEM item="OCEAN_SFC_Z0H"  /
-&HISTITEM item="OCEAN_SFC_Z0E"  /
 
-&HISTITEM item="LAND_TEMP"     /
-&HISTITEM item="LAND_WATER"    /
-&HISTITEM item="LAND_SFC_TEMP" /
-&HISTITEM item="LAND_ALB_SW"   /
-&HISTITEM item="LAND_ALB_LW"   /
+&HISTORY_ITEM name="LAND_TEMP"     / ! Nesting
+&HISTORY_ITEM name="LAND_WATER"    / ! Nesting
+&HISTORY_ITEM name="LAND_SFC_TEMP" / ! Nesting
+&HISTORY_ITEM name="LAND_SFC_ALB_IR_dir"   / ! Nesting
+&HISTORY_ITEM name="LAND_SFC_ALB_IR_dif"   / ! Nesting
+&HISTORY_ITEM name="LAND_SFC_ALB_NIR_dir"   / ! Nesting
+&HISTORY_ITEM name="LAND_SFC_ALB_NIR_dif"   / ! Nesting
+&HISTORY_ITEM name="LAND_SFC_ALB_VIS_dir"   / ! Nesting
+&HISTORY_ITEM name="LAND_SFC_ALB_VIS_dif"   / ! Nesting
 
-&HISTITEM item="URBAN_TC"       /
-&HISTITEM item="URBAN_SFC_TEMP" /
+&HISTORY_ITEM name="URBAN_SFC_TEMP" / ! Nesting
 
 #################################################
 #
@@ -419,16 +449,17 @@
  MONITOR_STEP_INTERVAL = 120,
 /
 
-&MONITITEM item="QDRY" /
-&MONITITEM item="QTOT" /
-&MONITITEM item="ENGT" /
-&MONITITEM item="ENGP" /
-&MONITITEM item="ENGK" /
-&MONITITEM item="ENGI" /
+&MONITOR_ITEM name="QDRY" /
+&MONITOR_ITEM name="QTOT" /
+&MONITOR_ITEM name="ENGT" /
+&MONITOR_ITEM name="ENGP" /
+&MONITOR_ITEM name="ENGK" /
+&MONITOR_ITEM name="ENGI" /
 
-&MONITITEM item="ENGFLXT" /
+&MONITOR_ITEM name="ENGFLXT" /
 
-&MONITITEM item="ENGSFC_SH" /
-&MONITITEM item="ENGSFC_LH" /
-&MONITITEM item="ENGSFC_RD" /
-&MONITITEM item="ENGTOA_RD" /
+&MONITOR_ITEM name="ENGSFC_SH" /
+&MONITOR_ITEM name="ENGSFC_LH" /
+&MONITOR_ITEM name="ENGSFC_RD" /
+&MONITOR_ITEM name="ENGTOA_RD" /
+

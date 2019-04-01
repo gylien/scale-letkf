@@ -71,7 +71,7 @@ program scaleles_ens
   nprocs = universal_nprocs
   myrank = universal_myrank
 
-  WRITE(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ',universal_myrank,'/',universal_nprocs-1
+!  WRITE(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ',universal_myrank,'/',universal_nprocs-1
 
   if (command_argument_count() >= 3) then
     write (myranks, '(I10)') universal_myrank
@@ -208,7 +208,7 @@ program scaleles_ens
 !-----------------------------------------------------------------------
 
   if (command_argument_count() >= 3) then
-    write (6,'(A)') 'Run post-processing scripts'
+!    write (6,'(A)') 'Run post-processing scripts'
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd2), ']'
     call system(trim(cmd2))
   end if

@@ -42,10 +42,6 @@ res=$? && ((res != 0)) && exit $res
 . src/func_util.sh
 . src/func_fcst.sh
 
-######
-echo "[$(datetime_now)] fcst_step: $@: start"
-######
-
 #-------------------------------------------------------------------------------
 
 setting
@@ -55,6 +51,12 @@ MYRANK="${1}"; shift
 #TIME="${1}"; shift
 LOOP="${1}"; shift
 ITER="${1:-0}"
+
+######
+if (( MYRANK == 0 )); then
+  echo "[$(datetime_now)] fcst_step: $@: start"
+fi
+######
 
 #===============================================================================
 # Determine the distibution schemes
@@ -119,7 +121,9 @@ res=$? && ((res != 0)) && exit $res
 #===============================================================================
 
 ######
-echo "[$(datetime_now)] fcst_step: $@: end"
+if (( MYRANK == 0 )); then
+  echo "[$(datetime_now)] fcst_step: $@: end"
+fi
 ######
 
 exit 0

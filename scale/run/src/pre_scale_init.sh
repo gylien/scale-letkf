@@ -211,7 +211,9 @@ cat $TMPDAT/conf/config.nml.scale_init | \
 
 if [ -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
   cat $TMPDAT/conf/config.nml.grads_boundary | \
-      sed -e "s#--DIR--#${TMPDIR}#g" \
+      sed -e "s#--FNAME_ATMOS--#$TMPDIR/bdyatm#g" \
+          -e "s#--FNAME_LAND--#$TMPDIR/bdyland#g" \
+          -e "s#--FNAME_SFC--#$TMPDIR/bdysfc#g" \
       > $TMPDIR/gradsbdy.conf
 fi
 

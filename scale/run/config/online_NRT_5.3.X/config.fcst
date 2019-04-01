@@ -15,12 +15,13 @@ ISTEP=
 FSTEP=
 
 CONF_MODE='static'
+#CONF_MODE=
 
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=3600      # SCALE forecast length in the forecast mode (second)
-FCSTOUT=3600
+FCSTLEN=600      # SCALE forecast length in the forecast mode (second)
+FCSTOUT=600
 
 
 #===============================================================================
@@ -37,11 +38,11 @@ OUT_OPT=2        # 1:   o       o
                  # 2:   o
 
                  #      topo
-TOPOOUT_OPT=1    # 1:   o
+TOPOOUT_OPT=2    # 1:   o
                  # 2:   (none)
 
                  #      landuse
-LANDUSEOUT_OPT=1 # 1:   o
+LANDUSEOUT_OPT=2 # 1:   o
                  # 2:   (none)
 
                  #      bdy

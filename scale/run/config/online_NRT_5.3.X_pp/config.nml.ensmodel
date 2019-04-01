@@ -5,7 +5,7 @@
 !--CONF_FILES--
 !--CONF_FILES_SEQNUM--
 !--DET_RUN--
-! DET_RUN_CYCLED = .true.,
+ DET_RUN_CYCLED = .true.,
 /
 
 &PARAM_PROCESS

@@ -33,7 +33,12 @@ setting "$@" || exit $?
 
 if [ "$CONF_MODE" = 'static' ]; then
   . src/func_common_static.sh || exit $?
-  . src/func_${job}_static.sh || exit $?
+
+  if ((NRT_FCST == 1)); then
+    . src/func_${job}_static_NRT_online.sh || exit $?
+  else
+    . src/func_${job}_static.sh || exit $?
+  fi
 fi
 
 echo
