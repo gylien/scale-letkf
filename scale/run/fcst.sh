@@ -240,16 +240,17 @@ while ((time <= ETIME)); do
 
       if [ "$CONF_MODE" = 'static' ]; then
 
+        mkdir -p log/${stepexecname[$s]}
         if ((enable_iter == 1 && nitmax > 1)); then
           for it in $(seq $nitmax); do
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-            mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}_${it}.conf log/${stepexecname[$s]}.NOUT_${stimes[1]}_${it} || exit $?
+            mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}_${it}.conf log/${stepexecname[$s]}/NOUT_${stimes[1]}_${it} || exit $?
 
             echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
           done
         else
-          mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}.conf log/${stepexecname[$s]}.NOUT_${stimes[1]} || exit $?
+          mpirunf ${nodestr} ./${stepexecname[$s]} fcst_${stepexecname[$s]}_${stimes[1]}.conf log/${stepexecname[$s]}/NOUT_${stimes[1]} || exit $?
         fi
 
       else

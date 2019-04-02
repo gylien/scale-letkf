@@ -123,9 +123,8 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 # Parallelization settings
 
 MEMBER=2      # Ensemble size [2+2] 
-NNODES=20    # Number of nodes
+NNODES=44    # Number of nodes
 
-#PPN=53              # Number of processes per node
 PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
@@ -133,9 +132,9 @@ THREADS=1          # Number of threads per process
 # D1
 SCALE_NP=192        # Number of processes to run SCALE
 # D2
-SCALE_NP[2]=64        # Number of processes to run SCALE
+SCALE_NP[2]=256        # Number of processes to run SCALE
 # D3
-SCALE_NP[3]=64        # Number of processes to run SCALE
+SCALE_NP[3]=256        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
