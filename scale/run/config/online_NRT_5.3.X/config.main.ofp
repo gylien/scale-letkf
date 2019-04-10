@@ -12,7 +12,7 @@ EXPNAME=r0051
 
 NRT_FCST=1 # Near real time forecast? # 1:True
            #                          # 0:False
-DOMNUM=3
+DOMNUM=2
 
 #===============================================================================
 
@@ -124,6 +124,10 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=2      # Ensemble size [2+2] 
 NNODES=44    # Number of nodes
+NNODES=28    # Number of nodes
+
+MEMBER=8      # Ensemble size [2+2] 
+NNODES=70    # Number of nodes
 
 PPN=64              # Number of processes per node
 

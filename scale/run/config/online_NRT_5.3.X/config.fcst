@@ -7,8 +7,9 @@
 
 STIME='20190130000000'
 ETIME='20190130000000'
-TIME_LIMIT='00:20:00'
+TIME_LIMIT='0:40:00'
 MEMBERS='all'
+MEMBERS='mean mdet '`seq 1 8`
 CYCLE=
 CYCLE_SKIP=1
 ISTEP=
@@ -20,8 +21,8 @@ CONF_MODE='static'
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=600      # SCALE forecast length in the forecast mode (second)
-FCSTOUT=600
+FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
+FCSTOUT=21600
 
 
 #===============================================================================
