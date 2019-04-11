@@ -34,7 +34,7 @@ def def_cmap(nvar, vmax):
 
     elif nvar == "CAPE":
       levs = np.array([50, 100, 150, 200, 400, 800, 1200, 1600, 2000, 2400])
-      levs_s = np.array([10, 20, 40, 80, 120, 160, 200, 400, 600, 800])
+      levs_s = np.array([10, 20, 40, 80, 120, 160, 200, 300, 400, 500])
       cmap = mpc.ListedColormap(['cyan','dodgerblue',
                                  'lime', 'limegreen','yellow',
                                  'orange', 'red', 'firebrick', 'magenta',
@@ -42,19 +42,26 @@ def def_cmap(nvar, vmax):
 
     elif nvar == "RAIN":
       levs = np.array([0.5, 1, 2, 4, 8, 12, 16, 20, 30, 40])
+      #levs = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
       levs_s = np.array([0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+      #rat = int(vmax / 10)
+      #
+      #levs = levs * rat
+
       cmap = mpc.ListedColormap(['cyan','dodgerblue',
                                  'lime', 'limegreen','yellow',
                                  'orange', 'red', 'firebrick', 'magenta',
                                  'purple'])
 
     elif nvar == "U" or nvar == "V":
-      levs = np.array([-16, -12, -8, -4, -2, 2, 4, 8, 12, 16])
+      levs = np.array([-20, -16, -12, -8, -4, 4, 8, 12, 16, 20])
       levs_s = np.array([1, 2, 3, 4, 6, 8, 10, 12, 16, 20])
-      if vmax > 24:
-        levs = levs * 3
-      elif vmax > 16:
-        levs = levs * 2
+
+      rat = int(vmax / 20)
+
+      levs = levs * rat
+
       cmap = mpc.ListedColormap(['darkblue', 'cornflowerblue','lightskyblue','lightcyan',
                                  'w',
                                  'mistyrose','salmon','firebrick','maroon',
@@ -150,6 +157,8 @@ def get_gdims(scale_np, PLOT_DIMS):
     jhalo = nc.scale_atmos_grid_cartesC_index_jhalo
     ihalo = nc.scale_atmos_grid_cartesC_index_ihalo
 
+    unit = nc.variables[PLOT_DIMS["nvar"]].units
+  
     nc.close()
 
     GDIMS = {"CXG":cxg, "CYG":cyg, "z":z, "x":x, "y":y, "time":time,
@@ -162,8 +171,9 @@ def get_gdims(scale_np, PLOT_DIMS):
 
     GDIMS["lon2d"] = lon2d
     GDIMS["lat2d"] = lat2d
+    PLOT_DIMS["unit"] = unit
 
-    return(GDIMS)
+    return(GDIMS, PLOT_DIMS)
 
 def get_dims(fn, dir):
 

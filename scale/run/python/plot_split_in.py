@@ -32,11 +32,11 @@ def main(nvar, INFO, itime, levs, quick):
                  "lon_ll":lon_ll, "lon_ur":lon_ur, 
                  "lat_ll":lat_ll, "lat_ur":lat_ur, 
                  "blon":blon, "blat":blat, "lat2":lat2, 
-                 "dir":dir,
+                 "dir":dir, "nvar":nvar,
                  }
     
     
-    GDIMS = get_gdims(scale_np, PLOT_DIMS)
+    GDIMS, PLOT_DIMS = get_gdims(scale_np, PLOT_DIMS)
     
   #  imin_g = 0
   #  imax_g = len(GDIMS["CXG"]) - GDIMS["IHALO"] * 2
@@ -70,19 +70,24 @@ def main(nvar, INFO, itime, levs, quick):
   
     fac = 1.0
 
+    unit = "(" + PLOT_DIMS["unit"] + ")"
     if nvar == "CAPE":
       tvar = nvar 
-      unit = r'(J kg$^{-1}$)'
+#      unit = r'(J kg$^{-1}$)'
     elif nvar == "U" or nvar == "V":
       tvar = nvar
     elif nvar == "RAIN":
       tvar = nvar 
-      unit = "(mm)"
-      fac = 3600
+      if tlev > 0:
+        fac = GDIMS["time"][tlev] - GDIMS["time"][tlev-1] 
+      else: 
+        print("!Unit for RAIN is not accurate!")
+        fac = 3600
+      unit = "(mm/" + str(fac/3600) + "h)"
     else:
       tvar = nvar
   
-    cmap_f, cmap_s, cnorm_f, cnorm_s, levs, levs_s = def_cmap(nvar, np.max(np.abs(evar)))
+    cmap_f, cmap_s, cnorm_f, cnorm_s, levs, levs_s = def_cmap(nvar, np.max(np.abs(evar))*fac)
 
     tit_l = ["Ensemble mean\n" + tvar, 
              "Ensemble spread\n" + tvar, 
@@ -117,7 +122,7 @@ def main(nvar, INFO, itime, levs, quick):
       pos = ax.get_position()
       cb_h = pos.height
       #ax_cb = fig.add_axes([pos.x1+0.01, pos.y0, 0.015, cb_h])
-      ax_cb = fig.add_axes([pos.x0+0.01, pos.y0-0.05, pos.width-0.01, 0.02])
+      ax_cb = fig.add_axes([pos.x0+0.01, pos.y0-0.06, pos.width-0.01, 0.02])
     
       CB1 = plt.colorbar(SHADE1, cax=ax_cb, orientation = 'horizontal')
       CB1.ax.tick_params(labelsize=8)    
@@ -137,20 +142,24 @@ def main(nvar, INFO, itime, levs, quick):
     time_info = "Init: " + itime.strftime('%m/%d/%Y %H:%M:%S UTC') + \
                 "\nFT=" + "{0:.1f}".format(GDIMS["time"][tlev]/3600) + "h"
      
+    foot = "_FT" + str(int(GDIMS["time"][tlev])).zfill(6) + "s_i" + \
+           itime.strftime('%Y%m%d%H%M%S') 
+
     if nvar != "CAPE" and nvar != "RAIN":
        time_info += "\nZ=" + "{0:.1f}".format(GDIMS["z"][zlev]/1000) + "km" 
- 
+       foot += "z" + "{0:.1f}".format(GDIMS["z"][zlev]/1000) + "km"
 
     fig.text(0.99, 0.97, time_info,
               verticalalignment='top', horizontalalignment='right',
               color='k', fontsize=10)
   
-    ofig = "000TEST.png"
+    ofig = tvar + foot
 
     if not quick:
-#      os.makedirs(p, exist_ok=True)
-      print(ofig)
-      plt.savefig(ofig,bbox_inches="tight", pad_inches = 0.1)
+      png_dir = os.path.join("png",itime.strftime('%Y%m%d'))
+      os.makedirs(png_dir, exist_ok=True)
+      plt.savefig(os.path.join(png_dir, ofig + ".png"), 
+                  bbox_inches="tight", pad_inches = 0.1)
       plt.clf()
       plt.close('all')
     else:
@@ -163,22 +172,19 @@ def main(nvar, INFO, itime, levs, quick):
 
 top = "/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT"
 exp = "TEST_exp_d2"
-ctime = "20190130000000"
 scale_np_org = 256
 scale_np = 4
 
 itime = datetime(2019, 1, 30, 0, 0)
 
-nvar = "CAPE"
-#nvar = "U"
-#nvar = "RAIN"
+nvar_l = ["CAPE", "RAIN"]
 
 tlev = 1
-zlev = 20
+zlev = 30
 levs = [tlev, zlev]
 
 quick = True
-#quick = False
+quick = False
 
 mem_l = []
 
@@ -189,4 +195,6 @@ for m in range(mems):
 
 INFO = {"top":top, "exp":exp, "ctime":itime.strftime('%Y%m%d%H%M%S'), 
         "SCALE_NP":scale_np, "SCALE_NP_ORG":scale_np_org, "mem_l":mem_l}
-main(nvar, INFO, itime, levs, quick)
+
+for nvar in nvar_l:
+  main(nvar, INFO, itime, levs, quick)
