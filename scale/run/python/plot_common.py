@@ -207,10 +207,11 @@ def prep_proj_multi(axs, PLOT_DIMS, quick):
     fs = 8
     lw = 0.2
 
-    if quick:
-       res = 'c'
-    else:
-       res = 'i'
+#    if quick:
+#       res = 'c'
+#    else:
+#       res = 'i'
+    res = 'c'
 
     for idx, ax in enumerate(axs):
        m = Basemap(projection="mill",resolution = res,

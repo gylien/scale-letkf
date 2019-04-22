@@ -18,7 +18,8 @@
  TIME_DURATION_UNIT         = "SEC",
  TIME_DT                    = 20.0D0,
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = 5.0D0,
+ TIME_NSTEP_ATMOS_DYN       = 3,
+! TIME_DT_ATMOS_DYN          = 5.0D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
  TIME_DT_ATMOS_PHY_MP       = 20.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
@@ -108,8 +109,8 @@
 
 &PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 47,
- IMAX = 16,
- JMAX = 16,
+ IMAX = 14,
+ JMAX = 14,
 /
 
 &PARAM_LAND_GRID_CARTESC_INDEX
@@ -152,7 +153,7 @@
 /
 
 &PARAM_MAPPROJECTION
-! Osaka PAWR
+! Kobe PAWR
  MAPPROJECTION_basepoint_lon = 134.9512D0,
  MAPPROJECTION_basepoint_lat =  34.7105D0,
 !

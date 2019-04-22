@@ -5,38 +5,33 @@
 #
 #===============================================================================
 
-PRESET='OFP' 
+#PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
+#PRESET='K_rankdir' 
+PRESET='K' 
+#PRESET='K_micro' 
 
 EXPNAME=r0051
 
+USERNAME=honda
 
-NRT_FCST=1 # Near real time forecast? # 1:True
-           #                          # 0:False
-DOMNUM=2
+DOMNUM=3
 
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
-OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT"
-EXP1=TEST_exp_d1
-EXP2=TEST_exp_d2
-EXP3=TEST_exp_d3
-
-OUTDIR="${OUTPUT}/${EXP1}"
-OUTDIR[2]="${OUTPUT}/${EXP2}"
-OUTDIR[3]="${OUTPUT}/${EXP3}"
-
-INDIR="${OUTDIR}"
-INDIR[2]="${OUTDIR[2]}"
-INDIR[3]="${OUTDIR[3]}"
+OUTDIR="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/TEST_exp_d1" # Directory for SCALE-LETKF output
+OUTDIR[2]="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/TEST_exp_d2" # Directory for SCALE-LETKF output
+OUTDIR[3]="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/TEST_exp_d3" # Directory for SCALE-LETKF output
+INDIR=$OUTDIR
 
 #===============================================================================
 # Location of model/data files
 
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
-DATADIR="/work/hp150019/share/database" 
+DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"        # Directory of the SCALE database
+DATADIR="/data/share005/data/scale_database"
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
 DATA_TOPO[2]=
@@ -46,16 +41,15 @@ DATA_LANDUSE=                                                        # Directory
 DATA_LANDUSE[2]=
 DATA_LANDUSE[3]=
 DATA_BDY_SCALE=                                                      # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PRC_NUM_X=16 # D1
-DATA_BDY_SCALE_PRC_NUM_Y=12 # D1
+DATA_BDY_SCALE_PRC_NUM_X=8 # D1
+DATA_BDY_SCALE_PRC_NUM_Y=6 # D1
 DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
+DATA_BDY_GRADS="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/ncepgfs_grads_da" # Directory of the boundary data in GrADS format 
 
-DATA_BDY_GRADS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/TEST_exp_d1/ncepgfs_grads"
-
-OBS=
+OBS="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/ncepobs"     # Directory of observation data in LETKF obs format
 OBSNCEP=                                                             # Directory of observation data in NCEP BUFR format
 
 #===============================================================================
@@ -122,21 +116,24 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=2      # Ensemble size [2+2] 
+#MEMBER=2      # Ensemble size [2+2] 
+#MEMBER=6      # Ensemble size [2+2] 
+#NNODES=208    # Number of nodes # DOMNUM=2
+#NNODES=212    # Number of nodes # DOMNUM=3
 
-MEMBER=8      # Ensemble size [2+2] 
-NNODES=70
+MEMBER=14      # Ensemble size [2+2] 
+NNODES=424    # Number of nodes
 
-PPN=64              # Number of processes per node
+PPN=1              # Number of processes per node
 
-THREADS=1          # Number of threads per process
+THREADS=8          # Number of threads per process
 
 # D1
-SCALE_NP=192    #3    # Number of processes to run SCALE
+SCALE_NP=48        # Number of processes to run SCALE
 # D2
-SCALE_NP[2]=256 #4       # Number of processes to run SCALE
+SCALE_NP[2]=4        # Number of processes to run SCALE
 # D3
-SCALE_NP[3]=1024 #16       # Number of processes to run SCALE
+SCALE_NP[3]=1        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -150,10 +147,9 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
-TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
+TMP="/scratch/$(echo $(id -ng)|cut -c 1-8)/${USERNAME}/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
-#TMPS="$TMP"  # Temporary directory only on the server node
-TMPL="$TMP"
+#TMPL=
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
                             #  0: No

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#
+# SNO is executed by a bulk job
+#
+
 STIME="20190130000000"
 
 . config.main || exit $?
@@ -7,19 +11,33 @@ RUNDIR="${TMP}_sno"
 
 PPN=64 # Process per node
 
-DOM=2
-NP_OFILE_X=2 # Output file (X process number) for each member
-NP_OFILE_Y=2 # Output file (X process number) for each member
+# Which domain do you want to convert?
+DOM=2 
 
+# Output file (X & Y process number) for each member
+NP_OFILE_X=2
+NP_OFILE_Y=2 
+
+# Do not edit!
 NP_OFILE=$((${NP_OFILE_X} * ${NP_OFILE_Y})) # Output file (process number) for each member
 
-SNO_MEMBERS=8
-#SNO_MEM_L=$(seq -f %04g ${SNO_MEMBERS})
-SNO_MEM_L=$(seq -f %04g ${SNO_MEMBERS})" mean mdet"
+SNO_MEMBERS=${MEMBER}
+SNO_MEM_L=$(seq -f %04g ${SNO_MEMBERS})" mean mdet" # All members + mean + mdet
+#SNO_MEM_L=" mean mdet"
+
+# Total SNO processes  
 NP_TOTAL=$((${SNO_MEMBERS} * ${NP_OFILE}))
 
+# Convert variables (Other variables will NOT be included in converted files)
 VARS='"U", "V", "W", "T", "QV", "QHYD", "PRES","RAIN", "CAPE"'
 
+TOPO=0 # Process topography file? # 1: Yes, 0: No
+if (( TOPO > 0 )) ; then
+  VARS='"TOPO"'
+  SNO_MEM_L="mean"
+fi
+
+# Get total SNO NODEs
 if (( NP_TOTAL < PPN )) ; then
   SNO_NODE=1
 else
@@ -28,7 +46,8 @@ fi
 
 ###############################
 
-SNOBIN_ORG=$SCALEDIR/bin/sno
+# Path for SNO binary
+SNOBIN_ORG=${SCALEDIR}/bin/sno
 SNOBIN=${RUNDIR}/sno
 if [ ! -e ${SNOBIN_ORG} ] ; then
   echo "No SNO binary!"
@@ -44,7 +63,7 @@ mkdir -p ${RUNDIR}/conf
 mkdir -p ${RUNDIR}/log
 
 # copy binary 
-cp $SNOBIN_ORG $SNOBIN
+cp ${SNOBIN_ORG} ${SNOBIN}
 
 conf_bulk="${RUNDIR}/conf/balk_sno.conf"
 
@@ -55,6 +74,13 @@ do
   echo $mem
 
   SNO_OUTPUT=${OUTDIR[${DOM}]}/${STIME}/fcst_sno_np$(printf %05d ${NP_OFILE})/${mem}
+  SNO_BASENAME_IN="${OUTDIR[${DOM}]}/${STIME}/fcst/${mem}/history"
+  SNO_BASENAME_OUT="${SNO_OUTPUT}/history"
+
+  if (( TOPO > 0 )) ; then
+    SNO_OUTPUT=${OUTDIR[${DOM}]}/const/topo_sno_np$(printf %05d ${NP_OFILE})
+    SNO_BASENAME_OUT="${SNO_OUTPUT}/topo"
+  fi
 
   if [ ! -e ${SNO_OUTPUT} ] ; then
     mkdir -p ${SNO_OUTPUT}
@@ -71,8 +97,8 @@ cat << EOF >> $conf
 /
 
 &PARAM_SNO
- basename_in  = "${OUTDIR[${DOM}]}/${STIME}/fcst/${mem}/history",
- basename_out  = "${SNO_OUTPUT}/history",
+ basename_in  = "${SNO_BASENAME_IN}",
+ basename_out  = "${SNO_BASENAME_OUT}",
  vars         = ${VARS},
  nprocs_x_out = ${NP_OFILE_X},
  nprocs_y_out = ${NP_OFILE_Y},
