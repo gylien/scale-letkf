@@ -18,8 +18,7 @@
  TIME_DURATION_UNIT         = "SEC",
  TIME_DT                    = 4.0D0,
  TIME_DT_UNIT               = "SEC",
- TIME_NSTEP_ATMOS_DYN       = 3,
-! TIME_DT_ATMOS_DYN          = 1.0D0,
+ TIME_DT_ATMOS_DYN          = 1.0D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
  TIME_DT_ATMOS_PHY_MP       = 4.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
@@ -95,8 +94,8 @@
 #################################################
 
 &PARAM_PRC_CARTESC
- PRC_NUM_X      = 32,
- PRC_NUM_Y      = 32,
+ PRC_NUM_X      = 16,
+ PRC_NUM_Y      = 16,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -109,8 +108,8 @@
 
 &PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 60,
- IMAX = 6,
- JMAX = 6,
+ IMAX = 12,
+ JMAX = 12,
 /
 
 &PARAM_LAND_GRID_CARTESC_INDEX
@@ -155,7 +154,7 @@
 /
 
 &PARAM_MAPPROJECTION
-! Kobe PAWR
+! Osaka PAWR
  MAPPROJECTION_basepoint_lon = 134.9512D0,
  MAPPROJECTION_basepoint_lat =  34.7105D0,
 !
@@ -177,9 +176,11 @@
 &PARAM_ATMOS
  ATMOS_DYN_TYPE    = "HEVI",
  ATMOS_PHY_MP_TYPE = "TOMITA08",
+ ATMOS_PHY_CP_TYPE = "KF",
  ATMOS_PHY_RD_TYPE = "MSTRNX",
  ATMOS_PHY_SF_TYPE = "COUPLE",
  ATMOS_PHY_TB_TYPE = "SMAGORINSKY",
+ ATMOS_PHY_BL_TYPE = "MYNN",
 /
 
 &PARAM_OCEAN
@@ -415,7 +416,9 @@
 &HISTORY_ITEM name='Q2'  / ! LETKF (not analyzed)
 &HISTORY_ITEM name="MSLP" / ! Nesting
 
-&HISTORY_ITEM name="CAPE" / ! Additional
+
+&HISTORY_ITEM name='CAPE' /
+
 
 &HISTORY_ITEM name='OSR' /
 &HISTORY_ITEM name='OLR' /

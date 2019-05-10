@@ -41,6 +41,7 @@ if [ "$CONF_MODE" = 'static' ]; then
   fi
 fi
 
+
 echo
 print_setting || exit $?
 echo

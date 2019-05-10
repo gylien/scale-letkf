@@ -5,13 +5,12 @@
 #
 #===============================================================================
 
-STIME='20190130000000'
-ETIME='20190130000000'
-TIME_LIMIT='0:40:00'
-TIME_LIMIT='1:40:00'
+#STIME='20190130000000'
+#ETIME='20190130000000'
+STIME=<STIME>
+ETIME=<ETIME>
+TIME_LIMIT=<WTIME_L>
 MEMBERS='all'
-MEMBERS='mean mdet '`seq 1 8`
-#MEMBERS='mean mdet '
 CYCLE=
 CYCLE_SKIP=1
 ISTEP=
@@ -23,10 +22,11 @@ CONF_MODE='static'
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
-FCSTLEN=64800      # SCALE forecast length in the forecast mode (second)
+      # SCALE forecast length in the forecast mode (second)
+FCSTLEN=<FCSTLEN>
 FCSTOUT=3600
 
+[ $FCSTOUT -gt $FCSTLEN ] && FCSTOUT=$FCSTLEN 
 
 #===============================================================================
 

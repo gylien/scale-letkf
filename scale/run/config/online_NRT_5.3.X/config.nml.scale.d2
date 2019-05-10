@@ -18,8 +18,7 @@
  TIME_DURATION_UNIT         = "SEC",
  TIME_DT                    = 20.0D0,
  TIME_DT_UNIT               = "SEC",
- TIME_NSTEP_ATMOS_DYN       = 3,
-! TIME_DT_ATMOS_DYN          = 5.0D0,
+ TIME_DT_ATMOS_DYN          = 5.0D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
  TIME_DT_ATMOS_PHY_MP       = 20.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
@@ -109,8 +108,8 @@
 
 &PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 47,
- IMAX = 14,
- JMAX = 14,
+ IMAX = 16,
+ JMAX = 16,
 /
 
 &PARAM_LAND_GRID_CARTESC_INDEX
@@ -153,7 +152,7 @@
 /
 
 &PARAM_MAPPROJECTION
-! Kobe PAWR
+! Osaka PAWR
  MAPPROJECTION_basepoint_lon = 134.9512D0,
  MAPPROJECTION_basepoint_lat =  34.7105D0,
 !
@@ -415,7 +414,9 @@
 &HISTORY_ITEM name='Q2'  / ! LETKF (not analyzed)
 &HISTORY_ITEM name="MSLP" / ! Nesting
 
-&HISTORY_ITEM name="CAPE" / ! Additional
+
+&HISTORY_ITEM name='CAPE' /
+
 
 &HISTORY_ITEM name='OSR' /
 &HISTORY_ITEM name='OLR' /

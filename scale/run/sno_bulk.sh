@@ -4,7 +4,7 @@
 # SNO is executed by a bulk job
 #
 
-STIME="20190130000000"
+STIME="20190506120000"
 
 . config.main || exit $?
 RUNDIR="${TMP}_sno"
@@ -16,7 +16,7 @@ DOM=2
 
 # Output file (X & Y process number) for each member
 NP_OFILE_X=2
-NP_OFILE_Y=2 
+NP_OFILE_Y=2
 
 # Do not edit!
 NP_OFILE=$((${NP_OFILE_X} * ${NP_OFILE_Y})) # Output file (process number) for each member
