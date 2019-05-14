@@ -887,7 +887,8 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
     zs= 3.48d3 * ( ro * qsp * 1.0d3 )**1.66
     ENDIF
     IF( qgp .GT. 0.0d0)THEN
-    zg= 8.18d4 * ( ro * qgp * 1.0d3 )**1.50
+!!!    zg= 8.18d4 * ( ro * qgp * 1.0d3 )**1.50  !!! hail
+    zg= 5.54d3 * ( ro * qgp * 1.0d3 )**1.70   !!! graupel (A. Amemiya 2019.5)
     ENDIF
     IF( qms .GT. 0.0d0 )THEN
     zms=( 0.00491 + 5.75*fws - 5.588*(fws**2) )*1.0d5
