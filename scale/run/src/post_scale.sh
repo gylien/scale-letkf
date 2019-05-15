@@ -54,13 +54,13 @@ if [ "$SCPCALL" = 'cycle' ]; then
 
   if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
 
-    if ((PNETCDF == 1)); then
-      mkdir -p $TMPOUT/${STIME}/hist
-      mv -f $TMPDIR/history.nc $TMPOUT/${STIME}/hist/mean.history.nc
-    else
-      mkdir -p $TMPOUT/${STIME}/hist/mean
-      mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/hist/mean
-    fi
+#    if ((PNETCDF == 1)); then
+#      mkdir -p $TMPOUT/${STIME}/hist
+#      mv -f $TMPDIR/history.nc $TMPOUT/${STIME}/hist/mean.history.nc
+#    else
+#      mkdir -p $TMPOUT/${STIME}/hist/mean
+#      mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/hist/mean
+#    fi
 
     if ((PNETCDF == 1)); then
       mkdir -p $TMPOUT/${ATIME}/anal
@@ -163,13 +163,13 @@ if [ "$SCPCALL" = 'cycle' ]; then
 
   else
 
-    if ((PNETCDF == 1)); then
-      mkdir -p $TMPOUT/${STIME}/hist
-      mv -f $TMPDIR/history.nc $TMPOUT/${STIME}/hist/${MEM}.history.nc
-    else
-      mkdir -p $TMPOUT/${STIME}/hist/${MEM}
-      mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/hist/${MEM}
-    fi
+#    if ((PNETCDF == 1)); then
+#      mkdir -p $TMPOUT/${STIME}/hist
+#      mv -f $TMPDIR/history.nc $TMPOUT/${STIME}/hist/${MEM}.history.nc
+#    else
+#      mkdir -p $TMPOUT/${STIME}/hist/${MEM}
+#      mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/hist/${MEM}
+#    fi
 
     if ((PNETCDF == 1)); then
       mkdir -p $TMPOUT/${ATIME}/anal
@@ -229,34 +229,34 @@ elif [ "$SCPCALL" = 'fcst' ]; then
 
   FTIME=$(datetime $STIME $FCSTLEN s)
 
-  if ((PNETCDF == 1)); then
-    mkdir -p $TMPOUT/${STIME}/fcst
-    mv -f $TMPDIR/history.nc $TMPOUT/${STIME}/fcst/${MEM}.history.nc
-  else
-    mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
-    mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
-  fi
+#  if ((PNETCDF == 1)); then
+#    mkdir -p $TMPOUT/${STIME}/fcst
+#    mv -f $TMPDIR/history.nc $TMPOUT/${STIME}/fcst/${MEM}.history.nc
+#  else
+#    mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
+#    mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
+#  fi
 
-  if ((OUT_OPT <= 1)); then
-    if ((PNETCDF == 1)); then
-      ifile="restart_${FTIME:0:8}-${FTIME:8:6}.000.nc"
-      if [ -e "$TMPDIR/${ifile}" ]; then
-        mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/fcst/${MEM}.init_${FTIME}.nc
-      fi
-    else
-      file_prefix="restart_${FTIME:0:8}-${FTIME:8:6}.000"
-      restartbaselen=27
-      for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
-        mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_${FTIME}${ifile:$restartbaselen}
-      done
-    fi
-  fi
-
-  if ((LOG_OPT <= 3)); then
-    if [ -f "$TMPDIR/run.conf" ]; then
-      mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/${SCPCALL}_scale/${MEM}_run.conf
-    fi
-  fi
+#  if ((OUT_OPT <= 1)); then
+#    if ((PNETCDF == 1)); then
+#      ifile="restart_${FTIME:0:8}-${FTIME:8:6}.000.nc"
+#      if [ -e "$TMPDIR/${ifile}" ]; then
+#        mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/fcst/${MEM}.init_${FTIME}.nc
+#      fi
+#    else
+#      file_prefix="restart_${FTIME:0:8}-${FTIME:8:6}.000"
+#      restartbaselen=27
+#      for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
+#        mv -f ${TMPDIR}/${ifile} $TMPOUT/${STIME}/fcst/${MEM}/init_${FTIME}${ifile:$restartbaselen}
+#      done
+#    fi
+#  fi
+#
+#  if ((LOG_OPT <= 3)); then
+#    if [ -f "$TMPDIR/run.conf" ]; then
+#      mv -f $TMPDIR/run.conf $TMPOUT/${STIME}/log/${SCPCALL}_scale/${MEM}_run.conf
+#    fi
+#  fi
 
 fi
 

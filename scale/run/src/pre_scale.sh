@@ -133,8 +133,11 @@ fi
 
 #===============================================================================
 
+mkdir -p ${OUTDIR}/${STIME}/log/fcst_scale
+mkdir -p ${OUTDIR}/${STIME}/fcst/${MEM}
+
 conf="$(cat $TMPDAT/conf/config.nml.scale | \
-        sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
+        sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"${OUTDIR}/${STIME}/log/fcst_scale/${MEM}_LOG\"," \
             -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
             -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
             -e "/!--TIME_DURATION--/a TIME_DURATION = ${FCSTLEN}.D0," \
@@ -145,12 +148,12 @@ conf="$(cat $TMPDAT/conf/config.nml.scale | \
             -e "/!--RESTART_IN_BASENAME--/a RESTART_IN_BASENAME = \"${INIT}\"," \
             -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = ${RESTART_OUTPUT}," \
             -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPDIR}\/restart\"," \
-            -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
+            -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${OUTDIR}/const/topo/topo\"," \
             -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
             -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${BDY}\"," \
             -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = $BS_YYYY, $BS_MM, $BS_DD, $BS_HH, $BS_II, $BS_SS," \
             -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0," \
-            -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${TMPDIR}\/history\"," \
+            -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${OUTDIR}/${STIME}/fcst/${MEM}/history\"," \
             -e "/!--FILE_HISTORY_DEFAULT_TINTERVAL--/a FILE_HISTORY_DEFAULT_TINTERVAL = ${HISTINT}.D0," \
             -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_monitor\"," \
             -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT_CONSTDB}/land/param.bucket.conf\"," \

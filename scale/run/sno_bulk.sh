@@ -79,6 +79,7 @@ do
 
   if (( TOPO > 0 )) ; then
     SNO_OUTPUT=${OUTDIR[${DOM}]}/const/topo_sno_np$(printf %05d ${NP_OFILE})
+    SNO_BASENAME_IN="${OUTDIR[${DOM}]}/const/topo/topo"
     SNO_BASENAME_OUT="${SNO_OUTPUT}/topo"
   fi
 
