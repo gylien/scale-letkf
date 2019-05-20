@@ -1,6 +1,6 @@
 include ../configure
 
-PROGS   = obsope obsmake obssim #dec_prepbufr
+PROGS   = obsope #obsmake obssim #dec_prepbufr
 
 OBJS    = obs_tools.o obsope_tools.o \
           radar_obs.o radar_tools.o read_toshiba.o read_toshiba_f.o

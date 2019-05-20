@@ -1,6 +1,7 @@
 include ../configure
 
-PROGS   = scale-rm_pp_ens scale-rm_init_ens scale-rm_ens
+#PROGS   = scale-rm_pp_ens scale-rm_init_ens scale-rm_ens
+PROGS   = scale-rm_ens
 
 OBJS    =
 

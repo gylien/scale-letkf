@@ -19,19 +19,26 @@ program scale_rm_ens
     myrank_use, &
     set_mem_node_proc
 
-  use scale_stdio, only: &
-    IO_L, &
-    IO_FID_LOG
+  use scale_io, only: &
+     H_LONG, &
+     IO_L, &
+     IO_FID_CONF, &
+     IO_FID_LOG, &
+     IO_FID_STDOUT
+  use scale_prc, only: &
+     PRC_MPIstart, &
+     PRC_UNIVERSAL_setup, &
+     PRC_GLOBAL_setup, &
+     PRC_MPIfinish, &
+     PRC_MPIsplit, &
+     PRC_UNIVERSAL_myrank, &
+     PRC_DOMAIN_nlim, &
+     PRC_GLOBAL_COMM_WORLD, &
+     PRC_LOCAL_COMM_WORLD
   use scale_prof, only: &
     PROF_setprefx, &
     PROF_rapstart, &
     PROF_rapend
-  use scale_process, only: &
-    PRC_MPIstart, &
-    PRC_mpi_alive, &
-    PRC_UNIVERSAL_setup, &
-    PRC_MPIfinish, &
-    PRC_UNIVERSAL_myrank
   use scale_time, only: &
     TIME_NOWDATE, &
     TIME_NOWMS, &
@@ -76,6 +83,8 @@ program scale_rm_ens
     URBAN_driver
   use mod_user, only: &
     USER_step
+  use mod_rm_driver
+
   implicit none
 
   character(7) :: stdoutf = '-000000'

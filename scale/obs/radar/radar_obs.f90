@@ -21,6 +21,8 @@ contains
 ! 
 !-----------------------------------------------------------------------
 SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev,v3d,v2d,yobs,qc,stggrd)
+  use scale_mapprojection, only: &
+      MAPPROJECTION_rotcoef
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk,radar_lon,radar_lat,radar_z !!!!! Use only, ri, rj, rk eventually... (radar_lon,lat,z in ri,rj,rk)
@@ -34,6 +36,10 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
 
   REAL(r_size) :: qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr !,rhr
   REAL(r_size) :: dist , dlon , dlat , az , elev , radar_ref,radar_rv
+
+  REAL(r_size) :: utmp, vtmp
+  REAL(RP) :: rotc(1,1,2)
+  real(RP) :: lon_tmp(1,1),lat_tmp(1,1)
 
 !  integer :: ierr
 !  REAL(r_dble) :: rrtimer00,rrtimer
@@ -92,6 +98,14 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   CALL com_distll_1(lon,lat,radar_lon,radar_lat,dist)
   elev=rad2deg*atan2(lev-radar_z,dist)
 
+  lon_tmp(1,1) = lon*deg2rad
+  lat_tmp(1,1) = lat*deg2rad
+  call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
+                             lon_tmp(1,1),lat_tmp(1,1),rotc)
+
+  utmp = ur
+  vtmp = vr
+  ur = utmp * rotc(1,1,1) - vtmp * rotc(1,1,2)
 
 !  rrtimer = MPI_WTIME()
 !  WRITE(6,'(A,F18.10)') '###### Trans_XtoY_radar:radar_coord:',rrtimer-rrtimer00

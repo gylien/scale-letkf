@@ -12,7 +12,7 @@ MODULE letkf_obs
 !   ............ See git history for the following revisions
 !
 !=======================================================================
-!$USE OMP_LIB
+!##!$USE OMP_LIB
   USE common
   use common_nml
   USE common_mpi
@@ -84,10 +84,10 @@ SUBROUTINE set_letkf_obs
     DY
   use scale_atmos_grid_cartesC_index, only: &
     IHALO,JHALO
-!  use scale_process, only: &
+!  use scale_prc, only: &
 !    MPI_COMM_d => LOCAL_COMM_WORLD, &
 !    PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
 
@@ -152,7 +152,7 @@ SUBROUTINE set_letkf_obs
 
   logical :: ctype_use(nid_obs,nobtype)
 
-  integer :: OMP_GET_NUM_THREADS, omp_chunk
+!  integer :: OMP_GET_NUM_THREADS, omp_chunk
 
 !  character(len=timer_name_width) :: timer_str
 
@@ -269,10 +269,10 @@ SUBROUTINE set_letkf_obs
   !-----------------------------------------------------------------------------
 
   ctype_use(:,:) = .false.
-!$OMP PARALLEL PRIVATE(iof,n) REDUCTION(.or.:ctype_use)
+!##!$OMP PARALLEL PRIVATE(iof,n,omp_chunk) REDUCTION(.or.:ctype_use)
   do iof = 1, OBS_IN_NUM
-    omp_chunk = min(10, max(1, (obs(iof)%nobs-1) / OMP_GET_NUM_THREADS() + 1))
-!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
+!    omp_chunk = min(10, max(1, (obs(iof)%nobs-1) / OMP_GET_NUM_THREADS() + 1))
+!##$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
     do n = 1, obs(iof)%nobs
       select case (obs(iof)%elm(n))
       case (id_radar_ref_obs)
@@ -303,9 +303,9 @@ SUBROUTINE set_letkf_obs
       ! mark (elm, typ) combinations for which observations exist
       ctype_use(uid_obs(obs(iof)%elm(n)), obs(iof)%typ(n)) = .true.
     end do ! [ n = 1, obs(iof)%nobs ]
-!$OMP END DO
+!##!$OMP END DO
   end do ! [ iof = 1, OBS_IN_NUM ]
-!$OMP END PARALLEL
+!##!$OMP END PARALLEL
 
   ! do this outside of the above obs loop, so these (ctype) arrays can be in ascending order
   nctype = count(ctype_use)
@@ -360,12 +360,12 @@ SUBROUTINE set_letkf_obs
   allocate(tmpelm(obsda%nobs))
 
 #ifdef H08
-!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref,ch_num)
+!##!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref,ch_num)
 #else
-!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref)
+!##!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref)
 #endif
-  omp_chunk = min(10, max(1, (obsda%nobs-1) / OMP_GET_NUM_THREADS() + 1))
-!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
+!  omp_chunk = min(10, max(1, (obsda%nobs-1) / OMP_GET_NUM_THREADS() + 1))
+!##!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
   do n = 1, obsda%nobs
     IF(obsda%qc(n) > 0) CYCLE
 
@@ -626,8 +626,8 @@ SUBROUTINE set_letkf_obs
 
 
   END DO ! [ n = 1, obsda%nobs ]
-!$OMP END DO
-!$OMP END PARALLEL
+!##!$OMP END DO
+!##!$OMP END PARALLEL
 
   call mpi_timer('set_letkf_obs:departure_cal_qc:', 2)
 
@@ -1065,7 +1065,7 @@ SUBROUTINE set_letkf_obs
   obsda_sort%nobs = nobstotal
   call obs_da_value_allocate(obsda_sort, nensobs)
 
-!$OMP PARALLEL DO SCHEDULE(STATIC) PRIVATE(ip,ip_i,ip_j,ictype,imin1,imax1,jmin1,jmax1,imin2,imax2,jmin2,jmax2,ishift,jshift,j,ns_ext,ne_ext,ns_bufr,ne_bufr)
+!##!$OMP PARALLEL DO SCHEDULE(STATIC) PRIVATE(ip,ip_i,ip_j,ictype,imin1,imax1,jmin1,jmax1,imin2,imax2,jmin2,jmax2,ishift,jshift,j,ns_ext,ne_ext,ns_bufr,ne_bufr)
   do ip = 0, nprocs_d-1
     call rank_1d_2d(ip, ip_i, ip_j)
 
@@ -1115,7 +1115,7 @@ SUBROUTINE set_letkf_obs
       end do
     end do ! [ ictype = 1, nctype ]
   end do ! [ ip = 0, nprocs_d-1 ]
-!$OMP END PARALLEL DO
+!##!$OMP END PARALLEL DO
 
   ! Save the keys of observations within the subdomain (excluding the localization buffer area)
   obsda_sort%nobs_in_key = 0
@@ -1196,7 +1196,7 @@ END SUBROUTINE set_letkf_obs
 subroutine ij_obsgrd(ctype, ri, rj, ogi, ogj)
   use scale_atmos_grid_cartesC_index, only: &
     IHALO,JHALO
-!  use scale_process, only: &
+!  use scale_prc, only: &
 !    PRC_myrank
   implicit none
   integer, intent(in) :: ctype
@@ -1218,7 +1218,7 @@ end subroutine ij_obsgrd
 subroutine ij_obsgrd_ext(ctype, ri, rj, ogi, ogj)
   use scale_atmos_grid_cartesC_index, only: &
     IHALO,JHALO
-!  use scale_process, only: &
+!  use scale_prc, only: &
 !    PRC_myrank
   implicit none
   integer, intent(in) :: ctype
@@ -1292,350 +1292,5 @@ subroutine obs_choose_ext(ctype, imin, imax, jmin, jmax, nn, nobs_use)
 
   return
 end subroutine obs_choose_ext
-
-
-!!-----------------------------------------------------------------------
-!! Monitor observation diagnostics after the letkf update
-!!  Moved from main program code to this subroutine, 2013/12/26 Guo-Yuan Lien
-!!-----------------------------------------------------------------------
-!SUBROUTINE monit_obs
-!  IMPLICIT NONE
-!  REAL(r_size),ALLOCATABLE :: ohx(:)
-!  REAL(r_size),ALLOCATABLE :: dep(:)
-!  INTEGER,ALLOCATABLE :: oqc(:)
-!  INTEGER :: l,im
-!  CHARACTER(10) :: ombfile='omb.dat'
-!  CHARACTER(10) :: omafile='oma.dat'
-!  CHARACTER(14) :: obsguesfile='obsguesNNN.dat'
-!  CHARACTER(14) :: obsanalfile='obsanalNNN.dat'
-!
-!  IF(omb_output .AND. myrank == 0) THEN
-!    ALLOCATE(ohx(nobs),oqc(nobs),dep(nobs))
-!    CALL monit_output('gues',0,ohx,oqc)
-!    dep = obsdat - ohx
-!    WRITE(6,'(A)') 'OBSERVATIONAL DEPARTURE STATISTICS [gues mean]:'
-!    CALL monit_dep(nobs,obselm,dep,oqc)
-!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',ombfile
-!    CALL write_obs2(ombfile,nobs,obselm,obslon,obslat,obslev, &
-!                    obsdat,obserr,obstyp,obsdif,dep,obsqc,0)
-!  END IF
-!  IF(oma_output .AND. myrank == 0) THEN
-!    IF(.NOT. ALLOCATED(ohx)) ALLOCATE(ohx(nobs),oqc(nobs),dep(nobs))
-!    CALL monit_output('anal',0,ohx,oqc)
-!    dep = obsdat - ohx
-!    WRITE(6,'(A)') 'OBSERVATIONAL DEPARTURE STATISTICS [anal mean]:'
-!    CALL monit_dep(nobs,obselm,dep,oqc)
-!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',omafile
-!    CALL write_obs2(omafile,nobs,obselm,obslon,obslat,obslev, &
-!                    obsdat,obserr,obstyp,obsdif,dep,obsqc,0)
-!  END IF
-
-!  IF(obsgues_output) THEN
-!    IF(.NOT. ALLOCATED(ohx)) ALLOCATE(ohx(nobs),oqc(nobs))
-!    IF(myrank == 0) THEN
-!      ohx = obsdat - obsdep
-!      oqc = 1
-!      WRITE(obsguesfile(8:10),'(A3)') '_me'
-!      WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',obsguesfile
-!      CALL write_obs2(obsguesfile,nobs,obselm,obslon,obslat,obslev, &
-!                      obsdat,obserr,obstyp,obsdif,ohx,obsqc,0)
-!    END IF
-!    l=0
-!    DO
-!      im = myrank+1 + nprocs * l
-!      IF(im > MEMBER) EXIT
-!      ohx(:) = obsdat(:) - obsdep(:) + obshdxf(:,im)
-!      WRITE(obsguesfile(8:10),'(I3.3)') im
-!      WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',obsguesfile
-!      CALL write_obs2(obsguesfile,nobs,obselm,obslon,obslat,obslev, &
-!                      obsdat,obserr,obstyp,obsdif,ohx,obsqc,0)
-!      l = l+1
-!    END DO
-!  END IF
-
-!! This is not an accurate estimate of obsanal.
-!! To obtain an accurate estimate of obsanal, use code in [letkf_tools:das_letkf]
-!!------
-!!  IF(obsanal_output) THEN
-!!    IF(.NOT. ALLOCATED(ohx)) ALLOCATE(ohx(nobs),oqc(nobs))
-!!    CALL monit_output('anal',0,ohx,oqc)
-!!    WRITE(obsanalfile(8:10),'(A3)') '_me'
-!!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',obsanalfile
-!!    CALL write_obs2(obsanalfile,nobs,obselm,obslon,obslat,obslev, &
-!!                    obsdat,obserr,obstyp,obsdif,ohx,obsqc,0)
-!!    l=0
-!!    DO
-!!      im = myrank+1 + nprocs * l
-!!      IF(im > MEMBER) EXIT
-!!      CALL monit_output('anal',im,ohx,oqc)
-!!      WRITE(obsanalfile(8:10),'(I3.3)') im
-!!      WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',obsanalfile
-!!      CALL write_obs2(obsanalfile,nobs,obselm,obslon,obslat,obslev, &
-!!                      obsdat,obserr,obstyp,obsdif,ohx,obsqc,0)
-!!      l = l+1
-!!    END DO
-!!  END IF
-
-!  IF(ALLOCATED(ohx)) DEALLOCATE(ohx,oqc)
-!  IF(ALLOCATED(dep)) DEALLOCATE(dep)
-
-!  RETURN
-!END SUBROUTINE monit_obs
-!-----------------------------------------------------------------------
-! Monitor h(xb) or h(xa) from a LETKF output file
-! Adopted from 'monit_mean' subroutine, 2013/12/24 Guo-Yuan Lien
-!-----------------------------------------------------------------------
-!  file: 'gues' or 'anal'
-!  im:   member # (integer); 0 for ensmean (always called from myrank == 0)
-!  ohx:  h(xb) or h(xa)
-!  oqc:  quality of h(xb) or h(xa)
-!-----------------------------------------------------------------------
-!SUBROUTINE monit_output(file,im,ohx,oqc)
-!  IMPLICIT NONE
-!  CHARACTER(4),INTENT(IN) :: file
-!  INTEGER,INTENT(IN) :: im
-!  REAL(r_size),INTENT(OUT) :: ohx(nobs)
-!  INTEGER,INTENT(OUT) :: oqc(nobs)
-!  REAL(r_size) :: v3d(nlon,nlat,nlev,nv3dx)
-!  REAL(r_size) :: v2d(nlon,nlat,nv2dx)
-!  REAL(r_size) :: v3dtmp(nlon,nlat,nlev,nv3d)
-!  REAL(r_size) :: v2dtmp(nlon,nlat,nv2d)
-!  REAL(r_size) :: elem
-!  REAL(r_size) :: bias_u,bias_v,bias_t,bias_ps,bias_q,bias_rh,bias_rain
-!  REAL(r_size) :: rmse_u,rmse_v,rmse_t,rmse_ps,rmse_q,rmse_rh,rmse_rain
-!  REAL(r_size) :: hdxf,dep,ri,rj,rk
-!  INTEGER :: n,iu,iv,it,iq,ips,irh,irain
-!  CHARACTER(11) :: filename='filexxx.grd'
-!  INTEGER :: iret
-!  REAL(r_size) :: tmpps(nlon*nlat)
-!  REAL(r_size) :: tmptv(nlon*nlat,nlev)
-!  REAL(r_size) :: tmpp(nlon*nlat,nlev)
-
-
-
-!  CHARACTER(4),INTENT(IN) :: file
-!  REAL(r_size),INTENT(OUT) :: v3d(nij1,nlev,MEMBER,nv3d)
-!  REAL(r_size),INTENT(OUT) :: v2d(nij1,MEMBER,nv2d)
-!  REAL(RP) :: v3dg(nlev,nlon,nlat,nv3d)
-!  REAL(RP) :: v2dg(nlon,nlat,nv2d)
-!  CHARACTER(9) :: filename='file.0000'
-!  integer :: it,im,mstart,mend
-
-
-
-
-!  IF(im == 0) THEN
-!    WRITE(filename(1:7),'(A4,A3)') file,'_me'
-!  ELSE
-!    WRITE(filename(1:7),'(A4,I3.3)') file,im
-!  END IF
-!  CALL read_grd(filename,v3dtmp,v2dtmp,0) ! read ensemble mean into a temporary array
-!  IF(im == 0) THEN
-!    WRITE(filename(1:7),'(A4,I3.3)') 'gues',1 ! assume called from myrank == 0
-!  ELSE
-!    WRITE(filename(1:7),'(A4,I3.3)') 'gues',im
-!  END IF
-!  CALL read_grdx(filename,v3d,v2d) ! only the orography is used, P will be recalulated
-
-
-
-
-
-
-!!-----------------------------------------------------------------------
-
-
-
-
-!      WRITE(filename(1:4),'(A4)') file
-!      WRITE(filename(6:9),'(I4.4)') im
-!!      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
-!      call read_restart(filename,v3dg,v2dg)
-
-
-
-
-
-
-!!  v3d(:,:,:,iv3d_u) = v3dtmp(:,:,:,iv3d_u)
-!!  v3d(:,:,:,iv3d_v) = v3dtmp(:,:,:,iv3d_v)
-!!  v3d(:,:,:,iv3d_t) = v3dtmp(:,:,:,iv3d_t)
-!!  v3d(:,:,:,iv3d_q) = v3dtmp(:,:,:,iv3d_q)
-!!  v3d(:,:,:,iv3d_qc) = v3dtmp(:,:,:,iv3d_qc)
-!!  v2d(:,:,iv2d_ps) = v2dtmp(:,:,iv2d_ps)
-!!  tmpps = reshape(v2d(:,:,iv2d_ps),(/nlon*nlat/))
-!!  tmptv = reshape(v3d(:,:,:,iv3d_t) * (1.0d0 + fvirt * v3d(:,:,:,iv3d_q)),(/nlon*nlat,nlev/))
-!!  call sigio_modprd(nlon*nlat,nlon*nlat,nlev,gfs_nvcoord,gfs_idvc,gfs_idsl, &
-!!                    gfs_vcoord,iret,tmpps,tmptv,pm=tmpp)
-!!  v3d(:,:,:,iv3d_p) = reshape(tmpp,(/nlon,nlat,nlev/))
-
-!!  oqc = 1
-!!  DO n=1,nobs
-!!    CALL phys2ijk(v3d(:,:,:,iv3d_p),obselm(n),obslon(n),obslat(n),obslev(n),ri,rj,rk)
-!!    !
-!!    ! For monitoring, don't skip any observation below or above model vertical extent.
-!!    ! Just put bad QC but still get estimate.
-!!    !
-!!    IF(CEILING(rk) > nlev) THEN
-!!      rk = REAL(nlev,r_size)
-!!      oqc(n) = 0
-!!    END IF
-!!    IF(CEILING(rk) < 2 .AND. NINT(obselm(n)) /= id_ps_obs) THEN
-!!      IF(NINT(obselm(n)) > 9999) THEN
-!!        rk = 0.0d0
-!!      ELSE IF(NINT(obselm(n)) == id_u_obs .OR. NINT(obselm(n)) == id_v_obs) THEN
-!!        rk = 1.00001d0
-!!      ELSE
-!!        rk = 1.00001d0
-!!        oqc(n) = 0
-!!      END IF
-!!    END IF
-!!    IF(NINT(obselm(n)) == id_ps_obs) THEN
-!!      CALL itpl_2d(v2d(:,:,iv2d_orog),ri,rj,rk)
-!!      rk = obslev(n) - rk
-!!    END IF
-!!    IF(NINT(obselm(n)) == id_rain_obs) THEN ! No way to get the accumulated precipitation value
-!!      ohx(n) = obsdat(n)
-!!      oqc(n) = 0
-!!    ELSE
-!!      CALL Trans_XtoY(obselm(n),ri,rj,rk,v3d,v2d,ohx(n))
-!!    END IF
-!!  END DO
-
-!  RETURN
-!END SUBROUTINE monit_output
-!!-----------------------------------------------------------------------
-!! Read observation diagnostics for EFSO
-!!  Adapted from Y.Ohta's EFSO code for SPEEDY-LETKF   2013/07/17 D.Hotta
-!!  Modified, renamed from 'read_monit_obs' to 'set_efso_obs', 2013/12/26 Guo-Yuan Lien
-!!-----------------------------------------------------------------------
-!SUBROUTINE set_efso_obs
-!  IMPLICIT NONE
-!  REAL(r_size),ALLOCATABLE :: tmpdep(:)
-!  INTEGER,ALLOCATABLE :: tmpqc0(:,:)
-!  INTEGER,ALLOCATABLE :: tmpqc(:)
-!  INTEGER :: nj(0:nlat-1)
-!  INTEGER :: njs(1:nlat-1)
-!  INTEGER :: l,im,i,j,n,nn,ierr
-!  CHARACTER(14) :: obsguesfile='obsguesNNN.dat'
-!  CHARACTER(14) :: obsanalfile='obsanalNNN.dat'
-
-!  WRITE(6,'(A)') 'Hello from set_efso_obs'
-
-!  dist_zero = SIGMA_OBS * SQRT(10.0d0/3.0d0) * 2.0d0
-!  dist_zero_rain = SIGMA_OBS_RAIN * SQRT(10.0d0/3.0d0) * 2.0d0
-!  dist_zerov = SIGMA_OBSV * SQRT(10.0d0/3.0d0) * 2.0d0
-!  dist_zerov_rain = SIGMA_OBSV_RAIN * SQRT(10.0d0/3.0d0) * 2.0d0
-
-!  CALL get_nobs_mpi(obsanalfile,10,nobs)
-!  WRITE(6,'(I10,A)') nobs,' TOTAL OBSERVATIONS INPUT'
-!  IF(nobs == 0) RETURN
-!!
-!! INITIALIZE GLOBAL VARIABLES
-!!
-!  ALLOCATE( obselm(nobs) )
-!  ALLOCATE( obslon(nobs) )
-!  ALLOCATE( obslat(nobs) )
-!  ALLOCATE( obslev(nobs) )
-!  ALLOCATE( obsdat(nobs) )
-!  ALLOCATE( obserr(nobs) )
-!  ALLOCATE( obstyp(nobs) )
-!  ALLOCATE( obsdif(nobs) )
-!  ALLOCATE( obsdep(nobs) )
-!  ALLOCATE( obshdxf(nobs,MEMBER) )
-!  ALLOCATE( obsqc(nobs) )
-!  ALLOCATE( tmpdep(nobs) )
-!  ALLOCATE( tmpqc0(nobs,MEMBER) )
-!!
-!! reading background observation data and compute departure
-!!
-!  IF(myrank == 0) THEN
-!    WRITE(obsguesfile(8:10),'(A3)') '_me'
-!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is reading a file ',obsguesfile
-!    CALL read_obs2(obsguesfile,nobs,obselm,obslon,obslat,obslev, &
-!                   obsdat,obserr,obstyp,obsdif,obsdep,obsqc)
-!    obsdep = obsdat - obsdep
-!  END IF
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!  CALL MPI_BCAST(obsdep,nobs,MPI_r_size,0,MPI_COMM_WORLD,ierr)
-!  CALL MPI_BCAST(obsqc,nobs,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-!!
-!! reading ensemble analysis observations
-!!
-!  CALL read_obs2_mpi(obsanalfile,nobs,MEMBER,obselm,obslon,obslat,obslev, &
-!                     obsdat,obserr,obstyp,obsdif,obshdxf,tmpqc0)
-
-!!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i)
-!  DO n=1,nobs
-!    tmpdep(n) = obshdxf(n,1)
-!    DO i=2,MEMBER
-!      tmpdep(n) = tmpdep(n) + obshdxf(n,i)
-!    END DO
-!    tmpdep(n) = tmpdep(n) / REAL(MEMBER,r_size) ! mean
-!    DO i=1,MEMBER
-!      obshdxf(n,i) = obshdxf(n,i) - tmpdep(n)
-!    END DO
-!  END DO
-!!$OMP END PARALLEL DO
-!  DEALLOCATE(tmpdep,tmpqc0)
-!!
-!! Create observation box
-!!
-!  nobsgrd = 0
-!  nj = 0
-!!$OMP PARALLEL PRIVATE(i,j,n,nn)
-!!$OMP DO SCHEDULE(DYNAMIC)
-!  DO j=1,nlat-1
-!    DO n=1,nobs
-!      IF(obslat(n) < lat(j) .OR. lat(j+1) <= obslat(n)) CYCLE
-!      nj(j) = nj(j) + 1
-!    END DO
-!  END DO
-!!$OMP END DO
-!!$OMP DO SCHEDULE(DYNAMIC)
-!  DO j=1,nlat-1
-!    njs(j) = SUM(nj(0:j-1))
-!  END DO
-!!$OMP END DO
-!!$OMP DO SCHEDULE(DYNAMIC)
-!  DO j=1,nlat-1
-!    nn = 0
-!    DO n=1,nobs
-!      IF(obslat(n) < lat(j) .OR. lat(j+1) <= obslat(n)) CYCLE
-!      nn = nn + 1
-!    END DO
-!  END DO
-!!$OMP END DO
-!!$OMP DO SCHEDULE(DYNAMIC)
-!  DO j=1,nlat-1
-!    IF(nj(j) == 0) THEN
-!      nobsgrd(:,j) = njs(j)
-!      CYCLE
-!    END IF
-!    nn = 0
-!    DO i=1,nlon
-!      DO n=njs(j)+1,njs(j)+nj(j)
-!        IF(i < nlon) THEN
-!          IF(obslon(n) < lon(i) .OR. lon(i+1) <= obslon(n)) CYCLE
-!        ELSE
-!          IF(obslon(n) < lon(nlon) .OR. 360.0d0 <= obslon(n)) CYCLE
-!        END IF
-!        nn = nn + 1
-!      END DO
-!      nobsgrd(i,j) = njs(j) + nn
-!    END DO
-!    IF(nn /= nj(j)) THEN
-!!$OMP CRITICAL
-!      WRITE(6,'(A,2I10)') 'OBS DATA SORT ERROR: ',nn,nj(j)
-!      WRITE(6,'(F6.2,A,F6.2)') lat(j),'< LAT <',lat(j+1)
-!      WRITE(6,'(F6.2,A,F6.2)') MINVAL(obslat(njs(j)+1:njs(j)+nj(j))),'< OBSLAT <',MAXVAL(obslat(njs(j)+1:njs(j)+nj(j)))
-!!$OMP END CRITICAL
-!    END IF
-!  END DO
-!!$OMP END DO
-!!$OMP END PARALLEL
-
-!  RETURN
-!END SUBROUTINE set_efso_obs
 
 END MODULE letkf_obs

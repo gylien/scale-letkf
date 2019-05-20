@@ -1,5 +1,8 @@
-# On-off settings
 #-----------------
+TOPDIR    = ../../..
+SCALE_INC = -I$(TOPDIR)/include
+SCALE_LIB = -L$(TOPDIR)/lib -lscale 
+SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
 
 SCALE_USER_VER = T
 
@@ -23,19 +26,12 @@ FC         = mpiifort
 
 FOPTS_SCALE = $(FFLAGS)
 
-#FOPTS      = -fpp -m64 -O3 -xHost                 \
-#             -assume byterecl -convert big_endian \
-#             -fp-model source                     \
-#             -mcmodel=medium -heap-arrays         \
-#             -axMIC-AVX512                        \
-#             -qopenmp \
-##             -g -traceback -check bounds,pointers -fpe0 -DDEBUG
-FOPTS      = $(FOPTS_SCALE) \
-             -qopenmp
+FOPTS     = $(FOPTS_SCALE) 
 
 FOPTS_EXE  = $(FOPTS)
 
-FMCMODEL   = #-mcmodel=medium -shared-intel
-FBYTESWAP  = #-convert little_endian
-FFREE      = #-free
-FFIXED     = #-fixed
+#FMCMODEL  = -mcmodel=medium -shared-intel
+FBYTESWAP = -convert little_endian
+FFREE     = -free
+FFIXED    = -fixed
+

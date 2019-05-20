@@ -82,6 +82,7 @@ cat $SCRP_DIR/config.main | \
     > $TMP/config.main
 
 echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMP/config.main
+echo "NODEFILE_DIR=\"\$TMPROOT/node\"" >> $TMPS/config.main
 echo "RUN_LEVEL=4" >> $TMP/config.main
 
 echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMP/config.main
@@ -102,6 +103,7 @@ ${SCRP_DIR}/config.rc|config.rc
 ${SCRP_DIR}/config.${job}|config.${job}
 ${SCRP_DIR}/${job}.sh|${job}.sh
 ${SCRP_DIR}/src/|src/
+${NODEFILE_DIR}/|node/
 EOF
 
 if [ "$CONF_MODE" != 'static' ]; then
@@ -118,6 +120,7 @@ stage_in server || exit $?
 #===============================================================================
 # Creat a job script
 
+NPIN=`expr 255 / \( $PPN \) + 1`
 jobscrp="$TMP/${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
@@ -130,22 +133,37 @@ cat > $jobscrp << EOF
 #PJM --mpi proc=$((NNODES*PPN))
 ##PJM --mpi proc=${totalnp}
 #PJM --omp thread=${THREADS}
-#PJM -g gg10
-##PJM -j
 
+#PJM -g $(echo $(id -ng))
+##PJM -j
 rm -f machinefile
 for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
   for ippn in \$(seq $PPN); do
     echo "\$inode" >> machinefile
   done
 done
-
 module load hdf5/1.8.17
 module load netcdf/4.4.1
 module load netcdf-fortran/4.4.3
 
+export FORT_FMT_RECL=400
+
+export HFI_NO_CPUAFFINITY=1
+export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
+export I_MPI_HBW_POLICY=hbw_preferred,,
+export I_MPI_FABRICS_LIST=tmi
+unset KMP_AFFINITY
+#export KMP_AFFINITY=verbose
+#export I_MPI_DEBUG=5
+
+export OMP_NUM_THREADS=1
+export I_MPI_PIN_DOMAIN=${NPIN}
+export I_MPI_PERHOST=${PPN}
+export KMP_HW_SUBSET=1t
+
+
+#export OMP_STACKSIZE=128m
 ulimit -s unlimited
-export OMP_STACKSIZE=128m
 
 ./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF

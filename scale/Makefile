@@ -2,7 +2,7 @@
 
 all:
 	$(MAKE) -C common
-	$(MAKE) -C ensmodel
+#	$(MAKE) -C ensmodel
 	$(MAKE) -C obs
 	$(MAKE) -C letkf
 	$(MAKE) -C dacycle

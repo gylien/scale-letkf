@@ -145,7 +145,7 @@ cat > $jobscrp << EOF
 #PJM --mpi "proc=${totalnp}"
 #PJM --mpi assign-online-node
 
-. /work/system/Env_base_1.2.0-22
+. /work/system/Env_base_1.2.0-25
 export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:\$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}

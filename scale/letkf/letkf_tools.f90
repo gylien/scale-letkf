@@ -12,7 +12,7 @@ MODULE letkf_tools
 !   ............ See git history for the following revisions
 !
 !=======================================================================
-!$USE OMP_LIB
+!##!$USE OMP_LIB
   USE common
   use common_nml
   USE common_mpi
@@ -108,7 +108,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
 
   integer,allocatable :: search_q0(:,:,:)
 
-  integer :: OMP_GET_NUM_THREADS, omp_chunk
+!  integer :: OMP_GET_NUM_THREADS, omp_chunk
 
   character(len=timer_name_width) :: timer_str
 
@@ -210,8 +210,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
   !
 !  .... this has been done by write_ensmean in letkf.f90
 !  CALL ensmean_grd(MEMBER,nens,nij1,gues3d,gues2d,mean3d,mean2d)
-!$OMP PARALLEL PRIVATE(n,m,k,i)
-!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+!##!$OMP PARALLEL PRIVATE(n,m,k,i)
+!##!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
   DO n=1,nv3d
     DO m=1,MEMBER
       DO k=1,nlev
@@ -221,8 +221,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       END DO
     END DO
   END DO
-!$OMP END DO NOWAIT
-!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+!##!$OMP END DO NOWAIT
+!##!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
   DO n=1,nv2d
     DO m=1,MEMBER
       DO i=1,nij1
@@ -230,8 +230,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       END DO
     END DO
   END DO
-!$OMP END DO
-!$OMP END PARALLEL
+!##!$OMP END DO
+!##!$OMP END PARALLEL
 
   call mpi_timer('das_letkf:fcst_perturbation:', 2)
 
@@ -290,8 +290,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
 
   call mpi_timer('das_letkf:allocation_shared_vars:', 2)
 
-!$OMP PARALLEL PRIVATE(ilev,ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,n2n,n2nc,trans,transm,transmd,transrlx,pa,trans_done,tmpinfl,q_mean,q_sprd,q_anal,timer_str)
-  omp_chunk = min(4, max(1, (nij1-1) / OMP_GET_NUM_THREADS() + 1))
+!##!$OMP PARALLEL PRIVATE(ilev,ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,n2n,n2nc,trans,transm,transmd,transrlx,pa,trans_done,tmpinfl,q_mean,q_sprd,q_anal,timer_str)
+!  omp_chunk = min(4, max(1, (nij1-1) / OMP_GET_NUM_THREADS() + 1))
 
   allocate (hdxf (nobstotal,MEMBER))
   allocate (rdiag(nobstotal))
@@ -305,22 +305,22 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
   allocate (transmd(MEMBER,       var_local_n2nc_max))
   allocate (pa     (MEMBER,MEMBER,var_local_n2nc_max))
 
-!$OMP MASTER
+
+!##!$OMP MASTER
   call mpi_timer('das_letkf:allocation_private_vars:', 2)
   call mpi_timer('', 3)
 
-  write (6, '(A,I3)') 'OpenMP chunk for dynamic schedule =', omp_chunk
-!$OMP END MASTER
+!  write (6, '(A,I3)') 'OpenMP chunk for dynamic schedule =', omp_chunk
+!##!$OMP END MASTER
   !
   ! MAIN ASSIMILATION LOOP
   !
   DO ilev=1,nlev
-
     if (LOG_LEVEL >= 3) then
       call mpi_timer('', 4)
     end if
 
-!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
+!##!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
     DO ij=1,nij1
 
       trans_done(:) = .false.                                                          !GYL
@@ -664,9 +664,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       END IF ! [ ilev == 1 ]
 
     END DO ! [ ij=1,nij1 ]
-!$OMP END DO
+!##!$OMP END DO
 
-!$OMP MASTER
+!##!$OMP MASTER
     if (LOG_LEVEL >= 3) then
       if (maxval(MAX_NOBS_PER_GRID(:)) > 0 .and. MAX_NOBS_PER_GRID_CRITERION == 1) then
         do ic = 1, nctype
@@ -685,7 +685,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
 
     write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
     call mpi_timer(trim(timer_str), 3)
-!$OMP END MASTER
+!##!$OMP END MASTER
 
   END DO ! [ ilev=1,nlev ]
 
@@ -694,7 +694,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
     deallocate (depd)
   end if
   deallocate (trans,transm,transmd,pa)
-!$OMP END PARALLEL
+!##!$OMP END PARALLEL
 
   call mpi_timer('das_letkf:letkf_core:', 2)
 
@@ -855,8 +855,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
     end if
     write (6,'(A)') '========================================='
 
-!$OMP PARALLEL PRIVATE(n,m,k,i,mshuf)
-!$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
+!##!$OMP PARALLEL PRIVATE(n,m,k,i,mshuf)
+!##!$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
     DO n=1,nv3d
       DO m=1,MEMBER
         if (INFL_ADD_SHUFFLE) then
@@ -881,8 +881,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
         end if
       END DO
     END DO
-!$OMP END DO NOWAIT
-!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+!##!$OMP END DO NOWAIT
+!##!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
     DO n=1,nv2d
       DO m=1,MEMBER
         if (INFL_ADD_SHUFFLE) then
@@ -895,8 +895,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
         END DO
       END DO
     END DO
-!$OMP END DO
-!$OMP END PARALLEL
+!##!$OMP END DO
+!##!$OMP END PARALLEL
 
     deallocate (addinfl_weight)
 
@@ -924,8 +924,8 @@ subroutine addinfl_setup(addi3d, addi2d)
 
   call mpi_timer('addinfl_setup:ensmean_grd:', 2)
 
-!$OMP PARALLEL PRIVATE(n,m,k,i)
-!$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
+!##!$OMP PARALLEL PRIVATE(n,m,k,i)
+!##!$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
   do n = 1, nv3d
     do m = 1, MEMBER
       do k = 1, nlev
@@ -935,8 +935,8 @@ subroutine addinfl_setup(addi3d, addi2d)
       end do
     end do
   end do
-!$OMP END DO NOWAIT
-!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+!##!$OMP END DO NOWAIT
+!##!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
   do n = 1, nv2d
     do m = 1, MEMBER
       do i = 1, nij1
@@ -944,383 +944,13 @@ subroutine addinfl_setup(addi3d, addi2d)
       end do
     end do
   end do
-!$OMP END DO
-!$OMP END PARALLEL
+!##!$OMP END DO
+!##!$OMP END PARALLEL
 
   call mpi_timer('addinfl_setup:calc_perturbation:', 2)
 
   return
 end subroutine addinfl_setup
-!!-----------------------------------------------------------------------
-!! Data assimilation for observations: Compute analyses of observations (Y^a)
-!! * currently only support multiplicative and adaptive inflation
-!!  -- 01/01/2014, Guo-Yuan Lien, 
-!!-----------------------------------------------------------------------
-!SUBROUTINE das_letkf_obs(v3dinfl,v2dinfl)
-!  IMPLICIT NONE
-!  REAL(r_sngl),INTENT(IN) :: v3dinfl(nlon,nlat,nlev,nv3d)
-!  REAL(r_sngl),INTENT(IN) :: v2dinfl(nlon,nlat,nv2d)
-!  REAL(r_size),ALLOCATABLE :: v3dinflx(:,:,:,:)
-!  REAL(r_size),ALLOCATABLE :: v2dinflx(:,:,:)
-!  REAL(r_size),ALLOCATABLE :: v3dtmp(:,:,:,:)
-!  REAL(r_size),ALLOCATABLE :: v2dtmp(:,:,:)
-!  REAL(r_size),ALLOCATABLE :: tmpps(:)
-!  REAL(r_size),ALLOCATABLE :: tmptv(:,:)
-!  REAL(r_size),ALLOCATABLE :: tmpp(:,:)
-!  REAL(r_size),ALLOCATABLE :: obsanal(:,:)
-!  REAL(r_size),ALLOCATABLE :: obsanalmean(:)
-!  REAL(r_size) :: hdxf(nobstotal,MEMBER)
-!  REAL(r_size) :: rdiag(nobstotal)
-!  REAL(r_size) :: rloc(nobstotal)
-!  REAL(r_size) :: dep(nobstotal)
-!  REAL(r_size) :: ohx(nobs)
-!  REAL(r_size) :: parm
-!  REAL(r_size) :: trans(MEMBER,MEMBER)
-!  REAL(r_size) :: ri,rj,rk
-!  REAL(r_size) :: rlev,p_update_q
-!  REAL(r_size) :: q_sprd
-!  REAL(r_size) :: q_anal(MEMBER)
-!  INTEGER :: n,nn,m,k,nobsl,ierr,iret
-!  INTEGER :: inflelem,irank,nobsp,nobspmax
-!  CHARACTER(14) :: obsanalfile='obsanalNNN.dat'
-
-!  WRITE(6,'(A)') 'Hello from das_letkf_obs: Compute [Y^a]'
-!  !
-!  ! If adaptive inflation is used, prepare a global array of inflation parameter
-!  !
-!  IF(COV_INFL_MUL <= 0.0d0) THEN
-!    ALLOCATE(v3dinflx(nlon,nlat,nlev,nv3dx))
-!    ALLOCATE(v2dinflx(nlon,nlat,nv2dx))
-!    IF(myrank == 0) THEN
-!      ALLOCATE(v3dtmp(nlon,nlat,nlev,nv3d))
-!      ALLOCATE(v2dtmp(nlon,nlat,nv2d))
-!      ALLOCATE(tmpps(nlon*nlat))
-!      ALLOCATE(tmptv(nlon*nlat,nlev))
-!      ALLOCATE(tmpp(nlon*nlat,nlev))
-!      CALL read_grd('gues_me.grd',v3dtmp,v2dtmp,0)  ! read ensemble mean into a temporary array
-!      CALL read_grdx('gues001.grd',v3dinflx,v2dinflx) ! only the orography is used, P will be recalulated
-!      v3dinflx(:,:,:,iv3d_u) = v3dinfl(:,:,:,iv3d_u)
-!      v3dinflx(:,:,:,iv3d_v) = v3dinfl(:,:,:,iv3d_v)
-!      v3dinflx(:,:,:,iv3d_t) = v3dinfl(:,:,:,iv3d_t)
-!      v3dinflx(:,:,:,iv3d_q) = v3dinfl(:,:,:,iv3d_q)
-!      v3dinflx(:,:,:,iv3d_qc) = v3dinfl(:,:,:,iv3d_qc)
-!!      v2dinflx(:,:,iv2d_ps) = v2dinfl(:,:,iv2d_ps)
-!      v2dinflx(:,:,iv2d_ps) = v3dinfl(:,:,1,iv3d_u)
-!      tmpps = reshape(v2dtmp(:,:,iv2d_ps),(/nlon*nlat/))
-!      tmptv = reshape(v3dtmp(:,:,:,iv3d_t) * (1.0d0 + fvirt * v3dtmp(:,:,:,iv3d_q)),(/nlon*nlat,nlev/))
-!      call sigio_modprd(nlon*nlat,nlon*nlat,nlev,gfs_nvcoord,gfs_idvc,gfs_idsl, &
-!                        gfs_vcoord,iret,tmpps,tmptv,pm=tmpp)
-!      v3dinflx(:,:,:,iv3d_p) = reshape(tmpp,(/nlon,nlat,nlev/))
-!      DEALLOCATE(v3dtmp,v2dtmp,tmpps,tmptv,tmpp)
-!    END IF
-!    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!    call MPI_BCAST(v3dinflx,nlon*nlat*nlev*nv3dx,MPI_r_size,0,MPI_COMM_WORLD,ierr)
-!    call MPI_BCAST(v2dinflx,nlon*nlat*nv2dx,MPI_r_size,0,MPI_COMM_WORLD,ierr)
-!  END IF
-!  !
-!  ! Define the partition of observations for parallel computation
-!  !
-!  nn = MOD(nobs,nprocs)
-!  nobspmax = (nobs - nn)/nprocs + 1
-!  IF(myrank < nn) THEN
-!    nobsp = nobspmax
-!  ELSE
-!    nobsp = nobspmax-1
-!  END IF
-!  WRITE(6,'(A,I3.3,A,I8)') 'MYRANK ',myrank,' process obs number=', nobsp
-!  !
-!  ! Main LETKF loop
-!  !
-!  ALLOCATE(obsanal(nobs,MEMBER))
-!  ALLOCATE(obsanalmean(nobs))
-!  obsanal = 0.0d0
-!  obsanalmean = 0.0d0
-!  nn = myrank+1
-!  DO
-!    IF(nn > nobs) EXIT
-!!    WRITE(6,'(A,I8)') 'nn = ',nn
-!    !
-!    ! The observation variable type is different from the grid variable type.
-!    ! To compute the analyses of observations as regular grids,
-!    ! what grid variable will the observation variable be regarded as?
-!    !
-!    ! Also determine the pressure level will the observation variable be regarded as?
-!    !
-!    SELECT CASE(NINT(obselm(nn)))
-!    CASE(id_u_obs)
-!      n = iv3d_u          ! for variable localization, what grid variable to be regarded as? 
-!      inflelem = id_u_obs ! for inflation parameter,   what grid variable to be regarded as?
-!      rlev = obslev(nn)
-!    CASE(id_v_obs)
-!      n = iv3d_v
-!      inflelem = id_v_obs
-!      rlev = obslev(nn)
-!    CASE(id_t_obs,id_tv_obs)
-!      n = iv3d_t
-!      inflelem = id_t_obs
-!      rlev = obslev(nn)
-!    CASE(id_q_obs,id_rh_obs)
-!      n = iv3d_q
-!      inflelem = id_q_obs
-!      rlev = obslev(nn)
-!    CASE(id_ps_obs)
-!      n = nv3d+iv2d_ps
-!      inflelem = id_ps_obs
-!      rlev = obsdat(nn)   ! for ps variable, use the observed pressure value
-!    CASE(id_rain_obs)
-!      n = 0
-!      inflelem = id_q_obs
-!      rlev = base_obsv_rain ! for precipitation, assigh the level 'base_obsv_rain'
-!    CASE DEFAULT
-!      n = 0
-!      IF(NINT(obselm(nn)) > 9999) THEN
-!        inflelem = id_ps_obs
-!        CALL itpl_2d(v3dinflx(:,:,1,iv3d_p),ri,rj,rlev)
-!      ELSE
-!        inflelem = id_u_obs
-!        rlev = obslev(nn)
-!      END IF
-!    END SELECT
-!    !
-!    ! Determine the inflation parameter
-!    !
-!    IF(COV_INFL_MUL > 0.0d0) THEN
-!      parm = COV_INFL_MUL
-!    ELSE
-!      CALL phys2ijk(v3dinflx(:,:,:,iv3d_p),real(inflelem,r_size),obslon(nn),obslat(nn),rlev,ri,rj,rk)
-!      IF(CEILING(rk) > nlev) THEN
-!        rk = REAL(nlev,r_size)
-!      END IF
-!      IF(CEILING(rk) < 2 .AND. inflelem /= id_ps_obs) THEN
-!        IF(inflelem > 9999) THEN
-!          rk = 0.0d0
-!        ELSE
-!          rk = 1.00001d0
-!        END IF
-!      END IF
-!      IF(inflelem == id_ps_obs) THEN
-!        CALL itpl_2d(v2dinflx(:,:,iv2d_orog),ri,rj,rk)
-!        rk = obslev(nn) - rk
-!      END IF
-!      CALL Trans_XtoY(real(inflelem,r_size),ri,rj,rk,v3dinflx,v2dinflx,parm)
-!    END IF
-!    !
-!    ! LETKF computation
-!    !
-!    CALL obs_local(obslon(nn),obslat(nn),rlev,n,hdxf,rdiag,rloc,dep,nobsl)
-!    CALL letkf_core(MEMBER,nobstotal,nobsl,hdxf,rdiag,rloc,dep,parm,trans,RELAX_ALPHA)
-
-!    IF(n == iv3d_q .OR. n == iv3d_qc) THEN
-!      CALL itpl_2d(v3dinflx(:,:,LEV_UPDATE_Q,iv3d_p),ri,rj,p_update_q)
-!    END IF
-!    IF((n == iv3d_q .OR. n == iv3d_qc) .AND. obslev(nn) < p_update_q) THEN
-!      obsanal(nn,:) = obsdat(nn) - obsdep(nn) + obshdxf(nn,:)
-!      obsanalmean(nn) = obsdat(nn) - obsdep(nn)
-!    ELSE
-!      DO m=1,MEMBER
-!        obsanal(nn,m) = obsdat(nn) - obsdep(nn)
-!        DO k=1,MEMBER
-!          obsanal(nn,m) = obsanal(nn,m) + obshdxf(nn,k) * trans(k,m)
-!        END DO
-!        obsanalmean(nn) = obsanalmean(nn) + obsanal(nn,m)
-!      END DO
-!      obsanalmean(nn) = obsanalmean(nn) / real(MEMBER,r_size)
-!    END IF
-!    IF(n == iv3d_q .AND. obslev(nn) >= p_update_q) THEN
-!      q_sprd = 0.0d0
-!      DO m=1,MEMBER
-!        q_anal(m) = obsanal(nn,m) - obsanalmean(nn)
-!        q_sprd = q_sprd + q_anal(m)**2
-!      END DO
-!      q_sprd = SQRT(q_sprd / REAL(MEMBER-1,r_size)) / obsanalmean(nn)
-!      IF(q_sprd > Q_SPRD_MAX) THEN
-!        DO m=1,MEMBER
-!          obsanal(nn,m) = obsanalmean(nn) + q_anal(m) * Q_SPRD_MAX / q_sprd
-!        END DO
-!      END IF
-!    END IF
-
-!    nn = nn + nprocs
-!  END DO
-!  !
-!  ! MPI_REDUCE and output obsanalfiles
-!  !
-!  ! mean
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!  CALL MPI_REDUCE(obsanalmean,ohx,nobs,MPI_r_size,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-!  IF(myrank == 0) THEN
-!    WRITE(obsanalfile(8:10),'(A3)') '_me'
-!    WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',obsanalfile
-!    CALL write_obs2(obsanalfile,nobs,obselm,obslon,obslat,obslev, &
-!                    obsdat,obserr,obstyp,obsdif,ohx,obsqc,0)
-!  END IF
-!  ! members
-!  irank = 0
-!  DO m=1,MEMBER
-!    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!    CALL MPI_REDUCE(obsanal(:,m),ohx,nobs,MPI_r_size,MPI_SUM,irank,MPI_COMM_WORLD,ierr)
-!    IF(myrank == irank) THEN
-!      WRITE(obsanalfile(8:10),'(I3.3)') m
-!      WRITE(6,'(A,I3.3,2A)') 'MYRANK ',myrank,' is writing a file ',obsanalfile
-!      CALL write_obs2(obsanalfile,nobs,obselm,obslon,obslat,obslev, &
-!                      obsdat,obserr,obstyp,obsdif,ohx,obsqc,0)
-!    END IF
-!    irank = irank + 1
-!    IF(irank >= nprocs) irank = 0
-!  END DO
-
-!  DEALLOCATE(obsanal)
-!  IF(COV_INFL_MUL <= 0.0d0) THEN
-!    DEALLOCATE(v3dinflx,v2dinflx)
-!  END IF
-!  RETURN
-!END SUBROUTINE das_letkf_obs
-!!-----------------------------------------------------------------------
-!! Subroutine for observation sensitivity computation
-!! Ported from Y.Ohta's SPEEDY-LETKF system by D.Hotta, 07/01/2013
-!! [ref: Eq.(6,7,9), Ota et al. 2013]
-!!-----------------------------------------------------------------------
-!! [INPUT]
-!!  gues3d,gues2d: xmean^g_0
-!!  fcst3d,fcst2d: C^(1/2)*X^f_t                    [(J/kg)^(1/2)]
-!!  fcer3d,fcer2d: C^(1/2)*[1/2(K-1)](e^f_t+e^g_t)  [(J/kg)^(1/2)]
-!! (save variables)
-!!  obshdxf:
-!! [OUTPUT]
-!!-----------------------------------------------------------------------
-!SUBROUTINE das_efso(gues3d,gues2d,fcst3d,fcst2d,fcer3d,fcer2d)
-!  IMPLICIT NONE
-!  REAL(r_size),INTENT(IN) :: gues3d(nij1,nlev,nv3d)     !
-!  REAL(r_size),INTENT(IN) :: gues2d(nij1,nv2d)          !
-!  REAL(r_size),INTENT(IN) :: fcst3d(nij1,nlev,MEMBER,nv3d) ! forecast ensemble
-!  REAL(r_size),INTENT(IN) :: fcst2d(nij1,MEMBER,nv2d)      !
-!  REAL(r_size),INTENT(IN) :: fcer3d(nij1,nlev,nv3d) ! forecast error
-!  REAL(r_size),INTENT(IN) :: fcer2d(nij1,nv2d)      !
-!  REAL(r_size),ALLOCATABLE :: hdxf(:,:)
-!  REAL(r_size),ALLOCATABLE :: hdxa_rinv(:,:)
-!  REAL(r_size),ALLOCATABLE :: rdiag(:)
-!  REAL(r_size),ALLOCATABLE :: rloc(:)
-!  REAL(r_size),ALLOCATABLE :: dep(:)
-!  REAL(r_size),ALLOCATABLE :: tmptv(:,:)
-!  REAL(r_size),ALLOCATABLE :: pfull(:,:)
-!  REAL(r_size),ALLOCATABLE :: djdy(:,:)
-!  REAL(r_size),ALLOCATABLE :: recbuf(:,:)
-!  REAL(r_size) :: work1(nterm,MEMBER)
-!  INTEGER,ALLOCATABLE :: oindex(:)
-!  INTEGER :: ij,k,ilev,m,nob,nobsl,ierr,iret,iterm
-
-!  WRITE(6,'(A)') 'Hello from das_obsense'
-!  nobstotal = nobs !+ ntvs
-!  WRITE(6,'(A,I8)') 'Target observation numbers : NOBS=',nobs!,', NTVS=',ntvs
-!  !
-!  ! In case of no obs
-!  !
-!  IF(nobstotal == 0) THEN
-!    WRITE(6,'(A)') 'No observation assimilated'
-!    RETURN
-!  END IF
-!  ALLOCATE(djdy(nterm,nobstotal))
-!  djdy = 0.0_r_size
-!  !
-!  ! p_full for background ensemble mean
-!  !
-!  ALLOCATE( tmptv(nij1,nlev) )
-!  ALLOCATE( pfull(nij1,nlev) )
-!  tmptv = gues3d(:,:,iv3d_t) * (1.0d0 + fvirt * gues3d(:,:,iv3d_q))
-!  call sigio_modprd(nij1,nij1,nlev,gfs_nvcoord,gfs_idvc,gfs_idsl, &
-!                    gfs_vcoord,iret,gues2d(:,iv2d_ps),tmptv,pm=pfull)
-!  DEALLOCATE(tmptv)
-!  !
-!  ! MAIN ASSIMILATION LOOP
-!  !
-!!$OMP PARALLEL PRIVATE(ij,ilev,k,hdxf,rdiag,rloc,dep,nobsl,oindex, &
-!!$                     work1,m,nob)
-!  ALLOCATE( hdxf(1:nobstotal,1:MEMBER),rdiag(1:nobstotal),rloc(1:nobstotal), &
-!       & dep(1:nobstotal) )
-!  ALLOCATE(oindex(1:nobstotal))
-!!--- For ILEV = 1 - NLEV
-!!$OMP DO SCHEDULE(DYNAMIC)
-!  DO ilev=1,nlev
-!    WRITE(6,'(A,I3)') 'ilev = ',ilev
-!    DO ij=1,nij1
-!      IF(ABS(locadv_rate) > TINY(locadv_rate)) THEN
-!        CALL obs_local(lon2(ij,ilev),lat2(ij,ilev),pfull(ij,ilev),0,hdxf,rdiag,rloc,dep,nobsl,oindex)
-!      ELSE
-!        CALL obs_local(lon1(ij),lat1(ij),pfull(ij,ilev),0,hdxf,rdiag,rloc,dep,nobsl,oindex)
-!      END IF
-!      IF( nobsl /= 0 ) THEN
-!        ! Forecast error
-!        work1 = 0.0_r_size
-!        DO k=1,nv3d
-!          SELECT CASE(k)
-!          CASE(iv3d_u,iv3d_v)
-!            iterm = 1
-!          CASE(iv3d_t)
-!            iterm = 2
-!          CASE(iv3d_q)
-!            iterm = 3
-!          CASE DEFAULT
-!            iterm = 0
-!          END SELECT
-!          IF(iterm > 0) THEN
-!            DO m=1,MEMBER
-!              work1(iterm,m) = work1(iterm,m) + fcst3d(ij,ilev,m,k) * fcer3d(ij,ilev,k)
-!            END DO
-!          END IF
-!        END DO
-!        IF(ilev == 1) THEN
-!          DO k=1,nv2d
-!            IF(k == iv2d_ps) THEN
-!              DO m=1,MEMBER
-!                work1(2,m) = work1(2,m) + fcst2d(ij,m,k) * fcer2d(ij,k)
-!              END DO
-!            END IF
-!          END DO
-!        END IF
-!        !!! work1: [1/2(K-1)](X^f_t)^T*C*(e^f_t+e^g_t)  [J/kg]
-!        ! Hdxa Rinv
-!        ALLOCATE(hdxa_rinv(nobsl,MEMBER))
-!        DO m=1,MEMBER
-!          DO nob=1,nobsl
-!            hdxa_rinv(nob,m) = hdxf(nob,m) / rdiag(nob) * rloc(nob)
-!          END DO
-!        END DO
-!        !!! hdxa_rinv: rho*R^(-1)*Y^a_0 = rho*R^(-1)*(H X^a_0)
-!        ! dJ/dy
-!        DO nob=1,nobsl
-!          DO m=1,MEMBER
-!            djdy(:,oindex(nob)) = djdy(:,oindex(nob)) + work1(:,m) * hdxa_rinv(nob,m)
-!          END DO
-!        END DO
-!        !!! djdy: [1/2(K-1)]rho*R^(-1)*Y^a_0*(X^f_t)^T*C*(e^f_t+e^g_t)
-!        DEALLOCATE(hdxa_rinv)
-!      END IF
-!    END DO
-!  END DO
-!!$OMP END DO
-!  DEALLOCATE(hdxf,rdiag,rloc,dep,oindex)
-!!$OMP END PARALLEL
-!  !
-!  ! Calculate observation sensitivity
-!  !
-!!$OMP PARALLEL PRIVATE(nob)
-!!$OMP DO
-!  DO nob=1,nobstotal
-!    obsense(:,nob) = djdy(:,nob) * obsdep(nob)
-!  END DO
-!  !!! obsense: delta e^{f-g}_t = [1/2(K-1)][y_o-H(xmean^b_0)]^T*rho*R^(-1)*Y^a_0*(X^f_t)^T*C*(e^f_t+e^g_t)
-!!$OMP END DO
-!!$OMP END PARALLEL
-!  ! Gather observation sensitivity informations to the root
-!  ALLOCATE(recbuf(nterm,nobstotal))
-!  CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-!  CALL MPI_REDUCE(obsense(:,1:nobstotal),recbuf,nterm*nobstotal,MPI_r_size,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-!  IF(myrank == 0) obsense(:,1:nobstotal) = recbuf(:,:)
-!  DEALLOCATE(recbuf)
-!  DEALLOCATE(djdy)
-!  DEALLOCATE(pfull)
-!  RETURN
-!END SUBROUTINE das_efso
 
 !-------------------------------------------------------------------------------
 ! Find local observations to be used for a targeted grid
@@ -1347,7 +977,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
   use common_sort
   use scale_atmos_grid_cartesC, only: &
     DX, DY
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
   implicit none

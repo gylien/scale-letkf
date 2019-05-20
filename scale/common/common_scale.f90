@@ -16,7 +16,7 @@ MODULE common_scale
   use common_nml
 
   use scale_precision, only: RP, SP, DP
-  use scale_stdio, only: H_MID, H_LONG
+  use scale_io, only: H_MID, H_LONG
   use scale_prof
 
   IMPLICIT NONE
@@ -101,7 +101,7 @@ MODULE common_scale
        'lsmask', 'SFC_TEMP'/)                                  ! H08
   LOGICAL,PARAMETER :: v2dd_hastime(nv2dd) = &                    ! H08
      (/.false., .true., .true., .true., .true., .true., .true., & ! H08
-       .false., .true./)                                          ! H08
+       .false., .true./)  
 #else
   CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &
      (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2'/)
@@ -174,7 +174,7 @@ CONTAINS
 ! Initialize standard I/O and read common namelist of SCALE-LETKF
 !-------------------------------------------------------------------------------
 subroutine set_common_conf(nprocs)
-  use scale_stdio, only: &
+  use scale_io, only: &
     IO_setup, &
     IO_ARG_getfname
 
@@ -197,7 +197,7 @@ end subroutine set_common_conf
 ! Set the parameters related to the SCALE model
 !-------------------------------------------------------------------------------
 SUBROUTINE set_common_scale
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
   use scale_atmos_grid_cartesC_index, only: &
@@ -303,7 +303,7 @@ END SUBROUTINE set_common_scale
 !-------------------------------------------------------------------------------
 !SUBROUTINE read_restart(filename,v3dg,v2dg)
 !  use gtool_file, only: FileRead, FileCloseAll
-!  use scale_process, only: PRC_myrank
+!  use scale_prc, only: PRC_myrank
 !  use common_mpi, only: myrank
 !  IMPLICIT NONE
 
@@ -335,9 +335,9 @@ END SUBROUTINE set_common_scale
 
 SUBROUTINE read_restart(filename,v3dg,v2dg)
   use netcdf
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_HAS_W,  &
     PRC_HAS_S
   use scale_atmos_grid_cartesC_index, only: &
@@ -352,7 +352,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   REAL(RP),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d, iv2d, ncid, varid
-  integer :: is, js
+  integer :: is, js, ks
 
   is = 1
   js = 1
@@ -373,9 +373,16 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
     end if
+
+    if (iv3d == iv3d_rhow) then
+      ks = 2 ! ignore zh=1 (the surface where MOMZ = 0.0)
+    else
+      ks = 1
+    endif
+
     call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
     call ncio_check(nf90_get_var(ncid, varid, v3dg(:,:,:,iv3d), &
-                                 start = (/ 1, is, js, 1 /),    &
+                                 start = (/ ks, is, js, 1 /),    &
                                  count = (/ KMAX, IMAX, JMAX, 1 /)))
   end do
 
@@ -401,9 +408,9 @@ END SUBROUTINE read_restart
 SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 !  use common_mpi_scale, only: &
 !    MPI_COMM_a
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_2Drank
 !    PRC_PERIODIC_X, PRC_PERIODIC_Y, &
 !    PRC_HAS_W,  &
@@ -501,7 +508,7 @@ subroutine read_restart_direct(v3dg,v2dg)
     RHOT, &
     QTRC
   use scale_atmos_hydrometeor, only: &
-    I_QV, I_QC, I_QR, I_QI, I_QS, I_QG
+    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
   use scale_atmos_grid_cartesC_index, only: &
     IS, IE, JS, JE, KS, KE
   implicit none
@@ -528,15 +535,15 @@ subroutine read_restart_direct(v3dg,v2dg)
     case (iv3d_q)
       v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_QV)
     case (iv3d_qc)
-      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_QC)
+      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_HC)
     case (iv3d_qr)
-      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_QR)
+      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_HR)
     case (iv3d_qi)
-      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_QI)
+      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_HI)
     case (iv3d_qs)
-      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_QS)
+      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_HS)
     case (iv3d_qg)
-      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_QG)
+      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_HG)
     case default
       write (6, '(3A)') "[Error] Variable '", trim(v3d_name(iv3d)), "' is not recognized."
       stop
@@ -566,7 +573,7 @@ end subroutine read_restart_direct
 !!  use gtool_file, only: FileOpen, FileClose, FileWrite
 !!  use gtool_file_h
 
-!  use scale_process, only: PRC_myrank
+!  use scale_prc, only: PRC_myrank
 !  use common_mpi, only: myrank
 !  use common_ncio
 !  implicit none
@@ -644,9 +651,9 @@ end subroutine read_restart_direct
 
 SUBROUTINE write_restart(filename,v3dg,v2dg)
   use netcdf
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_HAS_W,  &
     PRC_HAS_S
   use scale_atmos_grid_cartesC_index, only: &
@@ -661,7 +668,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d, iv2d, ncid, varid
-  integer :: is, js
+  integer :: is, js, ks
 
   is = 1
   js = 1
@@ -682,9 +689,16 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
     end if
+
+    if (iv3d == iv3d_rhow) then
+      ks = 2 ! ignore zh=1 (the surface where MOMZ = 0.0)
+    else
+      ks = 1
+    endif
+
     call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
     call ncio_check(nf90_put_var(ncid, varid, v3dg(:,:,:,iv3d), &
-                                 start = (/ 1, is, js, 1 /),    &
+                                 start = (/ ks, is, js, 1 /),    &
                                  count = (/ KMAX, IMAX, JMAX, 1 /)))
   end do
 
@@ -710,9 +724,9 @@ END SUBROUTINE write_restart
 SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 !  use common_mpi_scale, only: &
 !    MPI_COMM_a
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_2Drank
 !    PRC_PERIODIC_X, PRC_PERIODIC_Y, &
 !    PRC_HAS_W,  &
@@ -810,7 +824,7 @@ subroutine write_restart_direct(v3dg,v2dg)
     RHOT, &
     QTRC
   use scale_atmos_hydrometeor, only: &
-    I_QV, I_QC, I_QR, I_QI, I_QS, I_QG
+    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
   use scale_atmos_grid_cartesC_index, only: &
     IS, IE, JS, JE, KS, KE
   implicit none
@@ -837,15 +851,15 @@ subroutine write_restart_direct(v3dg,v2dg)
     case (iv3d_q)
       QTRC(KS:KE,IS:IE,JS:JE,I_QV) = v3dg(:,:,:,iv3d)
     case (iv3d_qc)
-      QTRC(KS:KE,IS:IE,JS:JE,I_QC) = v3dg(:,:,:,iv3d)
+      QTRC(KS:KE,IS:IE,JS:JE,I_HC) = v3dg(:,:,:,iv3d)
     case (iv3d_qr)
-      QTRC(KS:KE,IS:IE,JS:JE,I_QR) = v3dg(:,:,:,iv3d)
+      QTRC(KS:KE,IS:IE,JS:JE,I_HR) = v3dg(:,:,:,iv3d)
     case (iv3d_qi)
-      QTRC(KS:KE,IS:IE,JS:JE,I_QI) = v3dg(:,:,:,iv3d)
+      QTRC(KS:KE,IS:IE,JS:JE,I_HI) = v3dg(:,:,:,iv3d)
     case (iv3d_qs)
-      QTRC(KS:KE,IS:IE,JS:JE,I_QS) = v3dg(:,:,:,iv3d)
+      QTRC(KS:KE,IS:IE,JS:JE,I_HS) = v3dg(:,:,:,iv3d)
     case (iv3d_qg)
-      QTRC(KS:KE,IS:IE,JS:JE,I_QG) = v3dg(:,:,:,iv3d)
+      QTRC(KS:KE,IS:IE,JS:JE,I_HG) = v3dg(:,:,:,iv3d)
     case default
       write (6, '(3A)') "[Error] Variable '", trim(v3d_name(iv3d)), "' is not recognized."
       stop
@@ -871,9 +885,9 @@ end subroutine write_restart_direct
 !-------------------------------------------------------------------------------
 SUBROUTINE read_restart_coor(filename,lon,lat,height)
   use netcdf
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_HAS_W,  &
     PRC_HAS_S
   use scale_atmos_grid_cartesC_index, only: &
@@ -939,9 +953,9 @@ END SUBROUTINE read_restart_coor
 !-------------------------------------------------------------------------------
 SUBROUTINE read_topo(filename,topo)
   use netcdf
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_HAS_W,  &
     PRC_HAS_S
   use scale_atmos_grid_cartesC_index, only: &
@@ -988,9 +1002,9 @@ END SUBROUTINE read_topo
 !-------------------------------------------------------------------------------
 #ifdef PNETCDF
 SUBROUTINE read_topo_par(filename,topo,comm)
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_2Drank
 !    PRC_PERIODIC_X, PRC_PERIODIC_Y
   use scale_atmos_grid_cartesC_index, only: &
@@ -1079,15 +1093,14 @@ end subroutine read_topo_direct
 ! [File I/O] Read SCALE history files
 !-------------------------------------------------------------------------------
 subroutine read_history(filename,step,v3dg,v2dg)
-  use scale_process, only: &
+  use scale_prc, only: &
       PRC_myrank
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO, &
       IS, IE, JS, JE, KS, KE, KA
   use scale_file, only: &
-!      FILE_open, &
       FILE_read
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
       COMM_vars8, &
       COMM_wait
   use common_mpi, only: myrank
@@ -1131,7 +1144,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
                       trim(v3dd_name(iv3d)), & ! [IN]
                       var3D                  ) ! [OUT]
     end if
-    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg_RP(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
+    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
   end do
 
   ! 2D variables
@@ -1150,7 +1163,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
                       trim(v2dd_name(iv2d)), & ! [IN]
                       var2D                  ) ! [OUT]
     end if
-    v2dg_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
+    v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
   end do
 
   ! Communicate halo
@@ -1198,9 +1211,9 @@ end subroutine read_history
 !-------------------------------------------------------------------------------
 #ifdef PNETCDF
 subroutine read_history_par(filename,step,v3dg,v2dg,comm)
-  use scale_process, only: &
+  use scale_prc, only: &
       PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_2Drank
 !    PRC_PERIODIC_X, PRC_PERIODIC_Y
   use scale_atmos_grid_cartesC_index, only: &
@@ -1209,7 +1222,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
       IMAX, JMAX, KMAX
 !  use gtool_history, only: &
 !      HistoryGet
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
       COMM_vars8, &
       COMM_wait
   use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
@@ -1418,13 +1431,13 @@ subroutine read_history_direct(v3dg, v2dg)
     LANDUSE_frac_land
 #endif
   use scale_atmos_hydrometeor, only: &
-    I_QV, I_QC, I_QR, I_QI, I_QS, I_QG
+    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
   use scale_atmos_grid_cartesC_real, only: &
     ATMOS_GRID_CARTESC_REAL_CZ
   use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IS, IE, JS, JE, KS, KE, KA
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
     COMM_vars8, &
     COMM_wait
   implicit none
@@ -1449,15 +1462,15 @@ subroutine read_history_direct(v3dg, v2dg)
     case (iv3d_q)
       v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_QV)
     case (iv3d_qc)
-      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_QC)
+      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_HC)
     case (iv3d_qr)
-      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_QR)
+      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_HR)
     case (iv3d_qi)
-      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_QI)
+      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_HI)
     case (iv3d_qs)
-      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_QS)
+      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_HS)
     case (iv3d_qg)
-      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_QG)
+      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_HG)
     case (iv3dd_hgt)
       v3dg_RP(:,:,:,iv3d) = ATMOS_GRID_CARTESC_REAL_CZ(:,:,:)
     case default
@@ -1657,7 +1670,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO, &
       IS, IE, JS, JE, KS, KE, KA
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
       COMM_vars8, &
       COMM_wait
   implicit none
@@ -1980,7 +1993,7 @@ end subroutine enssprd_grd
 ! Convert 1D rank of process to 2D rank
 !-------------------------------------------------------------------------------
 subroutine rank_1d_2d(rank, rank_i, rank_j)
-  use scale_rm_process, only: PRC_2Drank
+  use scale_prc_cartesC, only: PRC_2Drank
   implicit none
   integer, intent(in) :: rank
   integer, intent(out) :: rank_i, rank_j
@@ -1995,7 +2008,7 @@ end subroutine rank_1d_2d
 ! Convert 2D rank of process to 1D rank
 !-------------------------------------------------------------------------------
 subroutine rank_2d_1d(rank_i, rank_j, rank)
-  use scale_rm_process, only: PRC_NUM_X
+  use scale_prc_cartesC, only: PRC_NUM_X
   implicit none
   integer, intent(in) :: rank_i, rank_j
   integer, intent(out) :: rank
@@ -2092,13 +2105,13 @@ end subroutine rij_l2g
 !            * return -1 if the grid is outside of the global domain
 !-------------------------------------------------------------------------------
 subroutine rij_rank(ig, jg, rank)
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
       PRC_NUM_X, PRC_NUM_Y
 #ifdef DEBUG
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, &
       IA, JA
-  use scale_process, only: &
+  use scale_prc, only: &
       PRC_myrank
   use scale_atmos_grid_cartesC, only: &
       GRID_CX, &
@@ -2156,13 +2169,13 @@ end subroutine rij_rank
 !   il, jl : local grid coordinates
 !-------------------------------------------------------------------------------
 subroutine rij_rank_g2l(ig, jg, rank, il, jl)
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
       PRC_NUM_X, PRC_NUM_Y
 #ifdef DEBUG
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, &
       IA, JA
-  use scale_process, only: &
+  use scale_prc, only: &
       PRC_myrank
   use scale_atmos_grid_cartesC, only: &
       GRID_CX, &

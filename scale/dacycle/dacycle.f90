@@ -21,7 +21,7 @@ program dacycle
   use obsope_tools, only: &
     obsope_cal
 
-  use scale_stdio, only: &
+  use scale_io, only: &
     IO_L, &
     IO_FID_LOG
   use scale_time, only: &
@@ -34,7 +34,7 @@ program dacycle
     FILE_HISTORY_write, &
     FILE_HISTORY_set_nowdate
   use scale_monitor, only: &
-    MONIT_write
+    MONITOR_write
   use mod_admin_restart, only: &
 #ifdef SCALEUV
     ADMIN_restart_write, &
@@ -56,22 +56,29 @@ program dacycle
   use mod_atmos_admin, only: &
     ATMOS_do
   use mod_atmos_driver, only: &
-    ATMOS_driver, &
+    ATMOS_driver_calc_tendency,            &
+    ATMOS_driver_calc_tendency_from_sflux, &
+    ATMOS_driver_update,                   &
     ATMOS_driver_finalize
   use mod_ocean_admin, only: &
     OCEAN_do
   use mod_ocean_driver, only: &
-    OCEAN_driver
+    OCEAN_driver_calc_tendency, &
+    OCEAN_driver_update
   use mod_land_admin, only: &
     LAND_do
   use mod_land_driver, only: &
-    LAND_driver
+    LAND_driver_calc_tendency, &
+    LAND_driver_update
+  use mod_cpl_admin, only: &
+    CPL_sw
   use mod_urban_admin, only: &
     URBAN_do
   use mod_urban_driver, only: &
-    URBAN_driver
-  use mod_user, only: &
-    USER_step
+    URBAN_driver_calc_tendency, &
+    URBAN_driver_update
+!  use mod_user, only: &
+!    USER_step
   implicit none
 
   real(r_size), allocatable :: gues3d(:,:,:,:)
@@ -179,7 +186,7 @@ program dacycle
         end if
 
         ! history&monitor file output
-        call MONIT_write('MAIN')
+        call MONITOR_write('MAIN', TIME_NOWSTEP)
         call FILE_HISTORY_write ! if needed
       end if
 
@@ -187,17 +194,26 @@ program dacycle
       call ADMIN_TIME_advance
       call FILE_HISTORY_set_nowdate( TIME_NOWDATE, TIME_NOWMS, TIME_NOWSTEP )
 
-      ! user-defined procedure
-      call USER_step
+!      ! user-defined procedure
+!      call USER_step
 
       ! change to next state
-      if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver
-      if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver
-      if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver
-      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver
+      if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver_update
+      if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver_update
+      if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver_update
+      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update
+!                                             call USER_update
+
+      ! calc tendencies and diagnostices
+      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency( force = .false. )
+      if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver_calc_tendency( force = .false. )
+      if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver_calc_tendency( force = .false. )
+      if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver_calc_tendency( force = .false. )
+      if( CPL_sw   .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency_from_sflux( force = .false. )
+!                                             call USER_calc_tendency 
 
       ! history&monitor file output
-      call MONIT_write('MAIN')
+      call MONITOR_write('MAIN', TIME_NOWSTEP)
       call FILE_HISTORY_write
 
       ! restart output before LETKF

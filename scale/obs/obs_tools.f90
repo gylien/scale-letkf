@@ -185,8 +185,8 @@ end subroutine monit_obs_mpi
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
 subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
-  use scale_process, only: &
-    PRC_myrank
+  use scale_prc, only: &
+      PRC_myrank
 
   implicit none
 
@@ -211,7 +211,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   real(r_size),allocatable :: ohx(:)
   integer,allocatable :: oqc(:)
 
-  integer :: OMP_GET_NUM_THREADS, omp_chunk
+!  integer :: OMP_GET_NUM_THREADS, omp_chunk
 
 !  REAL(r_size) :: timer
 !  INTEGER :: ierr
@@ -278,9 +278,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  obs_idx_TCY = -1
 !  obs_idx_TCP = -1
 
-!$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz)
-  omp_chunk = min(4, max(1, (nnobs-1) / OMP_GET_NUM_THREADS() + 1))
-!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
+!##!$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz)
+!##  omp_chunk = min(4, max(1, (nnobs-1) / OMP_GET_NUM_THREADS() + 1))
+!##!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
   do n = 1, nnobs
 
     if (use_key) then
@@ -317,22 +317,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 #endif
 
     oelm(n) = obs(iset)%elm(iidx)
-
-!    select case (int(oelm(n)))
-!    case (id_tclon_obs)
-!      obs_idx_TCX = n
-!      cycle
-!    case (id_tclat_obs)
-!      obs_idx_TCY = n
-!      cycle
-!    case (id_tcmip_obs)
-!      obs_idx_TCP = n
-!      cycle
-!    end select
-
-!!!!!!#ifdef H08
-!!!!!!    if(int(oelm(n)) == id_H08IR_obs)cycle
-!!!!!!#endif
 
     call rij_g2l(PRC_myrank, obs(iset)%ri(iidx), obs(iset)%rj(iidx), ril, rjl)
 #ifdef DEBUG
@@ -414,8 +398,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
            !   abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE ]
 
   end do ! [ n = 1, nnobs ]
-!$OMP END DO
-!$OMP END PARALLEL
+!##!$OMP END DO
+!##!$OMP END PARALLEL
 
 
 #ifdef H08

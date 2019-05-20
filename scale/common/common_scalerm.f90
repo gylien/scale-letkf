@@ -36,7 +36,7 @@ contains
 ! Setup SCALE-RM
 !-------------------------------------------------------------------------------
 subroutine scalerm_setup(execname)
-  use scale_stdio, only: &
+  use scale_io, only: &
     IO_setup, &
     IO_LOG_setup, &
 #ifdef SCALEUV
@@ -53,7 +53,7 @@ subroutine scalerm_setup(execname)
 
 !  use scale_file, only: &
 !    FILE_Close_All
-  use scale_process, only: &
+  use scale_prc, only: &
 !    PRC_mpi_alive, &
 !    PRC_MPIstart, &
 !    PRC_UNIVERSAL_setup, &
@@ -64,8 +64,8 @@ subroutine scalerm_setup(execname)
     PRC_nprocs, &
     PRC_myrank, &
     PRC_DOMAIN_nlim
-  use scale_rm_process, only: &
-    PRC_setup
+  use scale_prc_cartesC, only: &
+    PRC_CARTESC_setup
   use scale_const, only: &
     CONST_setup
   use scale_calendar, only: &
@@ -99,7 +99,7 @@ subroutine scalerm_setup(execname)
 !    FILE_CARTESC_cleanup
   use scale_file, only: &
     FILE_setup
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
     COMM_setup
 !    COMM_cleanup
   use scale_topography, only: &
@@ -112,20 +112,21 @@ subroutine scalerm_setup(execname)
     MAPPROJECTION_setup
   use scale_atmos_grid_cartesC_metric, only: &
     ATMOS_GRID_CARTESC_METRIC_setup
-  use scale_rm_statistics, only: &
-    STAT_setup
-!  use scale_time, only: &
-!    TIME_NOWDATE, &
-!    TIME_NOWMS, &
-!    TIME_NOWSTEP
+  use scale_statistics, only: &
+    STATISTICS_setup
+  use scale_time, only: &
+    TIME_NOWDATE, &
+    TIME_NOWMS,   &
+    TIME_NOWSTEP, &
+    TIME_DTSEC
 !  use scale_file_history, only: &
 !    FILE_HISTORY_write, &
 !    FILE_HISTORY_set_nowdate, &
 !    FILE_HISTORY_finalize
   use scale_file_history_cartesC, only: &
     FILE_HISTORY_CARTESC_setup
-  use scale_monitor, only: &
-    MONIT_setup
+  use scale_monitor_cartesC, only: &
+    MONITOR_CARTESC_setup
 !    MONIT_write, &
 !    MONIT_finalize
   use scale_file_external_input_cartesC, only: &
@@ -135,8 +136,8 @@ subroutine scalerm_setup(execname)
   use scale_atmos_thermodyn, only: &
     ATMOS_THERMODYN_setup
   use scale_atmos_hydrometeor, only: &
-    ATMOS_HYDROMETEOR_setup, &
-    ATMOS_HYDROMETEOR_regist
+    ATMOS_HYDROMETEOR_setup!, &
+!    ATMOS_HYDROMETEOR_regist
 !    I_QC, &
 !    I_QR, &
 !    I_QI, &
@@ -144,13 +145,13 @@ subroutine scalerm_setup(execname)
 !    I_QG
 !  use scale_atmos_phy_mp, only: &
 !    ATMOS_PHY_MP_config
-  use scale_atmos_phy_mp_tomita08, only: &
-!    ATMOS_PHY_MP_TOMITA08_ntracers, &
-    ATMOS_PHY_MP_TOMITA08_nwaters, &
-    ATMOS_PHY_MP_TOMITA08_nices, &
-    ATMOS_PHY_MP_TOMITA08_tracer_names, &
-    ATMOS_PHY_MP_TOMITA08_tracer_descriptions, &
-    ATMOS_PHY_MP_TOMITA08_tracer_units
+!  use scale_atmos_phy_mp_tomita08, only: &
+!!    ATMOS_PHY_MP_TOMITA08_ntracers, &
+!    ATMOS_PHY_MP_TOMITA08_nwaters, &
+!    ATMOS_PHY_MP_TOMITA08_nices, &
+!    ATMOS_PHY_MP_TOMITA08_tracer_names, &
+!    ATMOS_PHY_MP_TOMITA08_tracer_descriptions, &
+!    ATMOS_PHY_MP_TOMITA08_tracer_units
 !!  use mod_atmos_phy_mp_driver, only: &
 !!    ATMOS_PHY_MP_driver_tracer_setup
 !!  use mod_atmos_admin, only: &
@@ -164,11 +165,12 @@ subroutine scalerm_setup(execname)
     ATMOS_SATURATION_setup
   use scale_bulkflux, only: &
     BULKFLUX_setup
-  use scale_roughness, only: &
-    ROUGHNESS_setup
-
+!  use scale_roughness, only: &
+!    ROUGHNESS_setup
   use mod_atmos_driver, only: &
-    ATMOS_driver_config
+    ATMOS_driver_tracer_setup
+  use mod_atmos_phy_mp_vars, only: &
+    QA_MP
   use mod_admin_restart, only: &
     ADMIN_restart_setup
 !    ADMIN_restart_write
@@ -183,8 +185,9 @@ subroutine scalerm_setup(execname)
 !    TIME_DOresume, &
 !    TIME_DOend
   use mod_atmos_admin, only: &
-    ATMOS_admin_setup
-!    ATMOS_do
+    ATMOS_admin_setup, &
+    ATMOS_do, &
+    ATMOS_PHY_MP_TYPE
   use mod_atmos_vars, only: &
     ATMOS_vars_setup
 !    ATMOS_sw_check => ATMOS_RESTART_CHECK, &
@@ -194,35 +197,40 @@ subroutine scalerm_setup(execname)
 !    ATMOS_driver, &
 !    ATMOS_driver_finalize
   use mod_ocean_admin, only: &
-    OCEAN_admin_setup
-!    OCEAN_do
+    OCEAN_admin_setup, &
+    OCEAN_do
   use mod_ocean_vars, only: &
     OCEAN_vars_setup
   use mod_ocean_driver, only: &
     OCEAN_driver_setup
 !    OCEAN_driver
   use mod_land_admin, only: &
-    LAND_admin_setup
-!    LAND_do
+    LAND_admin_setup, &
+    LAND_do
   use mod_land_vars, only: &
     LAND_vars_setup
   use mod_land_driver, only: &
     LAND_driver_setup
 !    LAND_driver
   use mod_urban_admin, only: &
-    URBAN_admin_setup
-!    URBAN_do
+    URBAN_admin_setup, &
+    URBAN_do,          &
+    URBAN_land
   use mod_urban_vars, only: &
     URBAN_vars_setup
   use mod_urban_driver, only: &
     URBAN_driver_setup
 !    URBAN_driver
+  use mod_lake_admin, only: &
+     LAKE_admin_setup, &
+     LAKE_do
   use mod_cpl_admin, only: &
     CPL_admin_setup
   use mod_cpl_vars, only: &
     CPL_vars_setup
   use mod_user, only: &
-    USER_config, &
+    USER_tracer_setup,  &
+!    USER_config, &
     USER_setup
 !    USER_step
   use mod_convert, only: &
@@ -534,7 +542,7 @@ subroutine scalerm_setup(execname)
   !-----------------------------------------------------------------------------
 
   ! setup process
-  call PRC_setup
+  call PRC_CARTESC_setup
 
   if (exec_model .and. scalerm_run) then
     ! setup PROF
@@ -599,36 +607,36 @@ subroutine scalerm_setup(execname)
 
   if (exec_model) then
     if (scalerm_run) then
-      call ATMOS_driver_config
-      call USER_config
+      call ATMOS_driver_tracer_setup
+      call USER_tracer_setup
     end if
   else
-!   call ATMOS_driver_config -->
-!     call ATMOS_PHY_MP_driver_tracer_setup -->
-!        if ( ATMOS_sw_phy_mp ) then
-!          select case ( ATMOS_PHY_MP_TYPE )
-!          case ( 'TOMITA08' )
-            call ATMOS_HYDROMETEOR_regist( &
-!                 QS_MP,                                        & ! [OUT]
-                 qs_mp_dummy,                                  & ! [OUT]
-                 ATMOS_PHY_MP_TOMITA08_nwaters,                & ! [IN]
-                 ATMOS_PHY_MP_TOMITA08_nices,                  & ! [IN]
-                 ATMOS_PHY_MP_TOMITA08_tracer_names(:),        & ! [IN]
-                 ATMOS_PHY_MP_TOMITA08_tracer_descriptions(:), & ! [IN]
-                 ATMOS_PHY_MP_TOMITA08_tracer_units(:)         ) ! [IN]
-!            QA_MP = ATMOS_PHY_MP_TOMITA08_ntracers
-!            I_QC = QS_MP+1
-!            I_QR = QS_MP+2
-!            I_QI = QS_MP+3
-!            I_QS = QS_MP+4
-!            I_QG = QS_MP+5
-!          case default
-!            call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
-!          end select
-!        end if
-!        QE_MP = QS_MP + QA_MP - 1
-!     <-- ATMOS_PHY_MP_driver_tracer_setup
-!   <-- ATMOS_driver_config
+!!   call ATMOS_driver_config -->
+!!     call ATMOS_PHY_MP_driver_tracer_setup -->
+!!        if ( ATMOS_sw_phy_mp ) then
+!!          select case ( ATMOS_PHY_MP_TYPE )
+!!          case ( 'TOMITA08' )
+!            call ATMOS_HYDROMETEOR_regist( &
+!!                 QS_MP,                                        & ! [OUT]
+!                 qs_mp_dummy,                                  & ! [OUT]
+!                 ATMOS_PHY_MP_TOMITA08_nwaters,                & ! [IN]
+!                 ATMOS_PHY_MP_TOMITA08_nices,                  & ! [IN]
+!                 ATMOS_PHY_MP_TOMITA08_tracer_names(:),        & ! [IN]
+!                 ATMOS_PHY_MP_TOMITA08_tracer_descriptions(:), & ! [IN]
+!                 ATMOS_PHY_MP_TOMITA08_tracer_units(:)         ) ! [IN]
+!!            QA_MP = ATMOS_PHY_MP_TOMITA08_ntracers
+!!            I_QC = QS_MP+1
+!!            I_QR = QS_MP+2
+!!            I_QI = QS_MP+3
+!!            I_QS = QS_MP+4
+!!            I_QG = QS_MP+5
+!!          case default
+!!            call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
+!!          end select
+!!        end if
+!!        QE_MP = QS_MP + QA_MP - 1
+!!     <-- ATMOS_PHY_MP_driver_tracer_setup
+!!   <-- ATMOS_driver_config
   end if
 
   ! setup file I/O
@@ -650,7 +658,7 @@ subroutine scalerm_setup(execname)
     call TOPO_setup
 
     ! setup land use category index/fraction
-    call LANDUSE_setup
+    call LANDUSE_setup( OCEAN_do, (.not. URBAN_land), LAKE_do )
   end if
 
   ! setup grid coordinates (real world)
@@ -692,7 +700,7 @@ subroutine scalerm_setup(execname)
 
   if (exec_model .and. scalerm_run) then
     ! setup statistics
-    call STAT_setup
+    call STATISTICS_setup
   end if
 
   if ((execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') .and. scalerm_run) then
@@ -700,7 +708,7 @@ subroutine scalerm_setup(execname)
     call FILE_HISTORY_CARTESC_setup
 
     ! setup monitor I/O
-    call MONIT_setup
+    call MONITOR_CARTESC_setup( TIME_DTSEC, ATMOS_do, OCEAN_do, LAND_do, URBAN_do )
 
     ! setup external in
     call FILE_EXTERNAL_INPUT_CARTESC_setup
@@ -708,7 +716,7 @@ subroutine scalerm_setup(execname)
 
   if (exec_model .and. scalerm_run) then
     ! setup nesting grid
-    call COMM_CARTESC_NEST_setup ( intercomm_parent, intercomm_child )
+    call COMM_CARTESC_NEST_setup ( QA_MP, ATMOS_PHY_MP_TYPE, intercomm_parent, intercomm_child )
 
     ! setup common tools
     call ATMOS_HYDROSTATIC_setup
@@ -718,7 +726,7 @@ subroutine scalerm_setup(execname)
 
   if ((execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') .and. scalerm_run) then
     call BULKFLUX_setup( sqrt(DX**2+DY**2) )
-    call ROUGHNESS_setup
+!    call ROUGHNESS_setup
   end if
 
   if (exec_model .and. scalerm_run) then
@@ -774,18 +782,18 @@ subroutine scalerm_finalize(execname)
     PROF_rapstart, &
     PROF_rapend, &
     PROF_rapreport
-  use scale_process, only: &
-    PRC_MPIfinish
+!  use scale_process, only: &
+!    PRC_MPIfinish
   use scale_file_cartesC, only: &
     FILE_CARTESC_cleanup
   use scale_file, only: &
     FILE_Close_All
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
     COMM_cleanup
   use scale_file_history, only: &
     FILE_HISTORY_finalize
   use scale_monitor, only: &
-    MONIT_finalize
+    MONITOR_finalize
   use mod_atmos_vars, only: &
     ATMOS_sw_check => ATMOS_RESTART_CHECK, &
     ATMOS_vars_restart_check
@@ -809,7 +817,7 @@ subroutine scalerm_finalize(execname)
       if( ATMOS_sw_check ) call ATMOS_vars_restart_check
 
       call PROF_rapstart('Monit', 2)
-      call MONIT_finalize
+      call MONITOR_finalize
       call PROF_rapend  ('Monit', 2)
 
       call PROF_rapstart('File', 2)
@@ -867,42 +875,67 @@ end subroutine scalerm_finalize
 ! resume_state
 !-------------------------------------------------------------------------------
 subroutine resume_state(do_restart_read)
-  use mod_atmos_driver, only: &
-    ATMOS_driver_resume1, &
-    ATMOS_driver_resume2, &
-    ATMOS_SURFACE_SET
-  use mod_ocean_driver, only: &
-    OCEAN_driver_resume, &
-    OCEAN_SURFACE_SET
-  use mod_land_driver, only: &
-    LAND_driver_resume, &
-    LAND_SURFACE_SET
-  use mod_urban_driver, only: &
-    URBAN_driver_resume, &
-    URBAN_SURFACE_SET
-  use mod_atmos_vars, only: &
-    ATMOS_vars_calc_diagnostics, &
-    ATMOS_vars_history_setpres, &
-    ATMOS_vars_restart_read
-  use mod_ocean_vars, only: &
-    OCEAN_vars_restart_read
-  use mod_land_vars, only: &
-    LAND_vars_restart_read
-  use mod_urban_vars, only: &
-    URBAN_vars_restart_read
-  use mod_user, only: &
-    USER_resume0, &
-    USER_resume
-  use mod_atmos_admin, only: &
-    ATMOS_do
-  use mod_ocean_admin, only: &
-    OCEAN_do
-  use mod_land_admin, only: &
-    LAND_do
-  use mod_urban_admin, only: &
-    URBAN_do
+  use scale_atmos_grid_cartesC_index
+  use scale_atmos_grid_cartesC, only: &
+     CZ   => ATMOS_GRID_CARTESC_CZ,  &
+     FZ   => ATMOS_GRID_CARTESC_FZ,  &
+     FDZ  => ATMOS_GRID_CARTESC_FDZ, &
+     RCDZ => ATMOS_GRID_CARTESC_RCDZ
+  use scale_atmos_grid_cartesC_real, only: &
+     REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ,  &
+     REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ,  &
+     REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI, &
+     AREA     => ATMOS_GRID_CARTESC_REAL_AREA
+  use scale_time, only: &
+     TIME_NOWDAYSEC
   use mod_admin_restart, only: &
-    ADMIN_restart_read
+     ADMIN_restart_read
+  use mod_atmos_admin, only: &
+     ATMOS_do
+  use mod_atmos_driver, only: &
+     ATMOS_driver_calc_tendency, &
+     ATMOS_driver_calc_tendency_from_sflux, &
+     ATMOS_SURFACE_SET
+  use mod_atmos_vars, only: &
+     ATMOS_vars_calc_diagnostics, &
+     ATMOS_vars_history_setpres,  &
+     ATMOS_vars_history,          &
+     ATMOS_vars_monitor,          &
+     DENS,                        &
+     POTT,                        &
+     TEMP,                        &
+     PRES,                        &
+     QV
+  use mod_atmos_bnd_driver, only: &
+     ATMOS_BOUNDARY_driver_set
+  use scale_atmos_refstate, only: &
+     ATMOS_REFSTATE_UPDATE
+  use mod_ocean_admin, only: &
+     OCEAN_do
+  use mod_ocean_driver, only: &
+     OCEAN_driver_calc_tendency, &
+     OCEAN_SURFACE_SET
+  use mod_ocean_vars, only: &
+     OCEAN_vars_history
+  use mod_land_admin, only: &
+     LAND_do
+  use mod_land_driver, only: &
+     LAND_driver_calc_tendency, &
+     LAND_SURFACE_SET
+  use mod_land_vars, only: &
+     LAND_vars_history
+  use mod_urban_admin, only: &
+     URBAN_do
+  use mod_urban_driver, only: &
+     URBAN_driver_calc_tendency, &
+     URBAN_SURFACE_SET
+  use mod_urban_vars, only: &
+     URBAN_vars_history
+  use mod_cpl_admin, only: &
+     CPL_sw
+  use mod_user, only: &
+     USER_calc_tendency
+
   implicit none
   logical, intent(in), optional :: do_restart_read
 
@@ -916,12 +949,16 @@ subroutine resume_state(do_restart_read)
     call ADMIN_restart_read
   end if
 
-  ! setup user-defined procedure before setup of other components
-  call USER_resume0
-
   if ( ATMOS_do ) then
     ! calc diagnostics
     call ATMOS_vars_calc_diagnostics
+    call ATMOS_REFSTATE_update( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:),  PRES(:,:,:), QV(:,:,:), & ! [IN]
+                                CZ(:), FZ(:), FDZ(:), RCDZ(:), & ! [IN]
+                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
+                                TIME_NOWDAYSEC, & ! [IN]
+                                force = .true.)
+    call ATMOS_BOUNDARY_driver_set
     call ATMOS_vars_history_setpres
   endif
 
@@ -931,15 +968,21 @@ subroutine resume_state(do_restart_read)
   if( LAND_do  ) call LAND_SURFACE_SET ( countup=.false. )
   if( URBAN_do ) call URBAN_SURFACE_SET( countup=.false. )
 
-  ! setup submodel driver
-  if( ATMOS_do ) call ATMOS_driver_resume1
-  if( OCEAN_do ) call OCEAN_driver_resume
-  if( LAND_do  ) call LAND_driver_resume
-  if( URBAN_do ) call URBAN_driver_resume
-  if( ATMOS_do ) call ATMOS_driver_resume2
+  ! calc tendencies
+  if( ATMOS_do ) call ATMOS_driver_calc_tendency           ( force=.true. )
+  if( OCEAN_do ) call OCEAN_driver_calc_tendency           ( force=.true. )
+  if( LAND_do  ) call LAND_driver_calc_tendency            ( force=.true. )
+  if( URBAN_do ) call URBAN_driver_calc_tendency           ( force=.true. )
+  if( CPL_sw   ) call ATMOS_driver_calc_tendency_from_sflux( force=.true. )
+                 call USER_calc_tendency
 
-  ! setup user-defined procedure
-  call USER_resume
+  !########## History & Monitor ##########
+  if( ATMOS_do ) call ATMOS_vars_history
+  if( OCEAN_do ) call OCEAN_vars_history
+  if( LAND_do  ) call LAND_vars_history
+  if( URBAN_do ) call URBAN_vars_history
+
+  call ATMOS_vars_monitor
 
   return
 end subroutine resume_state

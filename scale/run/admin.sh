@@ -22,8 +22,8 @@ if [ "$ETIME" = '-' ]; then
   ETIME="$STIME"
 fi
 
-CONFIG='realtime_r0050_d1'
-PRESET='K_rankdir'
+CONFIG='realtime_r0051_d1'
+PRESET='OFP'
 
 #-------------------------------------------------------------------------------
 
@@ -33,6 +33,9 @@ if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
 elif [ "$PRESET" = 'K_micro' ]; then
   config_suffix='K'
   script_suffix='_K_micro'
+elif [ "$PRESET" = "OFP" ]; then
+  config_suffix='ofp'
+  script_suffix='_ofp'
 else
   echo "[Error] Unsupported \$PRESET" >&2
   exit 1
@@ -92,13 +95,13 @@ fi
 
 #-------------------------------------------------------------------------------
 
-./${SCPNAME}${script_suffix}.sh > ${SCPNAME}_K.log 2>&1 || exit $?
+./${SCPNAME}${script_suffix}.sh > ${SCPNAME}${script_suffix}.log 2>&1 || exit $?
 
 #-------------------------------------------------------------------------------
 
-if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro' ]; then
+if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro' ] || [ "$PRESET" = "OFP" ]; then
   jobname="${SCPNAME}_${SYSNAME}"
-  jobid=$(grep 'pjsub Job' ${SCPNAME}_K.log | cut -d ' ' -f6)
+  jobid=$(grep 'pjsub Job' ${SCPNAME}${script_suffix}.log | cut -d ' ' -f6)
   logdir="$OUTDIR/exp/${jobid}_${SCPNAME}_${STIME}"
   stdout="$logdir/job.o"
   stderr="$logdir/job.e"

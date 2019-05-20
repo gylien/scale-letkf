@@ -268,7 +268,8 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
   INTEGER,INTENT(OUT) :: qc
   INTEGER,INTENT(IN),OPTIONAL :: stggrd
   REAL(r_size) :: u,v,t,q,topo
-  REAL(RP) :: rotc(2)
+  REAL(RP) :: rotc(1,1,2)
+  real(RP) :: lon_tmp(1,1),lat_tmp(1,1)
 
   INTEGER :: stggrd_ = 0
   if (present(stggrd)) stggrd_ = stggrd
@@ -285,11 +286,14 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
     end if
-    call MAPPROJECTION_rotcoef(rotc,real(lon*deg2rad,RP),real(lat*deg2rad,RP))
+    lon_tmp(1,1) = lon*deg2rad
+    lat_tmp(1,1) = lat*deg2rad
+    call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
+                               lon_tmp(1,1),lat_tmp(1,1),rotc)
     if (elm == id_u_obs) then
-      yobs = u * rotc(1) - v * rotc(2)
+      yobs = u * rotc(1,1,1) - v * rotc(1,1,2)
     else
-      yobs = u * rotc(2) + v * rotc(1)
+      yobs = u * rotc(1,1,2) + v * rotc(1,1,1)
     end if
   CASE(id_t_obs)  ! T
     CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,yobs)
@@ -330,78 +334,6 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
 
   RETURN
 END SUBROUTINE Trans_XtoY
-
-!-----------------------------------------------------------------------
-! TC center search
-!  [AUTHORS:] T. Miyoshi and M. Kunii
-!-----------------------------------------------------------------------
-!SUBROUTINE tctrk(ps,t2,ri,rj,trk)
-!  IMPLICIT NONE
-!  INTEGER,PARAMETER :: isearch = 10 !search radius [grid points]
-!  REAL(r_size),INTENT(IN) :: ps(nlon,nlat)
-!  REAL(r_size),INTENT(IN) :: t2(nlon,nlat)
-!  REAL(r_size),INTENT(IN) :: ri,rj
-!  REAL(r_size),INTENT(OUT) :: trk(3) !1:lon, 2:lat, 3:minp
-!  REAL(r_size) :: wk(100,3)
-!  REAL(r_size) :: slp(nlon,nlat)
-!  REAL(r_size) :: p1,p2,p3,p4,p5,a,c,d,xx,yy
-!  INTEGER :: i,j,i0,i1,j0,j1,n
-
-!  i0 = MAX(1,FLOOR(ri)-isearch)
-!  i1 = MIN(nlon,CEILING(ri)+isearch)
-!  j0 = MAX(1,FLOOR(rj)-isearch)
-!  j1 = MIN(nlat,CEILING(rj)+isearch)
-!  trk = undef
-
-!  DO j=j0,j1
-!    DO i=i0,i1
-!      slp(i,j) = ps(i,j) * (1.0d0 - 0.0065d0 * phi0(i,j) / &
-!        & (t2(i,j) + 0.0065d0 * phi0(i,j))) ** -5.257d0
-!    END DO
-!  END DO
-
-!  n=0
-!  DO j=j0+1,j1-1
-!    DO i=i0+1,i1-1
-!      IF(slp(i,j) > slp(i  ,j-1)) CYCLE
-!      IF(slp(i,j) > slp(i  ,j+1)) CYCLE
-!      IF(slp(i,j) > slp(i-1,j  )) CYCLE
-!      IF(slp(i,j) > slp(i+1,j  )) CYCLE
-!      IF(slp(i,j) > slp(i-1,j-1)) CYCLE
-!      IF(slp(i,j) > slp(i+1,j-1)) CYCLE
-!      IF(slp(i,j) > slp(i-1,j+1)) CYCLE
-!      IF(slp(i,j) > slp(i+1,j+1)) CYCLE
-!      p1 = slp(i,j)
-!      p2 = slp(i-1,j)
-!      p3 = slp(i+1,j)
-!      p4 = slp(i,j-1)
-!      p5 = slp(i,j+1)
-!      c = (p3-p2)*0.5d0
-!      d = (p5-p4)*0.5d0
-!      a = (p2+p3+p4+p5)*0.25d0 - p1
-!      IF(a == 0.0d0) CYCLE
-!      xx = -0.5d0 * c / a
-!      yy = -0.5d0 * d / a
-!      n = n+1
-!      wk(n,3) = p1 - a*(xx*xx + yy*yy)
-!      wk(n,2) = lat(i,j) * (1.0d0 - yy) + lat(i,j+1) * yy
-!      wk(n,1) = lon(i,j) * (1.0d0 - xx) + lon(i+1,j) * xx
-!    END DO
-!  END DO
-
-!  j=1
-!  IF(n > 1) THEN
-!    a = wk(1,3)
-!    DO i=2,n
-!      IF(wk(i,3) < a) THEN
-!        a = wk(i,3)
-!        j = i
-!      END IF
-!    END DO
-!  END IF
-!  trk = wk(j,:)
-
-!END SUBROUTINE tctrk
 !-----------------------------------------------------------------------
 ! Compute relative humidity (RH)
 !-----------------------------------------------------------------------
@@ -829,12 +761,9 @@ SUBROUTINE itpl_3d(var,ri,rj,rk,var5)
 
   RETURN
 END SUBROUTINE itpl_3d
-!-----------------------------------------------------------------------
-! Monitor departure
-!  ofmt: output format
-!    0: U,V,T(Tv),Q,RH,PS (default)
-!    1: U,V,T(Tv),Q,RH,PS,RAIN
-!-----------------------------------------------------------------------
+!
+! monit_obs is ported into obs/obs_tools.f90
+!
 SUBROUTINE monit_dep(nn,elm,dep,qc,nobs,bias,rmse)
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: nn
@@ -1407,7 +1336,7 @@ SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
       DY
   use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
-  use scale_process, only: &
+  use scale_prc, only: &
       PRC_myrank
 
   IMPLICIT NONE
@@ -1545,6 +1474,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
   INTEGER :: slev, elev
 
   REAL(r_size) :: utmp, vtmp ! U10m & V10m tmp for rotation
+  REAL(RP) :: rotc(1,1,2)
+  real(r_size) :: lon_tmp(1,1),lat_tmp(1,1)
 
   if (present(stggrd)) stggrd_ = stggrd
 
@@ -1576,9 +1507,13 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yo
       CALL itpl_2d(v2d(:,:,iv2dd_u10m),ri(np),rj(np),utmp)
       CALL itpl_2d(v2d(:,:,iv2dd_v10m),ri(np),rj(np),vtmp)
     end if
-    call MAPPROJECTION_rotcoef(rotc,lon(np)*deg2rad,lat(np)*deg2rad)
-    usfc1d(np) = utmp * rotc(1) - vtmp * rotc(2)
-    vsfc1d(np) = utmp * rotc(2) + vtmp * rotc(1)
+
+    lon_tmp(1,1) = lon(np)*deg2rad
+    lat_tmp(1,1) = lat(np)*deg2rad
+    call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
+                               lon_tmp(1,1),lat_tmp(1,1),rotc)
+    usfc1d(np) = utmp * rotc(1,1,1) - vtmp * rotc(1,1,2)
+    vsfc1d(np) = utmp * rotc(1,1,2) + vtmp * rotc(1,1,1)
 
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_p),ri(np),rj(np),prs2d(:,np))
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_t),ri(np),rj(np),tk2d(:,np))

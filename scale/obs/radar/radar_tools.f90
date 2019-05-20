@@ -268,7 +268,7 @@ CONTAINS
        grid_index(idx) = packed_grid(idx)
     end do
 !$omp end parallel do
-    call merge_sort_parallel(nobs, grid_index)
+!    call merge_sort_parallel(nobs, grid_index) ! Check T. Honda
     !call system_clock(time2, timerate, timemax)
     !write(*, *) "sort", (time2 - time1) / dble(timerate)
 
@@ -782,18 +782,18 @@ CONTAINS
     return
   end subroutine heapsort
 
-  subroutine merge_sort_parallel(n, array)
-    use omp_lib
-    integer(8), intent(in) :: n
-    integer(8), intent(inout) :: array(n)
-    logical omp_nested
-    integer maxnest
-    omp_nested = omp_get_nested()
-    maxnest = floor(log(dble(omp_get_max_threads())) / log(2.0d0))
-    call omp_set_nested(.true.)
-    call merge_sort_2threads(n, array, 0, maxnest)
-    call omp_set_nested(omp_nested)
-  end subroutine merge_sort_parallel
+!  subroutine merge_sort_parallel(n, array)
+!    use omp_lib
+!    integer(8), intent(in) :: n
+!    integer(8), intent(inout) :: array(n)
+!    logical omp_nested
+!    integer maxnest
+!    omp_nested = omp_get_nested()
+!    maxnest = floor(log(dble(omp_get_max_threads())) / log(2.0d0))
+!    call omp_set_nested(.true.)
+!    call merge_sort_2threads(n, array, 0, maxnest)
+!    call omp_set_nested(omp_nested)
+!  end subroutine merge_sort_parallel
 
   recursive subroutine merge_sort_2threads(n, array, nest, maxnest)
     implicit none

@@ -18,7 +18,7 @@ MODULE obsope_tools
   use obs_tools
   use radar_obs
 
-!  use scale_process, only: &
+  use common_nml
 !    PRC_myrank
 !    MPI_COMM_d => LOCAL_COMM_WORLD
   use scale_atmos_grid_cartesC_index, only: &
@@ -1061,99 +1061,100 @@ SUBROUTINE obsmake_cal(obs)
 
 end subroutine obsmake_cal
 
-!-------------------------------------------------------------------------------
-! Model-to-observation simulator calculation
-!-------------------------------------------------------------------------------
-subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
-  use scale_atmos_grid_cartesC, only: &
-      ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_CY, &
-      DX, DY
-  use scale_atmos_grid_cartesC_index, only: &
-      IHALO, JHALO, KHALO
-  use scale_mapprojection, only: &
-      MAPPROJECTION_xy2lonlat
-
-  implicit none
-
-  real(r_size), intent(in) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
-  real(r_size), intent(in) :: v2dgh(nlonh,nlath,nv2dd)
-  real(r_size), intent(out) :: v3dgsim(nlev,nlon,nlat,OBSSIM_NUM_3D_VARS)
-  real(r_size), intent(out) :: v2dgsim(nlon,nlat,OBSSIM_NUM_2D_VARS)
-  integer, intent(in), optional :: stggrd
-
-  real(RP) :: lon_RP, lat_RP
-  integer :: i, j, k, iv3dsim, iv2dsim
-  real(r_size) :: ri, rj, rk
-  real(r_size) :: lon, lat, lev
-  real(r_size) :: tmpobs
-  integer :: tmpqc
-
-!-------------------------------------------------------------------------------
-
-  write (6,'(A,I6.6,A,I6.6)') 'MYRANK ', myrank, ' is processing subdomain id #', myrank_d
-
-  do j = 1, nlat
-    rj = real(j + JHALO, r_size)
-
-    do i = 1, nlon
-      ri = real(i + IHALO, r_size)
-      call MAPPROJECTION_xy2lonlat(real((ri-1.0_r_size) * DX + ATMOS_GRID_CARTESC_CX(1),RP), &
-                                   real((rj-1.0_r_size) * DY + ATMOS_GRID_CARTESC_CY(1),RP), lon_RP, lat_RP)
-      lon = lon_RP * rad2deg
-      lat = lat_RP * rad2deg
-
-      do k = 1, nlev
-        rk = real(k + KHALO, r_size)
-
-        do iv3dsim = 1, OBSSIM_NUM_3D_VARS
-          select case (OBSSIM_3D_VARS_LIST(iv3dsim))
-          case (id_radar_ref_obs, id_radar_ref_zero_obs, id_radar_vr_obs, id_radar_prh_obs)
-            lev = v3dgh(k+KHALO, i+IHALO, j+JHALO, iv3dd_hgt)
-            call Trans_XtoY_radar(OBSSIM_3D_VARS_LIST(iv3dsim), OBSSIM_RADAR_LON, OBSSIM_RADAR_LAT, OBSSIM_RADAR_Z, ri, rj, rk, &
-                                  lon, lat, lev, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
-            if (tmpqc == iqc_ref_low) tmpqc = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
-          case default
-            call Trans_XtoY(OBSSIM_3D_VARS_LIST(iv3dsim), ri, rj, rk, &
-                            lon, lat, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
-          end select
-
-          if (tmpqc == 0) then
-            v3dgsim(k,i,j,iv3dsim) = real(tmpobs, r_sngl)
-          else
-            v3dgsim(k,i,j,iv3dsim) = real(undef, r_sngl)
-          end if
-        end do ! [ iv3dsim = 1, OBSSIM_NUM_3D_VARS ]
-
-        ! 2D observations calculated when k = 1
-        if (k == 1) then
-          do iv2dsim = 1, OBSSIM_NUM_2D_VARS
-            select case (OBSSIM_2D_VARS_LIST(iv2dsim))
-!            case (id_H08IR_obs)               !!!!!! H08 as 2D observations ???
-!              call Trans_XtoY_radar_H08(...)
-!            case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)
-!              call ...
-            case default
-              call Trans_XtoY(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
-                              lon, lat, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
-            end select
-
-            if (tmpqc == 0) then
-              v2dgsim(i,j,iv2dsim) = real(tmpobs, r_sngl)
-            else
-              v2dgsim(i,j,iv2dsim) = real(undef, r_sngl)
-            end if
-          end do ! [ iv2dsim = 1, OBSSIM_NUM_2D_VARS ]
-        end if ! [ k == 1 ]
-
-      end do ! [ k = 1, nlev ]
-
-    end do ! [ i = 1, nlon ]
-
-  end do ! [ j = 1, nlat ]
-
-!-------------------------------------------------------------------------------
-
-end subroutine obssim_cal
+!!-------------------------------------------------------------------------------
+!! Model-to-observation simulator calculation
+!!-------------------------------------------------------------------------------
+!subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
+!  use scale_atmos_grid_cartesC, only: &
+!      ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_CY, &
+!      DX, DY
+!  use scale_atmos_grid_cartesC_index, only: &
+!      IHALO, JHALO, KHALO
+!  use scale_mapprojection, only: &
+!      MAPPROJECTION_xy2lonlat
+!
+!  implicit none
+!
+!  real(r_size), intent(in) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
+!  real(r_size), intent(in) :: v2dgh(nlonh,nlath,nv2dd)
+!  real(r_size), intent(out) :: v3dgsim(nlev,nlon,nlat,OBSSIM_NUM_3D_VARS)
+!  real(r_size), intent(out) :: v2dgsim(nlon,nlat,OBSSIM_NUM_2D_VARS)
+!  integer, intent(in), optional :: stggrd
+!
+!  real(RP) :: lon_RP, lat_RP
+!  integer :: i, j, k, iv3dsim, iv2dsim
+!  real(r_size) :: ri, rj, rk
+!  real(r_size) :: lon, lat, lev
+!  real(r_size) :: tmpobs
+!  integer :: tmpqc
+!
+!!-------------------------------------------------------------------------------
+!
+!  write (6,'(A,I6.6,A,I6.6)') 'MYRANK ', myrank, ' is processing subdomain id #', myrank_d
+!
+!  do j = 1, nlat
+!    rj = real(j + JHALO, r_size)
+!
+!    do i = 1, nlon
+!      ri = real(i + IHALO, r_size)
+!      call MAPPROJECTION_xy2lonlat((ri-1.0_RP) * DX + ATMOS_GRID_CARTESC_CX(1), &
+!                                   (rj-1.0_RP) * DY + ATMOS_GRID_CARTESC_CY(1), &
+!                                    lon_RP, lat_RP)
+!      lon = lon_RP * rad2deg
+!      lat = lat_RP * rad2deg
+!
+!      do k = 1, nlev
+!        rk = real(k + KHALO, r_size)
+!
+!        do iv3dsim = 1, OBSSIM_NUM_3D_VARS
+!          select case (OBSSIM_3D_VARS_LIST(iv3dsim))
+!          case (id_radar_ref_obs, id_radar_ref_zero_obs, id_radar_vr_obs, id_radar_prh_obs)
+!            lev = v3dgh(k+KHALO, i+IHALO, j+JHALO, iv3dd_hgt)
+!            call Trans_XtoY_radar(OBSSIM_3D_VARS_LIST(iv3dsim), OBSSIM_RADAR_LON, OBSSIM_RADAR_LAT, OBSSIM_RADAR_Z, ri, rj, rk, &
+!                                  lon, lat, lev, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
+!            if (tmpqc == iqc_ref_low) tmpqc = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
+!          case default
+!            call Trans_XtoY(OBSSIM_3D_VARS_LIST(iv3dsim), ri, rj, rk, &
+!                            lon, lat, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
+!          end select
+!
+!          if (tmpqc == 0) then
+!            v3dgsim(k,i,j,iv3dsim) = real(tmpobs, r_sngl)
+!          else
+!            v3dgsim(k,i,j,iv3dsim) = real(undef, r_sngl)
+!          end if
+!        end do ! [ iv3dsim = 1, OBSSIM_NUM_3D_VARS ]
+!
+!        ! 2D observations calculated when k = 1
+!        if (k == 1) then
+!          do iv2dsim = 1, OBSSIM_NUM_2D_VARS
+!            select case (OBSSIM_2D_VARS_LIST(iv2dsim))
+!!            case (id_H08IR_obs)               !!!!!! H08 as 2D observations ???
+!!              call Trans_XtoY_radar_H08(...)
+!!            case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)
+!!              call ...
+!            case default
+!              call Trans_XtoY(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
+!                              lon, lat, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
+!            end select
+!
+!            if (tmpqc == 0) then
+!              v2dgsim(i,j,iv2dsim) = real(tmpobs, r_sngl)
+!            else
+!              v2dgsim(i,j,iv2dsim) = real(undef, r_sngl)
+!            end if
+!          end do ! [ iv2dsim = 1, OBSSIM_NUM_2D_VARS ]
+!        end if ! [ k == 1 ]
+!
+!      end do ! [ k = 1, nlev ]
+!
+!    end do ! [ i = 1, nlon ]
+!
+!  end do ! [ j = 1, nlat ]
+!
+!!-------------------------------------------------------------------------------
+!
+!end subroutine obssim_cal
 
 !!!!!! it is not good to open/close a file many times for different steps !!!!!!
 !-------------------------------------------------------------------------------
