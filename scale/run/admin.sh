@@ -5,39 +5,52 @@ cd "$(dirname "$0")"
 
 #-------------------------------------------------------------------------------
 
-if (($# < 4)); then
+
+#SCPNAME=cycle
+#SCPNAME=fcst
+#STIME=201812100000
+#ETIME=-
+#TIME_DT=40.0D0
+#TIME_DT_DYN=8.0D0
+#NNODES=60#
+#NNODES=12
+#WTIME_L=00:30:00
+
+if (($# < 7)); then
   echo "$0: Insufficient arguments" >&2
   exit 1
 fi
 
-#SCPNAME="$1"; shift
+SCPNAME="$1"; shift
 STIME="$1"; shift
-FCSTLEN="$1"; shift
-#ETIME="$1"; shift
-#TIME_DT="$1"; shift
-#TIME_DT_DYN="$1"; shift
-#NNODES="$1"; shift
-WTIME_L="$1"; shift
-NMEM="$1"
+ETIME="$1"; shift
+TIME_DT="$1"; shift
+TIME_DT_DYN="$1"; shift
+NNODES="$1"; shift
+WTIME_L="$1"
 
+if [ "$ETIME" = '-' ]; then
+  ETIME="$STIME"
+fi
 
-SCPNAME=fcst
-ETIME="$STIME"
-
-
-###NODE=`expr \( $NMEM  + 2 \) \* 11` ### D3
-NODE=`expr \( $NMEM  + 2 \) \* 7` ### D2
-
-####NODE=`expr \( $NMEM  + 2 \) \* 12` ### MODIFIED D2 DOMAIN DECOMP
-
-
-CONFIG='online_NRT_5.3.X'
+CONFIG='realtime_r0051_d1'
 PRESET='OFP'
 
 #-------------------------------------------------------------------------------
 
- config_suffix='ofp'
- script_suffix='_ofp'
+if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
+  config_suffix='K'
+  script_suffix='_K'
+elif [ "$PRESET" = 'K_micro' ]; then
+  config_suffix='K'
+  script_suffix='_K_micro'
+elif [ "$PRESET" = "OFP" ]; then
+  config_suffix='ofp'
+  script_suffix='_ofp'
+else
+  echo "[Error] Unsupported \$PRESET" >&2
+  exit 1
+fi
 
 if [ "$SCPNAME" = 'cycle' ]; then
   DATA_BDY_WRF="ncepgfs_wrf_da"
@@ -49,39 +62,50 @@ fi
 
 #-------------------------------------------------------------------------------
 
-###rm -f config.*
+rm -f config.main
+rm -f config.${SCPNAME}
+rm -f config.nml.*
 
-
-cp config/${CONFIG}/config.* .
+cat config/${CONFIG}/config.main.${config_suffix} | \
+    sed -e "s/<PRESET>/${PRESET}/g" | \
+    sed -e "s/<DATA_BDY_WRF>/${DATA_BDY_WRF}/g" | \
+    sed -e "s/<DATA_BDY_GRADS>/${DATA_BDY_GRADS}/g" | \
+    sed -e "s/<NNODES>/${NNODES}/g" \
+    > config.main
 
 cat config/${CONFIG}/config.${SCPNAME} | \
     sed -e "s/<STIME>/${STIME}/g" | \
     sed -e "s/<ETIME>/${ETIME}/g" | \
-    sed -e "s/<WTIME_L>/${WTIME_L}/g" | \
-    sed -e "s/<FCSTLEN>/${FCSTLEN}/g" \
+    sed -e "s/<WTIME_L>/${WTIME_L}/g" \
     > config.${SCPNAME}
 
-cat config.main.ofp | \
-   sed -e "s/<MEMBER>/${NMEM}/g" | \
-   sed -e "s/<NNODES>/${NODE}/g" | \
-   sed -e "s/<STIME>/${STIME}/g" \
- > config.main
-rm config.main.ofp
+cat config/${CONFIG}/config.nml.scale | \
+    sed -e "s/<TIME_DT>/${TIME_DT}/g" | \
+    sed -e "s/<TIME_DT_DYN>/${TIME_DT_DYN}/g" \
+    > config.nml.scale
 
+ln -fs config/${CONFIG}/config.nml.ensmodel .
+ln -fs config/${CONFIG}/config.nml.letkf .
+ln -fs config/${CONFIG}/config.nml.scale_pp .
+ln -fs config/${CONFIG}/config.nml.scale_init .
+if [ -e "config/${CONFIG}/config.nml.scale_user" ]; then
+  ln -fs config/${CONFIG}/config.nml.scale_user .
+fi
+if [ -e "config/${CONFIG}/config.nml.obsope" ]; then
+  ln -fs config/${CONFIG}/config.nml.obsope .
+fi
+if [ -e "config/${CONFIG}/config.nml.grads_boundary" ]; then
+  ln -fs config/${CONFIG}/config.nml.grads_boundary .
+#cat config/${CONFIG}/config.nml.grads_boundary | \
+#    sed -e "s/--FNAME_SFC--/--DIR--\/bdysfc/g" | \
+#    sed -e "s/--FNAME_ATMOS--/--DIR--\/bdyatm/g" | \
+#    sed -e "s/--FNAME_LAND--/--DIR--\/bdyland/g"  \
+#    > config.nml.grads_boundary
+fi
 
 . config.main || exit $?
 #. config.$SCPNAME || exit $?
 #. src/func_datetime.sh || exit $?
-
-## shorter DT
-#cp config.nml.scale.d3.new config.nml.scale.d3
-#cp config.nml.scale.new config.nml.scale
-
-### modified domain decomp
-#cp config.nml.scale.d2.new config.nml.scale.d2
-#cp config.nml.scale_pp.d2.new config.nml.scale_pp.d2
-#cp config.nml.scale_init.d2.new config.nml.scale_init.d2
-
 
 #-------------------------------------------------------------------------------
 
@@ -89,25 +113,29 @@ rm config.main.ofp
 
 #-------------------------------------------------------------------------------
 
+if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro' ] || [ "$PRESET" = "OFP" ]; then
   jobname="${SCPNAME}_${SYSNAME}"
   jobid=$(grep 'pjsub Job' ${SCPNAME}${script_suffix}.log | cut -d ' ' -f6)
   logdir="$OUTDIR/exp/${jobid}_${SCPNAME}_${STIME}"
   stdout="$logdir/job.o"
   stderr="$logdir/job.e"
   jobinfo="$logdir/job.i"
+#  stdout="${jobname}.o${jobid}"
+#  stderr="${jobname}.e${jobid}"
+#  jobinfo="${jobname}.i${jobid}"
+fi
 
-
-#if [ ! -e "$stdout" ] || [ ! -e "$stderr" ]; then
-#  exit 101
-#fi
-#if [ -z "$(tail -n 1 $stderr | grep "Finish ${SCPNAME}.sh")" ]; then
-#  exit 102
-#fi
+if [ ! -e "$stdout" ] || [ ! -e "$stderr" ]; then
+  exit 101
+fi
+if [ -z "$(tail -n 1 $stderr | grep "Finish ${SCPNAME}.sh")" ]; then
+  exit 102
+fi
 
 #-------------------------------------------------------------------------------
 
-#rm -f ${SCPNAME}_job.sh
-#rm -f ${jobname}.?${jobid}
+rm -f ${SCPNAME}_job.sh
+rm -f ${jobname}.?${jobid}
 
 mkdir -p exp
 rm -f exp/*

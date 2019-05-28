@@ -1,12 +1,14 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Wrap fcst.sh in a OFP job script and run it.
+#  Wrap fcst.sh in a K-computer job script and run it.
+#
+#  October 2014, created,                 Guo-Yuan Lien
 #
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    fcst_ofp.sh [..]
+#    fcst_K.sh [..]
 #
 #===============================================================================
 
@@ -25,6 +27,21 @@ job='fcst'
 . src/func_util.sh || exit $?
 . src/func_${job}.sh || exit $?
 
+#STAGING_DIR="$TMPSL/staging"
+#NODEFILE_DIR="$TMPS/node"
+
+#-------------------------------------------------------------------------------
+
+if ((USE_TMP_LINK == 1)); then
+  echo "[Error] $0: Wrong disk mode for K computer staged jobs." >&2
+  exit 1
+fi
+
+if [ "$PRESET" = 'K_rankdir' ] && ((PNETCDF == 1)); then
+  echo "[Error] When PNETCDF is enabled, 'K_rankdir' preset cannot be used." 1>&2
+  exit 1
+fi
+
 #-------------------------------------------------------------------------------
 
 echo "[$(datetime_now)] Start $myname $@"
@@ -33,14 +50,8 @@ setting "$@" || exit $?
 
 if [ "$CONF_MODE" = 'static' ]; then
   . src/func_common_static.sh || exit $?
-
-  if ((NRT_FCST == 1)); then
-    . src/func_${job}_static_NRT_online.sh || exit $?
-  else
-    . src/func_${job}_static.sh || exit $?
-  fi
+  . src/func_${job}_static.sh || exit $?
 fi
-
 
 echo
 print_setting || exit $?
@@ -51,12 +62,7 @@ echo
 
 echo "[$(datetime_now)] Create and clean the temporary directory"
  
-#if [ -e "${TMP}" ]; then
-#  echo "[Error] $0: \$TMP will be completely removed." >&2
-#  echo "        \$TMP = '$TMP'" >&2
-#  exit 1
-#fi
-safe_init_tmpdir $TMP || exit $?
+safe_init_tmpdir $TMPS || exit $?
 
 #===============================================================================
 # Determine the distibution schemes
@@ -72,6 +78,7 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR || exit $?
+#distribute_fcst "$MEMBERS" $CYCLE "$NODELIST_TYPE" $NODEFILE_DIR || exit $?
 distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR || exit $?
 
 if ((CYCLE == 0)); then
@@ -83,15 +90,17 @@ fi
 
 echo "[$(datetime_now)] Determine the staging list"
 
+#cp -L $SCRP_DIR/config.main $TMPS/config.main
+
 cat $SCRP_DIR/config.main | \
     sed -e "/\(^DIR=\| DIR=\)/c DIR=\"$DIR\"" \
     > $TMP/config.main
 
-echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMP/config.main
+echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMPS/config.main
 echo "NODEFILE_DIR=\"\$TMPROOT/node\"" >> $TMPS/config.main
-echo "RUN_LEVEL=4" >> $TMP/config.main
+echo "RUN_LEVEL=4" >> $TMPS/config.main
 
-echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMP/config.main
+echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMPS/config.main
 
 safe_init_tmpdir $STAGING_DIR || exit $?
 if [ "$CONF_MODE" = 'static' ]; then
@@ -104,6 +113,8 @@ fi
 #-------------------------------------------------------------------------------
 # Add shell scripts and node distribution files into the staging list
 
+#${TMPS}/config.main|config.main
+#
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 ${SCRP_DIR}/config.rc|config.rc
 ${SCRP_DIR}/config.${job}|config.${job}
@@ -117,60 +128,59 @@ if [ "$CONF_MODE" != 'static' ]; then
 fi
 
 #===============================================================================
-# Stage in
-
-echo "[$(datetime_now)] Initialization (stage in)"
+# Staging in
 
 stage_in server || exit $?
+
 
 #===============================================================================
 # Creat a job script
 
-NPIN=`expr 255 / \( $PPN \) + 1`
 jobscrp="$TMP/${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
+NPIN=`expr 255 / \( $PPN \) + 1`
+
 cat > $jobscrp << EOF
-#!/bin/sh
+#!/bin/sh -l
 #PJM -L rscgrp=regular-flat
 #PJM -L node=${NNODES}
 #PJM -L elapse=${TIME_LIMIT}
-#PJM --mpi proc=$((NNODES*PPN))
-##PJM --mpi proc=${totalnp}
-#PJM --omp thread=${THREADS}
-#PJM -g $(echo $(id -ng))
-##PJM -j
-rm -f machinefile
+#PJM --mpi "proc=$((NNODES*PPN))"
+#PJM --omp "thread=${THREADS}"
+#PJM -g ${GNAME}
+
+
+rm -f machinefile 
 for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
-  for ippn in \$(seq $PPN); do
-    echo "\$inode" >> machinefile
-  done
+ for ippn in \$(seq $PPN); do
+   echo "\$inode" >> machinefile
+ done
 done
+
 module load hdf5/1.8.17
 module load netcdf/4.4.1
 module load netcdf-fortran/4.4.3
 
-export FORT_FMT_RECL=400
-
-export HFI_NO_CPUAFFINITY=1
-export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
-export I_MPI_HBW_POLICY=hbw_preferred,,
-export I_MPI_FABRICS_LIST=tmi
-unset KMP_AFFINITY
-#export KMP_AFFINITY=verbose
-#export I_MPI_DEBUG=5
-
-export OMP_NUM_THREADS=1
-export I_MPI_PIN_DOMAIN=${NPIN}
-export I_MPI_PERHOST=${PPN}
-export KMP_HW_SUBSET=1t
-
-
-#export OMP_STACKSIZE=128m
 ulimit -s unlimited
 
-./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
+#export OMP_STACKSIZE=128m
+export OMP_NUM_THREADS=1
+
+export I_MPI_PIN_PROCESSER_EXCLUDE_LIST=0,1,68,69,136,137,204,205
+export I_MPI_HBW_PJOLICY=hbw_preferred,,
+export I_MPI_FABRICS_LIST=tmi
+
+export I_MPI_PERHOST=${PPN}
+export I_MPI_PIN_DOMAIN=${NPIN}
+
+export KMP_HW_SUBSET=1t
+
+export HFI_NO_CPUAFFINITY=1
+unset KMP_AFFINITY
+
+./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" "$CONF_MODE" "$TIME_LIMIT" || exit \$?
 EOF
 
 #===============================================================================
@@ -207,7 +217,8 @@ backup_exp_setting $job $TMP $jobid ${job}_job.sh 'o e'
 archive_log
 
 #if ((CLEAR_TMP == 1)); then
-#  safe_rm_tmpdir $TMP
+#  safe_rm_tmpdir $TMPS
+#  safe_rm_tmpdir $TMPSL
 #fi
 
 #===============================================================================

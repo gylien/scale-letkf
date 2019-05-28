@@ -157,6 +157,7 @@ if ((BDY_FORMAT >= 1)); then
       elif ((BDY_FORMAT == 4 && BDY_ROTATING != 1)) && [ -s "$DATA_BDY_GRADS/${BDY_MEAN}/atm_${PARENT_REF_TIME}.grd" ]; then
         break
       elif ((bdy_startframe == BDY_STARTFRAME_MAX)); then
+	echo "$DATA_BDY_GRADS/${PARENT_REF_TIME}/${BDY_MEAN}/atm_${PARENT_REF_TIME}.grd"
         echo "[Error] Cannot find boundary files." >&2
         exit 1
       fi
@@ -324,6 +325,11 @@ while ((time <= ETIME)); do
 
   # anal
   #-------------------
+
+if [ "$DISK_MODE" == "1" ] ; then
+        path="${time}/anal"
+        echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+ else
   if ((loop == 1 && MAKEINIT != 1)); then
     for m in $(seq $mtot); do
       for q in $(seq $mem_np_); do
@@ -332,7 +338,7 @@ while ((time <= ETIME)); do
       done
     done
   fi
-
+fi
   # anal_ocean
   #-------------------
   if ((OCEAN_INPUT == 1)) && ((OCEAN_FORMAT == 0)); then
@@ -698,10 +704,12 @@ while ((time <= ETIME)); do
       path="${time}/log/scale_init/0001_LOG${SCALE_SFX_NONC_0}"
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
       if ((BDY_ENS == 1)); then
-#          path="${time}/log/scale_init/NOUT-1.${log_zeros}"
-	  path="${time}/log/scale_init/NOUT-1-${log_zeros}"
+#        path="${time}/log/scale_init/NOUT-1.${log_zeros}"
+        path="${time}/log/scale_init/NOUT-1-${log_zeros}"
       else
-        path="${time}/log/scale_init/NOUT.${log_zeros}"
+#        path="${time}/log/scale_init/NOUT.${log_zeros}"
+#        path="${time}/log/scale_init/NOUT-${log_zeros}"
+        path="${time}/log/scale_init/NOUT-1-${log_zeros}"
       fi
       echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
     else

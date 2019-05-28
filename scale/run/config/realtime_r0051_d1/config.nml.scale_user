@@ -1,4 +1,3 @@
-
 #################################################
 #
 # model configuration: user
@@ -9,8 +8,10 @@
  USER_resume_do = .true.,
 !--LAND_RESTART_IN_BASENAME--
  READ_LAND_TEMP       = .false.,
+! READ_LAND_TEMP       = .true.,
  READ_LAND_WATER      = .true.,
  READ_LAND_SFC_TEMP   = .false.,
+! READ_LAND_SFC_TEMP   = .true.,
  READ_LAND_SFC_ALB_IR_dir = .false., 
  READ_LAND_SFC_ALB_IR_dif = .false., 
  READ_LAND_SFC_ALB_NIR_dir = .false., 
