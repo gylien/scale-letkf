@@ -9,6 +9,7 @@ stat=`cat cycle_ofp.stat.$STIME`
 if [ "$stat" == "submit" ] ;then
  pjstat > pjstat.txt
  wait=`cat pjstat.txt | grep cycle_job | cut -c 64-76` 
+ rm pjstat.txt
  if [ `echo $wait | cut -c 1` == '(' ] ;then
   echo $wait
  else
