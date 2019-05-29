@@ -178,9 +178,9 @@ while ((time <= ETIME)); do
   done
   echo
   echo "  Nodes used:               $NNODES_APPAR"
-  for n in $(seq $NNODES_APPAR); do
-    echo "    ${node[$n]}"
-  done
+#  for n in $(seq $NNODES_APPAR); do
+#    echo "    ${node[$n]}"
+#  done
   echo
   echo "  Processes per node:       $PPN_APPAR"
   echo "  Total processes:          $totalnp"
@@ -189,9 +189,9 @@ while ((time <= ETIME)); do
   echo "  Processes per SCALE run:  $mem_np"
   echo
   echo "  Ensemble size:            $MEMBER"
-  for m in $(seq $mtot); do
-    echo "      ${name_m[$m]}: ${node_m[$m]}"
-  done
+#  for m in $(seq $mtot); do
+#    echo "      ${name_m[$m]}: ${node_m[$m]}"
+#  done
   echo
 
 #-------------------------------------------------------------------------------

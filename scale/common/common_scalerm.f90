@@ -86,14 +86,20 @@ subroutine scalerm_setup(execname)
     OCEAN_GRID_CARTESC_INDEX_setup
   use scale_ocean_grid_cartesC, only: &
     OCEAN_GRID_CARTESC_setup
+  use scale_ocean_grid_cartesC_real, only: &
+    OCEAN_GRID_CARTESC_REAL_setup
   use scale_land_grid_cartesC_index, only: &
     LAND_GRID_CARTESC_INDEX_setup
   use scale_land_grid_cartesC, only: &
     LAND_GRID_CARTESC_setup
+  use scale_land_grid_cartesC_real, only: &
+    LAND_GRID_CARTESC_REAL_setup
   use scale_urban_grid_cartesC_index, only: &
     URBAN_GRID_CARTESC_INDEX_setup
   use scale_urban_grid_cartesC, only: &
     URBAN_GRID_CARTESC_setup
+  use scale_urban_grid_cartesC_real, only: &
+     URBAN_GRID_CARTESC_REAL_setup
   use scale_file_cartesC, only: &
     FILE_CARTESC_setup
 !    FILE_CARTESC_cleanup
@@ -222,10 +228,11 @@ subroutine scalerm_setup(execname)
     URBAN_driver_setup
 !    URBAN_driver
   use mod_lake_admin, only: &
-     LAKE_admin_setup, &
-     LAKE_do
+    LAKE_admin_setup, &
+    LAKE_do
   use mod_cpl_admin, only: &
-    CPL_admin_setup
+    CPL_admin_setup, &
+    CPL_sw
   use mod_cpl_vars, only: &
     CPL_vars_setup
   use mod_user, only: &
@@ -280,7 +287,7 @@ subroutine scalerm_setup(execname)
     exec_modelonly = .true.
   end if
 
-  call mpi_timer('', 2, barrier=MPI_COMM_WORLD)
+!  call mpi_timer('', 2, barrier=MPI_COMM_WORLD)
 
   ! Communicator for all processes used
   !-----------------------------------------------------------------------------
@@ -304,7 +311,7 @@ subroutine scalerm_setup(execname)
   call MPI_COMM_SIZE(MPI_COMM_u, nprocs_u, ierr)
   call MPI_COMM_RANK(MPI_COMM_u, myrank_u, ierr)
 
-  call mpi_timer('scalerm_setup:mpi_comm_split_u:', 2)
+!  call mpi_timer('scalerm_setup:mpi_comm_split_u:', 2)
 
   ! Communicator for all domains of single members
   !-----------------------------------------------------------------------------
@@ -332,7 +339,7 @@ subroutine scalerm_setup(execname)
   call PRC_GLOBAL_setup( .false.,    & ! [IN]
                          global_comm ) ! [IN]
 
-  call mpi_timer('scalerm_setup:mpi_comm_split_d_global:', 2)
+!  call mpi_timer('scalerm_setup:mpi_comm_split_d_global:', 2)
 
   ! Communicator for one domain
   !-----------------------------------------------------------------------------
@@ -445,11 +452,13 @@ subroutine scalerm_setup(execname)
   !  call read_nml_ensemble
   !  call read_nml_process
 
-    if (scalerm_run) then
-      write (6, '(A,I6.6,2A)') '[Info] MYRANK = ', myrank, ' is running SCALE using configuration file: ', trim(confname)
-    else
-      write (6, '(A,I6.6,2A)') '[Info] MYRANK = ', myrank, ' is using configuration file: ', trim(confname)
-    end if
+    if (myrank == 0) then
+      if (scalerm_run) then
+        write (6, '(A,I6.6,2A)') '[Info] MYRANK = ', myrank, ' is running SCALE using configuration file: ', trim(confname)
+      else
+        write (6, '(A,I6.6,2A)') '[Info] MYRANK = ', myrank, ' is using configuration file: ', trim(confname)
+      end if
+    endif
   else
     write (6, '(A,I6.6,A)') '[Info] MYRANK = ', myrank, ' is not used for SCALE!'
   end if
@@ -501,7 +510,7 @@ subroutine scalerm_setup(execname)
 !  myrank_d = PRC_myrank
   myrank_d = local_myrank
 
-  call mpi_timer('scalerm_setup:mpi_comm_split_d_local:', 2)
+!  call mpi_timer('scalerm_setup:mpi_comm_split_d_local:', 2)
 
   ! Communicator for all processes for single domains
   !-----------------------------------------------------------------------------
@@ -520,7 +529,7 @@ subroutine scalerm_setup(execname)
   call MPI_COMM_SIZE(MPI_COMM_a, nprocs_a, ierr)
   call MPI_COMM_RANK(MPI_COMM_a, myrank_a, ierr)
 
-  call mpi_timer('scalerm_setup:mpi_comm_split_a:', 2)
+!  call mpi_timer('scalerm_setup:mpi_comm_split_a:', 2)
 
   if (exec_modelonly .and. (.not. scalerm_run)) then
     return
@@ -536,7 +545,7 @@ subroutine scalerm_setup(execname)
     call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
   end if
 
-  call mpi_timer('scalerm_setup:log_setup_init:', 2)
+!  call mpi_timer('scalerm_setup:log_setup_init:', 2)
 
   ! Other scalelib setups
   !-----------------------------------------------------------------------------
@@ -562,6 +571,14 @@ subroutine scalerm_setup(execname)
 
     ! setup random number
     call RANDOM_setup
+
+    ! setup submodel administrator
+    call ATMOS_admin_setup
+    call OCEAN_admin_setup
+    call LAND_admin_setup
+    call URBAN_admin_setup
+    call LAKE_admin_setup
+    call CPL_admin_setup
   end if
 
   ! setup horizontal/vertical grid coordinates (cartesian,idealized)
@@ -569,38 +586,42 @@ subroutine scalerm_setup(execname)
   call ATMOS_GRID_CARTESC_setup
 
   if (exec_model .and. scalerm_run) then
-    call OCEAN_GRID_CARTESC_INDEX_setup
-    call OCEAN_GRID_CARTESC_setup
+    if ( OCEAN_do ) then
+       call OCEAN_GRID_CARTESC_INDEX_setup
+       call OCEAN_GRID_CARTESC_setup
+    endif
+
+    if ( LAND_do ) then
+       call LAND_GRID_CARTESC_INDEX_setup
+       call LAND_GRID_CARTESC_setup
+    endif
+
+    if ( URBAN_do ) then
+       call URBAN_GRID_CARTESC_INDEX_setup
+       call URBAN_GRID_CARTESC_setup
+    endif
+
   end if
 
-#ifdef PNETCDF
-  call LAND_GRID_CARTESC_INDEX_setup
-  if (exec_model .and. scalerm_run) then
-    call LAND_GRID_CARTESC_setup
-  end if
-
-  call URBAN_GRID_CARTESC_INDEX_setup
-  if (exec_model .and. scalerm_run) then
-    call URBAN_GRID_CARTESC_setup
-  end if
-#else
-  if (exec_model .and. scalerm_run) then
-    call LAND_GRID_CARTESC_INDEX_setup
-    call LAND_GRID_CARTESC_setup
-
-    call URBAN_GRID_CARTESC_INDEX_setup
-    call URBAN_GRID_CARTESC_setup
-  end if
-#endif
-
-  if (exec_model .and. scalerm_run) then
-    ! setup submodel administrator
-    call ATMOS_admin_setup
-    call OCEAN_admin_setup
-    call LAND_admin_setup
-    call URBAN_admin_setup
-    call CPL_admin_setup
-  end if
+!#ifdef PNETCDF
+!  call LAND_GRID_CARTESC_INDEX_setup
+!  if (exec_model .and. scalerm_run) then
+!    call LAND_GRID_CARTESC_setup
+!  end if
+!
+!  call URBAN_GRID_CARTESC_INDEX_setup
+!  if (exec_model .and. scalerm_run) then
+!    call URBAN_GRID_CARTESC_setup
+!  end if
+!#else
+!  if (exec_model .and. scalerm_run) then
+!    call LAND_GRID_CARTESC_INDEX_setup
+!    call LAND_GRID_CARTESC_setup
+!
+!    call URBAN_GRID_CARTESC_INDEX_setup
+!    call URBAN_GRID_CARTESC_setup
+!  end if
+!#endif
 
   ! setup tracer index
   call ATMOS_HYDROMETEOR_setup
@@ -669,6 +690,14 @@ subroutine scalerm_setup(execname)
 #else
       call ATMOS_GRID_CARTESC_REAL_setup
 #endif
+
+      ! setup grid transfer metrics (uses in ATMOS_dynamics)
+      call ATMOS_GRID_CARTESC_METRIC_setup
+
+      if ( OCEAN_do ) call OCEAN_GRID_CARTESC_REAL_setup
+      if ( LAND_do  ) call LAND_GRID_CARTESC_REAL_setup
+      if ( URBAN_do ) call URBAN_GRID_CARTESC_REAL_setup
+
     end if
   else
 !   call ATMOS_GRID_CARTESC_REAL_setup -->
@@ -678,8 +707,6 @@ subroutine scalerm_setup(execname)
   end if
 
   if (exec_model .and. scalerm_run) then
-    ! setup grid transfer metrics (uses in ATMOS_dynamics)
-    call ATMOS_GRID_CARTESC_METRIC_setup
 
     ! setup restart
 #ifdef SCALEUV
@@ -726,25 +753,24 @@ subroutine scalerm_setup(execname)
 
   if ((execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') .and. scalerm_run) then
     call BULKFLUX_setup( sqrt(DX**2+DY**2) )
-!    call ROUGHNESS_setup
   end if
 
   if (exec_model .and. scalerm_run) then
     ! setup variable container
-    call ATMOS_vars_setup
-    call OCEAN_vars_setup
-    call LAND_vars_setup
-    call URBAN_vars_setup
-    call CPL_vars_setup
+    if ( ATMOS_do ) call ATMOS_vars_setup
+    if ( OCEAN_do ) call OCEAN_vars_setup
+    if ( LAND_do  ) call LAND_vars_setup
+    if ( URBAN_do ) call URBAN_vars_setup
+    if ( CPL_sw   ) call CPL_vars_setup
   end if
 
   if (scalerm_run) then
     if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
-      ! setup submodel driver
-      call ATMOS_driver_setup
-      call OCEAN_driver_setup
-      call LAND_driver_setup
-      call URBAN_driver_setup
+      ! setup driver
+      if ( ATMOS_do ) call ATMOS_driver_setup
+      if ( OCEAN_do ) call OCEAN_driver_setup
+      if ( LAND_do  ) call LAND_driver_setup
+      if ( URBAN_do ) call URBAN_driver_setup
 
       call USER_setup
     else if (execname_ == 'RMPREP ') then
@@ -763,7 +789,7 @@ subroutine scalerm_setup(execname)
     call PROF_rapend('Initialize', 0)
   end if
 
-  call mpi_timer('scalerm_setup:other_setup:', 2)
+!  call mpi_timer('scalerm_setup:other_setup:', 2)
 
   return
 end subroutine scalerm_setup
@@ -974,7 +1000,7 @@ subroutine resume_state(do_restart_read)
   if( LAND_do  ) call LAND_driver_calc_tendency            ( force=.true. )
   if( URBAN_do ) call URBAN_driver_calc_tendency           ( force=.true. )
   if( CPL_sw   ) call ATMOS_driver_calc_tendency_from_sflux( force=.true. )
-                 call USER_calc_tendency
+!                 call USER_calc_tendency
 
   !########## History & Monitor ##########
   if( ATMOS_do ) call ATMOS_vars_history

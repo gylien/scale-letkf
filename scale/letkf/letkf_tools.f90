@@ -114,11 +114,13 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
 
   call mpi_timer('', 2)
 
-  WRITE(6,'(A)') 'Hello from das_letkf'
-  WRITE(6,'(A,F15.2)') '  INFL_MUL = ',INFL_MUL
+  if (LOG_LEVEL >= 3) then
+    WRITE(6,'(A)') 'Hello from das_letkf'
+    WRITE(6,'(A,F15.2)') '  INFL_MUL = ',INFL_MUL
 
-  WRITE(6,'(A,I8)') 'Target observation numbers (global) : NOBS=',nobstotalg
-  WRITE(6,'(A,I8)') 'Target observation numbers processed in this subdomian : NOBS=',nobstotal
+    WRITE(6,'(A,I8)') 'Target observation numbers (global) : NOBS=',nobstotalg
+    WRITE(6,'(A,I8)') 'Target observation numbers processed in this subdomian : NOBS=',nobstotal
+  endif
 !!  !
 !!  ! In case of no obs
 !!  !
@@ -316,9 +318,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
   ! MAIN ASSIMILATION LOOP
   !
   DO ilev=1,nlev
+ 
     if (LOG_LEVEL >= 3) then
       call mpi_timer('', 4)
-    end if
+    endif
 
 !##!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
     DO ij=1,nij1
@@ -683,8 +686,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       end if
     end if
 
-    write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
-    call mpi_timer(trim(timer_str), 3)
+    if (LOG_LEVEL >= 3) then
+      write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
+      call mpi_timer(trim(timer_str), 3)
+    endif
 !##!$OMP END MASTER
 
   END DO ! [ ilev=1,nlev ]

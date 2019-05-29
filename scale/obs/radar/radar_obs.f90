@@ -809,6 +809,10 @@ subroutine read_obs_radar_toshiba(cfile, obs)
     ierr = jitdt_read_toshiba(n_type, jitdt_place, hd, az, el, rtdat)
 
     call mpi_timer('read_obs_radar_toshiba:jitdt_read_toshiba:', 3)
+    if (ierr /= 0) then
+      obs%nobs = 0
+      return
+    endif
   else
 #endif
     do j = 1, n_type
@@ -827,6 +831,10 @@ subroutine read_obs_radar_toshiba(cfile, obs)
     do j = 1, n_type
       ierr = read_toshiba(input_fname(j), hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
       write(*, *) "return code = ", ierr
+      if (ierr /= 0) then
+        obs%nobs = 0
+        return
+      endif
     end do
 
     call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 3)

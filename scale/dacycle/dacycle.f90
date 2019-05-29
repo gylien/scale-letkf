@@ -108,31 +108,34 @@ program dacycle
   call initialize_mpi_scale
   call mpi_timer('', 1)
 
-  if (command_argument_count() >= 2) then
-    call get_command_argument(2, icmd)
-    if (trim(icmd) /= '') then
-      write (stdoutf(2:7), '(I6.6)') myrank
-!      WRITE (6,'(3A,I6.6)') 'STDOUT goes to ', trim(icmd)//stdoutf, ' for MYRANK ', myrank
-      open (6, file=trim(icmd)//stdoutf)
-      write (6,'(A,I6.6,2A)') 'MYRANK=', myrank, ', STDOUTF=', trim(icmd)//stdoutf
-    end if
-  end if
+!  if (command_argument_count() >= 2) then
+!    call get_command_argument(2, icmd)
+!    if (trim(icmd) /= '') then
+!      write (stdoutf(2:7), '(I6.6)') myrank
+!!      WRITE (6,'(3A,I6.6)') 'STDOUT goes to ', trim(icmd)//stdoutf, ' for MYRANK ', myrank
+!      open (6, file=trim(icmd)//stdoutf)
+!      write (6,'(A,I6.6,2A)') 'MYRANK=', myrank, ', STDOUTF=', trim(icmd)//stdoutf
+!    end if
+!  end if
 
-  write (6, '(A)') '============================================='
-  write (6, '(A)') '  LOCAL ENSEMBLE TRANSFORM KALMAN FILTERING  '
-  write (6, '(A)') '                                             '
-  write (6, '(A)') '   LL      EEEEEE  TTTTTT  KK  KK  FFFFFF    '
-  write (6, '(A)') '   LL      EE        TT    KK KK   FF        '
-  write (6, '(A)') '   LL      EEEEE     TT    KKK     FFFFF     '
-  write (6, '(A)') '   LL      EE        TT    KK KK   FF        '
-  write (6, '(A)') '   LLLLLL  EEEEEE    TT    KK  KK  FF        '
-  write (6, '(A)') '                                             '
-  write (6, '(A)') '             WITHOUT LOCAL PATCH             '
-  write (6, '(A)') '                                             '
-  write (6, '(A)') '          Coded by Takemasa Miyoshi          '
-  write (6, '(A)') '  Based on Ott et al (2004) and Hunt (2005)  '
-  write (6, '(A)') '  Tested by Miyoshi and Yamane (2006)        '
-  write (6, '(A)') '============================================='
+  if (myrank == 0) then
+  
+    write (6, '(A)') '============================================='
+    write (6, '(A)') '  LOCAL ENSEMBLE TRANSFORM KALMAN FILTERING  '
+    write (6, '(A)') '                                             '
+    write (6, '(A)') '   LL      EEEEEE  TTTTTT  KK  KK  FFFFFF    '
+    write (6, '(A)') '   LL      EE        TT    KK KK   FF        '
+    write (6, '(A)') '   LL      EEEEE     TT    KKK     FFFFF     '
+    write (6, '(A)') '   LL      EE        TT    KK KK   FF        '
+    write (6, '(A)') '   LLLLLL  EEEEEE    TT    KK  KK  FF        '
+    write (6, '(A)') '                                             '
+    write (6, '(A)') '             WITHOUT LOCAL PATCH             '
+    write (6, '(A)') '                                             '
+    write (6, '(A)') '          Coded by Takemasa Miyoshi          '
+    write (6, '(A)') '  Based on Ott et al (2004) and Hunt (2005)  '
+    write (6, '(A)') '  Tested by Miyoshi and Yamane (2006)        '
+    write (6, '(A)') '============================================='
+  endif
 
 !-----------------------------------------------------------------------
 ! Initialize
@@ -151,14 +154,14 @@ program dacycle
     icycle = 0
     lastcycle = int((TIME_DTSEC * TIME_NSTEP + 1.0d-6) / TIME_DTSEC_ATMOS_RESTART)
 
-    write (6, '(A,I7)') 'Total cycle numbers:', lastcycle
+    if (myrank == 0) write (6, '(A,I7)') 'Total cycle numbers:', lastcycle
 
 !-----------------------------------------------------------------------
 ! Main loop
 !-----------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
+!    LOG_NEWLINE
+!    LOG_PROGRESS(*) 'START TIMESTEP'
     call PROF_setprefx('MAIN')
     call PROF_rapstart('Main_Loop', 0)
 
@@ -175,7 +178,7 @@ program dacycle
       call ADMIN_TIME_checkstate
 
       if ( TIME_DOresume ) then
-        ! resume state from restart files
+        ! read state from restart files
         if (DIRECT_TRANSFER .and. icycle >= 1) then
           if (LOG_LEVEL >= 1) then
             write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip reading restart files'
@@ -204,6 +207,16 @@ program dacycle
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update
 !                                             call USER_update
 
+      ! restart output before LETKF
+      if (DIRECT_TRANSFER) then
+        if (LOG_LEVEL >= 1 .and. TIME_DOATMOS_restart) then
+          write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip writing restart files before LETKF'
+        end if
+      else
+        call ADMIN_restart_write
+      end if
+      call ADMIN_restart_write_additional !!!!!! To do: control additional restart outputs for gues_mean, gues_sprd, and anal_sprd
+
       ! calc tendencies and diagnostices
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency( force = .false. )
       if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver_calc_tendency( force = .false. )
@@ -216,15 +229,6 @@ program dacycle
       call MONITOR_write('MAIN', TIME_NOWSTEP)
       call FILE_HISTORY_write
 
-      ! restart output before LETKF
-      if (DIRECT_TRANSFER) then
-        if (LOG_LEVEL >= 1 .and. TIME_DOATMOS_restart) then
-          write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip writing restart files before LETKF'
-        end if
-      else
-        call ADMIN_restart_write
-      end if
-      call ADMIN_restart_write_additional !!!!!! To do: control additional restart outputs for gues_mean, gues_sprd, and anal_sprd
 
       !-------------------------------------------------------------------------
       ! LETKF section start

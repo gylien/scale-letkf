@@ -895,7 +895,7 @@ subroutine read_nml_letkf_var_local
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_VAR_LOCAL,iostat=ierr)
   if (ierr < 0) then !--- missing
-    write(6,*) '[Warning] /PARAM_LETKF_VAR_LOCAL/ is not found in namelist.'
+!    write(6,*) '[Warning] /PARAM_LETKF_VAR_LOCAL/ is not found in namelist.'
 !    stop
   elseif (ierr > 0) then !--- fatal error
     write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_LETKF_VAR_LOCAL. Check!'
@@ -1159,7 +1159,7 @@ subroutine filename_replace_mem_str(filename, mem)
   if (pos == 0) then
     call str_replace(filename, memf_notation_2, mem, pos)
     if (pos == 0) then
-      write (6, '(7A)') "[Warning] Keyword '", memf_notation, "' or '", memf_notation_2, "' is not found in '", trim(filename), "'."
+!      write (6, '(7A)') "[Warning] Keyword '", memf_notation, "' or '", memf_notation_2, "' is not found in '", trim(filename), "'."
     end if
   end if
 
@@ -1206,7 +1206,7 @@ subroutine filename_replace_dom_str(filename, dom)
 
   call str_replace(filename, domf_notation, dom, pos)
   if (pos == 0) then
-    write (6, '(5A)') "[Warning] Keyword '", domf_notation, "' is not found in '", trim(filename), "'."
+!    write (6, '(5A)') "[Warning] Keyword '", domf_notation, "' is not found in '", trim(filename), "'."
   end if
 
   return

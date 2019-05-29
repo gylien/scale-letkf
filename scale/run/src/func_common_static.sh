@@ -36,10 +36,10 @@ done
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 ${COMMON_DIR}/pdbash|pdbash
 ${COMMON_DIR}/datetime|datetime
-${ENSMODEL_DIR}/scale-rm_pp_ens|scale-rm_pp_ens
-${ENSMODEL_DIR}/scale-rm_init_ens|scale-rm_init_ens
-${ENSMODEL_DIR}/scale-rm_ens|scale-rm_ens
 EOF
+#${ENSMODEL_DIR}/scale-rm_pp_ens|scale-rm_pp_ens
+#${ENSMODEL_DIR}/scale-rm_init_ens|scale-rm_init_ens
+#${ENSMODEL_DIR}/scale-rm_ens|scale-rm_ens
 
 if [ "$JOBTYPE" = 'cycle' ]; then
   if ((DACYCLE == 1)); then

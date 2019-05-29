@@ -102,7 +102,7 @@ subroutine initialize_mpi_scale
   nprocs = universal_nprocs
   myrank = PRC_UNIVERSAL_myrank
 
-  write(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ', myrank, '/', nprocs-1
+  if (myrank == 0) write(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ', myrank, '/', nprocs-1
   if (r_size == r_dble) then
     MPI_r_size = MPI_DOUBLE_PRECISION
   else if (r_size == r_sngl) then
@@ -277,7 +277,7 @@ subroutine set_common_mpi_grid
   else
     nij1 = nij1max - 1
   end if
-  write (6,'(A,I6.6,A,I7)') 'MYRANK ', myrank, ' number of grid points: nij1 =', nij1
+!  write (6,'(A,I6.6,A,I7)') 'MYRANK ', myrank, ' number of grid points: nij1 =', nij1
 
   allocate (nij1node(nprocs_e))
   do n = 1, nprocs_e
@@ -1150,21 +1150,21 @@ subroutine read_ens_mpi(v3d, v2d)
 
       if (DIRECT_TRANSFER) then
         if (ATMOS_RESTART_OUT_POSTFIX_TIMELABEL) then
-          if (trim(filename) /= trim(ATMOS_RESTART_OUT_BASENAME)//trim(timelabel_anal)) then
+          if ((myrank_a == 0) .and. trim(filename) /= trim(ATMOS_RESTART_OUT_BASENAME)//trim(timelabel_anal)) then
             write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
             write (6, '(3A)') "        Output filename in SCALE = '", trim(ATMOS_RESTART_OUT_BASENAME)//trim(timelabel_anal), "'"
             write (6, '(3A)') "        Input  filename in LETKF = '", trim(filename), "'"
             stop
           end if
         else
-          if (trim(filename) /= trim(ATMOS_RESTART_OUT_BASENAME)) then
+          if ((myrank_a == 0) .and. trim(filename) /= trim(ATMOS_RESTART_OUT_BASENAME)) then
             write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
             write (6, '(3A)') "        Output filename in SCALE = '", trim(ATMOS_RESTART_OUT_BASENAME), "'"
             write (6, '(3A)') "        Input  filename in LETKF = '", trim(filename), "'"
             stop
           end if
-        end if
-        call read_restart_direct(v3dg, v2dg)
+          call read_restart_direct(v3dg, v2dg)
+        endif
       else
 !        write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',trim(filename),'.pe',myrank_d,'.nc'
         if (FILE_AGGREGATE) then
@@ -1300,16 +1300,24 @@ subroutine write_ens_mpi(v3d, v2d, mean3d, mean2d)
       if (DIRECT_TRANSFER) then
         if (ATMOS_RESTART_IN_POSTFIX_TIMELABEL) then
           if (trim(filename) /= trim(ATMOS_RESTART_IN_BASENAME)//trim(timelabel_anal)) then
-            write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
-            write (6, '(3A)') "        Output filename in LETKF = '", trim(filename), "'"
-            write (6, '(3A)') "        Input  filename in SCALE = '", trim(ATMOS_RESTART_IN_BASENAME)//trim(timelabel_anal), "'"
+
+            if (LOG_LEVEL >= 3 .or. myrank_a == 0) then
+              write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
+              write (6, '(3A)') "        Output filename in LETKF = '", trim(filename), "'"
+              write (6, '(3A)') "        Input  filename in SCALE = '", trim(ATMOS_RESTART_IN_BASENAME)//trim(timelabel_anal), "'"
+            endif
+
             stop
-          end if
+          endif
         else
           if (trim(filename) /= trim(ATMOS_RESTART_IN_BASENAME)) then
-            write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
-            write (6, '(3A)') "        Output filename in LETKF = '", trim(filename), "'"
-            write (6, '(3A)') "        Input  filename in SCALE = '", trim(ATMOS_RESTART_IN_BASENAME), "'"
+
+            if (LOG_LEVEL >= 3 .or. myrank_a == 0) then
+                write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
+                write (6, '(3A)') "        Output filename in LETKF = '", trim(filename), "'"
+                write (6, '(3A)') "        Input  filename in SCALE = '", trim(ATMOS_RESTART_IN_BASENAME), "'"
+            endif
+
             stop
           end if
         end if
@@ -1657,6 +1665,8 @@ subroutine mpi_timer(sect_name, level, barrier)
   integer :: i, ierr
   logical :: initialized
 
+  if (LOG_LEVEL < 3 .and. level > 1) return
+
   timer_before_barrier = MPI_WTIME()
   timer_after_barrier = timer_before_barrier
 
@@ -1698,24 +1708,27 @@ subroutine mpi_timer(sect_name, level, barrier)
         sect_prefix_2 = '............'
       end select
 
-      if (i == level .and. initialized .and. trim(sect_name) /= '') then
-        sect_name_tmp = sect_name ! to left-align the text
-        write (6,'(3A,2F14.6,A)') sect_prefix_1, trim(sect_prefix_2), sect_name_tmp, &
-                                  timer_before_barrier - timer_save(i), &
-                                  timer_after_barrier - timer_save(i)
-      else if (timer_after_barrier - timer_save(i) >= timer_neglect) then
-        if (i == level .and. initialized) then
-          sect_name_tmp = ' (wait)'
-        else
-          sect_name_tmp = ' (unknown)'
-        end if
-        if (timer_before_barrier - timer_save(i) >= timer_neglect) then
+      if (myrank == 0) then
+
+        if (i == level .and. initialized .and. trim(sect_name) /= '') then
+          sect_name_tmp = sect_name ! to left-align the text
           write (6,'(3A,2F14.6,A)') sect_prefix_1, trim(sect_prefix_2), sect_name_tmp, &
                                     timer_before_barrier - timer_save(i), &
                                     timer_after_barrier - timer_save(i)
-        else
-          write (6,'(3A,14x,F14.6,A)') sect_prefix_1, trim(sect_prefix_2), sect_name_tmp, &
-                                       timer_after_barrier - timer_save(i)
+        else if (timer_after_barrier - timer_save(i) >= timer_neglect) then
+          if (i == level .and. initialized) then
+            sect_name_tmp = ' (wait)'
+          else
+            sect_name_tmp = ' (unknown)'
+          end if
+          if (timer_before_barrier - timer_save(i) >= timer_neglect) then
+            write (6,'(3A,2F14.6,A)') sect_prefix_1, trim(sect_prefix_2), sect_name_tmp, &
+                                      timer_before_barrier - timer_save(i), &
+                                      timer_after_barrier - timer_save(i)
+          else
+            write (6,'(3A,14x,F14.6,A)') sect_prefix_1, trim(sect_prefix_2), sect_name_tmp, &
+                                         timer_after_barrier - timer_save(i)
+          end if
         end if
       end if
     end if

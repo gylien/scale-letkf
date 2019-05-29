@@ -37,3 +37,4 @@ log*
 /scale/ensmodel/scale-rm_pp_ens
 /scale/ensmodel/scale-rm_init_ens
 /scale/ensmodel/scale-rm_ens
+/scale/common/*__*.f90

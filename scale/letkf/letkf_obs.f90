@@ -157,13 +157,13 @@ SUBROUTINE set_letkf_obs
 !  character(len=timer_name_width) :: timer_str
 
   call mpi_timer('', 2)
-
-  WRITE(6,'(A)') 'Hello from set_letkf_obs'
+ 
+  if (myrank_a == 0) write(6,'(A)') 'Hello from set_letkf_obs'
 
   nobs_intern = obsda%nobs - nobs_extern
-  WRITE(6,'(A,I10)') 'Internally processed observations: ', nobs_intern
-  WRITE(6,'(A,I10)') 'Externally processed observations: ', nobs_extern
-  WRITE(6,'(A,I10)') 'Total                observations: ', obsda%nobs
+  if (myrank_a == 0) write(6,'(A,I10)') 'Internally processed observations: ', nobs_intern
+  if (myrank_a == 0) write(6,'(A,I10)') 'Externally processed observations: ', nobs_extern
+  if (myrank_a == 0) write(6,'(A,I10)') 'Total                observations: ', obsda%nobs
 
 !-------------------------------------------------------------------------------
 ! Read externally processed observations
@@ -824,7 +824,7 @@ SUBROUTINE set_letkf_obs
 !  endif
 ! -- H08
 !#endif
-
+  
   call mpi_timer('set_letkf_obs:bucket_sort_second_scan:', 2, barrier=MPI_COMM_d)
 
   ! ALLREDUCE observation number information from subdomains, and compute total numbers

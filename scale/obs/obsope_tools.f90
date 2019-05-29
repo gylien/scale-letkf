@@ -401,9 +401,10 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   do it = 1, nitmax
     im = myrank_to_mem(it)
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
-
-      write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
-            im, ', subdomain id #', myrank_d
+      if (LOG_LEVEL >= 3) then
+        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is processing member ', &
+              im, ', subdomain id #', myrank_d
+      endif
 
       if (nobs > 0) then
         obsda%qc(1:nobs) = iqc_undef
@@ -432,14 +433,16 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       ! Valid observations: loop over time slots
       ! 
       do islot = SLOT_START, SLOT_END
-        write (6, '(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time window (', slot_lb(islot), ',', slot_ub(islot), '] sec'
+        if (LOG_LEVEL >= 3) then
+          write (6, '(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time window (', slot_lb(islot), ',', slot_ub(islot), '] sec'
+        endif
 
         n1 = bsna(islot-1, myrank_d) - bsna(SLOT_START-1, myrank_d) + 1
         n2 = bsna(islot,   myrank_d) - bsna(SLOT_START-1, myrank_d)
         slot_nobsg = sum(bsn(islot, :))
 
         if (slot_nobsg <= 0) then
-          write (6, '(A)') ' -- no observations found in this time slot... do not need to read model data'
+          if (LOG_LEVEL >= 3) write (6, '(A)') ' -- no observations found in this time slot... do not need to read model data'
           cycle
         end if
 
@@ -713,7 +716,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !          endif !
 
 
- 
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:obsope_step_2   (t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
       end do ! [ islot = SLOT_START, SLOT_END ]
@@ -738,7 +740,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
         call write_obs_da(trim(obsdafile)//obsda_suffix,obsda,0)
 
         write (timer_str, '(A30,I4,A2)') 'obsope_cal:write_obs_da    (t=', it, '):'
-        call mpi_timer(trim(timer_str), 2)
+        call mpi_timer(trim(timer_str), 2) 
       end if
 
       ! Prepare variables that will need to be communicated if obsda_return is given
@@ -816,7 +818,9 @@ SUBROUTINE obsmake_cal(obs)
   do islot = SLOT_START, SLOT_END
     slot_lb = (real(islot-SLOT_BASE,r_size) - 0.5d0) * SLOT_TINTERVAL
     slot_ub = (real(islot-SLOT_BASE,r_size) + 0.5d0) * SLOT_TINTERVAL
-    write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time window (', slot_lb, ',', slot_ub, '] sec'
+    if (LOG_LEVEL >= 3) then
+      write (6,'(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time window (', slot_lb, ',', slot_ub, '] sec'
+    endif
 
     call read_ens_history_iter(1,islot,v3dg,v2dg)
 

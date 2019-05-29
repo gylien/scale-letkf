@@ -213,7 +213,7 @@ SUBROUTINE set_common_scale
 !  REAL(r_size) :: totalwg, wgtmp, latm1, latm2
 !  INTEGER :: i,j
 
-  WRITE(6,'(A)') 'Hello from set_common_scale'
+!  WRITE(6,'(A)') 'Hello from set_common_scale'
 
   !
   ! Set up node and process distribution
@@ -366,7 +366,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
 !  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+!  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
   do iv3d = 1, nv3d
@@ -446,7 +446,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 !  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
 !  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
 
-  write (6,'(A,I6.6,3A,6I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(3), count(3) =', start, count
+!  write (6,'(A,I6.6,3A,6I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(3), count(3) =', start, count
 
   err = nfmpi_open(comm, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)
   if ( err .NE. NF_NOERR ) &
@@ -915,7 +915,7 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
   end if
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+!  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
 !!! restart files do not contain 3D height variable before SCALE v5.1
@@ -981,7 +981,7 @@ SUBROUTINE read_topo(filename,topo)
   end if
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+!  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
   if (LOG_LEVEL >= 1) then
@@ -1035,7 +1035,7 @@ SUBROUTINE read_topo_par(filename,topo,comm)
 !  if (.NOT. PRC_PERIODIC_X) start(2) = start(2) + IHALO
 !  if (.NOT. PRC_PERIODIC_Y) start(3) = start(3) + JHALO
 
-  write (6,'(A,I6.6,3A,4I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(2), count(2) =', start, count
+!  write (6,'(A,I6.6,3A,4I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(2), count(2) =', start, count
 
   err = nfmpi_open(comm, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)
   if ( err .NE. NF_NOERR ) &
@@ -1118,7 +1118,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
   real(RP) :: var2D(nlon,nlat)
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+!  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
 
 !  comm = MPI_COMM_NULL
 !  if ( FILE_AGGREGATE ) then
@@ -1261,7 +1261,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
 !  if (.NOT. PRC_PERIODIC_X) start(1) = start(1) + IHALO
 !  if (.NOT. PRC_PERIODIC_Y) start(2) = start(2) + JHALO
 
-  write (6,'(A,I6.6,3A,8I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(4), count(4) =', start, count
+!  write (6,'(A,I6.6,3A,8I6)') 'MYRANK ',myrank,' is reading a file ',trim(filename)//'.nc', ' >> PnetCDF start(4), count(4) =', start, count
 
 !  call FILEIO_open( fid, trim(filename) )
   err = nfmpi_open(comm, trim(filename)//".nc", NF_NOWRITE, MPI_INFO_NULL, ncid)
@@ -2114,10 +2114,10 @@ subroutine rij_rank(ig, jg, rank)
   use scale_prc, only: &
       PRC_myrank
   use scale_atmos_grid_cartesC, only: &
-      GRID_CX, &
-      GRID_CY, &
-      GRID_CXG, &
-      GRID_CYG, &
+      GRID_CX => ATMOS_GRID_CARTESC_CX, &
+      GRID_CY => ATMOS_GRID_CARTESC_CY, &
+      GRID_CXG => ATMOS_GRID_CARTESC_CXG, &
+      GRID_CYG => ATMOS_GRID_CARTESC_CYG, &
       DX, &
       DY
 #else
@@ -2178,10 +2178,10 @@ subroutine rij_rank_g2l(ig, jg, rank, il, jl)
   use scale_prc, only: &
       PRC_myrank
   use scale_atmos_grid_cartesC, only: &
-      GRID_CX, &
-      GRID_CY, &
-      GRID_CXG, &
-      GRID_CYG, &
+      GRID_CX => ATMOS_GRID_CARTESC_CX, &
+      GRID_CY => ATMOS_GRID_CARTESC_CY, &
+      GRID_CXG => ATMOS_GRID_CARTESC_CXG, &
+      GRID_CYG => ATMOS_GRID_CARTESC_CYG, &
       DX, &
       DY
 #else

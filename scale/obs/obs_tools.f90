@@ -752,6 +752,7 @@ subroutine read_obs_all_mpi(obs)
   implicit none
   type(obs_info), intent(out) :: obs(OBS_IN_NUM)
   integer :: iof, ierr
+  logical :: ex
 
   call mpi_timer('', 2)
 
@@ -790,6 +791,11 @@ subroutine read_obs_all_mpi(obs)
     select case (OBS_IN_FORMAT(iof))
     case (obsfmt_pawr_toshiba)
       if (OBS_USE_JITDT) then
+        inquire(file=trim(OBS_IN_NAME(iof)), exist=ex)
+        if (.not. ex) then
+          write(6,'(2a)')"PAWR file cannot be found!", trim(OBS_IN_NAME(iof))
+          cycle
+        endif
         call read_obs_radar_toshiba(trim(OBS_IN_NAME(iof)), obs(iof))
       end if
     end select
