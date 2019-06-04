@@ -1,73 +1,57 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Settings for cycle.sh
+#  Settings for fcst.sh
 #
 #===============================================================================
 
 STIME='20190130120000'
-ETIME='20190130120030'
-TIME_LIMIT='0:05:00'
+ETIME='20190130120000'
+TIME_LIMIT='0:40:00'
+MEMBERS='mean 1 2'
 CYCLE=
 CYCLE_SKIP=1
 
-ISTEP=
-FSTEP= 
+# Only init
+# pp (STEP=1), init(STEP=2), fcst(STEP=3)
+ISTEP=2
+FSTEP=2 
 
-CONF_MODE="static"
-DACYCLE=1
-DIRECT_TRANSFER=1
+CONF_MODE=
 
 #===============================================================================
 # Forecast settings
 
-FCSTOUT=30
-ADAPTINFL=0      # Adaptive inflation
-                 #  0: OFF
-                 #  1: ON
-ADDINFL=0        # Additive inflation
-                 #  0: OFF
-                 #  1: ON
+FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
+FCSTOUT=600
+
 
 #===============================================================================
 
-MAKEINIT=0       # 0: No
+MAKEINIT=1       # 0: No
                  # 1: Yes
 
 #===============================================================================
 # Diagnostic output settings
 
-                 #      anal              gues              history
-                 #      mean/sprd members mean/sprd members mean members
-OUT_OPT=7        # 1:   o         o       o         o       o    o
-                 # 2:   o         o       o         o       o
-                 # 3:   o         o       o         o
-                 # 4:   o         o       o
-                 # 5:   o         *       o                               * = every $OUT_CYCLE_SKIP cycles and the last cycle
-                 # 6:   o         **      o                               ** = only the last cycle
-                 # 7:   o         **
-
-OUT_CYCLE_SKIP=1
+                 #      fcst
+                 #      history restart
+OUT_OPT=2        # 1:   o       o
+                 # 2:   o
 
                  #      topo
-TOPOOUT_OPT=2    # 1:   o
+TOPOOUT_OPT=1    # 1:   o
                  # 2:   (none)
 
                  #      landuse
-LANDUSEOUT_OPT=2 # 1:   o
+LANDUSEOUT_OPT=1 # 1:   o
                  # 2:   (none)
 
                  #      bdy
                  #      mean members
-BDYOUT_OPT=3     # 1:   o    o
+BDYOUT_OPT=1     # 1:   o    o
                  # 2:   o
                  # 3:   (none)
-
-                 #      obsgues obsanal obsdep
-OBSOUT_OPT=4     # 1:   o       o       o
-                 # 2:   o               o
-                 # 3:                   o
-                 # 4:   (none)
 
                  #      topo landuse bdy perturb        scale
                  #      log  log     log (not finished) log
@@ -80,12 +64,5 @@ LOG_TYPE=2       # 1:   Only save the log file from the head process
                  # 2:   Save all log files
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file
-
-SPRD_OUT=0       # 0: No
-                 # 1: Yes
-RTPS_INFL_OUT=0  # 0: No
-                 # 1: Yes
-NOBS_OUT=0       # 0: No
-                 # 1: Yes
 
 #===============================================================================

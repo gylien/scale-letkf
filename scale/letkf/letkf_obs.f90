@@ -158,12 +158,14 @@ SUBROUTINE set_letkf_obs
 
   call mpi_timer('', 2)
  
-  if (myrank_a == 0) write(6,'(A)') 'Hello from set_letkf_obs'
+  if (myrank_a == 0 .and. LOG_LEVEL >= 3) write(6,'(A)') 'Hello from set_letkf_obs'
 
   nobs_intern = obsda%nobs - nobs_extern
-  if (myrank_a == 0) write(6,'(A,I10)') 'Internally processed observations: ', nobs_intern
-  if (myrank_a == 0) write(6,'(A,I10)') 'Externally processed observations: ', nobs_extern
-  if (myrank_a == 0) write(6,'(A,I10)') 'Total                observations: ', obsda%nobs
+  if (myrank_a == 0 .and. LOG_LEVEL >= 3) then
+    write(6,'(A,I10)') 'Internally processed observations: ', nobs_intern
+    write(6,'(A,I10)') 'Externally processed observations: ', nobs_extern
+    write(6,'(A,I10)') 'Total                observations: ', obsda%nobs
+  endif
 
 !-------------------------------------------------------------------------------
 ! Read externally processed observations
@@ -644,7 +646,7 @@ SUBROUTINE set_letkf_obs
   ! Print departure statistics
   !-------------------------------------------------------------------------------
 
-  if (LOG_LEVEL >= 1) then
+  if (LOG_LEVEL >= 3) then
     write (6, *)
     write (6,'(A,I6,A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN #', myrank_d, '):'
 
@@ -879,7 +881,7 @@ SUBROUTINE set_letkf_obs
   ! Print observation counts for each types
   !-----------------------------------------------------------------------------
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 1 .and. myrank_a == 0) then
     write (nstr, '(I4)') nid_obs
     write (6, *)
     write (6, '(A)') 'OBSERVATION COUNTS BEFORE QC (GLOABL):'
@@ -1167,7 +1169,7 @@ SUBROUTINE set_letkf_obs
   ! Print observation counts
   !-----------------------------------------------------------------------------
 
-  if (LOG_LEVEL >= 1) then
+  if (LOG_LEVEL >= 2) then
     write (6, *)
     write (6, '(A,I6,A)') 'OBSERVATION COUNTS (GLOABL AND IN THIS SUBDOMAIN #', myrank_d, '):'
     write (6, '(A)') '====================================================================='

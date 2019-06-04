@@ -395,7 +395,7 @@ SUBROUTINE set_mem_node_proc(mem)
 
   nprocs_m = sum(PRC_DOMAINS(1:NUM_DOMAIN))
 
-  if (LOG_LEVEL >= 1) then
+  if (LOG_LEVEL >= 2) then
     write(6,'(A,I10)') '[Info] Total number of MPI processes                = ', nprocs
     write(6,'(A,I10)') '[Info] Number of nodes (NNODES)                     = ', nnodes
     write(6,'(A,I10)') '[Info] Number of processes per node (PPN)           = ', PPN
@@ -1163,8 +1163,10 @@ subroutine read_ens_mpi(v3d, v2d)
             write (6, '(3A)') "        Input  filename in LETKF = '", trim(filename), "'"
             stop
           end if
-          call read_restart_direct(v3dg, v2dg)
-        endif
+        endif ! ATMOS_RESTART_OUT_POSTFIX_TIMELABEL
+
+        call read_restart_direct(v3dg, v2dg)
+
       else
 !        write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',trim(filename),'.pe',myrank_d,'.nc'
         if (FILE_AGGREGATE) then
@@ -1253,7 +1255,7 @@ subroutine write_ens_mpi(v3d, v2d, mean3d, mean2d)
   real(r_size), intent(in) :: v3d(nij1,nlev,nens,nv3d)
   real(r_size), intent(in) :: v2d(nij1,nens,nv2d)
   real(RP), intent(out), optional :: mean3d(nlev,nlon,nlat,nv3d)
-  real(RP), intent(out), optional :: mean2d(nlon,nlat,nv3d)
+  real(RP), intent(out), optional :: mean2d(nlon,nlat,nv2d)
 
   real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP) :: v2dg(nlon,nlat,nv2d)
@@ -1551,7 +1553,7 @@ subroutine write_ensmean(filename, v3d, v2d, calced, mean_out, mean3d, mean2d)
   logical, intent(in), optional :: calced
   logical, intent(in), optional :: mean_out
   real(RP), intent(out), optional :: mean3d(nlev,nlon,nlat,nv3d)
-  real(RP), intent(out), optional :: mean2d(nlon,nlat,nv3d)
+  real(RP), intent(out), optional :: mean2d(nlon,nlat,nv2d)
 
   real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP) :: v2dg(nlon,nlat,nv2d)
@@ -1569,7 +1571,7 @@ subroutine write_ensmean(filename, v3d, v2d, calced, mean_out, mean3d, mean2d)
     mean_out_ = mean_out
   end if
 
-  if (.not. calced) then
+  if (.not. calced_) then
     call ensmean_grd(MEMBER, nens, nij1, v3d, v2d)
 
     call mpi_timer('write_ensmean:ensmean_grd:', 2)

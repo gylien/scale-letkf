@@ -106,6 +106,7 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   utmp = ur
   vtmp = vr
   ur = utmp * rotc(1,1,1) - vtmp * rotc(1,1,2)
+  vr = utmp * rotc(1,1,2) + vtmp * rotc(1,1,1)
 
 !  rrtimer = MPI_WTIME()
 !  WRITE(6,'(A,F18.10)') '###### Trans_XtoY_radar:radar_coord:',rrtimer-rrtimer00
@@ -130,7 +131,6 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   !WRITE(6,*)'BCRV',dlon,dlat,az,elev
 
   CALL calc_ref_vr(qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr,az,elev,radar_ref,radar_rv)
-
 
 !  rrtimer = MPI_WTIME()
 !  WRITE(6,'(A,F18.10)') '###### Trans_XtoY_radar:calc_ref_vr:',rrtimer-rrtimer00
@@ -760,8 +760,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   integer, parameter :: n_type = 3
   character(len=1024) :: jitdt_place
-  character(len=9), parameter :: file_type_sfx(n_type) = &
-    (/'.10000000', '.20000000', '_pawr_qcf'/)
+  character(len=3), parameter :: file_type_sfx(n_type) = &
+    (/'.ze', '.vr', '.qc'/)
   logical, parameter :: input_is_dbz = .true.
 
   type(c_pawr_header) :: hd(n_type)
@@ -1027,6 +1027,72 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   return
 end subroutine read_obs_radar_toshiba
+
+subroutine read_obs_radar_JRC(cfile, obs)
+  use netcdf
+  use common_ncio
+  implicit none
+
+  character(*), intent(in) :: cfile
+  type(obs_info), intent(inout) :: obs
+  integer :: ncid, varid
+  integer :: status
+  integer :: xdim, ydim, zdim
+
+  real(r_sngl), allocatable :: vr3d(:,:,:), zh3d(:,:,:)
+  real(r_sngl) :: sf_vr, sf_zh ! scale factor for vr & Zh
+  real(r_sngl) :: radar_lon, radar_lat
+
+  call ncio_open(trim(cfile), NF90_NOWRITE, ncid)
+
+  call ncio_read_dim(ncid, "lon", xdim)
+  call ncio_read_dim(ncid, "lat", ydim)
+  call ncio_read_dim(ncid, "alt", zdim)
+
+  allocate(vr3d(xdim,ydim,zdim), zh3d(xdim,ydim,zdim))
+ 
+  call ncio_check(nf90_inq_varid(ncid, "Vel",  varid))
+  call ncio_check(nf90_get_var(ncid, varid, vr3d(:,:,:), &
+                               start = (/ 1, 1, 1/),    &
+                               count = (/ xdim, ydim, zdim /)))
+
+  status = nf90_get_att(ncid,varid,"scale_factor",sf_vr)
+  if (status /= nf90_noerr) then
+    sf_vr = 1.0
+  endif
+
+  call ncio_check(nf90_inq_varid(ncid, "Zh MTI",  varid))
+  call ncio_check(nf90_get_var(ncid, varid, zh3d(:,:,:), &
+                               start = (/ 1, 1, 1/),    &
+                               count = (/ xdim, ydim, zdim /)))
+
+  status = nf90_get_att(ncid,varid,"scale_factor",sf_zh)
+  if (status /= nf90_noerr) then
+    sf_zh = 1.0
+  endif
+
+  call ncio_read_gattr_r4(ncid, "site_positions_center_latitude", radar_lon)
+  call ncio_read_gattr_r4(ncid, "site_positions_center_longitude", radar_lat)
+
+  call ncio_close(ncid)
+
+  print *,"DEBUG VR"
+  print *,maxval(vr3d),minval(vr3d)
+  print *, radar_lon, radar_lat, sf_vr
+  print *,"DEBUG ZH"
+  print *,maxval(zh3d),minval(zh3d)
+  print *, radar_lon, radar_lat, sf_zh
+
+
+
+  obs%meta(1) = real(radar_lon, kind=r_size)
+  obs%meta(2) = real(radar_lat, kind=r_size)
+  obs%meta(3) = 82.0_r_size
+
+  deallocate(vr3d, zh3d)
+
+  return
+end subroutine read_obs_radar_JRC
 
 !=======================================================================
 end module radar_obs

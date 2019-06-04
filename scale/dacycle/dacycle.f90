@@ -209,7 +209,7 @@ program dacycle
 
       ! restart output before LETKF
       if (DIRECT_TRANSFER) then
-        if (LOG_LEVEL >= 1 .and. TIME_DOATMOS_restart) then
+        if (LOG_LEVEL >= 2 .and. TIME_DOATMOS_restart) then
           write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip writing restart files before LETKF'
         end if
       else
@@ -338,7 +338,7 @@ program dacycle
           end if
           if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
             allocate (mean3d(nlev,nlon,nlat,nv3d))
-            allocate (mean2d(nlon,nlat,nv3d))
+            allocate (mean2d(nlon,nlat,nv2d))
           end if
 
           call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
@@ -437,7 +437,7 @@ program dacycle
       ! restart output after LETKF
       if (DIRECT_TRANSFER .and. (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now)) then
         !!!!!! To do: control restart outputs separately for members, mean, and mdet
-        if (LOG_LEVEL >= 1 .and. TIME_DOATMOS_restart) then
+        if (LOG_LEVEL >= 2 .and. myrank_a == 0 .and. TIME_DOATMOS_restart) then
           write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; writing restart (analysis) files after LETKF'
         end if
         call ADMIN_restart_write

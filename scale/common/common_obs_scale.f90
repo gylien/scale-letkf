@@ -132,6 +132,7 @@ MODULE common_obs_scale
   character(obsformatlenmax), parameter :: obsfmt_prepbufr     = 'PREPBUFR'
   character(obsformatlenmax), parameter :: obsfmt_radar        = 'RADAR'
   character(obsformatlenmax), parameter :: obsfmt_pawr_toshiba = 'PAWR_TOSHIBA'
+  character(obsformatlenmax), parameter :: obsfmt_pawr_jrc     = 'PAWR_JRC'
   character(obsformatlenmax), parameter :: obsfmt_h08          = 'HIMAWARI8'
 !  integer, parameter :: nobsformats = 4
 !  character(obsformatlenmax), parameter :: obsformat(nobsformats) = &

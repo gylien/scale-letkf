@@ -6,8 +6,8 @@
 #===============================================================================
 
 STIME='20190130120000'
-ETIME='20190130120030'
-TIME_LIMIT='0:05:00'
+ETIME='20190130120000'
+TIME_LIMIT='0:40:00'
 CYCLE=
 CYCLE_SKIP=1
 
@@ -37,17 +37,10 @@ MAKEINIT=0       # 0: No
 #===============================================================================
 # Diagnostic output settings
 
-                 #      anal              gues              history
-                 #      mean/sprd members mean/sprd members mean members
-OUT_OPT=7        # 1:   o         o       o         o       o    o
-                 # 2:   o         o       o         o       o
-                 # 3:   o         o       o         o
-                 # 4:   o         o       o
-                 # 5:   o         *       o                               * = every $OUT_CYCLE_SKIP cycles and the last cycle
-                 # 6:   o         **      o                               ** = only the last cycle
-                 # 7:   o         **
-
-OUT_CYCLE_SKIP=1
+                 #      fcst
+                 #      history restart
+OUT_OPT=2        # 1:   o       o
+                 # 2:   o
 
                  #      topo
 TOPOOUT_OPT=2    # 1:   o

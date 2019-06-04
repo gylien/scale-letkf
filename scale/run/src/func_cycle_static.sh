@@ -1050,7 +1050,7 @@ EOF
     if [ "${OBSNAME[$iobs]}" != '' ]; then
       if [ "${OBS_FORMAT[$iobs]}" = 'PAWR_TOSHIBA' ]; then
         if ((DACYCLE == 1)); then
-          OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}<type>', "
+          OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${OBS}/obs.${OBSNAME[$iobs]}<type>', "
         else
           OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}<type>.dat', "
         fi

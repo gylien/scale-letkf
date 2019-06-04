@@ -93,14 +93,14 @@ end subroutine ncio_read_dim
 !-----------------------------------------------------------------------
 ! Read netcdf single-precision global attribute
 !-----------------------------------------------------------------------
-!subroutine ncio_read_gattr_r4(ncid, attrname, attr)
-!  implicit none
-!  integer, intent(in) :: ncid
-!  character(len=*), intent(in)  :: attrname
-!  real(r_sngl), intent(out) :: attr
+subroutine ncio_read_gattr_r4(ncid, attrname, attr)
+  implicit none
+  integer, intent(in) :: ncid
+  character(len=*), intent(in)  :: attrname
+  real(r_sngl), intent(out) :: attr
 
-!  call ncio_check(nf90_get_att(ncid, nf90_global, attrname, attr))
-!end subroutine ncio_read_gattr_r4
+  call ncio_check(nf90_get_att(ncid, nf90_global, attrname, attr))
+end subroutine ncio_read_gattr_r4
 !-----------------------------------------------------------------------
 ! Read netcdf single-precision 1-D variable
 !-----------------------------------------------------------------------

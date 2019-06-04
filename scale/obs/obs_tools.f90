@@ -161,19 +161,23 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   end if
 
   if (DEPARTURE_STAT_ALL_PROCESSES .or. myrank_e == mmean_rank_e) then
-    if (monit_step == 1) then
-      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (IN THIS SUBDOMAIN):'
-    else if (monit_step == 2) then
-      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (IN THIS SUBDOMAIN):'
-    end if
-    call monit_print(nobs, bias, rmse, monit_type)
+    if (LOG_LEVEL >= 3) then
+      if (monit_step == 1) then
+        write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (IN THIS SUBDOMAIN):'
+      else if (monit_step == 2) then
+        write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (IN THIS SUBDOMAIN):'
+      end if
+      call monit_print(nobs, bias, rmse, monit_type)
+    endif
 
-    if (monit_step == 1) then
-      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (GLOBAL):'
-    else if (monit_step == 2) then
-      write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (GLOBAL):'
-    end if
-    call monit_print(nobs_g, bias_g, rmse_g, monit_type)
+    if (myrank_a == 0 .and. LOG_LEVEL >= 1) then
+      if (monit_step == 1) then
+        write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (GLOBAL):'
+      else if (monit_step == 2) then
+        write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (GLOBAL):'
+      end if
+      call monit_print(nobs_g, bias_g, rmse_g, monit_type)
+    endif
 
     call mpi_timer('monit_obs_mpi:monit_print:', 2)
   end if
@@ -677,6 +681,10 @@ subroutine read_obs_all(obs)
     case (obsfmt_pawr_toshiba)
       if (.not. OBS_USE_JITDT) then
         call read_obs_radar_toshiba(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof))
+      end if
+    case (obsfmt_pawr_jrc)
+      if (.not. OBS_USE_JITDT) then
+        call read_obs_radar_jrc(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof))
       end if
     case (obsfmt_h08)
       call get_nobs_H08(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof)%nobs) ! H08

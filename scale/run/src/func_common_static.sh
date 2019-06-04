@@ -92,17 +92,17 @@ if [ "$JOBTYPE" = 'cycle' ] && ((OBS_USE_JITDT != 1)); then
     for iobs in $(seq $OBSNUM); do
       if [ "${OBSNAME[$iobs]}" != '' ]; then
         if [ "${OBS_FORMAT[$iobs]}" = 'PAWR_TOSHIBA' ]; then
-          if [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.10000000.dat ] && \
-             [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.20000000.dat ] && \
-             [ -e ${OBS}/${OBSNAME[$iobs]}_${time}_pawr_qcf.dat ]; then
+          if [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.ze.dat ] && \
+             [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.vr.dat ] && \
+             [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.qcf.dat ]; then
             if ((DACYCLE == 1)); then
-              echo "${OBS}/${OBSNAME[$iobs]}_${time}.10000000.dat|obs.${OBSNAME[$iobs]}.10000000_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
-              echo "${OBS}/${OBSNAME[$iobs]}_${time}.20000000.dat|obs.${OBSNAME[$iobs]}.20000000_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
-              echo "${OBS}/${OBSNAME[$iobs]}_${time}_pawr_qcf.dat|obs.${OBSNAME[$iobs]}_pawr_qcf_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.ze.dat|obs.${OBSNAME[$iobs]}.ze_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.vr.dat|obs.${OBSNAME[$iobs]}.vr_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.qc.dat|obs.${OBSNAME[$iobs]}.qc_${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
             else
-              echo "${OBS}/${OBSNAME[$iobs]}_${time}.10000000.dat|obs.${OBSNAME[$iobs]}_${time}.10000000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
-              echo "${OBS}/${OBSNAME[$iobs]}_${time}.20000000.dat|obs.${OBSNAME[$iobs]}_${time}.20000000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
-              echo "${OBS}/${OBSNAME[$iobs]}_${time}_pawr_qcf.dat|obs.${OBSNAME[$iobs]}_${time}_pawr_qcf.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.ze.dat|obs.${OBSNAME[$iobs]}_${time}.ze.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.vr.dat|obs.${OBSNAME[$iobs]}_${time}.vr.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.qc.dat|obs.${OBSNAME[$iobs]}_${time}.qc.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
             fi
           fi
         else

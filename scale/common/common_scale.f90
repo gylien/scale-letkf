@@ -370,7 +370,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
   do iv3d = 1, nv3d
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
     end if
 
@@ -387,7 +387,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   end do
 
   do iv2d = 1, nv2d
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
     end if
     call ncio_check(nf90_inq_varid(ncid, trim(v2d_name(iv2d)), varid))
@@ -453,7 +453,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
   do iv3d = 1, nv3d
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
     end if
     err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
@@ -469,7 +469,7 @@ SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
   end do
 
   do iv2d = 1, nv2d
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
     end if
     err = nfmpi_inq_varid(ncid, trim(v2d_name(iv2d)), varid)
@@ -518,7 +518,7 @@ subroutine read_restart_direct(v3dg,v2dg)
   integer :: iv3d, iv2d
 
   do iv3d = 1, nv3d
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Read 3D var [direct transfer]: ', trim(v3d_name(iv3d))
     end if
     select case (iv3d)
@@ -551,7 +551,7 @@ subroutine read_restart_direct(v3dg,v2dg)
   end do
 
   do iv2d = 1, nv2d
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Read 2D var [direct transfer]: ', trim(v2d_name(iv2d))
     end if
 !    select case (iv2d)
@@ -686,7 +686,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   call ncio_open(trim(filename) // filesuffix, NF90_WRITE, ncid)
 
   do iv3d = 1, nv3d
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
     end if
 
@@ -769,7 +769,7 @@ SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
   do iv3d = 1, nv3d
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
     end if
     err = nfmpi_inq_varid(ncid, trim(v3d_name(iv3d)), varid)
@@ -927,7 +927,7 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
 !                               start = (/ 1, is, js, 1 /), &
 !                               count = (/ KMAX, IMAX, JMAX, 1 /)))
 
-  if (LOG_LEVEL >= 1) then
+  if (LOG_LEVEL >= 3) then
     write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lon2d_name)
   end if
   call ncio_check(nf90_inq_varid(ncid, trim(lon2d_name), varid))
@@ -935,7 +935,7 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
                                start = (/ is, js, 1 /), &
                                count = (/ IMAX, JMAX, 1 /)))
 
-  if (LOG_LEVEL >= 1) then
+  if (LOG_LEVEL >= 3) then
     write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lat2d_name)
   end if
   call ncio_check(nf90_inq_varid(ncid, trim(lat2d_name), varid))
@@ -984,7 +984,7 @@ SUBROUTINE read_topo(filename,topo)
 !  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
-  if (LOG_LEVEL >= 1) then
+  if (LOG_LEVEL >= 3) then
     write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(topo2d_name)
   end if
   call ncio_check(nf90_inq_varid(ncid, trim(topo2d_name), varid))
@@ -1041,7 +1041,7 @@ SUBROUTINE read_topo_par(filename,topo,comm)
   if ( err .NE. NF_NOERR ) &
      write (6,'(A)') 'failed nfmpi_open '//trim(filename)//'.nc '//nfmpi_strerror(err)
 
-  if (LOG_LEVEL >= 1) then
+  if (LOG_LEVEL >= 3) then
     write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(topo2d_name)
   end if
   err = nfmpi_inq_varid(ncid, trim(topo2d_name), varid)
@@ -1081,7 +1081,7 @@ subroutine read_topo_direct(topo)
 
   real(r_size), intent(out) :: topo(nlon,nlat)
 
-  if (LOG_LEVEL >= 1) then
+  if (LOG_LEVEL >= 3) then
     write(6,'(1x,A,A15)') '*** Read 2D var [direct transfer]: ', trim(topo2d_name)
   end if
   topo(:,:) = TOPO_Zsfc(IS:IE,JS:JE)
@@ -1131,7 +1131,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
   ! 3D variables
   !-------------
   do iv3d = 1, nv3dd
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Read 3D hist var: ', trim(v3dd_name(iv3d))
     end if
     if (v3dd_hastime(iv3d)) then
@@ -1150,7 +1150,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
   ! 2D variables
   !-------------
   do iv2d = 1, nv2dd
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Read 2D hist var: ', trim(v2dd_name(iv2d))
     end if
     if (v2dd_hastime(iv2d)) then
@@ -1271,7 +1271,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   ! 3D variables
   !-------------
   do iv3d = 1, nv3dd
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Read 3D hist var: ', trim(v3dd_name(iv3d))
     end if
 
@@ -1307,7 +1307,7 @@ subroutine read_history_par(filename,step,v3dg,v2dg,comm)
   ! 2D variables
   !-------------
   do iv2d = 1, nv2dd
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Read 2D hist var: ', trim(v2dd_name(iv2d))
     end if
 
@@ -1451,7 +1451,7 @@ subroutine read_history_direct(v3dg, v2dg)
   ! 3D variables
   !-------------
   do iv3d = 1, nv3dd
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Read 3D hist var [direct transfer]: ', trim(v3dd_name(iv3d))
     end if
     select case (iv3d)
@@ -1482,7 +1482,7 @@ subroutine read_history_direct(v3dg, v2dg)
   ! 2D variables
   !-------------
   do iv2d = 1, nv2dd
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Read 2D hist var [direct transfer]: ', trim(v2dd_name(iv2d))
     end if
     select case (iv2d)
@@ -1711,6 +1711,11 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 
   call scale_calc_z(topo, height)
   v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = height
+  v3dgh_RP(KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = topo
+  v3dgh_RP(1,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = 0.0_RP
+
+
+
 
   ! Surface variables: use the 1st level as the surface (although it is not)
   !---------------------------------------------------------
@@ -1726,34 +1731,21 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 
 !  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) = [[No way]]
 
-#ifdef H08
-  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_skint) = v3dg(1,:,:,iv3d_t)
+!#ifdef H08
+!  v2dgh_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_skint) = v3dg(1,:,:,iv3d_t)
+!
+!  ! Assume the point where terrain height is less than 10 m is the ocean. T.Honda (02/09/2016)
+!  !---------------------------------------------------------
+!
+!!$OMP PARALLEL DO PRIVATE(j,i)
+!  do j = 1, nlat
+!    do i = 1, nlon
+!      v2dgh_RP(i+IHALO,j+JHALO,iv2dd_lsmask) = min(max(topo(i,j) - 10.0d0, 0.0d0), 1.0d0)
+!    enddo
+!  enddo
+!!$OMP END PARALLEL DO
+!#endif
 
-  ! Assume the point where terrain height is less than 10 m is the ocean. T.Honda (02/09/2016)
-  !---------------------------------------------------------
-
-!$OMP PARALLEL DO PRIVATE(j,i)
-  do j = 1, nlat
-    do i = 1, nlon
-      v2dgh_RP(i+IHALO,j+JHALO,iv2dd_lsmask) = min(max(topo(i,j) - 10.0d0, 0.0d0), 1.0d0)
-    enddo
-  enddo
-!$OMP END PARALLEL DO
-#endif
-
-  ! Pad the upper and lower halo areas
-  !---------------------------------------------------------
-
-!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
-  do iv3d = 1, nv3dd
-    do j  = JS, JE
-      do i  = IS, IE
-        v3dgh_RP(   1:KS-1,i,j,iv3d) = v3dgh_RP(KS,i,j,iv3d)
-        v3dgh_RP(KE+1:KA,  i,j,iv3d) = v3dgh_RP(KE,i,j,iv3d)
-      end do
-    end do
-  end do
-!$OMP END PARALLEL DO
 
   ! Communicate the lateral halo areas
   !---------------------------------------------------------
@@ -1771,6 +1763,21 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   do iv2d = 1, nv2dd
     call COMM_wait ( v2dgh_RP(:,:,iv2d), iv2d )
   end do
+
+
+  ! Pad the upper and lower halo areas
+  !---------------------------------------------------------
+
+!$OMP PARALLEL DO PRIVATE(i,j,iv3d) SCHEDULE(STATIC) COLLAPSE(2)
+  do iv3d = 1, nv3dd
+    do j  = JS, JE
+      do i  = IS, IE
+        v3dgh_RP(   1:KS-1,i,j,iv3d) = v3dgh_RP(KS,i,j,iv3d)
+        v3dgh_RP(KE+1:KA,  i,j,iv3d) = v3dgh_RP(KE,i,j,iv3d)
+      end do
+    end do
+  end do
+!$OMP END PARALLEL DO
 
   v3dgh = real(v3dgh_RP, kind=r_size)
   v2dgh = real(v2dgh_RP, kind=r_size)
@@ -2250,7 +2257,7 @@ subroutine timelabel_update(lcycle)
   else
     timelabel_obs = ''
   end if
-  if (LOG_LEVEL >= 1) then
+  if (LOG_LEVEL >= 3) then
     write (6, '(2A)') 'Timelabel for observation files: ', timelabel_obs
   end if
 
@@ -2260,7 +2267,7 @@ subroutine timelabel_update(lcycle)
   else
     timelabel_anal = ''
   end if
-  if (LOG_LEVEL >= 1) then
+  if (LOG_LEVEL >= 3) then
     write (6, '(2A)') 'Timelabel for guess/analysis files: ', timelabel_anal
   end if
 
@@ -2283,7 +2290,7 @@ subroutine timelabel_update(lcycle)
   else
     timelabel_hist = ''
   end if
-  if (LOG_LEVEL >= 1) then
+  if (LOG_LEVEL >= 3) then
     write (6, '(2A)') 'Timelabel for history files: ', timelabel_hist
   end if
 

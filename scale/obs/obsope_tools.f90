@@ -446,8 +446,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
           cycle
         end if
 
-        write (6, '(A,I10)') ' -- # obs in the slot = ', slot_nobsg
-        write (6, '(A,I6,A,I6,A,I10)') ' -- # obs in the slot and processed by rank ', myrank, ' (subdomain #', myrank_d, ') = ', bsn(islot, myrank_d)
+        if (LOG_LEVEL >= 3) write (6, '(A,I10)') ' -- # obs in the slot = ', slot_nobsg
+        if (LOG_LEVEL >= 3) write (6, '(A,I6,A,I6,A,I10)') ' -- # obs in the slot and processed by rank ', myrank, ' (subdomain #', myrank_d, ') = ', bsn(islot, myrank_d)
 
         call mpi_timer('', 2)
 
