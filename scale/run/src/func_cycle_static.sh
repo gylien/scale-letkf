@@ -1048,13 +1048,21 @@ EOF
   OBS_IN_FORMAT_LIST=
   for iobs in $(seq $OBSNUM); do
     if [ "${OBSNAME[$iobs]}" != '' ]; then
-      if [ "${OBS_FORMAT[$iobs]}" = 'PAWR_TOSHIBA' ]; then
-        if ((DACYCLE == 1)); then
-          OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${OBS}/obs.${OBSNAME[$iobs]}<type>', "
-        else
-          OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}<type>.dat', "
+      if [ "${OBS_FORMAT[$iobs]}" = 'PAWR_TOSHIBA' ] || \
+         [ "${OBS_FORMAT[$iobs]}" = 'PAWR_JRC' ]; then
+
+        if [ "${OBS_FORMAT[$iobs]}" = 'PAWR_TOSHIBA' ]; then
+          TYPE="<type>"
+        elif [ "${OBS_FORMAT[$iobs]}" = 'PAWR_JRC' ]; then
+          TYPE=""
         fi
-      else
+
+        if ((DACYCLE == 1)); then
+          OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${OBS}/obs.${OBSNAME[$iobs]}${TYPE}', "
+        else
+          OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}_${atime}${TYPE}.dat', "
+        fi
+      else # Other type obs
         if ((DACYCLE == 1)); then
           OBS_IN_NAME_LIST="${OBS_IN_NAME_LIST}'${TMPROOT_OBS}/obs.${OBSNAME[$iobs]}', "
         else

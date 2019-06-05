@@ -170,6 +170,7 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
 !  WRITE(6,'(A,F18.10)') '###### Trans_XtoY_radar:conversion:',rrtimer-rrtimer00
 !  rrtimer00=rrtimer
 
+print *,"DEBUG Y_radar",radar_ref,radar_rv,qc
 
   RETURN
 END SUBROUTINE Trans_XtoY_radar
@@ -1028,7 +1029,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   return
 end subroutine read_obs_radar_toshiba
 
-subroutine read_obs_radar_JRC(cfile, obs)
+subroutine read_obs_radar_jrc(cfile, obs)
   use netcdf
   use common_ncio
   implicit none
@@ -1038,10 +1039,20 @@ subroutine read_obs_radar_JRC(cfile, obs)
   integer :: ncid, varid
   integer :: status
   integer :: xdim, ydim, zdim
+  integer :: i, j, k
+  integer :: n, nobs_vr, nobs_zh
 
   real(r_sngl), allocatable :: vr3d(:,:,:), zh3d(:,:,:)
+  real(r_sngl), allocatable :: lon1d(:), lat1d(:), z1d(:)
   real(r_sngl) :: sf_vr, sf_zh ! scale factor for vr & Zh
-  real(r_sngl) :: radar_lon, radar_lat
+  real(r_sngl) :: fill_vr, fill_zh ! fill values for vr & Zh
+  real(r_size) :: radar_lon, radar_lat
+
+  real(r_sngl) :: max_obs_zh, min_obs_zh
+  real(r_sngl) :: max_obs_vr, min_obs_vr
+
+  call mpi_timer('', 3)
+
 
   call ncio_open(trim(cfile), NF90_NOWRITE, ncid)
 
@@ -1050,7 +1061,26 @@ subroutine read_obs_radar_JRC(cfile, obs)
   call ncio_read_dim(ncid, "alt", zdim)
 
   allocate(vr3d(xdim,ydim,zdim), zh3d(xdim,ydim,zdim))
- 
+  allocate(lon1d(xdim), lat1d(ydim), z1d(zdim)) 
+
+  ! get lon/lat/height information
+  call ncio_check(nf90_inq_varid(ncid, "lon",  varid))
+  call ncio_check(nf90_get_var(ncid, varid, lon1d(:), &
+                               start = (/ 1/),    &
+                               count = (/ xdim/)))
+
+  call ncio_check(nf90_inq_varid(ncid, "lat",  varid))
+  call ncio_check(nf90_get_var(ncid, varid, lat1d(:), &
+                               start = (/ 1/),    &
+                               count = (/ ydim/)))
+
+  call ncio_check(nf90_inq_varid(ncid, "alt",  varid))
+  call ncio_check(nf90_get_var(ncid, varid, z1d(:), &
+                               start = (/ 1/),    &
+                               count = (/ zdim/)))
+
+
+
   call ncio_check(nf90_inq_varid(ncid, "Vel",  varid))
   call ncio_check(nf90_get_var(ncid, varid, vr3d(:,:,:), &
                                start = (/ 1, 1, 1/),    &
@@ -1059,6 +1089,10 @@ subroutine read_obs_radar_JRC(cfile, obs)
   status = nf90_get_att(ncid,varid,"scale_factor",sf_vr)
   if (status /= nf90_noerr) then
     sf_vr = 1.0
+  endif
+  status = nf90_get_att(ncid,varid,"_FillValue",fill_vr)
+  if (status /= nf90_noerr) then
+    fill_vr = -32768.0
   endif
 
   call ncio_check(nf90_inq_varid(ncid, "Zh MTI",  varid))
@@ -1070,29 +1104,97 @@ subroutine read_obs_radar_JRC(cfile, obs)
   if (status /= nf90_noerr) then
     sf_zh = 1.0
   endif
+  status = nf90_get_att(ncid,varid,"_FillValue",fill_zh)
+  if (status /= nf90_noerr) then
+    fill_zh = -32768.0
+  endif
 
-  call ncio_read_gattr_r4(ncid, "site_positions_center_latitude", radar_lon)
-  call ncio_read_gattr_r4(ncid, "site_positions_center_longitude", radar_lat)
+
+  call ncio_read_gattr_r8(ncid, "site_positions_center_latitude",  radar_lon)
+  call ncio_read_gattr_r8(ncid, "site_positions_center_longitude", radar_lat)
 
   call ncio_close(ncid)
 
-  print *,"DEBUG VR"
-  print *,maxval(vr3d),minval(vr3d)
-  print *, radar_lon, radar_lat, sf_vr
-  print *,"DEBUG ZH"
-  print *,maxval(zh3d),minval(zh3d)
-  print *, radar_lon, radar_lat, sf_zh
 
-
+  obs%nobs = 0
 
   obs%meta(1) = real(radar_lon, kind=r_size)
   obs%meta(2) = real(radar_lat, kind=r_size)
   obs%meta(3) = 82.0_r_size
 
+  ! count number of obs 
+  do k = 1, zdim
+    do j = 1, ydim
+      do i = 1, xdim
+        if (zh3d(i,j,k) /= fill_zh .and. vr3d(i,j,k) /= fill_vr)then
+          obs%nobs = obs%nobs + 2
+        endif
+      enddo ! i
+    enddo ! j
+  enddo ! k
+
+  call obs_info_allocate(obs, extended=.true.)
+
+  ! substitute obs info
+  n = 0
+  nobs_vr = 0
+  nobs_zh = 0
+  min_obs_zh = huge(1.0)
+  max_obs_zh = -huge(1.0)
+  min_obs_vr = huge(1.0)
+  max_obs_vr = -huge(1.0)
+
+  do k = 1, zdim
+    do j = 1, ydim
+      do i = 1, xdim
+        if (zh3d(i,j,k) /= fill_zh .and. vr3d(i,j,k) /= fill_vr)then
+          ! zh
+          n = n + 1
+          obs%elm(n) = id_radar_ref_obs
+          obs%lon(n) = real(lon1d(i), kind=r_size)
+          obs%lat(n) = real(lat1d(j), kind=r_size)
+          obs%lev(n) = real(z1d(k), kind=r_size)
+          obs%dat(n) = real(zh3d(i,j,k) * sf_zh, kind=r_size)
+          obs%err(n) = OBSERR_RADAR_REF
+          obs%typ(n) = 22
+          obs%dif(n) = 0.0_r_size
+          nobs_zh = nobs_zh + 1
+
+          if (zh3d(i,j,k) > max_obs_zh) max_obs_zh = zh3d(i,j,k)
+          if (zh3d(i,j,k) < min_obs_zh) min_obs_zh = zh3d(i,j,k)
+
+          ! vr
+          n = n + 1
+          obs%elm(n) = id_radar_vr_obs
+          obs%lon(n) = real(lon1d(i), kind=r_size)
+          obs%lat(n) = real(lat1d(j), kind=r_size)
+          obs%lev(n) = real(z1d(k), kind=r_size)
+          obs%dat(n) = real(vr3d(i,j,k) * sf_vr, kind=r_size)
+          obs%err(n) = OBSERR_RADAR_VR
+          obs%typ(n) = 22
+          obs%dif(n) = 0.0_r_size
+          nobs_vr = nobs_vr + 1
+
+          if (vr3d(i,j,k) > max_obs_vr) max_obs_vr = vr3d(i,j,k)
+          if (vr3d(i,j,k) < min_obs_vr) min_obs_vr = vr3d(i,j,k)
+        endif
+      enddo ! i
+    enddo ! j
+  enddo ! k
+
+  write (6, *) "Reflectivity obs. range = ", min_obs_zh * sf_zh, &
+               " to ", max_obs_zh * sf_zh
+  write (6, *) "Radial vel. obs. range  = ", min_obs_vr * sf_vr, &
+               " to ", max_obs_vr * sf_vr
+  write (6, *) "zh: ", nobs_zh, ", vr: ", nobs_vr
+
   deallocate(vr3d, zh3d)
+  deallocate(lon1d, lat1d, z1d)
+
+  call mpi_timer('read_obs_radar_jrc:read_obs_radar_jrc:', 3)
 
   return
-end subroutine read_obs_radar_JRC
+end subroutine read_obs_radar_jrc
 
 !=======================================================================
 end module radar_obs

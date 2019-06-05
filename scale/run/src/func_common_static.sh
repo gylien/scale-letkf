@@ -105,6 +105,14 @@ if [ "$JOBTYPE" = 'cycle' ] && ((OBS_USE_JITDT != 1)); then
               echo "${OBS}/${OBSNAME[$iobs]}_${time}.qc.dat|obs.${OBSNAME[$iobs]}_${time}.qc.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
             fi
           fi
+        elif [ "${OBS_FORMAT[$iobs]}" = 'PAWR_JRC' ]; then
+          if [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
+            if ((DACYCLE == 1)); then
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}.${time:0:8}-${time:8:6}.000.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+            else
+              echo "${OBS}/${OBSNAME[$iobs]}_${time}.dat|obs.${OBSNAME[$iobs]}_${time}.dat" >> ${STAGING_DIR}/${STGINLIST_OBS}
+            fi
+          fi
         else
           if [ -e ${OBS}/${OBSNAME[$iobs]}_${time}.dat ]; then
             if ((DACYCLE == 1)); then

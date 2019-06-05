@@ -348,7 +348,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
                           v3dgh,v2dgh,ohx(n),oqc(n),stggrd=1)
         end if
       !=========================================================================
-      case (obsfmt_radar, obsfmt_pawr_toshiba)
+      case (obsfmt_radar, obsfmt_pawr_toshiba, obsfmt_pawr_jrc)
       !-------------------------------------------------------------------------
         if (DEPARTURE_STAT_RADAR) then
           call phys2ijkz(v3dgh(:,:,:,iv3dd_hgt),ril,rjl,obs(iset)%lev(iidx),rkz,oqc(n))
@@ -659,7 +659,7 @@ subroutine read_obs_all(obs)
   logical :: ex
 
   do iof = 1, OBS_IN_NUM
-    if (OBS_IN_FORMAT(iof) /= obsfmt_pawr_toshiba) then
+    if (OBS_IN_FORMAT(iof) /= obsfmt_pawr_toshiba .and. OBS_IN_FORMAT(iof) /= obsfmt_pawr_jrc) then
       inquire (file=trim(OBS_IN_NAME(iof))//trim(timelabel_obs), exist=ex)
       if (.not. ex) then
         write(6,*) '[Warning] FILE ',trim(OBS_IN_NAME(iof))//trim(timelabel_obs),' NOT FOUND'
@@ -773,7 +773,8 @@ subroutine read_obs_all_mpi(obs)
   call mpi_timer('', 2, barrier=MPI_COMM_a)
 
   do iof = 1, OBS_IN_NUM
-    if (OBS_IN_FORMAT(iof) == obsfmt_pawr_toshiba .and. OBS_USE_JITDT) then
+    if ((OBS_IN_FORMAT(iof) == obsfmt_pawr_toshiba .or. OBS_IN_FORMAT(iof) == obsfmt_pawr_jrc)&
+        .and. OBS_USE_JITDT) then
       cycle
     end if
 
@@ -805,6 +806,15 @@ subroutine read_obs_all_mpi(obs)
           cycle
         endif
         call read_obs_radar_toshiba(trim(OBS_IN_NAME(iof)), obs(iof))
+      end if
+    case (obsfmt_pawr_jrc)
+      if (OBS_USE_JITDT) then
+        inquire(file=trim(OBS_IN_NAME(iof)), exist=ex)
+        if (.not. ex) then
+          write(6,'(2a)')"PAWR file cannot be found!", trim(OBS_IN_NAME(iof))
+          cycle
+        endif
+        call read_obs_radar_jrc(trim(OBS_IN_NAME(iof)), obs(iof))
       end if
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]

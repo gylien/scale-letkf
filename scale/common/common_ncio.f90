@@ -102,6 +102,17 @@ subroutine ncio_read_gattr_r4(ncid, attrname, attr)
   call ncio_check(nf90_get_att(ncid, nf90_global, attrname, attr))
 end subroutine ncio_read_gattr_r4
 !-----------------------------------------------------------------------
+! Read netcdf double-precision global attribute
+!-----------------------------------------------------------------------
+subroutine ncio_read_gattr_r8(ncid, attrname, attr)
+  implicit none
+  integer, intent(in) :: ncid
+  character(len=*), intent(in)  :: attrname
+  real(r_dble), intent(out) :: attr
+
+  call ncio_check(nf90_get_att(ncid, nf90_global, attrname, attr))
+end subroutine ncio_read_gattr_r8
+!-----------------------------------------------------------------------
 ! Read netcdf single-precision 1-D variable
 !-----------------------------------------------------------------------
 subroutine ncio_read_1d_r4(ncid, varname, dim1, t, var)
