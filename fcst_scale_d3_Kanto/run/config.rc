@@ -1,0 +1,362 @@
+#!/bin/bash
+#===============================================================================
+#
+#  Machine-independent source file
+#
+#===============================================================================
+# Filename format
+
+PROCESS_FMT='%06d'
+MEMBER_FMT='%04d'
+DOMAIN_FMT='%02d'
+
+PROCESS_FMT_0="$(printf $PROCESS_FMT 0)"
+SCALE_SFX=".pe${PROCESS_FMT}.nc"
+SCALE_SFX_0=".pe${PROCESS_FMT_0}.nc"
+SCALE_SFX_NONC=".pe${PROCESS_FMT}"
+SCALE_SFX_NONC_0=".pe${PROCESS_FMT_0}"
+DOMAIN_FMT_0="$(printf $DOMAIN_FMT 0)"
+
+#===============================================================================
+# Preset
+
+#new variables:
+# NODELIST_TYPE: 'machinefile', '(0)'
+# MPI_TYPE: 'K', 'sgimpt', 'openmpi'
+
+if [ "$PRESET" = 'K' ]; then
+  TMP='.'
+  DISK_MODE=2
+  ONLINE_STGOUT=0
+  NODELIST_TYPE='(0)'
+  MPI_TYPE='K'
+elif [ "$PRESET" = 'K_rankdir' ]; then
+  TMP='..'
+  TMPL='.'
+  DISK_ALL_RANK_LOCAL=1
+  DISK_MODE=3
+  DISK_MODE_CONSTDB=${DISK_MODE_CONSTDB:-2}
+  DISK_MODE_BDYDATA=${DISK_MODE_BDYDATA:-2}
+#  DISK_MODE_OBS=${DISK_MODE_OBS:-2}
+  ONLINE_STGOUT=0
+  NODELIST_TYPE='(0)'
+  MPI_TYPE='K'
+elif [ "$PRESET" = 'K_micro' ]; then
+  DISK_MODE=2
+  NODELIST_TYPE='(0)'
+  MPI_TYPE='K'
+#elif [ "$PRESET" = 'K_interact' ]; then
+#  ...
+elif [ "$PRESET" = 'OFP' ]; then  
+##  DISK_MODE=1
+  DISK_MODE=2
+  NODELIST_TYPE='machinefile'
+  MPI_TYPE='impi'
+elif [ "$PRESET" = 'Linux' ]; then
+  NODELIST_TYPE='machinefile'
+elif [ "$PRESET" = 'Linux_torque' ]; then
+  NODELIST_TYPE='machinefile'
+else
+  echo "[Error] Preset '$PRESET' not found" 1>&2
+  exit 1
+fi
+
+#===============================================================================
+# Default values
+
+# RUN_LEVEL:
+#   0: Run everything (default)
+#   1: Run everything but skipping detecting errors
+#   2: Staging list files are ready; skip generating them (not implemented yet...)
+#   3: Staging-in has been done; skip staging
+#   4: Staging-in/out is done outside this script; skiping staging
+
+RUN_LEVEL=${RUN_LEVEL:-0}
+
+#-------------------------------------------------------------------------------
+
+TMPSL="${TMPSL:-$TMPS}"
+
+#-------------------------------------------------------------------------------
+
+if [ -z "$SCALEDIR" ] && [ -n "$MODELDIR" ]; then # for backward compatibility
+  SCALEDIR="${MODELDIR}/.."                       #
+fi                                                #
+
+DOMNUM="${DOMNUM:-1}"
+
+INDIR[1]="${INDIR[1]:-$INDIR}"
+OUTDIR[1]="${OUTDIR[1]:-$OUTDIR}"
+
+DATA_TOPO[1]="${DATA_TOPO[1]:-$DATA_TOPO}"
+DATA_LANDUSE[1]="${DATA_LANDUSE[1]:-$DATA_LANDUSE}"
+DATA_BDY_SCALE_PREP[1]="${DATA_BDY_SCALE_PREP[1]:-$DATA_BDY_SCALE_PREP}"
+DATA_ADDINFL[1]="${DATA_ADDINFL[1]:-$DATA_ADDINFL}"
+
+OBS[1]="${OBS[1]:-$OBS}"
+
+for d in $(seq $DOMNUM); do
+  INDIR[$d]="${INDIR[$d]:-${OUTDIR[$d]}}"
+  DATA_TOPO[$d]="${DATA_TOPO[$d]:-${INDIR[$d]}}"
+  DATA_LANDUSE[$d]="${DATA_LANDUSE[$d]:-${INDIR[$d]}}"
+  DATA_BDY_SCALE_PREP[$d]="${DATA_BDY_SCALE_PREP[$d]:-${INDIR[$d]}}"
+  DATA_ADDINFL[$d]="${DATA_ADDINFL[$d]:-${INDIR[$d]}}"
+  OBS[$d]="${OBS[$d]:-${OBS[1]}}"
+done
+
+INDIR="${INDIR[1]}"                             # for backward compatibility
+DATA_TOPO="${DATA_TOPO[1]}"                     #
+DATA_LANDUSE="${DATA_LANDUSE[1]}"               #
+DATA_BDY_SCALE_PREP="${DATA_BDY_SCALE_PREP[1]}" #
+DATA_ADDINFL="${DATA_ADDINFL[1]}"               #
+OBS="${OBS[1]}"                                 #
+
+DET_RUN="${DET_RUN:-0}"
+
+BDY_SINGLE_FILE="${BDY_SINGLE_FILE:-0}"
+if ((BDY_SINGLE_FILE == 1 && BDY_ROTATING != 1)); then
+  echo "[Warning] When \$BDY_SINGLE_FILE = 1, \$BDY_ROTATING needs to be enabled: \$BDY_ROTATING reset to 1" 1>&2
+  BDY_ROTATING=1
+fi
+
+BDY_SCALE_DIR="${BDY_SCALE_DIR:-hist}"
+BDY_MEAN="${BDY_MEAN:-mean}"
+
+BDYINT=${BDYINT:-$LCYCLE}
+BDYCYCLE_INT=${BDYCYCLE_INT:-$BDYINT}
+
+PNETCDF=${PNETCDF:-0}
+PNETCDF_BDY_SCALE=${PNETCDF_BDY_SCALE:-$PNETCDF}
+
+#-------------------------------------------------------------------------------
+
+ENABLE_PARAM_USER=${ENABLE_PARAM_USER:-0}
+
+OCEAN_INPUT=${OCEAN_INPUT:-0}
+OCEAN_FORMAT=${OCEAN_FORMAT:-99}
+LAND_INPUT=${LAND_INPUT:-0}
+LAND_FORMAT=${LAND_FORMAT:-99}
+
+#-------------------------------------------------------------------------------
+
+SCALE_NP[1]="${SCALE_NP[1]:-$SCALE_NP}"
+for d in $(seq $DOMNUM); do
+  SCALE_NP_S[$d]=$SCALE_NP_TOT
+  SCALE_NP_TOT=$((${SCALE_NP_TOT}+${SCALE_NP[$d]}))
+done
+SCALE_NP="${SCALE_NP[1]}"  # for backward compatibility
+
+#-------------------------------------------------------------------------------
+
+ADAPTINFL=${ADAPTINFL:-0}
+SPRD_OUT=${SPRD_OUT:-1}
+RTPS_INFL_OUT=${RTPS_INFL_OUT:-0}
+NOBS_OUT=${NOBS_OUT:-0}
+
+#-------------------------------------------------------------------------------
+
+DISK_ALL_RANK_LOCAL=${DISK_ALL_RANK_LOCAL:-0}
+
+if ((DISK_ALL_RANK_LOCAL == 1)); then
+  NNODES_APPAR=$((NNODES*PPN))
+  PPN_APPAR=1
+else
+  NNODES_APPAR=$NNODES
+  PPN_APPAR=$PPN
+fi
+
+CLEAR_TMP=${CLEAR_TMP:-1}
+
+#===============================================================================
+# Dependent variables
+
+OBSOPE_RUN=0
+for iobs in $(seq $OBSNUM); do
+  if [ -n "${OBSOPE_SEPARATE[$iobs]}" ] && ((${OBSOPE_SEPARATE[$iobs]} == 1)); then
+    OBSOPE_RUN=1
+    break
+  fi
+done
+
+#-------------------------------------------------------------------------------
+
+USE_INIT_FROM_BDY=0
+if (((OCEAN_INPUT == 1 && OCEAN_FORMAT == 99) || \
+     (LAND_INPUT == 1 && LAND_FORMAT == 99))); then
+  USE_INIT_FROM_BDY=1
+fi
+
+#-------------------------------------------------------------------------------
+
+if ((DISK_MODE <= 2)); then
+  PROC_OPT='one'
+else
+  PROC_OPT='alln'
+fi
+
+#-------------------------------------------------------------------------------
+
+if ((PNETCDF == 1)); then
+  CONNECTOR='.'
+  CONNECTOR_TOPO=''
+  CONNECTOR_LANDUSE=''
+else
+  CONNECTOR='/'
+  CONNECTOR_TOPO='topo/'
+  CONNECTOR_LANDUSE='landuse/'
+fi
+if ((PNETCDF_BDY_SCALE == 1)); then
+  CONNECTOR_BDY='.'
+else
+  CONNECTOR_BDY='/'
+fi
+
+#===============================================================================
+# Error detection
+
+if ((IO_ARB == 1)); then
+  if ((DISK_MODE == 3)); then
+    echo "[Error] When \$IO_ARB = 1, local disks cannot be used." 1>&2
+    exit 1
+  fi
+  if ((OBSOPE_RUN != 0)); then
+    echo "[Error] When \$IO_ARB = 1, a separate observation operator (obsope) is not allowed." 1>&2
+    exit 1
+  fi
+  if ((BDY_FORMAT != 0)); then
+    echo "[Error] When \$IO_ARB = 1, boundary files need to be prepared (\$BDY_FORMAT = 0)." 1>&2
+    exit 1
+  fi
+fi
+
+#===============================================================================
+# Definition of sub-directories
+
+SCRP_DIR="$DIR/run"              # Job script directory
+COMMON_DIR="$DIR/common"         # Common program directory
+LETKF_DIR="$DIR/letkf"           # LETKF program directory
+OBSUTIL_DIR="$DIR/obs"           # Observation program directory
+VERIFY_DIR="$DIR/verify"         # Verification program directory
+UTIL_DIR="$DIR/util"             # Other utility program directory
+ENSMODEL_DIR="$DIR/ensmodel"
+
+#-------------------------------------------------------------------------------
+
+DISK_MODE=${DISK_MODE:-2}
+DISK_MODE_CONSTDB=${DISK_MODE_CONSTDB:-$DISK_MODE}
+DISK_MODE_BDYDATA=${DISK_MODE_BDYDATA:-$DISK_MODE}
+DISK_MODE_OBS=${DISK_MODE_OBS:-$DISK_MODE}
+
+#-------------------------------------------------------------------------------
+
+USE_TMP_LINK=0
+USE_TMPL=0
+if ((DISK_MODE == 1)); then
+  TMPROOT="$TMP"
+  USE_TMP_LINK=1
+elif ((DISK_MODE == 2)); then
+  TMPROOT="$TMP"
+elif ((DISK_MODE == 3)); then
+  TMPROOT="$TMPL"
+  USE_TMPL=1
+fi
+if ((DISK_MODE_CONSTDB == 1)); then
+  TMPROOT_CONSTDB="$TMP"
+  USE_TMP_LINK=1
+elif ((DISK_MODE_CONSTDB == 2)); then
+  TMPROOT_CONSTDB="$TMP"
+elif ((DISK_MODE_CONSTDB == 3)); then
+  TMPROOT_CONSTDB="$TMPL"
+  USE_TMPL=1
+fi
+if ((DISK_MODE_BDYDATA == 1)); then
+  TMPROOT_BDYDATA="$TMP"
+  USE_TMP_LINK=1
+elif ((DISK_MODE_BDYDATA == 2)); then
+  TMPROOT_BDYDATA="$TMP"
+elif ((DISK_MODE_BDYDATA == 3)); then
+  TMPROOT_BDYDATA="$TMPL"
+  USE_TMPL=1
+fi
+if ((DISK_MODE_OBS == 1)); then
+  TMPROOT_OBS="$TMP"
+  USE_TMP_LINK=1
+elif ((DISK_MODE_OBS == 2)); then
+  TMPROOT_OBS="$TMP"
+elif ((DISK_MODE_OBS == 3)); then
+  TMPROOT_OBS="$TMPL"
+  USE_TMPL=1
+fi
+
+STAGING_DIR="$TMP/staging"
+NODEFILE_DIR="$TMP/node"
+
+#-------------------------------------------------------------------------------
+
+DAT_SUBDIR="dat"
+RUN_SUBDIR="run"
+OUT_SUBDIR="out"
+
+TMPDAT="$TMPROOT/${DAT_SUBDIR}"
+TMPRUN="$TMPROOT/${RUN_SUBDIR}"
+TMPOUT="$TMPROOT/${OUT_SUBDIR}"
+
+TMPDAT_CONSTDB="${TMPROOT_CONSTDB}/${DAT_SUBDIR}"
+TMPDAT_BDYDATA="${TMPROOT_BDYDATA}/${DAT_SUBDIR}"
+TMPDAT_OBS="${TMPROOT_OBS}/${DAT_SUBDIR}"
+
+#-------------------------------------------------------------------------------
+
+if ((PNETCDF == 1 && USE_TMPL == 1)); then
+  echo "[Error] When PNETCDF is enabled, local disks cannot be used." 1>&2
+  exit 1
+fi
+
+#-------------------------------------------------------------------------------
+
+STGINLIST_LINK="stgin_link"
+STGINLIST_SHARE="stgin_share"
+STGINLIST_LOCAL="stgin_local"
+STGOUTLIST_LINK="stgout_link"
+STGOUTLIST_SHARE="stgout_share"
+STGOUTLIST_LOCAL="stgout_local"
+
+if ((DISK_MODE == 1)); then
+  STGINLIST="$STGINLIST_LINK"
+  STGOUTLIST="$STGOUTLIST_LINK"
+  STGOUTLIST_NOLINK="$STGOUTLIST_SHARE"
+elif ((DISK_MODE == 2)); then
+  STGINLIST="$STGINLIST_SHARE"
+  STGOUTLIST="$STGOUTLIST_SHARE"
+  STGOUTLIST_NOLINK="$STGOUTLIST_SHARE"
+elif ((DISK_MODE == 3)); then
+  STGINLIST="$STGINLIST_LOCAL"
+  STGOUTLIST="$STGOUTLIST_LOCAL"
+  STGOUTLIST_NOLINK="$STGOUTLIST_LOCAL"
+fi
+
+if ((DISK_MODE_CONSTDB == 1)); then
+  STGINLIST_CONSTDB="$STGINLIST_LINK"
+elif ((DISK_MODE_CONSTDB == 2)); then
+  STGINLIST_CONSTDB="$STGINLIST_SHARE"
+elif ((DISK_MODE_CONSTDB == 3)); then
+  STGINLIST_CONSTDB="$STGINLIST_LOCAL"
+fi
+
+if ((DISK_MODE_BDYDATA == 1)); then
+  STGINLIST_BDYDATA="$STGINLIST_LINK"
+elif ((DISK_MODE_BDYDATA == 2)); then
+  STGINLIST_BDYDATA="$STGINLIST_SHARE"
+elif ((DISK_MODE_BDYDATA == 3)); then
+  STGINLIST_BDYDATA="$STGINLIST_LOCAL"
+fi
+
+if ((DISK_MODE_OBS == 1)); then
+  STGINLIST_OBS="$STGINLIST_LINK"
+elif ((DISK_MODE_OBS == 2)); then
+  STGINLIST_OBS="$STGINLIST_SHARE"
+elif ((DISK_MODE_OBS == 3)); then
+  STGINLIST_OBS="$STGINLIST_LOCAL"
+fi
+
+#===============================================================================
