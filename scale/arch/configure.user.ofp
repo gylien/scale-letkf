@@ -24,7 +24,8 @@ FC        = mpiifort
 FOPTS_SCALE = $(FFLAGS)
 
 FOPTS     = $(FOPTS_SCALE) \
-            -qopenmp
+            -qopenmp \
+            -traceback -g
 
 #FOPTS     = -fpp -m64 -O3 -xHost                 \
 #            -assume byterecl -convert big_endian \

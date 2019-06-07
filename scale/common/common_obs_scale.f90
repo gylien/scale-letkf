@@ -46,7 +46,7 @@ MODULE common_obs_scale
   IMPLICIT NONE
   PUBLIC
 
-  INTEGER,PARAMETER :: nid_obs_varlocal=9 !H08
+  INTEGER,PARAMETER :: nid_obs_varlocal=10
 !
 ! conventional observations
 !
@@ -75,18 +75,26 @@ MODULE common_obs_scale
 ! Himawari-8 (H08) observations
 !
   INTEGER,PARAMETER :: id_H08IR_obs=8800
+!
+! Lightning observations
+!
+  integer, parameter :: id_lt3d_obs=5001
+  integer, parameter :: id_lt2d_obs=5002
 
   INTEGER,PARAMETER :: elem_uid(nid_obs)= &
      (/id_u_obs, id_v_obs, id_t_obs, id_tv_obs, id_q_obs, id_rh_obs, &
        id_ps_obs, id_rain_obs, id_radar_ref_obs, id_radar_ref_zero_obs, id_radar_vr_obs, id_radar_prh_obs, &
-       id_H08IR_obs, id_tclon_obs, id_tclat_obs, id_tcmip_obs/)
+       id_H08IR_obs, id_tclon_obs, id_tclat_obs, id_tcmip_obs, &
+       id_lt3d_obs, id_lt2d_obs/)
 
   CHARACTER(3),PARAMETER :: obelmlist(nid_obs)= &
      (/'  U', '  V', '  T', ' Tv', '  Q', ' RH', ' PS', 'PRC', 'REF', 'RE0', ' Vr', 'PRH',&
-       'H08', 'TCX', 'TCY', 'TCP'/)
+       'H08', 'TCX', 'TCY', 'TCP', &
+       'LT3', 'LT2'/)
 
   CHARACTER(3),PARAMETER :: obelmlist_varlocal(nid_obs_varlocal)= &
-     (/'WND', '  T', 'MOI', ' PS', 'PRC', 'TCV', 'REF', ' Vr', 'H08'/)
+     (/'WND', '  T', 'MOI', ' PS', 'PRC', 'TCV', 'REF', ' Vr', 'H08', &
+      'LT'/)
 
   ! Parameter 'nobtype' is set in common_nml.f90
   CHARACTER(6),PARAMETER :: obtypelist(nobtype)= &
@@ -94,7 +102,8 @@ MODULE common_obs_scale
        'VADWND', 'SATEMP', 'ADPSFC', 'SFCSHP', 'SFCBOG', &
        'SPSSMI', 'SYNDAT', 'ERS1DA', 'GOESND', 'QKSWND', &
        'MSONET', 'GPSIPW', 'RASSDA', 'WDSATR', 'ASCATW', &
-       'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL'/) ! H08
+       'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL', &
+       'LTNING'/) 
 
   INTEGER,PARAMETER :: max_obs_info_meta = 3 ! maximum array size for type(obs_info)%meta
 
@@ -135,9 +144,10 @@ MODULE common_obs_scale
   END TYPE obs_da_value
   !!!!!! need to add %err and %dat for obsda2 if they can be determined in letkf_obs.f90 !!!!!!
 
-  INTEGER,PARAMETER :: nobsformats=3 ! H08
+  INTEGER,PARAMETER :: nobsformats=4 !
   CHARACTER(30) :: obsformat_name(nobsformats) = &
-    (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR'/)
+    (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR', &
+      'LIGHTNING    '/)
 
   INTEGER,PARAMETER :: iqc_good=0
   INTEGER,PARAMETER :: iqc_gross_err=5
@@ -873,7 +883,8 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
     zs= 3.48d3 * ( ro * qsp * 1.0d3 )**1.66
     ENDIF
     IF( qgp .GT. 0.0d0)THEN
-    zg= 8.18d4 * ( ro * qgp * 1.0d3 )**1.50
+!!!    zg= 8.18d4 * ( ro * qgp * 1.0d3 )**1.50 ! hail
+      zg= 5.54d3 * ( ro * qgp * 1.0d3 )**1.70   !!! graupel (A. Amemiya 2019.5)
     ENDIF
     IF( qms .GT. 0.0d0 )THEN
     zms=( 0.00491 + 5.75*fws - 5.588*(fws**2) )*1.0d5
@@ -2444,6 +2455,8 @@ subroutine read_obs_all(obs)
       call get_nobs_radar(trim(OBS_IN_NAME(iof)), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
     case (3) !H08 
       call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
+    case (4)
+      call get_nobs(trim(OBS_IN_NAME(iof)),8,obs(iof)%nobs) ! Lightning
     case default
       write(6,*) 'Error: Unsupported observation file format!'
       stop
@@ -2462,6 +2475,8 @@ subroutine read_obs_all(obs)
       call read_obs_radar(trim(OBS_IN_NAME(iof)),obs(iof))
     case (3) ! H08 
       call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
+    case (4) 
+      call read_obs(trim(OBS_IN_NAME(iof)),obs(iof)) ! Lightning
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
 
@@ -2497,6 +2512,8 @@ subroutine write_obs_all(obs, missing, file_suffix)
       call write_obs_radar(trim(filestr),obs(iof),missing=missing_)
     case (3) ! H08 
       call write_obs_H08(trim(filestr),obs(iof),missing=missing_) ! H08
+    case (4)
+      call write_obs(trim(filestr),obs(iof),missing=missing_) ! Lightning
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
 
@@ -2997,5 +3014,48 @@ END SUBROUTINE write_obs_H08
 !  RETURN
 !
 !END SUBROUTINE write_obs_radar3d
+
+
+subroutine Trans_XtoY_LT(elm,ri,rj,rk,v3d,v2d,yobs,qc)
+  use scale_grid_index, only: &
+      KHALO
+
+  implicit none
+  integer, intent(in) :: elm
+  real(r_size), intent(in) :: ri,rj,rk
+  real(r_size), intent(in) :: v3d(nlevh,nlonh,nlath,nv3dd)
+  real(r_size), intent(in) :: v2d(nlonh,nlath,nv2dd)
+
+  real(r_size), intent(out) :: yobs
+  integer, intent(out) :: qc
+
+  real(r_size) :: posfl, negfl
+  real(r_size) :: posfl1d(nlevh), negfl1d(nlevh)
+
+  integer :: k
+
+  yobs = undef
+  qc = iqc_good
+
+  select case(elm)
+  case (id_lt2d_obs) 
+    ! 2d flash obs
+    call itpl_2d_column(v3d(:,:,:,iv3dd_pfl),ri,rj,posfl1d(:))
+    call itpl_2d_column(v3d(:,:,:,iv3dd_nfl),ri,rj,negfl1d(:))
+
+    yobs = 0.0_r_size
+    do k = 1 + KHALO, nlev
+      yobs = yobs + posfl1d(k) + negfl1d(k)
+    enddo
+  case (id_lt3d_obs) 
+    ! 3d flash obs
+    call itpl_3d(v3d(:,:,:,iv3dd_pfl),rk,ri,rj,posfl)
+    call itpl_3d(v3d(:,:,:,iv3dd_nfl),rk,ri,rj,negfl)
+
+    yobs = posfl + negfl
+  end select
+
+  return
+end subroutine Trans_XtoY_LT
 
 END MODULE common_obs_scale

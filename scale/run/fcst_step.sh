@@ -44,7 +44,7 @@ res=$? && ((res != 0)) && exit $res
 . src/func_fcst.sh
 
 ######
-echo "[$(datetime_now)] fcst_step: $@: start"
+#echo "[$(datetime_now)] fcst_step: $@: start"
 ######
 
 #-------------------------------------------------------------------------------
@@ -120,7 +120,7 @@ res=$? && ((res != 0)) && exit $res
 #===============================================================================
 
 ######
-echo "[$(datetime_now)] fcst_step: $@: end"
+#echo "[$(datetime_now)] fcst_step: $@: end"
 ######
 
 exit 0

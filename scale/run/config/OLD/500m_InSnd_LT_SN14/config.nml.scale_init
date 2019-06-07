@@ -1,0 +1,114 @@
+&PARAM_IO
+!--IO_LOG_BASENAME--
+ IO_LOG_ALLNODE = .false.,
+/
+
+&PARAM_TIME
+!--TIME_STARTDATE--
+ TIME_STARTMS   = 0.D0,
+/
+
+&PARAM_STATISTICS
+ STATISTICS_checktotal     = .true.,
+ STATISTICS_use_globalcomm = .true.,
+/
+
+&PARAM_RESTART
+!--RESTART_OUTPUT--
+!--RESTART_OUT_BASENAME--
+/
+
+&PARAM_MKINIT
+ MKINIT_initname = "SUPERCELL",
+! MKINIT_initname = "WK1982",
+/
+
+&PARAM_MKINIT_SUPERCELL
+ BBL_THETA = 4.0d0,
+/
+
+&PARAM_MKINIT_SOUNDING
+!--ENV_IN_SOUNDING_file--!
+/
+
+!&PARAM_MKINIT_WK1982
+!! STORM_CX = 13.0d0,
+!! STORM_CY = 6.0d0,
+! STORM_CX = 10.0d0,
+! STORM_CY = 0.0d0,
+! WR20_HOD = .true.,
+!/
+
+&PARAM_BUBBLE
+ BBL_CZ =  1.5D3,
+ BBL_CX = 144.0D3,
+ BBL_CY = 144.0D3,
+ BBL_RZ =  1.5D3,
+ BBL_RX = 10.0D3,
+ BBL_RY = 10.0D3,
+/
+
+#################################################
+#
+# model configuration: process
+#
+#################################################
+
+&PARAM_PRC
+ PRC_NUM_X      = 24,
+ PRC_NUM_Y      = 24,
+ PRC_PERIODIC_X = .true.,
+ PRC_PERIODIC_Y = .true.,
+/
+
+#################################################
+#
+# model configuration: region
+#
+#################################################
+
+&PARAM_INDEX
+ KMAX = 40,
+ IMAX = 24,
+ JMAX = 24,
+/
+
+
+&PARAM_GRID
+ DX = 500.D0,
+ DY = 500.D0,
+ FZ(:) =  200.000000D0, 400.000000D0, 600.000000D0, 800.000000D0, 1000.00000D0,
+          1200.00000D0, 1410.00000D0, 1630.50000D0, 1862.02490D0, 2105.12598D0,
+          2360.38232D0, 2628.40137D0, 2909.82129D0, 3205.31226D0, 3515.57764D0,
+          3841.35645D0, 4183.42432D0, 4542.59521D0, 4919.72461D0, 5315.71045D0,
+          5731.49561D0, 6168.07031D0, 6626.47363D0, 7107.79688D0, 7613.18652D0,
+          8143.84570D0, 8701.03809D0, 9286.08984D0, 9900.39355D0, 10545.4131D0,
+          11222.6836D0, 11933.8174D0, 12680.5078D0, 13464.5322D0, 14287.7578D0,
+          15152.1445D0, 16059.7510D0, 17012.7383D0, 18013.3750D0, 19064.0430D0,
+ BUFFER_DZ = 5000.D0,
+/
+
+#################################################
+#
+# model configuration: administrator
+#
+#################################################
+
+&PARAM_CONST
+ CONST_THERMODYN_TYPE = "SIMPLE",
+/
+
+&PARAM_TRACER
+! TRACER_TYPE = "TOMITA08",
+ TRACER_TYPE = "SN14",
+ LIGHTNING_TYPE = 'TK78',
+/
+
+&PARAM_ATMOS
+ ATMOS_DYN_TYPE    = "HEVI",
+! ATMOS_PHY_MP_TYPE = "TOMITA08",
+ ATMOS_PHY_MP_TYPE = "SN14",
+! ATMOS_PHY_TB_TYPE = "MYNN",
+ ATMOS_PHY_TB_TYPE = "D1980",
+/
+

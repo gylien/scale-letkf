@@ -74,8 +74,8 @@ def hodograph(top, mems):
 
   import matplotlib.pyplot as plt
 
-  fig, (ax1) = plt.subplots(1, 1, figsize=(7.0, 7.0))
-  fig.subplots_adjust(left=0.1, bottom=0.1, right=0.94, top=0.92)#, wspace=0.15, hspace=0.1)
+  fig, (ax1) = plt.subplots(1, 1, figsize=(5.0, 5.0))
+  fig.subplots_adjust(left=0.15, bottom=0.1, right=0.94, top=0.92)#, wspace=0.15, hspace=0.1)
 
   for m in range(mems+1):
      if m == 0:
@@ -121,7 +121,7 @@ def hodograph(top, mems):
   plt.xlabel("Zonal wind", fontsize=14)
   plt.ylabel("Meridional wind", fontsize=14)
 
-  fig.suptitle("Hodograph",fontsize=20)
+  fig.suptitle("Hodograph",fontsize=18)
 
   plt.show()
 
@@ -139,7 +139,7 @@ def main(top, mems):
     write_txt(outfile, SOUNDING, rand2d=rand2d, m = m)
 
 
-top = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/5000m_InSnd_LT/input"
+top = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/input/WK"
 mems = 80
 
 #main(top, mems)

@@ -183,7 +183,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ALLOCATE(dep  (nobstotal))
 
   DO ilev=1,nlev
-    WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
+!    WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
 
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,m,k,hdxf,rdiag,rloc,dep,nobsl,nobsl_t,parm,beta,trans,transm,transrlx,pa,tmpinfl,q_mean,q_sprd,q_anal)
     DO ij=1,nij1

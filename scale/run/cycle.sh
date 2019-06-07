@@ -182,9 +182,9 @@ while ((time <= ETIME)); do
   done
   echo
   echo "  Nodes used:               $NNODES"
-  for n in $(seq $NNODES); do
-    echo "    ${node[$n]}"
-  done
+#  for n in $(seq $NNODES); do
+#    echo "    ${node[$n]}"
+#  done
   echo
   echo "  Processes per node:       $PPN"
   echo "  Total processes:          $totalnp"

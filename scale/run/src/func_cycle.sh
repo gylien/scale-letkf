@@ -412,8 +412,8 @@ else
   time=$STIME
   atime=$(datetime $time $LCYCLE s)
   loop=0
-#  while ((time <= ETIME)); do
-#    loop=$((loop+1))
+  while ((time <= ETIME)); do
+    loop=$((loop+1))
 #    if ((ONLINE_STGOUT == 1)); then
 #      stgoutstep="stageout.loop.${loop}"
 #    else
@@ -980,11 +980,11 @@ else
 #    #++++++
 #    fi # ((SIMPLE_STGOUT == 1))
 #    #++++++
-#
-#    #-------------------
-#    time=$(datetime $time $LCYCLE s)
-#    atime=$(datetime $time $LCYCLE s)
-#  done
+
+    #-------------------
+    time=$(datetime $time $LCYCLE s)
+    atime=$(datetime $time $LCYCLE s)
+  done
 
   #-------------------
   # stage-in
@@ -1530,6 +1530,7 @@ for it in $(seq $its $ite); do
            cycle $bdy_start_time
     fi
   fi
+
 
 #  if ((MYRANK == 0)); then
 #    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) end" >&2

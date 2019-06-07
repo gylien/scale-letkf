@@ -25,7 +25,7 @@ MODULE common_scale
 
   ! Parameter 'nv3d' is set in common_nml.f90 ; 3D state variables (in SCALE restart files)
   ! Parameter 'nv2d' is set in common_nml.f90 ; 2D state variables (in SCALE restart files)
-  INTEGER,PARAMETER :: nv3dd=13  ! 3D diagnostic variables (in SCALE history files)
+  INTEGER,PARAMETER :: nv3dd=15  ! 3D diagnostic variables (in SCALE history files)
 #ifdef H08
   INTEGER,PARAMETER :: nv2dd=9  ! H08  ! 2D diagnostic variables (in SCALE history files)
 #else
@@ -47,6 +47,15 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv3d_qi=9
   INTEGER,PARAMETER :: iv3d_qs=10
   INTEGER,PARAMETER :: iv3d_qg=11
+
+  ! Lightning variables
+  INTEGER,PARAMETER :: iv3d_cc=12
+  INTEGER,PARAMETER :: iv3d_cr=13
+  INTEGER,PARAMETER :: iv3d_ci=14
+  INTEGER,PARAMETER :: iv3d_cs=15
+  INTEGER,PARAMETER :: iv3d_cg=16
+  INTEGER,PARAMETER :: iv3d_oep=17 
+
   INTEGER,PARAMETER :: iv3dd_u=1
   INTEGER,PARAMETER :: iv3dd_v=2
   INTEGER,PARAMETER :: iv3dd_w=3
@@ -58,8 +67,12 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv3dd_qi=9
   INTEGER,PARAMETER :: iv3dd_qs=10
   INTEGER,PARAMETER :: iv3dd_qg=11
-  INTEGER,PARAMETER :: iv3dd_rh=12
-  INTEGER,PARAMETER :: iv3dd_hgt=13
+  INTEGER,PARAMETER :: iv3dd_rh=12 
+  INTEGER,PARAMETER :: iv3dd_hgt=13 
+
+  INTEGER,PARAMETER :: iv3dd_pfl=14
+  INTEGER,PARAMETER :: iv3dd_nfl=15
+
   INTEGER,PARAMETER :: iv2dd_topo=1
   INTEGER,PARAMETER :: iv2dd_ps=2
   INTEGER,PARAMETER :: iv2dd_rain=3
@@ -207,6 +220,14 @@ SUBROUTINE set_common_scale
     v3d_name(iv3d_qi)   = 'QI'
     v3d_name(iv3d_qs)   = 'QS'
     v3d_name(iv3d_qg)   = 'QG'
+
+    v3d_name(iv3d_cc)   = 'CDNS_QC'
+    v3d_name(iv3d_cr)   = 'CDNS_QR'
+    v3d_name(iv3d_ci)   = 'CDNS_QI'
+    v3d_name(iv3d_cs)   = 'CDNS_QS'
+    v3d_name(iv3d_cg)   = 'CDNS_QG'
+    v3d_name(iv3d_oep)   = 'Epot_old'
+
     !
     ! diagnostic variables (in 'history' files, for observation operators)
     v3dd_name(iv3dd_u)    = 'U'
@@ -222,6 +243,10 @@ SUBROUTINE set_common_scale
     v3dd_name(iv3dd_qg)   = 'QG'
     v3dd_name(iv3dd_rh)   = 'RH'
     v3dd_name(iv3dd_hgt)   = 'height'
+
+    v3dd_name(iv3dd_pfl)   = 'PosFLASH'
+    v3dd_name(iv3dd_nfl)   = 'NegFLASH'
+
     !
     v2dd_name(iv2dd_topo) = 'topo'
     v2dd_name(iv2dd_ps) = 'SFC_PRES'

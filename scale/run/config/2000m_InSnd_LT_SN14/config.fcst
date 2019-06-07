@@ -1,0 +1,76 @@
+#!/bin/bash
+#===============================================================================
+#
+#  Settings for fcst.sh
+#
+#===============================================================================
+
+STIME='20000101000000'
+ETIME='20000101000000'
+
+#STIME='20000101003000'
+#ETIME='20000101003000'
+
+#MEMBERS=`seq 1 40`
+MEMBERS="mean "`seq 1 80`
+#MEMBERS="mean"
+
+
+CYCLE=1
+CYCLE_SKIP=1
+ISTEP=
+FSTEP=
+TIME_LIMIT='1:30:00'
+#TIME_LIMIT='4:00:00'
+#TIME_LIMIT='6:00:00'
+
+
+#===============================================================================
+# Forecast settings
+
+
+FCSTLEN=5400 # 90min (~30min computation)
+FCSTOUT=600 
+FCSTOUT=300 
+
+
+#===============================================================================
+
+MAKEINIT=1       # 0: No
+                 # 1: Yes
+
+#===============================================================================
+# Diagnostic output settings
+
+                 #      fcst
+                 #      history restart
+OUT_OPT=1        # 1:   o       o
+                 # 2:   o
+
+                 #      topo
+TOPOOUT_OPT=2    # 1:   o
+                 # 2:   (none)
+
+                 #      landuse
+LANDUSEOUT_OPT=2 # 1:   o
+                 # 2:   (none)
+
+                 #      bdy
+                 #      mean members
+BDYOUT_OPT=3     # 1:   o    o
+                 # 2:   o
+                 # 3:   (none)
+
+                 #      topo landuse bdy perturb        scale
+                 #      log  log     log (not finished) log
+LOG_OPT=2        # 1:   o    o       o   o              o
+                 # 2:   o    o       o                  o
+                 # 3:                                   o
+                 # 4:   (none)
+
+LOG_TYPE=4       # 1:   Only save the log file from the head process
+                 # 2:   Save all log files
+                 # 3:   Save all log files in an archive file
+                 # 4:   Save all log files in a compressed archive file
+
+#===============================================================================

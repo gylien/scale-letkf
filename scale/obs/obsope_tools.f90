@@ -390,6 +390,10 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                 !end if
                 !!!!!!
 
+                case (4) ! Lighting obs
+                  call Trans_XtoY_LT(obs(iof)%elm(n),ri(nn),rj(nn),rk, &
+                                     v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
+
                 end select
               end if
 
@@ -762,6 +766,10 @@ SUBROUTINE obsmake_cal(obs)
                 case (2)
                   call Trans_XtoY_radar(obs(iof)%elm(n),obs(iof)%meta(1),obs(iof)%meta(2),obs(iof)%meta(3),ri,rj,rk, &
                                         obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
+
+                case (4)
+                  call Trans_XtoY_LT(obs(iof)%elm(n),ri,rj,rk, &
+                                     v3dg,v2dg,obs(iof)%dat(n),iqc)
                 end select
 
  !!! For radar observation, when reflectivity value is too low, do not generate ref/vr observations
@@ -987,13 +995,16 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
       call ij_l2g(myrank_d, i, j, ig, jg)
 
-! This is an idealized experiment without map projections
-!      call MPRJ_xy2lonlat((ri-1.0d0) * DX + GRID_CX(1), (rj-1.0d0) * DY + GRID_CY(1), lon, lat)
-!      lon = ri ! lon * rad2deg
-!      lat = rj ! lat * rad2deg
+      if (RADAR_IDEAL) then
+        ! Idealized experiment without map projections
+        lon = (ri-1.0d0) * DX + GRID_CX(1)
+        lat = (rj-1.0d0) * DY + GRID_CY(1)
+      else
+        call MPRJ_xy2lonlat((ri-1.0d0) * DX + GRID_CX(1), (rj-1.0d0) * DY + GRID_CY(1), lon, lat)
+        lon = ri ! lon * rad2deg
+        lat = rj ! lat * rad2deg
+      endif
 
-      lon = real(ig, kind=r_size)
-      lat = real(jg, kind=r_size)
 
       do k = 1, nlev
         rk = real(k + KHALO, r_size)
@@ -1007,6 +1018,11 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
             call Trans_XtoY_radar(OBSSIM_3D_VARS_LIST(iv3dsim), OBSSIM_RADAR_LON, OBSSIM_RADAR_LAT, OBSSIM_RADAR_Z, ri, rj, rk, &
                                   lon, lat, lev, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
             if (tmpqc == iqc_ref_low) tmpqc = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
+
+          case (id_lt3d_obs)
+            call Trans_XtoY_LT(OBSSIM_3D_VARS_LIST(iv3dsim), ri, rj, rk, &
+                               v3dgh, v2dgh, tmpobs, tmpqc)
+
           case default
             call Trans_XtoY(OBSSIM_3D_VARS_LIST(iv3dsim), ri, rj, rk, &
                             lon, lat, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
@@ -1027,6 +1043,11 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 !              call Trans_XtoY_radar_H08(...)
 !            case (id_tclon_obs, id_tclat_obs, id_tcmip_obs)
 !              call ...
+
+            case (id_lt2d_obs)
+              call Trans_XtoY_LT(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
+                                 v3dgh, v2dgh, tmpobs, tmpqc)
+
             case default
               call Trans_XtoY(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
                               lon, lat, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
