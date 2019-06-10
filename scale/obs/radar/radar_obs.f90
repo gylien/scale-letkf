@@ -170,8 +170,6 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
 !  WRITE(6,'(A,F18.10)') '###### Trans_XtoY_radar:conversion:',rrtimer-rrtimer00
 !  rrtimer00=rrtimer
 
-print *,"DEBUG Y_radar",radar_ref,radar_rv,qc
-
   RETURN
 END SUBROUTINE Trans_XtoY_radar
 

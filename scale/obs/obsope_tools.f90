@@ -491,7 +491,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
             if (obsda%qc(nn) == iqc_good) then
               call Trans_XtoY_radar(obs(iof)%elm(n), obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3), ril, rjl, rkz, &
                                     obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%lev(n), v3dg, v2dg, obsda%val(nn), obsda%qc(nn))
-print *,obsda%val(nn), obsda%qc(nn), obs(iof)%dat(n)
               if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
 
               !!!!!! may not need to do this at this stage !!!!!!
