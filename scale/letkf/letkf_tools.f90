@@ -100,6 +100,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   var_local(:,7) = VAR_LOCAL_RADAR_REF(:)
   var_local(:,8) = VAR_LOCAL_RADAR_VR(:)
   var_local(:,9) = VAR_LOCAL_H08(:) ! H08
+  var_local(:,10) = VAR_LOCAL_LT(:) 
   var_local_n2n(1) = 1
   DO n=2,nv3d+nv2d
     DO i=1,n

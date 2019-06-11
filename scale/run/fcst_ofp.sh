@@ -126,8 +126,7 @@ echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
 cat > $jobscrp << EOF
 #!/bin/sh
-##PJM -L rscgrp=regular-flat
-#PJM -L rscgrp=debug-flat
+#PJM -L rscgrp=${OFP_MODE}
 #PJM -L node=${NNODES}
 #PJM -L elapse=${TIME_LIMIT}
 #PJM --mpi proc=$((NNODES*PPN))

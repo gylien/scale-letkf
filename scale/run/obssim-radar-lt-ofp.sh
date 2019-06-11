@@ -4,14 +4,17 @@
 USER=honda
 SYS=ofp
 
-#OBSTYPE="RADAR"
-OBSTYPE="LT"
+OBSTYPE="RADAR"
+#OBSTYPE="LT"
 
 #EXP=8km_sc
 #. config/${EXP}/config.main.hakushu
 CEXP=2000m_InSnd_LT_SN14_Mac_0605
 . config/${CEXP}/config.main.$SYS
 . config/${CEXP}/config.fcst
+
+
+FCSTLEN=4800 #
 
 #
 LETKF_RUN="$(pwd)"
@@ -230,8 +233,9 @@ cat << EOF >> $RUNCONF
  OBSSIM_3D_VARS_LIST = ${OBSSIM_3D_VARS_LIST}, 
  OBSSIM_NUM_2D_VARS = ${OBSSIM_NUM_2D_VARS},
  OBSSIM_2D_VARS_LIST = ${OBSSIM_2D_VARS_LIST},
- OBSSIM_RADAR_LON = 100.0d3,
- OBSSIM_RADAR_LAT = 100.0d3,
+ ! About sqrt(40**2+40**2) km away from the storm (Similar to Zhang et al. 2004MWR)
+ OBSSIM_RADAR_LON = 120.0d3,
+ OBSSIM_RADAR_LAT = 120.0d3,
  OBSSIM_RADAR_Z = 0.0d0,
 /
 EOF

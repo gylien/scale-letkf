@@ -1300,6 +1300,11 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
 
   IF(myrank_e == lastmem_rank_e) THEN
+
+    if (WRITE_GRADS_MEAN) then
+      call write_grd_mpi(trim(file_mean)//"_grads.dat", nv3d, nv2d, 1, v3dg, v2dg)
+    endif
+
     call state_trans_inv(v3dg)
     call write_restart(file_mean,v3dg,v2dg)
 
@@ -1355,6 +1360,11 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
 
 
   IF(myrank_e == lastmem_rank_e) THEN
+
+    if (WRITE_GRADS_SPRD) then
+      call write_grd_mpi(trim(file_sprd)//"_grads.dat", nv3d, nv2d, 1, v3dg, v2dg)
+    endif
+
 !    call state_trans_inv(v3dg)             !!
     call write_restart(file_sprd,v3dg,v2dg)  !! not transformed to rho,rhou,rhov,rhow,rhot before writing.
 
@@ -1732,5 +1742,69 @@ subroutine create_ens_mpi()
 
   return
 end subroutine create_ens_mpi
+
+!!!!!! it is not good to open/close a file many times for different steps !!!!!!
+!-------------------------------------------------------------------------------
+! Write the subdomain model data into a single GrADS file
+!-------------------------------------------------------------------------------
+subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d)
+  implicit none
+  character(*), intent(in) :: filename
+  integer, intent(in) :: nv3dgrd
+  integer, intent(in) :: nv2dgrd
+  integer, intent(in) :: step
+  real(r_size), intent(in) :: v3d(nlev,nlon,nlat,nv3dgrd)
+  real(r_size), intent(in) :: v2d(nlon,nlat,nv2dgrd)
+
+  real(r_sngl) :: bufs4(nlong,nlatg)
+  real(r_sngl) :: bufr4(nlong,nlatg)
+  integer :: iunit, iolen
+  integer :: k, n, irec, ierr
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+
+  integer :: iunit2
+
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  if (myrank_d == 0) then
+    iunit = 55
+    inquire (iolength=iolen) iolen
+    open (iunit, file=trim(filename), form='unformatted', access='direct', &
+          status='unknown', convert='native', recl=nlong*nlatg*iolen)
+    irec = (nlev * nv3dgrd + nv2dgrd) * (step-1)
+  end if
+
+  do n = 1, nv3dgrd
+    do k = 1, nlev
+      bufs4(:,:) = 0.0
+      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(v3d(k,:,:,n), r_sngl)
+      call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+      if (myrank_d == 0) then
+        irec = irec + 1
+        write (iunit, rec=irec) bufr4
+      end if
+    end do
+  end do
+
+  do n = 1, nv2dgrd
+    bufs4(:,:) = 0.0
+    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(v2d(:,:,n), r_sngl)
+    call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+
+    if (myrank_d == 0) then
+      irec = irec + 1
+      write (iunit, rec=irec) bufr4
+    end if
+  end do
+
+  if (myrank_d == 0) then
+    close (iunit)
+  end if
+
+  return
+end subroutine write_grd_mpi
 
 END MODULE common_mpi_scale

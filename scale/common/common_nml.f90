@@ -45,6 +45,8 @@ MODULE common_nml
   real(r_size)          :: SLOT_TINTERVAL = 3600.0d0
 
   !--- PARAM_LETKF
+  logical               :: WRITE_GRADS_SPRD = .true.
+  logical               :: WRITE_GRADS_MEAN = .true.
   logical               :: OBSDA_IN = .false.
   character(filelenmax) :: OBSDA_IN_BASENAME = 'obsda.@@@@'
   character(filelenmax) :: GUES_IN_BASENAME = 'gues.@@@@'
@@ -361,6 +363,8 @@ subroutine read_nml_letkf
   integer :: ierr
   
   namelist /PARAM_LETKF/ &
+    WRITE_GRADS_MEAN, &
+    WRITE_GRADS_SPRD, &
     OBSDA_IN, &
     OBSDA_IN_BASENAME, &
     GUES_IN_BASENAME, &

@@ -48,6 +48,13 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv3d_qs=10
   INTEGER,PARAMETER :: iv3d_qg=11
 
+!  ! Number concentration (SN14 only) 
+!  INTEGER,PARAMETER :: iv3d_nc=12
+!  INTEGER,PARAMETER :: iv3d_nr=13
+!  INTEGER,PARAMETER :: iv3d_ni=14
+!  INTEGER,PARAMETER :: iv3d_ns=15
+!  INTEGER,PARAMETER :: iv3d_ng=16
+
   ! Lightning variables
   INTEGER,PARAMETER :: iv3d_cc=12
   INTEGER,PARAMETER :: iv3d_cr=13
@@ -220,6 +227,13 @@ SUBROUTINE set_common_scale
     v3d_name(iv3d_qi)   = 'QI'
     v3d_name(iv3d_qs)   = 'QS'
     v3d_name(iv3d_qg)   = 'QG'
+
+!    ! SN14 only
+!    v3d_name(iv3d_nc)   = 'NC'
+!    v3d_name(iv3d_nr)   = 'NR'
+!    v3d_name(iv3d_ni)   = 'NI'
+!    v3d_name(iv3d_ns)   = 'NS'
+!    v3d_name(iv3d_ng)   = 'NG'
 
     v3d_name(iv3d_cc)   = 'CDNS_QC'
     v3d_name(iv3d_cr)   = 'CDNS_QR'
@@ -1035,7 +1049,8 @@ SUBROUTINE state_trans(v3dg)
       do k = 1, nlev
        qdry  = 1.0d0
        CVtot = 0.0d0
-       do iv3d = iv3d_q, nv3d ! loop over all moisture variables
+!       do iv3d = iv3d_q, nv3d ! loop over all moisture variables
+       do iv3d = iv3d_q, iv3d_qg ! loop over all moisture variables
          qdry  = qdry - v3dg(k,i,j,iv3d)
          CVtot = CVtot + v3dg(k,i,j,iv3d) * AQ_CV(iv3d-iv3d_q+1)
        enddo
@@ -1120,7 +1135,8 @@ SUBROUTINE state_trans_inv(v3dg)
       do k = 1, nlev
        qdry  = 1.0d0
        CVtot = 0.0d0
-       do iv3d = iv3d_q, nv3d ! loop over all moisture variables
+!       do iv3d = iv3d_q, nv3d ! loop over all moisture variables
+       do iv3d = iv3d_q, iv3d_qg ! loop over all moisture variables
          qdry  = qdry - v3dg(k,i,j,iv3d)
          CVtot = CVtot + v3dg(k,i,j,iv3d) * AQ_CV(iv3d-iv3d_q+1)
        enddo

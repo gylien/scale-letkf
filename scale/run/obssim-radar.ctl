@@ -4,7 +4,7 @@ undef -9.99e33
 xdef 192 linear 0 2
 ydef 192 linear 0 2
 zdef 40 linear 0.5 0.25
-tdef 101 linear 00:40z01Jan2000 5mn
+tdef 10000 linear 00:40z01Jan2000 1mn
 vars 2
 z 40 99 test
 vr 40 99 test
