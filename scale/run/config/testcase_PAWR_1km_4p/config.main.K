@@ -15,9 +15,9 @@ USERNAME=honda
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
-EXP="testcase_PAWR_1km_4p_Z_CTRL" # Experiment name
-EXP="testcase_PAWR_1km_4p_Z_drag_g" # Experiment name
-EXP="testcase_PAWR_1km_4p_Z_Cs" # Experiment name
+EXP="testcase_PAWR_1km_4p_Z_TEST" # Experiment name
+#EXP="testcase_PAWR_1km_4p_Z_drag_g" # Experiment name
+#EXP="testcase_PAWR_1km_4p_Z_Cs" # Experiment name
 
 TOP="/data/share005/honda2/scale-5.2.6"
 OUTDIR="$TOP/OUTPUT/$EXP"     # SCALE-LETKF output
@@ -27,9 +27,9 @@ PEXP="testcase_PAWR_bdy" # Experiment name (parent)
 #===============================================================================
 # Parameter estimation
 
-PEST_PMAX=1
+PEST_PMAX=0
 PEST_NAME[1]=PARAM_ATMOS_PHY_MP_TOMITA08_Cs
-#PEST_NAME[1]=PARAM_ATMOS_PHY_MP_TOMITA08_drag_g
+PEST_NAME[2]=PARAM_ATMOS_PHY_MP_TOMITA08_drag_g
 
 #===============================================================================
 # Location of model/data files
@@ -37,10 +37,10 @@ PEST_NAME[1]=PARAM_ATMOS_PHY_MP_TOMITA08_Cs
 SCALEDIR="$DIR/../.."     # SCALE model
 DATADIR="/data/share005/SCALE/database"  # SCALE database
 
-DATA_TOPO="$TOP/OUTPUT/testcase_PAWR_1km_4p"      # Prepared topo files
-DATA_TOPO_BDY_SCALE="$TOP/OUTPUT/$PEXP/const/topo" # Parent domain topo
-DATA_LANDUSE="$TOP/OUTPUT/testcase_PAWR_1km_4p"   # Prepared landuse files
-DATA_BDY_SCALE="$TOP/OUTPUT/$PEXP"    # Boundary data in SCALE history format (parent domain)
+DATA_TOPO="/data/share005/honda2/scale-5.2.6/OUTPUT/testcase_PAWR_1km_4p"      # Prepared topo files
+DATA_TOPO_BDY_SCALE="/data/share005/honda2/scale-5.2.6/OUTPUT/testcase_PAWR_bdy/const/topo" # Parent domain topo
+DATA_LANDUSE="/data/share005/honda2/scale-5.2.6/OUTPUT/testcase_PAWR_1km_4p"   # Prepared landuse files
+DATA_BDY_SCALE="/data/share005/honda2/scale-5.2.6/OUTPUT/testcase_PAWR_bdy"    # Boundary data in SCALE history format (parent domain)
 
 # Number of MPI processes in parent domain
 DATA_BDY_SCALE_PRC_NUM_X=3
@@ -50,7 +50,7 @@ DATA_BDY_SCALE_PREP=         # Prepared SCALE boundary files
 DATA_BDY_WRF=                # Boundary data in WRF format
 DATA_BDY_NICAM=              # Boundary data in NICAM format (not finished)
 
-OBS="$TOP/OUTPUT/testcase_PAWR_1km_4p/obs/QCED_1KM_v4_v500M_attn0.01"       # Observation data in LETKF observation format
+OBS="/data/share005/honda2/scale-5.2.6/OUTPUT/testcase_PAWR_1km_4p/obs/QCED_1KM_v4_v500M_attn0.01"       # Observation data in LETKF observation format
 OBSNCEP=
 
 #===============================================================================
@@ -107,8 +107,6 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 MEMBER=100         # Ensemble size
 NNODES=404         # Number of nodes
 
-#MEMBER=2         # Ensemble size
-#NNODES=12         # Number of nodes
 
 PPN=1              # Number of processes per node
 
