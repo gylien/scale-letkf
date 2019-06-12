@@ -48,9 +48,10 @@ echo "[$(datetime_now)] Start $myname $@"
 
 setting "$@" || exit $?
 
-###if [ "$CONF_MODE" = 'static' ]; then
-###  . src/func_${job}_static.sh || exit $?
-###fi
+if [ "$CONF_MODE" = 'static' ]; then
+  . src/func_common_static.sh || exit $?
+  . src/func_${job}_static.sh || exit $?
+fi
 
 echo
 print_setting || exit $?
@@ -97,12 +98,12 @@ echo "RUN_LEVEL=4" >> $TMPS/config.main
 echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMPS/config.main
 
 safe_init_tmpdir $STAGING_DIR || exit $?
-###if [ "$CONF_MODE" = 'static' ]; then
-###  staging_list_static || exit $?
-###  config_file_list $TMPS/config || exit $?
-###else
+if [ "$CONF_MODE" = 'static' ]; then
+  staging_list_static || exit $?
+  config_file_list $TMPS/config || exit $?
+else
   staging_list || exit $?
-###fi
+fi
 
 #-------------------------------------------------------------------------------
 # Add shell scripts and node distribution files into the staging list
@@ -158,7 +159,7 @@ fi
 
 cat >> $jobscrp << EOF
 
-. /work/system/Env_base_1.2.0-22
+. /work/system/Env_base_1.2.0-25
 export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:\$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}

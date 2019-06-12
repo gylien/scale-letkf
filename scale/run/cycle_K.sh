@@ -49,6 +49,7 @@ echo "[$(datetime_now)] Start $myname $@"
 setting "$@" || exit $?
 
 if [ "$CONF_MODE" = 'static' ]; then
+  . src/func_common_static.sh || exit $?
   . src/func_${job}_static.sh || exit $?
 fi
 
@@ -166,7 +167,7 @@ fi
 
 cat >> $jobscrp << EOF
 
-. /work/system/Env_base_1.2.0-22
+. /work/system/Env_base_1.2.0-25
 export LD_LIBRARY_PATH=/opt/klocal/zlib-1.2.11-gnu/lib:\$LD_LIBRARY_PATH
 export OMP_NUM_THREADS=${THREADS}
 export PARALLEL=${THREADS}

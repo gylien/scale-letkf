@@ -88,6 +88,7 @@ RESTART_OUT_ADDITIONAL_COPIES=0
 RESTART_OUT_ADDITIONAL_BASENAME=
 if [ "$SCPCALL" = 'cycle' ]; then
   IO_LOG_DIR='scale'
+  RESTART_OUTPUT='.true.'
   if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
     RESTART_OUT_ADDITIONAL_COPIES=1
     RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPDIR}\/restart_2\", "
@@ -118,6 +119,11 @@ if [ "$SCPCALL" = 'cycle' ]; then
   fi
 else
   IO_LOG_DIR="${SCPCALL}_scale"
+  if ((OUT_OPT <= 1)); then
+    RESTART_OUTPUT='.true.'
+  else
+    RESTART_OUTPUT='.false.'
+  fi
 fi
 
 DOMAIN_CATALOGUE_OUTPUT=".false."
@@ -138,6 +144,7 @@ conf="$(cat $TMPDAT/conf/config.nml.scale | \
             -e "/!--TIME_DT_LAND_RESTART--/a TIME_DT_LAND_RESTART = ${FCSTINT}.D0," \
             -e "/!--TIME_DT_URBAN_RESTART--/a TIME_DT_URBAN_RESTART = ${FCSTINT}.D0," \
             -e "/!--RESTART_IN_BASENAME--/a RESTART_IN_BASENAME = \"${INIT}\"," \
+            -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = ${RESTART_OUTPUT}," \
             -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPDIR}\/restart\"," \
             -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
             -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \

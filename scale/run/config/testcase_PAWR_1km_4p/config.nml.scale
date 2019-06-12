@@ -42,13 +42,22 @@
 !--TIME_END_RESTART_OUT--
 /
 
+&PARAM_NEST
+!--ONLINE_DOMAIN_NUM--
+!--ONLINE_IAM_PARENT--
+!--ONLINE_IAM_DAUGHTER--
+ ONLINE_BOUNDARY_USE_QHYD = .true.,
+ ONLINE_AGGRESSIVE_COMM   = .true.,
+ ONLINE_SPECIFIED_MAXRQ   = 10000,
+/
+
 &PARAM_STATISTICS
  STATISTICS_checktotal     = .false.,
  STATISTICS_use_globalcomm = .false.,
 /
 
 &PARAM_RESTART
- RESTART_OUTPUT      = .true.,
+!--RESTART_OUTPUT--
 !--RESTART_IN_BASENAME--
 !--RESTART_IN_POSTFIX_TIMELABEL--
 !--RESTART_OUT_BASENAME--
@@ -249,12 +258,18 @@
 
 &PARAM_ATMOS_PHY_MP_TOMITA08
  enable_kk2000 = .false.,
- Cr = 58.D0,
- Cs = 0.9D0,
- drag_g = 2.5D0,
- beta_saut = 6D-3,
- gamma_saut = 6D-2,
- gamma_sacr = 2D-2,
+! Cr = 58.D0,
+! Cs = 0.9D0,
+! drag_g = 2.5D0,
+! beta_saut = 6D-3,
+! gamma_saut = 6D-2,
+! gamma_sacr = 2D-2,
+!--PARAM_ATMOS_PHY_MP_TOMITA08_Cr--
+!--PARAM_ATMOS_PHY_MP_TOMITA08_Cs--
+!--PARAM_ATMOS_PHY_MP_TOMITA08_drag_g--
+!--PARAM_ATMOS_PHY_MP_TOMITA08_beta_saut--
+!--PARAM_ATMOS_PHY_MP_TOMITA08_gamma_saut--
+!--PARAM_ATMOS_PHY_MP_TOMITA08_gamma_sacr--
 /
 
 #################################################

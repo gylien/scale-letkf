@@ -819,7 +819,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         do ij = 1, nij1
           ref_min_dist = 1.0d33
           !!!!!! save this (ref_min_dist) information when doing DA
-          do iob = obsgrd(ic)%ac_ext(0, 1), obsgrd(ic)%ac_ext(obsgrd(ic)%ngrdext_i, obsgrd(ic)%ngrdext_j)
+          do iob = obsgrd(ic)%ac_ext(0, 1) + 1, obsgrd(ic)%ac_ext(obsgrd(ic)%ngrdext_i, obsgrd(ic)%ngrdext_j)
             rdx = (rig1(ij) - obs(obsda_sort%set(iob))%ri(obsda_sort%idx(iob))) * DX
             rdy = (rjg1(ij) - obs(obsda_sort%set(iob))%rj(obsda_sort%idx(iob))) * DY
             rdxy = rdx*rdx + rdy*rdy

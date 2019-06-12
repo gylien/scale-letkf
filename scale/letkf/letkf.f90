@@ -33,7 +33,7 @@ PROGRAM letkf
   character(len=7) :: stdoutf='-000000'
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
-  integer :: iarg
+  integer :: iarg, iof
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -96,22 +96,12 @@ PROGRAM letkf
 
   call set_common_conf(nprocs)
 
-  call read_nml_obs_error
-  call read_nml_obsope
-  call read_nml_letkf
-  call read_nml_letkf_obs
-  call read_nml_letkf_var_local
-  call read_nml_letkf_monitor
-  call read_nml_letkf_radar
-  call read_nml_letkf_h08
-  call read_nml_pest
-
   if (DET_RUN) then
     call set_mem_node_proc(MEMBER+2)
   else
     call set_mem_node_proc(MEMBER+1)
   end if
-  call set_scalelib
+  call set_scalelib('LETKF')
 
   if (myrank_use) then
 
@@ -262,6 +252,9 @@ PROGRAM letkf
 !! Monitor
 !!-----------------------------------------------------------------------
 
+    do iof = 1, OBS_IN_NUM
+      call obs_info_deallocate(obs(iof))
+    end do
     deallocate (obs)
     deallocate (gues3d, gues2d, anal3d, anal2d)
 

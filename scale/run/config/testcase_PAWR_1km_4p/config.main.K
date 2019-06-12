@@ -5,41 +5,65 @@
 #
 #===============================================================================
 
-PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
+PRESET='K_rankdir'              # 'K' or 'K_rankdir' or 'K_micro'
+#PRESET='K_micro'       # 'K' or 'K_rankdir' or 'K_micro'
 
 #===============================================================================
 
+USERNAME=honda
+
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
-DDIR="$(cd "$(pwd)/../../../.." && pwd)"    # Root directory of the test suite
 
-OUTDIR="$DDIR/exp/testcase_PAWR_1km_4p"     # Directory for SCALE-LETKF output
+EXP="testcase_PAWR_1km_4p_Z_CTRL" # Experiment name
+EXP="testcase_PAWR_1km_4p_Z_drag_g" # Experiment name
+EXP="testcase_PAWR_1km_4p_Z_Cs" # Experiment name
+
+TOP="/data/share005/honda2/scale-5.2.6"
+OUTDIR="$TOP/OUTPUT/$EXP"     # SCALE-LETKF output
+INDIR="$TOP/OUTPUT/$EXP"     # SCALE-LETKF input
+
+PEXP="testcase_PAWR_bdy" # Experiment name (parent)
+#===============================================================================
+# Parameter estimation
+
+PEST_PMAX=1
+PEST_NAME[1]=PARAM_ATMOS_PHY_MP_TOMITA08_Cs
+#PEST_NAME[1]=PARAM_ATMOS_PHY_MP_TOMITA08_drag_g
 
 #===============================================================================
 # Location of model/data files
 
-SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
-DATADIR="$DDIR/database"                                             # Directory of the SCALE database
+SCALEDIR="$DIR/../.."     # SCALE model
+DATADIR="/data/share005/SCALE/database"  # SCALE database
 
-DATA_TOPO="$DDIR/exp/testcase_PAWR_1km_4p_data"                      # Directory of the prepared topo files
-DATA_TOPO_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy/const/topo"
-DATA_LANDUSE="$DDIR/exp/testcase_PAWR_1km_4p_data"                   # Directory of the prepared landuse files
-DATA_BDY_SCALE="$DDIR/exp/testcase_PAWR_bdy"                         # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
-DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
-DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
+DATA_TOPO="$TOP/OUTPUT/testcase_PAWR_1km_4p"      # Prepared topo files
+DATA_TOPO_BDY_SCALE="$TOP/OUTPUT/$PEXP/const/topo" # Parent domain topo
+DATA_LANDUSE="$TOP/OUTPUT/testcase_PAWR_1km_4p"   # Prepared landuse files
+DATA_BDY_SCALE="$TOP/OUTPUT/$PEXP"    # Boundary data in SCALE history format (parent domain)
 
-OBS="$DDIR/obs/QCED_1KM_v4_v500M_attn0.01"                           # Observation data in LETKF observation format
+# Number of MPI processes in parent domain
+DATA_BDY_SCALE_PRC_NUM_X=3
+DATA_BDY_SCALE_PRC_NUM_Y=3
+
+DATA_BDY_SCALE_PREP=         # Prepared SCALE boundary files
+DATA_BDY_WRF=                # Boundary data in WRF format
+DATA_BDY_NICAM=              # Boundary data in NICAM format (not finished)
+
+OBS="$TOP/OUTPUT/testcase_PAWR_1km_4p/obs/QCED_1KM_v4_v500M_attn0.01"       # Observation data in LETKF observation format
 OBSNCEP=
 
 #===============================================================================
 # model/data file options
 
-TOPO_FORMAT='DEM50M'    # 'prep': Use prepared topo files in $DATA_TOPO
+DET_RUN=0               # 0: Disable the deterministic run
+                        # 1: Enable  the deterministic run
+
+TOPO_FORMAT='prep'    # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='LU100M' # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep' # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -81,8 +105,11 @@ LTIMESLOT=30       # Timeslot interval for 4D-LETKF (second)
 # Parallelization settings
 
 MEMBER=100         # Ensemble size
-
 NNODES=404         # Number of nodes
+
+#MEMBER=2         # Ensemble size
+#NNODES=12         # Number of nodes
+
 PPN=1              # Number of processes per node
 
 THREADS=8          # Number of threads per process
@@ -101,7 +128,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
-TMP="/scratch/$(id -ng)/gylien/$TMPSUBDIR" # Temporary directory shared among all nodes
+TMP="/scratch/$(echo $(id -ng)|cut -c 1-8)/${USERNAME}/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPL=
 

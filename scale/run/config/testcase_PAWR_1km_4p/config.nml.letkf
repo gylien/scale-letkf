@@ -1,6 +1,5 @@
-&PARAM_ENSEMBLE
-!--MEMBER--
-!--DET_RUN--
+&PARAM_LOG
+ LOG_LEVEL = 1,
 /
 
 &PARAM_OBSOPE
@@ -47,13 +46,6 @@
 !--NOBS_OUT_BASENAME--
 /
 
-&PARAM_LETKF_PRC
-!--NNODES--
-!--PPN--
-!--MEM_NODES--
-!--MEM_NP--
-/
-
 &PARAM_LETKF_OBS
  HORI_LOCAL = 4.0D3,
  VERT_LOCAL = 0.3D0,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
@@ -77,7 +69,8 @@
 
 &PARAM_LETKF_RADAR
  USE_OBSERR_RADAR_REF = .true.
- USE_OBSERR_RADAR_VR = .true.
+! USE_OBSERR_RADAR_VR = .true.
+ USE_OBSERR_RADAR_VR = .false.
  RADAR_REF_THRES_DBZ = 10.0D0,
  MIN_RADAR_REF_MEMBER = 20,
  MIN_RADAR_REF_MEMBER_OBSREF = 1,
@@ -89,6 +82,13 @@
 &PARAM_OBS_ERROR
  OBSERR_RADAR_REF = 5.0D0,
  OBSERR_RADAR_VR = 3.0D0,
+/
+
+&PARAM_PEST
+!--PEST_PATH--
+!--PEST_PMAX--
+!--PEST_STIME--
+!--PEST_ATIME--
 /
 
 !*** Attach SCALE configuration below ***

@@ -194,6 +194,10 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
     exit $res
   fi
 
+elif [ "$MPI_TYPE" = 'impi_hibuna' ]; then
+
+  $MPIRUN $PROG $CONF $STDOUT $ARGS
+
 elif [ "$MPI_TYPE" = 'K' ]; then
 
   NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
@@ -250,11 +254,12 @@ local PROC_OPT="$1"; shift
 local SCRIPT="$1"; shift
 local ARGS="$@"
 
-if [ -x "$TMPDAT/exec/pdbash" ]; then
-  pdbash_exec="$TMPDAT/exec/pdbash"
-elif [ -x "$COMMON_DIR/pdbash" ]; then
+if ((RUN_LEVEL <= 2)); then
   pdbash_exec="$COMMON_DIR/pdbash"
 else
+  pdbash_exec="$TMPDAT/exec/pdbash"
+fi
+if [ ! -x "$pdbash_exec" ]; then
   echo "[Error] $FUNCNAME: Cannot find 'pdbash' program." >&2
   exit 1
 fi
@@ -315,6 +320,9 @@ elif [ "$MPI_TYPE" = 'impi' ]; then
     echo "        Exit code: $res" >&2
     exit $res
   fi
+
+elif [ "$MPI_TYPE" = 'impi_hibuna' ]; then
+  $MPIRUN $pdbash_exec $SCRIPT $ARGS
 
 elif [ "$MPI_TYPE" = 'K' ]; then
 
@@ -751,7 +759,11 @@ local scrpname=$(basename $JOBSCRP)
 
 #-------------------------------------------------------------------------------
 
-res=$(cd $rundir && pjsub $scrpname 2>&1)
+if [ "$PRESET" = 'K_micro' ] ; then 
+  res=$(cd $rundir && pjsub $scrpname -g $(id -ng)s 2>&1)
+else
+  res=$(cd $rundir && pjsub $scrpname 2>&1)
+fi
 echo $res
 
 if [ -z "$(echo $res | grep 'ERR')" ]; then
@@ -852,7 +864,7 @@ local JOBID="$1"
 local res=0
 local tmp
 while true; do
-  tmp=$(pjstat -H day=1 --choose ST,EC,REASON ${JOBID} | tail -n 1)
+  tmp=$(pjstat -H day=5 --choose ST,EC,REASON ${JOBID} | tail -n 1)
   if [ -z "$tmp" ]; then
     echo "[Error] $FUNCNAME: Cannot find PJM job ${JOBID}." >&2
     return 99
@@ -1048,6 +1060,34 @@ local PE="${1:-0}"
 #-------------------------------------------------------------------------------
 
 if ((PNETCDF == 1)); then
+  echo '.nc'
+else
+  printf $SCALE_SFX $PE
+fi
+
+#-------------------------------------------------------------------------------
+}
+
+#===============================================================================
+
+scale_filename_bdy_sfx () {
+#-------------------------------------------------------------------------------
+# Return the suffix of SCALE boundary file names (offline nesting) 
+# for either split-file NetCDF or PnetCDF formats
+#
+# Usage: scale_filename_bdy_sfx [PE]
+#
+#   PE  Process number
+#
+# Other input variables:
+#   $PNETCDF_BDY_SCALE
+#-------------------------------------------------------------------------------
+
+local PE="${1:-0}"
+
+#-------------------------------------------------------------------------------
+
+if ((PNETCDF_BDY_SCALE == 1)); then
   echo '.nc'
 else
   printf $SCALE_SFX $PE

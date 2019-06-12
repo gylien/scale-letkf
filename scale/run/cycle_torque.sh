@@ -34,6 +34,7 @@ echo
 setting "$@" || exit $?
 
 if [ "$CONF_MODE" = 'static' ]; then
+  . src/func_common_static.sh || exit $?
   . src/func_${job}_static.sh || exit $?
 fi
 
@@ -50,17 +51,19 @@ echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
 cat > $jobscrp << EOF
 #!/bin/sh
-##PBS -N ${job}_${SYSNAME}
+#PBS -q s
+#PBS -N ${job}_${SYSNAME}
 #PBS -l nodes=${NNODES}:ppn=${PPN}
-##PBS -l walltime=${TIME_LIMIT}
+#PBS -l walltime=${TIME_LIMIT}
 #PBS -W umask=027
-##PBS -k oe
+#PBS -k oe
 
 ulimit -s unlimited
 
 HOSTLIST=\$(cat \$PBS_NODEFILE | sort | uniq)
 HOSTLIST=\$(echo \$HOSTLIST | sed 's/  */,/g')
 export MPI_UNIVERSE="\$HOSTLIST $((PPN*THREADS))"
+export MPI_XPMEM_ENABLED=disabled
 
 export OMP_NUM_THREADS=${THREADS}
 #export PARALLEL=${THREADS}
@@ -73,7 +76,20 @@ rm -f machinefile
 cp -f \$PBS_NODEFILE machinefile
 
 export RUN_LEVEL=1
+EOF
 
+if [ "$MPI_TYPE" = 'impi_hibuna' ]; then
+cat >> $jobscrp << EOF
+
+source /etc/profile.d/modules.sh
+module unload mpt/2.12
+module load intelmpi/5.1.2.150
+
+EOF
+
+fi
+
+cat >> $jobscrp << EOF
 ./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
 
