@@ -156,7 +156,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       var_local_n2n(n) = n
     end if
   end do
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 3) then
     write (6, '(A,I3)') '[Info] var_local_n2nc_max=', var_local_n2nc_max
     do n = 1, nv3d+nv2d
       write (6, '(A,I3,A,I3,A,I3,A,I3)') '[Info] var_local_n2n(', n, ')=', var_local_n2n(n), '; var_local_n2nc(', n, ')=', var_local_n2nc(n)
@@ -680,8 +680,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
       end if
     end if
 
-    write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
-    call mpi_timer(trim(timer_str), 3)
+    if (LOG_LEVEL >= 3) then
+      write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
+      call mpi_timer(trim(timer_str), 3)
+    endif
 !$OMP END MASTER
 
   END DO ! [ ilev=1,nlev ]

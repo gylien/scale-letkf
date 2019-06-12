@@ -726,7 +726,6 @@ subroutine set_scalelib(execname)
   if (mydom >= 2) then ! In d01, keep using the original launcher config file; skip re-opening config files here
     call IO_setup( modelname, .true., confname_mydom )
 
-!    call read_nml_log
 !    call read_nml_model
 !    call read_nml_ensemble
 !    call read_nml_process
@@ -742,6 +741,7 @@ subroutine set_scalelib(execname)
 
   call mpi_timer('set_scalelib:mpi_comm_split_d_local:', 2)
 
+  call read_nml_log
   select case (execname_)
   case ('LETKF  ')
     call read_nml_obs_error
@@ -752,6 +752,7 @@ subroutine set_scalelib(execname)
     call read_nml_letkf_monitor
     call read_nml_letkf_radar
     call read_nml_letkf_h08
+    call read_nml_pest
   case ('OBSOPE ', 'OBSMAKE')
     call read_nml_obs_error
     call read_nml_obsope
@@ -1982,6 +1983,10 @@ subroutine mpi_timer(sect_name, level, barrier)
   integer :: i, ierr
   logical :: initialized
 
+  if (LOG_LEVEL <= 2) then
+    return
+  endif
+
   timer_before_barrier = MPI_WTIME()
   timer_after_barrier = timer_before_barrier
 
@@ -2096,6 +2101,7 @@ subroutine write_pest0d_all_mpi(anal0d)
   real(r_size), intent(in) :: anal0d(nens,PEST_PMAX)
   integer :: iof, ierr
 
+print *,"DEBUG write_pest0d_all_mpi",myrank_a
   call mpi_timer('write_pest0d_all_mpi:read_obs_all:', 2)
 
   call mpi_timer('', 2, barrier=MPI_COMM_a)
