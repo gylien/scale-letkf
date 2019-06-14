@@ -7,12 +7,14 @@ SYS=ofp
 OBSTYPE="RADAR"
 #OBSTYPE="LT"
 
+# Generate new obs format file
+OBSSIM_OBSOUT=".false." # anal/gues
+
 #EXP=8km_sc
 #. config/${EXP}/config.main.hakushu
 CEXP=2000m_InSnd_LT_SN14_Mac_0605
 . config/${CEXP}/config.main.$SYS
 . config/${CEXP}/config.fcst
-
 
 FCSTLEN=4800 #
 
@@ -29,21 +31,31 @@ SCALE_CONF=${LETKF_RUN}/config.nml.scale
 TOPO=${OUTDIR}/const/topo
 
 
-tstart='2000-01-01 0:40:00'
-tend=$(date -ud "${FCSTLEN} second $tstart" '+%Y-%m-%d %H:%M:%S')
-
-ctint=$(( FCSTLEN * 2 )) # obssim interval  # initial time loop
-tint=$FCSTOUT # analysis interval (Do not modify!)
-
 # -- SCALE setting --
 MEM_NP=${SCALE_NP}
 MEM=mean
 TYPE=fcst
+TYPE=anal
+TYPE=gues
 
 SMEM=0 # 
 EMEM=${SMEM} # mean
 MEM_L=`seq ${SMEM} ${EMEM}`
 
+if [ "$TYPE" == "fcst" ] ; then
+  OBSSIM_IN_TYPE="hisotry"
+elif [ "$TYPE" == "anal" ] || [ "$TYPE" == "gues" ] ; then
+  OBSSIM_IN_TYPE="restart"
+  FCSTLEN=30 #
+fi
+
+
+#tstart='2000-01-01 0:40:00'
+tstart='2000-01-01 0:40:30'
+tend=$(date -ud "${FCSTLEN} second $tstart" '+%Y-%m-%d %H:%M:%S')
+
+ctint=$(( FCSTLEN * 2 )) # obssim interval  # initial time loop
+tint=$FCSTOUT # analysis interval (Do not modify!)
 
 
 
@@ -106,6 +118,9 @@ EOF
 # -- Add header for run sh --
 TS=1
 TE=$((FCSTLEN / tint + 1))
+if [ "$TYPE" == "anal" ] || [ "$TYPE" == "gues" ] ; then
+  TE=1
+fi
 
 echo "TIME LEVELS: "$TS" "$TE
 
@@ -122,7 +137,7 @@ cat > $RUNSH << EOF
 ##PJM -L rscgrp=regular-flat
 #PJM -L rscgrp=debug-flat
 #PJM -L node=$((SCALE_NP/PPN))
-#PJM -L elapse=00:15:00
+#PJM -L elapse=00:25:00
 #PJM --mpi proc=${SCALE_NP}
 #PJM --omp thread=${THREADS}
 #PJM -g hp150019
@@ -172,6 +187,7 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
      MEM=$(printf '%04d' $MEM)
   fi
   ORG_DIR=${OUTDIR}/${HTIME}/${TYPE}/${MEM}
+  OBSSIM_TOPO_IN_BASENAME=${OUTDIR}/const/topo/topo
 
   if [ "$OBSTYPE" = 'RADAR' ]; then
     ONAME=${ORG_DIR}/radar_${HTIME}_${MEM}.dat
@@ -186,6 +202,7 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
     OBSSIM_NUM_2D_VARS="1"
     OBSSIM_2D_VARS_LIST="5002" 
   fi
+  ONAME_OBS=${ORG_DIR}/obs_i${HTIME}_${MEM}
 
   #-- copy bin & RTTOV coef files
 
@@ -221,11 +238,22 @@ cat ${RUNCONF_COMMON} > ${RUNCONF}
 
 cat << EOF >> $RUNCONF
 
+&PARAM_LETKF_RADAR
+ RADAR_REF_THRES_DBZ = 15.0d0,
+ MIN_RADAR_REF_DBZ = 5.0D0,
+/
+
+&PARAM_OBSERR
+ OBSERR_RADAR_REF = 5.0d0,
+ OBSERR_RADAR_VR = 3.0d0,
+/
+
 &PARAM_OBSSIM
- OBSSIM_IN_TYPE = "history",
-! OBSSIM_RESTART_IN_BASENAME = "${DAT_DIR}/init",
+ OBSSIM_OBSOUT = ${OBSSIM_OBSOUT},
+ OBSSIM_IN_TYPE = "${OBSSIM_IN_TYPE}",
+ OBSSIM_RESTART_IN_BASENAME = "${ORG_DIR}/init",
  OBSSIM_HISTORY_IN_BASENAME = "${ORG_DIR}/history",
- OBSSIM_TOPO_IN_BASENAME = "${WDIR}/dat/topo/topo",
+ OBSSIM_TOPO_IN_BASENAME = "${OBSSIM_TOPO_IN_BASENAME}",
  OBSSIM_TIME_START = ${TS},
  OBSSIM_TIME_END = ${TE},
  OBSSIM_GRADS_OUT_NAME = "${ONAME}",
@@ -234,9 +262,13 @@ cat << EOF >> $RUNCONF
  OBSSIM_NUM_2D_VARS = ${OBSSIM_NUM_2D_VARS},
  OBSSIM_2D_VARS_LIST = ${OBSSIM_2D_VARS_LIST},
  ! About sqrt(40**2+40**2) km away from the storm (Similar to Zhang et al. 2004MWR)
- OBSSIM_RADAR_LON = 120.0d3,
- OBSSIM_RADAR_LAT = 120.0d3,
+ OBSSIM_RADAR_LON = 140.0d3,
+ OBSSIM_RADAR_LAT = 140.0d3,
  OBSSIM_RADAR_Z = 0.0d0,
+ OBSSIM_RADAR_ERR_10 = .true.,
+ OBSSIM_RADAR_CLR_THIN = 2,
+ OBSSIM_RADAR_RANGE = 60.0d3,
+ OBSSIM_OBSOUT_FNAME = "${ONAME_OBS}",
 /
 EOF
 
@@ -262,6 +294,7 @@ echo "wait" >> $RUNSH
 #sed -i -e  's/<TNODE_CNT>/'${TNODE_CNT}'/g' $RUNSH
 #
 #echo ${WDIR}
+
 
 cd $WDIR
 pjsub $RUNSH

@@ -90,7 +90,8 @@ program obssim
 
       call read_restart(OBSSIM_RESTART_IN_BASENAME, v3dg, v2dg)
       call state_trans(v3dg)
-      call read_topo(OBSSIM_TOPO_IN_BASENAME, topog)
+!      call read_topo(OBSSIM_TOPO_IN_BASENAME, topog)
+      topog = 0.0_r_size
       call state_to_history(v3dg, v2dg, topog, v3dgh, v2dgh)
 
       deallocate (v3dg, v2dg, topog)
@@ -108,7 +109,7 @@ program obssim
         call obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim)
 
         call write_grd_mpi(OBSSIM_GRADS_OUT_NAME, OBSSIM_NUM_3D_VARS, OBSSIM_NUM_2D_VARS, &
-                           it, v3dgsim, v2dgsim)
+                           it, v3dgsim, v2dgsim, obsout=OBSSIM_OBSOUT)
       end do
 
     else

@@ -1043,7 +1043,7 @@ SUBROUTINE state_trans(v3dg)
 
 !  REAL(RP) :: pres2(nlev,nlon,nlat)
 
-!$OMP PARALLEL DO PRIVATE(i,j,k,iv3d,qdry,CVtot,Rtot,CPovCV,rho,pres,temp) COLLAPSE(2)
+!!!$OMP PARALLEL DO PRIVATE(i,j,k,iv3d,qdry,CVtot,Rtot,CPovCV,rho,pres,temp) COLLAPSE(2)
   do j = 1, nlat
     do i = 1, nlon
       do k = 1, nlev
@@ -1070,7 +1070,7 @@ SUBROUTINE state_trans(v3dg)
       enddo
     enddo
   enddo
-!$OMP END PARALLEL DO
+!!!$OMP END PARALLEL DO
 
 !  v3dg(:,:,:,5) = v3dg(:,:,:,iv3d_rho) ! temporarily store density here
 !  v3dg(:,:,:,iv3d_u) = v3dg(:,:,:,iv3d_rhou) / v3dg(:,:,:,5)
@@ -1217,7 +1217,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   !-----------------------------------------------------------------------------
 
   ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
-!$OMP PARALLEL DO PRIVATE(j,i,k)
+!!!$OMP PARALLEL DO PRIVATE(j,i,k)
   do j = 1, nlat
     do i = 1, nlon
       do k = 1, nlev
@@ -1225,7 +1225,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
       end do
     enddo
   enddo
-!$OMP END PARALLEL DO
+!!!$OMP END PARALLEL DO
 
   ! Surface variables: use the 1st level as the surface (although it is not)
   !-----------------------------------------------------------------------------
@@ -1247,13 +1247,13 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   ! Assume the point where terrain height is less than 10 m is the ocean. T.Honda (02/09/2016)
   !-----------------------------------------------------------------------------
 
-!$OMP PARALLEL DO PRIVATE(j,i)
+!!!$OMP PARALLEL DO PRIVATE(j,i)
   do j = 1, nlat
     do i = 1, nlon
       v2dgh(i+IHALO,j+JHALO,iv2dd_lsmask) = min(max(topo(i,j) - 10.0d0, 0.0d0), 1.0d0)
     enddo
   enddo
-!$OMP END PARALLEL DO
+!!!$OMP END PARALLEL DO
 #endif
 
   ! Pad the upper and lower halo areas

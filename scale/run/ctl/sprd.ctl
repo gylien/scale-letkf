@@ -1,4 +1,5 @@
-dset /work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/2000m_InSnd_LT_SN14_Mac_0605_PAWR/20000101%h2%n200/%e/mean/init_grads.dat
+*dset /work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/2000m_InSnd_LT_SN14_Mac_0605_PAWR/20000101%h2%n200/%e/sprd/init_grads.dat
+dset /work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/2000m_InSnd_LT_SN14_Mac_0605_NODA/20000101%h2%n200/%e/sprd/init_grads.dat
 
 options template
 edef 2 names anal gues
@@ -6,7 +7,7 @@ undef -9.99e33
 xdef 192 linear 0 2
 ydef 192 linear 0 2
 zdef 40 linear 0.5 0.25
-tdef 10000 linear 00:41z01Jan2000 1mn
+tdef 10000 linear 00:40z01Jan2000 1mn
 vars 17
 u 40 99 U wind
 v 40 99 V wind

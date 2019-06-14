@@ -7,11 +7,11 @@
 
 
 PRESET='OFP'
-#OFP_MODE="regular-flat"
+OFP_MODE="regular-flat"
 OFP_MODE="debug-flat"
 
 EXP=2000m_InSnd_LT_SN14_Mac_0605 # nature run
-#EXP=2000m_InSnd_LT_SN14_Mac_0605_NODA # NODA
+EXP=2000m_InSnd_LT_SN14_Mac_0605_NODA # NODA
 EXP=2000m_InSnd_LT_SN14_Mac_0605_PAWR #
 
 REF_EXP=2000m_InSnd_LT_SN14_Mac_0605 # nature run
@@ -40,7 +40,8 @@ DATA_BDY_WRF=
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 DATA_BDY_GRADS=
 
-OBS="/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/${REF_EXP}/obs"
+#OBS="/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/${REF_EXP}/obs"
+OBS="/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/2000m_InSnd_LT_SN14_Mac_0605/20000101004000/fcst/mean/obs"
 OBSNCEP=
 
 #===============================================================================
@@ -81,8 +82,11 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
 
 # NODA
 OBSNUM=1
-#OBSNAME[1]=NODA
-OBSNAME[1]=radar
+OBSNAME[1]=NODA
+
+#OBSNUM=2
+#OBSNAME[1]=ref
+#OBSNAME[2]=vr
 
 #===============================================================================
 # Cycling settings
@@ -106,8 +110,11 @@ NNODES=81
 
 #NNODES=1
 #
-MEMBER=5           # Ensemble size
-NNODES=6
+#MEMBER=5           # Ensemble size
+#NNODES=6
+
+MEMBER=80           # Ensemble size
+NNODES=27
 
 PPN=64              # Number of processes per node
 

@@ -268,6 +268,7 @@ MODULE common_nml
                                       5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
 
   !--- PARAM_OBSSIM
+  logical               :: OBSSIM_OBSOUT = .false.
   character(filelenmax) :: OBSSIM_IN_TYPE = 'history'
   character(filelenmax) :: OBSSIM_RESTART_IN_BASENAME = 'restart'
   character(filelenmax) :: OBSSIM_HISTORY_IN_BASENAME = 'history'
@@ -282,6 +283,10 @@ MODULE common_nml
   real(r_size)          :: OBSSIM_RADAR_LON = 0.0d0
   real(r_size)          :: OBSSIM_RADAR_LAT = 0.0d0
   real(r_size)          :: OBSSIM_RADAR_Z = 0.0d0
+  logical               :: OBSSIM_RADAR_ERR_10 = .true.
+  integer               :: OBSSIM_RADAR_CLR_THIN = 2
+  real(r_size)          :: OBSSIM_RADAR_RANGE = 60.0d3
+  character(filelenmax) :: OBSSIM_OBSOUT_FNAME = ''
 
   !--- PARAM_SC
   ! inital perturbation will be added within a SC_DIST_ECHO [m] circle centered at the first echo in nature run
@@ -770,6 +775,7 @@ subroutine read_nml_obssim
   integer :: ierr
 
   namelist /PARAM_OBSSIM/ &
+    OBSSIM_OBSOUT, &
     OBSSIM_IN_TYPE, &
     OBSSIM_RESTART_IN_BASENAME, &
     OBSSIM_HISTORY_IN_BASENAME, &
@@ -783,7 +789,11 @@ subroutine read_nml_obssim
     OBSSIM_2D_VARS_LIST, &
     OBSSIM_RADAR_LON, &
     OBSSIM_RADAR_LAT, &
-    OBSSIM_RADAR_Z
+    OBSSIM_RADAR_Z,   &
+    OBSSIM_RADAR_ERR_10, &
+    OBSSIM_RADAR_CLR_THIN, &
+    OBSSIM_RADAR_RANGE, &
+    OBSSIM_OBSOUT_FNAME
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBSSIM,iostat=ierr)
