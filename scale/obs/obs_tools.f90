@@ -8,7 +8,19 @@ module obs_tools
   use common
   use common_nml
   use common_scale
-  use common_mpi_scale
+  use common_mpi
+  use common_mpi_scale, only: &
+     MPI_COMM_a, MPI_COMM_e,  &
+     MPI_COMM_d, MPI_COMM_da, &
+     myrank_a, myrank_e, &
+     myrank_d, myrank_da, &
+     nprocs_d, nprocs_e, &
+     mmean_rank_e, mmdetin, &
+     mmean, mmdet, &
+     myrank_use_da, &
+     myrank_to_mem, nitmax, &
+     ranke_to_mem, mmdetobs, &
+     nensobs, timer_name_width
   use common_obs_scale
   use radar_obs
 
@@ -762,15 +774,17 @@ subroutine read_obs_all_mpi(obs)
   integer :: iof, ierr
   logical :: ex
 
+  if (.not. myrank_use_da) return
+
   call mpi_timer('', 2)
 
-  if (myrank_a == 0) then
+  if (myrank_da == 0) then
     call read_obs_all(obs)
 
     call mpi_timer('read_obs_all_mpi:read_obs_all:', 2)
   end if
 
-  call mpi_timer('', 2, barrier=MPI_COMM_a)
+  call mpi_timer('', 2, barrier=MPI_COMM_da)
 
   do iof = 1, OBS_IN_NUM
     if ((OBS_IN_FORMAT(iof) == obsfmt_pawr_toshiba .or. OBS_IN_FORMAT(iof) == obsfmt_pawr_jrc)&
@@ -778,20 +792,20 @@ subroutine read_obs_all_mpi(obs)
       cycle
     end if
 
-    call MPI_BCAST(obs(iof)%nobs, 1, MPI_INTEGER, 0, MPI_COMM_a, ierr)
-    if (myrank_a /= 0) then
+    call MPI_BCAST(obs(iof)%nobs, 1, MPI_INTEGER, 0, MPI_COMM_da, ierr)
+    if (myrank_da /= 0) then
       call obs_info_allocate(obs(iof), extended=.true.)
     end if
 
-    call MPI_BCAST(obs(iof)%elm, obs(iof)%nobs, MPI_INTEGER, 0, MPI_COMM_a, ierr)
-    call MPI_BCAST(obs(iof)%lon, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
-    call MPI_BCAST(obs(iof)%lat, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
-    call MPI_BCAST(obs(iof)%lev, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
-    call MPI_BCAST(obs(iof)%dat, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
-    call MPI_BCAST(obs(iof)%err, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
-    call MPI_BCAST(obs(iof)%typ, obs(iof)%nobs, MPI_INTEGER, 0, MPI_COMM_a, ierr)
-    call MPI_BCAST(obs(iof)%dif, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_a, ierr)
-    call MPI_BCAST(obs(iof)%meta, max_obs_info_meta, MPI_r_size, 0, MPI_COMM_a, ierr)
+    call MPI_BCAST(obs(iof)%elm, obs(iof)%nobs, MPI_INTEGER, 0, MPI_COMM_da, ierr)
+    call MPI_BCAST(obs(iof)%lon, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_da, ierr)
+    call MPI_BCAST(obs(iof)%lat, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_da, ierr)
+    call MPI_BCAST(obs(iof)%lev, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_da, ierr)
+    call MPI_BCAST(obs(iof)%dat, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_da, ierr)
+    call MPI_BCAST(obs(iof)%err, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_da, ierr)
+    call MPI_BCAST(obs(iof)%typ, obs(iof)%nobs, MPI_INTEGER, 0, MPI_COMM_da, ierr)
+    call MPI_BCAST(obs(iof)%dif, obs(iof)%nobs, MPI_r_size, 0, MPI_COMM_da, ierr)
+    call MPI_BCAST(obs(iof)%meta, max_obs_info_meta, MPI_r_size, 0, MPI_COMM_da, ierr)
   end do ! [ iof = 1, OBS_IN_NUM ]
 
   call mpi_timer('read_obs_all_mpi:mpi_bcast:', 2)
@@ -933,6 +947,8 @@ subroutine obs_da_value_allreduce(obsda)
   integer :: dspr(nprocs_e)
   integer :: current_shape(2)
   integer :: ie, it, im, imb, ierr
+
+  if (.not. myrank_use_da) return
 
   if (obsda%nobs <= 0) then
     return

@@ -55,6 +55,9 @@ MODULE common_nml
   logical :: DET_RUN = .false.             ! Deprecated (= ENS_WITH_MDET)
   logical :: DET_RUN_CYCLED = .true.       ! Deprecated (= MDET_CYCLED)
 
+  logical :: DACYCLE_RUN_FCST = .false.    ! Run a forecast from analysis ensemble mean by additional member
+  integer :: MAX_DACYCLE_RUN_FCST = 0      ! Maximum number of addtional forecasts 
+
   !--- PARAM_MODEL
   character(len=10) :: MODEL = 'scale-rm'
   logical :: VERIFY_COORD = .false.
@@ -380,7 +383,9 @@ subroutine read_nml_ensemble
     MDET_CYCLED, &
     CONF_FILES, &
     DET_RUN, &           !*** for backward compatibility ***
-    DET_RUN_CYCLED       !*** for backward compatibility ***
+    DET_RUN_CYCLED, &    !*** for backward compatibility ***
+    DACYCLE_RUN_FCST, &
+    MAX_DACYCLE_RUN_FCST
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)
@@ -412,9 +417,12 @@ subroutine read_nml_ensemble
     if (ENS_WITH_MDET) then
       MEMBER_RUN = MEMBER_RUN + 1
     end if
+    if (DACYCLE_RUN_FCST) then
+      MEMBER_RUN = MEMBER_RUN + MAX_DACYCLE_RUN_FCST
+    endif
   end if
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_ENSEMBLE)
   end if
 
@@ -442,7 +450,7 @@ subroutine read_nml_model
     stop
   endif
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_MODEL)
   end if
 
@@ -475,7 +483,7 @@ subroutine read_nml_process
     stop
   endif
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_PROCESS)
   end if
 
@@ -503,7 +511,7 @@ subroutine read_nml_log
     stop
   endif
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_LOG)
   end if
 
@@ -530,7 +538,7 @@ subroutine read_nml_dacycle
     stop
   endif
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_DACYCLE)
   end if
 
@@ -593,7 +601,7 @@ subroutine read_nml_obsope
     call filename_replace_mem(HISTORY_MDET_IN_BASENAME, memf_mdet)
   end if
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_OBSOPE)
   end if
 
@@ -790,7 +798,7 @@ subroutine read_nml_letkf
     BOUNDARY_BUFFER_WIDTH = BOUNDARY_TAPER_WIDTH
   end if
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_LETKF)
   end if
 
@@ -867,7 +875,7 @@ subroutine read_nml_letkf_obs
     VERT_LOCAL_RADAR_VR = VERT_LOCAL(22) !PHARAD
   end if
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_LETKF_OBS)
   end if
 
@@ -902,7 +910,7 @@ subroutine read_nml_letkf_var_local
     stop
   endif
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_LETKF_VAR_LOCAL)
   end if
 
@@ -939,7 +947,7 @@ subroutine read_nml_letkf_monitor
     stop
   endif
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_LETKF_MONITOR)
   end if
 
@@ -989,7 +997,7 @@ subroutine read_nml_letkf_radar
     RADAR_REF_THRES_DBZ = MIN_RADAR_REF_DBZ
   end if
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_LETKF_RADAR)
   end if
 
@@ -1024,7 +1032,7 @@ subroutine read_nml_letkf_h08
     stop
   endif
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_LETKF_H08)
   end if
 
@@ -1062,7 +1070,7 @@ subroutine read_nml_obs_error
     stop
   endif
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_OBS_ERROR)
   end if
 
@@ -1110,7 +1118,7 @@ subroutine read_nml_obssim
     end if
   end if
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_OBSSIM)
   end if
 

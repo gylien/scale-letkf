@@ -9,9 +9,28 @@ program dacycle
   use common_mpi
   use common_nml
   use common_scale
-  use common_scalerm
-  use common_mpi_scale
-  use common_obs_scale
+  use common_scalerm, only: &
+    scalerm_setup, &
+    resume_state,  &
+    scalerm_finalize
+  use common_mpi_scale, only: &
+    set_mem_node_proc,        &
+    set_common_mpi_scale,     &
+    myrank_use,               &
+    myrank_a, myrank_da,      &
+    myrank_d, myrank_e,       &
+    mmean_rank_e,             &
+    write_ensmean,            &
+    write_ens_mpi,            &
+    initialize_mpi_scale,     &
+    finalize_mpi_scale,       &
+    unset_common_mpi_scale,   &
+    read_ens_mpi,             &
+    write_enssprd,            &
+    set_common_mpi_grid,      &
+    mpi_timer
+  use common_obs_scale, only: &
+    set_common_obs_scale
   use letkf_obs
   use letkf_tools
   use obs_tools, only: &
@@ -165,7 +184,15 @@ program dacycle
     call PROF_setprefx('MAIN')
     call PROF_rapstart('Main_Loop', 0)
 
+if (.not. myrank_use_da) then ! DEBUG
+   TIME_NSTEP = TIME_NSTEP * 5
+endif
+
     do
+
+!      if (.not. myrank_use_da) then
+!        exit ! DEBUG
+!      endif
 
       anal_mem_out_now = .false.
       anal_mean_out_now = .false.
@@ -180,22 +207,31 @@ program dacycle
       if ( TIME_DOresume ) then
         ! read state from restart files
         if (DIRECT_TRANSFER .and. icycle >= 1) then
-          if (LOG_LEVEL >= 1) then
+          if (LOG_LEVEL >= 3) then
             write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip reading restart files'
           end if
           call resume_state(do_restart_read=.false.)
         else
           call resume_state(do_restart_read=.true.)
+
+          ! Additional forecast members do not enter resume_state twice
+          if (.not. myrank_use_da) then
+            icycle = 1
+          endif
         end if
 
         ! history&monitor file output
         call MONITOR_write('MAIN', TIME_NOWSTEP)
         call FILE_HISTORY_write ! if needed
+
       end if
 
       ! time advance
       call ADMIN_TIME_advance
       call FILE_HISTORY_set_nowdate( TIME_NOWDATE, TIME_NOWMS, TIME_NOWSTEP )
+
+if (myrank_da == 0 .and. (.not. myrank_a == 0))print *,"DEBUG additional",myrank_a, TIME_NOWDATE(4:6),TIME_NOWSTEP,TIME_NSTEP
+if (myrank_da == 0 .and. myrank_a == 0)print *,"DEBUG regular",myrank_a, TIME_NOWDATE(4:6),TIME_NOWSTEP,TIME_NSTEP
 
 !      ! user-defined procedure
 !      call USER_step
@@ -209,13 +245,15 @@ program dacycle
 
       ! restart output before LETKF
       if (DIRECT_TRANSFER) then
-        if (LOG_LEVEL >= 2 .and. TIME_DOATMOS_restart) then
+        if (LOG_LEVEL >= 2 .and. TIME_DOATMOS_restart .and. myrank_da == 0) then
           write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip writing restart files before LETKF'
         end if
       else
-        call ADMIN_restart_write
+! comment out for DEBUG
+!        call ADMIN_restart_write
       end if
-      call ADMIN_restart_write_additional !!!!!! To do: control additional restart outputs for gues_mean, gues_sprd, and anal_sprd
+! comment out for DEBUG
+!      call ADMIN_restart_write_additional !!!!!! To do: control additional restart outputs for gues_mean, gues_sprd, and anal_sprd
 
       ! calc tendencies and diagnostices
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency( force = .false. )
@@ -233,9 +271,9 @@ program dacycle
       !-------------------------------------------------------------------------
       ! LETKF section start
       !-------------------------------------------------------------------------
-      if (TIME_DOATMOS_restart) then
+      if (TIME_DOATMOS_restart .and. myrank_use_da) then
 
-        call mpi_timer('SCALE', 1, barrier=MPI_COMM_a)
+        call mpi_timer('SCALE', 1, barrier=MPI_COMM_da)
 
         icycle = icycle + 1
 
@@ -274,14 +312,14 @@ program dacycle
 
 #ifdef JITDT
           if (OBS_USE_JITDT) then
-            if (myrank_a == 0) then
+            if (myrank_da == 0) then
               open(80, file=trim(OBS_JITDT_DATADIR) // '/job.running')
               close(80)
             end if
           end if
 #endif
 
-          call mpi_timer('INIT_LETKF', 1, barrier=MPI_COMM_a)
+          call mpi_timer('INIT_LETKF', 1, barrier=MPI_COMM_da)
         end if
 
         !-----------------------------------------------------------------------
@@ -290,7 +328,7 @@ program dacycle
 
         call read_obs_all_mpi(obs)
 
-        call mpi_timer('READ_OBS', 1, barrier=MPI_COMM_a)
+        call mpi_timer('READ_OBS', 1, barrier=MPI_COMM_da)
 
         !-----------------------------------------------------------------------
         ! Observation operator
@@ -308,7 +346,7 @@ program dacycle
         !
         call obsope_cal(obsda_return=obsda, nobs_extern=nobs_extern)
 
-        call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
+        call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_da)
 
         !-----------------------------------------------------------------------
         ! Process observation data
@@ -316,7 +354,7 @@ program dacycle
 
         call set_letkf_obs
 
-        call mpi_timer('PROCESS_OBS', 1, barrier=MPI_COMM_a)
+        call mpi_timer('PROCESS_OBS', 1, barrier=MPI_COMM_da)
 
         !-----------------------------------------------------------------------
         ! First guess ensemble
@@ -341,12 +379,12 @@ program dacycle
             allocate (mean2d(nlon,nlat,nv2d))
           end if
 
-          call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_a)
+          call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_da)
 
           if (INFL_ADD > 0.0d0) then
             call addinfl_setup(addi3d, addi2d)
 
-            call mpi_timer('ADDINFL_PREP', 1, barrier=MPI_COMM_a)
+            call mpi_timer('ADDINFL_PREP', 1, barrier=MPI_COMM_da)
           end if
         end if
 
@@ -360,7 +398,7 @@ program dacycle
           gues2d(:,mmdet,:) = gues2d(:,mmdetin,:)
         end if
 
-        call mpi_timer('READ_GUES', 1, barrier=MPI_COMM_a)
+        call mpi_timer('READ_GUES', 1, barrier=MPI_COMM_da)
 
         !
         ! WRITE ENS MEAN and SPRD
@@ -378,7 +416,7 @@ program dacycle
           call write_enssprd(trim(GUES_SPRD_OUT_BASENAME) // trim(timelabel_anal), gues3d, gues2d)
         end if
 
-        call mpi_timer('GUES_MEAN', 1, barrier=MPI_COMM_a)
+        call mpi_timer('GUES_MEAN', 1, barrier=MPI_COMM_da)
 
         !-----------------------------------------------------------------------
         ! Data Assimilation
@@ -393,7 +431,7 @@ program dacycle
           call das_letkf(gues3d, gues2d, anal3d, anal2d)
         end if
 
-        call mpi_timer('DAS_LETKF', 1, barrier=MPI_COMM_a)
+        call mpi_timer('DAS_LETKF', 1, barrier=MPI_COMM_da)
 
         !-----------------------------------------------------------------------
         ! Analysis ensemble
@@ -409,7 +447,7 @@ program dacycle
           call write_enssprd(trim(ANAL_SPRD_OUT_BASENAME) // trim(timelabel_anal), anal3d, anal2d)
         end if
 
-        call mpi_timer('ANAL_MEAN', 1, barrier=MPI_COMM_a)
+        call mpi_timer('ANAL_MEAN', 1, barrier=MPI_COMM_da)
 
         !
         ! WRITE ANAL and ENS MEAN
@@ -421,7 +459,7 @@ program dacycle
           call write_ens_mpi(anal3d, anal2d)
         end if
 
-        call mpi_timer('WRITE_ANAL', 1, barrier=MPI_COMM_a)
+        call mpi_timer('WRITE_ANAL', 1, barrier=MPI_COMM_da)
 
         do iof = 1, OBS_IN_NUM
           call obs_info_deallocate(obs(iof))
@@ -437,13 +475,18 @@ program dacycle
       ! restart output after LETKF
       if (DIRECT_TRANSFER .and. (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now)) then
         !!!!!! To do: control restart outputs separately for members, mean, and mdet
-        if (LOG_LEVEL >= 2 .and. myrank_a == 0 .and. TIME_DOATMOS_restart) then
+        if (LOG_LEVEL >= 2 .and. myrank_da == 0 .and. TIME_DOATMOS_restart) then
           write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; writing restart (analysis) files after LETKF'
         end if
-        call ADMIN_restart_write
+!!! comment out for DEBUG
+!        call ADMIN_restart_write 
       end if
 
-      if( TIME_DOend ) exit
+      if ( TIME_NOWSTEP > TIME_NSTEP ) then
+        exit
+      endif
+
+!      if( TIME_DOend ) exit
 
       if( IO_L ) call flush(IO_FID_LOG)
 
@@ -458,13 +501,18 @@ program dacycle
     ! LETKF finalize
     !-------------------------------------------------------------------
 
-    deallocate (obs)
-    deallocate (gues3d, gues2d, anal3d, anal2d)
+    if (allocated(obs)) deallocate (obs)
+    if (allocated(gues3d)) deallocate (gues3d)
+    if (allocated(gues2d)) deallocate (gues2d)
+    if (allocated(anal3d)) deallocate (anal3d)
+    if (allocated(anal2d)) deallocate (anal2d)
     if (INFL_ADD > 0.0d0) then
-      deallocate (addi3d, addi2d)
+      if (allocated(addi3d)) deallocate (addi3d)
+      if (allocated(addi2d)) deallocate (addi2d)
     end if
     if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
-      deallocate (mean3d, mean2d)
+      if (allocated(mean3d)) deallocate (mean3d)
+      if (allocated(mean2d)) deallocate (mean2d)
     end if
 
     call unset_common_mpi_scale

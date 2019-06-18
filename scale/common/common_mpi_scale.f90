@@ -51,6 +51,7 @@ module common_mpi_scale
   integer,allocatable,save :: myrank_to_mem(:)
   integer,save :: myrank_to_pe
   logical,save :: myrank_use = .false.
+  logical,save :: myrank_use_da = .false.
 
   integer,save :: mydom = -1
 
@@ -68,6 +69,7 @@ module common_mpi_scale
 
   integer,save :: MPI_COMM_u, nprocs_u, myrank_u
   integer,save :: MPI_COMM_a, nprocs_a, myrank_a
+  integer,save :: MPI_COMM_da, nprocs_da, myrank_da
   integer,save :: MPI_COMM_d, nprocs_d, myrank_d
   integer,save :: MPI_COMM_e, nprocs_e, myrank_e
 
@@ -157,7 +159,7 @@ subroutine set_common_mpi_scale
   color = myrank_to_pe
   key = myrank_to_mem(1) - 1
 
-  call MPI_COMM_SPLIT(MPI_COMM_a, color, key, MPI_COMM_e, ierr)
+  call MPI_COMM_SPLIT(MPI_COMM_da, color, key, MPI_COMM_e, ierr)
 
   call MPI_COMM_SIZE(MPI_COMM_e, nprocs_e, ierr)
   call MPI_COMM_RANK(MPI_COMM_e, myrank_e, ierr)
@@ -239,6 +241,7 @@ subroutine unset_common_mpi_scale
   implicit none
   integer:: ierr
 
+  if (.not. myrank_use_da) return
   call MPI_COMM_FREE(MPI_COMM_e, ierr)
 
   return
@@ -395,7 +398,7 @@ SUBROUTINE set_mem_node_proc(mem)
 
   nprocs_m = sum(PRC_DOMAINS(1:NUM_DOMAIN))
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 2 .and. myrank == 0) then
     write(6,'(A,I10)') '[Info] Total number of MPI processes                = ', nprocs
     write(6,'(A,I10)') '[Info] Number of nodes (NNODES)                     = ', nnodes
     write(6,'(A,I10)') '[Info] Number of processes per node (PPN)           = ', PPN
@@ -1323,6 +1326,9 @@ subroutine write_ens_mpi(v3d, v2d, mean3d, mean2d)
             stop
           end if
         end if
+ 
+        call write_restart_direct(v3dg, v2dg) 
+
       else
         if (FILE_AGGREGATE) then
 #ifdef PNETCDF

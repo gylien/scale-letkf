@@ -13,7 +13,12 @@ MODULE obsope_tools
 !  USE common_mpi
   use common_nml
   USE common_scale
-  USE common_mpi_scale
+  USE common_mpi_scale, only: &
+     myrank_e, myrank_d, myrank_da, &
+     MPI_COMM_e, MPI_COMM_d, &
+     MPI_COMM_da, &
+     nprocs_da, myrank_use_da, &
+     read_ens_history_iter
   USE common_obs_scale
   use obs_tools
   use radar_obs
@@ -129,6 +134,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
 !-------------------------------------------------------------------------------
 
+  if (.not. myrank_use_da) return
+
   call mpi_timer('', 2)
 
 #ifdef H08
@@ -161,13 +168,13 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !  obs_idx_TCY = -1
 !  obs_idx_TCP = -1
 
-  nobs_max_per_file_sub = (nobs_max_per_file - 1) / nprocs_a + 1
+  nobs_max_per_file_sub = (nobs_max_per_file - 1) / nprocs_da + 1
   allocate (obrank_bufs(nobs_max_per_file_sub))
   allocate (ri_bufs(nobs_max_per_file_sub))
   allocate (rj_bufs(nobs_max_per_file_sub))
 
-  allocate (cntr(nprocs_a))
-  allocate (dspr(nprocs_a))
+  allocate (cntr(nprocs_da))
+  allocate (dspr(nprocs_da))
 
   ! Use all processes to compute the basic obsevration information
   ! (locations in model grids and the subdomains they belong to)
@@ -176,23 +183,23 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   do iof = 1, OBS_IN_NUM
     if (obs(iof)%nobs > 0) then ! Process basic obsevration information for all observations since this information is not saved in obsda files
                                 ! when using separate observation operators; ignore the 'OBSDA_RUN' setting for this section
-      nsub = obs(iof)%nobs / nprocs_a
-      nmod = mod(obs(iof)%nobs, nprocs_a)
+      nsub = obs(iof)%nobs / nprocs_da
+      nmod = mod(obs(iof)%nobs, nprocs_da)
       do ip = 1, nmod
         cntr(ip) = nsub + 1
       end do
-      do ip = nmod+1, nprocs_a
+      do ip = nmod+1, nprocs_da
         cntr(ip) = nsub
       end do
       dspr(1) = 0
-      do ip = 2, nprocs_a
+      do ip = 2, nprocs_da
         dspr(ip) = dspr(ip-1) + cntr(ip-1)
       end do
 
       obrank_bufs(:) = -1
 !$OMP PARALLEL DO PRIVATE(ibufs,n) SCHEDULE(STATIC)
-      do ibufs = 1, cntr(myrank_a+1)
-        n = dspr(myrank_a+1) + ibufs
+      do ibufs = 1, cntr(myrank_da+1)
+        n = dspr(myrank_da+1) + ibufs
 !        select case (obs(iof)%elm(n))
 !        case (id_tclon_obs)
 !          obs_set_TCX = iof
@@ -213,11 +220,11 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       end do ! [ ibufs = 1, cntr(myrank_a+1) ]
 !$OMP END PARALLEL DO
 
-      call mpi_timer('obsope_cal:first_scan_cal:', 2, barrier=MPI_COMM_a)
+      call mpi_timer('obsope_cal:first_scan_cal:', 2, barrier=MPI_COMM_da)
 
-      call MPI_ALLGATHERV(obrank_bufs, cntr(myrank_a+1), MPI_INTEGER, obs(iof)%rank, cntr, dspr, MPI_INTEGER, MPI_COMM_a, ierr)
-      call MPI_ALLGATHERV(ri_bufs,     cntr(myrank_a+1), MPI_r_size,  obs(iof)%ri,   cntr, dspr, MPI_r_size,  MPI_COMM_a, ierr)
-      call MPI_ALLGATHERV(rj_bufs,     cntr(myrank_a+1), MPI_r_size,  obs(iof)%rj,   cntr, dspr, MPI_r_size,  MPI_COMM_a, ierr)
+      call MPI_ALLGATHERV(obrank_bufs, cntr(myrank_da+1), MPI_INTEGER, obs(iof)%rank, cntr, dspr, MPI_INTEGER, MPI_COMM_da, ierr)
+      call MPI_ALLGATHERV(ri_bufs,     cntr(myrank_da+1), MPI_r_size,  obs(iof)%ri,   cntr, dspr, MPI_r_size,  MPI_COMM_da, ierr)
+      call MPI_ALLGATHERV(rj_bufs,     cntr(myrank_da+1), MPI_r_size,  obs(iof)%rj,   cntr, dspr, MPI_r_size,  MPI_COMM_da, ierr)
 
       call mpi_timer('obsope_cal:first_scan_reduce:', 2)
     end if ! [ obs(iof)%nobs > 0 ]
@@ -240,7 +247,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
     allocate ( obidx_bufs(nobs_all) )
   end if
 
-  if (myrank_a == 0) then
+  if (myrank_da == 0) then
     allocate (bsnext(SLOT_START  :SLOT_END+2, 0:nprocs_d-1))
     bsn(:,:) = 0
     bsna(:,:) = 0
@@ -303,15 +310,15 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
     deallocate (bsnext)
 
     call mpi_timer('obsope_cal:bucket_sort:', 2)
-  end if ! [ myrank_a == 0 ]
+  end if ! [ myrank_da == 0 ]
 
   ! Broadcast the bucket-sort observation numbers to all processes and print
   !-----------------------------------------------------------------------------
 
-  call mpi_timer('', 2, barrier=MPI_COMM_a)
+  call mpi_timer('', 2, barrier=MPI_COMM_da)
 
-  call MPI_BCAST(bsn,  (SLOT_END-SLOT_START+3)*nprocs_d, MPI_INTEGER, 0, MPI_COMM_a, ierr)
-  call MPI_BCAST(bsna, (SLOT_END-SLOT_START+4)*nprocs_d, MPI_INTEGER, 0, MPI_COMM_a, ierr)
+  call MPI_BCAST(bsn,  (SLOT_END-SLOT_START+3)*nprocs_d, MPI_INTEGER, 0, MPI_COMM_da, ierr)
+  call MPI_BCAST(bsna, (SLOT_END-SLOT_START+4)*nprocs_d, MPI_INTEGER, 0, MPI_COMM_da, ierr)
 
   call mpi_timer('obsope_cal:sort_info_bcast:', 2)
 
@@ -321,7 +328,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
     slot_ub(islot) = (real(islot - SLOT_BASE, r_size) + 0.5d0) * SLOT_TINTERVAL
   end do
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 2 .and. myrank_da == 0) then
     write (nstr, '(I4)') SLOT_END - SLOT_START + 1
     write (6, *)
     write (6, '(A,I6,A)') 'OBSERVATION COUNTS BEFORE QC (FROM OBSOPE):'

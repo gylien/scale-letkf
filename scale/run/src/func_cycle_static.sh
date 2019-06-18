@@ -505,6 +505,23 @@ fi
 
 #-------------------------------------------------------------------------------
 
+echo 
+echo "Make sure MPI configuration"
+if ((DACYCLE == 1 )); then
+  REQ_MEM=$((MEMBER + 1 + DET_RUN)) # Member + 1 (mean) + 1 (mdet)
+  if ((DACYCLE_RUN_FCST == 1)); then
+    REQ_MEM=$((REQ_MEM + MAX_DACYCLE_RUN_FCST))
+  fi
+  REQ_PRC=$((REQ_MEM * SCALE_NP))
+  NUM_PRC=$((NNODES * PPN))
+  if ((REQ_PRC != NUM_PRC)); then
+    echo "!!Incorrect MPI setting!! Stop!"
+    echo "Required MPI processes: "$REQ_PRC
+    echo "Current MPI processes: "$NUM_PRC
+    exit 1
+  fi
+fi
+
 echo
 echo "Generate configration files..."
 
@@ -918,7 +935,12 @@ while ((time <= ETIME)); do
       conf_file_src=$SCRP_DIR/config.nml.scale
       if ((DACYCLE == 1)); then
         conf_file="dacycle_${time}.conf"
-        config_file_scale_launcher cycle "$conf_file" "dacycle.d<domain>_${time}.conf" $mtot
+        if ((DACYCLE_RUN_FCST == 1)); then
+          MEMBER_RUN=$((mtot + MAX_DACYCLE_RUN_FCST))
+        else
+          MEMBER_RUN=$mtot
+        fi
+        config_file_scale_launcher cycle "$conf_file" "dacycle.d<domain>_${time}.conf" $MEMBER_RUN
       else
         conf_file="scale-rm_ens_${time}.conf"
         config_file_scale_launcher cycle "$conf_file" "scale-rm_ens.d<domain>_${time}.conf" $mtot
@@ -1152,6 +1174,19 @@ EOF
       config_file_scale_launcher letkf "$conf_file" "letkf.d<domain>_${atime}.conf" $mtot
     fi
 
+    if ((DACYCLE_RUN_FCST == 1)); then
+      ANAL_MEAN_OUT_FREQ=100000 # DEBUG # ${MAX_DACYCLE_RUN_FCST}
+      ANAL_MDET_OUT_FREQ=100000 # DEBUG # ${MAX_DACYCLE_RUN_FCST}
+    else
+      ANAL_MEAN_OUT_FREQ=100000
+      ANAL_MDET_OUT_FREQ=100000
+    fi
+    
+    # DEBUG
+    ANAL_MEAN_OUT_FREQ=0
+    ANAL_MDET_OUT_FREQ=0
+    GUES_MEAN_OUT_FREQ=0 # DEBUG
+
     cat $conf_file_src | \
         sed -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
             -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
@@ -1171,12 +1206,12 @@ EOF
             -e "/!--OBSDA_IN--/a OBSDA_IN = .false.," \
             -e "/!--GUES_IN_BASENAME--/a GUES_IN_BASENAME = \"${GUES_IN_BASENAME}\"," \
             -e "/!--GUES_OUT_BASENAME--/a GUES_OUT_BASENAME = \"${GUES_OUT_BASENAME}\"," \
-            -e "/!--GUES_MEAN_OUT_FREQ--/a GUES_MEAN_OUT_FREQ = 100000," \
+            -e "/!--GUES_MEAN_OUT_FREQ--/a GUES_MEAN_OUT_FREQ = ${GUES_MEAN_OUT_FREQ}," \
             -e "/!--GUES_SPRD_OUT_FREQ--/a GUES_SPRD_OUT_FREQ = ${GUES_SPRD_OUT_FREQ}," \
             -e "/!--ANAL_OUT_BASENAME--/a ANAL_OUT_BASENAME = \"${ANAL_OUT_BASENAME}\"," \
             -e "/!--ANAL_OUT_FREQ--/a ANAL_OUT_FREQ = 100000," \
-            -e "/!--ANAL_MEAN_OUT_FREQ--/a ANAL_MEAN_OUT_FREQ = 100000," \
-            -e "/!--ANAL_MDET_OUT_FREQ--/a ANAL_MDET_OUT_FREQ = 100000," \
+            -e "/!--ANAL_MEAN_OUT_FREQ--/a ANAL_MEAN_OUT_FREQ = ${ANAL_MEAN_OUT_FREQ}," \
+            -e "/!--ANAL_MDET_OUT_FREQ--/a ANAL_MDET_OUT_FREQ = ${ANAL_MDET_OUT_FREQ}," \
             -e "/!--ANAL_SPRD_OUT_FREQ--/a ANAL_SPRD_OUT_FREQ = ${ANAL_SPRD_OUT_FREQ}," \
             -e "/!--GUES_ANAL_POSTFIX_TIMELABEL--/a GUES_ANAL_POSTFIX_TIMELABEL = ${GUES_ANAL_POSTFIX_TIMELABEL_TF}," \
             -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${OUTDIR[$d]}/const/topo/topo\"," \

@@ -18,6 +18,12 @@ CONF_MODE="static"
 DACYCLE=1
 DIRECT_TRANSFER=1
 
+# Run fcst from analysis ensemble mean by additional members
+DACYCLE_RUN_FCST=1
+
+# Maximum number of addtional forecasts 
+MAX_DACYCLE_RUN_FCST=1
+
 #===============================================================================
 # Forecast settings
 

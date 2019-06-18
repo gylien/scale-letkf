@@ -19,9 +19,11 @@ module common_scalerm
     myrank_to_mem, &
     myrank_to_pe, &
     myrank_use, &
+    myrank_use_da, &
     mydom, &
     MPI_COMM_u, nprocs_u, myrank_u, &
     MPI_COMM_a, nprocs_a, myrank_a, &
+    MPI_COMM_da, nprocs_da, myrank_da, &
     MPI_COMM_d, nprocs_d, myrank_d
   implicit none
   public
@@ -269,6 +271,7 @@ subroutine scalerm_setup(execname)
   integer :: qs_mp_dummy
 
   integer :: color, key, idom, ierr
+  integer :: color_da, key_da, mem_da
   character(len=2) :: fmttmp
 
   logical :: exec_model
@@ -311,7 +314,7 @@ subroutine scalerm_setup(execname)
   call MPI_COMM_SIZE(MPI_COMM_u, nprocs_u, ierr)
   call MPI_COMM_RANK(MPI_COMM_u, myrank_u, ierr)
 
-!  call mpi_timer('scalerm_setup:mpi_comm_split_u:', 2)
+  call mpi_timer('scalerm_setup:mpi_comm_split_u:', 2)
 
   ! Communicator for all domains of single members
   !-----------------------------------------------------------------------------
@@ -339,7 +342,7 @@ subroutine scalerm_setup(execname)
   call PRC_GLOBAL_setup( .false.,    & ! [IN]
                          global_comm ) ! [IN]
 
-!  call mpi_timer('scalerm_setup:mpi_comm_split_d_global:', 2)
+  call mpi_timer('scalerm_setup:mpi_comm_split_d_global:', 2)
 
   ! Communicator for one domain
   !-----------------------------------------------------------------------------
@@ -409,6 +412,15 @@ subroutine scalerm_setup(execname)
         scalerm_mem = MEMBER_SEQ(myrank_to_mem(MEMBER_ITER))
       end if
 
+      mem_da = MEMBER
+      if (ENS_WITH_MEAN .and. ENS_WITH_MDET) then
+        mem_da = MEMBER + 2
+      elseif (ENS_WITH_MEAN .or. ENS_WITH_MDET) then
+        mem_da = MEMBER + 1
+      endif
+
+      myrank_use_da = .true.
+
       if (scalerm_mem >= 1 .and. scalerm_mem <= MEMBER) then
         write (fmttmp, '(I2)') memflen
         write (scalerm_memf, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') scalerm_mem
@@ -416,6 +428,9 @@ subroutine scalerm_setup(execname)
         scalerm_memf = memf_mean
       else if (scalerm_mem == MEMBER+2 .and. ENS_WITH_MDET) then
         scalerm_memf = memf_mdet
+      else if (scalerm_mem <= MEMBER+2+MAX_DACYCLE_RUN_FCST .and. scalerm_mem >= mem_da) then
+        scalerm_memf = memf_mean
+        myrank_use_da = .false.
       else
         write (6, '(A,I7)') '[Error] Invalid member number for this rank:', scalerm_mem
         write (6, '(A,I7)') '        MEMBER =', MEMBER
@@ -510,26 +525,42 @@ subroutine scalerm_setup(execname)
 !  myrank_d = PRC_myrank
   myrank_d = local_myrank
 
-!  call mpi_timer('scalerm_setup:mpi_comm_split_d_local:', 2)
+  call mpi_timer('scalerm_setup:mpi_comm_split_d_local:', 2)
 
   ! Communicator for all processes for single domains
   !-----------------------------------------------------------------------------
 
-!  if (mydom > 0) then
+  if (mydom > 0) then
     color = mydom - 1
     key   = (myrank_to_mem(1) - 1) * nprocs_m + myrank_to_pe
-!    key   = myrank
-!  else
-!    color = MPI_UNDEFINED
-!    key   = MPI_UNDEFINED
-!  end if
+  else
+    color = MPI_UNDEFINED
+    key   = MPI_UNDEFINED
+  end if
 
   call MPI_COMM_SPLIT(MPI_COMM_u, color, key, MPI_COMM_a, ierr)
 
   call MPI_COMM_SIZE(MPI_COMM_a, nprocs_a, ierr)
   call MPI_COMM_RANK(MPI_COMM_a, myrank_a, ierr)
 
-!  call mpi_timer('scalerm_setup:mpi_comm_split_a:', 2)
+  call mpi_timer('scalerm_setup:mpi_comm_split_a:', 2)
+
+! Define another MPI communicator in which processes used for DA
+!  color_da = 0:used for DA, 1: not used for DA
+  color_da = 0
+  key_da = key
+  if (.not. myrank_use_da) then
+    color_da = 1
+    key_da = myrank_a - mem_da * nprocs_m
+print *,"DEBUG SPLIT",myrank_a, mem_da * nprocs_m, color_da, key_da
+  endif
+
+  call MPI_COMM_SPLIT(MPI_COMM_u, color_da, key_da, MPI_COMM_da, ierr)
+
+  call MPI_COMM_SIZE(MPI_COMM_da, nprocs_da, ierr)
+  call MPI_COMM_RANK(MPI_COMM_da, myrank_da, ierr)
+
+  call mpi_timer('scalerm_setup:mpi_comm_split_da:', 2)
 
   if (exec_modelonly .and. (.not. scalerm_run)) then
     return
@@ -545,7 +576,7 @@ subroutine scalerm_setup(execname)
     call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
   end if
 
-!  call mpi_timer('scalerm_setup:log_setup_init:', 2)
+  call mpi_timer('scalerm_setup:log_setup_init:', 2)
 
   ! Other scalelib setups
   !-----------------------------------------------------------------------------
@@ -789,7 +820,7 @@ subroutine scalerm_setup(execname)
     call PROF_rapend('Initialize', 0)
   end if
 
-!  call mpi_timer('scalerm_setup:other_setup:', 2)
+  call mpi_timer('scalerm_setup:other_setup:', 2)
 
   return
 end subroutine scalerm_setup
@@ -880,6 +911,7 @@ subroutine scalerm_finalize(execname)
       call MPI_COMM_FREE(MPI_COMM_d, ierr)
     end if
     call MPI_COMM_FREE(MPI_COMM_a, ierr)
+    call MPI_COMM_FREE(MPI_COMM_da, ierr)
     call MPI_COMM_FREE(MPI_COMM_u, ierr)
   end if
 

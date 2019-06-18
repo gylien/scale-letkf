@@ -243,6 +243,12 @@ else
   MDET_CYCLED_TF='.false.'
 fi
 
+if ((DACYCLE_RUN_FCST == 1)); then
+  DACYCLE_RUN_FCST_TF='.true.'
+else
+  DACYCLE_RUN_FCST_TF='.false.'
+fi
+
 cat $SCRP_DIR/config.nml.ensmodel | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBER_TOT," \
         -e "/!--ENS_WITH_MEAN--/a ENS_WITH_MEAN = $ENS_WITH_MEAN_TF," \
@@ -250,6 +256,8 @@ cat $SCRP_DIR/config.nml.ensmodel | \
         -e "/!--MEMBER_RUN--/a MEMBER_RUN = $MEMBER_RUN," \
         -e "/!--MDET_CYCLED--/a MDET_CYCLED = ${MDET_CYCLED_TF}," \
         -e "/!--CONF_FILES--/a CONF_FILES = \"${CONF_FILES}\"," \
+        -e "/!--DACYCLE_RUN_FCST--/a DACYCLE_RUN_FCST = ${DACYCLE_RUN_FCST_TF}," \
+        -e "/!--MAX_DACYCLE_RUN_FCST--/a MAX_DACYCLE_RUN_FCST = ${MAX_DACYCLE_RUN_FCST}," \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
         -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \

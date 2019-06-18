@@ -18,7 +18,17 @@ MODULE letkf_obs
   USE common_mpi
   USE common_scale
   USE common_obs_scale
-  USE common_mpi_scale
+  USE common_mpi_scale, only: &
+    MPI_COMM_e, MPI_COMM_d, &
+    MPI_COMM_da, &
+    nprocs_e, nprocs_d, &
+    myrank_e, myrank_d, myrank_da, &
+    myrank_use_da, &
+    mmdetin, mmdet, mmean, &
+    nitmax, myrank_to_mem, &
+    nensobs, mmdetobs, &
+    nij1, nens, &
+    mpi_timer
   USE common_letkf
   use obs_tools, only: &
     obs_da_value_partial_reduce_iter, &
@@ -156,12 +166,14 @@ SUBROUTINE set_letkf_obs
 
 !  character(len=timer_name_width) :: timer_str
 
+  if (.not. myrank_use_da) return
+
   call mpi_timer('', 2)
  
-  if (myrank_a == 0 .and. LOG_LEVEL >= 3) write(6,'(A)') 'Hello from set_letkf_obs'
+  if (myrank_da == 0 .and. LOG_LEVEL >= 3) write(6,'(A)') 'Hello from set_letkf_obs'
 
   nobs_intern = obsda%nobs - nobs_extern
-  if (myrank_a == 0 .and. LOG_LEVEL >= 3) then
+  if (myrank_da == 0 .and. LOG_LEVEL >= 2) then
     write(6,'(A,I10)') 'Internally processed observations: ', nobs_intern
     write(6,'(A,I10)') 'Externally processed observations: ', nobs_extern
     write(6,'(A,I10)') 'Total                observations: ', obsda%nobs
@@ -646,7 +658,7 @@ SUBROUTINE set_letkf_obs
   ! Print departure statistics
   !-------------------------------------------------------------------------------
 
-  if (LOG_LEVEL >= 3) then
+  if (LOG_LEVEL >= 3 .and. myrank_da == 0) then
     write (6, *)
     write (6,'(A,I6,A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN #', myrank_d, '):'
 
@@ -710,7 +722,7 @@ SUBROUTINE set_letkf_obs
   ! Print observation usage settings
   !-----------------------------------------------------------------------------
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 2 .and. myrank_da == 0) then
     write (6, *)
     write (6, '(A)') 'OBSERVATION USAGE SETTINGS (LIST ONLY EXISTING TYPE-VAR):'
     write (6, '(A)') '=================================================================================='
@@ -881,7 +893,7 @@ SUBROUTINE set_letkf_obs
   ! Print observation counts for each types
   !-----------------------------------------------------------------------------
 
-  if (LOG_LEVEL >= 1 .and. myrank_a == 0) then
+  if (LOG_LEVEL >= 1 .and. myrank_da == 0) then
     write (nstr, '(I4)') nid_obs
     write (6, *)
     write (6, '(A)') 'OBSERVATION COUNTS BEFORE QC (GLOABL):'
@@ -1148,7 +1160,7 @@ SUBROUTINE set_letkf_obs
     call mpi_timer('set_letkf_obs:extdomain_allreduce:', 2)
   end if
 
-  if (LOG_LEVEL >= 3) then
+  if (LOG_LEVEL >= 3 .and. myrank_da == 0) then
     do n = 1, nobstotal
       write (6, '(I9,2I6,2F8.2,3F12.4,2F10.4,I6,F12.4,I3)') n, &
             obs(obsda_sort%set(n))%elm(obsda_sort%idx(n)), &
@@ -1169,7 +1181,7 @@ SUBROUTINE set_letkf_obs
   ! Print observation counts
   !-----------------------------------------------------------------------------
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 2 .and. myrank_da == 0) then
     write (6, *)
     write (6, '(A,I6,A)') 'OBSERVATION COUNTS (GLOABL AND IN THIS SUBDOMAIN #', myrank_d, '):'
     write (6, '(A)') '====================================================================='

@@ -17,7 +17,17 @@ MODULE letkf_tools
   use common_nml
   USE common_mpi
   USE common_scale
-  USE common_mpi_scale
+  USE common_mpi_scale, only: &
+    MPI_COMM_e, MPI_COMM_d, &
+    MPI_COMM_da, &
+    myrank_e, myrank_d, myrank_a, &
+    myrank_use_da, &
+    mmean_rank_e, &
+    rig1, rjg1, hgt1, &
+    timer_name_width, &
+    scatter_grd_mpi, &
+    gather_grd_mpi,  &
+    read_ens_mpi_addiinfl
   USE common_letkf
 
   USE letkf_obs
@@ -112,6 +122,8 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
 
   character(len=timer_name_width) :: timer_str
 
+  if (.not. myrank_use_da) return
+
   call mpi_timer('', 2)
 
   if (LOG_LEVEL >= 3) then
@@ -161,7 +173,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       var_local_n2n(n) = n
     end if
   end do
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 4) then
     write (6, '(A,I3)') '[Info] var_local_n2nc_max=', var_local_n2nc_max
     do n = 1, nv3d+nv2d
       write (6, '(A,I3,A,I3,A,I3,A,I3)') '[Info] var_local_n2n(', n, ')=', var_local_n2n(n), '; var_local_n2nc(', n, ')=', var_local_n2nc(n)
@@ -186,7 +198,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
             n_merge(ic) = n_merge(ic) + 1
             ic_merge(n_merge(ic),ic) = ic2
             n_merge(ic2) = 0
-            if (LOG_LEVEL >= 2) then
+            if (LOG_LEVEL >= 4) then
               write(6, '(9A)') '[Info] Observation number limit: Consider obs types (', obtypelist(typ_ctype(ic)), ', ', obelmlist(elm_u_ctype(ic)), &
                                ') and (', obtypelist(typ_ctype(ic2)), ', ', obelmlist(elm_u_ctype(ic2)), ') together'
             end if
@@ -851,10 +863,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
     write (6, '(A)') '===== Additive covariance inflation ====='
     write (6, '(A,F10.4)') '  parameter:', INFL_ADD
     if (INFL_ADD_SHUFFLE) then
-      if (myrank_a == 0) then
+      if (myrank_da == 0) then
         call Knuth_Shuffle(MEMBER, ishuf)
       end if
-      call MPI_BCAST(ishuf, MEMBER, MPI_INTEGER, 0, MPI_COMM_a, ierr)
+      call MPI_BCAST(ishuf, MEMBER, MPI_INTEGER, 0, MPI_COMM_da, ierr)
       write (6, '(A)') '  suffle members: on'
       write (6, *) ' suffle sequence: ', ishuf
     end if

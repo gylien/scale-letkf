@@ -834,7 +834,7 @@ subroutine write_restart_direct(v3dg,v2dg)
   integer :: iv3d, iv2d
 
   do iv3d = 1, nv3d
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Write 3D var [direct transfer]: ', trim(v3d_name(iv3d))
     end if
     select case (iv3d)
@@ -867,7 +867,7 @@ subroutine write_restart_direct(v3dg,v2dg)
   end do
 
   do iv2d = 1, nv2d
-    if (LOG_LEVEL >= 1) then
+    if (LOG_LEVEL >= 3) then
       write(6,'(1x,A,A15)') '*** Write 2D var [direct transfer]: ', trim(v2d_name(iv2d))
     end if
 !    select case (iv2d)
