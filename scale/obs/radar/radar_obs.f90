@@ -1051,8 +1051,11 @@ subroutine read_obs_radar_jrc(cfile, obs)
 
   call mpi_timer('', 3)
 
-
-  call ncio_open(trim(cfile), NF90_NOWRITE, ncid)
+  status = nf90_open(trim(cfile), NF90_NOWRITE, ncid)
+  if (status /= nf90_noerr) then
+    obs%nobs = 0
+    return
+  endif
 
   call ncio_read_dim(ncid, "lon", xdim)
   call ncio_read_dim(ncid, "lat", ydim)

@@ -16,7 +16,7 @@ program dacycle
   use common_mpi_scale, only: &
     set_mem_node_proc,        &
     set_common_mpi_scale,     &
-    myrank_use,               &
+    myrank_use, myrank_use_da,&
     myrank_a, myrank_da,      &
     myrank_d, myrank_e,       &
     mmean_rank_e,             &
@@ -28,6 +28,8 @@ program dacycle
     read_ens_mpi,             &
     write_enssprd,            &
     set_common_mpi_grid,      &
+    send_emean_direct,        &
+    receive_emean_direct,     &
     mpi_timer
   use common_obs_scale, only: &
     set_common_obs_scale
@@ -48,7 +50,8 @@ program dacycle
     TIME_NOWMS, &
     TIME_NOWSTEP, &
     TIME_DTSEC, &
-    TIME_NSTEP
+    TIME_NSTEP, &
+    TIME_gettimelabel
   use scale_file_history, only: &
     FILE_HISTORY_write, &
     FILE_HISTORY_set_nowdate
@@ -71,7 +74,8 @@ program dacycle
     TIME_DOresume, &
     TIME_DOend, &
     TIME_DOATMOS_restart, &
-    TIME_DTSEC_ATMOS_RESTART
+    TIME_DTSEC_ATMOS_RESTART, &
+    TIME_DSTEP_ATMOS_RESTART
   use mod_atmos_admin, only: &
     ATMOS_do
   use mod_atmos_driver, only: &
@@ -119,6 +123,10 @@ program dacycle
   logical :: gues_mean_out_now
   logical :: gues_sprd_out_now
   logical :: anal_sprd_out_now
+
+  integer :: icycle_fcst
+  integer :: fcst_cnt
+  character(len=19) :: ftimelabel
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -172,8 +180,23 @@ program dacycle
 
     icycle = 0
     lastcycle = int((TIME_DTSEC * TIME_NSTEP + 1.0d-6) / TIME_DTSEC_ATMOS_RESTART)
+    fcst_cnt = 0
 
     if (myrank == 0) write (6, '(A,I7)') 'Total cycle numbers:', lastcycle
+
+    ! Set forecast length (TIME_NSTEP) and initial step (icycle_fcst) 
+    ! for each additional member
+    if (.not. myrank_use_da) then 
+      icycle_fcst = int(myrank_da / nprocs_d) + 1
+      TIME_NSTEP = TIME_DSTEP_ATMOS_RESTART * icycle_fcst + &
+                   int( DACYCLE_RUN_FCST_TIME / TIME_DTSEC )
+    else
+      icycle_fcst = -1
+    endif
+
+
+    ! setup grid parameters
+    call set_common_scale
 
 !-----------------------------------------------------------------------
 ! Main loop
@@ -184,16 +207,8 @@ program dacycle
     call PROF_setprefx('MAIN')
     call PROF_rapstart('Main_Loop', 0)
 
-if (.not. myrank_use_da) then ! DEBUG
-   TIME_NSTEP = TIME_NSTEP * 5
-endif
-
     do
-
-!      if (.not. myrank_use_da) then
-!        exit ! DEBUG
-!      endif
-
+  
       anal_mem_out_now = .false.
       anal_mean_out_now = .false.
       anal_mdet_out_now = .false.
@@ -214,10 +229,6 @@ endif
         else
           call resume_state(do_restart_read=.true.)
 
-          ! Additional forecast members do not enter resume_state twice
-          if (.not. myrank_use_da) then
-            icycle = 1
-          endif
         end if
 
         ! history&monitor file output
@@ -229,9 +240,6 @@ endif
       ! time advance
       call ADMIN_TIME_advance
       call FILE_HISTORY_set_nowdate( TIME_NOWDATE, TIME_NOWMS, TIME_NOWSTEP )
-
-if (myrank_da == 0 .and. (.not. myrank_a == 0))print *,"DEBUG additional",myrank_a, TIME_NOWDATE(4:6),TIME_NOWSTEP,TIME_NSTEP
-if (myrank_da == 0 .and. myrank_a == 0)print *,"DEBUG regular",myrank_a, TIME_NOWDATE(4:6),TIME_NOWSTEP,TIME_NSTEP
 
 !      ! user-defined procedure
 !      call USER_step
@@ -267,6 +275,10 @@ if (myrank_da == 0 .and. myrank_a == 0)print *,"DEBUG regular",myrank_a, TIME_NO
       call MONITOR_write('MAIN', TIME_NOWSTEP)
       call FILE_HISTORY_write
 
+      ! Additional forecast members also require icycle information !
+      if (TIME_DOATMOS_restart .and. (.not. myrank_use_da)) then
+        icycle = icycle + 1
+      endif
 
       !-------------------------------------------------------------------------
       ! LETKF section start
@@ -304,7 +316,6 @@ if (myrank_da == 0 .and. myrank_a == 0)print *,"DEBUG regular",myrank_a, TIME_NO
         call timelabel_update(TIME_DTSEC_ATMOS_RESTART)
 
         if (icycle == 1) then
-          call set_common_scale
           call set_common_mpi_scale
           call set_common_obs_scale
 
@@ -482,11 +493,41 @@ if (myrank_da == 0 .and. myrank_a == 0)print *,"DEBUG regular",myrank_a, TIME_NO
 !        call ADMIN_restart_write 
       end if
 
-      if ( TIME_NOWSTEP > TIME_NSTEP ) then
-        exit
+      ! Send analysis ensemble mean for additional member
+      if (DACYCLE_RUN_FCST .and. icycle >= 1 .and. TIME_DOATMOS_restart) then
+        fcst_cnt = fcst_cnt + 1
+
+        ! Send analsis ensemble mean to an additional member
+        if (myrank_use_da .and. (myrank_e == mmean_rank_e) .and. &
+            (fcst_cnt <= MAX_DACYCLE_RUN_FCST)) then
+          call send_emean_direct(mean3d,mean2d,fcst_cnt)
+        endif
+
       endif
 
-!      if( TIME_DOend ) exit
+      if (icycle == icycle_fcst) then
+        if (.not. myrank_use_da) then
+          ! Receive analysis ensemble mean if myrank is in charge of the
+          ! additional forecast from icycle_fcst
+          call receive_emean_direct()
+
+          icycle_fcst = -1
+        endif
+      endif
+
+      if (.not. myrank_use_da .and. myrank_d == 0 .and. icycle_fcst < 0) then
+        call TIME_gettimelabel(ftimelabel)
+        write(6,'(a,1x,i3,1x,a15)') "Add. fcst ",int(myrank_da / nprocs_d) + 1, ftimelabel(1:15)
+      endif
+
+      if ( TIME_NOWSTEP > TIME_NSTEP ) then
+        if (myrank_a == 0) then
+          write(6,'(a)') "====="
+          write(6,'(a)') "Main DA loop end"
+          write(6,'(a)') "====="
+        endif
+        exit
+      endif
 
       if( IO_L ) call flush(IO_FID_LOG)
 

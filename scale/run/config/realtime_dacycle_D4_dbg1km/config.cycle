@@ -22,7 +22,10 @@ DIRECT_TRANSFER=1
 DACYCLE_RUN_FCST=1
 
 # Maximum number of addtional forecasts 
-MAX_DACYCLE_RUN_FCST=1
+MAX_DACYCLE_RUN_FCST=2
+
+# Forecast time for additional members that will be initiated from the analysis ensemble mean
+DACYCLE_RUN_FCST_TIME=120 # sec
 
 #===============================================================================
 # Forecast settings

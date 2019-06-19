@@ -57,6 +57,7 @@ MODULE common_nml
 
   logical :: DACYCLE_RUN_FCST = .false.    ! Run a forecast from analysis ensemble mean by additional member
   integer :: MAX_DACYCLE_RUN_FCST = 0      ! Maximum number of addtional forecasts 
+  integer :: DACYCLE_RUN_FCST_TIME = 0      ! Forecast time for addtional members
 
   !--- PARAM_MODEL
   character(len=10) :: MODEL = 'scale-rm'
@@ -385,7 +386,8 @@ subroutine read_nml_ensemble
     DET_RUN, &           !*** for backward compatibility ***
     DET_RUN_CYCLED, &    !*** for backward compatibility ***
     DACYCLE_RUN_FCST, &
-    MAX_DACYCLE_RUN_FCST
+    MAX_DACYCLE_RUN_FCST, &
+    DACYCLE_RUN_FCST_TIME
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)

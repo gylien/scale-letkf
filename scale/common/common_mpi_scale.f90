@@ -78,6 +78,8 @@ module common_mpi_scale
   real(r_dble), private, parameter :: timer_neglect = 1.0d-3
   real(r_dble), private, save :: timer_save(max_timer_levels) = -9.0d10
 
+  integer, save :: MPI_RP
+
 contains
 
 !-------------------------------------------------------------------------------
@@ -109,6 +111,12 @@ subroutine initialize_mpi_scale
     MPI_r_size = MPI_DOUBLE_PRECISION
   else if (r_size == r_sngl) then
     MPI_r_size = MPI_REAL
+  end if
+
+  if (RP == r_dble) then
+    MPI_RP = MPI_DOUBLE_PRECISION
+  else if (RP == r_sngl) then
+    MPI_RP = MPI_REAL
   end if
 
   return
@@ -1751,6 +1759,137 @@ subroutine mpi_timer(sect_name, level, barrier)
 
   return
 end subroutine mpi_timer
+
+!-------------------------------------------------------------------------------
+! [Direct transfer] Send SCALE restart (analysis) data
+!-------------------------------------------------------------------------------
+subroutine send_emean_direct(v3dg,v2dg,fcst_cnt)
+  use mod_atmos_vars, only: &
+    DENS, &
+    MOMX, &
+    MOMY, &
+    MOMZ, &
+    RHOT, &
+    QTRC
+  use scale_atmos_hydrometeor, only: &
+    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
+  use scale_atmos_grid_cartesC_index, only: &
+    IS, IE, JS, JE, KS, KE
+  implicit none
+
+  real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(RP), intent(in) :: v2dg(nlon,nlat,nv2d)
+  integer, intent(in) :: fcst_cnt
+  integer :: iv3d, iv2d
+  integer :: k, i, j
+
+  integer :: rrank_a ! rank_a of receiving rank
+  integer :: ierr, tag
+
+  rrank_a = nens * nprocs_d + nprocs_d * (fcst_cnt - 1) + myrank_d ! Additional member
+
+  tag = myrank_d 
+
+  if (nv3d > 0) then
+    call MPI_Send(v3dg,nlev*nlon*nlat*nv3d,MPI_RP,rrank_a,tag,MPI_COMM_a,ierr) 
+  endif
+
+  if (nv2d > 0) then
+    call MPI_Send(v2dg,nlon*nlat*nv2d,MPI_RP,rrank_a,tag+1,MPI_COMM_a,ierr) 
+  endif
+
+  return
+end subroutine send_emean_direct
+
+!-------------------------------------------------------------------------------
+! [Direct transfer] Receive SCALE restart (analysis) data
+!-------------------------------------------------------------------------------
+subroutine receive_emean_direct()
+  use mod_atmos_vars, only: &
+    DENS, &
+    MOMX, &
+    MOMY, &
+    MOMZ, &
+    RHOT, &
+    QTRC
+  use scale_atmos_hydrometeor, only: &
+    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
+  use scale_atmos_grid_cartesC_index, only: &
+    IS, IE, JS, JE, KS, KE
+  implicit none
+
+  real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
+  real(RP) :: v2dg(nlon,nlat,nv2d)
+  integer :: iv3d, iv2d
+
+  integer :: srank_a ! rank_a of sending rank ! Ensemble mean
+  integer :: ierr, tag
+  integer, allocatable :: istat(:)
+
+  srank_a = MEMBER * nprocs_d + myrank_d
+
+  tag = myrank_d 
+
+  allocate(istat(MPI_STATUS_SIZE))
+
+  if (nv3d > 0) then
+    call MPI_Recv(v3dg,nlev*nlon*nlat*nv3d,MPI_RP,srank_a,tag,MPI_COMM_a,istat,ierr)
+    call state_trans_inv(v3dg)
+  endif
+
+  if (nv2d > 0) then
+    call MPI_Recv(v2dg,nlon*nlat*nv2d,MPI_RP,srank_a,tag+1,MPI_COMM_a,istat,ierr)
+  endif
+  
+  deallocate(istat)
+
+  do iv3d = 1, nv3d
+    if (LOG_LEVEL >= 3) then
+      write(6,'(1x,A,A15)') '*** Update 3D var [direct transfer]: ', trim(v3d_name(iv3d))
+    end if
+    select case (iv3d)
+    case (iv3d_rho)
+      DENS(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
+    case (iv3d_rhou)
+      MOMX(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
+    case (iv3d_rhov)
+      MOMY(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
+    case (iv3d_rhow)
+      MOMZ(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
+    case (iv3d_rhot)
+      RHOT(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
+    case (iv3d_q)
+      QTRC(KS:KE,IS:IE,JS:JE,I_QV) = v3dg(:,:,:,iv3d)
+    case (iv3d_qc)
+      QTRC(KS:KE,IS:IE,JS:JE,I_HC) = v3dg(:,:,:,iv3d)
+    case (iv3d_qr)
+      QTRC(KS:KE,IS:IE,JS:JE,I_HR) = v3dg(:,:,:,iv3d)
+    case (iv3d_qi)
+      QTRC(KS:KE,IS:IE,JS:JE,I_HI) = v3dg(:,:,:,iv3d)
+    case (iv3d_qs)
+      QTRC(KS:KE,IS:IE,JS:JE,I_HS) = v3dg(:,:,:,iv3d)
+    case (iv3d_qg)
+      QTRC(KS:KE,IS:IE,JS:JE,I_HG) = v3dg(:,:,:,iv3d)
+    case default
+      write (6, '(3A)') "[Error] Variable '", trim(v3d_name(iv3d)), "' is not recognized."
+      stop
+    end select
+  end do
+
+  do iv2d = 1, nv2d
+    if (LOG_LEVEL >= 3) then
+      write(6,'(1x,A,A15)') '*** Update 2D var [direct transfer]: ', trim(v2d_name(iv2d))
+    end if
+!    select case (iv2d)
+!    case default
+!      write (6, '(3A)') "[Error] Variable '", trim(v2d_name(iv2d)), "' is not
+!      recognized."
+!      stop
+!    end select
+  end do
+
+  return
+end subroutine receive_emean_direct
 
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)
 !SUBROUTINE read_obs2_mpi(obsfile,nn,nbv,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,hdxf,iqc)

@@ -552,7 +552,6 @@ subroutine scalerm_setup(execname)
   if (.not. myrank_use_da) then
     color_da = 1
     key_da = myrank_a - mem_da * nprocs_m
-print *,"DEBUG SPLIT",myrank_a, mem_da * nprocs_m, color_da, key_da
   endif
 
   call MPI_COMM_SPLIT(MPI_COMM_u, color_da, key_da, MPI_COMM_da, ierr)

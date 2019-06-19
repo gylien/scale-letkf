@@ -258,6 +258,7 @@ cat $SCRP_DIR/config.nml.ensmodel | \
         -e "/!--CONF_FILES--/a CONF_FILES = \"${CONF_FILES}\"," \
         -e "/!--DACYCLE_RUN_FCST--/a DACYCLE_RUN_FCST = ${DACYCLE_RUN_FCST_TF}," \
         -e "/!--MAX_DACYCLE_RUN_FCST--/a MAX_DACYCLE_RUN_FCST = ${MAX_DACYCLE_RUN_FCST}," \
+        -e "/!--DACYCLE_RUN_FCST_TIME--/a DACYCLE_RUN_FCST_TIME = ${DACYCLE_RUN_FCST_TIME}," \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
         -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \
