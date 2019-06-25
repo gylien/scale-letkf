@@ -245,8 +245,11 @@ fi
 
 if ((DACYCLE_RUN_FCST == 1)); then
   DACYCLE_RUN_FCST_TF='.true.'
+  DACYCLE_RUN_FCST_OUTNAME="${OUTDIR[$d]}/${STIME}/dafcst"
+  mkdir -p $DACYCLE_RUN_FCST_OUTNAME
 else
   DACYCLE_RUN_FCST_TF='.false.'
+  DACYCLE_RUN_FCST_OUTNAME=""
 fi
 
 cat $SCRP_DIR/config.nml.ensmodel | \
@@ -259,6 +262,7 @@ cat $SCRP_DIR/config.nml.ensmodel | \
         -e "/!--DACYCLE_RUN_FCST--/a DACYCLE_RUN_FCST = ${DACYCLE_RUN_FCST_TF}," \
         -e "/!--MAX_DACYCLE_RUN_FCST--/a MAX_DACYCLE_RUN_FCST = ${MAX_DACYCLE_RUN_FCST}," \
         -e "/!--DACYCLE_RUN_FCST_TIME--/a DACYCLE_RUN_FCST_TIME = ${DACYCLE_RUN_FCST_TIME}," \
+        -e "/!--DACYCLE_RUN_FCST_OUTNAME--/a DACYCLE_RUN_FCST_OUTNAME = \"${DACYCLE_RUN_FCST_OUTNAME}\"," \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
         -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \

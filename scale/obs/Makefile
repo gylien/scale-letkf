@@ -66,7 +66,7 @@ dec_prepbufr.o:	dec_prepbufr.f90 $(COMMON_DIR)
 obj:	$(OBJS)
 
 obs_tools.o:	obs_tools.f90 radar_obs.o $(COMMON_DIR)
-	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
+	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS) -I$(SCALE_RM_OBJDIR)
 obsope_tools.o:	obsope_tools.f90 obs_tools.o $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 

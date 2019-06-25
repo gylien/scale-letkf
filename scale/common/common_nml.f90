@@ -55,9 +55,11 @@ MODULE common_nml
   logical :: DET_RUN = .false.             ! Deprecated (= ENS_WITH_MDET)
   logical :: DET_RUN_CYCLED = .true.       ! Deprecated (= MDET_CYCLED)
 
-  logical :: DACYCLE_RUN_FCST = .false.    ! Run a forecast from analysis ensemble mean by additional member
-  integer :: MAX_DACYCLE_RUN_FCST = 0      ! Maximum number of addtional forecasts 
-  integer :: DACYCLE_RUN_FCST_TIME = 0      ! Forecast time for addtional members
+  logical :: DACYCLE_RUN_FCST = .false.    ! Run a forecast from analysis ensemble mean by dacycle-forecast member
+  integer :: MAX_DACYCLE_RUN_FCST = 0      ! Maximum number of dacycle-forecasts 
+  integer :: ICYC_DACYCLE_RUN_FCST = 1      ! Initial-cycle number of dacycle-forecasts 
+  integer :: DACYCLE_RUN_FCST_TIME = 0      ! Forecast time for dacycle-forecast members
+  character(filelenmax) :: DACYCLE_RUN_FCST_OUTNAME = '' ! Output file name
 
   !--- PARAM_MODEL
   character(len=10) :: MODEL = 'scale-rm'
@@ -387,7 +389,9 @@ subroutine read_nml_ensemble
     DET_RUN_CYCLED, &    !*** for backward compatibility ***
     DACYCLE_RUN_FCST, &
     MAX_DACYCLE_RUN_FCST, &
-    DACYCLE_RUN_FCST_TIME
+    ICYC_DACYCLE_RUN_FCST, &
+    DACYCLE_RUN_FCST_TIME, &
+    DACYCLE_RUN_FCST_OUTNAME
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)
