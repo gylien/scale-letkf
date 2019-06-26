@@ -1786,7 +1786,7 @@ subroutine send_emean_direct(v3dg,v2dg,fcst_cnt)
   integer :: rrank_a ! rank_a of receiving rank
   integer :: ierr, tag
 
-  rrank_a = nens * nprocs_d + nprocs_d * (fcst_cnt - 1) + myrank_d ! Additional member
+  rrank_a = nens * nprocs_d + nprocs_d * (fcst_cnt - 1) + myrank_d ! dacycle-forecast member
 
   tag = myrank_d 
 
