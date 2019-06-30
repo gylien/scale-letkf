@@ -80,21 +80,21 @@ fi
 if ((PNETCDF == 1)); then
   BASENAME_BOUNDARY="$TMPOUT/${STIME}/bdy/${MEM_BDY}.boundary"
 else
-  BASENAME_BOUNDARY="$TMPOUT/${STIME}/bdy/${MEM_BDY}/boundary"
+  BASENAME_BOUNDARY="$OUTDIR/${STIME}/bdy/${MEM_BDY}/boundary"
 fi
 
 if ((BDY_FORMAT == 1)); then
   BASENAME_ORG="${TMPDIR}/bdydata"
   FILETYPE_ORG='SCALE-RM'
   LATLON_CATALOGUE_FNAME="$BDYORG/latlon_domain_catalogue.txt"
-elif ((BDY_FORMAT == 2)); then
-  BASENAME_ORG="${TMPDIR}/bdydata"
-  FILETYPE_ORG='WRF-ARW'
-  LATLON_CATALOGUE_FNAME=
-elif ((BDY_FORMAT == 4)); then
-  BASENAME_ORG="${TMPDIR}/gradsbdy.conf"
-  FILETYPE_ORG='GrADS'
-  LATLON_CATALOGUE_FNAME=
+#elif ((BDY_FORMAT == 2)); then
+#  BASENAME_ORG="${TMPDIR}/bdydata"
+#  FILETYPE_ORG='WRF-ARW'
+#  LATLON_CATALOGUE_FNAME=
+#elif ((BDY_FORMAT == 4)); then
+#  BASENAME_ORG="${TMPDIR}/gradsbdy.conf"
+#  FILETYPE_ORG='GrADS'
+#  LATLON_CATALOGUE_FNAME=
 else
   echo "[Error] $0: Unsupport boundary file types" >&2
   exit 1
@@ -122,7 +122,9 @@ for time_bdy in $BDY_TIME_LIST; do
     file_number="_$(printf %05d $i)"
   fi
   if ((BDY_ROTATING == 1)); then
-    bdyorg_path="$(cd "${BDYORG}/${STIME}" && pwd)"
+    # CHECK       
+    #bdyorg_path="$(cd "${BDYORG}/${time_bdy}" && pwd)"
+    bdyorg_path=${DATA_BDY_SCALE}
   else
     bdyorg_path="$(cd "${BDYORG}/const" && pwd)"
   fi
@@ -135,41 +137,47 @@ for time_bdy in $BDY_TIME_LIST; do
         exit 1
       fi
     else
-      if [ -s "${bdyorg_path}/${time_bdy}/${MEM_BDY}/history${SCALE_SFX_0}" ]; then
-        for ifile in $(cd ${bdyorg_path}/${time_bdy}/${MEM_BDY} ; ls history*.nc 2> /dev/null); do
-          ln -fs "${bdyorg_path}/${time_bdy}/${MEM_BDY}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
-        done
+      if [ -s "${bdyorg_path}/${time_bdy}/fcst/${MEM_BDY}/history${SCALE_SFX_0}" ]; then
+#        for ifile in $(cd ${bdyorg_path}/${time_bdy}/${MEM_BDY} ; ls history*.nc 2> /dev/null); do
+#          ln -fs "${bdyorg_path}/${time_bdy}/${MEM_BDY}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
+#        done
+
+        BASENAME_ORG="${bdyorg_path}/${time_bdy}/fcst/${MEM_BDY}/history"
+        OFFLINE_PARENT_BASENAME=${BASENAME_ORG}
+
+        break # CHECK!
+
       else
-        echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${time_bdy}/${MEM_BDY}/history.*.nc'."
+        echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${time_bdy}/fcst/${MEM_BDY}/history${SCALE_SFX_0}'"
         exit 1
       fi
     fi
-  elif ((BDY_FORMAT == 2)); then
-    if [ -s "${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}" ]; then
-      ln -fs "${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
-    else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}'."
-      exit 1
-    fi
-  elif ((BDY_FORMAT == 4)); then
-    if [ -s "${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd" ]; then
-      ln -fs "${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd" $TMPDIR/bdyatm${file_number}.grd
-    else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd'."
-      exit 1
-    fi
-    if [ -s "${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd" ]; then
-      ln -fs "${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd" $TMPDIR/bdysfc${file_number}.grd
-    else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd'."
-      exit 1
-    fi
-    if [ -s "${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd" ]; then
-      ln -fs "${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd" $TMPDIR/bdyland${file_number}.grd
-    else
-      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd'."
-      exit 1
-    fi
+#  elif ((BDY_FORMAT == 2)); then
+#    if [ -s "${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}" ]; then
+#      ln -fs "${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}" $TMPDIR/bdydata${file_number}
+#    else
+#      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/wrfout_${time_bdy}'."
+#      exit 1
+#    fi
+#  elif ((BDY_FORMAT == 4)); then
+#    if [ -s "${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd" ]; then
+#      ln -fs "${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd" $TMPDIR/bdyatm${file_number}.grd
+#    else
+#      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/atm_${time_bdy}.grd'."
+#      exit 1
+#    fi
+#    if [ -s "${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd" ]; then
+#      ln -fs "${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd" $TMPDIR/bdysfc${file_number}.grd
+#    else
+#      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/sfc_${time_bdy}.grd'."
+#      exit 1
+#    fi
+#    if [ -s "${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd" ]; then
+#      ln -fs "${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd" $TMPDIR/bdyland${file_number}.grd
+#    else
+#      echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${MEM_BDY}/land_${time_bdy}.grd'."
+#      exit 1
+#    fi
   fi
   i=$((i+1))
 done
@@ -183,19 +191,22 @@ fi
 mkdir -p $TMPOUT/${STIME}/bdy
 if ((PNETCDF != 1)); then
   mkdir -p $TMPOUT/${STIME}/bdy/${MEM_BDY}
+  mkdir -p $OUTDIR/${STIME}/bdy/${MEM_BDY}
+  mkdir -p $OUTDIR/${STIME}/anal/${MEM_BDY}
+  mkdir -p $OUTDIR/${STIME}/log/fcst_scale_init
 fi
 
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_init | \
-    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$OUTDIR/${STIME}/log/fcst_scale_init/${MEM}_LOG\"," \
         -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = $RESTART_OUTPUT," \
-        -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPDIR}\/init\"," \
-        -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
-        -e "/!--TOPOGRAPHY_IN_BASENAME--/a TOPOGRAPHY_IN_BASENAME = \"${TOPO}\"," \
-        -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
+        -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME =  \"${OUTDIR}/${STIME}/anal/${MEM}/init\"," \
+        -e "/!--RESTART_OUT_POSTFIX_TIMELABEL--/a RESTART_OUT_POSTFIX_TIMELABEL =  .false.," \
+        -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${INDIR}/const/topo/topo\"," \
+        -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${INDIR}/const/landuse/landuse\"," \
         -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT_CONSTDB}/land/param.bucket.conf\"," \
         -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"${BASENAME_BOUNDARY}\"," \
         -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${BASENAME_ORG}\"," \
@@ -210,9 +221,14 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--OFFLINE_PARENT_PRC_NUM_Y--/a OFFLINE_PARENT_PRC_NUM_Y = ${DATA_BDY_SCALE_PRC_NUM_Y}," \
     > $TMPDIR/init.conf
 
+#        -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${OUTDIR}/const/topo/topo\"," \
+#        -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${OUTDIR}/const/landuse/landuse\"," \
+
 if [ -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
   cat $TMPDAT/conf/config.nml.grads_boundary | \
-      sed -e "s#--DIR--#${TMPDIR}#g" \
+      sed -e "s#--FNAME_ATMOS--#$TMPDIR/bdyatm#g" \
+          -e "s#--FNAME_LAND--#$TMPDIR/bdyland#g" \
+          -e "s#--FNAME_SFC--#$TMPDIR/bdysfc#g" \
       > $TMPDIR/gradsbdy.conf
 fi
 

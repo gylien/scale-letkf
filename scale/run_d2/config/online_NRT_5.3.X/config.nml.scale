@@ -16,19 +16,19 @@
  TIME_STARTMS               = 0.D0,
 !--TIME_DURATION--
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = <TIME_DT>,
+ TIME_DT                    = 40.0D0,
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = <TIME_DT_DYN>,
+ TIME_DT_ATMOS_DYN          = 8.0D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = <TIME_DT>,
+ TIME_DT_ATMOS_PHY_MP       = 40.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_CP       = <TIME_DT>,
+ TIME_DT_ATMOS_PHY_CP       = 40.0D0,
  TIME_DT_ATMOS_PHY_CP_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_RD       = 600.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_SF       = <TIME_DT>,
+ TIME_DT_ATMOS_PHY_SF       = 40.0D0,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_BL       = <TIME_DT>,
+ TIME_DT_ATMOS_PHY_BL       = 40.0D0,
  TIME_DT_ATMOS_PHY_BL_UNIT  = "SEC",
  TIME_DT_OCEAN              = 600.D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
@@ -45,6 +45,15 @@
 !--TIME_DT_URBAN_RESTART--
  TIME_DT_URBAN_RESTART_UNIT = "SEC",
 !--TIME_END_RESTART_OUT--
+/
+
+&PARAM_COMM_CARTESC_NEST
+!--ONLINE_DOMAIN_NUM--
+!--ONLINE_IAM_PARENT--
+!--ONLINE_IAM_DAUGHTER--
+ ONLINE_BOUNDARY_USE_QHYD = .true.,
+ ONLINE_AGGRESSIVE_COMM   = .true.,
+ ONLINE_SPECIFIED_MAXRQ   = 10000,
 /
 
 &PARAM_STATISTICS
@@ -85,8 +94,6 @@
 #################################################
 
 &PARAM_PRC_CARTESC
-!# PRC_NUM_X      = 8,
-!# PRC_NUM_Y      = 6,
  PRC_NUM_X      = 16,
  PRC_NUM_Y      = 12,
  PRC_PERIODIC_X = .false.,
@@ -101,8 +108,6 @@
 
 &PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 36,
-!# IMAX = 40,
-!# JMAX = 40,
  IMAX = 20,
  JMAX = 20,
 /
@@ -363,6 +368,7 @@
  FILE_HISTORY_DEFAULT_DATATYPE  = "REAL4",
  FILE_HISTORY_DEFAULT_ZCOORD    = "model",
  FILE_HISTORY_OUTPUT_STEP0      = .true.,
+!--FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL--
 /
 
 &PARAM_FILE_HISTORY_CARTESC
@@ -442,6 +448,7 @@
 &HISTORY_ITEM name='T', OUTNAME='Tprs',zcoord="pressure" /
 &HISTORY_ITEM name='QHYD', OUTNAME='QHYDprs',zcoord="pressure" /
 &HISTORY_ITEM name='QV', OUTNAME='QVprs',zcoord="pressure" /
+
 
 &HISTORY_ITEM name='ENGI'  /  
 &HISTORY_ITEM name='ENGK'  /  

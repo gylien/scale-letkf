@@ -18,6 +18,15 @@ TIME_DT_DYN="$1"; shift
 NNODES="$1"; shift
 WTIME_L="$1"
 
+#SCPNAME=fcst
+#STIME=20190626060000
+#ETIME=-
+#TIME_DT=40.0
+#TIME_DT_DYN=8.0
+#NNODES=3
+#WTIME_L=00:30:00
+
+
 if [ "$ETIME" = '-' ]; then
   ETIME="$STIME"
 fi
@@ -59,7 +68,8 @@ cat config/${CONFIG}/config.main.${config_suffix} | \
     sed -e "s/<PRESET>/${PRESET}/g" | \
     sed -e "s/<DATA_BDY_WRF>/${DATA_BDY_WRF}/g" | \
     sed -e "s/<DATA_BDY_GRADS>/${DATA_BDY_GRADS}/g" | \
-    sed -e "s/<NNODES>/${NNODES}/g" \
+    sed -e "s/<NNODES>/${NNODES}/g" | \
+    sed -e "s/<STIME>/${STIME}/g" \
     > config.main
 
 cat config/${CONFIG}/config.${SCPNAME} | \
@@ -72,11 +82,6 @@ cat config/${CONFIG}/config.nml.scale | \
     sed -e "s/<TIME_DT>/${TIME_DT}/g" | \
     sed -e "s/<TIME_DT_DYN>/${TIME_DT_DYN}/g" \
     > config.nml.scale
-
-cat config/${CONFIG}/sno_bulk.sh | \
-    sed -e "s/<STIME>/${STIME}/g" \
-    > sno_bulk_${STIME}.sh
-chmod 755 sno_bulk_${STIME}.sh
 
 ln -fs config/${CONFIG}/config.nml.ensmodel .
 ln -fs config/${CONFIG}/config.nml.letkf .
@@ -103,13 +108,13 @@ fi
 
 #-------------------------------------------------------------------------------
 
-./${SCPNAME}${script_suffix}.sh > ${SCPNAME}${script_suffix}.log 2>&1 || exit $?
+./${SCPNAME}${script_suffix}.sh > ${SCPNAME}${script_suffix}.log.${STIME} 2>&1 || exit $?
 
 #-------------------------------------------------------------------------------
 
 if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro' ] || [ "$PRESET" = "OFP" ]; then
   jobname="${SCPNAME}_${SYSNAME}"
-  jobid=$(grep 'pjsub Job' ${SCPNAME}${script_suffix}.log | cut -d ' ' -f6)
+  jobid=$(grep 'pjsub Job' ${SCPNAME}${script_suffix}.log.${STIME} | cut -d ' ' -f6)
   logdir="$OUTDIR/exp/${jobid}_${SCPNAME}_${STIME}"
   stdout="$logdir/job.o"
   stderr="$logdir/job.e"
@@ -119,16 +124,13 @@ if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro'
 #  jobinfo="${jobname}.i${jobid}"
 fi
 
-if [ ! -e "$stdout" ] || [ ! -e "$stderr" ]; then
-  exit 101
-fi
-if [ -z "$(tail -n 1 $stderr | grep "Finish ${SCPNAME}.sh")" ]; then
-  exit 102
-fi
-#-------------------------------------------------------------------------------
-#
-./sno_bulk_${STIME}.sh > sno_bulk.log 2>&1 || exit $?
-#
+#if [ ! -e "$stdout" ] || [ ! -e "$stderr" ]; then
+#  exit 101
+#fi
+#if [ -z "$(tail -n 1 $stderr | grep "Finish ${SCPNAME}.sh")" ]; then
+#  exit 102
+#fi
+
 #-------------------------------------------------------------------------------
 
 rm -f ${SCPNAME}_job.sh

@@ -5,49 +5,64 @@
 #
 #===============================================================================
 
-PRESET='OFP'                           # 'OFP', 'K', 'K_rankdir' or 'K_micro'
+PRESET='OFP' 
 
 EXPNAME=r0051
-EXPDOMAIN=1
-
-GNAME=$(id -ng)
-UNAME=$(id -nu)
-
-USERNAME=c24140
 
 
-ENABLE_MONITOR=1
+NRT_FCST=1 # Near real time forecast? # 1:True
+           #                          # 0:False
+#####DOMNUM=3
+DOMNUM=2
 
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
-INDIR="/work/${GNAME}/${UNAME}/scale-letkf-rt/${EXPNAME}/exp_d${EXPDOMAIN}" # Directory for SCALE-LETKF input
 
-OUTDIR=${INDIR}
+OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
+EXP1=exp_d1
+EXP2=exp_d2
+EXP3=exp_d3
+
+OUTDIR="${OUTPUT}/${EXP1}"
+OUTDIR[2]="${OUTPUT}/${EXP2}"
+OUTDIR[3]="${OUTPUT}/${EXP3}"
+
+#INDIR=$OUTDIR
+INDIR="/work/hp150019/c24140/scale-letkf-rt/r0051/exp_d1" ### separated from nesting exp
+#INDIR="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/TEST_exp_d1" 
+#INDIR[2]="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/TEST_exp_d2" 
+#INDIR[3]="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/TEST_exp_d3" 
+INDIR[2]=${OUTDIR[2]}
+INDIR[3]=${OUTDIR[3]}
 
 #===============================================================================
 # Location of model/data files
 
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
-DATADIR="/work/${GNAME}/${UNAME}/scale-letkf/database"        # Directory of the SCALE database
+DATADIR="/work/hp150019/share/database" 
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
+DATA_TOPO[2]=
+DATA_TOPO[3]=
 DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE=                                                        # Directory of the prepared landuse files
+DATA_LANDUSE[2]=
+DATA_LANDUSE[3]=
 DATA_BDY_SCALE=                                                      # Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE_PRC_NUM_X=
-DATA_BDY_SCALE_PRC_NUM_Y=
+DATA_BDY_SCALE_PRC_NUM_X=16 # D1
+DATA_BDY_SCALE_PRC_NUM_Y=12 # D1
 DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-DATA_BDY_GRADS="/work/${GNAME}/${UNAME}/scale-letkf-rt/${EXPNAME}/ncepgfs_grads_da" # Directory of the boundary data in GrADS format
-#DATA_BDY_GRADS="${INDIR}/grads" # Directory of the boundary data in GrADS format
 
-OBS="/work/${GNAME}/${UNAME}/scale-letkf-rt/${EXPNAME}/ncepobs"     # Directory of observation data in LETKF obs format
-#OBS="${INDIR}/obs"     # Directory of observation data in LETKF obs format
-OBSNCEP=              
+#DATA_BDY_GRADS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/TEST_exp_d1/ncepgfs_grads"
+DATA_BDY_GRADS="/work/hp150019/c24140/scale-letkf-rt/r0051_nest/ncepgfs_grads"
+
+OBS=
+OBSNCEP=                                                             # Directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # model/data file options
@@ -104,24 +119,28 @@ OBSNAME[1]=obs
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=10800     # SCALE forecast time when the assimilation window starts (second)
-WINDOW_E=32400     # SCALE forecast time when the assimilation window ends (second)
-LCYCLE=21600       # Length of a DA cycle (second)
+WINDOW_S=3600     # SCALE forecast time when the assimilation window starts (second)
+WINDOW_E=3600     # SCALE forecast time when the assimilation window ends (second)
+LCYCLE=3600       # Length of a DA cycle (second)
 LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 
 #===============================================================================
 # Parallelization settings
 
-MEMBER=50          # Ensemble size
-
-NNODES=<NNODES> 
+MEMBER=<MEMBER>      # Ensemble size [2+2] 
+NNODES=<NNODES>    # Number of nodes
 
 PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
+# D1
 SCALE_NP=192        # Number of processes to run SCALE
+# D2
+SCALE_NP[2]=256        # Number of processes to run SCALE
+# D3
+SCALE_NP[3]=256        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -132,12 +151,14 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
-TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
+#SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
+SYSNAME="online_d1-2"                # A unique name in the machine
+TMPSUBDIR="scale-letkf_${SYSNAME}_<STIME>"           # (used to identify multiple runs in the same time)
 
 TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
-#TMPL=
+#TMPS="$TMP"  # Temporary directory only on the server node
+TMPL="$TMP"
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
                             #  0: No
@@ -146,7 +167,7 @@ CLEAR_TMP=0                 # Clear temporary directories after the completion o
 #===============================================================================
 # Environmental settings
 
-MPIRUN="mpiexec.hydra"
+MPIRUN="mpiexec"
 if (which $MPIRUN > /dev/null 2>&1); then
   MPIRUN=$(which $MPIRUN)
 fi

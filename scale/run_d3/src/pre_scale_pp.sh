@@ -56,19 +56,21 @@ else
 fi
 
 if ((PNETCDF == 1)); then
-  TOPO_OUT_BASENAME="$TMPOUT/const/topo"
+  TOPO_OUT_BASENAME="${OUTDIR}/../const/topo"
   if ((LANDUSE_UPDATE == 1)); then
     LANDUSE_OUT_BASENAME="$TMPOUT/${STIME}/landuse"
   else
-    LANDUSE_OUT_BASENAME="$TMPOUT/const/landuse"
+    LANDUSE_OUT_BASENAME="$TMPOUT/../const/landuse"
   fi
 else
-  TOPO_OUT_BASENAME="$TMPOUT/const/topo/topo"
+  TOPO_OUT_BASENAME="${OUTDIR}/../const/topo/topo"
   if ((LANDUSE_UPDATE == 1)); then
-    LANDUSE_OUT_BASENAME="$TMPOUT/${STIME}/landuse/landuse"
+    LANDUSE_OUT_BASENAME="$OUTDIR/${STIME}/landuse/landuse"
   else
-    LANDUSE_OUT_BASENAME="$TMPOUT/const/landuse/landuse"
+    LANDUSE_OUT_BASENAME="$OUTDIR/../const/landuse/landuse"
   fi
+  mkdir -p ${OUTDIR}/../const/topo
+  mkdir -p ${OUTDIR}/../const/landuse
 fi
 
 if [ "$TOPO_FORMAT" != 'prep' ]; then
@@ -100,17 +102,16 @@ cat $TMPDAT/conf/config.nml.scale_pp | \
     sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
         -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
         -e "/!--TOPO_OUT_BASENAME--/a TOPO_OUT_BASENAME = \"${TOPO_OUT_BASENAME}\"," \
-        -e "/!--TOPOGRAPHY_OUT_BASENAME--/a TOPOGRAPHY_OUT_BASENAME = \"${TOPO_OUT_BASENAME}\"," \
         -e "/!--LANDUSE_OUT_BASENAME--/a LANDUSE_OUT_BASENAME = \"${LANDUSE_OUT_BASENAME}\"," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--CONVERT_TOPO--/a CONVERT_TOPO = $CONVERT_TOPO," \
         -e "/!--CONVERT_LANDUSE--/a CONVERT_LANDUSE = $CONVERT_LANDUSE," \
         -e "/!--CNVTOPO_name--/a CNVTOPO_name = \"$TOPO_FORMAT\"," \
-        -e "/!--GTOPO30_IN_DIR--/a GTOPO30_IN_DIR = \"${TMPDAT_CONSTDB}/topo/GTOPO30/Products\"," \
-        -e "/!--DEM50M_IN_DIR--/a DEM50M_IN_DIR = \"${TMPDAT_CONSTDB}/topo/DEM50M/Products\"," \
+        -e "/!--GTOPO30_IN_DIR--/a GTOPO30_IN_DIR = \"${SCALE_DB}/topo/GTOPO30/Products\"," \
+        -e "/!--DEM50M_IN_DIR--/a DEM50M_IN_DIR = \"${SCALE_DB}/topo/DEM50M/Products\"," \
         -e "/!--CNVLANDUSE_name--/a CNVLANDUSE_name = '$LANDUSE_FORMAT'," \
-        -e "/!--GLCCv2_IN_DIR--/a GLCCv2_IN_DIR = \"${TMPDAT_CONSTDB}/landuse/GLCCv2/Products\"," \
-        -e "/!--LU100M_IN_DIR--/a LU100M_IN_DIR = \"${TMPDAT_CONSTDB}/landuse/LU100M/Products\"," \
+        -e "/!--GLCCv2_IN_DIR--/a GLCCv2_IN_DIR = \"${SCALE_DB}/landuse/GLCCv2/Products\"," \
+        -e "/!--LU100M_IN_DIR--/a LU100M_IN_DIR = \"${SCALE_DB}/landuse/LU100M/Products\"," \
         -e "/!--COPYTOPO_IN_BASENAME--/a COPYTOPO_IN_BASENAME = \"${COPYTOPO}\"," \
         -e "/!--LATLON_CATALOGUE_FNAME--/a LATLON_CATALOGUE_FNAME = \"${CATALOGUE}\"," \
         -e "/!--OFFLINE_PARENT_BASENAME--/a OFFLINE_PARENT_BASENAME = \"${OFFLINE_PARENT_BASENAME}\"," \

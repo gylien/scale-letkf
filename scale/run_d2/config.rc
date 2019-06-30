@@ -48,8 +48,6 @@ elif [ "$PRESET" = 'K_micro' ]; then
 #elif [ "$PRESET" = 'K_interact' ]; then
 #  ...
 elif [ "$PRESET" = 'OFP' ]; then
-  DISK_MODE=1 #####  
-#####  DISK_MODE=2 #####  
   NODELIST_TYPE='machinefile'
   MPI_TYPE='impi'
 elif [ "$PRESET" = 'Linux' ]; then
@@ -233,7 +231,7 @@ fi
 #===============================================================================
 # Definition of sub-directories
 
-SCRP_DIR="$DIR/run"              # Job script directory
+SCRP_DIR="$DIR/run_d2"              # Job script directory
 COMMON_DIR="$DIR/common"         # Common program directory
 LETKF_DIR="$DIR/letkf"           # LETKF program directory
 OBSUTIL_DIR="$DIR/obs"           # Observation program directory

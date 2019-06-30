@@ -30,7 +30,7 @@ MAKEINIT=0       # 0: No
 
                  #      anal              gues              history
                  #      mean/sprd members mean/sprd members mean members
-OUT_OPT=5        # 1:   o         o       o         o       o    o
+OUT_OPT=1        # 1:   o         o       o         o       o    o
                  # 2:   o         o       o         o       o
                  # 3:   o         o       o         o
                  # 4:   o         o       o
