@@ -55,9 +55,9 @@ NOBS_OUT="${1:-0}"
 
 #===============================================================================
 
-IO_AGGREGATE=".false"
+FILE_AGGREGATE=".false"
 if ((PNETCDF == 1)); then
-  IO_AGGREGATE=".true."
+  FILE_AGGREGATE=".true."
 fi
 
 OBS_IN_NAME_LIST=
@@ -180,11 +180,12 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--PEST_STIME--/a PEST_STIME = ${STIME}," \
         -e "/!--PEST_ATIME--/a PEST_ATIME = ${ATIME}," \
         -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+        -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
     >> $TMPDIR/letkf.conf
 
 # Most of these parameters are not important for letkf
 cat $TMPDAT/conf/config.nml.scale | \
-    sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+    sed -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
     >> $TMPDIR/letkf.conf
 
 #===============================================================================

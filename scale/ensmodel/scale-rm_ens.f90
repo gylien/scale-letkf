@@ -15,13 +15,13 @@ program scaleles_ens
      set_mem_node_proc, &
      mpi_timer
 
-  use scale_stdio, only: &
+  use scale_io, only: &
      H_LONG, &
      IO_L, &
      IO_FID_CONF, &
      IO_FID_LOG, &
      IO_FID_STDOUT
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_MPIstart, &
      PRC_UNIVERSAL_setup, &
      PRC_GLOBAL_setup, &
@@ -182,10 +182,10 @@ program scaleles_ens
         end if
         WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', trim(confname)
 
-        call scalerm ( local_comm, &
-                       intercomm_parent, &
-                       intercomm_child, &
-                       trim(confname) )
+        call rm_driver ( local_comm, &
+                         intercomm_parent, &
+                         intercomm_child, &
+                         trim(confname) )
       end if
     end do ! [ it = its, ite ]
 

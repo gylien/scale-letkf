@@ -43,9 +43,9 @@ SLOT_BASE="$1"
 
 #===============================================================================
 
-IO_AGGREGATE=".false"
+FILE_AGGREGATE=".false"
 if ((PNETCDF == 1)); then
-  IO_AGGREGATE=".true."
+  FILE_AGGREGATE=".true."
 fi
 
 OBS_IN_NAME_LIST=
@@ -97,12 +97,12 @@ cat $TMPDAT/conf/config.nml.obsope | \
         -e "/!--SLOT_END--/a SLOT_END = $SLOT_END," \
         -e "/!--SLOT_BASE--/a SLOT_BASE = $SLOT_BASE," \
         -e "/!--SLOT_TINTERVAL--/a SLOT_TINTERVAL = $LTIMESLOT.D0," \
-        -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+        -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
     >> $TMPDIR/obsope.conf
 
 # Most of these parameters are not important for obsope
 cat $TMPDAT/conf/config.nml.scale | \
-    sed -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
+    sed -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
     >> $TMPDIR/obsope.conf
 
 #===============================================================================
