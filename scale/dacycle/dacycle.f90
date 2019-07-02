@@ -135,12 +135,26 @@ program dacycle
 
   real(r_size), allocatable :: ref3d(:,:,:)
 
+  character(len=8) :: date
+  character(len=10) :: time
+  integer :: ierr
+
+  integer :: stime_c, etime_c, cpsec, cmax
+
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
 
   call initialize_mpi_scale
   call mpi_timer('', 1)
+
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+  call date_and_time(date=date, time=time)
+  call system_clock(stime_c, cpsec, cmax)
+
+  if (myrank == 0) then
+    write (6, '(2A,1x,A)') '[Info] Start time: ', date, time
+  endif
 
 !  if (command_argument_count() >= 2) then
 !    call get_command_argument(2, icmd)
@@ -597,6 +611,14 @@ program dacycle
   call scalerm_finalize('DACYCLE')
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
+
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+  call date_and_time(date=date, time=time)
+  call system_clock(etime_c)
+  if (myrank == 0) then
+    write (6, '(2A,1x,A)') '[Info] End time: ', date, time
+    write (6, '(1A,1f12.4)') '[Info] Computation time by system_clock: ', real(etime_c - stime_c) / real(cpsec)
+  endif
 
   call finalize_mpi_scale
 

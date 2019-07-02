@@ -14,12 +14,12 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT"
 EXP4=TEST_exp_d4_dbg1km_Kanto
-EXP3=TEST_exp_d3
-EXP2=TEST_exp_d2
 
-OUTDIR="${OUTPUT}/${EXP4}"
+# Output directory (Please modify if you need)
+OUTDIR="/work/$(id -ng)/$(id -nu)/SCALE-LETKF/scale-5.3.2/OUTPUT/TEST_exp_d4_dbg1km_Kanto"
 
-INDIR="${OUTDIR}"
+# Input directory (Do not change)
+INDIR="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/TEST_exp_d4_dbg1km_Kanto"
 
 #===============================================================================
 # Location of model/data files
@@ -31,7 +31,7 @@ SCALE_DB="/work/hp150019/share/database"
 DATA_TOPO=                                                           # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE=                                                        # Directory of the prepared landuse files
-DATA_BDY_SCALE="${OUTPUT}/${EXP4}"
+DATA_BDY_SCALE="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/TEST_exp_d4_dbg1km_Kanto"  # Boundary data (Do not modify)
 DATA_BDY_SCALE_PRC_NUM_X=
 DATA_BDY_SCALE_PRC_NUM_Y=
 DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
@@ -40,7 +40,7 @@ DATA_BDY_NICAM=                                                      # Directory
 DATA_BDY_GRADS=
 
 #OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_TOSHIBA"
-OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_JRC"
+OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_JRC" # Radar obs data (Do not modify)
 OBSNCEP=
 OBS_USE_JITDT=0
 
@@ -78,7 +78,7 @@ BDY_SCALE_DIR='fcst'    # Directory name of the SCALE history files when $BDY_FO
 
 BDY_ENS=1               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
-BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial time
+BDY_ROTATING=1          # 0: Use a same series of boundary files for all initial time
                         # 1: Use different series of boundary files for different initial time
 
 BDYINT=600
