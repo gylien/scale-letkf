@@ -344,6 +344,8 @@ END SUBROUTINE Trans_XtoY
 ! 
 !-----------------------------------------------------------------------
 SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev,v3d,v2d,yobs,qc,stggrd)
+  use scale_mapproj, only: &
+      MPRJ_rotcoef
 !  USE common_mpi
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: elm
@@ -358,6 +360,9 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
 
   REAL(r_size) :: qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr !,rhr
   REAL(r_size) :: dist , dlon , dlat , az , elev , radar_ref,radar_rv
+
+  real(r_size) :: rotc(2)
+  real(r_size) :: utmp, vtmp
 
 !  integer :: ierr
 !  REAL(r_dble) :: rrtimer00,rrtimer
@@ -387,7 +392,14 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   CALL itpl_3d(v3d(:,:,:,iv3dd_qi),rk,ri,rj,qir)
   CALL itpl_3d(v3d(:,:,:,iv3dd_qs),rk,ri,rj,qsr)
   CALL itpl_3d(v3d(:,:,:,iv3dd_qg),rk,ri,rj,qgr)
+!
 
+  utmp = ur
+  vtmp = vr
+
+  call MPRJ_rotcoef(rotc,lon*deg2rad,lat*deg2rad)
+  ur = utmp * rotc(1) - vtmp * rotc(2)
+  vr = utmp * rotc(2) + vtmp * rotc(1)
 
 !  rrtimer = MPI_WTIME()
 !  WRITE(6,'(A,F18.10)') '###### Trans_XtoY_radar:itpl_3d:',rrtimer-rrtimer00
@@ -879,7 +891,8 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
     zs= 3.48d3 * ( ro * qsp * 1.0d3 )**1.66
     ENDIF
     IF( qgp .GT. 0.0d0)THEN
-    zg= 8.18d4 * ( ro * qgp * 1.0d3 )**1.50
+!!!    zg= 8.18d4 * ( ro * qgp * 1.0d3 )**1.50  !!! hail
+    zg= 5.54d3 * ( ro * qgp * 1.0d3 )**1.70   !!! graupel (A. Amemiya 2019.5)
     ENDIF
     IF( qms .GT. 0.0d0 )THEN
     zms=( 0.00491 + 5.75*fws - 5.588*(fws**2) )*1.0d5
