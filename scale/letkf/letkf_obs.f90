@@ -533,6 +533,7 @@ SUBROUTINE set_letkf_obs
     sig_o = dsqrt(max(obs(iof)%err(iidx)**2,obsda%val(n)**2 - obsda%val2(n)**2))
 
 #ifdef H08
+    obsda%sprd(n) = sig_b ! Store background tbb spread for additive inflation
     if(H08_AOEI)then
       obsda%val2(n) = sig_o
     else
@@ -621,7 +622,7 @@ SUBROUTINE set_letkf_obs
                                               obsda%lev(n), &
                                               obsda%val(n), &
                                               obsda%val2(n), &
-                                              sig_b, &
+                                              obsda%sprd(n), &
                                               sig_o
     endif
 
@@ -1013,6 +1014,7 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
       obsbufs%lev(n) = obsda%lev(obsda%key(n))   ! H08
       obsbufs%val2(n) = obsda%val2(obsda%key(n)) ! H08
+      obsbufs%sprd(n) = obsda%sprd(obsda%key(n)) ! H08
 !      obsbufs%pred1(n) = obsda%pred1(obsda%key(n)) ! H08
 !      obsbufs%pred2(n) = obsda%pred2(obsda%key(n)) ! H08
 #endif
@@ -1041,6 +1043,7 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
     call MPI_ALLGATHERV(obsbufs%lev, cnts, MPI_r_size, obsbufr%lev, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
     call MPI_ALLGATHERV(obsbufs%val2, cnts, MPI_r_size, obsbufr%val2, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
+    call MPI_ALLGATHERV(obsbufs%sprd, cnts, MPI_r_size, obsbufr%sprd, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
 !    call MPI_ALLGATHERV(obsbufs%pred1, cnts, MPI_r_size, obsbufr%pred1, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
 !    call MPI_ALLGATHERV(obsbufs%pred2, cnts, MPI_r_size, obsbufr%pred2, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
 #endif
@@ -1102,6 +1105,7 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
         obsda_sort%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr)   ! H08
         obsda_sort%val2(ns_ext:ne_ext) = obsbufr%val2(ns_bufr:ne_bufr) ! H08
+        obsda_sort%sprd(ns_ext:ne_ext) = obsbufr%sprd(ns_bufr:ne_bufr) ! H08
 !        obsda_sort%pred1(ns_ext:ne_ext) = obsbufr%pred1(ns_bufr:ne_bufr) ! H08
 !        obsda_sort%pred2(ns_ext:ne_ext) = obsbufr%pred2(ns_bufr:ne_bufr) ! H08
 #endif

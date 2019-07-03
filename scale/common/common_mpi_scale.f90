@@ -2412,6 +2412,91 @@ subroutine write_Him8_mpi(tbb_l,step,tbb_lm)
   return
 end subroutine write_Him8_mpi
 
+!-------------------------------------------------------------------------------
+! Read ensemble additive inflation parameter and distribute to processes
+!-------------------------------------------------------------------------------
+subroutine read_ens_mpi_addiinfl_1var(v3d)
+  implicit none
+  real(r_size), intent(out) :: v3d(nij1,nlev,nens)
+  real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
+  character(len=filelenmax) :: filename
+  integer :: it, im, mstart, mend
+
+  do it = 1, nitmax
+    im = myrank_to_mem(it)
+
+    ! Note: read all members
+    ! 
+    if (im >= 1 .and. im <= MEMBER) then
+      call file_member_replace(im, INFL_ADD_IN_BASENAME, filename)
+
+!      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
+      call read_restart_1var(filename, v3dg)
+    endif
+
+    mstart = 1 + (it-1)*nprocs_e
+    mend = min(it*nprocs_e, MEMBER)
+    if (mstart <= mend) then
+      call scatter_grd_mpi_alltoall_1var(mstart, mend, v3dg, v3d)
+    end if
+  end do ! [ it = 1, nitmax ]
+
+  return
+end subroutine read_ens_mpi_addiinfl_1var
+
+!-------------------------------------------------------------------------------
+! Scatter gridded data using MPI_ALLTOALL(V) (mstart~mend -> all)
+!-------------------------------------------------------------------------------
+SUBROUTINE scatter_grd_mpi_alltoall_1var(mstart,mend,v3dg,v3d)
+  INTEGER,INTENT(IN) :: mstart,mend
+  REAL(RP),INTENT(IN) :: v3dg(nlev,nlon,nlat,1)
+  REAL(r_size),INTENT(INOUT) :: v3d(nij1,nlev,nens,1)
+  REAL(RP) :: bufs(nij1max,nlevall,nprocs_e)
+  REAL(RP) :: bufr(nij1max,nlevall,nprocs_e)
+  INTEGER :: k,n,j,m,mcount,ierr
+  INTEGER :: ns(nprocs_e),nst(nprocs_e),nr(nprocs_e),nrt(nprocs_e)
+
+  mcount = mend - mstart + 1
+#ifdef DEBUG
+  IF(mcount > nprocs_e .OR. mcount <= 0) STOP
+#endif
+
+  IF(myrank_e < mcount) THEN
+    j=0
+    DO n=1,1
+      DO k=1,nlev
+        j = j+1
+        CALL grd_to_buf(nprocs_e,v3dg(k,:,:,n),bufs(:,j,:))
+      END DO
+    END DO
+  END IF
+
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+  IF(mcount == nprocs_e) THEN
+    CALL MPI_ALLTOALL(bufs, nij1max*nlevall, COMM_datatype, &
+                      bufr, nij1max*nlevall, COMM_datatype, MPI_COMM_e, ierr)
+  ELSE
+    CALL set_alltoallv_counts(mcount,nij1max*nlevall,nprocs_e,nr,nrt,ns,nst)
+    CALL MPI_ALLTOALLV(bufs, ns, nst, COMM_datatype, &
+                       bufr, nr, nrt, COMM_datatype, MPI_COMM_e, ierr)
+  END IF
+
+  DO m = mstart,mend
+    j=0
+    DO n=1,1
+      DO k=1,nlev
+        j = j+1
+        v3d(:,k,m,n) = REAL(bufr(1:nij1,j,m-mstart+1),r_size)
+      END DO
+    END DO
+  END DO
+
+!  CALL MPI_BARRIER(MPI_COMM_e,ierr)
+  RETURN
+END SUBROUTINE scatter_grd_mpi_alltoall_1var
+
+
+
 
 
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)

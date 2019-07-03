@@ -411,6 +411,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 #ifdef H08
         obsda%lev(1:nobs) = 0.0d0
         obsda%val2(1:nobs) = 0.0d0
+        obsda%sprd(1:nobs) = 0.0d0
 !        obsda%pred1(1:nobs) = 0.0d0
 !        obsda%pred2(1:nobs) = 0.0d0
 #endif

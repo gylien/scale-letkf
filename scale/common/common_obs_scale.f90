@@ -123,6 +123,7 @@ MODULE common_obs_scale
 #ifdef H08
     REAL(r_size),ALLOCATABLE :: lev(:) ! Him8
     REAL(r_size),ALLOCATABLE :: val2(:) ! Him8 sigma_o for AOEI (not CA)
+    REAL(r_size),ALLOCATABLE :: sprd(:) ! background spread
 !    REAL(r_size),ALLOCATABLE :: pred1(:) ! Him8 bias correction predictor 1 (nobs)
 !    REAL(r_size),ALLOCATABLE :: pred2(:) ! Him8 bias correction predictor 1 (nobs)
 #endif
@@ -2080,6 +2081,7 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
 #ifdef H08
   ALLOCATE( obsda%lev (obsda%nobs) ) ! Him8
   ALLOCATE( obsda%val2 (obsda%nobs) ) ! Him8
+  ALLOCATE( obsda%sprd (obsda%nobs) ) ! Him8
 !  ALLOCATE( obsda%pred1 (obsda%nobs) ) ! Him8
 !  ALLOCATE( obsda%pred2 (obsda%nobs) ) ! Him8
 #endif
@@ -2092,6 +2094,7 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
 #ifdef H08
   obsda%lev = 0.0d0 ! Him8
   obsda%val2 = 0.0d0 ! Him8
+  obsda%sprd = 0.0d0 ! Him8
 !  obsda%pred1 = 0.0d0 ! Him8
 !  obsda%pred2 = 0.0d0 ! Him8
 #endif
@@ -2120,6 +2123,7 @@ SUBROUTINE obs_da_value_deallocate(obsda)
 #ifdef H08
   IF(ALLOCATED(obsda%lev   )) DEALLOCATE(obsda%lev   ) ! Him8
   IF(ALLOCATED(obsda%val2   )) DEALLOCATE(obsda%val2   ) ! Him8
+  IF(ALLOCATED(obsda%sprd   )) DEALLOCATE(obsda%sprd   ) ! Him8
 !  IF(ALLOCATED(obsda%pred1   )) DEALLOCATE(obsda%pred1   ) ! Him8
 !  IF(ALLOCATED(obsda%pred2   )) DEALLOCATE(obsda%pred2   ) ! Him8
 #endif

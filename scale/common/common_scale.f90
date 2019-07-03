@@ -2009,5 +2009,73 @@ subroutine td2qv(qv3dg, prs3dg, tk3dg)
   return
 end subroutine td2qv
 
+SUBROUTINE read_restart_1var(filename,v3dg)
+  use netcdf
+  use scale_process, only: &
+    PRC_myrank
+  use scale_rm_process, only: &
+    PRC_HAS_W,  &
+    PRC_HAS_S
+  use scale_grid_index, only: &
+    IHALO, JHALO, &
+    IMAX, JMAX, KMAX
+  use common_mpi, only: myrank
+  use common_ncio
+  IMPLICIT NONE
+
+  CHARACTER(*),INTENT(IN) :: filename
+  REAL(RP),INTENT(OUT) :: v3dg(nlev,nlon,nlat)
+  character(len=12) :: filesuffix = '.pe000000.nc'
+  integer :: iv3d, iv2d, ncid, varid
+  integer :: is, js
+
+!  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
+
+  write (filesuffix(4:9),'(I6.6)') PRC_myrank
+  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+  call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
+
+  if (LOG_LEVEL >= 1) then
+    write(6,'(1x,A,A15)') '*** Read 3D var: ', "rand"
+  end if
+  call ncio_check(nf90_inq_varid(ncid, "rand", varid))
+  call ncio_check(nf90_get_var(ncid, varid, v3dg(:,:,:), &
+                               start = (/ 1, 1, 1, 1 /),    &
+                               count = (/ KMAX, IMAX, JMAX, 1 /)))
+
+  call ncio_close(ncid)
+
+  RETURN
+END SUBROUTINE read_restart_1var
+
+subroutine ensmean_grd_1var(mem, nens, nij, v3d)
+  implicit none
+  integer, intent(in) :: mem
+  integer, intent(in) :: nens
+  integer, intent(in) :: nij
+  real(r_size), intent(inout) :: v3d(nij,nlev,nens,1)
+  integer :: i, k, m, n, mmean
+
+  mmean = mem + 1
+
+!$OMP PARALLEL PRIVATE(i,k,m,n)
+!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+  do n = 1, 1
+    do k = 1, nlev
+      do i = 1, nij
+        v3d(i,k,mmean,n) = v3d(i,k,1,n)
+        do m = 2, mem
+          v3d(i,k,mmean,n) = v3d(i,k,mmean,n) + v3d(i,k,m,n)
+        end do
+        v3d(i,k,mmean,n) = v3d(i,k,mmean,n) / real(mem, r_size)
+      end do
+    end do
+  end do
+!$OMP END DO
+!$OMP END PARALLEL
+
+  return
+end subroutine ensmean_grd_1var
+
 !===============================================================================
 END MODULE common_scale

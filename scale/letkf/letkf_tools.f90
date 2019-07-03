@@ -108,6 +108,9 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
 
   character(len=timer_name_width) :: timer_str
 
+  real(r_size) :: rand3d(nij1,nlev,nens) ! additive noise ! Qv/Td only
+  real(r_size) :: Him8_min_dist, Him8_sigma_b, Him8_ob, Him8_band
+
   call mpi_timer('', 2)
 
   WRITE(6,'(A)') 'Hello from das_letkf'
@@ -801,49 +804,74 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   !
   ! Additive inflation
   !
+
   IF(INFL_ADD > 0.0d0) THEN
     call mpi_timer('', 2, barrier=MPI_COMM_e)
 
-    if (INFL_ADD_Q_RATIO) then
-      work3d(:,:,:) = gues3d(:,:,mmean,:)
-    else
-      work3d(:,:,:) = 1.0d0
-    end if
+    work3d(:,:,:) = gues3d(:,:,mmean,:)
+!    if (INFL_ADD_Q_RATIO) then
+!      work3d(:,:,:) = gues3d(:,:,mmean,:)
+!    else
+!      work3d(:,:,:) = 1.0d0
+!    end if
 
     allocate (addinfl_weight(nij1))
-    if (INFL_ADD_REF_ONLY) then
+!    if (INFL_ADD_REF_ONLY) then
       addinfl_weight(:) = 0.0d0
-      ic = ctype_elmtyp(uid_obs(id_radar_ref_obs), 22)
+      ic = ctype_elmtyp(uid_obs(id_H08IR_obs), 23) ! Him8
       if (ic > 0) then
         do ij = 1, nij1
-          ref_min_dist = 1.0d33
-          !!!!!! save this (ref_min_dist) information when doing DA
+          Him8_min_dist = 1.0d33
+          Him8_sigma_b = -1.0d0
+          Him8_ob = 0.0d0
+          Him8_band = -1
+          !!!!!! save this (Him8_min_dist) information when doing DA
           do iob = obsgrd(ic)%ac_ext(0, 1), obsgrd(ic)%ac_ext(obsgrd(ic)%ngrdext_i, obsgrd(ic)%ngrdext_j)
+            if (iob < 1) cycle ! Himawari obs can be located in a gap??
             rdx = (rig1(ij) - obs(obsda_sort%set(iob))%ri(obsda_sort%idx(iob))) * DX
             rdy = (rjg1(ij) - obs(obsda_sort%set(iob))%rj(obsda_sort%idx(iob))) * DY
             rdxy = rdx*rdx + rdy*rdy
-            if (rdxy < ref_min_dist) then
-              ref_min_dist = rdxy
+            if (rdxy < Him8_min_dist) then
+              Him8_min_dist = rdxy
+              Him8_sigma_b = obsda_sort%sprd(iob) ! background tbb spread
+              Him8_ob =  obsda_sort%val(iob) ! O-B
+              Him8_band = nint(obs(obsda_sort%set(iob))%lev(obsda_sort%idx(iob))) 
             end if
           end do
 
-          ref_min_dist = ref_min_dist / (hori_loc_ctype(ic) * hori_loc_ctype(ic))
-          if (ref_min_dist <= dist_zero_fac_square) then
-            addinfl_weight(ij) = EXP(-0.5d0 * ref_min_dist)
-          end if
+          ! Detect a grid point where Himawari-8 obs is assimialted but
+          ! tbb spread is small, O-B is large, and observations is close (< hloc
+          ! scale)
+          ! 
+          if (Him8_sigma_b < INFL_ADD_HIM8_TBB_SPRD .and. &
+!              abs(Him8_ob) > OBSERR_H08(Him8_band-6)) then !.and. &
+              Him8_ob < -OBSERR_H08(Him8_band-6)) then !.and. &
+            Him8_min_dist = Him8_min_dist / (hori_loc_ctype(ic) * hori_loc_ctype(ic))
+            if (Him8_min_dist <= dist_zero_fac_square) then
+              addinfl_weight(ij) = EXP(-0.5d0 * Him8_min_dist)
+            end if
+
+          endif
+
+!          ref_min_dist = ref_min_dist / (hori_loc_ctype(ic) * hori_loc_ctype(ic))
+!          if (ref_min_dist <= dist_zero_fac_square) then
+!            addinfl_weight(ij) = EXP(-0.5d0 * ref_min_dist)
+!          end if
         end do
       end if
-    else
-      addinfl_weight(:) = 1.0d0
-    end if
+!    else
+!      addinfl_weight(:) = 1.0d0
+!    end if
 
     call mpi_timer('das_letkf:additive_infl_addinfl_weight:', 2)
 
-    CALL read_ens_mpi_addiinfl(gues3d,gues2d)
+!    CALL read_ens_mpi_addiinfl(gues3d,gues2d)
+    CALL read_ens_mpi_addiinfl_1var(rand3d)
 
     call mpi_timer('das_letkf:additive_infl_read_ens_mpi:', 2)
 
-    CALL ensmean_grd(MEMBER,nens,nij1,gues3d,gues2d)
+!    CALL ensmean_grd(MEMBER,nens,nij1,gues3d,gues2d)
+    CALL ensmean_grd_1var(MEMBER,nens,nij1,rand3d)
 
     call mpi_timer('das_letkf:additive_infl_ensmean_grd:', 2)
 
@@ -859,69 +887,73 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     end if
     write (6,'(A)') '========================================='
 
-!$OMP PARALLEL PRIVATE(n,m,k,i,mshuf)
-!$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
-    DO n=1,nv3d
+!##$OMP PARALLEL PRIVATE(n,m,k,i,mshuf)
+!##$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
+    DO n=1,1
       DO m=1,MEMBER
         DO k=1,nlev
           DO i=1,nij1
-            gues3d(i,k,m,n) = gues3d(i,k,m,n) - gues3d(i,k,mmean,n)
+!            gues3d(i,k,m,n) = gues3d(i,k,m,n) - gues3d(i,k,mmean,n)
+            rand3d(i,k,m) = rand3d(i,k,m) - rand3d(i,k,mmean)
           END DO
         END DO
       END DO
     END DO
-!$OMP END DO NOWAIT
-!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-    DO n=1,nv2d
-      DO m=1,MEMBER
-        DO i=1,nij1
-          gues2d(i,m,n) = gues2d(i,m,n) - gues2d(i,mmean,n)
-        END DO
-      END DO
-    END DO
-!$OMP END DO
+!##!$OMP END DO NOWAIT
+!##!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+!    DO n=1,nv2d
+!      DO m=1,MEMBER
+!        DO i=1,nij1
+!          gues2d(i,m,n) = gues2d(i,m,n) - gues2d(i,mmean,n)
+!        END DO
+!      END DO
+!    END DO
+!##$OMP END DO
 
-!$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
-    DO n=1,nv3d
+!##$OMP DO SCHEDULE(STATIC) COLLAPSE(2) 
+    DO n=iv3d_q,iv3d_q
       DO m=1,MEMBER
         if (INFL_ADD_SHUFFLE) then
           mshuf = ishuf(m)
         else
           mshuf = m
         end if
-        if (n == iv3d_q .or. n == iv3d_qc .or. n == iv3d_qr .or. n == iv3d_qi .or. n == iv3d_qs .or. n == iv3d_qg) then
+!        if (n == iv3d_q .or. n == iv3d_qc .or. n == iv3d_qr .or. n == iv3d_qi .or. n == iv3d_qs .or. n == iv3d_qg) then
           DO k=1,nlev
             DO i=1,nij1
-              anal3d(i,k,m,n) = anal3d(i,k,m,n) &
-                & + gues3d(i,k,mshuf,n) * INFL_ADD * addinfl_weight(i) * work3d(i,k,n)
+              if (gues3d(i,k,mmean,iv3d_p) > Q_UPDATE_TOP) then ! Applying only below Q_UPDATE_TOP
+                anal3d(i,k,m,n) = anal3d(i,k,m,n) &
+                  & + rand3d(i,k,mshuf) * INFL_ADD * addinfl_weight(i) !* work3d(i,k,n)
+              endif
             END DO
           END DO
-        else
-          DO k=1,nlev
-            DO i=1,nij1
-              anal3d(i,k,m,n) = anal3d(i,k,m,n) &
-                & + gues3d(i,k,mshuf,n) * INFL_ADD * addinfl_weight(i)
-            END DO
-          END DO
-        end if
+!        else
+!          DO k=1,nlev
+!            DO i=1,nij1
+!              anal3d(i,k,m,n) = anal3d(i,k,m,n) &
+!                & + gues3d(i,k,mshuf,n) * INFL_ADD * addinfl_weight(i)
+!            END DO
+!          END DO
       END DO
     END DO
-!$OMP END DO NOWAIT
-!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
-    DO n=1,nv2d
-      DO m=1,MEMBER
-        if (INFL_ADD_SHUFFLE) then
-          mshuf = ishuf(m)
-        else
-          mshuf = m
-        end if
-        DO i=1,nij1
-          anal2d(i,m,n) = anal2d(i,m,n) + gues2d(i,mshuf,n) * INFL_ADD * addinfl_weight(i)
-        END DO
-      END DO
-    END DO
-!$OMP END DO
-!$OMP END PARALLEL
+!##$OMP END DO 
+!##$OMP END PARALLEL
+
+!!$OMP DO SCHEDULE(STATIC) COLLAPSE(2)
+!    DO n=1,nv2d
+!      DO m=1,MEMBER
+!        if (INFL_ADD_SHUFFLE) then
+!          mshuf = ishuf(m)
+!        else
+!          mshuf = m
+!        end if
+!        DO i=1,nij1
+!          anal2d(i,m,n) = anal2d(i,m,n) + gues2d(i,mshuf,n) * INFL_ADD * addinfl_weight(i)
+!        END DO
+!      END DO
+!    END DO
+!!$OMP END DO
+!!$OMP END PARALLEL
 
     deallocate (addinfl_weight)
 
@@ -1913,7 +1945,7 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
 #ifdef H08
   if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'
     ch_num = nint(obs(obset)%lev(obidx)) - 6
-    if(H08_AOEI) then 
+    if(H08_AOEI .and.  INFL_ADD == 0.0d0) then 
     ! obs%err: sigma_ot/true (not inflated) obs error 
     ! obsda%val: O–B (innovation)
     ! obsda%val2: sigma_o (inflated obs error)

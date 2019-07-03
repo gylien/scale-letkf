@@ -100,6 +100,7 @@ MODULE common_nml
   character(filelenmax) :: INFL_MUL_OUT_BASENAME = 'infl'
 
   real(r_size) :: INFL_ADD = 0.0d0           ! additive inflation
+  real(r_size) :: INFL_ADD_HIM8_TBB_SPRD = 3.0d0 ! K, Minimum Tbb spread for additive inflation
   character(filelenmax) :: INFL_ADD_IN_BASENAME = 'addi.@@@@'
   logical :: INFL_ADD_SHUFFLE = .false.      ! shuffle the additive inflation members?
   logical :: INFL_ADD_Q_RATIO = .false.
@@ -581,6 +582,7 @@ subroutine read_nml_letkf
     INFL_ADD_SHUFFLE, &
     INFL_ADD_Q_RATIO, &
     INFL_ADD_REF_ONLY, &
+    INFL_ADD_HIM8_TBB_SPRD, &
     RELAX_ALPHA, &
     RELAX_ALPHA_SPREAD, &
     RELAX_TO_INFLATED_PRIOR, &

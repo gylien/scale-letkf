@@ -22,7 +22,7 @@ BUFR_LIB  =
 #SFC       = frtpx
 #FC        = mpifrtpx
 
-FOPTS_SCALE = $(FFLAGS)
+FOPTS_SCALE = $(FFLAGS) -DDEBUG
 
 #FOPTS     = -Kfast,ocl,openmp,noeval -V -Qa,d,i,p,t,x -Koptmsg=2 \
 #            -x-    \
@@ -46,7 +46,8 @@ TCV       = F
 H08       = T
 
 #DIR_RTTOV = /data/share005/honda/RTTOV
-DIR_RTTOV = /data/share025/honda/RTTOV
+#DIR_RTTOV = /data/share025/honda/RTTOV
+DIR_RTTOV = /volume63/data/hp120282_2/honda/SCALE-LETKF/RTTOV
 RT_LDFLAGS = -L$(DIR_RTTOV)/lib -lrttov11.2.0_test -lrttov11.2.0_other \
              -lrttov11.2.0_coef_io -lrttov11.2.0_parallel -lrttov11.2.0_main
 RT_INCLUDE = -I$(DIR_RTTOV)/mod -I$(DIR_RTTOV)/include
