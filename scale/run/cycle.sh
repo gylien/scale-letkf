@@ -46,6 +46,11 @@ echo "[$(datetime_now)] Start $myname $@" >&2
 
 setting "$@" || exit $?
 
+if [ "$CONF_MODE" = 'static' ]; then
+  . src/func_common_static.sh || exit $?
+  . src/func_${job}_static.sh || exit $?
+fi
+
 echo
 print_setting || exit $?
 
@@ -223,10 +228,15 @@ while ((time <= ETIME)); do
       echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2
 
       enable_iter=0
-      if ((s == 2 && BDY_ENS == 1)); then
+      nit=1
+      if ((s == 2)); then
         enable_iter=1
+        if ((BDY_ENS == 1)); then
+          nit=$nitmax
+        fi
       elif ((s == 3)); then
         enable_iter=1
+        nit=$nitmax
       fi
 
       nodestr=proc
@@ -237,19 +247,52 @@ while ((time <= ETIME)); do
         conf_time=$atime
       fi
 
+      if [ "$CONF_MODE" = 'static' ]; then
 
-      execpath="${stepexecdir[$s]}/${stepexecname[$s]}"
-      stdout_dir="$TMPOUT/${conf_time}/log/$(basename ${stepexecdir[$s]})"
-      if ((enable_iter == 1)); then
-        for it in $(seq $nitmax); do
-          echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+        if ((enable_iter == 1 && nitmax > 1)); then
+          for it in $(seq $nit); do
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
 
-          mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
+            if ((IO_ARB == 1)); then ##
+              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $? &
+            else ##
+              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
+            fi ##
 
-          echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-        done
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
+          done
+        else
+          if ((IO_ARB == 1)); then ##                                 
+            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $? &
+          else ##
+            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
+          fi ##
+        fi
+
       else
-        mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
+
+        execpath="${stepexecdir[$s]}/${stepexecname[$s]}"
+        stdout_dir="$TMPOUT/${conf_time}/log/$(basename ${stepexecdir[$s]})"
+        if ((enable_iter == 1)); then
+          for it in $(seq $nit); do
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
+
+            if ((IO_ARB == 1)); then ##
+              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $? &
+            else ##
+              mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
+            fi ##
+
+            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
+          done
+        else
+          if ((IO_ARB == 1)); then ##                                 
+            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $? &
+          else ##
+            mpirunf $nodestr $execpath ${execpath}.conf "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
+          fi ##
+        fi
+
       fi
 
     fi

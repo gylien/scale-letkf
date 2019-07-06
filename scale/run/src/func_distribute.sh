@@ -285,7 +285,7 @@ distribute_da_cycle () {
 #   $NNODES_APPAR  Apparent number of total nodes
 #   $PPN_APPAR     Apparent number of processes per node
 #   $MEMBER_FMT
-#   $SCALE_NP
+#   $SCALE_NP_TOT
 #   
 # Return variables:
 #   $node[1...$nnodes]                    Name of nodes
@@ -401,7 +401,7 @@ fi
 #-------------------------------------------------------------------------------
 # Set up the distribution of members on nodes
 
-set_mem_np $mtot $SCALE_NP $SCALE_NP
+set_mem_np $mtot $SCALE_NP_TOT $SCALE_NP_TOT
 
 set_mem2node $mtot $use_cache $SAVE_CACHE
 
@@ -453,7 +453,7 @@ distribute_da_cycle_set () {
 #   $NNODES_APPAR  Apparent number of total nodes
 #   $PPN_APPAR     Apparent number of processes per node
 #   $MEMBER_FMT
-#   $SCALE_NP
+#   $SCALE_NP_TOT
 #   
 # Return variables:
 #   $node[1...$nnodes]                    Name of nodes
@@ -563,7 +563,7 @@ fi
 #-------------------------------------------------------------------------------
 # Set up the distribution of members on nodes
 
-set_mem_np $mtot $SCALE_NP $SCALE_NP
+set_mem_np $mtot $SCALE_NP_TOT $SCALE_NP_TOT
 
 set_mem2node $mtot $use_cache $SAVE_CACHE
 
@@ -627,7 +627,7 @@ distribute_fcst () {
 #   $PPN           Number of processes per node
 #   $NNODES_APPAR  Apparent number of total nodes
 #   $PPN_APPAR     Apparent number of processes per node
-#   $SCALE_NP
+#   $SCALE_NP_TOT
 #   
 # Return variables:
 #   $node[1...$nnodes]                    Name of nodes
@@ -727,7 +727,7 @@ for iname in $MEMBERS; do
 done
 
 if ((CYCLE == 0)); then
-  set_mem_np $fmember $SCALE_NP $SCALE_NP
+  set_mem_np $fmember $SCALE_NP_TOT $SCALE_NP_TOT
   set_mem2node $fmember 0 0
   CYCLE=$((parallel_mems / fmember))
   if ((CYCLE < 1)); then
@@ -747,7 +747,7 @@ fmembertot=$((fmember * CYCLE))
 #-------------------------------------------------------------------------------
 # Set up the distribution of members on nodes
 
-set_mem_np $fmembertot $SCALE_NP $SCALE_NP
+set_mem_np $fmembertot $SCALE_NP_TOT $SCALE_NP_TOT
 
 set_mem2node $fmembertot $use_cache $SAVE_CACHE
 

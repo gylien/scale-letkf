@@ -38,10 +38,19 @@ OUTDIR_REF="/volume63/data/hp120282_2/honda/SCALE-LETKF/scale-5.2.6/OUTPUT/BAIU2
 SCALEDIR="$DIR/../.."       # Directory of the SCALE model
 DATADIR="/volume63/data/hp120282_2/honda/SCALE-LETKF/database"
 
+<<<<<<< HEAD:scale/run/config/BAIU2018_D2_HIM8_0413_LOC120km/config.main
 DATA_TOPO=${OUTDIR_REF}
 DATA_TOPO_BDY_SCALE=${PEXP}/const/topo
 DATA_LANDUSE=${OUTDIR_REF}
 DATA_BDY_SCALE=${PEXP} 
+=======
+DATA_TOPO=
+#DATA_TOPO_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_312/const/topo"
+DATA_LANDUSE=
+#DATA_BDY_SCALE="/volume63/data/hp150019/gylien/exp/scale-letkf/BDA_case130713/d3_1km_312"
+DATA_BDY_SCALE_PRC_NUM_X=3
+DATA_BDY_SCALE_PRC_NUM_Y=3
+>>>>>>> master5.3.X:scale/run/config/BDA_d4_250m_720p_bf40/config.main.K
 DATA_BDY_SCALE_PREP=
 DATA_BDY_WRF=
 DATA_BDY_NICAM=

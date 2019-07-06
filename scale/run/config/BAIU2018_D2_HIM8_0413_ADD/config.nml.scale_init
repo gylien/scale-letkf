@@ -43,6 +43,7 @@
 !--NUMBER_OF_TSTEPS--
 !--NUMBER_OF_SKIP_TSTEPS--
 !--BOUNDARY_UPDATE_DT--
+!--MAKE_BOUNDARY--
  PARENT_MP_TYPE = 3,
  USE_FILE_DENSITY = .false.,
 /
@@ -71,8 +72,13 @@
 
 &PARAM_NEST
 !--OFFLINE_PARENT_BASENAME--
+<<<<<<< HEAD:scale/run/config/BAIU2018_D2_HIM8_0413_ADD/config.nml.scale_init
 OFFLINE_PARENT_PRC_NUM_X = 8
 OFFLINE_PARENT_PRC_NUM_Y = 6
+=======
+!--OFFLINE_PARENT_PRC_NUM_X--
+!--OFFLINE_PARENT_PRC_NUM_Y--
+>>>>>>> master5.3.X:scale/run/config/realtime_r0023_d1/config.nml.scale_init
 !--LATLON_CATALOGUE_FNAME--
 ! NEST_INTERP_LEVEL = 12,
 /

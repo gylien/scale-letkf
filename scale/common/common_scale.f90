@@ -16,6 +16,7 @@ MODULE common_scale
   use common_nml
 
   use scale_precision, only: RP, SP
+  use scale_io, only: H_MID
   use scale_prof
 
   IMPLICIT NONE
@@ -24,6 +25,7 @@ MODULE common_scale
 ! General parameters
 !-------------------------------------------------------------------------------
 
+  character(len=H_MID), parameter :: modelname = "SCALE-LETKF"
   INTEGER,PARAMETER :: vname_max = 10
 
   ! 
@@ -82,9 +84,15 @@ MODULE common_scale
   CHARACTER(vname_max),PARAMETER :: v3dd_name(nv3dd) = &
      (/'U', 'V', 'W', 'T', 'PRES', &
        'QV', 'QC', 'QR', 'QI', 'QS', 'QG', 'RH', 'height'/)
+  LOGICAL,PARAMETER :: v3dd_hastime(nv3dd) = &
+     (/.true., .true., .true., .true., .true., &
+       .true., .true., .true., .true., .true., .true., .true., .false./)
   CHARACTER(vname_max),PARAMETER :: v2dd_name(nv2dd) = &       ! Him8
      (/'topo', 'SFC_PRES', 'PREC', 'U10', 'V10', 'T2', 'Q2', & ! Him8
        'lsmask', 'SFC_TEMP'/)                                  ! Him8
+  LOGICAL,PARAMETER :: v2dd_hastime(nv2dd) = &                    ! Him8
+     (/.false., .true., .true., .true., .true., .true., .true., & ! Him8
+       .false., .true./)  
 
   ! 
   !--- Variables for model coordinates
@@ -138,33 +146,29 @@ MODULE common_scale
 !  REAL(r_size),SAVE :: fcori(nlatsub)
 !!  REAL(r_size),SAVE :: wg(nlonsub,nlatsub)
 
+! dewpoint temperature limit
+  real(RP) :: tcmin = -35.0d0
+  real(RP) :: tcmax =  35.0d0
+
 CONTAINS
 
 !-------------------------------------------------------------------------------
 ! Initialize standard I/O and read common namelist of SCALE-LETKF
 !-------------------------------------------------------------------------------
 subroutine set_common_conf(nprocs)
-  use scale_stdio
+  use scale_io, only: &
+    IO_setup
 
   implicit none
   integer, intent(in) :: nprocs
-  character(len=H_MID), parameter :: MODELNAME = "SCALE-LETKF"
 
   ! setup standard I/O
-  call IO_setup( MODELNAME, .false.)
+  call IO_setup( modelname)
 
   call read_nml_log
   call read_nml_model
   call read_nml_ensemble
-  call read_nml_letkf_prc
-
-  if (nprocs /= NNODES * PPN) then
-    write(6,'(A,I10)') 'Number of MPI processes = ', nprocs
-    write(6,'(A,I10)') 'NNODES = ', NNODES
-    write(6,'(A,I10)') 'PPN    = ', PPN
-    write(6,'(A)') 'Number of MPI processes should be equal to NNODES * PPN.'
-    stop
-  end if
+  call read_nml_process
 
   return
 end subroutine set_common_conf
@@ -173,10 +177,10 @@ end subroutine set_common_conf
 ! Set the parameters related to the SCALE model
 !-------------------------------------------------------------------------------
 SUBROUTINE set_common_scale
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IMAX, &
     JMAX, &
     KMAX, &
@@ -194,14 +198,6 @@ SUBROUTINE set_common_scale
   !
   ! Set up node and process distribution
   !
-  if (MEM_NP /= PRC_NUM_X * PRC_NUM_Y) then
-    write(6,'(A,I10)') 'MEM_NP    = ', MEM_NP
-    write(6,'(A,I10)') 'PRC_NUM_X = ', PRC_NUM_X
-    write(6,'(A,I10)') 'PRC_NUM_Y = ', PRC_NUM_Y
-    write(6,'(A)') 'MEM_NP should be equal to PRC_NUM_X * PRC_NUM_Y.'
-    stop
-  end if
-
   nlon = IMAX
   nlat = JMAX
   nlev = KMAX
@@ -287,7 +283,7 @@ END SUBROUTINE set_common_scale
 !-------------------------------------------------------------------------------
 !SUBROUTINE read_restart(filename,v3dg,v2dg)
 !  use gtool_file, only: FileRead, FileCloseAll
-!  use scale_process, only: PRC_myrank
+!  use scale_prc, only: PRC_myrank
 !  use common_mpi, only: myrank
 !  IMPLICIT NONE
 
@@ -319,12 +315,12 @@ END SUBROUTINE set_common_scale
 
 SUBROUTINE read_restart(filename,v3dg,v2dg)
   use netcdf
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_HAS_W,  &
     PRC_HAS_S
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use common_mpi, only: myrank
@@ -336,7 +332,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   REAL(RP),INTENT(OUT) :: v2dg(nlon,nlat,nv2d)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d, iv2d, ncid, varid
-  integer :: is, js
+  integer :: is, js, ks
 
   is = 1
   js = 1
@@ -357,9 +353,16 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
     end if
+
+    if (iv3d == iv3d_rhow) then
+      ks = 2 ! ignore zh=1 (the surface where MOMZ = 0.0)
+    else
+      ks = 1
+    endif
+
     call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
     call ncio_check(nf90_get_var(ncid, varid, v3dg(:,:,:,iv3d), &
-                                 start = (/ 1, is, js, 1 /),    &
+                                 start = (/ ks, is, js, 1 /),    &
                                  count = (/ KMAX, IMAX, JMAX, 1 /)))
   end do
 
@@ -385,16 +388,16 @@ END SUBROUTINE read_restart
 SUBROUTINE read_restart_par(filename,v3dg,v2dg,comm)
 !  use common_mpi_scale, only: &
 !    MPI_COMM_a
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_2Drank
 !    PRC_PERIODIC_X, PRC_PERIODIC_Y, &
 !    PRC_HAS_W,  &
 !    PRC_HAS_E,  &
 !    PRC_HAS_S,  &
 !    PRC_HAS_N
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
@@ -482,7 +485,7 @@ END SUBROUTINE read_restart_par
 !!  use gtool_file, only: FileOpen, FileClose, FileWrite
 !!  use gtool_file_h
 
-!  use scale_process, only: PRC_myrank
+!  use scale_prc, only: PRC_myrank
 !  use common_mpi, only: myrank
 !  use common_ncio
 !  implicit none
@@ -560,12 +563,12 @@ END SUBROUTINE read_restart_par
 
 SUBROUTINE write_restart(filename,v3dg,v2dg)
   use netcdf
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_HAS_W,  &
     PRC_HAS_S
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use common_mpi, only: myrank
@@ -577,7 +580,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   REAL(RP),INTENT(IN) :: v2dg(nlon,nlat,nv2d)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: iv3d, iv2d, ncid, varid
-  integer :: is, js
+  integer :: is, js, ks
 
   is = 1
   js = 1
@@ -598,9 +601,16 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
     end if
+
+    if (iv3d == iv3d_rhow) then
+      ks = 2 ! ignore zh=1 (the surface where MOMZ = 0.0)
+    else
+      ks = 1
+    endif
+
     call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
     call ncio_check(nf90_put_var(ncid, varid, v3dg(:,:,:,iv3d), &
-                                 start = (/ 1, is, js, 1 /),    &
+                                 start = (/ ks, is, js, 1 /),    &
                                  count = (/ KMAX, IMAX, JMAX, 1 /)))
   end do
 
@@ -626,16 +636,16 @@ END SUBROUTINE write_restart
 SUBROUTINE write_restart_par(filename,v3dg,v2dg,comm)
 !  use common_mpi_scale, only: &
 !    MPI_COMM_a
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_2Drank
 !    PRC_PERIODIC_X, PRC_PERIODIC_Y, &
 !    PRC_HAS_W,  &
 !    PRC_HAS_E,  &
 !    PRC_HAS_S,  &
 !    PRC_HAS_N
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
@@ -719,12 +729,12 @@ END SUBROUTINE write_restart_par
 !-------------------------------------------------------------------------------
 SUBROUTINE read_restart_coor(filename,lon,lat,height)
   use netcdf
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_HAS_W,  &
     PRC_HAS_S
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX, KMAX
   use common_mpi, only: myrank
@@ -787,12 +797,12 @@ END SUBROUTINE read_restart_coor
 !-------------------------------------------------------------------------------
 SUBROUTINE read_topo(filename,topo)
   use netcdf
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_HAS_W,  &
     PRC_HAS_S
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX
   use common_mpi, only: myrank
@@ -836,12 +846,12 @@ END SUBROUTINE read_topo
 !-------------------------------------------------------------------------------
 #ifdef PNETCDF
 SUBROUTINE read_topo_par(filename,topo,comm)
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_2Drank
 !    PRC_PERIODIC_X, PRC_PERIODIC_Y
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO, &
     IMAX, JMAX
   use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
@@ -901,17 +911,17 @@ END SUBROUTINE read_topo_par
 #endif
 
 !-------------------------------------------------------------------------------
-! [File I/O] Read SCALE history files
+! File I/O] Read SCALE history files
 !-------------------------------------------------------------------------------
 subroutine read_history(filename,step,v3dg,v2dg)
-  use scale_process, only: &
+  use scale_prc, only: &
       PRC_myrank
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO, &
       IS, IE, JS, JE, KS, KE, KA
-  use gtool_history, only: &
-      HistoryGet
-  use scale_comm, only: &
+  use scale_file, only: &
+      FILE_read
+  use scale_comm_cartesC, only: &
       COMM_vars8, &
       COMM_wait
   use common_mpi, only: myrank
@@ -935,10 +945,16 @@ subroutine read_history(filename,step,v3dg,v2dg)
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
     end if
-    call HistoryGet( var3D,                 & ! [OUT]
-                     filename,              & ! [IN]
-                     trim(v3dd_name(iv3d)), & ! [IN]
-                     step                   ) ! [IN]
+    if (v3dd_hastime(iv3d)) then
+      call FILE_read( filename,              & ! [IN]
+                      trim(v3dd_name(iv3d)), & ! [IN]
+                      var3D,                 & ! [OUT]
+                      step=step              ) ! [IN]
+    else
+      call FILE_read( filename,              & ! [IN]
+                      trim(v3dd_name(iv3d)), & ! [IN]
+                      var3D                  ) ! [OUT]
+    end if
     forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
   end do
 
@@ -948,10 +964,16 @@ subroutine read_history(filename,step,v3dg,v2dg)
     if (LOG_LEVEL >= 1) then
       write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
     end if
-    call HistoryGet( var2D,                 & ! [OUT]
-                     filename,              & ! [IN]
-                     trim(v2dd_name(iv2d)), & ! [IN]
-                     step                   ) ! [IN]
+    if (v2dd_hastime(iv2d)) then
+      call FILE_read( filename,              & ! [IN]
+                      trim(v2dd_name(iv2d)), & ! [IN]
+                      var2D,                 & ! [OUT]
+                      step=step              ) ! [IN]
+    else
+      call FILE_read( filename,              & ! [IN]
+                      trim(v2dd_name(iv2d)), & ! [IN]
+                      var2D                  ) ! [OUT]
+    end if
     v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
   end do
 
@@ -997,18 +1019,18 @@ end subroutine read_history
 !-------------------------------------------------------------------------------
 #ifdef PNETCDF
 subroutine read_history_par(filename,step,v3dg,v2dg,comm)
-  use scale_process, only: &
+  use scale_prc, only: &
       PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_2Drank
 !    PRC_PERIODIC_X, PRC_PERIODIC_Y
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO, &
       IS, IE, JS, JE, KS, KE, KA, &
       IMAX, JMAX, KMAX
 !  use gtool_history, only: &
 !      HistoryGet
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
       COMM_vars8, &
       COMM_wait
   use mpi, only: MPI_OFFSET_KIND, MPI_INFO_NULL
@@ -1231,17 +1253,18 @@ subroutine state_trans(v3dg)
 !$OMP END PARALLEL DO
 
   if (Q_ANAL_TD) then
-!$OMP PARALLEL DO PRIVATE(i,j,k,ep) COLLAPSE(2)
-    do j = 1, nlat
-      do i = 1, nlon
-        do k = 1, Q_ANAL_TD_TOP_MLEV 
-          ep = max(v3dg(k,i,j,iv3d_q), 0.0_RP) * v3dg(k,i,j,iv3d_p) / &
-               (eps + max(v3dg(k,i,j,iv3d_q), 0.0_RP)) * 0.01_RP ! (hPa)
-          v3dg(k,i,j,iv3d_q) = 243.5_RP / (17.67_RP / log(ep / 6.112_RP) - 1.0_RP) + T00 ! (K)
-        enddo
-      enddo
-    enddo
-!$OMP END PARALLEL DO
+    call qv2td(v3dg(:,:,:,iv3d_q), v3dg(:,:,:,iv3d_p))!, v3dg(:,:,:,iv3d_t))
+!!$OMP PARALLEL DO PRIVATE(i,j,k,ep) COLLAPSE(2)
+!    do j = 1, nlat
+!      do i = 1, nlon
+!        do k = 1, Q_ANAL_TD_TOP_MLEV 
+!          ep = max(v3dg(k,i,j,iv3d_q), 0.0_RP) * v3dg(k,i,j,iv3d_p) / &
+!               (eps + max(v3dg(k,i,j,iv3d_q), 0.0_RP)) * 0.01_RP ! (hPa)
+!          v3dg(k,i,j,iv3d_q) = 243.5_RP / (17.67_RP / log(ep / 6.112_RP) - 1.0_RP) + T00 ! (K)
+!        enddo
+!      enddo
+!    enddo
+!!$OMP END PARALLEL DO
 
   endif
 
@@ -1285,20 +1308,23 @@ subroutine state_trans_inv(v3dg)
   ! Note: This computation should be done before substituting RHO*T into
   ! v3dg(:,:,:,iv3d_rhot), because iv3d_rhot and iv3d_p share the same memory
   ! space
-!$OMP PARALLEL DO PRIVATE(i,j,k,ep,td) COLLAPSE(2)
-    do j = 1, nlat
-      do i = 1, nlon
-        do k = 1, Q_ANAL_TD_TOP_MLEV 
-          ! v3dg(k,i,j,iv3d_q) stores Td (K), not qv
-          td = min(v3dg(k,i,j,iv3d_q), v3dg(k,i,j,iv3d_t)) - T00 !Avoid super saturation
 
-          ep = 611.2_RP * exp(17.67_RP * td / (td + 243.5_RP)) ! Pa
-          v3dg(k,i,j,iv3d_q) = eps * ep / (v3dg(k,i,j,iv3d_p) - ep)
+    call td2qv(v3dg(:,:,:,iv3d_q), v3dg(:,:,:,iv3d_p), v3dg(:,:,:,iv3d_t))
 
-        enddo
-      enddo
-    enddo
-!$OMP END PARALLEL DO
+!!$OMP PARALLEL DO PRIVATE(i,j,k,ep,td) COLLAPSE(2)
+!    do j = 1, nlat
+!      do i = 1, nlon
+!        do k = 1, Q_ANAL_TD_TOP_MLEV 
+!          ! v3dg(k,i,j,iv3d_q) stores Td (K), not qv
+!          td = min(v3dg(k,i,j,iv3d_q), v3dg(k,i,j,iv3d_t)) - T00 !Avoid super saturation
+!
+!          ep = 611.2_RP * exp(17.67_RP * td / (td + 243.5_RP)) ! Pa
+!          v3dg(k,i,j,iv3d_q) = eps * ep / (v3dg(k,i,j,iv3d_p) - ep)
+!
+!        enddo
+!      enddo
+!    enddo
+!!$OMP END PARALLEL DO
 
   endif
 
@@ -1343,13 +1369,10 @@ end subroutine state_trans_inv
 !   v3dgh, v2dgh : 3D, 2D SCALE history variables
 !-------------------------------------------------------------------------------
 subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO, &
       IS, IE, JS, JE, KS, KE, KA
-  use scale_grid, only: &
-      GRID_CZ, &
-      GRID_FZ
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
       COMM_vars8, &
       COMM_wait
   implicit none
@@ -1423,7 +1446,6 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 
 !  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) = [[No way]]
 
-#ifdef H08
   v2dgh(:,:,iv2dd_skint) = v3dgh(1+KHALO,:,:,iv3d_t)
 
   ! Assume the point where terrain height is less than 10 m is the ocean. T.Honda (02/09/2016)
@@ -1436,7 +1458,6 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
     enddo
   enddo
 !$OMP END PARALLEL DO
-#endif
 
   ! Pad the upper and lower halo areas
   !---------------------------------------------------------
@@ -1502,10 +1523,10 @@ end subroutine state_to_history
 !   z(nij,nlev) : 3D height coordinate (on scattered grids)
 !-------------------------------------------------------------------------------
 subroutine scale_calc_z(topo, z)
-  use scale_grid, only: &
-     GRID_CZ, &
-     GRID_FZ
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC, only: &
+     ATMOS_GRID_CARTESC_CZ, &
+     ATMOS_GRID_CARTESC_FZ
+  use scale_atmos_grid_cartesC_index, only: &
      KHALO, KS, KE
   implicit none
 
@@ -1514,12 +1535,12 @@ subroutine scale_calc_z(topo, z)
   real(r_size) :: ztop
   integer :: i, j, k
 
-  ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
+  ztop = ATMOS_GRID_CARTESC_FZ(KE) - ATMOS_GRID_CARTESC_FZ(KS-1)
 !$OMP PARALLEL DO PRIVATE(j,i,k) COLLAPSE(2)
   do j = 1, nlat
     do i = 1, nlon
       do k = 1, nlev
-        z(k, i, j) = (ztop - topo(i,j)) / ztop * GRID_CZ(k+KHALO) + topo(i,j)
+        z(k, i, j) = (ztop - topo(i,j)) / ztop * ATMOS_GRID_CARTESC_CZ(k+KHALO) + topo(i,j)
       end do
     enddo
   enddo
@@ -1538,10 +1559,10 @@ end subroutine scale_calc_z
 !   z(nij,nlev) : 3D height coordinate (on scattered grids)
 !-------------------------------------------------------------------------------
 subroutine scale_calc_z_grd(nij, topo, z)
-  use scale_grid, only: &
-     GRID_CZ, &
-     GRID_FZ
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC, only: &
+     ATMOS_GRID_CARTESC_CZ, &
+     ATMOS_GRID_CARTESC_FZ
+  use scale_atmos_grid_cartesC_index, only: &
      KHALO, KS, KE
   implicit none
 
@@ -1551,11 +1572,11 @@ subroutine scale_calc_z_grd(nij, topo, z)
   real(r_size) :: ztop
   integer :: k, i
 
-  ztop = GRID_FZ(KE) - GRID_FZ(KS-1)
+  ztop = ATMOS_GRID_CARTESC_FZ(KE) - ATMOS_GRID_CARTESC_FZ(KS-1)
 !$OMP PARALLEL DO PRIVATE(i,k)
   do k = 1, nlev
     do i = 1, nij
-      z(i,k) = (ztop - topo(i)) / ztop * GRID_CZ(k+KHALO) + topo(i)
+      z(i,k) = (ztop - topo(i)) / ztop * ATMOS_GRID_CARTESC_CZ(k+KHALO) + topo(i)
     end do
   end do
 !$OMP END PARALLEL DO
@@ -1684,7 +1705,7 @@ end subroutine enssprd_grd
 ! Convert 1D rank of process to 2D rank
 !-------------------------------------------------------------------------------
 subroutine rank_1d_2d(rank, rank_i, rank_j)
-  use scale_rm_process, only: PRC_2Drank
+  use scale_prc_cartesC, only: PRC_2Drank
   implicit none
   integer, intent(in) :: rank
   integer, intent(out) :: rank_i, rank_j
@@ -1699,7 +1720,7 @@ end subroutine rank_1d_2d
 ! Convert 2D rank of process to 1D rank
 !-------------------------------------------------------------------------------
 subroutine rank_2d_1d(rank_i, rank_j, rank)
-  use scale_rm_process, only: PRC_NUM_X
+  use scale_prc_cartesC, only: PRC_NUM_X
   implicit none
   integer, intent(in) :: rank_i, rank_j
   integer, intent(out) :: rank
@@ -1796,15 +1817,15 @@ end subroutine rij_l2g
 !            * return -1 if the grid is outside of the global domain
 !-------------------------------------------------------------------------------
 subroutine rij_rank(ig, jg, rank)
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
       PRC_NUM_X, PRC_NUM_Y
 #ifdef DEBUG
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, &
       IA, JA
-  use scale_process, only: &
+  use scale_prc, only: &
       PRC_myrank
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
       GRID_CX, &
       GRID_CY, &
       GRID_CXG, &
@@ -1812,7 +1833,7 @@ subroutine rij_rank(ig, jg, rank)
       DX, &
       DY
 #else
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
 #endif
   implicit none
@@ -1860,15 +1881,15 @@ end subroutine rij_rank
 !   il, jl : local grid coordinates
 !-------------------------------------------------------------------------------
 subroutine rij_rank_g2l(ig, jg, rank, il, jl)
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
       PRC_NUM_X, PRC_NUM_Y
 #ifdef DEBUG
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, &
       IA, JA
-  use scale_process, only: &
+  use scale_prc, only: &
       PRC_myrank
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
       GRID_CX, &
       GRID_CY, &
       GRID_CXG, &
@@ -1876,7 +1897,7 @@ subroutine rij_rank_g2l(ig, jg, rank, il, jl)
       DX, &
       DY
 #else
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
 #endif
   implicit none
@@ -1918,8 +1939,6 @@ subroutine rij_rank_g2l(ig, jg, rank, il, jl)
   return
 end subroutine rij_rank_g2l
 
-#ifdef H08
-
 function ch2BB_Him8(ch)
   implicit none
 
@@ -1939,10 +1958,7 @@ function ch2BB_Him8(ch)
 
 end function ch2BB_Him8
 
-
-#endif
-
-! convert qv to Td only
+! convert qv to Td only below Q_ANAL_TD_TOP_MLEV
 subroutine qv2td(qv3dg, prs3dg)
   use scale_tracer, only: TRACER_CV
     use scale_const, only: &
@@ -1963,9 +1979,11 @@ subroutine qv2td(qv3dg, prs3dg)
 !$OMP PARALLEL DO PRIVATE(i,j,k,ep) COLLAPSE(2)
   do j = 1, nlat
     do i = 1, nlon
-      do k = 1, Q_ANAL_TD_TOP_MLEV 
+      do k = 1, min(Q_ANAL_TD_TOP_MLEV, nlev)
+
         ep = max(qv3dg(k,i,j), 0.0_RP) * prs3dg(k,i,j) / (eps + max(qv3dg(k,i,j), 0.0_RP)) * 0.01_RP ! (hPa)
-        qv3dg(k,i,j) = 243.5_RP / (17.67_RP / log(ep / 6.112_RP) - 1.0_RP) + T00 ! (K)
+!          qv3dg(k,i,j) = 243.5_RP / (17.67_RP / log(ep / 6.112_RP) - 1.0_RP) + T00 ! (K)
+        qv3dg(k,i,j) = (243.5_RP * log(ep) - 440.8_RP ) / (19.48_RP  - log(ep)) + T00 ! (K) eq.11 of Bolton (1980) 
       enddo
     enddo
   enddo
@@ -1996,7 +2014,7 @@ subroutine td2qv(qv3dg, prs3dg, tk3dg)
 !$OMP PARALLEL DO PRIVATE(i,j,k,ep,td) COLLAPSE(2)
   do j = 1, nlat
     do i = 1, nlon
-      do k = 1, Q_ANAL_TD_TOP_MLEV 
+      do k = 1, min(Q_ANAL_TD_TOP_MLEV, nlev)
         td = min(qv3dg(k,i,j), tk3dg(k,i,j)) - T00 ! Avoid super saturation
         ep = 611.2_RP * exp(17.67_RP * td / (td + 243.5_RP)) ! Pa
         qv3dg(k,i,j) = eps * ep / (prs3dg(k,i,j) - ep)
@@ -2011,13 +2029,9 @@ end subroutine td2qv
 
 SUBROUTINE read_restart_1var(filename,v3dg)
   use netcdf
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
-  use scale_rm_process, only: &
-    PRC_HAS_W,  &
-    PRC_HAS_S
-  use scale_grid_index, only: &
-    IHALO, JHALO, &
+  use scale_atmos_grid_cartesC_index, only: &
     IMAX, JMAX, KMAX
   use common_mpi, only: myrank
   use common_ncio

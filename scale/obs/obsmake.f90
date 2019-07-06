@@ -42,13 +42,8 @@ PROGRAM obsmake
 
   call set_common_conf(nprocs)
 
-  call read_nml_obs_error
-  call read_nml_letkf
-  call read_nml_letkf_radar
-  call read_nml_letkf_h08
-
   call set_mem_node_proc(1)
-  call set_scalelib
+  call set_scalelib('OBSMAKE')
 
   if (myrank_use) then
 

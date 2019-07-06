@@ -55,9 +55,9 @@ NOBS_OUT="${1:-0}"
 
 #===============================================================================
 
-IO_AGGREGATE=".false"
+FILE_AGGREGATE=".false"
 if ((PNETCDF == 1)); then
-  IO_AGGREGATE=".true."
+  FILE_AGGREGATE=".true."
 fi
 
 OBS_IN_NAME_LIST=
@@ -141,10 +141,17 @@ S_SS=${STIME:12:2}
 
 #===============================================================================
 
-cat $TMPDAT/conf/config.nml.letkf | \
+cat $TMPDAT/conf/config.nml.ensmodel | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBER," \
         -e "/!--DET_RUN--/a DET_RUN = ${DET_RUN_TF}," \
-        -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
+        -e "/!--PPN--/a PPN = $PPN_APPAR," \
+        -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
+        -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = 1," \
+        -e "/!--PRC_DOMAINS--/a PRC_DOMAINS = $MEM_NP," \
+    > $TMPDIR/letkf.conf
+
+cat $TMPDAT/conf/config.nml.letkf | \
+    sed -e "/!--OBS_IN_NUM--/a OBS_IN_NUM = $OBSNUM," \
         -e "/!--OBS_IN_NAME--/a OBS_IN_NAME = $OBS_IN_NAME_LIST" \
         -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
         -e "/!--HISTORY_IN_BASENAME--/a HISTORY_IN_BASENAME = \"${HISTORY_IN_BASENAME}\"," \
@@ -169,17 +176,12 @@ cat $TMPDAT/conf/config.nml.letkf | \
         -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${RELAX_SPREAD_OUT_BASENAME}\"," \
         -e "/!--NOBS_OUT--/a NOBS_OUT = ${NOBS_OUT_TF}," \
         -e "/!--NOBS_OUT_BASENAME--/a NOBS_OUT_BASENAME = \"${NOBS_OUT_BASENAME}\"," \
-        -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
-        -e "/!--PPN--/a PPN = $PPN_APPAR," \
-        -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
-        -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
         -e "/!--OBSDEP_OUT--/a OBSDEP_OUT = ${OBSDEP_OUT_TF}," \
         -e "/!--OBSDEP_OUT_BASENAME--/a OBSDEP_OUT_BASENAME = \"${TMPOUT}/${ATIME}/obs/obsdep\"," \
-        -e "/!--IO_AGGREGATE--/a IO_AGGREGATE = ${IO_AGGREGATE}," \
         -e "/!--H08_NOWDATE--/a H08_NOWDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--H08_RTTOV_COEF_PATH--/a H08_RTTOV_COEF_PATH = \"${TMPDIR}\"," \
         -e "/!--H08_OUTFILE_BASENAME--/a H08_OUTFILE_BASENAME = \"${TMPOUT}/${ATIME}/Him8/Him8_${ATIME}\"," \
-    > $TMPDIR/letkf.conf
+    >> $TMPDIR/letkf.conf
 #        -e "/!--H08_VBC_PATH--/a H08_VBC_PATH = \"${TMPOUT}/vbc\"," \
 
 # Most of these parameters are not important for letkf
@@ -190,6 +192,7 @@ cat $TMPDAT/conf/config.nml.scale | \
         -e "/!--ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME--/a ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = \"${TMPDAT_CONSTDB}/rad/VARDATA.RM29\"," \
         -e "/!--ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME--/a ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME = \"${TMPDAT_CONSTDB}/rad/cira.nc\"," \
         -e "/!--ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME--/a ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = \"${TMPDAT_CONSTDB}/rad/MIPAS\"," \
+        -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
     >> $TMPDIR/letkf.conf
 
 

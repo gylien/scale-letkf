@@ -23,15 +23,18 @@ module common_mpi_scale
   use common_obs_scale
 
   use scale_precision, only: RP
-  use scale_comm, only: COMM_datatype
+  use scale_comm_cartesC, only: COMM_datatype
 #ifdef PNETCDF
-  use scale_stdio, only: IO_AGGREGATE
+  use scale_file, only: FILE_AGGREGATE
 #endif
 #ifdef H08
   use common_mtx
 #endif
   implicit none
   public
+
+  integer,save :: nnodes
+  integer,save :: nprocs_m
 
   integer,save :: nij1
   integer,save :: nij1max
@@ -51,8 +54,10 @@ module common_mpi_scale
   integer,allocatable,save :: rank_to_mempe(:,:,:) ! Deprecated except for the use in PRC_MPIsplit_letkf
   integer,allocatable,save :: ranke_to_mem(:,:)
   integer,allocatable,save :: myrank_to_mem(:)
-  integer,private,save :: myrank_to_pe
+  integer,save :: myrank_to_pe
   logical,save :: myrank_use = .false.
+
+  integer,save :: mydom = -1
 
   integer,save :: nens = -1
   integer,save :: nensobs = -1
@@ -66,9 +71,10 @@ module common_mpi_scale
   integer,save :: mmdet_rank_e = -1
   integer,save :: msprd_rank_e = -1
 
-  integer,save :: MPI_COMM_e, nprocs_e, myrank_e
-  integer,save :: MPI_COMM_d, nprocs_d, myrank_d
+  integer,save :: MPI_COMM_u, nprocs_u, myrank_u
   integer,save :: MPI_COMM_a, nprocs_a, myrank_a
+  integer,save :: MPI_COMM_d, nprocs_d, myrank_d
+  integer,save :: MPI_COMM_e, nprocs_e, myrank_e
 
   integer, parameter :: max_timer_levels = 5
   integer, parameter :: timer_name_width = 50
@@ -81,7 +87,7 @@ contains
 ! initialize_mpi_scale
 !-------------------------------------------------------------------------------
 subroutine initialize_mpi_scale
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_MPIstart, &
      PRC_UNIVERSAL_setup, &
      PRC_UNIVERSAL_myrank
@@ -115,7 +121,7 @@ end subroutine initialize_mpi_scale
 ! finalize_mpi_scale
 !-------------------------------------------------------------------------------
 subroutine finalize_mpi_scale
-!  use scale_process, only: PRC_MPIfinish
+!  use scale_prc, only: PRC_MPIfinish
   implicit none
   integer :: ierr
 
@@ -129,13 +135,13 @@ end subroutine finalize_mpi_scale
 ! set_common_mpi_scale
 !-------------------------------------------------------------------------------
 subroutine set_common_mpi_scale
-  use scale_grid, only: &
-      GRID_CX, GRID_CY, &
+  use scale_atmos_grid_cartesC, only: &
+      ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_CY, &
       DX, DY
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
-  use scale_mapproj, only: &
-      MPRJ_xy2lonlat
+  use scale_mapprojection, only: &
+      MAPPROJECTION_xy2lonlat
   implicit none
   integer :: color, key
   integer :: ierr
@@ -191,14 +197,18 @@ subroutine set_common_mpi_scale
         do i = 1, nlon
           ri = real(i + IHALO, r_size)
           rj = real(j + JHALO, r_size)
-          call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1), lon2d(i,j), lat2d(i,j))
+          call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + ATMOS_GRID_CARTESC_CX(1), &
+                                       (rj-1.0_r_size) * DY + ATMOS_GRID_CARTESC_CY(1), &
+                                        lon2d(i,j), lat2d(i,j))
+
           lon2d(i,j) = lon2d(i,j) * rad2deg
           lat2d(i,j) = lat2d(i,j) * rad2deg
         end do
       end do
 !$OMP END PARALLEL DO
 
-      call file_member_replace(myrank_to_mem(1), GUES_IN_BASENAME, filename)
+      filename = GUES_IN_BASENAME
+      call filename_replace_mem(filename, myrank_to_mem(1))
       call read_restart_coor(filename, lon2dtmp, lat2dtmp, height3dtmp)
 
       if (maxval(abs(lon2dtmp - lon2d)) > 1.0d-6 .or. maxval(abs(lat2dtmp - lat2d)) > 1.0d-6) then
@@ -237,10 +247,10 @@ end subroutine unset_common_mpi_scale
 ! set_common_mpi_grid
 !-------------------------------------------------------------------------------
 subroutine set_common_mpi_grid
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, &
     JHALO
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_myrank
 
   implicit none
@@ -308,7 +318,7 @@ subroutine set_common_mpi_grid
       write (6, '(1x,A,A15,A)') '*** Read 2D var: ', trim(topo2d_name), ' -- skipped because it was read previously'
 #ifdef DEBUG
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call read_topo_par(LETKF_TOPO_IN_BASENAME, topo2dtmp, MPI_COMM_d)
       else
 #endif
@@ -324,7 +334,7 @@ subroutine set_common_mpi_grid
     else
       allocate (topo2d(nlon,nlat))
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call read_topo_par(LETKF_TOPO_IN_BASENAME, topo2d, MPI_COMM_d)
       else
 #endif
@@ -367,19 +377,39 @@ SUBROUTINE set_mem_node_proc(mem)
 
   call mpi_timer('', 2)
 
+  if (mod(nprocs, PPN) /= 0) then
+    write(6,'(A,I10)') '[Info] Total number of MPI processes      = ', nprocs
+    write(6,'(A,I10)') '[Info] Number of processes per node (PPN) = ', PPN
+    write(6,'(A)') '[Error] Total number of MPI processes should be an exact multiple of PPN.'
+    stop
+  end if
+  nnodes = nprocs / PPN
+
+  nprocs_m = sum(PRC_DOMAINS(1:NUM_DOMAIN))
+
+  if (LOG_LEVEL >= 1) then
+    write(6,'(A,I10)') '[Info] Total number of MPI processes                = ', nprocs
+    write(6,'(A,I10)') '[Info] Number of nodes (NNODES)                     = ', nnodes
+    write(6,'(A,I10)') '[Info] Number of processes per node (PPN)           = ', PPN
+    write(6,'(A,I10)') '[Info] Number of processes per member (all domains) = ', nprocs_m
+  end if
+
+  if (MEM_NODES == 0) then
+    MEM_NODES = (nprocs_m-1) / PPN + 1
+  end if
   IF(MEM_NODES > 1) THEN
-    n_mem = NNODES / MEM_NODES
+    n_mem = nnodes / MEM_NODES
     n_mempn = 1
   ELSE
-    n_mem = NNODES
-    n_mempn = PPN / MEM_NP
+    n_mem = nnodes
+    n_mempn = PPN / nprocs_m
   END IF
   nitmax = (mem - 1) / (n_mem * n_mempn) + 1
-  tppn = MEM_NP / MEM_NODES
-  tmod = MOD(MEM_NP, MEM_NODES)
+  tppn = nprocs_m / MEM_NODES
+  tmod = MOD(nprocs_m, MEM_NODES)
 
-  ALLOCATE(mempe_to_node(MEM_NP,mem))
-  ALLOCATE(mempe_to_rank(MEM_NP,mem))
+  ALLOCATE(mempe_to_node(nprocs_m,mem))
+  ALLOCATE(mempe_to_rank(nprocs_m,mem))
   ALLOCATE(rank_to_mem(nitmax,nprocs))
   ALLOCATE(rank_to_pe(nprocs))
   ALLOCATE(rank_to_mempe(2,nitmax,nprocs))
@@ -405,7 +435,7 @@ mem_loop: DO it = 1, nitmax
             tppnt = tppn
           END IF
           DO q = 0, tppnt-1
-            ip = (n+nn)*PPN + i*MEM_NP + q
+            ip = (n+nn)*PPN + i*nprocs_m + q
             if (m <= mem) then
               mempe_to_node(qs+1,m) = n+nn
               mempe_to_rank(qs+1,m) = ip
@@ -489,22 +519,19 @@ END SUBROUTINE
 !-------------------------------------------------------------------------------
 ! Start using SCALE library
 !-------------------------------------------------------------------------------
-subroutine set_scalelib
-  use gtool_history, only: &
-    HistoryInit
-  use dc_log, only: &
-    LogInit
-  use scale_stdio, only: &
+subroutine set_scalelib(execname)
+  use scale_io, only: &
+    IO_setup, &
     IO_LOG_setup, &
     IO_FID_CONF, &
     IO_FID_LOG, &
     IO_L, &
     H_LONG
-  use scale_process, only: &
+  use scale_prc, only: &
     PRC_mpi_alive, &
 !    PRC_MPIstart, &
 !    PRC_UNIVERSAL_setup, &
-    PRC_MPIsplit_letkf, &
+!    PRC_MPIsplit_letkf, &
     PRC_MPIsplit, &
     PRC_GLOBAL_setup, &
     PRC_LOCAL_setup, &
@@ -513,9 +540,9 @@ subroutine set_scalelib
     PRC_myrank, &
     PRC_masterrank, &
     PRC_DOMAIN_nlim
-  use scale_rm_process, only: &
-    PRC_setup, &
-    PRC_2Drank
+  use scale_prc_cartesC, only: &
+    PRC_2Drank, &
+    PRC_CARTESC_setup
   use scale_const, only: &
     CONST_setup
   use scale_calendar, only: &
@@ -527,36 +554,38 @@ subroutine set_scalelib
   use scale_time, only: &
     TIME_DTSEC,       &
     TIME_STARTDAYSEC
-  use scale_grid, only: &
-    GRID_setup, &
-    GRID_DOMAIN_CENTER_X, &
-    GRID_DOMAIN_CENTER_Y
-  use scale_grid_index
-!  use scale_grid_nest, only: &
+  use scale_atmos_grid_cartesC, only: &
+    ATMOS_GRID_CARTESC_setup, &
+    ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, &
+    ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
+    DX, &
+    DY
+  use scale_atmos_grid_cartesC_index
+!  use scale_atmos_grid_cartesC_nest, only: &
 !    NEST_setup
 #ifdef PNETCDF
-  use scale_land_grid_index, only: &
-    LAND_GRID_INDEX_setup
+  use scale_land_grid_cartesC_index, only: &
+    LAND_GRID_CARTESC_INDEX_setup
 #endif
 !  use scale_land_grid, only: &
 !    LAND_GRID_setup
 #ifdef PNETCDF
-  use scale_urban_grid_index, only: &
-    URBAN_GRID_INDEX_setup
+  use scale_urban_grid_cartesC_index, only: &
+    URBAN_GRID_CARTESC_INDEX_setup
 #endif
 !  use scale_urban_grid, only: &
 !    URBAN_GRID_setup
-  use scale_fileio, only: &
-    FILEIO_setup
-  use scale_comm, only: &
+  use scale_file, only: &
+    FILE_setup
+  use scale_comm_cartesC, only: &
     COMM_setup
 !  use scale_topography, only: &
 !    TOPO_setup
 !  use scale_landuse, only: &
 !    LANDUSE_setup
-!  use scale_grid_real, only: &
+!  use scale_atmos_grid_cartesC_real, only: &
 !    REAL_setup
-!  use scale_gridtrans, only: &
+!  use scale_atmos_grid_cartesCtrans, only: &
 !    GTRANS_setup
 !  use scale_atmos_hydrostatic, only: &
 !    ATMOS_HYDROSTATIC_setup
@@ -566,8 +595,8 @@ subroutine set_scalelib
     ATMOS_HYDROMETEOR_setup
 !  use mod_atmos_driver, only: &
 !    ATMOS_driver_config
-  use scale_atmos_phy_mp, only: &
-    ATMOS_PHY_MP_config
+!  use scale_atmos_phy_mp, only: &
+!    ATMOS_PHY_MP_config
 !  use mod_atmos_admin, only: &
 !    ATMOS_PHY_MP_TYPE, &
 !    ATMOS_sw_phy_mp
@@ -581,13 +610,11 @@ subroutine set_scalelib
 !  use mod_admin_time, only: &
 !    ADMIN_TIME_setup
 #endif
-  use scale_mapproj, only: &
-    MPRJ_setup
+  use scale_mapprojection, only: &
+    MAPPROJECTION_setup
   implicit none
 
-  integer :: NUM_DOMAIN
-  integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
-  character(len=H_LONG) :: CONF_FILES(PRC_DOMAIN_nlim)
+  character(len=*), intent(in), optional :: execname
 
 !  integer :: universal_comm
 !  integer :: universal_nprocs
@@ -598,13 +625,18 @@ subroutine set_scalelib
   logical :: local_ismaster
   integer :: intercomm_parent
   integer :: intercomm_child
-  character(len=H_LONG) :: confname_dummy
+  character(len=H_LONG) :: confname_domains(PRC_DOMAIN_nlim)
+  character(len=H_LONG) :: confname_mydom
 
-  integer :: color, key, ierr
+  integer :: color, key, idom, ierr
   integer :: rankidx(2)
 
   integer :: HIST_item_limit    ! dummy
   integer :: HIST_variant_limit ! dummy
+
+  character(len=7) :: execname_ = ''
+
+  if (present(execname)) execname_ = execname
 
   call mpi_timer('', 2, barrier=MPI_COMM_WORLD)
 
@@ -613,69 +645,101 @@ subroutine set_scalelib
 
   if (myrank_use) then
     color = 0
-    key   = (myrank_to_mem(1) - 1) * MEM_NP + myrank_to_pe
+    key   = (myrank_to_mem(1) - 1) * nprocs_m + myrank_to_pe
 !    key   = myrank
   else
     color = MPI_UNDEFINED
     key   = MPI_UNDEFINED
   end if
 
-  call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, MPI_COMM_a, ierr)
-
-  call mpi_timer('set_scalelib:mpi_comm_split_a:', 2)
+  call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, MPI_COMM_u, ierr)
 
   if (.not. myrank_use) then
     write (6, '(A,I6.6,A)') 'MYRANK=', myrank, ': This process is not used!'
     return
   end if
 
-  call mpi_timer('', 2, barrier=MPI_COMM_a)
+  call MPI_COMM_SIZE(MPI_COMM_u, nprocs_u, ierr)
+  call MPI_COMM_RANK(MPI_COMM_u, myrank_u, ierr)
 
-  call MPI_COMM_SIZE(MPI_COMM_a, nprocs_a, ierr)
-  call MPI_COMM_RANK(MPI_COMM_a, myrank_a, ierr)
+  call mpi_timer('set_scalelib:mpi_comm_split_u:', 2)
 
-  ! Communicator for subdomains
+  ! Communicator for all domains of single members
   !-----------------------------------------------------------------------------
-
-  NUM_DOMAIN = 1
-  PRC_DOMAINS = 0
-  CONF_FILES = ""
 
   ! start SCALE MPI
 !  call PRC_MPIstart( universal_comm ) ! [OUT]
 
   PRC_mpi_alive = .true.
-!  universal_comm = MPI_COMM_a
+!  universal_comm = MPI_COMM_u
 
 !  call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
 !                            universal_nprocs, & ! [OUT]
 !                            universal_master  ) ! [OUT]
 
-  ! split MPI communicator for LETKF
-  call PRC_MPIsplit_letkf( MPI_COMM_a,                            & ! [IN]
-                           MEM_NP, nitmax, nprocs, rank_to_mempe, & ! [IN]
-                           global_comm                            ) ! [OUT]
+!  if (myrank_to_mem(1) >= 1) then
+    color = myrank_to_mem(1) - 1
+    key   = myrank_to_pe
+!  else
+!    color = MPI_UNDEFINED
+!    key   = MPI_UNDEFINED
+!  endif
+
+  call MPI_COMM_SPLIT(MPI_COMM_u, color, key, global_comm, ierr)
 
   call PRC_GLOBAL_setup( .false.,    & ! [IN]
                          global_comm ) ! [IN]
 
-  call mpi_timer('set_scalelib:mpi_comm_split_d_global:', 2, barrier=global_comm)
+  call mpi_timer('set_scalelib:mpi_comm_split_d_global:', 2)
+
+  ! Communicator for one domain
+  !-----------------------------------------------------------------------------
+
+  do idom = 1, NUM_DOMAIN
+    confname_domains(idom) = trim(CONF_FILES)
+    call filename_replace_dom(confname_domains(idom), idom)
+  end do
 
   !--- split for nesting
   ! communicator split for nesting domains
   call PRC_MPIsplit( global_comm,      & ! [IN]
                      NUM_DOMAIN,       & ! [IN]
                      PRC_DOMAINS(:),   & ! [IN]
-                     CONF_FILES(:),    & ! [IN]
+                     confname_domains(:), & ! [IN]
                      .false.,          & ! [IN]
                      .false.,          & ! [IN] flag bulk_split
                      .false.,          & ! [IN] no reordering
                      local_comm,       & ! [OUT]
                      intercomm_parent, & ! [OUT]
                      intercomm_child,  & ! [OUT]
-                     confname_dummy    ) ! [OUT]
+                     confname_mydom    ) ! [OUT]
 
   MPI_COMM_d = local_comm
+
+  do idom = 1, NUM_DOMAIN
+    if (trim(confname_mydom) == trim(confname_domains(idom))) then
+      mydom = idom
+      exit
+    end if
+  end do
+
+#ifdef DEBUG
+  if (mydom <= 0) then
+    write(6, '(A)'), '[Error] Cannot determine my domain ID.'
+    stop
+  end if
+#endif
+
+  !-----------------------------------------------------------------------------
+
+  if (mydom >= 2) then ! In d01, keep using the original launcher config file; skip re-opening config files here
+    call IO_setup( modelname, confname_mydom )
+
+!    call read_nml_log
+!    call read_nml_model
+!    call read_nml_ensemble
+!    call read_nml_process
+  end if
 
   call PRC_LOCAL_setup( local_comm, local_myrank, local_ismaster )
 
@@ -684,29 +748,63 @@ subroutine set_scalelib
 !  call MPI_COMM_RANK(MPI_COMM_d, myrank_d, ierr)
 !  myrank_d = PRC_myrank
   myrank_d = local_myrank
-#ifdef DEBUG
-  if (myrank_d /= myrank_to_pe) then
-    write (6, '(A)'), '[Error] XXXXXX wrong!!'
-    stop
-  end if
-#endif
 
   call mpi_timer('set_scalelib:mpi_comm_split_d_local:', 2)
+
+  select case (execname_)
+  case ('LETKF  ')
+    call read_nml_obs_error
+    call read_nml_obsope
+    call read_nml_letkf
+    call read_nml_letkf_obs
+    call read_nml_letkf_var_local
+    call read_nml_letkf_monitor
+    call read_nml_letkf_radar
+    call read_nml_letkf_h08
+  case ('OBSOPE ', 'OBSMAKE')
+    call read_nml_obs_error
+    call read_nml_obsope
+    call read_nml_letkf_radar
+    call read_nml_letkf_h08
+  case ('OBSSIM ')
+    call read_nml_obssim
+    call read_nml_letkf_radar
+    call read_nml_letkf_h08
+  end select
+
+  ! Communicator for all processes for single domains
+  !-----------------------------------------------------------------------------
+
+!  if (mydom > 0) then
+    color = mydom - 1
+    key   = (myrank_to_mem(1) - 1) * nprocs_m + myrank_to_pe
+!    key   = myrank
+!  else
+!    color = MPI_UNDEFINED
+!    key   = MPI_UNDEFINED
+!  end if
+
+  call MPI_COMM_SPLIT(MPI_COMM_u, color, key, MPI_COMM_a, ierr)
+
+  call MPI_COMM_SIZE(MPI_COMM_a, nprocs_a, ierr)
+  call MPI_COMM_RANK(MPI_COMM_a, myrank_a, ierr)
+
+  call mpi_timer('set_scalelib:mpi_comm_split_a:', 2)
 
   ! Setup scalelib LOG output (only for the universal master rank)
   !-----------------------------------------------------------------------------
 
   ! setup Log
   call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
-  call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
+!  call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
-  call mpi_timer('set_scalelib:log_setup_init:', 2, barrier=MPI_COMM_a)
+  call mpi_timer('set_scalelib:log_setup_init:', 2)
 
   ! Other minimal scalelib setups for LETKF
   !-----------------------------------------------------------------------------
 
   ! setup process
-  call PRC_setup
+  call PRC_CARTESC_setup
 
   ! setup PROF
 !  call PROF_setup
@@ -728,20 +826,20 @@ subroutine set_scalelib
 !  call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
 
   ! setup horizontal/vertical grid coordinates
-  call GRID_INDEX_setup
-  call GRID_setup
+  call ATMOS_GRID_CARTESC_INDEX_setup
+  call ATMOS_GRID_CARTESC_setup
 #ifdef PNETCDF
-  call LAND_GRID_INDEX_setup
+  call LAND_GRID_CARTESC_INDEX_setup
 #endif
 !  call LAND_GRID_setup
 #ifdef PNETCDF
-  call URBAN_GRID_INDEX_setup
+  call URBAN_GRID_CARTESC_INDEX_setup
 #endif
 !  call URBAN_GRID_setup
 
   ! setup tracer index
   call ATMOS_HYDROMETEOR_setup
-    call ATMOS_PHY_MP_config('TOMITA08') !!!!!!!!!!!!!!! tentative
+!    call ATMOS_PHY_MP_config('TOMITA08') !!!!!!!!!!!!!!! tentative
 !    if ( ATMOS_sw_phy_mp ) then
 !       call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
 !    end if
@@ -756,7 +854,7 @@ subroutine set_scalelib
 #endif
 
   ! setup file I/O
-  call FILEIO_setup
+  call FILE_setup( PRC_myrank )
 
   ! setup mpi communication
   call COMM_setup
@@ -770,7 +868,7 @@ subroutine set_scalelib
   ! setup grid coordinates (real world)
 !  call REAL_setup
     ! setup map projection [[ in REAL_setup ]]
-    call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
+     call MAPPROJECTION_setup( ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y )
 
   ! setup grid transfer metrics (uses in ATMOS_dynamics)
 !  call GTRANS_setup
@@ -790,21 +888,23 @@ subroutine set_scalelib
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
 
-    call HistoryInit( HIST_item_limit,                  & ! [OUT]
-                      HIST_variant_limit,               & ! [OUT]
-                      IMAX, JMAX, KMAX,                 & ! [IN]
-                      PRC_masterrank,                   & ! [IN]
-                      PRC_myrank,                       & ! [IN]
-                      rankidx,                          & ! [IN]
-                      '',                               & ! [IN]
-                      '',                               & ! [IN]
-                      '',                               & ! [IN]
-                      0.0d0,                            & ! [IN]
-                      1.0d0,                            & ! [IN]
-                      default_basename='history',       & ! [IN]
-                      default_zcoord = 'model',         & ! [IN]
-                      default_tinterval = 1.0d0,        & ! [IN]
-                      namelist_fid=IO_FID_CONF          ) ! [IN]
+! tentative 11/26/2018 TH
+!  call FILE_HISTORY_setup
+!    call HistoryInit( HIST_item_limit,                  & ! [OUT]
+!                      HIST_variant_limit,               & ! [OUT]
+!                      IMAX, JMAX, KMAX,                 & ! [IN]
+!                      PRC_masterrank,                   & ! [IN]
+!                      PRC_myrank,                       & ! [IN]
+!                      rankidx,                          & ! [IN]
+!                      '',                               & ! [IN]
+!                      '',                               & ! [IN]
+!                      '',                               & ! [IN]
+!                      0.0d0,                            & ! [IN]
+!                      1.0d0,                            & ! [IN]
+!                      default_basename='history',       & ! [IN]
+!                      default_zcoord = 'model',         & ! [IN]
+!                      default_tinterval = 1.0d0,        & ! [IN]
+!                      namelist_fid=IO_FID_CONF          ) ! [IN]
 
   ! setup monitor I/O
 !  call MONIT_setup
@@ -842,9 +942,9 @@ end subroutine set_scalelib
 ! Finish using SCALE library
 !-------------------------------------------------------------------------------
 subroutine unset_scalelib
-  use gtool_file, only: &
-    FileCloseAll
-  use scale_stdio, only: &
+  use scale_file, only: &
+     FILE_Close_All
+  use scale_io, only: &
     IO_FID_CONF, &
     IO_FID_LOG, &
     IO_L, &
@@ -854,7 +954,7 @@ subroutine unset_scalelib
 
   if (myrank_use) then
 !    call MONIT_finalize
-    call FileCloseAll
+    call FILE_Close_All
 
     ! Close logfile, configfile
     if ( IO_L ) then
@@ -864,6 +964,7 @@ subroutine unset_scalelib
 
     call MPI_COMM_FREE(MPI_COMM_d, ierr)
     call MPI_COMM_FREE(MPI_COMM_a, ierr)
+    call MPI_COMM_FREE(MPI_COMM_u, ierr)
   end if
 
   return
@@ -988,7 +1089,8 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
   im = myrank_to_mem(iter)
   if (im >= 1 .and. im <= nens) then
     if (im <= MEMBER) then
-      call file_member_replace(im, HISTORY_IN_BASENAME, filename)
+      filename = HISTORY_IN_BASENAME
+      call filename_replace_mem(filename, im)
     else if (im == mmean) then
       filename = HISTORY_MEAN_IN_BASENAME
     else if (im == mmdet) then
@@ -996,7 +1098,7 @@ subroutine read_ens_history_iter(iter, step, v3dg, v2dg)
     end if
 
 #ifdef PNETCDF
-    if (IO_AGGREGATE) then
+    if (FILE_AGGREGATE) then
       call read_history_par(trim(filename), step, v3dg, v2dg, MPI_COMM_d)
     else
 #endif
@@ -1030,7 +1132,8 @@ subroutine read_ens_mpi(v3d, v2d)
     ! 
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmdetin) then
       if (im <= MEMBER) then
-        call file_member_replace(im, GUES_IN_BASENAME, filename)
+        filename = GUES_IN_BASENAME
+        call filename_replace_mem(filename, im)
       else if (im == mmean) then
         filename = GUES_MEAN_INOUT_BASENAME
       else if (im == mmdet) then
@@ -1039,7 +1142,7 @@ subroutine read_ens_mpi(v3d, v2d)
 
 !      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call read_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
       else
 #endif
@@ -1090,11 +1193,12 @@ subroutine read_ens_mpi_addiinfl(v3d, v2d)
     ! Note: read all members
     ! 
     if (im >= 1 .and. im <= MEMBER) then
-      call file_member_replace(im, INFL_ADD_IN_BASENAME, filename)
+      filename = INFL_ADD_IN_BASENAME
+      call filename_replace_mem(filename, im)
 
 !      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call read_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
       else
 #endif
@@ -1157,7 +1261,8 @@ subroutine write_ens_mpi(v3d, v2d, monit_step)
     ! 
     if ((im >= 1 .and. im <= MEMBER) .or. im == mmean .or. im == mmdet) then
       if (im <= MEMBER) then
-        call file_member_replace(im, ANAL_OUT_BASENAME, filename)
+        filename = ANAL_OUT_BASENAME
+        call filename_replace_mem(filename, im)
       else if (im == mmean) then
         filename = ANAL_MEAN_OUT_BASENAME
       else if (im == mmdet) then
@@ -1170,7 +1275,7 @@ subroutine write_ens_mpi(v3d, v2d, monit_step)
       call mpi_timer('write_ens_mpi:state_trans_inv:', 2)
 
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
       else
 #endif
@@ -1411,11 +1516,10 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   real(r_size), allocatable :: obsdep_g_omb(:)
   real(r_size), allocatable :: obsdep_g_oma(:)
   integer :: cnts
-  integer :: cntr(MEM_NP)
-  integer :: dspr(MEM_NP)
+  integer :: cntr(nprocs_d)
+  integer :: dspr(nprocs_d)
   integer :: i, ip, ierr
 
-#ifdef H08
   integer :: nobs_H08(NIRB_HIM8)
   integer :: nobs_H08_g(NIRB_HIM8)
   real(r_size) :: bias_H08(NIRB_HIM8)
@@ -1436,7 +1540,6 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
 !  real(r_size) :: bH08(H08_NPRED,NIRB_HIM8)
 !  real(r_size) :: vbcaH08(H08_NPRED,NIRB_HIM8)
 !  real(r_size) :: vbcfH08(H08_NPRED,NIRB_HIM8)
-#endif
 
 #ifdef TCV
 !  real(r_size) :: bTC(3,0:MEM_NP-1) 
@@ -1453,7 +1556,6 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   ! 
   if (myrank_e == mmean_rank_e) then
 
-#ifdef H08
 !    if (H08_VBC_USE)then
 !      call read_vbc_Him8(vbcfH08)
 !    else
@@ -1469,9 +1571,6 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       call write_Him8_mpi(yobs_H08_l,monit_step)
     endif
    
-#else
-    call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true., monit_step)
-#endif
 
     call mpi_timer('monit_obs_mpi:monit_obs:', 2)
 
@@ -1555,7 +1654,6 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_g, nid_obs, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE, bias_g, nid_obs, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_g, nid_obs, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
-#ifdef H08
       call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_H08_g, NIRB_HIM8, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE, bias_H08_g, NIRB_HIM8, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
       call MPI_ALLREDUCE(MPI_IN_PLACE, rmse_H08_g, NIRB_HIM8, MPI_r_size,  MPI_SUM, MPI_COMM_d, ierr)
@@ -1584,11 +1682,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
 !          endif
 !        enddo
 !      endif ! [myrank == 0 & monit_step == 2]
-#endif
 
-#ifdef TCV
-
-#endif
     end if
 
     do i = 1, nid_obs
@@ -1607,7 +1701,6 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       end if
     end do
 
-#ifdef H08
     do i = 1, NIRB_HIM8
       if (nobs_H08_g(i) == 0) then
         bias_H08_g(i) = undef
@@ -1623,7 +1716,6 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
 !        endif
       end if
     end do
-#endif
 
     call mpi_timer('monit_obs_mpi:stat:mpi_allreduce(domain):', 2)
 
@@ -1631,13 +1723,13 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       cnts = obsdep_nobs
       cntr = 0
       cntr(myrank_d+1) = cnts
-      call MPI_ALLREDUCE(MPI_IN_PLACE, cntr, MEM_NP, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, cntr, nprocs_d, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
       dspr = 0
-      do ip = 1, MEM_NP-1
+      do ip = 1, nprocs_d-1
         dspr(ip+1) = dspr(ip) + cntr(ip)
       end do
 
-      obsdep_g_nobs = dspr(MEM_NP) + cntr(MEM_NP)
+      obsdep_g_nobs = dspr(nprocs_d) + cntr(nprocs_d)
       allocate (obsdep_g_set(obsdep_g_nobs))
       allocate (obsdep_g_idx(obsdep_g_nobs))
       allocate (obsdep_g_qc (obsdep_g_nobs))
@@ -1666,13 +1758,6 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       call mpi_timer('monit_obs_mpi:obsdep:mpi_allreduce(domain):', 2)
     end if ! [ OBSDEP_OUT .and. monit_step == 2 ]
 
-    if (monit_step == 2) then
-      deallocate (obsdep_set)
-      deallocate (obsdep_idx)
-      deallocate (obsdep_qc )
-      deallocate (obsdep_omb)
-      deallocate (obsdep_oma)
-    end if
   end if ! [ myrank_e == mmean_rank_e ]
 
 
@@ -1687,7 +1772,6 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
     call MPI_BCAST(rmse_g,     nid_obs, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
     call MPI_BCAST(monit_type, nid_obs, MPI_LOGICAL, mmean_rank_e, MPI_COMM_e, ierr)
 
-#ifdef H08
     call MPI_BCAST(nobs_H08,   NIRB_HIM8, MPI_INTEGER, mmean_rank_e, MPI_COMM_e, ierr)
     call MPI_BCAST(bias_H08,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
     call MPI_BCAST(rmse_H08,   NIRB_HIM8, MPI_r_size,  mmean_rank_e, MPI_COMM_e, ierr)
@@ -1708,7 +1792,6 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
 !      endif
 !    endif
 
-#endif
 
     call mpi_timer('monit_obs_mpi:mpi_allreduce(ens):', 2)
   end if
@@ -1720,13 +1803,11 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (IN THIS SUBDOMAIN):'
     end if
     call monit_print(nobs, bias, rmse, monit_type)
-#ifdef H08
     call monit_print_H08(nobs_H08, bias_H08, rmse_H08)
 !    if(H08_VBC_USE)then
 !      write(6,'(A)') 'BIAS CORRECTED:'
 !      call monit_print_H08(nobs_H08, bias_H08_bc, rmse_H08_bc)
 !    endif
-#endif
 
     if (monit_step == 1) then
       write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (GLOBAL):'
@@ -1734,13 +1815,11 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [ANALYSIS] (GLOBAL):'
     end if
     call monit_print(nobs_g, bias_g, rmse_g, monit_type)
-#ifdef H08
     call monit_print_H08(nobs_H08_g, bias_H08_g, rmse_H08_g)
 !    if(H08_VBC_USE)then
 !      write(6,'(A)') 'BIAS CORRECTED:'
 !      call monit_print_H08(nobs_H08_g, bias_H08_bc_g, rmse_H08_bc_g)
 !    endif
-#endif
 
     call mpi_timer('monit_obs_mpi:monit_print:', 2)
   end if
@@ -1799,7 +1878,7 @@ subroutine write_ensmean(filename, v3d, v2d, calced, monit_step)
     call mpi_timer('write_ensmean:state_trans_inv:', 2)
 
 #ifdef PNETCDF
-    if (IO_AGGREGATE) then
+    if (FILE_AGGREGATE) then
       call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
     else
 #endif
@@ -1840,7 +1919,7 @@ subroutine write_enssprd(filename, v3d, v2d)
   if (myrank_e == msprd_rank_e) then
 !    call state_trans_inv(v3dg)              !! do not transform the spread output
 #ifdef PNETCDF
-    if (IO_AGGREGATE) then
+    if (FILE_AGGREGATE) then
       call write_restart_par(filename, v3dg, v2dg, MPI_COMM_d)
     else
 #endif
@@ -1916,7 +1995,8 @@ subroutine get_nobs_da_mpi(nobs)
 !  if ((myrank_to_mem(1) >= 1 .and. myrank_to_mem(1) <= MEMBER) .or. &
 !      myrank_to_mem(1) == mmdetin) then
 !    if (myrank_to_mem(1) <= MEMBER) then
-!      call file_member_replace(myrank_to_mem(1), OBSDA_IN_BASENAME, obsdafile)
+!      obsdafile = OBSDA_IN_BASENAME
+!      call filename_replace_mem(obsdafile, myrank_to_mem(1))
 !    else if (myrank_to_mem(1) == mmean) then
 !      obsdafile = OBSDA_MEAN_IN_BASENAME
 !    else if (myrank_to_mem(1) == mmdet) then
@@ -1933,7 +2013,8 @@ subroutine get_nobs_da_mpi(nobs)
 ! read by process 0 and broadcast
 !-----------------------------
   if (myrank_e == 0) then
-    call file_member_replace(1, OBSDA_IN_BASENAME, obsdafile)
+    obsdafile = OBSDA_IN_BASENAME
+    call filename_replace_mem(obsdafile, 1)
     write (obsda_suffix(2:7), '(I6.6)') myrank_d
 #ifdef H08
     call get_nobs(trim(obsdafile) // obsda_suffix, 8, nobs) ! Him8
@@ -2428,7 +2509,8 @@ subroutine read_ens_mpi_addiinfl_1var(v3d)
     ! Note: read all members
     ! 
     if (im >= 1 .and. im <= MEMBER) then
-      call file_member_replace(im, INFL_ADD_IN_BASENAME, filename)
+      filename = INFL_ADD_IN_BASENAME
+      call filename_replace_mem(filename, im)
 
 !      write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',myrank_d,'.nc'
       call read_restart_1var(filename, v3dg)

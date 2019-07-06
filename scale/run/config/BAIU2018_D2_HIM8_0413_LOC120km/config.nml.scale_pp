@@ -67,8 +67,13 @@
 
 &PARAM_NEST
 !--OFFLINE_PARENT_BASENAME--
+<<<<<<< HEAD:scale/run/config/BAIU2018_D2_HIM8_0413_LOC120km/config.nml.scale_pp
 OFFLINE_PARENT_PRC_NUM_X = 8
 OFFLINE_PARENT_PRC_NUM_Y = 6
+=======
+!--OFFLINE_PARENT_PRC_NUM_X--
+!--OFFLINE_PARENT_PRC_NUM_Y--
+>>>>>>> master5.3.X:scale/run/config/realtime_r0043_d1/config.nml.scale_pp
 !--LATLON_CATALOGUE_FNAME--
 /
 

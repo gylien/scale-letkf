@@ -264,8 +264,8 @@ end subroutine set_common_obs_scale
 !  1: staggered grid
 !-----------------------------------------------------------------------
 SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
-  use scale_mapproj, only: &
-      MPRJ_rotcoef
+  use scale_mapprojection, only: &
+      MAPPROJECTION_rotcoef
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: elm
   REAL(r_size),INTENT(IN) :: ri,rj,rk
@@ -276,7 +276,8 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
   INTEGER,INTENT(OUT) :: qc
   INTEGER,INTENT(IN),OPTIONAL :: stggrd
   REAL(r_size) :: u,v,t,q,topo
-  REAL(RP) :: rotc(2)
+  REAL(RP) :: rotc(1,1,2)
+  real(r_size) :: lon_tmp(1,1),lat_tmp(1,1)
 
   INTEGER :: stggrd_ = 0
   if (present(stggrd)) stggrd_ = stggrd
@@ -293,11 +294,14 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
     end if
-    call MPRJ_rotcoef(rotc,lon*deg2rad,lat*deg2rad)
+    lon_tmp(1,1) = lon*deg2rad
+    lat_tmp(1,1) = lat*deg2rad
+    call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
+                               lon_tmp(1,1),lat_tmp(1,1),rotc)
     if (elm == id_u_obs) then
-      yobs = u * rotc(1) - v * rotc(2)
+      yobs = u * rotc(1,1,1) - v * rotc(1,1,2)
     else
-      yobs = u * rotc(2) + v * rotc(1)
+      yobs = u * rotc(1,1,2) + v * rotc(1,1,1)
     end if
   CASE(id_t_obs)  ! T
     CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,yobs)
@@ -342,6 +346,8 @@ END SUBROUTINE Trans_XtoY
 ! 
 !-----------------------------------------------------------------------
 SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev,v3d,v2d,yobs,qc,stggrd)
+  use scale_mapprojection, only: &
+      MAPPROJECTION_rotcoef
 !  USE common_mpi
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: elm
@@ -357,6 +363,10 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   REAL(r_size) :: qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr !,rhr
   REAL(r_size) :: dist , dlon , dlat , az , elev , radar_ref,radar_rv
 
+  real(r_size) :: utmp, vtmp
+  REAL(RP) :: rotc(1,1,2)
+  real(RP) :: lon_tmp(1,1),lat_tmp(1,1)
+
 !  integer :: ierr
 !  REAL(r_dble) :: rrtimer00,rrtimer
 !  rrtimer00 = MPI_WTIME()
@@ -369,12 +379,12 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   qc = iqc_good
 
   if (stggrd_ == 1) then
-    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
-    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,vr)  !######
+    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,utmp)  !###### should modity itpl_3d to prevent '1.0' problem....??
+    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,vtmp)  !######
     CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk-0.5_r_size,ri,rj,wr)  !######
   else
-    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,ur)
-    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,vr)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,utmp)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,vtmp)
     CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk,ri,rj,wr)
   end if
   CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,tr)
@@ -385,6 +395,15 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   CALL itpl_3d(v3d(:,:,:,iv3dd_qi),rk,ri,rj,qir)
   CALL itpl_3d(v3d(:,:,:,iv3dd_qs),rk,ri,rj,qsr)
   CALL itpl_3d(v3d(:,:,:,iv3dd_qg),rk,ri,rj,qgr)
+!
+
+  lon_tmp(1,1) = lon*deg2rad
+  lat_tmp(1,1) = lat*deg2rad
+  call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
+                             lon_tmp(1,1),lat_tmp(1,1),rotc)
+
+  ur = utmp * rotc(1,1,1) - vtmp * rotc(1,1,2)
+  vr = utmp * rotc(1,1,2) + vtmp * rotc(1,1,1)
 
 
 !  rrtimer = MPI_WTIME()
@@ -435,7 +454,7 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   !WRITE(6,*)'ELEVATION ',elev
   !DEGUB---------------------------------------------------------------
 
-  !WRITE(6,*)'BCRV',dlon,dlat,az,elev
+  !WRITE(6,*)'BCRV',dlon,dlat,az,eltmpv
 
   CALL calc_ref_vr(qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr,az,elev,radar_ref,radar_rv)
 
@@ -877,7 +896,8 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
     zs= 3.48d3 * ( ro * qsp * 1.0d3 )**1.66
     ENDIF
     IF( qgp .GT. 0.0d0)THEN
-    zg= 8.18d4 * ( ro * qgp * 1.0d3 )**1.50
+!!!    zg= 8.18d4 * ( ro * qgp * 1.0d3 )**1.50  !!! hail
+    zg= 5.54d3 * ( ro * qgp * 1.0d3 )**1.70   !!! graupel (A. Amemiya 2019.5)
     ENDIF
     IF( qms .GT. 0.0d0 )THEN
     zms=( 0.00491 + 5.75*fws - 5.588*(fws**2) )*1.0d5
@@ -986,7 +1006,7 @@ END SUBROUTINE calc_ref_vr
 ! rk = 0.0d0  : surface observation
 !-----------------------------------------------------------------------
 SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       KHALO
   IMPLICIT NONE
 
@@ -1103,7 +1123,7 @@ END SUBROUTINE phys2ijk
 ! rk = 0.0d0  : surface observation
 !-----------------------------------------------------------------------
 SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       KHALO
 !  use common_mpi
   IMPLICIT NONE
@@ -1228,13 +1248,13 @@ END SUBROUTINE phys2ijkz
 ! Coordinate conversion
 !-----------------------------------------------------------------------
 SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
-  use scale_grid, only: &
-      GRID_CXG, &
-      GRID_CYG, &
+  use scale_atmos_grid_cartesC, only: &
+      CXG => ATMOS_GRID_CARTESC_CXG, &
+      CYG => ATMOS_GRID_CARTESC_CYG, &
       DX, &
       DY
-  use scale_mapproj, only: &
-      MPRJ_lonlat2xy
+  use scale_mapprojection, only: &
+      MAPPROJECTION_lonlat2xy
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: rlon
   REAL(r_size),INTENT(IN) :: rlat
@@ -1243,21 +1263,21 @@ SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
 !
 ! rlon,rlat -> ri,rj
 !
-  call MPRJ_lonlat2xy(rlon*pi/180.0_r_size,rlat*pi/180.0_r_size,rig,rjg)
-  rig = (rig - GRID_CXG(1)) / DX + 1.0d0
-  rjg = (rjg - GRID_CYG(1)) / DY + 1.0d0
+  call MAPPROJECTION_lonlat2xy(rlon*pi/180.0_r_size,rlat*pi/180.0_r_size,rig,rjg)
+  rig = (rig - CXG(1)) / DX + 1.0d0
+  rjg = (rjg - CYG(1)) / DY + 1.0d0
 
   RETURN
 END SUBROUTINE phys2ij
 
 SUBROUTINE ij2phys(rig,rjg,rlon,rlat)
-  use scale_grid, only: &
-      GRID_CXG, &
-      GRID_CYG, &
+  use scale_atmos_grid_cartesC, only: &
+      CXG => ATMOS_GRID_CARTESC_CXG, &
+      CYG => ATMOS_GRID_CARTESC_CYG, &
       DX, &
       DY
-  use scale_mapproj, only: &
-      MPRJ_xy2lonlat
+  use scale_mapprojection, only: &
+      MAPPROJECTION_xy2lonlat
   IMPLICIT NONE
   REAL(r_size),INTENT(IN) :: rig
   REAL(r_size),INTENT(IN) :: rjg
@@ -1267,10 +1287,10 @@ SUBROUTINE ij2phys(rig,rjg,rlon,rlat)
 !
 ! ri,rj -> rlon,rlat
 !
-  x = (rig - 1.0d0) * DX + GRID_CXG(1) 
-  y = (rjg - 1.0d0) * DY + GRID_CYG(1) 
+  x = (rig - 1.0d0) * DX + CXG(1) 
+  y = (rjg - 1.0d0) * DY + CYG(1) 
 
-  call MPRJ_xy2lonlat(x,y,rlon,rlat)
+  call MAPPROJECTION_xy2lonlat(x,y,rlon,rlat)
 
   rlon = rlon * rad2deg
   rlat = rlat * rad2deg
@@ -1356,16 +1376,12 @@ END SUBROUTINE itpl_3d
 !-----------------------------------------------------------------------
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
-#ifdef H08
 subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,&
                      nobs_H08,bias_H08,rmse_H08,yobs_H08,step)!,bias_H08_bc,rmse_H08_bc,&
                      !aH08,bH08,vbcf,step)
-#else
-subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
-#endif
-  use scale_process, only: &
+  use scale_prc, only: &
       PRC_myrank
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
 
   implicit none
@@ -1396,7 +1412,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  REAL(r_size) :: timer
 !  INTEGER :: ierr
 
-#ifdef H08
   INTEGER,INTENT(OUT) :: nobs_H08(NIRB_HIM8)
   REAL(r_size),INTENT(OUT) :: bias_H08(NIRB_HIM8)
   REAL(r_size),INTENT(OUT) :: rmse_H08(NIRB_HIM8)
@@ -1414,6 +1429,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   integer :: i8, j8, b8
   integer :: ch
 
+print *,"Hello from monit_obs"
+
 !  ! bias correction
 !  integer,parameter :: nmin = 400 ! parameter from Miyoshi et al. (2010) & Sato (2007)
 !  integer :: nobs_b
@@ -1424,7 +1441,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  real(r_size), allocatable :: pred(:,:)
 !  real(r_size) :: tmp
 !  real(r_size) :: pbeta, predt
-#endif
 
 #ifdef TCV
 ! Multiple TCs are not considered (04/14/2017)
@@ -1435,6 +1451,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 #endif
 
   call state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
+print *,"Hello from monit_obs after state2"
 
   if (use_key) then
     nnobs = obsda_sort%nobs_in_key
@@ -1467,14 +1484,15 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  obs_idx_TCY = -1
 !  obs_idx_TCP = -1
 
-#ifdef H08
 !  yobs_H08 = -1.0d0
 !  yobs_H08_monit = -1.0d0
 !!  if (USE_HIM8) then 
 ! Always calculate Him8 radiances
 
+print *,"Hello from monit_obs before Trans",obsdep_nobs
   call Trans_XtoY_H08_allg(v3dgh,v2dgh,yobs_H08,yobs_H08_clr,&
                            plev_obs_H08,qc_H08,zangle_H08)
+print *,"Hello from monit_obs afte Trans"
   !
   ! Initialize qc flag (set iqc is "bad")
   ! This will be overwritten by obsda_sort%qc
@@ -1482,11 +1500,10 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
   yobs_H08_monit = yobs_H08
 
 !  endif
-#endif
 
-!$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz,i8,j8,b8,ch)
-  omp_chunk = min(4, max(1, (nnobs-1) / OMP_GET_NUM_THREADS() + 1))
-!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
+!##!$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz,i8,j8,b8,ch)
+!##  omp_chunk = min(4, max(1, (nnobs-1) / OMP_GET_NUM_THREADS() + 1))
+!##!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
   do n = 1, nnobs
 
     if (use_key) then
@@ -1566,7 +1583,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
       !=========================================================================
       case (obsfmt_h08)
       !-------------------------------------------------------------------------
-#ifdef H08
         i8 = nint(ril-IHALO)
         j8 = nint(rjl-JHALO)
         b8 = nint(obs(iset)%lev(iidx))
@@ -1607,7 +1623,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !      enddo ! [ch = 1, NIRB_HIM8]
 !    enddo ! [np = 1, nprof]
 
-#endif
 
       !=========================================================================
       end select
@@ -1645,8 +1660,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
            !   abs(obs(iset)%dif(iidx)) <= DEPARTURE_STAT_T_RANGE ]
 
   end do ! [ n = 1, nnobs ]
-!$OMP END DO
-!$OMP END PARALLEL
+!##!$OMP END DO
+!##!$OMP END PARALLEL
+print *,"Hello from monit_obs after loop"
 
 !   -- TC vital DA -- 
 !   -- End of TC vital DA -- 
@@ -1654,7 +1670,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 
   call monit_dep(nnobs,oelm,ohx,oqc,nobs,bias,rmse)
 
-#ifdef H08
 !  aH08 = 0.0d0
 !  bH08 = 0.0d0
   if (USE_HIM8) then
@@ -1670,6 +1685,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !      do ch = 1, NIRB_HIM8
 !        if(H08_BAND_USE(ch) /= 1) cycle
 !        nobs_b = nobs_H08(ch)
+!    allocate(bTC(3,0:nprocs_d-1))
+!    allocate(bufr(3,0:nproces_d-1))
 !
 !        if(nobs_b > 0)then
 !
@@ -1746,7 +1763,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !    bias_H08_bc = 0.0d0
 !    rmse_H08_bc = 0.0d0
   endif ! [USE_HIM8]
-#endif
   
 
   monit_type = .false.
@@ -1763,11 +1779,9 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
     monit_type(uid_obs(id_radar_vr_obs)) = .true.
 !    monit_type(uid_obs(id_radar_prh_obs)) = .true.
   end if
-#ifdef H08
   if (DEPARTURE_STAT_H08) then
     monit_type(uid_obs(id_H08IR_obs)) = .true.
   end if
-#endif
 
 #ifdef TCV
 !  monit_type(uid_obs(id_tclon_obs)) = .true.
@@ -1887,7 +1901,6 @@ SUBROUTINE monit_print(nobs,bias,rmse,monit_type)
 END SUBROUTINE monit_print
 !
 ! monitor for Himawari-8 IR observations --
-#ifdef H08
 !SUBROUTINE monit_dep_H08(dep,dep_bc,qc,nobs,bias,rmse)!,bias_bc,rmse_bc)
 SUBROUTINE monit_dep_H08(dep,qc,nobs,bias,rmse)!,bias_bc,rmse_bc)
   IMPLICIT NONE
@@ -2003,7 +2016,6 @@ SUBROUTINE monit_print_H08(nobs,bias,rmse,monit_type)
 
   RETURN
 END SUBROUTINE monit_print_H08
-#endif
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
@@ -2213,8 +2225,8 @@ SUBROUTINE get_nobs(cfile,nrec,nn)
 END SUBROUTINE get_nobs
 
 SUBROUTINE read_obs(cfile,obs)
-  use scale_mapproj, only: &
-      MPRJ_lonlat2xy
+  use scale_mapprojection, only: &
+      MAPPROJECTION_lonlat2xy
   IMPLICIT NONE
   CHARACTER(*),INTENT(IN) :: cfile
   TYPE(obs_info),INTENT(INOUT) :: obs
@@ -2249,16 +2261,16 @@ SUBROUTINE read_obs(cfile,obs)
       wk(5) = wk(5) * 100.0 ! hPa -> Pa
       wk(6) = real(OBSERR_TCP,kind=r_sngl)
     CASE(id_tclon_obs)
-      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
-                          REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
-                          x,y)
+      call MAPPROJECTION_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
+                                   REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
+                                   x,y)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = real(x,kind=r_sngl)
       wk(6) = real(OBSERR_TCXY,kind=r_sngl)
     CASE(id_tclat_obs)
-      call MPRJ_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
-                          REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
-                          x,y)
+      call MAPPROJECTION_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
+                                   REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
+                                   x,y)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = real(y,kind=r_sngl)
       wk(6) = real(OBSERR_TCXY,kind=r_sngl)
@@ -2762,14 +2774,14 @@ end subroutine write_obs_all
 !-----------------------------------------------------------------------
 !
 SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
-  use scale_grid, only: &
-      GRID_CXG, &
-      GRID_CYG, &
+  use scale_atmos_grid_cartesC, only: &
+      CXG => ATMOS_GRID_CARTESC_CXG, &
+      CYG => ATMOS_GRID_CARTESC_CYG, &
       DX, &
       DY
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
-  use scale_process, only: &
+  use scale_prc, only: &
       PRC_myrank
 
   IMPLICIT NONE
@@ -2815,8 +2827,8 @@ SUBROUTINE search_tc_subdom(ritc,rjtc,v2d,yobs_tcx,yobs_tcy,yobs_mslp)
 
     if(var5 < yobs_mslp)then
       yobs_mslp = var5
-      yobs_tcx = (real(ig,kind=r_size) - 1.0d0) * DX + GRID_CXG(1)
-      yobs_tcy = (real(jg,kind=r_size) - 1.0d0) * DY + GRID_CYG(1)
+      yobs_tcx = (real(ig,kind=r_size) - 1.0d0) * DX + CXG(1)
+      yobs_tcy = (real(jg,kind=r_size) - 1.0d0) * DY + CYG(1)
     endif
   ENDDO
   ENDDO
@@ -2853,12 +2865,15 @@ END SUBROUTINE wgt_ave2d
 ! --
 !
 SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc,zenith1d,stggrd)
-  use scale_mapproj, only: &
-      MPRJ_rotcoef
+  use scale_mapprojection, only: &
+      MAPPROJECTION_rotcoef
   use scale_H08_fwd
-  use scale_grid_index, only: &
-      KHALO, KMAX, &
-      JHALO, IHALO
+  use scale_atmos_grid_cartesC_index, only: &
+      KHALO, IHALO, JHALO, &
+      KS, KE, KA, KMAX
+  use scale_atmos_grid_cartesC, only: &
+      CZ => ATMOS_GRID_CARTESC_CZ, &
+      FZ => ATMOS_GRID_CARTESC_FZ
   use scale_const, only: &
       CONST_D2R
   use scale_atmos_phy_rd_profile, only: &
@@ -2880,7 +2895,6 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
   REAL(r_size),INTENT(IN) :: v3d(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
   INTEGER,INTENT(IN),OPTIONAL :: stggrd
-  REAL(RP) :: rotc(2)
 
   INTEGER :: stggrd_ = 0
 
@@ -2918,6 +2932,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
   REAL(r_size) :: utmp, vtmp ! U10m & V10m tmp for rotation
   REAL(r_size),PARAMETER :: btmax = 400.0d0
   REAL(r_size),PARAMETER :: btmin = 100.0d0
+  REAL(RP) :: rotc(1,1,2)
+  real(r_size) :: lon_tmp(1,1),lat_tmp(1,1)
 
   real(r_size) :: blon, blat ! lat/lon at the domain center
 
@@ -2985,7 +3001,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
   allocate( RD_cldfrac     (RD_KMAX         ) )
 
   !--- setup vartical grid for radiation (larger TOA than Model domain)
-  call ATMOS_PHY_RD_PROFILE_setup_zgrid( RD_TOA, RD_KMAX, H08_RTTOV_KADD, & ! [IN]
+  call ATMOS_PHY_RD_PROFILE_setup_zgrid( KA, KS, KE, RD_KMAX, H08_RTTOV_KADD, & ! [IN]
+                                         RD_TOA, CZ, FZ, & ! [IN]
                                          RD_zh(:), RD_z(:)         ) ! [INOUT]
 
   !--- read climatological profile
@@ -3050,9 +3067,13 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
       CALL itpl_2d(v2d(:,:,iv2dd_u10m),ri(np),rj(np),utmp)
       CALL itpl_2d(v2d(:,:,iv2dd_v10m),ri(np),rj(np),vtmp)
     end if
-    call MPRJ_rotcoef(rotc,lon(np)*deg2rad,lat(np)*deg2rad)
-    usfc1d(np) = utmp * rotc(1) - vtmp * rotc(2)
-    vsfc1d(np) = utmp * rotc(2) + vtmp * rotc(1)
+
+    lon_tmp(1,1) = lon(np)*deg2rad
+    lat_tmp(1,1) = lat(np)*deg2rad
+    call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
+                               lon_tmp(1,1),lat_tmp(1,1),rotc)
+    usfc1d(np) = utmp * rotc(1,1,1) - vtmp * rotc(1,1,2)
+    vsfc1d(np) = utmp * rotc(1,1,2) + vtmp * rotc(1,1,1)
 
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_p),ri(np),rj(np),prs2d(:,np))
     CALL itpl_2d_column(v3d(:,:,:,iv3dd_t),ri(np),rj(np),tk2d(:,np))
@@ -3142,17 +3163,19 @@ END SUBROUTINE Trans_XtoY_H08
 
 !
 SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stggrd)
-  use scale_mapproj, only: &
-      MPRJ_rotcoef
+  use scale_mapprojection, only: &
+      MAPPROJECTION_rotcoef, &
+      MAPPROJECTION_xy2lonlat
   use scale_H08_fwd
-  use scale_grid_index, only: &
-      KHALO, KMAX, &
-      JHALO, IHALO
-  use scale_grid, only: &
-      GRID_CX, GRID_CY, &
+  use scale_atmos_grid_cartesC_index, only: &
+      KHALO, IHALO, JHALO, &
+      KS, KE, KA, KMAX
+  use scale_atmos_grid_cartesC, only: &
+      CZ  => ATMOS_GRID_CARTESC_CZ, &
+      FZ  => ATMOS_GRID_CARTESC_FZ, &
+      CX => ATMOS_GRID_CARTESC_CX, &
+      CY => ATMOS_GRID_CARTESC_CY, &
       DX, DY
-  use scale_mapproj, only: &
-      MPRJ_xy2lonlat
   use scale_const, only: &
       CONST_D2R
   use scale_atmos_phy_rd_profile, only: &
@@ -3170,7 +3193,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   REAL(r_size),INTENT(IN) :: v3d(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
   INTEGER,INTENT(IN),OPTIONAL :: stggrd
-  REAL(RP) :: rotc(2)
+  REAL(RP) :: rotc(1,1,2)
 
   INTEGER :: stggrd_ = 0
 
@@ -3205,6 +3228,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   REAL(r_size) :: mwgt_plev1d(NIRB_HIM8,nlon*nlat)
 
   REAL(r_size) :: utmp, vtmp ! U10m & V10m tmp for rotation
+  real(r_size) :: lon_tmp(1,1),lat_tmp(1,1)
   REAL(r_size),PARAMETER :: btmax = 400.0d0
   REAL(r_size),PARAMETER :: btmin = 100.0d0
 
@@ -3220,6 +3244,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   integer, parameter :: ncfc = MSTRN_ncfc
   integer, parameter :: RD_naero      = N_HYD + N_AE ! # of cloud/aerosol species
 
+  integer :: RD_KMAX ! # of computational cells: z for radiation scheme
   real(RP) :: RD_zh          (KMAX + H08_RTTOV_KADD + 1)   ! altitude    at the interface [km]
   real(RP) :: RD_z           (KMAX + H08_RTTOV_KADD)   ! altitude    at the center [km]
   real(RP) :: RD_rhodz       (KMAX + H08_RTTOV_KADD)   ! density * delta z [kg/m2]
@@ -3236,6 +3261,8 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   integer :: i, j
   real(r_size) :: ri, rj
 
+print *,"Hello from Trans_XtoY_H08_allg"
+
   !
   ! Extrapolate input profiles by using climatology (MIPAS)
   ! Based on "scalelib/src/atmos-physics/scale_atmos_phy_rd_mstrnx.F90"
@@ -3246,10 +3273,11 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
                real(nlatg/2+JHALO, kind=r_size),&
                blon, blat)
 
-!  RD_KMAX = KMAX + H08_RTTOV_KADD
+  RD_KMAX = KMAX + H08_RTTOV_KADD
 
   !--- setup vartical grid for radiation (larger TOA than Model domain)
-  call ATMOS_PHY_RD_PROFILE_setup_zgrid( RD_TOA, KMAX + H08_RTTOV_KADD, H08_RTTOV_KADD, & ! [IN]
+  call ATMOS_PHY_RD_PROFILE_setup_zgrid( KA, KS, KE, RD_KMAX, H08_RTTOV_KADD, & ! [IN]
+                                         RD_TOA, CZ, FZ, & ! [IN]
                                          RD_zh(:), RD_z(:)         ) ! [INOUT]
 
   !--- read climatological profile
@@ -3281,8 +3309,9 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
 
     ri = real(i + IHALO, r_size)
     rj = real(j + JHALO, r_size)
-    call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1),&
-                        lon1d(np), lat1d(np))
+    call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + CX(1), &
+                                 (rj-1.0_r_size) * DY + CY(1),&
+                                 lon1d(np), lat1d(np))
 
     lon1d(np) = lon1d(np) * rad2deg
     lat1d(np) = lat1d(np) * rad2deg
@@ -3297,9 +3326,10 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
     ! assume not staggerd grid
     utmp = v2d(i+IHALO,j+JHALO,iv2dd_u10m)
     vtmp = v2d(i+IHALO,j+JHALO,iv2dd_v10m)
-    call MPRJ_rotcoef(rotc,lon1d(np)*deg2rad,lat1d(np)*deg2rad)
-    usfc1d(np) = utmp * rotc(1) - vtmp * rotc(2)
-    vsfc1d(np) = utmp * rotc(2) + vtmp * rotc(1)
+    call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
+                               lon1d(np),lat1d(np),rotc)
+    usfc1d(np) = utmp * rotc(1,1,1) - vtmp * rotc(1,1,2)
+    vsfc1d(np) = utmp * rotc(1,1,2) + vtmp * rotc(1,1,1)
 
     do k = 1, KMAX
       prs2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_p)
@@ -3347,6 +3377,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
                        btclr_out(:,:),& ! (K)
                        mwgt_plev1d(:,:),& ! (Pa)
                        ctop_out1d(:))
+print *,"Hello from Trans_XtoY_H08_allg finish RTTOV"
 
 !
 ! -- btall_out is substituted into yobs
@@ -3721,13 +3752,14 @@ subroutine read_Him8_nc(filename,imax_him8,jmax_him8,lon_him8,lat_him8,tbb)
 end subroutine read_Him8_nc
 
 subroutine sobs_Him8(imax_him8,jmax_him8,lon_him8,lat_him8,tbb_org,tbb_sobs)
-  use scale_grid, only: &
-      GRID_CX, GRID_CY, &
+  use scale_atmos_grid_cartesC, only: &
+      CX => ATMOS_GRID_CARTESC_CX, &
+      CY => ATMOS_GRID_CARTESC_CY, &
       DX, DY
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
-  use scale_mapproj, only: &
-      MPRJ_xy2lonlat
+  use scale_mapprojection, only: &
+      MAPPROJECTION_xy2lonlat
   implicit none
 
   integer,intent(in) :: imax_him8, jmax_him8
@@ -3754,8 +3786,9 @@ subroutine sobs_Him8(imax_him8,jmax_him8,lon_him8,lat_him8,tbb_org,tbb_sobs)
   do i = 1, 2
     ri_tmp(i) = real(int(nlon/2) + i - 1 + IHALO, r_size) 
     rj_tmp(i) = real(int(nlat/2) + i - 1 + JHALO, r_size)
-    call MPRJ_xy2lonlat((ri_tmp(i)-1.0_r_size) * DX + GRID_CX(1), (rj_tmp(i)-1.0_r_size) * DY + GRID_CY(1),&
-                        rlon_tmp(i), rlat_tmp(i))
+    call MAPPROJECTION_xy2lonlat((ri_tmp(i)-1.0_r_size) * DX + CX(1), &
+                                 (rj_tmp(i)-1.0_r_size) * DY + CY(1),&
+                                  rlon_tmp(i), rlat_tmp(i))
     rlon_tmp(i) = rlon_tmp(i) * rad2deg
     rlat_tmp(i) = rlat_tmp(i) * rad2deg
   enddo
@@ -3770,8 +3803,9 @@ subroutine sobs_Him8(imax_him8,jmax_him8,lon_him8,lat_him8,tbb_org,tbb_sobs)
 
     ri = real(i + IHALO, r_size)
     rj = real(j + JHALO, r_size)
-    call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1),&
-                        lon2d(i,j), lat2d(i,j))
+    call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + CX(1), &
+                                 (rj-1.0_r_size) * DY + CY(1),&
+                                  lon2d(i,j), lat2d(i,j))
     lon2d(i,j) = lon2d(i,j) * rad2deg
     lat2d(i,j) = lat2d(i,j) * rad2deg
 
@@ -3854,13 +3888,14 @@ subroutine get_nobs_allgHim8(nobs)
 end subroutine get_nobs_allgHim8
 
 subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat,obslev,obserr)
-  use scale_grid, only: &
-      GRID_CXG, GRID_CYG, &
+  use scale_atmos_grid_cartesC, only: &
+      CXG => ATMOS_GRID_CARTESC_CXG, &
+      CYG => ATMOS_GRID_CARTESC_CYG, &
       DX, DY
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO
-  use scale_mapproj, only: &
-      MPRJ_xy2lonlat
+  use scale_mapprojection, only: &
+      MAPPROJECTION_xy2lonlat
   implicit none
 
   real(r_size),intent(in) :: tbb_allg(nlong,nlatg,NIRB_HIM8)
@@ -3907,7 +3942,8 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
       ril = real(i+IHALO,kind=r_size)
       rjl = real(j+JHALO,kind=r_size)
 
-      call MPRJ_xy2lonlat((ril - 1.0_r_size) * DX + GRID_CXG(1), (rjl - 1.0_r_size) * DY + GRID_CYG(1), lon, lat)
+      call MAPPROJECTION_xy2lonlat((ril - 1.0_r_size) * DX + CXG(1), &
+                                   (rjl - 1.0_r_size) * DY + CYG(1), lon, lat)
     endif
 
     do ch = 1, NIRB_HIM8

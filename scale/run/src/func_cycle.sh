@@ -83,6 +83,7 @@ STIME=$(datetime $STIME)
 ETIME=$(datetime ${ETIME:-$STIME})
 ISTEP=${ISTEP:-1}
 FSTEP=${FSTEP:-$nsteps}
+CONF_MODE=${CONF_MODE:-"dynamic"}
 TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 
 #-------------------------------------------------------------------------------
@@ -92,6 +93,11 @@ TIME_LIMIT=${TIME_LIMIT:-"0:30:00"}
 #  echo "[Error] $myname: When \$MACHINE_TYPE = 10, \$ONLINE_STGOUT needs to be 0." >&2
 #  exit 1
 #fi
+
+if [ "$CONF_MODE" != 'static' ] && ((DOMNUM > 1)); then
+  echo "[Error] Online nesting with multiple domains is only allowed when the static-config mode is used (\$CONF_MODE = 'static')." 1>&2
+  exit 1
+fi
 
 if ((RUN_LEVEL == 0)); then
   if ((ENABLE_PARAM_USER == 1)) && [ ! -e "$SCRP_DIR/config.nml.scale_user" ]; then
@@ -167,14 +173,21 @@ fi
 print_setting () {
 #-------------------------------------------------------------------------------
 
-for vname in DIR INDIR OUTDIR DATA_TOPO DATA_TOPO_BDY_SCALE DATA_LANDUSE DATA_BDY_SCALE \
+for vname in DIR DOMAIN @INDIR @OUTDIR @DATA_TOPO DATA_TOPO_BDY_SCALE @DATA_LANDUSE DATA_BDY_SCALE \
              DATA_BDY_SCALE_PREP DATA_BDY_WRF DATA_BDY_NICAM OBS OBSNCEP DET_RUN TOPO_FORMAT \
              LANDUSE_FORMAT LANDUSE_UPDATE BDY_FORMAT BDY_ENS BDYINT BDYCYCLE_INT PARENT_REF_TIME \
              ENABLE_PARAM_USER OCEAN_INPUT OCEAN_FORMAT LAND_INPUT LAND_FORMAT OBSNUM WINDOW_S WINDOW_E \
-             LCYCLE LTIMESLOT MEMBER NNODES NNODES_APPAR PPN PPN_APPAR THREADS SCALE_NP \
+             LCYCLE LTIMESLOT MEMBER NNODES NNODES_APPAR PPN PPN_APPAR THREADS @SCALE_NP \
              STIME ETIME ISTEP FSTEP CONF_MODE FCSTOUT MAKEINIT OUT_OPT TOPOOUT_OPT \
              LANDUSEOUT_OPT BDYOUT_OPT OBSOUT_OPT LOG_OPT LOG_TYPE; do
-  printf '  %-20s = %s\n' $vname "${!vname}"
+  if [ "${vname:0:1}" = '@' ]; then
+    for d in $(seq $DOMNUM); do
+      vname_d="${vname:1}[$d]"
+      printf '  %-20s = %s\n' "$vname_d" "${!vname_d}"
+    done
+  else
+    printf '  %-20s = %s\n' $vname "${!vname}"
+  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -861,10 +874,10 @@ if ((BDY_FORMAT >= 1)); then
               for ifile in $(seq $filenum); do
                 if ((BDY_ROTATING == 1)); then
                   pathin="$data_bdy_i/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
-                  path="bdyorg/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
+                  path="bdyorg/${time}/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                 else
-                  pathin="$data_bdy_i/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
-                  path="bdyorg/const/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}"
+                  pathin="$data_bdy_i/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
+                  path="bdyorg/const/${name_m[$m]}/${filename_prefix[$ifile]}${time_bdy}${filename_suffix[$ifile]}"
                 fi
                 echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
               done
@@ -914,7 +927,7 @@ elif ((BDY_FORMAT == 0)); then
   exit 1
 elif ((LANDUSE_UPDATE != 1 && loop > 1)); then
   echo "  ... skip this step (already done in the first cycle)"
-  exit 1 
+  exit 1
 fi
 
 if ((BDY_FORMAT == 1)); then
@@ -1489,16 +1502,19 @@ local TIME="$1"
 
 local otime=$(datetime $TIME)               # HISTORY_OUTPUT_STEP0 = .true.,
 #local otime=$(datetime $TIME $LTIMESLOT s)  # HISTORY_OUTPUT_STEP0 = .false.,
+local otime_s=$(datetime $TIME $WINDOW_S s)
+local otime_e=$(datetime $TIME $WINDOW_E s)
+local otime_a=$(datetime $TIME $LCYCLE s)
 local is=0
 slot_s=0
-while ((otime <= $(datetime $TIME $WINDOW_E s))); do
+while ((otime <= otime_e)); do
   is=$((is+1))
   time_sl[$is]=$otime
   timefmt_sl[$is]="$(datetime_fmt ${otime})"
-  if ((slot_s == 0 && otime >= $(datetime $TIME $WINDOW_S s))); then
+  if ((slot_s == 0 && otime >= otime_s)); then
     slot_s=$is
   fi
-  if ((otime == $(datetime $TIME $LCYCLE s))); then # $(datetime $TIME $LCYCLE,$WINDOW_S,$WINDOW_E,... s) as a variable
+  if ((otime == otime_a)); then
     slot_b=$is
   fi
 otime=$(datetime $otime $LTIMESLOT s)
@@ -1517,100 +1533,102 @@ if ((LOG_TYPE >= 3)); then
   time=$STIME
   atime=$(datetime $time $LCYCLE s)
   while ((time <= ETIME)); do
-    if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time}/log/scale_pp" ]; then
-      if ((TAR_THREAD > 1)); then
-        while (($(jobs -p | wc -l) >= TAR_THREAD)); do
-          sleep 1s
-        done
-        if ((LOG_TYPE == 3)); then
-          ( tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/scale_pp.tar scale_pp && rm -fr $OUTDIR/${time}/log/scale_pp ) &
-        elif ((LOG_TYPE == 4)); then
-          ( tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/scale_pp.tar.gz scale_pp && rm -fr $OUTDIR/${time}/log/scale_pp ) &
-        fi
-      else
-        if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/scale_pp.tar scale_pp && rm -fr $OUTDIR/${time}/log/scale_pp
-        elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/scale_pp.tar.gz scale_pp && rm -fr $OUTDIR/${time}/log/scale_pp
+    for d in $(seq $DOMNUM); do
+      if ((LOG_OPT <= 2)) && [ -d "${OUTDIR[$d]}/${time}/log/scale_pp" ]; then
+        if ((TAR_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+            sleep 1s
+          done
+          if ((LOG_TYPE == 3)); then
+            ( tar -C ${OUTDIR[$d]}/${time}/log -cf ${OUTDIR[$d]}/${time}/log/scale_pp.tar scale_pp && rm -fr ${OUTDIR[$d]}/${time}/log/scale_pp ) &
+          elif ((LOG_TYPE == 4)); then
+            ( tar -C ${OUTDIR[$d]}/${time}/log -czf ${OUTDIR[$d]}/${time}/log/scale_pp.tar.gz scale_pp && rm -fr ${OUTDIR[$d]}/${time}/log/scale_pp ) &
+          fi
+        else
+          if ((LOG_TYPE == 3)); then
+            tar -C ${OUTDIR[$d]}/${time}/log -cf ${OUTDIR[$d]}/${time}/log/scale_pp.tar scale_pp && rm -fr ${OUTDIR[$d]}/${time}/log/scale_pp
+          elif ((LOG_TYPE == 4)); then
+            tar -C ${OUTDIR[$d]}/${time}/log -czf ${OUTDIR[$d]}/${time}/log/scale_pp.tar.gz scale_pp && rm -fr ${OUTDIR[$d]}/${time}/log/scale_pp
+          fi
         fi
       fi
-    fi
 
-    if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time}/log/scale_init" ]; then
-      if ((TAR_THREAD > 1)); then
-        while (($(jobs -p | wc -l) >= TAR_THREAD)); do
-          sleep 1s
-        done
-        if ((LOG_TYPE == 3)); then
-          ( tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/scale_init.tar scale_init && rm -fr $OUTDIR/${time}/log/scale_init ) &
-        elif ((LOG_TYPE == 4)); then
-          ( tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/scale_init.tar.gz scale_init && rm -fr $OUTDIR/${time}/log/scale_init ) &
-        fi
-      else
-        if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/scale_init.tar scale_init && rm -fr $OUTDIR/${time}/log/scale_init
-        elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/scale_init.tar.gz scale_init && rm -fr $OUTDIR/${time}/log/scale_init
+      if ((LOG_OPT <= 2)) && [ -d "${OUTDIR[$d]}/${time}/log/scale_init" ]; then
+        if ((TAR_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+            sleep 1s
+          done
+          if ((LOG_TYPE == 3)); then
+            ( tar -C ${OUTDIR[$d]}/${time}/log -cf ${OUTDIR[$d]}/${time}/log/scale_init.tar scale_init && rm -fr ${OUTDIR[$d]}/${time}/log/scale_init ) &
+          elif ((LOG_TYPE == 4)); then
+            ( tar -C ${OUTDIR[$d]}/${time}/log -czf ${OUTDIR[$d]}/${time}/log/scale_init.tar.gz scale_init && rm -fr ${OUTDIR[$d]}/${time}/log/scale_init ) &
+          fi
+        else
+          if ((LOG_TYPE == 3)); then
+            tar -C ${OUTDIR[$d]}/${time}/log -cf ${OUTDIR[$d]}/${time}/log/scale_init.tar scale_init && rm -fr ${OUTDIR[$d]}/${time}/log/scale_init
+          elif ((LOG_TYPE == 4)); then
+            tar -C ${OUTDIR[$d]}/${time}/log -czf ${OUTDIR[$d]}/${time}/log/scale_init.tar.gz scale_init && rm -fr ${OUTDIR[$d]}/${time}/log/scale_init
+          fi
         fi
       fi
-    fi
 
-    if ((LOG_OPT <= 3)) && [ -d "$OUTDIR/${time}/log/scale" ]; then
-      if ((TAR_THREAD > 1)); then
-        while (($(jobs -p | wc -l) >= TAR_THREAD)); do
-          sleep 1s
-        done
-        if ((LOG_TYPE == 3)); then
-          ( tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/scale.tar scale && rm -fr $OUTDIR/${time}/log/scale ) &
-        elif ((LOG_TYPE == 4)); then
-          ( tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/scale.tar.gz scale && rm -fr $OUTDIR/${time}/log/scale ) &
-        fi
-      else
-        if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/scale.tar scale && rm -fr $OUTDIR/${time}/log/scale
-        elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/scale.tar.gz scale && rm -fr $OUTDIR/${time}/log/scale
+      if ((LOG_OPT <= 3)) && [ -d "${OUTDIR[$d]}/${time}/log/scale" ]; then
+        if ((TAR_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+            sleep 1s
+          done
+          if ((LOG_TYPE == 3)); then
+            ( tar -C ${OUTDIR[$d]}/${time}/log -cf ${OUTDIR[$d]}/${time}/log/scale.tar scale && rm -fr ${OUTDIR[$d]}/${time}/log/scale ) &
+          elif ((LOG_TYPE == 4)); then
+            ( tar -C ${OUTDIR[$d]}/${time}/log -czf ${OUTDIR[$d]}/${time}/log/scale.tar.gz scale && rm -fr ${OUTDIR[$d]}/${time}/log/scale ) &
+          fi
+        else
+          if ((LOG_TYPE == 3)); then
+            tar -C ${OUTDIR[$d]}/${time}/log -cf ${OUTDIR[$d]}/${time}/log/scale.tar scale && rm -fr ${OUTDIR[$d]}/${time}/log/scale
+          elif ((LOG_TYPE == 4)); then
+            tar -C ${OUTDIR[$d]}/${time}/log -czf ${OUTDIR[$d]}/${time}/log/scale.tar.gz scale && rm -fr ${OUTDIR[$d]}/${time}/log/scale
+          fi
         fi
       fi
-    fi
 
-    if ((LOG_OPT <= 4)) && [ -d "$OUTDIR/${atime}/log/obsope" ]; then
-      if ((TAR_THREAD > 1)); then
-        while (($(jobs -p | wc -l) >= TAR_THREAD)); do
-          sleep 1s
-        done
-        if ((LOG_TYPE == 3)); then
-          ( tar -C $OUTDIR/${atime}/log -cf $OUTDIR/${atime}/log/obsope.tar obsope && rm -fr $OUTDIR/${atime}/log/obsope ) &
-        elif ((LOG_TYPE == 4)); then
-          ( tar -C $OUTDIR/${atime}/log -czf $OUTDIR/${atime}/log/obsope.tar.gz obsope && rm -fr $OUTDIR/${atime}/log/obsope ) &
-        fi
-      else
-        if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${atime}/log -cf $OUTDIR/${atime}/log/obsope.tar obsope && rm -fr $OUTDIR/${atime}/log/obsope
-        elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${atime}/log -czf $OUTDIR/${atime}/log/obsope.tar.gz obsope && rm -fr $OUTDIR/${atime}/log/obsope
+      if ((LOG_OPT <= 4)) && [ -d "${OUTDIR[$d]}/${atime}/log/obsope" ]; then
+        if ((TAR_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+            sleep 1s
+          done
+          if ((LOG_TYPE == 3)); then
+            ( tar -C ${OUTDIR[$d]}/${atime}/log -cf ${OUTDIR[$d]}/${atime}/log/obsope.tar obsope && rm -fr ${OUTDIR[$d]}/${atime}/log/obsope ) &
+          elif ((LOG_TYPE == 4)); then
+            ( tar -C ${OUTDIR[$d]}/${atime}/log -czf ${OUTDIR[$d]}/${atime}/log/obsope.tar.gz obsope && rm -fr ${OUTDIR[$d]}/${atime}/log/obsope ) &
+          fi
+        else
+          if ((LOG_TYPE == 3)); then
+            tar -C ${OUTDIR[$d]}/${atime}/log -cf ${OUTDIR[$d]}/${atime}/log/obsope.tar obsope && rm -fr ${OUTDIR[$d]}/${atime}/log/obsope
+          elif ((LOG_TYPE == 4)); then
+            tar -C ${OUTDIR[$d]}/${atime}/log -czf ${OUTDIR[$d]}/${atime}/log/obsope.tar.gz obsope && rm -fr ${OUTDIR[$d]}/${atime}/log/obsope
+          fi
         fi
       fi
-    fi
 
-    if ((LOG_OPT <= 4)) && [ -d "$OUTDIR/${atime}/log/letkf" ]; then
-      if ((TAR_THREAD > 1)); then
-        while (($(jobs -p | wc -l) >= TAR_THREAD)); do
-          sleep 1s
-        done
-        if ((LOG_TYPE == 3)); then
-          ( tar -C $OUTDIR/${atime}/log -cf $OUTDIR/${atime}/log/letkf.tar letkf && rm -fr $OUTDIR/${atime}/log/letkf ) &
-        elif ((LOG_TYPE == 4)); then
-          ( tar -C $OUTDIR/${atime}/log -czf $OUTDIR/${atime}/log/letkf.tar.gz letkf && rm -fr $OUTDIR/${atime}/log/letkf ) &
-        fi
-      else
-        if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${atime}/log -cf $OUTDIR/${atime}/log/letkf.tar letkf && rm -fr $OUTDIR/${atime}/log/letkf
-        elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${atime}/log -czf $OUTDIR/${atime}/log/letkf.tar.gz letkf && rm -fr $OUTDIR/${atime}/log/letkf
+      if ((LOG_OPT <= 4)) && [ -d "${OUTDIR[$d]}/${atime}/log/letkf" ]; then
+        if ((TAR_THREAD > 1)); then
+          while (($(jobs -p | wc -l) >= TAR_THREAD)); do
+            sleep 1s
+          done
+          if ((LOG_TYPE == 3)); then
+            ( tar -C ${OUTDIR[$d]}/${atime}/log -cf ${OUTDIR[$d]}/${atime}/log/letkf.tar letkf && rm -fr ${OUTDIR[$d]}/${atime}/log/letkf ) &
+          elif ((LOG_TYPE == 4)); then
+            ( tar -C ${OUTDIR[$d]}/${atime}/log -czf ${OUTDIR[$d]}/${atime}/log/letkf.tar.gz letkf && rm -fr ${OUTDIR[$d]}/${atime}/log/letkf ) &
+          fi
+        else
+          if ((LOG_TYPE == 3)); then
+            tar -C ${OUTDIR[$d]}/${atime}/log -cf ${OUTDIR[$d]}/${atime}/log/letkf.tar letkf && rm -fr ${OUTDIR[$d]}/${atime}/log/letkf
+          elif ((LOG_TYPE == 4)); then
+            tar -C ${OUTDIR[$d]}/${atime}/log -czf ${OUTDIR[$d]}/${atime}/log/letkf.tar.gz letkf && rm -fr ${OUTDIR[$d]}/${atime}/log/letkf
+          fi
         fi
       fi
-    fi
+    done # [ d in $(seq $DOMNUM) ]
 
     time=$(datetime $time $LCYCLE s)
     atime=$(datetime $time $LCYCLE s)

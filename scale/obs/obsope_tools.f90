@@ -15,17 +15,13 @@ MODULE obsope_tools
   USE common_mpi_scale
   USE common_obs_scale
   use common_nml
-!  use scale_process, only: &
+!  use scale_prc, only: &
 !    PRC_myrank
 !    MPI_COMM_d => LOCAL_COMM_WORLD
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     KHALO, IHALO, JHALO
-#ifdef H08
-  use scale_grid, only: &
-      DX, DY,           &
-      BUFFER_DX,        &
-      BUFFER_DY
-#endif
+  use scale_atmos_grid_cartesC, only: &
+    DX, DY
 
   IMPLICIT NONE
   PUBLIC
@@ -392,12 +388,10 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   allocate ( v3dg (nlevh,nlonh,nlath,nv3dd) )
   allocate ( v2dg (nlonh,nlath,nv2dd) )
 
-#ifdef H08
   yobs_H08_ens(:,:,:,:) = 0.0d0
   yobs_H08_esprd(:,:,:) = 0.0d0
   yobs_H08_ens_clr(:,:,:,:) = 0.0d0
   yobs_H08_esprd_clr(:,:,:) = 0.0d0
-#endif
 
   do it = 1, nitmax
     im = myrank_to_mem(it)
@@ -408,13 +402,11 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
       if (nobs > 0) then
         obsda%qc(1:nobs) = iqc_undef
-#ifdef H08
         obsda%lev(1:nobs) = 0.0d0
         obsda%val2(1:nobs) = 0.0d0
         obsda%sprd(1:nobs) = 0.0d0
 !        obsda%pred1(1:nobs) = 0.0d0
 !        obsda%pred2(1:nobs) = 0.0d0
-#endif
       end if
 
       ! Observations not in the assimilation time window
@@ -622,7 +614,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 #endif
 !   -- End of TC vital DA -- 
 
- 
+
         write (timer_str, '(A30,I4,A7,I4,A2)') 'obsope_cal:obsope_step_2   (t=', it, ', slot=', islot, '):'
         call mpi_timer(trim(timer_str), 2)
       end do ! [ islot = SLOT_START, SLOT_END ]
@@ -635,7 +627,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !        write (6,'(A,I6.6,A,I4.4,A,I6.6)') 'MYRANK ',myrank,' is writing observations for member ', &
 !              im, ', subdomain id #', myrank_d
         if (im <= MEMBER) then
-          call file_member_replace(im, OBSDA_OUT_BASENAME, obsdafile)
+          obsdafile = OBSDA_OUT_BASENAME
+          call filename_replace_mem(obsdafile, im)
         else if (im == mmean) then
           obsdafile = OBSDA_MEAN_OUT_BASENAME
         else if (im == mmdet) then
@@ -652,11 +645,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       ! Prepare variables that will need to be communicated if obsda_return is given
       ! 
       if (present(obsda_return)) then
-#ifdef H08
         call obs_da_value_partial_reduce_iter(obsda_return, it, 1, nobs, obsda%val, obsda%qc, obsda%lev, obsda%val2)!, obsda%pred1, obsda%pred2)
-#else
-        call obs_da_value_partial_reduce_iter(obsda_return, it, 1, nobs, obsda%val, obsda%qc)
-#endif
 
         write (timer_str, '(A30,I4,A2)') 'obsope_cal:partial_reduce  (t=', it, '):'
         call mpi_timer(trim(timer_str), 2)
@@ -665,7 +654,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
     end if ! [ (im >= 1 .and. im <= MEMBER) .or. im == mmdetin ]
   end do ! [ it = 1, nitmax ]
 
-#ifdef H08
   call MPI_ALLREDUCE(MPI_IN_PLACE, yobs_H08_ens, nlon*nlat*NIRB_HIM8*nens, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
   call MPI_ALLREDUCE(MPI_IN_PLACE, yobs_H08_ens_clr, nlon*nlat*NIRB_HIM8*nens, MPI_r_size, MPI_SUM, MPI_COMM_e, ierr)
 
@@ -710,7 +698,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
   endif ! myrank_e == mmean_rank_e
 
-#endif
 
   deallocate ( v3dg, v2dg )
   deallocate ( bsn, bsna )
@@ -1024,13 +1011,13 @@ end subroutine obsmake_cal
 ! Model-to-observation simulator calculation
 !-------------------------------------------------------------------------------
 subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
-  use scale_grid, only: &
-      GRID_CX, GRID_CY, &
+  use scale_atmos_grid_cartesC, only: &
+      ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_CY, &
       DX, DY
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
       IHALO, JHALO, KHALO
-  use scale_mapproj, only: &
-      MPRJ_xy2lonlat
+  use scale_mapprojection, only: &
+      MAPPROJECTION_xy2lonlat
 
   implicit none
 
@@ -1068,7 +1055,9 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
     do i = 1, nlon
       ri = real(i + IHALO, r_size)
-      call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1), lon, lat)
+      call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + ATMOS_GRID_CARTESC_CX(1), &
+                                   (rj-1.0_r_size) * DY + ATMOS_GRID_CARTESC_CY(1), &
+                                    lon, lat)
       lon = lon * rad2deg
       lat = lat * rad2deg
 

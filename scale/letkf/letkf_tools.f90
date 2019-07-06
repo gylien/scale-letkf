@@ -25,7 +25,7 @@ MODULE letkf_tools
 
   use scale_precision, only: RP
 #ifdef PNETCDF
-  use scale_stdio, only: IO_AGGREGATE
+  use scale_file, only: FILE_AGGREGATE
 #endif
 
   IMPLICIT NONE
@@ -48,7 +48,7 @@ CONTAINS
 ! Data Assimilation
 !-----------------------------------------------------------------------
 SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
     DX, DY
   use common_rand
   IMPLICIT NONE
@@ -246,7 +246,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',INFL_MUL_IN_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call read_restart_par(INFL_MUL_IN_BASENAME,work3dg,work2dg,MPI_COMM_d)
       else
 #endif
@@ -304,6 +304,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   allocate (transmd(MEMBER,       var_local_n2nc_max))
   allocate (pa     (MEMBER,MEMBER,var_local_n2nc_max))
 
+
 !$OMP MASTER
   call mpi_timer('das_letkf:allocation_private_vars:', 2)
   call mpi_timer('', 3)
@@ -314,7 +315,6 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   ! MAIN ASSIMILATION LOOP
   !
   DO ilev=1,nlev
-
     if (LOG_LEVEL >= 3) then
       call mpi_timer('', 4)
     end if
@@ -720,7 +720,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',INFL_MUL_OUT_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call write_restart_par(INFL_MUL_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
       else
 #endif
@@ -747,7 +747,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',RELAX_SPREAD_OUT_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call write_restart_par(RELAX_SPREAD_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
       else
 #endif
@@ -786,7 +786,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
     IF(myrank_e == mmean_rank_e) THEN
 !      WRITE(6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is writing a file ',NOBS_OUT_BASENAME,'.pe',myrank_d,'.nc'
 #ifdef PNETCDF
-      if (IO_AGGREGATE) then
+      if (FILE_AGGREGATE) then
         call write_restart_par(NOBS_OUT_BASENAME,work3dg,work2dg,MPI_COMM_d)
       else
 #endif
@@ -826,7 +826,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
           Him8_ob = 0.0d0
           Him8_band = -1
           !!!!!! save this (Him8_min_dist) information when doing DA
-          do iob = obsgrd(ic)%ac_ext(0, 1), obsgrd(ic)%ac_ext(obsgrd(ic)%ngrdext_i, obsgrd(ic)%ngrdext_j)
+          do iob = obsgrd(ic)%ac_ext(0, 1) + 1, obsgrd(ic)%ac_ext(obsgrd(ic)%ngrdext_i, obsgrd(ic)%ngrdext_j)
             if (iob < 1) cycle ! Himawari obs can be located in a gap??
             rdx = (rig1(ij) - obs(obsda_sort%set(iob))%ri(obsda_sort%idx(iob))) * DX
             rdy = (rjg1(ij) - obs(obsda_sort%set(iob))%rj(obsda_sort%idx(iob))) * DY
@@ -1356,9 +1356,9 @@ END SUBROUTINE das_letkf
 !-------------------------------------------------------------------------------
 subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd, nobsl_t, cutd_t, srch_q0)
   use common_sort
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
     DX, DY
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
   implicit none
@@ -1795,7 +1795,7 @@ end subroutine obs_local
 ! cut-off length in the extended subdomain, given the observation type
 !-------------------------------------------------------------------------------
 subroutine obs_local_range(ctype, ri, rj, imin, imax, jmin, jmax)
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
     DX, DY
   implicit none
   integer, intent(in) :: ctype
@@ -1823,7 +1823,7 @@ end subroutine obs_local_range
 ! Subroutine for main calculation of obs_local
 !-------------------------------------------------------------------------------
 subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
     DX, DY
   implicit none
   real(r_size), intent(in) :: ri, rj, rlev, rz ! coordinate of the targeted model grid
@@ -1971,9 +1971,9 @@ end subroutine obs_local_cal
 ! Relaxation parameter based on grid locations (not for covariance inflation purpose)
 !-------------------------------------------------------------------------------
 subroutine relax_beta(ri, rj, rz, beta)
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
     DX, DY
-  use scale_grid_index, only: &
+  use scale_atmos_grid_cartesC_index, only: &
     IHALO, JHALO
   implicit none
   real(r_size), intent(in) :: ri, rj, rz

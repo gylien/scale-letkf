@@ -9,25 +9,24 @@ program scaleles_init_ens
   use common_scale, only: &
      set_common_conf
   use common_mpi_scale, only: &
-     rank_to_mem, &
-     rank_to_mempe, &
+     myrank_to_mem, &
+     myrank_to_pe, &
      nitmax, &
      set_mem_node_proc, &
      mpi_timer
 
-  use scale_stdio, only: &
+  use scale_io, only: &
      H_LONG, &
      IO_L, &
      IO_FID_CONF, &
      IO_FID_LOG, &
      IO_FID_STDOUT
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_MPIstart, &
      PRC_UNIVERSAL_setup, &
      PRC_GLOBAL_setup, &
      PRC_MPIfinish, &
      PRC_MPIsplit, &
-     PRC_MPIsplit_letkf, &
      PRC_UNIVERSAL_myrank, &
      PRC_DOMAIN_nlim, &
      PRC_GLOBAL_COMM_WORLD, &
@@ -36,11 +35,8 @@ program scaleles_init_ens
 
   implicit none
 
-  integer :: it, its, ite, im, ierr
+  integer :: it, its, ite, im, idom, color, key, ierr
   character(7) :: stdoutf='-000000'
-
-  character(len=H_LONG) :: confname
-  character(len=H_LONG) :: confname_dummy
 
   integer :: universal_comm
   integer :: universal_nprocs
@@ -51,9 +47,9 @@ program scaleles_init_ens
   integer :: intercomm_parent
   integer :: intercomm_child
 
-  integer :: NUM_DOMAIN
-  integer :: PRC_DOMAINS(PRC_DOMAIN_nlim)
-  character(len=H_LONG) :: confname_dummy2(PRC_DOMAIN_nlim)
+  character(len=H_LONG) :: confname_domains(PRC_DOMAIN_nlim)
+  character(len=H_LONG) :: confname_mydom
+  character(len=H_LONG) :: confname
 
   character(len=6400) :: cmd1, cmd2, icmd
   character(len=10) :: myranks
@@ -62,10 +58,6 @@ program scaleles_init_ens
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
-
-  NUM_DOMAIN = 1
-  PRC_DOMAINS = 0
-  confname_dummy2 = ""
 
   ! start MPI
   call PRC_MPIstart( universal_comm ) ! [OUT]
@@ -118,7 +110,11 @@ program scaleles_init_ens
 !-----------------------------------------------------------------------
 
   call set_common_conf(universal_nprocs)
-  call set_mem_node_proc(MEMBER+2)
+  if (DET_RUN) then
+    call set_mem_node_proc(MEMBER+2)
+  else
+    call set_mem_node_proc(MEMBER+1)
+  end if
 
   call mpi_timer('INITIALIZE', 1, barrier=universal_comm)
 
@@ -126,29 +122,40 @@ program scaleles_init_ens
 ! Run SCALE-RM_init
 !-----------------------------------------------------------------------
 
-  ! split MPI communicator for LETKF
-  call PRC_MPIsplit_letkf( universal_comm,                   & ! [IN]
-                           MEM_NP, nitmax, universal_nprocs, rank_to_mempe, & ! [IN]
-                           global_comm                       ) ! [OUT]
+  ! split MPI communicator for single members
+  if (myrank_to_mem(1) >= 1) then
+    color = myrank_to_mem(1) - 1
+    key   = myrank_to_pe
+  else
+    color = MPI_UNDEFINED
+    key   = MPI_UNDEFINED
+  endif
+
+  call MPI_COMM_SPLIT(universal_comm, color, key, global_comm, ierr)
 
   if (global_comm /= MPI_COMM_NULL) then
 
     call PRC_GLOBAL_setup( .false.,    & ! [IN]
                            global_comm ) ! [IN]
 
+    do idom = 1, NUM_DOMAIN
+      confname_domains(idom) = trim(CONF_FILES)
+      call filename_replace_dom(confname_domains(idom), idom)
+    end do
+
     !--- split for nesting
     ! communicator split for nesting domains
     call PRC_MPIsplit( global_comm,      & ! [IN]
                        NUM_DOMAIN,       & ! [IN]
                        PRC_DOMAINS(:),   & ! [IN]
-                       confname_dummy2(:), & ! [IN]
+                       confname_domains(:), & ! [IN]
                        .false.,          & ! [IN]
                        .false.,          & ! [IN] flag bulk_split
-                       .false.,          & ! [IN] no reordering
+                       COLOR_REORDER,    & ! [IN]
                        local_comm,       & ! [OUT]
                        intercomm_parent, & ! [OUT]
                        intercomm_child,  & ! [OUT]
-                       confname_dummy    ) ! [OUT]
+                       confname_mydom    ) ! [OUT]
 
     if (MEMBER_ITER == 0) then
       its = 1
@@ -159,25 +166,26 @@ program scaleles_init_ens
     end if
 
     do it = its, ite
-      im = rank_to_mem(it,universal_myrank+1)
+      im = myrank_to_mem(it)
       if (im >= 1 .and. im <= MEMBER_RUN) then
+        confname = confname_mydom
         if (CONF_FILES_SEQNUM) then
-          call file_member_replace(im, CONF_FILES, confname)
+          call filename_replace_mem(confname, im)
         else
           if (im <= MEMBER) then
-            call file_member_replace(im, CONF_FILES, confname)
+            call filename_replace_mem(confname, im)
           else if (im == MEMBER+1) then
-            call file_member_replace(0, CONF_FILES, confname, memf_mean)
+            call filename_replace_mem(confname, memf_mean)
           else if (im == MEMBER+2) then
-            call file_member_replace(0, CONF_FILES, confname, memf_mdet)
+            call filename_replace_mem(confname, memf_mdet)
           end if
         end if
         WRITE(6,'(A,I6.6,2A)') 'MYRANK ',universal_myrank,' is running a model with configuration file: ', trim(confname)
 
-        call scalerm_prep ( local_comm, &
-                            intercomm_parent, &
-                            intercomm_child, &
-                            trim(confname) )
+        call rm_prep ( local_comm, &
+                       intercomm_parent, &
+                       intercomm_child, &
+                       trim(confname) )
       end if
     end do ! [ it = its, ite ]
 

@@ -37,6 +37,11 @@ SCPCALL="${1:-cycle}"
 
 #===============================================================================
 
+DET_RUN_TF='.false.'
+if ((DET_RUN == 1)); then
+  DET_RUN_TF='.true.'
+fi
+
 if [ "$SCPCALL" = 'cycle' ]; then
   CONF_FILES_SEQNUM='.false.'
 else
@@ -51,10 +56,11 @@ cat $TMPDAT/conf/config.nml.ensmodel | \
         -e "/!--MEMBER_ITER--/a MEMBER_ITER = $MEMBER_ITER," \
         -e "/!--CONF_FILES--/a CONF_FILES = \"${TMPDIR}/@@@@/run.conf\"," \
         -e "/!--CONF_FILES_SEQNUM--/a CONF_FILES_SEQNUM = $CONF_FILES_SEQNUM," \
-        -e "/!--NNODES--/a NNODES = $NNODES_APPAR," \
+        -e "/!--DET_RUN--/a DET_RUN = ${DET_RUN_TF}," \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $MEM_NODES," \
-        -e "/!--MEM_NP--/a MEM_NP = $MEM_NP," \
+        -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = 1," \
+        -e "/!--PRC_DOMAINS--/a PRC_DOMAINS = $MEM_NP," \
     > $TMPDIR/scale-rm_ens.conf
 
 #===============================================================================

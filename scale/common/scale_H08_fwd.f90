@@ -127,10 +127,6 @@ subroutine SCALE_RTTOV_fwd(nchannels,&
         H08_RTTOV_PROF_SHIFT, &
         H08_RTTOV_CFRAC,      &
         H08_RTTOV_KADD
-  use scale_grid, only: &
-      GRID_FZ
-  use scale_grid_index, only: &
-      KHALO
   IMPLICIT NONE
 
 #include "rttov_parallel_direct.interface"

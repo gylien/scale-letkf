@@ -67,8 +67,13 @@
 
 &PARAM_NEST
 !--OFFLINE_PARENT_BASENAME--
+<<<<<<< HEAD:scale/run/config/BAIU2018_D2_HIM8_0413_ADD/config.nml.scale_pp
 OFFLINE_PARENT_PRC_NUM_X = 8
 OFFLINE_PARENT_PRC_NUM_Y = 6
+=======
+!--OFFLINE_PARENT_PRC_NUM_X--
+!--OFFLINE_PARENT_PRC_NUM_Y--
+>>>>>>> master5.3.X:scale/run/config/BDA_d2_5km_64p_bf16/config.nml.scale_pp
 !--LATLON_CATALOGUE_FNAME--
 /
 

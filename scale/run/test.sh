@@ -16,20 +16,21 @@ function print_summary () {
 #  rm -f ${SCPNAME[$i]}_job.sh
 #  rm -f ${jobname}.?${jobid}
 
-#  rm -f test.letkf
-#  rm -f test.letkf.ref
-#  rm -f test.log
+  rm -f test.letkf
+  rm -f test.letkf.ref
+  rm -f test.log
+  rm -f test.time
 
   if ((NTEST > 0)); then
     echo
     echo "TEST SUMMARY:"
-    echo "=========================================================================================="
-    echo "Config                               Job    Preset    MPI_type  -> Time(s)  Result"
-    echo "------------------------------------------------------------------------------------------"
+    echo "========================================================================================================"
+    echo "Config                               Job    Dom  Preset    MPI_type  Mode     -> Time(s)  Result"
+    echo "--------------------------------------------------------------------------------------------------------"
     for j in $(seq $NTEST); do
-      printf "%-37s%-7s%-10s%-10s-> %-9s%-15s\n" "${CONFIG[$j]}" "${SCPNAME[$j]}" "${PRESET[$j]}" "${MPI_TYPE[$j]}" "${Rtime[$j]}" "${Rstatus[$j]}"
+      printf "%-37s%-7s%-5s%-10s%-10s%-9s-> %-9s%-15s\n" "${CONFIG[$j]}" "${SCPNAME[$j]}" "${DOMNUM[$j]}" "${PRESET[$j]}" "${MPI_TYPE[$j]}" "${CONF_MODE[$j]}" "${Rtime[$j]}" "${Rstatus[$j]}"
     done
-    echo "=========================================================================================="
+    echo "========================================================================================================"
 
     pass=0
     fail=0
@@ -74,9 +75,17 @@ if [ "$1" = '-f' ]; then
     NTEST=$((NTEST+1))
     CONFIG[$NTEST]="$(echo $line | cut -d ' ' -f1)"
     SCPNAME[$NTEST]="$(echo $line | cut -d ' ' -f2)"
-    PRESET[$NTEST]="$(echo $line | cut -d ' ' -f3)"
-    MPI_TYPE[$NTEST]="$(echo $line | cut -d ' ' -f4)"
-    WTIME_L[$NTEST]="$(echo $line | cut -d ' ' -f5)"
+    DOMNUM[$NTEST]="$(echo $line | cut -d ' ' -f3)"
+    PRESET[$NTEST]="$(echo $line | cut -d ' ' -f4)"
+    MPI_TYPE[$NTEST]="$(echo $line | cut -d ' ' -f5)"
+    CONF_MODE[$NTEST]="$(echo $line | cut -d ' ' -f6)"
+    WTIME_L[$NTEST]="$(echo $line | cut -d ' ' -f7)"
+    if [ "${DOMNUM[$NTEST]}" = '-' ]; then
+      DOMNUM[$NTEST]=1
+    fi
+    if [ "${CONF_MODE[$NTEST]}" = '-' ]; then
+      CONF_MODE[$NTEST]='dynamic'
+    fi
   done < "$FILENAME"
 else
   if (($# < 5)); then
@@ -86,9 +95,17 @@ else
   NTEST=1
   CONFIG[1]="$1"; shift
   SCPNAME[1]="$1"; shift
+  DOMNUM[1]="$1"; shift
   PRESET[1]="$1"; shift
   MPI_TYPE[1]="$1"; shift
+  CONF_MODE[1]="$1"; shift
   WTIME_L[1]="$1"
+  if [ "${DOMNUM[1]}" = '-' ]; then
+    DOMNUM[1]=1
+  fi
+  if [ "${CONF_MODE[1]}" = '-' ]; then
+    CONF_MODE[1]='dynamic'
+  fi
 fi
 
 for i in $(seq $NTEST); do
@@ -100,10 +117,17 @@ done
 
 for i in $(seq $NTEST); do
 
+  for d in $(seq ${DOMNUM[$i]}); do
+    CONFIG_D[$d]="$(echo ${CONFIG[$i]} | cut -d '|' -f${d})"
+    if ((d > 1)); then
+      CONFIG_D[$d]=${CONFIG_D[$d]:-${CONFIG_D[1]}}
+    fi
+  done
+
   echo
-  echo "********************************************************************************"
-  echo "* TEST $i: ${CONFIG[$i]} ${SCPNAME[$i]} ${PRESET[$i]} ${MPI_TYPE[$i]} ${WTIME_L[$i]}"
-  echo "********************************************************************************"
+  echo "********************************************************************************************"
+  echo "* TEST $i: ${CONFIG_D[1]} ${SCPNAME[$i]} ${DOMNUM[$i]} ${PRESET[$i]} ${MPI_TYPE[$i]} ${CONF_MODE[$i]} ${WTIME_L[$i]}"
+  echo "********************************************************************************************"
   echo
 
   if [ "${PRESET[$i]}" = 'K' ] || [ "${PRESET[$i]}" = 'K_rankdir' ]; then
@@ -130,29 +154,49 @@ for i in $(seq $NTEST); do
   rm -f config.${SCPNAME[$i]}
   rm -f config.nml.*
 
-  cat config/${CONFIG[$i]}/config.main.${config_suffix} | \
-      sed -e "s/<PRESET>/${PRESET[$i]}/g" | \
-      sed -e "s/<MPI_TYPE>/${MPI_TYPE[$i]}/g" \
+  cat config/${CONFIG_D[1]}/config.main.${config_suffix} | \
+      sed -e "s/<DOMNUM>/${DOMNUM[$i]}/g" \
+          -e "s/<PRESET>/${PRESET[$i]}/g" \
+          -e "s/<MPI_TYPE>/${MPI_TYPE[$i]}/g" \
       > config.main
 
-  cat config/${CONFIG[$i]}/config.${SCPNAME[$i]} | \
+  cat config/${CONFIG_D[1]}/config.${SCPNAME[$i]} | \
       sed -e "s/<WTIME_L>/${WTIME_L[$i]}/g" \
+          -e "s/<CONF_MODE>/${CONF_MODE[$i]}/g" \
       > config.${SCPNAME[$i]}
 
-  ln -fs config/${CONFIG[$i]}/config.nml.ensmodel .
-  ln -fs config/${CONFIG[$i]}/config.nml.letkf .
-  ln -fs config/${CONFIG[$i]}/config.nml.scale .
-  ln -fs config/${CONFIG[$i]}/config.nml.scale_pp .
-  ln -fs config/${CONFIG[$i]}/config.nml.scale_init .
-  if [ -e "config/${CONFIG[$i]}/config.nml.scale_user" ]; then
-    ln -fs config/${CONFIG[$i]}/config.nml.scale_user .
+  ln -fs config/${CONFIG_D[1]}/config.nml.ensmodel .
+  ln -fs config/${CONFIG_D[1]}/config.nml.letkf .
+  ln -fs config/${CONFIG_D[1]}/config.nml.scale .
+  ln -fs config/${CONFIG_D[1]}/config.nml.scale_pp .
+  ln -fs config/${CONFIG_D[1]}/config.nml.scale_init .
+  if [ -e "config/${CONFIG_D[1]}/config.nml.scale_user" ]; then
+    ln -fs config/${CONFIG_D[1]}/config.nml.scale_user .
   fi
-  if [ -e "config/${CONFIG[$i]}/config.nml.obsope" ]; then
-    ln -fs config/${CONFIG[$i]}/config.nml.obsope .
+  if [ -e "config/${CONFIG_D[1]}/config.nml.obsope" ]; then
+    ln -fs config/${CONFIG_D[1]}/config.nml.obsope .
   fi
-  if [ -e "config/${CONFIG[$i]}/config.nml.grads_boundary" ]; then
-    ln -fs config/${CONFIG[$i]}/config.nml.grads_boundary .
+  if [ -e "config/${CONFIG_D[1]}/config.nml.grads_boundary" ]; then
+    ln -fs config/${CONFIG_D[1]}/config.nml.grads_boundary .
   fi
+
+  for d in $(seq 2 ${DOMNUM[$i]}); do
+    if [ -s "config/${CONFIG_D[1]}/config.nml.letkf.d${d}" ]; then
+      ln -fs config/${CONFIG_D[1]}/config.nml.letkf.d${d} config.nml.letkf.d${d}
+    else
+      ln -fs config/${CONFIG_D[$d]}/config.nml.letkf config.nml.letkf.d${d}
+    fi
+    if [ -s "config/${CONFIG_D[1]}/config.nml.scale.d${d}" ]; then
+      ln -fs config/${CONFIG_D[1]}/config.nml.scale.d${d} config.nml.scale.d${d}
+    else
+      ln -fs config/${CONFIG_D[$d]}/config.nml.scale config.nml.scale.d${d}
+    fi
+    if [ -s "config/${CONFIG_D[1]}/config.nml.scale_init.d${d}" ]; then
+      ln -fs config/${CONFIG_D[1]}/config.nml.scale_init.d${d} config.nml.scale_init.d${d}
+    else
+      ln -fs config/${CONFIG_D[$d]}/config.nml.scale_init config.nml.scale_init.d${d}
+    fi
+  done
 
   . config.main || exit $?
   . config.${SCPNAME[$i]} || exit $?
@@ -174,21 +218,21 @@ for i in $(seq $NTEST); do
     stdout="$logdir/job.o"
     stderr="$logdir/job.e"
     jobinfo="$logdir/job.i"
-    letkflogname="NOUT.0"
+    letkflogfmt="NOUT.%d"
   elif [ "${PRESET[$i]}" = 'OFP' ]; then
     jobname="${SCPNAME[$i]}_${SYSNAME}"
     jobid=$(grep 'pjsub Job' test.log | cut -d ' ' -f6)
     logdir="$OUTDIR/exp/${jobid}_${SCPNAME[$i]}_${STIME}"
     stdout="$logdir/job.o"
     stderr="$logdir/job.e"
-    letkflogname="NOUT-${PROCESS_FMT_0}"
+    letkflogfmt="NOUT-${PROCESS_FMT}"
   elif [ "${PRESET[$i]}" = 'Linux_torque' ]; then
     jobname="${SCPNAME[$i]}_job.sh"
     jobid=$(grep 'qsub Job' test.log | cut -d ' ' -f3)
     logdir="$OUTDIR/exp/${jobid}_${SCPNAME[$i]}_${STIME}"
     stdout="$logdir/job.o"
     stderr="$logdir/job.e"
-    letkflogname="NOUT-${PROCESS_FMT_0}"
+    letkflogfmt="NOUT-${PROCESS_FMT}"
 #  elif [ "${PRESET[$i]}" = 'Linux' ]; then
 #    ...
 #    Rtime[$i]=$(grep 'real' test.time | cut -d ' ' -f2)
@@ -232,19 +276,26 @@ for i in $(seq $NTEST); do
     eatime=$(datetime $ETIME $LCYCLE s)
     str_search="OBSERVATIONAL DEPARTURE STATISTICS.*GLOBAL\|GLOBAL.*OBSERVATIONAL DEPARTURE STATISTICS"
     str_grep="OBSERVATIONAL DEPARTURE STATISTICS"
-    sed -n "/${str_search}/,+7p" $OUTDIR/${eatime}/log/letkf/${letkflogname} | grep -v "$str_grep" > test.letkf
-    sed -n "/${str_search}/,+7p" $OUTDIR/results/${eatime}/log/letkf/${letkflogname} | grep -v "$str_grep" > test.letkf.ref
 
-    if [ -n "$(diff test.letkf test.letkf.ref)" ]; then
-      echo
-      echo "REFERENCE RESULT:"
-      echo
-      cat test.letkf.ref
-      echo
-      echo "THIS RESULT:"
-      echo
-      cat test.letkf
-      echo
+    cdiff=0
+    for d in $(seq ${DOMNUM[$i]}); do
+      sed -n "/${str_search}/,+7p" ${OUTDIR[1]}/${eatime}/log/letkf/$(printf $letkflogfmt ${SCALE_NP_S[$d]}) | grep -v "$str_grep" > test.letkf
+      sed -n "/${str_search}/,+7p" ${OUTDIR[1]}/results/${eatime}/log/letkf/$(printf $letkflogfmt ${SCALE_NP_S[$d]}) | grep -v "$str_grep" > test.letkf.ref
+
+      if [ -n "$(diff test.letkf test.letkf.ref)" ]; then
+        echo
+        echo "REFERENCE RESULT [Domain $d]:"
+        echo
+        cat test.letkf.ref
+        echo
+        echo "THIS RESULT [Domain $d]:"
+        echo
+        cat test.letkf
+        echo
+        cdiff=1
+      fi
+    done
+    if ((cdiff == 1)); then
       print_result
       continue
     fi
