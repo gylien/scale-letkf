@@ -39,8 +39,8 @@ DATA_BDY_WRF=                                                        # Directory
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 DATA_BDY_GRADS=
 
-#OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_TOSHIBA"
-OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_JRC" # Radar obs data (Do not modify)
+OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_TOSHIBA"
+#OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_JRC" # Radar obs data (Do not modify)
 OBSNCEP=
 OBS_USE_JITDT=0
 
@@ -99,10 +99,10 @@ LAND_FORMAT=0          # 0: SCALE init files (with exactly same domain settings;
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
-#OBSNAME[1]=pawr
-#OBS_FORMAT[1]=PAWR_TOSHIBA
-OBSNAME[1]=ZV
-OBS_FORMAT[1]=PAWR_JRC
+OBSNAME[1]=pawr
+OBS_FORMAT[1]=PAWR_TOSHIBA
+#OBSNAME[1]=ZV
+#OBS_FORMAT[1]=PAWR_JRC
 
 #===============================================================================
 # Cycling settings
@@ -115,8 +115,11 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=50      # Ensemble size 
-NNODES=54      # Ensemble size + 1 (mean) +1 (mdet) + 2 (additional)
+#MEMBER=50      # Ensemble size 
+#NNODES=54      # Ensemble size + 1 (mean) +1 (mdet) + 2 (additional)
+
+MEMBER=8      # Ensemble size 
+NNODES=12      # Ensemble size + 1 (mean) +1 (mdet) + 2 (additional)
 
 PPN=64              # Number of processes per node
 
