@@ -34,6 +34,10 @@ setting "$@" || exit $?
 if [ "$CONF_MODE" = 'static' ]; then
   . src/func_common_static.sh || exit $?
   . src/func_${job}_static.sh || exit $?
+else
+  echo "CONF_MODE should be "static""
+  echo "Stop"
+  exit 0
 fi
 
 echo
