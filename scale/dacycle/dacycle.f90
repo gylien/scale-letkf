@@ -17,6 +17,7 @@ program dacycle
     set_mem_node_proc,        &
     set_common_mpi_scale,     &
     myrank_use, myrank_use_da,&
+    MPI_COMM_u,               &
     myrank_a, myrank_da,      &
     myrank_d, myrank_e,       &
     mmean_rank_e,             &
@@ -140,6 +141,7 @@ program dacycle
   integer :: ierr
 
   integer :: stime_c, etime_c, cpsec, cmax
+  integer :: stime_noio_c, etime_noio_c
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -252,7 +254,9 @@ program dacycle
           call resume_state(do_restart_read=.false.)
         else
           call resume_state(do_restart_read=.true.)
-
+          ! initialize system_clock after reading initial files
+          call MPI_BARRIER(MPI_COMM_u, ierr)
+          call system_clock(stime_noio_c)
         end if
 
         ! history&monitor file output
@@ -506,6 +510,12 @@ program dacycle
       ! LETKF section end
       !-------------------------------------------------------------------------
 
+      ! Monitor excluding restart I/O at 1st and last cycles
+      if ( TIME_NOWSTEP > TIME_NSTEP ) then
+        call MPI_BARRIER(MPI_COMM_u, ierr)
+        call system_clock(etime_noio_c) 
+      endif
+
       ! restart output after LETKF
       if (DIRECT_TRANSFER .and. (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now)) then
         !!!!!! To do: control restart outputs separately for members, mean, and mdet
@@ -549,9 +559,10 @@ program dacycle
           ! Output of dacycle-forecast
           if (.not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
 
-          call calc_ref_direct(ref3d)
-          call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
-        endif
+            call calc_ref_direct(ref3d)
+            ! Do not output
+            !call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
+          endif
 
       endif
 
@@ -618,6 +629,7 @@ program dacycle
   if (myrank == 0) then
     write (6, '(2A,1x,A)') '[Info] End time: ', date, time
     write (6, '(1A,1f12.4)') '[Info] Computation time by system_clock: ', real(etime_c - stime_c) / real(cpsec)
+    write (6, '(1A,1f12.4,1A,1i5,1A)') '[Info] Computation time by system_clock (excluding restart I/O): ', real(etime_noio_c - stime_noio_c) / real(cpsec), ' for ',lastcycle, ' cycles'
   endif
 
   call finalize_mpi_scale

@@ -795,10 +795,12 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   call mpi_timer('', 3)
 
-  write(*, *) RDIM, AZDIM, ELDIM
-  write(*, *) "dx = ", RADAR_SO_SIZE_HORI
-  write(*, *) "dy = ", RADAR_SO_SIZE_HORI
-  write(*, *) "dz = ", RADAR_SO_SIZE_VERT
+  if (LOG_LEVEL >= 2) then
+    write(*, *) RDIM, AZDIM, ELDIM
+    write(*, *) "dx = ", RADAR_SO_SIZE_HORI
+    write(*, *) "dy = ", RADAR_SO_SIZE_HORI
+    write(*, *) "dz = ", RADAR_SO_SIZE_VERT
+  endif
 
 #ifdef JITDT
   if (OBS_USE_JITDT) then
