@@ -134,13 +134,16 @@ fi
 
 # domain catalogue
 #-------------------
-if ((LOG_OPT <= 3)); then
-  for d in $(seq $DOMNUM); do
-    path="latlon_domain_catalogue.d$(printf $DOMAIN_FMT $d).txt"
-    pathout="${OUTDIR[$d]}/const/log/latlon_domain_catalogue.txt"
-    echo "${pathout}|${path}|1" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$((${SCALE_NP_S[$d]}+1))]}
-  done
-fi
+
+### For simulatenous run -- TORI AEZU
+###
+###if ((LOG_OPT <= 3 )); then
+###  for d in $(seq $DOMNUM); do
+###    path="latlon_domain_catalogue.d$(printf $DOMAIN_FMT $d).txt"
+###    pathout="${OUTDIR[$d]}/const/log/latlon_domain_catalogue.txt"
+###   echo "${pathout}|${path}|1" >> ${STAGING_DIR}/${STGOUTLIST}.${mem2node[$((${SCALE_NP_S[$d]}+1))]}
+###  done
+###fi
 
 #-------------------------------------------------------------------------------
 }

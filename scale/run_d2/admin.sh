@@ -49,6 +49,24 @@ fi
 
 #-------------------------------------------------------------------------------
 
+### wait until the submittion of previous jobs are completed
+
+iwait=1
+while [ $iwait == 1 ];do
+iwait=0
+running_jobs=`ls -x fcst_ofp.stat.*`
+if [ "$running_jobs" != "" ];then
+for statfile in $running_jobs ;do
+if [ `cat $statfile` == "prep" ] ;then
+ iwait=1
+ sleep 10s
+fi
+done
+fi
+done
+
+#-------------------------------------------------------------------------------
+
 ###rm -f config.*
 
 
