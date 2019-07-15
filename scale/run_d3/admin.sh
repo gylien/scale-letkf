@@ -19,10 +19,7 @@ FCSTLEN="$1"; shift
 #TIME_DT_DYN="$1"; shift
 #NNODES="$1"; shift
 WTIME_L="$1"; shift
-NMEM="$1" ; shift
-NP_OFILE_X="$1" ; shift
-NP_OFILE_Y="$1"
-
+NMEM="$1"
 
 #PARENT_REF_TIME=20190608180000
 #STIME=20190608180000
@@ -36,10 +33,9 @@ NP_OFILE_Y="$1"
 SCPNAME=fcst
 ETIME="$STIME"
 
-
 NODE=`expr \( $NMEM  + 2 \) \* 16` ### D3 
 #NODE=`expr \( $NMEM  + 2 \) \* 4` ### D3 
-#WTIME_L="03:00:00"
+WTIME_L="01:20:00"
 
 CONFIG='realtime_fcst_D3'
 PRESET='OFP'
@@ -48,6 +44,9 @@ PRESET='OFP'
 
  config_suffix='ofp'
  script_suffix='_ofp'
+again=1
+while [ $again -eq 1 ] ;do
+again=0
 
 if [ "$SCPNAME" = 'cycle' ]; then
   DATA_BDY_WRF="ncepgfs_wrf_da"
@@ -60,7 +59,6 @@ fi
 #-------------------------------------------------------------------------------
 
 ###rm -f config.*
-
 
 cp config/${CONFIG}/config.* .
 
@@ -82,9 +80,12 @@ rm config.main.ofp
 ### NCDF file merge
 cat config/${CONFIG}/sno_bulk.sh | \
    sed -e "s/<STIME>/${STIME}/g" | \
+   sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g" | \
    sed -e "s/<NP_OFILE_X>/${NP_OFILE_X}/g" | \
    sed -e "s/<NP_OFILE_Y>/${NP_OFILE_Y}/g" \
- > sno_bulk.sh
+ > sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh
+
+chmod 750 sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh
 
 . config.main || exit $?
 #. config.$SCPNAME || exit $?
@@ -92,7 +93,17 @@ cat config/${CONFIG}/sno_bulk.sh | \
 
 #-------------------------------------------------------------------------------
 
-./${SCPNAME}${script_suffix}.sh > ${SCPNAME}${script_suffix}.log.${PARENT_REF_TIME}.${STIME} 2>&1 || exit $?
+./${SCPNAME}${script_suffix}.sh > ${SCPNAME}${script_suffix}.log.${PARENT_REF_TIME}.${STIME} 2>&1
+
+if [ $? -eq 77 ] ; then
+ NODE=`expr \( $NMEM  + 2 \) \* 4` ### D3 
+ WTIME_L="03:00:00"
+ again=1
+elif [ $? -ne 0 ] ; then
+ exit $?
+fi
+
+done
 
 #-------------------------------------------------------------------------------
 
@@ -113,16 +124,16 @@ cat config/${CONFIG}/sno_bulk.sh | \
 
 #-------------------------------------------------------------------------------
 
-./sno_bulk.sh > ./sno_bulk.log 2>&1 || exit $?
-
-#-------------------------------------------------------------------------------
-
 #rm -f ${SCPNAME}_job.sh
 #rm -f ${jobname}.?${jobid}
 
 mkdir -p exp
 rm -f exp/*
 ln -s $OUTDIR/exp/${jobid}_${SCPNAME}_${STIME} exp
+
+#-------------------------------------------------------------------------------
+
+./sno_bulk_ref_${PATENT_REF_TIME}_${STIME}.sh > ./sno_bulk_${PARENT_REF_TIME}_${STIME}.log 2>&1 || exit $?
 
 #-------------------------------------------------------------------------------
 

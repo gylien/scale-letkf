@@ -7,7 +7,11 @@
 STIME=<STIME>
 
 . config.main || exit $?
-RUNDIR="${TMP}_sno"
+
+PARENT_REF_TIME=<PARENT_REF_TIME>
+RUNDIR="${TMP}/../run_sno_ref_${PARENT_REF_TIME}_${STIME}"
+
+PLOTDIR=/work/hp150019/c24140/scale-letkf-rt/scale_ope/scale-letkf-rt_ope/scale/run_d3/plotx
 
 PPN=64 # Process per node
 
@@ -15,8 +19,8 @@ PPN=64 # Process per node
 DOM=3 
 
 # Output file (X & Y process number) for each member
-NP_OFILE_X=2
-NP_OFILE_Y=2
+NP_OFILE_X=1
+NP_OFILE_Y=1
 
 # Do not edit!
 NP_OFILE=$((${NP_OFILE_X} * ${NP_OFILE_Y})) # Output file (process number) for each member
@@ -175,6 +179,9 @@ ulimit -s unlimited
 echo "[\$(date "+%Y/%m/%d %H:%M:%S")] Start SNO"
 mpirun -np ${NP_OFILE} ${SNOBIN} ${conf_bulk}.\${PJM_BULKNUM}
 echo "[\$(date "+%Y/%m/%d %H:%M:%S")] End SNO"
+
+cd $PLOTDIR
+./auto.sh "${PARENT_REF_TIME}" "${STIME}" ${PJM_BULKNUM}
 
 EOF
 

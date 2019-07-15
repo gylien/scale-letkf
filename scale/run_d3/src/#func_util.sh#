@@ -804,19 +804,7 @@ while true; do
     break
   fi
 
-  if [ `echo $tmp | cut -c 64` == "(" ] ;then
-  tmptime=`echo $tmp | cut -c 65-75`  
-  tmptime_s=`date -d "${tmptime}" +%s`
-  nowtime_s=`date +%s`
-  wait_second=`expr $tmptime_s - $nowtime_s`
-
-  wait_lim_second=21600 # 6h
-
-  if [ $wait_second -ge $wait_lim_second ] ;then ### 
-   pjdel ${JOBID}
-   return 77
-  fi
-  fi
+  
 
   sleep 10s
 done
