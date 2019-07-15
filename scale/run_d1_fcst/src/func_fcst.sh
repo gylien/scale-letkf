@@ -550,10 +550,10 @@ while ((time <= ETIME)); do
         log_zeros="$PROCESS_FMT_0"
       fi
 
-      if ((loop == 1 && c == 1 && LOG_OPT <= 3)); then
-        path="const/log/latlon_domain_catalogue.txt"
-        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      fi
+#      if ((loop == 1 && c == 1 && LOG_OPT <= 3)); then
+#        path="const/log/latlon_domain_catalogue.txt"
+#        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#      fi
 
       if ((LOG_OPT <= 2)); then
         if ((LOG_TYPE == 1)); then

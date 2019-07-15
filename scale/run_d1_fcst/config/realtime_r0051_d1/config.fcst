@@ -18,8 +18,8 @@ FSTEP=
 # Forecast settings
 
 ###FCSTLEN='<FCSTLEN>'   # SCALE forecast length in the forecast mode (second)
-###FCSTLEN=432000      # SCALE forecast length in the forecast mode (second)
-FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
+FCSTLEN=432000      # SCALE forecast length in the forecast mode (second)
+###FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
 
 FCSTOUT=21600
 
