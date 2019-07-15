@@ -127,9 +127,9 @@ else
 fi
 
 DOMAIN_CATALOGUE_OUTPUT=".false."
-if [ "$(basename $TMPDIR)" == '0001' ]; then ###### using a variable for '0001'
-  DOMAIN_CATALOGUE_OUTPUT=".true."
-fi
+###if [ "$(basename $TMPDIR)" == '0001' ]; then ###### using a variable for '0001'
+###  DOMAIN_CATALOGUE_OUTPUT=".true."
+###fi
 
 #===============================================================================
 
