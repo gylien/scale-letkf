@@ -28,6 +28,7 @@ fi
 ulimit -s unlimited 
 
 module load hdf5
+module load netcdf
 module load netcdf-fortran
 
 echo "draw "$cmem
@@ -38,10 +39,15 @@ sh compile_rain.sh
 sh compile_uvw.sh
 sh compile_dbz.sh
 
+echo 'plot rain...'
 ./draw_rain ${PARENT_REF_TIME} ${TIME} $cmem 1 37 1 
+echo 'plot uvw1500...'
 ./draw_uvw ${PARENT_REF_TIME} ${TIME} $cmem 1 37 1 1500 
+echo 'plot uvw5000...'
 ./draw_uvw ${PARENT_REF_TIME} ${TIME} $cmem 1 37 1 5000 
+echo 'plot dbz1500...'
 ./draw_dbz ${PARENT_REF_TIME} ${TIME} $cmem 1 37 1 1500 
+echo 'plot dbz5000...'
 ./draw_dbz ${PARENT_REF_TIME} ${TIME} $cmem 1 37 1 5000 
 
 mogrify -trim $mydir/plot_temp/$cmem/*.png

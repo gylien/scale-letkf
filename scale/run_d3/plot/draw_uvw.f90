@@ -119,9 +119,9 @@ istatus=nf_close(idnc)
 write(title3,'(I4,A)')irefheight,'m wind (high-pass)'
 
 u_large = sum(val_u_mean,abs(val_u_mean).lt.1.0e10) / real(count(abs(val_u_mean).lt.1.0e10))
-v_large = sum(val_v_mean,abs(val_u_mean).lt.1.0e10) / real(count(abs(val_u_mean).lt.1.0e10))
-val_plot_u=val_plot_u-u_large
-val_plot_v=val_plot_v-v_large
+v_large = sum(val_v_mean,abs(val_v_mean).lt.1.0e10) / real(count(abs(val_v_mean).lt.1.0e10))
+val_plot_u=val_u_mean-u_large
+val_plot_v=val_v_mean-v_large
 val_plot_w=val_w_mean  !!! m/s
 where (abs(val_u_mean).gt.1e10) val_plot_u=0.0
 where (abs(val_u_mean).gt.1e10) val_plot_v=0.0
@@ -134,7 +134,7 @@ vsmin=vwmin
 vsintv=vwintv
 vunit=10.0
 write(cvunit,'(I2,A)')int(vunit),'m/s'
-write(*,*) 'max wind', maxval(sqrt(val_plot_u**2+val_plot_v**2),val_u_mdet.lt.1.0e10)
+!write(*,*) 'max wind', maxval(sqrt(val_plot_u**2+val_plot_v**2),val_u_mdet.lt.1.0e10)
 call draw
 
 

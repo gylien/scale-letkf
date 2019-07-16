@@ -37,7 +37,8 @@ NP_TOTAL=$((${SNO_MEMBERS} * ${NP_OFILE}))
 # Convert variables (Other variables will NOT be included in converted files)
 #VARS='"U", "V", "W", "T", "QV", "QHYD", "PRES","RAIN", "CAPE"'
 #VARS='"U", "V", "W", "T", "QV", "QHYD", "PRES","RAIN"'
-VARS='"U", "V", "W", "T", "RH", "QV", "QC", "QR", "QI", "QS", "QG", "QHYD", "DENS", "RHOT", "PRES", "RAIN", "MSLP", "T2", "U10", "V10"'
+#VARS='"U", "V", "W", "T", "RH", "QV", "QC", "QR", "QI", "QS", "QG", "QHYD", "DENS", "RHOT", "PRES", "RAIN", "MSLP", "T2", "U10", "V10"'
+VARS='"U", "V", "W", "QR", "QS", "QG", "DENS", "RAIN"'
 
 TOPO=0 # Process topography file? # 1: Yes, 0: No
 if (( TOPO > 0 )) ; then
@@ -181,7 +182,7 @@ mpirun -np ${NP_OFILE} ${SNOBIN} ${conf_bulk}.\${PJM_BULKNUM}
 echo "[\$(date "+%Y/%m/%d %H:%M:%S")] End SNO"
 
 cd $PLOTDIR
-./auto.sh "${PARENT_REF_TIME}" "${STIME}" ${PJM_BULKNUM}
+./auto.sh "${PARENT_REF_TIME}" "${STIME}" \${PJM_BULKNUM}
 
 EOF
 
