@@ -117,6 +117,13 @@ cat $TMPDAT/conf/config.nml.scale_pp | \
         -e "/!--OFFLINE_PARENT_PRC_NUM_Y--/a OFFLINE_PARENT_PRC_NUM_Y = ${DATA_BDY_SCALE_PRC_NUM_Y}," \
     > $TMPDIR/pp.conf
 
+echo ""
+echo "DEBUG"
+cat  $TMPDIR/pp.conf
+echo "DEBUG"
+ls ${CATALOGUE}
+echo ""
+
 #===============================================================================
 
 exit 0
