@@ -18,7 +18,11 @@ MODULE radar_tools
   IMPLICIT NONE
   PUBLIC
 
+#ifdef SINGLE
+  integer, parameter :: r_size = kind(0.0e0)
+#else
   integer, parameter :: r_size = kind(0.0d0)
+#endif
   integer, parameter :: r_sngl = kind(0.0e0)
 
   real(r_size), parameter :: re = 6371.3d3 !radius of the Earth
