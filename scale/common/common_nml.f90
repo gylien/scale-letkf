@@ -21,6 +21,9 @@ MODULE common_nml
   integer, parameter :: nobtype = 24 ! number of observation report types
   integer, parameter :: nch = 10     ! H08 Num of Himawari-8 (IR) channels
 
+  integer, parameter :: NIRB_HIM8 = 10    ! H08 Num of Himawari-8 (IR) bands
+  integer, parameter :: NVIS_HIM8 = 6     ! H08 Num of Himawari-8 (VIS) bands
+
   integer, parameter :: nobsfilemax = 10
   integer, parameter :: filelenmax = 256
 
@@ -255,6 +258,8 @@ MODULE common_nml
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
   !---PARAM_LETKF_H08
+  integer :: H08_NOWDATE(6) = (/0,1,1,0,0,0/)
+  character(filelenmax) :: H08_RTTOV_COEF_PATH = ''
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
   logical :: H08_RTTOV_CLD = .true. ! true: all-sky, false: CSR in RTTOV fwd model
   real(r_size) :: H08_RTTOV_MINQ = 0.10d0 ! Threshold of water/ice contents for diagnosing cloud fraction (g m-3)
@@ -795,6 +800,7 @@ subroutine read_nml_letkf_h08
   integer :: ierr
 
   namelist /PARAM_LETKF_H08/ &
+    H08_NOWDATE, &
     H08_REJECT_LAND, &
     H08_RTTOV_CLD, &
     H08_MIN_CLD_MEMBER, &
@@ -803,7 +809,8 @@ subroutine read_nml_letkf_h08
     H08_RTTOV_CFRAC_CNST, &
     H08_LIMIT_LEV, &
     H08_BT_MIN, &
-    H08_CH_USE
+    H08_CH_USE, &
+    H08_RTTOV_COEF_PATH
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_H08,iostat=ierr)

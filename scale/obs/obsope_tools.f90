@@ -1132,7 +1132,7 @@ end subroutine obsmake_cal
 !-------------------------------------------------------------------------------
 ! Model-to-observation simulator calculation
 !-------------------------------------------------------------------------------
-subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
+subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd, it)
   use scale_grid, only: &
       GRID_CX, GRID_CY, &
       DX, DY
@@ -1148,16 +1148,32 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   real(r_size), intent(out) :: v3dgsim(nlev,nlon,nlat,OBSSIM_NUM_3D_VARS)
   real(r_size), intent(out) :: v2dgsim(nlon,nlat,OBSSIM_NUM_2D_VARS)
   integer, intent(in), optional :: stggrd
+  integer ,intent(in), optional :: it
 
+  integer :: it_ = 0
   integer :: i, j, k, iv3dsim, iv2dsim
   real(r_size) :: ri, rj, rk
   real(r_size) :: lon, lat, lev
   real(r_size) :: tmpobs
   integer :: tmpqc
 
+!  real(r_size) :: yobs_H08(nlon,nlat,NIRB_HIM8),yobs_H08_clr(nlon,nlat,NIRB_HIM8)
+!  real(r_size) :: plev_obs_H08(nlon,nlat,NIRB_HIM8)
+!  integer :: qc_H08(nlon,nlat,NIRB_HIM8)
+!  real(r_size) :: zangle_H08(nlon,nlat)
+
+!  real(r_size) :: yobs_ir(nlon,nlat,NIRB_HIM8)
+!  real(r_size) :: yobs_vis(nlon,nlat,NVIS_HIM8)
+  real(r_size) :: yobs_visir(nlon,nlat,NVIS_HIM8+NIRB_HIM8)
+  integer :: ch
+
+!  USE_HIM8 = .false. ! initialize
+
+  if(present(it)) it_ = it
+
 !-------------------------------------------------------------------------------
 
-  write (6,'(A,I6.6,A,I6.6)') 'MYRANK ', myrank, ' is processing subdomain id #', myrank_d
+!  write (6,'(A,I6.6,A,I6.6)') 'MYRANK ', myrank, ' is processing subdomain id #', myrank_d
 
   do j = 1, nlat
     rj = real(j + JHALO, r_size)
@@ -1217,6 +1233,25 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
   end do ! [ j = 1, nlat ]
 
+!!  if (USE_HIM8) then
+!    call Trans_XtoY_H08_allg(v3dgh,v2dgh,yobs_H08)!,yobs_H08_clr,&
+!                             !plev_obs_H08,qc_H08,zangle_H08)
+
+    ! call allgHim82obs(tbb_allg,tbb_allg_thg)
+
+    call Trans_XtoY_VIS_allg(v3dgh,v2dgh,yobs_visir,it=it_)
+
+    ch = 0
+    do iv2dsim = 1, NVIS_HIM8 + NIRB_HIM8
+!    do iv2dsim = 1, OBSSIM_NUM_2D_VARS
+!      if(OBSSIM_2D_VARS_LIST(iv2dsim) /= id_H08IR_obs .or. ch > NIRB_HIM8)cycle
+
+      ch = ch + 1
+      v2dgsim(:,:,iv2dsim) = real(yobs_visir(:,:,ch), r_sngl)
+    enddo ! [iv2dsim = 1, OBSSIM_NUM_2D_VARS]
+
+!  endif ! [USE_HIM8]
+
 !-------------------------------------------------------------------------------
 
 end subroutine obssim_cal
@@ -1241,16 +1276,23 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d)
   integer :: proc_i, proc_j
   integer :: ishift, jshift
 
+  character(2) :: FT2
+
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
   jshift = proc_j * nlat
 
   if (myrank_d == 0) then
+
+    write(FT2, '(i2.2)') step - 1
+
     iunit = 55
     inquire (iolength=iolen) iolen
-    open (iunit, file=trim(filename), form='unformatted', access='direct', &
+    open (iunit, file=trim(filename)//"_FT"//FT2//".dat", form='unformatted', access='direct', &
           status='unknown', convert='native', recl=nlong*nlatg*iolen)
-    irec = (nlev * nv3dgrd + nv2dgrd) * (step-1)
+    !irec = (nlev * nv3dgrd + nv2dgrd) * (step-1)
+    ! No time dimension in each file
+    irec = 0
   end if
 
   do n = 1, nv3dgrd

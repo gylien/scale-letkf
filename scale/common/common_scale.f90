@@ -86,6 +86,11 @@ MODULE common_scale
   INTEGER,PARAMETER :: iv2dd_skint=9 ! H08
 #endif
   CHARACTER(vname_max),PARAMETER :: v3dd_name(nv3dd) = &
+!     (/'U', 'V', 'W', 'T', 'PRES', &
+!       'QV', 'QC', 'QR', 'QI', 'QS', 'QG', 'RH', 'height'/)
+     (/'DENS', 'MOMX', 'MOMY', 'MOMZ', 'RHOT', &
+       'QV', 'QC', 'QR', 'QI', 'QS', 'QG', 'RH', 'height'/)
+  CHARACTER(vname_max),PARAMETER :: v3dd_name_org(nv3dd) = &
      (/'U', 'V', 'W', 'T', 'PRES', &
        'QV', 'QC', 'QR', 'QI', 'QS', 'QG', 'RH', 'height'/)
 #ifdef H08
@@ -355,11 +360,11 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
 !  write (6,'(A,I6.6,3A,I6.6,A)') 'MYRANK ',myrank,' is reading a file ',filename,'.pe',PRC_myrank,'.nc'
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+  !write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
   do iv3d = 1, nv3d
-    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
+!    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3d_name(iv3d))
     call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
     call ncio_check(nf90_get_var(ncid, varid, v3dg(:,:,:,iv3d), &
                                  start = (/ 1, is, js, 1 /),    &
@@ -367,7 +372,7 @@ SUBROUTINE read_restart(filename,v3dg,v2dg)
   end do
 
   do iv2d = 1, nv2d
-    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
+!    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2d_name(iv2d))
     call ncio_check(nf90_inq_varid(ncid, trim(v2d_name(iv2d)), varid))
     call ncio_check(nf90_get_var(ncid, varid, v2dg(:,:,iv2d), &
                                  start = (/ is, js, 1 /),     &
@@ -493,7 +498,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   call ncio_open(trim(filename) // filesuffix, NF90_WRITE, ncid)
 
   do iv3d = 1, nv3d
-    write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
+!    write(6,'(1x,A,A15)') '*** Write 3D var: ', trim(v3d_name(iv3d))
     call ncio_check(nf90_inq_varid(ncid, trim(v3d_name(iv3d)), varid))
     call ncio_check(nf90_put_var(ncid, varid, v3dg(:,:,:,iv3d), &
                                  start = (/ 1, is, js, 1 /),    &
@@ -501,7 +506,7 @@ SUBROUTINE write_restart(filename,v3dg,v2dg)
   end do
 
   do iv2d = 1, nv2d
-    write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
+!    write(6,'(1x,A,A15)') '*** Write 2D var: ', trim(v2d_name(iv2d))
     call ncio_check(nf90_inq_varid(ncid, trim(v2d_name(iv2d)), varid))
     call ncio_check(nf90_put_var(ncid, varid, v2dg(:,:,iv2d), &
                                  start = (/ is, js, 1 /),     &
@@ -548,7 +553,7 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
   end if
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+!  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
 !!! restart files do not contain 3D height variable before SCALE v5.1
@@ -558,13 +563,13 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
 !                               start = (/ 1, is, js, 1 /), &
 !                               count = (/ KMAX, IMAX, JMAX, 1 /)))
 
-  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lon2d_name)
+!  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lon2d_name)
   call ncio_check(nf90_inq_varid(ncid, trim(lon2d_name), varid))
   call ncio_check(nf90_get_var(ncid, varid, lon,        &
                                start = (/ is, js, 1 /), &
                                count = (/ IMAX, JMAX, 1 /)))
 
-  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lat2d_name)
+!  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lat2d_name)
   call ncio_check(nf90_inq_varid(ncid, trim(lat2d_name), varid))
   call ncio_check(nf90_get_var(ncid, varid, lat,        &
                                start = (/ is, js, 1 /), &
@@ -608,10 +613,10 @@ SUBROUTINE read_topo(filename,topo)
   end if
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+!  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
   call ncio_open(trim(filename) // filesuffix, NF90_NOWRITE, ncid)
 
-  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(topo2d_name)
+!  write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(topo2d_name)
   call ncio_check(nf90_inq_varid(ncid, trim(topo2d_name), varid))
   call ncio_check(nf90_get_var(ncid, varid, topo,       &
                                start = (/ is, js, 1 /), &
@@ -651,12 +656,12 @@ subroutine read_history(filename,step,v3dg,v2dg)
 !  real(RP) :: v2dgtmp(nlonh,nlath,nv2dd)       !
 
   write (filesuffix(4:9),'(I6.6)') PRC_myrank
-  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
+!  write (6,'(A,I6.6,2A)') 'MYRANK ',myrank,' is reading a file ',trim(filename) // filesuffix
 
   ! 3D variables
   !-------------
   do iv3d = 1, nv3dd
-    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
+!    write(6,'(1x,A,A15)') '*** Read 3D var: ', trim(v3dd_name(iv3d))
     call HistoryGet( var3D,                 & ! [OUT]
                      filename,              & ! [IN]
                      trim(v3dd_name(iv3d)), & ! [IN]
@@ -664,6 +669,9 @@ subroutine read_history(filename,step,v3dg,v2dg)
     forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
 !    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dgtmp(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
   end do
+
+  ! DEBUG, tentative for RTTOV12 VIS simulation (6/17/2019)
+  call state_trans(v3dg(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,:))
 
   do iv3d = 1, nv3dd
     call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
@@ -688,7 +696,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
   ! 2D variables
   !-------------
   do iv2d = 1, nv2dd
-    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
+!    write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(v2dd_name(iv2d))
     call HistoryGet( var2D,                 & ! [OUT]
                      filename,              & ! [IN]
                      trim(v2dd_name(iv2d)), & ! [IN]

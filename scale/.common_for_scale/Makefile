@@ -5,7 +5,8 @@ OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_sort.o commo
           common_nml.o
 
 ifeq ($(H08),T)
-OBJS    += scale_H08_fwd.o
+#OBJS    += scale_H08_fwd.o
+OBJS    += scale_rttov12_fwd.o
 endif
 
 all:	$(OBJS) 
@@ -33,9 +34,11 @@ common_ncio.o:	../common/common_ncio.f90 common.o
 common_scale.o:	../common/common_scale.f90 common.o common_nml.o common_mpi.o common_ncio.o
 	$(FC) $(FOPTS_SCALE) -c $< $(NETCDF_INC) $(SCALE_INC)
 ifeq ($(H08),T)
-scale_H08_fwd.o: ../common/scale_H08_fwd.F90 common.o
+#scale_H08_fwd.o: ../common/scale_H08_fwd.F90 common.o
+scale_rttov12_fwd.o: ../common/scale_rttov12_fwd.f90 common.o
 	$(FC) $(FOPTS) -c $< $(RT_INCLUDE) $(RT_LDFLAGS) $(SCALE_INC)
-common_obs_scale.o:	../common/common_obs_scale.f90 common.o common_nml.o common_scale.o scale_H08_fwd.o
+#common_obs_scale.o:	../common/common_obs_scale.f90 common.o common_nml.o common_scale.o scale_H08_fwd.o
+common_obs_scale.o:	../common/common_obs_scale.f90 common.o common_nml.o common_scale.o scale_rttov12_fwd.o
 	$(FC) $(FOPTS_SCALE) -c $< $(NETCDF_INC) $(SCALE_INC)
 else
 common_obs_scale.o:	../common/common_obs_scale.f90 common.o common_nml.o common_scale.o
