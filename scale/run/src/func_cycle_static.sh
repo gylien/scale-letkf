@@ -981,10 +981,10 @@ EOF
             -e "/!--ONLINE_IAM_PARENT--/a ONLINE_IAM_PARENT = ${ONLINE_IAM_PARENT}," \
             -e "/!--ONLINE_IAM_DAUGHTER--/a ONLINE_IAM_DAUGHTER = ${ONLINE_IAM_DAUGHTER}," \
             -e "/!--RESTART_IN_BASENAME--/a RESTART_IN_BASENAME = \"${RESTART_IN_BASENAME}\"," \
-            -e "/!--RESTART_IN_POSTFIX_TIMELABEL--/a RESTART_IN_POSTFIX_TIMELABEL = .true.," \
+            -e "/!--RESTART_IN_POSTFIX_TIMELABEL--/a RESTART_IN_POSTFIX_TIMELABEL = .false.," \
             -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = .true.," \
             -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${OUTDIR[$d]}/${time}/anal/<member>/init\"," \
-            -e "/!--RESTART_OUT_POSTFIX_TIMELABEL--/a RESTART_OUT_POSTFIX_TIMELABEL = .true.," \
+            -e "/!--RESTART_OUT_POSTFIX_TIMELABEL--/a RESTART_OUT_POSTFIX_TIMELABEL = .false.," \
             -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${OUTDIR[$d]}/const/topo/topo\"," \
             -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${OUTDIR[$d]}/const/landuse/landuse\"," \
             -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${FILE_HISTORY_DEFAULT_BASENAME}\"," \
@@ -1059,7 +1059,8 @@ EOF
   if ((DACYCLE == 1)); then
     OBS_POSTFIX_TIMELABEL_TF=".true."
     HISTORY_POSTFIX_TIMELABEL_TF=".true."
-    GUES_ANAL_POSTFIX_TIMELABEL_TF=".true."
+#    GUES_ANAL_POSTFIX_TIMELABEL_TF=".true."
+    GUES_ANAL_POSTFIX_TIMELABEL_TF=".false."
   else
     OBS_POSTFIX_TIMELABEL_TF=".false."
     HISTORY_POSTFIX_TIMELABEL_TF=".false."

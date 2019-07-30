@@ -48,6 +48,11 @@ INCS    += $(JITDT_INC)
 LIBS    += $(JITDT_LIB)
 endif
 
+ifeq ($(ENABLE_PLOT_DCL),T)
+COMMON_OBJS += $(COMMON_DIR)/plot_dbz_DCL.o
+LIBS += $(LIBDCL)
+endif
+
 .PHONY:	all clean FORCE
 
 all:	$(PROGS)

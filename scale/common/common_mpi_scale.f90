@@ -1918,6 +1918,9 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   integer :: proc_i, proc_j
   integer :: ishift, jshift
 
+#ifdef PLOT_DCL
+  character(len=H_LONG) :: plotname
+#endif
 !  real(r_sngl) :: v2d_ref(nlong,nlatg,nv3dd)
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
@@ -1932,6 +1935,7 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
           status='unknown', convert='native', recl=nlong*nlatg*iolen)
     irec = (step - 1)*nlev*2 ! 2 variable (nlev*2 record) output 
   end if
+
 
   ! Gather required data for reflectivity computation
 
@@ -1979,9 +1983,19 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
     if (myrank_d == 0) then
       irec = irec + 1
       write (iunit, rec=irec) bufr4
+
+#ifdef PLOT_DCL
+    if ( k .eq. 13) then !!! 1500m?
+      write(plotname,'(A,I3.3,A)') "fcst_dbz_"//trim(timelabel)//"_",step
+      call plot_dbz_DCL (bufr4,trim(plotname))
+    end if
+#endif
     end if
 
   enddo
+
+
+
 
   ! debug
   do k = 1, nlev 
