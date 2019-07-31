@@ -26,16 +26,16 @@ integer::iclrmap
 integer::ilon,ilat
 real(4)::vpr,vpl,vpt,vpb
 
-title1=''
+title1='SCALE-LETKF'
 title2=(/'',''/)
-title3=''
+title3='radar ref 1500m'
 
 iclrmap=12
 
 do ilon=1,nlon_ext
 do ilat=1,nlat_ext
- if (ilon-nlonadd/2.ge.1.and.ilon-nlonadd/2.lt.nlon .and. &
-     ilat-nlatadd/2.ge.1.and.ilat-nlatadd/2.lt.nlat  )then
+ if (ilon-nlonadd/2.ge.1.and.ilon-nlonadd/2.lt.nlong .and. &
+     ilat-nlatadd/2.ge.1.and.ilat-nlatadd/2.lt.nlatg  )then
   if (val_plot_s(ilon-nlonadd/2,ilat-nlatadd/2).ne.rmiss)then
    vmask(ilon,ilat)=0.0
   else
@@ -189,6 +189,7 @@ end do
 
   call uzlset('LABELYR',.false.)
 
+  call sglset('LCLIP',.false.)
   call sgtxzv (0.5*(vpr+vpl),vpt+0.03,trim(title1),0.025,0,0,5) !
   call sgtxzv (vpr-0.01,vpt+0.045,trim(title2(1)),0.016,0,1,3) !
   call sgtxzv (vpr-0.01,vpt+0.020,trim(title2(2)),0.016,0,1,3) !
