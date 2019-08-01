@@ -115,6 +115,16 @@ fi
 
 #${TMPS}/config.main|config.main
 #
+
+if [ $DISK_MODE -eq 1 ];then ### for multiple run
+cp ${SCRP_DIR}/config.${job} $TMP/config.${job}
+cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${SCRP_DIR}/config.rc|config.rc
+${SCRP_DIR}/${job}.sh|${job}.sh
+${SCRP_DIR}/src/|src/
+${NODEFILE_DIR}/|node/
+EOF
+else
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 ${SCRP_DIR}/config.rc|config.rc
 ${SCRP_DIR}/config.${job}|config.${job}
@@ -122,6 +132,7 @@ ${SCRP_DIR}/${job}.sh|${job}.sh
 ${SCRP_DIR}/src/|src/
 ${NODEFILE_DIR}/|node/
 EOF
+fi
 
 if [ "$CONF_MODE" != 'static' ]; then
   echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
