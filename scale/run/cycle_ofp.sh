@@ -203,6 +203,12 @@ stage_out server || exit $?
 echo "[$(datetime_now)] Finalization"
 echo
 
+if ((OBS_USE_JITDT_OFFLINE == 1)) ; then
+  echo "Stop JIT-DT Offilne!"
+  ${SCRP_DIR}/src/jitdt-lwatch-offline stop
+fi
+
+
 backup_exp_setting $job $TMP $jobid ${job}_job.sh 'o e'
 
 if [ "$CONF_MODE" = 'static' ]; then

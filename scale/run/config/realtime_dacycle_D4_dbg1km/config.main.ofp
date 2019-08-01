@@ -11,7 +11,7 @@ PRESET='OFP'
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
-
+USERNAME=honda
 OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT"
 EXP4=TEST_exp_d4_dbg1km_Kanto
 EXP3=TEST_exp_d3
@@ -39,12 +39,17 @@ DATA_BDY_WRF=                                                        # Directory
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 DATA_BDY_GRADS=
 
-#OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_TOSHIBA"
-OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_JRC"
+OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_TOSHIBA"
+#OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_JRC"
 OBSNCEP=
-OBS_USE_JITDT=0 # 1: Run with JIT-DT 
+OBS_USE_JITDT=1 # 1: Run with JIT-DT 
                 # 0: No JIT-DT
+OBS_USE_JITDT_OFFLINE=1 # 1: Offilne test
+                        # 0: Online (data should be transfered from NICT)
 
+JIT_TOP=/work/hp150019/share/honda/jitdt
+JIT_TARFILE=${JIT_TOP}/testdata/kobe_201901301200-09.tar
+JIT_OFFLOG=${JIT_TOP}/testdata/testdata201901301200.txt
 
 #===============================================================================
 # model/data file options
@@ -101,10 +106,10 @@ LAND_FORMAT=0          # 0: SCALE init files (with exactly same domain settings;
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
-#OBSNAME[1]=pawr
-#OBS_FORMAT[1]=PAWR_TOSHIBA
-OBSNAME[1]=ZV
-OBS_FORMAT[1]=PAWR_JRC
+OBSNAME[1]=pawr
+OBS_FORMAT[1]=PAWR_TOSHIBA
+#OBSNAME[1]=ZV
+#OBS_FORMAT[1]=PAWR_JRC
 
 #===============================================================================
 # Cycling settings
@@ -142,7 +147,8 @@ TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPS="$TMP"  # Temporary directory only on the server node
 TMPL="$TMP"
-TMP_JITDATA="/work/hp150019/share/nowcast/kobe"
+TMP_JITDATA="/work/hp150019/share/${USERNAME}/jitdt/offline/data"
+TMP_JITDATA_IP="$(hostname -i)"
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
                             #  0: No

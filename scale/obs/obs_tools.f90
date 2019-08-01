@@ -669,6 +669,7 @@ subroutine read_obs_all(obs)
   type(obs_info), intent(out) :: obs(OBS_IN_NUM)
   integer :: iof
   logical :: ex
+!  integer :: n
 
   do iof = 1, OBS_IN_NUM
     if (OBS_IN_FORMAT(iof) /= obsfmt_pawr_toshiba .and. OBS_IN_FORMAT(iof) /= obsfmt_pawr_jrc) then
@@ -691,13 +692,16 @@ subroutine read_obs_all(obs)
     case (obsfmt_radar)
       call get_nobs_radar(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
     case (obsfmt_pawr_toshiba)
-      if (.not. OBS_USE_JITDT) then
-        call read_obs_radar_toshiba(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof))
-      end if
+!      if (.not. OBS_USE_JITDT) then
+      call read_obs_radar_toshiba(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof))
+!      do n = 1, obs(iof)%nobs 
+!        write(6,('(a,3f5.1,i5,i6)'))"DEBUG obs ",obs(iof)%lon(n), obs(iof)%lat(n), obs(iof)%dat(n), int(obs(iof)%elm(n)),n
+!      enddo
+!      end if
     case (obsfmt_pawr_jrc)
-      if (.not. OBS_USE_JITDT) then
-        call read_obs_radar_jrc(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof))
-      end if
+!      if (.not. OBS_USE_JITDT) then
+      call read_obs_radar_jrc(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof))
+!      end if
     case (obsfmt_h08)
       call get_nobs_H08(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof)%nobs) ! H08
     case default
@@ -787,10 +791,10 @@ subroutine read_obs_all_mpi(obs)
   call mpi_timer('', 2, barrier=MPI_COMM_da)
 
   do iof = 1, OBS_IN_NUM
-    if ((OBS_IN_FORMAT(iof) == obsfmt_pawr_toshiba .or. OBS_IN_FORMAT(iof) == obsfmt_pawr_jrc)&
-        .and. OBS_USE_JITDT) then
-      cycle
-    end if
+!    if ((OBS_IN_FORMAT(iof) == obsfmt_pawr_toshiba .or. OBS_IN_FORMAT(iof) == obsfmt_pawr_jrc)&
+!        .and. OBS_USE_JITDT) then
+!      cycle
+!    end if
 
     call MPI_BCAST(obs(iof)%nobs, 1, MPI_INTEGER, 0, MPI_COMM_da, ierr)
     if (myrank_da /= 0) then
@@ -810,32 +814,27 @@ subroutine read_obs_all_mpi(obs)
 
   call mpi_timer('read_obs_all_mpi:mpi_bcast:', 2)
 
-  do iof = 1, OBS_IN_NUM
-    select case (OBS_IN_FORMAT(iof))
-    case (obsfmt_pawr_toshiba)
-      if (OBS_USE_JITDT) then
-        inquire(file=trim(OBS_IN_NAME(iof)), exist=ex)
-        if (.not. ex) then
-          write(6,'(2a)')"PAWR file cannot be found!", trim(OBS_IN_NAME(iof))
-          cycle
-        endif
-        call read_obs_radar_toshiba(trim(OBS_IN_NAME(iof)), obs(iof))
-      end if
-    case (obsfmt_pawr_jrc)
-      if (OBS_USE_JITDT) then
-        inquire(file=trim(OBS_IN_NAME(iof)), exist=ex)
-        if (.not. ex) then
-          write(6,'(2a)')"PAWR file cannot be found!", trim(OBS_IN_NAME(iof))
-          cycle
-        endif
-        call read_obs_radar_jrc(trim(OBS_IN_NAME(iof)), obs(iof))
-      end if
-    end select
-  end do ! [ iof = 1, OBS_IN_NUM ]
-
-  if (OBS_USE_JITDT) then
-    call mpi_timer('read_obs_all_mpi:read_obs_jitdt:', 2)
-  end if
+! Broadcast function in JIT-DT is not used, because SCALE-LETKF does not use
+! MPI_COMM_WORLD.
+! As in the original version of SCALE-LETKF, head node (myrank_da=0) only call
+! JIT-DT and receive the data before broadcast them.
+!
+!  do iof = 1, OBS_IN_NUM
+!    select case (OBS_IN_FORMAT(iof))
+!    case (obsfmt_pawr_toshiba)
+!      if (OBS_USE_JITDT) then
+!        call read_obs_radar_toshiba(trim(OBS_IN_NAME(iof)), obs(iof))
+!      end if
+!    case (obsfmt_pawr_jrc)
+!      if (OBS_USE_JITDT) then
+!        call read_obs_radar_jrc(trim(OBS_IN_NAME(iof)), obs(iof))
+!      end if
+!    end select
+!  end do ! [ iof = 1, OBS_IN_NUM ]
+!
+!  if (OBS_USE_JITDT) then
+!    call mpi_timer('read_obs_all_mpi:read_obs_jitdt:', 2)
+!  end if
 
   return
 end subroutine read_obs_all_mpi

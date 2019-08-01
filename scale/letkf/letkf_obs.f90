@@ -381,7 +381,7 @@ SUBROUTINE set_letkf_obs
 !  omp_chunk = min(10, max(1, (obsda%nobs-1) / OMP_GET_NUM_THREADS() + 1))
 !##!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
   do n = 1, obsda%nobs
-    IF(obsda%qc(n) > 0) CYCLE
+    IF(obsda%qc(n) > 0) CYCLE 
 
     iof = obsda%set(n)
     iidx = obsda%idx(n)
@@ -622,7 +622,7 @@ SUBROUTINE set_letkf_obs
     ELSE
 #endif
 
-    if (LOG_LEVEL >= 3) then
+    if (LOG_LEVEL >= 2) then
       write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
                                          obs(iof)%typ(iidx), &
                                          obs(iof)%lon(iidx), &

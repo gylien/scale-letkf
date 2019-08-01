@@ -506,7 +506,7 @@ fi
 #-------------------------------------------------------------------------------
 
 echo 
-echo "Make sure MPI configuration"
+echo "Check MPI configuration"
 if ((DACYCLE == 1 )); then
   REQ_MEM=$((MEMBER + 1 + DET_RUN)) # Member + 1 (mean) + 1 (mdet)
   if ((DACYCLE_RUN_FCST == 1)); then
@@ -519,6 +519,55 @@ if ((DACYCLE == 1 )); then
     echo "Required MPI processes: "$REQ_PRC
     echo "Current MPI processes: "$NUM_PRC
     exit 1
+  fi
+fi
+echo "OK!"
+echo 
+
+if ((DACYCLE == 1)); then
+  time=$STIME
+  n_cycles=0
+  while ((time <= ETIME)); do
+    n_cycles=$((n_cycles+1))
+    time=$(datetime $time $LCYCLE s)
+  done
+fi
+
+
+if ((DACYCLE == 1)) &&  ((OBS_USE_JITDT == 1)) ; then
+  echo 
+  echo "Use JIT-DT on IP: "${TMP_JITDATA}
+  echo
+  echo "Remove job.running at $TMP_JITDATA"
+#  rm -f ${TMP_JITDATA}/job.running
+  LWATCH_RUN=$(ps axfu  |grep -c [l]watcher)
+  if ((LWATCH_RUN > 0)) ; then
+    echo "lwatcher is running!"
+    LWATCH_INFO=$(ps axfu  |grep [l]watcher)
+    LWATCH_UID=${LWATCH_INFO:0:6}
+    if [ "${LWATCH_UID}" != "$(id -nu)" ] ; then
+      echo "lwatcher is run by another user:${LWATCH_UID}"
+      echo "Stop"
+      exit
+    fi
+  else
+    echo "Launch lwatcher!"
+    if ((OBS_USE_JITDT_OFFLINE == 1)) ; then
+      echo "JIT-DT Offilne!"
+      ./src/jitdt-lwatch-offline start
+    else
+      echo "JIT-DT NOT Offilne!"
+      exit
+#      ./lwatcher
+    fi
+  fi
+
+  if ((OBS_USE_JITDT_OFFLINE == 1)) ; then
+
+    echo "Launch offline test"
+    echo "JIT-DT will send the following files in "${JIT_TARFILE}
+    tar -tf ${JIT_TARFILE}
+    src/launch-jitdt-offline.sh ${n_cycles} > /dev/null&
   fi
 fi
 
@@ -536,15 +585,6 @@ PRC_DOMAINS_LIST=
 for d in $(seq $DOMNUM); do
   PRC_DOMAINS_LIST="$PRC_DOMAINS_LIST${SCALE_NP[$d]}, "
 done
-
-if ((DACYCLE == 1)); then
-  time=$STIME
-  n_cycles=0
-  while ((time <= ETIME)); do
-    n_cycles=$((n_cycles+1))
-    time=$(datetime $time $LCYCLE s)
-  done
-fi
 
 time=$STIME
 atime=$(datetime $time $LCYCLE s)
@@ -1194,6 +1234,7 @@ EOF
             -e "/!--OBS_POSTFIX_TIMELABEL--/a OBS_POSTFIX_TIMELABEL = ${OBS_POSTFIX_TIMELABEL_TF}," \
             -e "/!--OBS_USE_JITDT--/a OBS_USE_JITDT = ${OBS_USE_JITDT_TF}," \
             -e "/!--OBS_JITDT_DATADIR--/a OBS_JITDT_DATADIR = \"${TMP_JITDATA}\"," \
+            -e "/!--OBS_JITDT_IP--/a OBS_JITDT_IP = \"${TMP_JITDATA_IP}\"," \
             -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \
             -e "/!--OBSDA_OUT--/a OBSDA_OUT = $OBSDA_OUT" \
             -e "/!--OBSDA_OUT_BASENAME--/a OBSDA_OUT_BASENAME = \"<member>/obsgues.d${dfmt}_${atime}\"," \

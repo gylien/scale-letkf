@@ -2257,7 +2257,7 @@ subroutine timelabel_update(lcycle)
   else
     timelabel_obs = ''
   end if
-  if (LOG_LEVEL >= 3) then
+  if (LOG_LEVEL >= 4) then
     write (6, '(2A)') 'Timelabel for observation files: ', timelabel_obs
   end if
 
@@ -2267,7 +2267,7 @@ subroutine timelabel_update(lcycle)
   else
     timelabel_anal = ''
   end if
-  if (LOG_LEVEL >= 3) then
+  if (LOG_LEVEL >= 4) then
     write (6, '(2A)') 'Timelabel for guess/analysis files: ', timelabel_anal
   end if
 
@@ -2290,7 +2290,7 @@ subroutine timelabel_update(lcycle)
   else
     timelabel_hist = ''
   end if
-  if (LOG_LEVEL >= 3) then
+  if (LOG_LEVEL >= 4) then
     write (6, '(2A)') 'Timelabel for history files: ', timelabel_hist
   end if
 

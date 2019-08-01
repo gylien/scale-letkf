@@ -759,8 +759,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   integer, parameter :: n_type = 3
   character(len=1024) :: jitdt_place
-  character(len=3), parameter :: file_type_sfx(n_type) = &
-    (/'.ze', '.vr', '.qc'/)
+  character(len=4), parameter :: file_type_sfx(n_type) = &
+    (/'.ze', '.vr', '.qcf'/)
   logical, parameter :: input_is_dbz = .true.
 
   type(c_pawr_header) :: hd(n_type)
@@ -802,7 +802,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
 #ifdef JITDT
   if (OBS_USE_JITDT) then
-    jitdt_place = trim(OBS_JITDT_DATADIR) // '/'
+!    jitdt_place = trim(OBS_JITDT_DATADIR) !// '/'
+    jitdt_place = trim(OBS_JITDT_IP)
     write(*, *) "jitdt_place = ", trim(jitdt_place)
 
     ierr = jitdt_read_toshiba(n_type, jitdt_place, hd, az, el, rtdat)
@@ -816,7 +817,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 #endif
     do j = 1, n_type
       input_fname(j) = trim(cfile)
-      call str_replace(input_fname(j), '<type>', file_type_sfx(j), pos)
+      call str_replace(input_fname(j), '<type>', trim(file_type_sfx(j)), pos)
       if (pos == 0) then
         write (6, '(5A)') "[Error] Keyword '<type>' is not found in '", trim(cfile), "'."
         stop 1

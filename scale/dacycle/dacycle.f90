@@ -346,7 +346,7 @@ program dacycle
 
         call read_obs_all_mpi(obs)
 
-        call mpi_timer('READ_OBS', 1, barrier=MPI_COMM_da)
+        call mpi_timer('READ_OBS (This may include JIT-DT waiting time)', 1, barrier=MPI_COMM_da)
 
         !-----------------------------------------------------------------------
         ! Observation operator

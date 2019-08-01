@@ -19,8 +19,10 @@ LAPACK_LIB = -mkl=sequential
 BUFR_LIB   = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
 
 # JIT-DT
+ENABLE_JITDT = T
 JITDT_INC  = -I/work/hp150019/share/nowcast/include
-JITDT_LIB  = -L/work/hp150019/share/nowcast/lib -ljitdt-pl
+JITDT_LIB  = -L/work/hp150019/share/nowcast/lib -ljitdt-l
+#JITDT_LIB  = -L/work/hp150019/share/nowcast/lib -ljitdt-pl
 
 # Compiler flags
 #-----------------
