@@ -58,8 +58,8 @@ real,parameter::range_latr=35.3
 
 integer,parameter::nlonadd=20
 integer,parameter::nlatadd=20
-integer,parameter::nlon_ext=nlon+nlonadd
-integer,parameter::nlat_ext=nlat+nlatadd
-  real(4),parameter::axlon_ext(nlon_ext)=(/( range_lonl+real(i-1)/real(nlonadd/2)*(axlon(1)-range_lonl), i=1,nlonadd/2), axlon, ( axlon(nlon)+real(i-1)/real(nlonadd/2)*(range_lonr-axlon(nlon)), i=1,nlonadd/2) /)
-  real(4),parameter::axlatSN_ext(nlat_ext)=(/( range_latl+real(i-1)/real(nlatadd/2)*(axlatSN(1)-range_latl), i=1,nlatadd/2), axlatSN, ( axlatSN(nlat)+real(i-1)/real(nlatadd/2)*(range_latr-axlatSN(nlat)), i=1,nlatadd/2) /)
+integer,parameter::nlon_ext=nlong+nlonadd
+integer,parameter::nlat_ext=nlatg+nlatadd
+  real(4),parameter::axlon_ext(nlon_ext)=(/( range_lonl+real(i-1)/real(nlonadd/2)*(axlon(1)-range_lonl), i=1,nlonadd/2), axlon, ( axlon(nlong)+real(i-1)/real(nlonadd/2)*(range_lonr-axlon(nlong)), i=1,nlonadd/2) /)
+  real(4),parameter::axlatSN_ext(nlat_ext)=(/( range_latl+real(i-1)/real(nlatadd/2)*(axlatSN(1)-range_latl), i=1,nlatadd/2), axlatSN, ( axlatSN(nlatg)+real(i-1)/real(nlatadd/2)*(range_latr-axlatSN(nlatg)), i=1,nlatadd/2) /)
 
