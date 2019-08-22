@@ -16,19 +16,19 @@
  TIME_STARTMS               = 0.D0,
 !--TIME_DURATION--
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = <TIME_DT>,
+ TIME_DT                    = 40.0D0,
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = <TIME_DT_DYN>,
+ TIME_DT_ATMOS_DYN          = 8.0D0,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
- TIME_DT_ATMOS_PHY_MP       = <TIME_DT>,
+ TIME_DT_ATMOS_PHY_MP       = 40.0D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_CP       = <TIME_DT>,
+ TIME_DT_ATMOS_PHY_CP       = 40.0D0,
  TIME_DT_ATMOS_PHY_CP_UNIT  = "SEC",
  TIME_DT_ATMOS_PHY_RD       = 600.D0,
  TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_SF       = <TIME_DT>,
+ TIME_DT_ATMOS_PHY_SF       = 40.0D0,
  TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",
- TIME_DT_ATMOS_PHY_BL       = <TIME_DT>,
+ TIME_DT_ATMOS_PHY_BL       = 40.0D0,
  TIME_DT_ATMOS_PHY_BL_UNIT  = "SEC",
  TIME_DT_OCEAN              = 600.D0,
  TIME_DT_OCEAN_UNIT         = "SEC",
@@ -85,8 +85,8 @@
 #################################################
 
 &PARAM_PRC_CARTESC
- PRC_NUM_X      = 8,
- PRC_NUM_Y      = 6,
+ PRC_NUM_X      = 16,
+ PRC_NUM_Y      = 12,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -99,8 +99,8 @@
 
 &PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 36,
- IMAX = 40,
- JMAX = 40,
+ IMAX = 20,
+ JMAX = 20,
 /
 
 &PARAM_LAND_GRID_CARTESC_INDEX
