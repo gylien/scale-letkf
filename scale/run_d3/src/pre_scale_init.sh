@@ -204,7 +204,7 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = $RESTART_OUTPUT," \
         -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME =  \"${OUTDIR}/${STIME}/anal/${MEM}/init\"," \
-        -e "/!--RESTART_OUT_POSTFIX_TIMELABEL--/a RESTART_OUT_POSTFIX_TIMELABEL =  .false.," \
+        -e "/!--RESTART_OUT_POSTFIX_TIMELABEL--/a RESTART_OUT_POSTFIX_TIMELABEL =  .true.," \
         -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${INDIR}/const/topo/topo\"," \
         -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${INDIR}/const/landuse/landuse\"," \
         -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT_CONSTDB}/land/param.bucket.conf\"," \
