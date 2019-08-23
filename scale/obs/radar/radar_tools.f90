@@ -287,7 +287,6 @@ CONTAINS
 
     packed_grid_count=0
     do idx = 1, nobs
-     if (mod(idx,1000).eq.0) write(*,*) packed_grid(idx)
      packed_grid_count(packed_grid(idx))=packed_grid_count(packed_grid(idx))+1
    end do
     !Sort index array

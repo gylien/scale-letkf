@@ -1030,15 +1030,15 @@ write(*,*) nlon,nlat,nlev,nobs_sp
 !  write(*, *) "done"
 
 !  !!! OUTPUT CARTESIAN COORDINATE DATE FOR DEBUG !!!
-if (nobs_ze.gt.0) then 
-  write(*, *) "writing cartesian data ..."
-  i=i+1
-  write(fname, '(I03.3)') i
-  call output_grads_obs("super_" // fname // ".grd", nlon, nlat, nlev, nobs_sp, grid_index, &
-       &                grid_ze, grid_lon_ze, grid_lat_ze, grid_z_ze, grid_count_ze, &
-       &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr, missing)
-  write(*, *) "done"
- endif
+!if (nobs_ze.gt.0) then 
+!  write(*, *) "writing cartesian data ..."
+!  i=i+1
+!  write(fname, '(I03.3)') i
+!  call output_grads_obs("super_" // fname // ".grd", nlon, nlat, nlev, nobs_sp, grid_index, &
+!       &                grid_ze, grid_lon_ze, grid_lat_ze, grid_z_ze, grid_count_ze, &
+!       &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr, missing)
+!  write(*, *) "done"
+! endif
 
   if(allocated(ze)) deallocate(ze)
   if(allocated(vr)) deallocate(vr)
