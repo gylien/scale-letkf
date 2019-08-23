@@ -796,8 +796,11 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   integer, parameter :: int1 = selected_int_kind(1) !1-BYTE INT
   integer(kind = int1) :: tmp_qcf, valid_qcf
 
+!  integer,parameter :: qcf_mask(8)=(/ 1, 0, 0, 0, 0, 0, 0, 0 /) !! valid, shadow, clutter possible, clutter certain, interference, range sidelobe /
   integer,parameter :: qcf_mask(8)=(/ 0, 1, 1, 1, 1, 0, 0, 0 /) !! valid, shadow, clutter possible, clutter certain, interference, range sidelobe /
 !!!  integer,parameter :: qcf_mask(8)=(/ 0, 0, 0, 0, 0, 0, 0, 0 /) !! valid, shadow, clutter possible, clutter certain, interference, range sidelobe /
+
+ integer::qcf_count(0:255)
 
   call mpi_timer('', 3)
 
@@ -861,11 +864,13 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   write(*, *) "missing = ", missing
 
 !  i = 1
-!  !!! OUTPUT SPHERICAL COORDINATE DATA FOR DEBUG !!!
+!! OUTPUT SPHERICAL COORDINATE DATA FOR DEBUG !!!
 !  write(fname, '(I03.3)') i
 !  open(1, file = trim(fname) // ".bin", access = "stream", form = "unformatted")
 !  write(1) rtdat(1:hd(1)%range_num, 1:hd(1)%sector_num, 1:hd(1)%el_num, :)
 !  close(1)
+
+!  i=0
 
   nr = hd(1)%range_num
   na = hd(1)%sector_num
@@ -877,13 +882,19 @@ subroutine read_obs_radar_toshiba(cfile, obs)
     if(qcf_mask(j) > 0) valid_qcf = ibset(valid_qcf, j - 1) 
   end do
 
+!
+!qcf_count=0
+
 !$omp parallel do private(ia, ir, ie)
   do ie = 1, ne
      do ir = 1, nr
         do ia = 1, na
            ze(ia, ir, ie) = rtdat(ir, ia, ie, 1)
            vr(ia, ir, ie) = rtdat(ir, ia, ie, 2)                                                                      
-           tmp_qcf = int(rtdat(ia, ir, ie, 3), int1)
+           tmp_qcf = int(rtdat(ir, ia, ie, 3), int1)
+
+ !          qcf_count(tmp_qcf)=qcf_count(tmp_qcf)+1
+           
            if(iand(valid_qcf, tmp_qcf) == 0) then      
               qcflag(ia, ir, ie) = 0.0d0 !valid
            else
@@ -895,6 +906,14 @@ subroutine read_obs_radar_toshiba(cfile, obs)
      end do
   end do
 !$omp end parallel do
+
+
+
+
+!do j=0,255
+! write(*,*) j,qcf_count(j)
+!end do
+!stop
 
   call mpi_timer('read_obs_radar_toshiba:preliminary_qc:', 3)
 
@@ -931,6 +950,11 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   write(*, *) "done"
 
   call mpi_timer('read_obs_radar_toshiba:radar_superobing:', 3)
+
+
+
+!!!!! check
+write(*,*) nlon,nlat,nlev,nobs_sp
 
 
 

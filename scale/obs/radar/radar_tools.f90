@@ -104,12 +104,14 @@ CONTAINS
              do ia = 1, na
                 radlat(ia, ir, ie) = asin(sinll1_cdist + cosll1_sdist * cos_azim(ia)) * rad2deg
                 radlon(ia, ir, ie) = lon0 + atan2(sdist * sin_azim(ia), cosll1_cdist - sinll1_sdist * cos_azim(ia)) * rad2deg
+
              end do !ia
           end if
        end do !ir
     end do !ie
 !$omp end do
 !$omp end parallel
+
     return
   end subroutine radar_georeference
 
@@ -171,19 +173,19 @@ CONTAINS
 !$omp end do
 !$omp end parallel
 
-    !write(6,*)'DEFINE GRID DETAILED OUTPUT     '
-    !WRITE(6,*)'NLON ', nlon
-    !WRITE(6,*)'NLAT ', nlat
-    !WRITE(6,*)'NLEV ', nlev
-    !WRITE(6,*)'MAXRANGE ', maxrange
-    !WRITE(6,*)'STARTING LON ', lon(1)
-    !WRITE(6,*)'STARTING LAT ', lat(1)
-    !WRITE(6,*)'END      LON ', lon(nlon)
-    !WRITE(6,*)'END      LAT ', lat(nlat)
-    !WRITE(6,*)'DLAT         ', dlat
-    !WRITE(6,*)'DLON         ', dlon
-    !WRITE(6,*)'DX           ', dx
-    !WRITE(6,*)'DZ           ', dz
+!    write(6,*)'DEFINE GRID DETAILED OUTPUT     '
+!    WRITE(6,*)'NLON ', nlon
+!    WRITE(6,*)'NLAT ', nlat
+!    WRITE(6,*)'NLEV ', nlev
+!    WRITE(6,*)'MAXRANGE ', maxrange
+!    WRITE(6,*)'STARTING LON ', lon(1)
+!    WRITE(6,*)'STARTING LAT ', lat(1)
+!    WRITE(6,*)'END      LON ', lon(nlon)
+!    WRITE(6,*)'END      LAT ', lat(nlat)
+!    WRITE(6,*)'DLAT         ', dlat
+!    WRITE(6,*)'DLON         ', dlon
+!    WRITE(6,*)'DX           ', dx
+!    WRITE(6,*)'DZ           ', dz
 
 
   END SUBROUTINE define_grid
@@ -228,6 +230,12 @@ CONTAINS
     integer(8) :: idx, jdx, nobs
     !integer time1, time2, timerate, timemax
 
+    integer :: ia,ir,ie
+    integer,parameter::nobs_sp_max=1199*1199*110
+    integer :: packed_grid_count(nobs_sp_max)
+
+
+
     !QC
     !call system_clock(time1, timerate, timemax)
     call apply_qcflag(na, nr, ne, ze, vr, qcflag, missing, input_is_dbz, lon0, lat0, radlon, radlat, radz, & ! input
@@ -238,6 +246,18 @@ CONTAINS
     !AVERAGE DATA AND INCLUDE OBSERVATIONA ERROR.
     !We will compute the i,j,k for each radar grid point and box average the data.
 
+!!!! TEST !!!!
+!   idx=0
+!    do ie = 1, ne,10                                                                                                  
+!     do ir = 1, nr,10
+!       do ia = 1, na,10                                                                                                            
+!         write(*,'(3I4, 3F9.3)') ia,ir,ie, ze(ia,ir,ie), qcflag(ia,ir,ie), qced_ze(ia,ir,ie)
+!         if (ze(ia,ir,ie).ne.missing) idx=idx+1
+!       end do                                                                                                               
+!     end do                                                                                                            
+!    end do
+!  write(*,*) idx
+!stop
 
 
     !Write QCED DATA
@@ -255,6 +275,7 @@ CONTAINS
     !write(*, *) "index", (time2 - time1) / dble(timerate)
     !write(*, *) "nobs = ", nobs
 
+
     !Pack data
     !time1 = time2
     call packing(na, nr, ne, radlon, radlat, radz, qced_ze, qced_vr, attenuation, & ! input spherical
@@ -264,6 +285,11 @@ CONTAINS
     !call system_clock(time2, timerate, timemax)
     !write(*, *) "pack", (time2 - time1) / dble(timerate)
 
+    packed_grid_count=0
+    do idx = 1, nobs
+     if (mod(idx,1000).eq.0) write(*,*) packed_grid(idx)
+     packed_grid_count(packed_grid(idx))=packed_grid_count(packed_grid(idx))+1
+   end do
     !Sort index array
     !time1 = time2
     allocate(grid_index(nobs))
@@ -272,7 +298,12 @@ CONTAINS
        grid_index(idx) = packed_grid(idx)
     end do
 !$omp end parallel do
-!    call merge_sort_parallel(nobs, grid_index) ! Check T. Honda
+
+
+!!!    call merge_sort_parallel(nobs, grid_index) ! Check T. Honda
+    call quicksort(nobs, grid_index) 
+
+
     !call system_clock(time2, timerate, timemax)
     !write(*, *) "sort", (time2 - time1) / dble(timerate)
 
@@ -281,7 +312,7 @@ CONTAINS
     call uniq_int_sorted(nobs, grid_index, nobs_sp)
     !call system_clock(time2, timerate, timemax)
     !write(*, *) "uniq", (time2 - time1) / dble(timerate)
-    !write(*, *) "nobs_sp = ", nobs_sp
+!    write(*, *) "nobs_sp = ", nobs_sp
 
     !Inverted indexing
     !time1 = time2
@@ -612,6 +643,8 @@ CONTAINS
                 !rad2grid(ia, ir, ie) = ANINT(ri) + (ANINT(rj) + ANINT(rk) * nlat) * nlon + 1
                 !modified code
                 rad2grid(ia, ir, ie) = aint(ri) + (aint(rj) + aint(rk) * nlat) * nlon + 1
+          !!!        write(*,'(A,3I5,A,3I5,A)') '***', ia,ir,ie,' : ',aint(ri),aint(rj), aint(rk),'***'
+          !!!        write(*,*) '***', ia,ir,ie,' : ',aint(ri),aint(rj), aint(rk),'***'
                 mask(ia, ir, ie) = .true.
              end IF
           end do ! ia
@@ -786,18 +819,18 @@ CONTAINS
     return
   end subroutine heapsort
 
-!  subroutine merge_sort_parallel(n, array)
-!    use omp_lib
-!    integer(8), intent(in) :: n
-!    integer(8), intent(inout) :: array(n)
-!    logical omp_nested
-!    integer maxnest
-!    omp_nested = omp_get_nested()
-!    maxnest = floor(log(dble(omp_get_max_threads())) / log(2.0d0))
-!    call omp_set_nested(.true.)
-!    call merge_sort_2threads(n, array, 0, maxnest)
-!    call omp_set_nested(omp_nested)
-!  end subroutine merge_sort_parallel
+  subroutine merge_sort_parallel(n, array)
+    use omp_lib
+    integer(8), intent(in) :: n
+    integer(8), intent(inout) :: array(n)
+    logical omp_nested
+    integer maxnest
+    omp_nested = omp_get_nested()
+    maxnest = floor(log(dble(omp_get_max_threads())) / log(2.0d0))
+    call omp_set_nested(.true.)
+    call merge_sort_2threads(n, array, 0, maxnest)
+    call omp_set_nested(omp_nested)
+  end subroutine merge_sort_parallel
 
   recursive subroutine merge_sort_2threads(n, array, nest, maxnest)
     implicit none
