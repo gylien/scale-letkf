@@ -8,6 +8,7 @@ integer,parameter::nlong=128,nlatg=128
 include 'latlon_d4.h'
 
 real(4),intent(in)::val_plot_s(nlong,nlatg)
+real(4)::val_plot(nlong,nlatg)
 character(*),intent(in)::psfile
 
 integer,parameter::nwork=3*(nlong+2)*(nlatg+2)/2+1
@@ -25,6 +26,9 @@ real(4),parameter::rmiss=-9.99e20
 integer::iclrmap
 integer::ilon,ilat
 real(4)::vpr,vpl,vpt,vpb
+
+val_plot=val_plot_s
+where(.not.val_plot.gt.rmiss) val_plot=rmiss
 
 title1='SCALE-LETKF'
 title2=(/'',''/)
@@ -124,7 +128,7 @@ end do
    vtlevs(ntpat+3) = 1.0e10
   call uestln(vtlevs(1:ntpat+3),itpats(1:ntpat+2),ntpat+2)
 
-  call uetone (val_plot_s,nlong,nlong,nlatg)
+  call uetone (val_plot,nlong,nlong,nlatg)
 
   call dcbar(vpr+0.02,vpb,(vpt-vpb)*0.8)
 
@@ -159,6 +163,8 @@ end do
   call umpmap('coast_japan')
 
 !  call uulinz(npts,vlons_area_d2,vlats_area_d2,3,91)
+
+  call uumrkz(1,vlon_radarloc,vlat_radarloc,9,21,0.010)
 
   amtics=0.5
   astics=0.5
