@@ -2867,7 +2867,7 @@ END SUBROUTINE wgt_ave2d
 SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc,zenith1d,stggrd)
   use scale_mapprojection, only: &
       MAPPROJECTION_rotcoef
-  use scale_H08_fwd
+  use scale_H08_fwd12
   use scale_atmos_grid_cartesC_index, only: &
       KHALO, IHALO, JHALO, &
       KS, KE, KA, KMAX
@@ -3093,7 +3093,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
 !        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using (lon,lat).
 !
 
-  CALL SCALE_RTTOV_fwd(NIRB_HIM8, & ! num of channels
+  CALL SCALE_RTTOV_fwd12(NIRB_HIM8, & ! num of channels
                        nlev,& ! num of levels
                        nprof,& ! num of profs
                        prs2d(elev:slev:-1,1:nprof),& ! (Pa)
@@ -3166,7 +3166,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   use scale_mapprojection, only: &
       MAPPROJECTION_rotcoef, &
       MAPPROJECTION_xy2lonlat
-  use scale_H08_fwd
+  use scale_H08_fwd12
   use scale_atmos_grid_cartesC_index, only: &
       KHALO, IHALO, JHALO, &
       KS, KE, KA, KMAX
@@ -3353,7 +3353,7 @@ print *,"Hello from Trans_XtoY_H08_allg"
 !        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using (lon,lat).
 !
 
-  CALL SCALE_RTTOV_fwd(NIRB_HIM8, & ! num of channels
+  CALL SCALE_RTTOV_fwd12(NIRB_HIM8, & ! num of channels
                        KMAX,& ! num of levels
                        nlon*nlat,& ! num of profs
                        prs2d(:,:),& ! (Pa)
