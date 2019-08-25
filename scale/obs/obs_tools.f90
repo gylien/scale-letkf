@@ -173,7 +173,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   end if
 
   if (DEPARTURE_STAT_ALL_PROCESSES .or. myrank_e == mmean_rank_e) then
-    if (LOG_LEVEL >= 3) then
+    if (LOG_LEVEL >= 3 .and. myrank_da == 0) then
       if (monit_step == 1) then
         write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (IN THIS SUBDOMAIN):'
       else if (monit_step == 2) then

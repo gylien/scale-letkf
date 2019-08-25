@@ -131,10 +131,13 @@ jobscrp="$TMP/${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
+if [ "$RSCGRP" == "" ] ; then
+  RSCGRP="regular-cache"
+fi
+
 cat > $jobscrp << EOF
 #!/bin/sh
-##PJM -L rscgrp=regular-flat
-#PJM -L rscgrp=debug-flat
+#PJM -L rscgrp=${RSCGRP}
 #PJM -L node=${NNODES}
 #PJM -L elapse=${TIME_LIMIT}
 #PJM --mpi proc=$((NNODES*PPN))
@@ -203,7 +206,7 @@ stage_out server || exit $?
 echo "[$(datetime_now)] Finalization"
 echo
 
-if ((OBS_USE_JITDT_OFFLINE == 1)) ; then
+if ((OBS_USE_JITDT == 1)) && ((OBS_USE_JITDT_OFFLINE == 1)) ; then
   echo "Stop JIT-DT Offilne!"
   ${SCRP_DIR}/src/jitdt-lwatch-offline stop
 fi

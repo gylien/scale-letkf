@@ -443,7 +443,8 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
     zs= 3.48d3 * ( ro * qsp * 1.0d3 )**1.66
     ENDIF
     IF( qgp .GT. 0.0d0)THEN
-    zg= 8.18d4 * ( ro * qgp * 1.0d3 )**1.50
+!!!    zg= 8.18d4 * ( ro * qgp * 1.0d3 )**1.50 !!! hail (Xue et al. 2009)
+    zg= 5.54d3 * ( ro * qgp * 1.0d3 )**1.70  !!! graupel (A.Amemiya 2019)
     ENDIF
     IF( qms .GT. 0.0d0 )THEN
     zms=( 0.00491 + 5.75*fws - 5.588*(fws**2) )*1.0d5
@@ -768,7 +769,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   real(kind=c_float) :: el(AZDIM, ELDIM, n_type)
   real(kind=c_float) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
   integer j, ierr
-!  character(len=3) :: fname
+  character(len=3) :: fname
+  integer, save::i=0
 
   real(r_size), allocatable :: ze(:, :, :), vr(:, :, :), qcflag(:, :, :), attenuation(:, :, :), rrange(:)
   real(r_size), allocatable :: radlon(:, :, :), radlat(:, :, :), radz(:, :, :)
@@ -791,7 +793,14 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   integer :: nobs_ze, nobs_vr
   integer(8) :: idx, n
   integer :: pos
+  integer, parameter :: int1 = selected_int_kind(1) !1-BYTE INT
+  integer(kind = int1) :: tmp_qcf, valid_qcf
 
+!  integer,parameter :: qcf_mask(8)=(/ 1, 0, 0, 0, 0, 0, 0, 0 /) !! valid, shadow, clutter possible, clutter certain, interference, range sidelobe /
+  integer,parameter :: qcf_mask(8)=(/ 0, 1, 1, 1, 1, 0, 0, 0 /) !! valid, shadow, clutter possible, clutter certain, interference, range sidelobe /
+!!!  integer,parameter :: qcf_mask(8)=(/ 0, 0, 0, 0, 0, 0, 0, 0 /) !! valid, shadow, clutter possible, clutter certain, interference, range sidelobe /
+
+ integer::qcf_count(0:255)
 
   call mpi_timer('', 3)
 
@@ -856,24 +865,38 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   write(*, *) "missing = ", missing
 
 !  i = 1
-!  !!! OUTPUT SPHERICAL COORDINATE DATA FOR DEBUG !!!
+!! OUTPUT SPHERICAL COORDINATE DATA FOR DEBUG !!!
 !  write(fname, '(I03.3)') i
 !  open(1, file = trim(fname) // ".bin", access = "stream", form = "unformatted")
 !  write(1) rtdat(1:hd(1)%range_num, 1:hd(1)%sector_num, 1:hd(1)%el_num, :)
 !  close(1)
+
+!  i=0
 
   nr = hd(1)%range_num
   na = hd(1)%sector_num
   ne = hd(1)%el_num
   allocate(ze(na, nr, ne), vr(na, nr, ne), qcflag(na, nr, ne), attenuation(na, nr, ne))
 
+  valid_qcf = 0
+  do j = 1, 8  
+    if(qcf_mask(j) > 0) valid_qcf = ibset(valid_qcf, j - 1) 
+  end do
+
+!
+!qcf_count=0
+
 !$omp parallel do private(ia, ir, ie)
   do ie = 1, ne
      do ir = 1, nr
         do ia = 1, na
            ze(ia, ir, ie) = rtdat(ir, ia, ie, 1)
-           vr(ia, ir, ie) = rtdat(ir, ia, ie, 2)
-           if(rtdat(ir, ia, ie, 3) <= 1.1d0) then
+           vr(ia, ir, ie) = rtdat(ir, ia, ie, 2)                                                                      
+           tmp_qcf = int(rtdat(ir, ia, ie, 3), int1)
+
+ !          qcf_count(tmp_qcf)=qcf_count(tmp_qcf)+1
+           
+           if(iand(valid_qcf, tmp_qcf) == 0) then      
               qcflag(ia, ir, ie) = 0.0d0 !valid
            else
               qcflag(ia, ir, ie) = 1000.0d0 !invalid
@@ -884,6 +907,14 @@ subroutine read_obs_radar_toshiba(cfile, obs)
      end do
   end do
 !$omp end parallel do
+
+
+
+
+!do j=0,255
+! write(*,*) j,qcf_count(j)
+!end do
+!stop
 
   call mpi_timer('read_obs_radar_toshiba:preliminary_qc:', 3)
 
@@ -920,6 +951,11 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   write(*, *) "done"
 
   call mpi_timer('read_obs_radar_toshiba:radar_superobing:', 3)
+
+
+
+!!!!! check
+write(*,*) nlon,nlat,nlev,nobs_sp
 
 
 
@@ -995,12 +1031,15 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 !  write(*, *) "done"
 
 !  !!! OUTPUT CARTESIAN COORDINATE DATE FOR DEBUG !!!
+!if (nobs_ze.gt.0) then 
 !  write(*, *) "writing cartesian data ..."
+!  i=i+1
 !  write(fname, '(I03.3)') i
 !  call output_grads_obs("super_" // fname // ".grd", nlon, nlat, nlev, nobs_sp, grid_index, &
 !       &                grid_ze, grid_lon_ze, grid_lat_ze, grid_z_ze, grid_count_ze, &
 !       &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr, missing)
 !  write(*, *) "done"
+! endif
 
   if(allocated(ze)) deallocate(ze)
   if(allocated(vr)) deallocate(vr)
@@ -1046,7 +1085,7 @@ subroutine read_obs_radar_jrc(cfile, obs)
   real(r_sngl) :: sf_vr, sf_zh ! scale factor for vr & Zh
   real(r_sngl) :: fill_vr, fill_zh ! fill values for vr & Zh
   real(r_size) :: radar_lon, radar_lat
-#ifdef SINGLE
+#ifdef SINGLELETKF
   real(8) :: radar_lon_r8, radar_lat_r8
 #endif
 
@@ -1114,7 +1153,7 @@ subroutine read_obs_radar_jrc(cfile, obs)
     fill_zh = -32768.0
   endif
 
-#ifdef SINGLE
+#ifdef SINGLELETKF
   call ncio_read_gattr_r8(ncid, "site_positions_center_latitude",  radar_lon_r8)
   call ncio_read_gattr_r8(ncid, "site_positions_center_longitude", radar_lat_r8)
  radar_lon=real(radar_lon_r8)

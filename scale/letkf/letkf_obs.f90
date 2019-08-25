@@ -412,7 +412,7 @@ SUBROUTINE set_letkf_obs
       if (obs(iof)%dat(iidx) > RADAR_REF_THRES_DBZ+1.0d-6) then
         if (mem_ref < MIN_RADAR_REF_MEMBER_OBSREF) then
           obsda%qc(n) = iqc_ref_mem
-          if (LOG_LEVEL >= 3) then
+          if (LOG_LEVEL >= 5) then
             write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
             write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
                   '*  (lon,lat)=(',obs(iof)%lon(iidx),',',obs(iof)%lat(iidx),'), mem_ref=', &
@@ -423,7 +423,7 @@ SUBROUTINE set_letkf_obs
       else
         if (mem_ref < MIN_RADAR_REF_MEMBER) then
           obsda%qc(n) = iqc_ref_mem
-          if (LOG_LEVEL >= 3) then
+          if (LOG_LEVEL >= 5) then
             write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
             write (6,'(A,F6.2,A,F6.2,A,I6,A,F7.3)') &
                   '*  (lon,lat)=(',obs(iof)%lon(iidx),',',obs(iof)%lat(iidx),'), mem_ref=', &
@@ -622,7 +622,7 @@ SUBROUTINE set_letkf_obs
     ELSE
 #endif
 
-    if (LOG_LEVEL >= 2) then
+    if (LOG_LEVEL >= 4) then
       write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
                                          obs(iof)%typ(iidx), &
                                          obs(iof)%lon(iidx), &

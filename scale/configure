@@ -31,3 +31,9 @@ ifeq ($(ENABLE_JITDT),T)
 FOPTS     += -DJITDT
 FOPTS_SCALE += -DJITDT
 endif
+
+ifeq ($(ENABLE_PLOT_DCL),T)
+LIBDCL = -L/work/hp150019/c24140/Lib/dcl/lib -lf77dcl734 -lgtk-x11-2.0 -lgdk-x11-2.0 -latk-1.0 -lgio-2.0 -lpangoft2-1.0 -lpangocairo-1.0 -lgdk_pixbuf-2.0 -lcairo -lpango-1.0 -lfontconfig -lgobject-2.0 -lglib-2.0 -lfreetype  
+FOPTS += -DPLOT_DCL $(LIBDCL)
+FOPTS_SCALE += -DPLOT_DCL $(LIBDCL)
+endif

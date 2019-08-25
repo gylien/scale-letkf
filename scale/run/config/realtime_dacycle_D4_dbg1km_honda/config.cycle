@@ -5,9 +5,10 @@
 #
 #===============================================================================
 
-STIME='20190130120000'
-ETIME='20190130120000'
-TIME_LIMIT='0:40:00'
+STIME='20190610080000'
+ETIME='20190610080030'
+
+TIME_LIMIT='0:15:00'
 CYCLE=
 CYCLE_SKIP=1
 
@@ -17,6 +18,15 @@ FSTEP=
 CONF_MODE="static"
 DACYCLE=1
 DIRECT_TRANSFER=1
+
+# Run fcst from analysis ensemble mean by dacycle-forecast members
+DACYCLE_RUN_FCST=1
+
+# Maximum number of dacycle forecasts 
+MAX_DACYCLE_RUN_FCST=1
+
+# Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
+DACYCLE_RUN_FCST_TIME=60 # sec
 
 #===============================================================================
 # Forecast settings
@@ -37,10 +47,17 @@ MAKEINIT=0       # 0: No
 #===============================================================================
 # Diagnostic output settings
 
-                 #      fcst
-                 #      history restart
-OUT_OPT=2        # 1:   o       o
-                 # 2:   o
+                 #      anal              gues              history
+                 #      mean/sprd members mean/sprd members mean members
+OUT_OPT=7        # 1:   o         o       o         o       o    o
+                 # 2:   o         o       o         o       o
+                 # 3:   o         o       o         o
+                 # 4:   o         o       o
+                 # 5:   o         *       o                               * = every $OUT_CYCLE_SKIP cycles and the last cycle
+                 # 6:   o         **      o                               ** = only the last cycle
+                 # 7:   o         **
+
+OUT_CYCLE_SKIP=1
 
                  #      topo
 TOPOOUT_OPT=2    # 1:   o

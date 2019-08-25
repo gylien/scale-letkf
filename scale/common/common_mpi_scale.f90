@@ -1314,24 +1314,25 @@ subroutine write_ens_mpi(v3d, v2d, mean3d, mean2d)
         if (ATMOS_RESTART_IN_POSTFIX_TIMELABEL) then
           if (trim(filename) /= trim(ATMOS_RESTART_IN_BASENAME)//trim(timelabel_anal)) then
 
-            if (LOG_LEVEL >= 3 .or. myrank_a == 0) then
+            if (LOG_LEVEL >= 3 .or. myrank_da == 0) then
               write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
               write (6, '(3A)') "        Output filename in LETKF = '", trim(filename), "'"
               write (6, '(3A)') "        Input  filename in SCALE = '", trim(ATMOS_RESTART_IN_BASENAME)//trim(timelabel_anal), "'"
             endif
-
-            stop
+            ! File names can be different if INDIR and OUTDIR are different
+            !stop
           endif
         else
           if (trim(filename) /= trim(ATMOS_RESTART_IN_BASENAME)) then
 
-            if (LOG_LEVEL >= 3 .or. myrank_a == 0) then
+            if (LOG_LEVEL >= 3 .or. myrank_da == 0) then
                 write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
                 write (6, '(3A)') "        Output filename in LETKF = '", trim(filename), "'"
                 write (6, '(3A)') "        Input  filename in SCALE = '", trim(ATMOS_RESTART_IN_BASENAME), "'"
             endif
 
-            stop
+            ! File names can be different if INDIR and OUTDIR are different
+            !stop
           end if
         end if
  
@@ -1895,6 +1896,8 @@ end subroutine receive_emean_direct
 ! Write the subdomain model data into a single GrADS file from DACYCLE (additional) forecasts
 !-------------------------------------------------------------------------------
 subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
+  use mod_admin_time, only: &
+    TIME_DTSEC_ATMOS_RESTART
   use mod_atmos_vars, only: &
     TEMP
 !  use scale_atmos_hydrometeor, only: &
@@ -1913,63 +1916,46 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   character(len=H_LONG) :: filename
   real(r_sngl) :: bufs4(nlong,nlatg)
   real(r_sngl) :: bufr4(nlong,nlatg)
+  real(r_sngl) :: lon2dgs(nlong,nlatg)
+  real(r_sngl) :: lat2dgs(nlong,nlatg)
   integer :: iunit, iolen
   integer :: k, n, irec, ierr
   integer :: proc_i, proc_j
   integer :: ishift, jshift
+  character(4) :: ftsec ! forecast time (second)
 
+#ifdef PLOT_DCL
+  character(len=H_LONG) :: plotname
+#endif
 !  real(r_sngl) :: v2d_ref(nlong,nlatg,nv3dd)
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
   jshift = proc_j * nlat
 
-  if (myrank_d == 0) then
-    filename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_ref3d_"//trim(timelabel)//".grd"
-    iunit = 55
-    inquire (iolength=iolen) iolen
-    open (iunit, file=trim(filename), form='unformatted', access='direct', &
-          status='unknown', convert='native', recl=nlong*nlatg*iolen)
-    irec = (step - 1)*nlev*2 ! 2 variable (nlev*2 record) output 
-  end if
+  ! gather global lon/lat 
+  write(6,'(a)')"DEBUG000"
+  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(lon2d, r_sngl)
+  call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+  lon2dgs(:,:) = bufr4
+
+  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(lat2d, r_sngl)
+  call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+  lat2dgs(:,:) = bufr4
+
+!    v2d_ref(:,:,n) = bufs4
+
+!  if (myrank_d == 0) then
+!    filename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_ref3d_"//trim(timelabel)//".grd"
+!    iunit = 55
+!    inquire (iolength=iolen) iolen
+!    open (iunit, file=trim(filename), form='unformatted', access='direct', &
+!          status='unknown', convert='native', recl=nlong*nlatg*iolen)
+!    irec = (step - 1)*nlev*2 ! 2 variable (nlev*2 record) output 
+!  end if
+
 
   ! Gather required data for reflectivity computation
-
-!  k = 1 ! vertical level
-!
-!  do n = 1, nv3dd
-!    bufs4(:,:) = 0.0
-!
-!    select case(n)
-!    case (iv3dd_p)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(PRES(KS+k,IS:IE,JS:JE), r_sngl)
-!    case (iv3dd_q)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(QV(KS+k,IS:IE,JS:JE), r_sngl)
-!    case (iv3dd_qc)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(QC(KS+k,IS:IE,JS:JE), r_sngl)
-!    case (iv3dd_qr)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(QR(KS+k,IS:IE,JS:JE), r_sngl)
-!    case (iv3dd_qi)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(QI(KS+k,IS:IE,JS:JE), r_sngl)
-!    case (iv3dd_qs)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(QS(KS+k,IS:IE,JS:JE), r_sngl)
-!    case (iv3dd_qg)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(QG(KS+k,IS:IE,JS:JE), r_sngl)
-!    case default
-!      continue
-!    end select
-!
-!    call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
-!
-!    v2d_ref(:,:,n) = bufs4
-!
-!    if (myrank_d == 0) then
-!      irec = irec + 1
-!      write (iunit, rec=irec) bufr4
-!    end if
-!  enddo ! n = 1, nv3dd
-!
-!  call calc_ref_vr()
 
   do k = 1, nlev 
     bufs4(:,:) = 0.0
@@ -1977,28 +1963,28 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
     call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
 
     if (myrank_d == 0) then
-      irec = irec + 1
-      write (iunit, rec=irec) bufr4
+!      irec = irec + 1
+!      write (iunit, rec=irec) bufr4
+
+#ifdef PLOT_DCL
+      if ( k .eq. 13) then !!! 1500m?
+        !write(plotname,'(A,I3.3,A)')  trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_dbz_"//trim(timelabel)//"_",step
+        write(ftsec,'(I4.4)')  (step - 1) * int(TIME_DTSEC_ATMOS_RESTART) ! tentative
+        !plotname = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_dbz_"//trim(timelabel)//"_"//ftsec
+        plotname = "fcst_dbz_"//trim(timelabel)//"_FT"//ftsec//"s"
+  write(6,'(a)')trim(plotname)
+  write(6,'(a)')trim(DACYCLE_RUN_FCST_OUTNAME)
+        call plot_dbz_DCL (bufr4,lon2dgs,lat2dgs,trim(plotname))
+      end if
+#endif
     end if
 
   enddo
 
-  ! debug
-  do k = 1, nlev 
-    bufs4(:,:) = 0.0
-    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(TEMP(KHALO+k,IS:IE,JS:JE), r_sngl)
-    call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
-
-    if (myrank_d == 0) then
-      irec = irec + 1
-      write (iunit, rec=irec) bufr4
-    end if
-
-  enddo
-
-  if (myrank_d == 0) then
-    close (iunit)
-  end if
+!
+!  if (myrank_d == 0) then
+!    close (iunit)
+!  end if
 
   return
 end subroutine write_grd_dafcst_mpi

@@ -470,7 +470,7 @@ SUBROUTINE phys2ijk(p_full,elem,ri,rj,rlev,rk,qc)
     !
     IF(rk < plev(nlev+KHALO)) THEN
       call itpl_2d(p_full(nlev+KHALO,:,:),ri,rj,ptmp)
-      if (LOG_LEVEL >= 2) then
+      if (LOG_LEVEL >= 4) then
         write(6,'(A,F8.1,A,F8.1,A,I5)') '[Warning] observation is too high: ptop=', ptmp, ', lev=', rlev, ', elem=', elem
       end if
       rk = undef
@@ -591,7 +591,7 @@ SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
   !
   IF(rlev > zlev(nlev+KHALO)) THEN
     call itpl_2d(z_full(nlev+KHALO,:,:),ri,rj,ztmp)
-    if (LOG_LEVEL >= 3) then
+    if (LOG_LEVEL >= 4) then
       write(6,'(A,F8.1,A,F8.1)') '[Warning] observation is too high: ztop=', ztmp, ', lev=', rlev
     end if
     rk = undef
@@ -600,7 +600,7 @@ SUBROUTINE phys2ijkz(z_full,ri,rj,rlev,rk,qc)
   END IF
   IF(rlev < zlev(ks)) THEN
     call itpl_2d(z_full(ks,:,:),ri,rj,ztmp)
-    if (LOG_LEVEL >= 3) then
+    if (LOG_LEVEL >= 4) then
       write(6,'(A,F8.1,A,F8.1)') '[Warning] observation is too low: zbottom=', ztmp, ', lev=', rlev
     end if
     rk = undef

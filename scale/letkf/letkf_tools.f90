@@ -126,7 +126,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
 
   call mpi_timer('', 2)
 
-  if (LOG_LEVEL >= 3) then
+  if (LOG_LEVEL >= 3 .and. myrank_da == 0) then
     WRITE(6,'(A)') 'Hello from das_letkf'
     WRITE(6,'(A,F15.2)') '  INFL_MUL = ',INFL_MUL
 
@@ -344,7 +344,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       ! if the weight is zero, no analysis update is needed
       call relax_beta(rig1(ij),rjg1(ij),hgt1(ij,ilev),beta)
 
-      if (LOG_LEVEL >= 3) then
+      if (LOG_LEVEL >= 5) then
         write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:relax_beta(lev=', ilev, ',ij=', ij, '):'
         call mpi_timer(trim(timer_str), 4)
       end if
@@ -369,7 +369,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
           end do
         end if
 
-        if (LOG_LEVEL >= 3) then
+        if (LOG_LEVEL >= 5) then
           write (timer_str, '(A30,I4,A4,I4,A7)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',allv):'
           call mpi_timer(trim(timer_str), 4)
         end if
@@ -395,7 +395,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
             anal3d(ij,ilev,mmdet,n) = gues3d(ij,ilev,mmdet,n)                          !GYL
           end if                                                                       !GYL
 
-          if (LOG_LEVEL >= 3) then
+          if (LOG_LEVEL >= 5) then
             write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_skip(lev=', ilev, ',ij=', ij, ',n=', n, '):'
             call mpi_timer(trim(timer_str), 5)
           end if
@@ -419,7 +419,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
             work3dn(:,ij,ilev,n) = work3dn(:,ij,ilev,n2n)
           end if
 
-          if (LOG_LEVEL >= 3) then
+          if (LOG_LEVEL >= 5) then
             write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_copy(lev=', ilev, ',ij=', ij, ',n=', n, '):'
             call mpi_timer(trim(timer_str), 5)
           end if
@@ -466,7 +466,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
             work3dn(nobtype+6,ij,ilev,n) = real(cutd_t(11,22),r_size)                  !GYL !!! CUTOFF_DIST: vr
           END IF                                                                       !GYL
 
-          if (LOG_LEVEL >= 3) then
+          if (LOG_LEVEL >= 5) then
             write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(lev=', ilev, ',ij=', ij, ',n=', n, '):'
             call mpi_timer(trim(timer_str), 5)
           end if
@@ -531,14 +531,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
           END IF                                                                       !GYL
         END IF                                                                         !GYL
 
-        if (LOG_LEVEL >= 3) then
+        if (LOG_LEVEL >= 5) then
           write (timer_str, '(A30,I4,A4,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(lev=', ilev, ',ij=', ij, ',n=', n, '):'
           call mpi_timer(trim(timer_str), 5)
         end if
 
       END DO ! [ n=1,nv3d ]
 
-      if (LOG_LEVEL >= 3) then
+      if (LOG_LEVEL >= 5) then
         write (timer_str, '(A25,I4,A4,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, ',ij=', ij, '):'
         call mpi_timer(trim(timer_str), 4)
       end if
@@ -615,7 +615,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
               work2dn(:,ij,n) = real(sum(nobsl_t,dim=1),r_size)                        !GYL !!! NOBS: sum over all variables for each report type
             END IF                                                                     !GYL
 
-            if (LOG_LEVEL >= 3) then
+            if (LOG_LEVEL >= 5) then
               write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_calc(2d,ij=', ij, ',n=', n, '):'
               call mpi_timer(trim(timer_str), 5)
             end if
@@ -664,14 +664,14 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
                                + anal2d(ij,mmdet,n) * beta                           !GYL
           end if                                                                     !GYL
 
-          if (LOG_LEVEL >= 3) then
+          if (LOG_LEVEL >= 5) then
             write (timer_str, '(A32,I4,A3,I2,A2)') 'das_letkf:letkf_core_anal(2d,ij=', ij, ',n=', n, '):'
             call mpi_timer(trim(timer_str), 5)
           end if
 
         END DO ! [ n=1,nv2d ]
 
-        if (LOG_LEVEL >= 3) then
+        if (LOG_LEVEL >= 5) then
           write (timer_str, '(A27,I4,A2)') 'das_letkf:letkf_core(2d,ij=', ij, '):'
           call mpi_timer(trim(timer_str), 4)
         end if
@@ -682,7 +682,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
 !##!$OMP END DO
 
 !##!$OMP MASTER
-    if (LOG_LEVEL >= 3) then
+    if (LOG_LEVEL >= 5) then
       if (maxval(MAX_NOBS_PER_GRID(:)) > 0 .and. MAX_NOBS_PER_GRID_CRITERION == 1) then
         do ic = 1, nctype
           write (6, '(A,I4,A)') 'ic=', ic, ': search_q0='
@@ -698,7 +698,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d,addi3d,addi2d)
       end if
     end if
 
-    if (LOG_LEVEL >= 3) then
+    if (LOG_LEVEL >= 4) then
       write (timer_str, '(A25,I4,A2)') 'das_letkf:letkf_core(lev=', ilev, '):'
       call mpi_timer(trim(timer_str), 3)
     endif
@@ -1161,7 +1161,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
         end if ! [ obsgrd(ic2)%tot_ext > 0 ]
       end do ! [ do icm = 1, n_merge(ic) ]
 
-      if (LOG_LEVEL >= 3) then
+      if (LOG_LEVEL >= 5) then
         write (6, '(A,14x,I8)') '--- ALL      : ', nn
       end if
 
@@ -1221,7 +1221,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
 
         nn_steps(n_merge(ic)+1) = nn
 
-        if (LOG_LEVEL >= 3) then
+        if (LOG_LEVEL >= 5) then
           write (6, '(A,I4,A,F12.3,L2,I8,8x,10F12.3)') '--- TRY #', q, ': ', search_incr(1)*q, reach_cutoff, nn, search_incr(2:n_merge(ic))*q
         end if
 
@@ -1262,7 +1262,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
           end if ! [ nn_steps(icm+1) > nn_steps(icm) ]
         end do ! [ do icm = 1, n_merge(ic) ]
 
-        if (LOG_LEVEL >= 3) then
+        if (LOG_LEVEL >= 5) then
           write (6, '(A,I4,A,F12.3,L2,2I8,10F12.3)') '--- TRY #', q, ': ', search_incr(1)*q, reach_cutoff, nn, nobsl_incr, search_incr(2:n_merge(ic))*q
         end if
 
@@ -1299,7 +1299,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
           depd(nobsl) = obsda_sort%ensval(mmdetobs,iob)
         end if
 
-        if (LOG_LEVEL >= 3) then
+        if (LOG_LEVEL >= 5) then
           ic2 = ctype_elmtyp(uid_obs(obs(obsda_sort%set(iob))%elm(obsda_sort%idx(iob))), obs(obsda_sort%set(iob))%typ(obsda_sort%idx(iob)))
           do icm = 1, n_merge(ic)
             if (ic2 == ic_merge(icm,ic)) then
@@ -1309,7 +1309,7 @@ subroutine obs_local(ri, rj, rlev, rz, nvar, hdxf, rdiag, rloc, dep, nobsl, depd
         end if
       end do
 
-      if (LOG_LEVEL >= 3) then
+      if (LOG_LEVEL >= 5) then
         if (nobsl_incr == nobsl_max_master) then
           cutd = hori_loc_ctype(ic) * sqrt(dist_tmp(nobs_use2(nobsl_incr)))
         else

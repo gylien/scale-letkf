@@ -32,11 +32,14 @@ LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)
 endif
 
 ifeq ($(ENABLE_JITDT),T)
-#JITDT_LIB=-L/work/hp150019/share/nowcast/lib
-#JITDT_INC=-I/work/hp150019/share/nowcast/include
 OBJS    += jitdt_read_toshiba.o jitdt_read_toshiba_f.o
-INCS    +=$(JITDT_INC)
+INCS    += $(JITDT_INC)
 LIBS    += $(JITDT_LIB)
+endif
+
+ifeq ($(ENABLE_PLOT_DCL),T)
+COMMON_OBJS += $(COMMON_DIR)/plot_dbz_DCL.o
+LIBS += $(LIBDCL)
 endif
 
 .PHONY:	all clean FORCE

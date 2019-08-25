@@ -2,11 +2,14 @@ include ../configure
 
 OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_sort.o common_rand.o common_letkf.o \
 	  common_ncio.o common_scale.o common_scalerm.o common_obs_scale.o common_mpi_scale.o \
-          common_nml.o
+          common_nml.o 
           #common_precip.o
 
 ifeq ($(H08),T)
 OBJS    += scale_H08_fwd.o
+endif
+ifeq ($(ENABLE_PLOT_DCL),T)
+OBJS    += plot_dbz_DCL.o
 endif
 
 all:	$(OBJS) datetime pdbash 
@@ -18,8 +21,16 @@ pdbash:	pdbash.o SFMT.o
 
 common.o:	../../common/common.f90
 	$(SFC) $(FOPTS) -c $<
-common_mpi.o:	../../common/common_mpi.f90 common.o
-	$(FC) $(FOPTS) -c $<
+ifeq ($(ENABLE_PLOT_DCL),T)
+common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o common_scale.o plot_dbz_DCL.o
+	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC) -I$(SCALE_RM_OBJDIR)
+plot_dbz_DCL.o:	plot_dbz_DCL.f90 common_scale.o
+	$(SFC) $(FOPTS) -c $< $(SCALE_INC)
+else
+common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o common_scale.o
+	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC) -I$(SCALE_RM_OBJDIR)
+endif
+
 common_mtx.o:	../../common/common_mtx.f90 common.o
 	$(SFC) $(FOPTS) -c $<
 SFMT.o: ../../common/SFMT.f90
@@ -49,8 +60,9 @@ else
 common_obs_scale.o:	common_obs_scale.f90 common.o common_nml.o common_scale.o
 	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC)
 endif
-common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o common_scale.o
-	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC) -I$(SCALE_RM_OBJDIR)
+common_mpi.o:	../../common/common_mpi.f90 common.o
+	$(FC) $(FOPTS) -c $<
+
 #common_precip.o:	common_precip.f90 common.o common_scale.o common_letkf.o
 #	$(SFC) $(FOPTS) -c $<
 common_nml.o:	common_nml.f90 common.o

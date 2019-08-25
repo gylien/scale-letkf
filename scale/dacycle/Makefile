@@ -45,6 +45,11 @@ COMMON_OBJS += $(COMMON_DIR)/scale_H08_fwd.o
 LIBS    += $(RT_INCLUDE) $(RT_LDFLAGS)
 endif
 
+ifeq ($(ENABLE_PLOT_DCL),T)
+COMMON_OBJS += $(COMMON_DIR)/plot_dbz_DCL.o
+LIBS += $(LIBDCL)
+endif
+
 ifeq ($(ENABLE_JITDT),T)
 OBS_OBJS += $(OBS_DIR)/jitdt_read_toshiba.o \
             $(OBS_DIR)/jitdt_read_toshiba_f.o

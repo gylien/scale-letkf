@@ -900,12 +900,12 @@ while ((time <= ETIME)); do
       mmmm=$(printf %04d $m)
       if ((m == 0)); then
         mmmm="mean"
-      elif ((m == MEMBER_MAX)) & ((DET_RUN == 1 )); then
+      elif ((m == $MEMBER_MAX)) && ((DET_RUN == 1 )); then
         mmmm="mdet"
       fi
       mkdir -p ${OUTDIR[$d]}/${time}/hist/$mmmm
-      mkdir -p ${OUTDIR[$d]}/${atime}/gues/$mmmm
-      mkdir -p ${OUTDIR[$d]}/${atime}/anal/$mmmm
+      mkdir -p ${OUTDIR[$d]}/${time}/gues/$mmmm
+      mkdir -p ${OUTDIR[$d]}/${time}/anal/$mmmm
     done
 
     if ((DACYCLE == 1)); then
@@ -933,7 +933,7 @@ while ((time <= ETIME)); do
     if ((loop == 1 && MAKEINIT == 1 && DACYCLE != 1)); then
       RESTART_IN_BASENAME="<member>/init.d${dfmt}"
     else
-      RESTART_IN_BASENAME="${OUTDIR[$d]}/${time}/anal/<member>/init"
+      RESTART_IN_BASENAME="${INDIR[$d]}/${time}/anal/<member>/init"
     fi
     RESTART_OUT_ADDITIONAL_COPIES=0
     RESTART_OUT_ADDITIONAL_BASENAME=
@@ -1025,8 +1025,8 @@ EOF
             -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = .true.," \
             -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${OUTDIR[$d]}/${time}/anal/<member>/init\"," \
             -e "/!--RESTART_OUT_POSTFIX_TIMELABEL--/a RESTART_OUT_POSTFIX_TIMELABEL = .true.," \
-            -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${OUTDIR[$d]}/const/topo/topo\"," \
-            -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${OUTDIR[$d]}/const/landuse/landuse\"," \
+            -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${INDIR[$d]}/const/topo/topo\"," \
+            -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${INDIR[$d]}/const/landuse/landuse\"," \
             -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${FILE_HISTORY_DEFAULT_BASENAME}\"," \
             -e "/!--FILE_HISTORY_DEFAULT_TINTERVAL--/a FILE_HISTORY_DEFAULT_TINTERVAL = ${CYCLEFOUT}.D0," \
             -e "/!--FILE_HISTORY_OUTPUT_STEP0--/a FILE_HISTORY_OUTPUT_STEP0 = ${FILE_HISTORY_OUTPUT_STEP0}," \
@@ -1045,7 +1045,7 @@ EOF
             -e "/!--RESTART_OUT_ADDITIONAL_EFF_MEMBER--/a RESTART_OUT_ADDITIONAL_EFF_MEMBER = ${RESTART_OUT_ADDITIONAL_EFF_MEMBER}")"
     if ((d == 1)); then
       conf="$(echo "$conf" | \
-          sed -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${OUTDIR[$d]}/${bdy_start_time}/bdy/${mem_bdy}/boundary\"," \
+          sed -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${INDIR[$d]}/${bdy_start_time}/bdy/${mem_bdy}/boundary\"," \
               -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = ${bdy_start_time:0:4}, ${bdy_start_time:4:2}, ${bdy_start_time:6:2}, ${bdy_start_time:8:2}, ${bdy_start_time:10:2}, ${bdy_start_time:12:2}," \
               -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0,")"
     fi
@@ -1099,7 +1099,8 @@ EOF
   if ((DACYCLE == 1)); then
     OBS_POSTFIX_TIMELABEL_TF=".true."
     HISTORY_POSTFIX_TIMELABEL_TF=".true."
-    GUES_ANAL_POSTFIX_TIMELABEL_TF=".true."
+#    GUES_ANAL_POSTFIX_TIMELABEL_TF=".true."
+    GUES_ANAL_POSTFIX_TIMELABEL_TF=".false."
   else
     OBS_POSTFIX_TIMELABEL_TF=".false."
     HISTORY_POSTFIX_TIMELABEL_TF=".false."
@@ -1255,7 +1256,7 @@ EOF
             -e "/!--ANAL_MDET_OUT_FREQ--/a ANAL_MDET_OUT_FREQ = ${ANAL_MDET_OUT_FREQ}," \
             -e "/!--ANAL_SPRD_OUT_FREQ--/a ANAL_SPRD_OUT_FREQ = ${ANAL_SPRD_OUT_FREQ}," \
             -e "/!--GUES_ANAL_POSTFIX_TIMELABEL--/a GUES_ANAL_POSTFIX_TIMELABEL = ${GUES_ANAL_POSTFIX_TIMELABEL_TF}," \
-            -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${OUTDIR[$d]}/const/topo/topo\"," \
+            -e "/!--LETKF_TOPO_IN_BASENAME--/a LETKF_TOPO_IN_BASENAME = \"${INDIR[$d]}/const/topo/topo\"," \
             -e "/!--INFL_ADD_IN_BASENAME--/a INFL_ADD_IN_BASENAME = \"${OUTDIR[$d]}/const/addi/init\"," \
             -e "/!--RELAX_SPREAD_OUT--/a RELAX_SPREAD_OUT = ${RTPS_INFL_OUT_TF}," \
             -e "/!--RELAX_SPREAD_OUT_BASENAME--/a RELAX_SPREAD_OUT_BASENAME = \"${RELAX_SPREAD_OUT_BASENAME}\"," \

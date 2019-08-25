@@ -440,7 +440,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       ! Valid observations: loop over time slots
       ! 
       do islot = SLOT_START, SLOT_END
-        if (LOG_LEVEL >= 3) then
+        if (LOG_LEVEL >= 3 .and. myrank_da == 0) then
           write (6, '(A,I3,A,F9.1,A,F9.1,A)') 'Slot #', islot-SLOT_START+1, ': time window (', slot_lb(islot), ',', slot_ub(islot), '] sec'
         endif
 
@@ -449,12 +449,12 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
         slot_nobsg = sum(bsn(islot, :))
 
         if (slot_nobsg <= 0) then
-          if (LOG_LEVEL >= 3) write (6, '(A)') ' -- no observations found in this time slot... do not need to read model data'
+          if (LOG_LEVEL >= 3 .and. myrank_da == 0) write (6, '(A)') ' -- no observations found in this time slot... do not need to read model data'
           cycle
         end if
 
-        if (LOG_LEVEL >= 3) write (6, '(A,I10)') ' -- # obs in the slot = ', slot_nobsg
-        if (LOG_LEVEL >= 3) write (6, '(A,I6,A,I6,A,I10)') ' -- # obs in the slot and processed by rank ', myrank, ' (subdomain #', myrank_d, ') = ', bsn(islot, myrank_d)
+        if (LOG_LEVEL >= 3 .and. myrank_da == 0) write (6, '(A,I10)') ' -- # obs in the slot = ', slot_nobsg
+        if (LOG_LEVEL >= 3 .and. myrank_da == 0) write (6, '(A,I6,A,I6,A,I10)') ' -- # obs in the slot and processed by rank ', myrank, ' (subdomain #', myrank_d, ') = ', bsn(islot, myrank_d)
 
         call mpi_timer('', 2)
 

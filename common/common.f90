@@ -17,7 +17,7 @@ MODULE common
 !-----------------------------------------------------------------------
   INTEGER,PARAMETER :: r_dble=kind(0.0d0)
   INTEGER,PARAMETER :: r_sngl=kind(0.0e0)
-#ifdef SINGLE
+#ifdef SINGLELETKF
   INTEGER,PARAMETER :: r_size=r_sngl
 #else
   INTEGER,PARAMETER :: r_size=r_dble
@@ -874,7 +874,7 @@ SUBROUTINE com_gamma(x,ga)
               DO 10 K=2,M1
 10               GA=GA*K
            ELSE
-#ifdef SINGLE
+#ifdef SINGLELETKF
               GA=1.0E+30
 #else
               GA=1.0D+300
@@ -882,7 +882,7 @@ SUBROUTINE com_gamma(x,ga)
            ENDIF
         ELSE
 
-#ifdef SINGLE
+#ifdef SINGLELETKF
            IF (ABS(X).GT.1.0D0) THEN
               Z=ABS(X)
 #else
@@ -913,7 +913,7 @@ SUBROUTINE com_gamma(x,ga)
            DO 20 K=25,1,-1
 20            GR=GR*Z+G(K)
            GA=1.0D0/(GR*Z)
-#ifdef SINGLE
+#ifdef SINGLELETKF
            IF (ABS(X).GT.1.0D0) THEN
               GA=GA*R
               IF (X.LT.0.0D0) GA=-PI/(X*GA*SIN(PI*X))
