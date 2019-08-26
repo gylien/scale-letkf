@@ -1,78 +1,55 @@
 !==================================================!
-subroutine plot_dbz_DCL(nlong_in,nlatg_in,val_plot_s,topo2dgs,psfile,cheight) 
+subroutine plot_dbz_DCL(val_plot_s,topo2dgs,psfile,cheight) 
   use scale_io, only: &
     H_LONG
   use scale_atmos_grid_cartesC_index, only: &
-      IHALO, JHALO, IAG, JAG, &
-      nlong => IMAXG, &
-      nlatg => JMAXG
+      IHALO, JHALO
   use scale_atmos_grid_cartesC, only: &
       GRID_CXG => ATMOS_GRID_CARTESC_CXG, &
       GRID_CYG => ATMOS_GRID_CARTESC_CYG
 !  use common_scale, only : &
 !    nlong,nlatg 
 
-  integer,intent(in) :: nlong_in, nlatg_in
-  real(4),intent(in) :: val_plot_s(nlong_in,nlatg_in)
-  real(4),intent(in) :: topo2dgs(nlong_in,nlatg_in)
-  character(*),intent(in) :: psfile
+  integer,parameter :: nlong=128
+  integer,parameter :: nlatg=128
+
+  include 'latlon_d4.h'
+
+  real(4),intent(in) :: val_plot_s(nlong,nlatg)
+!  real(4),intent(in) :: lon2dgs(nlong,nlatg)
+!  real(4),intent(in) :: lat2dgs(nlong,nlatg)
+  real(4),intent(in) :: topo2dgs(nlong,nlatg)
+  real(4) :: val_plot(nlong,nlatg)
+  character(H_LONG),intent(in) :: psfile
   character(5),intent(in) :: cheight
 
-  real(4),allocatable :: val_plot(:,:)
-
-  integer,allocatable :: iwork(:)
-  
-
- integer,parameter::nlonadd=20
- integer,parameter::nlatadd=20 
-  real(4),allocatable :: grid_cxg_ext(:)
-  real(4),allocatable :: grid_cyg_ext(:)
-  real(4),allocatable :: vmask(:,:)
-  
-  real(4),parameter :: rmiss = -9.99e20
+  integer,parameter :: nwork = 3*(nlong+2)*(nlatg+2)/2+1
+  integer :: iwork(nwork)
   
   integer,parameter :: npatmax = 40
   real(4) :: vtlevs(npatmax)
-  integer :: itpats(npatmax)  
-  character*40 :: title1,title2(2),title3
-
-  integer :: iclrmap
-  integer :: ilon,ilat,nwork,nlong_ext,nlatg_ext
-  real(4) :: vpr,vpl,vpt,vpb
-
-
-  if (nlong_in.ne.nlong)then
-   write(*,*) 'error :: nlong not match ', nlong_in, nlong 
-   stop
-  end if
-  if (nlatg_in.ne.nlatg)then
-   write(*,*) 'error :: nlatg not match ', nlatg_in, nlatg 
-   stop
-  end if
+  integer :: itpats(npatmax)
   
-  nlong_ext = nlong+nlonadd
-  nlatg_ext = nlatg+nlatadd 
-  allocate(val_plot(nlong,nlatg),grid_cxg_ext(nlong_ext),grid_cyg_ext(nlatg_ext),vmask(nlong_ext,nlatg_ext))
-
-  nwork = 3*(nlong+2)*(nlatg+2)/2+1
-  allocate(iwork(nwork))
-
+  real(4) :: vmask(nlon_ext,nlat_ext)
+  character*40 :: title1,title2(2),title3
+  
+  real(4),parameter :: rmiss = -9.99e20
+  
+  integer :: iclrmap
+  integer :: ilon,ilat
+  real(4) :: vpr,vpl,vpt,vpb
+  
   val_plot=val_plot_s
   where(.not.val_plot.gt.rmiss) val_plot=rmiss
-
-
+  
   title1='SCALE-LETKF'
   title2=(/'',''/)
   title3='radar ref ' // cheight // ' m'
   
-  if (cheight(1:1).eq.'0') title3='radar ref ' // cheight(2:5) // ' m'
-  if (cheight(1:2).eq.'00') title3='radar ref ' // cheight(3:5) // ' m'
-
-
   iclrmap=12
   
-  do ilon=1,nlong_ext
-  do ilat=1,nlatg_ext
+  do ilon=1,nlon_ext
+  do ilat=1,nlat_ext
    if (ilon-nlonadd/2.ge.1.and.ilon-nlonadd/2.lt.nlong .and. &
        ilat-nlatadd/2.ge.1.and.ilat-nlatadd/2.lt.nlatg  )then
     if (val_plot_s(ilon-nlonadd/2,ilat-nlatadd/2).ne.rmiss)then
@@ -85,23 +62,6 @@ subroutine plot_dbz_DCL(nlong_in,nlatg_in,val_plot_s,topo2dgs,psfile,cheight)
    end if
   end do
   end do
-
-  grid_cxg_ext(nlonadd/2+1:nlong_ext-nlonadd/2) = real(grid_cxg(IHALO+1:IAG-IHALO))
-  grid_cyg_ext(nlatadd/2+1:nlatg_ext-nlatadd/2) = real(grid_cyg(JHALO+1:JAG-JHALO))
- do ilon=1,nlonadd/2
-  grid_cxg_ext(ilon) = grid_cxg_ext(nlonadd/2+1) - real(nlonadd/2+1-ilon) * (grid_cxg_ext(nlonadd/2+2)-grid_cxg_ext(nlonadd/2+1)) 
-  grid_cxg_ext(nlong_ext-ilon+1) = grid_cxg_ext(nlong_ext-nlonadd/2) + real(nlonadd/2+1-ilon) * (grid_cxg_ext(nlonadd/2+2)-grid_cxg_ext(nlonadd/2+1)) 
-end do
- do ilat=1,nlatadd/2
-  grid_cyg_ext(ilat) = grid_cyg_ext(nlatadd/2+1) - real(nlatadd/2+1-ilat) * (grid_cyg_ext(nlatadd/2+2)-grid_cyg_ext(nlatadd/2+1)) 
-  grid_cyg_ext(nlatg_ext-ilat+1) = grid_cyg_ext(nlatg_ext-nlatadd/2) + real(nlatadd/2+1-ilat) * (grid_cyg_ext(nlatadd/2+2)-grid_cyg_ext(nlatadd/2+1)) 
-end do
-
-  range_lonl=GRID_CXG(IHALO+1)-10.0e3
-  range_lonr=GRID_CXG(IAG-IHALO)+10.0e3
-  range_latl=GRID_CYG(JHALO+1)-10.0e3
-  range_latr=GRID_CYG(JAG-JHALO)+10.0e3
-
 
   vpl=0.15
   vpr=0.85
@@ -116,7 +76,6 @@ end do
    vpr=0.55+0.5*(vpt-vpb)*aratio
   end if
 
-  call gliset('MSGLEV',1)
   call sgiset('IFONT',1)
   call swiset('ICLRMAP',iclrmap)
   call swcmll
@@ -131,33 +90,51 @@ end do
   call slmgn(0.0,0.0,0.0,0.0)
   call grfrm
 
-
   call grswnd(range_lonl,range_lonr,range_latl,range_latr)
 
   call grsvpt(vpl,vpr,vpb,vpt)
-  call grstrn(1) !!! Give up map proj
+  call grstrn(10) !!! Mercator
 
-!!!!!  call grstrn(10) !!! Mercator
-!!!!  call umlset('LGLOBE',.false.)
-!!!!  call umiset('INDEXOUT',31)
+  call umlset('LGLOBE',.false.)
+  call umiset('INDEXOUT',31)
 !  call umscnt (0.5*(vlonl+vlonr),0.5*(vlatl+vlatr),0.0)
-!!!!  call umpfit
+
+  call umpfit
 
   call grstrf
+
 
   call glrset ('RMISS', rmiss)
   call gllset ('LMISS', .true.)
 
-  call uwsgxa (grid_cxg_ext(nlonadd/2+1:nlong_ext-nlonadd/2),nlong)
-  call uwsgya (grid_cyg_ext(nlatadd/2+1:nlatg_ext-nlatadd/2),nlatg)
+  call uwsgxa (axlon,nlong)
+  call uwsgya (axlatSN,nlatg)
+
+!  call uegtla (vsmin,vsmax,vsintv)
+!  if (abs(vsmin).eq.abs(vsmax)) call uestlv(-vsintv,vsintv,55999)
 
   call ueitlv
+
+!  ntpat = int((vsmax-vsmin) / vsintv)
+!  vtlevs (1) = -1.0e6
+!   do ipat=1,ntpat
+!    vtlevs(ipat+1) = vsmin + real(ipat-1) * vsintv
+!    vtlevs(ipat+2) = vsmin + real(ipat) * vsintv
+!   end do
+!  vtlevs (ntpat+3) = 1.0e6
+
+!  if (abs(vsmin).eq.abs(vsmax)) then
+!   itpats(1:ntpat+2) = (/ 16, 20,30,40,50, 55,55, 60,70,80,90, 94/) * 1000+999
+!  else
+!   itpats(1:ntpat+2) = (/ 10, 14,20,30,40, 50,60, 70,78,84,92, 96/) * 1000+999
+!  end if
+
 
    ntpat = 9
 
    itpats(1:ntpat+2) = (/ 0, 40,34,50,62,68,74,80,84,92,98/) * 1000+999
    itpats(1) = 0
-!   vtlevs(1:ntpat+3) = (/-1.0e6,0.5,1.0,2.0,3.0,5.0,7.0,10.0,15.0,20.0,30.0,40.0,60.0,80.0,1.0e6/) !!! rain 
+!   vtlevs(1:ntpat+3) = (/-1.0e6,0.5,1.0,2.0,3.0,5.0,7.0,10.0,15.0,20.0,30.0,40.0,60.0,80.0,1.0e6/)
    vtlevs(2:ntpat+2) = 5.0 + (/( 5.0*real(i), i=1,10 )/)
    vtlevs(1) = -1.0e10
    vtlevs(ntpat+3) = 1.0e10
@@ -167,14 +144,14 @@ end do
 
   call dcbar(vpr+0.02,vpb,(vpt-vpb)*0.8)
 
+  call udsfmt ('B')
+  call udrset ('RSIZEL',0.012)
   call udlset ('LMSG',.false.)
-  call udlset ('LABEL',.false.)
 
-  call udiclv 
-  call udsclv(1.0,31,1,'',-1.0) !!! z > 1.0m  -- approximate coastline 
+!  call udgcla (vcmin,vcmax,vcintv)
+!  call udcntr (val_plot_c,nlon,nlon,nlat)
+!  call udcntz (val_plot_c,nlon,nlon,nlat,iwork,nwork)
 
-
-  call udcntz (topo2dgs,nlong,nlong,nlatg,iwork,nwork)
 
 !!! masking
   call ueitlv
@@ -182,41 +159,34 @@ end do
   call glrset ('RMISS', 0.0)
   call gllset ('LMISS', .false.)
   call sglset('LCLIP',.true.)
-  call uwsgxa (grid_cxg_ext,nlong_ext)
-  call uwsgya (grid_cyg_ext,nlatg_ext)
+  call uwsgxa (axlon_ext,nlon_ext)
+  call uwsgya (axlatSN_ext,nlat_ext)
   call uestlv(rmiss-abs(rmiss)*0.01,rmiss+abs(rmiss)*0.01,1602)
-  call uetone (vmask,nlong_ext,nlong_ext,nlatg_ext)
+  call uetone (vmask,nlon_ext,nlon_ext,nlat_ext)
 
-!!! map
- 
- ! call umlset ('LGRIDMJ',.false.)
-!  call umrset ('DGRIDMN',0.5)
-!  call umiset ('ITYPEMN',3)
-!  call umiset ('INDEXMN',1)
-!
-!  call umpglb
+
+  call umlset ('LGRIDMJ',.false.)
+  call umrset ('DGRIDMN',0.5)
+  call umiset ('ITYPEMN',3)
+  call umiset ('INDEXMN',1)
+
+  call umpglb
 !  call umplim
-!  call umpmap('coast_japan')
+  call umpmap('coast_japan')
 
 !  call uulinz(npts,vlons_area_d2,vlats_area_d2,3,91)
 
+  call uumrkz(1,vlon_radarloc,vlat_radarloc,9,21,0.010)
 
-  
-  call uumrkz(1,0.5*(range_lonr+range_lonl),0.5*(range_latr+range_latl),9,21,0.010)
+  amtics=0.5
+  astics=0.5
 
-
-  amtics=50.0 !! km
-  astics=50.0
-  bmtics=50.0
-  bstics=50.0
+  bmtics=0.5
+  bstics=0.5
 
   call sglset('LCLIP',.false.)
   call uzinit
-  call uzlset('LOFFSET',.true.)
-  call uzrset('XOFFSET',-0.001*0.5*(range_lonr-range_lonl))
-  call uzrset('YOFFSET',-0.001*0.5*(range_latr-range_latl))
-  call uzrset('XFACT',0.001)
-  call uzrset('YFACT',0.001)
+  call uzlset('LOFFSET',.false.)
   call uziset('INDEXT2',3)
   call uziset('INDEXT1',3)
   call uziset('INNER',-1)
@@ -224,31 +194,25 @@ end do
   call uzrset('RSIZEC1',0.016)
   call uzrset('RSIZET1',0.006)
   call uzrset('RSIZET2',0.003)
-  call uxsfmt ('(I3)')
-  call uysfmt ('(I3)')
+  call uxsfmt ('(F5.1)')
+  call uysfmt ('B')
 
     
   call uxaxdv('B',astics,amtics)
   call uxaxdv('T',astics,amtics)
-  call uxsttl('B','X (km)',0.0)
+  call uxsttl('B','Lon',0.0)
   call uyaxdv('L',bstics,bmtics)
   call uyaxdv('R',bstics,bmtics)
-  call uysttl('L','Y (km)',0.0)
+  call uysttl('L','Lat',0.0)
 
   call uzlset('LABELYR',.false.)
 
   call sglset('LCLIP',.false.)
- 
-
-
   call sgtxzv (0.5*(vpr+vpl),vpt+0.03,trim(title1),0.025,0,0,5) !
   call sgtxzv (vpr-0.01,vpt+0.045,trim(title2(1)),0.016,0,1,3) !
   call sgtxzv (vpr-0.01,vpt+0.020,trim(title2(2)),0.016,0,1,3) !
-  call sgtxzv (vpl+0.01,vpt+0.020,trim(title3),0.014,0,-1,3) !
-
+  call sgtxzv (vpl+0.01,vpt+0.025,trim(title3),0.018,0,-1,3) !
   call grcls 
-
-deallocate(val_plot,grid_cxg_ext,grid_cyg_ext,vmask,iwork)
 
 return
 end subroutine plot_dbz_DCL
@@ -348,4 +312,4 @@ subroutine dcbar(vpxr,vpyl,dylen)
   return
 end subroutine dcbar
 
-!==============================================================!==================================================!
+!==============================================================!

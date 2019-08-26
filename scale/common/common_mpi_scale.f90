@@ -1998,7 +1998,7 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
       !write(plotname,'(A,I3.3,A)')  trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_dbz_"//trim(timelabel)//"_",step
       !plotname = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_dbz_"//trim(timelabel)//"_"//ftsec
       plotname = "fcst_dbz_"//trim(timelabel)//"_FT"//ftsec//"s_z" // cheight // "m"
-      call plot_dbz_DCL (nlong,nlatg,bufr3d(k,1:nlong,1:nlatg),topo2dgs,trim(plotname),cheight)
+      call plot_dbz_DCL (bufr3d(k,1:nlong,1:nlatg),topo2dgs,trim(plotname),cheight)
 #endif
     end if
 
