@@ -252,7 +252,7 @@ program dacycle
         else
           call resume_state(do_restart_read=.true.)
           ! initialize system_clock after reading initial files
-          call MPI_BARRIER(MPI_COMM_u, ierr)
+          call MPI_BARRIER(MPI_COMM_da, ierr)
           call system_clock(stime_noio_c)
 
         end if
@@ -510,7 +510,7 @@ program dacycle
 
       ! Monitor excluding restart I/O at 1st and last cycles
       if ( TIME_NOWSTEP > TIME_NSTEP ) then
-        call MPI_BARRIER(MPI_COMM_u, ierr)
+        call MPI_BARRIER(MPI_COMM_da, ierr)
         call system_clock(etime_noio_c) 
       endif
 

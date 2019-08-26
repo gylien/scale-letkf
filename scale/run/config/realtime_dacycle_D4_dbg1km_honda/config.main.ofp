@@ -132,7 +132,7 @@ MEMBER=50      # Ensemble size
 NNODES=72      # Ensemble size + 1 (mean) +1 (mdet) + 2 (additional)
 
 MEMBER=50      # Ensemble size 
-NNODES=53      # Ensemble size + 1 (mean) +1 (mdet) + 0 (additional)
+NNODES=54      # Ensemble size + 1 (mean) +1 (mdet) + 2 (additional)
 
 PPN=64              # Number of processes per node
 

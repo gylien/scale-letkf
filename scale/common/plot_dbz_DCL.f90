@@ -1,7 +1,12 @@
 !==================================================!
-subroutine plot_dbz_DCL(val_plot_s,lon2dgs,lat2dgs,psfile) 
+subroutine plot_dbz_DCL(val_plot_s,topo2dgs,psfile,cheight) 
   use scale_io, only: &
     H_LONG
+  use scale_atmos_grid_cartesC_index, only: &
+      IHALO, JHALO
+  use scale_atmos_grid_cartesC, only: &
+      GRID_CXG => ATMOS_GRID_CARTESC_CXG, &
+      GRID_CYG => ATMOS_GRID_CARTESC_CYG
 !  use common_scale, only : &
 !    nlong,nlatg 
 
@@ -11,10 +16,12 @@ subroutine plot_dbz_DCL(val_plot_s,lon2dgs,lat2dgs,psfile)
   include 'latlon_d4.h'
 
   real(4),intent(in) :: val_plot_s(nlong,nlatg)
-  real(4),intent(in) :: lon2dgs(nlong,nlatg)
-  real(4),intent(in) :: lat2dgs(nlong,nlatg)
+!  real(4),intent(in) :: lon2dgs(nlong,nlatg)
+!  real(4),intent(in) :: lat2dgs(nlong,nlatg)
+  real(4),intent(in) :: topo2dgs(nlong,nlatg)
   real(4) :: val_plot(nlong,nlatg)
   character(H_LONG),intent(in) :: psfile
+  character(5),intent(in) :: cheight
 
   integer,parameter :: nwork = 3*(nlong+2)*(nlatg+2)/2+1
   integer :: iwork(nwork)
@@ -37,7 +44,7 @@ subroutine plot_dbz_DCL(val_plot_s,lon2dgs,lat2dgs,psfile)
   
   title1='SCALE-LETKF'
   title2=(/'',''/)
-  title3='radar ref 1500m'
+  title3='radar ref ' // cheight // ' m'
   
   iclrmap=12
   
