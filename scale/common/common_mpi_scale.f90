@@ -1314,24 +1314,25 @@ subroutine write_ens_mpi(v3d, v2d, mean3d, mean2d)
         if (ATMOS_RESTART_IN_POSTFIX_TIMELABEL) then
           if (trim(filename) /= trim(ATMOS_RESTART_IN_BASENAME)//trim(timelabel_anal)) then
 
-            if (LOG_LEVEL >= 3 .or. myrank_a == 0) then
+            if (LOG_LEVEL >= 3 .or. myrank_da == 0) then
               write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
               write (6, '(3A)') "        Output filename in LETKF = '", trim(filename), "'"
               write (6, '(3A)') "        Input  filename in SCALE = '", trim(ATMOS_RESTART_IN_BASENAME)//trim(timelabel_anal), "'"
             endif
-
-            stop
+            ! File names can be different if INDIR and OUTDIR are different
+            !stop
           endif
         else
           if (trim(filename) /= trim(ATMOS_RESTART_IN_BASENAME)) then
 
-            if (LOG_LEVEL >= 3 .or. myrank_a == 0) then
+            if (LOG_LEVEL >= 3 .or. myrank_da == 0) then
                 write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
                 write (6, '(3A)') "        Output filename in LETKF = '", trim(filename), "'"
                 write (6, '(3A)') "        Input  filename in SCALE = '", trim(ATMOS_RESTART_IN_BASENAME), "'"
             endif
 
-            stop
+            ! File names can be different if INDIR and OUTDIR are different
+            !stop
           end if
         end if
  
@@ -1895,8 +1896,12 @@ end subroutine receive_emean_direct
 ! Write the subdomain model data into a single GrADS file from DACYCLE (additional) forecasts
 !-------------------------------------------------------------------------------
 subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
-  use mod_atmos_vars, only: &
-    TEMP
+  use mod_admin_time, only: &
+    TIME_DTSEC_ATMOS_RESTART
+  use scale_topography, only: &
+    TOPO_Zsfc
+  use scale_atmos_grid_cartesC, only: &
+     CZ => ATMOS_GRID_CARTESC_CZ
 !  use scale_atmos_hydrometeor, only: &
 !    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
   use scale_atmos_grid_cartesC_index, only: &
@@ -1913,106 +1918,102 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   character(len=H_LONG) :: filename
   real(r_sngl) :: bufs4(nlong,nlatg)
   real(r_sngl) :: bufr4(nlong,nlatg)
+  real(r_sngl) :: bufs3d(nlev,nlong,nlatg)
+  real(r_sngl) :: bufr3d(nlev,nlong,nlatg)
+  real(r_sngl) :: topo2dgs(nlong,nlatg)
+!  real(r_sngl) :: lon2dgs(nlong,nlatg)
+!  real(r_sngl) :: lat2dgs(nlong,nlatg)
   integer :: iunit, iolen
   integer :: k, n, irec, ierr
   integer :: proc_i, proc_j
   integer :: ishift, jshift
+  character(4) :: ftsec ! forecast time (second)
+  character(5) :: cheight ! height (m)
+
+  character(len=8) :: date
+  character(len=10) :: time
 
 #ifdef PLOT_DCL
   character(len=H_LONG) :: plotname
 #endif
 !  real(r_sngl) :: v2d_ref(nlong,nlatg,nv3dd)
 
+  write(ftsec,'(I4.4)')  (step - 1) * int(TIME_DTSEC_ATMOS_RESTART) ! tentative
+
+  call MPI_BARRIER(MPI_COMM_d, ierr)
+  call date_and_time(date=date, time=time)
+  if (myrank_d == 0) then
+    write (6, '(2A,1x,A,1x,A)') '[Info] fcst start plotting: ', date, time, trim(timelabel)//" FT"//trim(ftsec)
+  endif
+
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
   jshift = proc_j * nlat
 
-  if (myrank_d == 0) then
-    filename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_ref3d_"//trim(timelabel)//".grd"
-    iunit = 55
-    inquire (iolength=iolen) iolen
-    open (iunit, file=trim(filename), form='unformatted', access='direct', &
-          status='unknown', convert='native', recl=nlong*nlatg*iolen)
-    irec = (step - 1)*nlev*2 ! 2 variable (nlev*2 record) output 
-  end if
+  ! gather global topo
+  bufs4(:,:) = 0.0
+  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(TOPO_Zsfc, r_sngl)
+  call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+  topo2dgs(:,:) = bufr4
+
+  ! gather global lon/lat 
+!  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(lon2d, r_sngl)
+!  call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+!  lon2dgs(:,:) = bufr4
+!
+!  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(lat2d, r_sngl)
+!  call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+!  lat2dgs(:,:) = bufr4
+
+!  if (myrank_d == 0) then
+!    filename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_ref3d_"//trim(timelabel)//".grd"
+!    iunit = 55
+!    inquire (iolength=iolen) iolen
+!    open (iunit, file=trim(filename), form='unformatted', access='direct', &
+!          status='unknown', convert='native', recl=nlong*nlatg*iolen)
+!    irec = (step - 1)*nlev*2 ! 2 variable (nlev*2 record) output 
+!  end if
 
 
   ! Gather required data for reflectivity computation
 
-!  k = 1 ! vertical level
-!
-!  do n = 1, nv3dd
+  bufs3d(:,:,:) = 0.0
+  bufs3d(1:nlev, 1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(1:nlev,1:nlon,1:nlat), r_sngl)
+  call MPI_ALLREDUCE(bufs3d, bufr3d, nlong*nlatg*nlev, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+
+  do k = 10, nlev, 5
+
+    if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
+
 !    bufs4(:,:) = 0.0
-!
-!    select case(n)
-!    case (iv3dd_p)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(PRES(KS+k,IS:IE,JS:JE), r_sngl)
-!    case (iv3dd_q)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(QV(KS+k,IS:IE,JS:JE), r_sngl)
-!    case (iv3dd_qc)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(QC(KS+k,IS:IE,JS:JE), r_sngl)
-!    case (iv3dd_qr)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(QR(KS+k,IS:IE,JS:JE), r_sngl)
-!    case (iv3dd_qi)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(QI(KS+k,IS:IE,JS:JE), r_sngl)
-!    case (iv3dd_qs)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(QS(KS+k,IS:IE,JS:JE), r_sngl)
-!    case (iv3dd_qg)
-!      bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(QG(KS+k,IS:IE,JS:JE), r_sngl)
-!    case default
-!      continue
-!    end select
-!
-!    call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
-!
-!    v2d_ref(:,:,n) = bufs4
-!
-!    if (myrank_d == 0) then
+!    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
+!    call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+
+    if (myrank_d == k) then
 !      irec = irec + 1
 !      write (iunit, rec=irec) bufr4
-!    end if
-!  enddo ! n = 1, nv3dd
-!
-!  call calc_ref_vr()
-
-  do k = 1, nlev 
-    bufs4(:,:) = 0.0
-    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
-    call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
-
-    if (myrank_d == 0) then
-      irec = irec + 1
-      write (iunit, rec=irec) bufr4
+      write(cheight,'(I5.5)')  int(CZ(k+KHALO)) ! tentative
 
 #ifdef PLOT_DCL
-    if ( k .eq. 13) then !!! 1500m?
-      write(plotname,'(A,I3.3,A)') "fcst_dbz_"//trim(timelabel)//"_",step
-      call plot_dbz_DCL (bufr4,trim(plotname))
-    end if
+      !write(plotname,'(A,I3.3,A)')  trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_dbz_"//trim(timelabel)//"_",step
+      !plotname = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_dbz_"//trim(timelabel)//"_"//ftsec
+      plotname = "fcst_dbz_"//trim(timelabel)//"_FT"//ftsec//"s_z" // cheight // "m"
+      call plot_dbz_DCL (nlong,nlatg,bufr3d(k,1:nlong,1:nlatg),topo2dgs,trim(plotname),cheight)
 #endif
     end if
 
   enddo
 
-
-
-
-  ! debug
-  do k = 1, nlev 
-    bufs4(:,:) = 0.0
-    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(TEMP(KHALO+k,IS:IE,JS:JE), r_sngl)
-    call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
-
-    if (myrank_d == 0) then
-      irec = irec + 1
-      write (iunit, rec=irec) bufr4
-    end if
-
-  enddo
-
+  call MPI_BARRIER(MPI_COMM_d, ierr)
+  call date_and_time(date=date, time=time)
   if (myrank_d == 0) then
-    close (iunit)
-  end if
+    write (6, '(2a,1x,a,1x,a)') '[Info] fcst finish plotting: ', date, time, trim(timelabel)//" FT"//trim(ftsec)
+  endif
+
+!
+!  if (myrank_d == 0) then
+!    close (iunit)
+!  end if
 
   return
 end subroutine write_grd_dafcst_mpi
