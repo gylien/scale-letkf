@@ -18,7 +18,7 @@
  TIME_DURATION_UNIT         = "SEC",
  TIME_DT                    = 1.5D0,
  TIME_DT_UNIT               = "SEC",
- TIME_NSTEP_ATMOS_DYN       = 3,
+ TIME_NSTEP_ATMOS_DYN       = 5,
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
  TIME_DT_ATMOS_PHY_MP       = 1.5D0,
  TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",

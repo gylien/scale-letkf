@@ -17,6 +17,7 @@ program dacycle
     set_mem_node_proc,        &
     set_common_mpi_scale,     &
     myrank_use, myrank_use_da,&
+    MPI_COMM_u,               &
     myrank_a, myrank_da,      &
     myrank_d, myrank_e,       &
     mmean_rank_e,             &
@@ -135,12 +136,23 @@ program dacycle
 
   real(r_size), allocatable :: ref3d(:,:,:)
 
+  character(len=8) :: date
+  character(len=10) :: time
+  integer :: ierr
+
+  integer :: stime_c, etime_c, cpsec, cmax
+  integer :: stime_noio_c, etime_noio_c
+
 !-----------------------------------------------------------------------
 ! Initial settings
 !-----------------------------------------------------------------------
 
   call initialize_mpi_scale
   call mpi_timer('', 1)
+
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+  call date_and_time(date=date, time=time)
+  call system_clock(stime_c, cpsec, cmax)
 
 !  if (command_argument_count() >= 2) then
 !    call get_command_argument(2, icmd)
@@ -153,7 +165,8 @@ program dacycle
 !  end if
 
   if (myrank == 0) then
-  
+    write (6, '(2A,1x,A)') '[Info] Start time: ', date, time 
+
     write (6, '(A)') '============================================='
     write (6, '(A)') '  LOCAL ENSEMBLE TRANSFORM KALMAN FILTERING  '
     write (6, '(A)') '                                             '
@@ -238,6 +251,9 @@ program dacycle
           call resume_state(do_restart_read=.false.)
         else
           call resume_state(do_restart_read=.true.)
+          ! initialize system_clock after reading initial files
+          call MPI_BARRIER(MPI_COMM_u, ierr)
+          call system_clock(stime_noio_c)
 
         end if
 
@@ -492,6 +508,12 @@ program dacycle
       ! LETKF section end
       !-------------------------------------------------------------------------
 
+      ! Monitor excluding restart I/O at 1st and last cycles
+      if ( TIME_NOWSTEP > TIME_NSTEP ) then
+        call MPI_BARRIER(MPI_COMM_u, ierr)
+        call system_clock(etime_noio_c) 
+      endif
+
       ! restart output after LETKF
       if (DIRECT_TRANSFER .and. (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now)) then
         !!!!!! To do: control restart outputs separately for members, mean, and mdet
@@ -597,6 +619,15 @@ program dacycle
   call scalerm_finalize('DACYCLE')
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
+
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+  call date_and_time(date=date, time=time)
+  call system_clock(etime_c)
+  if (myrank == 0) then
+    write (6, '(2A,1x,A)') '[Info] End time: ', date, time
+    write (6, '(1A,1f12.4)') '[Info] Computation time by system_clock: ', real(etime_c - stime_c) / real(cpsec)
+    write (6, '(1A,1f12.4,1A,1i5,1A)') '[Info] Computation time by system_clock (excluding restart I/O): ', real(etime_noio_c - stime_noio_c) / real(cpsec), ' for ',lastcycle, ' cycles'
+  endif
 
   call finalize_mpi_scale
 
