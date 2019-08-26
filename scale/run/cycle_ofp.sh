@@ -66,11 +66,8 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR || exit $?
-if ((IO_ARB == 1)); then                              ##
-  distribute_da_cycle_set - $NODEFILE_DIR || exit $?  ##
-else                                                  ##
-  distribute_da_cycle - $NODEFILE_DIR || exit $?
-fi                                                    ##
+#distribute_da_cycle - $NODEFILE_DIR || exit $?
+distribute_da_cycle - - || exit $? # Do not use distr
 
 #===============================================================================
 # Determine the staging list
@@ -91,6 +88,8 @@ if [ "$CONF_MODE" = 'static' ]; then
   staging_list_static || exit $?
   config_file_list $TMPS/config || exit $?
 else
+  echo "Error: CONF_MODE should be static!"
+  exit
   staging_list || exit $?
 fi
 
@@ -107,14 +106,6 @@ EOF
 if [ "$CONF_MODE" != 'static' ]; then
   echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
 fi
-
-#===============================================================================
-
-if ((IO_ARB == 1)); then                                              ##
-  echo "${SCRP_DIR}/sleep.sh|sleep.sh" >> ${STAGING_DIR}/${STGINLIST} ##
-  NNODES=$((NNODES*2))                                                ##
-  NNODES_APPAR=$((NNODES_APPAR*2))                                    ##
-fi                                                                    ##
 
 #===============================================================================
 # Stage in
@@ -145,14 +136,7 @@ cat > $jobscrp << EOF
 #PJM --omp thread=${THREADS}
 
 #PJM -g $(echo $(id -ng))
-##PJM -j
 
-rm -f machinefile
-for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
-  for ippn in \$(seq $PPN); do
-    echo "\$inode" >> machinefile
-  done
-done
 
 module load hdf5/1.8.17
 module load netcdf/4.4.1

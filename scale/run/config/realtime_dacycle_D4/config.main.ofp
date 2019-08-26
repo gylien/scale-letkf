@@ -8,6 +8,7 @@
 PRESET='OFP' 
 RSCGRP="regular-cache"
 RSCGRP="regular-flat"
+RSCGRP="regular-cache"
 
 #===============================================================================
 

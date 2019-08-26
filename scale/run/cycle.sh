@@ -80,7 +80,8 @@ declare -a proc2grpproc
 if ((RUN_LEVEL <= 2)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
 fi
-distribute_da_cycle "$NODELIST_TYPE" $NODEFILE_DIR || exit $?
+#distribute_da_cycle - $NODEFILE_DIR || exit $? 
+distribute_da_cycle - - || exit $?  # Do not use distr
 
 echo "[$(datetime_now)] ### 4" >&2
 
@@ -219,36 +220,12 @@ while ((time <= ETIME)); do
           continue
         fi
       fi
-      if ((DACYCLE != 1 && s == 4)); then
-        if ((OBSOPE_RUN == 0)); then
-          echo "[$(datetime_now)] ${time}: ${stepname[$s]} ...skipped (only use integrated observation operators)" >&2
-          continue
-        fi
-      fi
       ######
 
       echo "[$(datetime_now)] ${time}: ${stepname[$s]}" >&2
 
       enable_iter=0
       nit=1
-      if ((s == 2)); then
-        enable_iter=1
-        if ((BDY_ENS == 1)); then
-          nit=$nitmax
-        fi
-      elif ((DACYCLE != 1 && s == 3)); then
-        enable_iter=1
-        nit=$nitmax
-      fi
-
-      nodestr=proc
-      if ((IO_ARB == 1)); then
-        if ((s == 3)); then
-          nodestr='set1.proc'
-        elif ((s == 5)); then
-          nodestr='set2.proc'
-        fi
-      fi
 
       if ((s <= 3)); then
         conf_time=$time
@@ -256,71 +233,12 @@ while ((time <= ETIME)); do
         conf_time=$atime
       fi
 
-      if ((enable_iter == 1)); then
-        noit=1
-      else
-        noit='-'
-      fi
+      noit='-'
 
-      if [ "$CONF_MODE" = 'static' ]; then
-
-        if ((enable_iter == 1 && nitmax > 1)); then
-          for it in $(seq $nit); do
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
-
-            if ((IO_ARB == 1)); then ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $it log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $? &
-            else ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $it log/${stepexecname[$s]}.NOUT_${conf_time}_${it} || exit $?
-            fi ##
-
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          done
-        else
-          if ((IO_ARB == 1)); then ##
-            if ((s == 5)); then ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} \
-                      "$SCRP_DIR/sleep.sh" || exit $? &
-            else ##
-              mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} || exit $? &
-            fi ##
-          else ##
-            mpirunf ${nodestr} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
-          fi ##
-        fi
-
-      else
-
-        execpath="${stepexecdir[$s]}/${stepexecname[$s]}"
-        stdout_dir="$TMPOUT/${conf_time}/log/$(basename ${stepexecdir[$s]})"
-        if ((enable_iter == 1)); then
-          for it in $(seq $nit); do
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: start" >&2
-
-            if ((IO_ARB == 1)); then ##
-              mpirunf $nodestr $execpath ${execpath}.conf $it "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $? &
-            else ##
-              mpirunf $nodestr $execpath ${execpath}.conf $it "${stdout_dir}/NOUT-${it}" "$SCRP_DIR/${job}_step.sh" "$time" $loop $it || exit $?
-            fi ##
-
-            echo "[$(datetime_now)] ${time}: ${stepname[$s]}: $it: end" >&2
-          done
-        else
-          if ((IO_ARB == 1)); then ##                                 
-            mpirunf $nodestr $execpath ${execpath}.conf $noit "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $? &
-          else ##
-            mpirunf $nodestr $execpath ${execpath}.conf $noit "${stdout_dir}/NOUT" "$SCRP_DIR/${job}_step.sh" "$time" "$loop" || exit $?
-          fi ##
-        fi
-
-      fi
+      $MPIRUN -n ${PJM_MPI_PROC} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
 
     fi
   done
-
-  if ((IO_ARB == 1)); then ##                                 
-    wait                   ##
-  fi                       ##
 
 #-------------------------------------------------------------------------------
 # Online stage out

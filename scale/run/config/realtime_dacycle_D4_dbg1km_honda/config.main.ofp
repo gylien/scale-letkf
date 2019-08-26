@@ -8,6 +8,7 @@
 PRESET='OFP' 
 RSCGRP="regular-flat"
 RSCGRP="debug-flat"
+RSCGRP="debug-cache"
 
 #===============================================================================
 
@@ -134,6 +135,9 @@ NNODES=72      # Ensemble size + 1 (mean) +1 (mdet) + 2 (additional)
 MEMBER=50      # Ensemble size 
 NNODES=54      # Ensemble size + 1 (mean) +1 (mdet) + 2 (additional)
 
+MEMBER=16      # Ensemble size 
+NNODES=20      # Ensemble size + 1 (mean) +1 (mdet) + 2 (additional)
+
 PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
@@ -166,7 +170,7 @@ CLEAR_TMP=0                 # Clear temporary directories after the completion o
 #===============================================================================
 # Environmental settings
 
-MPIRUN="mpiexec"
+MPIRUN="mpiexec.hydra"
 if (which $MPIRUN > /dev/null 2>&1); then
   MPIRUN=$(which $MPIRUN)
 fi
