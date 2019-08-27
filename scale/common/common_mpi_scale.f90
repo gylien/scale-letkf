@@ -1900,6 +1900,8 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
     TIME_DTSEC_ATMOS_RESTART
   use scale_topography, only: &
     TOPO_Zsfc
+  use scale_landuse, only: &
+    LANDUSE_frac_land
   use scale_atmos_grid_cartesC, only: &
      CZ => ATMOS_GRID_CARTESC_CZ
 !  use scale_atmos_hydrometeor, only: &
@@ -1920,7 +1922,8 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   real(r_sngl) :: bufr4(nlong,nlatg)
   real(r_sngl) :: bufs3d(nlev,nlong,nlatg)
   real(r_sngl) :: bufr3d(nlev,nlong,nlatg)
-  real(r_sngl) :: topo2dgs(nlong,nlatg)
+!  real(r_sngl) :: topo2dgs(nlong,nlatg)
+  real(r_sngl) :: lsmask2dgs(nlong,nlatg)
 !  real(r_sngl) :: lon2dgs(nlong,nlatg)
 !  real(r_sngl) :: lat2dgs(nlong,nlatg)
   integer :: iunit, iolen
@@ -1950,11 +1953,17 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   ishift = proc_i * nlon
   jshift = proc_j * nlat
 
-  ! gather global topo
+!  ! gather global topo
+!  bufs4(:,:) = 0.0
+!  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(TOPO_Zsfc, r_sngl)
+!  call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+!  topo2dgs(:,:) = bufr4
+
+  ! gather global landuse
   bufs4(:,:) = 0.0
-  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(TOPO_Zsfc, r_sngl)
+  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(LANDUSE_frac_land, r_sngl)
   call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-  topo2dgs(:,:) = bufr4
+  lsmask2dgs(:,:) = bufr4
 
   ! gather global lon/lat 
 !  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(lon2d, r_sngl)
@@ -1998,7 +2007,7 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
       !write(plotname,'(A,I3.3,A)')  trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_dbz_"//trim(timelabel)//"_",step
       !plotname = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_dbz_"//trim(timelabel)//"_"//ftsec
       plotname = "fcst_dbz_"//trim(timelabel)//"_FT"//ftsec//"s_z" // cheight // "m"
-      call plot_dbz_DCL (bufr3d(k,1:nlong,1:nlatg),topo2dgs,trim(plotname),cheight)
+      call plot_dbz_DCL (bufr3d(k,1:nlong,1:nlatg),lsmask2dgs,trim(plotname),cheight,ftsec)
 #endif
     end if
 

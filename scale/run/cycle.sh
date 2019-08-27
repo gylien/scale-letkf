@@ -260,6 +260,9 @@ while ((time <= ETIME)); do
 #-------------------------------------------------------------------------------
 
   if ((DACYCLE == 1)); then
+    if ((DACYCLE_RUN_FCST == 1)); then
+      cp -f ${TMP}/*.png ${OUTDIR}/${STIME}/dafcst
+    fi
     break
   fi
 
