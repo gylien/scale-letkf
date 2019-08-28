@@ -13,7 +13,7 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
 OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
-EXP4=exp_d4
+EXP4=exp_d4_1km
 EXP3=exp_d3
 EXP2=exp_d2
 
@@ -29,7 +29,7 @@ DATADIR="/work/hp150019/share/database"
 SCALE_DB="/work/hp150019/share/database" 
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
-DATA_TOPO_BDY_SCALE=
+DATA_TOPO_BDY_SCALE="${OUTPUT}/${EXP3}/const/topo"
 DATA_LANDUSE=                                                        # Directory of the prepared landuse files
 DATA_BDY_SCALE="${OUTPUT}/${EXP4}"
 DATA_BDY_SCALE_PRC_NUM_X=
@@ -123,9 +123,8 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=50      # Ensemble size 
-#NNODES=54      # Ensemble size + 1 (mean) +1 (mdet) + 2 (additional)
-NNODES=72      # Ensemble size + 1 (mean) +1 (mdet) + 2 (additional)
+MEMBER=<MEMBER>      # Ensemble size 
+NNODES=<NNODES>
 
 PPN=64              # Number of processes per node
 
