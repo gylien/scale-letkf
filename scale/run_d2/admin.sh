@@ -26,9 +26,9 @@ ETIME="$STIME"
 
 
 ###NODE=`expr \( $NMEM  + 2 \) \* 11` ### D3
-NODE=`expr \( $NMEM  + 2 \) \* 7` ### D2
 
-####NODE=`expr \( $NMEM  + 2 \) \* 12` ### MODIFIED D2 DOMAIN DECOMP
+NODE=`expr \( $NMEM  + 2 \) \* 7` ### D2
+###NODE=`expr \( $NMEM  + 2 \) \* 7 / 2` ### D2
 
 
 CONFIG='online_NRT_5.3.X'

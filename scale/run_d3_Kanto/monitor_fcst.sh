@@ -1,6 +1,6 @@
 #!/bin/sh
 
-TMPDIR="../tmp/scale-letkf_exp_d3"
+TMPDIR="../tmp/scale-letkf_d3_Kanto"
 PARENT_REF_TIME=$1
 STIME=$2
 logfile=${TMPDIR}_ref_${PARENT_REF_TIME}_$STIME/out/$STIME/log/fcst_scale/mdet_LOG.pe000000

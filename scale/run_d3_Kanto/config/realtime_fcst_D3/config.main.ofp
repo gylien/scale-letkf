@@ -137,7 +137,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
-TMPSUBDIR="scale-letkf_${SYSNAME}_<STIME>"           # (used to identify multiple runs in the same time)
+TMPSUBDIR="scale-letkf_d3_Kanto_${SYSNAME}_<STIME>"           # (used to identify multiple runs in the same time)
 
 TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node

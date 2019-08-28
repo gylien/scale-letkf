@@ -804,16 +804,19 @@ while true; do
     break
   fi
 
-  if [ `echo $tmp | cut -c 64` == "(" ] ;then
-  tmptime=`echo $tmp | cut -c 65-75`  
-  tmptime_s=`date -d "${tmptime}" +%s`
+  if [ "`echo $tmp | awk '{print $6}'| cut -c 1`" == "(" ] ;then
+  tmpdate=`echo $tmp | awk '{print $6}' | cut -c 2-6`  
+  tmptime=`echo $tmp | awk '{print $7}' | cut -c 1-5`  
+  tmptime_s=`date -d "${tmpdate} ${tmptime}" +%s`
   nowtime_s=`date +%s`
   wait_second=`expr $tmptime_s - $nowtime_s`
 
   wait_lim_second=21600 # 6h
-
+ 
   if [ $wait_second -ge $wait_lim_second ] ;then ### 
+   echo "job_end_check :: wait_second =" $wait_second " too long" 
    pjdel ${JOBID}
+   echo "try with smaller NNODES." 
    return 77
   fi
   fi

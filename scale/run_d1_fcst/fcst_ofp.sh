@@ -122,15 +122,17 @@ fi
 
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 ${SCRP_DIR}/config.rc|config.rc
-${SCRP_DIR}/config.${job}|config.${job}
 ${SCRP_DIR}/${job}.sh|${job}.sh
 ${SCRP_DIR}/src/|src/
 EOF
 
 if [ "$DISK_MODE" != "1" ] ; then
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
+${SCRP_DIR}/config.${job}|config.${job}
 ${NODEFILE_DIR}/|node/
 EOF
+else
+cp ${SCRP_DIR}/config.${job} $TMP/config.${job}
 fi
 
 if [ "$CONF_MODE" != 'static' ]; then

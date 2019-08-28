@@ -1,5 +1,7 @@
 #!/bin/sh
 
+source ~/.bashrc
+
 r_url="c24140@ofp.jcahpc.jp"
 web_url="amemiya@daweb.r-ccs27.riken.jp"
 
@@ -9,10 +11,14 @@ myname=$0
 
 PARENT_REF_TIME=$1
 TIME=$2
-inum=$3
+FCSTLEN=$3
+inum=$4
+
+ntime=`expr $FCSTLEN \/ 600 + 1`
+
 
 if [ ${#inum} -eq 0 ] ;then
- echo "specify ref_time and time and cmem"
+ echo "specify ref_time and time and fcstlen and cmem"
  exit 
 fi
 
@@ -35,23 +41,23 @@ echo "draw "$cmem
 
 rm $mydir/plot_temp/$cmem
 
-sh compile_rain.sh
-sh compile_uvw.sh
-sh compile_dbz.sh
+#sh compile_rain.sh
+#sh compile_uvw.sh
+#sh compile_dbz.sh
 
 echo 'plot rain...'
-./draw_rain ${PARENT_REF_TIME} ${TIME} $cmem 1 37 1 
+./draw_rain ${PARENT_REF_TIME} ${TIME} $cmem 1 $ntime 1 
 echo 'plot uvw1500...'
-./draw_uvw ${PARENT_REF_TIME} ${TIME} $cmem 1 37 1 1500 
+./draw_uvw ${PARENT_REF_TIME} ${TIME} $cmem 1 $ntime 1 1500 
 echo 'plot uvw5000...'
-./draw_uvw ${PARENT_REF_TIME} ${TIME} $cmem 1 37 1 5000 
+./draw_uvw ${PARENT_REF_TIME} ${TIME} $cmem 1 $ntime 1 5000 
 echo 'plot dbz1500...'
-./draw_dbz ${PARENT_REF_TIME} ${TIME} $cmem 1 37 1 1500 
+./draw_dbz ${PARENT_REF_TIME} ${TIME} $cmem 1 $ntime 1 1500 
 echo 'plot dbz5000...'
-./draw_dbz ${PARENT_REF_TIME} ${TIME} $cmem 1 37 1 5000 
-
+./draw_dbz ${PARENT_REF_TIME} ${TIME} $cmem 1 $ntime 1 5000 
+echo 'trim...'
 mogrify -trim $mydir/plot_temp/$cmem/*.png
-
+echo '=== complete ==='
 #ssh $web_url "mkdir -p ${WEBDIRBASE}/ref_${PARENT_REF_TIME}/${TIME}"
 
 #for prod in rain uvw1500m uvw5000m dbz1500m ;do

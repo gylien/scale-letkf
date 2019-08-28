@@ -3,7 +3,9 @@
 TMPDIR="../tmp/scale-letkf_d3"
 PARENT_REF_TIME=$1
 STIME=$2
-logfile=${TMPDIR}_ref_${PARENT_REF_TIME}_$STIME/out/$STIME/log/fcst_scale/mdet_LOG.pe000000
+#logfile=${TMPDIR}_ref_${PARENT_REF_TIME}_$STIME/out/$STIME/log/fcst_scale/mdet_LOG.pe000000
+logfile=/work/hp150019/c24140/scale-letkf-rt/r0051_nest/exp_d3/ref_${PARENT_REF_TIME}/$STIME/log/fcst_scale/mdet_LOG.pe000000
+
 
 stat=`cat fcst_ofp.stat.$PARENT_REF_TIME.$STIME`
 

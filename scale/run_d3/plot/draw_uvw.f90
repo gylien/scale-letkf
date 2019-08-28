@@ -100,15 +100,19 @@ command="ln -s "//trim(cdir_base_fcst)//'ref_'//trim(ctimeparent)//'/'//trim(cti
 call system(trim(command))
 
 izref = iblkge(axz,nz,real(irefheight))
+!write(*,*) izref
+
 
 do itimeref=itimestart,itimeend,itimeskip
 write(cftime(2:8),'(I7)') 1000000 + ioutsec*(itimeref-1)
 write(cftime(1:2),'(A2)')'_f'
 
 istatus=nf_open(trim(cdir_base_fcst)//'ref_'//trim(ctimeparent)//'/'//trim(ctimebase)//'/'//trim(cdir_prod)//trim(cmem)//'/'//trim(cfilename),NF_NOWRITE,idnc)
-
+if(istatus.ne.0)write(*,*) NF_STRERROR(istatus)
 istatus=nf_inq_varid(idnc,'U',idvarT)
 istatus=nf_get_vara_real(idnc,idvarT,(/1,1,izref,itimeref/),(/nlon,nlat,1,1/),val_u_mean)
+!write(*,*) izref,itimeref
+if(istatus.ne.0)write(*,*) NF_STRERROR(istatus)
 istatus=nf_inq_varid(idnc,'V',idvarT)
 istatus=nf_get_vara_real(idnc,idvarT,(/1,1,izref,itimeref/),(/nlon,nlat,1,1/),val_v_mean)
 istatus=nf_inq_varid(idnc,'W',idvarT)
@@ -120,9 +124,12 @@ write(title3,'(I4,A)')irefheight,'m wind (high-pass)'
 
 u_large = sum(val_u_mean,abs(val_u_mean).lt.1.0e10) / real(count(abs(val_u_mean).lt.1.0e10))
 v_large = sum(val_v_mean,abs(val_v_mean).lt.1.0e10) / real(count(abs(val_v_mean).lt.1.0e10))
+!write(*,*) 'max wind', maxval(sqrt(val_u_mean**2+val_v_mean**2),val_u_mean.lt.1.0e10)
+
 val_plot_u=val_u_mean-u_large
 val_plot_v=val_v_mean-v_large
 val_plot_w=val_w_mean  !!! m/s
+
 where (abs(val_u_mean).gt.1e10) val_plot_u=0.0
 where (abs(val_u_mean).gt.1e10) val_plot_v=0.0
 where (abs(val_u_mean).gt.1e10) val_plot_w=rmiss
@@ -134,7 +141,7 @@ vsmin=vwmin
 vsintv=vwintv
 vunit=10.0
 write(cvunit,'(I2,A)')int(vunit),'m/s'
-!write(*,*) 'max wind', maxval(sqrt(val_plot_u**2+val_plot_v**2),val_u_mdet.lt.1.0e10)
+!!!write(*,*) 'max wind', maxval(sqrt(val_plot_u**2+val_plot_v**2),val_u_mean.lt.1.0e10)
 call draw
 
 

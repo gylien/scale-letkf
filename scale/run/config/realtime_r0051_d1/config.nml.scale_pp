@@ -59,6 +59,7 @@
 &PARAM_CNVLANDUSE
 !--CNVLANDUSE_name--
  CNVLANDUSE_limit_urban_fraction = 0.3D0, ! r0051
+!!! CNVLANDUSE_limit_urban_fraction = 0.0D0, ! temporal noUrban 
 /
 
 &PARAM_CNVLANDUSE_GLCCv2

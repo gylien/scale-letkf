@@ -116,7 +116,7 @@ fi
 #${TMPS}/config.main|config.main
 #
 
-if [ $DISK_MODE -eq 1 ];then ### for multiple run
+if [ "$DISK_MODE" == "1" ];then ### for multiple run
 cp ${SCRP_DIR}/config.${job} $TMP/config.${job}
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 ${SCRP_DIR}/config.rc|config.rc

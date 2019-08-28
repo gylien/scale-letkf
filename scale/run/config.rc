@@ -49,7 +49,7 @@ elif [ "$PRESET" = 'K_micro' ]; then
 #  ...
 elif [ "$PRESET" = 'OFP' ]; then
   DISK_MODE=1 #####  
-#####  DISK_MODE=2 #####  
+####  DISK_MODE=2 #####  
   NODELIST_TYPE='machinefile'
   MPI_TYPE='impi'
 elif [ "$PRESET" = 'Linux' ]; then

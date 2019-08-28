@@ -44,9 +44,10 @@ fi
 
 #-------------------------------------------------------------------------------
 
-statfile=${myname%.*}.stat.$PARENT_REF_TIME.$STIME
+statfile=${myname%.*}.stat.${PARENT_REF_TIME}.${STIME}
 
 echo "prep" > $statfile
+rm temp.lock
 
 echo "[$(datetime_now)] Start $myname $@"
 
@@ -69,9 +70,9 @@ echo "[$(datetime_now)] Create and clean the temporary directory"
 safe_init_tmpdir $TMPS || exit $?
 
 #===============================================================================
-# Determine the distibution schemes
+# Determine the distribution schemes
 
-echo "[$(datetime_now)] Determine the distibution schemes"
+echo "[$(datetime_now)] Determine the distribution schemes"
 
 declare -a node_m
 declare -a name_m
@@ -208,6 +209,8 @@ echo
 
 job_end_check_PJM $jobid
 res=$?
+
+[ $res = 77 ] && exit $res
 
 echo "plot" > $statfile
 

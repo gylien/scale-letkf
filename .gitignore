@@ -34,7 +34,10 @@ scale/run*/exp
 scale/run*/*.stat*
 scale/run*/*.log*
 scale/run*/sno_bulk*.sh
-scale/run_d3/plot_temp/*
+scale/run_d3/plot/plot_temp/*
+scale/run_d3/plot/draw_uvw
+scale/run_d3/plot/draw_dbz
+scale/run_d3/plot/draw_rain
 scale/letkf/letkf
 scale/obs/obsmake
 scale/obs/obsope
