@@ -54,8 +54,8 @@ OBS_USE_JITDT_OFFLINE=1 # 1: Offilne test
                         # 0: Online (data should be transfered from NICT)
 
 JIT_TOP=/work/hp150019/share/honda/jitdt
-JIT_TARFILE=${JIT_TOP}/testdata/kobe_201901301200-09.tar
-JIT_OFFLOG=${JIT_TOP}/testdata/testdata201901301200.txt
+JIT_TARFILE=${JIT_TOP}/testdata/jit_offline_data_20190610080030-20190610100000.tar
+JIT_OFFLOG=${JIT_TOP}/testdata/jit_offline_data_20190610080030-20190610100000.txt
 
 #===============================================================================
 # model/data file options
@@ -160,7 +160,7 @@ TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPS="$TMP"  # Temporary directory only on the server node
 TMPL="$TMP"
-TMP_JITDATA="/work/hp150019/share/honda/jitdt/offline/data"
+TMP_JITDATA="/work/hp150019/share/honda/jitdt/offline/data" # Not used
 TMP_JITDATA_IP="$(hostname -i)"
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?

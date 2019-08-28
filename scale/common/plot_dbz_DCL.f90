@@ -27,7 +27,7 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
   
   integer :: nlonadd 
   integer :: nlatadd 
-  real(r_sngl),parameter :: OFFXY = 5.0e3 ! offset (m)
+  real(r_sngl),parameter :: OFFXY = 0.0e3 ! offset (m)
   real(r_sngl),allocatable :: grid_cxg_ext(:)
   real(r_sngl),allocatable :: grid_cyg_ext(:)
   real(r_sngl),allocatable :: vmask(:,:)

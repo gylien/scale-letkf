@@ -190,9 +190,14 @@ stage_out server || exit $?
 echo "[$(datetime_now)] Finalization"
 echo
 
-if ((OBS_USE_JITDT == 1)) && ((OBS_USE_JITDT_OFFLINE == 1)) ; then
-  echo "Stop JIT-DT Offilne!"
-  ${SCRP_DIR}/src/jitdt-lwatch-offline stop
+if ((OBS_USE_JITDT == 1)) ; then
+  if ((OBS_USE_JITDT_OFFLINE == 1)) ; then
+    echo "Stop JIT-DT Offline!"
+    ${SCRP_DIR}/src/jitdt-lwatch-offline stop
+  elif ((OBS_USE_JITDT_OFFLINE == 1)) ; then
+    echo "Stop JIT-DT Online!"
+    ${SCRP_DIR}/src/jit-lwatch stop
+  fi
 fi
 
 
