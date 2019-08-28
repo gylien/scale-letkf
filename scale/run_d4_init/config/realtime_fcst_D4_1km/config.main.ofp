@@ -10,9 +10,10 @@ PRESET='OFP'
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
+SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
+TOPDIR="$SCALEDIR/.."                                                # Directory of the SCALE model
 
-
-OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
+OUTPUT="${TOPDIR}/r0051_nest"
 EXP4=exp_d4_1km
 EXP3=exp_d3
 
@@ -25,7 +26,6 @@ GNAME=hp150019
 #===============================================================================
 # Location of model/data files
 
-SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="/work/hp150019/share/database" 
 SCALE_DB="/work/hp150019/share/database" 
 

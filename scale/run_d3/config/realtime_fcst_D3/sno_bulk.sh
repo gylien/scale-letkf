@@ -12,7 +12,7 @@ PARENT_REF_TIME=<PARENT_REF_TIME>
 FCSTLEN=<FCSTLEN>
 RUNDIR="${TMP}/../run_sno_ref_${PARENT_REF_TIME}_${STIME}"
 OUTDIR=${OUTPUT}/${EXP3}/ref_${PARENT_REF_TIME}
-PLOTDIR=/work/hp150019/c24140/scale-letkf-rt/scale_ope/scale-letkf-rt_ope/scale/run_d3/plot
+PLOTDIR=${DIR}/run_d3/plot
 
 PPN=64 # Process per node
 

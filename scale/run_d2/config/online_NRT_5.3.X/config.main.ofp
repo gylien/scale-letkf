@@ -18,9 +18,10 @@ DOMNUM=2
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
+SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
+TOPDIR="$SCALEDIR/.."
 
-
-OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
+OUTPUT="${TOPDIR}/r0051_nest"
 EXP1=exp_d1
 EXP2=exp_d2
 EXP3=exp_d3
@@ -30,17 +31,13 @@ OUTDIR[2]="${OUTPUT}/${EXP2}"
 OUTDIR[3]="${OUTPUT}/${EXP3}"
 
 #INDIR=$OUTDIR
-INDIR="/work/hp150019/c24140/scale-letkf-rt/r0051/exp_d1" ### separated from nesting exp
-#INDIR="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/TEST_exp_d1" 
-#INDIR[2]="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/TEST_exp_d2" 
-#INDIR[3]="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/TEST_exp_d3" 
+INDIR="${TOPDIR}/r0051/exp_d1" ### separated from nesting exp
 INDIR[2]=${OUTDIR[2]}
 INDIR[3]=${OUTDIR[3]}
 
 #===============================================================================
 # Location of model/data files
 
-SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="/work/hp150019/share/database" 
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
@@ -57,9 +54,7 @@ DATA_BDY_SCALE_PREP=                                                 # Directory
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-
-#DATA_BDY_GRADS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/TEST_exp_d1/ncepgfs_grads"
-DATA_BDY_GRADS="/work/hp150019/c24140/scale-letkf-rt/r0051_nest/ncepgfs_grads"
+DATA_BDY_GRADS="${TOPDIR}/r0051_nest/ncepgfs_grads"
 
 OBS=
 OBSNCEP=                                                             # Directory of observation data in NCEP BUFR format

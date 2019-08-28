@@ -20,17 +20,18 @@ ENABLE_MONITOR=1
 
 #===============================================================================
 
-DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
+DIR="$(cd "$(pwd)/.." && pwd)"                                 # Root directory of the SCALE-LETKF
+SCALEDIR="$DIR/../.."                                          # Directory of the SCALE model
+TOPDIR="$SCALEDIR/.."
 
-INDIR="/work/${GNAME}/${UNAME}/scale-letkf-rt/${EXPNAME}/exp_d${EXPDOMAIN}" # Directory for SCALE-LETKF input
+INDIR="$TOPDIR/${EXPNAME}/exp_d${EXPDOMAIN}" # Directory for SCALE-LETKF input
 
 OUTDIR=${INDIR}
 
 #===============================================================================
 # Location of model/data files
 
-SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
-DATADIR="/work/${GNAME}/${UNAME}/scale-letkf/database"        # Directory of the SCALE database
+DATADIR="$TOPDIR/database"        # Directory of the SCALE database
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE=
@@ -42,10 +43,10 @@ DATA_BDY_SCALE_PREP=                                                 # Directory
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-DATA_BDY_GRADS="/work/${GNAME}/${UNAME}/scale-letkf-rt/${EXPNAME}/ncepgfs_grads_da" # Directory of the boundary data in GrADS format
+DATA_BDY_GRADS="${TOPDIR}/${EXPNAME}/ncepgfs_grads_da" # Directory of the boundary data in GrADS format
 #DATA_BDY_GRADS="${INDIR}/grads" # Directory of the boundary data in GrADS format
 
-OBS="/work/${GNAME}/${UNAME}/scale-letkf-rt/${EXPNAME}/ncepobs"     # Directory of observation data in LETKF obs format
+OBS="${TOPDIR}/${EXPNAME}/ncepobs"     # Directory of observation data in LETKF obs format
 #OBS="${INDIR}/obs"     # Directory of observation data in LETKF obs format
 OBSNCEP=              
 

@@ -1,8 +1,9 @@
 #!/bin/sh
 
-
 STIME=$1
-logfile=/work/hp150019/c24140/scale-letkf-rt/r0051_nest/exp_d2/$STIME/log/0001_LOG_${STIME}.pe000000
+
+
+logfile=../../../../r0051_nest/exp_d2/$STIME/log/0001_LOG_${STIME}.pe000000
 
 stat=`cat fcst_ofp.stat.$STIME`
 if [ `echo $stat| awk '{print $1}'` == "submit" ] ;then

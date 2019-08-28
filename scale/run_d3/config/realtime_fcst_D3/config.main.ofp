@@ -17,9 +17,10 @@ UNAME=$(id -nu)
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
+SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
+TOPDIR="$SCALEDIR/.."
 
-
-OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
+OUTPUT="${TOPDIR}/r0051_nest"
 EXP3=exp_d3
 EXP2=exp_d2
 
@@ -30,7 +31,6 @@ INDIR="${OUTPUT}/${EXP3}"
 #===============================================================================
 # Location of model/data files
 
-SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 DATADIR="/work/hp150019/share/database" 
 SCALE_DB=${DATADIR} 
 
