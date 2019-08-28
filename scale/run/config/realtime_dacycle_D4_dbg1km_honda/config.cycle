@@ -6,7 +6,7 @@
 #===============================================================================
 
 STIME='20190610080000'
-ETIME='20190610080930'
+ETIME='20190610080430'
 
 TIME_LIMIT='0:25:00'
 CYCLE=
@@ -26,7 +26,7 @@ DACYCLE_RUN_FCST=1
 MAX_DACYCLE_RUN_FCST=2
 
 # Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
-DACYCLE_RUN_FCST_TIME=300 # sec
+DACYCLE_RUN_FCST_TIME=30 # sec
 
 #===============================================================================
 # Forecast settings

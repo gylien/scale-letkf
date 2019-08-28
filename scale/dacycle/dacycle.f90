@@ -132,7 +132,7 @@ program dacycle
   integer :: fcst_cnt ! Number of dacycle forecast launched
   integer :: dafcst_step ! dacycle-forecast step
   integer :: dafcst_ostep ! dacycle-forecast output step
-  character(len=19) :: ftimelabel, fstimelabel
+  character(len=19) :: ftimelabel, fstimelabel, fetimelabel
 
   real(r_size), allocatable :: ref3d(:,:,:)
 
@@ -141,6 +141,8 @@ program dacycle
   integer :: ierr
 
   integer :: stime_c, etime_c, cpsec, cmax
+  integer :: stime_da_c, etime_da_c ! timer for DA cycle 
+  integer :: stime_fcst_c, etime_fcst_c ! timer for forecast 
   integer :: stime_noio_c, etime_noio_c
 
 !-----------------------------------------------------------------------
@@ -153,6 +155,7 @@ program dacycle
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
   call date_and_time(date=date, time=time)
   call system_clock(stime_c, cpsec, cmax)
+  stime_da_c = stime_c
 
 !  if (command_argument_count() >= 2) then
 !    call get_command_argument(2, icmd)
@@ -215,7 +218,6 @@ program dacycle
     else
       scycle_dafcst = -1
     endif
-
 
     ! setup grid parameters
     call set_common_scale
@@ -501,18 +503,28 @@ program dacycle
           call obs_info_deallocate(obs(iof))
         end do
 
+        call MPI_BARRIER(MPI_COMM_da, ierr)
+        call date_and_time(date=date, time=time)
+        call system_clock(etime_da_c)
+        call TIME_gettimelabel(ftimelabel)
+        if (myrank_da == 0) then
+          write (6, '(2A,1x,A,1x,A,f12.4)') '[Info:DA] End analysis: ', date, time, trim(ftimelabel), &
+                                            real(etime_da_c - stime_da_c) / real(cpsec)
+        endif
+        stime_da_c = etime_da_c
+
+
+        ! Monitor excluding restart I/O at 1st and last cycles
+        if ( TIME_NOWSTEP > TIME_NSTEP ) then
+          call MPI_BARRIER(MPI_COMM_da, ierr)
+          call system_clock(etime_noio_c) 
+        endif
         !-----------------------------------------------------------------------
 
       end if ! [ TIME_DOATMOS_restart ]
       !-------------------------------------------------------------------------
       ! LETKF section end
       !-------------------------------------------------------------------------
-
-      ! Monitor excluding restart I/O at 1st and last cycles
-      if ( TIME_NOWSTEP > TIME_NSTEP ) then
-        call MPI_BARRIER(MPI_COMM_da, ierr)
-        call system_clock(etime_noio_c) 
-      endif
 
       ! restart output after LETKF
       if (DIRECT_TRANSFER .and. (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now)) then
@@ -544,11 +556,21 @@ program dacycle
           ! dacycle-forecast from scycle_dafcst
           call receive_emean_direct()
           call TIME_gettimelabel(fstimelabel)
+
+          call MPI_BARRIER(MPI_COMM_d, ierr)
+          call date_and_time(date=date, time=time)
+          call system_clock(stime_fcst_c)
+          if (myrank_d == 0) then
+            write (6, '(2A,1x,A,1x,A)') '[Info:fcst] Start forecast: ', date, time, trim(fstimelabel(1:15))
+          endif
         endif
+
 
         if (myrank_d == 0) then
           call TIME_gettimelabel(ftimelabel)
-          write(6,'(a,1x,i3,1x,a15)') "Add. fcst ",int(myrank_da / nprocs_d) + ICYC_DACYCLE_RUN_FCST, ftimelabel(1:15)
+          if (LOG_LEVEL >= 3) then
+            write(6,'(a,1x,i3,1x,a15)') "Add. fcst ",int(myrank_da / nprocs_d) + ICYC_DACYCLE_RUN_FCST, ftimelabel(1:15)
+          endif
         endif
 
         if (TIME_DOATMOS_restart) then
@@ -569,6 +591,21 @@ program dacycle
           write(6,'(a)') "Main DA loop end"
           write(6,'(a)') "====="
         endif
+       
+        if (.not. myrank_use_da) then
+          call MPI_BARRIER(MPI_COMM_d, ierr)
+          call date_and_time(date=date, time=time)
+          call system_clock(etime_fcst_c)
+          call TIME_gettimelabel(fetimelabel)
+          if (myrank_d == 0) then
+            write (6, '(2A,1x,A,1x,A,1x,A,f12.4)') '[Info:fcst] End forecast: ', date, time, &
+                                              trim(fstimelabel(1:15)), &
+                                              trim(fetimelabel(1:15)), &
+                                              real(etime_fcst_c - stime_fcst_c) / real(cpsec)
+
+          endif
+        endif
+
         exit
       endif
 
