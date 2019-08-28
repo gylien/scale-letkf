@@ -1946,7 +1946,7 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   call MPI_BARRIER(MPI_COMM_d, ierr)
   call date_and_time(date=date, time=time)
   if (myrank_d == 0) then
-    write (6, '(2A,1x,A,1x,A)') '[Info] fcst start plotting: ', date, time, trim(timelabel)//" FT"//trim(ftsec)
+    write (6, '(2A,1x,A,1x,A)') '[Info:plot] fcst start plotting: ', date, time, trim(timelabel)//" FT"//trim(ftsec)
   endif
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
@@ -2016,7 +2016,7 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   call MPI_BARRIER(MPI_COMM_d, ierr)
   call date_and_time(date=date, time=time)
   if (myrank_d == 0) then
-    write (6, '(2a,1x,a,1x,a)') '[Info] fcst finish plotting: ', date, time, trim(timelabel)//" FT"//trim(ftsec)
+    write (6, '(2a,1x,a,1x,a)') '[Info:plot] fcst finish plotting: ', date, time, trim(timelabel)//" FT"//trim(ftsec)
   endif
 
 !

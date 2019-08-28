@@ -27,7 +27,7 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
   
   integer :: nlonadd 
   integer :: nlatadd 
-  real(r_sngl),parameter :: OFFXY = 5.0e3 ! offset (m)
+  real(r_sngl),parameter :: OFFXY = 0.0e3 ! offset (m)
   real(r_sngl),allocatable :: grid_cxg_ext(:)
   real(r_sngl),allocatable :: grid_cyg_ext(:)
   real(r_sngl),allocatable :: vmask(:,:)
@@ -173,12 +173,14 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
 
   call ueitlv
 
-  ntpat = 9
-
-  itpats(1:ntpat+2) = (/ 0, 40,34,50,62,68,74,80,84,92,98/) * 1000 + 999
+!!   vtlevs(1:ntpat+3) = (/-1.0e6,0.5,1.0,2.0,3.0,5.0,7.0,10.0,15.0,20.0,30.0,40.0,60.0,80.0,1.0e6/) !!! rain 
+!  ntpat = 9
+!  itpats(1:ntpat+2) = (/ 0, 40,34,50,62,68,74,80,84,92,98/) * 1000 + 999
+!  vtlevs(2:ntpat+2) = 5.0 + (/( 5.0*real(i), i=1,10 )/)
+  ntpat = 10
+  itpats(1:ntpat+2) = (/ 0, 40,34,30,50,62,68,74,80,84,92,98/) * 1000 + 999
+  vtlevs(2:ntpat+2) = 5.0 + (/( 5.0*real(i), i=1,11 )/)
   itpats(1) = 0
-!   vtlevs(1:ntpat+3) = (/-1.0e6,0.5,1.0,2.0,3.0,5.0,7.0,10.0,15.0,20.0,30.0,40.0,60.0,80.0,1.0e6/) !!! rain 
-  vtlevs(2:ntpat+2) = 5.0 + (/( 5.0*real(i), i=1,10 )/)
   vtlevs(1) = -1.0e10
   vtlevs(ntpat+3) = 1.0e10
   call uestln(vtlevs(1:ntpat+3),itpats(1:ntpat+2),ntpat+2)

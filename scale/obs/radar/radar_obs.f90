@@ -749,6 +749,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   use jitdt_read_toshiba_f
 #endif
   use radar_tools
+  use scale_atmos_grid_cartesC, only: &
+      DX, DY
   implicit none
 
   character(len=*), intent(in) :: cfile
@@ -804,10 +806,15 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   call mpi_timer('', 3)
 
-  write(*, *) RDIM, AZDIM, ELDIM
-  write(*, *) "dx = ", RADAR_SO_SIZE_HORI
-  write(*, *) "dy = ", RADAR_SO_SIZE_HORI
-  write(*, *) "dz = ", RADAR_SO_SIZE_VERT
+  RADAR_SO_SIZE_HORI = max(real(DX,kind=r_size),RADAR_SO_SIZE_HORI)
+  RADAR_SO_SIZE_HORI = max(real(DY,kind=r_size),RADAR_SO_SIZE_HORI)
+
+  if (LOG_LEVEL >= 2) then
+    write(*, *) RDIM, AZDIM, ELDIM
+    write(*, *) "dx = ", RADAR_SO_SIZE_HORI
+    write(*, *) "dy = ", RADAR_SO_SIZE_HORI
+    write(*, *) "dz = ", RADAR_SO_SIZE_VERT
+  endif
 
 #ifdef JITDT
   if (OBS_USE_JITDT) then
@@ -817,7 +824,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
     ierr = jitdt_read_toshiba(n_type, jitdt_place, hd, az, el, rtdat)
 
-    call mpi_timer('read_obs_radar_toshiba:jitdt_read_toshiba:', 3)
+    call mpi_timer('read_obs_radar_toshiba:jitdt_read_toshiba:', 1)
     if (ierr /= 0) then
       obs%nobs = 0
       return
@@ -833,9 +840,11 @@ subroutine read_obs_radar_toshiba(cfile, obs)
       end if
     end do
 
-    write(*, *) "file1 = ", trim(input_fname(1))
-    write(*, *) "file2 = ", trim(input_fname(2))
-    write(*, *) "file3 = ", trim(input_fname(3))
+    if (LOG_LEVEL >= 1) then
+      write(*, *) "file1 = ", trim(input_fname(1))
+      write(*, *) "file2 = ", trim(input_fname(2))
+      write(*, *) "file3 = ", trim(input_fname(3))
+    endif
 
     do j = 1, n_type
       ierr = read_toshiba(input_fname(j), hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
@@ -846,7 +855,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
       endif
     end do
 
-    call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 3)
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 1)
 #ifdef JITDT
   end if
 #endif
@@ -856,13 +865,15 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   z0   = hd(1)%altitude
   missing = real(hd(1)%mesh_offset, r_size) ! MISSING VALUE (EXACT)
 
-  write(*, '(I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2, &
-       &     " -> ", I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2)') &
-       & hd(1)%s_yr, hd(1)%s_mn, hd(1)%s_dy, hd(1)%s_hr, hd(1)%s_mi, hd(1)%s_sc, &
-       & hd(1)%e_yr, hd(1)%e_mn, hd(1)%e_dy, hd(1)%e_hr, hd(1)%e_mi, hd(1)%e_sc
-  write(*, *) lon0, lat0, z0
-  write(*, *) hd(1)%range_num, hd(1)%sector_num, hd(1)%el_num
-  write(*, *) "missing = ", missing
+  if (LOG_LEVEL >= 2) then
+    write(*, '(I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2, &
+         &     " -> ", I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2)') &
+         & hd(1)%s_yr, hd(1)%s_mn, hd(1)%s_dy, hd(1)%s_hr, hd(1)%s_mi, hd(1)%s_sc, &
+         & hd(1)%e_yr, hd(1)%e_mn, hd(1)%e_dy, hd(1)%e_hr, hd(1)%e_mi, hd(1)%e_sc
+    write(*, *) lon0, lat0, z0
+    write(*, *) hd(1)%range_num, hd(1)%sector_num, hd(1)%el_num
+    write(*, *) "missing = ", missing
+  endif
 
 !  i = 1
 !! OUTPUT SPHERICAL COORDINATE DATA FOR DEBUG !!!
@@ -916,7 +927,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 !end do
 !stop
 
-  call mpi_timer('read_obs_radar_toshiba:preliminary_qc:', 3)
+  call mpi_timer('read_obs_radar_toshiba:preliminary_qc:', 1)
 
   allocate(rrange(nr))
 !$omp parallel do private(ir)
@@ -926,20 +937,20 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 !$omp end parallel do
 
   allocate(radlon(na, nr, ne), radlat(na, nr, ne), radz(na, nr, ne))
-  write(*, *) "call radar_georeference"
+!  write(*, *) "call radar_georeference"
   call radar_georeference(lon0, lat0, z0, na, nr, ne, &                                   ! input
        &                  real(az(:, 1, 1), r_size), rrange, real(el(1, :, 1), r_size), & ! input (assume ordinary scan strategy)
        &                  radlon, radlat, radz)                                           ! output
 
-  call mpi_timer('read_obs_radar_toshiba:radar_georeference:', 3)
+  call mpi_timer('read_obs_radar_toshiba:radar_georeference:', 1)
 
-  write(*, *) "call define_grid"
+!  write(*, *) "call define_grid"
   call define_grid(lon0, lat0, nr, rrange, rrange(nr), RADAR_ZMAX, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_VERT, & ! input
        &           dlon, dlat, nlon, nlat, nlev, lon, lat, z)              ! output
 
-  call mpi_timer('read_obs_radar_toshiba:define_grid:', 3)
+  call mpi_timer('read_obs_radar_toshiba:define_grid:', 1)
 
-  write(*, *) "call radar_superobing"
+!  write(*, *) "call radar_superobing"
   call radar_superobing(na, nr, ne, radlon, radlat, radz, ze, vr, &                    ! input spherical
        &                qcflag, attenuation, &                                         ! input spherical
        &                nlon, nlat, nlev, lon, lat, z, dlon, dlat, RADAR_SO_SIZE_VERT, & ! input cartesian
@@ -948,14 +959,14 @@ subroutine read_obs_radar_toshiba(cfile, obs)
        &                nobs_sp, grid_index, &                                         ! output array info
        &                grid_ze, grid_lon_ze, grid_lat_ze, grid_z_ze, grid_count_ze, & ! output ze
        &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr)   ! output vr
-  write(*, *) "done"
+!  write(*, *) "done"
 
-  call mpi_timer('read_obs_radar_toshiba:radar_superobing:', 3)
+  call mpi_timer('read_obs_radar_toshiba:radar_superobing:', 1)
 
 
 
 !!!!! check
-write(*,*) nlon,nlat,nlev,nobs_sp
+!write(*,*) nlon,nlat,nlev,nobs_sp
 
 
 
@@ -1014,11 +1025,13 @@ write(*,*) nlon,nlat,nlev,nobs_sp
     end if
   end do
 
-  write (6, *) "Reflectivity obs. range = ", min_obs_ze, " to ", max_obs_ze
-  write (6, *) "Radial vel. obs. range  = ", min_obs_vr, " to ", max_obs_vr
-  write (6, *) "ze: ", nobs_ze, ", vr: ", nobs_vr
+  if (LOG_LEVEL >= 2) then
+    write (6, *) "Reflectivity obs. range = ", min_obs_ze, " to ", max_obs_ze
+    write (6, *) "Radial vel. obs. range  = ", min_obs_vr, " to ", max_obs_vr
+    write (6, *) "ze: ", nobs_ze, ", vr: ", nobs_vr
+  endif
 
-  call mpi_timer('read_obs_radar_toshiba:save_obs_info:', 3)
+  call mpi_timer('read_obs_radar_toshiba:save_obs_info:', 1)
 
 
 
@@ -1062,7 +1075,7 @@ write(*,*) nlon,nlat,nlev,nobs_sp
   if(allocated(grid_z_vr)) deallocate(grid_z_vr)
   if(allocated(grid_count_vr)) deallocate(grid_count_vr)
 
-  call mpi_timer('read_obs_radar_toshiba:deallocate_vars:', 3)
+  call mpi_timer('read_obs_radar_toshiba:deallocate_vars:', 1)
 
   return
 end subroutine read_obs_radar_toshiba
@@ -1241,7 +1254,7 @@ subroutine read_obs_radar_jrc(cfile, obs)
   deallocate(vr3d, zh3d)
   deallocate(lon1d, lat1d, z1d)
 
-  call mpi_timer('read_obs_radar_jrc:read_obs_radar_jrc:', 3)
+  call mpi_timer('read_obs_radar_jrc:read_obs_radar_jrc:', 1)
 
   return
 end subroutine read_obs_radar_jrc

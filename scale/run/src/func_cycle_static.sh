@@ -539,26 +539,44 @@ if ((DACYCLE == 1)) &&  ((OBS_USE_JITDT == 1)) ; then
   echo "Use JIT-DT on IP: "${TMP_JITDATA}
   echo
   echo "Remove job.running at $TMP_JITDATA"
-#  rm -f ${TMP_JITDATA}/job.running
+  rm -f $TMP_JITDATA/job.running
+
   LWATCH_RUN=$(ps axfu  |grep -c [l]watcher)
+
   if ((LWATCH_RUN > 0)) ; then
     echo "lwatcher is running!"
+
+#    if ((OBS_USE_JITDT_OFFLINE == 0)) ; then
+#      echo "Make sure lwatcher for JIT-DT online!"
+#      exit
+#    fi
+
     LWATCH_INFO=$(ps axfu  |grep [l]watcher)
     LWATCH_UID=${LWATCH_INFO:0:6}
+
     if [ "${LWATCH_UID}" != "$(id -nu)" ] ; then
       echo "lwatcher is run by another user:${LWATCH_UID}"
       echo "Stop"
       exit
     fi
+
   else
     echo "Launch lwatcher!"
     if ((OBS_USE_JITDT_OFFLINE == 1)) ; then
-      echo "JIT-DT Offilne!"
+      echo "JIT-DT Offline!"
+      if [ "$TMP_JITDATA_IP" == "172.30.100.102" ] ; then
+        echo "Do not use log-in node #2 with JIT online"
+        echo "Stop"
+        exit
+      fi
       ./src/jitdt-lwatch-offline start
-    else
-      echo "JIT-DT NOT Offilne!"
-      exit
-#      ./lwatcher
+    elif ((OBS_USE_JITDT_OFFLINE == 0)) ; then
+      echo "JIT-DT Online!"
+      # Specify log-in node #2
+      TMP_JITDATA_IP="172.30.100.102"
+
+      #
+      #./src/jit-lwatch start
     fi
   fi
 
