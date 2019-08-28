@@ -334,6 +334,7 @@
 #
 #################################################
 
+! Do not turn on sensible heat (STRGR, STRGG, & STRGG should be zero)
 &PARAM_URBAN_DYN_KUSAKA01
  ZR         = 15.0D0,
  roof_width = 7.5D0,

@@ -7,11 +7,9 @@
 
 STIME='20190610080000'
 ETIME='20190610080000'
-TIME_LIMIT='1:30:00'
+TIME_LIMIT='0:10:00'
 MEMBERS='all'
-MEMBERS=`seq 37 44` 
-MEMBERS="13 14 19" 
-
+#MEMBERS='1'
 CYCLE=
 CYCLE_SKIP=1
 
@@ -25,9 +23,8 @@ CONF_MODE=
 #===============================================================================
 # Forecast settings
 
-#FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
 FCSTLEN=14400      # SCALE forecast length in the forecast mode (second)
-FCSTLEN=600      # SCALE forecast length in the forecast mode (second)
+FCSTOUT=300
 
 
 #===============================================================================

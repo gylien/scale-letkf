@@ -13,13 +13,13 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
 OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
-EXP4=exp_d4
-EXP4=D4_250M_NP4096_600S_SMTH
+EXP4=exp_d4_dbg
 EXP3=exp_d3
 
 OUTDIR="${OUTPUT}/${EXP4}"
 OUTDIR="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/${EXP4}" # DEBUG
-OUTDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/${EXP4}" # DEBUG 
+EXP4="D4_1km_NP64"
+OUTDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/${EXP4}"
 
 INDIR=$OUTDIR
 
@@ -62,7 +62,7 @@ TOPO_FORMAT='DEM50M'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
 #LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
-LANDUSE_FORMAT='LU100M'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='GLCCv2'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -116,15 +116,13 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=50      # Ensemble size [2+2] 
 
-NNODES=64
-NNODES=256
-NNODES=192
+NNODES=52
 
 PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
-SCALE_NP=4096  # D4    # Number of processes to run SCALE
+SCALE_NP=64  # D4    # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -136,7 +134,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
-TMPSUBDIR="09scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
+TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
 TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node

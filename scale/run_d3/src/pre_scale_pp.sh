@@ -56,21 +56,21 @@ else
 fi
 
 if ((PNETCDF == 1)); then
-  TOPO_OUT_BASENAME="${OUTDIR}/../const/topo"
+  TOPO_OUT_BASENAME="${OUTDIR}/const/topo"
   if ((LANDUSE_UPDATE == 1)); then
     LANDUSE_OUT_BASENAME="$TMPOUT/${STIME}/landuse"
   else
-    LANDUSE_OUT_BASENAME="$TMPOUT/../const/landuse"
+    LANDUSE_OUT_BASENAME="$TMPOUT/const/landuse"
   fi
 else
-  TOPO_OUT_BASENAME="${OUTDIR}/../const/topo/topo"
+  TOPO_OUT_BASENAME="${OUTDIR}/const/topo/topo"
   if ((LANDUSE_UPDATE == 1)); then
     LANDUSE_OUT_BASENAME="$OUTDIR/${STIME}/landuse/landuse"
   else
-    LANDUSE_OUT_BASENAME="$OUTDIR/../const/landuse/landuse"
+    LANDUSE_OUT_BASENAME="$OUTDIR/const/landuse/landuse"
   fi
-  mkdir -p ${OUTDIR}/../const/topo
-  mkdir -p ${OUTDIR}/../const/landuse
+  mkdir -p ${OUTDIR}/const/topo
+  mkdir -p ${OUTDIR}/const/landuse
 fi
 
 if [ "$TOPO_FORMAT" != 'prep' ]; then

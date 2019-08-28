@@ -50,7 +50,7 @@ function stage_out_ln_sub () {
     fi
   elif [[ "$sourcestg" == */ && "$destin" == */ ]]; then # directories
     if (mkdir -p "$destin") && (mkdir -p "$(dirname "$sourcestg")"); then
-      rm -fr "$destin"*
+      echo "$destin"* | xargs rm -rf 
       ln -s "${destin%/}" "${sourcestg%/}" # remove possible trailing slashes
     else
       echo "mkdir failed " $(dirname "$sourcestg")
