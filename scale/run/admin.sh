@@ -5,13 +5,14 @@ cd "$(dirname "$0")"
 
 #-------------------------------------------------------------------------------
 
-if (($# < 5)); then
+if (($# < 6)); then
   echo "$0: Insufficient arguments" >&2
   exit 1
 fi
 
 SCPNAME="cycle"
 
+EXPTYPE="$1"; shift
 STIME="$1"; shift
 NCYCLE="$1"; shift
 WTIME_L="$1"; shift
@@ -29,7 +30,11 @@ NNODES=`expr \( $NMEM + 2 + $MAX_DACYCLE_RUN_FCST \) / 1` ### 1km / 64domain
 
 #-------------------------------------------------------------------------------
 
-CONFIG='realtime_dacycle_D4'
+CONFIG="realtime_dacycle_D4_${EXPTYPE}"
+if [ ! -d config/${CONFIG} ];then
+ echo "EXPTYPE "$EXPTYPE" not supported !"
+ exit
+fi
 
 cp config/${CONFIG}/config.* .
 
