@@ -540,6 +540,7 @@ if ((DACYCLE == 1)) &&  ((OBS_USE_JITDT == 1)) ; then
   echo
   echo "Remove job.running at $TMP_JITDATA"
   rm -f $TMP_JITDATA/job.running
+  mkdir -p $TMP_JITDATA
 
   LWATCH_RUN=$(ps axfu  |grep -c [l]watcher)
 

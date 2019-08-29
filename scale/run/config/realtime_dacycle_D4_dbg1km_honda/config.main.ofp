@@ -10,6 +10,8 @@ RSCGRP="regular-flat"
 RSCGRP="debug-flat"
 RSCGRP="debug-cache"
 
+RSCGRP="challenge"
+
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
@@ -17,13 +19,13 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
 OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT"
-EXP4=D4_1km_NP64
+EXP4=D4_1km_NP64_0829_01_JITOFF
 EXP3=exp_d3
 EXP2=exp_d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
 
-INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/${EXP4}"
+INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_1km_NP64"
 
 #===============================================================================
 # Location of model/data files
@@ -48,7 +50,7 @@ DATA_BDY_GRADS=
 OBS="/work/hp150019/c24140/scale_database/PAWRtest/testcase"
 OBS="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/PAWR_TOSHIBA"
 OBSNCEP=
-OBS_USE_JITDT=0 # 1: Run with JIT-DT 
+OBS_USE_JITDT=1 # 1: Run with JIT-DT 
                 # 0: No JIT-DT
 OBS_USE_JITDT_OFFLINE=1 # 1: Offilne test
                         # 0: Online (data should be transfered from NICT)
@@ -160,7 +162,7 @@ TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPS="$TMP"  # Temporary directory only on the server node
 TMPL="$TMP"
-TMP_JITDATA="/work/hp150019/share/honda/jitdt/offline/data" # job.running
+TMP_JITDATA="/work/hp150019/share/$(id -nu)/jitdt/offline/data" # job.running
 TMP_JITDATA_IP="$(hostname -i)"
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?

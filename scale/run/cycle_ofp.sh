@@ -126,6 +126,7 @@ if [ "$RSCGRP" == "" ] ; then
   RSCGRP="regular-cache"
 fi
 
+
 cat > $jobscrp << EOF
 #!/bin/sh
 #PJM -L rscgrp=${RSCGRP}
@@ -135,7 +136,9 @@ cat > $jobscrp << EOF
 ##PJM --mpi proc=${totalnp}
 #PJM --omp thread=${THREADS}
 
-#PJM -g $(echo $(id -ng))
+##PJM -g $(echo $(id -ng))
+# HPC
+#PJM -g gx14  
 
 
 module load hdf5/1.8.17

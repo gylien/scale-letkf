@@ -2,9 +2,9 @@
 
 # copied from /work/hp150019/share/nowcast/bin/jit-lwatch on 8/28/2019
 
-USER=honda
+#USER=honda
 
-TOP=/work/hp150019/share/${USER}/jitdt/online
+TOP=/work/hp150019/share/$(id -nu)/jitdt/online
 
 DATA_DIR=/work/hp150019/share/nowcast/kobe/data/
 #DAEMON=./lwatcher
@@ -12,7 +12,8 @@ DAEMON=/work/hp150019/share/nowcast/bin/lwatcher
 
 LOGFILE=$TOP/LWATCHLOG
 PID_FILE=$TOP/LWATCH_PID
-CONF_FILE=$TOP/etc/conf
+#CONF_FILE=$TOP/etc/conf
+CONF_FILE=/work/hp150019/share/honda/jitdt/online/etc/conf
 OPTIONS="-D -d -v -h 5 -c $CONF_FILE -f $LOGFILE"
 OPTIONS2="-d -v -c $CONF_FILE -f $LOGFILE"
 
