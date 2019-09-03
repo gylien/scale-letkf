@@ -1429,8 +1429,6 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,&
   integer :: i8, j8, b8
   integer :: ch
 
-print *,"Hello from monit_obs"
-
 !  ! bias correction
 !  integer,parameter :: nmin = 400 ! parameter from Miyoshi et al. (2010) & Sato (2007)
 !  integer :: nobs_b
@@ -1451,7 +1449,6 @@ print *,"Hello from monit_obs"
 #endif
 
   call state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
-print *,"Hello from monit_obs after state2"
 
   if (use_key) then
     nnobs = obsda_sort%nobs_in_key
@@ -1489,10 +1486,10 @@ print *,"Hello from monit_obs after state2"
 !!  if (USE_HIM8) then 
 ! Always calculate Him8 radiances
 
-print *,"Hello from monit_obs before Trans",obsdep_nobs
+write(6,'(a,i9)'),"Hello from monit_obs before Trans",obsdep_nobs
   call Trans_XtoY_H08_allg(v3dgh,v2dgh,yobs_H08,yobs_H08_clr,&
                            plev_obs_H08,qc_H08,zangle_H08)
-print *,"Hello from monit_obs afte Trans"
+write(6,'(a)'),"Hello from monit_obs afte Trans"
   !
   ! Initialize qc flag (set iqc is "bad")
   ! This will be overwritten by obsda_sort%qc
@@ -1662,13 +1659,13 @@ print *,"Hello from monit_obs afte Trans"
   end do ! [ n = 1, nnobs ]
 !##!$OMP END DO
 !##!$OMP END PARALLEL
-print *,"Hello from monit_obs after loop"
 
 !   -- TC vital DA -- 
 !   -- End of TC vital DA -- 
 
-
+write(6,'(a)')"DEBUG before monit dep"
   call monit_dep(nnobs,oelm,ohx,oqc,nobs,bias,rmse)
+write(6,'(a)')"DEBUG after monit dep"
 
 !  aH08 = 0.0d0
 !  bH08 = 0.0d0
@@ -1764,6 +1761,7 @@ print *,"Hello from monit_obs after loop"
 !    rmse_H08_bc = 0.0d0
   endif ! [USE_HIM8]
   
+write(6,'(a)')"DEBUG after USE_HIM8"
 
   monit_type = .false.
   monit_type(uid_obs(id_u_obs)) = .true.
@@ -1792,6 +1790,8 @@ print *,"Hello from monit_obs after loop"
   deallocate (oelm)
   deallocate (ohx)
   deallocate (oqc)
+
+write(6,'(a)')"DEBUG after USE_HIM82"
 
   return
 end subroutine monit_obs
@@ -3261,8 +3261,6 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   integer :: i, j
   real(r_size) :: ri, rj
 
-print *,"Hello from Trans_XtoY_H08_allg"
-
   !
   ! Extrapolate input profiles by using climatology (MIPAS)
   ! Based on "scalelib/src/atmos-physics/scale_atmos_phy_rd_mstrnx.F90"
@@ -3353,6 +3351,8 @@ print *,"Hello from Trans_XtoY_H08_allg"
 !        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using (lon,lat).
 !
 
+write(6,'(a)') "DEBUG before RTTOV"
+
   CALL SCALE_RTTOV_fwd12(NIRB_HIM8, & ! num of channels
                        KMAX,& ! num of levels
                        nlon*nlat,& ! num of profs
@@ -3377,7 +3377,8 @@ print *,"Hello from Trans_XtoY_H08_allg"
                        btclr_out(:,:),& ! (K)
                        mwgt_plev1d(:,:),& ! (Pa)
                        ctop_out1d(:))
-print *,"Hello from Trans_XtoY_H08_allg finish RTTOV"
+
+write(6,'(a)') "DEBUG after RTTOV"
 
 !
 ! -- btall_out is substituted into yobs

@@ -1,5 +1,5 @@
 &PARAM_LOG
- LOG_LEVEL = 2, 
+ LOG_LEVEL = 2,
 /
 
 &PARAM_OBSOPE

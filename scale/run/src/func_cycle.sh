@@ -918,9 +918,9 @@ enspp_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script start" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script start" >&2
+#fi
 
 if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
   echo "  ... skip this step (use prepared topo and landuse files)"
@@ -949,14 +949,14 @@ if (pdrun all $PROC_OPT); then
        $mem_nodes $mem_np $TMPRUN/scale_pp $MEMBER_RUN $iter cycle
 fi
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script end" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script end" >&2
+#fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -968,9 +968,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -998,9 +998,9 @@ else # local run directory: run multiple members as needed
 fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1011,9 +1011,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1028,9 +1028,9 @@ ensinit_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script start" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script start" >&2
+#fi
 
 if ((BDY_FORMAT == 0)); then
   echo "  ... skip this step (use prepared boundaries)"
@@ -1069,14 +1069,14 @@ if (pdrun all $PROC_OPT); then
        $mem_nodes $mem_np $TMPRUN/scale_init $MEMBER_RUN $iter cycle
 fi
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script end" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script end" >&2
+#fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1096,9 +1096,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1131,9 +1131,9 @@ if ((loop == 1)); then
 fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1150,9 +1150,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1167,9 +1167,9 @@ ensfcst_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script start" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script start" >&2
+#fi
 
 bdy_setting $time $CYCLEFLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 
@@ -1210,14 +1210,14 @@ else
   time_l='const'
 fi
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script end" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script end" >&2
+#fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1265,9 +1265,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1288,9 +1288,9 @@ if ((OUT_OPT >= 5 && ((loop - 1) % OUT_CYCLE_SKIP != 0))); then
 fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1306,9 +1306,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1323,9 +1323,9 @@ obsope_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[4]}: Pre-processing script start" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[4]}: Pre-processing script start" >&2
+#fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_obsope_node.sh $MYRANK \
@@ -1333,14 +1333,14 @@ if (pdrun all $PROC_OPT); then
        $mem_nodes $mem_np $slot_s $slot_e $slot_b $MEMBER
 fi
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[4]}: Pre-processing script end" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[4]}: Pre-processing script end" >&2
+#fi
 
 for it in $(seq $nitmax); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1351,9 +1351,9 @@ for it in $(seq $nitmax); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1369,9 +1369,9 @@ obsope_2 () {
 #echo
 
 for it in $(seq $nitmax); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1382,9 +1382,9 @@ for it in $(seq $nitmax); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Post-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[4]}: $it: Post-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1399,9 +1399,9 @@ letkf_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script start" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script start" >&2
+#fi
 
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
@@ -1411,14 +1411,14 @@ if (pdrun all $PROC_OPT); then
        $MEMBER
 fi
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script end" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[5]}: Pre-processing script end" >&2
+#fi
 
 for it in $(seq $nitmax); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1430,9 +1430,9 @@ for it in $(seq $nitmax); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1448,9 +1448,9 @@ letkf_2 () {
 #echo
 
 for it in $(seq $nitmax); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1461,9 +1461,9 @@ for it in $(seq $nitmax); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Post-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[5]}: $it: Post-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------

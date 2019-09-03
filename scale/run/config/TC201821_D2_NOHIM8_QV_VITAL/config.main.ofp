@@ -9,7 +9,7 @@ PRESET='OFP'
 
 USERNAME=honda
 
-EXP=TC201821_D2_HIM8_QV_VITAL
+EXP=TC201821_D2_NOHIM8_QV_VITAL
 PEXP=TC201821_D1
 
 # -- RTTOV_DIR --
@@ -53,11 +53,13 @@ OBSNCEP=
 DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
 
-TOPO_FORMAT='GTOPO30'      # 'prep': Use prepared topo files in $DATA_TOPO
+#TOPO_FORMAT='GTOPO30'      # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
-LANDUSE_FORMAT='GLCCv2'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+#LANDUSE_FORMAT='GLCCv2'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
@@ -103,7 +105,7 @@ LAND_INPUT=1            # 0: No land input (use cycling land variables)
 LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
-OBSNUM=3
+OBSNUM=2
 OBSNAME[1]=obs
 OBSFOOT[1]="dat"
 OBSNAME[2]=vital
@@ -124,14 +126,13 @@ LTIMESLOT=600     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=50          # Ensemble size
 
-MEMBER=14          # Ensemble size
-NNODES=1    # Number of nodes
+NNODES=416    # Number of nodes
 
 PPN=64              # Number of processes per node
 
 THREADS=8          # Number of threads per process
 
-SCALE_NP=4        # Number of processes to run SCALE
+SCALE_NP=512        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 

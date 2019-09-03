@@ -351,7 +351,7 @@ MODULE common_nml
   integer :: H08_OBS_AVE_NG = 0 ! # of grids for averaging adjacent grids (H08_OBS_METHOD=2)
   logical :: H08_OBS_AVE_OVERLAP = .false.
   integer :: H08_OBS_THIN_LEV = 1 ! thinning level (1: no thinning)
-  logical :: USE_HIM8 = .false. ! will be overwritten from obsope_tools.f90
+  logical :: USE_HIM8 = .true. ! ! will be overwritten from obsope_tools.f90
 
   !--- PARAM_OBS_ERROR
   real(r_size) :: OBSERR_U = 1.0d0

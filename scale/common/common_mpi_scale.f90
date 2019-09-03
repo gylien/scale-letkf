@@ -107,7 +107,7 @@ subroutine initialize_mpi_scale
   nprocs = universal_nprocs
   myrank = PRC_UNIVERSAL_myrank
 
-  write(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ', myrank, '/', nprocs-1
+!  write(6,'(A,I6.6,A,I6.6)') 'Hello from MYRANK ', myrank, '/', nprocs-1
   if (r_size == r_dble) then
     MPI_r_size = MPI_DOUBLE_PRECISION
   else if (r_size == r_sngl) then
@@ -1562,13 +1562,23 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
 !      vbcfH08 = 0.0d0
 !    endif
 
+if (monit_step == 2 .and. myrank_d == 0) write(6,'(a)')"DEBUG monit 000"
+
     call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true.,&
                    nobs_H08, bias_H08, rmse_H08, yobs_H08_l, monit_step)
 !                   nobs_H08, bias_H08, rmse_H08, bias_H08_bc, rmse_H08_bc,&
 !                   aH08, bH08, vbcfH08, monit_step)
 
+if (monit_step == 2 .and. myrank_d == 0) write(6,'(a)')"DEBUG monit 001"
+
+
     if (H08_SIM_ALLG) then
+write(6,'(a)')"DEBUG write_Him8_mpi 00"
+if (monit_step == 2 .and. myrank_d == 0) write(6,'(a)')"DEBUG monit 002"
       call write_Him8_mpi(yobs_H08_l,monit_step)
+write(6,'(a)')"DEBUG write_Him8_mpi 01"
+if (monit_step == 2 .and. myrank_d == 0) write(6,'(a)')"DEBUG monit 003"
+
     endif
    
 
@@ -1649,6 +1659,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
       end if
     end do
 #endif
+if (monit_step == 2 .and. myrank_d == 0) write(6,'(a)')"DEBUG monit 005"
 
     if (nprocs_d > 1) then
       call MPI_ALLREDUCE(MPI_IN_PLACE, nobs_g, nid_obs, MPI_INTEGER, MPI_SUM, MPI_COMM_d, ierr)
@@ -1718,6 +1729,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
     end do
 
     call mpi_timer('monit_obs_mpi:stat:mpi_allreduce(domain):', 2)
+if (monit_step == 2 .and. myrank_d == 0) write(6,'(a)')"DEBUG monit 006"
 
     if (OBSDEP_OUT .and. monit_step == 2) then
       cnts = obsdep_nobs
@@ -1796,6 +1808,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
     call mpi_timer('monit_obs_mpi:mpi_allreduce(ens):', 2)
   end if
 
+if (monit_step == 2 .and. myrank_d == 0) write(6,'(a)')"DEBUG monit 008"
   if (DEPARTURE_STAT_ALL_PROCESSES .or. myrank_e == mmean_rank_e) then
     if (monit_step == 1) then
       write(6,'(2A)') 'OBSERVATIONAL DEPARTURE STATISTICS [GUESS] (IN THIS SUBDOMAIN):'
@@ -1823,6 +1836,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
 
     call mpi_timer('monit_obs_mpi:monit_print:', 2)
   end if
+if (monit_step == 2 .and. myrank_d == 0) write(6,'(a)')"DEBUG monit 009"
 
   return
 end subroutine monit_obs_mpi

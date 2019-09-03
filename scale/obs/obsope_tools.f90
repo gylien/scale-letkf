@@ -155,7 +155,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   ! (locations in model grids and the subdomains they belong to)
   !-----------------------------------------------------------------------------
 
-  USE_HIM8 = .false. ! initialize
+!  USE_HIM8 = .false. ! initialize
 
   do iof = 1, OBS_IN_NUM
     if (obs(iof)%nobs > 0) then ! Process basic obsevration information for all observations since this information is not saved in obsda files
@@ -175,11 +175,11 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
       obrank_bufs(:) = -1
 
-      if((OBS_IN_FORMAT(iof) == obsfmt_h08 ) .and. (.not. USE_HIM8))then
+!      if((OBS_IN_FORMAT(iof) == obsfmt_h08 ) .and. (.not. USE_HIM8))then
         ! Himawari-8 radiance obs
 
         USE_HIM8 = .true.
-      endif
+!      endif
 
 !$OMP PARALLEL DO PRIVATE(ibufs,n) SCHEDULE(STATIC)
       do ibufs = 1, cntr(myrank_a+1)

@@ -85,8 +85,8 @@
 #################################################
 
 &PARAM_PRC_CARTESC
- PRC_NUM_X      = 2,
- PRC_NUM_Y      = 2,
+ PRC_NUM_X      = 16,
+ PRC_NUM_Y      = 32,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -100,7 +100,7 @@
 &PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 36,
  IMAX = 24,
- JMAX = 32,
+ JMAX = 16,
 /
 
 &PARAM_LAND_GRID_CARTESC_INDEX
