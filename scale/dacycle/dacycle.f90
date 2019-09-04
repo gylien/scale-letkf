@@ -220,6 +220,8 @@ program dacycle
       scycle_dafcst = -1
     endif
 
+    if (myrank_d == 0 .and. .not. myrank_use_da ) write (6, '(A,2I7)') 'scycle_dafcst', scycle_dafcst, myrank_e !DEBUG
+
     ! setup grid parameters
     call set_common_scale
     call set_common_mpi_scale
@@ -252,14 +254,14 @@ program dacycle
             write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip reading restart files'
           end if
 
-          if ( ( .not. myrank_use_da ) .or. ( dafcst_step == 0 )) then
+          if ( ( myrank_use_da ) .or. ( dafcst_step == 0 )) then
             call resume_state(do_restart_read=.false.)
           endif
         else
           call resume_state(do_restart_read=.true.)
           if (icycle == 0 .and. myrank_use_da) then
             ! initialize system_clock after reading initial files
-            call MPI_BARRIER(MPI_COMM_da, ierr)
+            call MPI_BARRIER(MPI_COMM_da, ierr) 
             if ( myrank_da == 0 ) then
               call system_clock(stime_noio_c)
             endif
@@ -309,8 +311,7 @@ program dacycle
       call MONITOR_write('MAIN', TIME_NOWSTEP)
       call FILE_HISTORY_write
 
-      ! Dacycle-forecast members also require icycle information !
-      if (TIME_DOATMOS_restart .and. (.not. myrank_use_da)) then
+      if (TIME_DOATMOS_restart) then
         icycle = icycle + 1
       endif
 
@@ -320,8 +321,6 @@ program dacycle
       if (TIME_DOATMOS_restart .and. myrank_use_da) then
 
         call mpi_timer('SCALE', 1, barrier=MPI_COMM_da)
-
-        icycle = icycle + 1
 
         if (ANAL_OUT_FREQ >= 1 .and. (mod(icycle, ANAL_OUT_FREQ) == 0 .or. icycle == lastcycle)) then
           anal_mem_out_now = .true.
@@ -518,8 +517,8 @@ program dacycle
           call TIME_gettimelabel(ftimelabel)
           write (6, '(2A,1x,A,1x,A,f12.4)') '[Info:DA] End analysis: ', date, time, trim(ftimelabel), &
                                             real(etime_da_c - stime_da_c) / real(cpsec)
+          stime_da_c = etime_da_c
         endif
-        stime_da_c = etime_da_c
 
 
         ! Monitor excluding restart I/O at 1st and last cycles
@@ -531,33 +530,35 @@ program dacycle
         endif
         !-----------------------------------------------------------------------
 
+        ! Send analysis ensemble mean for dacycle-forecast member
+        if (DACYCLE_RUN_FCST .and. icycle >= ICYC_DACYCLE_RUN_FCST ) then
+          fcst_cnt = fcst_cnt + 1
+  
+          ! Send analsis ensemble mean to an dacycle-forecast member
+          if ((myrank_e == mmean_rank_e) .and. &
+              (fcst_cnt <= MAX_DACYCLE_RUN_FCST)) then
+            call send_emean_direct(mean3d,mean2d,fcst_cnt)
+          endif
+  
+        endif
+
+        ! restart output after LETKF
+        if (DIRECT_TRANSFER .and. (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now) ) then
+          !!!!!! To do: control restart outputs separately for members, mean, and mdet
+          if (LOG_LEVEL >= 2 .and. myrank_da == 0 ) then
+            write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; writing restart (analysis) files after LETKF'
+          end if
+          call ADMIN_restart_write 
+        end if
+
+
       end if ! [ TIME_DOATMOS_restart .and. myrank_use_da]
       !-------------------------------------------------------------------------
       ! LETKF section end
       !-------------------------------------------------------------------------
 
-      ! restart output after LETKF
-      if (DIRECT_TRANSFER .and. (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now) .and. (.not. myrank_use_da)) then
-        !!!!!! To do: control restart outputs separately for members, mean, and mdet
-        if (LOG_LEVEL >= 2 .and. myrank_da == 0 .and. TIME_DOATMOS_restart) then
-          write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; writing restart (analysis) files after LETKF'
-        end if
-        call ADMIN_restart_write 
-      end if
 
-      ! Send analysis ensemble mean for dacycle-forecast member
-      if (DACYCLE_RUN_FCST .and. icycle >= ICYC_DACYCLE_RUN_FCST .and. TIME_DOATMOS_restart) then
-        fcst_cnt = fcst_cnt + 1
-
-        ! Send analsis ensemble mean to an dacycle-forecast member
-        if (myrank_use_da .and. (myrank_e == mmean_rank_e) .and. &
-            (fcst_cnt <= MAX_DACYCLE_RUN_FCST)) then
-          call send_emean_direct(mean3d,mean2d,fcst_cnt)
-        endif
-
-      endif
-
-      if (.not. myrank_use_da .and. icycle >= scycle_dafcst ) then
+      if (.not. myrank_use_da .and. icycle >= scycle_dafcst .and. TIME_DOATMOS_restart ) then
 
         dafcst_step = dafcst_step + 1
 
@@ -576,24 +577,21 @@ program dacycle
         endif
 
 
-        if (myrank_d == 0) then
+        if (myrank_d == 0 .and. LOG_LEVEL >= 3) then
           call TIME_gettimelabel(ftimelabel)
-          if (LOG_LEVEL >= 3) then
-            write(6,'(a,1x,i3,1x,a15)') "Add. fcst ",int(myrank_da / nprocs_d) + ICYC_DACYCLE_RUN_FCST, ftimelabel(1:15)
-          endif
+          write(6,'(a,1x,i3,1x,a15)') "Add. fcst ",int(myrank_da / nprocs_d) + ICYC_DACYCLE_RUN_FCST, ftimelabel(1:15)
         endif
 
-        if (TIME_DOATMOS_restart) then
-          dafcst_ostep = dafcst_ostep + 1
+        dafcst_ostep = dafcst_ostep + 1
 
-          ! Output of dacycle-forecast
-          if (.not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
+        ! Output of dacycle-forecast
+        if (.not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
 
-          call calc_ref_direct(ref3d)
-          call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
-        endif
+        call calc_ref_direct(ref3d)
+        call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
 
       endif ! .not. myrank_use_da .and. icycle >= scycle_dafcst
+
 
       if ( TIME_NOWSTEP > TIME_NSTEP ) then
         if (myrank_a == 0) then

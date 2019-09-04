@@ -428,7 +428,7 @@ subroutine scalerm_setup(execname)
         scalerm_memf = memf_mean
       else if (scalerm_mem == MEMBER+2 .and. ENS_WITH_MDET) then
         scalerm_memf = memf_mdet
-      else if (scalerm_mem <= MEMBER+2+MAX_DACYCLE_RUN_FCST .and. scalerm_mem > mem_da) then
+      else if (scalerm_mem <= mem_da+MAX_DACYCLE_RUN_FCST .and. scalerm_mem > mem_da) then
         scalerm_memf = memf_mean
         myrank_use_da = .false.
       else
