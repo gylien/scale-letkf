@@ -290,7 +290,7 @@ subroutine scalerm_setup(execname)
     exec_modelonly = .true.
   end if
 
-!  call mpi_timer('', 2, barrier=MPI_COMM_WORLD)
+  call mpi_timer('', 2, barrier=MPI_COMM_WORLD)
 
   ! Communicator for all processes used
   !-----------------------------------------------------------------------------
@@ -428,7 +428,7 @@ subroutine scalerm_setup(execname)
         scalerm_memf = memf_mean
       else if (scalerm_mem == MEMBER+2 .and. ENS_WITH_MDET) then
         scalerm_memf = memf_mdet
-      else if (scalerm_mem <= MEMBER+2+MAX_DACYCLE_RUN_FCST .and. scalerm_mem >= mem_da) then
+      else if (scalerm_mem <= MEMBER+2+MAX_DACYCLE_RUN_FCST .and. scalerm_mem > mem_da) then
         scalerm_memf = memf_mean
         myrank_use_da = .false.
       else
@@ -478,6 +478,8 @@ subroutine scalerm_setup(execname)
     write (6, '(A,I6.6,A)') '[Info] MYRANK = ', myrank, ' is not used for SCALE!'
   end if
 
+  call mpi_timer('scalerm_setup:standard I/O:', 2)
+
   ! Read LETKF namelists
   !-----------------------------------------------------------------------------
 
@@ -511,6 +513,8 @@ subroutine scalerm_setup(execname)
     call read_nml_letkf_radar
     call read_nml_letkf_h08
   end select
+
+  call mpi_timer('scalerm_setup:read_nml:', 2)
 
   !-----------------------------------------------------------------------------
 
@@ -554,7 +558,7 @@ subroutine scalerm_setup(execname)
     key_da = myrank_a - mem_da * nprocs_m
   endif
 
-  call MPI_COMM_SPLIT(MPI_COMM_u, color_da, key_da, MPI_COMM_da, ierr)
+  call MPI_COMM_SPLIT(MPI_COMM_a, color_da, key_da, MPI_COMM_da, ierr)
 
   call MPI_COMM_SIZE(MPI_COMM_da, nprocs_da, ierr)
   call MPI_COMM_RANK(MPI_COMM_da, myrank_da, ierr)

@@ -153,9 +153,6 @@ program dacycle
   call mpi_timer('', 1)
 
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-  call date_and_time(date=date, time=time)
-  call system_clock(stime_c, cpsec, cmax)
-  stime_da_c = stime_c
 
 !  if (command_argument_count() >= 2) then
 !    call get_command_argument(2, icmd)
@@ -168,6 +165,10 @@ program dacycle
 !  end if
 
   if (myrank == 0) then
+    call date_and_time(date=date, time=time)
+    call system_clock(stime_c, cpsec, cmax)
+    stime_da_c = stime_c
+
     write (6, '(2A,1x,A)') '[Info] Start time: ', date, time 
 
     write (6, '(A)') '============================================='
@@ -244,18 +245,25 @@ program dacycle
       ! report current time
       call ADMIN_TIME_checkstate
 
-      if ( TIME_DOresume .and. dafcst_step <= 0) then
+      if ( TIME_DOresume ) then
         ! read state from restart files
         if (DIRECT_TRANSFER .and. icycle >= 1) then
           if (LOG_LEVEL >= 3) then
             write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip reading restart files'
           end if
-          call resume_state(do_restart_read=.false.)
+
+          if ( ( .not. myrank_use_da ) .or. ( dafcst_step == 0 )) then
+            call resume_state(do_restart_read=.false.)
+          endif
         else
           call resume_state(do_restart_read=.true.)
-          ! initialize system_clock after reading initial files
-          call MPI_BARRIER(MPI_COMM_da, ierr)
-          call system_clock(stime_noio_c)
+          if (icycle == 0 .and. myrank_use_da) then
+            ! initialize system_clock after reading initial files
+            call MPI_BARRIER(MPI_COMM_da, ierr)
+            if ( myrank_da == 0 ) then
+              call system_clock(stime_noio_c)
+            endif
+          endif
 
         end if
 
@@ -286,8 +294,8 @@ program dacycle
         end if
       else
         call ADMIN_restart_write
+        call ADMIN_restart_write_additional !!!!!! To do: control additional restart outputs for gues_mean, gues_sprd, and anal_sprd
       end if
-      call ADMIN_restart_write_additional !!!!!! To do: control additional restart outputs for gues_mean, gues_sprd, and anal_sprd
 
       ! calc tendencies and diagnostices
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency( force = .false. )
@@ -504,10 +512,10 @@ program dacycle
         end do
 
         call MPI_BARRIER(MPI_COMM_da, ierr)
-        call date_and_time(date=date, time=time)
-        call system_clock(etime_da_c)
-        call TIME_gettimelabel(ftimelabel)
         if (myrank_da == 0) then
+          call date_and_time(date=date, time=time)
+          call system_clock(etime_da_c)
+          call TIME_gettimelabel(ftimelabel)
           write (6, '(2A,1x,A,1x,A,f12.4)') '[Info:DA] End analysis: ', date, time, trim(ftimelabel), &
                                             real(etime_da_c - stime_da_c) / real(cpsec)
         endif
@@ -517,17 +525,19 @@ program dacycle
         ! Monitor excluding restart I/O at 1st and last cycles
         if ( TIME_NOWSTEP > TIME_NSTEP ) then
           call MPI_BARRIER(MPI_COMM_da, ierr)
-          call system_clock(etime_noio_c) 
+          if ( myrank_da == 0 ) then
+            call system_clock(etime_noio_c) 
+          endif
         endif
         !-----------------------------------------------------------------------
 
-      end if ! [ TIME_DOATMOS_restart ]
+      end if ! [ TIME_DOATMOS_restart .and. myrank_use_da]
       !-------------------------------------------------------------------------
       ! LETKF section end
       !-------------------------------------------------------------------------
 
       ! restart output after LETKF
-      if (DIRECT_TRANSFER .and. (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now)) then
+      if (DIRECT_TRANSFER .and. (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now) .and. (.not. myrank_use_da)) then
         !!!!!! To do: control restart outputs separately for members, mean, and mdet
         if (LOG_LEVEL >= 2 .and. myrank_da == 0 .and. TIME_DOATMOS_restart) then
           write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; writing restart (analysis) files after LETKF'
@@ -583,7 +593,7 @@ program dacycle
           call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
         endif
 
-      endif
+      endif ! .not. myrank_use_da .and. icycle >= scycle_dafcst
 
       if ( TIME_NOWSTEP > TIME_NSTEP ) then
         if (myrank_a == 0) then
@@ -595,7 +605,7 @@ program dacycle
         if (.not. myrank_use_da) then
           call MPI_BARRIER(MPI_COMM_d, ierr)
           call date_and_time(date=date, time=time)
-          call system_clock(etime_fcst_c)
+          call system_clock(etime_fcst_c, cpsec, cmax)
           call TIME_gettimelabel(fetimelabel)
           if (myrank_d == 0) then
             write (6, '(2A,1x,A,1x,A,1x,A,f12.4)') '[Info:fcst] End forecast: ', date, time, &
@@ -658,9 +668,9 @@ program dacycle
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-  call date_and_time(date=date, time=time)
-  call system_clock(etime_c)
   if (myrank == 0) then
+    call date_and_time(date=date, time=time)
+    call system_clock(etime_c, cpsec, cmax)
     write (6, '(2A,1x,A)') '[Info] End time: ', date, time
     write (6, '(1A,1f12.4)') '[Info] Computation time by system_clock: ', real(etime_c - stime_c) / real(cpsec)
     write (6, '(1A,1f12.4,1A,1i5,1A)') '[Info] Computation time by system_clock (excluding restart I/O): ', real(etime_noio_c - stime_noio_c) / real(cpsec), ' for ',lastcycle, ' cycles'

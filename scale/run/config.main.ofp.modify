@@ -12,8 +12,8 @@ PRESET='OFP'
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
-OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
-EXP4=exp_d4_250m_large
+OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest/"
+EXP4=exp_d4
 EXP3=exp_d3
 EXP2=exp_d2
 
@@ -31,9 +31,9 @@ SCALE_DB="/work/hp150019/share/database"
 DATA_TOPO=                                                           # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE="${OUTPUT}/${EXP3}/const/topo"
 DATA_LANDUSE=                                                        # Directory of the prepared landuse files
-DATA_BDY_SCALE="${OUTPUT}/${EXP4}"
-DATA_BDY_SCALE_PRC_NUM_X=
-DATA_BDY_SCALE_PRC_NUM_Y=
+DATA_BDY_SCALE="${OUTPUT}/${EXP3}/ref_20190528000000"
+DATA_BDY_SCALE_PRC_NUM_X=32
+DATA_BDY_SCALE_PRC_NUM_Y=32
 DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
@@ -41,16 +41,9 @@ DATA_BDY_GRADS=
 
 #OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_TOSHIBA"
 #OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_JRC"
-OBS="/work/hp150019/c24140/scale_database/PAWRtest/testcase"
+OBS="/work/hp150019/c24140/scale_database/PAWRtest/dummy"
 OBSNCEP=
-OBS_USE_JITDT=0 # 1: Run with JIT-DT 
-                # 0: No JIT-DT
-OBS_USE_JITDT_OFFLINE=1 # 1: Offilne test
-                        # 0: Online (data should be transfered from NICT)
-
-JIT_TOP=/work/hp150019/share/honda/jitdt
-JIT_TARFILE=${JIT_TOP}/testdata/jit_offline_data_20190610080030-20190610100000.tar
-JIT_OFFLOG=${JIT_TOP}/testdata/jit_offline_data_20190610080030-20190610100000.txt
+OBS_USE_JITDT=0
 
 #===============================================================================
 # model/data file options
@@ -123,14 +116,15 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=<MEMBER>      # Ensemble size 
-NNODES=<NNODES>
+MEMBER=50      # Ensemble size 
+#NNODES=54      # Ensemble size + 1 (mean) +1 (mdet) + 2 (additional)
+NNODES=72      # Ensemble size + 1 (mean) +1 (mdet) + 20 (additional)
 
 PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
-SCALE_NP=4096  # D4    # Number of processes to run SCALE
+SCALE_NP=64  # D4    # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -148,8 +142,6 @@ TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPS="$TMP"  # Temporary directory only on the server node
 TMPL="$TMP"
-TMP_JITDATA="/work/hp150019/share/$(id -nu)/jitdt/offline/data"
-TMP_JITDATA_IP="$(hostname -i)"
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
                             #  0: No
@@ -158,7 +150,7 @@ CLEAR_TMP=0                 # Clear temporary directories after the completion o
 #===============================================================================
 # Environmental settings
 
-MPIRUN="mpiexec.hydra"
+MPIRUN="mpiexec"
 if (which $MPIRUN > /dev/null 2>&1); then
   MPIRUN=$(which $MPIRUN)
 fi

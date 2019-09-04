@@ -38,7 +38,8 @@ fi
 #####
 
 OFFLINE_TOP=$TOP/offline
-DATADIR=$TOP/testdata
+mkdir -p $OFFLINE_TOP
+#DATADIR=$TOP/testdata
 #BIN=$TOP/bin
 #LOGFILE=testdata.txt
 

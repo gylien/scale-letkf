@@ -2,14 +2,15 @@
 
 # copied from /work/hp150019/share/nowcast/bin/jit-lwatch-offline on 7/31/2019
 
-USER=c24140
+USER=$(id -nu)
 
 TOP=/work/hp150019/share/${USER}/jitdt/offline
 DATA_DIR=$TOP/data
 DAEMON=/work/hp150019/share/nowcast/bin/lwatcher
 LOGFILE=$TOP/LWATCHLOG
 PID_FILE=$TOP/LWATCH_PID
-CONF_FILE=$TOP/etc/conf
+#CONF_FILE=$TOP/etc/conf
+CONF_FILE=/work/hp150019/share/honda/jitdt/offline/etc/conf
 OPTIONS="-D -d -v -h 5 -c $CONF_FILE -f $LOGFILE"
 OPTIONS2="-d -v -c $CONF_FILE -f $LOGFILE"
 

@@ -7,12 +7,15 @@
 
 PRESET='OFP' 
 
+RSCGRP="challenge"
+
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
 OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
+
 EXP4=exp_d4_1km
 EXP3=exp_d3
 EXP2=exp_d2
@@ -149,7 +152,7 @@ TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPS="$TMP"  # Temporary directory only on the server node
 TMPL="$TMP"
-TMP_JITDATA="/work/hp150019/share/c24140/jitdt/offline/data"
+TMP_JITDATA="/work/hp150019/share/$(id -nu)/jitdt/offline/data" # job.running
 TMP_JITDATA_IP="$(hostname -i)"
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
