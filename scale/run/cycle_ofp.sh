@@ -14,6 +14,8 @@ cd "$(dirname "$0")"
 myname="$(basename "$0")"
 job='cycle'
 
+RSCGRP='debug-cache'
+
 #===============================================================================
 # Configuration
 
@@ -136,9 +138,9 @@ cat > $jobscrp << EOF
 ##PJM --mpi proc=${totalnp}
 #PJM --omp thread=${THREADS}
 
-##PJM -g $(echo $(id -ng))
-# HPC
-#PJM -g gx14  
+#PJM -g $(echo $(id -ng))
+### HPC
+###PJM -g gx14  
 
 
 module load hdf5/1.8.17
