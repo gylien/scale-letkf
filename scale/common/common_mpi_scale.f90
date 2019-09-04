@@ -1682,7 +1682,7 @@ subroutine mpi_timer(sect_name, level, barrier)
   integer :: i, ierr
   logical :: initialized
 
-  if (LOG_LEVEL < 3 .and. level > 1) return
+  if (LOG_LEVEL < level ) return
 
   timer_before_barrier = MPI_WTIME()
   timer_after_barrier = timer_before_barrier

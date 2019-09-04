@@ -5,6 +5,7 @@
 #USER=honda
 
 TOP=/work/hp150019/share/$(id -nu)/jitdt/online
+mkdir -p $TOP
 
 DATA_DIR=/work/hp150019/share/nowcast/kobe/data/
 #DAEMON=./lwatcher

@@ -160,6 +160,9 @@ export I_MPI_PIN_DOMAIN=${NPIN}
 export I_MPI_PERHOST=${PPN}
 export KMP_HW_SUBSET=1t
 
+export PSM2_CONNECT_WARN_INTERVAL=2400
+export TMI_PSM2_CONNECT_TIMEOUT=2000
+
 
 #export OMP_STACKSIZE=128m
 ulimit -s unlimited
@@ -197,7 +200,7 @@ if ((OBS_USE_JITDT == 1)) ; then
   if ((OBS_USE_JITDT_OFFLINE == 1)) ; then
     echo "Stop JIT-DT Offline!"
     ${SCRP_DIR}/src/jitdt-lwatch-offline stop
-  elif ((OBS_USE_JITDT_OFFLINE == 1)) ; then
+  elif ((OBS_USE_JITDT_OFFLINE == 0)) ; then
     echo "Stop JIT-DT Online!"
     ${SCRP_DIR}/src/jit-lwatch stop
   fi
