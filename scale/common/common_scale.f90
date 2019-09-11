@@ -25,7 +25,8 @@ MODULE common_scale
 
   ! Parameter 'nv3d' is set in common_nml.f90 ; 3D state variables (in SCALE restart files)
   ! Parameter 'nv2d' is set in common_nml.f90 ; 2D state variables (in SCALE restart files)
-  INTEGER,PARAMETER :: nv3dd=15  ! 3D diagnostic variables (in SCALE history files)
+  INTEGER,PARAMETER :: nv3dd=17  ! 3D diagnostic variables (in SCALE history files)
+!  INTEGER,PARAMETER :: nv3dd=25 ! for obssim ! 3D diagnostic variables (in SCALE history files)
 #ifdef H08
   INTEGER,PARAMETER :: nv2dd=9  ! H08  ! 2D diagnostic variables (in SCALE history files)
 #else
@@ -79,6 +80,19 @@ MODULE common_scale
 
   INTEGER,PARAMETER :: iv3dd_pfl=14
   INTEGER,PARAMETER :: iv3dd_nfl=15
+  INTEGER,PARAMETER :: iv3dd_fp=16 ! flash point
+  INTEGER,PARAMETER :: iv3dd_ltp=17 ! LT path
+
+! Not used for DA, only for obssim
+  INTEGER,PARAMETER :: iv3dd_cc=18
+  INTEGER,PARAMETER :: iv3dd_cr=19
+  INTEGER,PARAMETER :: iv3dd_ci=20
+  INTEGER,PARAMETER :: iv3dd_cs=21
+  INTEGER,PARAMETER :: iv3dd_cg=22
+
+  INTEGER,PARAMETER :: iv3dd_ex=23
+  INTEGER,PARAMETER :: iv3dd_ey=24
+  INTEGER,PARAMETER :: iv3dd_ez=25
 
   INTEGER,PARAMETER :: iv2dd_topo=1
   INTEGER,PARAMETER :: iv2dd_ps=2
@@ -260,7 +274,19 @@ SUBROUTINE set_common_scale
 
     v3dd_name(iv3dd_pfl)   = 'PosFLASH'
     v3dd_name(iv3dd_nfl)   = 'NegFLASH'
+    v3dd_name(iv3dd_fp)   = 'FlashPoint'
+    v3dd_name(iv3dd_ltp)   = 'LTpath'
 
+!    ! For obssim
+!    v3dd_name(iv3dd_cc)   = 'QCRG_C'
+!    v3dd_name(iv3dd_cr)   = 'QCRG_R'
+!    v3dd_name(iv3dd_ci)   = 'QCRG_I'
+!    v3dd_name(iv3dd_cs)   = 'QCRG_S'
+!    v3dd_name(iv3dd_cg)   = 'QCRG_G'
+!
+!    v3dd_name(iv3dd_ex)   = 'Ex'
+!    v3dd_name(iv3dd_ey)   = 'Ey'
+!    v3dd_name(iv3dd_ez)   = 'Ez'
     !
     v2dd_name(iv2dd_topo) = 'topo'
     v2dd_name(iv2dd_ps) = 'SFC_PRES'
@@ -1067,6 +1093,13 @@ SUBROUTINE state_trans(v3dg)
        v3dg(k,i,j,iv3d_w) = v3dg(k,i,j,iv3d_rhow) / rho !!!!!!
        v3dg(k,i,j,iv3d_t) = temp
        v3dg(k,i,j,iv3d_p) = pres
+
+       v3dg(k,i,j,iv3d_cc) = v3dg(k,i,j,iv3d_cc) * rho  ! fC/kg => fC/m^3
+       v3dg(k,i,j,iv3d_cr) = v3dg(k,i,j,iv3d_cr) * rho  ! fC/kg => fC/m^3
+       v3dg(k,i,j,iv3d_ci) = v3dg(k,i,j,iv3d_ci) * rho  ! fC/kg => fC/m^3
+       v3dg(k,i,j,iv3d_cs) = v3dg(k,i,j,iv3d_cs) * rho  ! fC/kg => fC/m^3
+       v3dg(k,i,j,iv3d_cg) = v3dg(k,i,j,iv3d_cg) * rho  ! fC/kg => fC/m^3
+
       enddo
     enddo
   enddo
@@ -1124,10 +1157,41 @@ SUBROUTINE state_trans_inv(v3dg)
   do iv3d = 1, nv3d
     if (POSITIVE_DEFINITE_Q .and. iv3d == iv3d_q) then
       v3dg(:,:,:,iv3d) = max(v3dg(:,:,:,iv3d), 0.0d0)
-    else if (POSITIVE_DEFINITE_QHYD .and. (iv3d == iv3d_qc .or. iv3d == iv3d_qr .or. iv3d == iv3d_qi .or. iv3d == iv3d_qs .or. iv3d == iv3d_qg)) then
+    else if (POSITIVE_DEFINITE_QHYD .and. (.not. POSITIVE_DEFINITE_QHYD_QCRG) .and. (iv3d == iv3d_qc .or. iv3d == iv3d_qr .or. iv3d == iv3d_qi .or. iv3d == iv3d_qs .or. iv3d == iv3d_qg)) then
       v3dg(:,:,:,iv3d) = max(v3dg(:,:,:,iv3d), 0.0d0)
     end if
   end do
+
+  if (POSITIVE_DEFINITE_QHYD .and. POSITIVE_DEFINITE_QHYD_QCRG) then
+!$OMP PARALLEL DO PRIVATE(i,j,k) COLLAPSE(2)
+    do j = 1, nlat
+      do i = 1, nlon
+        do k = 1, nlev
+          if (v3dg(k,i,j,iv3d_qc) < 0.0d0) then
+            v3dg(k,i,j,iv3d_cc) = 0.0d0
+            v3dg(k,i,j,iv3d_qc) = 0.0d0
+          endif
+          if (v3dg(k,i,j,iv3d_qr) < 0.0d0) then
+            v3dg(k,i,j,iv3d_cr) = 0.0d0
+            v3dg(k,i,j,iv3d_qr) = 0.0d0
+          endif
+          if (v3dg(k,i,j,iv3d_qi) < 0.0d0) then
+            v3dg(k,i,j,iv3d_ci) = 0.0d0
+            v3dg(k,i,j,iv3d_qi) = 0.0d0
+          endif
+          if (v3dg(k,i,j,iv3d_qs) < 0.0d0) then
+            v3dg(k,i,j,iv3d_cs) = 0.0d0
+            v3dg(k,i,j,iv3d_qs) = 0.0d0
+          endif
+          if (v3dg(k,i,j,iv3d_qg) < 0.0d0) then
+            v3dg(k,i,j,iv3d_cg) = 0.0d0
+            v3dg(k,i,j,iv3d_qg) = 0.0d0
+          endif
+        enddo
+      enddo
+    enddo
+!$OMP END PARALLEL DO
+  endif
 
 !$OMP PARALLEL DO PRIVATE(i,j,k,iv3d,qdry,CVtot,Rtot,CVovCP,rho,rhot) COLLAPSE(2)
   do j = 1, nlat
@@ -1152,6 +1216,13 @@ SUBROUTINE state_trans_inv(v3dg)
        v3dg(k,i,j,iv3d_rhov) = v3dg(k,i,j,iv3d_v) * rho !!!!!!
        v3dg(k,i,j,iv3d_rhou) = v3dg(k,i,j,iv3d_u) * rho !!!!!!
        v3dg(k,i,j,iv3d_rho) = rho
+
+       v3dg(k,i,j,iv3d_cc) = v3dg(k,i,j,iv3d_cc) / rho  ! fC/m^3 => fC/kg
+       v3dg(k,i,j,iv3d_cr) = v3dg(k,i,j,iv3d_cr) / rho  ! fC/m^3 => fC/kg
+       v3dg(k,i,j,iv3d_ci) = v3dg(k,i,j,iv3d_ci) / rho  ! fC/m^3 => fC/kg
+       v3dg(k,i,j,iv3d_cs) = v3dg(k,i,j,iv3d_cs) / rho  ! fC/m^3 => fC/kg
+       v3dg(k,i,j,iv3d_cg) = v3dg(k,i,j,iv3d_cg) / rho  ! fC/m^3 => fC/kg
+
       enddo
     enddo
   enddo
@@ -1220,7 +1291,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 !!!$OMP PARALLEL DO PRIVATE(j,i,k)
   do j = 1, nlat
     do i = 1, nlon
-      do k = 1, nlev
+      do k = 1, nlev+KHALO ! T. Honda fullfilling the top halo levels
         v3dgh(k+KHALO, i+IHALO, j+JHALO, iv3dd_hgt) = (ztop - topo(i,j)) / ztop * GRID_CZ(k+KHALO) + topo(i,j)
       end do
     enddo

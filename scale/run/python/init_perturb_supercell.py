@@ -10,8 +10,9 @@ OVERW = True
 
 #exp = "2km_CZ2003"
 #exp = "2000m_InSnd_LT_SN14_Mac_0523"
-exp = "2000m_InSnd_LT_SN14_Mac_0605"
-
+#exp = "2000m_InSnd_LT_SN14_Mac_0605"
+exp = "2000m_WK1982_LT_TOMITA_NODA"
+exp = "2000m_WK1982_LT_SN14_NODA"
 
 top = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT"
 
@@ -30,7 +31,7 @@ NOPT_PRC=2
 # variable list
 # MOMX/Y/Z needs a consideration for a staggered grid system (2018/10/13)
 VAR_LIST = ["RHOT","MOMX","MOMY","MOMZ"]
-VAR_LIST = ["RHOT"]
+#VAR_LIST = ["RHOT"]
 
 # Vertical buffer size (grids) where no perturbations are added
 VTBUF = 30 # top (below 5 km)
@@ -122,7 +123,7 @@ def main(time):
  
      
         if vname == "RHOT":
-          sigma = 0.1 # (K)
+          sigma = 3.0 # (K)
         elif vname == "MOMX" or vname == "MOMY" or vname == "MOMZ":
           sigma = 3.0 # (m/s)
 
@@ -158,6 +159,6 @@ def main(time):
 
 #########
 
-time = datetime(2000, 1, 1, 0, 0, 0)
+time = datetime(2001, 1, 1, 0, 0, 0)
 main(time)
 

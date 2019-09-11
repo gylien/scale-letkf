@@ -66,6 +66,10 @@ def read_txt(infile):
          v[l-1] = ldata[4]  # meridional wind (m/s)
 
 
+   # Overwrite U.V by zeros, because we use random perturbations only
+   u[:] = 0.0
+   v[:] = 0.0
+
    SOUNDING = {"z":z, "pt":pt, "qv":qv, "u":u, "v":v, "psfc":psfc, "ptsfc":ptsfc, "qvsfc":qvsfc}
 
    return(SOUNDING)
@@ -142,7 +146,9 @@ def main(top, mems):
 top = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/input/WK"
 mems = 80
 
-#main(top, mems)
+main(top, mems)
+
+sys.exit()
 
 hodograph(top, mems)
 

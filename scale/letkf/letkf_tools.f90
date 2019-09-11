@@ -74,6 +74,10 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   REAL(r_size) :: q_mean,q_sprd                  !GYL
   REAL(r_size) :: q_anal(MEMBER)                 !GYL
 
+  real(r_size) :: c_mean
+  real(r_size) :: c_anal(MEMBER)
+  integer :: iv3d_c
+
   WRITE(6,'(A)') 'Hello from das_letkf'
   WRITE(6,'(A,F15.2)') '  INFL_MUL = ',INFL_MUL
 
@@ -186,7 +190,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   DO ilev=1,nlev
 !    WRITE(6,'(A,I3,F18.3)') 'ilev = ',ilev, MPI_WTIME()
 
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,m,k,hdxf,rdiag,rloc,dep,nobsl,nobsl_t,parm,beta,trans,transm,transrlx,pa,tmpinfl,q_mean,q_sprd,q_anal)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(ij,n,m,k,hdxf,rdiag,rloc,dep,nobsl,nobsl_t,parm,beta,trans,transm,transrlx,pa,tmpinfl,q_mean,q_sprd,q_anal,c_mean,c_anal)
     DO ij=1,nij1
 !      WRITE(6,'(A,I3,A,I8,F18.3)') 'ilev = ',ilev, ', ij = ',ij, MPI_WTIME()
 
@@ -285,6 +289,48 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
         END IF                                                                         !GYL
 
       END DO ! [ n=1,nv3d ]
+
+      do n = iv3d_qc, iv3d_qg ! only hydrometeor
+
+        ! limit hydrometeor (& charge) spread
+        if(Q_SPRD_MAX > 0.0d0 .and. (n == iv3d_qc .or. n == iv3d_qr .or. &
+           n == iv3d_qi .or. n == iv3d_qs .or. n == iv3d_qg)) then
+
+          if (n == iv3d_qc) iv3d_c = iv3d_cc
+          if (n == iv3d_qr) iv3d_c = iv3d_cr
+          if (n == iv3d_qi) iv3d_c = iv3d_ci
+          if (n == iv3d_qs) iv3d_c = iv3d_cs
+          if (n == iv3d_qg) iv3d_c = iv3d_cg
+
+          q_mean = sum(anal3d(ij,ilev,1:MEMBER,n)) / real(MEMBER,r_size)                   
+          q_sprd = 0.0d0 
+          c_mean = sum(anal3d(ij,ilev,1:MEMBER,iv3d_c)) / real(MEMBER,r_size)                   
+!          c_sprd = 0.0d0 
+
+          do m = 1, MEMBER
+            q_anal(m) = anal3d(ij,ilev,m,n) - q_mean
+            q_sprd = q_sprd + q_anal(m)**2
+            c_anal(m) = anal3d(ij,ilev,m,iv3d_c) - c_mean
+!            c_sprd = c_sprd + c_anal(m)**2
+          enddo
+
+          q_sprd = sqrt(q_sprd / real(MEMBER-1,r_size)) / q_mean
+!          c_sprd = sqrt(c_sprd / real(MEMBER-1,r_size)) / c_mean
+
+if (mod(ij,2)==0 .and. mod(ilev,2)==0)print *,"DEBUG999 QSPRD",q_sprd,q_mean
+          if(q_sprd > Q_SPRD_MAX) then 
+            do m = 1, MEMBER
+              anal3d(ij,ilev,m,n) = q_mean + q_anal(m) * Q_SPRD_MAX / q_sprd
+ 
+              ! Charge variables are modified such that they are consistent with
+              ! hydrometeor spread ! T. Honda (07/30/2019)
+              anal3d(ij,ilev,m,iv3d_c) = c_mean + c_anal(m) * Q_SPRD_MAX / q_sprd
+            enddo
+          endif
+
+        endif
+      enddo ! [ n = 1 , nv3d ]
+
 
       ! update 2D variables at ilev = 1
       IF(ilev == 1) THEN 
@@ -1343,6 +1389,11 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
 !  else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'                ! H08
 !    nd_v = ABS(LOG(obsda2%lev(iob)) - LOG(rlev)) / vert_loc_ctype(ic)       ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization
 !#endif
+  else if (obtyp == 25) then ! obtypelist(obtyp) == 'LTNING'
+    nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)             ! for LTNING, use z-coordinate for vertical localization
+    if (.not. USE_LT_3D) then ! No vertical localization for 2d lightning obs
+      nd_v = 0.0d0
+    endif
   else
     nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)    ! z level only 10/24/2018 by TH
   end if

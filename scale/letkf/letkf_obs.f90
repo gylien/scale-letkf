@@ -143,6 +143,8 @@ SUBROUTINE set_letkf_obs
 
   logical :: ctype_use(nid_obs,nobtype)
 
+  real(r_size) :: sig_b
+
 
   WRITE(6,'(A)') 'Hello from set_letkf_obs'
 
@@ -318,11 +320,13 @@ SUBROUTINE set_letkf_obs
     do n = 1, obs(iof)%nobs
       if (obs(iof)%elm(n) == id_radar_ref_obs) then
         if (obs(iof)%dat(n) >= 0.0d0 .and. obs(iof)%dat(n) < 1.0d10) then
-          if (obs(iof)%dat(n) < MIN_RADAR_REF) then
+!          if (obs(iof)%dat(n) < MIN_RADAR_REF) then
+          if (obs(iof)%dat(n) <= MIN_RADAR_REF_DBZ) then ! OSSE
             obs(iof)%elm(n) = id_radar_ref_zero_obs
             obs(iof)%dat(n) = MIN_RADAR_REF_DBZ + LOW_REF_SHIFT
           else
-            obs(iof)%dat(n) = 10.0d0 * log10(obs(iof)%dat(n))
+!            obs(iof)%dat(n) = 10.0d0 * log10(obs(iof)%dat(n))
+            ! do nothing OSSE
           end if
         else
           obs(iof)%dat(n) = undef
@@ -398,7 +402,7 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,ch_num)
 #else
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref)
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) PRIVATE(n,i,iof,iidx,mem_ref,sig_b)
 #endif
   do n = 1, obsda%nobs
     IF(obsda%qc(n) > 0) CYCLE
@@ -429,7 +433,8 @@ SUBROUTINE set_letkf_obs
           mem_ref = mem_ref + 1
         end if
       end do
-      if (obs(iof)%dat(iidx) > RADAR_REF_THRES_DBZ+1.0d-6) then
+      if (obs(iof)%dat(iidx) > RADAR_REF_THRES_DBZ+1.0d-6) then 
+      ! obs: rain
         if (mem_ref < MIN_RADAR_REF_MEMBER_OBSREF) then
           obsda%qc(n) = iqc_ref_mem
 !          write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
@@ -439,6 +444,7 @@ SUBROUTINE set_letkf_obs
           cycle
         end if
       else
+      ! obs: clear
         if (mem_ref < MIN_RADAR_REF_MEMBER) then
           obsda%qc(n) = iqc_ref_mem
 !          write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
@@ -514,6 +520,8 @@ SUBROUTINE set_letkf_obs
       obsda%val(n) = obsda%val(n) + obsda%ensval(i,n)
     END DO
     obsda%val(n) = obsda%val(n) / REAL(MEMBER,r_size)
+
+
 #ifdef H08
 ! Compute CA (cloud effect average, Okamoto et al. 2014QJRMS)
 ! CA is stored in obsda%val2
@@ -522,10 +530,25 @@ SUBROUTINE set_letkf_obs
                    + abs(obs(iof)%dat(iidx) - obsda%val2(n)) &! CO
                    &) * 0.5d0
 #endif
+
+
     DO i=1,MEMBER
       obsda%ensval(i,n) = obsda%ensval(i,n) - obsda%val(n) ! Hdx
     END DO
     obsda%val(n) = obs(iof)%dat(iidx) - obsda%val(n) ! y-Hx
+
+
+    sig_b = 0.0d0
+    do i = 1, MEMBER
+      sig_b = sig_b + obsda%ensval(i,n)**2
+    enddo
+    sig_b = dsqrt(sig_b / REAL(MEMBER-1,r_size))
+
+    if (QC_SIGB) then
+      if (sig_b < obs(iof)%err(n)) then
+        obsda%qc(n) = 225
+      endif
+    endif
 
 !   compute sprd in obs space ! H08
 
@@ -595,58 +618,61 @@ SUBROUTINE set_letkf_obs
       END IF
     end select
 
-    IF(obs(iof)%elm(iidx) == id_H08IR_obs)THEN
+!    IF(obs(iof)%elm(iidx) == id_H08IR_obs)THEN
+!
+!#ifdef H08
+!!
+!! Derived H08 obs height (based on the weighting function output from RTTOV fwd
+!! model) is substituted into obs%lev.
+!! Band num. is substituded into obsda%lev. This will be used in monit_obs.
+!!
+!      ch_num = obs(iof)%lev(iidx)
+!
+!!      IF(DEPARTURE_STAT_H08)THEN
+!!
+!! For obs err correlation statistics based on Desroziers et al. (2005, QJRMS).
+!!
+!        write(6, '(a,2I6,2F8.2,4F12.4,2I6,F10.4)')"H08-O-B", &
+!             obs(iof)%elm(iidx), &
+!             nint(ch_num), & ! obsda%lev includes band num.
+!             obs(iof)%lon(iidx), &
+!             obs(iof)%lat(iidx), &
+!             obsda%val(n),& ! O-B
+!             obsda%lev(n), & ! sensitive height
+!             obs(iof)%dat(iidx), &
+!             obs(iof)%err(iidx), &
+!             obsda%qc(n),        &
+!             mem_ref,  &  ! # of cloudy member
+!             obsda%val2(n)
+!      ELSE
+!        write(6, '(2I6,2F8.2,4F12.4,I3)') &
+!             obs(iof)%elm(iidx), & ! id
+!             nint(ch_num), & ! band num
+!             obs(iof)%lon(iidx), &
+!             obs(iof)%lat(n), &
+!             obsda%lev(iidx), & ! sensitive height
+!             obs(iof)%dat(iidx), &
+!             obs(iof)%err(iidx), &
+!             obsda%val(n), &
+!             obsda%qc(n)
+!      ENDIF !  [.not. DEPARTURE_STAT_H08]
+!#endif
+!    ELSE
+!#ifdef DEBUG
 
-#ifdef H08
-!
-! Derived H08 obs height (based on the weighting function output from RTTOV fwd
-! model) is substituted into obs%lev.
-! Band num. is substituded into obsda%lev. This will be used in monit_obs.
-!
-      ch_num = obs(iof)%lev(iidx)
-
-      IF(DEPARTURE_STAT_H08)THEN
-!
-! For obs err correlation statistics based on Desroziers et al. (2005, QJRMS).
-!
-        write(6, '(a,2I6,2F8.2,4F12.4,2I6,F10.4)')"H08-O-B", &
-             obs(iof)%elm(iidx), &
-             nint(ch_num), & ! obsda%lev includes band num.
-             obs(iof)%lon(iidx), &
-             obs(iof)%lat(iidx), &
-             obsda%val(n),& ! O-B
-             obsda%lev(n), & ! sensitive height
-             obs(iof)%dat(iidx), &
-             obs(iof)%err(iidx), &
-             obsda%qc(n),        &
-             mem_ref,  &  ! # of cloudy member
-             obsda%val2(n)
-      ELSE
-        write(6, '(2I6,2F8.2,4F12.4,I3)') &
-             obs(iof)%elm(iidx), & ! id
-             nint(ch_num), & ! band num
-             obs(iof)%lon(iidx), &
-             obs(iof)%lat(n), &
-             obsda%lev(iidx), & ! sensitive height
-             obs(iof)%dat(iidx), &
-             obs(iof)%err(iidx), &
-             obsda%val(n), &
-             obsda%qc(n)
-      ENDIF !  [.not. DEPARTURE_STAT_H08]
-#endif
-    ELSE
-#ifdef DEBUG
-      write (6, '(2I6,2F8.2,4F12.4,I3)') obs(iof)%elm(iidx), &
+      write (6, '(2I6,2F8.2,5F11.3,I3)') obs(iof)%elm(iidx), &
                                          obs(iof)%typ(iidx), &
-                                         obs(iof)%lon(iidx)*0.01, &
-                                         obs(iof)%lat(iidx)*0.01, &
-                                         obs(iof)%lev(iidx)*0.01, &
+                                         obs(iof)%lon(iidx)*0.001, &
+                                         obs(iof)%lat(iidx)*0.001, &
+                                         obs(iof)%lev(iidx)*0.001, &
                                          obs(iof)%dat(iidx), &
                                          obs(iof)%err(iidx), &
                                          obsda%val(n), &
+                                         sig_b, &
                                          obsda%qc(n)
-#endif
-    ENDIF
+
+!#endif
+!    ENDIF
 
 
   END DO ! [ n = 1, obsda%nobs ]

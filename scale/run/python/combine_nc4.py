@@ -6,9 +6,9 @@ import os
 import sys
 
 
-
-
 def combine(INFO, time):
+
+   print("Hello from combine")
 
    path = os.path.join(INFO["TOP"], INFO["EXP"], INFO["time"].strftime('%Y%m%d%H%M%S'), 
                        INFO["ftyp"], INFO["mem"])
@@ -188,14 +188,12 @@ def new_netcdf(fn, INFO):
 ########################
 
 TOP = "/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT"
-EXP = "2000m_InSnd_LT_SN14_Mac_0523_NODA"
-EXP = "2000m_InSnd_LT_SN14_Mac_0523_DA"
-#EXP = "2000m_InSnd_LT_SN14_Mac_0523"
+EXP = "2000m_InSnd_LT_SN14_Mac_0605_PAWR"
 time = datetime(2000,1,1,0,0,0)
 
 ftyp = "fcst"
-ftyp = "anal"
-ftyp = "gues"
+#ftyp = "anal"
+#ftyp = "gues"
 
 # Number of processes in X direction
 NPX = 8
@@ -207,7 +205,7 @@ NPBX = 0
 # Number of processes (Y) that will NOT be combined # Total: NPY - "2" * NPBY
 NPBY = 0
 
-ZMAX = 30 # Largest index number in Z direction
+ZMAX = 39 # Largest index number in Z direction
 
 mem = "mean"
 HALO = 2
@@ -219,35 +217,58 @@ var4d_names = ["U", "V", "W", "T", "PRES",\
                "QCRG_C", "QCRG_R", "QCRG_I", "QCRG_S", "QCRG_G",\
                "Ex", "Ey", "Ez", "Epot", "PosFLASH", "NegFLASH", "LTpath"]
 
-var4d_names = ["MOMX", "MOMY", "MOMZ", "RHOT", "DENS",\
-               "QV", "QC", "QR", "QI", "QS", "QG", \
-               "CDNS_QC", "CDNS_QR", "CDNS_QI", "CDNS_QS", "CDNS_QG"]
+#var4d_names = ["MOMX", "MOMY", "MOMZ", "RHOT", "DENS",\
+#               "QV", "QC", "QR", "QI", "QS", "QG", \
+#               "CDNS_QC", "CDNS_QR", "CDNS_QI", "CDNS_QS", "CDNS_QG"]
 
 #var4d_names = ["QG"]
 
-MEMBER = 80
-#MEMBER = 1
-mem_list = [str(x).zfill(4) for x in range(1,MEMBER+1)] 
-#mem_list.append("mean")
-mem_list = ["mean"]
-print(mem_list)
 
-time = datetime(2000,1,1,0,0,0)
-
-stime = datetime(2000,1,1,0,40,30)
-etime = datetime(2000,1,1,1,0,0)
-#etime = datetime(2000,1,1,0,35,0)
-#stime = etime # DEBUG
+etime = datetime(2000,1,1,1,10,0)
+stime = etime # DEBUG
 
 dt = timedelta(seconds=30)
+
+# MPI
+from mpi4py import MPI
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+
+
+print("myrank",size,rank)
+
+
+MEMBER = 80
+MEMBER = 2
+mem_list = [str(x).zfill(4) for x in range(1,MEMBER+1)] 
+mem_list.append("mean")
+#mem_list = ["mean", "0001"]
+
+if size > len(mem_list):
+   print("Make sure MPI size & mem_list")
+else:
+   dmem = len(mem_list) // size
+   sidx = dmem * rank
+   eidx = dmem * (rank + 1)
+
+   if (rank + 1) == size:
+      eidx = len(mem_list)
+
+   print("Myrank:", rank, "Mem:",mem_list[sidx:eidx])
+
 
 time = stime
 while time <= etime:
 
-   for mem in mem_list:
+   for mem in mem_list[sidx:eidx]:
       INFO["mem"] = mem
       INFO["time"] = time
       combine(INFO, time)
    
    time += dt
    
+print("myrank",rank,"finished")
+sys.exit()
+

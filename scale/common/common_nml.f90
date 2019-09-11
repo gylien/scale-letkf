@@ -45,6 +45,7 @@ MODULE common_nml
   real(r_size)          :: SLOT_TINTERVAL = 3600.0d0
 
   !--- PARAM_LETKF
+  logical               :: QC_SIGB = .false.
   logical               :: WRITE_GRADS_SPRD = .true.
   logical               :: WRITE_GRADS_MEAN = .true.
   logical               :: OBSDA_IN = .false.
@@ -91,6 +92,7 @@ MODULE common_nml
 
   logical :: POSITIVE_DEFINITE_Q = .false.
   logical :: POSITIVE_DEFINITE_QHYD = .false.
+  logical :: POSITIVE_DEFINITE_QHYD_QCRG = .true. ! Modify qcharge if qhyd is zero
   real(r_size) :: TC_SEARCH_DIS = 200.0d3 ! (m) ! tentative! Should be modify !!
 
   real(r_size) :: PS_ADJUST_THRES = 100.d0
@@ -203,6 +205,11 @@ MODULE common_nml
   LOGICAL :: OBSGUES_OUTPUT = .false.
   LOGICAL :: OBSANAL_OUTPUT = .false.
 
+  !--- PARAM_LETKF_LT
+  logical :: USE_LT_3D       = .false. ! True: Use 3d lightning obs
+                                       ! False: Use "2d" lightning obs
+
+
   !--- PARAM_LETKF_RADAR
   logical :: USE_RADAR_REF       = .true.
   logical :: USE_RADAR_VR        = .true.
@@ -228,6 +235,7 @@ MODULE common_nml
 
   LOGICAL :: USE_TERMINAL_VELOCITY = .false.
   logical :: RADAR_IDEAL = .true.
+  logical :: ADD_OBSERR_TRUTH = .true. ! Add noise to the truth?
 
   ! PARAMETERS FOR RADAR DATA ASSIMILATION
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
@@ -266,6 +274,8 @@ MODULE common_nml
   real(r_size) :: OBSERR_TCP = 5.0d2 ! (Pa)
   real(r_size) :: OBSERR_H08(nch) = (/5.0d0,5.0d0,5.0d0,5.0d0,5.0d0,&
                                       5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
+  real(r_size) :: OBSERR_LT3D = 1.0d0 ! tentative!!
+  real(r_size) :: OBSERR_LT2D = 1.0d0 ! tentative!!
 
   !--- PARAM_OBSSIM
   logical               :: OBSSIM_OBSOUT = .false.
@@ -275,16 +285,23 @@ MODULE common_nml
   character(filelenmax) :: OBSSIM_TOPO_IN_BASENAME = 'topo'
   integer               :: OBSSIM_TIME_START = 1
   integer               :: OBSSIM_TIME_END = 1
+  integer               :: OBSSIM_TIME_INT = 30
   character(filelenmax) :: OBSSIM_GRADS_OUT_NAME = ''
   integer               :: OBSSIM_NUM_3D_VARS = 0
-  integer               :: OBSSIM_3D_VARS_LIST(nid_obs) = 0
+  integer               :: OBSSIM_3D_VARS_LIST(100) = 0
   integer               :: OBSSIM_NUM_2D_VARS = 0
-  integer               :: OBSSIM_2D_VARS_LIST(nid_obs) = 0
+  integer               :: OBSSIM_2D_VARS_LIST(100) = 0
   real(r_size)          :: OBSSIM_RADAR_LON = 0.0d0
   real(r_size)          :: OBSSIM_RADAR_LAT = 0.0d0
   real(r_size)          :: OBSSIM_RADAR_Z = 0.0d0
+  character(3) :: OBSSIM_RADAR_LONc = ''
+  character(3) :: OBSSIM_RADAR_LATc = ''
+  character(3) :: OBSSIM_RADAR_Zc = ''
   logical               :: OBSSIM_RADAR_ERR_10 = .true.
-  integer               :: OBSSIM_RADAR_CLR_THIN = 2
+  integer               :: OBSSIM_RADAR_CLR_THIN = 1
+  integer               :: OBSSIM_RADAR_CLR_ZTHIN = 1
+  integer               :: OBSSIM_RADAR_RAIN_THIN = 1
+  integer               :: OBSSIM_RADAR_RAIN_ZTHIN = 1
   real(r_size)          :: OBSSIM_RADAR_RANGE = 60.0d3
   character(filelenmax) :: OBSSIM_OBSOUT_FNAME = ''
 
@@ -368,6 +385,7 @@ subroutine read_nml_letkf
   integer :: ierr
   
   namelist /PARAM_LETKF/ &
+    QC_SIGB, &
     WRITE_GRADS_MEAN, &
     WRITE_GRADS_SPRD, &
     OBSDA_IN, &
@@ -405,6 +423,7 @@ subroutine read_nml_letkf
     BOUNDARY_BUFFER_WIDTH, &
     POSITIVE_DEFINITE_Q, &
     POSITIVE_DEFINITE_QHYD, &
+    POSITIVE_DEFINITE_QHYD_QCRG, &
     TC_SEARCH_DIS, &
     PS_ADJUST_THRES, &
     NOBS_OUT, &
@@ -677,6 +696,7 @@ subroutine read_nml_letkf_radar
     METHOD_REF_CALC, &
     USE_TERMINAL_VELOCITY, &
     RADAR_IDEAL, &
+    ADD_OBSERR_TRUTH, &
     NRADARTYPE
 
   rewind(IO_FID_CONF)
@@ -750,7 +770,9 @@ subroutine read_nml_obs_error
     OBSERR_TCX, &
     OBSERR_TCY, &
     OBSERR_TCP, &
-    OBSERR_H08    ! H08
+    OBSERR_H08, &    ! H08
+    OBSERR_LT3D, &
+    OBSERR_LT2D
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBS_ERROR,iostat=ierr)
@@ -782,6 +804,7 @@ subroutine read_nml_obssim
     OBSSIM_TOPO_IN_BASENAME, &
     OBSSIM_TIME_START, &
     OBSSIM_TIME_END, &
+    OBSSIM_TIME_INT, &
     OBSSIM_GRADS_OUT_NAME, &
     OBSSIM_NUM_3D_VARS, &
     OBSSIM_3D_VARS_LIST, &
@@ -792,6 +815,9 @@ subroutine read_nml_obssim
     OBSSIM_RADAR_Z,   &
     OBSSIM_RADAR_ERR_10, &
     OBSSIM_RADAR_CLR_THIN, &
+    OBSSIM_RADAR_RAIN_THIN, &
+    OBSSIM_RADAR_CLR_ZTHIN, &
+    OBSSIM_RADAR_RAIN_ZTHIN, &
     OBSSIM_RADAR_RANGE, &
     OBSSIM_OBSOUT_FNAME
 
@@ -812,6 +838,10 @@ subroutine read_nml_obssim
       OBSSIM_GRADS_OUT_NAME = trim(OBSSIM_HISTORY_IN_BASENAME) // '.grd'
     end if
   end if
+
+  write(OBSSIM_RADAR_LONc,'(i3.3)')int(OBSSIM_RADAR_LON / 1000.0d0)
+  write(OBSSIM_RADAR_LATc,'(i3.3)')int(OBSSIM_RADAR_LAT / 1000.0d0)
+  write(OBSSIM_RADAR_Zc,'(i3.3)')int(OBSSIM_RADAR_Z / 1000.0d0)
 
   write(6, nml=PARAM_OBSSIM)
 
@@ -853,6 +883,31 @@ subroutine read_nml_sc
 
   return
 end subroutine read_nml_sc
+
+!-----------------------------------------------------------------------
+! PARAM_LETKF_LT
+!-----------------------------------------------------------------------
+subroutine read_nml_letkf_lt
+  implicit none
+  integer :: ierr
+
+  namelist /PARAM_LETKF_LT/ &
+    USE_LT_3D
+
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_LETKF_LT,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) 'Warning: /PARAM_LETKF_LT/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) 'xxx Not appropriate names in namelist PARAM_LETKF_LT. Check!'
+    stop
+  endif
+
+  write(6, nml=PARAM_LETKF_LT)
+
+  return
+end subroutine read_nml_letkf_lt
 
 !-----------------------------------------------------------------------
 ! file_member_replace

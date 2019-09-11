@@ -379,7 +379,8 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                 case (1)
                   call Trans_XtoY(obs(iof)%elm(n),ri(nn),rj(nn),rk, &
                                   obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
-                case (2)
+                case (2, 5)
+
                   call Trans_XtoY_radar(obs(iof)%elm(n),obs(iof)%meta(1),obs(iof)%meta(2),obs(iof)%meta(3),ri(nn),rj(nn),rk, &
                                         obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
                   if (obsda%qc(nn) == iqc_ref_low) obsda%qc(nn) = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
@@ -390,7 +391,7 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                 !end if
                 !!!!!!
 
-                case (4) ! Lighting obs
+                case (4, 6) ! Lighting obs
                   call Trans_XtoY_LT(obs(iof)%elm(n),ri(nn),rj(nn),rk, &
                                      v3dg,v2dg,obsda%val(nn),obsda%qc(nn))
 
@@ -763,11 +764,11 @@ SUBROUTINE obsmake_cal(obs)
                 case (1)
                   call Trans_XtoY(obs(iof)%elm(n),ri,rj,rk, &
                                   obs(iof)%lon(n),obs(iof)%lat(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
-                case (2)
+                case (2, 5)
                   call Trans_XtoY_radar(obs(iof)%elm(n),obs(iof)%meta(1),obs(iof)%meta(2),obs(iof)%meta(3),ri,rj,rk, &
                                         obs(iof)%lon(n),obs(iof)%lat(n),obs(iof)%lev(n),v3dg,v2dg,obs(iof)%dat(n),iqc)
 
-                case (4)
+                case (4, 6)
                   call Trans_XtoY_LT(obs(iof)%elm(n),ri,rj,rk, &
                                      v3dg,v2dg,obs(iof)%dat(n),iqc)
                 end select
@@ -1019,13 +1020,40 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
                                   lon, lat, lev, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
             if (tmpqc == iqc_ref_low) tmpqc = iqc_good ! when process the observation operator, we don't care if reflectivity is too small
 
-          case (id_lt3d_obs)
+          case (id_lt3d_obs, id_fp3d_obs)
             call Trans_XtoY_LT(OBSSIM_3D_VARS_LIST(iv3dsim), ri, rj, rk, &
                                v3dgh, v2dgh, tmpobs, tmpqc)
 
+          case (-999)
+!            if (iv3dsim == 7) then
+!              tmpobs = v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dd_qc) &
+!                     + v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dd_qr) &
+!                     + v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dd_qi) &
+!                     + v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dd_qs) &
+!                     + v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dd_qg)
+!            elseif (iv3dsim == 8) then
+!              tmpobs = v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dd_cc) &
+!                     + v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dd_cr) &
+!                     + v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dd_ci) &
+!                     + v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dd_cs) &
+!                     + v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dd_cg)
+!              if (OBSSIM_IN_TYPE == 'restart') then
+!                tmpobs = tmpobs * 1.e-6 ! fC(10^-15) => nC(10^-9)
+!              endif
+!            else
+!            tmpobs = v3dgh(k+KHALO,i+IHALO,j+JHALO,abs(OBSSIM_3D_VARS_LIST(iv3dsim)))
+!            tmpobs = v3dgh(k+KHALO,i+IHALO,j+JHALO,iv3dsim)
+!            endif
+            tmpqc = iqc_good 
           case default
-            call Trans_XtoY(OBSSIM_3D_VARS_LIST(iv3dsim), ri, rj, rk, &
-                            lon, lat, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
+            if (OBSSIM_3D_VARS_LIST(iv3dsim) < 0) then
+              tmpobs = v3dgh(k+KHALO,i+IHALO,j+JHALO,abs(OBSSIM_3D_VARS_LIST(iv3dsim)))
+              tmpqc = iqc_good 
+
+            else
+              call Trans_XtoY(OBSSIM_3D_VARS_LIST(iv3dsim), ri, rj, rk, &
+                              lon, lat, v3dgh, v2dgh, tmpobs, tmpqc, stggrd)
+            endif
           end select
 
           if (tmpqc == 0) then
@@ -1045,6 +1073,10 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 !              call ...
 
             case (id_lt2d_obs)
+              call Trans_XtoY_LT(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
+                                 v3dgh, v2dgh, tmpobs, tmpqc)
+
+            case (id_fp2d_obs)
               call Trans_XtoY_LT(OBSSIM_2D_VARS_LIST(iv2dsim), ri, rj, rk, &
                                  v3dgh, v2dgh, tmpobs, tmpqc)
 

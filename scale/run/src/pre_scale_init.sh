@@ -156,6 +156,40 @@ fi
 
 mkdir -p $TMPOUT/${STIME}/bdy/${MEM_BDY}
 
+
+
+#===============================================================================
+
+if (( INIT_LOC_ENS == 1 )); then
+
+  echo ""
+  echo "${INIT_LOC_ENS_FILE}"
+  
+  IFS=','
+  
+  #-----
+  ifile=${FULL_NAME}_${STIME}.txt
+  while read line
+  do
+    # divide by comma
+    set -- $line 
+    FMEM=$1
+    FXLOC=$2
+    FYLOC=$3
+    FAMP=$4
+  
+    if [ "$MEM" == $FMEM ] ; then
+      BBL_CX=${FXLOC}
+      BBL_CY=${FYLOC}
+      BBL_THETA=${FAMP}
+    fi
+  
+  done < ${INIT_LOC_ENS_FILE}
+  
+  echo "INIT_LOC_ENS ${BBL_CX}, ${BBL_CY}, ${BBL_THETA} ${FMEM}"
+
+fi
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_init | \
@@ -178,6 +212,18 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--ENV_IN_SOUNDING_file--/a ENV_IN_SOUNDING_file = \"$INPUT_SND/${MEM}_sounding.txt\"," \
         -e "/!--OFFLINE--/a OFFLINE = .true.," \
     > $TMPDIR/init.conf
+
+
+if (( INIT_LOC_ENS == 1 )); then
+
+  mv $TMPDIR/init.conf $TMPDIR/tmp.init.conf
+
+cat $TMPDIR/tmp.init.conf | \
+    sed -e "/!--BBL_CX--/a BBL_CX = ${BBL_CX}," \
+        -e "/!--BBL_CY--/a BBL_CY = ${BBL_CY}," \
+        -e "/!--BBL_THETA--/a BBL_THETA = ${BBL_THETA}," \
+    > $TMPDIR/init.conf
+fi
 
 #if [ -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
 #  cat $TMPDAT/conf/config.nml.grads_boundary | \

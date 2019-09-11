@@ -6,57 +6,101 @@ SYS=ofp
 
 OBSTYPE="RADAR"
 #OBSTYPE="LT"
+#OBSTYPE="FP" # Flash point
+#OBSTYPE="CONV"
+#OBSTYPE="ALL"
 
 # Generate new obs format file
 OBSSIM_OBSOUT=".false." # anal/gues
+OBSSIM_OBSOUT=".true." # fcst
 
-#EXP=8km_sc
-#. config/${EXP}/config.main.hakushu
-CEXP=2000m_InSnd_LT_SN14_Mac_0605
-. config/${CEXP}/config.main.$SYS
-. config/${CEXP}/config.fcst
+TYPE=fcst
+#TYPE=anal
+#TYPE=gues
 
-FCSTLEN=4800 #
+EXP=2000m_WK1982_LT_SN14_NATURE
+EXP=2000m_WK1982_LT_SN14_NATURE_1MIN
+#EXP=2000m_LT_SN14_0710_DA_TH02_RTPS0.95_0802
+
+. config/${EXP}/config.main.$SYS
+. config/${EXP}/config.fcst
+
+OBSSIM_RADAR_LON=180
+OBSSIM_RADAR_LAT=180
+
+tstart='2001-01-01 1:00:30'
+#tstart='2001-01-01 1:20:00'
+tstart='2001-01-01 1:00:30'
+#tstart='2001-01-01 1:01:30'
+
+tstart='2001-01-01 1:01:00'
+tend='2001-01-01 1:11:00'
+
+tstart='2001-01-01 1:00:30'
+tend='2001-01-01 1:10:00'
+
+#tstart='2001-01-01 1:10:30'
+#tend='2001-01-01 1:20:00'
+
+if [ "$TYPE" == "fcst" ] ; then
+  tstart='2001-01-01 1:00:00'
+
+  #FCSTLEN=3600 
+  #TS=1
+  #TE=121
+
+  tstart='2001-01-01 1:00:00'
+#  tstart='2001-01-01 1:10:00'
+##  tstart='2001-01-01 1:20:00'
+
+  FCSTLEN=1800 
+  TS=1
+  #TE=41
+  TE=31 # 2000m_WK1982_LT_SN14_NATURE_1MIN
+
+elif [ "$TYPE" == "anal" ] || [ "$TYPE" == "gues" ] ; then
+  FCSTOUT=30
+  FCSTLEN=30 
+  FCSTLEN=600
+
+  TS=1
+  TE=1
+fi
+
+# -- SCALE setting --
+MEM_NP=${SCALE_NP}
+MEM=mean
+
+SMEM=0 # 
+EMEM=${SMEM} # mean
+
+#
+MEM_L=`seq ${SMEM} ${EMEM}`
 
 #
 LETKF_RUN="$(pwd)"
 
 #WDIR="/scratch/$(id -ng)/${USER}/obssim"
 #WDIR=${TMPL}
-WDIR=${LETKF_RUN}/../tmp_obssim
+WDIR=${LETKF_RUN}/../tmp_obssim_${SMEM}_${EMEM}
 OBSSIM_BIN="${LETKF_RUN}/../obs/obssim"
 RUNSH=$WDIR/OBSSIM.sh
 RUNCONF_COMMON=$WDIR/OBSSIM.conf_common
-SCALE_CONF=${LETKF_RUN}/config.nml.scale
+SCALE_CONF=${LETKF_RUN}/config/${EXP}/config.nml.scale
 TOPO=${OUTDIR}/const/topo
 
 
-# -- SCALE setting --
-MEM_NP=${SCALE_NP}
-MEM=mean
-TYPE=fcst
-TYPE=anal
-TYPE=gues
 
-SMEM=0 # 
-EMEM=${SMEM} # mean
-MEM_L=`seq ${SMEM} ${EMEM}`
-
-if [ "$TYPE" == "fcst" ] ; then
-  OBSSIM_IN_TYPE="hisotry"
-elif [ "$TYPE" == "anal" ] || [ "$TYPE" == "gues" ] ; then
-  OBSSIM_IN_TYPE="restart"
-  FCSTLEN=30 #
-fi
-
-
-#tstart='2000-01-01 0:40:00'
-tstart='2000-01-01 0:40:30'
 tend=$(date -ud "${FCSTLEN} second $tstart" '+%Y-%m-%d %H:%M:%S')
 
-ctint=$(( FCSTLEN * 2 )) # obssim interval  # initial time loop
-tint=$FCSTOUT # analysis interval (Do not modify!)
-
+if [ "$TYPE" == "fcst" ] ; then
+  OBSSIM_IN_TYPE="history"
+  ctint=$(( FCSTLEN * 2 )) # obssim interval  # initial time loop
+elif [ "$TYPE" == "anal" ] || [ "$TYPE" == "gues" ] ; then
+  OBSSIM_IN_TYPE="restart"
+  ctint=$FCSTOUT # analysis interval (Do not modify!)
+#  FCSTLEN=30 #
+fi
 
 
 #if [ ! -e ${WDIR} ] ; then
@@ -65,7 +109,7 @@ tint=$FCSTOUT # analysis interval (Do not modify!)
 # clean up
 rm -rf $WDIR
 mkdir -p $WDIR
-
+mkdir -p $WDIR/log
 
 ctime="$tstart"
 YYYYh=$(date -ud "$ctime" '+%Y')
@@ -93,12 +137,12 @@ cat << EOF >> $RUNCONF_COMMON
 &PARAM_LETKF_RADAR
  USE_OBSERR_RADAR_REF = .true.
  USE_OBSERR_RADAR_VR = .true.
- RADAR_REF_THRES_DBZ = 10.0D0,
+ RADAR_REF_THRES_DBZ = 15.0D0,
  MIN_RADAR_REF_MEMBER = 20,
  MIN_RADAR_REF_MEMBER_OBSREF = 1,
- MIN_RADAR_REF_DBZ = 10.0D0,
- LOW_REF_SHIFT = -5.0D0,
- RADAR_ZMAX = 11.0D3,
+ MIN_RADAR_REF_DBZ = 5.0D0,
+ LOW_REF_SHIFT = 0.0D0, ! Do not use
+ RADAR_ZMAX = 31.0D3, ! Entire the domain
 /
 
 &PARAM_OBS_ERROR
@@ -116,11 +160,12 @@ EOF
 
 
 # -- Add header for run sh --
-TS=1
-TE=$((FCSTLEN / tint + 1))
-if [ "$TYPE" == "anal" ] || [ "$TYPE" == "gues" ] ; then
-  TE=1
-fi
+#TS=1
+#TE=$((FCSTLEN / tint + 1))
+#if [ "$TYPE" == "anal" ] || [ "$TYPE" == "gues" ] ; then
+#  TE=1
+#fi
+
 
 echo "TIME LEVELS: "$TS" "$TE
 
@@ -136,9 +181,10 @@ cat > $RUNSH << EOF
 #PJM -N OBSSIM
 ##PJM -L rscgrp=regular-flat
 #PJM -L rscgrp=debug-flat
-#PJM -L node=$((SCALE_NP/PPN))
-#PJM -L elapse=00:25:00
-#PJM --mpi proc=${SCALE_NP}
+#PJM -L node=<TNODE_CNT>
+##PJM -L node=$((SCALE_NP/PPN))
+#PJM -L elapse=00:30:00
+#PJM --mpi proc=<TPRC>
 #PJM --omp thread=${THREADS}
 #PJM -g hp150019
 
@@ -146,12 +192,12 @@ ulimit -s unlimited
 
 export FORT_FMT_RECL=400
 
-rm -f machinefile
-for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
-  for ippn in \$(seq $PPN); do
-    echo "\$inode" >> machinefile
-  done
-done
+#rm -f machinefile
+#for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
+#  for ippn in \$(seq $PPN); do
+#    echo "\$inode" >> machinefile
+#  done
+#done
 
 module load hdf5/1.8.17
 module load netcdf/4.4.1
@@ -195,14 +241,41 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
     OBSSIM_3D_VARS_LIST="4001, 4002" 
     OBSSIM_NUM_2D_VARS="0"
     OBSSIM_2D_VARS_LIST="4001" 
+    OHEAD="radar3d" 
+
+  elif [ "$OBSTYPE" = 'FP' ]; then
+    ONAME=${ORG_DIR}/fp_${HTIME}_${MEM}.dat
+    OBSSIM_NUM_3D_VARS="1"
+    OBSSIM_3D_VARS_LIST="5003" 
+    OBSSIM_NUM_2D_VARS="1"
+    OBSSIM_2D_VARS_LIST="5004" 
+    OHEAD="fp" 
+
   elif [ "$OBSTYPE" = 'LT' ]; then
     ONAME=${ORG_DIR}/lt_${HTIME}_${MEM}.dat
-    OBSSIM_NUM_3D_VARS="1"
-    OBSSIM_3D_VARS_LIST="5001" 
-    OBSSIM_NUM_2D_VARS="1"
-    OBSSIM_2D_VARS_LIST="5002" 
+    OBSSIM_NUM_3D_VARS="3"
+    OBSSIM_3D_VARS_LIST="5001, 5003, 5005" 
+    OBSSIM_NUM_2D_VARS="0"
+    OBSSIM_2D_VARS_LIST="5002, 5004"
+    OHEAD="lt" 
+#  elif [ "$OBSTYPE" = 'CONV' ]; then
+  elif [ "$OBSTYPE" = 'ALL' ]; then
+#    ONAME=${ORG_DIR}/conv_${HTIME}_${MEM}.dat
+    ONAME=${ORG_DIR}/all3d_${HTIME}_${MEM}.dat
+#    OBSSIM_NUM_3D_VARS="8"
+#    # u, v, w, t, p, qv, qh, qcrg
+#    OBSSIM_3D_VARS_LIST="-999, -999, -999, -999, -999, -999, -999, -999"
+    OBSSIM_NUM_3D_VARS="23"
+    OBSSIM_3D_VARS_LIST="-1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -14, -15, -16, -17, -18, -19, -20, -21, -22, -23, -24, -25"
+#    OBSSIM_3D_VARS_LIST="-999, -999, -999, -999, -999, -999, -999, -999, -999, -999, -999, -999, -999, -999, -999, -999, -999, -999, -999, -999, -999, -999"
+#, -999, -999, -999, -999"
+#, -999, -999, -999, -999" 
+    OBSSIM_NUM_2D_VARS="0"
+    OBSSIM_2D_VARS_LIST="4001" 
+#    OHEAD="conv3d" 
+    OHEAD="all3d" 
   fi
-  ONAME_OBS=${ORG_DIR}/obs_i${HTIME}_${MEM}
+  ONAME_OBS=${ORG_DIR}/${OHEAD}_i${HTIME}_${MEM}_${OBSSIM_RADAR_LON}_${OBSSIM_RADAR_LAT}
 
   #-- copy bin & RTTOV coef files
 
@@ -238,10 +311,6 @@ cat ${RUNCONF_COMMON} > ${RUNCONF}
 
 cat << EOF >> $RUNCONF
 
-&PARAM_LETKF_RADAR
- RADAR_REF_THRES_DBZ = 15.0d0,
- MIN_RADAR_REF_DBZ = 5.0D0,
-/
 
 &PARAM_OBSERR
  OBSERR_RADAR_REF = 5.0d0,
@@ -256,18 +325,20 @@ cat << EOF >> $RUNCONF
  OBSSIM_TOPO_IN_BASENAME = "${OBSSIM_TOPO_IN_BASENAME}",
  OBSSIM_TIME_START = ${TS},
  OBSSIM_TIME_END = ${TE},
+ OBSSIM_TIME_INT = ${FCSTOUT},
  OBSSIM_GRADS_OUT_NAME = "${ONAME}",
  OBSSIM_NUM_3D_VARS = ${OBSSIM_NUM_3D_VARS},
  OBSSIM_3D_VARS_LIST = ${OBSSIM_3D_VARS_LIST}, 
  OBSSIM_NUM_2D_VARS = ${OBSSIM_NUM_2D_VARS},
  OBSSIM_2D_VARS_LIST = ${OBSSIM_2D_VARS_LIST},
- ! About sqrt(40**2+40**2) km away from the storm (Similar to Zhang et al. 2004MWR)
- OBSSIM_RADAR_LON = 140.0d3,
- OBSSIM_RADAR_LAT = 140.0d3,
+!! ! About sqrt(20**2+20**2) km away from the storm (Similar to Zhang et al. 2004MWR)
+! About sqrt(10**2+10**2) km from the storm (similar to Aksoy et al. 2009's Fig. 1a)
+ OBSSIM_RADAR_LON = ${OBSSIM_RADAR_LON}.0d3,
+ OBSSIM_RADAR_LAT = ${OBSSIM_RADAR_LAT}.0d3,
  OBSSIM_RADAR_Z = 0.0d0,
- OBSSIM_RADAR_ERR_10 = .true.,
- OBSSIM_RADAR_CLR_THIN = 2,
- OBSSIM_RADAR_RANGE = 60.0d3,
+ OBSSIM_RADAR_ERR_10 = .true., ! Similar to Maejima et al. and Xue et al. GRL
+ OBSSIM_RADAR_CLR_THIN = 2, ! Similar to Aksoy et al. 
+ OBSSIM_RADAR_RANGE = 200.0d3, ! everywhere in the domain
  OBSSIM_OBSOUT_FNAME = "${ONAME_OBS}",
 /
 EOF
@@ -277,10 +348,11 @@ EOF
 
 
 
-#  echo "mpirun -n ${MEM_NP} ${WDIR}/obssim ${RUNCONF} &" >> $RUNSH
-  echo "mpiexec -n ${SCALE_NP} ${LETKF_RUN}/../obs/obssim ${RUNCONF} ${WDIR}/NOUT &" >> $RUNSH
+  echo "mpiexec.hydra -n ${SCALE_NP} ${LETKF_RUN}/../obs/obssim ${RUNCONF} ${WDIR}/log/NOUT-${TNODE_CNT} &" >> $RUNSH
+#  echo "mpiexec -n ${SCALE_NP} ${LETKF_RUN}/../obs/obssim ${RUNCONF} ${WDIR}/NOUT" >> $RUNSH
 
-  TNODE_CNT=$(expr ${TNODE_CNT} + ${MEM_NP})   
+#  TNODE_CNT=$(expr ${TNODE_CNT} + ${MEM_NP})   
+  TNODE_CNT=$(( TNODE_CNT + MEM_NP / PPN  ))   
   VCODE_CNT=$(expr ${VCODE_CNT} + 1)   
 
 
@@ -291,7 +363,8 @@ done # -- time
 echo "wait" >> $RUNSH
 
 
-#sed -i -e  's/<TNODE_CNT>/'${TNODE_CNT}'/g' $RUNSH
+sed -i -e  's/<TNODE_CNT>/'${TNODE_CNT}'/g' $RUNSH
+sed -i -e  's/<TPRC>/'$((TNODE_CNT*SCALE_NP))'/g' $RUNSH
 #
 #echo ${WDIR}
 

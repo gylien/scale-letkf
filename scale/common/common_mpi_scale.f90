@@ -1284,8 +1284,8 @@ SUBROUTINE write_ensmspr_mpi(file_mean,file_sprd,v3d,v2d,obs,obsda2)
     call MPI_BCAST(bias_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
     call MPI_BCAST(rmse_g,nid_obs,MPI_r_size,lastmem_rank_e,MPI_COMM_e,ierr)
     call MPI_BCAST(monit_type,nid_obs,MPI_LOGICAL,lastmem_rank_e,MPI_COMM_e,ierr)
-    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', trim(file_mean), ']:'
-    call monit_print(nobs,bias,rmse,monit_type)
+!    write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (IN THIS SUBDOMAIN) [', trim(file_mean), ']:'
+!    call monit_print(nobs,bias,rmse,monit_type)
     write(6,'(3A)') 'OBSERVATIONAL DEPARTURE STATISTICS (GLOBAL) [', trim(file_mean), ']:'
     call monit_print(nobs_g,bias_g,rmse_g,monit_type)
 
@@ -1773,10 +1773,9 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d, obsout)
   integer :: proc_i, proc_j
   integer :: ishift, jshift
 
-  integer :: iunit2
+  integer :: iunit2, irec2
 
-  real(r_sngl), allocatable :: v3ds(:,:,:,:)
-  real(r_size), allocatable :: error(:)
+  real(r_size), allocatable :: err3d(:), err2d(:)
   integer :: ig, jg, p
   real(r_size) :: rlon, rlat
   real(r_sngl) :: wk(8)
@@ -1788,7 +1787,8 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d, obsout)
   integer :: jmin, jmax
   real(r_size) :: rig, rjg ! radar site
   real(r_size) :: rdis ! radar distance
-  character(3) :: ctlev
+  character(6) :: ctlev
+  integer :: sidx, eidx
 
   obsout_ = .false.
   if (present(obsout)) obsout_ = obsout 
@@ -1805,26 +1805,60 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d, obsout)
     irec = (nlev * nv3dgrd + nv2dgrd) * (step-1)
 
     if (obsout_) then
-      allocate(v3ds(nlev,nlong,nlatg,nv3dgrd))
+!      allocate(v3ds(nlev,nlong,nlatg,nv3dgrd))
+      allocate(err3d(nlev*nlong*nlatg))
+      allocate(err2d(nlong*nlatg))
+
+      iunit2 = 60
+      write(ctlev,'(i6.6)') (step - 1 ) * OBSSIM_TIME_INT
+      open (iunit2, file=trim(OBSSIM_OBSOUT_FNAME)//"_t"//ctlev//".dat", &
+            form='unformatted', access='direct', recl=nlong*nlatg*iolen)
+      irec2 = 0
+
     endif
   end if
 
   do n = 1, nv3dgrd
+
+    if (obsout_ .and. myrank_d == 0)  then
+      call com_randn(nlev*nlong*nlatg, err3d)     
+      err3d = err3d - sum(err3d) / (nlev * nlong * nlatg)
+    endif
+
     do k = 1, nlev
+
       bufs4(:,:) = 0.0
       bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(v3d(k,:,:,n), r_sngl)
       call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+
       if (myrank_d == 0) then
         irec = irec + 1
         write (iunit, rec=irec) bufr4
 
-        if (obsout_) then
-          v3ds(k,:,:,n) = bufr4
-        endif
-      end if
-    end do
-  end do
+        if (obsout_)  then
+          irec2 = irec2 + 1
+          write (iunit2, rec=irec2) bufr4
 
+        end if
+      end if
+
+    end do
+
+    if (obsout_ .and. myrank_d == 0)  then
+
+      do k = 1, nlev
+        sidx = 1 + nlong * nlatg * (k - 1)
+        eidx = nlong * nlatg * k
+
+        irec2 = irec2 + 1
+        write (iunit2, rec=irec2) real(err3d(sidx:eidx), kind=r_sngl)
+
+      end do
+    endif
+
+  end do ! n = 1, nv3dgrd
+
+ 
   do n = 1, nv2dgrd
     bufs4(:,:) = 0.0
     bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(v2d(:,:,n), r_sngl)
@@ -1833,118 +1867,136 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d, obsout)
     if (myrank_d == 0) then
       irec = irec + 1
       write (iunit, rec=irec) bufr4
-    end if
-  end do
 
-  if (myrank_d == 0) then
-    close (iunit)
+      if (obsout_ )  then
+        irec2 = irec2 + 1
+        write (iunit2, rec=irec2) bufr4
 
-    if (obsout_) then
+        call com_randn(nlong*nlatg, err2d)     
+        err2d = err2d - sum(err2d) / (nlong * nlatg)
 
-      allocate(error(nlev*nlong*nlatg))
-
-      n_ref = 0
-      do n = 1, nv3dgrd
-        if (OBSSIM_3D_VARS_LIST(n) == id_radar_ref_obs) then
-          n_ref = n
-        endif
-      enddo
-
-      call phys2ij(OBSSIM_RADAR_LON,OBSSIM_RADAR_LAT,rig,rjg)
-      imin = max(nint(rig - (OBSSIM_RADAR_RANGE/DX + 1.0_r_size)), 1)
-      imax = min(nint(rig + (OBSSIM_RADAR_RANGE/DX + 1.0_r_size)), nlong)
-      jmin = max(nint(rjg - (OBSSIM_RADAR_RANGE/DY + 1.0_r_size)), 1)
-      jmax = min(nint(rjg + (OBSSIM_RADAR_RANGE/DY + 1.0_r_size)), nlatg)
-
-      do n = 1, nv3dgrd
-        call com_randn(nlev*nlong*nlatg, error)     
-       
-        write(cid,'(i4)') OBSSIM_3D_VARS_LIST(n)
-        write(ctlev,'(i3.3)') step
-
-        iunit2 = 60
-        open (iunit2, file=trim(OBSSIM_OBSOUT_FNAME)//"_"//cid//"_t"//ctlev//".dat", &
-              form='unformatted', access='sequential')
-        add_radar_hd = .true.    
-
-        p = 0
-        do k = 1, nlev
-          do ig = 1, nlong
-            do jg = 1, nlatg
-              p = p + 1
-              call ij2phys(real(ig,kind=r_size),real(jg,kind=r_size),rlon,rlat)
-
-              wk(1) = real(OBSSIM_3D_VARS_LIST(n), kind=r_sngl)
-              wk(2) = real(rlon, kind=r_sngl)
-              wk(3) = real(rlat, kind=r_sngl)
-              wk(4) = real(GRID_CZ(k+KHALO), kind=r_sngl)
-              wk(5) = real(v3ds(k,ig,jg,n), kind=r_sngl)
-              select case(OBSSIM_3D_VARS_LIST(n))
-              case(id_radar_ref_obs, id_radar_vr_obs)
-
-                ! Out of radar range
-                if (ig < imin .or. ig > imax .or. jg < jmin .or. jg > jmax) cycle 
-                rdis = sqrt(((real(ig, kind=r_size) - rig)*DX)**2 + &
-                            ((real(jg, kind=r_size) - rjg)*DY)**2 + &
-                             (GRID_CZ(k+KHALO) - OBSSIM_RADAR_Z)**2)
-                if (rdis > OBSSIM_RADAR_RANGE) cycle
-
-                if (add_radar_hd) then
-                  write(iunit2) real(OBSSIM_RADAR_LON, kind=r_sngl)
-                  write(iunit2) real(OBSSIM_RADAR_LAT, kind=r_sngl)
-                  write(iunit2) real(OBSSIM_RADAR_Z, kind=r_sngl)
-                  add_radar_hd = .false.
-                endif
-
-                maxrec = 7
-
-                ! Reflectivity
-                if (OBSSIM_3D_VARS_LIST(n) == id_radar_ref_obs) then
-
-                  ! Thinning for clear sky (Aksoy et al. 2009MWR)
-                  if (mod(ig,OBSSIM_RADAR_CLR_THIN) /= 0 .or. &
-                      mod(jg,OBSSIM_RADAR_CLR_THIN) /= 0) then
-                    if (v3ds(k,ig,jg,n) ==  real(MIN_RADAR_REF_DBZ, kind=r_sngl)) then
-                      cycle
-                    endif
-                  endif
-
-                  if (OBSSIM_RADAR_ERR_10) then
-                    ! Maejima et al. 2017SOLA
-                    wk(6) = max(real(error(p)*v3ds(k,ig,jg,n)*0.1, kind=r_size), 2.0_r_sngl)
-                  else
-                    wk(6) = real(error(p)*OBSERR_RADAR_REF, kind=r_size)
-                  endif
-                else
-                ! Radial velocity
-                  if (v3ds(k,ig,jg,n_ref) < RADAR_REF_THRES_DBZ) cycle
-
-                  wk(6) = real(error(p)*OBSERR_RADAR_VR, kind=r_size)
-                endif
-                wk(7) = 22
-
-              case(id_lt3d_obs, id_lt2d_obs)
-                maxrec = 8
-                wk(7) = 25
-                write(6,'(a)') 'Not available'
-                stop
-              end select
-              wk(8) = 0.0
-
-              write(iunit2)wk(1:maxrec)
-
-            enddo ! jg
-          enddo ! ig
-        enddo ! k
-
-        close(iunit2)
-
-      enddo ! n
-
-      deallocate(error, v3ds)
+        irec2 = irec2 + 1
+        write (iunit2, rec=irec2) real(err2d, kind=r_sngl)
+      endif
     endif
 
-  end if
+  end do ! n = 1, nv2dgrd
+
+  if (allocated(err2d)) deallocate(err2d)
+  if (allocated(err3d)) deallocate(err3d)
+
+!  if (myrank_d == 0) then
+!    close (iunit)
+!
+!    if (obsout_) then
+!
+!      allocate(error(nlev*nlong*nlatg))
+!
+!      n_ref = 0
+!      do n = 1, nv3dgrd
+!        if (OBSSIM_3D_VARS_LIST(n) == id_radar_ref_obs) then
+!          n_ref = n
+!        endif
+!      enddo
+!
+!      call phys2ij(OBSSIM_RADAR_LON,OBSSIM_RADAR_LAT,rig,rjg)
+!      imin = max(nint(rig - (OBSSIM_RADAR_RANGE/DX + 1.0_r_size)), 1)
+!      imax = min(nint(rig + (OBSSIM_RADAR_RANGE/DX + 1.0_r_size)), nlong)
+!      jmin = max(nint(rjg - (OBSSIM_RADAR_RANGE/DY + 1.0_r_size)), 1)
+!      jmax = min(nint(rjg + (OBSSIM_RADAR_RANGE/DY + 1.0_r_size)), nlatg)
+!
+!      do n = 1, nv3dgrd
+!        call com_randn(nlev*nlong*nlatg, error)     
+!       
+!        write(cid,'(i4)') OBSSIM_3D_VARS_LIST(n)
+!        write(ctlev,'(i3.3)') step
+!
+!        iunit2 = 60
+!        open (iunit2, file=trim(OBSSIM_OBSOUT_FNAME)//"_"//cid//"_t"//ctlev//".dat", &
+!              form='unformatted', access='sequential')
+!        add_radar_hd = .true.    
+!
+!        p = 0
+!        do k = 1, nlev
+!          do ig = imin, imax
+!            do jg = jmin, jmax
+!              p = p + 1
+!              call ij2phys(real(ig,kind=r_size),real(jg,kind=r_size),rlon,rlat)
+!
+!              wk(1) = real(OBSSIM_3D_VARS_LIST(n), kind=r_sngl)
+!              wk(2) = real(rlon, kind=r_sngl)
+!              wk(3) = real(rlat, kind=r_sngl)
+!              wk(4) = real(GRID_CZ(k+KHALO), kind=r_sngl)
+!              wk(5) = real(v3ds(k,ig,jg,n), kind=r_sngl)
+!              select case(OBSSIM_3D_VARS_LIST(n))
+!              case(id_radar_ref_obs, id_radar_vr_obs)
+!
+!                ! Out of radar range
+!!                if (ig < imin .or. ig > imax .or. jg < jmin .or. jg > jmax) cycle 
+!                rdis = sqrt(((real(ig, kind=r_size) - rig)*DX)**2 + &
+!                            ((real(jg, kind=r_size) - rjg)*DY)**2 + &
+!                             (GRID_CZ(k+KHALO) - OBSSIM_RADAR_Z)**2)
+!                if (rdis > OBSSIM_RADAR_RANGE) cycle
+!
+!                if (add_radar_hd) then
+!                  write(iunit2) real(OBSSIM_RADAR_LON, kind=r_sngl)
+!                  write(iunit2) real(OBSSIM_RADAR_LAT, kind=r_sngl)
+!                  write(iunit2) real(OBSSIM_RADAR_Z, kind=r_sngl)
+!                  add_radar_hd = .false.
+!                endif
+!
+!                maxrec = 7
+!
+!                ! Reflectivity
+!                if (OBSSIM_3D_VARS_LIST(n) == id_radar_ref_obs) then
+!
+!                  ! Thinning for clear sky (Aksoy et al. 2009MWR)
+!                  if (mod(ig,OBSSIM_RADAR_CLR_THIN) /= 0 .or. &
+!                      mod(jg,OBSSIM_RADAR_CLR_THIN) /= 0) then
+!                    if (v3ds(k,ig,jg,n) ==  real(MIN_RADAR_REF_DBZ, kind=r_sngl)) then
+!                      cycle
+!                    endif
+!                  endif
+!
+!                  if (OBSSIM_RADAR_ERR_10) then
+!                    ! Maejima et al. 2017SOLA
+!                    wk(6) = max(real(error(p)*v3ds(k,ig,jg,n)*0.1, kind=r_size), 2.0_r_sngl)
+!                  else
+!                    wk(6) = real(error(p)*OBSERR_RADAR_REF, kind=r_size)
+!                  endif
+!                else
+!                ! Radial velocity
+!                  if (v3ds(k,ig,jg,n_ref) < real(RADAR_REF_THRES_DBZ, kind=r_sngl)) cycle
+!
+!                  wk(6) = real(error(p)*OBSERR_RADAR_VR, kind=r_size)
+!                endif
+!                wk(5) = wk(5) + wk(6) ! Add error
+!                wk(7) = 22
+!
+!              case(id_lt3d_obs, id_lt2d_obs)
+!                wk(6) = real(error(p)*OBSERR_LT, kind=r_size)
+!                wk(5) = wk(5) + wk(6) ! Add error
+!                maxrec = 8
+!                wk(7) = 25
+!                write(6,'(a)') 'Not available'
+!                stop
+!              end select
+!              wk(8) = 0.0
+!
+!              write(iunit2)wk(1:maxrec)
+!
+!            enddo ! jg
+!          enddo ! ig
+!        enddo ! k
+!
+!        close(iunit2)
+!
+!      enddo ! n
+!
+!      deallocate(error, v3ds)
+!    endif
+!
+!  end if
 
   return
 end subroutine write_grd_mpi

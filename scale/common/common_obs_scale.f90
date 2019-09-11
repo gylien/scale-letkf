@@ -78,8 +78,12 @@ MODULE common_obs_scale
 !
 ! Lightning observations
 !
-  integer, parameter :: id_lt3d_obs=5001
-  integer, parameter :: id_lt2d_obs=5002
+  integer, parameter :: id_lt3d_obs = 5001
+  integer, parameter :: id_lt2d_obs = 5002
+  integer, parameter :: id_fp3d_obs = 5003 ! flash point
+  integer, parameter :: id_fp2d_obs = 5004 ! flash point
+  integer, parameter :: id_ltp3d_obs = 5005 ! LT path
+  integer, parameter :: id_ltp2d_obs = 5006 ! LT path
 
   INTEGER,PARAMETER :: elem_uid(nid_obs)= &
      (/id_u_obs, id_v_obs, id_t_obs, id_tv_obs, id_q_obs, id_rh_obs, &
@@ -144,10 +148,10 @@ MODULE common_obs_scale
   END TYPE obs_da_value
   !!!!!! need to add %err and %dat for obsda2 if they can be determined in letkf_obs.f90 !!!!!!
 
-  INTEGER,PARAMETER :: nobsformats=4 !
+  INTEGER,PARAMETER :: nobsformats=5 !
   CHARACTER(30) :: obsformat_name(nobsformats) = &
     (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR', &
-      'LIGHTNING    '/)
+      'LIGHTNING    ', 'RADAR-GRD    '/)
 
   INTEGER,PARAMETER :: iqc_good=0
   INTEGER,PARAMETER :: iqc_gross_err=5
@@ -293,11 +297,19 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
     end if
-    call MPRJ_rotcoef(rotc,lon*deg2rad,lat*deg2rad)
-    if (elm == id_u_obs) then
-      yobs = u * rotc(1) - v * rotc(2)
+    if (.not. RADAR_IDEAL) then
+      call MPRJ_rotcoef(rotc,lon*deg2rad,lat*deg2rad)
+      if (elm == id_u_obs) then
+        yobs = u * rotc(1) - v * rotc(2)
+      else
+        yobs = u * rotc(2) + v * rotc(1)
+      end if
     else
-      yobs = u * rotc(2) + v * rotc(1)
+      if (elm == id_u_obs) then
+        yobs = u 
+      else
+        yobs = v 
+      end if
     end if
   CASE(id_t_obs)  ! T
     CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,yobs)
@@ -392,9 +404,11 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   utmp = ur
   vtmp = vr
 
-  call MPRJ_rotcoef(rotc,lon*deg2rad,lat*deg2rad)
-  ur = utmp * rotc(1) - vtmp * rotc(2)
-  vr = utmp * rotc(2) + vtmp * rotc(1)
+  if (.not. RADAR_IDEAL) then
+    call MPRJ_rotcoef(rotc,lon*deg2rad,lat*deg2rad)
+    ur = utmp * rotc(1) - vtmp * rotc(2)
+    vr = utmp * rotc(2) + vtmp * rotc(1)
+  endif
 
 !  rrtimer = MPI_WTIME()
 !  WRITE(6,'(A,F18.10)') '###### Trans_XtoY_radar:itpl_3d:',rrtimer-rrtimer00
@@ -2457,6 +2471,10 @@ subroutine read_obs_all(obs)
       call get_nobs_H08(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! H08
     case (4)
       call get_nobs(trim(OBS_IN_NAME(iof)),8,obs(iof)%nobs) ! Lightning
+    case (5)
+      call get_nobs_radar_grd(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! radar grid
+    case (6)
+      call get_nobs_lt_grd(trim(OBS_IN_NAME(iof)),obs(iof)%nobs) ! Lightning grid
     case default
       write(6,*) 'Error: Unsupported observation file format!'
       stop
@@ -2477,6 +2495,10 @@ subroutine read_obs_all(obs)
       call read_obs_H08(trim(OBS_IN_NAME(iof)),obs(iof)) ! H08
     case (4) 
       call read_obs(trim(OBS_IN_NAME(iof)),obs(iof)) ! Lightning
+    case (5) 
+      call read_obs_radar_grd(trim(OBS_IN_NAME(iof)),obs(iof)) ! Radar grid
+    case (6) 
+      call read_obs_lt_grd(trim(OBS_IN_NAME(iof)),obs(iof)) ! Lightning grid
     end select
   end do ! [ iof = 1, OBS_IN_NUM ]
 
@@ -3044,7 +3066,7 @@ subroutine Trans_XtoY_LT(elm,ri,rj,rk,v3d,v2d,yobs,qc)
     call itpl_2d_column(v3d(:,:,:,iv3dd_nfl),ri,rj,negfl1d(:))
 
     yobs = 0.0_r_size
-    do k = 1 + KHALO, nlev
+    do k = 1 + KHALO, nlev + KHALO
       yobs = yobs + posfl1d(k) + negfl1d(k)
     enddo
   case (id_lt3d_obs) 
@@ -3053,9 +3075,298 @@ subroutine Trans_XtoY_LT(elm,ri,rj,rk,v3d,v2d,yobs,qc)
     call itpl_3d(v3d(:,:,:,iv3dd_nfl),rk,ri,rj,negfl)
 
     yobs = posfl + negfl
+
+  case (id_fp3d_obs) 
+    ! 3d flash point
+    call itpl_3d(v3d(:,:,:,iv3dd_fp),rk,ri,rj,yobs)
+
+  case (id_fp2d_obs) 
+    ! 2d flash point
+    call itpl_2d_column(v3d(:,:,:,iv3dd_fp),ri,rj,posfl1d(:))
+
+    yobs = 0.0_r_size
+    do k = 1 + KHALO, nlev + KHALO
+      yobs = yobs + posfl1d(k)
+    enddo
+!  case (id_ltp3d_obs) 
+!    ! 3d LT path obs
+!    call itpl_3d(v3d(:,:,:,iv3dd_ltp),rk,ri,rj,yobs)
+!  case (id_ltp2d_obs) 
+!    ! 2d flash point
+!    call itpl_2d_column(v3d(:,:,:,iv3dd_fp),ri,rj,posfl1d(:))
   end select
 
   return
 end subroutine Trans_XtoY_LT
+
+
+subroutine read_obs_radar_grd(cfile,obs)
+  use scale_grid, only: &
+      GRID_CXG, GRID_CYG, &
+      GRID_CZ
+  use scale_grid_index, only: &
+      IHALO, JHALO, KHALO
+
+  implicit none
+  character(*),intent(in) :: cfile
+  type(obs_info),intent(inout) :: obs
+
+  integer :: n, iunit
+
+  real(r_sngl) :: z3d(nlong,nlatg,nlev)
+  real(r_sngl) :: vr3d(nlong,nlatg,nlev)
+  real(r_sngl) :: err3dz(nlong,nlatg,nlev)
+  real(r_sngl) :: err3dvr(nlong,nlatg,nlev)
+  integer :: irec, iolen
+  real(r_size) :: rlon, rlat
+  real(r_size) :: err
+  integer :: i, j, k
+
+!  call obs_info_allocate(obs)
+
+  obs%meta(1) = OBSSIM_RADAR_LON
+  obs%meta(2) = OBSSIM_RADAR_LAT
+  obs%meta(3) = OBSSIM_RADAR_Z
+
+  iunit=91
+  inquire (iolength=iolen) iolen
+  open(iunit,file=cfile,form='unformatted',access='direct',recl=nlong*nlatg*iolen)
+  irec = 0
+  do k = 1, nlev
+    irec = irec + 1
+    read(iunit,rec=irec) ((z3d(i,j,k), i = 1, nlong), j = 1, nlatg)
+  enddo ! k
+
+  do k = 1, nlev
+    irec = irec + 1
+    read(iunit,rec=irec) ((err3dz(i,j,k), i = 1, nlong), j = 1, nlatg)
+  enddo ! k
+
+  do k = 1, nlev
+    irec = irec + 1
+    read(iunit,rec=irec) ((vr3d(i,j,k), i = 1, nlong), j = 1, nlatg)
+  enddo ! k
+
+  do k = 1, nlev
+    irec = irec + 1
+    read(iunit,rec=irec) ((err3dvr(i,j,k), i = 1, nlong), j = 1, nlatg)
+  enddo ! k
+
+  close(iunit)
+
+  n = 0
+  do k = 1, nlev
+  do j = 1, nlatg
+  do i = 1, nlong
+
+!    call ij2phys(real(i,kind=r_size),real(j,kind=r_size),rlon,rlat)
+
+    ! Radar reflectivity
+    n = n + 1
+    obs%elm(n) = id_radar_ref_obs
+    obs%lon(n) = GRID_CXG(i+IHALO)
+    obs%lat(n) = GRID_CYG(j+JHALO)
+    obs%lev(n) = GRID_CZ(k+KHALO)
+    obs%typ(n) = 22.0_r_size
+    obs%dif(n) = 0.0_r_size
+
+    if (OBSSIM_RADAR_ERR_10) then
+      ! Maejima et al. 2017SOLA
+      err = real(err3dz(i,j,k) * max(z3d(i,j,k) * 0.1, 2.0_r_size), kind=r_size)
+    else
+      err = real(err3dz(i,j,k) * OBSERR_RADAR_REF, kind=r_size)
+    endif
+
+    if (.not. ADD_OBSERR_TRUTH) then
+      err = 0.0_r_size
+    endif
+
+    obs%dat(n) = real(z3d(i,j,k), kind=r_size) + err
+    obs%err(n) = real(abs(err), kind=r_size)
+
+    if (z3d(i,j,k) ==  real(MIN_RADAR_REF_DBZ, kind=r_sngl)) then
+      ! Thinning for clear sky reflectivity (Aksoy et al. 2009MWR)
+      if (mod(i,OBSSIM_RADAR_CLR_THIN) /= 0 .or. &
+          mod(j,OBSSIM_RADAR_CLR_THIN) /= 0 .or. &
+          mod(k,OBSSIM_RADAR_CLR_ZTHIN) /= 0 ) then
+
+        obs%lon(n) = -1.0d10 * obs%lon(n)
+        obs%lat(n) = -1.0d10 * obs%lat(n)
+        obs%lev(n) = -1.0d10 * obs%lev(n)
+
+      endif
+    else
+      ! Thinning for rainy sky reflectivity 
+      if (mod(i,OBSSIM_RADAR_RAIN_THIN) /= 0 .or. &
+          mod(j,OBSSIM_RADAR_RAIN_THIN) /= 0 .or. &
+          mod(k,OBSSIM_RADAR_RAIN_ZTHIN) /= 0) then
+
+        obs%lon(n) = -1.0d10 * obs%lon(n)
+        obs%lat(n) = -1.0d10 * obs%lat(n)
+        obs%lev(n) = -1.0d10 * obs%lev(n)
+
+      endif
+    endif
+
+    ! Radial velocity
+    n = n + 1
+    obs%elm(n) = id_radar_vr_obs
+    obs%lon(n) = GRID_CXG(i+IHALO)
+    obs%lat(n) = GRID_CYG(j+JHALO)
+    obs%lev(n) = GRID_CZ(k+KHALO)
+    obs%typ(n) = 22.0_r_size
+    obs%dif(n) = 0.0_r_size
+
+    err = real(err3dvr(i,j,k) * OBSERR_RADAR_VR, kind=r_size)
+
+    if (.not. ADD_OBSERR_TRUTH) then
+      err = 0.0_r_size
+    endif
+
+    obs%dat(n) = real(vr3d(i,j,k), kind=r_size) + err
+    obs%err(n) = real(abs(err), kind=r_size)
+
+    if (z3d(i,j,k) <  real(RADAR_REF_THRES_DBZ, kind=r_sngl)) then
+      ! Radial velocity observations are available where z3d >= RADAR_REF_THRES_DBZ
+      obs%lon(n) = -1.0d10 * obs%lon(n)
+      obs%lat(n) = -1.0d10 * obs%lat(n)
+      obs%lev(n) = -1.0d10 * obs%lev(n)
+    endif
+
+  enddo
+  enddo
+  enddo
+
+  return
+end subroutine read_obs_radar_grd
+
+
+subroutine get_nobs_radar_grd(cfile,nn)
+  implicit none
+  character(*),intent(in) :: cfile
+  integer,intent(out) :: nn
+  INTEGER :: iunit
+  LOGICAL :: ex
+
+  nn = 0
+  iunit=91
+
+  inquire(file=cfile,exist=ex)
+  if(ex) then
+    nn = nlong * nlatg * nlev * 2 ! z, vr
+  else
+    write(6,'(2A)') cfile,' does not exist -- skipped'
+  end iF
+
+  return
+end subroutine get_nobs_radar_grd
+
+subroutine get_nobs_lt_grd(cfile,nn)
+  implicit none
+  character(*),intent(in) :: cfile
+  integer,intent(out) :: nn
+  INTEGER :: iunit
+  LOGICAL :: ex
+
+  nn = 0
+  iunit=91
+
+  inquire(file=cfile,exist=ex)
+  if(ex) then
+    if (USE_LT_3D) then
+      nn = nlong * nlatg * nlev ! lt3d
+    else
+      nn = nlong * nlatg        ! lt2d
+    endif
+  else
+    write(6,'(2A)') cfile,' does not exist -- skipped'
+  end iF
+
+  return
+end subroutine get_nobs_lt_grd
+
+subroutine read_obs_lt_grd(cfile,obs)
+  use scale_grid, only: &
+      GRID_CXG, GRID_CYG, &
+      GRID_CZ
+  use scale_grid_index, only: &
+      IHALO, JHALO, KHALO
+
+  implicit none
+  character(*),intent(in) :: cfile
+  type(obs_info),intent(inout) :: obs
+
+  integer :: n, iunit
+
+  real(r_sngl) :: lt3d(nlong,nlatg,nlev)
+  real(r_sngl) :: lt2d(nlong,nlatg)
+  real(r_sngl) :: err3d(nlong,nlatg,nlev)
+  real(r_sngl) :: err2d(nlong,nlatg)
+  integer :: irec, iolen
+  real(r_size) :: rlon, rlat
+  real(r_size) :: err
+  integer :: i, j, k, kmax_lt
+
+!  call obs_info_allocate(obs)
+
+
+  iunit=91
+  inquire (iolength=iolen) iolen
+  open(iunit,file=cfile,form='unformatted',access='direct',recl=nlong*nlatg*iolen)
+  irec = 0
+  do k = 1, nlev
+    irec = irec + 1
+    read(iunit,rec=irec) ((lt3d(i,j,k), i = 1, nlong), j = 1, nlatg)
+  enddo ! k
+
+  do k = 1, nlev
+    irec = irec + 1
+    read(iunit,rec=irec) ((err3d(i,j,k), i = 1, nlong), j = 1, nlatg)
+  enddo ! k
+
+  irec = irec + 1
+  read(iunit,rec=irec) ((lt2d(i,j), i = 1, nlong), j = 1, nlatg)
+
+  irec = irec + 1
+  read(iunit,rec=irec) ((err2d(i,j), i = 1, nlong), j = 1, nlatg)
+
+  close(iunit)
+
+  if (USE_LT_3D) then
+    kmax_lt = nlev
+  else
+    kmax_lt = 1
+  endif
+
+  n = 0
+  do k = 1, kmax_lt
+  do j = 1, nlatg
+  do i = 1, nlong
+
+!    call ij2phys(real(i,kind=r_size),real(j,kind=r_size),rlon,rlat)
+
+    ! Lightning observation
+    n = n + 1
+    obs%elm(n) = id_radar_ref_obs
+    obs%lon(n) = GRID_CXG(i+IHALO)
+    obs%lat(n) = GRID_CYG(j+JHALO)
+    obs%lev(n) = GRID_CZ(k+KHALO)
+    obs%typ(n) = 25.0_r_size
+    obs%dif(n) = 0.0_r_size
+
+    if (USE_LT_3D) then
+      err = real(err3d(i,j,k) * OBSERR_LT3D, kind=r_size)
+      obs%dat(n) = real(lt3d(i,j,k), kind=r_size) + err
+    else
+      err = real(err2d(i,j) * OBSERR_LT2D, kind=r_size)
+      obs%dat(n) = real(lt2d(i,j), kind=r_size) + err
+    endif
+
+  enddo
+  enddo
+  enddo
+
+  return
+end subroutine read_obs_lt_grd
 
 END MODULE common_obs_scale
