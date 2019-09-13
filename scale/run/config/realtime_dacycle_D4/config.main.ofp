@@ -10,22 +10,40 @@ RSCGRP="regular-cache"
 RSCGRP="regular-flat"
 RSCGRP="regular-cache"
 
+#RSCGRP="challenge"
+
 #===============================================================================
 
+DIR="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/scale-5.3.x_LETKF_sngl/scale-letkf-HPC0829/scale"
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
-
 
 OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
 OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT"
 EXP4=D4_250M_NP4096
-EXP4=D4_250M_NP4096_600S_SMTH
+#EXP4=D4_250M_NP4096_600S_SMTH
+#EXP4=D4_250M_NP4096_600S_SMTH_HPC0829_2112_JIT
+#EXP4=D4_250M_NP4096_600S_SMTH_HPC0829_1280_NOJIT
+#EXP4=D4_250M_NP4096_600S_SMTH_HPC0829_1280_JIT
+#
+#EXP4=D4_250M_NP4096_600S_SMTH_HPC0829_5248
+#EXP4=D4_250M_NP4096_600S_SMTH_HPC0829_3328_NOFCST
+#EXP4=D4_250M_NP4096_600S_SMTH_HPC0829_3328_NOFCST_JITON
+#EXP4=D4_250M_NP4096_600S_SMTH_HPC0829_3328_NOFCST_JITON2
+#
+#EXP4=D4_250M_NP4096_600S_SMTH_HPC0829_3968
+#EXP4=D4_250M_NP4096_600S_SMTH_HPC0829_6528
+#EXP4=D4_250M_NP4096_600S_SMTH_HPC0829_6528
+#EXP4=D4_250M_NP4096_600S_SMTH_HPC0829_8192
+
+EXP4=D4_250M_NP4096_600S_SMTH_0913_01
+
 #EXP4=exp_d4
 EXP3=exp_d3
 EXP2=exp_d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
 
-INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/${EXP4}"
+INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_250M_NP4096_600S_SMTH"
 
 #===============================================================================
 # Location of model/data files
@@ -52,7 +70,7 @@ OBS="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/PAWR_TOSHIBA"
 OBSNCEP=
 OBS_USE_JITDT=0 # 1: Run with JIT-DT 
                 # 0: No JIT-DT
-OBS_USE_JITDT_OFFLINE=1 # 1: Offilne test
+OBS_USE_JITDT_OFFLINE=0 # 1: Offilne test
                         # 0: Online (data should be transfered from NICT)
 
 JIT_TOP=/work/hp150019/share/honda/jitdt
@@ -134,6 +152,11 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 
 MEMBER=2      # Ensemble size 
 NNODES=320   # Ensemble size + 1 (mean) +1 (mdet) + 1 (additional)
+
+
+MEMBER=5      # Ensemble size 
+NNODES=640   # Ensemble size + 1 (mean) +1 (mdet) + 3 (additional)
+
 
 PPN=64              # Number of processes per node
 

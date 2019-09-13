@@ -161,6 +161,8 @@ subroutine set_common_mpi_scale
 
   call mpi_timer('', 2)
 
+  if ( .not. myrank_use_da ) return
+
   ! Communicator for 1-iteration ensemble member groups
   !-----------------------------------------------------------------------------
 

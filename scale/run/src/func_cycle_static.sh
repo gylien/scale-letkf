@@ -992,6 +992,9 @@ while ((time <= ETIME)); do
 
     if ((d == 1)); then
       conf_file_src=$SCRP_DIR/config.nml.scale
+echo $conf_file_src
+echo "DEBUG XXX"
+#exit # DEBUG
       if ((DACYCLE == 1)); then
         conf_file="dacycle_${time}.conf"
         if ((DACYCLE_RUN_FCST == 1)); then

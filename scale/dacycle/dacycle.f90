@@ -17,7 +17,6 @@ program dacycle
     set_mem_node_proc,        &
     set_common_mpi_scale,     &
     myrank_use, myrank_use_da,&
-    MPI_COMM_u,               &
     myrank_a, myrank_da,      &
     myrank_d, myrank_e,       &
     mmean_rank_e,             &
@@ -194,12 +193,24 @@ program dacycle
 
   call set_common_conf(nprocs)
 
+call MPI_BARRIER(MPI_COMM_WORLD, ierr) ! DEBUG
+call date_and_time(date=date, time=time) ! DEBUG
+if(myrank==0)write (6, '(2A,1x,A,i9)') '[Info] Start time1: ', date, time,myrank
+
   call set_mem_node_proc(MEMBER_RUN)
+
+call MPI_BARRIER(MPI_COMM_WORLD, ierr) ! DEBUG
+call date_and_time(date=date, time=time) ! DEBUG
+if(myrank==0)write (6, '(2A,1x,A,i9)') '[Info] Start time1: ', date, time,myrank
 
   call scalerm_setup('DACYCLE')
 
-  call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_WORLD)
+call MPI_BARRIER(MPI_COMM_WORLD, ierr) ! DEBUG
+call date_and_time(date=date, time=time) ! DEBUG
+if(myrank==0)write (6, '(2A,1x,A,i9)') '[Info] Start time1: ', date, time,myrank
+!stop
 
+  call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_WORLD)
   if (myrank_use) then
 
     icycle = 0
@@ -217,14 +228,20 @@ program dacycle
       TIME_NSTEP = TIME_DSTEP_ATMOS_RESTART * scycle_dafcst + &
                    int( (DACYCLE_RUN_FCST_TIME + 1.0d-6) / TIME_DTSEC )
     else
-      scycle_dafcst = -1
+      scycle_dafcst = 9999999
     endif
 
-    if (myrank_d == 0 .and. .not. myrank_use_da ) write (6, '(A,2I7)') 'scycle_dafcst', scycle_dafcst, myrank_e !DEBUG
+    ! DEBUG
+    if (.not. myrank_use_da) then
+      write(6,'(a,6i8)')"DEBUG",myrank_d,myrank_e,myrank_a,myrank_da,scycle_dafcst,TIME_NSTEP
+    endif 
 
     ! setup grid parameters
     call set_common_scale
-    call set_common_mpi_scale
+    if ( myrank_use_da ) then
+      ! Set COMM_e 
+      call set_common_mpi_scale
+    endif
 
 !-----------------------------------------------------------------------
 ! Main loop
@@ -513,7 +530,7 @@ program dacycle
         call MPI_BARRIER(MPI_COMM_da, ierr)
         if (myrank_da == 0) then
           call date_and_time(date=date, time=time)
-          call system_clock(etime_da_c)
+          call system_clock(etime_da_c, cpsec, cmax)
           call TIME_gettimelabel(ftimelabel)
           write (6, '(2A,1x,A,1x,A,f12.4)') '[Info:DA] End analysis: ', date, time, trim(ftimelabel), &
                                             real(etime_da_c - stime_da_c) / real(cpsec)
@@ -563,9 +580,18 @@ program dacycle
         dafcst_step = dafcst_step + 1
 
         if (dafcst_step == 0) then
+          if (myrank_d == 0) then
+call date_and_time(date=date, time=time)
+write(6,'(a,3i7,1x,A)')"DEBUG, wait",myrank_a,icycle,scycle_dafcst,time
+          endif
+
           ! Receive analysis ensemble mean if myrank is in charge of the
           ! dacycle-forecast from scycle_dafcst
           call receive_emean_direct()
+          if (myrank_d == 0) then
+call date_and_time(date=date, time=time)
+write(6,'(a,3i7,1x,A)')"DEBUG, receive",myrank_a,icycle,scycle_dafcst,time
+          endif
           call TIME_gettimelabel(fstimelabel)
 
           call MPI_BARRIER(MPI_COMM_d, ierr)
@@ -573,6 +599,14 @@ program dacycle
           call system_clock(stime_fcst_c)
           if (myrank_d == 0) then
             write (6, '(2A,1x,A,1x,A)') '[Info:fcst] Start forecast: ', date, time, trim(fstimelabel(1:15))
+          endif
+        ! DEBUG
+        else
+          call MPI_BARRIER(MPI_COMM_d, ierr)
+          call date_and_time(date=date, time=time)
+          call system_clock(etime_fcst_c, cpsec, cmax)
+          if (myrank_d == 0) then
+            write (6, '(A,1x,A,f10.5,i9)') '[Info:fcst] DEBUG: ', trim(fstimelabel(1:15)),real(etime_fcst_c - stime_fcst_c) / real(cpsec),icycle
           endif
         endif
 

@@ -21,7 +21,7 @@ module common_scalerm
     myrank_use, &
     myrank_use_da, &
     mydom, &
-    MPI_COMM_u, nprocs_u, myrank_u, &
+!    MPI_COMM_u, nprocs_u, myrank_u, &
     MPI_COMM_a, nprocs_a, myrank_a, &
     MPI_COMM_da, nprocs_da, myrank_da, &
     MPI_COMM_d, nprocs_d, myrank_d
@@ -295,26 +295,26 @@ subroutine scalerm_setup(execname)
   ! Communicator for all processes used
   !-----------------------------------------------------------------------------
 
-  if (myrank_use) then
-    color = 0
-    key   = (myrank_to_mem(1) - 1) * nprocs_m + myrank_to_pe
-!    key   = myrank
-  else
-    color = MPI_UNDEFINED
-    key   = MPI_UNDEFINED
-  end if
-
-  call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, MPI_COMM_u, ierr)
-
-  if (.not. myrank_use) then
-    write (6, '(A,I6.6,A)') 'MYRANK=', myrank, ': This process is not used!'
-    return
-  end if
-
-  call MPI_COMM_SIZE(MPI_COMM_u, nprocs_u, ierr)
-  call MPI_COMM_RANK(MPI_COMM_u, myrank_u, ierr)
-
-  call mpi_timer('scalerm_setup:mpi_comm_split_u:', 2)
+!  if (myrank_use) then
+!    color = 0
+!    key   = (myrank_to_mem(1) - 1) * nprocs_m + myrank_to_pe
+!!    key   = myrank
+!  else
+!    color = MPI_UNDEFINED
+!    key   = MPI_UNDEFINED
+!  end if
+!
+!  call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, MPI_COMM_u, ierr)
+!
+!  if (.not. myrank_use) then
+!    write (6, '(A,I6.6,A)') 'MYRANK=', myrank, ': This process is not used!'
+!    return
+!  end if
+!
+!  call MPI_COMM_SIZE(MPI_COMM_u, nprocs_u, ierr)
+!  call MPI_COMM_RANK(MPI_COMM_u, myrank_u, ierr)
+!
+!  call mpi_timer('scalerm_setup:mpi_comm_split_u:', 2)
 
   ! Communicator for all domains of single members
   !-----------------------------------------------------------------------------
@@ -337,12 +337,12 @@ subroutine scalerm_setup(execname)
 !    key   = MPI_UNDEFINED
 !  endif
 
-  call MPI_COMM_SPLIT(MPI_COMM_u, color, key, global_comm, ierr)
+  call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, global_comm, ierr)
 
   call PRC_GLOBAL_setup( .false.,    & ! [IN]
                          global_comm ) ! [IN]
 
-  call mpi_timer('scalerm_setup:mpi_comm_split_d_global:', 2)
+  call mpi_timer('scalerm_setup:mpi_comm_split_d_global:', 2, barrier=MPI_COMM_WORLD)
 
   ! Communicator for one domain
   !-----------------------------------------------------------------------------
@@ -431,6 +431,10 @@ subroutine scalerm_setup(execname)
       else if (scalerm_mem <= mem_da+MAX_DACYCLE_RUN_FCST .and. scalerm_mem > mem_da) then
         scalerm_memf = memf_mean
         myrank_use_da = .false.
+
+        write (fmttmp, '(I2)') memflen
+        write (scalerm_memf, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') scalerm_mem - mem_da ! DEBUG
+
       else
         write (6, '(A,I7)') '[Error] Invalid member number for this rank:', scalerm_mem
         write (6, '(A,I7)') '        MEMBER =', MEMBER
@@ -478,7 +482,7 @@ subroutine scalerm_setup(execname)
     write (6, '(A,I6.6,A)') '[Info] MYRANK = ', myrank, ' is not used for SCALE!'
   end if
 
-  call mpi_timer('scalerm_setup:standard I/O:', 2)
+  call mpi_timer('scalerm_setup:standard I/O:', 2, barrier=MPI_COMM_WORLD)
 
   ! Read LETKF namelists
   !-----------------------------------------------------------------------------
@@ -514,7 +518,7 @@ subroutine scalerm_setup(execname)
     call read_nml_letkf_h08
   end select
 
-  call mpi_timer('scalerm_setup:read_nml:', 2)
+  call mpi_timer('scalerm_setup:read_nml:', 2, barrier=MPI_COMM_WORLD)
 
   !-----------------------------------------------------------------------------
 
@@ -529,7 +533,7 @@ subroutine scalerm_setup(execname)
 !  myrank_d = PRC_myrank
   myrank_d = local_myrank
 
-  call mpi_timer('scalerm_setup:mpi_comm_split_d_local:', 2)
+  call mpi_timer('scalerm_setup:mpi_comm_split_d_local:', 2, barrier=MPI_COMM_WORLD)
 
   ! Communicator for all processes for single domains
   !-----------------------------------------------------------------------------
@@ -542,28 +546,28 @@ subroutine scalerm_setup(execname)
     key   = MPI_UNDEFINED
   end if
 
-  call MPI_COMM_SPLIT(MPI_COMM_u, color, key, MPI_COMM_a, ierr)
+  call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, MPI_COMM_a, ierr)
 
   call MPI_COMM_SIZE(MPI_COMM_a, nprocs_a, ierr)
   call MPI_COMM_RANK(MPI_COMM_a, myrank_a, ierr)
 
-  call mpi_timer('scalerm_setup:mpi_comm_split_a:', 2)
+  call mpi_timer('scalerm_setup:mpi_comm_split_a:', 2, barrier=MPI_COMM_WORLD)
 
 ! Define another MPI communicator in which processes used for DA
 !  color_da = 0:used for DA, 1: not used for DA
-  color_da = 0
-  key_da = key
+  color_da = 1
+  key_da = myrank_a
   if (.not. myrank_use_da) then
-    color_da = 1
-    key_da = myrank_a - mem_da * nprocs_m
+    color_da = 2
+    key_da = myrank_a 
   endif
 
   call MPI_COMM_SPLIT(MPI_COMM_a, color_da, key_da, MPI_COMM_da, ierr)
-
+  
   call MPI_COMM_SIZE(MPI_COMM_da, nprocs_da, ierr)
   call MPI_COMM_RANK(MPI_COMM_da, myrank_da, ierr)
 
-  call mpi_timer('scalerm_setup:mpi_comm_split_da:', 2)
+  call mpi_timer('scalerm_setup:mpi_comm_split_da:', 2, barrier=MPI_COMM_WORLD)
 
   if (exec_modelonly .and. (.not. scalerm_run)) then
     return
@@ -579,13 +583,14 @@ subroutine scalerm_setup(execname)
     call IO_LOG_setup( local_myrank, PRC_UNIVERSAL_IsMaster )
   end if
 
-  call mpi_timer('scalerm_setup:log_setup_init:', 2)
+  call mpi_timer('scalerm_setup:log_setup_init:', 2, barrier=MPI_COMM_WORLD)
 
   ! Other scalelib setups
   !-----------------------------------------------------------------------------
 
   ! setup process
   call PRC_CARTESC_setup
+  call mpi_timer('scalerm_setup:other_setup1:', 2, barrier=MPI_COMM_WORLD)
 
   if (exec_model .and. scalerm_run) then
     ! setup PROF
@@ -596,8 +601,12 @@ subroutine scalerm_setup(execname)
     call PROF_rapstart('Initialize', 0)
   end if
 
+  call mpi_timer('scalerm_setup:other_setup2:', 2, barrier=MPI_COMM_WORLD)
+
   ! setup constants
   call CONST_setup
+
+  call mpi_timer('scalerm_setup:other_setup3:', 2, barrier=MPI_COMM_WORLD)
 
   if (exec_model .and. scalerm_run) then
     ! setup calendar
@@ -615,9 +624,13 @@ subroutine scalerm_setup(execname)
     call CPL_admin_setup
   end if
 
+  call mpi_timer('scalerm_setup:other_setup4:', 2, barrier=MPI_COMM_WORLD)
+
   ! setup horizontal/vertical grid coordinates (cartesian,idealized)
   call ATMOS_GRID_CARTESC_INDEX_setup
   call ATMOS_GRID_CARTESC_setup
+
+  call mpi_timer('scalerm_setup:other_setup5:', 2, barrier=MPI_COMM_WORLD)
 
   if (exec_model .and. scalerm_run) then
     if ( OCEAN_do ) then
@@ -636,6 +649,8 @@ subroutine scalerm_setup(execname)
     endif
 
   end if
+
+  call mpi_timer('scalerm_setup:other_setup6:', 2, barrier=MPI_COMM_WORLD)
 
 !#ifdef PNETCDF
 !  call LAND_GRID_CARTESC_INDEX_setup
@@ -659,6 +674,8 @@ subroutine scalerm_setup(execname)
 
   ! setup tracer index
   call ATMOS_HYDROMETEOR_setup
+
+  call mpi_timer('scalerm_setup:other_setup7:', 2, barrier=MPI_COMM_WORLD)
 
   if (exec_model) then
     if (scalerm_run) then
@@ -694,6 +711,8 @@ subroutine scalerm_setup(execname)
 !!   <-- ATMOS_driver_config
   end if
 
+  call mpi_timer('scalerm_setup:other_setup8:', 2, barrier=MPI_COMM_WORLD)
+
   ! setup file I/O
   if (exec_model) then
     if (scalerm_run) then
@@ -705,8 +724,12 @@ subroutine scalerm_setup(execname)
 !   <-- FILE_CARTESC_setup
   end if
 
+  call mpi_timer('scalerm_setup:other_setup9:', 2, barrier=MPI_COMM_WORLD)
+
   ! setup mpi communication
   call COMM_setup
+
+  call mpi_timer('scalerm_setup:other_setup10:', 2, barrier=MPI_COMM_WORLD)
 
   if (exec_model .and. scalerm_run) then
     ! setup topography
@@ -715,6 +738,8 @@ subroutine scalerm_setup(execname)
     ! setup land use category index/fraction
     call LANDUSE_setup( OCEAN_do, (.not. URBAN_land), LAKE_do )
   end if
+
+  call mpi_timer('scalerm_setup:other_setup11:', 2, barrier=MPI_COMM_WORLD)
 
   ! setup grid coordinates (real world)
   if (exec_model) then
@@ -740,6 +765,8 @@ subroutine scalerm_setup(execname)
 !   <-- ATMOS_GRID_CARTESC_REAL_setup
   end if
 
+  call mpi_timer('scalerm_setup:other_setup12:', 2, barrier=MPI_COMM_WORLD)
+
   if (exec_model .and. scalerm_run) then
 
     ! setup restart
@@ -750,6 +777,8 @@ subroutine scalerm_setup(execname)
 #endif
   end if
 
+  call mpi_timer('scalerm_setup:other_setup13:', 2, barrier=MPI_COMM_WORLD)
+
   ! setup time
   if (scalerm_run) then
     if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
@@ -759,10 +788,14 @@ subroutine scalerm_setup(execname)
     end if
   end if
 
+  call mpi_timer('scalerm_setup:other_setup14:', 2, barrier=MPI_COMM_WORLD)
+
   if (exec_model .and. scalerm_run) then
     ! setup statistics
     call STATISTICS_setup
   end if
+
+  call mpi_timer('scalerm_setup:other_setup15:', 2, barrier=MPI_COMM_WORLD)
 
   if ((execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') .and. scalerm_run) then
     ! setup history I/O
@@ -775,6 +808,8 @@ subroutine scalerm_setup(execname)
     call FILE_EXTERNAL_INPUT_CARTESC_setup
   end if
 
+  call mpi_timer('scalerm_setup:other_setup16:', 2, barrier=MPI_COMM_WORLD)
+
   if (exec_model .and. scalerm_run) then
     ! setup nesting grid
     call COMM_CARTESC_NEST_setup ( QA_MP, ATMOS_PHY_MP_TYPE, intercomm_parent, intercomm_child )
@@ -785,26 +820,41 @@ subroutine scalerm_setup(execname)
     call ATMOS_SATURATION_setup
   end if
 
+  call mpi_timer('scalerm_setup:other_setup17:', 2, barrier=MPI_COMM_WORLD)
+
   if ((execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') .and. scalerm_run) then
     call BULKFLUX_setup( sqrt(DX**2+DY**2) )
   end if
 
+  call mpi_timer('scalerm_setup:other_setup18:', 2, barrier=MPI_COMM_WORLD)
+
   if (exec_model .and. scalerm_run) then
     ! setup variable container
     if ( ATMOS_do ) call ATMOS_vars_setup
+  call mpi_timer('scalerm_setup:other_setup18.1:', 2, barrier=MPI_COMM_WORLD)
     if ( OCEAN_do ) call OCEAN_vars_setup
+  call mpi_timer('scalerm_setup:other_setup18.2:', 2, barrier=MPI_COMM_WORLD)
     if ( LAND_do  ) call LAND_vars_setup
+  call mpi_timer('scalerm_setup:other_setup18.3:', 2, barrier=MPI_COMM_WORLD)
     if ( URBAN_do ) call URBAN_vars_setup
+  call mpi_timer('scalerm_setup:other_setup18.4:', 2, barrier=MPI_COMM_WORLD)
     if ( CPL_sw   ) call CPL_vars_setup
+  call mpi_timer('scalerm_setup:other_setup18.5:', 2, barrier=MPI_COMM_WORLD)
   end if
+
+  call mpi_timer('scalerm_setup:other_setup19:', 2, barrier=MPI_COMM_WORLD)
 
   if (scalerm_run) then
     if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
       ! setup driver
       if ( ATMOS_do ) call ATMOS_driver_setup
+  call mpi_timer('scalerm_setup:other_setup19.1:', 2, barrier=MPI_COMM_WORLD)
       if ( OCEAN_do ) call OCEAN_driver_setup
+  call mpi_timer('scalerm_setup:other_setup19.2:', 2, barrier=MPI_COMM_WORLD)
       if ( LAND_do  ) call LAND_driver_setup
+  call mpi_timer('scalerm_setup:other_setup19.3:', 2, barrier=MPI_COMM_WORLD)
       if ( URBAN_do ) call URBAN_driver_setup
+  call mpi_timer('scalerm_setup:other_setup19.4:', 2, barrier=MPI_COMM_WORLD)
 
       call USER_setup
     else if (execname_ == 'RMPREP ') then
@@ -819,11 +869,13 @@ subroutine scalerm_setup(execname)
     end if
   end if
 
+  call mpi_timer('scalerm_setup:other_setup20:', 2, barrier=MPI_COMM_WORLD)
+
   if (exec_model .and. scalerm_run) then
     call PROF_rapend('Initialize', 0)
   end if
 
-  call mpi_timer('scalerm_setup:other_setup:', 2)
+  call mpi_timer('scalerm_setup:other_setup:', 2, barrier=MPI_COMM_WORLD)
 
   return
 end subroutine scalerm_setup
@@ -914,8 +966,10 @@ subroutine scalerm_finalize(execname)
       call MPI_COMM_FREE(MPI_COMM_d, ierr)
     end if
     call MPI_COMM_FREE(MPI_COMM_a, ierr)
-    call MPI_COMM_FREE(MPI_COMM_da, ierr)
-    call MPI_COMM_FREE(MPI_COMM_u, ierr)
+    if ( myrank_use_da ) then
+      call MPI_COMM_FREE(MPI_COMM_da, ierr)
+    endif
+!    call MPI_COMM_FREE(MPI_COMM_u, ierr)
   end if
 
   ! stop MPI
