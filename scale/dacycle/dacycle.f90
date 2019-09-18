@@ -19,6 +19,7 @@ program dacycle
     myrank_use, myrank_use_da,&
     myrank_a, myrank_da,      &
     myrank_d, myrank_e,       &
+    myrank_ef,                &
     mmean_rank_e,             &
     write_ensmean,            &
     write_ens_mpi,            &
@@ -31,6 +32,7 @@ program dacycle
     send_emean_direct,        &
     receive_emean_direct,     &
     write_grd_dafcst_mpi,     &
+    bcast_restart_efcst_mpi,  &
     mpi_timer
   use common_obs_scale, only: &
     set_common_obs_scale
@@ -231,17 +233,10 @@ if(myrank==0)write (6, '(2A,1x,A,i9)') '[Info] Start time1: ', date, time,myrank
       scycle_dafcst = 9999999
     endif
 
-    ! DEBUG
-    if (.not. myrank_use_da) then
-      write(6,'(a,6i8)')"DEBUG",myrank_d,myrank_e,myrank_a,myrank_da,scycle_dafcst,TIME_NSTEP
-    endif 
-
     ! setup grid parameters
     call set_common_scale
-    if ( myrank_use_da ) then
-      ! Set COMM_e 
-      call set_common_mpi_scale
-    endif
+    ! Set COMM_e 
+    call set_common_mpi_scale
 
 !-----------------------------------------------------------------------
 ! Main loop
@@ -252,6 +247,15 @@ if(myrank==0)write (6, '(2A,1x,A,i9)') '[Info] Start time1: ', date, time,myrank
     call PROF_setprefx('MAIN')
     call PROF_rapstart('Main_Loop', 0)
 
+call MPI_BARRIER(MPI_COMM_da, ierr) 
+call date_and_time(date=date, time=time)
+if ( myrank_da == 0 ) then
+  if ( myrank_use_da) then
+    write(6,'(a,1x,a)')"CHECK DA MEM READY", time
+  else
+    write(6,'(a,1x,a)')"CHECK FCST MEM READY", time
+  endif
+endif
     do
  
       anal_mem_out_now = .false.
@@ -275,7 +279,32 @@ if(myrank==0)write (6, '(2A,1x,A,i9)') '[Info] Start time1: ', date, time,myrank
             call resume_state(do_restart_read=.false.)
           endif
         else
-          call resume_state(do_restart_read=.true.)
+if ( .not. myrank_use_da .and. myrank_da == 0 ) then
+  write(6,'(a,2i6)')"enter resume state", myrank_a,icycle
+endif
+          ! Read DA members & one dacycle-forecast member (myrank_ef==0)
+          if ( myrank_use_da .or. myrank_ef == 0 ) then
+            call resume_state(do_restart_read=.true.)
+          endif
+
+          ! Broadcast among the dacycle-(extended-) forecast members
+          if ( .not. myrank_use_da ) then
+            call bcast_restart_efcst_mpi
+            if ( myrank_ef /= 0 ) then
+              call resume_state(do_restart_read=.false.)
+            endif
+          endif
+
+call MPI_BARRIER(MPI_COMM_da, ierr) 
+call date_and_time(date=date, time=time)
+if ( myrank_da == 0 ) then
+  if ( myrank_use_da) then
+    write(6,'(a,1x,a)')"CHECK READ DA MEM", time
+  else
+    write(6,'(a,1x,a)')"CHECK READ FCST MEM", time
+  endif
+endif
+
           if (icycle == 0 .and. myrank_use_da) then
             ! initialize system_clock after reading initial files
             call MPI_BARRIER(MPI_COMM_da, ierr) 
@@ -527,6 +556,8 @@ if(myrank==0)write (6, '(2A,1x,A,i9)') '[Info] Start time1: ', date, time,myrank
           call obs_info_deallocate(obs(iof))
         end do
 
+        call mpi_timer('DEALLOCATE OBS', 1, barrier=MPI_COMM_da)
+
         call MPI_BARRIER(MPI_COMM_da, ierr)
         if (myrank_da == 0) then
           call date_and_time(date=date, time=time)
@@ -551,11 +582,17 @@ if(myrank==0)write (6, '(2A,1x,A,i9)') '[Info] Start time1: ', date, time,myrank
         if (DACYCLE_RUN_FCST .and. icycle >= ICYC_DACYCLE_RUN_FCST ) then
           fcst_cnt = fcst_cnt + 1
   
+        call mpi_timer('SEND_ANAL0', 1, barrier=MPI_COMM_da)
+if (myrank_da == 0) then
+call date_and_time(date=date, time=time)
+write(6,'(a,3i7,1x,A)')"DEBUG, ready for send",myrank_a,icycle,scycle_dafcst,time
+endif
           ! Send analsis ensemble mean to an dacycle-forecast member
           if ((myrank_e == mmean_rank_e) .and. &
               (fcst_cnt <= MAX_DACYCLE_RUN_FCST)) then
             call send_emean_direct(mean3d,mean2d,fcst_cnt)
           endif
+        call mpi_timer('SEND_ANAL', 1, barrier=MPI_COMM_da)
   
         endif
 
@@ -580,6 +617,7 @@ if(myrank==0)write (6, '(2A,1x,A,i9)') '[Info] Start time1: ', date, time,myrank
         dafcst_step = dafcst_step + 1
 
         if (dafcst_step == 0) then
+call MPI_BARRIER(MPI_COMM_d, ierr)
           if (myrank_d == 0) then
 call date_and_time(date=date, time=time)
 write(6,'(a,3i7,1x,A)')"DEBUG, wait",myrank_a,icycle,scycle_dafcst,time

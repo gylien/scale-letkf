@@ -432,8 +432,8 @@ subroutine scalerm_setup(execname)
         scalerm_memf = memf_mean
         myrank_use_da = .false.
 
-        write (fmttmp, '(I2)') memflen
-        write (scalerm_memf, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') scalerm_mem - mem_da ! DEBUG
+!        write (fmttmp, '(I2)') memflen
+!        write (scalerm_memf, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') scalerm_mem - mem_da ! DEBUG
 
       else
         write (6, '(A,I7)') '[Error] Invalid member number for this rank:', scalerm_mem

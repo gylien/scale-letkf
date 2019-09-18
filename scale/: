@@ -2042,95 +2042,22 @@ end subroutine write_grd_dafcst_mpi
 ! Broadcast restart data among the dacycle (extended) forecast members
 subroutine bcast_restart_efcst_mpi()
   use scale_atmos_grid_cartesC_index, only: &
-     IA, JA, KA
-  use scale_tracer, only: &
-     QA
+     IA, JA, KA, QA
   use mod_atmos_admin, only: &
-     ATMOS_do, &
-     ATMOS_sw_phy_mp, &
-     ATMOS_sw_phy_rd, &
-     ATMOS_sw_phy_sf
-  use mod_cpl_admin, only: &
-     CPL_sw
+     ATMOS_do
   use mod_ocean_admin, only: &
-     OCEAN_do, &
-     OCEAN_ICE_TYPE
+     OCEAN_do
   use mod_land_admin, only: &
      LAND_do
   use mod_urban_admin, only: &
      URBAN_do
   use mod_atmos_vars, only: &
-     DENS, MOMX, MOMY, MOMZ, &
-     RHOT, QTRC, &
-     ATMOS_vars_fillhalo
-  use mod_atmos_phy_mp_vars, only: &
-     ATMOS_PHY_MP_SFLX_rain, &
-     ATMOS_PHY_MP_SFLX_snow, &
-     ATMOS_PHY_MP_vars_fillhalo
-  use mod_atmos_phy_rd_vars, only: &
-     ATMOS_PHY_RD_SFLX_LW_up, &
-     ATMOS_PHY_RD_SFLX_LW_dn, &
-     ATMOS_PHY_RD_SFLX_SW_up, &
-     ATMOS_PHY_RD_SFLX_SW_dn, &
-     ATMOS_PHY_RD_TOAFLX_LW_up, &
-     ATMOS_PHY_RD_TOAFLX_LW_dn, &
-     ATMOS_PHY_RD_TOAFLX_SW_up, &
-     ATMOS_PHY_RD_TOAFLX_SW_dn, &
-     ATMOS_PHY_RD_SFLX_down,    &
-     ATMOS_PHY_RD_vars_fillhalo
-  use scale_cpl_sfc_index, only: &
-     I_R_direct, I_R_diffuse, &
-     I_R_IR, I_R_NIR, I_R_VIS
-  use mod_atmos_phy_sf_vars, only: &
-     ATMOS_PHY_SF_SFC_TEMP, &
-     ATMOS_PHY_SF_SFC_albedo, &
-     ATMOS_PHY_SF_SFC_Z0M, &
-     ATMOS_PHY_SF_SFC_Z0H, &
-     ATMOS_PHY_SF_SFC_Z0E, &
-     ATMOS_PHY_SF_vars_fillhalo
-  use scale_ocean_grid_cartesC_index, only: &
-     OKMAX, OIA, OJA, OIS, OIE, OJS, OJE
-  use mod_ocean_vars, only : &
-     OCEAN_TEMP,     &
-     OCEAN_OCN_Z0M,  &
-     OCEAN_ICE_TEMP, &
-     OCEAN_ICE_MASS, &
-     OCEAN_SFC_TEMP, &
-     OCEAN_SFC_albedo, &
-     OCEAN_SFC_Z0M,    &
-     OCEAN_SFC_Z0H,    &
-     OCEAN_SFC_Z0E,    &
-     OCEAN_ICE_FRAC,   &
-     OCEAN_vars_total
-  use scale_ocean_phy_ice_simple, only: &
-     OCEAN_PHY_ICE_freezetemp, &
-     OCEAN_PHY_ICE_fraction
-  use mod_land_vars, only : &
-     LAND_TEMP, &
-     LAND_WATER, &
-     LAND_SFC_TEMP, &
-     LAND_SFC_albedo
-  use scale_land_grid_cartesC_index, only: &
-     LKMAX, LIA, LJA
-  use mod_urban_vars, only : &
-     URBAN_TR, &
-     URBAN_TB, &
-     URBAN_TG, &
-     URBAN_TC, &
-     URBAN_QC, &
-     URBAN_UC, &
-     URBAN_TRL, &
-     URBAN_TBL, &
-     URBAN_TGL, &
-     URBAN_RAINR, &
-     URBAN_RAINB, &
-     URBAN_RAING, &
-     URBAN_ROFF, &
-     URBAN_SFC_TEMP, &
-     URBAN_SFC_albedo, &
-     URBAN_vars_total
-  use scale_urban_grid_cartesC_index, only: &
-     UIA, UJA, UKS, UKE
+     DENS, &
+     MOMX, &
+     MOMY, &
+     MOMZ, &
+     RHOT, &
+     QTRC
   implicit none
 
   integer :: ierr
@@ -2143,150 +2070,14 @@ subroutine bcast_restart_efcst_mpi()
     call MPI_BCAST(RHOT(1,1,1), KA*IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
 
     call MPI_BCAST(QTRC(1,1,1,1), KA*IA*JA*max(QA,1), MPI_RP, 0, MPI_COMM_ef, ierr)
+  endif
 
-    call ATMOS_vars_fillhalo
-
-    if ( ATMOS_sw_phy_mp ) then
-      call MPI_BCAST(ATMOS_PHY_MP_SFLX_rain(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_MP_SFLX_snow(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
+  if (myrank_d == 0) then
+    write(6,'(a)')"DEBUG",DENS(3,3,3),myrank_d,myrank_ef
+  endif
+!  call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
   
-      call ATMOS_PHY_MP_vars_fillhalo
-    endif
-  
-    if ( ATMOS_sw_phy_rd ) then
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_LW_up(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_LW_dn(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_SW_up(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_SW_dn(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_RD_TOAFLX_LW_up(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_TOAFLX_LW_dn(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_RD_TOAFLX_SW_up(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_TOAFLX_SW_dn(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_down(1,1,I_R_direct,I_R_IR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_down(1,1,I_R_diffuse,I_R_IR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_down(1,1,I_R_direct,I_R_NIR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_down(1,1,I_R_diffuse,I_R_NIR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_down(1,1,I_R_direct,I_R_VIS), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_RD_SFLX_down(1,1,I_R_diffuse,I_R_VIS), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call ATMOS_PHY_RD_vars_fillhalo
-    endif
-  
-    if ( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) then
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_TEMP(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_albedo(1,1,I_R_direct,I_R_IR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_albedo(1,1,I_R_diffuse,I_R_IR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_albedo(1,1,I_R_direct,I_R_NIR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_albedo(1,1,I_R_diffuse,I_R_NIR), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_albedo(1,1,I_R_direct,I_R_VIS), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_albedo(1,1,I_R_diffuse,I_R_VIS), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_Z0M(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_Z0H(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-      call MPI_BCAST(ATMOS_PHY_SF_SFC_Z0E(1,1), IA*JA, MPI_RP, 0, MPI_COMM_ef, ierr)
-  
-      call ATMOS_PHY_SF_vars_fillhalo
-    endif
-  
-  !    if ( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_read
-  !    if ( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_read
-  !    if ( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_read
-  !    if ( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_read
-  !    if ( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
 
-  endif ! ATMOS_do
-
-  if ( OCEAN_do ) then
-    call MPI_BCAST(OCEAN_TEMP(1,1,1), OKMAX*OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(OCEAN_OCN_Z0M(1,1), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_ICE_TEMP(1,1), OKMAX*OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_ICE_MASS(1,1), OKMAX*OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(OCEAN_SFC_TEMP(1,1), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(OCEAN_SFC_albedo(1,1,I_R_direct,I_R_IR), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_albedo(1,1,I_R_diffuse,I_R_IR), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_albedo(1,1,I_R_direct,I_R_NIR), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_albedo(1,1,I_R_diffuse,I_R_NIR), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_albedo(1,1,I_R_direct,I_R_VIS), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_albedo(1,1,I_R_diffuse,I_R_VIS), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(OCEAN_SFC_Z0M(1,1), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_Z0H(1,1), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(OCEAN_SFC_Z0E(1,1), OIA*OJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    if ( OCEAN_ICE_TYPE == 'NONE' ) then
-       OCEAN_ICE_TEMP(:,:) = OCEAN_PHY_ICE_freezetemp
-       OCEAN_ICE_FRAC(:,:) = 0.0_RP
-    else
-       OCEAN_ICE_TEMP(:,:) = min( OCEAN_ICE_TEMP(:,:), OCEAN_PHY_ICE_freezetemp )
-       call OCEAN_PHY_ICE_fraction( OIA, OIS, OIE,       & ! [IN]
-                                    OJA, OJS, OJE,       & ! [IN]
-                                    OCEAN_ICE_MASS(:,:), & ! [IN]
-                                    OCEAN_ICE_FRAC(:,:)  ) ! [OUT]
-    endif
-
-    call OCEAN_vars_total
-
-  endif ! OCEAN_do
-
-  if ( LAND_do ) then
-    call MPI_BCAST(LAND_TEMP(1,1,1), LKMAX*LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(LAND_WATER(1,1,1), LKMAX*LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(LAND_SFC_TEMP(1,1), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(LAND_SFC_albedo(1,1,I_R_direct,I_R_IR), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(LAND_SFC_albedo(1,1,I_R_diffuse,I_R_IR), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(LAND_SFC_albedo(1,1,I_R_direct,I_R_NIR), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(LAND_SFC_albedo(1,1,I_R_diffuse,I_R_NIR), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(LAND_SFC_albedo(1,1,I_R_direct,I_R_VIS), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(LAND_SFC_albedo(1,1,I_R_diffuse,I_R_VIS), LIA*LJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-  endif ! LAND_do
-
-  if ( URBAN_do ) then
-    call MPI_BCAST(URBAN_TR(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_TB(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_TG(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_TC(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_QC(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_UC(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(URBAN_TRL(1,1,1), UIA*UJA*(UKE-UKS+1), MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_TBL(1,1,1), UIA*UJA*(UKE-UKS+1), MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_TGL(1,1,1), UIA*UJA*(UKE-UKS+1), MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(URBAN_RAINR(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_RAINB(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_RAING(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_ROFF(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(URBAN_SFC_TEMP(1,1), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(URBAN_SFC_albedo(1,1,I_R_direct,I_R_IR), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_SFC_albedo(1,1,I_R_diffuse,I_R_IR), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(URBAN_SFC_albedo(1,1,I_R_direct,I_R_NIR), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_SFC_albedo(1,1,I_R_diffuse,I_R_NIR), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call MPI_BCAST(URBAN_SFC_albedo(1,1,I_R_direct,I_R_VIS), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-    call MPI_BCAST(URBAN_SFC_albedo(1,1,I_R_diffuse,I_R_VIS), UIA*UJA, MPI_RP, 0, MPI_COMM_ef, ierr)
-
-    call URBAN_vars_total
-
-  endif ! URBAN_do
 
   return
 end subroutine bcast_restart_efcst_mpi
