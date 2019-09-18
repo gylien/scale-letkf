@@ -74,6 +74,7 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
   where(.not.val_plot > rmiss) val_plot = rmiss
 
   title1 = trim(ftimelabel) // " UTC (FT=" // csec //"s)"
+  if (trim(csec).eq.'anal')  title1 = trim(ftimelabel) // " UTC (Analysis)"
   title2 = (/'',''/)
   title3 = 'radar ref ' // cheight // ' m'
   
