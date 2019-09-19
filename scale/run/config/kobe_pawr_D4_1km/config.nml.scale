@@ -95,7 +95,7 @@
 #################################################
 
 &PARAM_PRC_CARTESC
- PRC_NUM_X      = 12,
+ PRC_NUM_X      = 8,
  PRC_NUM_Y      = 8,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
@@ -109,7 +109,7 @@
 
 &PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 60,
- IMAX = 12,
+ IMAX = 16,
  JMAX = 16,
 /
 
@@ -161,10 +161,11 @@
  MAPPROJECTION_basepoint_lon = 134.9512D0,
  MAPPROJECTION_basepoint_lat =  34.7105D0,
 !
- MAPPROJECTION_type          = 'MER',
- MAPPROJECTION_M_lat =  34.7105D0,
-! MAPPROJECTION_LC_lat1       =  30.00D0,
-! MAPPROJECTION_LC_lat2       =  40.00D0,
+ MAPPROJECTION_type          = 'LC',
+! MAPPROJECTION_type          = 'MER',
+! MAPPROJECTION_M_lat =  34.7105D0,
+ MAPPROJECTION_LC_lat1       =  30.00D0,
+ MAPPROJECTION_LC_lat2       =  40.00D0,
 /
 
 #################################################
@@ -204,9 +205,9 @@
 
 ! r0051
 &PARAM_URBAN_DYN_KUSAKA01
- STRGR = 0.24D0,
- STRGB = 0.009D0,
- STRGG = 0.24D0,
+! STRGR = 0.24D0,
+! STRGB = 0.009D0,
+! STRGG = 0.24D0,
 /
 
 ! r0051
@@ -290,9 +291,20 @@
  MP_ntmax_sedimentation = 6,
 /
 
-!&PARAM_ATMOS_PHY_MP_TOMITA08
-! Default Tomita (2008) parameters are used
-!/
+&PARAM_ATMOS_PHY_MP_TOMITA08
+! Cr = 58.D0,
+! Cs = 0.9D0,
+! drag_g = 2.5D0,
+! beta_saut = 6D-3,
+! gamma_saut = 6D-2,
+! gamma_sacr = 2D-2,
+!--PARAM_ATMOS_PHY_MP_TOMITA08_Cr--
+!--PARAM_ATMOS_PHY_MP_TOMITA08_Cs--
+!--PARAM_ATMOS_PHY_MP_TOMITA08_drag_g--
+!--PARAM_ATMOS_PHY_MP_TOMITA08_beta_saut--
+!--PARAM_ATMOS_PHY_MP_TOMITA08_gamma_saut--
+!--PARAM_ATMOS_PHY_MP_TOMITA08_gamma_sacr--
+/
 
 #################################################
 #
