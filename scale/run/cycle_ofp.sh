@@ -130,8 +130,10 @@ jobscrp="$TMP/${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
+NPIN=`expr 255 / \( $PPN \) + 1`
+
 cat > $jobscrp << EOF
-#!/bin/sh
+#!/bin/sh -l
 #PJM -L rscgrp=regular-flat
 #PJM -L node=${NNODES}
 #PJM -L elapse=${TIME_LIMIT}
@@ -154,6 +156,7 @@ module load netcdf-fortran/4.4.3
 
 ulimit -s unlimited
 #export OMP_STACKSIZE=128m
+export OMP_NUM_THREADS=1
 
 export I_MPI_PIN_PROCESSER_EXCLUDE_LIST=0,1,68,69,136,137,204,205
 export I_MPI_HBW_PJOLICY=hbw_preferred,,
