@@ -84,7 +84,7 @@ do
     elif [ "$MEM" = 'mdet' ] && [ "${PMEM}" = 'mdet' ] ; then
       sed -i "/!--${FULL_NAME}--/a ${PNAME} = ${PVAL}," $TMPDIR/run.conf
       break
-    elif [ $MEM == $PMEM ] ; then
+    elif [ "$MEM" == "$PMEM" ] ; then
       sed -i "/!--${FULL_NAME}--/a ${PNAME} = ${PVAL}," $TMPDIR/run.conf
       break
     fi
