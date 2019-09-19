@@ -71,14 +71,14 @@ if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'sprd'
         cp -f $TMPOUT/${ATIME}/anal/mean.init.nc $TMPOUT/${ATIME}/diag/nobs.nc
       fi
     else
-      for ifile in $(cd $TMPOUT/${ATIME}/anal/mean ; ls init*.nc 2> /dev/null); do
-        mkdir -p $TMPOUT/${ATIME}/gues/mean
-        cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/gues/mean
+      for ifile in $(cd $OUTDIR/${ATIME}/anal/mean ; ls init*.nc 2> /dev/null); do
+        mkdir -p $OUTDIR/${ATIME}/gues/mean
+        cp -f $OUTDIR/${ATIME}/anal/mean/${ifile} $OUTDIR/${ATIME}/gues/mean
         if ((SPRD_OUT == 1)); then
           mkdir -p $TMPOUT/${ATIME}/gues/sprd
-          cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/gues/sprd
-          mkdir -p $TMPOUT/${ATIME}/anal/sprd
-          cp -f $TMPOUT/${ATIME}/anal/mean/${ifile} $TMPOUT/${ATIME}/anal/sprd
+          cp -f $OUTDIR/${ATIME}/anal/mean/${ifile} $OUTDIR/${ATIME}/gues/sprd
+          mkdir -p $OUTDIR/${ATIME}/anal/sprd
+          cp -f $OUTDIR/${ATIME}/anal/mean/${ifile} $OUTDIR/${ATIME}/anal/sprd
         fi
         if ((RTPS_INFL_OUT == 1)); then
           mkdir -p $TMPOUT/${ATIME}/diag/rtps
@@ -98,9 +98,9 @@ else
         mkdir -p $TMPOUT/${ATIME}/gues
         cp -f $TMPOUT/${ATIME}/anal/${MEM}.init.nc $TMPOUT/${ATIME}/gues/${MEM}.init.nc
       else
-        for ifile in $(cd $TMPOUT/${ATIME}/anal/${MEM} ; ls init*.nc 2> /dev/null); do
-          mkdir -p $TMPOUT/${ATIME}/gues/${MEM}
-          cp -f $TMPOUT/${ATIME}/anal/${MEM}/${ifile} $TMPOUT/${ATIME}/gues/${MEM}
+        for ifile in $(cd $OUTDIR/${ATIME}/anal/${MEM} ; ls init*.nc 2> /dev/null); do
+          mkdir -p $OUTDIR/${ATIME}/gues/${MEM}
+          cp -f $OUTDIR/${ATIME}/anal/${MEM}/${ifile} $OUTDIR/${ATIME}/gues/${MEM}
         done
       fi
     fi

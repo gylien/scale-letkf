@@ -208,6 +208,10 @@ fi
 #-------------------------------------------------------------------------------
 # TMPDAT
 
+if [ "$PRESET" = 'OFP' ]; then
+  mkdir -p $TMP/$DAT_SUBDIR
+fi
+
 cat >> ${STAGING_DIR}/${STGINLIST} << EOF
 ${COMMON_DIR}/pdbash|${DAT_SUBDIR}/exec/pdbash
 ${SCRP_DIR}/config.nml.scale_pp|${DAT_SUBDIR}/conf/config.nml.scale_pp
@@ -334,10 +338,17 @@ while ((time <= ETIME)); do
   #-------------------
   if ((loop == 1 && MAKEINIT != 1)); then
     for m in $(seq $mtot); do
-      for q in $(seq $mem_np_); do
-        path="${time}/anal/${name_m[$m]}${CONNECTOR}init$(scale_filename_sfx $((q-1)))"
-        echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-      done
+      if [ "$PRESET" = 'OFP' ]; then
+        if [ ! -z "$TMP/${OUT_SUBDIR}/${time}/anal/${name_m[$m]}" ]; then
+          mkdir -p $TMP/${OUT_SUBDIR}/${time}/anal/${name_m[$m]}
+        fi
+        ln -sf ${INDIR}/${time}/anal/${name_m[$m]}/i*.nc ${TMP}/${OUT_SUBDIR}/${time}/anal/${name_m[$m]}/
+      else
+        for q in $(seq $mem_np_); do
+          path="${time}/anal/${name_m[$m]}${CONNECTOR}init$(scale_filename_sfx $((q-1)))"
+          echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+        done
+      fi
     done
   fi
 
@@ -531,53 +542,53 @@ while ((time <= ETIME)); do
     fi
   fi
 
-  # bdy
-  #-------------------
-  if ((BDY_FORMAT != 0)); then
-    if ((BDY_ENS == 1 && BDYOUT_OPT <= 1)); then
-      path="${time}/bdy/"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-    elif ((BDYOUT_OPT <= 2)); then
-      if ((PNETCDF == 1)); then
-        path="${time}/bdy/mean.boundary.nc"
-#        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
-        if ((USE_INIT_FROM_BDY == 1)); then
-          path="${time}/bdy/mean.init_bdy.nc"
-#          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
-        fi
-      else
-        path="${time}/bdy/mean/"
-        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-        if ((DET_RUN == 1)); then
-          path="${time}/bdy/mdet/"
-          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-        fi
-      fi
-    fi
-  fi
-
-  # hist
-  #-------------------
-  if ((OUT_OPT <= 1)); then
-    path="${time}/hist/"
-    echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-  elif ((OUT_OPT <= 2)); then
-    if ((PNETCDF == 1)); then
-      path="${time}/hist/mean.history.nc"
+#  # bdy
+#  #-------------------
+#  if ((BDY_FORMAT != 0)); then
+#    if ((BDY_ENS == 1 && BDYOUT_OPT <= 1)); then
+#      path="${time}/bdy/"
 #      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
-    else
-      path="${time}/hist/mean/"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-      if ((DET_RUN == 1)); then
-        path="${time}/hist/mdet/"
-        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-      fi
-    fi
-  fi
+#    elif ((BDYOUT_OPT <= 2)); then
+#      if ((PNETCDF == 1)); then
+#        path="${time}/bdy/mean.boundary.nc"
+##        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
+#        if ((USE_INIT_FROM_BDY == 1)); then
+#          path="${time}/bdy/mean.init_bdy.nc"
+##          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
+#        fi
+#      else
+#        path="${time}/bdy/mean/"
+#        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#        if ((DET_RUN == 1)); then
+#          path="${time}/bdy/mdet/"
+#          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#        fi
+#      fi
+#    fi
+#  fi
 
+#  # hist
+#  #-------------------
+#  if ((OUT_OPT <= 1)); then
+#    path="${time}/hist/"
+#    echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#  elif ((OUT_OPT <= 2)); then
+#    if ((PNETCDF == 1)); then
+#      path="${time}/hist/mean.history.nc"
+##      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
+#    else
+#      path="${time}/hist/mean/"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#      if ((DET_RUN == 1)); then
+#        path="${time}/hist/mdet/"
+#        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#      fi
+#    fi
+#  fi
+#
   # gues
   #-------------------
   if ((OUT_OPT <= 3)); then
@@ -833,7 +844,14 @@ if ((BDY_FORMAT >= 1)); then
                   path="bdyorg/const/${time_bdy}/${name_m[$m]}/"
                 fi
               fi
-              echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+#              echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+
+              if [ "$PRESET" = 'OFP' ]; then
+                if [ ! -z "$TMP/$path" ]; then
+                  mkdir -p "$TMP/${DAT_SUBDIR}/$path"
+                fi
+                ln -sf ${pathin}/h*nc ${TMP}/${DAT_SUBDIR}/${path}
+              fi
             done
           else
             if ((PNETCDF_BDY_SCALE == 1)); then
@@ -851,7 +869,14 @@ if ((BDY_FORMAT >= 1)); then
                 path="bdyorg/const/mean/${time_bdy}/"
               fi
             fi
-            echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+#            echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+
+            if [ "$PRESET" = 'OFP' ]; then
+              if [ ! -z "$TMP/$path" ]; then
+                mkdir -p $TMP/${DAT_SUBDIR}/$path
+              fi
+              ln -sf ${pathin}/h*.nc ${TMP}/${DAT_SUBDIR}/${path}
+            fi
           fi
 
         elif ((BDY_FORMAT == 2 || BDY_FORMAT == 4)); then
@@ -1251,15 +1276,17 @@ for it in $(seq $its $ite); do
         fi
       fi
 
+      mkdir -p $OUTDIR/${bdy_start_time}/bdy/${mem_bdy}
+
       if ((SKIP_BDYINIT == 1)); then
-        bdy_base="$TMPOUT/${bdy_start_time}/bdy/${mem_bdy}${CONNECTOR}boundary"
+        bdy_base="$OUTDIR/${bdy_start_time}/bdy/${mem_bdy}${CONNECTOR}boundary"
       else
-        bdy_base="$TMPOUT/${time}/bdy/${mem_bdy}${CONNECTOR}boundary"
+        bdy_base="$OUTDIR/${time}/bdy/${mem_bdy}${CONNECTOR}boundary"
       fi
 
       bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
-           $TMPOUT/${time}/anal/${name_m[$m]}${CONNECTOR}init $ocean_base $land_base $bdy_base \
-           $TMPOUT/const/${CONNECTOR_TOPO}topo $TMPOUT/${time_l}/${CONNECTOR_LANDUSE}landuse \
+           $OUTDIR/${time}/anal/${name_m[$m]}${CONNECTOR}init $ocean_base $land_base $bdy_base \
+           $OUTDIR/const/${CONNECTOR_TOPO}topo $TMPOUT/${time_l}/${CONNECTOR_LANDUSE}landuse \
            $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $OUT_OPT \
            cycle $bdy_start_time $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
     fi

@@ -77,10 +77,11 @@ else
   RESTART_OUTPUT='.false.'
 fi
 
+mkdir -p $OUTDIR/${STIME}/bdy/${MEM_BDY}
 if ((PNETCDF == 1)); then
-  BASENAME_BOUNDARY="$TMPOUT/${STIME}/bdy/${MEM_BDY}.boundary"
+  BASENAME_BOUNDARY="$OUTDIR/${STIME}/bdy/${MEM_BDY}.boundary"
 else
-  BASENAME_BOUNDARY="$TMPOUT/${STIME}/bdy/${MEM_BDY}/boundary"
+  BASENAME_BOUNDARY="$OUTDIR/${STIME}/bdy/${MEM_BDY}/boundary"
 fi
 
 if ((BDY_FORMAT == 1)); then

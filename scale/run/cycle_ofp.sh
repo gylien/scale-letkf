@@ -66,11 +66,8 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR || exit $?
-if ((IO_ARB == 1)); then                              ##
-  distribute_da_cycle_set - $NODEFILE_DIR || exit $?  ##
-else                                                  ##
-  distribute_da_cycle - $NODEFILE_DIR || exit $?
-fi                                                    ##
+distribute_da_cycle - $NODEFILE_DIR || exit $?
+#distribute_da_cycle - - || exit $? # Do not use distr
 
 #===============================================================================
 # Determine the staging list

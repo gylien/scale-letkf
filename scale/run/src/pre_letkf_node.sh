@@ -120,16 +120,16 @@ if ((PNETCDF == 1)); then
   RELAX_SPREAD_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/rtps"
   NOBS_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/nobs"
 else
-  HISTORY_IN_BASENAME="${TMPOUT}/${STIME}/hist/@@@@/history"
-  GUES_IN_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@/init"
-  GUES_MEAN_INOUT_BASENAME="${TMPOUT}/${ATIME}/gues/mean/init"
-  GUES_SPRD_OUT_BASENAME="${TMPOUT}/${ATIME}/gues/sprd/init"
-  ANAL_OUT_BASENAME="${TMPOUT}/${ATIME}/anal/@@@@/init"
-  INFL_MUL_IN_BASENAME="${TMPOUT}/${ATIME}/diag/infl/init"
-  INFL_MUL_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/infl/init"
-  INFL_ADD_IN_BASENAME="${TMPOUT}/const/addi/@@@@/init"
-  RELAX_SPREAD_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/rtps/init"
-  NOBS_OUT_BASENAME="${TMPOUT}/${ATIME}/diag/nobs/init"
+  HISTORY_IN_BASENAME="${OUTDIR}/${STIME}/hist/@@@@/history"
+  GUES_IN_BASENAME="${OUTDIR}/${ATIME}/anal/@@@@/init"
+  GUES_MEAN_INOUT_BASENAME="${OUTDIR}/${ATIME}/gues/mean/init"
+  GUES_SPRD_OUT_BASENAME="${OUTDIR}/${ATIME}/gues/sprd/init"
+  ANAL_OUT_BASENAME="${OUTDIR}/${ATIME}/anal/@@@@/init"
+  INFL_MUL_IN_BASENAME="${OUTDIR}/${ATIME}/diag/infl/init"
+  INFL_MUL_OUT_BASENAME="${OUTDIR}/${ATIME}/diag/infl/init"
+  INFL_ADD_IN_BASENAME="${OUTDIR}/const/addi/@@@@/init"
+  RELAX_SPREAD_OUT_BASENAME="${OUTDIR}/${ATIME}/diag/rtps/init"
+  NOBS_OUT_BASENAME="${OUTDIR}/${ATIME}/diag/nobs/init"
 fi
 
 S_YYYY=${STIME:0:4}
