@@ -138,7 +138,7 @@ cat > $jobscrp << EOF
 #PJM --mpi proc=$((NNODES*PPN))
 ##PJM --mpi proc=${totalnp}
 #PJM --omp thread=${THREADS}
-#PJM -g gg10
+#PJM -g hp150019
 ##PJM -j
 
 rm -f machinefile
@@ -153,7 +153,19 @@ module load netcdf/4.4.1
 module load netcdf-fortran/4.4.3
 
 ulimit -s unlimited
-export OMP_STACKSIZE=128m
+#export OMP_STACKSIZE=128m
+
+export I_MPI_PIN_PROCESSER_EXCLUDE_LIST=0,1,68,69,136,137,204,205
+export I_MPI_HBW_PJOLICY=hbw_preferred,,
+export I_MPI_FABRICS_LIST=tmi
+
+export I_MPI_PERHOST=${PPN}
+export I_MPI_PIN_DOMAIN=${NPIN}
+
+export KMP_HW_SUBSET=1t
+
+export HFI_NO_CPUAFFINITY=1
+unset KMP_AFFINITY
 
 ./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
