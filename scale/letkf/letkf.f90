@@ -91,6 +91,7 @@ PROGRAM letkf
   end if
 
   call mpi_timer('PRE_SCRIPT', 1, barrier=MPI_COMM_WORLD)
+  if (LOG_LEVEL.le.2)  call MPI_BARRIER(MPI_COMM_WORLD,iarg)
 
 !-----------------------------------------------------------------------
 

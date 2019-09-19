@@ -104,9 +104,9 @@ program scaleles_ens
     write (6,'(A,I6.6,3A)') 'MYRANK ',universal_myrank,' is running a script: [', trim(cmd1), ']'
     call system(trim(cmd1))
   end if
-
   call mpi_timer('PRE_SCRIPT', 1, barrier=universal_comm)
 
+  if (LOG_LEVEL.le.2) call MPI_BARRIER(universal_comm,iarg)
 !-----------------------------------------------------------------------
 
   call set_common_conf(universal_nprocs)
