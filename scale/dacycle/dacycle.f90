@@ -31,6 +31,7 @@ program dacycle
     send_emean_direct,        &
     receive_emean_direct,     &
     write_grd_dafcst_mpi,     &
+    plot_anal_mpi, &
     mpi_timer
   use common_obs_scale, only: &
     set_common_obs_scale
@@ -478,6 +479,16 @@ program dacycle
         !else
         !  call write_ens_mpi(anal3d, anal2d)
         !end if
+
+
+        ! Plot Analysis mean
+        if (myrank_use_da .and. (myrank_e == mmean_rank_e)) then
+         if (.not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
+          call TIME_gettimelabel(fstimelabel)
+          call calc_ref_direct(ref3d)
+          call plot_anal_mpi(fstimelabel(1:15), ref3d)
+        endif
+
 
         call mpi_timer('WRITE_ANAL', 1, barrier=MPI_COMM_da)
 

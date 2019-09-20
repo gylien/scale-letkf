@@ -52,6 +52,12 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
 
   character(len=19) :: ftimelabel
 
+
+
+  write(*,*) 'max min val_plot', maxval(val_plot_s),minval(val_plot_s)
+
+
+
   nlonadd = int(OFFXY / DX)
   nlatadd = int(OFFXY / DY)
 
