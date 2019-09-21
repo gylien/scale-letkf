@@ -175,13 +175,15 @@ subroutine set_common_mpi_scale
     call MPI_COMM_SIZE(MPI_COMM_e, nprocs_e, ierr)
     call MPI_COMM_RANK(MPI_COMM_e, myrank_e, ierr)
   else
-    ! exntended forecast members
-    call MPI_COMM_SPLIT(MPI_COMM_da, color, key, MPI_COMM_ef, ierr)
-  
-    call MPI_COMM_SIZE(MPI_COMM_ef, nprocs_ef, ierr)
-    call MPI_COMM_RANK(MPI_COMM_ef, myrank_ef, ierr)
-    
+    ! No COMM_e for dacycle-forecast members
     return
+!    ! exntended forecast members
+!    call MPI_COMM_SPLIT(MPI_COMM_da, color, key, MPI_COMM_ef, ierr)
+!  
+!    call MPI_COMM_SIZE(MPI_COMM_ef, nprocs_ef, ierr)
+!    call MPI_COMM_RANK(MPI_COMM_ef, myrank_ef, ierr)
+!    
+!    return
   endif
 
 #ifdef DEBUG

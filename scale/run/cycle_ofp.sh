@@ -140,6 +140,7 @@ cat > $jobscrp << EOF
 # HPC
 ##PJM -g gx14  
 
+#PJM -s
 
 module load hdf5/1.8.17
 module load netcdf/4.4.1

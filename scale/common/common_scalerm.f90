@@ -30,6 +30,8 @@ module common_scalerm
 
   integer, save                :: scalerm_mem = -1
   character(len=memflen), save :: scalerm_memf = '????'
+  character(len=memflen+1), save :: scalerm_memf_dafcst = '?????'
+  character(len=memflen+1), save :: scalerm_memf_bdy = '????'
   logical, save                :: scalerm_run = .false.
 
 contains
@@ -429,12 +431,26 @@ subroutine scalerm_setup(execname)
       else if (scalerm_mem == MEMBER+2 .and. ENS_WITH_MDET) then
         scalerm_memf = memf_mdet
       else if (scalerm_mem <= mem_da+MAX_DACYCLE_RUN_FCST .and. scalerm_mem > mem_da) then
+
         scalerm_memf = memf_mean
-        myrank_use_da = .false.
 
 !        write (fmttmp, '(I2)') memflen
-!        write (scalerm_memf, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') scalerm_mem - mem_da ! DEBUG
+!        write (scalerm_memf, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')')  min(scalerm_mem - mem_da, MEMBER)
+        myrank_use_da = .false.
 
+        write (fmttmp, '(I2)') memflen
+        write (scalerm_memf_dafcst, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') scalerm_mem - mem_da
+        scalerm_memf_dafcst = "f"//trim(scalerm_memf_dafcst)
+
+        scalerm_memf_bdy = memf_mean
+
+        ! Dacycle-forecast members read different restart files.
+        !
+        ! When each dacycle-forecast member starts a forecast from the ensemble
+        ! mean, it receives a correct set of restart variables (not only LETKF
+        ! control variables) from the ensemble mean
+!        write (fmttmp, '(I2)') memflen
+!        write (scalerm_memf, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') scalerm_mem
       else
         write (6, '(A,I7)') '[Error] Invalid member number for this rank:', scalerm_mem
         write (6, '(A,I7)') '        MEMBER =', MEMBER
@@ -442,6 +458,21 @@ subroutine scalerm_setup(execname)
       end if
 
 #ifdef SCALEUV
+
+
+      ! log (lmember)
+      if (scalerm_memf_dafcst == '?????') then
+        scalerm_memf_dafcst = 'd' // scalerm_memf 
+      endif
+      call IO_filename_replace_setup(log_memf_notation, scalerm_memf_dafcst) 
+
+      ! bdy (bmember)
+      if (scalerm_memf_bdy == '????') then
+        scalerm_memf_bdy = scalerm_memf 
+      endif
+      call IO_filename_replace_setup(bdy_memf_notation, scalerm_memf_bdy) 
+
+      ! member
       call IO_filename_replace_setup(memf_notation, scalerm_memf)
 #endif
 
@@ -465,6 +496,10 @@ subroutine scalerm_setup(execname)
     ! setup standard I/O: Re-open the new config file; change of IO_LOG_BASENAME is effective in this step
     confname = confname_new
     call IO_setup( modelname, trim(confname) )
+
+    if ( .not. myrank_use_da ) then
+      call IO_filename_replace_setup(memf_notation, scalerm_memf)
+    endif
 
   !  call read_nml_log
   !  call read_nml_model
@@ -990,6 +1025,12 @@ end subroutine scalerm_finalize
 ! resume_state
 !-------------------------------------------------------------------------------
 subroutine resume_state(do_restart_read)
+#ifdef SCALEUV
+  use scale_io, only: &
+    H_LONG, &
+    IO_filename_replace_setup
+#endif
+
   use scale_atmos_grid_cartesC_index
   use scale_atmos_grid_cartesC, only: &
      CZ   => ATMOS_GRID_CARTESC_CZ,  &
@@ -1073,6 +1114,9 @@ subroutine resume_state(do_restart_read)
                                 REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
                                 TIME_NOWDAYSEC, & ! [IN]
                                 force = .true.)
+!    if (use_mean_bnd ) then
+!      call IO_filename_replace_setup(memf_notation, "mean")
+!    endif
     call ATMOS_BOUNDARY_driver_set
     call ATMOS_vars_history_setpres
   endif

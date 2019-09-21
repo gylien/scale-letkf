@@ -30,6 +30,8 @@ MODULE common_nml
   integer, parameter :: memflen = 4                           ! Length of formatted member strings
   character(len=8), parameter :: memf_notation = '<member>'   ! Notation of the member string
   character(len=memflen), parameter :: memf_notation_2 = '@@@@' ! Another notation of the member string (for backward-compatibility)
+  character(len=9), parameter :: log_memf_notation = '<lmember>'   ! Notation of the member string ! log
+  character(len=9), parameter :: bdy_memf_notation = '<bmember>'   ! Notation of the member string ! boundary
   character(len=memflen), parameter :: memf_mean = 'mean'
   character(len=memflen), parameter :: memf_mdet = 'mdet'
   character(len=memflen), parameter :: memf_sprd = 'sprd'

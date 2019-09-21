@@ -32,7 +32,7 @@ program dacycle
     send_emean_direct,        &
     receive_emean_direct,     &
     write_grd_dafcst_mpi,     &
-    bcast_restart_efcst_mpi,  &
+!    bcast_restart_efcst_mpi,  &
     mpi_timer
   use common_obs_scale, only: &
     set_common_obs_scale
@@ -275,34 +275,14 @@ endif
             write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip reading restart files'
           end if
 
-          if ( ( myrank_use_da ) .or. ( dafcst_step == 0 )) then
-            call resume_state(do_restart_read=.false.)
-          endif
+          call resume_state(do_restart_read=.false.)
         else
-if ( .not. myrank_use_da .and. myrank_da == 0 ) then
-  write(6,'(a,2i6)')"enter resume state", myrank_a,icycle
+if ( myrank_da == 0 .and. myrank_use_da) then
+  write(6,'(a)')"DEBUG111"
 endif
-          ! Read DA members & one dacycle-forecast member (myrank_ef==0)
-          if ( myrank_use_da .or. myrank_ef == 0 ) then
-            call resume_state(do_restart_read=.true.)
-          endif
-
-          ! Broadcast among the dacycle-(extended-) forecast members
-          if ( .not. myrank_use_da ) then
-            call bcast_restart_efcst_mpi
-            if ( myrank_ef /= 0 ) then
-              call resume_state(do_restart_read=.false.)
-            endif
-          endif
-
-call MPI_BARRIER(MPI_COMM_da, ierr) 
-call date_and_time(date=date, time=time)
-if ( myrank_da == 0 ) then
-  if ( myrank_use_da) then
-    write(6,'(a,1x,a)')"CHECK READ DA MEM", time
-  else
-    write(6,'(a,1x,a)')"CHECK READ FCST MEM", time
-  endif
+          call resume_state(do_restart_read=.true.)
+if ( myrank_da == 0 .and. myrank_use_da) then
+  write(6,'(a)')"DEBUG112"
 endif
 
           if (icycle == 0 .and. myrank_use_da) then

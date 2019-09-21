@@ -901,7 +901,7 @@ while ((time <= ETIME)); do
   ######
 
   if ((BDY_ENS == 1)); then
-    mem_bdy='<member>'
+    mem_bdy='<bmember>'
   else
     mem_bdy='mean'
   fi
@@ -992,9 +992,6 @@ while ((time <= ETIME)); do
 
     if ((d == 1)); then
       conf_file_src=$SCRP_DIR/config.nml.scale
-echo $conf_file_src
-echo "DEBUG XXX"
-#exit # DEBUG
       if ((DACYCLE == 1)); then
         conf_file="dacycle_${time}.conf"
         if ((DACYCLE_RUN_FCST == 1)); then
@@ -1030,7 +1027,7 @@ EOF
     mkdir -p ${OUTDIR[$d]}/${time}/log/scale
 
     conf="$(cat $conf_file_src | \
-        sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"${OUTDIR[$d]}/${time}/log/scale/<member>_LOG_${time}\"," \
+        sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"${OUTDIR[$d]}/${time}/log/scale/<lmember>_LOG_${time}\"," \
             -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
             -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = ${time:0:4}, ${time:4:2}, ${time:6:2}, ${time:8:2}, ${time:10:2}, ${time:12:2}," \
             -e "/!--TIME_DURATION--/a TIME_DURATION = ${TIME_DURATION}," \
