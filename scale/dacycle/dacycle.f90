@@ -32,6 +32,7 @@ program dacycle
     receive_emean_direct,     &
     write_grd_dafcst_mpi,     &
     plot_anal_mpi, &
+    plot_dafcst_mpi, &
     mpi_timer
   use common_obs_scale, only: &
     set_common_obs_scale
@@ -482,13 +483,16 @@ program dacycle
 
 
         ! Plot Analysis mean
+#ifdef PLOT_DCL
         if (myrank_use_da .and. (myrank_e == mmean_rank_e)) then
+         if (plot_anal)then
          if (.not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
           call TIME_gettimelabel(fstimelabel)
           call calc_ref_direct(ref3d)
           call plot_anal_mpi(fstimelabel(1:15), ref3d)
+         endif
         endif
-
+#endif
 
         call mpi_timer('WRITE_ANAL', 1, barrier=MPI_COMM_da)
 
@@ -540,14 +544,16 @@ program dacycle
           write(6,'(a,1x,i3,1x,a15)') "Add. fcst ",int(myrank_da / nprocs_d) + ICYC_DACYCLE_RUN_FCST, ftimelabel(1:15)
         endif
 
-        if (TIME_DOATMOS_restart) then
+       if (TIME_DOATMOS_restart) then
           dafcst_ostep = dafcst_ostep + 1
-
-          ! Output of dacycle-forecast
           if (.not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
-
           call calc_ref_direct(ref3d)
           call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
+#ifdef PLOT_DCL 
+        if (plot_fcst)then ! Output of dacycle-forecast        
+          call plot_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
+        endif 
+#endif
         endif
 
       endif

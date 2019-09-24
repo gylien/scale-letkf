@@ -54,10 +54,6 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
 
 
 
-  write(*,*) 'max min val_plot', maxval(val_plot_s),minval(val_plot_s)
-
-
-
   nlonadd = int(OFFXY / DX)
   nlatadd = int(OFFXY / DY)
 
@@ -281,8 +277,7 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
   deallocate(val_plot,grid_cxg_ext,grid_cyg_ext,vmask,iwork)
 
 return
-end subroutine plot_dbz_DCL
-
+contains
 !==================================================!
 subroutine dcbar(vpxr,vpyl,dylen)
   use common
@@ -384,4 +379,5 @@ subroutine dcbar(vpxr,vpyl,dylen)
   return
 end subroutine dcbar
 
+end subroutine plot_dbz_DCL
 !==============================================================!==================================================!

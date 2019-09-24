@@ -1892,11 +1892,89 @@ subroutine receive_emean_direct()
 
   return
 end subroutine receive_emean_direct
+!-------------------------------------------------------------------------------
+! Write the subdomain model data into a single GrADS file from DACYCLE (additional) forecasts
+!-------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Write the subdomain model data into a single GrADS file from DACYCLE
+! (additional) forecasts
+!-------------------------------------------------------------------------------
+subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
+  use mod_atmos_vars, only: &
+    TEMP
+!  use scale_atmos_hydrometeor, only: &
+!    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
+  use scale_atmos_grid_cartesC_index, only: &
+    IS, IE, JS, JE, KS, KE, &
+    KHALO
+  use scale_io, only: &
+    H_LONG
+
+  implicit none
+  character(15), intent(in) :: timelabel
+  real(r_size), intent(in) :: ref3d(nlev,nlon,nlat)
+  integer, intent(in) :: step
+
+  character(len=H_LONG) :: filename
+  real(r_sngl) :: bufs4(nlong,nlatg)
+  real(r_sngl) :: bufr4(nlong,nlatg)
+  integer :: iunit, iolen
+  integer :: k, n, irec, ierr
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+
+!  real(r_sngl) :: v2d_ref(nlong,nlatg,nv3dd)
+
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  if (myrank_d == 0) then
+    filename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_ref3d_"//trim(timelabel)//".grd"
+    iunit = 55
+    inquire (iolength=iolen) iolen
+    open (iunit, file=trim(filename), form='unformatted', access='direct', &
+          status='unknown', convert='native', recl=nlong*nlatg*iolen)
+    irec = (step - 1)*nlev*2 ! 2 variable (nlev*2 record) output 
+  end if
+
+  do k = 1, nlev 
+    bufs4(:,:) = 0.0
+    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
+    call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+
+    if (myrank_d == 0) then
+      irec = irec + 1
+      write (iunit, rec=irec) bufr4
+    end if
+
+  enddo
+
+  ! debug
+  do k = 1, nlev 
+    bufs4(:,:) = 0.0
+    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(TEMP(KHALO+k,IS:IE,JS:JE), r_sngl)
+    call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+
+    if (myrank_d == 0) then
+      irec = irec + 1
+      write (iunit, rec=irec) bufr4
+    end if
+
+  enddo
+
+  if (myrank_d == 0) then
+    close (iunit)
+  end if
+
+  return
+end subroutine write_grd_dafcst_mpi
+
 
 !-------------------------------------------------------------------------------
 ! Write the subdomain model data into a single GrADS file from DACYCLE (additional) forecasts
 !-------------------------------------------------------------------------------
-subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
+subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   use mod_admin_time, only: &
     TIME_DTSEC_ATMOS_RESTART
   use scale_topography, only: &
@@ -1975,15 +2053,6 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
 !  call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
 !  lat2dgs(:,:) = bufr4
 
-!  if (myrank_d == 0) then
-!    filename = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_ref3d_"//trim(timelabel)//".grd"
-!    iunit = 55
-!    inquire (iolength=iolen) iolen
-!    open (iunit, file=trim(filename), form='unformatted', access='direct', &
-!          status='unknown', convert='native', recl=nlong*nlatg*iolen)
-!    irec = (step - 1)*nlev*2 ! 2 variable (nlev*2 record) output 
-!  end if
-
 
   ! Gather required data for reflectivity computation
 
@@ -1991,7 +2060,7 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   bufs3d(1:nlev, 1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(1:nlev,1:nlon,1:nlat), r_sngl)
   call MPI_ALLREDUCE(bufs3d, bufr3d, nlong*nlatg*nlev, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
 
-  do k = 10, nlev, 5
+  do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
 
     if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
 
@@ -2000,8 +2069,6 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
 !    call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
 
     if (myrank_d == k) then
-!      irec = irec + 1
-!      write (iunit, rec=irec) bufr4
       write(cheight,'(I5.5)')  int(CZ(k+KHALO)) ! tentative
 
 #ifdef PLOT_DCL
@@ -2020,16 +2087,11 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
     write (6, '(2a,1x,a,1x,a)') '[Info:plot] fcst finish plotting: ', date, time, trim(timelabel)//" FT"//trim(ftsec)
   endif
 
-!
-!  if (myrank_d == 0) then
-!    close (iunit)
-!  end if
-
   return
-end subroutine write_grd_dafcst_mpi
+end subroutine plot_dafcst_mpi
 
 !-------------------------------------------------------------------------------
-! Plot the subdomain model data into a single GrADS file from Analysis
+! Plot the subdomain model data from Analysis
 !-------------------------------------------------------------------------------
 subroutine plot_anal_mpi(timelabel, ref3d)
   use mod_admin_time, only: &
@@ -2047,6 +2109,7 @@ subroutine plot_anal_mpi(timelabel, ref3d)
     KHALO
   use scale_io, only: &
     H_LONG
+
 
   implicit none
   character(15), intent(in) :: timelabel
@@ -2104,7 +2167,7 @@ subroutine plot_anal_mpi(timelabel, ref3d)
   bufs3d(1:nlev, 1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(1:nlev,1:nlon,1:nlat), r_sngl)
   call MPI_ALLREDUCE(bufs3d, bufr3d, nlong*nlatg*nlev, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
 
-  do k = 10, nlev, 5
+  do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
 
     if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
 
@@ -2140,7 +2203,6 @@ subroutine plot_anal_mpi(timelabel, ref3d)
 
   return
 end subroutine plot_anal_mpi
-
 
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)
 !SUBROUTINE read_obs2_mpi(obsfile,nn,nbv,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,hdxf,iqc)
