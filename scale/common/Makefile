@@ -9,7 +9,7 @@ ifeq ($(H08),T)
 OBJS    += scale_H08_fwd.o
 endif
 ifeq ($(ENABLE_PLOT_DCL),T)
-OBJS    += plot_dbz_DCL.o
+OBJS    += plot_dbz_DCL.o plot_dbz_DCL_obs.o
 endif
 
 all:	$(OBJS) datetime pdbash 
@@ -25,6 +25,8 @@ ifeq ($(ENABLE_PLOT_DCL),T)
 common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o common_scale.o plot_dbz_DCL.o
 	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC) -I$(SCALE_RM_OBJDIR)
 plot_dbz_DCL.o:	plot_dbz_DCL.f90 common.o common_scale.o
+	$(SFC) $(FOPTS) -c $< $(SCALE_INC)
+plot_dbz_DCL_obs.o: plot_dbz_DCL_obs.f90 common.o common_scale.o
 	$(SFC) $(FOPTS) -c $< $(SCALE_INC)
 else
 common_mpi_scale.o:	common_mpi_scale.f90 common.o common_nml.o common_mpi.o common_scale.o

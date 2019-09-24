@@ -751,6 +751,10 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   use radar_tools
   use scale_atmos_grid_cartesC, only: &
       DX, DY
+#ifdef PLOT_DCL
+use common_mpi_scale, only: myrank_d
+use scale_time, only: TIME_gettimelabel
+#endif
   implicit none
 
   character(len=*), intent(in) :: cfile
@@ -803,6 +807,13 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 !!!  integer,parameter :: qcf_mask(8)=(/ 0, 0, 0, 0, 0, 0, 0, 0 /) !! valid, shadow, clutter possible, clutter certain, interference, range sidelobe /
 
  integer::qcf_count(0:255)
+
+#ifdef PLOT_DCL
+ character(len=8)  :: date
+ character(len=10) :: time
+ character(len=90) :: plotname
+ character(len=19)::timelabel
+#endif
 
   call mpi_timer('', 3)
 
@@ -1053,6 +1064,21 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 !       &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr, missing)
 !  write(*, *) "done"
 ! endif
+
+
+#ifdef PLOT_DCL
+    if (plot_obs)then
+    call TIME_gettimelabel(timelabel)
+    call date_and_time(date=date, time=time)
+    write (6, '(2a,1x,a,1x,a)') '[Info:plot] obs start plotting: ', date, time, trim(timelabel(1:15))
+
+    plotname = "obs_dbz_"//trim(timelabel(1:15))
+    call plot_dbz_DCL_obs (nobs_sp,real(grid_ze),real(grid_lon_ze),real(grid_lat_ze),real(grid_z_ze),trim(plotname))
+
+    call date_and_time(date=date, time=time)
+    write (6, '(2a,1x,a,1x,a)') '[Info:plot] obs finish plotting: ', date, time, trim(timelabel(1:15))
+    endif
+#endif
 
   if(allocated(ze)) deallocate(ze)
   if(allocated(vr)) deallocate(vr)
