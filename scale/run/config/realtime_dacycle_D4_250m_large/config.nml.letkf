@@ -117,5 +117,16 @@
  H08_CH_USE = 0,0,0,0,0,0,0,0,0,0,
 /
 
+&PARAM_PLOT_DCL
+ plot_obs  = .false. ,
+ plot_anal = .true. ,
+ plot_fcst = .true. ,
+ plot_zlev_min = 10 , 
+ plot_zlev_max = 40 , 
+ plot_zlev_intv = 5 , 
+/
+
+
+
 !*** Attach SCALE configuration below ***
 
