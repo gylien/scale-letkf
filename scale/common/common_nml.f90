@@ -330,16 +330,22 @@ MODULE common_nml
   integer               :: PEST_PMAX = 0 ! Number of estmating parameters
   character(14) :: PEST_STIME = '20180101000000' ! file footer
   character(14) :: PEST_ATIME = '20180101000000' ! file footer
-  integer,parameter :: PEST_PMAX_CONST = 6
+  integer,parameter :: PEST_PMAX_CONST = 11
 
   character(20) :: PEST_PNAMES(PEST_PMAX_CONST)= &
      (/'Cr', 'Cs', 'drag_g', &
-       'beta_saut', 'gamma_saut', 'gamma_sacr'/) ! parameter names
+       'beta_saut', 'gamma_saut', 'gamma_sacr', &
+       'n0r_def', 'n0s_def', 'n0g_def', & 
+       'dens_s', 'dens_g'   /) ! parameter names
   logical :: PEST_TRANS = .true. ! Flag for transforming parameters into an arc-tangent function space
   real(r_size) :: PEST_ULIMIT(PEST_PMAX_CONST) = (/180.0d0, 8.0d0, 5.0d0,&
-                                                    10.0d-3, 7.0d-2, 7.0d-2/) ! parameter upper limit
+                                                    10.0d-3, 7.0d-2, 7.0d-2, &
+                                                      8.0d7, 3.0d7, 1.0d7, &
+                                                      9.17d-1, 9.17d-1 /) ! parameter upper limit
   real(r_size) :: PEST_LLIMIT(PEST_PMAX_CONST) = (/ 10.0d0, 0.1d0, 0.1d0,& 
-                                                     0.1d-3, 1.0d-3, 0.1d-3/) ! parameter lower limit
+                                                     0.1d-3, 1.0d-3, 0.1d-3, & 
+                                                      8.0d5, 3.0d5, 1.0d4, &
+                                                      1.0d-1, 1.0d-1 /) ! parameter lower limit
 
   interface filename_replace_mem
     module procedure filename_replace_mem_int

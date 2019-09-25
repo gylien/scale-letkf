@@ -1441,7 +1441,12 @@ for it in $(seq $nitmax); do
       bash $SCRP_DIR/src/pre_letkf.sh $MYRANK \
            $atime ${name_m[$m]} $OUT_OPT \
            $ADAPTINFL $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
-    fi
+     if ((INTERACTIVE_RADAR_OPE == T));then
+      bash $SCRP_DIR/src/pre_letkf_param.sh $MYRANK ${name_m[$m]} \
+           $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/letkf $OUT_OPT \
+           cycle
+     fi
+    fi   
   fi
 
   if ((MYRANK == 0)); then

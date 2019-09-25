@@ -631,6 +631,7 @@ END SUBROUTINE prsadj
 ! First reflectivity is computed, and the the radial velocity is computed.
 !-----------------------------------------------------------------------
 SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
+
   IMPLICIT NONE
   REAL(r_size), INTENT(IN) :: qv        !Water vapor
   REAL(r_size), INTENT(IN) :: qc,qr     !Cloud and rain water
@@ -675,6 +676,7 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
   ![U,V,W] m/s
   ![az, elev] degree
   ![vr] m/s
+
 
   !This model reflectivity won't be lower than this value.
 
@@ -753,7 +755,7 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
     kr2=0.930d0    !Dielectric factor for water.
     pip=pi ** 1.75 !factor
     cf =1.0d18 * 720 !factor 
-
+ 
     IF( qr .GT. 0.0d0 )THEN
     zr= cf * ( ( ro * qr )**1.75 )
     zr= zr / ( pip * ( nor ** 0.75 ) * ( ror ** 1.75 ) )
@@ -801,7 +803,7 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
     rog=rog*1e-3      ![g/cm3] 
     roo=roo*1e-3      ![g/cm3] Surface air density.
     ro= ro*1e-3
-
+ 
     a=2115d0   ![cm**1-b / s]
     b=0.8d0
     c=152.93d0 ![cm**1-b / s]
@@ -887,6 +889,14 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
 
     !Compute reflectivities for each species including the melting species.
 
+      nor=8.0d-2      ![cm^-4]
+      nos=3.0d-2      ![cm^-4]
+      nog=4.0d-4      ![cm^-4]
+      ror=1.0d0        ![g/cm3]
+      ros=0.1d0        ![g/cm3]
+      rog=0.917d0      ![g/cm3] 
+
+
     IF( qrp .GT. 0.0d0)THEN
     zr= 2.53d4 * ( ro * qrp * 1.0d3 )**1.84
     ENDIF
@@ -929,7 +939,7 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
       c=152.93d0 ![cm**1-b / s]
       d=0.25d0
       Cd=0.6d0
-
+ 
       rofactor= ( roo / ro  ) ** 0.5
 
       IF ( qr .GT. 0.0d0 )THEN

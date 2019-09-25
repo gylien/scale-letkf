@@ -52,3 +52,14 @@ ifeq ($(H08),T)
 FOPTS     += -DH08
 FOPTS_SCALE += -DH08
 endif
+
+###
+### Interactive PAWR observation operator for parameter estimation
+###
+
+INTERACTIVE_RADAR_OPE=T
+
+ifeq ($(INTERACTIVE_RADAR_OPE),T)
+ FOPTS     += -DINTERACTIVE_RADAR_OPE
+ FOPTS_SCALE += -DINTERACTIVE_RADAR_OPE
+endif

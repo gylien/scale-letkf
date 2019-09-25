@@ -2,7 +2,7 @@ include ../configure.user
 
 OBJS    = SFMT.o common.o common_mpi.o common_mtx.o netlib.o common_sort.o common_rand.o common_letkf.o \
 	  common_ncio.o common_scale.o common_obs_scale.o common_mpi_scale.o \
-          common_nml.o
+          common_nml.o common_obs_scale_ens.o
           #common_precip.o
 
 ifeq ($(H08),T)
@@ -59,6 +59,11 @@ datetime.o:	datetime.f90 common.o
 	$(SFC) $(FOPTS) -c $<
 pdbash.o:	pdbash.f90
 	$(FC) $(FOPTS) -c $<
+
+ifeq ($(INTERACTIVE_RADAR_OPE),T)
+common_obs_scale_ens.o:	common_obs_scale_ens.f90 common.o common_nml.o common_scale.o common_mpi_scale.o
+	$(FC) $(FOPTS) -c $< $(NETCDF_INC) $(SCALE_INC)
+endif
 
 clean:
 	rm -f *.o *.mod *.lst datetime pdbash

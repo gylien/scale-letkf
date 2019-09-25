@@ -2032,7 +2032,7 @@ subroutine write_PEST_PVALS(nens,anal0d)
         anal0d(im,ip) = func2phys(pidx, anal0d(im,ip))    
       endif
       write(ounit,*) trim(pname),",",im,",",anal0d(im,ip)
-      print *,"OUTPUT PEST PARAM, ",trim(pname),",",im,",",anal0d(im,ip)
+!      print *,"OUTPUT PEST PARAM, ",trim(pname),",",im,",",anal0d(im,ip)
     enddo ! [im = 1, MEMBER]
 
     ! mean
@@ -2057,7 +2057,7 @@ subroutine write_PEST_PVALS(nens,anal0d)
       endif
 
       write(ounit,*) trim(pname),", mdet,", anal0d(MEMBER+2,ip)
-      print *,"OUTPUT PEST PARAM, ",trim(pname),", mdet,",anal0d(MEMBER+2,ip)
+!      print *,"OUTPUT PEST PARAM, ",trim(pname),", mdet,",anal0d(MEMBER+2,ip)
     endif
 
     close(ounit)
@@ -2086,7 +2086,7 @@ subroutine get_PEST_PIDX(pname,pidx)
     print *,trim(pname)," A parameter cannot be transformed!"
     stop
   else
-    print *,trim(pname)," pidx= ",pidx
+!    print *,trim(pname)," pidx= ",pidx
   endif 
 
   return
