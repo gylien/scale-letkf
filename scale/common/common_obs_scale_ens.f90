@@ -54,7 +54,7 @@ use SCALE_IO
   namelist /PARAM_LETKF_RADAR_OPE/ n0r_def, n0s_def, n0g_def, dens_s, dens_g 
   INTEGER :: fid_conf_param 
   INTEGER :: ierr
-  REAL(r_size) :: re_mm
+  REAL(r_size) :: re_mm_log
 
   REAL(r_size) :: c0_r, c1_r, c2_r, c3_r, c4_r    
   REAL(r_size) :: c0_s, c1_s, c2_s, c3_s, c4_s    
