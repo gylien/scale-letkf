@@ -1799,9 +1799,13 @@ subroutine send_emean_direct(v3dg,v2dg,fcst_cnt)
   integer :: k, i, j
 
   integer :: rrank_a ! rank_a of receiving rank
+  integer :: srank_a ! rank_a of sending rank ! Ensemble mean
   integer :: ierr, tag
 
   rrank_a = nens * nprocs_d + nprocs_d * (fcst_cnt - 1) + myrank_d ! dacycle-forecast member
+  srank_a = MEMBER * nprocs_d + myrank_d
+
+  if ( myrank_a /= srank_a ) return
 
   tag = myrank_d 
 
@@ -2292,6 +2296,496 @@ subroutine bcast_restart_efcst_mpi()
 
   return
 end subroutine bcast_restart_efcst_mpi
+
+subroutine send_recv_emean_others(fcst_cnt)
+  use scale_atmos_grid_cartesC_index, only: &
+     IA, JA, KA
+  use mod_atmos_admin, only: &
+     ATMOS_sw_phy_mp, &
+     ATMOS_sw_phy_rd, &
+     ATMOS_sw_phy_sf
+  use mod_atmos_phy_mp_vars, only: &
+     ATMOS_PHY_MP_SFLX_rain, &
+     ATMOS_PHY_MP_SFLX_snow, &
+     ATMOS_PHY_MP_vars_fillhalo
+  use mod_atmos_phy_rd_vars, only: &
+     ATMOS_PHY_RD_SFLX_LW_up, &
+     ATMOS_PHY_RD_SFLX_LW_dn, &
+     ATMOS_PHY_RD_SFLX_SW_up, &
+     ATMOS_PHY_RD_SFLX_SW_dn, &
+     ATMOS_PHY_RD_TOAFLX_LW_up, &
+     ATMOS_PHY_RD_TOAFLX_LW_dn, &
+     ATMOS_PHY_RD_TOAFLX_SW_up, &
+     ATMOS_PHY_RD_TOAFLX_SW_dn, &
+     ATMOS_PHY_RD_SFLX_down,    &
+     ATMOS_PHY_RD_vars_fillhalo
+  use scale_cpl_sfc_index, only: &
+     I_R_direct, I_R_diffuse, &
+     I_R_IR, I_R_NIR, I_R_VIS
+  use mod_atmos_phy_sf_vars, only: &
+     ATMOS_PHY_SF_SFC_TEMP, &
+     ATMOS_PHY_SF_SFC_albedo, &
+     ATMOS_PHY_SF_SFC_Z0M, &
+     ATMOS_PHY_SF_SFC_Z0H, &
+     ATMOS_PHY_SF_SFC_Z0E, &
+     ATMOS_PHY_SF_vars_fillhalo
+  use mod_cpl_admin, only: &
+     CPL_sw
+  use mod_ocean_admin, only: &
+     OCEAN_do, &
+     OCEAN_ICE_TYPE
+  use scale_ocean_grid_cartesC_index, only: &
+     OKMAX, OIA, OJA, OIS, OIE, OJS, OJE
+  use mod_ocean_vars, only : &
+     OCEAN_TEMP,     &
+     OCEAN_OCN_Z0M,  &
+     OCEAN_ICE_TEMP, &
+     OCEAN_ICE_MASS, &
+     OCEAN_SFC_TEMP, &
+     OCEAN_SFC_albedo, &
+     OCEAN_SFC_Z0M,    &
+     OCEAN_SFC_Z0H,    &
+     OCEAN_SFC_Z0E,    &
+     OCEAN_ICE_FRAC,   &
+     OCEAN_vars_total
+  use scale_ocean_phy_ice_simple, only: &
+     OCEAN_PHY_ICE_freezetemp, &
+     OCEAN_PHY_ICE_fraction
+  use mod_land_admin, only: &
+     LAND_do
+  use scale_land_grid_cartesC_index, only: &
+     LKMAX, LIA, LJA
+  use mod_land_vars, only : &
+     LAND_TEMP, &
+     LAND_WATER, &
+     LAND_SFC_TEMP, &
+     LAND_SFC_albedo, &
+     LAND_vars_total
+  use mod_urban_admin, only: &
+     URBAN_do
+  use scale_urban_grid_cartesC_index, only: &
+     UIA, UJA, UKS, UKE
+  use mod_urban_vars, only : &
+     URBAN_TR, &
+     URBAN_TB, &
+     URBAN_TG, &
+     URBAN_TC, &
+     URBAN_QC, &
+     URBAN_UC, &
+     URBAN_TRL, &
+     URBAN_TBL, &
+     URBAN_TGL, &
+     URBAN_RAINR, &
+     URBAN_RAINB, &
+     URBAN_RAING, &
+     URBAN_ROFF, &
+     URBAN_SFC_TEMP, &
+     URBAN_SFC_albedo, &
+     URBAN_vars_total
+
+  implicit none
+
+  integer, intent(in) :: fcst_cnt
+
+  integer :: srank_a ! send rank_a
+  integer :: rrank_a ! receive rank_a
+
+  integer :: atmos_nv2d
+  integer :: ocean_nv2d
+  integer :: land_nv2d
+  integer :: urban_nv2d
+
+  real(RP), allocatable :: atmos2d(:,:,:)
+  real(RP), allocatable :: ocean2d(:,:,:)
+  real(RP), allocatable :: land2d(:,:,:)
+  real(RP), allocatable :: urban2d(:,:,:)
+
+  integer :: ukmax_
+
+  integer :: ierr, tag
+  integer, allocatable :: istat(:)
+
+  integer :: iv3d, iv2d
+
+  srank_a = MEMBER * nprocs_d + myrank_d
+  rrank_a = nens * nprocs_d + nprocs_d * (fcst_cnt - 1) + myrank_d ! dacycle-forecast member
+
+  if ( myrank_a /= srank_a .and. myrank_a /= rrank_a ) return
+
+  atmos_nv2d = 0
+  ocean_nv2d = 0
+  land_nv2d = 0
+  urban_nv2d = 0
+
+  allocate(istat(MPI_STATUS_SIZE))
+
+  !!! Send/receive variables except for the LETKF control variables
+  !!!  To do: Include ATMOS_DYN
+  if ( ATMOS_sw_phy_mp ) then
+
+     atmos_nv2d = 2  ! ATMOS_PHY_MP_SFLX_rain
+                     ! ATMOS_PHY_MP_SFLX_snow
+
+     allocate(atmos2d(atmos_nv2d,IA,JA))
+
+     tag = myrank_d 
+     if ( myrank_a == srank_a ) then
+       atmos2d(1,1:IA,1:JA) = ATMOS_PHY_MP_SFLX_rain(1:IA,1:JA)
+       atmos2d(2,1:IA,1:JA) = ATMOS_PHY_MP_SFLX_snow(1:IA,1:JA)
+
+       call MPI_Send(atmos2d,atmos_nv2d*IA*JA,MPI_RP,rrank_a,tag,MPI_COMM_a,ierr) 
+
+     elseif ( myrank_a == rrank_a ) then
+
+       call MPI_Recv(atmos2d,atmos_nv2d*IA*JA,MPI_RP,srank_a,tag,MPI_COMM_a,istat,ierr)
+
+       ATMOS_PHY_MP_SFLX_rain(1:IA,1:JA) = atmos2d(1,1:IA,1:JA)
+       ATMOS_PHY_MP_SFLX_snow(1:IA,1:JA) = atmos2d(2,1:IA,1:JA)
+
+       call ATMOS_PHY_MP_vars_fillhalo
+     endif
+
+     deallocate(atmos2d)
+
+  endif
+
+  if ( ATMOS_sw_phy_rd ) then
+    atmos_nv2d = 14 ! ATMOS_PHY_RD_SFLX_LW_up
+                    ! ATMOS_PHY_RD_SFLX_LW_dn
+                    ! ATMOS_PHY_RD_SFLX_SW_up
+                    ! ATMOS_PHY_RD_SFLX_SW_dn
+                    ! ATMOS_PHY_RD_TOAFLX_LW_up
+                    ! ATMOS_PHY_RD_TOAFLX_LW_dn
+                    ! ATMOS_PHY_RD_TOAFLX_SW_up
+                    ! ATMOS_PHY_RD_TOAFLX_SW_dn
+                    ! ATMOS_PHY_RD_SFLX_down I_R_direct,I_R_IR
+                    ! ATMOS_PHY_RD_SFLX_down I_R_diffuse,I_R_IR
+                    ! ATMOS_PHY_RD_SFLX_down I_R_direct,I_R_NIR
+                    ! ATMOS_PHY_RD_SFLX_down I_R_diffuse,I_R_NIR
+                    ! ATMOS_PHY_RD_SFLX_down I_R_direct,I_R_VIS
+                    ! ATMOS_PHY_RD_SFLX_down I_R_diffuse,I_R_VIS
+
+     allocate(atmos2d(atmos_nv2d,IA,JA))
+
+     tag = myrank_d 
+     if ( myrank_a == srank_a ) then
+       atmos2d(1, 1:IA,1:JA) = ATMOS_PHY_RD_SFLX_LW_up(1:IA,1:JA)
+       atmos2d(2, 1:IA,1:JA) = ATMOS_PHY_RD_SFLX_LW_dn(1:IA,1:JA)
+       atmos2d(3, 1:IA,1:JA) = ATMOS_PHY_RD_SFLX_SW_up(1:IA,1:JA)
+       atmos2d(4, 1:IA,1:JA) = ATMOS_PHY_RD_SFLX_SW_dn(1:IA,1:JA)
+       atmos2d(5, 1:IA,1:JA) = ATMOS_PHY_RD_TOAFLX_LW_up(1:IA,1:JA)
+       atmos2d(6, 1:IA,1:JA) = ATMOS_PHY_RD_TOAFLX_LW_dn(1:IA,1:JA)
+       atmos2d(7, 1:IA,1:JA) = ATMOS_PHY_RD_TOAFLX_SW_up(1:IA,1:JA)
+       atmos2d(8, 1:IA,1:JA) = ATMOS_PHY_RD_TOAFLX_SW_dn(1:IA,1:JA)
+       atmos2d(9, 1:IA,1:JA) = ATMOS_PHY_RD_SFLX_down(1:IA,1:JA,I_R_direct,I_R_IR)
+       atmos2d(10,1:IA,1:JA) = ATMOS_PHY_RD_SFLX_down(1:IA,1:JA,I_R_diffuse,I_R_IR)
+       atmos2d(11,1:IA,1:JA) = ATMOS_PHY_RD_SFLX_down(1:IA,1:JA,I_R_direct,I_R_NIR)
+       atmos2d(12,1:IA,1:JA) = ATMOS_PHY_RD_SFLX_down(1:IA,1:JA,I_R_diffuse,I_R_NIR)
+       atmos2d(13,1:IA,1:JA) = ATMOS_PHY_RD_SFLX_down(1:IA,1:JA,I_R_direct,I_R_VIS)
+       atmos2d(14,1:IA,1:JA) = ATMOS_PHY_RD_SFLX_down(1:IA,1:JA,I_R_diffuse,I_R_VIS)
+
+       call MPI_Send(atmos2d,atmos_nv2d*IA*JA,MPI_RP,rrank_a,tag,MPI_COMM_a,ierr) 
+
+     elseif ( myrank_a == rrank_a ) then
+
+       call MPI_Recv(atmos2d,atmos_nv2d*IA*JA,MPI_RP,srank_a,tag,MPI_COMM_a,istat,ierr)
+
+       ATMOS_PHY_RD_SFLX_LW_up(1:IA,1:JA)   = atmos2d(1, 1:IA,1:JA)
+       ATMOS_PHY_RD_SFLX_LW_dn(1:IA,1:JA)   = atmos2d(2, 1:IA,1:JA)
+       ATMOS_PHY_RD_SFLX_SW_up(1:IA,1:JA)   = atmos2d(3, 1:IA,1:JA)
+       ATMOS_PHY_RD_SFLX_SW_dn(1:IA,1:JA)   = atmos2d(4, 1:IA,1:JA) 
+       ATMOS_PHY_RD_TOAFLX_LW_up(1:IA,1:JA) = atmos2d(5, 1:IA,1:JA) 
+       ATMOS_PHY_RD_TOAFLX_LW_dn(1:IA,1:JA) = atmos2d(6, 1:IA,1:JA) 
+       ATMOS_PHY_RD_TOAFLX_SW_up(1:IA,1:JA) = atmos2d(7, 1:IA,1:JA) 
+       ATMOS_PHY_RD_TOAFLX_SW_dn(1:IA,1:JA) = atmos2d(8, 1:IA,1:JA) 
+       ATMOS_PHY_RD_SFLX_down(1:IA,1:JA,I_R_direct,I_R_IR)   = atmos2d(9, 1:IA,1:JA) 
+       ATMOS_PHY_RD_SFLX_down(1:IA,1:JA,I_R_diffuse,I_R_IR)  = atmos2d(10,1:IA,1:JA)
+       ATMOS_PHY_RD_SFLX_down(1:IA,1:JA,I_R_direct,I_R_NIR)  = atmos2d(11,1:IA,1:JA) 
+       ATMOS_PHY_RD_SFLX_down(1:IA,1:JA,I_R_diffuse,I_R_NIR) = atmos2d(12,1:IA,1:JA) 
+       ATMOS_PHY_RD_SFLX_down(1:IA,1:JA,I_R_direct,I_R_VIS)  = atmos2d(13,1:IA,1:JA) 
+       ATMOS_PHY_RD_SFLX_down(1:IA,1:JA,I_R_diffuse,I_R_VIS) = atmos2d(14,1:IA,1:JA) 
+
+       call ATMOS_PHY_RD_vars_fillhalo
+
+     endif
+
+     deallocate(atmos2d)
+
+  endif
+
+  if ( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) then
+
+    atmos_nv2d = 10 ! ATMOS_PHY_SF_SFC_TEMP
+                    ! ATMOS_PHY_SF_SFC_albedo I_R_direct,I_R_IR
+                    ! ATMOS_PHY_SF_SFC_albedo I_R_diffuse,I_R_IR
+                    ! ATMOS_PHY_SF_SFC_albedo I_R_direct,I_R_NIR
+                    ! ATMOS_PHY_SF_SFC_albedo I_R_diffuse,I_R_NIR
+                    ! ATMOS_PHY_SF_SFC_albedo I_R_direct,I_R_VIS
+                    ! ATMOS_PHY_SF_SFC_albedo I_R_diffuse,I_R_VIS
+                    ! ATMOS_PHY_SF_SFC_Z0M
+                    ! ATMOS_PHY_SF_SFC_Z0H
+                    ! ATMOS_PHY_SF_SFC_Z0E
+
+     allocate(atmos2d(atmos_nv2d,IA,JA))
+
+     tag = myrank_d 
+     if ( myrank_a == srank_a ) then
+       atmos2d(1, 1:IA,1:JA) = ATMOS_PHY_SF_SFC_TEMP(1:IA,1:JA)
+       atmos2d(2, 1:IA,1:JA) = ATMOS_PHY_SF_SFC_albedo(1:IA,1:JA,I_R_direct,I_R_IR)
+       atmos2d(3, 1:IA,1:JA) = ATMOS_PHY_SF_SFC_albedo(1:IA,1:JA,I_R_diffuse,I_R_IR)
+       atmos2d(4, 1:IA,1:JA) = ATMOS_PHY_SF_SFC_albedo(1:IA,1:JA,I_R_direct,I_R_NIR)
+       atmos2d(5, 1:IA,1:JA) = ATMOS_PHY_SF_SFC_albedo(1:IA,1:JA,I_R_diffuse,I_R_NIR)
+       atmos2d(6, 1:IA,1:JA) = ATMOS_PHY_SF_SFC_albedo(1:IA,1:JA,I_R_direct,I_R_VIS)
+       atmos2d(7, 1:IA,1:JA) = ATMOS_PHY_SF_SFC_albedo(1:IA,1:JA,I_R_diffuse,I_R_VIS)
+       atmos2d(8, 1:IA,1:JA) = ATMOS_PHY_SF_SFC_Z0M(1:IA,1:JA)
+       atmos2d(9, 1:IA,1:JA) = ATMOS_PHY_SF_SFC_Z0H(1:IA,1:JA)
+       atmos2d(10,1:IA,1:JA) = ATMOS_PHY_SF_SFC_Z0E(1:IA,1:JA)
+
+       call MPI_Send(atmos2d,atmos_nv2d*IA*JA,MPI_RP,rrank_a,tag,MPI_COMM_a,ierr) 
+
+     elseif ( myrank_a == rrank_a ) then
+
+       call MPI_Recv(atmos2d,atmos_nv2d*IA*JA,MPI_RP,srank_a,tag,MPI_COMM_a,istat,ierr)
+
+       ATMOS_PHY_SF_SFC_TEMP(1:IA,1:JA) = atmos2d(1,1:IA,1:JA) 
+       ATMOS_PHY_SF_SFC_albedo(1:IA,1:JA,I_R_direct,I_R_IR)   = atmos2d(2,1:IA,1:JA) 
+       ATMOS_PHY_SF_SFC_albedo(1:IA,1:JA,I_R_diffuse,I_R_IR)  = atmos2d(3,1:IA,1:JA)
+       ATMOS_PHY_SF_SFC_albedo(1:IA,1:JA,I_R_direct,I_R_NIR)  = atmos2d(4,1:IA,1:JA)
+       ATMOS_PHY_SF_SFC_albedo(1:IA,1:JA,I_R_diffuse,I_R_NIR) = atmos2d(5,1:IA,1:JA)
+       ATMOS_PHY_SF_SFC_albedo(1:IA,1:JA,I_R_direct,I_R_VIS)  = atmos2d(6,1:IA,1:JA) 
+       ATMOS_PHY_SF_SFC_albedo(1:IA,1:JA,I_R_diffuse,I_R_VIS) = atmos2d(7,1:IA,1:JA) 
+       ATMOS_PHY_SF_SFC_Z0M(1:IA,1:JA) = atmos2d(8,1:IA,1:JA) 
+       ATMOS_PHY_SF_SFC_Z0H(1:IA,1:JA) = atmos2d(9,1:IA,1:JA) 
+       ATMOS_PHY_SF_SFC_Z0E(1:IA,1:JA) = atmos2d(10,1:IA,1:JA) 
+
+       call ATMOS_PHY_SF_vars_fillhalo
+
+     endif
+
+     deallocate(atmos2d)
+
+  endif
+
+  if ( OCEAN_do ) then
+    ocean_nv2d = OKMAX ! OCEAN_TEMP (3D)
+
+    ocean_nv2d = ocean_nv2d +  13 ! OCEAN_OCN_Z0M
+                                  ! OCEAN_ICE_TEMP
+                                  ! OCEAN_ICE_MASS
+                                  ! OCEAN_SFC_TEMP 
+                                  ! OCEAN_SFC_albedo I_R_direct,I_R_IR
+                                  ! OCEAN_SFC_albedo I_R_diffuse,I_R_IR
+                                  ! OCEAN_SFC_albedo I_R_direct,I_R_NIR
+                                  ! OCEAN_SFC_albedo I_R_diffuse,I_R_NIR
+                                  ! OCEAN_SFC_albedo I_R_direct,I_R_VIS
+                                  ! OCEAN_SFC_albedo I_R_diffuse,I_R_VIS
+                                  ! OCEAN_SFC_Z0M
+                                  ! OCEAN_SFC_Z0H
+                                  ! OCEAN_SFC_Z0E
+
+     allocate(ocean2d(ocean_nv2d,OIA,OJA))
+
+     tag = myrank_d 
+     if ( myrank_a == srank_a ) then
+       ocean2d(1:OKMAX,1:OIA,1:OJA) = OCEAN_TEMP(1:OKMAX,1:OIA,1:OJA)
+
+       ocean2d(OKMAX+1, 1:OIA,1:OJA) = OCEAN_OCN_Z0M(1:OIA,1:OJA)
+       ocean2d(OKMAX+2, 1:OIA,1:OJA) = OCEAN_ICE_TEMP(1:OIA,1:OJA)
+       ocean2d(OKMAX+3, 1:OIA,1:OJA) = OCEAN_ICE_MASS(1:OIA,1:OJA)
+       ocean2d(OKMAX+4, 1:OIA,1:OJA) = OCEAN_SFC_TEMP(1:OIA,1:OJA)
+       ocean2d(OKMAX+5, 1:OIA,1:OJA) = OCEAN_SFC_albedo(1:OIA,1:OJA,I_R_direct,I_R_IR)
+       ocean2d(OKMAX+6, 1:OIA,1:OJA) = OCEAN_SFC_albedo(1:OIA,1:OJA,I_R_diffuse,I_R_IR)
+       ocean2d(OKMAX+7, 1:OIA,1:OJA) = OCEAN_SFC_albedo(1:OIA,1:OJA,I_R_direct,I_R_NIR)
+       ocean2d(OKMAX+8, 1:OIA,1:OJA) = OCEAN_SFC_albedo(1:OIA,1:OJA,I_R_diffuse,I_R_NIR)
+       ocean2d(OKMAX+9, 1:OIA,1:OJA) = OCEAN_SFC_albedo(1:OIA,1:OJA,I_R_direct,I_R_VIS)
+       ocean2d(OKMAX+10,1:OIA,1:OJA) = OCEAN_SFC_albedo(1:OIA,1:OJA,I_R_diffuse,I_R_VIS)
+       ocean2d(OKMAX+11,1:OIA,1:OJA) = OCEAN_SFC_Z0M(1:OIA,1:OJA)
+       ocean2d(OKMAX+12,1:OIA,1:OJA) = OCEAN_SFC_Z0H(1:OIA,1:OJA)
+       ocean2d(OKMAX+13,1:OIA,1:OJA) = OCEAN_SFC_Z0E(1:OIA,1:OJA)
+
+       call MPI_Send(ocean2d,ocean_nv2d*OIA*OJA,MPI_RP,rrank_a,tag,MPI_COMM_a,ierr) 
+
+     elseif ( myrank_a == rrank_a ) then
+
+       call MPI_Recv(ocean2d,ocean_nv2d*OIA*OJA,MPI_RP,srank_a,tag,MPI_COMM_a,istat,ierr)
+
+       OCEAN_TEMP(1:OKMAX,1:OIA,1:OJA) = ocean2d(1:OKMAX,1:OIA,1:OJA) 
+
+       OCEAN_OCN_Z0M(1:OIA,1:OJA)  = ocean2d(OKMAX+1,1:OIA,1:OJA) 
+       OCEAN_ICE_TEMP(1:OIA,1:OJA) = ocean2d(OKMAX+2,1:OIA,1:OJA)  
+       OCEAN_ICE_MASS(1:OIA,1:OJA) = ocean2d(OKMAX+3,1:OIA,1:OJA)  
+       OCEAN_SFC_TEMP(1:OIA,1:OJA) = ocean2d(OKMAX+4,1:OIA,1:OJA) 
+       OCEAN_SFC_albedo(1:OIA,1:OJA,I_R_direct,I_R_IR)   = ocean2d(OKMAX+5, 1:OIA,1:OJA)  
+       OCEAN_SFC_albedo(1:OIA,1:OJA,I_R_diffuse,I_R_IR)  = ocean2d(OKMAX+6, 1:OIA,1:OJA)  
+       OCEAN_SFC_albedo(1:OIA,1:OJA,I_R_direct,I_R_NIR)  = ocean2d(OKMAX+7, 1:OIA,1:OJA)  
+       OCEAN_SFC_albedo(1:OIA,1:OJA,I_R_diffuse,I_R_NIR) = ocean2d(OKMAX+8, 1:OIA,1:OJA)  
+       OCEAN_SFC_albedo(1:OIA,1:OJA,I_R_direct,I_R_VIS)  = ocean2d(OKMAX+9, 1:OIA,1:OJA) 
+       OCEAN_SFC_albedo(1:OIA,1:OJA,I_R_diffuse,I_R_VIS) = ocean2d(OKMAX+10,1:OIA,1:OJA)  
+       OCEAN_SFC_Z0M(1:OIA,1:OJA) = ocean2d(OKMAX+11,1:OIA,1:OJA) 
+       OCEAN_SFC_Z0H(1:OIA,1:OJA) = ocean2d(OKMAX+12,1:OIA,1:OJA)  
+       OCEAN_SFC_Z0E(1:OIA,1:OJA) = ocean2d(OKMAX+13,1:OIA,1:OJA)  
+
+       if ( OCEAN_ICE_TYPE == 'NONE' ) then
+          OCEAN_ICE_TEMP(:,:) = OCEAN_PHY_ICE_freezetemp
+          OCEAN_ICE_FRAC(:,:) = 0.0_RP
+       else
+          OCEAN_ICE_TEMP(:,:) = min( OCEAN_ICE_TEMP(:,:), OCEAN_PHY_ICE_freezetemp )
+          call OCEAN_PHY_ICE_fraction( OIA, OIS, OIE,       & ! [IN]
+                                       OJA, OJS, OJE,       & ! [IN]
+                                       OCEAN_ICE_MASS(:,:), & ! [IN]
+                                       OCEAN_ICE_FRAC(:,:)  ) ! [OUT]
+          call OCEAN_vars_total
+ 
+       endif
+     endif
+
+     deallocate(ocean2d)
+
+  endif
+
+  if ( LAND_do ) then
+    land_nv2d = LKMAX*2 ! LAND_TEMP, LAND_WATER (3D)
+
+    land_nv2d = land_nv2d +  7  ! LAND_SFC_TEMP
+                                ! LAND_SFC_albedo I_R_direct,I_R_IR
+                                ! LAND_SFC_albedo I_R_diffuse,I_R_IR
+                                ! LAND_SFC_albedo I_R_direct,I_R_NIR
+                                ! LAND_SFC_albedo I_R_diffuse,I_R_NIR
+                                ! LAND_SFC_albedo I_R_direct,I_R_VIS
+                                ! LAND_SFC_albedo I_R_diffuse,I_R_VIS
+
+     allocate(land2d(land_nv2d,LIA,LJA))
+
+     tag = myrank_d 
+     if ( myrank_a == srank_a ) then
+
+       land2d(1:LKMAX,        1:LIA,1:LJA) = LAND_TEMP (1:LKMAX,1:LIA,1:LJA)
+       land2d(1+LKMAX:LKMAX*2,1:LIA,1:LJA) = LAND_WATER(1:LKMAX,1:LIA,1:LJA)
+
+       land2d(LKMAX*2+1,      1:LIA,1:LJA) = LAND_SFC_TEMP  (1:LIA,1:LJA)
+       land2d(LKMAX*2+2,      1:LIA,1:LJA) = LAND_SFC_albedo(1:LIA,1:LJA,I_R_direct,I_R_IR)
+       land2d(LKMAX*2+3,      1:LIA,1:LJA) = LAND_SFC_albedo(1:LIA,1:LJA,I_R_diffuse,I_R_IR)
+       land2d(LKMAX*2+4,      1:LIA,1:LJA) = LAND_SFC_albedo(1:LIA,1:LJA,I_R_direct,I_R_NIR)
+       land2d(LKMAX*2+5,      1:LIA,1:LJA) = LAND_SFC_albedo(1:LIA,1:LJA,I_R_diffuse,I_R_NIR)
+       land2d(LKMAX*2+6,      1:LIA,1:LJA) = LAND_SFC_albedo(1:LIA,1:LJA,I_R_direct,I_R_VIS)
+       land2d(LKMAX*2+7,      1:LIA,1:LJA) = LAND_SFC_albedo(1:LIA,1:LJA,I_R_diffuse,I_R_VIS)
+
+       call MPI_Send(land2d,land_nv2d*LIA*LJA,MPI_RP,rrank_a,tag,MPI_COMM_a,ierr) 
+
+     elseif ( myrank_a == rrank_a ) then
+
+       call MPI_Recv(land2d,land_nv2d*LIA*LJA,MPI_RP,srank_a,tag,MPI_COMM_a,istat,ierr)
+
+       LAND_TEMP (1:LKMAX,1:LIA,1:LJA) = land2d(1:LKMAX,        1:LIA,1:LJA)  
+       LAND_WATER(1:LKMAX,1:LIA,1:LJA) = land2d(1+LKMAX:LKMAX*2,1:LIA,1:LJA)  
+
+       LAND_SFC_TEMP(1:LIA,1:LJA)                       = land2d(LKMAX*2+1,1:LIA,1:LJA)  
+       LAND_SFC_albedo(1:LIA,1:LJA,I_R_direct,I_R_IR)   = land2d(LKMAX*2+2,1:LIA,1:LJA)  
+       LAND_SFC_albedo(1:LIA,1:LJA,I_R_diffuse,I_R_IR)  = land2d(LKMAX*2+3,1:LIA,1:LJA)  
+       LAND_SFC_albedo(1:LIA,1:LJA,I_R_direct,I_R_NIR)  = land2d(LKMAX*2+4,1:LIA,1:LJA)  
+       LAND_SFC_albedo(1:LIA,1:LJA,I_R_diffuse,I_R_NIR) = land2d(LKMAX*2+5,1:LIA,1:LJA)  
+       LAND_SFC_albedo(1:LIA,1:LJA,I_R_direct,I_R_VIS)  = land2d(LKMAX*2+6,1:LIA,1:LJA)
+       LAND_SFC_albedo(1:LIA,1:LJA,I_R_diffuse,I_R_VIS) = land2d(LKMAX*2+7,1:LIA,1:LJA)  
+
+       call LAND_vars_total
+ 
+     endif
+
+     deallocate(land2d)
+
+  endif ! LAND_do
+
+  if ( URBAN_do ) then
+
+    ukmax_ = UKE - UKS + 1
+
+    urban_nv2d = ukmax_*3   ! URBAN_TRL, URBAN_TBL, URBAN_TGL
+
+    urban_nv2d = urban_nv2d +  17 ! URBAN_TR
+                                  ! URBAN_TB
+                                  ! URBAN_TG
+                                  ! URBAN_TC
+                                  ! URBAN_QC
+                                  ! URBAN_UC
+                                  ! URBAN_RAINR
+                                  ! URBAN_RAINB
+                                  ! URBAN_RAING
+                                  ! URBAN_ROFF
+                                  ! URBAN_SFC_TEMP
+                                  ! URBAN_SFC_albedo I_R_direct,I_R_IR
+                                  ! URBAN_SFC_albedo I_R_diffuse,I_R_IR
+                                  ! URBAN_SFC_albedo I_R_direct,I_R_NIR
+                                  ! URBAN_SFC_albedo I_R_diffuse,I_R_NIR
+                                  ! URBAN_SFC_albedo I_R_direct,I_R_VIS
+                                  ! URBAN_SFC_albedo I_R_diffuse,I_R_VIS
+
+
+     allocate(urban2d(urban_nv2d,UIA,UJA))
+
+     tag = myrank_d 
+     if ( myrank_a == srank_a ) then
+       urban2d(1:ukmax_,           1:UIA,1:UJA) = URBAN_TRL(1:ukmax_,1:UIA,1:UJA)
+       urban2d(1+ukmax_:ukmax_*2,  1:UIA,1:UJA) = URBAN_TBL(1:ukmax_,1:UIA,1:UJA)
+       urban2d(1+ukmax_*2:ukmax_*3,1:UIA,1:UJA) = URBAN_TGL(1:ukmax_,1:UIA,1:UJA)
+
+       urban2d(ukmax_*3+1, 1:UIA,1:UJA) = URBAN_TR(1:UIA,1:UJA)
+       urban2d(ukmax_*3+2, 1:UIA,1:UJA) = URBAN_TB(1:UIA,1:UJA)
+       urban2d(ukmax_*3+3, 1:UIA,1:UJA) = URBAN_TG(1:UIA,1:UJA)
+       urban2d(ukmax_*3+4, 1:UIA,1:UJA) = URBAN_TC(1:UIA,1:UJA)
+       urban2d(ukmax_*3+5, 1:UIA,1:UJA) = URBAN_QC(1:UIA,1:UJA)
+       urban2d(ukmax_*3+6, 1:UIA,1:UJA) = URBAN_UC(1:UIA,1:UJA)
+       urban2d(ukmax_*3+7, 1:UIA,1:UJA) = URBAN_RAINR(1:UIA,1:UJA)
+       urban2d(ukmax_*3+8, 1:UIA,1:UJA) = URBAN_RAINB(1:UIA,1:UJA)
+       urban2d(ukmax_*3+9, 1:UIA,1:UJA) = URBAN_RAING(1:UIA,1:UJA)
+       urban2d(ukmax_*3+10,1:UIA,1:UJA) = URBAN_ROFF(1:UIA,1:UJA)
+       urban2d(ukmax_*3+11,1:UIA,1:UJA) = URBAN_SFC_TEMP(1:UIA,1:UJA)
+       urban2d(ukmax_*3+12,1:UIA,1:UJA) = URBAN_SFC_albedo(1:UIA,1:UJA,I_R_direct,I_R_IR)
+       urban2d(ukmax_*3+13,1:UIA,1:UJA) = URBAN_SFC_albedo(1:UIA,1:UJA,I_R_diffuse,I_R_IR)
+       urban2d(ukmax_*3+14,1:UIA,1:UJA) = URBAN_SFC_albedo(1:UIA,1:UJA,I_R_direct,I_R_NIR)
+       urban2d(ukmax_*3+15,1:UIA,1:UJA) = URBAN_SFC_albedo(1:UIA,1:UJA,I_R_diffuse,I_R_NIR)
+       urban2d(ukmax_*3+16,1:UIA,1:UJA) = URBAN_SFC_albedo(1:UIA,1:UJA,I_R_direct,I_R_VIS)
+       urban2d(ukmax_*3+17,1:UIA,1:UJA) = URBAN_SFC_albedo(1:UIA,1:UJA,I_R_diffuse,I_R_VIS)
+
+       call MPI_Send(urban2d,urban_nv2d*UIA*UJA,MPI_RP,rrank_a,tag,MPI_COMM_a,ierr) 
+
+     elseif ( myrank_a == rrank_a ) then
+
+       call MPI_Recv(urban2d,urban_nv2d*UIA*UJA,MPI_RP,srank_a,tag,MPI_COMM_a,istat,ierr)
+
+       URBAN_TRL(1:ukmax_,1:UIA,1:UJA) = urban2d(1:ukmax_,           1:UIA,1:UJA)  
+       URBAN_TBL(1:ukmax_,1:UIA,1:UJA) = urban2d(1+ukmax_:ukmax_*2,  1:UIA,1:UJA)  
+       URBAN_TGL(1:ukmax_,1:UIA,1:UJA) = urban2d(1+ukmax_*2:ukmax_*3,1:UIA,1:UJA)  
+      
+       URBAN_TR(1:UIA,1:UJA)       = urban2d(ukmax_*3+1, 1:UIA,1:UJA)  
+       URBAN_TB(1:UIA,1:UJA)       = urban2d(ukmax_*3+2, 1:UIA,1:UJA)  
+       URBAN_TG(1:UIA,1:UJA)       = urban2d(ukmax_*3+3, 1:UIA,1:UJA)  
+       URBAN_TC(1:UIA,1:UJA)       = urban2d(ukmax_*3+4, 1:UIA,1:UJA)  
+       URBAN_QC(1:UIA,1:UJA)       = urban2d(ukmax_*3+5, 1:UIA,1:UJA)  
+       URBAN_UC(1:UIA,1:UJA)       = urban2d(ukmax_*3+6, 1:UIA,1:UJA)  
+       URBAN_RAINR(1:UIA,1:UJA)    = urban2d(ukmax_*3+7, 1:UIA,1:UJA)  
+       URBAN_RAINB(1:UIA,1:UJA)    = urban2d(ukmax_*3+8, 1:UIA,1:UJA)  
+       URBAN_RAING(1:UIA,1:UJA)    = urban2d(ukmax_*3+9, 1:UIA,1:UJA)  
+       URBAN_ROFF(1:UIA,1:UJA)     = urban2d(ukmax_*3+10,1:UIA,1:UJA)  
+       URBAN_SFC_TEMP(1:UIA,1:UJA) = urban2d(ukmax_*3+11,1:UIA,1:UJA)  
+
+       URBAN_SFC_albedo(1:UIA,1:UJA,I_R_direct,I_R_IR)   = urban2d(ukmax_*3+12,1:UIA,1:UJA)  
+       URBAN_SFC_albedo(1:UIA,1:UJA,I_R_diffuse,I_R_IR)  = urban2d(ukmax_*3+13,1:UIA,1:UJA)  
+       URBAN_SFC_albedo(1:UIA,1:UJA,I_R_direct,I_R_NIR)  = urban2d(ukmax_*3+14,1:UIA,1:UJA)  
+       URBAN_SFC_albedo(1:UIA,1:UJA,I_R_diffuse,I_R_NIR) = urban2d(ukmax_*3+15,1:UIA,1:UJA)  
+       URBAN_SFC_albedo(1:UIA,1:UJA,I_R_direct,I_R_VIS)  = urban2d(ukmax_*3+16,1:UIA,1:UJA)  
+       URBAN_SFC_albedo(1:UIA,1:UJA,I_R_diffuse,I_R_VIS) = urban2d(ukmax_*3+17,1:UIA,1:UJA)  
+
+       call URBAN_vars_total
+
+     endif
+     deallocate(urban2d)
+
+  endif ! URBAN_do
+
+  deallocate(istat)
+
+  return
+end subroutine send_recv_emean_others
 
 
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)

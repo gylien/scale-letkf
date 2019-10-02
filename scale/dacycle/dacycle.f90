@@ -32,6 +32,7 @@ program dacycle
     send_emean_direct,        &
     receive_emean_direct,     &
     write_grd_dafcst_mpi,     &
+    send_recv_emean_others,   &
 !    bcast_restart_efcst_mpi,  &
     mpi_timer
   use common_obs_scale, only: &
@@ -195,22 +196,9 @@ program dacycle
 
   call set_common_conf(nprocs)
 
-call MPI_BARRIER(MPI_COMM_WORLD, ierr) ! DEBUG
-call date_and_time(date=date, time=time) ! DEBUG
-if(myrank==0)write (6, '(2A,1x,A,i9)') '[Info] Start time1: ', date, time,myrank
-
   call set_mem_node_proc(MEMBER_RUN)
 
-call MPI_BARRIER(MPI_COMM_WORLD, ierr) ! DEBUG
-call date_and_time(date=date, time=time) ! DEBUG
-if(myrank==0)write (6, '(2A,1x,A,i9)') '[Info] Start time1: ', date, time,myrank
-
   call scalerm_setup('DACYCLE')
-
-call MPI_BARRIER(MPI_COMM_WORLD, ierr) ! DEBUG
-call date_and_time(date=date, time=time) ! DEBUG
-if(myrank==0)write (6, '(2A,1x,A,i9)') '[Info] Start time1: ', date, time,myrank
-!stop
 
   call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_WORLD)
   if (myrank_use) then
@@ -277,13 +265,7 @@ endif
 
           call resume_state(do_restart_read=.false.)
         else
-if ( myrank_da == 0 .and. myrank_use_da) then
-  write(6,'(a)')"DEBUG111"
-endif
           call resume_state(do_restart_read=.true.)
-if ( myrank_da == 0 .and. myrank_use_da) then
-  write(6,'(a)')"DEBUG112"
-endif
 
           if (icycle == 0 .and. myrank_use_da) then
             ! initialize system_clock after reading initial files
@@ -317,7 +299,7 @@ endif
 
       ! restart output before LETKF
       if (DIRECT_TRANSFER) then
-        if (LOG_LEVEL >= 2 .and. TIME_DOATMOS_restart .and. myrank_da == 0) then
+        if (LOG_LEVEL >= 3 .and. TIME_DOATMOS_restart .and. myrank_da == 0) then
           write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip writing restart files before LETKF'
         end if
       else
@@ -543,8 +525,8 @@ endif
           call date_and_time(date=date, time=time)
           call system_clock(etime_da_c, cpsec, cmax)
           call TIME_gettimelabel(ftimelabel)
-          write (6, '(2A,1x,A,1x,A,f12.4)') '[Info:DA] End analysis: ', date, time, trim(ftimelabel), &
-                                            real(etime_da_c - stime_da_c) / real(cpsec)
+          write (6, '(2A,1x,A,1x,A,f12.4,i7)') '[Info:DA] End analysis: ', date, time, trim(ftimelabel), &
+                                            real(etime_da_c - stime_da_c) / real(cpsec), fcst_cnt
           stime_da_c = etime_da_c
         endif
 
@@ -557,24 +539,6 @@ endif
           endif
         endif
         !-----------------------------------------------------------------------
-
-        ! Send analysis ensemble mean for dacycle-forecast member
-        if (DACYCLE_RUN_FCST .and. icycle >= ICYC_DACYCLE_RUN_FCST ) then
-          fcst_cnt = fcst_cnt + 1
-  
-        call mpi_timer('SEND_ANAL0', 1, barrier=MPI_COMM_da)
-if (myrank_da == 0) then
-call date_and_time(date=date, time=time)
-write(6,'(a,3i7,1x,A)')"DEBUG, ready for send",myrank_a,icycle,scycle_dafcst,time
-endif
-          ! Send analsis ensemble mean to an dacycle-forecast member
-          if ((myrank_e == mmean_rank_e) .and. &
-              (fcst_cnt <= MAX_DACYCLE_RUN_FCST)) then
-            call send_emean_direct(mean3d,mean2d,fcst_cnt)
-          endif
-        call mpi_timer('SEND_ANAL', 1, barrier=MPI_COMM_da)
-  
-        endif
 
         ! restart output after LETKF
         if (DIRECT_TRANSFER .and. (anal_mem_out_now .or. anal_mean_out_now .or. anal_mdet_out_now) ) then
@@ -592,57 +556,68 @@ endif
       !-------------------------------------------------------------------------
 
 
-      if (.not. myrank_use_da .and. icycle >= scycle_dafcst .and. TIME_DOATMOS_restart ) then
+      ! Send/receive the analysis ensemble mean
+      ! Draw/output from forecasts
+      if ( TIME_DOATMOS_restart .and. DACYCLE_RUN_FCST ) then
 
-        dafcst_step = dafcst_step + 1
+        ! Do not send the anaysis data if # of cycle is out of range
+        if ( ( myrank_use_da ) .and. ( icycle < ICYC_DACYCLE_RUN_FCST .or. fcst_cnt >= MAX_DACYCLE_RUN_FCST ) ) cycle 
 
-        if (dafcst_step == 0) then
-call MPI_BARRIER(MPI_COMM_d, ierr)
-          if (myrank_d == 0) then
-call date_and_time(date=date, time=time)
-write(6,'(a,3i7,1x,A)')"DEBUG, wait",myrank_a,icycle,scycle_dafcst,time
-          endif
+        ! Forecast member is initiated when icycle >= scycle_dafcst
+        if ( (.not. myrank_use_da ) .and. ( icycle < scycle_dafcst ) ) cycle
 
-          ! Receive analysis ensemble mean if myrank is in charge of the
-          ! dacycle-forecast from scycle_dafcst
-          call receive_emean_direct()
-          if (myrank_d == 0) then
-call date_and_time(date=date, time=time)
-write(6,'(a,3i7,1x,A)')"DEBUG, receive",myrank_a,icycle,scycle_dafcst,time
-          endif
-          call TIME_gettimelabel(fstimelabel)
+        ! Count the number of forecast member initiated
+        fcst_cnt = fcst_cnt + 1
+ 
 
-          call MPI_BARRIER(MPI_COMM_d, ierr)
-          call date_and_time(date=date, time=time)
-          call system_clock(stime_fcst_c)
-          if (myrank_d == 0) then
-            write (6, '(2A,1x,A,1x,A)') '[Info:fcst] Start forecast: ', date, time, trim(fstimelabel(1:15))
-          endif
-        ! DEBUG
-        else
-          call MPI_BARRIER(MPI_COMM_d, ierr)
-          call date_and_time(date=date, time=time)
-          call system_clock(etime_fcst_c, cpsec, cmax)
-          if (myrank_d == 0) then
-            write (6, '(A,1x,A,f10.5,i9)') '[Info:fcst] DEBUG: ', trim(fstimelabel(1:15)),real(etime_fcst_c - stime_fcst_c) / real(cpsec),icycle
-          endif
+        !! Send ensemble mean (analysis)
+        if ( myrank_use_da .and. myrank_e == mmean_rank_e ) then
+
+          call send_emean_direct(mean3d,mean2d,fcst_cnt)
+
+        endif ! [ myrank_use_da ]
+
+
+        ! Forecast member (receive/output)
+        if ( .not. myrank_use_da ) then
+
+          dafcst_step = dafcst_step + 1
+          dafcst_ostep = dafcst_ostep + 1
+
+          !! Receive ensemble mean (analysis) and start forecast
+          if ( dafcst_step == 0 ) then
+            call receive_emean_direct()
+            call TIME_gettimelabel(fstimelabel)
+  
+            call MPI_BARRIER(MPI_COMM_d, ierr)
+            call date_and_time(date=date, time=time)
+            call system_clock(stime_fcst_c)
+            if (myrank_d == 0) then
+              write (6, '(2A,1x,A,1x,A)') '[Info:fcst] Start forecast: ', date, time, trim(fstimelabel(1:15))
+            endif
+
+          elseif ( dafcst_ostep >= 1 ) then ! Draw figure using forecast results
+
+            if (.not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
+            call calc_ref_direct(ref3d)
+            call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
+
+          endif ! [dafcst_step == 0 ]
+
+        endif ! [ .not. myrank_use_da ]
+
+        if ( (myrank_use_da .and. myrank_e == mmean_rank_e ) .or. ( .not. myrank_use_da .and. dafcst_step == 0 )) then
+if (myrank_use_da .and. (myrank_d == 0) .and. myrank_e == mmean_rank_e)write(6,'(a,2i7)')"DEBUG999 ",myrank_a,fcst_cnt
+if (.not. myrank_use_da .and. (myrank_d == 0))write(6,'(a,2i7)')"DEBUG999 ",myrank_a,fcst_cnt
+          call send_recv_emean_others(fcst_cnt)
         endif
 
 
-        if (myrank_d == 0 .and. LOG_LEVEL >= 3) then
-          call TIME_gettimelabel(ftimelabel)
-          write(6,'(a,1x,i3,1x,a15)') "Add. fcst ",int(myrank_da / nprocs_d) + ICYC_DACYCLE_RUN_FCST, ftimelabel(1:15)
-        endif
+      endif ! [TIME_DOATMOS_restart .and. DACYCLE_RUN_FCST]
 
-        dafcst_ostep = dafcst_ostep + 1
-
-        ! Output of dacycle-forecast
-        if (.not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
-
-        call calc_ref_direct(ref3d)
-        call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
-
-      endif ! .not. myrank_use_da .and. icycle >= scycle_dafcst
+      if ( myrank_use_da .and. TIME_DOATMOS_restart ) then
+        call mpi_timer('SEND ANALYSIS', 1, barrier=MPI_COMM_da)
+      endif
 
 
       if ( TIME_NOWSTEP > TIME_NSTEP ) then

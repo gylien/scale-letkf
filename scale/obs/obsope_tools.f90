@@ -328,7 +328,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
     slot_ub(islot) = (real(islot - SLOT_BASE, r_size) + 0.5d0) * SLOT_TINTERVAL
   end do
 
-  if (LOG_LEVEL >= 2 .and. myrank_da == 0) then
+  if (LOG_LEVEL >= 3 .and. myrank_da == 0) then
     write (nstr, '(I4)') SLOT_END - SLOT_START + 1
     write (6, *)
     write (6, '(A,I6,A)') 'OBSERVATION COUNTS BEFORE QC (FROM OBSOPE):'
