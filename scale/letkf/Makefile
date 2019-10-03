@@ -50,6 +50,7 @@ endif
 
 ifeq ($(ENABLE_PLOT_DCL),T)
 COMMON_OBJS += $(COMMON_DIR)/plot_dbz_DCL.o
+COMMON_OBJS += $(COMMON_DIR)/plot_dbz_DCL_obs.o
 LIBS += $(LIBDCL)
 endif
 

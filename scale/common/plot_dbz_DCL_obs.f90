@@ -1,27 +1,32 @@
 !==================================================!
-subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec) 
+subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,psfile) 
   use common
   use common_scale
   use scale_io, only: &
       H_LONG
   use scale_atmos_grid_cartesC_index, only: &
-      IHALO, JHALO
+      IHALO, JHALO, KHALO
   use scale_atmos_grid_cartesC, only: &
       DX, DY, &
       GRID_CXG => ATMOS_GRID_CARTESC_CXG, &
-      GRID_CYG => ATMOS_GRID_CARTESC_CYG
+      GRID_CYG => ATMOS_GRID_CARTESC_CYG, &
+      GRID_CZ  => ATMOS_GRID_CARTESC_CZ,  &
+      GRID_FZ  => ATMOS_GRID_CARTESC_FZ
   use scale_time, only: &
       TIME_NOWDATE
+  use common_nml, only: &
+      plot_zlev_min, plot_zlev_max, plot_zlev_intv
 
   implicit none
 
-  real(r_sngl),intent(in) :: val_plot_s(nlong,nlatg)
-  real(r_sngl),intent(in) :: land2dgs(nlong,nlatg)
+  integer, intent(in) :: nobs
+  real(r_sngl),intent(in) :: ze_radar(nobs)
+  real(r_sngl),intent(in) :: lon_radar(nobs), lat_radar(nobs), z_radar(nobs)
   character(*),intent(in) :: psfile
-  character(len=5),intent(in) :: cheight
-  character(len=4),intent(in) :: csec
+
 
   real(r_sngl),allocatable :: val_plot(:,:)
+  integer,allocatable :: icount_data(:,:)
 
   integer,allocatable :: iwork(:)
   
@@ -30,7 +35,7 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
   real(r_sngl),parameter :: OFFXY = 0.0e3 ! offset (m)
   real(r_sngl),allocatable :: grid_cxg_ext(:)
   real(r_sngl),allocatable :: grid_cyg_ext(:)
-  real(r_sngl),allocatable :: vmask(:,:)
+!  real(r_sngl),allocatable :: vmask(:,:)
   
   real(r_sngl),parameter :: rmiss = -9.99e20
   
@@ -39,7 +44,7 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
   integer :: itpats(npatmax)  
   character(len=40) :: title1, title2(2), title3
 
-  integer :: iclrmap
+  integer :: iclrmap,iobs,iplot_lev
   integer :: ilon, ilat, nwork, nlong_ext, nlatg_ext
   real(r_sngl) :: vpr, vpl, vpt, vpb
 
@@ -50,9 +55,22 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
   real(r_sngl) :: amtics, astics
   real(r_sngl) :: bmtics, bstics
 
+  integer:: iblkle
+
   character(len=19) :: ftimelabel
 
+  character(len=5)::cheight
 
+  real(r_sngl),parameter::rmiss_radar=-327.68
+
+  integer,parameter::ismth=1
+
+  include 'latlon_d4_grid.h'
+
+  if (nlong_fix.ne.nlong.or.nlatg_fix.ne.nlatg) then
+   write(*,*) 'nlong or nlatg does not match'
+   stop
+  end if
 
   nlonadd = int(OFFXY / DX)
   nlatadd = int(OFFXY / DY)
@@ -64,43 +82,66 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
   nlong_ext = nlong + nlonadd * 2
   nlatg_ext = nlatg + nlatadd * 2 
 
+  allocate(icount_data(nlong,nlatg))
   allocate(val_plot(nlong,nlatg))
   allocate(grid_cxg_ext(nlong_ext))
   allocate(grid_cyg_ext(nlatg_ext))
-  allocate(vmask(nlong_ext,nlatg_ext))
+!  allocate(vmask(nlong_ext,nlatg_ext))
 
   nwork = 3 * (nlong + 2) * (nlatg + 2) / 2 + 1
   allocate(iwork(nwork))
 
-  val_plot = val_plot_s
-  where(.not.val_plot > rmiss) val_plot = rmiss
 
-  title1 = trim(ftimelabel) // " UTC (FT=" // csec //"s)"
-  if (trim(csec).eq.'anal')  title1 = trim(ftimelabel) // " UTC (Analysis)"
+do iplot_lev=plot_zlev_min,plot_zlev_max,plot_zlev_intv
+if ( grid_cz(iplot_lev+KHALO) .le. RADAR_ZMAX) then !!! exclude stratosphere
+
+ !!! def val_plot, cheight
+ icount_data=0
+ val_plot=0.0
+ do iobs=1,nobs
+ if (z_radar(iobs).ne.rmiss_radar) then
+  if ( z_radar(iobs) .ge. grid_fz(iplot_lev+KHALO-1) .and. & 
+       z_radar(iobs) .lt. grid_fz(iplot_lev+KHALO) ) then
+  ilon=iblkle(axlon,nlong,lon_radar(iobs))
+  ilat=iblkle(axlatSN,nlatg,lat_radar(iobs))
+!   if (ilon.lt.nlong.and.abs(lon_radar(iobs)-axlon(ilon)).gt.abs(lon_radar(iobs)-axlon(ilon+1))) ilon=ilon+1
+!   if (ilat.lt.nlatg.and.abs(lat_radar(iobs)-axlatSN(ilat)).gt.abs(lat_radar(iobs)-axlatSN(ilat+1))) ilat=ilat+1
+   if (ilon.le.nlong-ismth.and.ilon.ge.1+ismth.and.ilat.le.nlatg-ismth.and.ilat.ge.1+ismth)then
+   if (ze_radar(iobs).ne.rmiss_radar.and.ze_radar(iobs).gt.9.9999998e-3)then
+   icount_data(ilon-ismth:ilon+ismth,ilat-ismth:ilat+ismth) = icount_data(ilon-ismth:ilon+ismth,ilat-ismth:ilat+ismth) + 1
+    val_plot(ilon-ismth:ilon+ismth,ilat-ismth:ilat+ismth)  = val_plot(ilon-ismth:ilon+ismth,ilat-ismth:ilat+ismth)  + 10.0 * log10(ze_radar(iobs))
+   end if
+   end if
+  end if
+ end if
+end do
+write(cheight,'(I5.5)')int(grid_cz(iplot_lev+KHALO))
+
+where(icount_data.ne.0) val_plot=val_plot/real(icount_data)
+
+  title1 = trim(ftimelabel) // " UTC (PAWR obs)"
   title2 = (/'',''/)
-  title3 = 'radar ref ' // cheight // ' m'
-  
-  if (cheight(1:1) == '0') title3='Radar reflectivity z=' // cheight(2:5) // ' m'
-  if (cheight(1:2) == '00') title3='Radar reflectivity z=' // cheight(3:5) // ' m'
-
+ write(title3,'(A,I5,A)') 'Radar reflectivity ',int(grid_cz(iplot_lev+KHALO)),' m' 
+!  if (cheight(1:1) == '0') title3='Radar reflectivity z=' // cheight(2:5) // ' m'
+!  if (cheight(1:2) == '00') title3='Radar reflectivity z=' // cheight(3:5) // ' m'
 
   iclrmap = 12
   
-  do ilon = 1, nlong_ext
-  do ilat = 1, nlatg_ext
-    if (ilon - nlonadd >= 1 .and. ilon - nlonadd < nlong .and. &
-       ilat - nlatadd >= 1 .and. ilat - nlatadd < nlatg  )then
-      if (val_plot_s(ilon-nlonadd,ilat-nlatadd) /= rmiss)then
-        vmask(ilon,ilat) = 0.0
-      else
-        vmask(ilon,ilat) = rmiss
-      end if
-    else
-      vmask(ilon,ilat) = rmiss
-    end if
-  end do
-  end do
-
+!  do ilon = 1, nlong_ext
+!  do ilat = 1, nlatg_ext
+!    if (ilon - nlonadd >= 1 .and. ilon - nlonadd < nlong .and. &
+!       ilat - nlatadd >= 1 .and. ilat - nlatadd < nlatg  )then
+!      if (val_plot(ilon,ilat) /= rmiss)then
+!        vmask(ilon,ilat) = 0.0
+!      else
+!        vmask(ilon,ilat) = rmiss
+!      end if
+!    else
+!      vmask(ilon,ilat) = rmiss
+!    end if
+!  end do
+!  end do
+ 
   grid_cxg_ext(nlonadd+1:nlong_ext-nlonadd) = real(grid_cxg(IHALO+1:IHALO+nlong))
   grid_cyg_ext(nlatadd+1:nlatg_ext-nlatadd) = real(grid_cyg(JHALO+1:JHALO+nlatg))
 
@@ -137,13 +178,14 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
   if (vpb == 0.10)then
     vpl = 0.55 - 0.5 * (vpt - vpb) * aratio
     vpr = 0.55 + 0.5 * (vpt - vpb) * aratio
-  end if
+ end if
+
 
   call gliset('MSGLEV',1)
   call sgiset('IFONT',1)
   call swiset('ICLRMAP',iclrmap)
   call swcmll
-  call swcset('FNAME',trim(psfile))
+  call swcset('FNAME',trim(psfile)//'_z'//trim(cheight)//'m')
   call swlset('LSEP',.false.)
   call swiset('IFL',1) !!! PNG
   call swiset('IWIDTH',1000)
@@ -155,16 +197,36 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
   call grfrm
 
 
+!!! MAP
+  call grswnd(axlon(1), axlon(nlong), axlatSN(1),axlatSN(nlatg))
+
+  call grsvpt(vpl,vpr,vpb,vpt)
+  call grstrn(10) !!! Mercator
+  call umlset('LGLOBE',.false.)
+  call umiset('INDEXOUT',31)
+!  call umscnt (0.5*(axlon(1)+axlon(nlong)),0.5*(axlatSN(1)+axlatSN(nlatg)),0.0)
+  call umpfit
+
+  call grstrf
+
+  call uwsgxa (axlon,nlong)
+  call uwsgya (axlatSN,nlatg)
+
+  call sglset('LCLIP',.true.) 
+  call umlset ('LGRIDMJ',.false.)
+  call umrset ('DGRIDMN',0.5)
+!  call umiset ('ITYPEMN',3)
+  call umiset ('INDEXMN',1)
+  call umpglb
+  call umplim
+  call umpmap('coast_japan')
+
+!!!!
+
   call grswnd(range_lonl,range_lonr,range_latl,range_latr)
 
   call grsvpt(vpl,vpr,vpb,vpt)
   call grstrn(1) !!! Give up map proj
-
-!!!!!  call grstrn(10) !!! Mercator
-!!!!  call umlset('LGLOBE',.false.)
-!!!!  call umiset('INDEXOUT',31)
-!  call umscnt (0.5*(vlonl+vlonr),0.5*(vlatl+vlatr),0.0)
-!!!!  call umpfit
 
   call grstrf
 
@@ -176,10 +238,6 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
 
   call ueitlv
 
-!!   vtlevs(1:ntpat+3) = (/-1.0e6,0.5,1.0,2.0,3.0,5.0,7.0,10.0,15.0,20.0,30.0,40.0,60.0,80.0,1.0e6/) !!! rain 
-!  ntpat = 9
-!  itpats(1:ntpat+2) = (/ 0, 40,34,50,62,68,74,80,84,92,98/) * 1000 + 999
-!  vtlevs(2:ntpat+2) = 5.0 + (/( 5.0*real(i), i=1,10 )/)
   ntpat = 10
   itpats(1:ntpat+2) = (/ 0, 40,34,30,50,62,68,74,80,84,92,98/) * 1000 + 999
   vtlevs(2:ntpat+2) = 5.0 + (/( 5.0*real(i), i=1,11 )/)
@@ -195,41 +253,8 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
   call udlset ('LMSG',.false.)
   call udlset ('LABEL',.false.)
 
-  call udiclv 
-  !call udsclv(1.0,31,1,'',-1.0) !!! z > 1.0m  -- approximate coastline 
-  call udsclv(0.5,11,1,'',-1.0) !!! z > 1.0m  -- approximate coastline 
-
-
-  call udcntz (land2dgs,nlong,nlong,nlatg,iwork,nwork)
-
-!!! masking
-  call ueitlv
-
-  call glrset ('RMISS', 0.0)
-  call gllset ('LMISS', .false.)
-  call sglset('LCLIP',.true.)
-  call uwsgxa (grid_cxg_ext,nlong_ext)
-  call uwsgya (grid_cyg_ext,nlatg_ext)
-  call uestlv(rmiss-abs(rmiss)*0.01,rmiss+abs(rmiss)*0.01,1602)
-  call uetone (vmask,nlong_ext,nlong_ext,nlatg_ext)
-
-!!! map
- 
- ! call umlset ('LGRIDMJ',.false.)
-!  call umrset ('DGRIDMN',0.5)
-!  call umiset ('ITYPEMN',3)
-!  call umiset ('INDEXMN',1)
-!
-!  call umpglb
-!  call umplim
-!  call umpmap('coast_japan')
-
-!  call uulinz(npts,vlons_area_d2,vlats_area_d2,3,91)
-
-
-  
+!!! Radar location  
   call uumrkz(1,0.5*(range_lonr+range_lonl),0.5*(range_latr+range_latl),9,21,0.010)
-
 
   amtics = 50.0 !! km
   astics = 50.0
@@ -265,18 +290,22 @@ subroutine plot_dbz_DCL(val_plot_s,land2dgs,psfile,cheight,csec)
 
   call sglset('LCLIP',.false.)
  
-
-
   call sgtxzv (0.5*(vpr+vpl),vpt+0.02,trim(title1),0.016,0,0,3) !
   call sgtxzv (vpr-0.01,vpt+0.045,trim(title2(1)),0.016,0,1,3) !
   call sgtxzv (vpr-0.01,vpt+0.020,trim(title2(2)),0.016,0,1,3) !
   call sgtxzv (0.5*(vpr+vpl),vpt+0.05,trim(title3),0.017,0,0,4) !
 
+
   call grcls 
 
-  deallocate(val_plot,grid_cxg_ext,grid_cyg_ext,vmask,iwork)
+ end if
+ end do !!! iplot_lev
+
+  deallocate(icount_data,val_plot,grid_cxg_ext,grid_cyg_ext,iwork)
+
 
 return
+
 contains
 !==================================================!
 subroutine dcbar(vpxr,vpyl,dylen)
@@ -379,5 +408,5 @@ subroutine dcbar(vpxr,vpyl,dylen)
   return
 end subroutine dcbar
 
-end subroutine plot_dbz_DCL
+end subroutine plot_dbz_DCL_obs
 !==============================================================!==================================================!

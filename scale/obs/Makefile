@@ -18,7 +18,7 @@ COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common_scalerm.o   \
               $(COMMON_DIR)/common_obs_scale.o \
               $(COMMON_DIR)/common_mpi_scale.o \
-              $(COMMON_DIR)/common_nml.o
+              $(COMMON_DIR)/common_nml.o 
 
 INCS    = $(SCALE_INC) $(NETCDF_INC)
 
@@ -38,6 +38,7 @@ LIBS    += $(JITDT_LIB)
 endif
 
 ifeq ($(ENABLE_PLOT_DCL),T)
+COMMON_OBJS += $(COMMON_DIR)/plot_dbz_DCL_obs.o
 COMMON_OBJS += $(COMMON_DIR)/plot_dbz_DCL.o
 LIBS += $(LIBDCL)
 endif
@@ -76,9 +77,9 @@ obsope_tools.o:	obsope_tools.f90 obs_tools.o $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 
 ifeq ($(ENABLE_JITDT),T)
-radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o jitdt_read_toshiba_f.o $(COMMON_DIR)
+radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o jitdt_read_toshiba_f.o ../common/plot_dbz_DCL_obs.o $(COMMON_DIR)
 else
-radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o $(COMMON_DIR)
+radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o ../common/plot_dbz_DCL_obs.o $(COMMON_DIR)
 endif
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 radar_tools.o:	radar/radar_tools.f90

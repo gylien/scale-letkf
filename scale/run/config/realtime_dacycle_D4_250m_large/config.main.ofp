@@ -6,9 +6,6 @@
 #===============================================================================
 
 PRESET='OFP' 
-RSCGRP="regular-cache"
-RSCGRP="regular-flat"
-RSCGRP="regular-cache"
 
 #RSCGRP="challenge"
 
@@ -18,6 +15,7 @@ DIR="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/scale-5.3.x_LETKF_sngl/scale-
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
+<<<<<<< HEAD:scale/run/config/realtime_dacycle_D4/config.main.ofp
 OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT"
 EXP4=D4_250M_NP4096
 #EXP4=D4_250M_NP4096_600S_SMTH
@@ -38,12 +36,19 @@ EXP4=D4_250M_NP4096
 EXP4=D4_250M_NP4096_600S_SMTH_0913_02
 
 #EXP4=exp_d4
+=======
+EXP4=exp_d4_250m_large
+>>>>>>> dacycle_OFP_dev:scale/run/config/realtime_dacycle_D4_250m_large/config.main.ofp
 EXP3=exp_d3
 EXP2=exp_d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
 
+<<<<<<< HEAD:scale/run/config/realtime_dacycle_D4/config.main.ofp
 INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_250M_NP4096_600S_SMTH"
+=======
+INDIR="${OUTDIR}"
+>>>>>>> dacycle_OFP_dev:scale/run/config/realtime_dacycle_D4_250m_large/config.main.ofp
 
 #===============================================================================
 # Location of model/data files
@@ -53,7 +58,7 @@ DATADIR="/work/hp150019/share/database"
 SCALE_DB="/work/hp150019/share/database" 
 
 DATA_TOPO=                                                           # Directory of the prepared topo files
-DATA_TOPO_BDY_SCALE=
+DATA_TOPO_BDY_SCALE="${OUTPUT}/${EXP3}/const/topo"
 DATA_LANDUSE=                                                        # Directory of the prepared landuse files
 DATA_BDY_SCALE="${OUTPUT}/${EXP4}"
 DATA_BDY_SCALE_PRC_NUM_X=
@@ -66,8 +71,11 @@ DATA_BDY_GRADS=
 #OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_TOSHIBA"
 #OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_JRC"
 OBS="/work/hp150019/c24140/scale_database/PAWRtest/testcase"
+<<<<<<< HEAD:scale/run/config/realtime_dacycle_D4/config.main.ofp
 OBS="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/PAWR_TOSHIBA"
 OBS= # DEBUG
+=======
+>>>>>>> dacycle_OFP_dev:scale/run/config/realtime_dacycle_D4_250m_large/config.main.ofp
 OBSNCEP=
 OBS_USE_JITDT=0 # 1: Run with JIT-DT 
                 # 0: No JIT-DT
@@ -149,10 +157,8 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-#MEMBER=50      # Ensemble size 
-
-MEMBER=2      # Ensemble size 
-NNODES=320   # Ensemble size + 1 (mean) +1 (mdet) + 1 (additional)
+MEMBER=<MEMBER>      # Ensemble size 
+NNODES=<NNODES>
 
 
 MEMBER=5      # Ensemble size 

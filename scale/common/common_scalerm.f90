@@ -533,6 +533,9 @@ subroutine scalerm_setup(execname)
     call read_nml_letkf_monitor
     call read_nml_letkf_radar
     call read_nml_letkf_h08
+#ifdef PLOT_DCL
+    call read_nml_plot_dcl
+#endif
   case ('LETKF  ')
     call read_nml_obs_error
     call read_nml_obsope

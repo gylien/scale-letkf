@@ -34,6 +34,8 @@ program dacycle
     write_grd_dafcst_mpi,     &
     send_recv_emean_others,   &
 !    bcast_restart_efcst_mpi,  &
+    plot_anal_mpi, &
+    plot_dafcst_mpi, &
     mpi_timer
   use common_obs_scale, only: &
     set_common_obs_scale
@@ -154,8 +156,6 @@ program dacycle
   call initialize_mpi_scale
   call mpi_timer('', 1)
 
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-
 !  if (command_argument_count() >= 2) then
 !    call get_command_argument(2, icmd)
 !    if (trim(icmd) /= '') then
@@ -167,12 +167,7 @@ program dacycle
 !  end if
 
   if (myrank == 0) then
-    call date_and_time(date=date, time=time)
-    call system_clock(stime_c, cpsec, cmax)
-    stime_da_c = stime_c
-
-    write (6, '(2A,1x,A)') '[Info] Start time: ', date, time 
-
+  
     write (6, '(A)') '============================================='
     write (6, '(A)') '  LOCAL ENSEMBLE TRANSFORM KALMAN FILTERING  '
     write (6, '(A)') '                                             '
@@ -221,6 +216,7 @@ program dacycle
       scycle_dafcst = 9999999
     endif
 
+
     ! setup grid parameters
     call set_common_scale
     ! Set COMM_e 
@@ -256,7 +252,7 @@ endif
       ! report current time
       call ADMIN_TIME_checkstate
 
-      if ( TIME_DOresume ) then
+      if ( TIME_DOresume .and. dafcst_step <= 0) then
         ! read state from restart files
         if (DIRECT_TRANSFER .and. icycle >= 1) then
           if (LOG_LEVEL >= 3) then
@@ -304,8 +300,8 @@ endif
         end if
       else
         call ADMIN_restart_write
-        call ADMIN_restart_write_additional !!!!!! To do: control additional restart outputs for gues_mean, gues_sprd, and anal_sprd
       end if
+      call ADMIN_restart_write_additional !!!!!! To do: control additional restart outputs for gues_mean, gues_sprd, and anal_sprd
 
       ! calc tendencies and diagnostices
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency( force = .false. )
@@ -379,7 +375,7 @@ endif
 
         call read_obs_all_mpi(obs)
 
-        call mpi_timer('READ_OBS (This may include JIT-DT waiting time)', 1, barrier=MPI_COMM_da)
+        call mpi_timer('READ_OBS', 1, barrier=MPI_COMM_da)
 
         !-----------------------------------------------------------------------
         ! Observation operator
@@ -512,6 +508,19 @@ endif
         !  call write_ens_mpi(anal3d, anal2d)
         !end if
 
+
+        ! Plot Analysis mean
+#ifdef PLOT_DCL
+        if (myrank_use_da .and. (myrank_e == mmean_rank_e)) then
+         if (PLOT_ANAL)then
+         if (.not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
+          call TIME_gettimelabel(fstimelabel)
+          call calc_ref_direct(ref3d)
+          call plot_anal_mpi(fstimelabel(1:15), ref3d)
+         endif
+        endif
+#endif
+
         call mpi_timer('WRITE_ANAL', 1, barrier=MPI_COMM_da)
 
         do iof = 1, OBS_IN_NUM
@@ -554,7 +563,6 @@ endif
       !-------------------------------------------------------------------------
       ! LETKF section end
       !-------------------------------------------------------------------------
-
 
       ! Send/receive the analysis ensemble mean
       ! Draw/output from forecasts
@@ -600,15 +608,20 @@ endif
 
             if (.not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
             call calc_ref_direct(ref3d)
-            call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
+            if (OUT_GRADS_DAFCST)then ! Output of dacycle-forecast in GrADS format
+              call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
+            endif
+#ifdef PLOT_DCL 
+            if (PLOT_FCST)then ! Output of dacycle-forecast        
+              call plot_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
+            endif 
+#endif
 
           endif ! [dafcst_step == 0 ]
 
         endif ! [ .not. myrank_use_da ]
 
         if ( (myrank_use_da .and. myrank_e == mmean_rank_e ) .or. ( .not. myrank_use_da .and. dafcst_step == 0 )) then
-if (myrank_use_da .and. (myrank_d == 0) .and. myrank_e == mmean_rank_e)write(6,'(a,2i7)')"DEBUG999 ",myrank_a,fcst_cnt
-if (.not. myrank_use_da .and. (myrank_d == 0))write(6,'(a,2i7)')"DEBUG999 ",myrank_a,fcst_cnt
           call send_recv_emean_others(fcst_cnt)
         endif
 
@@ -626,7 +639,7 @@ if (.not. myrank_use_da .and. (myrank_d == 0))write(6,'(a,2i7)')"DEBUG999 ",myra
           write(6,'(a)') "Main DA loop end"
           write(6,'(a)') "====="
         endif
-       
+
         if (.not. myrank_use_da) then
           call MPI_BARRIER(MPI_COMM_d, ierr)
           call date_and_time(date=date, time=time)
@@ -691,15 +704,6 @@ if (.not. myrank_use_da .and. (myrank_d == 0))write(6,'(a,2i7)')"DEBUG999 ",myra
   call scalerm_finalize('DACYCLE')
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
-
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-  if (myrank == 0) then
-    call date_and_time(date=date, time=time)
-    call system_clock(etime_c, cpsec, cmax)
-    write (6, '(2A,1x,A)') '[Info] End time: ', date, time
-    write (6, '(1A,1f12.4)') '[Info] Computation time by system_clock: ', real(etime_c - stime_c) / real(cpsec)
-    write (6, '(1A,1f12.4,1A,1i5,1A)') '[Info] Computation time by system_clock (excluding restart I/O): ', real(etime_noio_c - stime_noio_c) / real(cpsec), ' for ',lastcycle, ' cycles'
-  endif
 
   call finalize_mpi_scale
 

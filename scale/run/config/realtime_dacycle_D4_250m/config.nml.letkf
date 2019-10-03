@@ -4,7 +4,7 @@
 /
 
 &PARAM_LOG
- LOG_LEVEL = 1,
+ LOG_LEVEL = 1, 
  USE_MPI_BARRIER = .true.,
 /
 
@@ -20,9 +20,9 @@
 !--SLOT_END--
 !--SLOT_BASE--
 !--SLOT_TINTERVAL--
+!--OBS_JITDT_IP--
 !--OBS_USE_JITDT--
 !--OBS_JITDT_DATADIR--
-!--OBS_JITDT_IP--
 /
 
 &PARAM_LETKF
@@ -99,9 +99,8 @@
  USE_OBSERR_RADAR_REF = .true.
  USE_OBSERR_RADAR_VR = .true.
  RADAR_REF_THRES_DBZ = 10.0D0,
-! MIN_RADAR_REF_MEMBER = 20,
- MIN_RADAR_REF_MEMBER = 0, ! DEBUG
- MIN_RADAR_REF_MEMBER_OBSREF = 0, ! DEBUG
+ MIN_RADAR_REF_MEMBER = 10, 
+ MIN_RADAR_REF_MEMBER_OBSREF = 1,
  MIN_RADAR_REF_DBZ = 10.0D0,
  LOW_REF_SHIFT = -5.0D0,
  RADAR_ZMAX = 11.0D3,
@@ -118,6 +117,17 @@
 &PARAM_LETKF_H08
  H08_CH_USE = 0,0,0,0,0,0,0,0,0,0,
 /
+
+&PARAM_PLOT_DCL
+ plot_obs  = .false. ,
+ plot_anal = .true. ,
+ plot_fcst = .true. ,
+ plot_zlev_min = 10 , 
+ plot_zlev_max = 40 , 
+ plot_zlev_intv = 5 , 
+/
+
+
 
 !*** Attach SCALE configuration below ***
 

@@ -187,6 +187,7 @@ MODULE common_nml
   real(r_size) :: MIN_INFL_MUL = 0.0d0         ! Deprecated (use INFL_MUL_MIN)
   logical :: ADAPTIVE_INFL_INIT = .false.      ! Deprecated (use INFL_MUL_ADAPTIVE)
   real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0 ! Deprecated (use BOUNDARY_BUFFER_WIDTH)
+  logical :: OUT_GRADS_DAFCST = .false. ! Outut dacycle forecast in GrADS format
 
   !--- PARAM_LETKF_OBS
   logical :: USE_OBS(nobtype) = .true.
@@ -360,6 +361,16 @@ MODULE common_nml
   real(r_size)          :: OBSSIM_RADAR_LON = 0.0d0
   real(r_size)          :: OBSSIM_RADAR_LAT = 0.0d0
   real(r_size)          :: OBSSIM_RADAR_Z = 0.0d0
+
+#ifdef PLOT_DCL
+ !--- PARAM_PLOT_DCL
+  logical :: PLOT_OBS = .true.
+  logical :: PLOT_ANAL = .true.
+  logical :: PLOT_FCST = .true.
+  integer :: PLOT_ZLEV_MIN = 10
+  integer :: PLOT_ZLEV_MAX = 40
+  integer :: PLOT_ZLEV_INTV = 5
+#endif
 
   interface filename_replace_mem
     module procedure filename_replace_mem_int
@@ -684,6 +695,7 @@ subroutine read_nml_letkf
     PS_ADJUST_THRES, &
     NOBS_OUT, &
     NOBS_OUT_BASENAME, &
+    OUT_GRADS_DAFCST, &
     COV_INFL_MUL, &       !*** for backward compatibility ***
     MIN_INFL_MUL, &       !*** for backward compatibility ***
     ADAPTIVE_INFL_INIT, & !*** for backward compatibility ***
@@ -1134,7 +1146,39 @@ subroutine read_nml_obssim
 
   return
 end subroutine read_nml_obssim
+!-------------------------------------------------------------------------------
+! PARAM_PLOT_DCL
+!-------------------------------------------------------------------------------
+#ifdef PLOT_DCL
+subroutine read_nml_plot_dcl
+implicit none 
+integer :: ierr
 
+namelist /PARAM_PLOT_DCL/ &
+ PLOT_OBS, &
+ PLOT_ANAL, &
+ PLOT_FCST, &
+ PLOT_ZLEV_MIN, & 
+ PLOT_ZLEV_MAX, & 
+ PLOT_ZLEV_INTV
+ 
+  rewind(IO_FID_CONF)
+  read(IO_FID_CONF,nml=PARAM_PLOT_DCL,iostat=ierr)
+  if (ierr < 0) then !--- missing
+    write(6,*) '[Warning] /PARAM_PLOT_DCL/ is not found in namelist.'
+!    stop
+  elseif (ierr > 0) then !--- fatal error
+    write(6,*) '[Error] xxx Not appropriate names in namelist PARAM_PLOT_DCL. Check!'
+    stop
+  endif
+
+  if (LOG_LEVEL >= 4) then
+    write(6, nml=PARAM_PLOT_DCL)
+  end if
+
+ return
+end subroutine read_nml_plot_dcl
+#endif
 !-------------------------------------------------------------------------------
 ! Replace the member notation in 'filename' with 'mem' (as an integer)
 !-------------------------------------------------------------------------------
