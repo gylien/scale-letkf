@@ -167,7 +167,12 @@ program dacycle
 !  end if
 
   if (myrank == 0) then
-  
+    call date_and_time(date=date, time=time)
+    call system_clock(stime_c, cpsec, cmax)
+    stime_da_c = stime_c
+
+    write (6, '(2A,1x,A)') '[Info] Start time: ', date, time 
+
     write (6, '(A)') '============================================='
     write (6, '(A)') '  LOCAL ENSEMBLE TRANSFORM KALMAN FILTERING  '
     write (6, '(A)') '                                             '
