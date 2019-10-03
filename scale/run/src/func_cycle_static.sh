@@ -952,7 +952,7 @@ while ((time <= ETIME)); do
     if ((loop == 1 && MAKEINIT == 1 && DACYCLE != 1)); then
       RESTART_IN_BASENAME="<member>/init.d${dfmt}"
     else
-      RESTART_IN_BASENAME="${INDIR[$d]}/${time}/anal/<member>/init"
+      RESTART_IN_BASENAME="${INDIR[$d]}/${time}/anal/<imember>/init"
     fi
     RESTART_OUT_ADDITIONAL_COPIES=0
     RESTART_OUT_ADDITIONAL_BASENAME=

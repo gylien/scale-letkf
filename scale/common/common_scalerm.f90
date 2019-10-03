@@ -31,7 +31,8 @@ module common_scalerm
   integer, save                :: scalerm_mem = -1
   character(len=memflen), save :: scalerm_memf = '????'
   character(len=memflen+1), save :: scalerm_memf_dafcst = '?????'
-  character(len=memflen+1), save :: scalerm_memf_bdy = '????'
+  character(len=memflen+1), save :: scalerm_memf_bdy = '?????'
+  character(len=memflen+1), save :: scalerm_memf_ini = '?????'
   logical, save                :: scalerm_run = .false.
 
 contains
@@ -439,7 +440,8 @@ subroutine scalerm_setup(execname)
         myrank_use_da = .false.
 
         write (fmttmp, '(I2)') memflen
-        write (scalerm_memf_dafcst, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') scalerm_mem - mem_da
+        write (scalerm_memf_dafcst, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')') max(scalerm_mem - mem_da, 1)
+        scalerm_memf_ini = trim(scalerm_memf_dafcst) ! init file
         scalerm_memf_dafcst = "f"//trim(scalerm_memf_dafcst)
 
         scalerm_memf_bdy = memf_mean
@@ -467,10 +469,17 @@ subroutine scalerm_setup(execname)
       call IO_filename_replace_setup(log_memf_notation, scalerm_memf_dafcst) 
 
       ! bdy (bmember)
-      if (scalerm_memf_bdy == '????') then
+      if (scalerm_memf_bdy == '?????') then
         scalerm_memf_bdy = scalerm_memf 
       endif
       call IO_filename_replace_setup(bdy_memf_notation, scalerm_memf_bdy) 
+
+      ! init (imember)
+      if (scalerm_memf_ini == '?????') then
+        scalerm_memf_ini = scalerm_memf 
+      endif
+      call IO_filename_replace_setup(ini_memf_notation, scalerm_memf_ini) 
+
 
       ! member
       call IO_filename_replace_setup(memf_notation, scalerm_memf)
