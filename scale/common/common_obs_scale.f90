@@ -106,8 +106,7 @@ MODULE common_obs_scale
        'VADWND', 'SATEMP', 'ADPSFC', 'SFCSHP', 'SFCBOG', &
        'SPSSMI', 'SYNDAT', 'ERS1DA', 'GOESND', 'QKSWND', &
        'MSONET', 'GPSIPW', 'RASSDA', 'WDSATR', 'ASCATW', &
-       'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL', &
-       'LTNING'/) 
+       'TMPAPR', 'PHARAD', 'H08IRB', 'TCVITL', 'LTNING'/) 
 
   INTEGER,PARAMETER :: max_obs_info_meta = 3 ! maximum array size for type(obs_info)%meta
 
@@ -148,10 +147,10 @@ MODULE common_obs_scale
   END TYPE obs_da_value
   !!!!!! need to add %err and %dat for obsda2 if they can be determined in letkf_obs.f90 !!!!!!
 
-  INTEGER,PARAMETER :: nobsformats=5 !
+  INTEGER,PARAMETER :: nobsformats=6 !
   CHARACTER(30) :: obsformat_name(nobsformats) = &
     (/'CONVENTIONAL ', 'RADAR        ', 'Himawari-8-IR', &
-      'LIGHTNING    ', 'RADAR-GRD    '/)
+      'LIGHTNING    ', 'RADAR-GRD    ', 'LIGHTNING-GRD'/)
 
   INTEGER,PARAMETER :: iqc_good=0
   INTEGER,PARAMETER :: iqc_gross_err=5
@@ -212,6 +211,10 @@ function uid_obs(id_obs)
     uid_obs = 15
   case(id_tcmip_obs)
     uid_obs = 16
+  case(id_fp3d_obs, id_lt3d_obs)
+    uid_obs = 17
+  case(id_fp2d_obs, id_lt2d_obs)
+    uid_obs = 18
   case default
     uid_obs = -1     ! error
   end select
@@ -243,6 +246,8 @@ function uid_obs_varlocal(id_obs)
     uid_obs_varlocal = 8
   case(id_h08ir_obs)      ! H08
     uid_obs_varlocal = 9  ! H08
+  case(id_fp3d_obs, id_fp2d_obs, id_lt3d_obs, id_lt2d_obs)
+    uid_obs_varlocal = 10
   case default
     uid_obs_varlocal = -1 ! error
   end select
@@ -3214,7 +3219,7 @@ subroutine read_obs_radar_grd(cfile,obs)
     obs%lon(n) = GRID_CXG(i+IHALO)
     obs%lat(n) = GRID_CYG(j+JHALO)
     obs%lev(n) = GRID_CZ(k+KHALO)
-    obs%typ(n) = 22.0_r_size
+    obs%typ(n) = 22
     obs%dif(n) = 0.0_r_size
 
     err = real(err3dvr(i,j,k) * OBSERR_RADAR_VR, kind=r_size)
@@ -3273,11 +3278,12 @@ subroutine get_nobs_lt_grd(cfile,nn)
 
   inquire(file=cfile,exist=ex)
   if(ex) then
-    if (USE_LT_3D) then
+    select case (LT_OBS_NANE)
+    case ('FP3D', 'LTP3D')
       nn = nlong * nlatg * nlev ! lt3d
-    else
+    case ('FP2D', 'LTP2D')
       nn = nlong * nlatg        ! lt2d
-    endif
+    end select
   else
     write(6,'(2A)') cfile,' does not exist -- skipped'
   end iF
@@ -3306,6 +3312,9 @@ subroutine read_obs_lt_grd(cfile,obs)
   real(r_size) :: rlon, rlat
   real(r_size) :: err
   integer :: i, j, k, kmax_lt
+  integer :: cnt
+  integer :: obs_id
+  real(r_sngl) :: vmax
 
 !  call obs_info_allocate(obs)
 
@@ -3324,49 +3333,106 @@ subroutine read_obs_lt_grd(cfile,obs)
     read(iunit,rec=irec) ((err3d(i,j,k), i = 1, nlong), j = 1, nlatg)
   enddo ! k
 
-  irec = irec + 1
-  read(iunit,rec=irec) ((lt2d(i,j), i = 1, nlong), j = 1, nlatg)
-
-  irec = irec + 1
-  read(iunit,rec=irec) ((err2d(i,j), i = 1, nlong), j = 1, nlatg)
+!  irec = irec + 1
+!  read(iunit,rec=irec) ((lt2d(i,j), i = 1, nlong), j = 1, nlatg)
+!
+!  irec = irec + 1
+!  read(iunit,rec=irec) ((err2d(i,j), i = 1, nlong), j = 1, nlatg)
 
   close(iunit)
 
-  if (USE_LT_3D) then
+  select case (LT_OBS_NANE)
+  case ('FP3D')
     kmax_lt = nlev
-  else
+    obs_id = id_fp3d_obs
+  case ('LTP3D')
+    kmax_lt = nlev
+    obs_id = id_ltp3d_obs
+  case ('FP2D')
     kmax_lt = 1
+    obs_id = id_fp2d_obs
+  case ('LTP2D')
+    kmax_lt = 1
+    obs_id = id_ltp2d_obs
+  end select
+
+  if ( LT_TEST_SINGLE ) then
+
+    if ( kmax_lt > 1 ) then ! 3d case
+      vmax = maxval(lt3d(:,:,:))
+
+    else ! 2d case
+      vmax = -1.0
+      do j = 1, nlatg
+      do i = 1, nlong
+        if ( vmax < sum(lt3d(i,j,1:nlev)) ) then
+          vmax = sum(lt3d(i,j,1:nlev))
+        endif
+      enddo
+      enddo
+    endif
   endif
 
+  cnt = 0
   n = 0
   do k = 1, kmax_lt
   do j = 1, nlatg
   do i = 1, nlong
 
-!    call ij2phys(real(i,kind=r_size),real(j,kind=r_size),rlon,rlat)
+    if ( lt3d(i,j,k) > 1.0e-6 ) cnt = cnt + 1
 
     ! Lightning observation
     n = n + 1
-    obs%elm(n) = id_radar_ref_obs
+    obs%elm(n) = obs_id
     obs%lon(n) = GRID_CXG(i+IHALO)
     obs%lat(n) = GRID_CYG(j+JHALO)
     obs%lev(n) = GRID_CZ(k+KHALO)
-    obs%typ(n) = 25.0_r_size
+    obs%typ(n) = 25
     obs%dif(n) = 0.0_r_size
 
-    if (USE_LT_3D) then
-      err = real(err3d(i,j,k) * OBSERR_LT3D, kind=r_size)
+    select case (obs_id)
+    case( id_fp3d_obs, id_lt3d_obs, id_ltp3d_obs)
+      if ( lt3d(i,j,k) < 1.0e-6 ) then
+        err = 0.0
+        obs%err(n) = OBSERR_FP_OBSOFF
+      else
+        err = real(err3d(i,j,k), kind=r_size) * abs(lt3d(i,j,k)) * OBSERR_FP_RAT
+        obs%err(n) = OBSERR_FP_OBSON
+      endif
       obs%dat(n) = real(lt3d(i,j,k), kind=r_size) + err
-    else
-      err = real(err2d(i,j) * OBSERR_LT2D, kind=r_size)
-      obs%dat(n) = real(lt2d(i,j), kind=r_size) + err
+    case( id_fp2d_obs, id_lt2d_obs, id_ltp2d_obs)
+      if ( sum(lt3d(i,j,1:nlev)) < 1.0e-6 ) then
+        err = 0.0
+        obs%err(n) = OBSERR_FP_OBSOFF
+      else
+        err = real(err2d(i,j), kind=r_size) * abs(sum(lt3d(i,j,1:nlev))) * OBSERR_FP_RAT
+        obs%err(n) = OBSERR_FP_OBSON
+      endif
+      obs%dat(n) = real(sum(lt3d(i,j,1:nlev)), kind=r_size) + err
+    end select
+
+    ! Thinning
+    if ((mod(i, XY_THINNING_LT) /= 0) .or. &
+        (mod(j, XY_THINNING_LT) /= 0) .or. &
+        (mod(k, Z_THINNING_LT) /= 0)) then
+       obs%dat(n) = -1.0_r_size
+       ! obs%dat(n) < 0 will be discarded in letkf_obs.f90 
+    endif
+
+    if ( LT_TEST_SINGLE ) then
+      if ( obs%dat(n) < vmax ) then
+        obs%dat(n) = -1.0_r_size
+      endif
     endif
 
   enddo
   enddo
   enddo
 
+  write(6,'(a,i10)')"DEBUG000 Non-zero flash-point obs:",cnt
+
   return
 end subroutine read_obs_lt_grd
+
 
 END MODULE common_obs_scale

@@ -8,24 +8,23 @@
 STIME='20010101000000'
 ETIME='20010101000000'
 
-STIME='20010101011000'
-ETIME='20010101011000'
-#STIME='20010101012000'
-#ETIME='20010101012000'
-MEMBERS="mean "`seq 1 80`
+STIME='20010101010000'
+ETIME='20010101010000'
+MEMBERS=`seq 1 80`" mean"
+MEMBERS=" mean"
 
+FCSTLEN=3600 # 60min 
+#FCSTOUT=600 # 10min 
+FCSTOUT=60 # 1min 
+FCSTOUT=300 # 5min 
 
 CYCLE=1
 CYCLE_SKIP=1
 ISTEP=
 FSTEP=
 
-TIME_LIMIT='4:30:00' # 30 min from 20010101011000
+TIME_LIMIT='0:30:00' # 60 min
 
-#TIME_LIMIT='0:15:00' # init
-
-FCSTLEN=1800
-FCSTOUT=30
 
 #===============================================================================
 
@@ -37,7 +36,7 @@ MAKEINIT=0       # 0: No
 
                  #      fcst
                  #      history restart
-OUT_OPT=2        # 1:   o       o
+OUT_OPT=1        # 1:   o       o
                  # 2:   o
 
                  #      topo

@@ -135,6 +135,8 @@ cat > $jobscrp << EOF
 #PJM --omp thread=${THREADS}
 #PJM -g hp150019
 ##PJM -j
+#PJM -s
+
 rm -f machinefile
 for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
   for ippn in \$(seq $PPN); do

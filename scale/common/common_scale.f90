@@ -25,8 +25,8 @@ MODULE common_scale
 
   ! Parameter 'nv3d' is set in common_nml.f90 ; 3D state variables (in SCALE restart files)
   ! Parameter 'nv2d' is set in common_nml.f90 ; 2D state variables (in SCALE restart files)
-  INTEGER,PARAMETER :: nv3dd=17  ! 3D diagnostic variables (in SCALE history files)
-!  INTEGER,PARAMETER :: nv3dd=25 ! for obssim ! 3D diagnostic variables (in SCALE history files)
+!  INTEGER,PARAMETER :: nv3dd=17  ! 3D diagnostic variables (in SCALE history files)
+  INTEGER,PARAMETER :: nv3dd=25 ! for obssim ! 3D diagnostic variables (in SCALE history files)
 #ifdef H08
   INTEGER,PARAMETER :: nv2dd=9  ! H08  ! 2D diagnostic variables (in SCALE history files)
 #else
@@ -278,15 +278,15 @@ SUBROUTINE set_common_scale
     v3dd_name(iv3dd_ltp)   = 'LTpath'
 
 !    ! For obssim
-!    v3dd_name(iv3dd_cc)   = 'QCRG_C'
-!    v3dd_name(iv3dd_cr)   = 'QCRG_R'
-!    v3dd_name(iv3dd_ci)   = 'QCRG_I'
-!    v3dd_name(iv3dd_cs)   = 'QCRG_S'
-!    v3dd_name(iv3dd_cg)   = 'QCRG_G'
-!
-!    v3dd_name(iv3dd_ex)   = 'Ex'
-!    v3dd_name(iv3dd_ey)   = 'Ey'
-!    v3dd_name(iv3dd_ez)   = 'Ez'
+    v3dd_name(iv3dd_cc)   = 'QCRG_C'
+    v3dd_name(iv3dd_cr)   = 'QCRG_R'
+    v3dd_name(iv3dd_ci)   = 'QCRG_I'
+    v3dd_name(iv3dd_cs)   = 'QCRG_S'
+    v3dd_name(iv3dd_cg)   = 'QCRG_G'
+
+    v3dd_name(iv3dd_ex)   = 'Ex'
+    v3dd_name(iv3dd_ey)   = 'Ey'
+    v3dd_name(iv3dd_ez)   = 'Ez'
     !
     v2dd_name(iv2dd_topo) = 'topo'
     v2dd_name(iv2dd_ps) = 'SFC_PRES'

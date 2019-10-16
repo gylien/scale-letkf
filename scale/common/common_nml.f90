@@ -81,9 +81,10 @@ MODULE common_nml
   real(r_size) :: GROSS_ERROR_RADAR_VR = -1.0d0  ! < 0: same as GROSS_ERROR
   real(r_size) :: GROSS_ERROR_RADAR_PRH = -1.0d0 ! < 0: same as GROSS_ERROR
   real(r_size) :: GROSS_ERROR_H08 = -1.0d0      ! < 0: same as GROSS_ERROR
-  real(r_size) :: GROSS_ERROR_TCX = -1.0d0 ! debug ! < 0: same as GROSS_ERROR 
-  real(r_size) :: GROSS_ERROR_TCY = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
-  real(r_size) :: GROSS_ERROR_TCP = -1.0d0 ! debug ! < 0: same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_TCX = -1.0d0 !  < 0: same as GROSS_ERROR 
+  real(r_size) :: GROSS_ERROR_TCY = -1.0d0 !  < 0: same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_TCP = -1.0d0 !  < 0: same as GROSS_ERROR
+  real(r_size) :: GROSS_ERROR_LT = -1.0d0 ! < 0: same as GROSS_ERROR
 
   real(r_size) :: Q_UPDATE_TOP = 0.0d0     ! water vapor and hydrometeors are updated only below this pressure level (Pa)
   real(r_size) :: Q_SPRD_MAX = -1.0D0      ! maximum q (ensemble spread)/(ensemble mean) (only effective when > 0)
@@ -123,8 +124,7 @@ MODULE common_nml
   real(r_size) :: HORI_LOCAL(nobtype) = &
     (/500.0d3, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
        -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-       -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-       -1.0d0/)
+       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
 
   ! >0: localization length scale [ln(p) or m depends on obstype]
   !  0: no localization
@@ -132,8 +132,7 @@ MODULE common_nml
   real(r_size) :: VERT_LOCAL(nobtype) = &
     (/ 0.4d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0,   -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0, 1000.0d0, -1.0d0, -1.0d0, &
-      -1.0d0/)
+      -1.0d0, 1000.0d0, -1.0d0, -1.0d0, -1.0d0/)
 !      -1.0d0, 1000.0d0, -1.0d0,  0.0d0/)
 
   ! >0: localization length scale (sec) XXX not implemented yet XXX
@@ -142,8 +141,7 @@ MODULE common_nml
   real(r_size) :: TIME_LOCAL(nobtype) = &
     (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0/)
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
 
   real(r_size) :: HORI_LOCAL_RADAR_OBSNOREF = -1.0d0 ! <0: same as HORI_LOCAL(22=PHARAD)
   real(r_size) :: HORI_LOCAL_RADAR_VR = -1.0d0       ! <0: same as HORI_LOCAL(22=PHARAD)
@@ -156,8 +154,7 @@ MODULE common_nml
   integer :: MAX_NOBS_PER_GRID(nobtype) = &
     (/ 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, &
-      -1, -1, -1, -1, &
-      -1/)
+      -1, -1, -1, -1, -1/)
 
   integer :: MAX_NOBS_PER_GRID_CRITERION = 1 ! 1: normalized 3D distance (from closest)
                                              ! 2: localization weight (from largest)
@@ -169,8 +166,7 @@ MODULE common_nml
   real(r_size) :: OBS_MIN_SPACING(nobtype) = &
     (/300.0d3, 100.0d3, 100.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 100.0d3, 150.0d3, 150.0d3, &
       150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 150.0d3, 300.0d3, 150.0d3, 150.0d3, 150.0d3, &
-      150.0d3,   1.0d3,  15.0d3,1000.0d3, &
-      5.0d2/)
+      150.0d3,   1.0d3,  15.0d3,1000.0d3, 5.0d2/)
 
   ! >0: optimal grid spacing for bucket sorting of observations
   !  0: automatically determined based on HORI_LOCAL, MAX_NOBS_PER_GRID, and OBS_MIN_SPACING
@@ -178,8 +174,7 @@ MODULE common_nml
   real(r_size) :: OBS_SORT_GRID_SPACING(nobtype) = &
     (/ 0.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
       -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0, -1.0d0, -1.0d0, -1.0d0, &
-      -1.0d0/)
+      -1.0d0, -1.0d0, -1.0d0, -1.0d0, -1.0d0/)
 
   !--- PARAM_LETKF_VAR_LOCAL
   real(r_size) :: VAR_LOCAL_UV(nv3d+nv2d)        = 1.0d0
@@ -206,8 +201,14 @@ MODULE common_nml
   LOGICAL :: OBSANAL_OUTPUT = .false.
 
   !--- PARAM_LETKF_LT
-  logical :: USE_LT_3D       = .false. ! True: Use 3d lightning obs
-                                       ! False: Use "2d" lightning obs
+  character(4) :: LT_OBS_NANE = 'FP3D'
+  logical :: LT_TEST_SINGLE = .false. ! Sigle-observation experiment? 
+  real(r_size) :: LT_OBSERR_GROSS = 1.0d0 ! obs error for gross-error check
+  integer :: MIN_LT_MEMBER_OBSON = 1
+  integer :: MIN_LT_MEMBER_OBSOFF = 1
+  real(r_size) :: LT_ZMAX = 12.0d3 ! !Height limit of lightning data to be used
+  integer :: XY_THINNING_LT = 1 ! Horizontal thinning interval (1: no thinning)
+  integer :: Z_THINNING_LT = 1 ! Vertical thinning interval (1: no thinning)
 
 
   !--- PARAM_LETKF_RADAR
@@ -276,6 +277,10 @@ MODULE common_nml
                                       5.0d0,5.0d0,5.0d0,5.0d0,5.0d0/) ! H08
   real(r_size) :: OBSERR_LT3D = 1.0d0 ! tentative!!
   real(r_size) :: OBSERR_LT2D = 1.0d0 ! tentative!!
+  real(r_size) :: OBSERR_FP_RAT = 0.5d0 ! 50% of observed value: Lien et al. (2013)
+  real(r_size) :: OBSERR_FP = 1.0d0 
+  real(r_size) :: OBSERR_FP_OBSON = 1.0d0  ! obs err for LETKF when obs has lightning
+  real(r_size) :: OBSERR_FP_OBSOFF = 0.1d0  ! obs err for LETKF when obs has no lightning
 
   !--- PARAM_OBSSIM
   logical               :: OBSSIM_OBSOUT = .false.
@@ -418,6 +423,7 @@ subroutine read_nml_letkf
     GROSS_ERROR_TCX, &
     GROSS_ERROR_TCY, &
     GROSS_ERROR_TCP, &
+    GROSS_ERROR_LT, &
     Q_UPDATE_TOP, &
     Q_SPRD_MAX, &
     BOUNDARY_BUFFER_WIDTH, &
@@ -467,6 +473,9 @@ subroutine read_nml_letkf
   end if
   if (GROSS_ERROR_TCP < 0.0d0) then
     GROSS_ERROR_TCP = GROSS_ERROR
+  end if
+  if (GROSS_ERROR_LT < 0.0d0) then
+    GROSS_ERROR_LT = GROSS_ERROR
   end if
 
   if (trim(INFL_MUL_OUT_BASENAME) == '') then
@@ -772,7 +781,11 @@ subroutine read_nml_obs_error
     OBSERR_TCP, &
     OBSERR_H08, &    ! H08
     OBSERR_LT3D, &
-    OBSERR_LT2D
+    OBSERR_LT2D, &
+    OBSERR_FP_RAT, &
+    OBSERR_FP_OBSOFF, &
+    OBSERR_FP_OBSON, &
+    OBSERR_FP
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBS_ERROR,iostat=ierr)
@@ -892,7 +905,14 @@ subroutine read_nml_letkf_lt
   integer :: ierr
 
   namelist /PARAM_LETKF_LT/ &
-    USE_LT_3D
+    LT_TEST_SINGLE, &
+    LT_OBS_NANE, &
+    LT_OBSERR_GROSS, &
+    MIN_LT_MEMBER_OBSON, &
+    MIN_LT_MEMBER_OBSOFF, &
+    XY_THINNING_LT, &
+    Z_THINNING_LT, &
+    LT_ZMAX
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_LT,iostat=ierr)

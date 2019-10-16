@@ -8,19 +8,26 @@ OBSTYPE="RADAR"
 #OBSTYPE="LT"
 #OBSTYPE="FP" # Flash point
 #OBSTYPE="CONV"
-#OBSTYPE="ALL"
+OBSTYPE="ALL"
 
 # Generate new obs format file
 OBSSIM_OBSOUT=".false." # anal/gues
-OBSSIM_OBSOUT=".true." # fcst
+#OBSSIM_OBSOUT=".true." # fcst
 
 TYPE=fcst
 #TYPE=anal
 #TYPE=gues
 
-EXP=2000m_WK1982_LT_SN14_NATURE
-EXP=2000m_WK1982_LT_SN14_NATURE_1MIN
+
+EXP=2000m_SN14_NODA_1002_FIR2km
+#
+EXP=2000m_SN14_DA_1002_FIR2km
+
+
+#EXP=2000m_WK1982_LT_SN14_NATURE
+#EXP=2000m_WK1982_LT_SN14_NATURE_1MIN
 #EXP=2000m_LT_SN14_0710_DA_TH02_RTPS0.95_0802
+
 
 . config/${EXP}/config.main.$SYS
 . config/${EXP}/config.fcst
@@ -36,8 +43,9 @@ tstart='2001-01-01 1:00:30'
 tstart='2001-01-01 1:01:00'
 tend='2001-01-01 1:11:00'
 
-tstart='2001-01-01 1:00:30'
-tend='2001-01-01 1:10:00'
+
+tstart='2001-01-01 1:15:00'
+tend='2001-01-01 1:20:00'
 
 #tstart='2001-01-01 1:10:30'
 #tend='2001-01-01 1:20:00'
@@ -45,18 +53,26 @@ tend='2001-01-01 1:10:00'
 if [ "$TYPE" == "fcst" ] ; then
   tstart='2001-01-01 1:00:00'
 
-  #FCSTLEN=3600 
-  #TS=1
-  #TE=121
+  FCSTLEN=1800 
+  FCSTLEN=3600 
+  TS=1
+  TE=121
 
   tstart='2001-01-01 1:00:00'
+  tstart='2001-01-01 0:00:00'
+  tstart='2001-01-01 1:10:00'
+
+  FCSTLEN=3600 
+  TS=1
+  TE=13
+
 #  tstart='2001-01-01 1:10:00'
 ##  tstart='2001-01-01 1:20:00'
 
-  FCSTLEN=1800 
-  TS=1
-  #TE=41
-  TE=31 # 2000m_WK1982_LT_SN14_NATURE_1MIN
+#  tstart='2001-01-01 1:11:00'
+#  FCSTLEN=1200 
+#  TS=1
+#  TE=41
 
 elif [ "$TYPE" == "anal" ] || [ "$TYPE" == "gues" ] ; then
   FCSTOUT=30
@@ -73,6 +89,24 @@ MEM=mean
 
 SMEM=0 # 
 EMEM=${SMEM} # mean
+EMEM=20
+
+SMEM=1
+EMEM=10
+SMEM=11
+EMEM=20
+SMEM=21
+EMEM=30
+SMEM=31
+EMEM=40
+SMEM=41
+EMEM=50
+SMEM=51
+EMEM=60
+SMEM=61
+EMEM=70
+SMEM=71
+EMEM=80
 
 #
 MEM_L=`seq ${SMEM} ${EMEM}`
@@ -82,7 +116,7 @@ LETKF_RUN="$(pwd)"
 
 #WDIR="/scratch/$(id -ng)/${USER}/obssim"
 #WDIR=${TMPL}
-WDIR=${LETKF_RUN}/../tmp_obssim_${SMEM}_${EMEM}
+WDIR=${LETKF_RUN}/../tmp_obssim_${EXP}_${SMEM}_${EMEM}
 OBSSIM_BIN="${LETKF_RUN}/../obs/obssim"
 RUNSH=$WDIR/OBSSIM.sh
 RUNCONF_COMMON=$WDIR/OBSSIM.conf_common
@@ -247,7 +281,7 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
     ONAME=${ORG_DIR}/fp_${HTIME}_${MEM}.dat
     OBSSIM_NUM_3D_VARS="1"
     OBSSIM_3D_VARS_LIST="5003" 
-    OBSSIM_NUM_2D_VARS="1"
+    OBSSIM_NUM_2D_VARS="0"
     OBSSIM_2D_VARS_LIST="5004" 
     OHEAD="fp" 
 

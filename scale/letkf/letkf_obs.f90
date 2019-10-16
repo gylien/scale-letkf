@@ -412,7 +412,36 @@ SUBROUTINE set_letkf_obs
 
     tmpelm(n) = obs(iof)%elm(iidx)
 
+!!!###### LT assimilation ######
+    if (obs(iof)%elm(iidx) == id_fp3d_obs .or. obs(iof)%elm(iidx) == id_fp2d_obs) then
+ 
+      ! Thinning 
+      if ( obs(iof)%dat(iidx) < 0.0d0 ) then
+        obsda%qc(n) = iqc_out_h
+        cycle
+      endif
 
+      mem_ref = 0
+      do i = 1, MEMBER
+        if (obsda%ensval(i,n) > 1.0d-6) then
+          mem_ref = mem_ref + 1
+        end if
+      end do
+
+      if (obs(iof)%dat(iidx) > 1.0d-6) then 
+      ! obs: flash
+        if (mem_ref < MIN_LT_MEMBER_OBSON) then
+          obsda%qc(n) = iqc_ref_mem
+          cycle
+        endif
+      else
+      ! obs: no flash
+        if (mem_ref < MIN_LT_MEMBER_OBSOFF) then
+          obsda%qc(n) = iqc_ref_mem
+          cycle
+        endif
+      endif
+    endif
 
 !!!###### RADAR assimilation ######
     if (obs(iof)%elm(iidx) == id_radar_ref_obs .or. obs(iof)%elm(iidx) == id_radar_ref_zero_obs) then
@@ -612,6 +641,10 @@ SUBROUTINE set_letkf_obs
       IF(ABS(obsda%val(n)) > GROSS_ERROR_TCP * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
       END IF
+    case (id_fp3d_obs, id_fp2d_obs)
+      if(ABS(obsda%val(n)) > GROSS_ERROR_LT * LT_OBSERR_GROSS) then
+        obsda%qc(n) = iqc_gross_err
+      endif
     case default
       IF(ABS(obsda%val(n)) > GROSS_ERROR * obs(iof)%err(iidx)) THEN
         obsda%qc(n) = iqc_gross_err
@@ -660,7 +693,7 @@ SUBROUTINE set_letkf_obs
 !    ELSE
 !#ifdef DEBUG
 
-      write (6, '(2I6,2F8.2,5F11.3,I3)') obs(iof)%elm(iidx), &
+      write (6, '(2I6,2F7.1,5F10.3,I3)') obs(iof)%elm(iidx), &
                                          obs(iof)%typ(iidx), &
                                          obs(iof)%lon(iidx)*0.001, &
                                          obs(iof)%lat(iidx)*0.001, &
@@ -1224,7 +1257,7 @@ SUBROUTINE set_letkf_obs
               obsgrd(ictype)%tot_sub(1), obsgrd(ictype)%tot_sub(2), obsgrd(ictype)%tot_ext
   end do
   write (6, '(A)') '---------------------------------------------------------------------'
-    write (6, '(A6,5x,4I11,11x,A3)') 'TOTAL ', nobs_g(1), nobs_sub(1), nobs_g(2), nobs_sub(2), 'N/A'
+    write (6, '(A6,5x,4I11,11x,A3)') 'TOTAL ', nobs_g(1), nobs_g(2), nobs_sub(1), nobs_sub(2), 'N/A'
   write (6, '(A)') '====================================================================='
 
   RETURN

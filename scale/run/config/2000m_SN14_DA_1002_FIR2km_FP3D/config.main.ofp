@@ -8,10 +8,10 @@
 
 PRESET='OFP'
 OFP_MODE="regular-flat"
-#OFP_MODE="debug-flat"
+OFP_MODE="debug-flat"
 
 
-EXP=2000m_LT_SN14_0710_DA_TH02_RTPS0.95_0802
+EXP=2000m_SN14_DA_1002_FIR2km_FP3D
 
 INIT_LOC_ENS=1 # 1: initialize with random bubble location and amplitude (Aksoy et al. 2009)
 
@@ -42,7 +42,7 @@ DATA_BDY_WRF=
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 DATA_BDY_GRADS=
 
-OBS="/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/2000m_WK1982_LT_SN14_NATURE/20010101010000/fcst/mean/obs"
+OBS="/work/hp150019/f22013/SCALE-LETKF/scale-LT/OUTPUT/2000m_SN14_NODA_1002_FIR2km/20010101010000/fcst/mean/obs"
 OBSNCEP=
 
 #===============================================================================
@@ -82,7 +82,8 @@ LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
 OBSNUM=1
-OBSNAME[1]=radar3d
+#OBSNAME[1]=radar3d
+OBSNAME[1]=fp
 
 #===============================================================================
 # Cycling settings
@@ -93,15 +94,11 @@ LCYCLE=300        # Length of a GFS-LETKF cycle (second)
 LTIMESLOT=300      # Timeslot interval for 4D-LETKF (second)
 
 
-WINDOW_S=30      # SCALE forecast time when assimilation window starts (second)
-WINDOW_E=30      # SCALE forecast time when assimilation window ends (second)
-LCYCLE=30        # Length of a GFS-LETKF cycle (second)
-LTIMESLOT=30      # Timeslot interval for 4D-LETKF (second)
-
 #===============================================================================
 # Parallelization settings
 
 MEMBER=80           # Ensemble size
+
 NNODES=81
 
 PPN=64              # Number of processes per node
@@ -120,7 +117,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
-TMPSUBDIR="efcst_scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
+TMPSUBDIR="scale-letkf_${SYSNAME}" # (used to identify multiple runs in the same time)
 
 TMP="$DIR/tmp/$TMPSUBDIR"   # Temporary directory shared among all nodes
 TMPS="$TMP"  # Temporary directory only on the server node

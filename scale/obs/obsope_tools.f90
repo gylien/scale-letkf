@@ -364,7 +364,11 @@ SUBROUTINE obsope_cal(obs, obsda_return)
                   call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn))
                 end if
               else
-                call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn)) ! z level 10/24/2018 by TH
+                if (obs(iof)%lev(n) > LT_ZMAX .and. id_fp3d_obs) then
+                  obsda%qc(nn) = iqc_radar_vhi
+                else
+                  call phys2ijkz(v3dg(:,:,:,iv3dd_hgt),ri(nn),rj(nn),obs(iof)%lev(n),rk,obsda%qc(nn)) ! z level 10/24/2018 by TH
+                endif
               end if
 
 
