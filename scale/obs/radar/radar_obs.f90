@@ -14,6 +14,7 @@ module radar_obs
 
   implicit none
   public
+  real(r_size), allocatable, save :: radlon(:, :, :), radlat(:, :, :), radz(:, :, :)
 
 contains
 
@@ -779,7 +780,6 @@ use scale_time, only: TIME_gettimelabel
   integer, save::i=0
 
   real(r_size), allocatable :: ze(:, :, :), vr(:, :, :), qcflag(:, :, :), attenuation(:, :, :), rrange(:)
-  real(r_size), allocatable :: radlon(:, :, :), radlat(:, :, :), radz(:, :, :)
   real(r_size), allocatable :: lon(:), lat(:), z(:)
   integer(8), allocatable :: grid_index(:), grid_count_ze(:), grid_count_vr(:)
   real(r_size), allocatable :: grid_ze(:), grid_vr(:)
@@ -947,13 +947,15 @@ use scale_time, only: TIME_gettimelabel
   end do
 !$omp end parallel do
 
-  allocate(radlon(na, nr, ne), radlat(na, nr, ne), radz(na, nr, ne))
-!  write(*, *) "call radar_georeference"
-  call radar_georeference(lon0, lat0, z0, na, nr, ne, &                                   ! input
-       &                  real(az(:, 1, 1), r_size), rrange, real(el(1, :, 1), r_size), & ! input (assume ordinary scan strategy)
-       &                  radlon, radlat, radz)                                           ! output
+  if ((.not. allocated(radlon)) .and. (.not. allocated(radlat)) .and. (.not. allocated(radz))) then 
+    allocate(radlon(na, nr, ne), radlat(na, nr, ne), radz(na, nr, ne))
+  !  write(*, *) "call radar_georeference"
+    call radar_georeference(lon0, lat0, z0, na, nr, ne, &                                   ! input
+         &                  real(az(:, 1, 1), r_size), rrange, real(el(1, :, 1), r_size), & ! input (assume ordinary scan strategy)
+         &                  radlon, radlat, radz)                                           ! output
 
-  call mpi_timer('read_obs_radar_toshiba:radar_georeference:', 1)
+    call mpi_timer('read_obs_radar_toshiba:radar_georeference:', 1)
+  endif
 
 !  write(*, *) "call define_grid"
   call define_grid(lon0, lat0, nr, rrange, rrange(nr), RADAR_ZMAX, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_VERT, & ! input
@@ -1085,9 +1087,10 @@ use scale_time, only: TIME_gettimelabel
   if(allocated(qcflag)) deallocate(qcflag)
   if(allocated(attenuation)) deallocate(attenuation)
   if(allocated(rrange)) deallocate(rrange)
-  if(allocated(radlon)) deallocate(radlon)
-  if(allocated(radlat)) deallocate(radlat)
-  if(allocated(radz)) deallocate(radz)
+! Assume radar geographical information does not change during DA cyclying
+!  if(allocated(radlon)) deallocate(radlon)
+!  if(allocated(radlat)) deallocate(radlat)
+!  if(allocated(radz)) deallocate(radz)
 
   if(allocated(grid_index)) deallocate(grid_index)
   if(allocated(grid_ze)) deallocate(grid_ze)

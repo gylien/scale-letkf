@@ -60,6 +60,8 @@ MODULE radar_tools
 CONTAINS
 
   subroutine radar_georeference(lon0, lat0, z0, na, nr, ne, azimuth, rrange, elevation, radlon, radlat, radz)
+    implicit none
+
     real(r_size), intent(in) :: lon0, lat0, z0
     integer, intent(in) :: na, nr, ne
     real(r_size), intent(in) :: azimuth(na), rrange(nr), elevation(ne)
@@ -228,7 +230,7 @@ CONTAINS
 
     REAL(r_size) :: count_inv, tmpstdvr, tmpmeanvr
     integer(8) :: idx, jdx, nobs
-    !integer time1, time2, timerate, timemax
+    integer time1, time2, timerate, timemax
 
     integer :: ia,ir,ie
     integer,parameter::nobs_sp_max=1199*1199*110
@@ -237,11 +239,11 @@ CONTAINS
 
 
     !QC
-    !call system_clock(time1, timerate, timemax)
+    call system_clock(time1, timerate, timemax)
     call apply_qcflag(na, nr, ne, ze, vr, qcflag, missing, input_is_dbz, lon0, lat0, radlon, radlat, radz, & ! input
          &            qced_ze, qced_vr)                                    ! output
-    !call system_clock(time2, timerate, timemax)
-    !write(*, *) "QC", (time2 - time1) / dble(timerate)
+    call system_clock(time2, timerate, timemax)
+    write(*, *) "QC", (time2 - time1) / dble(timerate)
 
     !AVERAGE DATA AND INCLUDE OBSERVATIONA ERROR.
     !We will compute the i,j,k for each radar grid point and box average the data.
@@ -266,31 +268,31 @@ CONTAINS
 
 
     !Indexing
-    !time1 = time2
+    time1 = time2
     call indexing(na, nr, ne, radlon, radlat, radz, qced_ze, & ! input spherical
          &        nlon, nlat, nlev, lon, lat, z, dlon, dlat, dz, & ! input cartesian
          &        missing, & ! input param
          &        rad2grid, mask, nobs_each_elev, nobs) ! output
-    !call system_clock(time2, timerate, timemax)
-    !write(*, *) "index", (time2 - time1) / dble(timerate)
-    !write(*, *) "nobs = ", nobs
+    call system_clock(time2, timerate, timemax)
+    write(*, *) "index", (time2 - time1) / dble(timerate)
+    write(*, *) "nobs = ", nobs
 
 
     !Pack data
-    !time1 = time2
+    time1 = time2
     call packing(na, nr, ne, radlon, radlat, radz, qced_ze, qced_vr, attenuation, & ! input spherical
          &       rad2grid, mask, nobs_each_elev, nobs, &                            ! input index
          &       packed_grid, packed_data, packed_attn)                             ! output
     deallocate(nobs_each_elev, qced_ze, qced_vr, rad2grid, mask)
-    !call system_clock(time2, timerate, timemax)
-    !write(*, *) "pack", (time2 - time1) / dble(timerate)
+    call system_clock(time2, timerate, timemax)
+    write(*, *) "pack", (time2 - time1) / dble(timerate)
 
     packed_grid_count=0
     do idx = 1, nobs
      packed_grid_count(packed_grid(idx))=packed_grid_count(packed_grid(idx))+1
    end do
     !Sort index array
-    !time1 = time2
+    time1 = time2
     allocate(grid_index(nobs))
 !$omp parallel do private(idx)
     do idx = 1, nobs
@@ -303,18 +305,18 @@ CONTAINS
     call quicksort(nobs, grid_index) 
 
 
-    !call system_clock(time2, timerate, timemax)
-    !write(*, *) "sort", (time2 - time1) / dble(timerate)
+    call system_clock(time2, timerate, timemax)
+    write(*, *) "sort", (time2 - time1) / dble(timerate)
 
     !Unique superobs (nobs_sp)
     !time1 = time2
     call uniq_int_sorted(nobs, grid_index, nobs_sp)
-    !call system_clock(time2, timerate, timemax)
-    !write(*, *) "uniq", (time2 - time1) / dble(timerate)
+    call system_clock(time2, timerate, timemax)
+    write(*, *) "uniq", (time2 - time1) / dble(timerate)
 !    write(*, *) "nobs_sp = ", nobs_sp
 
     !Inverted indexing
-    !time1 = time2
+    time1 = time2
     allocate(pack2uniq(nobs))
 !$omp parallel private(idx, jdx)
 !$omp do
@@ -323,22 +325,22 @@ CONTAINS
     end do !idx
 !$omp end do
 !$omp single
-    !call system_clock(time2, timerate, timemax)
-    !write(*, *) "inv idx", (time2 - time1) / dble(timerate)
+    call system_clock(time2, timerate, timemax)
+    write(*, *) "inv idx", (time2 - time1) / dble(timerate)
 
     !Allocate output arrays
-    !time1 = time2
+    time1 = time2
     allocate(grid_ref(nobs_sp), grid_vr(nobs_sp))
     allocate(grid_count_ref(nobs_sp), grid_count_vr(nobs_sp))
     allocate(grid_lon_ref(nobs_sp), grid_lat_ref(nobs_sp), grid_z_ref(nobs_sp))
     allocate(grid_lon_vr(nobs_sp) , grid_lat_vr(nobs_sp) , grid_z_vr(nobs_sp))
     allocate(grid_w_vr(nobs_sp))
     allocate(grid_meanvr(nobs_sp), grid_stdvr(nobs_sp))
-    !call system_clock(time2, timerate, timemax)
-    !write(*, *) "alloc out ary", (time2 - time1) / dble(timerate)
+    call system_clock(time2, timerate, timemax)
+    write(*, *) "alloc out ary", (time2 - time1) / dble(timerate)
 
     !Initialize arrays
-    !time1 = time2
+    time1 = time2
 !$omp end single
 !$omp do
     do idx = 1, nobs_sp
@@ -358,11 +360,11 @@ CONTAINS
     end do
 !$omp end do
 !$omp single
-    !call system_clock(time2, timerate, timemax)
-    !write(*, *) "init ary", (time2 - time1) / dble(timerate)
+    call system_clock(time2, timerate, timemax)
+    write(*, *) "init ary", (time2 - time1) / dble(timerate)
 
     !Accumulate data
-    !time1 = time2
+    time1 = time2
     !PROCESS REFLECITIVITY
     !use attenuation estimates / ignore estimates
     !13 sections
@@ -465,10 +467,10 @@ CONTAINS
     ENDDO !jdx
 !$omp end sections
 !$omp single
-    !call system_clock(time2, timerate, timemax)
-    !write(*, *) "accum", (time2 - time1) / dble(timerate)
+    call system_clock(time2, timerate, timemax)
+    write(*, *) "accum", (time2 - time1) / dble(timerate)
 
-    !time1 = time2
+    time1 = time2
     !Average data and write observation file (FOR LETKF)
 !$omp end single
 !$omp do private(idx, count_inv, tmpstdvr, tmpmeanvr)
@@ -520,8 +522,8 @@ CONTAINS
     end do !idx
 !$omp end do
 !$omp end parallel
-    !call system_clock(time2, timerate, timemax)
-    !write(*, *) "normalize", (time2 - time1) / dble(timerate)
+    call system_clock(time2, timerate, timemax)
+    write(*, *) "normalize", (time2 - time1) / dble(timerate)
     return
   end SUBROUTINE radar_superobing
 
