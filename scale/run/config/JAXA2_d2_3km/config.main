@@ -14,7 +14,7 @@ PRESET='K_rankdir'                          # 'K' or 'K_rankdir'
 LANDUSE_TARGZ="F"
 TOPO_TARGZ="F"
 
-EXP="test5"
+EXP="JAXA2_D2_BDYENS_Cnv_TCv_GPR_new"
 DIR="$(cd "$(pwd)/.." && pwd)"   # Root directory of the SCALE-LETKF
 
 DATADIR="/volume61/data/hp120282/k03117/scale/database"
@@ -36,7 +36,7 @@ DATA_BDY_NICAM=
 #DATA_ADDINFL="$OUTDIR/../JAXA2_D2_BDYENS_ZA_ADDI"
 
 
-OBS="$DATDIR/obs/JAXA2_D2_BDYENS_Zavrg_z"
+OBS="$DATDIR/obs/JAXA2_D2_171012_Cnv_TCv_GPR"
 OBSNCEP=
 
 #===============================================================================
@@ -71,7 +71,7 @@ BDYINT=3600
 BDYCYCLE_INT=21600
 #PARENT_REF_TIME=20150801000000
 #PARENT_REF_TIME=20150801060000
-PARENT_REF_TIME=20150801120000
+#PARENT_REF_TIME=20150801120000
 #PARENT_REF_TIME=20150801180000
 #PARENT_REF_TIME=20150802000000
 #PARENT_REF_TIME=20150802060000
@@ -102,9 +102,9 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 # Parallelization settings
 
 #dbg2
-#MEMBER=3          # Ensemble size
+#MEMBER=1          # Ensemble size
 #
-#NNODES=384          # Number of nodes
+#NNODES=96          # Number of nodes
 
 MEMBER=50          # Ensemble size
 

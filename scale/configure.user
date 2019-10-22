@@ -1,1 +1,56 @@
-configure.user.K
+TOPDIR    = ../../..
+SCALE_INC = -I$(TOPDIR)/dc_utils \
+            -I$(TOPDIR)/gtool   \
+            -I$(TOPDIR)/include
+#SCALE_LIB = -L$(TOPDIR)/lib -lscale 
+SCALE_LIB = -L$(TOPDIR)/lib -lscale -lgtool -ldcutils
+
+SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
+
+include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
+
+NETCDF_INC = $(SCALE_NETCDF_INCLUDE)
+NETCDF_LIB = $(SCALE_NETCDF_LIBS)
+
+LAPACK_LIB = -mkl=sequential
+
+BUFR_LIB  = -L/data/opt/bufrlib/10.1.0_intel/lib -lbufrlib
+
+######
+
+SFC       = ifort
+FC        = mpiifort
+
+FOPTS_SCALE = $(FFLAGS)
+
+FOPTS     = $(FOPTS_SCALE) \
+            -qopenmp
+
+#FOPTS     = -fpp -m64 -O3 -xHost                 \
+#            -assume byterecl -convert big_endian \
+#            -fp-model source                     \
+#            -mcmodel=medium -heap-arrays         \
+#            -axMIC-AVX512                        \
+#            -qopenmp \
+##            -g -traceback -check bounds,pointers -fpe0 -DDEBUG
+
+#FMCMODEL  = -mcmodel=medium -shared-intel
+FBYTESWAP = -convert little_endian
+FFREE     = -free
+FFIXED    = -fixed
+
+# -- for Himawari-8 assimilatin on the K computer (T.Honda)
+# -- If you want to compile without RTTOV (Himawari assimilation),
+# -- you should set "H08 = F".
+H08       = F
+
+DIR_RTTOV = /home/honda/local/RTTOV
+RT_LDFLAGS = -L$(DIR_RTTOV)/lib -lrttov11.2.0_test -lrttov11.2.0_other \
+             -lrttov11.2.0_coef_io -lrttov11.2.0_parallel -lrttov11.2.0_main
+RT_INCLUDE = -I$(DIR_RTTOV)/mod -I$(DIR_RTTOV)/include
+
+ifeq ($(H08),T)
+FOPTS     += -DH08
+FOPTS_SCALE += -DH08
+endif

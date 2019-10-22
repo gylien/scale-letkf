@@ -1,1 +1,12 @@
-config/JAXA2_d2_3km/config.nml.ensmodel
+&PARAM_ENSEMBLE
+!--MEMBER--
+!--MEMBER_RUN--
+!--MEMBER_ITER--
+/
+
+&PARAM_LETKF_PRC
+!--NNODES--
+!--PPN--
+!--MEM_NODES--
+!--MEM_NP--
+/

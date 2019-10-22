@@ -5,11 +5,11 @@
 #
 #===============================================================================
 
-STIME='20150801120000'
-ETIME='20150801170000'
+STIME='20150802060000'
+ETIME='20150802110000'
 ISTEP=
 FSTEP=
-TIME_LIMIT='06:00:00'
+TIME_LIMIT='06:30:00'
 
 #===============================================================================
 
@@ -51,7 +51,7 @@ OBSOPE=0         # 0: No    ! obsope options: not finished yet!!
 
                  #      anal              gues              history
                  #      mean/sprd members mean/sprd members mean members
-OUT_OPT=2        # 1:   o         o       o         o       o    o
+OUT_OPT=3        # 1:   o         o       o         o       o    o
                  # 2:   o         o       o         o       o
                  # 3:   o         o       o         o
                  # 4:   o         o       o

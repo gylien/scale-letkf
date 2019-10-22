@@ -2,7 +2,7 @@
 set -e
 
 SCALE_V=scale-5.1.1
-EXP=JAXA2_D2_PR #Finish
+EXP="JAXA2_D2_BDYENS_GPR" #Finish
 
 # Reference
 EXP_HIM8=TC201513_D2_PREP_0519
@@ -12,16 +12,17 @@ EXP_HIM8=TC201513_D2_PREP_0519
 #
 SWDIR=/scratch/hp120282/k03117/obssim
 OTOP=/volume61/data/hp120282/k03117/scale
+DTOP=/volume92/data/hp120282_A/k03117/scale
 LETKF_RUN=${OTOP}/${SCALE_V}/letkf/scale/run
-OBSSIM_BIN=${OTOP}/${SCALE_V}/letkf/scale/obs/obssim
+OBSSIM_BIN=${OTOP}/${SCALE_V}/letkf/scale_z_181109/obs/obssim
 RUNSH=$SWDIR/OBSSIM.sh
 RUNCONF_COMMON=$SWDIR/obssim.conf_common
-SCALE_CONF=${OTOP}/out/${EXP}/20150729080000/log/scale/0001_run.conf
-TOPO=${OTOP}/out/${EXP}/const/topo
+SCALE_CONF=${DTOP}/out/${EXP}/20150801130000/log/scale/mean_run.conf
+TOPO=${DTOP}/out/JAXA2_D2_BDYENS_TC/const/topo
 
 #
-tstart='2015-07-30 10:00:00'
-tend='2015-07-30 12:00:00'
+tstart='2015-08-01 18:00:00'
+tend='2015-08-01 18:00:00'
 
 ctint=3600 # obssim interval 
 tint=600 # analysis interval (Do not modify!)
@@ -36,7 +37,7 @@ TYPE=gues
 #SMEM=0 # 
 #EMEM=${SMEM} # mean
 SMEM=1
-EMEM=12
+EMEM=50
 #SMEM=13
 #EMEM=24
 #SMEM=25
@@ -108,8 +109,8 @@ cat << EOF >> $RUNSH
 #PJM -N Him8_OBSSIM
 #PJM -s
 #PJM --rsc-list "node=<TNODE_CNT>"
-#PJM --rsc-list "elapse=0:10:00"
-#PJM --rsc-list "rscgrp=micro"
+#PJM --rsc-list "elapse=1:00:00"
+#PJM --rsc-list "rscgrp=small"
 #PJM --stg-transfiles all
 
 . /work/system/Env_base
@@ -156,7 +157,7 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
   fi
 
 
-  ORG_DIR=${OTOP}/out/${EXP}/${HTIME}/${TYPE}/${MEM}
+  ORG_DIR=${DTOP}/out/${EXP}/${HTIME}/${TYPE}/${MEM}
   DAT_DIR=${SWDIR}/dat/${EXP}/${HTIME}/${TYPE}/${MEM}
   echo $HTIME
 

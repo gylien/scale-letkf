@@ -3552,7 +3552,7 @@ SUBROUTINE read_obs_GPR(cfile,obs)
     obs%typ(n) = NINT(wk(7))
     obs%dif(n) = REAL(wk(8),r_size)
 !tmp
-if(obs%dat(n)<=MIN_GPR_REF_DBZ) obs%err(n)=OBSERR_GPR_NOREF
+!tmp if(obs%dat(n)<=MIN_GPR_REF_DBZ) obs%err(n)=OBSERR_GPR_NOREF
 !tmp
   END DO
   CLOSE(iunit)

@@ -37,6 +37,9 @@ FBYTESWAP =
 FFREE     = -Free
 FFIXED    = -Fixed
 
+# TC vital DA
+TCV       = T
+
 # -- for Himawari-8 assimilatin on the K computer (T.Honda)
 # -- If you want to compile without RTTOV (Himawari assimilation),
 # -- you should set "H08 = F".
@@ -47,7 +50,37 @@ RT_LDFLAGS = -L$(DIR_RTTOV)/lib -lrttov11.2.0_test -lrttov11.2.0_other \
              -lrttov11.2.0_coef_io -lrttov11.2.0_parallel -lrttov11.2.0_main
 RT_INCLUDE = -I$(DIR_RTTOV)/mod -I$(DIR_RTTOV)/include
 
+ifeq ($(TCV),T)
+FOPTS     += -DTCV
+endif
+
 ifeq ($(H08),T)
 FOPTS     += -DH08
 FOPTS_SCALE += -DH08
+endif
+
+# -- for GeoSat/PR assimilation on K (Okazaki)
+GPR    	   = T
+ifeq ($(GPR),T)
+FOPTS	  += -DGPR
+endif
+# obs from satellite 
+GPRsatellite = T
+ifeq ($(GPRsatellite),T)
+FOPTS	  += -DGPRsatellite
+endif
+# averaging
+GPRavrg     = F
+ifeq ($(GPRavrg),T)
+FOPTS	  += -DGPRavrg
+endif
+# moisturization
+GPRmoist    = F
+ifeq ($(GPRmoist),T)
+FOPTS	  += -DGPRmoist
+endif
+# fraction
+GPRfrac     = F
+ifeq ($(GPRfrac),T)
+FOPTS	  += -DGPRfrac
 endif

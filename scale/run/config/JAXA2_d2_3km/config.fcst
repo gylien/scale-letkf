@@ -5,8 +5,8 @@
 #
 #===============================================================================
 
-STIME='20150802060000'
-ETIME='20150802060000'
+STIME='20150802010000'
+ETIME='20150802010000'
 MEMBERS='mean'
 #MEMBERS='all'
 CYCLE=1
@@ -15,13 +15,13 @@ IF_VERF=0
 IF_EFSO=0
 ISTEP=
 FSTEP=
-TIME_LIMIT='02:30:00'
+TIME_LIMIT='05:30:00'
 
 #===============================================================================
 # Forecast settings
 
-FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
-#FCSTLEN=86400      # SCALE forecast length in the forecast mode (second)
+#FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
+FCSTLEN=86400      # SCALE forecast length in the forecast mode (second)
 FCSTOUT=3600
 #FCSTOUT=86400
 

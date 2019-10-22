@@ -91,17 +91,21 @@ program obssim
       allocate (topog(nlon,nlat))
 
       call read_restart(OBSSIM_RESTART_IN_BASENAME, v3dg, v2dg)
+#ifdef GPR
 !tmp: save v3dg
       allocate (rho(nlev,nlon,nlat))
       rho(:,:,:)=v3dg(:,:,:,iv3d_rho)
 !tmp: save v3dg
+#endif
 
       call state_trans(v3dg)
 
+#ifdef GPR
 !tmp: save v3dg
       v3dg(:,:,:,iv3d_rho)=rho(:,:,:)
       deallocate(rho)
 !tmp: save v3dg
+#endif
 
       call read_topo(OBSSIM_TOPO_IN_BASENAME, topog)
       call state_to_history(v3dg, v2dg, topog, v3dgh, v2dgh)
