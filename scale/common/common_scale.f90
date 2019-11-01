@@ -116,6 +116,7 @@ MODULE common_scale
   REAL(r_size),ALLOCATABLE,SAVE :: lon2d(:,:)
   REAL(r_size),ALLOCATABLE,SAVE :: lat2d(:,:)
   REAL(r_size),ALLOCATABLE,SAVE :: topo2d(:,:)
+  reaL(r_sngl), allocatable, save :: lsmask2dgs(:,:)
   CHARACTER(vname_max),PARAMETER :: height3d_name = 'height' ! (in SCALE restart files)
   CHARACTER(vname_max),PARAMETER :: lon2d_name = 'lon'       ! (in SCALE restart files)
   CHARACTER(vname_max),PARAMETER :: lat2d_name = 'lat'       ! (in SCALE restart files)

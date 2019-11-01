@@ -201,6 +201,9 @@ if ((DACYCLE_RUN_FCST == 1)); then
   tar -zcf anal.tar.gz anal_*.png > /dev/null 
   tar -zcf fcst.tar.gz fcst_*.png > /dev/null 
   tar -zcf obs.tar.gz obs_*.png > /dev/null 
+  rm -f anal_*.png
+  rm -f fcst_*.png
+  rm -f obs_*.png
   cd -
   #mkdir -p ${TMP}/png
   #mv ${TMP}/*.png ${TMP}/png/

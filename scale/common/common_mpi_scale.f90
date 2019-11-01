@@ -1988,7 +1988,7 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
 end subroutine write_grd_dafcst_mpi
 
 !-------------------------------------------------------------------------------
-! Write the subdomain model data into a single GrADS file from DACYCLE (additional) forecasts
+! Plot forecast/analysis 3D data by DCL
 !-------------------------------------------------------------------------------
 subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   use mod_admin_time, only: &
@@ -2010,15 +2010,13 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   implicit none
   character(15), intent(in) :: timelabel
   real(r_size), intent(in) :: ref3d(nlev,nlon,nlat)
-  integer, intent(in) :: step
+  integer, intent(in), optional :: step
 
   character(len=H_LONG) :: filename
-  real(r_sngl) :: bufs4(nlong,nlatg)
-  real(r_sngl) :: bufr4(nlong,nlatg)
-  real(r_sngl) :: bufs3d(nlev,nlong,nlatg)
-  real(r_sngl) :: bufr3d(nlev,nlong,nlatg)
+  integer :: nlev_plot
+  real(r_sngl), allocatable :: bufr4(:,:)
+  real(r_sngl), allocatable :: bufr3d(:,:,:)
 !  real(r_sngl) :: topo2dgs(nlong,nlatg)
-  real(r_sngl) :: lsmask2dgs(nlong,nlatg)
 !  real(r_sngl) :: lon2dgs(nlong,nlatg)
 !  real(r_sngl) :: lat2dgs(nlong,nlatg)
   integer :: iunit, iolen
@@ -2034,190 +2032,101 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 #ifdef PLOT_DCL
   character(len=H_LONG) :: plotname
 #endif
-!  real(r_sngl) :: v2d_ref(nlong,nlatg,nv3dd)
 
-  write(ftsec,'(I4.4)')  (step - 1) * int(TIME_DTSEC_ATMOS_RESTART) ! tentative
+  logical :: fcst_
+  character(len=4) :: header
+  character(len=8) :: footer_fcst
 
-  call MPI_BARRIER(MPI_COMM_d, ierr)
-  call date_and_time(date=date, time=time)
+  call mpi_timer('', 2)
+
+  fcst_ = .false.
+  header = "anal"
+  footer_fcst = ""
+  if (present(step)) then
+    fcst_ = .true.
+    header = "fcst"
+    write(ftsec,'(I4.4)')  (step - 1) * int(TIME_DTSEC_ATMOS_RESTART)
+    footer_fcst = "_FT" // ftsec // "s"
+  end if
+
+!  call MPI_BARRIER(MPI_COMM_d, ierr)
+!  call date_and_time(date=date, time=time)
 !  if (myrank_d == 0) then
-!    write (6, '(2A,1x,A,1x,A)') '[Info:plot] fcst start plotting: ', date, time, trim(timelabel)//" FT"//trim(ftsec)
+!    write (6, '(3a,1x,a,1x,a,1x,a)') '[Info:plot] ',header,' start plotting: ', date, time, trim(timelabel) // trim(footer_fcst)
 !  endif
+
+
+  ! Count the number of plot levels
+  nlev_plot = 0
+  do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
+
+    if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
+    nlev_plot = nlev_plot + 1
+  enddo
+
+  allocate(bufr3d(nlev_plot,nlong,nlatg))
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
   jshift = proc_j * nlat
 
-!  ! gather global topo
-!  bufs4(:,:) = 0.0
-!  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(TOPO_Zsfc, r_sngl)
-!  call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-!  topo2dgs(:,:) = bufr4
-
-  ! gather global landuse
-  bufs4(:,:) = 0.0
-  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(LANDUSE_frac_land, r_sngl)
-  call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-  lsmask2dgs(:,:) = bufr4
-
-  ! gather global lon/lat 
-!  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(lon2d, r_sngl)
-!  call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-!  lon2dgs(:,:) = bufr4
-!
-!  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(lat2d, r_sngl)
-!  call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-!  lat2dgs(:,:) = bufr4
-
-
-  ! Gather required data for reflectivity computation
-
-  bufs3d(:,:,:) = 0.0
-  bufs3d(1:nlev, 1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(1:nlev,1:nlon,1:nlat), r_sngl)
-  call MPI_ALLREDUCE(bufs3d, bufr3d, nlong*nlatg*nlev, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-
+  nlev_plot = 0
   do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
 
     if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
+    nlev_plot = nlev_plot + 1
 
-!    bufs4(:,:) = 0.0
-!    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
-!    call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+    bufr3d(nlev_plot,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
+  enddo
 
-    if (myrank_d == k) then
+  call MPI_ALLREDUCE(MPI_IN_PLACE, bufr3d, nlong*nlatg*nlev_plot, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+
+
+  if ( .not. allocated(lsmask2dgs)) then
+    allocate(lsmask2dgs(nlong,nlatg))
+
+    allocate(bufr4(nlong,nlatg))
+
+    bufr4(:,:) = 0.0
+    bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(LANDUSE_frac_land, r_sngl)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+    lsmask2dgs(:,:) = bufr4
+
+    deallocate(bufr4)
+
+  endif
+
+  ! Gather required data for reflectivity computation
+
+  nlev_plot = 0
+  do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
+
+    if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
+    nlev_plot = nlev_plot + 1
+
+    if ( ( myrank_d + 1 ) == k) then
       write(cheight,'(I5.5)')  int(CZ(k+KHALO)) ! tentative
 
 #ifdef PLOT_DCL
-      !write(plotname,'(A,I3.3,A)')  trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_dbz_"//trim(timelabel)//"_",step
-      !plotname = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_dbz_"//trim(timelabel)//"_"//ftsec
-      plotname = "fcst_dbz_"//trim(timelabel)//"_FT"//ftsec//"s_z" // cheight // "m"
-      call plot_dbz_DCL (bufr3d(k,1:nlong,1:nlatg),lsmask2dgs,trim(plotname),cheight,ftsec)
+      plotname = header // "_dbz_"//trim(timelabel) // trim(footer_fcst) // "_z" // cheight // "m"
+      call plot_dbz_DCL (bufr3d(nlev_plot,1:nlong,1:nlatg),lsmask2dgs,trim(plotname),cheight,ftsec)
 #endif
+    elseif ( ( myrank_d + 1 ) < k) then
+      exit
     end if
 
   enddo
 
+  deallocate(bufr3d)
+
   call MPI_BARRIER(MPI_COMM_d, ierr)
   call date_and_time(date=date, time=time)
-  if (myrank_d == 0 .and. mod(step,2) == 0) then
-    write (6, '(2a,1x,a,1x,a)') '[Info:plot] fcst finish plotting: ', date, time, trim(timelabel)//" FT"//trim(ftsec)
+  if (myrank_d == 0 ) then
+    write (6, '(3a,1x,a,1x,a,1x,a)') '[Info:plot] ',header,' finish plotting: ', date, time, trim(timelabel) // trim(footer_fcst)
   endif
 
   return
 end subroutine plot_dafcst_mpi
-
-!-------------------------------------------------------------------------------
-! Plot the subdomain model data from Analysis
-!-------------------------------------------------------------------------------
-subroutine plot_anal_mpi(timelabel, ref3d)
-  use mod_admin_time, only: &
-    TIME_DTSEC_ATMOS_RESTART
-  use scale_topography, only: &
-    TOPO_Zsfc
-  use scale_landuse, only: &
-    LANDUSE_frac_land
-  use scale_atmos_grid_cartesC, only: &
-     CZ => ATMOS_GRID_CARTESC_CZ
-!  use scale_atmos_hydrometeor, only: &
-!    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
-  use scale_atmos_grid_cartesC_index, only: &
-    IS, IE, JS, JE, KS, KE, &
-    KHALO
-  use scale_io, only: &
-    H_LONG
-
-
-  implicit none
-  character(15), intent(in) :: timelabel
-  real(r_size), intent(in) :: ref3d(nlev,nlon,nlat)
-
-  character(len=H_LONG) :: filename
-  real(r_sngl) :: bufs4(nlong,nlatg)
-  real(r_sngl) :: bufr4(nlong,nlatg)
-  real(r_sngl) :: bufs3d(nlev,nlong,nlatg)
-  real(r_sngl) :: bufr3d(nlev,nlong,nlatg)
-!  real(r_sngl) :: topo2dgs(nlong,nlatg)
-  real(r_sngl) :: lsmask2dgs(nlong,nlatg)
-!  real(r_sngl) :: lon2dgs(nlong,nlatg)
-!  real(r_sngl) :: lat2dgs(nlong,nlatg)
-  integer :: iunit, iolen
-  integer :: k, n, irec, ierr
-  integer :: proc_i, proc_j
-  integer :: ishift, jshift
-  character(5) :: cheight ! height (m)
-
-  character(len=8) :: date
-  character(len=10) :: time
-
-#ifdef PLOT_DCL
-  character(len=H_LONG) :: plotname
-#endif
-!  real(r_sngl) :: v2d_ref(nlong,nlatg,nv3dd)
-
-  call MPI_BARRIER(MPI_COMM_d, ierr)
-  call date_and_time(date=date, time=time)
-  if (myrank_d == 0) then
-    write (6, '(2A,1x,A,1x,A)') '[Info:plot] anal start plotting: ', date, time, trim(timelabel)
-  endif
-
-  call rank_1d_2d(myrank_d, proc_i, proc_j)
-  ishift = proc_i * nlon
-  jshift = proc_j * nlat
-
-!  ! gather global topo
-!  bufs4(:,:) = 0.0
-!  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(TOPO_Zsfc, r_sngl)
-!  call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-!  topo2dgs(:,:) = bufr4
-
-  ! gather global landuse
-  bufs4(:,:) = 0.0
-  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(LANDUSE_frac_land, r_sngl)
-  call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-  lsmask2dgs(:,:) = bufr4
-
-  ! Gather required data for reflectivity computation
-
-  bufs3d(:,:,:) = 0.0
-  bufs3d(1:nlev, 1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(1:nlev,1:nlon,1:nlat), r_sngl)
-  call MPI_ALLREDUCE(bufs3d, bufr3d, nlong*nlatg*nlev, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-
-  do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
-
-    if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
-
-!    bufs4(:,:) = 0.0
-!    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
-!    call MPI_ALLREDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-
-    if (myrank_d == k) then
-!      irec = irec + 1
-!      write (iunit, rec=irec) bufr4
-      write(cheight,'(I5.5)')  int(CZ(k+KHALO)) ! tentative
-
-#ifdef PLOT_DCL
-      !write(plotname,'(A,I3.3,A)')  trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_dbz_"//trim(timelabel)//"_",step
-      !plotname = trim(DACYCLE_RUN_FCST_OUTNAME)//"/fcst_dbz_"//trim(timelabel)//"_"//ftsec
-      plotname = "anal_dbz_"//trim(timelabel)//"s_z" // cheight // "m"
-      call plot_dbz_DCL (bufr3d(k,1:nlong,1:nlatg),lsmask2dgs,trim(plotname),cheight,'anal')
-#endif
-    end if
-
-  enddo
-
-  call MPI_BARRIER(MPI_COMM_d, ierr)
-  call date_and_time(date=date, time=time)
-  if (myrank_d == 0) then
-    write (6, '(2a,1x,a,1x,a)') '[Info:plot] anal finish plotting: ', date, time, trim(timelabel)
-  endif
-
-!
-!  if (myrank_d == 0) then
-!    close (iunit)
-!  end if
-
-  return
-end subroutine plot_anal_mpi
 
 ! Broadcast restart data among the dacycle (extended) forecast members
 subroutine bcast_restart_efcst_mpi()
@@ -3061,13 +2970,13 @@ subroutine pawr_i8_allreduce(array,size)
 
   integer(8),intent(in) :: size
   integer(8),intent(inout) :: array(size)
-  real(r_dble) :: sarray(size), rarray(size)
+  real(r_dble) :: rarray(size)
   
   integer :: ierr
 
   if (nprocs_o < 2) return
-  sarray = real(array,kind=r_dble)
-  call MPI_ALLREDUCE(sarray, rarray, size, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_o, ierr)
+  rarray = real(array,kind=r_dble)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, rarray, size, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_o, ierr)
 
   array = rarray
 
@@ -3080,14 +2989,13 @@ subroutine pawr_3dvar_allreduce(na,nr,ne,radlon)
   integer,intent(in) :: na, nr, ne
   real(r_size),intent(inout) :: radlon(na, nr, ne)
 
-  real(r_size) :: sbuf3d(na, nr, ne)
   real(r_size) :: rbuf3d(na, nr, ne)
 
   integer :: ierr
 
   if (nprocs_o < 2) return
-  sbuf3d = radlon
-  call MPI_ALLREDUCE(sbuf3d, rbuf3d, na*nr*ne, MPI_r_size, MPI_SUM, MPI_COMM_o, ierr)
+  rbuf3d = radlon
+  call MPI_ALLREDUCE(MPI_IN_PLACE, rbuf3d, na*nr*ne, MPI_r_size, MPI_SUM, MPI_COMM_o, ierr)
   radlon = rbuf3d 
 
   return

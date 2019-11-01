@@ -34,7 +34,6 @@ program dacycle
     write_grd_dafcst_mpi,     &
     send_recv_emean_others,   &
 !    bcast_restart_efcst_mpi,  &
-    plot_anal_mpi, &
     plot_dafcst_mpi, &
     mpi_timer
   use common_obs_scale, only: &
@@ -516,7 +515,8 @@ program dacycle
 
           if ( myrank_e == mmean_rank_e ) then
             call TIME_gettimelabel(fstimelabel)
-            call plot_anal_mpi(fstimelabel(1:15), ref3d)
+            !call plot_anal_mpi(fstimelabel(1:15), ref3d)
+            call plot_dafcst_mpi(fstimelabel(1:15), ref3d)
           endif
           call mpi_timer('WRITE_ANAL:plot_anal', 2, barrier=MPI_COMM_da)
         endif

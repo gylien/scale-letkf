@@ -18,7 +18,7 @@ OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
 OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT"
 
 
-EXP4=D4_1km_NP64_1029_18_20MEM
+EXP4=D4_1km_NP64_1029_22_20MEM
 
 EXP3=exp_d3
 EXP2=exp_d2
