@@ -24,7 +24,8 @@ module common_scalerm
 !    MPI_COMM_u, nprocs_u, myrank_u, &
     MPI_COMM_a, nprocs_a, myrank_a, &
     MPI_COMM_da, nprocs_da, myrank_da, &
-    MPI_COMM_d, nprocs_d, myrank_d
+    MPI_COMM_d, nprocs_d, myrank_d, &
+    MPI_COMM_o, nprocs_o, myrank_o
   implicit none
   public
 
@@ -580,7 +581,21 @@ subroutine scalerm_setup(execname)
 !  myrank_d = PRC_myrank
   myrank_d = local_myrank
 
-  call mpi_timer('scalerm_setup:mpi_comm_split_d_local:', 2, barrier=MPI_COMM_WORLD)
+  call mpi_timer('scalerm_setup:mpi_comm_split_d_local:',2, barrier=MPI_COMM_WORLD)
+
+  if (myrank_da < nprocs_d) then
+    key = myrank_d
+    if (myrank_d < RADAR_NPROC) then
+      color = 0
+    else
+      color = 1
+    endif
+    call MPI_COMM_SPLIT(MPI_COMM_d, color, key, MPI_COMM_o, ierr)
+    call MPI_COMM_SIZE(MPI_COMM_o, nprocs_o, ierr)
+    call MPI_COMM_RANK(MPI_COMM_o, myrank_o, ierr)
+  endif
+
+  call mpi_timer('set_scalelib:mpi_comm_split_o:', 3)
 
   ! Communicator for all processes for single domains
   !-----------------------------------------------------------------------------
@@ -878,15 +893,15 @@ subroutine scalerm_setup(execname)
   if (exec_model .and. scalerm_run) then
     ! setup variable container
     if ( ATMOS_do ) call ATMOS_vars_setup
-  call mpi_timer('scalerm_setup:other_setup18.1:', 2, barrier=MPI_COMM_WORLD)
+    call mpi_timer('scalerm_setup:other_setup18.1:', 2, barrier=MPI_COMM_WORLD)
     if ( OCEAN_do ) call OCEAN_vars_setup
-  call mpi_timer('scalerm_setup:other_setup18.2:', 2, barrier=MPI_COMM_WORLD)
+    call mpi_timer('scalerm_setup:other_setup18.2:', 2, barrier=MPI_COMM_WORLD)
     if ( LAND_do  ) call LAND_vars_setup
-  call mpi_timer('scalerm_setup:other_setup18.3:', 2, barrier=MPI_COMM_WORLD)
+    call mpi_timer('scalerm_setup:other_setup18.3:', 2, barrier=MPI_COMM_WORLD)
     if ( URBAN_do ) call URBAN_vars_setup
-  call mpi_timer('scalerm_setup:other_setup18.4:', 2, barrier=MPI_COMM_WORLD)
+    call mpi_timer('scalerm_setup:other_setup18.4:', 2, barrier=MPI_COMM_WORLD)
     if ( CPL_sw   ) call CPL_vars_setup
-  call mpi_timer('scalerm_setup:other_setup18.5:', 2, barrier=MPI_COMM_WORLD)
+    call mpi_timer('scalerm_setup:other_setup18.5:', 2, barrier=MPI_COMM_WORLD)
   end if
 
   call mpi_timer('scalerm_setup:other_setup19:', 2, barrier=MPI_COMM_WORLD)
@@ -895,13 +910,13 @@ subroutine scalerm_setup(execname)
     if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
       ! setup driver
       if ( ATMOS_do ) call ATMOS_driver_setup
-  call mpi_timer('scalerm_setup:other_setup19.1:', 2, barrier=MPI_COMM_WORLD)
+      call mpi_timer('scalerm_setup:other_setup19.1:', 2, barrier=MPI_COMM_WORLD)
       if ( OCEAN_do ) call OCEAN_driver_setup
-  call mpi_timer('scalerm_setup:other_setup19.2:', 2, barrier=MPI_COMM_WORLD)
+      call mpi_timer('scalerm_setup:other_setup19.2:', 2, barrier=MPI_COMM_WORLD)
       if ( LAND_do  ) call LAND_driver_setup
-  call mpi_timer('scalerm_setup:other_setup19.3:', 2, barrier=MPI_COMM_WORLD)
+      call mpi_timer('scalerm_setup:other_setup19.3:', 2, barrier=MPI_COMM_WORLD)
       if ( URBAN_do ) call URBAN_driver_setup
-  call mpi_timer('scalerm_setup:other_setup19.4:', 2, barrier=MPI_COMM_WORLD)
+      call mpi_timer('scalerm_setup:other_setup19.4:', 2, barrier=MPI_COMM_WORLD)
 
       call USER_setup
     else if (execname_ == 'RMPREP ') then

@@ -279,6 +279,7 @@ MODULE common_nml
   character(filelenmax) :: OBSANAL_OUT_BASENAME = 'obsanal.<member>'  !XXX not implemented yet...
 
   !--- PARAM_LETKF_RADAR
+  integer :: RADAR_NPROC = 2 ! number of MPI processes for radar obs (TOSHIBA format) pre-process
   logical :: USE_RADAR_REF       = .true.
   logical :: USE_RADAR_VR        = .true.
   logical :: USE_RADAR_PSEUDO_RH = .false.
@@ -985,6 +986,7 @@ subroutine read_nml_letkf_radar
   integer :: ierr
 
   namelist /PARAM_LETKF_RADAR/ &
+    RADAR_NPROC, &
     USE_RADAR_REF, &
     USE_RADAR_VR, &
     USE_RADAR_PSEUDO_RH, &

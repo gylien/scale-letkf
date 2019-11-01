@@ -193,6 +193,20 @@ echo "[$(datetime_now)] Finalization (stage out)"
 
 stage_out server || exit $?
 
+if ((DACYCLE_RUN_FCST == 1)); then
+  echo
+  echo "[$(datetime_now)] Start: store images"
+  mv ${TMP}/*.png ${OUTDIR}/${STIME}/dafcst/
+  cd ${OUTDIR}/${STIME}/dafcst
+  tar -zcf anal.tar.gz anal_*.png > /dev/null 
+  tar -zcf fcst.tar.gz fcst_*.png > /dev/null 
+  tar -zcf obs.tar.gz obs_*.png > /dev/null 
+  cd -
+  #mkdir -p ${TMP}/png
+  #mv ${TMP}/*.png ${TMP}/png/
+  echo "[$(datetime_now)] End: store images"
+fi
+
 #===============================================================================
 # Finalization
 

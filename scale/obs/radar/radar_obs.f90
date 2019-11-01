@@ -10,7 +10,11 @@ module radar_obs
   use common_scale
   use common_obs_scale
   use common_mpi_scale, only: &
-    mpi_timer
+    MPI_COMM_o, &
+    myrank_a, myrank_o, &
+    mpi_timer!, &
+    !pawr_toshiba_scattv_mpi, &
+    !pawr_3dvar_allreduce
 
   implicit none
   public
@@ -753,7 +757,10 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   use scale_atmos_grid_cartesC, only: &
       DX, DY
 #ifdef PLOT_DCL
-use common_mpi_scale, only: myrank_d
+  use common_mpi_scale, only: &
+      myrank_o, &
+      myrank_da, &
+      pawr_toshiba_hd_mpi
 use scale_time, only: TIME_gettimelabel
 #endif
   implicit none
@@ -772,9 +779,12 @@ use scale_time, only: TIME_gettimelabel
   logical, parameter :: input_is_dbz = .true.
 
   type(c_pawr_header) :: hd(n_type)
-  real(kind=c_float) :: az(AZDIM, ELDIM, n_type)
-  real(kind=c_float) :: el(AZDIM, ELDIM, n_type)
-  real(kind=c_float) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
+!  real(kind=c_float) :: az(AZDIM, ELDIM, n_type)
+!  real(kind=c_float) :: el(AZDIM, ELDIM, n_type)
+!  real(kind=c_float) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
+  real(kind=c_float), allocatable :: rtdat(:, :, :, :)
+  real(kind=c_float), allocatable :: az(:, :, :)
+  real(kind=c_float), allocatable :: el(:, :, :)
   integer j, ierr
   character(len=3) :: fname
   integer, save::i=0
@@ -806,77 +816,117 @@ use scale_time, only: TIME_gettimelabel
   integer,parameter :: qcf_mask(8)=(/ 0, 1, 1, 1, 1, 0, 0, 0 /) !! valid, shadow, clutter possible, clutter certain, interference, range sidelobe /
 !!!  integer,parameter :: qcf_mask(8)=(/ 0, 0, 0, 0, 0, 0, 0, 0 /) !! valid, shadow, clutter possible, clutter certain, interference, range sidelobe /
 
- integer::qcf_count(0:255)
+  integer::qcf_count(0:255)
 
 #ifdef PLOT_DCL
- character(len=8)  :: date
- character(len=10) :: time
- character(len=90) :: plotname
- character(len=19)::timelabel
+  character(len=8)  :: date
+  character(len=10) :: time
+  character(len=90) :: plotname
+  character(len=19)::timelabel
 #endif
 
+  integer :: range_res
+
+!  real(kind=r_sngl), allocatable :: rtdat_l(:,:,:,:)
+!  real(kind=r_sngl), allocatable :: az_l(:,:,:), el_l(:,:,:)
+!  real(r_size), allocatable :: ze_l(:, :, :), vr_l(:, :, :), qcflag_l(:, :, :), attenuation_l(:, :, :)
+!  real(r_size), allocatable :: radlon_l(:, :, :), radlat_l(:, :, :), radz_l(:, :, :)
+!  integer :: ne_lmax
+
   call mpi_timer('', 3)
+
+  allocate(rtdat(RDIM, AZDIM, ELDIM, n_type))
+  allocate(az(AZDIM, ELDIM, n_type))
+  allocate(el(AZDIM, ELDIM, n_type))
 
   RADAR_SO_SIZE_HORI = max(real(DX,kind=r_size),RADAR_SO_SIZE_HORI)
   RADAR_SO_SIZE_HORI = max(real(DY,kind=r_size),RADAR_SO_SIZE_HORI)
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 3 .and. myrank_o == 0) then
     write(*, *) RDIM, AZDIM, ELDIM
     write(*, *) "dx = ", RADAR_SO_SIZE_HORI
     write(*, *) "dy = ", RADAR_SO_SIZE_HORI
     write(*, *) "dz = ", RADAR_SO_SIZE_VERT
   endif
 
+  if (myrank_o == 0) then
 #ifdef JITDT
-  if (OBS_USE_JITDT) then
-!    jitdt_place = trim(OBS_JITDT_DATADIR) !// '/'
-    jitdt_place = trim(OBS_JITDT_IP)
-    write(*, *) "jitdt_place = ", trim(jitdt_place)
-
-    ierr = jitdt_read_toshiba(n_type, jitdt_place, hd, az, el, rtdat)
-
-    call mpi_timer('read_obs_radar_toshiba:jitdt_read_toshiba:', 1)
-    if (ierr /= 0) then
-      obs%nobs = 0
-      return
-    endif
-  else
-#endif
-    do j = 1, n_type
-      input_fname(j) = trim(cfile)
-      call str_replace(input_fname(j), '<type>', trim(file_type_sfx(j)), pos)
-      if (pos == 0) then
-        write (6, '(5A)') "[Error] Keyword '<type>' is not found in '", trim(cfile), "'."
-        stop 1
-      end if
-    end do
-
-    if (LOG_LEVEL >= 1) then
-      write(*, *) "file1 = ", trim(input_fname(1))
-      write(*, *) "file2 = ", trim(input_fname(2))
-      write(*, *) "file3 = ", trim(input_fname(3))
-    endif
-
-    do j = 1, n_type
-      ierr = read_toshiba(input_fname(j), hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
-      write(*, *) "return code = ", ierr
+    if (OBS_USE_JITDT) then
+  !    jitdt_place = trim(OBS_JITDT_DATADIR) !// '/'
+      jitdt_place = trim(OBS_JITDT_IP)
+      write(*, *) "jitdt_place = ", trim(jitdt_place)
+  
+      ierr = jitdt_read_toshiba(n_type, jitdt_place, hd, az, el, rtdat)
+  
+      call mpi_timer('read_obs_radar_toshiba:jitdt_read_toshiba:', 2)
       if (ierr /= 0) then
         obs%nobs = 0
         return
       endif
-    end do
-
-    call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 1)
-#ifdef JITDT
-  end if
+    else
 #endif
+      do j = 1, n_type
+        input_fname(j) = trim(cfile)
+        call str_replace(input_fname(j), '<type>', trim(file_type_sfx(j)), pos)
+        if (pos == 0) then
+          write (6, '(5A)') "[Error] Keyword '<type>' is not found in '", trim(cfile), "'."
+          stop 1
+        end if
+      end do
+  
+      if (LOG_LEVEL >= 3) then
+        write(*, *) "file1 = ", trim(input_fname(1))
+        write(*, *) "file2 = ", trim(input_fname(2))
+        write(*, *) "file3 = ", trim(input_fname(3))
+      endif
+  
+      do j = 1, n_type
+        ierr = read_toshiba(input_fname(j), hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
+        if (LOG_LEVEL >= 3) then
+          write(*, *) "return code = ", ierr
+        endif
+        if (ierr /= 0) then
+          obs%nobs = 0
+          return
+        endif
+      end do
+  
+#ifdef JITDT
+    end if
+#endif
+  end if  ! myrank_o == 0
+  call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 2, barrier=MPI_COMM_o)
 
-  lon0 = hd(1)%longitude
-  lat0 = hd(1)%latitude
-  z0   = hd(1)%altitude
-  missing = real(hd(1)%mesh_offset, r_size) ! MISSING VALUE (EXACT)
+  ! ALl reduce obs information
+  if (myrank_o == 0) then
+    lon0 = hd(1)%longitude
+    lat0 = hd(1)%latitude
+    z0 = hd(1)%altitude
+    missing = real(hd(1)%mesh_offset, r_size)
+    range_res = hd(1)%range_res
 
-  if (LOG_LEVEL >= 2) then
+    na = hd(1)%sector_num
+    nr = hd(1)%range_num
+    ne = hd(1)%el_num
+  endif
+
+  call  pawr_toshiba_hd_mpi(lon0, lat0, z0, missing,&
+                           range_res, na, nr, ne, &
+                           AZDIM, ELDIM, n_type, RDIM, &
+                           az, el, rtdat)
+
+!  ! Set local index for elavation (ne_lmax)
+!  ie = mod(ELDIM, nprocs_o) 
+!  ne_lmax = ((ELDIM - ie ) / nprocs_o) + 1
+
+!  allocate(rtdat_l(1:RDIM, 1:AZDIM, ne_lmax, n_type))
+
+!  call pawr_toshiba_scattv_mpi(RDIM, AZDIM, ELDIM, n_type, ne_lmax, &
+!                              rtdat, rtdat_l)
+
+  call mpi_timer('read_obs_radar_toshiba:comm:', 2, barrier=MPI_COMM_o)
+
+  if (LOG_LEVEL >= 2 .and. myrank_o == 0) then
     write(*, '(I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2, &
          &     " -> ", I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2)') &
          & hd(1)%s_yr, hd(1)%s_mn, hd(1)%s_dy, hd(1)%s_hr, hd(1)%s_mi, hd(1)%s_sc, &
@@ -895,10 +945,10 @@ use scale_time, only: TIME_gettimelabel
 
 !  i=0
 
-  nr = hd(1)%range_num
-  na = hd(1)%sector_num
-  ne = hd(1)%el_num
   allocate(ze(na, nr, ne), vr(na, nr, ne), qcflag(na, nr, ne), attenuation(na, nr, ne))
+
+!  allocate(ze_l(na, nr, ne_lmax), vr_l(na, nr, ne_lmax))
+!  allocate(qcflag_l(na, nr, ne_lmax), attenuation_l(na, nr, ne_lmax))
 
   valid_qcf = 0
   do j = 1, 8  
@@ -930,41 +980,41 @@ use scale_time, only: TIME_gettimelabel
   end do
 !$omp end parallel do
 
-
-
+  deallocate(rtdat)
 
 !do j=0,255
 ! write(*,*) j,qcf_count(j)
 !end do
 !stop
 
-  call mpi_timer('read_obs_radar_toshiba:preliminary_qc:', 1)
+  call mpi_timer('read_obs_radar_toshiba:preliminary_qc:', 2, barrier=MPI_COMM_o)
 
   allocate(rrange(nr))
 !$omp parallel do private(ir)
   do ir = 1, nr
-     rrange(ir) = (dble(ir) - 0.5d0) * hd(1)%range_res
+     rrange(ir) = (dble(ir) - 0.5d0) * range_res
   end do
 !$omp end parallel do
 
-  if ((.not. allocated(radlon)) .and. (.not. allocated(radlat)) .and. (.not. allocated(radz))) then 
+  if ((.not. allocated(radlon)) .and. (.not. allocated(radlat)) .and. (.not. allocated(radz)) ) then 
     allocate(radlon(na, nr, ne), radlat(na, nr, ne), radz(na, nr, ne))
-  !  write(*, *) "call radar_georeference"
     call radar_georeference(lon0, lat0, z0, na, nr, ne, &                                   ! input
          &                  real(az(:, 1, 1), r_size), rrange, real(el(1, :, 1), r_size), & ! input (assume ordinary scan strategy)
-         &                  radlon, radlat, radz)                                           ! output
+         &                  radlon, radlat, radz)                                     ! output
 
-    call mpi_timer('read_obs_radar_toshiba:radar_georeference:', 1)
+    call mpi_timer('read_obs_radar_toshiba:radar_georeference:', 2, barrier=MPI_COMM_o)
   endif
+
+  deallocate(az, el)
 
 !  write(*, *) "call define_grid"
   call define_grid(lon0, lat0, nr, rrange, rrange(nr), RADAR_ZMAX, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_VERT, & ! input
        &           dlon, dlat, nlon, nlat, nlev, lon, lat, z)              ! output
 
-  call mpi_timer('read_obs_radar_toshiba:define_grid:', 1)
+  call mpi_timer('read_obs_radar_toshiba:define_grid:', 2, barrier=MPI_COMM_o)
 
 !  write(*, *) "call radar_superobing"
-  call radar_superobing(na, nr, ne, radlon, radlat, radz, ze, vr, &                    ! input spherical
+  call radar_superobing(na, nr, ne, radlon, radlat, radz, ze, vr, &    ! input spherical
        &                qcflag, attenuation, &                                         ! input spherical
        &                nlon, nlat, nlev, lon, lat, z, dlon, dlat, RADAR_SO_SIZE_VERT, & ! input cartesian
        &                missing, input_is_dbz, &                                       ! input param
@@ -974,8 +1024,31 @@ use scale_time, only: TIME_gettimelabel
        &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr)   ! output vr
 !  write(*, *) "done"
 
-  call mpi_timer('read_obs_radar_toshiba:radar_superobing:', 1)
+  if(allocated(ze)) deallocate(ze)
+  if(allocated(vr)) deallocate(vr)
+  if(allocated(qcflag)) deallocate(qcflag)
+  if(allocated(attenuation)) deallocate(attenuation)
+  if(allocated(rrange)) deallocate(rrange)
 
+
+  call mpi_timer('read_obs_radar_toshiba:radar_superobing:', 2, barrier=MPI_COMM_o)
+
+#ifdef PLOT_DCL
+  if (PLOT_OBS)then
+!    call date_and_time(date=date, time=time)
+!    write (6, '(2a,1x,a,1x,a)') '[Info:plot] obs start plotting: ', date, time, trim(timelabel(1:15))
+
+    call TIME_gettimelabel(timelabel)
+    plotname = "obs_dbz_"//trim(timelabel(1:15))
+    call plot_dbz_DCL_obs (nobs_sp,real(grid_ze),real(grid_lon_ze),real(grid_lat_ze),real(grid_z_ze),trim(plotname))
+
+!    call date_and_time(date=date, time=time)
+!    write (6, '(2a,1x,a,1x,a)') '[Info:plot] obs finish plotting: ', date, time, trim(timelabel(1:15))
+  endif
+  call mpi_timer('read_obs_radar_toshiba:plot_obs:', 2, barrier=MPI_COMM_o)
+#endif
+
+  if (myrank_o /= 0) return 
 
 
 !!!!! check
@@ -1044,7 +1117,7 @@ use scale_time, only: TIME_gettimelabel
     write (6, *) "ze: ", nobs_ze, ", vr: ", nobs_vr
   endif
 
-  call mpi_timer('read_obs_radar_toshiba:save_obs_info:', 1)
+  call mpi_timer('read_obs_radar_toshiba:save_obs_info:', 2)
 
 
 
@@ -1068,25 +1141,7 @@ use scale_time, only: TIME_gettimelabel
 ! endif
 
 
-#ifdef PLOT_DCL
-    if (plot_obs)then
-    call TIME_gettimelabel(timelabel)
-    call date_and_time(date=date, time=time)
-    write (6, '(2a,1x,a,1x,a)') '[Info:plot] obs start plotting: ', date, time, trim(timelabel(1:15))
 
-    plotname = "obs_dbz_"//trim(timelabel(1:15))
-    call plot_dbz_DCL_obs (nobs_sp,real(grid_ze),real(grid_lon_ze),real(grid_lat_ze),real(grid_z_ze),trim(plotname))
-
-    call date_and_time(date=date, time=time)
-    write (6, '(2a,1x,a,1x,a)') '[Info:plot] obs finish plotting: ', date, time, trim(timelabel(1:15))
-    endif
-#endif
-
-  if(allocated(ze)) deallocate(ze)
-  if(allocated(vr)) deallocate(vr)
-  if(allocated(qcflag)) deallocate(qcflag)
-  if(allocated(attenuation)) deallocate(attenuation)
-  if(allocated(rrange)) deallocate(rrange)
 ! Assume radar geographical information does not change during DA cyclying
 !  if(allocated(radlon)) deallocate(radlon)
 !  if(allocated(radlat)) deallocate(radlat)
@@ -1104,7 +1159,7 @@ use scale_time, only: TIME_gettimelabel
   if(allocated(grid_z_vr)) deallocate(grid_z_vr)
   if(allocated(grid_count_vr)) deallocate(grid_count_vr)
 
-  call mpi_timer('read_obs_radar_toshiba:deallocate_vars:', 1)
+  call mpi_timer('read_obs_radar_toshiba:deallocate_vars:', 2)
 
   return
 end subroutine read_obs_radar_toshiba
@@ -1283,7 +1338,7 @@ subroutine read_obs_radar_jrc(cfile, obs)
   deallocate(vr3d, zh3d)
   deallocate(lon1d, lat1d, z1d)
 
-  call mpi_timer('read_obs_radar_jrc:read_obs_radar_jrc:', 1)
+  call mpi_timer('read_obs_radar_jrc:read_obs_radar_jrc:', 2)
 
   return
 end subroutine read_obs_radar_jrc

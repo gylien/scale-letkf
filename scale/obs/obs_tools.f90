@@ -672,7 +672,7 @@ subroutine read_obs_all(obs)
 !  integer :: n
 
   do iof = 1, OBS_IN_NUM
-    if (OBS_IN_FORMAT(iof) /= obsfmt_pawr_toshiba .and. OBS_IN_FORMAT(iof) /= obsfmt_pawr_jrc) then
+    if (OBS_IN_FORMAT(iof) /= obsfmt_pawr_toshiba .and. OBS_IN_FORMAT(iof) /= obsfmt_pawr_jrc .and. myrank_da == 0) then
       inquire (file=trim(OBS_IN_NAME(iof))//trim(timelabel_obs), exist=ex)
       if (.not. ex) then
         write(6,*) '[Warning] FILE ',trim(OBS_IN_NAME(iof))//trim(timelabel_obs),' NOT FOUND'
@@ -688,8 +688,10 @@ subroutine read_obs_all(obs)
 
     select case (OBS_IN_FORMAT(iof))
     case (obsfmt_prepbufr)
+      if (myrank_da /= 0) return
       call get_nobs(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),8,obs(iof)%nobs)
     case (obsfmt_radar)
+      if (myrank_da /= 0) return
       call get_nobs_radar(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof)%nobs, obs(iof)%meta(1), obs(iof)%meta(2), obs(iof)%meta(3))
     case (obsfmt_pawr_toshiba)
 !      if (.not. OBS_USE_JITDT) then
@@ -699,33 +701,37 @@ subroutine read_obs_all(obs)
 !      enddo
 !      end if
     case (obsfmt_pawr_jrc)
+      if (myrank_da /= 0) return
 !      if (.not. OBS_USE_JITDT) then
       call read_obs_radar_jrc(trim(OBS_IN_NAME(iof))//trim(timelabel_obs), obs(iof))
 !      end if
     case (obsfmt_h08)
+      if (myrank_da /= 0) return
       call get_nobs_H08(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof)%nobs) ! H08
     case default
       write(6,*) '[Error] Unsupported observation file format!'
       stop
     end select
 
-    write(6,'(5A,I9,A)') 'OBS FILE [', trim(OBS_IN_NAME(iof))//trim(timelabel_obs), '] (FORMAT ', &
-                         trim(OBS_IN_FORMAT(iof)), '): TOTAL ', &
-                         obs(iof)%nobs, ' OBSERVATIONS'
-
-    select case (OBS_IN_FORMAT(iof))
-    case (obsfmt_prepbufr)
-      call obs_info_allocate(obs(iof), extended=.true.)
-      call read_obs(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof))
-    case (obsfmt_radar)
-      call obs_info_allocate(obs(iof), extended=.true.)
-      call read_obs_radar(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof))
-    !case (obsfmt_pawr_toshiba)
-    !  data already read by 'read_obs_radar_toshiba' above
-    case (obsfmt_h08)
-      call obs_info_allocate(obs(iof), extended=.true.)
-      call read_obs_H08(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof)) ! H08
-    end select
+    if (myrank_da == 0) then
+      write(6,'(5A,I9,A)') 'OBS FILE [', trim(OBS_IN_NAME(iof))//trim(timelabel_obs), '] (FORMAT ', &
+                           trim(OBS_IN_FORMAT(iof)), '): TOTAL ', &
+                           obs(iof)%nobs, ' OBSERVATIONS'
+  
+      select case (OBS_IN_FORMAT(iof))
+      case (obsfmt_prepbufr)
+        call obs_info_allocate(obs(iof), extended=.true.)
+        call read_obs(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof))
+      case (obsfmt_radar)
+        call obs_info_allocate(obs(iof), extended=.true.)
+        call read_obs_radar(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof))
+      !case (obsfmt_pawr_toshiba)
+      !  data already read by 'read_obs_radar_toshiba' above
+      case (obsfmt_h08)
+        call obs_info_allocate(obs(iof), extended=.true.)
+        call read_obs_H08(trim(OBS_IN_NAME(iof))//trim(timelabel_obs),obs(iof)) ! H08
+      end select
+    endif
   end do ! [ iof = 1, OBS_IN_NUM ]
 
   return
@@ -782,7 +788,7 @@ subroutine read_obs_all_mpi(obs)
 
   call mpi_timer('', 2)
 
-  if (myrank_da == 0) then
+  if (myrank_da < RADAR_NPROC) then
     call read_obs_all(obs)
 
     call mpi_timer('read_obs_all_mpi:read_obs_all:', 2)

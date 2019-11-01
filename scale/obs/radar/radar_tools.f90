@@ -14,6 +14,13 @@ MODULE radar_tools
   !USE common
   !USE common_radar_tools
   !USE common_namelist
+  use common_mpi_scale, only: &
+    myrank_o, &
+    nprocs_o, &
+    MPI_COMM_o, &
+    mpi_timer!, &
+!    pawr_3dvar_allreduce, &
+!    pawr_i8_allreduce
 
   IMPLICIT NONE
   PUBLIC
@@ -236,14 +243,10 @@ CONTAINS
     integer,parameter::nobs_sp_max=1199*1199*110
     integer :: packed_grid_count(nobs_sp_max)
 
-
-
     !QC
-    call system_clock(time1, timerate, timemax)
     call apply_qcflag(na, nr, ne, ze, vr, qcflag, missing, input_is_dbz, lon0, lat0, radlon, radlat, radz, & ! input
          &            qced_ze, qced_vr)                                    ! output
-    call system_clock(time2, timerate, timemax)
-    write(*, *) "QC", (time2 - time1) / dble(timerate)
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:qcflag', 2, barrier=MPI_COMM_o)
 
     !AVERAGE DATA AND INCLUDE OBSERVATIONA ERROR.
     !We will compute the i,j,k for each radar grid point and box average the data.
@@ -268,79 +271,77 @@ CONTAINS
 
 
     !Indexing
-    time1 = time2
     call indexing(na, nr, ne, radlon, radlat, radz, qced_ze, & ! input spherical
          &        nlon, nlat, nlev, lon, lat, z, dlon, dlat, dz, & ! input cartesian
          &        missing, & ! input param
          &        rad2grid, mask, nobs_each_elev, nobs) ! output
-    call system_clock(time2, timerate, timemax)
-    write(*, *) "index", (time2 - time1) / dble(timerate)
-    write(*, *) "nobs = ", nobs
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:indexing', 2, barrier=MPI_COMM_o)
 
 
     !Pack data
-    time1 = time2
     call packing(na, nr, ne, radlon, radlat, radz, qced_ze, qced_vr, attenuation, & ! input spherical
          &       rad2grid, mask, nobs_each_elev, nobs, &                            ! input index
          &       packed_grid, packed_data, packed_attn)                             ! output
     deallocate(nobs_each_elev, qced_ze, qced_vr, rad2grid, mask)
-    call system_clock(time2, timerate, timemax)
-    write(*, *) "pack", (time2 - time1) / dble(timerate)
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:pack', 2, barrier=MPI_COMM_o)
 
     packed_grid_count=0
     do idx = 1, nobs
      packed_grid_count(packed_grid(idx))=packed_grid_count(packed_grid(idx))+1
-   end do
+    end do
+
     !Sort index array
-    time1 = time2
     allocate(grid_index(nobs))
 !$omp parallel do private(idx)
     do idx = 1, nobs
        grid_index(idx) = packed_grid(idx)
     end do
 !$omp end parallel do
-
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:Sort index array', 2, barrier=MPI_COMM_o)
 
 !!!    call merge_sort_parallel(nobs, grid_index) ! Check T. Honda
     call quicksort(nobs, grid_index) 
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:quicksort', 2, barrier=MPI_COMM_o)
 
-
-    call system_clock(time2, timerate, timemax)
-    write(*, *) "sort", (time2 - time1) / dble(timerate)
 
     !Unique superobs (nobs_sp)
-    !time1 = time2
     call uniq_int_sorted(nobs, grid_index, nobs_sp)
-    call system_clock(time2, timerate, timemax)
-    write(*, *) "uniq", (time2 - time1) / dble(timerate)
-!    write(*, *) "nobs_sp = ", nobs_sp
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:Unique superobs', 2, barrier=MPI_COMM_o)
 
     !Inverted indexing
-    time1 = time2
+
     allocate(pack2uniq(nobs))
-!$omp parallel private(idx, jdx)
+    pack2uniq = 0d0
+
+!$omp parallel private(idx)
 !$omp do
     do idx = 1, nobs
        pack2uniq(idx) = binary_search_i8(nobs_sp, grid_index, packed_grid(idx))
     end do !idx
 !$omp end do
+!$omp end parallel 
+
+!    call pawr_i8_allreduce(pack2uniq,nobs)
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:Inverted indexing', 2, barrier=MPI_COMM_o)
+
+!$omp parallel private(idx, jdx)
 !$omp single
-    call system_clock(time2, timerate, timemax)
-    write(*, *) "inv idx", (time2 - time1) / dble(timerate)
+!    call system_clock(time2, timerate, timemax)
+!    if (myrank_o == 0) write(*, *) "inv idx", (time2 - time1) / dble(timerate)
 
     !Allocate output arrays
-    time1 = time2
+!    time1 = time2
     allocate(grid_ref(nobs_sp), grid_vr(nobs_sp))
     allocate(grid_count_ref(nobs_sp), grid_count_vr(nobs_sp))
     allocate(grid_lon_ref(nobs_sp), grid_lat_ref(nobs_sp), grid_z_ref(nobs_sp))
     allocate(grid_lon_vr(nobs_sp) , grid_lat_vr(nobs_sp) , grid_z_vr(nobs_sp))
     allocate(grid_w_vr(nobs_sp))
     allocate(grid_meanvr(nobs_sp), grid_stdvr(nobs_sp))
-    call system_clock(time2, timerate, timemax)
-    write(*, *) "alloc out ary", (time2 - time1) / dble(timerate)
+!    call system_clock(time2, timerate, timemax)
+!    if (myrank_o == 0) write(*, *) "alloc out ary", (time2 - time1) / dble(timerate)
 
     !Initialize arrays
-    time1 = time2
+!    time1 = time2
 !$omp end single
 !$omp do
     do idx = 1, nobs_sp
@@ -360,8 +361,8 @@ CONTAINS
     end do
 !$omp end do
 !$omp single
-    call system_clock(time2, timerate, timemax)
-    write(*, *) "init ary", (time2 - time1) / dble(timerate)
+!    call system_clock(time2, timerate, timemax)
+!    if (myrank_o == 0) write(*, *) "init ary", (time2 - time1) / dble(timerate)
 
     !Accumulate data
     time1 = time2
@@ -467,8 +468,8 @@ CONTAINS
     ENDDO !jdx
 !$omp end sections
 !$omp single
-    call system_clock(time2, timerate, timemax)
-    write(*, *) "accum", (time2 - time1) / dble(timerate)
+!    call system_clock(time2, timerate, timemax)
+!    write(*, *) "accum", (time2 - time1) / dble(timerate)
 
     time1 = time2
     !Average data and write observation file (FOR LETKF)
@@ -522,8 +523,9 @@ CONTAINS
     end do !idx
 !$omp end do
 !$omp end parallel
-    call system_clock(time2, timerate, timemax)
-    write(*, *) "normalize", (time2 - time1) / dble(timerate)
+!    call system_clock(time2, timerate, timemax)
+!    if (myrank_o == 0) write(*, *) "normalize", (time2 - time1) / dble(timerate)
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:others', 2, barrier=MPI_COMM_o)
     return
   end SUBROUTINE radar_superobing
 
@@ -541,6 +543,22 @@ CONTAINS
 
     real(r_size) :: lon_coef, lat_coef, dist_i, dist_j
     real(r_size) :: vr_min_dist_square
+
+    integer :: ie_s, ie_e
+
+!    qced_ze = 0.0_r_size
+!    qced_vr = 0.0_r_size
+    ie_s = 1
+    ie_e = ne
+!    if (ne < nprocs_o) then
+!      ie_s = 1
+!      ie_e = ne
+!      if (myrank_o /= 0) ie_e = 0
+!    else
+!      ie_s = int(ne / nprocs_o) * myrank_o + 1
+!      ie_e = int(ne / nprocs_o) * (myrank_o +1)
+!      if (myrank_o + 1 == nprocs_o) ie_e = max(ie_e, ne)
+!    endif
 
     lon_coef = deg2rad * (cos(lat0 * deg2rad) * re)
     lat_coef = deg2rad * re
@@ -599,6 +617,13 @@ CONTAINS
        end do !ir
     end do !ie
 !$omp end parallel do
+
+!    if ( nprocs_o > 1) then
+!      call pawr_3dvar_allreduce(na,nr,ne,qced_ze)
+!      call pawr_3dvar_allreduce(na,nr,ne,qced_vr)
+!    endif
+
+    return
   end subroutine apply_qcflag
 
   subroutine indexing(na, nr, ne, radlon, radlat, radz, qced_ze, & ! input spherical

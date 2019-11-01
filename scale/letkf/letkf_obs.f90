@@ -722,7 +722,7 @@ SUBROUTINE set_letkf_obs
   ! Print observation usage settings
   !-----------------------------------------------------------------------------
 
-  if (LOG_LEVEL >= 2 .and. myrank_da == 0) then
+  if (LOG_LEVEL >= 3 .and. myrank_da == 0) then
     write (6, *)
     write (6, '(A)') 'OBSERVATION USAGE SETTINGS (LIST ONLY EXISTING TYPE-VAR):'
     write (6, '(A)') '=================================================================================='

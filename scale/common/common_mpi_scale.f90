@@ -73,6 +73,7 @@ module common_mpi_scale
   integer,save :: MPI_COMM_d, nprocs_d, myrank_d
   integer,save :: MPI_COMM_e, nprocs_e, myrank_e
   integer,save :: MPI_COMM_ef, nprocs_ef, myrank_ef
+  integer,save :: MPI_COMM_o, nprocs_o, myrank_o
 
   integer, parameter :: max_timer_levels = 5
   integer, parameter :: timer_name_width = 50
@@ -174,6 +175,7 @@ subroutine set_common_mpi_scale
   
     call MPI_COMM_SIZE(MPI_COMM_e, nprocs_e, ierr)
     call MPI_COMM_RANK(MPI_COMM_e, myrank_e, ierr)
+
   else
     ! No COMM_e for dacycle-forecast members
     return
@@ -773,6 +775,7 @@ subroutine set_scalelib(execname)
 
   call mpi_timer('set_scalelib:mpi_comm_split_d_local:', 2)
 
+
   select case (execname_)
   case ('LETKF  ')
     call read_nml_obs_error
@@ -1175,14 +1178,14 @@ subroutine read_ens_mpi(v3d, v2d)
 
       if (DIRECT_TRANSFER) then
         if (ATMOS_RESTART_OUT_POSTFIX_TIMELABEL) then
-          if ((myrank_a == 0) .and. trim(filename) /= trim(ATMOS_RESTART_OUT_BASENAME)//trim(timelabel_anal)) then
+          if ((myrank_a == 0) .and. trim(filename) /= trim(ATMOS_RESTART_OUT_BASENAME)//trim(timelabel_anal) .and. LOG_LEVEL >= 4) then
             write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
             write (6, '(3A)') "        Output filename in SCALE = '", trim(ATMOS_RESTART_OUT_BASENAME)//trim(timelabel_anal), "'"
             write (6, '(3A)') "        Input  filename in LETKF = '", trim(filename), "'"
             stop
           end if
         else
-          if ((myrank_a == 0) .and. trim(filename) /= trim(ATMOS_RESTART_OUT_BASENAME)) then
+          if ((myrank_a == 0) .and. trim(filename) /= trim(ATMOS_RESTART_OUT_BASENAME) .and. LOG_LEVEL >= 4) then
             write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
             write (6, '(3A)') "        Output filename in SCALE = '", trim(ATMOS_RESTART_OUT_BASENAME), "'"
             write (6, '(3A)') "        Input  filename in LETKF = '", trim(filename), "'"
@@ -1329,7 +1332,7 @@ subroutine write_ens_mpi(v3d, v2d, mean3d, mean2d)
         if (ATMOS_RESTART_IN_POSTFIX_TIMELABEL) then
           if (trim(filename) /= trim(ATMOS_RESTART_IN_BASENAME)//trim(timelabel_anal)) then
 
-            if (LOG_LEVEL >= 3 .or. myrank_da == 0) then
+            if (LOG_LEVEL >= 4 .and. myrank_da == 0) then
               write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
               write (6, '(3A)') "        Output filename in LETKF = '", trim(filename), "'"
               write (6, '(3A)') "        Input  filename in SCALE = '", trim(ATMOS_RESTART_IN_BASENAME)//trim(timelabel_anal), "'"
@@ -1340,7 +1343,7 @@ subroutine write_ens_mpi(v3d, v2d, mean3d, mean2d)
         else
           if (trim(filename) /= trim(ATMOS_RESTART_IN_BASENAME)) then
 
-            if (LOG_LEVEL >= 3 .or. myrank_da == 0) then
+            if (LOG_LEVEL >= 4 .and. myrank_da == 0) then
                 write (6, '(A)') '[Error] Direct transfer error: filenames mismatch.'
                 write (6, '(3A)') "        Output filename in LETKF = '", trim(filename), "'"
                 write (6, '(3A)') "        Input  filename in SCALE = '", trim(ATMOS_RESTART_IN_BASENAME), "'"
@@ -2037,9 +2040,9 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
   call MPI_BARRIER(MPI_COMM_d, ierr)
   call date_and_time(date=date, time=time)
-  if (myrank_d == 0) then
-    write (6, '(2A,1x,A,1x,A)') '[Info:plot] fcst start plotting: ', date, time, trim(timelabel)//" FT"//trim(ftsec)
-  endif
+!  if (myrank_d == 0) then
+!    write (6, '(2A,1x,A,1x,A)') '[Info:plot] fcst start plotting: ', date, time, trim(timelabel)//" FT"//trim(ftsec)
+!  endif
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
@@ -2096,7 +2099,7 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
   call MPI_BARRIER(MPI_COMM_d, ierr)
   call date_and_time(date=date, time=time)
-  if (myrank_d == 0) then
+  if (myrank_d == 0 .and. mod(step,2) == 0) then
     write (6, '(2a,1x,a,1x,a)') '[Info:plot] fcst finish plotting: ', date, time, trim(timelabel)//" FT"//trim(ftsec)
   endif
 
@@ -2150,7 +2153,6 @@ subroutine plot_anal_mpi(timelabel, ref3d)
   character(len=H_LONG) :: plotname
 #endif
 !  real(r_sngl) :: v2d_ref(nlong,nlatg,nv3dd)
-
 
   call MPI_BARRIER(MPI_COMM_d, ierr)
   call date_and_time(date=date, time=time)
@@ -2958,6 +2960,138 @@ subroutine send_recv_emean_others(fcst_cnt)
 
   return
 end subroutine send_recv_emean_others
+
+subroutine pawr_toshiba_hd_mpi(lon0, lat0, z0, missing, range_res, na, nr, ne, &
+                            AZDIM, ELDIM, n_type, RDIM, az, el, rtdat)
+  implicit none
+
+  real(r_size), intent(inout) :: lon0, lat0, z0, missing
+  integer, intent(inout) :: range_res, na, nr, ne
+  integer, intent(in) :: AZDIM, ELDIM, n_type, RDIM
+  real(r_sngl), intent(inout) :: az(AZDIM, ELDIM, n_type), el(AZDIM, ELDIM, n_type)
+  real(r_sngl), intent(inout) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
+
+  integer :: ierr
+
+  if ( nprocs_o < 2 ) return
+
+  call MPI_BCAST(lon0, 1, MPI_r_size, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(lat0, 1, MPI_r_size, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(z0, 1, MPI_r_size, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(missing, 1, MPI_r_size, 0, MPI_COMM_o, ierr)
+
+  call MPI_BCAST(range_res, 1, MPI_INTEGER, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(na, 1, MPI_INTEGER, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(nr, 1, MPI_INTEGER, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(ne, 1, MPI_INTEGER, 0, MPI_COMM_o, ierr)
+
+  call MPI_BCAST(az,    AZDIM*ELDIM*n_type, MPI_REAL, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(el,    AZDIM*ELDIM*n_type, MPI_REAL, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(rtdat, RDIM*AZDIM*ELDIM*n_type, MPI_REAL, 0, MPI_COMM_o, ierr)
+
+  return
+end subroutine pawr_toshiba_hd_mpi
+
+!subroutine pawr_toshiba_scattv_mpi(RDIM, AZDIM, ELDIM, n_type, ne_lmax, rtdat, az, el, rtdat_l, az_l, el_l)
+subroutine pawr_toshiba_scattv_mpi(RDIM, AZDIM, ELDIM, n_type, ne_lmax, rtdat, rtdat_l)
+  implicit none
+  integer, intent(in) :: AZDIM, ELDIM, n_type, RDIM, ne_lmax
+  real(r_sngl), intent(in) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
+!  real(r_sngl), intent(in) :: az(AZDIM, ELDIM, n_type)
+!  real(r_sngl), intent(in) :: el(AZDIM, ELDIM, n_type)
+
+  real(r_sngl), intent(out) :: rtdat_l(RDIM, AZDIM, ne_lmax, n_type)
+!  real(r_sngl), intent(out) :: az_l(AZDIM, ne_lmax, n_type)
+!  real(r_sngl), intent(out) :: el_l(AZDIM, ne_lmax, n_type)
+
+  real(r_sngl), allocatable :: sbuf1(:), rbuf1(:)
+!  real(r_sngl), allocatable :: sbuf2(:), rbuf2(:)
+!  real(r_sngl), allocatable :: sbuf3(:), rbuf3(:)
+  integer :: ierr
+
+  integer :: it, ie, ia
+  integer :: cnt
+
+  allocate(sbuf1(ne_lmax*nprocs_o*RDIM*AZDIM))
+  allocate(rbuf1(ne_lmax*RDIM*AZDIM))
+!  allocate(sbuf2(ne_lmax*nprocs_o*RDIM*AZDIM))
+!  allocate(rbuf2(ne_lmax*RDIM*AZDIM))
+!  allocate(sbuf3(ne_lmax*nprocs_o*RDIM*AZDIM))
+!  allocate(rbuf3(ne_lmax*RDIM*AZDIM))
+
+  do it = 1, n_type
+
+    if ( myrank_o == 0 ) then
+      do ie = 1, ELDIM
+        do ia = 1, AZDIM
+          cnt = RDIM * AZDIM * (ie - 1) + RDIM *  (ia - 1)
+          sbuf1(1+cnt:RDIM+cnt) = rtdat(1:RDIM,ia,ie,it)
+!          sbuf2(1+cnt:RDIM+cnt) = az(1:RDIM,ia,ie)
+!          sbuf3(1+cnt:RDIM+cnt) = el(1:RDIM,ia,ie)
+        enddo
+      enddo
+    endif
+
+    call MPI_Scatter(sbuf1, ne_lmax*RDIM*AZDIM, MPI_REAL, rbuf1, ne_lmax*RDIM*AZDIM, &
+                     MPI_REAL, 0, MPI_COMM_o, ierr)
+!    call MPI_Scatter(sbuf2, ne_lmax*RDIM*AZDIM, MPI_REAL, rbuf2, ne_lmax*RDIM*AZDIM, &
+!                     MPI_REAL, 0, MPI_COMM_o, ierr)
+!    call MPI_Scatter(sbuf3, ne_lmax*RDIM*AZDIM, MPI_REAL, rbuf3, ne_lmax*RDIM*AZDIM, &
+!                     MPI_REAL, 0, MPI_COMM_o, ierr)
+
+    do ie = 1, ne_lmax
+      do ia = 1, AZDIM
+        cnt = RDIM * AZDIM * (ie - 1) + RDIM *  (ia - 1)
+        rtdat_l(1:RDIM,ia,ie,it) = rbuf1(1+cnt:RDIM+cnt)
+!        az_l(1:RDIM,ia,ie) = rbuf2(1+cnt:RDIM+cnt)
+!        el_l(1:RDIM,ia,ie) = rbuf3(1+cnt:RDIM+cnt)
+      enddo
+    enddo
+  enddo ! nt
+
+  deallocate(sbuf1,rbuf1)
+!  deallocate(sbuf2,rbuf2)
+!  deallocate(sbuf3,rbuf3)
+
+  return
+end subroutine pawr_toshiba_scattv_mpi
+
+subroutine pawr_i8_allreduce(array,size)
+  implicit none
+
+  integer(8),intent(in) :: size
+  integer(8),intent(inout) :: array(size)
+  real(r_dble) :: sarray(size), rarray(size)
+  
+  integer :: ierr
+
+  if (nprocs_o < 2) return
+  sarray = real(array,kind=r_dble)
+  call MPI_ALLREDUCE(sarray, rarray, size, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_o, ierr)
+
+  array = rarray
+
+  return
+end subroutine pawr_i8_allreduce
+
+subroutine pawr_3dvar_allreduce(na,nr,ne,radlon)
+  implicit none
+
+  integer,intent(in) :: na, nr, ne
+  real(r_size),intent(inout) :: radlon(na, nr, ne)
+
+  real(r_size) :: sbuf3d(na, nr, ne)
+  real(r_size) :: rbuf3d(na, nr, ne)
+
+  integer :: ierr
+
+  if (nprocs_o < 2) return
+  sbuf3d = radlon
+  call MPI_ALLREDUCE(sbuf3d, rbuf3d, na*nr*ne, MPI_r_size, MPI_SUM, MPI_COMM_o, ierr)
+  radlon = rbuf3d 
+
+  return
+end subroutine pawr_3dvar_allreduce
 
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)
 !SUBROUTINE read_obs2_mpi(obsfile,nn,nbv,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,hdxf,iqc)

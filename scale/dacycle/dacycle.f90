@@ -236,15 +236,6 @@ program dacycle
     call PROF_setprefx('MAIN')
     call PROF_rapstart('Main_Loop', 0)
 
-call MPI_BARRIER(MPI_COMM_da, ierr) 
-call date_and_time(date=date, time=time)
-if ( myrank_da == 0 ) then
-  if ( myrank_use_da) then
-    write(6,'(a,1x,a)')"CHECK DA MEM READY", time
-  else
-    write(6,'(a,1x,a)')"CHECK FCST MEM READY", time
-  endif
-endif
     do
  
       anal_mem_out_now = .false.
@@ -516,13 +507,18 @@ endif
 
         ! Plot Analysis mean
 #ifdef PLOT_DCL
-        if (myrank_use_da .and. (myrank_e == mmean_rank_e)) then
-         if (PLOT_ANAL)then
-         if (.not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
-          call TIME_gettimelabel(fstimelabel)
-          call calc_ref_direct(ref3d)
-          call plot_anal_mpi(fstimelabel(1:15), ref3d)
-         endif
+        if ( PLOT_ANAL ) then
+          if ( myrank_e == mmean_rank_e ) then
+            if ( .not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
+            call calc_ref_direct(ref3d)
+          endif
+          call mpi_timer('WRITE_ANAL:anal2dbz', 2, barrier=MPI_COMM_da)
+
+          if ( myrank_e == mmean_rank_e ) then
+            call TIME_gettimelabel(fstimelabel)
+            call plot_anal_mpi(fstimelabel(1:15), ref3d)
+          endif
+          call mpi_timer('WRITE_ANAL:plot_anal', 2, barrier=MPI_COMM_da)
         endif
 #endif
 

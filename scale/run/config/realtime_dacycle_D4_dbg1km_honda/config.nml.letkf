@@ -93,6 +93,7 @@
 /
 
 &PARAM_LETKF_RADAR
+ RADAR_NPROC = 6,
  USE_RADAR_REF = .true.,
  USE_RADAR_VR = .true.,
  METHOD_REF_CALC = 3,
