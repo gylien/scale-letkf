@@ -536,7 +536,7 @@ fi
 
 if ((DACYCLE == 1)) &&  ((OBS_USE_JITDT == 1)) ; then
   echo 
-  echo "Use JIT-DT on IP: "${TMP_JITDATA}
+  echo "Use JIT-DT: "${TMP_JITDATA}
   echo
   echo "Remove job.running at $TMP_JITDATA"
   rm -f $TMP_JITDATA/job.running
@@ -585,8 +585,12 @@ if ((DACYCLE == 1)) &&  ((OBS_USE_JITDT == 1)) ; then
 
     echo "Launch offline test"
     echo "JIT-DT will send the following files in "${JIT_TARFILE}
+    RADAR_CHECK_OBS_DA_TIME_TF=".true."
     tar -tf ${JIT_TARFILE}
     src/launch-jitdt-offline.sh ${n_cycles} > /dev/null&
+    OBS_JITDT_CHECK_RADAR_TIME_TF=".false."
+  else
+    OBS_JITDT_CHECK_RADAR_TIME_TF=".true."
   fi
 fi
 
@@ -1253,6 +1257,7 @@ EOF
             -e "/!--OBS_IN_FORMAT--/a OBS_IN_FORMAT = $OBS_IN_FORMAT_LIST" \
             -e "/!--OBS_POSTFIX_TIMELABEL--/a OBS_POSTFIX_TIMELABEL = ${OBS_POSTFIX_TIMELABEL_TF}," \
             -e "/!--OBS_USE_JITDT--/a OBS_USE_JITDT = ${OBS_USE_JITDT_TF}," \
+            -e "/!--OBS_JITDT_CHECK_RADAR_TIME--/a OBS_JITDT_CHECK_RADAR_TIME = ${OBS_JITDT_CHECK_RADAR_TIME_TF}," \
             -e "/!--OBS_JITDT_DATADIR--/a OBS_JITDT_DATADIR = \"${TMP_JITDATA}\"," \
             -e "/!--OBS_JITDT_IP--/a OBS_JITDT_IP = \"${TMP_JITDATA_IP}\"," \
             -e "/!--OBSDA_RUN--/a OBSDA_RUN = $OBSDA_RUN_LIST" \

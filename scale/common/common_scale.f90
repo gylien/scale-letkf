@@ -2340,5 +2340,47 @@ subroutine set_lonlat2d()
   return
 end subroutine set_lonlat2d
 
+subroutine jst2utc(jyear, jmonth, jday, jhour, jminute, jsecond, jtime_ms, utime)
+  use scale_calendar, only: &
+      CALENDAR_date2daysec, &
+      CALENDAR_daysec2date, &
+      CALENDAR_adjust_daysec
+  implicit none
+
+  integer, intent(in) :: jyear, jmonth, jday
+  integer, intent(in) :: jhour, jminute, jsecond
+  real(DP) :: jtime_ms
+  integer, intent(out) :: utime(6)
+  integer :: jtime(6)
+  integer :: absday
+  real(DP) :: abssec, utime_ms
+
+  jtime(1) = jyear
+  jtime(2) = jmonth
+  jtime(3) = jday
+  jtime(4) = jhour
+  jtime(5) = jminute
+  jtime(6) = jsecond
+
+  call CALENDAR_date2daysec( absday,       & ! [OUT]
+                             abssec,       & ! [OUT]
+                             jtime,        & ! [IN]
+                             jtime_ms,     & ! [IN]
+                             0             ) ! [IN]
+
+  abssec = abssec - real(3600*9, kind=DP)
+
+  call CALENDAR_adjust_daysec( absday,   & ! [INOUT]
+                               abssec )    ! [INOUT]
+
+  call CALENDAR_daysec2date( utime,   & ! [OUT]
+                             utime_ms, & ! [OUT]
+                             absday,      & ! [IN]
+                             abssec,      & ! [IN]
+                             0            ) ! [IN]
+
+  return
+end subroutine jst2utc
+
 !===============================================================================
 END MODULE common_scale

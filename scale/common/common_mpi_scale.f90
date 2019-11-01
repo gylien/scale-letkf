@@ -2871,7 +2871,7 @@ subroutine send_recv_emean_others(fcst_cnt)
 end subroutine send_recv_emean_others
 
 subroutine pawr_toshiba_hd_mpi(lon0, lat0, z0, missing, range_res, na, nr, ne, &
-                            AZDIM, ELDIM, n_type, RDIM, az, el, rtdat)
+                            AZDIM, ELDIM, n_type, RDIM, az, el, rtdat, utime_obs)
   implicit none
 
   real(r_size), intent(inout) :: lon0, lat0, z0, missing
@@ -2879,6 +2879,7 @@ subroutine pawr_toshiba_hd_mpi(lon0, lat0, z0, missing, range_res, na, nr, ne, &
   integer, intent(in) :: AZDIM, ELDIM, n_type, RDIM
   real(r_sngl), intent(inout) :: az(AZDIM, ELDIM, n_type), el(AZDIM, ELDIM, n_type)
   real(r_sngl), intent(inout) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
+  integer, intent(inout) :: utime_obs(6)
 
   integer :: ierr
 
@@ -2897,6 +2898,8 @@ subroutine pawr_toshiba_hd_mpi(lon0, lat0, z0, missing, range_res, na, nr, ne, &
   call MPI_BCAST(az,    AZDIM*ELDIM*n_type, MPI_REAL, 0, MPI_COMM_o, ierr)
   call MPI_BCAST(el,    AZDIM*ELDIM*n_type, MPI_REAL, 0, MPI_COMM_o, ierr)
   call MPI_BCAST(rtdat, RDIM*AZDIM*ELDIM*n_type, MPI_REAL, 0, MPI_COMM_o, ierr)
+
+  call MPI_BCAST(utime_obs, 6, MPI_INTEGER, 0, MPI_COMM_o, ierr)
 
   return
 end subroutine pawr_toshiba_hd_mpi
