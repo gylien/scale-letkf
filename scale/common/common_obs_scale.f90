@@ -2782,8 +2782,8 @@ END SUBROUTINE wgt_ave2d
 #ifdef H08
 !
 SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,plev_obs,qc,stggrd,yobs_H08_clr)
-  use scale_mapproj, only: &
-      MPRJ_rotcoef
+  use scale_mapprojection, only: &
+      MAPPROJECTION_rotcoef
   use scale_H08_fwd
   use scale_atmos_grid_cartesC_index, only: &
     KHALO
