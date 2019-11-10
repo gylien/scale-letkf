@@ -344,8 +344,8 @@ END SUBROUTINE Trans_XtoY
 ! 
 !-----------------------------------------------------------------------
 SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev,v3d,v2d,yobs,qc,stggrd)
-  use scale_mapproj, only: &
-      MPRJ_rotcoef
+  use scale_mapprojection, only: &
+      MAPPROJECTION_rotcoef
 !  USE common_mpi
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: elm
@@ -361,8 +361,9 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   REAL(r_size) :: qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr !,rhr
   REAL(r_size) :: dist , dlon , dlat , az , elev , radar_ref,radar_rv
 
-  real(r_size) :: rotc(2)
   real(r_size) :: utmp, vtmp
+  REAL(RP) :: rotc(1,1,2)
+  real(RP) :: lon_tmp(1,1),lat_tmp(1,1)
 
 !  integer :: ierr
 !  REAL(r_dble) :: rrtimer00,rrtimer
@@ -376,12 +377,12 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   qc = iqc_good
 
   if (stggrd_ == 1) then
-    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,ur)  !###### should modity itpl_3d to prevent '1.0' problem....??
-    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,vr)  !######
+    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri-0.5_r_size,rj,utmp)  !###### should modity itpl_3d to prevent '1.0' problem....??
+    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj-0.5_r_size,vtmp)  !######
     CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk-0.5_r_size,ri,rj,wr)  !######
   else
-    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,ur)
-    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,vr)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,utmp)
+    CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,vtmp)
     CALL itpl_3d(v3d(:,:,:,iv3dd_w),rk,ri,rj,wr)
   end if
   CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,tr)
@@ -394,12 +395,14 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   CALL itpl_3d(v3d(:,:,:,iv3dd_qg),rk,ri,rj,qgr)
 !
 
-  utmp = ur
-  vtmp = vr
+  lon_tmp(1,1) = lon*deg2rad
+  lat_tmp(1,1) = lat*deg2rad
+  call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
+                             lon_tmp(1,1),lat_tmp(1,1),rotc)
 
-  call MPRJ_rotcoef(rotc,lon*deg2rad,lat*deg2rad)
-  ur = utmp * rotc(1) - vtmp * rotc(2)
-  vr = utmp * rotc(2) + vtmp * rotc(1)
+  ur = utmp * rotc(1,1,1) - vtmp * rotc(1,1,2)
+  vr = utmp * rotc(1,1,2) + vtmp * rotc(1,1,1)
+
 
 !  rrtimer = MPI_WTIME()
 !  WRITE(6,'(A,F18.10)') '###### Trans_XtoY_radar:itpl_3d:',rrtimer-rrtimer00
@@ -449,7 +452,7 @@ SUBROUTINE Trans_XtoY_radar(elm,radar_lon,radar_lat,radar_z,ri,rj,rk,lon,lat,lev
   !WRITE(6,*)'ELEVATION ',elev
   !DEGUB---------------------------------------------------------------
 
-  !WRITE(6,*)'BCRV',dlon,dlat,az,elev
+  !WRITE(6,*)'BCRV',dlon,dlat,az,eltmpv
 
   CALL calc_ref_vr(qvr,qcr,qrr,qir,qsr,qgr,ur,vr,wr,tr,pr,az,elev,radar_ref,radar_rv)
 
