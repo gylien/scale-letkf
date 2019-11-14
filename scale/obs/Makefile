@@ -83,7 +83,7 @@ radar_obs.o:	radar/radar_obs.f90 radar_tools.o read_toshiba_f.o ../common/plot_d
 endif
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 radar_tools.o:	radar/radar_tools.f90 $(COMMON_DIR)
-	$(SFC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
+	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 
 read_toshiba.o:	radar/read_toshiba.c radar/read_toshiba.h
 	$(CC) $(COPTS) -c $<

@@ -1026,6 +1026,10 @@ subroutine read_nml_letkf_radar
     RADAR_REF_THRES_DBZ = MIN_RADAR_REF_DBZ
   end if
 
+  if ( RADAR_NPROC > MEMBER ) then
+    RADAR_NPROC = MEMBER 
+  endif
+
   if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_LETKF_RADAR)
   end if

@@ -52,6 +52,7 @@ module common_mpi_scale
   integer,save :: myrank_to_pe
   logical,save :: myrank_use = .false.
   logical,save :: myrank_use_da = .false.
+  logical,save :: myrank_use_obs = .false.
 
   integer,save :: mydom = -1
 
@@ -2986,23 +2987,23 @@ subroutine pawr_i8_allreduce(array,size)
   return
 end subroutine pawr_i8_allreduce
 
-subroutine pawr_3dvar_allreduce(na,nr,ne,radlon)
-  implicit none
-
-  integer,intent(in) :: na, nr, ne
-  real(r_size),intent(inout) :: radlon(na, nr, ne)
-
-  real(r_size) :: rbuf3d(na, nr, ne)
-
-  integer :: ierr
-
-  if (nprocs_o < 2) return
-  rbuf3d = radlon
-  call MPI_ALLREDUCE(MPI_IN_PLACE, rbuf3d, na*nr*ne, MPI_r_size, MPI_SUM, MPI_COMM_o, ierr)
-  radlon = rbuf3d 
-
-  return
-end subroutine pawr_3dvar_allreduce
+!subroutine pawr_3dvar_allreduce(na,nr,ne,radlon)
+!  implicit none
+!
+!  integer,intent(in) :: na, nr, ne
+!  real(r_size),intent(inout) :: radlon(na, nr, ne)
+!
+!  real(r_size) :: rbuf3d(na, nr, ne)
+!
+!  integer :: ierr
+!
+!  if (nprocs_o < 2) return
+!  rbuf3d = radlon
+!  call MPI_ALLREDUCE(MPI_IN_PLACE, rbuf3d, na*nr*ne, MPI_r_size, MPI_SUM, MPI_COMM_o, ierr)
+!  radlon = rbuf3d 
+!
+!  return
+!end subroutine pawr_3dvar_allreduce
 
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)
 !SUBROUTINE read_obs2_mpi(obsfile,nn,nbv,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,hdxf,iqc)

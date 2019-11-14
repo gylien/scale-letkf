@@ -830,12 +830,6 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   integer :: range_res
 
-!  real(kind=r_sngl), allocatable :: rtdat_l(:,:,:,:)
-!  real(kind=r_sngl), allocatable :: az_l(:,:,:), el_l(:,:,:)
-!  real(r_size), allocatable :: ze_l(:, :, :), vr_l(:, :, :), qcflag_l(:, :, :), attenuation_l(:, :, :)
-!  real(r_size), allocatable :: radlon_l(:, :, :), radlat_l(:, :, :), radz_l(:, :, :)
-!  integer :: ne_lmax
-
   call mpi_timer('', 3)
 
   if ( OBS_JITDT_CHECK_RADAR_TIME .and. minval(utime_obs) >= 0 ) then
@@ -932,19 +926,11 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   endif
 
+  ! broadcast obs information
   call  pawr_toshiba_hd_mpi(lon0, lat0, z0, missing,&
                            range_res, na, nr, ne, &
                            AZDIM, ELDIM, n_type, RDIM, &
                            az, el, rtdat, utime_obs)
-
-!  ! Set local index for elavation (ne_lmax)
-!  ie = mod(ELDIM, nprocs_o) 
-!  ne_lmax = ((ELDIM - ie ) / nprocs_o) + 1
-
-!  allocate(rtdat_l(1:RDIM, 1:AZDIM, ne_lmax, n_type))
-
-!  call pawr_toshiba_scattv_mpi(RDIM, AZDIM, ELDIM, n_type, ne_lmax, &
-!                              rtdat, rtdat_l)
 
   call mpi_timer('read_obs_radar_toshiba:comm:', 2, barrier=MPI_COMM_o)
 
@@ -973,27 +959,12 @@ subroutine read_obs_radar_toshiba(cfile, obs)
     endif
   endif
 
-!  i = 1
-!! OUTPUT SPHERICAL COORDINATE DATA FOR DEBUG !!!
-!  write(fname, '(I03.3)') i
-!  open(1, file = trim(fname) // ".bin", access = "stream", form = "unformatted")
-!  write(1) rtdat(1:hd(1)%range_num, 1:hd(1)%sector_num, 1:hd(1)%el_num, :)
-!  close(1)
-
-!  i=0
-
   allocate(ze(na, nr, ne), vr(na, nr, ne), qcflag(na, nr, ne), attenuation(na, nr, ne))
-
-!  allocate(ze_l(na, nr, ne_lmax), vr_l(na, nr, ne_lmax))
-!  allocate(qcflag_l(na, nr, ne_lmax), attenuation_l(na, nr, ne_lmax))
 
   valid_qcf = 0
   do j = 1, 8  
     if(qcf_mask(j) > 0) valid_qcf = ibset(valid_qcf, j - 1) 
   end do
-
-!
-!qcf_count=0
 
 !$omp parallel do private(ia, ir, ie)
   do ie = 1, ne
@@ -1016,15 +987,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
      end do
   end do
 !$omp end parallel do
-
   deallocate(rtdat)
 
-!do j=0,255
-! write(*,*) j,qcf_count(j)
-!end do
-!stop
-
-  call mpi_timer('read_obs_radar_toshiba:preliminary_qc:', 2, barrier=MPI_COMM_o)
 
   allocate(rrange(nr))
 !$omp parallel do private(ir)
@@ -1032,6 +996,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
      rrange(ir) = (dble(ir) - 0.5d0) * range_res
   end do
 !$omp end parallel do
+
+  call mpi_timer('read_obs_radar_toshiba:qc:', 2, barrier=MPI_COMM_o)
 
   if ((.not. allocated(radlon)) .and. (.not. allocated(radlat)) .and. (.not. allocated(radz)) ) then 
     allocate(radlon(na, nr, ne), radlat(na, nr, ne), radz(na, nr, ne))
@@ -1045,21 +1011,23 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   deallocate(az, el)
 
 !  write(*, *) "call define_grid"
-  call define_grid(lon0, lat0, nr, rrange, rrange(nr), RADAR_ZMAX, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_VERT, & ! input
+  call define_grid(lon0, lat0, nr, rrange, rrange(nr), RADAR_ZMAX, & ! input
+                   RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_VERT, & ! input
        &           dlon, dlat, nlon, nlat, nlev, lon, lat, z)              ! output
 
   call mpi_timer('read_obs_radar_toshiba:define_grid:', 2, barrier=MPI_COMM_o)
 
 !  write(*, *) "call radar_superobing"
-  call radar_superobing(na, nr, ne, radlon, radlat, radz, ze, vr, &    ! input spherical
-       &                qcflag, attenuation, &                                         ! input spherical
-       &                nlon, nlat, nlev, lon, lat, z, dlon, dlat, RADAR_SO_SIZE_VERT, & ! input cartesian
-       &                missing, input_is_dbz, &                                       ! input param
-       &                lon0, lat0, &
-       &                nobs_sp, grid_index, &                                         ! output array info
-       &                grid_ze, grid_lon_ze, grid_lat_ze, grid_z_ze, grid_count_ze, & ! output ze
-       &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr)   ! output vr
-!  write(*, *) "done"
+   call radar_superobing(na, nr, ne, radlon, radlat, radz, ze, vr, & ! input spherical
+        &                qcflag, attenuation, & ! input spherical
+        &                nlon, nlat, nlev, lon, lat, z, dlon, dlat, RADAR_SO_SIZE_VERT, & ! input cartesian
+        &                missing, input_is_dbz, & ! input param
+        &                lon0, lat0, &
+        &                nobs_sp, grid_index, & ! output array info
+        &                grid_ze, grid_lon_ze, grid_lat_ze, grid_z_ze, grid_count_ze, & ! output ze
+        &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr, & ! output vr
+        &                MPI_COMM_o)
+
 
   if(allocated(ze)) deallocate(ze)
   if(allocated(vr)) deallocate(vr)
