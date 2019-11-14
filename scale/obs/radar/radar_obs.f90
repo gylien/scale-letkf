@@ -18,7 +18,6 @@ module radar_obs
 
   implicit none
   public
-  real(r_size), allocatable, save :: radlon(:, :, :), radlat(:, :, :), radz(:, :, :)
   integer, save :: utime_obs(6) = (/-1,-1,-1,-1,-1,-1/)
 
 contains
@@ -793,6 +792,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   integer, save::i=0
 
   real(r_size), allocatable :: ze(:, :, :), vr(:, :, :), qcflag(:, :, :), attenuation(:, :, :), rrange(:)
+  real(r_size), allocatable :: radlon(:, :, :), radlat(:, :, :), radz(:, :, :)
   real(r_size), allocatable :: lon(:), lat(:), z(:)
   integer(8), allocatable :: grid_index(:), grid_count_ze(:), grid_count_vr(:)
   real(r_size), allocatable :: grid_ze(:), grid_vr(:)
@@ -999,14 +999,13 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   call mpi_timer('read_obs_radar_toshiba:qc:', 2, barrier=MPI_COMM_o)
 
-  if ((.not. allocated(radlon)) .and. (.not. allocated(radlat)) .and. (.not. allocated(radz)) ) then 
-    allocate(radlon(na, nr, ne), radlat(na, nr, ne), radz(na, nr, ne))
-    call radar_georeference(lon0, lat0, z0, na, nr, ne, &                                   ! input
-         &                  real(az(:, 1, 1), r_size), rrange, real(el(1, :, 1), r_size), & ! input (assume ordinary scan strategy)
-         &                  radlon, radlat, radz)                                     ! output
+  allocate(radlon(na, nr, ne), radlat(na, nr, ne), radz(na, nr, ne))
+  call radar_georeference(lon0, lat0, z0, na, nr, ne, &                                   ! input
+       &                  real(az(:, 1, 1), r_size), rrange, real(el(1, :, 1), r_size), & ! input (assume ordinary scan strategy)
+       &                  radlon, radlat, radz, &                                     ! output  
+       &                  MPI_comm_o)
 
-    call mpi_timer('read_obs_radar_toshiba:radar_georeference:', 2, barrier=MPI_COMM_o)
-  endif
+  call mpi_timer('read_obs_radar_toshiba:radar_georeference:', 2, barrier=MPI_COMM_o)
 
   deallocate(az, el)
 
@@ -1028,12 +1027,14 @@ subroutine read_obs_radar_toshiba(cfile, obs)
         &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr, & ! output vr
         &                MPI_COMM_o)
 
-
   if(allocated(ze)) deallocate(ze)
   if(allocated(vr)) deallocate(vr)
   if(allocated(qcflag)) deallocate(qcflag)
   if(allocated(attenuation)) deallocate(attenuation)
   if(allocated(rrange)) deallocate(rrange)
+  if(allocated(radlon)) deallocate(radlon)
+  if(allocated(radlat)) deallocate(radlat)
+  if(allocated(radz)) deallocate(radz)
 
 
   call mpi_timer('read_obs_radar_toshiba:radar_superobing:', 2, barrier=MPI_COMM_o)

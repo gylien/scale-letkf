@@ -56,7 +56,7 @@ MODULE radar_tools
   LOGICAL :: use_attenuation=.true. !Consider attenuation in superobbing
   LOGICAL :: use_qcflag=.true.      !Consider or not qc flag.
   LOGICAL :: use_vr_std=.true.           !If we are going to use the wind std threshold within each box.
-  REAL(r_size) :: vr_std_threshold=5.0d0 !If wind variability within each superob is greather than this threshold the box is rejected.
+  REAL(r_size) :: vr_std_threshold=2.5d0 !If wind variability within each superob is greather than this threshold the box is rejected.
   !IF USE_ATTENUATION == TRUE, then gates with estimated attenuation
   !greather than the threshold will be rejected. (this does not affect
   !the computation of attenuation in the forward operator)
@@ -73,11 +73,9 @@ MODULE radar_tools
 
 CONTAINS
 
-  subroutine radar_georeference(lon0, lat0, z0, na, nr, ne, azimuth, rrange, elevation, radlon, radlat, radz)
-    implicit none
-
+  subroutine radar_georeference(lon0, lat0, z0, na, nr, ne, azimuth, rrange, elevation, radlon, radlat, radz, comm)
     real(r_size), intent(in) :: lon0, lat0, z0
-    integer, intent(in) :: na, nr, ne
+    integer, intent(in) :: na, nr, ne, comm
     real(r_size), intent(in) :: azimuth(na), rrange(nr), elevation(ne)
     real(r_size), intent(out) :: radlon(na, nr, ne), radlat(na, nr, ne)
     real(r_size), intent(out) :: radz(na, nr, ne)
@@ -86,6 +84,17 @@ CONTAINS
     real(r_size) cdist, sdist, sinll1, cosll1, sinll1_cdist, cosll1_sdist, cosll1_cdist, sinll1_sdist
     real(r_size) :: azimuth_rad, sin_azim(na), cos_azim(na)
     integer ia, ir, ie
+    integer time1, time2, timerate, timemax
+    integer, allocatable :: j_mpi(:, :), sendcount(:), recvcount(:), recvoffset(:)
+    real(r_size), allocatable :: radlon_mpi(:, :, :), radlat_mpi(:, :, :), radz_mpi(:, :)
+
+!    call system_clock(time1, timerate, timemax)
+
+    mpiprocs = nprocs_o
+    myrank = myrank_o
+
+    allocate(j_mpi(2, 0:(mpiprocs - 1)))
+    call set_mpi_div(j_mpi, int(ne, 8))
 
     !THIS CODE IS COPIED FROM JUAN RUIZ'S QC CODE AND MODIFIED
     sinll1 = sin(lat0 * deg2rad)
@@ -99,8 +108,8 @@ CONTAINS
     end do !ia
 !$omp end do
 
-!$omp do private(ia, ir, ie, sin_elev_ke_Re_2, cos_elev_div_ke_Re, cdist, sdist, sinll1_cdist, cosll1_sdist, cosll1_cdist, sinll1_sdist, tmpdist)
-    do ie = 1, ne
+!$omp do private(ia, ir, ie, sin_elev_ke_Re_2, cos_elev_div_ke_Re, cdist, sdist,sinll1_cdist, cosll1_sdist, cosll1_cdist, sinll1_sdist, tmpdist)
+    do ie = j_mpi(1, myrank), j_mpi(2, myrank)
        sin_elev_ke_Re_2 = sin(elevation(ie) * deg2rad) * ke_Re * 2
        cos_elev_div_ke_Re = cos(elevation(ie) * deg2rad) / ke_Re
        do ir = 1, nr
@@ -120,13 +129,15 @@ CONTAINS
              do ia = 1, na
                 radlat(ia, ir, ie) = asin(sinll1_cdist + cosll1_sdist * cos_azim(ia)) * rad2deg
                 radlon(ia, ir, ie) = lon0 + atan2(sdist * sin_azim(ia), cosll1_cdist - sinll1_sdist * cos_azim(ia)) * rad2deg
-
              end do !ia
           end if
        end do !ir
     end do !ie
 !$omp end do
 !$omp end parallel
+
+!    call system_clock(time2, timerate, timemax)
+!    if(myrank == 0) write(*, *) "radar_georeference", (time2 - time1) / dble(timerate)
 
     return
   end subroutine radar_georeference
