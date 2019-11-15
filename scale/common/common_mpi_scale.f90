@@ -2065,6 +2065,7 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   enddo
 
   allocate(bufr3d(nlev_plot,nlong,nlatg))
+  bufr3d(:,:,:) = 0.0
 
   call rank_1d_2d(myrank_d, proc_i, proc_j)
   ishift = proc_i * nlon
