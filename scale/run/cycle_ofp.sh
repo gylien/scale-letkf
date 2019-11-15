@@ -14,8 +14,6 @@ cd "$(dirname "$0")"
 myname="$(basename "$0")"
 job='cycle'
 
-RSCGRP='debug-cache'
-
 #===============================================================================
 # Configuration
 
