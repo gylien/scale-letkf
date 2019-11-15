@@ -18,7 +18,7 @@ module radar_obs
 
   implicit none
   public
-  real(r_size), allocatable, save :: radlon(:, :, :), radlat(:, :, :), radz(:, :, :)
+  integer, save :: utime_obs(6) = (/-1,-1,-1,-1,-1,-1/)
 
 contains
 
@@ -756,12 +756,14 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   use radar_tools
   use scale_atmos_grid_cartesC, only: &
       DX, DY
+  use scale_time, only: &
+      TIME_gettimelabel, &
+      TIME_NOWDATE
 #ifdef PLOT_DCL
   use common_mpi_scale, only: &
       myrank_o, &
       myrank_da, &
       pawr_toshiba_hd_mpi
-use scale_time, only: TIME_gettimelabel
 #endif
   implicit none
 
@@ -790,6 +792,7 @@ use scale_time, only: TIME_gettimelabel
   integer, save::i=0
 
   real(r_size), allocatable :: ze(:, :, :), vr(:, :, :), qcflag(:, :, :), attenuation(:, :, :), rrange(:)
+  real(r_size), allocatable :: radlon(:, :, :), radlat(:, :, :), radz(:, :, :)
   real(r_size), allocatable :: lon(:), lat(:), z(:)
   integer(8), allocatable :: grid_index(:), grid_count_ze(:), grid_count_vr(:)
   real(r_size), allocatable :: grid_ze(:), grid_vr(:)
@@ -822,18 +825,28 @@ use scale_time, only: TIME_gettimelabel
   character(len=8)  :: date
   character(len=10) :: time
   character(len=90) :: plotname
-  character(len=19)::timelabel
+  character(len=19) :: timelabel
 #endif
 
   integer :: range_res
 
-!  real(kind=r_sngl), allocatable :: rtdat_l(:,:,:,:)
-!  real(kind=r_sngl), allocatable :: az_l(:,:,:), el_l(:,:,:)
-!  real(r_size), allocatable :: ze_l(:, :, :), vr_l(:, :, :), qcflag_l(:, :, :), attenuation_l(:, :, :)
-!  real(r_size), allocatable :: radlon_l(:, :, :), radlat_l(:, :, :), radz_l(:, :, :)
-!  integer :: ne_lmax
-
   call mpi_timer('', 3)
+
+  if ( OBS_JITDT_CHECK_RADAR_TIME .and. minval(utime_obs) >= 0 ) then
+    if ( .not. obs_da_same_time(utime_obs) ) then
+      if (myrank_o == 0 ) then
+        write(6,'(a)') "Obs & analysis times are different!"
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
+                                                                     TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS (previous):",utime_obs(1),utime_obs(2),utime_obs(3),&
+                                                                             utime_obs(4),":",utime_obs(5),":",utime_obs(6)
+        obs%nobs = 0
+      endif
+
+      return
+    endif
+
+  endif
 
   allocate(rtdat(RDIM, AZDIM, ELDIM, n_type))
   allocate(az(AZDIM, ELDIM, n_type))
@@ -897,7 +910,7 @@ use scale_time, only: TIME_gettimelabel
   end if  ! myrank_o == 0
   call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 2, barrier=MPI_COMM_o)
 
-  ! ALl reduce obs information
+  ! Set obs information
   if (myrank_o == 0) then
     lon0 = hd(1)%longitude
     lat0 = hd(1)%latitude
@@ -908,21 +921,16 @@ use scale_time, only: TIME_gettimelabel
     na = hd(1)%sector_num
     nr = hd(1)%range_num
     ne = hd(1)%el_num
+
+    call jst2utc(hd(1)%s_yr, hd(1)%s_mn, hd(1)%s_dy, hd(1)%s_hr, hd(1)%s_mi, hd(1)%s_sc, 0.0_DP, utime_obs)
+
   endif
 
+  ! broadcast obs information
   call  pawr_toshiba_hd_mpi(lon0, lat0, z0, missing,&
                            range_res, na, nr, ne, &
                            AZDIM, ELDIM, n_type, RDIM, &
-                           az, el, rtdat)
-
-!  ! Set local index for elavation (ne_lmax)
-!  ie = mod(ELDIM, nprocs_o) 
-!  ne_lmax = ((ELDIM - ie ) / nprocs_o) + 1
-
-!  allocate(rtdat_l(1:RDIM, 1:AZDIM, ne_lmax, n_type))
-
-!  call pawr_toshiba_scattv_mpi(RDIM, AZDIM, ELDIM, n_type, ne_lmax, &
-!                              rtdat, rtdat_l)
+                           az, el, rtdat, utime_obs)
 
   call mpi_timer('read_obs_radar_toshiba:comm:', 2, barrier=MPI_COMM_o)
 
@@ -936,27 +944,27 @@ use scale_time, only: TIME_gettimelabel
     write(*, *) "missing = ", missing
   endif
 
-!  i = 1
-!! OUTPUT SPHERICAL COORDINATE DATA FOR DEBUG !!!
-!  write(fname, '(I03.3)') i
-!  open(1, file = trim(fname) // ".bin", access = "stream", form = "unformatted")
-!  write(1) rtdat(1:hd(1)%range_num, 1:hd(1)%sector_num, 1:hd(1)%el_num, :)
-!  close(1)
+  if ( OBS_JITDT_CHECK_RADAR_TIME ) then
+    if ( .not. obs_da_same_time(utime_obs) ) then
+      if (myrank_o == 0 ) then
+        write(*,*) "Obs & analysis times are different!"
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
+                                                                     TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS:",utime_obs(1),utime_obs(2),utime_obs(3),&
+                                                                          utime_obs(4),":",utime_obs(5),":",utime_obs(6)
+        obs%nobs = 0
+      endif
 
-!  i=0
+      return
+    endif
+  endif
 
   allocate(ze(na, nr, ne), vr(na, nr, ne), qcflag(na, nr, ne), attenuation(na, nr, ne))
-
-!  allocate(ze_l(na, nr, ne_lmax), vr_l(na, nr, ne_lmax))
-!  allocate(qcflag_l(na, nr, ne_lmax), attenuation_l(na, nr, ne_lmax))
 
   valid_qcf = 0
   do j = 1, 8  
     if(qcf_mask(j) > 0) valid_qcf = ibset(valid_qcf, j - 1) 
   end do
-
-!
-!qcf_count=0
 
 !$omp parallel do private(ia, ir, ie)
   do ie = 1, ne
@@ -979,15 +987,8 @@ use scale_time, only: TIME_gettimelabel
      end do
   end do
 !$omp end parallel do
-
   deallocate(rtdat)
 
-!do j=0,255
-! write(*,*) j,qcf_count(j)
-!end do
-!stop
-
-  call mpi_timer('read_obs_radar_toshiba:preliminary_qc:', 2, barrier=MPI_COMM_o)
 
   allocate(rrange(nr))
 !$omp parallel do private(ir)
@@ -996,39 +997,44 @@ use scale_time, only: TIME_gettimelabel
   end do
 !$omp end parallel do
 
-  if ((.not. allocated(radlon)) .and. (.not. allocated(radlat)) .and. (.not. allocated(radz)) ) then 
-    allocate(radlon(na, nr, ne), radlat(na, nr, ne), radz(na, nr, ne))
-    call radar_georeference(lon0, lat0, z0, na, nr, ne, &                                   ! input
-         &                  real(az(:, 1, 1), r_size), rrange, real(el(1, :, 1), r_size), & ! input (assume ordinary scan strategy)
-         &                  radlon, radlat, radz)                                     ! output
+  call mpi_timer('read_obs_radar_toshiba:qc:', 2, barrier=MPI_COMM_o)
 
-    call mpi_timer('read_obs_radar_toshiba:radar_georeference:', 2, barrier=MPI_COMM_o)
-  endif
+  allocate(radlon(na, nr, ne), radlat(na, nr, ne), radz(na, nr, ne))
+  call radar_georeference(lon0, lat0, z0, na, nr, ne, &                                   ! input
+       &                  real(az(:, 1, 1), r_size), rrange, real(el(1, :, 1), r_size), & ! input (assume ordinary scan strategy)
+       &                  radlon, radlat, radz, &                                     ! output  
+       &                  MPI_comm_o)
+
+  call mpi_timer('read_obs_radar_toshiba:radar_georeference:', 2, barrier=MPI_COMM_o)
 
   deallocate(az, el)
 
 !  write(*, *) "call define_grid"
-  call define_grid(lon0, lat0, nr, rrange, rrange(nr), RADAR_ZMAX, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_VERT, & ! input
+  call define_grid(lon0, lat0, nr, rrange, rrange(nr), RADAR_ZMAX, & ! input
+                   RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_HORI, RADAR_SO_SIZE_VERT, & ! input
        &           dlon, dlat, nlon, nlat, nlev, lon, lat, z)              ! output
 
   call mpi_timer('read_obs_radar_toshiba:define_grid:', 2, barrier=MPI_COMM_o)
 
 !  write(*, *) "call radar_superobing"
-  call radar_superobing(na, nr, ne, radlon, radlat, radz, ze, vr, &    ! input spherical
-       &                qcflag, attenuation, &                                         ! input spherical
-       &                nlon, nlat, nlev, lon, lat, z, dlon, dlat, RADAR_SO_SIZE_VERT, & ! input cartesian
-       &                missing, input_is_dbz, &                                       ! input param
-       &                lon0, lat0, &
-       &                nobs_sp, grid_index, &                                         ! output array info
-       &                grid_ze, grid_lon_ze, grid_lat_ze, grid_z_ze, grid_count_ze, & ! output ze
-       &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr)   ! output vr
-!  write(*, *) "done"
+   call radar_superobing(na, nr, ne, radlon, radlat, radz, ze, vr, & ! input spherical
+        &                qcflag, attenuation, & ! input spherical
+        &                nlon, nlat, nlev, lon, lat, z, dlon, dlat, RADAR_SO_SIZE_VERT, & ! input cartesian
+        &                missing, input_is_dbz, & ! input param
+        &                lon0, lat0, &
+        &                nobs_sp, grid_index, & ! output array info
+        &                grid_ze, grid_lon_ze, grid_lat_ze, grid_z_ze, grid_count_ze, & ! output ze
+        &                grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr, & ! output vr
+        &                MPI_COMM_o)
 
   if(allocated(ze)) deallocate(ze)
   if(allocated(vr)) deallocate(vr)
   if(allocated(qcflag)) deallocate(qcflag)
   if(allocated(attenuation)) deallocate(attenuation)
   if(allocated(rrange)) deallocate(rrange)
+  if(allocated(radlon)) deallocate(radlon)
+  if(allocated(radlat)) deallocate(radlat)
+  if(allocated(radz)) deallocate(radz)
 
 
   call mpi_timer('read_obs_radar_toshiba:radar_superobing:', 2, barrier=MPI_COMM_o)
@@ -1342,6 +1348,25 @@ subroutine read_obs_radar_jrc(cfile, obs)
 
   return
 end subroutine read_obs_radar_jrc
+
+function obs_da_same_time(utime_obs)
+  use scale_time, only: &
+      TIME_NOWDATE
+  implicit none
+
+  integer :: utime_obs(6)
+  integer :: i
+  logical :: obs_da_same_time
+
+  obs_da_same_time = .true.
+  do i = 1, 6
+    if (utime_obs(i) /= TIME_NOWDATE(i)) then
+      obs_da_same_time = .false.
+      exit
+    endif
+  enddo
+
+end function obs_da_same_time
 
 !=======================================================================
 end module radar_obs

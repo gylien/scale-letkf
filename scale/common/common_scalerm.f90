@@ -20,8 +20,8 @@ module common_scalerm
     myrank_to_pe, &
     myrank_use, &
     myrank_use_da, &
+    myrank_use_obs, &
     mydom, &
-!    MPI_COMM_u, nprocs_u, myrank_u, &
     MPI_COMM_a, nprocs_a, myrank_a, &
     MPI_COMM_da, nprocs_da, myrank_da, &
     MPI_COMM_d, nprocs_d, myrank_d, &
@@ -583,20 +583,6 @@ subroutine scalerm_setup(execname)
 
   call mpi_timer('scalerm_setup:mpi_comm_split_d_local:',2, barrier=MPI_COMM_WORLD)
 
-  if (myrank_da < nprocs_d) then
-    key = myrank_d
-    if (myrank_d < RADAR_NPROC) then
-      color = 0
-    else
-      color = 1
-    endif
-    call MPI_COMM_SPLIT(MPI_COMM_d, color, key, MPI_COMM_o, ierr)
-    call MPI_COMM_SIZE(MPI_COMM_o, nprocs_o, ierr)
-    call MPI_COMM_RANK(MPI_COMM_o, myrank_o, ierr)
-  endif
-
-  call mpi_timer('set_scalelib:mpi_comm_split_o:', 3)
-
   ! Communicator for all processes for single domains
   !-----------------------------------------------------------------------------
 
@@ -630,6 +616,20 @@ subroutine scalerm_setup(execname)
   call MPI_COMM_RANK(MPI_COMM_da, myrank_da, ierr)
 
   call mpi_timer('scalerm_setup:mpi_comm_split_da:', 2, barrier=MPI_COMM_WORLD)
+
+  myrank_use_obs = .false.
+  color = 1
+  key = myrank_da
+  if ( myrank_d == 0 .and. myrank_da < nprocs_d*RADAR_NPROC) then
+    color = 0
+    myrank_use_obs = .true.
+  endif
+  call MPI_COMM_SPLIT(MPI_COMM_da, color, key, MPI_COMM_o, ierr)
+  call MPI_COMM_SIZE(MPI_COMM_o, nprocs_o, ierr)
+  call MPI_COMM_RANK(MPI_COMM_o, myrank_o, ierr)
+
+  call mpi_timer('set_scalelib:mpi_comm_split_o:', 3)
+
 
   if (exec_modelonly .and. (.not. scalerm_run)) then
     return

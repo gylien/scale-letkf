@@ -14,13 +14,14 @@ MODULE radar_tools
   !USE common
   !USE common_radar_tools
   !USE common_namelist
+  use mpi
+  use common_nml, only: &
+    LOG_LEVEL
   use common_mpi_scale, only: &
     myrank_o, &
     nprocs_o, &
     MPI_COMM_o, &
-    mpi_timer!, &
-!    pawr_3dvar_allreduce, &
-!    pawr_i8_allreduce
+    mpi_timer
 
   IMPLICIT NONE
   PUBLIC
@@ -61,16 +62,20 @@ MODULE radar_tools
   !the computation of attenuation in the forward operator)
   REAL(r_size)      :: attenuation_threshold=0.25 !0.1 is 10dbz, 0.5 is aprox 5 dbz.
 
+  !MPI-----
+  integer mpiprocs, myrank, mpi_ierr
+  !MPI-----
+
   private r_size, r_sngl
   private re, pi, deg2rad, rad2deg, id_ze_obs, id_vr_obs, xskip, yskip, zskip
 
+  private mpiprocs, myrank, mpi_ierr
+
 CONTAINS
 
-  subroutine radar_georeference(lon0, lat0, z0, na, nr, ne, azimuth, rrange, elevation, radlon, radlat, radz)
-    implicit none
-
+  subroutine radar_georeference(lon0, lat0, z0, na, nr, ne, azimuth, rrange, elevation, radlon, radlat, radz, comm)
     real(r_size), intent(in) :: lon0, lat0, z0
-    integer, intent(in) :: na, nr, ne
+    integer, intent(in) :: na, nr, ne, comm
     real(r_size), intent(in) :: azimuth(na), rrange(nr), elevation(ne)
     real(r_size), intent(out) :: radlon(na, nr, ne), radlat(na, nr, ne)
     real(r_size), intent(out) :: radz(na, nr, ne)
@@ -79,6 +84,17 @@ CONTAINS
     real(r_size) cdist, sdist, sinll1, cosll1, sinll1_cdist, cosll1_sdist, cosll1_cdist, sinll1_sdist
     real(r_size) :: azimuth_rad, sin_azim(na), cos_azim(na)
     integer ia, ir, ie
+    integer time1, time2, timerate, timemax
+    integer, allocatable :: j_mpi(:, :), sendcount(:), recvcount(:), recvoffset(:)
+    real(r_size), allocatable :: radlon_mpi(:, :, :), radlat_mpi(:, :, :), radz_mpi(:, :)
+
+!    call system_clock(time1, timerate, timemax)
+
+    mpiprocs = nprocs_o
+    myrank = myrank_o
+
+    allocate(j_mpi(2, 0:(mpiprocs - 1)))
+    call set_mpi_div(j_mpi, int(ne, 8))
 
     !THIS CODE IS COPIED FROM JUAN RUIZ'S QC CODE AND MODIFIED
     sinll1 = sin(lat0 * deg2rad)
@@ -92,8 +108,8 @@ CONTAINS
     end do !ia
 !$omp end do
 
-!$omp do private(ia, ir, ie, sin_elev_ke_Re_2, cos_elev_div_ke_Re, cdist, sdist, sinll1_cdist, cosll1_sdist, cosll1_cdist, sinll1_sdist, tmpdist)
-    do ie = 1, ne
+!$omp do private(ia, ir, ie, sin_elev_ke_Re_2, cos_elev_div_ke_Re, cdist, sdist,sinll1_cdist, cosll1_sdist, cosll1_cdist, sinll1_sdist, tmpdist)
+    do ie = j_mpi(1, myrank), j_mpi(2, myrank)
        sin_elev_ke_Re_2 = sin(elevation(ie) * deg2rad) * ke_Re * 2
        cos_elev_div_ke_Re = cos(elevation(ie) * deg2rad) / ke_Re
        do ir = 1, nr
@@ -113,13 +129,15 @@ CONTAINS
              do ia = 1, na
                 radlat(ia, ir, ie) = asin(sinll1_cdist + cosll1_sdist * cos_azim(ia)) * rad2deg
                 radlon(ia, ir, ie) = lon0 + atan2(sdist * sin_azim(ia), cosll1_cdist - sinll1_sdist * cos_azim(ia)) * rad2deg
-
              end do !ia
           end if
        end do !ir
     end do !ie
 !$omp end do
 !$omp end parallel
+
+!    call system_clock(time2, timerate, timemax)
+!    if(myrank == 0) write(*, *) "radar_georeference", (time2 - time1) / dble(timerate)
 
     return
   end subroutine radar_georeference
@@ -201,14 +219,15 @@ CONTAINS
 !-----------------------------------------------------------------------
 ! Main superobing routine
 !-----------------------------------------------------------------------
-  SUBROUTINE radar_superobing(na, nr, ne, radlon, radlat, radz, ze, vr, &                           ! input spherical
-       &                       qcflag, attenuation, &                                               ! input spherical 2
-       &                       nlon, nlat, nlev, lon, lat, z, dlon, dlat, dz, &                     ! input cartesian
-       &                       missing, input_is_dbz, &                                             ! input param
-       &                       lon0, lat0, &
-       &                       nobs_sp, grid_index, &                                               ! output array info
+  SUBROUTINE radar_superobing(na, nr, ne, radlon, radlat, radz, ze, vr, & ! input spherical
+       &                       qcflag, attenuation, & ! input spherical 2
+       &                       nlon, nlat, nlev, lon, lat, z, dlon, dlat, dz, & ! input cartesian
+       &                       missing, input_is_dbz, & ! input param
+       &                       lon0, lat0, & ! input param
+       &                       nobs_sp, grid_index, & ! output array info
        &                       grid_ref, grid_lon_ref, grid_lat_ref, grid_z_ref, grid_count_ref, &  ! output ze
-       &                       grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr)         ! output vr
+       &                       grid_vr, grid_lon_vr, grid_lat_vr, grid_z_vr, grid_count_vr, &       ! output vr
+       &                       comm)
     integer, intent(in) :: na, nr, ne ! array size of the spherical grid
     real(r_size), intent(in), dimension(na, nr, ne) :: radlon, radlat, radz ! georeference
     real(r_size), intent(in) :: ze(na, nr, ne), vr(na, nr, ne) ! main data
@@ -218,116 +237,169 @@ CONTAINS
     real(r_size), intent(in) :: dlon, dlat, dz, missing
     logical, intent(in) :: input_is_dbz
     real(r_size), intent(in) :: lon0, lat0
+    integer, intent(in) :: comm !MPI COMMUNICATOR
 
     integer(8), intent(out) :: nobs_sp
     integer(8), allocatable, intent(out) :: grid_index(:), grid_count_ref(:), grid_count_vr(:)
     REAL(r_size), allocatable, intent(out) :: grid_ref(:), grid_vr(:)
     REAL(r_size), allocatable, intent(out) :: grid_lon_ref(:), grid_lat_ref(:), grid_z_ref(:) !Lat, Lon and Z weighted by the observations.
-    REAL(r_size), allocatable, intent(out) :: grid_lon_vr(:),  grid_lat_vr(:),  grid_z_vr(:)  !Lat, Lon and Z weighted by the observations.
+    REAL(r_size), allocatable, intent(out) :: grid_lon_vr(:),  grid_lat_vr(:), grid_z_vr(:)  !Lat, Lon and Z weighted by the observations.
 
     REAL(r_size), ALLOCATABLE :: grid_w_vr(:)
     REAL(r_size), ALLOCATABLE :: grid_meanvr(:), grid_stdvr(:) !Non weighted radial velocity and its dispersion within each box.
-    integer(8), allocatable :: rad2grid(:, :, :)
-    logical, allocatable :: mask(:, :, :)
-    REAL(r_size), allocatable :: qced_ze(:, :, :), qced_vr(:, :, :)
 
     integer(8), allocatable :: packed_grid(:), pack2uniq(:), nobs_each_elev(:)
     real(r_size), allocatable :: packed_data(:, :)
     logical, allocatable :: packed_attn(:)
 
     REAL(r_size) :: count_inv, tmpstdvr, tmpmeanvr
-    integer(8) :: idx, jdx, nobs
+    integer(8) :: idx, jdx, nobs, sidx(ne), eidx(ne)
     integer time1, time2, timerate, timemax
 
-    integer :: ia,ir,ie
-    integer,parameter::nobs_sp_max=1199*1199*110
-    integer :: packed_grid_count(nobs_sp_max)
+    !MPI-----
+    integer i, e0, e1, ne_mpi
+    integer, allocatable :: j_mpi(:, :), sendcount(:), recvcount(:), recvoffset(:)
+    integer(8), allocatable :: sendbuf(:), nobs_each_mpi(:)
+    integer(8), allocatable :: packed_grid_mpi(:)
+    real(r_size), allocatable :: packed_data_mpi(:, :)
+    logical, allocatable :: packed_attn_mpi(:)
+    !MPI-----
 
-    !QC
-    call apply_qcflag(na, nr, ne, ze, vr, qcflag, missing, input_is_dbz, lon0, lat0, radlon, radlat, radz, & ! input
-         &            qced_ze, qced_vr)                                    ! output
-    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:qcflag', 2, barrier=MPI_COMM_o)
+    mpiprocs = nprocs_o
+    myrank = myrank_o
+    !MPI DIVISION
+    allocate(sendcount(0:(mpiprocs - 1)), recvcount(0:(mpiprocs - 1)), recvoffset(0:(mpiprocs - 1)))
+    allocate(j_mpi(2, 0:(mpiprocs - 1)))
+    call set_mpi_div(j_mpi, int(ne, 8))
+    e0 = j_mpi(1, myrank)
+    e1 = j_mpi(2, myrank)
+    ne_mpi = e1 - e0 + 1
 
     !AVERAGE DATA AND INCLUDE OBSERVATIONA ERROR.
-    !We will compute the i,j,k for each radar grid point and box average the data.
+    !We will compute the i,j,k for each radar grid point and box average the
+    !data.
 
-!!!! TEST !!!!
-!   idx=0
-!    do ie = 1, ne,10                                                                                                  
-!     do ir = 1, nr,10
-!       do ia = 1, na,10                                                                                                            
-!         write(*,'(3I4, 3F9.3)') ia,ir,ie, ze(ia,ir,ie), qcflag(ia,ir,ie), qced_ze(ia,ir,ie)
-!         if (ze(ia,ir,ie).ne.missing) idx=idx+1
-!       end do                                                                                                               
-!     end do                                                                                                            
-!    end do
-!  write(*,*) idx
-!stop
+    !QC, Indexing, and packing simultaneously
+    call system_clock(time1, timerate, timemax)
+    allocate(nobs_each_elev(ne))
+    if(mpiprocs > 1) then
+       allocate(packed_grid_mpi(na * nr * ne_mpi), &
+            &   packed_data_mpi(5, na * nr * ne_mpi), &
+            &   packed_attn_mpi(na * nr * ne_mpi), &
+            &   nobs_each_mpi(e0:e1))
+       call qc_indexing_and_packing( &
+            & na, nr, ne_mpi, ze(:, :, e0:e1), vr(:, :, e0:e1), & ! input spherical
+            & radlon(:, :, e0:e1), radlat(:, :, e0:e1), radz(:, :, e0:e1), & ! input spherical
+            & qcflag(:, :, e0:e1), input_is_dbz, attenuation(:, :, e0:e1), & ! input spherical
+            & nlon, nlat, nlev, lon, lat, z, dlon, dlat, dz, & ! input cartesian
+            & missing, & ! input param
+            & lon0, lat0, &
+            & nobs_each_mpi, packed_grid_mpi, packed_data_mpi, packed_attn_mpi) ! output
 
+       sendcount(:) = ne_mpi
+       recvcount(0:(mpiprocs - 1)) = j_mpi(2, 0:(mpiprocs - 1)) - j_mpi(1, 0:(mpiprocs - 1)) + 1
+       recvoffset = j_mpi(1, :) - 1 !START FROM 0
+       call MPI_Allgatherv(nobs_each_mpi, sendcount, MPI_INTEGER8, &
+            &              nobs_each_elev, recvcount, recvoffset, MPI_INTEGER8, &
+            &              comm, mpi_ierr)
+       deallocate(nobs_each_mpi)
+    else
+       allocate(packed_grid(na * nr * ne), &
+            &   packed_data(5, na * nr * ne), &
+            &   packed_attn(na * nr * ne))
+       call qc_indexing_and_packing( &
+            & na, nr, ne, ze, vr, radlon, radlat, radz, & ! input spherical
+            & qcflag, input_is_dbz, attenuation, & ! input spherical
+            & nlon, nlat, nlev, lon, lat, z, dlon, dlat, dz, & ! input cartesian
+            & missing, & ! input param
+            & lon0, lat0, &
+            & nobs_each_elev, packed_grid, packed_data, packed_attn) ! output
+    end if
+    nobs = sum(nobs_each_elev)
+    sidx(1) = 1
+    do i = 1, ne - 1
+       sidx(i + 1) = sidx(i) + nobs_each_elev(i)
+    end do !i
+    eidx = sidx + nobs_each_elev - 1
+    deallocate(nobs_each_elev)
+!    call system_clock(time2, timerate, timemax)
+!    if(myrank == 0) write(*, *) "qc_index_pack", (time2 - time1) / dble(timerate)
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:qc_index_pack', 2, barrier=MPI_COMM_o)
+    !MPI packed data
+    if(mpiprocs > 1) then
+       time1 = time2
+       sendcount = eidx(e1) - sidx(e0) + 1
+       do i = 0, mpiprocs - 1
+          recvoffset(i) = sidx(j_mpi(1, i)) - 1 !START FROM 0
+          recvcount(i) = eidx(j_mpi(2, i)) - sidx(j_mpi(1, i)) + 1
+       end do
+       allocate(packed_grid(nobs), packed_data(5, nobs), packed_attn(nobs))
+       !NEEDED BY ALL
+       call MPI_Allgatherv(packed_grid_mpi, sendcount, MPI_INTEGER8, &
+            &              packed_grid, recvcount, recvoffset, MPI_INTEGER8, &
+            &              comm, mpi_ierr)
+       !ONLY NEEDED BY ROOT
+       call MPI_Gatherv(packed_attn_mpi, sendcount, MPI_LOGICAL, &
+            &           packed_attn, recvcount, recvoffset, MPI_LOGICAL, &
+            &           0, comm, mpi_ierr)
+       call MPI_Gatherv(packed_data_mpi, sendcount * 5, MPI_DOUBLE_PRECISION, &
+            &           packed_data, recvcount * 5, recvoffset * 5, MPI_DOUBLE_PRECISION, &
+            &           0, comm, mpi_ierr)
+       deallocate(packed_grid_mpi, packed_data_mpi, packed_attn_mpi)
+!       call system_clock(time2, timerate, timemax)
+!       if(myrank == 0) write(*, *) "MPI packed", (time2 - time1) / dble(timerate)
+       call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:MPI packed', 2, barrier=MPI_COMM_o)
 
-    !Write QCED DATA
-!    call RADAR_WRITE_FILE( RADAR1 , qcedreflectivity(:,:,:) , qcedwind(:,:,:) , qcflag , attenuation , OUTPUT_FILE )
-
-
-
-    !Indexing
-    call indexing(na, nr, ne, radlon, radlat, radz, qced_ze, & ! input spherical
-         &        nlon, nlat, nlev, lon, lat, z, dlon, dlat, dz, & ! input cartesian
-         &        missing, & ! input param
-         &        rad2grid, mask, nobs_each_elev, nobs) ! output
-    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:indexing', 2, barrier=MPI_COMM_o)
-
-
-    !Pack data
-    call packing(na, nr, ne, radlon, radlat, radz, qced_ze, qced_vr, attenuation, & ! input spherical
-         &       rad2grid, mask, nobs_each_elev, nobs, &                            ! input index
-         &       packed_grid, packed_data, packed_attn)                             ! output
-    deallocate(nobs_each_elev, qced_ze, qced_vr, rad2grid, mask)
-    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:pack', 2, barrier=MPI_COMM_o)
-
-    packed_grid_count=0
-    do idx = 1, nobs
-     packed_grid_count(packed_grid(idx))=packed_grid_count(packed_grid(idx))+1
-    end do
+    end if
 
     !Sort index array
+!    time1 = time2
     allocate(grid_index(nobs))
 !$omp parallel do private(idx)
     do idx = 1, nobs
        grid_index(idx) = packed_grid(idx)
     end do
 !$omp end parallel do
-    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:Sort index array', 2, barrier=MPI_COMM_o)
-
-!!!    call merge_sort_parallel(nobs, grid_index) ! Check T. Honda
-    call quicksort(nobs, grid_index) 
-    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:quicksort', 2, barrier=MPI_COMM_o)
-
+    if(mpiprocs > 1) then
+       call merge_sort_mpi(nobs, grid_index, comm) !ONLY RANK 0 RETURNS DATA
+       call MPI_Bcast(grid_index, nobs, MPI_INTEGER8, 0, comm, mpi_ierr)
+    else
+       call merge_sort_parallel(nobs, grid_index)
+    end if
+!    call system_clock(time2, timerate, timemax)
+!    if(myrank == 0) write(*, *) "sort", (time2 - time1) / dble(timerate)
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:sort', 2, barrier=MPI_COMM_o)
 
     !Unique superobs (nobs_sp)
+!    time1 = time2
     call uniq_int_sorted(nobs, grid_index, nobs_sp)
-    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:Unique superobs', 2, barrier=MPI_COMM_o)
+!    call system_clock(time2, timerate, timemax)
+!    if(myrank == 0) write(*, *) "uniq", (time2 - time1) / dble(timerate)
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:uniq', 2, barrier=MPI_COMM_o)
+    !if(myrank == 0) write(*, *) "nobs_sp = ", nobs_sp
 
     !Inverted indexing
-
+!    time1 = time2
     allocate(pack2uniq(nobs))
-    pack2uniq = 0d0
-
-!$omp parallel private(idx)
-!$omp do
-    do idx = 1, nobs
-       pack2uniq(idx) = binary_search_i8(nobs_sp, grid_index, packed_grid(idx))
+    !MPI DIVISION
+    call set_mpi_div(j_mpi, nobs)
+    allocate(sendbuf(j_mpi(2, myrank) - j_mpi(1, myrank) + 1))
+!$omp parallel do private(idx)
+    do idx = j_mpi(1, myrank), j_mpi(2, myrank)
+       sendbuf(idx - j_mpi(1, myrank) + 1) = binary_search_i8(nobs_sp, grid_index, packed_grid(idx))
     end do !idx
-!$omp end do
-!$omp end parallel 
-
-!    call pawr_i8_allreduce(pack2uniq,nobs)
-    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:Inverted indexing', 2, barrier=MPI_COMM_o)
-
-!$omp parallel private(idx, jdx)
-!$omp single
+!$omp end parallel do
+    sendcount(:) = j_mpi(2, myrank) - j_mpi(1, myrank) + 1
+    recvcount(0:(mpiprocs - 1)) = j_mpi(2, 0:(mpiprocs - 1)) - j_mpi(1, 0:(mpiprocs - 1)) + 1
+    recvoffset = j_mpi(1, :) - 1
+    !ONLY NEEDED BY ROOT
+    call MPI_Gatherv(sendbuf, sendcount, MPI_INTEGER8, &
+         &           pack2uniq, recvcount, recvoffset, MPI_INTEGER8, &
+         &           0, comm, mpi_ierr)
+    deallocate(j_mpi, sendbuf, sendcount, recvcount, recvoffset) !END OF MPI
 !    call system_clock(time2, timerate, timemax)
-!    if (myrank_o == 0) write(*, *) "inv idx", (time2 - time1) / dble(timerate)
+!    if(myrank == 0) write(*, *) "inv idx", (time2 - time1) / dble(timerate)
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:inv idx', 2, barrier=MPI_COMM_o)
 
     !Allocate output arrays
 !    time1 = time2
@@ -337,12 +409,15 @@ CONTAINS
     allocate(grid_lon_vr(nobs_sp) , grid_lat_vr(nobs_sp) , grid_z_vr(nobs_sp))
     allocate(grid_w_vr(nobs_sp))
     allocate(grid_meanvr(nobs_sp), grid_stdvr(nobs_sp))
-!    call system_clock(time2, timerate, timemax)
-!    if (myrank_o == 0) write(*, *) "alloc out ary", (time2 - time1) / dble(timerate)
+    call system_clock(time2, timerate, timemax)
+!    if(myrank == 0) write(*, *) "alloc out ary", (time2 - time1) / dble(timerate)
+    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:alloc out ary', 2, barrier=MPI_COMM_o)
+
+    if(myrank > 0) return !ONLY RANK 0 DOES THE REMAINING WORK
 
     !Initialize arrays
-!    time1 = time2
-!$omp end single
+    time1 = time2
+!$omp parallel private(idx, jdx)
 !$omp do
     do idx = 1, nobs_sp
        grid_count_ref(idx) = 0
@@ -361,115 +436,40 @@ CONTAINS
     end do
 !$omp end do
 !$omp single
-!    call system_clock(time2, timerate, timemax)
-!    if (myrank_o == 0) write(*, *) "init ary", (time2 - time1) / dble(timerate)
+    call system_clock(time2, timerate, timemax)
+    if(myrank == 0 .and. LOG_LEVEL >= 3) write(*, *) "init ary", (time2 - time1) / dble(timerate)
 
     !Accumulate data
     time1 = time2
-    !PROCESS REFLECITIVITY
-    !use attenuation estimates / ignore estimates
-    !13 sections
-!$omp end single
-!$omp sections
-!$omp section
     do jdx = 1, nobs
+       idx = pack2uniq(jdx)
+       !PROCESS REFLECITIVITY
+       !use attenuation estimates / ignore estimates
        if(packed_attn(jdx)) then
-          idx = pack2uniq(jdx)
-          grid_ref(idx) = grid_ref(idx) + packed_data(jdx, 1)
-       ENDIF
-    end do
-!$omp section
-    do jdx = 1, nobs
-       if(packed_attn(jdx)) then
-          idx = pack2uniq(jdx)
+          grid_ref(idx) = grid_ref(idx) + packed_data(1, jdx)
           grid_count_ref(idx) = grid_count_ref(idx) + 1
+          grid_lon_ref(idx) = grid_lon_ref(idx) + packed_data(3, jdx)
+          grid_lat_ref(idx) = grid_lat_ref(idx) + packed_data(4, jdx)
+          grid_z_ref(idx) = grid_z_ref(idx) + packed_data(5, jdx)
        ENDIF
-    end do
-!$omp section
-    do jdx = 1, nobs
-       if(packed_attn(jdx)) then
-          idx = pack2uniq(jdx)
-          grid_lon_ref(idx) = grid_lon_ref(idx) + packed_data(jdx, 3)
-       ENDIF
-    end do
-!$omp section
-    do jdx = 1, nobs
-       if(packed_attn(jdx)) then
-          idx = pack2uniq(jdx)
-          grid_lat_ref(idx) = grid_lat_ref(idx) + packed_data(jdx, 4)
-       ENDIF
-    end do
-!$omp section
-    do jdx = 1, nobs
-       if(packed_attn(jdx)) then
-          idx = pack2uniq(jdx)
-          grid_z_ref(idx) = grid_z_ref(idx) + packed_data(jdx, 5)
-       ENDIF
-    end do
 
-    !CONSIDER THE RADIAL VELOCITY
-    !Wind will be averaged using an average weighted by returned power.
-    !(this should reduce noise). 
-!$omp section
-    do jdx = 1, nobs
-       IF(packed_data(jdx, 2) .GT. missing) THEN !PROCESS WIND
-          idx = pack2uniq(jdx)
-          grid_w_vr(idx) = grid_w_vr(idx) + packed_data(jdx, 1)
-       ENDIF
-    ENDDO !jdx
-!$omp section
-    do jdx = 1, nobs
-       IF(packed_data(jdx, 2) .GT. missing) THEN !PROCESS WIND
-          idx = pack2uniq(jdx)
+       !CONSIDER THE RADIAL VELOCITY
+       !Wind will be averaged using an average weighted by returned power.
+       !(this should reduce noise). 
+       IF(packed_data(2, jdx) .GT. missing) THEN !PROCESS WIND
+          grid_w_vr(idx) = grid_w_vr(idx) + packed_data(1, jdx)
           grid_count_vr(idx) = grid_count_vr(idx) + 1
+          grid_meanvr(idx) = grid_meanvr(idx) + packed_data(2, jdx)
+          grid_stdvr(idx) = grid_stdvr(idx) + packed_data(2, jdx) ** 2
+          grid_vr(idx) = grid_vr(idx) + packed_data(2, jdx) * packed_data(1, jdx)
+          grid_lon_vr(idx) = grid_lon_vr(idx) + packed_data(3, jdx) * packed_data(1, jdx)
+          grid_lat_vr(idx) = grid_lat_vr(idx) + packed_data(4, jdx) * packed_data(1, jdx)
+          grid_z_vr(idx) = grid_z_vr(idx) + packed_data(5, jdx) * packed_data(1, jdx)
        ENDIF
     ENDDO !jdx
-!$omp section
-    do jdx = 1, nobs
-       IF(packed_data(jdx, 2) .GT. missing) THEN !PROCESS WIND
-          idx = pack2uniq(jdx)
-          grid_meanvr(idx) = grid_meanvr(idx) + packed_data(jdx, 2)
-       ENDIF
-    ENDDO !jdx
-!$omp section
-    do jdx = 1, nobs
-       IF(packed_data(jdx, 2) .GT. missing) THEN !PROCESS WIND
-          idx = pack2uniq(jdx)
-          grid_stdvr(idx) = grid_stdvr(idx) + packed_data(jdx, 2) ** 2
-       ENDIF
-    ENDDO !jdx
-!$omp section
-    do jdx = 1, nobs
-       IF(packed_data(jdx, 2) .GT. missing) THEN !PROCESS WIND
-          idx = pack2uniq(jdx)
-          grid_vr(idx) = grid_vr(idx) + packed_data(jdx, 2) * packed_data(jdx, 1)
-       ENDIF
-    ENDDO !jdx
-!$omp section
-    do jdx = 1, nobs
-       IF(packed_data(jdx, 2) .GT. missing) THEN !PROCESS WIND
-          idx = pack2uniq(jdx)
-          grid_lon_vr(idx) = grid_lon_vr(idx) + packed_data(jdx, 3) * packed_data(jdx, 1)
-       ENDIF
-    ENDDO !jdx
-!$omp section
-    do jdx = 1, nobs
-       IF(packed_data(jdx, 2) .GT. missing) THEN !PROCESS WIND
-          idx = pack2uniq(jdx)
-          grid_lat_vr(idx) = grid_lat_vr(idx) + packed_data(jdx, 4) * packed_data(jdx, 1)
-       ENDIF
-    ENDDO !jdx
-!$omp section
-    do jdx = 1, nobs
-       IF(packed_data(jdx, 2) .GT. missing) THEN !PROCESS WIND
-          idx = pack2uniq(jdx)
-          grid_z_vr(idx) = grid_z_vr(idx) + packed_data(jdx, 5) * packed_data(jdx, 1)
-       ENDIF
-    ENDDO !jdx
-!$omp end sections
-!$omp single
-!    call system_clock(time2, timerate, timemax)
-!    write(*, *) "accum", (time2 - time1) / dble(timerate)
+
+    call system_clock(time2, timerate, timemax)
+    if(myrank == 0 .and. LOG_LEVEL >= 3) write(*, *) "accum", (time2 - time1) / dble(timerate)
 
     time1 = time2
     !Average data and write observation file (FOR LETKF)
@@ -482,11 +482,6 @@ CONTAINS
           grid_lon_ref(idx) = grid_lon_ref(idx) * count_inv
           grid_lat_ref(idx) = grid_lat_ref(idx) * count_inv
           grid_z_ref(idx)   = grid_z_ref(idx)   * count_inv
-       else
-          grid_ref(idx)     = missing
-          grid_lon_ref(idx) = missing
-          grid_lat_ref(idx) = missing
-          grid_z_ref(idx)   = missing
        ENDIF
 
        IF(grid_count_vr(idx) > 0) THEN
@@ -506,223 +501,147 @@ CONTAINS
              tmpmeanvr = grid_meanvr(idx) * count_inv
              tmpstdvr = grid_stdvr(idx)  * count_inv
              tmpstdvr = SQRT(tmpstdvr - (tmpmeanvr ** 2))
-             IF(tmpstdvr > vr_std_threshold) then
-                grid_count_vr(idx) = 0 !Reject the observation.
-                grid_vr(idx)     = missing
-                grid_lon_vr(idx) = missing
-                grid_lat_vr(idx) = missing
-                grid_z_vr(idx)   = missing
-             end if
+             IF(tmpstdvr > vr_std_threshold) grid_count_vr(idx) = 0 !Reject the observation.
           ENDIF
-       else
-          grid_vr(idx) = missing
-          grid_lon_vr(idx) = missing
-          grid_lat_vr(idx) = missing
-          grid_z_vr(idx)   = missing
        end IF
     end do !idx
 !$omp end do
 !$omp end parallel
-!    call system_clock(time2, timerate, timemax)
-!    if (myrank_o == 0) write(*, *) "normalize", (time2 - time1) / dble(timerate)
-    call mpi_timer('read_obs_radar_toshiba:read_toshiba:superob:others', 2, barrier=MPI_COMM_o)
+    call system_clock(time2, timerate, timemax)
+    if( myrank == 0 .and. LOG_LEVEL >= 3 ) write(*, *) "normalize", (time2 - time1) / dble(timerate)
     return
   end SUBROUTINE radar_superobing
 
-  subroutine apply_qcflag(na, nr, ne, ze, vr, qcflag, missing, input_is_dbz, lon0, lat0, radlon, radlat, radz, & ! input
-       &                  qced_ze, qced_vr)                                    ! output
+  subroutine set_mpi_div(j_mpi, ndat)
+    integer, intent(inout) :: j_mpi(2, 0:(mpiprocs - 1))
+    integer(8), intent(in) :: ndat
+    integer i
+
+    j_mpi(2, :) = ndat / mpiprocs
+    if(mod(ndat, mpiprocs) > 0) j_mpi(2, 0:(mod(ndat, mpiprocs) - 1)) = j_mpi(2, 0:(mod(ndat, mpiprocs) - 1)) + 1
+    j_mpi(1, 0) = 1
+    do i = 1, mpiprocs - 1
+       j_mpi(1, i) = j_mpi(2, i - 1) + 1
+       j_mpi(2, i) = j_mpi(2, i - 1) + j_mpi(2, i)
+    end do
+  end subroutine set_mpi_div
+
+  subroutine qc_indexing_and_packing(&
+       & na, nr, ne, ze, vr, radlon, radlat, radz, & ! input spherical
+       & qcflag, input_is_dbz, attenuation, & ! input spherical
+       & nlon, nlat, nlev, lon, lat, z, dlon, dlat, dz, & ! input cartesian
+       & missing, & ! input param
+       & lon0, lat0, &  ! input param
+       & nobs_each_elev, packed_grid, packed_data, packed_attn) ! output
     integer, intent(in) :: na, nr, ne ! array size of the spherical grid
-    real(r_size), intent(in) :: ze(na, nr, ne), vr(na, nr, ne) ! main data
-    real(r_size), intent(in) :: qcflag(na, nr, ne) ! additional info
-    real(r_size), intent(in) :: missing
+    real(r_size), intent(in) :: ze(na * nr, ne), vr(na * nr, ne) ! main data
+    real(r_size), intent(in), dimension(na * nr, ne) :: radlon, radlat, radz ! georeference
+    real(r_size), intent(in) :: qcflag(na * nr, ne) ! additional info
     logical, intent(in) :: input_is_dbz
     real(r_size), intent(in) :: lon0, lat0
-    real(r_size), intent(in), dimension(na, nr, ne) :: radlon, radlat, radz ! georeference
-    real(r_size), allocatable, intent(out) :: qced_ze(:, :, :), qced_vr(:, :, :)
-    integer :: ia , ir , ie
+    real(r_size), intent(in), dimension(na * nr, ne) :: attenuation
+    integer, intent(in) :: nlon, nlat, nlev ! array size of the cartesian grid
+    real(r_size), intent(in) :: lon(nlon), lat(nlat), z(nlev)
+    real(r_size), intent(in) :: dlon, dlat, dz, missing
+    integer(8), intent(out) :: nobs_each_elev(ne)
+    integer(8), intent(out) :: packed_grid(na * nr * ne) !MAX DATA SIZE
+    real(r_size), intent(out) :: packed_data(5, na * nr * ne) !MAX DATA SIZE
+    logical, intent(out) :: packed_attn(na * nr * ne) !MAX DATA SIZE
+    REAL(r_size) :: ri, rj, rk, dlon_inv, dlat_inv, dz_inv, qced_ze, qced_vr
+    INTEGER :: i, ie
+    integer(8) :: idx
 
     real(r_size) :: lon_coef, lat_coef, dist_i, dist_j
     real(r_size) :: vr_min_dist_square
-
-    integer :: ie_s, ie_e
-
-!    qced_ze = 0.0_r_size
-!    qced_vr = 0.0_r_size
-    ie_s = 1
-    ie_e = ne
-!    if (ne < nprocs_o) then
-!      ie_s = 1
-!      ie_e = ne
-!      if (myrank_o /= 0) ie_e = 0
-!    else
-!      ie_s = int(ne / nprocs_o) * myrank_o + 1
-!      ie_e = int(ne / nprocs_o) * (myrank_o +1)
-!      if (myrank_o + 1 == nprocs_o) ie_e = max(ie_e, ne)
-!    endif
 
     lon_coef = deg2rad * (cos(lat0 * deg2rad) * re)
     lat_coef = deg2rad * re
     vr_min_dist_square = vr_min_dist * vr_min_dist
 
-    allocate(qced_ze(na, nr, ne), qced_vr(na, nr, ne))
-!$omp parallel do private(ia, ir, ie, dist_i, dist_j)
-    do ie = 1, ne
-       do ir = 1, nr
-          do ia = 1, na
-             qced_ze(ia, ir, ie) = ze(ia, ir, ie)
-             qced_vr(ia, ir, ie) = vr(ia, ir, ie)
-
-             !We will work with reflectivity (not in dbz) if we have dbz as input then transform it
-             IF(input_is_dbz) THEN
-                if(qced_ze(ia, ir, ie) .NE. missing) qced_ze(ia, ir, ie) = 10.0d0 ** (qced_ze(ia, ir, ie) * 0.1d0)
-             ENDIF
-
-             !Missing values not associated with clutter will be asigned a minimum reflectivity value. 
-             if(qced_ze(ia, ir, ie) .LE. missing) then
-                qced_ze(ia, ir, ie) = minz
-                qced_vr(ia, ir, ie) = missing !added by Otsuka
-             end if
-             if(qced_ze(ia, ir, ie) .LT. minz) then
-                qced_ze(ia, ir, ie) = minz
-             end if
-             if(qced_ze(ia, ir, ie) .LT. minz_vr) then
-                qced_vr(ia, ir, ie) = missing !added by Otsuka
-             end if
-
-             IF(USE_QCFLAG) THEN
-                !If dealing with qced real data it will be a good idea to remove all values detected as non weather echoes in the qc algorithm.
-                !This can also be useful to deal with simulated tophographyc shading in OSSES.
-                !We need reflectivity to average vr observations. Remove vr observations where the reflectivity is missing.
-                if(qcflag(ia, ir, ie) .GE. 900.0d0) then
-                   qced_ze(ia, ir, ie) = missing
-                   qced_vr(ia, ir, ie) = missing
-                end if
-             ENDIF
-
-!             if (ir <= int(nr/12.d0)) then
-!                qced_vr(ia, ir, ie) = missing
-!             end if
-             if (qced_vr(ia, ir, ie) > missing) then
-                if (radz(ia, ir, ie) < vr_min_height) then
-                   qced_vr(ia, ir, ie) = missing
-                else
-                   dist_i = (radlon(ia, ir, ie) - lon0) * lon_coef
-                   dist_j = (radlat(ia, ir, ie) - lat0) * lat_coef
-                   if (dist_i * dist_i + dist_j * dist_j < vr_min_dist_square) then
-                      qced_vr(ia, ir, ie) = missing
-                   end if
-                end if
-             end if
-          end do !ia
-       end do !ir
-    end do !ie
-!$omp end parallel do
-
-!    if ( nprocs_o > 1) then
-!      call pawr_3dvar_allreduce(na,nr,ne,qced_ze)
-!      call pawr_3dvar_allreduce(na,nr,ne,qced_vr)
-!    endif
-
-    return
-  end subroutine apply_qcflag
-
-  subroutine indexing(na, nr, ne, radlon, radlat, radz, qced_ze, & ! input spherical
-       &              nlon, nlat, nlev, lon, lat, z, dlon, dlat, dz, & ! input cartesian
-       &              missing, & ! input param
-       &              rad2grid, mask, nobs_each_elev, nobs) ! output
-    integer, intent(in) :: na, nr, ne ! array size of the spherical grid
-    real(r_size), intent(in), dimension(na, nr, ne) :: radlon, radlat, radz ! georeference
-    real(r_size), intent(in) :: qced_ze(na, nr, ne) ! main data
-    integer, intent(in) :: nlon, nlat, nlev ! array size of the cartesian grid
-    real(r_size), intent(in) :: lon(nlon), lat(nlat), z(nlev)
-    real(r_size), intent(in) :: dlon, dlat, dz, missing
-    integer(8), allocatable, intent(out) :: rad2grid(:, :, :), nobs_each_elev(:)
-    logical, allocatable, intent(out) :: mask(:, :, :)
-    integer(8), intent(out) :: nobs
-    REAL(r_size) :: ri, rj, rk, dlon_inv, dlat_inv, dz_inv
-    INTEGER :: ia , ir , ie
-
     dlon_inv = 1.0d0 / dlon
     dlat_inv = 1.0d0 / dlat
     dz_inv = 1.0d0 / dz
-    allocate(rad2grid(na, nr, ne), mask(na, nr, ne), nobs_each_elev(ne))
-!$omp parallel do private(ia, ir, ie, ri, rj, rk) schedule(dynamic)
+
+    nobs_each_elev = 0
+    idx = 1
     do ie = 1, ne
-       do ir = 1, nr
-          do ia = 1, na
-             IF(qced_ze(ia, ir, ie) == missing) then
-                mask(ia, ir, ie) = .false.
-                cycle
-             end IF
-             !Get i,j,k very simple approach since we are assuming a regular lat/lon/z grid.
-             ri = (radlon(ia, ir, ie) - lon(1)) * dlon_inv
-             rj = (radlat(ia, ir, ie) - lat(1)) * dlat_inv
-             rk = (radz(ia, ir, ie)   - z(1)  ) * dz_inv
-             !Skip data outside the model domain.
-             !from Juan's algorithm: seems problematic
-             !IF(ri < 0 .OR. ri > nlon - 1 .OR. rj < 0 .OR. rj > nlat - 1 .OR. rk < 0 .OR. rk > nlev - 1) then
-             !modified code
-             if(ri < 0 .or. ri >= nlon .or. rj < 0 .or. rj >= nlat .or. rk < 0 .or. rk >= nlev) then
-                mask(ia, ir, ie) = .false.
-             else
-                !from Juan's algorithm: seems problematic
-                !rad2grid(ia, ir, ie) = ANINT(ri) + (ANINT(rj) + ANINT(rk) * nlat) * nlon + 1
-                !modified code
-                rad2grid(ia, ir, ie) = aint(ri) + (aint(rj) + aint(rk) * nlat) * nlon + 1
-          !!!        write(*,'(A,3I5,A,3I5,A)') '***', ia,ir,ie,' : ',aint(ri),aint(rj), aint(rk),'***'
-          !!!        write(*,*) '***', ia,ir,ie,' : ',aint(ri),aint(rj), aint(rk),'***'
-                mask(ia, ir, ie) = .true.
-             end IF
-          end do ! ia
-       end do ! ir
-       nobs_each_elev(ie) = count(mask(:, :, ie))
+       do i = 1, na * nr
+          !QC
+          qced_ze = ze(i, ie)
+          qced_vr = vr(i, ie)
+
+          !We will work with reflectivity (not in dbz) if we have dbz as input
+          !then transform it
+          IF(input_is_dbz .and. (qced_ze .ne. missing)) qced_ze = 10.0d0 ** (qced_ze * 0.1d0)
+
+          !Missing values not associated with clutter will be asigned a minimum
+          !reflectivity value. 
+          if(qced_ze .LE. missing) then
+             qced_ze = minz
+             qced_vr = missing !added by Otsuka
+          end if
+          if(qced_ze .LT. minz) then
+             qced_ze = minz
+!             qced_vr = missing !added by Otsuka 
+          end if
+          if(qced_ze .LT. minz_vr) then         
+            qced_vr = missing !added by Otsuka  
+          end if                                
+
+          !If dealing with qced real data it will be a good idea to remove all
+          !values detected as non weather echoes in the qc algorithm.
+          !This can also be useful to deal with simulated tophographyc shading
+          !in OSSES.
+          !We need reflectivity to average vr observations. Remove vr
+          !observations where the reflectivity is missing.
+          if(USE_QCFLAG .and. (qcflag(i, ie) .GE. 900.0d0)) then
+            qced_ze = missing
+            qced_vr = missing
+          endif
+
+          if(qced_ze == missing) cycle
+
+          !Get i,j,k very simple approach since we are assuming a regular
+          !lat/lon/z grid.
+          ri = (radlon(i, ie) - lon(1)) * dlon_inv
+          rj = (radlat(i, ie) - lat(1)) * dlat_inv
+          rk = (radz(i, ie)   - z(1)  ) * dz_inv
+          !Skip data outside the model domain.
+          !from Juan's algorithm: seems problematic
+          !IF(ri < 0 .OR. ri > nlon - 1 .OR. rj < 0 .OR. rj > nlat - 1 .OR. rk <
+          !0 .OR. rk > nlev - 1) then
+          !modified code
+          if(ri < 0 .or. ri >= nlon .or. rj < 0 .or. rj >= nlat .or. rk < 0 .or. rk >= nlev) cycle
+
+          if (qced_vr > missing) then
+            if (radz(i, ie) < vr_min_height) then
+               qced_vr = missing
+            else
+               dist_i = (radlon(i, ie) - lon0) * lon_coef
+               dist_j = (radlat(i, ie) - lat0) * lat_coef
+               if (dist_i * dist_i + dist_j * dist_j < vr_min_dist_square) then
+                 qced_vr = missing
+               end if
+            end if
+          end if
+
+          !from Juan's algorithm: seems problematic
+          !rad2grid(i, ie) = ANINT(ri) + (ANINT(rj) + ANINT(rk) * nlat) * nlon +
+          !1
+          !modified code
+          packed_grid(idx)    = aint(ri) + (aint(rj) + aint(rk) * nlat) * nlon + 1
+          packed_data(1, idx) = qced_ze
+          packed_data(2, idx) = qced_vr
+          packed_data(3, idx) = radlon(i, ie)
+          packed_data(4, idx) = radlat(i, ie)
+          packed_data(5, idx) = radz(i, ie)
+          packed_attn(idx)    = ((.not. USE_ATTENUATION) .or. &
+               &                 (attenuation(i, ie) > attenuation_threshold)) !seems wrong but not yet confirmed
+          idx = idx + 1
+          nobs_each_elev(ie) = nobs_each_elev(ie) + 1
+       end do ! i
     end do ! ie
-!$omp end parallel do
-    nobs = sum(nobs_each_elev)
-  end subroutine indexing
-
-  subroutine packing(na, nr, ne, radlon, radlat, radz, qced_ze, qced_vr, attenuation, & ! input spherical
-       &             rad2grid, mask, nobs_each_elev, nobs, &                            ! input index
-       &             packed_grid, packed_data, packed_attn)                             ! output
-    integer, intent(in) :: na, nr, ne ! array size of the spherical grid
-    real(r_size), intent(in), dimension(na, nr, ne) :: radlon, radlat, radz ! georeference
-    real(r_size), intent(in), dimension(na, nr, ne) :: qced_ze, qced_vr, attenuation ! main data
-    integer(8), intent(in) :: rad2grid(na, nr, ne), nobs_each_elev(ne)
-    logical, intent(in) :: mask(na, nr, ne)
-    integer(8), intent(in) :: nobs
-    integer(8), allocatable, intent(out) :: packed_grid(:)
-    real(r_size), allocatable, intent(out) :: packed_data(:, :)
-    logical, allocatable, intent(out) :: packed_attn(:)
-    integer(8), allocatable :: sidx(:)
-    integer :: ia , ir , ie
-    integer(8) :: idx
-
-    allocate(packed_grid(nobs), packed_data(nobs, 5), packed_attn(nobs), sidx(ne))
-    sidx(1) = 1
-    do ie = 1, ne - 1
-       sidx(ie + 1) = sidx(ie) + nobs_each_elev(ie)
-    end do !ie
-!$omp parallel do private(ia, ir, ie, idx) schedule(dynamic)
-    do ie = 1, ne
-       idx = sidx(ie)
-       do ir = 1, nr
-          do ia = 1, na
-             if(mask(ia, ir, ie)) then
-                packed_grid(idx)    = rad2grid(ia, ir, ie)
-                packed_data(idx, 1) = qced_ze(ia, ir, ie)
-                packed_data(idx, 2) = qced_vr(ia, ir, ie)
-                packed_data(idx, 3) = radlon(ia, ir, ie)
-                packed_data(idx, 4) = radlat(ia, ir, ie)
-                packed_data(idx, 5) = radz(ia, ir, ie)
-                packed_attn(idx)    = ((.not. USE_ATTENUATION) .or. &
-                     &                 (attenuation(ia, ir, ie) > attenuation_threshold)) !seems wrong but not yet confirmed
-                idx = idx + 1
-             end if
-          end do !ia
-       end do !ir
-    end do !ie
-!$omp end parallel do
-  end subroutine packing
+  end subroutine qc_indexing_and_packing
 
   subroutine uniq_int_sorted(n, ary, c)
     integer(8), intent(in) :: n
@@ -807,10 +726,10 @@ CONTAINS
     implicit none
     integer(8), intent(in) :: n
     integer(8), intent(inout) :: array(n)
-  
+
     integer(8) :: i, j, k, l
     integer(8) :: t
-  
+
     l = n / 2 + 1
     k = n
     do while(k .ne. 1)
@@ -944,6 +863,197 @@ CONTAINS
        end if
     end do
   end subroutine merge
+
+  recursive subroutine merge_sort_mpi(n, array, comm)
+    !ONLY RANK 0 RETURNS RESULT
+    integer(8), intent(in) :: n
+    integer, intent(in) :: comm
+    integer(8), intent(inout) :: array(n)
+    integer(8) :: asize(2)
+    integer(8), allocatable :: tmpary(:)
+    integer parent, child, procs(2), newcomm, tag, nprocs, rank
+
+    call mpi_comm_size(comm, nprocs, mpi_ierr)
+    call mpi_comm_rank(comm, rank, mpi_ierr)
+
+    procs(1) = nprocs / 2
+    procs(2) = nprocs - procs(1)
+    parent = 0
+    child = parent + procs(1)
+
+    asize = n / 2
+    if(mod(n, 2) .ne. 0) asize(1) = asize(1) + 1
+
+    allocate(tmpary(n))
+    if(rank < child) then
+       call MPI_comm_split(comm, 0, rank, newcomm, mpi_ierr)
+       tmpary(1:asize(1)) = array(1:asize(1))
+       if(procs(1) > 1) then
+          call merge_sort_mpi(asize(1), tmpary(1:asize(1)), newcomm)
+       else
+          call quicksort(asize(1), tmpary(1:asize(1)))
+       end if
+    else
+       call MPI_comm_split(comm, 1, rank, newcomm, mpi_ierr)
+       tmpary((asize(1) + 1):n) = array((asize(1) + 1):n)
+       if(procs(2) > 1) then
+          call merge_sort_mpi(asize(2), tmpary((asize(1) + 1):n), newcomm)
+       else
+          call quicksort(asize(2), tmpary((asize(1) + 1):n))
+       end if
+    end if
+
+    !FULL MPI VERSION
+    !SLOWER THAN SINGLE PROCESS VERSION
+    !call merge_mpi(asize(1), tmpary(1:asize(1)), asize(2), tmpary((asize(1) +
+    !1):n), n, array, parent, child, nprocs, comm)
+
+    !LIMITED MPI VERSION
+    !COMPARABLE TO SINGLE PROCESS VERSION
+    call merge_mpi_no_nest(asize(1), tmpary(1:asize(1)), asize(2), tmpary((asize(1) + 1):n), n, array, parent, child, comm)
+
+    !SINGLE PROCESS VERSION
+    !tag = 12345
+    !if(rank == parent) then
+    !   call MPI_recv(tmpary((asize(1) + 1):n), n - asize(1), MPI_INTEGER8,
+    !   child, tag, comm, MPI_STATUS_IGNORE, mpi_ierr)
+    !   call merge(asize(1), tmpary(1:asize(1)), asize(2), tmpary((asize(1) +
+    !   1):n), n, array)
+    !else if(rank == child) then
+    !   call MPI_send(tmpary((asize(1) + 1):n), n - asize(1), MPI_INTEGER8,
+    !   parent, tag, comm, MPI_STATUS_IGNORE, mpi_ierr)
+    !end if
+  end subroutine merge_sort_mpi
+
+  recursive subroutine merge_mpi(n1, ary1, n2, ary2, n3, ary3, parent, child, nprocs, comm)
+    integer(8), intent(in) :: n1, ary1(n1), n2, ary2(n2), n3
+    integer, intent(in) :: parent, child, nprocs, comm
+    integer(8), intent(inout) :: ary3(n3)
+    integer(8) k, m, pivot
+    integer, parameter :: threshold = 10
+    integer procs(2), grandchild1, grandchild2, rank, newcomm
+    integer, parameter :: tag_p2c = 12345
+    integer, parameter :: tag_p2g = 23451
+    integer, parameter :: tag_c2g = 34512
+    integer, parameter :: tag_p2h = 45123
+    integer, parameter :: tag_c2h = 51234
+
+    call mpi_comm_rank(comm, rank, mpi_ierr)
+    procs(1) = child - parent
+    procs(2) = nprocs - procs(1)
+
+    k = n1 / 2
+    if(rank == parent) pivot = ary1(k)
+    call MPI_bcast(pivot, 1, MPI_INTEGER8, parent, comm, mpi_ierr)
+    if(rank == child) m = binary_search_i8(n2, ary2, pivot)
+    call MPI_bcast(m, 1, MPI_INTEGER8, child, comm, mpi_ierr)
+
+    if(procs(1) > 1 .and. n1 >= threshold) then
+       grandchild1 = parent + (procs(1) / 2)
+    else
+       grandchild1 = parent
+    end if
+    if(procs(2) > 1 .and. n2 >= threshold) then
+       grandchild2 = child + (procs(2) / 2)
+    else
+       grandchild2 = child
+    end if
+
+    if(rank >= parent .and. rank < child) then
+       call MPI_comm_split(comm, 0, rank, newcomm, mpi_ierr)
+
+       if(rank == parent) then
+          if(rank == grandchild1) then
+             call MPI_sendrecv(ary1((k + 1):n1), n1 - k, MPI_INTEGER8, grandchild2, tag_p2h, &
+                  &            ary2(1:m), m, MPI_INTEGER8, child, tag_c2g, &
+                  &            comm, MPI_STATUS_IGNORE, mpi_ierr)
+          else
+             call MPI_send(ary1((k + 1):n1), n1 - k, MPI_INTEGER8, grandchild2, &
+                  &        tag_p2h, comm, MPI_STATUS_IGNORE, mpi_ierr)
+          end if
+       else if(rank == grandchild1) then
+          call MPI_recv(ary2(1:m), m, MPI_INTEGER8, child, &
+               &        tag_c2g, comm, MPI_STATUS_IGNORE, mpi_ierr)
+       end if
+
+       if(procs(1) > 1 .and. n1 >= threshold) then
+          call merge_mpi(k, ary1(1:k), m, ary2(1:m), k + m, ary3(1:(k + m)), 0, grandchild1 - parent, procs(1), newcomm)
+       else
+          call merge(k, ary1(1:k), m, ary2(1:m), k + m, ary3(1:(k + m)))
+       end if
+       if(rank == parent) then
+          call MPI_recv(ary3((k + m + 1):n3), n3 - (k + m), MPI_INTEGER8, child, &
+               &        tag_p2c, comm, MPI_STATUS_IGNORE, mpi_ierr)
+       end if
+    else if(rank >= child .and. rank < parent + nprocs) then
+       call MPI_comm_split(comm, 1, rank, newcomm, mpi_ierr)
+
+       if(rank == child) then
+          if(rank == grandchild2) then
+             call MPI_sendrecv(ary2(1:m), m, MPI_INTEGER8, grandchild1, tag_c2g, &
+                  &            ary1((k + 1):n1), n1 - k, MPI_INTEGER8, parent, tag_p2h, &
+                  &            comm, MPI_STATUS_IGNORE, mpi_ierr)
+          else
+             call MPI_send(ary2(1:m), m, MPI_INTEGER8, grandchild1, &
+                  &        tag_c2g, comm, MPI_STATUS_IGNORE, mpi_ierr)
+          end if
+       else if(rank == grandchild2) then
+          call MPI_recv(ary1((k + 1):n1), n1 - k, MPI_INTEGER8, parent, &
+               &        tag_p2h, comm, MPI_STATUS_IGNORE, mpi_ierr)
+       end if
+
+       if(procs(2) > 1 .and. n2 >= threshold) then
+          call merge_mpi(n2 - m, ary2((m + 1):n2), n1 - k, ary1((k + 1):n1), & !NOTE: FLIP SIDE
+               &         n3 - (k + m), ary3((k + m + 1):n3), 0, grandchild2 - child, procs(2), newcomm)
+       else
+          !write(*, *) "myrank: ", myrank, " ", ary1(k + 1), " ", ary2(m + 1) 
+          call merge(n1 - k, ary1((k + 1):n1), n2 - m, ary2((m + 1):n2), &
+               &     n3 - (k + m), ary3((k + m + 1):n3))
+       end if
+       if(rank == child) then
+          call MPI_send(ary3((k + m + 1):n3), n3 - (k + m), MPI_INTEGER8, parent, &
+               &        tag_p2c, comm, MPI_STATUS_IGNORE, mpi_ierr)
+       end if
+    else
+       call MPI_comm_split(comm, 3, rank, newcomm, mpi_ierr) !SHOULD NOT HAPPEN (BUG)
+       write(*, *) "something wrong in merge_mpi"
+    end if
+  end subroutine merge_mpi
+  recursive subroutine merge_mpi_no_nest(n1, ary1, n2, ary2, n3, ary3, parent, child, comm)
+    integer(8), intent(in) :: n1, ary1(n1), n2, ary2(n2), n3
+    integer, intent(in) :: parent, child, comm
+    integer(8), intent(inout) :: ary3(n3)
+    integer(8) k, m, pivot
+    integer, parameter :: threshold = 10
+    integer rank
+    integer, parameter :: tag_p2c = 12345
+
+    call mpi_comm_rank(comm, rank, mpi_ierr)
+
+    k = n1 / 2
+    if(rank == parent) then
+       pivot = ary1(k)
+       call MPI_send(pivot, 1, MPI_INTEGER8, child, tag_p2c, comm, MPI_STATUS_IGNORE, mpi_ierr)
+       call MPI_recv(m, 1, MPI_INTEGER8, child, tag_p2c, comm, MPI_STATUS_IGNORE, mpi_ierr)
+       call MPI_sendrecv(ary1((k + 1):n1), n1 - k, MPI_INTEGER8, child, tag_p2c, &
+            &            ary2(1:m), m, MPI_INTEGER8, child, tag_p2c, &
+            &            comm, MPI_STATUS_IGNORE, mpi_ierr)
+       call merge(k, ary1(1:k), m, ary2(1:m), k + m, ary3(1:(k + m)))
+       call MPI_recv(ary3((k + m + 1):n3), n3 - (k + m), MPI_INTEGER8, child, &
+               &        tag_p2c, comm, MPI_STATUS_IGNORE, mpi_ierr)
+    else if(rank == child) then
+       call MPI_recv(pivot, 1, MPI_INTEGER8, parent, tag_p2c, comm, MPI_STATUS_IGNORE, mpi_ierr)
+       m = binary_search_i8(n2, ary2, pivot)
+       call MPI_send(m, 1, MPI_INTEGER8, parent, tag_p2c, comm, MPI_STATUS_IGNORE, mpi_ierr)
+       call MPI_sendrecv(ary2(1:m), m, MPI_INTEGER8, parent, tag_p2c, &
+            &            ary1((k + 1):n1), n1 - k, MPI_INTEGER8, parent, tag_p2c, &
+            &            comm, MPI_STATUS_IGNORE, mpi_ierr)
+       call merge(n1 - k, ary1((k + 1):n1), n2 - m, ary2((m + 1):n2), &
+            &     n3 - (k + m), ary3((k + m + 1):n3))
+       call MPI_send(ary3((k + m + 1):n3), n3 - (k + m), MPI_INTEGER8, parent, &
+            &        tag_p2c, comm, MPI_STATUS_IGNORE, mpi_ierr)
+    end if
+  end subroutine merge_mpi_no_nest
 
   function binary_search_i8(n, ary, val)
     !returns nmin, where ary(nmin) <= val < ary(nmin + 1)                                                                                

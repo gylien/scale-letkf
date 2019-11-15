@@ -18,6 +18,7 @@ module obs_tools
      mmean_rank_e, mmdetin, &
      mmean, mmdet, &
      myrank_use_da, &
+     myrank_use_obs, &
      myrank_to_mem, nitmax, &
      ranke_to_mem, mmdetobs, &
      nensobs, timer_name_width
@@ -788,7 +789,7 @@ subroutine read_obs_all_mpi(obs)
 
   call mpi_timer('', 2)
 
-  if (myrank_da < RADAR_NPROC) then
+  if ( myrank_use_obs ) then
     call read_obs_all(obs)
 
     call mpi_timer('read_obs_all_mpi:read_obs_all:', 2)

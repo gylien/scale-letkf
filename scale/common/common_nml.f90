@@ -112,6 +112,9 @@ MODULE common_nml
   logical               :: OBS_USE_JITDT = .false.
   character(filelenmax) :: OBS_JITDT_DATADIR = 'jit-data'
   character(filelenmax) :: OBS_JITDT_IP = 'jit-data'
+  logical :: OBS_JITDT_CHECK_RADAR_TIME = .false. ! Check consistency between the observation time and analysis time
+                                                  ! If they are different, skip analysis
+
 
   !--- PARAM_LETKF
   logical               :: OBSDA_IN = .false.
@@ -594,7 +597,8 @@ subroutine read_nml_obsope
     SLOT_TINTERVAL, &
     OBS_USE_JITDT, &
     OBS_JITDT_DATADIR, &
-    OBS_JITDT_IP
+    OBS_JITDT_IP, &
+    OBS_JITDT_CHECK_RADAR_TIME
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_OBSOPE,iostat=ierr)
@@ -1021,6 +1025,10 @@ subroutine read_nml_letkf_radar
   if (RADAR_REF_THRES_DBZ < MIN_RADAR_REF_DBZ) then
     RADAR_REF_THRES_DBZ = MIN_RADAR_REF_DBZ
   end if
+
+  if ( RADAR_NPROC > MEMBER ) then
+    RADAR_NPROC = MEMBER 
+  endif
 
   if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_LETKF_RADAR)
