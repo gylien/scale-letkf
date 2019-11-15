@@ -1994,10 +1994,6 @@ end subroutine write_grd_dafcst_mpi
 subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   use mod_admin_time, only: &
     TIME_DTSEC_ATMOS_RESTART
-  use scale_topography, only: &
-    TOPO_Zsfc
-  use scale_landuse, only: &
-    LANDUSE_frac_land
   use scale_atmos_grid_cartesC, only: &
      CZ => ATMOS_GRID_CARTESC_CZ
 !  use scale_atmos_hydrometeor, only: &
@@ -2015,11 +2011,7 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
   character(len=H_LONG) :: filename
   integer :: nlev_plot
-  real(r_sngl), allocatable :: bufr4(:,:)
   real(r_sngl), allocatable :: bufr3d(:,:,:)
-!  real(r_sngl) :: topo2dgs(nlong,nlatg)
-!  real(r_sngl) :: lon2dgs(nlong,nlatg)
-!  real(r_sngl) :: lat2dgs(nlong,nlatg)
   integer :: iunit, iolen
   integer :: k, n, irec, ierr
   integer :: proc_i, proc_j
@@ -2043,6 +2035,7 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   fcst_ = .false.
   header = "anal"
   footer_fcst = ""
+  ftsec="anal"
   if (present(step)) then
     fcst_ = .true.
     header = "fcst"
@@ -2072,6 +2065,7 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   ishift = proc_i * nlon
   jshift = proc_j * nlat
 
+
   nlev_plot = 0
   do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
 
@@ -2083,20 +2077,6 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
   call MPI_ALLREDUCE(MPI_IN_PLACE, bufr3d, nlong*nlatg*nlev_plot, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
 
-
-  if ( .not. allocated(lsmask2dgs)) then
-    allocate(lsmask2dgs(nlong,nlatg))
-
-    allocate(bufr4(nlong,nlatg))
-
-    bufr4(:,:) = 0.0
-    bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(LANDUSE_frac_land, r_sngl)
-    call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
-    lsmask2dgs(:,:) = bufr4
-
-    deallocate(bufr4)
-
-  endif
 
   ! Gather required data for reflectivity computation
 
@@ -2111,7 +2091,7 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
 #ifdef PLOT_DCL
       plotname = header // "_dbz_"//trim(timelabel) // trim(footer_fcst) // "_z" // cheight // "m"
-      call plot_dbz_DCL (bufr3d(nlev_plot,1:nlong,1:nlatg),lsmask2dgs,trim(plotname),cheight,ftsec)
+      call plot_dbz_DCL (bufr3d(nlev_plot,1:nlong,1:nlatg),trim(plotname),cheight,ftsec)
 #endif
     elseif ( ( myrank_d + 1 ) < k) then
       exit
