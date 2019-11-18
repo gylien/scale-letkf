@@ -1,5 +1,5 @@
 !==================================================!
-subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,psfile) 
+subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,nlons,nlats,lons,lats,dlons,dlats,psfile) 
   use common
   use common_scale
   use scale_const, only: &
@@ -19,7 +19,7 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,psfile)
   use scale_time, only: &
       TIME_NOWDATE
   use common_nml, only: &
-      plot_zlev_min, plot_zlev_max, plot_zlev_intv, HORI_LOCAL
+      PLOT_ZLEV_MIN, PLOT_ZLEV_MAX, PLOT_ZLEV_INTV, HORI_LOCAL
   use common_mpi_scale, only: &
       myrank_o, &
       nprocs_o
@@ -30,9 +30,14 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,psfile)
   real(r_sngl),intent(in) :: ze_radar(nobs)
   real(r_sngl),intent(in) :: lon_radar(nobs), lat_radar(nobs), z_radar(nobs)
   character(*),intent(in) :: psfile
-  real(r_sngl) :: val_plot(nlong,nlatg)
-  integer :: iwork(3 * (nlong + 2) * (nlatg + 2) / 2 + 1)
- 
+
+  integer,intent(in) :: nlons,nlats !!! grid superob
+  real(r_sngl),intent(in) :: lons(nlons), lats(nlats)
+  real(r_sngl),intent(in) :: dlons, dlats
+
+  real(r_sngl):: val_plot(nlons,nlats)
+
+  integer :: iwork(3 * (nlons + 2) * (nlats + 2) / 2 + 1)
  
   real(r_sngl),parameter :: rmiss = -9.99e20
   
@@ -64,9 +69,7 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,psfile)
 
   integer :: pcnt !!! process count
 
-  real(r_sngl)::radius_in_map
-
-  include 'latlon_d4_grid.h'
+  real(r_sngl)::lon4(4),lat4(4)
 
 
   write(ftimelabel,'(I4.4,A1,I2.2,A1,I2.2,A1, I2.2,A1,I2.2,A1,I2.2)')&
@@ -117,13 +120,6 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,psfile)
       vpl = 0.55 - 0.5 * (vpt - vpb) * aratio
       vpr = 0.55 + 0.5 * (vpt - vpb) * aratio
     end if
-   
-  
-    radius_in_map = (vpr-vpl) * real( HORI_LOCAL(1) / (6.4e6 * COS(BASE_LAT)) / D2R ) / (range_lonr-range_lonl) 
-
-    write(*,*) radius_in_map
-    write(*,*) HORI_LOCAL, BASE_LAT
-
  
     call gliset('MSGLEV',1)
     call sgiset('IFONT',1)
@@ -155,10 +151,7 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,psfile)
  
     call glrset ('RMISS', rmiss)
     call gllset ('LMISS', .true.)
-      
-!    call uwsgxa (grid_long,nlong)
-!    call uwsgya (grid_latg,nlatg)
-   
+     
     call ueitlv
    
     ntpat = 10
@@ -169,29 +162,23 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,psfile)
     vtlevs(ntpat+3) = 1.0e10
     call uestln(vtlevs(1:ntpat+3),itpats(1:ntpat+2),ntpat+2)
  
-  
-!!!    call uetone (val_plot,nlong,nlong,nlatg)
 
-
-     !!! def val_plot, cheight
-   call uusmkt(10)
-   call uusmks(radius_in_map)
+    val_plot=0.0
 
     do iobs = 1, nobs
       if (z_radar(iobs).ne.rmiss_radar) then
         if ( z_radar(iobs) .ge. grid_fz(iplot_lev+KHALO-1) .and. & 
           z_radar(iobs) .lt. grid_fz(iplot_lev+KHALO) ) then
-
-        itpat = iblkge(vtlevs(1:ntpat+2),ntpat+2,10.0*log10(ze_radar(iobs)))
-      if (itpat.ge.2)then
-        call uusmki(10*(itpats(itpat)/1000)+1)
-        call uumrk(1,lon_radar(iobs),lat_radar(iobs))
-      end if
+          ilon = int((lon_radar(iobs)-lons(1)-0.5*dlons)/dlons)+1
+          ilat = int((lat_radar(iobs)-lats(1)-0.5*dlats)/dlats)+1
+          if (ilon.ge.1.and.ilon.le.nlons.and.ilat.ge.1.and.ilat.le.nlats) val_plot(ilon,ilat) = 10.0*log10(max(ze_radar(iobs),1.0e-10))  
         end if
       end if
     end do
  
-
+    call uwsgxa (lons,nlons)
+    call uwsgya (lats,nlats)
+    call uetone (val_plot,nlons,nlons,nlats)
    
     call dcbar(vpr+0.02,vpb,(vpt-vpb)*0.8)
    

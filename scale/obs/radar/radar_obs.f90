@@ -1046,7 +1046,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
     call TIME_gettimelabel(timelabel)
     plotname = "obs_dbz_"//trim(timelabel(1:15))
-    call plot_dbz_DCL_obs (nobs_sp,real(grid_ze),real(grid_lon_ze),real(grid_lat_ze),real(grid_z_ze),trim(plotname))
+    call plot_dbz_DCL_obs(nobs_sp,real(grid_ze(1:nobs_sp)),real(grid_lon_ze(1:nobs_sp)),real(grid_lat_ze(1:nobs_sp)),real(grid_z_ze(1:nobs_sp)), &
+                          nlon,nlat,real(lon),real(lat),real(dlon),real(dlat),trim(plotname))
 
 !    call date_and_time(date=date, time=time)
 !    write (6, '(2a,1x,a,1x,a)') '[Info:plot] obs finish plotting: ', date, time, trim(timelabel(1:15))
