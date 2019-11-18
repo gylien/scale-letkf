@@ -15,7 +15,7 @@ TOPDIR="$SCALEDIR/.."                                                # Directory
 
 OUTPUT="${TOPDIR}/r0051_nest"
 EXP4=D4_1km_NP64_1029_22_20MEM
-EXP3=exp_d3
+EXP3=exp_d3_mer
 
 OUTDIR="${OUTPUT}/${EXP4}/ref_<PARENT_REF_TIME_D2>"
 

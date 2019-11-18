@@ -14,8 +14,8 @@ SCALEDIR="$DIR/../.."                                                # Directory
 TOPDIR="$SCALEDIR/.."                                                # Directory of the SCALE model
 
 OUTPUT="${TOPDIR}/r0051_nest"
-EXP4=D4_1km_NP64_1029_22_20MEM
-EXP3=exp_d3
+EXP4=D4_250m_NP1024_1029_22_20MEM
+EXP3=exp_d3_mer
 
 OUTDIR="${OUTPUT}/${EXP4}/ref_<PARENT_REF_TIME_D2>"
 
@@ -35,9 +35,7 @@ DATA_LANDUSE=                                                        # Directory
 DATA_BDY_SCALE="${OUTPUT}/${EXP3}/ref_<PARENT_REF_TIME_D2>"   # Directory of the boundary data in SCALE history format (parent domain)
 DATA_BDY_SCALE_PRC_NUM_X=32 # D3
 DATA_BDY_SCALE_PRC_NUM_Y=32 # D3
-###DATA_BDY_SCALE_PRC_NUM_X=8 # D3 temporal
-###DATA_BDY_SCALE_PRC_NUM_Y=8 # D3 temporal
-DDATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
+DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
@@ -120,8 +118,8 @@ PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
-###SCALE_NP=4096  # D4    # Number of processes to run SCALE
-SCALE_NP=64  # D4 1km
+SCALE_NP=1024  # D4    # Number of processes to run SCALE
+##SCALE_NP=64  # D4 1km
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -132,8 +130,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-#SYSNAME="$(basename $OUTDIR/..)"                # A unique name in the machine
-SYSNAME=d4_init                # A unique name in the machine
+SYSNAME=d4_init_250m                 # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}_<PARENT_REF_TIME_D2>_<PARENT_REF_TIME>_<STIME>"           # (used to identify multiple runs in the same time)
 
 TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes

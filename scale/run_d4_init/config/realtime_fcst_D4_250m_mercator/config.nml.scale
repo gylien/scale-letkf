@@ -95,10 +95,10 @@
 #################################################
 
 &PARAM_PRC_CARTESC
- PRC_NUM_X      = 8,
-! PRC_NUM_X      = 32,
- PRC_NUM_Y      = 8,
-! PRC_NUM_Y      = 32,
+! PRC_NUM_X      = 8,
+ PRC_NUM_X      = 32,
+! PRC_NUM_Y      = 8,
+ PRC_NUM_Y      = 32,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -163,9 +163,10 @@
  MAPPROJECTION_basepoint_lon = 134.9512D0,
  MAPPROJECTION_basepoint_lat =  34.7105D0,
 !
- MAPPROJECTION_type          = 'LC',
- MAPPROJECTION_LC_lat1       =  30.00D0,
- MAPPROJECTION_LC_lat2       =  40.00D0,
+ MAPPROJECTION_type          = 'MER',
+! MAPPROJECTION_type          = 'LC',
+! MAPPROJECTION_LC_lat1       =  30.00D0,
+! MAPPROJECTION_LC_lat2       =  40.00D0,
 /
 
 #################################################

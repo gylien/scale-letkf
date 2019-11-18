@@ -17,57 +17,59 @@
  STATISTICS_use_globalcomm = .true.,
 /
 
+&PARAM_RESTART
+!--RESTART_OUTPUT--
+!--RESTART_OUT_BASENAME--
+!--RESTART_OUT_POSTFIX_TIMELABEL--
+/
+
 &PARAM_TOPO
-!--TOPO_OUT_BASENAME--
+!--TOPO_IN_BASENAME--
 /
 
 &PARAM_LANDUSE
-!--LANDUSE_OUT_BASENAME--
+!--LANDUSE_IN_BASENAME--
 /
 
-&PARAM_CONVERT
-!--CONVERT_TOPO--
-!--CONVERT_LANDUSE--
+&PARAM_LAND_PROPERTY
+!--LAND_PROPERTY_IN_FILENAME--
 /
 
-&PARAM_CNVTOPO
-!--CNVTOPO_name--
- CNVTOPO_SMOOTH_local    = .true.,
- CNVTOPO_SMOOTH_itelim   = 10000,
-! Following scale-rm/test/realcase/awaji/pp/pp.conf 
- CNVTOPO_smooth_maxslope_ratio = 10.0d0,
- CNVTOPO_copy_parent     = .true.,
+&PARAM_MKINIT
+ MKINIT_initname = "REAL",
 /
 
-&PARAM_COPYTOPO
-!--COPYTOPO_IN_BASENAME--
- COPYTOPO_ENTIRE_REGION = .false.,
- COPYTOPO_LINEAR_H      = .true.,
+&PARAM_MKINIT_REAL_ATMOS
+!--BASENAME_BOUNDARY--
+!--BASENAME_ORG--
+!--FILETYPE_ORG--
+!--NUMBER_OF_FILES--
+!--NUMBER_OF_TSTEPS--
+!--NUMBER_OF_SKIP_TSTEPS--
+!--BOUNDARY_UPDATE_DT--
+! USE_FILE_DENSITY = .false.,
 /
 
-&PARAM_CNVTOPO_GTOPO30
- GTOPO30_IN_CATALOGUE = "GTOPO30_catalogue.txt",
-!--GTOPO30_IN_DIR--
+&PARAM_MKINIT_REAL_OCEAN
+!#--BASENAME_ORG--
+!#--FILETYPE_ORG--
+!#--NUMBER_OF_FILES--
+!#--NUMBER_OF_TSTEPS--
+!#--NUMBER_OF_SKIP_TSTEPS--
+! INTRP_OCEAN_SFC_TEMP = "mask",
+! INTRP_OCEAN_TEMP = "mask",
 /
 
-&PARAM_CNVTOPO_DEM50M
- DEM50M_IN_CATALOGUE = "DEM50M_catalogue.txt",
-!--DEM50M_IN_DIR--
-/
-
-&PARAM_CNVLANDUSE
-!--CNVLANDUSE_name--
- CNVLANDUSE_limit_urban_fraction = 0.3D0, ! r0051
-/
-
-&PARAM_CNVLANDUSE_GLCCv2
- GLCCv2_IN_CATALOGUE = "GLCCv2_catalogue.txt",
-!--GLCCv2_IN_DIR--
-/
-
-&PARAM_CNVLANDUSE_LU100M
- LU100M_IN_CATALOGUE = "LU100M_catalogue.txt",
-!--LU100M_IN_DIR--
+&PARAM_MKINIT_REAL_LAND
+!#--BASENAME_ORG--
+!#--FILETYPE_ORG--
+!#--NUMBER_OF_FILES--
+!#--NUMBER_OF_TSTEPS--
+!#--NUMBER_OF_SKIP_TSTEPS--
+! USE_FILE_LANDWATER   = .true.,
+! INTRP_LAND_TEMP      = "mask",
+! INTRP_LAND_WATER     = "fill",
+! INTRP_LAND_SFC_TEMP  = "fill",
 /
 
 &PARAM_COMM_CARTESC_NEST
@@ -75,6 +77,7 @@
 !--OFFLINE_PARENT_PRC_NUM_X--
 !--OFFLINE_PARENT_PRC_NUM_Y--
 !--LATLON_CATALOGUE_FNAME--
+! NEST_INTERP_LEVEL = 12,
 /
 
 #################################################
@@ -82,6 +85,8 @@
 # model configuration: process
 #
 #################################################
+
+### TORI AEZU
 
 &PARAM_PRC_CARTESC
 ! PRC_NUM_X      = 8,
@@ -98,6 +103,8 @@
 #
 #################################################
 
+### TORI AEZU
+
 &PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = 60,
  IMAX = 16,
@@ -106,9 +113,33 @@
 ! JMAX = 8,
 /
 
+&PARAM_LAND_GRID_CARTESC_INDEX
+ LKMAX = 7,
+/
+
+&PARAM_LAND_GRID_CARTESC
+ LDZ = 0.05D0, 0.15D0, 0.3D0, 0.5D0, 1.0D0, 1.0D0, 1.0D0,
+/
+
+&PARAM_URBAN_GRID_CARTESC_INDEX
+ UKMAX = 5,
+/
+
+&PARAM_URBAN_GRID_CARTESC
+ UDZ = 0.01D0, 0.01D0, 0.03D0, 0.05D0, 0.10D0,
+/
+
+&PARAM_OCEAN_GRID_CARTESC_INDEX
+ OKMAX = 1,
+/
+
+### TORI AEZU
+
 &PARAM_ATMOS_GRID_CARTESC
  DX = 250.D0,
  DY = 250.D0,
+! DX = 1000.D0,
+! DY = 1000.D0,
  FZ(:) =    110.0000D0,   220.0000D0,   330.0000D0,   440.0000D0,   550.0000D0,
             666.1600D0,   788.8249D0,   918.3591D0,  1055.1472D0,  1199.5955D0,
            1352.1328D0,  1513.2123D0,  1683.3123D0,  1862.9379D0,  2052.6226D0,
@@ -129,9 +160,36 @@
 &PARAM_MAPPROJECTION
  MAPPROJECTION_basepoint_lon = 134.9512D0,
  MAPPROJECTION_basepoint_lat =  34.7105D0,
-! MAPPROJECTION_type          = "MER",
+! MAPPROJECTION_type          = 'MER',
  MAPPROJECTION_type          = 'LC',
  MAPPROJECTION_LC_lat1       =  30.00D0,
  MAPPROJECTION_LC_lat2       =  40.00D0,
 /
 
+#################################################
+#
+# model configuration: administrator
+#
+#################################################
+
+&PARAM_ATMOS
+ ATMOS_DYN_TYPE    = "HEVI",
+ ATMOS_PHY_MP_TYPE = "TOMITA08",
+ ATMOS_PHY_RD_TYPE = "MSTRNX",
+ ATMOS_PHY_SF_TYPE = "COUPLE",
+ ATMOS_PHY_TB_TYPE = "SMAGORINSKY",
+/
+
+&PARAM_OCEAN
+ OCEAN_DYN_TYPE = "INIT",
+ OCEAN_SFC_TYPE = "FIXED-TEMP",
+/
+
+&PARAM_LAND
+ LAND_DYN_TYPE = "BUCKET",
+ LAND_SFC_TYPE = "SKIN",
+/
+
+&PARAM_URBAN
+ URBAN_DYN_TYPE = "KUSAKA01",
+/
