@@ -12,7 +12,7 @@ fi
 
 SCPNAME="cycle"
 
-EXPTYPE="$1"; shift
+DX="$1"; shift
 STIME="$1"; shift
 NCYCLE="$1"; shift
 WTIME_L="$1"; shift
@@ -30,7 +30,7 @@ NNODES=`expr \( $NMEM + 2 + $MAX_DACYCLE_RUN_FCST \) / 1` ### 1km / 64domain
 
 #-------------------------------------------------------------------------------
 
-CONFIG="realtime_dacycle_D4_${EXPTYPE}"
+CONFIG="D4_${DX}_mercator"
 if [ ! -d config/${CONFIG} ];then
  echo "EXPTYPE "$EXPTYPE" not supported !"
  exit
