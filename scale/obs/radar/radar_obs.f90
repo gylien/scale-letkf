@@ -759,12 +759,10 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   use scale_time, only: &
       TIME_gettimelabel, &
       TIME_NOWDATE
-#ifdef PLOT_DCL
   use common_mpi_scale, only: &
       myrank_o, &
       myrank_da, &
       pawr_toshiba_hd_mpi
-#endif
   implicit none
 
   character(len=*), intent(in) :: cfile

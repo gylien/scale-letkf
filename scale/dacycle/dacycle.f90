@@ -34,7 +34,9 @@ program dacycle
     write_grd_dafcst_mpi,     &
     send_recv_emean_others,   &
 !    bcast_restart_efcst_mpi,  &
+#ifdef PLOT_DCL
     plot_dafcst_mpi, &
+#endif
     mpi_timer
   use common_obs_scale, only: &
     set_common_obs_scale

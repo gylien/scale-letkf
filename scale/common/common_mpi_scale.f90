@@ -1988,6 +1988,7 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   return
 end subroutine write_grd_dafcst_mpi
 
+#ifdef PLOT_DCL
 !-------------------------------------------------------------------------------
 ! Plot forecast/analysis 3D data by DCL
 !-------------------------------------------------------------------------------
@@ -2022,9 +2023,7 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   character(len=8) :: date
   character(len=10) :: time
 
-#ifdef PLOT_DCL
   character(len=H_LONG) :: plotname
-#endif
 
   logical :: fcst_
   character(len=4) :: header
@@ -2089,10 +2088,8 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
     if ( ( myrank_d + 1 ) == k) then
       write(cheight,'(I5.5)')  int(CZ(k+KHALO)) ! tentative
 
-#ifdef PLOT_DCL
       plotname = header // "_dbz_"//trim(timelabel) // trim(footer_fcst) // "_z" // cheight // "m"
       call plot_dbz_DCL (bufr3d(nlev_plot,1:nlong,1:nlatg),trim(plotname),cheight,ftsec)
-#endif
     elseif ( ( myrank_d + 1 ) < k) then
       exit
     end if
@@ -2109,6 +2106,7 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
   return
 end subroutine plot_dafcst_mpi
+#endif
 
 ! Broadcast restart data among the dacycle (extended) forecast members
 subroutine bcast_restart_efcst_mpi()
