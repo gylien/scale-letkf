@@ -41,7 +41,7 @@ subroutine plot_dbz_DCL(val_plot_s,psfile,cheight,csec)
   integer :: ilon, ilat
   real(r_sngl) :: vpr, vpl, vpt, vpb
 
-  real(r_size) :: lon, lat
+  real(RP) :: lon_RP, lat_RP
   real(r_sngl) :: range_lonl, range_lonr
   real(r_sngl) :: range_latl, range_latr
   real(r_sngl) :: aratio
@@ -70,15 +70,15 @@ subroutine plot_dbz_DCL(val_plot_s,psfile,cheight,csec)
   where(.not.val_plot > rmiss) val_plot = rmiss
 
 
-do ilon=1,nlong
-  call MAPPROJECTION_xy2lonlat( GRID_CXG(IHALO+ilon), GRID_CYG(1), lon, lat )
-  GRID_LONG(ilon)=real(lon/D2R)
-end do
+  do ilon = 1, nlong
+    call MAPPROJECTION_xy2lonlat( GRID_CXG(IHALO+ilon), GRID_CYG(1), lon_RP, lat_RP )
+    GRID_LONG(ilon) = real(lon_RP / D2R)
+  end do
 
-do ilat=1,nlatg
-  call MAPPROJECTION_xy2lonlat( GRID_CXG(1),GRID_CYG(JHALO+ilat), lon, lat )
-  GRID_LATG(ilat)=real(lat/D2R)
-end do
+  do ilat = 1, nlatg
+    call MAPPROJECTION_xy2lonlat( GRID_CXG(1),GRID_CYG(JHALO+ilat), lon_RP, lat_RP )
+    GRID_LATG(ilat) = real(lat_RP / D2R)
+  end do
 
   iclrmap = 12
 

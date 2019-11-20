@@ -8,6 +8,7 @@
 PRESET='OFP' 
 
 RSCGRP="regular-cache"
+RSCGRP="regular-flat"
 
 #===============================================================================
 
@@ -15,12 +16,12 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 #OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
 OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT"
-EXP4=D4_250M_NP4096_1115
+EXP4=D4_250M_mercator
 EXP3=exp_d3
 EXP2=exp_d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
-INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_250M_NP4096_600S_SMTH"
+INDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_250m_mer"
 
 #===============================================================================
 # Location of model/data files
@@ -122,8 +123,8 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=7      # Ensemble size 
-NNODES=640
+MEMBER=3      # Ensemble size 
+NNODES=384
 
 PPN=64              # Number of processes per node
 

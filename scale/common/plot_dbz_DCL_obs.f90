@@ -46,7 +46,7 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,nlons,nlat
   integer :: itpats(npatmax)  
   character(len=40) :: title1, title2(2), title3
 
-  real(r_size) :: lon,lat
+  real(RP) :: lon_RP, lat_RP
 
   integer :: iclrmap,iobs,iplot_lev
   integer :: ilon, ilat
@@ -94,16 +94,16 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,nlons,nlat
     iclrmap = 12
      
 
-  call MAPPROJECTION_xy2lonlat( GRID_CXG(IHALO+1), GRID_CYG(1), lon, lat )
-  range_lonl=real(lon/D2R)
-  call MAPPROJECTION_xy2lonlat( GRID_CXG(IHALO+nlong), GRID_CYG(1), lon, lat )
-  range_lonr=real(lon/D2R)
+  call MAPPROJECTION_xy2lonlat( GRID_CXG(IHALO+1), GRID_CYG(1), lon_RP, lat_RP )
+  range_lonl=real(lon_RP/D2R)
+  call MAPPROJECTION_xy2lonlat( GRID_CXG(IHALO+nlong), GRID_CYG(1), lon_RP, lat_RP )
+  range_lonr=real(lon_RP/D2R)
 
 
-  call MAPPROJECTION_xy2lonlat( GRID_CXG(1),GRID_CYG(JHALO+1), lon, lat )
-  range_latl=real(lat/D2R)
-  call MAPPROJECTION_xy2lonlat( GRID_CXG(1),GRID_CYG(JHALO+nlatg), lon, lat )
-  range_latr=real(lat/D2R)
+  call MAPPROJECTION_xy2lonlat( GRID_CXG(1),GRID_CYG(JHALO+1), lon_RP, lat_RP )
+  range_latl=real(lat_RP/D2R)
+  call MAPPROJECTION_xy2lonlat( GRID_CXG(1),GRID_CYG(JHALO+nlatg), lon_RP, lat_RP )
+  range_latr=real(lat_RP/D2R)
 
   iclrmap = 12
 

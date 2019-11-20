@@ -12,6 +12,11 @@ include ../configure.user
 
 #------
 
+ifeq ($(SCALE_SINGLE_FP),T)
+FOPTS     += -DSINGLE
+FOPTS_SCALE += -DSINGLE
+endif
+
 ifeq ($(SCALE_USER_VER),T)
 FOPTS     += -DSCALEUV
 FOPTS_SCALE += -DSCALEUV

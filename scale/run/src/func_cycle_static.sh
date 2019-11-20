@@ -934,8 +934,8 @@ while ((time <= ETIME)); do
     if ((DACYCLE == 1)); then
       TIME_DURATION="$((CYCLEFLEN * n_cycles)).D0"
       if ((DIRECT_TRANSFER == 1 && OUT_OPT >= 3)); then
-#        FILE_HISTORY_DEFAULT_BASENAME=""
-        FILE_HISTORY_DEFAULT_BASENAME="${OUTDIR[$d]}/${time}/hist/<lmember>/history"
+#        FILE_HISTORY_DEFAULT_BASENAME="${OUTDIR[$d]}/${time}/hist/<lmember>/history" # DEBUG
+        FILE_HISTORY_DEFAULT_BASENAME=""
       else
         FILE_HISTORY_DEFAULT_BASENAME="${OUTDIR[$d]}/${time}/hist/<member>/history"
       fi
