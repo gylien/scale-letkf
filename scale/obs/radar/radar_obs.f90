@@ -1039,12 +1039,19 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
 #ifdef PLOT_DCL
   if (PLOT_OBS)then
+    call MPI_BCAST(grid_lon_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
+    call MPI_BCAST(grid_lat_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
+    call MPI_BCAST(grid_z_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
+    call MPI_BCAST(grid_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
+    call MPI_BCAST(grid_count_ze, nobs_sp, MPI_INTEGER8, 0, MPI_COMM_o, ierr)
+    call mpi_timer('read_obs_radar_toshiba:plot_comm:', 2, barrier=MPI_COMM_o)
+
 !    call date_and_time(date=date, time=time)
 !    write (6, '(2a,1x,a,1x,a)') '[Info:plot] obs start plotting: ', date, time, trim(timelabel(1:15))
 
     call TIME_gettimelabel(timelabel)
     plotname = "obs_dbz_"//trim(timelabel(1:15))
-    call plot_dbz_DCL_obs(nobs_sp,real(grid_ze(1:nobs_sp)),real(grid_lon_ze(1:nobs_sp)),real(grid_lat_ze(1:nobs_sp)),real(grid_z_ze(1:nobs_sp)), &
+    call plot_dbz_DCL_obs(nobs_sp,int(grid_count_ze), real(grid_ze),real(grid_lon_ze),real(grid_lat_ze),real(grid_z_ze), &
                           nlon,nlat,real(lon),real(lat),real(dlon),real(dlat),trim(plotname))
 
 !    call date_and_time(date=date, time=time)

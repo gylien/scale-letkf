@@ -1,5 +1,5 @@
 !==================================================!
-subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,nlons,nlats,lons,lats,dlons,dlats,psfile) 
+subroutine plot_dbz_DCL_obs(nobs,count_radar,ze_radar,lon_radar,lat_radar,z_radar,nlons,nlats,lons,lats,dlons,dlats,psfile) 
   use common
   use common_scale
   use scale_const, only: &
@@ -28,6 +28,7 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,nlons,nlat
 
   integer, intent(in) :: nobs
   real(r_sngl),intent(in) :: ze_radar(nobs)
+  integer,intent(in) :: count_radar(nobs)
   real(r_sngl),intent(in) :: lon_radar(nobs), lat_radar(nobs), z_radar(nobs)
   character(*),intent(in) :: psfile
 
@@ -40,7 +41,7 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,nlons,nlat
   integer :: iwork(3 * (nlons + 2) * (nlats + 2) / 2 + 1)
  
   real(r_sngl),parameter :: rmiss = -9.99e20
-  
+
   integer,parameter :: npatmax = 40
   real(r_sngl) :: vtlevs(npatmax)
   integer :: itpats(npatmax)  
@@ -69,8 +70,8 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,nlons,nlat
 
   integer :: pcnt !!! process count
 
-  real(r_sngl)::lon4(4),lat4(4)
-
+  real(r_sngl)::lon4(4), lat4(4)
+  real(r_sngl) :: zmin, zmax
 
   write(ftimelabel,'(I4.4,A1,I2.2,A1,I2.2,A1, I2.2,A1,I2.2,A1,I2.2)')&
        TIME_NOWDATE(1), '/', TIME_NOWDATE(2), '/' ,TIME_NOWDATE(3), ' ', &
@@ -79,34 +80,34 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,nlons,nlat
 
 
   pcnt = 0
-  do iplot_lev = plot_zlev_min, plot_zlev_max, plot_zlev_intv
-    if ( grid_cz(iplot_lev+KHALO) > RADAR_ZMAX) cycle !!! exclude stratosphere
+  do iplot_lev = PLOT_ZLEV_MIN, PLOT_ZLEV_MAX, PLOT_ZLEV_INTV
+    if ( GRID_CZ(iplot_lev+KHALO) > RADAR_ZMAX) cycle !!! exclude stratosphere
 
     pcnt = pcnt + 1
     if ( mod(pcnt, nprocs_o) /= myrank_o ) cycle
 
-   write(cheight,'(I5.5)')int(grid_cz(iplot_lev+KHALO))
+    write(cheight,'(I5.5)')int(GRID_CZ(iplot_lev+KHALO))
    
     title1 = trim(ftimelabel) // " UTC (PAWR obs)"
     title2 = (/'',''/)
-    write(title3,'(A,I5,A)') 'Radar reflectivity ',int(grid_cz(iplot_lev+KHALO)),' m' 
+    write(title3,'(A,I5,A)') 'Radar reflectivity ',int(GRID_CZ(iplot_lev+KHALO)),' m' 
    
     iclrmap = 12
      
 
-  call MAPPROJECTION_xy2lonlat( GRID_CXG(IHALO+1), GRID_CYG(1), lon_RP, lat_RP )
-  range_lonl=real(lon_RP/D2R)
-  call MAPPROJECTION_xy2lonlat( GRID_CXG(IHALO+nlong), GRID_CYG(1), lon_RP, lat_RP )
-  range_lonr=real(lon_RP/D2R)
-
-
-  call MAPPROJECTION_xy2lonlat( GRID_CXG(1),GRID_CYG(JHALO+1), lon_RP, lat_RP )
-  range_latl=real(lat_RP/D2R)
-  call MAPPROJECTION_xy2lonlat( GRID_CXG(1),GRID_CYG(JHALO+nlatg), lon_RP, lat_RP )
-  range_latr=real(lat_RP/D2R)
-
-  iclrmap = 12
-
+    call MAPPROJECTION_xy2lonlat( GRID_CXG(IHALO+1), GRID_CYG(1), lon_RP, lat_RP )
+    range_lonl=real(lon_RP/D2R)
+    call MAPPROJECTION_xy2lonlat( GRID_CXG(IHALO+nlong), GRID_CYG(1), lon_RP, lat_RP )
+    range_lonr=real(lon_RP/D2R)
+  
+  
+    call MAPPROJECTION_xy2lonlat( GRID_CXG(1),GRID_CYG(JHALO+1), lon_RP, lat_RP )
+    range_latl=real(lat_RP/D2R)
+    call MAPPROJECTION_xy2lonlat( GRID_CXG(1),GRID_CYG(JHALO+nlatg), lon_RP, lat_RP )
+    range_latr=real(lat_RP/D2R)
+  
+    iclrmap = 12
+  
   
     vpl = 0.15
     vpr = 0.85
@@ -165,17 +166,20 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,nlons,nlat
 
     val_plot=0.0
 
+    zmin = real(GRID_FZ(iplot_lev+KHALO-1) - RADAR_SO_SIZE_VERT*0.5)
+    zmax = real(GRID_FZ(iplot_lev+KHALO-1) + RADAR_SO_SIZE_VERT*0.5)
+
     do iobs = 1, nobs
-      if (z_radar(iobs).ne.rmiss_radar) then
-        if ( z_radar(iobs) .ge. grid_fz(iplot_lev+KHALO-1) .and. & 
-          z_radar(iobs) .lt. grid_fz(iplot_lev+KHALO) ) then
+      if (count_radar(iobs) < 1 ) cycle
+
+      if ( z_radar(iobs) >= zmin .and. & 
+          z_radar(iobs) < zmax  ) then
           ilon = int((lon_radar(iobs)-lons(1)-0.5*dlons)/dlons)+1
           ilat = int((lat_radar(iobs)-lats(1)-0.5*dlats)/dlats)+1
           if (ilon.ge.1.and.ilon.le.nlons.and.ilat.ge.1.and.ilat.le.nlats) val_plot(ilon,ilat) = 10.0*log10(max(ze_radar(iobs),1.0e-10))  
-        end if
       end if
     end do
- 
+
     call uwsgxa (lons,nlons)
     call uwsgya (lats,nlats)
     call uetone (val_plot,nlons,nlons,nlats)
@@ -187,24 +191,24 @@ subroutine plot_dbz_DCL_obs(nobs,ze_radar,lon_radar,lat_radar,z_radar,nlons,nlat
    
 !!! map  
  
-  call sglset('LCLIP',.true.)
-  call umlset ('LGRIDMJ',.false.)
-  call umrset ('DGRIDMN',0.5)
-  call umiset ('ITYPEMN',3)
-  call umiset ('INDEXMN',1)
-
-  call umpglb
-  call umplim
-  call umpmap('coast_japan')
-
-  call uumrkz(1,real(BASE_LON/D2R),real(BASE_LAT/D2R),9,21,0.010) !!! RADAR location
-
-  amtics = 0.5 !! deg
-  astics = 0.5
-  bmtics = 0.5
-  bstics = 0.5
-
-   
+    call sglset('LCLIP',.true.)
+    call umlset ('LGRIDMJ',.false.)
+    call umrset ('DGRIDMN',0.5)
+    call umiset ('ITYPEMN',3)
+    call umiset ('INDEXMN',1)
+  
+    call umpglb
+    call umplim
+    call umpmap('coast_japan')
+  
+    call uumrkz(1,real(BASE_LON/D2R),real(BASE_LAT/D2R),9,21,0.010) !!! RADAR location
+  
+    amtics = 0.5 !! deg
+    astics = 0.5
+    bmtics = 0.5
+    bstics = 0.5
+  
+     
     call sglset('LCLIP',.false.)
     call uzinit
     call uziset('INDEXT2',3)
