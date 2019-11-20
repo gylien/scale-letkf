@@ -409,8 +409,9 @@ SUBROUTINE set_letkf_obs
           mem_ref = mem_ref + 1
         end if
       end do
+      ! Obs: Rain
       if (obs(iof)%dat(iidx) > RADAR_REF_THRES_DBZ+1.0d-6) then
-        if (mem_ref < MIN_RADAR_REF_MEMBER_OBSREF) then
+        if (mem_ref < MIN_RADAR_REF_MEMBER_OBSRAIN) then
           obsda%qc(n) = iqc_ref_mem
           if (LOG_LEVEL >= 5) then
             write (6,'(A)') '* Reflectivity does not fit assimilation criterion'
@@ -421,7 +422,8 @@ SUBROUTINE set_letkf_obs
           cycle
         end if
       else
-        if (mem_ref < MIN_RADAR_REF_MEMBER) then
+      ! Obs: No rain
+        if (mem_ref < MIN_RADAR_REF_MEMBER_OBSNORAIN) then
           obsda%qc(n) = iqc_ref_mem
           if (LOG_LEVEL >= 5) then
             write (6,'(A)') '* Reflectivity does not fit assimilation criterion'

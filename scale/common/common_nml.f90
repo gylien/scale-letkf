@@ -293,8 +293,8 @@ MODULE common_nml
   logical :: RADAR_OBS_4D = .false.
 
   REAL(r_size) :: RADAR_REF_THRES_DBZ = 15.0d0 !Threshold of rain/no rain
-  INTEGER :: MIN_RADAR_REF_MEMBER = 1          !Ensemble members with reflectivity greather than RADAR_REF_THRES_DBZ
-  INTEGER :: MIN_RADAR_REF_MEMBER_OBSREF = 1   !Ensemble members with
+  INTEGER :: MIN_RADAR_REF_MEMBER_OBSRAIN = 1 ! Minimum rainy ensemble members for assimilating rainy radar obs
+  INTEGER :: MIN_RADAR_REF_MEMBER_OBSNORAIN = 1 ! Minimum rainy ensemble members for assimilating clear-sky radar obs
 
   REAL(r_size) :: MIN_RADAR_REF_DBZ = 0.0d0    !Minimum reflectivity
   REAL(r_size) :: LOW_REF_SHIFT = 0.0d0
@@ -998,8 +998,8 @@ subroutine read_nml_letkf_radar
     USE_OBSERR_RADAR_VR, &
     RADAR_OBS_4D, &
     RADAR_REF_THRES_DBZ, &
-    MIN_RADAR_REF_MEMBER, &
-    MIN_RADAR_REF_MEMBER_OBSREF, &
+    MIN_RADAR_REF_MEMBER_OBSRAIN, &
+    MIN_RADAR_REF_MEMBER_OBSNORAIN, &
     MIN_RADAR_REF_DBZ, &
     LOW_REF_SHIFT, &
     RADAR_ZMAX, &
