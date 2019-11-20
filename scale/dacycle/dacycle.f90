@@ -237,6 +237,14 @@ program dacycle
     call PROF_setprefx('MAIN')
     call PROF_rapstart('Main_Loop', 0)
 
+    call mpi_timer('INITIALIZE_OTHERS', 1, barrier=MPI_COMM_da)
+
+    call MPI_BARRIER(MPI_COMM_da, ierr)
+    call date_and_time(date=date, time=time)
+    if (myrank_da == 0) then
+      call system_clock(stime_da_c, cpsec, cmax)
+    endif
+
     do
  
       anal_mem_out_now = .false.
