@@ -48,7 +48,7 @@ DATA_BDY_GRADS=
 #OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_JRC"
 OBS="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/PAWR_TOSHIBA"
 OBSNCEP=
-OBS_USE_JITDT=0 # 1: Run with JIT-DT 
+OBS_USE_JITDT=1 # 1: Run with JIT-DT 
                 # 0: No JIT-DT
 OBS_USE_JITDT_OFFLINE=0 # 1: Offilne test
                         # 0: Online (data should be transfered from NICT)
