@@ -434,6 +434,23 @@ SUBROUTINE set_letkf_obs
           cycle
         end if
       end if
+
+      if ( obs(iof)%elm(iidx) == id_radar_ref_zero_obs .and. RADAR_THIN_CLR_HLEV > 1 ) then
+         if ( mod( nint( obs(iof)%ri(iidx) ), RADAR_THIN_CLR_HLEV ) /= 0 .or. &
+              mod( nint( obs(iof)%rj(iidx) ), RADAR_THIN_CLR_HLEV ) /= 0 ) then
+           obsda%qc(n) = iqc_thin
+           cycle
+         endif
+      endif
+
+      if ( obs(iof)%elm(iidx) == id_radar_ref_obs .and. RADAR_THIN_RAIN_HLEV > 1 ) then
+         if ( mod( nint( obs(iof)%ri(iidx) ), RADAR_THIN_RAIN_HLEV ) /= 0 .or. &
+              mod( nint( obs(iof)%rj(iidx) ), RADAR_THIN_RAIN_HLEV ) /= 0 ) then
+           obsda%qc(n) = iqc_thin
+           cycle
+         endif
+      endif
+
     end if
 
     if (obs(iof)%elm(iidx) == id_radar_vr_obs) then

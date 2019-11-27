@@ -151,6 +151,7 @@ MODULE common_obs_scale
   INTEGER,PARAMETER :: iqc_time=97
   INTEGER,PARAMETER :: iqc_out_h=98
   INTEGER,PARAMETER :: iqc_undef=99
+  integer, parameter :: iqc_thin=100
 
   type(obs_info),allocatable,save :: obs(:) ! observation information
   type(obs_da_value),save :: obsda_sort     ! sorted obsda
