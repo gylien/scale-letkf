@@ -3,7 +3,8 @@
 STIME=$1
 
 
-logfile=../../../../r0051_nest/exp_d2/$STIME/log/0001_LOG_${STIME}.pe000000
+#logfile=/work/hp150019/share/SCALE-LETKF-rt/result/ope/d2/$STIME/log/0001_LOG_${STIME}.pe000000
+logfile=/work/hp150019/c24140/HPCC_SCALE-LETKF-rt/result/ope/d2/$STIME/log/0001_LOG_${STIME}.pe000000
 
 stat=`cat fcst_ofp.stat.$STIME`
 if [ `echo $stat| awk '{print $1}'` == "submit" ] ;then

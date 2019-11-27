@@ -21,17 +21,17 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 TOPDIR="$SCALEDIR/.."
 
-OUTPUT="${TOPDIR}/r0051_nest"
-EXP1=exp_d1
-EXP2=exp_d2
-EXP3=exp_d3
+OUTPUT="${TOPDIR}/result/ope"
+EXP1=d1
+EXP2=d2
+EXP3=d3
 
 OUTDIR="${OUTPUT}/${EXP1}"
 OUTDIR[2]="${OUTPUT}/${EXP2}"
 OUTDIR[3]="${OUTPUT}/${EXP3}"
 
 #INDIR=$OUTDIR
-INDIR="${TOPDIR}/r0051/exp_d1" ### separated from nesting exp
+INDIR="${TOPDIR}/result/ope/${EXP1}"
 INDIR[2]=${OUTDIR[2]}
 INDIR[3]=${OUTDIR[3]}
 
@@ -54,7 +54,7 @@ DATA_BDY_SCALE_PREP=                                                 # Directory
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-DATA_BDY_GRADS="${TOPDIR}/r0051_nest/ncepgfs_grads"
+DATA_BDY_GRADS="${TOPDIR}/result/ope/ncepgfs_grads"
 
 OBS=
 OBSNCEP=                                                             # Directory of observation data in NCEP BUFR format
