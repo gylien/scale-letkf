@@ -5,25 +5,27 @@ cd "$(dirname "$0")"
 
 #-------------------------------------------------------------------------------
 
-if (($# < 7)); then
+if (($# < 3)); then
   echo "$0: Insufficient arguments" >&2
   exit 1
 fi
 
-SCPNAME="$1"; shift
+#SCPNAME="$1"; shift
+SCPNAME=cycle
 STIME="$1"; shift
-ETIME="$1"; shift
-TIME_DT="$1"; shift
-TIME_DT_DYN="$1"; shift
-NNODES="$1"; shift
-WTIME_L="$1"
+WTIME_L="$1"; shift
+MEMBER="$1"
 
-if [ "$ETIME" = '-' ]; then
-  ETIME="$STIME"
-fi
+ETIME="$STIME"
+TIME_DT=40.0D0
+TIME_DT_DYN=8.0D0
 
-CONFIG='realtime_r0051_d1'
+CONFIG='realtime_ope_d1'
 PRESET='OFP'
+
+
+
+NNODES=`expr \( $MEMBER + 2 \) \* 3`
 
 #-------------------------------------------------------------------------------
 
@@ -59,6 +61,7 @@ cat config/${CONFIG}/config.main.${config_suffix} | \
     sed -e "s/<PRESET>/${PRESET}/g" | \
     sed -e "s/<DATA_BDY_WRF>/${DATA_BDY_WRF}/g" | \
     sed -e "s/<DATA_BDY_GRADS>/${DATA_BDY_GRADS}/g" | \
+    sed -e "s/<MEMBER>/${MEMBER}/g" | \
     sed -e "s/<NNODES>/${NNODES}/g" \
     > config.main
 
@@ -72,11 +75,6 @@ cat config/${CONFIG}/config.nml.scale | \
     sed -e "s/<TIME_DT>/${TIME_DT}/g" | \
     sed -e "s/<TIME_DT_DYN>/${TIME_DT_DYN}/g" \
     > config.nml.scale
-
-cat config/${CONFIG}/sno_bulk.sh | \
-    sed -e "s/<STIME>/${STIME}/g" \
-    > sno_bulk_${STIME}.sh
-chmod 755 sno_bulk_${STIME}.sh
 
 ln -fs config/${CONFIG}/config.nml.ensmodel .
 ln -fs config/${CONFIG}/config.nml.letkf .
@@ -125,10 +123,7 @@ fi
 if [ -z "$(tail -n 1 $stderr | grep "Finish ${SCPNAME}.sh")" ]; then
   exit 102
 fi
-#-------------------------------------------------------------------------------
-#
-./sno_bulk_${STIME}.sh > sno_bulk.log 2>&1 || exit $?
-#
+
 #-------------------------------------------------------------------------------
 
 rm -f ${SCPNAME}_job.sh
