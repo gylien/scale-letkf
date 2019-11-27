@@ -14,8 +14,8 @@ SCALEDIR="$DIR/../.."                                                # Directory
 TOPDIR="$SCALEDIR/.."                                                # Directory of the SCALE model
 
 OUTPUT="${TOPDIR}/result/ope"
-EXP4=d4_1km_mer
-EXP3=d3_mer
+EXP4=d4_1km
+EXP3=d3
 
 OUTDIR="${OUTPUT}/${EXP4}"
 

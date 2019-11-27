@@ -11,11 +11,11 @@ PRESET='OFP'
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
-TOPDIR="$SCALEDIR/.."                                                # Directory of the SCALE model
+TOPDIR="$SCALEDIR/.."                                                
 
-OUTPUT="${TOPDIR}/r0051_nest"
-EXP4=D4_250m_NP1024_1029_22_20MEM
-EXP3=exp_d3_mer
+OUTPUT="${TOPDIR}/result/ope"
+EXP4=d4_250m
+EXP3=d3
 
 OUTDIR="${OUTPUT}/${EXP4}/ref_<PARENT_REF_TIME_D2>"
 
@@ -118,7 +118,7 @@ PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
-SCALE_NP=1024  # D4    # Number of processes to run SCALE
+SCALE_NP=4096  # D4    # Number of processes to run SCALE
 ##SCALE_NP=64  # D4 1km
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions

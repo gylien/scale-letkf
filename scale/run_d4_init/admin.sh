@@ -34,8 +34,8 @@ NMEM="$1"
 SCPNAME=fcst
 ETIME="$STIME"
 
-#NODE=`expr \( $NMEM  + 2 \) \* 16` ### D3 
-NODE=`expr \( $NMEM  + 2 \) \* 4` ### D3 
+NODE=`expr \( $NMEM  + 2 \) \* 64` ### D4 250m 
+NODE=`expr \( $NMEM  + 2 \) ` ### D4 1km 
 ###WTIME_L="00:20:00"
 
 CONFIG='realtime_fcst_D4_1km'
@@ -101,15 +101,6 @@ cat config.main.ofp | \
  > config.main
 rm config.main.ofp
 
-### NCDF file merge
-#cat config/${CONFIG}/sno_bulk.sh | \
-#   sed -e "s/<STIME>/${STIME}/g" | \
-#   sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g" | \
-#   sed -e "s/<NP_OFILE_X>/${NP_OFILE_X}/g" | \
-#   sed -e "s/<NP_OFILE_Y>/${NP_OFILE_Y}/g" \
-# > sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh
-
-#chmod 750 sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh
 
 . config.main || exit $?
 #. config.$SCPNAME || exit $?
@@ -173,10 +164,6 @@ fi
 mkdir -p exp
 rm -f exp/*
 ln -s $OUTDIR/exp/${jobid}_${SCPNAME}_${STIME} exp
-
-#-------------------------------------------------------------------------------
-
-##### ./sno_bulk_ref_${PATENT_REF_TIME}_${STIME}.sh > ./sno_bulk_${PARENT_REF_TIME}_${STIME}.log 2>&1 || exit $?
 
 #-------------------------------------------------------------------------------
 
