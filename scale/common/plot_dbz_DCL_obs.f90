@@ -1,5 +1,5 @@
 !==================================================!
-subroutine plot_dbz_DCL_obs(nobs,count_radar,ze_radar,lon_radar,lat_radar,z_radar,nlons,nlats,lons,lats,dlons,dlats,psfile) 
+subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons, nlats, lons, lats, dlons, dlats, psfile) 
   use common
   use common_scale
   use scale_const, only: &
@@ -21,6 +21,7 @@ subroutine plot_dbz_DCL_obs(nobs,count_radar,ze_radar,lon_radar,lat_radar,z_rada
   use common_nml, only: &
       PLOT_ZLEV_MIN, PLOT_ZLEV_MAX, PLOT_ZLEV_INTV, HORI_LOCAL
   use common_mpi_scale, only: &
+      mpi_timer, &
       myrank_o, &
       nprocs_o
 
@@ -28,7 +29,6 @@ subroutine plot_dbz_DCL_obs(nobs,count_radar,ze_radar,lon_radar,lat_radar,z_rada
 
   integer, intent(in) :: nobs
   real(r_sngl),intent(in) :: ze_radar(nobs)
-  integer,intent(in) :: count_radar(nobs)
   real(r_sngl),intent(in) :: lon_radar(nobs), lat_radar(nobs), z_radar(nobs)
   character(*),intent(in) :: psfile
 
@@ -73,6 +73,10 @@ subroutine plot_dbz_DCL_obs(nobs,count_radar,ze_radar,lon_radar,lat_radar,z_rada
   real(r_sngl)::lon4(4), lat4(4)
   real(r_sngl) :: zmin, zmax
 
+  integer time1, time2, timerate, timemax
+
+  call system_clock(time1, timerate, timemax)
+
   write(ftimelabel,'(I4.4,A1,I2.2,A1,I2.2,A1, I2.2,A1,I2.2,A1,I2.2)')&
        TIME_NOWDATE(1), '/', TIME_NOWDATE(2), '/' ,TIME_NOWDATE(3), ' ', &
        TIME_NOWDATE(4), ':', TIME_NOWDATE(5), ':', TIME_NOWDATE(6)
@@ -85,7 +89,7 @@ subroutine plot_dbz_DCL_obs(nobs,count_radar,ze_radar,lon_radar,lat_radar,z_rada
 
     pcnt = pcnt + 1
     if ( mod(pcnt, nprocs_o) /= myrank_o ) cycle
-
+write(*,*) "DEBUG",myrank_o, pcnt, iplot_lev, nprocs_o
     write(cheight,'(I5.5)')int(GRID_CZ(iplot_lev+KHALO))
    
     title1 = trim(ftimelabel) // " UTC (PAWR obs)"
@@ -166,19 +170,26 @@ subroutine plot_dbz_DCL_obs(nobs,count_radar,ze_radar,lon_radar,lat_radar,z_rada
 
     val_plot=0.0
 
-    zmin = real(GRID_FZ(iplot_lev+KHALO-1) - RADAR_SO_SIZE_VERT*0.5)
-    zmax = real(GRID_FZ(iplot_lev+KHALO-1) + RADAR_SO_SIZE_VERT*0.5)
+    zmin = real( GRID_FZ(iplot_lev+KHALO-1) - RADAR_SO_SIZE_VERT )
+    zmax = real( GRID_FZ(iplot_lev+KHALO-1) + RADAR_SO_SIZE_VERT )
+
+    call system_clock(time2, timerate, timemax)
+    if (myrank_o == 1 ) write(*, *) "plot setting", (time2 - time1) / dble(timerate), myrank_o
+    time1 = time2
 
     do iobs = 1, nobs
-      if (count_radar(iobs) < 1 ) cycle
-
       if ( z_radar(iobs) >= zmin .and. & 
           z_radar(iobs) < zmax  ) then
           ilon = int((lon_radar(iobs)-lons(1)-0.5*dlons)/dlons)+1
           ilat = int((lat_radar(iobs)-lats(1)-0.5*dlats)/dlats)+1
-          if (ilon.ge.1.and.ilon.le.nlons.and.ilat.ge.1.and.ilat.le.nlats) val_plot(ilon,ilat) = 10.0*log10(max(ze_radar(iobs),1.0e-10))  
+          if (ilon >= 1 .and. ilon <= nlons .and. ilat >= 1 .and. ilat <= nlats ) then
+            val_plot(ilon,ilat) = 10.0*log10(max(ze_radar(iobs),1.0e-10))  
+          endif
       end if
     end do
+    call system_clock(time2, timerate, timemax)
+    if (myrank_o == 1 ) write(*, *) "plot obs loop", (time2 - time1) / dble(timerate), myrank_o
+    time1 = time2
 
     call uwsgxa (lons,nlons)
     call uwsgya (lats,nlats)
@@ -189,6 +200,9 @@ subroutine plot_dbz_DCL_obs(nobs,count_radar,ze_radar,lon_radar,lat_radar,z_rada
     call udlset ('LMSG',.false.)
     call udlset ('LABEL',.false.)
    
+    call system_clock(time2, timerate, timemax)
+    if (myrank_o == 1 ) write(*, *) "plot chk1", (time2 - time1) / dble(timerate), myrank_o
+    time1 = time2
 !!! map  
  
     call sglset('LCLIP',.true.)
@@ -203,6 +217,10 @@ subroutine plot_dbz_DCL_obs(nobs,count_radar,ze_radar,lon_radar,lat_radar,z_rada
   
     call uumrkz(1,real(BASE_LON/D2R),real(BASE_LAT/D2R),9,21,0.010) !!! RADAR location
   
+    call system_clock(time2, timerate, timemax)
+    if (myrank_o == 1 ) write(*, *) "plot chk2", (time2 - time1) / dble(timerate), myrank_o
+    time1 = time2
+
     amtics = 0.5 !! deg
     astics = 0.5
     bmtics = 0.5
@@ -221,6 +239,9 @@ subroutine plot_dbz_DCL_obs(nobs,count_radar,ze_radar,lon_radar,lat_radar,z_rada
     call uxsfmt ('(F5.1)')
     call uysfmt ('(F5.1)')
    
+    call system_clock(time2, timerate, timemax)
+    if (myrank_o == 1 ) write(*, *) "plot chk3", (time2 - time1) / dble(timerate), myrank_o
+    time1 = time2
        
     call uxaxdv('B',astics,amtics)
     call uxaxdv('T',astics,amtics)
@@ -229,6 +250,10 @@ subroutine plot_dbz_DCL_obs(nobs,count_radar,ze_radar,lon_radar,lat_radar,z_rada
     call uyaxdv('R',bstics,bmtics)
     call uysttl('L','Latitude',0.0)
   
+    call system_clock(time2, timerate, timemax)
+    if (myrank_o == 1 ) write(*, *) "plot chk4", (time2 - time1) / dble(timerate), myrank_o
+    time1 = time2
+
     call uzlset('LABELYR',.false.)
    
     call sglset('LCLIP',.false.)
@@ -238,8 +263,16 @@ subroutine plot_dbz_DCL_obs(nobs,count_radar,ze_radar,lon_radar,lat_radar,z_rada
     call sgtxzv (vpr-0.01,vpt+0.020,trim(title2(2)),0.016,0,1,3) !
     call sgtxzv (0.5*(vpr+vpl),vpt+0.05,trim(title3),0.017,0,0,4) !
    
+    call system_clock(time2, timerate, timemax)
+    if (myrank_o == 1 ) write(*, *) "plot chk5", (time2 - time1) / dble(timerate), myrank_o
+    time1 = time2
+
     call grcls 
    
+    call system_clock(time2, timerate, timemax)
+    if (myrank_o == 1 ) write(*, *) "plot chk6", (time2 - time1) / dble(timerate), myrank_o
+    time1 = time2
+
   end do !!! iplot_lev
 
 

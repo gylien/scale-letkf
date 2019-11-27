@@ -767,6 +767,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   character(len=*), intent(in) :: cfile
   type(obs_info), intent(out) :: obs
+  type(obs_info) :: obs_ref
 !  REAL(r_sngl) :: wk(8)
 !  INTEGER :: nrec
 !  REAL(r_sngl) :: tmp
@@ -808,7 +809,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   real(r_size) :: max_obs_ze , min_obs_ze , max_obs_vr , min_obs_vr 
   integer :: nobs_ze, nobs_vr
-  integer(8) :: idx, n
+  integer(8) :: idx, n, n_ref
   integer :: pos
   integer, parameter :: int1 = selected_int_kind(1) !1-BYTE INT
   integer(kind = int1) :: tmp_qcf, valid_qcf
@@ -1037,30 +1038,14 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   call mpi_timer('read_obs_radar_toshiba:radar_superobing:', 2, barrier=MPI_COMM_o)
 
-#ifdef PLOT_DCL
-  if (PLOT_OBS)then
-    call MPI_BCAST(grid_lon_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
-    call MPI_BCAST(grid_lat_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
-    call MPI_BCAST(grid_z_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
-    call MPI_BCAST(grid_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
-    call MPI_BCAST(grid_count_ze, nobs_sp, MPI_INTEGER8, 0, MPI_COMM_o, ierr)
-    call mpi_timer('read_obs_radar_toshiba:plot_comm:', 2, barrier=MPI_COMM_o)
 
-!    call date_and_time(date=date, time=time)
-!    write (6, '(2a,1x,a,1x,a)') '[Info:plot] obs start plotting: ', date, time, trim(timelabel(1:15))
-
-    call TIME_gettimelabel(timelabel)
-    plotname = "obs_dbz_"//trim(timelabel(1:15))
-    call plot_dbz_DCL_obs(nobs_sp,int(grid_count_ze), real(grid_ze),real(grid_lon_ze),real(grid_lat_ze),real(grid_z_ze), &
-                          nlon,nlat,real(lon),real(lat),real(dlon),real(dlat),trim(plotname))
-
-!    call date_and_time(date=date, time=time)
-!    write (6, '(2a,1x,a,1x,a)') '[Info:plot] obs finish plotting: ', date, time, trim(timelabel(1:15))
-  endif
-  call mpi_timer('read_obs_radar_toshiba:plot_obs:', 2, barrier=MPI_COMM_o)
-#endif
-
-  if (myrank_o /= 0) return 
+  call MPI_BCAST(grid_lon_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(grid_lat_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(grid_z_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(grid_ze, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(grid_vr, nobs_sp, MPI_DOUBLE_PRECISION, 0, MPI_COMM_o, ierr)
+  call MPI_BCAST(grid_count_ze, nobs_sp, MPI_INTEGER8, 0, MPI_COMM_o, ierr)
+  call mpi_timer('read_obs_radar_toshiba:plot_comm:', 2, barrier=MPI_COMM_o)
 
 
 !!!!! check
@@ -1074,17 +1059,24 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   obs%meta(3) = z0
 
   obs%nobs = 0
+  obs_ref%nobs = 0
   do idx = 1, nobs_sp
     if (grid_count_ze(idx) > 0) then
       obs%nobs = obs%nobs + 1
+      ! Count refrectivity obs ( > MIN_RADAR_REF ) below RADAR_ZMAX
+      if ( grid_ze(idx) > MIN_RADAR_REF .and. grid_z_ze(idx) < RADAR_ZMAX ) then
+        obs_ref%nobs = obs_ref%nobs + 1
+      end if
     end if
     if (grid_count_vr(idx) > 0) then
       obs%nobs = obs%nobs + 1
     end if
   end do
   call obs_info_allocate(obs, extended=.true.)
+  call obs_info_allocate(obs_ref, extended=.true.)
 
   n = 0
+  n_ref = 0
   nobs_ze = 0
   nobs_vr = 0
   min_obs_ze = huge(1.0d0)
@@ -1105,6 +1097,15 @@ subroutine read_obs_radar_toshiba(cfile, obs)
       nobs_ze = nobs_ze + 1
       if (grid_ze(idx) > max_obs_ze) max_obs_ze = grid_ze(idx)
       if (grid_ze(idx) < min_obs_ze) min_obs_ze = grid_ze(idx)
+
+      if ( grid_ze(idx) > MIN_RADAR_REF .and. grid_z_ze(idx) < RADAR_ZMAX ) then
+        n_ref = n_ref + 1
+        obs_ref%elm(n_ref) = id_radar_ref_obs
+        obs_ref%lon(n_ref) = grid_lon_ze(idx)
+        obs_ref%lat(n_ref) = grid_lat_ze(idx)
+        obs_ref%lev(n_ref) = grid_z_ze(idx)
+        obs_ref%dat(n_ref) = grid_ze(idx)
+      end if
     end if
 
     if (grid_count_vr(idx) > 0) then
@@ -1123,15 +1124,30 @@ subroutine read_obs_radar_toshiba(cfile, obs)
     end if
   end do
 
-  if (LOG_LEVEL >= 2) then
+  if (LOG_LEVEL >= 2 .and. myrank_o == 0 ) then
     write (6, *) "Reflectivity obs. range = ", min_obs_ze, " to ", max_obs_ze
     write (6, *) "Radial vel. obs. range  = ", min_obs_vr, " to ", max_obs_vr
-    write (6, *) "ze: ", nobs_ze, ", vr: ", nobs_vr
+    write (6, *) "ze: ", nobs_ze, ", vr: ", nobs_vr, ", ze(rain): ", obs_ref%nobs
   endif
 
   call mpi_timer('read_obs_radar_toshiba:save_obs_info:', 2)
 
+#ifdef PLOT_DCL
+  if (PLOT_OBS)then
 
+    call TIME_gettimelabel(timelabel)
+    plotname = "obs_dbz_"//trim(timelabel(1:15))
+    call plot_dbz_DCL_obs(obs_ref%nobs, real(obs_ref%dat), real(obs_ref%lon), real(obs_ref%lat), real(obs_ref%lev), &
+                          nlon, nlat, real(lon), real(lat), real(dlon), real(dlat), trim(plotname))
+
+  endif
+  call mpi_timer('read_obs_radar_toshiba:plot_obs:', 2, barrier=MPI_COMM_o)
+#endif
+
+  call obs_info_deallocate( obs_ref )
+  if (myrank_o /= 0) then
+    call obs_info_deallocate( obs )
+  endif
 
 
 !  write(*, *) "writing LETKF data ..."

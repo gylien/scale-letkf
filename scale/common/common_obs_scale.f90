@@ -920,6 +920,9 @@ SUBROUTINE obs_info_deallocate(obs)
   IF(ALLOCATED(obs%err)) DEALLOCATE(obs%err)
   IF(ALLOCATED(obs%typ)) DEALLOCATE(obs%typ)
   IF(ALLOCATED(obs%dif)) DEALLOCATE(obs%dif)
+  IF(ALLOCATED(obs%ri)) DEALLOCATE(obs%ri)
+  IF(ALLOCATED(obs%rj)) DEALLOCATE(obs%rj)
+  IF(ALLOCATED(obs%rank)) DEALLOCATE(obs%rank)
 
   RETURN
 END SUBROUTINE obs_info_deallocate
