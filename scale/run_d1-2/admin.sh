@@ -24,13 +24,19 @@ NMEM="$1"
 SCPNAME=fcst
 ETIME="$STIME"
 
+if [ $NMEM == 'mdet' ];then
+ MEMBERS='mean mdet'
+ NMEM=2
+ NODE=`expr \( $NMEM  \) \* 7` ### D2
+else
+ MEMBERS='all'
+ NODE=`expr \( $NMEM  + 2 \) \* 7` ### D2
+fi
 
 ###NODE=`expr \( $NMEM  + 2 \) \* 11` ### D3
 
-NODE=`expr \( $NMEM  + 2 \) \* 7` ### D2
-###NODE=`expr \( $NMEM  + 2 \) \* 7 / 2` ### D2
 
-
+#
 CONFIG='online_NRT_5.3.X'
 PRESET='OFP'
 
@@ -76,6 +82,7 @@ cat config/${CONFIG}/config.${SCPNAME} | \
     sed -e "s/<STIME>/${STIME}/g" | \
     sed -e "s/<ETIME>/${ETIME}/g" | \
     sed -e "s/<WTIME_L>/${WTIME_L}/g" | \
+    sed -e "s/<MEMBERS>/${MEMBERS}/g" | \
     sed -e "s/<FCSTLEN>/${FCSTLEN}/g" \
     > config.${SCPNAME}
 
@@ -86,29 +93,10 @@ cat config.main.ofp | \
  > config.main
 rm config.main.ofp
 
-cat config/${CONFIG}/sno_bulk.sh | \
-   sed -e "s/<STIME>/${STIME}/g" \
- > sno_bulk_${STIME}.sh
-cat config/${CONFIG}/sno_bulk_d2.sh | \
-   sed -e "s/<STIME>/${STIME}/g" \
- > sno_bulk_d2_${STIME}.sh
-
-chmod 755 sno_bulk*${STIME}.sh
-
 
 . config.main || exit $?
 #. config.$SCPNAME || exit $?
 #. src/func_datetime.sh || exit $?
-
-## shorter DT
-#cp config.nml.scale.d3.new config.nml.scale.d3
-#cp config.nml.scale.new config.nml.scale
-
-### modified domain decomp
-#cp config.nml.scale.d2.new config.nml.scale.d2
-#cp config.nml.scale_pp.d2.new config.nml.scale_pp.d2
-#cp config.nml.scale_init.d2.new config.nml.scale_init.d2
-
 
 #-------------------------------------------------------------------------------
 
@@ -132,9 +120,10 @@ chmod 755 sno_bulk*${STIME}.sh
 #fi
 
 #-------------------------------------------------------------------------------
-./sno_bulk_${STIME}.sh > sno_bulk_${STIME}.log 2>&1 || exit $?
-./sno_bulk_d2_${STIME}.sh > sno_bulk_d2_${STIME}.log 2>&1 || exit $?
-#-------------------------------------------------------------------------------
+cd post
+./post.sh ${STIME} &> post.log.${STIME}
+cd -
+##-------------------------------------------------------------------------------
 
 #rm -f ${SCPNAME}_job.sh
 #rm -f ${jobname}.?${jobid}
