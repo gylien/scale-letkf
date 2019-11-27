@@ -33,12 +33,18 @@ NMEM="$1"
 SCPNAME=fcst
 ETIME="$STIME"
 
-NODE=`expr \( $NMEM  + 2 \) \* 16` ### D3 
-###NODE=`expr \( $NMEM  + 2 \) \* 4` ### D3 
+if [ $NMEM == 'mdet' ];then
+ MEMBERS='mdet'
+ NMEM=1
+else
+ MEMBERS='all'
+fi
+
+NODE=`expr \( $NMEM  + 2 \) \* 16` ### D3 1024 domain 
+###NODE=`expr \( $NMEM  + 2 \)` ### 64 domain 
 ###WTIME_L="01:20:00"
 
 CONFIG='realtime_fcst_D3'
-###CONFIG='realtime_fcst_D3_large'
 PRESET='OFP'
 
 #-------------------------------------------------------------------------------
@@ -89,6 +95,7 @@ cat config/${CONFIG}/config.${SCPNAME} | \
     sed -e "s/<STIME>/${STIME}/g" | \
     sed -e "s/<ETIME>/${ETIME}/g" | \
     sed -e "s/<WTIME_L>/${WTIME_L}/g" | \
+    sed -e "s/<MEMBERS>/${MEMBERS}/g" | \
     sed -e "s/<FCSTLEN>/${FCSTLEN}/g" \
     > config.${SCPNAME}
 
