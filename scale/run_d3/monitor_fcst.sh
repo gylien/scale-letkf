@@ -1,8 +1,9 @@
 #!/bin/sh
 
+. config.main || exit $?
 PARENT_REF_TIME=$1
 STIME=$2
-logfile=../../../../r0051_nest/exp_d3/ref_${PARENT_REF_TIME}/$STIME/log/fcst_scale/mdet_LOG.pe000000
+logfile=$OUTPUT/d3/ref_${PARENT_REF_TIME}/$STIME/log/fcst_scale/mdet_LOG.pe000000
 
 
 stat=`cat fcst_ofp.stat.$PARENT_REF_TIME.$STIME`
