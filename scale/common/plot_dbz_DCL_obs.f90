@@ -182,10 +182,16 @@ write(*,*) "DEBUG",myrank_o, pcnt, iplot_lev, nprocs_o
           z_radar(iobs) < zmax  ) then
           ilon = int((lon_radar(iobs)-lons(1)-0.5*dlons)/dlons)+1
           ilat = int((lat_radar(iobs)-lats(1)-0.5*dlats)/dlats)+1
-          if (ilon >= 1 .and. ilon <= nlons .and. ilat >= 1 .and. ilat <= nlats ) then
-            val_plot(ilon,ilat) = 10.0*log10(max(ze_radar(iobs),1.0e-10))  
-          endif
-      end if
+          if (ilon.ge.1.and.ilon.le.nlons.and.ilat.ge.1.and.ilat.le.nlats) then
+           itpat=iblkge( vtlevs(1:ntpat+3),ntpat+3,10.0*log10(max(ze_radar(iobs),1.0e-10)))
+            if (itpat >= 2 .and. itpat <= ntpat+1 )then
+             call sgtnzu(4, &
+                         (/ lons(ilon)-0.5*dlons,lons(ilon)+0.5*dlons,lons(ilon)+0.5*dlons,lons(ilon)-0.5*dlons/), &
+                         (/ lats(ilat)-0.5*dlats,lats(ilat)-0.5*dlats,lats(ilat)+0.5*dlats,lats(ilat)+0.5*dlats/), &
+                         itpats(itpat))
+            end if
+          end if
+     end if
     end do
     call system_clock(time2, timerate, timemax)
     if (myrank_o == 1 ) write(*, *) "plot obs loop", (time2 - time1) / dble(timerate), myrank_o
@@ -193,7 +199,7 @@ write(*,*) "DEBUG",myrank_o, pcnt, iplot_lev, nprocs_o
 
     call uwsgxa (lons,nlons)
     call uwsgya (lats,nlats)
-    call uetone (val_plot,nlons,nlons,nlats)
+!    call uetone (val_plot,nlons,nlons,nlats)
    
     call dcbar(vpr+0.02,vpb,(vpt-vpb)*0.8)
    
