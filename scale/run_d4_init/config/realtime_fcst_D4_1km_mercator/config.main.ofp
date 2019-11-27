@@ -13,11 +13,11 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 TOPDIR="$SCALEDIR/.."                                                # Directory of the SCALE model
 
-OUTPUT="${TOPDIR}/r0051_nest"
-EXP4=D4_1km_NP64_1029_22_20MEM
-EXP3=exp_d3_mer
+OUTPUT="${TOPDIR}/result/ope"
+EXP4=d4_1km_mer
+EXP3=d3_mer
 
-OUTDIR="${OUTPUT}/${EXP4}/ref_<PARENT_REF_TIME_D2>"
+OUTDIR="${OUTPUT}/${EXP4}"
 
 INDIR=$OUTDIR
 
@@ -35,9 +35,7 @@ DATA_LANDUSE=                                                        # Directory
 DATA_BDY_SCALE="${OUTPUT}/${EXP3}/ref_<PARENT_REF_TIME_D2>"   # Directory of the boundary data in SCALE history format (parent domain)
 DATA_BDY_SCALE_PRC_NUM_X=32 # D3
 DATA_BDY_SCALE_PRC_NUM_Y=32 # D3
-###DATA_BDY_SCALE_PRC_NUM_X=8 # D3 temporal
-###DATA_BDY_SCALE_PRC_NUM_Y=8 # D3 temporal
-DDATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
+DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
@@ -132,8 +130,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  0: No
                             #  1: Yes
 
-#SYSNAME="$(basename $OUTDIR/..)"                # A unique name in the machine
-SYSNAME=d4_init                # A unique name in the machine
+SYSNAME=d4_init_mer                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}_<PARENT_REF_TIME_D2>_<PARENT_REF_TIME>_<STIME>"           # (used to identify multiple runs in the same time)
 
 TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes

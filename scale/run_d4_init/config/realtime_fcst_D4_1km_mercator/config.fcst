@@ -16,7 +16,7 @@ CYCLE_SKIP=1
 
 # Only init
 # pp (STEP=1), init(STEP=2), fcst(STEP=3)
-ISTEP=1
+ISTEP=2
 FSTEP=2 
 
 CONF_MODE=

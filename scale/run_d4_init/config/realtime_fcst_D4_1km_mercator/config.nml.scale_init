@@ -89,10 +89,12 @@
 ### TORI AEZU
 
 &PARAM_PRC_CARTESC
-! PRC_NUM_X      = 8,
-! PRC_NUM_Y      = 8,
- PRC_NUM_X      = 32,
- PRC_NUM_Y      = 32,
+ PRC_NUM_X      = 8,
+ PRC_NUM_Y      = 8,
+! PRC_NUM_X      = 32,
+! PRC_NUM_Y      = 32,
+! PRC_NUM_X      = 64,
+! PRC_NUM_Y      = 64,
  PRC_PERIODIC_X = .false.,
  PRC_PERIODIC_Y = .false.,
 /
@@ -136,10 +138,10 @@
 ### TORI AEZU
 
 &PARAM_ATMOS_GRID_CARTESC
- DX = 250.D0,
- DY = 250.D0,
-! DX = 1000.D0,
-! DY = 1000.D0,
+! DX = 250.D0,
+! DY = 250.D0,
+ DX = 1000.D0,
+ DY = 1000.D0,
  FZ(:) =    110.0000D0,   220.0000D0,   330.0000D0,   440.0000D0,   550.0000D0,
             666.1600D0,   788.8249D0,   918.3591D0,  1055.1472D0,  1199.5955D0,
            1352.1328D0,  1513.2123D0,  1683.3123D0,  1862.9379D0,  2052.6226D0,
@@ -160,10 +162,10 @@
 &PARAM_MAPPROJECTION
  MAPPROJECTION_basepoint_lon = 134.9512D0,
  MAPPROJECTION_basepoint_lat =  34.7105D0,
-! MAPPROJECTION_type          = 'MER',
- MAPPROJECTION_type          = 'LC',
- MAPPROJECTION_LC_lat1       =  30.00D0,
- MAPPROJECTION_LC_lat2       =  40.00D0,
+ MAPPROJECTION_type          = 'MER',
+! MAPPROJECTION_type          = 'LC',
+! MAPPROJECTION_LC_lat1       =  30.00D0,
+! MAPPROJECTION_LC_lat2       =  40.00D0,
 /
 
 #################################################
