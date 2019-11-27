@@ -31,7 +31,7 @@ OUTDIR[2]="${OUTPUT}/${EXP2}"
 OUTDIR[3]="${OUTPUT}/${EXP3}"
 
 #INDIR=$OUTDIR
-INDIR="${TOPDIR}/result/ope/${EXP1}"
+INDIR="${OUTPUT}/${EXP1}"
 INDIR[2]=${OUTDIR[2]}
 INDIR[3]=${OUTDIR[3]}
 
@@ -54,7 +54,7 @@ DATA_BDY_SCALE_PREP=                                                 # Directory
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-DATA_BDY_GRADS="${TOPDIR}/result/ope/ncepgfs_grads"
+DATA_BDY_GRADS="${OUTPUT}/ncepgfs_grads"
 
 OBS=
 OBSNCEP=                                                             # Directory of observation data in NCEP BUFR format
