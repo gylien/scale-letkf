@@ -231,7 +231,7 @@ fi
 #===============================================================================
 # Definition of sub-directories
 
-SCRP_DIR="$DIR/run_d2"              # Job script directory
+SCRP_DIR="$DIR/run_d1-2"              # Job script directory
 COMMON_DIR="$DIR/common"         # Common program directory
 LETKF_DIR="$DIR/letkf"           # LETKF program directory
 OBSUTIL_DIR="$DIR/obs"           # Observation program directory
