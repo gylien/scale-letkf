@@ -136,9 +136,9 @@ cat > $jobscrp << EOF
 ##PJM --mpi proc=${totalnp}
 #PJM --omp thread=${THREADS}
 
-#PJM -g $(echo $(id -ng))
+##PJM -g $(echo $(id -ng))
 # HPC
-##PJM -g gx14  
+#PJM -g gx14  
 
 #PJM -s
 

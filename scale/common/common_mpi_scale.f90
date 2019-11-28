@@ -2029,6 +2029,10 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   character(len=4) :: header
   character(len=8) :: footer_fcst
 
+  integer time1, time2, timerate, timemax
+
+  call system_clock(time1, timerate, timemax)
+
   call mpi_timer('', 2)
 
   fcst_ = .false.
@@ -2076,6 +2080,10 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
   call MPI_ALLREDUCE(MPI_IN_PLACE, bufr3d, nlong*nlatg*nlev_plot, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
 
+!  call mpi_timer('plot_dafcst_mpi:comm:', 2, barrier=MPI_COMM_d)
+  call system_clock(time2, timerate, timemax)
+  if (myrank_d == 1 ) write(*, *) "Info plot_dafcst_mpi:comm:", (time2 - time1) / dble(timerate), myrank_da
+  time1 = time2
 
   ! Gather required data for reflectivity computation
 
@@ -2103,6 +2111,10 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   if (myrank_d == 0 ) then
     write (6, '(3a,1x,a,1x,a,1x,a)') '[Info:plot] ',header,' finish plotting: ', date, time, trim(timelabel) // trim(footer_fcst)
   endif
+!  call mpi_timer('plot_dafcst_mpi:plot:', 2, barrier=MPI_COMM_d)
+  call system_clock(time2, timerate, timemax)
+  if (myrank_d == 1 ) write(*, *) "Info plot_dafcst_mpi:plot:", (time2 - time1) / dble(timerate), myrank_da
+  time1 = time2
 
   return
 end subroutine plot_dafcst_mpi

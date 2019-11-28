@@ -1477,6 +1477,8 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
   real(r_size) :: rdx, rdy
   real(r_size) :: nd_h, nd_v ! normalized horizontal/vertical distances
 
+  integer :: dri, drj
+
   nrloc = 0.0d0
   nrdiag = -1.0d0
   ndist = -1.0d0
@@ -1524,6 +1526,25 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
     nd_v = ABS(LOG(VERT_LOCAL_RAIN_BASE) - LOG(rlev)) / vert_loc_ctype(ic)  ! for rain, use VERT_LOCAL_RAIN_BASE for the base of vertical localization
   else if (obtyp == 22) then ! obtypelist(obtyp) == 'PHARAD'
     nd_v = ABS(obs(obset)%lev(obidx) - rz) / vert_loc_ctype(ic)             ! for PHARAD, use z-coordinate for vertical localization
+
+    ! Thin out the PAWR obs data if the data is on a cartesian grid
+    ! (1) Radar obs is not located on the analysis grid 
+    !     Nearest "four" obs are always assimilated, but far obs are thinned every RADAR_THIN_LETKF_GRID
+    !
+    ! (2) Radar obs is located exactly on the analysis grid 
+    !     Nearest "single" obs is always assimilated, but far obs are thinned every RADAR_THIN_LETKF_GRID
+    !
+    if ( RADAR_THIN_LETKF_GRID > 1 .and. RADAR_SO_SIZE_HORI == DX ) then
+      dri = int( abs( ri - obs(obset)%ri(obidx) ) )
+      drj = int( abs( rj - obs(obset)%rj(obidx) ) )
+
+      if ( mod( dri, RADAR_THIN_LETKF_GRID ) /= 0 .or. mod( drj, RADAR_THIN_LETKF_GRID ) /= 0 ) then
+        nrloc = 0.0d0
+        ndist = -1.0d0
+        return
+      endif
+
+    endif
 #ifdef H08
   else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'                ! H08
     nd_v = ABS(LOG(obsda_sort%lev(iob)) - LOG(rlev)) / vert_loc_ctype(ic)   ! H08 for H08IRB, use obsda2%lev(iob) for the base of vertical localization

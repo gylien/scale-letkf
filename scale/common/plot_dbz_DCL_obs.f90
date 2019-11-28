@@ -89,7 +89,6 @@ subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons
 
     pcnt = pcnt + 1
     if ( mod(pcnt, nprocs_o) /= myrank_o ) cycle
-write(*,*) "DEBUG",myrank_o, pcnt, iplot_lev, nprocs_o
     write(cheight,'(I5.5)')int(GRID_CZ(iplot_lev+KHALO))
    
     title1 = trim(ftimelabel) // " UTC (PAWR obs)"

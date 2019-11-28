@@ -142,7 +142,8 @@ subroutine plot_dbz_DCL(val_plot_s,psfile,cheight,csec)
   vtlevs(ntpat+3) = 1.0e10
 
   call uestln(vtlevs(1:ntpat+3),itpats(1:ntpat+2),ntpat+2)
-  call uetone (val_plot,nlong,nlong,nlatg)
+!  call uetone (val_plot,nlong,nlong,nlatg)
+  call uetonf (val_plot,nlong,nlong,nlatg)
 
   call dcbar(vpr+0.02,vpb,(vpt-vpb)*0.8)
 

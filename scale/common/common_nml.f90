@@ -317,6 +317,7 @@ MODULE common_nml
   integer :: RADAR_THIN_CLR_HLEV = 1 ! Horizontal thinning level (e.g., 1: all grid, 2: evry 2 grids) for clear sky obs
   integer :: RADAR_THIN_RAIN_HLEV = 1 ! Horizontal thinning level (e.g., 1: all grid, 2: evry 2 grids) for rainy obs
   real(r_size) :: RADAR_MAX_ABS_VR = 100.0d0
+  integer :: RADAR_THIN_LETKF_GRID = 1 ! Horizontal thinning level in obs_local
 
   !---PARAM_LETKF_H08
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
@@ -1014,6 +1015,7 @@ subroutine read_nml_letkf_radar
     RADAR_SO_SIZE_VERT, &
     RADAR_THIN_CLR_HLEV, &
     RADAR_THIN_RAIN_HLEV, &
+    RADAR_THIN_LETKF_GRID, &
     RADAR_MAX_ABS_VR
 
   rewind(IO_FID_CONF)
