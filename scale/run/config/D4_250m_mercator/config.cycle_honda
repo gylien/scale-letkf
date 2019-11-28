@@ -6,9 +6,9 @@
 #===============================================================================
 
 STIME='20190610080000'
-ETIME='20190610082930'
+ETIME='20190610083930'
 #
-TIME_LIMIT='1:00:00'
+TIME_LIMIT='2:00:00'
 
 CYCLE=
 CYCLE_SKIP=1
@@ -24,7 +24,7 @@ DIRECT_TRANSFER=1
 DACYCLE_RUN_FCST=1
 
 # Maximum number of dacycle forecasts 
-MAX_DACYCLE_RUN_FCST=8
+MAX_DACYCLE_RUN_FCST=50
 
 # Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
 DACYCLE_RUN_FCST_TIME=1800 # sec

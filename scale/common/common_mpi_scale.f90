@@ -2106,8 +2106,6 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
       plotname = header // "_dbz_"//trim(timelabel) // trim(footer_fcst) // "_z" // cheight // "m"
       call plot_dbz_DCL (bufr3d(nlev_plot,1:nlong,1:nlatg),trim(plotname),cheight,ftsec)
       exit
-    else
-      exit
     end if
 
   enddo

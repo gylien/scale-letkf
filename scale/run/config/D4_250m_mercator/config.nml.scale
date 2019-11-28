@@ -8,7 +8,7 @@
 /
 
 &PARAM_FILE_CARTESC
- FILE_CARTESC_datacheck_criteria = 1.0D-4,
+ FILE_CARTESC_datacheck_criteria = 1.0D-3,
 /
 
 &PARAM_TIME
