@@ -2029,6 +2029,7 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   character(len=4) :: header
   character(len=8) :: footer_fcst
 
+  integer :: rank_fac
   integer time1, time2, timerate, timemax
 
   call system_clock(time1, timerate, timemax)
@@ -2087,18 +2088,25 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
 
   ! Gather required data for reflectivity computation
 
+  if ( PPN * nlev_plot < nprocs_d ) then
+    rank_fac = PPN
+  else
+    rank_fac = 1
+  endif
+
   nlev_plot = 0
   do k = plot_zlev_min, plot_zlev_max, plot_zlev_intv
 
     if (CZ(k+KHALO) > real(RADAR_ZMAX,kind=RP)) cycle ! Do not draw the stratosphere
     nlev_plot = nlev_plot + 1
 
-    if ( ( myrank_d + 1 ) == k) then
+    if ( myrank_d == k * rank_fac ) then
       write(cheight,'(I5.5)')  int(CZ(k+KHALO)) ! tentative
 
       plotname = header // "_dbz_"//trim(timelabel) // trim(footer_fcst) // "_z" // cheight // "m"
       call plot_dbz_DCL (bufr3d(nlev_plot,1:nlong,1:nlatg),trim(plotname),cheight,ftsec)
-    elseif ( ( myrank_d + 1 ) < k) then
+      exit
+    else
       exit
     end if
 

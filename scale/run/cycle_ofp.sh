@@ -126,6 +126,11 @@ if [ "$RSCGRP" == "" ] ; then
   RSCGRP="regular-cache"
 fi
 
+if [ "${RSCGRP}" == "challenge" ] ; then
+ GRP=gx14
+else
+ GRP=$(echo $(id -ng))
+fi
 
 cat > $jobscrp << EOF
 #!/bin/sh
@@ -136,9 +141,7 @@ cat > $jobscrp << EOF
 ##PJM --mpi proc=${totalnp}
 #PJM --omp thread=${THREADS}
 
-##PJM -g $(echo $(id -ng))
-# HPC
-#PJM -g gx14  
+#PJM -g $GRP
 
 #PJM -s
 
