@@ -8,7 +8,7 @@ include $(TOPDIR)/Mkinclude
 
 #------
 
-include ../configure.user
+include ../arch/configure.user.$(SCALE_SYS)
 
 #------
 
