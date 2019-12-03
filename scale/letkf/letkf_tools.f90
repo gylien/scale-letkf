@@ -287,7 +287,7 @@ SUBROUTINE das_letkf(gues3d,gues2d,anal3d,anal2d)
   call mpi_timer('das_letkf:allocation_shared_vars:', 2)
 
 !$OMP PARALLEL PRIVATE(ilev,ij,n,m,k,hdxf,rdiag,rloc,dep,depd,nobsl,nobsl_t,cutd_t,parm,beta,n2n,n2nc,trans,transm,transmd,transrlx,pa,trans_done,tmpinfl,q_mean,q_sprd,q_anal,timer_str)
-  omp_chunk = min(4, max(1, (nij1-1) / OMP_GET_NUM_THREADS() + 1))
+!$  omp_chunk = min(4, max(1, (nij1-1) / OMP_GET_NUM_THREADS() + 1))
 
   allocate (hdxf (nobstotal,MEMBER))
   allocate (rdiag(nobstotal))

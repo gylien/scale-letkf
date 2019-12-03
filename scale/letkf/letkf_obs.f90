@@ -268,7 +268,7 @@ SUBROUTINE set_letkf_obs
   ctype_use(:,:) = .false.
 !$OMP PARALLEL PRIVATE(iof,n,omp_chunk) REDUCTION(.or.:ctype_use)
   do iof = 1, OBS_IN_NUM
-    omp_chunk = min(10, max(1, (obs(iof)%nobs-1) / OMP_GET_NUM_THREADS() + 1))
+!$    omp_chunk = min(10, max(1, (obs(iof)%nobs-1) / OMP_GET_NUM_THREADS() + 1))
 !$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
     do n = 1, obs(iof)%nobs
       select case (obs(iof)%elm(n))
@@ -356,7 +356,7 @@ SUBROUTINE set_letkf_obs
 #else
 !$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref)
 #endif
-  omp_chunk = min(10, max(1, (obsda%nobs-1) / OMP_GET_NUM_THREADS() + 1))
+!$  omp_chunk = min(10, max(1, (obsda%nobs-1) / OMP_GET_NUM_THREADS() + 1))
 !$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
   do n = 1, obsda%nobs
     IF(obsda%qc(n) > 0) CYCLE

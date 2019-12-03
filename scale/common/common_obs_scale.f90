@@ -1453,7 +1453,7 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,step)
 !  obs_idx_TCP = -1
 
 !$OMP PARALLEL PRIVATE(n,nn,iset,iidx,ril,rjl,rk,rkz,omp_chunk)
-  omp_chunk = min(4, max(1, (nnobs-1) / OMP_GET_NUM_THREADS() + 1))
+!$ omp_chunk = min(4, max(1, (nnobs-1) / OMP_GET_NUM_THREADS() + 1))
 !$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
   do n = 1, nnobs
 
