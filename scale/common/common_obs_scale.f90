@@ -276,8 +276,8 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
   INTEGER,INTENT(OUT) :: qc
   INTEGER,INTENT(IN),OPTIONAL :: stggrd
   REAL(r_size) :: u,v,t,q,topo
-  REAL(RP) :: rotc(1,1,2)
-  real(r_size) :: lon_tmp(1,1),lat_tmp(1,1)
+  REAL(RP) :: rotc_RP(1,1,2)
+  real(RP) :: lon_tmp_RP(1,1), lat_tmp_RP(1,1)
 
   INTEGER :: stggrd_ = 0
   if (present(stggrd)) stggrd_ = stggrd
@@ -294,14 +294,14 @@ SUBROUTINE Trans_XtoY(elm,ri,rj,rk,lon,lat,v3d,v2d,yobs,qc,stggrd)
       CALL itpl_3d(v3d(:,:,:,iv3dd_u),rk,ri,rj,u)
       CALL itpl_3d(v3d(:,:,:,iv3dd_v),rk,ri,rj,v)
     end if
-    lon_tmp(1,1) = lon*deg2rad
-    lat_tmp(1,1) = lat*deg2rad
-    call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
-                               lon_tmp(1,1),lat_tmp(1,1),rotc)
+    lon_tmp_RP = real( lon*deg2rad, kind=RP )
+    lat_tmp_RP = real( lat*deg2rad, kind=RP )
+    call MAPPROJECTION_rotcoef( 1, 1, 1, 1, 1, 1, &
+                                lon_tmp_RP, lat_tmp_RP, rotc_RP )
     if (elm == id_u_obs) then
-      yobs = u * rotc(1,1,1) - v * rotc(1,1,2)
+      yobs = u * rotc_RP( 1,1,1 ) - v * rotc_RP( 1,1,2 )
     else
-      yobs = u * rotc(1,1,2) + v * rotc(1,1,1)
+      yobs = u * rotc_RP( 1,1,2 ) + v * rotc_RP( 1,1,1 )
     end if
   CASE(id_t_obs)  ! T
     CALL itpl_3d(v3d(:,:,:,iv3dd_t),rk,ri,rj,yobs)
@@ -1255,17 +1255,22 @@ SUBROUTINE phys2ij(rlon,rlat,rig,rjg)
       DY
   use scale_mapprojection, only: &
       MAPPROJECTION_lonlat2xy
-  IMPLICIT NONE
-  REAL(r_size),INTENT(IN) :: rlon
-  REAL(r_size),INTENT(IN) :: rlat
-  REAL(r_size),INTENT(OUT) :: rig
-  REAL(r_size),INTENT(OUT) :: rjg
+  implicit none
+  real(r_size), intent(in) :: rlon
+  real(r_size), intent(in) :: rlat
+  real(r_size), intent(out) :: rig
+  real(r_size), intent(out) :: rjg
+  real(RP) :: rig_RP
+  real(RP) :: rjg_RP
 !
 ! rlon,rlat -> ri,rj
 !
-  call MAPPROJECTION_lonlat2xy(rlon*pi/180.0_r_size,rlat*pi/180.0_r_size,rig,rjg)
-  rig = (rig - CXG(1)) / DX + 1.0d0
-  rjg = (rjg - CYG(1)) / DY + 1.0d0
+  call MAPPROJECTION_lonlat2xy( real( rlon*pi/180.0_r_size, kind=RP ), real( rlat*pi/180.0_r_size, kind=RP), rig_RP, rjg_RP )
+  rig_RP = (rig_RP - CXG(1)) / DX + 1.0_RP
+  rjg_RP = (rjg_RP - CYG(1)) / DY + 1.0_RP
+  
+  rig = real( rig_RP, kind=RP )
+  rjg = real( rjg_RP, kind=RP )
 
   RETURN
 END SUBROUTINE phys2ij
@@ -1278,22 +1283,24 @@ SUBROUTINE ij2phys(rig,rjg,rlon,rlat)
       DY
   use scale_mapprojection, only: &
       MAPPROJECTION_xy2lonlat
-  IMPLICIT NONE
+  implicit none
   REAL(r_size),INTENT(IN) :: rig
   REAL(r_size),INTENT(IN) :: rjg
   REAL(r_size),INTENT(OUT) :: rlon ! (deg)
   REAL(r_size),INTENT(OUT) :: rlat ! (deg)
-  REAL(r_size) :: x, y ! (m)
+  REAL(RP) :: rlon_RP ! (deg)
+  REAL(RP) :: rlat_RP ! (deg)
+  REAL(RP) :: x_RP, y_RP ! (m)
 !
 ! ri,rj -> rlon,rlat
 !
-  x = (rig - 1.0d0) * DX + CXG(1) 
-  y = (rjg - 1.0d0) * DY + CYG(1) 
+  x_RP = ( real( rig, kind=RP )  - 1.0_RP) * DX + CXG(1) 
+  y_RP = ( real( rjg, kind=RP ) - 1.0_RP) * DY + CYG(1) 
 
-  call MAPPROJECTION_xy2lonlat(x,y,rlon,rlat)
+  call MAPPROJECTION_xy2lonlat( x_RP, y_RP, rlon_RP, rlat_RP )
 
-  rlon = rlon * rad2deg
-  rlat = rlat * rad2deg
+  rlon = real( rlon_RP, kind=r_size ) * rad2deg
+  rlat = real ( rlat_RP, kind=r_size ) * rad2deg
 
   RETURN
 END SUBROUTINE ij2phys
@@ -2224,6 +2231,7 @@ SUBROUTINE read_obs(cfile,obs)
   TYPE(obs_info),INTENT(INOUT) :: obs
   REAL(r_sngl) :: wk(8)
   REAL(r_size) :: x, y
+!  REAL(r_size) :: x, y
   INTEGER :: n,iunit
 
   iunit=91
@@ -2252,20 +2260,20 @@ SUBROUTINE read_obs(cfile,obs)
       wk(4) = wk(4) * 100.0 ! hPa -> Pa
       wk(5) = wk(5) * 100.0 ! hPa -> Pa
       wk(6) = real(OBSERR_TCP,kind=r_sngl)
-    CASE(id_tclon_obs)
-      call MAPPROJECTION_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
-                                   REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
-                                   x,y)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-      wk(5) = real(x,kind=r_sngl)
-      wk(6) = real(OBSERR_TCXY,kind=r_sngl)
-    CASE(id_tclat_obs)
-      call MAPPROJECTION_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
-                                   REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
-                                   x,y)
-      wk(4) = wk(4) * 100.0 ! hPa -> Pa
-      wk(5) = real(y,kind=r_sngl)
-      wk(6) = real(OBSERR_TCXY,kind=r_sngl)
+!    CASE(id_tclon_obs)
+!      call MAPPROJECTION_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
+!                                   REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
+!                                   x,y)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!      wk(5) = real(x,kind=r_sngl)
+!      wk(6) = real(OBSERR_TCXY,kind=r_sngl)
+!    CASE(id_tclat_obs)
+!      call MAPPROJECTION_lonlat2xy(REAL(wk(2),kind=r_size)*pi/180.0_r_size,&
+!                                   REAL(wk(3),kind=r_size)*pi/180.0_r_size,&
+!                                   x,y)
+!      wk(4) = wk(4) * 100.0 ! hPa -> Pa
+!      wk(5) = real(y,kind=r_sngl)
+!      wk(6) = real(OBSERR_TCXY,kind=r_sngl)
     END SELECT
     obs%elm(n) = NINT(wk(1))
     obs%lon(n) = REAL(wk(2),r_size)
@@ -2924,8 +2932,9 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
   REAL(r_size) :: utmp, vtmp ! U10m & V10m tmp for rotation
   REAL(r_size),PARAMETER :: btmax = 400.0d0
   REAL(r_size),PARAMETER :: btmin = 100.0d0
-  REAL(RP) :: rotc(1,1,2)
-  real(r_size) :: lon_tmp(1,1),lat_tmp(1,1)
+  REAL(RP) :: rotc_RP(1,1,2)
+  REAL(r_size) :: rotc(1,1,2)
+  real(RP) :: lon_tmp_RP(1,1), lat_tmp_RP(1,1)
 
   real(r_size) :: blon, blat ! lat/lon at the domain center
 
@@ -3002,7 +3011,7 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
                                   ngas,                   & ! [IN]
                                   ncfc,                   & ! [IN]
                                   RD_naero,               & ! [IN]
-                                  blat*CONST_D2R,         & ! [IN]
+                                  real( blat, kind=RP )*CONST_D2R,         & ! [IN]
                                   H08_NOWDATE    (:),     & ! [IN]
                                   RD_zh          (:),     & ! [IN]
                                   RD_z           (:),     & ! [IN]
@@ -3060,10 +3069,11 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
       CALL itpl_2d(v2d(:,:,iv2dd_v10m),ri(np),rj(np),vtmp)
     end if
 
-    lon_tmp(1,1) = lon(np)*deg2rad
-    lat_tmp(1,1) = lat(np)*deg2rad
+    lon_tmp_RP(1,1) = real( lon(np)*deg2rad, kind=RP )
+    lat_tmp_RP(1,1) = real( lat(np)*deg2rad, kind=RP )
     call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
-                               lon_tmp(1,1),lat_tmp(1,1),rotc)
+                               lon_tmp_RP(1,1), lat_tmp_RP(1,1), rotc_RP)
+    rotc = real( rotc_RP, kind=r_size )
     usfc1d(np) = utmp * rotc(1,1,1) - vtmp * rotc(1,1,2)
     vsfc1d(np) = utmp * rotc(1,1,2) + vtmp * rotc(1,1,1)
 
@@ -3103,8 +3113,8 @@ SUBROUTINE Trans_XtoY_H08(nprof,ri,rj,lon,lat,v3d,v2d,yobs,yobs_clr,mwgt_plev,qc
                        lat1d(1:nprof),& ! (deg)
                        lsmask1d(1:nprof),& ! (0-1)
                        zenith1d(1:nprof), & ! (deg) 
-                       RD_presh(1:RD_KMAX+1), & ! (hPa) 
-                       RD_temph(1:RD_KMAX+1), & ! (K) 
+                       real( RD_presh(1:RD_KMAX+1), kind=r_size), & ! (hPa) 
+                       real( RD_temph(1:RD_KMAX+1), kind=r_size), & ! (K) 
                        btall_out(1:NIRB_HIM8,1:nprof),& ! (K)
                        btclr_out(1:NIRB_HIM8,1:nprof),& ! (K)
                        mwgt_plev(1:NIRB_HIM8,1:nprof),& ! (Pa)
@@ -3185,7 +3195,8 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   REAL(r_size),INTENT(IN) :: v3d(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
   INTEGER,INTENT(IN),OPTIONAL :: stggrd
-  REAL(RP) :: rotc(1,1,2)
+  REAL(r_size) :: rotc(1,1,2)
+  REAL(RP) :: rotc_RP(1,1,2)
 
   INTEGER :: stggrd_ = 0
 
@@ -3203,6 +3214,8 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   REAL(r_size) :: vsfc1d(nlon*nlat)
   REAL(r_size) :: lon1d(nlon*nlat)
   REAL(r_size) :: lat1d(nlon*nlat)
+  REAL(RP) :: lon_tmp_RP(1,1)
+  REAL(RP) :: lat_tmp_RP(1,1)
   REAL(r_size) :: topo1d(nlon*nlat)
   REAL(r_size) :: lsmask1d(nlon*nlat)
   REAL(r_size),INTENT(OUT) :: zenith1d(nlon*nlat) ! predictor for bias correction
@@ -3220,7 +3233,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   REAL(r_size) :: mwgt_plev1d(NIRB_HIM8,nlon*nlat)
 
   REAL(r_size) :: utmp, vtmp ! U10m & V10m tmp for rotation
-  real(r_size) :: lon_tmp(1,1),lat_tmp(1,1)
+  real(r_size) :: lon_tmp(1,1), lat_tmp(1,1)
   REAL(r_size),PARAMETER :: btmax = 400.0d0
   REAL(r_size),PARAMETER :: btmin = 100.0d0
 
@@ -3251,7 +3264,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   real(RP) :: RD_cldfrac     (KMAX + H08_RTTOV_KADD)   ! cloud fraction (0-1)
 
   integer :: i, j
-  real(r_size) :: ri, rj
+  real(RP) :: ri_RP, rj_RP
 
   !
   ! Extrapolate input profiles by using climatology (MIPAS)
@@ -3275,7 +3288,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
                                   ngas,                   & ! [IN]
                                   ncfc,                   & ! [IN]
                                   RD_naero,               & ! [IN]
-                                  blat*CONST_D2R,         & ! [IN]
+                                  real( blat, kind=RP )*CONST_D2R,         & ! [IN]
                                   H08_NOWDATE    (:),     & ! [IN]
                                   RD_zh          (:),     & ! [IN]
                                   RD_z           (:),     & ! [IN]
@@ -3297,14 +3310,14 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   do i = 1, nlon
     np = (j - 1) * nlon + i
 
-    ri = real(i + IHALO, r_size)
-    rj = real(j + JHALO, r_size)
-    call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + CX(1), &
-                                 (rj-1.0_r_size) * DY + CY(1),&
-                                 lon1d(np), lat1d(np))
+    ri_RP = real( i + IHALO, kind=RP )
+    rj_RP = real( j + JHALO, kind=RP )
+    call MAPPROJECTION_xy2lonlat( (ri_RP-1.0_RP) * DX + CX(1), &
+                                  (rj_RP-1.0_RP) * DY + CY(1),&
+                                  lon_tmp_RP(1,1), lat_tmp_RP(1,1) )
 
-    lon1d(np) = lon1d(np) * rad2deg
-    lat1d(np) = lat1d(np) * rad2deg
+    lon1d(np) = real( lon_tmp_RP(1,1), kind=RP ) * rad2deg
+    lat1d(np) = real( lat_tmp_RP(1,1), kind=RP ) * rad2deg
 
     CALL zenith_geosat(HIM8_LON,lon1d(np),lat1d(np),zenith1d(np))
     tsfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_skint)
@@ -3317,7 +3330,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
     utmp = v2d(i+IHALO,j+JHALO,iv2dd_u10m)
     vtmp = v2d(i+IHALO,j+JHALO,iv2dd_v10m)
     call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
-                               lon1d(np),lat1d(np),rotc)
+                               lon_tmp_RP, lat_tmp_RP, rotc_RP )
     usfc1d(np) = utmp * rotc(1,1,1) - vtmp * rotc(1,1,2)
     vsfc1d(np) = utmp * rotc(1,1,2) + vtmp * rotc(1,1,1)
 
@@ -3343,7 +3356,6 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
 !        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using (lon,lat).
 !
 
-write(6,'(a)') "DEBUG before RTTOV"
 
   CALL SCALE_RTTOV_fwd12(NIRB_HIM8, & ! num of channels
                        KMAX,& ! num of levels
@@ -3363,14 +3375,12 @@ write(6,'(a)') "DEBUG before RTTOV"
                        lat1d(:),& ! (deg)
                        lsmask1d(:),& ! (0-1)
                        zenith1d(:), & ! (deg) 
-                       RD_presh(:), & ! (hPa) 
-                       RD_temph(:), & ! (K) 
+                       real( RD_presh(:), kind=r_size ), & ! (hPa) 
+                       real( RD_temph(:), kind=r_size), & ! (K) 
                        btall_out(:,:),& ! (K)
                        btclr_out(:,:),& ! (K)
                        mwgt_plev1d(:,:),& ! (Pa)
                        ctop_out1d(:))
-
-write(6,'(a)') "DEBUG after RTTOV"
 
 !
 ! -- btall_out is substituted into yobs
@@ -3763,10 +3773,12 @@ subroutine sobs_Him8(imax_him8,jmax_him8,lon_him8,lat_him8,tbb_org,tbb_sobs)
 
   real(r_size),intent(out) :: tbb_sobs(nlon,nlat,NIRB_HIM8)
 
-  real(r_size) :: ri, rj  
-  real(r_size) :: ri_tmp(2), rj_tmp(2)  
+  real(RP) :: ri_RP, rj_RP
+  real(RP) :: ri_tmp_RP(2), rj_tmp_RP(2)  
+  real(RP) :: rlon_tmp_RP(2), rlat_tmp_RP(2)
   real(r_size) :: rlon_tmp(2), rlat_tmp(2)
   real(r_size) :: lon2d(nlon,nlat), lat2d(nlon,nlat)
+  real(RP) :: lon_RP, lat_RP
 
   integer :: i, j, k, ii, jj
   integer :: is, ie, js, je
@@ -3777,13 +3789,13 @@ subroutine sobs_Him8(imax_him8,jmax_him8,lon_him8,lat_him8,tbb_org,tbb_sobs)
   !
   ! Use a distance btw. the center of a subdomain & an adjacent grid point
   do i = 1, 2
-    ri_tmp(i) = real(int(nlon/2) + i - 1 + IHALO, r_size) 
-    rj_tmp(i) = real(int(nlat/2) + i - 1 + JHALO, r_size)
-    call MAPPROJECTION_xy2lonlat((ri_tmp(i)-1.0_r_size) * DX + CX(1), &
-                                 (rj_tmp(i)-1.0_r_size) * DY + CY(1),&
-                                  rlon_tmp(i), rlat_tmp(i))
-    rlon_tmp(i) = rlon_tmp(i) * rad2deg
-    rlat_tmp(i) = rlat_tmp(i) * rad2deg
+    ri_tmp_RP(i) = real( int(nlon/2) + i - 1 + IHALO, RP ) 
+    rj_tmp_RP(i) = real( int(nlat/2) + i - 1 + JHALO, RP )
+    call MAPPROJECTION_xy2lonlat( (ri_tmp_RP(i)-1.0_RP) * DX + CX(1), &
+                                  (rj_tmp_RP(i)-1.0_RP) * DY + CY(1),&
+                                  rlon_tmp_RP(i), rlat_tmp_RP(i) )
+    rlon_tmp(i) = real( rlon_tmp_RP(i), kind=r_size ) * rad2deg
+    rlat_tmp(i) = real( rlat_tmp_RP(i), kind=r_size ) * rad2deg
   enddo
 
   dix = max(nint(abs(rlon_tmp(2) - rlon_tmp(1)) * 0.5d0 / abs(lon_him8(2)-lon_him8(1))),1)
@@ -3794,13 +3806,13 @@ subroutine sobs_Him8(imax_him8,jmax_him8,lon_him8,lat_him8,tbb_org,tbb_sobs)
   do j = 1, nlat
   do i = 1, nlon
 
-    ri = real(i + IHALO, r_size)
-    rj = real(j + JHALO, r_size)
-    call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + CX(1), &
-                                 (rj-1.0_r_size) * DY + CY(1),&
-                                  lon2d(i,j), lat2d(i,j))
-    lon2d(i,j) = lon2d(i,j) * rad2deg
-    lat2d(i,j) = lat2d(i,j) * rad2deg
+    ri_RP = real( i + IHALO, RP )
+    rj_RP = real( j + JHALO, RP )
+    call MAPPROJECTION_xy2lonlat( (ri_RP-1.0_RP) * DX + CX(1), &
+                                  (rj_RP-1.0_RP) * DY + CY(1),&
+                                  lon_RP, lat_RP )
+    lon2d(i,j) = real( lon_RP, kind=r_size ) * rad2deg
+    lat2d(i,j) = real( lat_RP, kind=r_size ) * rad2deg
 
     call phys2ij_Him8(imax_him8,jmax_him8,lon_him8,lat_him8,lon2d(i,j),lat2d(i,j),i_him8,j_him8)
 
@@ -3902,7 +3914,8 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
   real(r_size),intent(out),optional :: obslev(nlong*nlatg*NIRB_HIM8)
   real(r_size),intent(out),optional :: obserr(nlong*nlatg*NIRB_HIM8)
 
-  real(r_size) :: ril, rjl
+  real(RP) :: ril_RP, rjl_RP
+  real(RP) :: lon_RP, lat_RP
   real(r_size) :: lon, lat
 
   integer :: i, j
@@ -3932,19 +3945,19 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
   do j = 1, nlatg
   do i = 1, nlong
     if (present(obslon) .and. present(obslat) .and. present(obslev) .and. present(obserr)) then
-      ril = real(i+IHALO,kind=r_size)
-      rjl = real(j+JHALO,kind=r_size)
+      ril_RP = real( i+IHALO,kind=RP )
+      rjl_RP = real( j+JHALO,kind=RP )
 
-      call MAPPROJECTION_xy2lonlat((ril - 1.0_r_size) * DX + CXG(1), &
-                                   (rjl - 1.0_r_size) * DY + CYG(1), lon, lat)
+      call MAPPROJECTION_xy2lonlat( (ril_RP - 1.0_RP) * DX + CXG(1), &
+                                    (rjl_RP - 1.0_RP) * DY + CYG(1), lon_RP, lat_RP )
     endif
 
     do ch = 1, NIRB_HIM8
       n = ((j - 1) * nlong + i - 1) * NIRB_HIM8 + ch
 
       if (present(obslon) .and. present(obslat) .and. present(obslev) .and. present(obserr)) then
-        obslon(n) = lon * rad2deg
-        obslat(n) = lat * rad2deg
+        obslon(n) = real( lon_RP, kind=r_size) * rad2deg
+        obslat(n) = real( lat_RP, kind=r_size) * rad2deg
         obslev(n) = ch + 6.0
         obserr(n) = REAL(OBSERR_H08(ch),r_size)
       endif

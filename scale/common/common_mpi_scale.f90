@@ -150,7 +150,8 @@ subroutine set_common_mpi_scale
   real(r_size), allocatable :: lon2dtmp(:,:)
   real(r_size), allocatable :: lat2dtmp(:,:)
   integer :: i, j
-  real(r_size) :: ri, rj
+  real(RP) :: ri_RP, rj_RP
+  real(RP) :: lon_RP, lat_RP
 
   call mpi_timer('', 2)
 
@@ -192,17 +193,17 @@ subroutine set_common_mpi_scale
       end if
 !      call scale_calc_z(topo2d, height3d)
 
-!$OMP PARALLEL DO PRIVATE(i,j,ri,rj) COLLAPSE(2)
+!$OMP PARALLEL DO PRIVATE(i,j,ri_RP,rj_RP, lon_RP, lat_RP) COLLAPSE(2)
       do j = 1, nlat
         do i = 1, nlon
-          ri = real(i + IHALO, r_size)
-          rj = real(j + JHALO, r_size)
-          call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + ATMOS_GRID_CARTESC_CX(1), &
-                                       (rj-1.0_r_size) * DY + ATMOS_GRID_CARTESC_CY(1), &
-                                        lon2d(i,j), lat2d(i,j))
+          ri_RP = real( i + IHALO, kind=RP )
+          rj_RP = real( j + JHALO, kind=RP )
+          call MAPPROJECTION_xy2lonlat( (ri_RP-1.0_RP) * DX + ATMOS_GRID_CARTESC_CX(1), &
+                                        (rj_RP-1.0_RP) * DY + ATMOS_GRID_CARTESC_CY(1), &
+                                        lon_RP, lat_RP )
 
-          lon2d(i,j) = lon2d(i,j) * rad2deg
-          lat2d(i,j) = lat2d(i,j) * rad2deg
+          lon2d(i,j) = real( lon_RP, kind=r_size ) * rad2deg
+          lat2d(i,j) = real( lat_RP, kind=r_size ) * rad2deg
         end do
       end do
 !$OMP END PARALLEL DO

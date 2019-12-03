@@ -12,7 +12,7 @@ log*
 /scale/common/pdbash
 /scale/common/*genmod.f90
 /scale/run/config.main
-/scale/run/config.main.K
+/scale/run/config.main.*
 /scale/run/config.cycle
 /scale/run/config.fcst
 /scale/run/config.nml.ensmodel

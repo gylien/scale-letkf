@@ -4,15 +4,16 @@
 # SNO is executed by a bulk job
 #
 
+EXP=TAIWAN201808_D2_NOHIM8_1203
 STIME="20180821020000"
 
-. config.main || exit $?
+. config/${EXP}/config.main.ofp || exit $?
 RUNDIR="${TMP}_sno"
 
 PPN=1024 # Process per node
 
 TYPE=fcst
-TYPE=hist
+#TYPE=hist
 
 ## Which domain do you want to convert?
 #DOM=2 
@@ -36,7 +37,7 @@ NP_TOTAL=$((${SNO_MEMBERS} * ${NP_OFILE}))
 VARS='"U", "V", "W", "T", "QV", "QHYD", "PRES", "RAIN", '
 VARS=' "MSLP"'
 
-TOPO=0 # Process topography file? # 1: Yes, 0: No
+TOPO=1 # Process topography file? # 1: Yes, 0: No
 if (( TOPO > 0 )) ; then
   VARS='"TOPO"'
   SNO_MEM_L="mean"

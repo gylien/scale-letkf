@@ -742,9 +742,12 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
   IMPLICIT NONE
 
   CHARACTER(*),INTENT(IN) :: filename
-  REAL(RP),INTENT(OUT) :: lon(nlon,nlat)
-  REAL(RP),INTENT(OUT) :: lat(nlon,nlat)
-  REAL(RP),INTENT(OUT) :: height(nlev,nlon,nlat)
+  REAL(RP) :: lon_RP(nlon,nlat)
+  REAL(RP) :: lat_RP(nlon,nlat)
+  REAL(r_size),INTENT(OUT) :: lon(nlon,nlat)
+  REAL(r_size),INTENT(OUT) :: lat(nlon,nlat)
+  REAL(r_size),INTENT(OUT) :: height(nlev,nlon,nlat)
+  REAL(RP) :: height_RP(nlev,nlon,nlat)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: ncid, varid
   integer :: is, js
@@ -775,7 +778,7 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
     write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lon2d_name)
   end if
   call ncio_check(nf90_inq_varid(ncid, trim(lon2d_name), varid))
-  call ncio_check(nf90_get_var(ncid, varid, lon,        &
+  call ncio_check(nf90_get_var(ncid, varid, lon_RP,     &
                                start = (/ is, js, 1 /), &
                                count = (/ IMAX, JMAX, 1 /)))
 
@@ -783,11 +786,14 @@ SUBROUTINE read_restart_coor(filename,lon,lat,height)
     write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(lat2d_name)
   end if
   call ncio_check(nf90_inq_varid(ncid, trim(lat2d_name), varid))
-  call ncio_check(nf90_get_var(ncid, varid, lat,        &
+  call ncio_check(nf90_get_var(ncid, varid, lat_RP,     &
                                start = (/ is, js, 1 /), &
                                count = (/ IMAX, JMAX, 1 /)))
 
   call ncio_close(ncid)
+
+  lon = real( lon_RP, kind=r_size ) 
+  lat = real( lat_RP, kind=r_size ) 
 
   RETURN
 END SUBROUTINE read_restart_coor
@@ -810,7 +816,8 @@ SUBROUTINE read_topo(filename,topo)
   IMPLICIT NONE
 
   CHARACTER(*),INTENT(IN) :: filename
-  REAL(RP),INTENT(OUT) :: topo(nlon,nlat)
+  REAL(RP) :: topo_RP(nlon,nlat)
+  REAL(r_size),INTENT(OUT) :: topo(nlon,nlat)
   character(len=12) :: filesuffix = '.pe000000.nc'
   integer :: ncid, varid
   integer :: is, js
@@ -832,11 +839,13 @@ SUBROUTINE read_topo(filename,topo)
     write(6,'(1x,A,A15)') '*** Read 2D var: ', trim(topo2d_name)
   end if
   call ncio_check(nf90_inq_varid(ncid, trim(topo2d_name), varid))
-  call ncio_check(nf90_get_var(ncid, varid, topo,       &
+  call ncio_check(nf90_get_var(ncid, varid, topo_RP,    &
                                start = (/ is, js, 1 /), &
                                count = (/ IMAX, JMAX, 1 /)))
 
   call ncio_close(ncid)
+ 
+  topo = real( topo_RP, kind=r_size )
 
   RETURN
 END SUBROUTINE read_topo
@@ -931,6 +940,8 @@ subroutine read_history(filename,step,v3dg,v2dg)
   integer,intent(in) :: step
   real(r_size),intent(out) :: v3dg(nlevh,nlonh,nlath,nv3dd)
   real(r_size),intent(out) :: v2dg(nlonh,nlath,nv2dd)
+  real(RP) :: v3dg_RP(nlevh,nlonh,nlath,nv3dd)
+  real(RP) :: v2dg_RP(nlonh,nlath,nv2dd)
   integer :: i,j,k,iv3d,iv2d
   character(len=12) :: filesuffix = '.pe000000.nc'
   real(RP) :: var3D(nlon,nlat,nlev)
@@ -983,26 +994,29 @@ subroutine read_history(filename,step,v3dg,v2dg)
   do iv3d = 1, nv3dd
     do j = JS, JE
       do i = IS, IE
-        v3dg(   1:KS-1,i,j,iv3d) = v3dg(KS,i,j,iv3d)
-        v3dg(KE+1:KA,  i,j,iv3d) = v3dg(KE,i,j,iv3d)
+        v3dg_RP(   1:KS-1,i,j,iv3d) = v3dg_RP(KS,i,j,iv3d)
+        v3dg_RP(KE+1:KA,  i,j,iv3d) = v3dg_RP(KE,i,j,iv3d)
       end do
     end do
   end do
 !$OMP END PARALLEL DO
 
   do iv3d = 1, nv3dd
-    call COMM_vars8( v3dg(:,:,:,iv3d), iv3d )
+    call COMM_vars8( v3dg_RP(:,:,:,iv3d), iv3d )
   end do
   do iv3d = 1, nv3dd
-    call COMM_wait ( v3dg(:,:,:,iv3d), iv3d )
+    call COMM_wait ( v3dg_RP(:,:,:,iv3d), iv3d )
   end do
 
   do iv2d = 1, nv2dd
-    call COMM_vars8( v2dg(:,:,iv2d), iv2d )
+    call COMM_vars8( v2dg_RP(:,:,iv2d), iv2d )
   end do
   do iv2d = 1, nv2dd
-    call COMM_wait ( v2dg(:,:,iv2d), iv2d )
+    call COMM_wait ( v2dg_RP(:,:,iv2d), iv2d )
   end do
+
+  v3dg = real(v3dg_RP, kind=r_size)
+  v2dg = real(v2dg_RP, kind=r_size)
 
   ! Save topo for later use
   !-------------
@@ -1379,9 +1393,11 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 
   real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP), intent(in) :: v2dg(nlon,nlat,nv2d)
-  real(RP), intent(in) :: topo(nlon,nlat)
+  real(r_size), intent(in) :: topo(nlon,nlat)
   real(r_size), intent(out) :: v3dgh(nlevh,nlonh,nlath,nv3dd)
   real(r_size), intent(out) :: v2dgh(nlonh,nlath,nv2dd)
+  real(RP) :: v3dgh_RP(nlevh,nlonh,nlath,nv3dd)
+  real(RP) :: v2dgh_RP(nlonh,nlath,nv2dd)
 
   real(r_size) :: height(nlev,nlon,nlat)
   integer :: i, j, k, iv3d, iv2d
@@ -1391,22 +1407,22 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   ! Variables that can be directly copied
   !---------------------------------------------------------
 
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_u) = v3dg(:,:,:,iv3d_u)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_v) = v3dg(:,:,:,iv3d_v)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_w) = v3dg(:,:,:,iv3d_w)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_t) = v3dg(:,:,:,iv3d_t)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_p) = v3dg(:,:,:,iv3d_p)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q) = v3dg(:,:,:,iv3d_q)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_u) = v3dg(:,:,:,iv3d_u)
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_v) = v3dg(:,:,:,iv3d_v)
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_w) = v3dg(:,:,:,iv3d_w)
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_t) = v3dg(:,:,:,iv3d_t)
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_p) = v3dg(:,:,:,iv3d_p)
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q) = v3dg(:,:,:,iv3d_q)
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qc) = v3dg(:,:,:,iv3d_qc)
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qr) = v3dg(:,:,:,iv3d_qr)
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qi) = v3dg(:,:,:,iv3d_qi)
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qs) = v3dg(:,:,:,iv3d_qs)
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_qg) = v3dg(:,:,:,iv3d_qg)
 
   if (Q_ANAL_TD) then
     qv3dg = v3dg(:,:,:,iv3d_q)
     call td2qv(qv3dg(:,:,:), v3dg(:,:,:,iv3d_p), v3dg(:,:,:,iv3d_t))
-    v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q) = qv3dg(:,:,:)
+    v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_q) = qv3dg(:,:,:)
   endif
 
   ! RH
@@ -1418,35 +1434,35 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   !---------------------------------------------------------
 
   call scale_calc_z(topo, height)
-  v3dgh(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = height
-  v3dgh(KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = topo(:,:) ! TH
-  v3dgh(1,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = 0.0d0 ! TH
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = height
+  v3dgh_RP(KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = topo(:,:) ! TH
+  v3dgh_RP(1,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = 0.0_RP ! TH
 
   ! Communicate the lateral halo areas
   !---------------------------------------------------------
 
   do iv3d = 1, nv3dd
-    call COMM_vars8( v3dgh(:,:,:,iv3d), iv3d )
+    call COMM_vars8( v3dgh_RP(:,:,:,iv3d), iv3d )
   end do
   do iv3d = 1, nv3dd
-    call COMM_wait ( v3dgh(:,:,:,iv3d), iv3d )
+    call COMM_wait ( v3dgh_RP(:,:,:,iv3d), iv3d )
   end do
 
   ! Surface variables: use the 1st level as the surface (although it is not)
   !---------------------------------------------------------
 
-  v2dgh(:,:,iv2dd_topo) = v3dgh(KHALO,:,:,iv3dd_hgt)                ! Use the first model level as topography (is this good?)
+  v2dgh_RP(:,:,iv2dd_topo) = v3dgh_RP(KHALO,:,:,iv3dd_hgt)                ! Use the first model level as topography (is this good?)
 !  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_topo) = topo(:,:) ! Use the real topography
 
-  v2dgh(:,:,iv2dd_ps) = v3dgh(1+KHALO,:,:,iv3d_p)
-  v2dgh(:,:,iv2dd_u10m) = v3dgh(1+KHALO,:,:,iv3d_u)
-  v2dgh(:,:,iv2dd_v10m) = v3dgh(1+KHALO,:,:,iv3d_v)
-  v2dgh(:,:,iv2dd_t2m) = v3dgh(1+KHALO,:,:,iv3d_t)
-  v2dgh(:,:,iv2dd_q2m) = v3dgh(1+KHALO,:,:,iv3d_q)
+  v2dgh_RP(:,:,iv2dd_ps) = v3dgh_RP(1+KHALO,:,:,iv3d_p)
+  v2dgh_RP(:,:,iv2dd_u10m) = v3dgh_RP(1+KHALO,:,:,iv3d_u)
+  v2dgh_RP(:,:,iv2dd_v10m) = v3dgh_RP(1+KHALO,:,:,iv3d_v)
+  v2dgh_RP(:,:,iv2dd_t2m) = v3dgh_RP(1+KHALO,:,:,iv3d_t)
+  v2dgh_RP(:,:,iv2dd_q2m) = v3dgh_RP(1+KHALO,:,:,iv3d_q)
 
 !  v2dgh(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2dd_rain) = [[No way]]
 
-  v2dgh(:,:,iv2dd_skint) = v3dgh(1+KHALO,:,:,iv3d_t)
+  v2dgh_RP(:,:,iv2dd_skint) = v3dgh_RP(1+KHALO,:,:,iv3d_t)
 
   ! Assume the point where terrain height is less than 10 m is the ocean. T.Honda (02/09/2016)
   !---------------------------------------------------------
@@ -1454,7 +1470,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 !$OMP PARALLEL DO PRIVATE(j,i)
   do j = 1, nlat
     do i = 1, nlon
-      v2dgh(i+IHALO,j+JHALO,iv2dd_lsmask) = min(max(topo(i,j) - 10.0d0, 0.0d0), 1.0d0)
+      v2dgh_RP(i+IHALO,j+JHALO,iv2dd_lsmask) = min(max(topo(i,j) - 10.0_RP, 0.0_RP), 1.0_RP)
     enddo
   enddo
 !$OMP END PARALLEL DO
@@ -1466,8 +1482,8 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   do iv3d = 1, nv3dd
     do j  = JS, JE
       do i  = IS, IE
-        v3dgh(   1:KS-1,i,j,iv3d) = v3dgh(KS,i,j,iv3d)
-        v3dgh(KE+1:KA,  i,j,iv3d) = v3dgh(KE,i,j,iv3d)
+        v3dgh_RP(   1:KS-1,i,j,iv3d) = v3dgh_RP(KS,i,j,iv3d)
+        v3dgh_RP(KE+1:KA,  i,j,iv3d) = v3dgh_RP(KE,i,j,iv3d)
       end do
     end do
   end do
@@ -1477,8 +1493,8 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 ! Most 2D diagnostic variables (except for iv2dd_rain) have already been prepared with lateral halo areas.
 !
 
-  call COMM_vars8( v2dgh(:,:,iv2dd_lsmask), iv2dd_lsmask )
-  call COMM_wait ( v2dgh(:,:,iv2dd_lsmask), iv2dd_lsmask )
+  call COMM_vars8( v2dgh_RP(:,:,iv2dd_lsmask), iv2dd_lsmask )
+  call COMM_wait ( v2dgh_RP(:,:,iv2dd_lsmask), iv2dd_lsmask )
 
 !  do iv2d = 1, nv2dd
 !    call COMM_vars8( v2dgh(:,:,iv2d), iv2d )
@@ -1486,6 +1502,9 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 !  do iv2d = 1, nv2dd
 !    call COMM_wait ( v2dgh(:,:,iv2d), iv2d )
 !  end do
+
+  v3dgh = real(v3dgh_RP, kind=r_size)
+  v2dgh = real(v2dgh_RP, kind=r_size)
 
   return
 end subroutine state_to_history

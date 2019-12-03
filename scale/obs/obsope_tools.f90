@@ -1032,6 +1032,8 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
   real(r_size) :: lon, lat, lev
   real(r_size) :: tmpobs
   integer :: tmpqc
+  real(RP) :: ri_RP, rj_RP
+  real(RP) :: lon_RP, lat_RP
 
 #ifdef H08
 ! -- for Himawari-8 obs --
@@ -1051,15 +1053,15 @@ subroutine obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, stggrd)
 
 
   do j = 1, nlat
-    rj = real(j + JHALO, r_size)
+    rj_RP = real( j + JHALO, kind=RP )
 
     do i = 1, nlon
-      ri = real(i + IHALO, r_size)
-      call MAPPROJECTION_xy2lonlat((ri-1.0_r_size) * DX + ATMOS_GRID_CARTESC_CX(1), &
-                                   (rj-1.0_r_size) * DY + ATMOS_GRID_CARTESC_CY(1), &
-                                    lon, lat)
-      lon = lon * rad2deg
-      lat = lat * rad2deg
+      ri_RP = real( i + IHALO, kind=RP )
+      call MAPPROJECTION_xy2lonlat( (ri_RP-1.0_RP) * DX + ATMOS_GRID_CARTESC_CX(1), &
+                                    (rj_RP-1.0_RP) * DY + ATMOS_GRID_CARTESC_CY(1), &
+                                    lon_RP, lat_RP )
+      lon = real( lon_RP, kind=r_size ) * rad2deg
+      lat = real( lat_RP, kind=r_size ) * rad2deg
 
       do k = 1, nlev
         rk = real(k + KHALO, r_size)
