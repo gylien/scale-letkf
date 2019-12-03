@@ -66,7 +66,7 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR || exit $?
-distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR || exit $?
+distribute_fcst "$MEMBERS" $CYCLE "-" $NODEFILE_DIR || exit $?
 
 if ((CYCLE == 0)); then
   CYCLE=$cycle_auto
@@ -127,21 +127,14 @@ echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
 cat > $jobscrp << EOF
 #!/bin/sh
-###PJM -L rscgrp=regular-flat
-#PJM -L rscgrp=regular-cache
+#PJM -L rscgrp=${RSCGRP}
 #PJM -L node=${NNODES}
 #PJM -L elapse=${TIME_LIMIT}
 #PJM --mpi proc=$((NNODES*PPN))
-##PJM --mpi proc=${totalnp}
 #PJM --omp thread=${THREADS}
 #PJM -g $(echo $(id -ng))
-##PJM -j
-rm -f machinefile
-for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
-  for ippn in \$(seq $PPN); do
-    echo "\$inode" >> machinefile
-  done
-done
+#PJM -s
+
 module load hdf5/1.8.17
 module load netcdf/4.4.1
 module load netcdf-fortran/4.4.3

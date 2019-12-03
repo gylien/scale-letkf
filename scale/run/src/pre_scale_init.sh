@@ -65,6 +65,15 @@ historybaselen=7
 mkdir -p $TMPDIR
 rm -fr $TMPDIR/*
 
+if [ "$SCPCALL" = 'cycle' ]; then
+  IO_LOG_DIR='scale_init'
+  RESTART_OUT_POSTFIX_TIMELABEL=".true."
+else
+  IO_LOG_DIR="${SCPCALL}_scale_init"
+  RESTART_OUT_POSTFIX_TIMELABEL=".false."
+fi
+
+
 if ((PNETCDF == 1)); then
   FILE_AGGREGATE=".true."
 else
@@ -93,7 +102,8 @@ elif ((BDY_FORMAT == 2)); then
   FILETYPE_ORG='WRF-ARW'
   LATLON_CATALOGUE_FNAME=
 elif ((BDY_FORMAT == 4)); then
-  BASENAME_ORG="${TMPDIR}/gradsbdy.conf"
+  mkdir -p ${OUTDIR}/${STIME}/log/${IO_LOG_DIR}
+  BASENAME_ORG="${OUTDIR}/${STIME}/log/${IO_LOG_DIR}/${MEM}_gradsbdy.conf"
   FILETYPE_ORG='GrADS'
   LATLON_CATALOGUE_FNAME=
 else
@@ -175,25 +185,23 @@ for time_bdy in $BDY_TIME_LIST; do
   i=$((i+1))
 done
 
-if [ "$SCPCALL" = 'cycle' ]; then
-  IO_LOG_DIR='scale_init'
-else
-  IO_LOG_DIR="${SCPCALL}_scale_init"
-fi
-
 mkdir -p $TMPOUT/${STIME}/bdy
 if ((PNETCDF != 1)); then
   mkdir -p $TMPOUT/${STIME}/bdy/${MEM_BDY}
 fi
 
+mkdir -p $OUTDIR/${STIME}/log/${IO_LOG_DIR}
+mkdir -p ${OUTDIR}/${STIME}/anal/$MEM
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_init | \
-    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$OUTDIR/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
         -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = $RESTART_OUTPUT," \
-        -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${TMPDIR}\/init\"," \
+        -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME = \"${OUTDIR}/${STIME}/anal/$MEM/init\"," \
+        -e "/!--RESTART_OUT_POSTFIX_TIMELABEL--/a RESTART_OUT_POSTFIX_TIMELABEL = ${RESTART_OUT_POSTFIX_TIMELABEL}," \
         -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${TOPO}\"," \
         -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${LANDUSE}\"," \
         -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT_CONSTDB}/land/param.bucket.conf\"," \
@@ -210,10 +218,12 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--OFFLINE_PARENT_PRC_NUM_Y--/a OFFLINE_PARENT_PRC_NUM_Y = ${DATA_BDY_SCALE_PRC_NUM_Y}," \
     > $TMPDIR/init.conf
 
-if [ -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
-  cat $TMPDAT/conf/config.nml.grads_boundary | \
-      sed -e "s#--DIR--#${TMPDIR}#g" \
-      > $TMPDIR/gradsbdy.conf
+if ((BDY_FORMAT == 1)); then
+  if [ -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
+    cat $TMPDAT/conf/config.nml.grads_boundary | \
+        sed -e "s#--DIR--#${TMPDIR}#g" \
+        > $OUTDIR/$STIME/log/${IO_LOG_DIR}/${MEM}_gradsbdy.conf
+  fi
 fi
 
 #===============================================================================

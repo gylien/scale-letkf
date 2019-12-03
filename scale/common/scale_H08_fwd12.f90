@@ -159,6 +159,9 @@ subroutine SCALE_RTTOV_fwd12(nchannels,&
   real(kind=jprb) :: tmp_dif
  
   real(Kind=jprb), parameter :: q_mixratio_to_ppmv  = 1.60771704e+6_JPRB
+
+  logical :: unit_kgkg = .true.
+
  
   if(debug) write(6,'(1x,a)')"hello from RTTOV"
 
@@ -340,15 +343,23 @@ subroutine SCALE_RTTOV_fwd12(nchannels,&
       profiles(iprof)%p(ilev) = real(prs(ilev-H08_RTTOV_KADD,iprof),kind=jprb) * 0.01_jprb ! (hPa)
       profiles(iprof)%t(ilev) = real(tk(ilev-H08_RTTOV_KADD,iprof),kind=jprb) ! (K) 
 
-      profiles(iprof)%q(ilev) = min(max(qv(ilev-H08_RTTOV_KADD,iprof) * q_mixratio_to_ppmv, qmin * 1.01_jprb), qmax*0.99) ! (ppmv)
+      if ( unit_kgkg ) then
+        profiles(iprof)%q(ilev) = real(qv(ilev-H08_RTTOV_KADD,iprof),kind=jprb) ! (kg/kg)
+      else
+        profiles(iprof)%q(ilev) = min(max(qv(ilev-H08_RTTOV_KADD,iprof) * q_mixratio_to_ppmv, qmin * 1.01_jprb), qmax*0.99) ! (ppmv)
+      endif
 
     enddo
 
+    if ( unit_kgkg ) then
+      profiles(iprof)%s2m%q = real(q2m(iprof),kind=jprb) ! (kg/kg)
+    else
+      profiles(iprof)%s2m%q = real(q2m(iprof),kind=jprb) * q_mixratio_to_ppmv ! (ppmv)
+      if(profiles(iprof)%s2m%q < qmin) profiles(iprof)%s2m%q = qmin + qmin * 0.01_jprb
+    endif
     profiles(iprof)%s2m%t = real(tk2m(iprof),kind=jprb)
-    profiles(iprof)%s2m%q = real(q2m(iprof),kind=jprb) * q_mixratio_to_ppmv ! (ppmv)
 
     if(profiles(iprof)%s2m%t < tmin) profiles(iprof)%s2m%t = tmin + tmin * 0.01_jprb
-    if(profiles(iprof)%s2m%q < qmin) profiles(iprof)%s2m%q = qmin + qmin * 0.01_jprb
 
 
     profiles(iprof)%s2m%p = real(prs2m(iprof),kind=jprb) * 0.01_jprb ! (hPa)
@@ -362,10 +373,15 @@ subroutine SCALE_RTTOV_fwd12(nchannels,&
 
     profiles(iprof)% zenangle = real(zenith(iprof),kind=jprb)
 
-    !profiles(iprof) % gas_units = 1 ! kg/kg
-    profiles(iprof) % gas_units = 2 ! ppmv 
+    if ( unit_kgkg ) then
+      profiles(iprof) % gas_units = 1 ! kg/kg
+      profiles(iprof) % mmr_cldaer = .true. ! kg/kg
+    else
+      profiles(iprof) % gas_units = 2 ! ppmv 
+      write(*, *) "unit_kgkg should be true"
+      stop
+    endif
 
-    profiles(iprof) % mmr_cldaer = .true. ! kg/kg
 
     profiles(iprof) % skin % t = real(tk2m(iprof),kind=jprb)
 
@@ -415,9 +431,6 @@ subroutine SCALE_RTTOV_fwd12(nchannels,&
       !profiles(iprof) % idg = icecld_idg  !ice water effective diameter 
       !profiles(iprof) % icede(:)= 0._jprb !ice effective diameter, set non-zero if you give by yourself
 
-      profiles(iprof) % cloud(:,:) = 0._jprb
-      profiles(iprof) % cfrac(:)   = 0._jprb
-
 
       ctop_out(iprof) = -1.0d0
 
@@ -448,9 +461,10 @@ subroutine SCALE_RTTOV_fwd12(nchannels,&
         select case (H08_RTTOV_CFRAC)
         case (0) ! use H08_RTTOV_MINQ_CTOP as in Honda et al. (2017a,b)
                  !
-          profiles(iprof) % cfrac(ilev) = min((profiles(iprof) % cloud(2,ilev) + &
-                                               profiles(iprof) % cloud(6,ilev)) / H08_RTTOV_CFRAC_CNST, &
-                                               1.0_jprb)
+                 ! H08_RTTOV_CFRAC_CNST (g/kg)
+          profiles(iprof) % cfrac(ilev) = min( ( profiles(iprof) % cloud(2,ilev) + &
+                                                profiles(iprof) % cloud(6,ilev) ) * 1.e3 / H08_RTTOV_CFRAC_CNST, &
+                                                1.0_jprb )
 
         case (1) ! SCALE microphysics method with a minor modification
                  ! e.g.,
@@ -480,10 +494,11 @@ subroutine SCALE_RTTOV_fwd12(nchannels,&
 
     if(debug .and. mod(iprof,20)==0)then
       do ilev = 1, nlevs + H08_RTTOV_KADD - 1
-        write(6,'(a,i5,4f11.4)')"DEBUG PROF",ilev,profiles(iprof) % t(ilev),&
+        write(6,'(a,i5,5f11.4)')"DEBUG PROF",ilev,profiles(iprof) % t(ilev),&
                                                   profiles(iprof) % q(ilev),&
                                                   profiles(iprof) % p(ilev),&
-                                                  profiles(iprof) % cloud(6,ilev)
+                                                  profiles(iprof) % cloud(4,ilev)*1.e3,&
+                                                  profiles(iprof) % cloud(6,ilev)*1.e3
       end do ! ilev
       print *,""
     endif
@@ -498,6 +513,13 @@ subroutine SCALE_RTTOV_fwd12(nchannels,&
 
   if(debug) WRITE(6,*) 'END SUBSTITUTE PROFILE'
 
+!  ! debug
+!  do iprof = 1, nprof
+!    do ilev = 1, H08_RTTOV_KADD + nlevs - 1
+!      profiles(iprof) % cloud(6,ilev) = 0.0_jprb
+!      profiles(iprof) % cloud(4,ilev) = 0.0_jprb
+!    end do ! ilev
+!  enddo
 
   ! --------------------------------------------------------------------------
   ! 6. Specify surface emissivity and reflectance

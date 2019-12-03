@@ -21,6 +21,7 @@ FC        = mpiifort
 FOPTS_SCALE = $(FFLAGS)
 
 FOPTS     = $(FOPTS_SCALE) \
+	     -check bounds \
             -qopenmp
 
 #FOPTS     = -fpp -m64 -O3 -xHost                 \

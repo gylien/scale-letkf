@@ -184,11 +184,9 @@ elif [ "$MPI_TYPE" = 'openmpi' ]; then
 
 elif [ "$MPI_TYPE" = 'impi' ]; then
 
-  NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
-  $MPIRUN -n $NNP -machinefile ${NODEFILE_DIR}/${NODEFILE} $PROG $CONF $STDOUT $ARGS
+#  NNP=$(cat ${NODEFILE_DIR}/${NODEFILE} | wc -l)
 
-#  echo "$MPIRUN -n ${PJM_MPI_PROC} $PROG $CONF $STDOUT $ARGS" >&2
-#  $MPIRUN -n ${PJM_MPI_PROC} $PROG $CONF $STDOUT $ARGS
+  $MPIRUN -n $((NNODES*PPN)) $PROG $CONF $STDOUT $ARGS
 
   res=$?
   if ((res != 0)); then

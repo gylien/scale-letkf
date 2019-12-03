@@ -1,0 +1,171 @@
+#!/bin/bash
+#===============================================================================
+#
+#  Settings for cycle.sh
+#
+#===============================================================================
+
+STIME='20180811000000'
+ETIME='20180811000000'
+TIME_LIMIT='00:40:00'
+
+STIME='20180811060000'
+ETIME='20180811060000'
+TIME_LIMIT='00:40:00'
+
+STIME='20180811120000'
+ETIME='20180811180000'
+TIME_LIMIT='01:20:00'
+
+STIME='20180812000000'
+ETIME='20180812000000'
+TIME_LIMIT='00:40:00'
+
+STIME='20180812060000'
+ETIME='20180812120000'
+TIME_LIMIT='01:40:00'
+
+STIME='20180812180000'
+ETIME='20180813060000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180813060000'
+ETIME='20180813180000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180813120000'
+ETIME='20180813180000'
+TIME_LIMIT='01:40:00'
+
+STIME='20180814000000'
+ETIME='20180814120000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180814180000'
+ETIME='20180815060000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180815120000'
+ETIME='20180816060000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180816120000'
+ETIME='20180817060000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180817120000'
+ETIME='20180818060000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180818120000'
+ETIME='20180819060000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180819120000'
+ETIME='20180820060000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180820120000'
+ETIME='20180821060000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180820120000'
+ETIME='20180820180000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180821000000'
+ETIME='20180821180000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180822000000'
+ETIME='20180822180000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180822180000'
+ETIME='20180823060000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180823120000'
+ETIME='20180824000000'
+TIME_LIMIT='02:40:00'
+
+STIME='20180824060000'
+ETIME='20180824180000'
+TIME_LIMIT='02:40:00'
+
+
+
+
+ISTEP=
+FSTEP=
+CONF_MODE=
+
+#===============================================================================
+
+FCSTOUT=
+
+ADAPTINFL=0      # Adaptive inflation
+                 #  0: OFF
+                 #  1: ON
+
+#===============================================================================
+
+MAKEINIT=0       # 0: No
+                 # 1: Yes
+
+#===============================================================================
+# Diagnostic output settings
+
+                 #      anal              gues              history
+                 #      mean/sprd members mean/sprd members mean members
+OUT_OPT=1        # 1:   o         o       o         o       o    o
+                 # 2:   o         o       o         o       o
+                 # 3:   o         o       o         o
+                 # 4:   o         o       o
+                 # 5:   o         *       o                               * = every $OUT_CYCLE_SKIP cycles and the last cycle
+                 # 6:   o         **      o                               ** = only the last cycle
+                 # 7:   o         **
+
+OUT_CYCLE_SKIP=1
+
+                 #      topo
+TOPOOUT_OPT=2    # 1:   o
+                 # 2:   (none)
+
+                 #      landuse
+LANDUSEOUT_OPT=2 # 1:   o
+                 # 2:   (none)
+
+                 #      bdy
+                 #      mean members
+BDYOUT_OPT=3     # 1:   o    o
+                 # 2:   o
+                 # 3:   (none)
+
+                 #      obsgues obsanal obsdep
+OBSOUT_OPT=3     # 1:   o       o       o
+                 # 2:   o               o
+                 # 3:                   o
+                 # 4:   (none)
+
+                 #      topo landuse bdy perturb        scale obsope letkf
+                 #      log  log     log (not finished) log   log    log
+LOG_OPT=2        # 1:   o    o       o   o              o     o      o
+                 # 2:   o    o       o                  o     o      o
+                 # 3:                                   o     o      o
+                 # 4:                                         o      o
+                 # 5:   (none)
+
+LOG_TYPE=1       # 1:   Only save the log file from the head process
+                 # 2:   Save all log files
+                 # 3:   Save all log files in an archive file
+                 # 4:   Save all log files in a compressed archive file
+
+SPRD_OUT=1       # 0: No
+                 # 1: Yes
+RTPS_INFL_OUT=0  # 0: No
+                 # 1: Yes
+NOBS_OUT=0       # 0: No
+                 # 1: Yes
+
+#===============================================================================

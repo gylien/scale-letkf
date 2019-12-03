@@ -100,7 +100,11 @@ TIME_LIMIT="${1:-$TIME_LIMIT}"
 STIME=$(datetime $STIME)
 ETIME=$(datetime ${ETIME:-$STIME})
 if [ -z "$MEMBERS" ] || [ "$MEMBERS" = 'all' ]; then
-  MEMBERS="mean mdet $(printf "$MEMBER_FMT " $(seq $MEMBER))"
+  if ((DET_RUN == 1)); then
+    MEMBERS="mean mdet $(printf "$MEMBER_FMT " $(seq $MEMBER))"
+  else
+    MEMBERS="mean $(printf "$MEMBER_FMT " $(seq $MEMBER))"
+  fi
 elif [ "$MEMBERS" = 'mems' ]; then
   MEMBERS=$(printf "$MEMBER_FMT " $(seq $MEMBER))
 else
@@ -326,11 +330,15 @@ while ((time <= ETIME)); do
       # anal
       #-------------------
       if ((MAKEINIT != 1)); then
+
+        mkdir -p ${TMP}/${OUT_SUBDIR}/${time2}/anal
+
         for m in $(seq $fmember); do
           mm=$(((c-1) * fmember + m))
+          ln -sf ${INDIR}/${time2}/anal/${name_m[$mm]} ${TMP}/${OUT_SUBDIR}/${time2}/anal
           for q in $(seq $mem_np_); do
             path="${time2}/anal/${name_m[$mm]}${CONNECTOR}init$(scale_filename_sfx $((q-1)))"
-            echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
+#            echo "${INDIR}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
           done
         done
       fi
@@ -396,6 +404,10 @@ while ((time <= ETIME)); do
       # landuse
       #-------------------
       if ((loop == 1 || LANDUSE_UPDATE == 1)) && [ "$LANDUSE_FORMAT" = 'prep' ]; then
+
+        mkdir -p ${TMP}/${DAT_SUBDIR}/const/${CONNECTOR_LANDUSE}
+        mkdir -p ${TMP}/${DAT_SUBDIR}/$time2/${CONNECTOR_LANDUSE}
+
         if ((DISK_MODE == 3)); then
           for m in $(seq $fmember); do
             mm=$(((c-1) * fmember + m))
@@ -405,7 +417,8 @@ while ((time <= ETIME)); do
               else
                 path="const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
               fi
-              echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
+#              echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((mm-1)*mem_np+q))]}
+              ln -sf ${DATA_LANDUSE}/${path} ${TMP}/${DAT_SUBDIR}/${path}
             done
           done
         else
@@ -416,7 +429,8 @@ while ((time <= ETIME)); do
               else
                 path="const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
               fi
-              echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+#              echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+              ln -sf ${DATA_LANDUSE}/${path} ${TMP}/${DAT_SUBDIR}/${path}
             done
           fi
         fi
@@ -473,10 +487,10 @@ while ((time <= ETIME)); do
 
       # anal
       #-------------------
-      if ((MAKEINIT == 1)); then
-        path="${time2}/anal/"
-        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-      fi
+#      if ((MAKEINIT == 1)); then
+#        path="${time2}/anal/"
+#        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#      fi
 
       # topo
       #-------------------
@@ -550,10 +564,10 @@ while ((time <= ETIME)); do
         log_zeros="$PROCESS_FMT_0"
       fi
 
-      if ((loop == 1 && c == 1 && LOG_OPT <= 3)); then
-        path="const/log/latlon_domain_catalogue.txt"
-        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      fi
+#      if ((loop == 1 && c == 1 && LOG_OPT <= 3)); then
+#        path="const/log/latlon_domain_catalogue.txt"
+#        echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#      fi
 
       if ((LOG_OPT <= 2)); then
         if ((LOG_TYPE == 1)); then
@@ -660,6 +674,10 @@ if ((BDY_FORMAT >= 1)); then
                   if [ "$mem" = 'mean' ]; then
                     mem="$BDY_MEAN"
                   fi
+
+                  mkdir -p $TMP/${DAT_SUBDIR}/bdyorg/${time_bdy}/${time_bdy}/${name_m[$m]}
+                  mkdir -p $TMP/${DAT_SUBDIR}/bdyorg/const/${time_bdy}/${name_m[$m]}
+
                   if ((PNETCDF_BDY_SCALE == 1)); then
                     pathin="$DATA_BDY_SCALE/${time_bdy}/${BDY_SCALE_DIR}/${mem}.history.nc"
                     if ((BDY_ROTATING == 1)); then
@@ -675,7 +693,8 @@ if ((BDY_FORMAT >= 1)); then
                       path="bdyorg/const/${time_bdy}/${name_m[$m]}/"
                     fi
                   fi
-                  echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+#                  echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+                  ln -sf  ${pathin}/*.nc $TMP/${DAT_SUBDIR}/${path}/
                 done
               else
                 if ((PNETCDF_BDY_SCALE == 1)); then
@@ -693,7 +712,8 @@ if ((BDY_FORMAT >= 1)); then
                     path="bdyorg/const/${time_bdy}/mean/"
                   fi
                 fi
-                echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+#                echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+                ln -sf ${pathin}/*.nc $TMP/${DAT_SUBDIR}/${path}
               fi
 
             elif ((BDY_FORMAT == 2 || BDY_FORMAT == 4)); then
@@ -764,9 +784,9 @@ enspp_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script start" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script start" >&2
+#fi
 
 if [ "$TOPO_FORMAT" == 'prep' ] && [ "$LANDUSE_FORMAT" == 'prep' ]; then
   echo "  ... skip this step (use prepared topo and landuse files)"
@@ -796,14 +816,14 @@ if (pdrun all $PROC_OPT); then
        $mem_nodes $mem_np $TMPRUN/scale_pp $MEMBER_RUN $iter fcst
 fi
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script end" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[1]}: Pre-processing script end" >&2
+#fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -823,9 +843,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -853,9 +873,9 @@ else # local run directory: run multiple members as needed
 fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -874,9 +894,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[1]}: $it: Post-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -891,9 +911,9 @@ ensinit_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script start" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script start" >&2
+#fi
 
 if ((BDY_FORMAT == 0)); then
   echo "  ... skip this step (use prepared boundaries)"
@@ -917,14 +937,14 @@ if (pdrun all $PROC_OPT); then
        $mem_nodes $mem_np $TMPRUN/scale_init $MEMBER_RUN $iter fcst
 fi
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script end" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[2]}: Pre-processing script end" >&2
+#fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -955,7 +975,7 @@ for it in $(seq $its $ite); do
         fi
 
         bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
-             $TMPOUT/const/${CONNECTOR_TOPO}topo $TMPOUT/${time_l}/${CONNECTOR_LANDUSE}landuse \
+             $OUTDIR/const/${CONNECTOR_TOPO}topo $OUTDIR/${time_l}/${CONNECTOR_LANDUSE}landuse \
              ${bdyorgf} ${stimes[$c]} $mkinit ${name_m[$m]} $mem_bdy \
              $TMPRUN/scale_init/$(printf $MEMBER_FMT $m) \
              "$bdy_time_list" $ntsteps $ntsteps_skip fcst
@@ -963,9 +983,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -995,9 +1015,9 @@ fi
 mkinit=$MAKEINIT
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1021,9 +1041,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[2]}: $it: Post-processing script (member) start" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1038,9 +1058,9 @@ ensfcst_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script start" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script start" >&2
+#fi
  
 MEMBER_RUN=$((fmember*rcycle))
 
@@ -1051,14 +1071,14 @@ fi
 
 mkinit=$MAKEINIT
 
-if ((MYRANK == 0)); then
-  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script end" >&2
-fi
+#if ((MYRANK == 0)); then
+#  echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script end" >&2
+#fi
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1080,22 +1100,22 @@ for it in $(seq $its $ite); do
         ocean_base='-'
         if ((OCEAN_INPUT == 1)); then
           if ((OCEAN_FORMAT == 0)); then
-            ocean_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}${CONNECTOR}init_ocean"
+            ocean_base="$OUTDIR/${stimes[$c]}/anal/${mem_bdy}${CONNECTOR}init_ocean"
           elif ((OCEAN_FORMAT == 99 && mkinit != 1)); then
-            ocean_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}${CONNECTOR}init_bdy"
+            ocean_base="$OUTDIR/${stimes[$c]}/bdy/${mem_bdy}${CONNECTOR}init_bdy"
           fi
         fi
 
         land_base='-'
         if ((LAND_INPUT == 1)); then
           if ((LAND_FORMAT == 0)); then
-            land_base="$TMPOUT/${stimes[$c]}/anal/${mem_bdy}${CONNECTOR}init_land"
+            land_base="$OUTDIR/${stimes[$c]}/anal/${mem_bdy}${CONNECTOR}init_land"
           elif ((LAND_FORMAT == 99 && mkinit != 1)); then
-            land_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}${CONNECTOR}init_bdy"
+            land_base="$OUTDIR/${stimes[$c]}/bdy/${mem_bdy}${CONNECTOR}init_bdy"
           fi
         fi
 
-        bdy_base="$TMPOUT/${stimes[$c]}/bdy/${mem_bdy}${CONNECTOR}boundary"
+        bdy_base="$OUTDIR/${stimes[$c]}/bdy/${mem_bdy}${CONNECTOR}boundary"
 
         bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 
@@ -1105,18 +1125,19 @@ for it in $(seq $its $ite); do
           time_l='const'
         fi
 
+        mkdir -p $OUTDIR/${stimes[$c]}/anal/${name_m[$m]}
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
-             $TMPOUT/${stimes[$c]}/anal/${name_m[$m]}${CONNECTOR}init $ocean_base $land_base $bdy_base \
-             $TMPOUT/const/${CONNECTOR_TOPO}topo $TMPOUT/${time_l}/${CONNECTOR_LANDUSE}landuse \
+             $OUTDIR/${stimes[$c]}/anal/${name_m[$m]}${CONNECTOR}init $ocean_base $land_base $bdy_base \
+             $OUTDIR/const/${CONNECTOR_TOPO}topo $OUTDIR/${time_l}/${CONNECTOR_LANDUSE}landuse \
              ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf $MEMBER_FMT $m) $OUT_OPT \
              fcst $bdy_start_time
       fi
     fi
   fi
 
-  if ((MYRANK == 0)); then
-     echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#     echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Pre-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------
@@ -1132,9 +1153,9 @@ ensfcst_2 () {
 #echo
 
 for it in $(seq $its $ite); do
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) start" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) start" >&2
+#  fi
 
   g=${proc2group[$((MYRANK+1))]}
   if (pdrun $g $PROC_OPT); then
@@ -1153,9 +1174,9 @@ for it in $(seq $its $ite); do
     fi
   fi
 
-  if ((MYRANK == 0)); then
-    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) end" >&2
-  fi
+#  if ((MYRANK == 0)); then
+#    echo "[$(datetime_now)] ${time}: ${stepname[3]}: $it: Post-processing script (member) end" >&2
+#  fi
 done
 
 #-------------------------------------------------------------------------------

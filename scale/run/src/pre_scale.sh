@@ -87,6 +87,7 @@ fi
 RESTART_OUT_ADDITIONAL_COPIES=0
 RESTART_OUT_ADDITIONAL_BASENAME=
 if [ "$SCPCALL" = 'cycle' ]; then
+  HISTDIR='hist'
   IO_LOG_DIR='scale'
   RESTART_OUTPUT='.true.'
   if [ "$MEM" = 'mean' ]; then ###### using a variable for 'mean', 'mdet', 'sprd'
@@ -118,6 +119,7 @@ if [ "$SCPCALL" = 'cycle' ]; then
     RESTART_OUT_ADDITIONAL_BASENAME="\"${TMPDIR}\/restart_2\", "
   fi
 else
+  HISTDIR='fcst'
   IO_LOG_DIR="${SCPCALL}_scale"
   if ((OUT_OPT <= 1)); then
     RESTART_OUTPUT='.true.'
@@ -131,6 +133,7 @@ if [ "$(basename $TMPDIR)" == '0001' ]; then ###### using a variable for '0001'
   DOMAIN_CATALOGUE_OUTPUT=".true."
 fi
 
+mkdir -p ${OUTDIR}/${STIME}/${HISTDIR}/${MEM}
 #===============================================================================
 
 conf="$(cat $TMPDAT/conf/config.nml.scale | \
@@ -150,7 +153,7 @@ conf="$(cat $TMPDAT/conf/config.nml.scale | \
             -e "/!--ATMOS_BOUNDARY_IN_BASENAME--/a ATMOS_BOUNDARY_IN_BASENAME = \"${BDY}\"," \
             -e "/!--ATMOS_BOUNDARY_START_DATE--/a ATMOS_BOUNDARY_START_DATE = $BS_YYYY, $BS_MM, $BS_DD, $BS_HH, $BS_II, $BS_SS," \
             -e "/!--ATMOS_BOUNDARY_UPDATE_DT--/a ATMOS_BOUNDARY_UPDATE_DT = $BDYINT.D0," \
-            -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${OUTDIR}/${STIME}/hist/${MEM}/history\"," \
+            -e "/!--FILE_HISTORY_DEFAULT_BASENAME--/a FILE_HISTORY_DEFAULT_BASENAME = \"${OUTDIR}/${STIME}/${HISTDIR}/${MEM}/history\"," \
             -e "/!--FILE_HISTORY_DEFAULT_TINTERVAL--/a FILE_HISTORY_DEFAULT_TINTERVAL = ${HISTINT}.D0," \
             -e "/!--MONITOR_OUT_BASENAME--/a MONITOR_OUT_BASENAME = \"${OUTDIR}/${STIME}/log/${IO_LOG_DIR}/${MEM}_monitor\"," \
             -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT_CONSTDB}/land/param.bucket.conf\"," \

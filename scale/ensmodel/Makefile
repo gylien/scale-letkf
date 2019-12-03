@@ -4,7 +4,7 @@ PROGS   = scale-rm_pp_ens scale-rm_init_ens scale-rm_ens
 
 OBJS    =
 
-COMMON_DIR = ../.common_for_scale
+COMMON_DIR = ../common
 
 COMMON_OBJS = $(COMMON_DIR)/SFMT.o           \
               $(COMMON_DIR)/common.o         \

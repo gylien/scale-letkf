@@ -55,19 +55,21 @@ else
   FILE_AGGREGATE=".false"
 fi
 
+mkdir -p "$OUTDIR/const/topo"
+mkdir -p "$OUTDIR/const/landuse"
 if ((PNETCDF == 1)); then
-  TOPO_OUT_BASENAME="$TMPOUT/const/topo"
+  TOPO_OUT_BASENAME="$OUTDIR/const/topo"
   if ((LANDUSE_UPDATE == 1)); then
-    LANDUSE_OUT_BASENAME="$TMPOUT/${STIME}/landuse"
+    LANDUSE_OUT_BASENAME="$OUTDIR/${STIME}/landuse"
   else
-    LANDUSE_OUT_BASENAME="$TMPOUT/const/landuse"
+    LANDUSE_OUT_BASENAME="$OUTDIR/const/landuse"
   fi
 else
-  TOPO_OUT_BASENAME="$TMPOUT/const/topo/topo"
+  TOPO_OUT_BASENAME="$OUTDIR/const/topo/topo"
   if ((LANDUSE_UPDATE == 1)); then
-    LANDUSE_OUT_BASENAME="$TMPOUT/${STIME}/landuse/landuse"
+    LANDUSE_OUT_BASENAME="$OUTDIR/${STIME}/landuse/landuse"
   else
-    LANDUSE_OUT_BASENAME="$TMPOUT/const/landuse/landuse"
+    LANDUSE_OUT_BASENAME="$OUTDIR/const/landuse/landuse"
   fi
 fi
 
@@ -94,10 +96,12 @@ else
   IO_LOG_DIR="${SCPCALL}_scale_pp"
 fi
 
+mkdir -p $OUTDIR/${STIME}/log/${IO_LOG_DIR}
+
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_pp | \
-    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$TMPOUT/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$OUTDIR/${STIME}/log/${IO_LOG_DIR}/${MEM}_LOG\"," \
         -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
         -e "/!--TOPO_OUT_BASENAME--/a TOPO_OUT_BASENAME = \"${TOPO_OUT_BASENAME}\"," \
         -e "/!--LANDUSE_OUT_BASENAME--/a LANDUSE_OUT_BASENAME = \"${LANDUSE_OUT_BASENAME}\"," \

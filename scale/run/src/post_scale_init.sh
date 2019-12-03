@@ -59,12 +59,12 @@ elif ((USE_INIT_FROM_BDY == 1)); then
     mkdir -p $TMPOUT/${STIME}/anal
     ifile="$(cd $TMPDIR ; ls init_*.nc 2> /dev/null)"
     if [ -e "$TMPDIR/${ifile}" ]; then
-      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/bdy/${MEM}.init_bdy.nc
+      mv -f $TMPDIR/${ifile} $OUTDIR/${STIME}/bdy/${MEM}.init_bdy.nc
     fi
   else
     mkdir -p $TMPOUT/${STIME}/anal/${MEM}
     for ifile in $(cd $TMPDIR ; ls init_*.nc 2> /dev/null); do
-      mv -f $TMPDIR/${ifile} $TMPOUT/${STIME}/bdy/${MEM}/init_bdy${ifile:$initbaselen}
+      mv -f $TMPDIR/${ifile} $OUTDIR/${STIME}/bdy/${MEM}/init_bdy${ifile:$initbaselen}
     done
   fi
 fi
@@ -72,19 +72,19 @@ fi
 if [ "$SCPCALL" = 'cycle' ]; then
   if ((LOG_OPT <= 2)); then
     if [ -f "$TMPDIR/init.conf" ]; then
-      mv -f $TMPDIR/init.conf $TMPOUT/${STIME}/log/scale_init/${MEM}_init.conf
+      mv -f $TMPDIR/init.conf $OUTDIR/${STIME}/log/scale_init/${MEM}_init.conf
     fi
     if [ -f "$TMPDIR/gradsbdy.conf" ]; then
-      mv -f $TMPDIR/gradsbdy.conf $TMPOUT/${STIME}/log/scale_init/${MEM}_gradsbdy.conf
+      mv -f $TMPDIR/gradsbdy.conf $OUTDIR/${STIME}/log/scale_init/${MEM}_gradsbdy.conf
     fi
   fi
 elif [ "$SCPCALL" = 'fcst' ]; then
   if ((LOG_OPT <= 2)); then
     if [ -f "$TMPDIR/init.conf" ]; then
-      mv -f $TMPDIR/init.conf $TMPOUT/${STIME}/log/${SCPCALL}_scale_init/${MEM}_init.conf
+      mv -f $TMPDIR/init.conf $OUTDIR/${STIME}/log/${SCPCALL}_scale_init/${MEM}_init.conf
     fi
     if [ -f "$TMPDIR/gradsbdy.conf" ]; then
-      mv -f $TMPDIR/gradsbdy.conf $TMPOUT/${STIME}/log/${SCPCALL}_scale_init/${MEM}_gradsbdy.conf
+      mv -f $TMPDIR/gradsbdy.conf $OUTDIR/${STIME}/log/${SCPCALL}_scale_init/${MEM}_gradsbdy.conf
     fi
   fi
 fi

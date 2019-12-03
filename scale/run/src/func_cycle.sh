@@ -712,8 +712,8 @@ while ((time <= ETIME)); do
     echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
   fi
 
-  if ((LOG_OPT <= 2)); then
-    if ((LOG_TYPE == 1)); then
+#  if ((LOG_OPT <= 2)); then
+#    if ((LOG_TYPE == 1)); then
 #      path="${time}/log/scale_pp/0001_pp.conf"
 #      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
 #      path="${time}/log/scale_pp/0001_LOG${SCALE_SFX_NONC_0}"
@@ -721,59 +721,59 @@ while ((time <= ETIME)); do
 #      path="${time}/log/scale_pp/NOUT.${log_zeros}"
 #      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
 #      path="${time}/log/scale_init/0001_init.conf"
-      path="${time}/log/scale_init/mean_init.conf"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#      path="${time}/log/scale_init/mean_init.conf"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
 #      path="${time}/log/scale_init/0001_gradsbdy.conf"
-      path="${time}/log/scale_init/mean_gradsbdy.conf"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${time}/log/scale_init/0001_LOG${SCALE_SFX_NONC_0}"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      if ((BDY_ENS == 1)); then
+#      path="${time}/log/scale_init/mean_gradsbdy.conf"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#      path="${time}/log/scale_init/0001_LOG${SCALE_SFX_NONC_0}"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#      if ((BDY_ENS == 1)); then
 #          path="${time}/log/scale_init/NOUT-1.${log_zeros}"
-	  path="${time}/log/scale_init/NOUT-1-${log_zeros}"
-      else
-        path="${time}/log/scale_init/NOUT.${log_zeros}"
-      fi
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-    else
-      path="${time}/log/scale_pp/"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-      path="${time}/log/scale_init/"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-    fi
-  fi
-  if ((LOG_OPT <= 3)); then
-    if ((LOG_TYPE == 1)); then
-      path="${time}/log/scale/0001_run.conf"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${time}/log/scale/0001_LOG${SCALE_SFX_NONC_0}"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-#      path="${time}/log/scale/NOUT-1.${log_zeros}"
-      path="${time}/log/scale/NOUT-1-${log_zeros}"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-    else
-      path="${time}/log/scale/"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-    fi
-  fi
-  if ((LOG_OPT <= 4)); then
-    if ((LOG_TYPE == 1)); then
+#	  path="${time}/log/scale_init/NOUT-1-${log_zeros}"
+#      else
+#        path="${time}/log/scale_init/NOUT.${log_zeros}"
+#      fi
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#    else
+#      path="${time}/log/scale_pp/"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#      path="${time}/log/scale_init/"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#    fi
+#  fi
+#  if ((LOG_OPT <= 3)); then
+#    if ((LOG_TYPE == 1)); then
+#      path="${time}/log/scale/0001_run.conf"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#      path="${time}/log/scale/0001_LOG${SCALE_SFX_NONC_0}"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+##      path="${time}/log/scale/NOUT-1.${log_zeros}"
+#      path="${time}/log/scale/NOUT-1-${log_zeros}"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#    else
+#      path="${time}/log/scale/"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#    fi
+#  fi
+#  if ((LOG_OPT <= 4)); then
+#    if ((LOG_TYPE == 1)); then
 #      path="${atime}/log/obsope/obsope.conf"
 #      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
 #      path="${atime}/log/obsope/NOUT.${log_zeros}"
 #      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-      path="${atime}/log/letkf/letkf.conf"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#      path="${atime}/log/letkf/letkf.conf"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
 #      path="${atime}/log/letkf/NOUT.${log_zeros}"
-      path="${atime}/log/letkf/NOUT-${log_zeros}"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-    else
+#      path="${atime}/log/letkf/NOUT-${log_zeros}"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+#    else
 #      path="${atime}/log/obsope/"
 #      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-      path="${atime}/log/letkf/"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-    fi
-  fi
+#      path="${atime}/log/letkf/"
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#    fi
+#  fi
 
   #-------------------
   time=$(datetime $time $LCYCLE s)
@@ -1261,18 +1261,18 @@ for it in $(seq $its $ite); do
       ocean_base='-'
       if ((OCEAN_INPUT == 1)); then
         if ((OCEAN_FORMAT == 0)); then
-          ocean_base="$TMPOUT/${time}/anal/${mem_bdy}${CONNECTOR}init_ocean"
+          ocean_base="$OUTDIR/${time}/anal/${mem_bdy}${CONNECTOR}init_ocean"
         elif ((OCEAN_FORMAT == 99 && mkinit != 1)); then
-          ocean_base="$TMPOUT/${time}/bdy/${mem_bdy}${CONNECTOR}init_bdy"
+          ocean_base="$OUTDIR/${time}/bdy/${mem_bdy}${CONNECTOR}init_bdy"
         fi
       fi
 
       land_base='-'
       if ((LAND_INPUT == 1)); then
         if ((LAND_FORMAT == 0)); then
-          land_base="$TMPOUT/${time}/anal/${mem_bdy}${CONNECTOR}init_land"
+          land_base="$OUTDIR/${time}/anal/${mem_bdy}${CONNECTOR}init_land"
         elif ((LAND_FORMAT == 99 && mkinit != 1)); then
-          land_base="$TMPOUT/${time}/bdy/${mem_bdy}${CONNECTOR}init_bdy"
+          land_base="$OUTDIR/${time}/bdy/${mem_bdy}${CONNECTOR}init_bdy"
         fi
       fi
 

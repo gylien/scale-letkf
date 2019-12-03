@@ -1528,6 +1528,7 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
   real(r_size) :: rmse_H08_g(NIRB_HIM8)
 
   real(r_size) :: yobs_H08_l(nlon,nlat,NIRB_HIM8)
+  real(r_size) :: yobs_H08_clr_l(nlon,nlat,NIRB_HIM8)
 
 !  real(r_size) :: bias_H08_bc(NIRB_HIM8)
 !  real(r_size) :: bias_H08_bc_g(NIRB_HIM8)
@@ -1562,22 +1563,14 @@ subroutine monit_obs_mpi(v3dg, v2dg, monit_step)
 !      vbcfH08 = 0.0d0
 !    endif
 
-if (monit_step == 2 .and. myrank_d == 0) write(6,'(a)')"DEBUG monit 000"
-
     call monit_obs(v3dg, v2dg, topo2d, nobs, bias, rmse, monit_type, .true.,&
-                   nobs_H08, bias_H08, rmse_H08, yobs_H08_l, monit_step)
+                   nobs_H08, bias_H08, rmse_H08, yobs_H08_l, yobs_H08_clr_l, monit_step)
 !                   nobs_H08, bias_H08, rmse_H08, bias_H08_bc, rmse_H08_bc,&
 !                   aH08, bH08, vbcfH08, monit_step)
 
-if (monit_step == 2 .and. myrank_d == 0) write(6,'(a)')"DEBUG monit 001"
-
 
     if (H08_SIM_ALLG) then
-write(6,'(a)')"DEBUG write_Him8_mpi 00"
-if (monit_step == 2 .and. myrank_d == 0) write(6,'(a)')"DEBUG monit 002"
-      call write_Him8_mpi(yobs_H08_l,monit_step)
-write(6,'(a)')"DEBUG write_Him8_mpi 01"
-if (monit_step == 2 .and. myrank_d == 0) write(6,'(a)')"DEBUG monit 003"
+      call write_Him8_mpi(yobs_H08_l, tbb_clr_l=yobs_H08_clr_l, step=monit_step)
 
     endif
    
@@ -2435,18 +2428,20 @@ subroutine read_Him8_mpi(filename,obs)
   return
 end subroutine read_Him8_mpi
 
-subroutine write_Him8_mpi(tbb_l,step,tbb_lm)
+subroutine write_Him8_mpi( tbb_l, tbb_clr_l, step, tbb_lm )
   implicit none
 
-  real(r_size),intent(in) :: tbb_l(nlon,nlat,NIRB_HIM8)
-  real(r_size),optional,intent(in) :: tbb_lm(nlon,nlat,NIRB_HIM8)
+  real(r_size), intent(in) :: tbb_l(nlon,nlat,NIRB_HIM8)
+  real(r_size), optional, intent(in) :: tbb_clr_l(nlon,nlat,NIRB_HIM8)
+  real(r_size), optional, intent(in) :: tbb_lm(nlon,nlat,NIRB_HIM8)
   real(r_size) :: tbb_lprep(nlon,nlat,NIRB_HIM8)
-  real(r_size) :: tbb_gprep(nlong,nlatg,NIRB_HIM8)
-  integer,intent(in) :: step
+!  real(r_size) :: tbb_gprep(nlong,nlatg,NIRB_HIM8)
+  integer, optional, intent(in) :: step
 
   character(filelenmax) :: filename
 
   real(r_size) :: tbb_g(nlong,nlatg,NIRB_HIM8)
+  real(r_size) :: tbb_clr_g(nlong,nlatg,NIRB_HIM8)
   real(r_size) :: bufs4(nlong,nlatg,NIRB_HIM8)
 
   integer :: proc_i, proc_j
@@ -2472,9 +2467,14 @@ subroutine write_Him8_mpi(tbb_l,step,tbb_lm)
   tbb_g = bufs4
 
   bufs4(:,:,:) = 0.0d0
-  bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift,:) = tbb_lprep(:,:,:)
+  if ( present(tbb_clr_l) ) then
+    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift,:) = tbb_clr_l(:,:,:)
+  else
+    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift,:) = tbb_lprep(:,:,:)
+  endif
   call MPI_ALLREDUCE(MPI_IN_PLACE, bufs4, nlong*nlatg*NIRB_HIM8, MPI_r_size, MPI_SUM, MPI_COMM_d, ierr)
-  tbb_gprep = bufs4
+  tbb_clr_g = bufs4
+  
 
   if (myrank_d == 0) then
     iunit = 65
@@ -2498,7 +2498,7 @@ subroutine write_Him8_mpi(tbb_l,step,tbb_lm)
     enddo
     do ch = 1, NIRB_HIM8
       irec = irec + 1
-      write(iunit,rec=irec) real(tbb_gprep(:,:,ch),kind=r_sngl)
+      write(iunit,rec=irec) real(tbb_clr_g(:,:,ch),kind=r_sngl)
     enddo
 
     close(unit=iunit)

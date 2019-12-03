@@ -1377,7 +1377,7 @@ END SUBROUTINE itpl_3d
 ! Monitor observation departure by giving the v3dg,v2dg data
 !-----------------------------------------------------------------------
 subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,&
-                     nobs_H08,bias_H08,rmse_H08,yobs_H08,step)!,bias_H08_bc,rmse_H08_bc,&
+                     nobs_H08,bias_H08,rmse_H08,yobs_H08,yobs_H08_clr,step)!,bias_H08_bc,rmse_H08_bc,&
                      !aH08,bH08,vbcf,step)
   use scale_prc, only: &
       PRC_myrank
@@ -1419,10 +1419,10 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,&
 !  REAL(r_size),INTENT(OUT) :: rmse_H08_bc(NIRB_HIM8)
 
   real(r_size),intent(out) :: yobs_H08(nlon,nlat,NIRB_HIM8)
+  real(r_size),intent(out) :: yobs_H08_clr(nlon,nlat,NIRB_HIM8)
   real(r_size) :: yobs_H08_monit(nlon,nlat,NIRB_HIM8)
   real(r_size) :: plev_obs_H08(nlon,nlat,NIRB_HIM8)
 !  real(r_size) :: yobs_H08_bc(nlon,nlat,NIRB_HIM8)
-  real(r_size) :: yobs_H08_clr(nlon,nlat,NIRB_HIM8)
   integer :: qc_H08(nlon,nlat,NIRB_HIM8)
   real(r_size) :: zangle_H08(nlon,nlat)
 
@@ -1486,10 +1486,8 @@ subroutine monit_obs(v3dg,v2dg,topo,nobs,bias,rmse,monit_type,use_key,&
 !!  if (USE_HIM8) then 
 ! Always calculate Him8 radiances
 
-write(6,'(a,i9)'),"Hello from monit_obs before Trans",obsdep_nobs
   call Trans_XtoY_H08_allg(v3dgh,v2dgh,yobs_H08,yobs_H08_clr,&
                            plev_obs_H08,qc_H08,zangle_H08)
-write(6,'(a)'),"Hello from monit_obs afte Trans"
   !
   ! Initialize qc flag (set iqc is "bad")
   ! This will be overwritten by obsda_sort%qc
@@ -1663,9 +1661,7 @@ write(6,'(a)'),"Hello from monit_obs afte Trans"
 !   -- TC vital DA -- 
 !   -- End of TC vital DA -- 
 
-write(6,'(a)')"DEBUG before monit dep"
   call monit_dep(nnobs,oelm,ohx,oqc,nobs,bias,rmse)
-write(6,'(a)')"DEBUG after monit dep"
 
 !  aH08 = 0.0d0
 !  bH08 = 0.0d0
@@ -1761,8 +1757,6 @@ write(6,'(a)')"DEBUG after monit dep"
 !    rmse_H08_bc = 0.0d0
   endif ! [USE_HIM8]
   
-write(6,'(a)')"DEBUG after USE_HIM8"
-
   monit_type = .false.
   monit_type(uid_obs(id_u_obs)) = .true.
   monit_type(uid_obs(id_v_obs)) = .true.
@@ -1790,8 +1784,6 @@ write(6,'(a)')"DEBUG after USE_HIM8"
   deallocate (oelm)
   deallocate (ohx)
   deallocate (oqc)
-
-write(6,'(a)')"DEBUG after USE_HIM82"
 
   return
 end subroutine monit_obs

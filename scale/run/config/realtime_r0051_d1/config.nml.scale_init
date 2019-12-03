@@ -67,7 +67,7 @@
 !--NUMBER_OF_TSTEPS--
 !--NUMBER_OF_SKIP_TSTEPS--
  USE_FILE_LANDWATER   = .true.,
- INTRP_LAND_TEMP      = "mask",
+ INTRP_LAND_TEMP      = "fill",
  INTRP_LAND_WATER     = "fill",
  INTRP_LAND_SFC_TEMP  = "fill",
 /

@@ -48,7 +48,8 @@ elif [ "$PRESET" = 'K_micro' ]; then
 #elif [ "$PRESET" = 'K_interact' ]; then
 #  ...
 elif [ "$PRESET" = 'OFP' ]; then
-  NODELIST_TYPE='machinefile'
+#  NODELIST_TYPE='machinefile'
+  NODELIST_TYPE='-'
   MPI_TYPE='impi'
 elif [ "$PRESET" = 'Linux' ]; then
   NODELIST_TYPE='machinefile'

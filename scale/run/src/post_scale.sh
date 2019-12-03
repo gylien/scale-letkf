@@ -62,47 +62,47 @@ if [ "$SCPCALL" = 'cycle' ]; then
 #      mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/hist/mean
 #    fi
 
-    if ((PNETCDF == 1)); then
-      mkdir -p $TMPOUT/${ATIME}/anal
-      ifile="restart_$(datetime_scale $ATIME).nc"
-      if [ -e "$TMPDIR/${ifile}" ]; then
-        mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/mean.init.nc
-      fi
-    else
-      mkdir -p $TMPOUT/${ATIME}/anal/mean
+#    if ((PNETCDF == 1)); then
+#      mkdir -p $TMPOUT/${ATIME}/anal
+#      ifile="restart_$(datetime_scale $ATIME).nc"
+#      if [ -e "$TMPDIR/${ifile}" ]; then
+#        mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/mean.init.nc
+#      fi
+#    else
+      mkdir -p $OUTDIR/${ATIME}/anal/mean
       file_prefix="restart_$(datetime_scale $ATIME)"
       restartbaselen=27
       for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
         mv -f $TMPDIR/${ifile} $OUTDIR/${ATIME}/anal/mean/init${ifile:$restartbaselen}
       done
-    fi
+#    fi
 
     if ((ENABLE_PARAM_USER == 1)); then
-      if ((PNETCDF == 1)); then
-        ifile="restart_2_$(datetime_scale $ATIME).nc"
-        if [ -e "$TMPDIR/${ifile}" ]; then
-          mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/mean.init.nc
-        fi
-
-        icopy=2
-        if ((SPRD_OUT == 1)); then
-          icopy=$((icopy+1))
-          mkdir -p $TMPOUT/${ATIME}/anal
-          ifile="restart_${icopy}_$(datetime_scale $ATIME).nc"
-          if [ -e "$TMPDIR/${ifile}" ]; then
-            mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/sprd.init.nc
-          fi
-
-          icopy=$((icopy+1))
-          ifile="restart_${icopy}_$(datetime_scale $ATIME).nc"
-          if [ -e "$TMPDIR/${ifile}" ]; then
-            mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/sprd.init.nc
-          fi
-        fi
-      else
+#      if ((PNETCDF == 1)); then
+#        ifile="restart_2_$(datetime_scale $ATIME).nc"
+#        if [ -e "$TMPDIR/${ifile}" ]; then
+#          mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/mean.init.nc
+#        fi
+#
+#        icopy=2
+#        if ((SPRD_OUT == 1)); then
+#          icopy=$((icopy+1))
+#          mkdir -p $TMPOUT/${ATIME}/anal
+#          ifile="restart_${icopy}_$(datetime_scale $ATIME).nc"
+#          if [ -e "$TMPDIR/${ifile}" ]; then
+#            mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/anal/sprd.init.nc
+#          fi
+#
+#          icopy=$((icopy+1))
+#          ifile="restart_${icopy}_$(datetime_scale $ATIME).nc"
+#          if [ -e "$TMPDIR/${ifile}" ]; then
+#            mv -f $TMPDIR/${ifile} $TMPOUT/${ATIME}/gues/sprd.init.nc
+#          fi
+#        fi
+#      else
         restartbaselen=29
 
-        mkdir -p $TMPOUT/${ATIME}/gues/mean
+        mkdir -p $OUTDIR/${ATIME}/gues/mean
         file_prefix="restart_2_$(datetime_scale $ATIME)"
         for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
           mv -f $TMPDIR/${ifile} $OUTDIR/${ATIME}/gues/mean/init${ifile:$restartbaselen}
@@ -118,13 +118,13 @@ if [ "$SCPCALL" = 'cycle' ]; then
           done
 
           icopy=$((icopy+1))
-          mkdir -p $TMPOUT/${ATIME}/gues/sprd
+          mkdir -p $OUTDIR/${ATIME}/gues/sprd
           file_prefix="restart_${icopy}_$(datetime_scale $ATIME)"
           for ifile in $(cd $TMPDIR ; ls ${file_prefix}*.nc); do
             mv -f $TMPDIR/${ifile} $OUTDIR/${ATIME}/gues/sprd/init${ifile:$restartbaselen}
           done
         fi
-      fi
+#      fi
 
       if ((RTPS_INFL_OUT == 1)); then
         icopy=$((icopy+1))
@@ -229,13 +229,13 @@ elif [ "$SCPCALL" = 'fcst' ]; then
 
   FTIME=$(datetime $STIME $FCSTLEN s)
 
-  if ((PNETCDF == 1)); then
-    mkdir -p $TMPOUT/${STIME}/fcst
-    mv -f $TMPDIR/history.nc $TMPOUT/${STIME}/fcst/${MEM}.history.nc
-  else
-    mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
-    mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
-  fi
+#  if ((PNETCDF == 1)); then
+#    mkdir -p $TMPOUT/${STIME}/fcst
+#    mv -f $TMPDIR/history.nc $TMPOUT/${STIME}/fcst/${MEM}.history.nc
+#  else
+#    mkdir -p $TMPOUT/${STIME}/fcst/${MEM}
+#    mv -f $TMPDIR/history*.nc $TMPOUT/${STIME}/fcst/${MEM}
+#  fi
 
   if ((OUT_OPT <= 1)); then
     if ((PNETCDF == 1)); then

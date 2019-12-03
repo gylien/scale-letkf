@@ -10,6 +10,7 @@ log*
 /scale/configure.user
 /scale/common/datetime
 /scale/common/pdbash
+/scale/common/*genmod.f90
 /scale/run/config.main
 /scale/run/config.main.K
 /scale/run/config.cycle
