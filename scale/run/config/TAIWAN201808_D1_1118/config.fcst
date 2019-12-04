@@ -7,7 +7,8 @@
 
 STIME='20180822000000'
 ETIME='20180822000000'
-TIME_LIMIT='00:30:00'
+TIME_LIMIT='01:30:00'
+TIME_LIMIT='03:30:00'
 MEMBERS=`seq 1 50`
 
 MEMBERS="mean"
@@ -21,6 +22,9 @@ FSTEP=
 
 FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
 FCSTOUT=21600
+
+FCSTLEN=259200
+FCSTOUT=3600
 
 #===============================================================================
 

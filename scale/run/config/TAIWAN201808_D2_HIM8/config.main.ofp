@@ -6,7 +6,8 @@
 #===============================================================================
 
 PRESET='OFP'
-#RSCGRP="debug-cache"
+RSCGRP="debug-cache"
+RSCGRP="debug-flat"
 RSCGRP="regular-cache"
 #RSCGRP="regular-flat"
 
@@ -118,11 +119,9 @@ LTIMESLOT=600     # Timeslot interval for 4D-LETKF (second)
 # Parallelization settings
 
 MEMBER=50          # Ensemble size
+NNODES=272    # Number of nodes
 
-NNODES=544    # Number of nodes
-
-
-PPN=32              # Number of processes per node
+PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 

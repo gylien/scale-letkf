@@ -3266,6 +3266,9 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
   integer :: i, j
   real(RP) :: ri_RP, rj_RP
 
+  integer, parameter :: itmax = 4 ! 
+  integer :: nps, npe, it
+  
   !
   ! Extrapolate input profiles by using climatology (MIPAS)
   ! Based on "scalelib/src/atmos-physics/scale_atmos_phy_rd_mstrnx.F90"
@@ -3316,8 +3319,8 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
                                   (rj_RP-1.0_RP) * DY + CY(1),&
                                   lon_tmp_RP(1,1), lat_tmp_RP(1,1) )
 
-    lon1d(np) = real( lon_tmp_RP(1,1), kind=RP ) * rad2deg
-    lat1d(np) = real( lat_tmp_RP(1,1), kind=RP ) * rad2deg
+    lon1d(np) = real( lon_tmp_RP(1,1), kind=r_size ) * rad2deg
+    lat1d(np) = real( lat_tmp_RP(1,1), kind=r_size ) * rad2deg
 
     CALL zenith_geosat(HIM8_LON,lon1d(np),lat1d(np),zenith1d(np))
     tsfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_skint)
@@ -3331,6 +3334,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
     vtmp = v2d(i+IHALO,j+JHALO,iv2dd_v10m)
     call MAPPROJECTION_rotcoef(1, 1, 1, 1, 1, 1, &
                                lon_tmp_RP, lat_tmp_RP, rotc_RP )
+    rotc = real( rotc_RP, kind=r_size )
     usfc1d(np) = utmp * rotc(1,1,1) - vtmp * rotc(1,1,2)
     vsfc1d(np) = utmp * rotc(1,1,2) + vtmp * rotc(1,1,1)
 
@@ -3356,31 +3360,37 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
 !        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using (lon,lat).
 !
 
+  do it = 1, itmax
+    nps = int( nlon*nlat / itmax ) * ( it - 1) + 1
+    npe = int( nlon*nlat / itmax ) * it
+  
+    if ( it == itmax ) npe = max( npe, nlon*nlat )
 
-  CALL SCALE_RTTOV_fwd12(NIRB_HIM8, & ! num of channels
-                       KMAX,& ! num of levels
-                       nlon*nlat,& ! num of profs
-                       prs2d(:,:),& ! (Pa)
-                       tk2d(:,:),& ! (K)
-                       qv2d(:,:),& ! (kg/kg)
-                       qliq2d(:,:),& ! (kg/kg)
-                       qice2d(:,:),& ! (kg/kg)
-                       tsfc1d(:),& ! (K)
-                       qsfc1d(:),& ! (kg/kg)
-                       psfc1d(:),& ! (Pa)
-                       usfc1d(:),& ! (m/s)
-                       vsfc1d(:),& ! (m/s)
-                       topo1d(:),& ! (m)
-                       lon1d(:),& ! (deg)
-                       lat1d(:),& ! (deg)
-                       lsmask1d(:),& ! (0-1)
-                       zenith1d(:), & ! (deg) 
-                       real( RD_presh(:), kind=r_size ), & ! (hPa) 
-                       real( RD_temph(:), kind=r_size), & ! (K) 
-                       btall_out(:,:),& ! (K)
-                       btclr_out(:,:),& ! (K)
-                       mwgt_plev1d(:,:),& ! (Pa)
-                       ctop_out1d(:))
+    CALL SCALE_RTTOV_fwd12(NIRB_HIM8, & ! num of channels
+                         KMAX,& ! num of levels
+                         npe-nps+1, & ! num of profs
+                         prs2d(:,nps:npe),& ! (Pa)
+                         tk2d(:,nps:npe),& ! (K)
+                         qv2d(:,nps:npe),& ! (kg/kg)
+                         qliq2d(:,nps:npe),& ! (kg/kg)
+                         qice2d(:,nps:npe),& ! (kg/kg)
+                         tsfc1d(nps:npe),& ! (K)
+                         qsfc1d(nps:npe),& ! (kg/kg)
+                         psfc1d(nps:npe),& ! (Pa)
+                         usfc1d(nps:npe),& ! (m/s)
+                         vsfc1d(nps:npe),& ! (m/s)
+                         topo1d(nps:npe),& ! (m)
+                         lon1d(nps:npe),& ! (deg)
+                         lat1d(nps:npe),& ! (deg)
+                         lsmask1d(nps:npe),& ! (0-1)
+                         zenith1d(nps:npe), & ! (deg) 
+                         real( RD_presh(:), kind=r_size ), & ! (hPa) 
+                         real( RD_temph(:), kind=r_size ), & ! (K) 
+                         btall_out(:,nps:npe),& ! (K)
+                         btclr_out(:,nps:npe),& ! (K)
+                         mwgt_plev1d(:,nps:npe),& ! (Pa)
+                         ctop_out1d(nps:npe))
+  enddo ! it
 
 !
 ! -- btall_out is substituted into yobs

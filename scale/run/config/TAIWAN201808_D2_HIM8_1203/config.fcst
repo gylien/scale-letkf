@@ -7,12 +7,24 @@
 
 STIME='20180820180000'
 ETIME='20180820180000'
+TIME_LIMIT='02:30:00'
 TIME_LIMIT='01:00:00'
 
-MEMBERS="mean "`seq 1 10`
-MEMBERS=`seq 11 30`
-MEMBERS=`seq 31 50`
+MEMBERS="mean"
+MEMBERS=`seq 1 50`
+MEMBERS=`seq 27 50`
+MEMBERS=`seq 1 8`
+MEMBERS=`seq 9 50`
 
+MEMBERS=`seq 1 8`
+
+MEMBERS=`seq 41 50`
+MEMBERS=`seq 9 10`
+#MEMBERS=`seq 31 40`
+#MEMBERS=`seq 21 30`
+#MEMBERS=`seq 11 20`
+
+#MEMBERS="all"
 CYCLE=
 CYCLE_SKIP=1
 ISTEP=
@@ -29,7 +41,7 @@ FCSTOUT=21600
 
 #===============================================================================
 
-MAKEINIT=1       # 0: No
+MAKEINIT=0       # 0: No
                  # 1: Yes
 
 #===============================================================================

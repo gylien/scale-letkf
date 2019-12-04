@@ -966,7 +966,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
                       trim(v3dd_name(iv3d)), & ! [IN]
                       var3D                  ) ! [OUT]
     end if
-    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
+    forall (i=1:nlon, j=1:nlat, k=1:nlev) v3dg_RP(k+KHALO,i+IHALO,j+JHALO,iv3d) = var3D(i,j,k) ! use FORALL to change order of dimensions
   end do
 
   ! 2D variables
@@ -985,7 +985,7 @@ subroutine read_history(filename,step,v3dg,v2dg)
                       trim(v2dd_name(iv2d)), & ! [IN]
                       var2D                  ) ! [OUT]
     end if
-    v2dg(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
+    v2dg_RP(1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv2d) = var2D(:,:)
   end do
 
   ! Communicate halo
@@ -1434,8 +1434,8 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
   !---------------------------------------------------------
 
   call scale_calc_z(topo, height)
-  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = height
-  v3dgh_RP(KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = topo(:,:) ! TH
+  v3dgh_RP(1+KHALO:nlev+KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = real( height, kind=RP )
+  v3dgh_RP(KHALO,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = real( topo(:,:), kind=RP ) ! TH
   v3dgh_RP(1,1+IHALO:nlon+IHALO,1+JHALO:nlat+JHALO,iv3dd_hgt) = 0.0_RP ! TH
 
   ! Communicate the lateral halo areas
@@ -1470,7 +1470,7 @@ subroutine state_to_history(v3dg, v2dg, topo, v3dgh, v2dgh)
 !$OMP PARALLEL DO PRIVATE(j,i)
   do j = 1, nlat
     do i = 1, nlon
-      v2dgh_RP(i+IHALO,j+JHALO,iv2dd_lsmask) = min(max(topo(i,j) - 10.0_RP, 0.0_RP), 1.0_RP)
+      v2dgh_RP(i+IHALO,j+JHALO,iv2dd_lsmask) = min(max( real( topo(i,j), kind=RP )  - 10.0_RP, 0.0_RP), 1.0_RP)
     enddo
   enddo
 !$OMP END PARALLEL DO
