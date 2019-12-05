@@ -8,24 +8,26 @@
 PRESET='OFP' 
 
 RSCGRP="regular-cache"
-RSCGRP="debug-cache"
+#RSCGRP="debug-cache"
+RSCGRP="regular-flat"
 
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
+OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/DEBUG256p"
+EXP4=D4_250M_mercator_50mem+1fcst_10min
+#EXP4=D4_250M_mercator_50mem+1fcst_10min_maxslope20_NODA
+#EXP4=D4_250M_mercator_50mem+1fcst_10min_maxslope20_VRONLY
 
-OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
-OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/DEBUG"
-
-
-EXP4=D4_1km_NP64_merc
+EXP4=D4_250M_mercator_50mem+1fcst_10min_maxslope20_ZGERR5
 
 EXP3=exp_d3
 EXP2=exp_d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
-INDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_1km_mer"
+INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_250m20191202_np256" # maxslope20
+#INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_250m20191202_np256_steep"
 
 #===============================================================================
 # Location of model/data files
@@ -34,7 +36,7 @@ SCALEDIR="$DIR/../.."                                                # Directory
 DATADIR="/work/hp150019/share/database" 
 SCALE_DB="/work/hp150019/share/database" 
 
-DATA_TOPO=                                                           # Directory of the prepared topo files
+DATA_TOPO=
 DATA_TOPO_BDY_SCALE="${OUTPUT}/${EXP3}/const/topo"
 DATA_LANDUSE=                                                        # Directory of the prepared landuse files
 DATA_BDY_SCALE="${OUTPUT}/${EXP4}"
@@ -45,19 +47,16 @@ DATA_BDY_WRF=                                                        # Directory
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 DATA_BDY_GRADS=
 
-#OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_TOSHIBA"
-#OBS="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/obs/PAWR_JRC"
 OBS="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/PAWR_TOSHIBA"
 OBSNCEP=
 OBS_USE_JITDT=0 # 1: Run with JIT-DT 
                 # 0: No JIT-DT
-OBS_USE_JITDT_OFFLINE=0 # 1: Offilne test
+OBS_USE_JITDT_OFFLINE=1 # 1: Offilne test
                         # 0: Online (data should be transfered from NICT)
 
-JIT_TOP=/work/hp150019/share/c24140/jitdt
-
-JIT_TARFILE=${JIT_TOP}/testdata/jit_offline_data_20190610080030-20190610100000.tar
-JIT_OFFLOG=${JIT_TOP}/testdata/jit_offline_data_20190610080030-20190610100000.txt
+JIT_TOP=/work/hp150019/share/honda/jitdt
+JIT_TARFILE=${JIT_TOP}/testdata/kobe_201901301200-09.tar
+JIT_OFFLOG=${JIT_TOP}/testdata/testdata201901301200.txt
 
 #===============================================================================
 # model/data file options
@@ -130,18 +129,20 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
+MEMBER=50      # Ensemble size 
+NNODES=212
 
-MEMBER=20      # Ensemble size 
-NNODES=52      # Ensemble size + 1 (mean) +1 (mdet) + 30 (additional)
+#MEMBER=27      # Ensemble size 
+#NNODES=120
 
-#MEMBER=<MEMBER>      # Ensemble size 
-#NNODES=<NNODES>
+#MEMBER=3     # Ensemble size 
+#NNODES=20
 
 PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
-SCALE_NP=64  # D4    # Number of processes to run SCALE
+SCALE_NP=256  # D4    # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -159,7 +160,7 @@ TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPS="$TMP"  # Temporary directory only on the server node
 TMPL="$TMP"
-TMP_JITDATA="/work/hp150019/share/$(id -nu)/jitdt/offline/data" # job.running
+TMP_JITDATA="/work/hp150019/share/$(id -nu)/jitdt/offline/data"
 TMP_JITDATA_IP="$(hostname -i)"
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?

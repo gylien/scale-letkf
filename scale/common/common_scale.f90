@@ -827,7 +827,8 @@ subroutine write_restart_direct(v3dg,v2dg)
     MOMY, &
     MOMZ, &
     RHOT, &
-    QTRC
+    QTRC, &
+    ATMOS_vars_fillhalo
   use scale_atmos_hydrometeor, only: &
     I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
   use scale_atmos_grid_cartesC_index, only: &
@@ -870,6 +871,8 @@ subroutine write_restart_direct(v3dg,v2dg)
       stop
     end select
   end do
+
+  call ATMOS_vars_fillhalo 
 
   do iv2d = 1, nv2d
     if (LOG_LEVEL >= 5) then
@@ -1418,6 +1421,7 @@ end subroutine read_history_par
 subroutine read_history_direct(v3dg, v2dg)
   use mod_atmos_vars, only: &
     ATMOS_vars_get_diagnostic, &
+    ATMOS_vars_calc_diagnostics, &
     QTRC, &
     PRES
   use mod_atmos_phy_sf_vars, only: &
@@ -1465,6 +1469,7 @@ subroutine read_history_direct(v3dg, v2dg)
     case (iv3dd_u, iv3dd_v, iv3dd_w, iv3dd_t, iv3dd_rh)
       call ATMOS_vars_get_diagnostic(trim(v3dd_name(iv3d)), v3dg_RP(:,:,:,iv3d))
     case (iv3dd_p)
+      call ATMOS_vars_calc_diagnostics 
       v3dg_RP(:,:,:,iv3d) = PRES(:,:,:)
     case (iv3d_q)
       v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_QV)

@@ -786,7 +786,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   real(kind=c_float), allocatable :: rtdat(:, :, :, :)
   real(kind=c_float), allocatable :: az(:, :, :)
   real(kind=c_float), allocatable :: el(:, :, :)
-  integer j, ierr
+  integer :: j, ierr, ierr2
   character(len=3) :: fname
   integer, save::i=0
 
@@ -871,10 +871,6 @@ subroutine read_obs_radar_toshiba(cfile, obs)
       ierr = jitdt_read_toshiba(n_type, jitdt_place, hd, az, el, rtdat)
   
       call mpi_timer('read_obs_radar_toshiba:jitdt_read_toshiba:', 2)
-      if (ierr /= 0) then
-        obs%nobs = 0
-        return
-      endif
     else
 #endif
       do j = 1, n_type
@@ -897,17 +893,22 @@ subroutine read_obs_radar_toshiba(cfile, obs)
         if (LOG_LEVEL >= 3) then
           write(*, *) "return code = ", ierr
         endif
-        if (ierr /= 0) then
-          obs%nobs = 0
-          return
-        endif
       end do
   
 #ifdef JITDT
     end if
 #endif
   end if  ! myrank_o == 0
-  call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 2, barrier=MPI_COMM_o)
+
+  call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 2, barrier=MPI_COMM_o )
+  if ( nprocs_o > 1 ) then
+    call MPI_BCAST( ierr, 1, MPI_INTEGER, 0, MPI_COMM_o, ierr2 )
+  endif
+
+  if ( ierr /= 0 ) then 
+    obs%nobs = 0
+    return
+  endif
 
   ! Set obs information
   if (myrank_o == 0) then
