@@ -779,9 +779,10 @@ end subroutine write_obs_all
 !-------------------------------------------------------------------------------
 ! Read all observation data from files of various formats
 !-------------------------------------------------------------------------------
-subroutine read_obs_all_mpi(obs)
+subroutine read_obs_all_mpi( obs, icycle )
   implicit none
   type(obs_info), intent(out) :: obs(OBS_IN_NUM)
+  integer, optional, intent(in) :: icycle
   integer :: iof, ierr
   logical :: ex
 
@@ -789,7 +790,16 @@ subroutine read_obs_all_mpi(obs)
 
   call mpi_timer('', 2)
 
+  if ( present (icycle) .and. icycle < ICYC_DACYCLE_ANALYSIS ) then
+    do iof = 1, OBS_IN_NUM
+      obs(iof)%nobs = 0
+      call obs_info_allocate(obs(iof), extended=.true.)
+    enddo
+    return
+  endif
+
   if ( myrank_use_obs ) then
+
     call read_obs_all(obs)
 
     call mpi_timer('read_obs_all_mpi:read_obs_all:', 2)

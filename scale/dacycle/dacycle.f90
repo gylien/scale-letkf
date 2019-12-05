@@ -148,7 +148,9 @@ program dacycle
   integer :: stime_c, etime_c, cpsec, cmax
   integer :: stime_da_c, etime_da_c ! timer for DA cycle 
   integer :: stime_fcst_c, etime_fcst_c ! timer for forecast 
-  integer :: stime_noio_c, etime_noio_c
+  integer :: stime_noio_c, etime_noio_c, time_noio_c
+
+  integer :: icycle_init
 
 !-----------------------------------------------------------------------
 ! Initial settings
@@ -222,6 +224,12 @@ program dacycle
       scycle_dafcst = 9999999
     endif
 
+    if ( ICYC_DACYCLE_ANALYSIS == 1 ) then
+      icycle_init = 1
+    else
+      icycle_init = ICYC_DACYCLE_ANALYSIS -1
+    endif
+
 
     ! setup grid parameters
     call set_common_scale
@@ -273,6 +281,7 @@ program dacycle
             call MPI_BARRIER(MPI_COMM_da, ierr) 
             if ( myrank_da == 0 ) then
               call system_clock(stime_noio_c)
+              time_noio_c = 0
             endif
           endif
 
@@ -327,9 +336,13 @@ program dacycle
       !-------------------------------------------------------------------------
       ! LETKF section start
       !-------------------------------------------------------------------------
-      if (TIME_DOATMOS_restart .and. myrank_use_da) then
+      if (TIME_DOATMOS_restart .and. myrank_use_da .and. icycle >= icycle_init ) then
 
         call mpi_timer('SCALE', 1, barrier=MPI_COMM_da)
+        if ( myrank_da == 0 ) then
+           call system_clock(etime_noio_c)
+           time_noio_c = time_noio_c + ( etime_noio_c - stime_noio_c )
+        endif
 
         if (ANAL_OUT_FREQ >= 1 .and. (mod(icycle, ANAL_OUT_FREQ) == 0 .or. icycle == lastcycle)) then
           anal_mem_out_now = .true.
@@ -357,7 +370,7 @@ program dacycle
 
         call timelabel_update(TIME_DTSEC_ATMOS_RESTART)
 
-        if (icycle == 1) then
+        if ( icycle == icycle_init ) then
           call set_common_obs_scale
 
           allocate (obs(OBS_IN_NUM))
@@ -378,9 +391,13 @@ program dacycle
         ! Read observations
         !-----------------------------------------------------------------------
 
-        call read_obs_all_mpi(obs)
+        call read_obs_all_mpi(obs, icycle)
 
         call mpi_timer('READ_OBS', 1, barrier=MPI_COMM_da)
+        if ( myrank_da == 0 ) then
+           ! exclude obs reading time
+           call system_clock(stime_noio_c)
+        endif
 
         !-----------------------------------------------------------------------
         ! Observation operator
@@ -415,7 +432,7 @@ program dacycle
         !
         ! LETKF GRID setup
         !
-        if (icycle == 1) then
+        if ( icycle == icycle_init ) then
           call set_common_mpi_grid
 
           allocate (gues3d(nij1,nlev,nens,nv3d))
@@ -556,6 +573,7 @@ program dacycle
           call MPI_BARRIER(MPI_COMM_da, ierr)
           if ( myrank_da == 0 ) then
             call system_clock(etime_noio_c) 
+            time_noio_c = time_noio_c + ( etime_noio_c - stime_noio_c )
           endif
         endif
         !-----------------------------------------------------------------------
@@ -697,6 +715,11 @@ program dacycle
 
     if (allocated(ref3d)) deallocate (ref3d)
 
+    if ( myrank_use_da .and. myrank_da == 0 ) then
+      write(6,'(a)') "#############"
+      write(6,'(a,f12.4)') "Computation time (excluding most I/O parts): ", real( time_noio_c ) / real( cpsec )
+      write(6,'(a)') "#############"
+    endif
     call unset_common_mpi_scale
 
     !-------------------------------------------------------------------

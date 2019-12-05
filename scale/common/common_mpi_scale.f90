@@ -1835,7 +1835,8 @@ subroutine receive_emean_direct()
     MOMY, &
     MOMZ, &
     RHOT, &
-    QTRC
+    QTRC, &
+    ATMOS_vars_fillhalo
   use scale_atmos_hydrometeor, only: &
     I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
   use scale_atmos_grid_cartesC_index, only: &
@@ -1899,6 +1900,8 @@ subroutine receive_emean_direct()
       stop
     end select
   end do
+
+  call ATMOS_vars_fillhalo 
 
   do iv2d = 1, nv2d
     if (LOG_LEVEL >= 3) then

@@ -33,6 +33,12 @@ MAX_DACYCLE_RUN_FCST=<MAX_DACYCLE_RUN_FCST>
 # Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
 DACYCLE_RUN_FCST_TIME=<DACYCLE_RUN_FCST_TIME> # sec
 
+# Cycle # of 1st dacycle-forecast start
+ICYC_DACYCLE_RUN_FCST=1
+
+# Cycle # of 1st DA cycle starts after spin-up forecast
+ICYC_DACYCLE_RUN_ANALYSIS=1
+
 #===============================================================================
 # Forecast settings
 

@@ -89,7 +89,6 @@ subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons
 
     pcnt = pcnt + 1
     if ( mod(pcnt, nprocs_o) /= myrank_o ) cycle
-write(*,*) "DEBUG",myrank_o, pcnt, iplot_lev, nprocs_o
     write(cheight,'(I5.5)')int(GRID_CZ(iplot_lev+KHALO))
    
     title1 = trim(ftimelabel) // " UTC (PAWR obs)"
@@ -174,7 +173,7 @@ write(*,*) "DEBUG",myrank_o, pcnt, iplot_lev, nprocs_o
     zmax = real( GRID_FZ(iplot_lev+KHALO-1) + RADAR_SO_SIZE_VERT )
 
     call system_clock(time2, timerate, timemax)
-    if (myrank_o == 1 ) write(*, *) "plot setting", (time2 - time1) / dble(timerate), myrank_o
+!    if (myrank_o == 1 ) write(*, *) "plot setting", (time2 - time1) / dble(timerate), myrank_o
     time1 = time2
 
     do iobs = 1, nobs
@@ -194,7 +193,7 @@ write(*,*) "DEBUG",myrank_o, pcnt, iplot_lev, nprocs_o
      end if
     end do
     call system_clock(time2, timerate, timemax)
-    if (myrank_o == 1 ) write(*, *) "plot obs loop", (time2 - time1) / dble(timerate), myrank_o
+!    if (myrank_o == 1 ) write(*, *) "plot obs loop", (time2 - time1) / dble(timerate), myrank_o
     time1 = time2
 
     call uwsgxa (lons,nlons)
@@ -207,7 +206,7 @@ write(*,*) "DEBUG",myrank_o, pcnt, iplot_lev, nprocs_o
     call udlset ('LABEL',.false.)
    
     call system_clock(time2, timerate, timemax)
-    if (myrank_o == 1 ) write(*, *) "plot chk1", (time2 - time1) / dble(timerate), myrank_o
+!    if (myrank_o == 1 ) write(*, *) "plot chk1", (time2 - time1) / dble(timerate), myrank_o
     time1 = time2
 !!! map  
  
@@ -224,7 +223,7 @@ write(*,*) "DEBUG",myrank_o, pcnt, iplot_lev, nprocs_o
     call uumrkz(1,real(BASE_LON/D2R),real(BASE_LAT/D2R),9,21,0.010) !!! RADAR location
   
     call system_clock(time2, timerate, timemax)
-    if (myrank_o == 1 ) write(*, *) "plot chk2", (time2 - time1) / dble(timerate), myrank_o
+!    if (myrank_o == 1 ) write(*, *) "plot chk2", (time2 - time1) / dble(timerate), myrank_o
     time1 = time2
 
     amtics = 0.5 !! deg
@@ -246,7 +245,7 @@ write(*,*) "DEBUG",myrank_o, pcnt, iplot_lev, nprocs_o
     call uysfmt ('(F5.1)')
    
     call system_clock(time2, timerate, timemax)
-    if (myrank_o == 1 ) write(*, *) "plot chk3", (time2 - time1) / dble(timerate), myrank_o
+!    if (myrank_o == 1 ) write(*, *) "plot chk3", (time2 - time1) / dble(timerate), myrank_o
     time1 = time2
        
     call uxaxdv('B',astics,amtics)
@@ -257,7 +256,7 @@ write(*,*) "DEBUG",myrank_o, pcnt, iplot_lev, nprocs_o
     call uysttl('L','Latitude',0.0)
   
     call system_clock(time2, timerate, timemax)
-    if (myrank_o == 1 ) write(*, *) "plot chk4", (time2 - time1) / dble(timerate), myrank_o
+!    if (myrank_o == 1 ) write(*, *) "plot chk4", (time2 - time1) / dble(timerate), myrank_o
     time1 = time2
 
     call uzlset('LABELYR',.false.)
@@ -270,13 +269,13 @@ write(*,*) "DEBUG",myrank_o, pcnt, iplot_lev, nprocs_o
     call sgtxzv (0.5*(vpr+vpl),vpt+0.05,trim(title3),0.017,0,0,4) !
    
     call system_clock(time2, timerate, timemax)
-    if (myrank_o == 1 ) write(*, *) "plot chk5", (time2 - time1) / dble(timerate), myrank_o
+!    if (myrank_o == 1 ) write(*, *) "plot chk5", (time2 - time1) / dble(timerate), myrank_o
     time1 = time2
 
     call grcls 
    
     call system_clock(time2, timerate, timemax)
-    if (myrank_o == 1 ) write(*, *) "plot chk6", (time2 - time1) / dble(timerate), myrank_o
+!    if (myrank_o == 1 ) write(*, *) "plot chk6", (time2 - time1) / dble(timerate), myrank_o
     time1 = time2
 
   end do !!! iplot_lev

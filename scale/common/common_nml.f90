@@ -61,6 +61,7 @@ MODULE common_nml
   logical :: DACYCLE_RUN_FCST = .false.    ! Run a forecast from analysis ensemble mean by dacycle-forecast member
   integer :: MAX_DACYCLE_RUN_FCST = 0      ! Maximum number of dacycle-forecasts 
   integer :: ICYC_DACYCLE_RUN_FCST = 1      ! Initial-cycle number of dacycle-forecasts 
+  integer :: ICYC_DACYCLE_ANALYSIS = 1      ! Initial-cycle number of DA (after spin-up forecast)
   integer :: DACYCLE_RUN_FCST_TIME = 0      ! Forecast time for dacycle-forecast members
   character(filelenmax) :: DACYCLE_RUN_FCST_OUTNAME = '' ! Output file name
 
@@ -409,6 +410,7 @@ subroutine read_nml_ensemble
     DACYCLE_RUN_FCST, &
     MAX_DACYCLE_RUN_FCST, &
     ICYC_DACYCLE_RUN_FCST, &
+    ICYC_DACYCLE_ANALYSIS, &
     DACYCLE_RUN_FCST_TIME, &
     DACYCLE_RUN_FCST_OUTNAME
 
@@ -446,6 +448,9 @@ subroutine read_nml_ensemble
       MEMBER_RUN = MEMBER_RUN + MAX_DACYCLE_RUN_FCST
     endif
   end if
+
+  ICYC_DACYCLE_ANALYSIS = max( ICYC_DACYCLE_ANALYSIS, 1 )
+  ICYC_DACYCLE_RUN_FCST = max( ICYC_DACYCLE_RUN_FCST, ICYC_DACYCLE_ANALYSIS )
 
   if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_ENSEMBLE)
