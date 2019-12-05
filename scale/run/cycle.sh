@@ -235,6 +235,7 @@ while ((time <= ETIME)); do
 
       noit='-'
 
+      echo $MPIRUN -n ${PJM_MPI_PROC} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} >&2
       $MPIRUN -n ${PJM_MPI_PROC} ./${stepexecname[$s]} ${stepexecname[$s]}_${conf_time}.conf $noit log/${stepexecname[$s]}.NOUT_${conf_time} || exit $?
 
     fi

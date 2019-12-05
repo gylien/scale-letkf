@@ -8,25 +8,20 @@
 PRESET='OFP' 
 
 RSCGRP="regular-cache"
-RSCGRP="debug-cache"
+RSCGRP="regular-flat"
 
 #===============================================================================
 
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
-
-# Output directory (specify use's own directory)
-OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/DEBUG" 
-
-
-EXP4=D4_1km_NP64_merc
-
+OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT"
+EXP4=D4_250M_mercator_Mc
 EXP3=exp_d3
 EXP2=exp_d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
-#INDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_1km_mer" # Input data # do not modify
-INDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_1km" # Input data # do not modify
+# Input data # do not modify
+INDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_250m_mer_large"
 
 #===============================================================================
 # Location of model/data files
@@ -35,24 +30,27 @@ SCALEDIR="$DIR/../.."                                                # Directory
 DATADIR="/work/hp150019/share/database" 
 SCALE_DB="/work/hp150019/share/database" 
 
-DATA_TOPO=                                                           # Directory of the prepared topo files
+DATA_TOPO=
 DATA_TOPO_BDY_SCALE=
 DATA_LANDUSE=                                                        # Directory of the prepared landuse files
 DATA_BDY_SCALE="${OUTPUT}/${EXP4}"
 DATA_BDY_SCALE_PRC_NUM_X=
 DATA_BDY_SCALE_PRC_NUM_Y=
+DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
+DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
+DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
+DATA_BDY_GRADS=
 
 OBS="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/PAWR_TOSHIBA"
 OBSNCEP=
 OBS_USE_JITDT=0 # 1: Run with JIT-DT 
                 # 0: No JIT-DT
-OBS_USE_JITDT_OFFLINE=0 # 1: Offilne test
+OBS_USE_JITDT_OFFLINE=1 # 1: Offilne test
                         # 0: Online (data should be transfered from NICT)
 
-JIT_TOP=/work/hp150019/share/c24140/jitdt
-
-JIT_TARFILE=${JIT_TOP}/testdata/jit_offline_data_20190610080030-20190610100000.tar
-JIT_OFFLOG=${JIT_TOP}/testdata/jit_offline_data_20190610080030-20190610100000.txt
+JIT_TOP=/work/hp150019/share/honda/jitdt
+JIT_TARFILE=${JIT_TOP}/testdata/kobe_201901301200-09.tar
+JIT_OFFLOG=${JIT_TOP}/testdata/testdata201901301200.txt
 
 #===============================================================================
 # model/data file options
@@ -125,17 +123,18 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-
-SCALE_NP=64  # D4    # Number of processes to run SCALE
 PPN=64              # Number of processes per node
+SCALE_NP=4096  # D4    # Number of processes to run SCALE
 
-MEMBER=20      # Ensemble size 
-# Specify MEMBER (3-50), which determines the total number of nodes (NNODES)
+
+MEMBER=2      # Ensemble size 
+# Specify MEMBER (2-50), which determines the total number of nodes (NNODES)
+#  MEMBER=2 => 256 nodes
+#  MEMBER=8 => 640 nodes
+#  MEMBER=18 => 1280 nodes
 NNODES=$(((MEMBER + 2)*(SCALE_NP/PPN)))      # Ensemble size + 1 (mean) +1 (mdet) 
 
-
 THREADS=1          # Number of threads per process
-
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -153,7 +152,7 @@ TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
 #TMPS="$TMP"  # Temporary directory only on the server node
 TMPL="$TMP"
-TMP_JITDATA="/work/hp150019/share/$(id -nu)/jitdt/offline/data" # job.running
+TMP_JITDATA="/work/hp150019/share/$(id -nu)/jitdt/offline/data"
 TMP_JITDATA_IP="$(hostname -i)"
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?

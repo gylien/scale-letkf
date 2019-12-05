@@ -12,7 +12,7 @@ RSCGRP="debug-cache"
 
 #===============================================================================
 
-DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
+DIR="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/LETKF-5.3.4_sngl/scale-letkf/scale"
 
 
 # Output directory (specify use's own directory)
@@ -130,7 +130,7 @@ SCALE_NP=64  # D4    # Number of processes to run SCALE
 PPN=64              # Number of processes per node
 
 MEMBER=20      # Ensemble size 
-# Specify MEMBER (3-50), which determines the total number of nodes (NNODES)
+# Specify MEMBER (2-50), which determines the total number of nodes (NNODES)
 NNODES=$(((MEMBER + 2)*(SCALE_NP/PPN)))      # Ensemble size + 1 (mean) +1 (mdet) 
 
 
@@ -186,3 +186,6 @@ PYTHON="python"
 . config.rc
 
 #===============================================================================
+SCRP_DIR="$TMPROOT"
+RUN_LEVEL=4
+PARENT_REF_TIME=
