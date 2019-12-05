@@ -38,18 +38,18 @@ PRESET='OFP'
 
 if [ "$PRESET" = 'OFP' ]; then
  if [ "$MEMBERS" = "mean mdet" ];then
-   NODE=`expr \( $NMEM  \) \* 7` ### D2
+   NNODES=`expr \( $NMEM  \) \* 7` ### D2
  else
-   NODE=`expr \( $NMEM + 2 \) \* 7` ### D2
+   NNODES=`expr \( $NMEM + 2 \) \* 7` ### D2
  fi
  config_suffix='ofp'
  script_suffix='_ofp'
 elif [ "$PRESET" = 'OBCX' ]; then
  if [ "$MEMBERS" = "mean mdet" ];then
-   NODE=`expr \( $NMEM  \) \* 16` ### D2
+   NNODES=`expr \( $NMEM  \) \* 16` ### D2
  else
-   NODE=`expr \( $NMEM + 2 \) \* 16` ### D2
-    while [ $NNODES > 256 ] ;do
+   NNODES=`expr \( $NMEM + 2 \) \* 16` ### D2
+    while [ $NNODES -gt 256 ] ;do
       NNODES=`expr $NNODES \/ 2`
     done
   fi
@@ -100,7 +100,7 @@ cat config/${CONFIG}/config.${SCPNAME} | \
 
 cat config.main.ofp | \
    sed -e "s/<MEMBER>/${NMEM}/g" | \
-   sed -e "s/<NNODES>/${NODE}/g" | \
+   sed -e "s/<NNODES>/${NNODES}/g" | \
    sed -e "s/<STIME>/${STIME}/g" \
  > config.main
 rm config.main.ofp

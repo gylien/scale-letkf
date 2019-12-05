@@ -38,7 +38,7 @@ if [ "$PRESET" = "OFP" ]; then
   script_suffix='_ofp'
 elif [ "$PRESET" = "OBCX" ]; then
   NNODES=`expr \( $MEMBER + 2 \) \* 8`
-  while [ $NNODES > 256 ] ;do
+  while [ $NNODES -gt 256 ] ;do
    NNODES=`expr $NNODES \/ 2`
   done
   config_suffix='obcx'

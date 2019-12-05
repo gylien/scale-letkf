@@ -34,25 +34,21 @@ NMEM="$1"
 SCPNAME=fcst
 ETIME="$STIME"
 
-#NODE=`expr \( $NMEM  + 2 \) \* 64` ### D4 250m 
-NODE=`expr \( $NMEM  + 2 \) ` ### D4 1km 
-###WTIME_L="00:20:00"
-
 CONFIG='realtime_fcst_D4_1km'
 PRESET='OFP'
 
 #-------------------------------------------------------------------------------
 
 if [ "$PRESET" = 'OFP' ]; then
- NODE=`expr \( $NMEM + 2 \) ` ### D4 1km
-# NODE=`expr \( $NMEM + 2 \) \* 64` ### D4 250m
-    while [ $NNODES > 2048 ] ;do
+ NNODES=`expr \( $NMEM + 2 \) ` ### D4 1km
+# NNODES=`expr \( $NMEM + 2 \) \* 64` ### D4 250m
+    while [ $NNODES -gt 2048 ] ;do
       NNODES=`expr $NNODES \/ 2`
     done
  config_suffix='ofp'
  script_suffix='_ofp'
 elif [ "$PRESET" = 'OBCX' ]; then
- NODE=`expr \( $NMEM + 2 \) \* 4` ### D4 1km
+ NNODES=`expr \( $NMEM + 2 \) \* 4` ### D4 1km
     while [ $NNODES > 256 ] ;do
       NNODES=`expr $NNODES \/ 2`
     done
@@ -109,7 +105,7 @@ cat config/${CONFIG}/config.${SCPNAME} | \
 
 cat config.main.${config_suffix} | \
    sed -e "s/<MEMBER>/${NMEM}/g" | \
-   sed -e "s/<NNODES>/${NODE}/g" | \
+   sed -e "s/<NNODES>/${NNODES}/g" | \
    sed -e "s/<STIME>/${STIME}/g" | \
    sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g" | \
    sed -e "s/<PARENT_REF_TIME_D2>/${PARENT_REF_TIME_D2}/g" \

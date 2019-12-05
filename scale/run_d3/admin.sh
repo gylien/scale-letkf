@@ -47,18 +47,18 @@ PRESET='OFP'
 
 if [ "$PRESET" = 'OFP' ]; then
  if [ "$MEMBERS" = "mdet" ];then
-   NODE=`expr \( $NMEM  \) \* 16` ### D2
+   NNODES=`expr \( $NMEM  \) \* 16` ### D2
  else
-   NODE=`expr \( $NMEM + 2 \) \* 16` ### D2
+   NNODES=`expr \( $NMEM + 2 \) \* 16` ### D2
  fi
  config_suffix='ofp'
  script_suffix='_ofp'
 elif [ "$PRESET" = 'OBCX' ]; then
  if [ "$MEMBERS" = "mdet" ];then
-   NODE=`expr \( $NMEM  \) \* 64` ### D2
+   NNODES=`expr \( $NMEM  \) \* 64` ### D2
  else
-   NODE=`expr \( $NMEM + 2 \) \* 64` ### D2
-    while [ $NNODES > 256 ] ;do
+   NNODES=`expr \( $NMEM + 2 \) \* 64` ### D2
+    while [ $NNODES -gt 256 ] ;do
       NNODES=`expr $NNODES \/ 2`
     done
   fi
@@ -115,7 +115,7 @@ cat config/${CONFIG}/config.${SCPNAME} | \
 
 cat config.main.${config_suffix} | \
    sed -e "s/<MEMBER>/${NMEM}/g" | \
-   sed -e "s/<NNODES>/${NODE}/g" | \
+   sed -e "s/<NNODES>/${NNODES}/g" | \
    sed -e "s/<STIME>/${STIME}/g" | \
    sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g" \
  > config.main

@@ -54,7 +54,7 @@ elif [ "$PRESET" = "OBCX" ]; then
     NNODES=8
   else
     NNODES=`\( $MEMBER + 2 \) * 8`
-    while [ $NNODES > 256 ] ;do
+    while [ $NNODES -gt 256 ] ;do
       NNODES=`expr $NNODES \/ 2`
     done
    fi
