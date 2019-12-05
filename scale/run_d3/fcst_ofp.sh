@@ -156,7 +156,7 @@ NPIN=`expr 255 / \( $PPN \) + 1`
 
 cat > $jobscrp << EOF
 #!/bin/sh -l
-#PJM -L rscgrp=regular-cache
+#PJM -L rscgrp=regular-flat
 #PJM -L node=${NNODES}
 #PJM -L elapse=${TIME_LIMIT}
 #PJM --mpi "proc=$((NNODES*PPN))"
