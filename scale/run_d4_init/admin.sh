@@ -34,7 +34,7 @@ NMEM="$1"
 SCPNAME=fcst
 ETIME="$STIME"
 
-NODE=`expr \( $NMEM  + 2 \) \* 64` ### D4 250m 
+#NODE=`expr \( $NMEM  + 2 \) \* 64` ### D4 250m 
 NODE=`expr \( $NMEM  + 2 \) ` ### D4 1km 
 ###WTIME_L="00:20:00"
 
@@ -43,8 +43,23 @@ PRESET='OFP'
 
 #-------------------------------------------------------------------------------
 
+if [ "$PRESET" = 'OFP' ]; then
+ NODE=`expr \( $NMEM + 2 \) ` ### D4 1km
+# NODE=`expr \( $NMEM + 2 \) \* 64` ### D4 250m
+    while [ $NNODES > 2048 ] ;do
+      NNODES=`expr $NNODES \/ 2`
+    done
  config_suffix='ofp'
  script_suffix='_ofp'
+elif [ "$PRESET" = 'OBCX' ]; then
+ NODE=`expr \( $NMEM + 2 \) \* 4` ### D4 1km
+    while [ $NNODES > 256 ] ;do
+      NNODES=`expr $NNODES \/ 2`
+    done
+ config_suffix='obcx'
+ script_suffix='_obcx'
+fi
+
 
 if [ "$SCPNAME" = 'cycle' ]; then
   DATA_BDY_WRF="ncepgfs_wrf_da"
@@ -65,7 +80,7 @@ while [ $ntry -le 3 ] ;do
 iwait=1
 while [ $iwait == 1 ];do
 iwait=0
-running_jobs=`ls -x fcst_ofp.stat.*`
+running_jobs=`ls -x fcst${script_suffix}.stat.*`
 if [ "$running_jobs" != "" ];then
 for statfile in $running_jobs ;do
 if [ `cat $statfile` == "prep" ] ;then
@@ -92,14 +107,14 @@ cat config/${CONFIG}/config.${SCPNAME} | \
     sed -e "s/<FCSTLEN>/${FCSTLEN}/g" \
     > config.${SCPNAME}
 
-cat config.main.ofp | \
+cat config.main.${config_suffix} | \
    sed -e "s/<MEMBER>/${NMEM}/g" | \
    sed -e "s/<NNODES>/${NODE}/g" | \
    sed -e "s/<STIME>/${STIME}/g" | \
    sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g" | \
    sed -e "s/<PARENT_REF_TIME_D2>/${PARENT_REF_TIME_D2}/g" \
  > config.main
-rm config.main.ofp
+rm config.main.${config_suffix}
 
 
 . config.main || exit $?

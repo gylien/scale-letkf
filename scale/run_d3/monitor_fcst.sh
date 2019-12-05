@@ -7,6 +7,7 @@ logfile=$OUTPUT/d3/ref_${PARENT_REF_TIME}/$STIME/log/fcst_scale/mdet_LOG.pe00000
 
 
 stat=`cat fcst_ofp.stat.$PARENT_REF_TIME.$STIME`
+#stat=`cat fcst_obcx.stat.$PARENT_REF_TIME.$STIME`
 
 if [ `echo $stat| awk '{print $1}'` == "submit" ] ;then
  jobid=`echo $stat | awk '{print $2}'`

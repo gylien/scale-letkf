@@ -29,20 +29,35 @@ if [ $MEMBER == 'mdet' ] ;then
   NNODES=3
 else
   MEMBERS='all'
-  NNODES=`\( $MEMBER + 2 \) * 3`
 fi
 
 #-------------------------------------------------------------------------------
 
-if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
-  config_suffix='K'
-  script_suffix='_K'
-elif [ "$PRESET" = 'K_micro' ]; then
-  config_suffix='K'
-  script_suffix='_K_micro'
-elif [ "$PRESET" = "OFP" ]; then
+#if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
+#  config_suffix='K'
+#  script_suffix='_K'
+#elif [ "$PRESET" = 'K_micro' ]; then
+#  config_suffix='K'
+#  script_suffix='_K_micro'
+if [ "$PRESET" = "OFP" ]; then
   config_suffix='ofp'
   script_suffix='_ofp'
+  if [ $MEMBERS='mdet' ];then
+    NNODES=3
+  else
+    NNODES=`\( $MEMBER + 2 \) * 3`
+  fi
+elif [ "$PRESET" = "OBCX" ]; then
+  config_suffix='obcx'
+  script_suffix='_obcx'
+  if [ $MEMBERS='mdet' ];then
+    NNODES=8
+  else
+    NNODES=`\( $MEMBER + 2 \) * 8`
+    while [ $NNODES > 256 ] ;do
+      NNODES=`expr $NNODES \/ 2`
+    done
+   fi
 else
   echo "[Error] Unsupported \$PRESET" >&2
   exit 1
@@ -63,7 +78,7 @@ fi
 iwait=1
 while [ $iwait == 1 ];do
 iwait=0
-running_jobs=`ls -x fcst_ofp.stat.*`
+running_jobs=`ls -x fcst${script_suffix}.stat.*`
 if [ "$running_jobs" != "" ];then
 for statfile in $running_jobs ;do
 if [ `cat $statfile` == "prep" ] ;then
@@ -129,7 +144,7 @@ fi
 
 #-------------------------------------------------------------------------------
 
-if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro' ] || [ "$PRESET" = "OFP" ]; then
+#if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro' ] || [ "$PRESET" = "OFP" ]; then
   jobname="${SCPNAME}_${SYSNAME}"
   jobid=$(grep 'pjsub Job' ${SCPNAME}${script_suffix}.log.${STIME} | cut -d ' ' -f6)
   logdir="$OUTDIR/exp/${jobid}_${SCPNAME}_${STIME}"
@@ -139,7 +154,7 @@ if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro'
 #  stdout="${jobname}.o${jobid}"
 #  stderr="${jobname}.e${jobid}"
 #  jobinfo="${jobname}.i${jobid}"
-fi
+#fi
 
 #if [ ! -e "$stdout" ] || [ ! -e "$stderr" ]; then
 #  exit 101
@@ -150,7 +165,7 @@ fi
 
 #-------------------------------------------------------------------------------
 cd post
-./post.sh ${STIME} &> post.log.${STIME}
+./post${script_suffix}.sh ${STIME} &> post.log.${STIME}
 cd -
 #-------------------------------------------------------------------------------
 

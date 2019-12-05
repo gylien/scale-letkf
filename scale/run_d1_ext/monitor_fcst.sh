@@ -5,6 +5,7 @@ STIME=$1
 logfile=${TMPDIR}_$STIME/out/$STIME/log/fcst_scale/mdet_LOG.pe000000
 
 stat=`cat fcst_ofp.stat.$STIME`
+#stat=`cat fcst_obcx.stat.$STIME`
 
 if [ `echo $stat| awk '{print $1}'` == "submit" ] ;then
  jobid=`echo $stat | awk '{print $2}'` 

@@ -40,17 +40,31 @@ else
  MEMBERS='all'
 fi
 
-NODE=`expr \( $NMEM  + 2 \) \* 16` ### D3 1024 domain 
-###NODE=`expr \( $NMEM  + 2 \)` ### 64 domain 
-###WTIME_L="01:20:00"
-
 CONFIG='realtime_fcst_D3'
 PRESET='OFP'
 
 #-------------------------------------------------------------------------------
 
+if [ "$PRESET" = 'OFP' ]; then
+ if [ "$MEMBERS" = "mdet" ];then
+   NODE=`expr \( $NMEM  \) \* 16` ### D2
+ else
+   NODE=`expr \( $NMEM + 2 \) \* 16` ### D2
+ fi
  config_suffix='ofp'
  script_suffix='_ofp'
+elif [ "$PRESET" = 'OBCX' ]; then
+ if [ "$MEMBERS" = "mdet" ];then
+   NODE=`expr \( $NMEM  \) \* 64` ### D2
+ else
+   NODE=`expr \( $NMEM + 2 \) \* 64` ### D2
+    while [ $NNODES > 256 ] ;do
+      NNODES=`expr $NNODES \/ 2`
+    done
+  fi
+ config_suffix='obcx'
+ script_suffix='_obcx'
+fi
 
 ntry=1
 while [ $ntry -le 3 ] ;do
@@ -71,7 +85,7 @@ fi
 iwait=1
 while [ $iwait == 1 ];do
 iwait=0
-running_jobs=`ls -x fcst_ofp.stat.* 2>/dev/null`
+running_jobs=`ls -x fcst${script_suffix}.stat.* 2>/dev/null`
 if [ ! -z "$running_jobs" ];then
 for statfile in $running_jobs ;do
 if [ "`cat $statfile`" == "prep" ] ;then
@@ -99,13 +113,13 @@ cat config/${CONFIG}/config.${SCPNAME} | \
     sed -e "s/<FCSTLEN>/${FCSTLEN}/g" \
     > config.${SCPNAME}
 
-cat config.main.ofp | \
+cat config.main.${config_suffix} | \
    sed -e "s/<MEMBER>/${NMEM}/g" | \
    sed -e "s/<NNODES>/${NODE}/g" | \
    sed -e "s/<STIME>/${STIME}/g" | \
    sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g" \
  > config.main
-rm config.main.ofp
+rm config.main.${config_suffix}
 
 ### NCDF file merge
 cat config/${CONFIG}/sno_bulk.sh | \

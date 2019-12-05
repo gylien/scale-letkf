@@ -7,6 +7,7 @@ STIME=$1
 logfile=$OUTPUT/d2/$STIME/log/0001_LOG_${STIME}.pe000000
 
 stat=`cat fcst_ofp.stat.$STIME`
+#stat=`cat fcst_obcx.stat.$STIME`
 if [ `echo $stat| awk '{print $1}'` == "submit" ] ;then
  jobid=`echo $stat | awk '{print $2}'`
  wait=`pjstat | grep $jobid | cut -c 64-76`

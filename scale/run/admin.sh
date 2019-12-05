@@ -38,6 +38,9 @@ if [ "$PRESET" = "OFP" ]; then
   script_suffix='_ofp'
 elif [ "$PRESET" = "OBCX" ]; then
   NNODES=`expr \( $MEMBER + 2 \) \* 8`
+  while [ $NNODES > 256 ] ;do
+   NNODES=`expr $NNODES \/ 2`
+  done
   config_suffix='obcx'
   script_suffix='_obcx'
 else
@@ -46,11 +49,6 @@ else
 fi
 
 #-------------------------------------------------------------------------------
-  while [ $NNODES > 256 ] ;do
-   NNODES=`expr $NNODES \/ 2`
-  done
-#-------------------------------------------------------------------------------
- 
 
 if [ "$SCPNAME" = 'cycle' ]; then
   DATA_BDY_WRF="ncepgfs_wrf_da"

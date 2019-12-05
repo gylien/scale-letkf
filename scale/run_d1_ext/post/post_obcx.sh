@@ -9,24 +9,21 @@ POSTDIR=`cd $mydir ; pwd`
 
 cd $POSTDIR/..
 
-#STIME=20191104120000
 STIME=$1
-
 
 . config.main || exit $?
 . src/func_util.sh || exit $?
 
-RUNDIR="${TMP}/../sno_grads_d2_${STIME}"
-
-# Which domain do you want to convert?
-DOM=2 ### fixed
-
-OUTDIR=${OUTDIR[${DOM}]}
+RUNDIR="${TMP}/../sno_grads_${STIME}"
+OUTDIR=${OUTDIR[1]}
 
 cd $POSTDIR
 
-FCSTLEN=86400
+FCSTLEN=432000
 PPN=64 # Process per node
+
+# Which domain do you want to convert?
+DOM=1
 
 # Output file (X & Y process number) for each member
 NP_OFILE_X=1
@@ -45,8 +42,7 @@ SNO_MEM_L="mdet"
 NP_TOTAL=$((${SNO_MEMBERS} * ${NP_OFILE}))
 
 # Convert variables (Other variables will NOT be included in converted files)
-#VARS='"Uprs", "Vprs", "Wprs", "Gprs", "Tprs", "RHprs" , "QVprs", "QHYDprs", "PREC", "MSLP", "SFC_TEMP","U10", "V10", "T2"'
-VARS='"Uprs", "Vprs", "Gprs", "Tprs" , "QVprs", "QHYDprs", "PREC", "MSLP", "SFC_TEMP","U10", "V10", "T2"'
+VARS='"Uprs", "Vprs", "Wprs", "Gprs", "Tprs", "RHprs" , "QVprs", "QHYDprs", "PREC", "MSLP", "SFC_TEMP","U10", "V10", "T2"'
 
 TOPO=0 # Process topography file? # 1: Yes, 0: No
 if (( TOPO > 0 )) ; then
@@ -64,7 +60,7 @@ fi
 ###############################
 
 # Path for SNO binary
-SNOBIN_ORG=/work/hp150019/share/SCALE-LETKF-rt/scale_develop/bin/sno
+SNOBIN_ORG=${SCALEDIR}/../scale_develop/bin/sno
 SNOBIN=${RUNDIR}/sno
 if [ ! -e ${SNOBIN_ORG} ] ; then
   echo "No SNO binary!"
@@ -128,6 +124,17 @@ cat << EOF >> $conf
  dirpath_out="grads/${mem}",
 /
 
+&PARAM_SNOPLGIN_HGRIDOPE
+! SNOPLGIN_hgridope_type="LATLON",
+! SNOPLGIN_hgridope_lat_start = 12.0,
+! SNOPLGIN_hgridope_lat_end = 54.0,
+! SNOPLGIN_hgridope_dlat = 0.5,
+! SNOPLGIN_hgridope_lon_start = 96.0,
+! SNOPLGIN_hgridope_lon_end = 174.0,
+! SNOPLGIN_hgridope_dlon = 0.5,
+/
+
+
 
 EOF
 
@@ -141,7 +148,7 @@ jobsh="${RUNDIR}/job_sno.sh"
 
 cat << EOF >> $jobsh
 #!/bin/sh
-#PJM -L rscgrp=regular-flat
+#PJM -L rscgrp=regular
 #PJM -L node=${SNO_NODE}
 #PJM -L elapse="00:30:00"
 #PJM --mpi proc=${NP_TOTAL}
@@ -154,21 +161,21 @@ for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
     echo "\$inode" >> machinefile
   done
 done
-module load hdf5/1.8.17
-module load netcdf/4.4.1
-module load netcdf-fortran/4.4.3
+module load hdf5/1.10.5
+module load netcdf/4.7.0
+module load netcdf-fortran/4.4.5
 
 export FORT_FMT_RECL=400
 
 export HFI_NO_CPUAFFINITY=1
-export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
-export I_MPI_HBW_POLICY=hbw_preferred,,
-export I_MPI_FABRICS_LIST=tmi
+#export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
+#export I_MPI_HBW_POLICY=hbw_preferred,,
+#export I_MPI_FABRICS_LIST=tmi
 unset KMP_AFFINITY
 
 export OMP_NUM_THREADS=1
-export I_MPI_PIN_DOMAIN=${NPIN}
-export I_MPI_PERHOST=${PPN}
+#export I_MPI_PIN_DOMAIN=${NPIN}
+#export I_MPI_PERHOST=${PPN}
 export KMP_HW_SUBSET=1t
 
 
@@ -186,14 +193,9 @@ cd ${RUNDIR}
 pjsub --bulk --sparam 1-${cnt} job_sno.sh 
 cd $POSTDIR
 
-
-
 jobid=$(grep 'pjsub Job' post.log.${STIME} | cut -d ' ' -f6)
 job_end_check_PJM $jobid
 res=$?
-
-echo 'stop here.'
-exit 
 
 
 STIMEf="${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:0:2}"
@@ -219,11 +221,10 @@ if [ -f plot.lock ] ;then
 else
  echo $STIME > plot.lock 
  [ ! -z "`ls out/`" ] && rm out/*
- grads -bcl "plot_driver_d2_1h.gs $OUTDIR/$STIME/fcstgp/$mem/history.ctl 1 25 1" &> plot_driver_1h.log 
+ grads -bcl "plot_driver_6h.gs $OUTDIR/$STIME/fcstgp/$mem/history.ctl 1 21 1" &> plot_driver_6h.log 
  mkdir -p $OUTDIR/$STIME/fcstgpi/$mem 
  mv out/*.png $OUTDIR/$STIME/fcstgpi/$mem/
  rm plot.lock
 fi
 cd $POSTDIR
-
-
+echo 'completed.'

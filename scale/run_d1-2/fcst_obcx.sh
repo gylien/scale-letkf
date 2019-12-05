@@ -1,18 +1,18 @@
 #!/bin/bash
 #===============================================================================
 #
-#  Wrap cycle.sh in an OFP job script and run it.
+#  Wrap fcst.sh in a OFP job script and run it.
 #
 #-------------------------------------------------------------------------------
 #
 #  Usage:
-#    cycle_obcx.sh [..]
+#    fcst_obcx.sh [..]
 #
 #===============================================================================
 
 cd "$(dirname "$0")"
 myname="$(basename "$0")"
-job='cycle'
+job='fcst'
 
 #===============================================================================
 # Configuration
@@ -37,8 +37,14 @@ setting "$@" || exit $?
 
 if [ "$CONF_MODE" = 'static' ]; then
   . src/func_common_static.sh || exit $?
-  . src/func_${job}_static.sh || exit $?
+
+  if ((NRT_FCST == 1)); then
+    . src/func_${job}_static_NRT_online.sh || exit $?
+  else
+    . src/func_${job}_static.sh || exit $?
+  fi
 fi
+
 
 echo
 print_setting || exit $?
@@ -48,7 +54,7 @@ echo
 # Create and clean the temporary directory
 
 echo "[$(datetime_now)] Create and clean the temporary directory"
-
+ 
 #if [ -e "${TMP}" ]; then
 #  echo "[Error] $0: \$TMP will be completely removed." >&2
 #  echo "        \$TMP = '$TMP'" >&2
@@ -70,11 +76,11 @@ declare -a proc2group
 declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR || exit $?
-if ((IO_ARB == 1)); then                              ##
-  distribute_da_cycle_set - $NODEFILE_DIR || exit $?  ##
-else                                                  ##
-  distribute_da_cycle - $NODEFILE_DIR || exit $?
-fi                                                    ##
+distribute_fcst "$MEMBERS" $CYCLE - $NODEFILE_DIR || exit $?
+
+if ((CYCLE == 0)); then
+  CYCLE=$cycle_auto
+fi
 
 #===============================================================================
 # Determine the staging list
@@ -86,6 +92,7 @@ cat $SCRP_DIR/config.main | \
     > $TMP/config.main
 
 echo "SCRP_DIR=\"\$TMPROOT\"" >> $TMP/config.main
+echo "NODEFILE_DIR=\"\$TMPROOT/node\"" >> $TMPS/config.main
 echo "RUN_LEVEL=4" >> $TMP/config.main
 
 echo "PARENT_REF_TIME=$PARENT_REF_TIME" >> $TMP/config.main
@@ -106,19 +113,12 @@ ${SCRP_DIR}/config.rc|config.rc
 ${SCRP_DIR}/config.${job}|config.${job}
 ${SCRP_DIR}/${job}.sh|${job}.sh
 ${SCRP_DIR}/src/|src/
+${NODEFILE_DIR}/|node/
 EOF
 
 if [ "$CONF_MODE" != 'static' ]; then
   echo "${SCRP_DIR}/${job}_step.sh|${job}_step.sh" >> ${STAGING_DIR}/${STGINLIST}
 fi
-
-#===============================================================================
-
-if ((IO_ARB == 1)); then                                              ##
-  echo "${SCRP_DIR}/sleep.sh|sleep.sh" >> ${STAGING_DIR}/${STGINLIST} ##
-  NNODES=$((NNODES*2))                                                ##
-  NNODES_APPAR=$((NNODES_APPAR*2))                                    ##
-fi                                                                    ##
 
 #===============================================================================
 # Stage in
@@ -130,53 +130,51 @@ stage_in server || exit $?
 #===============================================================================
 # Creat a job script
 
+NPIN=`expr 255 / \( $PPN \) + 1`
 jobscrp="$TMP/${job}_job.sh"
 
 echo "[$(datetime_now)] Create a job script '$jobscrp'"
 
-NPIN=`expr 255 / \( $PPN \) + 1`
-
 cat > $jobscrp << EOF
-#!/bin/sh -l
+#!/bin/sh
 #PJM -L rscgrp=regular
 #PJM -L node=${NNODES}
 #PJM -L elapse=${TIME_LIMIT}
 #PJM --mpi proc=$((NNODES*PPN))
 ##PJM --mpi proc=${totalnp}
 #PJM --omp thread=${THREADS}
-#PJM -g ${GNAME}
+#PJM -g $(echo $(id -ng))
 ##PJM -j
-
 rm -f machinefile
 for inode in \$(cat \$I_MPI_HYDRA_HOST_FILE); do
   for ippn in \$(seq $PPN); do
     echo "\$inode" >> machinefile
   done
 done
-
 module load hdf5/1.10.5
 module load netcdf/4.7.0
 module load netcdf-fortran/4.4.5
 
-ulimit -s unlimited
-
-#export OMP_STACKSIZE=128m
-export OMP_NUM_THREADS=1
-
-#export I_MPI_PIN_PROCESSER_EXCLUDE_LIST=0,1,68,69,136,137,204,205
-#export I_MPI_HBW_PJOLICY=hbw_preferred,,
-#export I_MPI_FABRICS_LIST=tmi
-
-#export I_MPI_PERHOST=${PPN}
-#export I_MPI_PIN_DOMAIN=${NPIN}
-
-export KMP_HW_SUBSET=1t
+export FORT_FMT_RECL=400
 
 export HFI_NO_CPUAFFINITY=1
+#export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
+#export I_MPI_HBW_POLICY=hbw_preferred,,
+#export I_MPI_FABRICS_LIST=tmi
 unset KMP_AFFINITY
+#export KMP_AFFINITY=verbose
+#export I_MPI_DEBUG=5
+
+export OMP_NUM_THREADS=1
+#export I_MPI_PIN_DOMAIN=${NPIN}
+#export I_MPI_PERHOST=${PPN}
+export KMP_HW_SUBSET=1t
 
 
-./${job}.sh "$STIME" "$ETIME" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
+#export OMP_STACKSIZE=128m
+ulimit -s unlimited
+
+./${job}.sh "$STIME" "$ETIME" "$MEMBERS" "$CYCLE" "$CYCLE_SKIP" "$IF_VERF" "$IF_EFSO" "$ISTEP" "$FSTEP" "$CONF_MODE" || exit \$?
 EOF
 
 #===============================================================================
@@ -185,15 +183,17 @@ EOF
 echo "[$(datetime_now)] Run ${job} job on PJM"
 echo
 
-echo 'submit' > $statfile
-
 job_submit_PJM $jobscrp
+
+jobid=$(grep 'pjsub Job' fcst_obcx.log.${STIME} | cut -d ' ' -f6)
+echo "submit" $jobid > $statfile
 echo
+
 
 job_end_check_PJM $jobid
 res=$?
 
-echo 'plot' > $statfile
+echo "plot" > $statfile
 
 #===============================================================================
 # Stage out
@@ -210,9 +210,9 @@ echo
 
 backup_exp_setting $job $TMP $jobid ${job}_job.sh 'o e'
 
-if [ "$CONF_MODE" = 'static' ]; then
-  config_file_save $TMPS/config || exit $?
-fi
+###if [ "$CONF_MODE" = 'static' ]; then
+###  config_file_save $TMPS/config || exit $?
+###fi
 
 archive_log
 

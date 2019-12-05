@@ -27,23 +27,35 @@ ETIME="$STIME"
 if [ $NMEM == 'mdet' ];then
  MEMBERS='mean mdet'
  NMEM=2
- NODE=`expr \( $NMEM  \) \* 7` ### D2
 else
  MEMBERS='all'
- NODE=`expr \( $NMEM  + 2 \) \* 7` ### D2
 fi
 
-###NODE=`expr \( $NMEM  + 2 \) \* 11` ### D3
-
-
-#
 CONFIG='online_NRT_5.3.X'
 PRESET='OFP'
 
 #-------------------------------------------------------------------------------
 
+if [ "$PRESET" = 'OFP' ]; then
+ if [ "$MEMBERS" = "mean mdet" ];then
+   NODE=`expr \( $NMEM  \) \* 7` ### D2
+ else
+   NODE=`expr \( $NMEM + 2 \) \* 7` ### D2
+ fi
  config_suffix='ofp'
  script_suffix='_ofp'
+elif [ "$PRESET" = 'OBCX' ]; then
+ if [ "$MEMBERS" = "mean mdet" ];then
+   NODE=`expr \( $NMEM  \) \* 16` ### D2
+ else
+   NODE=`expr \( $NMEM + 2 \) \* 16` ### D2
+    while [ $NNODES > 256 ] ;do
+      NNODES=`expr $NNODES \/ 2`
+    done
+  fi
+ config_suffix='obcx'
+ script_suffix='_obcx'
+fi
 
 if [ "$SCPNAME" = 'cycle' ]; then
   DATA_BDY_WRF="ncepgfs_wrf_da"
@@ -60,7 +72,7 @@ fi
 iwait=1
 while [ $iwait == 1 ];do
 iwait=0
-running_jobs=`ls -x fcst_ofp.stat.*`
+running_jobs=`ls -x fcst${config_suffix}.stat.*`
 if [ "$running_jobs" != "" ];then
 for statfile in $running_jobs ;do
 if [ `cat $statfile` == "prep" ] ;then
@@ -121,7 +133,7 @@ rm config.main.ofp
 
 #-------------------------------------------------------------------------------
 cd post
-./post.sh ${STIME} &> post.log.${STIME}
+./post${script_suffix}.sh ${STIME} &> post.log.${STIME}
 cd -
 ##-------------------------------------------------------------------------------
 
