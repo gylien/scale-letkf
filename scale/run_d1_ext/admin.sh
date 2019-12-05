@@ -5,34 +5,25 @@ cd "$(dirname "$0")"
 
 #-------------------------------------------------------------------------------
 
-if (($# < 7)); then
+if (($# < 3)); then
   echo "$0: Insufficient arguments" >&2
   exit 1
 fi
 
-SCPNAME="$1"; shift
+#SCPNAME="$1"; shift
+SCPNAME=fcst
 STIME="$1"; shift
-ETIME="$1"; shift
-TIME_DT="$1"; shift
-TIME_DT_DYN="$1"; shift
-NNODES="$1"; shift
-WTIME_L="$1"
+WTIME_L="$1"; shift
+MEMBER="$1"
 
-#SCPNAME=fcst
-#STIME=20190626060000
-#ETIME=-
-#TIME_DT=40.0
-#TIME_DT_DYN=8.0
-#NNODES=3
-#WTIME_L=00:30:00
+ETIME="$STIME"
+TIME_DT=40.0D0
+TIME_DT_DYN=8.0D0
 
-
-if [ "$ETIME" = '-' ]; then
-  ETIME="$STIME"
-fi
-
-CONFIG='realtime_r0051_d1'
+CONFIG='realtime_ope_d1'
 PRESET='OFP'
+
+NNODES=`expr \( $MEMBER + 2 \) \* 3`
 
 #-------------------------------------------------------------------------------
 
@@ -149,6 +140,10 @@ fi
 #  exit 102
 #fi
 
+#-------------------------------------------------------------------------------
+cd post
+./post.sh ${STIME} &> post.log.${STIME}
+cd -
 #-------------------------------------------------------------------------------
 
 rm -f ${SCPNAME}_job.sh
