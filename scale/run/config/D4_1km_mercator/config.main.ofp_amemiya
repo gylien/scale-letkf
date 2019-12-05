@@ -14,9 +14,9 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 
 OUTPUT="/work/hp150019/share/SCALE-LETKF-rt/result/ope"
-EXP4=exp_d4_mer_1km
-EXP3=exp_d3_mer
-EXP2=exp_d2
+EXP4=d4_1km_mer
+EXP3=d3_mer
+EXP2=d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
 
