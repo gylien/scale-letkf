@@ -11,8 +11,7 @@ scale/configure.user
 scale/common/datetime
 scale/common/pdbash
 scale/run*/config.main
-scale/run*/config.main.K
-scale/run*/config.main.ofp
+scale/run*/config.main*
 scale/run*/config.cycle
 scale/run*/config.fcst
 scale/run*/config.nml.ensmodel

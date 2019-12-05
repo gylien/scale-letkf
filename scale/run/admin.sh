@@ -24,24 +24,33 @@ CONFIG='realtime_ope_d1'
 PRESET='OFP'
 
 
-
-NNODES=`expr \( $MEMBER + 2 \) \* 3`
-
 #-------------------------------------------------------------------------------
 
-if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
-  config_suffix='K'
-  script_suffix='_K'
-elif [ "$PRESET" = 'K_micro' ]; then
-  config_suffix='K'
-  script_suffix='_K_micro'
-elif [ "$PRESET" = "OFP" ]; then
+#if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ]; then
+#  config_suffix='K'
+#  script_suffix='_K'
+#elif [ "$PRESET" = 'K_micro' ]; then
+#  config_suffix='K'
+#  script_suffix='_K_micro'
+if [ "$PRESET" = "OFP" ]; then
+  NNODES=`expr \( $MEMBER + 2 \) \* 3`
   config_suffix='ofp'
   script_suffix='_ofp'
+elif [ "$PRESET" = "OBCX" ]; then
+  NNODES=`expr \( $MEMBER + 2 \) \* 8`
+  config_suffix='obcx'
+  script_suffix='_obcx'
 else
   echo "[Error] Unsupported \$PRESET" >&2
   exit 1
 fi
+
+#-------------------------------------------------------------------------------
+  while [ $NNODES > 256 ] ;do
+   NNODES=`expr $NNODES \/ 2`
+  done
+#-------------------------------------------------------------------------------
+ 
 
 if [ "$SCPNAME" = 'cycle' ]; then
   DATA_BDY_WRF="ncepgfs_wrf_da"
@@ -105,7 +114,7 @@ fi
 
 #-------------------------------------------------------------------------------
 
-if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro' ] || [ "$PRESET" = "OFP" ]; then
+#if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro' ] || [ "$PRESET" = "OFP" ]; then
   jobname="${SCPNAME}_${SYSNAME}"
   jobid=$(grep 'pjsub Job' ${SCPNAME}${script_suffix}.log | cut -d ' ' -f6)
   logdir="$OUTDIR/exp/${jobid}_${SCPNAME}_${STIME}"
@@ -115,7 +124,7 @@ if [ "$PRESET" = 'K' ] || [ "$PRESET" = 'K_rankdir' ] || [ "$PRESET" = 'K_micro'
 #  stdout="${jobname}.o${jobid}"
 #  stderr="${jobname}.e${jobid}"
 #  jobinfo="${jobname}.i${jobid}"
-fi
+#fi
 
 if [ ! -e "$stdout" ] || [ ! -e "$stderr" ]; then
   exit 101
