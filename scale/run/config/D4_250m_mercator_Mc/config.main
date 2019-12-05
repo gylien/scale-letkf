@@ -8,7 +8,7 @@
 PRESET='OFP' 
 
 RSCGRP="regular-cache"
-RSCGRP="regular-flat"
+#RSCGRP="regular-flat"
 
 #===============================================================================
 
@@ -21,7 +21,7 @@ EXP2=exp_d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
 # Input data # do not modify
-INDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_250m_mer_large"
+INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_250m20191128"
 
 #===============================================================================
 # Location of model/data files
