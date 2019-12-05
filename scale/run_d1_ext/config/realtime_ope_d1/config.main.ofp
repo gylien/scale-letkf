@@ -9,7 +9,7 @@ PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
 #PRESET='K_rankdir' 
 #PRESET='K_micro' 
 
-EXPNAME=r0051
+EXPNAME=ope
 EXPDOMAIN=1
 
 GNAME=$(id -ng)
@@ -23,8 +23,8 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 TOPDIR="$SCALEDIR/.."
 
-INDIR="${TOPDIR}/${EXPNAME}/exp_d${EXPDOMAIN}" # Directory for SCALE-LETKF input
-OUTDIR="${TOPDIR}/${EXPNAME}/exp_d${EXPDOMAIN}" # Directory for SCALE-LETKF output
+INDIR="${TOPDIR}/result/${EXPNAME}/d${EXPDOMAIN}" # Directory for SCALE-LETKF input
+OUTDIR="${TOPDIR}/result/${EXPNAME}/d${EXPDOMAIN}" # Directory for SCALE-LETKF output
 
 #===============================================================================
 # Location of model/data files
@@ -110,8 +110,7 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=50          # Ensemble size
-#MEMBER=1          # Ensemble size
+MEMBER=<MEMBER>          # Ensemble size
 
 NNODES=<NNODES>    # Number of nodes
 
@@ -119,7 +118,6 @@ PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
-###SCALE_NP=48        # Number of processes to run SCALE
 SCALE_NP=192        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions

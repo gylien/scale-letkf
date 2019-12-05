@@ -23,7 +23,14 @@ TIME_DT_DYN=8.0D0
 CONFIG='realtime_ope_d1'
 PRESET='OFP'
 
-NNODES=`expr \( $MEMBER + 2 \) \* 3`
+if [ $MEMBER == 'mdet' ] ;then
+  MEMBERS='mdet'
+  MEMBER=1
+  NNODES=3
+else
+  MEMBERS='all'
+  NNODES=`\( $MEMBER + 2 \) * 3`
+fi
 
 #-------------------------------------------------------------------------------
 
@@ -78,6 +85,7 @@ cat config/${CONFIG}/config.main.${config_suffix} | \
     sed -e "s/<DATA_BDY_WRF>/${DATA_BDY_WRF}/g" | \
     sed -e "s/<DATA_BDY_GRADS>/${DATA_BDY_GRADS}/g" | \
     sed -e "s/<NNODES>/${NNODES}/g" | \
+    sed -e "s/<MEMBER>/${MEMBER}/g" | \
     sed -e "s/<STIME>/${STIME}/g" \
     > config.main
 
