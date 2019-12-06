@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 . config.main || exit $?
 PARENT_REF_TIME=$1
