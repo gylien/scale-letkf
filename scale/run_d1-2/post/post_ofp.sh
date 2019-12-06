@@ -45,8 +45,8 @@ SNO_MEM_L="mdet"
 NP_TOTAL=$((${SNO_MEMBERS} * ${NP_OFILE}))
 
 # Convert variables (Other variables will NOT be included in converted files)
-#VARS='"Uprs", "Vprs", "Wprs", "Gprs", "Tprs", "RHprs" , "QVprs", "QHYDprs", "PREC", "MSLP", "SFC_TEMP","U10", "V10", "T2"'
-VARS='"Uprs", "Vprs", "Gprs", "Tprs" , "QVprs", "QHYDprs", "PREC", "MSLP", "SFC_TEMP","U10", "V10", "T2"'
+VARS='"Uprs", "Vprs", "Wprs", "Gprs", "Tprs", "RHprs" , "QVprs", "QHYDprs", "PREC", "MSLP", "SFC_TEMP","U10", "V10", "T2"'
+#VARS='"Uprs", "Vprs", "Gprs", "Tprs" , "QVprs", "QHYDprs", "PREC", "MSLP", "SFC_TEMP","U10", "V10", "T2"'
 
 TOPO=0 # Process topography file? # 1: Yes, 0: No
 if (( TOPO > 0 )) ; then
