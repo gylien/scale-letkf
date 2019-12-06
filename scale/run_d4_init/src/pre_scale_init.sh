@@ -8,6 +8,10 @@
 
 . config.main
 
+###
+. src/func_datetime.sh
+###
+
 if (($# < 12)); then
   cat >&2 << EOF
 
@@ -80,7 +84,8 @@ fi
 if ((PNETCDF == 1)); then
   BASENAME_BOUNDARY="$TMPOUT/${STIME}/bdy/${MEM_BDY}.boundary"
 else
-  BASENAME_BOUNDARY="$OUTDIR/${STIME}/bdy/${MEM_BDY}/boundary"
+#  BASENAME_BOUNDARY="$OUTDIR/${STIME}/bdy/${MEM_BDY}/boundary"
+  BASENAME_BOUNDARY="$OUTDIR/bdy/${MEM_BDY}/boundary_$(datetime_scale $STIME)"
 fi
 
 if ((BDY_FORMAT == 1)); then
@@ -191,22 +196,22 @@ fi
 mkdir -p $TMPOUT/${STIME}/bdy
 if ((PNETCDF != 1)); then
   mkdir -p $TMPOUT/${STIME}/bdy/${MEM_BDY}
-  mkdir -p $OUTDIR/${STIME}/bdy/${MEM_BDY}
-  mkdir -p $OUTDIR/${STIME}/anal/${MEM_BDY}
-  mkdir -p $OUTDIR/${STIME}/log/fcst_scale_init
+  mkdir -p $OUTDIR/bdy/${MEM_BDY}
+  mkdir -p $OUTDIR/anal/${MEM_BDY}
+  mkdir -p $OUTDIR/log/${STIME}/fcst_scale_init
 fi
 
 #===============================================================================
 
 cat $TMPDAT/conf/config.nml.scale_init | \
-    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$OUTDIR/${STIME}/log/fcst_scale_init/${MEM}_LOG\"," \
+    sed -e "/!--IO_LOG_BASENAME--/a IO_LOG_BASENAME = \"$OUTDIR/log/${STIME}/fcst_scale_init/${MEM}_LOG\"," \
         -e "/!--FILE_AGGREGATE--/a FILE_AGGREGATE = ${FILE_AGGREGATE}," \
         -e "/!--TIME_STARTDATE--/a TIME_STARTDATE = $S_YYYY, $S_MM, $S_DD, $S_HH, $S_II, $S_SS," \
         -e "/!--RESTART_OUTPUT--/a RESTART_OUTPUT = $RESTART_OUTPUT," \
-        -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME =  \"${OUTDIR}/${STIME}/anal/${MEM}/init\"," \
+        -e "/!--RESTART_OUT_BASENAME--/a RESTART_OUT_BASENAME =  \"${OUTDIR}/anal/${MEM}/init\"," \
         -e "/!--RESTART_OUT_POSTFIX_TIMELABEL--/a RESTART_OUT_POSTFIX_TIMELABEL =  .true.," \
-        -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${INDIR}/const/topo/topo\"," \
-        -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${INDIR}/const/landuse/landuse\"," \
+        -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${DATA_TOPO}/const/topo/topo\"," \
+        -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${DATA_LANDUSE}/const/landuse/landuse\"," \
         -e "/!--LAND_PROPERTY_IN_FILENAME--/a LAND_PROPERTY_IN_FILENAME = \"${TMPDAT_CONSTDB}/land/param.bucket.conf\"," \
         -e "/!--BASENAME_BOUNDARY--/a BASENAME_BOUNDARY = \"${BASENAME_BOUNDARY}\"," \
         -e "/!--BASENAME_ORG--/a BASENAME_ORG = \"${BASENAME_ORG}\"," \
@@ -220,9 +225,6 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--OFFLINE_PARENT_PRC_NUM_X--/a OFFLINE_PARENT_PRC_NUM_X = ${DATA_BDY_SCALE_PRC_NUM_X}," \
         -e "/!--OFFLINE_PARENT_PRC_NUM_Y--/a OFFLINE_PARENT_PRC_NUM_Y = ${DATA_BDY_SCALE_PRC_NUM_Y}," \
     > $TMPDIR/init.conf
-
-#        -e "/!--TOPO_IN_BASENAME--/a TOPO_IN_BASENAME = \"${OUTDIR}/const/topo/topo\"," \
-#        -e "/!--LANDUSE_IN_BASENAME--/a LANDUSE_IN_BASENAME = \"${OUTDIR}/const/landuse/landuse\"," \
 
 if [ -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
   cat $TMPDAT/conf/config.nml.grads_boundary | \

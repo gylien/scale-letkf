@@ -147,15 +147,15 @@ if ((RUN_LEVEL == 0)); then
     exit 1
   fi
 
-  if ((MAKEINIT == 1)); then
-    if [ -d "${OUTDIR}/${STIME}/anal" ]; then
-      if [ -n "$(ls ${OUTDIR}/${STIME}/anal 2> /dev/null)" ]; then
-        echo "[Error] $myname: Initial ensemble is to be generated (\$MAKEINIT = 1) at \"${OUTDIR}/${STIME}/anal/\", but existing data are found there;" >&2
-        echo "        Set \$MAKEINIT = 0 or remove \"${OUTDIR}/${STIME}/anal/*\" before running this job." >&2
-        exit 1
-      fi
-    fi
-  fi
+#  if ((MAKEINIT == 1)); then
+#    if [ -d "${OUTDIR}/anal" ]; then
+#      if [ -n "$(ls ${OUTDIR}/anal 2> /dev/null)" ]; then
+#        echo "[Error] $myname: Initial ensemble is to be generated (\$MAKEINIT = 1) at \"${OUTDIR}/anal/\", but existing data are found there;" >&2
+#        echo "        Set \$MAKEINIT = 0 or remove \"${OUTDIR}/anal/*\" before running this job." >&2
+#        exit 1
+#      fi
+#    fi
+#  fi
 fi
 
 #... more detections...
@@ -561,45 +561,45 @@ while ((time <= ETIME)); do
       if ((LOG_OPT <= 2)); then
         if ((LOG_TYPE == 1)); then
           if ((c == 1)); then
-            path="${time2}/log/fcst_scale_pp/${name_m[1]}_pp.conf"
-            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-            path="${time2}/log/fcst_scale_pp/${name_m[1]}_LOG${SCALE_SFX_NONC_0}"
-            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-            path="${time2}/log/fcst_scale_pp/NOUT.${log_zeros}"
-            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-            path="${time2}/log/fcst_scale_init/${name_m[1]}_init.conf"
-            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-            path="${time2}/log/fcst_scale_init/${name_m[1]}_gradsbdy.conf"
-            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-            path="${time2}/log/fcst_scale_init/${name_m[1]}_LOG${SCALE_SFX_NONC_0}"
-            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+            path="fcst_scale_pp/${name_m[1]}_pp.conf"
+            echo "${OUTDIR}/log/${time2}/${path}|${OUT_SUBDIR}/${time2}/log/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+            path="fcst_scale_pp/${name_m[1]}_LOG${SCALE_SFX_NONC_0}"
+            echo "${OUTDIR}/log/$time2/${path}|${OUT_SUBDIR}/$time2/log/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+            path="fcst_scale_pp/NOUT.${log_zeros}"
+            echo "${OUTDIR}/log/$time2/${path}|${OUT_SUBDIR}/$time2/log/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+            path="fcst_scale_init/${name_m[1]}_init.conf"
+            echo "${OUTDIR}/log/$time2/${path}|${OUT_SUBDIR}/$time2/log/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+            path="fcst_scale_init/${name_m[1]}_gradsbdy.conf"
+            echo "${OUTDIR}/log/$time2/${path}|${OUT_SUBDIR}/$time2/log/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+            path="fcst_scale_init/${name_m[1]}_LOG${SCALE_SFX_NONC_0}"
+            echo "${OUTDIR}/log/$time2/${path}|${OUT_SUBDIR}/$time2/log/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
             if ((BDY_ENS == 1)); then
-              path="${time2}/log/fcst_scale_init/NOUT-1.${log_zeros}"
+              path="fcst_scale_init/NOUT-1.${log_zeros}"
             else
-              path="${time2}/log/fcst_scale_init/NOUT.${log_zeros}"
+              path="fcst_scale_init/NOUT.${log_zeros}"
             fi
-            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+            echo "${OUTDIR}/log/$time2/${path}|${OUT_SUBDIR}/$time2/log/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
           fi
         else
-          path="${time2}/log/fcst_scale_pp/"
-          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-          path="${time2}/log/fcst_scale_init/"
-          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+          path="fcst_scale_pp/"
+          echo "${OUTDIR}/log/$time2/${path}|${OUT_SUBDIR}/$time2/log/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+          path="fcst_scale_init/"
+          echo "${OUTDIR}/log/$time2/${path}|${OUT_SUBDIR}/$time2/log/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         fi
       fi
       if ((LOG_OPT <= 3)); then
         if ((LOG_TYPE == 1)); then
           if ((c == 1)); then
-            path="${time2}/log/fcst_scale/${name_m[1]}_run.conf"
-            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-            path="${time2}/log/fcst_scale/${name_m[1]}_LOG${SCALE_SFX_NONC_0}"
-            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
-            path="${time2}/log/fcst_scale/NOUT-1.${log_zeros}"
-            echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+            path="fcst_scale/${name_m[1]}_run.conf"
+            echo "${OUTDIR}/log/$time2/${path}|${OUT_SUBDIR}/$time2/log/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+            path="fcst_scale/${name_m[1]}_LOG${SCALE_SFX_NONC_0}"
+            echo "${OUTDIR}/log/$time2/${path}|${OUT_SUBDIR}/$time2/log/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
+            path="fcst_scale/NOUT-1.${log_zeros}"
+            echo "${OUTDIR}/log/$time2/${path}|${OUT_SUBDIR}/$time2/log/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}.1
           fi
         else
-          path="${time2}/log/fcst_scale/"
-          echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+          path="fcst_scale/"
+          echo "${OUTDIR}/log/$time2/${path}|${OUT_SUBDIR}/$time2/log/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
         fi
       fi
 
@@ -1046,6 +1046,8 @@ ensfcst_1 () {
 #echo "* Pre-processing scripts"
 #echo
 
+. src/datetime_scale.sh
+
 if ((MYRANK == 0)); then
   echo "[$(datetime_now)] ${time}: ${stepname[3]}: Pre-processing script start" >&2
 fi
@@ -1103,7 +1105,7 @@ for it in $(seq $its $ite); do
           fi
         fi
 
-        bdy_base="$OUTDIR/${stimes[$c]}/bdy/${mem_bdy}${CONNECTOR}boundary"
+        bdy_base="$OUTDIR/bdy/${mem_bdy}${CONNECTOR}boundary_$(datetime_scale ${stimes[$c]})"
 
         bdy_setting ${stimes[$c]} $FCSTLEN $BDYCYCLE_INT "$BDYINT" "$PARENT_REF_TIME" "$BDY_SINGLE_FILE"
 
@@ -1114,7 +1116,7 @@ for it in $(seq $its $ite); do
         fi
 
         bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
-             $OUTDIR/${stimes[$c]}/anal/${name_m[$m]}${CONNECTOR}init $ocean_base $land_base $bdy_base \
+             $OUTDIR/anal/${name_m[$m]}${CONNECTOR}init $ocean_base $land_base $bdy_base \
              $TMPOUT/const/${CONNECTOR_TOPO}topo $TMPOUT/${time_l}/${CONNECTOR_LANDUSE}landuse \
              ${stimes[$c]} $FCSTLEN $FCSTLEN $FCSTOUT $TMPRUN/scale/$(printf $MEMBER_FMT $m) $OUT_OPT \
              fcst $bdy_start_time
@@ -1178,59 +1180,59 @@ if ((LOG_TYPE >= 3)); then
   lcycles=$((LCYCLE * CYCLE_SKIP))
   time=$STIME
   while ((time <= ETIME)); do
-    if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time}/log/fcst_scale_pp" ]; then
+    if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/log/${time}/fcst_scale_pp" ]; then
       if ((TAR_THREAD > 1)); then
         while (($(jobs -p | wc -l) >= TAR_THREAD)); do
           sleep 1s
         done
         if ((LOG_TYPE == 3)); then
-          ( tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/fcst_scale_pp.tar fcst_scale_pp && rm -fr $OUTDIR/${time}/log/fcst_scale_pp ) &
+          ( tar -C $OUTDIR/log/${time} -cf $OUTDIR/log/${time}/fcst_scale_pp.tar fcst_scale_pp && rm -fr $OUTDIR/log/${time}/fcst_scale_pp ) &
         elif ((LOG_TYPE == 4)); then
-          ( tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/fcst_scale_pp.tar.gz fcst_scale_pp && rm -fr $OUTDIR/${time}/log/fcst_scale_pp ) &
+          ( tar -C $OUTDIR/log/${time} -czf $OUTDIR/log/${time}/fcst_scale_pp.tar.gz fcst_scale_pp && rm -fr $OUTDIR/log/${time}/fcst_scale_pp ) &
         fi
       else
         if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/fcst_scale_pp.tar fcst_scale_pp && rm -fr $OUTDIR/${time}/log/fcst_scale_pp
+          tar -C $OUTDIR/log/${time} -cf $OUTDIR/log/${time}/fcst_scale_pp.tar fcst_scale_pp && rm -fr $OUTDIR/log/${time}/fcst_scale_pp
         elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/fcst_scale_pp.tar.gz fcst_scale_pp && rm -fr $OUTDIR/${time}/log/fcst_scale_pp
+          tar -C $OUTDIR/log/${time} -czf $OUTDIR/log/${time}/log/fcst_scale_pp.tar.gz fcst_scale_pp && rm -fr $OUTDIR/log/${time}/fcst_scale_pp
         fi
       fi
     fi
 
-    if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/${time}/log/fcst_scale_init" ]; then
+    if ((LOG_OPT <= 2)) && [ -d "$OUTDIR/log/${time}/fcst_scale_init" ]; then
       if ((TAR_THREAD > 1)); then
         while (($(jobs -p | wc -l) >= TAR_THREAD)); do
           sleep 1s
         done
         if ((LOG_TYPE == 3)); then
-          ( tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/fcst_scale_init.tar fcst_scale_init && rm -fr $OUTDIR/${time}/log/fcst_scale_init ) &
+          ( tar -C $OUTDIR/log/${time} -cf $OUTDIR/log/${time}/fcst_scale_init.tar fcst_scale_init && rm -fr $OUTDIR/log/${time}/fcst_scale_init ) &
         elif ((LOG_TYPE == 4)); then
-          ( tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/fcst_scale_init.tar.gz fcst_scale_init && rm -fr $OUTDIR/${time}/log/fcst_scale_init ) &
+          ( tar -C $OUTDIR/log/${time} -czf $OUTDIR/log/${time}/fcst_scale_init.tar.gz fcst_scale_init && rm -fr $OUTDIR/log/${time}/fcst_scale_init ) &
         fi
       else
         if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/fcst_scale_init.tar fcst_scale_init && rm -fr $OUTDIR/${time}/log/fcst_scale_init
+          tar -C $OUTDIR/log/${time} -cf $OUTDIR/log/${time}/fcst_scale_init.tar fcst_scale_init && rm -fr $OUTDIR/log/${time}/fcst_scale_init
         elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/fcst_scale_init.tar.gz fcst_scale_init && rm -fr $OUTDIR/${time}/log/fcst_scale_init
+          tar -C $OUTDIR/log/${time} -czf $OUTDIR/log/${time}/fcst_scale_init.tar.gz fcst_scale_init && rm -fr $OUTDIR/log/${time}/fcst_scale_init
         fi
       fi
     fi
 
-    if ((LOG_OPT <= 3)) && [ -d "$OUTDIR/${time}/log/fcst_scale" ]; then
+    if ((LOG_OPT <= 3)) && [ -d "$OUTDIR/log/${time}/fcst_scale" ]; then
       if ((TAR_THREAD > 1)); then
         while (($(jobs -p | wc -l) >= TAR_THREAD)); do
           sleep 1s
         done
         if ((LOG_TYPE == 3)); then
-          ( tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/fcst_scale.tar fcst_scale && rm -fr $OUTDIR/${time}/log/fcst_scale ) &
+          ( tar -C $OUTDIR/log/${time} -cf $OUTDIR/log/${time}/fcst_scale.tar fcst_scale && rm -fr $OUTDIR/log/${time}/fcst_scale ) &
         elif ((LOG_TYPE == 4)); then
-          ( tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/fcst_scale.tar.gz fcst_scale && rm -fr $OUTDIR/${time}/log/fcst_scale ) &
+          ( tar -C $OUTDIR/log/${time} -czf $OUTDIR/log/${time}/fcst_scale.tar.gz fcst_scale && rm -fr $OUTDIR/log/${time}/fcst_scale ) &
         fi
       else
         if ((LOG_TYPE == 3)); then
-          tar -C $OUTDIR/${time}/log -cf $OUTDIR/${time}/log/fcst_scale.tar fcst_scale && rm -fr $OUTDIR/${time}/log/fcst_scale
+          tar -C $OUTDIR/log/${time} -cf $OUTDIR/log/${time}/fcst_scale.tar fcst_scale && rm -fr $OUTDIR/log/${time}/fcst_scale
         elif ((LOG_TYPE == 4)); then
-          tar -C $OUTDIR/${time}/log -czf $OUTDIR/${time}/log/fcst_scale.tar.gz fcst_scale && rm -fr $OUTDIR/${time}/log/fcst_scale
+          tar -C $OUTDIR/log/${time} -czf $OUTDIR/log/${time}/fcst_scale.tar.gz fcst_scale && rm -fr $OUTDIR/log/${time}/fcst_scale
         fi
       fi
     fi

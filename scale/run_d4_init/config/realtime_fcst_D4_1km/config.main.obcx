@@ -17,10 +17,6 @@ OUTPUT="${TOPDIR}/result/ope"
 EXP4=d4_1km
 EXP3=d3
 
-OUTDIR="${OUTPUT}/${EXP4}"
-
-INDIR=$OUTDIR
-
 GNAME=gm84
 
 #===============================================================================
@@ -29,10 +25,13 @@ GNAME=gm84
 DATADIR="/work/$GNAME/share/database" 
 SCALE_DB="/work/$GNAME/share/database" 
 
-DATA_TOPO=                                                           # Directory of the prepared topo files
+DATA_TOPO="${OUTPUT}/${EXP4}"                                        # Directory of the prepared topo files
 DATA_TOPO_BDY_SCALE="${OUTPUT}/${EXP3}/const/topo"
-DATA_LANDUSE=                                                        # Directory of the prepared landuse files
+DATA_LANDUSE="${OUTPUT}/${EXP4}"                                  # Directory of the prepared landuse files
 DATA_BDY_SCALE="${OUTPUT}/${EXP3}/ref_<PARENT_REF_TIME_D2>"   # Directory of the boundary data in SCALE history format (parent domain)
+OUTDIR="${DATA_BDY_SCALE}/<PARENT_REF_TIME>/${EXP4}"
+
+
 DATA_BDY_SCALE_PRC_NUM_X=32 # D3
 DATA_BDY_SCALE_PRC_NUM_Y=32 # D3
 DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
