@@ -192,9 +192,6 @@ jobid=$(grep 'pjsub Job' post.log.${STIME} | cut -d ' ' -f6)
 job_end_check_PJM $jobid
 res=$?
 
-echo 'stop here.'
-exit 
-
 
 STIMEf="${STIME:0:4}-${STIME:4:2}-${STIME:6:2} ${STIME:0:2}"
 export LANG=en_us
