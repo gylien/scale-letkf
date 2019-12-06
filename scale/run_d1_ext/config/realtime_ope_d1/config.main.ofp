@@ -41,9 +41,9 @@ DATA_BDY_SCALE_PREP=                                                 # Directory
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-DATA_BDY_GRADS="${TOPDIR}/${EXPNAME}/<DATA_BDY_GRADS>" # Directory of the boundary data in GrADS format
+DATA_BDY_GRADS="${TOPDIR}/result/${EXPNAME}/<DATA_BDY_GRADS>" # Directory of the boundary data in GrADS format
 
-OBS="${TOPDIR}/${EXPNAME}/ncepobs"     # Directory of observation data in LETKF obs format
+OBS="${TOPDIR}/result/${EXPNAME}/ncepobs"     # Directory of observation data in LETKF obs format
 OBSNCEP=              
 
 #===============================================================================
