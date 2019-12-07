@@ -1766,10 +1766,10 @@ subroutine rij_rank(ig, jg, rank)
   use scale_prc, only: &
       PRC_myrank
   use scale_atmos_grid_cartesC, only: &
-      GRID_CX, &
-      GRID_CY, &
-      GRID_CXG, &
-      GRID_CYG, &
+      GRID_CX => ATMOS_GRID_CARTESC_CX, &
+      GRID_CY => ATMOS_GRID_CARTESC_CY, &
+      GRID_CXG => ATMOS_GRID_CARTESC_CXG, &
+      GRID_CYG => ATMOS_GRID_CARTESC_CYG, &
       DX, &
       DY
 #else
@@ -1830,10 +1830,10 @@ subroutine rij_rank_g2l(ig, jg, rank, il, jl)
   use scale_prc, only: &
       PRC_myrank
   use scale_atmos_grid_cartesC, only: &
-      GRID_CX, &
-      GRID_CY, &
-      GRID_CXG, &
-      GRID_CYG, &
+      GRID_CX => ATMOS_GRID_CARTESC_CX, &
+      GRID_CY => ATMOS_GRID_CARTESC_CY, &
+      GRID_CXG => ATMOS_GRID_CARTESC_CXG, &
+      GRID_CYG => ATMOS_GRID_CARTESC_CYG, &
       DX, &
       DY
 #else
