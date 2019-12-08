@@ -145,7 +145,7 @@ echo 'exec job'
 res=$?
 
 if [ $res -eq 77 ] ; then
- NODE=`expr $NODE \/ 2` ### D3 
+ NNODES=`expr $NNODES \/ 2` ### D3 
 
  sec1=`date -d "$WTIME_L" +%s`
  sec0=`date -d "00:00:00" +%s`
@@ -153,7 +153,7 @@ if [ $res -eq 77 ] ; then
  WTIME_L=`date -d "2000/1/1 $wtime_sec second" +%H:%M:%S`
 
  ntry=`expr $ntry + 1`
- echo "retry :: NNODES="$NODE" WTIME_L="$WTIME_L
+ echo "retry :: NNODES="$NNODES" WTIME_L="$WTIME_L
 elif [ $res -ne 0 ] ; then
  echo 'abort : res='$res
  exit $res
