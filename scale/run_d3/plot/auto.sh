@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash -l
 
 source ~/.bashrc
 
@@ -6,6 +6,9 @@ r_url="c24140@ofp.jcahpc.jp"
 web_url="amemiya@daweb.r-ccs27.riken.jp"
 
 WEBDIRBASE="/home/amemiya/public_html/scale/data/ens/fcst_d3"
+
+. ../config.main ### MEMBER
+
 
 myname=$0
 
@@ -23,9 +26,12 @@ if [ ${#inum} -eq 0 ] ;then
 fi
 
 mydir=`dirname $myname`
-if [ $inum -eq 51 ];then
+
+inum_mean=`expr $MEMBER +1`
+inum_mdet=`expr $MEMBER +2`
+if [ $inum -eq $inum_mean ];then
 cmem=mean
-elif [ $inum -eq 52 ];then
+elif [ $inum -eq $inum_mdet ];then
 cmem=mdet
 else
 cmem=`printf %04d $inum`
