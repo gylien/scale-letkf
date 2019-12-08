@@ -39,11 +39,8 @@ module load netcdf-fortran
 
 echo "draw "$cmem
 
-rm $mydir/plot_temp/$cmem
-
-#sh compile_rain.sh
-#sh compile_uvw.sh
-#sh compile_dbz.sh
+mkdir -p $mydir/plot_temp
+rm $mydir/plot_temp/* ###links
 
 echo 'plot rain...'
 ./draw_rain ${PARENT_REF_TIME} ${TIME} $cmem 1 $ntime 1 

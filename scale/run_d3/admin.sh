@@ -136,6 +136,10 @@ chmod 750 sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh
 #. config.$SCPNAME || exit $?
 #. src/func_datetime.sh || exit $?
 
+cat config/${CONFIG}/common_d3.h > plot/common_d3.h
+cat "character*120,parameter::cdir_base_fcst= \"${OUTPUT}/${EXP3}/\"," >>plot/common_d3.h  
+
+
 #-------------------------------------------------------------------------------
 
 echo 'exec job'

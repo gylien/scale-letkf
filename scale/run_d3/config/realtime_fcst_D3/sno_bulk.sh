@@ -57,7 +57,8 @@ fi
 ###############################
 
 # Path for SNO binary
-SNOBIN_ORG=${SCALEDIR}/bin/sno
+SNOBIN_ORG=${SCALEDIR}../scale_develop/bin/sno
+#SNOBIN_ORG=${SCALEDIR}/bin/sno
 SNOBIN=${RUNDIR}/sno
 if [ ! -e ${SNOBIN_ORG} ] ; then
   echo "No SNO binary!"
@@ -197,6 +198,12 @@ cd $PLOTDIR
 ./auto.sh "${PARENT_REF_TIME}" "${STIME}" "${FCSTLEN}" \${PJM_BULKNUM}
 
 EOF
+
+cd ${PLOTDIR}
+./compile_rain.sh
+./compile_dbz.sh
+./compile_uvw.sh
+cd -
 
 cd ${RUNDIR}
 pjsub --bulk --sparam 1-${cnt} job_sno.sh 
