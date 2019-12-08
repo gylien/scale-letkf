@@ -1,4 +1,4 @@
-B#!/bin/sh
+#!/bin/sh
 
 module load hdf5
 module load netcdf

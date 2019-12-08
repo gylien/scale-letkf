@@ -21,8 +21,8 @@ fi
 
 mydir=`dirname $myname`
 
-inum_mean=`expr $MEMBER +1`
-inum_mdet=`expr $MEMBER +2`
+inum_mean=`expr $MEMBER + 1`
+inum_mdet=`expr $MEMBER + 2`
 if [ $inum -eq $inum_mean ];then
 cmem=mean
 elif [ $inum -eq $inum_mdet ];then
