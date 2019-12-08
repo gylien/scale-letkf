@@ -2,13 +2,7 @@
 
 source ~/.bashrc
 
-r_url="c24140@ofp.jcahpc.jp"
-web_url="amemiya@daweb.r-ccs27.riken.jp"
-
-WEBDIRBASE="/home/amemiya/public_html/scale/data/ens/fcst_d3"
-
 . ../config.main ### MEMBER
-
 
 myname=$0
 
@@ -61,12 +55,3 @@ echo 'plot dbz5000...'
 echo 'trim...'
 mogrify -trim $mydir/plot_temp/$cmem/*.png
 echo '=== complete ==='
-#ssh $web_url "mkdir -p ${WEBDIRBASE}/ref_${PARENT_REF_TIME}/${TIME}"
-
-#for prod in rain uvw1500m uvw5000m dbz1500m ;do
-#for imem in `seq $nmem`;do
-#mem=`printf %04d $imem`
-#rsync -av ./figure/d3/${prod}_${mem}_f*_0001.png ${web_url}:${WEBDIRBASE}/ref_${PARENT_REF_TIME}/${TIME}
-#done
-#rsync -av ./figure/d3/${prod}_mean_f*_0001.png ${web_url}:${WEBDIRBASE}/ref_${PARENT_REF_TIME}/${TIME}
-#done
