@@ -56,8 +56,7 @@
 !--RELAX_SPREAD_OUT_BASENAME--
 ! RELAX_TO_INFLATED_PRIOR = .true.,
  GROSS_ERROR = 5.0D0,
-! GROSS_ERROR_RADAR_REF = 10.0D0,
- GROSS_ERROR_RADAR_REF = 5.0D0, ! TEST
+ GROSS_ERROR_RADAR_REF = 10.0D0,
  GROSS_ERROR_RADAR_VR = 10.0D0,
  GROSS_ERROR_RADAR_PRH = 10.0D0,
 ! Q_UPDATE_TOP = 300.0D2,
@@ -123,12 +122,12 @@
 /
 
 &PARAM_PLOT_DCL
- plot_obs  = .true. ,
- plot_anal = .true. ,
- plot_fcst = .true. ,
+ plot_obs  = .true.,
+ plot_anal = .true.,
+ plot_fcst = .true.,
  plot_zlev_min = 1 , 
  plot_zlev_max = 40 , 
- plot_zlev_intv = 1 , 
+ plot_zlev_intv = 5, 
 /
 
 
