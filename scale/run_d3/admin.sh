@@ -130,7 +130,7 @@ cat config/${CONFIG}/sno_bulk.sh | \
    sed -e "s/<NP_OFILE_Y>/${NP_OFILE_Y}/g" \
  > sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh
 
-cdmod 750 sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh
+chmod 750 sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh
 
 . config.main || exit $?
 #. config.$SCPNAME || exit $?

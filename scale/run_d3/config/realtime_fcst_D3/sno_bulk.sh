@@ -57,7 +57,7 @@ fi
 ###############################
 
 # Path for SNO binary
-SNOBIN_ORG=${SCALEDIR}../scale_develop/bin/sno
+SNOBIN_ORG=${SCALEDIR}/../scale_develop/bin/sno
 #SNOBIN_ORG=${SCALEDIR}/bin/sno
 SNOBIN=${RUNDIR}/sno
 if [ ! -e ${SNOBIN_ORG} ] ; then
