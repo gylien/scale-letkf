@@ -79,7 +79,7 @@ iwait=0
 running_jobs=`ls -x fcst${script_suffix}.stat.*`
 if [ "$running_jobs" != "" ];then
 for statfile in $running_jobs ;do
-if [ `cat $statfile` == "prep" ] ;then
+if [ "`cat $statfile`" == "prep" ] ;then
  iwait=1
  sleep 13s
 fi
@@ -175,6 +175,11 @@ fi
 mkdir -p exp
 rm -f exp/*
 ln -s $OUTDIR/exp/${jobid}_${SCPNAME}_${STIME} exp
+
+#-------------------------------------------------------------------------------
+cd $TOPDIR/scale_ope_single/scale-letkf_ope_d4/scale/run
+./prep.sh
+cd -
 
 #-------------------------------------------------------------------------------
 
