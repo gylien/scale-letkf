@@ -8,11 +8,14 @@ STIME=<STIME>
 
 . config.main || exit $?
 
+
+
 PARENT_REF_TIME=<PARENT_REF_TIME>
 FCSTLEN=<FCSTLEN>
 RUNDIR="${TMP}/../run_sno_ref_${PARENT_REF_TIME}_${STIME}"
 OUTDIR=${OUTPUT}/${EXP3}/ref_${PARENT_REF_TIME}
-PLOTDIR=${DIR}/run_d3/plot
+PLOTDIR_SRC=${DIR}/run_d3/plot
+PLOTDIR=${RUNDIR}/plot
 
 PPN=64 # Process per node
 
@@ -72,6 +75,10 @@ rm -rf ${RUNDIR}
 
 mkdir -p ${RUNDIR}/conf
 mkdir -p ${RUNDIR}/log
+
+cp -r ${PLOTDIR_SRC} ${PLOTDIR}
+echo "character*120,parameter::cdir_base_fcst= \"${OUTPUT}/${EXP3}/\"" >>${PLOTDIR}/common_d3.h  
+sed -i -e "s/<MEMBER>/${MEMBER}/g" ${PLOTDIR}/auto.sh
 
 # copy binary 
 cp ${SNOBIN_ORG} ${SNOBIN}

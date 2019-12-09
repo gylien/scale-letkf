@@ -2,7 +2,7 @@
 
 source ~/.bashrc
 
-. ../config.main ### MEMBER
+MEMBER=<MEMBER>
 
 myname=$0
 
