@@ -83,25 +83,41 @@ fi
 ### wait until the submittion of previous jobs are completed
 
 iwait=1
-while [ $iwait == 1 ];do
+res=`grep prep fcst${script_suffix}.stat.*`
+mytime=${PARENT_REF_TIME}.${STIME}
+if [ -s waiting_list ] || [ ! -z "$res" ];then
+ echo $mytime >> waiting_list
+else
 iwait=0
-running_jobs=`ls -x fcst${script_suffix}.stat.* 2>/dev/null`
-if [ ! -z "$running_jobs" ];then
-for statfile in $running_jobs ;do
-if [ "`cat $statfile`" == "prep" ] ;then
- iwait=1
- sleep 23s
+fi
+
+while [ $iwait == 1 ];do
+if [ -s waiting_list ] ;then
+ next=`cat waiting_list | head -n 1`
+ res=`grep prep fcst${script_suffix}.stat.*`
+ if [ "$next" == "$mytime" ] && [ -z "$res" ] ;then 
+   iwait=0 
+   wcl=`cat waiting_list| wc -l`
+   wcl=`expr $wcl - 1`
+   cp waiting_list temp_list
+   cat temp_list | tail -n $wcl > waiting_list 
+   rm temp_list
+ else
+  sleep 23s
+ fi
+else
+ iwait=0 ### never occur
+ echo 'ERROR'
+ exit 1
 fi
 done
-fi
-[ -s temp.lock ] && iwait=1 
-done
+
+[ -f waiting_list ] && [ ! -s waiting_list ] && rm waiting_list ### clean
+
+echo 'prep' > fcst${script_suffix}.stat.$mytime
 
 #-------------------------------------------------------------------------------
 
-###rm -f config.*
-
-echo ${PARENT_REF_TIME}.${STIME} > temp.lock
 
 cp config/${CONFIG}/config.* .
 
@@ -135,10 +151,6 @@ chmod 750 sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh
 . config.main || exit $?
 #. config.$SCPNAME || exit $?
 #. src/func_datetime.sh || exit $?
-
-cat config/${CONFIG}/common_d3.h > plot/common_d3.h
-echo "character*120,parameter::cdir_base_fcst= \"${OUTPUT}/${EXP3}/\"" >>plot/common_d3.h  
-
 
 #-------------------------------------------------------------------------------
 
