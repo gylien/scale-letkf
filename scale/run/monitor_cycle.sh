@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash -l
 
 TMPDIR="../tmp/scale-letkf_exp_d1"
 STIME=$1
@@ -7,7 +7,7 @@ logfile=$TMPDIR/out/$STIME/log/scale/0001_LOG.pe000000
 stat=`cat cycle_ofp.stat.$STIME`
 
 if [ "$stat" == "submit" ] ;then
- pjstat > pjstat.txt
+ /usr/local/bin/pjstat > pjstat.txt
  wait=`cat pjstat.txt | grep cycle_job | cut -c 64-76` 
  rm pjstat.txt
  if [ `echo $wait | cut -c 1` == '(' ] ;then
