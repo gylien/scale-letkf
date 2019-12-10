@@ -3,6 +3,7 @@
 source ~/.bashrc
 
 MEMBER=<MEMBER>
+OUTDIR=<OUTDIR>
 
 myname=$0
 
@@ -30,6 +31,9 @@ cmem=mdet
 else
 cmem=`printf %04d $inum`
 fi
+
+srcfile=${OUTDIR}/${TIME}/fcst_sno_np00001/mean/history.pe000000.nc
+if [ -f $srcfile ] ;then
 
 ulimit -s unlimited 
 

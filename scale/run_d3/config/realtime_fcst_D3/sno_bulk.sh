@@ -77,8 +77,9 @@ mkdir -p ${RUNDIR}/conf
 mkdir -p ${RUNDIR}/log
 
 cp -r ${PLOTDIR_SRC} ${PLOTDIR}
-echo "character*120,parameter::cdir_base_fcst= \"${OUTPUT}/${EXP3}/\"" >>${PLOTDIR}/common_d3.h  
+sed -i -e "s#<cdir_base_fcst>#${OUTPUT}/${EXP3}#g" ${PLOTDIR}/common_d3.sh
 sed -i -e "s/<MEMBER>/${MEMBER}/g" ${PLOTDIR}/auto.sh
+sed -i -e "s#<OUTDIR>#${OUTDIR}#g" ${PLOTDIR}/auto.sh
 
 # copy binary 
 cp ${SNOBIN_ORG} ${SNOBIN}

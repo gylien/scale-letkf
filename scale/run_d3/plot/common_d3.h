@@ -63,7 +63,6 @@ real,parameter::drad=3.141563 / 180.0
 
 real,parameter::rmiss=-9.9999e30
 
-character*120,parameter::cfilename='history.pe000000.nc'
+character*120,parameter::cfilename = 'history.pe000000.nc'
 
-!!! to be inserted by admin.sh !!!
-!--cdir_base_fcst--
+character*120,parameter::cdir_base_fcst = '<cdir_base_fcst>'  
