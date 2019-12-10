@@ -21,7 +21,8 @@ TIME_DT=40.0D0
 TIME_DT_DYN=8.0D0
 
 CONFIG='realtime_ope_d1'
-PRESET='OFP'
+PRESET=`hostname | cut -d '.' -f 2 | tr '[a-z]' '[A-Z]'`
+
 
 if [ $MEMBER == 'mdet' ] ;then
   MEMBERS='mdet'

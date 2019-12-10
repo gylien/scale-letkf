@@ -41,7 +41,8 @@ else
 fi
 
 CONFIG='realtime_fcst_D3'
-PRESET='OFP'
+PRESET=`hostname | cut -d '.' -f 2 | tr '[a-z]' '[A-Z]'`
+
 
 #-------------------------------------------------------------------------------
 
