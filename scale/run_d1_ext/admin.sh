@@ -82,7 +82,7 @@ iwait=0
 running_jobs=`ls -x fcst${script_suffix}.stat.*`
 if [ "$running_jobs" != "" ];then
 for statfile in $running_jobs ;do
-if [ `cat $statfile` == "prep" ] ;then
+if [ "`cat $statfile`" == "prep" ] ;then
  iwait=1
  sleep 10s
 fi

@@ -213,18 +213,20 @@ cp history.ctl $OUTDIR/$STIME/fcstgp/$mem
 cp history.grd $OUTDIR/$STIME/fcstgp/$mem
 done
 
+cd $POSTDIR/plot_grads
+[ -f plot.lock ] && echo 'wait...'
+while [ -f plot.lock ] ;do
+ sleep 60
+done
 
 echo 'plot...'
-cd $POSTDIR/plot_grads
-if [ -f plot.lock ] ;then
- sleep 60
-else
- echo $STIME > plot.lock 
+echo $STIME > plot.lock 
  [ ! -z "`ls out/`" ] && rm out/*
  grads -bcl "plot_driver_6h.gs $OUTDIR/$STIME/fcstgp/$mem/history.ctl 1 21 1" &> plot_driver_6h.log 
  mkdir -p $OUTDIR/$STIME/fcstgpi/$mem 
  mv out/*.png $OUTDIR/$STIME/fcstgpi/$mem/
  rm plot.lock
-fi
+
+echo 'done.'
+
 cd $POSTDIR
-echo 'completed.'
