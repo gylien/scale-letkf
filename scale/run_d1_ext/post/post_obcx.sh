@@ -4,6 +4,11 @@
 # SNO is executed by a bulk job
 #
 
+
+echo "*** convert/plot is temporally disabled in OBCX. ***"
+exit 0
+
+
 mydir=`dirname $0`
 POSTDIR=`cd $mydir ; pwd`
 
