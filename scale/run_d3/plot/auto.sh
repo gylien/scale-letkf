@@ -58,4 +58,5 @@ echo 'plot dbz5000...'
 ./draw_dbz ${PARENT_REF_TIME} ${TIME} $cmem 1 $ntime 1 5000 
 echo 'trim...'
 mogrify -trim $mydir/plot_temp/$cmem/*.png
+fi
 echo '=== complete ==='

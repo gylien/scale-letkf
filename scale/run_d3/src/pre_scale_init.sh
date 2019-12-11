@@ -137,6 +137,8 @@ for time_bdy in $BDY_TIME_LIST; do
         exit 1
       fi
     else
+     icount=0
+
       if [ -s "${bdyorg_path}/${time_bdy}/fcst/${MEM_BDY}/history${SCALE_SFX_0}" ]; then
 #        for ifile in $(cd ${bdyorg_path}/${time_bdy}/${MEM_BDY} ; ls history*.nc 2> /dev/null); do
 #          ln -fs "${bdyorg_path}/${time_bdy}/${MEM_BDY}/${ifile}" $TMPDIR/bdydata${file_number}${ifile:$historybaselen}
@@ -148,8 +150,16 @@ for time_bdy in $BDY_TIME_LIST; do
         break # CHECK!
 
       else
+        echo "[WARNING] $0: Cannot find source boundary file '${bdyorg_path}/${time_bdy}/fcst/${MEM_BDY}/history${SCALE_SFX_0}'"
+        echo "try again."
+        if [ -s "${bdyorg_path}/${time_bdy}/fcst/${MEM_BDY}/history${SCALE_SFX_0}" ]; then
+#
+          BASENAME_ORG="${bdyorg_path}/${time_bdy}/fcst/${MEM_BDY}/history"
+          OFFLINE_PARENT_BASENAME=${BASENAME_ORG}
+        break # CHECK!
         echo "[Error] $0: Cannot find source boundary file '${bdyorg_path}/${time_bdy}/fcst/${MEM_BDY}/history${SCALE_SFX_0}'"
         exit 1
+        fi
       fi
     fi
 #  elif ((BDY_FORMAT == 2)); then
