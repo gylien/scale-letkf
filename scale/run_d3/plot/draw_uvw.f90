@@ -106,7 +106,6 @@ izref = iblkge(axz,nz,real(irefheight))
 do itimeref=itimestart,itimeend,itimeskip
 write(cftime(2:8),'(I7)') 1000000 + ioutsec*(itimeref-1)
 write(cftime(1:2),'(A2)')'_f'
-
 istatus=nf_open(trim(cdir_base_fcst)//'ref_'//trim(ctimeparent)//'/'//trim(ctimebase)//'/'//trim(cdir_prod)//trim(cmem)//'/'//trim(cfilename),NF_NOWRITE,idnc)
 if(istatus.ne.0)write(*,*) NF_STRERROR(istatus)
 istatus=nf_inq_varid(idnc,'U',idvarT)
