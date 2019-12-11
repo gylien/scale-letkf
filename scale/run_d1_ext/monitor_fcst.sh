@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-TMPDIR="../tmp/scale-letkf_d1"
+TMPDIR="../tmp/scale-letkf_d1_ext"
 STIME=$1
 logfile=${TMPDIR}_$STIME/out/$STIME/log/fcst_scale/mdet_LOG.pe000000
 
