@@ -25,8 +25,7 @@ EXP3=exp_d3
 EXP2=exp_d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
-#INDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_1km_mer" # Input data # do not modify
-INDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_1km" # Input data # do not modify
+INDIR="/work/hp150019/share/SCALE-LETKF-rt/result/ope/d4_1km"
 
 #===============================================================================
 # Location of model/data files
@@ -126,8 +125,14 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 # Parallelization settings
 
 
+<<<<<<< HEAD
 SCALE_NP=64  # D4    # Number of processes to run SCALE
 PPN=64              # Number of processes per node
+=======
+MEMBER=20      # Ensemble size 
+NNODES=52      # Ensemble size + 1 (mean) +1 (mdet) + 30 (additional)
+NNODES=23      # Ensemble size + 1 (mean) +1 (mdet) + 30 (additional)
+>>>>>>> dacycle_OFP_honda_debug
 
 MEMBER=20      # Ensemble size 
 # Specify MEMBER (3-50), which determines the total number of nodes (NNODES)

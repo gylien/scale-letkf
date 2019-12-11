@@ -536,7 +536,7 @@ program dacycle
         if ( PLOT_ANAL ) then
           if ( myrank_e == mmean_rank_e ) then
             if ( .not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
-            call calc_ref_direct(ref3d)
+            call calc_ref_direct( ref3d )
           endif
           call mpi_timer('WRITE_ANAL:anal2dbz', 2, barrier=MPI_COMM_da)
 
@@ -636,7 +636,7 @@ program dacycle
           elseif ( dafcst_ostep >= 1 ) then ! Draw figure using forecast results
 
             if (.not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
-            call calc_ref_direct(ref3d)
+            call calc_ref_direct( ref3d )
             if (OUT_GRADS_DAFCST)then ! Output of dacycle-forecast in GrADS format
               call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
             endif

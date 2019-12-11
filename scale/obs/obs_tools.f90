@@ -1044,14 +1044,14 @@ subroutine obs_da_value_allreduce(obsda)
   return
 end subroutine obs_da_value_allreduce
 
-subroutine calc_ref_direct(ref3d)
+subroutine calc_ref_direct( ref3d )
   use mod_atmos_vars, only: &
-    QTRC,    &
+    ! Assume Tomita08
+    QV, QC, QR, &
+    QI, QS, QG, &
     U, V, W, &
     PRES,    &
     TEMP
-  use scale_atmos_hydrometeor, only: &
-    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
   use scale_atmos_grid_cartesC_index, only: &
     IS, IE, JS, JE, KS, KE, &
     IHALO, JHALO, KHALO
@@ -1062,26 +1062,29 @@ subroutine calc_ref_direct(ref3d)
 
   integer :: i, j, k
 
+  ! Diagnostic varialbes are updated in write_ens_mpi (write_restart_direct)
+
   do j = JS, JE
   do i = IS, IE
     do k = KS, KE
-      call calc_ref_vr(real(QTRC(k,i,j,I_QV),kind=r_size), &
-                       real(QTRC(k,i,j,I_HC),kind=r_size), &
-                       real(QTRC(k,i,j,I_HR),kind=r_size), &
-                       real(QTRC(k,i,j,I_HI),kind=r_size), &
-                       real(QTRC(k,i,j,I_HS),kind=r_size), &
-                       real(QTRC(k,i,j,I_HG),kind=r_size), &
-                       real(U(k,i,j),kind=r_size), &
-                       real(V(k,i,j),kind=r_size), &
-                       real(W(k,i,j),kind=r_size), &
-                       real(TEMP(k,i,j),kind=r_size), &
-                       real(PRES(k,i,j),kind=r_size), &
-                       0.0_r_size,0.0_r_size,& ! az and radar_z: dummy
-                       ref3d(k-KHALO,i-IHALO,j-JHALO),vr3d(k-KHALO,i-IHALO,j-JHALO)) ! vr3d: dummy
-      if (ref3d(k-KHALO,i-IHALO,j-JHALO) < MIN_RADAR_REF) then
+      call calc_ref_vr( real( QV(k,i,j), kind=r_size ),   &
+                        real( QC(k,i,j), kind=r_size ),   &
+                        real( QR(k,i,j), kind=r_size ),   &
+                        real( QI(k,i,j), kind=r_size ),   &
+                        real( QS(k,i,j), kind=r_size ),   &
+                        real( QG(k,i,j), kind=r_size ),   &
+                        real( U(k,i,j), kind=r_size ),    &
+                        real( V(k,i,j), kind=r_size ),    &
+                        real( W(k,i,j), kind=r_size ),    &
+                        real( TEMP(k,i,j), kind=r_size ), &
+                        real( PRES(k,i,j), kind=r_size ), &
+                        0.0_r_size, 0.0_r_size,          & ! az and radar_z: dummy
+                       ref3d(k-KHALO,i-IHALO,j-JHALO),   & ! [OUT]
+                       vr3d(k-KHALO,i-IHALO,j-JHALO) ) ! vr3d: dummy ! [OUT]
+      if ( ref3d(k-KHALO,i-IHALO,j-JHALO) < MIN_RADAR_REF ) then
         ref3d(k-KHALO,i-IHALO,j-JHALO) = MIN_RADAR_REF_DBZ + LOW_REF_SHIFT
       else
-        ref3d(k-KHALO,i-IHALO,j-JHALO) = 10.0d0 * log10(ref3d(k-KHALO,i-IHALO,j-JHALO)) ! dBZ
+        ref3d(k-KHALO,i-IHALO,j-JHALO) = 10.0_r_size * log10(ref3d(k-KHALO,i-IHALO,j-JHALO)) ! dBZ
       endif
     enddo
   enddo
