@@ -511,9 +511,8 @@ subroutine read_restart_direct(v3dg,v2dg)
     MOMY, &
     MOMZ, &
     RHOT, &
-    QTRC
-  use scale_atmos_hydrometeor, only: &
-    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
+    QV, QC, QR, &
+    QI, QS, QG
   use scale_atmos_grid_cartesC_index, only: &
     IS, IE, JS, JE, KS, KE
   implicit none
@@ -538,17 +537,17 @@ subroutine read_restart_direct(v3dg,v2dg)
     case (iv3d_rhot)
       v3dg(:,:,:,iv3d) = RHOT(KS:KE,IS:IE,JS:JE)
     case (iv3d_q)
-      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_QV)
+      v3dg(:,:,:,iv3d) = QV(KS:KE,IS:IE,JS:JE)
     case (iv3d_qc)
-      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_HC)
+      v3dg(:,:,:,iv3d) = QC(KS:KE,IS:IE,JS:JE)
     case (iv3d_qr)
-      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_HR)
+      v3dg(:,:,:,iv3d) = QR(KS:KE,IS:IE,JS:JE)
     case (iv3d_qi)
-      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_HI)
+      v3dg(:,:,:,iv3d) = QI(KS:KE,IS:IE,JS:JE)
     case (iv3d_qs)
-      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_HS)
+      v3dg(:,:,:,iv3d) = QS(KS:KE,IS:IE,JS:JE)
     case (iv3d_qg)
-      v3dg(:,:,:,iv3d) = QTRC(KS:KE,IS:IE,JS:JE,I_HG)
+      v3dg(:,:,:,iv3d) = QG(KS:KE,IS:IE,JS:JE)
     case default
       write (6, '(3A)') "[Error] Variable '", trim(v3d_name(iv3d)), "' is not recognized."
       stop
@@ -828,11 +827,15 @@ subroutine write_restart_direct(v3dg,v2dg)
     MOMZ, &
     RHOT, &
     QTRC, &
+    QV, Qe, &
+    ATMOS_vars_calc_diagnostics, &
     ATMOS_vars_fillhalo
+  use mod_atmos_phy_mp_driver, only: &
+    ATMOS_PHY_MP_driver_qhyd2qtrc
   use scale_atmos_hydrometeor, only: &
     I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
   use scale_atmos_grid_cartesC_index, only: &
-    IS, IE, JS, JE, KS, KE
+    IS, IE, IA, JS, JE, JA, KS, KE, KA
   implicit none
 
   real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
@@ -855,24 +858,30 @@ subroutine write_restart_direct(v3dg,v2dg)
     case (iv3d_rhot)
       RHOT(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
     case (iv3d_q)
-      QTRC(KS:KE,IS:IE,JS:JE,I_QV) = v3dg(:,:,:,iv3d)
+      QV(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
     case (iv3d_qc)
-      QTRC(KS:KE,IS:IE,JS:JE,I_HC) = v3dg(:,:,:,iv3d)
+      Qe(KS:KE,IS:IE,JS:JE,I_HC) = v3dg(:,:,:,iv3d)
     case (iv3d_qr)
-      QTRC(KS:KE,IS:IE,JS:JE,I_HR) = v3dg(:,:,:,iv3d)
+      Qe(KS:KE,IS:IE,JS:JE,I_HR) = v3dg(:,:,:,iv3d)
     case (iv3d_qi)
-      QTRC(KS:KE,IS:IE,JS:JE,I_HI) = v3dg(:,:,:,iv3d)
+      Qe(KS:KE,IS:IE,JS:JE,I_HI) = v3dg(:,:,:,iv3d)
     case (iv3d_qs)
-      QTRC(KS:KE,IS:IE,JS:JE,I_HS) = v3dg(:,:,:,iv3d)
+      Qe(KS:KE,IS:IE,JS:JE,I_HS) = v3dg(:,:,:,iv3d)
     case (iv3d_qg)
-      QTRC(KS:KE,IS:IE,JS:JE,I_HG) = v3dg(:,:,:,iv3d)
+      Qe(KS:KE,IS:IE,JS:JE,I_HG) = v3dg(:,:,:,iv3d)
     case default
       write (6, '(3A)') "[Error] Variable '", trim(v3d_name(iv3d)), "' is not recognized."
       stop
     end select
   end do
 
+  ! Assume Tomita08
+  call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, & 
+                                      QV, Qe, & ! [IN]
+                                      QTRC    ) ! [OUT] 
   call ATMOS_vars_fillhalo 
+
+  call ATMOS_vars_calc_diagnostics 
 
   do iv2d = 1, nv2d
     if (LOG_LEVEL >= 5) then
@@ -1420,10 +1429,12 @@ end subroutine read_history_par
 !-------------------------------------------------------------------------------
 subroutine read_history_direct(v3dg, v2dg)
   use mod_atmos_vars, only: &
-    ATMOS_vars_get_diagnostic, &
     ATMOS_vars_calc_diagnostics, &
-    QTRC, &
-    PRES
+    ATMOS_vars_get_diagnostic, &
+    QV, QC, QR, &
+    QI, QS, QG, &
+    U, V, W, &
+    PRES, TEMP
   use mod_atmos_phy_sf_vars, only: &
     ATMOS_PHY_SF_SFC_PRES, &
     ATMOS_PHY_SF_U10, &
@@ -1441,8 +1452,6 @@ subroutine read_history_direct(v3dg, v2dg)
   use scale_landuse, only: &
     LANDUSE_frac_land
 #endif
-  use scale_atmos_hydrometeor, only: &
-    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
   use scale_atmos_grid_cartesC_real, only: &
     ATMOS_GRID_CARTESC_REAL_CZ
   use scale_atmos_grid_cartesC_index, only: &
@@ -1461,28 +1470,40 @@ subroutine read_history_direct(v3dg, v2dg)
 
   ! 3D variables
   !-------------
+
+  call ATMOS_vars_calc_diagnostics 
+
   do iv3d = 1, nv3dd
     if (LOG_LEVEL >= 4) then
       write(6,'(1x,A,A15)') '*** Read 3D hist var [direct transfer]: ', trim(v3dd_name(iv3d))
     end if
     select case (iv3d)
-    case (iv3dd_u, iv3dd_v, iv3dd_w, iv3dd_t, iv3dd_rh)
+    case (iv3dd_u)
+      v3dg_RP(:,:,:,iv3d) = U(:,:,:)
+    case (iv3dd_v)
+      v3dg_RP(:,:,:,iv3d) = V(:,:,:)
+    case (iv3dd_w)
+      v3dg_RP(:,:,:,iv3d) = W(:,:,:)
+    case (iv3dd_t)
+      v3dg_RP(:,:,:,iv3d) = TEMP(:,:,:)
+    case (iv3dd_rh)
+      ! RH relative to liquid
+      ! Not used as of 12/11/2019
       call ATMOS_vars_get_diagnostic(trim(v3dd_name(iv3d)), v3dg_RP(:,:,:,iv3d))
     case (iv3dd_p)
-      call ATMOS_vars_calc_diagnostics 
       v3dg_RP(:,:,:,iv3d) = PRES(:,:,:)
     case (iv3d_q)
-      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_QV)
+      v3dg_RP(:,:,:,iv3d) = QV(:,:,:)
     case (iv3d_qc)
-      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_HC)
+      v3dg_RP(:,:,:,iv3d) = QC(:,:,:)
     case (iv3d_qr)
-      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_HR)
+      v3dg_RP(:,:,:,iv3d) = QR(:,:,:)
     case (iv3d_qi)
-      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_HI)
+      v3dg_RP(:,:,:,iv3d) = QI(:,:,:)
     case (iv3d_qs)
-      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_HS)
+      v3dg_RP(:,:,:,iv3d) = QS(:,:,:)
     case (iv3d_qg)
-      v3dg_RP(:,:,:,iv3d) = QTRC(:,:,:,I_HG)
+      v3dg_RP(:,:,:,iv3d) = QG(:,:,:)
     case (iv3dd_hgt)
       v3dg_RP(:,:,:,iv3d) = ATMOS_GRID_CARTESC_REAL_CZ(:,:,:)
     case default

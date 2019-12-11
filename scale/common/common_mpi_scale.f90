@@ -1784,17 +1784,6 @@ end subroutine mpi_timer
 ! [Direct transfer] Send SCALE restart (analysis) data
 !-------------------------------------------------------------------------------
 subroutine send_emean_direct(v3dg,v2dg,fcst_cnt)
-  use mod_atmos_vars, only: &
-    DENS, &
-    MOMX, &
-    MOMY, &
-    MOMZ, &
-    RHOT, &
-    QTRC
-  use scale_atmos_hydrometeor, only: &
-    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
-  use scale_atmos_grid_cartesC_index, only: &
-    IS, IE, JS, JE, KS, KE
   implicit none
 
   real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
@@ -1835,12 +1824,14 @@ subroutine receive_emean_direct()
     MOMY, &
     MOMZ, &
     RHOT, &
-    QTRC, &
+    QTRC, QV, Qe, &
     ATMOS_vars_fillhalo
+  use mod_atmos_phy_mp_driver, only: &
+    ATMOS_PHY_MP_driver_qhyd2qtrc
   use scale_atmos_hydrometeor, only: &
-    I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
+    I_HC, I_HR, I_HI, I_HS, I_HG
   use scale_atmos_grid_cartesC_index, only: &
-    IS, IE, JS, JE, KS, KE
+    IS, IE, IA, JS, JE, JA, KS, KE, KA
   implicit none
 
   real(RP) :: v3dg(nlev,nlon,nlat,nv3d)
@@ -1859,7 +1850,9 @@ subroutine receive_emean_direct()
 
   if (nv3d > 0) then
     call MPI_Recv(v3dg,nlev*nlon*nlat*nv3d,MPI_RP,srank_a,tag,MPI_COMM_a,istat,ierr)
-    call state_trans_inv(v3dg)
+    ! Ensemble mean data (mean3d & mean 2d) are not transformed into 
+    ! SCALE prognostic variables (e.g., MOMX) in write_ens_mpi
+    call state_trans_inv(v3dg) 
   endif
 
   if (nv2d > 0) then
@@ -1884,23 +1877,27 @@ subroutine receive_emean_direct()
     case (iv3d_rhot)
       RHOT(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
     case (iv3d_q)
-      QTRC(KS:KE,IS:IE,JS:JE,I_QV) = v3dg(:,:,:,iv3d)
+      QV(KS:KE,IS:IE,JS:JE) = v3dg(:,:,:,iv3d)
     case (iv3d_qc)
-      QTRC(KS:KE,IS:IE,JS:JE,I_HC) = v3dg(:,:,:,iv3d)
+      Qe(KS:KE,IS:IE,JS:JE,I_HC) = v3dg(:,:,:,iv3d)
     case (iv3d_qr)
-      QTRC(KS:KE,IS:IE,JS:JE,I_HR) = v3dg(:,:,:,iv3d)
+      Qe(KS:KE,IS:IE,JS:JE,I_HR) = v3dg(:,:,:,iv3d)
     case (iv3d_qi)
-      QTRC(KS:KE,IS:IE,JS:JE,I_HI) = v3dg(:,:,:,iv3d)
+      Qe(KS:KE,IS:IE,JS:JE,I_HI) = v3dg(:,:,:,iv3d)
     case (iv3d_qs)
-      QTRC(KS:KE,IS:IE,JS:JE,I_HS) = v3dg(:,:,:,iv3d)
+      Qe(KS:KE,IS:IE,JS:JE,I_HS) = v3dg(:,:,:,iv3d)
     case (iv3d_qg)
-      QTRC(KS:KE,IS:IE,JS:JE,I_HG) = v3dg(:,:,:,iv3d)
+      Qe(KS:KE,IS:IE,JS:JE,I_HG) = v3dg(:,:,:,iv3d)
     case default
       write (6, '(3A)') "[Error] Variable '", trim(v3d_name(iv3d)), "' is not recognized."
       stop
     end select
   end do
 
+  ! Assume Tomita08
+  call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, & 
+                                      QV, Qe, & ! [IN]
+                                      QTRC    ) ! [OUT] 
   call ATMOS_vars_fillhalo 
 
   do iv2d = 1, nv2d
