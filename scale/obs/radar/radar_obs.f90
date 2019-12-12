@@ -799,13 +799,15 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   real(r_size), allocatable :: grid_lon_vr(:),  grid_lat_vr(:),  grid_z_vr(:)
 
   character(len=1024) :: input_fname(n_type)
-  integer na, nr, ne, ia, ir, ie
-  real(r_size) :: lon0, lat0, z0
+  integer ia, ir, ie
   real(r_size) :: dlon, dlat
-  real(r_size) :: missing
   integer :: nlon , nlat , nlev
   integer(8) nobs_sp
 
+  integer,save :: na, nr, ne
+  real(r_size),save :: lon0, lat0, z0
+  real(r_size),save :: missing
+  integer,save :: range_res
 
   real(r_size) :: max_obs_ze , min_obs_ze , max_obs_vr , min_obs_vr 
   integer :: nobs_ze, nobs_vr
@@ -827,7 +829,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   character(len=19) :: timelabel
 #endif
 
-  integer :: range_res
+
 
   call mpi_timer('', 3)
 
@@ -961,14 +963,17 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
 
   if (LOG_LEVEL >= 2 .and. myrank_o == 0) then
-    write(*, '(I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2, &
-         &     " -> ", I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2)') &
-         & hd(1)%s_yr, hd(1)%s_mn, hd(1)%s_dy, hd(1)%s_hr, hd(1)%s_mi, hd(1)%s_sc, &
-         & hd(1)%e_yr, hd(1)%e_mn, hd(1)%e_dy, hd(1)%e_hr, hd(1)%e_mi, hd(1)%e_sc
-    write(*, *) lon0, lat0, z0
-    write(*, *) hd(1)%range_num, hd(1)%sector_num, hd(1)%el_num
+!    write(*, '(I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2, &
+!         &     " -> ", I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2)') &
+!         & hd(1)%s_yr, hd(1)%s_mn, hd(1)%s_dy, hd(1)%s_hr, hd(1)%s_mi, hd(1)%s_sc, &
+!         & hd(1)%e_yr, hd(1)%e_mn, hd(1)%e_dy, hd(1)%e_hr, hd(1)%e_mi, hd(1)%e_sc
+    write(*, '(I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2)') &
+         & utime_obs(1), utime_obs(2), utime_obs(3), utime_obs(4), utime_obs(5), utime_obs(6)
+     write(*, *) lon0, lat0, z0
+    write(*, *)   na,   nr, ne
     write(*, *) "missing = ", missing
   endif
+
 
   allocate(ze(na, nr, ne), vr(na, nr, ne), qcflag(na, nr, ne), attenuation(na, nr, ne))
 
