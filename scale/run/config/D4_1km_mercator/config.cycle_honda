@@ -27,7 +27,6 @@ MAX_DACYCLE_RUN_FCST=1
 
 # Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
 DACYCLE_RUN_FCST_TIME=1800 # sec
-DACYCLE_RUN_FCST_TIME=30 # sec
 
 # Cycle # of 1st dacycle-forecast start
 ICYC_DACYCLE_RUN_FCST=1
