@@ -831,36 +831,23 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   call mpi_timer('', 3)
 
-  if ( OBS_JITDT_CHECK_RADAR_TIME .and. minval(utime_obs) >= 0 ) then
-    if ( .not. obs_da_same_time(utime_obs) ) then
-      if (myrank_o == 0 ) then
-        write(6,'(a)') "Obs & analysis times are different!"
-        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
-                                                                     TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
-        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS (previous):",utime_obs(1),utime_obs(2),utime_obs(3),&
-                                                                             utime_obs(4),":",utime_obs(5),":",utime_obs(6)
-        obs%nobs = 0
+  if ( .not.OBS_JITDT_CHECK_RADAR_TIME .or. obs_da_time_compare(utime_obs) == -1 ) then !!! read new data 
+      if ( .not. (allocated(rtdat)) ) allocate(rtdat(RDIM, AZDIM, ELDIM, n_type))
+      if ( .not. (allocated(az)) ) allocate(az(AZDIM, ELDIM, n_type))
+      if ( .not. (allocated(el)) ) allocate(el(AZDIM, ELDIM, n_type))
+
+      RADAR_SO_SIZE_HORI = max(real(DX,kind=r_size),RADAR_SO_SIZE_HORI)
+      RADAR_SO_SIZE_HORI = max(real(DY,kind=r_size),RADAR_SO_SIZE_HORI)
+
+      if (LOG_LEVEL >= 3 .and. myrank_o == 0) then
+        write(*, *) RDIM, AZDIM, ELDIM
+        write(*, *) "dx = ", RADAR_SO_SIZE_HORI
+        write(*, *) "dy = ", RADAR_SO_SIZE_HORI
+        write(*, *) "dz = ", RADAR_SO_SIZE_VERT
       endif
-
-      return
-    endif
-
-  endif
-
-  allocate(rtdat(RDIM, AZDIM, ELDIM, n_type))
-  allocate(az(AZDIM, ELDIM, n_type))
-  allocate(el(AZDIM, ELDIM, n_type))
-
-  RADAR_SO_SIZE_HORI = max(real(DX,kind=r_size),RADAR_SO_SIZE_HORI)
-  RADAR_SO_SIZE_HORI = max(real(DY,kind=r_size),RADAR_SO_SIZE_HORI)
-
-  if (LOG_LEVEL >= 3 .and. myrank_o == 0) then
-    write(*, *) RDIM, AZDIM, ELDIM
-    write(*, *) "dx = ", RADAR_SO_SIZE_HORI
-    write(*, *) "dy = ", RADAR_SO_SIZE_HORI
-    write(*, *) "dz = ", RADAR_SO_SIZE_VERT
-  endif
-
+#ifdef JITDT
+    do while (.not.OBS_JITDT_CHECK_RADAR_TIME.or.obs_da_time_compare(utime_obs) < 0 ) 
+#endif
   if (myrank_o == 0) then
 #ifdef JITDT
     if (OBS_USE_JITDT) then
@@ -871,6 +858,10 @@ subroutine read_obs_radar_toshiba(cfile, obs)
       ierr = jitdt_read_toshiba(n_type, jitdt_place, hd, az, el, rtdat)
   
       call mpi_timer('read_obs_radar_toshiba:jitdt_read_toshiba:', 2)
+      if (ierr /= 0) then
+        obs%nobs = 0
+        return
+      endif
     else
 #endif
       do j = 1, n_type
@@ -893,22 +884,17 @@ subroutine read_obs_radar_toshiba(cfile, obs)
         if (LOG_LEVEL >= 3) then
           write(*, *) "return code = ", ierr
         endif
+        if (ierr /= 0) then
+          obs%nobs = 0
+          return
+        endif
       end do
   
 #ifdef JITDT
     end if
 #endif
   end if  ! myrank_o == 0
-
-  call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 2, barrier=MPI_COMM_o )
-  if ( nprocs_o > 1 ) then
-    call MPI_BCAST( ierr, 1, MPI_INTEGER, 0, MPI_COMM_o, ierr2 )
-  endif
-
-  if ( ierr /= 0 ) then 
-    obs%nobs = 0
-    return
-  endif
+  call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 2, barrier=MPI_COMM_o)
 
   ! Set obs information
   if (myrank_o == 0) then
@@ -923,16 +909,56 @@ subroutine read_obs_radar_toshiba(cfile, obs)
     ne = hd(1)%el_num
 
     call jst2utc(hd(1)%s_yr, hd(1)%s_mn, hd(1)%s_dy, hd(1)%s_hr, hd(1)%s_mi, hd(1)%s_sc, 0.0_DP, utime_obs)
-
-  endif
+      if (myrank_o == 0 ) then
+        write(6,'(a)') "get new data ..."
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
+                                                                     TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS:",utime_obs(1),utime_obs(2),utime_obs(3),&
+                                                                             utime_obs(4),":",utime_obs(5),":",utime_obs(6)
+      endif
+ 
+   endif
 
   ! broadcast obs information
   call  pawr_toshiba_hd_mpi(lon0, lat0, z0, missing,&
                            range_res, na, nr, ne, &
                            AZDIM, ELDIM, n_type, RDIM, &
                            az, el, rtdat, utime_obs)
-
   call mpi_timer('read_obs_radar_toshiba:comm:', 2, barrier=MPI_COMM_o)
+
+
+#ifdef JITDT
+   if (.not.OBS_JITDT_CHECK_RADAR_TIME) exit
+   enddo !!! while
+
+    if (OBS_JITDT_CHECK_RADAR_TIME .and. obs_da_time_compare(utime_obs) == 1 )then !!! data is available but model is behind obs time
+      if (myrank_o == 0 ) then
+        write(6,'(a)') "Model is behind observation !"
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
+                                                                     TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS:",utime_obs(1),utime_obs(2),utime_obs(3),&
+                                                                             utime_obs(4),":",utime_obs(5),":",utime_obs(6)
+        obs%nobs = 0
+      endif
+      return
+    endif
+#endif
+  elseif ( obs_da_time_compare(utime_obs) == 0 ) then !!! use previous obs data
+        write(6,'(a)') "Model reaches previous obs time."
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
+                                                                     TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
+   else !!! model is behind obs
+      if (myrank_o == 0 ) then
+        write(6,'(a)') "Model is still behind observation !"
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
+                                                                     TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
+        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS (previous):",utime_obs(1),utime_obs(2),utime_obs(3),&
+                                                                             utime_obs(4),":",utime_obs(5),":",utime_obs(6)
+        obs%nobs = 0
+      endif
+      return
+  endif
+
 
   if (LOG_LEVEL >= 2 .and. myrank_o == 0) then
     write(*, '(I4.4, "-", I2.2, "-", I2.2, "T", I2.2, ":", I2.2, ":", I2.2, &
@@ -942,21 +968,6 @@ subroutine read_obs_radar_toshiba(cfile, obs)
     write(*, *) lon0, lat0, z0
     write(*, *) hd(1)%range_num, hd(1)%sector_num, hd(1)%el_num
     write(*, *) "missing = ", missing
-  endif
-
-  if ( OBS_JITDT_CHECK_RADAR_TIME ) then
-    if ( .not. obs_da_same_time(utime_obs) ) then
-      if (myrank_o == 0 ) then
-        write(*,*) "Obs & analysis times are different!"
-        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "SCALE-LETKF:",TIME_NOWDATE(1),TIME_NOWDATE(2),TIME_NOWDATE(3),&
-                                                                     TIME_NOWDATE(4),":",TIME_NOWDATE(5),":",TIME_NOWDATE(6)
-        write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS:",utime_obs(1),utime_obs(2),utime_obs(3),&
-                                                                          utime_obs(4),":",utime_obs(5),":",utime_obs(6)
-        obs%nobs = 0
-      endif
-
-      return
-    endif
   endif
 
   allocate(ze(na, nr, ne), vr(na, nr, ne), qcflag(na, nr, ne), attenuation(na, nr, ne))
@@ -1372,24 +1383,33 @@ subroutine read_obs_radar_jrc(cfile, obs)
   return
 end subroutine read_obs_radar_jrc
 
-function obs_da_same_time(utime_obs)
+function obs_da_time_compare(utime_obs)
   use scale_time, only: &
       TIME_NOWDATE
   implicit none
 
   integer :: utime_obs(6)
+  integer :: obs_da_time_compare
   integer :: i
-  logical :: obs_da_same_time
 
-  obs_da_same_time = .true.
+  if (minval(utime_obs) < 0)then
+   obs_da_time_compare = -1 !!! no obs 
+   return
+  endif
+
   do i = 1, 6
-    if (utime_obs(i) /= TIME_NOWDATE(i)) then
-      obs_da_same_time = .false.
-      exit
-    endif
+   if (utime_obs(i) > TIME_NOWDATE(i))then
+      obs_da_time_compare = 1
+      return
+   elseif (utime_obs(i) < TIME_NOWDATE(i))then
+      obs_da_time_compare = -1
+      return
+   endif
   enddo
 
-end function obs_da_same_time
+  obs_da_time_compare = 0
+
+end function obs_da_time_compare
 
 !=======================================================================
 end module radar_obs
