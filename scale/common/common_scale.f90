@@ -834,6 +834,8 @@ subroutine write_restart_direct(v3dg,v2dg)
     ATMOS_PHY_MP_driver_qhyd2qtrc
   use scale_atmos_hydrometeor, only: &
     I_QV, I_HC, I_HR, I_HI, I_HS, I_HG
+  use mod_atmos_phy_mp_vars, only: &
+    QS_MP, QE_MP
   use scale_atmos_grid_cartesC_index, only: &
     IS, IE, IA, JS, JE, JA, KS, KE, KA
   implicit none
@@ -877,8 +879,8 @@ subroutine write_restart_direct(v3dg,v2dg)
 
   ! Assume Tomita08
   call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, & 
-                                      QV, Qe, & ! [IN]
-                                      QTRC    ) ! [OUT] 
+                                      QV, Qe, &                    ! [IN]
+                                      QTRC(:,:,:,QS_MP:QE_MP)    ) ! [OUT] 
   call ATMOS_vars_fillhalo 
 
   call ATMOS_vars_calc_diagnostics 

@@ -1828,6 +1828,8 @@ subroutine receive_emean_direct()
     ATMOS_vars_fillhalo
   use mod_atmos_phy_mp_driver, only: &
     ATMOS_PHY_MP_driver_qhyd2qtrc
+  use mod_atmos_phy_mp_vars, only: &
+    QS_MP, QE_MP
   use scale_atmos_hydrometeor, only: &
     I_HC, I_HR, I_HI, I_HS, I_HG
   use scale_atmos_grid_cartesC_index, only: &
@@ -1896,8 +1898,8 @@ subroutine receive_emean_direct()
 
   ! Assume Tomita08
   call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, & 
-                                      QV, Qe, & ! [IN]
-                                      QTRC    ) ! [OUT] 
+                                      QV, Qe, &                    ! [IN]
+                                      QTRC(:,:,:,QS_MP:QE_MP)    ) ! [OUT] 
   call ATMOS_vars_fillhalo 
 
   do iv2d = 1, nv2d
