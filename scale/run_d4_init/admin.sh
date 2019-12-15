@@ -50,7 +50,7 @@ if [ "$PRESET" = 'OFP' ]; then
  script_suffix='_ofp'
 elif [ "$PRESET" = 'OBCX' ]; then
  NNODES=`expr \( $NMEM + 2 \) \* 4` ### D4 1km
-    while [ $NNODES > 256 ] ;do
+    while [ $NNODES -gt 256 ] ;do
       NNODES=`expr $NNODES \/ 2`
     done
  config_suffix='obcx'
@@ -196,9 +196,9 @@ rm -f exp/*
 ln -s $OUTDIR/exp/${jobid}_${SCPNAME}_${STIME} exp
 
 #-------------------------------------------------------------------------------
-cd $TOPDIR/scale_ope_single/scale-letkf_ope_d4/scale/run
-./prep.sh
-cd -
+#cd $TOPDIR/scale_ope_single/scale-letkf_ope_d4/scale/run
+#./prep.sh
+#cd -
 
 #-------------------------------------------------------------------------------
 

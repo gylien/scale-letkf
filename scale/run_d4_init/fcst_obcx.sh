@@ -213,7 +213,7 @@ echo
 job_end_check_PJM $jobid
 res=$?
 
-echo "plot" > $statfile
+echo "done" > $statfile
 
 
 #===============================================================================

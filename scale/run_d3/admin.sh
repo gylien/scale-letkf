@@ -212,10 +212,10 @@ rm -f exp/*
 ln -s $OUTDIR/exp/${jobid}_${SCPNAME}_${STIME} exp
 
 #-------------------------------------------------------------------------------
-
-echo 'exec sno'
- ./sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh > ./sno_bulk_${PARENT_REF_TIME}_${STIME}.log 2>&1 &
-
+#
+#echo 'exec sno'
+# ./sno_bulk_ref_${PARENT_REF_TIME}_${STIME}.sh > ./sno_bulk_${PARENT_REF_TIME}_${STIME}.log 2>&1 &
+#
 #-------------------------------------------------------------------------------
 
 echo 'exec d4 init...'

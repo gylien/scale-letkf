@@ -47,7 +47,7 @@ elif [ "$PRESET" = 'K_micro' ]; then
   MPI_TYPE='K'
 #elif [ "$PRESET" = 'K_interact' ]; then
 #  ...
-elif [ "$PRESET" = 'OFP' ]; then  
+elif [ "$PRESET" = 'OFP' ] || [ "$PRESET" = 'OBCX' ] ; then  
   DISK_MODE=1
 ##  DISK_MODE=2
   NODELIST_TYPE='machinefile'

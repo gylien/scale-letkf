@@ -7,7 +7,7 @@
 
 PRESET='OBCX' 
 
-EXPNAME=ope
+EXPNAME=ope_single
 
 
 GNAME=$(id -ng)
