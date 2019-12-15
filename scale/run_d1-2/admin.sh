@@ -73,7 +73,7 @@ fi
 iwait=1
 while [ $iwait == 1 ];do
 iwait=0
-running_jobs=`ls -x fcst${config_suffix}.stat.*`
+running_jobs=`ls -x fcst${script_suffix}.stat.*`
 if [ "$running_jobs" != "" ];then
 for statfile in $running_jobs ;do
 if [ `cat $statfile` == "prep" ] ;then
