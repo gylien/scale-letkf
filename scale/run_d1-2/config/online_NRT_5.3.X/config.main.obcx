@@ -5,9 +5,9 @@
 #
 #===============================================================================
 
-PRESET='OFP' 
+PRESET='OBCX' 
 
-EXPNAME=ope
+EXPNAME=ope_single
 
 NRT_FCST=1 # Near real time forecast? # 1:True
            #                          # 0:False
@@ -20,12 +20,12 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
 TOPDIR="$SCALEDIR/.."
 
-OUTPUT="${TOPDIR}/result/ope"
+OUTPUT="${TOPDIR}/result/${expname}"
 EXP1=d1
 EXP2=d2
 EXP3=d3
 
-OUTDIR="${OUTPUT}/${EXP1}"
+OUTDIR="${TOPDIR}/result/ope/${EXP1}"
 OUTDIR[2]="${OUTPUT}/${EXP2}"
 OUTDIR[3]="${OUTPUT}/${EXP3}"
 

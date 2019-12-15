@@ -99,12 +99,12 @@ cat config/${CONFIG}/config.${SCPNAME} | \
     sed -e "s/<FCSTLEN>/${FCSTLEN}/g" \
     > config.${SCPNAME}
 
-cat config.main.ofp | \
+cat config.main.${script_suffix} | \
    sed -e "s/<MEMBER>/${NMEM}/g" | \
    sed -e "s/<NNODES>/${NNODES}/g" | \
    sed -e "s/<STIME>/${STIME}/g" \
  > config.main
-rm config.main.ofp
+rm config.main.${script_suffix}
 
 
 . config.main || exit $?
