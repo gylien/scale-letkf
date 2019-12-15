@@ -69,7 +69,8 @@ if [ "$SCPNAME" = 'cycle' ]; then
   DATA_BDY_GRADS="ncepgfs_grads_da"
 else
   DATA_BDY_WRF="ncepgfs_wrf"
-  DATA_BDY_GRADS="ncepgfs_grads"
+#  DATA_BDY_GRADS="ncepgfs_grads"
+  DATA_BDY_GRADS="ncepgfs_grads_ext"
 fi
 
 #-------------------------------------------------------------------------------
