@@ -1,0 +1,222 @@
+#!/bin/bash
+#===============================================================================
+#
+#  Main settings for SCALE-LETKF scripts
+#
+#===============================================================================
+
+PRESET=`hostname | cut -d '.' -f 2 | tr '[a-z]' '[A-Z]'`
+
+#===============================================================================
+
+DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
+SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
+TOPDIR="$SCALEDIR/.."                                                # Directory of the SCALE model
+
+DOMNUM=1
+
+DOMAIN=d1
+NX=192
+NY=192
+PRC_NUM_X=16
+PRC_NUM_Y=12
+DATA_TOPO_BDY_SCALE=""
+DATA_BDY_SCALE_PRC_NUM_X= # D1
+DATA_BDY_SCALE_PRC_NUM_Y= # D1
+
+#DOMAIN=d2
+#NX=256
+#NY=256
+#PRC_NUM_X=16
+#PRC_NUM_Y=16
+#DATA_TOPO_BDY_SCALE="${TOPDIR}/result/ope_single/d1/const/topo"
+#DATA_BDY_SCALE_PRC_NUM_X=16 # D1
+#DATA_BDY_SCALE_PRC_NUM_Y=12 # D1
+
+#DOMAIN=d3
+#NX=192
+#NY=192
+#PRC_NUM_X=16
+#PRC_NUM_Y=16
+#DATA_TOPO_BDY_SCALE="${TOPDIR}/result/ope_single/d2/const/topo"
+#DATA_BDY_SCALE_PRC_NUM_X=16 # D2
+#DATA_BDY_SCALE_PRC_NUM_Y=16 # D2
+
+#DOMAIN=d4
+#NX=128
+#NY=128
+#PRC_NUM_X=8
+#PRC_NUM_Y=8
+#DATA_TOPO_BDY_SCALE="${TOPDIR}/result/ope_single/d3/const/topo"
+#DATA_BDY_SCALE_PRC_NUM_X=32 # D3
+#DATA_BDY_SCALE_PRC_NUM_Y=32 # D3
+
+IMAX=`expr $NX \/ $PRC_NUM_X`
+JMAX=`expr $NY \/ $PRC_NUM_Y`
+
+SCALE_NP=`expr $PRC_NUM_X \* $PRC_NUM_Y`  # D4 1km
+
+
+GNAME=`id -ng`
+UNAME=`id -nu`
+
+#OUTDIR="${TOPDIR}/result/ope_single/d4_1km"         # Directory of the prepared topo files
+#OUTPUT="${TOPDIR}/result/ope_single/d4_1km"         # Directory of the prepared topo files
+
+#===============================================================================
+# Location of model/data files
+
+DATADIR="$TOPDIR/database" 
+SCALE_DB="$TOPDIR/database" 
+
+DATA_TOPO="${TOPDIR}/result/test_const"         # Directory of the prepared topo files
+DATA_LANDUSE="${TOPDIR}/result/test_const"   # Directory of the prepared landuse files
+
+#===============================================================================
+# model/data file options
+
+DET_RUN=1               # 0: Disable the deterministic run
+                        # 1: Enable  the deterministic run
+
+#TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
+TOPO_FORMAT='DEM50M'      # 'prep': Use prepared topo files in $DATA_TOPO
+                        # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
+                        # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
+
+#LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+LANDUSE_FORMAT='GLCCv2'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
+                        # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
+                        # 'LU100M' (requires compatible 'config.nml.scale_pp')
+LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
+                        # 1: Time-variant landuse files
+
+BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+                        # 1: SCALE history (requires compatible 'config.nml.scale_init')
+                        # 2: WRF           (requires compatible 'config.nml.scale_init')
+                        # 3: NICAM         (requires compatible 'config.nml.scale_init')
+                        # 4: GrADS         (requires compatible 'config.nml.scale_init')
+BDY_SINGLE_FILE=1       # 0: Length of a boundary file = $BDYCYCLE_INT (e.g., files made by data assimilation cycles)
+                        # 1: Length of a boundary file is long enough so that only a single boundary file is used for each forecast
+BDY_SCALE_DIR='fcst'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
+
+BDY_ENS=1               # 0: Fixed boundary files for all memebers
+                        # 1: Ensemble boundary files
+BDY_ROTATING=1          # 0: Use a same series of boundary files for all initial time
+                        # 1: Use different series of boundary files for different initial time
+
+#BDYINT=600
+#BDYCYCLE_INT=21600
+
+#PARENT_REF_TIME=20191214100000
+
+ENABLE_PARAM_USER=0     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
+                        # 1: Enable the 'PARAM_USER' section of the SCALE namelist (require 'config.nml.scale_user' and customized version of SCALE)
+
+OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
+                        # 1: Update the ocean variables every cycle
+OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+                        # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
+LAND_INPUT=0            # 0: No land input (use cycling land variables)
+                        # 1: Update the land variables every cycle
+LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+                        # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
+
+#===============================================================================
+# Parallelization settings
+
+MEMBER=2      # Ensemble size [2+2] *** NOT USED *** 
+MEMBERS=mdet 
+
+
+if [ "$PRESET" == "OBCX" ] ;then
+PPN=16              # Number of processes per node
+elif [ "$PRESET" == "OFP" ] ;then
+PPN=64
+else
+ echo $PRESET " not supported."
+ exit 1
+fi
+NNODES=`expr $SCALE_NP \/ $PPN`
+
+THREADS=1          # Number of threads per process
+
+BGJOB_INT='0.1s'   # Interval of multiple background job submissions
+
+#===============================================================================
+# Temporary directories to store runtime files
+
+ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait until the end of the job)?
+                            #  0: No
+                            #  1: Yes
+
+TMPSUBDIR="scale-letkf_pp"           # (used to identify multiple runs in the same time)
+
+TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
+TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
+#TMPS="$TMP"  # Temporary directory only on the server node
+TMPL="$TMP"
+
+CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
+                            #  0: No
+                            #  1: Yes
+
+#===============================================================================
+# Environmental settings
+
+MPIRUN="mpiexec"
+if (which $MPIRUN > /dev/null 2>&1); then
+  MPIRUN=$(which $MPIRUN)
+fi
+
+SCP='cp -L'
+SCP_HOSTPREFIX=''
+#SCP="scp -q"
+#SCP_HOSTPREFIX="XXXX:"
+
+STAGE_THREAD=8
+TAR_THREAD=8
+
+PYTHON="python"
+
+#BUFRBIN=
+
+#===============================================================================
+# Diagnostic output settings
+
+                 #      fcst
+                 #      history restart
+OUT_OPT=2        # 1:   o       o
+                 # 2:   o
+
+                 #      topo
+TOPOOUT_OPT=1    # 1:   o
+                 # 2:   (none)
+
+                 #      landuse
+LANDUSEOUT_OPT=1 # 1:   o
+                 # 2:   (none)
+
+                 #      bdy
+                 #      mean members
+BDYOUT_OPT=1     # 1:   o    o
+                 # 2:   o
+                 # 3:   (none)
+
+                 #      topo landuse bdy perturb        scale
+                 #      log  log     log (not finished) log
+LOG_OPT=2        # 1:   o    o       o   o              o
+                 # 2:   o    o       o                  o
+                 # 3:                                   o
+                 # 4:   (none)
+
+LOG_TYPE=1       # 1:   Only save the log file from the head process
+                 # 2:   Save all log files
+                 # 3:   Save all log files in an archive file
+                 # 4:   Save all log files in a compressed archive file
+
+#===============================================================================#===============================================================================
+# Machine-independent source file
+
+. config.rc
+
+#===============================================================================

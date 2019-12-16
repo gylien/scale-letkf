@@ -182,6 +182,7 @@ c=1
       # topo (bdy_scale)
       #-------------------
       if ((loop == 1 && c == 1 && BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
+        if [ $DOMAIN != "d1" ] ;then
         if ((PNETCDF_BDY_SCALE == 1)); then
           pathin="${DATA_TOPO_BDY_SCALE}.nc"
           path="bdytopo/const/topo.nc"
@@ -189,7 +190,7 @@ c=1
           pathin="${DATA_TOPO_BDY_SCALE}/"
           path="bdytopo/const/"
         fi
-
+        fi
         mkdir -p ${TMP}/${DAT_SUBDIR}/${path}
         ln -sf ${pathin}/* ${TMP}/${DAT_SUBDIR}/${path}
 #        echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
@@ -223,7 +224,7 @@ c=1
 # bdy
 #-------------------
 if ((BDY_FORMAT >= 1)); then
-  if ((BDY_FORMAT == 1)); then
+  if ((BDY_FORMAT == 1)) && [ "$DOMAIN" != "d1" ] ; then
 #    if [ -s "$DATA_BDY_SCALE/const/log/latlon_domain_catalogue.txt" ]; then
 #      pathin="$DATA_BDY_SCALE/const/log/latlon_domain_catalogue.txt"
     if [ -s "$DATA_TOPO_BDY_SCALE/../log/latlon_domain_catalogue.txt" ]; then

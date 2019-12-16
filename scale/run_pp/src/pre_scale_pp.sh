@@ -88,7 +88,9 @@ fi
 
 OFFLINE_PARENT_BASENAME=
 if ((BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
-  OFFLINE_PARENT_BASENAME="$COPYTOPO"
+  if [ $DOMAIN != "d1" ];then
+    OFFLINE_PARENT_BASENAME="$COPYTOPO"
+  fi
 fi
 
 if [ "$SCPCALL" = 'cycle' ]; then
