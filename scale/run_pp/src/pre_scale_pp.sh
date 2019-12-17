@@ -72,6 +72,7 @@ else
   fi
   mkdir -p ${DATA_TOPO}/const/topo
   mkdir -p ${DATA_LANDUSE}/const/landuse
+  mkdir -p ${DATA_TOPO}/const/log
 fi
 
 if [ "$TOPO_FORMAT" != 'prep' ]; then
@@ -120,7 +121,9 @@ cat $TMPDAT/conf/config.nml.scale_pp | \
         -e "/!--OFFLINE_PARENT_BASENAME--/a OFFLINE_PARENT_BASENAME = \"${OFFLINE_PARENT_BASENAME}\"," \
         -e "/!--OFFLINE_PARENT_PRC_NUM_X--/a OFFLINE_PARENT_PRC_NUM_X = ${DATA_BDY_SCALE_PRC_NUM_X}," \
         -e "/!--OFFLINE_PARENT_PRC_NUM_Y--/a OFFLINE_PARENT_PRC_NUM_Y = ${DATA_BDY_SCALE_PRC_NUM_Y}," \
-    > $TMPDIR/pp.conf
+        -e "/!--DOMAIN_CATALOGUE_FNAME--/a DOMAIN_CATALOGUE_FNAME = \"$DATA_TOPO/const/log/latlon_domain_catalogue.txt\"," \
+        -e "/!--DOMAIN_CATALOGUE_OUTPUT--/a DOMAIN_CATALOGUE_OUTPUT = .true.," \
+     > $TMPDIR/pp.conf
 
 #===============================================================================
 
