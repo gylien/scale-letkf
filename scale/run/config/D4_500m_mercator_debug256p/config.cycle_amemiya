@@ -5,10 +5,10 @@
 #
 #===============================================================================
 
-STIME='20190610080000'
-ETIME='20190610080130'
+STIME=20190610080000
+ETIME=20190610080130
 
-TIME_LIMIT='0:25:00'
+TIME_LIMIT="00:30:00"
 CYCLE=
 CYCLE_SKIP=1
 
@@ -20,22 +20,19 @@ DACYCLE=1
 DIRECT_TRANSFER=1
 
 # Run fcst from analysis ensemble mean by dacycle-forecast members
-DACYCLE_RUN_FCST=0
+DACYCLE_RUN_FCST=1
 
 # Maximum number of dacycle forecasts 
-MAX_DACYCLE_RUN_FCST=1
+MAX_DACYCLE_RUN_FCST=4
 
 # Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
-DACYCLE_RUN_FCST_TIME=1800 # sec
+DACYCLE_RUN_FCST_TIME=600 # sec
 
 # Cycle # of 1st dacycle-forecast start
 ICYC_DACYCLE_RUN_FCST=1
 
 # Cycle # of 1st DA cycle starts after spin-up forecast
 ICYC_DACYCLE_RUN_ANALYSIS=1
-
-# GrADS output
-OUT_MEAN_GRADS=1
 
 #===============================================================================
 # Forecast settings
@@ -95,7 +92,7 @@ LOG_OPT=2        # 1:   o    o       o   o              o
                  # 3:                                   o
                  # 4:   (none)
 
-LOG_TYPE=2       # 1:   Only save the log file from the head process
+LOG_TYPE=1       # 1:   Only save the log file from the head process
                  # 2:   Save all log files
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file

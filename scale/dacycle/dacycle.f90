@@ -32,6 +32,7 @@ program dacycle
     send_emean_direct,        &
     receive_emean_direct,     &
     write_grd_dafcst_mpi,     &
+    write_grd_all_mpi,        &
     send_recv_emean_others,   &
 !    bcast_restart_efcst_mpi,  &
 #ifdef PLOT_DCL
@@ -309,9 +310,9 @@ program dacycle
 
       ! restart output before LETKF
       if (DIRECT_TRANSFER) then
-        if (LOG_LEVEL >= 3 .and. TIME_DOATMOS_restart .and. myrank_da == 0) then
-          write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip writing restart files before LETKF'
-        end if
+!        if (LOG_LEVEL >= 3 .and. TIME_DOATMOS_restart .and. myrank_da == 0) then
+!          write (6, '(A,I6,A)') '[Info] Cycle #', icycle, ': Use direct transfer; skip writing restart files before LETKF'
+!        end if
       else
         call ADMIN_restart_write
       end if
@@ -483,6 +484,11 @@ program dacycle
         !                     calced=.false., mean_out=gues_mean_out_now)
         !end if
 
+        if ( OUT_GRADS_DA_ALL .and. myrank_e == mmean_rank_e ) then
+          call TIME_gettimelabel(fstimelabel)
+          call write_grd_all_mpi( trim(fstimelabel(1:15)), mean3d, 1 )
+        endif
+
         if (gues_sprd_out_now) then
           call write_enssprd(trim(GUES_SPRD_OUT_BASENAME) // trim(timelabel_anal), gues3d, gues2d)
         end if
@@ -587,6 +593,10 @@ program dacycle
           call ADMIN_restart_write 
         end if
 
+        if ( OUT_GRADS_DA_ALL .and. myrank_e == mmean_rank_e ) then
+          call TIME_gettimelabel(fstimelabel)
+          call write_grd_all_mpi( trim(fstimelabel(1:15)), mean3d, 2 )
+        endif
 
       end if ! [ TIME_DOATMOS_restart .and. myrank_use_da]
       !-------------------------------------------------------------------------
@@ -641,7 +651,7 @@ program dacycle
               call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
             endif
 #ifdef PLOT_DCL 
-            if (PLOT_FCST)then ! Output of dacycle-forecast        
+            if ( PLOT_FCST ) then ! Output of dacycle-forecast        
               call plot_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
             endif 
 #endif

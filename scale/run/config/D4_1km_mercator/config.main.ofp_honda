@@ -9,6 +9,7 @@ PRESET='OFP'
 
 RSCGRP="regular-cache"
 RSCGRP="debug-cache"
+RSCGRP="debug-flat"
 
 #===============================================================================
 
@@ -135,6 +136,7 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 MEMBER=20      # Ensemble size 
 NNODES=52      # Ensemble size + 1 (mean) +1 (mdet) + 30 (additional)
 NNODES=23      # Ensemble size + 1 (mean) +1 (mdet) + 30 (additional)
+NNODES=22      # Ensemble size + 1 (mean) +1 (mdet) + 30 (additional)
 
 #MEMBER=<MEMBER>      # Ensemble size 
 #NNODES=<NNODES>

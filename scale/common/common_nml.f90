@@ -193,6 +193,8 @@ MODULE common_nml
   logical :: ADAPTIVE_INFL_INIT = .false.      ! Deprecated (use INFL_MUL_ADAPTIVE)
   real(r_size) :: BOUNDARY_TAPER_WIDTH = 0.0d0 ! Deprecated (use BOUNDARY_BUFFER_WIDTH)
   logical :: OUT_GRADS_DAFCST = .false. ! Outut dacycle forecast in GrADS format
+  logical :: OUT_GRADS_DA_ALL = .false. ! Outut dacycle analysis/guess in GrADS format
+  character(filelenmax) :: OUT_GRADS_DA_ALL_PATH = "" ! Output path
 
   !--- PARAM_LETKF_OBS
   logical :: USE_OBS(nobtype) = .true.
@@ -707,6 +709,8 @@ subroutine read_nml_letkf
     NOBS_OUT, &
     NOBS_OUT_BASENAME, &
     OUT_GRADS_DAFCST, &
+    OUT_GRADS_DA_ALL, &
+    OUT_GRADS_DA_ALL_PATH, &
     COV_INFL_MUL, &       !*** for backward compatibility ***
     MIN_INFL_MUL, &       !*** for backward compatibility ***
     ADAPTIVE_INFL_INIT, & !*** for backward compatibility ***
