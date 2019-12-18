@@ -17,13 +17,20 @@ RSCGRP="regular-cache"
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 #OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
-OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/DEBUG"
-EXP4=D4_500M_mercator_50mem_50fcst_1210
+OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/DEBUG256p"
+EXP4=D4_500M_mercator_50mem+1fcst_10min_1215_RMEM10_2
+EXP4=D4_500M_mercator_20mem+1fcst_10min_1215_RMEM10
+EXP4=D4_500M_mercator_10mem+1fcst_10min_1215_RMEM10
+
+EXP4=D4_500M_mercator_10mem+1fcst_10min_1215_00
+
+EXP4=D4_500M_mercator_50mem_ainc
 EXP3=exp_d3
 EXP2=exp_d2
 
 OUTDIR="${OUTPUT}/${EXP4}"
-INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_500m20191206"
+INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_500m20191206_np256"
+INDIR="/work/hp150019/share/honda/SCALE-LETKF/TEST_INPUT/D4_500m20191216_np256"
 
 #===============================================================================
 # Location of model/data files
@@ -125,20 +132,25 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-MEMBER=5      # Ensemble size 
-NNODES=128
 
 MEMBER=50      # Ensemble size # 50mem + 2 (mean mdet) + 1 fcst
-NNODES=1632
+NNODES=212
+NNODES=208
+
+
+
+
 
 MEMBER=50      # Ensemble size # 50mem + 2 (mean mdet) + 1 fcst
-NNODES=848
+NNODES=212
+MEMBER=50      # Ensemble size # 50mem + 2 (mean mdet) + 0 fcst
+NNODES=208
 
 PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
-SCALE_NP=1024  # D4    # Number of processes to run SCALE
+SCALE_NP=256  # D4    # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -150,7 +162,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
-TMPSUBDIR="2scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
+TMPSUBDIR="1215scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
 TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node

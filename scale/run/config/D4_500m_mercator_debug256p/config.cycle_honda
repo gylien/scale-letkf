@@ -6,9 +6,10 @@
 #===============================================================================
 
 STIME='20190610080000'
-ETIME='20190610080130'
+ETIME='20190610080930'
+#
+TIME_LIMIT='0:30:00'
 
-TIME_LIMIT='0:25:00'
 CYCLE=
 CYCLE_SKIP=1
 
@@ -29,7 +30,7 @@ MAX_DACYCLE_RUN_FCST=1
 DACYCLE_RUN_FCST_TIME=1800 # sec
 
 # Cycle # of 1st dacycle-forecast start
-ICYC_DACYCLE_RUN_FCST=1
+ICYC_DACYCLE_RUN_FCST=20
 
 # Cycle # of 1st DA cycle starts after spin-up forecast
 ICYC_DACYCLE_RUN_ANALYSIS=1
@@ -95,7 +96,7 @@ LOG_OPT=2        # 1:   o    o       o   o              o
                  # 3:                                   o
                  # 4:   (none)
 
-LOG_TYPE=2       # 1:   Only save the log file from the head process
+LOG_TYPE=1       # 1:   Only save the log file from the head process
                  # 2:   Save all log files
                  # 3:   Save all log files in an archive file
                  # 4:   Save all log files in a compressed archive file

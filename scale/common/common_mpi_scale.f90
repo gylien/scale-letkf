@@ -1990,6 +1990,66 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   return
 end subroutine write_grd_dafcst_mpi
 
+!-------------------------------------------------------------------------------
+! Write the analysis/guess ensemble mean into a single GrADS file 
+!-------------------------------------------------------------------------------
+subroutine write_grd_all_mpi(timelabel, v3dg, step)
+  use scale_io, only: &
+    H_LONG
+
+  implicit none
+  character(15), intent(in) :: timelabel
+  real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
+  integer, intent(in) :: step ! 1:guess, 2:analysis
+
+  character(4) :: head
+  character(len=H_LONG) :: filename
+  real(r_sngl) :: buf(nlev,nlong,nlatg)
+  integer :: iunit, iolen
+  integer :: k, n, irec, ierr
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+
+  integer :: iv3d
+
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  if (myrank_d == 0) then
+
+    if ( step == 1 ) head = "gues_"
+    if ( step == 2 ) head = "anal_"
+
+    filename = trim(OUT_GRADS_DA_ALL_PATH) // "/" //head // trim(timelabel) // ".grd"
+    iunit = 55
+    inquire (iolength=iolen) iolen
+    open (iunit, file=trim(filename), form='unformatted', access='direct', &
+          status='unknown', convert='native', recl=nlong*nlatg*iolen)
+    irec = 0
+  end if
+
+  do iv3d = 1, nv3d
+    buf(:,:,:) = 0.0
+    buf(:,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( v3dg(:,:,:,iv3d), kind=r_sngl )
+    call MPI_ALLREDUCE(MPI_IN_PLACE, buf, nlev*nlong*nlatg, MPI_RP, MPI_SUM, MPI_COMM_d, ierr)
+
+    if (myrank_d == 0) then
+      do k = 1, nlev
+        irec = irec + 1
+        write (iunit, rec=irec) buf(k,:,:)
+      enddo
+    end if
+
+  enddo
+
+  if (myrank_d == 0) then
+    close (iunit)
+  end if
+
+  return
+end subroutine write_grd_all_mpi
+
 #ifdef PLOT_DCL
 !-------------------------------------------------------------------------------
 ! Plot forecast/analysis 3D data by DCL
