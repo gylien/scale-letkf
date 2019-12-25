@@ -278,6 +278,7 @@ MODULE common_nml
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
   !---PARAM_LETKF_H08
+  logical :: H08_OUT_ETBB_NC = .false.
   character(filelenmax) :: H08_RTTOV_COEF_PATH = '.'
   character(filelenmax) :: H08_VBC_PATH = '.'
   character(filelenmax) :: H08_OUTFILE_BASENAME = 'him8'
@@ -970,6 +971,7 @@ subroutine read_nml_letkf_h08
   integer :: ierr
 
   namelist /PARAM_LETKF_H08/ &
+    H08_OUT_ETBB_NC, &
     H08_FORMAT_NC, &
     H08_SIM_ALLG, &
     H08_NOWDATE, &

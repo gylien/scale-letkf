@@ -59,6 +59,7 @@
 /
 
 &PARAM_LETKF_H08
+ H08_OUT_ETBB_NC = .false.,
  H08_FORMAT_NC = .true.,
  H08_SIM_ALLG = .true.,
  H08_OBS_THIN_LEV = 6,

@@ -374,62 +374,62 @@ while ((time <= ETIME)); do
     done
   fi
 
-  # topo
-  #-------------------
-  if ((loop == 1)) && [ "$TOPO_FORMAT" = 'prep' ]; then
-    if ((DISK_MODE == 3)); then
-      for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
-        for q in $(seq $mem_np_); do
-          path="const/${CONNECTOR_TOPO}topo$(scale_filename_sfx $((q-1)))"
-          echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-        done
-      done
-    else
-      for q in $(seq $mem_np_); do
-        path="const/${CONNECTOR_TOPO}topo$(scale_filename_sfx $((q-1)))"
-        echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
-      done
-    fi
-  fi
-
-  # topo (bdy_scale)
-  #-------------------
-  if ((loop == 1 && BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
-    if ((PNETCDF_BDY_SCALE == 1)); then
-      pathin="${DATA_TOPO_BDY_SCALE}.nc"
-      path="bdytopo/const/topo.nc"
-    else
-      pathin="${DATA_TOPO_BDY_SCALE}/"
-      path="bdytopo/const/"
-    fi
-    echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
-  fi
-
-  # landuse
-  #-------------------
-  if ((loop == 1 || LANDUSE_UPDATE == 1)) && [ "$LANDUSE_FORMAT" = 'prep' ]; then
-    if ((DISK_MODE == 3)); then
-      for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
-        for q in $(seq $mem_np_); do
-          if ((LANDUSE_UPDATE == 1)); then
-            path="${time}/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
-          else
-            path="const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
-          fi
-          echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
-        done
-      done
-    else
-      for q in $(seq $mem_np_); do
-        if ((LANDUSE_UPDATE == 1)); then
-          path="${time}/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
-        else
-          path="const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
-        fi
-        echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
-      done
-    fi
-  fi
+#  # topo
+#  #-------------------
+#  if ((loop == 1)) && [ "$TOPO_FORMAT" = 'prep' ]; then
+#    if ((DISK_MODE == 3)); then
+#      for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
+#        for q in $(seq $mem_np_); do
+#          path="const/${CONNECTOR_TOPO}topo$(scale_filename_sfx $((q-1)))"
+#          echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+#        done
+#      done
+#    else
+#      for q in $(seq $mem_np_); do
+#        path="const/${CONNECTOR_TOPO}topo$(scale_filename_sfx $((q-1)))"
+#        echo "${DATA_TOPO}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+#      done
+#    fi
+#  fi
+#
+#  # topo (bdy_scale)
+#  #-------------------
+#  if ((loop == 1 && BDY_FORMAT == 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
+#    if ((PNETCDF_BDY_SCALE == 1)); then
+#      pathin="${DATA_TOPO_BDY_SCALE}.nc"
+#      path="bdytopo/const/topo.nc"
+#    else
+#      pathin="${DATA_TOPO_BDY_SCALE}/"
+#      path="bdytopo/const/"
+#    fi
+#    echo "${pathin}|${DAT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST_BDYDATA}
+#  fi
+#
+#  # landuse
+#  #-------------------
+#  if ((loop == 1 || LANDUSE_UPDATE == 1)) && [ "$LANDUSE_FORMAT" = 'prep' ]; then
+#    if ((DISK_MODE == 3)); then
+#      for m in $(seq $((repeat_mems <= mtot ? repeat_mems : mtot))); do
+#        for q in $(seq $mem_np_); do
+#          if ((LANDUSE_UPDATE == 1)); then
+#            path="${time}/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
+#          else
+#            path="const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
+#          fi
+#          echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}.${mem2node[$(((m-1)*mem_np+q))]}
+#        done
+#      done
+#    else
+#      for q in $(seq $mem_np_); do
+#        if ((LANDUSE_UPDATE == 1)); then
+#          path="${time}/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
+#        else
+#          path="const/${CONNECTOR_LANDUSE}landuse$(scale_filename_sfx $((q-1)))"
+#        fi
+#        echo "${DATA_LANDUSE}/${path}|${OUT_SUBDIR}/${path}" >> ${STAGING_DIR}/${STGINLIST}
+#      done
+#    fi
+#  fi
 
   # bdy (prepared)
   #-------------------
@@ -508,39 +508,39 @@ while ((time <= ETIME)); do
     echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
   fi
 
-  # topo
-  #-------------------
-  if ((loop == 1 && TOPOOUT_OPT <= 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
-    if ((PNETCDF == 1)); then
-      path="const/topo.nc"
+#  # topo
+#  #-------------------
+#  if ((loop == 1 && TOPOOUT_OPT <= 1)) && [ "$TOPO_FORMAT" != 'prep' ]; then
+#    if ((PNETCDF == 1)); then
+#      path="const/topo.nc"
+##      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
+#    else
+#      path="const/topo/"
 #      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
-    else
-      path="const/topo/"
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-    fi
-  fi
-
-  # landuse
-  #-------------------
-  if ((loop == 1 || LANDUSE_UPDATE == 1)) && ((LANDUSEOUT_OPT <= 1)) && [ "$LANDUSE_FORMAT" != 'prep' ]; then
-    if ((PNETCDF == 1)); then
-      if ((LANDUSE_UPDATE == 1)); then
-        path="${time}/landuse.nc"
-      else
-        path="const/landuse.nc"
-      fi
+#    fi
+#  fi
+#
+#  # landuse
+#  #-------------------
+#  if ((loop == 1 || LANDUSE_UPDATE == 1)) && ((LANDUSEOUT_OPT <= 1)) && [ "$LANDUSE_FORMAT" != 'prep' ]; then
+#    if ((PNETCDF == 1)); then
+#      if ((LANDUSE_UPDATE == 1)); then
+#        path="${time}/landuse.nc"
+#      else
+#        path="const/landuse.nc"
+#      fi
+##      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
+#      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
+#    else
+#      if ((LANDUSE_UPDATE == 1)); then
+#        path="${time}/landuse/"
+#      else
+#        path="const/landuse/"
+#      fi
 #      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST_NOLINK}
-    else
-      if ((LANDUSE_UPDATE == 1)); then
-        path="${time}/landuse/"
-      else
-        path="const/landuse/"
-      fi
-      echo "${OUTDIR}/${path}|${OUT_SUBDIR}/${path}|${loop}" >> ${STAGING_DIR}/${STGOUTLIST}
-    fi
-  fi
+#    fi
+#  fi
 
 #  # bdy
 #  #-------------------
@@ -1114,7 +1114,7 @@ for it in $(seq $its $ite); do
       fi
 
       bash $SCRP_DIR/src/pre_scale_init.sh $MYRANK \
-           $TMPOUT/const/${CONNECTOR_TOPO}topo $TMPOUT/${time_l}/${CONNECTOR_LANDUSE}landuse \
+           $OUTDIR/const/${CONNECTOR_TOPO}topo $OUTDIR/${time_l}/${CONNECTOR_LANDUSE}landuse \
            ${bdyorgf} $time $mkinit ${name_m[$m]} $mem_bdy \
            $TMPRUN/scale_init/${name_m[$m]} \
            "$bdy_time_list" $ntsteps $ntsteps_skip cycle
@@ -1286,7 +1286,7 @@ for it in $(seq $its $ite); do
 
       bash $SCRP_DIR/src/pre_scale.sh $MYRANK ${name_m[$m]} \
            $OUTDIR/${time}/anal/${name_m[$m]}${CONNECTOR}init $ocean_base $land_base $bdy_base \
-           $OUTDIR/const/${CONNECTOR_TOPO}topo $TMPOUT/${time_l}/${CONNECTOR_LANDUSE}landuse \
+           $OUTDIR/const/${CONNECTOR_TOPO}topo $OUTDIR/${time_l}/${CONNECTOR_LANDUSE}landuse \
            $time $CYCLEFLEN $LCYCLE $CYCLEFOUT $TMPRUN/scale/${name_m[$m]} $OUT_OPT \
            cycle $bdy_start_time $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT
     fi
@@ -1433,7 +1433,7 @@ letkf_1 () {
 if (pdrun all $PROC_OPT); then
   bash $SCRP_DIR/src/pre_letkf_node.sh $MYRANK \
        $time $atime $TMPRUN/letkf ${TMPDAT_OBS}/obs \
-       $mem_nodes $mem_np $slot_s $slot_e $slot_b $TMPOUT/const/${CONNECTOR_TOPO}topo $OBSOUT_OPT \
+       $mem_nodes $mem_np $slot_s $slot_e $slot_b $OUTDIR/const/${CONNECTOR_TOPO}topo $OBSOUT_OPT \
        $ADAPTINFL $SPRD_OUT $RTPS_INFL_OUT $NOBS_OUT \
        $MEMBER
 fi

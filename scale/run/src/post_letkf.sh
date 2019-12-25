@@ -41,12 +41,16 @@ if ((LOG_OPT <= 4 && MYRANK == 0)); then
   fi
 fi
 
-if ((OUT_OPT >= 3 )); then
-  rm -rf ${TMPOUT}/${STIME}/hist
-  rm -rf ${TMPOUT}/${ATIME}/gues/0???
+if ((OUT_OPT >= 3 && MYRANK == 0)); then
+#  rm -rf ${TMPOUT}/${STIME}/hist/00??
+  rm -rf ${OUTDIR}/${STIME}/hist/00??
+#  rm -rf ${TMPOUT}/${ATIME}/gues/0???
+  rm -rf ${OUTDIR}/${ATIME}/gues/0???
 fi
 
-rm -f $TMPDAT_OBS/*_${ATIME}.*
+if (( MYRANK == 0)); then
+  rm -f $TMPDAT_OBS/*_${ATIME}.*
+fi
 
 #if [ -f "${TMPOUT}/vbc/Him8_vbca.dat" ] && [ ${MYRANK} -eq 0 ] ; then
 #  mv ${TMPOUT}/vbc/Him8_vbca.dat ${TMPOUT}/vbc/Him8_vbca_${ATIME}.dat

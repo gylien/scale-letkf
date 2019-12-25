@@ -1,0 +1,18 @@
+&PARAM_ENSEMBLE
+!--MEMBER--
+!--MEMBER_RUN--
+!--MEMBER_ITER--
+!--CONF_FILES--
+!--CONF_FILES_SEQNUM--
+!--DET_RUN--
+ DET_RUN_CYCLED = .true.,
+/
+
+&PARAM_PROCESS
+!--PPN--
+!--MEM_NODES--
+!--NUM_DOMAIN--
+!--PRC_DOMAINS--
+! COLOR_REORDER = .true.,
+/
+

@@ -6,9 +6,9 @@
 #===============================================================================
 
 PRESET='OFP'
-RSCGRP="debug-cache"
+#RSCGRP="debug-cache"
 RSCGRP="regular-cache"
-#RSCGRP="regular-flat"
+RSCGRP="regular-flat"
 
 EXP=TAIWAN201808_D2_NOHIM8_1203
 
@@ -65,6 +65,7 @@ LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
 BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=0            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
@@ -77,6 +78,13 @@ BDY_ENS=1               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
 BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial time
                         # 1: Use different series of boundary files for different initial time
+
+
+# fcst
+BDY_ENS=0               # 0: Fixed boundary files for all memebers
+BDY_ROTATING=1
+BDY_SCALE_DIR='fcst'
+BDY_SINGLE_FILE=1
 
 
 SKIP_BDYINIT=1 # 1: Skip unnecessary scale_init process
@@ -118,6 +126,11 @@ LTIMESLOT=600     # Timeslot interval for 4D-LETKF (second)
 MEMBER=50          # Ensemble size
 
 NNODES=272  # Number of nodes
+NNODES=16
+
+NNODES=400
+
+# Number of nodes
 
 PPN=64              # Number of processes per node
 

@@ -2594,6 +2594,162 @@ END SUBROUTINE scatter_grd_mpi_alltoall_1var
 
 
 
+subroutine write_Him8_ens_mpi( etbb_l )
+  implicit none
+
+  real(r_size), intent(in) :: etbb_l( nens,nlon,nlat,NIRB_HIM8 )
+
+  character(filelenmax) :: filename
+
+!  real(r_sngl) :: etbb_g(nens,nlong,nlatg,NIRB_HIM8)
+  real(r_sngl) :: etbb_g(nens,nlong,nlatg,4) ! B08, B09, B10, B13
+
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+  integer :: ierr
+
+  integer :: iunit, irec
+  integer :: ch, ie
+
+  character(3) :: mem
+ 
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  etbb_g(:,:,:,:) = 0.0_r_sngl
+  etbb_g(:,1+ishift:nlon+ishift, 1+jshift:nlat+jshift,1:3) = real( etbb_l(:,:,:,2:4), kind=r_sngl ) ! B07-B10
+  etbb_g(:,1+ishift:nlon+ishift, 1+jshift:nlat+jshift,4) = real( etbb_l(:,:,:,7), kind=r_sngl ) ! B07-B10
+  call MPI_ALLREDUCE(MPI_IN_PLACE, etbb_g, nens*nlong*nlatg*4, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+
+!  if (myrank_d == 0) then
+!    iunit = 65
+!    irec = 0
+!
+!    do ie = 1, nens
+!
+!      write(mem,'(I4.4)') ie
+!      if ( ie == nens ) mem = "mean"
+!
+!      filename = trim(H08_OUTFILE_BASENAME) // "_be_" // mem // ".dat"
+!  
+!      open(unit=iunit,file=trim(filename),form='unformatted',access='direct', &
+!           status='unknown', recl=nlong*nlatg*4)
+!
+!      do ch = 1, NIRB_HIM8
+!        irec = irec + 1
+!        write(iunit,rec=irec) etbb_g(ie,:,:,ch)
+!      enddo
+!
+!      close(unit=iunit)
+!    enddo
+!
+!  endif
+
+  if (myrank_d == 0) then
+    filename = trim(H08_OUTFILE_BASENAME) // "_be.nc"
+    call write_Him8_ens_nc( trim(filename), etbb_g )
+  endif
+
+  return
+end subroutine write_Him8_ens_mpi
+
+
+subroutine write_Him8_ens_nc(filename, etbb)
+  use netcdf
+  use common_ncio
+  implicit none
+
+  character(len=*), intent(in) :: filename
+  real, intent(in) :: etbb(nens, nlong, nlatg, 4) ! B07-B10, B13
+
+  character(len=*), parameter :: TBB_NAME = "tbb"
+!  character(len=*), parameter :: CTBB_NAME = "ctbb"
+
+  character(len=*), parameter :: E_NAME = "ensemble"
+  character(len=*), parameter :: BAND_NAME = "band"
+
+  character(len=*), parameter :: LAT_NAME = "latitude"
+  character(len=*), parameter :: LON_NAME = "longitude"
+
+  integer :: ncid
+  integer :: e_dimid, lon_dimid, lat_dimid, band_dimid
+  integer :: lon_varid, lat_varid, band_varid, e_varid
+
+  integer :: tbb_varid
+
+  real :: lons(nlong), lats(nlatg), bands(4), enss(nens)
+  integer :: i, j, ch, e
+
+  integer :: dimids(4)
+  integer :: start(4), count(4)
+
+  do i = 1, nlong
+    lons(i) = real( i )
+  enddo
+
+  do j = 1, nlatg
+    lats(j) = real( j )
+  enddo
+
+!  do ch = 1, NIRB_HIM8
+!    bands(ch) = real( ch + 6)
+!  enddo
+  bands(1) = 8
+  bands(2) = 9
+  bands(3) = 10
+  bands(4) = 13
+
+  do e = 1, nens
+    enss(e) = real( e )
+  enddo
+
+  ! Create the file. 
+  call ncio_check( nf90_create(trim(filename), nf90_clobber, ncid) )
+
+  ! Define the dimensions. 
+  call ncio_check( nf90_def_dim(ncid, E_NAME, nens, e_dimid) )
+  call ncio_check( nf90_def_dim(ncid, BAND_NAME, 4, band_dimid) ) ! B08, B09, B10 & B13 only
+  call ncio_check( nf90_def_dim(ncid, LON_NAME, nlong, lon_dimid) )
+  call ncio_check( nf90_def_dim(ncid, LAT_NAME, nlatg, lat_dimid) )
+
+  ! Define the coordinate variables. 
+  call ncio_check( nf90_def_var(ncid, LAT_NAME, NF90_REAL, lat_dimid, lat_varid) )
+  call ncio_check( nf90_def_var(ncid, LON_NAME, NF90_REAL, lon_dimid, lon_varid) )
+  call ncio_check( nf90_def_var(ncid, E_NAME, NF90_REAL, e_dimid, e_varid) )
+  call ncio_check( nf90_def_var(ncid, BAND_NAME, NF90_REAL, band_dimid, band_varid) )
+
+  ! Assign units attributes to coordinate variables.
+  call ncio_check( nf90_put_att(ncid, lat_varid, "units", "") )
+
+  dimids = (/ e_dimid, lon_dimid, lat_dimid, band_dimid /)
+
+  ! Define the netCDF variables
+  call ncio_check( nf90_def_var(ncid, TBB_NAME, NF90_REAL, dimids, tbb_varid) )
+
+  ! End define mode.
+  call ncio_check( nf90_enddef(ncid) )
+
+  ! Write the coordinate variable data. 
+  call ncio_check( nf90_put_var(ncid, lat_varid, lats) )
+  call ncio_check( nf90_put_var(ncid, lon_varid, lons) )
+  call ncio_check( nf90_put_var(ncid, band_varid, bands) )
+  call ncio_check( nf90_put_var(ncid, e_varid, enss) )
+
+  count = (/ nens, nlong, nlatg,  4 /)
+  start = (/ 1, 1, 1, 1 /)
+
+  ! Write the data.
+  call ncio_check( nf90_put_var(ncid, tbb_varid, etbb, start = start, &
+                   count = count) )
+
+  ! Close the file. 
+  call ncio_check( nf90_close(ncid) )
+
+  return
+end subroutine write_Him8_ens_nc
+
+
 
 
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)

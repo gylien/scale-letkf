@@ -696,6 +696,10 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
     call write_Him8_mpi(yobs_H08_esprd, step=-1, tbb_lm=yobs_H08_ens(mmean,:,:,:))
     call write_Him8_mpi(yobs_H08_esprd_clr, step=-2, tbb_lm=yobs_H08_ens(mmean,:,:,:))
 
+    if ( H08_OUT_ETBB_NC ) then
+      call write_Him8_ens_mpi (yobs_H08_ens )
+    endif
+
   endif ! myrank_e == mmean_rank_e
 
 
