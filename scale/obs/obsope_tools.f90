@@ -87,6 +87,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
   real(r_size) :: zangle_H08(nlon,nlat)
   integer :: i8, j8, b8
   integer :: i, j, ch
+  integer :: qc_dummy
 
   real(r_size) :: yobs_H08_ens(nens,nlon,nlat,NIRB_HIM8)
   real(r_size) :: yobs_H08_esprd(nlon,nlat,NIRB_HIM8)
@@ -405,6 +406,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
         obsda%lev(1:nobs) = 0.0d0
         obsda%val2(1:nobs) = 0.0d0
         obsda%sprd(1:nobs) = 0.0d0
+        obsda%qv(1:nobs) = 0.0d0
+        obsda%tk(1:nobs) = 0.0d0
 !        obsda%pred1(1:nobs) = 0.0d0
 !        obsda%pred2(1:nobs) = 0.0d0
       end if
@@ -468,7 +471,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !        endif
 
   
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC,5) PRIVATE(nn,n,iof,ril,rjl,rk,rkz,i8,j8,b8) 
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC,5), PRIVATE(nn,n,iof,ril,rjl,rk,rkz,i8,j8,b8,qc_dummy) 
         do nn = n1, n2
           iof = obsda%set(nn)
           n = obsda%idx(nn)
@@ -535,6 +538,17 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 
             obsda%val2(nn) = (abs(yobs_H08_prep(i8,j8,b8-6) - yobs_H08_clr_prep(i8,j8,b8-6) )  &
                               + abs(obs(iof)%dat(n) - yobs_H08_clr_prep(i8,j8,b8-6)) ) * 0.5d0
+
+            call phys2ijk(v3dg(:,:,:,iv3dd_p), id_q_obs, ril, rjl, H08_PQV_PLEV, rk, qc_dummy)
+            if ( qc_dummy == iqc_good ) then
+              call Trans_XtoY( id_q_obs, ril, rjl, rk, &
+                               obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%qv(nn), qc_dummy )
+              call Trans_XtoY( id_t_obs, ril, rjl, rk, &
+                               obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%tk(nn), qc_dummy )
+            else
+              obsda%qv(nn) = -9999999.0_r_size
+              obsda%tk(nn) = -9999999.0_r_size
+            end if
 
 !            obsda%pred1(nn) = zangle_H08(i8,j8)  ! predictor (1)
 !            obsda%pred2(nn) = yobs_H08(i8,j8,b8-6) ! predictor (2)
@@ -645,7 +659,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       ! Prepare variables that will need to be communicated if obsda_return is given
       ! 
       if (present(obsda_return)) then
-        call obs_da_value_partial_reduce_iter(obsda_return, it, 1, nobs, obsda%val, obsda%qc, obsda%lev, obsda%val2)!, obsda%pred1, obsda%pred2)
+        call obs_da_value_partial_reduce_iter(obsda_return, it, 1, nobs, obsda%val, obsda%qc, obsda%lev, obsda%val2, obsda%qv, obsda%tk )!, obsda%pred1, obsda%pred2)
 
         write (timer_str, '(A30,I4,A2)') 'obsope_cal:partial_reduce  (t=', it, '):'
         call mpi_timer(trim(timer_str), 2)

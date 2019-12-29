@@ -108,7 +108,9 @@
                   0.0d0, 0.0d0, 0.0d0, 0.0d0,0.0d0,
 !--H08_VBC_PATH--!
  H08_VBC_USE = .false.,
- H08_PQV_PLEV = 500.0d2, ! Test
+ H08_PQV = .true.,
+ H08_PQV_PLEV = 850.0d2, ! Test
+ H08_PQV_MIN_CMEM = 5,
 /
 
 

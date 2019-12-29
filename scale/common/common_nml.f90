@@ -354,6 +354,14 @@ MODULE common_nml
   integer :: H08_OBS_THIN_LEV = 1 ! thinning level (1: no thinning)
   logical :: USE_HIM8 = .true. ! ! will be overwritten from obsope_tools.f90
 
+  real(r_size) :: H08_CLD_THRS(NIRB_HIM8) = (/300.0d0, 300.0d0, 300.0d0, 300.0d0, 300.0d0, &
+                                              300.0d0, 300.0d0, 300.0d0, 300.0d0, 300.0d0/) ! Threshold tbb btw clear & cloudy skies
+  integer :: H08_PQV_MIN_CMEM = 0 ! Minumim # of cloudy members
+  logical :: H08_PQV = .false. ! Assimilate as pseudo qv if # of cloudy members < H08_PQV_MIN_CMEM and O-B < H08_PQV_OB_MAX
+  real(r_size) :: H08_PQV_OB_MAX = -5.0d0 ! O-B threshold for H08_PQV (K)
+  real(r_size) :: H08_PQV_PLEV = 850.0d2 ! Assumed pressure level (Pa) for pseudo qv obs 
+  real(r_size) :: H08_PQV_QVERR = 1.0d-3 ! obs error for pseudo qv (kg/kg)
+
   !--- PARAM_OBS_ERROR
   real(r_size) :: OBSERR_U = 1.0d0
   real(r_size) :: OBSERR_V = 1.0d0
@@ -1010,7 +1018,13 @@ subroutine read_nml_letkf_h08
     H08_OBS_SWD_B,&
     H08_OBS_AVE_NG,&
     H08_OBS_AVE_OVERLAP, &
-    H08_OBS_THIN_LEV
+    H08_OBS_THIN_LEV, &
+    H08_CLD_THRS, &
+    H08_PQV_MIN_CMEM, &
+    H08_PQV, &
+    H08_PQV_OB_MAX, &
+    H08_PQV_PLEV, &
+    H08_PQV_QVERR
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_H08,iostat=ierr)

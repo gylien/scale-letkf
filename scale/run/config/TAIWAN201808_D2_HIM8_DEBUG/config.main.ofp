@@ -11,7 +11,7 @@ RSCGRP="debug-flat"
 #RSCGRP="regular-cache"
 #RSCGRP="regular-flat"
 
-EXP=TAIWAN201808_D2_HIM8_1218
+EXP=TAIWAN201808_D2_HIM8_DEBUG
 
 #===============================================================================
 
@@ -45,7 +45,7 @@ DATA_BDY_SCALE_PREP=         # Directory of the prepared SCALE boundary files
 
 DATA_BDY_GRADS=
 
-OBS="/work/hp150019/share/honda/SCALE-LETKF/scale-5.3.3/OUTPUT/obs_d2/D2"
+OBS="/work/hp150019/share/honda/SCALE-LETKF/scale-5.3.3/OUTPUT/TAIWAN201808_D2_HIM8_DEBUG"
 
 #===============================================================================
 # model/data file options
@@ -109,10 +109,10 @@ OBSFOOT[2]=nc
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=600     # SCALE forecast time when the assimilation window starts (second)
-WINDOW_E=600     # SCALE forecast time when the assimilation window ends (second)
-LCYCLE=600       # Length of a DA cycle (second)
-LTIMESLOT=600     # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=120     # SCALE forecast time when the assimilation window starts (second)
+WINDOW_E=120     # SCALE forecast time when the assimilation window ends (second)
+LCYCLE=120       # Length of a DA cycle (second)
+LTIMESLOT=120     # Timeslot interval for 4D-LETKF (second)
 
 
 #===============================================================================
@@ -122,13 +122,13 @@ MEMBER=50          # Ensemble size
 NNODES=272    # Number of nodes
 
 MEMBER=9          # Ensemble size
-NNODES=80    # Number of nodes
+NNODES=40    # Number of nodes
 
 PPN=64              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 
-SCALE_NP=1024        # Number of processes to run SCALE
+SCALE_NP=256        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 

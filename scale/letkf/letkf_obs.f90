@@ -87,7 +87,10 @@ SUBROUTINE set_letkf_obs
   use scale_prc_cartesC, only: &
     PRC_NUM_X, &
     PRC_NUM_Y
-
+  use scale_const, only: &
+    Rdry   => CONST_Rdry, &
+    Rvap   => CONST_Rvap, &
+    T00   => CONST_TEM00
 
   IMPLICIT NONE
   INTEGER :: n,i,j,ierr,im,iof,iidx
@@ -101,12 +104,15 @@ SUBROUTINE set_letkf_obs
   real(r_size) :: target_grdspc
 
 #ifdef H08
+  integer :: mem_cld
   integer :: ch_num ! H08
 !  integer :: npr
 
 !  real(r_size) :: vbcH08(H08_NPRED,NIRB_HIM8)
 !  real(r_size) :: pred, pbeta
   real(r_size) :: std13
+  real(r_size) :: es
+  real(r_size) :: qvs
 #endif
   real(r_size) :: sig_b ! sigma_b for AOEI
   real(r_size) :: sig_o ! sigma_o derived from AOEI
@@ -235,7 +241,7 @@ SUBROUTINE set_letkf_obs
         end if
 
 #ifdef H08
-        call obs_da_value_partial_reduce_iter(obsda, it, n1, n2, obsda_ext%val, obsda_ext%qc, obsda_ext%lev, obsda_ext%val2)!, obsda_ext%pred1, obsda_ext%pred2)
+        call obs_da_value_partial_reduce_iter(obsda, it, n1, n2, obsda_ext%val, obsda_ext%qc, obsda_ext%lev, obsda_ext%val2, obsda_ext%qv, obsda_ext%tk )!, obsda_ext%pred1, obsda_ext%pred2)
 #else
         call obs_da_value_partial_reduce_iter(obsda, it, n1, n2, obsda_ext%val, obsda_ext%qc)
 #endif
@@ -367,7 +373,7 @@ SUBROUTINE set_letkf_obs
   allocate(tmpelm(obsda%nobs))
 
 #ifdef H08
-!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref,ch_num,sig_b,sig_o,std13)
+!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref,ch_num,sig_b,sig_o,std13,mem_cld,es)
 #else
 !$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref)
 #endif
@@ -479,6 +485,12 @@ SUBROUTINE set_letkf_obs
         cycle
       endif
 
+      mem_cld = 0
+      do i = 1, MEMBER
+        if ( H08_CLD_THRS( ch_num ) > obsda%ensval(i,n) ) then
+          mem_cld = mem_cld + 1
+        endif
+      enddo
     endif
 !!!###### end Himawari-8 assimilation ###### ! H08
 #endif
@@ -498,7 +510,32 @@ SUBROUTINE set_letkf_obs
       obsda%ensval(mmdetobs,n) = obs(iof)%dat(iidx) - obsda%ensval(mmdetobs,n) ! y-Hx for deterministic run
     end if
 
-!#ifdef H08
+#ifdef H08
+    ! pseudo qv obs
+    if ( obs(iof)%elm(iidx) == id_H08IR_obs .and. H08_PQV ) then
+      if ( mem_cld < H08_PQV_MIN_CMEM .and. obsda%val(n) < H08_PQV_OB_MAX ) then
+
+        if ( obsda%tk(n) < 0.0_r_size .or. obsda%tk(n) < 0.0_r_size ) cycle 
+
+        es = 6.112_r_size * exp( 17.67_r_size * ( obsda%tk(n) - real( T00, kind=r_size ) ) / &
+             ( obsda%tk(n) - real( T00, kind=r_size ) + 243.5_r_size ))
+        qvs = real( Rdry / Rvap, kind=r_size ) * es / ( H08_PQV_PLEV - es )
+
+        obsda%val(n) = obsda%eqv(1,n)
+        do i = 2, MEMBER
+          obsda%val(n) = obsda%val(n) + obsda%eqv(i,n)
+        enddo
+        obsda%val(n) = obsda%val(n) / real( MEMBER,r_size ) 
+
+        do i = 1, MEMBER
+          obsda%ensval(i,n) = obsda%eqv(i,n) - obsda%val(n) ! Hdx
+        enddo
+        obsda%val(n) = qvs - obsda%val(n) ! y-Hx
+
+        obsda%qv(n) = -1.0d5
+      endif
+    endif
+
 !!   Bias correction
 !    if (obs(iof)%elm(iidx) == id_H08IR_obs) then
 !      ch_num = nint(obs(iof)%lev(iidx)) - 6
@@ -519,7 +556,7 @@ SUBROUTINE set_letkf_obs
 !
 !      endif
 !    endif
-!#endif
+#endif
 
  
 !   AOEI: compute sprd in obs space (sigma_b for AOEI) ! H08
@@ -1017,6 +1054,8 @@ SUBROUTINE set_letkf_obs
       obsbufs%lev(n) = obsda%lev(obsda%key(n))   ! H08
       obsbufs%val2(n) = obsda%val2(obsda%key(n)) ! H08
       obsbufs%sprd(n) = obsda%sprd(obsda%key(n)) ! H08
+      obsbufs%qv(n) = obsda%qv(obsda%key(n)) ! H08
+      obsbufs%tk(n) = obsda%tk(obsda%key(n)) ! H08
 !      obsbufs%pred1(n) = obsda%pred1(obsda%key(n)) ! H08
 !      obsbufs%pred2(n) = obsda%pred2(obsda%key(n)) ! H08
 #endif
@@ -1046,6 +1085,8 @@ SUBROUTINE set_letkf_obs
     call MPI_ALLGATHERV(obsbufs%lev, cnts, MPI_r_size, obsbufr%lev, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
     call MPI_ALLGATHERV(obsbufs%val2, cnts, MPI_r_size, obsbufr%val2, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
     call MPI_ALLGATHERV(obsbufs%sprd, cnts, MPI_r_size, obsbufr%sprd, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
+    call MPI_ALLGATHERV(obsbufs%qv, cnts, MPI_r_size, obsbufr%qv, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
+    call MPI_ALLGATHERV(obsbufs%tk, cnts, MPI_r_size, obsbufr%tk, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
 !    call MPI_ALLGATHERV(obsbufs%pred1, cnts, MPI_r_size, obsbufr%pred1, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
 !    call MPI_ALLGATHERV(obsbufs%pred2, cnts, MPI_r_size, obsbufr%pred2, cntr, dspr, MPI_r_size, MPI_COMM_d, ierr)
 #endif
@@ -1108,6 +1149,8 @@ SUBROUTINE set_letkf_obs
         obsda_sort%lev(ns_ext:ne_ext) = obsbufr%lev(ns_bufr:ne_bufr)   ! H08
         obsda_sort%val2(ns_ext:ne_ext) = obsbufr%val2(ns_bufr:ne_bufr) ! H08
         obsda_sort%sprd(ns_ext:ne_ext) = obsbufr%sprd(ns_bufr:ne_bufr) ! H08
+        obsda_sort%qv(ns_ext:ne_ext) = obsbufr%qv(ns_bufr:ne_bufr) ! H08
+        obsda_sort%tk(ns_ext:ne_ext) = obsbufr%tk(ns_bufr:ne_bufr) ! H08
 !        obsda_sort%pred1(ns_ext:ne_ext) = obsbufr%pred1(ns_bufr:ne_bufr) ! H08
 !        obsda_sort%pred2(ns_ext:ne_ext) = obsbufr%pred2(ns_bufr:ne_bufr) ! H08
 #endif

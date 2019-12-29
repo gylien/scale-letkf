@@ -124,6 +124,9 @@ MODULE common_obs_scale
     REAL(r_size),ALLOCATABLE :: lev(:) ! Him8
     REAL(r_size),ALLOCATABLE :: val2(:) ! Him8 sigma_o for AOEI (not CA)
     REAL(r_size),ALLOCATABLE :: sprd(:) ! background spread
+    real(r_size), allocatable :: qv(:) ! mixint ratio
+    real(r_size), allocatable :: tk(:) ! mixint ratio
+    real(r_size), allocatable :: eqv(:,:)
 !    REAL(r_size),ALLOCATABLE :: pred1(:) ! Him8 bias correction predictor 1 (nobs)
 !    REAL(r_size),ALLOCATABLE :: pred2(:) ! Him8 bias correction predictor 1 (nobs)
 #endif
@@ -2093,6 +2096,8 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
   ALLOCATE( obsda%lev (obsda%nobs) ) ! Him8
   ALLOCATE( obsda%val2 (obsda%nobs) ) ! Him8
   ALLOCATE( obsda%sprd (obsda%nobs) ) ! Him8
+  allocate( obsda%qv (obsda%nobs) ) ! Him8
+  allocate( obsda%tk (obsda%nobs) ) ! Him8
 !  ALLOCATE( obsda%pred1 (obsda%nobs) ) ! Him8
 !  ALLOCATE( obsda%pred2 (obsda%nobs) ) ! Him8
 #endif
@@ -2106,6 +2111,8 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
   obsda%lev = 0.0d0 ! Him8
   obsda%val2 = 0.0d0 ! Him8
   obsda%sprd = 0.0d0 ! Him8
+  obsda%qv = 0.0d0 ! Him8
+  obsda%tk = 0.0d0 ! Him8
 !  obsda%pred1 = 0.0d0 ! Him8
 !  obsda%pred2 = 0.0d0 ! Him8
 #endif
@@ -2114,6 +2121,8 @@ SUBROUTINE obs_da_value_allocate(obsda,member)
   if (member >= 0) then
     ALLOCATE( obsda%ensval (member,obsda%nobs) )
     obsda%ensval = 0.0d0
+    ALLOCATE( obsda%eqv (member,obsda%nobs) )
+    obsda%eqv = 0.0d0
   end if
 
   RETURN
@@ -2135,10 +2144,13 @@ SUBROUTINE obs_da_value_deallocate(obsda)
   IF(ALLOCATED(obsda%lev   )) DEALLOCATE(obsda%lev   ) ! Him8
   IF(ALLOCATED(obsda%val2   )) DEALLOCATE(obsda%val2   ) ! Him8
   IF(ALLOCATED(obsda%sprd   )) DEALLOCATE(obsda%sprd   ) ! Him8
+  if(allocated(obsda%qv   )) deallocate(obsda%qv   ) ! Him8
+  if(allocated(obsda%tk   )) deallocate(obsda%tk   ) ! Him8
 !  IF(ALLOCATED(obsda%pred1   )) DEALLOCATE(obsda%pred1   ) ! Him8
 !  IF(ALLOCATED(obsda%pred2   )) DEALLOCATE(obsda%pred2   ) ! Him8
 #endif
   IF(ALLOCATED(obsda%ensval)) DEALLOCATE(obsda%ensval)
+  IF(ALLOCATED(obsda%eqv)) DEALLOCATE(obsda%eqv)
   IF(ALLOCATED(obsda%qc    )) DEALLOCATE(obsda%qc    )
 
   RETURN
