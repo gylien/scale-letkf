@@ -21,15 +21,6 @@ FCSTLEN="$1"; shift
 WTIME_L="$1"; shift
 NMEM="$1"
 
-#PARENT_REF_TIME=20190608180000
-#STIME=20190608180000
-#FCSTLEN=600
-#WTIME_L=00:10:00
-#NMEM=2 
-#NP_OFILE_X=2
-#NP_OFILE_Y=2
-
-
 SCPNAME=fcst
 ETIME="$STIME"
 
@@ -43,6 +34,7 @@ fi
 CONFIG='realtime_fcst_D3'
 PRESET=`hostname | cut -d '.' -f 2 | tr '[a-z]' '[A-Z]'`
 
+FP_SUFFIX='_single'
 
 #-------------------------------------------------------------------------------
 
@@ -51,7 +43,10 @@ if [ "$PRESET" = 'OFP' ]; then
    NNODES=`expr \( $NMEM  \) \* 16` ### D2
  else
    NNODES=`expr \( $NMEM + 2 \) \* 16` ### D2
- fi
+    while [ $NNODES -gt 256 ] ;do
+      NNODES=`expr $NNODES \/ 2`
+    done
+  fi
  config_suffix='ofp'
  script_suffix='_ofp'
 elif [ "$PRESET" = 'OBCX' ]; then
@@ -134,7 +129,8 @@ cat config.main.${config_suffix} | \
    sed -e "s/<MEMBER>/${NMEM}/g" | \
    sed -e "s/<NNODES>/${NNODES}/g" | \
    sed -e "s/<STIME>/${STIME}/g" | \
-   sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g" \
+   sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g" | \
+   sed -e "s/<FP_SUFFIX>/${FP_SUFFIX}/g"  \
  > config.main
 rm config.main.${config_suffix}
 

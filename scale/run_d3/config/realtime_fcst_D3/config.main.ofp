@@ -7,7 +7,10 @@
 
 PRESET='OFP' 
 
-EXPNAME=ope
+
+fp_suffix='<FP_SUFFIX>'
+
+EXPNAME=ope${fp_suffix}
 
 
 GNAME=$(id -ng)

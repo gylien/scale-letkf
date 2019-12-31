@@ -7,7 +7,8 @@
 
 PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
 
-EXPNAME=ope_single
+fp_suffix='<FP_SUFFIX>'
+EXPNAME=ope${fp_suffix}
 EXPDOMAIN=1
 
 GNAME=$(id -ng)

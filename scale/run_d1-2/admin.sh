@@ -43,7 +43,10 @@ if [ "$PRESET" = 'OFP' ]; then
    NNODES=`expr \( $NMEM  \) \* 7` ### D2
  else
    NNODES=`expr \( $NMEM + 2 \) \* 7` ### D2
- fi
+    while [ $NNODES -gt 256 ] ;do
+      NNODES=`expr $NNODES \/ 2`
+    done
+  fi
  config_suffix='ofp'
  script_suffix='_ofp'
 elif [ "$PRESET" = 'OBCX' ]; then
