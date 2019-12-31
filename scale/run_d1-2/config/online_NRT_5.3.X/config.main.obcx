@@ -7,7 +7,9 @@
 
 PRESET='OBCX' 
 
-EXPNAME=ope_single
+fp_suffix='<FP_SUFFIX>'
+
+EXPNAME=ope${fp_suffix}
 
 NRT_FCST=1 # Near real time forecast? # 1:True
            #                          # 0:False

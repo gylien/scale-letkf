@@ -7,7 +7,9 @@
 
 PRESET='OFP' 
 
-EXPNAME=ope
+fp_suffix='<FP_SUFFIX>'  ### '' or '_single'
+
+EXPNAME=ope${fp_suffix}
 
 
 NRT_FCST=1 # Near real time forecast? # 1:True
@@ -32,7 +34,7 @@ OUTDIR[2]="${OUTPUT}/${EXP2}"
 OUTDIR[3]="${OUTPUT}/${EXP3}"
 
 #INDIR=$OUTDIR
-INDIR="${OUTPUT}/${EXP1}"
+INDIR="${OUTPUT}/../ope/d1" ### cycle is always double-precision
 INDIR[2]=${OUTDIR[2]}
 INDIR[3]=${OUTDIR[3]}
 
@@ -55,7 +57,7 @@ DATA_BDY_SCALE_PREP=                                                 # Directory
 DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
 DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-DATA_BDY_GRADS="${OUTPUT}/ncepgfs_grads"
+DATA_BDY_GRADS="${OUTPUT}/../ope/ncepgfs_grads"
 
 OBS=
 OBSNCEP=                                                             # Directory of observation data in NCEP BUFR format
