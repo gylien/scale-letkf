@@ -10,7 +10,6 @@ stat=`cat fcst_ofp.stat.$STIME`
 if [ `echo $stat| awk '{print $1}'` == "submit" ] ;then
  jobid=`echo $stat | awk '{print $2}'` 
  wait=`/usr/local/bin/pjstat | grep $jobid | cut -c 64-76`
- 
  if [ `echo $wait | cut -c 1` == '(' ] ;then
   echo $wait
  else
