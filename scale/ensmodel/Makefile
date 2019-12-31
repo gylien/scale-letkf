@@ -1,5 +1,11 @@
 include ../configure.user
 
+ifeq ($(SCALE_USE_SINGLEFP),T)
+  SUFFIX=_single
+else
+  SUFFIX=
+endif
+
 PROGS   = scale-rm_pp_ens scale-rm_init_ens scale-rm_ens
 
 OBJS    =
@@ -31,21 +37,21 @@ endif
 all:	$(PROGS)
 
 scale-rm_pp_ens:	scale-rm_pp_ens.o $(OBJS) $(COMMON_DIR)
-	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_pp_ens scale-rm_pp_ens.o \
+	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_pp_ens$(SUFFIX) scale-rm_pp_ens.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
 scale-rm_pp_ens.o:	scale-rm_pp_ens.f90 $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS_SCALE) -c $< -I$(COMMON_DIR) $(INCS)
 
 scale-rm_init_ens:	scale-rm_init_ens.o $(OBJS) $(COMMON_DIR)
-	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_init_ens scale-rm_init_ens.o \
+	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_init_ens$(SUFFIX) scale-rm_init_ens.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
 scale-rm_init_ens.o:	scale-rm_init_ens.f90 $(OBJS) $(COMMON_DIR)
 	$(FC) $(FOPTS_SCALE) -c $< -I$(COMMON_DIR) $(INCS)
 
 scale-rm_ens:	scale-rm_ens.o $(OBJS) $(COMMON_DIR)
-	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_ens scale-rm_ens.o \
+	$(FC) $(FOPTS_SCALE) $(FMCMODEL) -o scale-rm_ens$(SUFFIX) scale-rm_ens.o \
 	$(COMMON_OBJS) $(OBJS) $(SCALE_RM_OBJS) $(LIBS)
 
 scale-rm_ens.o:	scale-rm_ens.f90 $(OBJS) $(COMMON_DIR)

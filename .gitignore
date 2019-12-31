@@ -49,3 +49,6 @@ scale/obs/dec_prepbufr
 scale/ensmodel/scale-rm_pp_ens
 scale/ensmodel/scale-rm_init_ens
 scale/ensmodel/scale-rm_ens
+scale/ensmodel/scale-rm_pp_ens_single
+scale/ensmodel/scale-rm_init_ens_single
+scale/ensmodel/scale-rm_ens_single

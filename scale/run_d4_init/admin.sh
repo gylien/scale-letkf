@@ -22,14 +22,6 @@ FCSTLEN="$1"; shift
 WTIME_L="$1"; shift
 NMEM="$1"
 
-#PARENT_REF_TIME=20190608180000
-#STIME=20190608180000
-#FCSTLEN=600
-#WTIME_L=00:10:00
-#NMEM=2 
-#NP_OFILE_X=2
-#NP_OFILE_Y=2
-
 
 SCPNAME=fcst
 ETIME="$STIME"
@@ -37,6 +29,7 @@ ETIME="$STIME"
 CONFIG='realtime_fcst_D4_1km'
 PRESET=`hostname | cut -d '.' -f 2 | tr '[a-z]' '[A-Z]'`
 
+FP_SUFFIX='_single' ### '' or '_single'
 
 #-------------------------------------------------------------------------------
 
@@ -127,7 +120,8 @@ cat config.main.${config_suffix} | \
    sed -e "s/<NNODES>/${NNODES}/g" | \
    sed -e "s/<STIME>/${STIME}/g" | \
    sed -e "s/<PARENT_REF_TIME>/${PARENT_REF_TIME}/g" | \
-   sed -e "s/<PARENT_REF_TIME_D2>/${PARENT_REF_TIME_D2}/g" \
+   sed -e "s/<PARENT_REF_TIME_D2>/${PARENT_REF_TIME_D2}/g" | \
+   sed -e "s/<FP_SUFFIX>/${FP_SUFFIX}/g"  \
  > config.main
 rm config.main.${config_suffix}
 

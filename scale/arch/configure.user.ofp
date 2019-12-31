@@ -1,7 +1,15 @@
 TOPDIR    = ../../..
-SCALE_INC = -I$(TOPDIR)/include
-SCALE_LIB = -L$(TOPDIR)/lib -lscale 
-SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
+
+ifeq ($(SCALE_USE_SINGLEFP),T)
+  SCALE_INC = -I$(TOPDIR)/include_single
+  SCALE_LIB = -L$(TOPDIR)/lib_single -lscale 
+  SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs_single
+else
+  SCALE_INC = -I$(TOPDIR)/include
+  SCALE_LIB = -L$(TOPDIR)/lib -lscale 
+  SCALE_RM_OBJDIR = $(TOPDIR)/scale-rm/src/.libs
+endif
+
 
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
