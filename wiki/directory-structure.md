@@ -129,10 +129,10 @@ $OUTDIR/                                  # SCALE-LETKF output directory
 │   │   └── mdet/                                  # deterministic run
 │   │       ├── history.pe<process>.nc             # (same as for ensemble members)
 │   │       └── init_YYYYMMDDHHmmss.pe<process>.nc #
-
+│   │
 │   ├── fcstgp/                             # forecast grads files
 │   ├── fcstgpi/                           # plot files 
-
+|   |
 │   ├── bdy/                              # boundary files saved for repeated use
 │   │   ├── <member>/                     # 4-digit ensemble member number
 │   │   │   └── boundary.pe<process>.nc
@@ -171,9 +171,9 @@ For D3 : `$OUTDIR = $TOPDIR/result/ope_single/d3`
 $OUTDIR/                                               ### SCALE-LETKF output directory
 ├── ref_YYYYMMDDhhmmss/                                 # PARENT DOMAIN (D2) forecast init time 
 │   └── YYYYMMDDhhmmss/                                 # forecast init time
-│       ├── anal/                                       # analysis files
+│       ├── anal/                                       # init files
 │       │   └── <member>/                               # 4-digit ensemble member number and/or mean/mdet
-│       │      └── init.pe<process>.nc                  # analysis files
+│       │      └── init.pe<process>.nc                  # 
 │       ├── fcst/                                       # extended forecasts (for 'fcst' jobs only)
 │       │   └── <member>/                               # 4-digit ensemble member number and/or mean/mdet
 │       │       ├── history.pe<process>.nc              # forecast history files
@@ -181,9 +181,12 @@ $OUTDIR/                                               ### SCALE-LETKF output di
 │       ├── log/                                        # log files
 │       │   ├── fcst_scale_init/                        # for 'scale_init' steps in 'fcst' jobs
 │       │   └── fcst_scale/                             # for 'scale' steps in 'fcst' jobs
-│       ├── plot/                                       # quicklook png files 
+│       │
+│       ├── fcstgp/                                     # forecast grads files
+│       ├── fcstgpi/                                    # plot files 
 │       │   └── <member>/                               #   4-digit ensemble member number and/or mean/mdet
 │       │       └── xxxxxx.png                           
+│       │
 │       └── d4_XXX/                                    ### Init/bdy data for Domain 4 (XXX = 1km/500m/250m)
 │           ├── anal/                                   # Initial files with timestamp
 │           │   └── <member>/                           # 4-digit ensemble member number and/or mean/mdet
