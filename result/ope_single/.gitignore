@@ -1,0 +1,15 @@
+#
+# directory ope_single 
+#
+
+*
+!.gitignore
+!d1
+!d1_ext
+!d2
+!d3
+!d3_Kanto
+!d4_1km
+!d4_500m
+!d4_250m
+!ncepgfs_grads_ext

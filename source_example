@@ -1,0 +1,18 @@
+# grads 
+export GRADSHOME=/work/hp150019/share/honda/local/grads
+export GADDIR=${GRADSHOME}/data
+export GASCRP=${GRADSHOME}/data
+
+### path to grib2
+export PATH=/work/hp150019/share/honda/local/grads:$PATH
+
+# python3
+export PATH=/work/hp150019/share/sw/anaconda3/5.2.0/bin:$PATH
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/work/hp150019/share/sw/anaconda3/5.2.0/lib
+export PROJ_LIB=/work/hp150019/share/sw/anaconda3/5.2.0/pkgs/proj4-5.2.0-he6710b0_1/share/proj
+export PYTHONPATH=/work/hp150019/share/c24140/python3_modify
+
+# fortran DCL
+export PATH=/work/hp150019/c24140/Lib/dcl/bin:$PATH
+
+

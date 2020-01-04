@@ -1,0 +1,2 @@
+0 2,8,14,20 * * * /work/hp150019/share/SCALE-LETKF-rt/external/ncepgfs/get_ncep_gfs.sh &> /work/hp150019/share/SCALE-LETKF-rt/external/ncepgfs/get_ncep_gfs.log 
+0 4,10,16,22 * * * /work/hp150019/share/SCALE-LETKF-rt/external/ncepobs_gdas/get_ncep_obs.sh &> /work/hp150019/share/SCALE-LETKF-rt/external/ncepobs_gdas/get_ncep_obs.log 

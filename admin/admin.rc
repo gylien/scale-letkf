@@ -1,0 +1,38 @@
+#!/bin/bash
+
+username=$(id -nu)
+groupname=$(id -ng)
+
+scale_ver="ope" 
+letkf_ver="ope" 
+expname="ope"
+#expname="test"
+
+nmem=50
+
+nmem_d1_ext='mdet' ### deterministic run
+nmem_d2=2 ### disk saving mode
+nmem_d3=2 ### disk saving mode
+#nmem_d2=50
+#nmem_d3=50 
+
+realtimebase="/work/${groupname}/share/SCALE-LETKF-rt"
+###realtimebase="/work/${groupname}/${username}/HPCC_SCALE-LETKF-rt"
+
+logfile="$wkdir/${myname1}.log"
+outfile="$wkdir/${myname1}.out"
+lockfile="$wkdir/${myname1}.lock"
+timefile="$wkdir/${myname1}.time"
+timestopfile="$wkdir/${myname1}.time.stop"
+tmpdir="$wkdir/tmp/${myname1}"
+
+gradsdir="${realtimebase}/external/ncepgfs_grads" 
+obsdir="${realtimebase}/external/ncepobs_gdas_letkf" 
+
+LCYCLE=21600
+FCSTLEN=432000
+FCSTLEN_d2=86400
+
+
+
+
