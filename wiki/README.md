@@ -8,7 +8,7 @@ The system is currently running on Oakforest-PACS and produces forecasts for mul
 The control scripts are currently available in the branch *admin_realtime* . 
 
 Realtime forecasts are displayed at  
- [http://daweb.r-ccs27.riken.jp/~amemiya/scale/](http://daweb.r-ccs27.riken.jp/~amemiya/scale/) (accessible only inside R-CCS net).
+ [http://daweb.r-ccs27.riken.jp/~amemiya/scale/](http://daweb.r-ccs27.riken.jp/~amemiya/scale/) (R-CCS intranet).
 
 ## Analysis and forecast domains 
 
