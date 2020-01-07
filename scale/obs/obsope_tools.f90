@@ -241,6 +241,9 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
       if (OBSDA_RUN(iof) .and. obs(iof)%nobs > 0) then
 !$OMP DO SCHEDULE(STATIC)
         do n = 1, obs(iof)%nobs
+
+!          if (obs(iof)%elm(n) == id_H08IR_obs .and. obs(iof)%dat(n) < 0.0_r_size ) cycle
+
           if (obs(iof)%rank(n) == -1) then
             ! process the observations outside of the model domain in process rank 0
 !$OMP ATOMIC

@@ -9,7 +9,7 @@ PRESET='OFP'
 RSCGRP="debug-cache"
 RSCGRP="debug-flat"
 RSCGRP="regular-cache"
-#RSCGRP="regular-flat"
+RSCGRP="regular-flat"
 
 EXP=TAIWAN201808_D2_HIM8_1218_HLOC120km
 

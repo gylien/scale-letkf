@@ -5,67 +5,62 @@
 #
 #===============================================================================
 
-PRESET='OFP'
-RSCGRP="debug-cache"
-RSCGRP="debug-flat"
-#RSCGRP="regular-cache"
-RSCGRP="regular-flat"
+PRESET='<PRESET>'                           # 'K' or 'K_rankdir' or 'K_micro'
+#PRESET='K_rankdir' 
+#PRESET='K_micro' 
 
-EXP=TAIWAN201808_D2_HIM8_1218
+EXPNAME=r0051
+EXPDOMAIN=1
+
+USERNAME=honda
 
 #===============================================================================
 
-# -- RTTOV_DIR --
-DIR_RTTOV=/work/hp150019/share/honda/RTTOV12.3
-RTTOV_COEF=${DIR_RTTOV}/rtcoef_rttov12/rttov7pred54L/rtcoef_himawari_8_ahi.dat
-RTTOV_SCCOEF=${DIR_RTTOV}/rtcoef_rttov12/cldaer_ir/sccldcoef_himawari_8_ahi.dat
-
-TOP=/work/hp150019/share/honda/SCALE-LETKF/scale-5.3.3/OUTPUT
-PEXP=TAIWAN201808_D1_1118
-
 DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
-OUTDIR=${TOP}/$EXP
+#OUTDIR="/volume63/data/hp150019/gylien/realtime/${EXPNAME}/exp_d${EXPDOMAIN}" # Directory for SCALE-LETKF output
+
+OUTDIR="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/exp_d${EXPDOMAIN}" # Directory for SCALE-LETKF output
 INDIR=$OUTDIR
 
 #===============================================================================
 # Location of model/data files
 
 SCALEDIR="$DIR/../.."                                                # Directory of the SCALE model
-DATADIR="/work/hp150019/share/database"       # Directory of the SCALE database
+DATADIR="/volume63/data/hp150019/gylien/scale-letkf/database"        # Directory of the SCALE database
 
-DATA_TOPO=                   # Directory of the prepared topo files
-DATA_TOPO_BDY_SCALE=${TOP}/$PEXP/const/topo
-DATA_LANDUSE=                # Directory of the prepared landuse files
-# Directory of the boundary data in SCALE history format (parent domain)
-DATA_BDY_SCALE=${TOP}/$PEXP
-DATA_BDY_SCALE_PRC_NUM_X=16
-DATA_BDY_SCALE_PRC_NUM_Y=16
-DATA_BDY_SCALE_PREP=         # Directory of the prepared SCALE boundary files
+DATA_TOPO=                                                           # Directory of the prepared topo files
+DATA_TOPO_BDY_SCALE=
+DATA_LANDUSE=                                                        # Directory of the prepared landuse files
+DATA_BDY_SCALE=                                                      # Directory of the boundary data in SCALE history format (parent domain)
+DATA_BDY_SCALE_PRC_NUM_X=
+DATA_BDY_SCALE_PRC_NUM_Y=
+DATA_BDY_SCALE_PREP=                                                 # Directory of the prepared SCALE boundary files
+DATA_BDY_WRF=                                                        # Directory of the boundary data in WRF format
+DATA_BDY_NICAM=                                                      # Directory of the boundary data in NICAM format (not finished)
 
-DATA_BDY_GRADS=
+DATA_BDY_GRADS="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/<DATA_BDY_GRADS>" # Directory of the boundary data in GrADS format 
 
-OBS="/work/hp150019/share/honda/SCALE-LETKF/scale-5.3.3/OUTPUT/obs_d2/D2"
+OBS="/volume63/data/hp150019/${USERNAME}/realtime/${EXPNAME}/ncepobs"     # Directory of observation data in LETKF obs format
+OBSNCEP=                                                             # Directory of observation data in NCEP BUFR format
 
 #===============================================================================
 # model/data file options
 
-DET_RUN=0               # 0: Disable the deterministic run
+DET_RUN=1               # 0: Disable the deterministic run
                         # 1: Enable  the deterministic run
 
 TOPO_FORMAT='prep'      # 'prep': Use prepared topo files in $DATA_TOPO
-#TOPO_FORMAT='GTOPO30'      # 'prep': Use prepared topo files in $DATA_TOPO
                         # 'GTOPO30' (requires compatible 'config.nml.scale_pp')
                         # 'DEM50M'  (requires compatible 'config.nml.scale_pp')
 
 LANDUSE_FORMAT='prep'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
-#LANDUSE_FORMAT='GLCCv2'   # 'prep': Use prepared landuse files in $DATA_LANDUSE
                         # 'GLCCv2' (requires compatible 'config.nml.scale_pp')
                         # 'LU100M' (requires compatible 'config.nml.scale_pp')
 LANDUSE_UPDATE=0        # 0: Time-invariant landuse files
                         # 1: Time-variant landuse files
 
-BDY_FORMAT=1            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=4            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
                         # 1: SCALE history (requires compatible 'config.nml.scale_init')
                         # 2: WRF           (requires compatible 'config.nml.scale_init')
                         # 3: NICAM         (requires compatible 'config.nml.scale_init')
@@ -74,16 +69,12 @@ BDY_SINGLE_FILE=0       # 0: Length of a boundary file = $BDYCYCLE_INT (e.g., fi
                         # 1: Length of a boundary file is long enough so that only a single boundary file is used for each forecast
 BDY_SCALE_DIR='hist'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
 
-BDY_ENS=1               # 0: Fixed boundary files for all memebers
+BDY_ENS=0               # 0: Fixed boundary files for all memebers
                         # 1: Ensemble boundary files
-BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial time
+BDY_ROTATING=1          # 0: Use a same series of boundary files for all initial time
                         # 1: Use different series of boundary files for different initial time
 
-
-SKIP_BDYINIT=1 # 1: Skip unnecessary scale_init process
-               # 0: Run scale_init every cycle
-
-BDYINT=3600
+BDYINT=21600
 BDYCYCLE_INT=21600
 
 PARENT_REF_TIME=
@@ -91,42 +82,39 @@ PARENT_REF_TIME=
 ENABLE_PARAM_USER=1     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
                         # 1: Enable the 'PARAM_USER' section of the SCALE namelist (require 'config.nml.scale_user' and customized version of SCALE)
 
-OCEAN_INPUT=0           # 0: No ocean input (use cycling ocean variables)
+OCEAN_INPUT=1           # 0: No ocean input (use cycling ocean variables)
                         # 1: Update the ocean variables every cycle
-OCEAN_FORMAT=0         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+OCEAN_FORMAT=99         # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
-LAND_INPUT=0            # 0: No land input (use cycling land variables)
+LAND_INPUT=1            # 0: No land input (use cycling land variables)
                         # 1: Update the land variables every cycle
-LAND_FORMAT=0          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
+LAND_FORMAT=99          # 0: SCALE init files (with exactly same domain settings; do not need additional preprocessing)
                         # 99: From the same file as used in generating the boundary conditions ($BDY_FORMAT)
 
-OBSNUM=2
+OBSNUM=1
 OBSNAME[1]=obs
-OBSFOOT[1]=dat
-OBSNAME[2]=H08_ll
-OBSFOOT[2]=nc
 
 #===============================================================================
 # Cycling settings
 
-WINDOW_S=600     # SCALE forecast time when the assimilation window starts (second)
-WINDOW_E=600     # SCALE forecast time when the assimilation window ends (second)
-LCYCLE=600       # Length of a DA cycle (second)
-LTIMESLOT=600     # Timeslot interval for 4D-LETKF (second)
+WINDOW_S=10800     # SCALE forecast time when the assimilation window starts (second)
+WINDOW_E=32400     # SCALE forecast time when the assimilation window ends (second)
+LCYCLE=21600       # Length of a DA cycle (second)
+LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 
 
 #===============================================================================
 # Parallelization settings
 
 MEMBER=50          # Ensemble size
-NNODES=272    # Number of nodes
+NNODES=<NNODES>    # Number of nodes
 
 
-PPN=64              # Number of processes per node
+PPN=1              # Number of processes per node
 
-THREADS=1          # Number of threads per process
+THREADS=8          # Number of threads per process
 
-SCALE_NP=1024        # Number of processes to run SCALE
+SCALE_NP=48        # Number of processes to run SCALE
 
 BGJOB_INT='0.1s'   # Interval of multiple background job submissions
 
@@ -140,9 +128,9 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
 TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
-TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
+TMP="/scratch/$(echo $(id -ng)|cut -c 1-8)/${USERNAME}/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
-TMPL="$TMP"
+#TMPL=
 
 CLEAR_TMP=0                 # Clear temporary directories after the completion of job?
                             #  0: No
@@ -151,7 +139,7 @@ CLEAR_TMP=0                 # Clear temporary directories after the completion o
 #===============================================================================
 # Environmental settings
 
-MPIRUN="mpiexec.hydra"
+MPIRUN="mpiexec"
 if (which $MPIRUN > /dev/null 2>&1); then
   MPIRUN=$(which $MPIRUN)
 fi

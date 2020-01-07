@@ -8,10 +8,10 @@
 PRESET='OFP'
 RSCGRP="debug-cache"
 RSCGRP="debug-flat"
-#RSCGRP="regular-cache"
-RSCGRP="regular-flat"
+RSCGRP="regular-cache"
+#RSCGRP="regular-flat"
 
-EXP=TAIWAN201808_D2_HIM8_1218
+EXP=TAIWAN201808_D2_HIM8_1218_PQV
 
 #===============================================================================
 
@@ -121,8 +121,13 @@ LTIMESLOT=600     # Timeslot interval for 4D-LETKF (second)
 MEMBER=50          # Ensemble size
 NNODES=272    # Number of nodes
 
+#MEMBER=9          # Ensemble size
+#NNODES=80    # Number of nodes
 
 PPN=64              # Number of processes per node
+
+NNODES=352    # Number of nodes
+PPN=32              # Number of processes per node
 
 THREADS=1          # Number of threads per process
 

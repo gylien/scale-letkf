@@ -3908,8 +3908,9 @@ subroutine get_nobs_allgHim8(nobs)
   implicit none
 
   integer, intent(out) :: nobs
+  integer :: i, j
 
-  nobs = nlong * nlatg * NIRB_HIM8
+  nobs = int( nlong / H08_OBS_THIN_LEV ) * int( nlatg / H08_OBS_THIN_LEV ) * NIRB_HIM8
 
   return
 end subroutine get_nobs_allgHim8
@@ -3930,11 +3931,11 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
 
   integer,intent(out),optional :: qc_allg_prep(nlong,nlatg,NIRB_HIM8)
 
-  real(r_size),intent(out),optional :: obsdat(nlong*nlatg*NIRB_HIM8)
-  real(r_size),intent(out),optional :: obslon(nlong*nlatg*NIRB_HIM8)
-  real(r_size),intent(out),optional :: obslat(nlong*nlatg*NIRB_HIM8)
-  real(r_size),intent(out),optional :: obslev(nlong*nlatg*NIRB_HIM8)
-  real(r_size),intent(out),optional :: obserr(nlong*nlatg*NIRB_HIM8)
+  real(r_size), intent(out), optional :: obsdat( int(nlong/H08_OBS_THIN_LEV)*int(nlatg/H08_OBS_THIN_LEV)*NIRB_HIM8 )
+  real(r_size), intent(out), optional :: obslon( int(nlong/H08_OBS_THIN_LEV)*int(nlatg/H08_OBS_THIN_LEV)*NIRB_HIM8 )
+  real(r_size), intent(out), optional :: obslat( int(nlong/H08_OBS_THIN_LEV)*int(nlatg/H08_OBS_THIN_LEV)*NIRB_HIM8 )
+  real(r_size), intent(out), optional :: obslev( int(nlong/H08_OBS_THIN_LEV)*int(nlatg/H08_OBS_THIN_LEV)*NIRB_HIM8 )
+  real(r_size), intent(out), optional :: obserr( int(nlong/H08_OBS_THIN_LEV)*int(nlatg/H08_OBS_THIN_LEV)*NIRB_HIM8 )
 
   real(RP) :: ril_RP, rjl_RP
   real(RP) :: lon_RP, lat_RP
@@ -3964,6 +3965,7 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
 
   ave_ng = 2 * H08_OBS_AVE_NG + 1
 
+  n = 0
   do j = 1, nlatg
   do i = 1, nlong
     if (present(obslon) .and. present(obslat) .and. present(obslev) .and. present(obserr)) then
@@ -3975,14 +3977,6 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
     endif
 
     do ch = 1, NIRB_HIM8
-      n = ((j - 1) * nlong + i - 1) * NIRB_HIM8 + ch
-
-      if (present(obslon) .and. present(obslat) .and. present(obslev) .and. present(obserr)) then
-        obslon(n) = real( lon_RP, kind=r_size) * rad2deg
-        obslat(n) = real( lat_RP, kind=r_size) * rad2deg
-        obslev(n) = ch + 6.0
-        obserr(n) = REAL(OBSERR_H08(ch),r_size)
-      endif
 
       select case(H08_OBS_METHOD)
       case(1) ! simple thinning
@@ -4015,9 +4009,15 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
         endif
       endif
 
-
-      if (present(obsdat)) then
-        obsdat(n) = tbb_allg_prep(i,j,ch)
+      if (present(obslon) .and. present(obslat) .and. present(obslev) .and. present(obserr)) then
+        if ( ( mod(i, H08_OBS_THIN_LEV) == 0 ) .and. ( mod(j, H08_OBS_THIN_LEV) == 0 ) ) then
+          n = n + 1
+          obslon(n) = real( lon_RP, kind=r_size) * rad2deg
+          obslat(n) = real( lat_RP, kind=r_size) * rad2deg
+          obslev(n) = ch + 6.0
+          obserr(n) = REAL(OBSERR_H08(ch),r_size)
+          obsdat(n) = tbb_allg_prep(i,j,ch)
+        endif
       endif
 
       if (present(qc_allg_prep)) then
