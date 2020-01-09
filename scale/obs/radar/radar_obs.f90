@@ -423,6 +423,10 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
       fws= qr / ( qr + qs )
     ENDIF
 
+    if ( .not. USE_METHOD3_REF_MELT ) then
+      Fs = 0.0_r_size
+      Fg = 0.0_r_size
+    endif 
 
     !Correct the rain, snow and hail mixing ratios assuming
     !that we have a mixture due to melting.

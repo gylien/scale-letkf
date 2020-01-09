@@ -420,7 +420,7 @@
 &HISTORY_ITEM name='Q2'  / ! LETKF (not analyzed)
 &HISTORY_ITEM name="MSLP" / ! Nesting
 
-&HISTORY_ITEM name="CAPE" / ! Additional
+!&HISTORY_ITEM name="CAPE" / ! Additional
 
 &HISTORY_ITEM name='OSR' /
 &HISTORY_ITEM name='OLR' /

@@ -309,6 +309,7 @@ MODULE common_nml
   !These 2 flags affects the computation of model reflectivity and radial velocity. 
   INTEGER :: INTERPOLATION_TECHNIQUE = 1
   INTEGER :: METHOD_REF_CALC = 3
+  logical :: USE_METHOD3_REF_MELT = .false. ! Use radar operator considering melting (Xue et al. 2009QJRMS)
 
   LOGICAL :: USE_TERMINAL_VELOCITY = .false.
 
@@ -1019,7 +1020,8 @@ subroutine read_nml_letkf_radar
     NRADARTYPE, &
     RADAR_SO_SIZE_HORI, &
     RADAR_SO_SIZE_VERT, &
-    RADAR_MAX_ABS_VR
+    RADAR_MAX_ABS_VR, &
+    USE_METHOD3_REF_MELT
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_LETKF_RADAR,iostat=ierr)

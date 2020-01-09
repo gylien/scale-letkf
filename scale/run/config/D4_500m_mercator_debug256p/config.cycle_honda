@@ -21,7 +21,7 @@ DACYCLE=1
 DIRECT_TRANSFER=1
 
 # Run fcst from analysis ensemble mean by dacycle-forecast members
-DACYCLE_RUN_FCST=0
+DACYCLE_RUN_FCST=1
 
 # Maximum number of dacycle forecasts 
 MAX_DACYCLE_RUN_FCST=1
