@@ -10,7 +10,7 @@ PRESET='OFP'
 RSCGRP="regular-cache"
 #RSCGRP="debug-cache"
 #RSCGRP="debug-flat"
-#RSCGRP="regular-flat"
+RSCGRP="regular-flat"
 
 #===============================================================================
 
@@ -18,13 +18,8 @@ DIR="$(cd "$(pwd)/.." && pwd)"              # Root directory of the SCALE-LETKF
 
 #OUTPUT="/work/hp150019/c24140/scale-letkf-rt/r0051_nest"
 OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/DEBUG256p"
-EXP4=D4_500M_mercator_50mem+1fcst_10min_1215_RMEM10_2
-EXP4=D4_500M_mercator_20mem+1fcst_10min_1215_RMEM10
-EXP4=D4_500M_mercator_10mem+1fcst_10min_1215_RMEM10
 
-EXP4=D4_500M_mercator_10mem+1fcst_10min_1215_00
-
-EXP4=D4_500M_mercator_50mem_ainc
+EXP4=D4_500M_mercator_50mem_MELT
 EXP3=exp_d3
 EXP2=exp_d2
 
@@ -132,19 +127,8 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 #===============================================================================
 # Parallelization settings
 
-
 MEMBER=50      # Ensemble size # 50mem + 2 (mean mdet) + 1 fcst
 NNODES=212
-NNODES=208
-
-
-
-
-
-MEMBER=50      # Ensemble size # 50mem + 2 (mean mdet) + 1 fcst
-NNODES=212
-MEMBER=50      # Ensemble size # 50mem + 2 (mean mdet) + 0 fcst
-NNODES=208
 
 PPN=64              # Number of processes per node
 
@@ -162,7 +146,7 @@ ONLINE_STGOUT=0             # Stage out right after each cycle (do not wait unti
                             #  1: Yes
 
 SYSNAME="$(basename $OUTDIR)"                # A unique name in the machine
-TMPSUBDIR="1215scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
+TMPSUBDIR="scale-letkf_${SYSNAME}"           # (used to identify multiple runs in the same time)
 
 TMP="$DIR/tmp/$TMPSUBDIR" # Temporary directory shared among all nodes
 TMPS="$DIR/tmp/$TMPSUBDIR"  # Temporary directory only on the server node
