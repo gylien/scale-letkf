@@ -785,16 +785,14 @@ subroutine read_obs_radar_toshiba(cfile, obs)
    (/'.ze', '.vr'/)
   logical, parameter :: input_is_dbz = .false.
   integer, parameter :: opt_verbose = 0 !!! for MP-PAWR toshiba format    
-
-  type(c_mppawr_header) :: hd(n_type)
 #else
   integer, parameter :: n_type = 3
   character(len=4), parameter :: file_type_sfx(n_type) = &
     (/'.ze', '.vr', '.qcf'/)
   logical, parameter :: input_is_dbz = .true.
-  type(c_pawr_header) :: hd(n_type)
 #endif
 
+  type(c_mppawr_header) :: hd(n_type)
 !  real(kind=c_float) :: az(AZDIM, ELDIM, n_type)
 !  real(kind=c_float) :: el(AZDIM, ELDIM, n_type)
 !  real(kind=c_float) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
@@ -1427,6 +1425,8 @@ subroutine read_obs_radar_jrc(cfile, obs)
 end subroutine read_obs_radar_jrc
 
 function obs_da_time_compare(utime_obs)
+  use scale_calendar, only: &
+      calendar_date2daysec
   use scale_time, only: &
       TIME_NOWDATE
   implicit none
@@ -1435,23 +1435,28 @@ function obs_da_time_compare(utime_obs)
   integer :: obs_da_time_compare
   integer :: i
 
+  real(r_dble) :: abssec,abssec_obs
+  integer :: iabsday
+
+
   if (minval(utime_obs) < 0)then
    obs_da_time_compare = -1 !!! no obs 
    return
   endif
 
-  do i = 1, 6
-   if (utime_obs(i) > TIME_NOWDATE(i))then
-      obs_da_time_compare = 1
-      return
-   elseif (utime_obs(i) < TIME_NOWDATE(i))then
-      obs_da_time_compare = -1
-      return
-   endif
-  enddo
+  call calendar_date2daysec(iabsday,abssec_obs,utime_obs,0.D0,0)
+  abssec_obs = abssec_obs + real(iabsday*86400)
+  call calendar_date2daysec(iabsday,abssec,TIME_NOWDATE,0.D0,0)
+  abssec     = abssec     + real(iabsday*86400)
 
+if (int(abssec_obs) > int(abssec))then
+  obs_da_time_compare = 1
+elseif (int(abssec_obs) < int(abssec))then
+  obs_da_time_compare = -1
+else
   obs_da_time_compare = 0
-
+endif
+return
 end function obs_da_time_compare
 
 !=======================================================================
