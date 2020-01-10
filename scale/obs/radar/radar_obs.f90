@@ -423,10 +423,6 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
       fws= qr / ( qr + qs )
     ENDIF
 
-    if ( .not. USE_METHOD3_REF_MELT ) then
-      Fs = 0.0_r_size
-      Fg = 0.0_r_size
-    endif 
 
     !Correct the rain, snow and hail mixing ratios assuming
     !that we have a mixture due to melting.
@@ -753,7 +749,12 @@ END SUBROUTINE write_obs_radar
 !-----------------------------------------------------------------------
 subroutine read_obs_radar_toshiba(cfile, obs)
   use iso_c_binding
+#ifdef MPW
+  use read_toshiba_mpr_f
+#else
   use read_toshiba_f
+#endif
+
 #ifdef JITDT
   use jitdt_read_toshiba_f
 #endif
@@ -777,13 +778,23 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 !  REAL(r_sngl) :: tmp
 !  INTEGER :: n,iunit,ios
 
-  integer, parameter :: n_type = 3
   character(len=1024) :: jitdt_place
+#ifdef MPW
+  integer, parameter :: n_type = 2
+  character(len=4), parameter :: file_type_sfx(n_type) = &
+   (/'.ze', '.vr'/)
+  logical, parameter :: input_is_dbz = .false.
+  integer, parameter :: opt_verbose = 0 !!! for MP-PAWR toshiba format    
+
+  type(c_mppawr_header) :: hd(n_type)
+#else
+  integer, parameter :: n_type = 3
   character(len=4), parameter :: file_type_sfx(n_type) = &
     (/'.ze', '.vr', '.qcf'/)
   logical, parameter :: input_is_dbz = .true.
-
   type(c_pawr_header) :: hd(n_type)
+#endif
+
 !  real(kind=c_float) :: az(AZDIM, ELDIM, n_type)
 !  real(kind=c_float) :: el(AZDIM, ELDIM, n_type)
 !  real(kind=c_float) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
@@ -834,7 +845,6 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 #endif
 
 
-
   call mpi_timer('', 3)
 
   RADAR_SO_SIZE_HORI = max( real( DX, kind=r_size ), RADAR_SO_SIZE_HORI )
@@ -856,23 +866,22 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
 #ifdef JITDT
     do while ( .not. OBS_JITDT_CHECK_RADAR_TIME .or. obs_da_time_compare(utime_obs) < 0 ) 
-#endif
-      if (myrank_o == 0) then
-#ifdef JITDT
         if (OBS_USE_JITDT) then
         !    jitdt_place = trim(OBS_JITDT_DATADIR) !// '/'
-          jitdt_place = trim(OBS_JITDT_IP)
-          write(*, *) "jitdt_place = ", trim(jitdt_place)
-        
-          ierr = jitdt_read_toshiba(n_type, jitdt_place, hd, az, el, rtdat)
-        
-          call mpi_timer('read_obs_radar_toshiba:jitdt_read_toshiba:', 2)
+          if (myrank_o == 0)then
+            jitdt_place = trim(OBS_JITDT_IP)
+            write(*, *) "jitdt_place = ", trim(jitdt_place)    
+            ierr = jitdt_read_toshiba(n_type, jitdt_place, hd, az, el, rtdat)    
+            call mpi_timer('read_obs_radar_toshiba:jitdt_read_toshiba:', 2)
+          end if
+          call MPI_BCAST(ierr, 1, MPI_INTEGER, 0, MPI_COMM_o, ie)
           if (ierr /= 0) then
             obs%nobs = 0
             return
           endif
         else
 #endif
+        if (myrank_o == 0)then
           do j = 1, n_type
             input_fname(j) = trim(cfile)
             call str_replace(input_fname(j), '<type>', trim(file_type_sfx(j)), pos)
@@ -885,14 +894,25 @@ subroutine read_obs_radar_toshiba(cfile, obs)
           if (LOG_LEVEL >= 3) then
             write(*, *) "file1 = ", trim(input_fname(1))
             write(*, *) "file2 = ", trim(input_fname(2))
+#ifndef MPW
             write(*, *) "file3 = ", trim(input_fname(3))
+#endif
           endif
-        
+
+         endif
+
           do j = 1, n_type
-            ierr = read_toshiba(input_fname(j), hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
-            if (LOG_LEVEL >= 3) then
-              write(*, *) "return code = ", ierr
-            endif
+            if (myrank_o == 0)then
+#ifdef MPW
+              ierr = read_toshiba_mpr(input_fname(j), opt_verbose, hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
+#else
+              ierr = read_toshiba(input_fname(j), hd(j), az(:, :, j), el(:, :, j), rtdat(:, :, :, j))
+#endif
+              if (LOG_LEVEL >= 3) then
+                write(*, *) "return code = ", ierr
+              endif
+            end if
+            call MPI_BCAST(ierr, 1, MPI_INTEGER, 0, MPI_COMM_o, ie)
             if (ierr /= 0) then
               obs%nobs = 0
               return
@@ -902,7 +922,6 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 #ifdef JITDT
         end if ! OBS_USE_JITDT
 #endif
-      end if  ! myrank_o == 0
       call mpi_timer('read_obs_radar_toshiba:read_toshiba:', 2, barrier=MPI_COMM_o)
  
       ! Set obs information
@@ -913,8 +932,12 @@ subroutine read_obs_radar_toshiba(cfile, obs)
         missing = real(hd(1)%mesh_offset, r_size)
         range_res = hd(1)%range_res
       
-        na = hd(1)%sector_num
         nr = hd(1)%range_num
+#ifdef MPW
+        na = hd(1)%ray_num
+#else
+        na = hd(1)%sector_num
+#endif
         ne = hd(1)%el_num
     
         call jst2utc(hd(1)%s_yr, hd(1)%s_mn, hd(1)%s_dy, hd(1)%s_hr, hd(1)%s_mi, hd(1)%s_sc, 0.0_DP, utime_obs)
@@ -952,8 +975,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
         write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS:",&
               utime_obs(1),utime_obs(2),utime_obs(3),&
               utime_obs(4),":",utime_obs(5),":",utime_obs(6)
-        obs%nobs = 0
       endif
+        obs%nobs = 0
       return
     endif
 #endif
@@ -971,8 +994,8 @@ subroutine read_obs_radar_toshiba(cfile, obs)
       write(6,'(a,i4.4,i2.2,i2.2,1x,i2.2,1a,i2.2,1a,i2.2)') "PAWR OBS (previous):",&
             utime_obs(1),utime_obs(2),utime_obs(3),&
             utime_obs(4),":",utime_obs(5),":",utime_obs(6)
-      obs%nobs = 0
     endif ! [ myrank_o == 0 ]
+      obs%nobs = 0
     return
   endif
 
@@ -991,10 +1014,10 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   allocate(ze(na, nr, ne), vr(na, nr, ne), qcflag(na, nr, ne), attenuation(na, nr, ne))
 
-  valid_qcf = 0
-  do j = 1, 8  
-    if(qcf_mask(j) > 0) valid_qcf = ibset(valid_qcf, j - 1) 
-  end do
+!!!  valid_qcf = 0
+!!!  do j = 1, 8  
+!!!    if(qcf_mask(j) > 0) valid_qcf = ibset(valid_qcf, j - 1) 
+!!!  end do
 
 !$omp parallel do private(ia, ir, ie)
   do ie = 1, ne
@@ -1002,15 +1025,16 @@ subroutine read_obs_radar_toshiba(cfile, obs)
         do ia = 1, na
            ze(ia, ir, ie) = rtdat(ir, ia, ie, 1)
            vr(ia, ir, ie) = rtdat(ir, ia, ie, 2)                                                                      
-           tmp_qcf = int(rtdat(ir, ia, ie, 3), int1)
+!!!           tmp_qcf = int(rtdat(ir, ia, ie, 3), int1)
 
  !          qcf_count(tmp_qcf)=qcf_count(tmp_qcf)+1
            
-           if(iand(valid_qcf, tmp_qcf) == 0) then      
+!!!           if(iand(valid_qcf, tmp_qcf) == 0) then      
               qcflag(ia, ir, ie) = 0.0d0 !valid
-           else
-              qcflag(ia, ir, ie) = 1000.0d0 !invalid
-           end if
+!!!           else
+!!!              qcflag(ia, ir, ie) = 1000.0d0 !invalid
+!!!           end if
+
            if(vr(ia, ir, ie) > RADAR_MAX_ABS_VR .or. vr(ia, ir, ie) < -RADAR_MAX_ABS_VR) vr(ia, ir, ie) = missing
            attenuation(ia, ir, ie) = 1.0d0 !not implemented yet
         end do

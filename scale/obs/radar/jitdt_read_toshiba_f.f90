@@ -1,16 +1,27 @@
 module jitdt_read_toshiba_f
   use iso_c_binding
+#ifdef MPW
+  use read_toshiba_mpr_f
+#else
   use read_toshiba_f
+#endif
 
   interface
      integer(kind=c_int) function jitdt_read_toshiba_c(n_type, jitdt_place, hd, az, el, rtdat) bind(C, name="jitdt_read_toshiba")
        use iso_c_binding
+#ifdef MPW
+       import c_mppawr_header
+#else
        import c_pawr_header
+#endif
        import RDIM, AZDIM, ELDIM
-
        integer(kind=c_int), value :: n_type
        character(kind=c_char) :: jitdt_place(*)
+#ifdef MPW
+       type(c_mppawr_header) :: hd(n_type)
+#else
        type(c_pawr_header) :: hd(n_type)
+#endif
        real(kind=c_float) :: az(AZDIM, ELDIM, n_type)
        real(kind=c_float) :: el(AZDIM, ELDIM, n_type)
        real(kind=c_float) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
@@ -25,7 +36,11 @@ contains
     integer :: jitdt_read_toshiba
     integer, intent(in) :: n_type
     character(*), intent(in) :: jitdt_place
+#ifdef MPW
+    type(c_mppawr_header), intent(out) :: hd(n_type)
+#else
     type(c_pawr_header), intent(out) :: hd(n_type)
+#endif
     real(kind=c_float), intent(out) :: az(AZDIM, ELDIM, n_type)
     real(kind=c_float), intent(out) :: el(AZDIM, ELDIM, n_type)
     real(kind=c_float), intent(out) :: rtdat(RDIM, AZDIM, ELDIM, n_type)

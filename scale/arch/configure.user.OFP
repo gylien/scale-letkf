@@ -11,6 +11,15 @@ SCALE_SINGLE_FP = T
 
 ENABLE_PLOT_DCL = T
 
+# Saitama MP-PAWR
+
+#ENABLE_SAITAMA_MPW = T
+#TOSHIBA_OPT = _mpr
+ENABLE_SAITAMA_MPW = F
+TOSHIBA_OPT = 
+
+
+
 # Libraries
 #-----------------
 
