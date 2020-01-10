@@ -6,7 +6,7 @@
 #===============================================================================
 
 STIME='20190610080000'
-ETIME='20190610080130'
+ETIME='20190610081930'
 
 TIME_LIMIT='0:25:00'
 CYCLE=
@@ -20,22 +20,25 @@ DACYCLE=1
 DIRECT_TRANSFER=1
 
 # Run fcst from analysis ensemble mean by dacycle-forecast members
-DACYCLE_RUN_FCST=0
+DACYCLE_RUN_FCST=1
 
 # Maximum number of dacycle forecasts 
-MAX_DACYCLE_RUN_FCST=1
+MAX_DACYCLE_RUN_FCST=20
+
+# Number of dafcst members
+NUM_DACYCLE_FCST_MEM=10
 
 # Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
-DACYCLE_RUN_FCST_TIME=1800 # sec
+DACYCLE_RUN_FCST_TIME=300 # sec
 
 # Cycle # of 1st dacycle-forecast start
-ICYC_DACYCLE_RUN_FCST=1
+ICYC_DACYCLE_RUN_FCST=10
 
 # Cycle # of 1st DA cycle starts after spin-up forecast
 ICYC_DACYCLE_RUN_ANALYSIS=1
 
 # GrADS output
-OUT_MEAN_GRADS=1
+OUT_MEAN_GRADS=0
 
 #===============================================================================
 # Forecast settings

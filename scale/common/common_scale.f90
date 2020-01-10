@@ -2410,5 +2410,39 @@ subroutine jst2utc(jyear, jmonth, jday, jhour, jminute, jsecond, jtime_ms, utime
   return
 end subroutine jst2utc
 
+subroutine advance_nowdate( date, dsec )
+  use scale_calendar, only: &
+      CALENDAR_date2daysec, &
+      CALENDAR_daysec2date, &
+      CALENDAR_adjust_daysec
+  implicit none
+
+  integer, intent(inout) :: date(6)
+  real(DP) :: dsec
+  integer :: absday
+  real(DP) :: abssec
+  real(DP) :: date_ms = 0.0_DP
+
+  call CALENDAR_date2daysec( absday,       & ! [OUT]
+                             abssec,       & ! [OUT]
+                             date,         & ! [IN]
+                             date_ms,       & ! [IN]
+                             0             ) ! [IN]
+
+  abssec = abssec + dsec
+
+  call CALENDAR_adjust_daysec( absday,   & ! [INOUT]
+                               abssec )    ! [INOUT]
+
+  call CALENDAR_daysec2date( date,        & ! [OUT]
+                             date_ms,     & ! [OUT]
+                             absday,      & ! [IN]
+                             abssec,      & ! [IN]
+                             0            ) ! [IN]
+
+
+  return
+end subroutine advance_nowdate
+
 !===============================================================================
 END MODULE common_scale

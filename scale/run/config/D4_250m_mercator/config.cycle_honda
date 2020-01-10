@@ -26,6 +26,9 @@ DACYCLE_RUN_FCST=1
 # Maximum number of dacycle forecasts 
 MAX_DACYCLE_RUN_FCST=8
 
+# Number of dafcst members
+NUM_DACYCLE_FCST_MEM=$MAX_DACYCLE_RUN_FCST
+
 # Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
 DACYCLE_RUN_FCST_TIME=1800 # sec
 
@@ -34,6 +37,9 @@ ICYC_DACYCLE_RUN_FCST=1
 
 # Cycle # of 1st DA cycle starts after spin-up forecast
 ICYC_DACYCLE_RUN_ANALYSIS=1
+
+# GrADS output
+OUT_MEAN_GRADS=0
 
 #===============================================================================
 # Forecast settings

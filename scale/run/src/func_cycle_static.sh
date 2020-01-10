@@ -510,7 +510,7 @@ echo "Check MPI configuration"
 if ((DACYCLE == 1 )); then
   REQ_MEM=$((MEMBER + 1 + DET_RUN)) # Member + 1 (mean) + 1 (mdet)
   if ((DACYCLE_RUN_FCST == 1)); then
-    REQ_MEM=$((REQ_MEM + MAX_DACYCLE_RUN_FCST))
+    REQ_MEM=$((REQ_MEM + NUM_DACYCLE_FCST_MEM))
   fi
   REQ_PRC=$((REQ_MEM * SCALE_NP))
   NUM_PRC=$((NNODES * PPN))
@@ -1000,7 +1000,7 @@ while ((time <= ETIME)); do
       if ((DACYCLE == 1)); then
         conf_file="dacycle_${time}.conf"
         if ((DACYCLE_RUN_FCST == 1)); then
-          MEMBER_RUN=$((mtot + MAX_DACYCLE_RUN_FCST))
+          MEMBER_RUN=$((mtot + NUM_DACYCLE_FCST_MEM))
         else
           MEMBER_RUN=$mtot
         fi

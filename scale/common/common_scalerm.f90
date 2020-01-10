@@ -1173,5 +1173,85 @@ subroutine resume_state(do_restart_read)
   return
 end subroutine resume_state
 
+subroutine set_dafcst( ncycle, dafcst_slist )
+  use scale_time, only: &
+    TIME_NOWDATE, &
+    TIME_gettimelabel
+  use mod_admin_time, only: &
+    TIME_DTSEC_ATMOS_RESTART
+  use common_scale, only: &
+    advance_nowdate
+  use scale_precision, only: &
+    RP, DP
+  implicit none
+
+  integer, intent(in) :: ncycle
+  logical, intent(out) :: dafcst_slist( ncycle, NUM_DACYCLE_FCST_MEM )
+  integer :: n, nf, mem_f
+  integer :: time_nowdate_org(6)
+  logical :: START_FCST
+  character(12) :: str
+  character(len=19) :: timelabel
+
+  time_nowdate_org = TIME_NOWDATE
+
+  dafcst_slist = .false.
+  write(str, '(i8)') NUM_DACYCLE_FCST_MEM
+
+  if ( myrank_a == 0 ) then
+    write(6,'(a)')"### Summary of DA cycles and forecasts ###"
+    write(6,'(a9,1x,a15,1x,3a12)') "  Cycle #", "           time", "  start fcst", "  fcst count", " fcst member"
+  endif
+
+  nf = 0
+  mem_f = 0
+  do n = 1, ncycle
+
+    call advance_nowdate( TIME_NOWDATE, TIME_DTSEC_ATMOS_RESTART )
+    call TIME_gettimelabel( timelabel )
+
+    if ( ( n >= ICYC_DACYCLE_RUN_FCST ) .and. ( nf < MAX_DACYCLE_RUN_FCST ) ) then
+      START_FCST = .true.
+      nf = nf + 1
+      mem_f = mem_f + 1
+      if ( mem_f > NUM_DACYCLE_FCST_MEM ) then
+        mem_f = 1
+      endif
+
+      dafcst_slist( n, mem_f ) = .true.
+
+    else
+      START_FCST = .false.
+    endif
+
+
+    if ( myrank_a == 0 ) then
+      write(6,'(i9,1x,a15,1x,l12,i12,i12)') n, timelabel(1:15), START_FCST, nf, mem_f
+    endif
+
+  enddo
+  TIME_NOWDATE = time_nowdate_org
+
+  if ( myrank_a == 0 ) then
+    write(6,'(a)')"### Summary of dafcst ###"
+    write(6,'(a9,1x,a15,1x,a)')"cycle", "time,","flag for fcst membsers"
+
+    do n = 1, ncycle
+      call advance_nowdate( TIME_NOWDATE, TIME_DTSEC_ATMOS_RESTART )
+      call TIME_gettimelabel( timelabel )
+
+      write(6,'(i9,1x,a15,1x,' // trim(str) // 'l3)') n, timelabel(1:15), dafcst_slist(n,1:NUM_DACYCLE_FCST_MEM)
+    enddo
+
+    write(6,'(a)')""
+  endif
+
+  TIME_NOWDATE = time_nowdate_org
+  stop
+  
+
+  return
+end subroutine set_dafcst
+
 !===============================================================================
 end module common_scalerm

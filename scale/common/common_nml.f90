@@ -59,6 +59,7 @@ MODULE common_nml
   logical :: DET_RUN_CYCLED = .true.       ! Deprecated (= MDET_CYCLED)
 
   logical :: DACYCLE_RUN_FCST = .false.    ! Run a forecast from analysis ensemble mean by dacycle-forecast member
+  integer :: NUM_DACYCLE_FCST_MEM = 0      ! Number of dacycle-forecasts members
   integer :: MAX_DACYCLE_RUN_FCST = 0      ! Maximum number of dacycle-forecasts 
   integer :: ICYC_DACYCLE_RUN_FCST = 1      ! Initial-cycle number of dacycle-forecasts 
   integer :: ICYC_DACYCLE_ANALYSIS = 1      ! Initial-cycle number of DA (after spin-up forecast)
@@ -411,6 +412,7 @@ subroutine read_nml_ensemble
     DET_RUN, &           !*** for backward compatibility ***
     DET_RUN_CYCLED, &    !*** for backward compatibility ***
     DACYCLE_RUN_FCST, &
+    NUM_DACYCLE_FCST_MEM, &
     MAX_DACYCLE_RUN_FCST, &
     ICYC_DACYCLE_RUN_FCST, &
     ICYC_DACYCLE_ANALYSIS, &
@@ -448,7 +450,7 @@ subroutine read_nml_ensemble
       MEMBER_RUN = MEMBER_RUN + 1
     end if
     if (DACYCLE_RUN_FCST) then
-      MEMBER_RUN = MEMBER_RUN + MAX_DACYCLE_RUN_FCST
+      MEMBER_RUN = MEMBER_RUN + NUM_DACYCLE_FCST_MEM
     endif
   end if
 

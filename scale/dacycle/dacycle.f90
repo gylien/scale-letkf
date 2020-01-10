@@ -12,7 +12,8 @@ program dacycle
   use common_scalerm, only: &
     scalerm_setup, &
     resume_state,  &
-    scalerm_finalize
+    scalerm_finalize, &
+    set_dafcst
   use common_mpi_scale, only: &
     set_mem_node_proc,        &
     set_common_mpi_scale,     &
@@ -139,6 +140,7 @@ program dacycle
   integer :: dafcst_step ! dacycle-forecast step
   integer :: dafcst_ostep ! dacycle-forecast output step
   character(len=19) :: ftimelabel, fstimelabel, fetimelabel
+  logical, allocatable :: dafcst_slist(:,:)
 
   real(r_size), allocatable :: ref3d(:,:,:)
 
@@ -214,6 +216,9 @@ program dacycle
     dafcst_ostep = 0
 
     if (myrank == 0) write (6, '(A,I7)') 'Total cycle numbers:', lastcycle
+
+    allocate( dafcst_slist( lastcycle, NUM_DACYCLE_FCST_MEM ) )
+    call set_dafcst( lastcycle, dafcst_slist )
 
     ! Set forecast length (TIME_NSTEP) and initial step (scycle_dafcst) 
     ! for each dacycle-forecast member
