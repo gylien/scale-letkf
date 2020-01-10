@@ -1438,6 +1438,7 @@ function obs_da_time_compare(utime_obs)
   real(r_dble) :: abssec,abssec_obs
   integer :: iabsday
 
+  integer,parameter :: timeslot_sec = 30 
 
   if (minval(utime_obs) < 0)then
    obs_da_time_compare = -1 !!! no obs 
@@ -1449,9 +1450,9 @@ function obs_da_time_compare(utime_obs)
   call calendar_date2daysec(iabsday,abssec,TIME_NOWDATE,0.D0,0)
   abssec     = abssec     + real(iabsday*86400)
 
-if (int(abssec_obs) > int(abssec))then
+if (int(abssec_obs) - int(abssec) .gt. timeslot_sec/2 )then
   obs_da_time_compare = 1
-elseif (int(abssec_obs) < int(abssec))then
+elseif (int(abssec_obs) - int(abssec) .le. timeslot_sec/2 )then
   obs_da_time_compare = -1
 else
   obs_da_time_compare = 0
