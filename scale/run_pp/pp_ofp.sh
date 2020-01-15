@@ -34,6 +34,7 @@ sed -i -e "s/<--PRC_NUM_X-->/$PRC_NUM_X/g" config.nml.scale_pp
 sed -i -e "s/<--PRC_NUM_Y-->/$PRC_NUM_Y/g" config.nml.scale_pp
 sed -i -e "s/<--IMAX-->/$IMAX/g" config.nml.scale_pp
 sed -i -e "s/<--JMAX-->/$JMAX/g" config.nml.scale_pp
+sed -i -e "s/<--DX-->/$DX/g" config.nml.scale_pp
 
 #-------------------------------------------------------------------------------
 

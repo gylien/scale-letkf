@@ -35,23 +35,26 @@ fp_suffix='_single' ### '' (double) or '_single'
 #DATA_BDY_SCALE_PRC_NUM_X=8 # D1
 #DATA_BDY_SCALE_PRC_NUM_Y=6 # D1
 
-DOMAIN=d3
-NX=192
-NY=192
-PRC_NUM_X=8
-PRC_NUM_Y=8
-DATA_TOPO_BDY_SCALE="${TOPDIR}/result/ope_single/d2_small/const/topo"
-DATA_BDY_SCALE_PRC_NUM_X=8 # D2
-DATA_BDY_SCALE_PRC_NUM_Y=8 # D2
+#DOMAIN=d3
+#NX=192
+#NY=192
+#PRC_NUM_X=32
+#PRC_NUM_Y=32
+#DATA_TOPO_BDY_SCALE="${TOPDIR}/result/ope_single/d2/const/topo"
+#DATA_BDY_SCALE_PRC_NUM_X=16 # D2
+#DATA_BDY_SCALE_PRC_NUM_Y=16 # D2
 
-#DOMAIN=d4
-#NX=128
-#NY=128
-#PRC_NUM_X=8
-#PRC_NUM_Y=8
+DOMAIN=d4
+NX=512
+NY=512
+PRC_NUM_X=64
+PRC_NUM_Y=64
 #DATA_TOPO_BDY_SCALE="${TOPDIR}/result/ope_single/d3/const/topo"
-#DATA_BDY_SCALE_PRC_NUM_X=32 # D3
-#DATA_BDY_SCALE_PRC_NUM_Y=32 # D3
+DATA_TOPO_BDY_SCALE="${TOPDIR}/result/test/d3_Kanto/const/topo"
+DATA_BDY_SCALE_PRC_NUM_X=32 # D3
+DATA_BDY_SCALE_PRC_NUM_Y=32 # D3
+DX=250.D0
+
 
 IMAX=`expr $NX \/ $PRC_NUM_X`
 JMAX=`expr $NY \/ $PRC_NUM_Y`
@@ -68,8 +71,8 @@ UNAME=`id -nu`
 #===============================================================================
 # Location of model/data files
 
-DATADIR="$TOPDIR/database" 
-SCALE_DB="$TOPDIR/database" 
+DATADIR="/work/hp150019/share/database" 
+SCALE_DB="$DATADIR" 
 
 DATA_TOPO="${TOPDIR}/result/test_const"         # Directory of the prepared topo files
 DATA_LANDUSE="${TOPDIR}/result/test_const"   # Directory of the prepared landuse files
