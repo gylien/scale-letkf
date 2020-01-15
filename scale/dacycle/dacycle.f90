@@ -12,8 +12,9 @@ program dacycle
   use common_scalerm, only: &
     scalerm_setup, &
     resume_state,  &
-    scalerm_finalize, &
-    set_dafcst
+    set_dafcst,    &
+    true_mem,      &
+    scalerm_finalize
   use common_mpi_scale, only: &
     set_mem_node_proc,        &
     set_common_mpi_scale,     &
@@ -30,7 +31,7 @@ program dacycle
     read_ens_mpi,             &
     write_enssprd,            &
     set_common_mpi_grid,      &
-    send_emean_direct,        &
+    send_recv_emean_direct,        &
     receive_emean_direct,     &
     write_grd_dafcst_mpi,     &
     write_grd_all_mpi,        &
@@ -138,9 +139,19 @@ program dacycle
   integer :: scycle_dafcst
   integer :: fcst_cnt ! Number of dacycle forecast launched
   integer :: dafcst_step ! dacycle-forecast step
+  integer :: dafcst_step_max ! dacycle-forecast step
   integer :: dafcst_ostep ! dacycle-forecast output step
   character(len=19) :: ftimelabel, fstimelabel, fetimelabel
+
+  ! List for dafcst (start cycle [x] dafcst member)
   logical, allocatable :: dafcst_slist(:,:)
+  ! Last start cycle for each dafcst member
+  integer, allocatable :: dafcst_list_last(:) 
+  ! Total # of forecasts for each dafcst member
+  integer, allocatable :: dafcst_list_sum(:) 
+  ! dafcst member index (fmem_idx=1 for f0001)
+  integer :: fmem_idx = -1
+  integer :: fcst_cnt_mem ! Number of dacycle forecast launched by each member
 
   real(r_size), allocatable :: ref3d(:,:,:)
 
@@ -210,24 +221,26 @@ program dacycle
   if (myrank_use) then
 
     icycle = 0
-    lastcycle = int((TIME_DTSEC * TIME_NSTEP + 1.0d-6) / TIME_DTSEC_ATMOS_RESTART)
+    lastcycle = int( TIME_DTSEC * real( TIME_NSTEP, kind=DP ) / TIME_DTSEC_ATMOS_RESTART )
     fcst_cnt = 0
+    fcst_cnt_mem = 0
     dafcst_step = -1
-    dafcst_ostep = 0
+    dafcst_ostep = -1
 
     if (myrank == 0) write (6, '(A,I7)') 'Total cycle numbers:', lastcycle
 
     allocate( dafcst_slist( lastcycle, NUM_DACYCLE_FCST_MEM ) )
-    call set_dafcst( lastcycle, dafcst_slist )
+    allocate( dafcst_list_last( NUM_DACYCLE_FCST_MEM ) )
+    allocate( dafcst_list_sum( NUM_DACYCLE_FCST_MEM ) )
+    call set_dafcst( lastcycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
 
     ! Set forecast length (TIME_NSTEP) and initial step (scycle_dafcst) 
     ! for each dacycle-forecast member
-    if (.not. myrank_use_da) then 
-      scycle_dafcst = int(myrank_da / nprocs_d) + ICYC_DACYCLE_RUN_FCST
-      TIME_NSTEP = TIME_DSTEP_ATMOS_RESTART * scycle_dafcst + &
-                   int( (DACYCLE_RUN_FCST_TIME + 1.0d-6) / TIME_DTSEC )
-    else
-      scycle_dafcst = 9999999
+    if ( .not. myrank_use_da ) then 
+      fmem_idx = int( myrank_da / nprocs_d ) + 1
+      TIME_NSTEP = int( ( TIME_DTSEC_ATMOS_RESTART * real( dafcst_list_last(fmem_idx), kind=DP ) + &
+                          DACYCLE_RUN_FCST_TIME ) / TIME_DTSEC )     
+      dafcst_step_max = int( DACYCLE_RUN_FCST_TIME / TIME_DTSEC_ATMOS_RESTART )
     endif
 
     if ( ICYC_DACYCLE_ANALYSIS == 1 ) then
@@ -271,7 +284,7 @@ program dacycle
       ! report current time
       call ADMIN_TIME_checkstate
 
-      if ( TIME_DOresume .and. dafcst_step <= 0) then
+      if ( TIME_DOresume .and. dafcst_step == -1 ) then
         ! read state from restart files
         if (DIRECT_TRANSFER .and. icycle >= 1) then
           if (LOG_LEVEL >= 3) then
@@ -608,73 +621,86 @@ program dacycle
       ! LETKF section end
       !-------------------------------------------------------------------------
 
-      ! Send/receive the analysis ensemble mean
-      ! Draw/output from forecasts
+      !! Send/receive the analysis ensemble mean !!
       if ( TIME_DOATMOS_restart .and. DACYCLE_RUN_FCST ) then
 
-        ! Do not send the anaysis data if # of cycle is out of range
-        if ( ( myrank_use_da ) .and. ( icycle < ICYC_DACYCLE_RUN_FCST .or. fcst_cnt >= MAX_DACYCLE_RUN_FCST ) ) cycle 
-
-        ! Forecast member is initiated when icycle >= scycle_dafcst
-        if ( (.not. myrank_use_da ) .and. ( icycle < scycle_dafcst ) ) cycle
-
-        ! Count the number of forecast member initiated
-        fcst_cnt = fcst_cnt + 1
- 
-
-        !! Send ensemble mean (analysis)
-        if ( myrank_use_da .and. myrank_e == mmean_rank_e ) then
-
-          call send_emean_direct(mean3d,mean2d,fcst_cnt)
-
-        endif ! [ myrank_use_da ]
-
-
-        ! Forecast member (receive/output)
-        if ( .not. myrank_use_da ) then
+        ! Draw figure using forecast results
+        if ( .not. myrank_use_da .and. ( dafcst_step >= 0 ) ) then 
 
           dafcst_step = dafcst_step + 1
           dafcst_ostep = dafcst_ostep + 1
 
-          !! Receive ensemble mean (analysis) and start forecast
-          if ( dafcst_step == 0 ) then
-            call receive_emean_direct()
-            call TIME_gettimelabel(fstimelabel)
-  
-            call MPI_BARRIER(MPI_COMM_d, ierr)
-            call date_and_time(date=date, time=time)
-            call system_clock(stime_fcst_c)
-            if (myrank_d == 0) then
-              write (6, '(2A,1x,A,1x,A)') '[Info:fcst] Start forecast: ', date, time, trim(fstimelabel(1:15))
-            endif
-
-          elseif ( dafcst_ostep >= 1 ) then ! Draw figure using forecast results
-
-            if (.not. allocated(ref3d)) allocate(ref3d(nlev,nlon,nlat))
-            call calc_ref_direct( ref3d )
-            if (OUT_GRADS_DAFCST)then ! Output of dacycle-forecast in GrADS format
-              call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
-            endif
+          if ( .not. allocated(ref3d) ) allocate( ref3d(nlev,nlon,nlat) )
+          call calc_ref_direct( ref3d )
+          if ( OUT_GRADS_DAFCST ) then ! Output of dacycle-forecast in GrADS format
+            call write_grd_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
+          endif
 #ifdef PLOT_DCL 
-            if ( PLOT_FCST ) then ! Output of dacycle-forecast        
-              call plot_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
-            endif 
+          if ( PLOT_FCST ) then ! Output of dacycle-forecast        
+            call plot_dafcst_mpi(fstimelabel(1:15), ref3d, dafcst_ostep)
+          endif 
 #endif
+        endif ! [ .not. myrank_use_da .and. dafcst_step >= 0 ]
 
-          endif ! [dafcst_step == 0 ]
+        if ( .not. myrank_use_da .and. ( myrank_d == 0 ) ) write(6,'(a,4i6)')"DEBUG",dafcst_step, dafcst_step_max, TIME_NOWSTEP,  myrank_a
 
-        endif ! [ .not. myrank_use_da ]
 
-        if ( (myrank_use_da .and. myrank_e == mmean_rank_e ) .or. ( .not. myrank_use_da .and. dafcst_step == 0 )) then
-          call send_recv_emean_others(fcst_cnt)
+        ! Do nothing if myrank is not ensemble mean or no forecasts are started from this cycle
+        if ( myrank_use_da .and. ( .not. ( myrank_e == mmean_rank_e ) .or. ( .not. any( dafcst_slist(icycle,:) ) ) ) )  cycle 
+        ! Do nothing if myrank is not in charge of dacycle forecast from this cycle
+        if ( .not. myrank_use_da .and. ( dafcst_step < dafcst_step_max .and. dafcst_step /= -1 ) ) cycle 
+
+        ! Get forecast elapse time
+        if ( .not. myrank_use_da .and. dafcst_step == dafcst_step_max ) then
+          call MPI_BARRIER(MPI_COMM_d, ierr)
+          call date_and_time(date=date, time=time)
+          call system_clock(etime_fcst_c, cpsec, cmax)
+          call TIME_gettimelabel(fetimelabel)
+          if (myrank_d == 0) then
+            write (6, '(2A,1x,A,1x,A,1x,A,f12.4)') '[Info:fcst] End forecast: ', date, time, &
+                                              trim(fstimelabel(1:15)), trim(fetimelabel(1:15)), &
+                                              real(etime_fcst_c - stime_fcst_c) / real(cpsec)
+
+            ! End main loop for dafcst members
+            write(6,'(a,3i7)')"DEBUGFCST",fmem_idx,dafcst_list_sum(fmem_idx),fcst_cnt_mem
+          endif
+
+          ! End of forecast
+          if ( fcst_cnt_mem == dafcst_list_sum(fmem_idx) ) exit  
         endif
 
 
-      endif ! [TIME_DOATMOS_restart .and. DACYCLE_RUN_FCST]
+        ! Count the number of forecast member initiated
+        if ( myrank_use_da ) then
+          fcst_cnt = true_mem( dafcst_slist(icycle,:) )
+        elseif ( .not. myrank_use_da ) then
+          fcst_cnt = fmem_idx
+          fcst_cnt_mem = fcst_cnt_mem + 1
+         endif
 
-      if ( myrank_use_da .and. TIME_DOATMOS_restart ) then
-        call mpi_timer('SEND ANALYSIS', 1, barrier=MPI_COMM_da)
-      endif
+        ! Send/receive ensemble mean (analysis)
+        call send_recv_emean_direct( mean3d, mean2d, fcst_cnt )
+        call send_recv_emean_others( fcst_cnt )
+!        if ( myrank_use_da .and. TIME_DOATMOS_restart ) then
+!          call mpi_timer('SEND ANALYSIS', 1, barrier=MPI_COMM_da)
+!        endif
+
+        ! Initialize timer for dafcst
+        if ( .not. myrank_use_da ) then
+          dafcst_step = 0
+          dafcst_ostep = 0
+          call TIME_gettimelabel(fstimelabel)
+ 
+          call MPI_BARRIER(MPI_COMM_d, ierr)
+          call date_and_time(date=date, time=time)
+          call system_clock(stime_fcst_c)
+          if (myrank_d == 0) then
+            write (6, '(2A,1x,A,1x,A)') '[Info:fcst] Start forecast: ', date, time, trim(fstimelabel(1:15))
+          endif
+        endif
+
+      endif ! [ TIME_DOATMOS_restart .and. DACYCLE_RUN_FCST ]
+
 
 
       if ( TIME_NOWSTEP > TIME_NSTEP ) then
@@ -682,20 +708,6 @@ program dacycle
           write(6,'(a)') "====="
           write(6,'(a)') "Main DA loop end"
           write(6,'(a)') "====="
-        endif
-
-        if (.not. myrank_use_da) then
-          call MPI_BARRIER(MPI_COMM_d, ierr)
-          call date_and_time(date=date, time=time)
-          call system_clock(etime_fcst_c, cpsec, cmax)
-          call TIME_gettimelabel(fetimelabel)
-          if (myrank_d == 0) then
-            write (6, '(2A,1x,A,1x,A,1x,A,f12.4)') '[Info:fcst] End forecast: ', date, time, &
-                                              trim(fstimelabel(1:15)), &
-                                              trim(fetimelabel(1:15)), &
-                                              real(etime_fcst_c - stime_fcst_c) / real(cpsec)
-
-          endif
         endif
 
         exit
@@ -713,7 +725,6 @@ program dacycle
 
     ! LETKF finalize
     !-------------------------------------------------------------------
-
     if (allocated(obs)) deallocate (obs)
     if (allocated(gues3d)) deallocate (gues3d)
     if (allocated(gues2d)) deallocate (gues2d)
@@ -751,6 +762,9 @@ program dacycle
   end if ! [ myrank_use ]
 
   call scalerm_finalize('DACYCLE')
+
+  call PROF_rapend  ('All', 1)
+  call PROF_rapreport
 
   call mpi_timer('FINALIZE', 1, barrier=MPI_COMM_WORLD)
 

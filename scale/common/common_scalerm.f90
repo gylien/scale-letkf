@@ -995,8 +995,8 @@ subroutine scalerm_finalize(execname)
       call PROF_rapend  ('Monit', 2)
 
       call PROF_rapstart('File', 2)
-
       call FILE_HISTORY_finalize
+
     end if
 
     if (exec_model) then
@@ -1010,29 +1010,29 @@ subroutine scalerm_finalize(execname)
   end if
 
   call FILE_Close_All
+  call PROF_rapend  ('File', 2)
 
   if (myrank_use .and. scalerm_run) then
     if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
-      call PROF_rapend  ('File', 2)
-
-      call PROF_rapend  ('All', 1)
     end if
 
-    if (exec_model) then
-      call PROF_rapreport
-    end if
+    call PROF_rapend  ('All', 1)
+    call PROF_rapreport
+
   end if
 
-  if (myrank_use) then
-    if (NUM_DOMAIN <= 1) then ! When NUM_DOMAIN >= 2, 'PRC_MPIfinish' in SCALE library will free the communicator
-      call MPI_COMM_FREE(MPI_COMM_d, ierr)
-    end if
-    call MPI_COMM_FREE(MPI_COMM_a, ierr)
-    if ( myrank_use_da ) then
-      call MPI_COMM_FREE(MPI_COMM_da, ierr)
-    endif
-!    call MPI_COMM_FREE(MPI_COMM_u, ierr)
-  end if
+!  if (myrank_use) then
+!    if (NUM_DOMAIN <= 1) then ! When NUM_DOMAIN >= 2, 'PRC_MPIfinish' in SCALE library will free the communicator
+!      call MPI_COMM_FREE(MPI_COMM_d, ierr)
+!    end if
+!
+!    if ( myrank_use_obs ) then
+!      call MPI_COMM_FREE(MPI_COMM_o, ierr)
+!    endif
+!    call MPI_COMM_FREE(MPI_COMM_da, ierr)
+!    call MPI_COMM_FREE(MPI_COMM_a, ierr)
+!!    call MPI_COMM_FREE(MPI_COMM_u, ierr)
+!  end if
 
   ! stop MPI
 !  call PRC_MPIfinish
@@ -1173,7 +1173,7 @@ subroutine resume_state(do_restart_read)
   return
 end subroutine resume_state
 
-subroutine set_dafcst( ncycle, dafcst_slist )
+subroutine set_dafcst( ncycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
   use scale_time, only: &
     TIME_NOWDATE, &
     TIME_gettimelabel
@@ -1187,11 +1187,16 @@ subroutine set_dafcst( ncycle, dafcst_slist )
 
   integer, intent(in) :: ncycle
   logical, intent(out) :: dafcst_slist( ncycle, NUM_DACYCLE_FCST_MEM )
+  integer, intent(out) :: dafcst_list_last( NUM_DACYCLE_FCST_MEM )
+  integer, intent(out) :: dafcst_list_sum( NUM_DACYCLE_FCST_MEM )
   integer :: n, nf, mem_f
   integer :: time_nowdate_org(6)
+
   logical :: START_FCST
   character(12) :: str
   character(len=19) :: timelabel
+
+  integer :: dummy( ncycle )
 
   time_nowdate_org = TIME_NOWDATE
 
@@ -1246,12 +1251,46 @@ subroutine set_dafcst( ncycle, dafcst_slist )
     write(6,'(a)')""
   endif
 
+  do n = 1, ncycle
+    dummy(n) = n
+  enddo
+  do n = 1, NUM_DACYCLE_FCST_MEM
+    dafcst_list_last(n) = maxval( dummy, dafcst_slist(:,n) )
+  enddo
+
+  do n = 1, ncycle
+    dummy(n) = 1
+  enddo
+  do n = 1, NUM_DACYCLE_FCST_MEM
+    dafcst_list_sum(n) = sum( dummy, dafcst_slist(:,n) )
+  enddo
+
   TIME_NOWDATE = time_nowdate_org
-  stop
-  
 
   return
 end subroutine set_dafcst
+
+function true_mem( dafcst_slist1d )
+  implicit none
+
+  integer :: true_mem
+  logical, intent(in) :: dafcst_slist1d( NUM_DACYCLE_FCST_MEM )
+
+  integer :: m
+
+  true_mem = -1
+  do m = 1, NUM_DACYCLE_FCST_MEM
+    if ( dafcst_slist1d(m) ) then
+      true_mem = m
+    endif
+  enddo
+
+  if ( true_mem < 1 ) then
+    write(6,'(a)')"Error in true_mem/dafcst_slist"
+    stop
+  endif
+
+end function true_mem
 
 !===============================================================================
 end module common_scalerm

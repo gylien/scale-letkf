@@ -63,7 +63,7 @@ MODULE common_nml
   integer :: MAX_DACYCLE_RUN_FCST = 0      ! Maximum number of dacycle-forecasts 
   integer :: ICYC_DACYCLE_RUN_FCST = 1      ! Initial-cycle number of dacycle-forecasts 
   integer :: ICYC_DACYCLE_ANALYSIS = 1      ! Initial-cycle number of DA (after spin-up forecast)
-  integer :: DACYCLE_RUN_FCST_TIME = 0      ! Forecast time for dacycle-forecast members
+  real(r_size) :: DACYCLE_RUN_FCST_TIME = 0      ! Forecast time for dacycle-forecast members
   character(filelenmax) :: DACYCLE_RUN_FCST_OUTNAME = '' ! Output file name
 
   !--- PARAM_MODEL

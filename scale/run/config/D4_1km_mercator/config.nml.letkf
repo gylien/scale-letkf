@@ -4,7 +4,7 @@
 /
 
 &PARAM_LOG
- LOG_LEVEL = 2,
+ LOG_LEVEL = 1,
  USE_MPI_BARRIER = .true.,
 /
 

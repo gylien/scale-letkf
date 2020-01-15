@@ -1783,11 +1783,33 @@ end subroutine mpi_timer
 !-------------------------------------------------------------------------------
 ! [Direct transfer] Send SCALE restart (analysis) data
 !-------------------------------------------------------------------------------
-subroutine send_emean_direct(v3dg,v2dg,fcst_cnt)
+subroutine send_recv_emean_direct(v3dg,v2dg,fcst_cnt)
+  use scale_time, only: &
+    TIME_NOWDATE, &
+    TIME_NOWMS, &
+    TIME_NOWSTEP
+  use mod_atmos_vars, only: &
+    DENS, &
+    MOMX, &
+    MOMY, &
+    MOMZ, &
+    RHOT, &
+    QTRC, QV, Qe, &
+    ATMOS_vars_fillhalo
+  use mod_atmos_phy_mp_driver, only: &
+    ATMOS_PHY_MP_driver_qhyd2qtrc
+  use mod_atmos_phy_mp_vars, only: &
+    QS_MP, QE_MP
+  use scale_atmos_hydrometeor, only: &
+    I_HC, I_HR, I_HI, I_HS, I_HG
+  use scale_atmos_grid_cartesC_index, only: &
+    IS, IE, IA, JS, JE, JA, KS, KE, KA
   implicit none
 
   real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
   real(RP), intent(in) :: v2dg(nlon,nlat,nv2d)
+  real(RP) :: v3dg_r(nlev,nlon,nlat,nv3d)
+  real(RP) :: v2dg_r(nlon,nlat,nv2d)
   integer, intent(in) :: fcst_cnt
   integer :: iv3d, iv2d
   integer :: k, i, j
@@ -1796,23 +1818,104 @@ subroutine send_emean_direct(v3dg,v2dg,fcst_cnt)
   integer :: srank_a ! rank_a of sending rank ! Ensemble mean
   integer :: ierr, tag
 
+  integer, allocatable :: istat(:)
+
   rrank_a = nens * nprocs_d + nprocs_d * (fcst_cnt - 1) + myrank_d ! dacycle-forecast member
   srank_a = MEMBER * nprocs_d + myrank_d
 
-  if ( myrank_a /= srank_a ) return
+if ( myrank_d == 0 ) write(6,'(a,i6,6i6,2i6)')"Enter sendre",myrank_a,TIME_NOWDATE(1:6),rrank_a,srank_a
+  if ( myrank_a /= rrank_a .and. myrank_a /= srank_a ) return
+if ( myrank_d == 0 ) write(6,'(a,i6,6i6,2i6)')"Cont sendre",myrank_a, TIME_NOWDATE(1:6),rrank_a,srank_a
 
   tag = myrank_d 
+  if ( myrank_a == srank_a ) then
 
-  if (nv3d > 0) then
-    call MPI_Send(v3dg,nlev*nlon*nlat*nv3d,MPI_RP,rrank_a,tag,MPI_COMM_a,ierr) 
-  endif
+    call MPI_Send( TIME_NOWDATE, 6, MPI_INTEGER,          rrank_a, tag+2, MPI_COMM_a, ierr ) 
+    call MPI_Send( TIME_NOWMS,   1, MPI_DOUBLE_PRECISION, rrank_a, tag+3, MPI_COMM_a, ierr ) 
+    call MPI_Send( TIME_NOWSTEP, 1, MPI_INTEGER,          rrank_a, tag+4, MPI_COMM_a, ierr ) 
+if ( myrank_d == 0 ) write(6,'(a,i6,6i6,2i6)')"send times",myrank_a,TIME_NOWDATE(1:6),rrank_a,srank_a
 
-  if (nv2d > 0) then
-    call MPI_Send(v2dg,nlon*nlat*nv2d,MPI_RP,rrank_a,tag+1,MPI_COMM_a,ierr) 
+    if (nv3d > 0) then
+      call MPI_Send( v3dg, nlev*nlon*nlat*nv3d, MPI_RP, rrank_a, tag, MPI_COMM_a, ierr ) 
+    endif
+  
+    if (nv2d > 0) then
+      call MPI_Send( v2dg, nlon*nlat*nv2d, MPI_RP, rrank_a, tag+1, MPI_COMM_a, ierr ) 
+    endif
+
+    return 
+
+  elseif ( myrank_a == rrank_a ) then
+
+    allocate( istat( MPI_STATUS_SIZE ) )
+
+    call MPI_Recv( TIME_NOWDATE, 6, MPI_INTEGER,          srank_a, tag+2, MPI_COMM_a, istat, ierr ) 
+    call MPI_Recv( TIME_NOWMS,   1, MPI_DOUBLE_PRECISION, srank_a, tag+3, MPI_COMM_a, istat, ierr ) 
+    call MPI_Recv( TIME_NOWSTEP, 1, MPI_INTEGER,          srank_a, tag+4, MPI_COMM_a, istat, ierr ) 
+
+if ( myrank_d == 0 ) write(6,'(a,i6,6i6,2i6)')"recv times",myrank_a,TIME_NOWDATE(1:6),rrank_a,srank_a
+    if (nv3d > 0) then
+      call MPI_Recv( v3dg_r, nlev*nlon*nlat*nv3d, MPI_RP, srank_a, tag, MPI_COMM_a, istat, ierr)
+      ! Ensemble mean data (mean3d & mean 2d) are not transformed into 
+      ! SCALE prognostic variables (e.g., MOMX) in write_ens_mpi
+      call state_trans_inv(v3dg_r) 
+    endif
+  
+    if (nv2d > 0) then
+      call MPI_Recv( v2dg_r, nlon*nlat*nv2d, MPI_RP, srank_a, tag+1, MPI_COMM_a, istat, ierr)
+    endif
+
+    deallocate( istat )
+ 
+    do iv3d = 1, nv3d
+      if (LOG_LEVEL >= 3) then
+        write(6,'(1x,A,A15)') '*** Update 3D var [direct transfer]: ', trim(v3d_name(iv3d))
+      end if
+      select case (iv3d)
+      case (iv3d_rho)
+        DENS(KS:KE,IS:IE,JS:JE) = v3dg_r(:,:,:,iv3d)
+      case (iv3d_rhou)
+        MOMX(KS:KE,IS:IE,JS:JE) = v3dg_r(:,:,:,iv3d)
+      case (iv3d_rhov)
+        MOMY(KS:KE,IS:IE,JS:JE) = v3dg_r(:,:,:,iv3d)
+      case (iv3d_rhow)
+        MOMZ(KS:KE,IS:IE,JS:JE) = v3dg_r(:,:,:,iv3d)
+      case (iv3d_rhot)
+        RHOT(KS:KE,IS:IE,JS:JE) = v3dg_r(:,:,:,iv3d)
+      case (iv3d_q)
+        QV(KS:KE,IS:IE,JS:JE) = v3dg_r(:,:,:,iv3d)
+      case (iv3d_qc)
+        Qe(KS:KE,IS:IE,JS:JE,I_HC) = v3dg_r(:,:,:,iv3d)
+      case (iv3d_qr)
+        Qe(KS:KE,IS:IE,JS:JE,I_HR) = v3dg_r(:,:,:,iv3d)
+      case (iv3d_qi)
+        Qe(KS:KE,IS:IE,JS:JE,I_HI) = v3dg_r(:,:,:,iv3d)
+      case (iv3d_qs)
+        Qe(KS:KE,IS:IE,JS:JE,I_HS) = v3dg_r(:,:,:,iv3d)
+      case (iv3d_qg)
+        Qe(KS:KE,IS:IE,JS:JE,I_HG) = v3dg_r(:,:,:,iv3d)
+      case default
+        write (6, '(3A)') "[Error] Variable '", trim(v3d_name(iv3d)), "' is not recognized."
+        stop
+      end select
+    end do
+  
+    ! Assume Tomita08
+    call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, & 
+                                        QV, Qe, &                    ! [IN]
+                                        QTRC(:,:,:,QS_MP:QE_MP)    ) ! [OUT] 
+    call ATMOS_vars_fillhalo 
+  
+    do iv2d = 1, nv2d
+      if (LOG_LEVEL >= 3) then
+        write(6,'(1x,A,A15)') '*** Update 2D var [direct transfer]: ', trim(v2d_name(iv2d))
+      end if
+    end do
+ 
   endif
 
   return
-end subroutine send_emean_direct
+end subroutine send_recv_emean_direct
 
 !-------------------------------------------------------------------------------
 ! [Direct transfer] Receive SCALE restart (analysis) data
@@ -2100,7 +2203,7 @@ subroutine plot_dafcst_mpi(timelabel, ref3d, step)
   if (present(step)) then
     fcst_ = .true.
     header = "fcst"
-    write(ftsec,'(I4.4)')  (step - 1) * int(TIME_DTSEC_ATMOS_RESTART)
+    write(ftsec,'(I4.4)')  step * int(TIME_DTSEC_ATMOS_RESTART)
     footer_fcst = "_FT" // ftsec // "s"
   end if
 
