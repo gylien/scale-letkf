@@ -117,7 +117,7 @@ subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons
     vpb = 0.20
     vpt = 0.70
    
-    aratio = (range_lonr - range_lonl) / (range_latr - range_latl)
+    aratio = cos(0.5*BASE_LAT/ D2R) * (range_lonr - range_lonl) / (range_latr - range_latl)
    
     vpb = max(vpt - (vpr - vpl) / aratio, 0.10)
     if (vpb == 0.10)then
@@ -145,7 +145,7 @@ subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons
     call grswnd(range_lonl,range_lonr,range_latl,range_latr)
    
     call grsvpt(vpl,vpr,vpb,vpt)
-    call grstrn(10) !!! Mercator
+    call grstrn(11) !!! Mercator
     call umlset('LGLOBE',.false.)
     call umiset('INDEXOUT',31)
     call umpfit
@@ -219,6 +219,7 @@ subroutine plot_dbz_DCL_obs(nobs, ze_radar, lon_radar, lat_radar, z_radar, nlons
     call umpglb
     call umplim
     call umpmap('coast_japan')
+    call umpmap('pref_japan')
   
     call uumrkz(1,real(BASE_LON/D2R),real(BASE_LAT/D2R),9,21,0.010) !!! RADAR location
   
