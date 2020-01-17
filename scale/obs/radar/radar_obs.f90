@@ -792,7 +792,11 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   logical, parameter :: input_is_dbz = .true.
 #endif
 
+#ifdef MPW
   type(c_mppawr_header) :: hd(n_type)
+#else
+  type(c_pawr_header) :: hd(n_type)
+#endif
 !  real(kind=c_float) :: az(AZDIM, ELDIM, n_type)
 !  real(kind=c_float) :: el(AZDIM, ELDIM, n_type)
 !  real(kind=c_float) :: rtdat(RDIM, AZDIM, ELDIM, n_type)

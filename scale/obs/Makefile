@@ -94,10 +94,6 @@ endif
 radar_tools.o:	radar/radar_tools.f90 $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
 
-read_toshiba.o:	radar/read_toshiba.c radar/read_toshiba.h
-	$(CC) $(COPTS) -c $<
-read_toshiba_f.o:	radar/read_toshiba_f.f90 read_toshiba.o
-	$(FC) $(FOPTS) -c $<
 read_toshiba$(TOSHIBA_OPT).o:	radar/read_toshiba$(TOSHIBA_OPT).c radar/read_toshiba$(TOSHIBA_OPT).h
 	$(CC) $(COPTS) -c $<
 read_toshiba$(TOSHIBA_OPT)_f.o:	radar/read_toshiba$(TOSHIBA_OPT)_f.f90 read_toshiba$(TOSHIBA_OPT).o
