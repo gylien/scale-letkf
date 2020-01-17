@@ -1754,7 +1754,7 @@ end subroutine mpi_timer
 !-------------------------------------------------------------------------------
 ! [Direct transfer] Send SCALE restart (analysis) data
 !-------------------------------------------------------------------------------
-subroutine send_recv_emean_direct( fcst_cnt )
+subroutine send_recv_analysis_direct( fcst_cnt )
   use scale_time, only: &
     TIME_NOWDATE, &
     TIME_NOWMS, &
@@ -1788,8 +1788,13 @@ subroutine send_recv_emean_direct( fcst_cnt )
 
   integer, allocatable :: istat(:)
 
+  if ( USE_MDET_FCST ) then
+    srank_a = ( MEMBER + 1 ) * nprocs_d + myrank_d
+  else
+    srank_a = MEMBER * nprocs_d + myrank_d
+  endif
+
   rrank_a = nens * nprocs_d + nprocs_d * (fcst_cnt - 1) + myrank_d ! dacycle-forecast member
-  srank_a = MEMBER * nprocs_d + myrank_d
 
   if ( myrank_a /= rrank_a .and. myrank_a /= srank_a ) return
 
@@ -1847,7 +1852,7 @@ subroutine send_recv_emean_direct( fcst_cnt )
   endif
 
   return
-end subroutine send_recv_emean_direct
+end subroutine send_recv_analysis_direct
 
 !-------------------------------------------------------------------------------
 ! [Direct transfer] Receive SCALE restart (analysis) data
@@ -2457,7 +2462,7 @@ subroutine bcast_restart_efcst_mpi()
   return
 end subroutine bcast_restart_efcst_mpi
 
-subroutine send_recv_emean_others(fcst_cnt)
+subroutine send_recv_analysis_others( fcst_cnt )
   use scale_atmos_grid_cartesC_index, only: &
      IA, JA, KA
   use mod_atmos_admin, only: &
@@ -2567,7 +2572,11 @@ subroutine send_recv_emean_others(fcst_cnt)
 
   integer :: iv3d, iv2d
 
-  srank_a = MEMBER * nprocs_d + myrank_d
+  if ( USE_MDET_FCST ) then
+    srank_a = ( MEMBER + 1 ) * nprocs_d + myrank_d
+  else
+    srank_a = MEMBER * nprocs_d + myrank_d
+  endif
   rrank_a = nens * nprocs_d + nprocs_d * (fcst_cnt - 1) + myrank_d ! dacycle-forecast member
 
   if ( myrank_a /= srank_a .and. myrank_a /= rrank_a ) return
@@ -2945,7 +2954,7 @@ subroutine send_recv_emean_others(fcst_cnt)
   deallocate(istat)
 
   return
-end subroutine send_recv_emean_others
+end subroutine send_recv_analysis_others
 
 subroutine pawr_toshiba_hd_mpi(lon0, lat0, z0, missing, range_res, na, nr, ne, &
                             AZDIM, ELDIM, n_type, RDIM, az, el, rtdat, utime_obs)

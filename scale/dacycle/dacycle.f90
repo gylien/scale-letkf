@@ -31,11 +31,11 @@ program dacycle
     read_ens_mpi,             &
     write_enssprd,            &
     set_common_mpi_grid,      &
-    send_recv_emean_direct,        &
+    send_recv_analysis_direct,        &
     receive_emean_direct,     &
     write_grd_dafcst_mpi,     &
     write_grd_all_mpi,        &
-    send_recv_emean_others,   &
+    send_recv_analysis_others,   &
 !    bcast_restart_efcst_mpi,  &
 #ifdef PLOT_DCL
     plot_dafcst_mpi, &
@@ -673,8 +673,8 @@ program dacycle
        endif
 
       ! Send/receive ensemble mean (analysis)
-      call send_recv_emean_direct( fcst_cnt )
-      call send_recv_emean_others( fcst_cnt )
+      call send_recv_analysis_direct( fcst_cnt )
+      call send_recv_analysis_others( fcst_cnt )
 !      if ( myrank_use_da .and. TIME_DOATMOS_restart ) then
 !        call mpi_timer('SEND ANALYSIS', 1, barrier=MPI_COMM_da)
 !      endif

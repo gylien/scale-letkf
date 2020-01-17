@@ -33,6 +33,9 @@ MAX_DACYCLE_RUN_FCST=<MAX_DACYCLE_RUN_FCST>
 # Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
 DACYCLE_RUN_FCST_TIME=<DACYCLE_RUN_FCST_TIME> # sec
 
+# Use mdet for extended forecasts
+USE_MDET_FCST=1
+
 #===============================================================================
 # Forecast settings
 

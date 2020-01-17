@@ -61,8 +61,10 @@ MODULE common_nml
   logical :: DACYCLE_RUN_FCST = .false.    ! Run a forecast from analysis ensemble mean by dacycle-forecast member
   integer :: NUM_DACYCLE_FCST_MEM = 0      ! Number of dacycle-forecasts members
   integer :: MAX_DACYCLE_RUN_FCST = 0      ! Maximum number of dacycle-forecasts 
-  integer :: ICYC_DACYCLE_RUN_FCST = 1      ! Initial-cycle number of dacycle-forecasts 
-  integer :: ICYC_DACYCLE_ANALYSIS = 1      ! Initial-cycle number of DA (after spin-up forecast)
+  integer :: ICYC_DACYCLE_RUN_FCST = 1     ! Initial-cycle number of dacycle-forecasts 
+  integer :: ICYC_DACYCLE_ANALYSIS = 1     ! Initial-cycle number of DA (after spin-up forecast)
+  logical :: USE_MDET_FCST = .false.       ! True:  Use analysis "mdet" for extended forecasts
+                                           ! False: Use analysis "mean" for extended forecasts
   real(r_size) :: DACYCLE_RUN_FCST_TIME = 0      ! Forecast time for dacycle-forecast members
   character(filelenmax) :: DACYCLE_RUN_FCST_OUTNAME = '' ! Output file name
 
@@ -418,7 +420,8 @@ subroutine read_nml_ensemble
     ICYC_DACYCLE_RUN_FCST, &
     ICYC_DACYCLE_ANALYSIS, &
     DACYCLE_RUN_FCST_TIME, &
-    DACYCLE_RUN_FCST_OUTNAME
+    DACYCLE_RUN_FCST_OUTNAME, &
+    USE_MDET_FCST
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)
@@ -454,6 +457,10 @@ subroutine read_nml_ensemble
       MEMBER_RUN = MEMBER_RUN + NUM_DACYCLE_FCST_MEM
     endif
   end if
+
+  if ( .not. ENS_WITH_MDET ) then
+    USE_MDET_FCST = .false.
+  endif
 
   ICYC_DACYCLE_ANALYSIS = max( ICYC_DACYCLE_ANALYSIS, 1 )
   ICYC_DACYCLE_RUN_FCST = max( ICYC_DACYCLE_RUN_FCST, ICYC_DACYCLE_ANALYSIS )

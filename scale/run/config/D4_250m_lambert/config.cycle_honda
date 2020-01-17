@@ -35,6 +35,9 @@ ICYC_DACYCLE_RUN_FCST=1
 # Cycle # of 1st DA cycle starts after spin-up forecast
 ICYC_DACYCLE_RUN_ANALYSIS=1
 
+# Use mdet for extended forecasts
+USE_MDET_FCST=1
+
 #===============================================================================
 # Forecast settings
 

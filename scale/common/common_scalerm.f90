@@ -433,8 +433,11 @@ subroutine scalerm_setup(execname)
         scalerm_memf = memf_mdet
       else if (scalerm_mem <= mem_da+MAX_DACYCLE_RUN_FCST .and. scalerm_mem > mem_da) then
 
-        scalerm_memf = memf_mean
-
+        if ( USE_MDET_FCST ) then
+          scalerm_memf = memf_mdet
+        else
+          scalerm_memf = memf_mean
+        endif
 !        write (fmttmp, '(I2)') memflen
 !        write (scalerm_memf, '(I'//trim(fmttmp)//'.'//trim(fmttmp)//')')  min(scalerm_mem - mem_da, MEMBER)
         myrank_use_da = .false.

@@ -252,6 +252,11 @@ else
   DACYCLE_RUN_FCST_OUTNAME=""
 fi
 
+USE_MDET_FCST_TF='.false.'
+if ((USE_MDET_FCST == 1)); then
+  USE_MDET_FCST_TF='.true.'
+fi
+
 cat $SCRP_DIR/config.nml.ensmodel | \
     sed -e "/!--MEMBER--/a MEMBER = $MEMBER_TOT," \
         -e "/!--ENS_WITH_MEAN--/a ENS_WITH_MEAN = $ENS_WITH_MEAN_TF," \
@@ -266,6 +271,7 @@ cat $SCRP_DIR/config.nml.ensmodel | \
         -e "/!--ICYC_DACYCLE_ANALYSIS--/a ICYC_DACYCLE_ANALYSIS = ${ICYC_DACYCLE_ANALYSIS}," \
         -e "/!--DACYCLE_RUN_FCST_TIME--/a DACYCLE_RUN_FCST_TIME = ${DACYCLE_RUN_FCST_TIME}.D0," \
         -e "/!--DACYCLE_RUN_FCST_OUTNAME--/a DACYCLE_RUN_FCST_OUTNAME = \"${DACYCLE_RUN_FCST_OUTNAME}\"," \
+        -e "/!--USE_MDET_FCST--/a USE_MDET_FCST = ${USE_MDET_FCST_TF}," \
         -e "/!--PPN--/a PPN = $PPN_APPAR," \
         -e "/!--MEM_NODES--/a MEM_NODES = $mem_nodes," \
         -e "/!--NUM_DOMAIN--/a NUM_DOMAIN = $DOMNUM," \
