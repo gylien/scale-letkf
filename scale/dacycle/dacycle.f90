@@ -32,11 +32,9 @@ program dacycle
     write_enssprd,            &
     set_common_mpi_grid,      &
     send_recv_analysis_direct,        &
-    receive_emean_direct,     &
     write_grd_dafcst_mpi,     &
     write_grd_all_mpi,        &
     send_recv_analysis_others,   &
-!    bcast_restart_efcst_mpi,  &
 #ifdef PLOT_DCL
     plot_dafcst_mpi, &
 #endif
@@ -619,7 +617,7 @@ program dacycle
     ! LETKF section end
     !-------------------------------------------------------------------------
 
-    !! Send/receive the analysis ensemble mean !!
+    !! Send/receive an analysis member (mean or mdet) !!
     if ( TIME_DOATMOS_restart .and. DACYCLE_RUN_FCST ) then
 
       ! Draw figure using forecast results
@@ -641,9 +639,9 @@ program dacycle
       endif ! [ .not. myrank_use_da .and. dafcst_step >= 0 ]
 
 
-      ! Do nothing if myrank is not ensemble mean or no forecasts are started from this cycle
+      ! Do nothing if no forecasts are started from the current analysis time
       if ( myrank_use_da .and. ( .not. any( dafcst_slist(icycle,:) ) ) )  cycle 
-      ! Do nothing if myrank is not in charge of dacycle forecast from this cycle
+      ! Do nothing if myrank is running a dafcst forecast 
       if ( .not. myrank_use_da .and. ( dafcst_step < dafcst_step_max .and. dafcst_step /= -1 ) ) cycle 
 
       ! Get forecast elapse time
@@ -672,7 +670,7 @@ program dacycle
         fcst_cnt_mem = fcst_cnt_mem + 1
        endif
 
-      ! Send/receive ensemble mean (analysis)
+      ! Send/receive analysis
       call send_recv_analysis_direct( fcst_cnt )
       call send_recv_analysis_others( fcst_cnt )
 !      if ( myrank_use_da .and. TIME_DOATMOS_restart ) then
