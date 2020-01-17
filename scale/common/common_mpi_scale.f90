@@ -1754,7 +1754,7 @@ end subroutine mpi_timer
 !-------------------------------------------------------------------------------
 ! [Direct transfer] Send SCALE restart (analysis) data
 !-------------------------------------------------------------------------------
-subroutine send_recv_emean_direct(v3dg,v2dg,fcst_cnt)
+subroutine send_recv_emean_direct( fcst_cnt )
   use scale_time, only: &
     TIME_NOWDATE, &
     TIME_NOWMS, &
@@ -1779,12 +1779,7 @@ subroutine send_recv_emean_direct(v3dg,v2dg,fcst_cnt)
     IS, IE, IA, JS, JE, JA, KS, KE, KA
   implicit none
 
-  real(RP), intent(in) :: v3dg(nlev,nlon,nlat,nv3d)
-  real(RP), intent(in) :: v2dg(nlon,nlat,nv2d)
-  real(RP) :: v3dg_r(nlev,nlon,nlat,nv3d)
-  real(RP) :: v2dg_r(nlon,nlat,nv2d)
   integer, intent(in) :: fcst_cnt
-  integer :: iv3d, iv2d
   integer :: k, i, j
 
   integer :: rrank_a ! rank_a of receiving rank
@@ -1805,13 +1800,18 @@ subroutine send_recv_emean_direct(v3dg,v2dg,fcst_cnt)
     call MPI_Send( TIME_NOWMS,   1, MPI_DOUBLE_PRECISION, rrank_a, tag+3, MPI_COMM_a, ierr ) 
     call MPI_Send( TIME_NOWSTEP, 1, MPI_INTEGER,          rrank_a, tag+4, MPI_COMM_a, ierr ) 
 
-    if (nv3d > 0) then
-      call MPI_Send( v3dg, nlev*nlon*nlat*nv3d, MPI_RP, rrank_a, tag, MPI_COMM_a, ierr ) 
-    endif
-  
-    if (nv2d > 0) then
-      call MPI_Send( v2dg, nlon*nlat*nv2d, MPI_RP, rrank_a, tag+1, MPI_COMM_a, ierr ) 
-    endif
+    call MPI_Send( DENS, KA*IA*JA, MPI_RP, rrank_a, tag+101, MPI_COMM_a, ierr ) 
+    call MPI_Send( MOMX, KA*IA*JA, MPI_RP, rrank_a, tag+102, MPI_COMM_a, ierr ) 
+    call MPI_Send( MOMY, KA*IA*JA, MPI_RP, rrank_a, tag+103, MPI_COMM_a, ierr ) 
+    call MPI_Send( MOMZ, KA*IA*JA, MPI_RP, rrank_a, tag+104, MPI_COMM_a, ierr ) 
+    call MPI_Send( RHOT, KA*IA*JA, MPI_RP, rrank_a, tag+105, MPI_COMM_a, ierr ) 
+
+    call MPI_Send( QV, KA*IA*JA, MPI_RP, rrank_a, tag+106, MPI_COMM_a, ierr ) 
+    call MPI_Send( Qe(:,:,:,I_HC), KA*IA*JA, MPI_RP, rrank_a, tag+107, MPI_COMM_a, ierr ) 
+    call MPI_Send( Qe(:,:,:,I_HR), KA*IA*JA, MPI_RP, rrank_a, tag+108, MPI_COMM_a, ierr ) 
+    call MPI_Send( Qe(:,:,:,I_HI), KA*IA*JA, MPI_RP, rrank_a, tag+109, MPI_COMM_a, ierr ) 
+    call MPI_Send( Qe(:,:,:,I_HS), KA*IA*JA, MPI_RP, rrank_a, tag+110, MPI_COMM_a, ierr ) 
+    call MPI_Send( Qe(:,:,:,I_HG), KA*IA*JA, MPI_RP, rrank_a, tag+111, MPI_COMM_a, ierr ) 
 
     return 
 
@@ -1823,52 +1823,19 @@ subroutine send_recv_emean_direct(v3dg,v2dg,fcst_cnt)
     call MPI_Recv( TIME_NOWMS,   1, MPI_DOUBLE_PRECISION, srank_a, tag+3, MPI_COMM_a, istat, ierr ) 
     call MPI_Recv( TIME_NOWSTEP, 1, MPI_INTEGER,          srank_a, tag+4, MPI_COMM_a, istat, ierr ) 
 
-    if (nv3d > 0) then
-      call MPI_Recv( v3dg_r, nlev*nlon*nlat*nv3d, MPI_RP, srank_a, tag, MPI_COMM_a, istat, ierr)
-      ! Ensemble mean data (mean3d & mean 2d) are not transformed into 
-      ! SCALE prognostic variables (e.g., MOMX) in write_ens_mpi
-      call state_trans_inv(v3dg_r) 
-    endif
-  
-    if (nv2d > 0) then
-      call MPI_Recv( v2dg_r, nlon*nlat*nv2d, MPI_RP, srank_a, tag+1, MPI_COMM_a, istat, ierr)
-    endif
+    call MPI_Recv( DENS, KA*IA*JA, MPI_RP, srank_a, tag+101, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( MOMX, KA*IA*JA, MPI_RP, srank_a, tag+102, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( MOMY, KA*IA*JA, MPI_RP, srank_a, tag+103, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( MOMZ, KA*IA*JA, MPI_RP, srank_a, tag+104, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( RHOT, KA*IA*JA, MPI_RP, srank_a, tag+105, MPI_COMM_a, istat, ierr)
 
-    deallocate( istat )
- 
-    do iv3d = 1, nv3d
-      if (LOG_LEVEL >= 3) then
-        write(6,'(1x,A,A15)') '*** Update 3D var [direct transfer]: ', trim(v3d_name(iv3d))
-      end if
-      select case (iv3d)
-      case (iv3d_rho)
-        DENS(KS:KE,IS:IE,JS:JE) = v3dg_r(:,:,:,iv3d)
-      case (iv3d_rhou)
-        MOMX(KS:KE,IS:IE,JS:JE) = v3dg_r(:,:,:,iv3d)
-      case (iv3d_rhov)
-        MOMY(KS:KE,IS:IE,JS:JE) = v3dg_r(:,:,:,iv3d)
-      case (iv3d_rhow)
-        MOMZ(KS:KE,IS:IE,JS:JE) = v3dg_r(:,:,:,iv3d)
-      case (iv3d_rhot)
-        RHOT(KS:KE,IS:IE,JS:JE) = v3dg_r(:,:,:,iv3d)
-      case (iv3d_q)
-        QV(KS:KE,IS:IE,JS:JE) = v3dg_r(:,:,:,iv3d)
-      case (iv3d_qc)
-        Qe(KS:KE,IS:IE,JS:JE,I_HC) = v3dg_r(:,:,:,iv3d)
-      case (iv3d_qr)
-        Qe(KS:KE,IS:IE,JS:JE,I_HR) = v3dg_r(:,:,:,iv3d)
-      case (iv3d_qi)
-        Qe(KS:KE,IS:IE,JS:JE,I_HI) = v3dg_r(:,:,:,iv3d)
-      case (iv3d_qs)
-        Qe(KS:KE,IS:IE,JS:JE,I_HS) = v3dg_r(:,:,:,iv3d)
-      case (iv3d_qg)
-        Qe(KS:KE,IS:IE,JS:JE,I_HG) = v3dg_r(:,:,:,iv3d)
-      case default
-        write (6, '(3A)') "[Error] Variable '", trim(v3d_name(iv3d)), "' is not recognized."
-        stop
-      end select
-    end do
-  
+    call MPI_Recv( QV, KA*IA*JA, MPI_RP, srank_a, tag+106, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( Qe(:,:,:,I_HC), KA*IA*JA, MPI_RP, srank_a, tag+107, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( Qe(:,:,:,I_HR), KA*IA*JA, MPI_RP, srank_a, tag+108, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( Qe(:,:,:,I_HI), KA*IA*JA, MPI_RP, srank_a, tag+109, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( Qe(:,:,:,I_HS), KA*IA*JA, MPI_RP, srank_a, tag+110, MPI_COMM_a, istat, ierr)
+    call MPI_Recv( Qe(:,:,:,I_HG), KA*IA*JA, MPI_RP, srank_a, tag+111, MPI_COMM_a, istat, ierr)
+
     ! Assume Tomita08
     call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, & 
                                         QV, Qe, &                    ! [IN]
@@ -1877,12 +1844,6 @@ subroutine send_recv_emean_direct(v3dg,v2dg,fcst_cnt)
 
     call ATMOS_BOUNDARY_driver_set
   
-    do iv2d = 1, nv2d
-      if (LOG_LEVEL >= 3) then
-        write(6,'(1x,A,A15)') '*** Update 2D var [direct transfer]: ', trim(v2d_name(iv2d))
-      end if
-    end do
- 
   endif
 
   return

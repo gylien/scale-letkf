@@ -642,7 +642,7 @@ program dacycle
 
 
       ! Do nothing if myrank is not ensemble mean or no forecasts are started from this cycle
-      if ( myrank_use_da .and. ( .not. ( myrank_e == mmean_rank_e ) .or. ( .not. any( dafcst_slist(icycle,:) ) ) ) )  cycle 
+      if ( myrank_use_da .and. ( .not. any( dafcst_slist(icycle,:) ) ) )  cycle 
       ! Do nothing if myrank is not in charge of dacycle forecast from this cycle
       if ( .not. myrank_use_da .and. ( dafcst_step < dafcst_step_max .and. dafcst_step /= -1 ) ) cycle 
 
@@ -673,7 +673,7 @@ program dacycle
        endif
 
       ! Send/receive ensemble mean (analysis)
-      call send_recv_emean_direct( mean3d, mean2d, fcst_cnt )
+      call send_recv_emean_direct( fcst_cnt )
       call send_recv_emean_others( fcst_cnt )
 !      if ( myrank_use_da .and. TIME_DOATMOS_restart ) then
 !        call mpi_timer('SEND ANALYSIS', 1, barrier=MPI_COMM_da)
