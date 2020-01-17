@@ -423,6 +423,10 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
       fws= qr / ( qr + qs )
     ENDIF
 
+    if ( .not. USE_METHOD3_REF_MELT ) then
+      Fs = 0.0_r_size
+      Fg = 0.0_r_size
+    endif 
 
     !Correct the rain, snow and hail mixing ratios assuming
     !that we have a mixture due to melting.
@@ -792,7 +796,11 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   logical, parameter :: input_is_dbz = .true.
 #endif
 
+#ifdef MPW
   type(c_mppawr_header) :: hd(n_type)
+#else
+  type(c_pawr_header) :: hd(n_type)
+#endif
 !  real(kind=c_float) :: az(AZDIM, ELDIM, n_type)
 !  real(kind=c_float) :: el(AZDIM, ELDIM, n_type)
 !  real(kind=c_float) :: rtdat(RDIM, AZDIM, ELDIM, n_type)
@@ -1012,10 +1020,12 @@ subroutine read_obs_radar_toshiba(cfile, obs)
 
   allocate(ze(na, nr, ne), vr(na, nr, ne), qcflag(na, nr, ne), attenuation(na, nr, ne))
 
-!!!  valid_qcf = 0
-!!!  do j = 1, 8  
-!!!    if(qcf_mask(j) > 0) valid_qcf = ibset(valid_qcf, j - 1) 
-!!!  end do
+#ifndef MPW
+  valid_qcf = 0
+  do j = 1, 8  
+    if(qcf_mask(j) > 0) valid_qcf = ibset(valid_qcf, j - 1) 
+  end do
+#endif
 
 !$omp parallel do private(ia, ir, ie)
   do ie = 1, ne
@@ -1023,15 +1033,19 @@ subroutine read_obs_radar_toshiba(cfile, obs)
         do ia = 1, na
            ze(ia, ir, ie) = rtdat(ir, ia, ie, 1)
            vr(ia, ir, ie) = rtdat(ir, ia, ie, 2)                                                                      
-!!!           tmp_qcf = int(rtdat(ir, ia, ie, 3), int1)
 
  !          qcf_count(tmp_qcf)=qcf_count(tmp_qcf)+1
-           
-!!!           if(iand(valid_qcf, tmp_qcf) == 0) then      
-              qcflag(ia, ir, ie) = 0.0d0 !valid
-!!!           else
-!!!              qcflag(ia, ir, ie) = 1000.0d0 !invalid
-!!!           end if
+
+#ifdef MPW
+           qcflag(ia, ir, ie) = 0.0d0 !valid
+#else
+           tmp_qcf = int(rtdat(ir, ia, ie, 3), int1)
+           if(iand(valid_qcf, tmp_qcf) == 0) then      
+             qcflag(ia, ir, ie) = 0.0d0 !valid
+           else
+             qcflag(ia, ir, ie) = 1000.0d0 !invalid
+           end if
+#endif
 
            if(vr(ia, ir, ie) > RADAR_MAX_ABS_VR .or. vr(ia, ir, ie) < -RADAR_MAX_ABS_VR) vr(ia, ir, ie) = missing
            attenuation(ia, ir, ie) = 1.0d0 !not implemented yet
