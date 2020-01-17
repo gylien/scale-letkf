@@ -92,7 +92,7 @@ subroutine plot_dbz_DCL(val_plot_s,psfile,cheight,csec)
   vpb = 0.20
   vpt = 0.70
 
-  aratio = cos(0.5*BASE_LAT/ D2R) * (range_lonr - range_lonl) / (range_latr - range_latl)
+  aratio = cos(BASE_LAT) * (range_lonr - range_lonl) / (range_latr - range_latl)
 
   vpb = max(vpt - (vpr - vpl) / aratio, 0.10)
   if (vpb == 0.10)then
