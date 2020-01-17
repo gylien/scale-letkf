@@ -50,7 +50,6 @@ module common_mpi_scale
   integer,allocatable,save :: ranke_to_mem(:,:)
   integer,allocatable,save :: myrank_to_mem(:)
   integer,save :: myrank_to_pe
-  logical,save :: myrank_use = .false.
   logical,save :: myrank_use_da = .false.
   logical,save :: myrank_use_obs = .false.
 
@@ -68,7 +67,6 @@ module common_mpi_scale
   integer,save :: mmdet_rank_e = -1
   integer,save :: msprd_rank_e = -1
 
-  integer,save :: MPI_COMM_u, nprocs_u, myrank_u
   integer,save :: MPI_COMM_a, nprocs_a, myrank_a
   integer,save :: MPI_COMM_da, nprocs_da, myrank_da
   integer,save :: MPI_COMM_d, nprocs_d, myrank_d
@@ -500,10 +498,6 @@ mem_loop: DO it = 1, nitmax
   END DO
   myrank_to_pe = rank_to_pe(myrank+1)
 
-  if (myrank_to_mem(1) >= 1) then
-    myrank_use = .true.
-  end if
-
   ! settings related to mean/mdet (only valid when ENS_WITH_MEAN/ENS_WITH_MDET = .true.)
   !----------------------------------------------------------------
   if (ENS_WITH_MEAN) then
@@ -668,26 +662,8 @@ subroutine set_scalelib(execname)
   ! Communicator for all processes used
   !-----------------------------------------------------------------------------
 
-  if (myrank_use) then
-    color = 0
-    key   = (myrank_to_mem(1) - 1) * nprocs_m + myrank_to_pe
-!    key   = myrank
-  else
-    color = MPI_UNDEFINED
-    key   = MPI_UNDEFINED
-  end if
-
-  call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, MPI_COMM_u, ierr)
-
-  if (.not. myrank_use) then
-    write (6, '(A,I6.6,A)') 'MYRANK=', myrank, ': This process is not used!'
-    return
-  end if
-
-  call MPI_COMM_SIZE(MPI_COMM_u, nprocs_u, ierr)
-  call MPI_COMM_RANK(MPI_COMM_u, myrank_u, ierr)
-
-  call mpi_timer('set_scalelib:mpi_comm_split_u:', 2)
+  color = 0
+  key   = (myrank_to_mem(1) - 1) * nprocs_m + myrank_to_pe
 
   ! Communicator for all domains of single members
   !-----------------------------------------------------------------------------
@@ -696,7 +672,6 @@ subroutine set_scalelib(execname)
 !  call PRC_MPIstart( universal_comm ) ! [OUT]
 
   PRC_mpi_alive = .true.
-!  universal_comm = MPI_COMM_u
 
 !  call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
 !                            universal_nprocs, & ! [OUT]
@@ -710,7 +685,7 @@ subroutine set_scalelib(execname)
 !    key   = MPI_UNDEFINED
 !  endif
 
-  call MPI_COMM_SPLIT(MPI_COMM_u, color, key, global_comm, ierr)
+  call MPI_COMM_SPLIT( MPI_COMM_WORLD, color, key, global_comm, ierr )
 
   call PRC_GLOBAL_setup( .false.,    & ! [IN]
                          global_comm ) ! [IN]
@@ -810,10 +785,10 @@ subroutine set_scalelib(execname)
 !    key   = MPI_UNDEFINED
 !  end if
 
-  call MPI_COMM_SPLIT(MPI_COMM_u, color, key, MPI_COMM_a, ierr)
+  call MPI_COMM_SPLIT( MPI_COMM_WORLD, color, key, MPI_COMM_a, ierr )
 
-  call MPI_COMM_SIZE(MPI_COMM_a, nprocs_a, ierr)
-  call MPI_COMM_RANK(MPI_COMM_a, myrank_a, ierr)
+  call MPI_COMM_SIZE( MPI_COMM_a, nprocs_a, ierr )
+  call MPI_COMM_RANK( MPI_COMM_a, myrank_a, ierr )
 
   call mpi_timer('set_scalelib:mpi_comm_split_a:', 2)
 
@@ -971,20 +946,16 @@ subroutine unset_scalelib
   implicit none
   integer :: ierr
 
-  if (myrank_use) then
-!    call MONIT_finalize
-    call FILE_Close_All
+  call FILE_Close_All
 
-    ! Close logfile, configfile
-    if ( IO_L ) then
-      if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
-    endif
-    close(IO_FID_CONF)
+  ! Close logfile, configfile
+  if ( IO_L ) then
+    if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+  endif
+  close(IO_FID_CONF)
 
-    call MPI_COMM_FREE(MPI_COMM_d, ierr)
-    call MPI_COMM_FREE(MPI_COMM_a, ierr)
-    call MPI_COMM_FREE(MPI_COMM_u, ierr)
-  end if
+  call MPI_COMM_FREE(MPI_COMM_d, ierr)
+  call MPI_COMM_FREE(MPI_COMM_a, ierr)
 
   return
 end subroutine unset_scalelib
@@ -1796,6 +1767,8 @@ subroutine send_recv_emean_direct(v3dg,v2dg,fcst_cnt)
     RHOT, &
     QTRC, QV, Qe, &
     ATMOS_vars_fillhalo
+  use mod_atmos_bnd_driver, only: &
+     ATMOS_BOUNDARY_driver_set
   use mod_atmos_phy_mp_driver, only: &
     ATMOS_PHY_MP_driver_qhyd2qtrc
   use mod_atmos_phy_mp_vars, only: &
@@ -1823,9 +1796,7 @@ subroutine send_recv_emean_direct(v3dg,v2dg,fcst_cnt)
   rrank_a = nens * nprocs_d + nprocs_d * (fcst_cnt - 1) + myrank_d ! dacycle-forecast member
   srank_a = MEMBER * nprocs_d + myrank_d
 
-if ( myrank_d == 0 ) write(6,'(a,i6,6i6,2i6)')"Enter sendre",myrank_a,TIME_NOWDATE(1:6),rrank_a,srank_a
   if ( myrank_a /= rrank_a .and. myrank_a /= srank_a ) return
-if ( myrank_d == 0 ) write(6,'(a,i6,6i6,2i6)')"Cont sendre",myrank_a, TIME_NOWDATE(1:6),rrank_a,srank_a
 
   tag = myrank_d 
   if ( myrank_a == srank_a ) then
@@ -1833,7 +1804,6 @@ if ( myrank_d == 0 ) write(6,'(a,i6,6i6,2i6)')"Cont sendre",myrank_a, TIME_NOWDA
     call MPI_Send( TIME_NOWDATE, 6, MPI_INTEGER,          rrank_a, tag+2, MPI_COMM_a, ierr ) 
     call MPI_Send( TIME_NOWMS,   1, MPI_DOUBLE_PRECISION, rrank_a, tag+3, MPI_COMM_a, ierr ) 
     call MPI_Send( TIME_NOWSTEP, 1, MPI_INTEGER,          rrank_a, tag+4, MPI_COMM_a, ierr ) 
-if ( myrank_d == 0 ) write(6,'(a,i6,6i6,2i6)')"send times",myrank_a,TIME_NOWDATE(1:6),rrank_a,srank_a
 
     if (nv3d > 0) then
       call MPI_Send( v3dg, nlev*nlon*nlat*nv3d, MPI_RP, rrank_a, tag, MPI_COMM_a, ierr ) 
@@ -1853,7 +1823,6 @@ if ( myrank_d == 0 ) write(6,'(a,i6,6i6,2i6)')"send times",myrank_a,TIME_NOWDATE
     call MPI_Recv( TIME_NOWMS,   1, MPI_DOUBLE_PRECISION, srank_a, tag+3, MPI_COMM_a, istat, ierr ) 
     call MPI_Recv( TIME_NOWSTEP, 1, MPI_INTEGER,          srank_a, tag+4, MPI_COMM_a, istat, ierr ) 
 
-if ( myrank_d == 0 ) write(6,'(a,i6,6i6,2i6)')"recv times",myrank_a,TIME_NOWDATE(1:6),rrank_a,srank_a
     if (nv3d > 0) then
       call MPI_Recv( v3dg_r, nlev*nlon*nlat*nv3d, MPI_RP, srank_a, tag, MPI_COMM_a, istat, ierr)
       ! Ensemble mean data (mean3d & mean 2d) are not transformed into 
@@ -1905,6 +1874,8 @@ if ( myrank_d == 0 ) write(6,'(a,i6,6i6,2i6)')"recv times",myrank_a,TIME_NOWDATE
                                         QV, Qe, &                    ! [IN]
                                         QTRC(:,:,:,QS_MP:QE_MP)    ) ! [OUT] 
     call ATMOS_vars_fillhalo 
+
+    call ATMOS_BOUNDARY_driver_set
   
     do iv2d = 1, nv2d
       if (LOG_LEVEL >= 3) then

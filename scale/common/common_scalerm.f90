@@ -18,7 +18,6 @@ module common_scalerm
     nitmax, &
     myrank_to_mem, &
     myrank_to_pe, &
-    myrank_use, &
     myrank_use_da, &
     myrank_use_obs, &
     mydom, &
@@ -985,7 +984,7 @@ subroutine scalerm_finalize(execname)
     exec_model = .true.
   end if
 
-  if (myrank_use .and. scalerm_run) then
+  if ( scalerm_run ) then
     if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
       ! check data
       if( ATMOS_sw_check ) call ATMOS_vars_restart_check
@@ -1012,7 +1011,7 @@ subroutine scalerm_finalize(execname)
   call FILE_Close_All
   call PROF_rapend  ('File', 2)
 
-  if (myrank_use .and. scalerm_run) then
+  if ( scalerm_run ) then
     if (execname_ == 'SCALERM' .or. execname_ == 'DACYCLE') then
     end if
 

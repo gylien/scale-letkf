@@ -74,36 +74,32 @@ PROGRAM obsope
 
   call scalerm_setup('OBSOPE')
 
-  if (myrank_use) then
+  call set_common_scale
+  call set_common_mpi_scale
+  call set_common_obs_scale
 
-    call set_common_scale
-    call set_common_mpi_scale
-    call set_common_obs_scale
-
-    call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_a)
+  call mpi_timer('INITIALIZE', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Read observations
 !-----------------------------------------------------------------------
 
-    allocate(obs(OBS_IN_NUM))
-    call read_obs_all_mpi(obs)
+  allocate(obs(OBS_IN_NUM))
+  call read_obs_all_mpi(obs)
 
-    call mpi_timer('READ_OBS', 1, barrier=MPI_COMM_a)
+  call mpi_timer('READ_OBS', 1, barrier=MPI_COMM_a)
 
 !-----------------------------------------------------------------------
 ! Observation operator
 !-----------------------------------------------------------------------
 
-    call obsope_cal()
+  call obsope_cal()
 
-    call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
+  call mpi_timer('OBS_OPERATOR', 1, barrier=MPI_COMM_a)
 
-    deallocate(obs)
+  deallocate(obs)
 
-    call unset_common_mpi_scale
-
-  end if ! [ myrank_use ]
+  call unset_common_mpi_scale
 
   call scalerm_finalize('OBSOPE')
 

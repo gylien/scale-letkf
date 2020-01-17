@@ -377,6 +377,7 @@ MODULE common_nml
   logical :: PLOT_OBS = .true.
   logical :: PLOT_ANAL = .true.
   logical :: PLOT_FCST = .true.
+  logical :: PLOT_FCST_T0 = .false.
   integer :: PLOT_ZLEV_MIN = 10
   integer :: PLOT_ZLEV_MAX = 40
   integer :: PLOT_ZLEV_INTV = 5
@@ -1175,16 +1176,17 @@ end subroutine read_nml_obssim
 !-------------------------------------------------------------------------------
 #ifdef PLOT_DCL
 subroutine read_nml_plot_dcl
-implicit none 
-integer :: ierr
-
-namelist /PARAM_PLOT_DCL/ &
- PLOT_OBS, &
- PLOT_ANAL, &
- PLOT_FCST, &
- PLOT_ZLEV_MIN, & 
- PLOT_ZLEV_MAX, & 
- PLOT_ZLEV_INTV
+  implicit none 
+  integer :: ierr
+  
+  namelist /PARAM_PLOT_DCL/ &
+    PLOT_OBS, &
+    PLOT_ANAL, &
+    PLOT_FCST, &
+    PLOT_FCST_T0, &
+    PLOT_ZLEV_MIN, & 
+    PLOT_ZLEV_MAX, & 
+    PLOT_ZLEV_INTV
  
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_PLOT_DCL,iostat=ierr)
