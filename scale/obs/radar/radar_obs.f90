@@ -787,7 +787,7 @@ subroutine read_obs_radar_toshiba(cfile, obs)
   integer, parameter :: n_type = 2
   character(len=4), parameter :: file_type_sfx(n_type) = &
    (/'.ze', '.vr'/)
-  logical, parameter :: input_is_dbz = .false.
+  logical, parameter :: input_is_dbz = .true.
   integer, parameter :: opt_verbose = 0 !!! for MP-PAWR toshiba format    
 #else
   integer, parameter :: n_type = 3
