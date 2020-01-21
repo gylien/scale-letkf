@@ -461,10 +461,8 @@ program dacycle
         end if
 
         ! mean3d is always required for dacycle-forecasts
-         if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
         allocate (mean3d(nlev,nlon,nlat,nv3d))
         allocate (mean2d(nlon,nlat,nv2d))
-         end if
 
         call mpi_timer('SET_GRID', 1, barrier=MPI_COMM_da)
 
@@ -544,12 +542,8 @@ program dacycle
       !
       ! WRITE ANAL and ENS MEAN
       !
-      !if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
       call write_ens_mpi(anal3d, anal2d, mean3d=mean3d, mean2d=mean2d)
       call monit_obs_mpi(mean3d, mean2d, monit_step=2)
-      !else
-      !  call write_ens_mpi(anal3d, anal2d)
-      !end if
 
 
       ! Plot Analysis mean
@@ -734,10 +728,8 @@ program dacycle
     if (allocated(addi3d)) deallocate (addi3d)
     if (allocated(addi2d)) deallocate (addi2d)
   end if
-  !if (DEPARTURE_STAT .and. LOG_LEVEL >= 1) then
   if (allocated(mean3d)) deallocate (mean3d)
   if (allocated(mean2d)) deallocate (mean2d)
-  !end if
 
   if (allocated(ref3d)) deallocate (ref3d)
 
