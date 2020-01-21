@@ -373,7 +373,7 @@ SUBROUTINE set_letkf_obs
   allocate(tmpelm(obsda%nobs))
 
 #ifdef H08
-!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref,ch_num,sig_b,sig_o,std13,mem_cld,es)
+!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref,ch_num,sig_b,sig_o,std13,mem_cld,es,qvs)
 #else
 !$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref)
 #endif
@@ -513,12 +513,20 @@ SUBROUTINE set_letkf_obs
 #ifdef H08
     ! pseudo qv obs
     if ( obs(iof)%elm(iidx) == id_H08IR_obs .and. H08_PQV ) then
+
+      ! obsda%qv value will be used as the flag for pseudo-QV DA or raw-TBB DA
+      !          >= 0: pseudo-QV DA
+      !          <  0: raw-TBB DA
+
+
       if ( mem_cld < H08_PQV_MIN_CMEM .and. obsda%val(n) < H08_PQV_OB_MAX ) then
 
-        if ( obsda%tk(n) < 0.0_r_size .or. obsda%tk(n) < 0.0_r_size ) cycle 
-
+        if ( obsda%tk(n) < 0.0_r_size .or. obsda%qv(n) < 0.0_r_size ) then
+          obsda%qc(n) = iqc_obs_bad
+          cycle
+        endif
         es = 6.112_r_size * exp( 17.67_r_size * ( obsda%tk(n) - real( T00, kind=r_size ) ) / &
-             ( obsda%tk(n) - real( T00, kind=r_size ) + 243.5_r_size ))
+             ( obsda%tk(n) - real( T00, kind=r_size ) + 243.5_r_size )) * 1.0d2 ! (Pa)
         qvs = real( Rdry / Rvap, kind=r_size ) * es / ( H08_PQV_PLEV - es )
 
         obsda%val(n) = obsda%eqv(1,n)
@@ -527,12 +535,18 @@ SUBROUTINE set_letkf_obs
         enddo
         obsda%val(n) = obsda%val(n) / real( MEMBER,r_size ) 
 
+        obsda%qv(n) = obsda%val(n) ! ensemble-mean qv
+                                   ! Used in letkf_tools for diagnosing pseudo
+                                   ! qv or tbb
+
         do i = 1, MEMBER
           obsda%ensval(i,n) = obsda%eqv(i,n) - obsda%val(n) ! Hdx
         enddo
         obsda%val(n) = qvs - obsda%val(n) ! y-Hx
+        obsda%lev(n) = H08_PQV_PLEV
 
-        obsda%qv(n) = -1.0d5
+      else
+        obsda%qv(n) = -9.999999_r_size 
       endif
     endif
 
@@ -603,6 +617,8 @@ SUBROUTINE set_letkf_obs
     case (id_H08IR_obs)
       IF(H08_AOEI .and. H08_AOEI_QC == 0)THEN
         ! No Gross-error QC
+      elseif( H08_PQV .and. obsda%qv(n) >= 0.0_r_size ) then
+        ! No QC for pseudo Qv obs
       ELSEIF(H08_AOEI .and. H08_AOEI_QC == 1)THEN
         IF(ABS(obsda%val(n)) > GROSS_ERROR_H08 * OBSERR_H08(ch_num)) THEN
           obsda%qc(n) = iqc_gross_err
@@ -651,7 +667,7 @@ SUBROUTINE set_letkf_obs
 #else
     if(obs(iof)%elm(iidx) == id_H08IR_obs .and. myrank_a <= nprocs_d)then
 #endif
-      write (6, '(A,2F8.2,I3,2F12.4,I3,5F12.4)') 'Him8_letkf_obs',&
+      write (6, '(A,2F8.2,I3,2F12.4,I3,5F12.4,i6)') 'Him8_letkf_obs',&
                                               obs(iof)%lon(iidx), &
                                               obs(iof)%lat(iidx), &
                                               nint(obs(iof)%lev(iidx)), &
@@ -662,7 +678,8 @@ SUBROUTINE set_letkf_obs
                                               obsda%val(n), &
                                               obsda%val2(n), &
                                               obsda%sprd(n), &
-                                              sig_o
+                                              sig_o, &
+                                              mem_cld
     endif
 
   END DO ! [ n = 1, obsda%nobs ]

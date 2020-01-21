@@ -246,13 +246,13 @@ PROGRAM letkf
 ! Post-processing scripts
 !-----------------------------------------------------------------------
 
-  if (command_argument_count() >= 3) then
-    write (6,'(A)') 'Run post-processing scripts'
-    write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd2), ']'
-    call system(trim(cmd2))
-  end if
-
-  call mpi_timer('POST_SCRIPT', 1, barrier=MPI_COMM_WORLD)
+!  if (command_argument_count() >= 3) then
+!    write (6,'(A)') 'Run post-processing scripts'
+!    write (6,'(A,I6.6,3A)') 'MYRANK ',myrank,' is running a script: [', trim(cmd2), ']'
+!    call system(trim(cmd2))
+!  end if
+!
+!  call mpi_timer('POST_SCRIPT', 1, barrier=MPI_COMM_WORLD)
 
 !-----------------------------------------------------------------------
 ! Finalize

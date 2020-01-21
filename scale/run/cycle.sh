@@ -81,7 +81,6 @@ if ((RUN_LEVEL <= 2)); then
   safe_init_tmpdir $NODEFILE_DIR || exit $?
 fi
 distribute_da_cycle "$NODELIST_TYPE" $NODEFILE_DIR || exit $?
-#distribute_da_cycle - - || exit $?  # Do not use distr
 
 echo "[$(datetime_now)] ### 4" >&2
 

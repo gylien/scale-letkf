@@ -81,10 +81,10 @@ BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial
 
 
 # fcst
-BDY_ENS=0               # 0: Fixed boundary files for all memebers
-BDY_ROTATING=1
-BDY_SCALE_DIR='fcst'
-BDY_SINGLE_FILE=1
+#BDY_ENS=1               # 0: Fixed boundary files for all memebers
+#BDY_ROTATING=1
+#BDY_SCALE_DIR='fcst'
+#BDY_SINGLE_FILE=1
 
 
 SKIP_BDYINIT=1 # 1: Skip unnecessary scale_init process
@@ -126,9 +126,9 @@ LTIMESLOT=600     # Timeslot interval for 4D-LETKF (second)
 MEMBER=50          # Ensemble size
 
 NNODES=272  # Number of nodes
-NNODES=16
-
-NNODES=400
+#NNODES=16
+#
+#NNODES=400
 
 # Number of nodes
 

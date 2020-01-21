@@ -2177,6 +2177,7 @@ subroutine obs_da_value_allreduce(obsda)
     end do
   end do
   deallocate(ensval_bufs, ensval_bufr)
+  deallocate(ensval_bufs2, ensval_bufr2)
 
   call mpi_timer('obs_da_value_allreduce:copy_bufr:', 3, barrier=MPI_COMM_e)
 

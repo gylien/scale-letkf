@@ -80,6 +80,13 @@ BDY_ROTATING=0          # 0: Use a same series of boundary files for all initial
                         # 1: Use different series of boundary files for different initial time
 
 
+# fcst
+BDY_SINGLE_FILE=1       # 0: Length of a boundary file = $BDYCYCLE_INT (e.g., files made by data assimilation cycles)
+BDY_SCALE_DIR='fcst'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
+BDY_ROTATING=1          # 0: Use a same series of boundary files for all initial time
+
+
+
 SKIP_BDYINIT=1 # 1: Skip unnecessary scale_init process
                # 0: Run scale_init every cycle
 
@@ -121,6 +128,7 @@ LTIMESLOT=600     # Timeslot interval for 4D-LETKF (second)
 MEMBER=50          # Ensemble size
 NNODES=272    # Number of nodes
 
+NNODES=16    # Number of nodes
 
 
 PPN=64              # Number of processes per node

@@ -5,21 +5,15 @@
 #
 #===============================================================================
 
-STIME='20180820180000'
-ETIME='20180820180000'
+STIME='20180822000000'
+ETIME='20180822000000'
+
 TIME_LIMIT='02:30:00'
-TIME_LIMIT='01:00:00'
+MEMBERS="mean "`seq 1 25`
 
-STIME='20180821000000'
-ETIME='20180821000000'
-TIME_LIMIT='01:30:00'
 
-STIME='20180821061000'
-ETIME='20180821061000'
-TIME_LIMIT='00:30:00'
 
-MEMBERS="mean"
-
+#MEMBERS=`seq 26 50`
 
 #MEMBERS="all"
 CYCLE=
@@ -33,8 +27,8 @@ FSTEP=
 FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
 FCSTOUT=21600
 
-FCSTLEN=60      # SCALE forecast length in the forecast mode (second)
-FCSTOUT=20
+FCSTLEN=172800      # SCALE forecast length in the forecast mode (second)
+FCSTOUT=21600
 
 #===============================================================================
 

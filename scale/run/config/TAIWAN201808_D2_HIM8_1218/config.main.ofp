@@ -86,6 +86,14 @@ SKIP_BDYINIT=1 # 1: Skip unnecessary scale_init process
 BDYINT=3600
 BDYCYCLE_INT=21600
 
+
+# fcst
+BDY_SCALE_DIR='fcst'    # Directory name of the SCALE history files when $BDY_FORMAT = 1
+BDY_ROTATING=1          # 0: Use a same series of boundary files for all initial time
+BDY_SINGLE_FILE=1
+
+
+
 PARENT_REF_TIME=
 
 ENABLE_PARAM_USER=1     # 0: Do not enable the 'PARAM_USER' section of the SCALE namelist
@@ -121,6 +129,9 @@ LTIMESLOT=600     # Timeslot interval for 4D-LETKF (second)
 MEMBER=50          # Ensemble size
 NNODES=272    # Number of nodes
 
+NNODES=416    # Number of nodes
+
+#NNODES=32    # Number of nodes
 
 PPN=64              # Number of processes per node
 

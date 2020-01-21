@@ -354,8 +354,8 @@ MODULE common_nml
   integer :: H08_OBS_THIN_LEV = 1 ! thinning level (1: no thinning)
   logical :: USE_HIM8 = .true. ! ! will be overwritten from obsope_tools.f90
 
-  real(r_size) :: H08_CLD_THRS(NIRB_HIM8) = (/300.0d0, 300.0d0, 300.0d0, 300.0d0, 300.0d0, &
-                                              300.0d0, 300.0d0, 300.0d0, 300.0d0, 300.0d0/) ! Threshold tbb btw clear & cloudy skies
+  real(r_size) :: H08_CLD_THRS(NIRB_HIM8) = (/300.0d0, 232.5d0, 243.5d0, 256.5d0, 300.0d0, &
+                                              300.0d0, 295.5d0, 300.0d0, 300.0d0, 300.0d0/) ! Threshold tbb btw clear & cloudy skies
   integer :: H08_PQV_MIN_CMEM = 0 ! Minumim # of cloudy members
   logical :: H08_PQV = .false. ! Assimilate as pseudo qv if # of cloudy members < H08_PQV_MIN_CMEM and O-B < H08_PQV_OB_MAX
   real(r_size) :: H08_PQV_OB_MAX = -5.0d0 ! O-B threshold for H08_PQV (K)

@@ -42,9 +42,7 @@ if ((LOG_OPT <= 4 && MYRANK == 0)); then
 fi
 
 if ((OUT_OPT >= 3 && MYRANK == 0)); then
-#  rm -rf ${TMPOUT}/${STIME}/hist/00??
   rm -rf ${OUTDIR}/${STIME}/hist/00??
-#  rm -rf ${TMPOUT}/${ATIME}/gues/0???
   rm -rf ${OUTDIR}/${ATIME}/gues/0???
 fi
 

@@ -1,0 +1,16 @@
+&PARAM_OBSOPE
+!--OBS_IN_NUM--
+!--OBS_IN_NAME--
+ OBS_IN_FORMAT = 'PREPBUFR',
+!--OBSDA_RUN--
+ OBSDA_OUT = .true.,
+!--OBSDA_OUT_BASENAME--
+!--HISTORY_IN_BASENAME--
+!--SLOT_START--
+!--SLOT_END--
+!--SLOT_BASE--
+!--SLOT_TINTERVAL--
+/
+
+!*** Attach SCALE configuration below ***
+

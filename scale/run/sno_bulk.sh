@@ -16,9 +16,10 @@ SEXP=TAIWAN201808_D2_HIM8_1209
 SEXP=TAIWAN201808_D2_HIM8_1209_HLOC120
 SEXP=TAIWAN201808_D2_HIM8_1209_UVW0.0
 SEXP=TAIWAN201808_D2_HIM8_1209_NOPREP
-SEXP=TAIWAN201808_D2_NOHIM8_1203
 
 SEXP=TAIWAN201808_D2_HIM8_1218
+#SEXP=TAIWAN201808_D2_NOHIM8_1203
+SEXP=TAIWAN201808_D2_HIM8_1218_HLOC120km
 
 #SEXP=TAIWAN201808_D2_HIM8_1209_NOVLOC
 #SEXP=TAIWAN201808_D2_NOHIM8_1203
@@ -31,11 +32,18 @@ SEXP=TAIWAN201808_D2_HIM8_1218
 #STIME="20190610081000"
 
 
-tstart='2018-08-21 7:00:00'
 #tstart='2018-08-22 0:00:00'
+tstart='2018-08-21 7:00:00'
 tend='2018-08-21 23:00:00'
-tend=$tstart
+tstart='2018-08-21 23:00:00'
+tend='2018-08-22 0:00:00'
+
 tint=3600 # [second]
+
+tstart='2018-08-21 12:00:00'
+tstart='2018-08-21 23:50:00'
+tstart='2018-08-22 0:00:00'
+tend=$tstart
 
 . config/${SEXP}/config.main.ofp || exit $?
 EXP=${SEXP}
@@ -46,7 +54,7 @@ SCALEDIR=/work/hp150019/share/honda/SCALE-LETKF/scale-5.3.3/develop_scale/scale-
 #PPN=$PPN # Process per node
 
 TYPE=fcst
-TYPE=anal
+#TYPE=anal
 #TYPE=gues
 #TYPE=hist
 
@@ -85,12 +93,13 @@ VARS="'PRES', 'SFC_PRES'"
 
 if [ "$PLEV" == "T" ] ; then
   VARS="'QV', 'Umet', 'Vmet', 'W', 'T', 'QHYD', 'MSLP', 'PRES', 'SFC_PRES'"
+  #VARS="'QV', 'W', 'T', 'QHYD', 'MSLP', 'PRES', 'SFC_PRES'" # tentative
   if [ "$INPUT_FROM_SNOW" == "T" ] ; then
     VARS="'QV', 'Umet', 'Vmet', 'W', 'T', 'QHYD', 'MSLP', 'SFC_PRES'"
   fi
 fi
 
-if [ "$TYPE" != "fcst" ] ; then
+if [ "$TYPE" != "fcst" ] && [ "$TYPE" != "hist" ] ; then
   VARS="'RHOT', 'DENS', 'MOMX', 'MOMY', 'MOMZ'"
   PLEV=F
 fi
@@ -173,7 +182,7 @@ while (($(date -ud "$time" '+%s') <= $(date -ud "$tend" '+%s'))); do # time loop
       SNO_BASENAME_OUT="history"
     fi
   
-    if [ "$TYPE" != "fcst" ] ; then
+    if [ "$TYPE" != "fcst" ] && [ "$TYPE" != "hist" ]  ; then
       SNO_BASENAME_OUT="$TYPE"
       SNO_BASENAME_IN="${OUTDIR}/${DTIME}/${TYPE}/${mem}/init"
     fi

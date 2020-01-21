@@ -1895,7 +1895,7 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
 #ifdef H08
   else if (obtyp == 23) then ! obtypelist(obtyp) == 'H08IRB'                ! H08
     nd_v = ABS(LOG(obsda_sort%lev(iob)) - LOG(rlev)) / vert_loc_ctype(ic)   ! H08 for H08IRB, use obsda_sort%lev(iob) for vertical localization
-    if ( H08_PQV .and. obsda_sort%qv(iob) < 0.0_r_size ) then ! Pseudo qv
+    if ( H08_PQV .and. obsda_sort%qv(iob) >= 0.0_r_size ) then ! Pseudo qv
       nd_v = abs( log(H08_PQV_PLEV) - log(rlev) ) / vert_loc_ctype(ic)   
     endif
 #endif
@@ -1955,15 +1955,15 @@ subroutine obs_local_cal(ri, rj, rlev, rz, nvar, iob, ic, ndist, nrloc, nrdiag)
     ! nrdiag = max(obs(obset)%err(obidx)**2, obsda_sort%val(iob)**2 - obsda_sort%val2(iob)**2)**2 / nrloc 
       nrdiag = obsda_sort%val2(iob)**2 / nrloc 
 
+    elseif( H08_PQV .and. obsda_sort%qv(iob) >= 0.0_r_size ) then ! pseudo qv
+      nrdiag = H08_PQV_QVERR**2 / nrloc
+
     elseif(H08_CLDERR_SIMPLE)then ! simple cloud-dependent obs err (Honda et al. 2017MWR)
       if(obsda_sort%val2(iob) > H08_CA_THRES)then
         nrdiag = H08_CLDERR_CLOUD(ch_num) * H08_CLDERR_CLOUD(ch_num) / nrloc
       else
         nrdiag = H08_CLDERR_CLEAR(ch_num) * H08_CLDERR_CLEAR(ch_num) / nrloc
       endif
-
-    elseif( H08_PQV .and. obsda_sort%qv(iob) < 0.0_r_size ) then ! pseudo qv
-      nrdiag = H08_PQV_QVERR**2 / nrloc
 
     else
       nrdiag = OBSERR_H08(ch_num) * OBSERR_H08(ch_num) / nrloc ! constant everywhere

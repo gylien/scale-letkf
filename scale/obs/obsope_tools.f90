@@ -409,8 +409,8 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
         obsda%lev(1:nobs) = 0.0d0
         obsda%val2(1:nobs) = 0.0d0
         obsda%sprd(1:nobs) = 0.0d0
-        obsda%qv(1:nobs) = 0.0d0
-        obsda%tk(1:nobs) = 0.0d0
+        obsda%qv(1:nobs) = -9999999.0_r_size
+        obsda%tk(1:nobs) = -9999999.0_r_size
 !        obsda%pred1(1:nobs) = 0.0d0
 !        obsda%pred2(1:nobs) = 0.0d0
       end if
@@ -548,9 +548,6 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
                                obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%qv(nn), qc_dummy )
               call Trans_XtoY( id_t_obs, ril, rjl, rk, &
                                obs(iof)%lon(n), obs(iof)%lat(n), v3dg, v2dg, obsda%tk(nn), qc_dummy )
-            else
-              obsda%qv(nn) = -9999999.0_r_size
-              obsda%tk(nn) = -9999999.0_r_size
             end if
 
 !            obsda%pred1(nn) = zangle_H08(i8,j8)  ! predictor (1)

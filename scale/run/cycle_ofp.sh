@@ -67,7 +67,6 @@ declare -a proc2grpproc
 
 safe_init_tmpdir $NODEFILE_DIR || exit $?
 distribute_da_cycle - $NODEFILE_DIR || exit $?
-#distribute_da_cycle - - || exit $? # Do not use distr
 
 #===============================================================================
 # Determine the staging list
