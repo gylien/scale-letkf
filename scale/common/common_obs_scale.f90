@@ -3178,8 +3178,14 @@ SUBROUTINE Trans_XtoY_VIS_allg(v3d,v2d,yobs,stggrd,it) !yobs_clr,mwgt_plev2d,qc,
     call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1),&
                         lon1d(np), lat1d(np))
 
-    call ATMOS_SOLARINS_insolation(dummy1,szenith1d(np),dummy2, &
-                                   lon1d(np),lat1d(np),fdate,0,azm=sazm1d(np))  ! lon & lat: radian 
+    call ATMOS_SOLARINS_insolation(dummy1, &
+                                   szenith1d(np), &
+                                   dummy2, &
+                                   lon1d(np), &
+                                   lat1d(np), & 
+                                   fdate, &          !
+                                   0 )               ! offset year
+                                   !azm=sazm1d(np))  ! lon & lat: radian 
                                                                                 ! szenith1d: cos(szenith) (rad)
                                                                                 ! azm: (rad)
 
