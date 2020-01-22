@@ -25,7 +25,7 @@ exec files for both single-precision and double-precision need to be created.
 cd scale_ope
 cp scale-letkf_ope/Mkinclude_scale ./Mkinclude   ### Special config to create multiple bin/lib/include sets
 export SCALE_SYS=OFP
-export SCALE_USE_OPENMP=T 
+export SCALE_ENABLE_OPENMP=T 
 export SCALE_USE_SINGLEFP=T ### single precision 
 cd scale-rm/src
 make 
