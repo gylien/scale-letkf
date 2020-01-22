@@ -1970,7 +1970,7 @@ subroutine write_grd_all_mpi(timelabel, v3dg, step)
   do iv3d = 1, nv3d
     buf(:,:,:) = 0.0
     buf(:,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( v3dg(:,:,:,iv3d), kind=r_sngl )
-    call MPI_ALLREDUCE(MPI_IN_PLACE, buf, nlev*nlong*nlatg, MPI_RP, MPI_SUM, MPI_COMM_d, ierr)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, buf, nlev*nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
 
     if (myrank_d == 0) then
       do k = 1, nlev
