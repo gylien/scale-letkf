@@ -447,7 +447,16 @@ subroutine scalerm_setup(execname)
         scalerm_memf_ini = trim(scalerm_memf_dafcst) ! init file
         scalerm_memf_dafcst = "f"//trim(scalerm_memf_dafcst)
 
-        scalerm_memf_bdy = memf_mean
+        if ( USE_DIF_BDY_DAFCST ) then
+          scalerm_memf_bdy = trim( scalerm_memf_dafcst )
+        else
+          scalerm_memf_bdy = memf_mean
+        endif
+
+        if ( USE_DIF_INIT_DAFCST ) then
+          scalerm_memf_ini = trim( scalerm_memf_dafcst ) 
+        endif
+
 
         ! Dacycle-forecast members read different restart files.
         !

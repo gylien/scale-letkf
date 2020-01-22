@@ -67,6 +67,8 @@ MODULE common_nml
                                            ! False: Use analysis "mean" for extended forecasts
   real(r_size) :: DACYCLE_RUN_FCST_TIME = 0      ! Forecast time for dacycle-forecast members
   character(filelenmax) :: DACYCLE_RUN_FCST_OUTNAME = '' ! Output file name
+  logical :: USE_DIF_BDY_DAFCST = .false. ! Use different bdy files for each dafcst member
+  logical :: USE_DIF_INIT_DAFCST = .false. ! Use different restart files for each dafcst member
 
   !--- PARAM_MODEL
   character(len=10) :: MODEL = 'scale-rm'
@@ -421,7 +423,9 @@ subroutine read_nml_ensemble
     ICYC_DACYCLE_ANALYSIS, &
     DACYCLE_RUN_FCST_TIME, &
     DACYCLE_RUN_FCST_OUTNAME, &
-    USE_MDET_FCST
+    USE_MDET_FCST, &
+    USE_DIF_BDY_DAFCST, &
+    USE_DIF_INIT_DAFCST
 
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_ENSEMBLE,iostat=ierr)

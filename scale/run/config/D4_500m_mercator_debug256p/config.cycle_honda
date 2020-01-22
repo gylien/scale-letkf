@@ -6,9 +6,9 @@
 #===============================================================================
 
 STIME='20190610080000'
-ETIME='20190610080930'
+ETIME='20190610082930'
 #
-TIME_LIMIT='0:30:00'
+TIME_LIMIT='1:00:00'
 
 CYCLE=
 CYCLE_SKIP=1
@@ -24,10 +24,10 @@ DIRECT_TRANSFER=1
 DACYCLE_RUN_FCST=1
 
 # Maximum number of dacycle forecasts 
-MAX_DACYCLE_RUN_FCST=1
+MAX_DACYCLE_RUN_FCST=30
 
 # Number of dafcst members
-NUM_DACYCLE_FCST_MEM=$MAX_DACYCLE_RUN_FCST
+NUM_DACYCLE_FCST_MEM=10 #$MAX_DACYCLE_RUN_FCST
 
 # Forecast time for dacycle-forecast members that will be initiated from the analysis ensemble mean
 DACYCLE_RUN_FCST_TIME=1800 # sec
@@ -39,7 +39,7 @@ ICYC_DACYCLE_RUN_FCST=20
 ICYC_DACYCLE_RUN_ANALYSIS=1
 
 # GrADS output
-OUT_MEAN_GRADS=1
+OUT_MEAN_GRADS=0
 
 # Use mdet for extended forecasts
 USE_MDET_FCST=1
