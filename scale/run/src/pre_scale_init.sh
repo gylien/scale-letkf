@@ -218,7 +218,7 @@ cat $TMPDAT/conf/config.nml.scale_init | \
         -e "/!--OFFLINE_PARENT_PRC_NUM_Y--/a OFFLINE_PARENT_PRC_NUM_Y = ${DATA_BDY_SCALE_PRC_NUM_Y}," \
     > $TMPDIR/init.conf
 
-if ((BDY_FORMAT == 1)); then
+if ((BDY_FORMAT == 4)); then
   if [ -e "$TMPDAT/conf/config.nml.grads_boundary" ]; then
     cat $TMPDAT/conf/config.nml.grads_boundary | \
         sed -e "s#--DIR--#${TMPDIR}#g" \
