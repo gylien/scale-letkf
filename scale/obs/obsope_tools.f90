@@ -535,7 +535,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
             obsda%lev(nn) = plev_obs_H08(i8,j8,b8-6)
             obsda%qc(nn) = qc_H08_prep(i8,j8,b8-6)
  
-            if (obs(iof)%dat(n) == undef) then
+            if ( obs(iof)%dat(n) == undef) then
               obsda%qc(nn) = iqc_obs_bad
             endif
 

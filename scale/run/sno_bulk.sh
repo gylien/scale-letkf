@@ -8,7 +8,7 @@ GRADS=F
 PLEV=T
 
 
-INPUT_FROM_SNOW=T
+INPUT_FROM_SNOW=F
 INPUT_SNOW_NP=16
 
 SEXP=TAIWAN201808_D2_NOHIM8
@@ -24,25 +24,20 @@ SEXP=TAIWAN201808_D2_HIM8_1218_HLOC120km
 #SEXP=TAIWAN201808_D2_HIM8_1209_NOVLOC
 #SEXP=TAIWAN201808_D2_NOHIM8_1203
 
-
-#EXP=TAIWAN201808_D1_1118
-#STIME="20180822000000"
-
-#EXP=D4_250m_mercator_debug256p
-#STIME="20190610081000"
+SEXP=TAIWAN201808_D2_HIM8_0116_VLOC0.5_NOGC
+SEXP=TAIWAN201808_D2_NOHIM8_0116
 
 
-#tstart='2018-08-22 0:00:00'
-tstart='2018-08-21 7:00:00'
-tend='2018-08-21 23:00:00'
-tstart='2018-08-21 23:00:00'
-tend='2018-08-22 0:00:00'
+SEXP=TAIWAN201808_D2_HIM8_0116_VLOC0.5_GC30K
+
+SEXP=TAIWAN201808_D1_1118
+
 
 tint=3600 # [second]
 
+tstart='2018-08-21 7:00:00'
+tend='2018-08-21 12:00:00'
 tstart='2018-08-21 12:00:00'
-tstart='2018-08-21 23:50:00'
-tstart='2018-08-22 0:00:00'
 tend=$tstart
 
 . config/${SEXP}/config.main.ofp || exit $?
@@ -56,7 +51,7 @@ SCALEDIR=/work/hp150019/share/honda/SCALE-LETKF/scale-5.3.3/develop_scale/scale-
 TYPE=fcst
 #TYPE=anal
 #TYPE=gues
-#TYPE=hist
+TYPE=hist
 
 ## Which domain do you want to convert?
 #DOM=2 
@@ -92,10 +87,10 @@ VARS='"MSLP",'
 VARS="'PRES', 'SFC_PRES'"
 
 if [ "$PLEV" == "T" ] ; then
-  VARS="'QV', 'Umet', 'Vmet', 'W', 'T', 'QHYD', 'MSLP', 'PRES', 'SFC_PRES'"
+  VARS="'QV', 'Umet', 'Vmet', 'W', 'T', 'QHYD', 'MSLP', 'PRES', 'SFC_PRES','PREC', 'PW'"
   #VARS="'QV', 'W', 'T', 'QHYD', 'MSLP', 'PRES', 'SFC_PRES'" # tentative
   if [ "$INPUT_FROM_SNOW" == "T" ] ; then
-    VARS="'QV', 'Umet', 'Vmet', 'W', 'T', 'QHYD', 'MSLP', 'SFC_PRES'"
+    VARS="'QV', 'Umet', 'Vmet', 'W', 'T', 'QHYD', 'MSLP', 'SFC_PRES', 'GPH', 'PREC', 'PW'"
   fi
 fi
 
@@ -215,7 +210,7 @@ cat << EOF >> $conf
 &PARAM_IO
  IO_LOG_BASENAME = "log/LOG_${mem}_${time}",
  IO_LOG_ALLNODE = .false.,
- IO_LOG_SUPPRESS = .false.,
+ IO_LOG_SUPPRESS = .true.,
  IO_LOG_NML_SUPPRESS = .false.,
 /
 

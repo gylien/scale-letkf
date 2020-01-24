@@ -109,6 +109,7 @@
                   0.0d0, 0.0d0, 0.0d0, 0.0d0,0.0d0,
 !--H08_VBC_PATH--!
  H08_VBC_USE = .false.,
+ H08_OBS_BUF_GRID = 40, ! TEST ! 20 failed
 /
 
 

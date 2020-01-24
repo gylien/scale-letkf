@@ -353,6 +353,7 @@ MODULE common_nml
   logical :: H08_OBS_AVE_OVERLAP = .false.
   integer :: H08_OBS_THIN_LEV = 1 ! thinning level (1: no thinning)
   logical :: USE_HIM8 = .true. ! ! will be overwritten from obsope_tools.f90
+  integer :: H08_OBS_BUF_GRID = 20 ! Lateral # of grids where Him8 obs are not used
 
   real(r_size) :: H08_CLD_THRS(NIRB_HIM8) = (/300.0d0, 232.5d0, 243.5d0, 256.5d0, 300.0d0, &
                                               300.0d0, 295.5d0, 300.0d0, 300.0d0, 300.0d0/) ! Threshold tbb btw clear & cloudy skies
@@ -1019,6 +1020,7 @@ subroutine read_nml_letkf_h08
     H08_OBS_AVE_NG,&
     H08_OBS_AVE_OVERLAP, &
     H08_OBS_THIN_LEV, &
+    H08_OBS_BUF_GRID, &
     H08_CLD_THRS, &
     H08_PQV_MIN_CMEM, &
     H08_PQV, &

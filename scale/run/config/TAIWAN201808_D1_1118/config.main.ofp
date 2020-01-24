@@ -80,7 +80,7 @@ BDY_ROTATING=0
 BDY_ENS=0               # 0: Fixed boundary files for all memebers
 
 # fcst
-BDY_FORMAT=0            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
+BDY_FORMAT=4            # 0: SCALE boundary files (with exactly same domain settings; do not need additional preprocessing)
 BDY_ROTATING=1
 
 
@@ -122,7 +122,7 @@ MEMBER=50          # Ensemble size
 NNODES=204    # Number of nodes
 NNODES=4    # Number of nodes
 
-NNODES=200    # Number of nodes
+#NNODES=200    # Number of nodes
 
 PPN=64              # Number of processes per node
 

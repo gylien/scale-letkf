@@ -395,10 +395,9 @@
 &HISTORY_ITEM name='Q2'  / ! LETKF (not analyzed)
 &HISTORY_ITEM name="MSLP" / ! Nesting
 
-
-&HISTORY_ITEM name='Umet'    / 
-&HISTORY_ITEM name='Vmet'    / 
-&HISTORY_ITEM name='PW'    / 
+&HISTORY_ITEM name='Umet'    /
+&HISTORY_ITEM name='Vmet'    /
+&HISTORY_ITEM name='PW'    /
 
 &HISTORY_ITEM name='OSR' /
 &HISTORY_ITEM name='OLR' /

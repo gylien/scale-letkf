@@ -7,28 +7,25 @@
 
 STIME='20180820180000'
 ETIME='20180820180000'
-TIME_LIMIT='02:30:00'
 TIME_LIMIT='01:00:00'
 
-STIME='20180821000000'
-ETIME='20180821000000'
-TIME_LIMIT='01:30:00'
-
-STIME='20180821061000'
-ETIME='20180821061000'
-TIME_LIMIT='00:30:00'
-
-MEMBERS="mean"
+MEMBERS="mean "`seq 1 10`
+MEMBERS=`seq 11 30`
+MEMBERS=`seq 31 50`
 
 STIME='20180822000000'
 ETIME='20180822000000'
 
 TIME_LIMIT='02:30:00'
-MEMBERS="mean "
+MEMBERS="mean"
+#MEMBERS=`seq 1 25`
+#MEMBERS=`seq 26 50`
+
+#STIME='20180821001000'
+#ETIME='20180821001000'
+#TIME_LIMIT='00:20:00'
 
 
-
-#MEMBERS="all"
 CYCLE=
 CYCLE_SKIP=1
 ISTEP=
@@ -41,8 +38,12 @@ FCSTLEN=21600      # SCALE forecast length in the forecast mode (second)
 FCSTOUT=21600
 
 FCSTLEN=172800      # SCALE forecast length in the forecast mode (second)
+
+FCSTLEN=172800      # SCALE forecast length in the forecast mode (second)
 FCSTOUT=21600
 
+#FCSTLEN=180      # SCALE forecast length in the forecast mode (second)
+#FCSTOUT=20
 #===============================================================================
 
 MAKEINIT=0       # 0: No
@@ -66,7 +67,7 @@ LANDUSEOUT_OPT=2 # 1:   o
 
                  #      bdy
                  #      mean members
-BDYOUT_OPT=1     # 1:   o    o
+BDYOUT_OPT=3     # 1:   o    o
                  # 2:   o
                  # 3:   (none)
 

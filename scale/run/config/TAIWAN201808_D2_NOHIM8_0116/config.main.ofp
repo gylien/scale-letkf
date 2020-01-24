@@ -127,6 +127,7 @@ NNODES=272  # Number of nodes
 
 NNODES=416  # Number of nodes
 NNODES=400  # Number of nodes
+NNODES=16  # Number of nodes
 
 #MEMBER=7          # Ensemble size
 #NNODES=128  # Number of nodes

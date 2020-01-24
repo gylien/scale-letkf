@@ -51,6 +51,12 @@
 !--NOBS_OUT_BASENAME--
 /
 
+&PARAM_OBS_ERROR
+! reference for the standard gross-error QC
+ OBSERR_H08 = 3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0,
+              3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0,
+/
+
 &PARAM_LETKF_OBS
 ! Honda et al. 2018JGRA
  HORI_LOCAL =  120.0D3,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,   -1.,
@@ -68,12 +74,6 @@
 ! DEPARTURE_STAT_T_RANGE = 0.0d0
 !--OBSDEP_OUT--
 !--OBSDEP_OUT_BASENAME--
-/
-
-&PARAM_OBS_ERROR
-! reference for the standard gross-error QC
- OBSERR_H08 = 3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0,
-              3.0d0, 3.0d0, 3.0d0, 3.0d0, 3.0d0,
 /
 
 &PARAM_LETKF_H08
@@ -115,6 +115,7 @@
                   0.0d0, 0.0d0, 0.0d0, 0.0d0,0.0d0,
 !--H08_VBC_PATH--!
  H08_VBC_USE = .false.,
+ H08_OBS_BUF_GRID = 40, ! TEST ! 20 failed
 /
 
 

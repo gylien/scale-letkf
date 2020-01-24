@@ -1,14 +1,15 @@
 #!/bin/bash
 
-
+TIME_LIMIT="00:30:00"
 USER=honda
 
 EXP=test_Him8_hist_ref
-. config/${EXP}/config.main
+EXP=TAIWAN201808_D2_NOHIM8_0116_RTTOV_TEST
+. config/${EXP}/config.main.ofp
 
 #
-SWDIR="/scratch/$(id -ng)/${USER}/obssim"
 LETKF_RUN="$(pwd)"
+SWDIR="$LETKF_RUN/../tmp/obssim"
 OBSSIM_BIN="${LETKF_RUN}/../obs/obssim"
 RUNSH=$SWDIR/OBSSIM.sh
 RUNCONF_COMMON=$SWDIR/obssim.conf_common
@@ -17,9 +18,11 @@ TOPO=${OUTDIR}/const/topo
 
 
 
-tstart='2018-06-24 0:10:00'
-tend='2018-06-24 0:10:00'
+#tstart='2018-06-24 0:10:00'
+#tend='2018-06-24 0:10:00'
 
+tstart='2018-08-21 12:00:00'
+tend=$tstart
 
 #ctint=21600 # obssim interval 
 ctint=600 # obssim interval 
@@ -61,11 +64,20 @@ cat << EOF >> $RUNCONF_COMMON
 ! MEMBER = 100,
 /
 
-&PARAM_LETKF_PRC
- NNODES = ${MEM_NP},
- PPN = 1,
+!&PARAM_LETKF_PRC
+! NNODES = ${MEM_NP},
+! PPN = ${PPN},
+! MEM_NODES = ${MEM_NP},
+! MEM_NP = ${MEM_NP},
+!/
+
+&PARAM_LOG
+ LOG_LEVEL = 2,
+/
+
+&PARAM_PROCESS
+ PPN = ${PPN},
  MEM_NODES = ${MEM_NP},
- MEM_NP = ${MEM_NP},
 /
 
 &PARAM_LETKF_H08
@@ -119,18 +131,37 @@ VCODE_CNT=1
 rm -f $RUNSH
 cat << EOF >> $RUNSH
 #!/bin/sh
-#PJM -N Him8_OBSSIM
+#PJM -L rscgrp=${RSCGRP}
+#PJM -L node=${NNODES}
+#PJM -L elapse=${TIME_LIMIT}
+#PJM --mpi proc=$((PPN))
+#PJM --omp thread=${THREADS}
+#PJM -g $(echo $(id -ng))
 #PJM -s
-#PJM --rsc-list "node=<TNODE_CNT>"
-#PJM --rsc-list "elapse=0:10:00"
-#PJM --rsc-list "rscgrp=micro"
-#PJM --stg-transfiles all
 
-. /work/system/Env_base
-export F_UFMTENDIAN=big
+module load hdf5/1.8.17
+module load netcdf/4.4.1
+module load netcdf-fortran/4.4.3
 
-export OMP_NUM_THREADS=8
-export PARALLEL=8
+export FORT_FMT_RECL=400
+
+export HFI_NO_CPUAFFINITY=1
+export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
+export I_MPI_HBW_POLICY=hbw_preferred,,
+export I_MPI_FABRICS_LIST=tmi
+unset KMP_AFFINITY
+#export KMP_AFFINITY=verbose
+#export I_MPI_DEBUG=5
+
+export OMP_NUM_THREADS=1
+export I_MPI_PIN_DOMAIN=${NPIN}
+export I_MPI_PERHOST=${PPN}
+export KMP_HW_SUBSET=1t
+
+
+#export OMP_STACKSIZE=128m
+ulimit -s unlimited
+
 
 EOF
 
@@ -236,7 +267,7 @@ EOF
     echo "("${VN}")" >> $VCODE
   done
 
-  echo "mpirun -n ${MEM_NP} --vcoordfile ${VCODE}  ${SWDIR}/obssim ${RUNCONF} &" >> $RUNSH
+  echo "mpiexec.hydra -n ${MEM_NP}  ${SWDIR}/obssim ${RUNCONF} &" >> $RUNSH
 
   TNODE_CNT=$(expr ${TNODE_CNT} + ${MEM_NP})   
   VCODE_CNT=$(expr ${VCODE_CNT} + 1)   
@@ -248,10 +279,15 @@ EOF
 done # -- time
 echo "wait" >> $RUNSH
 
-
+TNODE_CNT=$((SCALE_NP/PPN))
+echo $TNODE_CNT
 sed -i -e  's/<TNODE_CNT>/'${TNODE_CNT}'/g' $RUNSH
 
 echo ${SWDIR}
+
+cd $SWDIR > /dev/null
+pjsub OBSSIM.sh
+cd - > /dev/null
 
 exit
 

@@ -4017,6 +4017,12 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
           obslev(n) = ch + 6.0
           obserr(n) = REAL(OBSERR_H08(ch),r_size)
           obsdat(n) = tbb_allg_prep(i,j,ch)
+
+          if ( i <= H08_OBS_BUF_GRID .or. ( nlong - i ) <= H08_OBS_BUF_GRID .or. &
+               j <= H08_OBS_BUF_GRID .or. ( nlatg - j ) <= H08_OBS_BUF_GRID  ) then
+            obsdat(n) = undef
+          endif
+
         endif
       endif
 
@@ -4029,7 +4035,6 @@ subroutine allgHim82obs(tbb_allg,tbb_allg_prep,qc_allg_prep,obsdat,obslon,obslat
           qc_allg_prep(i,j,ch) = iqc_obs_bad
         endif
       endif
-
 
     enddo ! ch
   enddo ! i
