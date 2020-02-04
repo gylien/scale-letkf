@@ -155,8 +155,8 @@ if ((RUN_LEVEL == 0)); then
     if [ -d "${OUTDIR}/${STIME}/anal" ]; then
       if [ -n "$(ls ${OUTDIR}/${STIME}/anal 2> /dev/null)" ]; then
         echo "[Error] $myname: Initial ensemble is to be generated (\$MAKEINIT = 1) at \"${OUTDIR}/${STIME}/anal/\", but existing data are found there;" >&2
-        echo "        Set \$MAKEINIT = 0 or remove \"${OUTDIR}/${STIME}/anal/*\" before running this job." >&2
-        exit 1
+#        echo "        Set \$MAKEINIT = 0 or remove \"${OUTDIR}/${STIME}/anal/*\" before running this job." >&2
+#        exit 1
       fi
     fi
   fi

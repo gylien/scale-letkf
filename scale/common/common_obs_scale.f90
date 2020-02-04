@@ -3431,7 +3431,7 @@ SUBROUTINE Trans_XtoY_H08_allg(v3d,v2d,yobs,yobs_clr,mwgt_plev2d,qc,zenith1d,stg
       endif
 
       if(yobs(i,j,ch) > btmax .or. yobs(i,j,ch) < btmin .or. yobs(i,j,ch) /= yobs(i,j,ch))then
-        qc(i,j,np) = iqc_obs_bad
+        qc(i,j,ch) = iqc_obs_bad
       endif
 
     enddo ! ch

@@ -474,7 +474,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
 !        endif
 
   
-!$OMP PARALLEL DO SCHEDULE(DYNAMIC,5), PRIVATE(nn,n,iof,ril,rjl,rk,rkz,i8,j8,b8,qc_dummy) 
+!!$OMP PARALLEL DO SCHEDULE(DYNAMIC,5), PRIVATE(nn,n,iof,ril,rjl,rk,rkz,i8,j8,b8,qc_dummy) 
         do nn = n1, n2
           iof = obsda%set(nn)
           n = obsda%idx(nn)
@@ -568,7 +568,7 @@ SUBROUTINE obsope_cal(obsda_return, nobs_extern)
           end select
 
         end do ! [ nn = n1, n2 ]
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
 
 !    -- End of Him8 DA part --

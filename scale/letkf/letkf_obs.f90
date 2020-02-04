@@ -372,13 +372,13 @@ SUBROUTINE set_letkf_obs
 
   allocate(tmpelm(obsda%nobs))
 
-#ifdef H08
-!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref,ch_num,sig_b,sig_o,std13,mem_cld,es,qvs)
-#else
-!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref)
-#endif
+!#ifdef H08
+!!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref,ch_num,sig_b,sig_o,std13,mem_cld,es,qvs)
+!#else
+!!$OMP PARALLEL PRIVATE(n,i,iof,iidx,mem_ref)
+!#endif
   omp_chunk = min(10, max(1, (obsda%nobs-1) / OMP_GET_NUM_THREADS() + 1))
-!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
+!!$OMP DO SCHEDULE(DYNAMIC,omp_chunk)
   do n = 1, obsda%nobs
     IF(obsda%qc(n) > 0) CYCLE
 
@@ -683,8 +683,8 @@ SUBROUTINE set_letkf_obs
     endif
 
   END DO ! [ n = 1, obsda%nobs ]
-!$OMP END DO
-!$OMP END PARALLEL
+!!$OMP END DO
+!!$OMP END PARALLEL
 
   call mpi_timer('set_letkf_obs:departure_cal_qc:', 2)
 

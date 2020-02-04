@@ -62,9 +62,10 @@ elif ((USE_INIT_FROM_BDY == 1)); then
       mv -f $TMPDIR/${ifile} $OUTDIR/${STIME}/bdy/${MEM}.init_bdy.nc
     fi
   else
-    mkdir -p $TMPOUT/${STIME}/anal/${MEM}
-    for ifile in $(cd $TMPDIR ; ls init_*.nc 2> /dev/null); do
-      mv -f $TMPDIR/${ifile} $OUTDIR/${STIME}/bdy/${MEM}/init_bdy${ifile:$initbaselen}
+    #mkdir -p $TMPOUT/${STIME}/anal/${MEM}
+    mkdir -p $OUTDIR/$STIME/anal/${MEM} 
+    for ifile in $(cd $OUTDIR/$STIME/anal/${MEM} ; ls init_*.nc 2> /dev/null); do
+      mv -f $OUTDIR/${STIME}/anal/${MEM}/${ifile} $OUTDIR/${STIME}/bdy/${MEM}/init_bdy${ifile:$initbaselen}
     done
   fi
 fi
