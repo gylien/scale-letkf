@@ -121,7 +121,7 @@ subroutine plot_dbz_DCL(val_plot_s,psfile,cheight,csec)
   call grsvpt(vpl,vpr,vpb,vpt)
   call grstrn(11) !!! Mercator
   call umlset('LGLOBE',.false.)
-  call umiset('INDEXOUT',31)
+  call umiset('INDEXOUT',12)
   call umpfit
 
   call grstrf
