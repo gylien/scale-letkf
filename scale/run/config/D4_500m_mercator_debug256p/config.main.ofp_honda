@@ -10,7 +10,7 @@ PRESET='OFP'
 RSCGRP="regular-cache"
 #RSCGRP="debug-cache"
 #RSCGRP="debug-flat"
-RSCGRP="regular-flat"
+#RSCGRP="regular-flat"
 
 #===============================================================================
 
@@ -21,6 +21,7 @@ OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/DEBUG256p"
 
 EXP4=D4_500M_mercator_50mem_same_bdy
 EXP4=D4_500M_mercator_50mem_diff_bdy
+EXP4=D4_500M_mercator_50mem_verify
 EXP3=exp_d3
 EXP2=exp_d2
 
@@ -129,8 +130,8 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 # Parallelization settings
 
 MEMBER=50      # Ensemble size # 50mem + 2 (mean mdet) + 1 fcst
-NNODES=212
 NNODES=248 # 50mem + 2mem + 10mem
+
 
 PPN=64              # Number of processes per node
 

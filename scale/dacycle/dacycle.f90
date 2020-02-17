@@ -240,10 +240,10 @@ program dacycle
     dafcst_step_max = int( DACYCLE_RUN_FCST_TIME / TIME_DTSEC_ATMOS_RESTART )
   endif
 
-  if ( ICYC_DACYCLE_ANALYSIS == 1 ) then
+  if ( ICYC_DACYCLE_RUN_ANALYSIS == 1 ) then
     icycle_init = 1
   else
-    icycle_init = ICYC_DACYCLE_ANALYSIS -1
+    icycle_init = ICYC_DACYCLE_RUN_ANALYSIS - 1
   endif
 
 

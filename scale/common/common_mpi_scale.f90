@@ -1874,7 +1874,6 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   integer, intent(in) :: step
 
   character(len=H_LONG) :: filename
-  real(r_sngl) :: bufs4(nlong,nlatg)
   real(r_sngl) :: bufr4(nlong,nlatg)
   integer :: iunit, iolen
   integer :: k, n, irec, ierr
@@ -1897,9 +1896,9 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
   end if
 
   do k = 1, nlev 
-    bufs4(:,:) = 0.0
-    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
-    call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
+    bufr4(:,:) = 0.0
+    bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(ref3d(k,1:nlon,1:nlat), r_sngl)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
 
     if (myrank_d == 0) then
       irec = irec + 1
@@ -1908,18 +1907,18 @@ subroutine write_grd_dafcst_mpi(timelabel, ref3d, step)
 
   enddo
 
-  ! debug
-  do k = 1, nlev 
-    bufs4(:,:) = 0.0
-    bufs4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(TEMP(KHALO+k,IS:IE,JS:JE), r_sngl)
-    call MPI_REDUCE(bufs4, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, 0, MPI_COMM_d, ierr)
-
-    if (myrank_d == 0) then
-      irec = irec + 1
-      write (iunit, rec=irec) bufr4
-    end if
-
-  enddo
+!  ! debug
+!  do k = 1, nlev 
+!    bufr4(:,:) = 0.0
+!    bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(TEMP(KHALO+k,IS:IE,JS:JE), r_sngl)
+!    call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+!
+!    if (myrank_d == 0) then
+!      irec = irec + 1
+!      write (iunit, rec=irec) bufr4
+!    end if
+!
+!  enddo
 
   if (myrank_d == 0) then
     close (iunit)

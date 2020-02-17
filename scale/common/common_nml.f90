@@ -62,7 +62,7 @@ MODULE common_nml
   integer :: NUM_DACYCLE_FCST_MEM = 0      ! Number of dacycle-forecasts members
   integer :: MAX_DACYCLE_RUN_FCST = 0      ! Maximum number of dacycle-forecasts 
   integer :: ICYC_DACYCLE_RUN_FCST = 1     ! Initial-cycle number of dacycle-forecasts 
-  integer :: ICYC_DACYCLE_ANALYSIS = 1     ! Initial-cycle number of DA (after spin-up forecast)
+  integer :: ICYC_DACYCLE_RUN_ANALYSIS = 1     ! Initial-cycle number of DA (after spin-up forecast)
   logical :: USE_MDET_FCST = .false.       ! True:  Use analysis "mdet" for extended forecasts
                                            ! False: Use analysis "mean" for extended forecasts
   real(r_size) :: DACYCLE_RUN_FCST_TIME = 0      ! Forecast time for dacycle-forecast members
@@ -420,7 +420,7 @@ subroutine read_nml_ensemble
     NUM_DACYCLE_FCST_MEM, &
     MAX_DACYCLE_RUN_FCST, &
     ICYC_DACYCLE_RUN_FCST, &
-    ICYC_DACYCLE_ANALYSIS, &
+    ICYC_DACYCLE_RUN_ANALYSIS, &
     DACYCLE_RUN_FCST_TIME, &
     DACYCLE_RUN_FCST_OUTNAME, &
     USE_MDET_FCST, &
@@ -466,8 +466,8 @@ subroutine read_nml_ensemble
     USE_MDET_FCST = .false.
   endif
 
-  ICYC_DACYCLE_ANALYSIS = max( ICYC_DACYCLE_ANALYSIS, 1 )
-  ICYC_DACYCLE_RUN_FCST = max( ICYC_DACYCLE_RUN_FCST, ICYC_DACYCLE_ANALYSIS )
+  ICYC_DACYCLE_RUN_ANALYSIS = max( ICYC_DACYCLE_RUN_ANALYSIS, 1 )
+  ICYC_DACYCLE_RUN_FCST = max( ICYC_DACYCLE_RUN_FCST, ICYC_DACYCLE_RUN_ANALYSIS )
 
   if (LOG_LEVEL >= 4) then
     write(6, nml=PARAM_ENSEMBLE)

@@ -790,7 +790,7 @@ subroutine read_obs_all_mpi( obs, icycle )
 
   call mpi_timer('', 2)
 
-  if ( present (icycle) .and. icycle < ICYC_DACYCLE_ANALYSIS ) then
+  if ( present (icycle) .and. icycle < ICYC_DACYCLE_RUN_ANALYSIS ) then
     do iof = 1, OBS_IN_NUM
       obs(iof)%nobs = 0
       call obs_info_allocate(obs(iof), extended=.true.)

@@ -22,6 +22,7 @@ OUTPUT="/work/hp150019/f22013/SCALE-LETKF/scale-5.3.2/OUTPUT/DEBUG"
 
 EXP4=D4_1km_NP64_merc_REF_same_bdymem
 EXP4=D4_1km_NP64_merc_REF_diff_bdymem
+EXP4=D4_1km_NP64_merc_verify
 
 EXP3=exp_d3
 EXP2=exp_d2
@@ -136,12 +137,8 @@ LTIMESLOT=30     # Timeslot interval for 4D-LETKF (second)
 # Parallelization settings
 
 
-MEMBER=20      # Ensemble size 
-NNODES=52      # Ensemble size + 1 (mean) +1 (mdet) + 30 (additional)
-NNODES=32      # Ensemble size + 1 (mean) +1 (mdet) + 30 (additional)
-
-#MEMBER=<MEMBER>      # Ensemble size 
-#NNODES=<NNODES>
+MEMBER=50      # Ensemble size 
+NNODES=62      # Ensemble size + 1 (mean) +1 (mdet) + 10 (additional)
 
 PPN=64              # Number of processes per node
 

@@ -38,6 +38,9 @@ ICYC_DACYCLE_RUN_FCST=1
 # Cycle # of 1st DA cycle starts after spin-up forecast
 ICYC_DACYCLE_RUN_ANALYSIS=1
 
+# GrADS output from dafcst
+OUT_GRADS_DAFCST=0
+
 # GrADS output
 OUT_MEAN_GRADS=0
 
