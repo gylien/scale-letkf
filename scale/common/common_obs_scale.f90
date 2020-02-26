@@ -903,8 +903,10 @@ SUBROUTINE calc_ref_vr(qv,qc,qr,qci,qs,qg,u,v,w,t,p,az,elev,ref,vr)
 
     ENDIF
     IF( qmg .GT. 0.0d0 )THEN
-    zmg=( 0.809 + 10.13*fwg -5.98*(fwg**2) )*1.0d5
-    zmg= zmg * ( ro * qmg * 1.0d3 )**( 1.48 + 0.0448*fwg - 0.0313*(fwg**2) )
+!!!    zmg=( 0.809 + 10.13*fwg -5.98*(fwg**2) )*1.0d5
+!!!    zmg= zmg * ( ro * qmg * 1.0d3 )**( 1.48 + 0.0448*fwg - 0.0313*(fwg**2) ) !!! hail
+    zmg=( 0.0358 + 5.27*fwg -9.51*(fwg**2) + 4.68 *(fwg**3) )*1.0d5
+    zmg= zmg * ( ro * qmg * 1.0d3 )**( 1.70 + 0.020*fwg + 0.287 * (fwg**2) - 0.186*(fwg**3) ) !!! graupel (A. Amemiya 2020)
     ENDIF
 
     ref = zr +  zg  + zs + zms + zmg
