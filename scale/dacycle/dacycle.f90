@@ -48,7 +48,8 @@ program dacycle
     get_nobs_da_mpi, &
     monit_obs_mpi
   use obsope_tools, only: &
-    obsope_cal
+    obsope_cal, &
+    write_pawr_direct
   use obs_tools, only: &
     calc_ref_direct
 
@@ -500,6 +501,7 @@ program dacycle
       if ( OUT_GRADS_DA_ALL .and. myrank_e == mmean_rank_e ) then
         call TIME_gettimelabel(fstimelabel)
         call write_grd_all_mpi( trim(fstimelabel(1:15)), mean3d, 1 )
+        call write_pawr_direct( trim(fstimelabel(1:15)), 1 )
       endif
 
       if (gues_sprd_out_now) then
@@ -604,6 +606,7 @@ program dacycle
       if ( OUT_GRADS_DA_ALL .and. myrank_e == mmean_rank_e ) then
         call TIME_gettimelabel(fstimelabel)
         call write_grd_all_mpi( trim(fstimelabel(1:15)), mean3d, 2 )
+        call write_pawr_direct( trim(fstimelabel(1:15)), 2 )
       endif
 
     end if ! [ TIME_DOATMOS_restart .and. myrank_use_da]

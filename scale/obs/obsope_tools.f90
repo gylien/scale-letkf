@@ -1228,6 +1228,105 @@ subroutine write_grd_mpi(filename, nv3dgrd, nv2dgrd, step, v3d, v2d)
   return
 end subroutine write_grd_mpi
 
+subroutine write_pawr_direct( timelabel, step )
+  use mod_atmos_vars, only: &
+    ! Assume Tomita08
+    QV, QC, QR, &
+    QI, QS, QG, &
+    U, V, W, &
+    PRES,    &
+    TEMP
+  use scale_atmos_grid_cartesC_index, only: &
+    IS, IE, JS, JE, KS, KE, &
+    IHALO, JHALO, KHALO
+  implicit none
+
+  character(15), intent(in) :: timelabel
+  integer, intent(in) :: step
+
+  real(r_size) :: ref3d(nlev,nlon,nlat)
+  real(r_size) :: vr3d(nlev,nlon,nlat)
+
+  integer :: i, j, k
+
+  character(10) :: head
+  character(len=H_LONG) :: filename
+  real(r_sngl), allocatable :: buf1(:,:,:)
+  real(r_sngl), allocatable :: buf2(:,:,:)
+  integer :: iunit, iolen
+  integer :: n, irec, ierr
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+
+  do j = JS, JE
+  do i = IS, IE
+    do k = KS, KE
+      call calc_ref_vr( real( QV(k,i,j), kind=r_size ),   &
+                        real( QC(k,i,j), kind=r_size ),   &
+                        real( QR(k,i,j), kind=r_size ),   &
+                        real( QI(k,i,j), kind=r_size ),   &
+                        real( QS(k,i,j), kind=r_size ),   &
+                        real( QG(k,i,j), kind=r_size ),   &
+                        real( U(k,i,j), kind=r_size ),    &
+                        real( V(k,i,j), kind=r_size ),    &
+                        real( W(k,i,j), kind=r_size ),    &
+                        real( TEMP(k,i,j), kind=r_size ), &
+                        real( PRES(k,i,j), kind=r_size ), &
+                        0.0_r_size, 0.0_r_size,          & ! az and radar_z: dummy
+                       ref3d(k-KHALO,i-IHALO,j-JHALO),   & ! [OUT]
+                       vr3d(k-KHALO,i-IHALO,j-JHALO) ) ! vr3d: dummy ! [OUT]
+      if ( ref3d(k-KHALO,i-IHALO,j-JHALO) < MIN_RADAR_REF ) then
+        ref3d(k-KHALO,i-IHALO,j-JHALO) = MIN_RADAR_REF_DBZ + LOW_REF_SHIFT
+      else
+        ref3d(k-KHALO,i-IHALO,j-JHALO) = 10.0_r_size * log10(ref3d(k-KHALO,i-IHALO,j-JHALO)) ! dBZ
+      endif
+    enddo
+  enddo
+  enddo
+
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  allocate( buf1(nlev,nlong,nlatg) )
+  allocate( buf2(nlev,nlong,nlatg) )
+
+  buf1 = 0.0
+  buf1(:,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( ref3d, kind=r_sngl )
+  call MPI_ALLREDUCE(MPI_IN_PLACE, buf1, nlev*nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+
+  buf2 = 0.0
+  buf2(:,1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real( vr3d, kind=r_sngl )
+  call MPI_ALLREDUCE(MPI_IN_PLACE, buf2, nlev*nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+
+  if ( myrank_d == 0 ) then
+
+    if ( step == 1 ) head = "gues_pawr_"
+    if ( step == 2 ) head = "anal_pawr_"
+
+    filename = trim(OUT_GRADS_DA_ALL_PATH) // "/" // head // trim(timelabel) // ".grd"
+    iunit = 55
+    inquire (iolength=iolen) iolen
+    open (iunit, file=trim(filename), form='unformatted', access='direct', &
+          status='unknown', convert='native', recl=nlong*nlatg*iolen)
+    irec = 0
+
+    do n = 1, 2
+      do k = 1, nlev
+        irec = irec + 1
+        if( n == 1 ) write (iunit, rec=irec) buf1(k,:,:)
+        if( n == 2 ) write (iunit, rec=irec) buf2(k,:,:)
+      enddo
+    enddo
+
+    close (iunit)
+  end if ! myrank_d == 0
+
+  deallocate( buf1, buf2 )
+
+  return
+end subroutine write_pawr_direct
+
 !=======================================================================
 
 END MODULE obsope_tools

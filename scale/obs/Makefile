@@ -75,7 +75,7 @@ obj:	$(OBJS)
 obs_tools.o:	obs_tools.f90 radar_obs.o $(COMMON_DIR)
 	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS) -I$(SCALE_RM_OBJDIR)
 obsope_tools.o:	obsope_tools.f90 obs_tools.o $(COMMON_DIR)
-	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS)
+	$(FC) $(FOPTS) -c $< -I$(COMMON_DIR) $(INCS) -I$(SCALE_RM_OBJDIR)
 
 ifeq ($(ENABLE_JITDT),T)
 ifeq ($(ENABLE_PLOT_DCL),T)
