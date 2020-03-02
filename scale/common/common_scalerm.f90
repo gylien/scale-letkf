@@ -1252,12 +1252,16 @@ subroutine set_dafcst( ncycle, dafcst_slist, dafcst_list_last, dafcst_list_sum )
     write(6,'(a)')"### Summary of dafcst ###"
     write(6,'(a9,1x,a15,1x,a)')"cycle", "time,","flag for fcst membsers"
 
-    do n = 1, ncycle
-      call advance_nowdate( TIME_NOWDATE, TIME_DTSEC_ATMOS_RESTART )
-      call TIME_gettimelabel( timelabel )
-
-      write(6,'(i9,1x,a15,1x,' // trim(str) // 'l3)') n, timelabel(1:15), dafcst_slist(n,1:NUM_DACYCLE_FCST_MEM)
-    enddo
+    if ( NUM_DACYCLE_FCST_MEM > 0 ) then
+      do n = 1, ncycle
+        call advance_nowdate( TIME_NOWDATE, TIME_DTSEC_ATMOS_RESTART )
+        call TIME_gettimelabel( timelabel )
+  
+        write(6,'(i9,1x,a15,1x,' // trim(str) // 'l3)') n, timelabel(1:15), dafcst_slist(n,1:NUM_DACYCLE_FCST_MEM)
+      enddo
+    else
+      write(6,'(a)')"No dafcst"
+    endif
 
     write(6,'(a)')""
   endif

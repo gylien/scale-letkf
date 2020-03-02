@@ -926,9 +926,14 @@ while ((time <= ETIME)); do
       elif ((m == $MEMBER_MAX)) && ((DET_RUN == 1 )); then
         mmmm="mdet"
       fi
-      mkdir -p ${OUTDIR[$d]}/${time}/hist/$mmmm
+      mkdir -p ${OUTDIR[$d]}/${time}/hist/d$mmmm
       mkdir -p ${OUTDIR[$d]}/${time}/gues/$mmmm
       mkdir -p ${OUTDIR[$d]}/${time}/anal/$mmmm
+    done
+
+    for m in $(seq 1 $NUM_DACYCLE_FCST_MEM); do
+      mmmm=$(printf %04d $m)
+      mkdir -p ${OUTDIR[$d]}/${time}/hist/f$mmmm
     done
 
     if ((DACYCLE == 1)); then
@@ -937,7 +942,7 @@ while ((time <= ETIME)); do
 #        FILE_HISTORY_DEFAULT_BASENAME="${OUTDIR[$d]}/${time}/hist/<lmember>/history" # DEBUG
         FILE_HISTORY_DEFAULT_BASENAME=""
       else
-        FILE_HISTORY_DEFAULT_BASENAME="${OUTDIR[$d]}/${time}/hist/<member>/history"
+        FILE_HISTORY_DEFAULT_BASENAME="${OUTDIR[$d]}/${time}/hist/<lmember>/history"
       fi
       FILE_HISTORY_OUTPUT_STEP0=".false."
     else
@@ -964,14 +969,14 @@ while ((time <= ETIME)); do
     RESTART_OUT_ADDITIONAL_EFF_MEMBER=
     if ((OUT_OPT <= 3)); then
       RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+1))
-      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${atime}/gues/<member>/init\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${time}/gues/<member>/init\", "
       RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}0, "
     elif ((OUT_OPT <= 6)); then
       RESTART_OUT_ADDITIONAL_COPIES=$((RESTART_OUT_ADDITIONAL_COPIES+2))
-      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${atime}/gues/mean/init\", "
+      RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${time}/gues/mean/init\", "
       RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmean}, "
       if ((DET_RUN == 1)); then
-        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${atime}/gues/mdet/init\", "
+        RESTART_OUT_ADDITIONAL_BASENAME="$RESTART_OUT_ADDITIONAL_BASENAME\"${OUTDIR[$d]}/${time}/gues/mdet/init\", "
         RESTART_OUT_ADDITIONAL_EFF_MEMBER="${RESTART_OUT_ADDITIONAL_EFF_MEMBER}${mmdet}, "
       fi
     else
