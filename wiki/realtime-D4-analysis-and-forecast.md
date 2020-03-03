@@ -11,9 +11,9 @@
 | Model top | 28.8 km |
 | levels | 60 |
 | dt | 4 sec |
-| Number of processes | 256 |
-| Number of subdomain in X | 16 |
-| Number of subdomain in Y | 16 |
+| Number of processes | 256/1024/4096 |
+| Number of subdomain in X | 16/32/64 |
+| Number of subdomain in Y | 16/32/64 |
 
 <img src="https://github.com/aamemiya/shared_image/blob/master/D4_Kobe.png" height="250px">
 <img src="https://github.com/aamemiya/shared_image/blob/master/D4_Tokyo.png" height="250px">
