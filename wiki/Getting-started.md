@@ -4,7 +4,7 @@
 
 ```
 cd (directory-to-place-the-system) 
-git clone https://github.com/gylien/scale-letkf.git -b admin_realtime SCALE-LETKF-rt
+git clone https://github.com/gylien/scale-letkf.git -b realtime-interface SCALE-LETKF-rt
 cd SCALE-LETKF-rt
 git clone https://gitlab.com/scale-met/scale.git -b LETKF-5.3.4 scale_ope
 cd scale_ope
