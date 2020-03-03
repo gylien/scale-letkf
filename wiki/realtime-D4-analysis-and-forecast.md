@@ -2,8 +2,7 @@
 ### Overview
 
 * Domain setting  
-<table><td>
-<tr>
+
 | | | 
 | --- | --- |
 | Target area | Kansai / Kanto |
@@ -15,10 +14,9 @@
 | Number of processes | 256 |
 | Number of subdomain in X | 16 |
 | Number of subdomain in Y | 16 |
-</tr>
-<tr><img src="https://github.com/aamemiya/shared_image/blob/master/D4_Kobe.png" height="250px"></tr>
-<tr><img src="https://github.com/aamemiya/shared_image/blob/master/D4_Tokyo.png" height="250px"></tr>
-</td></table>
+<img src="https://github.com/aamemiya/shared_image/blob/master/D4_Kobe.png" height="250px">
+<img src="https://github.com/aamemiya/shared_image/blob/master/D4_Tokyo.png" height="250px">
+
 ### Analysis cycle
 
 * Start from the previous step analysis data 
