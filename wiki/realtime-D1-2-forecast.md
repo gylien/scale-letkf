@@ -15,7 +15,7 @@
 | Number of subdomain in X | 12 | 16 |
 | Number of subdomain in Y | 16 | 16 |
 
-\* It is not confirmed that Mercator projection is safe to use for D2. This map projection configuration is only a temporal treatment. 
+\* **This map projection configuration is only a temporal treatment necessary for offline-nesting with current version (SCALE 5.3). It is not confirmed that Mercator projection is safe to use for D2.**  
 
 * Boundary data
 
