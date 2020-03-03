@@ -86,9 +86,9 @@ Before you start a DA cycle or a forecast, you also need topography and landuse 
 See [create topography and landuse files](create-topography-and-landuse-files.md).
 
 ## Prepare configure files for physical processes 
-
+Physical processes in SCALE-RM such as radiation and ground soil model need parameter table files. 
 You don't need to prepare anything unless you need to change the default settings of physical processes.
-The files needed to run SCALE-RM physical processes (radiation,surface, etc) are copied from the default database in `scale-rm/test`. 
+The necessary files are copied from the default database in `scale-rm/test`. 
 
 ## Here we go
 Go to `admin` and [start DA cycle for domain 1](control.md).  
