@@ -10,6 +10,6 @@
 | Model top | 28.8 km |
 | levels | 60 |
 | dt | 4 sec |
-| Number of processes | 1024 |
-| Number of subdomain in X | 32 |
-| Number of subdomain in Y | 32 |
+| Number of processes | 256/1024 |
+| Number of subdomain in X | 16/32 |
+| Number of subdomain in Y | 16/32 |
