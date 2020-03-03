@@ -31,7 +31,7 @@ Realtime forecasts are displayed at
 
 \* D1 and D2 forecasts are performed as a conbined online-nesting system.  
 
-<img src="https://github.com/aamemiya/shared_image/blob/master/domain1-3_Kanto.png" height="400px"><img src="https://github.com/aamemiya/shared_image/blob/master/domain3-4_Kanto.png" height="400px">
+<img src="https://github.com/aamemiya/shared_image/blob/master/domain1-3_Kanto.png" height="250px"><img src="https://github.com/aamemiya/shared_image/blob/master/domain3-4_Kanto.png" height="250px">
 
 ## Sources
 ### SCALE-RM
