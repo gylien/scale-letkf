@@ -15,8 +15,7 @@
 | Number of subdomain in X | 16/32/64 |
 | Number of subdomain in Y | 16/32/64 |
 
-<img src="https://github.com/aamemiya/shared_image/blob/master/D4_Kobe.png" height="250px">
-<img src="https://github.com/aamemiya/shared_image/blob/master/D4_Tokyo.png" height="250px">
+<img src="https://github.com/aamemiya/shared_image/blob/master/D4_Kobe.png" height="250px"><img src="https://github.com/aamemiya/shared_image/blob/master/D4_Tokyo.png" height="250px">
 
 ### Analysis cycle
 
