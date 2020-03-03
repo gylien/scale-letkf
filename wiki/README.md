@@ -29,7 +29,7 @@ Realtime forecasts are displayed at
 | [D4](realtime-D4-analysis-and-forecast.md) | 500 m / 250 m | 30 min | 1 | D4 analysis / D3 forecast |
 | [D1](realtime-D1-analysis-and-forecast.md) (extended) | 18 km | 5 days | 1 (mdet) | D1 analysis / NCEP GFS |
 
-\* D1 and D2 forecasts are performed as a conbined online-nesting system.  
+\* D1 and D2 forecasts are performed as a combined online-nesting system.  
 
 <img src="https://github.com/aamemiya/shared_image/blob/master/domain1-3_Kanto.png" height="250px"><img src="https://github.com/aamemiya/shared_image/blob/master/domain3-4_Kanto.png" height="250px">
 
