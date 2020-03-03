@@ -49,6 +49,6 @@ For the innermost domain for PAWR assimilation, branch [dacycle_OFP](https://git
 See [Getting started](Getting-started.md) when you start the system from scratch. 
 
 ## References
-[Miyoshi et al. 2016 *BAMS*](https://journals.ametsoc.org/doi/full/10.1175/BAMS-D-15-00144.1)
-[Miyoshi et al. 2016 *IEEE*](https://ieeexplore.ieee.org/abstract/document/7576655)
+[Miyoshi et al. 2016 *BAMS*](https://journals.ametsoc.org/doi/full/10.1175/BAMS-D-15-00144.1)<br>
+[Miyoshi et al. 2016 *IEEE*](https://ieeexplore.ieee.org/abstract/document/7576655)<br>
 [Lien et al. 2017](https://www.jstage.jst.go.jp/article/sola/13/0/13_2017-001/_article/-char/ja/)
