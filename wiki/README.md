@@ -5,7 +5,7 @@
 
 The system is currently running on Oakforest-PACS and produces forecasts for multiple domains every 6 hours.  
 
-The control scripts are currently available in the branch *admin_realtime* . 
+The control scripts are currently available in the branch [realtime-interface](https://github.com/gylien/scale-letkf/tree/realtime-interface) . 
 
 Realtime forecasts are displayed at  
  [http://daweb.r-ccs27.riken.jp/~amemiya/scale/](http://daweb.r-ccs27.riken.jp/~amemiya/scale/) (R-CCS intranet).
