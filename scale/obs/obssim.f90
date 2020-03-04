@@ -99,8 +99,10 @@ program obssim
 
         call obssim_cal(v3dgh, v2dgh, v3dgsim, v2dgsim, it=it)
 
-        call write_grd_mpi(OBSSIM_GRADS_OUT_NAME, OBSSIM_NUM_3D_VARS, OBSSIM_NUM_2D_VARS, &
-                           it, v3dgsim, v2dgsim)
+        !call write_grd_mpi(OBSSIM_GRADS_OUT_NAME, OBSSIM_NUM_3D_VARS, OBSSIM_NUM_2D_VARS, &
+        !                   it, v3dgsim, v2dgsim)
+        call write_grd_mpi_nc(OBSSIM_GRADS_OUT_NAME, OBSSIM_NUM_2D_VARS, &
+                              it, v2dgsim)
       end do
 
     else

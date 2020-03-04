@@ -3010,6 +3010,7 @@ SUBROUTINE Trans_XtoY_VIS_allg(v3d,v2d,yobs,stggrd,it) !yobs_clr,mwgt_plev2d,qc,
   use scale_const, only: &
       CONST_D2R
   use scale_atmos_solarins, only: &
+      ATMOS_SOLARINS_setup, &
       ATMOS_SOLARINS_insolation
 !  use scale_atmos_phy_rd_profile, only: &
 !      ATMOS_PHY_RD_PROFILE_read, &
@@ -3022,7 +3023,7 @@ SUBROUTINE Trans_XtoY_VIS_allg(v3d,v2d,yobs,stggrd,it) !yobs_clr,mwgt_plev2d,qc,
   IMPLICIT NONE
   INTEGER :: np, ch
 !  REAL(r_size),PARAMETER :: HIM8_LON = 140.7d0
-  REAL(r_size),PARAMETER :: HIM8_LON = 50.4d0 ! Germany
+  REAL(r_size),PARAMETER :: HIM8_LON = 11.3d0 ! Germany
 
   REAL(r_size),INTENT(IN) :: v3d(nlevh,nlonh,nlath,nv3dd)
   REAL(r_size),INTENT(IN) :: v2d(nlonh,nlath,nv2dd)
@@ -3115,8 +3116,11 @@ SUBROUTINE Trans_XtoY_VIS_allg(v3d,v2d,yobs,stggrd,it) !yobs_clr,mwgt_plev2d,qc,
 !effective radius [cm]
 !  real(RP) :: RD_cldfrac     (KMAX + H08_RTTOV_KADD)   ! cloud fraction (0-1)
 
-  integer :: i, j
+  integer :: i, j, dj, dj2
   real(r_size) :: ri, rj
+
+  integer :: ii, jmin, jmax
+  integer :: nps, npe, dnp
 
   fdate = H08_NOWDATE
   if (present(it)) it_ = it
@@ -3128,6 +3132,49 @@ SUBROUTINE Trans_XtoY_VIS_allg(v3d,v2d,yobs,stggrd,it) !yobs_clr,mwgt_plev2d,qc,
     fdate(4) = fdate(4) - 24 
     fdate(3) = fdate(3) + 1
   endif
+
+  call ATMOS_SOLARINS_setup( fdate(1) )
+
+! debug
+!  np = 1
+!  do j = 1, nlat
+!  do i = 1, nlon
+!
+!    call MPRJ_xy2lonlat((i-1) * DX + GRID_CX(1), (j-1) * DY + GRID_CY(1),&
+!                        lon1d(np), lat1d(np))
+!
+!    call ATMOS_SOLARINS_insolation(dummy1, &
+!                                   szenith1d(np), &
+!                                   dummy2, &
+!                                   sazm1d(np), &
+!                                   lon1d(np), &
+!                                   lat1d(np), & 
+!                                   fdate, &          !
+!                                   0 )               ! offset year
+!    szenith1d(np) = acos(szenith1d(np)) * rad2deg
+!    sazm1d(np) = sazm1d(np) * rad2deg
+!
+!    call zenith_geosat( HIM8_LON, lon1d(np)*rad2deg, lat1d(np)*rad2deg, zenith1d(np) )
+!
+!    do ch = 1, NVIS_HIM8
+!      qc(i,j,ch) = iqc_good
+!      yobs(i,j,ch) =  szenith1d(np) !!(i-1.0_r_size) * DX + GRID_CX(1)
+!      if (ch == 2) then
+!         yobs(i,j,ch) = sazm1d(np)
+!      elseif (ch == 3) then
+!         yobs(i,j,ch) = zenith1d(np)
+!      endif
+!    enddo
+!    do ch = NVIS_HIM8+1, NVIS_HIM8+NIRB_HIM8
+!      qc(i,j,ch) = iqc_good
+!      yobs(i,j,ch) = j
+!      yobs(i,j,ch) = (j-1.0_r_size) * DY + GRID_CY(1)
+!    enddo
+!  enddo
+!  enddo
+!
+!  return
+!
 
   !
   ! Extrapolate input profiles by using climatology (MIPAS)
@@ -3168,227 +3215,307 @@ SUBROUTINE Trans_XtoY_VIS_allg(v3d,v2d,yobs,stggrd,it) !yobs_clr,mwgt_plev2d,qc,
 
   if (present(stggrd)) stggrd_ = stggrd
 
-! -- make profile arrays for RTTOV --
-  do j = 1, nlat
-  do i = 1, nlon
-    np = (j - 1) * nlon + i
+  dj = int( nlat / H08_RTTOV_ITMAX )
+  do ii = 1, H08_RTTOV_ITMAX
+    jmin = dj * (ii - 1) + 1
+    jmax = min( dj * ii + 1, nlat )
+    
+    nps = ( jmin - 1 ) * nlon + 1
+    npe = jmax * nlon
+    dnp = npe - nps + 1
 
-    ri = real(i + IHALO, r_size)
-    rj = real(j + JHALO, r_size)
-    call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1),&
-                        lon1d(np), lat1d(np))
+    write(6,'(a,2i5)')"H08 it",ii,H08_RTTOV_ITMAX
 
-    call ATMOS_SOLARINS_insolation(dummy1, &
-                                   szenith1d(np), &
-                                   dummy2, &
-                                   lon1d(np), &
-                                   lat1d(np), & 
-                                   fdate, &          !
-                                   0 )               ! offset year
-                                   !azm=sazm1d(np))  ! lon & lat: radian 
-                                                                                ! szenith1d: cos(szenith) (rad)
-                                                                                ! azm: (rad)
+  ! -- make profile arrays for RTTOV --
+    do j = jmin, jmax
+    do i = 1, nlon
+      np = (j - 1) * nlon + i
+  
+      ri = real(i + IHALO, r_size)
+      rj = real(j + JHALO, r_size)
+      call MPRJ_xy2lonlat((ri-1.0_r_size) * DX + GRID_CX(1), (rj-1.0_r_size) * DY + GRID_CY(1),&
+                          lon1d(np), lat1d(np))
+  
+  
+      call ATMOS_SOLARINS_insolation(dummy1, &
+                                     szenith1d(np), &
+                                     dummy2, &
+                                     sazm1d(np), &
+                                     lon1d(np), &
+                                     lat1d(np), & 
+                                     fdate, &          !
+                                     0 )               ! offset year
+                                     !azm=sazm1d(np))  ! lon & lat: radian 
+                                                                                  ! szenith1d: cos(szenith) (rad)
+                                                                                  ! azm: (rad)
+  
+      CALL zenith_geosat( HIM8_LON, lon1d(np)*rad2deg, lat1d(np)*rad2deg, zenith1d(np) )
 
-    szenith1d(np) = acos(szenith1d(np)) * rad2deg
-    sazm1d(np) = sazm1d(np) * rad2deg
-
-    lon1d(np) = lon1d(np) * rad2deg
-    lat1d(np) = lat1d(np) * rad2deg
-
-    CALL zenith_geosat(HIM8_LON,lon1d(np),lat1d(np),zenith1d(np))
-
-    tsfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_skint)
-    qsfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_q2m)
-    topo1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_topo)
-    lsmask1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_lsmask)
-    psfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_ps)
-
-    ! assume not staggerd grid
-    utmp = v2d(i+IHALO,j+JHALO,iv2dd_u10m)
-    vtmp = v2d(i+IHALO,j+JHALO,iv2dd_v10m)
-    call MPRJ_rotcoef(rotc,lon1d(np)*deg2rad,lat1d(np)*deg2rad)
-    usfc1d(np) = utmp * rotc(1) - vtmp * rotc(2)
-    vsfc1d(np) = utmp * rotc(2) + vtmp * rotc(1)
-
-    do k = 1, KMAX
-      prs2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_p)
-      tk2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_t)
-      qv2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_q)
-      qliq2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_qc)
-      qice2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_qi) & 
-                   + v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_qs) &
-                   + v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_qg)  
-
-    enddo
+      szenith1d(np) = acos(szenith1d(np)) * rad2deg
+      sazm1d(np) = sazm1d(np) * rad2deg
+  
+      lon1d(np) = lon1d(np) * rad2deg
+      lat1d(np) = lat1d(np) * rad2deg
 
 
-  enddo ! i
-  enddo ! j
+  
+      tsfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_skint)
+      qsfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_q2m)
+      topo1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_topo)
+      lsmask1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_lsmask)
+      psfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_ps)
+  
+      ! assume not staggerd grid
+      utmp = v2d(i+IHALO,j+JHALO,iv2dd_u10m)
+      vtmp = v2d(i+IHALO,j+JHALO,iv2dd_v10m)
+      call MPRJ_rotcoef(rotc,lon1d(np)*deg2rad,lat1d(np)*deg2rad)
+      usfc1d(np) = utmp * rotc(1) - vtmp * rotc(2)
+      vsfc1d(np) = utmp * rotc(2) + vtmp * rotc(1)
+  
+      do k = 1, KMAX
+        prs2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_p)
+        tk2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_t)
+        qv2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_q)
+        qliq2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_qc)
+        qice2d(k,np) = v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_qi) & 
+                     + v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_qs) &
+                     + v3d(KHALO+KMAX-k+1,i+IHALO,j+JHALO,iv3dd_qg)  
+  
+      enddo
+  
+  
+    enddo ! i
+    enddo ! j
+ 
+ 
+  !
+  ! -- NOTE: The channel number for RTTOV is always 10, because it should be the
+  ! same
+  !          with that in Himawari-8 RTTOV coef files.
+  !
+  !        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using
+  !        (lon,lat).
+  !
+  
+    CALL cld_ir_fwd(NIRB_HIM8, & ! num of channels
+                         KMAX,& ! num of levels
+                         dnp,& ! num of profs
+                         prs2d(:,nps:npe),& ! (Pa)
+                         tk2d(:,nps:npe),& ! (K)
+                         qv2d(:,nps:npe),& ! (kg/kg)
+                         qliq2d(:,nps:npe),& ! (kg/kg)
+                         qice2d(:,nps:npe),& ! (kg/kg)
+                         tsfc1d(nps:npe),& ! (K)
+                         qsfc1d(nps:npe),& ! (kg/kg)
+                         psfc1d(nps:npe),& ! (Pa)
+                         usfc1d(nps:npe),& ! (m/s)
+                         vsfc1d(nps:npe),& ! (m/s)
+                         topo1d(nps:npe),& ! (m)
+                         lon1d(nps:npe),& ! (deg)
+                         lat1d(nps:npe),& ! (deg)
+                         lsmask1d(nps:npe),& ! (0-1)
+                         zenith1d(nps:npe), & ! (deg)  ! satellite
+                         btall_out(:,nps:npe),& ! (K)
+                         btclr_out(:,nps:npe))!,& ! (K)
+  
+!  write(6,'(a,2f10.3)')'DEBUG lon',maxval(lon1d(1:nlon*dj)),minval(lon1d(1:nlon*dj))
+!  write(6,'(a,2f10.3)')'DEBUG lat',maxval(lat1d(1:nlon*dj)),minval(lat1d(1:nlon*dj))
+!  write(6,'(a,2f10.3)')'DEBUG z',maxval(zenith1d(1:nlon*dj)),minval(zenith1d(1:nlon*dj))
+!  write(6,'(a,2f10.3)')'DEBUG sz',maxval(szenith1d(1:nlon*dj)),minval(szenith1d(1:nlon*dj))
+!  write(6,'(a,2f10.3)')'DEBUG sazm',maxval(sazm1d(1:nlon*dj)),minval(sazm1d(1:nlon*dj))
+    CALL cld_mfasis_fwd(NVIS_HIM8, & ! num of channels
+                         KMAX,& ! num of levels
+                         dnp,& ! num of profs
+                         prs2d(:,nps:npe),& ! (Pa)
+                         tk2d(:,nps:npe),& ! (K)
+                         qv2d(:,nps:npe),& ! (kg/kg)
+                         qliq2d(:,nps:npe),& ! (kg/kg)
+                         qice2d(:,nps:npe),& ! (kg/kg)
+                         tsfc1d(nps:npe),& ! (K)
+                         qsfc1d(nps:npe),& ! (kg/kg)
+                         psfc1d(nps:npe),& ! (Pa)
+                         usfc1d(nps:npe),& ! (m/s)
+                         vsfc1d(nps:npe),& ! (m/s)
+                         topo1d(nps:npe),& ! (m)
+                         lon1d(nps:npe),& ! (deg)
+                         lat1d(nps:npe),& ! (deg)
+                         lsmask1d(nps:npe),& ! (0-1)
+                         zenith1d(nps:npe), & ! (deg)  ! satellite
+                         szenith1d(nps:npe), & ! (deg) ! Solor zenith
+                         sazm1d(nps:npe), & ! (deg)    ! Solor azimuth
+                         reflall_out(:,nps:npe),& ! (K)
+                         reflclr_out(:,nps:npe))!,& ! (K)
+  
+  !
+  ! -- reflall/btall_out are substituted into yobs
+  !
+  
+    do j = 1, nlat
+    do i = 1, nlon
+      np = (j - 1) * nlon + i
+  
+      do ch = 1, NVIS_HIM8
+        qc(i,j,ch) = iqc_good
+        yobs(i,j,ch) = reflall_out(ch,np)
+  !      yobs_clr(i,j,ch) = btclr_out(ch,np)
+  !      mwgt_plev2d(i,j,ch) = mwgt_plev1d(ch,np)
+  !
+  !      if(H08_VLOCAL_CTOP)then
+  !        if((ctop_out1d(np) > 0.0d0) .and. (ctop_out1d(np) < mwgt_plev1d(ch,np))
+  !.and. &
+  !           (mwgt_plev1d(ch,np)>H08_LIMIT_LEV)) then
+  !          mwgt_plev1d(ch,np) = (ctop_out1d(np) + mwgt_plev1d(ch,np))*0.5d0
+  !        endif
+  !      endif
+  
+  !      ! QC
+  !      if(H08_REJECT_LAND .and. (lsmask1d(np) > 0.5d0))then
+  !        qc(i,j,ch) = iqc_obs_bad
+  !      endif
+  !
+  !      if(yobs(i,j,ch) > btmax .or. yobs(i,j,ch) < btmin .or. yobs(i,j,ch) /= yobs(i,j,ch))then
+  !        qc(i,j,np) = iqc_obs_bad
+  !      endif
+  
+      enddo ! ch
+  
+      do ch = 1, NIRB_HIM8
+        qc(i,j,ch+NVIS_HIM8) = iqc_good
+        yobs(i,j,ch+NVIS_HIM8) = btall_out(ch,np)
+  
+      enddo ! ch
+  
+    enddo ! i
+    enddo ! j
 
-!
-! -- NOTE: The channel number for RTTOV is always 10, because it should be the
-! same
-!          with that in Himawari-8 RTTOV coef files.
-!
-!        : Satellite zenith angles are computed within SCALE_RTTOV_fwd using
-!        (lon,lat).
-!
+  enddo ! ii
 
-  CALL cld_ir_fwd(NIRB_HIM8, & ! num of channels
-                       KMAX,& ! num of levels
-                       nlon*nlat,& ! num of profs
-                       prs2d(:,:),& ! (Pa)
-                       tk2d(:,:),& ! (K)
-                       qv2d(:,:),& ! (kg/kg)
-                       qliq2d(:,:),& ! (kg/kg)
-                       qice2d(:,:),& ! (kg/kg)
-                       tsfc1d(:),& ! (K)
-                       qsfc1d(:),& ! (kg/kg)
-                       psfc1d(:),& ! (Pa)
-                       usfc1d(:),& ! (m/s)
-                       vsfc1d(:),& ! (m/s)
-                       topo1d(:),& ! (m)
-                       lon1d(:),& ! (deg)
-                       lat1d(:),& ! (deg)
-                       lsmask1d(:),& ! (0-1)
-                       zenith1d(:), & ! (deg)  ! satellite
-                       btall_out(:,:),& ! (K)
-                       btclr_out(:,:))!,& ! (K)
-
-
-  CALL cld_mfasis_fwd(NVIS_HIM8, & ! num of channels
-                       KMAX,& ! num of levels
-                       nlon*nlat,& ! num of profs
-                       prs2d(:,:),& ! (Pa)
-                       tk2d(:,:),& ! (K)
-                       qv2d(:,:),& ! (kg/kg)
-                       qliq2d(:,:),& ! (kg/kg)
-                       qice2d(:,:),& ! (kg/kg)
-                       tsfc1d(:),& ! (K)
-                       qsfc1d(:),& ! (kg/kg)
-                       psfc1d(:),& ! (Pa)
-                       usfc1d(:),& ! (m/s)
-                       vsfc1d(:),& ! (m/s)
-                       topo1d(:),& ! (m)
-                       lon1d(:),& ! (deg)
-                       lat1d(:),& ! (deg)
-                       lsmask1d(:),& ! (0-1)
-                       zenith1d(:), & ! (deg)  ! satellite
-                       szenith1d(:), & ! (deg) ! Solor zenith
-                       sazm1d(:), & ! (deg)    ! Solor azimuth
-                       reflall_out(:,:),& ! (K)
-                       reflclr_out(:,:))!,& ! (K)
-
-!
-! -- reflall/btall_out are substituted into yobs
-!
-
-  do j = 1, nlat
-  do i = 1, nlon
-    np = (j - 1) * nlon + i
-
-    do ch = 1, NVIS_HIM8
-      qc(i,j,ch) = iqc_good
-      yobs(i,j,ch) = reflall_out(ch,np)
-!      yobs_clr(i,j,ch) = btclr_out(ch,np)
-!      mwgt_plev2d(i,j,ch) = mwgt_plev1d(ch,np)
-!
-!      if(H08_VLOCAL_CTOP)then
-!        if((ctop_out1d(np) > 0.0d0) .and. (ctop_out1d(np) < mwgt_plev1d(ch,np))
-!.and. &
-!           (mwgt_plev1d(ch,np)>H08_LIMIT_LEV)) then
-!          mwgt_plev1d(ch,np) = (ctop_out1d(np) + mwgt_plev1d(ch,np))*0.5d0
-!        endif
-!      endif
-
-!      ! QC
-!      if(H08_REJECT_LAND .and. (lsmask1d(np) > 0.5d0))then
-!        qc(i,j,ch) = iqc_obs_bad
-!      endif
-!
-!      if(yobs(i,j,ch) > btmax .or. yobs(i,j,ch) < btmin .or. yobs(i,j,ch) /= yobs(i,j,ch))then
-!        qc(i,j,np) = iqc_obs_bad
-!      endif
-
-    enddo ! ch
-
-    do ch = 1, NIRB_HIM8
-      qc(i,j,ch+NVIS_HIM8) = iqc_good
-      yobs(i,j,ch+NVIS_HIM8) = btall_out(ch,np)
-
-    enddo ! ch
-
-  enddo ! i
-  enddo ! j
-
-    do ch = 1, NIRB_HIM8
-      print*, "DEBUG999", maxval(btall_out(ch,:)),ch
-    enddo ! ch
+!    do ch = 1, NIRB_HIM8
+!      print*, "DEBUG999", maxval(btall_out(ch,:)),ch
+!    enddo ! ch
 
   return
 END SUBROUTINE Trans_XtoY_VIS_allg
 
+!!!!
+!!!SUBROUTINE zenith_geosat(sat_lon,lon,lat,z_angle)
+!!!! 
+!!!! Compute geostatinoary-satelitte zenith angle from lat/lon information
+!!!!
+!!!! -- Note: Computation of the zenith angle in each obs point (P) is based on the
+!!!! formula in
+!!!!          LRIT/HRIT Global Specification.
+!!!!          http://www.cgms-info.org/index_.php/cgms/page?cat=publications&page=technical+publications
+!!!! 
+!!!  USE scale_const, ONLY: &
+!!!      Deg2Rad => CONST_D2R
+!!!
+!!!  IMPLICIT NONE
+!!!
+!!!  REAL(r_size),INTENT(IN) :: sat_lon ! longitude of Himawari-8 satellite
+!!!  REAL(r_size),INTENT(IN) :: lon, lat ! (rad)
+!!!  REAL(r_size),INTENT(OUT) :: z_angle ! zenith angle
+!!!
+!!!  REAL(r_size),PARAMETER :: Rpol = 6356.7523d3 ! a polar radius of Earth (m) 
+!!!  REAL(r_size) :: Rl ! a local radius of Earth
+!!!  REAL(r_size) :: rlon, rlat ! (Radian)
+!!!!
+!!!!
+!!!! Vector components for a satellite coordinate frame
+!!!!
+!!!!
+!!!  REAL(r_size) :: rnps, rnep, c_lat ! auxiliary variables
+!!!  REAL(r_size) :: r1, r2, r3       ! components of location vector for point P 
+!!!  REAL(r_size) :: r1ps, r2ps, r3ps ! components of the vector from P to the satellite 
+!!!  REAL(r_size) :: r1ep, r2ep, r3ep  ! components of the vector from the center of Earth to P
+!!!
+!!!! sattelite zenith angle 
+!!!
+!!!  rlat = lat 
+!!!  rlon = lon 
+!!!
+!!!  c_lat = datan(0.993305616d0 * dtan(rlat))
+!!!  Rl = Rpol / dsqrt(1.0d0 - 0.00669438444d0 * dcos(c_lat)*dcos(c_lat))
+!!!  r1 = 42164.0d3 - Rl * dcos(c_lat) * dcos(rlon - sat_lon*Deg2Rad)
+!!!  r2 = -Rl * dcos(c_lat) * dsin(rlon - sat_lon*Deg2Rad)
+!!!  r3 = Rl * dsin(c_lat)
+!!!  rnps = dsqrt(r1*r1+r2*r2+r3*r3)
+!!!
+!!!  r1ps = r1 * (-1.0d0)
+!!!  r2ps = r2 * (-1.0d0)
+!!!  r3ps = r3 * (-1.0d0)
+!!!
+!!!  r1ep = r1 - 42164.0d3
+!!!  r2ep = r2
+!!!  r3ep = r3
+!!!
+!!!  rnep = dsqrt(r1ep*r1ep+r2ep*r2ep+r3ep*r3ep)
+!!!
+!!!  z_angle = r1ps * r1ep + r2ps * r2ep + r3ps * r3ep ! internal product 
+!!!  z_angle = dacos(z_angle/(rnps*rnep))/Deg2Rad
+!!!
+!!!
+!!!  RETURN
+!!!END SUBROUTINE zenith_geosat
+!!!
+
 !
-SUBROUTINE zenith_geosat(sat_lon,lon,lat,z_angle)
+subroutine zenith_geosat( sat_lon, lon, lat, z_angle )
 ! 
 ! Compute geostatinoary-satelitte zenith angle from lat/lon information
 !
 ! -- Note: Computation of the zenith angle in each obs point (P) is based on the
-! formula in
 !          LRIT/HRIT Global Specification.
-!          http://www.cgms-info.org/index_.php/cgms/page?cat=publications&page=technical+publications
+!          http://www.cgms-info.org/documents/pdf_cgms_03.pdf
 ! 
-  USE scale_const, ONLY: &
-      Deg2Rad => CONST_D2R
+  use scale_const, only: &
+      Deg2Rad => CONST_D2R, &
+      PI => CONST_PI
 
-  IMPLICIT NONE
+  implicit none
 
-  REAL(r_size),INTENT(IN) :: sat_lon ! longitude of Himawari-8 satellite
-  REAL(r_size),INTENT(IN) :: lon, lat ! (degree)
-  REAL(r_size),INTENT(OUT) :: z_angle ! zenith angle
+  real(r_size), intent(in) :: sat_lon ! (deg) longitude of Himawari-8 satellite
+  real(r_size), intent(in) :: lon, lat ! (deg) 
+  real(r_size), intent(out) :: z_angle ! zenith angle (deg)
 
-  REAL(r_size),PARAMETER :: Rpol = 6356.7523d3 ! a polar radius of Earth (m) 
-  REAL(r_size) :: Rl ! a local radius of Earth
-  REAL(r_size) :: rlon, rlat ! (Radian)
-!
-!
-! Vector components for a satellite coordinate frame
-!
-!
-  REAL(r_size) :: rnps, rnep, c_lat ! auxiliary variables
-  REAL(r_size) :: r1, r2, r3       ! components of location vector for point P 
-  REAL(r_size) :: r1ps, r2ps, r3ps ! components of the vector from P to the satellite 
-  REAL(r_size) :: r1ep, r2ep, r3ep  ! components of the vector from the center of Earth to P
+  real(r_size) :: rlon, rlat, rsat_lon ! (rad)
 
-! sattelite zenith angle 
+  ! satellite coordinate vector components
+  ! (0,0,0) is the Earth center
+  real(r_size) :: r_ps1, r_ps2, r_ps3 ! From P to satellite
+  real(r_size) :: r_ep1, r_ep2, r_ep3 ! From the Earth center to P
 
-  rlat = lat * Deg2Rad
+  real(r_size), parameter :: h = 42164.0d3 ! (m) ! distance btw the Earth center & satellite
+  real(r_size) :: r_e ! the rength of r_e
+  real(r_size), parameter :: r_pol = 6356.5838d3 ! a polar radius of Earth (m)
+  real(r_size), parameter :: r_eq = 6378.1690d3 ! an equator radius of Earth (m)
+
+  ! lon/lat (deg) => lon/lat(rad)
   rlon = lon * Deg2Rad
+  rlat = atan( ( r_pol / r_eq )**2 * tan( lat * Deg2Rad ) ) 
+  rsat_lon = sat_lon * Deg2Rad
 
-  c_lat = datan(0.993305616d0 * dtan(rlat))
-  Rl = Rpol / dsqrt(1.0d0 - 0.00669438444d0 * dcos(c_lat)*dcos(c_lat))
-  r1 = 42164.0d3 - Rl * dcos(c_lat) * dcos(rlon - sat_lon*Deg2Rad)
-  r2 = -Rl * dcos(c_lat) * dsin(rlon - sat_lon*Deg2Rad)
-  r3 = Rl * dsin(c_lat)
-  rnps = dsqrt(r1*r1+r2*r2+r3*r3)
+  ! From P to satellite 
+  r_e = r_pol / sqrt( 1.0d0 - (r_eq**2 - r_pol**2) / (r_eq**2) * cos(rlat)**2 )
+  r_ps1 = h - r_e * cos( rlat ) * cos( rlon - rsat_lon )
+  r_ps2 =   - r_e * cos( rlat ) * sin( rlon - rsat_lon )
+  r_ps3 =     r_e * sin( rlat )
 
-  r1ps = r1 * (-1.0d0)
-  r2ps = r2 * (-1.0d0)
-  r3ps = r3 * (-1.0d0)
+  ! From the Earth center to P
+  r_ep1 = r_e * cos( rlat ) * cos( rlon - rsat_lon)
+  r_ep2 = r_e * cos( rlat ) * sin( rlon - rsat_lon)
+  r_ep3 = r_e * sin( rlat )
 
-  r1ep = r1 - 42164.0d3
-  r2ep = r2
-  r3ep = r3
+  ! Inner product btw r_ep & r_sp
+  z_angle = ( r_ep1 * r_ps1 + r_ep2 * r_ps2 + r_ep3 * r_ps3 )
+  z_angle = z_angle / ( sqrt( r_ep1**2 + r_ep2**2 + r_ep3**2 ) * &
+                        sqrt( r_ps1**2 + r_ps2**2 + r_ps3**2) )
 
-  rnep = dsqrt(r1ep*r1ep+r2ep*r2ep+r3ep*r3ep)
+  ! Get satellite zenith angle (deg)
+  z_angle = acos( z_angle ) / Deg2Rad
 
-  z_angle = r1ps * r1ep + r2ps * r2ep + r3ps * r3ep ! internal product 
-  z_angle = dacos(z_angle/(rnps*rnep))/Deg2Rad
-
-
-  RETURN
-END SUBROUTINE zenith_geosat
-
+  return
+end subroutine zenith_geosat
 
 
 END MODULE common_obs_scale

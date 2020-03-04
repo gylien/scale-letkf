@@ -8,6 +8,9 @@ USER=honda
 EXP=test03km
 . config/${EXP}/config.main
 
+RTTOV_THREADS=4
+RTTOV_ITMAX=3
+
 #
 LETKF_RUN="$(pwd)"
 if ((MICRO == 1)) ; then
@@ -22,7 +25,7 @@ fi
 OBSSIM_BIN="${LETKF_RUN}/../obs/obssim"
 RUNSH=$SWDIR/OBSSIM.sh
 RUNCONF_COMMON=$SWDIR/obssim.conf_common
-SCALE_CONF=${LETKF_RUN}/config.nml.scale
+SCALE_CONF=${LETKF_RUN}/config/${EXP}/config.nml.scale
 TOPO=${OUTDIR}/const/topo
 
 
@@ -31,11 +34,19 @@ TOPO=${OUTDIR}/const/topo
 #tend='2016-06-08 0:00:00'
 
 # 3 km
-tstart='2016-06-03 12:00:00'
-tend='2016-06-03 12:00:00'
+tstart='2016-06-01 12:00:00'
+#tstart='2016-06-03 12:00:00'
+#tend='2016-06-03 12:00:00'
+
+tend=$tstart
 
 OBSSIM_TIME_START=2
-OBSSIM_TIME_END=5
+#OBSSIM_TIME_END=5
+#OBSSIM_TIME_START=3
+OBSSIM_TIME_START=5
+#OBSSIM_TIME_START=1
+OBSSIM_TIME_END=$OBSSIM_TIME_START
+
 
 ELAPSE="0:30:00"
 #OBSSIM_TIME_START=4
@@ -65,13 +76,29 @@ TYPE=fcst
 OBSSIM_IN_TYPE=history
 FHEAD=history
 
-SMEM=0 # 
+SMEM=1 # 
 EMEM=${SMEM} # mean # DEBUG
-EMEM=1 
-SMEM=2
-EMEM=50
+#EMEM=1 
+SMEM=1
+EMEM=1
 MEM_L=`seq ${SMEM} ${EMEM}`
 
+
+
+NNODES=$(( SCALE_NP / PPN))
+if (( NNODES < 1 )) ; then
+  NNODES=1
+fi
+
+MEM_TOTAL=$((EMEM - SMEM + 1))
+echo $MEM_TOTAL
+
+NP_TOTAL=$((MEM_TOTAL * SCALE_NP))
+NNODE_TOTAL=$((NP_TOTAL / PPN))
+if [ $NNODE_TOTAL -lt 1 ] ; then
+  NNODE_TOTAL=1
+fi
+echo $NP_TOTAL" "$NNODE_TOTAL
 
 
 # -- Him8 DA (RTTOV) setting --
@@ -95,33 +122,22 @@ cat << EOF >> $RUNCONF_COMMON
 ! MEMBER = 100,
 /
 &PARAM_LETKF_PRC
- NNODES = ${MEM_NP},
- PPN = 1,
- MEM_NODES = ${MEM_NP},
- MEM_NP = ${MEM_NP},
+ NNODES = ${NNODES},
+ PPN = ${PPN},
+ MEM_NODES = 1,
+ MEM_NP = ${SCALE_NP},
 /
 
 &PARAM_LETKF_H08
  H08_RTTOV_CLD = .true.,
- H08_RTTOV_MINQ = 0.10d0,
+ H08_RTTOV_MINQ = 0.0d0,
+ H08_RTTOV_CFRAC_CNST = -0.1d0,
 !--H08_RTTOV_COEF_PATH--!
 !--H08_NOWDATE--!
+!--H08_RTTOV_ITMAX--
+!--H08_RTTOV_NTHREAD--
 /
 
-!&PARAM_LETKF_H08
-! H08_FORMAT_NC = .true.,
-! H08_SIM_ALLG = .true.,
-! H08_OBS_THIN_LEV = 2,
-!!--H08_NOWDATE--!
-! H08_RTTOV_CLD = .true.,
-! H08_RTTOV_MINQ_CTOP = 0.10d0,
-! H08_RTTOV_CFRAC_CNST = 0.1d0,
-! H08_RTTOV_CFRAC = 1, ! scale method for cldfrac
-! H08_LIMIT_LEV = 200.0d2,
-! H08_VLOCAL_CTOP = .true.,
-! H08_RTTOV_KADD = 5,
-! H08_RTTOV_PROF_SHIFT = .true.,
-!/
 EOF
 
 
@@ -131,10 +147,10 @@ fi
 
 #-- copy topo
 
-cp ${TOPO}/topo.pe*[0,1].nc ${SWDIR}/dat/topo/ &
-cp ${TOPO}/topo.pe*[2,3].nc ${SWDIR}/dat/topo/ &
-cp ${TOPO}/topo.pe*[4,5].nc ${SWDIR}/dat/topo/ &
-cp ${TOPO}/topo.pe*[6,7].nc ${SWDIR}/dat/topo/ &
+#cp ${TOPO}/topo.pe*[0,1].nc ${SWDIR}/dat/topo/ &
+#cp ${TOPO}/topo.pe*[2,3].nc ${SWDIR}/dat/topo/ &
+#cp ${TOPO}/topo.pe*[4,5].nc ${SWDIR}/dat/topo/ &
+#cp ${TOPO}/topo.pe*[6,7].nc ${SWDIR}/dat/topo/ &
 
 #RAD_DAT=${SWDIR}/dat/rad
 #rm -rf $RAD_DAT
@@ -151,17 +167,45 @@ echo $TLEV
 TNODE=`expr ${MEM_NP} \* $TLEV`
 
 TNODE_CNT=0
-VCODE_CNT=1
+VCODE_CNT=0
 
+NPIN=`expr 255 / \( $PPN \) + 1`
 rm -f $RUNSH
 cat << EOF >> $RUNSH
 #!/bin/sh
-#PJM -N Him8_OBSSIM
+#PJM -L rscgrp=${RSCGRP}
+#PJM -N VIS_OBSSIM
+#PJM -L node=$NNODE_TOTAL
+#PJM -L elapse=00:30:00
+#PJM --mpi proc=$NP_TOTAL
+#PJM --omp thread=${RTTOV_THREADS}
+#PJM -g $(echo $(id -ng))
 #PJM -s
-#PJM --rsc-list "node=<TNODE_CNT>"
-#PJM --rsc-list "elapse=${ELAPSE}"
-#PJM --rsc-list "rscgrp=${MODE}"
-#PJM --stg-transfiles all
+
+module load hdf5/1.8.17
+module load netcdf/4.4.1
+module load netcdf-fortran/4.4.3
+
+export FORT_FMT_RECL=400
+
+export HFI_NO_CPUAFFINITY=1
+export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
+export I_MPI_HBW_POLICY=hbw_preferred,,
+export I_MPI_FABRICS_LIST=tmi
+unset KMP_AFFINITY
+#export KMP_AFFINITY=verbose
+#export I_MPI_DEBUG=5
+
+#export OMP_NUM_THREADS=1
+export I_MPI_PIN_DOMAIN=${NPIN}
+export I_MPI_PERHOST=${PPN}
+export KMP_HW_SUBSET=1t
+
+
+#export OMP_STACKSIZE=128m
+ulimit -s unlimited
+
+
 EOF
 
 
@@ -174,13 +218,6 @@ if (( MICRO != 1 )) ; then
 #  echo "#PJM --stgout-dir \"./out ${SWDIR}/out recursive=10\"" >> ${RUNSH}
 fi
 
-cat << EOF >> $RUNSH
-. /work/system/Env_base
-export F_UFMTENDIAN=big
-export OMP_NUM_THREADS=8
-export PARALLEL=8
-
-EOF
 
 #-- copy init file
 
@@ -200,6 +237,9 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
   for MEM in $MEM_L # MEM
   do
 
+    TNODE_CNT=$(expr ${TNODE_CNT} + ${MEM_NP})   
+    VCODE_CNT=$(expr ${VCODE_CNT} + 1)   
+
 
   if [ $MEM == 0 ] ; then
      MEM=mean
@@ -217,24 +257,28 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
 
   #-- copy bin & RTTOV coef files
 
-  ORG_DIR=${OUTDIR}/${HTIME}/${TYPE}/${MEM}
+  ORG_DIR=${INDIR}/${HTIME}/${TYPE}/${MEM}
   DAT_DIR=${SWDIR}/dat/${EXP}/${HTIME}/${TYPE}/${MEM}
   mkdir -p $DAT_DIR
   echo $HTIME" "$MEM
+
+  if [ ! -e ${DAT_DIR}/vis ] ; then 
+    mkdir -p ${DAT_DIR}/vis
+  fi
 
   if [ ! -e ${SWDIR}/${OBSSIM_BIN} ] ; then 
     cp ${OBSSIM_BIN} ${SWDIR}/
     cp ${RTTOV_COEF} ${DAT_DIR}/
     cp ${RTTOV_SCCOEF} ${DAT_DIR}/
 
-    cp ${RTTOV_COEF_VIS} ${DAT_DIR}/
-    cp ${RTTOV_SCCOEF_VIS} ${DAT_DIR}/
-    cp ${RTTOV_MFCOEF} ${DAT_DIR}/
+    cp ${RTTOV_COEF_VIS} ${DAT_DIR}/vis
+    cp ${RTTOV_SCCOEF_VIS} ${DAT_DIR}/vis
+    cp ${RTTOV_MFCOEF} ${DAT_DIR}/vis
   fi
 
   if [ ! -e ${SWDIR}/out/${EXP}/${TYPE}/${MEM} ] ; then
     mkdir -p ${SWDIR}/out/${EXP}/${TYPE}
-    touch ${SWDIR}/out/${EXP}/${TYPE}/tmp
+#    touch ${SWDIR}/out/${EXP}/${TYPE}/tmp
    
   fi
   if [ ! -e ${DAT_DIR} ] ; then
@@ -248,7 +292,8 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
   wait
 
   # copy common parts of obssim.conf 
-  RUNCONF=${SWDIR}/obssim_$(printf %03d $VCODE_CNT).conf
+#  RUNCONF=${SWDIR}/obssim_$(printf %03d $VCODE_CNT).conf
+  RUNCONF=${SWDIR}/obssim.conf.$VCODE_CNT
   if (( MICRO == 1 )) ; then
     LRUNCONF=${SWDIR}/obssim_$(printf %03d $VCODE_CNT).conf
     LDAT_DIR=$DAT_DIR
@@ -263,6 +308,8 @@ while (($(date -ud "$ctime" '+%s') <= $(date -ud "$tend" '+%s'))); do # -- time
   cat ${RUNCONF_COMMON} | \
      sed -e "/!--H08_NOWDATE--/a H08_NOWDATE = $YYYYh, $MMh, $DDh, $HHh, $MNh, $SEh," \
          -e "/!--H08_RTTOV_COEF_PATH--/a H08_RTTOV_COEF_PATH = \"${LDAT_DIR}\"," \
+         -e "/!--H08_RTTOV_ITMAX--/a H08_RTTOV_ITMAX = ${RTTOV_ITMAX}," \
+         -e "/!--H08_RTTOV_NTHREAD--/a H08_RTTOV_NTHREAD = ${RTTOV_THREADS}," \
     >> ${RUNCONF}
 
 cat << EOF >> $RUNCONF
@@ -312,31 +359,33 @@ EOF
   fi
   VCODE=${SWDIR}/vcode${VCODE_NUM}
 
-  rm -f ${VCODE}
-  touch $VCODE
+#  rm -f ${VCODE}
+#  touch $VCODE
 
   VNODE_MAX=$(expr ${TNODE_CNT} + ${MEM_NP} - 1)
 
-  for VN in `seq ${TNODE_CNT} ${VNODE_MAX}`
-  do
-    echo "("${VN}")" >> $VCODE
-  done
+#  for VN in `seq ${TNODE_CNT} ${VNODE_MAX}`
+#  do
+#    echo "("${VN}")" >> $VCODE
+#  done
 
-  echo "mpirun -n ${MEM_NP} --vcoordfile ${LVCODE}  ${BIN} ${LRUNCONF} &" >> $RUNSH
-
-  TNODE_CNT=$(expr ${TNODE_CNT} + ${MEM_NP})   
-  VCODE_CNT=$(expr ${VCODE_CNT} + 1)   
+#  echo "mpiexec.hydra -np ${MEM_NP} ${BIN} ${LRUNCONF} &" >> $RUNSH
 
 
   done # -- MEM
 
   ctime=$(date -ud "${ctint} second $ctime" '+%Y-%m-%d %H:%M:%S')
 done # -- time
-echo "wait" >> $RUNSH
+echo "mpiexec.hydra -np ${MEM_NP} ${BIN} obssim.conf.\$PJM_BULKNUM " >> $RUNSH
 
+echo "mv ./out/${EXP}/${TYPE}/Him8_*.nc $OUTDIR/ " >> $RUNSH
 
 sed -i -e  's/<TNODE_CNT>/'${TNODE_CNT}'/g' $RUNSH
 
+cd $SWDIR > /dev/null
+echo pjsub --bulk --sparam 1-${VCODE_CNT} OBSSIM.sh 
+pjsub --bulk --sparam 1-${VCODE_CNT} OBSSIM.sh 
+cd - > /dev/null
 echo ${SWDIR}
 
 exit

@@ -5,6 +5,8 @@
 #  !Adjust for downscaling....!
 #===============================================================================
 
+RSCGRP='debug-flat'
+
 PRESET='K_micro'
 
 EXP="test03km"
@@ -13,7 +15,8 @@ USERNAME=honda
 
 # -- H08 --
 # -- RTTOV_DIR --
-DIR_RTTOV=/volume64/data/ra001011/honda/RTTOV12.2_netcdf
+DIR_RTTOV=/work/hp150019/share/honda/RTTOV12.3_HDF
+#/volume64/data/ra001011/honda/RTTOV12.2_netcdf
 RTTOV_COEF=${DIR_RTTOV}/rtcoef_rttov12/rttov7pred54L/rtcoef_himawari_8_ahi.dat
 RTTOV_SCCOEF=${DIR_RTTOV}/rtcoef_rttov12/cldaer_ir/sccldcoef_himawari_8_ahi.dat
 
@@ -21,8 +24,12 @@ RTTOV_MFCOEF=${DIR_RTTOV}/rtcoef_rttov12/mfasis_lut/rttov_mfasis_cld_himawari_8_
 RTTOV_SCCOEF_VIS=${DIR_RTTOV}/rtcoef_rttov12/cldaer_visir/sccldcoef_himawari_8_ahi.dat
 RTTOV_COEF_VIS=${DIR_RTTOV}/rtcoef_rttov12/rttov9pred54L/rtcoef_himawari_8_ahi.dat
 
-INDIR="/volume64/data/ra001011/tnecker/experiments/germany_3km_15h_fcst_1000m"
-OUTDIR="/volume64/data/ra001011/${USERNAME}/SCALE-LETKF/VIS_TEST/OUTPUT/${EXP}"
+
+#INDIR="/volume64/data/ra001011/tnecker/experiments/germany_3km_15h_fcst_1000m"
+#OUTDIR="/volume64/data/ra001011/${USERNAME}/SCALE-LETKF/VIS_TEST/OUTPUT/${EXP}"
+
+INDIR="/work/hp150019/share/honda/LMU/experiments/germany_3km_15h_en_fcst_1000m"
+OUTDIR="/work/hp150019/share/honda/LMU/experiments/germany_3km_15h_en_fcst_1000m/20160601120000/obssim"
 
 #===============================================================================
 # Location of model/data files
@@ -107,9 +114,11 @@ LTIMESLOT=3600     # Timeslot interval for 4D-LETKF (second)
 MEMBER=1000 #1000         # Ensemble size
 
 NNODES=8 
-PPN=1               # Number of processes per node
+PPN=64               # Number of processes per node
+PPN=32               # Number of processes per node
+PPN=8               # Number of processes per node
 
-THREADS=8           # Number of threads per process
+THREADS=1           # Number of threads per process
 
 SCALE_NP=8          # Number of processes to run SCALE
 

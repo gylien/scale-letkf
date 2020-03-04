@@ -61,6 +61,7 @@ subroutine cld_ir_fwd(nchannels,&
         H08_RTTOV_MinQ, &
         H08_RTTOV_CFRAC_CNST, &
         H08_RTTOV_CLD,  &
+        H08_RTTOV_NTHREAD, &
         NVIS_HIM8
   implicit none
 
@@ -95,7 +96,7 @@ subroutine cld_ir_fwd(nchannels,&
   !====================
   character(len=256) :: coef_filename = './rtcoef_himawari_8_ahi.dat'
   character(len=256) :: sccldcoef_filename = './sccldcoef_himawari_8_ahi.dat'
-  integer(kind=jpim) :: nthreads = 8 ! K
+!  integer(kind=jpim) :: nthreads = 1 ! OFP 
   integer(kind=jpim) :: dosolar
   integer(kind=jpim) :: nlevels
   integer(kind=jpim) :: nprof
@@ -245,7 +246,7 @@ subroutine cld_ir_fwd(nchannels,&
 
 
 !  opts%config%apply_reg_limits       = .true.
-!  opts%config%do_checkinput          = .false.
+  opts%config%do_checkinput          = .false.
 
 !! added by T.Honda(2015/06/10)
 !  opts % interpolation % reg_limit_extrap  = .TRUE.  ! see UG 7.3 (32pp)
@@ -323,7 +324,7 @@ subroutine cld_ir_fwd(nchannels,&
     do jch = 1, nchannels
       nch = nch + 1_jpim
       chanprof(nch)%prof = j
-      chanprof(nch)%chan = jch + NVIS_HIM8 !channel_list(jch)
+      chanprof(nch)%chan = jch ! + NVIS_HIM8 !channel_list(jch)
     enddo
   enddo
 
@@ -342,6 +343,8 @@ subroutine cld_ir_fwd(nchannels,&
     write(6,*) 'max qv, min qv',maxval(tmp_qv),minval(tmp_qv)
     write(6,*) '-- t prof --'
     write(6,*) 'size t:',size(tmp_t(:,1)),size(tmp_p(:,1))
+    write(6,*) '-- zenith --'
+    write(6,*) 'min za, min za',minval(tmp_sat_zangle(:)),minval(tmp_sat_zangle(:))
 
 !    do j = 1, nlevels
 !      write(6,*) 'qv:',tmp_qv(j,2)
@@ -488,7 +491,7 @@ subroutine cld_ir_fwd(nchannels,&
   ! --------------------------------------------------------------------------
   ! 7. Call RTTOV forward model
   ! --------------------------------------------------------------------------
-  if (nthreads <= 1) then
+  if (H08_RTTOV_NTHREAD <= 1) then
     call rttov_direct(                &
             errorstatus,              &! out   error flag
             chanprof,                 &! in    channel and profile index structure
@@ -514,7 +517,7 @@ subroutine cld_ir_fwd(nchannels,&
             emissivity  = emissivity, &! inout input/output emissivities per channel
             calcrefl    = calcrefl,   &! in    flag for internal BRDF calcs
             reflectance = reflectance,&! inout input/output BRDFs per channel
-            nthreads    = nthreads)    ! in    number of threads to use
+            nthreads    = H08_RTTOV_NTHREAD)    ! in    number of threads to use
   endif
 
   if (errorstatus /= errorstatus_success) then
@@ -640,7 +643,8 @@ subroutine cld_mfasis_fwd(nchannels,&
         H08_RTTOV_COEF_PATH, &
         H08_RTTOV_MinQ, &
         H08_RTTOV_CFRAC_CNST, &
-        H08_RTTOV_CLD
+        H08_RTTOV_CLD, &
+        H08_RTTOV_NTHREAD
   implicit none
 
 #include "rttov_direct.interface"
@@ -677,7 +681,7 @@ subroutine cld_mfasis_fwd(nchannels,&
   character(len=256) :: coef_filename = './rtcoef_himawari_8_ahi.dat'
   character(len=256) :: sccldcoef_filename = './sccldcoef_himawari_8_ahi.dat'
   character(len=256) :: mfasis_lut_filename = './rttov_mfasis_cld_himawari_8_ahi_opac.H5'
-  integer(kind=jpim) :: nthreads = 8 ! K
+!  integer(kind=jpim) :: nthreads = 1 ! K
   integer(kind=jpim) :: nlevels
   integer(kind=jpim) :: nprof
   integer(kind=jpim) :: nchannels
@@ -757,6 +761,8 @@ subroutine cld_mfasis_fwd(nchannels,&
 
   Real(Kind=jprb), Parameter :: q_mixratio_to_ppmv  = 1.60771704e+6_JPRB
 
+  logical :: unit_kgkg = .true.
+
   Rd = real(Rdry,kind=jprb)
   Rv = real(Rvap,kind=jprb)
   epsb = Rd / Rv 
@@ -764,6 +770,12 @@ subroutine cld_mfasis_fwd(nchannels,&
 
   minQcfrac = real(H08_RTTOV_MinQ,kind=jprb)
   jcfrac_cnst = real(H08_RTTOV_CFRAC_CNST,kind=jprb)
+
+  if ( unit_kgkg ) then
+    ! g/kg => kg/kg
+    minQcfrac = minQcfrac * 1.E-3_jprb
+    jcfrac_cnst = jcfrac_cnst * 1.E-3_jprb
+  endif
 
   allocate(kgkg2gm3(nlevels))
   allocate(icec(nlevels))
@@ -835,9 +847,9 @@ subroutine cld_mfasis_fwd(nchannels,&
   ! --------------------------------------------------------------------------
   if(debug) write(6,'(1x,a)')"hello from RTTOV3 MFASIS"
   call rttov_read_coefs(errorstatus, coefs, opts, & !form_coef='formatted', &
-                       file_coef=trim(H08_RTTOV_COEF_PATH)//"/"//coef_filename, &
-                       file_sccld=trim(H08_RTTOV_COEF_PATH)//"/"//sccldcoef_filename, &
-                       file_mfasis_cld=trim(H08_RTTOV_COEF_PATH)//"/"//mfasis_lut_filename)
+                       file_coef=trim(H08_RTTOV_COEF_PATH)//"/vis/"//coef_filename, &
+                       file_sccld=trim(H08_RTTOV_COEF_PATH)//"/vis/"//sccldcoef_filename, &
+                       file_mfasis_cld=trim(H08_RTTOV_COEF_PATH)//"/vis/"//mfasis_lut_filename)
 
 !  CALL rttov_read_coefs(errorstatus, coefs, opts, form_coef='formatted', file_coef=coef_filename)
   if (errorstatus /= errorstatus_success) then
@@ -937,16 +949,13 @@ subroutine cld_mfasis_fwd(nchannels,&
     profiles(iprof) % sunazangle = real(tmp_saangle(iprof),kind=jprb)
     profiles(iprof)% zenangle = real(tmp_sat_zangle(iprof),kind=jprb)
 
-    !profiles(iprof) % gas_units = 1 ! kg/kg
-    profiles(iprof) % gas_units = 2 ! ppmv 
-
     profiles(iprof)%p(:)=real(tmp_p(:,iprof),kind=jprb) * 0.01_jprb  ! (hpa)
     profiles(iprof)%t(:)=real(tmp_t(:,iprof),kind=jprb)
-    !profiles(iprof)%q(:)=max(real(tmp_qv(:,iprof),kind=jprb), qmin) ! (kg/kg) 
-    profiles(iprof)%q(:)=min(max(real(tmp_qv(:,iprof)*q_mixratio_to_ppmv,kind=jprb), qmin*1.01_jprb), qmax*0.99_jprb) ! (kg/kg) 
+    profiles(iprof)%q(:)=max(real(tmp_qv(:,iprof),kind=jprb), qmin) ! (kg/kg) 
+    !profiles(iprof)%q(:)=min(max(real(tmp_qv(:,iprof)*q_mixratio_to_ppmv,kind=jprb), qmin*1.01_jprb), qmax*0.99_jprb) ! (kg/kg) 
     profiles(iprof)%s2m%t=real(tmp_t2m(iprof),kind=jprb)
-    !profiles(iprof)%s2m%q=max(real(tmp_q2m(iprof),kind=jprb), qmin) ! (kg/kg)
-    profiles(iprof)%s2m%q=min(max(real(tmp_q2m(iprof),kind=jprb)*q_mixratio_to_ppmv, qmin*1.01_jprb), qmax*0.99_jprb) ! (kg/kg)
+    profiles(iprof)%s2m%q=max(real(tmp_q2m(iprof),kind=jprb), qmin) ! (kg/kg)
+    !profiles(iprof)%s2m%q=min(max(real(tmp_q2m(iprof),kind=jprb)*q_mixratio_to_ppmv, qmin*1.01_jprb), qmax*0.99_jprb) ! (kg/kg)
 
 !    if(profiles(iprof)%s2m%q < qmin) profiles(iprof)%s2m%q = qmin + qmin * 0.01_jprb
 !    do ilev=1,nlevels
@@ -957,6 +966,16 @@ subroutine cld_mfasis_fwd(nchannels,&
     profiles(iprof)%s2m%u=real(tmp_u2m(iprof),kind=jprb)
     profiles(iprof)%s2m%v=real(tmp_v2m(iprof),kind=jprb)
     profiles(iprof)%s2m%wfetc= 100000.0_jprb
+
+    if ( unit_kgkg ) then
+      profiles(iprof) % gas_units = 1 ! kg/kg
+      profiles(iprof) % mmr_cldaer = .true. ! kg/kg
+    else
+      profiles(iprof) % gas_units = 2 ! ppmv 
+      write(*, *) "unit_kgkg should be true"
+      stop
+    endif
+
 
     profiles(iprof) % skin % t = real(tmp_t2m(iprof),kind=jprb)
 !    profiles(iprof) % skin % fastem(1) = 3.0 ! comment out (11/18/2015)
@@ -1003,15 +1022,15 @@ subroutine cld_mfasis_fwd(nchannels,&
         tv = real(tmp_t(ilev,iprof),kind=jprb) * (1.0_jprb+real(tmp_qv(ilev,iprof),kind=jprb) * repsb) &
            / (1.0_jprb + real(tmp_qv(ilev,iprof),kind=jprb))
         kgkg2gm3(ilev) = real(tmp_p(ilev,iprof),kind=jprb) / (Rd * tv) * 1000.0_jprb 
-        liqc(ilev) = real(max(tmp_qc(ilev,iprof),0.0_r_size),kind=jprb) * kgkg2gm3(ilev)
-        icec(ilev) = real(max(tmp_qice(ilev,iprof),0.0_r_size),kind=jprb) * kgkg2gm3(ilev)
+        liqc(ilev) = real(max(tmp_qc(ilev,iprof),0.0_r_size),kind=jprb) !* kgkg2gm3(ilev)
+        icec(ilev) = real(max(tmp_qice(ilev,iprof),0.0_r_size),kind=jprb) !* kgkg2gm3(ilev)
       end do !ilev
 
       do ilev=1,nlevels-1
         profiles(iprof) % cloud(2,ilev) = & !stratus maritime (default)
-                   (liqc(ilev+1) + liqc(ilev)) * 0.5_jprb
+                   (liqc(ilev+1) + liqc(ilev)) * 0.5_jprb 
         profiles(iprof) % cloud(6,ilev) = & 
-                   (icec(ilev+1) + icec(ilev)) * 0.5_jprb
+                   (icec(ilev+1) + icec(ilev)) * 0.5_jprb 
 !
 ! cloud fraction diagnosis
         if(jcfrac_cnst <= 0.0_jprb)then
@@ -1065,7 +1084,7 @@ subroutine cld_mfasis_fwd(nchannels,&
   ! --------------------------------------------------------------------------
   ! 7. Call RTTOV forward model
   ! --------------------------------------------------------------------------
-  if (nthreads <= 1) then
+  if (H08_RTTOV_NTHREAD <= 1) then
     call rttov_direct(                &
             errorstatus,              &! out   error flag
             chanprof,                 &! in    channel and profile index structure
@@ -1091,7 +1110,7 @@ subroutine cld_mfasis_fwd(nchannels,&
             emissivity  = emissivity, &! inout input/output emissivities per channel
             calcrefl    = calcrefl,   &! in    flag for internal BRDF calcs
             reflectance = reflectance,&! inout input/output BRDFs per channel
-            nthreads    = nthreads)    ! in    number of threads to use
+            nthreads    = H08_RTTOV_NTHREAD)    ! in    number of threads to use
   endif
 
   if (errorstatus /= errorstatus_success) then

@@ -1658,6 +1658,168 @@ subroutine mpi_timer(sect_name, level, barrier)
   return
 end subroutine mpi_timer
 
+
+subroutine write_grd_mpi_nc(filename, nv2dgrd, step, v2d)
+  use netcdf
+  use common_ncio
+  use scale_grid, only: &
+      GRID_CX, GRID_CY, &
+      DX, DY
+  use scale_mapproj, only: &
+      MPRJ_xy2lonlat
+  implicit none
+  character(*), intent(in) :: filename
+  integer, intent(in) :: nv2dgrd
+  integer, intent(in) :: step
+  real(r_size), intent(in) :: v2d(nlon,nlat,nv2dgrd)
+
+  real(r_sngl) :: bufr4(nlong,nlatg)
+  integer :: iunit, iolen
+  integer :: k, n, irec, ierr
+  integer :: proc_i, proc_j
+  integer :: ishift, jshift
+
+  character(2) :: FT2
+
+  integer :: ncid
+  integer :: lon_dimid, lat_dimid, band_dimid
+  integer :: x_dimid, y_dimid
+
+  integer :: x_varid, y_varid
+  integer :: lon_varid, lat_varid, band_varid
+  integer :: tbb_varid
+
+  character(len=*), parameter :: BAND_NAME = "band"
+
+  character(len=*), parameter :: TBB_NAME = "tbb"
+  character(len=*), parameter :: LAT_NAME = "latitude"
+  character(len=*), parameter :: LON_NAME = "longitude"
+  character(len=*), parameter :: X_NAME = "x"
+  character(len=*), parameter :: Y_NAME = "y"
+
+  integer :: dimids(3)
+  integer :: dimids2d(2)
+  integer :: start2d(2), count2d(2)
+  integer :: start3d(3)
+
+  real :: lons(nlong), lats(nlatg), bands(NIRB_HIM8+NVIS_HIM8)
+  integer :: i, j, b
+
+  real :: xs(nlong), ys(nlatg)
+  real :: lons2d(nlong,nlatg), lats2d(nlong,nlatg)
+
+  real(RP) :: lon_RP, lat_RP
+
+  call rank_1d_2d(myrank_d, proc_i, proc_j)
+  ishift = proc_i * nlon
+  jshift = proc_j * nlat
+
+  if (myrank_d == 0) then
+
+    write(FT2, '(i2.2)') step - 1
+
+    do b = 1, NIRB_HIM8+NVIS_HIM8
+      bands(b) = b
+    enddo 
+
+    do i = 1, nlong
+      xs(i) = i
+      lons(i) = i
+      lons2d(i,:) = i
+    enddo
+    do j = 1, nlatg
+      ys(j) = j
+      lats(j) = j
+      lats2d(:,j) = j
+    enddo
+
+    do j = 1, nlatg
+    do i = 1, nlong
+      call MPRJ_xy2lonlat((i-1) * DX + GRID_CX(1), (j-1) * DY + GRID_CY(1),&
+                          lon_RP, lat_RP)
+      lons2d(i,j) = real( lon_RP*rad2deg, kind=r_sngl)
+      lats2d(i,j) = real( lat_RP*rad2deg, kind=r_sngl)
+    enddo
+    enddo
+
+    ! Create the file. 
+    call ncio_check( nf90_create( trim(filename)//"_FT"//FT2//".nc", nf90_clobber, ncid) )
+
+    ! Define the dimensions. 
+    call ncio_check( nf90_def_dim(ncid, BAND_NAME, NIRB_HIM8+NVIS_HIM8, band_dimid) ) 
+!    call ncio_check( nf90_def_dim(ncid, LON_NAME, nlong, lon_dimid) )
+!    call ncio_check( nf90_def_dim(ncid, LAT_NAME, nlatg, lat_dimid) )
+
+    call ncio_check( nf90_def_dim(ncid, X_NAME, nlong, x_dimid) )
+    call ncio_check( nf90_def_dim(ncid, Y_NAME, nlatg, y_dimid) )
+
+    ! Define the coordinate variables. 
+
+    call ncio_check( nf90_def_var(ncid, X_NAME, NF90_REAL, x_dimid, x_varid) )
+    call ncio_check( nf90_def_var(ncid, Y_NAME, NF90_REAL, y_dimid, y_varid) )
+
+    dimids2d = (/ x_dimid, y_dimid /)
+    start2d = (/ 1, 1 /)
+    count2d = (/ nlong, nlatg /)
+
+    call ncio_check( nf90_def_var(ncid, LAT_NAME, NF90_REAL, dimids2d, lat_varid) )
+    call ncio_check( nf90_def_var(ncid, LON_NAME, NF90_REAL, dimids2d, lon_varid) )
+    call ncio_check( nf90_def_var(ncid, BAND_NAME, NF90_REAL, band_dimid, band_varid) )
+
+    ! Assign units attributes to coordinate variables.
+    call ncio_check( nf90_put_att(ncid, lat_varid, "units", "degrees_north") )
+    call ncio_check( nf90_put_att(ncid, lon_varid, "units", "degrees_east") )
+
+    dimids = (/x_dimid, y_dimid, band_dimid/)
+
+    ! Define the netCDF variables
+    call ncio_check( nf90_def_var(ncid, TBB_NAME, NF90_REAL, dimids, tbb_varid) )
+    call ncio_check( nf90_put_att(ncid, tbb_varid, "long_name", "reflectance/tbb") )
+    call ncio_check( nf90_put_att(ncid, tbb_varid, "units", "()/(K)") )
+  
+    ! End define mode.
+    call ncio_check( nf90_enddef(ncid) )
+
+
+    ! Write the coordinate variable data. 
+    call ncio_check( nf90_put_var(ncid, x_varid, xs) )
+    call ncio_check( nf90_put_var(ncid, y_varid, ys) )
+
+    call ncio_check( nf90_put_var(ncid, lat_varid, lats2d, start=start2d, count=count2d) )
+    call ncio_check( nf90_put_var(ncid, lon_varid, lons2d, start=start2d, count=count2d) )
+    call ncio_check( nf90_put_var(ncid, band_varid, bands) )
+
+!    iunit = 55
+!    inquire (iolength=iolen) iolen
+!    open (iunit, file=trim(filename)//"_FT"//FT2//".dat", form='unformatted', access='direct', &
+!          status='unknown', convert='native', recl=nlong*nlatg*iolen)
+!    !irec = (nlev * nv3dgrd + nv2dgrd) * (step-1)
+!    ! No time dimension in each file
+!    irec = 0
+  end if
+
+  do n = 1, nv2dgrd
+    bufr4(:,:) = 0.0
+    bufr4(1+ishift:nlon+ishift, 1+jshift:nlat+jshift) = real(v2d(:,:,n), r_sngl)
+    call MPI_ALLREDUCE(MPI_IN_PLACE, bufr4, nlong*nlatg, MPI_REAL, MPI_SUM, MPI_COMM_d, ierr)
+    if (myrank_d == 0) then
+      start3d = (/ 1, 1, n/)
+      count2d = (/ nlong, nlatg /)
+      call ncio_check( nf90_put_var(ncid, tbb_varid, bufr4, start=start3d, count=count2d) )
+!      irec = irec + 1
+!      write (iunit, rec=irec) bufr4
+    end if
+  end do
+
+  if (myrank_d == 0) then
+    ! Close the file. 
+    call ncio_check( nf90_close(ncid) )
+  end if
+
+  return
+end subroutine write_grd_mpi_nc
+
+
 !SUBROUTINE get_nobs_mpi(obsfile,nrec,nn)
 !SUBROUTINE read_obs2_mpi(obsfile,nn,nbv,elem,rlon,rlat,rlev,odat,oerr,otyp,tdif,hdxf,iqc)
 !SUBROUTINE allreduce_obs_mpi(n,nbv,hdxf,iqc)

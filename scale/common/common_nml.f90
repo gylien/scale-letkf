@@ -258,6 +258,8 @@ MODULE common_nml
   INTEGER :: NRADARTYPE = 1  !Currently PAWR (1) and LIDAR (2) ... not used?
 
   !---PARAM_LETKF_H08
+  integer :: H08_RTTOV_ITMAX = 3 ! iteration max for RTTOV
+  integer :: H08_RTTOV_NTHREAD = 1 ! nthread for rttov
   integer :: H08_NOWDATE(6) = (/0,1,1,0,0,0/)
   character(filelenmax) :: H08_RTTOV_COEF_PATH = ''
   logical :: H08_REJECT_LAND = .false. ! true: reject Himawari-8 radiance over the land
@@ -800,6 +802,8 @@ subroutine read_nml_letkf_h08
   integer :: ierr
 
   namelist /PARAM_LETKF_H08/ &
+    H08_RTTOV_ITMAX, &
+    H08_RTTOV_NTHREAD, &
     H08_NOWDATE, &
     H08_REJECT_LAND, &
     H08_RTTOV_CLD, &

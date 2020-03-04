@@ -1,6 +1,7 @@
-*dset ^out/test03km/anal/Him8_20160603120000_mean.dat 
-dset /volume64/data/ra001011/honda/SCALE-LETKF/VIS_TEST/OUTPUT/test03km/20160603120000/obssim/Him8_20160603120000_%e_FT01.dat 
-options big_endian template
+*dset /volume64/data/ra001011/honda/SCALE-LETKF/VIS_TEST/OUTPUT/test03km/20160603120000/obssim/Him8_20160603120000_%e_FT01.dat 
+*dset /work/hp150019/share/honda/LMU/scale-letkf_v170124_scale5.1.2/scale-letkf/scale/tmp_obssim/out/test03km/fcst/Him8_20160603120000_%e_FT01.dat
+dset /work/hp150019/share/honda/LMU/scale-letkf_v170124_scale5.1.2/scale-letkf/scale/tmp_obssim/out/test03km/fcst/Him8_20160601120000_0001_FT01.dat
+*options big_endian template
 *undef -9.990000e+33
 undef -9.990000e+33
 xdef    499 linear     4.111291     0.023649

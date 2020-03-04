@@ -6,8 +6,10 @@
 *.log
 *~
 /scale/configure.user
+/scale/.common_for_scale/*f90
 /scale/common/datetime
 /scale/common/pdbash
+/scale/common/*__*.f90
 /scale/run/config.main
 /scale/run/config.cycle
 /scale/run/config.fcst
