@@ -603,6 +603,7 @@ subroutine cld_mfasis_fwd(nchannels,&
                            tmp_lat,&
                            tmp_land,&
                            tmp_sat_zangle, & ! satellite zenith angle
+                           tmp_sat_azm, & ! satellite azimuth angle
                            tmp_szangle,  & ! solar zenith angle
                            tmp_saangle,  &
                            reflall_out,& 
@@ -721,6 +722,7 @@ subroutine cld_mfasis_fwd(nchannels,&
   real(r_size),intent(in) :: tmp_lat(nprof)
   real(r_size),intent(in) :: tmp_land(nprof)
   real(r_size),intent(in) :: tmp_sat_zangle(nprof)
+  real(r_size),intent(in) :: tmp_sat_azm(nprof)
   real(r_size),intent(in) :: tmp_szangle(nprof)
   real(r_size),intent(in) :: tmp_saangle(nprof)
 
@@ -948,6 +950,7 @@ subroutine cld_mfasis_fwd(nchannels,&
     profiles(iprof) % sunzenangle = real(tmp_szangle(iprof),kind=jprb)
     profiles(iprof) % sunazangle = real(tmp_saangle(iprof),kind=jprb)
     profiles(iprof)% zenangle = real(tmp_sat_zangle(iprof),kind=jprb)
+    profiles(iprof)% azangle = real(tmp_sat_azm(iprof),kind=jprb)
 
     profiles(iprof)%p(:)=real(tmp_p(:,iprof),kind=jprb) * 0.01_jprb  ! (hpa)
     profiles(iprof)%t(:)=real(tmp_t(:,iprof),kind=jprb)

@@ -3063,8 +3063,11 @@ SUBROUTINE Trans_XtoY_VIS_allg(v3d,v2d,yobs,stggrd,it) !yobs_clr,mwgt_plev2d,qc,
 
 !  REAL(r_size) :: ctop_out1d(nlon*nlat) 
 
+  ! satellite angles
   REAL(r_size) :: zenith1d(nlon*nlat)
+  REAL(r_size) :: azm1d(nlon*nlat)
 
+  ! solar angles
   REAL(r_size) :: szenith1d(nlon*nlat) ! solar zenith angle
   REAL(r_size) :: sazm1d(nlon*nlat) ! solar azimuth angle
   real(r_size) :: dummy1, dummy2
@@ -3154,7 +3157,7 @@ SUBROUTINE Trans_XtoY_VIS_allg(v3d,v2d,yobs,stggrd,it) !yobs_clr,mwgt_plev2d,qc,
 !    szenith1d(np) = acos(szenith1d(np)) * rad2deg
 !    sazm1d(np) = sazm1d(np) * rad2deg
 !
-!    call zenith_geosat( HIM8_LON, lon1d(np)*rad2deg, lat1d(np)*rad2deg, zenith1d(np) )
+!    call zenith_geosat( HIM8_LON, lon1d(np)*rad2deg, lat1d(np)*rad2deg, zenith1d(np), azm1d(np) )
 !
 !    do ch = 1, NVIS_HIM8
 !      qc(i,j,ch) = iqc_good
@@ -3163,6 +3166,8 @@ SUBROUTINE Trans_XtoY_VIS_allg(v3d,v2d,yobs,stggrd,it) !yobs_clr,mwgt_plev2d,qc,
 !         yobs(i,j,ch) = sazm1d(np)
 !      elseif (ch == 3) then
 !         yobs(i,j,ch) = zenith1d(np)
+!      elseif (ch == 4) then
+!         yobs(i,j,ch) = azm1d(np)
 !      endif
 !    enddo
 !    do ch = NVIS_HIM8+1, NVIS_HIM8+NIRB_HIM8
@@ -3174,7 +3179,7 @@ SUBROUTINE Trans_XtoY_VIS_allg(v3d,v2d,yobs,stggrd,it) !yobs_clr,mwgt_plev2d,qc,
 !  enddo
 !
 !  return
-!
+
 
   !
   ! Extrapolate input profiles by using climatology (MIPAS)
@@ -3249,7 +3254,7 @@ SUBROUTINE Trans_XtoY_VIS_allg(v3d,v2d,yobs,stggrd,it) !yobs_clr,mwgt_plev2d,qc,
                                                                                   ! szenith1d: cos(szenith) (rad)
                                                                                   ! azm: (rad)
   
-      CALL zenith_geosat( HIM8_LON, lon1d(np)*rad2deg, lat1d(np)*rad2deg, zenith1d(np) )
+      CALL zenith_geosat( HIM8_LON, lon1d(np)*rad2deg, lat1d(np)*rad2deg, zenith1d(np), azm1d(np) )
 
       szenith1d(np) = acos(szenith1d(np)) * rad2deg
       sazm1d(np) = sazm1d(np) * rad2deg
@@ -3262,7 +3267,19 @@ SUBROUTINE Trans_XtoY_VIS_allg(v3d,v2d,yobs,stggrd,it) !yobs_clr,mwgt_plev2d,qc,
       tsfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_skint)
       qsfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_q2m)
       topo1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_topo)
-      lsmask1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_lsmask)
+      !
+      ! Definition of lsmask is different btw SCALE & RTTOV
+      ! 
+      ! SCALE lsmask:1 (land)
+      !              0 (ocean)
+      ! RTTOV lsmask:0 (land)
+      !              1 (ocean)
+      !
+      if ( v2d(i+IHALO,j+JHALO,iv2dd_lsmask) > 0.5d0 ) then
+        lsmask1d(np) = 0 ! land in RTTOV
+      else
+        lsmask1d(np) = 1 ! ocean in RTTOV
+      endif
       psfc1d(np) = v2d(i+IHALO,j+JHALO,iv2dd_ps)
   
       ! assume not staggerd grid
@@ -3341,6 +3358,7 @@ SUBROUTINE Trans_XtoY_VIS_allg(v3d,v2d,yobs,stggrd,it) !yobs_clr,mwgt_plev2d,qc,
                          lat1d(nps:npe),& ! (deg)
                          lsmask1d(nps:npe),& ! (0-1)
                          zenith1d(nps:npe), & ! (deg)  ! satellite
+                         azm1d(nps:npe), & ! (deg)  ! satellite
                          szenith1d(nps:npe), & ! (deg) ! Solor zenith
                          sazm1d(nps:npe), & ! (deg)    ! Solor azimuth
                          reflall_out(:,nps:npe),& ! (K)
@@ -3460,7 +3478,7 @@ END SUBROUTINE Trans_XtoY_VIS_allg
 !!!
 
 !
-subroutine zenith_geosat( sat_lon, lon, lat, z_angle )
+subroutine zenith_geosat( sat_lon, lon, lat, zenith, azm )
 ! 
 ! Compute geostatinoary-satelitte zenith angle from lat/lon information
 !
@@ -3476,7 +3494,8 @@ subroutine zenith_geosat( sat_lon, lon, lat, z_angle )
 
   real(r_size), intent(in) :: sat_lon ! (deg) longitude of Himawari-8 satellite
   real(r_size), intent(in) :: lon, lat ! (deg) 
-  real(r_size), intent(out) :: z_angle ! zenith angle (deg)
+  real(r_size), intent(out) :: zenith ! satellite zenith angle (deg)
+  real(r_size), intent(out) :: azm ! satellite azimuth angle (deg)
 
   real(r_size) :: rlon, rlat, rsat_lon ! (rad)
 
@@ -3484,6 +3503,8 @@ subroutine zenith_geosat( sat_lon, lon, lat, z_angle )
   ! (0,0,0) is the Earth center
   real(r_size) :: r_ps1, r_ps2, r_ps3 ! From P to satellite
   real(r_size) :: r_ep1, r_ep2, r_ep3 ! From the Earth center to P
+  real(r_size) :: r_ps_we ! West=>East vector component of r_ps
+  real(r_size) :: r_ps_sn ! South=>North vector component of r_ps
 
   real(r_size), parameter :: h = 42164.0d3 ! (m) ! distance btw the Earth center & satellite
   real(r_size) :: r_e ! the rength of r_e
@@ -3497,23 +3518,38 @@ subroutine zenith_geosat( sat_lon, lon, lat, z_angle )
 
   ! From P to satellite 
   r_e = r_pol / sqrt( 1.0d0 - (r_eq**2 - r_pol**2) / (r_eq**2) * cos(rlat)**2 )
-  r_ps1 = h - r_e * cos( rlat ) * cos( rlon - rsat_lon )
-  r_ps2 =   - r_e * cos( rlat ) * sin( rlon - rsat_lon )
-  r_ps3 =     r_e * sin( rlat )
+  r_ps1 = -r_e * cos( rlat ) * cos( rlon ) + h * cos( rsat_lon )
+  r_ps2 = -r_e * cos( rlat ) * sin( rlon ) + h * sin( rsat_lon )
+  r_ps3 = -r_e * sin( rlat ) 
 
   ! From the Earth center to P
-  r_ep1 = r_e * cos( rlat ) * cos( rlon - rsat_lon)
-  r_ep2 = r_e * cos( rlat ) * sin( rlon - rsat_lon)
+  r_ep1 = r_e * cos( rlat ) * cos( rlon )
+  r_ep2 = r_e * cos( rlat ) * sin( rlon )
   r_ep3 = r_e * sin( rlat )
 
   ! Inner product btw r_ep & r_sp
-  z_angle = ( r_ep1 * r_ps1 + r_ep2 * r_ps2 + r_ep3 * r_ps3 )
-  z_angle = z_angle / ( sqrt( r_ep1**2 + r_ep2**2 + r_ep3**2 ) * &
+  zenith = ( r_ep1 * r_ps1 + r_ep2 * r_ps2 + r_ep3 * r_ps3 )
+  zenith = zenith / ( sqrt( r_ep1**2 + r_ep2**2 + r_ep3**2 ) * &
                         sqrt( r_ps1**2 + r_ps2**2 + r_ps3**2) )
 
   ! Get satellite zenith angle (deg)
-  z_angle = acos( z_angle ) / Deg2Rad
+  zenith = acos( zenith ) / Deg2Rad
 
+  !
+  r_ps_we = -r_ps1 * sin( rlon ) + r_ps2 * cos( rlon )
+  r_ps_sn = r_ps3 * cos( rlat )
+
+  ! Inner product btw r_ps projected on the NSWE plain at P & 
+  ! the unit vector pointing N at P on the same plain
+  !
+  ! N: 0deg, E: +90deg
+  if ( r_ps_sn >= 0.0d0) then 
+    azm = atan( r_ps_we / r_ps_sn ) / Deg2Rad ! (deg)
+  else
+    azm = atan( r_ps_we / abs(r_ps_sn) ) / Deg2Rad ! (deg)
+    azm = 180.0d0 - azm
+  endif
+ 
   return
 end subroutine zenith_geosat
 
